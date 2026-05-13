@@ -2,6 +2,11 @@
 
 A terminal IDE that feels like VSCode — built on Bubble Tea, powered by a real Neovim process under the hood.
 
+<!--
+Drop a screenshot or asciinema GIF at assets/screenshots/demo.png and uncomment:
+![termocode demo](assets/screenshots/demo.png)
+-->
+
 ```sh
 go build -o termocode ./cmd/termocode
 ./termocode [path]
@@ -23,7 +28,7 @@ Without `path`, opens in the current directory.
 
 ## Install
 
-Requires Go ≥ 1.22 to build, plus a handful of runtime dependencies:
+Requires Go ≥ 1.26 to build, plus a handful of runtime dependencies:
 
 - `nvim` ≥ 0.10 on `$PATH`
 - `rg` (ripgrep) for workspace search
@@ -36,7 +41,7 @@ Optional but recommended:
 - Debug adapters — `dlv`, `debugpy`, `node --inspect`
 
 ```sh
-git clone https://github.com/<you>/termocode.git
+git clone https://github.com/amin-jalali/termocode.git
 cd termocode
 ./scripts/dev.sh    # vet + test + build
 ```

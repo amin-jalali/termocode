@@ -23,6 +23,10 @@ jobs:
           go-version-file: go.mod
           cache: false
 
+      - name: Install X11 dev headers (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev
+
       - name: Cache Go modules
         uses: actions/cache@v4
         with:
