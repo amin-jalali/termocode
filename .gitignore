@@ -1,0 +1,13 @@
+/termocode
+/cmd/termocode/termocode
+/dist/
+
+*.test
+*.out
+coverage.txt
+
+.idea/
+.vscode/
+.claude/
+*.swp
+.DS_Store
