@@ -92,11 +92,15 @@ func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (tea.Model,
 		return m, nil
 	}
 	contentW := m.explorerWidth - 1
-	// Title-row "tree · flat" toggle lives in the right edge of the row.
-	if y == 0 {
+	// "tree · flat" toggle lives on the right edge of the sub-header row.
+	if y == gitSubheaderRow {
 		if x >= contentW-gitViewToggleWidth {
 			m.toggleGitViewMode()
 		}
+		return m, nil
+	}
+	// The title + hairline rows above the sub-header are inert.
+	if y < gitSubheaderRow {
 		return m, nil
 	}
 	// Map the click to a body row through the same scroll layout the renderer

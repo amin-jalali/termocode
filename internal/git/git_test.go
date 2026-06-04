@@ -377,18 +377,71 @@ func TestGraphLog(t *testing.T) {
 	}
 }
 
+func TestShowCommitDetail(t *testing.T) {
+	r := newGitTestRepo(t)
+	r.write(t, "a.txt", "one\ntwo\nthree\n")
+	r.git(t, "add", "a.txt")
+	r.git(t, "commit", "-q", "-m", "feat: add a.txt\n\nA longer body line.")
+	r.write(t, "a.txt", "one\ntwo\nTHREE\nfour\n")
+	r.git(t, "commit", "-q", "-am", "fix: tweak a.txt")
+
+	d, err := ShowCommitDetail(r.dir, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Subject != "fix: tweak a.txt" {
+		t.Errorf("subject = %q", d.Subject)
+	}
+	if d.Author != "Test" {
+		t.Errorf("author = %q, want Test", d.Author)
+	}
+	if d.Hash == "" || d.DateAbs == "" || d.DateRel == "" {
+		t.Errorf("missing hash/date: %+v", d)
+	}
+	// One line added, one removed (THREE replaced + four added → 2 ins, 1 del).
+	if d.Files != 1 || d.Add == 0 {
+		t.Errorf("stat files=%d add=%d del=%d, want 1 file with insertions", d.Files, d.Add, d.Del)
+	}
+
+	first, err := ShowCommitDetail(r.dir, "HEAD~1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(first.Body, "longer body") {
+		t.Errorf("body not captured: %q", first.Body)
+	}
+}
+
+func TestParseShortstat(t *testing.T) {
+	cases := []struct {
+		in              string
+		files, add, del int
+	}{
+		{" 4 files changed, 88 insertions(+), 24 deletions(-)", 4, 88, 24},
+		{" 1 file changed, 2 insertions(+)", 1, 2, 0},
+		{" 1 file changed, 3 deletions(-)", 1, 0, 3},
+		{"", 0, 0, 0},
+	}
+	for _, c := range cases {
+		f, a, d := parseShortstat(c.in)
+		if f != c.files || a != c.add || d != c.del {
+			t.Errorf("parseShortstat(%q) = %d/%d/%d, want %d/%d/%d", c.in, f, a, d, c.files, c.add, c.del)
+		}
+	}
+}
+
 func TestCompactAge(t *testing.T) {
 	cases := map[string]string{
-		"just now":       "now",
-		"3 seconds ago":  "now",
-		"5 minutes ago":  "5m",
-		"2 hours ago":    "2h",
-		"1 hour ago":     "1h",
-		"4 days ago":     "4d",
-		"2 weeks ago":    "2w",
-		"3 months ago":   "3mo",
-		"1 year ago":     "1y",
-		"":               "now",
+		"just now":      "now",
+		"3 seconds ago": "now",
+		"5 minutes ago": "5m",
+		"2 hours ago":   "2h",
+		"1 hour ago":    "1h",
+		"4 days ago":    "4d",
+		"2 weeks ago":   "2w",
+		"3 months ago":  "3mo",
+		"1 year ago":    "1y",
+		"":              "now",
 	}
 	for in, want := range cases {
 		if got := compactAge(in); got != want {
@@ -512,9 +565,9 @@ func TestDiffAgainst(t *testing.T) {
 
 func TestFileStatusFlags(t *testing.T) {
 	cases := []struct {
-		code              string
-		staged, unstaged  bool
-		untracked         bool
+		code             string
+		staged, unstaged bool
+		untracked        bool
 	}{
 		{"M ", true, false, false},
 		{" M", false, true, false},

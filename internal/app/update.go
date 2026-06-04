@@ -15,6 +15,7 @@ import (
 	"termocode/internal/confirm"
 	"termocode/internal/explorer"
 	"termocode/internal/findbar"
+	"termocode/internal/git"
 	"termocode/internal/keymap"
 	"termocode/internal/toast"
 	"termocode/internal/menu"
@@ -28,9 +29,48 @@ import (
 	"termocode/internal/tabbar"
 )
 
+// Update wraps updateInner and keeps the xterm mouse-tracking mode in sync:
+// all-motion (1003) for hover, downgraded to button-only (1002) while a text
+// input is focused so the SGR-fragmentation leak can't corrupt typed input.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	next, cmd := m.updateInner(msg)
+	nm, ok := next.(Model)
+	if !ok {
+		return next, cmd
+	}
+	// Hover card: fetch the commit metadata when the pointer moves onto a new
+	// commit row in the Source Control panel.
+	if hoverCmd := nm.updateHoverCommit(); hoverCmd != nil {
+		cmd = tea.Batch(cmd, hoverCmd)
+	}
+	want := !nm.anyTextInputOpen()
+	if want != nm.mouseAllMotion {
+		nm.mouseAllMotion = want
+		mode := tea.EnableMouseCellMotion
+		if want {
+			mode = tea.EnableMouseAllMotion
+		}
+		return nm, tea.Batch(cmd, mode)
+	}
+	return nm, cmd
+}
+
+// anyTextInputOpen reports whether a focused text field is on screen — the
+// only context where all-motion mouse events risk leaking into typed input.
+func (m Model) anyTextInputOpen() bool {
+	return m.pickerOpen || m.promptOpen || m.searchOpen || m.replaceOpen ||
+		m.settingsModalOpen || m.recentsOpen || m.findOpen
+}
+
+func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Overlay control messages always handled regardless of state.
 	switch msg := msg.(type) {
+	case commitDetailMsg:
+		if m.commitDetails == nil {
+			m.commitDetails = map[string]git.CommitDetail{}
+		}
+		m.commitDetails[msg.hash] = msg.detail
+		return m, nil
 	case picker.SelectMsg:
 		m.pickerOpen = false
 		return m, m.handlePickerSelect(msg)

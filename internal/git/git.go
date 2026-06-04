@@ -453,6 +453,75 @@ func ShowCommit(dir, hash string) (string, error) {
 	return runOut(dir, "git", "show", "--no-color", hash)
 }
 
+// CommitDetail is the rich metadata shown in the hover card for a commit.
+type CommitDetail struct {
+	Hash    string // short SHA
+	Author  string
+	Email   string
+	DateAbs string // "2026-06-04 09:24"
+	DateRel string // "4 hours ago"
+	Subject string
+	Body    string // full message body (may be multi-line)
+	Files   int
+	Add     int
+	Del     int
+}
+
+// ShowCommitDetail loads the metadata + shortstat for a single commit, used by
+// the Source Control hover card.
+func ShowCommitDetail(dir, hash string) (CommitDetail, error) {
+	const sep = "\x1f"
+	// Fields, then \x1e, then git appends the --shortstat summary line.
+	fmtArg := "--format=%h" + sep + "%an" + sep + "%ae" + sep + "%ad" + sep + "%ar" + sep + "%s" + sep + "%b" + "\x1e"
+	out, err := runOut(dir, "git", "show", "--no-color", "--shortstat",
+		"--date=format-local:%Y-%m-%d %H:%M", fmtArg, hash)
+	if err != nil {
+		return CommitDetail{}, err
+	}
+	var d CommitDetail
+	meta, tail := out, ""
+	if i := strings.IndexByte(out, '\x1e'); i >= 0 {
+		meta, tail = out[:i], out[i+1:]
+	}
+	f := strings.Split(meta, sep)
+	if len(f) >= 7 {
+		d.Hash, d.Author, d.Email = f[0], f[1], f[2]
+		d.DateAbs, d.DateRel, d.Subject = f[3], f[4], f[5]
+		d.Body = strings.TrimSpace(f[6])
+	}
+	d.Files, d.Add, d.Del = parseShortstat(tail)
+	return d, nil
+}
+
+// parseShortstat extracts the counts from git's
+// " 4 files changed, 88 insertions(+), 24 deletions(-)" summary line.
+func parseShortstat(s string) (files, add, del int) {
+	num := func(after string) int {
+		i := strings.Index(s, after)
+		if i < 0 {
+			return 0
+		}
+		// walk back over the number preceding `after`.
+		j := i
+		for j > 0 && s[j-1] == ' ' {
+			j--
+		}
+		end := j
+		for j > 0 && s[j-1] >= '0' && s[j-1] <= '9' {
+			j--
+		}
+		n := 0
+		for _, c := range s[j:end] {
+			if c < '0' || c > '9' {
+				break
+			}
+			n = n*10 + int(c-'0')
+		}
+		return n
+	}
+	return num("file"), num("insertion"), num("deletion")
+}
+
 // DiffAgainst returns the diff between HEAD and a named ref / revision.
 // `ref` can be a branch ("main"), a relative ref ("HEAD~3"), or any other
 // rev-parse-able expression. The diff covers the whole repo, not a single

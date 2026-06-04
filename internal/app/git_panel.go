@@ -1,7 +1,5 @@
 package app
 
-import "strings"
-
 // The Source Control panel is an accordion of collapsible sections —
 // CHANGES (the working-tree file list, tree or flat) and GRAPH (the current
 // branch's commit graph with merge topology). gitPanelRows flattens both
@@ -117,23 +115,17 @@ func (m Model) gitPanelRows() []gitPanelRow {
 		if len(m.gitGraph) == 0 {
 			rows = append(rows, gitPanelRow{kind: gitRowNote, note: "No commits"})
 		}
-		for i, g := range m.gitGraph {
+		for _, g := range m.gitGraph {
+			// The timeline renders each commit as a colour-coded ribbon row, so
+			// git's ASCII topology connector lines (the art-only rows) are
+			// skipped — the ribbon itself is the continuous rail.
 			if g.Hash == "" {
-				rows = append(rows, gitPanelRow{kind: gitRowConnector, art: g.Art})
 				continue
 			}
 			rows = append(rows, gitPanelRow{
 				kind: gitRowCommit, art: g.Art, hash: g.Hash, subject: g.Subject,
 				refs: g.Refs, age: g.Age, isMerge: g.IsMerge, isHead: g.IsHead,
 			})
-			// Synthesize a spine connector between two consecutive commits
-			// (linear runs) so the graph reads as a timeline. Merge topology
-			// already carries git's own connector lines, so we only add one
-			// when the next line is itself a commit.
-			if i+1 < len(m.gitGraph) && m.gitGraph[i+1].Hash != "" {
-				spine := strings.ReplaceAll(g.Art, "*", "|")
-				rows = append(rows, gitPanelRow{kind: gitRowConnector, art: spine})
-			}
 		}
 	}
 	return rows
@@ -216,15 +208,15 @@ func (m *Model) gitToggleSection(s gitSection) {
 }
 
 // gitPanelTopOffset is the screen-row index where the first panel row renders,
-// below the SOURCE CONTROL title, the optional branch line, and a blank
-// spacer. Shared by the renderer and the mouse hit-test.
+// below the explorer-style header: title (0), hairline (1), branch+toggle
+// sub-row (2), blank spacer (3). Shared by the renderer and the mouse hit-test.
 func (m Model) gitPanelTopOffset() int {
-	off := 2 // title + blank spacer
-	if m.gitBranch.Name != "" {
-		off++
-	}
-	return off
+	return 4
 }
+
+// gitSubheaderRow is the screen-row index of the branch + tree·flat sub-row,
+// where the toggle is hit-tested.
+const gitSubheaderRow = 2
 
 // gitPanelLayout computes the scrollable body geometry for the accordion at
 // panel height h: the scroll offset (top) that keeps the cursor visible, the

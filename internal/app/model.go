@@ -140,6 +140,20 @@ type Model struct {
 	gitGraphCollapsed   bool
 	gitGraph            []git.GraphLine
 
+	// VSCode-style mouse hover. hoverX/hoverY are the absolute screen cell
+	// under the pointer (or -1 when unknown). mouseAllMotion mirrors the live
+	// xterm tracking mode so the Update loop only emits a switch when it
+	// changes — all-motion for hover, downgraded to button-only while a text
+	// input is focused (avoids the SGR-fragmentation leak documented in
+	// cmd/termocode/main.go).
+	hoverX, hoverY int
+	mouseAllMotion bool
+
+	// Source Control commit hover card: the SHA the pointer is over and a
+	// cache of fetched commit metadata (author/date/body/stat) keyed by SHA.
+	hoverCommitHash string
+	commitDetails   map[string]git.CommitDetail
+
 	// problemsIndex maps picker IDs (e.g. "p-3") back to the underlying
 	// nvim.Diagnostic so jumpToProblem can decode the user's selection. Only
 	// populated while the Problems picker is open.
@@ -512,11 +526,15 @@ func New() Model {
 		keys:          keys,
 		focus:         FocusEditor,
 		showExp:       true,
-		inlayHintsOn:  true,
-		lineNumbersOn: true,
-		gitViewTree:   gitViewTree,
-		gitCollapsed:  map[string]bool{},
-		explorerWidth: defaultExplorerWidth,
+		inlayHintsOn:   true,
+		lineNumbersOn:  true,
+		gitViewTree:    gitViewTree,
+		gitCollapsed:   map[string]bool{},
+		hoverX:         -1,
+		hoverY:         -1,
+		mouseAllMotion: true,
+		commitDetails:  map[string]git.CommitDetail{},
+		explorerWidth:  defaultExplorerWidth,
 		terminalRows:  termRows,
 		actionsOpen:   actionsOpen,
 		actionsPinned: actionsPinned,

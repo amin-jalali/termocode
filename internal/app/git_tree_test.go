@@ -166,9 +166,10 @@ func TestGitPanelRows_Structure(t *testing.T) {
 		},
 	}
 	rows := m.gitPanelRows()
-	// CHANGES hdr, a.go, b.go, spacer, GRAPH hdr, commit, connector, commit = 8.
-	if len(rows) != 8 {
-		t.Fatalf("rows = %d, want 8: %+v", len(rows), rows)
+	// CHANGES hdr, a.go, b.go, spacer, GRAPH hdr, commit, commit = 7. The git
+	// "|\\" topology connector line is skipped (the ribbon is the rail).
+	if len(rows) != 7 {
+		t.Fatalf("rows = %d, want 7: %+v", len(rows), rows)
 	}
 	if rows[0].kind != gitRowSection || rows[0].section != gitSecChanges {
 		t.Errorf("row0 should be CHANGES header: %+v", rows[0])
@@ -179,19 +180,19 @@ func TestGitPanelRows_Structure(t *testing.T) {
 	if rows[4].kind != gitRowSection || rows[4].section != gitSecGraph {
 		t.Errorf("row4 should be GRAPH header: %+v", rows[4])
 	}
-	if rows[6].kind != gitRowConnector || rows[6].selectable() {
-		t.Errorf("row6 should be a non-selectable connector: %+v", rows[6])
-	}
 	if rows[5].kind != gitRowCommit || rows[5].hash != "a1b2" {
 		t.Errorf("row5 should be commit a1b2: %+v", rows[5])
+	}
+	if rows[6].kind != gitRowCommit || rows[6].hash != "c3d4" {
+		t.Errorf("row6 should be commit c3d4 (connector skipped): %+v", rows[6])
 	}
 
 	// Collapsing CHANGES hides its file rows but keeps the GRAPH section.
 	m.gitChangesCollapsed = true
 	rows = m.gitPanelRows()
-	// CHANGES hdr, spacer, GRAPH hdr, commit, connector, commit = 6.
-	if len(rows) != 6 {
-		t.Fatalf("collapsed rows = %d, want 6: %+v", len(rows), rows)
+	// CHANGES hdr, spacer, GRAPH hdr, commit, commit = 5.
+	if len(rows) != 5 {
+		t.Fatalf("collapsed rows = %d, want 5: %+v", len(rows), rows)
 	}
 	for _, r := range rows {
 		if r.kind == gitRowFile {
@@ -243,24 +244,25 @@ func TestGitPanelRows_StagedSplit(t *testing.T) {
 	}
 }
 
-func TestGitMoveCursorSkipsConnectors(t *testing.T) {
+func TestGitMoveCursorSkipsNonSelectable(t *testing.T) {
 	m := Model{
 		gitViewTree:         false,
-		gitChangesCollapsed: true, // hide files so cursor starts in the graph quickly
+		gitChangesCollapsed: true, // empty CHANGES so only the header + spacer sit above GRAPH
 		gitGraph: []git.GraphLine{
 			{Art: "* ", Hash: "a1", Subject: "x"},
-			{Art: "|\\ "}, // connector — must be skipped
+			{Art: "|\\ "}, // git topology connector — now skipped entirely
 			{Art: "* ", Hash: "b2", Subject: "y"},
 		},
 	}
-	// Rows: [0 CHANGES hdr][1 spacer][2 GRAPH hdr][3 commit a1][4 connector][5 commit b2].
+	// Rows: [0 CHANGES hdr][1 spacer][2 GRAPH hdr][3 commit a1][4 commit b2].
+	m.gitCursor = 0 // CHANGES header
+	m.gitMoveCursor(1)
+	if m.gitCursor != 2 { // skip the non-selectable spacer at index 1
+		t.Errorf("down from CHANGES header landed on %d, want 2 (skipping the spacer)", m.gitCursor)
+	}
 	m.gitCursor = 3 // commit a1
 	m.gitMoveCursor(1)
-	if m.gitCursor != 5 {
-		t.Errorf("down from commit a1 landed on %d, want 5 (skipping the connector)", m.gitCursor)
-	}
-	m.gitMoveCursor(-1)
-	if m.gitCursor != 3 {
-		t.Errorf("up from commit b2 landed on %d, want 3", m.gitCursor)
+	if m.gitCursor != 4 { // adjacent commit (no connector between)
+		t.Errorf("down from commit a1 landed on %d, want 4", m.gitCursor)
 	}
 }

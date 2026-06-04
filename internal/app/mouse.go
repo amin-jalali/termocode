@@ -12,6 +12,11 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Track the pointer cell for hover highlighting. Updated for every mouse
+	// event (motion included); the renderers decide what to highlight. The
+	// event still flows through to the click/drag handlers below.
+	m.hoverX, m.hoverY = msg.X, msg.Y
+
 	// Right-side Actions panel: click on the launcher chip re-opens (and
 	// re-pins) the panel. The chip lives one row above the status bar
 	// (msg.Y == m.h-2), so we have to handle it BEFORE the m.h-1 status-bar

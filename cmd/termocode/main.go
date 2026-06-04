@@ -163,7 +163,11 @@ func runTUI() {
 		// internal/picker/model.go and internal/prompt/model.go in
 		// case the fragmentation race somehow triggers under 1002
 		// too — it's a belt-and-suspenders.
-		tea.WithMouseCellMotion(),
+		// All-motion (xterm 1003) so the UI can react to plain hover. The
+		// Update loop downgrades to button-only (cell motion) whenever a text
+		// input is focused, which is the only place the 1003 SGR-fragmentation
+		// leak (see the note above) can corrupt typed input.
+		tea.WithMouseAllMotion(),
 	)
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
