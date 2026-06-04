@@ -1,10 +1,39 @@
 package app
 
 import (
+	"strings"
 	"testing"
+
+	"github.com/charmbracelet/lipgloss"
 
 	"termocode/internal/git"
 )
+
+// TestGitSidebarRowsFitWidth guards against the editor-shift bug: every row
+// renderGitSidebar emits must be <= the content width. A wider row grows the
+// sidebar column on JoinHorizontal and shoves the editor right — which the
+// focus-only footer hints did when they outgrew the panel.
+func TestGitSidebarRowsFitWidth(t *testing.T) {
+	const w, h = 29, 24 // contentW for the default 30-col sidebar (minus divider)
+	m := Model{
+		gitIsRepo:    true,
+		gitBranch:    git.Branch{Name: "main"},
+		gitViewTree:  true,
+		gitCollapsed: map[string]bool{},
+		focus:        FocusExplorer, // focused → footer hints render
+		gitFiles: gitFiles(
+			"internal/app/view.go",
+			"internal/app/git.go",
+			"deeply/nested/path/that/keeps/going/file.go",
+			"README.md",
+		),
+	}
+	for i, row := range strings.Split(m.renderGitSidebar(w, h), "\n") {
+		if got := lipgloss.Width(row); got > w {
+			t.Errorf("git sidebar row %d width = %d exceeds %d: %q", i, got, w, row)
+		}
+	}
+}
 
 func gitFiles(paths ...string) []git.FileStatus {
 	out := make([]git.FileStatus, len(paths))

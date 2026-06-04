@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/mattn/go-runewidth"
 
 	"termocode/internal/activity"
@@ -1359,8 +1360,8 @@ func (m Model) renderGitSidebar(w, h int) string {
 			lines = append(lines, sidebarFill.Render(strings.Repeat(" ", w)))
 		}
 		lines = append(lines,
-			padBgToWidth(gitBranchStyle.Render(" s stage  d diff  c commit  t tree"), w),
-			padBgToWidth(gitBranchStyle.Render(" x discard  r refresh  ↵ open/fold"), w),
+			padBgToWidth(gitBranchStyle.Render(" s stage  d diff  c commit"), w),
+			padBgToWidth(gitBranchStyle.Render(" x discard  r refresh  t tree"), w),
 		)
 	}
 
@@ -1534,10 +1535,7 @@ func renderGitTreeDir(name string, depth int, expanded, active, focused bool, w 
 	}
 	sb.WriteString(nameStyle.Render(name))
 	used += runewidth.StringWidth(name)
-	if pad := w - used; pad > 0 {
-		sb.WriteString(rowStyle.Render(strings.Repeat(" ", pad)))
-	}
-	return sb.String()
+	return clampSidebarRow(sb.String(), used, w, rowStyle)
 }
 
 // renderGitTreeFile renders a file row inside the tree: indent guides, the
@@ -1566,10 +1564,20 @@ func renderGitTreeFile(f git.FileStatus, depth int, active, focused bool, w int)
 	}
 	sb.WriteString(nameStyle.Render(name))
 	used += runewidth.StringWidth(name)
-	if pad := w - used; pad > 0 {
-		sb.WriteString(rowStyle.Render(strings.Repeat(" ", pad)))
+	return clampSidebarRow(sb.String(), used, w, rowStyle)
+}
+
+// clampSidebarRow forces a styled sidebar row to exactly w cells: pad with
+// the row's own background when short (so a cursor/selected row keeps its
+// highlight to the edge), or ANSI-truncate when an extreme indent depth
+// pushes it past w (so it can't widen the sidebar and shift the editor).
+func clampSidebarRow(row string, width, w int, rowStyle lipgloss.Style) string {
+	if pad := w - width; pad > 0 {
+		return row + rowStyle.Render(strings.Repeat(" ", pad))
+	} else if width > w {
+		return ansi.Truncate(row, w, "")
 	}
-	return sb.String()
+	return row
 }
 
 // leftEllipsize keeps the tail of s and prepends "…" when the string is wider
@@ -1628,11 +1636,18 @@ func padToWidth(s string, w int) string {
 
 // padBgToWidth pads with the sidebar bg so empty space stays the panel color.
 func padBgToWidth(s string, w int) string {
-	pad := w - lipgloss.Width(s)
-	if pad <= 0 {
-		return s
+	width := lipgloss.Width(s)
+	if width > w {
+		// Truncate over-wide rows. A row wider than the sidebar would widen
+		// the whole sidebar column on JoinHorizontal and shove the editor
+		// right (e.g. a focus-only footer hint or a long branch name).
+		// ANSI-aware so we never slice through an SGR escape.
+		return ansi.Truncate(s, w, "")
 	}
-	return s + sidebarFill.Render(strings.Repeat(" ", pad))
+	if pad := w - width; pad > 0 {
+		return s + sidebarFill.Render(strings.Repeat(" ", pad))
+	}
+	return s
 }
 
 func placeholderSidebar(w, h int, title, body string) string {
