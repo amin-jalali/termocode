@@ -453,6 +453,18 @@ func ShowCommit(dir, hash string) (string, error) {
 	return runOut(dir, "git", "show", "--no-color", hash)
 }
 
+// ShowFileAtRevision returns a file's contents at a revision
+// (`git show <rev>:<path>`). When the path doesn't exist at that revision —
+// e.g. a newly-added/untracked file — it returns ("", nil) so callers can
+// treat the "before" side as empty rather than an error.
+func ShowFileAtRevision(dir, rev, path string) (string, error) {
+	out, err := runOut(dir, "git", "show", "--no-color", rev+":"+path)
+	if err != nil {
+		return "", nil
+	}
+	return out, nil
+}
+
 // CommitDetail is the rich metadata shown in the hover card for a commit.
 type CommitDetail struct {
 	Hash    string // short SHA

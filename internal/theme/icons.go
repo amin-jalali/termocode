@@ -132,9 +132,18 @@ var (
 	IconFile         = Icon{NerdFont: "", Unicode: "·", ASCII: " "}
 )
 
+// Source Control "view as tree / view as list" toggle — the VSCode SCM
+// codicons (list-tree / list-flat). Shown for the CURRENT mode; clicking
+// switches. ASCII keeps the words so the toggle stays legible without a
+// Nerd Font.
+var (
+	IconViewTree = Icon{NerdFont: "", Unicode: "⊟", ASCII: "tree"}
+	IconViewFlat = Icon{NerdFont: "", Unicode: "≡", ASCII: "flat"}
+)
+
 // Status-bar markers.
 var (
-	IconBranch  = Icon{NerdFont: "", Unicode: "⑂", ASCII: "git:"}
+	IconBranch  = Icon{NerdFont: "", Unicode: "⑂", ASCII: "git:"}
 	IconError   = Icon{NerdFont: "", Unicode: "✗", ASCII: "E"}
 	IconWarning = Icon{NerdFont: "", Unicode: "⚠", ASCII: "W"}
 	IconDirty   = Icon{NerdFont: "●", Unicode: "●", ASCII: "*"}

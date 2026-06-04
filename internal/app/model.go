@@ -154,6 +154,12 @@ type Model struct {
 	hoverCommitHash string
 	commitDetails   map[string]git.CommitDetail
 
+	// Side-by-side diff: while one is showing, the pointer drives scrolling.
+	// gitDiffHoverPane is the diff pane last under the pointer (0=left,
+	// 1=right, -1=unknown) so we only re-focus when it crosses the split.
+	gitDiffActive    bool
+	gitDiffHoverPane int
+
 	// problemsIndex maps picker IDs (e.g. "p-3") back to the underlying
 	// nvim.Diagnostic so jumpToProblem can decode the user's selection. Only
 	// populated while the Problems picker is open.
@@ -530,10 +536,11 @@ func New() Model {
 		lineNumbersOn:  true,
 		gitViewTree:    gitViewTree,
 		gitCollapsed:   map[string]bool{},
-		hoverX:         -1,
-		hoverY:         -1,
-		mouseAllMotion: true,
-		commitDetails:  map[string]git.CommitDetail{},
+		hoverX:           -1,
+		hoverY:           -1,
+		mouseAllMotion:   true,
+		commitDetails:    map[string]git.CommitDetail{},
+		gitDiffHoverPane: -1,
 		explorerWidth:  defaultExplorerWidth,
 		terminalRows:  termRows,
 		actionsOpen:   actionsOpen,

@@ -184,6 +184,12 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.preview.SetSize(m.w, m.h)
 		m.previewOpen = true
 		return m, nil
+	case gitDiffReadyMsg:
+		m.openSideBySideDiff(msg)
+		return m, nil
+	case gitCommitDiffReadyMsg:
+		m.openCommitDiffBuffer(msg)
+		return m, nil
 	case preview.CloseMsg:
 		m.previewOpen = false
 		return m, nil

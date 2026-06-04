@@ -511,6 +511,41 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	// Side-by-side diff: the pointer drives a synchronized scroll. A raw mouse
+	// wheel scrolls only the window under it and never propagates through
+	// 'scrollbind', so we translate the wheel into a keyboard scroll on the
+	// current window (which scrollbind DOES mirror to the partner) and keep the
+	// current window matched to whichever pane the pointer is over.
+	if m.gitDiffActive && m.nvim != nil {
+		switch msg.Type {
+		case tea.MouseWheelUp:
+			_ = m.nvim.Input("3\x19") // 3<C-y>
+			return m, nil
+		case tea.MouseWheelDown:
+			_ = m.nvim.Input("3\x05") // 3<C-e>
+			return m, nil
+		case tea.MouseMotion:
+			edPaneW := m.w - activity.Width - editorScrollbarWidth
+			if m.showExp {
+				edPaneW -= m.explorerWidth
+			}
+			pane := 0
+			if edPaneW > 0 && localX >= edPaneW/2 {
+				pane = 1
+			}
+			if pane != m.gitDiffHoverPane {
+				m.gitDiffHoverPane = pane
+				dir := "h"
+				if pane == 1 {
+					dir = "l"
+				}
+				// stopinsert undoes the global "enter modifiable buffer →
+				// startinsert" autocmd that fires on the working pane.
+				_ = m.nvim.Command("wincmd " + dir + " | stopinsert")
+			}
+		}
+	}
+
 	var cmd tea.Cmd
 	m.editor, cmd = m.editor.HandleMouse(localX, localY, msg.Type)
 	return m, cmd

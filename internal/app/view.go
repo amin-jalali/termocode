@@ -1499,10 +1499,21 @@ func renderGitFile(f git.FileStatus, active, focused bool, w int) string {
 // gitViewIconTree / gitViewIconFlat are the 1-cell glyphs shown at the right
 // edge of the SOURCE CONTROL title row. The glyph reflects the CURRENT mode;
 // clicking it (or pressing `t`) toggles to the other.
-// gitViewToggleWidth is the on-screen width of the "tree · flat" toggle and
+// gitViewToggleWidth is the on-screen width of the view-mode toggle glyph plus
 // its trailing breather; handleGitSidebarMouse hit-tests the right edge of the
-// title row against it.
-const gitViewToggleWidth = 12 // "tree · flat" (11) + 1 trailing pad
+// sub-header row against it. The width depends on the icon mode (a Nerd-Font
+// glyph is 1 cell; the ASCII fallback is the 4-cell word).
+func gitViewToggleWidth(viewTree bool) int {
+	return lipgloss.Width(gitViewToggleGlyph(viewTree)) + 1
+}
+
+// gitViewToggleGlyph is the toggle's glyph for the current view mode.
+func gitViewToggleGlyph(viewTree bool) string {
+	if viewTree {
+		return theme.IconViewTree.String()
+	}
+	return theme.IconViewFlat.String()
+}
 
 // renderGitTitleRow draws the letter-spaced " S O U R C E   C O N T R O L "
 // title, mirroring the file-explorer's "E X P L O R E R" header. Falls back to
@@ -1536,19 +1547,21 @@ func renderGitSubheader(b git.Branch, viewTree bool, w int) string {
 	branchStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#6fd0bd")).Bold(true)
 	aheadStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#73c991"))
 	behindStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#e2c08d"))
-	dim := lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#5f5f5f"))
 	on := lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#4ec9e0")).Bold(true)
 
-	treeStyle, flatStyle := dim, on
-	if viewTree {
-		treeStyle, flatStyle = on, dim
-	}
-	toggle := treeStyle.Render("tree") + dim.Render(" · ") + flatStyle.Render("flat")
-	const toggleW = 11
+	toggleGlyph := gitViewToggleGlyph(viewTree)
+	toggle := on.Render(toggleGlyph)
+	toggleW := lipgloss.Width(toggleGlyph)
 
 	var sb strings.Builder
 	sb.WriteString(rowStyle.Render(" "))
 	used := 1
+	// Branch glyph, then the branch name.
+	if bi := theme.IconBranch.String(); bi != "" {
+		sb.WriteString(branchStyle.Render(bi))
+		sb.WriteString(rowStyle.Render(" "))
+		used += lipgloss.Width(bi) + 1
+	}
 	if b.Name != "" {
 		sync := ""
 		if b.Ahead > 0 {

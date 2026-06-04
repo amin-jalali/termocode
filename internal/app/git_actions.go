@@ -164,26 +164,114 @@ func (m *Model) gitStageToggle() tea.Cmd {
 	return tea.Batch(fetchGitCmd(), toastCmd)
 }
 
-// gitDiffCmd loads the diff for the current file and opens it in the preview
-// overlay. ANSI-coloured per-line so additions/removals stand out.
+// gitDiffReadyMsg carries the HEAD version of a file (written to a temp file)
+// so the main loop can set up the Neovim side-by-side diff.
+type gitDiffReadyMsg struct {
+	workPath string // absolute path of the working file (right pane)
+	headPath string // temp file holding the HEAD version (left pane)
+	name     string // display name for the left (HEAD) buffer
+}
+
+// gitDiffCmd opens the current file's changes as a Neovim-native side-by-side
+// diff (VSCode style): the HEAD revision on the left, the working tree on the
+// right, with nvim's own diff highlighting. The HEAD blob is fetched off the
+// main loop and handed back via gitDiffReadyMsg.
 func (m Model) gitDiffCmd() tea.Cmd {
 	fi, ok := m.gitCurrentFileIndex()
 	if !ok {
 		return nil
 	}
-	path := m.gitFiles[fi].Path
+	rel := m.gitFiles[fi].Path
+	abs := gitFileAbsPath(rel)
+	name := filepath.Base(rel) + " (HEAD)"
 	return func() tea.Msg {
 		cwd, err := os.Getwd()
 		if err != nil {
 			return ErrMsg{Err: err}
 		}
-		raw, err := git.Diff(cwd, path)
+		head, _ := git.ShowFileAtRevision(cwd, "HEAD", rel)
+		tmp, err := os.CreateTemp("", "termocode-diff-*")
 		if err != nil {
 			return ErrMsg{Err: err}
 		}
-		body := colorizeDiff(raw)
-		return PreviewMsg{Title: "diff · " + path, Body: body}
+		_, _ = tmp.WriteString(head)
+		_ = tmp.Close()
+		return gitDiffReadyMsg{workPath: abs, headPath: tmp.Name(), name: name}
 	}
+}
+
+// openSideBySideDiff sets up the two-pane nvim diff for a gitDiffReadyMsg:
+// the working file on the right, a read-only HEAD scratch buffer on the left,
+// both in diff mode. Runs on the main loop (ExecLua is synchronous, so the
+// temp file is safe to remove afterwards).
+func (m *Model) openSideBySideDiff(msg gitDiffReadyMsg) {
+	if m.nvim == nil {
+		return
+	}
+	m.ensureEditorWindowCurrent()
+	if err := m.nvim.ExecLua(buildDiffLua(msg.workPath, msg.headPath, msg.name)); err != nil {
+		m.err = "diff: " + err.Error()
+	}
+	_ = os.Remove(msg.headPath)
+	m.focus = FocusEditor
+	// The pointer now drives synced scrolling between the two panes.
+	m.gitDiffActive = true
+	m.gitDiffHoverPane = -1
+}
+
+// buildDiffLua returns the Lua that opens the working file, splits a read-only
+// HEAD scratch buffer to its left, and puts both into diff mode.
+func buildDiffLua(work, head, name string) string {
+	esc := func(s string) string {
+		s = strings.ReplaceAll(s, `\`, `\\`)
+		return strings.ReplaceAll(s, `"`, `\"`)
+	}
+	return fmt.Sprintf(`
+local work, head, name = "%s", "%s", "%s"
+-- Clear, high-contrast diff highlights so changes are obvious.
+vim.api.nvim_set_hl(0, 'DiffAdd',    { bg = '#16361f' })
+vim.api.nvim_set_hl(0, 'DiffChange', { bg = '#2a2a18' })
+vim.api.nvim_set_hl(0, 'DiffText',   { bg = '#4a4a1f', bold = true })
+vim.api.nvim_set_hl(0, 'DiffDelete', { bg = '#3a1818', fg = '#6a2a2a' })
+-- Close any prior diff scratch pane and clear diff mode so re-diffing
+-- replaces the view instead of stacking splits.
+for _, w in ipairs(vim.api.nvim_list_wins()) do
+  local b = vim.api.nvim_win_get_buf(w)
+  local ok2, v = pcall(vim.api.nvim_buf_get_var, b, 'termocode_diff')
+  if ok2 and v then pcall(vim.api.nvim_win_close, w, true) end
+end
+pcall(vim.cmd, 'diffoff!')
+-- Working tree on the right.
+vim.cmd('edit ' .. vim.fn.fnameescape(work))
+local ft = vim.bo.filetype
+vim.cmd('diffthis')
+vim.wo.scrollbind = true
+vim.wo.foldenable = false
+-- HEAD revision on the left, in a read-only scratch buffer. We set 'syntax'
+-- (NOT 'filetype') so the pane is highlighted without firing the FileType
+-- autocmd that would attach an LSP to a throwaway nofile buffer (and hang).
+vim.cmd('leftabove vnew')
+local buf = vim.api.nvim_get_current_buf()
+vim.bo[buf].buftype = 'nofile'
+vim.bo[buf].swapfile = false
+vim.bo[buf].buflisted = false
+vim.bo[buf].bufhidden = 'wipe'
+vim.api.nvim_buf_set_var(buf, 'termocode_diff', true)
+local ok, lines = pcall(vim.fn.readfile, head)
+if ok then vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines) end
+vim.bo[buf].modifiable = false
+if ft ~= '' then pcall(function() vim.bo[buf].syntax = ft end) end
+pcall(vim.api.nvim_buf_set_name, buf, name)
+vim.cmd('diffthis')
+vim.wo.scrollbind = true
+vim.wo.foldenable = false
+-- Native 'scrollbind' keeps the panes aligned with zero per-event cost (no
+-- cursorbind, no WinScrolled autocmd — those made scrolling slow and dragged
+-- the cursor around). Land on the working (right) side in normal mode.
+vim.cmd('syncbind')
+vim.cmd('wincmd l')
+vim.cmd('stopinsert')
+`, esc(work), esc(head), esc(name))
 }
 
 // openCommitPrompt asks for a commit message via the standard prompt overlay.
@@ -820,9 +908,17 @@ func (m *Model) showCommitFromPicker(id string) tea.Cmd {
 	return m.gitShowCommitCmd(strings.TrimPrefix(id, "commit-"))
 }
 
-// gitShowCommitCmd loads a commit's full diff (`git show <hash>`) and opens it
-// in the preview overlay. Shared by the log picker and the Source Control
-// graph's click-to-diff.
+// gitCommitDiffReadyMsg carries a commit's full diff (written to a temp file)
+// so the main loop can open it in a Neovim diff buffer.
+type gitCommitDiffReadyMsg struct {
+	path string // temp file holding `git show <hash>`
+	name string // display name for the buffer
+}
+
+// gitShowCommitCmd loads a commit's full diff (`git show <hash>`) and opens it,
+// GitLab-style, as a single scrollable Neovim buffer (filetype=diff) with every
+// changed file stacked and syntax-highlighted. Shared by the log picker and the
+// Source Control graph's click-to-diff.
 func (m *Model) gitShowCommitCmd(hash string) tea.Cmd {
 	if hash == "" {
 		return nil
@@ -836,8 +932,68 @@ func (m *Model) gitShowCommitCmd(hash string) tea.Cmd {
 		if err != nil {
 			return ErrMsg{Err: err}
 		}
-		return PreviewMsg{Title: "commit · " + hash, Body: colorizeDiff(body)}
+		tmp, err := os.CreateTemp("", "termocode-commit-*.diff")
+		if err != nil {
+			return ErrMsg{Err: err}
+		}
+		_, _ = tmp.WriteString(body)
+		_ = tmp.Close()
+		return gitCommitDiffReadyMsg{path: tmp.Name(), name: hash + " · commit"}
 	}
+}
+
+// openCommitDiffBuffer renders a commit's diff into a read-only, syntax-
+// highlighted Neovim buffer in the editor window (GitLab-style single page).
+func (m *Model) openCommitDiffBuffer(msg gitCommitDiffReadyMsg) {
+	if m.nvim == nil {
+		return
+	}
+	m.ensureEditorWindowCurrent()
+	if err := m.nvim.ExecLua(buildCommitDiffLua(msg.path, msg.name)); err != nil {
+		m.err = "diff: " + err.Error()
+	}
+	_ = os.Remove(msg.path)
+	m.focus = FocusEditor
+	m.gitDiffActive = false // single scrollable buffer — no pane sync needed
+}
+
+// buildCommitDiffLua loads the diff temp file into a read-only nofile buffer in
+// the current (editor) window, sets filetype=diff for highlighting, and tunes
+// the diff syntax colours so adds/removes/headers stand out.
+func buildCommitDiffLua(path, name string) string {
+	esc := func(s string) string {
+		s = strings.ReplaceAll(s, `\`, `\\`)
+		return strings.ReplaceAll(s, `"`, `\"`)
+	}
+	return fmt.Sprintf(`
+local path, name = "%s", "%s"
+vim.api.nvim_set_hl(0, 'diffAdded',   { fg = '#73c991' })
+vim.api.nvim_set_hl(0, 'diffRemoved', { fg = '#e2756a' })
+vim.api.nvim_set_hl(0, 'diffLine',    { fg = '#569cd6' })
+vim.api.nvim_set_hl(0, 'diffFile',    { fg = '#dcdcaa', bold = true })
+vim.api.nvim_set_hl(0, 'diffIndexLine', { fg = '#808080' })
+-- Close any prior diff panes (side-by-side or commit) before reusing the window.
+for _, w in ipairs(vim.api.nvim_list_wins()) do
+  local b = vim.api.nvim_win_get_buf(w)
+  local ok2, v = pcall(vim.api.nvim_buf_get_var, b, 'termocode_diff')
+  if ok2 and v then pcall(vim.api.nvim_win_close, w, true) end
+end
+pcall(vim.cmd, 'diffoff!')
+vim.cmd('enew')
+local buf = vim.api.nvim_get_current_buf()
+vim.bo[buf].buftype = 'nofile'
+vim.bo[buf].swapfile = false
+vim.bo[buf].buflisted = false
+vim.bo[buf].bufhidden = 'wipe'
+vim.api.nvim_buf_set_var(buf, 'termocode_diff', true)
+local ok, lines = pcall(vim.fn.readfile, path)
+if ok then vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines) end
+vim.bo[buf].modifiable = false
+vim.bo[buf].filetype = 'diff'
+pcall(vim.api.nvim_buf_set_name, buf, name)
+pcall(vim.api.nvim_win_set_cursor, 0, { 1, 0 })
+vim.cmd('stopinsert')
+`, esc(path), esc(name))
 }
 
 // openCompareWithRevisionPrompt asks the user for a revision/branch to

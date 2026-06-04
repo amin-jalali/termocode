@@ -92,9 +92,9 @@ func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (tea.Model,
 		return m, nil
 	}
 	contentW := m.explorerWidth - 1
-	// "tree · flat" toggle lives on the right edge of the sub-header row.
+	// The view-mode toggle glyph lives on the right edge of the sub-header row.
 	if y == gitSubheaderRow {
-		if x >= contentW-gitViewToggleWidth {
+		if x >= contentW-gitViewToggleWidth(m.gitViewTree) {
 			m.toggleGitViewMode()
 		}
 		return m, nil
