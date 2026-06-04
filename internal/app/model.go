@@ -712,6 +712,31 @@ func (m Model) attachCmd() tea.Cmd {
 		_ = m.nvim.Command(`highlight TrailingWhitespace guibg=#3c1f1f`)
 		_ = m.nvim.Command("autocmd TermOpen * startinsert")
 		_ = m.nvim.Command("autocmd BufEnter,WinEnter * if &buftype == 'terminal' | startinsert | endif")
+		// Restore editor chrome (line-number gutter, signcolumn, cursorline,
+		// custom statuscolumn) whenever a normal file buffer enters a window.
+		// openTerminalPanel strips all of these WINDOW-LOCAL from the terminal
+		// split; without this, a file buffer that ever lands in that window —
+		// e.g. the shell exited and nvim reused the de-chromed window — renders
+		// with no line numbers, shifted hard left, and no indent guides. The
+		// number column honours the global `set number` toggle (vim.o.number),
+		// so toggling line numbers off still works; statuscolumn mirrors it so
+		// `%=%l` doesn't keep drawing numbers after a toggle-off. Idempotent on
+		// already-correct windows, so firing on every BufWinEnter is cheap.
+		_ = m.nvim.ExecLua(`
+			vim.api.nvim_create_autocmd({'BufWinEnter', 'WinEnter'}, {
+				callback = function(ev)
+					if vim.bo[ev.buf].buftype ~= '' then return end
+					local w = vim.api.nvim_get_current_win()
+					pcall(function()
+						vim.wo[w].number       = vim.o.number
+						vim.wo[w].signcolumn   = 'auto'
+						vim.wo[w].cursorline   = true
+						vim.wo[w].foldcolumn   = '0'
+						vim.wo[w].statuscolumn = vim.o.number and '%=%l  ' or ''
+					end)
+				end,
+			})
+		`)
 		// A left-click anywhere INSIDE a terminal-buffer window drops nvim
 		// out of terminal-insert into Terminal-Normal mode (`nt`) — by
 		// design in nvim with `mouse=a`, but it makes the integrated
