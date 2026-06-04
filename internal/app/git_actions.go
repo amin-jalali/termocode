@@ -35,7 +35,16 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 	if !m.gitIsRepo {
 		return m, nil, false
 	}
-	n := len(m.gitFiles)
+	// Navigation and selection operate over the visible rows (file rows plus,
+	// in tree mode, directory headers) so tree and flat share one cursor model.
+	rows := m.gitVisibleRows()
+	n := len(rows)
+	cur := func() (gitVisRow, bool) {
+		if m.gitCursor >= 0 && m.gitCursor < len(rows) {
+			return rows[m.gitCursor], true
+		}
+		return gitVisRow{}, false
+	}
 
 	switch msg.Type {
 	case tea.KeyDown:
@@ -48,11 +57,29 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 			m.gitCursor = clampInt(m.gitCursor-1, 0, n-1)
 		}
 		return m, nil, true
+	case tea.KeyLeft:
+		// Collapse the directory under the cursor (or the file's parent dir).
+		if r, ok := cur(); ok {
+			if r.IsDir && !m.gitCollapsed[r.DirPath] {
+				m.gitToggleCollapse(r.DirPath)
+			}
+		}
+		return m, nil, true
+	case tea.KeyRight:
+		if r, ok := cur(); ok && r.IsDir && m.gitCollapsed[r.DirPath] {
+			m.gitToggleCollapse(r.DirPath)
+		}
+		return m, nil, true
 	case tea.KeyEnter:
-		if n == 0 {
+		r, ok := cur()
+		if !ok {
 			return m, nil, true
 		}
-		path := gitFileAbsPath(m.gitFiles[m.gitCursor].Path)
+		if r.IsDir {
+			m.gitToggleCollapse(r.DirPath)
+			return m, nil, true
+		}
+		path := gitFileAbsPath(m.gitFiles[r.FileIndex].Path)
 		if m.nvim != nil {
 			m.ensureEditorWindowCurrent()
 			_ = m.nvim.Command("edit " + path)
@@ -95,6 +122,9 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 			return m, nil, true
 		case 'r':
 			return m, fetchGitCmd(), true
+		case 't':
+			m.toggleGitViewMode()
+			return m, nil, true
 		}
 	}
 	return m, nil, false
@@ -105,10 +135,11 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 // and unstaged changes get the unstaged ones promoted to the index — that
 // matches VSCode's "Stage" affordance and is the more useful default.
 func (m *Model) gitStageToggle() tea.Cmd {
-	if len(m.gitFiles) == 0 {
+	fi, ok := m.gitCurrentFileIndex()
+	if !ok {
 		return nil
 	}
-	f := m.gitFiles[m.gitCursor]
+	f := m.gitFiles[fi]
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil
@@ -135,10 +166,11 @@ func (m *Model) gitStageToggle() tea.Cmd {
 // gitDiffCmd loads the diff for the current file and opens it in the preview
 // overlay. ANSI-coloured per-line so additions/removals stand out.
 func (m Model) gitDiffCmd() tea.Cmd {
-	if len(m.gitFiles) == 0 {
+	fi, ok := m.gitCurrentFileIndex()
+	if !ok {
 		return nil
 	}
-	path := m.gitFiles[m.gitCursor].Path
+	path := m.gitFiles[fi].Path
 	return func() tea.Msg {
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -178,10 +210,11 @@ func (m *Model) openCommitPrompt() {
 // openGitDiscardConfirm wires up the standard confirm dialog for the destructive
 // "Discard Changes" action.
 func (m *Model) openGitDiscardConfirm() {
-	if len(m.gitFiles) == 0 {
+	fi, ok := m.gitCurrentFileIndex()
+	if !ok {
 		return
 	}
-	f := m.gitFiles[m.gitCursor]
+	f := m.gitFiles[fi]
 	m.confirm = confirm.New(
 		"Discard changes?",
 		fmt.Sprintf("This will revert \"%s\" to its last committed state. This cannot be undone.", f.Path),

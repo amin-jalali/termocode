@@ -121,7 +121,16 @@ type Model struct {
 	gitIsRepo bool
 	gitBranch git.Branch
 	gitFiles  []git.FileStatus
-	gitCursor int // index into gitFiles for ViewGit sidebar
+	gitCursor int // index into gitVisibleRows() for the ViewGit sidebar
+
+	// gitViewTree selects the Source-Control file list layout: true renders a
+	// collapsible directory tree (the default, like the file explorer), false
+	// a flat one-row-per-file list. Persisted in the session file.
+	gitViewTree bool
+	// gitCollapsed holds the repo-relative paths of directories the user has
+	// collapsed in tree view. Absent = expanded, so a fresh tree starts fully
+	// open. In-memory only (not persisted across runs).
+	gitCollapsed map[string]bool
 
 	// problemsIndex maps picker IDs (e.g. "p-3") back to the underlying
 	// nvim.Diagnostic so jumpToProblem can decode the user's selection. Only
@@ -477,6 +486,14 @@ func New() Model {
 		actionsWidth = sess.ActionsWidth
 	}
 
+	// Source Control file list defaults to the collapsible tree view. A
+	// persisted preference (pointer, so an explicit prior choice wins over
+	// the default) overrides it.
+	gitViewTree := true
+	if sess.GitViewTree != nil {
+		gitViewTree = *sess.GitViewTree
+	}
+
 	m := Model{
 		activity:      activity.New(),
 		explorer:      explorer.New(),
@@ -489,6 +506,8 @@ func New() Model {
 		showExp:       true,
 		inlayHintsOn:  true,
 		lineNumbersOn: true,
+		gitViewTree:   gitViewTree,
+		gitCollapsed:  map[string]bool{},
 		explorerWidth: defaultExplorerWidth,
 		terminalRows:  termRows,
 		actionsOpen:   actionsOpen,

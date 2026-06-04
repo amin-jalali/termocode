@@ -37,6 +37,11 @@ type SessionState struct {
 	ActionsOpen   *bool `json:"actions_open,omitempty"`
 	ActionsPinned *bool `json:"actions_pinned,omitempty"`
 	ActionsWidth  int   `json:"actions_width,omitempty"`
+
+	// GitViewTree is the Source-Control file list layout preference: tree
+	// (true) vs flat list (false). Pointer so an unset field (nil) falls back
+	// to the tree default while an explicit choice survives a relaunch.
+	GitViewTree *bool `json:"git_view_tree,omitempty"`
 }
 
 func sessionPath() (string, error) {

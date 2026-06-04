@@ -69,30 +69,44 @@ func (m Model) gitStatusMap() map[string]string {
 	return out
 }
 
-// handleGitSidebarMouse processes a click inside the Git sidebar.
+// handleGitSidebarMouse processes a click inside the Git sidebar. x is
+// sidebar-relative (0 = first column), y is absolute with the title at row 0.
+//
+//   - Clicking the tree/flat glyph on the title row toggles the view mode.
+//   - Clicking a directory header folds/unfolds it.
+//   - Clicking a changed file shows its diff (VSCode-style single click).
 func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (tea.Model, tea.Cmd) {
 	if t != tea.MouseLeft {
 		return m, nil
 	}
 	m.focus = FocusExplorer
-	if !m.gitIsRepo || len(m.gitFiles) == 0 {
+	if !m.gitIsRepo {
 		return m, nil
 	}
-	// Header layout: title (1) + branch line (1 if present) + blank (1) + count (1) + files...
+	// Title-row tree/flat toggle glyph lives in the right ~2 cells.
+	if y == 0 {
+		if x >= m.explorerWidth-3 {
+			m.toggleGitViewMode()
+		}
+		return m, nil
+	}
+	if len(m.gitFiles) == 0 {
+		return m, nil
+	}
+	// Header layout: title (1) + branch line (1 if present) + blank (1) + count (1) + rows...
 	header := 3
 	if m.gitBranch.Name != "" {
 		header = 4
 	}
 	idx := y - header
-	if idx < 0 || idx >= len(m.gitFiles) {
+	rows := m.gitVisibleRows()
+	if idx < 0 || idx >= len(rows) {
 		return m, nil
 	}
 	m.gitCursor = idx
-	path := gitFileAbsPath(m.gitFiles[idx].Path)
-	if m.nvim != nil {
-		m.ensureEditorWindowCurrent()
-		_ = m.nvim.Command("edit " + path)
+	if rows[idx].IsDir {
+		m.gitToggleCollapse(rows[idx].DirPath)
+		return m, nil
 	}
-	m.focus = FocusEditor
-	return m, nil
+	return m, m.gitDiffCmd()
 }

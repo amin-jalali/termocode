@@ -86,6 +86,8 @@ type overflowMenuContext struct {
 	ZenModeOn       bool
 	AutoSaveOn      bool
 	TerminalTabsLen int // # of integrated-terminal tabs (>1 → cycling makes sense)
+	GitRepo         bool // cwd is a git repo → Source Control toggles apply
+	GitTreeView     bool // Source Control list is in tree (vs flat) mode
 }
 
 // overflowMenuItem is one row of the dropdown. Visible/Checked may be nil
@@ -124,6 +126,8 @@ func (m Model) overflowMenuContextSnapshot() overflowMenuContext {
 		ZenModeOn:       m.zenMode,
 		AutoSaveOn:      m.autoSaveOn,
 		TerminalTabsLen: len(m.terminalTabs),
+		GitRepo:         m.gitIsRepo,
+		GitTreeView:     m.gitViewTree,
 	}
 }
 
@@ -559,6 +563,13 @@ func overflowMenuAllItems(hints map[keymap.Action]string) []overflowMenuItem {
 			group:   groupGeneral,
 			checked: func(c overflowMenuContext) bool { return c.LineNumOn },
 			action:  toggleLineNumbersAction,
+		},
+		{
+			label:   "Source Control: View as Tree",
+			group:   groupGeneral,
+			visible: func(c overflowMenuContext) bool { return c.GitRepo },
+			checked: func(c overflowMenuContext) bool { return c.GitTreeView },
+			action:  func(m *Model) tea.Cmd { m.toggleGitViewMode(); return nil },
 		},
 		{
 			label:    "Zen Mode",

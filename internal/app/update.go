@@ -544,9 +544,9 @@ end
 		m.gitIsRepo = msg.IsRepo
 		m.gitBranch = msg.Branch
 		m.gitFiles = msg.Files
-		if m.gitCursor >= len(m.gitFiles) {
-			m.gitCursor = 0
-		}
+		// Clamp against the visible-row count: tree mode interleaves dir
+		// headers, so the row count differs from len(gitFiles).
+		m.gitClampCursor()
 		return m, nil, true
 	case nvim.ErrMsg:
 		m.err = msg.Err.Error()

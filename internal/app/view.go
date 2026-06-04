@@ -1319,7 +1319,7 @@ func (m Model) renderGitSidebar(w, h int) string {
 	}
 
 	var lines []string
-	lines = append(lines, padBgToWidth(gitTitleStyle.Render(" SOURCE CONTROL"), w))
+	lines = append(lines, renderGitTitleRow(m.gitViewTree, w))
 	if m.gitBranch.Name != "" {
 		text := " " + m.gitBranch.Name
 		if m.gitBranch.Ahead > 0 {
@@ -1337,8 +1337,16 @@ func (m Model) renderGitSidebar(w, h int) string {
 	} else {
 		lines = append(lines, padBgToWidth(gitTitleStyle.Render(fmt.Sprintf(" CHANGES (%d)", len(m.gitFiles))), w))
 		focused := m.focus == FocusExplorer
-		for i, f := range m.gitFiles {
-			lines = append(lines, renderGitFile(f, i == m.gitCursor, focused, w))
+		for i, r := range m.gitVisibleRows() {
+			active := i == m.gitCursor
+			switch {
+			case r.IsDir:
+				lines = append(lines, renderGitTreeDir(r.Name, r.Depth, !m.gitCollapsed[r.DirPath], active, focused, w))
+			case m.gitViewTree:
+				lines = append(lines, renderGitTreeFile(m.gitFiles[r.FileIndex], r.Depth, active, focused, w))
+			default:
+				lines = append(lines, renderGitFile(m.gitFiles[r.FileIndex], active, focused, w))
+			}
 		}
 	}
 
@@ -1351,8 +1359,8 @@ func (m Model) renderGitSidebar(w, h int) string {
 			lines = append(lines, sidebarFill.Render(strings.Repeat(" ", w)))
 		}
 		lines = append(lines,
-			padBgToWidth(gitBranchStyle.Render(" s stage  d diff  c commit"), w),
-			padBgToWidth(gitBranchStyle.Render(" x discard  r refresh  ↵ open"), w),
+			padBgToWidth(gitBranchStyle.Render(" s stage  d diff  c commit  t tree"), w),
+			padBgToWidth(gitBranchStyle.Render(" x discard  r refresh  ↵ open/fold"), w),
 		)
 	}
 
@@ -1429,6 +1437,135 @@ func renderGitFile(f git.FileStatus, active, focused bool, w int) string {
 	if dir != "" {
 		used += 2 + runewidth.StringWidth(dir)
 	}
+	if pad := w - used; pad > 0 {
+		sb.WriteString(rowStyle.Render(strings.Repeat(" ", pad)))
+	}
+	return sb.String()
+}
+
+// gitViewIconTree / gitViewIconFlat are the 1-cell glyphs shown at the right
+// edge of the SOURCE CONTROL title row. The glyph reflects the CURRENT mode;
+// clicking it (or pressing `t`) toggles to the other.
+const (
+	gitViewIconTree = "⊟"
+	gitViewIconFlat = "≡"
+)
+
+// renderGitTitleRow draws " SOURCE CONTROL" with the tree/flat toggle glyph
+// right-aligned. The glyph sits at column w-2 (a 1-cell breather follows);
+// handleGitSidebarMouse hit-tests that cell. Falls back to a plain padded
+// title when the panel is too narrow for the glyph.
+func renderGitTitleRow(viewTree bool, w int) string {
+	label := " SOURCE CONTROL"
+	icon := gitViewIconFlat
+	if viewTree {
+		icon = gitViewIconTree
+	}
+	lw := runewidth.StringWidth(label)
+	gap := w - lw - 2 // 1 col for the glyph + 1 trailing breather
+	if gap < 1 {
+		return padBgToWidth(gitTitleStyle.Render(label), w)
+	}
+	var sb strings.Builder
+	sb.WriteString(gitTitleStyle.Render(label))
+	sb.WriteString(sidebarFill.Render(strings.Repeat(" ", gap)))
+	sb.WriteString(gitBranchStyle.Render(icon))
+	sb.WriteString(sidebarFill.Render(" "))
+	return sb.String()
+}
+
+// gitRowColors centralises the cursor/blur background + foreground choices
+// shared by the tree dir and file rows so they highlight identically.
+func gitRowColors(active, focused bool, statusFG lipgloss.Color) (bg, name, status lipgloss.Color) {
+	bg = sidebarBg
+	name = lipgloss.Color("#cccccc")
+	status = statusFG
+	if active {
+		if focused {
+			bg = lipgloss.Color("#0087d7")
+			name = lipgloss.Color("#ffffff")
+			status = lipgloss.Color("#ffffff")
+		} else {
+			bg = lipgloss.Color("#37373d")
+			name = lipgloss.Color("#d0d0d0")
+		}
+	}
+	return bg, name, status
+}
+
+// gitTreeGuide renders the leading pad + one `│ ` indent guide per nesting
+// level, returning the builder-written width so callers can budget the name.
+func gitTreeGuide(sb *strings.Builder, rowStyle lipgloss.Style, bg lipgloss.Color, depth int) int {
+	guideStyle := lipgloss.NewStyle().Background(bg).Foreground(lipgloss.Color("#5a5a5a"))
+	sb.WriteString(rowStyle.Render(" "))
+	width := 1
+	for d := 0; d < depth; d++ {
+		sb.WriteString(guideStyle.Render("│"))
+		sb.WriteString(rowStyle.Render(" "))
+		width += 2
+	}
+	return width
+}
+
+// renderGitTreeDir renders a collapsible directory header row: indent guides,
+// an amber-when-open chevron, then the folder name in bold.
+func renderGitTreeDir(name string, depth int, expanded, active, focused bool, w int) string {
+	bg, fgName, _ := gitRowColors(active, focused, lipgloss.Color("#858585"))
+	rowStyle := lipgloss.NewStyle().Background(bg)
+	chev, chevFG := "▸", lipgloss.Color("#858585")
+	if expanded {
+		chev, chevFG = "▾", lipgloss.Color("#e2c08d")
+	}
+	chevStyle := lipgloss.NewStyle().Background(bg).Foreground(chevFG)
+	nameStyle := lipgloss.NewStyle().Background(bg).Foreground(fgName).Bold(true)
+
+	var sb strings.Builder
+	used := gitTreeGuide(&sb, rowStyle, bg, depth)
+	sb.WriteString(chevStyle.Render(chev))
+	sb.WriteString(rowStyle.Render(" "))
+	used += 2
+
+	avail := w - used - 1
+	if avail < 1 {
+		avail = 1
+	}
+	if runewidth.StringWidth(name) > avail {
+		name = runewidth.Truncate(name, avail, "…")
+	}
+	sb.WriteString(nameStyle.Render(name))
+	used += runewidth.StringWidth(name)
+	if pad := w - used; pad > 0 {
+		sb.WriteString(rowStyle.Render(strings.Repeat(" ", pad)))
+	}
+	return sb.String()
+}
+
+// renderGitTreeFile renders a file row inside the tree: indent guides, the
+// status letter, then the basename. The full path lives in the dir headers
+// above it, so only the basename shows here.
+func renderGitTreeFile(f git.FileStatus, depth int, active, focused bool, w int) string {
+	statusChar, statusFG := gitStatusGlyph(f)
+	bg, fgName, fgStatus := gitRowColors(active, focused, statusFG)
+	rowStyle := lipgloss.NewStyle().Background(bg)
+	nameStyle := lipgloss.NewStyle().Background(bg).Foreground(fgName)
+	statusStyle := lipgloss.NewStyle().Background(bg).Foreground(fgStatus).Bold(true)
+
+	var sb strings.Builder
+	used := gitTreeGuide(&sb, rowStyle, bg, depth)
+	sb.WriteString(statusStyle.Render(statusChar))
+	sb.WriteString(rowStyle.Render("  "))
+	used += 3
+
+	name := filepath.Base(f.Path)
+	avail := w - used - 1
+	if avail < 1 {
+		avail = 1
+	}
+	if runewidth.StringWidth(name) > avail {
+		name = runewidth.Truncate(name, avail, "…")
+	}
+	sb.WriteString(nameStyle.Render(name))
+	used += runewidth.StringWidth(name)
 	if pad := w - used; pad > 0 {
 		sb.WriteString(rowStyle.Render(strings.Repeat(" ", pad)))
 	}

@@ -183,6 +183,7 @@ func paletteItems() []picker.Item {
 		{ID: "git-diff", Title: "Git: Show Diff for Current File"},
 		{ID: "git-discard", Title: "Git: Discard Changes in Current File"},
 		{ID: "git-refresh", Title: "Git: Refresh Status"},
+		{ID: "git-view-toggle", Title: "Git: Toggle Tree/Flat View"},
 		{ID: "git-focus", Title: "Git: Focus Source Control"},
 		{ID: "git-push", Title: "Git: Push"},
 		{ID: "git-pull", Title: "Git: Pull"},
@@ -412,6 +413,8 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.openGitDiscardForActiveFile()
 	case "git-refresh":
 		return fetchGitCmd()
+	case "git-view-toggle":
+		m.toggleGitViewMode()
 	case "git-focus":
 		m.activity.SetActive(activity.ViewGit)
 		m.showExp = true
