@@ -5,7 +5,31 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
+
+// TestViewRowsNeverExceedWidth guards the alt-screen frame: every rendered
+// row must be exactly m.w cells wide. A row wider than m.w wraps in the
+// terminal and corrupts the frame — that was the stray right-edge column /
+// scrollbar gutter the user saw after closing a wide diff.
+func TestViewRowsNeverExceedWidth(t *testing.T) {
+	const w, h = 120, 12 // full-screen-ish width, where chrome fits
+	body := strings.Join([]string{
+		"short line",
+		// An over-wide line with ANSI colour, like a long diff line.
+		"\x1b[32m+" + strings.Repeat("x", 200) + "\x1b[0m",
+		"another short",
+	}, "\n")
+
+	m := New("diff · "+strings.Repeat("deep/path/", 20)+"file.go", body)
+	m.SetSize(w, h)
+
+	for i, row := range strings.Split(m.View(), "\n") {
+		if got := lipgloss.Width(row); got > w {
+			t.Errorf("row %d width = %d exceeds %d (wraps the frame): %q", i, got, w, row)
+		}
+	}
+}
 
 func TestNewSplitsBodyAndTrimsTrailingNewlines(t *testing.T) {
 	m := New("title", "line1\nline2\nline3\n\n")

@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // CloseMsg is emitted when the user dismisses the preview.
@@ -119,7 +120,13 @@ func (m Model) View() string {
 		return ""
 	}
 
-	header := titleStyle.Width(m.w).Render(" " + m.title + " ")
+	// Truncate the title so a long "diff · <long/path>" can't wrap the header
+	// onto a second row and shift the whole frame down.
+	title := " " + m.title + " "
+	if ansi.StringWidth(title) > m.w {
+		title = ansi.Truncate(title, m.w, "…")
+	}
+	header := titleStyle.Width(m.w).Render(title)
 
 	contentH := m.contentHeight()
 	var contentLines []string
@@ -137,7 +144,15 @@ func (m Model) View() string {
 		// extends cleanly to m.w cells.
 		const reset = "\x1b[0m"
 		w := lipgloss.Width(line)
-		if w < m.w {
+		switch {
+		case w > m.w:
+			// Truncate over-wide lines (a long minified-code / string diff
+			// line) so the row never exceeds m.w cells. An overflowing row
+			// wraps in the terminal and corrupts the alt-screen frame —
+			// which is what left a stray column / scrollbar gutter showing
+			// after the preview closed.
+			line = ansi.Truncate(line, m.w, "") + reset
+		case w < m.w:
 			line = line + reset + bodyFill.Render(strings.Repeat(" ", m.w-w))
 		}
 		// Wrap the whole row so a stray open-fg from inside the line
