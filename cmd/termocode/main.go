@@ -114,6 +114,8 @@ func runTUI() {
 		// pre-Run is on the primary buffer, this defer fires AFTER the
 		// alt-screen flip-back, which lands us on primary again).
 		_, _ = os.Stdout.WriteString("\x1b[3J")
+		// Restore the terminal's default background (overridden below). OSC 111.
+		_, _ = os.Stdout.WriteString("\x1b]111\x07")
 		// Restore font size by emitting the inverse delta.
 		applyFontDelta(-delta)
 		if r := recover(); r != nil {
@@ -129,6 +131,17 @@ func runTUI() {
 	// switch); after the switch any erase escape lands on alt, which is
 	// already empty.
 	_, _ = os.Stdout.WriteString("\x1b[3J")
+
+	// The window height is rarely an exact multiple of the cell height, so the
+	// terminal fills the ~1-row leftover strip at the bottom with its OWN
+	// default background (a jarring purple on Ubuntu/GNOME). We can't paint
+	// there (it's below the character grid), but OSC 11 sets the terminal's
+	// default bg, so the strip blends in instead of flashing purple. We use the
+	// status-bar bg (#121212) since the status bar spans most of the bottom
+	// width. A single colour can't match every region — the strip fully
+	// vanishes only when the window is sized to whole rows. Reset via OSC 111
+	// in the defer above.
+	_, _ = os.Stdout.WriteString("\x1b]11;#121212\x07")
 
 	p := tea.NewProgram(
 		app.New(),
@@ -170,6 +183,7 @@ func runTUI() {
 		tea.WithMouseAllMotion(),
 	)
 	if _, err := p.Run(); err != nil {
+		_, _ = os.Stdout.WriteString("\x1b]111\x07") // os.Exit skips the defer
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
