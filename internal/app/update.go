@@ -43,6 +43,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// list), reveal it in the tree, and refocus the editor.
 		m.recentsOpen = false
 		if msg.Path != "" {
+			m.ensureEditorWindowCurrent()
 			if err := m.editor.Open(msg.Path); err != nil {
 				m.err = err.Error()
 			} else {
@@ -161,6 +162,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					abs = filepath.Join(cwd, abs)
 				}
 			}
+			m.ensureEditorWindowCurrent()
 			_ = m.nvim.Command(fmt.Sprintf("edit +%d %s", msg.Line, abs))
 		}
 		m.focus = FocusEditor
@@ -264,6 +266,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.toast, c = m.toast.PushDetail(toast.Warn, t, d)
 			return m, c
 		}
+		m.ensureEditorWindowCurrent()
 		if err := m.editor.Open(msg.Path); err != nil {
 			m.err = err.Error()
 		} else {
@@ -286,15 +289,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// editor buffer would land in it, displacing the running shell
 			// (and leaving the tab-bar splice rendering across editor cells).
 			// Hop to any non-terminal window first.
-			_ = m.nvim.ExecLua(`
-				for _, w in ipairs(vim.api.nvim_list_wins()) do
-					local b = vim.api.nvim_win_get_buf(w)
-					if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buftype ~= 'terminal' then
-						pcall(vim.api.nvim_set_current_win, w)
-						break
-					end
-				end
-			`)
+			m.ensureEditorWindowCurrent()
 			_ = m.nvim.Command(fmt.Sprintf("buffer %d", msg.ID))
 		}
 		// Also reveal the file in the explorer tree — expand any
@@ -1556,6 +1551,7 @@ func (m *Model) reopenClosed() tea.Cmd {
 	// quoting (which nvim's :edit would treat as literal characters in
 	// the filename, opening a file whose name actually contains the
 	// quotes — that's the "wrong content" the user saw).
+	m.ensureEditorWindowCurrent()
 	_ = m.nvim.Command(fmt.Sprintf(`execute 'edit ' . fnameescape(%q)`, path))
 	m.focus = FocusEditor
 	var toastCmd tea.Cmd
@@ -1589,6 +1585,7 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 			return c
 		}
 		if m.nvim != nil {
+			m.ensureEditorWindowCurrent()
 			_ = m.nvim.Command("edit " + msg.ID)
 		}
 		m.explorer.RevealPath(msg.ID)
@@ -1625,6 +1622,7 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 			return c
 		}
 		if m.nvim != nil {
+			m.ensureEditorWindowCurrent()
 			_ = m.nvim.Command("edit " + msg.ID)
 		}
 		m.explorer.RevealPath(msg.ID)

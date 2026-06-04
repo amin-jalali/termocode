@@ -97,6 +97,7 @@ func (m *Model) jumpToProblem(id string) {
 		return
 	}
 	if m.nvim != nil {
+		m.ensureEditorWindowCurrent()
 		// Use `+line` form; col positioning happens inside nvim via :call cursor.
 		_ = m.nvim.Command(fmt.Sprintf("edit +%d %s", d.Line, d.Path))
 		if d.Col > 0 {

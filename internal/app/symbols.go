@@ -168,6 +168,7 @@ func (m *Model) jumpToWorkspaceSymbol(id string) {
 	if !ok || m.nvim == nil || t.File == "" {
 		return
 	}
+	m.ensureEditorWindowCurrent()
 	_ = m.nvim.Command(fmt.Sprintf("edit +%d %s", t.Line, t.File))
 	if t.Col > 0 {
 		_ = m.nvim.Command(fmt.Sprintf("call cursor(%d, %d)", t.Line, t.Col))

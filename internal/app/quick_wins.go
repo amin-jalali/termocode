@@ -103,5 +103,6 @@ func (m *Model) alternateFile() {
 	if m.nvim == nil {
 		return
 	}
+	m.ensureEditorWindowCurrent()
 	_ = m.nvim.Command("buffer #")
 }

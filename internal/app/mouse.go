@@ -425,6 +425,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 				return m, m.openRecentFilePicker()
 			}
 			if m.nvim != nil {
+				m.ensureEditorWindowCurrent()
 				_ = m.nvim.Command("edit " + hit.Path)
 			}
 			m.focus = FocusEditor

@@ -152,6 +152,7 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		m.err = ""
 		m.explorer.Reload()
 		// open the new file
+		m.ensureEditorWindowCurrent()
 		if err := m.editor.Open(newPath); err == nil {
 			m.focus = FocusEditor
 		}

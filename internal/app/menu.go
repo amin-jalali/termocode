@@ -115,6 +115,7 @@ func (m *Model) handleMenuSelect(id string) tea.Cmd {
 			m.toast, c = m.toast.PushDetail(toast.Warn, t, d)
 			return c
 		}
+		m.ensureEditorWindowCurrent()
 		if err := m.editor.Open(path); err != nil {
 			m.err = err.Error()
 		} else {

@@ -1121,6 +1121,35 @@ func (m *Model) invalidateTerminalProbeCache() {
 	terminalProbeMu.Unlock()
 }
 
+// ensureEditorWindowCurrent makes nvim's current window a non-terminal
+// (editor) window, so a subsequent `:edit`/`:buffer` lands in the editor
+// area instead of the integrated-terminal split.
+//
+// Why this exists: opening a file loads the buffer into nvim's CURRENT
+// window. When the terminal panel is focused, the terminal split IS that
+// window — so the file would displace the running shell and render in the
+// middle of the terminal panel. Every file-open path (picker, recent files,
+// search, explorer, tab switch) must call this first.
+//
+// No-op (and cheap) when the panel is closed or no terminal window exists:
+// in that case the current window is already an editor window. If somehow
+// only terminal windows exist, this leaves the current window unchanged and
+// the caller's edit falls back to nvim's default behaviour.
+func (m *Model) ensureEditorWindowCurrent() {
+	if m.nvim == nil || !m.termOpen {
+		return
+	}
+	_ = m.nvim.ExecLua(`
+		for _, w in ipairs(vim.api.nvim_list_wins()) do
+			local b = vim.api.nvim_win_get_buf(w)
+			if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buftype ~= 'terminal' then
+				pcall(vim.api.nvim_set_current_win, w)
+				break
+			end
+		end
+	`)
+}
+
 // probeTerminalBufferLive does a fresh, uncached check of nvim for any
 // loaded terminal buffer. Used by toggleTerminalPanel (where we need
 // authoritative state) and by syncTerminalState after the cache TTL

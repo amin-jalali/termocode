@@ -396,6 +396,7 @@ func (m *Model) generateTableTestSkeleton(fn, srcPath string) tea.Cmd {
 	}
 	// Open the new test file so the user can iterate on the scaffold.
 	if m.nvim != nil {
+		m.ensureEditorWindowCurrent()
 		_ = m.nvim.Command("edit " + target)
 	}
 	var toastCmd tea.Cmd

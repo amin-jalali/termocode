@@ -54,6 +54,7 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		}
 		path := gitFileAbsPath(m.gitFiles[m.gitCursor].Path)
 		if m.nvim != nil {
+			m.ensureEditorWindowCurrent()
 			_ = m.nvim.Command("edit " + path)
 		}
 		m.focus = FocusEditor

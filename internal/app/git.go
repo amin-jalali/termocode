@@ -90,6 +90,7 @@ func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (tea.Model,
 	m.gitCursor = idx
 	path := gitFileAbsPath(m.gitFiles[idx].Path)
 	if m.nvim != nil {
+		m.ensureEditorWindowCurrent()
 		_ = m.nvim.Command("edit " + path)
 	}
 	m.focus = FocusEditor
