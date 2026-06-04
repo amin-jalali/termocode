@@ -132,12 +132,13 @@ type Model struct {
 	// open. In-memory only (not persisted across runs).
 	gitCollapsed map[string]bool
 
-	// Source Control accordion section fold state (in-memory; both expanded
-	// by default). gitGraph holds the current branch's commit graph for the
-	// GRAPH section, refreshed alongside status.
+	// Source Control accordion section fold state (in-memory; all expanded by
+	// default). gitGraph holds the current branch's commit graph for the GRAPH
+	// section, refreshed alongside status.
+	gitStagedCollapsed  bool
 	gitChangesCollapsed bool
-	gitGraphCollapsed    bool
-	gitGraph             []git.GraphLine
+	gitGraphCollapsed   bool
+	gitGraph            []git.GraphLine
 
 	// problemsIndex maps picker IDs (e.g. "p-3") back to the underlying
 	// nvim.Diagnostic so jumpToProblem can decode the user's selection. Only

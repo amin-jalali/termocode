@@ -346,13 +346,16 @@ func Log(dir string, limit int) ([]LogEntry, error) {
 }
 
 // GraphLine is one line of `git log --graph` output. A commit node has Hash
-// set (plus Subject/Refs); a pure topology connector line ("| |", "|\", "|/")
+// set (plus Subject/Refs/…); a pure topology connector line ("| |", "|\", "|/")
 // has Hash empty and only Art populated.
 type GraphLine struct {
 	Art     string // graph art prefix, e.g. "* ", "| * ", "|\\ "
 	Hash    string // short SHA; "" on connector lines
 	Subject string
 	Refs    string // decorations, e.g. "HEAD -> main"
+	Age     string // compact relative committer date, e.g. "2h", "3d", "now"
+	IsMerge bool   // commit has 2+ parents
+	IsHead  bool   // commit is (or is pointed at by) HEAD
 }
 
 // GraphLog returns `git log --graph` for HEAD (current branch, including the
@@ -366,8 +369,9 @@ func GraphLog(dir string, limit int) ([]GraphLine, error) {
 	}
 	// --graph draws the topology; the pretty format is appended after the art
 	// on each NODE line. Connector lines carry no format output, so they have
-	// no \x1f and parse as art-only. \x1f separates hash/subject/refs.
-	fmtArg := "--pretty=format:%h%x1f%s%x1f%d"
+	// no \x1f and parse as art-only. Fields: hash, subject, refs, committer
+	// relative date, parent hashes (for merge detection).
+	fmtArg := "--pretty=format:%h%x1f%s%x1f%d%x1f%cr%x1f%p"
 	out, err := runOut(dir, "git", "log", "--graph", "--abbrev-commit", "--decorate", fmtArg, fmt.Sprintf("-n%d", limit))
 	if err != nil {
 		return nil, err
@@ -384,25 +388,64 @@ func GraphLog(dir string, limit int) ([]GraphLine, error) {
 			lines = append(lines, GraphLine{Art: line})
 			continue
 		}
-		fields := strings.SplitN(line, "\x1f", 3)
+		fields := strings.SplitN(line, "\x1f", 5)
 		head := fields[0] // "<art><hash>"
-		subject, refs := "", ""
+		gl := GraphLine{}
 		if len(fields) > 1 {
-			subject = fields[1]
+			gl.Subject = fields[1]
 		}
 		if len(fields) > 2 {
-			refs = strings.TrimSpace(fields[2])
+			gl.Refs = strings.TrimSpace(fields[2])
 		}
+		if len(fields) > 3 {
+			gl.Age = compactAge(fields[3])
+		}
+		if len(fields) > 4 {
+			gl.IsMerge = strings.Contains(strings.TrimSpace(fields[4]), " ")
+		}
+		gl.IsHead = strings.Contains(gl.Refs, "HEAD")
 		// The hash is the last whitespace-delimited token of head; everything
 		// before it (incl. the trailing space) is the graph art.
-		art, hash := "", head
+		gl.Art, gl.Hash = "", head
 		if sp := strings.LastIndexByte(head, ' '); sp >= 0 {
-			art = head[:sp+1]
-			hash = head[sp+1:]
+			gl.Art = head[:sp+1]
+			gl.Hash = head[sp+1:]
 		}
-		lines = append(lines, GraphLine{Art: art, Hash: hash, Subject: subject, Refs: refs})
+		lines = append(lines, gl)
 	}
 	return lines, nil
+}
+
+// compactAge squeezes git's `%cr` ("3 hours ago", "just now") into a 2-3 char
+// badge ("3h", "now") for the narrow sidebar.
+func compactAge(rel string) string {
+	rel = strings.TrimSpace(rel)
+	switch rel {
+	case "", "just now":
+		return "now"
+	}
+	fields := strings.Fields(rel) // ["3", "hours", "ago"]
+	if len(fields) < 2 {
+		return ""
+	}
+	n, unit := fields[0], fields[1]
+	switch {
+	case strings.HasPrefix(unit, "second"):
+		return "now"
+	case strings.HasPrefix(unit, "minute"):
+		return n + "m"
+	case strings.HasPrefix(unit, "hour"):
+		return n + "h"
+	case strings.HasPrefix(unit, "day"):
+		return n + "d"
+	case strings.HasPrefix(unit, "week"):
+		return n + "w"
+	case strings.HasPrefix(unit, "month"):
+		return n + "mo"
+	case strings.HasPrefix(unit, "year"):
+		return n + "y"
+	}
+	return ""
 }
 
 // ShowCommit returns the full diff body for a commit (`git show <hash>`).

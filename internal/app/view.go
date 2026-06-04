@@ -80,7 +80,7 @@ func (m Model) View() string {
 // areas) so the menu feels like a translucent floating layer rather than
 // a solid drop. Border + accent cells stay crisp.
 func (m Model) glassyMenuOverlay(base string) string {
-	const alpha = 0.99
+	const alpha = 1.0 // fully opaque body — no editor bg bleeds through the menu
 	tint := rgbColor{0x00, 0x01, 0x03} // matches modalTint
 	panelBg := rgbColor{0x26, 0x26, 0x26}
 
@@ -156,7 +156,7 @@ func (m Model) glassyMenuOverlay(base string) string {
 					baseFg = textPrimaryFallback
 				}
 				boxCells[j].glyph = baseCells[ci].glyph
-				boxCells[j].sgr = makeFgBgSGR(dimRGB(baseFg, 0.45), blendedBg)
+				boxCells[j].sgr = makeFgBgSGR(dimRGB(baseFg, 0.20), blendedBg)
 			} else {
 				boxCells[j].glyph = " "
 				boxCells[j].sgr = makeFgBgSGR(rgbColor{}, blendedBg)
@@ -1325,14 +1325,7 @@ func (m Model) renderGitSidebar(w, h int) string {
 	var header []string
 	header = append(header, renderGitTitleRow(m.gitViewTree, w))
 	if m.gitBranch.Name != "" {
-		text := " " + m.gitBranch.Name
-		if m.gitBranch.Ahead > 0 {
-			text += fmt.Sprintf(" ↑%d", m.gitBranch.Ahead)
-		}
-		if m.gitBranch.Behind > 0 {
-			text += fmt.Sprintf(" ↓%d", m.gitBranch.Behind)
-		}
-		header = append(header, padBgToWidth(gitBranchStyle.Render(text), w))
+		header = append(header, renderGitBranchRow(m.gitBranch, w))
 	}
 	header = append(header, sidebarFill.Render(strings.Repeat(" ", w)))
 
@@ -1370,8 +1363,12 @@ func (m Model) renderGitPanelRow(r gitPanelRow, active, focused bool, w int) str
 	switch r.kind {
 	case gitRowSection:
 		switch r.section {
+		case gitSecStaged:
+			staged, _ := m.gitFileCounts()
+			return renderGitSectionHeader("STAGED", staged, true, !m.gitStagedCollapsed, active, focused, w)
 		case gitSecChanges:
-			return renderGitSectionHeader("CHANGES", len(m.gitFiles), true, !m.gitChangesCollapsed, active, focused, w)
+			_, changed := m.gitFileCounts()
+			return renderGitSectionHeader("CHANGES", changed, true, !m.gitChangesCollapsed, active, focused, w)
 		default:
 			return renderGitSectionHeader("GRAPH", 0, false, !m.gitGraphCollapsed, active, focused, w)
 		}
@@ -1387,38 +1384,37 @@ func (m Model) renderGitPanelRow(r gitPanelRow, active, focused bool, w int) str
 		}
 		return renderGitFile(m.gitFiles[r.fileIndex], active, focused, w)
 	case gitRowCommit:
-		return renderGitGraphCommit(r.art, r.hash, r.subject, r.refs, active, focused, w)
+		return renderGitGraphCommit(r, active, focused, w)
 	case gitRowConnector:
 		return renderGitGraphConnector(r.art, w)
 	case gitRowNote:
 		return padBgToWidth(gitBranchStyle.Render("   "+r.note), w)
+	case gitRowSpacer:
+		return sidebarFill.Render(strings.Repeat(" ", w))
 	}
 	return sidebarFill.Render(strings.Repeat(" ", w))
 }
 
+// renderGitFile renders a flat-list file row: the lead/accent cell, a coloured
+// status dot, the basename, then a dim parent dir.
 func renderGitFile(f git.FileStatus, active, focused bool, w int) string {
-	statusChar, statusFG := gitStatusGlyph(f)
-
+	statusChar, statusFG := gitStatusDot(f)
 	name := filepath.Base(f.Path)
 	dir := filepath.Dir(f.Path)
 	if dir == "." {
 		dir = ""
 	}
 
-	bgC := sidebarBg
+	bgC := gitSelBg(active, focused)
 	fgName := lipgloss.Color("#cccccc")
 	fgDir := lipgloss.Color("#858585")
 	fgStatus := statusFG
 	if active {
+		fgName = lipgloss.Color("#d6d6d6")
+		fgDir = lipgloss.Color("#9aa6ad")
 		if focused {
-			bgC = lipgloss.Color("#0087d7")
 			fgName = lipgloss.Color("#ffffff")
-			fgDir = lipgloss.Color("#cce6f4")
-			fgStatus = lipgloss.Color("#ffffff")
-		} else {
-			bgC = lipgloss.Color("#37373d")
-			fgName = lipgloss.Color("#d0d0d0")
-			fgDir = lipgloss.Color("#a0a0a0")
+			fgDir = lipgloss.Color("#a9c7e0")
 		}
 	}
 
@@ -1427,19 +1423,16 @@ func renderGitFile(f git.FileStatus, active, focused bool, w int) string {
 	dirStyle := lipgloss.NewStyle().Background(bgC).Foreground(fgDir)
 	statusStyle := lipgloss.NewStyle().Background(bgC).Foreground(fgStatus).Bold(true)
 
-	// Layout: " <X>  name  dir            "
-	//         ^^^   status block (3 cols: " X ")
+	// Layout: "▌●  name  dir            " — lead + status dot + name + dim dir.
 	avail := w - 3
 	if avail < 4 {
 		avail = 4
 	}
-
 	if runewidth.StringWidth(name) > avail-1 {
 		name = runewidth.Truncate(name, avail-1, "…")
 		dir = ""
 	}
-
-	dirAvail := avail - runewidth.StringWidth(name) - 3 // 3 = 2-space sep + leading pad
+	dirAvail := avail - runewidth.StringWidth(name) - 3
 	if dirAvail < 3 {
 		dir = ""
 	} else if dir != "" {
@@ -1447,80 +1440,146 @@ func renderGitFile(f git.FileStatus, active, focused bool, w int) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString(rowStyle.Render(" "))
+	sb.WriteString(gitLead(active, focused, bgC))
 	sb.WriteString(statusStyle.Render(statusChar))
 	sb.WriteString(rowStyle.Render("  "))
 	sb.WriteString(nameStyle.Render(name))
+	used := 1 + 1 + 2 + runewidth.StringWidth(name)
 	if dir != "" {
 		sb.WriteString(rowStyle.Render("  "))
 		sb.WriteString(dirStyle.Render(dir))
-	}
-
-	used := 1 + 1 + 2 + runewidth.StringWidth(name)
-	if dir != "" {
 		used += 2 + runewidth.StringWidth(dir)
 	}
 	if pad := w - used; pad > 0 {
 		sb.WriteString(rowStyle.Render(strings.Repeat(" ", pad)))
+		used += pad
 	}
-	return sb.String()
+	return clampSidebarRow(sb.String(), used, w, rowStyle)
 }
 
 // gitViewIconTree / gitViewIconFlat are the 1-cell glyphs shown at the right
 // edge of the SOURCE CONTROL title row. The glyph reflects the CURRENT mode;
 // clicking it (or pressing `t`) toggles to the other.
-const (
-	gitViewIconTree = "⊟"
-	gitViewIconFlat = "≡"
-)
+// gitViewToggleWidth is the on-screen width of the "tree · flat" toggle and
+// its trailing breather; handleGitSidebarMouse hit-tests the right edge of the
+// title row against it.
+const gitViewToggleWidth = 12 // "tree · flat" (11) + 1 trailing pad
 
-// renderGitTitleRow draws " SOURCE CONTROL" with the tree/flat toggle glyph
-// right-aligned. The glyph sits at column w-2 (a 1-cell breather follows);
-// handleGitSidebarMouse hit-tests that cell. Falls back to a plain padded
-// title when the panel is too narrow for the glyph.
+// renderGitTitleRow draws " SOURCE CONTROL" with a right-aligned "tree · flat"
+// text toggle — the active mode bright, the other dim. Clicking the toggle
+// region flips the mode. Falls back to a plain padded title when too narrow.
 func renderGitTitleRow(viewTree bool, w int) string {
 	label := " SOURCE CONTROL"
-	icon := gitViewIconFlat
-	if viewTree {
-		icon = gitViewIconTree
-	}
 	lw := runewidth.StringWidth(label)
-	gap := w - lw - 2 // 1 col for the glyph + 1 trailing breather
+
+	dim := lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#5f5f5f"))
+	on := lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#4ec9e0")).Bold(true)
+	treeStyle, flatStyle := dim, on
+	if viewTree {
+		treeStyle, flatStyle = on, dim
+	}
+	toggle := treeStyle.Render("tree") + dim.Render(" · ") + flatStyle.Render("flat")
+	toggleW := 11
+
+	gap := w - lw - toggleW - 1
 	if gap < 1 {
 		return padBgToWidth(gitTitleStyle.Render(label), w)
 	}
 	var sb strings.Builder
 	sb.WriteString(gitTitleStyle.Render(label))
 	sb.WriteString(sidebarFill.Render(strings.Repeat(" ", gap)))
-	sb.WriteString(gitBranchStyle.Render(icon))
+	sb.WriteString(toggle)
 	sb.WriteString(sidebarFill.Render(" "))
 	return sb.String()
+}
+
+// renderGitBranchRow renders the current branch as a teal "current HEAD" pill
+// (echoing the teal ◉ HEAD node in the graph) with coloured ahead/behind sync
+// arrows: " ‹main› ↑1 ↓2". A pill carries the meaning — no exotic branch glyph
+// (the ⎇ codepoint is missing from most terminal fonts and rendered as mojibake).
+func renderGitBranchRow(b git.Branch, w int) string {
+	rowStyle := lipgloss.NewStyle().Background(sidebarBg)
+	pillStyle := lipgloss.NewStyle().Background(lipgloss.Color("#143d3a")).Foreground(lipgloss.Color("#6fd0bd")).Bold(true)
+	aheadStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#73c991"))
+	behindStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#e2c08d"))
+
+	sync := ""
+	if b.Ahead > 0 {
+		sync += fmt.Sprintf(" ↑%d", b.Ahead)
+	}
+	if b.Behind > 0 {
+		sync += fmt.Sprintf(" ↓%d", b.Behind)
+	}
+
+	// Pill is " name " (1 pad each side). Leave room for a leading space and
+	// the sync arrows.
+	name := b.Name
+	if maxName := w - 1 - 2 - runewidth.StringWidth(sync); runewidth.StringWidth(name) > maxName && maxName >= 1 {
+		name = runewidth.Truncate(name, maxName, "…")
+	}
+
+	var sb strings.Builder
+	sb.WriteString(rowStyle.Render(" "))
+	sb.WriteString(pillStyle.Render(" " + name + " "))
+	used := 1 + runewidth.StringWidth(name) + 2
+
+	if b.Ahead > 0 {
+		seg := fmt.Sprintf(" ↑%d", b.Ahead)
+		sb.WriteString(aheadStyle.Render(seg))
+		used += runewidth.StringWidth(seg)
+	}
+	if b.Behind > 0 {
+		seg := fmt.Sprintf(" ↓%d", b.Behind)
+		sb.WriteString(behindStyle.Render(seg))
+		used += runewidth.StringWidth(seg)
+	}
+	return clampSidebarRow(sb.String(), used, w, rowStyle)
 }
 
 // gitRowColors centralises the cursor/blur background + foreground choices
 // shared by the tree dir and file rows so they highlight identically.
 func gitRowColors(active, focused bool, statusFG lipgloss.Color) (bg, name, status lipgloss.Color) {
-	bg = sidebarBg
+	bg = gitSelBg(active, focused)
 	name = lipgloss.Color("#cccccc")
 	status = statusFG
 	if active {
+		name = lipgloss.Color("#d6d6d6")
 		if focused {
-			bg = lipgloss.Color("#0087d7")
 			name = lipgloss.Color("#ffffff")
-			status = lipgloss.Color("#ffffff")
-		} else {
-			bg = lipgloss.Color("#37373d")
-			name = lipgloss.Color("#d0d0d0")
 		}
 	}
 	return bg, name, status
 }
 
-// gitTreeGuide renders the leading pad + one `│ ` indent guide per nesting
-// level, returning the builder-written width so callers can budget the name.
-func gitTreeGuide(sb *strings.Builder, rowStyle lipgloss.Style, bg lipgloss.Color, depth int) int {
-	guideStyle := lipgloss.NewStyle().Background(bg).Foreground(lipgloss.Color("#5a5a5a"))
-	sb.WriteString(rowStyle.Render(" "))
+// gitSelBg returns a row's background: a subtle dark slate for the cursor row
+// (so the bright left accent bar — not a loud full-width fill — carries the
+// selection) and the panel bg otherwise.
+func gitSelBg(active, focused bool) lipgloss.Color {
+	switch {
+	case active && focused:
+		return lipgloss.Color("#1f2d36")
+	case active:
+		return lipgloss.Color("#2a2a2e")
+	default:
+		return sidebarBg
+	}
+}
+
+// gitLead renders the leftmost cell of a row: a bright cyan accent bar on the
+// focused cursor row, otherwise a blank in the row background.
+func gitLead(active, focused bool, bg lipgloss.Color) string {
+	if active && focused {
+		return lipgloss.NewStyle().Background(bg).Foreground(lipgloss.Color("#36a3d9")).Render("▌")
+	}
+	return lipgloss.NewStyle().Background(bg).Render(" ")
+}
+
+// gitTreeGuide renders the accent-bar/blank lead cell + one `│ ` indent guide
+// per nesting level, returning the written width so callers can budget the name.
+func gitTreeGuide(sb *strings.Builder, bg lipgloss.Color, depth int, active, focused bool) int {
+	rowStyle := lipgloss.NewStyle().Background(bg)
+	guideStyle := lipgloss.NewStyle().Background(bg).Foreground(lipgloss.Color("#46505a"))
+	sb.WriteString(gitLead(active, focused, bg))
 	width := 1
 	for d := 0; d < depth; d++ {
 		sb.WriteString(guideStyle.Render("│"))
@@ -1543,7 +1602,7 @@ func renderGitTreeDir(name string, depth int, expanded, active, focused bool, w 
 	nameStyle := lipgloss.NewStyle().Background(bg).Foreground(fgName).Bold(true)
 
 	var sb strings.Builder
-	used := gitTreeGuide(&sb, rowStyle, bg, depth)
+	used := gitTreeGuide(&sb, bg, depth, active, focused)
 	sb.WriteString(chevStyle.Render(chev))
 	sb.WriteString(rowStyle.Render(" "))
 	used += 2
@@ -1560,18 +1619,18 @@ func renderGitTreeDir(name string, depth int, expanded, active, focused bool, w 
 	return clampSidebarRow(sb.String(), used, w, rowStyle)
 }
 
-// renderGitTreeFile renders a file row inside the tree: indent guides, the
-// status letter, then the basename. The full path lives in the dir headers
-// above it, so only the basename shows here.
+// renderGitTreeFile renders a file row inside the tree: indent guides, a
+// coloured status dot, then the basename. The full path lives in the dir
+// headers above it, so only the basename shows here.
 func renderGitTreeFile(f git.FileStatus, depth int, active, focused bool, w int) string {
-	statusChar, statusFG := gitStatusGlyph(f)
+	statusChar, statusFG := gitStatusDot(f)
 	bg, fgName, fgStatus := gitRowColors(active, focused, statusFG)
 	rowStyle := lipgloss.NewStyle().Background(bg)
 	nameStyle := lipgloss.NewStyle().Background(bg).Foreground(fgName)
 	statusStyle := lipgloss.NewStyle().Background(bg).Foreground(fgStatus).Bold(true)
 
 	var sb strings.Builder
-	used := gitTreeGuide(&sb, rowStyle, bg, depth)
+	used := gitTreeGuide(&sb, bg, depth, active, focused)
 	sb.WriteString(statusStyle.Render(statusChar))
 	sb.WriteString(rowStyle.Render("  "))
 	used += 3
@@ -1605,100 +1664,192 @@ func clampSidebarRow(row string, width, w int, rowStyle lipgloss.Style) string {
 // ── Accordion section + graph rows ──────────────────────────────────────────
 
 var (
-	gitGraphArtColor  = lipgloss.Color("#6a9fb5") // dim blue for the topology art
-	gitGraphHashColor = lipgloss.Color("#e2c08d") // amber for the abbreviated SHA
-	gitGraphRefColor  = lipgloss.Color("#73c991") // green for branch/tag decorations
+	gitLaneColor    = lipgloss.Color("#46606f") // dim blue for topology lanes/spine (│ ╲ ╱)
+	gitNodeColor    = lipgloss.Color("#7fb3d5") // a regular commit node ●
+	gitMergeColor   = lipgloss.Color("#c586c0") // a merge node ◆
+	gitHeadColor    = lipgloss.Color("#4ec9b0") // the HEAD node ◉
+	gitAgeColor     = lipgloss.Color("#6e7681") // dim relative timestamp
+	gitSubjectColor = lipgloss.Color("#c5c5c5")
 )
 
-// renderGitSectionHeader renders a collapsible accordion header like
-// "▾ CHANGES (3)" or "▸ GRAPH", bold with a fold chevron.
+// renderGitSectionHeader renders a collapsible accordion divider as a quiet
+// letter-spaced caption with a trailing count:
+//
+//	 C H A N G E S   4
+//
+// Expanded sections show just the spaced label (clean); a collapsed one gets a
+// leading "▸" so the folded state is visible. The cursor row gets the accent
+// bar + subtle bg like every other row.
 func renderGitSectionHeader(label string, count int, hasCount, expanded, active, focused bool, w int) string {
-	bg, fgName, _ := gitRowColors(active, focused, lipgloss.Color("#858585"))
+	bg := gitSelBg(active, focused)
+	labelFG := lipgloss.Color("#828c95")
+	countFG := lipgloss.Color("#5e6770")
+	if active {
+		labelFG = lipgloss.Color("#cdd6de")
+		countFG = lipgloss.Color("#9aa7b1")
+		if focused {
+			labelFG = lipgloss.Color("#dbeaf4")
+			countFG = lipgloss.Color("#a9c3d4")
+		}
+	}
 	rowStyle := lipgloss.NewStyle().Background(bg)
-	chev := "▸"
-	if expanded {
-		chev = "▾"
-	}
-	chevStyle := lipgloss.NewStyle().Background(bg).Foreground(lipgloss.Color("#858585"))
-	labelStyle := lipgloss.NewStyle().Background(bg).Foreground(fgName).Bold(true)
+	labelStyle := lipgloss.NewStyle().Background(bg).Foreground(labelFG).Bold(true)
+	countStyle := lipgloss.NewStyle().Background(bg).Foreground(countFG).Bold(true)
 
-	text := label
-	if hasCount {
-		text = fmt.Sprintf("%s (%d)", label, count)
-	}
 	var sb strings.Builder
-	sb.WriteString(rowStyle.Render(" "))
-	sb.WriteString(chevStyle.Render(chev))
-	sb.WriteString(rowStyle.Render(" "))
-	used := 3
-	avail := w - used - 1
-	if avail < 1 {
-		avail = 1
+	sb.WriteString(gitLead(active, focused, bg))
+	used := 1
+	if expanded {
+		sb.WriteString(rowStyle.Render(" "))
+		used++
+	} else {
+		sb.WriteString(labelStyle.Render("▸"))
+		used++
 	}
-	if runewidth.StringWidth(text) > avail {
-		text = runewidth.Truncate(text, avail, "…")
+
+	spaced := letterSpace(label)
+	if avail := w - used - 1; runewidth.StringWidth(spaced) > avail && avail >= 1 {
+		spaced = runewidth.Truncate(spaced, avail, "…")
 	}
-	sb.WriteString(labelStyle.Render(text))
-	used += runewidth.StringWidth(text)
+	sb.WriteString(rowStyle.Render(" "))
+	sb.WriteString(labelStyle.Render(spaced))
+	used += 1 + runewidth.StringWidth(spaced)
+
+	if hasCount {
+		c := "   " + fmt.Sprintf("%d", count)
+		if used+runewidth.StringWidth(c) <= w {
+			sb.WriteString(countStyle.Render(c))
+			used += runewidth.StringWidth(c)
+		}
+	}
 	return clampSidebarRow(sb.String(), used, w, rowStyle)
 }
 
-// renderGitGraphCommit renders one commit node: the topology art (dim blue),
-// the SHA (amber), an optional decoration (green), then the subject.
-func renderGitGraphCommit(art, hash, subject, refs string, active, focused bool, w int) string {
-	bg, fgName, _ := gitRowColors(active, focused, lipgloss.Color("#858585"))
+// letterSpace inserts a space between each rune of s ("GRAPH" → "G R A P H")
+// for the section-divider caption look.
+func letterSpace(s string) string {
+	rs := []rune(s)
+	if len(rs) <= 1 {
+		return s
+	}
+	out := make([]rune, 0, len(rs)*2-1)
+	for i, r := range rs {
+		if i > 0 {
+			out = append(out, ' ')
+		}
+		out = append(out, r)
+	}
+	return string(out)
+}
+
+// renderGitArt renders the graph topology prefix, colouring lane glyphs (│ \ /
+// _) soft blue and replacing the commit-node "*" with a glyph chosen by commit
+// type (● regular, ◆ merge, ◉ HEAD). Returns the rendered string and its width.
+func renderGitArt(art string, isMerge, isHead bool, bg lipgloss.Color) (string, int) {
+	laneStyle := lipgloss.NewStyle().Background(bg).Foreground(gitLaneColor)
+	node, nodeColor := "●", gitNodeColor
+	switch {
+	case isHead:
+		node, nodeColor = "◉", gitHeadColor
+	case isMerge:
+		node, nodeColor = "◆", gitMergeColor
+	}
+	nodeStyle := lipgloss.NewStyle().Background(bg).Foreground(nodeColor).Bold(true)
 	rowStyle := lipgloss.NewStyle().Background(bg)
-	artStyle := lipgloss.NewStyle().Background(bg).Foreground(gitGraphArtColor)
-	hashStyle := lipgloss.NewStyle().Background(bg).Foreground(gitGraphHashColor)
-	refStyle := lipgloss.NewStyle().Background(bg).Foreground(gitGraphRefColor)
-	subjStyle := lipgloss.NewStyle().Background(bg).Foreground(fgName)
 
 	var sb strings.Builder
-	sb.WriteString(rowStyle.Render(" "))
-	sb.WriteString(artStyle.Render(art))
-	sb.WriteString(hashStyle.Render(hash))
-	used := 1 + runewidth.StringWidth(art) + runewidth.StringWidth(hash)
+	width := 0
+	for _, r := range art {
+		switch r {
+		case '*':
+			sb.WriteString(nodeStyle.Render(node))
+		case '|', '│':
+			sb.WriteString(laneStyle.Render("│"))
+		case '/':
+			sb.WriteString(laneStyle.Render("╱"))
+		case '\\':
+			sb.WriteString(laneStyle.Render("╲"))
+		case '_', '-':
+			sb.WriteString(laneStyle.Render("─"))
+		default:
+			sb.WriteString(rowStyle.Render(string(r)))
+		}
+		width += runewidth.RuneWidth(r)
+	}
+	return sb.String(), width
+}
 
-	// Decoration (short refs) in green, only if there's comfortable room.
-	if r := shortRefs(refs); r != "" {
-		if avail := w - used - 2; avail >= 4 {
-			if runewidth.StringWidth(r) > avail {
-				r = runewidth.Truncate(r, avail, "…")
-			}
+// renderGitGraphCommit renders one commit: the coloured topology node, an
+// optional branch/tag pill, the subject, and a right-aligned relative age.
+func renderGitGraphCommit(r gitPanelRow, active, focused bool, w int) string {
+	bg, _, _ := gitRowColors(active, focused, lipgloss.Color("#858585"))
+	rowStyle := lipgloss.NewStyle().Background(bg)
+	subjStyle := lipgloss.NewStyle().Background(bg).Foreground(gitSubjectColor)
+	if active && focused {
+		subjStyle = subjStyle.Foreground(lipgloss.Color("#ffffff"))
+	}
+	ageStyle := lipgloss.NewStyle().Background(bg).Foreground(gitAgeColor)
+
+	var sb strings.Builder
+	sb.WriteString(gitLead(active, focused, bg))
+	artStr, artW := renderGitArt(r.art, r.isMerge, r.isHead, bg)
+	sb.WriteString(artStr)
+	used := 1 + artW
+
+	// Reserve the right edge for the age badge ("2h").
+	ageW := 0
+	if r.age != "" {
+		ageW = runewidth.StringWidth(r.age) + 1 // leading space
+	}
+
+	// Branch/tag pill (e.g. " main ") right after the node, if there's room.
+	if pill := gitRefPill(r.refs); pill != "" {
+		pillW := lipgloss.Width(pill)
+		if used+1+pillW+ageW+4 <= w {
 			sb.WriteString(rowStyle.Render(" "))
-			sb.WriteString(refStyle.Render(r))
-			used += 1 + runewidth.StringWidth(r)
+			sb.WriteString(pill)
+			used += 1 + pillW
 		}
 	}
 
-	// Subject fills the remainder.
-	if avail := w - used - 1; avail >= 1 && subject != "" {
-		if runewidth.StringWidth(subject) > avail {
-			subject = runewidth.Truncate(subject, avail, "…")
+	// Subject fills the middle, leaving room for the age badge.
+	if avail := w - used - 1 - ageW; avail >= 1 && r.subject != "" {
+		s := r.subject
+		if runewidth.StringWidth(s) > avail {
+			s = runewidth.Truncate(s, avail, "…")
 		}
 		sb.WriteString(rowStyle.Render(" "))
-		sb.WriteString(subjStyle.Render(subject))
-		used += 1 + runewidth.StringWidth(subject)
+		sb.WriteString(subjStyle.Render(s))
+		used += 1 + runewidth.StringWidth(s)
+	}
+
+	// Age badge, right-aligned.
+	if r.age != "" {
+		if pad := w - used - ageW; pad > 0 {
+			sb.WriteString(rowStyle.Render(strings.Repeat(" ", pad)))
+			used += pad
+		}
+		sb.WriteString(rowStyle.Render(" "))
+		sb.WriteString(ageStyle.Render(r.age))
+		used += 1 + runewidth.StringWidth(r.age)
 	}
 	return clampSidebarRow(sb.String(), used, w, rowStyle)
 }
 
-// renderGitGraphConnector renders a topology-only line (no commit), e.g. "|/"
-// or "| |", in the dim graph-art colour.
+// renderGitGraphConnector renders a topology-only line ("|/", "| |") with
+// lane-coloured glyphs.
 func renderGitGraphConnector(art string, w int) string {
 	rowStyle := lipgloss.NewStyle().Background(sidebarBg)
-	artStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(gitGraphArtColor)
 	var sb strings.Builder
 	sb.WriteString(rowStyle.Render(" "))
-	sb.WriteString(artStyle.Render(art))
-	used := 1 + runewidth.StringWidth(art)
-	return clampSidebarRow(sb.String(), used, w, rowStyle)
+	artStr, artW := renderGitArt(art, false, false, sidebarBg)
+	sb.WriteString(artStr)
+	return clampSidebarRow(sb.String(), 1+artW, w, rowStyle)
 }
 
-// shortRefs trims `git log %d` decoration ("(HEAD -> main, origin/main)") down
-// to a compact form for the narrow sidebar: drop the wrapping parens and the
-// "HEAD -> " noise, keep the first ref.
-func shortRefs(refs string) string {
+// gitRefPill renders the first branch/tag decoration as a small coloured pill
+// (e.g. a green " main "), or "" when there's no ref. Tags get an amber pill.
+func gitRefPill(refs string) string {
 	r := strings.TrimSpace(refs)
 	r = strings.TrimPrefix(r, "(")
 	r = strings.TrimSuffix(r, ")")
@@ -1707,9 +1858,21 @@ func shortRefs(refs string) string {
 	}
 	r = strings.ReplaceAll(r, "HEAD -> ", "")
 	if i := strings.IndexByte(r, ','); i >= 0 {
-		r = r[:i] // keep only the first decoration
+		r = r[:i]
 	}
-	return strings.TrimSpace(r)
+	r = strings.TrimSpace(r)
+	if r == "" {
+		return ""
+	}
+	pillBg, pillFG := lipgloss.Color("#234d36"), lipgloss.Color("#89d99b") // branch: green
+	if strings.HasPrefix(r, "tag:") {
+		r = strings.TrimSpace(strings.TrimPrefix(r, "tag:"))
+		pillBg, pillFG = lipgloss.Color("#4a3a1f"), lipgloss.Color("#e2c08d") // tag: amber
+	}
+	if runewidth.StringWidth(r) > 12 {
+		r = runewidth.Truncate(r, 12, "…")
+	}
+	return lipgloss.NewStyle().Background(pillBg).Foreground(pillFG).Render(" " + r + " ")
 }
 
 // leftEllipsize keeps the tail of s and prepends "…" when the string is wider
@@ -1731,9 +1894,13 @@ func leftEllipsize(s string, max int) string {
 	return "…" + string(keep)
 }
 
-func gitStatusGlyph(f git.FileStatus) (string, lipgloss.Color) {
+// gitStatusDot maps a file status to a small colour-coded marker for the
+// change rows: a filled ● for tracked changes (amber=modified, green=added,
+// red=deleted, blue=renamed, bright-red=conflict) and a hollow ○ for brand-new
+// untracked files.
+func gitStatusDot(f git.FileStatus) (string, lipgloss.Color) {
 	if f.Untracked() {
-		return "U", lipgloss.Color("#73c991")
+		return "○", lipgloss.Color("#73c991")
 	}
 	primary := byte(' ')
 	if len(f.Code) >= 1 && f.Code[0] != ' ' {
@@ -1743,19 +1910,17 @@ func gitStatusGlyph(f git.FileStatus) (string, lipgloss.Color) {
 	}
 	switch primary {
 	case 'M':
-		return "M", lipgloss.Color("#e2c08d")
+		return "●", lipgloss.Color("#e2c08d")
 	case 'A':
-		return "A", lipgloss.Color("#73c991")
+		return "●", lipgloss.Color("#73c991")
 	case 'D':
-		return "D", lipgloss.Color("#c74e39")
+		return "●", lipgloss.Color("#f48771")
 	case 'R':
-		return "R", lipgloss.Color("#73c991")
-	case 'C':
-		return "C", lipgloss.Color("#73c991")
-	case 'U':
-		return "U", lipgloss.Color("#6c6cc4")
+		return "●", lipgloss.Color("#569cd6")
+	case 'C', 'U':
+		return "●", lipgloss.Color("#f44747")
 	}
-	return "?", lipgloss.Color("#8c8c8c")
+	return "·", lipgloss.Color("#8c8c8c")
 }
 
 func padToWidth(s string, w int) string {

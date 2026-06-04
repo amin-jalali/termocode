@@ -4,8 +4,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-
-	"termocode/internal/git"
 )
 
 // gitTreeNode is one node of the virtual Source-Control tree. Unlike the
@@ -43,10 +41,18 @@ type gitVisRow struct {
 // gets its own collapsible row. To switch to compaction later, collapse any
 // dir node that has exactly one dir child and no file children into its
 // parent here.
-func buildGitTree(files []git.FileStatus) *gitTreeNode {
+// gitFileRef pairs a changed file's path with its index into Model.gitFiles,
+// so a tree built from a SUBSET of files (e.g. only staged) still maps each
+// file row back to the master list for stage/diff/discard actions.
+type gitFileRef struct {
+	path  string
+	index int
+}
+
+func buildGitTree(files []gitFileRef) *gitTreeNode {
 	root := &gitTreeNode{isDir: true, fileIndex: -1}
-	for i, f := range files {
-		segs := strings.Split(filepath.ToSlash(f.Path), "/")
+	for _, f := range files {
+		segs := strings.Split(filepath.ToSlash(f.path), "/")
 		cur := root
 		for d, seg := range segs {
 			if seg == "" {
@@ -55,9 +61,9 @@ func buildGitTree(files []git.FileStatus) *gitTreeNode {
 			if d == len(segs)-1 {
 				cur.children = append(cur.children, &gitTreeNode{
 					name:      seg,
-					path:      f.Path,
+					path:      f.path,
 					isDir:     false,
-					fileIndex: i,
+					fileIndex: f.index,
 				})
 				break
 			}
@@ -101,20 +107,28 @@ func sortGitTree(n *gitTreeNode) {
 	}
 }
 
-// gitVisibleRows is the single source of truth for what the Source-Control
-// list shows, in both modes. Flat mode emits one file row per gitFiles
-// entry; tree mode walks the built tree, skipping the children of any
-// collapsed directory. gitCursor and the mouse hit-test both index into
-// this slice, so the two modes share all navigation logic.
+// gitVisibleRows renders ALL changed files (used by the standalone tree
+// tests). The accordion uses gitVisibleRowsFor with staged/unstaged subsets.
 func (m Model) gitVisibleRows() []gitVisRow {
+	refs := make([]gitFileRef, len(m.gitFiles))
+	for i, f := range m.gitFiles {
+		refs[i] = gitFileRef{path: f.Path, index: i}
+	}
+	return m.gitVisibleRowsFor(refs)
+}
+
+// gitVisibleRowsFor flattens a file subset into display rows. Flat mode emits
+// one row per file; tree mode walks the built tree, skipping the children of
+// any collapsed directory. The returned rows carry master gitFiles indices.
+func (m Model) gitVisibleRowsFor(refs []gitFileRef) []gitVisRow {
 	if !m.gitViewTree {
-		rows := make([]gitVisRow, len(m.gitFiles))
-		for i, f := range m.gitFiles {
-			rows[i] = gitVisRow{Depth: 0, Name: f.Path, FileIndex: i}
+		rows := make([]gitVisRow, len(refs))
+		for j, r := range refs {
+			rows[j] = gitVisRow{Depth: 0, Name: r.path, FileIndex: r.index}
 		}
 		return rows
 	}
-	root := buildGitTree(m.gitFiles)
+	root := buildGitTree(refs)
 	var rows []gitVisRow
 	var walk func(n *gitTreeNode, depth int)
 	walk = func(n *gitTreeNode, depth int) {

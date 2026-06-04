@@ -353,6 +353,48 @@ func TestGraphLog(t *testing.T) {
 	if !sawMerge {
 		t.Errorf("merge commit subject not parsed")
 	}
+
+	// The newest commit is the merge; it must be flagged IsMerge + IsHead and
+	// carry a compact age.
+	var head *GraphLine
+	for i := range lines {
+		if lines[i].Hash != "" {
+			head = &lines[i]
+			break
+		}
+	}
+	if head == nil {
+		t.Fatal("no commit node found")
+	}
+	if !head.IsHead {
+		t.Errorf("newest commit should be flagged IsHead: %+v", head)
+	}
+	if !head.IsMerge {
+		t.Errorf("newest commit is a merge, want IsMerge: %+v", head)
+	}
+	if head.Age == "" {
+		t.Errorf("newest commit missing compact age: %+v", head)
+	}
+}
+
+func TestCompactAge(t *testing.T) {
+	cases := map[string]string{
+		"just now":       "now",
+		"3 seconds ago":  "now",
+		"5 minutes ago":  "5m",
+		"2 hours ago":    "2h",
+		"1 hour ago":     "1h",
+		"4 days ago":     "4d",
+		"2 weeks ago":    "2w",
+		"3 months ago":   "3mo",
+		"1 year ago":     "1y",
+		"":               "now",
+	}
+	for in, want := range cases {
+		if got := compactAge(in); got != want {
+			t.Errorf("compactAge(%q) = %q, want %q", in, got, want)
+		}
+	}
 }
 
 func TestFileHistory(t *testing.T) {

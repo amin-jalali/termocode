@@ -23,8 +23,8 @@ import (
 // No noise, no solid blue panel, no real transparency, no drop shadow.
 var (
 	modalTint        = rgbColor{0x00, 0x01, 0x03} // essentially black, faintest blue hint
-	bodyBlendAlpha   = 0.99                       // 99% tint, 1% underlying — matches menu/toast glass
-	bodyFgDimFactor  = 0.18                       // dim editor text to 18% intensity
+	bodyBlendAlpha   = 1.0                        // fully opaque body — editor bg doesn't bleed through
+	bodyFgDimFactor  = 0.10                       // ghost editor text barely visible (10% intensity)
 	glassBorderLight = rgbColor{0x3a, 0x3a, 0x3a} // uniform thin dark-grey rim
 	glassBorderDark  = rgbColor{0x15, 0x19, 0x22} // bottom + right rim shadow (unused)
 	glassShadow      = rgbColor{0x0b, 0x0d, 0x10} // drop shadow (unused)

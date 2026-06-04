@@ -166,34 +166,80 @@ func TestGitPanelRows_Structure(t *testing.T) {
 		},
 	}
 	rows := m.gitPanelRows()
-	// CHANGES hdr, a.go, b.go, GRAPH hdr, commit, connector, commit = 7.
-	if len(rows) != 7 {
-		t.Fatalf("rows = %d, want 7: %+v", len(rows), rows)
+	// CHANGES hdr, a.go, b.go, spacer, GRAPH hdr, commit, connector, commit = 8.
+	if len(rows) != 8 {
+		t.Fatalf("rows = %d, want 8: %+v", len(rows), rows)
 	}
 	if rows[0].kind != gitRowSection || rows[0].section != gitSecChanges {
 		t.Errorf("row0 should be CHANGES header: %+v", rows[0])
 	}
-	if rows[3].kind != gitRowSection || rows[3].section != gitSecGraph {
-		t.Errorf("row3 should be GRAPH header: %+v", rows[3])
+	if rows[3].kind != gitRowSpacer || rows[3].selectable() {
+		t.Errorf("row3 should be a non-selectable spacer: %+v", rows[3])
 	}
-	if rows[5].kind != gitRowConnector || rows[5].selectable() {
-		t.Errorf("row5 should be a non-selectable connector: %+v", rows[5])
+	if rows[4].kind != gitRowSection || rows[4].section != gitSecGraph {
+		t.Errorf("row4 should be GRAPH header: %+v", rows[4])
 	}
-	if rows[4].kind != gitRowCommit || rows[4].hash != "a1b2" {
-		t.Errorf("row4 should be commit a1b2: %+v", rows[4])
+	if rows[6].kind != gitRowConnector || rows[6].selectable() {
+		t.Errorf("row6 should be a non-selectable connector: %+v", rows[6])
+	}
+	if rows[5].kind != gitRowCommit || rows[5].hash != "a1b2" {
+		t.Errorf("row5 should be commit a1b2: %+v", rows[5])
 	}
 
 	// Collapsing CHANGES hides its file rows but keeps the GRAPH section.
 	m.gitChangesCollapsed = true
 	rows = m.gitPanelRows()
-	// CHANGES hdr, GRAPH hdr, commit, connector, commit = 5.
-	if len(rows) != 5 {
-		t.Fatalf("collapsed rows = %d, want 5: %+v", len(rows), rows)
+	// CHANGES hdr, spacer, GRAPH hdr, commit, connector, commit = 6.
+	if len(rows) != 6 {
+		t.Fatalf("collapsed rows = %d, want 6: %+v", len(rows), rows)
 	}
 	for _, r := range rows {
 		if r.kind == gitRowFile {
 			t.Errorf("collapsed CHANGES leaked a file row: %+v", r)
 		}
+	}
+}
+
+func TestGitPanelRows_StagedSplit(t *testing.T) {
+	m := Model{
+		gitViewTree:  false,
+		gitCollapsed: map[string]bool{},
+		gitFiles: []git.FileStatus{
+			{Code: "M ", Path: "staged.go"},   // index-side change → STAGED
+			{Code: " M", Path: "unstaged.go"}, // worktree change → CHANGES
+			{Code: "MM", Path: "both.go"},     // appears in BOTH sections
+		},
+	}
+	var sections []gitSection
+	var fileNames []string
+	for _, r := range m.gitPanelRows() {
+		switch r.kind {
+		case gitRowSection:
+			sections = append(sections, r.section)
+		case gitRowFile:
+			fileNames = append(fileNames, m.gitFiles[r.fileIndex].Path)
+		}
+	}
+	// STAGED first, then CHANGES, then GRAPH.
+	want := []gitSection{gitSecStaged, gitSecChanges, gitSecGraph}
+	if len(sections) != 3 || sections[0] != want[0] || sections[1] != want[1] || sections[2] != want[2] {
+		t.Fatalf("sections = %v, want %v", sections, want)
+	}
+	// both.go appears twice (staged + changes); staged.go once; unstaged.go once.
+	count := map[string]int{}
+	for _, n := range fileNames {
+		count[n]++
+	}
+	if count["both.go"] != 2 {
+		t.Errorf("both.go should appear in STAGED and CHANGES, got %d", count["both.go"])
+	}
+	if count["staged.go"] != 1 || count["unstaged.go"] != 1 {
+		t.Errorf("unexpected file counts: %v", count)
+	}
+
+	staged, changed := m.gitFileCounts()
+	if staged != 2 || changed != 2 { // staged: staged.go+both.go; changed: unstaged.go+both.go
+		t.Errorf("counts staged=%d changed=%d, want 2/2", staged, changed)
 	}
 }
 
@@ -207,14 +253,14 @@ func TestGitMoveCursorSkipsConnectors(t *testing.T) {
 			{Art: "* ", Hash: "b2", Subject: "y"},
 		},
 	}
-	// Rows: [0 CHANGES hdr][1 GRAPH hdr][2 commit a1][3 connector][4 commit b2].
-	m.gitCursor = 2 // commit a1
+	// Rows: [0 CHANGES hdr][1 spacer][2 GRAPH hdr][3 commit a1][4 connector][5 commit b2].
+	m.gitCursor = 3 // commit a1
 	m.gitMoveCursor(1)
-	if m.gitCursor != 4 {
-		t.Errorf("down from commit a1 landed on %d, want 4 (skipping the connector)", m.gitCursor)
+	if m.gitCursor != 5 {
+		t.Errorf("down from commit a1 landed on %d, want 5 (skipping the connector)", m.gitCursor)
 	}
 	m.gitMoveCursor(-1)
-	if m.gitCursor != 2 {
-		t.Errorf("up from commit b2 landed on %d, want 2", m.gitCursor)
+	if m.gitCursor != 3 {
+		t.Errorf("up from commit b2 landed on %d, want 3", m.gitCursor)
 	}
 }

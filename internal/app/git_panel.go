@@ -1,6 +1,8 @@
 package app
 
-// The Source Control panel is an accordion of two collapsible sections —
+import "strings"
+
+// The Source Control panel is an accordion of collapsible sections —
 // CHANGES (the working-tree file list, tree or flat) and GRAPH (the current
 // branch's commit graph with merge topology). gitPanelRows flattens both
 // sections, their headers, and (when expanded) their contents into one row
@@ -16,12 +18,14 @@ const (
 	gitRowCommit                      // GRAPH: a commit node
 	gitRowConnector                   // GRAPH: a topology-only line (not selectable)
 	gitRowNote                        // empty-section note ("No changes") (not selectable)
+	gitRowSpacer                      // blank separator between sections (not selectable)
 )
 
 type gitSection int
 
 const (
-	gitSecChanges gitSection = iota
+	gitSecStaged gitSection = iota
+	gitSecChanges
 	gitSecGraph
 )
 
@@ -40,29 +44,44 @@ type gitPanelRow struct {
 	hash    string // gitRowCommit → short SHA
 	subject string
 	refs    string
+	age     string // compact relative date ("2h")
+	isMerge bool
+	isHead  bool
 
 	note string // gitRowNote → the dim placeholder text
 }
 
 // selectable reports whether the cursor may land on this row. Topology-only
-// connector lines and empty-section notes are skipped during navigation and
-// ignored on click.
+// connector lines, empty-section notes, and spacers are skipped during
+// navigation and ignored on click.
 func (r gitPanelRow) selectable() bool {
-	return r.kind != gitRowConnector && r.kind != gitRowNote
+	switch r.kind {
+	case gitRowConnector, gitRowNote, gitRowSpacer:
+		return false
+	}
+	return true
 }
 
-// gitPanelRows flattens the accordion into one indexable row list: the
-// CHANGES header, its file/dir rows (unless collapsed), then the GRAPH header
-// and its commit/connector rows (unless collapsed).
+// gitPanelRows flattens the accordion into one indexable row list: an optional
+// STAGED section, the CHANGES section, then the GRAPH section — each a header
+// plus its contents (unless collapsed), separated by spacer rows.
 func (m Model) gitPanelRows() []gitPanelRow {
-	rows := make([]gitPanelRow, 0, len(m.gitFiles)+len(m.gitGraph)+2)
+	rows := make([]gitPanelRow, 0, len(m.gitFiles)+len(m.gitGraph)*2+4)
 
-	rows = append(rows, gitPanelRow{kind: gitRowSection, section: gitSecChanges})
-	if !m.gitChangesCollapsed {
-		vis := m.gitVisibleRows()
-		if len(vis) == 0 {
-			rows = append(rows, gitPanelRow{kind: gitRowNote, note: "No changes"})
+	// Partition files: a file with index-side changes is "staged"; one with
+	// worktree changes (or untracked) is "changed". A file edited after staging
+	// (e.g. "MM") legitimately appears in both, matching VSCode.
+	var staged, changed []gitFileRef
+	for i, f := range m.gitFiles {
+		if f.Staged() {
+			staged = append(staged, gitFileRef{path: f.Path, index: i})
 		}
+		if f.Unstaged() || f.Untracked() {
+			changed = append(changed, gitFileRef{path: f.Path, index: i})
+		}
+	}
+
+	appendFiles := func(vis []gitVisRow) {
 		for _, r := range vis {
 			if r.IsDir {
 				rows = append(rows, gitPanelRow{kind: gitRowDir, depth: r.Depth, dirPath: r.DirPath})
@@ -72,22 +91,67 @@ func (m Model) gitPanelRows() []gitPanelRow {
 		}
 	}
 
+	// STAGED — only when something is staged.
+	if len(staged) > 0 {
+		rows = append(rows, gitPanelRow{kind: gitRowSection, section: gitSecStaged})
+		if !m.gitStagedCollapsed {
+			appendFiles(m.gitVisibleRowsFor(staged))
+		}
+		rows = append(rows, gitPanelRow{kind: gitRowSpacer})
+	}
+
+	// CHANGES.
+	rows = append(rows, gitPanelRow{kind: gitRowSection, section: gitSecChanges})
+	if !m.gitChangesCollapsed {
+		vis := m.gitVisibleRowsFor(changed)
+		if len(vis) == 0 {
+			rows = append(rows, gitPanelRow{kind: gitRowNote, note: "No changes"})
+		}
+		appendFiles(vis)
+	}
+
+	// GRAPH.
+	rows = append(rows, gitPanelRow{kind: gitRowSpacer})
 	rows = append(rows, gitPanelRow{kind: gitRowSection, section: gitSecGraph})
 	if !m.gitGraphCollapsed {
 		if len(m.gitGraph) == 0 {
 			rows = append(rows, gitPanelRow{kind: gitRowNote, note: "No commits"})
 		}
-		for _, g := range m.gitGraph {
+		for i, g := range m.gitGraph {
 			if g.Hash == "" {
 				rows = append(rows, gitPanelRow{kind: gitRowConnector, art: g.Art})
-			} else {
-				rows = append(rows, gitPanelRow{
-					kind: gitRowCommit, art: g.Art, hash: g.Hash, subject: g.Subject, refs: g.Refs,
-				})
+				continue
+			}
+			rows = append(rows, gitPanelRow{
+				kind: gitRowCommit, art: g.Art, hash: g.Hash, subject: g.Subject,
+				refs: g.Refs, age: g.Age, isMerge: g.IsMerge, isHead: g.IsHead,
+			})
+			// Synthesize a spine connector between two consecutive commits
+			// (linear runs) so the graph reads as a timeline. Merge topology
+			// already carries git's own connector lines, so we only add one
+			// when the next line is itself a commit.
+			if i+1 < len(m.gitGraph) && m.gitGraph[i+1].Hash != "" {
+				spine := strings.ReplaceAll(g.Art, "*", "|")
+				rows = append(rows, gitPanelRow{kind: gitRowConnector, art: spine})
 			}
 		}
 	}
 	return rows
+}
+
+// gitFileCounts returns how many files have staged (index-side) changes and
+// how many have worktree changes (modified-but-unstaged or untracked). A file
+// can count toward both.
+func (m Model) gitFileCounts() (staged, changed int) {
+	for _, f := range m.gitFiles {
+		if f.Staged() {
+			staged++
+		}
+		if f.Unstaged() || f.Untracked() {
+			changed++
+		}
+	}
+	return staged, changed
 }
 
 // gitCurrentFileIndex resolves the cursor to an index into m.gitFiles, or
@@ -141,6 +205,8 @@ func gitNearestSelectable(rows []gitPanelRow, idx int) int {
 // (collapsing a section above the cursor shrinks the list).
 func (m *Model) gitToggleSection(s gitSection) {
 	switch s {
+	case gitSecStaged:
+		m.gitStagedCollapsed = !m.gitStagedCollapsed
 	case gitSecChanges:
 		m.gitChangesCollapsed = !m.gitChangesCollapsed
 	case gitSecGraph:
