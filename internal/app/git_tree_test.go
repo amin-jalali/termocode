@@ -27,6 +27,11 @@ func TestGitSidebarRowsFitWidth(t *testing.T) {
 			"deeply/nested/path/that/keeps/going/file.go",
 			"README.md",
 		),
+		gitGraph: []git.GraphLine{
+			{Art: "* ", Hash: "a1b2c3d", Subject: "a very long commit subject that should be truncated hard", Refs: "(HEAD -> main, origin/main)"},
+			{Art: "|\\ "},
+			{Art: "| * ", Hash: "e5f6a7b", Subject: "feature work on the side branch"},
+		},
 	}
 	for i, row := range strings.Split(m.renderGitSidebar(w, h), "\n") {
 		if got := lipgloss.Width(row); got > w {
@@ -128,17 +133,88 @@ func TestGitVisibleRows_Flat(t *testing.T) {
 }
 
 func TestGitCurrentFileIndex_OnDir(t *testing.T) {
+	// Panel rows: [0 CHANGES header][1 internal dir][2 app dir][3 view.go file]
+	// [4 GRAPH header][5 "No commits" note].
 	m := Model{
 		gitViewTree:  true,
 		gitCollapsed: map[string]bool{},
 		gitFiles:     gitFiles("internal/app/view.go"),
-		gitCursor:    0, // the "internal" dir header
+		gitCursor:    0, // the CHANGES section header
 	}
+	if _, ok := m.gitCurrentFileIndex(); ok {
+		t.Error("cursor on a section header should not resolve to a file index")
+	}
+	m.gitCursor = 1 // the "internal" dir header
 	if _, ok := m.gitCurrentFileIndex(); ok {
 		t.Error("cursor on a dir header should not resolve to a file index")
 	}
-	m.gitCursor = 2 // the file row (internal > app > view.go)
+	m.gitCursor = 3 // the file row
 	if fi, ok := m.gitCurrentFileIndex(); !ok || fi != 0 {
 		t.Errorf("cursor on file row = (%d,%v), want (0,true)", fi, ok)
+	}
+}
+
+func TestGitPanelRows_Structure(t *testing.T) {
+	m := Model{
+		gitViewTree:  false, // flat changes for simpler indexing
+		gitCollapsed: map[string]bool{},
+		gitFiles:     gitFiles("a.go", "b.go"),
+		gitGraph: []git.GraphLine{
+			{Art: "* ", Hash: "a1b2", Subject: "fix", Refs: "(HEAD -> main)"},
+			{Art: "|\\ "},
+			{Art: "* ", Hash: "c3d4", Subject: "feat"},
+		},
+	}
+	rows := m.gitPanelRows()
+	// CHANGES hdr, a.go, b.go, GRAPH hdr, commit, connector, commit = 7.
+	if len(rows) != 7 {
+		t.Fatalf("rows = %d, want 7: %+v", len(rows), rows)
+	}
+	if rows[0].kind != gitRowSection || rows[0].section != gitSecChanges {
+		t.Errorf("row0 should be CHANGES header: %+v", rows[0])
+	}
+	if rows[3].kind != gitRowSection || rows[3].section != gitSecGraph {
+		t.Errorf("row3 should be GRAPH header: %+v", rows[3])
+	}
+	if rows[5].kind != gitRowConnector || rows[5].selectable() {
+		t.Errorf("row5 should be a non-selectable connector: %+v", rows[5])
+	}
+	if rows[4].kind != gitRowCommit || rows[4].hash != "a1b2" {
+		t.Errorf("row4 should be commit a1b2: %+v", rows[4])
+	}
+
+	// Collapsing CHANGES hides its file rows but keeps the GRAPH section.
+	m.gitChangesCollapsed = true
+	rows = m.gitPanelRows()
+	// CHANGES hdr, GRAPH hdr, commit, connector, commit = 5.
+	if len(rows) != 5 {
+		t.Fatalf("collapsed rows = %d, want 5: %+v", len(rows), rows)
+	}
+	for _, r := range rows {
+		if r.kind == gitRowFile {
+			t.Errorf("collapsed CHANGES leaked a file row: %+v", r)
+		}
+	}
+}
+
+func TestGitMoveCursorSkipsConnectors(t *testing.T) {
+	m := Model{
+		gitViewTree:         false,
+		gitChangesCollapsed: true, // hide files so cursor starts in the graph quickly
+		gitGraph: []git.GraphLine{
+			{Art: "* ", Hash: "a1", Subject: "x"},
+			{Art: "|\\ "}, // connector — must be skipped
+			{Art: "* ", Hash: "b2", Subject: "y"},
+		},
+	}
+	// Rows: [0 CHANGES hdr][1 GRAPH hdr][2 commit a1][3 connector][4 commit b2].
+	m.gitCursor = 2 // commit a1
+	m.gitMoveCursor(1)
+	if m.gitCursor != 4 {
+		t.Errorf("down from commit a1 landed on %d, want 4 (skipping the connector)", m.gitCursor)
+	}
+	m.gitMoveCursor(-1)
+	if m.gitCursor != 2 {
+		t.Errorf("up from commit b2 landed on %d, want 2", m.gitCursor)
 	}
 }

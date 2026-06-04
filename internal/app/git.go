@@ -14,9 +14,14 @@ type GitMsg struct {
 	IsRepo bool
 	Branch git.Branch
 	Files  []git.FileStatus
+	Graph  []git.GraphLine
 }
 
-// fetchGitCmd asynchronously runs git status + branch and returns a GitMsg.
+// gitGraphLimit caps how many commits the Source Control GRAPH section loads.
+const gitGraphLimit = 200
+
+// fetchGitCmd asynchronously runs git status + branch + graph and returns a
+// GitMsg.
 func fetchGitCmd() tea.Cmd {
 	return func() tea.Msg {
 		cwd, err := os.Getwd()
@@ -28,7 +33,8 @@ func fetchGitCmd() tea.Cmd {
 		}
 		branch, _ := git.GetBranch(cwd)
 		files, _ := git.Status(cwd)
-		return GitMsg{IsRepo: true, Branch: branch, Files: files}
+		graph, _ := git.GraphLog(cwd, gitGraphLimit)
+		return GitMsg{IsRepo: true, Branch: branch, Files: files, Graph: graph}
 	}
 }
 
@@ -72,9 +78,11 @@ func (m Model) gitStatusMap() map[string]string {
 // handleGitSidebarMouse processes a click inside the Git sidebar. x is
 // sidebar-relative (0 = first column), y is absolute with the title at row 0.
 //
-//   - Clicking the tree/flat glyph on the title row toggles the view mode.
-//   - Clicking a directory header folds/unfolds it.
-//   - Clicking a changed file shows its diff (VSCode-style single click).
+//   - The tree/flat glyph on the title row toggles the view mode.
+//   - An accordion section header (CHANGES / GRAPH) folds/unfolds it.
+//   - A directory header folds/unfolds it.
+//   - A changed file shows its diff (VSCode-style single click).
+//   - A graph commit shows that commit's diff.
 func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (tea.Model, tea.Cmd) {
 	if t != tea.MouseLeft {
 		return m, nil
@@ -83,30 +91,37 @@ func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (tea.Model,
 	if !m.gitIsRepo {
 		return m, nil
 	}
+	contentW := m.explorerWidth - 1
 	// Title-row tree/flat toggle glyph lives in the right ~2 cells.
 	if y == 0 {
-		if x >= m.explorerWidth-3 {
+		if x >= contentW-3 {
 			m.toggleGitViewMode()
 		}
 		return m, nil
 	}
-	if len(m.gitFiles) == 0 {
+	// Map the click to a body row through the same scroll layout the renderer
+	// used, so it lands on the row actually drawn there.
+	top, bodyH, _ := m.gitPanelLayout(m.h)
+	bodyRow := y - m.gitPanelTopOffset()
+	if bodyRow < 0 || bodyRow >= bodyH {
 		return m, nil
 	}
-	// Header layout: title (1) + branch line (1 if present) + blank (1) + count (1) + rows...
-	header := 3
-	if m.gitBranch.Name != "" {
-		header = 4
-	}
-	idx := y - header
-	rows := m.gitVisibleRows()
-	if idx < 0 || idx >= len(rows) {
+	idx := top + bodyRow
+	rows := m.gitPanelRows()
+	if idx < 0 || idx >= len(rows) || !rows[idx].selectable() {
 		return m, nil
 	}
 	m.gitCursor = idx
-	if rows[idx].IsDir {
-		m.gitToggleCollapse(rows[idx].DirPath)
-		return m, nil
+	r := rows[idx]
+	switch r.kind {
+	case gitRowSection:
+		m.gitToggleSection(r.section)
+	case gitRowDir:
+		m.gitToggleCollapse(r.dirPath)
+	case gitRowFile:
+		return m, m.gitDiffCmd()
+	case gitRowCommit:
+		return m, m.gitShowCommitCmd(r.hash)
 	}
-	return m, m.gitDiffCmd()
+	return m, nil
 }

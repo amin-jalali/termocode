@@ -345,6 +345,66 @@ func Log(dir string, limit int) ([]LogEntry, error) {
 	return entries, nil
 }
 
+// GraphLine is one line of `git log --graph` output. A commit node has Hash
+// set (plus Subject/Refs); a pure topology connector line ("| |", "|\", "|/")
+// has Hash empty and only Art populated.
+type GraphLine struct {
+	Art     string // graph art prefix, e.g. "* ", "| * ", "|\\ "
+	Hash    string // short SHA; "" on connector lines
+	Subject string
+	Refs    string // decorations, e.g. "HEAD -> main"
+}
+
+// GraphLog returns `git log --graph` for HEAD (current branch, including the
+// merge topology that feeds into it). Each output line is parsed into a
+// GraphLine: the leading graph art is split from the commit fields so the
+// caller can colour them separately and map a row back to its commit. Limit
+// caps the commit count; pass <= 0 for the default (200).
+func GraphLog(dir string, limit int) ([]GraphLine, error) {
+	if limit <= 0 {
+		limit = 200
+	}
+	// --graph draws the topology; the pretty format is appended after the art
+	// on each NODE line. Connector lines carry no format output, so they have
+	// no \x1f and parse as art-only. \x1f separates hash/subject/refs.
+	fmtArg := "--pretty=format:%h%x1f%s%x1f%d"
+	out, err := runOut(dir, "git", "log", "--graph", "--abbrev-commit", "--decorate", fmtArg, fmt.Sprintf("-n%d", limit))
+	if err != nil {
+		return nil, err
+	}
+	var lines []GraphLine
+	for _, raw := range strings.Split(out, "\n") {
+		line := strings.TrimRight(raw, " \t")
+		if line == "" {
+			continue
+		}
+		sep := strings.IndexByte(line, '\x1f')
+		if sep < 0 {
+			// Connector-only line (no commit fields).
+			lines = append(lines, GraphLine{Art: line})
+			continue
+		}
+		fields := strings.SplitN(line, "\x1f", 3)
+		head := fields[0] // "<art><hash>"
+		subject, refs := "", ""
+		if len(fields) > 1 {
+			subject = fields[1]
+		}
+		if len(fields) > 2 {
+			refs = strings.TrimSpace(fields[2])
+		}
+		// The hash is the last whitespace-delimited token of head; everything
+		// before it (incl. the trailing space) is the graph art.
+		art, hash := "", head
+		if sp := strings.LastIndexByte(head, ' '); sp >= 0 {
+			art = head[:sp+1]
+			hash = head[sp+1:]
+		}
+		lines = append(lines, GraphLine{Art: art, Hash: hash, Subject: subject, Refs: refs})
+	}
+	return lines, nil
+}
+
 // ShowCommit returns the full diff body for a commit (`git show <hash>`).
 func ShowCommit(dir, hash string) (string, error) {
 	return runOut(dir, "git", "show", "--no-color", hash)

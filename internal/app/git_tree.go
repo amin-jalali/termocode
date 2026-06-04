@@ -143,27 +143,19 @@ func (m Model) gitVisibleRows() []gitVisRow {
 	return rows
 }
 
-// gitCurrentFileIndex resolves the cursor to an index into m.gitFiles, or
-// (-1, false) when the cursor is parked on a directory header. The file
-// actions (stage / diff / discard / open) call this so they degrade to
-// no-ops on dir rows instead of indexing the wrong file.
-func (m Model) gitCurrentFileIndex() (int, bool) {
-	rows := m.gitVisibleRows()
-	if m.gitCursor >= 0 && m.gitCursor < len(rows) && !rows[m.gitCursor].IsDir {
-		return rows[m.gitCursor].FileIndex, true
-	}
-	return -1, false
-}
-
 // gitClampCursor keeps gitCursor inside the current row set after the row
-// count changes (collapse/expand, mode toggle, a fresh status fetch).
+// count changes (collapse/expand, mode toggle, a fresh status fetch), and
+// nudges it off any non-selectable connector line onto the nearest row.
 func (m *Model) gitClampCursor() {
-	n := len(m.gitVisibleRows())
-	if n == 0 {
+	rows := m.gitPanelRows()
+	if len(rows) == 0 {
 		m.gitCursor = 0
 		return
 	}
-	m.gitCursor = clampInt(m.gitCursor, 0, n-1)
+	m.gitCursor = clampInt(m.gitCursor, 0, len(rows)-1)
+	if !rows[m.gitCursor].selectable() {
+		m.gitCursor = gitNearestSelectable(rows, m.gitCursor)
+	}
 }
 
 // gitToggleCollapse flips the collapsed state of a directory row and

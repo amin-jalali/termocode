@@ -1319,8 +1319,11 @@ func (m Model) renderGitSidebar(w, h int) string {
 		return placeholderSidebar(w, h, "Source Control", "Not a git repository.\n\nRun `git init` in a\nterminal to enable.")
 	}
 
-	var lines []string
-	lines = append(lines, renderGitTitleRow(m.gitViewTree, w))
+	focused := m.focus == FocusExplorer
+
+	// ── Fixed header: title (+ optional branch) + blank spacer ───────────
+	var header []string
+	header = append(header, renderGitTitleRow(m.gitViewTree, w))
 	if m.gitBranch.Name != "" {
 		text := " " + m.gitBranch.Name
 		if m.gitBranch.Ahead > 0 {
@@ -1329,42 +1332,30 @@ func (m Model) renderGitSidebar(w, h int) string {
 		if m.gitBranch.Behind > 0 {
 			text += fmt.Sprintf(" ↓%d", m.gitBranch.Behind)
 		}
-		lines = append(lines, padBgToWidth(gitBranchStyle.Render(text), w))
+		header = append(header, padBgToWidth(gitBranchStyle.Render(text), w))
 	}
-	lines = append(lines, sidebarFill.Render(strings.Repeat(" ", w)))
+	header = append(header, sidebarFill.Render(strings.Repeat(" ", w)))
 
-	if len(m.gitFiles) == 0 {
-		lines = append(lines, padBgToWidth(gitBranchStyle.Render(" No changes"), w))
-	} else {
-		lines = append(lines, padBgToWidth(gitTitleStyle.Render(fmt.Sprintf(" CHANGES (%d)", len(m.gitFiles))), w))
-		focused := m.focus == FocusExplorer
-		for i, r := range m.gitVisibleRows() {
-			active := i == m.gitCursor
-			switch {
-			case r.IsDir:
-				lines = append(lines, renderGitTreeDir(r.Name, r.Depth, !m.gitCollapsed[r.DirPath], active, focused, w))
-			case m.gitViewTree:
-				lines = append(lines, renderGitTreeFile(m.gitFiles[r.FileIndex], r.Depth, active, focused, w))
-			default:
-				lines = append(lines, renderGitFile(m.gitFiles[r.FileIndex], active, focused, w))
-			}
-		}
+	// ── Scrollable body + optional footer hints (shared layout with the
+	// mouse hit-test so clicks land on the row that was drawn) ────────────
+	top, bodyH, footerRows := m.gitPanelLayout(h)
+	rows := m.gitPanelRows()
+
+	var body []string
+	for i := top; i < len(rows) && len(body) < bodyH; i++ {
+		body = append(body, m.renderGitPanelRow(rows[i], i == m.gitCursor, focused, w))
+	}
+	for len(body) < bodyH {
+		body = append(body, sidebarFill.Render(strings.Repeat(" ", w)))
 	}
 
-	// Footer hints — only worth space when the user has focus here, since
-	// the bindings only fire in that case. We show them as the bottom 2
-	// rows of the panel using the dim "branch" style.
-	if m.focus == FocusExplorer && h >= len(lines)+3 {
-		// Pad up to (h - 2) so the hints sit flush against the bottom.
-		for len(lines) < h-2 {
-			lines = append(lines, sidebarFill.Render(strings.Repeat(" ", w)))
-		}
+	lines := append(header, body...)
+	if footerRows == 2 {
 		lines = append(lines,
 			padBgToWidth(gitBranchStyle.Render(" s stage  d diff  c commit"), w),
 			padBgToWidth(gitBranchStyle.Render(" x discard  r refresh  t tree"), w),
 		)
 	}
-
 	for len(lines) < h {
 		lines = append(lines, sidebarFill.Render(strings.Repeat(" ", w)))
 	}
@@ -1372,6 +1363,37 @@ func (m Model) renderGitSidebar(w, h int) string {
 		lines = lines[:h]
 	}
 	return strings.Join(lines, "\n")
+}
+
+// renderGitPanelRow dispatches one accordion row to its renderer.
+func (m Model) renderGitPanelRow(r gitPanelRow, active, focused bool, w int) string {
+	switch r.kind {
+	case gitRowSection:
+		switch r.section {
+		case gitSecChanges:
+			return renderGitSectionHeader("CHANGES", len(m.gitFiles), true, !m.gitChangesCollapsed, active, focused, w)
+		default:
+			return renderGitSectionHeader("GRAPH", 0, false, !m.gitGraphCollapsed, active, focused, w)
+		}
+	case gitRowDir:
+		name := r.dirPath
+		if i := strings.LastIndexByte(name, '/'); i >= 0 {
+			name = name[i+1:]
+		}
+		return renderGitTreeDir(name, r.depth, !m.gitCollapsed[r.dirPath], active, focused, w)
+	case gitRowFile:
+		if m.gitViewTree {
+			return renderGitTreeFile(m.gitFiles[r.fileIndex], r.depth, active, focused, w)
+		}
+		return renderGitFile(m.gitFiles[r.fileIndex], active, focused, w)
+	case gitRowCommit:
+		return renderGitGraphCommit(r.art, r.hash, r.subject, r.refs, active, focused, w)
+	case gitRowConnector:
+		return renderGitGraphConnector(r.art, w)
+	case gitRowNote:
+		return padBgToWidth(gitBranchStyle.Render("   "+r.note), w)
+	}
+	return sidebarFill.Render(strings.Repeat(" ", w))
 }
 
 func renderGitFile(f git.FileStatus, active, focused bool, w int) string {
@@ -1578,6 +1600,116 @@ func clampSidebarRow(row string, width, w int, rowStyle lipgloss.Style) string {
 		return ansi.Truncate(row, w, "")
 	}
 	return row
+}
+
+// ── Accordion section + graph rows ──────────────────────────────────────────
+
+var (
+	gitGraphArtColor  = lipgloss.Color("#6a9fb5") // dim blue for the topology art
+	gitGraphHashColor = lipgloss.Color("#e2c08d") // amber for the abbreviated SHA
+	gitGraphRefColor  = lipgloss.Color("#73c991") // green for branch/tag decorations
+)
+
+// renderGitSectionHeader renders a collapsible accordion header like
+// "▾ CHANGES (3)" or "▸ GRAPH", bold with a fold chevron.
+func renderGitSectionHeader(label string, count int, hasCount, expanded, active, focused bool, w int) string {
+	bg, fgName, _ := gitRowColors(active, focused, lipgloss.Color("#858585"))
+	rowStyle := lipgloss.NewStyle().Background(bg)
+	chev := "▸"
+	if expanded {
+		chev = "▾"
+	}
+	chevStyle := lipgloss.NewStyle().Background(bg).Foreground(lipgloss.Color("#858585"))
+	labelStyle := lipgloss.NewStyle().Background(bg).Foreground(fgName).Bold(true)
+
+	text := label
+	if hasCount {
+		text = fmt.Sprintf("%s (%d)", label, count)
+	}
+	var sb strings.Builder
+	sb.WriteString(rowStyle.Render(" "))
+	sb.WriteString(chevStyle.Render(chev))
+	sb.WriteString(rowStyle.Render(" "))
+	used := 3
+	avail := w - used - 1
+	if avail < 1 {
+		avail = 1
+	}
+	if runewidth.StringWidth(text) > avail {
+		text = runewidth.Truncate(text, avail, "…")
+	}
+	sb.WriteString(labelStyle.Render(text))
+	used += runewidth.StringWidth(text)
+	return clampSidebarRow(sb.String(), used, w, rowStyle)
+}
+
+// renderGitGraphCommit renders one commit node: the topology art (dim blue),
+// the SHA (amber), an optional decoration (green), then the subject.
+func renderGitGraphCommit(art, hash, subject, refs string, active, focused bool, w int) string {
+	bg, fgName, _ := gitRowColors(active, focused, lipgloss.Color("#858585"))
+	rowStyle := lipgloss.NewStyle().Background(bg)
+	artStyle := lipgloss.NewStyle().Background(bg).Foreground(gitGraphArtColor)
+	hashStyle := lipgloss.NewStyle().Background(bg).Foreground(gitGraphHashColor)
+	refStyle := lipgloss.NewStyle().Background(bg).Foreground(gitGraphRefColor)
+	subjStyle := lipgloss.NewStyle().Background(bg).Foreground(fgName)
+
+	var sb strings.Builder
+	sb.WriteString(rowStyle.Render(" "))
+	sb.WriteString(artStyle.Render(art))
+	sb.WriteString(hashStyle.Render(hash))
+	used := 1 + runewidth.StringWidth(art) + runewidth.StringWidth(hash)
+
+	// Decoration (short refs) in green, only if there's comfortable room.
+	if r := shortRefs(refs); r != "" {
+		if avail := w - used - 2; avail >= 4 {
+			if runewidth.StringWidth(r) > avail {
+				r = runewidth.Truncate(r, avail, "…")
+			}
+			sb.WriteString(rowStyle.Render(" "))
+			sb.WriteString(refStyle.Render(r))
+			used += 1 + runewidth.StringWidth(r)
+		}
+	}
+
+	// Subject fills the remainder.
+	if avail := w - used - 1; avail >= 1 && subject != "" {
+		if runewidth.StringWidth(subject) > avail {
+			subject = runewidth.Truncate(subject, avail, "…")
+		}
+		sb.WriteString(rowStyle.Render(" "))
+		sb.WriteString(subjStyle.Render(subject))
+		used += 1 + runewidth.StringWidth(subject)
+	}
+	return clampSidebarRow(sb.String(), used, w, rowStyle)
+}
+
+// renderGitGraphConnector renders a topology-only line (no commit), e.g. "|/"
+// or "| |", in the dim graph-art colour.
+func renderGitGraphConnector(art string, w int) string {
+	rowStyle := lipgloss.NewStyle().Background(sidebarBg)
+	artStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(gitGraphArtColor)
+	var sb strings.Builder
+	sb.WriteString(rowStyle.Render(" "))
+	sb.WriteString(artStyle.Render(art))
+	used := 1 + runewidth.StringWidth(art)
+	return clampSidebarRow(sb.String(), used, w, rowStyle)
+}
+
+// shortRefs trims `git log %d` decoration ("(HEAD -> main, origin/main)") down
+// to a compact form for the narrow sidebar: drop the wrapping parens and the
+// "HEAD -> " noise, keep the first ref.
+func shortRefs(refs string) string {
+	r := strings.TrimSpace(refs)
+	r = strings.TrimPrefix(r, "(")
+	r = strings.TrimSuffix(r, ")")
+	if r == "" {
+		return ""
+	}
+	r = strings.ReplaceAll(r, "HEAD -> ", "")
+	if i := strings.IndexByte(r, ','); i >= 0 {
+		r = r[:i] // keep only the first decoration
+	}
+	return strings.TrimSpace(r)
 }
 
 // leftEllipsize keeps the tail of s and prepends "…" when the string is wider

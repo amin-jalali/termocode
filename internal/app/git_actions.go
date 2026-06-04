@@ -35,56 +35,58 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 	if !m.gitIsRepo {
 		return m, nil, false
 	}
-	// Navigation and selection operate over the visible rows (file rows plus,
-	// in tree mode, directory headers) so tree and flat share one cursor model.
-	rows := m.gitVisibleRows()
-	n := len(rows)
-	cur := func() (gitVisRow, bool) {
-		if m.gitCursor >= 0 && m.gitCursor < len(rows) {
-			return rows[m.gitCursor], true
-		}
-		return gitVisRow{}, false
-	}
+	// Navigation and selection operate over the unified accordion rows
+	// (section headers + change files/dirs + graph commits) so every section
+	// shares one cursor model. Connector lines are skipped by gitMoveCursor.
+	cur, hasCur := m.gitCurrentRow()
 
 	switch msg.Type {
 	case tea.KeyDown:
-		if n > 0 {
-			m.gitCursor = clampInt(m.gitCursor+1, 0, n-1)
-		}
+		m.gitMoveCursor(1)
 		return m, nil, true
 	case tea.KeyUp:
-		if n > 0 {
-			m.gitCursor = clampInt(m.gitCursor-1, 0, n-1)
-		}
+		m.gitMoveCursor(-1)
 		return m, nil, true
 	case tea.KeyLeft:
-		// Collapse the directory under the cursor (or the file's parent dir).
-		if r, ok := cur(); ok {
-			if r.IsDir && !m.gitCollapsed[r.DirPath] {
-				m.gitToggleCollapse(r.DirPath)
+		// Collapse the section/dir under the cursor.
+		if hasCur {
+			switch {
+			case cur.kind == gitRowSection:
+				m.gitToggleSection(cur.section)
+			case cur.kind == gitRowDir && !m.gitCollapsed[cur.dirPath]:
+				m.gitToggleCollapse(cur.dirPath)
 			}
 		}
 		return m, nil, true
 	case tea.KeyRight:
-		if r, ok := cur(); ok && r.IsDir && m.gitCollapsed[r.DirPath] {
-			m.gitToggleCollapse(r.DirPath)
+		if hasCur {
+			switch {
+			case cur.kind == gitRowSection:
+				m.gitToggleSection(cur.section)
+			case cur.kind == gitRowDir && m.gitCollapsed[cur.dirPath]:
+				m.gitToggleCollapse(cur.dirPath)
+			}
 		}
 		return m, nil, true
 	case tea.KeyEnter:
-		r, ok := cur()
-		if !ok {
+		if !hasCur {
 			return m, nil, true
 		}
-		if r.IsDir {
-			m.gitToggleCollapse(r.DirPath)
-			return m, nil, true
+		switch cur.kind {
+		case gitRowSection:
+			m.gitToggleSection(cur.section)
+		case gitRowDir:
+			m.gitToggleCollapse(cur.dirPath)
+		case gitRowCommit:
+			return m, m.gitShowCommitCmd(cur.hash), true
+		case gitRowFile:
+			path := gitFileAbsPath(m.gitFiles[cur.fileIndex].Path)
+			if m.nvim != nil {
+				m.ensureEditorWindowCurrent()
+				_ = m.nvim.Command("edit " + path)
+			}
+			m.focus = FocusEditor
 		}
-		path := gitFileAbsPath(m.gitFiles[r.FileIndex].Path)
-		if m.nvim != nil {
-			m.ensureEditorWindowCurrent()
-			_ = m.nvim.Command("edit " + path)
-		}
-		m.focus = FocusEditor
 		return m, nil, true
 	case tea.KeyRunes:
 		if len(msg.Runes) != 1 {
@@ -92,27 +94,26 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		}
 		switch msg.Runes[0] {
 		case 'j':
-			if n > 0 {
-				m.gitCursor = clampInt(m.gitCursor+1, 0, n-1)
-			}
+			m.gitMoveCursor(1)
 			return m, nil, true
 		case 'k':
-			if n > 0 {
-				m.gitCursor = clampInt(m.gitCursor-1, 0, n-1)
-			}
+			m.gitMoveCursor(-1)
 			return m, nil, true
 		case 'g':
 			m.gitCursor = 0
+			m.gitClampCursor()
 			return m, nil, true
 		case 'G':
-			if n > 0 {
-				m.gitCursor = n - 1
-			}
+			m.gitCursor = len(m.gitPanelRows()) - 1
+			m.gitClampCursor()
 			return m, nil, true
 		case 's':
-			cmd := m.gitStageToggle()
-			return m, cmd, true
+			return m, m.gitStageToggle(), true
 		case 'd':
+			// On a graph commit, diff that commit; otherwise the file's diff.
+			if hasCur && cur.kind == gitRowCommit {
+				return m, m.gitShowCommitCmd(cur.hash), true
+			}
 			return m, m.gitDiffCmd(), true
 		case 'c':
 			m.openCommitPrompt()
@@ -816,7 +817,16 @@ func (m *Model) gitLogPicker() tea.Cmd {
 // case: load the commit's diff via `git show` and stuff it into the
 // preview overlay.
 func (m *Model) showCommitFromPicker(id string) tea.Cmd {
-	hash := strings.TrimPrefix(id, "commit-")
+	return m.gitShowCommitCmd(strings.TrimPrefix(id, "commit-"))
+}
+
+// gitShowCommitCmd loads a commit's full diff (`git show <hash>`) and opens it
+// in the preview overlay. Shared by the log picker and the Source Control
+// graph's click-to-diff.
+func (m *Model) gitShowCommitCmd(hash string) tea.Cmd {
+	if hash == "" {
+		return nil
+	}
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil

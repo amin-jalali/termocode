@@ -302,6 +302,59 @@ func TestLog(t *testing.T) {
 	}
 }
 
+func TestGraphLog(t *testing.T) {
+	r := newGitTestRepo(t)
+	r.write(t, "a.txt", "v1\n")
+	r.git(t, "add", "a.txt")
+	r.git(t, "commit", "-q", "-m", "first")
+	// Branch off, commit, then merge back with a merge commit so the graph
+	// has real topology (a connector line) to parse.
+	r.git(t, "checkout", "-q", "-b", "feature")
+	r.write(t, "b.txt", "feat\n")
+	r.git(t, "add", "b.txt")
+	r.git(t, "commit", "-q", "-m", "feature work")
+	r.git(t, "checkout", "-q", "main")
+	r.write(t, "c.txt", "main\n")
+	r.git(t, "add", "c.txt")
+	r.git(t, "commit", "-q", "-m", "main work")
+	r.git(t, "merge", "-q", "--no-ff", "feature", "-m", "merge feature")
+
+	lines, err := GraphLog(r.dir, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var commits, connectors int
+	var sawMerge bool
+	for _, l := range lines {
+		if l.Hash == "" {
+			connectors++
+			continue
+		}
+		commits++
+		// Every commit node's art must contain the node marker.
+		if !strings.Contains(l.Art, "*") {
+			t.Errorf("commit line art %q missing '*' node marker (hash %q)", l.Art, l.Hash)
+		}
+		// Hash must be hex, not leak any art characters.
+		if strings.ContainsAny(l.Hash, " *|/\\") {
+			t.Errorf("hash %q leaked graph art", l.Hash)
+		}
+		if l.Subject == "merge feature" {
+			sawMerge = true
+		}
+	}
+	if commits != 4 {
+		t.Errorf("commits = %d, want 4", commits)
+	}
+	if connectors == 0 {
+		t.Errorf("expected at least one connector line from the merge topology")
+	}
+	if !sawMerge {
+		t.Errorf("merge commit subject not parsed")
+	}
+}
+
 func TestFileHistory(t *testing.T) {
 	r := newGitTestRepo(t)
 	r.write(t, "a.txt", "1\n")

@@ -544,8 +544,10 @@ end
 		m.gitIsRepo = msg.IsRepo
 		m.gitBranch = msg.Branch
 		m.gitFiles = msg.Files
-		// Clamp against the visible-row count: tree mode interleaves dir
-		// headers, so the row count differs from len(gitFiles).
+		m.gitGraph = msg.Graph
+		// Clamp against the visible-row count: the accordion interleaves
+		// section headers, dir headers, and graph rows, so the row count
+		// differs from len(gitFiles).
 		m.gitClampCursor()
 		return m, nil, true
 	case nvim.ErrMsg:
