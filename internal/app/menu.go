@@ -21,7 +21,112 @@ const (
 	menuKindExplorerDir
 	menuKindTab
 	menuKindEditor
+	menuKindGitFile
+	menuKindGitCommit
 )
+
+// Source Control context-menu action IDs.
+const (
+	gitMenuDiff     = "git-diff"
+	gitMenuStage    = "git-stage"
+	gitMenuDiscard  = "git-discard"
+	gitMenuCommit   = "git-commit"
+	gitMenuCopyHash = "git-copy-hash"
+	gitMenuRefresh  = "git-refresh"
+)
+
+// gitFileMenuItems builds the right-click menu for a changed file. willStage
+// reflects what the Stage toggle would do next (stage vs unstage), so the label
+// matches the action.
+func gitFileMenuItems(willStage bool) []menu.Item {
+	stage := menu.Item{ID: gitMenuStage, Title: "Unstage Changes", Icon: "−"}
+	if willStage {
+		stage = menu.Item{ID: gitMenuStage, Title: "Stage Changes", Icon: "+"}
+	}
+	return []menu.Item{
+		{ID: gitMenuDiff, Title: "Open Changes", Icon: "≢"},
+		stage,
+		{ID: gitMenuDiscard, Title: "Discard Changes", Icon: "↩"},
+		{Sep: true},
+		{ID: gitMenuCommit, Title: "Commit...", Icon: "✓"},
+		{ID: gitMenuRefresh, Title: "Refresh", Icon: "⟳"},
+	}
+}
+
+// gitCommitMenuItems builds the right-click menu for a graph commit.
+func gitCommitMenuItems() []menu.Item {
+	return []menu.Item{
+		{ID: gitMenuDiff, Title: "Open Changes", Icon: "≢"},
+		{ID: gitMenuCopyHash, Title: "Copy Commit Hash", Icon: "⎘"},
+		{Sep: true},
+		{ID: gitMenuRefresh, Title: "Refresh", Icon: "⟳"},
+	}
+}
+
+// openGitMenu shows the Source Control context menu for the row under the
+// pointer. anchorX/anchorY are screen coordinates; anchorY also locates the
+// clicked row (same mapping the renderer and left-click hit-test use). The
+// clicked row becomes the cursor so the existing cursor-based git actions
+// target it.
+func (m *Model) openGitMenu(anchorX, anchorY int) {
+	if !m.gitIsRepo {
+		return
+	}
+	top, bodyH, _ := m.gitPanelLayout(m.h)
+	bodyRow := anchorY - m.gitPanelTopOffset()
+	if bodyRow < 0 || bodyRow >= bodyH {
+		return
+	}
+	idx := top + bodyRow
+	rows := m.gitPanelRows()
+	if idx < 0 || idx >= len(rows) {
+		return
+	}
+	r := rows[idx]
+	var items []menu.Item
+	switch r.kind {
+	case gitRowFile:
+		f := m.gitFiles[r.fileIndex]
+		items = gitFileMenuItems(f.Untracked() || f.Unstaged())
+		m.menuKind = menuKindGitFile
+	case gitRowCommit:
+		items = gitCommitMenuItems()
+		m.menuKind = menuKindGitCommit
+	default:
+		return
+	}
+	m.gitCursor = idx
+	m.focus = FocusExplorer
+	m.menu = menu.New(items, anchorX, anchorY)
+	m.menu.SetScreenSize(m.w, m.h)
+	m.menuOpen = true
+}
+
+// handleGitMenuSelect dispatches a Source Control context-menu action. The
+// target row is whatever openGitMenu left under the cursor.
+func (m *Model) handleGitMenuSelect(id string) tea.Cmd {
+	switch id {
+	case gitMenuDiff:
+		if cur, ok := m.gitCurrentRow(); ok && cur.kind == gitRowCommit {
+			return m.gitShowCommitCmd(cur.hash)
+		}
+		return m.gitDiffCmd()
+	case gitMenuStage:
+		return m.gitStageToggle()
+	case gitMenuDiscard:
+		m.openGitDiscardConfirm()
+	case gitMenuCommit:
+		m.openCommitPrompt()
+	case gitMenuCopyHash:
+		if cur, ok := m.gitCurrentRow(); ok && cur.hash != "" {
+			m.copyToClipboard(cur.hash)
+			m.err = "Copied: " + cur.hash
+		}
+	case gitMenuRefresh:
+		return fetchGitCmd()
+	}
+	return nil
+}
 
 // Tab context-menu action IDs.
 const (
@@ -105,6 +210,9 @@ func (m *Model) handleMenuSelect(id string) tea.Cmd {
 	}
 	if m.menuKind == menuKindEditor {
 		return m.handleEditorMenuSelect(id)
+	}
+	if m.menuKind == menuKindGitFile || m.menuKind == menuKindGitCommit {
+		return m.handleGitMenuSelect(id)
 	}
 	path := m.menuPath
 	switch id {

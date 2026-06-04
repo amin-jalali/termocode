@@ -302,6 +302,10 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			m.persistExplorerState()
 			return m, cmd
 		case activity.ViewGit:
+			if msg.Type == tea.MouseRight {
+				m.openGitMenu(msg.X, msg.Y)
+				return m, nil
+			}
 			return m.handleGitSidebarMouse(x, msg.Y, msg.Type)
 		case activity.ViewSearch:
 			// Header + placeholder; nothing interactive yet.

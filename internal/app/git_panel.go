@@ -225,17 +225,12 @@ const gitSubheaderRow = 2
 // was drawn.
 func (m Model) gitPanelLayout(h int) (top, bodyH, footerRows int) {
 	headerRows := m.gitPanelTopOffset()
-	if m.focus == FocusExplorer {
-		footerRows = 2 // key-hint rows, only while focused
-	}
-	bodyH = h - headerRows - footerRows
+	// No key-hint footer: the same actions (stage/diff/discard/commit/refresh)
+	// now live in the right-click context menu, so the rows go to the body.
+	footerRows = 0
+	bodyH = h - headerRows
 	if bodyH < 1 {
-		// Too short for the footer — drop it and give the row to the body.
-		footerRows = 0
-		bodyH = h - headerRows
-		if bodyH < 1 {
-			bodyH = 1
-		}
+		bodyH = 1
 	}
 	rows := m.gitPanelRows()
 	if m.gitCursor >= bodyH {
