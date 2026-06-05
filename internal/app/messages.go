@@ -48,6 +48,10 @@ type StateMsg struct {
 	// terminal-shortcut pass-through path in handleGlobalKey.
 	CurrentWin int
 	Mode       string
+
+	// Diff is true when the current window is in diff mode (the side-by-side
+	// diff view); the handler mirrors it into m.gitDiffActive.
+	Diff bool
 }
 
 // nvimBuffer is a thin alias to avoid an import cycle in messages.go callers.

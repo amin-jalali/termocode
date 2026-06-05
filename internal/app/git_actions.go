@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -167,9 +168,80 @@ func (m *Model) gitStageToggle() tea.Cmd {
 // gitDiffReadyMsg carries the HEAD version of a file (written to a temp file)
 // so the main loop can set up the Neovim side-by-side diff.
 type gitDiffReadyMsg struct {
-	workPath string // absolute path of the working file (right pane)
-	headPath string // temp file holding the HEAD version (left pane)
-	name     string // display name for the left (HEAD) buffer
+	workPath     string // absolute path of the working file (right pane)
+	headPath     string // temp file holding the HEAD version (left pane)
+	name         string // display name for the left (HEAD) buffer
+	hunkStarts   []int  // working-file start line of each diff hunk (for the X/N counter)
+	changedLines []int  // every changed working-file line (for the overview ruler)
+	totalLines   int    // working-file line count (overview scale denominator)
+}
+
+// diffHunkStarts returns the new-file (working) start line of every hunk in a
+// unified diff — the "+c" of each "@@ -a,b +c,d @@" header.
+func diffHunkStarts(diff string) []int {
+	var starts []int
+	for _, line := range strings.Split(diff, "\n") {
+		if !strings.HasPrefix(line, "@@") {
+			continue
+		}
+		plus := strings.IndexByte(line, '+')
+		if plus < 0 {
+			continue
+		}
+		n := 0
+		for _, ch := range line[plus+1:] {
+			if ch < '0' || ch > '9' {
+				break
+			}
+			n = n*10 + int(ch-'0')
+		}
+		if n > 0 {
+			starts = append(starts, n)
+		}
+	}
+	return starts
+}
+
+// diffSignLines walks a unified diff and returns the new-file line numbers of
+// added/changed ('+') lines and the old-file line numbers of removed ('-')
+// lines — used to paint the change ruler in each pane's sign column. Computed
+// in Go so it never depends on nvim having finished its async diff.
+func diffSignLines(diff string) (add, del []int) {
+	newLn, oldLn := 0, 0
+	for _, line := range strings.Split(diff, "\n") {
+		switch {
+		case strings.HasPrefix(line, "@@"):
+			if i := strings.IndexByte(line, '-'); i >= 0 {
+				oldLn = leadingInt(line[i+1:])
+			}
+			if j := strings.IndexByte(line, '+'); j >= 0 {
+				newLn = leadingInt(line[j+1:])
+			}
+		case strings.HasPrefix(line, "+++"), strings.HasPrefix(line, "---"):
+			// file headers — skip
+		case strings.HasPrefix(line, "+"):
+			add = append(add, newLn)
+			newLn++
+		case strings.HasPrefix(line, "-"):
+			del = append(del, oldLn)
+			oldLn++
+		default:
+			newLn++
+			oldLn++
+		}
+	}
+	return add, del
+}
+
+func leadingInt(s string) int {
+	n := 0
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			break
+		}
+		n = n*10 + int(c-'0')
+	}
+	return n
 }
 
 // gitDiffCmd opens the current file's changes as a Neovim-native side-by-side
@@ -190,13 +262,22 @@ func (m Model) gitDiffCmd() tea.Cmd {
 			return ErrMsg{Err: err}
 		}
 		head, _ := git.ShowFileAtRevision(cwd, "HEAD", rel)
+		diff, _ := git.Diff(cwd, rel)
+		changed, _ := diffSignLines(diff)
+		total := 1
+		if b, e := os.ReadFile(abs); e == nil {
+			total = 1 + strings.Count(string(b), "\n")
+		}
 		tmp, err := os.CreateTemp("", "termocode-diff-*")
 		if err != nil {
 			return ErrMsg{Err: err}
 		}
 		_, _ = tmp.WriteString(head)
 		_ = tmp.Close()
-		return gitDiffReadyMsg{workPath: abs, headPath: tmp.Name(), name: name}
+		return gitDiffReadyMsg{
+			workPath: abs, headPath: tmp.Name(), name: name,
+			hunkStarts: diffHunkStarts(diff), changedLines: changed, totalLines: total,
+		}
 	}
 }
 
@@ -209,7 +290,7 @@ func (m *Model) openSideBySideDiff(msg gitDiffReadyMsg) {
 		return
 	}
 	m.ensureEditorWindowCurrent()
-	if err := m.nvim.ExecLua(buildDiffLua(msg.workPath, msg.headPath, msg.name)); err != nil {
+	if err := m.nvim.ExecLua(buildDiffLua(msg.workPath, msg.headPath, msg.name, msg.hunkStarts, msg.changedLines, msg.totalLines)); err != nil {
 		m.err = "diff: " + err.Error()
 	}
 	_ = os.Remove(msg.headPath)
@@ -221,20 +302,53 @@ func (m *Model) openSideBySideDiff(msg gitDiffReadyMsg) {
 
 // buildDiffLua returns the Lua that opens the working file, splits a read-only
 // HEAD scratch buffer to its left, and puts both into diff mode.
-func buildDiffLua(work, head, name string) string {
+func buildDiffLua(work, head, name string, hunkStarts, changedLines []int, totalLines int) string {
 	esc := func(s string) string {
 		s = strings.ReplaceAll(s, `\`, `\\`)
 		return strings.ReplaceAll(s, `"`, `\"`)
 	}
-	return fmt.Sprintf(`
-local work, head, name = "%s", "%s", "%s"
--- Clear, high-contrast diff highlights so changes are obvious.
+	luaArr := func(xs []int) string {
+		ss := make([]string, len(xs))
+		for i, x := range xs {
+			ss[i] = strconv.Itoa(x)
+		}
+		return "{" + strings.Join(ss, ",") + "}"
+	}
+	startsLua := luaArr(hunkStarts)
+	changedLua := luaArr(changedLines)
+	// Values are concatenated (not %-formatted) so the Lua body can use literal
+	// '%' freely — winbar highlight syntax (%#Grp#) and gsub patterns need it.
+	return `local work, head, name = "` + esc(work) + `", "` + esc(head) + `", "` + esc(name) + `"
+vim.g.tc_diff_changed = ` + changedLua + `
+vim.g.tc_diff_total = ` + strconv.Itoa(totalLines) + `
+-- X/N change counter: re-evaluated live in the working pane's winbar.
+vim.g.tc_diff_starts = ` + startsLua + `
+vim.api.nvim_set_hl(0, 'TcDiffCount', { fg = '#9aa3ad', bg = '#26292e', bold = true })
+vim.api.nvim_set_hl(0, 'TcDiffOk',    { fg = '#73c991', bg = '#26292e' })
+function _G.TcDiffCounter()
+  local s = vim.g.tc_diff_starts or {}
+  local n = #s
+  if n == 0 then return '' end
+  local l = vim.fn.line('.')
+  local cur = 1
+  for i, v in ipairs(s) do if l >= v then cur = i end end
+  return cur .. '/' .. n
+end
+local base = (vim.fn.fnamemodify(work, ':t') or ''):gsub('%%', '%%%%')
+-- Tiny dots (not dashes) fill the deleted-line gaps.
+pcall(function() vim.opt.fillchars:append('diff:·') end)
+-- Shared diff colours; per-pane overrides applied further down.
 vim.api.nvim_set_hl(0, 'DiffAdd',    { bg = '#16361f' })
 vim.api.nvim_set_hl(0, 'DiffChange', { bg = '#2a2a18' })
 vim.api.nvim_set_hl(0, 'DiffText',   { bg = '#4a4a1f', bold = true })
-vim.api.nvim_set_hl(0, 'DiffDelete', { bg = '#3a1818', fg = '#6a2a2a' })
--- Close any prior diff scratch pane and clear diff mode so re-diffing
--- replaces the view instead of stacking splits.
+vim.api.nvim_set_hl(0, 'DiffDelete', { bg = '#241317', fg = '#4a2630' })
+-- Per-pane header bar: "<file> · HEAD" / "<file> · working".
+vim.api.nvim_set_hl(0, 'WinBar',       { fg = '#cfd8e3', bg = '#26292e' })
+vim.api.nvim_set_hl(0, 'WinBarNC',     { fg = '#9aa3ad', bg = '#26292e' })
+vim.api.nvim_set_hl(0, 'TcDiffHdr',    { fg = '#e6edf3', bg = '#26292e', bold = true })
+vim.api.nvim_set_hl(0, 'TcDiffHdrDim', { fg = '#7d868f', bg = '#26292e' })
+vim.api.nvim_set_hl(0, 'TcDiffCount',  { fg = '#9aa3ad', bg = '#26292e', bold = true })
+-- Close any prior diff panes so re-diffing replaces instead of stacking.
 for _, w in ipairs(vim.api.nvim_list_wins()) do
   local b = vim.api.nvim_win_get_buf(w)
   local ok2, v = pcall(vim.api.nvim_buf_get_var, b, 'termocode_diff')
@@ -244,13 +358,16 @@ pcall(vim.cmd, 'diffoff!')
 -- Working tree on the right.
 vim.cmd('edit ' .. vim.fn.fnameescape(work))
 local ft = vim.bo.filetype
+local rwin = vim.api.nvim_get_current_win()
+local wlines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 vim.cmd('diffthis')
-vim.wo.scrollbind = true
 vim.wo.foldenable = false
--- HEAD revision on the left, in a read-only scratch buffer. We set 'syntax'
--- (NOT 'filetype') so the pane is highlighted without firing the FileType
--- autocmd that would attach an LSP to a throwaway nofile buffer (and hang).
+vim.wo.number = true
+vim.wo.winbar = '%#TcDiffCount#%{v:lua.TcDiffCounter()}  %#TcDiffHdr#' .. base .. '  %#TcDiffHdrDim#·  working'
+-- HEAD revision on the left, read-only scratch. 'syntax' (not 'filetype')
+-- highlights it without firing the FileType→LSP autocmd (which hangs).
 vim.cmd('leftabove vnew')
+local lwin = vim.api.nvim_get_current_win()
 local buf = vim.api.nvim_get_current_buf()
 vim.bo[buf].buftype = 'nofile'
 vim.bo[buf].swapfile = false
@@ -260,18 +377,54 @@ vim.api.nvim_buf_set_var(buf, 'termocode_diff', true)
 local ok, lines = pcall(vim.fn.readfile, head)
 if ok then vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines) end
 vim.bo[buf].modifiable = false
-if ft ~= '' then pcall(function() vim.bo[buf].syntax = ft end) end
+-- Highlight the HEAD pane with TREE-SITTER (incremental, no FileType→LSP
+-- autocmd, no hang) — regex 'syntax' re-syncs from above on every scroll-up,
+-- which made scrolling up far slower than scrolling down. Fall back to regex
+-- syntax only when no parser is installed for the language.
+if ft ~= '' then
+  local lang = ft
+  if vim.treesitter.language and vim.treesitter.language.get_lang then
+    lang = vim.treesitter.language.get_lang(ft) or ft
+  end
+  if not pcall(vim.treesitter.start, buf, lang) then
+    pcall(function() vim.bo[buf].syntax = ft end)
+  end
+end
 pcall(vim.api.nvim_buf_set_name, buf, name)
 vim.cmd('diffthis')
-vim.wo.scrollbind = true
 vim.wo.foldenable = false
--- Native 'scrollbind' keeps the panes aligned with zero per-event cost (no
--- cursorbind, no WinScrolled autocmd — those made scrolling slow and dragged
--- the cursor around). Land on the working (right) side in normal mode.
+vim.wo.number = true
+vim.wo.winbar = '%#TcDiffHdr# ' .. base .. '  %#TcDiffHdrDim#·  HEAD'
+-- Per-side colours: red on the left (HEAD), green on the right (working).
+local nsL = vim.api.nvim_create_namespace('tcDiffL')
+vim.api.nvim_set_hl(nsL, 'DiffChange', { bg = '#3a1f28' })
+vim.api.nvim_set_hl(nsL, 'DiffText',   { bg = '#5e2b3a', bold = true })
+vim.api.nvim_set_hl(nsL, 'DiffAdd',    { bg = '#3a1f28' })
+vim.api.nvim_set_hl(nsL, 'DiffDelete', { bg = '#241317', fg = '#4a2630' })
+pcall(vim.api.nvim_win_set_hl_ns, lwin, nsL)
+local nsR = vim.api.nvim_create_namespace('tcDiffR')
+vim.api.nvim_set_hl(nsR, 'DiffAdd',    { bg = '#16361f' })
+vim.api.nvim_set_hl(nsR, 'DiffChange', { bg = '#16361f' })
+vim.api.nvim_set_hl(nsR, 'DiffText',   { bg = '#1f5e34', bold = true })
+vim.api.nvim_set_hl(nsR, 'DiffDelete', { bg = '#241317', fg = '#4a2630' })
+pcall(vim.api.nvim_win_set_hl_ns, rwin, nsR)
+-- Sync and land on the working pane in normal mode.
 vim.cmd('syncbind')
-vim.cmd('wincmd l')
+pcall(vim.api.nvim_set_current_win, rwin)
 vim.cmd('stopinsert')
-`, esc(work), esc(head), esc(name))
+-- Wipe any stray empty unnamed buffer (e.g. the start-up [No Name]) that the
+-- diff's :edit left behind as a phantom extra tab/window.
+for _, b in ipairs(vim.api.nvim_list_bufs()) do
+  if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buflisted
+     and vim.api.nvim_buf_get_name(b) == '' and vim.fn.bufwinid(b) == -1 then
+    local lc = vim.api.nvim_buf_line_count(b)
+    local first = vim.api.nvim_buf_get_lines(b, 0, 1, false)[1] or ''
+    if lc <= 1 and first == '' then
+      pcall(vim.api.nvim_buf_delete, b, { force = true })
+    end
+  end
+end
+`
 }
 
 // openCommitPrompt asks for a commit message via the standard prompt overlay.

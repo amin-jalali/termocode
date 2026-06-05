@@ -555,6 +555,9 @@ end
 		// Move pinned buffers to the front before handing the list to the
 		// tab bar so the rendering order matches the pinned-set state.
 		m.tabs.SetBuffers(m.reorderPinned(m.bufs), msg.Active)
+		// Track the side-by-side diff view straight from nvim's window state
+		// so it self-corrects when the user opens/closes the diff.
+		m.gitDiffActive = msg.Diff
 		// Refresh layout-extension state: breadcrumbs from path, sticky
 		// context from the enclosing function/class signature. Only the
 		// breadcrumbs change on every state msg; sticky context is fetched
@@ -1011,6 +1014,7 @@ func (m Model) fetchStateCmd() tea.Cmd {
 			LastReloadSeq:  s.LastReloadSeq,
 			CurrentWin:     s.CurrentWin,
 			Mode:           s.Mode,
+			Diff:           s.Diff,
 		}
 	}
 }
@@ -1900,6 +1904,17 @@ func (m *Model) applyLayout() {
 func (m *Model) refreshBreadcrumbs(path string) {
 	prev := m.breadcrumbs
 	m.breadcrumbs = m.breadcrumbs[:0]
+	// In the side-by-side diff each pane's winbar already labels its file, so
+	// the breadcrumb/sticky strip is just a redundant third header row — hide
+	// it (and the sticky context) for the whole diff view.
+	if m.gitDiffActive {
+		hadSticky := m.stickyContext != ""
+		m.stickyContext = ""
+		if len(prev) > 0 || hadSticky {
+			m.applyLayout()
+		}
+		return
+	}
 	if path == "" {
 		if len(prev) > 0 {
 			m.applyLayout()
@@ -1967,7 +1982,7 @@ const stickyDebounce = 1500 * time.Millisecond
 // recent matching line ABOVE the cursor (W=no wrap, n=no move, c=accept
 // match at cursor). Empty result → no enclosing symbol → strip hidden.
 func (m *Model) maybeRefreshStickyContext() tea.Cmd {
-	if m.nvim == nil {
+	if m.nvim == nil || m.gitDiffActive {
 		return nil
 	}
 	now := time.Now()

@@ -580,6 +580,10 @@ func (m Model) attachCmd() tea.Cmd {
 			"set mouse=a",
 			"set tabstop=4 shiftwidth=4 expandtab",
 			"set scrolloff=4",
+			// Scroll the view several lines per wheel notch (not 1–3) so the
+			// cursor jumps in bigger steps and there are far fewer redraws per
+			// scroll — keeps the side-by-side diff snappy.
+			"set mousescroll=ver:6,hor:6",
 			"set signcolumn=auto",
 			// External file change detection: autoread silently reloads
 			// buffers whose mtime changed on disk (e.g., after `git pull`

@@ -225,6 +225,11 @@ type State struct {
 	// actively typing into the PTY, not just hovering the terminal window
 	// in Terminal-Normal mode (`nt`) where keys should still hit termocode.
 	Mode string
+
+	// Diff is true when the current window is in diff mode (vim.wo.diff) — the
+	// app uses it to recognise the side-by-side diff view (hide breadcrumbs,
+	// route the synced wheel scroll, …).
+	Diff bool
 }
 
 // FetchState returns the current State in a single Lua call. If a previous
@@ -294,7 +299,8 @@ func (c *Client) FetchState() (State, error) {
 			vim.g.termocode_last_reload or '',
 			vim.g.termocode_reload_seq or 0,
 			cur_win,
-			mode_first
+			mode_first,
+			vim.wo.diff
 		}
 	`, &raw)
 	if err != nil {
@@ -363,6 +369,9 @@ func (c *Client) FetchState() (State, error) {
 	}
 	if len(raw) > 12 {
 		s.Mode = toString(raw[12])
+	}
+	if len(raw) > 13 {
+		s.Diff = toBool(raw[13])
 	}
 	return s, nil
 }

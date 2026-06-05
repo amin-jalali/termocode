@@ -511,24 +511,31 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	// Side-by-side diff: the pointer drives a synchronized scroll. A raw mouse
-	// wheel scrolls only the window under it and never propagates through
-	// 'scrollbind', so we translate the wheel into a keyboard scroll on the
-	// current window (which scrollbind DOES mirror to the partner) and keep the
-	// current window matched to whichever pane the pointer is over.
+	// Side-by-side diff scrolling. A mouse wheel is forwarded to BOTH panes at
+	// once (left col + right col), so each scrolls the same number of display
+	// lines natively and they stay aligned — no 'scrollbind', whose per-tick
+	// realignment across diff filler was the jank. Async dispatch keeps it
+	// smooth. Plain motion still does focus-follows so the cursor sits on the
+	// pane under the pointer.
 	if m.gitDiffActive && m.nvim != nil {
+		edPaneW := m.w - activity.Width - editorScrollbarWidth
+		if m.showExp {
+			edPaneW -= m.explorerWidth
+		}
 		switch msg.Type {
-		case tea.MouseWheelUp:
-			_ = m.nvim.Input("3\x19") // 3<C-y>
-			return m, nil
-		case tea.MouseWheelDown:
-			_ = m.nvim.Input("3\x05") // 3<C-e>
+		case tea.MouseWheelUp, tea.MouseWheelDown:
+			dir := "up"
+			if msg.Type == tea.MouseWheelDown {
+				dir = "down"
+			}
+			right := edPaneW - 2
+			if right < 2 {
+				right = edPaneW - 1
+			}
+			m.nvim.MouseAsync("wheel", dir, "", localY, 1)
+			m.nvim.MouseAsync("wheel", dir, "", localY, right)
 			return m, nil
 		case tea.MouseMotion:
-			edPaneW := m.w - activity.Width - editorScrollbarWidth
-			if m.showExp {
-				edPaneW -= m.explorerWidth
-			}
 			pane := 0
 			if edPaneW > 0 && localX >= edPaneW/2 {
 				pane = 1
