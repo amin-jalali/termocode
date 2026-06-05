@@ -207,11 +207,13 @@ func (m *Model) gitToggleSection(s gitSection) {
 	m.gitClampCursor()
 }
 
-// gitPanelTopOffset is the screen-row index where the first panel row renders,
-// below the explorer-style header: title (0), hairline (1), branch+toggle
-// sub-row (2), blank spacer (3). Shared by the renderer and the mouse hit-test.
+// gitPanelTopOffset is the screen-row index where the first accordion row
+// renders, below the fixed Source Control chrome: title (0), hairline (1),
+// branch sub-row (2), spacer (3), commit box (4), action bar (5), spacer (6).
+// Shared by the renderer and the mouse hit-test — see git_commit_box.go for the
+// row map.
 func (m Model) gitPanelTopOffset() int {
-	return 4
+	return 7
 }
 
 // gitSubheaderRow is the screen-row index of the branch + tree·flat sub-row,

@@ -36,6 +36,11 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 	if !m.gitIsRepo {
 		return m, nil, false
 	}
+	// When the always-visible message box has focus, keystrokes edit it (Enter
+	// commits, Esc/Tab return to the accordion).
+	if m.gitCommitFocused {
+		return m.handleGitCommitKey(msg)
+	}
 	// Navigation and selection operate over the unified accordion rows
 	// (section headers + change files/dirs + graph commits) so every section
 	// shares one cursor model. Connector lines are skipped by gitMoveCursor.
@@ -117,7 +122,9 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 			}
 			return m, m.gitDiffCmd(), true
 		case 'c':
-			m.openCommitPrompt()
+			// Focus the always-visible message box (the multi-line prompt
+			// remains reachable from the ⋯ menu / right-click "Commit...").
+			m.gitFocusCommitBox()
 			return m, nil, true
 		case 'x':
 			m.openGitDiscardConfirm()
@@ -749,6 +756,158 @@ func (m *Model) gitPull() tea.Cmd {
 		}
 	}
 	return tea.Batch(fetchGitCmd(), toastCmd)
+}
+
+// gitFetch runs `git fetch --prune` — updates remote-tracking refs (so the
+// ahead/behind counters refresh) without touching the working tree.
+func (m *Model) gitFetch() tea.Cmd {
+	if !m.gitIsRepo {
+		return nil
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil
+	}
+	var toastCmd tea.Cmd
+	if err := git.Fetch(cwd); err != nil {
+		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Fetch failed", err.Error())
+	} else {
+		m.toast, toastCmd = m.toast.Push(toast.Info, "Fetched from origin")
+	}
+	return tea.Batch(fetchGitCmd(), toastCmd)
+}
+
+// gitSync mirrors VSCode's "Sync Changes": pull, then push. With no upstream
+// configured it falls back to a first push (-u origin <branch>).
+func (m *Model) gitSync() tea.Cmd {
+	if !m.gitIsRepo {
+		return nil
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil
+	}
+	if !git.HasUpstream(cwd) {
+		return m.gitPush()
+	}
+	var toastCmd tea.Cmd
+	if err := git.Pull(cwd); err != nil {
+		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Sync failed (pull)", err.Error())
+		return tea.Batch(fetchGitCmd(), toastCmd)
+	}
+	if err := git.Push(cwd); err != nil {
+		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Sync failed (push)", err.Error())
+		return tea.Batch(fetchGitCmd(), toastCmd)
+	}
+	if m.nvim != nil {
+		_ = m.nvim.Command("silent! checktime")
+	}
+	m.toast, toastCmd = m.toast.Push(toast.Info, "Synced with origin")
+	return tea.Batch(fetchGitCmd(), toastCmd)
+}
+
+// gitInlineCommit commits the always-visible message box. amend rewords HEAD;
+// signoff adds the Signed-off-by trailer. When nothing is staged it warns (or,
+// if there are unstaged changes, offers to stage-all-and-commit) rather than
+// letting git fail. On success the box is cleared and blurred.
+func (m *Model) gitInlineCommit(amend, signoff bool) tea.Cmd {
+	if !m.gitIsRepo {
+		return nil
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil
+	}
+	msg := strings.TrimSpace(m.gitCommitMsg)
+	if msg == "" && !amend {
+		// Nothing typed yet — focus the field instead of erroring out.
+		m.gitFocusCommitBox()
+		var c tea.Cmd
+		m.toast, c = m.toast.Push(toast.Warn, "Enter a commit message")
+		return c
+	}
+	staged, changed := m.gitFileCounts()
+	if staged == 0 && !amend {
+		if changed == 0 {
+			var c tea.Cmd
+			m.toast, c = m.toast.Push(toast.Info, "Nothing to commit")
+			return c
+		}
+		m.openStageAllCommitConfirm()
+		return nil
+	}
+	var toastCmd tea.Cmd
+	if err := git.CommitWith(cwd, msg, amend, signoff); err != nil {
+		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Commit failed", err.Error())
+		return tea.Batch(fetchGitCmd(), toastCmd)
+	}
+	m.clearCommitBox()
+	m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Committed", commitToastLabel(msg, amend))
+	return tea.Batch(fetchGitCmd(), toastCmd)
+}
+
+// gitStageAllAndCommit is the confirmed branch of the "nothing staged" prompt:
+// stage every change, then commit the stored message.
+func (m *Model) gitStageAllAndCommit() tea.Cmd {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil
+	}
+	if err := git.Stage(cwd, "."); err != nil {
+		var c tea.Cmd
+		m.toast, c = m.toast.PushDetail(toast.Errr, "Stage all failed", err.Error())
+		return c
+	}
+	msg := strings.TrimSpace(m.gitCommitMsg)
+	var toastCmd tea.Cmd
+	if err := git.Commit(cwd, msg); err != nil {
+		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Commit failed", err.Error())
+		return tea.Batch(fetchGitCmd(), toastCmd)
+	}
+	m.clearCommitBox()
+	m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Committed", commitToastLabel(msg, false))
+	return tea.Batch(fetchGitCmd(), toastCmd)
+}
+
+// clearCommitBox resets the inline message field after a successful commit.
+func (m *Model) clearCommitBox() {
+	m.gitCommitMsg = ""
+	m.gitCommitCaret = 0
+	m.gitCommitFocused = false
+}
+
+// openStageAllCommitConfirm asks before staging every change for a commit when
+// the index is empty (VSCode's "no staged changes" prompt).
+func (m *Model) openStageAllCommitConfirm() {
+	m.confirm = confirm.New(
+		"Stage all changes?",
+		"There are no staged changes. Stage all changes and commit?",
+		[]confirm.Button{
+			{ID: "stage", Title: "Stage All & Commit", Style: confirm.StylePrimary},
+			{ID: "cancel", Title: "Cancel"},
+		},
+	)
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = confirmKindGitStageCommit
+}
+
+// commitToastLabel trims a commit message to a single ≤50-char line for toasts.
+func commitToastLabel(msg string, amend bool) string {
+	first := msg
+	if i := strings.IndexByte(first, '\n'); i >= 0 {
+		first = first[:i]
+	}
+	if first == "" && amend {
+		return "amended HEAD"
+	}
+	if len(first) > 50 {
+		first = first[:50] + "…"
+	}
+	if amend {
+		return "amended: " + first
+	}
+	return first
 }
 
 // openBranchPicker shows a fuzzy picker of local branches; selecting one

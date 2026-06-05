@@ -1109,6 +1109,14 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// so it doesn't linger as the user moves around or types. The apply
 	// branch reads m.preferredCodeAction BEFORE this clear runs (we
 	// detect that case below via matchedAction == ActionApplyPreferred...).
+	// When the Source Control commit box has keyboard focus it behaves like a
+	// text input: every key edits it (Enter commits, Esc/Tab blur). Route here
+	// BEFORE the global keymap so typed letters aren't claimed as shortcuts.
+	if m.gitCommitFocused && m.focus == FocusExplorer && m.activity.Active() == activity.ViewGit {
+		newM, cmd, _ := m.handleGitCommitKey(msg)
+		return newM, cmd
+	}
+
 	matchedAction := m.keys.Match(msg)
 	if m.preferredCodeAction != nil && matchedAction != keymap.ActionApplyPreferredCodeAction {
 		m.preferredCodeAction = nil

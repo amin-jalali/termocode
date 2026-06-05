@@ -92,12 +92,22 @@ func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (tea.Model,
 		return m, nil
 	}
 	contentW := m.explorerWidth - 1
+	// A click anywhere but the message field blurs it (re-focused below if the
+	// field itself was clicked).
+	if y != gitCommitInputRow {
+		m.gitCommitFocused = false
+	}
 	// The view-mode toggle glyph lives on the right edge of the sub-header row.
 	if y == gitSubheaderRow {
 		if x >= contentW-gitViewToggleWidth(m.gitViewTree) {
 			m.toggleGitViewMode()
 		}
 		return m, nil
+	}
+	// Commit message box + action bar (fixed chrome between the sub-header and
+	// the accordion).
+	if newM, cmd, ok := m.gitCommitAreaClick(x, y, contentW); ok {
+		return newM, cmd
 	}
 	// The title + hairline rows above the sub-header are inert.
 	if y < gitSubheaderRow {

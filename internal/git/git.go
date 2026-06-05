@@ -154,10 +154,32 @@ func Discard(dir, path string) error {
 // up front so we don't surface git's less-helpful "Aborting commit due to
 // empty commit message" error to the user.
 func Commit(dir, message string) error {
-	if strings.TrimSpace(message) == "" {
-		return fmt.Errorf("commit message is empty")
+	return CommitWith(dir, message, false, false)
+}
+
+// CommitWith creates a commit with optional --amend / --signoff. When amend is
+// true and the message is empty, the existing commit message is kept
+// (--amend --no-edit); otherwise an empty message is rejected. signoff adds the
+// "Signed-off-by:" trailer (git commit -s).
+func CommitWith(dir, message string, amend, signoff bool) error {
+	args := []string{"commit"}
+	if amend {
+		args = append(args, "--amend")
 	}
-	cmd := exec.Command("git", "commit", "-m", message)
+	if signoff {
+		args = append(args, "--signoff")
+	}
+	if strings.TrimSpace(message) == "" {
+		if amend {
+			// Reword nothing: keep the previous message verbatim.
+			args = append(args, "--no-edit")
+		} else {
+			return fmt.Errorf("commit message is empty")
+		}
+	} else {
+		args = append(args, "-m", message)
+	}
+	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -783,6 +805,18 @@ func PushSetUpstream(dir, branch string) error {
 // Pull runs `git pull` in dir. Same error-formatting strategy as Push.
 func Pull(dir string) error {
 	cmd := exec.Command("git", "pull")
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+// Fetch runs `git fetch --prune` in dir, updating remote-tracking refs without
+// touching the working tree. Same error-formatting strategy as Push/Pull.
+func Fetch(dir string) error {
+	cmd := exec.Command("git", "fetch", "--prune")
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {

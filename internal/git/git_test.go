@@ -133,6 +133,68 @@ func TestCommit(t *testing.T) {
 	}
 }
 
+func TestCommitWithAmend(t *testing.T) {
+	r := newGitTestRepo(t)
+	r.write(t, "a.txt", "x\n")
+	if err := Stage(r.dir, "a.txt"); err != nil {
+		t.Fatal(err)
+	}
+	if err := Commit(r.dir, "typo mesage"); err != nil {
+		t.Fatal(err)
+	}
+	// Reword HEAD without staging anything new.
+	if err := CommitWith(r.dir, "fixed message", true, false); err != nil {
+		t.Fatal(err)
+	}
+	out := r.git(t, "log", "--oneline")
+	if strings.Contains(out, "typo mesage") {
+		t.Errorf("amend left the old subject behind: %q", out)
+	}
+	if !strings.Contains(out, "fixed message") {
+		t.Errorf("amend did not apply new subject: %q", out)
+	}
+	if n := strings.Count(strings.TrimSpace(out), "\n"); n != 0 {
+		t.Errorf("amend created an extra commit, want 1 line: %q", out)
+	}
+}
+
+func TestCommitWithAmendNoEdit(t *testing.T) {
+	r := newGitTestRepo(t)
+	r.write(t, "a.txt", "x\n")
+	_ = Stage(r.dir, "a.txt")
+	if err := Commit(r.dir, "keep me"); err != nil {
+		t.Fatal(err)
+	}
+	// Stage a follow-up change and fold it into HEAD with an empty message:
+	// the subject must be preserved (--amend --no-edit).
+	r.write(t, "b.txt", "y\n")
+	_ = Stage(r.dir, "b.txt")
+	if err := CommitWith(r.dir, "", true, false); err != nil {
+		t.Fatal(err)
+	}
+	out := r.git(t, "log", "--oneline")
+	if !strings.Contains(out, "keep me") {
+		t.Errorf("amend --no-edit dropped the message: %q", out)
+	}
+	files := r.git(t, "show", "--name-only", "--format=", "HEAD")
+	if !strings.Contains(files, "a.txt") || !strings.Contains(files, "b.txt") {
+		t.Errorf("amended commit missing files: %q", files)
+	}
+}
+
+func TestCommitWithSignoff(t *testing.T) {
+	r := newGitTestRepo(t)
+	r.write(t, "a.txt", "x\n")
+	_ = Stage(r.dir, "a.txt")
+	if err := CommitWith(r.dir, "with trailer", false, true); err != nil {
+		t.Fatal(err)
+	}
+	body := r.git(t, "log", "-1", "--format=%B")
+	if !strings.Contains(body, "Signed-off-by: Test <test@example.com>") {
+		t.Errorf("sign-off trailer missing: %q", body)
+	}
+}
+
 func TestCommitEmptyMessageRejected(t *testing.T) {
 	r := newGitTestRepo(t)
 	r.write(t, "a.txt", "x\n")

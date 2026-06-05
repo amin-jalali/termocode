@@ -22,6 +22,7 @@ const (
 	confirmKindCloseBuffer confirmKindEnum = iota
 	confirmKindDeletePath
 	confirmKindGitDiscard
+	confirmKindGitStageCommit
 )
 
 // findBuffer returns the buffer info for the given id, if known.
@@ -108,6 +109,10 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 	case confirmKindGitDiscard:
 		if id == "discard" {
 			return m.gitDiscardConfirmed()
+		}
+	case confirmKindGitStageCommit:
+		if id == "stage" {
+			return m.gitStageAllAndCommit()
 		}
 	}
 	return nil

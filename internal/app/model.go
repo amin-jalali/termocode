@@ -140,6 +140,14 @@ type Model struct {
 	gitGraphCollapsed   bool
 	gitGraph            []git.GraphLine
 
+	// Always-visible commit box (VSCode-style). gitCommitMsg is the single-line
+	// inline message buffer; gitCommitFocused routes keystrokes to it (vs the
+	// accordion navigation); gitCommitCaret is the rune-index caret position.
+	// The multi-line prompt overlay (openCommitPrompt) remains for commit bodies.
+	gitCommitMsg     string
+	gitCommitFocused bool
+	gitCommitCaret   int
+
 	// VSCode-style mouse hover. hoverX/hoverY are the absolute screen cell
 	// under the pointer (or -1 when unknown). mouseAllMotion mirrors the live
 	// xterm tracking mode so the Update loop only emits a switch when it

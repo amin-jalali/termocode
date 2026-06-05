@@ -1330,6 +1330,9 @@ func (m Model) renderGitSidebar(w, h int) string {
 	header = append(header, renderGitHairline(w))
 	header = append(header, renderGitSubheader(m.gitBranch, m.gitViewTree, w))
 	header = append(header, sidebarFill.Render(strings.Repeat(" ", w)))
+	header = append(header, m.renderGitCommitBox(w))
+	header = append(header, m.renderGitActionBar(w))
+	header = append(header, sidebarFill.Render(strings.Repeat(" ", w)))
 
 	// ── Scrollable body + optional footer hints (shared layout with the
 	// mouse hit-test so clicks land on the row that was drawn) ────────────

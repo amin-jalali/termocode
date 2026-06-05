@@ -190,6 +190,8 @@ func paletteItems() []picker.Item {
 		{ID: "git-focus", Title: "Git: Focus Source Control"},
 		{ID: "git-push", Title: "Git: Push"},
 		{ID: "git-pull", Title: "Git: Pull"},
+		{ID: "git-fetch", Title: "Git: Fetch"},
+		{ID: "git-sync", Title: "Git: Sync (Pull, then Push)"},
 		{ID: "git-branch", Title: "Git: Switch Branch..."},
 		{ID: "problems", Title: "View: Problems"},
 		{ID: "code-actions", Title: "Edit: Quick Fix...", Hint: "Ctrl+. / Alt+Enter"},
@@ -433,6 +435,10 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.gitPush()
 	case "git-pull":
 		return m.gitPull()
+	case "git-fetch":
+		return m.gitFetch()
+	case "git-sync":
+		return m.gitSync()
 	case "git-branch":
 		return m.openBranchPicker()
 	case "problems":

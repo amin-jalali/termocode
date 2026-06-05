@@ -9,6 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"termocode/internal/activity"
 	"termocode/internal/menu"
 	"termocode/internal/tabbar"
 	"termocode/internal/toast"
@@ -23,6 +24,7 @@ const (
 	menuKindEditor
 	menuKindGitFile
 	menuKindGitCommit
+	menuKindGitActions
 )
 
 // Source Control context-menu action IDs.
@@ -33,6 +35,15 @@ const (
 	gitMenuCommit   = "git-commit"
 	gitMenuCopyHash = "git-copy-hash"
 	gitMenuRefresh  = "git-refresh"
+
+	// Action-bar overflow (⋯) menu.
+	gitMenuAmend     = "git-amend"
+	gitMenuSignoff   = "git-signoff"
+	gitMenuCommitMsg = "git-commit-msg"
+	gitMenuPush      = "git-push"
+	gitMenuPull      = "git-pull"
+	gitMenuFetch     = "git-fetch"
+	gitMenuSync      = "git-sync"
 )
 
 // gitFileMenuItems builds the right-click menu for a changed file. willStage
@@ -128,6 +139,65 @@ func (m *Model) handleGitMenuSelect(id string) tea.Cmd {
 	return nil
 }
 
+// gitActionsMenuItems builds the ⋯ overflow menu for the commit action bar.
+func gitActionsMenuItems() []menu.Item {
+	return []menu.Item{
+		{ID: gitMenuCommit, Title: "Commit", Icon: "✓"},
+		{ID: gitMenuAmend, Title: "Commit (Amend)", Icon: "✎"},
+		{ID: gitMenuSignoff, Title: "Commit (Sign-off)", Icon: "✍"},
+		{ID: gitMenuCommitMsg, Title: "Commit Message…", Icon: "≡"},
+		{Sep: true},
+		{ID: gitMenuSync, Title: "Sync", Icon: "⟳"},
+		{ID: gitMenuPush, Title: "Push", Icon: "↑"},
+		{ID: gitMenuPull, Title: "Pull", Icon: "↓"},
+		{ID: gitMenuFetch, Title: "Fetch", Icon: "⇊"},
+		{Sep: true},
+		{ID: gitMenuRefresh, Title: "Refresh", Icon: "⟳"},
+	}
+}
+
+// openGitActionsMenu pops the ⋯ overflow under the action-bar chip.
+func (m *Model) openGitActionsMenu() {
+	contentW := m.explorerWidth - 1
+	anchorX := activity.Width
+	for _, b := range m.gitActionButtons(contentW) {
+		if b.id == gitBtnMore {
+			anchorX += b.x0
+			break
+		}
+	}
+	m.menu = menu.New(gitActionsMenuItems(), anchorX, gitActionBarRow+1)
+	m.menu.SetScreenSize(m.w, m.h)
+	m.menuOpen = true
+	m.menuKind = menuKindGitActions
+	m.focus = FocusExplorer
+}
+
+// handleGitActionsMenuSelect dispatches a ⋯ overflow action.
+func (m *Model) handleGitActionsMenuSelect(id string) tea.Cmd {
+	switch id {
+	case gitMenuCommit:
+		return m.gitInlineCommit(false, false)
+	case gitMenuAmend:
+		return m.gitInlineCommit(true, false)
+	case gitMenuSignoff:
+		return m.gitInlineCommit(false, true)
+	case gitMenuCommitMsg:
+		m.openCommitPrompt()
+	case gitMenuSync:
+		return m.gitSync()
+	case gitMenuPush:
+		return m.gitPush()
+	case gitMenuPull:
+		return m.gitPull()
+	case gitMenuFetch:
+		return m.gitFetch()
+	case gitMenuRefresh:
+		return fetchGitCmd()
+	}
+	return nil
+}
+
 // Tab context-menu action IDs.
 const (
 	tabMenuClose       = "tab-close"
@@ -213,6 +283,9 @@ func (m *Model) handleMenuSelect(id string) tea.Cmd {
 	}
 	if m.menuKind == menuKindGitFile || m.menuKind == menuKindGitCommit {
 		return m.handleGitMenuSelect(id)
+	}
+	if m.menuKind == menuKindGitActions {
+		return m.handleGitActionsMenuSelect(id)
 	}
 	path := m.menuPath
 	switch id {
