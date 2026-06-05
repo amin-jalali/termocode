@@ -63,6 +63,9 @@ const (
 	ActionToggleAutoSave
 	ActionNextHunk
 	ActionPrevHunk
+	ActionStageHunk
+	ActionUnstageHunk
+	ActionDiscardHunk
 	ActionReloadBuffer
 	ActionOpenURL
 	ActionPinTab
@@ -369,6 +372,8 @@ func Default() KeyMap {
 			// vim defaults too — these don't conflict.
 			"alt+]": ActionNextHunk,
 			"alt+[": ActionPrevHunk,
+			"alt+s": ActionStageHunk,
+			"alt+u": ActionUnstageHunk,
 
 			// Pin / unpin the active tab — VSCode uses Ctrl+K Shift+Enter
 			// (chord) which we can't represent. Alt+P is universally free

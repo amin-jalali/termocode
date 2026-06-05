@@ -179,6 +179,9 @@ func paletteItems() []picker.Item {
 		{ID: "pick-theme", Title: "Preferences: Color Theme"},
 		{ID: "git-stage", Title: "Git: Stage Current File"},
 		{ID: "git-stage-all", Title: "Git: Stage All Changes"},
+		{ID: "git-stage-hunk", Title: "Git: Stage Hunk (at cursor)"},
+		{ID: "git-unstage-hunk", Title: "Git: Unstage Hunk (at cursor)"},
+		{ID: "git-discard-hunk", Title: "Git: Discard Hunk (at cursor)"},
 		{ID: "git-commit", Title: "Git: Commit..."},
 		{ID: "git-diff", Title: "Git: Show Diff for Current File"},
 		{ID: "git-discard", Title: "Git: Discard Changes in Current File"},
@@ -405,6 +408,12 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.gitStageActiveFile()
 	case "git-stage-all":
 		return m.gitStageAll()
+	case "git-stage-hunk":
+		return m.gitStageHunk()
+	case "git-unstage-hunk":
+		return m.gitUnstageHunk()
+	case "git-discard-hunk":
+		return m.gitDiscardHunk()
 	case "git-commit":
 		m.openCommitPrompt()
 	case "git-diff":

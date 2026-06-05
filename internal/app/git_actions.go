@@ -136,6 +136,59 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 // any change that's only present in the index. Files that have *both* staged
 // and unstaged changes get the unstaged ones promoted to the index — that
 // matches VSCode's "Stage" affordance and is the more useful default.
+type gitHunkKind int
+
+const (
+	gitHunkStage gitHunkKind = iota
+	gitHunkUnstage
+	gitHunkDiscard
+)
+
+// gitStageHunk / gitUnstageHunk / gitDiscardHunk apply git's per-hunk staging
+// to the hunk under the cursor in the active editor buffer — the `git add -p`
+// workflow, without dropping to the terminal.
+func (m *Model) gitStageHunk() tea.Cmd   { return m.gitHunkOp(gitHunkStage) }
+func (m *Model) gitUnstageHunk() tea.Cmd { return m.gitHunkOp(gitHunkUnstage) }
+func (m *Model) gitDiscardHunk() tea.Cmd { return m.gitHunkOp(gitHunkDiscard) }
+
+func (m *Model) gitHunkOp(kind gitHunkKind) tea.Cmd {
+	path := m.editor.Path()
+	if path == "" || m.cursorLine <= 0 {
+		return nil
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil
+	}
+	rel := path
+	if r, e := filepath.Rel(cwd, path); e == nil && !strings.HasPrefix(r, "..") {
+		rel = r
+	}
+	var opErr error
+	var verb string
+	switch kind {
+	case gitHunkStage:
+		opErr, verb = git.StageHunk(cwd, rel, m.cursorLine), "Staged hunk"
+	case gitHunkUnstage:
+		opErr, verb = git.UnstageHunk(cwd, rel, m.cursorLine), "Unstaged hunk"
+	case gitHunkDiscard:
+		opErr, verb = git.DiscardHunk(cwd, rel, m.cursorLine), "Discarded hunk"
+	}
+	var toastCmd tea.Cmd
+	if opErr != nil {
+		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Git", opErr.Error())
+		return toastCmd
+	}
+	// Discard rewrote the working file on disk — reload it (autoread) so the
+	// buffer + signs reflect the revert. Stage/unstage only touch the index,
+	// which the HEAD-relative editor signs don't show, so no reload is needed.
+	if kind == gitHunkDiscard && m.nvim != nil {
+		_ = m.nvim.Command("checktime")
+	}
+	m.toast, toastCmd = m.toast.PushDetail(toast.Info, verb, filepath.Base(rel))
+	return tea.Batch(fetchGitCmd(), toastCmd)
+}
+
 func (m *Model) gitStageToggle() tea.Cmd {
 	fi, ok := m.gitCurrentFileIndex()
 	if !ok {

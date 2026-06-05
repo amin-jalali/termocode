@@ -453,6 +453,137 @@ func ShowCommit(dir, hash string) (string, error) {
 	return runOut(dir, "git", "show", "--no-color", hash)
 }
 
+// runStdin runs a command feeding `stdin` to it, returning a combined-output
+// error so `git apply` rejections surface their reason.
+func runStdin(dir, stdin, name string, args ...string) error {
+	cmd := exec.Command(name, args...)
+	cmd.Dir = dir
+	cmd.Stdin = strings.NewReader(stdin)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("%s: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+// StageHunk stages the single diff hunk that contains working-file line `line`
+// (1-based), the `git add -p` equivalent. UnstageHunk / DiscardHunk are the
+// index-reverse / worktree-reverse twins.
+func StageHunk(dir, file string, line int) error {
+	// read worktree-vs-index diff, apply it forward to the index
+	return applyOneHunk(dir, file, line, false, true, false)
+}
+
+// UnstageHunk removes one staged hunk from the index (reverse-apply the staged
+// diff). The line is matched against the staged (index) side of the diff.
+func UnstageHunk(dir, file string, line int) error {
+	// read index-vs-HEAD diff, reverse-apply it to the index
+	return applyOneHunk(dir, file, line, true, true, true)
+}
+
+// DiscardHunk reverts one unstaged hunk in the working tree.
+func DiscardHunk(dir, file string, line int) error {
+	// read worktree-vs-index diff, reverse-apply it to the worktree
+	return applyOneHunk(dir, file, line, false, false, true)
+}
+
+// applyOneHunk extracts the hunk under `line` from the file's diff and feeds it
+// to `git apply`. diffCached reads the staged diff (index-vs-HEAD); applyCached
+// targets the index (vs worktree); applyReverse reverses the patch.
+func applyOneHunk(dir, file string, line int, diffCached, applyCached, applyReverse bool) error {
+	diffArgs := []string{"diff", "--no-color"}
+	if diffCached {
+		diffArgs = append(diffArgs, "--cached")
+	}
+	diffArgs = append(diffArgs, "--", file)
+	diff, err := runOut(dir, "git", diffArgs...)
+	if err != nil {
+		return err
+	}
+	patch, ok := extractHunkPatch(diff, line)
+	if !ok {
+		return fmt.Errorf("no change under the cursor")
+	}
+	applyArgs := []string{"apply"}
+	if applyCached {
+		applyArgs = append(applyArgs, "--cached")
+	}
+	if applyReverse {
+		applyArgs = append(applyArgs, "--reverse")
+	}
+	return runStdin(dir, patch, "git", append(applyArgs, "-")...)
+}
+
+// extractHunkPatch returns a one-hunk patch (file header + the single hunk
+// whose new-side range contains `line`) suitable for `git apply`.
+func extractHunkPatch(diff string, line int) (string, bool) {
+	lines := strings.Split(diff, "\n")
+	var header []string
+	i := 0
+	for ; i < len(lines); i++ {
+		if strings.HasPrefix(lines[i], "@@") {
+			break
+		}
+		header = append(header, lines[i])
+	}
+	for i < len(lines) {
+		if !strings.HasPrefix(lines[i], "@@") {
+			i++
+			continue
+		}
+		start := i
+		newStart, newCount := parseHunkNewRange(lines[i])
+		i++
+		for i < len(lines) && !strings.HasPrefix(lines[i], "@@") {
+			i++
+		}
+		if newCount <= 0 {
+			newCount = 1
+		}
+		if line >= newStart && line < newStart+newCount {
+			var b strings.Builder
+			for _, h := range header {
+				b.WriteString(h)
+				b.WriteByte('\n')
+			}
+			for _, h := range lines[start:i] {
+				b.WriteString(h)
+				b.WriteByte('\n')
+			}
+			return b.String(), true
+		}
+	}
+	return "", false
+}
+
+// parseHunkNewRange reads the "+start,count" side of an "@@ -a,b +c,d @@" header.
+func parseHunkNewRange(h string) (start, count int) {
+	plus := strings.IndexByte(h, '+')
+	if plus < 0 {
+		return 0, 0
+	}
+	rest := h[plus+1:]
+	end := strings.IndexByte(rest, ' ')
+	if end < 0 {
+		end = len(rest)
+	}
+	rest = rest[:end]
+	if comma := strings.IndexByte(rest, ','); comma >= 0 {
+		return atoiPrefix(rest[:comma]), atoiPrefix(rest[comma+1:])
+	}
+	return atoiPrefix(rest), 1
+}
+
+func atoiPrefix(s string) int {
+	n := 0
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			break
+		}
+		n = n*10 + int(c-'0')
+	}
+	return n
+}
+
 // ShowFileAtRevision returns a file's contents at a revision
 // (`git show <rev>:<path>`). When the path doesn't exist at that revision —
 // e.g. a newly-added/untracked file — it returns ("", nil) so callers can

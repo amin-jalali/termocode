@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -409,6 +410,47 @@ func TestShowCommitDetail(t *testing.T) {
 	}
 	if !strings.Contains(first.Body, "longer body") {
 		t.Errorf("body not captured: %q", first.Body)
+	}
+}
+
+func TestHunkStaging(t *testing.T) {
+	r := newGitTestRepo(t)
+	var base strings.Builder
+	for i := 1; i <= 30; i++ {
+		base.WriteString("line")
+		base.WriteString(strconv.Itoa(i))
+		base.WriteByte('\n')
+	}
+	r.write(t, "a.txt", base.String())
+	r.git(t, "add", "a.txt")
+	r.git(t, "commit", "-q", "-m", "init")
+	// Two changes far enough apart (line 3, line 25) to be distinct hunks.
+	mod := strings.Replace(base.String(), "line3\n", "CHANGED_A\n", 1)
+	mod = strings.Replace(mod, "line25\n", "CHANGED_B\n", 1)
+	r.write(t, "a.txt", mod)
+
+	// Stage only the hunk at line 3 → index has A, not B.
+	if err := StageHunk(r.dir, "a.txt", 3); err != nil {
+		t.Fatalf("StageHunk: %v", err)
+	}
+	staged := r.git(t, "diff", "--cached", "--no-color", "--", "a.txt")
+	if !strings.Contains(staged, "CHANGED_A") || strings.Contains(staged, "CHANGED_B") {
+		t.Fatalf("staged should hold only hunk A:\n%s", staged)
+	}
+	// Discard the hunk at line 25 → working tree loses B, keeps A.
+	if err := DiscardHunk(r.dir, "a.txt", 25); err != nil {
+		t.Fatalf("DiscardHunk: %v", err)
+	}
+	body, _ := os.ReadFile(filepath.Join(r.dir, "a.txt"))
+	if strings.Contains(string(body), "CHANGED_B") || !strings.Contains(string(body), "CHANGED_A") {
+		t.Fatalf("discard should revert only hunk B:\n%s", body)
+	}
+	// Unstage hunk A → index clean again.
+	if err := UnstageHunk(r.dir, "a.txt", 3); err != nil {
+		t.Fatalf("UnstageHunk: %v", err)
+	}
+	if s := r.git(t, "diff", "--cached", "--no-color", "--", "a.txt"); strings.TrimSpace(s) != "" {
+		t.Fatalf("index should be clean after unstage:\n%s", s)
 	}
 }
 
