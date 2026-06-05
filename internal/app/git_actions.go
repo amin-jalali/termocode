@@ -443,7 +443,8 @@ if ft ~= '' then
     pcall(function() vim.bo[buf].syntax = ft end)
   end
 end
-pcall(vim.api.nvim_buf_set_name, buf, name)
+-- Intentionally NOT named: a path-like buffer name ("<file> (HEAD)") can get
+-- written to disk as a phantom file. The winbar below carries the label.
 vim.cmd('diffthis')
 vim.wo.foldenable = false
 vim.wo.number = true
@@ -1196,7 +1197,11 @@ local ok, lines = pcall(vim.fn.readfile, path)
 if ok then vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines) end
 vim.bo[buf].modifiable = false
 vim.bo[buf].filetype = 'diff'
-pcall(vim.api.nvim_buf_set_name, buf, name)
+-- Label via the winbar, NOT a buffer name: a path-like name gets written to
+-- disk as a phantom file.
+vim.api.nvim_set_hl(0, 'WinBar',    { fg = '#cfd8e3', bg = '#26292e' })
+vim.api.nvim_set_hl(0, 'TcDiffHdr', { fg = '#e6edf3', bg = '#26292e', bold = true })
+vim.wo.winbar = '%%#TcDiffHdr# ' .. name
 pcall(vim.api.nvim_win_set_cursor, 0, { 1, 0 })
 vim.cmd('stopinsert')
 `, esc(path), esc(name))
