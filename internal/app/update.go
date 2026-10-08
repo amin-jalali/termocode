@@ -1332,6 +1332,8 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// don't push built-ins down the fuzzy-match list.
 		items := paletteItems()
 		items = append(items, tasksPaletteItems()...) // Group C
+		// Hints come from the live keymap (keymap.json overrides too).
+		items = withKeyHints(items, m.keys)
 		items = append(items, userCommandsItems()...)
 		items = append(items, m.extPaletteItems()...) // Group I
 		// Promote frequently-used commands to the front so muscle memory
