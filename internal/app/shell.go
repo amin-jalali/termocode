@@ -838,14 +838,9 @@ func (m Model) computeTerminalTabBarLayout(width int) terminalTabBarLayout {
 	layout.MinStart = layout.MaxStart + 1 // ↑(1) → −
 	layout.CloseStart = layout.MinStart + 1
 
-	// Left segment: " <Label> │ " (1 pad + label + 1 gap + 1 sep + 1 gap).
-	// Build the layout incrementally so it stays correct if widths shift.
-	col := 0
-	col++                                                       // " " (left pad)
-	col += runewidth.StringWidth(m.panelTitle(m.panelActive))   // "Terminal" / "Output" / …
-	col++                                                       // " " (gap before separator)
-	col++                                                       // "│" (separator)
-	col++                                                       // " " (gap after separator)
+	// Left pad only: the active tab already names the panel (a separate
+	// "<Label> │" heading repeated it).
+	col := 1
 	tabsStart := col
 
 	// Tabs: each rendered as " icon name × ", in panelBarEntries order.
@@ -931,12 +926,9 @@ func (m Model) renderTerminalTabBar(width int) string {
 
 	var out strings.Builder
 
-	// Left segment: " <active kind title> │ "
+	// Left pad (the active tab names the panel).
 	out.WriteString(bg.Render(" "))
-	out.WriteString(label.Render(m.panelTitle(m.panelActive)))
-	out.WriteString(bg.Render(" "))
-	out.WriteString(sepStyle.Render("│"))
-	out.WriteString(bg.Render(" "))
+	_ = label
 
 	// Tabs.
 	for i, slot := range layout.Tabs {
