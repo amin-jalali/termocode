@@ -502,7 +502,7 @@ end
 		// Persist the freshly-expanded set so a subsequent restart sees
 		// the same tree shape even if no further user interaction happens.
 		m.persistExplorerState()
-		return m, m.extLoadCmd(false), true // Group I: load extensions after the built-in Lua
+		return m, tea.Batch(m.extLoadCmd(false), m.keymapProblemsToast()), true // Group I: load extensions after the built-in Lua
 	case nvim.RedrawMsg:
 		// Watch for mode_change events so we can update the hardware
 		// cursor shape (DECSCUSR) in View(). Events arrive as

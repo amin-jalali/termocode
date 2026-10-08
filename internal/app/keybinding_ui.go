@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -71,19 +72,21 @@ func (m *Model) onKeybindingRowSelected(id string) tea.Cmd {
 }
 
 // applyKeybinding is invoked from handlePromptSubmit when the user
-// confirms a new binding string. Validates against keymap.Default()'s
-// recognised key set, persists to keymap.json, and rebuilds m.keys so
+// confirms a new binding string. Validates it with keymap.ValidateKey,
+// persists to keymap.json, and rebuilds m.keys so
 // the change takes effect without restart.
 func (m *Model) applyKeybinding(value string) tea.Cmd {
 	if m.keybindingPromptAction == "" {
 		return nil
 	}
 	var toastCmd tea.Cmd
-	// Reject unknown keys early. This is the same gate keymap.LoadOverrides
+	// Reject malformed keys early. This is the same gate keymap.LoadOverrides
 	// applies on read; doing it on write too ensures the persisted file
-	// stays clean and the user gets immediate feedback.
-	if !keymap.IsKnownKey(value) {
-		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Unknown key", value)
+	// stays clean and the user gets immediate feedback. Any valid key is
+	// fine, even one no default binding uses (e.g. ctrl+k).
+	value = strings.TrimSpace(value)
+	if err := keymap.ValidateKey(value); err != nil {
+		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Invalid key", err.Error())
 		return toastCmd
 	}
 	// Find the Action for this name. We rely on the same name table
@@ -151,4 +154,29 @@ func (m *Model) commitKeybinding(value string, action keymap.Action) tea.Cmd {
 	m.toast, toastCmd = m.toast.PushDetail(toast.Info, keymap.ActionName(action), value)
 	m.keybindingPromptAction = ""
 	return toastCmd
+}
+
+// keymapProblemsToast warns once about keymap.json entries that were
+// dropped at startup (malformed key, unknown action) and logs each one to
+// errors.log. nil when there is nothing to report.
+func (m *Model) keymapProblemsToast() tea.Cmd {
+	probs := m.keymapProblems
+	m.keymapProblems = nil
+	if len(probs) == 0 {
+		return nil
+	}
+	for _, p := range probs {
+		recordError("keymap.json: " + p)
+	}
+	var c tea.Cmd
+	m.toast, c = m.toast.PushDetail(toast.Warn, keymapProblemsTitle(len(probs)), strings.Join(probs, "\n"))
+	return c
+}
+
+// keymapProblemsTitle is the toast title for n dropped keymap.json entries.
+func keymapProblemsTitle(n int) string {
+	if n == 1 {
+		return "keymap.json: 1 entry ignored"
+	}
+	return fmt.Sprintf("keymap.json: %d entries ignored", n)
 }

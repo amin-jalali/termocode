@@ -67,10 +67,14 @@ name:
 ```
 
 !!! note "Which keys can I use?"
-    termocode only accepts key names it already knows — the keys that some
-    default binding uses (`ctrl+…`, `alt+…`, `f1`–`f12`, and so on). A key that
-    no default uses, like `ctrl+k`, is rejected. See
-    [Keyboard shortcuts](../reference/keys.md) for the list.
+    Any key name your terminal can send: optional `ctrl+`, `alt+`, `shift+`,
+    then one character (`ctrl+k`, `alt+T`, `ctrl+/`) or a named key
+    (`f1`–`f24`, `enter`, `tab`, `esc`, `space`, `up`, `pgdown`, …). Write
+    them in lower case, like in [Keyboard shortcuts](../reference/keys.md).
+    Entries with a typo (a bad key like `ctrl+monkey`, or an unknown action
+    name) are skipped. termocode shows a toast at startup and writes the
+    details to `errors.log`. Some keys never reach the app because the
+    terminal keeps them (for example `ctrl+shift+t` in many terminals).
 
 Extensions can be bound too, with `"ext:<command-id>"` as the action (for
 example `{ "alt+h": "ext:hello.say" }`). Extension bindings accept any key
