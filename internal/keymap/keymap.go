@@ -118,6 +118,13 @@ const (
 	ActionRunTask
 	ActionRerunTask
 	ActionShowProblems
+	// Group A — AI. Alt+A (ActionToggleActionsPanel) opens the AI chat
+	// panel; these cover the rest: Alt+\ asks for an inline completion
+	// now, Alt+I edits the selection / line with an instruction, Alt+|
+	// toggles automatic ghost text.
+	ActionAITriggerInline
+	ActionAIEditSelection
+	ActionAIToggleInline
 )
 
 type KeyMap struct {
@@ -218,8 +225,8 @@ func Default() KeyMap {
 			// ActionNextDiagnostic; "Debug: Continue" is palette-only.
 			"f9":  ActionDebugToggleBreakpoint,
 			"f10": ActionDebugStepOver,
-			"f7":     ActionMarkdownPreview,
-			"f8":    ActionWorkspaceSearch,
+			"f7":  ActionMarkdownPreview,
+			"f8":  ActionWorkspaceSearch,
 			// Ctrl+Shift+F (VSCode / Sublime default) is intercepted by
 			// every common terminal emulator we've tested so it never
 			// reaches the app. Alt+F is forwarded by iTerm2, wezterm,
@@ -403,6 +410,11 @@ func Default() KeyMap {
 			// Right-side Actions panel toggle. Alt+A is universally free
 			// (Ctrl+Shift+A is grabbed by most terminals for "select all").
 			"alt+a": ActionToggleActionsPanel,
+
+			// Group A — AI.
+			"alt+\\": ActionAITriggerInline,
+			"alt+i":  ActionAIEditSelection,
+			"alt+|":  ActionAIToggleInline,
 
 			// Markdown preview: F7 (the canonical one-shot overlay) is the
 			// only binding now. We had a tab-based "live preview" attempt

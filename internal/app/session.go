@@ -42,6 +42,11 @@ type SessionState struct {
 	// (true) vs flat list (false). Pointer so an unset field (nil) falls back
 	// to the tree default while an explicit choice survives a relaunch.
 	GitViewTree *bool `json:"git_view_tree,omitempty"`
+
+	// Group A: the AI chat shown on reopen + its scroll offset (lines up
+	// from the bottom).
+	AILastChat   string `json:"ai_last_chat,omitempty"`
+	AIChatScroll int    `json:"ai_chat_scroll,omitempty"`
 }
 
 func sessionPath() (string, error) {

@@ -74,7 +74,7 @@ func (m *Model) applyCodeActionsMsg(msg CodeActionsMsg) tea.Cmd {
 	// → Git → Other. Empty groups don't contribute a header. "Git" is the
 	// Phase-2 synthesized bucket; it sits between Test and Other so the
 	// LSP-driven groups stay at the top of the list.
-	order := []string{"Quick Fix", "Source", "Refactor", "Generate", "Test", "Git", "Other"}
+	order := []string{"Quick Fix", "AI", "Source", "Refactor", "Generate", "Test", "Git", "Other"}
 	items := make([]picker.Item, 0, len(all)+len(order))
 	for _, g := range order {
 		gActions := groups[g]
@@ -155,6 +155,9 @@ func codeActionGroup(a nvim.CodeAction) string {
 	// on "test" only.
 	if isConflictSynthKind(kind) {
 		return "Quick Fix"
+	}
+	if isAISynthKind(kind) { // Group A
+		return "AI"
 	}
 	switch kind {
 	case synthKindGitBlame, synthKindGitDiff, synthKindGitCopy:
@@ -266,6 +269,9 @@ func formatCodeActionHint(a nvim.CodeAction) string {
 // action kinds. Quick fixes get a wrench, refactors get a tool, source-level
 // (organize imports etc) gets a sparkle. Unknown kinds get a dot.
 func codeActionIcon(kind string) string {
+	if isAISynthKind(kind) { // Group A
+		return "✦"
+	}
 	switch kind {
 	case synthKindTestRun, synthKindTestCommand:
 		return "▶"
