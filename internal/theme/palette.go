@@ -65,6 +65,13 @@ type Palette256 struct {
 	// everywhere the recents modal sets the visual norm.
 	AccentLavender Color256
 
+	// AI (Group A): AIGhost colors inline ghost-text completions (should be
+	// clearly dimmer than real code); AIAccent marks AI chrome — the ✦
+	// status badge, chat role labels, the AI code-action group. Zero means
+	// "derive" (TextDim / AccentLavender) so older user themes keep working.
+	AIGhost  Color256
+	AIAccent Color256
+
 	// Borders
 	BorderDefault Color256
 	BorderFocus   Color256
@@ -145,6 +152,12 @@ var (
 	AccentRedCoral Color256 = 203 // #ff5f5f
 	AccentMagenta  Color256 = 170 // #d75fd7
 	AccentLavender Color256 = 141 // #bb86fc (256 idx 141 ≈ #af87ff; truecolor exact)
+)
+
+// ─── AI (Group A) ──────────────────────────────────────────────────────
+var (
+	AIGhost  Color256 = 242 // ghost text — TextDim grey
+	AIAccent Color256 = 141 // ✦ badge / chat labels — lavender
 )
 
 // ─── Borders ───────────────────────────────────────────────────────────
@@ -292,6 +305,17 @@ func SetPalette(p Palette256) {
 	}
 	if p.AccentLavender != 0 {
 		AccentLavender = p.AccentLavender
+	}
+
+	// Group A: AI tokens fall back to their neighbours when a palette
+	// doesn't set them.
+	AIGhost = p.AIGhost
+	if AIGhost == 0 {
+		AIGhost = TextDim
+	}
+	AIAccent = p.AIAccent
+	if AIAccent == 0 {
+		AIAccent = AccentLavender
 	}
 
 	BorderDefault = p.BorderDefault
