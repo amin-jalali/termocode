@@ -32,7 +32,22 @@ type State struct {
 	// attached client names ("{} gopls"), empty → dim "{} none".
 	ShowLSP bool
 	LSP     []string
+
+	// Group A — AI badge "✦ <model>". AI is the label (model name, or
+	// "AI" when unconfigured); AIState picks the look. AIOff hides it.
+	AI      string
+	AIState AIState
 }
+
+// AIState is the status-bar AI badge look (Group A).
+type AIState int
+
+const (
+	AIOff          AIState = iota // no badge
+	AIUnconfigured                // dim "✦ AI off" — click to configure
+	AIIdle                        // "✦ <model>" in AIAccent
+	AIStreaming                   // bold "✦ <model> …"
+)
 
 type Model struct {
 	w int
@@ -73,6 +88,7 @@ type barLayout struct {
 	leftW, centerW, rightW int
 	gapL, gapR             int
 	chipStart, chipW       int // LSP chip offset inside right (chipW 0 = none)
+	aiStart, aiW           int // Group A: AI badge offset inside right (aiW 0 = none)
 }
 
 // layout fits left / center / right into the bar width (see View).
@@ -80,7 +96,7 @@ func (m Model) layout(s State) barLayout {
 	var l barLayout
 	l.left = m.renderLeft(s)
 	l.center = m.renderCenter(s)
-	l.right, l.chipStart, l.chipW = m.renderRightChip(s)
+	l.right, l.chipStart, l.chipW, l.aiStart, l.aiW = m.renderRightChips(s)
 
 	l.leftW = lipgloss.Width(l.left)
 	l.centerW = lipgloss.Width(l.center)
@@ -118,6 +134,9 @@ func (m Model) layout(s State) barLayout {
 	// A chip cut by truncation is not clickable.
 	if l.chipStart+l.chipW > l.rightW {
 		l.chipW = 0
+	}
+	if l.aiStart+l.aiW > l.rightW {
+		l.aiW = 0
 	}
 
 	contentW := l.leftW + l.centerW + l.rightW
@@ -163,6 +182,20 @@ func (m Model) LSPChipSpan(s State) (x0, x1 int, ok bool) {
 	}
 	rightX := 1 + l.leftW + l.gapL + l.centerW + l.gapR
 	return rightX + l.chipStart, rightX + l.chipStart + l.chipW, true
+}
+
+// AIBadgeSpan returns the [x0, x1) cell range of the AI badge relative to
+// the bar's left edge; ok=false when hidden or truncated (Group A).
+func (m Model) AIBadgeSpan(s State) (x0, x1 int, ok bool) {
+	if m.w <= 0 {
+		return 0, 0, false
+	}
+	l := m.layout(s)
+	if l.aiW == 0 {
+		return 0, 0, false
+	}
+	rightX := 1 + l.leftW + l.gapL + l.centerW + l.gapR
+	return rightX + l.aiStart, rightX + l.aiStart + l.aiW, true
 }
 
 // truncateStyled clips a possibly-styled string to width w cells by
@@ -275,13 +308,13 @@ func (m Model) renderCenter(s State) string {
 // the LSP chip, and (if active) TERM / DEBUG indicators — separated by dim
 // │ pipes.
 func (m Model) renderRight(s State) string {
-	out, _, _ := m.renderRightChip(s)
+	out, _, _, _, _ := m.renderRightChips(s)
 	return out
 }
 
-// renderRightChip is renderRight plus the LSP chip's cell offset / width
-// inside the returned string (width 0 when the chip is hidden).
-func (m Model) renderRightChip(s State) (string, int, int) {
+// renderRightChips is renderRight plus the cell offset / width of the LSP
+// chip and the AI badge inside the returned string (width 0 = hidden).
+func (m Model) renderRightChips(s State) (string, int, int, int, int) {
 	var parts []string
 	parts = append(parts, barFg(theme.TextSecondary).Render(
 		fmt.Sprintf("Ln %d, Col %d", s.Line, s.Col)))
@@ -301,6 +334,11 @@ func (m Model) renderRightChip(s State) (string, int, int) {
 		chipIdx = len(parts)
 		parts = append(parts, renderLSPChip(s.LSP))
 	}
+	aiIdx := -1
+	if s.AIState != AIOff {
+		aiIdx = len(parts)
+		parts = append(parts, renderAIBadge(s.AI, s.AIState))
+	}
 	if s.Term {
 		// Subtle "TERM" indicator so the user can tell at a glance
 		// whether the integrated terminal panel is currently open.
@@ -312,15 +350,30 @@ func (m Model) renderRightChip(s State) (string, int, int) {
 		// debug session is high-attention.
 		parts = append(parts, barFg(theme.DiagError).Bold(true).Render("● DEBUG"))
 	}
-	chipStart, chipW := 0, 0
-	if chipIdx >= 0 {
-		sepW := lipgloss.Width(sep())
-		for _, p := range parts[:chipIdx] {
-			chipStart += lipgloss.Width(p) + sepW
+	span := func(idx int) (int, int) {
+		if idx < 0 {
+			return 0, 0
 		}
-		chipW = lipgloss.Width(parts[chipIdx])
+		start, sepW := 0, lipgloss.Width(sep())
+		for _, p := range parts[:idx] {
+			start += lipgloss.Width(p) + sepW
+		}
+		return start, lipgloss.Width(parts[idx])
 	}
-	return strings.Join(parts, sep()), chipStart, chipW
+	chipStart, chipW := span(chipIdx)
+	aiStart, aiW := span(aiIdx)
+	return strings.Join(parts, sep()), chipStart, chipW, aiStart, aiW
+}
+
+// renderAIBadge draws the Group A "✦ <model>" badge.
+func renderAIBadge(label string, st AIState) string {
+	switch st {
+	case AIUnconfigured:
+		return barFg(theme.TextDim).Render("✦ AI off")
+	case AIStreaming:
+		return barFg(theme.AIAccent).Bold(true).Render("✦ " + truncate(label, 24) + " …")
+	}
+	return barFg(theme.AIAccent).Render("✦ " + truncate(label, 24))
 }
 
 // renderLSPChip is "{} gopls" (attached clients) or a dim "{} none".
