@@ -1,0 +1,82 @@
+name: docs
+
+# Builds the MkDocs Material site and deploys it to GitHub Pages:
+# https://amin-jalali.github.io/termocode/
+# One-time setup: repo Settings → Pages → Source = "GitHub Actions".
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "requirements-docs.txt"
+      - "cmd/docgen/**"
+      - "assets/screenshots/**"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a newer push replaces a queued one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install X11 dev headers
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev
+
+      - name: Generate reference pages
+        run: go run ./cmd/docgen
+
+      - name: Copy screenshots into the site
+        run: |
+          mkdir -p docs/assets/screenshots
+          cp -f assets/screenshots/*.gif assets/screenshots/*.png docs/assets/screenshots/ 2>/dev/null || true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-docs.txt
+
+      - name: Install MkDocs Material
+        run: pip install -r requirements-docs.txt
+
+      - name: Build site
+        run: mkdocs build --strict
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

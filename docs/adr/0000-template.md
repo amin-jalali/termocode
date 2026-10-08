@@ -1,6 +1,6 @@
 # ADR NNNN — <short decision title>
 
-Status: **Proposed** | **Accepted** (YYYY-MM-DD) | **Superseded by [NNNN](NNNN-...md)**
+Status: **Proposed** | **Accepted** (YYYY-MM-DD) | **Superseded by NNNN** (link the new ADR)
 
 ## Context
 What problem forced a choice? What constraints exist (terminal limits, nvim
