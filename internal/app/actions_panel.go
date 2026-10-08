@@ -33,10 +33,13 @@ import (
 const (
 	actionsPanelGlyphPin   = "⚐"
 	actionsPanelGlyphClose = "×"
+	// Group A: the panel hosts the AI chat — new-chat and history buttons.
+	actionsPanelGlyphNew     = "+"
+	actionsPanelGlyphHistory = "≡"
 
 	// Launcher chip glyph + label shown when unpinned. "Actions" is a
 	// reasonable hint of what the chip does without leaning on tooltips.
-	actionsLauncherLabel = "▸ Actions"
+	actionsLauncherLabel = "▸ ✦ AI"
 )
 
 // actionsPanelVisible reports whether the pinned (column-occupying) panel
@@ -83,9 +86,8 @@ func (m Model) renderActionsPanel(width, height int) string {
 	if height > 1 {
 		rows = append(rows, renderActionsDivider(width))
 	}
-	bodyRows := height - len(rows)
-	if bodyRows > 0 {
-		rows = append(rows, renderActionsBody(width, bodyRows)...)
+	if height > aiPanelTopRow {
+		rows = append(rows, m.renderAIPanelBody(width, height)...) // Group A: AI chat body
 	}
 	for len(rows) < height {
 		rows = append(rows, bg.Render(strings.Repeat(" ", width)))
@@ -115,8 +117,11 @@ func (m Model) renderActionsHeader(width int) string {
 	pinStyle := theme.FgBg(pinTok, theme.BgPanel).Bold(true)
 	closeStyle := theme.FgBg(theme.TextSecondary, theme.BgPanel).Bold(true)
 
-	left := bg.Render(" ") + labelStyle.Render("ACTIONS")
-	right := pinStyle.Render(actionsPanelGlyphPin) + bg.Render(" ") +
+	labelStyle = theme.FgBg(theme.AIAccent, theme.BgPanel).Bold(true)
+	left := bg.Render(" ") + labelStyle.Render("✦ AI CHAT")
+	right := closeStyle.Render(actionsPanelGlyphNew) + bg.Render(" ") +
+		closeStyle.Render(actionsPanelGlyphHistory) + bg.Render(" ") +
+		pinStyle.Render(actionsPanelGlyphPin) + bg.Render(" ") +
 		closeStyle.Render(actionsPanelGlyphClose) + bg.Render(" ")
 
 	leftW := lipgloss.Width(left)
@@ -140,41 +145,6 @@ func (m Model) renderActionsHeader(width int) string {
 func renderActionsDivider(width int) string {
 	style := theme.FgBg(theme.BorderSubtle, theme.BgPanel)
 	return style.Render(strings.Repeat("─", width))
-}
-
-// renderActionsBody fills `bodyRows` rows with a centered, italic,
-// muted "No actions yet" hint vertically centered in the body, and
-// pads the rest with BgPanel-colored spaces.
-func renderActionsBody(width, bodyRows int) []string {
-	bg := theme.Bg(theme.BgPanel)
-	hintStyle := theme.FgBg(theme.TextDim, theme.BgPanel).Italic(true)
-
-	rows := make([]string, bodyRows)
-	for i := range rows {
-		rows[i] = bg.Render(strings.Repeat(" ", width))
-	}
-	hint := "No actions yet"
-	if runewidth.StringWidth(hint) > width-2 {
-		// Width too small to render the hint safely — just leave the
-		// body fully blank.
-		return rows
-	}
-	hintRow := bodyRows / 2
-	if hintRow < 0 || hintRow >= bodyRows {
-		return rows
-	}
-	leftPad := (width - runewidth.StringWidth(hint)) / 2
-	rightPad := width - leftPad - runewidth.StringWidth(hint)
-	if leftPad < 0 {
-		leftPad = 0
-	}
-	if rightPad < 0 {
-		rightPad = 0
-	}
-	rows[hintRow] = bg.Render(strings.Repeat(" ", leftPad)) +
-		hintStyle.Render(hint) +
-		bg.Render(strings.Repeat(" ", rightPad))
-	return rows
 }
 
 // renderActionsLauncher returns the tiny launcher chip rendered as a
@@ -229,7 +199,7 @@ func (m Model) hitActionsButton(screenX, screenY int) string {
 		return ""
 	}
 	w := x2 - x1
-	// Right side: " ⚐ × "  →  glyphs at local cols (w-4) and (w-2).
+	// Right side: " + ≡ ⚐ × "  →  glyphs at local cols w-8, w-6, w-4, w-2.
 	closeCol := x1 + w - 2
 	pinCol := x1 + w - 4
 	if screenX == closeCol {
@@ -237,6 +207,12 @@ func (m Model) hitActionsButton(screenX, screenY int) string {
 	}
 	if screenX == pinCol {
 		return "pin"
+	}
+	if screenX == x1+w-6 {
+		return "history" // Group A
+	}
+	if screenX == x1+w-8 {
+		return "new" // Group A
 	}
 	return ""
 }
@@ -289,9 +265,11 @@ func (m Model) hitActionsLauncher(screenX, screenY int) bool {
 func (m *Model) toggleActionsPanel() {
 	if m.actionsOpen {
 		m.actionsOpen = false
+		m.aiS().focused = false // Group A
 	} else {
 		m.actionsOpen = true
 		m.actionsPinned = true
+		m.aiS().focused = true // Group A: Alt+A lands in the chat input
 	}
 	m.persistActionsState()
 }

@@ -144,7 +144,9 @@ func ArgBool(args map[string]any, key string) bool {
 	return false
 }
 
-func strParam(desc string) map[string]any { return map[string]any{"type": "string", "description": desc} }
+func strParam(desc string) map[string]any {
+	return map[string]any{"type": "string", "description": desc}
+}
 
 // Workspace is what the built-in tools operate on.
 type Workspace struct {
