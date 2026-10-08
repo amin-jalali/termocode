@@ -91,6 +91,7 @@ Each is a self-contained Bubble Tea sub-component with its own `Model` / `Update
 | `confirm`    | "Are you sure?" modal                                                             |
 | `editor`     | Reads nvim grid via `ext_linegrid`, draws cells + scrollbar + cursor              |
 | `explorer`   | File tree sidebar; handles expand / collapse / multi-root                         |
+| `ext`        | Extension discovery, registry JSON, `{{token}}` markup, scaffold ([extensions](extensions.md)) |
 | `findbar`    | Inline find/replace bar with case/word/regex toggles                              |
 | `git`        | Git commands, status parsing, diff rendering                                      |
 | `grid`       | Cell-grid data structure shared with nvim                                         |
@@ -135,6 +136,7 @@ One `modalOverlay` function powers every picker and prompt. Per-call tweaks go t
 | `commands.json`         | Optional — user-defined palette commands surfaced as `User: <Title>`  |
 | `keymap.json`           | Optional — keybinding overrides (see [Keymap](#keymap-internalkeymap)) |
 | `user_theme.json`       | Optional — custom theme saved by the theme editor                      |
+| `extensions/<name>/`    | Optional — Lua extensions (`init.lua`); see [extensions.md](extensions.md) and [ADR 0006](adr/0006-lua-extension-host.md) |
 
 Plugins that termocode clones on first launch (nvim-dap, vim-visual-multi) live outside the config dir, in `~/.local/share/termocode/plugins` (`$XDG_DATA_HOME/termocode/plugins`, or `$TERMOCODE_PLUGINS_DIR`). See [ADR 0003](adr/0003-auto-bootstrapped-nvim-plugins.md).
 
@@ -183,6 +185,7 @@ Tests cache aggressively; if a test wrongly reports stale, use `go clean -testca
 
 ```text
 cmd/termocode/        entrypoint — sets up nvim, wires the Bubble Tea program
+extensions/           sample Lua extensions, embedded in the binary
 internal/             every package described above (~23 sub-packages)
 assets/screenshots/   README images + the vhs demo script
 packaging/            Homebrew formula + AUR PKGBUILD templates
