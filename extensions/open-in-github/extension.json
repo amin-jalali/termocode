@@ -1,0 +1,5 @@
+{
+  "name": "open-in-github",
+  "version": "1.0.0",
+  "description": "Open or copy a GitHub / GitLab / Bitbucket link to the current line."
+}
