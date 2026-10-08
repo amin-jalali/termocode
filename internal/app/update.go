@@ -1606,14 +1606,20 @@ func (m *Model) editorCopy() {
 local mode = vim.api.nvim_get_mode().mode
 local m1 = mode:sub(1,1)
 local visual = m1 == 'v' or m1 == 'V' or mode:byte(1) == 22
+-- Yank into the unnamed register, not "+: "+ needs a clipboard provider
+-- (xclip / wl-copy) that many machines don't have. Go pushes the text to
+-- the OS clipboard itself.
 if visual then
-  vim.cmd('normal! "+y')
+  vim.cmd('normal! y')
 else
-  vim.cmd('normal! "+yy')
+  vim.cmd('normal! yy')
 end
 vim.cmd('startinsert')
-return vim.fn.getreg('+')
+local text = vim.fn.getreg('"')
+if vim.fn.has('clipboard') == 1 then pcall(vim.fn.setreg, '+', text) end
+return (visual and 'C:' or 'L:') .. text
 `)
+	out = m.noteLineCopy(out)
 	if err == nil && out != "" {
 		safeClipboardWrite(out)
 		// Also emit OSC 52 so the user's *local* clipboard (their
@@ -1635,14 +1641,20 @@ func (m *Model) editorCut() {
 local mode = vim.api.nvim_get_mode().mode
 local m1 = mode:sub(1,1)
 local visual = m1 == 'v' or m1 == 'V' or mode:byte(1) == 22
+-- Yank into the unnamed register, not "+: "+ needs a clipboard provider
+-- (xclip / wl-copy) that many machines don't have. Go pushes the text to
+-- the OS clipboard itself.
 if visual then
-  vim.cmd('normal! "+d')
+  vim.cmd('normal! d')
 else
-  vim.cmd('normal! "+dd')
+  vim.cmd('normal! dd')
 end
 vim.cmd('startinsert')
-return vim.fn.getreg('+')
+local text = vim.fn.getreg('"')
+if vim.fn.has('clipboard') == 1 then pcall(vim.fn.setreg, '+', text) end
+return (visual and 'C:' or 'L:') .. text
 `)
+	out = m.noteLineCopy(out)
 	if err == nil && out != "" {
 		safeClipboardWrite(out)
 		// See editorCopy: OSC 52 is what reaches the local clipboard
@@ -1657,6 +1669,9 @@ return vim.fn.getreg('+')
 // we fall back to nvim's own `+` register clipboard provider, which the
 // caller already populated via `"+y` / `"+d` before calling here.
 func safeClipboardWrite(s string) {
+	if !clipboardReady() {
+		return
+	}
 	defer func() {
 		_ = recover()
 	}()
@@ -1672,7 +1687,12 @@ func (m *Model) editorPaste() {
 	if m.nvim == nil {
 		return
 	}
-	_ = m.nvim.ExecLua(`
+	// The OS clipboard read from Go is the source of truth: nvim's "+
+	// register is empty when no clipboard provider is installed. Fall back
+	// to "+ and then the unnamed register (last in-editor copy).
+	clip := readClipboardText()
+	_ = m.nvim.ExecLuaArgs(`
+local clip, linewise = ...
 local mode = vim.api.nvim_get_mode().mode
 local m1 = mode:sub(1,1)
 local visual = m1 == 'v' or m1 == 'V' or mode:byte(1) == 22
@@ -1681,12 +1701,33 @@ if visual then
   -- below uses the clipboard contents, not the just-deleted text.
   vim.cmd('normal! "_d')
 end
-local clip = vim.fn.getreg('+')
+if clip == '' and vim.fn.has('clipboard') == 1 then clip = vim.fn.getreg('+') end
+if clip == '' then clip = vim.fn.getreg('"') end
 if clip ~= '' then
-  vim.api.nvim_paste(clip, true, -1)
+  if linewise and not visual then
+    -- VSCode: a whole-line copy (no selection) pastes as a new line above.
+    vim.api.nvim_put(vim.split((clip:gsub('\n$', '')), '\n', { plain = true }), 'l', false, false)
+  else
+    vim.api.nvim_paste(clip, true, -1)
+  end
 end
 vim.cmd('startinsert')
-`)
+`, clip, clip != "" && clip == m.lastLineCopy)
+}
+
+// noteLineCopy strips the "L:" / "C:" marker returned by the copy / cut
+// Lua and remembers whole-line copies, so editorPaste can paste them as a
+// new line (VSCode behaviour) while the clipboard still holds that text.
+func (m *Model) noteLineCopy(out string) string {
+	switch {
+	case strings.HasPrefix(out, "L:"):
+		out = out[2:]
+		m.lastLineCopy = out
+	case strings.HasPrefix(out, "C:"):
+		out = out[2:]
+		m.lastLineCopy = ""
+	}
+	return out
 }
 
 // toggleLineComment toggles the comment on the current line / selection.
