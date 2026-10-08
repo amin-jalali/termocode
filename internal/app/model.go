@@ -139,6 +139,10 @@ type Model struct {
 	gitStagedCollapsed  bool
 	gitChangesCollapsed bool
 	gitGraphCollapsed   bool
+	// gitConflictsCollapsed folds the CONFLICTS section (git_conflicts.go).
+	gitConflictsCollapsed bool
+	// clone is the in-flight "Clone Repository" request (git_clone.go).
+	clone cloneState
 	gitGraph            []git.GraphLine
 
 	// Always-visible commit box (VSCode-style). gitCommitMsg is the single-line
@@ -758,6 +762,8 @@ func (m Model) attachCmd() tea.Cmd {
 		// on save / buffer enter / 1-second idle. Failure is non-fatal —
 		// non-git buffers just stay sign-less.
 		_ = m.nvim.ExecLua(gitSignsLua)
+		// Merge-conflict highlights + ]x / [x (git_conflicts.go).
+		_ = m.nvim.ExecLua(conflictLua())
 		// Multi-cursor: bootstrap-clone vim-visual-multi (silent, idempotent,
 		// non-fatal on failure), then run its setup Lua. If the clone fails
 		// we log a warning to stderr but the editor keeps running normally.
