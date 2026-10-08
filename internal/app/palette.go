@@ -42,6 +42,7 @@ const (
 	pickerKindKeybinding
 	pickerKindToolManager // LSP / DAP installer (lsp_manager.go)
 	pickerKindSnippetManager // Group H — Snippets: Manage…
+	pickerKindTasks          // Group C — Run Task… / Open Link… (tasks_run.go)
 )
 
 // loadFiles walks the cwd and returns one picker.Item per file (relative path).
@@ -199,7 +200,7 @@ func paletteItems() []picker.Item {
 		{ID: "git-fetch", Title: "Git: Fetch"},
 		{ID: "git-sync", Title: "Git: Sync (Pull, then Push)"},
 		{ID: "git-branch", Title: "Git: Switch Branch..."},
-		{ID: "problems", Title: "View: Problems"},
+		{ID: "problems", Title: "Go to Problem..."}, // Group C: "View: Problems" opens the panel now
 		{ID: "code-actions", Title: "Edit: Quick Fix...", Hint: "Ctrl+. / Alt+Enter"},
 		{ID: "goto-symbol-file", Title: "Go to Symbol in File...", Hint: "Ctrl+Shift+O"},
 		{ID: "goto-symbol-workspace", Title: "Go to Symbol in Workspace..."},
@@ -637,6 +638,10 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 	default:
 		// Group G: merge conflicts + clone (git_conflicts.go, git_clone.go).
 		if cmd, ok := m.dispatchGitExtrasPalette(id); ok {
+			return cmd
+		}
+		// Group C: tasks + problems panel (tasks_run.go).
+		if cmd, ok := m.dispatchTasksPalette(id); ok {
 			return cmd
 		}
 		// User commands have IDs prefixed with "user-".
