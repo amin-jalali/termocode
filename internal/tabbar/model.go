@@ -75,7 +75,7 @@ func (m Model) virtualLayout() (starts []int, widths []int, totalW int) {
 	widths = make([]int, len(m.bufs))
 	x := 0
 	for i, b := range m.bufs {
-		w := len(renderTabCellsSfx(b, b.ID == m.activeID, m.suffix(b)))
+		w := len(renderTabCellsSfx(b, b.ID == m.activeID, m.suffix(b), m.isWelcome(b)))
 		starts[i] = x
 		widths[i] = w
 		x += w
@@ -203,7 +203,7 @@ func (m Model) View() string {
 	// ANSI escapes is fragile.
 	virt := make([]string, 0, totalW)
 	for i, b := range m.bufs {
-		cells := renderTabCellsSfx(b, b.ID == m.activeID, m.suffix(b))
+		cells := renderTabCellsSfx(b, b.ID == m.activeID, m.suffix(b), m.isWelcome(b))
 		// renderTabCells width must match widths[i]
 		_ = widths
 		virt = append(virt, cells...)
@@ -402,7 +402,7 @@ func renderTab(b nvim.BufferInfo, active bool) (string, int) {
 // Width = len(returned slice). Used by View() to enable cell-level
 // clipping at viewport edges.
 func renderTabCells(b nvim.BufferInfo, active bool) []string {
-	return renderTabCellsSfx(b, active, "")
+	return renderTabCellsSfx(b, active, "", isWelcomeBuf(b))
 }
 
 // suffix is the dim parent-folder hint shown after a tab name when
@@ -422,6 +422,12 @@ func (m Model) suffix(b nvim.BufferInfo) string {
 	return filepath.Base(filepath.Dir(b.Path))
 }
 
+// isWelcome: the directory buffer, or the lone unnamed buffer termocode
+// starts with — both show the dashboard.
+func (m Model) isWelcome(b nvim.BufferInfo) bool {
+	return isWelcomeBuf(b) || (b.Path == "" && len(m.bufs) <= 1)
+}
+
 var dirCache = map[string]bool{}
 
 // isWelcomeBuf reports whether the buffer is the start-up directory
@@ -439,9 +445,8 @@ func isWelcomeBuf(b nvim.BufferInfo) bool {
 	return isDir
 }
 
-func renderTabCellsSfx(b nvim.BufferInfo, active bool, suffix string) []string {
+func renderTabCellsSfx(b nvim.BufferInfo, active bool, suffix string, welcome bool) []string {
 	name := filepath.Base(b.Path)
-	welcome := isWelcomeBuf(b)
 	if welcome {
 		name = "Welcome"
 	}
