@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/glamour/ansi"
 
+	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -19,285 +20,281 @@ func strPtr(s string) *string { return &s }
 func boolPtr(b bool) *bool    { return &b }
 func uintPtr(u uint) *uint    { return &u }
 
-// Palette anchors. We expand on the basic VSCode Dark+ scheme with a
-// handful of richer accents so the rendered preview reads as colourful
-// rather than mostly grey-on-blue.
-const (
-	editorBg    = "#1c1c1c" // matches the editor pane bg
-	codeBg      = "#23262c" // softer than tab bg so it's tinted, not loud
-	codeFg      = "#d7ba7d" // warm tan — readable but doesn't shout
-	codeBlockBg = "#1f2227" // slightly cooler for fenced blocks
-	quoteBg     = "#23232a" // subtle violet tint for block quotes
-	hrFg        = "#3a3a3a"
-	mutedFg     = "#9090a0"
-)
-
-// vscodeDarkPlusGlamourStyle is a glamour StyleConfig that mirrors the
-// VSCode Dark+ palette we already feed to Neovim (see theme_lua.go).
-// Every element sets BackgroundColor explicitly because glamour only
-// honours the parent block's bg on cells *it* writes — anything missed
-// shows the host terminal's default background, which is what made the
-// preview look blotchy until we fixed it.
-var vscodeDarkPlusGlamourStyle = ansi.StyleConfig{
-	Document: ansi.StyleBlock{
-		StylePrimitive: ansi.StylePrimitive{
-			BlockPrefix:     "\n",
-			BlockSuffix:     "\n",
-			Color:           strPtr("#d0d0d0"),
-			BackgroundColor: strPtr(editorBg),
-		},
-		Margin: uintPtr(1), // tighter — every column matters in a TUI
-	},
-	BlockQuote: ansi.StyleBlock{
-		StylePrimitive: ansi.StylePrimitive{
-			Color:           strPtr("#b5cea8"),
-			BackgroundColor: strPtr(quoteBg),
-			Italic:          boolPtr(true),
-		},
-		Indent:      uintPtr(1),
-		IndentToken: strPtr("┃ "),
-	},
-	Paragraph: ansi.StyleBlock{
-		StylePrimitive: ansi.StylePrimitive{
-			Color:           strPtr("#d0d0d0"),
-			BackgroundColor: strPtr(editorBg),
-		},
-	},
-	List: ansi.StyleList{
-		LevelIndent: 2,
-		StyleBlock: ansi.StyleBlock{
+func glamourStyle() ansi.StyleConfig {
+	hx := func(c theme.Color256) string { return theme.ToRGB(c).Hex() }
+	mix := func(a, b theme.Color256, t float64) string {
+		return theme.Lerp(theme.ToRGB(a), theme.ToRGB(b), t).Hex()
+	}
+	// Palette anchors, all derived from the active theme.
+	editorBg := hx(theme.BgEditor)
+	codeBg := mix(theme.BgEditor, theme.TextPrimary, 0.07)
+	codeFg := hx(theme.AccentAmber)
+	codeBlockBg := mix(theme.BgEditor, theme.TextPrimary, 0.04)
+	quoteBg := mix(theme.BgEditor, theme.AccentLavender, 0.07)
+	hrFg := hx(theme.BorderDefault)
+	mutedFg := hx(theme.TextSecondary)
+	_ = mutedFg
+	return ansi.StyleConfig{
+		Document: ansi.StyleBlock{
 			StylePrimitive: ansi.StylePrimitive{
-				Color:           strPtr("#d0d0d0"),
+				BlockPrefix:     "\n",
+				BlockSuffix:     "\n",
+				Color:           strPtr(hx(theme.TextPrimary)),
+				BackgroundColor: strPtr(editorBg),
+			},
+			Margin: uintPtr(1), // tighter — every column matters in a TUI
+		},
+		BlockQuote: ansi.StyleBlock{
+			StylePrimitive: ansi.StylePrimitive{
+				Color:           strPtr(hx(theme.SyntaxNumber)),
+				BackgroundColor: strPtr(quoteBg),
+				Italic:          boolPtr(true),
+			},
+			Indent:      uintPtr(1),
+			IndentToken: strPtr("┃ "),
+		},
+		Paragraph: ansi.StyleBlock{
+			StylePrimitive: ansi.StylePrimitive{
+				Color:           strPtr(hx(theme.TextPrimary)),
 				BackgroundColor: strPtr(editorBg),
 			},
 		},
-	},
-	// Heading is the *base* style every Hn inherits. We override the
-	// per-level prefix / colour individually below. BlockPrefix is the
-	// block-leading text glamour emits *before* the first line.
-	Heading: ansi.StyleBlock{
-		StylePrimitive: ansi.StylePrimitive{
-			BlockSuffix:     "\n",
-			Color:           strPtr("#569cd6"),
-			BackgroundColor: strPtr(editorBg),
-			Bold:            boolPtr(true),
-		},
-	},
-	H1: ansi.StyleBlock{
-		StylePrimitive: ansi.StylePrimitive{
-			BlockPrefix:     " ",
-			BlockSuffix:     " ",
-			Prefix:          " ",
-			Suffix:          " ",
-			Color:           strPtr("#ffffff"),
-			BackgroundColor: strPtr("#0e639c"), // VSCode "button" blue
-			Bold:            boolPtr(true),
-		},
-	},
-	H2: ansi.StyleBlock{
-		StylePrimitive: ansi.StylePrimitive{
-			BlockPrefix: "▌ ",
-			Prefix:      "▌ ",
-			// A grey rule line under each H2 so sections are visibly
-			// chunked — colour baked into the format so paragraphs
-			// after the heading don't inherit it.
-			BlockSuffix:     "\n\x1b[38;2;58;58;58m" + strings.Repeat("─", 40) + "\x1b[0m",
-			Color:           strPtr("#569cd6"),
-			BackgroundColor: strPtr(editorBg),
-			Bold:            boolPtr(true),
-		},
-	},
-	H3: ansi.StyleBlock{
-		StylePrimitive: ansi.StylePrimitive{
-			BlockPrefix:     "▎ ",
-			Prefix:          "▎ ",
-			Color:           strPtr("#4ec9b0"), // teal
-			BackgroundColor: strPtr(editorBg),
-			Bold:            boolPtr(true),
-		},
-	},
-	H4: ansi.StyleBlock{
-		StylePrimitive: ansi.StylePrimitive{
-			BlockPrefix:     "▏ ",
-			Prefix:          "▏ ",
-			Color:           strPtr("#dcdcaa"), // function yellow
-			BackgroundColor: strPtr(editorBg),
-			Bold:            boolPtr(true),
-		},
-	},
-	H5: ansi.StyleBlock{
-		StylePrimitive: ansi.StylePrimitive{
-			BlockPrefix:     "· ",
-			Prefix:          "· ",
-			Color:           strPtr("#9cdcfe"),
-			BackgroundColor: strPtr(editorBg),
-			Bold:            boolPtr(true),
-		},
-	},
-	H6: ansi.StyleBlock{
-		StylePrimitive: ansi.StylePrimitive{
-			BlockPrefix:     "· ",
-			Prefix:          "· ",
-			Color:           strPtr("#c586c0"),
-			BackgroundColor: strPtr(editorBg),
-			Bold:            boolPtr(true),
-		},
-	},
-	Text: ansi.StylePrimitive{
-		Color:           strPtr("#d0d0d0"),
-		BackgroundColor: strPtr(editorBg),
-	},
-	Strikethrough: ansi.StylePrimitive{
-		CrossedOut:      boolPtr(true),
-		BackgroundColor: strPtr(editorBg),
-	},
-	Emph: ansi.StylePrimitive{
-		// Was orange (#ce9178) — too close to the inline-code colour and
-		// made italic phrases blur into code spans. Cyan reads as "this
-		// is emphasised text" without competing with code tokens.
-		Italic:          boolPtr(true),
-		Color:           strPtr("#9cdcfe"),
-		BackgroundColor: strPtr(editorBg),
-	},
-	Strong: ansi.StylePrimitive{
-		Bold:            boolPtr(true),
-		Color:           strPtr("#dcdcaa"),
-		BackgroundColor: strPtr(editorBg),
-	},
-	HorizontalRule: ansi.StylePrimitive{
-		Color:           strPtr(hrFg),
-		BackgroundColor: strPtr(editorBg),
-		// glamour ignores Color when the Format string is set with
-		// inline ANSI. Bake the colour into the format itself so the
-		// rule is always rendered grey, regardless of the surrounding
-		// paragraph's foreground.
-		Format: "\n\x1b[38;2;58;58;58m" + strings.Repeat("─", 40) + "\x1b[0m\n",
-	},
-	Item: ansi.StylePrimitive{
-		BlockPrefix:     "• ",
-		Color:           strPtr("#75beff"),
-		BackgroundColor: strPtr(editorBg),
-	},
-	Enumeration: ansi.StylePrimitive{
-		BlockPrefix:     ". ",
-		Color:           strPtr("#75beff"),
-		BackgroundColor: strPtr(editorBg),
-	},
-	Task: ansi.StyleTask{
-		StylePrimitive: ansi.StylePrimitive{
-			Color:           strPtr("#d0d0d0"),
-			BackgroundColor: strPtr(editorBg),
-		},
-		Ticked:   "[✓] ",
-		Unticked: "[ ] ",
-	},
-	Link: ansi.StylePrimitive{
-		Color:           strPtr("#3794ff"),
-		BackgroundColor: strPtr(editorBg),
-		Underline:       boolPtr(true),
-	},
-	LinkText: ansi.StylePrimitive{
-		Color:           strPtr("#4ec9b0"),
-		BackgroundColor: strPtr(editorBg),
-		Bold:            boolPtr(true),
-	},
-	Image: ansi.StylePrimitive{
-		Color:           strPtr("#3794ff"),
-		BackgroundColor: strPtr(editorBg),
-		Underline:       boolPtr(true),
-	},
-	ImageText: ansi.StylePrimitive{
-		Color:           strPtr("#9cdcfe"),
-		BackgroundColor: strPtr(editorBg),
-		Format:          "Image: {{.text}} →",
-	},
-	Code: ansi.StyleBlock{
-		StylePrimitive: ansi.StylePrimitive{
-			Prefix:          " ",
-			Suffix:          " ",
-			Color:           strPtr(codeFg), // warm tan, not flame orange
-			BackgroundColor: strPtr(codeBg), // gentle tint, not loud highlight
-		},
-	},
-	CodeBlock: ansi.StyleCodeBlock{
-		StyleBlock: ansi.StyleBlock{
-			StylePrimitive: ansi.StylePrimitive{
-				Color:           strPtr("#d4d4d4"),
-				BackgroundColor: strPtr(codeBlockBg),
-			},
-			Margin: uintPtr(2),
-		},
-		Chroma: &ansi.Chroma{
-			Text:                ansi.StylePrimitive{Color: strPtr("#d0d0d0")},
-			Error:               ansi.StylePrimitive{Color: strPtr("#f14c4c")},
-			Comment:             ansi.StylePrimitive{Color: strPtr("#6a9955"), Italic: boolPtr(true)},
-			CommentPreproc:      ansi.StylePrimitive{Color: strPtr("#bd63c5")},
-			Keyword:             ansi.StylePrimitive{Color: strPtr("#569cd6")},
-			KeywordReserved:     ansi.StylePrimitive{Color: strPtr("#569cd6")},
-			KeywordNamespace:    ansi.StylePrimitive{Color: strPtr("#c586c0")},
-			KeywordType:         ansi.StylePrimitive{Color: strPtr("#4ec9b0")},
-			Operator:            ansi.StylePrimitive{Color: strPtr("#d0d0d0")},
-			Punctuation:         ansi.StylePrimitive{Color: strPtr("#d0d0d0")},
-			Name:                ansi.StylePrimitive{Color: strPtr("#9cdcfe")},
-			NameBuiltin:         ansi.StylePrimitive{Color: strPtr("#4ec9b0")},
-			NameTag:             ansi.StylePrimitive{Color: strPtr("#569cd6")},
-			NameAttribute:       ansi.StylePrimitive{Color: strPtr("#9cdcfe")},
-			NameClass:           ansi.StylePrimitive{Color: strPtr("#4ec9b0")},
-			NameConstant:        ansi.StylePrimitive{Color: strPtr("#4fc1ff")},
-			NameDecorator:       ansi.StylePrimitive{Color: strPtr("#dcdcaa")},
-			NameFunction:        ansi.StylePrimitive{Color: strPtr("#dcdcaa")},
-			LiteralNumber:       ansi.StylePrimitive{Color: strPtr("#b5cea8")},
-			LiteralString:       ansi.StylePrimitive{Color: strPtr("#ce9178")},
-			LiteralStringEscape: ansi.StylePrimitive{Color: strPtr("#d7ba7d")},
-			GenericDeleted:      ansi.StylePrimitive{Color: strPtr("#c74e39")},
-			GenericInserted:     ansi.StylePrimitive{Color: strPtr("#73c991")},
-			GenericEmph:         ansi.StylePrimitive{Italic: boolPtr(true)},
-			GenericStrong:       ansi.StylePrimitive{Bold: boolPtr(true)},
-		},
-	},
-	Table: ansi.StyleTable{
-		StyleBlock: ansi.StyleBlock{
-			StylePrimitive: ansi.StylePrimitive{
-				Color: strPtr("#d4d4d4"),
-				// Slightly lighter than the document bg so a table reads
-				// as a distinct "card" — same step as the inline-code
-				// background. Without this every cell merges into the
-				// surrounding paragraphs.
-				BackgroundColor: strPtr("#23262c"),
+		List: ansi.StyleList{
+			LevelIndent: 2,
+			StyleBlock: ansi.StyleBlock{
+				StylePrimitive: ansi.StylePrimitive{
+					Color:           strPtr(hx(theme.TextPrimary)),
+					BackgroundColor: strPtr(editorBg),
+				},
 			},
 		},
-		CenterSeparator: strPtr("┼"),
-		ColumnSeparator: strPtr("│"),
-		RowSeparator:    strPtr("─"),
-	},
-	DefinitionList: ansi.StyleBlock{
-		StylePrimitive: ansi.StylePrimitive{
-			Color:           strPtr("#d0d0d0"),
+		// Heading is the *base* style every Hn inherits. We override the
+		// per-level prefix / colour individually below. BlockPrefix is the
+		// block-leading text glamour emits *before* the first line.
+		Heading: ansi.StyleBlock{
+			StylePrimitive: ansi.StylePrimitive{
+				BlockSuffix:     "\n",
+				Color:           strPtr(hx(theme.SyntaxKeyword)),
+				BackgroundColor: strPtr(editorBg),
+				Bold:            boolPtr(true),
+			},
+		},
+		H1: ansi.StyleBlock{
+			StylePrimitive: ansi.StylePrimitive{
+				BlockPrefix:     " ",
+				BlockSuffix:     " ",
+				Prefix:          " ",
+				Suffix:          " ",
+				Color:           strPtr(hx(theme.OnAccent)),
+				BackgroundColor: strPtr(hx(theme.BorderFocus)), // VSCode "button" blue
+				Bold:            boolPtr(true),
+			},
+		},
+		H2: ansi.StyleBlock{
+			StylePrimitive: ansi.StylePrimitive{
+				BlockPrefix: "▌ ",
+				Prefix:      "▌ ",
+				// A grey rule line under each H2 so sections are visibly
+				// chunked — colour baked into the format so paragraphs
+				// after the heading don't inherit it.
+				BlockSuffix:     "\n" + theme.FgSeq(theme.BorderDefault) + strings.Repeat("─", 40) + "\x1b[0m",
+				Color:           strPtr(hx(theme.SyntaxKeyword)),
+				BackgroundColor: strPtr(editorBg),
+				Bold:            boolPtr(true),
+			},
+		},
+		H3: ansi.StyleBlock{
+			StylePrimitive: ansi.StylePrimitive{
+				BlockPrefix:     "▎ ",
+				Prefix:          "▎ ",
+				Color:           strPtr(hx(theme.SyntaxType)), // teal
+				BackgroundColor: strPtr(editorBg),
+				Bold:            boolPtr(true),
+			},
+		},
+		H4: ansi.StyleBlock{
+			StylePrimitive: ansi.StylePrimitive{
+				BlockPrefix:     "▏ ",
+				Prefix:          "▏ ",
+				Color:           strPtr(hx(theme.SyntaxFunction)), // function yellow
+				BackgroundColor: strPtr(editorBg),
+				Bold:            boolPtr(true),
+			},
+		},
+		H5: ansi.StyleBlock{
+			StylePrimitive: ansi.StylePrimitive{
+				BlockPrefix:     "· ",
+				Prefix:          "· ",
+				Color:           strPtr(hx(theme.SyntaxVariable)),
+				BackgroundColor: strPtr(editorBg),
+				Bold:            boolPtr(true),
+			},
+		},
+		H6: ansi.StyleBlock{
+			StylePrimitive: ansi.StylePrimitive{
+				BlockPrefix:     "· ",
+				Prefix:          "· ",
+				Color:           strPtr(hx(theme.SyntaxControl)),
+				BackgroundColor: strPtr(editorBg),
+				Bold:            boolPtr(true),
+			},
+		},
+		Text: ansi.StylePrimitive{
+			Color:           strPtr(hx(theme.TextPrimary)),
 			BackgroundColor: strPtr(editorBg),
 		},
-	},
-	DefinitionTerm: ansi.StylePrimitive{
-		Color:           strPtr("#dcdcaa"),
-		BackgroundColor: strPtr(editorBg),
-		Bold:            boolPtr(true),
-	},
-	DefinitionDescription: ansi.StylePrimitive{
-		BlockPrefix:     "\n  → ",
-		Color:           strPtr("#d0d0d0"),
-		BackgroundColor: strPtr(editorBg),
-	},
-	HTMLBlock: ansi.StyleBlock{
-		StylePrimitive: ansi.StylePrimitive{
-			Color:           strPtr("#858585"),
+		Strikethrough: ansi.StylePrimitive{
+			CrossedOut:      boolPtr(true),
 			BackgroundColor: strPtr(editorBg),
 		},
-	},
-	HTMLSpan: ansi.StyleBlock{
-		StylePrimitive: ansi.StylePrimitive{
-			Color:           strPtr("#858585"),
+		Emph: ansi.StylePrimitive{
+			// Was orange (#ce9178) — too close to the inline-code colour and
+			// made italic phrases blur into code spans. Cyan reads as "this
+			// is emphasised text" without competing with code tokens.
+			Italic:          boolPtr(true),
+			Color:           strPtr(hx(theme.SyntaxVariable)),
 			BackgroundColor: strPtr(editorBg),
 		},
-	},
+		Strong: ansi.StylePrimitive{
+			Bold:            boolPtr(true),
+			Color:           strPtr(hx(theme.SyntaxFunction)),
+			BackgroundColor: strPtr(editorBg),
+		},
+		HorizontalRule: ansi.StylePrimitive{
+			Color:           strPtr(hrFg),
+			BackgroundColor: strPtr(editorBg),
+			// glamour ignores Color when the Format string is set with
+			// inline ANSI. Bake the colour into the format itself so the
+			// rule is always rendered grey, regardless of the surrounding
+			// paragraph's foreground.
+			Format: "\n" + theme.FgSeq(theme.BorderDefault) + strings.Repeat("─", 40) + "\x1b[0m\n",
+		},
+		Item: ansi.StylePrimitive{
+			BlockPrefix:     "• ",
+			Color:           strPtr(hx(theme.DiagInfo)),
+			BackgroundColor: strPtr(editorBg),
+		},
+		Enumeration: ansi.StylePrimitive{
+			BlockPrefix:     ". ",
+			Color:           strPtr(hx(theme.DiagInfo)),
+			BackgroundColor: strPtr(editorBg),
+		},
+		Task: ansi.StyleTask{
+			StylePrimitive: ansi.StylePrimitive{
+				Color:           strPtr(hx(theme.TextPrimary)),
+				BackgroundColor: strPtr(editorBg),
+			},
+			Ticked:   "[✓] ",
+			Unticked: "[ ] ",
+		},
+		Link: ansi.StylePrimitive{
+			Color:           strPtr(hx(theme.AccentBlue)),
+			BackgroundColor: strPtr(editorBg),
+			Underline:       boolPtr(true),
+		},
+		LinkText: ansi.StylePrimitive{
+			Color:           strPtr(hx(theme.SyntaxType)),
+			BackgroundColor: strPtr(editorBg),
+			Bold:            boolPtr(true),
+		},
+		Image: ansi.StylePrimitive{
+			Color:           strPtr(hx(theme.AccentBlue)),
+			BackgroundColor: strPtr(editorBg),
+			Underline:       boolPtr(true),
+		},
+		ImageText: ansi.StylePrimitive{
+			Color:           strPtr(hx(theme.SyntaxVariable)),
+			BackgroundColor: strPtr(editorBg),
+			Format:          "Image: {{.text}} →",
+		},
+		Code: ansi.StyleBlock{
+			StylePrimitive: ansi.StylePrimitive{
+				Prefix:          " ",
+				Suffix:          " ",
+				Color:           strPtr(codeFg), // warm tan, not flame orange
+				BackgroundColor: strPtr(codeBg), // gentle tint, not loud highlight
+			},
+		},
+		CodeBlock: ansi.StyleCodeBlock{
+			StyleBlock: ansi.StyleBlock{
+				StylePrimitive: ansi.StylePrimitive{
+					Color:           strPtr(hx(theme.TextPrimary)),
+					BackgroundColor: strPtr(codeBlockBg),
+				},
+				Margin: uintPtr(2),
+			},
+			Chroma: &ansi.Chroma{
+				Text:                ansi.StylePrimitive{Color: strPtr(hx(theme.TextPrimary))},
+				Error:               ansi.StylePrimitive{Color: strPtr(hx(theme.DiagError))},
+				Comment:             ansi.StylePrimitive{Color: strPtr(hx(theme.SyntaxComment)), Italic: boolPtr(true)},
+				CommentPreproc:      ansi.StylePrimitive{Color: strPtr(hx(theme.SyntaxControl))},
+				Keyword:             ansi.StylePrimitive{Color: strPtr(hx(theme.SyntaxKeyword))},
+				KeywordReserved:     ansi.StylePrimitive{Color: strPtr(hx(theme.SyntaxKeyword))},
+				KeywordNamespace:    ansi.StylePrimitive{Color: strPtr(hx(theme.SyntaxControl))},
+				KeywordType:         ansi.StylePrimitive{Color: strPtr(hx(theme.SyntaxType))},
+				Operator:            ansi.StylePrimitive{Color: strPtr(hx(theme.TextPrimary))},
+				Punctuation:         ansi.StylePrimitive{Color: strPtr(hx(theme.TextPrimary))},
+				Name:                ansi.StylePrimitive{Color: strPtr(hx(theme.SyntaxVariable))},
+				NameBuiltin:         ansi.StylePrimitive{Color: strPtr(hx(theme.SyntaxType))},
+				NameTag:             ansi.StylePrimitive{Color: strPtr(hx(theme.SyntaxKeyword))},
+				NameAttribute:       ansi.StylePrimitive{Color: strPtr(hx(theme.SyntaxVariable))},
+				NameClass:           ansi.StylePrimitive{Color: strPtr(hx(theme.SyntaxType))},
+				NameConstant:        ansi.StylePrimitive{Color: strPtr(hx(theme.SyntaxConstant))},
+				NameDecorator:       ansi.StylePrimitive{Color: strPtr(hx(theme.SyntaxFunction))},
+				NameFunction:        ansi.StylePrimitive{Color: strPtr(hx(theme.SyntaxFunction))},
+				LiteralNumber:       ansi.StylePrimitive{Color: strPtr(hx(theme.SyntaxNumber))},
+				LiteralString:       ansi.StylePrimitive{Color: strPtr(hx(theme.SyntaxString))},
+				LiteralStringEscape: ansi.StylePrimitive{Color: strPtr(hx(theme.AccentAmber))},
+				GenericDeleted:      ansi.StylePrimitive{Color: strPtr(hx(theme.GitDeleted))},
+				GenericInserted:     ansi.StylePrimitive{Color: strPtr(hx(theme.GitAdded))},
+				GenericEmph:         ansi.StylePrimitive{Italic: boolPtr(true)},
+				GenericStrong:       ansi.StylePrimitive{Bold: boolPtr(true)},
+			},
+		},
+		Table: ansi.StyleTable{
+			StyleBlock: ansi.StyleBlock{
+				StylePrimitive: ansi.StylePrimitive{
+					Color: strPtr(hx(theme.TextPrimary)),
+					// Slightly lighter than the document bg so a table reads
+					// as a distinct "card" — same step as the inline-code
+					// background. Without this every cell merges into the
+					// surrounding paragraphs.
+					BackgroundColor: strPtr(codeBg),
+				},
+			},
+			CenterSeparator: strPtr("┼"),
+			ColumnSeparator: strPtr("│"),
+			RowSeparator:    strPtr("─"),
+		},
+		DefinitionList: ansi.StyleBlock{
+			StylePrimitive: ansi.StylePrimitive{
+				Color:           strPtr(hx(theme.TextPrimary)),
+				BackgroundColor: strPtr(editorBg),
+			},
+		},
+		DefinitionTerm: ansi.StylePrimitive{
+			Color:           strPtr(hx(theme.SyntaxFunction)),
+			BackgroundColor: strPtr(editorBg),
+			Bold:            boolPtr(true),
+		},
+		DefinitionDescription: ansi.StylePrimitive{
+			BlockPrefix:     "\n  → ",
+			Color:           strPtr(hx(theme.TextPrimary)),
+			BackgroundColor: strPtr(editorBg),
+		},
+		HTMLBlock: ansi.StyleBlock{
+			StylePrimitive: ansi.StylePrimitive{
+				Color:           strPtr(hx(theme.TextMuted)),
+				BackgroundColor: strPtr(editorBg),
+			},
+		},
+		HTMLSpan: ansi.StyleBlock{
+			StylePrimitive: ansi.StylePrimitive{
+				Color:           strPtr(hx(theme.TextMuted)),
+				BackgroundColor: strPtr(editorBg),
+			},
+		},
+	}
 }
 
 // PreviewMsg carries rendered preview content from the async fetch+render cmd.
@@ -359,7 +356,7 @@ func renderMarkdown(content string, width int) (string, error) {
 		width = 30
 	}
 	r, err := glamour.NewTermRenderer(
-		glamour.WithStyles(vscodeDarkPlusGlamourStyle),
+		glamour.WithStyles(glamourStyle()),
 		glamour.WithWordWrap(width),
 	)
 	if err != nil {
@@ -382,10 +379,8 @@ func renderMarkdown(content string, width int) (string, error) {
 // Cells that already carry their own bg (e.g. a coloured status word)
 // keep it because their inner SGR overrides the row-wide default.
 func paintTableRows(s string) string {
-	const (
-		bg    = "\x1b[48;2;35;38;44m" // matches Table StyleBlock bg
-		reset = "\x1b[0m"
-	)
+	bg := theme.BgSeqMix(theme.BgEditor, theme.TextPrimary, 0.07) // matches the table block bg
+	const reset = "\x1b[0m"
 	lines := strings.Split(s, "\n")
 	for i, line := range lines {
 		raw := stripANSI(line)
@@ -401,19 +396,17 @@ func paintTableRows(s string) string {
 
 // paintStatusWords re-paints occurrences of common status words so they
 // stand out at a glance in plan / TODO style markdown:
-//   "done"  → green
-//   "open"  → yellow
-//   "TODO"  → orange
-//   "DONE"  → green
+//
+//	"done"  → green
+//	"open"  → yellow
+//	"TODO"  → orange
+//	"DONE"  → green
+//
 // Word-boundary matched (preceded / followed by non-letter) so we don't
 // recolour "openssl" or "fundone".
 func paintStatusWords(s string) string {
-	const (
-		green  = "\x1b[38;2;115;201;145m"
-		yellow = "\x1b[38;2;220;220;170m"
-		orange = "\x1b[38;2;247;140;108m"
-		reset  = "\x1b[0m"
-	)
+	green, yellow, orange := theme.FgSeq(theme.GitAdded), theme.FgSeq(theme.AccentAmber), theme.FgSeq(theme.AccentRedCoral)
+	const reset = "\x1b[0m"
 	subs := []struct {
 		pattern *regexp.Regexp
 		colour  string
@@ -441,10 +434,8 @@ func paintStatusWords(s string) string {
 // for us to commit — guards against treating arbitrary `│` lines (e.g.
 // box-drawing in code blocks) as table headers.
 func paintTableHeaders(s string) string {
-	const (
-		headerBg = "\x1b[48;2;38;79;120m" // VSCode list-active blue
-		reset    = "\x1b[0m"
-	)
+	headerBg := theme.BgSeqMix(theme.BgEditor, theme.BorderFocus, 0.3)
+	const reset = "\x1b[0m"
 	lines := strings.Split(s, "\n")
 	for i := 0; i < len(lines)-1; i++ {
 		raw := stripANSI(lines[i])

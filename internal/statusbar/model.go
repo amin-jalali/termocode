@@ -85,12 +85,34 @@ func barFg(c theme.Color256) lipgloss.Style {
 	return lipgloss.NewStyle().Background(theme.LG(barBgColor())).Foreground(theme.LG(c))
 }
 
-// dim grey vertical pipe used to subdivide the right-hand metadata
-// cluster (Ln/Col │ indent │ encoding │ language).
-const sepGlyph = "│"
-
+// sep is the gap between right-hand items: plain breathing room (the
+// pills and colours do the grouping, not pipes).
 func sep() string {
-	return barFg(theme.BorderDefault).Render(" " + sepGlyph + " ")
+	return barBg().Render("  ")
+}
+
+// pill draws a status-bar pill on the bar background (rounded Powerline
+// caps with a Nerd Font, a padded block otherwise).
+func pill(text string, fg theme.Color256, bg lipgloss.Color, bold bool) string {
+	return theme.Pill(text, theme.LG(fg), bg, theme.LG(barBgColor()), bold)
+}
+
+// glyph picks the icon variant for the active icon mode ("" in ASCII).
+func glyph(nerd, uni string) string {
+	switch theme.CurrentIconMode {
+	case theme.IconModeNerdFont:
+		return nerd
+	case theme.IconModeUnicode:
+		return uni
+	}
+	return ""
+}
+
+func withGlyph(g, text string) string {
+	if g == "" {
+		return text
+	}
+	return g + " " + text
 }
 
 // barLayout is the fitted content of one status-bar row.
@@ -283,21 +305,18 @@ func (m Model) renderLeft(s State) string {
 		return barFg(theme.TextDim).Render("[no file]")
 	}
 
-	var b strings.Builder
-	// Dirty dot only renders when a buffer is actually open AND modified.
-	if s.Dirty && s.Path != "" {
-		b.WriteString(barFg(theme.SyntaxKeyword).Bold(true).Render(theme.IconDirty.String()))
-		b.WriteString(barBg().Render(" "))
-	}
-	if s.Project != "" {
-		b.WriteString(barFg(theme.TextSecondary).Render(s.Project))
-	} else {
+	if s.Project == "" {
 		// Edge case: no project name resolved but a buffer is open —
-		// fall back to the placeholder so the left zone is never empty
-		// (the dirty dot alone reads as a stray glyph).
-		b.WriteString(barFg(theme.TextDim).Render("[no file]"))
+		// fall back to the placeholder so the left zone is never empty.
+		return barFg(theme.TextDim).Render("[no file]")
 	}
-	return b.String()
+	// The project pill is the bar's anchor: accent fill, bold. A modified
+	// buffer shows a dot inside it.
+	text := withGlyph(glyph("\uf07c", "◆"), truncate(s.Project, 40))
+	if s.Dirty && s.Path != "" {
+		text += " " + theme.IconDirty.String()
+	}
+	return pill(text, theme.OnAccent, theme.LG(theme.BorderFocus), true)
 }
 
 // renderCenter shows git branch + LSP diagnostic counters. These are
@@ -318,7 +337,10 @@ func (m Model) renderCenterDiag(s State) (string, int, int) {
 	}
 	var parts []string
 	if s.Branch != "" {
-		branchText := theme.IconBranch.String() + " " + s.Branch
+		branchText := withGlyph(glyph("\ue725", "⎇"), s.Branch)
+		if theme.CurrentIconMode == theme.IconModeASCII {
+			branchText = theme.IconBranch.String() + " " + s.Branch
+		}
 		if s.Ahead > 0 {
 			branchText += fmt.Sprintf(" ↑%d", s.Ahead)
 		}
@@ -367,8 +389,6 @@ func (m Model) renderRight(s State) string {
 // chip and the AI badge inside the returned string (width 0 = hidden).
 func (m Model) renderRightChips(s State) (string, int, int, int, int) {
 	var parts []string
-	parts = append(parts, barFg(theme.TextSecondary).Render(
-		fmt.Sprintf("Ln %d, Col %d", s.Line, s.Col)))
 	if s.Indent != "" {
 		parts = append(parts, barFg(theme.TextSecondary).Render(s.Indent))
 	}
@@ -378,7 +398,13 @@ func (m Model) renderRightChips(s State) (string, int, int, int, int) {
 	}
 	parts = append(parts, barFg(theme.TextSecondary).Render(enc))
 	if s.Lang != "" {
-		parts = append(parts, barFg(theme.TextSecondary).Render(s.Lang))
+		lang := s.Lang
+		if g, c := theme.FileIconFor(s.Path, false, false); s.Path != "" && theme.CurrentIconMode != theme.IconModeASCII {
+			lang = barFg(c).Render(g) + barBg().Render(" ") + barFg(theme.TextSecondary).Render(s.Lang)
+		} else {
+			lang = barFg(theme.TextSecondary).Render(s.Lang)
+		}
+		parts = append(parts, lang)
 	}
 	chipIdx := -1
 	if s.ShowLSP {
@@ -395,11 +421,13 @@ func (m Model) renderRightChips(s State) (string, int, int, int, int) {
 		// whether the integrated terminal panel is currently open.
 		parts = append(parts, barFg(theme.SyntaxString).Bold(true).Render("● TERM"))
 	}
+	// Cursor position sits in a soft accent pill near the right edge.
+	parts = append(parts, pill(fmt.Sprintf("Ln %d, Col %d", s.Line, s.Col), theme.TextWhite,
+		theme.Mix(barBgColor(), theme.BorderFocus, 0.30), false))
 	if s.Debug {
-		// "● DEBUG" badge mirrors the "● TERM" pattern. Rendered in
-		// the diagnostic-error palette so it stands out — an active
-		// debug session is high-attention.
-		parts = append(parts, barFg(theme.DiagError).Bold(true).Render("● DEBUG"))
+		// An active debug session is high-attention: a red pill, always
+		// last (DebugBadgeSpan relies on that).
+		parts = append(parts, pill(debugBadgeText, theme.OnAccent, theme.LG(theme.DiagError), true))
 	}
 	span := func(idx int) (int, int) {
 		if idx < 0 {

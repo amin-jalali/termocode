@@ -207,7 +207,8 @@ func (m Model) View() string {
 		_ = widths
 		virt = append(virt, cells...)
 		if i < len(m.bufs)-1 {
-			virt = append(virt, theme.FgBg(theme.BorderDefault, theme.BgTitleBar).Render("│"))
+			virt = append(virt, lipgloss.NewStyle().Background(theme.LG(theme.BgTitleBar)).
+				Foreground(theme.Mix(theme.BgTitleBar, theme.BorderDefault, 0.7)).Render("│"))
 		}
 	}
 	_ = starts
@@ -408,47 +409,63 @@ func renderTabCells(b nvim.BufferInfo, active bool) []string {
 		name = name[:39] + "…"
 	}
 
-	var bg theme.Color256
-	var fg theme.Color256
+	bg, fg := theme.BgTitleBar, theme.TextMuted
 	if active {
-		bg = theme.BgEditor
-		fg = theme.TextWhite
-	} else {
-		bg = theme.BgTitleBar
-		fg = theme.TextMuted
+		bg, fg = theme.BgEditor, theme.TextWhite
 	}
 
 	bgStyle := theme.Bg(bg)
-	textStyle := theme.FgBg(fg, bg)
-	textBold := textStyle.Bold(true)
-	dirtyStyle := theme.FgBg(theme.SyntaxString, bg).Bold(true)
-	closeStyle := theme.FgBg(theme.TextMuted, bg)
-	accentStyle := theme.FgBg(theme.AccentLavender, bg).Bold(true)
+	textStyle := theme.FgBg(fg, bg).Bold(active)
+	dirtyStyle := theme.FgBg(theme.AccentAmber, bg).Bold(true)
+	closeFg := theme.TextDimmer
+	if active {
+		closeFg = theme.TextMuted
+	}
+	closeStyle := theme.FgBg(closeFg, bg)
+	accentStyle := theme.FgBg(theme.BorderFocus, bg).Bold(true)
 
-	cells := make([]string, 0, 7+len(name))
+	cells := make([]string, 0, 8+len(name))
 	if active {
 		cells = append(cells, accentStyle.Render("▎"))
 	} else {
 		cells = append(cells, bgStyle.Render(" "))
 	}
+	cells = append(cells, bgStyle.Render(" "))
+	if theme.CurrentIconMode != theme.IconModeASCII {
+		g, c := theme.FileIconFor(name, false, false)
+		if !active {
+			// Inactive tabs keep a hint of the type colour.
+			cells = append(cells, lipgloss.NewStyle().Background(theme.LG(bg)).
+				Foreground(theme.Mix(bg, c, 0.7)).Render(g))
+		} else {
+			cells = append(cells, theme.FgBg(c, bg).Render(g))
+		}
+		cells = append(cells, bgStyle.Render(" "))
+	}
+	for _, r := range name {
+		cells = append(cells, textStyle.Render(string(r)))
+	}
+	cells = append(cells, bgStyle.Render(" "))
+	// A modified buffer shows the dirty dot where the close glyph sits
+	// (VSCode); the slot still closes the tab on click.
 	if b.Modified {
 		cells = append(cells, dirtyStyle.Render("●"))
 	} else {
-		cells = append(cells, bgStyle.Render(" "))
+		cells = append(cells, closeStyle.Render(closeGlyph()))
 	}
-	cells = append(cells, bgStyle.Render(" "))
-	for _, r := range name {
-		s := string(r)
-		if active {
-			cells = append(cells, textBold.Render(s))
-		} else {
-			cells = append(cells, textStyle.Render(s))
-		}
-	}
-	cells = append(cells, bgStyle.Render(" "))
-	cells = append(cells, closeStyle.Render("×"))
 	cells = append(cells, bgStyle.Render(" "))
 	return cells
+}
+
+// closeGlyph is the tab close button for the active icon mode.
+func closeGlyph() string {
+	switch theme.CurrentIconMode {
+	case theme.IconModeNerdFont:
+		return "\uf00d" // nf-fa-times
+	case theme.IconModeUnicode:
+		return "×"
+	}
+	return "x"
 }
 
 func (m Model) extensionIcon(name string) string {

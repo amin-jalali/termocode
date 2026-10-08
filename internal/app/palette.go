@@ -113,10 +113,10 @@ func loadFilesIn(roots []string) []picker.Item {
 			// use absolute path for ID, prefix the visible title with the
 			// root basename so users can tell which project a file lives in.
 			if i == 0 {
-				items = append(items, picker.Item{ID: rel, Title: rel})
+				items = append(items, picker.Item{ID: rel, Title: rel, File: true})
 			} else {
 				title := filepath.Join(filepath.Base(abs), rel)
-				items = append(items, picker.Item{ID: absPath, Title: title})
+				items = append(items, picker.Item{ID: absPath, Title: title, File: true})
 			}
 			return nil
 		})

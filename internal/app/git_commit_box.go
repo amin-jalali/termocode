@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/mattn/go-runewidth"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -33,24 +35,38 @@ const (
 // step lighter than the panel; the primary Commit chip uses the same green as
 // staged/added signs.
 var (
-	gitInputBg      = lipgloss.Color("#1b1b1b") // sunken trough, clearly darker than the #303030 panel
-	gitInputFg      = lipgloss.Color("#d6d6d6")
-	gitInputFocusFg = lipgloss.Color("#ffffff")
-	gitInputPlace   = lipgloss.Color("#7a7a7a")
-	gitInputAccent  = lipgloss.Color("#36a3d9") // focus bar, matches the cursor-row accent
-	gitInputRail    = lipgloss.Color("#45454d") // quiet rail when the field is blurred
-
-	// Primary Commit button: confident VSCode-blue when actionable, muted slate
-	// when there's nothing to commit yet.
-	gitCommitReadyBg = lipgloss.Color("#0e639c")
-	gitCommitReadyFg = lipgloss.Color("#ffffff")
-	gitCommitIdleBg  = lipgloss.Color("#37373d")
-	gitCommitIdleFg  = lipgloss.Color("#9a9a9a")
-
-	// Secondary square buttons (Sync, overflow).
-	gitChipBg = lipgloss.Color("#3a3a40") // raised, lighter than the panel
-	gitChipFg = lipgloss.Color("#cfcfcf")
+	gitInputBg lipgloss.Color
+	gitInputFg lipgloss.Color
+	gitInputFocusFg lipgloss.Color
+	gitInputPlace lipgloss.Color
+	gitInputAccent lipgloss.Color
+	gitInputRail lipgloss.Color
+	gitCommitReadyBg lipgloss.Color
+	gitCommitReadyFg lipgloss.Color
+	gitCommitIdleBg lipgloss.Color
+	gitCommitIdleFg lipgloss.Color
+	gitChipBg lipgloss.Color
+	gitChipFg lipgloss.Color
 )
+
+func init() { refreshCommitBoxColors() }
+
+// refreshCommitBoxColors derives this file's colours from the active theme. It runs
+// before every render so a theme switch applies immediately.
+func refreshCommitBoxColors() {
+	gitInputBg = theme.Mix(theme.BgSidebar, theme.BgPanel, 0.7) // sunken trough, clearly darker than the #303030 panel
+	gitInputFg = theme.LG(theme.TextPrimary)
+	gitInputFocusFg = theme.LG(theme.TextWhite)
+	gitInputPlace = theme.LG(theme.TextDim)
+	gitInputAccent = theme.LG(theme.BorderFocus) // focus bar, matches the cursor-row accent
+	gitInputRail = theme.LG(theme.BorderDefault) // quiet rail when the field is blurred
+	gitCommitReadyBg = theme.LG(theme.BorderFocus)
+	gitCommitReadyFg = theme.LG(theme.TextWhite)
+	gitCommitIdleBg = theme.Mix(theme.BgSidebar, theme.TextPrimary, 0.08)
+	gitCommitIdleFg = theme.LG(theme.TextMuted)
+	gitChipBg = theme.Mix(theme.BgSidebar, theme.TextPrimary, 0.12) // raised, lighter than the panel
+	gitChipFg = theme.LG(theme.TextSecondary)
+}
 
 // gitCommitPlaceholder is shown dim in the empty message box.
 const gitCommitPlaceholder = "Message…"

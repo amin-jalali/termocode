@@ -268,9 +268,9 @@ func TestViewSmokeLandmarks(t *testing.T) {
 
 	// Synthesize a git status: main.go modified, lib.rs untracked, README.md staged.
 	gs := GitStatus{
-		filepath.Join(dir, "src", "main.go"):  "M",
-		filepath.Join(dir, "src", "lib.rs"):   "U",
-		filepath.Join(dir, "README.md"):       "A",
+		filepath.Join(dir, "src", "main.go"): "M",
+		filepath.Join(dir, "src", "lib.rs"):  "U",
+		filepath.Join(dir, "README.md"):      "A",
 	}
 
 	out := m.View(true, "", false, gs)

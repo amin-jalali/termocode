@@ -11,6 +11,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // commitDetailMsg delivers a fetched commit's metadata for the hover card.
@@ -125,15 +126,15 @@ func (m Model) overlayCommitHoverCard(base string) string {
 // renderCommitHoverCard builds the bordered commit card (author + date,
 // subject, wrapped body, a +/- stat line and the short hash).
 func renderCommitHoverCard(d git.CommitDetail, w int) []string {
-	const (
-		panelBg  = lipgloss.Color("#21252b")
-		border   = lipgloss.Color("#3a4048")
-		authorFG = lipgloss.Color("#7cb7e8")
-		dimFG    = lipgloss.Color("#8a929b")
-		subjFG   = lipgloss.Color("#eaeef2")
-		bodyFG   = lipgloss.Color("#c4ccd4")
-		addFG    = lipgloss.Color("#73c991")
-		delFG    = lipgloss.Color("#e2756a")
+	var (
+		panelBg  = theme.LG(theme.BgFloat)
+		border   = theme.Float().Border
+		authorFG = theme.LG(theme.AccentBlue)
+		dimFG    = theme.LG(theme.TextMuted)
+		subjFG   = theme.LG(theme.TextWhite)
+		bodyFG   = theme.LG(theme.TextPrimary)
+		addFG    = theme.LG(theme.GitAdded)
+		delFG    = theme.LG(theme.GitDeleted)
 	)
 	inner := w - 4 // rounded border (2) + horizontal padding (2)
 	if inner < 8 {

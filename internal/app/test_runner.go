@@ -13,6 +13,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/tests"
+	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -489,12 +490,8 @@ func (m *Model) runTestsCmd() tea.Cmd {
 // jump out at a glance. Operates line-by-line; preserves any ANSI the test
 // runner already emitted. Used by user commands (user_commands.go).
 func colourTestOutput(s string) string {
-	const (
-		reset = "\x1b[0m"
-		green = "\x1b[38;2;115;201;145m"
-		red   = "\x1b[38;2;199;78;57m"
-		dim   = "\x1b[38;2;138;138;138m"
-	)
+	reset := "\x1b[0m"
+	green, red, dim := theme.FgSeq(theme.GitAdded), theme.FgSeq(theme.DiagError), theme.FgSeq(theme.TextMuted)
 	var b strings.Builder
 	for _, line := range strings.Split(s, "\n") {
 		switch {
