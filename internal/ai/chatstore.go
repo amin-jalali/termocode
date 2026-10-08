@@ -24,6 +24,9 @@ const (
 type StoredMessage struct {
 	Role string `json:"role"`
 	Text string `json:"text"`
+	// Context is attached file / selection text sent to the model with a
+	// user message but not shown in the transcript.
+	Context string `json:"context,omitempty"`
 }
 
 // Conversation is one persisted chat. Port of mobocode's chat_store.dart,

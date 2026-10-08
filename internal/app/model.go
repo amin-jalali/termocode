@@ -514,6 +514,10 @@ type Model struct {
 	// `set nonumber` to nvim. Authoritative state lives in nvim; this is
 	// just a UI mirror so the checkmark renders correctly.
 	lineNumbersOn bool
+
+	// ai is the Group A AI assistant state (ai_state.go). Pointer so value
+	// copies and the streaming goroutines share one instance.
+	ai *aiState
 }
 
 // welcomeShowing reports whether the start page is currently rendered in
@@ -598,6 +602,7 @@ func New() Model {
 		actionsWidth:  actionsWidth,
 		output:        newOutputStore(),
 		debounce:      debounce.New(),
+		ai:            newAIState(), // Group A
 	}
 	if err != nil {
 		m.editor = editor.New(nil)
@@ -758,6 +763,9 @@ func (m Model) attachCmd() tea.Cmd {
 		// load both via the same chunk would force a single keymap, losing
 		// either snippet expansion or popup acceptance.)
 		_ = m.nvim.ExecLua(snippetsLua)
+		// Group A: AI ghost text (_G._termocode_ai). After snippetsLua so
+		// its Tab handler can call _termocode_ai.accept() first.
+		_ = m.nvim.ExecLua(aiLua)
 		// Group H: user snippets.json (layered over the bundled table) and
 		// Neovim's built-in EditorConfig support.
 		m.setupUserSnippets()
@@ -800,6 +808,9 @@ func (m Model) attachCmd() tea.Cmd {
 		// Runs after the theme so its RainbowDelimiter* overrides are the
 		// final word; failure (offline, no git) is non-fatal.
 		_ = m.nvim.ExecLua(bracketPairLua)
+		// Group A: ghost-text colors (after the theme's `hi clear`) + the
+		// inline-completion toggle.
+		m.aiAfterAttach()
 		// VSCode-feel: stay in insert mode whenever a normal buffer is active.
 		// Guard on &modifiable && !&readonly so we don't trigger E5 on help
 		// buffers, find-results scratch (modifiable=false), or `:view`-opened

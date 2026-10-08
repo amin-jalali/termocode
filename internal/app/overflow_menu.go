@@ -268,7 +268,7 @@ const overflowMenuMinWidth = overflowMenuInnerMin + 2
 func (m Model) overflowMenuItems() []overflowMenuItem {
 	ctx := m.overflowMenuContextSnapshot()
 	hints := overflowMenuShortcuts(m.keys)
-	all := overflowMenuAllItems(hints)
+	all := append(overflowMenuAllItems(hints), aiOverflowMenuItems(hints)...) // Group A
 	out := make([]overflowMenuItem, 0, len(all))
 	for _, it := range all {
 		if it.visible != nil && !it.visible(ctx) {

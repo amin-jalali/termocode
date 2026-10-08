@@ -70,6 +70,9 @@ func (m *Model) promptCloseBufferIfDirty(id int) bool {
 }
 
 func (m *Model) handleConfirmSelect(id string) tea.Cmd {
+	if cmd, ok := m.handleAIConfirm(id); ok { // Group A
+		return cmd
+	}
 	switch m.confirmKind {
 	case confirmKindCloseBuffer:
 		switch id {

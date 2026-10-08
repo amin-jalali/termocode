@@ -8,6 +8,7 @@ package app
 // Loaded after the existing Tab keymap in lsp_lua.go, so this version wins.
 // The new Tab order of preference is:
 //
+//   0. Accept AI ghost text (Group A, ai_lua.go) when it is showing.
 //   1. Snippet expansion if the word before the cursor matches.
 //   2. Accept popup completion if pumvisible().
 //   3. Jump to next placeholder if a snippet session is active.
@@ -199,6 +200,9 @@ local function _expand_plain(body)
 end
 
 vim.keymap.set('i', '<Tab>', function()
+  -- 0. Group A: accept AI ghost text (continuation-vs-rewrite edit).
+  local ai = _G._termocode_ai
+  if ai and ai.accept and ai.accept() then return end
   -- 1. Try snippet expansion first.
   local trigger, body, start_col, end_col = _find_snippet()
   if trigger and body then
