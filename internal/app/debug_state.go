@@ -119,6 +119,7 @@ type debugState struct {
 	configs  configCache
 	selected string // selected config name ("" = first)
 	hint     string // missing-adapter hint shown in the Run view
+	hintTool string // registry adapter the hint row installs ("" = open the manager)
 
 	// Breakpoints.
 	bpPath  string
@@ -286,7 +287,7 @@ func (m *Model) debugSessionStarted(name string) {
 	if d.status == "" || d.status == "Starting…" {
 		d.status = "Running"
 	}
-	d.hint = ""
+	d.setHint("", "")
 }
 
 func stopStatus(reason, text string) string {
@@ -379,7 +380,7 @@ func (m *Model) debugApplySnapshot(snap dbgSnapshot) tea.Cmd {
 		d.status = "Running"
 	}
 	if wasActive != snap.Active && snap.Active {
-		d.hint = ""
+		d.setHint("", "")
 	}
 	m.debugClampCursor()
 	return m.debugRequestOpenChildren()

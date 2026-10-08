@@ -104,7 +104,7 @@ func (m *Model) dapStart() tea.Cmd {
 func (m *Model) debugStartConfig(cfg launchConfig) tea.Cmd {
 	d := m.ensureDebug()
 	if msg := missingAdapterMsg(dapTypeLang(cfg.Type)); msg != "" {
-		d.hint = msg
+		d.setHint(msg, dapTypeLang(cfg.Type))
 		return m.debugErrorToast(msg)
 	}
 	raw := map[string]any{}
@@ -127,7 +127,7 @@ func (m *Model) debugStartConfig(cfg launchConfig) tea.Cmd {
 	}
 	if res != "" {
 		if strings.Contains(res, "no debug adapter") {
-			d.hint = res + " — Install Adapter…"
+			d.setHint(res+" — Install Adapter…", dapTypeLang(cfg.Type))
 		}
 		d.console.AppendOutput("stderr", res+"\n")
 		return m.debugErrorToast(res)
@@ -138,7 +138,7 @@ func (m *Model) debugStartConfig(cfg launchConfig) tea.Cmd {
 // debugStarted is the shared bookkeeping after a successful dap.run.
 func (m *Model) debugStarted(name string) tea.Cmd {
 	d := m.ensureDebug()
-	d.hint = ""
+	d.setHint("", "")
 	d.status = "Starting…"
 	d.console.AppendOutput("console", "Starting "+name+"…\n")
 	m.showDebugConsole(false)
@@ -165,7 +165,7 @@ func (m *Model) debugStartForFiletype() tea.Cmd {
 		lang = strings.ToLower(m.editor.Lang())
 	}
 	if msg := m.dapMissingAdapterToast(lang); msg != "" {
-		m.ensureDebug().hint = msg
+		m.ensureDebug().setHint(msg, lang)
 		return m.debugErrorToast(msg)
 	}
 	raw, err := m.nvim.EvalLuaStringArgs(`local ft = ...; return _G._termocode_dap and _G._termocode_dap.configs(ft) or '[]'`, ft)
@@ -243,7 +243,7 @@ func (m *Model) onDebugConfigPicked(id string) tea.Cmd {
 			return nil
 		}
 		d.selected = cfgs[i].Name
-		d.hint = adapterHintFor(cfgs[i])
+		d.setHint(adapterHintFor(cfgs[i]), dapTypeLang(cfgs[i].Type))
 		return m.debugToast("configuration: " + cfgs[i].Name)
 	case strings.HasPrefix(id, "ft:"):
 		rest := strings.TrimPrefix(id, "ft:")
@@ -464,6 +464,38 @@ func dapTypeLang(t string) string {
 		return "javascript"
 	}
 	return ""
+}
+
+// adapterToolFor is the registry debug adapter that serves lang ("" when
+// the installer has none), e.g. go → dlv, python → debugpy.
+func adapterToolFor(lang string) string {
+	if lang == "" {
+		return ""
+	}
+	if ts := lspinstall.ForFiletype(lspinstall.CategoryDAP, lang); len(ts) > 0 {
+		return ts[0].Name
+	}
+	return ""
+}
+
+// setHint shows (msg != "") or clears the Run view's missing-adapter row.
+// lang picks the adapter its Enter / click installs.
+func (d *debugState) setHint(msg, lang string) {
+	d.hint, d.hintTool = msg, ""
+	if msg != "" {
+		d.hintTool = adapterToolFor(lang)
+	}
+}
+
+// openAdapterInstall is the hint row's action: the install dialog for the
+// missing adapter in one step, or the full "DAP: Install Adapter…"
+// manager when the hint does not name one.
+func (m *Model) openAdapterInstall(name string) tea.Cmd {
+	t, ok := lspinstall.Lookup(name)
+	if !ok || t.Category != lspinstall.CategoryDAP {
+		return m.openToolManager(lspinstall.CategoryDAP)
+	}
+	return m.onToolRowSelected(t.Name)
 }
 
 // adapterHintFor is the Run view hint for a config whose adapter is

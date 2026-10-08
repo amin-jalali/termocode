@@ -235,6 +235,9 @@ func (m *Model) onToolInstallEvent(ev lspInstallEventMsg) tea.Cmd {
 		return m.toolErrorToast(t, ev.err, ev.output)
 	}
 	detail := "language server started for open files"
+	if m.debug != nil && m.debug.hintTool == t.Name {
+		m.debug.setHint("", "") // the Run view's install hint is done
+	}
 	if m.nvim != nil {
 		if t.Category == lspinstall.CategoryDAP {
 			detail = "debug adapter registered"
