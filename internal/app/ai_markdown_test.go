@@ -68,12 +68,12 @@ func TestChatMarkdownCodeButtons(t *testing.T) {
 
 func TestChatMarkdownCacheByWidth(t *testing.T) {
 	s := &aiState{}
-	a := s.renderAnswer(0, mdSample, 40, false)
-	b := s.renderAnswer(0, mdSample, 40, false)
+	a := s.renderAnswer(0, mdSample, 40, false, false)
+	b := s.renderAnswer(0, mdSample, 40, false, false)
 	if &a[0] != &b[0] {
 		t.Error("same text + width should hit the cache")
 	}
-	c := s.renderAnswer(0, mdSample, 50, false)
+	c := s.renderAnswer(0, mdSample, 50, false, false)
 	if lipgloss.Width(c[0].styled) != 50 {
 		t.Error("a new width must re-render")
 	}
