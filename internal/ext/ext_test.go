@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"termocode/extensions"
+	"github.com/amin-jalali/termocode/extensions"
 )
 
 func write(t *testing.T, path, body string) {

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/nvim"
 )
 
 // Group D — integration tests for the DAP Lua (dap_lua.go) against a real

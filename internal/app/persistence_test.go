@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/picker"
 )
 
 // withConfigDir overrides XDG_CONFIG_HOME to a tempdir so loadRecents /

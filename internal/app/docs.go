@@ -11,9 +11,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/ai"
-	"termocode/internal/keymap"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/keymap"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // DocsURL is the user documentation site.

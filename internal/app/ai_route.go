@@ -3,7 +3,7 @@ package app
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/keymap"
+	"github.com/amin-jalali/termocode/internal/keymap"
 )
 
 // handleAIMsg routes the Group A async messages (called early in

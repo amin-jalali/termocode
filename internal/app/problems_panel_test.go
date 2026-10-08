@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/nvim"
 )
 
 func sampleDiags() []nvim.Diagnostic {

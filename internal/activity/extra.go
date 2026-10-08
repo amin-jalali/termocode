@@ -7,7 +7,7 @@ import (
 
 	"github.com/mattn/go-runewidth"
 
-	"termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // ── Extension items (Group I) ────────────────────────────────────────────

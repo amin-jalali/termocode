@@ -3,8 +3,8 @@ package editor
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/grid"
-	"termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/grid"
+	"github.com/amin-jalali/termocode/internal/nvim"
 )
 
 // Cursor mirrors a (line, col) pair. Both fields are 0-based.

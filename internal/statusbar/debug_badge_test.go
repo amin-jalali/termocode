@@ -3,7 +3,7 @@ package statusbar
 import (
 	"testing"
 
-	"termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 func TestDebugBadgeSpanMatchesRenderedText(t *testing.T) {

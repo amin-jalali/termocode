@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/picker"
 )
 
 // paletteRecentsCap is the max number of recent palette commands we keep.

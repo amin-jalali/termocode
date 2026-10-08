@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 type State struct {

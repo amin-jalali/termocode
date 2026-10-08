@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/nvim"
 )
 
 func TestSeverityIcon(t *testing.T) {

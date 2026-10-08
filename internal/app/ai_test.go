@@ -10,9 +10,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"termocode/internal/ai"
-	"termocode/internal/debounce"
-	"termocode/internal/statusbar"
+	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/debounce"
+	"github.com/amin-jalali/termocode/internal/statusbar"
 )
 
 // aiTestModel builds a Model with an isolated config dir and no AI keys in

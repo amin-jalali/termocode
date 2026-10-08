@@ -1,6 +1,6 @@
 package app
 
-import "termocode/internal/lspinstall"
+import "github.com/amin-jalali/termocode/internal/lspinstall"
 
 // lspSetupLua configures nvim's built-in LSP for common languages, attaches
 // per-buffer keymaps on LspAttach, and wires up auto-trigger completion via

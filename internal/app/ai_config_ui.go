@@ -8,11 +8,11 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/ai"
-	"termocode/internal/confirm"
-	"termocode/internal/picker"
-	"termocode/internal/prompt"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // Group A overlay kinds. Defined here with a high base (instead of in the

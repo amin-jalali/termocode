@@ -5,8 +5,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/recents"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/recents"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // formatDocumentCmd runs the active buffer's LSP formatter via the same

@@ -5,7 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // gotoNextHunk / gotoPrevHunk move the cursor to the next/prev line that

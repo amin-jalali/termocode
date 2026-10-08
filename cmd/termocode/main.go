@@ -9,9 +9,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
 
-	"termocode/internal/app"
-	"termocode/internal/setup"
-	"termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/app"
+	"github.com/amin-jalali/termocode/internal/setup"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // fontDelta returns the number of font-points by which we ask the host

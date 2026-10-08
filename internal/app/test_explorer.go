@@ -14,10 +14,10 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/mattn/go-runewidth"
 
-	"termocode/internal/activity"
-	"termocode/internal/statusbar"
-	"termocode/internal/tests"
-	"termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/statusbar"
+	"github.com/amin-jalali/termocode/internal/tests"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // ── Testing sidebar view (Group E) ───────────────────────────────────────

@@ -9,9 +9,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/git"
-	"termocode/internal/prompt"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // Clone repository (dashboard card + palette "Git: Clone Repository…").

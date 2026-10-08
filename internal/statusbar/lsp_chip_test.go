@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 func TestLSPChipRendersClientsOrNone(t *testing.T) {

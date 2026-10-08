@@ -7,8 +7,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"termocode/internal/nvim"
-	"termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // SwitchMsg is emitted when the user clicks a tab body.

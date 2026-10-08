@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/ai"
 )
 
 // aiEditorTools are the agent tools that need the embedded nvim (LSP and

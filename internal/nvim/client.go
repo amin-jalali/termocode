@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	gonvim "github.com/neovim/go-client/nvim"
 
-	"termocode/internal/lspinstall"
+	"github.com/amin-jalali/termocode/internal/lspinstall"
 )
 
 // RedrawMsg carries one batch of nvim redraw events. Each element is an event

@@ -9,8 +9,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 
-	"termocode/internal/ai"
-	"termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // AI chat panel (Group A) — the body of the right-side Actions panel

@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"termocode/internal/git"
-	"termocode/internal/search"
+	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/search"
 )
 
 // Tool is one capability the agent can call. Port of mobocode's AiTool:

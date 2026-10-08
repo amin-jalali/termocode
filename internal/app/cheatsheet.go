@@ -1,6 +1,6 @@
 package app
 
-import "termocode/internal/preview"
+import "github.com/amin-jalali/termocode/internal/preview"
 
 // openCheatSheet opens a non-interactive preview overlay listing every
 // keyboard shortcut and the most useful palette commands. Closes with

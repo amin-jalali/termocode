@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"termocode/internal/ext"
+	"github.com/amin-jalali/termocode/internal/ext"
 )
 
 func TestExtItemSpans(t *testing.T) {

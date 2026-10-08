@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/nvim"
 )
 
 // TestPanelHostLifecycleNvim drives the panel split against a real nvim:

@@ -8,8 +8,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 
-	"termocode/internal/keymap"
-	"termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/keymap"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // Overflow (⋮) menu — a small dropdown of secondary toggles anchored to a

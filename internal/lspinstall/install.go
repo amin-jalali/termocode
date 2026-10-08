@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"termocode/internal/fetch"
+	"github.com/amin-jalali/termocode/internal/fetch"
 )
 
 // Progress receives short human-readable status lines while an install

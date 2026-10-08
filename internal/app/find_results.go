@@ -10,9 +10,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/prompt"
-	"termocode/internal/search"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/search"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // openFindInFilesPrompt is the entry point for the Sublime-style

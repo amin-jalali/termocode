@@ -8,12 +8,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/activity"
-	"termocode/internal/findbar"
-	"termocode/internal/lspinstall"
-	"termocode/internal/picker"
-	"termocode/internal/search"
-	"termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/findbar"
+	"github.com/amin-jalali/termocode/internal/lspinstall"
+	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/search"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 type pickerKindEnum int

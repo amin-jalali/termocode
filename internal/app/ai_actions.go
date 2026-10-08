@@ -10,9 +10,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/ai"
-	"termocode/internal/confirm"
-	"termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/prompt"
 )
 
 // AI code actions (Group A): Explain, Fix diagnostic, Edit selection,
