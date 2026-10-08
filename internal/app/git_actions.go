@@ -386,8 +386,7 @@ vim.g.tc_diff_changed = ` + changedLua + `
 vim.g.tc_diff_total = ` + strconv.Itoa(totalLines) + `
 -- X/N change counter: re-evaluated live in the working pane's winbar.
 vim.g.tc_diff_starts = ` + startsLua + `
-vim.api.nvim_set_hl(0, 'TcDiffCount', { fg = '#9aa3ad', bg = '#26292e', bold = true })
-vim.api.nvim_set_hl(0, 'TcDiffOk',    { fg = '#73c991', bg = '#26292e' })
+if _G.termocode_diff_hl then _G.termocode_diff_hl() end
 function _G.TcDiffCounter()
   local s = vim.g.tc_diff_starts or {}
   local n = #s
@@ -426,20 +425,13 @@ local base = (vim.fn.fnamemodify(work, ':t') or ''):gsub('%%', '%%%%')
 -- Tiny dots (not dashes) fill the deleted-line gaps.
 pcall(function() vim.opt.fillchars:append('diff:·') end)
 -- Shared diff colours; per-pane overrides applied further down.
-vim.api.nvim_set_hl(0, 'DiffAdd',    { bg = '#16361f' })
-vim.api.nvim_set_hl(0, 'DiffChange', { bg = '#2a2a18' })
-vim.api.nvim_set_hl(0, 'DiffText',   { bg = '#4a4a1f', bold = true })
-vim.api.nvim_set_hl(0, 'DiffDelete', { bg = '#241317', fg = '#4a2630' })
--- Per-pane header bar: "<file> · HEAD" / "<file> · working".
-vim.api.nvim_set_hl(0, 'WinBar',       { fg = '#cfd8e3', bg = '#26292e' })
-vim.api.nvim_set_hl(0, 'WinBarNC',     { fg = '#9aa3ad', bg = '#26292e' })
-vim.api.nvim_set_hl(0, 'TcDiffHdr',    { fg = '#e6edf3', bg = '#26292e', bold = true })
-vim.api.nvim_set_hl(0, 'TcDiffHdrDim', { fg = '#7d868f', bg = '#26292e' })
-vim.api.nvim_set_hl(0, 'TcDiffCount',  { fg = '#9aa3ad', bg = '#26292e', bold = true })
+-- Diff colours and the per-pane header bar ("<file> · HEAD" / "<file> ·
+-- working") come from the active theme (theme_lua.go).
+if _G.termocode_diff_hl then _G.termocode_diff_hl() end
+local C = _G.termocode_colors or {}
 -- Change-nav buttons (‹ ›) pinned to the LEFT pane's winbar start; termocode
 -- hit-tests columns 0-5 of the winbar row and drives the jump (nvim's own
 -- winbar %@ click handlers don't fire reliably for v:lua refs).
-vim.api.nvim_set_hl(0, 'TcDiffNav', { fg = '#79c0ff', bg = '#30363d', bold = true })
 -- Close any prior diff panes so re-diffing replaces instead of stacking.
 for _, w in ipairs(vim.api.nvim_list_wins()) do
   local b = vim.api.nvim_win_get_buf(w)
@@ -491,16 +483,16 @@ vim.wo.number = true
 vim.wo.winbar = '%#TcDiffNav# ‹ %#TcDiffNav# › %#TcDiffHdr# ' .. base .. '  %#TcDiffHdrDim#·  HEAD'
 -- Per-side colours: red on the left (HEAD), green on the right (working).
 local nsL = vim.api.nvim_create_namespace('tcDiffL')
-vim.api.nvim_set_hl(nsL, 'DiffChange', { bg = '#3a1f28' })
-vim.api.nvim_set_hl(nsL, 'DiffText',   { bg = '#5e2b3a', bold = true })
-vim.api.nvim_set_hl(nsL, 'DiffAdd',    { bg = '#3a1f28' })
-vim.api.nvim_set_hl(nsL, 'DiffDelete', { bg = '#241317', fg = '#4a2630' })
+vim.api.nvim_set_hl(nsL, 'DiffChange', { bg = C.diff_del })
+vim.api.nvim_set_hl(nsL, 'DiffText',   { bg = C.diff_del_t, bold = true })
+vim.api.nvim_set_hl(nsL, 'DiffAdd',    { bg = C.diff_del })
+vim.api.nvim_set_hl(nsL, 'DiffDelete', { bg = C.diff_del, fg = C.diff_del_fg })
 pcall(vim.api.nvim_win_set_hl_ns, lwin, nsL)
 local nsR = vim.api.nvim_create_namespace('tcDiffR')
-vim.api.nvim_set_hl(nsR, 'DiffAdd',    { bg = '#16361f' })
-vim.api.nvim_set_hl(nsR, 'DiffChange', { bg = '#16361f' })
-vim.api.nvim_set_hl(nsR, 'DiffText',   { bg = '#1f5e34', bold = true })
-vim.api.nvim_set_hl(nsR, 'DiffDelete', { bg = '#241317', fg = '#4a2630' })
+vim.api.nvim_set_hl(nsR, 'DiffAdd',    { bg = C.diff_add })
+vim.api.nvim_set_hl(nsR, 'DiffChange', { bg = C.diff_add })
+vim.api.nvim_set_hl(nsR, 'DiffText',   { bg = C.diff_add_t, bold = true })
+vim.api.nvim_set_hl(nsR, 'DiffDelete', { bg = C.diff_del, fg = C.diff_del_fg })
 pcall(vim.api.nvim_win_set_hl_ns, rwin, nsR)
 -- Sync and land on the working pane in normal mode.
 vim.cmd('syncbind')
@@ -1366,11 +1358,7 @@ func buildCommitDiffLua(path, name string) string {
 	}
 	return fmt.Sprintf(`
 local path, name = "%s", "%s"
-vim.api.nvim_set_hl(0, 'diffAdded',   { fg = '#73c991' })
-vim.api.nvim_set_hl(0, 'diffRemoved', { fg = '#e2756a' })
-vim.api.nvim_set_hl(0, 'diffLine',    { fg = '#569cd6' })
-vim.api.nvim_set_hl(0, 'diffFile',    { fg = '#dcdcaa', bold = true })
-vim.api.nvim_set_hl(0, 'diffIndexLine', { fg = '#808080' })
+if _G.termocode_diff_hl then _G.termocode_diff_hl() end
 -- Close any prior diff panes (side-by-side or commit) before reusing the window.
 for _, w in ipairs(vim.api.nvim_list_wins()) do
   local b = vim.api.nvim_win_get_buf(w)
@@ -1391,8 +1379,6 @@ vim.bo[buf].modifiable = false
 vim.bo[buf].filetype = 'diff'
 -- Label via the winbar, NOT a buffer name: a path-like name gets written to
 -- disk as a phantom file.
-vim.api.nvim_set_hl(0, 'WinBar',    { fg = '#cfd8e3', bg = '#26292e' })
-vim.api.nvim_set_hl(0, 'TcDiffHdr', { fg = '#e6edf3', bg = '#26292e', bold = true })
 vim.wo.winbar = '%%#TcDiffHdr# ' .. name
 pcall(vim.api.nvim_win_set_cursor, 0, { 1, 0 })
 vim.cmd('stopinsert')

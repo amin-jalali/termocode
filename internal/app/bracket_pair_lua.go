@@ -50,7 +50,11 @@ vim.opt.runtimepath:prepend(plugin_dir)
 
 -- Palette: gold, magenta, azure — cycled across the 7 highlight groups
 -- the plugin uses, so deeper nestings still rotate through our 3 colors.
-local palette = { '#FFD700', '#D75FD7', '#00AFFF' }
+-- Colours come from the active theme (_G.termocode_colors, theme_lua.go).
+local function palette()
+  local C = _G.termocode_colors or {}
+  return { C.br1, C.br2, C.br3 }
+end
 local groups = {
   'RainbowDelimiterRed',
   'RainbowDelimiterYellow',
@@ -61,11 +65,13 @@ local groups = {
   'RainbowDelimiterViolet',
 }
 local function apply_highlights()
+  local pal = palette()
   for i, group in ipairs(groups) do
-    local color = palette[((i - 1) % #palette) + 1]
-    vim.api.nvim_set_hl(0, group, { fg = color, default = false })
+    local color = pal[((i - 1) % #pal) + 1]
+    if color then vim.api.nvim_set_hl(0, group, { fg = color, default = false }) end
   end
 end
+_G.termocode_bracket_hl = apply_highlights
 apply_highlights()
 -- Re-apply on ColorScheme so a future :colorscheme can't wipe us out.
 vim.api.nvim_create_autocmd('ColorScheme', {

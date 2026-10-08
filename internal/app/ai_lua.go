@@ -27,7 +27,7 @@ local A = _G._termocode_ai
 A.ns = vim.api.nvim_create_namespace('termocode_ai_ghost')
 A.enabled = A.enabled or false
 A.ghost = nil
-A.hl = A.hl or { fg = '#6c6c6c', italic = true }
+A.hl = A.hl or { fg = (_G.termocode_colors or {}).ai_ghost, italic = true }
 local has_inline = vim.fn.has('nvim-0.10') == 1
 
 local function notify(method, ...)
