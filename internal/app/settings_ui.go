@@ -426,10 +426,18 @@ func (m *Model) applyStartupSettings() {
 	if cfg.AutoSave != nil && *cfg.AutoSave && !m.autoSaveOn {
 		_ = m.toggleAutoSave()
 	}
-	if cfg.WordWrap != nil && *cfg.WordWrap && m.nvim != nil {
+	if m.nvim != nil {
 		// Called on nvim.ReadyMsg. Applied silently — no "Word wrap
-		// enabled" toast on every launch.
-		_ = m.nvim.Command("set wrap")
+		// enabled" toast on every launch. word_wrap defaults to off (nvim's
+		// own default is on, which split long lines mid-word whenever a
+		// side panel narrowed the editor). When it is on, wrap at word
+		// boundaries and keep the indent of wrapped lines.
+		_ = m.nvim.Command("set linebreak breakindent")
+		if cfg.WordWrap != nil && *cfg.WordWrap {
+			_ = m.nvim.Command("set wrap")
+		} else {
+			_ = m.nvim.Command("set nowrap")
+		}
 	}
 	if cfg.ShowHidden != nil && *cfg.ShowHidden && !m.explorer.HiddenShown() {
 		_ = m.toggleHiddenFiles()
