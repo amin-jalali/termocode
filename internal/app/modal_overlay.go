@@ -49,7 +49,7 @@ type ModalOpts struct {
 	SlideX int // columns the card travels while animating (toasts)
 }
 
-const defaultOutsideDim = 0.55
+const defaultOutsideDim = 0.62
 
 // modalOverlay centres box over base and composites it (see above).
 func modalOverlay(base, box string, screenW, screenH int, opts *ModalOpts) string {
@@ -78,6 +78,11 @@ func modalOverlay(base, box string, screenW, screenH int, opts *ModalOpts) strin
 	slide := o.Slide
 	if slide == 0 && !o.At {
 		slide = 2
+	}
+	// Slide in from above for top-anchored cards (pickers), from below
+	// for centred ones.
+	if o.At && slide > 0 {
+		slide = -slide
 	}
 	topRow += int(math.Round((1 - p) * float64(slide)))
 	leftCol += int(math.Round((1 - p) * float64(o.SlideX)))
@@ -205,7 +210,7 @@ func fadeRow(row string, under []cellData, leftCol int, p float64) string {
 
 // paintShadow darkens the L-shaped strip right of and below the card.
 func paintShadow(lines []string, leftCol, topRow, boxW, boxH int, p float64) {
-	strength := 0.6 * p
+	strength := 0.7 * p
 	if theme.IsLight() {
 		strength = 0.35 * p
 	}
@@ -241,12 +246,13 @@ func paintShadow(lines []string, leftCol, topRow, boxW, boxH int, p float64) {
 			lines[row] = renderCells(cells)
 		}
 	}
-	// Right edge: rows 1..boxH (offset one row down), 1 column wide.
+	// Right edge: rows 1..boxH (offset one row down), 2 columns wide
+	// (cells are tall, a 1-column shadow reads as a hairline).
 	for r := topRow + 1; r <= topRow+boxH; r++ {
-		shade(r, leftCol+boxW, leftCol+boxW+1)
+		shade(r, leftCol+boxW, leftCol+boxW+2)
 	}
-	// Bottom edge: one row below, offset one column right.
-	shade(topRow+boxH, leftCol+1, leftCol+boxW)
+	// Bottom edge: one row below, offset two columns right.
+	shade(topRow+boxH, leftCol+2, leftCol+boxW)
 }
 
 // colorMath reports whether blended colours can be shown faithfully.

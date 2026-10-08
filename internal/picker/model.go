@@ -357,8 +357,7 @@ func (m Model) handleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 	// Hover: move the highlight onto the result row under the pointer.
 	if action == tea.MouseActionMotion {
 		boxW, boxH, available := m.layoutDims()
-		boxLeft := (m.w - boxW) / 2
-		boxTop := (m.h - boxH) / 2
+		boxLeft, boxTop := m.Origin(boxW, boxH)
 		if boxLeft < 0 {
 			boxLeft = 0
 		}
@@ -384,8 +383,7 @@ func (m Model) handleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 	}
 
 	boxW, boxH, available := m.layoutDims()
-	boxLeft := (m.w - boxW) / 2
-	boxTop := (m.h - boxH) / 2
+	boxLeft, boxTop := m.Origin(boxW, boxH)
 	if boxLeft < 0 {
 		boxLeft = 0
 	}
@@ -512,6 +510,30 @@ func (m *Model) follow() {
 	}
 }
 
+// Origin is the top-left cell of the box: centred horizontally and
+// anchored near the top (like VSCode), so the box grows downward as the
+// list changes instead of jumping around the centre.
+func (m Model) Origin(boxW, boxH int) (x, y int) {
+	x = (m.w - boxW) / 2
+	y = m.h / 7
+	if y+boxH > m.h {
+		y = (m.h - boxH) / 2
+	}
+	if x < 0 {
+		x = 0
+	}
+	if y < 0 {
+		y = 0
+	}
+	return x, y
+}
+
+// BoxSize is the rendered box size (for the host's compositor).
+func (m Model) BoxSize() (w, h int) {
+	w, h, _ = m.layoutDims()
+	return w, h
+}
+
 // Current returns the item under the cursor (ok=false for none / header).
 func (m Model) Current() (Item, bool) {
 	if m.cursor < 0 || m.cursor >= len(m.matches) {
@@ -586,14 +608,8 @@ func (m Model) layoutDims() (boxW, boxH, available int) {
 	}
 
 	contentRows := 1 /*header*/ + 1 /*top sep*/ + 1 /*input*/ + available
-	desiredH := m.h * 80 / 100
-	spacer := desiredH - contentRows - 3 // 3 = footer + 2 border
-	if spacer < 3 {
-		spacer = 3
-	}
-	if spacer > 12 {
-		spacer = 12
-	}
+	// The list is sized to its content; one blank row before the footer.
+	spacer := 1
 	innerH := contentRows + spacer + 1 /*bottom sep*/ + 1 /*footer*/
 	boxH = innerH + 2
 	return
@@ -690,14 +706,7 @@ func (m Model) renderBox() string {
 	}
 
 	// ── Spacer ────────────────────────────────────────────────────────
-	desiredH := m.h * 80 / 100
-	spacer := desiredH - len(rows) - 3
-	if spacer < 3 {
-		spacer = 3
-	}
-	if spacer > 12 {
-		spacer = 12
-	}
+	spacer := 1
 	for i := 0; i < spacer; i++ {
 		rows = append(rows, blank)
 	}

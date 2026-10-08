@@ -245,7 +245,7 @@ func (m *Model) gitToggleSection(s gitSection) {
 // Shared by the renderer and the mouse hit-test — see git_commit_box.go for the
 // row map.
 func (m Model) gitPanelTopOffset() int {
-	return 7
+	return 8
 }
 
 // gitSubheaderRow is the screen-row index of the branch + tree·flat sub-row,

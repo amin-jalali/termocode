@@ -253,15 +253,8 @@ func (m Model) layoutDims() confirmDims {
 
 	// Footer spacer (3..12) — same shape as settings_modal.Box().
 	// Content rows so far: 1 header + 1 hairline + 1 blank + body + 1 blank + 1 buttons.
-	contentH := 1 + 1 + 1 + len(bodyLines) + 1 + 1
-	desiredH := m.h * 80 / 100
-	footerSpacer := desiredH - contentH - 3
-	if footerSpacer < 3 {
-		footerSpacer = 3
-	}
-	if footerSpacer > 12 {
-		footerSpacer = 12
-	}
+	// The card is sized to its content: one blank row before the footer.
+	footerSpacer := 1
 
 	return confirmDims{
 		boxW:         boxW,
@@ -321,7 +314,14 @@ func (m Model) Box() string {
 	innerW := dims.boxW - 2
 
 	bgFill := lipgloss.NewStyle().Background(cmBoxBg)
-	headerIcon := lipgloss.NewStyle().Background(cmBoxBg).Foreground(cmIconWarn).Bold(true).Render("⚠")
+	warn := "⚠"
+	switch theme.CurrentIconMode {
+	case theme.IconModeNerdFont:
+		warn = "\uf071" // nf-fa-warning
+	case theme.IconModeASCII:
+		warn = "!"
+	}
+	headerIcon := lipgloss.NewStyle().Background(cmBoxBg).Foreground(cmIconWarn).Bold(true).Render(warn)
 	headerTitle := lipgloss.NewStyle().Background(cmBoxBg).Foreground(cmTextPri).Bold(true).Render(" " + m.title)
 	bodyStyle := lipgloss.NewStyle().Background(cmBoxBg).Foreground(cmTextBody)
 	separatorStyle := lipgloss.NewStyle().Background(cmBoxBg).Foreground(cmGuideColor)
@@ -345,7 +345,7 @@ func (m Model) Box() string {
 	rows = append(rows, padBg(left, innerW))
 
 	// Top hairline separator.
-	rows = append(rows, separatorStyle.Render(strings.Repeat("─", innerW)))
+	rows = append(rows, theme.Hairline(innerW, theme.BgFloat))
 
 	// Body — wrap message into innerW-4 columns so it has 2 cells of
 	// breathing room either side. Multi-line preserved.
@@ -371,18 +371,13 @@ func (m Model) Box() string {
 
 	// Bottom hairline separator + footer key-hints.
 	rows = append(rows, separatorStyle.Render(strings.Repeat("─", innerW)))
-	footer := footerStyle.Render("←→ Move    ↵ Select    Esc Cancel")
+	_ = footerStyle
+	footer := theme.HintBar(cmBoxBg, "←→", "move", "enter", "select", "esc", "cancel")
 	rows = append(rows, padBg(bgFill.Render("  ")+footer, innerW))
 
 	content := lipgloss.JoinVertical(lipgloss.Left, rows...)
 	// Height intentionally NOT set — auto-fit to content rows.
-	border := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(cmBorderRim).
-		BorderBackground(cmBoxBg).
-		Background(cmBoxBg).
-		Width(dims.boxW)
-	return border.Render(content)
+	return theme.FloatBox(content, dims.boxW+2)
 }
 
 // renderButtonsRow lays out all buttons centered within `w` cells. The

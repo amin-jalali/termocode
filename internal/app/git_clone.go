@@ -202,6 +202,9 @@ func (m *Model) handleCloneDone(msg cloneDoneMsg) tea.Cmd {
 // welcomeCardClone is the dashboard card id for "Clone repository".
 const welcomeCardClone = "clone"
 
+// welcomeCardWorkspace is the "Open workspace" card (recent folders).
+const welcomeCardWorkspace = "workspace"
+
 // runWelcomeCard runs dashboard card i: cards with an id are handled here,
 // the rest go through their keymap action.
 func (m Model) runWelcomeCard(i int) (tea.Model, tea.Cmd) {
@@ -211,6 +214,10 @@ func (m Model) runWelcomeCard(i int) (tea.Model, tea.Cmd) {
 	}
 	if actions[i].id == welcomeCardClone {
 		cmd := m.openCloneURLPrompt()
+		return m, cmd
+	}
+	if actions[i].id == welcomeCardWorkspace {
+		cmd := m.openWorkspacePicker()
 		return m, cmd
 	}
 	return m.dispatchWelcomeAction(actions[i].action)

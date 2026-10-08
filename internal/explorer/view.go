@@ -121,23 +121,30 @@ func (m Model) View(focused bool, activePath string, activeDirty bool, gitStatus
 // muted branch (right-aligned, ≤12 chars), muted ⋯ kebab.
 func (m Model) renderHeader() string {
 	bg := theme.Bg(theme.BgSidebar)
-	primary := theme.FgBg(theme.TextPrimary, theme.BgSidebar).Bold(true)
+	primary := lipgloss.NewStyle().Background(theme.LG(theme.BgSidebar)).
+		Foreground(theme.Mix(theme.TextSecondary, theme.BorderFocus, 0.35)).Bold(true)
 	secondary := theme.FgBg(theme.TextSecondary, theme.BgSidebar)
 	muted := theme.FgBg(theme.TextMuted, theme.BgSidebar)
 
-	leftPadStr := bg.Render(strings.Repeat(" ", leftPad))
-	rightPadStr := bg.Render(strings.Repeat(" ", rightPad))
+	leftPadStr := bg.Render(strings.Repeat(" ", leftPad+1))
+	rightPadStr := bg.Render(strings.Repeat(" ", rightPad+1))
 
-	innerW := m.w - leftPad - rightPad
+	innerW := m.w - leftPad - rightPad - 2
 	if innerW <= 0 {
 		return blankSidebarRow(m.w)
 	}
 
-	// Letter-spaced "E X P L O R E R".
-	spacedLabel := strings.Join(strings.Split("EXPLORER", ""), " ")
+	// Plain caps (letter spacing crowded narrow sidebars).
+	spacedLabel := "EXPLORER"
 	left := primary.Render(spacedLabel)
-	if ws := strings.ToUpper(m.metaWorkspace); ws != "" {
-		left += bg.Render(" ") + muted.Render("·") + bg.Render(" ") + secondary.Render(ws)
+	if ws := m.metaWorkspace; ws != "" {
+		room := innerW - lipgloss.Width(left) - 3 - 4 // keep space for the right side
+		if room >= 4 {
+			if runewidth.StringWidth(ws) > room {
+				ws = runewidth.Truncate(ws, room, "…")
+			}
+			left += bg.Render(" ") + muted.Render("·") + bg.Render(" ") + secondary.Render(ws)
+		}
 	}
 	leftW := lipgloss.Width(left)
 

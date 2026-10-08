@@ -23,30 +23,31 @@ import (
 //	row 2  branch sub-header           (gitSubheaderRow)
 //	row 3  spacer
 //	row 4  commit message box          (gitCommitInputRow)
-//	row 5  action bar                  (gitActionBarRow)
-//	row 6  spacer
-//	row 7… scrollable accordion        (gitPanelTopOffset)
+//	row 5  breathing room
+//	row 6  action bar                  (gitActionBarRow)
+//	row 7  spacer
+//	row 8… scrollable accordion        (gitPanelTopOffset)
 const (
 	gitCommitInputRow = 4
-	gitActionBarRow   = 5
+	gitActionBarRow   = 6
 )
 
 // Commit-area palette. The input field reads as a sunken control via a bg one
 // step lighter than the panel; the primary Commit chip uses the same green as
 // staged/added signs.
 var (
-	gitInputBg lipgloss.Color
-	gitInputFg lipgloss.Color
-	gitInputFocusFg lipgloss.Color
-	gitInputPlace lipgloss.Color
-	gitInputAccent lipgloss.Color
-	gitInputRail lipgloss.Color
+	gitInputBg       lipgloss.Color
+	gitInputFg       lipgloss.Color
+	gitInputFocusFg  lipgloss.Color
+	gitInputPlace    lipgloss.Color
+	gitInputAccent   lipgloss.Color
+	gitInputRail     lipgloss.Color
 	gitCommitReadyBg lipgloss.Color
 	gitCommitReadyFg lipgloss.Color
-	gitCommitIdleBg lipgloss.Color
-	gitCommitIdleFg lipgloss.Color
-	gitChipBg lipgloss.Color
-	gitChipFg lipgloss.Color
+	gitCommitIdleBg  lipgloss.Color
+	gitCommitIdleFg  lipgloss.Color
+	gitChipBg        lipgloss.Color
+	gitChipFg        lipgloss.Color
 )
 
 func init() { refreshCommitBoxColors() }
@@ -54,17 +55,17 @@ func init() { refreshCommitBoxColors() }
 // refreshCommitBoxColors derives this file's colours from the active theme. It runs
 // before every render so a theme switch applies immediately.
 func refreshCommitBoxColors() {
-	gitInputBg = theme.Mix(theme.BgSidebar, theme.BgPanel, 0.7) // sunken trough, clearly darker than the #303030 panel
+	gitInputBg = theme.Mix(theme.BgSidebar, theme.TextPrimary, 0.07) // raised field, readable on any theme
 	gitInputFg = theme.LG(theme.TextPrimary)
 	gitInputFocusFg = theme.LG(theme.TextWhite)
-	gitInputPlace = theme.LG(theme.TextDim)
+	gitInputPlace = theme.LG(theme.TextMuted)
 	gitInputAccent = theme.LG(theme.BorderFocus) // focus bar, matches the cursor-row accent
 	gitInputRail = theme.LG(theme.BorderDefault) // quiet rail when the field is blurred
 	gitCommitReadyBg = theme.LG(theme.BorderFocus)
-	gitCommitReadyFg = theme.LG(theme.TextWhite)
-	gitCommitIdleBg = theme.Mix(theme.BgSidebar, theme.TextPrimary, 0.08)
-	gitCommitIdleFg = theme.LG(theme.TextMuted)
-	gitChipBg = theme.Mix(theme.BgSidebar, theme.TextPrimary, 0.12) // raised, lighter than the panel
+	gitCommitReadyFg = theme.LG(theme.OnAccent)
+	gitCommitIdleBg = theme.Mix(theme.BgSidebar, theme.TextPrimary, 0.12)
+	gitCommitIdleFg = theme.LG(theme.TextSecondary)
+	gitChipBg = theme.Mix(theme.BgSidebar, theme.TextPrimary, 0.14) // raised, lighter than the panel
 	gitChipFg = theme.LG(theme.TextSecondary)
 }
 
@@ -172,6 +173,21 @@ func (m Model) handleGitCommitKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 // focused it shows a caret and horizontally scrolls to keep it visible; when
 // empty it shows a dim placeholder.
 func (m Model) renderGitCommitBox(w int) string {
+	// One column of panel margin on each side so the field does not touch
+	// the sidebar edges.
+	margin := lipgloss.NewStyle().Background(sidebarBg).Render(" ")
+	if w >= 8 {
+		return margin + m.renderGitCommitField(w-2) + margin
+	}
+	return m.renderGitCommitField(w)
+}
+
+func (m Model) renderGitCommitField(w int) string {
+	inputBg := gitInputBg
+	if m.gitCommitFocused {
+		inputBg = theme.Mix(theme.BgSidebar, theme.BorderFocus, 0.14)
+	}
+	gitInputBg := inputBg
 	field := lipgloss.NewStyle().Background(gitInputBg)
 	if w < 4 {
 		return field.Render(strings.Repeat(" ", max(w, 0)))
@@ -276,8 +292,21 @@ func (m Model) gitActionButtons(w int) []gitActionBtn {
 	}
 
 	commit := gitActionBtn{id: gitBtnCommit, label: label, bg: commitBg, fg: commitFg}
-	sync := gitActionBtn{id: gitBtnSync, label: "⟳", bg: gitChipBg, fg: gitChipFg}
-	more := gitActionBtn{id: gitBtnMore, label: "▾", bg: gitChipBg, fg: gitChipFg}
+	syncG, moreG := "⟳", "▾"
+	switch theme.CurrentIconMode {
+	case theme.IconModeNerdFont:
+		syncG, moreG = "\uf021", "\uf0d7" // nf-fa-refresh, nf-fa-caret_down
+	case theme.IconModeASCII:
+		syncG, moreG = "~", "v"
+	}
+	if theme.CurrentIconMode == theme.IconModeNerdFont {
+		label = "\uf00c " + strings.TrimPrefix(label, "✓ ")
+	} else if theme.CurrentIconMode == theme.IconModeASCII {
+		label = strings.TrimPrefix(label, "✓ ")
+	}
+	commit.label = label
+	sync := gitActionBtn{id: gitBtnSync, label: syncG, bg: gitChipBg, fg: gitChipFg}
+	more := gitActionBtn{id: gitBtnMore, label: moreG, bg: gitChipBg, fg: gitChipFg}
 
 	// Right edge: two 3-wide squares (glyph + 1 pad each side), 1-col gap, 1-col
 	// right margin. Commit fills everything to their left from a 1-col margin.
