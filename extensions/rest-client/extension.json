@@ -1,0 +1,5 @@
+{
+  "name": "rest-client",
+  "version": "1.0.0",
+  "description": "Send HTTP requests from .http / .rest files (VS Code REST Client syntax). Needs curl."
+}
