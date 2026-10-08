@@ -106,3 +106,29 @@ func TestReplaceConfirmMessage(t *testing.T) {
 		t.Errorf("dirty warning missing: %q", got)
 	}
 }
+
+func TestFindNavToast(t *testing.T) {
+	if got := findNavToast("ok", 1); got != "" {
+		t.Errorf("ok: got %q, want no toast", got)
+	}
+	if got := findNavToast("none", 1); !strings.Contains(got, "Find in Files") {
+		t.Errorf("none: got %q", got)
+	}
+	if got := findNavToast("end", -1); !strings.Contains(got, "previous") {
+		t.Errorf("end/-1: got %q", got)
+	}
+	if got := findNavToast("end", 1); !strings.Contains(got, "more") {
+		t.Errorf("end/1: got %q", got)
+	}
+}
+
+// The app calls _G._termocode_find_nav for F4 / Shift+F4; the old nvim
+// <F4> maps never fired because the app keymap caught F4 first.
+func TestFindResultsLuaExportsNav(t *testing.T) {
+	if !strings.Contains(findResultsLua, "_G._termocode_find_nav = navigate_results") {
+		t.Error("findResultsLua must export _G._termocode_find_nav")
+	}
+	if strings.Contains(findResultsLua, "'<F4>'") {
+		t.Error("findResultsLua should not map <F4> in nvim any more")
+	}
+}

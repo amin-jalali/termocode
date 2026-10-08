@@ -166,7 +166,7 @@ Actions are an enum in `keymap.go`; the default `KeyMap` maps key strings (Bubbl
 
 The file is a flat map of key string → action name, e.g. `{"alt+s": "Save"}`. Action names come from the `actionNames` table in `overrides.go`. `Preferences: Customize Keybindings` writes this file for you (read-modify-write, so other entries stay). On load, entries with an unknown action name **or a key string the default keymap does not already use** are dropped silently — a broken file can never block startup.
 
-**Some keys are reserved by terminal emulators.** For example `ctrl+shift+t` opens a new terminal tab in most emulators and never reaches the app. termocode ships multiple fallbacks for the affected actions — Reopen-closed is bound to all of `alt+shift+t`, `alt+T`, `shift+f4`, and `f16`.
+**Some keys are reserved by terminal emulators.** For example `ctrl+shift+t` opens a new terminal tab in most emulators and never reaches the app. termocode ships fallbacks for the affected actions — Reopen-closed is bound to `ctrl+shift+t` (best effort), `alt+shift+t` and `alt+T` (how xterm-style terminals report Alt+Shift+T).
 
 ## Theme system (`internal/theme`)
 
