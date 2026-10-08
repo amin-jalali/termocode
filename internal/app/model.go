@@ -124,6 +124,8 @@ type Model struct {
 	// Animations (anim.go): overlay open progress 0→1, and whether a
 	// tick is already scheduled.
 	overlayAnim anim.Value
+	// resizeT coalesces nvim resizes during splitter drags.
+	resizeT     resizeThrottle
 	animTicking bool
 	keys        keymap.KeyMap
 	nvim        *nvim.Client

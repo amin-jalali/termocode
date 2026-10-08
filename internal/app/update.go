@@ -36,6 +36,10 @@ import (
 // input is focused so the SGR-fragmentation leak can't corrupt typed input.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	prevKind := m.overlayKind()
+	if _, ok := msg.(resizeFlushMsg); ok {
+		m.onResizeFlush()
+		return m, m.resizeAfterUpdate()
+	}
 	if _, ok := msg.(anim.TickMsg); ok {
 		m.animTicking = false
 		m.stepAnimations()
@@ -51,6 +55,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	if animCmd := nm.afterUpdateAnim(prevKind); animCmd != nil {
 		cmd = tea.Batch(cmd, animCmd)
+	}
+	if rc := nm.resizeAfterUpdate(); rc != nil {
+		cmd = tea.Batch(cmd, rc)
 	}
 	// Hover card: fetch the commit metadata when the pointer moves onto a new
 	// commit row in the Source Control panel.
@@ -2109,14 +2116,15 @@ func (m *Model) applyLayout() {
 	m.picker.SetSize(m.w, m.h)
 	m.recents.SetSize(m.w, m.h)
 
+	// Push the size (and the bottom panel height) into nvim. During a
+	// splitter drag this is coalesced to ≤ 30 resizes/s, with the final
+	// size sent on release (resize_throttle.go). resizeTerminalSplit is a
+	// no-op when the panel isn't open or the height is unchanged.
 	if m.nvim != nil && m.nvimAttached && edPaneW > 0 && nvimEditorH > 0 {
-		_ = m.nvim.Resize(edPaneW, nvimEditorH)
+		m.sendNvimResize(edPaneW, nvimEditorH)
+	} else {
+		m.resizeTerminalSplit()
 	}
-	// Push the panel height into the live nvim split so a stale split
-	// shrinks/grows to match m.terminalRows after a window resize, theme
-	// switch, etc. No-op when the panel isn't open or the value matches
-	// the last sent (resizeTerminalSplit caches).
-	m.resizeTerminalSplit()
 }
 
 // refreshBreadcrumbs derives the breadcrumb segments from the editor's path.

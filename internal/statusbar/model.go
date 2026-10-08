@@ -337,7 +337,7 @@ func (m Model) renderCenterDiag(s State) (string, int, int) {
 	}
 	var parts []string
 	if s.Branch != "" {
-		branchText := withGlyph(glyph("\ue725", "⎇"), s.Branch)
+		branchText := withGlyph(glyph("\ue725", "⌥"), s.Branch)
 		if theme.CurrentIconMode == theme.IconModeASCII {
 			branchText = theme.IconBranch.String() + " " + s.Branch
 		}

@@ -52,7 +52,7 @@ var (
 	// Bold: tabbed folder — small tab notch at the top (▗▄), solid
 	// folder body below (▟█).
 	IconFiles = Icon{
-		NerdFont: "", Unicode: "❐", ASCII: "F", // fa-folder, ▤
+		NerdFont: "", Unicode: "◫", ASCII: "F", // fa-folder, ▤
 		Bold: [2]string{"▗▄", "▟█"},
 	}
 	// IconSearch — telephone-recorder doubles as a magnifier outline at
@@ -67,13 +67,13 @@ var (
 	// U+2442 (ocr-branch) only if 2387 fails the probe.
 	// Bold: two dots (▖▗) converging into solid wedges (▟▙) = merge / fork.
 	IconGit = Icon{
-		NerdFont: "", Unicode: "⎇", ASCII: "G", // fa-code-fork, ⎇
+		NerdFont: "", Unicode: "⌥", ASCII: "G", // fa-code-fork, ⎇
 		Bold: [2]string{"▖▗", "▟▙"},
 	}
 	// IconOutline — identical-to ("hamburger menu"). U+2261, EAW=Neutral.
 	// Bold: two heavy horizontal bars stacked = hamburger/list.
 	IconOutline = Icon{
-		NerdFont: "", Unicode: "≡", ASCII: "O", // fa-list, ≡
+		NerdFont: "", Unicode: "☰", ASCII: "O", // fa-list, ≡
 		Bold: [2]string{"▀▀", "▄▄"},
 	}
 	// IconRun — black right-pointing triangle. U+25B6, EAW=Neutral
@@ -84,7 +84,7 @@ var (
 	// triangle tip, so this is an evocative right-pointing wedge rather
 	// than a literal play glyph.
 	IconRun = Icon{
-		NerdFont: "", Unicode: "▶", ASCII: "R", // fa-play, ▶
+		NerdFont: "", Unicode: "⊳", ASCII: "R", // fa-play, ▶
 		Bold: [2]string{"▙ ", "▛ "},
 	}
 	// IconTests — check mark (Group E: Testing view). U+2713, EAW=Neutral.
@@ -111,7 +111,7 @@ var (
 	// a console prompt. U+25A3, EAW=Neutral.
 	// Bold: chevron tip (▙ + space) on top, underscore bar (▀▀) below = `>_`.
 	IconTerminal = Icon{
-		NerdFont: "", Unicode: "▣", ASCII: "T", // fa-terminal, ▣
+		NerdFont: "", Unicode: "⌨", ASCII: "T", // fa-terminal, ▣
 		Bold: [2]string{"▙ ", "▀▀"},
 	}
 	// IconAccount — bullseye, evokes a user avatar circle. U+25CE.
@@ -119,7 +119,7 @@ var (
 	// at top (▟▙ = tucked-in head), wide at bottom (▛▜ = shoulders).
 	// Differentiated from IconExtensions (▛▜/▙▟) by inversion.
 	IconAccount = Icon{
-		NerdFont: "", Unicode: "◎", ASCII: "U", // fa-user, ◎
+		NerdFont: "", Unicode: "☺", ASCII: "U", // fa-user, ◎
 		Bold: [2]string{"▟▙", "▛▜"},
 	}
 	// IconSettings — gear. U+2699 is the riskiest single glyph because
