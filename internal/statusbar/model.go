@@ -33,6 +33,13 @@ type State struct {
 	ShowLSP bool
 	LSP     []string
 
+	// Group E: test chip "✓ n ✗ n" in the center (after a run; "◐" while
+	// running). Clicking it opens the Testing view (TestsChipSpan).
+	ShowTests    bool
+	TestsRunning bool
+	TestsPassed  int
+	TestsFailed  int
+
 	// Ext holds extension status items (Group I), as {{token}} markup.
 	// They render at the end of the center cluster; see ext_items.go.
 	Ext []string
@@ -169,6 +176,25 @@ func (m Model) LSPChipSpan(s State) (x0, x1 int, ok bool) {
 	return rightX + l.chipStart, rightX + l.chipStart + l.chipW, true
 }
 
+// DiagSpan returns the [x0, x1) cell range of the error / warning
+// counters relative to the bar's left edge; ok=false when they are hidden
+// (no diagnostics, an error message on show, or no room). Group C.
+func (m Model) DiagSpan(s State) (x0, x1 int, ok bool) {
+	if m.w <= 0 {
+		return 0, 0, false
+	}
+	l := m.layout(s)
+	if l.centerW == 0 {
+		return 0, 0, false
+	}
+	_, start, w := m.renderCenterDiag(s)
+	if w == 0 {
+		return 0, 0, false
+	}
+	cx := 1 + l.leftW + l.gapL
+	return cx + start, cx + start + w, true
+}
+
 // truncateStyled clips a possibly-styled string to width w cells by
 // stripping ANSI escapes, truncating with an ellipsis, and re-styling
 // the result with the status-bar palette. Good enough for the trailing
@@ -246,8 +272,16 @@ func (m Model) renderLeft(s State) string {
 // the whole bar is given over to the error message) the center is
 // empty.
 func (m Model) renderCenter(s State) string {
+	out, _, _ := m.renderCenterDiag(s)
+	return out
+}
+
+// renderCenterDiag is renderCenter plus the cell offset / width of the
+// diagnostic counters inside the returned string (width 0 when hidden).
+// Group C: the counters are clickable (they open the Problems panel).
+func (m Model) renderCenterDiag(s State) (string, int, int) {
 	if s.Err != "" {
-		return ""
+		return "", 0, 0
 	}
 	var parts []string
 	if s.Branch != "" {
@@ -260,6 +294,7 @@ func (m Model) renderCenter(s State) string {
 		}
 		parts = append(parts, barFg(theme.TextSecondary).Render(branchText))
 	}
+	diagIdx := len(parts)
 	if s.Errors > 0 {
 		parts = append(parts, barFg(theme.DiagError).Bold(true).Render(
 			fmt.Sprintf("%s %d", theme.IconError.String(), s.Errors)))
@@ -269,11 +304,22 @@ func (m Model) renderCenter(s State) string {
 			fmt.Sprintf("%s %d", theme.IconWarning.String(), s.Warnings)))
 	}
 	parts = append(parts, renderExtParts(s.Ext)...) // Group I
+	if chip := renderTestsChip(s); chip != "" { // Group E (always last)
+		parts = append(parts, chip)
+	}
 	if len(parts) == 0 {
-		return ""
+		return "", 0, 0
 	}
 	gap := barBg().Render("  ")
-	return strings.Join(parts, gap)
+	out := strings.Join(parts, gap)
+	if diagIdx == len(parts) {
+		return out, 0, 0
+	}
+	start := 0
+	if diagIdx > 0 {
+		start = lipgloss.Width(strings.Join(parts[:diagIdx], gap) + gap)
+	}
+	return out, start, lipgloss.Width(out) - start
 }
 
 // renderRight shows cursor position, indent style, encoding, language,
@@ -326,6 +372,43 @@ func (m Model) renderRightChip(s State) (string, int, int) {
 		chipW = lipgloss.Width(parts[chipIdx])
 	}
 	return strings.Join(parts, sep()), chipStart, chipW
+}
+
+// renderTestsChip is the Group E test chip: "✓ 12 ✗ 1" (◐ prefix while a
+// run is in progress), or "" when hidden.
+func renderTestsChip(s State) string {
+	if !s.ShowTests {
+		return ""
+	}
+	var b strings.Builder
+	if s.TestsRunning {
+		b.WriteString(barFg(theme.AccentAmber).Render("◐ "))
+	}
+	b.WriteString(barFg(theme.AccentGreen).Render(fmt.Sprintf("✓ %d", s.TestsPassed)))
+	b.WriteString(barBg().Render(" "))
+	failFg := theme.TextSecondary
+	if s.TestsFailed > 0 {
+		failFg = theme.DiagError
+	}
+	b.WriteString(barFg(failFg).Bold(s.TestsFailed > 0).Render(fmt.Sprintf("✗ %d", s.TestsFailed)))
+	return b.String()
+}
+
+// TestsChipSpan returns the [x0, x1) cell range of the test chip relative
+// to the bar's left edge; ok=false when hidden or dropped for width. The
+// chip is always the last part of the center cluster.
+func (m Model) TestsChipSpan(s State) (x0, x1 int, ok bool) {
+	chip := renderTestsChip(s)
+	if m.w <= 0 || chip == "" || s.Err != "" {
+		return 0, 0, false
+	}
+	l := m.layout(s)
+	if l.centerW == 0 {
+		return 0, 0, false
+	}
+	cw := lipgloss.Width(chip)
+	end := 1 + l.leftW + l.gapL + l.centerW
+	return end - cw, end, true
 }
 
 // renderLSPChip is "{} gopls" (attached clients) or a dim "{} none".

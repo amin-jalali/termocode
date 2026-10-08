@@ -107,6 +107,7 @@ Each is a self-contained Bubble Tea sub-component with its own `Model` / `Update
 | `setup`      | `termocode setup` subcommand (Nerd Font, gopls) + read-only `Doctor()` checks     |
 | `statusbar`  | Bottom status bar — branch, diagnostics, ln/col, badges                           |
 | `tabbar`     | Top tab strip with close buttons, pin indicator                                   |
+| `tasks`      | `.termocode/tasks.json` loader, task auto-detection, `file:line` links + problem matchers |
 | `theme`      | Color palette + lipgloss style helpers (`Bg`, `FgBg`, `LG`)                       |
 | `toast`      | Transient notifications (top-right of editor area)                                |
 

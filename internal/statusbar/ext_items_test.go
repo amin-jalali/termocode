@@ -12,7 +12,7 @@ import (
 func TestExtItemSpans(t *testing.T) {
 	m := Model{}
 	m.SetWidth(160)
-	s := State{Line: 1, Col: 1, Branch: "main", Ext: []string{"{{muted}}12 words{{/}}", "", "TODO 3"}}
+	s := State{Line: 1, Col: 1, Branch: "main", ShowTests: true, TestsPassed: 3, Ext: []string{"{{muted}}12 words{{/}}", "", "TODO 3"}}
 	view := m.View(s)
 	if lipgloss.Width(view) != 160 {
 		t.Fatalf("bar width = %d", lipgloss.Width(view))

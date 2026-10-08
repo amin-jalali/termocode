@@ -42,6 +42,7 @@ const (
 	pickerKindKeybinding
 	pickerKindToolManager // LSP / DAP installer (lsp_manager.go)
 	pickerKindSnippetManager // Group H — Snippets: Manage…
+	pickerKindTasks          // Group C — Run Task… / Open Link… (tasks_run.go)
 	pickerKindExt            // Group I — termocode.pick() from an extension
 )
 
@@ -200,7 +201,7 @@ func paletteItems() []picker.Item {
 		{ID: "git-fetch", Title: "Git: Fetch"},
 		{ID: "git-sync", Title: "Git: Sync (Pull, then Push)"},
 		{ID: "git-branch", Title: "Git: Switch Branch..."},
-		{ID: "problems", Title: "View: Problems"},
+		{ID: "problems", Title: "Go to Problem..."}, // Group C: "View: Problems" opens the panel now
 		{ID: "code-actions", Title: "Edit: Quick Fix...", Hint: "Ctrl+. / Alt+Enter"},
 		{ID: "goto-symbol-file", Title: "Go to Symbol in File...", Hint: "Ctrl+Shift+O"},
 		{ID: "goto-symbol-workspace", Title: "Go to Symbol in Workspace..."},
@@ -294,6 +295,17 @@ func paletteItems() []picker.Item {
 		{ID: "settings-export", Title: "Preferences: Export Settings..."},
 		{ID: "settings-import", Title: "Preferences: Import Settings..."},
 		{ID: "snippets-manage", Title: "Snippets: Manage..."},
+		// ── Group E: Testing (test_explorer.go / test_runner.go) ──
+		{ID: "testing-focus", Title: "Testing: Focus Test Explorer"},
+		{ID: "testing-run-all", Title: "Testing: Run All Tests", Hint: "Alt+T"},
+		{ID: "testing-rerun-failed", Title: "Testing: Rerun Failed Tests"},
+		{ID: "testing-run-file", Title: "Testing: Run Tests in Current File"},
+		{ID: "testing-run-cursor", Title: "Testing: Run Test at Cursor"},
+		{ID: "testing-stop", Title: "Testing: Stop Test Run"},
+		{ID: "testing-refresh", Title: "Testing: Refresh Tests"},
+		{ID: "testing-collapse", Title: "Testing: Collapse All"},
+		{ID: "testing-results", Title: "View: Test Results"},
+		// ── end Group E ──
 		{ID: "quit", Title: "File: Quit", Hint: "Ctrl+Q"},
 	}, extManagePaletteItems()...) // Group I — Extensions: Reload / Open Folder / …
 }
@@ -638,6 +650,14 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 	default:
 		// Group G: merge conflicts + clone (git_conflicts.go, git_clone.go).
 		if cmd, ok := m.dispatchGitExtrasPalette(id); ok {
+			return cmd
+		}
+		// Group C: tasks + problems panel (tasks_run.go).
+		if cmd, ok := m.dispatchTasksPalette(id); ok {
+			return cmd
+		}
+		// Group E: Testing (test_explorer.go).
+		if cmd, ok := m.dispatchTestingPalette(id); ok {
 			return cmd
 		}
 		// Group I: "Ext: …" commands + "Extensions: …" management (ext.go).
