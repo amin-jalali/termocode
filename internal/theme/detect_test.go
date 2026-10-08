@@ -18,7 +18,12 @@ func TestResolveIconMode(t *testing.T) {
 		env     map[string]string
 		want    IconMode
 	}{
-		{"auto", true, no, nil, IconModeNerdFont},
+		// An installed Nerd Font alone does not switch to Nerd icons: the
+		// running terminal may not draw with it (tofu boxes).
+		{"auto", true, nil, nil, IconModeUnicode},
+		{"auto", false, nil, map[string]string{"TERM_PROGRAM": "WezTerm"}, IconModeNerdFont},
+		{"auto", false, nil, map[string]string{"TERM": "xterm-kitty"}, IconModeNerdFont},
+		{"auto", false, nil, map[string]string{"TERM_PROGRAM": "ghostty"}, IconModeNerdFont},
 		{"auto", false, yes, nil, IconModeUnicode},
 		{"auto", false, nil, nil, IconModeUnicode},
 		{"auto", false, no, nil, IconModeASCII},
