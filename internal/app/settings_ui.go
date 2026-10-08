@@ -400,19 +400,16 @@ func (m *Model) applyStartupSettings() {
 		_ = m.toggleAutoSave()
 	}
 	if cfg.WordWrap != nil && *cfg.WordWrap && m.nvim != nil {
-		// EvalLuaString isn't safe here yet (nvim may still be attaching);
-		// this helper is invoked AFTER ReadyMsg so it's safe.
-		// Apply persisted word_wrap setting silently on startup — no
-		// toast (we don't want a "Word wrap enabled" pop on every launch).
-		cur, _ := m.nvim.EvalLuaString(`return vim.wo.wrap and 'on' or 'off'`)
-		if cur != "on" {
-			_ = m.nvim.Command("setlocal wrap")
-		}
+		// Called on nvim.ReadyMsg. Applied silently — no "Word wrap
+		// enabled" toast on every launch.
+		_ = m.nvim.Command("set wrap")
 	}
 	if cfg.ShowHidden != nil && *cfg.ShowHidden && !m.explorer.HiddenShown() {
 		_ = m.toggleHiddenFiles()
 	}
 	if cfg.TabSize != nil && *cfg.TabSize > 0 && m.nvim != nil {
-		_ = m.nvim.Command(fmt.Sprintf("set tabstop=%d shiftwidth=%d", *cfg.TabSize, *cfg.TabSize))
+		// setglobal: new buffers inherit it, but EditorConfig's buffer-local
+		// values still win for the files it covers.
+		_ = m.nvim.Command(fmt.Sprintf("setglobal tabstop=%d shiftwidth=%d", *cfg.TabSize, *cfg.TabSize))
 	}
 }
