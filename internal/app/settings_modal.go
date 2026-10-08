@@ -99,7 +99,7 @@ func newSettingsModal() settingsModal {
 // settingsRows declaration stays untouched and unrelated callers don't need
 // to learn about UI grouping.
 func settingsCategories() map[string]string {
-	return map[string]string{
+	return aiSettingsCategories(map[string]string{ // Group A adds "AI"
 		"setting-theme":              "Appearance",
 		"setting-font-delta":         "Appearance",
 		"setting-auto-save":          "Editor",
@@ -107,7 +107,7 @@ func settingsCategories() map[string]string {
 		"setting-show-hidden":        "Editor",
 		"setting-tab-size":           "Editor",
 		"setting-search-max-results": "Search",
-	}
+	})
 }
 
 // SetSize remembers the screen size so Box() can compute its layout.

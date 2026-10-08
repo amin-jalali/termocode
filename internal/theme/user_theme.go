@@ -156,6 +156,10 @@ var PaletteKeys = []string{
 	"GitConflict",
 	"GitIgnored",
 	"GitSubmodule",
+
+	// Group A — AI ghost text + accent.
+	"AIGhost",
+	"AIAccent",
 }
 
 // CurrentPaletteHex returns the active hex value for a palette field by
@@ -262,6 +266,10 @@ func paletteFieldValue(field string) (Color256, bool) {
 		return GitIgnored, true
 	case "GitSubmodule":
 		return GitSubmodule, true
+	case "AIGhost": // Group A
+		return AIGhost, true
+	case "AIAccent":
+		return AIAccent, true
 	}
 	return 0, false
 }

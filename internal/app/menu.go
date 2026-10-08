@@ -437,6 +437,11 @@ func editorMenuItems() []menu.Item {
 		{ID: editorMenuToggleComm, Title: "Toggle Line Comment", Icon: "/", Hint: "Ctrl+/"},
 		{Sep: true},
 		{ID: editorMenuGoToDef, Title: "Go to Definition", Icon: "▸", Hint: "F12 / Ctrl+Click"},
+		// Group A — AI (ids are palette ids, see dispatchAIPalette).
+		{Sep: true},
+		{ID: "ai-explain", Title: "Explain with AI", Icon: "✦"},
+		{ID: "ai-edit", Title: "Edit with AI…", Icon: "✦", Hint: "Alt+I"},
+		{ID: "ai-attach", Title: "Add to AI Chat", Icon: "✦"},
 	}
 }
 
@@ -452,6 +457,9 @@ func (m *Model) openEditorMenu(anchorX, anchorY int) {
 // handleEditorMenuSelect runs the action chosen from the editor context menu.
 // All actions go through nvim's Ex command interface.
 func (m *Model) handleEditorMenuSelect(id string) tea.Cmd {
+	if cmd, ok := m.dispatchAIPalette(id); ok { // Group A
+		return cmd
+	}
 	if m.nvim == nil {
 		return nil
 	}

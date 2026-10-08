@@ -139,6 +139,9 @@ func (m *Model) openBulkDeleteConfirm(paths []string) {
 
 // handlePromptSubmit performs the file op for the active prompt kind.
 func (m *Model) handlePromptSubmit(value string) tea.Cmd {
+	if cmd, ok := m.handleAIPromptSubmit(value); ok { // Group A
+		return cmd
+	}
 	switch m.promptKind {
 	case promptKindRename:
 		dir := filepath.Dir(m.promptPath)

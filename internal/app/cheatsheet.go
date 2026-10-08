@@ -67,6 +67,15 @@ NAVIGATION
   Palette           Bookmarks: Clear All
   Alt+P             Pin / unpin current tab
 
+AI (needs a provider: Palette → AI: Configure Provider…)
+  Alt+A             AI chat panel (Enter send · Esc back · F6 cycles focus)
+  Tab               Accept AI ghost text
+  Alt+\             Ask for an inline completion now
+  Alt+|             Toggle automatic ghost text
+  Alt+I             Edit selection / line with AI
+  Ctrl+.            AI group: Explain / Fix / Edit / Doc comment
+  Palette           AI: Chat History / Pick Model / Auto-Approve
+
 LSP
   F12               Go to definition
   Ctrl+F12          Go to type definition

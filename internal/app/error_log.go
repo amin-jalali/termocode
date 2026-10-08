@@ -9,6 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"termocode/internal/ai"
 	"termocode/internal/preview"
 	"termocode/internal/toast"
 )
@@ -48,7 +49,7 @@ func recordError(msg string) {
 		return
 	}
 	stamp := time.Now().Format("2006-01-02 15:04:05")
-	entry := stamp + "  " + msg
+	entry := stamp + "  " + ai.Redact(msg) // Group A: never log API keys / tokens
 	errorRingMu.Lock()
 	errorRing = append(errorRing, entry)
 	if len(errorRing) > errorLogCap {

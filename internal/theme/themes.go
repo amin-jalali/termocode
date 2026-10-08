@@ -169,6 +169,10 @@ func applyHexOverride(p *Palette256, field, hex string) {
 		p.AccentMagenta = idx
 	case "AccentLavender":
 		p.AccentLavender = idx
+	case "AIGhost": // Group A
+		p.AIGhost = idx
+	case "AIAccent":
+		p.AIAccent = idx
 	case "SyntaxKeyword":
 		p.SyntaxKeyword = idx
 	case "SyntaxControl":
@@ -324,6 +328,9 @@ func vscodeDarkPlusPalette() Palette256 {
 		AccentMagenta:  170,
 		AccentLavender: 141,
 
+		AIGhost:  242, // Group A
+		AIAccent: 141,
+
 		BorderDefault: 238,
 		BorderFocus:   32,
 		BorderSubtle:  237,
@@ -379,6 +386,7 @@ func githubDarkPalette() Palette256 {
 	p.SyntaxConstant = 73
 	p.SyntaxType = 109
 	p.SyntaxComment = 102
+	p.AIGhost = 102 // Group A: ghost text = muted comment grey
 
 	// Add the indices we just introduced to the hex map.
 	p.IndexHex = mergeHex(p.IndexHex, map[Color256]string{
@@ -410,6 +418,8 @@ func oneDarkPalette() Palette256 {
 	p.SyntaxConstant = 173 // orange
 	p.SyntaxNumber = 173
 	p.SyntaxComment = 244
+	p.AIGhost = 244 // Group A
+	p.AIAccent = 176
 
 	p.IndexHex = mergeHex(p.IndexHex, map[Color256]string{
 		60:  "#5f5f87",
@@ -448,6 +458,8 @@ func solarizedDarkPalette() Palette256 {
 	p.SyntaxNumber = 166
 	p.SyntaxComment = 66
 	p.SyntaxRegex = 125
+	p.AIGhost = 66 // Group A: base01, readable on the teal bg
+	p.AIAccent = 37
 
 	p.IndexHex = mergeHex(p.IndexHex, map[Color256]string{
 		22:  "#005f00",
