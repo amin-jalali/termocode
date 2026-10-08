@@ -12,12 +12,12 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/mattn/go-runewidth"
 
-	"termocode/internal/activity"
-	"termocode/internal/explorer"
-	"termocode/internal/git"
-	"termocode/internal/keymap"
-	"termocode/internal/statusbar"
-	"termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/explorer"
+	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/keymap"
+	"github.com/amin-jalali/termocode/internal/statusbar"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 func (m Model) View() string {

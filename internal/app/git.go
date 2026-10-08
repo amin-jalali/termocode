@@ -7,7 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/git"
 )
 
 // gitAutoRefreshMsg fires on a timer so git state (the Source Control list,

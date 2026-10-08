@@ -8,8 +8,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/picker"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // hoverCmd asks the LSP for hover docs at the cursor and shows them in the

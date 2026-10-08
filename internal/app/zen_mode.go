@@ -8,7 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // sendF11ToHost simulates an F11 keypress at the OS level so the host

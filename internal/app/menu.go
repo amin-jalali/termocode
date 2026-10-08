@@ -9,10 +9,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/activity"
-	"termocode/internal/menu"
-	"termocode/internal/tabbar"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/menu"
+	"github.com/amin-jalali/termocode/internal/tabbar"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 type menuKindEnum int

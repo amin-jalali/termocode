@@ -3,10 +3,10 @@ package app
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/picker"
-	"termocode/internal/prompt"
-	"termocode/internal/theme"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // openThemeEditor pops a picker listing every palette key with its

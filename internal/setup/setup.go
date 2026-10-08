@@ -13,8 +13,8 @@ import (
 	"runtime"
 	"strings"
 
-	"termocode/internal/fetch"
-	"termocode/internal/lspinstall"
+	"github.com/amin-jalali/termocode/internal/fetch"
+	"github.com/amin-jalali/termocode/internal/lspinstall"
 )
 
 const (

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"termocode/internal/search"
+	"github.com/amin-jalali/termocode/internal/search"
 )
 
 func TestFormatFindGroups(t *testing.T) {

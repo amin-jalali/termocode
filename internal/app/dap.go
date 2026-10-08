@@ -12,10 +12,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/activity"
-	"termocode/internal/lspinstall"
-	"termocode/internal/picker"
-	"termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/lspinstall"
+	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/prompt"
 )
 
 // nvimDapRepo is the upstream URL for mfussenegger/nvim-dap, the de-facto

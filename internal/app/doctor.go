@@ -3,7 +3,7 @@ package app
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/setup"
+	"github.com/amin-jalali/termocode/internal/setup"
 )
 
 // runDoctorCmd backs "Help: Run Doctor". It runs the read-only `setup`

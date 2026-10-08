@@ -9,9 +9,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/ai"
-	"termocode/internal/preview"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/preview"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // errorLogCap caps the in-memory error log so a runaway error path

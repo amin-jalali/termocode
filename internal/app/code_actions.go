@@ -6,9 +6,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/nvim"
-	"termocode/internal/picker"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // CodeActionsMsg carries the LSP-fetched code actions awaiting picker display.

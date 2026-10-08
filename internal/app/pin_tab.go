@@ -3,8 +3,8 @@ package app
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/nvim"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // togglePinActiveTab adds or removes the active buffer from the pinned set.

@@ -9,11 +9,11 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/confirm"
-	"termocode/internal/git"
-	"termocode/internal/picker"
-	"termocode/internal/prompt"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // handleGitSidebarKey routes key presses when the Git sidebar has focus.

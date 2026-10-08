@@ -7,8 +7,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/preview"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/preview"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // openBufferInfo shows a non-interactive preview overlay describing the

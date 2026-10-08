@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/glamour/ansi"
 
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // strPtr / boolPtr — glamour's StyleConfig uses pointer fields for

@@ -10,10 +10,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
-	"termocode/internal/activity"
-	"termocode/internal/statusbar"
-	"termocode/internal/tests"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/statusbar"
+	"github.com/amin-jalali/termocode/internal/tests"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // testsModel is a Model with the Testing view showing a small Go tree.

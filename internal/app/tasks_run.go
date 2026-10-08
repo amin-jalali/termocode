@@ -12,9 +12,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
 
-	"termocode/internal/picker"
-	"termocode/internal/tasks"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/tasks"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // ── Tasks (Group C) ──────────────────────────────────────────────────────

@@ -3,7 +3,7 @@ package app
 import (
 	"fmt"
 
-	"termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // aiLua installs _G._termocode_ai — the nvim half of inline ghost-text

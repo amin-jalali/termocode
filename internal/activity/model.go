@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 
-	"termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // View identifies which panel the sidebar should show.

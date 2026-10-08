@@ -10,7 +10,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/nvim"
 )
 
 func TestCellToByte(t *testing.T) {

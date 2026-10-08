@@ -12,8 +12,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/tests"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/tests"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // ── Test runner (Group E) ────────────────────────────────────────────────

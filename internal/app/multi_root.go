@@ -6,9 +6,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/picker"
-	"termocode/internal/prompt"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // Multi-root workspace plumbing for the app layer.

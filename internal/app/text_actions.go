@@ -5,8 +5,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/picker"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // copyFileLineRef puts "path:line" (or "path:line:col") on the system
