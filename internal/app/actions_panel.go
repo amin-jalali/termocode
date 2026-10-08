@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 
+	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -63,7 +64,34 @@ func (m Model) actionsColumnWidth() int {
 	if !m.actionsPinned || !m.actionsOpen {
 		return 0
 	}
-	return m.actionsWidth
+	if m.actionsWidthSet {
+		return m.actionsWidth
+	}
+	return autoActionsWidth(m.w, m.showExp, m.explorerWidth)
+}
+
+// autoActionsWidth is the chat panel's width until the user drags its
+// edge: about 40% of the window (44–80 columns) so answers with code fit,
+// while the editor keeps at least 60 columns.
+func autoActionsWidth(w int, showExp bool, explorerW int) int {
+	auto := w * 40 / 100
+	if auto < 44 {
+		auto = 44
+	}
+	if auto > 80 {
+		auto = 80
+	}
+	left := w - activity.Width - editorScrollbarWidth
+	if showExp {
+		left -= explorerW
+	}
+	if room := left - 60; auto > room {
+		auto = room
+	}
+	if auto < defaultActionsWidth {
+		auto = defaultActionsWidth
+	}
+	return auto
 }
 
 // renderActionsPanel renders the pinned panel as a (width × height) block.
@@ -306,6 +334,9 @@ func (m *Model) persistActionsState() {
 	pinnedVal := m.actionsPinned
 	existing.ActionsOpen = &openVal
 	existing.ActionsPinned = &pinnedVal
-	existing.ActionsWidth = m.actionsWidth
+	existing.ActionsWidth = 0
+	if m.actionsWidthSet { // only a width the user chose sticks
+		existing.ActionsWidth = m.actionsWidth
+	}
 	saveSession(existing)
 }
