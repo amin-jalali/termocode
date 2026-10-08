@@ -8,12 +8,10 @@ hide:
 
 **A terminal IDE that feels like VSCode — with a real Neovim inside.**
 
+![termocode: explorer, tabs, editor and status bar](assets/screenshots/editor.png)
+
 <!--
-Hero GIF. It is not committed yet. Make it with:
-  go build -o termocode ./cmd/termocode
-  vhs assets/screenshots/demo.tape
-The docs workflow copies assets/screenshots/ into the site, so after you
-commit demo.gif, remove this comment wrapper around the next line:
+Hero GIF (not committed yet): `vhs assets/screenshots/demo.tape`, then:
 ![termocode demo](assets/screenshots/demo.gif)
 -->
 
