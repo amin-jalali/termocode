@@ -341,10 +341,14 @@ func (m *Model) aiCancelAll() tea.Cmd {
 
 func init() {
 	settingsRows = append(settingsRows,
-		settingsRow{ID: "setting-ai-inline", Label: "ai_inline", Kind: "bool"},
-		settingsRow{ID: "setting-ai-provider", Label: "ai_provider", Kind: "string"},
-		settingsRow{ID: "setting-ai-model", Label: "ai_model", Kind: "string"},
-		settingsRow{ID: "setting-ai-base-url", Label: "ai_base_url", Kind: "string"},
+		settingsRow{ID: "setting-ai-inline", Label: "ai_inline", Kind: "bool", Default: "true",
+			Desc: "Show AI ghost-text completions while typing (needs a configured provider)."},
+		settingsRow{ID: "setting-ai-provider", Label: "ai_provider", Kind: "string", Default: "(auto)",
+			Desc: "AI provider: " + strings.Join(ai.Kinds, ", ") + " or none. Empty picks anthropic or openai from the API keys it finds. TERMOCODE_AI_PROVIDER overrides it."},
+		settingsRow{ID: "setting-ai-model", Label: "ai_model", Kind: "string", Default: "(default)",
+			Desc: "Chat model ID. Empty uses the provider's default model."},
+		settingsRow{ID: "setting-ai-base-url", Label: "ai_base_url", Kind: "string", Default: "(default)",
+			Desc: "API base URL, for local or OpenAI-compatible servers. Empty uses the provider's default."},
 	)
 }
 
