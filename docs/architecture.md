@@ -136,25 +136,30 @@ One `modalOverlay` function powers every picker and prompt. Per-call tweaks go t
 
 ## Persistence (`~/.config/termocode/`)
 
-| File                    | Purpose                                                                |
-| ----------------------- | ---------------------------------------------------------------------- |
-| `session.json`          | Open files, tab order, cursor positions, expanded explorer dirs, roots |
-| `config.json`           | Settings (theme, font_delta, auto_save, word_wrap, show_hidden, …)     |
-| `recents.json`          | Recent files for the welcome screen                                    |
-| `palette_recents.json`  | Frequently-used palette commands (auto-floats them to the top)         |
-| `workspaces.json`       | Recent workspace roots for `File: Open Recent Workspace...`            |
-| `errors.log`            | Append-only ring of error toasts and `recordError(...)` debug lines    |
-| `commands.json`         | Optional — user-defined palette commands surfaced as `User: <Title>`  |
-| `keymap.json`           | Optional — keybinding overrides (see [Keymap](#keymap-internalkeymap)) |
-| `user_theme.json`       | Optional — custom theme saved by the theme editor                      |
-| `extensions/<name>/`    | Optional — Lua extensions (`init.lua`); see [extensions.md](extensions.md) and [ADR 0006](adr/0006-lua-extension-host.md) |
-| `ai/credentials.json`   | AI API keys + Claude OAuth tokens (mode 0600)                          |
-| `ai/chats/*.json`       | Saved AI chats (newest 50 kept)                                         |
-| `breakpoints.json`      | Debugger breakpoints per file (line + line text, re-checked on open)   |
+The full list of files termocode reads and writes — config dir, data dir and
+per-workspace `.termocode/` — with their format and whether each is safe to
+edit, is generated from `ConfigFileCatalog()` in `internal/app/docs.go`:
+**[reference/config-files.md](reference/config-files.md)**. Add new files
+there (and run `go run ./cmd/docgen`), not here, so the two can not drift.
 
-The full, generated list (with formats and whether each file is safe to edit) is in [reference/config-files.md](reference/config-files.md).
+What a contributor should know about the layout:
 
-Per-workspace: `<workspace>/.termocode/launch.json` holds debug / run configurations (VSCode `launch.json` shape; comments allowed).
+- **Settings vs. state.** `config.json`, `keymap.json`, `commands.json`,
+  `snippets.json`, `user_theme.json` are user settings (exported by
+  *Preferences: Export Settings…*). Session, recents, palette recents and
+  workspaces files are state and never exported.
+- **Sessions are per workspace.** `sessions/<hash>.json` holds open files,
+  cursors, explorer state and extra multi-root roots; the hash is of the
+  absolute cwd (`loadSession` / `saveSession` in `internal/app/session.go`).
+  `session.json` only keeps layout preferences shared by all workspaces (and
+  an un-migrated session from older versions).
+- **Secrets** (`ai/credentials.json`) are written with mode 0600.
+- **Per-workspace files** live in `<workspace>/.termocode/`: `tasks.json`
+  (tasks) and `launch.json` (debug / run configurations, VSCode shape,
+  comments allowed).
+- **Data dir** (`~/.local/share/termocode`, `$XDG_DATA_HOME/termocode`):
+  `plugins/` and `tools/` (language servers and debug adapters installed by
+  termocode, plus `tools/asked.json`).
 
 Plugins that termocode clones on first launch (nvim-dap, vim-visual-multi) live outside the config dir, in `~/.local/share/termocode/plugins` (`$XDG_DATA_HOME/termocode/plugins`, or `$TERMOCODE_PLUGINS_DIR`). See [ADR 0003](adr/0003-auto-bootstrapped-nvim-plugins.md).
 
@@ -164,9 +169,9 @@ Plugins that termocode clones on first launch (nvim-dap, vim-visual-multi) live 
 
 Actions are an enum in `keymap.go`; the default `KeyMap` maps key strings (Bubble Tea vocabulary: `ctrl+s`, `alt+shift+t`, `f8`) to actions. User overrides layer on top via `~/.config/termocode/keymap.json` (or `$XDG_CONFIG_HOME/termocode/keymap.json`) — see `overrides.go`.
 
-The file is a flat map of key string → action name, e.g. `{"alt+s": "Save"}`. Action names come from the `actionNames` table in `overrides.go`. `Preferences: Customize Keybindings` writes this file for you (read-modify-write, so other entries stay). On load, entries with an unknown action name **or a key string the default keymap does not already use** are dropped silently — a broken file can never block startup.
+The file is a flat map of key string → action name, e.g. `{"alt+s": "Save"}`. Action names come from the `actionNames` table in `overrides.go`. `Preferences: Customize Keybindings` writes this file for you (read-modify-write, so other entries stay). Any key string Bubble Tea can produce is accepted (`keymap.ValidateKey`: optional `ctrl+` / `alt+` / `shift+`, then one character or a named key such as `f1`–`f24`, `enter`, `pgdown`). On load, entries with an unknown action name or a malformed key are dropped — a broken file can never block startup — and `LoadOverridesReport` lists them, so the app shows one warning toast after start and logs each entry to `errors.log`.
 
-**Some keys are reserved by terminal emulators.** For example `ctrl+shift+t` opens a new terminal tab in most emulators and never reaches the app. termocode ships multiple fallbacks for the affected actions — Reopen-closed is bound to all of `alt+shift+t`, `alt+T`, `shift+f4`, and `f16`.
+**Some keys are reserved by terminal emulators.** For example `ctrl+shift+t` opens a new terminal tab in most emulators and never reaches the app. termocode ships fallbacks for the affected actions — Reopen-closed is bound to `ctrl+shift+t` (best effort), `alt+shift+t` and `alt+T` (how xterm-style terminals report Alt+Shift+T).
 
 ## Theme system (`internal/theme`)
 

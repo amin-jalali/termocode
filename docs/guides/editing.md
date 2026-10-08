@@ -27,7 +27,7 @@ refused with a short message.
 | `Ctrl+PgDn` / `Ctrl+PgUp` | Next / previous tab |
 | `Ctrl+Tab` | Switch to the last file |
 | `Ctrl+W` | Close the tab |
-| `Alt+Shift+T` or `Shift+F4` | Reopen the last closed tab |
+| `Alt+Shift+T` (or `Ctrl+Shift+T` if your terminal sends it) | Reopen the last closed tab |
 | `Alt+P` | Pin or unpin the tab (pinned tabs stay at the front) |
 | `Ctrl+\` | Split the editor to the right |
 
@@ -87,7 +87,7 @@ These keys need a language server for the file type. See
 | `Ctrl+Shift+.` | Apply the preferred quick fix directly |
 | `Ctrl+Shift+O` | Go to symbol in file |
 | `Ctrl+Space` | Show completions |
-| `F4` | Toggle inlay hints |
+| `Alt+L` | Toggle inlay hints |
 | `F5` / `Shift+F5` | Next / previous problem in the file |
 
 **LSP: Go to Implementation** and **Go to Symbol in Workspace...** are in the

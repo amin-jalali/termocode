@@ -148,20 +148,22 @@ func workspaceRoots() []string {
 }
 
 // paletteItems returns the static list of commands shown in the command palette.
-// Each item's ID is dispatched in dispatchPaletteAction.
+// Each item's ID is dispatched in dispatchPaletteAction. For items listed in
+// paletteActions (docs.go) the Hint is replaced at open time by the keys
+// bound in the keymap (withKeyHints); the Hint here only orders them.
 func paletteItems() []picker.Item {
 	items := []picker.Item{
 		{ID: "save", Title: "File: Save", Hint: "Ctrl+S"},
 		{ID: "save-all", Title: "File: Save All Files"},
 		{ID: "close-buffer", Title: "View: Close Editor", Hint: "Ctrl+W"},
-		{ID: "reopen-closed", Title: "View: Reopen Closed Editor", Hint: "Shift+F4 / Alt+Shift+T"},
+		{ID: "reopen-closed", Title: "View: Reopen Closed Editor", Hint: "Alt+Shift+T"},
 		{ID: "clipboard-history", Title: "Edit: Clipboard History", Hint: "Ctrl+Shift+V"},
 		{ID: "next-buffer", Title: "View: Next Editor", Hint: "Ctrl+PgDn"},
 		{ID: "prev-buffer", Title: "View: Previous Editor", Hint: "Ctrl+PgUp"},
 		{ID: "toggle-explorer", Title: "View: Toggle Explorer", Hint: "Ctrl+B"},
 		{ID: "toggle-actions-panel", Title: "View: Toggle Actions Panel", Hint: "Alt+A"},
-		{ID: "focus-explorer", Title: "View: Focus Explorer", Hint: "Ctrl+0"},
-		{ID: "focus-editor", Title: "View: Focus Editor", Hint: "Ctrl+1"},
+		{ID: "focus-explorer", Title: "View: Focus Explorer"},
+		{ID: "focus-editor", Title: "View: Focus Editor"},
 		{ID: "reveal-file", Title: "Reveal File in Explorer", Hint: "Ctrl+Shift+E"},
 		{ID: "toggle-terminal", Title: "Terminal: Toggle Integrated Panel", Hint: "Ctrl+T"},
 		{ID: "open-shell", Title: "Terminal: Open External Shell"},
@@ -182,9 +184,11 @@ func paletteItems() []picker.Item {
 		{ID: "toggle-fold", Title: "View: Toggle Fold Under Cursor", Hint: "za"},
 		{ID: "preview-md", Title: "Markdown: Open Preview", Hint: "F7"},
 		{ID: "find-files", Title: "Search: Find in Files", Hint: "F8 / Alt+F"},
+		{ID: "search-next-result", Title: "Search: Go to Next Search Result", Hint: "F4"},
+		{ID: "search-prev-result", Title: "Search: Go to Previous Search Result", Hint: "Shift+F4"},
 		{ID: "find-files-overlay", Title: "Search: Find in Files (Live Overlay)"},
 		{ID: "replace-in-file", Title: "Edit: Replace in File", Hint: "Ctrl+H"},
-		{ID: "toggle-inlay-hints", Title: "LSP: Toggle Inlay Hints", Hint: "F4"},
+		{ID: "toggle-inlay-hints", Title: "LSP: Toggle Inlay Hints", Hint: "Alt+L"},
 		{ID: "pick-theme", Title: "Preferences: Color Theme"},
 		{ID: "git-stage", Title: "Git: Stage Current File"},
 		{ID: "git-stage-all", Title: "Git: Stage All Changes"},
@@ -466,6 +470,10 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.applyLayout()
 	case "toggle-inlay-hints":
 		m.toggleInlayHints()
+	case "search-next-result":
+		return m.findResultNav(1)
+	case "search-prev-result":
+		return m.findResultNav(-1)
 	case "pick-theme":
 		return m.openThemePicker()
 	case "git-stage":

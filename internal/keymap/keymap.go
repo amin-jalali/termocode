@@ -71,7 +71,6 @@ const (
 	ActionPinTab
 	ActionCopyFileRef
 	ActionShowSnippetPicker
-	ActionMdLivePreview
 	// Debug Adapter Protocol actions. ActionDebugToggleBreakpoint is bound to
 	// F9 (terminal toggle moves to Ctrl+T only); ActionDebugStepOver / StepInto
 	// / StepOut to F10 / F11 / Shift+F11. Continue / Start / Stop have no
@@ -132,6 +131,11 @@ const (
 	// is caught in app.routeDebugMsg).
 	ActionDebugStartContinue
 	ActionDebugStop
+	// ActionNextSearchResult / ActionPrevSearchResult walk the Find Results
+	// buffer (VSCode: F4 / Shift+F4). No-op with a toast when no search
+	// has run yet.
+	ActionNextSearchResult
+	ActionPrevSearchResult
 )
 
 type KeyMap struct {
@@ -250,9 +254,15 @@ func Default() KeyMap {
 			// in which case F8 / palette stay as fallbacks.
 			"alt+f": ActionWorkspaceSearch,
 
-			// LSP display toggles. F4 is free across all common terminals
-			// (F2/F12 are taken by rename / goto-def in lsp_lua.go).
-			"f4": ActionToggleInlayHints,
+			// Find in Files results: F4 / Shift+F4 = next / previous result,
+			// as in VSCode. xterm reports Shift+F4 as F16.
+			"f4":       ActionNextSearchResult,
+			"shift+f4": ActionPrevSearchResult,
+			"f16":      ActionPrevSearchResult,
+
+			// LSP inlay hints. VSCode has no default key; Alt+L ("inLay")
+			// is free and every terminal forwards it.
+			"alt+l": ActionToggleInlayHints,
 
 			// Navigation
 			// ctrl+shift+e is best-effort: only terminals with the kitty/CSI-u
@@ -261,27 +271,16 @@ func Default() KeyMap {
 			"ctrl+shift+e": ActionRevealFile,
 
 			// Buffer history
-			// Reopen-closed-editor. Ctrl+Shift+T (the VSCode binding) gets
-			// eaten by every terminal emulator for "new terminal tab", so we
-			// can't use it. Bubble Tea reports Alt+Shift+T differently on
-			// different terminals — sometimes "alt+shift+t", sometimes
-			// "alt+T" (capital, shift implied), sometimes neither. We bind
-			// every form *plus* a Shift+F4 fallback so at least one route
-			// reaches the action. The palette ("View: Reopen Closed Editor")
-			// always works.
-			// Bubble Tea reports Reopen-closed-editor differently per
-			// terminal — we bind every form we've seen so at least one
-			// route works. Ctrl+Shift+T (VSCode default) and
-			// Ctrl+Shift+W are deliberately NOT bound: every terminal
-			// emulator we've tested grabs them for "new tab" / "close
-			// tab" and they never reach us.
-			//   modern terminals: alt+shift+t
-			//   xterm folded:     alt+T   (capital T, shift implied)
-			//   xterm Shift+F4:   f16     (xterm extra-function range)
-			"alt+shift+t": ActionReopenClosed,
-			"alt+T":       ActionReopenClosed,
-			"shift+f4":    ActionReopenClosed,
-			"f16":         ActionReopenClosed,
+			// Reopen-closed-editor. Ctrl+Shift+T is the VSCode binding; it
+			// only reaches us on terminals that do not grab it for "new
+			// tab" (kitty/CSI-u setups with the key unbound), so we bind it
+			// best-effort. Alt+Shift+T is the universal route; Bubble Tea
+			// reports it as "alt+shift+t" on modern terminals and "alt+T"
+			// (capital T, shift implied) on xterm-style ones. The palette
+			// ("View: Reopen Closed Editor") always works.
+			"ctrl+shift+t": ActionReopenClosed,
+			"alt+shift+t":  ActionReopenClosed,
+			"alt+T":        ActionReopenClosed,
 			// ctrl+shift+v: clipboard history picker (best-effort).
 			"ctrl+shift+v": ActionClipboardHistory,
 

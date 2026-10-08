@@ -114,6 +114,10 @@ type Model struct {
 	bufs      []nvim.BufferInfo
 	activeBuf int
 
+	// keymapProblems are keymap.json entries dropped at startup (typos);
+	// shown once in a toast on nvim.ReadyMsg.
+	keymapProblems []string
+
 	// closedRing remembers the paths of recently-closed editors so the
 	// "Reopen Closed Editor" action can pop the most recent one. Capacity is
 	// fixed (closedRingCap); when full, the oldest entry is dropped.
@@ -548,9 +552,10 @@ func New() Model {
 	t := named.Styles
 
 	// Layer the user's keymap overrides on top of the defaults. Missing /
-	// corrupt files yield an empty map (LoadOverrides never errors) so
-	// startup is uninterruptible by a hand-edited config.
-	keys := keymap.Default().MergeInto(keymap.LoadOverrides(""))
+	// corrupt files yield an empty map so startup is uninterruptible by a
+	// hand-edited config; dropped entries are toasted once nvim is ready.
+	overrides, keymapProblems := keymap.LoadOverridesReport("")
+	keys := keymap.Default().MergeInto(overrides)
 
 	client, err := nvim.New()
 	// Terminal panel height: prefer the value persisted from the previous
@@ -596,6 +601,7 @@ func New() Model {
 		lspMgr:           newLSPInstallState(),
 		theme:            t,
 		keys:             keys,
+		keymapProblems:   keymapProblems,
 		focus:            FocusEditor,
 		showExp:          true,
 		inlayHintsOn:     true,

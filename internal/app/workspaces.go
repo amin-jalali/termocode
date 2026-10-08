@@ -130,7 +130,8 @@ func (m *Model) openWorkspacePicker() tea.Cmd {
 // PID, file descriptors, and environment.
 //
 // The current session is saved on the way out via the existing StateMsg
-// path; the new instance loads the per-cwd session.json on startup.
+// path; the new instance loads the session of its cwd
+// (sessions/<hash>.json, see loadSession) on startup.
 func (m *Model) openWorkspace(path string) tea.Cmd {
 	if path == "" {
 		return nil

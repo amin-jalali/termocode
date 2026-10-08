@@ -3,11 +3,15 @@ package keymap
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // OverridesPath returns the absolute path of the user-overrides JSON file.
@@ -25,57 +29,72 @@ func OverridesPath() (string, error) {
 }
 
 // overrideFile is the on-disk schema. It is a flat map of key-string to
-// action-name (e.g. {"alt+s": "Save"}). Unknown action names and unknown key
-// strings are silently dropped at load time so a stale or hand-edited file
-// can never block startup.
+// action-name (e.g. {"alt+s": "Save"}). Entries with a malformed key or an
+// unknown action name are dropped at load time (and reported by
+// LoadOverridesReport) so a stale or hand-edited file can never block
+// startup.
 type overrideFile map[string]string
 
 // LoadOverrides reads the persisted overrides file at `path` and returns a
 // map of bubble-tea key string -> Action. Missing file, unreadable file,
-// corrupt JSON, and unknown action names are all treated as "no overrides"
-// — the function never returns an error, mirroring the rest of termocode's
+// corrupt JSON, and bad entries are all treated as "no override" — the
+// function never returns an error, mirroring the rest of termocode's
 // "config can't break startup" rule. Pass an empty path to fall back to
 // the default OverridesPath().
 func LoadOverrides(path string) map[string]Action {
+	out, _ := LoadOverridesReport(path)
+	return out
+}
+
+// LoadOverridesReport is LoadOverrides plus one human-readable problem
+// line per entry it dropped (corrupt JSON, malformed key, unknown action
+// name), so the UI can tell the user about typos. A missing file is not a
+// problem. "ext:" values belong to LoadExtBindings and are skipped
+// silently.
+func LoadOverridesReport(path string) (map[string]Action, []string) {
 	if path == "" {
 		p, err := OverridesPath()
 		if err != nil {
-			return nil
+			return nil, nil
 		}
 		path = p
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil
+			return nil, nil
 		}
-		return nil
+		return nil, []string{err.Error()}
 	}
 	var raw overrideFile
 	if err := json.Unmarshal(b, &raw); err != nil {
-		return nil
+		return nil, []string{"not valid JSON: " + err.Error()}
 	}
+	keys := make([]string, 0, len(raw))
+	for k := range raw {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 	out := make(map[string]Action, len(raw))
-	defaultBindings := Default().bindings
-	for key, name := range raw {
-		key = strings.TrimSpace(key)
-		if key == "" {
+	var problems []string
+	for _, rawKey := range keys {
+		name := raw[rawKey]
+		if strings.HasPrefix(name, ExtPrefix) {
 			continue
 		}
-		// Reject any binding the default keymap doesn't already understand —
-		// this enforces the "validate before persist" rule on the read side
-		// too, so a hand-edited file with a typo can't silently shadow a
-		// real binding.
-		if _, knownKey := defaultBindings[key]; !knownKey {
+		key := strings.TrimSpace(rawKey)
+		if err := ValidateKey(key); err != nil {
+			problems = append(problems, err.Error())
 			continue
 		}
-		act := actionFromName(name)
+		act := actionFromName(strings.TrimSpace(name))
 		if act == ActionNone {
+			problems = append(problems, fmt.Sprintf("%q: unknown action %q", key, name))
 			continue
 		}
 		out[key] = act
 	}
-	return out
+	return out, problems
 }
 
 // SaveOverrides writes the given key->action map to `path`. Existing entries
@@ -132,14 +151,69 @@ func (k KeyMap) Bindings() map[string]Action {
 	return out
 }
 
-// IsKnownKey reports whether `s` is a valid bubble-tea key string —
-// i.e. one that Default() already binds to some action. The keybinding-
-// customization UI uses this to validate user input BEFORE writing the
-// override file: if a user types "ctrl+monkey" we reject it instead of
-// shipping a useless entry to disk.
+// namedKeys are the non-character key names Bubble Tea (and the CSI-u
+// spellings termocode binds) use after the modifiers.
+var namedKeys = map[string]bool{
+	"enter": true, "tab": true, "esc": true, "backspace": true, "space": true,
+	"up": true, "down": true, "left": true, "right": true,
+	"home": true, "end": true, "pgup": true, "pgdown": true,
+	"delete": true, "insert": true,
+}
+
+// ValidateKey reports whether s is a key string Bubble Tea can produce:
+// optional "ctrl+", "alt+", "shift+" modifiers (each at most once), then
+// one character ("a", "T", "/", "`", "+") or a named key ("enter",
+// "pgdown", "f1".."f24"). It catches typos such as "ctrl+monkey",
+// "alt+" or "ctrl+ctrl+s" before they reach keymap.json. Any key that
+// passes may be bound, even one no default binding uses.
+func ValidateKey(s string) error {
+	if s == "" {
+		return errors.New("empty key")
+	}
+	if strings.TrimSpace(s) != s {
+		return fmt.Errorf("%q: key has spaces around it", s)
+	}
+	rest := s
+	seen := map[string]bool{}
+	for {
+		i := strings.Index(rest, "+")
+		// A "+" at index 0 or a lone last char is the key itself ("ctrl++").
+		if i <= 0 || i == len(rest)-1 {
+			break
+		}
+		mod := rest[:i]
+		if mod != "ctrl" && mod != "alt" && mod != "shift" {
+			break
+		}
+		if seen[mod] {
+			return fmt.Errorf("%q: %s given twice", s, mod)
+		}
+		seen[mod] = true
+		rest = rest[i+1:]
+	}
+	if rest == "" || strings.HasSuffix(s, "+") && rest != "+" {
+		return fmt.Errorf("%q: missing key after the modifiers", s)
+	}
+	if utf8.RuneCountInString(rest) == 1 {
+		r, _ := utf8.DecodeRuneInString(rest)
+		if unicode.IsPrint(r) && r != ' ' {
+			return nil
+		}
+		return fmt.Errorf("%q: %q is not a printable key", s, rest)
+	}
+	if namedKeys[rest] {
+		return nil
+	}
+	if n, err := strconv.Atoi(strings.TrimPrefix(rest, "f")); err == nil && rest[0] == 'f' && n >= 1 && n <= 24 {
+		return nil
+	}
+	return fmt.Errorf("%q: unknown key %q (use a character, f1-f24, or one of enter, tab, esc, backspace, space, up, down, left, right, home, end, pgup, pgdown, delete, insert)", s, rest)
+}
+
+// IsKnownKey reports whether s is a valid key string (see ValidateKey).
+// The keybinding-customization UI checks it before writing keymap.json.
 func IsKnownKey(s string) bool {
-	_, ok := Default().bindings[strings.TrimSpace(s)]
-	return ok
+	return ValidateKey(strings.TrimSpace(s)) == nil
 }
 
 // AllActions returns every Action the keymap layer knows about, sorted by
@@ -233,7 +307,6 @@ var actionNames = map[Action]string{
 	ActionPinTab:                   "PinTab",
 	ActionCopyFileRef:              "CopyFileRef",
 	ActionShowSnippetPicker:        "ShowSnippetPicker",
-	ActionMdLivePreview:            "MdLivePreview",
 	ActionApplyPreferredCodeAction: "ApplyPreferredCodeAction",
 	// Group C
 	ActionRunTask:      "RunTask",
@@ -251,6 +324,8 @@ var actionNames = map[Action]string{
 	ActionTerminalCloseTab:   "TerminalCloseTab",
 	ActionTerminalNextTab:    "TerminalNextTab",
 	ActionTerminalPrevTab:    "TerminalPrevTab",
+	ActionNextSearchResult:   "NextSearchResult",
+	ActionPrevSearchResult:   "PrevSearchResult",
 }
 
 // ActionName returns the stable string name for an Action. Empty string
@@ -262,12 +337,23 @@ func ActionName(a Action) string {
 	return ""
 }
 
+// legacyActionNames maps retired action names that may still sit in a
+// user's keymap.json to the action that does that job today.
+// "MdLivePreview" was a tab-based live Markdown preview that was never
+// finished; the F7 Markdown preview replaced it.
+var legacyActionNames = map[string]Action{
+	"MdLivePreview": ActionMarkdownPreview,
+}
+
 // actionFromName is the reverse lookup. Returns ActionNone on unknown name.
 func actionFromName(name string) Action {
 	for a, n := range actionNames {
 		if n == name {
 			return a
 		}
+	}
+	if a, ok := legacyActionNames[name]; ok {
+		return a
 	}
 	return ActionNone
 }

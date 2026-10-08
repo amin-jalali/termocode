@@ -16,7 +16,8 @@ Every file termocode reads or writes. termocode never fails to start because of 
 | `snippets.json` | User snippets, layered over the built-in ones. | JSON object: scope (filetype or `*`) → trigger → body (string or array of lines). | Yes. Also Snippets: Manage…. |
 | `user_theme.json` | Custom color theme saved by the theme editor. | JSON object: palette key (for example `BgEditor`) → hex color. Used by the `custom` theme. | Yes, but Preferences: Edit Custom Theme is easier. |
 | `breakpoints.json` | Saved debugger breakpoints per file (line and line text). | JSON `{"version", "breakpoints": {file: [...]}}`. | Not needed. termocode rewrites it when breakpoints change. |
-| `session.json` | Open files, tab order, cursor positions, expanded folders, workspace roots. | JSON, written by termocode. | No (state). Developer: Reset Session clears it and keeps `session.json.bak`. |
+| `sessions/<hash>.json` | Session of one workspace: open files, tab order, cursor positions, expanded folders, extra workspace roots, last AI chat. The name is a hash of the workspace path; the `workspace` key says which folder. | JSON, written by termocode. | No (state). Developer: Reset Session clears the current workspace's file and keeps a `.bak`. |
+| `session.json` | Layout kept across all workspaces: terminal height, Actions panel, Source Control view. A session.json from before per-workspace sessions moves to `sessions/` the first time its workspace opens. | JSON, written by termocode. | No (state). Safe to delete. |
 | `recents.json` | Recent files for the welcome screen and File: Open Recent…. | JSON array. | No (state). Safe to delete. |
 | `workspaces.json` | Recent workspace folders for File: Open Recent Workspace…. | JSON array. | No (state). Safe to delete. |
 | `palette_recents.json` | Recently used palette commands (shown first). | JSON array of command IDs. | No (state). Safe to delete. |

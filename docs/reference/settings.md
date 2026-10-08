@@ -17,7 +17,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `theme` | string | `vscode-dark-plus` | Color theme ID. Same as Preferences: Color Theme. |
-| `font_delta` | int | `-2` | Font size change asked of the host terminal at launch (OSC 1337). Note: today only the TERMOCODE_FONT_DELTA environment variable is read at startup. |
+| `font_delta` | int | `-2` | Font size change asked of the host terminal at launch (OSC 1337); 0 turns it off. TERMOCODE_FONT_DELTA wins over it. |
 
 ## Editor
 
@@ -62,7 +62,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `TERMOCODE_AI_BASE_URL` | AI API base URL; wins over `ai_base_url`. |
 | `TERMOCODE_AI_MODEL` | AI chat model; wins over `ai_model`. |
 | `TERMOCODE_AI_PROVIDER` | AI provider; wins over `ai_provider` in config.json. |
-| `TERMOCODE_FONT_DELTA` | Font size change asked of the terminal at launch (default -2, 0 turns it off). |
+| `TERMOCODE_FONT_DELTA` | Font size change asked of the terminal at launch; wins over font_delta in config.json (default -2, 0 turns it off). |
 | `TERMOCODE_ICON_MODE` | Icon set: `nerd_font`, `unicode` or `ascii`. |
 | `TERMOCODE_NERD_FONT` | Legacy: `1` is the same as `TERMOCODE_ICON_MODE=nerd_font`. |
 | `TERMOCODE_PLUGINS_DIR` | Folder for the Neovim plugins termocode clones on first launch. |
