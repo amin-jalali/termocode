@@ -276,11 +276,18 @@ func (m Model) renderRow(row int, st styleSet) string {
 		return emptyRow
 	case rowDivider:
 		return st.divider.Render(strings.Repeat("─", Width))
-	case rowItemTop:
-		return renderActivityBoldRow(it.icon, 0, it.view == m.active, st)
-	case rowItemBottom:
+	case rowItemTop, rowItemBottom:
+		if theme.CurrentIconMode != theme.IconModeASCII {
+			return renderActivityGlyphRow(it.icon, kind == rowItemTop, it.view == m.active, st)
+		}
+		if kind == rowItemTop {
+			return renderActivityBoldRow(it.icon, 0, it.view == m.active, st)
+		}
 		return renderActivityBoldRow(it.icon, 1, it.view == m.active, st)
 	case rowInterItem:
+		if theme.CurrentIconMode != theme.IconModeASCII {
+			return emptyRow
+		}
 		return renderInterItemDivider(st)
 	}
 	return emptyRow
@@ -345,6 +352,36 @@ func renderActivityBoldRow(ic theme.Icon, boldRow int, isActive bool, st styleSe
 		st.bgFill.Render(strings.Repeat(" ", rightPad))
 	// Last-resort pin so JoinHorizontal sees exactly Width.
 	return st.rowFrame.Render(out)
+}
+
+// renderActivityGlyphRow draws one row of an item with a single-cell icon
+// (Nerd Font or Unicode set): the icon sits on the first row, the second
+// row is breathing room. The active item gets the accent edge and a soft
+// accent wash across both rows.
+func renderActivityGlyphRow(ic theme.Icon, iconRow, isActive bool, st styleSet) string {
+	bg := theme.LG(theme.BgActivityBar)
+	if isActive {
+		bg = theme.Mix(theme.BgActivityBar, theme.BorderFocus, 0.16)
+	}
+	fill := lipgloss.NewStyle().Background(bg)
+	lead := st.bgFill.Render(" ")
+	if isActive {
+		lead = lipgloss.NewStyle().Background(theme.LG(theme.BgActivityBar)).
+			Foreground(theme.LG(theme.BorderFocus)).Render("▎")
+	}
+	g := " "
+	if iconRow {
+		g = ic.String()
+		if runewidth.StringWidth(g) != 1 {
+			g = ic.ASCII
+		}
+	}
+	fg := theme.LG(theme.TextMuted)
+	if isActive {
+		fg = theme.LG(theme.TextWhite)
+	}
+	icon := lipgloss.NewStyle().Background(bg).Foreground(fg).Bold(true).Render(g)
+	return st.rowFrame.Render(lead + fill.Render(" ") + icon + fill.Render(" "))
 }
 
 // renderInterItemDivider draws the hairline that sits between two

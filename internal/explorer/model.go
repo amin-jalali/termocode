@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/amin-jalali/termocode/internal/anim"
 )
 
 // OpenFileMsg asks the host to open Path in the editor. KeepFocus = true
@@ -40,6 +42,10 @@ type Model struct {
 	// target for single-row actions (Delete, etc).
 	selected   map[string]struct{}
 	anchorPath string
+
+	// scroll animates the drawn window toward top (smooth wheel / page
+	// scrolling); see AnimStep.
+	scroll anim.Value
 }
 
 func New() Model {
@@ -647,4 +653,42 @@ func (m *Model) scrollIntoView() {
 	if m.top < 0 {
 		m.top = 0
 	}
+}
+
+// Animating reports whether the drawn tree window still has to glide to
+// the scroll position.
+func (m Model) Animating() bool {
+	return m.scroll.Target != float64(m.top) || m.scroll.Moving()
+}
+
+// AnimStep advances the scroll animation one frame. One-row moves snap so
+// arrow-key navigation stays crisp; wheel and page jumps glide.
+func (m *Model) AnimStep() {
+	if t := float64(m.top); m.scroll.Target != t {
+		if d := t - m.scroll.Pos; d >= -1 && d <= 1 {
+			m.scroll.Jump(t)
+		} else {
+			m.scroll.Set(t)
+		}
+	}
+	m.scroll.Step()
+}
+
+// drawTop is the first tree row to draw this frame: the animated scroll
+// position while a glide is running, else top.
+func (m Model) drawTop(top, n int) int {
+	if !anim.Enabled || !m.Animating() {
+		return top
+	}
+	if d := float64(m.top) - m.scroll.Pos; d >= -1 && d <= 1 && !m.scroll.Moving() {
+		return top
+	}
+	t := m.scroll.Int()
+	if t > n-1 {
+		t = n - 1
+	}
+	if t < 0 {
+		t = 0
+	}
+	return t
 }

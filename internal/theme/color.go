@@ -158,6 +158,17 @@ func SGR(fg, bg *RGB) string {
 	return "\x1b[" + strings.Join(parts, ";") + "m"
 }
 
+// FgSeq / BgSeq are SGR sequences that set a token as foreground /
+// background in the active profile ("" on a no-colour terminal). For
+// hand-built ANSI strings (diff colouring, test output).
+func FgSeq(c Color256) string { v := ToRGB(c); return SGR(&v, nil) }
+
+// BgSeq: see FgSeq.
+func BgSeq(c Color256) string { v := ToRGB(c); return SGR(nil, &v) }
+
+// BgSeqMix is BgSeq of a blend of two tokens.
+func BgSeqMix(a, b Color256, t float64) string { v := Lerp(ToRGB(a), ToRGB(b), t); return SGR(nil, &v) }
+
 func xterm256(n int) RGB {
 	if n < 0 || n > 255 {
 		return RGB{}

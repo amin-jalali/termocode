@@ -6,6 +6,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // Style constants for buttons.
@@ -86,7 +88,7 @@ func (m Model) View() string {
 	}
 	return lipgloss.Place(m.w, m.h, lipgloss.Center, lipgloss.Center, box,
 		lipgloss.WithWhitespaceChars(" "),
-		lipgloss.WithWhitespaceForeground(lipgloss.Color("#1c1c1c")),
+		lipgloss.WithWhitespaceForeground(theme.LG(theme.BgEditor)),
 	)
 }
 
@@ -155,21 +157,38 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 // idiom — same panel bg, dim rim, hairline separators, soft selection
 // bar tint.
 var (
-	cmBoxBg      = lipgloss.Color("#262626")
-	cmBorderRim  = lipgloss.Color("#3a3a3a")
-	cmIconWarn   = lipgloss.Color("#e0a050") // amber for the ⚠ glyph
-	cmTextPri    = lipgloss.Color("#d0d0d0")
-	cmTextBody   = lipgloss.Color("#cccccc")
-	cmTextDim    = lipgloss.Color("#6c6c6c")
-	cmGuideColor = lipgloss.Color("#363636")
-	cmSubtitleFg = lipgloss.Color("#5a5a66")
-	cmSelBg      = lipgloss.Color("#1f4f63") // soft selection bar (matches settings)
-	cmSelFg      = lipgloss.Color("#ffffff")
-	// Destructive / primary tints are kept softer than the previous
-	// solid VSCode blues so they harmonise with the muted panel bg.
-	cmPrimaryBg     = lipgloss.Color("#0e639c")
-	cmDestructiveBg = lipgloss.Color("#a04030")
+	cmBoxBg lipgloss.Color
+	cmBorderRim lipgloss.Color
+	cmIconWarn lipgloss.Color
+	cmTextPri lipgloss.Color
+	cmTextBody lipgloss.Color
+	cmTextDim lipgloss.Color
+	cmGuideColor lipgloss.Color
+	cmSubtitleFg lipgloss.Color
+	cmSelBg lipgloss.Color
+	cmSelFg lipgloss.Color
+	cmPrimaryBg lipgloss.Color
+	cmDestructiveBg lipgloss.Color
 )
+
+func init() { refreshColors() }
+
+// refreshColors derives this file's colours from the active theme. It runs
+// before every render so a theme switch applies immediately.
+func refreshColors() {
+	cmBoxBg = theme.Float().Bg
+	cmBorderRim = theme.Float().Border
+	cmIconWarn = theme.LG(theme.DiagWarning) // amber for the ⚠ glyph
+	cmTextPri = theme.Float().Title
+	cmTextBody = theme.Float().Text
+	cmTextDim = theme.Float().Dim
+	cmGuideColor = theme.Float().Hairline
+	cmSubtitleFg = theme.Float().Dim
+	cmSelBg = theme.Float().SelBg // soft selection bar (matches settings)
+	cmSelFg = theme.Float().SelFg
+	cmPrimaryBg = theme.Float().Primary
+	cmDestructiveBg = theme.Float().DangerBg
+}
 
 // confirmDims captures every measurement Box() needs in one place, so
 // that Box() and HandleMouse() can both compute the same layout from
@@ -293,6 +312,7 @@ func (m Model) computeRects() (boxRect rect, buttonRects []rect) {
 // conventions as the Settings modal: width band + auto-fit height +
 // flexible footer spacer.
 func (m Model) Box() string {
+	refreshColors()
 	if m.w <= 0 || m.h <= 0 {
 		return ""
 	}
@@ -406,40 +426,25 @@ func (m Model) buttonLabel(b Button) string {
 // (default → panel bg, primary → cmPrimaryBg, destructive → cmDestructiveBg).
 func (m Model) renderButton(b Button, active bool) string {
 	label := "  " + b.Title + "  "
-
+	f := theme.Float()
 	if active {
-		// Active button — selection bar. Style-tint shows through as the
-		// fg accent so the user can still distinguish destructive vs
-		// primary even when highlighted.
-		fg := cmSelFg
-		switch b.Style {
-		case StyleDestructive:
-			fg = lipgloss.Color("#ffd0c4")
-		case StylePrimary:
-			fg = lipgloss.Color("#cce6f4")
+		// The focused button is a solid fill: accent for primary / plain,
+		// red for destructive.
+		bg := cmPrimaryBg
+		if b.Style == StyleDestructive {
+			bg = theme.LG(theme.DiagError)
 		}
-		return lipgloss.NewStyle().
-			Background(cmSelBg).
-			Foreground(fg).
-			Bold(true).
-			Render(label)
+		return lipgloss.NewStyle().Background(bg).Foreground(theme.LG(theme.OnAccent)).Bold(true).Render(label)
 	}
-
-	// Inactive — keep the accent bg, just less prominent than before.
-	bg := cmBoxBg
+	// Resting buttons are quiet chips; the label colour hints the role.
 	fg := cmTextPri
 	switch b.Style {
 	case StylePrimary:
-		bg = cmPrimaryBg
-		fg = lipgloss.Color("#ffffff")
+		fg = f.Primary
 	case StyleDestructive:
-		bg = cmDestructiveBg
-		fg = lipgloss.Color("#ffffff")
-	default:
-		bg = lipgloss.Color("#3a3a3a")
-		fg = lipgloss.Color("#cccccc")
+		fg = f.Danger
 	}
-	return lipgloss.NewStyle().Background(bg).Foreground(fg).Render(label)
+	return lipgloss.NewStyle().Background(f.KeycapBg).Foreground(fg).Render(label)
 }
 
 // wrap is a minimal word wrapper, preserving manual newlines.

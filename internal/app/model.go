@@ -9,6 +9,7 @@ import (
 
 	"context"
 	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/anim"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/debounce"
 	"github.com/amin-jalali/termocode/internal/editor"
@@ -93,27 +94,31 @@ const terminalRowsMin = 5
 const terminalRowsDefault = 10
 
 type Model struct {
-	activity  activity.Model
-	explorer  explorer.Model
-	editor    editor.Model
-	tabs      tabbar.Model
-	status    statusbar.Model
-	picker    picker.Model
-	menu      menu.Model
-	find      findbar.Model
-	confirm   confirm.Model
-	preview   preview.Model
-	prompt    prompt.Model
-	recents   recents.Model
-	replace   replacebar.Model
-	search    search.Model
-	toast     toast.Model
-	theme     theme.Theme
-	themeID   string // active theme id (drives the nvim colourscheme)
-	keys      keymap.KeyMap
-	nvim      *nvim.Client
-	bufs      []nvim.BufferInfo
-	activeBuf int
+	activity activity.Model
+	explorer explorer.Model
+	editor   editor.Model
+	tabs     tabbar.Model
+	status   statusbar.Model
+	picker   picker.Model
+	menu     menu.Model
+	find     findbar.Model
+	confirm  confirm.Model
+	preview  preview.Model
+	prompt   prompt.Model
+	recents  recents.Model
+	replace  replacebar.Model
+	search   search.Model
+	toast    toast.Model
+	theme    theme.Theme
+	themeID  string // active theme id (drives the nvim colourscheme)
+	// Animations (anim.go): overlay open progress 0→1, and whether a
+	// tick is already scheduled.
+	overlayAnim anim.Value
+	animTicking bool
+	keys        keymap.KeyMap
+	nvim        *nvim.Client
+	bufs        []nvim.BufferInfo
+	activeBuf   int
 
 	// keymapProblems are keymap.json entries dropped at startup (typos);
 	// shown once in a toast on nvim.ReadyMsg.

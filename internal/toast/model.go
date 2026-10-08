@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 
+	"github.com/amin-jalali/termocode/internal/anim"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -35,6 +36,11 @@ type Toast struct {
 	// Key, when set, identifies an updatable toast (PushKeyed): a later push
 	// with the same key replaces it in place instead of stacking.
 	Key string
+
+	// slide is the horizontal slide position: 0 = in place, 1 = fully
+	// off to the right. New toasts slide in, expired ones slide out.
+	slide   anim.Value
+	leaving bool
 }
 
 // TickMsg fires when the next-expiring toast should be expired and re-rendered.
@@ -43,11 +49,11 @@ type TickMsg time.Time
 const (
 	defaultLifetime = 3 * time.Second
 	maxStacked      = 3
-	// Each toast occupies these rows: title + detail. Top + bottom edge
-	// "borders" are drawn as ANSI overline / underline on those rows
-	// (1/8-cell thick), not as separate rows.
-	rowsPerToast = 2
-	// One blank row separates stacked toasts.
+	// A toast is a rounded card: border + title + detail + border. Toasts
+	// without a detail line drop the detail row.
+	rowsPerToast        = 4
+	rowsPerToastCompact = 3
+	// One row separates stacked toasts (room for the drop shadow).
 	gapBetweenToasts = 1
 )
 
@@ -87,6 +93,8 @@ func (m Model) PushDetail(severity Severity, title, detail string) (Model, tea.C
 		Detail:    detail,
 		ExpiresAt: time.Now().Add(defaultLifetime),
 	}
+	t.slide.Jump(1)
+	t.slide.Set(0)
 	m.toasts = append(m.toasts, t)
 	if OnPush != nil {
 		combined := title
@@ -134,10 +142,17 @@ func (m Model) Dismiss(key string) Model {
 // Tick removes any toasts whose ExpiresAt is in the past and returns the
 // model + a Cmd waking us at the next expiry.
 func (m Model) Tick(now time.Time) (Model, tea.Cmd) {
-	out := m.toasts[:0]
+	out := make([]Toast, 0, len(m.toasts))
 	for _, t := range m.toasts {
 		if !t.ExpiresAt.After(now) {
-			continue
+			if !anim.Enabled {
+				continue
+			}
+			// Slide out first; Step drops it once it is off screen.
+			if !t.leaving {
+				t.leaving = true
+				t.slide.Set(1)
+			}
 		}
 		out = append(out, t)
 	}
@@ -145,15 +160,52 @@ func (m Model) Tick(now time.Time) (Model, tea.Cmd) {
 	return m, m.scheduleTick()
 }
 
+// Animating reports whether any toast is sliding.
+func (m Model) Animating() bool {
+	for _, t := range m.toasts {
+		if t.slide.Moving() {
+			return true
+		}
+	}
+	return false
+}
+
+// Step advances the slide animations one frame and drops toasts that
+// finished sliding out. It reports whether anything is still moving.
+func (m Model) Step() (Model, bool) {
+	if len(m.toasts) == 0 {
+		return m, false
+	}
+	moving := false
+	out := make([]Toast, 0, len(m.toasts))
+	for _, t := range m.toasts {
+		if t.slide.Step() {
+			moving = true
+		}
+		if t.leaving && !t.slide.Moving() {
+			continue
+		}
+		out = append(out, t)
+	}
+	m.toasts = out
+	return m, moving
+}
+
 func (m Model) scheduleTick() tea.Cmd {
 	if len(m.toasts) == 0 {
 		return nil
 	}
-	soonest := m.toasts[0].ExpiresAt
-	for _, t := range m.toasts[1:] {
-		if t.ExpiresAt.Before(soonest) {
+	var soonest time.Time
+	for _, t := range m.toasts {
+		if t.leaving {
+			continue
+		}
+		if soonest.IsZero() || t.ExpiresAt.Before(soonest) {
 			soonest = t.ExpiresAt
 		}
+	}
+	if soonest.IsZero() {
+		return nil
 	}
 	d := time.Until(soonest)
 	if d < 50*time.Millisecond {
@@ -162,12 +214,17 @@ func (m Model) scheduleTick() tea.Cmd {
 	return tea.Tick(d, func(t time.Time) tea.Msg { return TickMsg(t) })
 }
 
-// View returns the rendered toast block as a list of full-width rows. Each
-// toast contributes `rowsPerToast` rows: topBorder + title + detail + botBorder.
-// Stacked toasts are separated by `gapBetweenToasts` blank rows (rendered
-// transparent — caller's base bg shows through).
-func (m Model) View(width, height int) []string {
-	if len(m.toasts) == 0 || width <= 0 || height <= 0 {
+// Card is one rendered toast: its rows plus the slide position (0 = in
+// place, 1 = off to the right) the compositor applies.
+type Card struct {
+	Lines []string
+	Slide float64
+}
+
+// Cards returns the visible toasts (oldest first), each as a rounded card
+// `width` cells wide.
+func (m Model) Cards(width int) []Card {
+	if len(m.toasts) == 0 || width <= 0 {
 		return nil
 	}
 	count := len(m.toasts)
@@ -175,112 +232,100 @@ func (m Model) View(width, height int) []string {
 		count = maxStacked
 	}
 	visible := m.toasts[len(m.toasts)-count:]
-	out := make([]string, 0, count*rowsPerToast+(count-1)*gapBetweenToasts)
-	for i, t := range visible {
-		if i > 0 {
-			// Gap row: empty string of `width` cells. Returning a string of
-			// pure spaces (no bg style) lets dropLeftVisual / spliceAt
-			// preserve the underlying editor row through the gap.
-			for g := 0; g < gapBetweenToasts; g++ {
-				out = append(out, transparentRow(width))
-			}
-		}
-		out = append(out, renderToast(t, width)...)
+	out := make([]Card, 0, count)
+	for _, t := range visible {
+		out = append(out, Card{Lines: renderToast(t, width), Slide: t.slide.Pos})
 	}
 	return out
 }
 
-// transparentRow returns a row that splices through the toast region as
-// "no overlay" — same width but rendered as the underlying base row's
-// content. We achieve that by emitting a sentinel: ANY string of width
-// cells will overwrite the base in spliceAt, so we emit an empty string
-// with a marker. Caller must skip these rows. Simpler: just emit a
-// width-long string of spaces with no SGR — terminal will use whatever
-// SGR was last open from the left base portion, which (after normalize)
-// is the editor bg. That gives a clean editor-bg gap.
-func transparentRow(width int) string {
-	return strings.Repeat(" ", width)
+// View returns the toast block as rows (cards separated by blank gap
+// rows). The app composites Cards directly; View is kept for callers that
+// want a flat block.
+func (m Model) View(width, height int) []string {
+	if len(m.toasts) == 0 || width <= 0 || height <= 0 {
+		return nil
+	}
+	var out []string
+	for i, c := range m.Cards(width) {
+		if i > 0 {
+			for g := 0; g < gapBetweenToasts; g++ {
+				out = append(out, strings.Repeat(" ", width))
+			}
+		}
+		out = append(out, c.Lines...)
+	}
+	return out
 }
 
-func renderToast(t Toast, paneW int) []string {
-	// Severity → accent colour + level label. Width-1 ASCII labels so the
-	// reported visual width always matches the rendered cell count.
-	accentColor := theme.DiagInfo
-	label := "INFO"
-	switch t.Severity {
+// severityIcon is the glyph + colour token for a severity.
+func severityIcon(s Severity) (string, theme.Color256) {
+	type icons struct{ nerd, uni, ascii string }
+	var ic icons
+	var c theme.Color256
+	switch s {
 	case Warn:
-		accentColor = theme.DiagWarning
-		label = "WARN"
+		ic, c = icons{"\uf071", "▲", "!"}, theme.DiagWarning
 	case Errr:
-		accentColor = theme.DiagError
-		label = "ERR "
+		ic, c = icons{"\uf057", "✕", "x"}, theme.DiagError
+	default:
+		ic, c = icons{"\uf05a", "●", "i"}, theme.DiagInfo
 	}
+	switch theme.CurrentIconMode {
+	case theme.IconModeNerdFont:
+		return ic.nerd, c
+	case theme.IconModeUnicode:
+		return ic.uni, c
+	}
+	return ic.ascii, c
+}
 
-	bg := theme.Bg(theme.BgHover)
-	accentStrip := theme.Bg(accentColor)
-	labelStyle := theme.FgBg(accentColor, theme.BgHover).Bold(true)
-	titleStyle := theme.FgBg(theme.TextPrimary, theme.BgHover).Bold(true)
-	detailStyle := theme.FgBg(theme.TextMuted, theme.BgHover)
-	// Pale (Faint) accent line that traces the top + bottom of the toast
-	// box — same colour as the severity accent, dimmed so it reads as a
-	// subtle outline rather than a second strong block.
-	borderStyle := theme.FgBg(accentColor, theme.BgHover).Faint(true)
-
-	w := paneW
+// renderToast draws one toast as a rounded card exactly w cells wide:
+//
+//	╭──────────────────────────────╮
+//	│  ●  Saved                    │
+//	│     internal/foo.go · 480 L  │
+//	╰──────────────────────────────╯
+func renderToast(t Toast, w int) []string {
 	if w < 16 {
 		w = 16
 	}
+	f := theme.Float()
+	icon, sev := severityIcon(t.Severity)
+	bg := lipgloss.NewStyle().Background(f.Bg)
+	iconStyle := lipgloss.NewStyle().Background(f.Bg).Foreground(theme.LG(sev)).Bold(true)
+	titleStyle := lipgloss.NewStyle().Background(f.Bg).Foreground(f.Title).Bold(true)
+	detailStyle := lipgloss.NewStyle().Background(f.Bg).Foreground(f.Hint)
 
-	const stripW = 1
-	const labelW = 4
-	const labelGapL = 1
-	const labelGapR = 2
-	leadingW := stripW + labelGapL + labelW + labelGapR
-
-	titleAvail := w - leadingW - 1 // 1-cell trailing pad for symmetry
-	if titleAvail < 4 {
-		titleAvail = 4
+	inner := w - 2
+	const lead = 5 // "  ●  "
+	avail := inner - lead - 1
+	if avail < 4 {
+		avail = 4
 	}
-	title := t.Title
-	if runewidth.StringWidth(title) > titleAvail {
-		title = runewidth.Truncate(title, titleAvail, "…")
-	}
-	titleBody := accentStrip.Render(strings.Repeat(" ", stripW)) +
-		bg.Render(strings.Repeat(" ", labelGapL)) +
-		labelStyle.Render(label) +
-		bg.Render(strings.Repeat(" ", labelGapR)) +
-		titleStyle.Render(title)
-	if used := lipgloss.Width(titleBody); used < w {
-		titleBody += bg.Render(strings.Repeat(" ", w-used))
-	}
-
-	// Detail row mirrors the title-row indent EXACTLY (strip + gapL +
-	// label-shaped gap + gapR), so the SGR boundary positions line up
-	// between the two rows.
-	detailAvail := w - leadingW - 1
-	if detailAvail < 4 {
-		detailAvail = 4
-	}
-	// Use labelStyle (bold) for the row-2 label-shaped gap too — even
-	// though we're rendering spaces, matching the row-1 SGR sequence
-	// keeps glyph metrics identical between the two rows. Without this,
-	// row-1's bold "WARN" can render ~1px wider than row-2's plain bg
-	// in some terminal fonts and the rows drift apart by a cell.
-	detailBody := accentStrip.Render(strings.Repeat(" ", stripW)) +
-		bg.Render(strings.Repeat(" ", labelGapL)) +
-		labelStyle.Render(strings.Repeat(" ", labelW)) +
-		bg.Render(strings.Repeat(" ", labelGapR))
-	if t.Detail != "" {
-		detail := t.Detail
-		if runewidth.StringWidth(detail) > detailAvail {
-			detail = runewidth.Truncate(detail, detailAvail, "…")
+	fit := func(s string) string {
+		if runewidth.StringWidth(s) > avail {
+			return runewidth.Truncate(s, avail, "…")
 		}
-		detailBody += detailStyle.Render(detail)
+		return s
 	}
-	if used := lipgloss.Width(detailBody); used < w {
-		detailBody += bg.Render(strings.Repeat(" ", w-used))
+	pad := func(s string) string {
+		if used := lipgloss.Width(s); used < inner {
+			s += bg.Render(strings.Repeat(" ", inner-used))
+		}
+		return s
 	}
-
-	_ = borderStyle
-	return []string{titleBody, detailBody}
+	rows := []string{pad(bg.Render("  ") + iconStyle.Render(icon) + bg.Render("  ") + titleStyle.Render(fit(t.Title)))}
+	if t.Detail != "" {
+		rows = append(rows, pad(bg.Render(strings.Repeat(" ", lead))+detailStyle.Render(fit(t.Detail))))
+	}
+	rim := theme.Mix(theme.BorderDefault, sev, 0.45)
+	box := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(rim).
+		BorderBackground(f.Bg).
+		Background(f.Bg).
+		Width(inner).
+		Render(strings.Join(rows, "\n"))
+	return strings.Split(box, "\n")
 }

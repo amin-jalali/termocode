@@ -18,6 +18,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -279,44 +281,56 @@ func (m Model) Box() string {
 // the per-cell dim-and-tint replacement. Other surfaces use distinct
 // values so they pass through the overlay untouched and read as crisp.
 var (
-	PanelBg     = lipgloss.Color("#262626")
-	PanelBorder = lipgloss.Color("#3a3a3a")
-
-	// HairlineFg is the muted line that splits header / list / footer.
-	HairlineFg = lipgloss.Color("#363636")
-
-	// Input field — slightly darker than the panel so it reads as a well.
-	InputBg     = lipgloss.Color("#1a1a1c")
-	InputFg     = lipgloss.Color("#f2f2f2")
-	InputCursor = lipgloss.Color("#bb86fc") // matches findbar.AccentFocus
-	Placeholder = lipgloss.Color("#5e5e66")
-
-	// Selected row — subtle purple tint (NOT bright cyan/blue).
-	SelBg     = lipgloss.Color("#2a1f3a")
-	SelDot    = lipgloss.Color("#bb86fc")
-	NameFg    = lipgloss.Color("#f2f2f2")
-	SelNameFg = lipgloss.Color("#ffffff")
-
-	// Path / muted text on both selected and unselected rows.
-	PathFg    = lipgloss.Color("#8c8c8c")
-	SelPathFg = lipgloss.Color("#cfc0e6")
-
-	// Header + subtitle text.
-	TitleFg    = lipgloss.Color("#e6e6e6")
-	HeaderIcon = lipgloss.Color("#bb86fc")
-
-	// Pills: small chips for "20 matches" + the right-aligned time slot.
-	PillBg = lipgloss.Color("#2a2a2a")
-	PillFg = lipgloss.Color("#9a9a9a")
-
-	// Footer.
-	FooterFg    = lipgloss.Color("#8c8c8c")
-	FooterChipBg = lipgloss.Color("#2a2a2a")
-	FooterChipFg = lipgloss.Color("#cfcfcf")
-
-	// Indicator bullet for unselected rows.
-	BulletFg = lipgloss.Color("#5a5a66")
+	PanelBg lipgloss.Color
+	PanelBorder lipgloss.Color
+	HairlineFg lipgloss.Color
+	InputBg lipgloss.Color
+	InputFg lipgloss.Color
+	InputCursor lipgloss.Color
+	Placeholder lipgloss.Color
+	SelBg lipgloss.Color
+	SelDot lipgloss.Color
+	NameFg lipgloss.Color
+	SelNameFg lipgloss.Color
+	PathFg lipgloss.Color
+	SelPathFg lipgloss.Color
+	TitleFg lipgloss.Color
+	HeaderIcon lipgloss.Color
+	PillBg lipgloss.Color
+	PillFg lipgloss.Color
+	FooterFg lipgloss.Color
+	FooterChipBg lipgloss.Color
+	FooterChipFg lipgloss.Color
+	BulletFg lipgloss.Color
 )
+
+func init() { refreshColors() }
+
+// refreshColors derives this file's colours from the active theme. It runs
+// before every render so a theme switch applies immediately.
+func refreshColors() {
+	PanelBg = theme.Float().Bg
+	PanelBorder = theme.Float().Border
+	HairlineFg = theme.Float().Hairline
+	InputBg = theme.Float().InputBg
+	InputFg = theme.Float().Text
+	InputCursor = theme.Float().Icon // matches findbar.AccentFocus
+	Placeholder = theme.Float().Dim
+	SelBg = theme.Float().SelBg
+	SelDot = theme.Float().Icon
+	NameFg = theme.Float().Text
+	SelNameFg = theme.Float().SelFg
+	PathFg = theme.Float().Hint
+	SelPathFg = theme.Float().Sub
+	TitleFg = theme.Float().Title
+	HeaderIcon = theme.Float().Icon
+	PillBg = theme.Float().KeycapBg
+	PillFg = theme.Float().Hint
+	FooterFg = theme.Float().Hint
+	FooterChipBg = theme.Float().KeycapBg
+	FooterChipFg = theme.Float().KeycapFg
+	BulletFg = theme.Float().Dim
+}
 
 // layoutDims returns the modal box width and the number of result rows
 // (each row is 1 cell tall — single-line entries, command-palette style).
@@ -356,6 +370,7 @@ func (m Model) layoutDims() (boxW, rowsVisible int) {
 }
 
 func (m Model) renderBox() string {
+	refreshColors()
 	boxW, rowsVisible := m.layoutDims()
 	innerW := boxW - 2
 
@@ -620,7 +635,7 @@ func renderTimeChip(text string, rowBg lipgloss.Color) string {
 	// On selected rows, lift the chip's bg one notch lighter than SelBg so
 	// the time still reads as a distinct pill (not a fade-out).
 	if rowBg == SelBg {
-		chipBg = lipgloss.Color("#3a2a4a")
+		chipBg = theme.Mix(theme.BgFloat, theme.BorderFocus, 0.3)
 	}
 	return lipgloss.NewStyle().
 		Background(chipBg).

@@ -1,91 +1,58 @@
 package app
 
 import (
-	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
+
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
-// Pseudo-transparent floating modal overlay (pickers, prompts).
+// Floating overlay compositor (modals, pickers, prompts, confirms, menus,
+// toasts).
 //
-// Recipe (illusion only — terminal can't do real alpha):
-//   1. The modal RECTANGLE is identified at render time.
-//   2. The base cells under the rectangle are dimmed + blue-tinted and
-//      become the modal BODY background — so the editor's surface
-//      visibly shows through.
-//   3. Borders / title bar / input bar / selection bars are rendered
-//      ON TOP of that dimmed body, with soft tints (no bright cyan).
-//   4. Cells outside the rectangle are dimmed so the modal stands out
-//      while the editor stays visible at reduced intensity.
+// The terminal has no alpha channel, so a "floating" card is an
+// illusion built from cells:
 //
-// No noise, no solid blue panel, no real transparency, no drop shadow.
-var (
-	modalTint        = rgbColor{0x00, 0x01, 0x03} // essentially black, faintest blue hint
-	bodyBlendAlpha   = 1.0                        // fully opaque body — editor bg doesn't bleed through
-	bodyFgDimFactor  = 0.10                       // ghost editor text barely visible (10% intensity)
-	glassBorderLight = rgbColor{0x3a, 0x3a, 0x3a} // uniform thin dark-grey rim
-	glassBorderDark  = rgbColor{0x15, 0x19, 0x22} // bottom + right rim shadow (unused)
-	glassShadow      = rgbColor{0x0b, 0x0d, 0x10} // drop shadow (unused)
+//  1. The frame behind the card is dimmed (backdrop), so the card stands
+//     out while the editor stays readable around it.
+//  2. The card itself is opaque: it paints its own BgFloat surface.
+//  3. A soft drop shadow — the cells one column right and one row below
+//     the card, blended toward the theme's Shadow token — lifts the card
+//     off the page.
+//  4. While an open animation runs, the card slides up a couple of rows
+//     and fades in from the backdrop (Progress < 1).
+//
+// Colour math only happens on truecolor / 256-colour terminals. On a
+// 16-colour terminal the backdrop uses the SGR "faint" attribute and the
+// shadow a plain dark background, so no 24-bit sequence is ever written.
 
-	// Soft re-tints for the picker's strong VSCode-blue bars so the
-	// modal feels cohesive instead of bright cyan over dim body.
-	softTitleBg    = rgbColor{0x1f, 0x4f, 0x63}
-	softSelectedBg = rgbColor{0x1f, 0x4f, 0x63}
-	softInputBg    = rgbColor{0x1d, 0x26, 0x32}
-
-	pickerPanelBg = rgbColor{0x26, 0x26, 0x26}
-	pickerTitleBg = rgbColor{0x0e, 0x63, 0x9c}
-	pickerSelBg   = rgbColor{0x09, 0x47, 0x71}
-	pickerInputBg = rgbColor{0x1f, 0x34, 0x47}
-
-	editorBgFallback    = rgbColor{0x1c, 0x1c, 0x1c}
-	textPrimaryFallback = rgbColor{0xd0, 0xd0, 0xd0}
-
-	defaultOutsideDim = 0.4 // outside cells: 40% intensity (= 60% transparent feel)
-)
-
-// ModalOpts lets callers tweak the modal recipe per-call. Pass nil to use
-// the package defaults (the values tuned for the Settings modal: blue rim,
-// 95% tint, 18% fg dim, 0.4 outside dim).
+// ModalOpts tweaks one overlay. nil = defaults (dim backdrop, shadow, no
+// animation).
 type ModalOpts struct {
-	OutsideDim     float64
-	BodyBlendAlpha float64
-	BodyFgDim      float64
-	BodyTint       rgbColor
-	Rim            rgbColor
-	SoftAccent     rgbColor
+	// OutsideDim is the backdrop intensity (0..1, default 0.45).
+	OutsideDim float64
+	// NoDim keeps the backdrop at full intensity (menus, toasts).
+	NoDim bool
+	// NoShadow skips the drop shadow.
+	NoShadow bool
+	// Animating + Progress drive the open animation (0 → 1).
+	Animating bool
+	Progress  float64
+	// At, when set, places the card at (X, Y) instead of centring it.
+	At     bool
+	X, Y   int
+	Slide  int // rows the card travels while animating (default 2)
+	SlideX int // columns the card travels while animating (toasts)
 }
 
-func modalOverlay(base, box string, screenW, screenH int, opts *ModalOpts) string {
-	outsideDim := defaultOutsideDim
-	blendAlpha := bodyBlendAlpha
-	fgDim := bodyFgDimFactor
-	tint := modalTint
-	rim := glassBorderLight
-	accent := softTitleBg
-	if opts != nil {
-		if opts.OutsideDim != 0 {
-			outsideDim = opts.OutsideDim
-		}
-		if opts.BodyBlendAlpha != 0 {
-			blendAlpha = opts.BodyBlendAlpha
-		}
-		if opts.BodyFgDim != 0 {
-			fgDim = opts.BodyFgDim
-		}
-		if opts.BodyTint != (rgbColor{}) {
-			tint = opts.BodyTint
-		}
-		if opts.Rim != (rgbColor{}) {
-			rim = opts.Rim
-		}
-		if opts.SoftAccent != (rgbColor{}) {
-			accent = opts.SoftAccent
-		}
-	}
+const defaultOutsideDim = 0.55
 
+// modalOverlay centres box over base and composites it (see above).
+func modalOverlay(base, box string, screenW, screenH int, opts *ModalOpts) string {
 	boxLines := strings.Split(strings.TrimRight(box, "\n"), "\n")
 	if len(boxLines) == 0 {
 		return base
@@ -95,8 +62,25 @@ func modalOverlay(base, box string, screenW, screenH int, opts *ModalOpts) strin
 	if boxW == 0 {
 		return base
 	}
+	o := ModalOpts{}
+	if opts != nil {
+		o = *opts
+	}
+	p := 1.0
+	if o.Animating {
+		p = clamp01(o.Progress)
+	}
 	leftCol := (screenW - boxW) / 2
 	topRow := (screenH - boxH) / 2
+	if o.At {
+		leftCol, topRow = o.X, o.Y
+	}
+	slide := o.Slide
+	if slide == 0 && !o.At {
+		slide = 2
+	}
+	topRow += int(math.Round((1 - p) * float64(slide)))
+	leftCol += int(math.Round((1 - p) * float64(o.SlideX)))
 	if leftCol < 0 {
 		leftCol = 0
 	}
@@ -104,296 +88,265 @@ func modalOverlay(base, box string, screenW, screenH int, opts *ModalOpts) strin
 		topRow = 0
 	}
 
-	// The "dim every cell outside the box" pass walks the WHOLE screen and is by
-	// far the most expensive step. It depends only on the base frame and the box
-	// RECTANGLE — never on the box CONTENTS. During mouse hover the editor frame
-	// is static while the modal's highlighted row changes on every motion event,
-	// so we cache the dimmed base and reuse it across frames. Without this, every
-	// hover motion re-dims the full screen, which makes hover visibly lag.
-	dimmed := dimmedBaseCached(base, leftCol, topRow, boxW, boxH, outsideDim)
-
-	// Copy so splicing the box doesn't mutate the cached dimmed base.
-	out := make([]string, len(dimmed))
-	copy(out, dimmed)
-
-	for i := range boxLines {
-		baseRowIdx := topRow + i
-		var baseCells []cellData
-		if baseRowIdx >= 0 && baseRowIdx < len(out) {
-			baseCells = parseANSIRow(out[baseRowIdx])
+	var lines []string
+	dim := 1.0
+	if o.NoDim {
+		lines = strings.Split(base, "\n")
+	} else {
+		dim = o.OutsideDim
+		if dim == 0 {
+			dim = defaultOutsideDim
 		}
-		boxLines[i] = styleGlassRow(boxLines[i], baseCells, leftCol, i, len(boxLines), blendAlpha, fgDim, tint, rim, accent)
+		// The backdrop fades in with the card.
+		dim = 1 - (1-dim)*p
+		cached := dimmedBaseCached(base, leftCol, topRow, boxW, boxH, dim)
+		lines = make([]string, len(cached))
+		copy(lines, cached)
 	}
 
-	for i, line := range boxLines {
+	for i, bl := range boxLines {
 		row := topRow + i
-		if row < 0 || row >= len(out) {
+		if row < 0 || row >= len(lines) {
 			continue
 		}
-		out[row] = spliceAt(out[row], line, leftCol)
+		under := parseANSIRow(lines[row])
+		bl = edgeOnBackdrop(bl, under, leftCol, i == 0 || i == boxH-1, dim)
+		if p < 1 {
+			bl = fadeRow(bl, under, leftCol, p)
+		}
+		lines[row] = spliceAt(lines[row], bl, leftCol)
 	}
-	return strings.Join(out, "\n")
+	if !o.NoShadow {
+		paintShadow(lines, leftCol, topRow, boxW, boxH, p)
+	}
+	return strings.Join(lines, "\n")
 }
 
-// modalDimCache memoises the result of dimming the screen outside a modal box.
-// Single-entry: only one modal is ever open at a time, and View() runs on the
-// bubbletea goroutine so no locking is needed.
+func clamp01(v float64) float64 {
+	if v < 0 {
+		return 0
+	}
+	if v > 1 {
+		return 1
+	}
+	return v
+}
+
+// edgeOnBackdrop gives the card's border glyphs the backdrop's
+// background, so the rounded corners and edges sit on the page instead of
+// inside a rectangle of card colour.
+func edgeOnBackdrop(row string, under []cellData, leftCol int, edgeRow bool, dim float64) string {
+	cells := parseANSIRow(row)
+	n := len(cells)
+	changed := false
+	for i := range cells {
+		if !edgeRow && i != 0 && i != n-1 {
+			continue
+		}
+		if !isBorderGlyph(cells[i].glyph) {
+			continue
+		}
+		ui := leftCol + i
+		if ui < 0 || ui >= len(under) {
+			continue
+		}
+		u := parseSGR(under[ui].sgr)
+		s := parseSGR(cells[i].sgr)
+		if !u.hasBg {
+			u.bg = theme.ToRGB(theme.BgEditor)
+		}
+		// The cells under the card were not dimmed with the backdrop;
+		// dim them the same way so the edge blends in.
+		if dim < 1 && colorMath() {
+			u.bg = dimToward(u.bg, dim)
+		}
+		s.bg, s.hasBg = u.bg, true
+		cells[i].sgr = s.render()
+		changed = true
+	}
+	if !changed {
+		return row
+	}
+	return renderCells(cells)
+}
+
+func isBorderGlyph(g string) bool {
+	switch g {
+	case "╭", "╮", "╰", "╯", "─", "│", "┌", "┐", "└", "┘":
+		return true
+	}
+	return false
+}
+
+// fadeRow blends a card row toward the cells underneath it by (1-p).
+func fadeRow(row string, under []cellData, leftCol int, p float64) string {
+	cells := parseANSIRow(row)
+	for i := range cells {
+		ui := leftCol + i
+		ubg := theme.ToRGB(theme.BgEditor)
+		if ui >= 0 && ui < len(under) {
+			if s := parseSGR(under[ui].sgr); s.hasBg {
+				ubg = s.bg
+			}
+		}
+		s := parseSGR(cells[i].sgr)
+		if s.hasBg {
+			s.bg = theme.Lerp(ubg, s.bg, p)
+		} else {
+			s.bg, s.hasBg = ubg, true
+		}
+		if s.hasFg {
+			s.fg = theme.Lerp(ubg, s.fg, p)
+		}
+		cells[i].sgr = s.render()
+	}
+	return renderCells(cells)
+}
+
+// paintShadow darkens the L-shaped strip right of and below the card.
+func paintShadow(lines []string, leftCol, topRow, boxW, boxH int, p float64) {
+	strength := 0.6 * p
+	if theme.IsLight() {
+		strength = 0.35 * p
+	}
+	shadow := theme.ToRGB(theme.Shadow)
+	shade := func(row, from, to int) {
+		if row < 0 || row >= len(lines) || from >= to {
+			return
+		}
+		cells := parseANSIRow(lines[row])
+		changed := false
+		for i := from; i < to && i < len(cells); i++ {
+			if i < 0 {
+				continue
+			}
+			s := parseSGR(cells[i].sgr)
+			if !colorMath() {
+				s.bg, s.hasBg = shadow, true
+				s.faint = true
+			} else {
+				bg := theme.ToRGB(theme.BgEditor)
+				if s.hasBg {
+					bg = s.bg
+				}
+				s.bg, s.hasBg = theme.Lerp(bg, shadow, strength), true
+				if s.hasFg {
+					s.fg = theme.Lerp(s.fg, shadow, strength)
+				}
+			}
+			cells[i].sgr = s.render()
+			changed = true
+		}
+		if changed {
+			lines[row] = renderCells(cells)
+		}
+	}
+	// Right edge: rows 1..boxH (offset one row down), 1 column wide.
+	for r := topRow + 1; r <= topRow+boxH; r++ {
+		shade(r, leftCol+boxW, leftCol+boxW+1)
+	}
+	// Bottom edge: one row below, offset one column right.
+	shade(topRow+boxH, leftCol+1, leftCol+boxW)
+}
+
+// colorMath reports whether blended colours can be shown faithfully.
+func colorMath() bool {
+	p := theme.Profile()
+	return p == termenv.TrueColor || p == termenv.ANSI256
+}
+
+// modalDimCache memoises the dimmed backdrop. Single-entry: only one modal
+// is open at a time, and View() runs on the Bubble Tea goroutine.
 type modalDimCache struct {
-	base       string
-	leftCol    int
-	topRow     int
-	boxW       int
-	boxH       int
-	outsideDim float64
-	lines      []string
+	base                        string
+	leftCol, topRow, boxW, boxH int
+	outsideDim                  float64
+	profile                     termenv.Profile
+	lines                       []string
 }
 
 var modalDimCacheV *modalDimCache
 
-// dimmedBaseCached returns base (split into lines) with every cell outside the
-// box rectangle dimmed, reusing the cached result when the base frame and box
-// rect are unchanged from the last call (the hover-motion fast path).
+// dimmedBaseCached returns base split into lines with every cell outside
+// the card rectangle dimmed; reused while base and rect are unchanged (the
+// hover fast path: the card changes on every mouse move, the base doesn't).
 func dimmedBaseCached(base string, leftCol, topRow, boxW, boxH int, outsideDim float64) []string {
+	prof := theme.Profile()
 	if c := modalDimCacheV; c != nil && c.base == base &&
 		c.leftCol == leftCol && c.topRow == topRow &&
-		c.boxW == boxW && c.boxH == boxH && c.outsideDim == outsideDim {
+		c.boxW == boxW && c.boxH == boxH && c.outsideDim == outsideDim && c.profile == prof {
 		return c.lines
 	}
 	lines := strings.Split(base, "\n")
-	dimOutsideRect(lines, leftCol, topRow, boxW, boxH, outsideDim)
+	if outsideDim < 1 {
+		dimOutsideRect(lines, leftCol, topRow, boxW, boxH, outsideDim)
+	}
 	modalDimCacheV = &modalDimCache{
 		base: base, leftCol: leftCol, topRow: topRow,
-		boxW: boxW, boxH: boxH, outsideDim: outsideDim, lines: lines,
+		boxW: boxW, boxH: boxH, outsideDim: outsideDim, profile: prof, lines: lines,
 	}
 	return lines
 }
 
-// dimOutsideRect multiplies fg+bg of every cell outside the modal rectangle
-// by `factor` (0..1). factor=0.4 keeps 40% of the original intensity, i.e.
-// the user-requested "60% transparent" feel for the surrounding chrome.
+// dimOutsideRect dims every cell outside the rectangle by factor (0..1).
 func dimOutsideRect(lines []string, leftCol, topRow, boxW, boxH int, factor float64) {
-	rectStartRow := topRow
-	rectEndRow := topRow + boxH // exclusive
-	rectStartCol := leftCol
-	rectEndCol := leftCol + boxW
 	for i := range lines {
-		if i < rectStartRow || i >= rectEndRow {
-			lines[i] = dimRowFully(lines[i], factor)
+		if i < topRow || i >= topRow+boxH {
+			lines[i] = dimRow(lines[i], -1, -1, factor)
 		} else {
-			lines[i] = dimRowOutsideCols(lines[i], rectStartCol, rectEndCol, factor)
+			lines[i] = dimRow(lines[i], leftCol, leftCol+boxW, factor)
 		}
 	}
 }
 
-func dimRowFully(row string, factor float64) string {
+// dimRow dims the cells of row outside [skipFrom, skipTo).
+func dimRow(row string, skipFrom, skipTo int, factor float64) string {
 	cells := parseANSIRow(row)
+	cm := colorMath()
+	bgDef := theme.ToRGB(theme.BgEditor)
 	for i := range cells {
-		dimCellInPlace(&cells[i], factor)
-	}
-	return renderCells(cells)
-}
-
-func dimRowOutsideCols(row string, startCol, endCol int, factor float64) string {
-	cells := parseANSIRow(row)
-	for i := range cells {
-		if i >= startCol && i < endCol {
+		if i >= skipFrom && i < skipTo {
 			continue
 		}
-		dimCellInPlace(&cells[i], factor)
-	}
-	return renderCells(cells)
-}
-
-func dimCellInPlace(c *cellData, factor float64) {
-	if bg, ok := extractBgRGB(c.sgr); ok {
-		c.sgr = replaceBgRGB(c.sgr, dimRGB(bg, factor))
-	}
-	if fg, ok := extractFgRGB(c.sgr); ok {
-		c.sgr = replaceFgRGB(c.sgr, dimRGB(fg, factor))
-	}
-}
-
-// styleGlassRow rebuilds one row of the modal output. Border/title/input/
-// selection cells get soft re-tints; everything else is replaced with a
-// dimmed+tinted version of the underlying base cell so the editor shows
-// through the modal body.
-func styleGlassRow(row string, baseCells []cellData, leftCol, rowIdx, totalRows int, blendAlpha, fgDim float64, tint, rim, accent rgbColor) string {
-	cells := parseANSIRow(row)
-	if len(cells) == 0 {
-		return row
-	}
-	n := len(cells)
-	isTopRow := rowIdx == 0
-	isBottomRow := rowIdx == totalRows-1
-
-	for i := range cells {
-		c := cells[i]
-		isLeftCol := i == 0
-		isRightCol := i == n-1
-		isBorder := isTopRow || isBottomRow || isLeftCol || isRightCol
-
-		var underlying cellData
-		bi := leftCol + i
-		if bi >= 0 && bi < len(baseCells) {
-			underlying = baseCells[bi]
-		}
-		dimBg, dimFg := dimBaseColors(underlying, blendAlpha, fgDim, tint)
-
-		if isBorder && c.glyph != " " && c.glyph != "" {
-			// Picker's RoundedBorder gives the curved corners (╭ ╮ ╰ ╯).
-			c.sgr = replaceFgRGB(c.sgr, rim)
-			c.sgr = replaceBgRGB(c.sgr, dimBg)
-			cells[i] = c
-			continue
-		}
-
-		// Track whether this cell's bg is the standard panel bg. Only
-		// panel-bg (or unset) cells get the dim+tint body replacement
-		// below — cells with a deliberately-set bg (e.g. a footer red,
-		// a section accent) pass through untouched so callers can paint
-		// regions of the modal that opt out of the glass body look.
-		isPanelOrUnset := true
-		if bg, ok := extractBgRGB(c.sgr); ok {
-			switch bg {
-			case pickerTitleBg:
-				c.sgr = replaceBgRGB(c.sgr, accent)
-				cells[i] = c
-				continue
-			case pickerSelBg:
-				c.sgr = replaceBgRGB(c.sgr, accent)
-				cells[i] = c
-				continue
-			case pickerInputBg:
-				c.sgr = replaceBgRGB(c.sgr, softInputBg)
-				cells[i] = c
-				continue
-			case pickerPanelBg:
-				// fall through into body replacement
-			default:
-				isPanelOrUnset = false
+		s := parseSGR(cells[i].sgr)
+		if !cm {
+			s.faint = true
+		} else {
+			if !s.hasBg {
+				s.bg, s.hasBg = bgDef, true
+			}
+			// Dim toward black on dark themes; on light themes dim toward
+			// a grey so the backdrop reads as "shaded", not inverted.
+			s.bg = dimToward(s.bg, factor)
+			if s.hasFg {
+				s.fg = dimToward(s.fg, factor)
 			}
 		}
-
-		if !isPanelOrUnset {
-			cells[i] = c
-			continue
-		}
-
-		if c.glyph == " " || c.glyph == "" {
-			// Show the underlying glyph dimmed ONLY if it's printable
-			// single-byte ASCII (regular code text). Multi-byte glyphs —
-			// emoji, Nerd Font icons, box-drawing — get masked with a
-			// space because they don't reliably obey ANSI dim/fg and
-			// would otherwise pop bright through the modal body.
-			if isPrintableASCII(underlying.glyph) {
-				cells[i] = cellData{
-					sgr:   makeFgBgSGR(dimFg, dimBg),
-					glyph: underlying.glyph,
-				}
-			} else {
-				cells[i] = cellData{
-					sgr:   makeFgBgSGR(rgbColor{}, dimBg),
-					glyph: " ",
-				}
-			}
-		} else {
-			c.sgr = replaceBgRGB(c.sgr, dimBg)
-			cells[i] = c
-		}
+		cells[i].sgr = s.render()
 	}
 	return renderCells(cells)
 }
 
-// dimBaseColors returns the bg/fg the modal should paint behind a given
-// underlying cell: bg pulled toward `tint` at `blendAlpha`, fg reduced to
-// `fgDim` of original intensity. Falls back to editor defaults when the
-// underlying cell has no styling.
-func dimBaseColors(c cellData, blendAlpha, fgDim float64, tint rgbColor) (bg, fg rgbColor) {
-	baseBg, bgOK := extractBgRGB(c.sgr)
-	baseFg, fgOK := extractFgRGB(c.sgr)
-	if !bgOK {
-		baseBg = editorBgFallback
+func dimToward(c theme.RGB, factor float64) theme.RGB {
+	target := theme.RGB{}
+	if theme.IsLight() {
+		target = theme.Lerp(theme.ToRGB(theme.Shadow), theme.RGB{}, 0.3)
 	}
-	if !fgOK {
-		baseFg = textPrimaryFallback
-	}
-	bg = blendRGB(baseBg, tint, blendAlpha)
-	fg = dimRGB(baseFg, fgDim)
-	return
+	return theme.Lerp(target, c, factor)
 }
 
-func blendRGB(a, b rgbColor, alpha float64) rgbColor {
-	return rgbColor{
-		r: int(float64(a.r)*(1-alpha) + float64(b.r)*alpha),
-		g: int(float64(a.g)*(1-alpha) + float64(b.g)*alpha),
-		b: int(float64(a.b)*(1-alpha) + float64(b.b)*alpha),
-	}
-}
+// ── cell parser ───────────────────────────────────────────────────────────
 
-func dimRGB(c rgbColor, factor float64) rgbColor {
-	return rgbColor{
-		r: int(float64(c.r) * factor),
-		g: int(float64(c.g) * factor),
-		b: int(float64(c.b) * factor),
-	}
-}
-
-func makeFgBgSGR(fg, bg rgbColor) string {
-	return fmt.Sprintf("\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm",
-		fg.r, fg.g, fg.b, bg.r, bg.g, bg.b)
-}
-
-// isPrintableASCII reports whether g is a single printable ASCII byte
-// (space through ~). Used to decide which underlying glyphs are safe to
-// show dimmed inside the modal body — multi-byte / wide / emoji glyphs
-// don't reliably honour ANSI dim and would pop bright through the body.
-func isPrintableASCII(g string) bool {
-	if len(g) != 1 {
-		return false
-	}
-	b := g[0]
-	return b >= 0x20 && b <= 0x7e
-}
-
-// addDropShadow paints a one-cell-offset L-shape of dark cells just below
-// and right of the modal. Currently unused — kept for callers that want to
-// re-introduce a floating-panel look.
-func addDropShadow(lines []string, leftCol, topRow, boxW, boxH int) {
-	if r := topRow + boxH; r >= 0 && r < len(lines) {
-		lines[r] = paintCellsBg(lines[r], leftCol+1, leftCol+boxW+1, glassShadow)
-	}
-	col := leftCol + boxW
-	for r := topRow + 1; r <= topRow+boxH && r >= 0 && r < len(lines); r++ {
-		lines[r] = paintCellsBg(lines[r], col, col+1, glassShadow)
-	}
-}
-
-func paintCellsBg(row string, startCol, endCol int, bg rgbColor) string {
-	cells := parseANSIRow(row)
-	for len(cells) < endCol {
-		cells = append(cells, cellData{glyph: " "})
-	}
-	for i := startCol; i < endCol && i < len(cells); i++ {
-		if i < 0 {
-			continue
-		}
-		cells[i].sgr = replaceBgRGB(cells[i].sgr, bg)
-		if cells[i].glyph == "" {
-			cells[i].glyph = " "
-		}
-	}
-	return renderCells(cells)
-}
-
-// ── helpers: cell parser, RGB extract/replace ─────────────────────────────
-
-type rgbColor struct{ r, g, b int }
+type rgbColor = theme.RGB
 
 type cellData struct {
 	sgr   string
 	glyph string
 }
 
+// parseANSIRow splits one rendered row into cells, each carrying the full
+// SGR in effect. `[` (0x5B) is also an SGR final-byte candidate, so the
+// CSI introducer `\x1b[` is consumed as a unit.
 func parseANSIRow(s string) []cellData {
 	var cells []cellData
 	current := ""
@@ -409,10 +362,13 @@ func parseANSIRow(s string) []cellData {
 				j++
 			}
 			sgr := s[i:j]
-			if sgr == "\x1b[0m" || sgr == "\x1b[m" {
+			switch {
+			case sgr == "\x1b[0m" || sgr == "\x1b[m":
 				current = ""
-			} else {
-				current = sgr
+			case strings.HasSuffix(sgr, "m"):
+				// lipgloss emits one SGR per span; merge consecutive ones
+				// (e.g. a bold run inside a coloured run) into one state.
+				current = mergeSGR(current, sgr)
 			}
 			i = j
 			continue
@@ -425,6 +381,16 @@ func parseANSIRow(s string) []cellData {
 		cells = append(cells, cellData{sgr: current, glyph: s[glyphStart:i]})
 	}
 	return cells
+}
+
+// mergeSGR folds next into cur (both full "\x1b[…m" sequences).
+func mergeSGR(cur, next string) string {
+	if cur == "" {
+		return next
+	}
+	a := parseSGR(cur)
+	b := parseSGRInto(a, next)
+	return b.render()
 }
 
 func renderCells(cells []cellData) string {
@@ -448,103 +414,189 @@ func renderCells(cells []cellData) string {
 	return b.String()
 }
 
-func extractBgRGB(sgr string) (rgbColor, bool) { return extractColor(sgr, "48") }
-func extractFgRGB(sgr string) (rgbColor, bool) { return extractColor(sgr, "38") }
+// sgrState is a decoded SGR: colours as RGB plus the other attributes.
+type sgrState struct {
+	fg, bg       rgbColor
+	hasFg, hasBg bool
+	bold, faint  bool
+	italic       bool
+	underline    bool
+	reverse      bool
+	strike       bool
+}
 
-func extractColor(sgr, kind string) (rgbColor, bool) {
+func parseSGR(sgr string) sgrState { return parseSGRInto(sgrState{}, sgr) }
+
+func parseSGRInto(s sgrState, sgr string) sgrState {
 	if !strings.HasPrefix(sgr, "\x1b[") || !strings.HasSuffix(sgr, "m") {
-		return rgbColor{}, false
+		return s
 	}
 	body := sgr[2 : len(sgr)-1]
 	if body == "" {
-		return rgbColor{}, false
+		return sgrState{}
 	}
 	parts := strings.Split(body, ";")
 	for i := 0; i < len(parts); i++ {
-		if parts[i] == kind && i+1 < len(parts) {
-			switch parts[i+1] {
-			case "2":
-				if i+4 < len(parts) {
-					r, e1 := strconv.Atoi(parts[i+2])
-					g, e2 := strconv.Atoi(parts[i+3])
-					b, e3 := strconv.Atoi(parts[i+4])
-					if e1 == nil && e2 == nil && e3 == nil {
-						return rgbColor{r, g, b}, true
-					}
-				}
-			case "5":
-				if i+2 < len(parts) {
-					n, err := strconv.Atoi(parts[i+2])
-					if err == nil {
-						return xterm256ToRGB(n), true
-					}
-				}
+		n, err := strconv.Atoi(parts[i])
+		if err != nil {
+			continue
+		}
+		switch {
+		case n == 0:
+			s = sgrState{}
+		case n == 1:
+			s.bold = true
+		case n == 2:
+			s.faint = true
+		case n == 3:
+			s.italic = true
+		case n == 4:
+			s.underline = true
+		case n == 7:
+			s.reverse = true
+		case n == 9:
+			s.strike = true
+		case n == 22:
+			s.bold, s.faint = false, false
+		case n == 23:
+			s.italic = false
+		case n == 24:
+			s.underline = false
+		case n == 27:
+			s.reverse = false
+		case n == 29:
+			s.strike = false
+		case n >= 30 && n <= 37:
+			s.fg, s.hasFg = ansi16RGB(n-30), true
+		case n >= 90 && n <= 97:
+			s.fg, s.hasFg = ansi16RGB(n-90+8), true
+		case n == 39:
+			s.hasFg = false
+		case n >= 40 && n <= 47:
+			s.bg, s.hasBg = ansi16RGB(n-40), true
+		case n >= 100 && n <= 107:
+			s.bg, s.hasBg = ansi16RGB(n-100+8), true
+		case n == 49:
+			s.hasBg = false
+		case n == 38 || n == 48:
+			var c rgbColor
+			ok := false
+			if i+1 < len(parts) && parts[i+1] == "2" && i+4 < len(parts) {
+				r, _ := strconv.Atoi(parts[i+2])
+				g, _ := strconv.Atoi(parts[i+3])
+				b, _ := strconv.Atoi(parts[i+4])
+				c, ok = rgbColor{R: uint8(r), G: uint8(g), B: uint8(b)}, true
+				i += 4
+			} else if i+1 < len(parts) && parts[i+1] == "5" && i+2 < len(parts) {
+				k, _ := strconv.Atoi(parts[i+2])
+				c, ok = xterm256ToRGB(k), true
+				i += 2
+			}
+			if ok && n == 38 {
+				s.fg, s.hasFg = c, true
+			} else if ok {
+				s.bg, s.hasBg = c, true
 			}
 		}
 	}
-	return rgbColor{}, false
+	return s
 }
 
-func replaceBgRGB(sgr string, c rgbColor) string { return replaceColor(sgr, "48", c) }
-func replaceFgRGB(sgr string, c rgbColor) string { return replaceColor(sgr, "38", c) }
-
-func replaceColor(sgr, kind string, c rgbColor) string {
-	if sgr == "" {
-		return fmt.Sprintf("\x1b[%s;2;%d;%d;%dm", kind, c.r, c.g, c.b)
+// render encodes the state for the active colour profile.
+func (s sgrState) render() string {
+	var parts []string
+	if s.bold {
+		parts = append(parts, "1")
 	}
-	if !strings.HasPrefix(sgr, "\x1b[") || !strings.HasSuffix(sgr, "m") {
-		return sgr
+	if s.faint {
+		parts = append(parts, "2")
 	}
-	body := sgr[2 : len(sgr)-1]
-	parts := strings.Split(body, ";")
-	out := make([]string, 0, len(parts)+2)
-	i := 0
-	replaced := false
-	for i < len(parts) {
-		if parts[i] == kind && i+1 < len(parts) {
-			if parts[i+1] == "2" && i+4 < len(parts) {
-				out = append(out, kind, "2",
-					strconv.Itoa(c.r), strconv.Itoa(c.g), strconv.Itoa(c.b))
-				i += 5
-				replaced = true
-				continue
-			}
-			if parts[i+1] == "5" && i+2 < len(parts) {
-				out = append(out, kind, "2",
-					strconv.Itoa(c.r), strconv.Itoa(c.g), strconv.Itoa(c.b))
-				i += 3
-				replaced = true
-				continue
+	if s.italic {
+		parts = append(parts, "3")
+	}
+	if s.underline {
+		parts = append(parts, "4")
+	}
+	if s.reverse {
+		parts = append(parts, "7")
+	}
+	if s.strike {
+		parts = append(parts, "9")
+	}
+	prof := theme.Profile()
+	if prof != termenv.Ascii {
+		if s.hasFg {
+			if c := prof.Color(s.fg.Hex()); c != nil {
+				parts = append(parts, c.Sequence(false))
 			}
 		}
-		out = append(out, parts[i])
-		i++
+		if s.hasBg {
+			if c := prof.Color(s.bg.Hex()); c != nil {
+				parts = append(parts, c.Sequence(true))
+			}
+		}
 	}
-	if !replaced {
-		out = append(out, kind, "2",
-			strconv.Itoa(c.r), strconv.Itoa(c.g), strconv.Itoa(c.b))
+	if len(parts) == 0 {
+		return ""
 	}
-	return "\x1b[" + strings.Join(out, ";") + "m"
+	return "\x1b[" + strings.Join(parts, ";") + "m"
 }
+
+// ── compatibility helpers (used by other overlays) ───────────────────────
+
+func extractBgRGB(sgr string) (rgbColor, bool) { s := parseSGR(sgr); return s.bg, s.hasBg }
+func extractFgRGB(sgr string) (rgbColor, bool) { s := parseSGR(sgr); return s.fg, s.hasFg }
+
+func replaceBgRGB(sgr string, c rgbColor) string {
+	s := parseSGR(sgr)
+	s.bg, s.hasBg = c, true
+	return s.render()
+}
+
+func replaceFgRGB(sgr string, c rgbColor) string {
+	s := parseSGR(sgr)
+	s.fg, s.hasFg = c, true
+	return s.render()
+}
+
+func makeFgBgSGR(fg, bg rgbColor) string {
+	return sgrState{fg: fg, bg: bg, hasFg: true, hasBg: true}.render()
+}
+
+func blendRGB(a, b rgbColor, alpha float64) rgbColor { return theme.Lerp(a, b, alpha) }
+
+func dimRGB(c rgbColor, factor float64) rgbColor { return theme.Lerp(rgbColor{}, c, factor) }
+
+// isPrintableASCII reports whether g is a single printable ASCII byte.
+func isPrintableASCII(g string) bool {
+	if len(g) != 1 {
+		return false
+	}
+	b := g[0]
+	return b >= 0x20 && b <= 0x7e
+}
+
+var ansi16Table = [16]rgbColor{
+	{R: 0, G: 0, B: 0}, {R: 128, G: 0, B: 0}, {R: 0, G: 128, B: 0}, {R: 128, G: 128, B: 0},
+	{R: 0, G: 0, B: 128}, {R: 128, G: 0, B: 128}, {R: 0, G: 128, B: 128}, {R: 192, G: 192, B: 192},
+	{R: 128, G: 128, B: 128}, {R: 255, G: 0, B: 0}, {R: 0, G: 255, B: 0}, {R: 255, G: 255, B: 0},
+	{R: 0, G: 0, B: 255}, {R: 255, G: 0, B: 255}, {R: 0, G: 255, B: 255}, {R: 255, G: 255, B: 255},
+}
+
+func ansi16RGB(n int) rgbColor { return ansi16Table[n&15] }
 
 func xterm256ToRGB(n int) rgbColor {
 	if n < 0 || n > 255 {
 		return rgbColor{}
 	}
 	if n < 16 {
-		base := [16][3]int{
-			{0, 0, 0}, {128, 0, 0}, {0, 128, 0}, {128, 128, 0},
-			{0, 0, 128}, {128, 0, 128}, {0, 128, 128}, {192, 192, 192},
-			{128, 128, 128}, {255, 0, 0}, {0, 255, 0}, {255, 255, 0},
-			{0, 0, 255}, {255, 0, 255}, {0, 255, 255}, {255, 255, 255},
-		}
-		return rgbColor{base[n][0], base[n][1], base[n][2]}
+		return ansi16RGB(n)
 	}
 	if n < 232 {
 		k := n - 16
-		levels := [6]int{0, 95, 135, 175, 215, 255}
-		return rgbColor{levels[k/36%6], levels[k/6%6], levels[k%6]}
+		levels := [6]uint8{0, 95, 135, 175, 215, 255}
+		return rgbColor{R: levels[k/36%6], G: levels[k/6%6], B: levels[k%6]}
 	}
-	v := 8 + (n-232)*10
-	return rgbColor{v, v, v}
+	v := uint8(8 + (n-232)*10)
+	return rgbColor{R: v, G: v, B: v}
 }

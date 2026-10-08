@@ -5,6 +5,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -456,27 +458,40 @@ func (m settingsModal) firstSelectable(start, step int) int {
 // project's "soft selected" RGB lets a future overlay tweak land in one
 // place. (See modalOverlay's softSelectedBg / softTitleBg.)
 var (
-	smBoxBg      = lipgloss.Color("#262626")
-	smBorderBlue = lipgloss.Color("#3a3a3a") // thin dark-grey rim
-	smIconBlue   = lipgloss.Color("#569cd6") // header icon keeps the blue accent
-	smTextPri    = lipgloss.Color("#d0d0d0")
-	smTextSec    = lipgloss.Color("#9090a0") // muted labels / subtitle
-	smTextDim    = lipgloss.Color("#6c6c6c") // separators, footer hints
-	smCategoryFg = lipgloss.Color("#cce6f4") // [ Appearance ] tint
-	smSelBg      = lipgloss.Color("#1f4f63") // soft selection bar (matches softSelectedBg)
-	smValueFg    = lipgloss.Color("#e6e6e6")
-	// smGuideColor matches the editor's indent guide colour + weight
-	// (`│` painted in #363636 — see theme_lua.go::c.indent). Using the
-	// same colour for the modal's hairline separators ties them visually
-	// to the rest of the editor's "secondary scaffolding" lines.
-	smGuideColor = lipgloss.Color("#363636")
-	// smSubtitleFg is a darker, more faded shade than smTextSec — gives
-	// the modal subtitle a "muted byline" feel without competing with
-	// the title for attention.
-	smSubtitleFg = lipgloss.Color("#5a5a66")
-	smInputBg    = lipgloss.Color("#1f3447") // search field bg (matches picker input)
-	smInputFg    = lipgloss.Color("#ffffff")
+	smBoxBg lipgloss.Color
+	smBorderBlue lipgloss.Color
+	smIconBlue lipgloss.Color
+	smTextPri lipgloss.Color
+	smTextSec lipgloss.Color
+	smTextDim lipgloss.Color
+	smCategoryFg lipgloss.Color
+	smSelBg lipgloss.Color
+	smValueFg lipgloss.Color
+	smGuideColor lipgloss.Color
+	smSubtitleFg lipgloss.Color
+	smInputBg lipgloss.Color
+	smInputFg lipgloss.Color
 )
+
+func init() { refreshSettingsColors() }
+
+// refreshSettingsColors derives this file's colours from the active theme. It runs
+// before every render so a theme switch applies immediately.
+func refreshSettingsColors() {
+	smBoxBg = theme.Float().Bg
+	smBorderBlue = theme.Float().Border // thin dark-grey rim
+	smIconBlue = theme.Float().Icon // header icon keeps the blue accent
+	smTextPri = theme.Float().Text
+	smTextSec = theme.Float().Sub // muted labels / subtitle
+	smTextDim = theme.Float().Dim // separators, footer hints
+	smCategoryFg = theme.LG(theme.AccentLavender) // [ Appearance ] tint
+	smSelBg = theme.Float().SelBg // soft selection bar (matches softSelectedBg)
+	smValueFg = theme.Float().Title
+	smGuideColor = theme.Float().Hairline
+	smSubtitleFg = theme.Float().Dim
+	smInputBg = theme.Float().InputBg // search field bg (matches picker input)
+	smInputFg = theme.Float().SelFg
+}
 
 // Box renders the structured Settings modal: header (icon + title +
 // subtitle), separator, grouped rows with [ Category ] labels and aligned
@@ -484,6 +499,7 @@ var (
 // reasonable band so very wide terminals don't blow out the layout; height
 // auto-fits to the row count.
 func (m settingsModal) Box() string {
+	refreshSettingsColors()
 	if m.w <= 0 || m.h <= 0 {
 		return ""
 	}
@@ -509,9 +525,9 @@ func (m settingsModal) Box() string {
 	labelStyle := lipgloss.NewStyle().Background(smBoxBg).Foreground(smTextSec)
 	valueStyle := lipgloss.NewStyle().Background(smBoxBg).Foreground(smValueFg)
 	selRowBg := lipgloss.NewStyle().Background(smSelBg)
-	selLabel := lipgloss.NewStyle().Background(smSelBg).Foreground(lipgloss.Color("#cce6f4"))
-	selValue := lipgloss.NewStyle().Background(smSelBg).Foreground(lipgloss.Color("#ffffff")).Bold(true)
-	selChevron := lipgloss.NewStyle().Background(smSelBg).Foreground(lipgloss.Color("#ffffff")).Bold(true)
+	selLabel := lipgloss.NewStyle().Background(smSelBg).Foreground(theme.LG(theme.AccentLavender))
+	selValue := lipgloss.NewStyle().Background(smSelBg).Foreground(theme.Float().SelFg).Bold(true)
+	selChevron := lipgloss.NewStyle().Background(smSelBg).Foreground(theme.Float().SelFg).Bold(true)
 	separatorStyle := lipgloss.NewStyle().Background(smBoxBg).Foreground(smGuideColor)
 	footerStyle := lipgloss.NewStyle().Background(smBoxBg).Foreground(smTextDim)
 	footerSepStyle := lipgloss.NewStyle().Background(smBoxBg).Foreground(smGuideColor)
