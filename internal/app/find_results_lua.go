@@ -34,6 +34,10 @@ vim.api.nvim_create_autocmd('FileType', {
       " Footer summary + the initial "Searching N files for ..." line.
       syntax match findResultsFooter      /^\d\+ match\(es\)\? \(across\|for\) .*$/
       syntax match findResultsFooter      /^Searching \d\+ files\? for ".*"$/
+      " While the search streams in: "Searching for "q"…". When the
+      " search_max_results cap was hit: "Showing N of M matches …".
+      syntax match findResultsFooter      /^Searching for ".*"…$/
+      syntax match findResultsFooter      /^Showing \d\+ of \d\+ match\(es\)\? across .*$/
 
       " File path header: teal (editor "type" colour), bold.
       highlight default findResultsHeader      guifg=#4ec9b0 gui=bold
@@ -173,7 +177,8 @@ local function navigate_results(direction)
       for s = r-1, 1, -1 do
         local sline = vim.api.nvim_buf_get_lines(buf, s-1, s, false)[1] or ''
         local p = sline:match('^([^ \t].+):$')
-        if p then file = p; break end
+        -- Drop the " (N)" hit count, same as strip_count above.
+        if p then file = (p:gsub(' %(%d+%)$', '')); break end
       end
       if file then
         -- Move the cursor in the results buffer (best-effort visual
