@@ -153,6 +153,9 @@ func codeActionGroup(a nvim.CodeAction) string {
 	// Phase-2 synthesized kinds bucketed first so the LSP-prefix rules below
 	// can't accidentally bucket "test.run" into "Test" via a substring match
 	// on "test" only.
+	if isConflictSynthKind(kind) {
+		return "Quick Fix"
+	}
 	switch kind {
 	case synthKindGitBlame, synthKindGitDiff, synthKindGitCopy:
 		return "Git"

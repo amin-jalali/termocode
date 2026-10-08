@@ -31,6 +31,10 @@ const (
 	promptKindThemeColor
 	promptKindKeybinding
 	promptKindFindInFiles
+	// Group G: clone repository (git_clone.go).
+	promptKindCloneURL
+	promptKindCloneDest
+	promptKindCloneToken
 )
 
 func (m *Model) openRenamePrompt(path string) {
@@ -188,6 +192,8 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		return m.applyKeybinding(value)
 	case promptKindFindInFiles:
 		return m.runFindInFiles(value)
+	case promptKindCloneURL, promptKindCloneDest, promptKindCloneToken:
+		return m.handleClonePromptSubmit(value) // Group G (git_clone.go)
 	}
 	return nil
 }

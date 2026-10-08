@@ -25,6 +25,7 @@ const (
 	gitSecStaged gitSection = iota
 	gitSecChanges
 	gitSecGraph
+	gitSecConflicts // merge conflicts (unmerged paths); shown first, only when non-empty
 )
 
 // gitPanelRow is one rendered line of the Source Control panel.
@@ -69,8 +70,14 @@ func (m Model) gitPanelRows() []gitPanelRow {
 	// Partition files: a file with index-side changes is "staged"; one with
 	// worktree changes (or untracked) is "changed". A file edited after staging
 	// (e.g. "MM") legitimately appears in both, matching VSCode.
-	var staged, changed []gitFileRef
+	// Unmerged paths ("UU", "AA", …) go to CONFLICTS only — their two status
+	// columns would otherwise put them in both STAGED and CHANGES.
+	var staged, changed, conflicts []gitFileRef
 	for i, f := range m.gitFiles {
+		if f.Conflicted() {
+			conflicts = append(conflicts, gitFileRef{path: f.Path, index: i})
+			continue
+		}
 		if f.Staged() {
 			staged = append(staged, gitFileRef{path: f.Path, index: i})
 		}
@@ -79,21 +86,30 @@ func (m Model) gitPanelRows() []gitPanelRow {
 		}
 	}
 
-	appendFiles := func(vis []gitVisRow) {
+	appendFiles := func(vis []gitVisRow, sec gitSection) {
 		for _, r := range vis {
 			if r.IsDir {
-				rows = append(rows, gitPanelRow{kind: gitRowDir, depth: r.Depth, dirPath: r.DirPath})
+				rows = append(rows, gitPanelRow{kind: gitRowDir, section: sec, depth: r.Depth, dirPath: r.DirPath})
 			} else {
-				rows = append(rows, gitPanelRow{kind: gitRowFile, depth: r.Depth, fileIndex: r.FileIndex})
+				rows = append(rows, gitPanelRow{kind: gitRowFile, section: sec, depth: r.Depth, fileIndex: r.FileIndex})
 			}
 		}
+	}
+
+	// CONFLICTS — only during a merge/rebase with unmerged paths.
+	if len(conflicts) > 0 {
+		rows = append(rows, gitPanelRow{kind: gitRowSection, section: gitSecConflicts})
+		if !m.gitConflictsCollapsed {
+			appendFiles(m.gitVisibleRowsFor(conflicts), gitSecConflicts)
+		}
+		rows = append(rows, gitPanelRow{kind: gitRowSpacer})
 	}
 
 	// STAGED — only when something is staged.
 	if len(staged) > 0 {
 		rows = append(rows, gitPanelRow{kind: gitRowSection, section: gitSecStaged})
 		if !m.gitStagedCollapsed {
-			appendFiles(m.gitVisibleRowsFor(staged))
+			appendFiles(m.gitVisibleRowsFor(staged), gitSecStaged)
 		}
 		rows = append(rows, gitPanelRow{kind: gitRowSpacer})
 	}
@@ -105,7 +121,7 @@ func (m Model) gitPanelRows() []gitPanelRow {
 		if len(vis) == 0 {
 			rows = append(rows, gitPanelRow{kind: gitRowNote, note: "No changes"})
 		}
-		appendFiles(vis)
+		appendFiles(vis, gitSecChanges)
 	}
 
 	// GRAPH.
@@ -136,6 +152,9 @@ func (m Model) gitPanelRows() []gitPanelRow {
 // can count toward both.
 func (m Model) gitFileCounts() (staged, changed int) {
 	for _, f := range m.gitFiles {
+		if f.Conflicted() {
+			continue
+		}
 		if f.Staged() {
 			staged++
 		}
@@ -144,6 +163,17 @@ func (m Model) gitFileCounts() (staged, changed int) {
 		}
 	}
 	return staged, changed
+}
+
+// gitConflictCount returns how many files are unmerged (CONFLICTS section).
+func (m Model) gitConflictCount() int {
+	n := 0
+	for _, f := range m.gitFiles {
+		if f.Conflicted() {
+			n++
+		}
+	}
+	return n
 }
 
 // gitCurrentFileIndex resolves the cursor to an index into m.gitFiles, or
@@ -203,6 +233,8 @@ func (m *Model) gitToggleSection(s gitSection) {
 		m.gitChangesCollapsed = !m.gitChangesCollapsed
 	case gitSecGraph:
 		m.gitGraphCollapsed = !m.gitGraphCollapsed
+	case gitSecConflicts:
+		m.gitConflictsCollapsed = !m.gitConflictsCollapsed
 	}
 	m.gitClampCursor()
 }
