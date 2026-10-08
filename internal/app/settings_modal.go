@@ -103,6 +103,9 @@ func newSettingsModal() settingsModal {
 func settingsCategories() map[string]string {
 	return aiSettingsCategories(map[string]string{ // Group A adds "AI"
 		"setting-theme":              "Appearance",
+		"setting-icons":              "Appearance",
+		"setting-animations":         "Appearance",
+		"setting-images":             "Appearance",
 		"setting-font-delta":         "Appearance",
 		"setting-auto-save":          "Editor",
 		"setting-word-wrap":          "Editor",

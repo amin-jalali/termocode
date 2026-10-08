@@ -512,6 +512,29 @@ func (m *Model) follow() {
 	}
 }
 
+// Current returns the item under the cursor (ok=false for none / header).
+func (m Model) Current() (Item, bool) {
+	if m.cursor < 0 || m.cursor >= len(m.matches) {
+		return Item{}, false
+	}
+	idx := m.matches[m.cursor].Index
+	if idx < 0 || idx >= len(m.items) || m.items[idx].Header {
+		return Item{}, false
+	}
+	return m.items[idx], true
+}
+
+// SetCursorID moves the cursor onto the item with the given ID.
+func (m *Model) SetCursorID(id string) {
+	for i, mt := range m.matches {
+		if mt.Index >= 0 && mt.Index < len(m.items) && m.items[mt.Index].ID == id {
+			m.cursor = i
+			m.follow()
+			return
+		}
+	}
+}
+
 // Animating reports whether the list is still gliding to its scroll target.
 func (m Model) Animating() bool { return m.scroll.Moving() }
 

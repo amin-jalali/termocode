@@ -113,6 +113,7 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.onToolUninstalled(msg)
 	case picker.CloseMsg:
 		m.pickerOpen = false
+		m.endThemePreview(false)
 		return m, m.extOverlayClosed() // Group I: nil unless an extension pick
 	case recents.SelectMsg:
 		// Recents modal selection: close the overlay, open the file via
@@ -702,10 +703,12 @@ func (m Model) routeToPicker(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseMsg:
 		var cmd tea.Cmd
 		m.picker, cmd = m.picker.HandleMouse(msg.X, msg.Y, msg.Action, msg.Button)
+		m.previewThemeUnderCursor()
 		return m, cmd
 	}
 	var cmd tea.Cmd
 	m.picker, cmd = m.picker.Update(msg)
+	m.previewThemeUnderCursor()
 	return m, cmd
 }
 
@@ -1788,7 +1791,11 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		// dispatch action by ID
 		return m.dispatchPaletteAction(msg.ID)
 	case pickerKindTheme:
+		m.endThemePreview(true)
 		m.applyTheme(msg.ID)
+	case pickerKindSettingChoice:
+		m.settingPromptID = m.settingChoiceRow
+		return m.applySettingValue(msg.ID)
 	case pickerKindClipboard:
 		// msg.ID looks like "clip-N" where N is the index into the ring.
 		var idx int
