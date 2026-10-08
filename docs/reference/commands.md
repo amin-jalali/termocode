@@ -296,6 +296,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Testing: Collapse All | `testing-collapse` |   |   |
+| Testing: Debug Test at Cursor | `testing-debug-cursor` |   |   |
 | Testing: Focus Test Explorer | `testing-focus` |   |   |
 | Testing: Refresh Tests | `testing-refresh` |   |   |
 | Testing: Rerun Failed Tests | `testing-rerun-failed` |   |   |

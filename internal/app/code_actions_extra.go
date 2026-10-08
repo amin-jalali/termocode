@@ -21,6 +21,7 @@ import (
 const (
 	synthKindTestRun     = "test.run"     // "Test" group
 	synthKindTestCommand = "test.command" // "Test" group (clipboard)
+	synthKindTestDebug   = "test.debug"   // "Test" group (Run & Debug, test_debug.go)
 	synthKindGitBlame    = "git.blame"    // "Git" group
 	synthKindGitDiff     = "git.diff"     // "Git" group
 	synthKindGitCopy     = "git.copy"     // "Git" group
@@ -106,6 +107,15 @@ func (m *Model) extraCodeActionsForContext() []nvim.CodeAction {
 				synthKindTestRun,
 				synthCodeAction{FuncName: funcName, PkgPath: pkgRel, Path: path},
 			)
+			// -test.run selects tests, examples and fuzz targets, not
+			// benchmarks — those keep Run only.
+			if !strings.HasPrefix(funcName, "Benchmark") {
+				addSynth(
+					"Debug Test: "+funcName,
+					synthKindTestDebug,
+					synthCodeAction{FuncName: funcName, PkgPath: pkgRel, Path: path},
+				)
+			}
 			addSynth(
 				"Copy go test command",
 				synthKindTestCommand,
@@ -188,6 +198,8 @@ func (m *Model) applySynthCodeAction(idx int) tea.Cmd {
 	switch a.Kind {
 	case synthKindTestRun:
 		return m.runSynthTest(a) // Group E: streaming runner (test_explorer.go)
+	case synthKindTestDebug:
+		return m.debugTest(a.Path, a.FuncName) // glue D + E (test_debug.go)
 	case synthKindTestCommand:
 		safeClipboardWrite(a.Command)
 		var toastCmd tea.Cmd
