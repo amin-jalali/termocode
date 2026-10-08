@@ -27,11 +27,11 @@ type Icon struct {
 // common Nerd Font patches.
 //
 // Curated Unicode tier — chosen for being:
-//   1. Geometric BMP glyphs (U+2200–U+27BF range, mostly).
-//   2. Reported as east-asian-width=Neutral by Unicode (i.e. 1 cell on
-//      every modern terminal that respects EAW, including kitty,
-//      wezterm, ghostty, alacritty, iTerm2).
-//   3. Visually iconic enough to convey the action without text.
+//  1. Geometric BMP glyphs (U+2200–U+27BF range, mostly).
+//  2. Reported as east-asian-width=Neutral by Unicode (i.e. 1 cell on
+//     every modern terminal that respects EAW, including kitty,
+//     wezterm, ghostty, alacritty, iTerm2).
+//  3. Visually iconic enough to convey the action without text.
 //
 // Bold tier — hand-crafted 2-row × 2-cell glyph blocks built strictly
 // from the Unicode block-element set at U+2580–U+259F (single quadrants,
@@ -52,7 +52,7 @@ var (
 	// Bold: tabbed folder — small tab notch at the top (▗▄), solid
 	// folder body below (▟█).
 	IconFiles = Icon{
-		NerdFont: "", Unicode: "▤", ASCII: "F", // fa-folder, ▤
+		NerdFont: "", Unicode: "❐", ASCII: "F", // fa-folder, ▤
 		Bold: [2]string{"▗▄", "▟█"},
 	}
 	// IconSearch — telephone-recorder doubles as a magnifier outline at

@@ -15,8 +15,10 @@ import (
 //   - "nerd", "unicode", "ascii" are taken as is.
 //   - "auto" (or empty): Nerd Font when the doctor found one installed
 //     (and we are not over SSH, where the local fonts say nothing about
-//     the client); else Unicode when the width probe saw every Unicode
-//     icon draw one cell wide; else ASCII.
+//     the client); ASCII only on terminals that cannot draw Unicode
+//     (TERM=linux / dumb / vt*, or a non-UTF-8 locale); else the Unicode
+//     set, which renders in every modern terminal font. unicodeOK, when
+//     given, can veto Unicode (a width probe that saw wide glyphs).
 func ResolveIconMode(setting string, nerdFont bool, unicodeOK func() bool, getenv func(string) string) IconMode {
 	if getenv == nil {
 		getenv = os.Getenv
@@ -46,10 +48,29 @@ func ResolveIconMode(setting string, nerdFont bool, unicodeOK func() bool, geten
 	if nerdFont && !remote {
 		return IconModeNerdFont
 	}
-	if unicodeOK != nil && unicodeOK() {
-		return IconModeUnicode
+	if !unicodeTerminal(getenv) {
+		return IconModeASCII
 	}
-	return IconModeASCII
+	if unicodeOK != nil && !unicodeOK() {
+		return IconModeASCII
+	}
+	return IconModeUnicode
+}
+
+// unicodeTerminal reports whether the terminal can be expected to draw
+// Unicode symbols: not a bare console and not an explicitly non-UTF-8
+// locale (an unset locale is common over SSH and does not count).
+func unicodeTerminal(getenv func(string) string) bool {
+	t := strings.ToLower(getenv("TERM"))
+	if t == "linux" || t == "dumb" || t == "cons25" || strings.HasPrefix(t, "vt1") || strings.HasPrefix(t, "vt2") {
+		return false
+	}
+	for _, k := range []string{"LC_ALL", "LC_CTYPE", "LANG"} {
+		if v := strings.ToLower(getenv(k)); v != "" {
+			return strings.Contains(v, "utf-8") || strings.Contains(v, "utf8")
+		}
+	}
+	return true
 }
 
 // ProbeUnicode measures every Unicode icon on the real terminal (CSI 6n
