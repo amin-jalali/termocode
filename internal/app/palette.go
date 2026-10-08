@@ -41,6 +41,7 @@ const (
 	pickerKindThemeEditor
 	pickerKindKeybinding
 	pickerKindToolManager // LSP / DAP installer (lsp_manager.go)
+	pickerKindSnippetManager // Group H — Snippets: Manage…
 )
 
 // loadFiles walks the cwd and returns one picker.Item per file (relative path).
@@ -287,6 +288,10 @@ func paletteItems() []picker.Item {
 		{ID: "open-settings-ui", Title: "Preferences: Open Settings (UI)"},
 		{ID: "edit-custom-theme", Title: "Preferences: Edit Custom Theme"},
 		{ID: "customize-keybindings", Title: "Preferences: Customize Keybindings"},
+		// Group H — settings sync + user snippets.
+		{ID: "settings-export", Title: "Preferences: Export Settings..."},
+		{ID: "settings-import", Title: "Preferences: Import Settings..."},
+		{ID: "snippets-manage", Title: "Snippets: Manage..."},
 		{ID: "quit", Title: "File: Quit", Hint: "Ctrl+Q"},
 	}
 }
@@ -619,6 +624,13 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.openThemeEditor()
 	case "customize-keybindings":
 		return m.openKeybindingPicker()
+	// Group H — settings sync + user snippets.
+	case "settings-export":
+		return m.openSettingsExportPrompt()
+	case "settings-import":
+		return m.openSettingsImportPrompt()
+	case "snippets-manage":
+		return m.openSnippetManager()
 	default:
 		// Group G: merge conflicts + clone (git_conflicts.go, git_clone.go).
 		if cmd, ok := m.dispatchGitExtrasPalette(id); ok {

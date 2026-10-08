@@ -1771,6 +1771,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.onKeybindingRowSelected(msg.ID)
 	case pickerKindToolManager:
 		return m.onToolRowSelected(msg.ID)
+	case pickerKindSnippetManager: // Group H
+		return m.onSnippetManagerSelected(msg.ID)
 	}
 	return nil
 }

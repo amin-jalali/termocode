@@ -76,18 +76,26 @@ return table.concat(names, ', ')
 		lang = "—"
 	}
 
-	// Encoding + indent currently live as UI-only constants in the status
-	// bar (UTF-8 / Spaces:4). Keeping the same values here avoids any
-	// confusion about a divergent display until the editor surfaces real
-	// per-buffer values.
+	// Encoding / indent / EditorConfig come from the live buffer options
+	// (EditorConfig may have changed them per file). Fall back to the
+	// old static values when nvim isn't available.
+	encLine, indentLine, ecLine := "UTF-8", "Spaces: 4", "—"
+	if m.nvim != nil {
+		if s, err := m.nvim.EvalLuaString(bufferFormatLua); err == nil {
+			if bf, ok := parseBufferFormat(s); ok {
+				encLine, indentLine, ecLine = bf.encodingLine(), bf.indentLine(), bf.editorconfigLine()
+			}
+		}
+	}
 	body := strings.Join([]string{
-		"Path        " + path,
-		"Size        " + sizeStr,
-		"Lines       " + fmt.Sprintf("%d", lineCount),
-		"Filetype    " + lang,
-		"Encoding    UTF-8",
-		"Indent      Spaces: 4",
-		"LSP         " + lspLine,
+		"Path         " + path,
+		"Size         " + sizeStr,
+		"Lines        " + fmt.Sprintf("%d", lineCount),
+		"Filetype     " + lang,
+		"Encoding     " + encLine,
+		"Indent       " + indentLine,
+		"EditorConfig " + ecLine,
+		"LSP          " + lspLine,
 	}, "\n")
 
 	m.preview = preview.New(" Buffer Info ", body)
