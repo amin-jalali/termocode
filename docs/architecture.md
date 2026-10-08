@@ -195,7 +195,7 @@ Tests cache aggressively; if a test wrongly reports stale, use `go clean -testca
 ## CI
 
 - **`.github/workflows/test.yml`** — every push & PR runs `go vet ./...` + `go test ./... -race -count=1` on Ubuntu and macOS.
-- **`.github/workflows/release.yml`** — tagged releases (`v*`) cross-compile for linux/darwin × amd64/arm64, upload tarballs + `checksums.txt` to the GitHub Release with auto-generated release notes, then render the Homebrew formula and AUR `PKGBUILD` from `packaging/` and push them (each push is skipped when its secret is missing — see [CONTRIBUTING.md](../CONTRIBUTING.md#releases)).
+- **`.github/workflows/release.yml`** — tagged releases (`v*`) cross-compile for linux/darwin × amd64/arm64, upload tarballs + `checksums.txt` to the GitHub Release with auto-generated release notes, then render the Homebrew formula and AUR `PKGBUILD` from `packaging/` and push them (each push is skipped when its secret is missing — see [CONTRIBUTING.md](https://github.com/amin-jalali/termocode/blob/main/CONTRIBUTING.md#releases)).
 
 ## Repository layout
 
