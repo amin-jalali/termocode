@@ -50,11 +50,9 @@ func (m *Model) openSnippetPicker() tea.Cmd {
 	// don't have to keep the Go and Lua copies in sync — _snippets is a
 	// global table (defined in snippets_lua.go), keyed by ft.
 	out, err := m.nvim.EvalLuaString(`
-		local ft = vim.bo.filetype
-		local alias = { javascriptreact = 'javascript', typescriptreact = 'typescript', py = 'python' }
-		ft = alias[ft] or ft
-		local table_ = _snippets and _snippets[ft]
-		if not table_ then return '' end
+		-- Bundled + user snippets merged (user wins), see snippets_lua.go.
+		if not termocode_snippets_for then return '' end
+		local table_ = termocode_snippets_for(vim.bo.filetype)
 		local parts = {}
 		for trigger, body in pairs(table_) do
 			-- Encode each trigger and base64-ish escape the body so the
@@ -114,12 +112,13 @@ func (m *Model) insertSnippetBody(id string) tea.Cmd {
 	// Pass the body through Lua to call vim.snippet.expand. We can't
 	// directly nvim.Input the body because tabstop expansion needs the
 	// snippet API.
-	luaSafe := luaEscape(body)
+	// luaLongString keeps newlines / quotes intact (a '…' string literal
+	// would break on the first multi-line body).
 	_ = m.nvim.ExecLua(fmt.Sprintf(`
 		if vim.snippet and vim.snippet.expand then
-			vim.snippet.expand('%s')
+			vim.snippet.expand(%s)
 		end
-	`, luaSafe))
+	`, luaLongString(body)))
 	m.focus = FocusEditor
 	return nil
 }

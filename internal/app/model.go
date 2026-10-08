@@ -246,6 +246,10 @@ type Model struct {
 	// the snippet picker opens.
 	snippetPickerIndex map[string]string
 
+	// extras holds transient state for Group H flows (keymap conflict,
+	// settings export/import, user snippets manager). See settings_sync.go.
+	extras extrasState
+
 	// Markdown live preview: when on, a scratch buffer named
 	// "<basename> PREVIEW" carries the glamour-rendered output and lives
 	// in its own tab/window alongside the source. Refreshes on save.
@@ -754,6 +758,10 @@ func (m Model) attachCmd() tea.Cmd {
 		// load both via the same chunk would force a single keymap, losing
 		// either snippet expansion or popup acceptance.)
 		_ = m.nvim.ExecLua(snippetsLua)
+		// Group H: user snippets.json (layered over the bundled table) and
+		// Neovim's built-in EditorConfig support.
+		m.setupUserSnippets()
+		_ = m.nvim.ExecLua(editorconfigLua)
 		// Find Results scratch buffer: syntax + jump-to-file keymaps +
 		// global F4/Shift+F4 navigation. Filetype-driven so a fresh
 		// search buffer just sets filetype=findresults to wire up.

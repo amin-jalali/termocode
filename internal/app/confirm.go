@@ -25,6 +25,10 @@ const (
 	confirmKindGitStageCommit
 	confirmKindToolInstall // LSP / DAP installer (lsp_manager.go)
 	confirmKindReplaceWorkspace
+	// Group H — keymap conflict, settings import, user snippets.
+	confirmKindKeybindingConflict
+	confirmKindSettingsImport
+	confirmKindSnippetAction
 )
 
 // findBuffer returns the buffer info for the given id, if known.
@@ -123,6 +127,13 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 			return m.applyReplaceInWorkspace()
 		}
 		m.replaceFind, m.replaceRepl, m.replaceTargets = "", "", nil
+	// Group H — keymap conflict, settings import, user snippets.
+	case confirmKindKeybindingConflict:
+		return m.onKeybindingConflictConfirm(id)
+	case confirmKindSettingsImport:
+		return m.onSettingsImportConfirm(id)
+	case confirmKindSnippetAction:
+		return m.onSnippetActionConfirm(id)
 	}
 	return nil
 }

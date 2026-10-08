@@ -1,8 +1,11 @@
 package app
 
 import (
+	"fmt"
+
 	tea "github.com/charmbracelet/bubbletea"
 
+	"termocode/internal/confirm"
 	"termocode/internal/keymap"
 	"termocode/internal/picker"
 	"termocode/internal/prompt"
@@ -97,6 +100,45 @@ func (m *Model) applyKeybinding(value string) tea.Cmd {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Unknown action", m.keybindingPromptAction)
 		return toastCmd
 	}
+	// Conflict check: if the chord already belongs to another action,
+	// ask before stealing it. The confirm's Replace button routes back to
+	// commitKeybinding via confirmKindKeybindingConflict.
+	if owner, clash := m.keys.Conflict(value, action); clash {
+		m.extras.kbPendingKey = value
+		m.extras.kbPendingAction = action
+		m.confirm = confirm.New(
+			"Key already in use",
+			fmt.Sprintf("%s is already bound to %s.\n\nReplace it with %s?\n(%s will lose this key.)",
+				value, keymap.ActionName(owner), m.keybindingPromptAction, keymap.ActionName(owner)),
+			[]confirm.Button{
+				{ID: "replace", Title: "Replace", Style: confirm.StyleDestructive},
+				{ID: "cancel", Title: "Cancel"},
+			},
+		)
+		m.confirm.SetSize(m.w, m.h)
+		m.confirmOpen = true
+		m.confirmKind = confirmKindKeybindingConflict
+		return nil
+	}
+	return m.commitKeybinding(value, action)
+}
+
+// onKeybindingConflictConfirm handles the Replace / Cancel buttons of the
+// "Key already in use" dialog opened by applyKeybinding.
+func (m *Model) onKeybindingConflictConfirm(id string) tea.Cmd {
+	key, action := m.extras.kbPendingKey, m.extras.kbPendingAction
+	m.extras.kbPendingKey, m.extras.kbPendingAction = "", keymap.ActionNone
+	if id != "replace" || key == "" || action == keymap.ActionNone {
+		m.keybindingPromptAction = ""
+		return nil
+	}
+	return m.commitKeybinding(key, action)
+}
+
+// commitKeybinding persists value -> action to keymap.json and rebuilds
+// m.keys so the change is live without a restart.
+func (m *Model) commitKeybinding(value string, action keymap.Action) tea.Cmd {
+	var toastCmd tea.Cmd
 	// Persist + apply atomically. The override file is read-modify-write,
 	// so other entries the user previously customised stay intact.
 	entry := map[string]keymap.Action{value: action}
@@ -106,7 +148,7 @@ func (m *Model) applyKeybinding(value string) tea.Cmd {
 	}
 	overrides := keymap.LoadOverrides("")
 	m.keys = keymap.Default().MergeInto(overrides)
-	m.toast, toastCmd = m.toast.PushDetail(toast.Info, m.keybindingPromptAction, value)
+	m.toast, toastCmd = m.toast.PushDetail(toast.Info, keymap.ActionName(action), value)
 	m.keybindingPromptAction = ""
 	return toastCmd
 }
