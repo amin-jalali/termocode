@@ -28,6 +28,26 @@ termocode picks Vitest when `package.json` mentions it, and Jest otherwise.
 - In the Testing view: move to a test, file or package and press `r`.
 - In Go files, `Ctrl+.` also offers **Run Test: `<Name>`**.
 
+## Debug one test
+
+Set a breakpoint with `F9`, then start the test in the debugger:
+
+- In the Testing view: move to a test and press `d`.
+- In the editor: put the cursor in a test and run
+  **Testing: Debug Test at Cursor**, or press `Ctrl+.` and pick
+  **Debug Test: `<Name>`**.
+
+The session runs in the **Run and Debug** view, like any other session.
+
+| Framework | How it runs |
+|---|---|
+| Go | `dlv` in test mode with `-test.run ^Name$` |
+| pytest | `debugpy` runs `pytest file::Name` (uses `.venv` when it exists) |
+
+Rust, Jest and Vitest tests can't be debugged this way yet. When the debug
+adapter is missing, a toast says so and the Run view shows an install hint.
+See [Debug a program](debug.md).
+
 ## Read a failure
 
 1. Failed tests show their message right under the test row.
@@ -61,6 +81,7 @@ In the Testing view:
 | `Space` | Toggle fold |
 | `Enter` | Open the test (or the failure line) |
 | `r` | Run the item under the cursor |
+| `d` | Debug the test under the cursor (Go, pytest) |
 | `o` | Show its output |
 | `R` | Run all |
 | `f` | Rerun failed |
