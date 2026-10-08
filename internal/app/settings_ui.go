@@ -52,6 +52,12 @@ func settingsConfigPath() (string, error) {
 	return filepath.Join(home, ".config", "termocode", "config.json"), nil
 }
 
+// ConfigFontDelta returns the "font_delta" value from config.json, or nil
+// when it is not set. cmd/termocode reads it before the TUI starts.
+func ConfigFontDelta() *int {
+	return loadSettings().FontDelta
+}
+
 // loadSettings reads config.json. Missing/corrupt = empty struct.
 func loadSettings() settingsConfig {
 	path, err := settingsConfigPath()
@@ -135,7 +141,7 @@ var settingsRows = []settingsRow{
 	{ID: "setting-theme", Label: "theme", Kind: "string", Default: "vscode-dark-plus",
 		Desc: "Color theme ID. Same as Preferences: Color Theme."},
 	{ID: "setting-font-delta", Label: "font_delta", Kind: "int", Default: "-2",
-		Desc: "Font size change asked of the host terminal at launch (OSC 1337). Note: today only the TERMOCODE_FONT_DELTA environment variable is read at startup."},
+		Desc: "Font size change asked of the host terminal at launch (OSC 1337); 0 turns it off. TERMOCODE_FONT_DELTA wins over it."},
 	{ID: "setting-auto-save", Label: "auto_save", Kind: "bool", Default: "false",
 		Desc: "Save files automatically after edits."},
 	{ID: "setting-word-wrap", Label: "word_wrap", Kind: "bool", Default: "false",
@@ -385,7 +391,7 @@ func parseBoolLoose(s string) (bool, error) {
 // applyStartupSettings reads config.json and applies any per-launch
 // settings (auto_save, word_wrap, show_hidden, tab_size) at startup.
 // Theme is already handled by theme.LoadAndApply(); font_delta is read
-// before the TUI even starts (cmd/termocode/main.go), so we don't
+// before the TUI even starts (cmd/termocode/main.go via ConfigFontDelta), so we don't
 // re-apply it here. Best-effort — failures are logged but never block
 // startup.
 func (m *Model) applyStartupSettings() {

@@ -16,12 +16,22 @@ import (
 
 // fontDelta returns the number of font-points by which we ask the host
 // terminal to shrink (or grow) its font on launch. Negative = smaller.
-// Override with TERMOCODE_FONT_DELTA (set =0 to disable).
+// TERMOCODE_FONT_DELTA wins, then "font_delta" in config.json (written by
+// the Settings UI), then the default -2. 0 disables it.
 func fontDelta() int {
-	if v := os.Getenv("TERMOCODE_FONT_DELTA"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
+	return resolveFontDelta(os.Getenv("TERMOCODE_FONT_DELTA"), app.ConfigFontDelta())
+}
+
+// resolveFontDelta is the pure part of fontDelta: env (if it parses), else
+// cfg (if set), else -2.
+func resolveFontDelta(env string, cfg *int) int {
+	if env != "" {
+		if n, err := strconv.Atoi(env); err == nil {
 			return n
 		}
+	}
+	if cfg != nil {
+		return *cfg
 	}
 	return -2
 }
