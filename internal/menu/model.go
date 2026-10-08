@@ -127,17 +127,31 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-// HandleMouse routes a tea.MouseMsg through the menu. Click outside the
+// HandleMouse routes a tea.MouseMsg through the menu. Hover (plain motion)
+// moves the highlight onto the row under the pointer; click outside the
 // rendered panel closes the menu; click on an action row selects it; clicks
 // on borders/headers/separators are no-ops.
 func (m Model) HandleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
+	w, h := m.size()
+	x, y := m.clampedAnchor()
+	inside := msg.X >= x && msg.X < x+w && msg.Y >= y && msg.Y < y+h
+
+	// Hover: highlight the row under the pointer (the cursor doubles as the
+	// hover indicator, so moving the mouse previews what a click will hit).
+	if msg.Type == tea.MouseMotion {
+		if inside {
+			if idx := m.itemAt(msg.Y - y); idx >= 0 && idx < len(m.items) && !m.items[idx].Sep {
+				m.cursor = idx
+			}
+		}
+		return m, nil
+	}
+
 	if msg.Type != tea.MouseLeft {
 		return m, nil
 	}
-	w, h := m.size()
-	x, y := m.clampedAnchor()
 	// Click outside the bordered panel → close.
-	if msg.X < x || msg.X >= x+w || msg.Y < y || msg.Y >= y+h {
+	if !inside {
 		return m, func() tea.Msg { return CloseMsg{} }
 	}
 	// Map screen y to a logical item index (skipping border + optional header).

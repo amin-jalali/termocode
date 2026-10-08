@@ -319,6 +319,35 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 		}
 		return m, nil
 	}
+	// Hover: move the highlight onto the result row under the pointer.
+	if action == tea.MouseActionMotion {
+		boxW, boxH, available := m.layoutDims()
+		boxLeft := (m.w - boxW) / 2
+		boxTop := (m.h - boxH) / 2
+		if boxLeft < 0 {
+			boxLeft = 0
+		}
+		if boxTop < 0 {
+			boxTop = 0
+		}
+		if x < boxLeft || x >= boxLeft+boxW || y < boxTop || y >= boxTop+boxH {
+			return m, nil
+		}
+		yRel := y - boxTop - 4
+		if yRel < 0 || yRel >= available {
+			return m, nil
+		}
+		start := 0
+		if m.cursor >= available {
+			start = m.cursor - available + 1
+		}
+		idx := start + yRel
+		if idx >= 0 && idx < len(m.matches) && !m.matchIsHeader(idx) {
+			m.cursor = idx
+		}
+		return m, nil
+	}
+
 	if button != tea.MouseButtonLeft || action != tea.MouseActionPress {
 		return m, nil
 	}
