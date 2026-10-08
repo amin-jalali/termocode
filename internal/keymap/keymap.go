@@ -112,6 +112,13 @@ const (
 	// binding: Ctrl+Shift+. (kitty/CSI-u terminals); palette is the
 	// universal fallback ("Edit: Apply Preferred Quick Fix").
 	ActionApplyPreferredCodeAction
+	// Group A — AI. Alt+A (ActionToggleActionsPanel) opens the AI chat
+	// panel; these cover the rest: Alt+\ asks for an inline completion
+	// now, Alt+I edits the selection / line with an instruction, Alt+|
+	// toggles automatic ghost text.
+	ActionAITriggerInline
+	ActionAIEditSelection
+	ActionAIToggleInline
 )
 
 type KeyMap struct {
@@ -389,6 +396,11 @@ func Default() KeyMap {
 			// Right-side Actions panel toggle. Alt+A is universally free
 			// (Ctrl+Shift+A is grabbed by most terminals for "select all").
 			"alt+a": ActionToggleActionsPanel,
+
+			// Group A — AI.
+			"alt+\\": ActionAITriggerInline,
+			"alt+i":  ActionAIEditSelection,
+			"alt+|":  ActionAIToggleInline,
 
 			// Markdown preview: F7 (the canonical one-shot overlay) is the
 			// only binding now. We had a tab-based "live preview" attempt

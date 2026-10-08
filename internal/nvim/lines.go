@@ -32,3 +32,9 @@ func (c *Client) ExecLuaArgs(code string, args ...interface{}) error {
 	var result interface{}
 	return c.nv.ExecLua(code, &result, args...)
 }
+
+// ExecLuaResult runs a Lua chunk with positional arguments and decodes its
+// return value into result (Group A: AI proposal apply).
+func (c *Client) ExecLuaResult(code string, result interface{}, args ...interface{}) error {
+	return c.nv.ExecLua(code, result, args...)
+}
