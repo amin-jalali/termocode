@@ -27,6 +27,11 @@ type State struct {
 	Encoding string // e.g. "UTF-8"
 	Term     bool   // integrated terminal panel is open
 	Debug    bool   // a Debug Adapter Protocol session is active
+
+	// LSP chip: ShowLSP turns it on (a file buffer is open); LSP lists the
+	// attached client names ("{} gopls"), empty → dim "{} none".
+	ShowLSP bool
+	LSP     []string
 }
 
 type Model struct {
@@ -62,19 +67,24 @@ func sep() string {
 	return barFg(theme.BorderDefault).Render(" " + sepGlyph + " ")
 }
 
-func (m Model) View(s State) string {
-	if m.w <= 0 {
-		return ""
-	}
-	pad := barBg().Render(" ")
+// barLayout is the fitted content of one status-bar row.
+type barLayout struct {
+	left, center, right    string
+	leftW, centerW, rightW int
+	gapL, gapR             int
+	chipStart, chipW       int // LSP chip offset inside right (chipW 0 = none)
+}
 
-	left := m.renderLeft(s)
-	center := m.renderCenter(s)
-	right := m.renderRight(s)
+// layout fits left / center / right into the bar width (see View).
+func (m Model) layout(s State) barLayout {
+	var l barLayout
+	l.left = m.renderLeft(s)
+	l.center = m.renderCenter(s)
+	l.right, l.chipStart, l.chipW = m.renderRightChip(s)
 
-	leftW := lipgloss.Width(left)
-	centerW := lipgloss.Width(center)
-	rightW := lipgloss.Width(right)
+	l.leftW = lipgloss.Width(l.left)
+	l.centerW = lipgloss.Width(l.center)
+	l.rightW = lipgloss.Width(l.right)
 
 	innerW := m.w - 2 // subtract left+right edge pad
 	if innerW < 0 {
@@ -83,42 +93,55 @@ func (m Model) View(s State) string {
 
 	// Drop center first if everything won't fit, then truncate right and
 	// left in turn so the bar never overflows m.w.
-	if leftW+centerW+rightW > innerW {
-		center, centerW = "", 0
+	if l.leftW+l.centerW+l.rightW > innerW {
+		l.center, l.centerW = "", 0
 	}
-	if leftW+rightW > innerW {
+	if l.leftW+l.rightW > innerW {
 		// Truncate the right cluster first — the filename on the left
 		// is more critical than the trailing metadata when space is
 		// tight.
-		avail := innerW - leftW
+		avail := innerW - l.leftW
 		if avail < 0 {
 			avail = 0
 		}
-		right = truncateStyled(right, avail)
-		rightW = lipgloss.Width(right)
+		l.right = truncateStyled(l.right, avail)
+		l.rightW = lipgloss.Width(l.right)
 	}
-	if leftW+rightW > innerW {
-		avail := innerW - rightW
+	if l.leftW+l.rightW > innerW {
+		avail := innerW - l.rightW
 		if avail < 0 {
 			avail = 0
 		}
-		left = truncateStyled(left, avail)
-		leftW = lipgloss.Width(left)
+		l.left = truncateStyled(l.left, avail)
+		l.leftW = lipgloss.Width(l.left)
+	}
+	// A chip cut by truncation is not clickable.
+	if l.chipStart+l.chipW > l.rightW {
+		l.chipW = 0
 	}
 
-	contentW := leftW + centerW + rightW
+	contentW := l.leftW + l.centerW + l.rightW
 	gap := innerW - contentW
 	if gap < 0 {
 		gap = 0
 	}
-	gapL := gap / 2
-	gapR := gap - gapL
-	leftSpace := barBg().Render(strings.Repeat(" ", gapL))
-	rightSpace := barBg().Render(strings.Repeat(" ", gapR))
+	l.gapL = gap / 2
+	l.gapR = gap - l.gapL
+	return l
+}
+
+func (m Model) View(s State) string {
+	if m.w <= 0 {
+		return ""
+	}
+	pad := barBg().Render(" ")
+	l := m.layout(s)
+	leftSpace := barBg().Render(strings.Repeat(" ", l.gapL))
+	rightSpace := barBg().Render(strings.Repeat(" ", l.gapR))
 
 	body := lipgloss.JoinHorizontal(
 		lipgloss.Top,
-		pad, left, leftSpace, center, rightSpace, right, pad,
+		pad, l.left, leftSpace, l.center, rightSpace, l.right, pad,
 	)
 	// Force the row to exactly m.w cells from lipgloss's perspective so
 	// JoinVertical above can't pad it with default-styled spaces.
@@ -126,6 +149,20 @@ func (m Model) View(s State) string {
 		Width(m.w).
 		Background(theme.LG(barBgColor())).
 		Render(body)
+}
+
+// LSPChipSpan returns the [x0, x1) cell range of the LSP chip relative to
+// the bar's left edge; ok=false when the chip is hidden or truncated.
+func (m Model) LSPChipSpan(s State) (x0, x1 int, ok bool) {
+	if m.w <= 0 {
+		return 0, 0, false
+	}
+	l := m.layout(s)
+	if l.chipW == 0 {
+		return 0, 0, false
+	}
+	rightX := 1 + l.leftW + l.gapL + l.centerW + l.gapR
+	return rightX + l.chipStart, rightX + l.chipStart + l.chipW, true
 }
 
 // truncateStyled clips a possibly-styled string to width w cells by
@@ -235,8 +272,16 @@ func (m Model) renderCenter(s State) string {
 }
 
 // renderRight shows cursor position, indent style, encoding, language,
-// and (if active) TERM / DEBUG indicators — separated by dim │ pipes.
+// the LSP chip, and (if active) TERM / DEBUG indicators — separated by dim
+// │ pipes.
 func (m Model) renderRight(s State) string {
+	out, _, _ := m.renderRightChip(s)
+	return out
+}
+
+// renderRightChip is renderRight plus the LSP chip's cell offset / width
+// inside the returned string (width 0 when the chip is hidden).
+func (m Model) renderRightChip(s State) (string, int, int) {
 	var parts []string
 	parts = append(parts, barFg(theme.TextSecondary).Render(
 		fmt.Sprintf("Ln %d, Col %d", s.Line, s.Col)))
@@ -251,6 +296,11 @@ func (m Model) renderRight(s State) string {
 	if s.Lang != "" {
 		parts = append(parts, barFg(theme.TextSecondary).Render(s.Lang))
 	}
+	chipIdx := -1
+	if s.ShowLSP {
+		chipIdx = len(parts)
+		parts = append(parts, renderLSPChip(s.LSP))
+	}
 	if s.Term {
 		// Subtle "TERM" indicator so the user can tell at a glance
 		// whether the integrated terminal panel is currently open.
@@ -262,7 +312,23 @@ func (m Model) renderRight(s State) string {
 		// debug session is high-attention.
 		parts = append(parts, barFg(theme.DiagError).Bold(true).Render("● DEBUG"))
 	}
-	return strings.Join(parts, sep())
+	chipStart, chipW := 0, 0
+	if chipIdx >= 0 {
+		sepW := lipgloss.Width(sep())
+		for _, p := range parts[:chipIdx] {
+			chipStart += lipgloss.Width(p) + sepW
+		}
+		chipW = lipgloss.Width(parts[chipIdx])
+	}
+	return strings.Join(parts, sep()), chipStart, chipW
+}
+
+// renderLSPChip is "{} gopls" (attached clients) or a dim "{} none".
+func renderLSPChip(clients []string) string {
+	if len(clients) == 0 {
+		return barFg(theme.TextDim).Render("{} none")
+	}
+	return barFg(theme.TextSecondary).Render("{} " + strings.Join(clients, ", "))
 }
 
 func truncate(s string, n int) string {

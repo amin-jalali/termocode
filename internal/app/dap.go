@@ -9,6 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"termocode/internal/lspinstall"
 	"termocode/internal/toast"
 )
 
@@ -161,10 +162,14 @@ func (m *Model) dapShowVars() tea.Cmd {
 // has no usable adapter on PATH — the caller surfaces it as a toast. Empty
 // string means "either supported here, or we don't gate this language".
 func (m *Model) dapMissingAdapterToast(lang string) string {
+	// Adapters from the managed installer (tools/bin) count as present.
+	if lspinstall.AnyAvailable(lspinstall.ForFiletype(lspinstall.CategoryDAP, lang)) {
+		return ""
+	}
 	switch lang {
 	case "go":
 		if _, err := exec.LookPath("dlv"); err != nil {
-			return "DAP: install dlv  (go install github.com/go-delve/delve/cmd/dlv@latest)"
+			return "DAP: dlv missing — palette → DAP: Install Adapter..."
 		}
 	case "python":
 		py := pythonExecutable()
@@ -174,7 +179,7 @@ func (m *Model) dapMissingAdapterToast(lang string) string {
 		// Cheap import check; identical to the Lua-side gate.
 		check := exec.Command(py, "-c", "import debugpy")
 		if err := check.Run(); err != nil {
-			return "DAP: install debugpy  (" + py + " -m pip install debugpy)"
+			return "DAP: debugpy missing — palette → DAP: Install Adapter..."
 		}
 	case "javascript", "typescript":
 		if _, err := exec.LookPath("node"); err != nil {
