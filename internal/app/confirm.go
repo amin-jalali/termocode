@@ -23,6 +23,7 @@ const (
 	confirmKindDeletePath
 	confirmKindGitDiscard
 	confirmKindGitStageCommit
+	confirmKindReplaceWorkspace
 )
 
 // findBuffer returns the buffer info for the given id, if known.
@@ -114,6 +115,11 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		if id == "stage" {
 			return m.gitStageAllAndCommit()
 		}
+	case confirmKindReplaceWorkspace:
+		if id == "replace" {
+			return m.applyReplaceInWorkspace()
+		}
+		m.replaceFind, m.replaceRepl, m.replaceTargets = "", "", nil
 	}
 	return nil
 }
