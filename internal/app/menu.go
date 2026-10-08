@@ -12,6 +12,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/menu"
 	"github.com/amin-jalali/termocode/internal/tabbar"
+	"github.com/amin-jalali/termocode/internal/termimg"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -294,6 +295,9 @@ func (m *Model) handleMenuSelect(id string) tea.Cmd {
 	path := m.menuPath
 	switch id {
 	case "open":
+		if termimg.IsImagePath(path) {
+			return m.openImagePreview(path)
+		}
 		if !isSupportedFile(path) {
 			var c tea.Cmd
 			t, d := unsupportedFileMessage(path)
@@ -423,12 +427,12 @@ func closeBufferCmd(id int) tea.Cmd {
 
 // Editor right-click context-menu action IDs.
 const (
-	editorMenuCut          = "editor-cut"
-	editorMenuCopy         = "editor-copy"
-	editorMenuPaste        = "editor-paste"
-	editorMenuFormat       = "editor-format"
-	editorMenuToggleComm   = "editor-toggle-comment"
-	editorMenuGoToDef      = "editor-go-to-def"
+	editorMenuCut        = "editor-cut"
+	editorMenuCopy       = "editor-copy"
+	editorMenuPaste      = "editor-paste"
+	editorMenuFormat     = "editor-format"
+	editorMenuToggleComm = "editor-toggle-comment"
+	editorMenuGoToDef    = "editor-go-to-def"
 )
 
 func editorMenuItems() []menu.Item {

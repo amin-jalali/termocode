@@ -2,6 +2,9 @@ package app
 
 import (
 	"fmt"
+	"image"
+	"image/color"
+	"image/draw"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -279,6 +282,7 @@ func renderWelcomeFull(w, h, focusIdx int) (string, []welcomeRecentHit, []welcom
 	logoStyle := theme.FgBg(theme.AccentBlue, theme.BgEditor).Bold(true)
 	tagStyle := theme.FgBg(theme.TextMuted, theme.BgEditor)
 	logo := welcomeLogo(innerW)
+	pixelLogo := logo != nil
 	if logo == nil {
 		logo = welcomeBanner(logoStyle, innerW)
 	}
@@ -399,6 +403,13 @@ func renderWelcomeFull(w, h, focusIdx int) (string, []welcomeRecentHit, []welcom
 	topPad := (h - rowsTotal) / 2
 	if topPad < 0 {
 		topPad = 0
+	}
+	// Remember where the pixel wordmark landed, so the frame can draw the
+	// image version on top of it (image_view.go / welcomeLogoImage).
+	welcomeLogoAt = welcomeLogoRect{}
+	if pixelLogo && len(logo) > 0 {
+		lw := lipgloss.Width(logo[0])
+		welcomeLogoAt = welcomeLogoRect{ok: true, x: leftPad + (innerW-lw)/2, y: topPad, cols: lw, rows: len(logo)}
 	}
 	bottomPad := h - rowsTotal - topPad
 	if bottomPad < 0 {
@@ -1360,4 +1371,51 @@ func padRightS(s string, w int) string {
 		return s
 	}
 	return s + strings.Repeat(" ", w-len(s))
+}
+
+// welcomeLogoRect is where the pixel wordmark was drawn in the last
+// welcome render (editor-pane relative). View runs on one goroutine.
+type welcomeLogoRect struct {
+	ok               bool
+	x, y, cols, rows int
+}
+
+var welcomeLogoAt welcomeLogoRect
+
+// welcomeLogoImage paints the wordmark as an image: one logo pixel is a
+// cellW × cellH/2 block, coloured along the same gradient as the text
+// version but per image column (smoother), on the editor background.
+func welcomeLogoImage(cols, rows, cellW, cellH int) image.Image {
+	px := logoPixels("TERMOCODE", 2)
+	if len(px[0]) != cols {
+		px = logoPixels("TERMOCODE", 1)
+	}
+	w, h := cols*cellW, rows*cellH
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	bg := theme.ToRGB(theme.BgEditor)
+	draw.Draw(img, img.Bounds(), &image.Uniform{color.RGBA{bg.R, bg.G, bg.B, 255}}, image.Point{}, draw.Src)
+	stops := []theme.RGB{theme.ToRGB(theme.BorderFocus), theme.ToRGB(theme.AccentLavender), theme.ToRGB(theme.AccentMagenta)}
+	grad := theme.Gradient(w, stops...)
+	ph := cellH / 2
+	inset := cellW / 8
+	for y, row := range px {
+		for x := 0; x < len(row) && x < cols; x++ {
+			if row[x] != '#' {
+				continue
+			}
+			x0, y0 := x*cellW, y*ph
+			for yy := y0; yy < y0+ph && yy < h; yy++ {
+				for xx := x0; xx < x0+cellW && xx < w; xx++ {
+					c := grad[xx]
+					// A hairline gap between pixels gives the mark a crisp,
+					// tiled look; neighbours in the same stroke stay joined.
+					if inset > 0 && (xx-x0 < inset && (x == 0 || row[x-1] != '#')) {
+						continue
+					}
+					img.Set(xx, yy, color.RGBA{c.R, c.G, c.B, 255})
+				}
+			}
+		}
+	}
+	return img
 }

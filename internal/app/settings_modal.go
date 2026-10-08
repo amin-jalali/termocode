@@ -461,19 +461,19 @@ func (m settingsModal) firstSelectable(start, step int) int {
 // project's "soft selected" RGB lets a future overlay tweak land in one
 // place. (See modalOverlay's softSelectedBg / softTitleBg.)
 var (
-	smBoxBg lipgloss.Color
+	smBoxBg      lipgloss.Color
 	smBorderBlue lipgloss.Color
-	smIconBlue lipgloss.Color
-	smTextPri lipgloss.Color
-	smTextSec lipgloss.Color
-	smTextDim lipgloss.Color
+	smIconBlue   lipgloss.Color
+	smTextPri    lipgloss.Color
+	smTextSec    lipgloss.Color
+	smTextDim    lipgloss.Color
 	smCategoryFg lipgloss.Color
-	smSelBg lipgloss.Color
-	smValueFg lipgloss.Color
+	smSelBg      lipgloss.Color
+	smValueFg    lipgloss.Color
 	smGuideColor lipgloss.Color
 	smSubtitleFg lipgloss.Color
-	smInputBg lipgloss.Color
-	smInputFg lipgloss.Color
+	smInputBg    lipgloss.Color
+	smInputFg    lipgloss.Color
 )
 
 func init() { refreshSettingsColors() }
@@ -483,12 +483,12 @@ func init() { refreshSettingsColors() }
 func refreshSettingsColors() {
 	smBoxBg = theme.Float().Bg
 	smBorderBlue = theme.Float().Border // thin dark-grey rim
-	smIconBlue = theme.Float().Icon // header icon keeps the blue accent
+	smIconBlue = theme.Float().Icon     // header icon keeps the blue accent
 	smTextPri = theme.Float().Text
-	smTextSec = theme.Float().Sub // muted labels / subtitle
-	smTextDim = theme.Float().Dim // separators, footer hints
+	smTextSec = theme.Float().Sub                 // muted labels / subtitle
+	smTextDim = theme.Float().Dim                 // separators, footer hints
 	smCategoryFg = theme.LG(theme.AccentLavender) // [ Appearance ] tint
-	smSelBg = theme.Float().SelBg // soft selection bar (matches softSelectedBg)
+	smSelBg = theme.Float().SelBg                 // soft selection bar (matches softSelectedBg)
 	smValueFg = theme.Float().Title
 	smGuideColor = theme.Float().Hairline
 	smSubtitleFg = theme.Float().Dim

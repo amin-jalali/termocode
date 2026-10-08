@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/explorer"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -17,6 +18,7 @@ import (
 //
 //	palette:<command id>   run a command-palette entry (see paletteItems)
 //	open:<path>            open a file in the editor
+//	openfile:<path>        open a file as the explorer does (image preview)
 //	view:files|git         switch the sidebar view
 //	toast:<title>|<detail> push an info toast
 //	theme:<id>             apply a color theme (not persisted)
@@ -29,6 +31,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		return m.dispatchPaletteAction(arg)
 	case "open":
 		m.openFileAtLine(arg, 1)
+	case "openfile": // as if picked in the explorer (images open the preview)
+		return func() tea.Msg { return explorer.OpenFileMsg{Path: arg} }
 	case "view":
 		m.showExp = true
 		switch arg {

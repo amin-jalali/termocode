@@ -28,6 +28,8 @@ func (m Model) overlayKind() string {
 		return "confirm"
 	case m.menuOpen:
 		return "menu"
+	case m.imageOpen:
+		return "image"
 	}
 	return ""
 }

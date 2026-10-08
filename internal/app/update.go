@@ -18,7 +18,6 @@ import (
 	"github.com/amin-jalali/termocode/internal/findbar"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/keymap"
-	"github.com/amin-jalali/termocode/internal/toast"
 	"github.com/amin-jalali/termocode/internal/menu"
 	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/picker"
@@ -28,6 +27,8 @@ import (
 	"github.com/amin-jalali/termocode/internal/replacebar"
 	"github.com/amin-jalali/termocode/internal/search"
 	"github.com/amin-jalali/termocode/internal/tabbar"
+	"github.com/amin-jalali/termocode/internal/termimg"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // Update wraps updateInner and keeps the xterm mouse-tracking mode in sync:
@@ -39,6 +40,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.animTicking = false
 		m.stepAnimations()
 		return m, m.afterUpdateAnim(prevKind)
+	}
+	if c, ok := m.handleImageMsg(msg); ok {
+		return m, tea.Batch(c, m.afterUpdateAnim(prevKind))
 	}
 	next, cmd := m.updateInner(msg)
 	nm, ok := next.(Model)
@@ -357,6 +361,9 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleMouse(msg)
 
 	case explorer.OpenFileMsg:
+		if termimg.IsImagePath(msg.Path) {
+			return m, m.openImagePreview(msg.Path)
+		}
 		if !isSupportedFile(msg.Path) {
 			var c tea.Cmd
 			t, d := unsupportedFileMessage(msg.Path)
@@ -1816,6 +1823,9 @@ func (m *Model) revealActiveFileInExplorer() {
 func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 	switch m.pickerKind {
 	case pickerKindFiles:
+		if termimg.IsImagePath(msg.ID) {
+			return m.openImagePreview(msg.ID)
+		}
 		if !isSupportedFile(msg.ID) {
 			var c tea.Cmd
 			t, d := unsupportedFileMessage(msg.ID)
@@ -1859,6 +1869,9 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 	case pickerKindBranches:
 		return m.gitCheckoutSelected(msg.ID)
 	case pickerKindRecentFiles:
+		if termimg.IsImagePath(msg.ID) {
+			return m.openImagePreview(msg.ID)
+		}
 		if !isSupportedFile(msg.ID) {
 			var c tea.Cmd
 			t, d := unsupportedFileMessage(msg.ID)
