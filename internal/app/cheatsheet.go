@@ -131,8 +131,10 @@ DEBUG
   F9                Toggle breakpoint
   F10               Step over
   F11 / Shift+F11   Step into / out (terminal-dependent)
-  Palette           Debug: Start / Stop / Continue
-  Palette           Debug: Show Call Stack / Variables
+  Alt+F5            Start / continue debugging
+  Shift+Alt+F5      Stop debugging
+  Palette           View: Run and Debug / View: Debug Console
+  Palette           Debug: Run Without Debugging / Open launch.json
 
 WORKSPACE
   Palette           Workspace: Add Folder
