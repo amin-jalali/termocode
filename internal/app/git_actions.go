@@ -394,6 +394,31 @@ function _G.TcDiffCounter()
   for i, v in ipairs(s) do if l >= v then cur = i end end
   return cur .. '/' .. n
 end
+-- Jump to the next / previous change in BOTH diff panes and centre it — the
+-- click target for the winbar's ‹ › buttons. Driving both windows mirrors the
+-- wheel-to-both-panes scroll model (no scrollbind), so the panes stay aligned.
+-- ']c' / '[c' are nvim's native diff change motions; pcall guards the no-more-
+-- changes case (it errors rather than wrapping).
+function _G.TcDiffJump(dir)
+  local key = dir > 0 and ']c' or '[c'
+  -- Wrap: if there is no next/prev change, jump to the first/last one. Done
+  -- per-window so both diff panes land on the SAME change and stay aligned.
+  local wrapkey = dir > 0 and 'gg]c' or 'G[c'
+  for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if vim.wo[w].diff then
+      vim.api.nvim_win_call(w, function()
+        local before = vim.fn.line('.')
+        pcall(vim.cmd, 'normal! ' .. key)
+        if vim.fn.line('.') == before then
+          pcall(vim.cmd, 'normal! ' .. wrapkey)
+        end
+        pcall(vim.cmd, 'normal! zz')
+      end)
+    end
+  end
+end
+function _G.TcDiffNext() _G.TcDiffJump(1) end
+function _G.TcDiffPrev() _G.TcDiffJump(-1) end
 local base = (vim.fn.fnamemodify(work, ':t') or ''):gsub('%%', '%%%%')
 -- Tiny dots (not dashes) fill the deleted-line gaps.
 pcall(function() vim.opt.fillchars:append('diff:·') end)
@@ -408,6 +433,10 @@ vim.api.nvim_set_hl(0, 'WinBarNC',     { fg = '#9aa3ad', bg = '#26292e' })
 vim.api.nvim_set_hl(0, 'TcDiffHdr',    { fg = '#e6edf3', bg = '#26292e', bold = true })
 vim.api.nvim_set_hl(0, 'TcDiffHdrDim', { fg = '#7d868f', bg = '#26292e' })
 vim.api.nvim_set_hl(0, 'TcDiffCount',  { fg = '#9aa3ad', bg = '#26292e', bold = true })
+-- Change-nav buttons (‹ ›) pinned to the LEFT pane's winbar start; termocode
+-- hit-tests columns 0-5 of the winbar row and drives the jump (nvim's own
+-- winbar %@ click handlers don't fire reliably for v:lua refs).
+vim.api.nvim_set_hl(0, 'TcDiffNav', { fg = '#79c0ff', bg = '#30363d', bold = true })
 -- Close any prior diff panes so re-diffing replaces instead of stacking.
 for _, w in ipairs(vim.api.nvim_list_wins()) do
   local b = vim.api.nvim_win_get_buf(w)
@@ -455,7 +484,8 @@ end
 vim.cmd('diffthis')
 vim.wo.foldenable = false
 vim.wo.number = true
-vim.wo.winbar = '%#TcDiffHdr# ' .. base .. '  %#TcDiffHdrDim#·  HEAD'
+-- Nav buttons occupy columns 0-5 ( ‹ = 0-2, › = 3-5 ); termocode maps clicks there.
+vim.wo.winbar = '%#TcDiffNav# ‹ %#TcDiffNav# › %#TcDiffHdr# ' .. base .. '  %#TcDiffHdrDim#·  HEAD'
 -- Per-side colours: red on the left (HEAD), green on the right (working).
 local nsL = vim.api.nvim_create_namespace('tcDiffL')
 vim.api.nvim_set_hl(nsL, 'DiffChange', { bg = '#3a1f28' })

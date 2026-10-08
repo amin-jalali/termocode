@@ -1,6 +1,8 @@
 package app
 
 import (
+	"fmt"
+
 	tea "github.com/charmbracelet/bubbletea"
 
 	"termocode/internal/activity"
@@ -40,6 +42,15 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			m.overflowMenuOpen = false
 		} else {
 			m.openOverflowMenu()
+		}
+		return m, nil
+	}
+	// Hover: move the overflow menu's highlight onto the row under the pointer.
+	if m.overflowMenuOpen && msg.Type == tea.MouseMotion {
+		if m.hitOverflowMenuRect(msg.X, msg.Y) {
+			if idx := m.overflowMenuItemRow(msg.Y); idx >= 0 {
+				m.overflowMenuCursor = idx
+			}
 		}
 		return m, nil
 	}
@@ -370,7 +381,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// Welcome screen: when no editor file is open we show the welcome
 	// content in the editor pane. A click on a recent-files row should
 	// open that file rather than fall through to the editor.
-	if msg.Type == tea.MouseLeft && m.editor.Path() == "" && len(m.bufs) <= 1 && !m.termOpen {
+	if msg.Type == tea.MouseLeft && m.editor.Path() == "" && len(m.bufs) <= 1 && !m.termOpen && !m.gitDiffActive {
 		// Reproduce edPaneW + editorH the same way renderBase does so
 		// the hit map matches what's actually on screen.
 		bodyH := m.h - 1
@@ -523,6 +534,24 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			edPaneW -= m.explorerWidth
 		}
 		switch msg.Type {
+		case tea.MouseLeft:
+			// Change-nav buttons live on the winbar (localY == 0) at the very
+			// start of the left pane: " ‹ " spans cols 0-2, " › " cols 3-5.
+			// Clicking jumps to the prev/next change in BOTH panes (go-to-line).
+			recordError(fmt.Sprintf("[diffclick] localX=%d localY=%d msgX=%d msgY=%d edTop=%d", localX, localY, msg.X, msg.Y, editorTopRow))
+			if localY == 0 {
+				switch {
+				case localX >= 0 && localX <= 2:
+					recordError("[diffclick] -> PREV")
+					_ = m.nvim.Command("lua _G.TcDiffPrev()")
+					return m, nil
+				case localX >= 3 && localX <= 5:
+					recordError("[diffclick] -> NEXT")
+					_ = m.nvim.Command("lua _G.TcDiffNext()")
+					return m, nil
+				}
+			}
+			// Not a nav button — fall through to the normal click forwarding.
 		case tea.MouseWheelUp, tea.MouseWheelDown:
 			dir := "up"
 			if msg.Type == tea.MouseWheelDown {
