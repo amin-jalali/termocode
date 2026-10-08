@@ -3,8 +3,9 @@
 A terminal IDE that feels like VSCode — built on Bubble Tea, powered by a real Neovim process under the hood.
 
 <!--
-Drop a screenshot or asciinema GIF at assets/screenshots/demo.png and uncomment:
-![termocode demo](assets/screenshots/demo.png)
+Screenshots are not committed yet. Generate them with
+`vhs assets/screenshots/demo.tape` (see assets/screenshots/README.md), then uncomment:
+![termocode demo](assets/screenshots/demo.gif)
 -->
 
 ```sh
@@ -28,10 +29,19 @@ Without `path`, opens in the current directory.
 
 ## Install
 
-Requires Go ≥ 1.26 to build, plus a handful of runtime dependencies:
+Once a release is published to the package managers:
+
+```sh
+brew install amin-jalali/termocode/termocode   # macOS / Linux (Homebrew tap)
+yay -S termocode-bin                           # Arch Linux (AUR)
+```
+
+Or grab a tarball from the GitHub Releases page, or build from source.
+
+Building requires Go ≥ 1.26, plus a handful of runtime dependencies:
 
 - `nvim` ≥ 0.10 on `$PATH`
-- `rg` (ripgrep) for workspace search
+- `rg` (ripgrep) for fast workspace search (optional — a slower built-in search is used without it)
 - `git` for the Source Control sidebar
 - A truecolor terminal (kitty, wezterm, ghostty, alacritty, iTerm2, modern Windows Terminal)
 
@@ -56,7 +66,11 @@ For cross-compiled release tarballs (linux/darwin × amd64/arm64) in `dist/`:
 
 - **[Feature guide](docs/features.md)** — every keybinding, palette command, and feature in detail.
 - **[Architecture](docs/architecture.md)** — how the pieces fit: Bubble Tea, Neovim RPC, overlay rendering, persistence, themes.
+- **[Contributing](CONTRIBUTING.md)** — build, test, code layout, style, commit messages, releases.
+- **[Decisions](docs/adr/README.md)** and **[QC cases](docs/qc/README.md)**.
+
+Something not working? Run `termocode setup` in a shell, or `Help: Run Doctor` from the command palette (`F1`), to check nvim, ripgrep, language servers and fonts.
 
 ## CI
 
-Every push and PR runs the test matrix (Ubuntu + macOS) via `.github/workflows/test.yml`. Tagged releases (`v*`) trigger `.github/workflows/release.yml`, which cross-compiles and attaches binaries to a GitHub Release.
+Every push and PR runs the test matrix (Ubuntu + macOS) via `.github/workflows/test.yml`. Tagged releases (`v*`) trigger `.github/workflows/release.yml`, which cross-compiles and attaches binaries to a GitHub Release, then updates the Homebrew tap and the AUR package.
