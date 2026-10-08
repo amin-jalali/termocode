@@ -19,6 +19,7 @@ const (
 	ViewGit
 	ViewRun
 	ViewSettings // bottom group; not yet wired to a sidebar
+	ViewTests    // Group E: Testing view (test explorer)
 )
 
 // Width is the column count taken by the activity bar.
@@ -70,6 +71,7 @@ var topItems = []item{
 	{view: ViewFiles, icon: theme.IconFiles, label: "Explorer"},
 	{view: ViewGit, icon: theme.IconGit, label: "Source Control"},
 	{view: ViewRun, icon: theme.IconRun, label: "Run"},
+	{view: ViewTests, icon: theme.IconTests, label: "Testing"}, // Group E
 }
 
 var bottomItems = []item{
