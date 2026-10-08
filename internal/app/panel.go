@@ -81,6 +81,9 @@ type panelKindSpec struct {
 	Key func(m *Model, msg tea.KeyMsg) (tea.Cmd, bool)
 	// OnClose runs when the tab is closed (× or closePanelTab). Optional.
 	OnClose func(m *Model)
+	// TitleFn, when set, overrides Title with a live label (e.g.
+	// "PROBLEMS (3)"). Called from View — it must not block. Optional.
+	TitleFn func(m *Model) string
 }
 
 // panelKinds holds the registered specs. Written only from init().
@@ -111,6 +114,16 @@ func panelKindTitle(k panelKind) string {
 		return s.Title
 	}
 	return "Panel"
+}
+
+// panelTitle is panelKindTitle plus the kind's live TitleFn, if any.
+func (m Model) panelTitle(k panelKind) string {
+	if s, ok := panelKinds[k]; ok && s.TitleFn != nil {
+		if t := s.TitleFn(&m); t != "" {
+			return t
+		}
+	}
+	return panelKindTitle(k)
 }
 
 // panelKindIcon returns the 1-cell glyph for a non-terminal kind.

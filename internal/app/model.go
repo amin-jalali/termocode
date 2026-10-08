@@ -385,6 +385,10 @@ type Model struct {
 	// debounce coalesces noisy events (nvim notifications, keystrokes)
 	// into one message per quiet period. Shared by pointer.
 	debounce *debounce.Debouncer
+	// Group C — Problems panel (problems_panel.go) and task runner
+	// (tasks_run.go). Pointers so copies of Model share the state.
+	problems *problemsPanel
+	tasks    *taskRunner
 
 	focus             Focus
 	showExp           bool
@@ -598,6 +602,8 @@ func New() Model {
 		actionsWidth:  actionsWidth,
 		output:        newOutputStore(),
 		debounce:      debounce.New(),
+		problems:      newProblemsPanel(), // Group C
+		tasks:         newTaskRunner(),    // Group C
 	}
 	if err != nil {
 		m.editor = editor.New(nil)

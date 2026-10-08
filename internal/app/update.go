@@ -648,6 +648,8 @@ end
 		// works with overlays open, like the nvim stream.
 		m.output.Append(msg.Channel, msg.Lines...)
 		return m, nil, true
+	case applyMsg: // Group C — background results (problems_panel.go)
+		return m, msg(&m), true
 	}
 	return m, nil, false
 }
@@ -1294,6 +1296,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Splice user-defined commands at the bottom so they're visible but
 		// don't push built-ins down the fuzzy-match list.
 		items := paletteItems()
+		items = append(items, tasksPaletteItems()...) // Group C
 		items = append(items, userCommandsItems()...)
 		// Promote frequently-used commands to the front so muscle memory
 		// works: type a few letters and the right command is already
@@ -1428,6 +1431,12 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.gotoImplementationCmd()
 	case keymap.ActionRunTests:
 		return m, m.runTestsCmd()
+	case keymap.ActionRunTask: // Group C
+		return m, m.openTaskPicker()
+	case keymap.ActionRerunTask: // Group C
+		return m, m.rerunLastTask()
+	case keymap.ActionShowProblems: // Group C
+		return m, m.showProblemsPanel()
 	case keymap.ActionGitBlameLine:
 		return m, m.gitBlameCurrentLine()
 	case keymap.ActionFileHistory:
@@ -1726,6 +1735,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		}
 	case pickerKindProblems:
 		m.jumpToProblem(msg.ID)
+	case pickerKindTasks: // Group C
+		return m.handleTasksPickerSelect(msg.ID)
 	case pickerKindCodeAction:
 		return m.applySelectedCodeAction(msg.ID)
 	case pickerKindSymbols:

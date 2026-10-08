@@ -193,6 +193,44 @@ const Template = `{
 }
 `
 
+// Marshal renders tasks as a tasks.json document (used to seed the file
+// with the detected tasks).
+func Marshal(list []Task) string {
+	type outTask struct {
+		Label          string            `json:"label"`
+		Command        string            `json:"command"`
+		Args           []string          `json:"args,omitempty"`
+		Cwd            string            `json:"cwd,omitempty"`
+		Env            map[string]string `json:"env,omitempty"`
+		Group          any               `json:"group,omitempty"`
+		ProblemMatcher any               `json:"problemMatcher,omitempty"`
+	}
+	f := struct {
+		Version int       `json:"version"`
+		Tasks   []outTask `json:"tasks"`
+	}{Version: 1}
+	for _, t := range list {
+		o := outTask{Label: t.Label, Command: t.Command, Args: t.Args, Cwd: t.Cwd, Env: t.Env}
+		if t.Group != "" {
+			if t.IsDefault {
+				o.Group = map[string]any{"kind": t.Group, "isDefault": true}
+			} else {
+				o.Group = t.Group
+			}
+		}
+		switch len(t.ProblemMatcher) {
+		case 0:
+		case 1:
+			o.ProblemMatcher = t.ProblemMatcher[0]
+		default:
+			o.ProblemMatcher = t.ProblemMatcher
+		}
+		f.Tasks = append(f.Tasks, o)
+	}
+	b, _ := json.MarshalIndent(f, "", "  ")
+	return string(b) + "\n"
+}
+
 // Merge joins task lists in priority order. A later task whose label is
 // already taken is dropped.
 func Merge(lists ...[]Task) []Task {

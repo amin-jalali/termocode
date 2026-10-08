@@ -182,6 +182,15 @@ vim.diagnostic.config({
   float = { border = 'rounded' },
 })
 
+-- Group C: tell Go whenever any diagnostic set changes (LSP or task
+-- problem matchers) so the Problems panel refreshes live. Go debounces.
+vim.api.nvim_create_autocmd('DiagnosticChanged', {
+  group = 'TermocodeLSP',
+  callback = function()
+    if _G.termocode_notify then _G.termocode_notify('termocode_diagnostics_changed') end
+  end,
+})
+
 -- Sign column glyphs (use Nerd Font symbols when present, else letters).
 local signs = { Error = '', Warn = '', Info = '', Hint = '' }
 for type, icon in pairs(signs) do
