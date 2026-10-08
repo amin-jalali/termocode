@@ -198,6 +198,12 @@ func (m *Model) toggleTerminalPanel() {
 	if m.nvim == nil {
 		return
 	}
+	// Panel open on a non-terminal tab (Output, …): Ctrl+T brings the
+	// terminal forward instead of closing everything (VSCode behaviour).
+	if m.termOpen && m.panelActive != panelKindTerminal {
+		m.showPanelTab(panelKindTerminal)
+		return
+	}
 	if m.probeTerminalBufferLive() {
 		m.closeTerminalPanel()
 		return
@@ -207,11 +213,16 @@ func (m *Model) toggleTerminalPanel() {
 
 // openTerminalPanel opens a fresh terminal split + first tab. Idempotent
 // when called with the panel already open: returns without touching nvim.
+// When the split is already open with only non-terminal tabs, it adds the
+// first terminal tab into that split instead.
 func (m *Model) openTerminalPanel() {
 	if m.nvim == nil {
 		return
 	}
-	if m.termOpen && len(m.terminalTabs) > 0 {
+	if m.termOpen {
+		if len(m.terminalTabs) == 0 {
+			m.newTerminalTab()
+		}
 		return
 	}
 	shell := os.Getenv("SHELL")
@@ -234,6 +245,9 @@ func (m *Model) openTerminalPanel() {
 		vim.bo[buf].buflisted = false
 		vim.bo[buf].swapfile  = false
 		local termWin = vim.api.nvim_get_current_win()
+		-- Tag the panel split so ensureEditorWindowCurrent never picks it
+		-- (it may later hold the non-terminal placeholder buffer).
+		vim.w[termWin].termocode_panel = true
 		local job = vim.fn.termopen(%q, {
 			on_exit = function(_, code, _)
 				vim.g.termocode_term_last_exit = code
@@ -291,6 +305,7 @@ func (m *Model) openTerminalPanel() {
 	}
 	m.terminalTabs = []terminalTab{tab}
 	m.terminalActiveTab = 0
+	m.panelActive = panelKindTerminal
 	m.terminalMinimized = false
 	m.focus = FocusEditor
 	m.termOpen = true
@@ -314,7 +329,15 @@ func (m *Model) closeTerminalPanel() {
 				pcall(vim.api.nvim_buf_delete, b, { force = true })
 			end
 		end
+		-- Non-terminal placeholder (panel.go): deleting it closes the split
+		-- when it is the buffer on display.
+		local pb = vim.g.termocode_panel_buf
+		if pb and vim.api.nvim_buf_is_valid(pb) then
+			pcall(vim.api.nvim_buf_delete, pb, { force = true })
+		end
+		vim.g.termocode_panel_buf = nil
 	`)
+	m.resetPanelState()
 	m.termOpen = false
 	m.terminalCwd = ""
 	m.terminalCwdAt = time.Time{}
@@ -335,7 +358,7 @@ func (m *Model) newTerminalTab() {
 	if m.nvim == nil {
 		return
 	}
-	if !m.termOpen || len(m.terminalTabs) == 0 {
+	if !m.termOpen {
 		m.openTerminalPanel()
 		return
 	}
@@ -414,6 +437,8 @@ func (m *Model) newTerminalTab() {
 	}
 	m.terminalTabs = append(m.terminalTabs, tab)
 	m.terminalActiveTab = len(m.terminalTabs) - 1
+	m.panelActive = panelKindTerminal
+	m.panelFocused = false
 	m.terminalCwd = cwd
 	m.terminalCwdAt = time.Now()
 	m.terminalMinimized = false
@@ -436,9 +461,22 @@ func (m *Model) closeTerminalTab(idx int) {
 		return
 	}
 	if len(m.terminalTabs) == 1 {
-		m.closeTerminalPanel()
+		if len(m.panelTabs) == 0 {
+			m.closeTerminalPanel()
+			return
+		}
+		// Non-terminal tabs remain: keep the split, park the placeholder
+		// buffer in it, then drop the last shell.
+		m.closeLastTerminalKeepPanel()
 		return
 	}
+	// Restore editor focus afterwards if a non-terminal tab is on show —
+	// the buffer swap below focuses the terminal window.
+	defer func() {
+		if m.panelActive != panelKindTerminal {
+			m.ensureEditorWindowCurrent()
+		}
+	}()
 	closedTab := m.terminalTabs[idx]
 	wasActive := idx == m.terminalActiveTab
 
@@ -513,13 +551,47 @@ func (m *Model) closeTerminalTab(idx int) {
 	}
 }
 
+// closeLastTerminalKeepPanel closes the only terminal tab while non-terminal
+// tabs stay open: the placeholder goes into the split FIRST (so nvim never
+// closes the window or shows the editor buffer there), then the shell is
+// stopped and its buffer deleted.
+func (m *Model) closeLastTerminalKeepPanel() {
+	if len(m.terminalTabs) == 0 {
+		return
+	}
+	buf := m.terminalTabs[0].BufID
+	m.ensurePanelHost(true)
+	if m.nvim != nil {
+		_ = m.nvim.ExecLua(fmt.Sprintf(`
+			local b = %d
+			if vim.api.nvim_buf_is_loaded(b) then
+				local ok, chan = pcall(function() return vim.bo[b].channel end)
+				if ok and chan and chan > 0 then pcall(vim.fn.jobstop, chan) end
+				pcall(vim.api.nvim_buf_delete, b, { force = true })
+			end
+		`, buf))
+	}
+	m.terminalTabs = nil
+	m.terminalActiveTab = 0
+	m.terminalCwd = ""
+	if m.panelActive == panelKindTerminal && len(m.panelTabs) > 0 {
+		m.panelActive = m.panelTabs[len(m.panelTabs)-1]
+	}
+	m.inTerminal = false
+	m.ensureEditorWindowCurrent()
+	m.invalidateTerminalProbeCache()
+}
+
 // switchTerminalTab sets the active tab to idx and swaps the visible buffer
-// in the terminal window. No-op when idx is out of range or already active.
+// in the terminal window. No-op when idx is out of range. Also makes the
+// terminal kind the visible panel tab.
 func (m *Model) switchTerminalTab(idx int) {
 	if idx < 0 || idx >= len(m.terminalTabs) {
 		return
 	}
 	m.terminalActiveTab = idx
+	m.panelActive = panelKindTerminal
+	m.panelFocused = false
 	if m.nvim == nil || m.terminalWinID <= 0 {
 		return
 	}
@@ -538,17 +610,10 @@ func (m *Model) switchTerminalTab(idx int) {
 }
 
 // cycleTerminalTab moves the active tab by `step` (negative cycles back),
-// wrapping around. No-op when fewer than 2 tabs exist.
+// wrapping around. Cycles ALL bottom-panel tabs — terminals and Output /
+// Problems / … alike (panel.go). No-op when fewer than 2 tabs exist.
 func (m *Model) cycleTerminalTab(step int) {
-	n := len(m.terminalTabs)
-	if n < 2 {
-		return
-	}
-	idx := (m.terminalActiveTab + step) % n
-	if idx < 0 {
-		idx += n
-	}
-	m.switchTerminalTab(idx)
+	m.cyclePanelTabs(step)
 }
 
 // minimizeTerminalPanel collapses the panel to just the tab-bar row.
@@ -619,8 +684,14 @@ func (m *Model) resizeTerminalSplit() {
 		// Minimized — squash the split to 1 row (nvim won't allow 0).
 		rows = 1
 	}
+	// Prefer the known panel window (it may hold the non-terminal
+	// placeholder buffer); fall back to the first terminal window.
 	_ = m.nvim.ExecLua(fmt.Sprintf(`
-		local rows = %d
+		local rows, panelWin = %d, %d
+		if panelWin > 0 and vim.api.nvim_win_is_valid(panelWin) then
+			pcall(vim.api.nvim_win_set_height, panelWin, rows)
+			return
+		end
 		for _, w in ipairs(vim.api.nvim_list_wins()) do
 			local b = vim.api.nvim_win_get_buf(w)
 			if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buftype == 'terminal' then
@@ -628,7 +699,7 @@ func (m *Model) resizeTerminalSplit() {
 				break
 			end
 		end
-	`, rows))
+	`, rows, m.terminalWinID))
 }
 
 // persistTerminalRows writes the current m.terminalRows into the session
@@ -691,11 +762,14 @@ func (m Model) editorPaneWidth() int {
 //
 // Layout, left to right:
 //
-//   "Terminal" │ <icon> name × │ <icon> name × │ + …………………… ● ↑ − ×
+//   "Terminal" │ ≡ Output × │ <icon> name × │ <icon> name × │ + ……… ● ↑ − ×
 //
-// One row, full editor-pane width. Active tab punches through to the
-// editor body bg (BgEditor). Inactive tabs inherit the tab-bar bg
-// (BgPanel). All styling pulls from the active theme; no raw hex literals.
+// The leading label is the active tab's kind title ("Terminal", "Output",
+// …). Non-terminal tabs (panel.go) come first, then terminal tabs; "+"
+// always adds a terminal. One row, full editor-pane width. Active tab
+// punches through to the editor body bg (BgEditor). Inactive tabs inherit
+// the tab-bar bg (BgPanel). All styling pulls from the active theme; no
+// raw hex literals.
 
 const (
 	terminalTabMaxNameW   = 16 // truncate tab name to this many cells with "…"
@@ -706,7 +780,9 @@ const (
 // returned alongside the rendered string so the mouse router can hit-test
 // click targets without re-deriving the column layout.
 type terminalTabSlot struct {
-	// Index into m.terminalTabs.
+	// Kind of the tab. Index points into m.terminalTabs for
+	// panelKindTerminal and into m.panelTabs for every other kind.
+	Kind  panelKind
 	Index int
 	// Active tab gets the editor-bg punch-through.
 	Active bool
@@ -757,22 +833,20 @@ func (m Model) computeTerminalTabBarLayout(width int) terminalTabBarLayout {
 	layout.MinStart = layout.MaxStart + 1 // ↑(1) → −
 	layout.CloseStart = layout.MinStart + 1
 
-	// Left segment: " Terminal │ " (1 pad + 8 label + 1 gap + 1 sep + 1 gap = 12).
+	// Left segment: " <Label> │ " (1 pad + label + 1 gap + 1 sep + 1 gap).
 	// Build the layout incrementally so it stays correct if widths shift.
 	col := 0
-	col++           // " " (left pad)
-	col += 8        // "Terminal"
-	col++           // " " (gap before separator)
-	col++           // "│" (separator)
-	col++           // " " (gap after separator)
+	col++                                                       // " " (left pad)
+	col += runewidth.StringWidth(panelKindTitle(m.panelActive)) // "Terminal" / "Output" / …
+	col++                                                       // " " (gap before separator)
+	col++                                                       // "│" (separator)
+	col++                                                       // " " (gap after separator)
 	tabsStart := col
 
-	// Tabs: each rendered as " icon name × ".
-	for i := range m.terminalTabs {
-		tabName := m.terminalTabs[i].Name
-		if tabName == "" {
-			tabName = "shell"
-		}
+	// Tabs: each rendered as " icon name × ", in panelBarEntries order.
+	entries := m.panelBarEntries()
+	for i, e := range entries {
+		tabName := m.panelEntryName(e)
 		// Visible cell-width budget for the tab segment.
 		nameW := runewidth.StringWidth(tabName)
 		if nameW > terminalTabMaxNameW {
@@ -791,8 +865,9 @@ func (m Model) computeTerminalTabBarLayout(width int) terminalTabBarLayout {
 			break
 		}
 		slot := terminalTabSlot{
-			Index:      i,
-			Active:     i == m.terminalActiveTab,
+			Kind:       e.Kind,
+			Index:      e.Index,
+			Active:     m.panelEntryActive(e),
 			Start:      col,
 			End:        col + segW,
 			CloseStart: col + segW - 2, // " ×"
@@ -802,9 +877,9 @@ func (m Model) computeTerminalTabBarLayout(width int) terminalTabBarLayout {
 		col += segW
 		// Inter-tab separator " │ " (3 cells), unless this is the last one
 		// or either neighbour is the active tab (spec).
-		if i < len(m.terminalTabs)-1 {
-			nextIsActive := (i + 1) == m.terminalActiveTab
-			thisIsActive := i == m.terminalActiveTab
+		if i < len(entries)-1 {
+			nextIsActive := m.panelEntryActive(entries[i+1])
+			thisIsActive := slot.Active
 			if !nextIsActive && !thisIsActive {
 				col += 3
 			} else {
@@ -851,24 +926,21 @@ func (m Model) renderTerminalTabBar(width int) string {
 
 	var out strings.Builder
 
-	// Left segment: " Terminal │ "
+	// Left segment: " <active kind title> │ "
 	out.WriteString(bg.Render(" "))
-	out.WriteString(label.Render("Terminal"))
+	out.WriteString(label.Render(panelKindTitle(m.panelActive)))
 	out.WriteString(bg.Render(" "))
 	out.WriteString(sepStyle.Render("│"))
 	out.WriteString(bg.Render(" "))
 
 	// Tabs.
 	for i, slot := range layout.Tabs {
-		tab := m.terminalTabs[slot.Index]
-		name := tab.Name
-		if name == "" {
-			name = "shell"
-		}
+		e := panelBarEntry{Kind: slot.Kind, Index: slot.Index}
+		name := m.panelEntryName(e)
 		if runewidth.StringWidth(name) > terminalTabMaxNameW {
 			name = runewidth.Truncate(name, terminalTabMaxNameW, "…")
 		}
-		glyph := shellGlyphFor(tab.Shell)
+		glyph := m.panelEntryGlyph(e)
 		if slot.Active {
 			out.WriteString(editorBg.Render(" "))
 			out.WriteString(accent.Render(glyph))
@@ -917,9 +989,15 @@ func (m Model) renderTerminalTabBar(width int) string {
 		out.WriteString(bg.Render(strings.Repeat(" ", rightStart-have)))
 	}
 
-	// Right-side controls: status dot, gap, ↑, −, ×, right pad.
-	dotStyle := terminalStatusDotStyle(m.activeTerminalLastExit())
-	out.WriteString(dotStyle.Render("●"))
+	// Right-side controls: status dot, gap, ↑, −, ×, right pad. The dot
+	// reports the active shell, so it is blank while a non-terminal tab
+	// is on show.
+	if m.panelActive == panelKindTerminal {
+		dotStyle := terminalStatusDotStyle(m.activeTerminalLastExit())
+		out.WriteString(dotStyle.Render("●"))
+	} else {
+		out.WriteString(bg.Render(" "))
+	}
 	out.WriteString(bg.Render(" "))
 	out.WriteString(mutedDim.Render("↑"))
 	out.WriteString(mutedDim.Render("−"))
@@ -927,6 +1005,32 @@ func (m Model) renderTerminalTabBar(width int) string {
 	out.WriteString(bg.Render(" "))
 
 	return padTabBarToWidth(out.String(), width, bg)
+}
+
+// panelEntryName returns the tab label for a bar entry: the shell cwd
+// basename for terminals, the kind title otherwise.
+func (m Model) panelEntryName(e panelBarEntry) string {
+	if e.Kind != panelKindTerminal {
+		return panelKindTitle(e.Kind)
+	}
+	if e.Index < 0 || e.Index >= len(m.terminalTabs) {
+		return "shell"
+	}
+	if name := m.terminalTabs[e.Index].Name; name != "" {
+		return name
+	}
+	return "shell"
+}
+
+// panelEntryGlyph returns the 1-cell icon for a bar entry.
+func (m Model) panelEntryGlyph(e panelBarEntry) string {
+	if e.Kind != panelKindTerminal {
+		return panelKindIcon(e.Kind)
+	}
+	if e.Index < 0 || e.Index >= len(m.terminalTabs) {
+		return shellGlyphFor("")
+	}
+	return shellGlyphFor(m.terminalTabs[e.Index].Shell)
 }
 
 // terminalStatusDotStyle returns the lipgloss style for the right-side
@@ -1013,6 +1117,12 @@ func (m Model) spliceTerminalTabBar(editorContent string, paneW, editorH int) st
 	}
 	rows[barIdx] = bar
 
+	// Non-terminal tab on show (Output, Problems, …): Go paints its
+	// content over nvim's split rows below the bar (panel.go).
+	if m.panelActive != panelKindTerminal && barIdx+1 < editorH {
+		copy(rows[barIdx+1:], m.renderPanelContent(paneW, editorH-barIdx-1))
+	}
+
 	return strings.Join(rows, "\n")
 }
 
@@ -1052,11 +1162,16 @@ const (
 	// terminalHitDrag means the click landed on the bar but not on any
 	// button — start a vertical drag-resize.
 	terminalHitDrag
+	// panelHitTabClose / panelHitTabActivate are the non-terminal tab
+	// counterparts (Output, Problems, …); the index is into m.panelTabs.
+	panelHitTabClose
+	panelHitTabActivate
 )
 
 // terminalTabBarHitTest maps an absolute screen coordinate to a tab-bar
 // hit. Returns (terminalHitNone, -1) when the coord doesn't fall on the
-// tab-bar row at all.
+// tab-bar row at all. Tab hits carry an index into m.terminalTabs
+// (terminalHit*) or m.panelTabs (panelHit*).
 func (m Model) terminalTabBarHitTest(absX, absY int) (terminalTabBarHit, int) {
 	if !m.termOpen {
 		return terminalHitNone, -1
@@ -1089,12 +1204,18 @@ func (m Model) terminalTabBarHitTest(absX, absY int) (terminalTabBarHit, int) {
 	// Per-tab close-x.
 	for _, slot := range layout.Tabs {
 		if localX >= slot.CloseStart && localX < slot.CloseEnd {
+			if slot.Kind != panelKindTerminal {
+				return panelHitTabClose, slot.Index
+			}
 			return terminalHitTabClose, slot.Index
 		}
 	}
 	// Per-tab activate.
 	for _, slot := range layout.Tabs {
 		if localX >= slot.Start && localX < slot.End {
+			if slot.Kind != panelKindTerminal {
+				return panelHitTabActivate, slot.Index
+			}
 			return terminalHitTabActivate, slot.Index
 		}
 	}
@@ -1139,10 +1260,13 @@ func (m *Model) ensureEditorWindowCurrent() {
 	if m.nvim == nil || !m.termOpen {
 		return
 	}
+	// Skip the panel split too (vim.w.termocode_panel): it may hold the
+	// non-terminal placeholder buffer, which is not a terminal.
 	_ = m.nvim.ExecLua(`
 		for _, w in ipairs(vim.api.nvim_list_wins()) do
 			local b = vim.api.nvim_win_get_buf(w)
-			if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buftype ~= 'terminal' then
+			if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buftype ~= 'terminal'
+				and not vim.w[w].termocode_panel then
 				pcall(vim.api.nvim_set_current_win, w)
 				break
 			end
@@ -1158,11 +1282,17 @@ func (m Model) probeTerminalBufferLive() bool {
 	if m.nvim == nil {
 		return false
 	}
+	// The panel also counts as live while its non-terminal placeholder
+	// buffer (panel.go) is on display in a window.
 	out, _ := m.nvim.EvalLuaString(`
 		for _, b in ipairs(vim.api.nvim_list_bufs()) do
 			if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buftype == 'terminal' then
 				return '1'
 			end
+		end
+		local pb = vim.g.termocode_panel_buf
+		if pb and vim.api.nvim_buf_is_valid(pb) and vim.fn.bufwinid(pb) ~= -1 then
+			return '1'
 		end
 		return ''
 	`)
@@ -1211,6 +1341,7 @@ func (m *Model) syncTerminalState() (changed bool) {
 	live := terminalProbeVal
 	terminalProbeMu.Unlock()
 	if m.termOpen && !live {
+		m.resetPanelState()
 		m.termOpen = false
 		m.terminalCwd = ""
 		m.terminalCwdAt = time.Time{}
@@ -1279,8 +1410,23 @@ func (m *Model) refreshTerminalCwd() {
 	if m.terminalActiveTab < 0 {
 		m.terminalActiveTab = 0
 	}
+	if len(m.terminalTabs) == 0 && len(m.panelTabs) > 0 {
+		// Every shell exited but Output / Problems / … tabs remain: keep
+		// (or reopen) the split with the placeholder buffer in it.
+		m.terminalCwd = ""
+		m.terminalActiveTab = 0
+		if m.panelActive == panelKindTerminal {
+			m.panelActive = m.panelTabs[len(m.panelTabs)-1]
+		}
+		m.ensurePanelHost(true)
+		m.inTerminal = false
+		m.ensureEditorWindowCurrent()
+		m.invalidateTerminalProbeCache()
+		return
+	}
 	if len(m.terminalTabs) == 0 {
 		// No live tabs → close the panel state.
+		m.resetPanelState()
 		m.termOpen = false
 		m.terminalCwd = ""
 		m.terminalRowsLastSent = 0

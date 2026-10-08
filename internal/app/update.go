@@ -595,6 +595,7 @@ end
 		// re-enters terminal-insert. Cleared whenever the panel closes
 		// or the user moves focus to an editor window.
 		m.inTerminal = m.termOpen && m.terminalWinID > 0 &&
+			m.panelActive == panelKindTerminal &&
 			msg.CurrentWin == m.terminalWinID && msg.Mode == "t"
 		return m, tea.Batch(m.maybeRefreshStickyContext(), m.maybeRefreshScrollbarMarkers(), reloadToastCmd), true
 	case gitAutoRefreshMsg:
@@ -614,6 +615,20 @@ end
 		return m, nil, true
 	case nvim.ErrMsg:
 		m.err = msg.Err.Error()
+		return m, nil, true
+
+	// ── nvim → Go event channel (notify.go) ──
+	case nvim.NotifyMsg:
+		cmd := m.dispatchNotify(msg)
+		if m.nvim != nil {
+			// Re-arm the stream, same as RedrawMsg.
+			cmd = tea.Batch(m.nvim.Next(), cmd)
+		}
+		return m, cmd, true
+	case OutputMsg:
+		// Output panel append from a tea.Cmd (output.go). Lives here so it
+		// works with overlays open, like the nvim stream.
+		m.output.Append(msg.Channel, msg.Lines...)
 		return m, nil, true
 	}
 	return m, nil, false
@@ -1108,6 +1123,14 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
+	// Bottom panel: a focused non-terminal tab (Output, Problems, …) gets
+	// first pick of keys; unclaimed keys fall through (panel.go).
+	if m.panelFocused {
+		if cmd, handled := m.routePanelKey(msg); handled {
+			return m, cmd
+		}
+	}
+
 	// Welcome-screen keyboard navigation: when the start page is
 	// rendered (no buffer, no terminal panel) we let arrow keys / Tab
 	// move the Quick Actions cursor and Enter dispatch the focused
@@ -1193,11 +1216,8 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// binding's no-op otherwise so other handlers can claim the chord
 		// (e.g. nothing else binds Ctrl+Shift+W today, but if a future
 		// binding does, this guard keeps the action panel-scoped).
-		if m.termOpen && len(m.terminalTabs) > 0 {
-			m.closeTerminalTab(m.terminalActiveTab)
-			m.applyLayout()
-			m.resizeTerminalSplit()
-		}
+		// Closes the visible panel tab of any kind (panel.go).
+		m.closeActivePanelTab()
 		return m, nil
 	case keymap.ActionTerminalNextTab:
 		if m.termOpen {
