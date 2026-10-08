@@ -1,0 +1,22 @@
+pkgbase = termocode-bin
+	pkgdesc = Terminal IDE that feels like VSCode, powered by an embedded Neovim
+	pkgver = @VERSION@
+	pkgrel = 1
+	url = https://github.com/@REPO@
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	depends = neovim
+	optdepends = ripgrep: fast workspace search (pure-Go fallback otherwise)
+	optdepends = git: Source Control sidebar
+	optdepends = ttf-jetbrains-mono-nerd: icons in the explorer and tabs
+	provides = termocode
+	conflicts = termocode
+	source = LICENSE::https://raw.githubusercontent.com/@REPO@/v@VERSION@/LICENSE
+	sha256sums = SKIP
+	source_x86_64 = termocode-v@VERSION@-linux-amd64.tar.gz::https://github.com/@REPO@/releases/download/v@VERSION@/termocode-v@VERSION@-linux-amd64.tar.gz
+	sha256sums_x86_64 = @SHA_LINUX_AMD64@
+	source_aarch64 = termocode-v@VERSION@-linux-arm64.tar.gz::https://github.com/@REPO@/releases/download/v@VERSION@/termocode-v@VERSION@-linux-arm64.tar.gz
+	sha256sums_aarch64 = @SHA_LINUX_ARM64@
+
+pkgname = termocode-bin
