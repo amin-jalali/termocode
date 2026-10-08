@@ -150,6 +150,9 @@ One `modalOverlay` function powers every picker and prompt. Per-call tweaks go t
 | `extensions/<name>/`    | Optional — Lua extensions (`init.lua`); see [extensions.md](extensions.md) and [ADR 0006](adr/0006-lua-extension-host.md) |
 | `ai/credentials.json`   | AI API keys + Claude OAuth tokens (mode 0600)                          |
 | `ai/chats/*.json`       | Saved AI chats (newest 50 kept)                                         |
+| `breakpoints.json`      | Debugger breakpoints per file (line + line text, re-checked on open)   |
+
+Per-workspace: `<workspace>/.termocode/launch.json` holds debug / run configurations (VSCode `launch.json` shape; comments allowed).
 
 Plugins that termocode clones on first launch (nvim-dap, vim-visual-multi) live outside the config dir, in `~/.local/share/termocode/plugins` (`$XDG_DATA_HOME/termocode/plugins`, or `$TERMOCODE_PLUGINS_DIR`). See [ADR 0003](adr/0003-auto-bootstrapped-nvim-plugins.md).
 

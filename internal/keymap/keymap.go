@@ -125,6 +125,13 @@ const (
 	ActionAITriggerInline
 	ActionAIEditSelection
 	ActionAIToggleInline
+	// Group D — Run & Debug. ActionDebugStartContinue starts the selected
+	// configuration (or continues a paused session): Alt+F5.
+	// ActionDebugStop terminates the session: Shift+Alt+F5 (arrives as
+	// alt+f17 on terminals that report Shift+F5 as F17; xterm's CSI 15;4~
+	// is caught in app.routeDebugMsg).
+	ActionDebugStartContinue
+	ActionDebugStop
 )
 
 type KeyMap struct {
@@ -225,8 +232,16 @@ func Default() KeyMap {
 			// ActionNextDiagnostic; "Debug: Continue" is palette-only.
 			"f9":  ActionDebugToggleBreakpoint,
 			"f10": ActionDebugStepOver,
-			"f7":  ActionMarkdownPreview,
-			"f8":  ActionWorkspaceSearch,
+
+			// Group D: F11 step into, Shift+F11 step out (xterm reports
+			// Shift+F11 as F23), Alt+F5 start/continue, Shift+Alt+F5 stop.
+			"f11":     ActionDebugStepInto,
+			"f23":     ActionDebugStepOut,
+			"alt+f5":  ActionDebugStartContinue,
+			"alt+f17": ActionDebugStop,
+
+			"f7": ActionMarkdownPreview,
+			"f8": ActionWorkspaceSearch,
 			// Ctrl+Shift+F (VSCode / Sublime default) is intercepted by
 			// every common terminal emulator we've tested so it never
 			// reaches the app. Alt+F is forwarded by iTerm2, wezterm,

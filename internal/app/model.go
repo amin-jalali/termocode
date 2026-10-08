@@ -473,6 +473,8 @@ type Model struct {
 	// gates step-* keybindings (so F10/F11 don't toast spam without a
 	// session) and adds a "● DEBUG" badge to the status bar.
 	dapSessionActive bool
+	// debug is the Run & Debug state (Group D, debug_state.go).
+	debug *debugState
 
 	// lspMgr: LSP/DAP installer state (manager picker, background
 	// installs, one-time "no language server" toast, status-bar chip).
@@ -617,6 +619,7 @@ func New() Model {
 		testView:         newTestsState(),    // Group E
 		ext:              newExtState(),      // Group I
 		ai:               newAIState(),       // Group A
+		debug:            loadDebugState(),   // Group D (shared by Model copies)
 	}
 	if err != nil {
 		m.editor = editor.New(nil)
@@ -815,6 +818,7 @@ func (m Model) attachCmd() tea.Cmd {
 		_ = m.nvim.ExecLua(dapSetupLua(dapPath))
 		// Adapters installed by the managed installer (tools/bin shims).
 		_ = m.nvim.ExecLua(dapManagedLua)
+		m.debugLoadBreakpoints() // Group D: persisted breakpoints (m.debug is shared)
 		// Apply the VSCode Dark+ palette via Lua. Done after `syntax on` so
 		// the highlight groups override the default scheme.
 		_ = m.nvim.ExecLua(vscodeDarkPlusLua)
