@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/explorer"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -24,6 +25,7 @@ import (
 //	view:files|git         switch the sidebar view
 //	toast:<title>|<detail> push an info toast
 //	theme:<id>             apply a color theme (not persisted)
+//	aidemo                 load a sample AI conversation
 type DevActionMsg struct{ ID string }
 
 func (m *Model) runDevAction(id string) tea.Cmd {
@@ -38,6 +40,13 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 			_ = m.nvim.ExecLua(fmt.Sprintf(`local b = vim.api.nvim_win_get_buf(%d); vim.api.nvim_chan_send(vim.bo[b].channel, %q)`,
 				m.terminalWinID, arg+"\r"))
 		}
+	case "aidemo": // a sample conversation for the AI chat shot
+		s := m.aiS()
+		s.conv.Messages = []ai.StoredMessage{
+			{Role: ai.StoredUser, Text: "Why does the toast slide out twice?", Context: "Attached model.go:120-160:\n..."},
+			{Role: ai.StoredAssistant, Text: aiDemoAnswer},
+		}
+		s.scroll = 0
 	case "openfile": // as if picked in the explorer (images open the preview)
 		return func() tea.Msg { return explorer.OpenFileMsg{Path: arg} }
 	case "view":
@@ -57,3 +66,5 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 	}
 	return nil
 }
+
+const aiDemoAnswer = "## Cause\n\n`Tick` marks an expired toast as **leaving** but keeps it in the list, and `Step` removes it only after the slide ends. When a second tick fires *before* that, the toast is marked again:\n\n1. first tick: `leaving = true`, slide starts\n2. second tick: the check runs again and **restarts** the slide\n\n### Fix\n\nSkip toasts that are already leaving:\n\n```go\nfor _, t := range m.toasts {\n\tif !t.ExpiresAt.After(now) && !t.leaving {\n\t\tt.leaving = true // slide out once\n\t\tt.slide.Set(1)\n\t}\n\tout = append(out, t)\n}\n```\n\n- keeps one slide per toast\n- no change when animations are off\n\n> Tip: run `go test ./internal/toast` after the change."

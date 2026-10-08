@@ -182,7 +182,7 @@ func TestAIPanelKeysAndMouse(t *testing.T) {
 		t.Fatal("unfocused panel must not take keys")
 	}
 	// Click the input row focuses the panel.
-	g := aiGeom(m.h)
+	g := m.aiPanelGeom(m.actionsColumnWidth(), m.h)
 	x := m.w - m.actionsColumnWidth() + 3
 	if _, ok := m.handleAIPanelMouse(tea.MouseMsg{X: x, Y: g.inputTop, Type: tea.MouseLeft, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft}); !ok || !s.focused {
 		t.Fatal("click on input should focus")
