@@ -37,6 +37,12 @@ func (m *Model) applyNvimTheme() {
 const themeLuaBody = `
 local hi = function(group, opts) vim.api.nvim_set_hl(0, group, opts) end
 
+-- Integrated terminal ANSI colours follow the theme (nvim reads them when
+-- a terminal opens; terminals that are already open keep their colours).
+for i = 0, 15 do
+  vim.g['terminal_color_' .. i] = c['term_' .. i]
+end
+
 -- ─── core UI ───────────────────────────────────────────────────────────
 hi('Normal',          { fg = c.fg, bg = c.bg })
 hi('NormalNC',        { fg = c.fg, bg = c.bg })
