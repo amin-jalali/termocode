@@ -315,3 +315,39 @@ func matchPlural(n int) string {
 	}
 	return "es"
 }
+
+// findResultNav moves to the next (dir=1) or previous (dir=-1) Find in
+// Files result via the Lua helper from findResultsLua (F4 / Shift+F4).
+func (m *Model) findResultNav(dir int) tea.Cmd {
+	if m.nvim == nil {
+		return nil
+	}
+	res, err := m.nvim.EvalLuaString(fmt.Sprintf(
+		`local f = _G._termocode_find_nav; if not f then return 'none' end; return f(%d) or 'none'`, dir))
+	if err != nil {
+		recordError(fmt.Sprintf("find result nav: %v", err))
+		return nil
+	}
+	text := findNavToast(res, dir)
+	if text == "" {
+		return nil
+	}
+	var c tea.Cmd
+	m.toast, c = m.toast.Push(toast.Info, text)
+	return c
+}
+
+// findNavToast is the toast text for a _termocode_find_nav result
+// ("" = no toast).
+func findNavToast(res string, dir int) string {
+	switch res {
+	case "none":
+		return "No search results — run Find in Files (F8) first"
+	case "end":
+		if dir < 0 {
+			return "No previous search result"
+		}
+		return "No more search results"
+	}
+	return ""
+}

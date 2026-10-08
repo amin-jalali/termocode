@@ -205,7 +205,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | LSP: Go to Type Definition | `goto-type-def` | `Ctrl+F12` | `Ctrl+F12` |
 | LSP: Manage Language Servers... | `lsp-manage` |   |   |
 | LSP: Show Hover Documentation | `hover` |   |   |
-| LSP: Toggle Inlay Hints | `toggle-inlay-hints` | `F4` | `F4` |
+| LSP: Toggle Inlay Hints | `toggle-inlay-hints` | `Alt+L` | `Alt+L` |
 
 ## Markdown
 
@@ -250,6 +250,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Search: Find in Files | `find-files` | `Alt+F` / `F8` | `F8 / Alt+F` |
 | Search: Find in Files (Live Overlay) | `find-files-overlay` |   |   |
+| Search: Go to Next Search Result | `search-next-result` | `F4` | `F4` |
+| Search: Go to Previous Search Result | `search-prev-result` | `Shift+F4` | `Shift+F4` |
 | Search: Replace in Workspace... | `replace-workspace` | `Ctrl+Shift+H` | `Ctrl+Shift+H` |
 
 ## Snippets
@@ -318,7 +320,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | View: Output | `view-output` |   |   |
 | View: Previous Editor | `prev-buffer` | `Ctrl+PgUp` | `Ctrl+PgUp` |
 | View: Problems | `problems-panel` | `Alt+M` / `Ctrl+Shift+M` | `Ctrl+Shift+M / Alt+M` |
-| View: Reopen Closed Editor | `reopen-closed` | `Alt+Shift+T` / `Shift+F4` | `Shift+F4 / Alt+Shift+T` |
+| View: Reopen Closed Editor | `reopen-closed` | `Alt+Shift+T` / `Ctrl+Shift+T` | `Alt+Shift+T` |
 | View: Run and Debug | `debug-view` |   |   |
 | View: Show Buffer Info | `buffer-info` | `Ctrl+Alt+I` | `Ctrl+Alt+I` |
 | View: Switch to Last File | `alternate-file` | `Ctrl+Tab` | `Ctrl+Tab` |

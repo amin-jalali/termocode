@@ -67,6 +67,8 @@ var actionInfo = map[Action]ActionInfo{
 	ActionReplaceInFile:      {"Search", "Find and replace in the active file."},
 	ActionWorkspaceSearch:    {"Search", "Search all files in the workspace (ripgrep)."},
 	ActionReplaceInWorkspace: {"Search", "Replace text in all files of the workspace."},
+	ActionNextSearchResult:   {"Search", "Go to the next Find in Files result."},
+	ActionPrevSearchResult:   {"Search", "Go to the previous Find in Files result."},
 
 	ActionHover:              {"LSP", "Show hover documentation for the symbol at the cursor."},
 	ActionFindReferences:     {"LSP", "List all references to the symbol at the cursor."},

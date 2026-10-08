@@ -62,3 +62,26 @@ func TestDefaultBindings(t *testing.T) {
 		}
 	}
 }
+
+// F4 / Shift+F4 belong to Find in Files result navigation (VSCode); the
+// app actions that used to sit there moved to Alt+L and Alt+Shift+T.
+func TestSearchResultKeys(t *testing.T) {
+	b := Default().bindings
+	cases := map[string]Action{
+		"f4":           ActionNextSearchResult,
+		"shift+f4":     ActionPrevSearchResult,
+		"f16":          ActionPrevSearchResult,
+		"alt+l":        ActionToggleInlayHints,
+		"alt+shift+t":  ActionReopenClosed,
+		"alt+T":        ActionReopenClosed,
+		"ctrl+shift+t": ActionReopenClosed,
+	}
+	for k, want := range cases {
+		if got := b[k]; got != want {
+			t.Errorf("%s: got %s, want %s", k, ActionName(got), ActionName(want))
+		}
+	}
+	if got := Default().Match(tea.KeyMsg{Type: tea.KeyF4}); got != ActionNextSearchResult {
+		t.Errorf("F4 KeyMsg: got %s", ActionName(got))
+	}
+}

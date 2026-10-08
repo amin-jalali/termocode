@@ -1521,6 +1521,10 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case keymap.ActionToggleInlayHints:
 		m.toggleInlayHints()
 		return m, nil
+	case keymap.ActionNextSearchResult:
+		return m, m.findResultNav(1)
+	case keymap.ActionPrevSearchResult:
+		return m, m.findResultNav(-1)
 	case keymap.ActionPickTheme:
 		return m, m.openThemePicker()
 	case keymap.ActionDebugToggleBreakpoint:

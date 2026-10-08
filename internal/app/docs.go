@@ -75,6 +75,8 @@ var paletteActions = map[string]keymap.Action{
 	"toggle-comment":          keymap.ActionToggleComment,
 	"preview-md":              keymap.ActionMarkdownPreview,
 	"find-files":              keymap.ActionWorkspaceSearch,
+	"search-next-result":      keymap.ActionNextSearchResult,
+	"search-prev-result":      keymap.ActionPrevSearchResult,
 	"replace-in-file":         keymap.ActionReplaceInFile,
 	"toggle-inlay-hints":      keymap.ActionToggleInlayHints,
 	"pick-theme":              keymap.ActionPickTheme,
@@ -336,7 +338,6 @@ func EditorKeyCatalog() []EditorKey {
 		{"Ctrl+D", "Normal", "Multi-cursor: select the next match of the word."},
 		{"Ctrl+Alt+Up / Ctrl+Alt+Down", "Normal, Insert", "Multi-cursor: add a cursor above / below."},
 		{"]x / [x", "Normal", "Next / previous merge conflict."},
-		{"F4 / Shift+F4", "Normal, Insert", "Next / previous Find in Files result. Note: today the app keys F4 (ToggleInlayHints) and Shift+F4 (ReopenClosed) catch these keys first."},
 		{"Esc", "Insert", "Back to Normal mode — the editor is real Neovim."},
 	}
 }
