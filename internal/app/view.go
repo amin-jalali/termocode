@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"image"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,12 +18,64 @@ import (
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/statusbar"
+	"github.com/amin-jalali/termocode/internal/termimg"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
+// View renders the frame, then lays the terminal-graphics layer (image
+// preview, dashboard logo) on top of it — see image_view.go.
 func (m Model) View() string {
+	frame := m.viewFrame()
+	if m.w == 0 || m.h == 0 {
+		return frame
+	}
+	previewShown := m.imageOpen && m.imagePrev != nil && m.imagePrev.img != nil
+	logoShown := false
+	if !previewShown && m.overlayKind() == "" && !m.previewOpen && !m.searchOpen && m.welcomeVisible() {
+		frame, logoShown = m.placeLogo(frame)
+	}
+	return m.cleanupGraphics(frame, previewShown, logoShown)
+}
+
+// welcomeVisible mirrors renderBase's welcome-screen condition.
+func (m Model) welcomeVisible() bool {
+	return m.editor.Path() == "" && len(m.bufs) <= 1 && !m.termOpen && !m.gitDiffActive && !m.zenMode
+}
+
+// placeLogo draws the image wordmark over the half-block one.
+func (m Model) placeLogo(frame string) (string, bool) {
+	r := welcomeLogoAt
+	if !r.ok || m.toast.Animating() || !m.toast.Empty() {
+		return frame, false
+	}
+	cw, ch := termCaps.CellSize()
+	key := termimg.CacheKey{Path: "\x00logo:" + m.themeID, Cols: r.cols, Rows: r.rows}
+	seq := graphicsSeq(key, func() image.Image { return welcomeLogoImage(r.cols, r.rows, cw, ch) }, r.cols, r.rows, kittyIDLogo)
+	if seq == "" {
+		return frame, false
+	}
+	x0 := activity.Width
+	if m.showExp {
+		x0 += m.explorerWidth
+	}
+	y0 := m.tabs.Height()
+	if m.replaceOpen {
+		y0 += 2
+	}
+	if len(m.breadcrumbs) > 0 || m.stickyContext != "" {
+		y0++
+	}
+	return placeGraphics(frame, seq, y0+r.y, x0+r.x, r.rows), true
+}
+
+func (m Model) viewFrame() string {
 	if m.w == 0 || m.h == 0 {
 		return "termocode loading..."
+	}
+	if m.imageOpen && m.imagePrev != nil {
+		base := m.renderBase()
+		base = m.overlayToastsInEditor(base)
+		return m.imageOverlay(base)
 	}
 
 	// All pickers and prompts share the same modalOverlay recipe so
