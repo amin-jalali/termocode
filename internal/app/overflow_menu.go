@@ -497,6 +497,26 @@ func overflowMenuAllItems(hints map[keymap.Action]string) []overflowMenuItem {
 			visible:  func(c overflowMenuContext) bool { return c.InTerminal },
 			action:   func(m *Model) tea.Cmd { return openShellCmd() },
 		},
+		// Group C — task + link actions for terminal tabs (tasks_run.go).
+		{
+			label:   "Open File Link...",
+			group:   groupContext,
+			visible: func(c overflowMenuContext) bool { return c.InTerminal },
+			action:  func(m *Model) tea.Cmd { return m.openTerminalLinksPicker() },
+		},
+		{
+			label:    "Rerun Last Task",
+			group:    groupContext,
+			shortcut: hint(keymap.ActionRerunTask),
+			visible:  func(c overflowMenuContext) bool { return c.InTerminal },
+			action:   func(m *Model) tea.Cmd { return m.rerunLastTask() },
+		},
+		{
+			label:   "Terminate Task",
+			group:   groupContext,
+			visible: func(c overflowMenuContext) bool { return c.InTerminal },
+			action:  func(m *Model) tea.Cmd { return m.terminateTask() },
+		},
 
 		// Non-terminal file context: "Open Terminal Here" cd's the
 		// integrated terminal into the active file's directory. Only
@@ -539,6 +559,19 @@ func overflowMenuAllItems(hints map[keymap.Action]string) []overflowMenuItem {
 		// Always present, regardless of context. Order: chrome toggles
 		// first (Sidebar, Word Wrap, Line Numbers), then mode toggles
 		// (Zen, Auto Save), then jumps (Outline, Pick Theme), then
+		// Group C — tasks + Problems panel.
+		{
+			label:    "Run Task...",
+			group:    groupGeneral,
+			shortcut: hint(keymap.ActionRunTask),
+			action:   func(m *Model) tea.Cmd { return m.openTaskPicker() },
+		},
+		{
+			label:    "Problems",
+			group:    groupGeneral,
+			shortcut: hint(keymap.ActionShowProblems),
+			action:   func(m *Model) tea.Cmd { return m.showProblemsPanel() },
+		},
 		// Settings last.
 		{
 			label:    "Toggle Sidebar",
