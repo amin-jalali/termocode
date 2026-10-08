@@ -77,6 +77,11 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		if msg.Type == tea.MouseLeft && m.hitStatusLSPChip(msg.X, msg.Y) {
 			return m, m.openToolManager(lspinstall.CategoryLSP)
 		}
+		// Group E: status-bar test chip → Testing view.
+		if msg.Type == tea.MouseLeft && m.hitStatusTestsChip(msg.X, msg.Y) {
+			m.revealTestsView(true)
+			return m, m.ensureTestsDiscovered()
+		}
 		return m, nil // statusbar
 	}
 
@@ -344,6 +349,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		case activity.ViewSearch:
 			// Header + placeholder; nothing interactive yet.
 			return m, nil
+		case activity.ViewTests: // Group E (test_explorer.go)
+			return m.handleTestsSidebarMouse(x, msg.Y, msg.Type)
 		}
 		return m, nil
 	}
