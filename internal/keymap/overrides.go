@@ -243,6 +243,14 @@ var actionNames = map[Action]string{
 	ActionAITriggerInline: "AITriggerInline",
 	ActionAIEditSelection: "AIEditSelection",
 	ActionAIToggleInline:  "AIToggleInline",
+	// Docs: these had default keys but no name, so keymap.json could not
+	// rebind them.
+	ActionShowBufferInfo:     "ShowBufferInfo",
+	ActionToggleActionsPanel: "ToggleActionsPanel",
+	ActionTerminalNewTab:     "TerminalNewTab",
+	ActionTerminalCloseTab:   "TerminalCloseTab",
+	ActionTerminalNextTab:    "TerminalNextTab",
+	ActionTerminalPrevTab:    "TerminalPrevTab",
 }
 
 // ActionName returns the stable string name for an Action. Empty string
