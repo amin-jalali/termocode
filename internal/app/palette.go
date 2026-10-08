@@ -147,7 +147,7 @@ func workspaceRoots() []string {
 // paletteItems returns the static list of commands shown in the command palette.
 // Each item's ID is dispatched in dispatchPaletteAction.
 func paletteItems() []picker.Item {
-	return []picker.Item{
+	items := []picker.Item{
 		{ID: "save", Title: "File: Save", Hint: "Ctrl+S"},
 		{ID: "save-all", Title: "File: Save All Files"},
 		{ID: "close-buffer", Title: "View: Close Editor", Hint: "Ctrl+W"},
@@ -295,6 +295,11 @@ func paletteItems() []picker.Item {
 		{ID: "snippets-manage", Title: "Snippets: Manage..."},
 		{ID: "quit", Title: "File: Quit", Hint: "Ctrl+Q"},
 	}
+	// Group A — AI commands (ai_state.go).
+	for _, e := range aiPaletteItems() {
+		items = append(items, picker.Item{ID: e.id, Title: e.title, Hint: e.hint})
+	}
+	return items
 }
 
 // dispatchPaletteAction performs the action selected in the palette.
@@ -635,6 +640,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 	case "snippets-manage":
 		return m.openSnippetManager()
 	default:
+		if cmd, ok := m.dispatchAIPalette(id); ok { // Group A
+			return cmd
+		}
 		// Group G: merge conflicts + clone (git_conflicts.go, git_clone.go).
 		if cmd, ok := m.dispatchGitExtrasPalette(id); ok {
 			return cmd
@@ -662,6 +670,7 @@ func (m *Model) applyTheme(id string) {
 	t, _ := theme.ApplyTheme(id)
 	m.theme = t.Styles
 	m.refreshConflictHighlights() // Group G: conflict tints follow the theme
+	m.refreshAIHighlights()       // Group A: ghost text recolors live
 	if err := theme.SaveThemeID(t.ID); err != nil {
 		m.err = "theme: " + err.Error()
 	}

@@ -164,6 +164,9 @@ func (m *Model) openSettingsPicker() tea.Cmd {
 // currentSettingValue returns the human-readable representation of a
 // setting's current value, used as the picker row hint.
 func currentSettingValue(r settingsRow, cfg settingsConfig) string {
+	if v, ok := aiSettingValue(r.ID); ok { // Group A
+		return v
+	}
 	switch r.ID {
 	case "setting-theme":
 		if cfg.Theme == "" {
@@ -233,6 +236,9 @@ func (m *Model) applySettingValue(value string) tea.Cmd {
 	row, ok := findSettingsRow(m.settingPromptID)
 	if !ok {
 		return nil
+	}
+	if cmd, ok := m.applyAISetting(row.ID, value); ok { // Group A
+		return cmd
 	}
 	cfg := loadSettings()
 	var toastCmd tea.Cmd
