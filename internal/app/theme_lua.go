@@ -1,84 +1,40 @@
 package app
 
-// vscodeDarkPlusLua defines a VSCode Dark+ inspired colorscheme by setting
-// nvim highlight groups directly. Reapplied after `syntax on` so it
-// overrides nvim's default scheme.
-const vscodeDarkPlusLua = `
-if vim.g.syntax_on then vim.cmd('syntax reset') end
-vim.cmd('hi clear')
-vim.opt.background = 'dark'
-vim.g.colors_name = 'termocode'
+import (
+	"github.com/amin-jalali/termocode/internal/theme"
+)
 
--- VSCode "Dark+" canonical palette.
-local c = {
-  -- chrome
-  bg          = '#1c1c1c', -- editor background
-  bg_panel    = '#262626', -- sidebar background
-  bg_activity = '#303030', -- activity bar background
-  bg_title    = '#3a3a3a', -- title bar / borders
-  bg_tab      = '#2d2d2d', -- inactive tab background
-  bg_active   = '#2a2d2e', -- current line highlight
-  bg_select   = '#005f87', -- selection
-  bg_match    = '#515c6a', -- find match
-  bg_hl       = '#ea5c00', -- find highlight (we approximate transparency)
-  bg_input    = '#3a3a3a', -- input background
-  bg_list_act = '#094771', -- active list item
-  bg_list_in  = '#37373d', -- inactive list highlight
-  bg_btn      = '#0e639c', -- button
-  bg_btn_h    = '#1177bb', -- button hover
-
-  -- text
-  fg          = '#d0d0d0',
-  fg_muted    = '#858585',
-  fg_dim      = '#3a3a3a',
-  fg_active_n = '#c6c6c6', -- active line number
-
-  -- accent
-  accent      = '#0087d7',
-  border      = '#3a3a3a',
-  focus       = '#007fd4',
-
-  -- editor extras
-  cursor      = '#aeafad',
-  indent      = '#363636', -- dimmer for a thinner-looking guide
-  indent_a    = '#5a5a5a',
-  whitespace  = '#3b3a32',
-
-  -- syntax
-  comment     = '#6a9955',
-  keyword     = '#569cd6',
-  control     = '#c586c0',
-  string      = '#ce9178',
-  regex       = '#d16969',
-  number      = '#b5cea8',
-  ['function']= '#dcdcaa',
-  type        = '#4ec9b0',
-  constant    = '#4fc1ff',
-  variable    = '#9cdcfe',
-  operator    = '#d0d0d0',
-  special     = '#d7ba7d',
-  preproc     = '#bd63c5',
-
-  -- diagnostics
-  error_      = '#f14c4c',
-  warn        = '#cca700',
-  info        = '#75beff',
-  hint        = '#3794ff',
-
-  -- git
-  git_mod     = '#e2c08d',
-  git_unt     = '#73c991',
-  git_del     = '#c74e39',
-  git_conf    = '#6c6cc4',
-  git_ign     = '#8c8c8c',
-  git_add     = '#587c0c',
-
-  -- bracket rainbow
-  br1         = '#ffd700',
-  br2         = '#da70d6',
-  br3         = '#179fff',
+// themeLua builds the colourscheme for the embedded nvim from the active
+// palette (theme.NvimColors): core UI, vim + tree-sitter + LSP semantic
+// groups, diagnostics, diff and sign columns, AI ghost text, debug and
+// test signs. It is re-run on every theme switch so the editor follows
+// the chrome. The table is also published as _G.termocode_colors so other
+// Lua chunks (diff views, conflict tints) reuse the same colours instead
+// of hard-coding their own.
+func themeLua(themeID string, light bool) string {
+	bgMode := "dark"
+	if light {
+		bgMode = "light"
+	}
+	return "if vim.g.syntax_on then vim.cmd('syntax reset') end\n" +
+		"vim.cmd('hi clear')\n" +
+		"vim.opt.background = '" + bgMode + "'\n" +
+		"vim.g.colors_name = 'termocode'\n" +
+		"local c = " + theme.LuaTable(theme.NvimColors(themeID)) + "\n" +
+		"_G.termocode_colors = c\n" +
+		themeLuaBody
 }
 
+// applyNvimTheme pushes the active theme into the embedded nvim.
+func (m *Model) applyNvimTheme() {
+	if m.nvim == nil {
+		return
+	}
+	t, _ := theme.LookupTheme(m.themeID)
+	_ = m.nvim.ExecLua(themeLua(t.ID, t.Light))
+}
+
+const themeLuaBody = `
 local hi = function(group, opts) vim.api.nvim_set_hl(0, group, opts) end
 
 -- ─── core UI ───────────────────────────────────────────────────────────
@@ -119,12 +75,12 @@ hi('VisualNOS',       { bg = c.bg_select })
 hi('Search',          { fg = c.fg, bg = c.bg_match })
 hi('IncSearch',       { fg = c.fg, bg = c.bg_hl })
 hi('CurSearch',       { fg = c.fg, bg = c.bg_hl })
-hi('MatchParen',      { fg = '#ffd700', bold = true })
+hi('MatchParen',      { fg = c.match_paren, bold = true })
 hi('Substitute',      { fg = c.fg, bg = c.bg_hl })
 
 -- popup menu / lists
 hi('Pmenu',           { fg = c.fg, bg = c.bg_panel })
-hi('PmenuSel',        { fg = '#ffffff', bg = c.bg_list_act })
+hi('PmenuSel',        { fg = c.fg_sel, bg = c.bg_list_act })
 hi('PmenuSbar',       { bg = c.bg_active })
 hi('PmenuThumb',      { bg = c.fg_muted })
 hi('PmenuKind',       { fg = c.type, bg = c.bg_panel })
@@ -160,10 +116,10 @@ hi('DiagnosticVirtualTextInfo',  { fg = c.info, bg = c.bg })
 hi('DiagnosticVirtualTextHint',  { fg = c.hint, bg = c.bg })
 
 -- diff / git signs
-hi('DiffAdd',         { bg = '#1e3a1e' })
-hi('DiffChange',      { bg = '#2e2e1e' })
-hi('DiffDelete',      { fg = c.error_, bg = '#3a1e1e' })
-hi('DiffText',        { bg = '#3e3e1e' })
+hi('DiffAdd',         { bg = c.diff_add })
+hi('DiffChange',      { bg = c.diff_change })
+hi('DiffDelete',      { fg = c.diff_del_fg, bg = c.diff_del })
+hi('DiffText',        { bg = c.diff_text, bold = true })
 hi('GitSignsAdd',     { fg = c.git_add })
 hi('GitSignsChange',  { fg = c.git_mod })
 hi('GitSignsDelete',  { fg = c.git_del })
@@ -313,4 +269,44 @@ hi('RainbowDelimiterViolet', { fg = c.br2 })
 -- Indent guide highlight (used by our extmark renderer).
 hi('TermocodeIndentGuide',       { fg = c.indent })
 hi('TermocodeIndentGuideActive', { fg = c.indent_a })
+
+-- Sign column: per-line change bars, debug and test markers.
+hi('TermocodeGitAdd',    { fg = c.git_unt })
+hi('TermocodeGitChange', { fg = c.git_mod })
+hi('TermocodeGitDelete', { fg = c.git_del })
+hi('DapStoppedLine',     { bg = c.dap_stop_bg })
+hi('TermocodeDapBreakpoint', { fg = c.dap_bp })
+hi('TermocodeDapStopped',    { fg = c.dap_stop })
+hi('TermocodeTestPass',  { fg = c.test_pass })
+hi('TermocodeTestFail',  { fg = c.test_fail })
+hi('LspInlayHint',       { fg = c.inlay, italic = true })
+hi('TermocodeAIGhost',   { fg = c.ai_ghost, italic = true })
+hi('TermocodeAIAccent',  { fg = c.ai_accent, bold = true })
+hi('LspReferenceText',   { bg = c.bg_list_in })
+hi('LspReferenceRead',   { bg = c.bg_list_in })
+hi('LspReferenceWrite',  { bg = c.bg_list_in })
+
+-- Diff views (side-by-side + commit diffs) re-run this when they open, so
+-- they always match the current theme.
+function _G.termocode_diff_hl()
+  local C = _G.termocode_colors or c
+  hi('DiffAdd',      { bg = C.diff_add })
+  hi('DiffChange',   { bg = C.diff_change })
+  hi('DiffText',     { bg = C.diff_text, bold = true })
+  hi('DiffDelete',   { bg = C.diff_del, fg = C.diff_del_fg })
+  hi('WinBar',       { fg = C.winbar_fg, bg = C.winbar })
+  hi('WinBarNC',     { fg = C.fg_muted, bg = C.winbar })
+  hi('TcDiffHdr',    { fg = C.fg, bg = C.winbar, bold = true })
+  hi('TcDiffHdrDim', { fg = C.fg_muted, bg = C.winbar })
+  hi('TcDiffCount',  { fg = C.fg_muted, bg = C.winbar, bold = true })
+  hi('TcDiffOk',     { fg = C.git_unt, bg = C.winbar })
+  hi('TcDiffNav',    { fg = C.accent, bg = C.bg_list_in, bold = true })
+  hi('diffAdded',    { fg = C.git_unt })
+  hi('diffRemoved',  { fg = C.git_del })
+  hi('diffLine',     { fg = C.keyword })
+  hi('diffFile',     { fg = C['function'], bold = true })
+  hi('diffIndexLine',{ fg = C.fg_muted })
+end
+_G.termocode_diff_hl()
+if _G.termocode_bracket_hl then _G.termocode_bracket_hl() end
 `

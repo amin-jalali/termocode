@@ -34,6 +34,13 @@ type Palette256 struct {
 	// surfaces (welcome screen shortcut hints, footer help). One shade
 	// lighter than BgEditor so the cap reads as a button.
 	BgKeycap Color256
+	// BgFloat is the surface of floating chrome: modals, pickers, toasts,
+	// menus. Zero means "derive" (BgSidebar).
+	BgFloat Color256
+	// Shadow is the colour the drop shadow under floating chrome is
+	// blended toward. Zero means "derive" (near-black on dark themes, a
+	// darker shade of the background on light ones).
+	Shadow Color256
 
 	// Foregrounds
 	TextPrimary   Color256
@@ -46,8 +53,11 @@ type Palette256 struct {
 	// the welcome screen. Sits below TextDimmer in the emphasis hierarchy.
 	TextQuaternary Color256
 	TextWhite      Color256
-	Cursor         Color256
-	ActiveLineNum  Color256
+	// OnAccent is text drawn on an accent fill (status-bar mode pill,
+	// active badges). Zero means "derive" (TextWhite).
+	OnAccent      Color256
+	Cursor        Color256
+	ActiveLineNum Color256
 
 	// Accent palette (semantic) — used by chromeless surfaces (welcome
 	// screen icons, file-extension tags, link text). Distinct from
@@ -129,6 +139,8 @@ var (
 	BgInactiveSel Color256 = 237
 	BgSectionHdr  Color256 = 237
 	BgKeycap      Color256 = 236
+	BgFloat       Color256 = 236
+	Shadow        Color256 = 232
 )
 
 // ─── Foregrounds ───────────────────────────────────────────────────────
@@ -140,6 +152,7 @@ var (
 	TextDimmer     Color256 = 240
 	TextQuaternary Color256 = 238
 	TextWhite      Color256 = 231
+	OnAccent       Color256 = 231
 	Cursor         Color256 = 145
 	ActiveLineNum  Color256 = 251
 )
@@ -275,6 +288,10 @@ func SetPalette(p Palette256) {
 	if p.BgKeycap != 0 {
 		BgKeycap = p.BgKeycap
 	}
+	BgFloat = p.BgFloat
+	if BgFloat == 0 {
+		BgFloat = BgSidebar
+	}
 
 	TextPrimary = p.TextPrimary
 	TextSecondary = p.TextSecondary
@@ -285,6 +302,10 @@ func SetPalette(p Palette256) {
 		TextQuaternary = p.TextQuaternary
 	}
 	TextWhite = p.TextWhite
+	OnAccent = p.OnAccent
+	if OnAccent == 0 {
+		OnAccent = TextWhite
+	}
 	Cursor = p.Cursor
 	ActiveLineNum = p.ActiveLineNum
 
@@ -352,6 +373,15 @@ func SetPalette(p Palette256) {
 	}
 	if p.IndexHex != nil {
 		indexHex = p.IndexHex
+	}
+	// Shadow is resolved last: its fallback is derived from the (new)
+	// editor background, so the hex map must already be swapped in.
+	Shadow = p.Shadow
+	if Shadow == 0 {
+		Shadow = 232
+		if _, ok := indexHex[232]; !ok {
+			indexHex[232] = "#080808"
+		}
 	}
 }
 
