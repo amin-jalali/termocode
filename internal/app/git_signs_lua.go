@@ -24,9 +24,13 @@ const gitSignsLua = `
 -- One-time initialization: register sign glyphs and the highlight groups
 -- they reference. We use truecolor hex values so light terminals don't
 -- collapse the three states onto a single palette entry.
-vim.cmd('highlight TermocodeGitAdd    guifg=#73c991 guibg=NONE')
-vim.cmd('highlight TermocodeGitChange guifg=#e2c08d guibg=NONE')
-vim.cmd('highlight TermocodeGitDelete guifg=#c74e39 guibg=NONE')
+-- Colours come from the active theme (_G.termocode_colors, theme_lua.go).
+do
+  local C = _G.termocode_colors or {}
+  vim.api.nvim_set_hl(0, 'TermocodeGitAdd',    { fg = C.git_unt })
+  vim.api.nvim_set_hl(0, 'TermocodeGitChange', { fg = C.git_mod })
+  vim.api.nvim_set_hl(0, 'TermocodeGitDelete', { fg = C.git_del })
+end
 
 vim.fn.sign_define('TermocodeGitAdd',    { text = '┃', texthl = 'TermocodeGitAdd' })
 vim.fn.sign_define('TermocodeGitChange', { text = '┃', texthl = 'TermocodeGitChange' })

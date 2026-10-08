@@ -118,6 +118,8 @@ var PaletteKeys = []string{
 	"BgActiveLine",
 	"BgInactiveSel",
 	"BgSectionHdr",
+	"BgFloat",
+	"Shadow",
 
 	"TextPrimary",
 	"TextSecondary",
@@ -125,6 +127,7 @@ var PaletteKeys = []string{
 	"TextDim",
 	"TextDimmer",
 	"TextWhite",
+	"OnAccent",
 	"Cursor",
 	"ActiveLineNum",
 
@@ -200,6 +203,12 @@ func paletteFieldValue(field string) (Color256, bool) {
 		return BgInactiveSel, true
 	case "BgSectionHdr":
 		return BgSectionHdr, true
+	case "BgFloat":
+		return BgFloat, true
+	case "Shadow":
+		return Shadow, true
+	case "OnAccent":
+		return OnAccent, true
 	case "TextPrimary":
 		return TextPrimary, true
 	case "TextSecondary":

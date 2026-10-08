@@ -109,6 +109,7 @@ type Model struct {
 	search    search.Model
 	toast     toast.Model
 	theme     theme.Theme
+	themeID   string // active theme id (drives the nvim colourscheme)
 	keys      keymap.KeyMap
 	nvim      *nvim.Client
 	bufs      []nvim.BufferInfo
@@ -600,6 +601,7 @@ func New() Model {
 		status:           statusbar.New(t),
 		lspMgr:           newLSPInstallState(),
 		theme:            t,
+		themeID:          named.ID,
 		keys:             keys,
 		keymapProblems:   keymapProblems,
 		focus:            FocusEditor,
@@ -825,9 +827,9 @@ func (m Model) attachCmd() tea.Cmd {
 		// Adapters installed by the managed installer (tools/bin shims).
 		_ = m.nvim.ExecLua(dapManagedLua)
 		m.debugLoadBreakpoints() // Group D: persisted breakpoints (m.debug is shared)
-		// Apply the VSCode Dark+ palette via Lua. Done after `syntax on` so
-		// the highlight groups override the default scheme.
-		_ = m.nvim.ExecLua(vscodeDarkPlusLua)
+		// Apply the active theme's colourscheme via Lua. Done after `syntax
+		// on` so the highlight groups override the default scheme.
+		m.applyNvimTheme()
 		// Bracket-pair colorization (HiPhish/rainbow-delimiters.nvim).
 		// Runs after the theme so its RainbowDelimiter* overrides are the
 		// final word; failure (offline, no git) is non-fatal.
