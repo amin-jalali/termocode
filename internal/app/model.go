@@ -385,6 +385,9 @@ type Model struct {
 	// debounce coalesces noisy events (nvim notifications, keystrokes)
 	// into one message per quiet period. Shared by pointer.
 	debounce *debounce.Debouncer
+	// ext is the extension host state (Group I, ext.go). Pointer so
+	// Model copies share it; nil in bare test Models.
+	ext *extState
 
 	focus             Focus
 	showExp           bool
@@ -598,6 +601,7 @@ func New() Model {
 		actionsWidth:  actionsWidth,
 		output:        newOutputStore(),
 		debounce:      debounce.New(),
+		ext:           newExtState(), // Group I
 	}
 	if err != nil {
 		m.editor = editor.New(nil)

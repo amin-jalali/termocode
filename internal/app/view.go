@@ -1249,7 +1249,10 @@ func (m Model) renderSidebar(h int) string {
 		body := placeholderSidebar(contentW, h-1, "", "Run / Debug — coming soon.\n\nPress F5 to run a build.")
 		content = lipgloss.JoinVertical(lipgloss.Left, header, body)
 	default:
-		return ""
+		if !m.isExtSidebar() { // Group I: extension panels (ext.go)
+			return ""
+		}
+		content = m.renderExtSidebar(contentW, h)
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, content, sidebarDivider(h))
 }
@@ -2182,6 +2185,7 @@ func (m Model) statusState() statusbar.State {
 		Debug:    m.dapSessionActive,
 		ShowLSP:  m.editor.Path() != "",
 		LSP:      m.lspClients(),
+		Ext:      m.extStatusTexts(), // Group I
 	}
 }
 
