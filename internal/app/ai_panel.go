@@ -312,7 +312,7 @@ func (m Model) aiTranscript(width int) []aiLine {
 				out = append(out, aiLine{text: ind + "thinking…", style: theme.Fg(theme.TextDim).Italic(true)})
 				break
 			}
-			out = append(out, s.renderAnswer(i, text, width, streaming)...)
+			out = append(out, s.renderAnswer(i, text, width, streaming, m.dragKind == dragActionsLeft)...)
 		case ai.StoredTool:
 			for _, l := range wrapPlain(aiCleanText(msg.Text), inner) {
 				out = append(out, plain(l, theme.TextDim))
@@ -420,12 +420,17 @@ func (m Model) aiAnswerHeader(width int) aiLine {
 // renderAnswer renders (and caches) an assistant message. Finished
 // messages are cached by text, width and theme; the streaming one is
 // re-rendered only when its text changed.
-func (s *aiState) renderAnswer(i int, text string, width int, streaming bool) []aiLine {
+//
+// While the panel's splitter is being dragged (resizing) the last render
+// is reused at any width — rows are padded / clipped by renderAILine — so
+// a drag does not re-run Markdown + syntax highlighting on every step;
+// the release renders once at the final width.
+func (s *aiState) renderAnswer(i int, text string, width int, streaming, resizing bool) []aiLine {
 	key := aiMDKey{text: text, width: width, theme: theme.Hex(theme.BgPanel) + theme.Hex(theme.TextPrimary), icons: theme.CurrentIconMode, streaming: streaming}
 	if s.mdCache == nil {
 		s.mdCache = map[int]aiMDEntry{}
 	}
-	if e, ok := s.mdCache[i]; ok && e.key == key {
+	if e, ok := s.mdCache[i]; ok && (e.key == key || (resizing && e.key.text == text && e.key.theme == key.theme)) {
 		return e.lines
 	}
 	lines := renderChatMarkdown(text, width, aiIndent, i, streaming)

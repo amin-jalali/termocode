@@ -744,8 +744,14 @@ func clipRowsToHeight(s string, h, w int, filler lipgloss.Style) string {
 		// Right-pad each existing row to `w` cells with styled filler.
 		for i, row := range rows {
 			rw := lipgloss.Width(row)
-			if rw < w {
+			switch {
+			case rw < w:
 				rows[i] = row + filler.Render(strings.Repeat(" ", w-rw))
+			case rw > w:
+				// A grid wider than its rect (nvim not resized yet during
+				// a splitter drag) is clipped, never painted over the
+				// neighbouring panel.
+				rows[i] = truncRightVisual(row, w)
 			}
 		}
 		pad := filler.Render(strings.Repeat(" ", w))

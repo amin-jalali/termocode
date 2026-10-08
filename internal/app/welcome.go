@@ -140,9 +140,38 @@ type welcomeQuickActionHit struct {
 // renderWelcome returns the centered welcome screen for the editor pane.
 // `focusIdx` selects which action card is highlighted (0..3).
 func renderWelcome(w, h, focusIdx int) string {
+	key := welcomeKey{w: w, h: h, focus: focusIdx, theme: theme.Hex(theme.BgEditor) + theme.Hex(theme.BorderFocus), cfg: os.Getenv("XDG_CONFIG_HOME"),
+		icons: theme.CurrentIconMode, profile: int(theme.Profile())}
+	if c := welcomeCache; c != nil && c.key == key && time.Since(c.at) < welcomeCacheTTL {
+		welcomeLogoAt = c.logo
+		return c.out
+	}
 	rendered, _, _, _ := renderWelcomeFull(w, h, focusIdx)
+	welcomeCache = &welcomeCached{key: key, out: rendered, logo: welcomeLogoAt, at: time.Now()}
 	return rendered
 }
+
+// The welcome page reads the recents files from disk, so View reuses the
+// last render for a short while (frames come at up to 60/s, e.g. while a
+// splitter is dragged). A new size, focus, theme or icon set re-renders.
+const welcomeCacheTTL = time.Second
+
+type welcomeKey struct {
+	w, h, focus int
+	theme       string
+	cfg         string
+	icons       theme.IconMode
+	profile     int
+}
+
+type welcomeCached struct {
+	key  welcomeKey
+	out  string
+	logo welcomeLogoRect
+	at   time.Time
+}
+
+var welcomeCache *welcomeCached
 
 // renderWelcomeLayout returns the recent + workspace hits expected by
 // mouse.go. Quick-action hits are surfaced via welcomeQuickActionHits.
