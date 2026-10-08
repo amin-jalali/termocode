@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="2" skipped="1" tests="6" time="0.031" timestamp="2026-10-08T10:00:00.000000+02:00" hostname="box"><testcase classname="tests.test_math" name="test_add" file="tests/test_math.py" line="3" time="0.001" /><testcase classname="tests.test_math" name="test_div" file="tests/test_math.py" line="6" time="0.002"><failure message="assert 1.0 == 2">def test_div():
+&gt;       assert 1 / 1 == 2
+E       assert 1.0 == 2
+
+tests/test_math.py:7: AssertionError</failure></testcase><testcase classname="tests.test_math.TestOps" name="test_mul" file="tests/test_math.py" line="10" time="0.001" /><testcase classname="tests.test_math" name="test_param[1-2]" file="tests/test_math.py" line="14" time="0.001" /><testcase classname="tests.test_math" name="test_param[2-5]" file="tests/test_math.py" line="14" time="0.001"><failure message="assert 4 == 5">a = 2, b = 5
+
+    @pytest.mark.parametrize("a,b", [(1, 2), (2, 5)])
+    def test_param(a, b):
+&gt;       assert a * 2 == b
+E       assert 4 == 5
+
+tests/test_math.py:16: AssertionError</failure></testcase><testcase classname="tests.test_math" name="test_later" file="tests/test_math.py" line="19" time="0.000"><skipped type="pytest.skip" message="not ready">tests/test_math.py:19: not ready</skipped></testcase></testsuite></testsuites>

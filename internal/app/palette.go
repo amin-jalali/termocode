@@ -294,6 +294,17 @@ func paletteItems() []picker.Item {
 		{ID: "settings-export", Title: "Preferences: Export Settings..."},
 		{ID: "settings-import", Title: "Preferences: Import Settings..."},
 		{ID: "snippets-manage", Title: "Snippets: Manage..."},
+		// ── Group E: Testing (test_explorer.go / test_runner.go) ──
+		{ID: "testing-focus", Title: "Testing: Focus Test Explorer"},
+		{ID: "testing-run-all", Title: "Testing: Run All Tests", Hint: "Alt+T"},
+		{ID: "testing-rerun-failed", Title: "Testing: Rerun Failed Tests"},
+		{ID: "testing-run-file", Title: "Testing: Run Tests in Current File"},
+		{ID: "testing-run-cursor", Title: "Testing: Run Test at Cursor"},
+		{ID: "testing-stop", Title: "Testing: Stop Test Run"},
+		{ID: "testing-refresh", Title: "Testing: Refresh Tests"},
+		{ID: "testing-collapse", Title: "Testing: Collapse All"},
+		{ID: "testing-results", Title: "View: Test Results"},
+		// ── end Group E ──
 		{ID: "quit", Title: "File: Quit", Hint: "Ctrl+Q"},
 	}
 }
@@ -642,6 +653,10 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		}
 		// Group C: tasks + problems panel (tasks_run.go).
 		if cmd, ok := m.dispatchTasksPalette(id); ok {
+			return cmd
+		}
+		// Group E: Testing (test_explorer.go).
+		if cmd, ok := m.dispatchTestingPalette(id); ok {
 			return cmd
 		}
 		// User commands have IDs prefixed with "user-".

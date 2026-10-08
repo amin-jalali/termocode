@@ -3,7 +3,6 @@ package app
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -122,6 +121,9 @@ func (m *Model) extraCodeActionsForContext() []nvim.CodeAction {
 		)
 	}
 
+	// ── 1b. Group E: Run Test for discovered non-Go test files ────────────
+	m.testCodeActions(path, line, addSynth)
+
 	// ── 2. Git actions (only inside a repo with an open file) ─────────────
 	if m.gitIsRepo && path != "" {
 		if rel, ok := m.activeGitRel(); ok {
@@ -182,7 +184,7 @@ func (m *Model) applySynthCodeAction(idx int) tea.Cmd {
 	}
 	switch a.Kind {
 	case synthKindTestRun:
-		return m.runGoTestExec(a.FuncName, a.PkgPath)
+		return m.runSynthTest(a) // Group E: streaming runner (test_explorer.go)
 	case synthKindTestCommand:
 		safeClipboardWrite(a.Command)
 		var toastCmd tea.Cmd
@@ -202,35 +204,6 @@ func (m *Model) applySynthCodeAction(idx int) tea.Cmd {
 		return m.resolveConflictAt(a.Line, conflictResolutionFor(a.Kind))
 	}
 	return nil
-}
-
-// runGoTestExec suspends termocode and runs `go test` so the user sees real
-// streaming output, then resumes on Enter / process exit. funcName == ""
-// means the package-wide form (no -run filter, no -v).
-func (m *Model) runGoTestExec(funcName, pkgPath string) tea.Cmd {
-	if pkgPath == "" {
-		pkgPath = "./..."
-	}
-	args := []string{"test"}
-	if funcName != "" {
-		args = append(args, "-run", "^"+funcName+"$", "-v", pkgPath)
-	} else {
-		args = append(args, pkgPath)
-	}
-	c := exec.Command("go", args...)
-	c.Env = os.Environ()
-	if cwd, err := os.Getwd(); err == nil {
-		c.Dir = cwd
-	}
-	return tea.ExecProcess(c, func(err error) tea.Msg {
-		if err != nil {
-			// `go test` exits non-zero on test failure. We surface it as a
-			// soft warn-toast rather than ErrMsg so the user doesn't see a
-			// scary red banner for a normal failed test run.
-			return ToastMsg{Level: toast.Warn, Title: "go test exited non-zero", Body: err.Error()}
-		}
-		return ToastMsg{Level: toast.Info, Title: "go test finished"}
-	})
 }
 
 // synthGitBlame is the Phase-2 inline-blame variant of gitBlameCurrentLine —
