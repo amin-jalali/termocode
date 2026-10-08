@@ -1448,6 +1448,8 @@ func (m Model) renderGitPanelRow(r gitPanelRow, active, focused bool, w int) str
 		case gitSecChanges:
 			_, changed := m.gitFileCounts()
 			return renderGitSectionHeader("CHANGES", changed, true, !m.gitChangesCollapsed, active, focused, w)
+		case gitSecConflicts:
+			return renderGitSectionHeader("CONFLICTS", m.gitConflictCount(), true, !m.gitConflictsCollapsed, active, focused, w)
 		default:
 			return renderGitSectionHeader("GRAPH", 0, false, !m.gitGraphCollapsed, active, focused, w)
 		}

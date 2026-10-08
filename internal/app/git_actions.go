@@ -86,6 +86,9 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		case gitRowCommit:
 			return m, m.gitShowCommitCmd(cur.hash), true
 		case gitRowFile:
+			if cur.section == gitSecConflicts {
+				return m, m.gitOpenConflictFile(cur.fileIndex), true
+			}
 			path := gitFileAbsPath(m.gitFiles[cur.fileIndex].Path)
 			if m.nvim != nil {
 				m.ensureEditorWindowCurrent()

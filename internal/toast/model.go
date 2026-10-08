@@ -32,6 +32,9 @@ type Toast struct {
 	Title     string
 	Detail    string
 	ExpiresAt time.Time
+	// Key, when set, identifies an updatable toast (PushKeyed): a later push
+	// with the same key replaces it in place instead of stacking.
+	Key string
 }
 
 // TickMsg fires when the next-expiring toast should be expired and re-rendered.
@@ -93,6 +96,39 @@ func (m Model) PushDetail(severity Severity, title, detail string) (Model, tea.C
 		OnPush(severity, combined)
 	}
 	return m, m.scheduleTick()
+}
+
+// PushKeyed shows a toast that later pushes with the same key update in
+// place (and re-arm its lifetime) — used for progress such as a background
+// clone. OnPush fires only when the toast is first created.
+func (m Model) PushKeyed(key string, severity Severity, title, detail string) (Model, tea.Cmd) {
+	for i := range m.toasts {
+		if m.toasts[i].Key == key && key != "" {
+			// Copy-on-write: the slice may be shared with an older Model.
+			ts := append([]Toast(nil), m.toasts...)
+			ts[i].Severity = severity
+			ts[i].Title = title
+			ts[i].Detail = detail
+			ts[i].ExpiresAt = time.Now().Add(defaultLifetime)
+			m.toasts = ts
+			return m, m.scheduleTick()
+		}
+	}
+	m, cmd := m.PushDetail(severity, title, detail)
+	m.toasts[len(m.toasts)-1].Key = key
+	return m, cmd
+}
+
+// Dismiss removes the toast with the given key, if any.
+func (m Model) Dismiss(key string) Model {
+	out := make([]Toast, 0, len(m.toasts))
+	for _, t := range m.toasts {
+		if key == "" || t.Key != key {
+			out = append(out, t)
+		}
+	}
+	m.toasts = out
+	return m
 }
 
 // Tick removes any toasts whose ExpiresAt is in the past and returns the

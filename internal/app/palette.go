@@ -246,6 +246,14 @@ func paletteItems() []picker.Item {
 		{ID: "toggle-auto-save", Title: "File: Toggle Auto Save"},
 		{ID: "next-hunk", Title: "Git: Go to Next Change", Hint: "Alt+]"},
 		{ID: "prev-hunk", Title: "Git: Go to Previous Change", Hint: "Alt+["},
+		// ── Group G: merge conflicts + clone (git_conflicts.go, git_clone.go) ──
+		{ID: "git-conflict-next", Title: "Git: Go to Next Merge Conflict", Hint: "]x"},
+		{ID: "git-conflict-prev", Title: "Git: Go to Previous Merge Conflict", Hint: "[x"},
+		{ID: "git-conflict-ours", Title: "Git: Accept Current Change (Conflict at Cursor)"},
+		{ID: "git-conflict-theirs", Title: "Git: Accept Incoming Change (Conflict at Cursor)"},
+		{ID: "git-conflict-both", Title: "Git: Accept Both Changes (Conflict at Cursor)"},
+		{ID: "git-clone", Title: "Git: Clone Repository..."},
+		// ── end Group G ──
 		{ID: "reload-buffer", Title: "File: Revert / Reload from Disk"},
 		{ID: "open-url", Title: "View: Open URL on Current Line"},
 		{ID: "pin-tab", Title: "Tab: Toggle Pinned", Hint: "Alt+P"},
@@ -598,6 +606,10 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 	case "customize-keybindings":
 		return m.openKeybindingPicker()
 	default:
+		// Group G: merge conflicts + clone (git_conflicts.go, git_clone.go).
+		if cmd, ok := m.dispatchGitExtrasPalette(id); ok {
+			return cmd
+		}
 		// User commands have IDs prefixed with "user-".
 		if strings.HasPrefix(id, "user-") {
 			return m.runUserCommand(id)
@@ -620,6 +632,7 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 func (m *Model) applyTheme(id string) {
 	t, _ := theme.ApplyTheme(id)
 	m.theme = t.Styles
+	m.refreshConflictHighlights() // Group G: conflict tints follow the theme
 	if err := theme.SaveThemeID(t.ID); err != nil {
 		m.err = "theme: " + err.Error()
 	}

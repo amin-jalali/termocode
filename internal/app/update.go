@@ -206,7 +206,13 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handlePromptSubmit(msg.Value)
 	case prompt.CloseMsg:
 		m.promptOpen = false
-		return m, nil
+		return m, m.handleClonePromptClose() // Group G: no-op unless a clone prompt
+	// ── Group G: background clone (git_clone.go) ──
+	case cloneProgressMsg:
+		return m, m.handleCloneProgress(msg)
+	case cloneDoneMsg:
+		return m, m.handleCloneDone(msg)
+	// ── end Group G ──
 	case search.SelectMsg:
 		m.searchOpen = false
 		if m.nvim != nil {

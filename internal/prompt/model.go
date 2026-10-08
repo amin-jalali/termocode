@@ -15,11 +15,16 @@ type SubmitMsg struct{ Value string }
 type CloseMsg struct{}
 
 type Model struct {
-	title string
-	label string
-	value string
-	w, h  int
+	title  string
+	label  string
+	value  string
+	masked bool // render the value as bullets (secrets: tokens, passwords)
+	w, h   int
 }
+
+// SetMasked hides the typed value behind bullets (for secrets). The value
+// itself is unchanged and still returned in SubmitMsg.
+func (m *Model) SetMasked(on bool) { m.masked = on }
 
 // New returns a prompt with the given title, input label, and initial value.
 func New(title, label, initial string) Model {
@@ -270,6 +275,9 @@ func (m Model) Box() string {
 	// Layout: " › <value>▎" then padded to innerW with input bg so the
 	// whole row reads as a single field.
 	value := m.value
+	if m.masked {
+		value = strings.Repeat("•", len([]rune(m.value)))
+	}
 	// Truncate value if it would overflow the input width.
 	maxValW := innerW - 4 /*" › "*/ - 1 /*cursor*/
 	if maxValW < 1 {
