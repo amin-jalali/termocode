@@ -213,21 +213,6 @@ func TestFormatRecentTime(t *testing.T) {
 	}
 }
 
-func TestSedEscape(t *testing.T) {
-	cases := map[string]string{
-		`hello`:        `hello`,
-		`a#b`:          `a\#b`,
-		`a&b`:          `a\&b`,
-		`a\b`:          `a\\b`,
-		`mix # & \ end`: `mix \# \& \\ end`,
-	}
-	for in, want := range cases {
-		if got := sedEscape(in); got != want {
-			t.Errorf("sedEscape(%q) = %q, want %q", in, got, want)
-		}
-	}
-}
-
 func TestPlural(t *testing.T) {
 	if plural(1) != "" {
 		t.Errorf("plural(1) should be empty, got %q", plural(1))

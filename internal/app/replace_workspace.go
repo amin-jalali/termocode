@@ -2,13 +2,13 @@ package app
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"termocode/internal/confirm"
 	"termocode/internal/prompt"
+	"termocode/internal/search"
 	"termocode/internal/toast"
 )
 
@@ -16,12 +16,15 @@ import (
 //
 // Step 1: prompt for the search pattern
 // Step 2: prompt for the replacement text
-// Step 3: confirm + run
+// Step 3: count matches per file, then confirm ("Replace 12 matches in 3
+//         files?") before anything is written
+// Step 4: rewrite each file in Go
 //
-// Implementation: ripgrep gives us a deterministic file list, then we shell
-// out to `sed -i` (Linux) / `sed -i ''` (macOS) per match. This is simpler
-// than building our own parser and faster than feeding files through nvim
-// one-by-one.
+// The search is literal and case-sensitive across every workspace root.
+// search.CountLiteral finds the files (ripgrep when installed, so
+// .gitignore is honoured; the built-in walker otherwise) and the same exact
+// byte match drives both the counts and the write, so the dialog's numbers
+// are what actually gets replaced.
 
 // openReplaceInWorkspacePrompt is step 1 — ask for the search pattern.
 func (m *Model) openReplaceInWorkspacePrompt() {
@@ -41,75 +44,106 @@ func (m *Model) continueReplaceWithReplacement(find string) {
 	m.promptKind = promptKindReplaceReplacement
 }
 
-// runReplaceInWorkspace executes the substitution. We use ripgrep to find
-// the candidate files and then `sed -i` per file. Counts and surfaces a
-// toast with the number of files modified.
+// runReplaceInWorkspace is step 3: count the matches and open the confirm
+// dialog. Nothing is written until the user picks "Replace".
 func (m *Model) runReplaceInWorkspace(replacement string) tea.Cmd {
 	find := m.replaceFind
 	m.replaceFind = ""
 	if find == "" {
 		return nil
 	}
-	cwd, err := os.Getwd()
+	counts, err := search.CountLiteral(workspaceRoots(), find)
+	var toastCmd tea.Cmd
 	if err != nil {
-		return nil
-	}
-	// Step 1: ripgrep --files-with-matches  finds the files cheaply.
-	out, err := exec.Command("rg", "-l", "--null", "-F", find, cwd).Output()
-	if err != nil {
-		// Exit code 1 means "no matches" — that's not an error for us.
-		if ee, ok := err.(*exec.ExitError); ok && ee.ExitCode() == 1 {
-			var toastCmd tea.Cmd
-			m.toast, toastCmd = m.toast.Push(toast.Info, "No matches found")
-			return toastCmd
-		}
-		var toastCmd tea.Cmd
-		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "ripgrep failed", err.Error())
+		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Replace failed", err.Error())
 		return toastCmd
 	}
-	files := strings.Split(string(out), "\x00")
-	count := 0
-	for _, f := range files {
-		f = strings.TrimSpace(f)
-		if f == "" {
+	if len(counts) == 0 {
+		m.toast, toastCmd = m.toast.Push(toast.Info, fmt.Sprintf("No matches for %q", find))
+		return toastCmd
+	}
+	m.replaceFind = find
+	m.replaceRepl = replacement
+	m.replaceTargets = counts
+	m.confirm = confirm.New("Replace in Workspace",
+		replaceConfirmMessage(find, replacement, counts, m.dirtyBufferCount(counts)),
+		[]confirm.Button{
+			{ID: "replace", Title: "Replace", Style: confirm.StyleDestructive},
+			{ID: "cancel", Title: "Cancel"},
+		})
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = confirmKindReplaceWorkspace
+	return nil
+}
+
+// replaceConfirmMessage builds the dialog text: total matches, file count,
+// and a warning when some target files have unsaved edits in the editor
+// (those buffers will be reloaded from disk by :checktime).
+func replaceConfirmMessage(find, repl string, counts []search.FileCount, dirty int) string {
+	total := 0
+	for _, c := range counts {
+		total += c.Count
+	}
+	msg := fmt.Sprintf("Replace %d match%s of %q with %q in %d file%s?",
+		total, matchPlural(total), find, repl, len(counts), plurals(len(counts)))
+	if dirty > 0 {
+		msg += fmt.Sprintf(" %d of them %s unsaved changes in the editor.",
+			dirty, map[bool]string{true: "has", false: "have"}[dirty == 1])
+	}
+	return msg
+}
+
+// dirtyBufferCount counts target files that are open with unsaved edits.
+func (m *Model) dirtyBufferCount(counts []search.FileCount) int {
+	n := 0
+	for _, c := range counts {
+		for _, b := range m.bufs {
+			if b.Modified && b.Path == c.Path {
+				n++
+				break
+			}
+		}
+	}
+	return n
+}
+
+// applyReplaceInWorkspace is step 4, run when the confirm dialog's
+// "Replace" button is picked. Rewrites every counted file, reloads open
+// buffers, and toasts the outcome.
+func (m *Model) applyReplaceInWorkspace() tea.Cmd {
+	find, repl, targets := m.replaceFind, m.replaceRepl, m.replaceTargets
+	m.replaceFind, m.replaceRepl, m.replaceTargets = "", "", nil
+	if find == "" {
+		return nil
+	}
+	files, matches := 0, 0
+	var failed []string
+	for _, t := range targets {
+		n, err := search.ReplaceLiteralInFile(t.Path, find, repl)
+		if err != nil {
+			failed = append(failed, fmt.Sprintf("%s: %v", t.Path, err))
 			continue
 		}
-		// sed -i with a regex-safe escape on both sides. We use # as the
-		// delimiter and escape any literal # that show up in either string.
-		safeFind := sedEscape(find)
-		safeRepl := sedEscape(replacement)
-		expr := fmt.Sprintf("s#%s#%s#g", safeFind, safeRepl)
-		// `--posix` keeps semantics consistent across GNU/BSD sed; the `-i`
-		// in-place flag differs syntactically (BSD wants a backup-suffix arg)
-		// so we use a portable pattern: write to a tmpfile then rename. But
-		// since termocode is dev-targeted at Linux & macOS users with GNU
-		// coreutils available (or Homebrew gnu-sed on macOS), the simpler
-		// `sed -i` works in practice. Failures are silently skipped — the
-		// toast count reflects the real number of successful files.
-		if err := exec.Command("sed", "-i", expr, f).Run(); err == nil {
-			count++
+		if n > 0 {
+			files++
+			matches += n
 		}
 	}
 	if m.nvim != nil {
 		_ = m.nvim.Command("silent! checktime")
 	}
 	var toastCmd tea.Cmd
-	if count == 0 {
+	switch {
+	case len(failed) > 0:
+		m.toast, toastCmd = m.toast.PushDetail(toast.Warn,
+			fmt.Sprintf("Replaced in %d file%s, %d failed", files, plurals(files), len(failed)),
+			strings.Join(failed, "\n"))
+	case files == 0:
 		m.toast, toastCmd = m.toast.Push(toast.Warn, "No files modified")
-	} else {
-		m.toast, toastCmd = m.toast.Push(toast.Info, fmt.Sprintf("Replaced in %d file(s)", count))
+	default:
+		m.toast, toastCmd = m.toast.Push(toast.Info,
+			fmt.Sprintf("Replaced %d match%s in %d file%s", matches, matchPlural(matches), files, plurals(files)))
 	}
 	return toastCmd
-}
-
-// sedEscape neutralises the characters that have meaning in a sed `s#…#…#g`
-// command. We chose `#` as the delimiter precisely because it's rare in
-// code; we still need to escape `#`, `&`, and `\` for safety.
-func sedEscape(s string) string {
-	r := strings.NewReplacer(
-		`\`, `\\`,
-		`#`, `\#`,
-		`&`, `\&`,
-	)
-	return r.Replace(s)
 }

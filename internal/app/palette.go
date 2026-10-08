@@ -393,6 +393,7 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.search = search.New()
 		m.search.SetSize(m.w, m.h)
 		m.search.SetRoots(m.explorer.Roots())
+		m.search.SetMaxResults(searchMaxResults(loadSettings()))
 		m.searchOpen = true
 	case "replace-in-file":
 		// Unified findbar in expanded (Replace) mode — mirrors Ctrl+H.
