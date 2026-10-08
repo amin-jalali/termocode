@@ -392,6 +392,9 @@ type Model struct {
 	// testView is the Testing view + test runner state (Group E,
 	// test_runner.go / test_explorer.go). Pointer, shared by copies.
 	testView *testsState
+	// ext is the extension host state (Group I, ext.go). Pointer so
+	// Model copies share it; nil in bare test Models.
+	ext *extState
 
 	focus             Focus
 	showExp           bool
@@ -608,6 +611,7 @@ func New() Model {
 		problems:         newProblemsPanel(), // Group C
 		tasks:            newTaskRunner(),    // Group C
 		testView:         newTestsState(),    // Group E
+		ext:              newExtState(), // Group I
 	}
 	if err != nil {
 		m.editor = editor.New(nil)

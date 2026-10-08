@@ -39,6 +39,10 @@ type State struct {
 	TestsRunning bool
 	TestsPassed  int
 	TestsFailed  int
+
+	// Ext holds extension status items (Group I), as {{token}} markup.
+	// They render at the end of the center cluster; see ext_items.go.
+	Ext []string
 }
 
 type Model struct {
@@ -299,6 +303,7 @@ func (m Model) renderCenterDiag(s State) (string, int, int) {
 		parts = append(parts, barFg(theme.DiagWarning).Bold(true).Render(
 			fmt.Sprintf("%s %d", theme.IconWarning.String(), s.Warnings)))
 	}
+	parts = append(parts, renderExtParts(s.Ext)...) // Group I
 	if chip := renderTestsChip(s); chip != "" { // Group E (always last)
 		parts = append(parts, chip)
 	}

@@ -1251,7 +1251,10 @@ func (m Model) renderSidebar(h int) string {
 	case activity.ViewTests: // Group E (test_explorer.go)
 		content = m.renderTestsSidebar(contentW, h)
 	default:
-		return ""
+		if !m.isExtSidebar() { // Group I: extension panels (ext.go)
+			return ""
+		}
+		content = m.renderExtSidebar(contentW, h)
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, content, sidebarDivider(h))
 }
@@ -2184,6 +2187,7 @@ func (m Model) statusState() statusbar.State {
 		Debug:    m.dapSessionActive,
 		ShowLSP:  m.editor.Path() != "",
 		LSP:      m.lspClients(),
+		Ext:      m.extStatusTexts(), // Group I
 	}
 	m.fillTestsStatus(&st) // Group E: ✓ n ✗ n chip (test_explorer.go)
 	return st

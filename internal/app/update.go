@@ -71,6 +71,10 @@ func (m Model) anyTextInputOpen() bool {
 }
 
 func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// Group I: extension host messages (ext.go).
+	if cmd, ok := m.updateExt(msg); ok {
+		return m, cmd
+	}
 	// Overlay control messages always handled regardless of state.
 	switch msg := msg.(type) {
 	case commitDetailMsg:
@@ -89,7 +93,7 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.onToolUninstalled(msg)
 	case picker.CloseMsg:
 		m.pickerOpen = false
-		return m, nil
+		return m, m.extOverlayClosed() // Group I: nil unless an extension pick
 	case recents.SelectMsg:
 		// Recents modal selection: close the overlay, open the file via
 		// the editor (which also pushes the path back onto the recents
@@ -214,7 +218,7 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handlePromptSubmit(msg.Value)
 	case prompt.CloseMsg:
 		m.promptOpen = false
-		return m, m.handleClonePromptClose() // Group G: no-op unless a clone prompt
+		return m, tea.Batch(m.handleClonePromptClose(), m.extOverlayClosed()) // Group G / Group I: no-op unless theirs
 	// ── Group G: background clone (git_clone.go) ──
 	case cloneProgressMsg:
 		return m, m.handleCloneProgress(msg)
@@ -490,7 +494,7 @@ end
 		// Persist the freshly-expanded set so a subsequent restart sees
 		// the same tree shape even if no further user interaction happens.
 		m.persistExplorerState()
-		return m, nil, true
+		return m, m.extLoadCmd(false), true // Group I: load extensions after the built-in Lua
 	case nvim.RedrawMsg:
 		// Watch for mode_change events so we can update the hardware
 		// cursor shape (DECSCUSR) in View(). Events arrive as
@@ -1187,6 +1191,11 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return newM, cmd
 	}
 
+	// Group I: keymap.json "ext:<id>" bindings run extension commands.
+	if id, ok := m.extKeyCommand(msg.String()); ok {
+		return m, m.runExtCommand(id)
+	}
+
 	matchedAction := m.keys.Match(msg)
 	if m.preferredCodeAction != nil && matchedAction != keymap.ActionApplyPreferredCodeAction {
 		m.preferredCodeAction = nil
@@ -1309,6 +1318,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		items := paletteItems()
 		items = append(items, tasksPaletteItems()...) // Group C
 		items = append(items, userCommandsItems()...)
+		items = append(items, m.extPaletteItems()...) // Group I
 		// Promote frequently-used commands to the front so muscle memory
 		// works: type a few letters and the right command is already
 		// near the cursor.
@@ -1795,6 +1805,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.onToolRowSelected(msg.ID)
 	case pickerKindSnippetManager: // Group H
 		return m.onSnippetManagerSelected(msg.ID)
+	case pickerKindExt: // Group I
+		return m.extPickSelect(msg.ID)
 	}
 	return nil
 }
@@ -1805,6 +1817,9 @@ func (m Model) dispatchToFocus(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case FocusExplorer:
 		// The "explorer" focus actually means "the sidebar panel": route
 		// keys to whichever pane the activity bar currently shows.
+		if k, ok := msg.(tea.KeyMsg); ok && m.isExtSidebar() { // Group I
+			return m, m.handleExtSidebarKey(k)
+		}
 		switch m.activity.Active() {
 		case activity.ViewGit:
 			// Git sidebar has its own keymap (s/d/c/x/r + j/k/g/G/Enter).

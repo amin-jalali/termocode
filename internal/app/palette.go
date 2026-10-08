@@ -43,6 +43,7 @@ const (
 	pickerKindToolManager // LSP / DAP installer (lsp_manager.go)
 	pickerKindSnippetManager // Group H — Snippets: Manage…
 	pickerKindTasks          // Group C — Run Task… / Open Link… (tasks_run.go)
+	pickerKindExt            // Group I — termocode.pick() from an extension
 )
 
 // loadFiles walks the cwd and returns one picker.Item per file (relative path).
@@ -148,7 +149,7 @@ func workspaceRoots() []string {
 // paletteItems returns the static list of commands shown in the command palette.
 // Each item's ID is dispatched in dispatchPaletteAction.
 func paletteItems() []picker.Item {
-	return []picker.Item{
+	return append([]picker.Item{
 		{ID: "save", Title: "File: Save", Hint: "Ctrl+S"},
 		{ID: "save-all", Title: "File: Save All Files"},
 		{ID: "close-buffer", Title: "View: Close Editor", Hint: "Ctrl+W"},
@@ -306,7 +307,7 @@ func paletteItems() []picker.Item {
 		{ID: "testing-results", Title: "View: Test Results"},
 		// ── end Group E ──
 		{ID: "quit", Title: "File: Quit", Hint: "Ctrl+Q"},
-	}
+	}, extManagePaletteItems()...) // Group I — Extensions: Reload / Open Folder / …
 }
 
 // dispatchPaletteAction performs the action selected in the palette.
@@ -657,6 +658,10 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		}
 		// Group E: Testing (test_explorer.go).
 		if cmd, ok := m.dispatchTestingPalette(id); ok {
+			return cmd
+		}
+		// Group I: "Ext: …" commands + "Extensions: …" management (ext.go).
+		if cmd, ok := m.dispatchExtPalette(id); ok {
 			return cmd
 		}
 		// User commands have IDs prefixed with "user-".

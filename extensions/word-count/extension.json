@@ -1,0 +1,5 @@
+{
+  "name": "word-count",
+  "version": "1.0.0",
+  "description": "Word count of the current file in the status bar."
+}
