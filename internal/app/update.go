@@ -1728,6 +1728,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.onThemeEditorRowSelected(msg.ID)
 	case pickerKindKeybinding:
 		return m.onKeybindingRowSelected(msg.ID)
+	case pickerKindSnippetManager: // Group H
+		return m.onSnippetManagerSelected(msg.ID)
 	}
 	return nil
 }

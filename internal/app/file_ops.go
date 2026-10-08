@@ -31,6 +31,11 @@ const (
 	promptKindThemeColor
 	promptKindKeybinding
 	promptKindFindInFiles
+	// Group H — settings sync + user snippets (settings_sync.go, snippets_user.go).
+	promptKindSettingsExport
+	promptKindSettingsImport
+	promptKindSnippetNew
+	promptKindSnippetBody
 )
 
 func (m *Model) openRenamePrompt(path string) {
@@ -188,6 +193,9 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		return m.applyKeybinding(value)
 	case promptKindFindInFiles:
 		return m.runFindInFiles(value)
+	// Group H — settings sync + user snippets.
+	case promptKindSettingsExport, promptKindSettingsImport, promptKindSnippetNew, promptKindSnippetBody:
+		return m.handleExtrasPromptSubmit(value)
 	}
 	return nil
 }
