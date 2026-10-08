@@ -79,6 +79,7 @@ Press `Esc` any time to drop into Vim's Normal mode if you want to use Vim motio
 | Reveal in file system               | Palette                                |
 | Show keyboard shortcuts             | Palette → `Help: Show Shortcuts`       |
 | Show error log                      | Palette → `Help: Show Error Log`       |
+| Check installed tools               | Palette → `Help: Run Doctor`           |
 | Show buffer info                    | `Ctrl+Alt+I`                           |
 | Open URL on current line            | Palette                                |
 | Compare two files                   | Palette → `File: Compare Two Files...` |
@@ -232,6 +233,7 @@ Other quality-of-life commands in the palette:
 - `File: Toggle Auto Save` — write modified buffers automatically after one second of idle time.
 - `Help: Show Shortcuts` — a quick scrollable reference of every binding.
 - `Help: Show Error Log` — tail the rolling `errors.log` ring without leaving the editor.
+- `Help: Run Doctor` — run the same read-only checks as `termocode setup` (nvim version, ripgrep, git, language servers, debug adapters, truecolor, Nerd Font) and show the report in an overlay. Nothing is installed.
 - `View: Open URL on Current Line` — find an `http(s)://...` URL in the line and open it in your browser.
 - `File: Revert / Reload from Disk` — re-read the active buffer from disk (autoread is on too, but useful for "I just changed this in another tool").
 
