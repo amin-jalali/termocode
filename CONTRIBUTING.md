@@ -51,7 +51,8 @@ internal/nvim/        msgpack-RPC client for `nvim --embed`
 internal/setup/       `termocode setup` + Doctor checks
 packaging/            Homebrew formula + AUR PKGBUILD templates
 scripts/              dev / release / packaging helpers
-docs/                 features, architecture, adr/, qc/
+docs/                 features, architecture, adr/, qc/, reference/ (generated)
+cmd/docgen/           generates docs/reference/ from the code
 ```
 
 The package table in [docs/architecture.md](docs/architecture.md#per-feature-packages-internalname)
@@ -63,12 +64,30 @@ Where to put new code:
   `dispatchPaletteAction` in `internal/app/palette.go`. Put the logic in its own
   file in `internal/app/` if it is more than a few lines.
 - A new key binding → add an `Action` in `internal/keymap/keymap.go`, a default
-  key, and a name in `actionNames` (`overrides.go`) so users can rebind it.
+  key, a name in `actionNames` (`overrides.go`) so users can rebind it, and an
+  area + description in `internal/keymap/docs.go`.
 - Lua that runs inside nvim → a `*_lua.go` file (see
   [ADR 0002](docs/adr/0002-lua-chunks-in-go-raw-strings.md)).
 - Something reusable with its own Update/View → a new `internal/<name>` package.
 - Update `docs/features.md` and the cheat sheet (`internal/app/cheatsheet.go`)
   when you add a user-facing command or key.
+
+## Docs
+
+The pages in `docs/reference/` (keys, commands, settings, config files) are
+generated from the code. Do not edit them by hand.
+
+After you change a key, a palette command, a setting or a config file, run:
+
+```sh
+go run ./cmd/docgen           # rewrite docs/reference/*.md
+go run ./cmd/docgen -check    # exit 1 if they are out of date (CI runs this)
+```
+
+and commit the result. `go test ./cmd/docgen` fails while they are out of date.
+The text comes from Go: action descriptions in `internal/keymap/docs.go`,
+setting descriptions in `settingsRows` (`internal/app/settings_ui.go`), and
+the palette / config-file / Neovim-key lists in `internal/app/docs.go`.
 
 ## Style
 
