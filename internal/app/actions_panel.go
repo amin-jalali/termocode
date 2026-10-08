@@ -118,11 +118,22 @@ func (m Model) renderActionsHeader(width int) string {
 	closeStyle := theme.FgBg(theme.TextSecondary, theme.BgPanel).Bold(true)
 
 	labelStyle = theme.FgBg(theme.AIAccent, theme.BgPanel).Bold(true)
-	left := bg.Render(" ") + labelStyle.Render("✦ AI CHAT")
-	right := closeStyle.Render(actionsPanelGlyphNew) + bg.Render(" ") +
-		closeStyle.Render(actionsPanelGlyphHistory) + bg.Render(" ") +
-		pinStyle.Render(actionsPanelGlyphPin) + bg.Render(" ") +
-		closeStyle.Render(actionsPanelGlyphClose) + bg.Render(" ")
+	left := bg.Render(" ") + labelStyle.Render(aiSpark()+" AI CHAT")
+	// Header buttons light up under the pointer.
+	hover := ""
+	if m.hoverY == 0 {
+		hover = m.hitActionsButton(m.hoverX, m.hoverY)
+	}
+	btn := func(id, glyph string, st lipgloss.Style) string {
+		if id == hover {
+			st = st.Background(theme.Mix(theme.BgPanel, theme.TextPrimary, 0.16)).Foreground(theme.LG(theme.TextWhite))
+		}
+		return st.Render(glyph)
+	}
+	right := btn("new", actionsPanelGlyphNew, closeStyle) + bg.Render(" ") +
+		btn("history", actionsPanelGlyphHistory, closeStyle) + bg.Render(" ") +
+		btn("pin", actionsPanelGlyphPin, pinStyle) + bg.Render(" ") +
+		btn("close", actionsPanelGlyphClose, closeStyle) + bg.Render(" ")
 
 	leftW := lipgloss.Width(left)
 	rightW := lipgloss.Width(right)
