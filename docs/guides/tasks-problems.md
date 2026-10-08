@@ -70,7 +70,15 @@ Other commands: **Tasks: Run Build Task**, **Tasks: Run Test Task**,
 | `problemMatcher` | `$go`, `$gcc`, `$tsc`, `$rustc`, `$pytest`, `$eslint-compact`, `$generic`, or `$none` |
 
 The default task of the `build` group runs with **Tasks: Run Build Task**.
-The same goes for `test`.
+
+**Tasks: Run Test Task** works like this:
+
+1. If `tasks.json` has a `test` task, it runs that task in a terminal tab.
+2. If not, it runs your tests in the **Testing** view (Go, pytest, Rust,
+   Jest, Vitest). Results show in the test tree and in the **TEST RESULTS**
+   tab. See [Run and explore tests](tests.md).
+3. If termocode finds no test framework, it runs a detected test task, for
+   example `make: test`.
 
 ## The Problems panel
 
