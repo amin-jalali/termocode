@@ -11,6 +11,14 @@ import (
 // moment) and shows the report in the preview overlay via PreviewMsg.
 func runDoctorCmd() tea.Cmd {
 	return func() tea.Msg {
-		return PreviewMsg{Title: " Doctor ", Body: setup.Report(setup.Doctor())}
+		checks := setup.Doctor()
+		// Replace the environment-only graphics row with the live probe.
+		for i, c := range checks {
+			if c.Name == "graphics (images)" {
+				checks[i] = setup.GraphicsCheck(termCaps, true)
+				checks[i].Detail += " · using: " + imageProtocol().String()
+			}
+		}
+		return PreviewMsg{Title: " Doctor ", Body: setup.Report(checks)}
 	}
 }

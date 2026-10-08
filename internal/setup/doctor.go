@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/termimg"
 )
 
 // Status is the outcome of one doctor check.
@@ -96,7 +98,37 @@ func Doctor() []Check {
 		font.Detail = "not detected — run `termocode setup` (Linux) or install " + jbmName
 	}
 	out = append(out, font)
+	out = append(out, GraphicsCheck(termimg.Caps{}, false))
 	return out
+}
+
+// GraphicsCheck reports image support. With probed = true caps holds the
+// live startup probe (from inside the app); otherwise only environment
+// hints are available (`termocode setup`, which runs outside the TUI).
+func GraphicsCheck(caps termimg.Caps, probed bool) Check {
+	c := Check{Group: "terminal", Name: "graphics (images)"}
+	if !probed {
+		p, sure := termimg.DetectEnv(os.Getenv)
+		caps.Protocol = p
+		caps.Reason = "from environment"
+		if !sure {
+			caps.Reason = "no hint in environment; the app probes at start"
+		}
+		if os.Getenv("TMUX") != "" {
+			caps.InTmux = true
+		}
+	}
+	switch caps.Protocol {
+	case termimg.Kitty, termimg.Sixel:
+		c.Status, c.Detail = OK, caps.Protocol.String()+" — "+caps.Reason
+	default:
+		c.Status = Warn
+		c.Detail = "half-blocks only (" + caps.Reason + ") — kitty / WezTerm / Ghostty / foot / iTerm2 show real images"
+	}
+	if caps.InTmux && !caps.Passthrough {
+		c.Detail += "; inside tmux: `set -g allow-passthrough on` enables images"
+	}
+	return c
 }
 
 // Report renders checks as plain text for the preview overlay.
