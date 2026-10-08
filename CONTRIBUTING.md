@@ -9,7 +9,11 @@ You need Go ≥ 1.26 (see `go.mod`), `nvim` ≥ 0.10, and `git`. `rg` is optiona
 On Linux the clipboard library needs X11 headers to build tests
 (`sudo apt install libx11-dev`).
 
+Users install with `go install github.com/amin-jalali/termocode/cmd/termocode@latest`.
+To work on the code, clone the repository and build it:
+
 ```sh
+git clone https://github.com/amin-jalali/termocode.git && cd termocode
 go build -o termocode ./cmd/termocode
 ./termocode [path]            # opens path, or the current folder
 
@@ -110,7 +114,8 @@ the palette / config-file / Neovim-key lists in `internal/app/docs.go`.
 
 - `go vet ./...` must be clean. Run `gofmt -w` on the files you touch (some
   older files are not gofmt-clean yet; fixing them in a separate commit is welcome).
-- Imports in three groups: standard library, third party, `termocode/...`.
+- Imports in three groups: standard library, third party,
+  `github.com/amin-jalali/termocode/...`.
 - Comments explain **why**, not what. Exported names get a doc comment.
 - Errors from optional features are non-fatal: log them (toast /
   `recordError`) and keep going. Config loading must never block startup

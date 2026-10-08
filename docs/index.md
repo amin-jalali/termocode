@@ -105,11 +105,11 @@ commit demo.gif, remove this comment wrapper around the next line:
 
 ## Install
 
-termocode is built from source for now. You need Go 1.26 or newer and
+termocode is installed with Go for now. You need Go 1.26 or newer and
 `nvim` 0.10 or newer.
 
 ```sh
-git clone https://github.com/amin-jalali/termocode.git && cd termocode && go install ./cmd/termocode
+go install github.com/amin-jalali/termocode/cmd/termocode@latest
 ```
 
 Then run `termocode` in any project folder. See [Install](getting-started/install.md)

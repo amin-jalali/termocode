@@ -26,14 +26,14 @@ Screenshots are not committed yet. Generate them with
 
 ## Install
 
-termocode runs on Linux and macOS. Build it from source (needs Go ≥ 1.26 and `nvim` ≥ 0.10):
+termocode runs on Linux and macOS. Install it with Go (needs Go ≥ 1.26 and `nvim` ≥ 0.10):
 
 ```sh
-git clone https://github.com/amin-jalali/termocode.git
-cd termocode
-go install ./cmd/termocode
+go install github.com/amin-jalali/termocode/cmd/termocode@latest
 termocode            # opens the current folder
 ```
+
+To build from a clone instead: `git clone https://github.com/amin-jalali/termocode.git && cd termocode && go install ./cmd/termocode`.
 
 On Linux, install the X11 headers first (`sudo apt install libx11-dev`).
 Homebrew, AUR and release tarballs are **coming soon** — they are not published yet.
