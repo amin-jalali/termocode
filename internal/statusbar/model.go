@@ -32,6 +32,10 @@ type State struct {
 	// attached client names ("{} gopls"), empty → dim "{} none".
 	ShowLSP bool
 	LSP     []string
+
+	// Ext holds extension status items (Group I), as {{token}} markup.
+	// They render at the end of the center cluster; see ext_items.go.
+	Ext []string
 }
 
 type Model struct {
@@ -264,6 +268,7 @@ func (m Model) renderCenter(s State) string {
 		parts = append(parts, barFg(theme.DiagWarning).Bold(true).Render(
 			fmt.Sprintf("%s %d", theme.IconWarning.String(), s.Warnings)))
 	}
+	parts = append(parts, renderExtParts(s.Ext)...) // Group I
 	if len(parts) == 0 {
 		return ""
 	}
