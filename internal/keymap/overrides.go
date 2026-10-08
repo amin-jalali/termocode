@@ -235,6 +235,10 @@ var actionNames = map[Action]string{
 	ActionShowSnippetPicker:        "ShowSnippetPicker",
 	ActionMdLivePreview:            "MdLivePreview",
 	ActionApplyPreferredCodeAction: "ApplyPreferredCodeAction",
+	// Group C
+	ActionRunTask:      "RunTask",
+	ActionRerunTask:    "RerunTask",
+	ActionShowProblems: "ShowProblems",
 }
 
 // ActionName returns the stable string name for an Action. Empty string
