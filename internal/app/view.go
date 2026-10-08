@@ -2176,7 +2176,7 @@ func (m Model) statusState() statusbar.State {
 		Behind:   m.gitBranch.Behind,
 		Indent:   "Spaces: 4",
 		Encoding: "UTF-8",
-		Term:     m.termOpen,
+		Term:     m.termOpen && len(m.terminalTabs) > 0,
 		Debug:    m.dapSessionActive,
 	}
 }
