@@ -75,10 +75,11 @@ func probeTerminal() {
 	nerd := false
 	unicodeOK := false
 	if autoIcons {
+		// The Unicode set renders in every modern terminal font, so auto
+		// picks it unless a Nerd Font is installed (ResolveIconMode keeps
+		// ASCII for TERM=linux and non-UTF-8 locales).
 		nerd = setup.HasNerdFont()
-		if !nerd {
-			unicodeOK = theme.ProbeUnicode(200 * time.Millisecond)
-		}
+		unicodeOK = true
 	}
 	caps := termimg.Caps{Protocol: termimg.Blocks}
 	switch termimg.ParseMode(disp.Images) {
