@@ -86,7 +86,6 @@ func modalOverlay(base, box string, screenW, screenH int, opts *ModalOpts) strin
 		}
 	}
 
-	baseLines := strings.Split(base, "\n")
 	boxLines := strings.Split(strings.TrimRight(box, "\n"), "\n")
 	if len(boxLines) == 0 {
 		return base
@@ -105,25 +104,68 @@ func modalOverlay(base, box string, screenW, screenH int, opts *ModalOpts) strin
 		topRow = 0
 	}
 
-	dimOutsideRect(baseLines, leftCol, topRow, boxW, boxH, outsideDim)
+	// The "dim every cell outside the box" pass walks the WHOLE screen and is by
+	// far the most expensive step. It depends only on the base frame and the box
+	// RECTANGLE — never on the box CONTENTS. During mouse hover the editor frame
+	// is static while the modal's highlighted row changes on every motion event,
+	// so we cache the dimmed base and reuse it across frames. Without this, every
+	// hover motion re-dims the full screen, which makes hover visibly lag.
+	dimmed := dimmedBaseCached(base, leftCol, topRow, boxW, boxH, outsideDim)
+
+	// Copy so splicing the box doesn't mutate the cached dimmed base.
+	out := make([]string, len(dimmed))
+	copy(out, dimmed)
 
 	for i := range boxLines {
 		baseRowIdx := topRow + i
 		var baseCells []cellData
-		if baseRowIdx >= 0 && baseRowIdx < len(baseLines) {
-			baseCells = parseANSIRow(baseLines[baseRowIdx])
+		if baseRowIdx >= 0 && baseRowIdx < len(out) {
+			baseCells = parseANSIRow(out[baseRowIdx])
 		}
 		boxLines[i] = styleGlassRow(boxLines[i], baseCells, leftCol, i, len(boxLines), blendAlpha, fgDim, tint, rim, accent)
 	}
 
 	for i, line := range boxLines {
 		row := topRow + i
-		if row < 0 || row >= len(baseLines) {
+		if row < 0 || row >= len(out) {
 			continue
 		}
-		baseLines[row] = spliceAt(baseLines[row], line, leftCol)
+		out[row] = spliceAt(out[row], line, leftCol)
 	}
-	return strings.Join(baseLines, "\n")
+	return strings.Join(out, "\n")
+}
+
+// modalDimCache memoises the result of dimming the screen outside a modal box.
+// Single-entry: only one modal is ever open at a time, and View() runs on the
+// bubbletea goroutine so no locking is needed.
+type modalDimCache struct {
+	base       string
+	leftCol    int
+	topRow     int
+	boxW       int
+	boxH       int
+	outsideDim float64
+	lines      []string
+}
+
+var modalDimCacheV *modalDimCache
+
+// dimmedBaseCached returns base (split into lines) with every cell outside the
+// box rectangle dimmed, reusing the cached result when the base frame and box
+// rect are unchanged from the last call (the hover-motion fast path).
+func dimmedBaseCached(base string, leftCol, topRow, boxW, boxH int, outsideDim float64) []string {
+	if c := modalDimCacheV; c != nil && c.base == base &&
+		c.leftCol == leftCol && c.topRow == topRow &&
+		c.boxW == boxW && c.boxH == boxH && c.outsideDim == outsideDim {
+		return c.lines
+	}
+	lines := strings.Split(base, "\n")
+	dimOutsideRect(lines, leftCol, topRow, boxW, boxH, outsideDim)
+	modalDimCacheV = &modalDimCache{
+		base: base, leftCol: leftCol, topRow: topRow,
+		boxW: boxW, boxH: boxH, outsideDim: outsideDim, lines: lines,
+	}
+	return lines
 }
 
 // dimOutsideRect multiplies fg+bg of every cell outside the modal rectangle

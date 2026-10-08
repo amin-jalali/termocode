@@ -33,18 +33,27 @@ const (
 // step lighter than the panel; the primary Commit chip uses the same green as
 // staged/added signs.
 var (
-	gitInputBg      = lipgloss.Color("#252526")
+	gitInputBg      = lipgloss.Color("#1b1b1b") // sunken trough, clearly darker than the #303030 panel
 	gitInputFg      = lipgloss.Color("#d6d6d6")
-	gitInputPlace   = lipgloss.Color("#6a6a6a")
-	gitChipBg       = lipgloss.Color("#2d2d30")
-	gitChipFg       = lipgloss.Color("#cccccc")
-	gitCommitChipBg = lipgloss.Color("#2ea043")
-	gitCommitChipFg = lipgloss.Color("#ffffff")
-	gitChipDisabled = lipgloss.Color("#5a5a5a")
+	gitInputFocusFg = lipgloss.Color("#ffffff")
+	gitInputPlace   = lipgloss.Color("#7a7a7a")
+	gitInputAccent  = lipgloss.Color("#36a3d9") // focus bar, matches the cursor-row accent
+	gitInputRail    = lipgloss.Color("#45454d") // quiet rail when the field is blurred
+
+	// Primary Commit button: confident VSCode-blue when actionable, muted slate
+	// when there's nothing to commit yet.
+	gitCommitReadyBg = lipgloss.Color("#0e639c")
+	gitCommitReadyFg = lipgloss.Color("#ffffff")
+	gitCommitIdleBg  = lipgloss.Color("#37373d")
+	gitCommitIdleFg  = lipgloss.Color("#9a9a9a")
+
+	// Secondary square buttons (Sync, overflow).
+	gitChipBg = lipgloss.Color("#3a3a40") // raised, lighter than the panel
+	gitChipFg = lipgloss.Color("#cfcfcf")
 )
 
 // gitCommitPlaceholder is shown dim in the empty message box.
-const gitCommitPlaceholder = "Message (c to edit)"
+const gitCommitPlaceholder = "Message…"
 
 // ── editing ───────────────────────────────────────────────────────────────
 
@@ -151,7 +160,21 @@ func (m Model) renderGitCommitBox(w int) string {
 	if w < 4 {
 		return field.Render(strings.Repeat(" ", max(w, 0)))
 	}
-	inner := w - 2 // one column of padding on each side
+	inner := w - 3 // rail column + one space + trailing pad column
+
+	// Leftmost column: a rail that frames the field. Bright cyan when active
+	// (matching the cursor-row accent), quiet grey when blurred — always present
+	// so the row always reads as an editable input, not stray dim text.
+	railColor := gitInputRail
+	if m.gitCommitFocused {
+		railColor = gitInputAccent
+	}
+	lead := lipgloss.NewStyle().Background(gitInputBg).Foreground(railColor).Render("▌")
+
+	fg := gitInputFg
+	if m.gitCommitFocused {
+		fg = gitInputFocusFg
+	}
 
 	runes := []rune(m.gitCommitMsg)
 	var body string
@@ -164,23 +187,17 @@ func (m Model) renderGitCommitBox(w int) string {
 		body = padBgRight(body, inner, gitInputBg)
 	} else {
 		// Horizontal scroll window around the caret.
-		caret := m.gitCommitCaret
-		if caret > len(runes) {
-			caret = len(runes)
-		}
+		caret := min(m.gitCommitCaret, len(runes))
 		start := 0
 		if caret >= inner {
 			start = caret - inner + 1
 		}
-		end := start + inner
-		if end > len(runes) {
-			end = len(runes)
-		}
+		end := min(start+inner, len(runes))
 		vis := runes[start:end]
 
 		var sb strings.Builder
-		txt := lipgloss.NewStyle().Background(gitInputBg).Foreground(gitInputFg)
-		caretStyle := lipgloss.NewStyle().Background(gitInputFg).Foreground(gitInputBg)
+		txt := lipgloss.NewStyle().Background(gitInputBg).Foreground(fg)
+		caretStyle := lipgloss.NewStyle().Background(gitInputAccent).Foreground(gitInputBg)
 		cells := 0
 		for i, r := range vis {
 			if m.gitCommitFocused && start+i == caret {
@@ -190,19 +207,18 @@ func (m Model) renderGitCommitBox(w int) string {
 			}
 			cells += runewidth.RuneWidth(r)
 		}
-		// Caret sitting past the last visible rune → a reverse-video space.
+		// Caret sitting past the last visible rune → a solid accent block.
 		if m.gitCommitFocused && caret >= start+len(vis) && cells < inner {
-			sb.WriteString(lipgloss.NewStyle().Background(gitInputFg).Render(" "))
+			sb.WriteString(lipgloss.NewStyle().Background(gitInputAccent).Render(" "))
 			cells++
 		}
 		if cells < inner {
-			sb.WriteString(lipgloss.NewStyle().Background(gitInputBg).Render(strings.Repeat(" ", inner-cells)))
+			sb.WriteString(field.Render(strings.Repeat(" ", inner-cells)))
 		}
 		body = sb.String()
 	}
 
-	pad := field.Render(" ")
-	return pad + body + pad
+	return lead + field.Render(" ") + body + field.Render(" ")
 }
 
 // gitActionBtn is one clickable chip on the action bar. x0..x1 are inclusive
@@ -223,71 +239,88 @@ const (
 	gitBtnMore   = "more"
 )
 
-// gitActionButtons lays the chips out left-to-right and records their column
-// spans. The Commit chip turns green only when something is staged; otherwise
-// it stays muted to signal "nothing to commit yet" without disabling the click
-// (clicking offers to stage-all).
+// gitActionButtons lays the action row out as one dominant primary plus two
+// small secondary squares: a WIDE Commit button fills the left, while a Sync
+// (⟳) and an overflow (▾) square sit at the right edge. The single bold primary
+// + quiet secondaries is what gives the toolbar a clear hierarchy. Each button
+// records its column span so the mouse hit-test maps a click back to the id.
 func (m Model) gitActionButtons(w int) []gitActionBtn {
 	staged, _ := m.gitFileCounts()
+	ready := staged > 0 || strings.TrimSpace(m.gitCommitMsg) != ""
 
-	commitBg, commitFg := gitChipBg, lipgloss.Color(gitChipDisabled)
-	if staged > 0 || strings.TrimSpace(m.gitCommitMsg) != "" {
-		commitBg, commitFg = gitCommitChipBg, gitCommitChipFg
-	}
-
-	syncLabel := "⟳ Sync"
-	if git := m.gitBranch; git.Ahead > 0 || git.Behind > 0 {
-		var b strings.Builder
-		b.WriteString("⟳")
-		if git.Behind > 0 {
-			b.WriteString(" ↓")
-			b.WriteString(itoa(git.Behind))
-		}
-		if git.Ahead > 0 {
-			b.WriteString(" ↑")
-			b.WriteString(itoa(git.Ahead))
-		}
-		syncLabel = b.String()
+	commitBg, commitFg := gitCommitIdleBg, gitCommitIdleFg
+	if ready {
+		commitBg, commitFg = gitCommitReadyBg, gitCommitReadyFg
 	}
 
-	specs := []gitActionBtn{
-		{id: gitBtnCommit, label: " ✓ Commit ", bg: commitBg, fg: commitFg},
-		{id: gitBtnSync, label: " " + syncLabel + " ", bg: gitChipBg, fg: gitChipFg},
-		{id: gitBtnMore, label: " ⋯ ", bg: gitChipBg, fg: gitChipFg},
+	// Primary label: "✓ Commit" plus the staged count when there is one.
+	label := "✓ Commit"
+	if staged > 0 {
+		label = "✓ Commit (" + itoa(staged) + ")"
 	}
-	// Place chips with a single space gap, starting one column in.
-	x := 1
-	for i := range specs {
-		lw := runewidth.StringWidth(specs[i].label)
-		specs[i].x0 = x
-		specs[i].x1 = x + lw - 1
-		x += lw + 1
-	}
-	return specs
+
+	commit := gitActionBtn{id: gitBtnCommit, label: label, bg: commitBg, fg: commitFg}
+	sync := gitActionBtn{id: gitBtnSync, label: "⟳", bg: gitChipBg, fg: gitChipFg}
+	more := gitActionBtn{id: gitBtnMore, label: "▾", bg: gitChipBg, fg: gitChipFg}
+
+	// Right edge: two 3-wide squares (glyph + 1 pad each side), 1-col gap, 1-col
+	// right margin. Commit fills everything to their left from a 1-col margin.
+	const sq = 3
+	more.x1 = w - 2
+	more.x0 = more.x1 - sq + 1
+	sync.x1 = more.x0 - 2
+	sync.x0 = sync.x1 - sq + 1
+	commit.x0 = 1
+	commit.x1 = sync.x0 - 2
+	return []gitActionBtn{commit, sync, more}
 }
 
-// renderGitActionBar draws the chips returned by gitActionButtons, padded to w.
+// renderGitActionBar draws the primary Commit button (label centered) and the
+// two secondary squares at the spans gitActionButtons assigns, filling gaps
+// with the panel background so the row is exactly w wide and lines up with the
+// hit-test zones.
 func (m Model) renderGitActionBar(w int) string {
 	rowBg := lipgloss.NewStyle().Background(sidebarBg)
 	var sb strings.Builder
-	sb.WriteString(rowBg.Render(" "))
-	used := 1
-	for i, b := range m.gitActionButtons(w) {
-		if i > 0 {
-			sb.WriteString(rowBg.Render(" "))
-			used++
+	col := 0
+	for _, b := range m.gitActionButtons(w) {
+		bw := b.x1 - b.x0 + 1
+		if b.x0 < col || b.x1 >= w || bw <= 0 {
+			continue // doesn't fit — drop it rather than corrupt the row
 		}
-		lw := runewidth.StringWidth(b.label)
-		if used+lw > w {
-			break
+		if b.x0 > col {
+			sb.WriteString(rowBg.Render(strings.Repeat(" ", b.x0-col)))
 		}
-		sb.WriteString(lipgloss.NewStyle().Background(b.bg).Foreground(b.fg).Bold(b.id == gitBtnCommit).Render(b.label))
-		used += lw
+		style := lipgloss.NewStyle().Background(b.bg).Foreground(b.fg)
+		var content string
+		if b.id == gitBtnCommit {
+			content = centerLabel(b.label, bw)
+			style = style.Bold(true)
+		} else {
+			content = centerLabel(b.label, bw)
+		}
+		sb.WriteString(style.Render(content))
+		col = b.x1 + 1
 	}
-	if used < w {
-		sb.WriteString(rowBg.Render(strings.Repeat(" ", w-used)))
+	if col < w {
+		sb.WriteString(rowBg.Render(strings.Repeat(" ", w-col)))
 	}
 	return sb.String()
+}
+
+// centerLabel centers s within width cells (truncating with … if it overflows),
+// padding with plain spaces so the caller's bg style fills the button.
+func centerLabel(s string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	lw := runewidth.StringWidth(s)
+	if lw > width {
+		return runewidth.Truncate(s, width, "…")
+	}
+	left := (width - lw) / 2
+	right := width - lw - left
+	return strings.Repeat(" ", left) + s + strings.Repeat(" ", right)
 }
 
 // ── mouse ───────────────────────────────────────────────────────────────────
@@ -298,8 +331,9 @@ func (m Model) gitCommitAreaClick(x, y int, w int) (tea.Model, tea.Cmd, bool) {
 	switch y {
 	case gitCommitInputRow:
 		m.gitFocusCommitBox()
-		// Drop the caret near the clicked column (best-effort, 1 col padding).
-		col := x - 1
+		// Drop the caret near the clicked column (text starts after the rail +
+		// one space, i.e. column 2).
+		col := x - 2
 		n := len([]rune(m.gitCommitMsg))
 		if col < 0 {
 			col = 0

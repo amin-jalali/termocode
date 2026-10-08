@@ -122,6 +122,17 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 	inside := x >= boxRect.x && x < boxRect.x+boxRect.w &&
 		y >= boxRect.y && y < boxRect.y+boxRect.h
 
+	// Hover: move the highlight onto the button under the pointer.
+	if action == tea.MouseActionMotion {
+		for i, br := range buttonRects {
+			if x >= br.x && x < br.x+br.w && y == br.y {
+				m.cursor = i
+				break
+			}
+		}
+		return m, nil, inside
+	}
+
 	if button != tea.MouseButtonLeft || action != tea.MouseActionPress {
 		return m, nil, inside
 	}

@@ -55,11 +55,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return nm, cmd
 }
 
-// anyTextInputOpen reports whether a focused text field is on screen — the
-// only context where all-motion mouse events risk leaking into typed input.
+// anyTextInputOpen reports whether to downgrade mouse tracking from all-motion
+// (1003) to button/cell motion (1002). We keep this ON only for text-input
+// overlays that have NO selectable list to hover — prompt, find, replace, and
+// the (mouse-less) workspace search — where all-motion buys nothing but still
+// risks the SGR-fragment leak into typed input.
+//
+// The list overlays (picker, recents, settings) are deliberately EXCLUDED so
+// all-motion stays live and their rows highlight under the pointer; each of
+// those already strips stray mouse-SGR runes from its filter input (see
+// picker.sanitizeInput, recents.isMouseFragmentEvent, sanitizeSettingsInput),
+// so the leak can't reach them.
 func (m Model) anyTextInputOpen() bool {
-	return m.pickerOpen || m.promptOpen || m.searchOpen || m.replaceOpen ||
-		m.settingsModalOpen || m.recentsOpen || m.findOpen
+	return m.promptOpen || m.searchOpen || m.replaceOpen || m.findOpen
 }
 
 func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -589,6 +597,11 @@ end
 		m.inTerminal = m.termOpen && m.terminalWinID > 0 &&
 			msg.CurrentWin == m.terminalWinID && msg.Mode == "t"
 		return m, tea.Batch(m.maybeRefreshStickyContext(), m.maybeRefreshScrollbarMarkers(), reloadToastCmd), true
+	case gitAutoRefreshMsg:
+		// Background poll: refresh git state and reschedule the next tick. The
+		// GitMsg handler only re-clamps the cursor, so this never disturbs the
+		// user's section-collapse state, selection, or the commit message box.
+		return m, tea.Batch(fetchGitCmd(), gitAutoRefreshTick()), true
 	case GitMsg:
 		m.gitIsRepo = msg.IsRepo
 		m.gitBranch = msg.Branch

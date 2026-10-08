@@ -110,6 +110,21 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 	if x < leftCol || x >= leftCol+boxW || y < topRow || y >= topRow+boxH {
 		return m, nil
 	}
+	// Hover: move the highlight onto the row under the pointer.
+	if action == tea.MouseActionMotion {
+		const listStartOffset = 6
+		listStart := topRow + listStartOffset
+		if y >= listStart && y < listStart+rowsVisible {
+			start := 0
+			if m.cursor >= rowsVisible {
+				start = m.cursor - rowsVisible + 1
+			}
+			if target := start + (y - listStart); target >= 0 && target < len(m.filtered) {
+				m.cursor = target
+			}
+		}
+		return m, nil
+	}
 	// Wheel anywhere inside the box scrolls the list.
 	if action == tea.MouseActionPress {
 		switch button {

@@ -3,11 +3,32 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"termocode/internal/git"
 )
+
+// gitAutoRefreshMsg fires on a timer so git state (the Source Control list,
+// explorer decorations, status-bar branch, and editor diff signs) stays live
+// when files change OUTSIDE termocode's own actions — `:w` typed directly in
+// nvim, edits/commits run from the integrated terminal, or changes made by
+// external tools. termocode has no filesystem watcher (no fsnotify dependency);
+// a lightweight poll catches every change source uniformly. fetchGitCmd
+// short-circuits on a cheap git.IsRepo() check when the cwd isn't a repo, so
+// polling stays inexpensive.
+type gitAutoRefreshMsg struct{}
+
+// gitPollInterval is how often git state is re-polled. 2s balances "feels live"
+// against the cost of spawning git status/branch/graph in the background. Users
+// who want an instant update can still trigger a manual refresh.
+const gitPollInterval = 2 * time.Second
+
+// gitAutoRefreshTick schedules the next git poll.
+func gitAutoRefreshTick() tea.Cmd {
+	return tea.Tick(gitPollInterval, func(time.Time) tea.Msg { return gitAutoRefreshMsg{} })
+}
 
 // GitMsg carries the latest git snapshot.
 type GitMsg struct {

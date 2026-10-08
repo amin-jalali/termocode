@@ -582,7 +582,12 @@ func (m Model) renderBase() string {
 	}
 
 	var editorContent string
-	if m.editor.Path() == "" && len(m.bufs) <= 1 && !m.termOpen {
+	// The welcome screen shows only on a truly empty editor. During a Source
+	// Control diff the focused pane may be the nameless, unlisted HEAD scratch
+	// buffer (Path()=="" and not counted in m.bufs) — without the gitDiffActive
+	// guard, moving the mouse onto the HEAD pane would flip the whole editor to
+	// the welcome screen and the diff would appear to vanish.
+	if m.editor.Path() == "" && len(m.bufs) <= 1 && !m.termOpen && !m.gitDiffActive {
 		editorContent = renderWelcome(edPaneW, editorH, m.welcomeFocus)
 	} else {
 		editorContent = m.editor.View(m.focus == FocusEditor)
@@ -1223,6 +1228,16 @@ func (m Model) renderSidebar(h int) string {
 			m.editor.IsDirty(),
 			m.gitStatusMap(),
 		)
+		// VSCode-style hover: tint the body row under the pointer. The re-tint
+		// only touches panel-bg cells, so the cursor/selection rows (which use a
+		// different bg) and blank rows are skipped automatically.
+		if hy := m.explorerHoverLine(); hy >= 0 {
+			lines := strings.Split(content, "\n")
+			if hy < len(lines) {
+				lines[hy] = sidebarHoverLineBg(lines[hy])
+				content = strings.Join(lines, "\n")
+			}
+		}
 	case activity.ViewSearch:
 		header := sidebarHeader(contentW, "SEARCH", "")
 		body := placeholderSidebar(contentW, h-1, "", "Press F8 for\nFind in Files.\n\nUse Ctrl+F for\nin-file find.")
@@ -1366,7 +1381,7 @@ func (m Model) renderGitSidebar(w, h int) string {
 	if hy := m.gitHoverLine(); hy >= 0 && hy < len(lines) {
 		cursorLine := len(header) + (m.gitCursor - top)
 		if hy != cursorLine {
-			lines[hy] = gitHoverLineBg(lines[hy])
+			lines[hy] = sidebarHoverLineBg(lines[hy])
 		}
 	}
 	return strings.Join(lines, "\n")
@@ -1382,10 +1397,32 @@ func (m Model) gitHoverLine() int {
 	return m.hoverY
 }
 
-// gitHoverLineBg re-tints the panel-background cells of a rendered row to the
-// hover colour, leaving pills, chips and the cursor accent untouched. Blank
-// rows are left alone so empty space doesn't light up.
-func gitHoverLineBg(line string) string {
+// explorerHoverLine returns the sidebar screen-row under the pointer when the
+// Files pane is showing and the pointer is over an explorer BODY row (not the
+// header chrome, footer, or the right-edge divider). -1 otherwise. Recomputed
+// from the live pointer each render, so it never goes stale when the pointer
+// leaves the panel.
+func (m Model) explorerHoverLine() int {
+	if m.activity.Active() != activity.ViewFiles {
+		return -1
+	}
+	if m.hoverX < activity.Width || m.hoverX >= activity.Width+m.explorerWidth-1 {
+		return -1
+	}
+	headerRows := m.explorer.HeaderChromeRows()
+	footerRows := m.explorer.FooterChromeRows()
+	if m.hoverY < headerRows || m.hoverY >= m.h-footerRows {
+		return -1
+	}
+	return m.hoverY
+}
+
+// sidebarHoverLineBg re-tints the panel-background cells of a rendered row to
+// the hover colour, leaving pills, chips and the cursor/selection rows
+// untouched (their bg isn't the panel bg, so the re-tint skips them). Blank
+// rows are left alone so empty space doesn't light up. Shared by the Source
+// Control panel and the file explorer so hover reads identically in both.
+func sidebarHoverLineBg(line string) string {
 	if strings.TrimSpace(ansi.Strip(line)) == "" {
 		return line
 	}
@@ -1559,8 +1596,11 @@ func renderGitSubheader(b git.Branch, viewTree bool, w int) string {
 	var sb strings.Builder
 	sb.WriteString(rowStyle.Render(" "))
 	used := 1
-	// Branch glyph, then the branch name.
-	if bi := theme.IconBranch.String(); bi != "" {
+	// Branch glyph, then the branch name. In nerd-font / unicode icon modes the
+	// glyph is a clean fork mark; the ASCII fallback ("git:") is dropped — it
+	// reads as noise next to the "SOURCE CONTROL" title, and the teal branch
+	// name already says what it is.
+	if bi := theme.IconBranch.String(); bi != "" && bi != theme.IconBranch.ASCII {
 		sb.WriteString(branchStyle.Render(bi))
 		sb.WriteString(rowStyle.Render(" "))
 		used += lipgloss.Width(bi) + 1

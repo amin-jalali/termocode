@@ -216,20 +216,29 @@ func (m Model) renderBox(w, h int) string {
 		available = 1
 	}
 
+	// Without ripgrep we fall back to the built-in walker (literal, smart-case).
+	// It still works, so we show results normally and just flag "basic" mode
+	// rather than blocking the panel with a "not installed" error.
+	basic := ""
+	if !m.rgAvailable {
+		basic = " · basic"
+	}
 	var summary string
 	switch {
-	case !m.rgAvailable:
-		summary = errStyle.Render(" ripgrep (rg) not installed ")
 	case m.lastErr != "":
 		summary = errStyle.Render(" " + m.lastErr)
 	case m.pending:
 		summary = hintS.Render(" searching... ")
 	case strings.TrimSpace(m.input) == "":
-		summary = hintS.Render(" type to search ")
+		if m.rgAvailable {
+			summary = hintS.Render(" type to search ")
+		} else {
+			summary = hintS.Render(" type to search · basic (install rg for regex) ")
+		}
 	case len(m.results) == 0:
-		summary = hintS.Render(" no results ")
+		summary = hintS.Render(" no results" + basic + " ")
 	default:
-		summary = hintS.Render(fmt.Sprintf(" %d results ", len(m.results)))
+		summary = hintS.Render(fmt.Sprintf(" %d results%s ", len(m.results), basic))
 	}
 	summary = padBg(summary, innerW)
 

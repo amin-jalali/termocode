@@ -190,6 +190,17 @@ func (m settingsModal) HandleMouse(x, y int, action tea.MouseAction, button tea.
 		boxTop = 0
 	}
 
+	// Hover: move the highlight onto the row under the pointer.
+	if action == tea.MouseActionMotion {
+		if x >= boxLeft && x < boxLeft+boxW && y >= boxTop && y < boxTop+boxH {
+			if yRel := y - boxTop - 1; yRel >= 0 && yRel < innerH {
+				if idx := m.layoutRowAt(yRel, visible); idx >= 0 && idx < len(m.rows) && !m.rows[idx].Header {
+					m.cursor = idx
+				}
+			}
+		}
+		return m, nil
+	}
 	if button == tea.MouseButtonWheelUp {
 		if next := m.prevVisible(m.cursor); next >= 0 {
 			m.cursor = next

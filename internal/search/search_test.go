@@ -96,6 +96,62 @@ func TestRun_EmptyQuery(t *testing.T) {
 
 // TestRun_LiveRipgrep exercises Run end-to-end against a sandbox tmpdir.
 // Skipped if rg isn't on PATH so the suite stays portable.
+func TestRunFallback(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "sample.txt"),
+		[]byte("alpha beta gamma\nbeta delta beta\nepsilon\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// A pruned directory and a binary file must be ignored.
+	if err := os.MkdirAll(filepath.Join(dir, "node_modules"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "node_modules", "x.txt"), []byte("beta\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "bin.dat"), []byte("beta\x00beta"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	results, err := runFallback(dir, "beta")
+	if err != nil {
+		t.Fatalf("runFallback: %v", err)
+	}
+	if len(results) != 2 {
+		t.Fatalf("want 2 matching lines (binary + node_modules skipped), got %d (%+v)", len(results), results)
+	}
+	// Line 2 has two occurrences of "beta" → two highlight ranges.
+	var line2 *Result
+	for i := range results {
+		if results[i].Line == 2 {
+			line2 = &results[i]
+		}
+	}
+	if line2 == nil {
+		t.Fatalf("expected a match on line 2, got %+v", results)
+	}
+	if len(line2.Matches) != 2 {
+		t.Errorf("line 2 should have 2 match ranges, got %d", len(line2.Matches))
+	}
+}
+
+func TestRunFallback_SmartCase(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "f.txt"), []byte("Beta\nbeta\nBETA\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Lowercase query → case-insensitive: all three lines match.
+	lower, _ := runFallback(dir, "beta")
+	if len(lower) != 3 {
+		t.Errorf("smart-case lowercase: want 3, got %d", len(lower))
+	}
+	// Mixed-case query → case-sensitive: only the exact "Beta" matches.
+	upper, _ := runFallback(dir, "Beta")
+	if len(upper) != 1 {
+		t.Errorf("smart-case mixed: want 1, got %d", len(upper))
+	}
+}
+
 func TestRun_LiveRipgrep(t *testing.T) {
 	if !Available() {
 		t.Skip("ripgrep not installed")
