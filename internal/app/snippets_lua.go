@@ -19,7 +19,7 @@ package app
 const snippetsLua = `
 -- Per-filetype snippet table. Keep these short and focused on the truly
 -- common patterns that hurt to type repeatedly. Anything domain-specific
--- belongs in user config (which we don't have a UI for yet).
+-- belongs in user snippets (snippets.json, see snippets_user.go).
 local _snippets = {
   go = {
     iferr   = 'if err != nil {\n\treturn ${1:err}\n}\n$0',
@@ -82,6 +82,67 @@ local _snippets = {
   },
 }
 
+-- Exposed globally so the Go side (Snippets: Browse) can read it.
+_G._snippets = _snippets
+
+-- User snippets from ~/.config/termocode/snippets.json, keyed by scope
+-- ('*' = every filetype). Filled by termocode_load_user_snippets.
+_G._user_snippets = _G._user_snippets or {}
+
+-- Map related filetypes to their canonical entry. JSX/TSX share JS/TS.
+local _ft_alias = {
+  javascriptreact = 'javascript',
+  typescriptreact = 'typescript',
+  py = 'python',
+}
+
+-- termocode_snippets_for returns trigger -> body for a filetype, merged
+-- bundled < user '*' < user canonical ft < user exact ft, so a user
+-- snippet always wins on a trigger clash.
+function _G.termocode_snippets_for(ft)
+  local canon = _ft_alias[ft] or ft
+  local out = {}
+  for k, v in pairs(_snippets[canon] or {}) do out[k] = v end
+  local user = _G._user_snippets or {}
+  for _, scope in ipairs({ '*', canon, ft }) do
+    for k, v in pairs(user[scope] or {}) do out[k] = v end
+  end
+  return out
+end
+
+-- termocode_load_user_snippets (re)reads snippets.json. A missing file
+-- clears the user table; a file that fails to parse keeps the previous
+-- table and warns, so a half-typed edit never wipes working snippets.
+function _G.termocode_load_user_snippets(path)
+  if vim.fn.filereadable(path) == 0 then
+    _G._user_snippets = {}
+    return
+  end
+  local ok, data = pcall(vim.json.decode, table.concat(vim.fn.readfile(path), '\n'))
+  if not ok or type(data) ~= 'table' then
+    vim.notify('termocode: snippets.json is not valid JSON', vim.log.levels.WARN)
+    return
+  end
+  local out = {}
+  for scope, items in pairs(data) do
+    if type(scope) == 'string' and type(items) == 'table' then
+      local s = scope:lower()
+      if s == '' or s == 'global' or s == 'all' then s = '*' end
+      out[s] = out[s] or {}
+      for trig, body in pairs(items) do
+        if type(body) == 'table' then
+          local okc, joined = pcall(table.concat, body, '\n')
+          body = okc and joined or nil
+        end
+        if type(trig) == 'string' and type(body) == 'string' then
+          out[s][trig] = body
+        end
+      end
+    end
+  end
+  _G._user_snippets = out
+end
+
 -- Look up the trigger word immediately before the cursor (word characters
 -- only; we want 'iferr' to match but '.iferr' should not). Returns the
 -- trigger and its body, or nil if no match.
@@ -96,17 +157,7 @@ local function _find_snippet()
   end
   local trigger = line:sub(i + 1, col)
   if trigger == '' then return nil end
-  local ft = vim.bo.filetype
-  -- Map related filetypes to their canonical entry. JSX/TSX share JS/TS.
-  local alias = {
-    javascriptreact = 'javascript',
-    typescriptreact = 'typescript',
-    py = 'python',
-  }
-  ft = alias[ft] or ft
-  local table_ = _snippets[ft]
-  if not table_ then return nil end
-  local body = table_[trigger]
+  local body = termocode_snippets_for(vim.bo.filetype)[trigger]
   if not body then return nil end
   return trigger, body, i + 1, col
 end
