@@ -42,6 +42,7 @@ const (
 	pickerKindKeybinding
 	pickerKindToolManager // LSP / DAP installer (lsp_manager.go)
 	pickerKindSnippetManager // Group H — Snippets: Manage…
+	pickerKindDebugConfig    // Group D — debug configuration pickers (dap.go)
 )
 
 // loadFiles walks the cwd and returns one picker.Item per file (relative path).
@@ -274,8 +275,8 @@ func paletteItems() []picker.Item {
 		// Debug Adapter Protocol. F-key shortcuts (F9 / F10 / F11 / Shift+F11)
 		// are exposed via the Hint column so the palette doubles as a
 		// discoverability surface. Continue / Start / Stop have no shortcut.
-		{ID: "debug-start", Title: "Debug: Start"},
-		{ID: "debug-stop", Title: "Debug: Stop"},
+		{ID: "debug-start", Title: "Debug: Start / Continue", Hint: "Alt+F5"}, // Group D
+		{ID: "debug-stop", Title: "Debug: Stop", Hint: "Shift+Alt+F5"},       // Group D
 		{ID: "debug-toggle-breakpoint", Title: "Debug: Toggle Breakpoint", Hint: "F9"},
 		{ID: "debug-step-over", Title: "Debug: Step Over", Hint: "F10"},
 		{ID: "debug-step-into", Title: "Debug: Step Into", Hint: "F11"},
@@ -283,6 +284,19 @@ func paletteItems() []picker.Item {
 		{ID: "debug-continue", Title: "Debug: Continue"},
 		{ID: "debug-show-stack", Title: "Debug: Show Call Stack"},
 		{ID: "debug-show-vars", Title: "Debug: Show Variables"},
+		// Group D — Run & Debug (dap.go / debug_*.go).
+		{ID: "debug-run-nodebug", Title: "Debug: Run Without Debugging"},
+		{ID: "debug-select-config", Title: "Debug: Select Configuration..."},
+		{ID: "debug-open-launch", Title: "Debug: Open launch.json"},
+		{ID: "debug-pause", Title: "Debug: Pause"},
+		{ID: "debug-restart", Title: "Debug: Restart"},
+		{ID: "debug-conditional-bp", Title: "Debug: Add Conditional Breakpoint..."},
+		{ID: "debug-logpoint", Title: "Debug: Add Logpoint..."},
+		{ID: "debug-clear-bps", Title: "Debug: Remove All Breakpoints"},
+		{ID: "debug-add-watch", Title: "Debug: Add Watch Expression..."},
+		{ID: "debug-console", Title: "View: Debug Console"},
+		{ID: "debug-view", Title: "View: Run and Debug"},
+		// ── end Group D ──
 		// LSP / DAP installer (lsp_manager.go).
 		{ID: "lsp-manage", Title: "LSP: Manage Language Servers..."},
 		{ID: "dap-install", Title: "DAP: Install Adapter..."},
@@ -303,6 +317,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 	// Record this action in the recent-palette list so next time it floats
 	// to the top. Best-effort; failures don't block the dispatch.
 	pushPaletteRecent(id)
+	if debugPaletteIDs[id] { // Group D
+		return m.runDebugPaletteCmd(id)
+	}
 	switch id {
 	case "save":
 		if err := m.editor.Save(); err != nil {

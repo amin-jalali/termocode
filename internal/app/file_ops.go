@@ -40,6 +40,10 @@ const (
 	promptKindSettingsImport
 	promptKindSnippetNew
 	promptKindSnippetBody
+	// Group D — watch / conditional breakpoint / logpoint (dap.go).
+	promptKindDebugWatch
+	promptKindDebugCondition
+	promptKindDebugLogpoint
 )
 
 func (m *Model) openRenamePrompt(path string) {
@@ -202,6 +206,8 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 	// Group H — settings sync + user snippets.
 	case promptKindSettingsExport, promptKindSettingsImport, promptKindSnippetNew, promptKindSnippetBody:
 		return m.handleExtrasPromptSubmit(value)
+	case promptKindDebugWatch, promptKindDebugCondition, promptKindDebugLogpoint: // Group D
+		return m.handleDebugPromptSubmit(value)
 	}
 	return nil
 }
