@@ -36,11 +36,11 @@ termocode is a single-window **Bubble Tea** application that wraps **a real Neov
 - **[neovim/go-client](https://github.com/neovim/go-client)** — msgpack-RPC client to the embedded Neovim process.
 - **[sahilm/fuzzy](https://github.com/sahilm/fuzzy)** — fuzzy matching for the picker (Quick Open, palette, …).
 - **Neovim 0.10+** (0.9.5 mostly works as fallback) — runs as `nvim --embed`; talks to the host via `ext_linegrid`.
-- **ripgrep** (`rg`) — workspace search backend (`F8`, live-find overlay).
+- **ripgrep** (`rg`) — workspace search backend (`F8`, live-find overlay). Optional: without it, search falls back to a slower pure-Go walker (literal text only, no `.gitignore`). See [ADR 0004](adr/0004-pure-go-search-fallback.md).
 
 ## The big knot: `internal/app`
 
-`internal/app/model.go` defines `Model`, the master Bubble Tea model. It owns one of every component (activity, explorer, editor, tabs, status, picker, menu, find, confirm, preview, prompt, replace, search, toast) plus an `*nvim.Client`. **There are ~70 files in this package** — each one is a slice of behaviour hanging off the same `Model`: git actions, multi-cursor, settings UI, snippet engine, terminal split, and so on.
+`internal/app/model.go` defines `Model`, the master Bubble Tea model. It owns one of every component (activity, explorer, editor, tabs, status, picker, menu, find, confirm, preview, prompt, replace, search, toast) plus an `*nvim.Client`. **There are ~75 files in this package** — each one is a slice of behaviour hanging off the same `Model`: git actions, multi-cursor, settings UI, snippet engine, terminal split, and so on.
 
 ### Render flow
 
@@ -102,8 +102,8 @@ Each is a self-contained Bubble Tea sub-component with its own `Model` / `Update
 | `prompt`     | Single-line input modal                                                           |
 | `recents`    | Welcome-screen recents pane                                                       |
 | `replacebar` | Inline replace bar; pairs with `findbar`                                          |
-| `search`     | Workspace ripgrep results sidebar                                                 |
-| `setup`      | First-run bootstrapping (plugin clones, lazy.nvim, etc.)                          |
+| `search`     | Workspace search sidebar — ripgrep, or a pure-Go walker when `rg` is missing      |
+| `setup`      | `termocode setup` subcommand (Nerd Font, gopls) + read-only `Doctor()` checks     |
 | `statusbar`  | Bottom status bar — branch, diagnostics, ln/col, badges                           |
 | `tabbar`     | Top tab strip with close buttons, pin indicator                                   |
 | `theme`      | Color palette + lipgloss style helpers (`Bg`, `FgBg`, `LG`)                       |
@@ -132,12 +132,18 @@ One `modalOverlay` function powers every picker and prompt. Per-call tweaks go t
 | `workspaces.json`       | Recent workspace roots for `File: Open Recent Workspace...`            |
 | `errors.log`            | Append-only ring of error toasts and `recordError(...)` debug lines    |
 | `commands.json`         | Optional — user-defined palette commands surfaced as `User: <Title>`  |
+| `keymap.json`           | Optional — keybinding overrides (see [Keymap](#keymap-internalkeymap)) |
+| `user_theme.json`       | Optional — custom theme saved by the theme editor                      |
+
+Plugins that termocode clones on first launch (nvim-dap, vim-visual-multi) live outside the config dir, in `~/.local/share/termocode/plugins` (`$XDG_DATA_HOME/termocode/plugins`, or `$TERMOCODE_PLUGINS_DIR`). See [ADR 0003](adr/0003-auto-bootstrapped-nvim-plugins.md).
 
 `tail -f ~/.config/termocode/errors.log` is the supported live-debug path.
 
 ## Keymap (`internal/keymap`)
 
-Actions are an enum in `keymap.go`; the default `KeyMap` maps key strings (Bubble Tea vocabulary: `ctrl+s`, `alt+shift+t`, `f8`) to actions. User overrides layer on top via `~/.config/termocode/keys.json`.
+Actions are an enum in `keymap.go`; the default `KeyMap` maps key strings (Bubble Tea vocabulary: `ctrl+s`, `alt+shift+t`, `f8`) to actions. User overrides layer on top via `~/.config/termocode/keymap.json` (or `$XDG_CONFIG_HOME/termocode/keymap.json`) — see `overrides.go`.
+
+The file is a flat map of key string → action name, e.g. `{"alt+s": "Save"}`. Action names come from the `actionNames` table in `overrides.go`. `Preferences: Customize Keybindings` writes this file for you (read-modify-write, so other entries stay). On load, entries with an unknown action name **or a key string the default keymap does not already use** are dropped silently — a broken file can never block startup.
 
 **Some keys are reserved by terminal emulators.** For example `ctrl+shift+t` opens a new terminal tab in most emulators and never reaches the app. termocode ships multiple fallbacks for the affected actions — Reopen-closed is bound to all of `alt+shift+t`, `alt+T`, `shift+f4`, and `f16`.
 
@@ -170,15 +176,21 @@ Tests cache aggressively; if a test wrongly reports stale, use `go clean -testca
 ## CI
 
 - **`.github/workflows/test.yml`** — every push & PR runs `go vet ./...` + `go test ./... -race -count=1` on Ubuntu and macOS.
-- **`.github/workflows/release.yml`** — tagged releases (`v*`) cross-compile for linux/darwin × amd64/arm64 and upload tarballs to the GitHub Release with auto-generated release notes.
+- **`.github/workflows/release.yml`** — tagged releases (`v*`) cross-compile for linux/darwin × amd64/arm64, upload tarballs + `checksums.txt` to the GitHub Release with auto-generated release notes, then render the Homebrew formula and AUR `PKGBUILD` from `packaging/` and push them (each push is skipped when its secret is missing — see [CONTRIBUTING.md](../CONTRIBUTING.md#releases)).
 
 ## Repository layout
 
 ```text
 cmd/termocode/        entrypoint — sets up nvim, wires the Bubble Tea program
-internal/             every package described above (~24 sub-packages)
-assets/               vendored runtime assets (snippets, theme JSONs)
-scripts/              dev.sh, release.sh, run-with-small-font.sh
-docs/                 this folder
+internal/             every package described above (~23 sub-packages)
+assets/screenshots/   README images + the vhs demo script
+packaging/            Homebrew formula + AUR PKGBUILD templates
+scripts/              dev.sh, release.sh, render-packaging.sh, run-with-small-font.sh
+docs/                 this folder — plus adr/ (decisions) and qc/ (manual test cases)
 .github/workflows/    CI / release pipelines
 ```
+
+## Decisions and QC
+
+- **[`docs/adr/`](adr/README.md)** — Architecture Decision Records: why the big choices were made. Add one when you make a choice that is hard to undo.
+- **[`docs/qc/`](qc/README.md)** — small, focused QC cases (one behaviour per file) for checks a unit test can't cover.
