@@ -1248,6 +1248,8 @@ func (m Model) renderSidebar(h int) string {
 		header := sidebarHeader(contentW, "RUN", "")
 		body := placeholderSidebar(contentW, h-1, "", "Run / Debug — coming soon.\n\nPress F5 to run a build.")
 		content = lipgloss.JoinVertical(lipgloss.Left, header, body)
+	case activity.ViewTests: // Group E (test_explorer.go)
+		content = m.renderTestsSidebar(contentW, h)
 	default:
 		if !m.isExtSidebar() { // Group I: extension panels (ext.go)
 			return ""
@@ -2166,7 +2168,7 @@ func (m Model) statusState() statusbar.State {
 		// it reads as ambient context rather than another label.
 		proj = strings.ToLower(proj)
 	}
-	return statusbar.State{
+	st := statusbar.State{
 		Path:     m.editor.Path(),
 		Project:  proj,
 		Lang:     lang,
@@ -2187,6 +2189,8 @@ func (m Model) statusState() statusbar.State {
 		LSP:      m.lspClients(),
 		Ext:      m.extStatusTexts(), // Group I
 	}
+	m.fillTestsStatus(&st) // Group E: ✓ n ✗ n chip (test_explorer.go)
+	return st
 }
 
 // overlayPreferredActionHint splices a 1-row "💡 <Title>  Ctrl+. ▸ Apply

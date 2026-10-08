@@ -75,10 +75,33 @@ func userCommandsItems() []picker.Item {
 	return items
 }
 
-// runUserCommand executes the picked entry. Output (combined stdout+stderr)
-// is shown in the preview overlay, with a green "✓" or red "✘" prefix in
-// the title based on exit status.
+// runUserCommand executes the picked entry as a task (Group C): it runs in
+// its own PTY terminal tab like every other task (tasks_run.go), so output
+// streams live and the tab dot shows the exit status.
 func (m *Model) runUserCommand(id string) tea.Cmd {
+	if m.nvim == nil {
+		return m.runUserCommandPreview(id)
+	}
+	target := strings.TrimPrefix(id, "user-")
+	for _, c := range loadUserCommands() {
+		if c.ID == target && c.Cmd != "" {
+			title := c.Title
+			if title == "" {
+				title = c.ID
+			}
+			return m.runTaskByLabel("User: " + title)
+		}
+	}
+	var toastCmd tea.Cmd
+	m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Command not found", target)
+	return toastCmd
+}
+
+// runUserCommandPreview is the pre-tasks runner: output (combined
+// stdout+stderr) in the preview overlay, with a green "✓" or red "✘"
+// prefix in the title based on exit status. Kept for headless use (no
+// nvim → no terminal tabs).
+func (m *Model) runUserCommandPreview(id string) tea.Cmd {
 	target := strings.TrimPrefix(id, "user-")
 	var cmd UserCommand
 	for _, c := range loadUserCommands() {

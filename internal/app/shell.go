@@ -66,6 +66,11 @@ type terminalTab struct {
 	//   >0  → last command failed                        → red dot
 	// Drives the right-side status-dot color in the tab bar.
 	LastExit int
+	// Group C — Task is the task label for tabs started by the task runner
+	// (tasks_run.go): the tab keeps that name (no cwd renaming) and its
+	// glyph shows ▶ while Running, then ✓ / ✘ from LastExit.
+	Task    string
+	Running bool
 }
 
 // integratedTerminalRows returns the live total height (in cells) of the
@@ -837,7 +842,7 @@ func (m Model) computeTerminalTabBarLayout(width int) terminalTabBarLayout {
 	// Build the layout incrementally so it stays correct if widths shift.
 	col := 0
 	col++                                                       // " " (left pad)
-	col += runewidth.StringWidth(panelKindTitle(m.panelActive)) // "Terminal" / "Output" / …
+	col += runewidth.StringWidth(m.panelTitle(m.panelActive))   // "Terminal" / "Output" / …
 	col++                                                       // " " (gap before separator)
 	col++                                                       // "│" (separator)
 	col++                                                       // " " (gap after separator)
@@ -928,7 +933,7 @@ func (m Model) renderTerminalTabBar(width int) string {
 
 	// Left segment: " <active kind title> │ "
 	out.WriteString(bg.Render(" "))
-	out.WriteString(label.Render(panelKindTitle(m.panelActive)))
+	out.WriteString(label.Render(m.panelTitle(m.panelActive)))
 	out.WriteString(bg.Render(" "))
 	out.WriteString(sepStyle.Render("│"))
 	out.WriteString(bg.Render(" "))
@@ -1011,7 +1016,7 @@ func (m Model) renderTerminalTabBar(width int) string {
 // basename for terminals, the kind title otherwise.
 func (m Model) panelEntryName(e panelBarEntry) string {
 	if e.Kind != panelKindTerminal {
-		return panelKindTitle(e.Kind)
+		return m.panelTitle(e.Kind)
 	}
 	if e.Index < 0 || e.Index >= len(m.terminalTabs) {
 		return "shell"
@@ -1029,6 +1034,9 @@ func (m Model) panelEntryGlyph(e panelBarEntry) string {
 	}
 	if e.Index < 0 || e.Index >= len(m.terminalTabs) {
 		return shellGlyphFor("")
+	}
+	if t := m.terminalTabs[e.Index]; t.Task != "" { // Group C
+		return taskTabGlyph(t)
 	}
 	return shellGlyphFor(m.terminalTabs[e.Index].Shell)
 }
@@ -1386,7 +1394,7 @@ func (m *Model) refreshTerminalCwd() {
 			continue
 		}
 		alive = append(alive, m.terminalTabs[i])
-		if err != nil || out == "" {
+		if err != nil || out == "" || m.terminalTabs[i].Task != "" { // Group C: task tabs keep their name
 			continue
 		}
 		cwd := strings.TrimSpace(out)
