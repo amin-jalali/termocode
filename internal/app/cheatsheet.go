@@ -90,6 +90,7 @@ VIEW
   Palette           Files: Toggle Hidden Files
   Palette           Help: Show Shortcuts (this overlay)
   Palette           Help: Show Error Log
+  Palette           Help: Run Doctor (check nvim, rg, LSPs, font)
 
 GIT
   Alt+] / Alt+[     Next / previous change (hunk)
