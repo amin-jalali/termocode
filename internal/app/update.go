@@ -67,7 +67,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // picker.sanitizeInput, recents.isMouseFragmentEvent, sanitizeSettingsInput),
 // so the leak can't reach them.
 func (m Model) anyTextInputOpen() bool {
-	return m.promptOpen || m.searchOpen || m.replaceOpen || m.findOpen
+	return m.promptOpen || m.searchOpen || m.replaceOpen || m.findOpen ||
+		(m.ai != nil && m.ai.focused) // Group A: typing in the AI chat input
 }
 
 func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
