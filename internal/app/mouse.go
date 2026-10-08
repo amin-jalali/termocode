@@ -7,6 +7,7 @@ import (
 
 	"termocode/internal/activity"
 	"termocode/internal/keymap"
+	"termocode/internal/lspinstall"
 )
 
 func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
@@ -72,6 +73,10 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	}
 
 	if msg.Y >= m.h-1 {
+		// Status-bar LSP chip → language-server manager.
+		if msg.Type == tea.MouseLeft && m.hitStatusLSPChip(msg.X, msg.Y) {
+			return m, m.openToolManager(lspinstall.CategoryLSP)
+		}
 		return m, nil // statusbar
 	}
 

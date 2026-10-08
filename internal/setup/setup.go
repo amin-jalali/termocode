@@ -4,15 +4,17 @@
 package setup
 
 import (
-	"archive/zip"
+	"context"
+	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"termocode/internal/fetch"
+	"termocode/internal/lspinstall"
 )
 
 const (
@@ -22,8 +24,14 @@ const (
 
 // Run executes the setup checks and font install. Returns a process exit code.
 func Run(args []string) int {
-	for _, a := range args {
+	for i, a := range args {
 		switch a {
+		case "--install":
+			if i+1 >= len(args) {
+				fmt.Println("usage: termocode setup --install <name>")
+				return 2
+			}
+			return installByName(args[i+1])
 		case "--test-colors":
 			printColorGradient()
 			return 0
@@ -45,52 +53,95 @@ func Run(args []string) int {
 
 	fmt.Println()
 	fmt.Println("== language servers ==")
-	ensureGopls()
-	reportOtherLSPs()
+	reportLanguageServers()
 
 	fmt.Println()
 	printTerminalInstructions()
 	return 0
 }
 
-func ensureGopls() {
-	if _, err := exec.LookPath("gopls"); err == nil {
-		fmt.Println("✓ gopls (Go LSP) installed")
-		return
-	}
-	if _, err := exec.LookPath("go"); err != nil {
-		fmt.Println("? gopls not installed; install Go first, then run setup again")
-		return
-	}
-	fmt.Println("✗ gopls missing; installing via `go install`...")
-	c := exec.Command("go", "install", "golang.org/x/tools/gopls@latest")
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	if err := c.Run(); err != nil {
-		fmt.Printf("  ✗ install failed: %v\n", err)
-		return
-	}
-	fmt.Println("  ✓ installed (ensure $HOME/go/bin is on PATH)")
-}
-
-func reportOtherLSPs() {
-	lsps := []struct {
-		bin, label, hint string
-	}{
-		{"pyright-langserver", "pyright (Python)", "npm i -g pyright"},
-		{"pylsp", "python-lsp-server (Python)", "pipx install python-lsp-server"},
-		{"typescript-language-server", "ts_ls (JS/TS)", "npm i -g typescript typescript-language-server"},
-		{"rust-analyzer", "rust-analyzer (Rust)", "rustup component add rust-analyzer"},
-		{"clangd", "clangd (C/C++)", "apt install clangd"},
-		{"lua-language-server", "lua_ls (Lua)", "https://github.com/LuaLS/lua-language-server"},
-	}
-	for _, l := range lsps {
-		if _, err := exec.LookPath(l.bin); err == nil {
-			fmt.Printf("✓ %s installed\n", l.label)
-		} else {
-			fmt.Printf("? %s missing → %s\n", l.label, l.hint)
+// reportLanguageServers walks the shared lspinstall registry (the same
+// table the in-editor "LSP: Manage Language Servers…" uses): gopls is
+// auto-installed when Go is present (as setup always did), every other
+// server / adapter is reported with its exact install recipe.
+func reportLanguageServers() {
+	for _, cat := range []lspinstall.Category{lspinstall.CategoryLSP, lspinstall.CategoryDAP} {
+		if cat == lspinstall.CategoryDAP {
+			fmt.Println()
+			fmt.Println("== debug adapters ==")
+		}
+		for _, t := range lspinstall.ByCategory(cat) {
+			st := lspinstall.StatusOf(t)
+			switch {
+			case st.State == lspinstall.Managed:
+				fmt.Printf("✓ %s installed (managed: %s)\n", t.DisplayName(), st.Path)
+			case st.State == lspinstall.System:
+				fmt.Printf("✓ %s installed (%s)\n", t.DisplayName(), st.Path)
+			case t.Name == "gopls":
+				installTool(t)
+			default:
+				fmt.Printf("? %s missing → %s\n", t.DisplayName(), installHint(t))
+			}
 		}
 	}
+	fmt.Println()
+	fmt.Println("Install any of these with `termocode setup --install <name>`")
+	fmt.Println("or from the palette: LSP: Manage Language Servers… / DAP: Install Adapter…")
+}
+
+// installHint is the plan's command line, or the reason it can't run here.
+func installHint(t lspinstall.Tool) string {
+	dir, _ := lspinstall.ToolDir(t.Name)
+	p, err := lspinstall.BuildPlan(t, dir, runtime.GOOS, runtime.GOARCH)
+	if err != nil {
+		return err.Error()
+	}
+	return p.HumanCommand()
+}
+
+// installTool runs the managed install for t, printing progress. Returns
+// false on failure. A missing host toolchain prints the precise hint.
+func installTool(t lspinstall.Tool) bool {
+	fmt.Printf("→ installing %s (%s)...\n", t.DisplayName(), installHint(t))
+	out, err := lspinstall.Install(context.Background(), t, func(line string) {
+		fmt.Printf("    %s\n", line)
+	})
+	if err != nil {
+		var mt *lspinstall.MissingToolchainError
+		var off *lspinstall.OfflineError
+		switch {
+		case errors.As(err, &mt):
+			fmt.Printf("  ? skipped: %s needs %s — %s\n", t.Name, mt.Bin, mt.Hint)
+		case errors.As(err, &off):
+			fmt.Printf("  ✗ offline: could not reach the network to install %s\n", t.Name)
+		default:
+			fmt.Printf("  ✗ install failed: %v\n", err)
+			if strings.TrimSpace(out) != "" {
+				fmt.Println(out)
+			}
+		}
+		return false
+	}
+	bin, _ := lspinstall.BinDir()
+	fmt.Printf("  ✓ installed (termocode adds %s to nvim's PATH)\n", bin)
+	return true
+}
+
+// installByName handles `termocode setup --install <name>`.
+func installByName(name string) int {
+	t, ok := lspinstall.Lookup(name)
+	if !ok {
+		fmt.Printf("unknown tool %q; known:", name)
+		for _, t := range lspinstall.All() {
+			fmt.Printf(" %s", t.Name)
+		}
+		fmt.Println()
+		return 2
+	}
+	if installTool(t) {
+		return 0
+	}
+	return 1
 }
 
 // printBgSwatches emits the four chrome backgrounds side-by-side using
@@ -223,12 +274,12 @@ func installJetBrainsMonoLinux() (string, error) {
 	defer os.Remove(tmpPath)
 
 	fmt.Println("    downloading...")
-	if err := download(jbmURL, tmpPath); err != nil {
+	if err := fetch.Download(context.Background(), jbmURL, tmpPath, nil); err != nil {
 		return "", fmt.Errorf("download: %w", err)
 	}
 
 	fmt.Println("    extracting...")
-	if err := unzipTTF(tmpPath, fontDir); err != nil {
+	if err := fetch.ExtractZip(tmpPath, fontDir, fetch.FlattenSuffix(".ttf", ".otf")); err != nil {
 		return "", fmt.Errorf("extract: %w", err)
 	}
 
@@ -238,58 +289,6 @@ func installJetBrainsMonoLinux() (string, error) {
 	}
 
 	return fontDir, nil
-}
-
-func download(url, dest string) error {
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("http %d", resp.StatusCode)
-	}
-	out, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	_, err = io.Copy(out, resp.Body)
-	return err
-}
-
-func unzipTTF(zipPath, dest string) error {
-	r, err := zip.OpenReader(zipPath)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-	for _, f := range r.File {
-		if !strings.HasSuffix(strings.ToLower(f.Name), ".ttf") &&
-			!strings.HasSuffix(strings.ToLower(f.Name), ".otf") {
-			continue
-		}
-		if err := extractOne(f, dest); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func extractOne(f *zip.File, dest string) error {
-	rc, err := f.Open()
-	if err != nil {
-		return err
-	}
-	defer rc.Close()
-	target := filepath.Join(dest, filepath.Base(f.Name))
-	out, err := os.Create(target)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	_, err = io.Copy(out, rc)
-	return err
 }
 
 func printTerminalInstructions() {

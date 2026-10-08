@@ -447,6 +447,10 @@ type Model struct {
 	// session) and adds a "● DEBUG" badge to the status bar.
 	dapSessionActive bool
 
+	// lspMgr: LSP/DAP installer state (manager picker, background
+	// installs, one-time "no language server" toast, status-bar chip).
+	lspMgr *lspInstallState
+
 	// Preferences UI state ───────────────────────────────────────────────
 	// settingPromptID remembers which settings row the user just chose,
 	// so handlePromptSubmit can dispatch the typed value to the right
@@ -556,6 +560,7 @@ func New() Model {
 		tabs:          tabbar.New(),
 		toast:         toast.New(),
 		status:        statusbar.New(t),
+		lspMgr:        newLSPInstallState(),
 		theme:         t,
 		keys:          keys,
 		focus:         FocusEditor,
@@ -763,6 +768,8 @@ func (m Model) attachCmd() tea.Cmd {
 			fmt.Fprintln(os.Stderr, dapWarn)
 		}
 		_ = m.nvim.ExecLua(dapSetupLua(dapPath))
+		// Adapters installed by the managed installer (tools/bin shims).
+		_ = m.nvim.ExecLua(dapManagedLua)
 		// Apply the VSCode Dark+ palette via Lua. Done after `syntax on` so
 		// the highlight groups override the default scheme.
 		_ = m.nvim.ExecLua(vscodeDarkPlusLua)
