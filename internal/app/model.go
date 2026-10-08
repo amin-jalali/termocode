@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"context"
+
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/anim"
 	"github.com/amin-jalali/termocode/internal/confirm"
@@ -116,6 +117,10 @@ type Model struct {
 	themePreviewing  bool
 	// Settings rows with fixed choices open a picker; this is the row.
 	settingChoiceRow string
+	// Image preview (image_view.go) and kitty images in use.
+	imagePrev *imagePreview
+	imageOpen bool
+	kittyUsed bool
 	// Animations (anim.go): overlay open progress 0→1, and whether a
 	// tick is already scheduled.
 	overlayAnim anim.Value

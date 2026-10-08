@@ -328,10 +328,12 @@ func (m *Model) openPreviewCmd() tea.Cmd {
 		if err != nil {
 			return ErrMsg{Err: err}
 		}
+		content, images := extractMarkdownImages(content, filepath.Dir(path))
 		rendered, err := renderMarkdown(content, width-2)
 		if err != nil {
 			return ErrMsg{Err: err}
 		}
+		rendered = injectMarkdownImages(rendered, images, width-2)
 		title := "Preview"
 		if path != "" {
 			title = filepath.Base(path) + "  (preview)"
