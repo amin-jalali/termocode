@@ -148,7 +148,7 @@ Each has an `auto` value that picks the best your terminal can show.
 
 | Value | What you get |
 |---|---|
-| `auto` (default) | `nerd` when a Nerd Font is installed (and not over SSH), `ascii` on a bare console (`TERM=linux`) or a non-UTF-8 locale, else `unicode` |
+| `auto` (default) | `nerd` on terminals that bundle the Nerd symbols (WezTerm, Ghostty, kitty), `ascii` on a bare console (`TERM=linux`) or a non-UTF-8 locale, else `unicode`. An installed Nerd Font alone is not enough: set `icons` to `nerd` once your terminal uses it (restart the terminal after `termocode setup`). |
 | `nerd` | File-type, folder, git and panel icons from a [Nerd Font](https://www.nerdfonts.com/) (`termocode setup` installs one on Linux) |
 | `unicode` | Plain one-cell symbols (▪ ◫ ⌥ ✓ ⚙) that render in any modern terminal font |
 | `ascii` | Letters only — the safest choice for very old terminals |

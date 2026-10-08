@@ -13,9 +13,8 @@ import (
 //
 //   - TERMOCODE_ICON_MODE / TERMOCODE_NERD_FONT=1 win over everything.
 //   - "nerd", "unicode", "ascii" are taken as is.
-//   - "auto" (or empty): Nerd Font when the doctor found one installed
-//     (and we are not over SSH, where the local fonts say nothing about
-//     the client); ASCII only on terminals that cannot draw Unicode
+//   - "auto" (or empty): Nerd Font only on terminals that bundle the Nerd
+//     symbols (WezTerm, Ghostty, kitty); ASCII only on terminals that cannot draw Unicode
 //     (TERM=linux / dumb / vt*, or a non-UTF-8 locale); else the Unicode
 //     set, which renders in every modern terminal font. unicodeOK, when
 //     given, can veto Unicode (a width probe that saw wide glyphs).
@@ -44,8 +43,14 @@ func ResolveIconMode(setting string, nerdFont bool, unicodeOK func() bool, geten
 	case "ascii":
 		return IconModeASCII
 	}
-	remote := getenv("SSH_CONNECTION") != "" || getenv("SSH_TTY") != ""
-	if nerdFont && !remote {
+	// An installed Nerd Font is not enough: the terminal must actually
+	// draw with it, and a terminal opened before the install (or set to
+	// another font without fallback) shows tofu boxes for every icon. So
+	// auto only picks Nerd icons on terminals that bundle the Nerd
+	// symbols themselves; everyone else gets Unicode and can opt in with
+	// icons = "nerd" (nerdFont only feeds the Doctor / settings tip).
+	_ = nerdFont
+	if bundlesNerdSymbols(getenv) {
 		return IconModeNerdFont
 	}
 	if !unicodeTerminal(getenv) {
@@ -55,6 +60,19 @@ func ResolveIconMode(setting string, nerdFont bool, unicodeOK func() bool, geten
 		return IconModeASCII
 	}
 	return IconModeUnicode
+}
+
+// bundlesNerdSymbols reports terminals that ship the Nerd Font symbols
+// as a built-in fallback, so Nerd icons render whatever font is set:
+// WezTerm, Ghostty and kitty (0.36+). Over SSH the env usually still
+// names the client terminal, which is the one doing the drawing.
+func bundlesNerdSymbols(getenv func(string) string) bool {
+	switch strings.ToLower(getenv("TERM_PROGRAM")) {
+	case "wezterm", "ghostty":
+		return true
+	}
+	t := strings.ToLower(getenv("TERM"))
+	return t == "xterm-kitty" || t == "xterm-ghostty" || t == "wezterm"
 }
 
 // unicodeTerminal reports whether the terminal can be expected to draw

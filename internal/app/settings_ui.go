@@ -150,7 +150,7 @@ var settingsRows = []settingsRow{
 	{ID: "setting-theme", Label: "theme", Kind: "string", Default: "vscode-dark-plus",
 		Desc: "Color theme ID. Same as Preferences: Color Theme."},
 	{ID: "setting-icons", Label: "icons", Kind: "enum", Default: "auto",
-		Desc: "Icon set: nerd (Nerd Font glyphs), unicode (plain symbols), ascii, or auto (nerd when TERMOCODE_NERD_FONT=1 or the doctor finds a Nerd Font, ascii on TERM=linux or a non-UTF-8 locale, else unicode). TERMOCODE_ICON_MODE wins over it."},
+		Desc: "Icon set: nerd (Nerd Font glyphs), unicode (plain symbols), ascii, or auto (nerd on terminals that bundle Nerd symbols — WezTerm, Ghostty, kitty — ascii on TERM=linux or a non-UTF-8 locale, else unicode). TERMOCODE_ICON_MODE wins over it."},
 	{ID: "setting-animations", Label: "animations", Kind: "enum", Default: "auto",
 		Desc: "Overlay / toast / list animations: on, off, or auto (off over SSH and when the terminal is not truecolor). The editor text itself never animates."},
 	{ID: "setting-images", Label: "images", Kind: "enum", Default: "auto",
