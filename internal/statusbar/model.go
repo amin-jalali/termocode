@@ -165,6 +165,25 @@ func (m Model) LSPChipSpan(s State) (x0, x1 int, ok bool) {
 	return rightX + l.chipStart, rightX + l.chipStart + l.chipW, true
 }
 
+// DiagSpan returns the [x0, x1) cell range of the error / warning
+// counters relative to the bar's left edge; ok=false when they are hidden
+// (no diagnostics, an error message on show, or no room). Group C.
+func (m Model) DiagSpan(s State) (x0, x1 int, ok bool) {
+	if m.w <= 0 {
+		return 0, 0, false
+	}
+	l := m.layout(s)
+	if l.centerW == 0 {
+		return 0, 0, false
+	}
+	_, start, w := m.renderCenterDiag(s)
+	if w == 0 {
+		return 0, 0, false
+	}
+	cx := 1 + l.leftW + l.gapL
+	return cx + start, cx + start + w, true
+}
+
 // truncateStyled clips a possibly-styled string to width w cells by
 // stripping ANSI escapes, truncating with an ellipsis, and re-styling
 // the result with the status-bar palette. Good enough for the trailing
@@ -242,8 +261,16 @@ func (m Model) renderLeft(s State) string {
 // the whole bar is given over to the error message) the center is
 // empty.
 func (m Model) renderCenter(s State) string {
+	out, _, _ := m.renderCenterDiag(s)
+	return out
+}
+
+// renderCenterDiag is renderCenter plus the cell offset / width of the
+// diagnostic counters inside the returned string (width 0 when hidden).
+// Group C: the counters are clickable (they open the Problems panel).
+func (m Model) renderCenterDiag(s State) (string, int, int) {
 	if s.Err != "" {
-		return ""
+		return "", 0, 0
 	}
 	var parts []string
 	if s.Branch != "" {
@@ -256,6 +283,7 @@ func (m Model) renderCenter(s State) string {
 		}
 		parts = append(parts, barFg(theme.TextSecondary).Render(branchText))
 	}
+	diagIdx := len(parts)
 	if s.Errors > 0 {
 		parts = append(parts, barFg(theme.DiagError).Bold(true).Render(
 			fmt.Sprintf("%s %d", theme.IconError.String(), s.Errors)))
@@ -265,10 +293,18 @@ func (m Model) renderCenter(s State) string {
 			fmt.Sprintf("%s %d", theme.IconWarning.String(), s.Warnings)))
 	}
 	if len(parts) == 0 {
-		return ""
+		return "", 0, 0
 	}
 	gap := barBg().Render("  ")
-	return strings.Join(parts, gap)
+	out := strings.Join(parts, gap)
+	if diagIdx == len(parts) {
+		return out, 0, 0
+	}
+	start := 0
+	if diagIdx > 0 {
+		start = lipgloss.Width(strings.Join(parts[:diagIdx], gap) + gap)
+	}
+	return out, start, lipgloss.Width(out) - start
 }
 
 // renderRight shows cursor position, indent style, encoding, language,
