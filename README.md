@@ -7,11 +7,12 @@ A terminal IDE that feels like VSCode — built on Bubble Tea, powered by a real
 
 **Documentation: <https://amin-jalali.github.io/termocode/>**
 
-<!--
-Screenshots are not committed yet. Generate them with
-`vhs assets/screenshots/demo.tape` (see assets/screenshots/README.md), then uncomment:
-![termocode demo](assets/screenshots/demo.gif)
--->
+![termocode: explorer, tabs, editor and status bar](assets/screenshots/editor.png)
+
+| | |
+|---|---|
+| ![Start page](assets/screenshots/dashboard.png) | ![Command palette](assets/screenshots/palette.png) |
+| ![AI chat with a Markdown answer](assets/screenshots/ai-chat-answer.png) | ![Catppuccin Latte](assets/screenshots/theme-catppuccin-latte-dashboard.png) |
 
 ## Highlights
 
@@ -22,7 +23,8 @@ Screenshots are not committed yet. Generate them with
 - **Git** — stage hunks, commit, sync, stash, blame, a commit graph, a merge-conflict resolver and clone.
 - **Language servers** for Go, Python, JS/TS, Rust, C/C++, Lua and more — with a built-in installer.
 - **Fast search** across every workspace folder with ripgrep: case / word / regex toggles and globs.
-- **Make it yours** — themes, a custom theme editor, key rebinding, snippets, settings export, and **Lua extensions**.
+- **Make it yours** — themes (VSCode Dark+, Catppuccin Mocha / Latte, Tokyo Night, Rosé Pine / Dawn, …), a custom theme editor, Nerd Font / Unicode / ASCII icons, key rebinding, snippets, settings export, and **Lua extensions**.
+- **Looks good everywhere** — rounded floating cards, status pills, smooth animations, inline images (kitty / sixel / half-blocks), and a clean fallback on 16-colour, no-Nerd-Font and SSH sessions.
 
 ## Install
 
