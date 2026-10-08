@@ -12,6 +12,14 @@ type NamedTheme struct {
 	Name    string
 	Palette Palette256
 	Styles  Theme
+	// Light marks a light-background theme (nvim 'background' = light).
+	Light bool
+}
+
+func init() {
+	for _, s := range SpecThemes {
+		allThemes[s.ID] = specTheme(s)
+	}
 }
 
 // allThemes holds every built-in theme keyed by its lower-case ID. The lookup
@@ -133,6 +141,12 @@ func applyHexOverride(p *Palette256, field, hex string) {
 		p.BgSectionHdr = idx
 	case "BgKeycap":
 		p.BgKeycap = idx
+	case "BgFloat":
+		p.BgFloat = idx
+	case "Shadow":
+		p.Shadow = idx
+	case "OnAccent":
+		p.OnAccent = idx
 	case "TextPrimary":
 		p.TextPrimary = idx
 	case "TextSecondary":
@@ -435,9 +449,9 @@ func oneDarkPalette() Palette256 {
 func solarizedDarkPalette() Palette256 {
 	p := vscodeDarkPlusPalette()
 	// Solarized Dark — Ethan Schoonover's classic teal-bg scheme.
-	p.BgEditor = 23       // #005f5f (base03-ish)
-	p.BgSidebar = 23      // base02
-	p.BgActivityBar = 22  // even darker teal
+	p.BgEditor = 23      // #005f5f (base03-ish)
+	p.BgSidebar = 23     // base02
+	p.BgActivityBar = 22 // even darker teal
 	p.BgTitleBar = 22
 	p.BgPanel = 22
 	p.BgHover = 24

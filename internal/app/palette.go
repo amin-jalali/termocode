@@ -724,6 +724,8 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 func (m *Model) applyTheme(id string) {
 	t, _ := theme.ApplyTheme(id)
 	m.theme = t.Styles
+	m.themeID = t.ID
+	m.applyNvimTheme()            // editor colours follow the chrome
 	m.refreshConflictHighlights() // Group G: conflict tints follow the theme
 	m.refreshAIHighlights()       // Group A: ghost text recolors live
 	if err := theme.SaveThemeID(t.ID); err != nil {

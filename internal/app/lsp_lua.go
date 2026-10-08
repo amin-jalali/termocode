@@ -82,7 +82,7 @@ vim.api.nvim_create_augroup('TermocodeLSP', { clear = true })
 
 -- Inlay hints: muted, italic foreground so virtual text fades into the
 -- background. ` + "`TextDimmer`" + ` (#585858) is the same color the indent guides use.
-pcall(vim.api.nvim_set_hl, 0, 'LspInlayHint', { fg = '#585858', italic = true })
+pcall(vim.api.nvim_set_hl, 0, 'LspInlayHint', { fg = (_G.termocode_colors or {}).inlay, italic = true })
 
 vim.api.nvim_create_autocmd('FileType', {
   group = 'TermocodeLSP',
