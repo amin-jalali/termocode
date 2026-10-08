@@ -33,8 +33,6 @@ func TestRenderTerminalTabBarTwoTabs(t *testing.T) {
 		t.Fatalf("tab bar width = %d, want %d", w, width)
 	}
 	mustContain := []string{
-		"Terminal", // label
-		"│",        // separator after label
 		"%",        // zsh icon (active tab)
 		"$",        // bash icon (inactive tab)
 		"termocode",
@@ -145,10 +143,10 @@ func TestSpliceTerminalTabBarRowCount(t *testing.T) {
 	if len(gotRows) != editorH {
 		t.Fatalf("spliced rows = %d, want %d", len(gotRows), editorH)
 	}
-	// Tab bar should contain "Terminal" — pinpoint the row.
+	// Tab bar carries the "+" new-tab button — pinpoint the row.
 	tabBarIdx := -1
 	for i, r := range gotRows {
-		if strings.Contains(r, "Terminal") {
+		if strings.Contains(r, "↑−×") {
 			tabBarIdx = i
 			break
 		}
@@ -187,7 +185,7 @@ func TestSpliceTerminalTabBarMinimized(t *testing.T) {
 	if len(gotRows) != editorH {
 		t.Fatalf("minimized rows = %d, want %d", len(gotRows), editorH)
 	}
-	if !strings.Contains(gotRows[editorH-1], "Terminal") {
+	if !strings.Contains(gotRows[editorH-1], "↑−×") {
 		t.Errorf("bar should be on the last row, got %q", stripANSITerminal(gotRows[editorH-1]))
 	}
 	// Ensure the second-to-last editor row is preserved (we replaced only

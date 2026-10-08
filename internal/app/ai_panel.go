@@ -245,7 +245,14 @@ func (m Model) aiTranscript(width int) []aiLine {
 			"Ctrl+. → AI actions (Explain, Fix)",
 			"Tab accepts ghost text",
 		} {
-			out = append(out, plain(l, theme.TextDim))
+			if l == "" {
+				out = append(out, plain("", theme.TextDim))
+				continue
+			}
+			// Wrap (don't truncate) the hints on a narrow panel.
+			for _, w := range wrapPlain(l, inner-1) {
+				out = append(out, plain(w, theme.TextDim))
+			}
 		}
 		return out
 	}
