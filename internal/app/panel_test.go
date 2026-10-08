@@ -111,8 +111,8 @@ func TestTabBarWithOutputTab(t *testing.T) {
 		t.Fatalf("tab bar width = %d, want %d", w, width)
 	}
 	plain := stripANSITerminal(out)
-	if !strings.HasPrefix(plain, " Output │  ≡ Output ×") {
-		t.Errorf("bar should lead with the Output label + tab, got %q", plain)
+	if !strings.HasPrefix(plain, "  ≡ Output ×") || strings.Count(plain, "Output") != 1 {
+		t.Errorf("bar should lead with the Output tab (title shown once), got %q", plain)
 	}
 	if !strings.Contains(plain, "termocode") || !strings.Contains(plain, "scratch") {
 		t.Errorf("terminal tabs missing: %q", plain)
