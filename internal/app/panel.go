@@ -79,6 +79,10 @@ type panelKindSpec struct {
 	// in its content). Return false to let the global keymap run. Esc is
 	// handled by the framework (drops focus). Optional.
 	Key func(m *Model, msg tea.KeyMsg) (tea.Cmd, bool)
+	// RightClick handles a right click inside the content area (row / col
+	// are content-local, x / y the screen cell for a context menu).
+	// Optional.
+	RightClick func(m *Model, row, col, x, y int) tea.Cmd
 	// OnClose runs when the tab is closed (× or closePanelTab). Optional.
 	OnClose func(m *Model)
 	// TitleFn, when set, overrides Title with a live label (e.g.
@@ -467,6 +471,12 @@ func (m *Model) routePanelContentMouse(msg tea.MouseMsg) (tea.Cmd, bool) {
 		m.focus = FocusEditor
 		if spec.Click != nil {
 			return spec.Click(m, msg.Y-y, msg.X-x), true
+		}
+	case tea.MouseRight:
+		if spec.RightClick != nil {
+			m.panelFocused = true
+			m.focus = FocusEditor
+			return spec.RightClick(m, msg.Y-y, msg.X-x, msg.X, msg.Y), true
 		}
 	}
 	return nil, true

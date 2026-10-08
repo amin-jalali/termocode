@@ -97,6 +97,10 @@ clicking the error / warning counts in the status bar.
 | `c` | Collapse or expand all |
 | `e` / `w` / `i` | Hide or show errors / warnings / info |
 | `r` | Refresh |
+| `a` | ✦ Fix with AI (see [Use AI](ai-use.md)) |
+
+The selected row also has a **✦ Fix with AI** button at its right end.
+Right-click a row for **Go to Problem**, **Fix with AI** and **Copy Message**.
 
 In the editor, `F5` and `Shift+F5` jump to the next and previous problem.
 
