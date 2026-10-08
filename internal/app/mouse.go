@@ -419,15 +419,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			if localX < hit.ColStart || localX >= hit.ColEnd {
 				continue
 			}
-			actions := welcomeQuickActions()
-			for i, a := range actions {
-				if a.action == hit.Action {
-					m.welcomeFocus = i
-					break
-				}
-			}
+			m.welcomeFocus = hit.Index
 			m.focus = FocusEditor
-			return m.dispatchWelcomeAction(hit.Action)
+			return m.runWelcomeCard(hit.Index)
 		}
 		for _, hit := range welcomeRecentHits(edPaneW, editorH) {
 			if localY != hit.Row {
@@ -621,7 +615,7 @@ func (m Model) handleWelcomeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 		if idx < 0 || idx >= len(actions) {
 			idx = 0
 		}
-		newM, cmd := m.dispatchWelcomeAction(actions[idx].action)
+		newM, cmd := m.runWelcomeCard(idx)
 		return newM, cmd, true
 	}
 	return m, nil, false
