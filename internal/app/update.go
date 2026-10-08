@@ -187,6 +187,9 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.showExp = true
 			m.applyLayout()
 		}
+		if msg.View == activity.ViewTests { // Group E: discover on first open
+			return m, m.ensureTestsDiscovered()
+		}
 		return m, nil
 	case activity.ToggleSidebarMsg:
 		m.showExp = !m.showExp
@@ -650,6 +653,14 @@ end
 		return m, nil, true
 	case applyMsg: // Group C — background results (problems_panel.go)
 		return m, msg(&m), true
+	// ── Group E: test runner stream (test_runner.go). Handled here so the
+	// stream keeps draining while an overlay is open. ──
+	case testsDiscoveredMsg:
+		return m, m.applyTestsDiscovered(msg), true
+	case testLinesMsg:
+		return m, m.applyTestLines(msg), true
+	case testDoneMsg:
+		return m, m.finishTestRun(msg), true
 	}
 	return m, nil, false
 }
@@ -1804,6 +1815,10 @@ func (m Model) dispatchToFocus(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return newM, gcmd
 			}
 			m.explorer, cmd = m.explorer.Update(msg)
+		case activity.ViewTests: // Group E: Testing view keys (test_explorer.go)
+			if k, ok := msg.(tea.KeyMsg); ok {
+				return m.handleTestsSidebarKey(k)
+			}
 		default:
 			// Files pane: intercept the Delete / `d` chord here so the
 			// confirm modal opens with the multi-selection (or the
