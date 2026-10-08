@@ -35,6 +35,11 @@ const (
 	promptKindCloneURL
 	promptKindCloneDest
 	promptKindCloneToken
+	// Group H — settings sync + user snippets (settings_sync.go, snippets_user.go).
+	promptKindSettingsExport
+	promptKindSettingsImport
+	promptKindSnippetNew
+	promptKindSnippetBody
 )
 
 func (m *Model) openRenamePrompt(path string) {
@@ -194,6 +199,9 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		return m.runFindInFiles(value)
 	case promptKindCloneURL, promptKindCloneDest, promptKindCloneToken:
 		return m.handleClonePromptSubmit(value) // Group G (git_clone.go)
+	// Group H — settings sync + user snippets.
+	case promptKindSettingsExport, promptKindSettingsImport, promptKindSnippetNew, promptKindSnippetBody:
+		return m.handleExtrasPromptSubmit(value)
 	}
 	return nil
 }
