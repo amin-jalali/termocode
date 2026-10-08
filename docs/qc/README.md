@@ -27,6 +27,7 @@ in a case, set its `Automated check`:
 | `SR` | Workspace search | [search/](search/) |
 | `KM` | Keymap / settings | [keymap/](keymap/) |
 | `HD` | Help / doctor | [help/](help/) |
+| `EX` | Extensions | [extensions/](extensions/) |
 
 Add a row (and a folder) when you start cases for a new area, e.g. `ED` editor,
 `GIT` Source Control, `RD` run/debug, `TM` terminal, `TH` themes, `SS` session.
@@ -41,6 +42,7 @@ Add a row (and a folder) when you start cases for a new area, e.g. `ED` editor,
 | [KM-01](keymap/KM-01-override-from-keymap-json.md) | Override loaded from `keymap.json` | 🤖 TODO: unit | ⬜ |
 | [KM-02](keymap/KM-02-bad-keymap-json-ignored.md) | Corrupt `keymap.json` does not break startup | 🤖 TODO: unit | ⬜ |
 | [HD-01](help/HD-01-run-doctor.md) | `Help: Run Doctor` shows the report | ✅ `TestDoctorReport` (report text) · 👁 overlay | ⬜ |
+| [EX-01](extensions/EX-01-broken-extension-does-not-block.md) | A broken extension does not block startup | ✅ `TestExtensionHostNvim` · 👁 toast | ⬜ |
 
 ## Environment
 Record the environment in each case you run: OS, terminal emulator, `nvim
