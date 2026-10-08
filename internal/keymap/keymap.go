@@ -112,6 +112,12 @@ const (
 	// binding: Ctrl+Shift+. (kitty/CSI-u terminals); palette is the
 	// universal fallback ("Edit: Apply Preferred Quick Fix").
 	ActionApplyPreferredCodeAction
+	// Group C — tasks + Problems panel. Alt+R picks a task to run,
+	// Alt+Shift+R reruns the last one, Ctrl+Shift+M / Alt+M shows the
+	// Problems panel.
+	ActionRunTask
+	ActionRerunTask
+	ActionShowProblems
 )
 
 type KeyMap struct {
@@ -350,6 +356,14 @@ func Default() KeyMap {
 			// problem". For runtest we use Alt+T as the keyboard shortcut
 			// (palette also has "Run: Tests").
 			"alt+t": ActionRunTests,
+
+			// Group C — tasks + Problems panel. Shift+Alt+R arrives as
+			// "alt+R" on legacy terminals and "alt+shift+r" on CSI-u ones.
+			"alt+r":        ActionRunTask,
+			"alt+R":        ActionRerunTask,
+			"alt+shift+r":  ActionRerunTask,
+			"ctrl+shift+m": ActionShowProblems,
+			"alt+m":        ActionShowProblems,
 
 			// Zen mode toggle. VSCode uses Ctrl+K Z (chord) which we can't
 			// represent; Alt+Z is the next-most-common alternative and is
