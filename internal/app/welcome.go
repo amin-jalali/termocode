@@ -474,6 +474,11 @@ func footerRow(w int) string {
 
 	leftW := lipgloss.Width(left)
 	rightW := lipgloss.Width(right)
+	// Docs: append the docs hint to the version line when it fits.
+	if docs := versionStyle.Render("  ·  Docs: " + docsHost); leftW+lipgloss.Width(docs)+rightW+1 <= w {
+		left += docs
+		leftW = lipgloss.Width(left)
+	}
 	gap := w - leftW - rightW
 	if gap < 1 {
 		gap = 1

@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"termocode/internal/prompt"
+	"termocode/internal/search"
 	"termocode/internal/toast"
 )
 
@@ -122,18 +123,29 @@ type settingsRow struct {
 	ID    string // stable id used in picker.Item.ID
 	Label string // human-readable name shown in the picker
 	Kind  string // "string", "int", "bool"
+	// Docs: Default is the value used when the key is missing from
+	// config.json; Desc is the one-line help for docs/reference/settings.md.
+	Default string
+	Desc    string
 }
 
 // settingsRows is the canonical list of settings the UI exposes. Order is
 // the row order in the picker.
 var settingsRows = []settingsRow{
-	{ID: "setting-theme", Label: "theme", Kind: "string"},
-	{ID: "setting-font-delta", Label: "font_delta", Kind: "int"},
-	{ID: "setting-auto-save", Label: "auto_save", Kind: "bool"},
-	{ID: "setting-word-wrap", Label: "word_wrap", Kind: "bool"},
-	{ID: "setting-show-hidden", Label: "show_hidden", Kind: "bool"},
-	{ID: "setting-tab-size", Label: "tab_size", Kind: "int"},
-	{ID: "setting-search-max-results", Label: "search_max_results", Kind: "int"},
+	{ID: "setting-theme", Label: "theme", Kind: "string", Default: "vscode-dark-plus",
+		Desc: "Color theme ID. Same as Preferences: Color Theme."},
+	{ID: "setting-font-delta", Label: "font_delta", Kind: "int", Default: "-2",
+		Desc: "Font size change asked of the host terminal at launch (OSC 1337). Note: today only the TERMOCODE_FONT_DELTA environment variable is read at startup."},
+	{ID: "setting-auto-save", Label: "auto_save", Kind: "bool", Default: "false",
+		Desc: "Save files automatically after edits."},
+	{ID: "setting-word-wrap", Label: "word_wrap", Kind: "bool", Default: "false",
+		Desc: "Soft-wrap long lines in the editor."},
+	{ID: "setting-show-hidden", Label: "show_hidden", Kind: "bool", Default: "false",
+		Desc: "Show dot-files in the explorer."},
+	{ID: "setting-tab-size", Label: "tab_size", Kind: "int", Default: "4",
+		Desc: "Indent width in spaces (1-16). Sets tabstop and shiftwidth."},
+	{ID: "setting-search-max-results", Label: "search_max_results", Kind: "int", Default: strconv.Itoa(search.DefaultMaxResults),
+		Desc: "Most results Find in Files shows. 0 means no limit."},
 }
 
 // findSettingsRow looks up a row by ID. Returns the zero value + false on
@@ -170,32 +182,32 @@ func currentSettingValue(r settingsRow, cfg settingsConfig) string {
 	switch r.ID {
 	case "setting-theme":
 		if cfg.Theme == "" {
-			return "vscode-dark-plus"
+			return r.Default // Docs: default lives in settingsRows
 		}
 		return cfg.Theme
 	case "setting-font-delta":
 		if cfg.FontDelta == nil {
-			return "-2"
+			return r.Default
 		}
 		return strconv.Itoa(*cfg.FontDelta)
 	case "setting-auto-save":
 		if cfg.AutoSave == nil {
-			return "false"
+			return r.Default
 		}
 		return strconv.FormatBool(*cfg.AutoSave)
 	case "setting-word-wrap":
 		if cfg.WordWrap == nil {
-			return "false"
+			return r.Default
 		}
 		return strconv.FormatBool(*cfg.WordWrap)
 	case "setting-show-hidden":
 		if cfg.ShowHidden == nil {
-			return "false"
+			return r.Default
 		}
 		return strconv.FormatBool(*cfg.ShowHidden)
 	case "setting-tab-size":
 		if cfg.TabSize == nil {
-			return "4"
+			return r.Default
 		}
 		return strconv.Itoa(*cfg.TabSize)
 	case "setting-search-max-results":
