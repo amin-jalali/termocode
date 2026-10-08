@@ -52,6 +52,10 @@ type StateMsg struct {
 	// Diff is true when the current window is in diff mode (the side-by-side
 	// diff view); the handler mirrors it into m.gitDiffActive.
 	Diff bool
+
+	// LSPClients are the LSP client names attached to the active buffer
+	// (status-bar chip).
+	LSPClients []string
 }
 
 // nvimBuffer is a thin alias to avoid an import cycle in messages.go callers.
