@@ -40,6 +40,9 @@ const (
 	promptKindSettingsImport
 	promptKindSnippetNew
 	promptKindSnippetBody
+	// Group I — extensions (ext.go).
+	promptKindExt    // termocode.prompt() from an extension
+	promptKindExtNew // Extensions: New Extension…
 )
 
 func (m *Model) openRenamePrompt(path string) {
@@ -202,6 +205,11 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 	// Group H — settings sync + user snippets.
 	case promptKindSettingsExport, promptKindSettingsImport, promptKindSnippetNew, promptKindSnippetBody:
 		return m.handleExtrasPromptSubmit(value)
+	// Group I — extensions (ext.go).
+	case promptKindExt:
+		return m.extPromptSubmit(value)
+	case promptKindExtNew:
+		return m.extNewSubmit(value)
 	}
 	return nil
 }
