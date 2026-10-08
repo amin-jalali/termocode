@@ -1,6 +1,11 @@
 # termocode
 
+[![Docs](https://img.shields.io/badge/docs-amin--jalali.github.io%2Ftermocode-4051b5)](https://amin-jalali.github.io/termocode/)
+[![test](https://github.com/amin-jalali/termocode/actions/workflows/test.yml/badge.svg)](https://github.com/amin-jalali/termocode/actions/workflows/test.yml)
+
 A terminal IDE that feels like VSCode — built on Bubble Tea, powered by a real Neovim process under the hood.
+
+**Documentation: <https://amin-jalali.github.io/termocode/>**
 
 <!--
 Screenshots are not committed yet. Generate them with
@@ -8,69 +13,42 @@ Screenshots are not committed yet. Generate them with
 ![termocode demo](assets/screenshots/demo.gif)
 -->
 
-```sh
-go build -o termocode ./cmd/termocode
-./termocode [path]
-```
+## Highlights
 
-Without `path`, opens in the current directory.
-
-## What you get
-
-- **Real Neovim** as the editor (buffers, motions, undo tree, LSP, DAP) wrapped in a familiar IDE chrome.
-- **Multi-cursor**, **bracket-matched selection**, **clipboard history**, **snippets**, **format-on-save**.
-- **Fuzzy file open**, **command palette**, **workspace ripgrep search**, **live find/replace**.
-- **LSP** out of the box for Go, Python, TypeScript / JavaScript, Rust, C / C++, Lua (servers installed separately).
-- **DAP** debugger with breakpoints, step over / into / out for Go (delve), Python (debugpy), Node.
-- **Git** sidebar with stage, diff, commit, stash, log, blame, branch switch — plus inline gutter signs.
-- **Tabs**, **splits**, **bookmarks**, **outline**, **markdown preview**, **integrated terminal**.
-- **Themes** (VSCode Dark+, GitHub Dark, One Dark, Solarized Dark) + a full custom-theme editor.
-- **Session persistence** — tabs, cursors, expanded folders, recent files, recent workspaces, undo history.
+- **Real Neovim** as the editor — your motions, registers and `init.lua` — inside tabs, an explorer and a command palette (`F1`).
+- **AI assistant** — ghost-text completion, a chat panel with an agent, and Explain / Fix / Edit actions you review as a diff. Anthropic, OpenAI, OpenRouter or local Ollama.
+- **Run and Debug** — breakpoints, watch, call stack and a Debug Console for Go, Python and Node, with `launch.json`.
+- **Test explorer** for Go, pytest, Rust, Jest and Vitest, plus **tasks** and a **Problems** panel.
+- **Git** — stage hunks, commit, sync, stash, blame, a commit graph, a merge-conflict resolver and clone.
+- **Language servers** for Go, Python, JS/TS, Rust, C/C++, Lua and more — with a built-in installer.
+- **Fast search** across every workspace folder with ripgrep: case / word / regex toggles and globs.
+- **Make it yours** — themes, a custom theme editor, key rebinding, snippets, settings export, and **Lua extensions**.
 
 ## Install
 
-Once a release is published to the package managers:
-
-```sh
-brew install amin-jalali/termocode/termocode   # macOS / Linux (Homebrew tap)
-yay -S termocode-bin                           # Arch Linux (AUR)
-```
-
-Or grab a tarball from the GitHub Releases page, or build from source.
-
-Building requires Go ≥ 1.26, plus a handful of runtime dependencies:
-
-- `nvim` ≥ 0.10 on `$PATH`
-- `rg` (ripgrep) for fast workspace search (optional — a slower built-in search is used without it)
-- `git` for the Source Control sidebar
-- A truecolor terminal (kitty, wezterm, ghostty, alacritty, iTerm2, modern Windows Terminal)
-
-Optional but recommended:
-
-- Language servers — `gopls`, `pyright`, `ts_ls`, `rust-analyzer`, `clangd`, `lua-language-server`
-- Debug adapters — `dlv`, `debugpy`, `node --inspect`
+termocode runs on Linux and macOS. Build it from source (needs Go ≥ 1.26 and `nvim` ≥ 0.10):
 
 ```sh
 git clone https://github.com/amin-jalali/termocode.git
 cd termocode
-./scripts/dev.sh    # vet + test + build
+go install ./cmd/termocode
+termocode            # opens the current folder
 ```
 
-For cross-compiled release tarballs (linux/darwin × amd64/arm64) in `dist/`:
+On Linux, install the X11 headers first (`sudo apt install libx11-dev`).
+Homebrew, AUR and release tarballs are **coming soon** — they are not published yet.
+See the [install guide](https://amin-jalali.github.io/termocode/getting-started/install/).
 
-```sh
-./scripts/release.sh
-```
+Something not working? Run `termocode setup`, or **Help: Run Doctor** from the palette (`F1`).
 
-## Documentation
+## Learn more
 
-- **[Feature guide](docs/features.md)** — every keybinding, palette command, and feature in detail.
-- **[Architecture](docs/architecture.md)** — how the pieces fit: Bubble Tea, Neovim RPC, overlay rendering, persistence, themes.
-- **[Contributing](CONTRIBUTING.md)** — build, test, code layout, style, commit messages, releases.
-- **[Decisions](docs/adr/README.md)** and **[QC cases](docs/qc/README.md)**.
-
-Something not working? Run `termocode setup` in a shell, or `Help: Run Doctor` from the command palette (`F1`), to check nvim, ripgrep, language servers and fonts.
+- [First 5 minutes](https://amin-jalali.github.io/termocode/getting-started/first-steps/)
+- [Guides](https://amin-jalali.github.io/termocode/features/) · [Reference](https://amin-jalali.github.io/termocode/reference/)
+- [Architecture](docs/architecture.md) · [Decisions](docs/adr/README.md) · [Contributing](CONTRIBUTING.md)
 
 ## CI
 
-Every push and PR runs the test matrix (Ubuntu + macOS) via `.github/workflows/test.yml`. Tagged releases (`v*`) trigger `.github/workflows/release.yml`, which cross-compiles and attaches binaries to a GitHub Release, then updates the Homebrew tap and the AUR package.
+Every push and PR runs the test matrix (Ubuntu + macOS) via `.github/workflows/test.yml`.
+Tagged releases (`v*`) trigger `.github/workflows/release.yml`.
+Pushes to `main` that touch the docs rebuild the site via `.github/workflows/docs.yml`.
