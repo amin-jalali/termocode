@@ -23,6 +23,7 @@ const (
 	confirmKindDeletePath
 	confirmKindGitDiscard
 	confirmKindGitStageCommit
+	confirmKindToolInstall // LSP / DAP installer (lsp_manager.go)
 )
 
 // findBuffer returns the buffer info for the given id, if known.
@@ -114,6 +115,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		if id == "stage" {
 			return m.gitStageAllAndCommit()
 		}
+	case confirmKindToolInstall:
+		return m.onToolConfirm(id)
 	}
 	return nil
 }

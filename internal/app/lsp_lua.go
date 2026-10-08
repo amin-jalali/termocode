@@ -1,50 +1,17 @@
 package app
 
+import "termocode/internal/lspinstall"
+
 // lspSetupLua configures nvim's built-in LSP for common languages, attaches
 // per-buffer keymaps on LspAttach, and wires up auto-trigger completion via
 // omnifunc so termocode behaves VSCode-like.
 //
 // The Lua chunk is idempotent and safe to re-run.
-const lspSetupLua = `
--- Server registry: name → { cmd, filetypes, root_markers }
-local servers = {
-  gopls = {
-    cmd = { 'gopls' },
-    filetypes = { 'go', 'gomod', 'gowork', 'gotmpl' },
-    root = { 'go.mod', 'go.work', '.git' },
-  },
-  pyright = {
-    cmd = { 'pyright-langserver', '--stdio' },
-    filetypes = { 'python' },
-    root = { 'pyproject.toml', 'setup.py', 'setup.cfg', 'requirements.txt', 'Pipfile', '.git' },
-  },
-  pylsp = {
-    cmd = { 'pylsp' },
-    filetypes = { 'python' },
-    root = { 'pyproject.toml', 'setup.py', '.git' },
-  },
-  ts_ls = {
-    cmd = { 'typescript-language-server', '--stdio' },
-    filetypes = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact' },
-    root = { 'package.json', 'tsconfig.json', 'jsconfig.json', '.git' },
-  },
-  rust_analyzer = {
-    cmd = { 'rust-analyzer' },
-    filetypes = { 'rust' },
-    root = { 'Cargo.toml', '.git' },
-  },
-  clangd = {
-    cmd = { 'clangd' },
-    filetypes = { 'c', 'cpp', 'objc', 'objcpp' },
-    root = { 'compile_commands.json', 'compile_flags.txt', '.clangd', '.git' },
-  },
-  lua_ls = {
-    cmd = { 'lua-language-server' },
-    filetypes = { 'lua' },
-    root = { '.luarc.json', '.luarc.jsonc', '.luacheckrc', '.git' },
-  },
-}
-
+//
+// The server table is generated from the lspinstall registry (the single
+// source of truth shared with the installer and `termocode setup`); see
+// lspServersPrelude.
+var lspSetupLua = lspServersPrelude() + `
 -- Find the first ancestor of start_dir that contains any of the marker files/dirs.
 local function find_root(start_dir, markers)
   if start_dir == nil or start_dir == '' then start_dir = vim.fn.getcwd() end
@@ -70,7 +37,45 @@ local function ft_to_servers(ft)
       if x == ft then table.insert(out, { name = name, cfg = cfg }); break end
     end
   end
+  table.sort(out, function(a, b) return (a.cfg.order or 0) < (b.cfg.order or 0) end)
   return out
+end
+
+-- Resolve a server executable: PATH first (tools/bin is prepended to the
+-- embedded nvim's PATH), then the managed tools/bin by absolute path —
+-- covers a PATH reset by the user's config. Returns nil when missing.
+local function resolve_cmd(cmd)
+  if vim.fn.executable(cmd[1]) == 1 then return cmd end
+  local abs = cmd[1]
+  if abs:sub(1, 1) ~= '/' then abs = termocode_tools_bin .. '/' .. abs end
+  if termocode_tools_bin ~= '' and vim.fn.executable(abs) == 1 then
+    local out = vim.deepcopy(cmd)
+    out[1] = abs
+    return out
+  end
+  return nil
+end
+
+-- Start every available server for buf. Global so the Go side can call it
+-- right after the installer finishes (no reopen needed).
+function _G._termocode_lsp_start(buf)
+  buf = (buf == nil or buf == 0) and vim.api.nvim_get_current_buf() or buf
+  if not vim.api.nvim_buf_is_loaded(buf) then return end
+  local ft = vim.bo[buf].filetype
+  local name = vim.api.nvim_buf_get_name(buf)
+  local start_dir = name ~= '' and vim.fn.fnamemodify(name, ':p:h') or vim.fn.getcwd()
+  for _, srv in ipairs(ft_to_servers(ft)) do
+    local cmd = resolve_cmd(srv.cfg.cmd)
+    if cmd then
+      local root = find_root(start_dir, srv.cfg.root)
+      vim.lsp.start({
+        name = srv.name,
+        cmd = cmd,
+        root_dir = root,
+        capabilities = vim.lsp.protocol.make_client_capabilities(),
+      }, { bufnr = buf })
+    end
+  end
 end
 
 vim.api.nvim_create_augroup('TermocodeLSP', { clear = true })
@@ -85,18 +90,7 @@ vim.api.nvim_create_autocmd('FileType', {
     local ft = args.match
     -- Enable Tree-sitter highlighting if a parser is bundled / installed.
     pcall(vim.treesitter.start, args.buf, ft)
-    for _, srv in ipairs(ft_to_servers(ft)) do
-      if vim.fn.executable(srv.cfg.cmd[1]) ~= 1 then goto continue end
-      local start_dir = vim.fn.expand('%:p:h')
-      local root = find_root(start_dir, srv.cfg.root)
-      vim.lsp.start({
-        name = srv.name,
-        cmd = srv.cfg.cmd,
-        root_dir = root,
-        capabilities = vim.lsp.protocol.make_client_capabilities(),
-      })
-      ::continue::
-    end
+    _G._termocode_lsp_start(args.buf)
   end,
 })
 
@@ -526,3 +520,15 @@ vim.keymap.set('i', '<BS>', function()
   return '<BS>'
 end, { expr = true, silent = true })
 `
+
+// lspServersPrelude renders the Lua `servers` table from the lspinstall
+// registry plus the managed tools/bin path used as a fallback lookup.
+func lspServersPrelude() string {
+	bin, err := lspinstall.BinDir()
+	if err != nil {
+		bin = ""
+	}
+	return "\n-- Server registry (generated from internal/lspinstall): name → { cmd, filetypes, root, order }\n" +
+		"local servers = " + lspinstall.LuaServersTable() + "\n" +
+		"local termocode_tools_bin = " + lspinstall.LuaQuote(bin) + "\n"
+}

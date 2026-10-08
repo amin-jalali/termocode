@@ -82,6 +82,11 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case picker.SelectMsg:
 		m.pickerOpen = false
 		return m, m.handlePickerSelect(msg)
+	// LSP / DAP installer background events (lsp_manager.go).
+	case lspInstallEventMsg:
+		return m, m.onToolInstallEvent(msg)
+	case lspUninstallDoneMsg:
+		return m, m.onToolUninstalled(msg)
 	case picker.CloseMsg:
 		m.pickerOpen = false
 		return m, nil
@@ -557,6 +562,9 @@ end
 		}
 		saveSession(existing)
 		m.editor.SetMeta(msg.Path, msg.Dirty, msg.Lang)
+		// LSP installer: status-bar chip + one-time missing-server toast.
+		m.setLSPClients(msg.LSPClients)
+		lspSuggestCmd := m.maybeSuggestLanguageServer(msg.Lang)
 		m.editor.SetDiagnostics(msg.Errors, msg.Warnings)
 		m.bufs = toNvimBufs(msg.Bufs)
 		m.activeBuf = msg.Active
@@ -596,7 +604,7 @@ end
 		// or the user moves focus to an editor window.
 		m.inTerminal = m.termOpen && m.terminalWinID > 0 &&
 			msg.CurrentWin == m.terminalWinID && msg.Mode == "t"
-		return m, tea.Batch(m.maybeRefreshStickyContext(), m.maybeRefreshScrollbarMarkers(), reloadToastCmd), true
+		return m, tea.Batch(m.maybeRefreshStickyContext(), m.maybeRefreshScrollbarMarkers(), reloadToastCmd, lspSuggestCmd), true
 	case gitAutoRefreshMsg:
 		// Background poll: refresh git state and reschedule the next tick. The
 		// GitMsg handler only re-clamps the cursor, so this never disturbs the
@@ -1028,6 +1036,7 @@ func (m Model) fetchStateCmd() tea.Cmd {
 			CurrentWin:     s.CurrentWin,
 			Mode:           s.Mode,
 			Diff:           s.Diff,
+			LSPClients:     s.LSPClients,
 		}
 	}
 }
@@ -1728,6 +1737,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.onThemeEditorRowSelected(msg.ID)
 	case pickerKindKeybinding:
 		return m.onKeybindingRowSelected(msg.ID)
+	case pickerKindToolManager:
+		return m.onToolRowSelected(msg.ID)
 	}
 	return nil
 }

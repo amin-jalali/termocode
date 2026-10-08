@@ -2178,6 +2178,8 @@ func (m Model) statusState() statusbar.State {
 		Encoding: "UTF-8",
 		Term:     m.termOpen,
 		Debug:    m.dapSessionActive,
+		ShowLSP:  m.editor.Path() != "",
+		LSP:      m.lspClients(),
 	}
 }
 
