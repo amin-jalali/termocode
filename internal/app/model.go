@@ -545,6 +545,11 @@ type Model struct {
 	// ai is the Group A AI assistant state (ai_state.go). Pointer so value
 	// copies and the streaming goroutines share one instance.
 	ai *aiState
+
+	// lastLineCopy is the text of the last whole-line Ctrl+C / Ctrl+X (no
+	// selection). While the OS clipboard still holds it, Ctrl+V pastes it
+	// as a new line above the cursor, like VSCode.
+	lastLineCopy string
 }
 
 // welcomeShowing reports whether the start page is currently rendered in

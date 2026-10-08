@@ -1691,6 +1691,9 @@ func (m Model) terminalCopyToClipboard() int {
 // or when the clipboard is empty / non-text.
 func readClipboardText() string {
 	var out string
+	if !clipboardReady() {
+		return ""
+	}
 	defer func() { _ = recover() }()
 	buf := clipboard.Read(clipboard.FmtText)
 	if len(buf) == 0 {

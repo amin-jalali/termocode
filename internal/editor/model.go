@@ -80,6 +80,13 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		// into the active buffer — visible to the user as random
 		// "[<35;70;19M…" text appearing while wheel-scrolling near a
 		// buffer edge.
+		// Bracketed paste (terminal paste: Ctrl+Shift+V, right-click, or a
+		// terminal that maps Ctrl+V to paste): insert the text as one
+		// nvim_paste so autoindent / mappings don't mangle it.
+		if k.Paste && len(k.Runes) > 0 && m.client != nil {
+			_ = m.client.ExecLuaArgs(`vim.api.nvim_paste(..., true, -1)`, string(k.Runes))
+			return m, nil
+		}
 		if k.Type == tea.KeyRunes {
 			if isMouseFragmentEvent(k.Runes) {
 				return m, nil
