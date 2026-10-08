@@ -67,6 +67,9 @@ type aiState struct {
 	// configure / sign-in flow
 	cfgKind string
 	pkce    *ai.PKCE
+
+	// mdCache holds rendered answers per message index (ai_panel.go).
+	mdCache map[int]aiMDEntry
 }
 
 // aiAttachment is file / selection context added to the next chat message.

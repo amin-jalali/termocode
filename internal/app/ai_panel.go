@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -17,22 +16,29 @@ import (
 // (actions_panel.go keeps the header buttons, pin / close, drag-resize and
 // persistence). Layout of the body rows (below header + divider):
 //
-//	transcript  (scrollable, wrapped, with clickable Copy / Apply rows)
-//	──── divider (attachments chip or "edit ready: Apply / Discard") ────
-//	input       (aiInputRows rows, caret shown when focused)
-//	footer      (key hints; non-interactive)
+//	transcript  (scrollable: user bubbles, AI answers rendered as Markdown
+//	             with code cards and Copy / Apply buttons)
+//	chips row   (attachments, or "edit ready: Apply / Discard")
+//	input box   (rounded border, 1..aiInputMaxRows rows, grows with the
+//	             text; the bottom border carries the key hint)
 
 const (
-	aiInputRows   = 3
-	aiPanelTopRow = 2 // header + divider drawn by actions_panel.go
+	aiInputMaxRows = 6
+	aiPanelTopRow  = 2 // header + divider drawn by actions_panel.go
+	aiIndent       = 2 // left padding of transcript content
 )
 
-// aiLine is one rendered transcript row before padding.
+// aiInputRows is kept for callers that need the minimum input height.
+const aiInputRows = 1
+
+// aiLine is one rendered transcript row before padding. Either text +
+// style (plain, padded by renderAILine) or styled (already rendered).
 type aiLine struct {
 	text    string
 	style   lipgloss.Style
 	bg      theme.Color256
 	buttons []aiLineButton
+	styled  string
 }
 
 // aiLineButton is a clickable span on a transcript / divider row.
@@ -45,22 +51,52 @@ type aiLineButton struct {
 type aiPanelGeom struct {
 	transTop, transH int
 	dividerRow       int
-	inputTop         int
-	footerRow        int
-	compact          bool // too short for input / footer
+	inputTop         int // top border row of the input box
+	inputRows        int // text rows inside the box
+	footerRow        int // bottom border row of the input box
+	compact          bool
 }
 
-func aiGeom(height int) aiPanelGeom {
+// aiGeom is the geometry for a one-row input (tests, scrolling math).
+func aiGeom(height int) aiPanelGeom { return aiGeomRows(height, 1) }
+
+func aiGeomRows(height, rows int) aiPanelGeom {
 	body := height - aiPanelTopRow
-	if body < aiInputRows+4 {
+	if body < rows+6 {
 		return aiPanelGeom{transTop: aiPanelTopRow, transH: maxInt(body, 0), compact: true, dividerRow: -1, inputTop: -1, footerRow: -1}
 	}
-	g := aiPanelGeom{transTop: aiPanelTopRow}
+	g := aiPanelGeom{transTop: aiPanelTopRow, inputRows: rows}
 	g.footerRow = height - 1
-	g.inputTop = g.footerRow - aiInputRows
+	g.inputTop = g.footerRow - rows - 1
 	g.dividerRow = g.inputTop - 1
 	g.transH = g.dividerRow - g.transTop
 	return g
+}
+
+// aiPanelGeom is the live geometry: the input box grows with its text.
+func (m Model) aiPanelGeom(width, height int) aiPanelGeom {
+	rows := 1
+	if s := m.ai; s != nil && len(s.input) > 0 {
+		wrapped, _, _ := aiInputWrapped(s.input, s.caret, aiInputTextW(width))
+		rows = len(wrapped)
+	}
+	if rows > aiInputMaxRows {
+		rows = aiInputMaxRows
+	}
+	if rows < 1 {
+		rows = 1
+	}
+	return aiGeomRows(height, rows)
+}
+
+// aiInputTextW is the text width inside the input box ("│ " … " │"
+// inside a one-column margin).
+func aiInputTextW(width int) int {
+	w := width - 6
+	if w < 1 {
+		w = 1
+	}
+	return w
 }
 
 func maxInt(a, b int) int {
@@ -72,7 +108,7 @@ func maxInt(a, b int) int {
 
 // renderAIPanelBody renders the panel rows below the header divider.
 func (m Model) renderAIPanelBody(width, height int) []string {
-	g := aiGeom(height)
+	g := m.aiPanelGeom(width, height)
 	bg := theme.Bg(theme.BgPanel)
 	blank := bg.Render(strings.Repeat(" ", width))
 	rows := make([]string, 0, height-aiPanelTopRow)
@@ -89,8 +125,7 @@ func (m Model) renderAIPanelBody(width, height int) []string {
 		return rows
 	}
 	rows = append(rows, renderAILine(m.aiDividerLine(width), width))
-	rows = append(rows, m.renderAIInput(width)...)
-	rows = append(rows, renderAILine(m.aiFooterLine(width), width))
+	rows = append(rows, m.renderAIInput(width, g.inputRows)...)
 	return rows
 }
 
@@ -130,6 +165,9 @@ func renderAILine(l aiLine, width int) string {
 	bgTok := l.bg
 	if bgTok == 0 {
 		bgTok = theme.BgPanel
+	}
+	if l.styled != "" {
+		return padStyled(l.styled, width, theme.Bg(bgTok))
 	}
 	txt := runewidth.Truncate(l.text, width, "…")
 	pad := width - runewidth.StringWidth(txt)
@@ -212,17 +250,17 @@ func aiWrapCode(s string, w int) []string {
 	return out
 }
 
-// aiTranscript builds the wrapped transcript (panel-local columns).
+// aiTranscript builds the transcript (panel-local columns): padded
+// content, user messages as tinted bubbles on the right, AI answers as
+// rendered Markdown under an "✦ AI · model" line.
 func (m Model) aiTranscript(width int) []aiLine {
-	inner := width - 2
+	inner := width - aiIndent - 1
 	if inner < 4 {
 		inner = 4
 	}
-	label := func(s string) aiLine {
-		return aiLine{text: " " + s, style: theme.Fg(theme.AIAccent).Bold(true)}
-	}
+	ind := strings.Repeat(" ", aiIndent)
 	plain := func(s string, tok theme.Color256) aiLine {
-		return aiLine{text: " " + s, style: theme.Fg(tok)}
+		return aiLine{text: ind + s, style: theme.Fg(tok)}
 	}
 	var out []aiLine
 	s := m.ai
@@ -230,74 +268,51 @@ func (m Model) aiTranscript(width int) []aiLine {
 		out = append(out, aiLine{})
 		if s == nil || s.provider == nil || !s.provider.Configured() {
 			out = append(out, plain("AI is not configured.", theme.TextSecondary))
-			btn := " [ Configure… ]"
-			out = append(out, aiLine{text: btn, style: theme.Fg(theme.TextSecondary), buttons: []aiLineButton{{1, runewidth.StringWidth(btn), "configure"}}})
+			out = append(out, aiLine{})
+			out = append(out, aiChip("Configure…", "configure", width))
+			out = append(out, aiLine{})
 			for _, l := range wrapPlain("Or set ANTHROPIC_API_KEY / OPENAI_API_KEY, or TERMOCODE_AI_PROVIDER=ollama.", inner) {
 				out = append(out, plain(l, theme.TextDim))
 			}
 			return out
 		}
+		out = append(out, aiLine{text: ind + aiSpark() + " Ask about your code", style: theme.Fg(theme.AIAccent).Bold(true)})
+		out = append(out, aiLine{})
+		for _, sg := range aiSuggestions {
+			out = append(out, aiChip(sg.label, "suggest:"+sg.id, width))
+		}
+		out = append(out, aiLine{})
 		for _, l := range []string{
-			"✦ Ask about your code.",
-			"",
 			"Enter send · Shift+Enter newline",
 			"Alt+I edit selection with AI",
-			"Ctrl+. → AI actions (Explain, Fix)",
+			"Ctrl+. AI actions (Explain, Fix)",
 			"Tab accepts ghost text",
 		} {
-			if l == "" {
-				out = append(out, plain("", theme.TextDim))
-				continue
-			}
-			// Wrap (don't truncate) the hints on a narrow panel.
-			for _, w := range wrapPlain(l, inner-1) {
+			for _, w := range wrapPlain(l, inner) {
 				out = append(out, plain(w, theme.TextDim))
 			}
 		}
 		return out
 	}
+	last := len(s.conv.Messages) - 1
 	for i, msg := range s.conv.Messages {
 		switch msg.Role {
 		case ai.StoredUser:
-			out = append(out, label("You"))
-			for _, l := range wrapPlain(aiCleanText(msg.Text), inner) {
-				out = append(out, plain(l, theme.TextPrimary))
-			}
+			out = append(out, aiLine{})
+			out = append(out, aiUserBubble(aiCleanText(msg.Text), width)...)
 			if msg.Context != "" {
-				out = append(out, plain("📎 "+aiContextLabel(msg.Context), theme.TextDim))
+				out = append(out, aiRightChip(aiAttachGlyph()+" "+aiContextLabel(msg.Context), width))
 			}
 		case ai.StoredAssistant:
-			out = append(out, label("✦ AI"))
+			out = append(out, aiLine{})
+			out = append(out, m.aiAnswerHeader(width))
 			text := aiCleanText(msg.Text)
-			if strings.TrimSpace(text) == "" && s.streaming && i == len(s.conv.Messages)-1 {
-				out = append(out, aiLine{text: " thinking…", style: theme.Fg(theme.TextDim).Italic(true)})
+			streaming := s.streaming && i == last
+			if strings.TrimSpace(text) == "" && streaming {
+				out = append(out, aiLine{text: ind + "thinking…", style: theme.Fg(theme.TextDim).Italic(true)})
 				break
 			}
-			inCode := false
-			for _, raw := range strings.Split(text, "\n") {
-				if strings.HasPrefix(strings.TrimSpace(raw), "```") {
-					inCode = !inCode
-					out = append(out, aiLine{text: " " + strings.TrimSpace(raw), style: theme.Fg(theme.TextDim), bg: theme.BgEditor})
-					continue
-				}
-				if inCode {
-					for _, l := range aiWrapCode(raw, inner) {
-						out = append(out, aiLine{text: " " + l, style: theme.Fg(theme.SyntaxString), bg: theme.BgEditor})
-					}
-					continue
-				}
-				for _, l := range wrapPlain(raw, inner) {
-					out = append(out, plain(l, theme.TextPrimary))
-				}
-			}
-			if _, ok := ai.FirstCodeBlock(msg.Text); ok && !(s.streaming && i == len(s.conv.Messages)-1) {
-				copyLbl, applyLbl := "⧉ Copy", "✓ Apply to file"
-				x := 1
-				btns := []aiLineButton{{x, x + runewidth.StringWidth(copyLbl), "copy:" + strconv.Itoa(i)}}
-				x += runewidth.StringWidth(copyLbl) + 3
-				btns = append(btns, aiLineButton{x, x + runewidth.StringWidth(applyLbl), "apply:" + strconv.Itoa(i)})
-				out = append(out, aiLine{text: " " + copyLbl + "   " + applyLbl, style: theme.Fg(theme.TextSecondary), buttons: btns})
-			}
+			out = append(out, s.renderAnswer(i, text, width, streaming)...)
 		case ai.StoredTool:
 			for _, l := range wrapPlain(aiCleanText(msg.Text), inner) {
 				out = append(out, plain(l, theme.TextDim))
@@ -307,9 +322,128 @@ func (m Model) aiTranscript(width int) []aiLine {
 				out = append(out, plain(l, theme.DiagError))
 			}
 		}
-		out = append(out, aiLine{})
+	}
+	out = append(out, aiLine{})
+	return out
+}
+
+// aiSuggestions are the empty-state chips.
+var aiSuggestions = []struct{ id, label, prompt string }{
+	{"explain", "Explain this file", "Explain what this file does, its main parts and how they fit together."},
+	{"bugs", "Find bugs", "Review this file for bugs, edge cases and error handling problems. List the issues with fixes."},
+	{"tests", "Write tests", "Write unit tests for this file. Cover the main paths and edge cases."},
+}
+
+// aiSpark is the AI mark for the icon mode.
+func aiSpark() string {
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		return "*"
+	}
+	return "✦"
+}
+
+func aiAttachGlyph() string {
+	switch theme.CurrentIconMode {
+	case theme.IconModeNerdFont:
+		return "\uf0c6" // nf-fa-paperclip
+	case theme.IconModeUnicode:
+		return "⊕"
+	}
+	return "+"
+}
+
+// aiChip is a clickable chip on its own row (left-aligned).
+func aiChip(label, id string, width int) aiLine {
+	chip := lipgloss.NewStyle().Background(theme.Mix(theme.BgPanel, theme.AIAccent, 0.16)).
+		Foreground(theme.LG(theme.TextPrimary)).Render(" " + label + " ")
+	cw := runewidth.StringWidth(label) + 2
+	row := theme.Bg(theme.BgPanel).Render(strings.Repeat(" ", aiIndent)) + chip
+	return aiLine{styled: row, buttons: []aiLineButton{{aiIndent, aiIndent + cw, id}}}
+}
+
+// aiRightChip is a dim chip aligned to the right edge (attachments).
+func aiRightChip(label string, width int) aiLine {
+	if max := width - aiIndent - 3; runewidth.StringWidth(label) > max && max > 3 {
+		label = runewidth.Truncate(label, max, "…")
+	}
+	chip := lipgloss.NewStyle().Background(theme.Mix(theme.BgPanel, theme.TextPrimary, 0.08)).
+		Foreground(theme.LG(theme.TextMuted)).Render(" " + label + " ")
+	x := width - 1 - runewidth.StringWidth(label) - 2
+	if x < 0 {
+		x = 0
+	}
+	return aiLine{styled: theme.Bg(theme.BgPanel).Render(strings.Repeat(" ", x)) + chip}
+}
+
+// aiUserBubble renders a user message as a tinted bubble on the right.
+func aiUserBubble(text string, width int) []aiLine {
+	maxW := (width - aiIndent - 1) * 85 / 100
+	if maxW < 10 {
+		maxW = width - aiIndent - 1
+	}
+	lines := wrapPlain(text, maxW-2)
+	bw := 0
+	for _, l := range lines {
+		if w := runewidth.StringWidth(l); w > bw {
+			bw = w
+		}
+	}
+	bw += 2
+	x := width - 1 - bw
+	if x < aiIndent {
+		x = aiIndent
+	}
+	bub := lipgloss.NewStyle().Background(theme.Mix(theme.BgPanel, theme.BorderFocus, 0.20)).Foreground(theme.LG(theme.TextWhite))
+	lead := theme.Bg(theme.BgPanel).Render(strings.Repeat(" ", x))
+	out := make([]aiLine, 0, len(lines))
+	for _, l := range lines {
+		fill := bw - 2 - runewidth.StringWidth(l)
+		if fill < 0 {
+			fill = 0
+		}
+		out = append(out, aiLine{styled: lead + bub.Render(" "+l+strings.Repeat(" ", fill)+" ")})
 	}
 	return out
+}
+
+// aiAnswerHeader is the "✦ AI · model" line above an answer.
+func (m Model) aiAnswerHeader(width int) aiLine {
+	bg := theme.Bg(theme.BgPanel)
+	row := bg.Render(strings.Repeat(" ", aiIndent)) +
+		theme.FgBg(theme.AIAccent, theme.BgPanel).Bold(true).Render(aiSpark()+" AI")
+	if s := m.ai; s != nil && s.provider != nil {
+		row += theme.FgBg(theme.TextDim, theme.BgPanel).Render(" · " + s.modelLabel())
+	}
+	return aiLine{styled: row}
+}
+
+// renderAnswer renders (and caches) an assistant message. Finished
+// messages are cached by text, width and theme; the streaming one is
+// re-rendered only when its text changed.
+func (s *aiState) renderAnswer(i int, text string, width int, streaming bool) []aiLine {
+	key := aiMDKey{text: text, width: width, theme: theme.Hex(theme.BgPanel) + theme.Hex(theme.TextPrimary), icons: theme.CurrentIconMode, streaming: streaming}
+	if s.mdCache == nil {
+		s.mdCache = map[int]aiMDEntry{}
+	}
+	if e, ok := s.mdCache[i]; ok && e.key == key {
+		return e.lines
+	}
+	lines := renderChatMarkdown(text, width, aiIndent, i, streaming)
+	s.mdCache[i] = aiMDEntry{key: key, lines: lines}
+	return lines
+}
+
+type aiMDKey struct {
+	text      string
+	width     int
+	theme     string
+	icons     theme.IconMode
+	streaming bool
+}
+
+type aiMDEntry struct {
+	key   aiMDKey
+	lines []aiLine
 }
 
 // aiContextLabel is the first line of an attachment block ("main.go:3-9").
@@ -320,40 +454,59 @@ func aiContextLabel(ctx string) string {
 }
 
 // aiDividerLine is the row above the input: proposal banner, attachment
-// chip, or a plain rule.
+// chips, or empty breathing room.
 func (m Model) aiDividerLine(width int) aiLine {
 	s := m.ai
-	rule := func(text string, btns []aiLineButton) aiLine {
-		w := runewidth.StringWidth(text)
-		if w < width {
-			text += " " + strings.Repeat("─", maxInt(width-w-1, 0))
-		}
-		return aiLine{text: text, style: theme.Fg(theme.BorderSubtle), buttons: btns}
+	chip := func(label string, bgTok theme.Color256, t float64) string {
+		return lipgloss.NewStyle().Background(theme.Mix(theme.BgPanel, bgTok, t)).
+			Foreground(theme.LG(theme.TextPrimary)).Render(" " + label + " ")
 	}
+	bg := theme.Bg(theme.BgPanel)
 	if s != nil && s.proposal != nil {
-		head := "─ ✦ edit ready "
-		a, d := "[Apply]", "[Discard]"
+		head := " " + aiSpark() + " edit ready "
+		a, d := "Apply", "Discard"
 		x := runewidth.StringWidth(head)
-		btns := []aiLineButton{{x, x + len(a), "proposal-apply"}, {x + len(a) + 1, x + len(a) + 1 + len(d), "proposal-discard"}}
-		return rule(head+a+" "+d, btns)
+		ax := x
+		dx := ax + len(a) + 2 + 1
+		row := theme.FgBg(theme.AIAccent, theme.BgPanel).Bold(true).Render(head) +
+			chip(a, theme.AccentGreen, 0.25) + bg.Render(" ") + chip(d, theme.DiagError, 0.2)
+		return aiLine{styled: row, buttons: []aiLineButton{{ax, ax + len(a) + 2, "proposal-apply"}, {dx, dx + len(d) + 2, "proposal-discard"}}}
 	}
 	if s != nil && len(s.attachments) > 0 {
-		head := fmt.Sprintf("─ 📎 %d attached ", len(s.attachments))
-		x := runewidth.StringWidth(head)
-		return rule(head+"[×]", []aiLineButton{{x, x + 3, "clear-attach"}})
+		row := bg.Render(" ")
+		x := 1
+		for _, at := range s.attachments {
+			lbl := aiAttachGlyph() + " " + at.Label
+			row += chip(lbl, theme.TextPrimary, 0.10) + bg.Render(" ")
+			x += runewidth.StringWidth(lbl) + 3
+		}
+		row += theme.FgBg(theme.TextDim, theme.BgPanel).Render("×")
+		return aiLine{styled: row, buttons: []aiLineButton{{x, x + 1, "clear-attach"}}}
 	}
-	return aiLine{text: strings.Repeat("─", width), style: theme.Fg(theme.BorderSubtle)}
+	return aiLine{}
 }
 
-// aiFooterLine is the dim key-hint row.
-func (m Model) aiFooterLine(width int) aiLine {
-	s := m.ai
-	hint := " Alt+A chat · F6 focus"
+// aiInputHints are the bottom-border hints, longest first (the first
+// that fits is shown).
+func aiInputHints(s *aiState) []string {
 	switch {
 	case s != nil && s.streaming:
-		hint = " ■ generating — Ctrl+C stop"
+		return []string{"generating · ctrl+c stop", "ctrl+c stop"}
 	case s != nil && s.focused:
-		hint = " Enter send · Esc editor · PgUp/PgDn"
+		return []string{"enter send · shift+enter newline", "enter send"}
+	}
+	return []string{"alt+a chat · F6 focus", "F6 focus"}
+}
+
+// aiFooterLine is the key hint shown inside the input box's bottom border.
+func (m Model) aiFooterLine(width int) aiLine {
+	s := m.ai
+	hint := "enter send · shift+enter newline"
+	switch {
+	case s != nil && s.streaming:
+		hint = "■ generating — ctrl+c stop"
+	case s != nil && !s.focused:
+		hint = "alt+a chat · F6 focus"
 	}
 	return aiLine{text: hint, style: theme.Fg(theme.TextDim)}
 }
@@ -402,74 +555,95 @@ func aiInputWrapped(input []rune, caret, w int) ([]string, int, int) {
 	return rows, cr, cc
 }
 
-// renderAIInput draws the aiInputRows input rows.
-func (m Model) renderAIInput(width int) []string {
-	bgTok := theme.BgEditor
-	bg := theme.Bg(bgTok)
-	prefixFirst, prefix := " › ", "   "
-	inner := width - runewidth.StringWidth(prefixFirst) - 1
-	if inner < 1 {
-		inner = 1
-	}
+// renderAIInput draws the input box: a rounded border (accent while
+// focused) with rows text rows and the key hint in the bottom border.
+func (m Model) renderAIInput(width, rows int) []string {
+	panel := theme.Bg(theme.BgPanel)
 	var input []rune
 	caret, focused := 0, false
 	if s := m.ai; s != nil {
 		input, caret, focused = s.input, s.caret, s.focused
 	}
-	out := make([]string, 0, aiInputRows)
-	pre := theme.FgBg(theme.AIAccent, bgTok).Bold(true)
-	if len(input) == 0 {
-		ph := "Ask AI…"
-		if focused {
-			ph = "Ask AI…  (Enter to send)"
-		}
-		row := pre.Render(prefixFirst)
-		if focused {
-			row += theme.FgBg(theme.BgEditor, theme.TextPrimary).Render(" ")
-		}
-		row += theme.FgBg(theme.TextDim, bgTok).Italic(true).Render(runewidth.Truncate(ph, inner, "…"))
-		out = append(out, padStyled(row, width, bg))
-		for len(out) < aiInputRows {
-			out = append(out, bg.Render(strings.Repeat(" ", width)))
+	boxBg := theme.Mix(theme.BgPanel, theme.TextPrimary, 0.05)
+	borderC := theme.Mix(theme.BgPanel, theme.BorderDefault, 0.9)
+	if focused {
+		boxBg = theme.Mix(theme.BgPanel, theme.AIAccent, 0.06)
+		borderC = theme.LG(theme.AIAccent)
+	}
+	edge := lipgloss.NewStyle().Background(theme.LG(theme.BgPanel)).Foreground(borderC)
+	side := lipgloss.NewStyle().Background(boxBg).Foreground(borderC)
+	fill := lipgloss.NewStyle().Background(boxBg)
+	txt := lipgloss.NewStyle().Background(boxBg).Foreground(theme.LG(theme.TextPrimary))
+	cur := lipgloss.NewStyle().Background(theme.LG(theme.TextPrimary)).Foreground(boxBg)
+	tw := aiInputTextW(width)
+	inner := tw + 2 // between the side borders
+	out := make([]string, 0, rows+2)
+	if width < 8 {
+		for i := 0; i < rows+2; i++ {
+			out = append(out, panel.Render(strings.Repeat(" ", width)))
 		}
 		return out
 	}
-	rows, cr, cc := aiInputWrapped(input, caret, inner)
-	first := 0
-	if cr >= aiInputRows {
-		first = cr - aiInputRows + 1
-	}
-	txt := theme.FgBg(theme.TextPrimary, bgTok)
-	cur := theme.FgBg(theme.BgEditor, theme.TextPrimary)
-	for i := first; i < len(rows) && len(out) < aiInputRows; i++ {
-		p := prefix
-		if i == 0 {
-			p = prefixFirst
+	out = append(out, panel.Render(" ")+edge.Render("╭"+strings.Repeat("─", inner)+"╮")+panel.Render(" "))
+	line := func(content string, w int) string {
+		if w < tw {
+			content += fill.Render(strings.Repeat(" ", tw-w))
 		}
-		line := pre.Render(p)
-		if focused && i == cr {
-			rs := []rune(rows[i])
-			// cc is a cell column; map to a rune index.
-			idx, wsum := 0, 0
-			for idx < len(rs) && wsum+runewidth.RuneWidth(rs[idx]) <= cc {
-				wsum += runewidth.RuneWidth(rs[idx])
-				idx++
-			}
-			at := " "
-			rest := ""
-			if idx < len(rs) {
-				at = string(rs[idx])
-				rest = string(rs[idx+1:])
-			}
-			line += txt.Render(string(rs[:idx])) + cur.Render(at) + txt.Render(rest)
-		} else {
-			line += txt.Render(rows[i])
+		return panel.Render(" ") + side.Render("│") + fill.Render(" ") + content + fill.Render(" ") + side.Render("│") + panel.Render(" ")
+	}
+	if len(input) == 0 {
+		ph := "Ask AI anything…"
+		c := ""
+		w := 0
+		if focused {
+			c = cur.Render(" ")
+			w = 1
 		}
-		out = append(out, padStyled(line, width, bg))
+		ph = runewidth.Truncate(ph, tw-w, "…")
+		c += lipgloss.NewStyle().Background(boxBg).Foreground(theme.LG(theme.TextDim)).Italic(true).Render(ph)
+		out = append(out, line(c, w+runewidth.StringWidth(ph)))
+		for len(out) < rows+1 {
+			out = append(out, line("", 0))
+		}
+	} else {
+		wrapped, cr, cc := aiInputWrapped(input, caret, tw)
+		first := 0
+		if cr >= rows {
+			first = cr - rows + 1
+		}
+		for i := first; i < len(wrapped) && len(out) < rows+1; i++ {
+			rs := []rune(wrapped[i])
+			if focused && i == cr {
+				idx, wsum := 0, 0
+				for idx < len(rs) && wsum+runewidth.RuneWidth(rs[idx]) <= cc {
+					wsum += runewidth.RuneWidth(rs[idx])
+					idx++
+				}
+				at, rest := " ", ""
+				if idx < len(rs) {
+					at, rest = string(rs[idx]), string(rs[idx+1:])
+				}
+				w := runewidth.StringWidth(string(rs[:idx])) + runewidth.StringWidth(at) + runewidth.StringWidth(rest)
+				out = append(out, line(txt.Render(string(rs[:idx]))+cur.Render(at)+txt.Render(rest), w))
+				continue
+			}
+			out = append(out, line(txt.Render(wrapped[i]), runewidth.StringWidth(wrapped[i])))
+		}
+		for len(out) < rows+1 {
+			out = append(out, line("", 0))
+		}
 	}
-	for len(out) < aiInputRows {
-		out = append(out, bg.Render(strings.Repeat(" ", width)))
+	hint := ""
+	for _, h := range aiInputHints(m.ai) {
+		if runewidth.StringWidth(h)+4 <= inner {
+			hint = " " + h + " "
+			break
+		}
 	}
+	hw := runewidth.StringWidth(hint)
+	bottom := edge.Render("╰─") + lipgloss.NewStyle().Background(theme.LG(theme.BgPanel)).Foreground(theme.LG(theme.TextDim)).Render(hint) +
+		edge.Render(strings.Repeat("─", maxInt(inner-1-hw, 0))+"╯")
+	out = append(out, panel.Render(" ")+bottom+panel.Render(" "))
 	return out
 }
 
@@ -606,7 +780,7 @@ func (m *Model) aiInsert(rs []rune) {
 func (m *Model) scrollAIPanel(delta int) {
 	s := m.aiS()
 	total := len(m.aiTranscript(m.actionsColumnWidth()))
-	maxScroll := total - aiGeom(m.h).transH
+	maxScroll := total - m.aiPanelGeom(m.actionsColumnWidth(), m.h).transH
 	if maxScroll < 0 {
 		maxScroll = 0
 	}
@@ -677,7 +851,7 @@ func (m *Model) handleAIPanelMouse(msg tea.MouseMsg) (tea.Cmd, bool) {
 	}
 	localX := msg.X - x0
 	width := m.actionsColumnWidth()
-	g := aiGeom(m.h)
+	g := m.aiPanelGeom(width, m.h)
 	switch {
 	case msg.Y >= g.transTop && msg.Y < g.transTop+g.transH:
 		lines := m.aiTranscript(width)
@@ -699,7 +873,7 @@ func (m *Model) handleAIPanelMouse(msg tea.MouseMsg) (tea.Cmd, bool) {
 			}
 		}
 		return nil, true
-	case !g.compact && msg.Y >= g.inputTop && msg.Y < g.inputTop+aiInputRows:
+	case !g.compact && msg.Y >= g.inputTop && msg.Y <= g.footerRow:
 		s.focused = true
 		s.caret = len(s.input)
 		return nil, true
@@ -719,13 +893,25 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 	case id == "clear-attach":
 		m.aiS().attachments = nil
 		return nil
+	case strings.HasPrefix(id, "suggest:"):
+		for _, sg := range aiSuggestions {
+			if "suggest:"+sg.id == id {
+				return m.aiSuggest(sg.prompt)
+			}
+		}
+		return nil
 	case strings.HasPrefix(id, "copy:"), strings.HasPrefix(id, "apply:"):
-		i, err := strconv.Atoi(id[strings.IndexByte(id, ':')+1:])
+		parts := strings.Split(id, ":")
+		i, err := strconv.Atoi(parts[1])
 		s := m.aiS()
 		if err != nil || i < 0 || i >= len(s.conv.Messages) {
 			return nil
 		}
-		code, ok := ai.FirstCodeBlock(s.conv.Messages[i].Text)
+		block := 0
+		if len(parts) > 2 {
+			block, _ = strconv.Atoi(parts[2])
+		}
+		code, ok := aiCodeBlock(s.conv.Messages[i].Text, block)
 		if !ok {
 			return nil
 		}
@@ -736,4 +922,35 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 		return m.proposeWholeFile(code, "chat code block")
 	}
 	return nil
+}
+
+// aiCodeBlock returns the n-th fenced code block of a message.
+func aiCodeBlock(text string, n int) (string, bool) {
+	lines := strings.Split(strings.ReplaceAll(text, "\r", ""), "\n")
+	k := -1
+	for i := 0; i < len(lines); i++ {
+		if !strings.HasPrefix(strings.TrimSpace(lines[i]), "```") {
+			continue
+		}
+		k++
+		var code []string
+		for i++; i < len(lines) && !strings.HasPrefix(strings.TrimSpace(lines[i]), "```"); i++ {
+			code = append(code, lines[i])
+		}
+		if k == n {
+			return strings.Join(code, "\n"), true
+		}
+	}
+	return "", false
+}
+
+// aiSuggest sends an empty-state suggestion, with the open file attached
+// when there is one.
+func (m *Model) aiSuggest(prompt string) tea.Cmd {
+	s := m.aiS()
+	if m.editor.Path() != "" && len(s.attachments) == 0 {
+		_ = m.aiAttachCurrent()
+	}
+	s.input, s.caret = []rune(prompt), len([]rune(prompt))
+	return m.submitAIInput()
 }
