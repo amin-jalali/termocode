@@ -6,6 +6,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // Style constants for buttons.
@@ -86,7 +88,7 @@ func (m Model) View() string {
 	}
 	return lipgloss.Place(m.w, m.h, lipgloss.Center, lipgloss.Center, box,
 		lipgloss.WithWhitespaceChars(" "),
-		lipgloss.WithWhitespaceForeground(lipgloss.Color("#1c1c1c")),
+		lipgloss.WithWhitespaceForeground(theme.LG(theme.BgEditor)),
 	)
 }
 
@@ -155,21 +157,38 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 // idiom — same panel bg, dim rim, hairline separators, soft selection
 // bar tint.
 var (
-	cmBoxBg      = lipgloss.Color("#262626")
-	cmBorderRim  = lipgloss.Color("#3a3a3a")
-	cmIconWarn   = lipgloss.Color("#e0a050") // amber for the ⚠ glyph
-	cmTextPri    = lipgloss.Color("#d0d0d0")
-	cmTextBody   = lipgloss.Color("#cccccc")
-	cmTextDim    = lipgloss.Color("#6c6c6c")
-	cmGuideColor = lipgloss.Color("#363636")
-	cmSubtitleFg = lipgloss.Color("#5a5a66")
-	cmSelBg      = lipgloss.Color("#1f4f63") // soft selection bar (matches settings)
-	cmSelFg      = lipgloss.Color("#ffffff")
-	// Destructive / primary tints are kept softer than the previous
-	// solid VSCode blues so they harmonise with the muted panel bg.
-	cmPrimaryBg     = lipgloss.Color("#0e639c")
-	cmDestructiveBg = lipgloss.Color("#a04030")
+	cmBoxBg lipgloss.Color
+	cmBorderRim lipgloss.Color
+	cmIconWarn lipgloss.Color
+	cmTextPri lipgloss.Color
+	cmTextBody lipgloss.Color
+	cmTextDim lipgloss.Color
+	cmGuideColor lipgloss.Color
+	cmSubtitleFg lipgloss.Color
+	cmSelBg lipgloss.Color
+	cmSelFg lipgloss.Color
+	cmPrimaryBg lipgloss.Color
+	cmDestructiveBg lipgloss.Color
 )
+
+func init() { refreshColors() }
+
+// refreshColors derives this file's colours from the active theme. It runs
+// before every render so a theme switch applies immediately.
+func refreshColors() {
+	cmBoxBg = theme.Float().Bg
+	cmBorderRim = theme.Float().Border
+	cmIconWarn = theme.LG(theme.DiagWarning) // amber for the ⚠ glyph
+	cmTextPri = theme.Float().Title
+	cmTextBody = theme.Float().Text
+	cmTextDim = theme.Float().Dim
+	cmGuideColor = theme.Float().Hairline
+	cmSubtitleFg = theme.Float().Dim
+	cmSelBg = theme.Float().SelBg // soft selection bar (matches settings)
+	cmSelFg = theme.Float().SelFg
+	cmPrimaryBg = theme.Float().Primary
+	cmDestructiveBg = theme.Float().DangerBg
+}
 
 // confirmDims captures every measurement Box() needs in one place, so
 // that Box() and HandleMouse() can both compute the same layout from
@@ -234,15 +253,8 @@ func (m Model) layoutDims() confirmDims {
 
 	// Footer spacer (3..12) — same shape as settings_modal.Box().
 	// Content rows so far: 1 header + 1 hairline + 1 blank + body + 1 blank + 1 buttons.
-	contentH := 1 + 1 + 1 + len(bodyLines) + 1 + 1
-	desiredH := m.h * 80 / 100
-	footerSpacer := desiredH - contentH - 3
-	if footerSpacer < 3 {
-		footerSpacer = 3
-	}
-	if footerSpacer > 12 {
-		footerSpacer = 12
-	}
+	// The card is sized to its content: one blank row before the footer.
+	footerSpacer := 1
 
 	return confirmDims{
 		boxW:         boxW,
@@ -293,6 +305,7 @@ func (m Model) computeRects() (boxRect rect, buttonRects []rect) {
 // conventions as the Settings modal: width band + auto-fit height +
 // flexible footer spacer.
 func (m Model) Box() string {
+	refreshColors()
 	if m.w <= 0 || m.h <= 0 {
 		return ""
 	}
@@ -301,7 +314,14 @@ func (m Model) Box() string {
 	innerW := dims.boxW - 2
 
 	bgFill := lipgloss.NewStyle().Background(cmBoxBg)
-	headerIcon := lipgloss.NewStyle().Background(cmBoxBg).Foreground(cmIconWarn).Bold(true).Render("⚠")
+	warn := "⚠"
+	switch theme.CurrentIconMode {
+	case theme.IconModeNerdFont:
+		warn = "\uf071" // nf-fa-warning
+	case theme.IconModeASCII:
+		warn = "!"
+	}
+	headerIcon := lipgloss.NewStyle().Background(cmBoxBg).Foreground(cmIconWarn).Bold(true).Render(warn)
 	headerTitle := lipgloss.NewStyle().Background(cmBoxBg).Foreground(cmTextPri).Bold(true).Render(" " + m.title)
 	bodyStyle := lipgloss.NewStyle().Background(cmBoxBg).Foreground(cmTextBody)
 	separatorStyle := lipgloss.NewStyle().Background(cmBoxBg).Foreground(cmGuideColor)
@@ -325,7 +345,7 @@ func (m Model) Box() string {
 	rows = append(rows, padBg(left, innerW))
 
 	// Top hairline separator.
-	rows = append(rows, separatorStyle.Render(strings.Repeat("─", innerW)))
+	rows = append(rows, theme.Hairline(innerW, theme.BgFloat))
 
 	// Body — wrap message into innerW-4 columns so it has 2 cells of
 	// breathing room either side. Multi-line preserved.
@@ -351,18 +371,13 @@ func (m Model) Box() string {
 
 	// Bottom hairline separator + footer key-hints.
 	rows = append(rows, separatorStyle.Render(strings.Repeat("─", innerW)))
-	footer := footerStyle.Render("←→ Move    ↵ Select    Esc Cancel")
+	_ = footerStyle
+	footer := theme.HintBar(cmBoxBg, "←→", "move", "enter", "select", "esc", "cancel")
 	rows = append(rows, padBg(bgFill.Render("  ")+footer, innerW))
 
 	content := lipgloss.JoinVertical(lipgloss.Left, rows...)
 	// Height intentionally NOT set — auto-fit to content rows.
-	border := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(cmBorderRim).
-		BorderBackground(cmBoxBg).
-		Background(cmBoxBg).
-		Width(dims.boxW)
-	return border.Render(content)
+	return theme.FloatBox(content, dims.boxW+2)
 }
 
 // renderButtonsRow lays out all buttons centered within `w` cells. The
@@ -406,40 +421,25 @@ func (m Model) buttonLabel(b Button) string {
 // (default → panel bg, primary → cmPrimaryBg, destructive → cmDestructiveBg).
 func (m Model) renderButton(b Button, active bool) string {
 	label := "  " + b.Title + "  "
-
+	f := theme.Float()
 	if active {
-		// Active button — selection bar. Style-tint shows through as the
-		// fg accent so the user can still distinguish destructive vs
-		// primary even when highlighted.
-		fg := cmSelFg
-		switch b.Style {
-		case StyleDestructive:
-			fg = lipgloss.Color("#ffd0c4")
-		case StylePrimary:
-			fg = lipgloss.Color("#cce6f4")
+		// The focused button is a solid fill: accent for primary / plain,
+		// red for destructive.
+		bg := cmPrimaryBg
+		if b.Style == StyleDestructive {
+			bg = theme.LG(theme.DiagError)
 		}
-		return lipgloss.NewStyle().
-			Background(cmSelBg).
-			Foreground(fg).
-			Bold(true).
-			Render(label)
+		return lipgloss.NewStyle().Background(bg).Foreground(theme.LG(theme.OnAccent)).Bold(true).Render(label)
 	}
-
-	// Inactive — keep the accent bg, just less prominent than before.
-	bg := cmBoxBg
+	// Resting buttons are quiet chips; the label colour hints the role.
 	fg := cmTextPri
 	switch b.Style {
 	case StylePrimary:
-		bg = cmPrimaryBg
-		fg = lipgloss.Color("#ffffff")
+		fg = f.Primary
 	case StyleDestructive:
-		bg = cmDestructiveBg
-		fg = lipgloss.Color("#ffffff")
-	default:
-		bg = lipgloss.Color("#3a3a3a")
-		fg = lipgloss.Color("#cccccc")
+		fg = f.Danger
 	}
-	return lipgloss.NewStyle().Background(bg).Foreground(fg).Render(label)
+	return lipgloss.NewStyle().Background(f.KeycapBg).Foreground(fg).Render(label)
 }
 
 // wrap is a minimal word wrapper, preserving manual newlines.

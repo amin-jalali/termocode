@@ -132,6 +132,10 @@ func Report(checks []Check) string {
 	return b.String()
 }
 
+// HasNerdFont reports whether a Nerd Font is installed (fc-list). The
+// "icons: auto" setting uses it as a hint.
+func HasNerdFont() bool { return hasNerdFont() }
+
 func firstLine(s string) string {
 	if i := strings.IndexByte(s, '\n'); i >= 0 {
 		s = s[:i]

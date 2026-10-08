@@ -5,6 +5,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -108,14 +110,27 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 }
 
 var (
-	bgPanel    = lipgloss.Color("#1c1c1c")
-	bgHeader   = lipgloss.Color("#262626")
-	titleStyle = lipgloss.NewStyle().Background(bgHeader).Foreground(lipgloss.Color("#ffffff")).Bold(true)
-	hintStyle  = lipgloss.NewStyle().Background(bgHeader).Foreground(lipgloss.Color("#858585"))
-	bodyFill   = lipgloss.NewStyle().Background(bgPanel)
+	bgPanel lipgloss.Color
+	bgHeader lipgloss.Color
+	titleStyle lipgloss.Style
+	hintStyle lipgloss.Style
+	bodyFill lipgloss.Style
 )
 
+func init() { refreshColors() }
+
+// refreshColors derives this file's colours from the active theme. It runs
+// before every render so a theme switch applies immediately.
+func refreshColors() {
+	bgPanel = theme.LG(theme.BgEditor)
+	bgHeader = theme.LG(theme.BgSidebar)
+	titleStyle = lipgloss.NewStyle().Background(bgHeader).Foreground(theme.LG(theme.TextWhite)).Bold(true)
+	hintStyle = lipgloss.NewStyle().Background(bgHeader).Foreground(theme.LG(theme.TextMuted))
+	bodyFill = lipgloss.NewStyle().Background(bgPanel)
+}
+
 func (m Model) View() string {
+	refreshColors()
 	if m.w <= 0 || m.h <= 0 {
 		return ""
 	}

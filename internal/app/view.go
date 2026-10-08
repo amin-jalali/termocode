@@ -32,17 +32,22 @@ func (m Model) View() string {
 	if m.settingsModalOpen {
 		base := m.renderBase()
 		base = m.overlayToastsInEditor(base)
-		return modalOverlay(base, m.settingsModal.Box(), m.w, m.h, nil)
+		return modalOverlay(base, m.settingsModal.Box(), m.w, m.h, m.modalOpts())
 	}
 	if m.pickerOpen {
 		base := m.renderBase()
 		base = m.overlayToastsInEditor(base)
-		return modalOverlay(base, m.picker.Box(), m.w, m.h, nil)
+		o := m.overlayOpts()
+		bw, bh := m.picker.BoxSize()
+		o.At = true
+		o.X, o.Y = m.picker.Origin(bw, bh)
+		o.Slide = 2
+		return modalOverlay(base, m.picker.Box(), m.w, m.h, &o)
 	}
 	if m.recentsOpen {
 		base := m.renderBase()
 		base = m.overlayToastsInEditor(base)
-		return modalOverlay(base, m.recents.Box(), m.w, m.h, nil)
+		return modalOverlay(base, m.recents.Box(), m.w, m.h, m.modalOpts())
 	}
 	if m.previewOpen {
 		return m.preview.View()
@@ -53,12 +58,12 @@ func (m Model) View() string {
 	if m.promptOpen {
 		base := m.renderBase()
 		base = m.overlayToastsInEditor(base)
-		return modalOverlay(base, m.prompt.Box(), m.w, m.h, nil)
+		return modalOverlay(base, m.prompt.Box(), m.w, m.h, m.modalOpts())
 	}
 	if m.confirmOpen {
 		base := m.renderBase()
 		base = m.overlayToastsInEditor(base)
-		return modalOverlay(base, m.confirm.Box(), m.w, m.h, nil)
+		return modalOverlay(base, m.confirm.Box(), m.w, m.h, m.modalOpts())
 	}
 
 	base := m.renderBase()
@@ -76,222 +81,53 @@ func (m Model) View() string {
 	return base
 }
 
-// glassyMenuOverlay places the right-click menu over base and runs a
-// per-cell glass blend over the menu's panel cells (the body/selection
-// areas) so the menu feels like a translucent floating layer rather than
-// a solid drop. Border + accent cells stay crisp.
+// glassyMenuOverlay floats the right-click menu over base with a drop
+// shadow (no backdrop dim: a menu is a light-weight popup).
 func (m Model) glassyMenuOverlay(base string) string {
-	const alpha = 1.0 // fully opaque body — no editor bg bleeds through the menu
-	tint := rgbColor{0x00, 0x01, 0x03} // matches modalTint
-	panelBg := rgbColor{0x26, 0x26, 0x26}
-
 	mx, my, mw, mh := m.menu.Bounds()
 	if mw <= 0 || mh <= 0 {
-		recordError(fmt.Sprintf("[glass.menu] FALLBACK to plain Overlay — bounds=%d,%d,%d,%d", mx, my, mw, mh))
 		return m.menu.Overlay(base)
 	}
-
-	boxStr := m.menu.View()
-	boxLines := strings.Split(strings.TrimRight(boxStr, "\n"), "\n")
-	baseLines := strings.Split(base, "\n")
-
-	totalCells, blendedCells, skipNoBg, skipWrongBg, skipOutOfRange := 0, 0, 0, 0, 0
-	var sampleSGR, sampleBaseLine string
-	var minBaseCells, maxBaseCells int = 1 << 30, 0
-	for i, line := range boxLines {
-		row := my + i
-		if row < 0 || row >= len(baseLines) {
-			continue
-		}
-		baseCells := parseANSIRow(baseLines[row])
-		boxCells := parseANSIRow(line)
-		bcLen := len(baseCells)
-		if bcLen < minBaseCells {
-			minBaseCells = bcLen
-			if bcLen < mx+len(boxCells) && sampleBaseLine == "" && len(baseLines[row]) > 0 {
-				snip := baseLines[row]
-				if len(snip) > 200 {
-					snip = snip[:200]
-				}
-				sampleBaseLine = snip
-			}
-		}
-		if bcLen > maxBaseCells {
-			maxBaseCells = bcLen
-		}
-		for j := range boxCells {
-			totalCells++
-			ci := mx + j
-			if ci < 0 || ci >= len(baseCells) {
-				skipOutOfRange++
-				continue
-			}
-			cellBg, ok := extractBgRGB(boxCells[j].sgr)
-			if !ok {
-				skipNoBg++
-				if sampleSGR == "" {
-					sampleSGR = boxCells[j].sgr
-				}
-				continue
-			}
-			if cellBg != panelBg {
-				skipWrongBg++
-				continue
-			}
-			_ = cellBg
-			baseBg, baseOK := extractBgRGB(baseCells[ci].sgr)
-			if !baseOK {
-				continue
-			}
-			blendedBg := blendRGB(baseBg, tint, alpha)
-			if boxCells[j].glyph != " " && boxCells[j].glyph != "" {
-				boxCells[j].sgr = replaceBgRGB(boxCells[j].sgr, blendedBg)
-				continue
-			}
-			// Empty body cell: show the underlying ASCII glyph dimmed so
-			// editor text bleeds through. Non-ASCII glyphs masked with a
-			// space (they don't dim reliably).
-			if isPrintableASCII(baseCells[ci].glyph) {
-				baseFg, fgOK := extractFgRGB(baseCells[ci].sgr)
-				if !fgOK {
-					baseFg = textPrimaryFallback
-				}
-				boxCells[j].glyph = baseCells[ci].glyph
-				boxCells[j].sgr = makeFgBgSGR(dimRGB(baseFg, 0.20), blendedBg)
-			} else {
-				boxCells[j].glyph = " "
-				boxCells[j].sgr = makeFgBgSGR(rgbColor{}, blendedBg)
-			}
-			blendedCells++
-		}
-		baseLines[row] = spliceAt(baseLines[row], renderCells(boxCells), mx)
-	}
-	logMenuGlass(mx, my, mw, mh, totalCells, blendedCells, skipNoBg, skipWrongBg, sampleSGR)
-	return strings.Join(baseLines, "\n")
+	o := m.overlayOpts()
+	o.At, o.X, o.Y, o.NoDim, o.Slide = true, mx, my, true, 1
+	return modalOverlay(base, m.menu.View(), m.w, m.h, &o)
 }
 
-var lastMenuGlassKey string
-
-func logMenuGlass(mx, my, mw, mh, total, blended, noBg, wrongBg int, sample string) {
-	key := fmt.Sprintf("%d:%d:%d:%d:%d:%d:%d:%d", mx, my, mw, mh, total, blended, noBg, wrongBg)
-	if key == lastMenuGlassKey {
-		return
-	}
-	lastMenuGlassKey = key
-	recordError(fmt.Sprintf("[glass.menu] mx=%d my=%d mw=%d mh=%d total=%d blended=%d skipNoBg=%d skipWrongBg=%d sampleSGR=%q",
-		mx, my, mw, mh, total, blended, noBg, wrongBg, sample))
-}
-
-// overlayToastsInEditor positions toasts inside the code-text area:
-//   - left edge:  cs + 1   (cs = code-start = editorPaneStart + actualGutter)
-//   - right edge: cs + 0.8*(ce - cs)   (cs..ce = code-text width)
-//
-// Gutter width is queried from nvim (getwininfo().textoff) — the real
-// total of numberwidth + signcolumn + foldcolumn — instead of being
-// hardcoded; that way the toast alignment tracks whatever nvim is
-// actually painting (signs come and go with diagnostics).
+// overlayToastsInEditor stacks the toast cards in the bottom-right corner
+// of the editor pane, newest at the bottom. Each card slides in from the
+// right (and out again when it expires) while animations are on.
 func (m Model) overlayToastsInEditor(base string) string {
-	// Hot-path early exit: when no toasts are queued, there's nothing to
-	// overlay — and we'd otherwise pay a synchronous Lua RPC for
-	// queryGutterWidth + a strings.Split of the whole frame on every
-	// View() call (including every mouse drag event). Skipping when empty
-	// is what makes drag-select feel snappy.
+	// Hot path: nothing to do (and no frame split) without toasts.
 	if m.toast.Empty() {
 		return base
 	}
-	const codePadding = 1
 	edPaneW := m.w - activity.Width - editorScrollbarWidth - m.actionsColumnWidth()
 	if m.showExp {
 		edPaneW -= m.explorerWidth
 	}
 	editorStart := m.w - edPaneW - m.actionsColumnWidth()
-	gutter := m.queryGutterWidth() // real value from nvim, falls back to 7
-	cs := editorStart + gutter
-	ce := m.w - editorScrollbarWidth
-	codeWidth := ce - cs
-	toastLeft := cs + codePadding
-	toastRight := cs + (codeWidth*80)/100
-	toastW := toastRight - toastLeft
-	if toastW < 16 {
+	w := 52
+	if w > edPaneW-6 {
+		w = edPaneW - 6
+	}
+	if w < 24 {
 		return base
 	}
-	rows := m.toast.View(toastW, m.h)
-	if len(rows) == 0 {
-		return base
+	cards := m.toast.Cards(w)
+	x := editorStart + edPaneW - w - 2
+	y := m.h - 3 // the shadow row of the newest card sits just above the status bar
+	for i := len(cards) - 1; i >= 0; i-- {
+		c := cards[i]
+		y -= len(c.Lines)
+		if y < 1 {
+			break
+		}
+		o := ModalOpts{At: true, X: x, Y: y, NoDim: true, SlideX: w + 4,
+			Animating: c.Slide != 0, Progress: 1 - c.Slide}
+		base = modalOverlay(base, strings.Join(c.Lines, "\n"), m.w, m.h, &o)
+		y-- // gap row (holds the shadow of the card above)
 	}
-	logToastGeometry(m.w, m.h, edPaneW, m.showExp, m.explorerWidth, editorStart, gutter, cs, ce, toastLeft, toastRight, toastW)
-	// Glassify each toast row using the underlying base bg per cell so
-	// the toast reads as a translucent strip (same recipe as the modal
-	// body). Compute the row indices the way overlayToastsAt does.
-	baseLines := strings.Split(base, "\n")
-	const bottomMargin = 4
-	startRow := m.h - 1 - bottomMargin - len(rows)
-	if startRow < 0 {
-		startRow = 0
-	}
-	for i := range rows {
-		bi := startRow + i
-		if bi < 0 || bi >= len(baseLines) {
-			continue
-		}
-		rows[i] = glassifyToastRow(rows[i], baseLines[bi], toastLeft)
-	}
-	return overlayToastsAt(base, rows, toastLeft, m.h)
-}
-
-// glassifyToastRow gives the toast a real glass look by blending each
-// body cell's bg with the underlying base bg AND showing the underlying
-// ASCII glyph dimmed where the toast cell is empty. Without the glyph
-// passthrough the toast over a uniform editor surface produces uniform
-// blended cells — which reads as a solid card, not glass.
-//
-// The severity accent strip (bg != toast panel bg) and any non-space
-// content in the toast (label, title, detail text) pass through with
-// just the bg swapped, so the toast's own text stays crisp.
-func glassifyToastRow(toastRow, baseRow string, leftCol int) string {
-	const alpha = 0.99
-	tint := rgbColor{0x00, 0x01, 0x03} // matches modalTint
-	toastPanelBg := rgbColor{0x26, 0x26, 0x26}
-
-	tcells := parseANSIRow(toastRow)
-	bcells := parseANSIRow(baseRow)
-	for i := range tcells {
-		bi := leftCol + i
-		if bi < 0 || bi >= len(bcells) {
-			continue
-		}
-		toastBg, ok := extractBgRGB(tcells[i].sgr)
-		if !ok || toastBg != toastPanelBg {
-			continue
-		}
-		baseBg, baseOK := extractBgRGB(bcells[bi].sgr)
-		if !baseOK {
-			continue
-		}
-		blendedBg := blendRGB(baseBg, tint, alpha)
-		// Non-space toast cells (text glyphs) keep their glyph + fg,
-		// only their bg swaps to the blended one.
-		if tcells[i].glyph != " " && tcells[i].glyph != "" {
-			tcells[i].sgr = replaceBgRGB(tcells[i].sgr, blendedBg)
-			continue
-		}
-		// Empty body cell: show the underlying ASCII glyph dimmed so
-		// the editor's text bleeds through. Non-ASCII / wide / emoji
-		// underlying chars get masked with a space (they don't dim
-		// reliably and would pop bright).
-		if isPrintableASCII(bcells[bi].glyph) {
-			baseFg, fgOK := extractFgRGB(bcells[bi].sgr)
-			if !fgOK {
-				baseFg = textPrimaryFallback
-			}
-			tcells[i].glyph = bcells[bi].glyph
-			tcells[i].sgr = makeFgBgSGR(dimRGB(baseFg, 0.45), blendedBg)
-		} else {
-			tcells[i].glyph = " "
-			tcells[i].sgr = makeFgBgSGR(rgbColor{}, blendedBg)
-		}
-	}
-	return renderCells(tcells)
+	return base
 }
 
 // queryGutterWidth asks nvim for the actual gutter width via
@@ -349,62 +185,6 @@ var (
 	gutterCacheVal int
 	gutterCacheAt  time.Time
 )
-
-var lastToastGeomKey string
-
-func logToastGeometry(mw, mh, edPaneW int, showExp bool, explorerW, editorStart, gutter, cs, ce, tl, tr, tw int) {
-	key := fmt.Sprintf("%d:%d:%d:%v:%d:%d:%d:%d:%d:%d:%d:%d",
-		mw, mh, edPaneW, showExp, explorerW, editorStart, gutter, cs, ce, tl, tr, tw)
-	if key == lastToastGeomKey {
-		return
-	}
-	lastToastGeomKey = key
-	recordError(fmt.Sprintf(
-		"[toast.geom] m.w=%d m.h=%d edPaneW=%d showExp=%v explorerW=%d editorStart=%d gutter=%d cs=%d ce=%d toastLeft=%d toastRight=%d toastW=%d",
-		mw, mh, edPaneW, showExp, explorerW, editorStart, gutter, cs, ce, tl, tr, tw))
-}
-
-// overlayToastsAt splices toast rows into the base above the status bar,
-// inserting each toast row at column `leftCol` (cell-aligned). The base
-// content to the LEFT of leftCol is preserved; the base content from
-// leftCol+toastW onward is preserved too — the toast lives in the middle.
-func overlayToastsAt(base string, toasts []string, leftCol, height int) string {
-	if len(toasts) == 0 || height <= 0 {
-		return base
-	}
-	lines := strings.Split(base, "\n")
-	const bottomMargin = 4
-	startRow := height - 1 - bottomMargin - len(toasts)
-	if startRow < 0 {
-		startRow = 0
-	}
-	for i, t := range toasts {
-		row := startRow + i
-		if row >= len(lines) {
-			break
-		}
-		baseW := lipgloss.Width(lines[row])
-		toastW := lipgloss.Width(t)
-		spliced := spliceAt(lines[row], t, leftCol)
-		splicedW := lipgloss.Width(spliced)
-		logSpliceRow(i, row, leftCol, baseW, toastW, splicedW, len(lines[row]), len(t), len(spliced))
-		lines[row] = spliced
-	}
-	return strings.Join(lines, "\n")
-}
-
-var lastSpliceLogKey string
-
-func logSpliceRow(toastIdx, row, leftCol, baseW, toastW, splicedW, baseBytes, toastBytes, splicedBytes int) {
-	key := fmt.Sprintf("%d:%d:%d:%d:%d:%d", toastIdx, leftCol, baseW, toastW, splicedW, baseBytes)
-	if key == lastSpliceLogKey {
-		return
-	}
-	lastSpliceLogKey = key
-	recordError(fmt.Sprintf(
-		"[toast.splice] toastIdx=%d row=%d leftCol=%d baseW=%d toastW=%d splicedW=%d baseBytes=%d toastBytes=%d splicedBytes=%d",
-		toastIdx, row, leftCol, baseW, toastW, splicedW, baseBytes, toastBytes, splicedBytes))
-}
 
 // spliceAt overlays `mid` onto `base` starting at the leftCol-th visible
 // cell, preserving base on both sides. lipgloss.Width(mid) cells of base
@@ -538,6 +318,7 @@ func truncRightVisual(s string, cells int) string {
 // has a single ▕ in BorderDefault. Each component renders strictly
 // inside its column width so there are no overlaps.
 func (m Model) renderBase() string {
+	refreshSidebarColors()
 	bodyH := m.h - 1
 	if bodyH < 1 {
 		bodyH = 1
@@ -742,53 +523,6 @@ func (m Model) overlayActionsLauncher(base string) string {
 	return strings.Join(lines, "\n")
 }
 
-// glassifyFindBarRow gives the find panel a real glass look by blending
-// each panel-bg cell with the underlying base bg AND showing the underlying
-// ASCII glyph dimmed where the panel cell is empty. Same recipe as
-// glassifyToastRow / glassyMenuOverlay; only the panel bg differs.
-//
-// The drop-shadow row uses ShadowBg (not PanelBg) and is left untouched —
-// stays solid so it still reads as a lifted-card shadow.
-func glassifyFindBarRow(panelRow, baseRow string, leftCol int) string {
-	const alpha = 0.95
-	tint := rgbColor{0x00, 0x01, 0x03} // matches modalTint
-	findPanelBg := rgbColor{0x20, 0x20, 0x22}
-
-	pcells := parseANSIRow(panelRow)
-	bcells := parseANSIRow(baseRow)
-	for i := range pcells {
-		bi := leftCol + i
-		if bi < 0 || bi >= len(bcells) {
-			continue
-		}
-		cellBg, ok := extractBgRGB(pcells[i].sgr)
-		if !ok || cellBg != findPanelBg {
-			continue
-		}
-		baseBg, baseOK := extractBgRGB(bcells[bi].sgr)
-		if !baseOK {
-			continue
-		}
-		blendedBg := blendRGB(baseBg, tint, alpha)
-		if pcells[i].glyph != " " && pcells[i].glyph != "" {
-			pcells[i].sgr = replaceBgRGB(pcells[i].sgr, blendedBg)
-			continue
-		}
-		if isPrintableASCII(bcells[bi].glyph) {
-			baseFg, fgOK := extractFgRGB(bcells[bi].sgr)
-			if !fgOK {
-				baseFg = textPrimaryFallback
-			}
-			pcells[i].glyph = bcells[bi].glyph
-			pcells[i].sgr = makeFgBgSGR(dimRGB(baseFg, 0.45), blendedBg)
-		} else {
-			pcells[i].glyph = " "
-			pcells[i].sgr = makeFgBgSGR(rgbColor{}, blendedBg)
-		}
-	}
-	return renderCells(pcells)
-}
-
 // overlayFindBarInEditor splices the compact floating find panel onto the
 // top-right of the editor pane, leaving the editor content under it intact
 // (the chrome above — tabs and breadcrumbs — is NOT covered). Modeled on
@@ -850,7 +584,7 @@ func (m Model) overlayFindBarInEditor(base string) string {
 		if row < 0 || row >= len(baseLines) {
 			continue
 		}
-		glassed := glassifyFindBarRow(pline, baseLines[row], leftCol)
+		glassed := pline
 		baseLines[row] = spliceAt(baseLines[row], glassed, leftCol)
 	}
 	return strings.Join(baseLines, "\n")
@@ -1014,9 +748,12 @@ func (m Model) renderBreadcrumbs(width int) string {
 	if width <= 0 {
 		return ""
 	}
-	bg := theme.Bg(theme.BgHover)
-	seg := theme.FgBg(theme.BorderDefault, theme.BgHover).Italic(true).Faint(true)
-	sep := theme.FgBg(theme.BorderDefault, theme.BgHover).Faint(true)
+	// Quiet path trail on the editor surface: folders dim, the file name
+	// (with its type icon) one step brighter.
+	bg := theme.Bg(theme.BgEditor)
+	seg := theme.FgBg(theme.TextDim, theme.BgEditor)
+	last := theme.FgBg(theme.TextSecondary, theme.BgEditor)
+	sep := theme.FgBg(theme.TextDimmer, theme.BgEditor)
 
 	bcArea := width
 
@@ -1028,6 +765,14 @@ func (m Model) renderBreadcrumbs(width int) string {
 		for i, s := range segs {
 			if i > 0 {
 				b.WriteString(sep.Render(" › "))
+			}
+			if i == len(segs)-1 {
+				if theme.CurrentIconMode != theme.IconModeASCII {
+					g, c := theme.FileIconFor(s, false, false)
+					b.WriteString(theme.FgBg(c, theme.BgEditor).Render(g) + bg.Render(" "))
+				}
+				b.WriteString(last.Render(s))
+				continue
 			}
 			b.WriteString(seg.Render(s))
 		}
@@ -1072,9 +817,9 @@ func renderSignature(sig string) string {
 	// Faint(true) emits SGR 2 — most terminals render that with a thinner
 	// weight, approximating a smaller font without actually changing the
 	// per-cell font size (which terminals don't support).
-	kwStyle := theme.FgBg(theme.SyntaxKeyword, theme.BgHover).Faint(true)
-	nameStyle := theme.FgBg(theme.SyntaxFunction, theme.BgHover).Faint(true)
-	restStyle := theme.FgBg(theme.TextPrimary, theme.BgHover).Faint(true)
+	kwStyle := theme.FgBg(theme.SyntaxKeyword, theme.BgEditor).Faint(true)
+	nameStyle := theme.FgBg(theme.SyntaxFunction, theme.BgEditor).Faint(true)
+	restStyle := theme.FgBg(theme.TextPrimary, theme.BgEditor).Faint(true)
 	keywords := []string{"func ", "class ", "def ", "interface ", "type ", "impl ", "struct ", "fn "}
 	for _, kw := range keywords {
 		if strings.HasPrefix(sig, kw) {
@@ -1134,13 +879,13 @@ func (m Model) renderStickyScroll(width int) string {
 // renderEditorScrollbar returns a height-tall, 1-column overview ruler. It
 // renders in three layers (lowest priority first):
 //
-//   1. Track: a dim │ on BgEditor for every row.
-//   2. Git markers (TODO v1: stubbed — git change line numbers aren't yet
-//      threaded through to the editor model).
-//   3. Diagnostic markers (TODO v1: stubbed — only counts are exposed today;
-//      per-line locations would require a separate Lua fetch).
-//   4. Thumb: a bright █ block sized proportionally to viewport / total
-//      lines, positioned by m.editor.Cursor().Line / m.editor.LineCount().
+//  1. Track: a dim │ on BgEditor for every row.
+//  2. Git markers (TODO v1: stubbed — git change line numbers aren't yet
+//     threaded through to the editor model).
+//  3. Diagnostic markers (TODO v1: stubbed — only counts are exposed today;
+//     per-line locations would require a separate Lua fetch).
+//  4. Thumb: a bright █ block sized proportionally to viewport / total
+//     lines, positioned by m.editor.Cursor().Line / m.editor.LineCount().
 //
 // When the editor has no buffer (LineCount == 0) we just render the track —
 // no thumb, no markers.
@@ -1258,7 +1003,7 @@ func (m Model) renderSidebar(h int) string {
 }
 
 func sidebarDivider(h int) string {
-	style := lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#444444"))
+	style := lipgloss.NewStyle().Background(sidebarBg).Foreground(theme.LG(theme.BorderSubtle))
 	cell := style.Render("▕")
 	var lines []string
 	for i := 0; i < h; i++ {
@@ -1322,16 +1067,33 @@ func sidebarHeader(w int, label, project string) string {
 	return left + fill.Render(strings.Repeat(" ", gap)) + right
 }
 
+// Sidebar colours: derived from theme tokens on every frame (refreshSidebarColors
+// runs from renderBase), so a theme switch recolours Source Control at once.
 var (
-	sidebarBg      = lipgloss.Color("#303030")
-	sidebarFill    = lipgloss.NewStyle().Background(sidebarBg)
-	gitTitleStyle  = lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#cccccc")).Bold(true)
-	gitBranchStyle = lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#858585"))
-	gitNameStyle   = lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#cccccc"))
-	gitDirStyle    = lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#858585"))
-	gitCursorBlur  = lipgloss.NewStyle().Background(lipgloss.Color("#2a2d2e")).Foreground(lipgloss.Color("#d0d0d0"))
-	gitCursorFocus = lipgloss.NewStyle().Background(lipgloss.Color("#0087d7")).Foreground(lipgloss.Color("#ffffff"))
+	sidebarBg      lipgloss.Color
+	sidebarFill    lipgloss.Style
+	gitTitleStyle  lipgloss.Style
+	gitBranchStyle lipgloss.Style
+	gitNameStyle   lipgloss.Style
+	gitDirStyle    lipgloss.Style
+	gitCursorBlur  lipgloss.Style
+	gitCursorFocus lipgloss.Style
 )
+
+func init() { refreshSidebarColors() }
+
+func refreshSidebarColors() {
+	sidebarBg = theme.LG(theme.BgSidebar)
+	sidebarFill = lipgloss.NewStyle().Background(sidebarBg)
+	gitTitleStyle = lipgloss.NewStyle().Background(sidebarBg).Foreground(theme.LG(theme.TextPrimary)).Bold(true)
+	gitBranchStyle = lipgloss.NewStyle().Background(sidebarBg).Foreground(theme.LG(theme.TextMuted))
+	gitNameStyle = lipgloss.NewStyle().Background(sidebarBg).Foreground(theme.LG(theme.TextPrimary))
+	gitDirStyle = lipgloss.NewStyle().Background(sidebarBg).Foreground(theme.LG(theme.TextMuted))
+	gitCursorBlur = lipgloss.NewStyle().Background(theme.Mix(theme.BgSidebar, theme.BorderFocus, 0.10)).Foreground(theme.LG(theme.TextPrimary))
+	gitCursorFocus = lipgloss.NewStyle().Background(theme.LG(theme.BorderFocus)).Foreground(theme.LG(theme.OnAccent))
+	refreshGitGraphColors()
+	refreshCommitBoxColors()
+}
 
 func (m Model) renderGitSidebar(w, h int) string {
 	if !m.gitIsRepo {
@@ -1349,6 +1111,7 @@ func (m Model) renderGitSidebar(w, h int) string {
 	header = append(header, renderGitSubheader(m.gitBranch, m.gitViewTree, w))
 	header = append(header, sidebarFill.Render(strings.Repeat(" ", w)))
 	header = append(header, m.renderGitCommitBox(w))
+	header = append(header, sidebarFill.Render(strings.Repeat(" ", w)))
 	header = append(header, m.renderGitActionBar(w))
 	header = append(header, sidebarFill.Render(strings.Repeat(" ", w)))
 
@@ -1429,8 +1192,8 @@ func sidebarHoverLineBg(line string) string {
 	if strings.TrimSpace(ansi.Strip(line)) == "" {
 		return line
 	}
-	from := rgbColor{0x30, 0x30, 0x30} // sidebarBg #303030
-	to := rgbColor{0x2c, 0x31, 0x36}   // VSCode list.hoverBackground-ish
+	from := theme.ToRGB(theme.BgSidebar)
+	to := theme.Lerp(from, theme.ToRGB(theme.BorderFocus), 0.07)
 	cells := parseANSIRow(line)
 	for i := range cells {
 		if bg, ok := extractBgRGB(cells[i].sgr); ok && bg == from {
@@ -1490,15 +1253,15 @@ func renderGitFile(f git.FileStatus, active, focused bool, w int) string {
 	}
 
 	bgC := gitSelBg(active, focused)
-	fgName := lipgloss.Color("#cccccc")
-	fgDir := lipgloss.Color("#858585")
+	fgName := theme.LG(theme.TextPrimary)
+	fgDir := theme.LG(theme.TextMuted)
 	fgStatus := statusFG
 	if active {
-		fgName = lipgloss.Color("#d6d6d6")
-		fgDir = lipgloss.Color("#9aa6ad")
+		fgName = theme.Mix(theme.TextPrimary, theme.TextWhite, 0.5)
+		fgDir = theme.LG(theme.TextSecondary)
 		if focused {
-			fgName = lipgloss.Color("#ffffff")
-			fgDir = lipgloss.Color("#a9c7e0")
+			fgName = theme.LG(theme.TextWhite)
+			fgDir = theme.Mix(theme.TextSecondary, theme.BorderFocus, 0.3)
 		}
 	}
 
@@ -1564,11 +1327,22 @@ func gitViewToggleGlyph(viewTree bool) string {
 // title, mirroring the file-explorer's "E X P L O R E R" header. Falls back to
 // the plain title when the panel is too narrow for the spaced form.
 func renderGitTitleRow(w int) string {
-	spaced := " " + letterSpace("SOURCE CONTROL")
-	if runewidth.StringWidth(spaced) > w {
-		spaced = " SOURCE CONTROL"
+	return sidebarTitle("SOURCE CONTROL", w)
+}
+
+// sidebarTitle is the title row of a side panel: plain caps (no letter
+// spacing, so long titles fit), bold, in a dimmed accent, with a two-cell
+// margin. Exactly w cells.
+func sidebarTitle(label string, w int) string {
+	if w <= 0 {
+		return ""
 	}
-	return padBgToWidth(gitTitleStyle.Render(spaced), w)
+	if max := w - 3; runewidth.StringWidth(label) > max && max > 0 {
+		label = runewidth.Truncate(label, max, "…")
+	}
+	st := lipgloss.NewStyle().Background(theme.LG(theme.BgSidebar)).
+		Foreground(theme.Mix(theme.TextSecondary, theme.BorderFocus, 0.35)).Bold(true)
+	return padBgToWidth(theme.Bg(theme.BgSidebar).Render("  ")+st.Render(label), w)
 }
 
 // renderGitHairline draws the 1/8-block underline beneath the title — the same
@@ -1579,7 +1353,7 @@ func renderGitHairline(w int) string {
 	}
 	return lipgloss.NewStyle().
 		Background(sidebarBg).
-		Foreground(lipgloss.Color("#454545")).
+		Foreground(theme.LG(theme.BorderSubtle)).
 		Render(strings.Repeat("▔", w))
 }
 
@@ -1589,10 +1363,10 @@ func renderGitHairline(w int) string {
 // (right) under the hairline — the row the mouse hit-tests for the toggle.
 func renderGitSubheader(b git.Branch, viewTree bool, w int) string {
 	rowStyle := lipgloss.NewStyle().Background(sidebarBg)
-	branchStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#6fd0bd")).Bold(true)
-	aheadStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#73c991"))
-	behindStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#e2c08d"))
-	on := lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#4ec9e0")).Bold(true)
+	branchStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(theme.LG(theme.AccentBlue)).Bold(true)
+	aheadStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(theme.LG(theme.GitAdded))
+	behindStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(theme.LG(theme.GitModified))
+	on := lipgloss.NewStyle().Background(sidebarBg).Foreground(theme.LG(theme.AccentBlue)).Bold(true)
 
 	toggleGlyph := gitViewToggleGlyph(viewTree)
 	toggle := on.Render(toggleGlyph)
@@ -1650,12 +1424,12 @@ func renderGitSubheader(b git.Branch, viewTree bool, w int) string {
 // shared by the tree dir and file rows so they highlight identically.
 func gitRowColors(active, focused bool, statusFG lipgloss.Color) (bg, name, status lipgloss.Color) {
 	bg = gitSelBg(active, focused)
-	name = lipgloss.Color("#cccccc")
+	name = theme.LG(theme.TextPrimary)
 	status = statusFG
 	if active {
-		name = lipgloss.Color("#d6d6d6")
+		name = theme.Mix(theme.TextPrimary, theme.TextWhite, 0.5)
 		if focused {
-			name = lipgloss.Color("#ffffff")
+			name = theme.LG(theme.TextWhite)
 		}
 	}
 	return bg, name, status
@@ -1667,9 +1441,9 @@ func gitRowColors(active, focused bool, statusFG lipgloss.Color) (bg, name, stat
 func gitSelBg(active, focused bool) lipgloss.Color {
 	switch {
 	case active && focused:
-		return lipgloss.Color("#1f2d36")
+		return theme.Mix(theme.BgSidebar, theme.BorderFocus, 0.20)
 	case active:
-		return lipgloss.Color("#2a2a2e")
+		return theme.Mix(theme.BgSidebar, theme.BorderFocus, 0.08)
 	default:
 		return sidebarBg
 	}
@@ -1679,7 +1453,7 @@ func gitSelBg(active, focused bool) lipgloss.Color {
 // focused cursor row, otherwise a blank in the row background.
 func gitLead(active, focused bool, bg lipgloss.Color) string {
 	if active && focused {
-		return lipgloss.NewStyle().Background(bg).Foreground(lipgloss.Color("#36a3d9")).Render("▌")
+		return lipgloss.NewStyle().Background(bg).Foreground(theme.LG(theme.BorderFocus)).Render("▌")
 	}
 	return lipgloss.NewStyle().Background(bg).Render(" ")
 }
@@ -1688,7 +1462,7 @@ func gitLead(active, focused bool, bg lipgloss.Color) string {
 // per nesting level, returning the written width so callers can budget the name.
 func gitTreeGuide(sb *strings.Builder, bg lipgloss.Color, depth int, active, focused bool) int {
 	rowStyle := lipgloss.NewStyle().Background(bg)
-	guideStyle := lipgloss.NewStyle().Background(bg).Foreground(lipgloss.Color("#46505a"))
+	guideStyle := lipgloss.NewStyle().Background(bg).Foreground(theme.Mix(theme.BgSidebar, theme.TextDimmer, 0.6))
 	sb.WriteString(gitLead(active, focused, bg))
 	width := 1
 	for d := 0; d < depth; d++ {
@@ -1702,11 +1476,11 @@ func gitTreeGuide(sb *strings.Builder, bg lipgloss.Color, depth int, active, foc
 // renderGitTreeDir renders a collapsible directory header row: indent guides,
 // an amber-when-open chevron, then the folder name in bold.
 func renderGitTreeDir(name string, depth int, expanded, active, focused bool, w int) string {
-	bg, fgName, _ := gitRowColors(active, focused, lipgloss.Color("#858585"))
+	bg, fgName, _ := gitRowColors(active, focused, theme.LG(theme.TextMuted))
 	rowStyle := lipgloss.NewStyle().Background(bg)
-	chev, chevFG := "▸", lipgloss.Color("#858585")
+	chev, chevFG := "▸", theme.LG(theme.TextMuted)
 	if expanded {
-		chev, chevFG = "▾", lipgloss.Color("#e2c08d")
+		chev, chevFG = "▾", theme.LG(theme.GitModified)
 	}
 	chevStyle := lipgloss.NewStyle().Background(bg).Foreground(chevFG)
 	nameStyle := lipgloss.NewStyle().Background(bg).Foreground(fgName).Bold(true)
@@ -1774,35 +1548,44 @@ func clampSidebarRow(row string, width, w int, rowStyle lipgloss.Style) string {
 // ── Accordion section + graph rows ──────────────────────────────────────────
 
 var (
-	gitLaneColor    = lipgloss.Color("#566270") // one clean dim slate for every lane/spine line
-	gitNodeColor    = lipgloss.Color("#7fb3d5") // a regular commit node ●
-	gitMergeColor   = lipgloss.Color("#c586c0") // a merge node (magenta ●)
-	gitHeadColor    = lipgloss.Color("#4ec9b0") // the HEAD node ◉
-	gitAgeColor     = lipgloss.Color("#6e7681") // dim relative timestamp
-	gitSubjectColor = lipgloss.Color("#c5c5c5")
+	gitLaneColor    lipgloss.Color
+	gitNodeColor    lipgloss.Color
+	gitMergeColor   lipgloss.Color
+	gitHeadColor    lipgloss.Color
+	gitAgeColor     lipgloss.Color
+	gitSubjectColor lipgloss.Color
 )
+
+func refreshGitGraphColors() {
+	gitLaneColor = theme.LG(theme.TextDimmer)     // one clean dim slate for every lane/spine line
+	gitNodeColor = theme.LG(theme.AccentBlue)     // a regular commit node ●
+	gitMergeColor = theme.LG(theme.AccentMagenta) // a merge node (magenta ●)
+	gitHeadColor = theme.LG(theme.AccentGreen)    // the HEAD node ◉
+	gitAgeColor = theme.LG(theme.TextDim)         // dim relative timestamp
+	gitSubjectColor = theme.LG(theme.TextPrimary)
+}
 
 // renderGitSectionHeader renders a collapsible accordion divider as a quiet
 // letter-spaced caption with a trailing count:
 //
-//	 C H A N G E S   4
+//	C H A N G E S   4
 //
 // Expanded sections show just the spaced label (clean); a collapsed one gets a
 // leading "▸" so the folded state is visible. The cursor row gets the accent
 // bar + subtle bg like every other row.
 func renderGitSectionHeader(label string, count int, hasCount, expanded, active, focused bool, w int) string {
 	bg := gitSelBg(active, focused)
-	chevFG := lipgloss.Color("#666c72")
-	labelFG := lipgloss.Color("#9aa3ac")
-	ruleFG := lipgloss.Color("#3a3d40")
-	chipBg, chipFG := lipgloss.Color("#2b3138"), lipgloss.Color("#8b97a1")
+	chevFG := theme.LG(theme.TextDim)
+	labelFG := theme.LG(theme.TextSecondary)
+	ruleFG := theme.LG(theme.BorderSubtle)
+	chipBg, chipFG := theme.Mix(theme.BgSidebar, theme.TextPrimary, 0.08), theme.LG(theme.TextMuted)
 	if active {
-		chevFG = lipgloss.Color("#9aa3ac")
-		labelFG = lipgloss.Color("#d6dee5")
-		ruleFG = lipgloss.Color("#4a4f55")
-		chipBg, chipFG = lipgloss.Color("#33424e"), lipgloss.Color("#bcd2e2")
+		chevFG = theme.LG(theme.TextSecondary)
+		labelFG = theme.LG(theme.TextPrimary)
+		ruleFG = theme.LG(theme.BorderDefault)
+		chipBg, chipFG = theme.Mix(theme.BgSidebar, theme.BorderFocus, 0.25), theme.LG(theme.TextWhite)
 		if focused {
-			labelFG = lipgloss.Color("#e8f0f6")
+			labelFG = theme.LG(theme.TextWhite)
 		}
 	}
 	rowStyle := lipgloss.NewStyle().Background(bg)
@@ -1913,7 +1696,7 @@ func renderGitArt(art, node string, nodeColor, bg lipgloss.Color) (string, int) 
 // colour-segmented rail — followed by an optional branch/tag pill, the clean
 // commit message (type prefix stripped), and a right-aligned relative age.
 func renderGitGraphCommit(r gitPanelRow, active, focused bool, w int) string {
-	bg, _, _ := gitRowColors(active, focused, lipgloss.Color("#858585"))
+	bg, _, _ := gitRowColors(active, focused, theme.LG(theme.TextMuted))
 	rowStyle := lipgloss.NewStyle().Background(bg)
 
 	// Ribbon colour: commit type, with HEAD (teal) and merge (magenta) overrides.
@@ -1931,11 +1714,11 @@ func renderGitGraphCommit(r gitPanelRow, active, focused bool, w int) string {
 
 	subjFG := gitSubjectColor
 	if r.isHead {
-		subjFG = lipgloss.Color("#eef4f8") // the current commit reads brightest
+		subjFG = theme.LG(theme.TextWhite) // the current commit reads brightest
 	}
 	subjStyle := lipgloss.NewStyle().Background(bg).Foreground(subjFG).Bold(r.isHead)
 	if active && focused {
-		subjStyle = subjStyle.Foreground(lipgloss.Color("#ffffff"))
+		subjStyle = subjStyle.Foreground(theme.LG(theme.TextWhite))
 	}
 	ageStyle := lipgloss.NewStyle().Background(bg).Foreground(gitAgeColor)
 
@@ -1999,23 +1782,23 @@ func gitStripCommitType(subject string) string {
 func gitCommitTypeColor(typ string) (lipgloss.Color, bool) {
 	switch typ {
 	case "feat":
-		return lipgloss.Color("#73c991"), true // green
+		return theme.LG(theme.GitAdded), true // green
 	case "fix":
-		return lipgloss.Color("#e2c08d"), true // amber
+		return theme.LG(theme.GitModified), true // amber
 	case "docs":
-		return lipgloss.Color("#569cd6"), true // blue
+		return theme.LG(theme.AccentBlue), true // blue
 	case "refactor":
-		return lipgloss.Color("#c586c0"), true // magenta
+		return theme.LG(theme.AccentMagenta), true // magenta
 	case "perf":
-		return lipgloss.Color("#4ec9b0"), true // teal
+		return theme.LG(theme.AccentGreen), true // teal
 	case "test":
-		return lipgloss.Color("#56b6c2"), true // cyan
+		return theme.LG(theme.SyntaxType), true // cyan
 	case "style":
-		return lipgloss.Color("#b5bd68"), true // olive
+		return theme.LG(theme.SyntaxString), true // olive
 	case "revert":
-		return lipgloss.Color("#f48771"), true // red-orange
+		return theme.LG(theme.AccentRedCoral), true // red-orange
 	case "chore", "ci", "build", "deps":
-		return lipgloss.Color("#8a949d"), true // muted
+		return theme.LG(theme.TextMuted), true // muted
 	}
 	return "", false
 }
@@ -2045,10 +1828,10 @@ func gitRefPill(refs string) string {
 	if r == "" {
 		return ""
 	}
-	pillBg, pillFG := lipgloss.Color("#234d36"), lipgloss.Color("#89d99b") // branch: green
+	pillBg, pillFG := theme.Mix(theme.BgSidebar, theme.GitAdded, 0.25), theme.LG(theme.GitAdded) // branch: green
 	if strings.HasPrefix(r, "tag:") {
 		r = strings.TrimSpace(strings.TrimPrefix(r, "tag:"))
-		pillBg, pillFG = lipgloss.Color("#4a3a1f"), lipgloss.Color("#e2c08d") // tag: amber
+		pillBg, pillFG = theme.Mix(theme.BgSidebar, theme.GitModified, 0.25), theme.LG(theme.GitModified) // tag: amber
 	}
 	if runewidth.StringWidth(r) > 12 {
 		r = runewidth.Truncate(r, 12, "…")
@@ -2081,7 +1864,7 @@ func leftEllipsize(s string, max int) string {
 // untracked files.
 func gitStatusDot(f git.FileStatus) (string, lipgloss.Color) {
 	if f.Untracked() {
-		return "○", lipgloss.Color("#73c991")
+		return "○", theme.LG(theme.GitAdded)
 	}
 	primary := byte(' ')
 	if len(f.Code) >= 1 && f.Code[0] != ' ' {
@@ -2091,17 +1874,17 @@ func gitStatusDot(f git.FileStatus) (string, lipgloss.Color) {
 	}
 	switch primary {
 	case 'M':
-		return "●", lipgloss.Color("#e2c08d")
+		return "●", theme.LG(theme.GitModified)
 	case 'A':
-		return "●", lipgloss.Color("#73c991")
+		return "●", theme.LG(theme.GitAdded)
 	case 'D':
-		return "●", lipgloss.Color("#f48771")
+		return "●", theme.LG(theme.AccentRedCoral)
 	case 'R':
-		return "●", lipgloss.Color("#569cd6")
+		return "●", theme.LG(theme.AccentBlue)
 	case 'C', 'U':
-		return "●", lipgloss.Color("#f44747")
+		return "●", theme.LG(theme.DiagError)
 	}
-	return "·", lipgloss.Color("#8c8c8c")
+	return "·", theme.LG(theme.TextMuted)
 }
 
 func padToWidth(s string, w int) string {
@@ -2129,8 +1912,8 @@ func padBgToWidth(s string, w int) string {
 }
 
 func placeholderSidebar(w, h int, title, body string) string {
-	titleStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#cccccc")).Bold(true)
-	bodyStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(lipgloss.Color("#858585"))
+	titleStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(theme.LG(theme.TextPrimary)).Bold(true)
+	bodyStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(theme.LG(theme.TextMuted))
 	content := titleStyle.Render(title) + "\n\n" + bodyStyle.Render(body)
 	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, content,
 		lipgloss.WithWhitespaceChars(" "),
@@ -2306,56 +2089,8 @@ func (m Model) overlayPreferredActionHint(base string) string {
 	if row < 0 || row >= len(lines) {
 		return base
 	}
-	// Glassify so the chip blends into the underlying editor cells (same
-	// bg-blend recipe as toasts / find bar).
-	body = glassifyHintRow(body, lines[row], leftCol)
 	lines[row] = spliceAt(lines[row], body, leftCol)
 	return strings.Join(lines, "\n")
-}
-
-// glassifyHintRow blends each panel-bg cell of the hint row with the
-// underlying base row so the chip reads as a translucent strip rather than
-// a solid block, matching the find bar / toast recipe.
-func glassifyHintRow(panelRow, baseRow string, leftCol int) string {
-	const alpha = 0.92
-	tint := rgbColor{0x00, 0x01, 0x03}
-	// theme.BgPanel resolves to a 256-color index; we accept whatever the
-	// active theme produced and just blend the cells whose bg is the
-	// dominant chip bg. extractBgRGB returns false for cells whose bg
-	// can't be parsed as truecolor — we leave those alone.
-	pcells := parseANSIRow(panelRow)
-	bcells := parseANSIRow(baseRow)
-	for i := range pcells {
-		bi := leftCol + i
-		if bi < 0 || bi >= len(bcells) {
-			continue
-		}
-		_, ok := extractBgRGB(pcells[i].sgr)
-		if !ok {
-			continue
-		}
-		baseBg, baseOK := extractBgRGB(bcells[bi].sgr)
-		if !baseOK {
-			continue
-		}
-		blendedBg := blendRGB(baseBg, tint, alpha)
-		if pcells[i].glyph != " " && pcells[i].glyph != "" {
-			pcells[i].sgr = replaceBgRGB(pcells[i].sgr, blendedBg)
-			continue
-		}
-		if isPrintableASCII(bcells[bi].glyph) {
-			baseFg, fgOK := extractFgRGB(bcells[bi].sgr)
-			if !fgOK {
-				baseFg = textPrimaryFallback
-			}
-			pcells[i].glyph = bcells[bi].glyph
-			pcells[i].sgr = makeFgBgSGR(dimRGB(baseFg, 0.45), blendedBg)
-		} else {
-			pcells[i].glyph = " "
-			pcells[i].sgr = makeFgBgSGR(rgbColor{}, blendedBg)
-		}
-	}
-	return renderCells(pcells)
 }
 
 // keyForAction walks the live keymap and returns the friendly-formatted

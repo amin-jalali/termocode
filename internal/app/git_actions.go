@@ -13,6 +13,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -561,13 +562,9 @@ func (m *Model) openGitDiscardConfirm() {
 // preview overlay (which renders pre-styled content as-is) shows additions
 // in green, removals in red, and hunk headers in cyan.
 func colorizeDiff(s string) string {
-	const (
-		reset = "\x1b[0m"
-		green = "\x1b[38;2;115;201;145m"
-		red   = "\x1b[38;2;199;78;57m"
-		cyan  = "\x1b[38;2;86;156;214m"
-		dim   = "\x1b[38;2;138;138;138m"
-	)
+	reset := "\x1b[0m"
+	green, red := theme.FgSeq(theme.GitAdded), theme.FgSeq(theme.GitDeleted)
+	cyan, dim := theme.FgSeq(theme.AccentBlue), theme.FgSeq(theme.TextMuted)
 	var b strings.Builder
 	for _, line := range strings.Split(s, "\n") {
 		switch {

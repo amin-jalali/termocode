@@ -5,6 +5,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // ReplaceNextMsg fires on Enter — replace the next match and advance.
@@ -123,23 +125,36 @@ func (m *Model) setValue(v string) {
 }
 
 var (
-	bgStyle    = lipgloss.NewStyle().Background(lipgloss.Color("#262626"))
-	labelStyle = lipgloss.NewStyle().
-			Background(lipgloss.Color("#3a3a3a")).
-			Foreground(lipgloss.Color("#dcdcaa")).
-			Bold(true)
-	inputStyle = lipgloss.NewStyle().
-			Background(lipgloss.Color("#1c1c1c")).
-			Foreground(lipgloss.Color("#ffffff"))
-	inputDim = lipgloss.NewStyle().
-			Background(lipgloss.Color("#1c1c1c")).
-			Foreground(lipgloss.Color("#9a9a9a"))
-	hintStyle = lipgloss.NewStyle().
-			Background(lipgloss.Color("#262626")).
-			Foreground(lipgloss.Color("#858585"))
+	bgStyle lipgloss.Style
+	labelStyle lipgloss.Style
+	inputStyle lipgloss.Style
+	inputDim lipgloss.Style
+	hintStyle lipgloss.Style
 )
 
+func init() { refreshColors() }
+
+// refreshColors derives this file's colours from the active theme. It runs
+// before every render so a theme switch applies immediately.
+func refreshColors() {
+	bgStyle = lipgloss.NewStyle().Background(theme.LG(theme.BgSidebar))
+	labelStyle = lipgloss.NewStyle().
+			Background(theme.LG(theme.BgKeycap)).
+			Foreground(theme.LG(theme.AccentAmber)).
+			Bold(true)
+	inputStyle = lipgloss.NewStyle().
+			Background(theme.LG(theme.BgEditor)).
+			Foreground(theme.LG(theme.TextWhite))
+	inputDim = lipgloss.NewStyle().
+			Background(theme.LG(theme.BgEditor)).
+			Foreground(theme.LG(theme.TextMuted))
+	hintStyle = lipgloss.NewStyle().
+			Background(theme.LG(theme.BgSidebar)).
+			Foreground(theme.LG(theme.TextMuted))
+}
+
 func (m Model) View() string {
+	refreshColors()
 	if m.w <= 0 {
 		return ""
 	}

@@ -17,6 +17,9 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `theme` | string | `vscode-dark-plus` | Color theme ID. Same as Preferences: Color Theme. |
+| `icons` | enum | `auto` | Icon set: nerd (Nerd Font glyphs), unicode (plain symbols), ascii, or auto (TERMOCODE_NERD_FONT / a Nerd Font found by the doctor, else a width probe picks unicode or ascii). TERMOCODE_ICON_MODE wins over it. |
+| `animations` | enum | `auto` | Overlay / toast / list animations: on, off, or auto (off over SSH and when the terminal is not truecolor). The editor text itself never animates. |
+| `images` | enum | `auto` | Inline images (image preview, dashboard logo, Markdown preview): kitty, sixel, blocks (coloured half-blocks, works everywhere with colour), off, or auto (probe the terminal; blocks inside tmux without allow-passthrough). |
 | `font_delta` | int | `-2` | Font size change asked of the host terminal at launch (OSC 1337); 0 turns it off. TERMOCODE_FONT_DELTA wins over it. |
 
 ## Editor

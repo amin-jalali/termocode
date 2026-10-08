@@ -222,6 +222,13 @@ func welcomeQuickActions() []quickAction {
 			action:   keymap.ActionToggleTerminal,
 		},
 		{
+			icon:     "~",
+			title:    "Open workspace",
+			subtitle: "recent folders",
+			iconTok:  theme.AccentLavender,
+			id:       welcomeCardWorkspace,
+		},
+		{
 			icon:     "↓",
 			title:    "Clone repository",
 			subtitle: "git clone, then open it",
@@ -271,7 +278,11 @@ func renderWelcomeFull(w, h, focusIdx int) (string, []welcomeRecentHit, []welcom
 	// ── 1. Logo + tagline ─────────────────────────────────────────────
 	logoStyle := theme.FgBg(theme.AccentBlue, theme.BgEditor).Bold(true)
 	tagStyle := theme.FgBg(theme.TextMuted, theme.BgEditor)
-	for _, b := range welcomeBanner(logoStyle, innerW) {
+	logo := welcomeLogo(innerW)
+	if logo == nil {
+		logo = welcomeBanner(logoStyle, innerW)
+	}
+	for _, b := range logo {
 		contentLines = append(contentLines, centerInWidth(b, innerW))
 	}
 	contentLines = append(contentLines, blank(innerW))
@@ -280,7 +291,13 @@ func renderWelcomeFull(w, h, focusIdx int) (string, []welcomeRecentHit, []welcom
 		tagline = spaceLetters(tagline)
 	}
 	contentLines = append(contentLines, centerInWidth(tagStyle.Render(tagline), innerW))
-	contentLines = append(contentLines, blank(innerW), blank(innerW), blank(innerW))
+	// A short lit rule under the hero.
+	if rw := lipgloss.Width(logo[0]); rw > 8 {
+		contentLines = append(contentLines, centerInWidth(heroRule(rw/2), innerW))
+	} else {
+		contentLines = append(contentLines, blank(innerW))
+	}
+	contentLines = append(contentLines, blank(innerW), blank(innerW))
 
 	// ── 2. START — 2×2 (or 1×4 on narrow) grid of action cards ────────
 	contentLines = append(contentLines, padRowToWidth(sectionHeader("START"), innerW, bgFill))
@@ -556,7 +573,8 @@ func buildActionGrid(actions []quickAction, innerW, lineOffset, focusIdx int, wi
 
 	bgFill := theme.Bg(theme.BgEditor)
 	dividerStyle := theme.FgBg(theme.BorderSubtle, theme.BgEditor)
-	vDivider := dividerStyle.Render("│")
+	// Cards are separate rounded tiles now; a blank column parts them.
+	vDivider := bgFill.Render(" ")
 	// The horizontal divider is one row of "─" characters spanning the
 	// full innerW; where the column boundary falls, we use a "┼" so the
 	// internal cross-divider reads as a continuous line.
@@ -661,38 +679,55 @@ func buildHDivider(innerW, cols, cardW int, style lipgloss.Style) string {
 // card body is tinted with BgHover and the title gets the AccentLavender
 // foreground so the active card visually pops.
 func renderActionCard(a quickAction, cardW, contentRows int, focused, showSubtitle bool) []string {
-	// Choose card background tier.
-	cardBgTok := theme.BgEditor
+	// A rounded tile: dim border at rest; on focus / hover the border
+	// takes the accent and the inside gets a soft accent wash.
+	cardBgC := theme.LG(theme.BgEditor)
+	borderC := theme.Mix(theme.BgEditor, theme.BorderDefault, 0.85)
 	if focused {
-		cardBgTok = theme.BgHover
+		cardBgC = theme.Mix(theme.BgEditor, theme.BorderFocus, 0.10)
+		borderC = theme.LG(theme.BorderFocus)
 	}
-	cardBg := theme.Bg(cardBgTok)
-
-	titleTok := theme.TextPrimary
+	cardBg := lipgloss.NewStyle().Background(cardBgC)
+	edge := lipgloss.NewStyle().Background(theme.LG(theme.BgEditor)).Foreground(borderC)
+	side := lipgloss.NewStyle().Background(cardBgC).Foreground(borderC)
+	// The focused tile's left edge becomes a solid accent strip — the
+	// focus stays visible even without colour.
+	leftEdge := side.Render("│")
 	if focused {
-		titleTok = theme.AccentLavender
+		leftEdge = side.Render("▌")
 	}
-	titleStyle := theme.FgBg(titleTok, cardBgTok).Bold(true)
-	subtitleStyle := theme.FgBg(theme.TextDim, cardBgTok)
-	iconStyle := theme.FgBg(a.iconTok, cardBgTok).Bold(true)
-	keycapStyle := theme.FgBg(theme.TextSecondary, theme.BgKeycap)
-	keycapEdge := theme.Bg(theme.BgKeycap)
 
-	innerPad := 2 // 2 cols of cardBg padding on each side
-	avail := cardW - innerPad*2
+	titleFg := theme.LG(theme.TextPrimary)
+	if focused {
+		titleFg = theme.LG(theme.TextWhite)
+	}
+	titleStyle := lipgloss.NewStyle().Background(cardBgC).Foreground(titleFg).Bold(true)
+	subtitleStyle := lipgloss.NewStyle().Background(cardBgC).Foreground(theme.LG(theme.TextDim))
+	iconStyle := lipgloss.NewStyle().Background(cardBgC).Foreground(theme.LG(a.iconTok)).Bold(true)
+	keycapStyle := lipgloss.NewStyle().Background(theme.Mix(theme.BgEditor, theme.TextPrimary, 0.10)).
+		Foreground(theme.LG(theme.TextSecondary))
+	keycapEdge := lipgloss.NewStyle().Background(theme.Mix(theme.BgEditor, theme.TextPrimary, 0.10))
+
+	if cardW < 6 {
+		pad := cardBg.Render(strings.Repeat(" ", cardW))
+		out := []string{pad, pad}
+		if showSubtitle && contentRows >= 2 {
+			out = append(out, pad)
+		}
+		return append(out, pad)
+	}
+	inner := cardW - 2
+	innerPad := 2
+	avail := inner - innerPad*2
 	if avail < 8 {
-		avail = cardW
-		innerPad = 0
+		avail, innerPad = inner, 0
 	}
-
-	// Icon: 1 visual cell + 2 cells of gap before title (3 cells total).
-	iconCells := 3
+	icon := welcomeCardIcon(a)
+	iconCells := runewidth.StringWidth(icon) + 2
 	keycapW := keycapWidth(a.shortcut)
 
-	// title row: " [icon][gap][title]              [keycap] "
 	titleAvail := avail - iconCells - keycapW - 1
 	if titleAvail < 4 {
-		// Pathological narrow card; collapse to title only.
 		titleAvail = avail - iconCells
 		if titleAvail < 1 {
 			titleAvail = 0
@@ -702,63 +737,143 @@ func renderActionCard(a quickAction, cardW, contentRows int, focused, showSubtit
 	if runewidth.StringWidth(title) > titleAvail && titleAvail > 1 {
 		title = runewidth.Truncate(title, titleAvail, "…")
 	}
-	titleW := runewidth.StringWidth(title)
-
-	// Build the title row. Focused cards reserve the leftmost padding
-	// cell for a thin "▌" bar in AccentLavender — a quiet "you are here"
-	// marker. UNfocused cards reserve the same cell as a card-bg-styled
-	// space so the column aligns AND the bg doesn't leak through to the
-	// editor surface behind it (the bug the user spotted: a bare `" "`
-	// has no styled bg, so the terminal default bg shows through).
-	focusBar := cardBg.Render(" ")
-	if focused && innerPad >= 1 {
-		focusBar = theme.FgBg(theme.AccentLavender, cardBgTok).Render("▌")
+	gap := avail - iconCells - runewidth.StringWidth(title) - keycapW
+	if gap < 1 {
+		gap = 1
 	}
-	leftPadStr := cardBg.Render(strings.Repeat(" ", innerPad-1))
-	if innerPad < 1 {
-		focusBar = ""
-		leftPadStr = ""
-	}
-	titleRowGap := avail - iconCells - titleW - keycapW
-	if titleRowGap < 1 {
-		titleRowGap = 1
-	}
-	titleRow := focusBar + leftPadStr +
-		iconStyle.Render(a.icon) + cardBg.Render("  ") +
+	titleRow := cardBg.Render(strings.Repeat(" ", innerPad)) +
+		iconStyle.Render(icon) + cardBg.Render("  ") +
 		titleStyle.Render(title) +
-		cardBg.Render(strings.Repeat(" ", titleRowGap)) +
-		renderKeycap(a.shortcut, keycapStyle, keycapEdge) +
-		cardBg.Render(strings.Repeat(" ", innerPad))
-	// Pad/trim to exact cardW.
-	titleRow = padRowToWidth(titleRow, cardW, cardBg)
+		cardBg.Render(strings.Repeat(" ", gap)) +
+		renderKeycap(a.shortcut, keycapStyle, keycapEdge)
+	titleRow = padRowToWidth(titleRow, inner, cardBg)
 
-	// Subtitle row: indented under the title.
-	var subRow string
+	out := []string{edge.Render("╭" + strings.Repeat("─", inner) + "╮")}
+	out = append(out, leftEdge+titleRow+side.Render("│"))
 	if showSubtitle && contentRows >= 2 {
 		sub := a.subtitle
 		subAvail := avail - iconCells
 		if runewidth.StringWidth(sub) > subAvail && subAvail > 1 {
 			sub = runewidth.Truncate(sub, subAvail, "…")
 		}
-		subW := runewidth.StringWidth(sub)
-		fill := avail - iconCells - subW
-		if fill < 0 {
-			fill = 0
-		}
-		subRow = cardBg.Render(strings.Repeat(" ", innerPad+iconCells)) +
-			subtitleStyle.Render(sub) +
-			cardBg.Render(strings.Repeat(" ", fill)) +
-			cardBg.Render(strings.Repeat(" ", innerPad))
-		subRow = padRowToWidth(subRow, cardW, cardBg)
+		subRow := cardBg.Render(strings.Repeat(" ", innerPad+iconCells)) + subtitleStyle.Render(sub)
+		out = append(out, leftEdge+padRowToWidth(subRow, inner, cardBg)+side.Render("│"))
 	}
-
-	pad := cardBg.Render(strings.Repeat(" ", cardW))
-	out := []string{pad, titleRow}
-	if showSubtitle && contentRows >= 2 {
-		out = append(out, subRow)
-	}
-	out = append(out, pad)
+	out = append(out, edge.Render("╰"+strings.Repeat("─", inner)+"╯"))
 	return out
+}
+
+// welcomeCardIcon picks the card glyph for the icon mode.
+func welcomeCardIcon(a quickAction) string {
+	if theme.CurrentIconMode != theme.IconModeNerdFont {
+		return a.icon
+	}
+	switch {
+	case a.id == welcomeCardClone:
+		return "\uf09b" // nf-fa-github
+	case a.id == welcomeCardWorkspace:
+		return "\uf07c" // nf-fa-folder_open
+	case a.action == keymap.ActionQuickOpen:
+		return "\uf15b" // nf-fa-file
+	case a.action == keymap.ActionCommandPalette:
+		return "\uf120" // nf-fa-terminal
+	case a.action == keymap.ActionWorkspaceSearch:
+		return "\uf002" // nf-fa-search
+	case a.action == keymap.ActionToggleTerminal:
+		return "\uf489" // nf-oct-terminal
+	}
+	return a.icon
+}
+
+// ─── Hero logo ─────────────────────────────────────────────────────────
+
+// logoGlyphs is a bold 5-pixel-high pixel font (2-pixel vertical stems)
+// for the letters of "TERMOCODE". Drawn with half blocks, one pixel is
+// half a cell tall and one cell wide, i.e. square.
+var logoGlyphs = map[rune][5]string{
+	'T': {"######", "  ##  ", "  ##  ", "  ##  ", "  ##  "},
+	'E': {"######", "##    ", "##### ", "##    ", "######"},
+	'R': {"##### ", "##  ##", "##### ", "## ## ", "##  ##"},
+	'M': {"##   ##", "### ###", "## # ##", "##   ##", "##   ##"},
+	'O': {" #### ", "##  ##", "##  ##", "##  ##", " #### "},
+	'C': {" #####", "##    ", "##    ", "##    ", " #####"},
+	'D': {"##### ", "##  ##", "##  ##", "##  ##", "##### "},
+}
+
+// logoPixels lays out text in the pixel font: 6 pixel rows (the last is
+// blank so the rows pair up into 3 cell rows).
+func logoPixels(text string, gap int) []string {
+	rows := make([]string, 6)
+	for i, r := range text {
+		g, ok := logoGlyphs[r]
+		if !ok {
+			continue
+		}
+		for y := 0; y < 5; y++ {
+			if i > 0 {
+				rows[y] += strings.Repeat(" ", gap)
+			}
+			rows[y] += g[y]
+		}
+	}
+	rows[5] = strings.Repeat(" ", len(rows[0]))
+	return rows
+}
+
+// welcomeLogo renders the hero wordmark with a horizontal accent
+// gradient (flat accent on terminals without truecolor). Returns nil when
+// it does not fit or the terminal is in ASCII icon mode (the plain ASCII
+// banner is used instead).
+func welcomeLogo(innerW int) []string {
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		return nil
+	}
+	var px []string
+	for _, gap := range []int{2, 1} {
+		px = logoPixels("TERMOCODE", gap)
+		if len(px[0]) <= innerW {
+			break
+		}
+	}
+	if len(px[0]) > innerW {
+		return nil
+	}
+	w := len(px[0])
+	stops := []theme.RGB{theme.ToRGB(theme.BorderFocus), theme.ToRGB(theme.AccentLavender), theme.ToRGB(theme.AccentMagenta)}
+	cols := theme.Gradient(w, stops...)
+	flat := !theme.TrueColor()
+	bg := theme.LG(theme.BgEditor)
+	out := make([]string, 0, 3)
+	for r := 0; r < 3; r++ {
+		var b strings.Builder
+		top, bot := px[2*r], px[2*r+1]
+		for x := 0; x < w; x++ {
+			t, u := top[x] == '#', bot[x] == '#'
+			g := " "
+			switch {
+			case t && u:
+				g = "█"
+			case t:
+				g = "▀"
+			case u:
+				g = "▄"
+			}
+			c := cols[x]
+			if flat {
+				c = stops[1]
+			}
+			b.WriteString(lipgloss.NewStyle().Background(bg).Foreground(c.LG()).Render(g))
+		}
+		out = append(out, b.String())
+	}
+	return out
+}
+
+// heroRule is a short gradient hairline that fades out at both ends.
+func heroRule(w int) string {
+	bg := theme.ToRGB(theme.BgEditor)
+	mid := theme.ToRGB(theme.AccentLavender)
+	return theme.GradientBar(w, "─", theme.BgEditor, bg, theme.ToRGB(theme.BorderFocus), mid, bg)
 }
 
 // keycapWidth is the rendered width of a shortcut chip including its

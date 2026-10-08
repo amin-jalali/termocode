@@ -6,6 +6,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
+
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // SubmitMsg is emitted when the user presses Enter.
@@ -186,29 +188,21 @@ func sanitizeInput(s string) string {
 	return string(b)
 }
 
-// Palette mirrors the Settings modal (see internal/app/settings_modal.go)
-// so every overlay in termocode shares the same visual idiom — same
-// panel bg, same rim, same hairline separators, same input bar tint.
-var (
-	pmBoxBg      = lipgloss.Color("#262626")
-	pmBorderRim  = lipgloss.Color("#3a3a3a")
-	pmIconBlue   = lipgloss.Color("#569cd6")
-	pmTextPri    = lipgloss.Color("#d0d0d0")
-	pmTextDim    = lipgloss.Color("#6c6c6c") // footer hints
-	pmGuideColor = lipgloss.Color("#363636") // hairline separators
-	pmSubtitleFg = lipgloss.Color("#5a5a66")
-	pmInputBg    = lipgloss.Color("#1f3447")
-	pmInputFg    = lipgloss.Color("#ffffff")
-	pmLabelFg    = lipgloss.Color("#9090a0")
-)
-
+// View renders the prompt card.
 func (m Model) View() string { return m.Box() }
 
-// Box renders the prompt modal: header (icon + title + faint subtitle),
-// hairline separator, label row, input row, spacer, hairline separator,
-// footer hints. Width capped in a comfortable band; height auto-fits to
-// content + flexible spacer so the footer hugs the bottom on tall
-// terminals without padding short ones.
+// Box renders the prompt as a compact floating card:
+//
+//	╭──────────────────────────────────────╮
+//	│  ❯ Title                     label   │
+//	│  ────────────────────                 │
+//	│  label                                │
+//	│  ▏ value                              │
+//	│                                       │
+//	│  enter submit   esc cancel            │
+//	╰──────────────────────────────────────╯
+//
+// Colours come from theme.Float(), shared with every floating card.
 func (m Model) Box() string {
 	if m.w <= 0 || m.h <= 0 {
 		return ""
@@ -221,107 +215,70 @@ func (m Model) Box() string {
 		boxW = 36
 	}
 	innerW := boxW - 2
+	f := theme.Float()
 
-	bgFill := lipgloss.NewStyle().Background(pmBoxBg)
-	inputBgFill := lipgloss.NewStyle().Background(pmInputBg)
-	inputStyle := lipgloss.NewStyle().Background(pmInputBg).Foreground(pmInputFg)
-	inputCursorStyle := lipgloss.NewStyle().Background(pmInputBg).Foreground(pmInputFg).Underline(true)
-	headerIcon := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmIconBlue).Bold(true).Render("›")
-	headerTitle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmTextPri).Bold(true).Render(" " + m.title)
-	subtitle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmSubtitleFg).Faint(true).Render(m.label)
-	labelStyle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmLabelFg)
-	separatorStyle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmGuideColor)
-	footerStyle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmTextDim)
+	bgFill := lipgloss.NewStyle().Background(f.Bg)
+	inputBgFill := lipgloss.NewStyle().Background(f.InputBg)
+	inputStyle := lipgloss.NewStyle().Background(f.InputBg).Foreground(f.InputFg)
+	caret := lipgloss.NewStyle().Background(f.InputBg).Foreground(f.Icon).Bold(true)
+	headerIcon := lipgloss.NewStyle().Background(f.Bg).Foreground(f.Icon).Bold(true).Render(promptGlyph())
+	headerTitle := lipgloss.NewStyle().Background(f.Bg).Foreground(f.Title).Bold(true).Render(" " + m.title)
+	labelStyle := lipgloss.NewStyle().Background(f.Bg).Foreground(f.Sub)
 
 	padBg := func(s string, w int) string {
-		used := lipgloss.Width(s)
-		if used >= w {
-			return s
+		if used := lipgloss.Width(s); used < w {
+			return s + bgFill.Render(strings.Repeat(" ", w-used))
 		}
-		return s + bgFill.Render(strings.Repeat(" ", w-used))
+		return s
 	}
-
 	blank := bgFill.Render(strings.Repeat(" ", innerW))
 
-	var rows []string
-
-	// Header — icon + bold title left, faint label as subtitle right.
-	left := bgFill.Render("  ") + headerIcon + headerTitle
-	right := subtitle + bgFill.Render("  ")
-	gap := innerW - lipgloss.Width(left) - lipgloss.Width(right)
-	if gap < 1 {
-		// If the subtitle would overflow, drop it; the title alone fits.
-		right = bgFill.Render("  ")
-		gap = innerW - lipgloss.Width(left) - lipgloss.Width(right)
-		if gap < 1 {
-			gap = 1
-		}
-	}
-	rows = append(rows, left+bgFill.Render(strings.Repeat(" ", gap))+right)
-
-	// Top hairline separator.
-	rows = append(rows, separatorStyle.Render(strings.Repeat("─", innerW)))
-
-	// Optional label row above the input field — kept compact and muted
-	// so the input itself remains the focal element.
+	rows := []string{padBg(bgFill.Render("  ")+headerIcon+headerTitle, innerW)}
+	rows = append(rows, theme.Hairline(innerW, theme.BgFloat))
 	if strings.TrimSpace(m.label) != "" {
-		labelRow := bgFill.Render("  ") + labelStyle.Render(m.label)
-		rows = append(rows, padBg(labelRow, innerW))
+		label := m.label
+		if max := innerW - 4; runewidth.StringWidth(label) > max && max > 0 {
+			label = runewidth.Truncate(label, max, "…")
+		}
+		rows = append(rows, padBg(bgFill.Render("  ")+labelStyle.Render(label), innerW))
 	} else {
 		rows = append(rows, blank)
 	}
 
-	// Input row — chevron prefix on the input bg, value, soft cursor.
-	// Layout: " › <value>▎" then padded to innerW with input bg so the
-	// whole row reads as a single field.
 	value := m.value
 	if m.masked {
 		value = strings.Repeat("•", len([]rune(m.value)))
 	}
-	// Truncate value if it would overflow the input width.
-	maxValW := innerW - 4 /*" › "*/ - 1 /*cursor*/
+	maxValW := innerW - 6
 	if maxValW < 1 {
 		maxValW = 1
 	}
 	if runewidth.StringWidth(value) > maxValW {
-		value = runewidth.Truncate(value, maxValW, "…")
+		// Keep the end of long values visible (that is where the caret is).
+		r := []rune(value)
+		for runewidth.StringWidth(string(r)) > maxValW-1 && len(r) > 0 {
+			r = r[1:]
+		}
+		value = "…" + string(r)
 	}
-	inputContent := inputBgFill.Render(" › ") + inputStyle.Render(value) + inputCursorStyle.Render("▎")
-	if w := lipgloss.Width(inputContent); w < innerW {
-		inputContent += inputBgFill.Render(strings.Repeat(" ", innerW-w))
+	field := bgFill.Render(" ") + inputBgFill.Render(" ") + inputStyle.Render(value) + caret.Render("▏")
+	if w := lipgloss.Width(field); w < innerW-1 {
+		field += inputBgFill.Render(strings.Repeat(" ", innerW-1-w))
 	}
-	rows = append(rows, inputContent)
+	rows = append(rows, field+bgFill.Render(" "))
+	rows = append(rows, blank)
+	rows = append(rows, padBg(bgFill.Render("  ")+theme.HintBar(f.Bg, "enter", "submit", "esc", "cancel"), innerW))
 
-	// Spacer — flexes 3..12 rows so the footer sits near the bottom on
-	// tall terminals while staying compact on short ones. Math mirrors
-	// settings_modal.Box() so all overlays share the same vertical feel.
-	desiredH := m.h * 80 / 100
-	contentH := len(rows)
-	footerSpacer := desiredH - contentH - 3 // 3 = footer + 2 border rows
-	if footerSpacer < 3 {
-		footerSpacer = 3
-	}
-	if footerSpacer > 12 {
-		footerSpacer = 12
-	}
-	for i := 0; i < footerSpacer; i++ {
-		rows = append(rows, blank)
-	}
+	return theme.FloatBox(lipgloss.JoinVertical(lipgloss.Left, rows...), boxW)
+}
 
-	// Bottom hairline separator + footer key-hints.
-	rows = append(rows, separatorStyle.Render(strings.Repeat("─", innerW)))
-	footer := footerStyle.Render("↵ Submit    Esc Cancel")
-	rows = append(rows, padBg(bgFill.Render("  ")+footer, innerW))
-
-	content := lipgloss.JoinVertical(lipgloss.Left, rows...)
-	// Height intentionally NOT set — lipgloss auto-fits the rounded
-	// border to the content row count. (Setting Height(N) inserts blank
-	// rows BELOW the footer before the bottom rim — visible as a gap.)
-	border := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(pmBorderRim).
-		BorderBackground(pmBoxBg).
-		Background(pmBoxBg).
-		Width(boxW)
-	return border.Render(content)
+// promptGlyph is the header icon for the active icon mode.
+func promptGlyph() string {
+	switch theme.CurrentIconMode {
+	case theme.IconModeNerdFont:
+		return "\uf044" // nf-fa-pencil_square_o
+	case theme.IconModeUnicode:
+		return "❯"
+	}
+	return ">"
 }

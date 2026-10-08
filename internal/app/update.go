@@ -12,6 +12,7 @@ import (
 	"golang.design/x/clipboard"
 
 	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/anim"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/explorer"
 	"github.com/amin-jalali/termocode/internal/findbar"
@@ -33,10 +34,19 @@ import (
 // all-motion (1003) for hover, downgraded to button-only (1002) while a text
 // input is focused so the SGR-fragmentation leak can't corrupt typed input.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	prevKind := m.overlayKind()
+	if _, ok := msg.(anim.TickMsg); ok {
+		m.animTicking = false
+		m.stepAnimations()
+		return m, m.afterUpdateAnim(prevKind)
+	}
 	next, cmd := m.updateInner(msg)
 	nm, ok := next.(Model)
 	if !ok {
 		return next, cmd
+	}
+	if animCmd := nm.afterUpdateAnim(prevKind); animCmd != nil {
+		cmd = tea.Batch(cmd, animCmd)
 	}
 	// Hover card: fetch the commit metadata when the pointer moves onto a new
 	// commit row in the Source Control panel.
@@ -85,6 +95,8 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	// Overlay control messages always handled regardless of state.
 	switch msg := msg.(type) {
+	case DevActionMsg:
+		return m, m.runDevAction(msg.ID)
 	case commitDetailMsg:
 		if m.commitDetails == nil {
 			m.commitDetails = map[string]git.CommitDetail{}
@@ -101,6 +113,7 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.onToolUninstalled(msg)
 	case picker.CloseMsg:
 		m.pickerOpen = false
+		m.endThemePreview(false)
 		return m, m.extOverlayClosed() // Group I: nil unless an extension pick
 	case recents.SelectMsg:
 		// Recents modal selection: close the overlay, open the file via
@@ -690,10 +703,12 @@ func (m Model) routeToPicker(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseMsg:
 		var cmd tea.Cmd
 		m.picker, cmd = m.picker.HandleMouse(msg.X, msg.Y, msg.Action, msg.Button)
+		m.previewThemeUnderCursor()
 		return m, cmd
 	}
 	var cmd tea.Cmd
 	m.picker, cmd = m.picker.Update(msg)
+	m.previewThemeUnderCursor()
 	return m, cmd
 }
 
@@ -1817,7 +1832,11 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		// dispatch action by ID
 		return m.dispatchPaletteAction(msg.ID)
 	case pickerKindTheme:
+		m.endThemePreview(true)
 		m.applyTheme(msg.ID)
+	case pickerKindSettingChoice:
+		m.settingPromptID = m.settingChoiceRow
+		return m.applySettingValue(msg.ID)
 	case pickerKindClipboard:
 		// msg.ID looks like "clip-N" where N is the index into the ring.
 		var idx int

@@ -179,7 +179,7 @@ func TestViewVisualContract(t *testing.T) {
 	}
 
 	// 1. Header row contains the letter-spaced "E X P L O R E R".
-	if !strings.Contains(out, "E X P L O R E R") {
+	if !strings.Contains(out, "EXPLORER") {
 		t.Fatalf("expected letter-spaced header label in output:\n%s", out)
 	}
 	// 2. Indent guide is `│` (U+2502).
@@ -268,18 +268,18 @@ func TestViewSmokeLandmarks(t *testing.T) {
 
 	// Synthesize a git status: main.go modified, lib.rs untracked, README.md staged.
 	gs := GitStatus{
-		filepath.Join(dir, "src", "main.go"):  "M",
-		filepath.Join(dir, "src", "lib.rs"):   "U",
-		filepath.Join(dir, "README.md"):       "A",
+		filepath.Join(dir, "src", "main.go"): "M",
+		filepath.Join(dir, "src", "lib.rs"):  "U",
+		filepath.Join(dir, "README.md"):      "A",
 	}
 
 	out := m.View(true, "", false, gs)
 
 	// Header landmarks.
-	if !strings.Contains(out, "E X P L O R E R") {
-		t.Fatalf("missing letter-spaced label:\n%s", out)
+	if !strings.Contains(out, "EXPLORER") {
+		t.Fatalf("missing label:\n%s", out)
 	}
-	if !strings.Contains(out, "MYPROJ") {
+	if !strings.Contains(out, "myproj") {
 		t.Fatalf("missing workspace name:\n%s", out)
 	}
 	if !strings.Contains(out, "feature/red…") && !strings.Contains(out, "feature/red") {

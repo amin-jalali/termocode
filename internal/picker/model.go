@@ -7,7 +7,11 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 	"github.com/sahilm/fuzzy"
+
+	"github.com/amin-jalali/termocode/internal/anim"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // Item is one row in the picker. Most items are selectable; rows where
@@ -21,6 +25,9 @@ type Item struct {
 	Hint   string
 	Header bool   // true → non-selectable section heading row
 	Group  string // group key (e.g. "Quick Fix"); shared by header + items
+	// File marks Title as a file path: the row gets a file-type icon and
+	// the directory part is dimmed.
+	File bool
 }
 
 // SelectMsg is emitted when the user activates a row.
@@ -46,6 +53,10 @@ type Model struct {
 	w, h    int
 	loader  Loader
 	loading bool
+	// top is the first visible result row; scroll animates toward it so
+	// long jumps (PgDn, wheel, typing) glide instead of snapping.
+	top    int
+	scroll anim.Value
 }
 
 // NewWith returns a picker with a provided loader. The loader runs on Init.
@@ -77,6 +88,12 @@ func (m Model) Init() tea.Cmd {
 func (m *Model) SetSize(w, h int) { m.w, m.h = w, h }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	m, cmd := m.update(msg)
+	m.follow()
+	return m, cmd
+}
+
+func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case itemsLoadedMsg:
 		m.loading = false
@@ -105,6 +122,18 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			return m, nil
 		case tea.KeyDown, tea.KeyCtrlN:
 			m.cursor = m.nextSelectable(m.cursor, +1)
+			return m, nil
+		case tea.KeyPgDown:
+			_, _, avail := m.layoutDims()
+			for i := 0; i < avail; i++ {
+				m.cursor = m.nextSelectable(m.cursor, +1)
+			}
+			return m, nil
+		case tea.KeyPgUp:
+			_, _, avail := m.layoutDims()
+			for i := 0; i < avail; i++ {
+				m.cursor = m.nextSelectable(m.cursor, -1)
+			}
 			return m, nil
 		case tea.KeyBackspace:
 			if len(m.input) > 0 {
@@ -186,8 +215,8 @@ func (m *Model) refilter() {
 	// hits aren't necessarily in input-order; sort by underlying item index
 	// so injected headers land in the same stable order as the unfiltered list.
 	type indexedHit struct {
-		match    fuzzy.Match
-		itemIdx  int
+		match   fuzzy.Match
+		itemIdx int
 	}
 	ord := make([]indexedHit, 0, len(hits))
 	for _, h := range hits {
@@ -292,6 +321,12 @@ func (m Model) nextSelectable(cursor, dir int) int {
 // result row both moves the cursor and emits SelectMsg (VSCode-style
 // single-click select). Click outside the box closes the picker.
 func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseButton) (Model, tea.Cmd) {
+	m, cmd := m.handleMouse(x, y, action, button)
+	m.follow()
+	return m, cmd
+}
+
+func (m Model) handleMouse(x, y int, action tea.MouseAction, button tea.MouseButton) (Model, tea.Cmd) {
 	if m.w <= 0 || m.h <= 0 {
 		return m, nil
 	}
@@ -322,8 +357,7 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 	// Hover: move the highlight onto the result row under the pointer.
 	if action == tea.MouseActionMotion {
 		boxW, boxH, available := m.layoutDims()
-		boxLeft := (m.w - boxW) / 2
-		boxTop := (m.h - boxH) / 2
+		boxLeft, boxTop := m.Origin(boxW, boxH)
 		if boxLeft < 0 {
 			boxLeft = 0
 		}
@@ -337,11 +371,7 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 		if yRel < 0 || yRel >= available {
 			return m, nil
 		}
-		start := 0
-		if m.cursor >= available {
-			start = m.cursor - available + 1
-		}
-		idx := start + yRel
+		idx := m.viewTop(available) + yRel
 		if idx >= 0 && idx < len(m.matches) && !m.matchIsHeader(idx) {
 			m.cursor = idx
 		}
@@ -353,8 +383,7 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 	}
 
 	boxW, boxH, available := m.layoutDims()
-	boxLeft := (m.w - boxW) / 2
-	boxTop := (m.h - boxH) / 2
+	boxLeft, boxTop := m.Origin(boxW, boxH)
 	if boxLeft < 0 {
 		boxLeft = 0
 	}
@@ -374,11 +403,7 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 	if yRel < 0 || yRel >= available {
 		return m, nil
 	}
-	start := 0
-	if m.cursor >= available {
-		start = m.cursor - available + 1
-	}
-	idx := start + yRel
+	idx := m.viewTop(available) + yRel
 	if idx < 0 || idx >= len(m.matches) {
 		return m, nil
 	}
@@ -422,32 +447,121 @@ func (m Model) Box() string {
 	return m.renderBox()
 }
 
-// ── Palette (mirrors settings_modal.go so all overlays share one design) ──
-//
-// We intentionally keep the panel bg at #262626, input bg at #1f3447, and
-// selection bg at #094771 — modalOverlay matches those exact RGBs to
-// re-tint them into the soft-glass look (selection becomes #1f4f63, input
-// becomes #1d2632). Direct callers that don't go through modalOverlay see
-// the raw VSCode-blue palette, which is the intended fallback.
+// Colours come from theme.Float() (refreshed on every render so a theme
+// switch applies at once). Pickers, prompts, confirms and settings share
+// that one floating-card look.
 var (
-	pmBoxBg      = lipgloss.Color("#262626")
-	pmBorder     = lipgloss.Color("#3a3a3a")
-	pmIconBlue   = lipgloss.Color("#569cd6")
-	pmTextPri    = lipgloss.Color("#d0d0d0")
-	pmTextSec    = lipgloss.Color("#9090a0")
-	pmTextDim    = lipgloss.Color("#6c6c6c")
-	pmGuide      = lipgloss.Color("#363636")
-	pmSubtitleFg = lipgloss.Color("#5a5a66")
-	pmInputBg    = lipgloss.Color("#1f3447")
-	pmInputFg    = lipgloss.Color("#ffffff")
-	pmSelBg      = lipgloss.Color("#094771")
-	pmSelFg      = lipgloss.Color("#ffffff")
-	pmSelDirFg   = lipgloss.Color("#cce6f4")
-	pmDirFg      = lipgloss.Color("#6c8a9c")
-	pmHintFg     = lipgloss.Color("#7a7a7a")
-	pmSelHintFg  = lipgloss.Color("#cce6f4")
-	pmMatchFg    = lipgloss.Color("#ffd700")
+	pmBoxBg, pmBorder, pmIconBlue, pmTextPri, pmTextSec, pmTextDim lipgloss.Color
+	pmGuide, pmSubtitleFg, pmInputBg, pmInputFg, pmSelBg, pmSelFg  lipgloss.Color
+	pmSelDirFg, pmDirFg, pmHintFg, pmSelHintFg, pmMatchFg          lipgloss.Color
 )
+
+func refreshColors() {
+	f := theme.Float()
+	pmBoxBg, pmBorder, pmIconBlue = f.Bg, f.Border, f.Icon
+	pmTextPri, pmTextSec, pmTextDim = f.Text, f.Sub, f.Dim
+	pmGuide, pmSubtitleFg = f.Hairline, f.Dim
+	pmInputBg, pmInputFg = f.InputBg, f.InputFg
+	pmSelBg, pmSelFg = f.SelBg, f.SelFg
+	pmSelDirFg, pmDirFg = f.Sub, f.Dim
+	pmHintFg, pmSelHintFg, pmMatchFg = f.Hint, f.Sub, f.Match
+}
+
+// viewTop is the first result row drawn (the animated scroll position,
+// clamped so the window never runs past the list).
+func (m Model) viewTop(available int) int {
+	top := m.scroll.Int()
+	if max := len(m.matches) - available; top > max {
+		top = max
+	}
+	if top < 0 {
+		top = 0
+	}
+	return top
+}
+
+// follow moves the scroll window just enough to keep the cursor visible.
+func (m *Model) follow() {
+	_, _, available := m.layoutDims()
+	if available < 1 {
+		return
+	}
+	top := m.top
+	if m.cursor < top {
+		top = m.cursor
+	}
+	if m.cursor >= top+available {
+		top = m.cursor - available + 1
+	}
+	if max := len(m.matches) - available; top > max {
+		top = max
+	}
+	if top < 0 {
+		top = 0
+	}
+	if top != m.top || m.scroll.Target != float64(top) {
+		m.top = top
+		// One-row moves (arrow keys) stay crisp; longer jumps glide.
+		if d := float64(top) - m.scroll.Pos; d >= -1 && d <= 1 {
+			m.scroll.Jump(float64(top))
+		} else {
+			m.scroll.Set(float64(top))
+		}
+	}
+}
+
+// Origin is the top-left cell of the box: centred horizontally and
+// anchored near the top (like VSCode), so the box grows downward as the
+// list changes instead of jumping around the centre.
+func (m Model) Origin(boxW, boxH int) (x, y int) {
+	x = (m.w - boxW) / 2
+	y = m.h / 7
+	if y+boxH > m.h {
+		y = (m.h - boxH) / 2
+	}
+	if x < 0 {
+		x = 0
+	}
+	if y < 0 {
+		y = 0
+	}
+	return x, y
+}
+
+// BoxSize is the rendered box size (for the host's compositor).
+func (m Model) BoxSize() (w, h int) {
+	w, h, _ = m.layoutDims()
+	return w, h
+}
+
+// Current returns the item under the cursor (ok=false for none / header).
+func (m Model) Current() (Item, bool) {
+	if m.cursor < 0 || m.cursor >= len(m.matches) {
+		return Item{}, false
+	}
+	idx := m.matches[m.cursor].Index
+	if idx < 0 || idx >= len(m.items) || m.items[idx].Header {
+		return Item{}, false
+	}
+	return m.items[idx], true
+}
+
+// SetCursorID moves the cursor onto the item with the given ID.
+func (m *Model) SetCursorID(id string) {
+	for i, mt := range m.matches {
+		if mt.Index >= 0 && mt.Index < len(m.items) && m.items[mt.Index].ID == id {
+			m.cursor = i
+			m.follow()
+			return
+		}
+	}
+}
+
+// Animating reports whether the list is still gliding to its scroll target.
+func (m Model) Animating() bool { return m.scroll.Moving() }
+
+// AnimStep advances the scroll animation one frame.
+func (m *Model) AnimStep() { m.scroll.Step() }
 
 // layoutDims returns the modal box width, total box height, and the number
 // of result rows available between input and footer. The math here MUST be
@@ -494,38 +608,31 @@ func (m Model) layoutDims() (boxW, boxH, available int) {
 	}
 
 	contentRows := 1 /*header*/ + 1 /*top sep*/ + 1 /*input*/ + available
-	desiredH := m.h * 80 / 100
-	spacer := desiredH - contentRows - 3 // 3 = footer + 2 border
-	if spacer < 3 {
-		spacer = 3
-	}
-	if spacer > 12 {
-		spacer = 12
-	}
+	// The list is sized to its content; one blank row before the footer.
+	spacer := 1
 	innerH := contentRows + spacer + 1 /*bottom sep*/ + 1 /*footer*/
 	boxH = innerH + 2
 	return
 }
 
 func (m Model) renderBox() string {
+	refreshColors()
 	boxW, _, available := m.layoutDims()
 	innerW := boxW - 2
 
 	bgFill := lipgloss.NewStyle().Background(pmBoxBg)
 	inputBgFill := lipgloss.NewStyle().Background(pmInputBg)
 	inputStyle := lipgloss.NewStyle().Background(pmInputBg).Foreground(pmInputFg)
-	inputCursorStyle := lipgloss.NewStyle().Background(pmInputBg).Foreground(pmInputFg).Underline(true)
-	separatorStyle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmGuide)
-	footerStyle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmTextDim)
+	placeholder := lipgloss.NewStyle().Background(pmInputBg).Foreground(pmTextDim)
+	caret := lipgloss.NewStyle().Background(pmInputBg).Foreground(pmIconBlue).Bold(true)
 
-	headerIcon := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmIconBlue).Bold(true).Render("›")
+	headerIcon := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmIconBlue).Bold(true).Render(titleGlyph())
 	titleText := strings.TrimSpace(m.title)
 	if titleText == "" {
 		titleText = "Picker"
 	}
 	headerTitle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmTextPri).Bold(true).Render(" " + titleText)
-	subtitleText := pickerSubtitle(len(m.matches), m.loading)
-	subtitle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmSubtitleFg).Faint(true).Render(subtitleText)
+	subtitle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmSubtitleFg).Render(pickerSubtitle(len(m.matches), m.loading))
 
 	padBg := func(s string, w int) string {
 		used := lipgloss.Width(s)
@@ -538,44 +645,45 @@ func (m Model) renderBox() string {
 
 	var rows []string
 
-	// ── Header: title left, subtitle right ─────────────────────────────
+	// ── Header: icon + title left, match count right ──────────────────
 	left := bgFill.Render("  ") + headerIcon + headerTitle
 	right := subtitle + bgFill.Render("  ")
-	gap := innerW - lipgloss.Width(left) - lipgloss.Width(right)
-	if gap < 1 {
-		// Subtitle didn't fit — drop it and just pad the header.
+	if gap := innerW - lipgloss.Width(left) - lipgloss.Width(right); gap < 1 {
 		rows = append(rows, padBg(left, innerW))
 	} else {
 		rows = append(rows, left+bgFill.Render(strings.Repeat(" ", gap))+right)
 	}
 
-	// ── Top hairline ──────────────────────────────────────────────────
-	rows = append(rows, separatorStyle.Render(strings.Repeat("─", innerW)))
+	// ── Lit hairline under the title ──────────────────────────────────
+	rows = append(rows, theme.Hairline(innerW, theme.BgFloat))
 
-	// ── Input row with chevron prefix ─────────────────────────────────
-	inputContent := inputBgFill.Render(" › ") + inputStyle.Render(m.input) + inputCursorStyle.Render("▎")
-	if w := lipgloss.Width(inputContent); w < innerW {
-		inputContent += inputBgFill.Render(strings.Repeat(" ", innerW-w))
+	// ── Search field ──────────────────────────────────────────────────
+	field := inputBgFill.Render(" ") + caret.Render(searchGlyph()) + inputBgFill.Render(" ")
+	if m.input == "" {
+		field += caret.Render("▏") + placeholder.Render("Type to search")
+	} else {
+		field += inputStyle.Render(m.input) + caret.Render("▏")
 	}
-	rows = append(rows, inputContent)
+	if w := lipgloss.Width(field); w < innerW {
+		field += inputBgFill.Render(strings.Repeat(" ", innerW-w))
+	}
+	rows = append(rows, field)
 
 	// ── Result rows ───────────────────────────────────────────────────
-	if m.loading {
-		rows = append(rows, padBg(bgFill.Render("    ")+lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmTextSec).Render("loading…"), innerW))
-		// Pad remaining result slots so the spacer math stays consistent.
+	msg := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmTextSec)
+	switch {
+	case m.loading:
+		rows = append(rows, padBg(bgFill.Render("    ")+msg.Render("loading…"), innerW))
 		for i := 1; i < available; i++ {
 			rows = append(rows, blank)
 		}
-	} else if len(m.matches) == 0 {
-		rows = append(rows, padBg(bgFill.Render("    ")+lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmTextSec).Render("no results"), innerW))
+	case len(m.matches) == 0:
+		rows = append(rows, padBg(bgFill.Render("    ")+msg.Render("no results"), innerW))
 		for i := 1; i < available; i++ {
 			rows = append(rows, blank)
 		}
-	} else {
-		start := 0
-		if m.cursor >= available {
-			start = m.cursor - available + 1
-		}
+	default:
+		start := m.viewTop(available)
 		end := start + available
 		if end > len(m.matches) {
 			end = len(m.matches)
@@ -592,43 +700,48 @@ func (m Model) renderBox() string {
 			}
 			rows = append(rows, m.renderResultRow(match, it, i == m.cursor, innerW))
 		}
-		// Pad with blank rows when we have fewer results than slots so
-		// the footer keeps its position.
 		for i := end - start; i < available; i++ {
 			rows = append(rows, blank)
 		}
 	}
 
 	// ── Spacer ────────────────────────────────────────────────────────
-	desiredH := m.h * 80 / 100
-	contentH := len(rows)
-	spacer := desiredH - contentH - 3
-	if spacer < 3 {
-		spacer = 3
-	}
-	if spacer > 12 {
-		spacer = 12
-	}
+	spacer := 1
 	for i := 0; i < spacer; i++ {
 		rows = append(rows, blank)
 	}
 
-	// ── Bottom hairline + footer ──────────────────────────────────────
-	rows = append(rows, separatorStyle.Render(strings.Repeat("─", innerW)))
-	footer := footerStyle.Render("↑↓ Navigate    ↵ Select    Esc Close")
+	// ── Footer: keycap hints ──────────────────────────────────────────
+	rows = append(rows, lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmGuide).Render(strings.Repeat("─", innerW)))
+	footer := theme.HintBar(pmBoxBg, "↑↓", "navigate", "enter", "select", "esc", "close")
+	if lipgloss.Width(footer)+2 > innerW {
+		footer = theme.HintBar(pmBoxBg, "enter", "select", "esc", "close")
+	}
 	rows = append(rows, padBg(bgFill.Render("  ")+footer, innerW))
 
-	content := lipgloss.JoinVertical(lipgloss.Left, rows...)
-	// Height intentionally NOT set — lipgloss auto-fits the rounded border
-	// to the row count. Setting Height(N) would pad below the footer and
-	// open a visible gap.
-	border := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(pmBorder).
-		BorderBackground(pmBoxBg).
-		Background(pmBoxBg).
-		Width(boxW)
-	return border.Render(content)
+	return theme.FloatBox(lipgloss.JoinVertical(lipgloss.Left, rows...), boxW)
+}
+
+// titleGlyph / searchGlyph follow the icon mode (Nerd Font, Unicode,
+// ASCII).
+func titleGlyph() string {
+	switch theme.CurrentIconMode {
+	case theme.IconModeNerdFont:
+		return "\uf120" // nf-fa-terminal
+	case theme.IconModeUnicode:
+		return "❯"
+	}
+	return ">"
+}
+
+func searchGlyph() string {
+	switch theme.CurrentIconMode {
+	case theme.IconModeNerdFont:
+		return "\uf002" // nf-fa-search
+	case theme.IconModeUnicode:
+		return "⌕"
+	}
+	return "/"
 }
 
 // pickerSubtitle returns the right-aligned faint text that appears beside
@@ -664,64 +777,38 @@ func itoa(n int) string {
 	return string(buf[i:])
 }
 
-// renderHeaderRow paints a non-selectable section heading. The label is
-// rendered uppercased in a muted fg + box bg, with a faint horizontal
-// hairline to the right so the row reads as a section divider as well as
-// a label. Width contract: exactly `w` cells.
+// renderHeaderRow paints a non-selectable section heading: a small
+// uppercase label followed by a hairline. Exactly w cells.
 func (m Model) renderHeaderRow(it Item, w int) string {
 	bgFill := lipgloss.NewStyle().Background(pmBoxBg)
 	labelStyle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmTextDim).Bold(true)
 	dividerStyle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmGuide)
 
 	label := strings.ToUpper(strings.TrimSpace(it.Title))
-	// 1-cell left pad so the label doesn't sit flush against the box border.
-	left := bgFill.Render(" ") + labelStyle.Render(label) + bgFill.Render(" ")
-	leftW := lipgloss.Width(left)
-	if leftW >= w {
-		// Label longer than the row: drop the trailing pad / truncate
-		// so we never overflow innerW. Fallback simple rune trim.
-		runes := []rune(label)
-		for lipgloss.Width(labelStyle.Render(string(runes))) >= w && len(runes) > 0 {
-			runes = runes[:len(runes)-1]
-		}
-		s := bgFill.Render(" ") + labelStyle.Render(string(runes))
-		// Pad to exactly w with bg.
-		if pad := w - lipgloss.Width(s); pad > 0 {
-			s += bgFill.Render(strings.Repeat(" ", pad))
-		}
-		return s
+	if max := w - 4; runewidth.StringWidth(label) > max && max > 0 {
+		label = runewidth.Truncate(label, max, "…")
 	}
-	dashes := w - leftW
+	left := bgFill.Render("  ") + labelStyle.Render(label) + bgFill.Render(" ")
+	dashes := w - lipgloss.Width(left)
 	if dashes < 0 {
 		dashes = 0
 	}
 	return left + dividerStyle.Render(strings.Repeat("─", dashes))
 }
 
-// renderResultRow renders one fuzzy match as a row inside the results list.
-// Selected rows get a soft selection bar with a leading "▶ " chevron and
-// bold white title; unselected rows live on the panel bg with a 4-space
-// indent. The directory portion of a path-style title is dimmed and match
-// positions are highlighted in yellow.
+// renderResultRow renders one match. The active row is a soft accent bar
+// with a left accent edge; matched characters are highlighted; for file
+// items the type icon leads and the directory part is dimmed. Exactly w
+// cells.
 func (m Model) renderResultRow(match fuzzy.Match, it Item, active bool, w int) string {
 	bg := pmBoxBg
+	titleFg, hintFg, dirFg := pmTextPri, pmHintFg, pmDirFg
 	if active {
 		bg = pmSelBg
+		titleFg, hintFg, dirFg = pmSelFg, pmSelHintFg, pmSelDirFg
 	}
-	rowBgFill := lipgloss.NewStyle().Background(bg)
-
-	titleFg := pmTextPri
-	hintFg := pmHintFg
-	dirFg := pmDirFg
-	if active {
-		titleFg = pmSelFg
-		hintFg = pmSelHintFg
-		dirFg = pmSelDirFg
-	}
-	titleStyle := lipgloss.NewStyle().Background(bg).Foreground(titleFg)
-	if active {
-		titleStyle = titleStyle.Bold(true)
-	}
+	fill := lipgloss.NewStyle().Background(bg)
+	titleStyle := lipgloss.NewStyle().Background(bg).Foreground(titleFg).Bold(active)
 	dirStyle := lipgloss.NewStyle().Background(bg).Foreground(dirFg)
 	hintStyle := lipgloss.NewStyle().Background(bg).Foreground(hintFg)
 	matchStyle := lipgloss.NewStyle().Background(bg).Foreground(pmMatchFg).Bold(true)
@@ -730,27 +817,46 @@ func (m Model) renderResultRow(match fuzzy.Match, it Item, active bool, w int) s
 	for _, i := range match.MatchedIndexes {
 		pos[i] = true
 	}
-
-	// Find the LAST '/' so we can dim the directory portion.
 	runes := []rune(it.Title)
 	splitAt := -1
-	for i := len(runes) - 1; i >= 0; i-- {
-		if runes[i] == '/' {
-			splitAt = i
-			break
+	if it.File || strings.ContainsRune(it.Title, '/') {
+		for i := len(runes) - 1; i >= 0; i-- {
+			if runes[i] == '/' {
+				splitAt = i
+				break
+			}
 		}
 	}
 
 	var sb strings.Builder
 	if active {
-		// "▶ " chevron + 2-space indent → 4 cells before content, matches
-		// the unselected 4-space indent so the rows visually align.
-		sb.WriteString(lipgloss.NewStyle().Background(bg).Foreground(pmSelFg).Bold(true).Render(" ▶  "))
+		sb.WriteString(lipgloss.NewStyle().Background(bg).Foreground(pmIconBlue).Render("▌"))
+		sb.WriteString(fill.Render(" "))
 	} else {
-		sb.WriteString(rowBgFill.Render("    "))
+		sb.WriteString(fill.Render("  "))
 	}
-
+	if it.File {
+		g, c := theme.FileIconFor(it.Title, false, false)
+		sb.WriteString(lipgloss.NewStyle().Background(bg).Foreground(theme.LG(c)).Render(g))
+		sb.WriteString(fill.Render(" "))
+	}
+	// Room for the title: leave space for the hint and a right margin.
+	hint := it.Hint
+	avail := w - lipgloss.Width(sb.String()) - 2
+	if hint != "" {
+		if hw := runewidth.StringWidth(hint); hw > avail/2 {
+			hint = runewidth.Truncate(hint, avail/2, "…")
+		}
+		avail -= runewidth.StringWidth(hint) + 2
+	}
+	used := 0
 	for i, r := range runes {
+		rw := runewidth.RuneWidth(r)
+		if used+rw > avail {
+			sb.WriteString(titleStyle.Render("…"))
+			break
+		}
+		used += rw
 		switch {
 		case pos[i]:
 			sb.WriteString(matchStyle.Render(string(r)))
@@ -760,14 +866,16 @@ func (m Model) renderResultRow(match fuzzy.Match, it Item, active bool, w int) s
 			sb.WriteString(titleStyle.Render(string(r)))
 		}
 	}
-	if it.Hint != "" {
-		sb.WriteString(rowBgFill.Render("  "))
-		sb.WriteString(hintStyle.Render(it.Hint))
-	}
-
 	rendered := sb.String()
+	if hint != "" {
+		gap := w - lipgloss.Width(rendered) - runewidth.StringWidth(hint) - 2
+		if gap < 1 {
+			gap = 1
+		}
+		rendered += fill.Render(strings.Repeat(" ", gap)) + hintStyle.Render(hint)
+	}
 	if pad := w - lipgloss.Width(rendered); pad > 0 {
-		rendered += rowBgFill.Render(strings.Repeat(" ", pad))
+		rendered += fill.Render(strings.Repeat(" ", pad))
 	}
 	return rendered
 }
@@ -803,7 +911,7 @@ func filesLoader() []Item {
 			return nil
 		}
 		if rel, err := filepath.Rel(cwd, path); err == nil {
-			items = append(items, Item{ID: rel, Title: rel})
+			items = append(items, Item{ID: rel, Title: rel, File: true})
 		}
 		return nil
 	})
