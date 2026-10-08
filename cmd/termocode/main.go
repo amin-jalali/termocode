@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/termenv"
 
 	"github.com/amin-jalali/termocode/internal/app"
 	"github.com/amin-jalali/termocode/internal/setup"
+	"github.com/amin-jalali/termocode/internal/termimg"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -55,12 +56,38 @@ func applyFontDelta(delta int) {
 }
 
 func init() {
-	// Force truecolor SGR output. Many terminals support 24-bit color but
-	// don't advertise it via $COLORTERM; without this lipgloss/termenv
-	// auto-detection falls back to ANSI-256 and dark-gray shades collapse
-	// onto adjacent palette indices that some terminals render identically.
-	lipgloss.SetColorProfile(termenv.TrueColor)
+	// Truecolor SGR output by default: many terminals support 24-bit
+	// colour without advertising it via $COLORTERM (it is rarely forwarded
+	// over SSH), and lipgloss' own detection would fall back to ANSI-256,
+	// collapsing the dark greys. theme.DetectProfile steps down only when
+	// the environment says so (TERMOCODE_COLORS, NO_COLOR, TERM=linux …).
+	lipgloss.SetColorProfile(theme.DetectProfile(os.Getenv))
 	theme.CurrentIconMode = theme.DetectIconMode()
+}
+
+// probeTerminal resolves the display settings (icons, animations, images)
+// against what the terminal can do. The probes write queries and read the
+// replies in raw mode, so this must run before Bubble Tea owns the TTY.
+func probeTerminal() {
+	disp := app.ConfigDisplay()
+	envIcons := os.Getenv("TERMOCODE_ICON_MODE") != "" || os.Getenv("TERMOCODE_NERD_FONT") == "1"
+	autoIcons := !envIcons && (disp.Icons == "" || disp.Icons == "auto")
+	nerd := false
+	unicodeOK := false
+	if autoIcons {
+		nerd = setup.HasNerdFont()
+		if !nerd {
+			unicodeOK = theme.ProbeUnicode(200 * time.Millisecond)
+		}
+	}
+	caps := termimg.Caps{Protocol: termimg.Blocks}
+	switch termimg.ParseMode(disp.Images) {
+	case termimg.ModeOff, termimg.ModeBlocks:
+	default:
+		caps = termimg.Probe(os.Stdin, os.Stdout, 250*time.Millisecond, os.Getenv)
+	}
+	app.SetTerminalCaps(caps, unicodeOK, nerd)
+	app.ApplyDisplaySettings(disp)
 }
 
 func main() {
@@ -109,7 +136,7 @@ func runTUI() {
 	// CSI sequences and reads cursor-position reports; doing this after
 	// tea.NewProgram would race with Bubble Tea's own input reader.
 	// Honours TERMOCODE_ICON_MODE (manual override) and NO_COLOR.
-	theme.CurrentIconMode = theme.Probe()
+	probeTerminal()
 
 	delta := fontDelta()
 	applyFontDelta(delta)

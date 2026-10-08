@@ -231,7 +231,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
-| Preferences: Color Theme | `pick-theme` |   |   |
+| Preferences: Color Theme… | `pick-theme` |   |   |
 | Preferences: Customize Keybindings | `customize-keybindings` |   |   |
 | Preferences: Edit Custom Theme | `edit-custom-theme` |   |   |
 | Preferences: Export Settings... | `settings-export` |   |   |

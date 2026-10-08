@@ -22,6 +22,7 @@ const (
 	pickerKindFiles pickerKindEnum = iota
 	pickerKindPalette
 	pickerKindTheme
+	pickerKindSettingChoice
 	pickerKindClipboard
 	pickerKindProblems
 	pickerKindCodeAction
@@ -189,7 +190,7 @@ func paletteItems() []picker.Item {
 		{ID: "find-files-overlay", Title: "Search: Find in Files (Live Overlay)"},
 		{ID: "replace-in-file", Title: "Edit: Replace in File", Hint: "Ctrl+H"},
 		{ID: "toggle-inlay-hints", Title: "LSP: Toggle Inlay Hints", Hint: "Alt+L"},
-		{ID: "pick-theme", Title: "Preferences: Color Theme"},
+		{ID: "pick-theme", Title: "Preferences: Color Theme…"},
 		{ID: "git-stage", Title: "Git: Stage Current File"},
 		{ID: "git-stage-all", Title: "Git: Stage All Changes"},
 		{ID: "git-stage-hunk", Title: "Git: Stage Hunk (at cursor)"},
@@ -772,7 +773,12 @@ func (m *Model) openThemePicker() tea.Cmd {
 	}
 	m.picker = picker.NewItems(" Color Theme ", items)
 	m.picker.SetSize(m.w, m.h)
+	m.picker.SetCursorID(active)
 	m.pickerOpen = true
 	m.pickerKind = pickerKindTheme
+	// Live preview: moving through the list applies each theme (not
+	// saved); Esc restores this one.
+	m.themePreviewFrom = m.themeID
+	m.themePreviewing = true
 	return m.picker.Init()
 }

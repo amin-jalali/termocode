@@ -111,6 +111,11 @@ type Model struct {
 	toast    toast.Model
 	theme    theme.Theme
 	themeID  string // active theme id (drives the nvim colourscheme)
+	// Color Theme picker live preview: the theme to restore on Esc.
+	themePreviewFrom string
+	themePreviewing  bool
+	// Settings rows with fixed choices open a picker; this is the row.
+	settingChoiceRow string
 	// Animations (anim.go): overlay open progress 0→1, and whether a
 	// tick is already scheduled.
 	overlayAnim anim.Value
