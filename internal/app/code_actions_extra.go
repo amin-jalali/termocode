@@ -9,9 +9,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/git"
-	"termocode/internal/nvim"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // Synthesized code-action kinds used by Phase 2 to extend the LSP-driven

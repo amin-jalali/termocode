@@ -10,10 +10,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/ai"
-	"termocode/internal/confirm"
-	"termocode/internal/picker"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // Streaming chat (Group A). A turn runs the tool agent on a goroutine;

@@ -6,10 +6,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/confirm"
-	"termocode/internal/prompt"
-	"termocode/internal/search"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/search"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // Replace-In-Workspace flow

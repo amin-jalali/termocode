@@ -8,9 +8,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/confirm"
-	"termocode/internal/nvim"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // osRemoveAll is wrapped so tests can stub if needed.

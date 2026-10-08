@@ -13,11 +13,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"termocode/extensions"
-	"termocode/internal/activity"
-	"termocode/internal/editor"
-	"termocode/internal/ext"
-	"termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/extensions"
+	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/editor"
+	"github.com/amin-jalali/termocode/internal/ext"
+	"github.com/amin-jalali/termocode/internal/nvim"
 )
 
 // ── helpers ──────────────────────────────────────────────────────────────

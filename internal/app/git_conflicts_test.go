@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"termocode/internal/git"
-	"termocode/internal/nvim"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 func TestBlendHexAndXterm(t *testing.T) {

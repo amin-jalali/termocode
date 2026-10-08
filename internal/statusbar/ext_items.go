@@ -5,8 +5,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"termocode/internal/ext"
-	"termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/ext"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // ── Extension status items (Group I) ─────────────────────────────────────

@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/git"
 )
 
 // TestGitSidebarRowsFitWidth guards against the editor-shift bug: every row

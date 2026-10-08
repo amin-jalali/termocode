@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"termocode/internal/lspinstall"
+	"github.com/amin-jalali/termocode/internal/lspinstall"
 )
 
 func TestToolPickerItemsStates(t *testing.T) {

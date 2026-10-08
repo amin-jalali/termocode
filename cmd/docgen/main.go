@@ -15,8 +15,8 @@ import (
 	"sort"
 	"strings"
 
-	"termocode/internal/app"
-	"termocode/internal/keymap"
+	"github.com/amin-jalali/termocode/internal/app"
+	"github.com/amin-jalali/termocode/internal/keymap"
 )
 
 // outDir is where the pages go, relative to the repository root.

@@ -3,7 +3,7 @@ package app
 import (
 	"testing"
 
-	"termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/nvim"
 )
 
 func TestReorderPinned_NoPins_ReturnsAsIs(t *testing.T) {

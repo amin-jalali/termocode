@@ -12,8 +12,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
 
-	"termocode/internal/nvim"
-	"termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // ── Problems panel (Group C) ─────────────────────────────────────────────

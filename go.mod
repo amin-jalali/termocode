@@ -1,4 +1,4 @@
-module termocode
+module github.com/amin-jalali/termocode
 
 go 1.26.2
 

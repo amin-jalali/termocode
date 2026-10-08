@@ -12,11 +12,11 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"termocode/internal/confirm"
-	"termocode/internal/keymap"
-	"termocode/internal/prompt"
-	"termocode/internal/theme"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/keymap"
+	"github.com/amin-jalali/termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // extrasState is the transient state for the Group H flows: keymap

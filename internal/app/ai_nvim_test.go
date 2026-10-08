@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"termocode/internal/debounce"
-	"termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/debounce"
+	"github.com/amin-jalali/termocode/internal/nvim"
 )
 
 // TestAIGhostTextAndProposalNvim drives the Lua half of Group A against a

@@ -11,9 +11,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
 
-	"termocode/internal/activity"
-	"termocode/internal/lspinstall"
-	"termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/lspinstall"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // ── RUN AND DEBUG sidebar (Group D) ──────────────────────────────────────

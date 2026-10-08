@@ -14,7 +14,7 @@ import (
 	"github.com/mattn/go-runewidth"
 	"golang.design/x/clipboard"
 
-	"termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // openShellCmd suspends the TUI and runs the user's shell attached to the

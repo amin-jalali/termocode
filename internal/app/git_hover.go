@@ -9,8 +9,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 
-	"termocode/internal/activity"
-	"termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/git"
 )
 
 // commitDetailMsg delivers a fetched commit's metadata for the hover card.

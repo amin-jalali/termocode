@@ -1,6 +1,6 @@
 package app
 
-import "termocode/internal/nvim"
+import "github.com/amin-jalali/termocode/internal/nvim"
 
 // stickyContextMsg carries the freshly-fetched "function/class signature"
 // line that should sit in the sticky-scroll strip above the editor. Empty

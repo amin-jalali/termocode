@@ -13,16 +13,16 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"termocode/extensions"
-	"termocode/internal/activity"
-	"termocode/internal/ext"
-	"termocode/internal/keymap"
-	"termocode/internal/nvim"
-	"termocode/internal/picker"
-	"termocode/internal/preview"
-	"termocode/internal/prompt"
-	"termocode/internal/theme"
-	"termocode/internal/toast"
+	"github.com/amin-jalali/termocode/extensions"
+	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/ext"
+	"github.com/amin-jalali/termocode/internal/keymap"
+	"github.com/amin-jalali/termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/preview"
+	"github.com/amin-jalali/termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // ── Extensions (Group I) ─────────────────────────────────────────────────
