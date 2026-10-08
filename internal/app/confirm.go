@@ -24,6 +24,7 @@ const (
 	confirmKindGitDiscard
 	confirmKindGitStageCommit
 	confirmKindToolInstall // LSP / DAP installer (lsp_manager.go)
+	confirmKindReplaceWorkspace
 )
 
 // findBuffer returns the buffer info for the given id, if known.
@@ -117,6 +118,11 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		}
 	case confirmKindToolInstall:
 		return m.onToolConfirm(id)
+	case confirmKindReplaceWorkspace:
+		if id == "replace" {
+			return m.applyReplaceInWorkspace()
+		}
+		m.replaceFind, m.replaceRepl, m.replaceTargets = "", "", nil
 	}
 	return nil
 }
