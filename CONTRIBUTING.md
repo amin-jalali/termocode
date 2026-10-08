@@ -1,0 +1,159 @@
+# Contributing to termocode
+
+Thanks for helping! This page covers how to build, test and send changes.
+For how the code works, read [docs/architecture.md](docs/architecture.md) first.
+
+## Build and run
+
+You need Go ≥ 1.26 (see `go.mod`), `nvim` ≥ 0.10, and `git`. `rg` is optional.
+On Linux the clipboard library needs X11 headers to build tests
+(`sudo apt install libx11-dev`).
+
+```sh
+go build -o termocode ./cmd/termocode
+./termocode [path]            # opens path, or the current folder
+
+./scripts/dev.sh              # go vet + go test + build — run before every PR
+./scripts/release.sh          # cross-compile tarballs into dist/
+./termocode setup             # check prerequisites, install Nerd Font (Linux)
+```
+
+Inside the app, `Help: Run Doctor` (palette, `F1`) shows the same checks.
+
+## Test
+
+```sh
+go test ./...                 # all packages
+go test ./... -race -count=1  # what CI runs (Ubuntu + macOS)
+go test ./internal/search -run Fallback -v
+```
+
+- Put tests next to the code (`foo.go` → `foo_test.go`), same package.
+- Prefer pure functions you can test without nvim or a terminal: build the
+  string / slice in a helper, test the helper, keep the `tea.Cmd` wrapper thin.
+- Use seams for the outside world (see `lookPath` / `runOutput` in
+  `internal/setup/doctor.go`, or `TERMOCODE_PLUGINS_DIR` for plugin clones).
+- Tests that need real tools (`rg`, `nvim`, `git`) must `t.Skip` when the tool
+  is missing.
+- For behaviour a test can't cover (rendering, mouse, terminal keys), add a QC
+  case under [docs/qc/](docs/qc/README.md).
+- Tests cache hard. If a result looks stale: `go clean -testcache`.
+
+Debug a running session with `tail -f ~/.config/termocode/errors.log`.
+
+## Code layout
+
+```text
+cmd/termocode/        main: subcommands, terminal setup, starts Bubble Tea
+internal/app/         the master Model — one file per feature slice
+internal/<component>/ self-contained Bubble Tea components (picker, prompt, …)
+internal/nvim/        msgpack-RPC client for `nvim --embed`
+internal/setup/       `termocode setup` + Doctor checks
+packaging/            Homebrew formula + AUR PKGBUILD templates
+scripts/              dev / release / packaging helpers
+docs/                 features, architecture, adr/, qc/
+```
+
+The package table in [docs/architecture.md](docs/architecture.md#per-feature-packages-internalname)
+says what each `internal/` package does.
+
+Where to put new code:
+
+- A new palette command → add an entry in `paletteItems()` and a `case` in
+  `dispatchPaletteAction` in `internal/app/palette.go`. Put the logic in its own
+  file in `internal/app/` if it is more than a few lines.
+- A new key binding → add an `Action` in `internal/keymap/keymap.go`, a default
+  key, and a name in `actionNames` (`overrides.go`) so users can rebind it.
+- Lua that runs inside nvim → a `*_lua.go` file (see
+  [ADR 0002](docs/adr/0002-lua-chunks-in-go-raw-strings.md)).
+- Something reusable with its own Update/View → a new `internal/<name>` package.
+- Update `docs/features.md` and the cheat sheet (`internal/app/cheatsheet.go`)
+  when you add a user-facing command or key.
+
+## Style
+
+- `go vet ./...` must be clean. Run `gofmt -w` on the files you touch (some
+  older files are not gofmt-clean yet; fixing them in a separate commit is welcome).
+- Imports in three groups: standard library, third party, `termocode/...`.
+- Comments explain **why**, not what. Exported names get a doc comment.
+- Errors from optional features are non-fatal: log them (toast /
+  `recordError`) and keep going. Config loading must never block startup
+  ([ADR 0005](docs/adr/0005-config-never-breaks-startup.md)).
+- Don't block `Update()`: slow work (exec, file walks, network) goes in a
+  `tea.Cmd` that returns a message.
+- Rendering: every component fills its width exactly and pads with **styled**
+  spaces — see "Render-width contract" in the architecture doc.
+- **No backticks inside Lua heredocs** — they end the Go raw string.
+- Don't add new runtime dependencies (external binaries) without a fallback or
+  a Doctor check.
+
+## Commit messages
+
+We use [Conventional Commits](https://www.conventionalcommits.org/) with an
+optional scope, as in `git log`:
+
+```text
+feat(git): per-hunk staging — Stage / Unstage / Discard Hunk
+fix(preview): truncate over-wide lines so the diff overlay can't wrap
+ci+docs: install libx11-dev on linux runner; fix README placeholders
+```
+
+- Types: `feat`, `fix`, `docs`, `ci`, `refactor`, `test`, `chore`, `perf`.
+- Scopes are package or area names: `git`, `ui`, `preview`, `search`, `help`, …
+- Subject in the imperative, lower case, no final period, ≲ 72 chars.
+- Body (optional): what changed and why, as short lines or bullets.
+- One logical change per commit. `./scripts/dev.sh` must pass.
+
+## Pull requests
+
+1. Branch from `main`.
+2. Keep the PR focused; describe what you tested (unit tests, QC cases, terminal).
+3. Add screenshots for visible UI changes.
+4. For a choice that is hard to undo, add an ADR in [docs/adr/](docs/adr/README.md).
+
+## Releases
+
+Maintainers only. Push a tag `vX.Y.Z` on `main`:
+
+```sh
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+`.github/workflows/release.yml` then:
+
+1. builds linux/darwin × amd64/arm64 tarballs;
+2. publishes a GitHub Release with the tarballs and `checksums.txt`;
+3. renders `packaging/homebrew/termocode.rb.tmpl` and `packaging/aur/*.tmpl`
+   with `scripts/render-packaging.sh` (the rendered files are kept as a
+   workflow artifact) and pushes them to the Homebrew tap and the AUR.
+
+Tags with a `-` (e.g. `v0.2.0-rc1`) skip step 3.
+
+### One-time setup for step 3
+
+Each push is **skipped** (not failed) while its secret is missing.
+
+| Name | Kind | What |
+|---|---|---|
+| `HOMEBREW_TAP_TOKEN` | repo secret | Fine-grained GitHub token with **Contents: read & write** on the tap repo |
+| `HOMEBREW_TAP_REPO` | repo variable (optional) | Tap repo, default `amin-jalali/homebrew-termocode` |
+| `AUR_SSH_PRIVATE_KEY` | repo secret | Private SSH key whose public half is added to your AUR account |
+
+Before the first release:
+
+- Create the empty GitHub repo `homebrew-termocode` (the `homebrew-` prefix is
+  required by `brew tap`).
+- Create an AUR account, add the SSH public key, and make sure the package
+  name `termocode-bin` is free. The first push creates the AUR package.
+
+To check the rendered files locally:
+
+```sh
+./scripts/release.sh
+./scripts/render-packaging.sh "$(git describe --tags)" dist /tmp/termocode-pkg
+```
+
+## License
+
+By contributing you agree that your work is released under the
+[MIT License](LICENSE).
