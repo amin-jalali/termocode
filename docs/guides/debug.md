@@ -16,6 +16,10 @@ Supported out of the box:
 Run **DAP: Install Adapter…** and pick yours. termocode installs it in its own
 tools folder. See [Install language servers and debuggers](language-servers.md).
 
+When you start a session and the adapter is missing, the **CONFIGURATIONS**
+section shows a `⚠` hint row. Press `Enter` on it (or click it): the install
+dialog for that adapter opens right away. Pick **Install**.
+
 ## Debug in five steps
 
 1. Open the **Run and Debug** view: click the **Run** icon in the activity bar,
@@ -141,8 +145,8 @@ In the Run and Debug view:
 ## Troubleshooting
 
 **"install dlv" (or debugpy) message**
-:   The adapter is missing. Click the install hint in the view, or run
-    **DAP: Install Adapter…**.
+:   The adapter is missing. Click the `⚠` hint in the view: it opens the
+    install dialog for that adapter. Or run **DAP: Install Adapter…**.
 
 **`F11` makes my terminal full screen**
 :   Your terminal uses `F11`. Use **Debug: Step Into** from the palette.

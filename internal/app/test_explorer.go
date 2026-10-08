@@ -33,7 +33,8 @@ import (
 //	   message lines; a footer hint row when the view has focus.
 //
 // Keys (sidebar focused): j/k ↑/↓ move · h/l ←/→ fold · Space toggle ·
-// Enter open (failure line for failed tests) · r run item · o output ·
+// Enter open (failure line for failed tests) · r run item · d debug test
+// (test_debug.go) · o output ·
 // R run all · f rerun failed · u refresh · c collapse all · x stop.
 
 const (
@@ -294,6 +295,10 @@ func (m Model) handleTestsSidebarKey(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "r":
 		if cur != nil {
 			return m, m.runTestRow(*cur)
+		}
+	case "d":
+		if cur != nil {
+			return m, m.debugTestRow(*cur)
 		}
 	case "o":
 		m.showTestOutput(cur)
@@ -577,7 +582,7 @@ func (m Model) renderTestsSidebar(w, h int) string {
 	}
 	lines = append(lines, body...)
 	if footer > 0 {
-		lines = append(lines, testsPad(theme.FgBg(theme.TextMuted, theme.BgSidebar).Render(" ⏎ open  r run  o output  f failed"), w))
+		lines = append(lines, testsPad(theme.FgBg(theme.TextMuted, theme.BgSidebar).Render(" ⏎ open  r run  d debug  o output"), w))
 	}
 	for len(lines) < h {
 		lines = append(lines, testsFill(w))
@@ -1028,6 +1033,8 @@ func (m *Model) dispatchTestingPalette(id string) (tea.Cmd, bool) {
 	case "testing-results":
 		m.showTestOutput(nil)
 		return nil, true
+	case "testing-debug-cursor":
+		return m.debugTestAtCursor(), true
 	}
 	return nil, false
 }
@@ -1061,6 +1068,9 @@ func (m *Model) testCodeActions(path string, line int, add func(title, kind stri
 	}
 	if c := testCaseAtLine(f, line); c != nil {
 		add("Run Test: "+c.Name, synthKindTestRun, synthCodeAction{FuncName: c.Name, Path: abs})
+		if st.tree.FW == tests.FrameworkPytest {
+			add("Debug Test: "+c.Name, synthKindTestDebug, synthCodeAction{FuncName: c.Name, Path: abs})
+		}
 	}
 	add("Run Tests in File", synthKindTestRun, synthCodeAction{Path: abs, Command: "file"})
 }

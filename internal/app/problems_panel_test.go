@@ -2,6 +2,7 @@ package app
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -157,5 +158,89 @@ func TestProblemsKeysAndHeaderClick(t *testing.T) {
 	problemsClick(&m, 0, chips[0].Start)
 	if m.problems.hide[1] {
 		t.Error("chip click should toggle the error filter back on")
+	}
+}
+
+// Glue A + C: "✦ Fix with AI" on Problems rows.
+
+func TestProblemsFixLabel(t *testing.T) {
+	if problemsFixLabel(20) != "" || problemsFixLabel(40) != " ✦ Fix " || problemsFixLabel(80) != " ✦ Fix with AI " {
+		t.Errorf("labels: %q %q %q", problemsFixLabel(20), problemsFixLabel(40), problemsFixLabel(80))
+	}
+}
+
+func TestProblemsFixChipRender(t *testing.T) {
+	m := aiTestModel(t)
+	m.problems = newProblemsPanel()
+	m.problems.setItems(sampleDiags())
+	m.problems.sel = 1 // first diagnostic under the first file header
+	rows := renderProblemsTab(&m, 80, 6)
+	// rows[0] = filter chips, rows[1] = file header, rows[2] = selected.
+	if sel := stripANSI(rows[2]); !strings.HasSuffix(sel, "✦ Fix with AI ") {
+		t.Errorf("selected row = %q, want the Fix chip at the end", sel)
+	}
+	if w := lipgloss.Width(rows[2]); w != 80 {
+		t.Errorf("selected row width = %d, want 80", w)
+	}
+	if strings.Contains(stripANSI(rows[3]), "Fix with AI") {
+		t.Error("only the selected row carries the chip")
+	}
+	m.problems.sel = 0 // a file header has no chip
+	if strings.Contains(stripANSI(renderProblemsTab(&m, 80, 6)[1]), "Fix") {
+		t.Error("header row must not show the chip")
+	}
+}
+
+func TestProblemsFixWithAIUnconfigured(t *testing.T) {
+	m := aiTestModel(t)
+	m.problems = newProblemsPanel()
+	m.problems.viewH = 10
+	m.problems.setItems(sampleDiags())
+	m.problems.sel = 1
+	a := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")}
+	cmd, ok := problemsKey(&m, a)
+	if !ok || cmd == nil {
+		t.Fatalf("a: ok=%v cmd=%v, want the configure toast", ok, cmd != nil)
+	}
+	// Click on the chip of the selected row (content row 2 = list index
+	// 1): same toast, selection kept.
+	w := m.editorPaneWidth()
+	if cmd := problemsClick(&m, 2, w-2); cmd == nil {
+		t.Error("chip click: want the configure toast")
+	}
+	if m.problems.sel != 1 {
+		t.Errorf("sel = %d, want 1", m.problems.sel)
+	}
+	m.problems.sel = 0 // on a header row `a` does nothing
+	if cmd, _ := problemsKey(&m, a); cmd != nil {
+		t.Error("header: want no cmd")
+	}
+}
+
+func TestProblemsContextMenu(t *testing.T) {
+	m := aiTestModel(t)
+	m.problems = newProblemsPanel()
+	m.problems.viewH = 10
+	m.problems.setItems(sampleDiags())
+	// Header row (content row 1 = list index 0): no menu.
+	problemsRightClick(&m, 1, 3, 10, 20)
+	if m.menuOpen {
+		t.Fatal("header row must not open a menu")
+	}
+	// A diagnostic row: selects it and opens the menu.
+	problemsRightClick(&m, 3, 3, 10, 20)
+	if !m.menuOpen || m.menuKind != menuKindProblems || m.problems.sel != 2 {
+		t.Fatalf("menuOpen=%v kind=%v sel=%d", m.menuOpen, m.menuKind, m.problems.sel)
+	}
+	var hasFix bool
+	for _, it := range problemsMenuItems() {
+		hasFix = hasFix || it.ID == "problem-fix-ai"
+	}
+	if !hasFix {
+		t.Error("menu lacks Fix with AI")
+	}
+	// Unconfigured AI: the entry only shows the configure toast.
+	if cmd := m.handleMenuSelect("problem-fix-ai"); cmd == nil {
+		t.Error("fix entry: want the configure toast")
 	}
 }

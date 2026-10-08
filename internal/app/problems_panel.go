@@ -12,8 +12,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
 
+	"github.com/amin-jalali/termocode/internal/menu"
 	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // ── Problems panel (Group C) ─────────────────────────────────────────────
@@ -357,6 +359,102 @@ func (m *Model) openSelectedProblem() {
 	m.jumpToDiagnostic(r.Diag.Path, r.Diag.Line, r.Diag.Col)
 }
 
+// ── Fix with AI (glue A + C) ─────────────────────────────────────────────
+
+// problemsFixLabel is the "✦ Fix with AI" click target drawn at the right
+// end of the selected diagnostic row ("" when the panel is too narrow).
+func problemsFixLabel(w int) string {
+	switch {
+	case w >= 60:
+		return " ✦ Fix with AI "
+	case w >= 30:
+		return " ✦ Fix "
+	}
+	return ""
+}
+
+// selectedDiag returns the selected row's diagnostic (ok=false on a file
+// header or an empty list).
+func (p *problemsPanel) selectedDiag() (nvim.Diagnostic, bool) {
+	rows := p.rows()
+	if p.sel < 0 || p.sel >= len(rows) || rows[p.sel].Header {
+		return nvim.Diagnostic{}, false
+	}
+	return rows[p.sel].Diag, true
+}
+
+// fixSelectedProblemWithAI is `a` / the ✦ chip on a Problems row: jump to
+// the diagnostic, then run the editor's "Fix with AI" flow on that line
+// (diff review → Apply as one undo step). Without a provider only the
+// configure toast shows — the cursor does not move.
+func (m *Model) fixSelectedProblemWithAI() tea.Cmd {
+	if m.problems == nil {
+		return nil
+	}
+	d, ok := m.problems.selectedDiag()
+	if !ok {
+		return nil
+	}
+	if c, ok := m.aiReady(); !ok {
+		return c
+	}
+	m.jumpToDiagnostic(d.Path, d.Line, d.Col)
+	return m.aiFixDiagnostic()
+}
+
+// problemsMenuItems is the right-click menu of a diagnostic row.
+func problemsMenuItems() []menu.Item {
+	return []menu.Item{
+		{ID: "problem-open", Title: "Go to Problem", Hint: "Enter"},
+		{ID: "problem-fix-ai", Title: "Fix with AI", Icon: "✦", Hint: "a"},
+		{ID: "problem-copy", Title: "Copy Message"},
+	}
+}
+
+// problemsRightClick selects the row under the mouse and opens its
+// context menu (diagnostic rows only).
+func problemsRightClick(m *Model, row, _, x, y int) tea.Cmd {
+	p := m.problems
+	if p == nil || row < 1 {
+		return nil
+	}
+	idx := p.scroll + row - 1
+	rows := p.rows()
+	if idx < 0 || idx >= len(rows) || rows[idx].Header {
+		return nil
+	}
+	p.sel = idx
+	m.menu = menu.New(problemsMenuItems(), x, y)
+	m.menu.SetScreenSize(m.w, m.h)
+	m.menuOpen = true
+	m.menuKind = menuKindProblems
+	return nil
+}
+
+// handleProblemsMenuSelect runs a Problems context-menu entry on the
+// selected row.
+func (m *Model) handleProblemsMenuSelect(id string) tea.Cmd {
+	if m.problems == nil {
+		return nil
+	}
+	d, ok := m.problems.selectedDiag()
+	if !ok {
+		return nil
+	}
+	switch id {
+	case "problem-open":
+		m.jumpToDiagnostic(d.Path, d.Line, d.Col)
+	case "problem-fix-ai":
+		return m.fixSelectedProblemWithAI()
+	case "problem-copy":
+		safeClipboardWrite(d.Message)
+		var c tea.Cmd
+		m.toast, c = m.toast.Push(toast.Info, "Copied problem message")
+		return c
+	}
+	return nil
+}
+
 // ── Rendering ────────────────────────────────────────────────────────────
 
 // problemsChip is one clickable filter in the header row.
@@ -479,8 +577,12 @@ func renderProblemsTab(m *Model, w, h int) []string {
 			if d.Source != "" {
 				src = "  " + d.Source
 			}
-			// "    ✘ msg  src  [Ln, Col]" — clip the message to fit.
+			// "    ✘ msg  src  [Ln, Col]" — clip the message to fit
+			// (the selected row also keeps room for the ✦ Fix chip).
 			fixed := 4 + runewidth.StringWidth(severityIcon(d.Severity)) + 1 + runewidth.StringWidth(src) + 2 + runewidth.StringWidth(loc) + 1
+			if idx == p.sel {
+				fixed += runewidth.StringWidth(problemsFixLabel(w))
+			}
 			if room := w - fixed; room < runewidth.StringWidth(msg) {
 				if room < 1 {
 					room = 1
@@ -494,7 +596,13 @@ func renderProblemsTab(m *Model, w, h int) []string {
 		}
 		line := b.String()
 		if idx == p.sel {
-			line = padTabBarToWidth(line, w, bg)
+			if fix := problemsFixLabel(w); fix != "" && !r.Header {
+				fw := runewidth.StringWidth(fix)
+				line = padTabBarToWidth(line, w-fw, bg) +
+					theme.FgBg(theme.AIAccent, bgc).Bold(true).Render(fix)
+			} else {
+				line = padTabBarToWidth(line, w, bg)
+			}
 		}
 		rows = append(rows, line)
 	}
@@ -525,6 +633,15 @@ func problemsClick(m *Model, row, col int) tea.Cmd {
 	idx := p.scroll + row - 1
 	if idx < 0 || idx >= len(p.rows()) {
 		return nil
+	}
+	// The ✦ Fix chip only exists on the selected row.
+	if idx == p.sel {
+		w := m.editorPaneWidth()
+		if fix := problemsFixLabel(w); fix != "" && col >= w-runewidth.StringWidth(fix) {
+			if _, ok := p.selectedDiag(); ok {
+				return m.fixSelectedProblemWithAI()
+			}
+		}
 	}
 	p.sel = idx
 	m.openSelectedProblem()
@@ -566,6 +683,8 @@ func problemsKey(m *Model, msg tea.KeyMsg) (tea.Cmd, bool) {
 		p.toggleCollapseAll()
 	case "r":
 		return m.refreshProblemsCmd(), true
+	case "a":
+		return m.fixSelectedProblemWithAI(), true
 	default:
 		return nil, false
 	}
@@ -618,8 +737,9 @@ func init() {
 				}
 			}
 		},
-		Click: problemsClick,
-		Key:   problemsKey,
+		Click:      problemsClick,
+		RightClick: problemsRightClick,
+		Key:        problemsKey,
 	})
 	// lsp_lua.go fires this on every DiagnosticChanged (LSP and task
 	// matchers alike). Debounced: one refetch per quiet period.

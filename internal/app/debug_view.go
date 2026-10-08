@@ -12,7 +12,6 @@ import (
 	"github.com/mattn/go-runewidth"
 
 	"github.com/amin-jalali/termocode/internal/activity"
-	"github.com/amin-jalali/termocode/internal/lspinstall"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -731,7 +730,7 @@ func (m *Model) runActivate(r runRow, viaMouse bool) tea.Cmd {
 	case runRowConfig:
 		d.selected = r.key
 		cfg, _, _ := d.selectedConfig()
-		d.hint = adapterHintFor(cfg)
+		d.setHint(adapterHintFor(cfg), dapTypeLang(cfg.Type))
 		if !viaMouse {
 			return m.dapStart()
 		}
@@ -747,7 +746,7 @@ func (m *Model) runActivate(r runRow, viaMouse bool) tea.Cmd {
 	case runRowAction:
 		switch r.action {
 		case "install":
-			return m.openToolManager(lspinstall.CategoryDAP)
+			return m.openAdapterInstall(d.hintTool)
 		case "launch":
 			return m.debugOpenLaunchJSON()
 		}
