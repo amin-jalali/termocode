@@ -18,7 +18,7 @@ func dragTestModel(tb testing.TB) Model {
 	m0, _ := New().Update(tea.WindowSizeMsg{Width: 200, Height: 50})
 	m := m0.(Model)
 	m.actionsOpen, m.actionsPinned = true, true
-	m.actionsWidth = 40
+	m.actionsWidth, m.actionsWidthSet = 40, true
 	s := m.aiS()
 	s.provider = fakeAIProvider{}
 	for i := 0; i < 10; i++ {
