@@ -4,10 +4,32 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"golang.design/x/clipboard"
 )
+
+var (
+	clipboardOnce sync.Once
+	clipboardOK   bool
+)
+
+// clipboardReady initialises golang.design/x/clipboard once and reports
+// whether it is usable. Read / Write without a successful Init silently
+// do nothing (or panic on CGO_ENABLED=0 builds), so every caller goes
+// through here first.
+func clipboardReady() (ok bool) {
+	clipboardOnce.Do(func() {
+		defer func() {
+			if recover() != nil {
+				clipboardOK = false
+			}
+		}()
+		clipboardOK = clipboard.Init() == nil
+	})
+	return clipboardOK
+}
 
 // clipPushMsg is dispatched from the system-clipboard watcher goroutine to
 // the bubbletea event loop so we add to the ring on the main thread.
@@ -26,7 +48,7 @@ func (m Model) initClipboardCapture() tea.Cmd {
 	if ring == nil {
 		return nil
 	}
-	if err := clipboard.Init(); err != nil {
+	if !clipboardReady() {
 		return nil
 	}
 	ctx, cancel := context.WithCancel(context.Background())
