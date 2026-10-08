@@ -222,6 +222,13 @@ func welcomeQuickActions() []quickAction {
 			action:   keymap.ActionToggleTerminal,
 		},
 		{
+			icon:     "~",
+			title:    "Open workspace",
+			subtitle: "recent folders",
+			iconTok:  theme.AccentLavender,
+			id:       welcomeCardWorkspace,
+		},
+		{
 			icon:     "↓",
 			title:    "Clone repository",
 			subtitle: "git clone, then open it",
@@ -764,6 +771,8 @@ func welcomeCardIcon(a quickAction) string {
 	switch {
 	case a.id == welcomeCardClone:
 		return "\uf09b" // nf-fa-github
+	case a.id == welcomeCardWorkspace:
+		return "\uf07c" // nf-fa-folder_open
 	case a.action == keymap.ActionQuickOpen:
 		return "\uf15b" // nf-fa-file
 	case a.action == keymap.ActionCommandPalette:

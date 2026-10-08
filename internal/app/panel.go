@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -132,6 +133,11 @@ func (m Model) panelTitle(k panelKind) string {
 
 // panelKindIcon returns the 1-cell glyph for a non-terminal kind.
 func panelKindIcon(k panelKind) string {
+	if s, ok := panelKinds[k]; ok && theme.CurrentIconMode == theme.IconModeNerdFont {
+		if g := theme.PanelIcon(strings.ToLower(s.Title)); g != "" {
+			return g
+		}
+	}
 	if s, ok := panelKinds[k]; ok && s.Icon != "" {
 		return s.Icon
 	}

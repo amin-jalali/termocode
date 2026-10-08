@@ -37,7 +37,12 @@ func (m Model) View() string {
 	if m.pickerOpen {
 		base := m.renderBase()
 		base = m.overlayToastsInEditor(base)
-		return modalOverlay(base, m.picker.Box(), m.w, m.h, m.modalOpts())
+		o := m.overlayOpts()
+		bw, bh := m.picker.BoxSize()
+		o.At = true
+		o.X, o.Y = m.picker.Origin(bw, bh)
+		o.Slide = 2
+		return modalOverlay(base, m.picker.Box(), m.w, m.h, &o)
 	}
 	if m.recentsOpen {
 		base := m.renderBase()
@@ -1106,6 +1111,7 @@ func (m Model) renderGitSidebar(w, h int) string {
 	header = append(header, renderGitSubheader(m.gitBranch, m.gitViewTree, w))
 	header = append(header, sidebarFill.Render(strings.Repeat(" ", w)))
 	header = append(header, m.renderGitCommitBox(w))
+	header = append(header, sidebarFill.Render(strings.Repeat(" ", w)))
 	header = append(header, m.renderGitActionBar(w))
 	header = append(header, sidebarFill.Render(strings.Repeat(" ", w)))
 
@@ -1321,11 +1327,22 @@ func gitViewToggleGlyph(viewTree bool) string {
 // title, mirroring the file-explorer's "E X P L O R E R" header. Falls back to
 // the plain title when the panel is too narrow for the spaced form.
 func renderGitTitleRow(w int) string {
-	spaced := " " + letterSpace("SOURCE CONTROL")
-	if runewidth.StringWidth(spaced) > w {
-		spaced = " SOURCE CONTROL"
+	return sidebarTitle("SOURCE CONTROL", w)
+}
+
+// sidebarTitle is the title row of a side panel: plain caps (no letter
+// spacing, so long titles fit), bold, in a dimmed accent, with a two-cell
+// margin. Exactly w cells.
+func sidebarTitle(label string, w int) string {
+	if w <= 0 {
+		return ""
 	}
-	return padBgToWidth(gitTitleStyle.Render(spaced), w)
+	if max := w - 3; runewidth.StringWidth(label) > max && max > 0 {
+		label = runewidth.Truncate(label, max, "…")
+	}
+	st := lipgloss.NewStyle().Background(theme.LG(theme.BgSidebar)).
+		Foreground(theme.Mix(theme.TextSecondary, theme.BorderFocus, 0.35)).Bold(true)
+	return padBgToWidth(theme.Bg(theme.BgSidebar).Render("  ")+st.Render(label), w)
 }
 
 // renderGitHairline draws the 1/8-block underline beneath the title — the same
