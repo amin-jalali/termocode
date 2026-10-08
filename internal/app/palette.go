@@ -10,6 +10,7 @@ import (
 
 	"termocode/internal/activity"
 	"termocode/internal/findbar"
+	"termocode/internal/lspinstall"
 	"termocode/internal/picker"
 	"termocode/internal/search"
 	"termocode/internal/theme"
@@ -39,6 +40,7 @@ const (
 	pickerKindSettings
 	pickerKindThemeEditor
 	pickerKindKeybinding
+	pickerKindToolManager // LSP / DAP installer (lsp_manager.go)
 )
 
 // loadFiles walks the cwd and returns one picker.Item per file (relative path).
@@ -271,6 +273,9 @@ func paletteItems() []picker.Item {
 		{ID: "debug-continue", Title: "Debug: Continue"},
 		{ID: "debug-show-stack", Title: "Debug: Show Call Stack"},
 		{ID: "debug-show-vars", Title: "Debug: Show Variables"},
+		// LSP / DAP installer (lsp_manager.go).
+		{ID: "lsp-manage", Title: "LSP: Manage Language Servers..."},
+		{ID: "dap-install", Title: "DAP: Install Adapter..."},
 		{ID: "open-settings-ui", Title: "Preferences: Open Settings (UI)"},
 		{ID: "edit-custom-theme", Title: "Preferences: Edit Custom Theme"},
 		{ID: "customize-keybindings", Title: "Preferences: Customize Keybindings"},
@@ -595,6 +600,10 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.dapShowStack()
 	case "debug-show-vars":
 		return m.dapShowVars()
+	case "lsp-manage":
+		return m.openToolManager(lspinstall.CategoryLSP)
+	case "dap-install":
+		return m.openToolManager(lspinstall.CategoryDAP)
 	case "open-settings-ui":
 		return m.openSettingsPicker()
 	case "edit-custom-theme":

@@ -7,6 +7,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	gonvim "github.com/neovim/go-client/nvim"
+
+	"termocode/internal/lspinstall"
 )
 
 // RedrawMsg carries one batch of nvim redraw events. Each element is an event
@@ -63,6 +65,10 @@ func New() (*Client, error) {
 		// corruption errors and keeps each termocode session isolated.
 		// -n disables swap files (we own the buffers via nvim_input).
 		gonvim.ChildProcessArgs("--embed", "-i", "NONE", "-n"),
+		// Managed language servers / debug adapters live as shims in
+		// ~/.local/share/termocode/tools/bin; put that dir first on the
+		// embedded nvim's PATH so vim.lsp / nvim-dap find them.
+		gonvim.ChildProcessEnv(lspinstall.EnvWithToolsBin()),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("spawn nvim: %w", err)
@@ -236,6 +242,10 @@ type State struct {
 	// app uses it to recognise the side-by-side diff view (hide breadcrumbs,
 	// route the synced wheel scroll, …).
 	Diff bool
+
+	// LSPClients are the names of the LSP clients attached to the current
+	// buffer (status-bar chip).
+	LSPClients []string
 }
 
 // FetchState returns the current State in a single Lua call. If a previous
@@ -292,6 +302,13 @@ func (c *Client) FetchState() (State, error) {
 		local cur_win = vim.api.nvim_get_current_win()
 		local mode_full = vim.api.nvim_get_mode().mode or ''
 		local mode_first = mode_full:sub(1, 1)
+		local lsp_names = {}
+		local get_clients = vim.lsp.get_clients or vim.lsp.get_active_clients
+		if get_clients then
+			for _, cl in ipairs(get_clients({ bufnr = 0 })) do
+				table.insert(lsp_names, cl.name)
+			end
+		end
 		return {
 			vim.fn.expand('%:p'),
 			vim.bo.modified,
@@ -306,7 +323,8 @@ func (c *Client) FetchState() (State, error) {
 			vim.g.termocode_reload_seq or 0,
 			cur_win,
 			mode_first,
-			vim.wo.diff
+			vim.wo.diff,
+			lsp_names
 		}
 	`, &raw)
 	if err != nil {
@@ -378,6 +396,15 @@ func (c *Client) FetchState() (State, error) {
 	}
 	if len(raw) > 13 {
 		s.Diff = toBool(raw[13])
+	}
+	if len(raw) > 14 {
+		if list, ok := raw[14].([]interface{}); ok {
+			for _, v := range list {
+				if n := toString(v); n != "" {
+					s.LSPClients = append(s.LSPClients, n)
+				}
+			}
+		}
 	}
 	return s, nil
 }
