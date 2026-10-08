@@ -22,6 +22,7 @@ func TestViewDoesNotPanicAcrossSizes(t *testing.T) {
 }
 
 func TestKeyDispatchSequence(t *testing.T) {
+	withConfigDir(t) // never read the developer's real session (open panels, widths)
 	m := New()
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
@@ -44,6 +45,6 @@ func TestKeyDispatchSequence(t *testing.T) {
 	if !strings.Contains(out, "Termocode") && !strings.Contains(out, "termocode") &&
 		!strings.Contains(out, "Ln") && !strings.Contains(out, "Spaces") &&
 		!strings.Contains(out, "UTF-8") {
-		t.Errorf("view missing expected markers")
+		t.Errorf("view missing expected markers:\n%s", out)
 	}
 }
