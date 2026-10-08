@@ -3,8 +3,8 @@ package app
 import (
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -100,12 +100,13 @@ func newSettingsModal() settingsModal {
 // to learn about UI grouping.
 func settingsCategories() map[string]string {
 	return map[string]string{
-		"setting-theme":       "Appearance",
-		"setting-font-delta":  "Appearance",
-		"setting-auto-save":   "Editor",
-		"setting-word-wrap":   "Editor",
-		"setting-show-hidden": "Editor",
-		"setting-tab-size":    "Editor",
+		"setting-theme":              "Appearance",
+		"setting-font-delta":         "Appearance",
+		"setting-auto-save":          "Editor",
+		"setting-word-wrap":          "Editor",
+		"setting-show-hidden":        "Editor",
+		"setting-tab-size":           "Editor",
+		"setting-search-max-results": "Search",
 	}
 }
 

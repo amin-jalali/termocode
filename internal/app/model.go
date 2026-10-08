@@ -220,6 +220,15 @@ type Model struct {
 	// replaceFind holds the search pattern entered in the first step of
 	// the Replace-in-Workspace flow. The second prompt's submit reads it.
 	replaceFind string
+	// replaceRepl / replaceTargets hold the replacement text and the
+	// per-file match counts while the Replace-in-Workspace confirm dialog
+	// is open (see replace_workspace.go).
+	replaceRepl    string
+	replaceTargets []search.FileCount
+
+	// findRun tracks the streamed search feeding the Find Results buffer
+	// (see find_results.go).
+	findRun findResultsRun
 
 	// pinnedBufs maps buffer-id → pin order (1, 2, 3 …). Pinned buffers
 	// move to the front of the tab bar, keeping their relative order. The

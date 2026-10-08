@@ -229,6 +229,10 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case search.CloseMsg:
 		m.searchOpen = false
 		return m, nil
+	case findBatchMsg:
+		// Streamed Find-in-Files batch (find_results.go). Handled whatever
+		// overlay is open so the search keeps flowing in the background.
+		return m, m.handleFindBatch(msg)
 	case stickyContextMsg:
 		needsLayout := (m.stickyContext == "") != (msg.Signature == "")
 		m.stickyContext = msg.Signature
@@ -721,8 +725,10 @@ func (m Model) routeToSearch(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.search.SetSize(m.w, m.h)
 		return m, nil
 	case tea.MouseMsg:
-		_ = msg
-		return m, nil
+		// Clicks toggle Aa / ab / .* and focus the filter fields.
+		var cmd tea.Cmd
+		m.search, cmd = m.search.HandleMouse(msg.X, msg.Y, msg.Action, msg.Button)
+		return m, cmd
 	}
 	var cmd tea.Cmd
 	m.search, cmd = m.search.Update(msg)

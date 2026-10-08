@@ -31,6 +31,8 @@ type settingsConfig struct {
 	WordWrap   *bool  `json:"word_wrap,omitempty"`
 	ShowHidden *bool  `json:"show_hidden,omitempty"`
 	TabSize    *int   `json:"tab_size,omitempty"`
+	// SearchMaxResults caps Find-in-Files results (0 = unlimited).
+	SearchMaxResults *int `json:"search_max_results,omitempty"`
 }
 
 // settingsConfigPath returns the absolute path to config.json. We don't
@@ -105,6 +107,9 @@ func saveSettings(cfg settingsConfig) error {
 	if cfg.TabSize != nil {
 		merged["tab_size"] = *cfg.TabSize
 	}
+	if cfg.SearchMaxResults != nil {
+		merged["search_max_results"] = *cfg.SearchMaxResults
+	}
 	out, err := json.MarshalIndent(merged, "", "  ")
 	if err != nil {
 		return err
@@ -128,6 +133,7 @@ var settingsRows = []settingsRow{
 	{ID: "setting-word-wrap", Label: "word_wrap", Kind: "bool"},
 	{ID: "setting-show-hidden", Label: "show_hidden", Kind: "bool"},
 	{ID: "setting-tab-size", Label: "tab_size", Kind: "int"},
+	{ID: "setting-search-max-results", Label: "search_max_results", Kind: "int"},
 }
 
 // findSettingsRow looks up a row by ID. Returns the zero value + false on
@@ -189,6 +195,8 @@ func currentSettingValue(r settingsRow, cfg settingsConfig) string {
 			return "4"
 		}
 		return strconv.Itoa(*cfg.TabSize)
+	case "setting-search-max-results":
+		return strconv.Itoa(searchMaxResults(cfg))
 	}
 	return ""
 }
@@ -327,6 +335,19 @@ func (m *Model) applySettingValue(value string) tea.Cmd {
 			_ = m.nvim.Command(fmt.Sprintf("set tabstop=%d shiftwidth=%d", n, n))
 		}
 		m.toast, toastCmd = m.toast.Push(toast.Info, fmt.Sprintf("tab_size = %d", n))
+	case "setting-search-max-results":
+		n, err := strconv.Atoi(value)
+		if err != nil || n < 0 {
+			m.toast, toastCmd = m.toast.Push(toast.Errr, "search_max_results: expected integer ≥ 0 (0 = unlimited)")
+			return toastCmd
+		}
+		cfg.SearchMaxResults = &n
+		if err := saveSettings(cfg); err != nil {
+			m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Settings error", err.Error())
+			return toastCmd
+		}
+		// Read fresh on every search — nothing to apply live.
+		m.toast, toastCmd = m.toast.Push(toast.Info, fmt.Sprintf("search_max_results = %d", n))
 	}
 	return toastCmd
 }
