@@ -19,6 +19,7 @@ func (m Model) DebugBadgeSpan(s State) (x0, x1 int, ok bool) {
 		return 0, 0, false
 	}
 	rightX := 1 + l.leftW + l.gapL + l.centerW + l.gapR
-	x1 = rightX + l.rightW
+	// The badge is a pill: one cap / pad cell on each side of the text.
+	x1 = rightX + l.rightW - 1
 	return x1 - lipgloss.Width(debugBadgeText), x1, true
 }

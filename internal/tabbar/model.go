@@ -1,6 +1,7 @@
 package tabbar
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -74,7 +75,7 @@ func (m Model) virtualLayout() (starts []int, widths []int, totalW int) {
 	widths = make([]int, len(m.bufs))
 	x := 0
 	for i, b := range m.bufs {
-		_, w := renderTab(b, b.ID == m.activeID)
+		w := len(renderTabCellsSfx(b, b.ID == m.activeID, m.suffix(b)))
 		starts[i] = x
 		widths[i] = w
 		x += w
@@ -202,12 +203,13 @@ func (m Model) View() string {
 	// ANSI escapes is fragile.
 	virt := make([]string, 0, totalW)
 	for i, b := range m.bufs {
-		cells := renderTabCells(b, b.ID == m.activeID)
+		cells := renderTabCellsSfx(b, b.ID == m.activeID, m.suffix(b))
 		// renderTabCells width must match widths[i]
 		_ = widths
 		virt = append(virt, cells...)
 		if i < len(m.bufs)-1 {
-			virt = append(virt, theme.FgBg(theme.BorderDefault, theme.BgTitleBar).Render("│"))
+			virt = append(virt, lipgloss.NewStyle().Background(theme.LG(theme.BgTitleBar)).
+				Foreground(theme.Mix(theme.BgTitleBar, theme.BorderDefault, 0.7)).Render("│"))
 		}
 	}
 	_ = starts
@@ -400,55 +402,129 @@ func renderTab(b nvim.BufferInfo, active bool) (string, int) {
 // Width = len(returned slice). Used by View() to enable cell-level
 // clipping at viewport edges.
 func renderTabCells(b nvim.BufferInfo, active bool) []string {
+	return renderTabCellsSfx(b, active, "")
+}
+
+// suffix is the dim parent-folder hint shown after a tab name when
+// another open buffer has the same file name (VSCode-style).
+func (m Model) suffix(b nvim.BufferInfo) string {
+	base := filepath.Base(b.Path)
+	dup := false
+	for _, o := range m.bufs {
+		if o.ID != b.ID && filepath.Base(o.Path) == base && o.Path != b.Path {
+			dup = true
+			break
+		}
+	}
+	if !dup || isWelcomeBuf(b) {
+		return ""
+	}
+	return filepath.Base(filepath.Dir(b.Path))
+}
+
+var dirCache = map[string]bool{}
+
+// isWelcomeBuf reports whether the buffer is the start-up directory
+// buffer, which shows the dashboard and is labelled "Welcome".
+func isWelcomeBuf(b nvim.BufferInfo) bool {
+	if b.Path == "" || b.Path == "." {
+		return b.Path == "."
+	}
+	isDir, ok := dirCache[b.Path]
+	if !ok {
+		st, err := os.Stat(b.Path)
+		isDir = err == nil && st.IsDir()
+		dirCache[b.Path] = isDir
+	}
+	return isDir
+}
+
+func renderTabCellsSfx(b nvim.BufferInfo, active bool, suffix string) []string {
 	name := filepath.Base(b.Path)
+	welcome := isWelcomeBuf(b)
+	if welcome {
+		name = "Welcome"
+	}
 	if name == "" {
 		name = "[unnamed]"
 	}
 	if len(name) > 40 {
 		name = name[:39] + "…"
 	}
+	if len(suffix) > 16 {
+		suffix = suffix[:15] + "…"
+	}
 
-	var bg theme.Color256
-	var fg theme.Color256
+	bg, fg := theme.BgTitleBar, theme.TextMuted
 	if active {
-		bg = theme.BgEditor
-		fg = theme.TextWhite
-	} else {
-		bg = theme.BgTitleBar
-		fg = theme.TextMuted
+		bg, fg = theme.BgEditor, theme.TextWhite
 	}
 
 	bgStyle := theme.Bg(bg)
-	textStyle := theme.FgBg(fg, bg)
-	textBold := textStyle.Bold(true)
-	dirtyStyle := theme.FgBg(theme.SyntaxString, bg).Bold(true)
-	closeStyle := theme.FgBg(theme.TextMuted, bg)
-	accentStyle := theme.FgBg(theme.AccentLavender, bg).Bold(true)
+	textStyle := theme.FgBg(fg, bg).Bold(active)
+	dirtyStyle := theme.FgBg(theme.AccentAmber, bg).Bold(true)
+	closeFg := theme.TextDimmer
+	if active {
+		closeFg = theme.TextMuted
+	}
+	closeStyle := theme.FgBg(closeFg, bg)
+	accentStyle := theme.FgBg(theme.BorderFocus, bg).Bold(true)
 
-	cells := make([]string, 0, 7+len(name))
+	cells := make([]string, 0, 8+len(name))
 	if active {
 		cells = append(cells, accentStyle.Render("▎"))
 	} else {
 		cells = append(cells, bgStyle.Render(" "))
 	}
-	if b.Modified {
-		cells = append(cells, dirtyStyle.Render("●"))
-	} else {
+	cells = append(cells, bgStyle.Render(" "))
+	if theme.CurrentIconMode != theme.IconModeASCII {
+		g, c := theme.FileIconFor(name, false, false)
+		if welcome {
+			g, c = "\uf015", theme.BorderFocus // nf-fa-home
+			if theme.CurrentIconMode == theme.IconModeUnicode {
+				g = "⌂"
+			}
+		}
+		if !active {
+			// Inactive tabs keep a hint of the type colour.
+			cells = append(cells, lipgloss.NewStyle().Background(theme.LG(bg)).
+				Foreground(theme.Mix(bg, c, 0.7)).Render(g))
+		} else {
+			cells = append(cells, theme.FgBg(c, bg).Render(g))
+		}
 		cells = append(cells, bgStyle.Render(" "))
 	}
-	cells = append(cells, bgStyle.Render(" "))
 	for _, r := range name {
-		s := string(r)
-		if active {
-			cells = append(cells, textBold.Render(s))
-		} else {
-			cells = append(cells, textStyle.Render(s))
+		cells = append(cells, textStyle.Render(string(r)))
+	}
+	if suffix != "" {
+		dim := theme.FgBg(theme.TextDim, bg)
+		cells = append(cells, bgStyle.Render(" "))
+		for _, r := range suffix {
+			cells = append(cells, dim.Render(string(r)))
 		}
 	}
 	cells = append(cells, bgStyle.Render(" "))
-	cells = append(cells, closeStyle.Render("×"))
+	// A modified buffer shows the dirty dot where the close glyph sits
+	// (VSCode); the slot still closes the tab on click.
+	if b.Modified {
+		cells = append(cells, dirtyStyle.Render("●"))
+	} else {
+		cells = append(cells, closeStyle.Render(closeGlyph()))
+	}
 	cells = append(cells, bgStyle.Render(" "))
 	return cells
+}
+
+// closeGlyph is the tab close button for the active icon mode.
+func closeGlyph() string {
+	switch theme.CurrentIconMode {
+	case theme.IconModeNerdFont:
+		return "\uf00d" // nf-fa-times
+	case theme.IconModeUnicode:
+		return "×"
+	}
+	return "x"
 }
 
 func (m Model) extensionIcon(name string) string {

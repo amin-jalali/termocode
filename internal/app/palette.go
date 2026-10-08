@@ -22,6 +22,7 @@ const (
 	pickerKindFiles pickerKindEnum = iota
 	pickerKindPalette
 	pickerKindTheme
+	pickerKindSettingChoice
 	pickerKindClipboard
 	pickerKindProblems
 	pickerKindCodeAction
@@ -113,10 +114,10 @@ func loadFilesIn(roots []string) []picker.Item {
 			// use absolute path for ID, prefix the visible title with the
 			// root basename so users can tell which project a file lives in.
 			if i == 0 {
-				items = append(items, picker.Item{ID: rel, Title: rel})
+				items = append(items, picker.Item{ID: rel, Title: rel, File: true})
 			} else {
 				title := filepath.Join(filepath.Base(abs), rel)
-				items = append(items, picker.Item{ID: absPath, Title: title})
+				items = append(items, picker.Item{ID: absPath, Title: title, File: true})
 			}
 			return nil
 		})
@@ -189,7 +190,7 @@ func paletteItems() []picker.Item {
 		{ID: "find-files-overlay", Title: "Search: Find in Files (Live Overlay)"},
 		{ID: "replace-in-file", Title: "Edit: Replace in File", Hint: "Ctrl+H"},
 		{ID: "toggle-inlay-hints", Title: "LSP: Toggle Inlay Hints", Hint: "Alt+L"},
-		{ID: "pick-theme", Title: "Preferences: Color Theme"},
+		{ID: "pick-theme", Title: "Preferences: Color Theme…"},
 		{ID: "git-stage", Title: "Git: Stage Current File"},
 		{ID: "git-stage-all", Title: "Git: Stage All Changes"},
 		{ID: "git-stage-hunk", Title: "Git: Stage Hunk (at cursor)"},
@@ -772,7 +773,12 @@ func (m *Model) openThemePicker() tea.Cmd {
 	}
 	m.picker = picker.NewItems(" Color Theme ", items)
 	m.picker.SetSize(m.w, m.h)
+	m.picker.SetCursorID(active)
 	m.pickerOpen = true
 	m.pickerKind = pickerKindTheme
+	// Live preview: moving through the list applies each theme (not
+	// saved); Esc restores this one.
+	m.themePreviewFrom = m.themeID
+	m.themePreviewing = true
 	return m.picker.Init()
 }

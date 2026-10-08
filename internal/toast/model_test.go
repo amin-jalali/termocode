@@ -138,7 +138,7 @@ func TestViewRendersAtMostMaxStacked(t *testing.T) {
 		m, _ = m.Push(Info, "msg")
 	}
 	lines := m.View(80, 24)
-	want := maxStacked*rowsPerToast + (maxStacked-1)*gapBetweenToasts
+	want := maxStacked*rowsPerToastCompact + (maxStacked-1)*gapBetweenToasts
 	if len(lines) != want {
 		t.Fatalf("stacked toasts: want %d rows, got %d", want, len(lines))
 	}
@@ -153,8 +153,8 @@ func TestViewRendersMessage(t *testing.T) {
 	m := New()
 	m, _ = m.Push(Errr, "saved!")
 	lines := m.View(80, 24)
-	if len(lines) != rowsPerToast {
-		t.Fatalf("want %d rows, got %d", rowsPerToast, len(lines))
+	if len(lines) != rowsPerToastCompact {
+		t.Fatalf("want %d rows, got %d", rowsPerToastCompact, len(lines))
 	}
 	if !strings.Contains(strings.Join(lines, "\n"), "saved!") {
 		t.Fatalf("rendered block missing message: %q", lines)

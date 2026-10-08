@@ -393,11 +393,7 @@ func (m Model) renderRunSidebar(w, h int) string {
 	blank := fill.Render(strings.Repeat(" ", w))
 
 	var lines []string
-	title := " " + letterSpace("RUN AND DEBUG")
-	if runewidth.StringWidth(title) > w {
-		title = " RUN AND DEBUG"
-	}
-	lines = append(lines, padRunRow(theme.FgBg(theme.TextSecondary, theme.BgSidebar).Bold(true).Render(title), w))
+	lines = append(lines, padRunRow(sidebarTitle("RUN AND DEBUG", w), w))
 	lines = append(lines, theme.FgBg(theme.BorderSubtle, theme.BgSidebar).Render(strings.Repeat("▔", maxInt(w, 0))))
 	lines = append(lines, m.renderRunToolbar(w))
 	lines = append(lines, blank)

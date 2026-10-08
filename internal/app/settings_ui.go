@@ -34,6 +34,10 @@ type settingsConfig struct {
 	TabSize    *int   `json:"tab_size,omitempty"`
 	// SearchMaxResults caps Find-in-Files results (0 = unlimited).
 	SearchMaxResults *int `json:"search_max_results,omitempty"`
+	// Display (display_settings.go). "" means auto.
+	Icons      string `json:"icons,omitempty"`
+	Animations string `json:"animations,omitempty"`
+	Images     string `json:"images,omitempty"`
 }
 
 // settingsConfigPath returns the absolute path to config.json. We don't
@@ -117,6 +121,11 @@ func saveSettings(cfg settingsConfig) error {
 	if cfg.SearchMaxResults != nil {
 		merged["search_max_results"] = *cfg.SearchMaxResults
 	}
+	for k, v := range map[string]string{"icons": cfg.Icons, "animations": cfg.Animations, "images": cfg.Images} {
+		if v != "" {
+			merged[k] = v
+		}
+	}
 	out, err := json.MarshalIndent(merged, "", "  ")
 	if err != nil {
 		return err
@@ -140,6 +149,12 @@ type settingsRow struct {
 var settingsRows = []settingsRow{
 	{ID: "setting-theme", Label: "theme", Kind: "string", Default: "vscode-dark-plus",
 		Desc: "Color theme ID. Same as Preferences: Color Theme."},
+	{ID: "setting-icons", Label: "icons", Kind: "enum", Default: "auto",
+		Desc: "Icon set: nerd (Nerd Font glyphs), unicode (plain symbols), ascii, or auto (TERMOCODE_NERD_FONT / a Nerd Font found by the doctor, else a width probe picks unicode or ascii). TERMOCODE_ICON_MODE wins over it."},
+	{ID: "setting-animations", Label: "animations", Kind: "enum", Default: "auto",
+		Desc: "Overlay / toast / list animations: on, off, or auto (off over SSH and when the terminal is not truecolor). The editor text itself never animates."},
+	{ID: "setting-images", Label: "images", Kind: "enum", Default: "auto",
+		Desc: "Inline images (image preview, dashboard logo, Markdown preview): kitty, sixel, blocks (coloured half-blocks, works everywhere with colour), off, or auto (probe the terminal; blocks inside tmux without allow-passthrough)."},
 	{ID: "setting-font-delta", Label: "font_delta", Kind: "int", Default: "-2",
 		Desc: "Font size change asked of the host terminal at launch (OSC 1337); 0 turns it off. TERMOCODE_FONT_DELTA wins over it."},
 	{ID: "setting-auto-save", Label: "auto_save", Kind: "bool", Default: "false",
@@ -183,6 +198,9 @@ func (m *Model) openSettingsPicker() tea.Cmd {
 // setting's current value, used as the picker row hint.
 func currentSettingValue(r settingsRow, cfg settingsConfig) string {
 	if v, ok := aiSettingValue(r.ID); ok { // Group A
+		return v
+	}
+	if v, ok := displaySettingValue(r.ID, cfg); ok {
 		return v
 	}
 	switch r.ID {
@@ -231,6 +249,12 @@ func (m *Model) onSettingsRowSelected(id string) tea.Cmd {
 	}
 	cfg := loadSettings()
 	current := currentSettingValue(row, cfg)
+	if row.Kind == "enum" {
+		return m.openSettingChoicePicker(row, current)
+	}
+	if row.ID == "setting-theme" {
+		return m.openThemePicker()
+	}
 	hint := row.Label
 	switch row.Kind {
 	case "bool":
@@ -256,6 +280,9 @@ func (m *Model) applySettingValue(value string) tea.Cmd {
 		return nil
 	}
 	if cmd, ok := m.applyAISetting(row.ID, value); ok { // Group A
+		return cmd
+	}
+	if cmd, ok := m.applyDisplaySetting(row.ID, value); ok {
 		return cmd
 	}
 	cfg := loadSettings()

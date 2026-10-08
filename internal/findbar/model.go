@@ -6,6 +6,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -658,84 +660,94 @@ func (m Model) buttonColumnsReplace() (oneCol, allCol int) {
 
 // ── styling ───────────────────────────────────────────────────────────────
 var (
-	// PanelBg is the body bg of the find widget — a dark "glass" tone close
-	// to VS Code rgba(32,32,34,0.92). Match this in glassifyFindBarRow.
-	PanelBg     = lipgloss.Color("#202022")
-	PanelBorder = lipgloss.Color("#363636")
+	PanelBg lipgloss.Color
+	PanelBorder lipgloss.Color
+	InputBg lipgloss.Color
+	TextPrimary lipgloss.Color
+	TextMuted lipgloss.Color
+	TextDim lipgloss.Color
+	BtnFg lipgloss.Color
+	BtnDim lipgloss.Color
+	AccentFocus lipgloss.Color
+	CountFg lipgloss.Color
+	WarnFg lipgloss.Color
+	bodyStyle lipgloss.Style
+	chevronStyle lipgloss.Style
+	chevronActive lipgloss.Style
+	inputBgStyle lipgloss.Style
+	queryStyle lipgloss.Style
+	placeholderStyle lipgloss.Style
+	cursorStyle lipgloss.Style
+	countStyle lipgloss.Style
+	countWarnStyle lipgloss.Style
+	ctrlStyle lipgloss.Style
+	ctrlDim lipgloss.Style
+	closeStyle lipgloss.Style
+	toggleOff lipgloss.Style
+	toggleOnBg lipgloss.Color
+	toggleOn lipgloss.Style
+)
 
-	// InputBg sits slightly darker than the panel so the input fields read
-	// as embedded wells (no heavy border).
-	InputBg = lipgloss.Color("#161618")
+func init() { refreshColors() }
 
-	TextPrimary = lipgloss.Color("#e8e8e8")
-	TextMuted   = lipgloss.Color("#8b8b8b")
-	TextDim     = lipgloss.Color("#6a6a6a")
-	BtnFg       = lipgloss.Color("#9b9b9b")
-	BtnDim      = lipgloss.Color("#5a5a5a")
-	AccentFocus = lipgloss.Color("#bb86fc")
-	CountFg     = lipgloss.Color("#b8b8b8")
-	WarnFg      = lipgloss.Color("#f87171")
-
+// refreshColors derives this file's colours from the active theme. It runs
+// before every render so a theme switch applies immediately.
+func refreshColors() {
+	PanelBg = theme.Float().Bg
+	PanelBorder = theme.Float().Border
+	InputBg = theme.Float().InputBg
+	TextPrimary = theme.Float().Title
+	TextMuted = theme.Float().Hint
+	TextDim = theme.Float().Dim
+	BtnFg = theme.Float().Sub
+	BtnDim = theme.Float().Dim
+	AccentFocus = theme.Float().Icon
+	CountFg = theme.Float().Sub
+	WarnFg = theme.Float().Danger
 	bodyStyle = lipgloss.NewStyle().Background(PanelBg)
-
 	chevronStyle = lipgloss.NewStyle().
 			Background(PanelBg).
 			Foreground(BtnFg)
-
 	chevronActive = lipgloss.NewStyle().
 			Background(PanelBg).
 			Foreground(AccentFocus).
 			Bold(true)
-
 	inputBgStyle = lipgloss.NewStyle().Background(InputBg)
-
 	queryStyle = lipgloss.NewStyle().
 			Background(InputBg).
 			Foreground(TextPrimary)
-
 	placeholderStyle = lipgloss.NewStyle().
 				Background(InputBg).
 				Foreground(TextDim).
 				Italic(true)
-
 	cursorStyle = lipgloss.NewStyle().
 			Background(InputBg).
 			Foreground(AccentFocus).
 			Bold(true)
-
 	countStyle = lipgloss.NewStyle().
 			Background(PanelBg).
 			Foreground(CountFg)
-
 	countWarnStyle = lipgloss.NewStyle().
 			Background(PanelBg).
 			Foreground(WarnFg)
-
 	ctrlStyle = lipgloss.NewStyle().
 			Background(PanelBg).
 			Foreground(BtnFg)
-
 	ctrlDim = lipgloss.NewStyle().
 		Background(PanelBg).
 		Foreground(BtnDim)
-
 	closeStyle = lipgloss.NewStyle().
 			Background(PanelBg).
 			Foreground(BtnFg)
-
-	// toggleOff renders a case/regex/word glyph in its inactive state.
 	toggleOff = lipgloss.NewStyle().
 			Background(PanelBg).
 			Foreground(BtnFg)
-
-	// toggleOn renders a case/regex/word glyph in its active state — bright
-	// fg on a subtle accent-tinted bg.
-	toggleOnBg = lipgloss.Color("#3a2a4a")
-	toggleOn   = lipgloss.NewStyle().
+	toggleOnBg = theme.Mix(theme.BgFloat, theme.BorderFocus, 0.3)
+	toggleOn = lipgloss.NewStyle().
 			Background(toggleOnBg).
 			Foreground(TextPrimary).
 			Bold(true)
-)
+}
 
 // PanelWidth returns the cell width of the rendered floating panel.
 func (m Model) PanelWidth() int { return panelWidth(m.w) }
@@ -774,6 +786,7 @@ func panelWidth(avail int) int {
 }
 
 func (m Model) View() string {
+	refreshColors()
 	if m.w <= 0 {
 		return ""
 	}

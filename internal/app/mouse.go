@@ -444,7 +444,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// Welcome screen: when no editor file is open we show the welcome
 	// content in the editor pane. A click on a recent-files row should
 	// open that file rather than fall through to the editor.
-	if msg.Type == tea.MouseLeft && m.editor.Path() == "" && len(m.bufs) <= 1 && !m.termOpen && !m.gitDiffActive {
+	if (msg.Type == tea.MouseLeft || msg.Type == tea.MouseMotion) && m.editor.Path() == "" && len(m.bufs) <= 1 && !m.termOpen && !m.gitDiffActive {
 		// Reproduce edPaneW + editorH the same way renderBase does so
 		// the hit map matches what's actually on screen.
 		bodyH := m.h - 1
@@ -475,6 +475,16 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		// Also moves the keyboard focus to the clicked card so a
 		// follow-up Enter / arrow press stays in sync with what the
 		// user just pointed at.
+		if msg.Type == tea.MouseMotion {
+			// Hover: the card under the pointer lights up.
+			for _, hit := range welcomeQuickActionHits(edPaneW, editorH) {
+				if localY == hit.Row && localX >= hit.ColStart && localX < hit.ColEnd {
+					m.welcomeFocus = hit.Index
+					break
+				}
+			}
+			return m, nil
+		}
 		for _, hit := range welcomeQuickActionHits(edPaneW, editorH) {
 			if localY != hit.Row {
 				continue

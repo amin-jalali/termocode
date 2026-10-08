@@ -11,6 +11,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -134,6 +135,18 @@ func formatProblemHint(d nvim.Diagnostic) string {
 }
 
 func severityIcon(sev int) string {
+	if theme.CurrentIconMode == theme.IconModeNerdFont {
+		switch sev {
+		case 1:
+			return "\uf057" // nf-fa-times_circle
+		case 2:
+			return "\uf071" // nf-fa-warning
+		case 3:
+			return "\uf05a" // nf-fa-info_circle
+		case 4:
+			return "\uf0eb" // nf-fa-lightbulb_o
+		}
+	}
 	switch sev {
 	case 1:
 		return "✘" // error

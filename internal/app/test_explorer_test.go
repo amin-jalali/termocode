@@ -93,7 +93,7 @@ func TestTestsSidebarRender(t *testing.T) {
 	m := testsModel()
 	replayGoRun(t, &m)
 	out := ansi.Strip(m.renderTestsSidebar(40, 30))
-	for _, want := range []string{"T E S T I N G", "▶ Run All", "↻ Failed", "✓ TestAdd", "✗ TestAddFails", "┃ calc_test.go:16: Add(2, 2)", "⊘ TestSkipped", "⚠ broken/broken_test.go:5:28"} {
+	for _, want := range []string{"TESTING", "▶ Run All", "↻ Failed", "✓ TestAdd", "✗ TestAddFails", "┃ calc_test.go:16: Add(2, 2)", "⊘ TestSkipped", "⚠ broken/broken_test.go:5:28"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("sidebar missing %q:\n%s", want, out)
 		}
