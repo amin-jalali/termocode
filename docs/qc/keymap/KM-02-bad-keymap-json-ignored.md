@@ -7,10 +7,10 @@
 - **Test Data:** three variants of `~/.config/termocode/keymap.json`:
   1. `{not json`
   2. `{"ctrl+s": "NoSuchAction"}`
-  3. `{"ctrl+alt+shift+f19": "Save"}` (key the default keymap does not use)
+  3. `{"ctrl+monkey": "Save"}` (malformed key)
 - **Environment:** <OS · terminal · nvim version>
 - **Traces to:** [ADR 0005](../../adr/0005-config-never-breaks-startup.md) · `internal/keymap/overrides.go`
-- **Automated check:** `🤖 TODO: unit` (each variant → LoadOverrides returns empty map)
+- **Automated check:** `✅ internal/keymap/overrides_test.go` (`TestLoadOverridesReport`)
 
 **Scenario:** a bad override file is ignored and the defaults stay active.
 
@@ -21,6 +21,7 @@
 ## Expected
 - termocode starts normally every time (no crash, no blank screen).
 - `Ctrl+S` saves the active file (default binding) in every variant.
+- Variants 2 and 3 show a "keymap.json: 1 entry ignored" toast naming the entry.
 
 ## Actual
 _(filled at run time)_

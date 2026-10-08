@@ -40,7 +40,7 @@ Add a row (and a folder) when you start cases for a new area, e.g. `ED` editor,
 | [SR-02](search/SR-02-fallback-without-rg.md) | Search works without ripgrep | ✅ `TestRunFallback` | ⬜ |
 | [SR-03](search/SR-03-fallback-skips-dirs-and-binaries.md) | Fallback skips vendored dirs and binaries | 🤖 TODO: unit | ⬜ |
 | [KM-01](keymap/KM-01-override-from-keymap-json.md) | Override loaded from `keymap.json` | 🤖 TODO: unit | ⬜ |
-| [KM-02](keymap/KM-02-bad-keymap-json-ignored.md) | Corrupt `keymap.json` does not break startup | 🤖 TODO: unit | ⬜ |
+| [KM-02](keymap/KM-02-bad-keymap-json-ignored.md) | Corrupt `keymap.json` does not break startup | ✅ `TestLoadOverridesReport` | ⬜ |
 | [HD-01](help/HD-01-run-doctor.md) | `Help: Run Doctor` shows the report | ✅ `TestDoctorReport` (report text) · 👁 overlay | ⬜ |
 | [EX-01](extensions/EX-01-broken-extension-does-not-block.md) | A broken extension does not block startup | ✅ `TestExtensionHostNvim` · 👁 toast | ⬜ |
 
