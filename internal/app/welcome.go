@@ -129,6 +129,7 @@ type welcomeQuickActionHit struct {
 	ColStart int
 	ColEnd   int
 	Action   keymap.Action
+	Index    int // card index into welcomeQuickActions()
 }
 
 // ─── Public API (kept stable) ──────────────────────────────────────────
@@ -181,6 +182,9 @@ type quickAction struct {
 	shortcut string
 	iconTok  theme.Color256
 	action   keymap.Action
+	// id names a card that has no keymap action (action == ActionNone);
+	// runWelcomeCard dispatches it directly. "clone" = Clone repository.
+	id string
 }
 
 func welcomeQuickActions() []quickAction {
@@ -216,6 +220,13 @@ func welcomeQuickActions() []quickAction {
 			shortcut: "^T",
 			iconTok:  theme.AccentMagenta,
 			action:   keymap.ActionToggleTerminal,
+		},
+		{
+			icon:     "↓",
+			title:    "Clone repository",
+			subtitle: "git clone, then open it",
+			iconTok:  theme.AccentRedCoral,
+			id:       welcomeCardClone,
 		},
 	}
 }
@@ -595,6 +606,7 @@ func buildActionGrid(actions []quickAction, innerW, lineOffset, focusIdx int, wi
 					ColStart: colStart,
 					ColEnd:   colEnd,
 					Action:   rowActs[i].action,
+					Index:    startIdx + i,
 				})
 			}
 		}
