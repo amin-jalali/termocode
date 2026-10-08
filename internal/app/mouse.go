@@ -77,6 +77,12 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		if msg.Type == tea.MouseLeft && m.hitStatusLSPChip(msg.X, msg.Y) {
 			return m, m.openToolManager(lspinstall.CategoryLSP)
 		}
+		// Group I: extension status items.
+		if msg.Type == tea.MouseLeft {
+			if cmd, ok := m.hitExtStatusItem(msg.X, msg.Y); ok {
+				return m, cmd
+			}
+		}
 		return m, nil // statusbar
 	}
 
@@ -344,6 +350,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		case activity.ViewSearch:
 			// Header + placeholder; nothing interactive yet.
 			return m, nil
+		}
+		if m.isExtSidebar() { // Group I: extension panels (ext.go)
+			return m, m.handleExtSidebarMouse(msg.Y, msg.Type)
 		}
 		return m, nil
 	}
