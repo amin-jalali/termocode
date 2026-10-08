@@ -476,17 +476,20 @@ func solarizedDarkPalette() Palette256 {
 	p.AIAccent = 37
 
 	p.IndexHex = mergeHex(p.IndexHex, map[Color256]string{
-		22:  "#005f00",
-		23:  "#005f5f",
-		33:  "#0087ff",
-		37:  "#00afaf",
-		60:  "#5f5f87",
-		64:  "#5f8700",
-		66:  "#5f8787",
+		// The real Solarized base tones (the xterm-cube neighbours were
+		// too bright a teal for readable text).
+		22:  "#00212b",
+		23:  "#002b36",
+		24:  "#073642",
+		33:  "#268bd2",
+		37:  "#2aa198",
+		60:  "#3b5a73",
+		64:  "#859900",
+		66:  "#657b83",
 		125: "#af005f",
 		136: "#af8700",
-		144: "#afaf87",
-		166: "#d75f00",
+		144: "#93a1a1",
+		166: "#cb4b16",
 	})
 	return p
 }
