@@ -1,0 +1,5 @@
+# Tools to build the documentation site (https://amin-jalali.github.io/termocode/).
+#   pip install -r requirements-docs.txt
+#   mkdocs serve
+mkdocs==1.6.1
+mkdocs-material==9.7.7

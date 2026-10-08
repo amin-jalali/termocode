@@ -11,3 +11,7 @@ coverage.txt
 .claude/
 *.swp
 .DS_Store
+
+# MkDocs build output / local venv
+/site/
+/.venv/

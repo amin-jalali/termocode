@@ -1,0 +1,116 @@
+site_name: termocode
+site_description: A terminal IDE that feels like VSCode, powered by a real Neovim.
+site_url: https://amin-jalali.github.io/termocode/
+repo_url: https://github.com/amin-jalali/termocode
+repo_name: amin-jalali/termocode
+edit_uri: edit/main/docs/
+copyright: termocode — see LICENSE in the repository
+
+docs_dir: docs
+
+theme:
+  name: material
+  language: en
+  icon:
+    logo: material/console
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - toc.follow
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+# Pages that exist for contributors but are not linked from the user nav.
+not_in_nav: |
+  /qc/**
+  /adr/0000-template.md
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Install: getting-started/install.md
+      - First 5 minutes: getting-started/first-steps.md
+      - Check your setup (Doctor): getting-started/help-doctor.md
+      - Feature tour: features.md
+  - Guides:
+      - Edit and move around: guides/editing.md
+      - Find and replace across files: guides/search.md
+      - "Git: stage, commit, sync, conflicts": guides/git.md
+      - Set up AI: guides/ai-setup.md
+      - Use AI: guides/ai-use.md
+      - Debug a program: guides/debug.md
+      - Run and explore tests: guides/tests.md
+      - Tasks and problems: guides/tasks-problems.md
+      - Install language servers and debuggers: guides/language-servers.md
+      - Workspaces and sessions: guides/workspaces.md
+      - Customize termocode: guides/customize.md
+      - Write an extension: extensions.md
+  - Reference:
+      - reference/index.md
+      - Keyboard shortcuts: reference/keys.md
+      - Commands: reference/commands.md
+      - Settings: reference/settings.md
+      - Config files: reference/config-files.md
+  - Concepts:
+      - How termocode works: concepts/how-it-works.md
+      - Find in files, in depth: concepts/find-in-files.md
+      - Architecture: architecture.md
+      - Decisions (ADRs):
+          - adr/README.md
+          - "0001 Embedded Neovim": adr/0001-embedded-neovim-editor-engine.md
+          - "0002 Lua chunks in Go": adr/0002-lua-chunks-in-go-raw-strings.md
+          - "0003 Auto-bootstrapped plugins": adr/0003-auto-bootstrapped-nvim-plugins.md
+          - "0004 Pure-Go search fallback": adr/0004-pure-go-search-fallback.md
+          - "0005 Config never breaks startup": adr/0005-config-never-breaks-startup.md
+          - "0006 Lua extension host": adr/0006-lua-extension-host.md
+  - Project:
+      - Roadmap (task list): TASKS.md
+      - QC test cases: qc/README.md
