@@ -113,10 +113,11 @@ func (m Model) HandleMouse(x, y int, t tea.MouseEventType) (Model, tea.Cmd) {
 // topGroupRows returns the row count taken by the top-of-bar group:
 // itemPitch per item plus interItemDivider between adjacent items.
 func topGroupRows() int {
-	if len(topItems) == 0 {
+	items := topAll() // Group I: + extension items
+	if len(items) == 0 {
 		return 0
 	}
-	return len(topItems)*itemPitch + (len(topItems)-1)*interItemDivider
+	return len(items)*itemPitch + (len(items)-1)*interItemDivider
 }
 
 // bottomGroupRows returns the row count taken by the bottom-of-bar group.
@@ -143,10 +144,11 @@ func (m Model) bottomGroupStart() int {
 func (m Model) itemAt(y int) (View, bool) {
 	if y < topGroupRows() {
 		idx, isItem := strideIndex(y)
-		if !isItem || idx >= len(topItems) {
+		items := topAll() // Group I: + extension items
+		if !isItem || idx >= len(items) {
 			return 0, false
 		}
-		return topItems[idx].view, true
+		return items[idx].view, true
 	}
 	bs := m.bottomGroupStart()
 	if bs < 0 {
@@ -187,7 +189,7 @@ const (
 
 func (m Model) classify(row int) (rowKind, *item) {
 	if row < topGroupRows() {
-		return classifyInGroup(row, topItems)
+		return classifyInGroup(row, topAll()) // Group I: + extension items
 	}
 	bs := m.bottomGroupStart()
 	if bs < 0 {
