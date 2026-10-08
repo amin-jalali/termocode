@@ -429,6 +429,9 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 	case nvim.ReadyMsg:
 		m.nvimAttached = true
 		m.applyLayout()
+		// Persisted settings (auto_save, word_wrap, show_hidden, tab_size)
+		// apply before the session restore so reopened buffers inherit them.
+		m.applyStartupSettings()
 		// Restore previous session: re-open every file that was open last
 		// time and re-expand the explorer tree to its previous state.
 		// Multi-root: load any persisted extra roots BEFORE applying the
