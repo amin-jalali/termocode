@@ -24,10 +24,10 @@ in a case, set its `Automated check`:
 
 | Prefix | Area | Folder |
 |---|---|---|
-| `SR` | Workspace search | [search/](search/) |
-| `KM` | Keymap / settings | [keymap/](keymap/) |
-| `HD` | Help / doctor | [help/](help/) |
-| `EX` | Extensions | [extensions/](extensions/) |
+| `SR` | Workspace search | [search/](https://github.com/amin-jalali/termocode/tree/main/docs/qc/search) |
+| `KM` | Keymap / settings | [keymap/](https://github.com/amin-jalali/termocode/tree/main/docs/qc/keymap) |
+| `HD` | Help / doctor | [help/](https://github.com/amin-jalali/termocode/tree/main/docs/qc/help) |
+| `EX` | Extensions | [extensions/](https://github.com/amin-jalali/termocode/tree/main/docs/qc/extensions) |
 
 Add a row (and a folder) when you start cases for a new area, e.g. `ED` editor,
 `GIT` Source Control, `RD` run/debug, `TM` terminal, `TH` themes, `SS` session.
