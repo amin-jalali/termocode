@@ -117,6 +117,8 @@ func main() {
 		scene{name: "confirm", steps: with(act("palette:git-discard"), pause(400*time.Millisecond))},
 		scene{name: "ai-chat", env: map[string]string{"TERMOCODE_AI_PROVIDER": "ollama", "TERMOCODE_AI_MODEL": "qwen2.5-coder"},
 			steps: with(act("palette:ai-open-chat"), pause(600*time.Millisecond))},
+		scene{name: "ai-chat-answer", env: map[string]string{"TERMOCODE_AI_PROVIDER": "ollama", "TERMOCODE_AI_MODEL": "qwen2.5-coder"},
+			steps: with(act("palette:ai-open-chat"), act("aidemo"), pause(600*time.Millisecond))},
 		scene{name: "problems", steps: with(act("palette:problems-panel"), pause(800*time.Millisecond))},
 		scene{name: "testing", steps: with(act("palette:testing-focus"), pause(1500*time.Millisecond))},
 		scene{name: "run-debug", steps: with(act("palette:debug-view"), pause(800*time.Millisecond))},
