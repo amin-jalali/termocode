@@ -77,6 +77,10 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		if msg.Type == tea.MouseLeft && m.hitStatusLSPChip(msg.X, msg.Y) {
 			return m, m.openToolManager(lspinstall.CategoryLSP)
 		}
+		if msg.Type == tea.MouseLeft && m.hitStatusDebugBadge(msg.X, msg.Y) { // Group D
+			m.openRunView(runSecStack, true)
+			return m, nil
+		}
 		return m, nil // statusbar
 	}
 
@@ -344,6 +348,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		case activity.ViewSearch:
 			// Header + placeholder; nothing interactive yet.
 			return m, nil
+		case activity.ViewRun: // Group D (debug_view.go)
+			return m, m.handleRunSidebarMouse(x, msg.Y, msg.Type)
 		}
 		return m, nil
 	}

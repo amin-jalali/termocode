@@ -1245,9 +1245,7 @@ func (m Model) renderSidebar(h int) string {
 	case activity.ViewGit:
 		content = m.renderGitSidebar(contentW, h)
 	case activity.ViewRun:
-		header := sidebarHeader(contentW, "RUN", "")
-		body := placeholderSidebar(contentW, h-1, "", "Run / Debug — coming soon.\n\nPress F5 to run a build.")
-		content = lipgloss.JoinVertical(lipgloss.Left, header, body)
+		content = m.renderRunSidebar(contentW, h) // Group D (debug_view.go)
 	default:
 		return ""
 	}

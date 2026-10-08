@@ -134,6 +134,9 @@ One `modalOverlay` function powers every picker and prompt. Per-call tweaks go t
 | `commands.json`         | Optional — user-defined palette commands surfaced as `User: <Title>`  |
 | `keymap.json`           | Optional — keybinding overrides (see [Keymap](#keymap-internalkeymap)) |
 | `user_theme.json`       | Optional — custom theme saved by the theme editor                      |
+| `breakpoints.json`      | Debugger breakpoints per file (line + line text, re-checked on open)   |
+
+Per-workspace: `<workspace>/.termocode/launch.json` holds debug / run configurations (VSCode `launch.json` shape; comments allowed).
 
 Plugins that termocode clones on first launch (nvim-dap, vim-visual-multi) live outside the config dir, in `~/.local/share/termocode/plugins` (`$XDG_DATA_HOME/termocode/plugins`, or `$TERMOCODE_PLUGINS_DIR`). See [ADR 0003](adr/0003-auto-bootstrapped-nvim-plugins.md).
 

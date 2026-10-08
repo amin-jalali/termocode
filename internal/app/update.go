@@ -71,6 +71,9 @@ func (m Model) anyTextInputOpen() bool {
 }
 
 func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if cmd, ok := m.routeDebugMsg(msg); ok { // Group D (debug_state.go)
+		return m, cmd
+	}
 	// Overlay control messages always handled regardless of state.
 	switch msg := msg.(type) {
 	case commitDetailMsg:
@@ -1486,6 +1489,10 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.dapStepInto()
 	case keymap.ActionDebugStepOut:
 		return m, m.dapStepOut()
+	case keymap.ActionDebugStartContinue: // Group D
+		return m, m.dapStart()
+	case keymap.ActionDebugStop: // Group D
+		return m, m.dapStop()
 	case keymap.ActionShowBufferInfo:
 		return m, m.openBufferInfo()
 	case keymap.ActionToggleActionsPanel:
@@ -1773,6 +1780,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.onToolRowSelected(msg.ID)
 	case pickerKindSnippetManager: // Group H
 		return m.onSnippetManagerSelected(msg.ID)
+	case pickerKindDebugConfig: // Group D
+		return m.onDebugConfigPicked(msg.ID)
 	}
 	return nil
 }
@@ -1784,6 +1793,10 @@ func (m Model) dispatchToFocus(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// The "explorer" focus actually means "the sidebar panel": route
 		// keys to whichever pane the activity bar currently shows.
 		switch m.activity.Active() {
+		case activity.ViewRun: // Group D (debug_view.go)
+			if k, ok := msg.(tea.KeyMsg); ok {
+				return m, m.handleRunSidebarKey(k)
+			}
 		case activity.ViewGit:
 			// Git sidebar has its own keymap (s/d/c/x/r + j/k/g/G/Enter).
 			// Route key events through it; non-key events fall through to
