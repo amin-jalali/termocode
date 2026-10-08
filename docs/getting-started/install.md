@@ -20,28 +20,25 @@ On Linux, the clipboard library needs X11 headers to build:
 sudo apt install libx11-dev     # Debian / Ubuntu
 ```
 
+## Install with Go
+
+```sh
+go install github.com/amin-jalali/termocode/cmd/termocode@latest
+```
+
+`go install` puts the `termocode` binary in `$(go env GOPATH)/bin`.
+Make sure that folder is on your `PATH`. Run the same command again to
+update.
+
 ## Build from source
+
+To hack on termocode, or to build a local binary:
 
 ```sh
 git clone https://github.com/amin-jalali/termocode.git
 cd termocode
-go install ./cmd/termocode
+go install ./cmd/termocode       # or: go build -o termocode ./cmd/termocode
 ```
-
-`go install` puts the `termocode` binary in `$(go env GOPATH)/bin`.
-Make sure that folder is on your `PATH`.
-
-If you prefer a local binary:
-
-```sh
-go build -o termocode ./cmd/termocode
-./termocode
-```
-
-!!! note "`go install …@latest` does not work yet"
-    The Go module is named `termocode`, not `github.com/amin-jalali/termocode`.
-    So `go install github.com/amin-jalali/termocode/cmd/termocode@latest`
-    fails. Clone the repository and run `go install ./cmd/termocode` inside it.
 
 ## Run it
 
