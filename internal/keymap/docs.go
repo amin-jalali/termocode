@@ -121,7 +121,6 @@ var actionInfo = map[Action]ActionInfo{
 	ActionToggleWordWrap:  {"View", "Turn soft word wrap on or off."},
 	ActionToggleZenMode:   {"View", "Turn Zen mode on or off."},
 	ActionMarkdownPreview: {"View", "Open the Markdown preview for the active file."},
-	ActionMdLivePreview:   {"View", "Old Markdown live preview. Not bound and does nothing; kept so old keymap.json files still load."},
 	ActionShowBufferInfo:  {"View", "Show path, size, encoding and LSP info for the active file."},
 
 	ActionPickTheme: {"Preferences", "Pick a color theme."},
