@@ -1,8 +1,18 @@
-# Find in Files — The Full Story
+# Find in files, in depth
 
-This document traces **everything** that happens when you search across your project in Termocode — from the keystroke that starts it, through the search engine, to the pixels you click on. It is grounded in the actual code (`internal/search/` and `internal/app/find_results*.go`, `internal/search/model.go`).
+!!! info "A deep dive for curious users and contributors"
+    This page traces one feature through the code. For the how-to, read the
+    [Find and replace guide](../guides/search.md).
 
-> **Scope:** this is *workspace* search ("find in files"), not the in-buffer findbar (`Ctrl+F`). The findbar searches the current file via Neovim's own engine and is covered in the main feature doc.
+    Since this page was first written, search gained the `Aa` / `ab` / `.*`
+    toggles, include / exclude globs and context lines (live overlay), result
+    streaming, and a configurable limit. The numbers below are current:
+    the total limit is the `search_max_results` setting (**default 2000**,
+    `0` = no limit), and ripgrep still stops at 100 matches per file.
+
+This page traces **everything** that happens when you search across your project in Termocode — from the keystroke that starts it, through the search engine, to the pixels you click on. It is grounded in the actual code (`internal/search/` and `internal/app/find_results*.go`, `internal/search/model.go`).
+
+> **Scope:** this is *workspace* search ("find in files"), not the in-buffer findbar (`Ctrl+F`). The findbar searches the current file via Neovim's own engine and is covered in the [Find and replace guide](../guides/search.md).
 
 ---
 
@@ -53,10 +63,10 @@ Everything funnels through three functions:
 ### 2.1 The ripgrep invocation
 
 ```
-rg --json --smart-case --max-count=100 --max-columns=200 -- <query>
+rg --json --max-count=100 --max-columns=200 --smart-case [--fixed-strings] [--word-regexp] [--context=N] [--glob=…] -- <query>
 ```
 
-run with `cmd.Dir = <root>`. Flag by flag:
+(`--case-sensitive` replaces `--smart-case` when `Aa` is on; `--fixed-strings` is added when regex is off.) It runs with `cmd.Dir = <root>`. Flag by flag:
 
 | Flag | Effect |
 |---|---|
@@ -90,13 +100,13 @@ type Result struct {
 }
 ```
 
-Collection stops at **`MaxResults = 100`** total.
+Collection stops at the **`search_max_results`** limit (default **2000**). The summary then reports *Showing N of M*.
 
 ### 2.3 The pure-Go fallback (`runFallback`) — works without ripgrep
 
 If `rg` is not on `PATH`, find-in-files **still works** via a dependency-free directory walker. It is deliberately simpler than ripgrep:
 
-- **Literal** substring search only (no regex), still **smart-case**.
+- Uses Go's `regexp`: the query is quoted (literal) unless regex mode is on; still **smart-case**.
 - Walks the tree with `filepath.WalkDir`, pruning directories via `skipSearchDir`: `.git`, `node_modules`, `vendor`, `target`, `dist`, `build`, `.next`, `.cache`, `__pycache__`, `.venv`, `venv`, and **any dot-directory**.
 - Skips files larger than **5 MiB** (`maxFallbackFileSize`).
 - Skips **binary** files — detected by a NUL byte in the first 8 KiB (`isBinary`).
@@ -111,7 +121,7 @@ The live overlay flags this state by appending **`· basic`** to its summary lin
 - Iterates each root, running `runOne` (or the fallback) per directory.
 - **One bad root doesn't kill the search:** an error from a root is remembered but the others continue; the error is only surfaced if **no** root produced any results.
 - Each hit's relative path is rewritten to **absolute** (`absJoin`) so it opens correctly no matter which root matched.
-- Accumulates across roots and stops once the combined total hits **100**.
+- Accumulates across roots and stops once the combined total hits the limit.
 
 The roots themselves come from `workspaceRoots()` — the primary cwd plus any folders added via *Workspace: Add Folder…*.
 
@@ -135,7 +145,7 @@ When you press Enter, `handlePromptSubmit` (via `file_ops.go`, which routes `pro
 
 1. Trims the query; empty → no-op.
 2. `roots := workspaceRoots()`.
-3. `results, err := search.RunDirs(roots, q)`.
+3. `search.Stream(ctx, roots, q, opts)` starts the search; results arrive in batches about every 100 ms, and a new search cancels the old one.
 4. **Error** → red toast *"Find failed"* with detail. **Zero results** → info toast *"No matches for «query»"*. Either way, no buffer is opened.
 
 ### Step 4 — Format the results body (`formatFindResults`)
@@ -201,7 +211,10 @@ Inside the buffer:
 
 ### Step 8 — Global next/previous match (`F4` / `Shift+F4`)
 
-These are bound **globally** (normal *and* insert mode), so you can cycle matches without returning to the results buffer:
+!!! warning "Known issue"
+    termocode's own keymap also binds `F4` (Toggle Inlay Hints) and `Shift+F4` (Reopen Closed Editor). Those bindings are checked first, so today these Neovim-side keys usually do not reach the results buffer. Use `Enter` or a click in the Find Results tab.
+
+These are bound in Neovim (normal *and* insert mode), so you can cycle matches without returning to the results buffer:
 
 - `navigate_results(+1)` / `navigate_results(-1)` walk the saved results buffer (`vim.g.termocode_find_results_buf`) from the currently-selected row, looking for the next/previous **match row** (identified by the `:` sigil — context rows with a space sigil are skipped).
 - On finding one, it moves the cursor in the results window (visual feedback) and `:edit +line <file>` to jump there.
@@ -262,10 +275,10 @@ A centered, rounded box (width capped at 110, height at 30) containing:
 Because both surfaces call `RunDirs`, these rules are **identical** everywhere:
 
 - **Case:** smart-case — lowercase query = case-insensitive; any uppercase = case-sensitive.
-- **Regex:** available through ripgrep when `rg` is installed (the query is passed after `--` untouched); **literal-only** on the pure-Go fallback.
+- **Regex:** on by default for the `F8` buffer (when `rg` is installed); a toggle (`.*`) in the live overlay.
 - **Scope:** every workspace root (primary cwd + added folders).
 - **Ignore rules:** ripgrep honors `.gitignore`/`.ignore`; the fallback instead prunes a fixed set of dependency/VCS/dot directories.
-- **Caps:** ≤ 100 results total, ≤ 100 matches per file (rg), lines over 200 columns truncated, files over 5 MiB skipped (fallback), binaries skipped.
+- **Caps:** ≤ `search_max_results` results total (default 2000), ≤ 100 matches per file (rg), lines over 200 columns truncated, files over 5 MiB skipped (fallback), binaries skipped.
 
 ---
 
@@ -291,14 +304,14 @@ Because both surfaces call `RunDirs`, these rules are **identical** everywhere:
 - Results buffer: `F8`, `Alt+F`, palette *Search: Find in Files*, welcome card.
 - Live overlay: palette *Search: Find in Files (Live Overlay)*.
 
-**Inside the results buffer:** `<CR>`/click = open hit · `F4`/`Shift+F4` = next/prev match (global).
+**Inside the results buffer:** `<CR>`/click = open hit.
 
 **Inside the live overlay:** `↑↓`/`Ctrl+P`/`Ctrl+N` = move · `Enter` = open · `Esc` = close.
 
-**Engine knobs:** `rg --json --smart-case --max-count=100 --max-columns=200`; 100-result cap; 150 ms overlay debounce; 5 MiB / binary / dot-dir skips on the fallback.
+**Engine knobs:** `rg --json --smart-case --max-count=100 --max-columns=200`; `search_max_results` cap (default 2000); 150 ms overlay debounce; 5 MiB / binary / dot-dir skips on the fallback.
 
 **Key files:** `internal/search/search.go` (engine), `internal/search/model.go` (live overlay), `internal/app/find_results.go` (buffer flow), `internal/app/find_results_lua.go` (buffer syntax + keymaps).
 
 ---
 
-*Related: in-buffer find/replace (`Ctrl+F` / `Ctrl+H`) and workspace replace (`Ctrl+Shift+H`) are documented in `FEATURE.md` §4.*
+*Related: in-buffer find/replace (`Ctrl+F` / `Ctrl+H`) and workspace replace (`Ctrl+Shift+H`) are covered in the [Find and replace guide](../guides/search.md).*
