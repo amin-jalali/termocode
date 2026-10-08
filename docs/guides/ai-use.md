@@ -66,6 +66,13 @@ the AI was working, termocode does not apply the edit.
 
 Shortcut: `Alt+I` runs **Edit with AI** on the selection or the current line.
 
+### Fix from the Problems panel
+
+In the **Problems** panel (`Alt+M`), select a problem and press `a`. Or
+click **✦ Fix with AI** at the end of the selected row, or right-click the
+row and pick **Fix with AI**. termocode jumps to the problem and runs the
+same Fix flow: diff, then **Apply** as one undo step.
+
 ## Agent: let the chat use tools
 
 The chat is an agent. It can call tools to answer you:
