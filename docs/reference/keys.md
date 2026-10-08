@@ -28,8 +28,7 @@ These are the default keys. The **Key** column is the key you press. The **Key s
 | `Alt+P` | `alt+p` | `PinTab` | Pin or unpin the active tab. |
 | `Alt+Shift+T` | `alt+T` | `ReopenClosed` | Reopen the editor you closed last. |
 | `Alt+Shift+T` | `alt+shift+t` | `ReopenClosed` | Reopen the editor you closed last. |
-| `Shift+F4` | `f16` | `ReopenClosed` | Reopen the editor you closed last. |
-| `Shift+F4` | `shift+f4` | `ReopenClosed` | Reopen the editor you closed last. |
+| `Ctrl+Shift+T` | `ctrl+shift+t` | `ReopenClosed` | Reopen the editor you closed last. |
 | `Ctrl+/` | `ctrl+/` | `ToggleComment` | Comment or uncomment the current line or selection. |
 | `Ctrl+/` | `ctrl+_` | `ToggleComment` | Comment or uncomment the current line or selection. |
 
@@ -54,6 +53,9 @@ These are the default keys. The **Key** column is the key you press. The **Key s
 | Key | Key string | Action | Description |
 | --- | --- | --- | --- |
 | `Ctrl+F` | `ctrl+f` | `Find` | Find in the active file. |
+| `F4` | `f4` | `NextSearchResult` | Go to the next Find in Files result. |
+| `Shift+F4` | `f16` | `PrevSearchResult` | Go to the previous Find in Files result. |
+| `Shift+F4` | `shift+f4` | `PrevSearchResult` | Go to the previous Find in Files result. |
 | `Ctrl+H` | `ctrl+h` | `ReplaceInFile` | Find and replace in the active file. |
 | `Ctrl+Shift+H` | `ctrl+shift+h` | `ReplaceInWorkspace` | Replace text in all files of the workspace. |
 | `Alt+F` | `alt+f` | `WorkspaceSearch` | Search all files in the workspace (ripgrep). |
@@ -70,7 +72,7 @@ These are the default keys. The **Key** column is the key you press. The **Key s
 | `Ctrl+F12` | `ctrl+f12` | `GotoTypeDef` | Go to the type definition of the symbol at the cursor. |
 | `F5` | `f5` | `NextDiagnostic` | Go to the next problem in the active file. |
 | `Shift+F5` | `shift+f5` | `PrevDiagnostic` | Go to the previous problem in the active file. |
-| `F4` | `f4` | `ToggleInlayHints` | Show or hide inlay hints. |
+| `Alt+L` | `alt+l` | `ToggleInlayHints` | Show or hide inlay hints. |
 
 ## Git
 
@@ -161,7 +163,6 @@ You can give these a key in `keymap.json` (see below), or run them from the comm
 | `FocusExplorer` | Navigation | Move focus to the sidebar. |
 | `GotoImplementation` | LSP | Go to the implementation of the symbol at the cursor. |
 | `Hover` | LSP | Show hover documentation for the symbol at the cursor. |
-| `MdLivePreview` | View | Old Markdown live preview. Not bound and does nothing; kept so old keymap.json files still load. |
 | `OpenShell` | Terminal | Open an external shell in the workspace folder. |
 | `OpenURL` | Editor | Open the first URL on the current line in the browser. |
 | `PickTheme` | Preferences | Pick a color theme. |
@@ -198,7 +199,6 @@ The editor is real Neovim. termocode adds these keys inside Neovim. They are not
 | `Ctrl+D` | Normal | Multi-cursor: select the next match of the word. |
 | `Ctrl+Alt+Up / Ctrl+Alt+Down` | Normal, Insert | Multi-cursor: add a cursor above / below. |
 | `]x / [x` | Normal | Next / previous merge conflict. |
-| `F4 / Shift+F4` | Normal, Insert | Next / previous Find in Files result. Note: today the app keys F4 (ToggleInlayHints) and Shift+F4 (ReopenClosed) catch these keys first. |
 | `Esc` | Insert | Back to Normal mode — the editor is real Neovim. |
 
 ## Change a key

@@ -502,7 +502,7 @@ end
 		// Persist the freshly-expanded set so a subsequent restart sees
 		// the same tree shape even if no further user interaction happens.
 		m.persistExplorerState()
-		return m, m.extLoadCmd(false), true // Group I: load extensions after the built-in Lua
+		return m, tea.Batch(m.extLoadCmd(false), m.keymapProblemsToast()), true // Group I: load extensions after the built-in Lua
 	case nvim.RedrawMsg:
 		// Watch for mode_change events so we can update the hardware
 		// cursor shape (DECSCUSR) in View(). Events arrive as
@@ -1332,6 +1332,8 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// don't push built-ins down the fuzzy-match list.
 		items := paletteItems()
 		items = append(items, tasksPaletteItems()...) // Group C
+		// Hints come from the live keymap (keymap.json overrides too).
+		items = withKeyHints(items, m.keys)
 		items = append(items, userCommandsItems()...)
 		items = append(items, m.extPaletteItems()...) // Group I
 		// Promote frequently-used commands to the front so muscle memory
@@ -1521,6 +1523,10 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case keymap.ActionToggleInlayHints:
 		m.toggleInlayHints()
 		return m, nil
+	case keymap.ActionNextSearchResult:
+		return m, m.findResultNav(1)
+	case keymap.ActionPrevSearchResult:
+		return m, m.findResultNav(-1)
 	case keymap.ActionPickTheme:
 		return m, m.openThemePicker()
 	case keymap.ActionDebugToggleBreakpoint:

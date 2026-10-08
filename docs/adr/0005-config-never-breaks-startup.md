@@ -13,10 +13,10 @@ start on a bad file would lock the user out of the tool they need to fix it.
 Every config loader treats "missing", "unreadable", "corrupt JSON" and "unknown
 values" as "use defaults" and never returns an error to the caller. For example
 `keymap.LoadOverrides` (`internal/keymap/overrides.go`) returns `nil` on any
-read/parse failure and drops entries with an unknown action name or a key the
-default keymap does not use. Writers validate **before** they persist
-(`keymap.IsKnownKey` in `applyKeybinding`), so the app itself never writes a bad
-file. Real problems are surfaced as toasts and in `errors.log`, not as a failed
+read/parse failure and drops entries with an unknown action name or a malformed
+key (`keymap.LoadOverridesReport` lists them for a startup toast). Writers
+validate **before** they persist (`keymap.ValidateKey` in `applyKeybinding`), so
+the app itself never writes a bad file. Real problems are surfaced as toasts and in `errors.log`, not as a failed
 launch.
 
 ## Consequences

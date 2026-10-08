@@ -13,6 +13,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/keymap"
+	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -75,6 +76,8 @@ var paletteActions = map[string]keymap.Action{
 	"toggle-comment":          keymap.ActionToggleComment,
 	"preview-md":              keymap.ActionMarkdownPreview,
 	"find-files":              keymap.ActionWorkspaceSearch,
+	"search-next-result":      keymap.ActionNextSearchResult,
+	"search-prev-result":      keymap.ActionPrevSearchResult,
 	"replace-in-file":         keymap.ActionReplaceInFile,
 	"toggle-inlay-hints":      keymap.ActionToggleInlayHints,
 	"pick-theme":              keymap.ActionPickTheme,
@@ -139,7 +142,7 @@ var paletteActions = map[string]keymap.Action{
 // default keys of each row's action.
 func PaletteCatalog() []PaletteEntry {
 	km := keymap.Default()
-	items := append(paletteItems(), tasksPaletteItems()...)
+	items := withKeyHints(append(paletteItems(), tasksPaletteItems()...), km)
 	out := make([]PaletteEntry, 0, len(items))
 	for _, it := range items {
 		e := PaletteEntry{ID: it.ID, Title: it.Title, Hint: it.Hint}
@@ -149,6 +152,68 @@ func PaletteCatalog() []PaletteEntry {
 		out = append(out, e)
 	}
 	return out
+}
+
+// maxHintKeys caps how many keys a palette hint lists, so the row stays short.
+const maxHintKeys = 2
+
+// withKeyHints sets the Hint of every palette item that runs a keymap
+// Action (paletteActions) from the keys bound to it in km, so hints follow
+// the real keymap — including keymap.json overrides — and cannot drift.
+// Keys named in the static Hint come first, in that order (the static
+// hint says which key is the main one); other bound keys follow. An item
+// whose action has no key keeps its static Hint: that is a Neovim-side
+// key (for example Shift+Alt+Down), checked by TestPaletteHintsMatchKeymap.
+func withKeyHints(items []picker.Item, km keymap.KeyMap) []picker.Item {
+	out := make([]picker.Item, len(items))
+	copy(out, items)
+	for i, it := range out {
+		a, ok := paletteActions[it.ID]
+		if !ok {
+			continue
+		}
+		if h := keyHint(km.KeysFor(a), it.Hint); h != "" {
+			out[i].Hint = h
+		}
+	}
+	return out
+}
+
+// keyHint builds a hint from bound key strings: unique human names
+// ("alt+T" and "alt+shift+t" are both Alt+Shift+T), keys mentioned in
+// static first, then the rest sorted, at most maxHintKeys of them.
+func keyHint(keys []string, static string) string {
+	var names []string
+	seen := map[string]bool{}
+	for _, k := range keys {
+		h := keymap.HumanKey(k)
+		if !seen[h] {
+			seen[h] = true
+			names = append(names, h)
+		}
+	}
+	if len(names) == 0 {
+		return ""
+	}
+	pos := func(n string) int {
+		for i, p := range strings.Split(static, " / ") {
+			if strings.EqualFold(strings.TrimSpace(p), n) {
+				return i
+			}
+		}
+		return len(static) + 1
+	}
+	sort.SliceStable(names, func(i, j int) bool {
+		pi, pj := pos(names[i]), pos(names[j])
+		if pi != pj {
+			return pi < pj
+		}
+		return names[i] < names[j]
+	})
+	if len(names) > maxHintKeys {
+		names = names[:maxHintKeys]
+	}
+	return strings.Join(names, " / ")
 }
 
 // PaletteActionFor returns the keymap Action a palette ID runs, if any.
@@ -212,7 +277,7 @@ func EnvCatalog() []EnvVar {
 	out := []EnvVar{
 		{"XDG_CONFIG_HOME", "Moves the config folder to `$XDG_CONFIG_HOME/termocode`."},
 		{"XDG_DATA_HOME", "Moves the data folder to `$XDG_DATA_HOME/termocode`."},
-		{"TERMOCODE_FONT_DELTA", "Font size change asked of the terminal at launch (default -2, 0 turns it off)."},
+		{"TERMOCODE_FONT_DELTA", "Font size change asked of the terminal at launch; wins over font_delta in config.json (default -2, 0 turns it off)."},
 		{"TERMOCODE_ICON_MODE", "Icon set: `nerd_font`, `unicode` or `ascii`."},
 		{"TERMOCODE_NERD_FONT", "Legacy: `1` is the same as `TERMOCODE_ICON_MODE=nerd_font`."},
 		{"TERMOCODE_PLUGINS_DIR", "Folder for the Neovim plugins termocode clones on first launch."},
@@ -264,8 +329,10 @@ func ConfigFileCatalog() []ConfigFile {
 			"Yes, but Preferences: Edit Custom Theme is easier."},
 		{"config", "breakpoints.json", "Saved debugger breakpoints per file (line and line text).",
 			"JSON `{\"version\", \"breakpoints\": {file: [...]}}`.", "Not needed. termocode rewrites it when breakpoints change."},
-		{"config", "session.json", "Open files, tab order, cursor positions, expanded folders, workspace roots.",
-			"JSON, written by termocode.", "No (state). Developer: Reset Session clears it and keeps `session.json.bak`."},
+		{"config", "sessions/<hash>.json", "Session of one workspace: open files, tab order, cursor positions, expanded folders, extra workspace roots, last AI chat. The name is a hash of the workspace path; the `workspace` key says which folder.",
+			"JSON, written by termocode.", "No (state). Developer: Reset Session clears the current workspace's file and keeps a `.bak`."},
+		{"config", "session.json", "Layout kept across all workspaces: terminal height, Actions panel, Source Control view. A session.json from before per-workspace sessions moves to `sessions/` the first time its workspace opens.",
+			"JSON, written by termocode.", "No (state). Safe to delete."},
 		{"config", "recents.json", "Recent files for the welcome screen and File: Open Recent….",
 			"JSON array.", "No (state). Safe to delete."},
 		{"config", "workspaces.json", "Recent workspace folders for File: Open Recent Workspace….",
@@ -336,7 +403,6 @@ func EditorKeyCatalog() []EditorKey {
 		{"Ctrl+D", "Normal", "Multi-cursor: select the next match of the word."},
 		{"Ctrl+Alt+Up / Ctrl+Alt+Down", "Normal, Insert", "Multi-cursor: add a cursor above / below."},
 		{"]x / [x", "Normal", "Next / previous merge conflict."},
-		{"F4 / Shift+F4", "Normal, Insert", "Next / previous Find in Files result. Note: today the app keys F4 (ToggleInlayHints) and Shift+F4 (ReopenClosed) catch these keys first."},
 		{"Esc", "Insert", "Back to Normal mode — the editor is real Neovim."},
 	}
 }

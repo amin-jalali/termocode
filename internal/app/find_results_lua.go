@@ -6,8 +6,9 @@ package app
 //     line numbers, footer summary)
 //   - buffer-local <CR> / <2-LeftMouse>  → open the file at the cursor's
 //     result row
-//   - global F4 / Shift+F4 → next / previous match (works from anywhere
-//     in the editor, not just inside the results buffer)
+//   - _G._termocode_find_nav(dir) → next / previous match (works from
+//     anywhere in the editor). The app calls it for F4 / Shift+F4
+//     (keymap.ActionNextSearchResult / ActionPrevSearchResult).
 //
 // Loaded once during attach (see model.go::attachCmd) and triggers on
 // the FileType autocmd whenever a buffer announces filetype=findresults.
@@ -144,7 +145,7 @@ vim.api.nvim_create_autocmd('FileType', {
   end,
 })
 
--- Global F4 / Shift+F4 navigation. Walks the saved Find Results buffer
+-- Next / previous result navigation (F4 / Shift+F4 in the app). Walks the saved Find Results buffer
 -- looking for the next / previous match line (those have ":" between
 -- the line number and the content; context lines have " "). Opens the
 -- corresponding file as if the user pressed <CR> on the row, AND moves
@@ -152,9 +153,9 @@ vim.api.nvim_create_autocmd('FileType', {
 -- from.
 local function navigate_results(direction)
   local buf = vim.g.termocode_find_results_buf
-  if not buf or not vim.api.nvim_buf_is_valid(buf) then return end
+  if not buf or not vim.api.nvim_buf_is_valid(buf) then return 'none' end
   local total = vim.api.nvim_buf_line_count(buf)
-  if total == 0 then return end
+  if total == 0 then return 'none' end
 
   -- Find the row currently selected in the results window (if any). If
   -- the results buffer isn't visible we start from the top.
@@ -191,14 +192,14 @@ local function navigate_results(direction)
         end
         vim.cmd('edit +' .. lineno .. ' ' .. vim.fn.fnameescape(file))
       end
-      return
+      return 'ok'
     end
     r = r + step
   end
+  return 'end'
 end
 
-vim.keymap.set('n', '<F4>',     function() navigate_results( 1) end, { silent = true })
-vim.keymap.set('n', '<S-F4>',   function() navigate_results(-1) end, { silent = true })
-vim.keymap.set('i', '<F4>',     function() navigate_results( 1) end, { silent = true })
-vim.keymap.set('i', '<S-F4>',   function() navigate_results(-1) end, { silent = true })
+-- Called from Go (findResultNav). Returns 'ok', 'end' (no more results in
+-- that direction) or 'none' (no Find Results buffer).
+_G._termocode_find_nav = navigate_results
 `

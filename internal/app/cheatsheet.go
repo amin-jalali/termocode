@@ -17,7 +17,7 @@ FILE
   Ctrl+S            Save
   Ctrl+Q            Quit
   Ctrl+W            Close current editor
-  Alt+Shift+T       Reopen closed editor
+  Alt+Shift+T       Reopen closed editor (also Ctrl+Shift+T)
   Ctrl+R            Open Recent file
   Palette           Save All Files
   Palette           Open Recent Workspace
@@ -48,6 +48,7 @@ SEARCH
   Ctrl+F            Find in current file
   Ctrl+H            Replace in current file
   F8 / Alt+F        Find in workspace (ripgrep)
+  F4 / Shift+F4     Next / previous search result
   Ctrl+Shift+H      Replace in workspace
   Find/Replace bar  Aa case · ab word · .* regex toggles
                     (selection is auto-prefilled when opened)
@@ -84,7 +85,7 @@ LSP
   K / Palette       Hover documentation
   F2                Rename symbol
   Ctrl+Space        Manual completion
-  F4                Toggle inlay hints
+  Alt+L             Toggle inlay hints
   F5 / Shift+F5     Next / previous diagnostic
   Alt+M             View: Problems (panel; also Ctrl+Shift+M)
   Palette           Go to Problem...

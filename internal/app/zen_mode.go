@@ -68,21 +68,22 @@ func (m *Model) toggleZenMode() tea.Cmd {
 	return toastCmd
 }
 
-// resetSession wipes the persisted editor state — open files, cursor
-// positions, expanded explorer dirs — and re-execs termocode so the user
-// gets a clean slate. Useful after a buffer leak (zombie `term://...` or
-// PREVIEW entries from previous sessions) leaves tabs that won't close.
+// resetSession wipes the persisted editor state of this workspace — open
+// files, cursor positions, expanded explorer dirs — and re-execs termocode
+// so the user gets a clean slate. Useful after a buffer leak (zombie
+// `term://...` or PREVIEW entries from previous sessions) leaves tabs that
+// won't close. Other workspaces and the global layout (session.json) are
+// left alone.
 //
-// We back up the existing session.json next to it as a `.bak` so a
+// We back up the workspace session file next to it as a `.bak` so a
 // pebkac "I didn't mean it" can be undone with `mv ... .bak ... .json`.
 func (m *Model) resetSession() tea.Cmd {
-	dir, err := configDir()
+	target, err := workspaceSessionPath()
 	if err != nil {
 		var toastCmd tea.Cmd
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Config error", err.Error())
 		return toastCmd
 	}
-	target := dir + "/session.json"
 	// Best-effort backup; errors are non-fatal — the user explicitly
 	// asked to reset, missing backup just means we can't undo.
 	if data, err := os.ReadFile(target); err == nil {

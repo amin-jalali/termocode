@@ -41,6 +41,7 @@ This is normal Neovim editing, so `Ctrl+Z` undoes it.
 2. Type your text and press `Enter`.
 3. A **Find Results** tab opens. Hits are grouped by file.
 4. Move to a hit and press `Enter`, or click it, to open that line.
+5. Press `F4` / `Shift+F4` anywhere to jump to the next / previous hit.
 
 Results stream in while the search runs. The tab stays open, so you can
 come back to it.
@@ -94,6 +95,7 @@ Find in Files stops after **2000** results by default. The footer then says
 | `Ctrl+H` | Replace in file |
 | `Enter` / `Shift+Tab` | Next / previous match (find bar) |
 | `F8` or `Alt+F` | Find in all files |
+| `F4` / `Shift+F4` | Next / previous Find in Files result |
 | `Ctrl+Shift+H` | Replace in all files |
 | `Alt+C` / `Alt+W` / `Alt+R` | Case / word / regex (live overlay) |
 

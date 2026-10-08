@@ -180,12 +180,12 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Show Tags... | `git-tags` |   |   |
 | Git: Stage All Changes | `git-stage-all` |   |   |
 | Git: Stage Current File | `git-stage` |   |   |
-| Git: Stage Hunk (at cursor) | `git-stage-hunk` | `Alt+S` |   |
+| Git: Stage Hunk (at cursor) | `git-stage-hunk` | `Alt+S` | `Alt+S` |
 | Git: Stash Changes | `git-stash` |   |   |
 | Git: Switch Branch... | `git-branch` |   |   |
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
-| Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` |   |
+| Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |
 
 ## Help
 
@@ -205,7 +205,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | LSP: Go to Type Definition | `goto-type-def` | `Ctrl+F12` | `Ctrl+F12` |
 | LSP: Manage Language Servers... | `lsp-manage` |   |   |
 | LSP: Show Hover Documentation | `hover` |   |   |
-| LSP: Toggle Inlay Hints | `toggle-inlay-hints` | `F4` | `F4` |
+| LSP: Toggle Inlay Hints | `toggle-inlay-hints` | `Alt+L` | `Alt+L` |
 
 ## Markdown
 
@@ -250,6 +250,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Search: Find in Files | `find-files` | `Alt+F` / `F8` | `F8 / Alt+F` |
 | Search: Find in Files (Live Overlay) | `find-files-overlay` |   |   |
+| Search: Go to Next Search Result | `search-next-result` | `F4` | `F4` |
+| Search: Go to Previous Search Result | `search-prev-result` | `Shift+F4` | `Shift+F4` |
 | Search: Replace in Workspace... | `replace-workspace` | `Ctrl+Shift+H` | `Ctrl+Shift+H` |
 
 ## Snippets
@@ -285,11 +287,11 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Terminal: Maximize Panel | `terminal-maximize` |   |   |
 | Terminal: Minimize Panel | `terminal-minimize` |   |   |
 | Terminal: New Tab | `terminal-new-tab` | <code>Ctrl+Shift+&#96;</code> | <code>Ctrl+Shift+&#96;</code> |
-| Terminal: Next Tab | `terminal-next-tab` | `Ctrl+Shift+PgDn` | `Ctrl+Shift+PgDown` |
+| Terminal: Next Tab | `terminal-next-tab` | `Ctrl+Shift+PgDn` | `Ctrl+Shift+PgDn` |
 | Terminal: Open External Shell | `open-shell` |   |   |
 | Terminal: Open File Link... | `terminal-open-link` |   |   |
 | Terminal: Previous Tab | `terminal-prev-tab` | `Ctrl+Shift+PgUp` | `Ctrl+Shift+PgUp` |
-| Terminal: Toggle Integrated Panel | `toggle-terminal` | <code>Alt+&#96;</code> / <code>Ctrl+&#96;</code> / `Ctrl+T` | `Ctrl+T` |
+| Terminal: Toggle Integrated Panel | `toggle-terminal` | <code>Alt+&#96;</code> / <code>Ctrl+&#96;</code> / `Ctrl+T` | <code>Ctrl+T / Alt+&#96;</code> |
 
 ## Testing
 
@@ -311,15 +313,15 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | View: Close Editor | `close-buffer` | `Ctrl+W` | `Ctrl+W` |
 | View: Debug Console | `debug-console` |   |   |
-| View: Focus Editor | `focus-editor` |   | `Ctrl+1` |
-| View: Focus Explorer | `focus-explorer` |   | `Ctrl+0` |
+| View: Focus Editor | `focus-editor` |   |   |
+| View: Focus Explorer | `focus-explorer` |   |   |
 | View: Fold All | `fold-all` |   | `zM` |
 | View: Next Editor | `next-buffer` | `Ctrl+PgDn` | `Ctrl+PgDn` |
 | View: Open URL on Current Line | `open-url` |   |   |
 | View: Output | `view-output` |   |   |
 | View: Previous Editor | `prev-buffer` | `Ctrl+PgUp` | `Ctrl+PgUp` |
 | View: Problems | `problems-panel` | `Alt+M` / `Ctrl+Shift+M` | `Ctrl+Shift+M / Alt+M` |
-| View: Reopen Closed Editor | `reopen-closed` | `Alt+Shift+T` / `Shift+F4` | `Shift+F4 / Alt+Shift+T` |
+| View: Reopen Closed Editor | `reopen-closed` | `Alt+Shift+T` / `Ctrl+Shift+T` | `Alt+Shift+T / Ctrl+Shift+T` |
 | View: Run and Debug | `debug-view` |   |   |
 | View: Show Buffer Info | `buffer-info` | `Ctrl+Alt+I` | `Ctrl+Alt+I` |
 | View: Switch to Last File | `alternate-file` | `Ctrl+Tab` | `Ctrl+Tab` |

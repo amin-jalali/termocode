@@ -211,13 +211,11 @@ Inside the buffer:
 
 ### Step 8 — Global next/previous match (`F4` / `Shift+F4`)
 
-!!! warning "Known issue"
-    termocode's own keymap also binds `F4` (Toggle Inlay Hints) and `Shift+F4` (Reopen Closed Editor). Those bindings are checked first, so today these Neovim-side keys usually do not reach the results buffer. Use `Enter` or a click in the Find Results tab.
-
-These are bound in Neovim (normal *and* insert mode), so you can cycle matches without returning to the results buffer:
+`F4` / `Shift+F4` are termocode keymap actions (`NextSearchResult` / `PrevSearchResult`, also in the palette as *Search: Go to Next / Previous Search Result*). They work in every mode, so you can cycle matches without returning to the results buffer. The app calls the Lua function `_G._termocode_find_nav(dir)`:
 
 - `navigate_results(+1)` / `navigate_results(-1)` walk the saved results buffer (`vim.g.termocode_find_results_buf`) from the currently-selected row, looking for the next/previous **match row** (identified by the `:` sigil — context rows with a space sigil are skipped).
 - On finding one, it moves the cursor in the results window (visual feedback) and `:edit +line <file>` to jump there.
+- It returns `'none'` when there is no results buffer and `'end'` when there is no more match in that direction; the app shows a toast for both.
 
 ---
 
