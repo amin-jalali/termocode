@@ -43,9 +43,9 @@ const (
 	uniConfig  = "⋄" // U+22C4
 	uniDoc     = "▭" // U+25AD
 	uniImage   = "◍" // U+25CD
-	uniArchive = "▮" // U+25AE
+	uniArchive = "⊞" // U+229E
 	uniShell   = "$"
-	uniGit     = "⎇" // U+2387
+	uniGit     = "⌥" // U+2325
 	uniLock    = "▴" // U+25B4
 	uniData    = "◊" // U+25CA
 	uniFile    = "◦" // U+25E6
