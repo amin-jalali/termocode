@@ -472,6 +472,9 @@ type Model struct {
 	actionsOpen   bool
 	actionsPinned bool
 	actionsWidth  int
+	// actionsWidthSet: the user dragged the edge (or a saved width was
+	// restored); until then the width follows the window (autoActionsWidth).
+	actionsWidthSet bool
 
 	// stickyContext is the 1-line "function/class signature" shown above the
 	// editor content as the user scrolls past it. Empty string suppresses the
@@ -603,8 +606,10 @@ func New() Model {
 		actionsPinned = *sess.ActionsPinned
 	}
 	actionsWidth := defaultActionsWidth
+	actionsWidthSet := false
 	if sess.ActionsWidth >= actionsMinWidth {
 		actionsWidth = sess.ActionsWidth
+		actionsWidthSet = true
 	}
 
 	// Source Control file list defaults to the collapsible tree view. A
@@ -642,6 +647,7 @@ func New() Model {
 		actionsOpen:      actionsOpen,
 		actionsPinned:    actionsPinned,
 		actionsWidth:     actionsWidth,
+		actionsWidthSet:  actionsWidthSet,
 		output:           newOutputStore(),
 		debounce:         debounce.New(),
 		problems:         newProblemsPanel(), // Group C

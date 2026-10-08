@@ -151,8 +151,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			} else if newW > max {
 				newW = max
 			}
-			if newW != m.actionsWidth {
+			if newW != m.actionsWidth || !m.actionsWidthSet {
 				m.actionsWidth = newW
+				m.actionsWidthSet = true
 				m.applyLayout()
 			}
 			return m, nil

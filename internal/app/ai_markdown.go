@@ -564,37 +564,101 @@ func highlightCode(code, lang string, s mdStyles) [][]mdSpan {
 
 func aiCleanTextKeepNL(s string) string { return aiCleanText(s) }
 
-// wrapStyledLine hard-wraps a styled code line to w cells.
+// wrapStyledLine wraps a styled code line to w cells. It breaks after
+// whitespace or punctuation (never inside an identifier when it can be
+// avoided); continuation rows start with a dim "↪" and the line's own
+// indent, so wrapped code still reads as one statement.
 func wrapStyledLine(spans []mdSpan, w int) [][]mdSpan {
-	if w < 1 {
-		w = 1
+	if w < 4 {
+		w = 4
 	}
-	var out [][]mdSpan
-	var line []mdSpan
-	lw := 0
+	type cell struct {
+		r  rune
+		st lipgloss.Style
+		cw int
+	}
+	var cells []cell
+	total := 0
 	for _, sp := range spans {
-		t := sp.text
-		for t != "" {
-			room := w - lw
-			if room <= 0 {
-				out = append(out, line)
-				line, lw = nil, 0
-				room = w
-			}
-			head := runewidth.Truncate(t, room, "")
-			if head == "" {
-				out = append(out, line)
-				line, lw = nil, 0
-				head = runewidth.Truncate(t, w, "")
-				if head == "" {
-					head = string([]rune(t)[:1])
-				}
-			}
-			line = append(line, mdSpan{text: head, st: sp.st})
-			lw += runewidth.StringWidth(head)
-			t = t[len(head):]
+		for _, r := range sp.text {
+			cw := runewidth.RuneWidth(r)
+			cells = append(cells, cell{r, sp.st, cw})
+			total += cw
 		}
 	}
-	out = append(out, line)
+	emit := func(cs []cell) []mdSpan {
+		var out []mdSpan
+		for _, c := range cs {
+			if n := len(out); n > 0 && out[n-1].st.GetForeground() == c.st.GetForeground() {
+				out[n-1].text += string(c.r)
+				continue
+			}
+			out = append(out, mdSpan{text: string(c.r), st: c.st})
+		}
+		return out
+	}
+	if total <= w {
+		return [][]mdSpan{emit(cells)}
+	}
+	indent := 0
+	for indent < len(cells) && cells[indent].r == ' ' {
+		indent++
+	}
+	if indent > w/3 {
+		indent = w / 3
+	}
+	cont := "↪ "
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		cont = "> "
+	}
+	var contSt lipgloss.Style
+	if len(cells) > 0 {
+		contSt = cells[0].st.Foreground(theme.LG(theme.TextDim))
+	}
+	var out [][]mdSpan
+	first := true
+	for len(cells) > 0 {
+		room := w
+		var prefix []mdSpan
+		if !first {
+			prefix = []mdSpan{{text: strings.Repeat(" ", indent), st: contSt}, {text: cont, st: contSt}}
+			room = w - indent - runewidth.StringWidth(cont)
+			if room < 4 {
+				room = 4
+			}
+		}
+		// Fits?
+		used, n := 0, 0
+		for n < len(cells) && used+cells[n].cw <= room {
+			used += cells[n].cw
+			n++
+		}
+		if n == len(cells) {
+			out = append(out, append(prefix, emit(cells)...))
+			break
+		}
+		// Prefer a break after a space / punctuation in the last 2/3.
+		cut := n
+		for k := n; k > room/3; k-- {
+			if isCodeBreak(cells[k-1].r) {
+				cut = k
+				break
+			}
+		}
+		if cut == 0 {
+			cut = 1
+		}
+		out = append(out, append(prefix, emit(cells[:cut])...))
+		cells = cells[cut:]
+		// Continuations don't start with the spaces we broke at.
+		for len(cells) > 0 && cells[0].r == ' ' {
+			cells = cells[1:]
+		}
+		first = false
+	}
 	return out
+}
+
+func isCodeBreak(r rune) bool {
+	return strings.ContainsRune(" ,;(){}[].:=+-*/&|<>!?", r)
 }
