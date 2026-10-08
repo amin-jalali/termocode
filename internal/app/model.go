@@ -142,8 +142,8 @@ type Model struct {
 	// gitConflictsCollapsed folds the CONFLICTS section (git_conflicts.go).
 	gitConflictsCollapsed bool
 	// clone is the in-flight "Clone Repository" request (git_clone.go).
-	clone cloneState
-	gitGraph            []git.GraphLine
+	clone    cloneState
+	gitGraph []git.GraphLine
 
 	// Always-visible commit box (VSCode-style). gitCommitMsg is the single-line
 	// inline message buffer; gitCommitFocused routes keystrokes to it (vs the
@@ -385,6 +385,13 @@ type Model struct {
 	// debounce coalesces noisy events (nvim notifications, keystrokes)
 	// into one message per quiet period. Shared by pointer.
 	debounce *debounce.Debouncer
+	// Group C — Problems panel (problems_panel.go) and task runner
+	// (tasks_run.go). Pointers so copies of Model share the state.
+	problems *problemsPanel
+	tasks    *taskRunner
+	// testView is the Testing view + test runner state (Group E,
+	// test_runner.go / test_explorer.go). Pointer, shared by copies.
+	testView *testsState
 	// ext is the extension host state (Group I, ext.go). Pointer so
 	// Model copies share it; nil in bare test Models.
 	ext *extState
@@ -409,16 +416,16 @@ type Model struct {
 	// buffer is :bdelete!'d. Empty means single-path delete via
 	// confirmTargetPath; populated means bulk delete.
 	confirmTargetPaths []string
-	previewOpen       bool
-	promptOpen        bool
-	promptKind        promptKindEnum
-	promptPath        string
-	recentsOpen       bool
-	searchOpen        bool
-	termOpen          bool
-	w, h              int
-	err               string
-	nvimAttached      bool
+	previewOpen        bool
+	promptOpen         bool
+	promptKind         promptKindEnum
+	promptPath         string
+	recentsOpen        bool
+	searchOpen         bool
+	termOpen           bool
+	w, h               int
+	err                string
+	nvimAttached       bool
 
 	// inlayHintsOn mirrors the LSP inlay-hint display toggle for the
 	// "Toggle Inlay Hints" command. Hints start enabled on LspAttach
@@ -575,33 +582,36 @@ func New() Model {
 	}
 
 	m := Model{
-		activity:      activity.New(),
-		explorer:      explorer.New(),
-		tabs:          tabbar.New(),
-		toast:         toast.New(),
-		status:        statusbar.New(t),
-		lspMgr:        newLSPInstallState(),
-		theme:         t,
-		keys:          keys,
-		focus:         FocusEditor,
-		showExp:       true,
-		inlayHintsOn:   true,
-		lineNumbersOn:  true,
-		gitViewTree:    gitViewTree,
-		gitCollapsed:   map[string]bool{},
+		activity:         activity.New(),
+		explorer:         explorer.New(),
+		tabs:             tabbar.New(),
+		toast:            toast.New(),
+		status:           statusbar.New(t),
+		lspMgr:           newLSPInstallState(),
+		theme:            t,
+		keys:             keys,
+		focus:            FocusEditor,
+		showExp:          true,
+		inlayHintsOn:     true,
+		lineNumbersOn:    true,
+		gitViewTree:      gitViewTree,
+		gitCollapsed:     map[string]bool{},
 		hoverX:           -1,
 		hoverY:           -1,
 		mouseAllMotion:   true,
 		commitDetails:    map[string]git.CommitDetail{},
 		gitDiffHoverPane: -1,
-		explorerWidth:  defaultExplorerWidth,
-		terminalRows:  termRows,
-		actionsOpen:   actionsOpen,
-		actionsPinned: actionsPinned,
-		actionsWidth:  actionsWidth,
-		output:        newOutputStore(),
-		debounce:      debounce.New(),
-		ext:           newExtState(), // Group I
+		explorerWidth:    defaultExplorerWidth,
+		terminalRows:     termRows,
+		actionsOpen:      actionsOpen,
+		actionsPinned:    actionsPinned,
+		actionsWidth:     actionsWidth,
+		output:           newOutputStore(),
+		debounce:         debounce.New(),
+		problems:         newProblemsPanel(), // Group C
+		tasks:            newTaskRunner(),    // Group C
+		testView:         newTestsState(),    // Group E
+		ext:              newExtState(), // Group I
 	}
 	if err != nil {
 		m.editor = editor.New(nil)

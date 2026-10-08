@@ -77,7 +77,14 @@ LSP
   Ctrl+Space        Manual completion
   F4                Toggle inlay hints
   F5 / Shift+F5     Next / previous diagnostic
-  Palette           View: Problems
+  Alt+M             View: Problems (panel; also Ctrl+Shift+M)
+  Palette           Go to Problem...
+
+TASKS
+  Alt+R             Run task...
+  Alt+Shift+R       Rerun last task
+  Palette           Tasks: Run Build / Test Task, Terminate, Configure
+  Click file:line   Open a link printed in a terminal tab
 
 VIEW
   Alt+Z             Toggle Zen mode

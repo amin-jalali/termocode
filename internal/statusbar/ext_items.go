@@ -46,6 +46,7 @@ func (m Model) ExtItemSpans(s State) []ExtItemSpan {
 	}
 	base := s
 	base.Ext = nil
+	base.ShowTests = false // the Group E chip sits after the extension items
 	baseW := lipgloss.Width(m.renderCenter(base))
 	x := 1 + l.leftW + l.gapL + baseW
 	if baseW > 0 {

@@ -77,6 +77,15 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		if msg.Type == tea.MouseLeft && m.hitStatusLSPChip(msg.X, msg.Y) {
 			return m, m.openToolManager(lspinstall.CategoryLSP)
 		}
+		// Group C: error / warning counters → Problems panel.
+		if msg.Type == tea.MouseLeft && m.hitStatusDiagCounts(msg.X, msg.Y) {
+			return m, m.showProblemsPanel()
+		}
+		// Group E: status-bar test chip → Testing view.
+		if msg.Type == tea.MouseLeft && m.hitStatusTestsChip(msg.X, msg.Y) {
+			m.revealTestsView(true)
+			return m, m.ensureTestsDiscovered()
+		}
 		// Group I: extension status items.
 		if msg.Type == tea.MouseLeft {
 			if cmd, ok := m.hitExtStatusItem(msg.X, msg.Y); ok {
@@ -252,6 +261,10 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	if cmd, handled := m.routePanelContentMouse(msg); handled {
 		return m, cmd
 	}
+	// Group C: file:line links in terminal tabs (tasks_run.go).
+	if m.routeTerminalLinkClick(msg) {
+		return m, nil
+	}
 
 	// Find bar takes priority when open: it floats above the editor and
 	// owns clicks that fall inside its panel rectangle (the ↑ / ↓ / ×
@@ -350,6 +363,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		case activity.ViewSearch:
 			// Header + placeholder; nothing interactive yet.
 			return m, nil
+		case activity.ViewTests: // Group E (test_explorer.go)
+			return m.handleTestsSidebarMouse(x, msg.Y, msg.Type)
 		}
 		if m.isExtSidebar() { // Group I: extension panels (ext.go)
 			return m, m.handleExtSidebarMouse(msg.Y, msg.Type)

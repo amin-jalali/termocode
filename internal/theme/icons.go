@@ -87,6 +87,13 @@ var (
 		NerdFont: "", Unicode: "▶", ASCII: "R", // fa-play, ▶
 		Bold: [2]string{"▙ ", "▛ "},
 	}
+	// IconTests — check mark (Group E: Testing view). U+2713, EAW=Neutral.
+	// Bold: a quadrant-block tick — short stroke down-right (▚) on the
+	// bottom-left, long stroke up-right (▞ / ▘) on the right.
+	IconTests = Icon{
+		NerdFont: "", Unicode: "✓", ASCII: "T", // fa-flask, ✓
+		Bold: [2]string{" ▞", "▚▘"},
+	}
 	// IconDebug — fisheye, reads as a "bug eye". U+25C9, EAW=Neutral.
 	// Bold: solid bug body (▟▙) on top, two small leg/foot dots (▘▝) below.
 	IconDebug = Icon{
@@ -277,7 +284,7 @@ var ProbeDeadline = 200 * time.Millisecond
 // probe as exactly 1 cell.
 func unicodeCandidates() []string {
 	icons := []Icon{
-		IconFiles, IconSearch, IconGit, IconOutline, IconRun,
+		IconFiles, IconSearch, IconGit, IconOutline, IconRun, IconTests,
 		IconDebug, IconExtensions, IconTerminal, IconAccount, IconSettings,
 	}
 	out := make([]string, 0, len(icons))
