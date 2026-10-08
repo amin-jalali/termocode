@@ -165,6 +165,9 @@ func paletteItems() []picker.Item {
 		{ID: "terminal-prev-tab", Title: "Terminal: Previous Tab", Hint: "Ctrl+Shift+PgUp"},
 		{ID: "terminal-maximize", Title: "Terminal: Maximize Panel"},
 		{ID: "terminal-minimize", Title: "Terminal: Minimize Panel"},
+		// Bottom panel tabs (panel.go / output.go).
+		{ID: "view-output", Title: "View: Output"},
+		{ID: "output-clear", Title: "Output: Clear Channel"},
 		{ID: "quick-open", Title: "Go to File...", Hint: "Ctrl+P"},
 		{ID: "duplicate-line", Title: "Edit: Duplicate Line", Hint: "Shift+Alt+Down"},
 		{ID: "toggle-comment", Title: "Edit: Toggle Line Comment", Hint: "Ctrl+/"},
@@ -334,11 +337,7 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.applyLayout()
 		m.resizeTerminalSplit()
 	case "terminal-close-tab":
-		if m.termOpen && len(m.terminalTabs) > 0 {
-			m.closeTerminalTab(m.terminalActiveTab)
-			m.applyLayout()
-			m.resizeTerminalSplit()
-		}
+		m.closeActivePanelTab()
 	case "terminal-next-tab":
 		if m.termOpen {
 			m.cycleTerminalTab(1)
@@ -355,6 +354,11 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		if m.termOpen {
 			m.minimizeTerminalPanel()
 		}
+	// ── Bottom panel tabs (panel.go / output.go) ──
+	case "view-output":
+		m.showPanelTab(panelKindOutput)
+	case "output-clear":
+		m.output.Clear(m.output.Active())
 	case "quick-open":
 		m.picker = picker.NewWith(" Go to file ", func() []picker.Item { return loadFiles() })
 		m.picker.SetSize(m.w, m.h)

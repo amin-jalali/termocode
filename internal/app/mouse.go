@@ -221,7 +221,25 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			m.dragKind = dragTerminalTop
 			m.dragStartX = msg.X
 			return m, nil
+		// Non-terminal tabs (Output, Problems, …) — panel.go.
+		case panelHitTabActivate:
+			if idx >= 0 && idx < len(m.panelTabs) {
+				m.activatePanelEntry(panelBarEntry{Kind: m.panelTabs[idx], Index: idx})
+			}
+			return m, nil
+		case panelHitTabClose:
+			if idx >= 0 && idx < len(m.panelTabs) {
+				m.closePanelTab(m.panelTabs[idx])
+				m.applyLayout()
+				m.resizeTerminalSplit()
+			}
+			return m, nil
 		}
+	}
+	// Content area of a non-terminal panel tab: Go owns it, so wheel and
+	// clicks must never reach the hidden nvim split underneath (panel.go).
+	if cmd, handled := m.routePanelContentMouse(msg); handled {
+		return m, cmd
 	}
 
 	// Find bar takes priority when open: it floats above the editor and

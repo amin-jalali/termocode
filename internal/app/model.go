@@ -10,6 +10,7 @@ import (
 	"context"
 	"termocode/internal/activity"
 	"termocode/internal/confirm"
+	"termocode/internal/debounce"
 	"termocode/internal/editor"
 	"termocode/internal/explorer"
 	"termocode/internal/findbar"
@@ -349,6 +350,25 @@ type Model struct {
 	// shell. See shell.go::shouldPassToTerminal for the pass-through set.
 	inTerminal bool
 
+	// ── Bottom panel framework (panel.go) ──────────────────────────────
+	// panelTabs lists the open NON-terminal tabs (Output, Problems, …) in
+	// bar order; terminal tabs stay in terminalTabs. panelActive is the
+	// kind of the visible tab — panelKindTerminal (the zero value) means
+	// "terminalTabs[terminalActiveTab]". panelFocused routes keys to the
+	// active non-terminal tab (set by a click inside its content area).
+	// panelHostBuf is the placeholder scratch buffer that holds the split
+	// open while no terminal tab exists.
+	panelTabs    []panelKind
+	panelActive  panelKind
+	panelFocused bool
+	panelHostBuf int
+	// output holds the named Output channels (output.go). Pointer so any
+	// copy of Model — and background goroutines — append to the same store.
+	output *outputStore
+	// debounce coalesces noisy events (nvim notifications, keystrokes)
+	// into one message per quiet period. Shared by pointer.
+	debounce *debounce.Debouncer
+
 	focus             Focus
 	showExp           bool
 	pickerOpen        bool
@@ -554,6 +574,8 @@ func New() Model {
 		actionsOpen:   actionsOpen,
 		actionsPinned: actionsPinned,
 		actionsWidth:  actionsWidth,
+		output:        newOutputStore(),
+		debounce:      debounce.New(),
 	}
 	if err != nil {
 		m.editor = editor.New(nil)
@@ -561,6 +583,9 @@ func New() Model {
 	} else {
 		m.editor = editor.New(client)
 		m.nvim = client
+		// nvim → Go event channel: subscribe every method registered via
+		// registerNotifyHandler (notify.go) before Lua can send any.
+		m.subscribeNotify()
 	}
 	m.clipRing = clipring.New()
 	return m
