@@ -14,6 +14,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/tasks"
+	"github.com/amin-jalali/termocode/internal/tests"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -178,19 +179,53 @@ func (m *Model) runTaskByLabel(label string) tea.Cmd {
 	return m.runTask(t)
 }
 
-// runTaskGroup runs the default build / test task. With no test task
-// configured, the test group falls back to the classic test runner
-// (test_runner.go — Group E owns its future).
+// testTaskRoute decides what "Tasks: Run Test Task" runs (glue C + E):
+//
+//  1. a test task from tasks.json — the user asked for that command, so
+//     it runs as a task;
+//  2. else, when the Testing view knows the framework, its streaming
+//     runner (results land in the TESTS tree and the TEST RESULTS tab) —
+//     runner == true;
+//  3. else an auto-detected test task (make test, just test, …).
+//
+// ok is false when there is nothing to run.
+func testTaskRoute(list []tasks.Task, fw tests.Framework) (t tasks.Task, runner, ok bool) {
+	explicit := onlySource(list, "tasks.json")
+	if d, found := tasks.DefaultFor(explicit, tasks.GroupTest); found {
+		return d, false, true
+	}
+	if fw != tests.FrameworkNone {
+		return tasks.Task{}, true, true
+	}
+	if d, found := tasks.DefaultFor(list, tasks.GroupTest); found {
+		return d, false, true
+	}
+	return tasks.Task{}, false, false
+}
+
+// testsFramework is the Testing view's framework: the discovered tree's,
+// else a fresh marker-file check of the workspace root.
+func (m Model) testsFramework() tests.Framework {
+	if st := m.testView; st != nil && st.tree != nil {
+		return st.tree.FW
+	}
+	return tests.Detect(m.taskVars().WorkspaceFolder)
+}
+
+// runTaskGroup runs the default build / test task. The test group goes
+// through testTaskRoute.
 func (m *Model) runTaskGroup(group string) tea.Cmd {
 	list, err := m.allTasks()
 	errCmd := m.toastTasksError(err)
 	if group == tasks.GroupTest {
-		if d, ok := tasks.DefaultFor(onlySource(list, "tasks.json"), tasks.GroupTest); ok {
-			return tea.Batch(errCmd, m.runTask(d))
+		t, runner, ok := testTaskRoute(list, m.testsFramework())
+		switch {
+		case runner:
+			return tea.Batch(errCmd, m.runTestsCmd())
+		case ok:
+			return tea.Batch(errCmd, m.runTask(t))
 		}
-		return tea.Batch(errCmd, m.runTestsCmd())
-	}
-	if t, ok := tasks.DefaultFor(list, group); ok {
+	} else if t, ok := tasks.DefaultFor(list, group); ok {
 		return tea.Batch(errCmd, m.runTask(t))
 	}
 	var c tea.Cmd

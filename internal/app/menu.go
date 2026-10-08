@@ -25,6 +25,7 @@ const (
 	menuKindGitFile
 	menuKindGitCommit
 	menuKindGitActions
+	menuKindProblems // problems_panel.go
 )
 
 // Source Control context-menu action IDs.
@@ -286,6 +287,9 @@ func (m *Model) handleMenuSelect(id string) tea.Cmd {
 	}
 	if m.menuKind == menuKindGitActions {
 		return m.handleGitActionsMenuSelect(id)
+	}
+	if m.menuKind == menuKindProblems {
+		return m.handleProblemsMenuSelect(id)
 	}
 	path := m.menuPath
 	switch id {

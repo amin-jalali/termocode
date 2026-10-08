@@ -162,7 +162,7 @@ func codeActionGroup(a nvim.CodeAction) string {
 	switch kind {
 	case synthKindGitBlame, synthKindGitDiff, synthKindGitCopy:
 		return "Git"
-	case synthKindTestRun, synthKindTestCommand:
+	case synthKindTestRun, synthKindTestCommand, synthKindTestDebug:
 		return "Test"
 	case synthKindGenerateDoc, synthKindGenerateTbl:
 		return "Generate"
@@ -273,7 +273,7 @@ func codeActionIcon(kind string) string {
 		return "✦"
 	}
 	switch kind {
-	case synthKindTestRun, synthKindTestCommand:
+	case synthKindTestRun, synthKindTestCommand, synthKindTestDebug:
 		return "▶"
 	case synthKindGitBlame, synthKindGitDiff, synthKindGitCopy:
 		return "⎇"

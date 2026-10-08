@@ -11,6 +11,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/tasks"
+	"github.com/amin-jalali/termocode/internal/tests"
 )
 
 func TestCellToByte(t *testing.T) {
@@ -87,6 +89,32 @@ func TestUserCommandTasks(t *testing.T) {
 	got := userCommandTasks()
 	if len(got) != 1 || got[0].Label != "User: Lint" || got[0].Command != "make lint" || got[0].Cwd != "sub" || got[0].Source != "user" {
 		t.Errorf("userCommandTasks = %+v", got)
+	}
+}
+
+// Glue C + E: "Tasks: Run Test Task" uses the Testing runner unless
+// tasks.json names a test task.
+func TestTestTaskRoute(t *testing.T) {
+	detected := tasks.Task{Label: "go: test", Command: "go test ./...", Group: tasks.GroupTest, Source: "go"}
+	makeTest := tasks.Task{Label: "make: test", Command: "make test", Group: tasks.GroupTest, Source: "make"}
+	explicit := tasks.Task{Label: "unit", Command: "./run-unit.sh", Group: tasks.GroupTest, Source: "tasks.json"}
+	build := tasks.Task{Label: "build", Command: "make", Group: tasks.GroupBuild, Source: "tasks.json"}
+
+	// Explicit tasks.json test task wins, even with a known framework.
+	if got, runner, ok := testTaskRoute([]tasks.Task{build, explicit, detected}, tests.FrameworkGo); !ok || runner || got.Label != "unit" {
+		t.Errorf("explicit: got %q runner=%v ok=%v", got.Label, runner, ok)
+	}
+	// No explicit test task + known framework → Testing runner.
+	if _, runner, ok := testTaskRoute([]tasks.Task{build, detected}, tests.FrameworkGo); !ok || !runner {
+		t.Errorf("framework: runner=%v ok=%v", runner, ok)
+	}
+	// No framework → detected test task as a plain task.
+	if got, runner, ok := testTaskRoute([]tasks.Task{makeTest}, tests.FrameworkNone); !ok || runner || got.Label != "make: test" {
+		t.Errorf("detected: got %q runner=%v ok=%v", got.Label, runner, ok)
+	}
+	// Nothing at all.
+	if _, _, ok := testTaskRoute([]tasks.Task{build}, tests.FrameworkNone); ok {
+		t.Error("nothing: want ok=false")
 	}
 }
 

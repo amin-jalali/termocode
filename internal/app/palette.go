@@ -316,6 +316,7 @@ func paletteItems() []picker.Item {
 		{ID: "testing-rerun-failed", Title: "Testing: Rerun Failed Tests"},
 		{ID: "testing-run-file", Title: "Testing: Run Tests in Current File"},
 		{ID: "testing-run-cursor", Title: "Testing: Run Test at Cursor"},
+		{ID: "testing-debug-cursor", Title: "Testing: Debug Test at Cursor"},
 		{ID: "testing-stop", Title: "Testing: Stop Test Run"},
 		{ID: "testing-refresh", Title: "Testing: Refresh Tests"},
 		{ID: "testing-collapse", Title: "Testing: Collapse All"},
