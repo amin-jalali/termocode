@@ -75,7 +75,7 @@ func imageProtocol() termimg.Protocol {
 // ApplyDisplaySettings resolves icons + animations from the settings and
 // the startup probes. Called by cmd/termocode and after a settings change.
 func ApplyDisplaySettings(cfg DisplayConfig) {
-	theme.CurrentIconMode = theme.ResolveIconMode(cfg.Icons, nerdFontHint, func() bool { return unicodeProbeOK }, os.Getenv)
+	theme.CurrentIconMode = theme.ResolveIconMode(cfg.Icons, nerdFontHint, nil, os.Getenv)
 	anim.Enabled = anim.Resolve(anim.ParseMode(cfg.Animations), theme.TrueColor(), os.Getenv)
 }
 
