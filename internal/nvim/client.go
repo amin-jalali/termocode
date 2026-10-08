@@ -87,12 +87,18 @@ func New() (*Client, error) {
 	return c, nil
 }
 
-// Attach attaches as a UI client with ext_linegrid and rgb enabled.
+// Attach attaches as a UI client with ext_linegrid and rgb enabled, then
+// exports the RPC channel id to Lua (vim.g.termocode_channel, see notify.go).
 func (c *Client) Attach(width, height int) error {
-	return c.nv.AttachUI(width, height, map[string]interface{}{
+	if err := c.nv.AttachUI(width, height, map[string]interface{}{
 		"ext_linegrid": true,
 		"rgb":          true,
-	})
+	}); err != nil {
+		return err
+	}
+	// Non-fatal: the editor works without the nvim → Go event channel.
+	_ = c.exportChannel()
+	return nil
 }
 
 // Input forwards a string of nvim keycodes (e.g. "<C-s>", "<CR>", "abc").
