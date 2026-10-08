@@ -67,12 +67,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // picker.sanitizeInput, recents.isMouseFragmentEvent, sanitizeSettingsInput),
 // so the leak can't reach them.
 func (m Model) anyTextInputOpen() bool {
-	return m.promptOpen || m.searchOpen || m.replaceOpen || m.findOpen
+	return m.promptOpen || m.searchOpen || m.replaceOpen || m.findOpen ||
+		(m.ai != nil && m.ai.focused) // Group A: typing in the AI chat input
 }
 
 func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Group I: extension host messages (ext.go).
 	if cmd, ok := m.updateExt(msg); ok {
+		return m, cmd
+	}
+	// Group A: AI streaming / inline / sign-in messages run under any overlay.
+	if cmd, ok := m.handleAIMsg(msg); ok {
 		return m, cmd
 	}
 	// Overlay control messages always handled regardless of state.
@@ -178,7 +183,7 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleConfirmSelect(msg.ID)
 	case confirm.CloseMsg:
 		m.confirmOpen = false
-		return m, nil
+		return m, m.onAIConfirmClosed() // Group A: Esc denies an AI tool call
 	case activity.SwitchMsg:
 		// Settings is a one-shot action (open the modal Settings UI), not
 		// a sidebar view — clicking it should pop the picker instead of
@@ -1168,6 +1173,10 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 	}
+	// Group A: the focused AI chat panel gets keys before the keymap.
+	if cmd, handled := m.routeAIPanelKey(msg); handled {
+		return m, cmd
+	}
 
 	// Welcome-screen keyboard navigation: when the start page is
 	// rendered (no buffer, no terminal panel) we let arrow keys / Tab
@@ -1227,6 +1236,9 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.applyLayout()
 		return m, nil
 	case keymap.ActionFocusSwap:
+		if m.aiFocusSwap() { // Group A: AI panel joins the F6 cycle
+			return m, nil
+		}
 		if m.focus == FocusExplorer {
 			m.focus = FocusEditor
 		} else {
@@ -1522,6 +1534,10 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.toggleActionsPanel()
 		m.applyLayout()
 		return m, nil
+	// Group A — AI keys.
+	case keymap.ActionAITriggerInline, keymap.ActionAIEditSelection, keymap.ActionAIToggleInline:
+		cmd, _ := m.dispatchAIPalette(aiActionForKey(matchedAction))
+		return m, cmd
 	}
 	return m.dispatchToFocus(msg)
 }
@@ -1807,6 +1823,10 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.onSnippetManagerSelected(msg.ID)
 	case pickerKindExt: // Group I
 		return m.extPickSelect(msg.ID)
+	default:
+		if cmd, ok := m.handleAIPickerSelect(msg.ID); ok { // Group A
+			return cmd
+		}
 	}
 	return nil
 }

@@ -91,6 +91,9 @@ func (m *Model) extraCodeActionsForContext() []nvim.CodeAction {
 		m.conflictCodeActions(line, addSynth)
 	}
 
+	// ── 0b. AI actions (Group A, ai_actions.go) ──────────────────────────
+	m.aiCodeActions(path, line, addSynth)
+
 	// ── 1. Test actions (Go files only) ───────────────────────────────────
 	if path != "" && strings.HasSuffix(path, ".go") {
 		funcName := m.enclosingGoFuncName(line)
@@ -202,6 +205,10 @@ func (m *Model) applySynthCodeAction(idx int) tea.Cmd {
 		return m.generateTableTestSkeleton(a.FuncName, a.Path)
 	case synthKindConflictOurs, synthKindConflictTheirs, synthKindConflictBoth:
 		return m.resolveConflictAt(a.Line, conflictResolutionFor(a.Kind))
+	default:
+		if isAISynthKind(a.Kind) { // Group A
+			return m.applyAICodeAction(a)
+		}
 	}
 	return nil
 }

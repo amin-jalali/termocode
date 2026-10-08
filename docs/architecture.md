@@ -86,6 +86,7 @@ Each is a self-contained Bubble Tea sub-component with its own `Model` / `Update
 | Package      | What it does                                                                      |
 | ------------ | --------------------------------------------------------------------------------- |
 | `activity`   | Vertical icon bar on the left; switches the sidebar view                          |
+| `ai`         | AI layer: streaming providers, config / secrets, chats, inline helpers, agent     |
 | `app`        | Master model — owns everything else                                               |
 | `clipring`   | Clipboard history ring                                                            |
 | `confirm`    | "Are you sure?" modal                                                             |
@@ -110,6 +111,16 @@ Each is a self-contained Bubble Tea sub-component with its own `Model` / `Update
 | `tasks`      | `.termocode/tasks.json` loader, task auto-detection, `file:line` links + problem matchers |
 | `theme`      | Color palette + lipgloss style helpers (`Bg`, `FgBg`, `LG`)                       |
 | `toast`      | Transient notifications (top-right of editor area)                                |
+
+## AI assistant (`internal/ai` + `internal/app/ai_*.go`)
+
+AI is optional: with no provider, every AI entry only shows a "configure" toast.
+
+- **Providers** (`internal/ai`): one `Provider` interface (`Stream(ctx, Request) <-chan Chunk`) with two wire implementations — OpenAI-compatible SSE (OpenAI, OpenRouter, Ollama, LM Studio, any `/v1` URL) and the Anthropic Messages API (API key, or opt-in Claude OAuth). Both support native tool calling. No SDKs; tests use `httptest` only.
+- **Config**: non-secret `ai_*` keys live in `config.json`; keys and OAuth tokens in `ai/credentials.json` (mode 0600). Environment variables win (`TERMOCODE_AI_PROVIDER`, `TERMOCODE_AI_MODEL`, `TERMOCODE_AI_BASE_URL`, `TERMOCODE_AI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `OLLAMA_HOST`). `ai.Redact` scrubs secrets from every AI error, and `recordError` runs it on everything written to `errors.log`.
+- **Ghost text**: `ai_lua.go` installs `_G._termocode_ai`. `TextChangedI` → `termocode_ai_changed` notify → 300 ms debounce → request (fast model) → `ResolveInlineCompletion` (continuation vs rewrite, never blind insert) → extmark virtual text. `Tab` tries `accept()` first, then snippet → completion → placeholder → tab.
+- **Chat**: the right-side panel (`actions_panel.go` frame, `ai_panel.go` body). A turn runs `ai.Agent` on a goroutine; events reach `Update` through a channel (`aiChatEventMsg` … `aiChatDoneMsg`), tagged with a generation so New Chat / Stop drops late events. Mutating tools wait on a confirm dialog (per-class auto-approve: fileWrite / git / run). Chats are saved in `ai/chats/<id>.json`.
+- **Code actions**: Explain goes to the chat; Fix / Edit / Doc build a range proposal that opens in a side-by-side nvim diff, and Apply replaces the range with one `nvim_buf_set_lines` call (one undo step), after checking the buffer did not change.
 
 ## Overlay rendering (`modal_overlay.go`)
 
@@ -137,6 +148,8 @@ One `modalOverlay` function powers every picker and prompt. Per-call tweaks go t
 | `keymap.json`           | Optional — keybinding overrides (see [Keymap](#keymap-internalkeymap)) |
 | `user_theme.json`       | Optional — custom theme saved by the theme editor                      |
 | `extensions/<name>/`    | Optional — Lua extensions (`init.lua`); see [extensions.md](extensions.md) and [ADR 0006](adr/0006-lua-extension-host.md) |
+| `ai/credentials.json`   | AI API keys + Claude OAuth tokens (mode 0600)                          |
+| `ai/chats/*.json`       | Saved AI chats (newest 50 kept)                                         |
 
 Plugins that termocode clones on first launch (nvim-dap, vim-visual-multi) live outside the config dir, in `~/.local/share/termocode/plugins` (`$XDG_DATA_HOME/termocode/plugins`, or `$TERMOCODE_PLUGINS_DIR`). See [ADR 0003](adr/0003-auto-bootstrapped-nvim-plugins.md).
 

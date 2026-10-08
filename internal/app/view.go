@@ -2168,7 +2168,10 @@ func (m Model) statusState() statusbar.State {
 		// it reads as ambient context rather than another label.
 		proj = strings.ToLower(proj)
 	}
+	aiLabel, aiState := m.aiStatus() // Group A
 	st := statusbar.State{
+		AI:       aiLabel,
+		AIState:  aiState,
 		Path:     m.editor.Path(),
 		Project:  proj,
 		Lang:     lang,

@@ -72,7 +72,17 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		m.overflowMenuOpen = false
 	}
 
+	// Group A: AI chat panel body (wheel, clicks, input focus) — before the
+	// status-bar guard because the panel spans the full height.
+	if cmd, handled := m.handleAIPanelMouse(msg); handled {
+		return m, cmd
+	}
+
 	if msg.Y >= m.h-1 {
+		// Group A: status-bar "✦ model" badge → configure / toggle chat.
+		if msg.Type == tea.MouseLeft && m.hitStatusAIBadge(msg.X, msg.Y) {
+			return m, m.onAIBadgeClick()
+		}
 		// Status-bar LSP chip → language-server manager.
 		if msg.Type == tea.MouseLeft && m.hitStatusLSPChip(msg.X, msg.Y) {
 			return m, m.openToolManager(lspinstall.CategoryLSP)
