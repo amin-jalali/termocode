@@ -163,7 +163,6 @@ You can give these a key in `keymap.json` (see below), or run them from the comm
 | `FocusExplorer` | Navigation | Move focus to the sidebar. |
 | `GotoImplementation` | LSP | Go to the implementation of the symbol at the cursor. |
 | `Hover` | LSP | Show hover documentation for the symbol at the cursor. |
-| `MdLivePreview` | View | Old Markdown live preview. Not bound and does nothing; kept so old keymap.json files still load. |
 | `OpenShell` | Terminal | Open an external shell in the workspace folder. |
 | `OpenURL` | Editor | Open the first URL on the current line in the browser. |
 | `PickTheme` | Preferences | Pick a color theme. |

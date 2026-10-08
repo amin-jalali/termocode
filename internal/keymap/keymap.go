@@ -71,7 +71,6 @@ const (
 	ActionPinTab
 	ActionCopyFileRef
 	ActionShowSnippetPicker
-	ActionMdLivePreview
 	// Debug Adapter Protocol actions. ActionDebugToggleBreakpoint is bound to
 	// F9 (terminal toggle moves to Ctrl+T only); ActionDebugStepOver / StepInto
 	// / StepOut to F10 / F11 / Shift+F11. Continue / Start / Stop have no

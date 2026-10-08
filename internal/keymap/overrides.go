@@ -233,7 +233,6 @@ var actionNames = map[Action]string{
 	ActionPinTab:                   "PinTab",
 	ActionCopyFileRef:              "CopyFileRef",
 	ActionShowSnippetPicker:        "ShowSnippetPicker",
-	ActionMdLivePreview:            "MdLivePreview",
 	ActionApplyPreferredCodeAction: "ApplyPreferredCodeAction",
 	// Group C
 	ActionRunTask:      "RunTask",
@@ -264,12 +263,23 @@ func ActionName(a Action) string {
 	return ""
 }
 
+// legacyActionNames maps retired action names that may still sit in a
+// user's keymap.json to the action that does that job today.
+// "MdLivePreview" was a tab-based live Markdown preview that was never
+// finished; the F7 Markdown preview replaced it.
+var legacyActionNames = map[string]Action{
+	"MdLivePreview": ActionMarkdownPreview,
+}
+
 // actionFromName is the reverse lookup. Returns ActionNone on unknown name.
 func actionFromName(name string) Action {
 	for a, n := range actionNames {
 		if n == name {
 			return a
 		}
+	}
+	if a, ok := legacyActionNames[name]; ok {
+		return a
 	}
 	return ActionNone
 }
