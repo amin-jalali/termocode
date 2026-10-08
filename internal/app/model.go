@@ -385,6 +385,9 @@ type Model struct {
 	// debounce coalesces noisy events (nvim notifications, keystrokes)
 	// into one message per quiet period. Shared by pointer.
 	debounce *debounce.Debouncer
+	// testView is the Testing view + test runner state (Group E,
+	// test_runner.go / test_explorer.go). Pointer, shared by copies.
+	testView *testsState
 
 	focus             Focus
 	showExp           bool
@@ -598,6 +601,7 @@ func New() Model {
 		actionsWidth:  actionsWidth,
 		output:        newOutputStore(),
 		debounce:      debounce.New(),
+		testView:      newTestsState(), // Group E
 	}
 	if err != nil {
 		m.editor = editor.New(nil)
