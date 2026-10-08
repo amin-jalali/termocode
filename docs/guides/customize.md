@@ -10,11 +10,21 @@ Everything is saved in `~/.config/termocode/` (or `$XDG_CONFIG_HOME/termocode/`)
 
 ## Pick a theme
 
-1. Press `F1` and run **Preferences: Color Theme**.
-2. Pick a theme and press `Enter`. It applies at once, with no restart.
+1. Press `F1` and run **Preferences: Color Theme…**.
+2. Move through the list: each theme is shown **live** as you move.
+3. Press `Enter` to keep it, or `Esc` to go back to your old theme.
 
-Built-in themes: **VSCode Dark+** (default), **GitHub Dark**, **One Dark**,
-**Solarized Dark**.
+Built-in themes:
+
+| Dark | Light |
+|---|---|
+| **VSCode Dark+** (default), **GitHub Dark**, **One Dark**, **Solarized Dark**, **Catppuccin Mocha**, **Tokyo Night**, **Rosé Pine** | **Catppuccin Latte**, **Rosé Pine Dawn** |
+
+A theme colours everything: the chrome (tabs, sidebars, pickers, status
+bar) **and** the editor (syntax, diff, git signs, diagnostics, AI ghost
+text, debug and test markers, the integrated terminal's colours).
+
+![Catppuccin Latte](../assets/screenshots/theme-catppuccin-latte.png)
 
 ### Make your own colors
 
@@ -129,20 +139,87 @@ The export holds your config files (settings, theme, keys, snippets,
 commands…). It leaves out session state and **secrets**: API keys, tokens
 and passwords are removed.
 
-## Icons and font
+## Look and feel: icons, animations, images
+
+Three settings (Settings → **Appearance**) control how rich the screen is.
+Each has an `auto` value that picks the best your terminal can show.
+
+### Icons — `icons`
+
+| Value | What you get |
+|---|---|
+| `auto` (default) | `nerd` when a Nerd Font is installed (and not over SSH), `ascii` on a bare console (`TERM=linux`) or a non-UTF-8 locale, else `unicode` |
+| `nerd` | File-type, folder, git and panel icons from a [Nerd Font](https://www.nerdfonts.com/) (`termocode setup` installs one on Linux) |
+| `unicode` | Plain one-cell symbols (▪ ◫ ⌥ ✓ ⚙) that render in any modern terminal font |
+| `ascii` | Letters only — the safest choice for very old terminals |
+
+`TERMOCODE_ICON_MODE=nerd|unicode|ascii` and `TERMOCODE_NERD_FONT=1` win over
+the setting.
+
+### Animations — `animations`
+
+Pickers, the palette and dialogs slide and fade in (about 150 ms), toasts
+slide in and out, and long jumps in lists scroll smoothly. The editor text
+itself never animates.
+
+| Value | What you get |
+|---|---|
+| `auto` (default) | On, except over SSH (`SSH_CONNECTION` / `SSH_TTY`) or when the terminal is not truecolor |
+| `on` / `off` | Always / never |
+
+When nothing moves, no animation timer runs (no idle CPU).
+
+### Images — `images`
+
+Opening a PNG, JPEG, GIF or WebP file shows it in a preview card. The
+dashboard logo and images in the Markdown preview (`F7`) use the same code.
+
+| Value | What you get |
+|---|---|
+| `auto` (default) | Ask the terminal at start: kitty graphics, else sixel, else half-blocks |
+| `kitty` | Real images with the kitty graphics protocol |
+| `sixel` | Real images with sixel |
+| `blocks` | Coloured half-block characters (`▀`) — works in every colour terminal |
+| `off` | No images |
+
+Inside **tmux**, real images need `set -g allow-passthrough on`; without it
+termocode uses half-blocks. **Help: Run Doctor** shows what was detected.
+
+### Colours
+
+termocode sends 24-bit colour by default, because most terminals support
+it even when they do not say so (and `COLORTERM` is often lost over SSH).
+It uses fewer colours on its own for `TERM=linux`, `TERM=dumb` / `NO_COLOR`
+(no colour), and when you set `TERMOCODE_COLORS=truecolor|256|16|none`.
+On 16 colours the dimmed background behind dialogs uses the terminal's
+"faint" style instead of colour blending.
+
+### What works where
+
+| Terminal | Colours | Images | Notes |
+|---|---|---|---|
+| kitty, Ghostty | truecolor | kitty | everything |
+| WezTerm | truecolor | kitty (sixel too) | everything |
+| iTerm2 | truecolor | sixel | |
+| foot | truecolor | sixel | |
+| Windows Terminal | truecolor | sixel (1.22+) | |
+| GNOME Terminal / VTE, Konsole, Alacritty | truecolor | half-blocks | |
+| VSCode terminal | truecolor | half-blocks | |
+| tmux | as the outer terminal | half-blocks; real images with `allow-passthrough on` | |
+| SSH session | as the client terminal | as the client terminal | animations off by default |
+| Linux console (`TERM=linux`) | 16 colours | half-blocks | ASCII icons |
+
+### Font size
 
 | Environment variable | Effect |
 |---|---|
-| `TERMOCODE_ICON_MODE=nerd_font` | Use Nerd Font icons |
-| `TERMOCODE_ICON_MODE=unicode` | Use plain Unicode icons |
-| `TERMOCODE_ICON_MODE=ascii` | Safest; for terminals that draw icons badly |
 | `TERMOCODE_FONT_DELTA=0` | Do not change the terminal font size |
 
 ## Keys at a glance
 
 | Command | Action |
 |---|---|
-| **Preferences: Color Theme** | Pick a theme |
+| **Preferences: Color Theme…** | Pick a theme (live preview) |
 | **Preferences: Edit Custom Theme** | Edit colors |
 | **Preferences: Open Settings (UI)** | Settings |
 | **Preferences: Customize Keybindings** | Change keys |

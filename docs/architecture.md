@@ -109,7 +109,10 @@ Each is a self-contained Bubble Tea sub-component with its own `Model` / `Update
 | `statusbar`  | Bottom status bar — branch, diagnostics, ln/col, badges                           |
 | `tabbar`     | Top tab strip with close buttons, pin indicator                                   |
 | `tasks`      | `.termocode/tasks.json` loader, task auto-detection, `file:line` links + problem matchers |
-| `theme`      | Color palette + lipgloss style helpers (`Bg`, `FgBg`, `LG`)                       |
+| `theme`      | Palette tokens, built-in themes (`Spec` → palette), nvim colours, floating-card / pill / gradient helpers, icon sets |
+| `anim`       | Spring animations (harmonica); the `animations` setting                           |
+| `termimg`    | Terminal images: kitty / sixel / half-block detection, encoding, caching          |
+| `devtools`   | Developer tools: `shots` (screenshot renderer), `ansipng` (ANSI → PNG)            |
 | `toast`      | Transient notifications (top-right of editor area)                                |
 
 ## AI assistant (`internal/ai` + `internal/app/ai_*.go`)
@@ -124,7 +127,11 @@ AI is optional: with no provider, every AI entry only shows a "configure" toast.
 
 ## Overlay rendering (`modal_overlay.go`)
 
-Modal overlays parse the rendered base into ANSI cells, mutate them, and splice back. This is where the "frosted glass" look comes from: cells under the modal rect get read, dimmed, tinted, and used as the modal body background so the editor "shows through".
+Floating chrome (pickers, prompts, confirms, menus, toasts, the image preview) is composited by `modalOverlay`: the rendered base is parsed into ANSI cells, everything outside the card is dimmed (the backdrop), the opaque card (`theme.FloatBox`, `BgFloat`, rounded border) is spliced in with its border glyphs sitting on the backdrop, and a drop shadow is blended toward the theme's `Shadow` token. Colour math only runs on truecolor / 256-colour profiles; on 16 colours the backdrop uses the SGR "faint" attribute, so no 24-bit sequence is ever written (`render_invariants_test.go` checks this).
+
+Animations (`internal/anim`, harmonica springs) drive the overlay open (slide + fade), toast slide in / out and smooth list scrolling. One `anim.TickMsg` steps everything and is only scheduled while something moves; with `animations: off` values snap and no tick runs. The nvim grid is never animated.
+
+Images (`internal/termimg`) have two layers: half-blocks as ordinary cells, plus — on kitty / sixel terminals — the real image, drawn by a carrier sequence appended after the image's last row at the very end of `View()` (after every overlay), so Bubble Tea's line diff rewrites it whenever the area changes.
 
 ### The CSI parser quirk we hit
 
@@ -176,6 +183,8 @@ The file is a flat map of key string → action name, e.g. `{"alt+s": "Save"}`. 
 ## Theme system (`internal/theme`)
 
 Single source of truth: `palette.go` declares `Color256` package vars (`BgEditor`, `BgHover`, `TextPrimary`, …). `SetPalette` rebinds them at runtime when the user picks a theme. `LG()` resolves to a `lipgloss.Color` — truecolor hex when the palette has one mapped, else the generic 256-color name.
+
+New themes are one `Spec` literal (`spec.go`: the upstream base / surface / overlay / text ladder plus accents and syntax roles); `FromSpec` derives every chrome token and `NvimColors` derives the editor colourscheme (`theme_lua.go`), so chrome and editor always match. Views never write hex: derived shades come from `theme.Mix(a, b, t)` / `theme.Float()`.
 
 Most components style via `theme.Bg(...)` and `theme.FgBg(...)`. A theme switch is a global swap — no component holds its own copy.
 
