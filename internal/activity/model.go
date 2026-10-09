@@ -372,7 +372,9 @@ func renderActivityGlyphRow(ic theme.Icon, iconRow, isActive bool, st styleSet) 
 	g := " "
 	if iconRow {
 		g = ic.String()
-		if runewidth.StringWidth(g) != 1 {
+		// Unicode mode: plain letters (F, G, R, T …) read better than
+		// thin, font-dependent symbols. Nerd mode keeps its glyphs.
+		if theme.CurrentIconMode == theme.IconModeUnicode || runewidth.StringWidth(g) != 1 {
 			g = ic.ASCII
 		}
 	}
