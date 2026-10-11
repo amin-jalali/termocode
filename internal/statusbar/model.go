@@ -6,9 +6,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mattn/go-runewidth"
 
 	"github.com/amin-jalali/termocode/internal/theme"
+	"github.com/charmbracelet/x/ansi"
 )
 
 type State struct {
@@ -505,12 +505,8 @@ func renderLSPChip(clients []string) string {
 	return barFg(theme.TextSecondary).Render("{} " + strings.Join(clients, ", "))
 }
 
-// truncate cuts s to n display cells, ending in "…". It counts cells, not
-// bytes, so it never splits a multi-byte glyph (a Nerd icon cut in half
-// printed "\xee…" at the right end of a narrow status bar).
+// truncate clips s to n terminal cells, ending in "…" when cut. It counts
+// cells, not bytes, so it never splits a multi-byte glyph.
 func truncate(s string, n int) string {
-	if runewidth.StringWidth(s) <= n {
-		return s
-	}
-	return runewidth.Truncate(s, n, "…")
+	return ansi.Truncate(s, n, "…")
 }

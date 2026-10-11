@@ -12,6 +12,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/toast"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // UserCommand is one shell command the user has registered to appear in
@@ -141,8 +142,5 @@ func (m *Model) runUserCommandPreview(id string) tea.Cmd {
 }
 
 func truncateHint(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n-1] + "…"
+	return ansi.Truncate(s, n, "…")
 }

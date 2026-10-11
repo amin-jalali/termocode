@@ -66,7 +66,7 @@ func (m *Model) sendNvimResize(w, h int) {
 		return
 	}
 	_ = m.nvim.Resize(w, h)
-	m.resizeTerminalSplit()
+	m.reapplyTerminalSplit()
 }
 
 // resizeAfterUpdate runs after every Update: when a drag ended, the last
@@ -90,6 +90,17 @@ func (m *Model) resizeAfterUpdate() tea.Cmd {
 func (m *Model) onResizeFlush() {
 	if w, h, ok := m.resizeT.flush(m.dragKind != dragNone, time.Now()); ok && m.nvim != nil {
 		_ = m.nvim.Resize(w, h)
-		m.resizeTerminalSplit()
+		m.reapplyTerminalSplit()
 	}
+}
+
+// reapplyTerminalSplit sets the panel height again after nvim's grid was
+// resized. nvim squeezes the panel window when the grid gets too small and
+// does not give the rows back when it grows, so the cached "already sent"
+// height is not valid any more. Skipping the call left the shell drawn
+// above the panel's tab bar after a small-then-large resize (found by the
+// e2e suite).
+func (m *Model) reapplyTerminalSplit() {
+	m.terminalRowsLastSent = -1
+	m.resizeTerminalSplit()
 }

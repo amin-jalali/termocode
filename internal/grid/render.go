@@ -33,6 +33,9 @@ func (g *Grid) Render() string {
 			}
 			var text strings.Builder
 			for k := c; k < j; k++ {
+				if g.Cells[r][k].Cont {
+					continue // right half of a wide glyph: already drawn
+				}
 				rn := g.Cells[r][k].Rune
 				if rn == 0 {
 					rn = ' '
@@ -52,6 +55,9 @@ func (g *Grid) Render() string {
 
 func (g *Grid) renderCell(r, c int, cursor bool) string {
 	cell := g.Cells[r][c]
+	if cell.Cont {
+		return ""
+	}
 	rn := cell.Rune
 	if rn == 0 {
 		rn = ' '

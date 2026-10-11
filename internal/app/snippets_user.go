@@ -15,6 +15,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/toast"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // User snippets live in ~/.config/termocode/snippets.json:
@@ -420,9 +421,7 @@ func (m *Model) openSnippetManager() tea.Cmd {
 	}
 	for _, s := range snips.list(m.extras.snipScope) {
 		preview := firstLine(s.Body)
-		if len(preview) > 40 {
-			preview = preview[:40] + "…"
-		}
+		preview = ansi.Truncate(preview, 41, "…")
 		items = append(items, picker.Item{
 			ID:    snipMgrPrefix + s.Scope + "\x00" + s.Trigger,
 			Title: s.Trigger,

@@ -10,6 +10,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/theme"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // SwitchMsg is emitted when the user clicks a tab body.
@@ -453,12 +454,8 @@ func renderTabCellsSfx(b nvim.BufferInfo, active bool, suffix string, welcome bo
 	if name == "" {
 		name = "[unnamed]"
 	}
-	if len(name) > 40 {
-		name = name[:39] + "…"
-	}
-	if len(suffix) > 16 {
-		suffix = suffix[:15] + "…"
-	}
+	name = ansi.Truncate(name, 40, "…")
+	suffix = ansi.Truncate(suffix, 16, "…")
 
 	bg, fg := theme.BgTitleBar, theme.TextMuted
 	if active {
