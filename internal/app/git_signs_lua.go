@@ -36,9 +36,24 @@ vim.fn.sign_define('TermocodeGitAdd',    { text = '┃', texthl = 'TermocodeGitA
 vim.fn.sign_define('TermocodeGitChange', { text = '┃', texthl = 'TermocodeGitChange' })
 vim.fn.sign_define('TermocodeGitDelete', { text = '▁', texthl = 'TermocodeGitDelete' })
 
+-- The editor's statuscolumn ('%=%l %{%v:lua.TcGitMark()%}', model.go) has
+-- no sign column, so placed signs alone are never drawn. TcGitMark draws
+-- the one-cell git mark of each line from this table:
+-- bufnr -> { [lnum] = sign name }.
+_G._tc_git_marks = _G._tc_git_marks or {}
+local _tc_mark_text = { TermocodeGitAdd = '┃', TermocodeGitChange = '┃', TermocodeGitDelete = '▁' }
+function _G.TcGitMark()
+  if vim.v.virtnum ~= 0 then return ' ' end
+  local marks = _G._tc_git_marks[vim.api.nvim_get_current_buf()]
+  local name = marks and marks[vim.v.lnum]
+  if not name then return ' ' end
+  return '%#' .. name .. '#' .. _tc_mark_text[name] .. '%*'
+end
+
 -- Render: clears the buffer's sign group and re-paints from the diff hunks.
 local function _termocode_git_signs(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
+  _G._tc_git_marks[bufnr] = nil
   local file = vim.api.nvim_buf_get_name(bufnr)
   if file == '' then return end
   -- Only run inside git repos; checking the buffer's actual path lets us
@@ -50,6 +65,13 @@ local function _termocode_git_signs(bufnr)
   -- want to surface "what's different from the last commit").
   local diff = vim.fn.systemlist({ 'git', '-C', git_dir, 'diff', '--no-color', '-U0', 'HEAD', '--', file })
   vim.fn.sign_unplace('TermocodeGitSigns', { buffer = bufnr })
+  local marks = {}
+  _G._tc_git_marks[bufnr] = marks
+  local function place(name, lnum)
+    marks[lnum] = name
+    vim.fn.sign_place(0, 'TermocodeGitSigns', name, bufnr, { lnum = lnum, priority = 5 })
+  end
+  -- (sign_place / sign_unplace also make nvim redraw the statuscolumn.)
   if not diff or #diff == 0 then return end
   for _, line in ipairs(diff) do
     -- Hunk header form: @@ -A,B +C,D @@ ...
@@ -74,19 +96,16 @@ local function _termocode_git_signs(bufnr)
       -- Pure deletion: place a "deleted" sign on the line where the
       -- removed range USED to live (we anchor it at added_start so the
       -- glyph appears just below the gap).
-      vim.fn.sign_place(0, 'TermocodeGitSigns', 'TermocodeGitDelete', bufnr,
-        { lnum = math.max(added_start, 1), priority = 5 })
+      place('TermocodeGitDelete', math.max(added_start, 1))
     elseif removed_count == 0 then
       -- Pure addition.
       for i = 0, added_count - 1 do
-        vim.fn.sign_place(0, 'TermocodeGitSigns', 'TermocodeGitAdd', bufnr,
-          { lnum = added_start + i, priority = 5 })
+        place('TermocodeGitAdd', added_start + i)
       end
     else
       -- Modification (changed lines).
       for i = 0, added_count - 1 do
-        vim.fn.sign_place(0, 'TermocodeGitSigns', 'TermocodeGitChange', bufnr,
-          { lnum = added_start + i, priority = 5 })
+        place('TermocodeGitChange', added_start + i)
       end
     end
     ::continue::
@@ -95,13 +114,39 @@ end
 
 -- Throttle: refresh on BufWritePost (immediate, after each save) and on
 -- CursorHold (after 'updatetime' = 1s of idle), but never more than once
--- every 500 ms.
-local _git_signs_last = 0
+-- every 500 ms. An event inside the window is not dropped: it schedules
+-- one refresh at the window's end (a file opened right after another
+-- buffer event would otherwise get no signs until the next idle).
+local _git_signs_last, _git_signs_pending = 0, false
 local function _git_signs_maybe()
   local now = (vim.uv or vim.loop).now()
-  if now - _git_signs_last < 500 then return end
-  _git_signs_last = now
-  pcall(_termocode_git_signs)
+  local wait = 500 - (now - _git_signs_last)
+  if wait <= 0 then
+    _git_signs_last = now
+    pcall(_termocode_git_signs)
+    return
+  end
+  if _git_signs_pending then return end
+  _git_signs_pending = true
+  vim.defer_fn(function()
+    _git_signs_pending = false
+    _git_signs_last = (vim.uv or vim.loop).now()
+    pcall(_termocode_git_signs)
+  end, wait)
+end
+
+-- Called from Go when the git state changed (commit, stage, checkout,
+-- pull …): HEAD moved, so the signs of every shown file may be stale
+-- although no buffer event fired.
+function _G.termocode_git_signs_refresh()
+  local seen = {}
+  for _, w in ipairs(vim.api.nvim_list_wins()) do
+    local b = vim.api.nvim_win_get_buf(w)
+    if not seen[b] and vim.bo[b].buftype == '' then
+      seen[b] = true
+      pcall(_termocode_git_signs, b)
+    end
+  end
 end
 
 vim.api.nvim_create_augroup('TermocodeGitSigns', { clear = true })
