@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -64,8 +65,11 @@ func BenchmarkAISplitterDrag(b *testing.B) {
 
 // TestAISplitterDragIsCheap asserts the per-step cost of a 200-step drag.
 func TestAISplitterDragIsCheap(t *testing.T) {
-	if testing.Short() || raceEnabled {
-		t.Skip("timing test")
+	// Timing on a loaded machine (go test ./... runs packages in
+	// parallel, shared CI runners) is noise, so this only runs on demand:
+	//   TERMOCODE_PERF=1 go test ./internal/app -run DragIsCheap
+	if testing.Short() || raceEnabled || os.Getenv("TERMOCODE_PERF") != "1" {
+		t.Skip("timing test; set TERMOCODE_PERF=1")
 	}
 	withConfigDir(t)
 	m := startDrag(dragTestModel(t))
