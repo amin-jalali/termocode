@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+	"time"
 )
 
 // Spec: Given a workspace,
@@ -54,6 +55,28 @@ func TestExplorerNewFolder(t *testing.T) {
 	}
 	if !explorerShows(d, "lib") {
 		t.Errorf("explorer does not list lib:\n%s", screen(d))
+	}
+}
+
+// Spec: Given files a.txt and b.txt,
+// when the user renames a.txt to "b.txt",
+// then nothing is overwritten: both files keep their content and an
+// error is shown.
+func TestExplorerRenameOntoExistingFileRefused(t *testing.T) {
+	d := New(t, Options{Files: textFiles()})
+	rightClickExplorer(d, "a.txt")
+	clickText(d, "Rename...")
+	for range len("a.txt") {
+		d.Key("backspace")
+	}
+	d.Type("b.txt")
+	d.Key("enter")
+	d.Settle(200 * time.Millisecond)
+	if a, b := diskFile(d, "a.txt"), diskFile(d, "b.txt"); a != "alpha\nbravo\ncharlie\n" || b != "one\ntwo\nthree\n" {
+		t.Fatalf("rename onto b.txt: a.txt=%q b.txt=%q, want both unchanged", a, b)
+	}
+	if _, _, ok := find(d, "exists"); !ok {
+		t.Errorf("no error shown:\n%s", screen(d))
 	}
 }
 
