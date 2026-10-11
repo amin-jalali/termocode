@@ -85,7 +85,7 @@ type overflowMenuContext struct {
 	SidebarOn       bool
 	ZenModeOn       bool
 	AutoSaveOn      bool
-	TerminalTabsLen int // # of integrated-terminal tabs (>1 → cycling makes sense)
+	TerminalTabsLen int  // # of integrated-terminal tabs (>1 → cycling makes sense)
 	GitRepo         bool // cwd is a git repo → Source Control toggles apply
 	GitTreeView     bool // Source Control list is in tree (vs flat) mode
 }
@@ -95,10 +95,10 @@ type overflowMenuContext struct {
 // the row; closing the menu happens in activateOverflowMenuItem.
 type overflowMenuItem struct {
 	label    string
-	visible  func(overflowMenuContext) bool   // nil → always visible
-	checked  func(overflowMenuContext) bool   // nil → no checkmark
+	visible  func(overflowMenuContext) bool // nil → always visible
+	checked  func(overflowMenuContext) bool // nil → no checkmark
 	action   func(m *Model) tea.Cmd
-	shortcut string                            // pre-resolved at build time
+	shortcut string // pre-resolved at build time
 	group    menuGroup
 }
 
@@ -106,9 +106,9 @@ type overflowMenuItem struct {
 // divider line. The keyboard router uses isDivider to skip non-selectable
 // rows when the user presses up/down.
 type overflowMenuRow struct {
-	item       overflowMenuItem
-	isDivider  bool
-	itemIndex  int // -1 for divider; otherwise index into the visible-items slice
+	item      overflowMenuItem
+	isDivider bool
+	itemIndex int // -1 for divider; otherwise index into the visible-items slice
 }
 
 // overflowMenuContextSnapshot computes the live context the menu builder

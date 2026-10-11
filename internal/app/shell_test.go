@@ -15,12 +15,12 @@ import (
 // styled output.
 func TestRenderTerminalTabBarTwoTabs(t *testing.T) {
 	m := Model{
-		w:           120,
-		h:           40,
-		showExp:     true,
+		w:             120,
+		h:             40,
+		showExp:       true,
 		explorerWidth: defaultExplorerWidth,
-		termOpen:    true,
-		terminalRows: 10,
+		termOpen:      true,
+		terminalRows:  10,
 		terminalTabs: []terminalTab{
 			{Name: "termocode", Cwd: "/root/termocode", Shell: "zsh", LastExit: 0},
 			{Name: "scratch", Cwd: "/tmp", Shell: "bash", LastExit: 0},
@@ -33,8 +33,8 @@ func TestRenderTerminalTabBarTwoTabs(t *testing.T) {
 		t.Fatalf("tab bar width = %d, want %d", w, width)
 	}
 	mustContain := []string{
-		"%",        // zsh icon (active tab)
-		"$",        // bash icon (inactive tab)
+		"%", // zsh icon (active tab)
+		"$", // bash icon (inactive tab)
 		"termocode",
 		"scratch",
 		"×", // tab close glyphs + panel close glyph
@@ -56,12 +56,12 @@ func TestRenderTerminalTabBarTwoTabs(t *testing.T) {
 // terminalHitTabClose.
 func TestRenderTerminalTabBarHitTestActiveTab(t *testing.T) {
 	m := Model{
-		w:           120,
-		h:           40,
-		showExp:     true,
+		w:             120,
+		h:             40,
+		showExp:       true,
 		explorerWidth: defaultExplorerWidth,
-		termOpen:    true,
-		terminalRows: 10,
+		termOpen:      true,
+		terminalRows:  10,
 		terminalTabs: []terminalTab{
 			{Name: "termocode", Cwd: "/root/termocode", Shell: "zsh", LastExit: 0},
 			{Name: "scratch", Cwd: "/tmp", Shell: "bash", LastExit: 0},
@@ -119,10 +119,10 @@ func TestRenderTerminalTabBarHitTestActiveTab(t *testing.T) {
 // editorH rows and that the bar lands at the correct boundary index.
 func TestSpliceTerminalTabBarRowCount(t *testing.T) {
 	m := Model{
-		w:           80,
-		h:           24,
-		showExp:     false,
-		termOpen:    true,
+		w:            80,
+		h:            24,
+		showExp:      false,
+		termOpen:     true,
 		terminalRows: 6,
 		terminalTabs: []terminalTab{
 			{Name: "shell", Cwd: "/", Shell: "bash", LastExit: 0},
