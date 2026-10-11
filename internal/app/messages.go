@@ -65,3 +65,6 @@ type nvimBuffer struct {
 	Modified bool
 	Filetype string
 }
+
+// stateTrailingMsg runs the FetchState that the redraw throttle skipped.
+type stateTrailingMsg struct{}

@@ -512,13 +512,26 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 			// (every grid_line / grid_scroll / etc.) — at ~60fps during
 			// scroll that's a Lua roundtrip every 16ms. Coalesce to 100ms.
 			const stateThrottle = 100 * time.Millisecond
-			if time.Since(m.stateLastFetch) >= stateThrottle {
+			if since := time.Since(m.stateLastFetch); since >= stateThrottle {
 				m.stateLastFetch = time.Now()
 				cmds = append(cmds, m.fetchStateCmd())
+			} else if !m.stateTrailing {
+				// Throttled: fetch once more when the window ends, or
+				// the last change of a burst (a file just opened, a
+				// tab closed) never reaches the tab bar and status bar.
+				m.stateTrailing = true
+				cmds = append(cmds, tea.Tick(stateThrottle-since, func(time.Time) tea.Msg { return stateTrailingMsg{} }))
 			}
 			return m, tea.Batch(cmds...), true
 		}
 		return m, nil, true
+	case stateTrailingMsg:
+		m.stateTrailing = false
+		if m.nvim == nil {
+			return m, nil, true
+		}
+		m.stateLastFetch = time.Now()
+		return m, m.fetchStateCmd(), true
 	case StateMsg:
 		// Recents: push to disk only when the active path actually changes.
 		if msg.Path != "" && msg.Path != m.lastRecordedPath {
