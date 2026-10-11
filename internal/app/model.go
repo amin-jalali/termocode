@@ -443,18 +443,23 @@ type Model struct {
 	// Model copies share it; nil in bare test Models.
 	ext *extState
 
-	focus             Focus
-	showExp           bool
-	pickerOpen        bool
-	pickerKind        pickerKindEnum
-	menuOpen          bool
-	menuKind          menuKindEnum
-	menuPath          string
-	menuTabID         int
-	findOpen          bool
-	replaceOpen       bool
-	confirmOpen       bool
-	confirmKind       confirmKindEnum
+	focus       Focus
+	showExp     bool
+	pickerOpen  bool
+	pickerKind  pickerKindEnum
+	menuOpen    bool
+	menuKind    menuKindEnum
+	menuPath    string
+	menuTabID   int
+	findOpen    bool
+	replaceOpen bool
+	confirmOpen bool
+	confirmKind confirmKindEnum
+	// Hot exit (hot_exit.go): this workspace's backup dir, this run's
+	// live dir, and the backups waiting for Restore / Discard.
+	hotExitRoot       string
+	hotExitLive       string
+	hotExitPending    []hotBackup
 	confirmTargetID   int
 	confirmTargetPath string
 	// confirmTargetPaths is the absolute-path list for a bulk-delete

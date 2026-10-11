@@ -81,3 +81,4 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `XDG_CONFIG_HOME` | Moves the config folder to `$XDG_CONFIG_HOME/termocode`. |
 | `XDG_DATA_HOME` | Moves the data folder to `$XDG_DATA_HOME/termocode`. |
 | `XDG_RUNTIME_DIR` | Folder for the persistent-session sockets (`$XDG_RUNTIME_DIR/termocode`); without it they go to `~/.cache/termocode/sessions`. |
+| `XDG_STATE_HOME` | Moves the hot-exit backups of unsaved files to `$XDG_STATE_HOME/termocode/backup`. |

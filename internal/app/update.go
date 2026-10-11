@@ -495,8 +495,13 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 		m.persistExplorerState()
 		// Group I: load extensions after the built-in Lua. Plugins not
 		// downloaded yet are cloned in the background (plugins.go).
-		cmds := append([]tea.Cmd{m.extLoadCmd(false), m.keymapProblemsToast()}, pluginBootstrapCmds()...)
+		cmds := append([]tea.Cmd{m.extLoadCmd(false), m.keymapProblemsToast(), m.startHotExit()}, pluginBootstrapCmds()...)
 		return m, tea.Batch(cmds...), true
+	case hotExitFoundMsg:
+		if len(msg.backups) > 0 && !m.confirmOpen {
+			m.promptHotExit(msg.backups)
+		}
+		return m, nil, true
 	case pluginClonedMsg:
 		return m, m.onPluginCloned(msg), true
 	case nvim.RedrawMsg:

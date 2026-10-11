@@ -26,7 +26,7 @@ are two sessions.
 - **Quit** (`Ctrl+Q`, or **Quit** in the palette) ends the session for
   real. termocode asks about unsaved files first, as always.
 - `termocode kill` ends the session of the current folder from a shell.
-  termocode does not ask about unsaved files then.
+  Unsaved files go to the [hot-exit backup](#unsaved-files-after-a-crash).
 
 Closing the terminal window or losing the connection does **not** end it.
 
@@ -68,7 +68,22 @@ start. A change applies the next time you start termocode.
 
 Why off on your own machine by default? A local terminal rarely "drops",
 and with sessions a second window for the same folder would take the editor
-away from the first one.
+away from the first one. Unsaved files are still safe: see below.
+
+## Unsaved files after a crash
+
+termocode keeps a backup of every file with unsaved changes, a moment after
+each change. If termocode is killed, crashes, or loses its terminal without
+a session, the next start in the same folder asks:
+
+**Restore unsaved changes?** — **Restore** opens the files with your text
+(still unsaved, so you can review and save). **Discard** deletes the
+backup. **Later** keeps it and asks again next time.
+
+A clean Quit removes the backup, so you only see the question when
+something went wrong. Backups live in
+`~/.local/state/termocode/backup/` (or `$XDG_STATE_HOME/termocode/backup/`).
+Files that never had a name (new, unsaved buffers) are not backed up.
 
 ## Security
 

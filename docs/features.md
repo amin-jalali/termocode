@@ -74,6 +74,8 @@ to hide the sidebar.
 
 - Several folders in one window, or switch projects in one step. → [Workspaces and sessions](guides/workspaces.md)
 - Tabs, cursors, folds, undo history and breakpoints come back after a restart.
+- Over SSH, a dropped connection loses nothing: run `termocode` again to get the same editor, terminals and jobs back. → [Remote and SSH](guides/remote-ssh.md)
+- Unsaved files survive a crash or a kill: the next start offers to restore them.
 
 ## Help
 
