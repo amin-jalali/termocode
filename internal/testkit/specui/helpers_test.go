@@ -3,6 +3,7 @@ package specui
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -81,6 +82,29 @@ func waitFile(t *testing.T, d *testkit.Driver, rel string, ok func(string) bool)
 // configPath is the sandboxed config.json.
 func configPath() string {
 	return filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "termocode", "config.json")
+}
+
+var (
+	activeTabRe = regexp.MustCompile(`▎ (\S+) x`)
+	cursorRe    = regexp.MustCompile(`Ln \d+`)
+)
+
+// activeTab is the name on the highlighted editor tab ("" if none).
+func activeTab(d *testkit.Driver) string {
+	first, _, _ := strings.Cut(screen(d), "\n")
+	// The sidebar header starts with the same bar; skip past it.
+	if i := strings.Index(first, "▕"); i >= 0 {
+		first = first[i:]
+	}
+	if m := activeTabRe.FindStringSubmatch(first); m != nil {
+		return m[1]
+	}
+	return ""
+}
+
+// cursorLine is the status bar's "Ln N".
+func cursorLine(d *testkit.Driver) string {
+	return cursorRe.FindString(lineWith(d, "Ln "))
 }
 
 // slow skips a test in -short mode.
