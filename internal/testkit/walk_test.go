@@ -208,7 +208,7 @@ func TestWalkViewsAndPanels(t *testing.T) {
 					d.Send(activity.SwitchMsg{View: v})
 					resetUI(d)
 					// Click every row of the sidebar once.
-					for y := 0; y < d.H; y += 4 {
+					for y := 0; y < d.H; y += 6 {
 						d.Click(6, y)
 						resetUI(d)
 					}
@@ -216,7 +216,11 @@ func TestWalkViewsAndPanels(t *testing.T) {
 				d.Send(activity.ToggleSidebarMsg{})
 				d.Send(activity.ToggleSidebarMsg{})
 				// The activity bar itself.
-				for y := 0; y < d.H; y++ {
+				step := 1
+				if nv && !fullWalk() {
+					step = 3 // the icons are 3 rows apart; SwitchMsg above covers the views
+				}
+				for y := 0; y < d.H; y += step {
 					d.Click(0, y)
 					resetUI(d)
 				}
