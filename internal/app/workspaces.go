@@ -10,6 +10,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -106,7 +107,7 @@ func (m *Model) openWorkspacePicker() tea.Cmd {
 	cwd, _ := os.Getwd()
 	items := make([]picker.Item, 0, len(entries))
 	for _, e := range entries {
-		hint := formatRecentTime(e.OpenedAt, time.Now())
+		hint := formatRecentTime(e.OpenedAt, clock.Now())
 		if e.Path == cwd {
 			hint = "current"
 		}
