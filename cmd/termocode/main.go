@@ -94,6 +94,9 @@ func probeTerminal() {
 
 func main() {
 	args, noSession := extractFlag(os.Args[1:], "--no-session")
+	if noSession {
+		_ = os.Setenv(envNoSession, "1")
+	}
 	if len(args) == 2 && args[0] == serverArg {
 		os.Exit(runServer(args[1]))
 	}

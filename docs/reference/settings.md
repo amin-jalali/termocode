@@ -75,7 +75,9 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `TERMOCODE_FONT_DELTA` | Font size change asked of the terminal at launch; wins over font_delta in config.json (default -2, 0 turns it off). |
 | `TERMOCODE_ICON_MODE` | Icon set: `nerd_font`, `unicode` or `ascii`. |
 | `TERMOCODE_NERD_FONT` | Legacy: `1` is the same as `TERMOCODE_ICON_MODE=nerd_font`. |
+| `TERMOCODE_NO_SESSION` | Any value: run without a persistent session, like `--no-session`. |
 | `TERMOCODE_PLUGINS_DIR` | Folder for the Neovim plugins termocode clones on first launch. |
 | `TERMOCODE_TOOLS_DIR` | Folder for language servers and debug adapters installed by termocode. |
 | `XDG_CONFIG_HOME` | Moves the config folder to `$XDG_CONFIG_HOME/termocode`. |
 | `XDG_DATA_HOME` | Moves the data folder to `$XDG_DATA_HOME/termocode`. |
+| `XDG_RUNTIME_DIR` | Folder for the persistent-session sockets (`$XDG_RUNTIME_DIR/termocode`); without it they go to `~/.cache/termocode/sessions`. |

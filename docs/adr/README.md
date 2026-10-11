@@ -18,6 +18,7 @@ picked over a clear alternative. A normal feature does not need one.
 | [0004](0004-pure-go-search-fallback.md) | Pure-Go search fallback when ripgrep is missing | Accepted |
 | [0005](0005-config-never-breaks-startup.md) | Config files can never break startup | Accepted |
 | [0006](0006-lua-extension-host.md) | Extensions run as Lua inside the embedded Neovim | Accepted |
+| [0007](0007-persistent-sessions.md) | Persistent sessions: the UI runs behind a socket, on over SSH | Accepted |
 
 > The folder was started after the project was already running, so 0001–0005
 > backfill decisions that were made earlier. Dates are the best guess from git

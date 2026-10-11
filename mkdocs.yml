@@ -91,6 +91,7 @@ nav:
       - Tasks and problems: guides/tasks-problems.md
       - Install language servers and debuggers: guides/language-servers.md
       - Workspaces and sessions: guides/workspaces.md
+      - Remote and SSH: guides/remote-ssh.md
       - Customize termocode: guides/customize.md
       - Write an extension: extensions.md
   - Reference:
@@ -111,6 +112,7 @@ nav:
           - "0004 Pure-Go search fallback": adr/0004-pure-go-search-fallback.md
           - "0005 Config never breaks startup": adr/0005-config-never-breaks-startup.md
           - "0006 Lua extension host": adr/0006-lua-extension-host.md
+          - "0007 Persistent sessions": adr/0007-persistent-sessions.md
   - Project:
       - Roadmap (task list): TASKS.md
       - QC test cases: qc/README.md
