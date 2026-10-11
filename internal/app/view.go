@@ -1946,7 +1946,6 @@ func buildSeparator(h int, t theme.Theme) string {
 }
 
 func (m Model) statusState() statusbar.State {
-	cur := m.editor.Cursor()
 	lang := m.editor.Lang()
 	if lang != "" {
 		lang = strings.ToUpper(lang[:1]) + lang[1:]
@@ -1963,13 +1962,15 @@ func (m Model) statusState() statusbar.State {
 	}
 	aiLabel, aiState := m.aiStatus() // Group A
 	st := statusbar.State{
-		AI:       aiLabel,
-		AIState:  aiState,
-		Path:     m.editor.Path(),
-		Project:  proj,
-		Lang:     lang,
-		Line:     cur.Line + 1,
-		Col:      cur.Col + 1,
+		AI:      aiLabel,
+		AIState: aiState,
+		Path:    m.editor.Path(),
+		Project: proj,
+		Lang:    lang,
+		// nvim's cursor in the file (StateMsg), not the grid cursor: that
+		// is the screen row / column (scrolled view, gutter, wrapped lines).
+		Line:     max(m.cursorLine, 1),
+		Col:      max(m.cursorCol, 1),
 		Dirty:    m.editor.IsDirty(),
 		Err:      m.err,
 		Errors:   m.editor.Errors(),

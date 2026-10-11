@@ -328,6 +328,8 @@ type Model struct {
 	// cursorLine mirrors the most recent StateMsg's 1-based cursor line.
 	// Used by breadcrumbs to find the enclosing symbol.
 	cursorLine int
+	// cursorCol is the matching 1-based virtual column (status bar).
+	cursorCol int
 
 	// editorMode is the nvim mode short name ("insert", "normal",
 	// "replace", "visual", …) used to shape the terminal hardware cursor
