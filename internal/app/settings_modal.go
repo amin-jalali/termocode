@@ -112,6 +112,7 @@ func settingsCategories() map[string]string {
 		"setting-show-hidden":        "Editor",
 		"setting-tab-size":           "Editor",
 		"setting-search-max-results": "Search",
+		"setting-persistent-session": "Editor",
 	})
 }
 
@@ -337,14 +338,20 @@ func (m settingsModal) layoutInnerHeight(visibleCount int) int {
 	contentRows := 1 /*header*/ + 1 /*top sep*/ + 1 /*input*/ + visibleCount + breathingRows
 	// Spacer flexes; the math has to match Box()'s spacer calc exactly.
 	desiredH := m.h * 80 / 100
-	footerSpacer := desiredH - contentRows - 3
-	if footerSpacer < 3 {
-		footerSpacer = 3
-	}
-	if footerSpacer > 12 {
-		footerSpacer = 12
-	}
+	footerSpacer := settingsFooterSpacer(desiredH, contentRows, m.h)
 	return contentRows + footerSpacer + 1 /*bottom sep*/ + 1 /*footer*/
+}
+
+// settingsFooterSpacer is the blank-row count above the footer: 3..12
+// rows towards 80% of the screen, but fewer on a short screen so the
+// footer and the bottom border stay visible (4 = separator, footer and
+// the two border rows).
+func settingsFooterSpacer(desiredH, contentH, screenH int) int {
+	n := min(max(desiredH-contentH-3, 3), 12)
+	if fit := screenH - contentH - 4; n > fit {
+		n = max(1, fit)
+	}
+	return n
 }
 
 // layoutRowAt translates a rendered inner-y back to an m.rows index. Y=0 is
@@ -617,13 +624,7 @@ func (m settingsModal) Box() string {
 	// ones — minimum 3 rows of gap, ideally fills until 80% of m.h.
 	desiredH := m.h * 80 / 100
 	contentH := len(rows)
-	footerSpacer := desiredH - contentH - 3 // 3 = footer + 2 border
-	if footerSpacer < 3 {
-		footerSpacer = 3
-	}
-	if footerSpacer > 12 {
-		footerSpacer = 12
-	}
+	footerSpacer := settingsFooterSpacer(desiredH, contentH, m.h)
 	for i := 0; i < footerSpacer; i++ {
 		rows = append(rows, blank)
 	}

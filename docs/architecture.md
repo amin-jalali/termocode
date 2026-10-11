@@ -105,6 +105,7 @@ Each is a self-contained Bubble Tea sub-component with its own `Model` / `Update
 | `prompt`     | Single-line input modal                                                           |
 | `recents`    | Welcome-screen recents pane                                                       |
 | `replacebar` | Inline replace bar; pairs with `findbar`                                          |
+| `session`    | Persistent sessions: socket server owning the UI's PTY, thin client, mode replay ([ADR 0007](adr/0007-persistent-sessions.md)) |
 | `search`     | Workspace search sidebar — ripgrep, or a pure-Go walker when `rg` is missing      |
 | `setup`      | `termocode setup` subcommand (Nerd Font, gopls) + read-only `Doctor()` checks     |
 | `statusbar`  | Bottom status bar — branch, diagnostics, ln/col, badges                           |

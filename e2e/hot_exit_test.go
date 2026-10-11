@@ -1,0 +1,124 @@
+//go:build e2e
+
+package e2e
+
+import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"syscall"
+	"testing"
+	"time"
+)
+
+// backupFiles lists the hot-exit backup files under home.
+func backupFiles(home string) []string {
+	var out []string
+	_ = filepath.Walk(filepath.Join(home, ".local/state/termocode/backup"), func(p string, fi os.FileInfo, err error) error {
+		if err == nil && !fi.IsDir() {
+			out = append(out, p)
+		}
+		return nil
+	})
+	return out
+}
+
+// TestHotExitRestore: without a session, the terminal hangs up (SIGHUP to
+// the whole process group, so nvim dies too) while a file has unsaved
+// text. The next start offers to restore it, and Restore brings the text
+// back as unsaved changes. A clean quit leaves no backup.
+func TestHotExitRestore(t *testing.T) {
+	home := t.TempDir()
+	ws := NewRepo(t)
+	start := func() *Term {
+		tm := Start(t, StartOpts{Home: home, Workspace: ws, Args: []string{"--no-session"}})
+		tm.WaitFor("status bar", bootTimeout, func(ls []string) bool {
+			return mainFrame.Top(ls[0]) && mainFrame.Bottom(ls[len(ls)-1])
+		})
+		return tm
+	}
+	tm := start()
+	tm.settle()
+	tm.OpenFile("notes.txt")
+	tm.WaitText("first note", uiTimeout)
+	tm.Send(KeyEsc)
+	tm.settle()
+	tm.Type("ohot-exit-marker-9")
+	tm.WaitText("hot-exit-marker-9", uiTimeout)
+
+	// The live backup is written a moment after the last change.
+	deadline := time.Now().Add(5 * time.Second)
+	for len(backupFiles(home)) == 0 {
+		if time.Now().After(deadline) {
+			t.Fatalf("no hot-exit backup written")
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	if err := syscall.Kill(-tm.cmd.Process.Pid, syscall.SIGHUP); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-tm.exited:
+	case <-time.After(10 * time.Second):
+		t.Fatalf("termocode did not exit on SIGHUP")
+	}
+	if b, _ := os.ReadFile(filepath.Join(ws, "notes.txt")); strings.Contains(string(b), "hot-exit-marker-9") {
+		t.Fatalf("the unsaved text was written to the file itself")
+	}
+
+	tm2 := start()
+	tm2.WaitText("Restore unsaved changes?", bootTimeout)
+	tm2.WaitText("notes.txt", uiTimeout)
+	tm2.settle()
+	tm2.ClickText("Restore")
+	tm2.WaitText("hot-exit-marker-9", uiTimeout)
+	tm2.WaitFor("notes.txt tab, modified", uiTimeout, func(ls []string) bool {
+		return strings.Contains(ls[0], "notes.txt ●")
+	})
+	tm2.step("restored")
+
+	tm2.quitDiscard()
+	if left := backupFiles(home); len(left) > 0 {
+		t.Errorf("backup left after a clean quit: %v", left)
+	}
+}
+
+// TestHotExitDiscard: Discard drops the backup; the file stays as saved.
+func TestHotExitDiscard(t *testing.T) {
+	home := t.TempDir()
+	ws := NewRepo(t)
+	// A backup left by a process that is gone.
+	dead := exec.Command("true")
+	if err := dead.Run(); err != nil {
+		t.Fatal(err)
+	}
+	pid := strconv.Itoa(dead.ProcessState.Pid())
+	writeFile(t, filepath.Join(home, ".local/state/termocode/backup", hashKey(ws), pid, "x.bak"),
+		filepath.Join(ws, "notes.txt")+"\nfrom a crash")
+
+	tm := Start(t, StartOpts{Home: home, Workspace: ws, Args: []string{"--no-session"}})
+	tm.WaitText("Restore unsaved changes?", bootTimeout)
+	tm.settle()
+	tm.ClickText("Discard ") // not the test name in the workspace path
+	tm.WaitGone("Restore unsaved changes?", uiTimeout)
+	if left := backupFiles(home); len(left) > 0 {
+		t.Errorf("backup left after Discard: %v", left)
+	}
+	if tm.Has("from a crash") {
+		t.Errorf("discarded text shown")
+	}
+	tm.Quit()
+}
+
+func writeFile(t *testing.T, p, body string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
