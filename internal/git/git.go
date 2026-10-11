@@ -194,7 +194,7 @@ func CommitWith(dir, message string, amend, signoff bool) error {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
@@ -783,7 +783,7 @@ func Stash(dir, message string) error {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	if strings.Contains(string(out), "No local changes to save") {
 		return fmt.Errorf("no local changes to save")
@@ -797,7 +797,7 @@ func StashPop(dir string) error {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
@@ -808,7 +808,7 @@ func StashApply(dir, ref string) error {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
@@ -819,7 +819,7 @@ func StashDrop(dir, ref string) error {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
@@ -853,7 +853,7 @@ func Push(dir string) error {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
@@ -867,7 +867,7 @@ func PushSetUpstream(dir, branch string) error {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
@@ -878,7 +878,7 @@ func Pull(dir string) error {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
@@ -890,7 +890,7 @@ func Fetch(dir string) error {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
@@ -921,7 +921,7 @@ func Checkout(dir, branch string) error {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
@@ -933,7 +933,7 @@ func CreateBranch(dir, name string) error {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
