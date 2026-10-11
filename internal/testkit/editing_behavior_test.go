@@ -256,6 +256,58 @@ func TestToggleWordWrapKey(t *testing.T) {
 	}
 }
 
+// Spec: Given a.txt open and unchanged, and the user idle,
+// when another program rewrites a.txt (git pull, another editor),
+// then the buffer shows the new text without any key press — so the next
+// key does not edit (and later save over) the old text.
+func TestExternalChangeReloads(t *testing.T) {
+	d := editorDriver(t, nil)
+	open(d, "a.txt")
+	time.Sleep(1100 * time.Millisecond) // a new mtime second
+	if err := os.WriteFile(filepath.Join(d.Dir, "a.txt"), []byte("changed\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !d.WaitFor(func() bool { return bufLines(d) == "changed" }, 5*time.Second) {
+		t.Fatalf("buffer not reloaded: %q", bufLines(d))
+	}
+	if !d.WaitForText("changed", 2*time.Second) {
+		t.Errorf("editor does not show the new text:\n%s", screen(d))
+	}
+}
+
+// Spec: Given a.txt open,
+// when another program deletes a.txt and the app keeps checking files,
+// then the user is warned once (not every check), the editor keeps the
+// text and the file is not written back.
+// Slow (waits for three checks): runs with TERMOCODE_WALK=full.
+func TestExternalDeleteWarnsOnce(t *testing.T) {
+	if os.Getenv("TERMOCODE_WALK") != "full" {
+		t.Skip("slow; set TERMOCODE_WALK=full")
+	}
+	d := editorDriver(t, nil)
+	open(d, "a.txt")
+	lua(d, `_G.tc_warns = 0
+local orig = vim.notify
+vim.notify = function(msg, ...)
+  if tostring(msg):find('deleted on disk', 1, true) then _G.tc_warns = _G.tc_warns + 1 end
+  return orig(msg, ...)
+end
+return ''`)
+	if err := os.Remove(filepath.Join(d.Dir, "a.txt")); err != nil {
+		t.Fatal(err)
+	}
+	d.WaitFor(func() bool { return false }, 6500*time.Millisecond)
+	if got := lua(d, `return tostring(_G.tc_warns)`); got != "1" {
+		t.Errorf("warned %s times, want once", got)
+	}
+	if got := bufLines(d); got != "alpha\nbravo\ncharlie" {
+		t.Errorf("buffer = %q, want the old text kept", got)
+	}
+	if exists(d, "a.txt") {
+		t.Errorf("a.txt written back")
+	}
+}
+
 // Spec: Given a.txt open with unsaved edits,
 // when the user runs File: Revert / Reload from Disk,
 // then the edits are dropped, the buffer matches the file and the tab is
