@@ -49,7 +49,7 @@ func (m *Model) editConfigFile(name string, defaultBody string) tea.Cmd {
 	}
 	if m.nvim != nil {
 		m.ensureEditorWindowCurrent()
-		_ = m.nvim.Command("edit " + path)
+		_ = m.nvim.OpenFile("edit", path)
 	}
 	m.focus = FocusEditor
 	return nil
