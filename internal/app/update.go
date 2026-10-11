@@ -557,6 +557,7 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 			m.preferredCodeAction = nil
 		}
 		m.cursorLine = msg.CursorLine
+		m.cursorCol = msg.CursorCol
 		m.indentLabel = msg.Indent
 		// File-watcher toast: surface "Reloaded <basename>" the first time
 		// we see a new reload-seq value so each external mutation fires
@@ -1132,6 +1133,7 @@ func (m Model) fetchStateCmd() tea.Cmd {
 			Errors:         s.Errors,
 			Warnings:       s.Warnings,
 			CursorLine:     s.CursorLine,
+			CursorCol:      s.CursorCol,
 			Cursors:        s.Cursors,
 			LastReloadPath: s.LastReloadPath,
 			LastReloadSeq:  s.LastReloadSeq,

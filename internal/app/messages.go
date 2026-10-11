@@ -34,6 +34,7 @@ type StateMsg struct {
 	Errors     int
 	Warnings   int
 	CursorLine int               // 1-based; 0 when unknown
+	CursorCol  int               // 1-based virtual column; 0 when unknown
 	Cursors    map[string][2]int // path → [line, col] (1-based) for every listed buffer
 
 	// LastReloadPath / LastReloadSeq mirror the Lua side's "file just

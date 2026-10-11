@@ -242,6 +242,9 @@ type State struct {
 	Errors     int
 	Warnings   int
 	CursorLine int // 1-based; 0 when unknown
+	// CursorCol is the 1-based screen column of the cursor in its line
+	// (virtcol: a tab counts its width); 0 when unknown.
+	CursorCol int
 	// Cursors maps each listed buffer's absolute path to its last-known
 	// (line, col), 1-based. The active buffer's entry reflects the live
 	// cursor; inactive buffers report the `"` mark (position on last
@@ -383,7 +386,8 @@ func (c *Client) fetchStateOnce() (State, error) {
 			lsp_names,
 			vim.bo.expandtab
 				and ('Spaces: ' .. (vim.bo.shiftwidth > 0 and vim.bo.shiftwidth or vim.bo.tabstop))
-				or ('Tabs: ' .. vim.bo.tabstop)
+				or ('Tabs: ' .. vim.bo.tabstop),
+			vim.fn.virtcol('.'),
 		}
 	`, &raw)
 	if err != nil {
@@ -467,6 +471,9 @@ func (c *Client) fetchStateOnce() (State, error) {
 	}
 	if len(raw) > 15 {
 		s.Indent = toString(raw[15])
+	}
+	if len(raw) > 16 {
+		s.CursorCol = toInt(raw[16])
 	}
 	return s, nil
 }
