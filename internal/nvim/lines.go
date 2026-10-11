@@ -44,3 +44,12 @@ func (c *Client) ExecLuaResult(code string, result interface{}, args ...interfac
 func (c *Client) EvalLuaArgs(code string, result interface{}, args ...interface{}) error {
 	return c.execLua(code, result, args...)
 }
+
+// OpenFile runs an Ex command that takes a file name (edit, vsplit, ...)
+// on path. The name goes through fnameescape: in a plain "edit " + path,
+// Vim reads % and # as the current / alternate file, so "100%.txt"
+// opened "100<current file>.txt".
+func (c *Client) OpenFile(cmd, path string) error {
+	return c.ExecLuaArgs(`local cmd, path = ...
+vim.cmd(cmd .. ' ' .. vim.fn.fnameescape(path))`, cmd, path)
+}

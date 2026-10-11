@@ -52,6 +52,8 @@ func loadWorkspaces() []WorkspaceEntry {
 }
 
 func saveWorkspaces(entries []WorkspaceEntry) {
+	// The dashboard caches its render; it lists these entries.
+	defer invalidateWelcome()
 	path, err := workspacesPath()
 	if err != nil {
 		return

@@ -383,6 +383,9 @@ func (d *Driver) run(cmd tea.Cmd) {
 	if cmd == nil {
 		return
 	}
+	// Bind the channels now: after Restart a late message from the old
+	// model must go nowhere, not to the new one.
+	msgs, done := d.msgs, d.done
 	go func() {
 		var msg tea.Msg
 		func() {
@@ -393,17 +396,17 @@ func (d *Driver) run(cmd tea.Cmd) {
 			}()
 			msg = cmd()
 		}()
-		d.post(msg)
+		post(msgs, done, msg)
 	}()
 }
 
-func (d *Driver) post(msg tea.Msg) {
+func post(msgs chan tea.Msg, done chan struct{}, msg tea.Msg) {
 	if msg == nil {
 		return
 	}
 	select {
-	case d.msgs <- msg:
-	case <-d.done:
+	case msgs <- msg:
+	case <-done:
 	}
 }
 
@@ -439,13 +442,14 @@ func (d *Driver) handle(msg tea.Msg) {
 			for i := range cmds {
 				cmds[i], _ = v.Index(i).Interface().(tea.Cmd)
 			}
+			msgs, done := d.msgs, d.done
 			go func() {
 				for _, c := range cmds {
 					if c == nil {
 						continue
 					}
 					if r := c(); r != nil {
-						d.post(r)
+						post(msgs, done, r)
 					}
 				}
 			}()

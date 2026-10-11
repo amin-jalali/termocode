@@ -84,7 +84,7 @@ func TestSCMNvimClickFileOpensSideBySideDiff(t *testing.T) {
 	d, _ := scmNvimDriver(t, func(r *repo) {
 		r.write("main.go", "package main\n\nfunc main() { println(\"new\") }\n")
 	})
-	clickText(d, "main.go")
+	scmClickText(d, "main.go")
 	if !waitText(d, "working") {
 		t.Fatalf("no diff view:%s", dump(d))
 	}

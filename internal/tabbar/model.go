@@ -57,6 +57,11 @@ func (m *Model) SetBuffers(bufs []nvim.BufferInfo, active int) {
 	m.EnsureVisible(active)
 }
 
+// Buffers returns the tabs in display order and the active buffer id.
+func (m Model) Buffers() ([]nvim.BufferInfo, int) {
+	return append([]nvim.BufferInfo(nil), m.bufs...), m.activeID
+}
+
 func (m *Model) SetWidth(w int) {
 	m.w = w
 	m.clampScroll()

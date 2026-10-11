@@ -294,7 +294,7 @@ func inSection(d *Driver, title, s string) bool {
 }
 
 // clickText left-clicks the first sidebar cell showing s.
-func clickText(d *Driver, s string) {
+func scmClickText(d *Driver, s string) {
 	d.T.Helper()
 	y := mustRow(d, s)
 	d.Click(colOf(d, y, s), y)
@@ -303,7 +303,7 @@ func clickText(d *Driver, s string) {
 // typeCommitMessage clicks the commit message box and types msg.
 func typeCommitMessage(d *Driver, msg string) {
 	d.T.Helper()
-	clickText(d, "Message…")
+	scmClickText(d, "Message…")
 	d.Type(msg)
 }
 

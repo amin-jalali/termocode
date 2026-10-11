@@ -56,7 +56,7 @@ func TestSCMCommitEmptyMessageRefused(t *testing.T) {
 	})
 	d.WaitForText("Commit (1)", 3*time.Second)
 	before := r.git("rev-parse", "HEAD")
-	clickText(d, "Commit (1)")
+	scmClickText(d, "Commit (1)")
 	if !strings.Contains(text(d), "Enter a commit message") {
 		t.Errorf("no warning for an empty message:%s", dump(d))
 	}
@@ -93,7 +93,7 @@ func TestSCMCommitNothingStagedOffersStageAll(t *testing.T) {
 	if !strings.Contains(text(d), "chore: all") {
 		t.Errorf("Cancel lost the typed message:%s", dump(d))
 	}
-	clickText(d, "Commit")
+	scmClickText(d, "Commit")
 	d.Key("enter") // "Stage All & Commit" is the default
 	until(d, func() bool { return inSection(d, "GRAPH", "all") })
 	if got := r.git("log", "-1", "--format=%s"); got != "chore: all" {

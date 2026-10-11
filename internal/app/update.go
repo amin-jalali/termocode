@@ -210,6 +210,8 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleConfirmSelect(msg.ID)
 	case confirm.CloseMsg:
 		m.confirmOpen = false
+		// Esc on "Save changes?" also cancels a Close Others.
+		m.closeQueue = nil
 		return m, m.onAIConfirmClosed() // Group A: Esc denies an AI tool call
 	case activity.SwitchMsg:
 		// Settings is a one-shot action (open the modal Settings UI), not
@@ -575,7 +577,11 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 			existing.OpenFiles = paths
 			existing.ActivePath = msg.Path
 		}
-		existing.ExpandedDirs = m.explorer.ExpandedPaths()
+		// Not before ReadyMsg: the session has not been restored then, and
+		// the fresh tree (root only) overwrote the saved expanded folders.
+		if m.nvimAttached {
+			existing.ExpandedDirs = m.explorer.ExpandedPaths()
+		}
 		// Merge (don't replace): a buffer that was just closed externally
 		// drops out of msg.Cursors but its last-known position is still
 		// useful if the user re-opens that file in the same session, so we
@@ -1327,10 +1333,11 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case keymap.ActionCloseBuffer:
-		if m.activeBuf != 0 && m.promptCloseBufferIfDirty(m.activeBuf) {
+		id := m.currentBufferID()
+		if id != 0 && m.promptCloseBufferIfDirty(id) {
 			return m, nil
 		}
-		if buf, ok := m.findBuffer(m.activeBuf); ok {
+		if buf, ok := m.findBuffer(id); ok {
 			m.pushClosed(buf.Path)
 		}
 		if m.nvim != nil {
@@ -1840,7 +1847,7 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		}
 		if m.nvim != nil {
 			m.ensureEditorWindowCurrent()
-			_ = m.nvim.Command("edit " + msg.ID)
+			_ = m.nvim.OpenFile("edit", msg.ID)
 		}
 		m.explorer.RevealPath(msg.ID)
 		m.focus = FocusEditor
@@ -1886,7 +1893,7 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		}
 		if m.nvim != nil {
 			m.ensureEditorWindowCurrent()
-			_ = m.nvim.Command("edit " + msg.ID)
+			_ = m.nvim.OpenFile("edit", msg.ID)
 		}
 		m.explorer.RevealPath(msg.ID)
 		m.focus = FocusEditor

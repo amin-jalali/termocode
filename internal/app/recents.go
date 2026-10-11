@@ -50,6 +50,8 @@ func loadRecents() []RecentEntry {
 
 // saveRecents writes the entries to disk. Errors are swallowed (best-effort).
 func saveRecents(entries []RecentEntry) {
+	// The dashboard caches its render; it lists these entries.
+	defer invalidateWelcome()
 	path, err := recentsPath()
 	if err != nil {
 		return

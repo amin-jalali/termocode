@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -41,11 +42,46 @@ func (m Model) findBuffer(id int) (nvim.BufferInfo, bool) {
 	return nvim.BufferInfo{}, false
 }
 
+// liveBuffer is findBuffer with the path and modified flag read from nvim
+// itself. m.bufs lags up to one state refresh behind: a Ctrl+W right
+// after typing saw a clean buffer, so no question was asked and the
+// :bdelete failed on the modified buffer - the key did nothing.
+func (m Model) liveBuffer(id int) (nvim.BufferInfo, bool) {
+	if m.nvim == nil {
+		return m.findBuffer(id)
+	}
+	s, err := m.nvim.EvalLuaStringArgs(`local b = ...
+if not vim.api.nvim_buf_is_valid(b) then return '' end
+return (vim.bo[b].modified and '1' or '0') .. vim.api.nvim_buf_get_name(b)`, id)
+	if err != nil {
+		return m.findBuffer(id)
+	}
+	if s == "" {
+		return nvim.BufferInfo{}, false
+	}
+	buf, _ := m.findBuffer(id)
+	buf.ID, buf.Modified, buf.Path = id, s[0] == '1', s[1:]
+	return buf, true
+}
+
+// currentBufferID is the id of the buffer in nvim's current window (the
+// one :bdelete closes), or the last known active buffer without nvim.
+func (m Model) currentBufferID() int {
+	if m.nvim != nil {
+		if s, err := m.nvim.EvalLuaString(`return tostring(vim.api.nvim_get_current_buf())`); err == nil {
+			if id, err := strconv.Atoi(s); err == nil {
+				return id
+			}
+		}
+	}
+	return m.activeBuf
+}
+
 // promptCloseBuffer opens the unsaved-changes confirm dialog for the given id.
 // Returns true if a dialog was opened; false if the buffer is clean and the
 // caller should proceed with the close.
 func (m *Model) promptCloseBufferIfDirty(id int) bool {
-	buf, ok := m.findBuffer(id)
+	buf, ok := m.liveBuffer(id)
 	if !ok || !buf.Modified {
 		return false
 	}
@@ -77,6 +113,7 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 	case confirmKindCloseBuffer:
 		switch id {
 		case "cancel":
+			m.closeQueue = nil
 			return nil
 		case "save":
 			if buf, ok := m.findBuffer(m.confirmTargetID); ok {
@@ -90,9 +127,10 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 				m.pushClosed(buf.Path)
 			}
 			if m.nvim != nil {
-				_ = m.nvim.Command(fmt.Sprintf("bdelete! %d", m.confirmTargetID))
+				_ = m.nvim.Command(discardBufferCmd(m.confirmTargetID))
 			}
 		}
+		m.drainCloseQueue() // Close Others / to the Right go on
 	case confirmKindDeletePath:
 		switch id {
 		case "cancel":
@@ -105,14 +143,15 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 				return m.runBulkDelete(m.confirmTargetPaths)
 			}
 			path := m.confirmTargetPath
+			// Close any open buffer pointing at the path first, so the
+			// user doesn't keep editing a phantom file, and so closing
+			// it (auto-save on BufLeave) can't write it back.
+			m.closeBuffersForPaths([]string{path})
 			if err := osRemoveAll(path); err != nil {
 				m.err = err.Error()
 				return nil
 			}
 			m.err = ""
-			// Close any open buffer pointing at the just-deleted path so
-			// the user doesn't keep editing a phantom file.
-			m.closeBuffersForPaths([]string{path})
 			m.explorer.Reload()
 		}
 	case confirmKindGitDiscard:
@@ -149,6 +188,9 @@ func (m *Model) runBulkDelete(paths []string) tea.Cmd {
 	if len(paths) == 0 {
 		return nil
 	}
+	// Close their buffers first: closing a modified one auto-saves it
+	// (BufLeave), which would re-create a file deleted before.
+	m.closeBuffersForPaths(paths)
 	deleted := 0
 	var failed []string
 	for _, p := range paths {
@@ -160,9 +202,6 @@ func (m *Model) runBulkDelete(paths []string) tea.Cmd {
 			continue
 		}
 		deleted++
-	}
-	if deleted > 0 {
-		m.closeBuffersForPaths(paths)
 	}
 	m.explorer.Reload()
 	m.explorer.ClearSelection()
@@ -225,6 +264,14 @@ func (m *Model) closeBuffersForPaths(paths []string) {
 			}
 		}
 		m.pushClosed(b.Path)
-		_ = m.nvim.Command(fmt.Sprintf("bdelete! %d", b.ID))
+		_ = m.nvim.Command(discardBufferCmd(b.ID))
 	}
+}
+
+// discardBufferCmd is the Ex command that closes buffer id and drops its
+// unsaved edits. The buffer is marked unmodified first: closing the
+// current buffer fires BufLeave, whose auto-save would otherwise write the
+// edits the user chose not to save (Don't Save saved the file).
+func discardBufferCmd(id int) string {
+	return fmt.Sprintf("call setbufvar(%d, '&modified', 0) | bdelete! %d", id, id)
 }

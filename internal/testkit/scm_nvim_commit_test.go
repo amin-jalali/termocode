@@ -14,7 +14,7 @@ func TestSCMNvimClickCommitOpensDiff(t *testing.T) {
 		r.commit("feat: add parser")
 	})
 	hash := r.git("rev-parse", "HEAD")
-	clickText(d, "add parser")
+	scmClickText(d, "add parser")
 	if !waitText(d, "commit "+hash) {
 		t.Fatalf("commit diff not shown:%s", dump(d))
 	}
