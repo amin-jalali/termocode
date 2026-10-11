@@ -23,3 +23,21 @@ func TestSpliceAtKeepsUTF8AndWidth(t *testing.T) {
 		}
 	}
 }
+
+// A toast sliding in from the right starts off screen: every frame of the
+// slide must keep each row exactly screen-wide.
+func TestModalOverlaySlideClipsAtRightEdge(t *testing.T) {
+	const w, h = 80, 10
+	row := strings.Repeat("·", w)
+	base := strings.TrimSuffix(strings.Repeat(row+"\n", h), "\n")
+	card := "╭────────╮\n│ toast 界│\n╰────────╯"
+	for _, p := range []float64{0, 0.1, 0.3, 0.5, 0.8, 1} {
+		o := ModalOpts{At: true, X: w - 12, Y: 3, NoDim: true, SlideX: 14, Animating: true, Progress: p}
+		out := modalOverlay(base, card, w, h, &o)
+		for i, r := range strings.Split(out, "\n") {
+			if got := ansi.StringWidth(r); got != w {
+				t.Fatalf("progress %.1f: row %d is %d cells: %q", p, i, got, ansi.Strip(r))
+			}
+		}
+	}
+}
