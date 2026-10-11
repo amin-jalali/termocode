@@ -1265,10 +1265,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	switch matchedAction {
 	case keymap.ActionQuit:
-		if m.nvim != nil {
-			_ = m.nvim.Close()
-		}
-		return m, tea.Quit
+		return m, m.quit()
 	case keymap.ActionSave:
 		var toastCmd tea.Cmd
 		if err := m.editor.Save(); err != nil {

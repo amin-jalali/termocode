@@ -708,10 +708,7 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return m.runUserCommand(id)
 		}
 	case "quit":
-		if m.nvim != nil {
-			_ = m.nvim.Close()
-		}
-		return tea.Quit
+		return m.quit()
 	}
 	return nil
 }
