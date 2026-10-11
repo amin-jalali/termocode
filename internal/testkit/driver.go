@@ -30,7 +30,7 @@ type Options struct {
 	Files map[string]string
 
 	// Quiet is how long no message may arrive before a step counts as
-	// settled (default 15ms, 60ms with nvim). MaxSettle caps a step's
+	// settled (default 5ms, 40ms with nvim). MaxSettle caps a step's
 	// settle time (default 300ms, 1.5s with nvim).
 	Quiet, MaxSettle time.Duration
 	// StepTimeout is the deadline for one Update or View (default 5s).
@@ -51,6 +51,7 @@ type Driver struct {
 	frame   string
 	history []string
 	ready   bool // nvim.ReadyMsg seen
+	quit    bool // the app returned tea.Quit
 }
 
 // New builds a sandboxed app model at opt.W × opt.H and settles it.
@@ -68,9 +69,9 @@ func New(t testing.TB, opt Options) *Driver {
 		opt.H = 40
 	}
 	if opt.Quiet == 0 {
-		opt.Quiet = 15 * time.Millisecond
+		opt.Quiet = 5 * time.Millisecond
 		if opt.Nvim {
-			opt.Quiet = 60 * time.Millisecond
+			opt.Quiet = 40 * time.Millisecond
 		}
 	}
 	if opt.MaxSettle == 0 {
@@ -134,6 +135,10 @@ func (d *Driver) History() []string { return append([]string(nil), d.history...)
 
 // Failed reports whether the test has failed.
 func (d *Driver) Failed() bool { return d.T.Failed() }
+
+// Quit reports whether the app asked to quit (tea.Quit). The model may
+// have closed nvim then; start a new Driver to go on.
+func (d *Driver) Quit() bool { return d.quit }
 
 // Send delivers msg, settles and returns the new frame.
 func (d *Driver) Send(msg tea.Msg) string {
@@ -365,6 +370,9 @@ func (d *Driver) handle(msg tea.Msg) {
 		return
 	case tea.QuitMsg, tea.InterruptMsg, tea.SuspendMsg:
 		d.history = append(d.history, fmt.Sprintf("(app asked to %T)", m))
+		if _, ok := m.(tea.QuitMsg); ok {
+			d.quit = true
+		}
 		return
 	}
 	t := reflect.TypeOf(msg)

@@ -37,5 +37,6 @@
 // CheckFrame (and FrameProblems, which returns the problems instead of
 // failing) asserts the frame invariants: valid UTF-8, exactly h rows,
 // every row exactly w cells wide (charmbracelet/x/ansi StringWidth), and no
-// control bytes other than SGR (ESC [ … m) and OSC 8 hyperlinks.
+// control bytes other than SGR (ESC [ … m), OSC 8 hyperlinks and image
+// data (kitty APC "ESC _ G…", sixel DCS), which the images setting emits.
 package testkit

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+	"time"
 )
 
 // DefaultFiles is the workspace content when Options.Files is nil. It has
@@ -24,7 +25,7 @@ var DefaultFiles = map[string]string{
 // dirs, and cuts the network and the system clipboard off.
 func sandbox(t testing.TB, nvim bool) {
 	t.Helper()
-	root := t.TempDir()
+	root := looseTempDir(t)
 	home := filepath.Join(root, "home")
 	for _, d := range []string{"config/termocode", "data", "state", "cache", "plugins/vim-visual-multi/.git", "plugins/nvim-dap/.git", "tools",
 		// bracket_pair_lua.go looks here (not at TERMOCODE_PLUGINS_DIR).
@@ -87,7 +88,7 @@ func sandbox(t testing.TB, nvim bool) {
 // them over a few commits and leaves one modified and one untracked file.
 func makeWorkspace(t testing.TB, files map[string]string, withGit bool) string {
 	t.Helper()
-	dir := filepath.Join(t.TempDir(), "workspace")
+	dir := filepath.Join(looseTempDir(t), "workspace")
 	if files == nil {
 		files = DefaultFiles
 	}
@@ -153,4 +154,24 @@ func commitSubject(i int) string {
 
 func sortedKeys(m map[string]string) []string {
 	return slices.Sorted(maps.Keys(m))
+}
+
+// looseTempDir is t.TempDir without the hard failure on cleanup: language
+// servers started by nvim (gopls) may still write their cache while the
+// test ends, and that must not fail the test.
+func looseTempDir(t testing.TB) string {
+	t.Helper()
+	dir, err := os.MkdirTemp("", "termocode-testkit-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		for range 5 {
+			if os.RemoveAll(dir) == nil {
+				return
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+	})
+	return dir
 }

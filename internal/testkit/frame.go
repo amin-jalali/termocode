@@ -108,6 +108,19 @@ func badControl(row string) string {
 					j++
 				}
 				i = j
+			case '_', 'P': // APC (kitty graphics "G…") or DCS (sixel) … ST
+				j := strings.Index(row[i+2:], "\x1b\\")
+				if j < 0 {
+					return fmt.Sprintf("unterminated APC/DCS at byte %d", i)
+				}
+				body := row[i+2 : i+2+j]
+				if row[i+1] == '_' && !strings.HasPrefix(body, "G") {
+					return fmt.Sprintf("unexpected APC %q at byte %d", body[:min(len(body), 16)], i)
+				}
+				if row[i+1] == 'P' && !strings.Contains(body[:min(len(body), 16)], "q") {
+					return fmt.Sprintf("unexpected DCS %q at byte %d", body[:min(len(body), 16)], i)
+				}
+				i += 2 + j + 1
 			default:
 				return fmt.Sprintf("unexpected escape %q at byte %d", row[i:min(len(row), i+2)], i)
 			}
