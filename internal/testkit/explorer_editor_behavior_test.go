@@ -166,3 +166,43 @@ func TestExplorerOpenFileWithSpaceInName(t *testing.T) {
 		t.Errorf("buffer = %q, want latte", got)
 	}
 }
+
+// Spec: Given a.txt open and files named "100%.txt" and "#1.txt" (Vim
+// reads % and # in a file name as "current file" / "alternate file"),
+// when the user opens each from the explorer, from Quick Open (Ctrl+P)
+// and with Open to the Side,
+// then that exact file opens with its content.
+func TestOpenFileWithVimSpecialCharsInName(t *testing.T) {
+	files := textFiles()
+	files["100%.txt"] = "pct\n"
+	files["#1.txt"] = "hash\n"
+	d := editorDriver(t, files)
+	open(d, "a.txt")
+	check := func(how, rel, body string) {
+		t.Helper()
+		if !d.WaitFor(func() bool { _, a := tabs(d); return a == rel }, 3*time.Second) {
+			got, a := tabs(d)
+			t.Fatalf("%s %s: active %q (tabs %v)", how, rel, a, got)
+		}
+		if got := bufLines(d); got != body {
+			t.Errorf("%s %s: buffer = %q, want %q", how, rel, got, body)
+		}
+	}
+
+	clickExplorer(d, "100%.txt")
+	check("explorer", "100%.txt", "pct")
+
+	open(d, "a.txt")
+	d.Key("ctrl+p")
+	d.Type("#1")
+	if !d.WaitForText("#1.txt", 3*time.Second) {
+		t.Fatalf("quick open does not list #1.txt:\n%s", screen(d))
+	}
+	d.Key("enter")
+	check("quick open", "#1.txt", "hash")
+
+	open(d, "a.txt")
+	rightClickExplorer(d, "100%.txt")
+	clickText(d, "Open to the Side")
+	check("open to the side", "100%.txt", "pct")
+}
