@@ -3,6 +3,7 @@ package statusbar
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/charmbracelet/lipgloss"
 
@@ -134,9 +135,12 @@ func TestTruncate(t *testing.T) {
 	}{
 		{"abc", 5, "abc"},
 		{"abcdef", 5, "abcd…"},
+		{"Spaces: 4  UTF-8  {} none  ✦ AI off", 26, "Spaces: 4  UTF-8  {} none…"},
+		{"日本語テキスト", 7, "日本語…"},
+		{"✦ ✦ ✦", 0, ""},
 	}
 	for _, tc := range cases {
-		if got := truncate(tc.s, tc.n); got != tc.want {
+		if got := truncate(tc.s, tc.n); got != tc.want || !utf8.ValidString(got) {
 			t.Fatalf("truncate(%q,%d) = %q, want %q", tc.s, tc.n, got, tc.want)
 		}
 	}
