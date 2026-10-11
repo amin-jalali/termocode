@@ -1130,6 +1130,9 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// name), or (c) the action ran but failed (entry but no follow-up
 	// toast). Cheap: just appends to errors.log via recordError.
 	recordError("[key] " + msg.String())
+	// Any key ends a wheel scroll of the terminal scrollback; a key meant
+	// for the shell then goes to the prompt (terminal_scroll.go).
+	m.endTerminalScroll()
 
 	// Terminal pass-through: when the user is actively typing into the
 	// integrated terminal (current nvim window IS our terminal split AND

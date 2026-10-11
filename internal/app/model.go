@@ -391,6 +391,10 @@ type Model struct {
 	// moment the user clicks back into the editor or runs `exit` in the
 	// shell. See shell.go::shouldPassToTerminal for the pass-through set.
 	inTerminal bool
+	// termScrolled is true while the mouse wheel scrolls the terminal's
+	// scrollback (terminal_scroll.go): nvim stays in Terminal-Normal mode
+	// until the next key or click.
+	termScrolled bool
 
 	// ── Bottom panel framework (panel.go) ──────────────────────────────
 	// panelTabs lists the open NON-terminal tabs (Output, Problems, …) in
@@ -968,6 +972,8 @@ func (m Model) attachCmd() tea.Cmd {
 			vim.api.nvim_create_autocmd('ModeChanged', {
 				pattern = '*:nt',
 				callback = function()
+					-- The wheel scrolls the scrollback in nt mode (terminal_scroll.go).
+					if vim.g.termocode_term_scroll then return end
 					local b = vim.api.nvim_get_current_buf()
 					if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buftype == 'terminal' then
 						pcall(vim.cmd, 'startinsert')
