@@ -71,9 +71,9 @@ func TestIsPinned(t *testing.T) {
 
 func TestSplitOnUnescapedBar(t *testing.T) {
 	cases := []struct {
-		in       string
-		wantA    string
-		wantB    string
+		in    string
+		wantA string
+		wantB string
 	}{
 		{"key|value", "key", "value"},
 		{"key|val\\|ue", "key", "val\\|ue"},
@@ -90,11 +90,11 @@ func TestSplitOnUnescapedBar(t *testing.T) {
 
 func TestUnescapeSnippetBody(t *testing.T) {
 	cases := map[string]string{
-		"plain":              "plain",
-		`a\nb`:               "a\nb",
-		`a\|b`:               "a|b",
-		`back\\slash`:        `back\slash`,
-		`tab\nnext\nthird`:   "tab\nnext\nthird",
+		"plain":            "plain",
+		`a\nb`:             "a\nb",
+		`a\|b`:             "a|b",
+		`back\\slash`:      `back\slash`,
+		`tab\nnext\nthird`: "tab\nnext\nthird",
 	}
 	for in, want := range cases {
 		if got := unescapeSnippetBody(in); got != want {

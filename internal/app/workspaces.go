@@ -141,6 +141,11 @@ func (m *Model) openWorkspace(path string) tea.Cmd {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Workspace error", err.Error())
 		return toastCmd
 	}
+	if headless() {
+		var toastCmd tea.Cmd
+		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Exec failed", errHeadless.Error())
+		return toastCmd
+	}
 	// Persist any pending session state, close nvim cleanly, then re-exec.
 	if m.nvim != nil {
 		_ = m.nvim.Close()

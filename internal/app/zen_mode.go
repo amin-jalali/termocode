@@ -18,7 +18,7 @@ import (
 // every tool we know about in sequence and silently no-ops on failure
 // (no toast — a missing tool isn't an error worth shouting about).
 func sendF11ToHost() {
-	if !stdoutIsTerminal() {
+	if headless() {
 		return // tests / pipes: never press keys on the host desktop
 	}
 	switch runtime.GOOS {
@@ -108,6 +108,11 @@ func (m *Model) resetSession() tea.Cmd {
 // has changed config files or installed a new LSP server and wants a
 // fresh process without dropping back to the shell.
 func (m *Model) reloadWindow() tea.Cmd {
+	if headless() {
+		var toastCmd tea.Cmd
+		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Reload failed", errHeadless.Error())
+		return toastCmd
+	}
 	if m.nvim != nil {
 		_ = m.nvim.Close()
 	}

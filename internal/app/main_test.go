@@ -31,6 +31,7 @@ func TestMain(m *testing.M) {
 		"XDG_STATE_HOME":        filepath.Join(home, "state"),
 		"XDG_CACHE_HOME":        filepath.Join(home, "cache"),
 		"TERMOCODE_PLUGINS_DIR": filepath.Join(home, "plugins"),
+		"TERMOCODE_HEADLESS":    "1",
 		"DISPLAY":               "",
 		"WAYLAND_DISPLAY":       "",
 		"HTTP_PROXY":            "http://127.0.0.1:9",

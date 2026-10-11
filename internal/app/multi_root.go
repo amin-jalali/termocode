@@ -198,4 +198,3 @@ func (m *Model) pushToastDetail(level toast.Severity, title, detail string) tea.
 	m.toast, cmd = m.toast.PushDetail(level, title, detail)
 	return cmd
 }
-

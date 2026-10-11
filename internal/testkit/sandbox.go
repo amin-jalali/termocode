@@ -73,6 +73,7 @@ func sandbox(t testing.TB, nvim bool) {
 		"TERMOCODE_NERD_FONT":   "",
 		"TERMOCODE_FONT_DELTA":  "0",
 		"TERMOCODE_NO_NVIM":     "1",
+		"TERMOCODE_HEADLESS":    "1", // no re-exec, xdg-open, OSC 52 …
 	}
 	if nvim {
 		env["TERMOCODE_NO_NVIM"] = ""
