@@ -92,6 +92,9 @@ func tabs(d *Driver) ([]string, string) {
 	var out []string
 	var act string
 	for _, b := range bufs {
+		if b.Path == "" { // the Welcome tab
+			continue
+		}
 		rel := relPath(d, b.Path)
 		if b.ID == active {
 			act = rel

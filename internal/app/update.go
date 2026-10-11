@@ -575,7 +575,11 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 			existing.OpenFiles = paths
 			existing.ActivePath = msg.Path
 		}
-		existing.ExpandedDirs = m.explorer.ExpandedPaths()
+		// Not before ReadyMsg: the session has not been restored then, and
+		// the fresh tree (root only) overwrote the saved expanded folders.
+		if m.nvimAttached {
+			existing.ExpandedDirs = m.explorer.ExpandedPaths()
+		}
 		// Merge (don't replace): a buffer that was just closed externally
 		// drops out of msg.Cursors but its last-known position is still
 		// useful if the user re-opens that file in the same session, so we
