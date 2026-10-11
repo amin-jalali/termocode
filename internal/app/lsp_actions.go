@@ -10,6 +10,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/toast"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // hoverCmd asks the LSP for hover docs at the cursor and shows them in the
@@ -74,9 +75,7 @@ func (m Model) fetchReferencesCmd() tea.Cmd {
 				rel = r
 			}
 			preview := strings.TrimSpace(loc.Preview)
-			if len(preview) > 60 {
-				preview = preview[:60] + "…"
-			}
+			preview = ansi.Truncate(preview, 61, "…")
 			items = append(items, picker.Item{
 				ID:    id,
 				Title: fmt.Sprintf("%s   %s", rel, preview),

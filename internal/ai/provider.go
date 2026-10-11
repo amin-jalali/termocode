@@ -14,6 +14,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 // Role is a chat message role.
@@ -290,9 +292,7 @@ func httpError(code int, body []byte) error {
 			}
 		}
 	}
-	if len(msg) > 300 {
-		msg = msg[:300] + "…"
-	}
+	msg = ansi.Truncate(msg, 301, "…")
 	return errString(Redact("HTTP " + itoa(code) + ": " + msg))
 }
 

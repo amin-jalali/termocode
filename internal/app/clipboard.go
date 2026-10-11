@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 	"golang.design/x/clipboard"
 )
 
@@ -95,9 +96,7 @@ func clipPreview(s string) string {
 		first = s[:i]
 		lines = strings.Count(s, "\n") + 1
 	}
-	if len(first) > 60 {
-		first = first[:59] + "…"
-	}
+	first = ansi.Truncate(first, 60, "…")
 	if lines > 1 {
 		return fmt.Sprintf("%s  · %d lines", first, lines)
 	}

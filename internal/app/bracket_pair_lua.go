@@ -9,7 +9,10 @@ package app
 //
 // The chunk is idempotent: subsequent runs short-circuit when the plugin
 // is already on the filesystem. A clone failure (e.g. no network) is
-// logged and silently skipped so termocode still starts.
+// recorded in vim.g.termocode_bracket_pair_error and skipped so termocode
+// still starts. It never calls vim.notify: with cmdheight=0 a warning
+// becomes a hit-enter prompt that blocks every RPC and key, so a failed
+// clone (or a half-cloned plugin dir) froze the whole editor.
 //
 // We deliberately set the highlight groups *after* adding the plugin to
 // runtimepath so any defaults the plugin ships with are overridden, and
@@ -19,7 +22,17 @@ const bracketPairLua = `
 local plugin_root = vim.fn.expand('~/.local/share/termocode/plugins')
 local plugin_dir  = plugin_root .. '/rainbow-delimiters.nvim'
 
--- Bootstrap clone (idempotent, silent, non-fatal).
+-- Never vim.notify here (see the Go doc comment): record and move on.
+local function disable(why)
+  vim.g.termocode_bracket_pair_error = why
+end
+
+-- Bootstrap clone (idempotent, silent, non-fatal). A dir without the Lua
+-- module is a half-finished clone (interrupted first start): start over.
+local module_dir = plugin_dir .. '/lua/rainbow-delimiters'
+if vim.fn.isdirectory(plugin_dir) == 1 and vim.fn.isdirectory(module_dir) == 0 then
+  vim.fn.delete(plugin_dir, 'rf')
+end
 if vim.fn.isdirectory(plugin_dir) == 0 then
   vim.fn.mkdir(plugin_root, 'p')
   if vim.fn.executable('git') == 1 then
@@ -30,18 +43,11 @@ if vim.fn.isdirectory(plugin_dir) == 0 then
       plugin_dir,
     })
     if vim.v.shell_error ~= 0 then
-      vim.notify(
-        'termocode: rainbow-delimiters bootstrap failed (offline?), bracket colorization disabled. ' .. (out or ''),
-        vim.log.levels.WARN
-      )
-      return
+      vim.fn.delete(plugin_dir, 'rf')
+      return disable('rainbow-delimiters bootstrap failed (offline?): ' .. (out or ''))
     end
   else
-    vim.notify(
-      'termocode: git not found; bracket colorization disabled.',
-      vim.log.levels.WARN
-    )
-    return
+    return disable('git not found')
   end
 end
 
@@ -96,9 +102,6 @@ vim.g.rainbow_delimiters = {
 -- pick it up on the next BufEnter / TSEnable.
 local ok, err = pcall(require, 'rainbow-delimiters.setup')
 if not ok then
-  vim.notify(
-    'termocode: rainbow-delimiters require failed: ' .. tostring(err),
-    vim.log.levels.WARN
-  )
+  disable('rainbow-delimiters require failed: ' .. tostring(err))
 end
 `
