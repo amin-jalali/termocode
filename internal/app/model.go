@@ -395,6 +395,10 @@ type Model struct {
 	// scrollback (terminal_scroll.go): nvim stays in Terminal-Normal mode
 	// until the next key or click.
 	termScrolled bool
+	// hiddenTerminalTabs are the tabs of a panel hidden with Ctrl+T; their
+	// shells keep running until the panel shows again (terminal_hide.go).
+	hiddenTerminalTabs   []terminalTab
+	hiddenTerminalActive int
 
 	// ── Bottom panel framework (panel.go) ──────────────────────────────
 	// panelTabs lists the open NON-terminal tabs (Output, Problems, …) in

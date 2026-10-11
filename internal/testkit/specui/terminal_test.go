@@ -39,6 +39,27 @@ func terminalTabs(d *testkit.Driver) int {
 	return strings.Count(lineWith(d, "↑−×"), " ×")
 }
 
+// Spec: Given the editor,
+// when the user presses Ctrl+T and types a command,
+// then the panel opens with a shell and the command's output shows;
+// Ctrl+T hides the panel (the editor stays) and the next Ctrl+T shows the
+// same shell again, with its output and its running jobs.
+func TestTerminalToggleAndRunCommand(t *testing.T) {
+	d := termDriver(t)
+	openTerminal(t, d)
+	run(t, d, "echo MARK$((40+2))", "MARK42")
+	d.Type("(sleep 1; echo BG$((7))) &")
+	d.Key("enter")
+	d.Key("ctrl+t")
+	mustNotSee(t, d, "MARK42")
+	mustSee(t, d, "fmt.Println")
+	d.Settle(1200 * time.Millisecond) // the background job ends while hidden
+	d.Key("ctrl+t")
+	mustSee(t, d, "MARK42") // the same shell comes back
+	mustSee(t, d, "BG7")
+	run(t, d, "echo STILL$((8))", "STILL8")
+}
+
 // Spec: Given an open terminal,
 // when the user adds a tab, runs a command in each, and switches back,
 // then each tab shows its own output; closing a tab leaves the other,
