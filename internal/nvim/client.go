@@ -112,6 +112,10 @@ func (c *Client) Attach(width, height int) error {
 	if err := c.nv.AttachUI(width, height, map[string]interface{}{
 		"ext_linegrid": true,
 		"rgb":          true,
+		// hl_attr_define then says which colours come from a :terminal
+		// palette, so the grid can recolour open terminals on a theme
+		// switch (grid.Attrs.TermFg).
+		"ext_hlstate": true,
 	}); err != nil {
 		return err
 	}

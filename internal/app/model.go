@@ -906,7 +906,7 @@ func (m Model) attachCmd() tea.Cmd {
 		m.setupPlugin(pluginDap, pluginDap.installedDir())
 		// Apply the active theme's colourscheme via Lua. Done after `syntax
 		// on` so the highlight groups override the default scheme.
-		m.applyNvimTheme()
+		m.applyNvimThemeLua()
 		// Bracket-pair colorization (HiPhish/rainbow-delimiters.nvim).
 		// Runs after the theme so its RainbowDelimiter* overrides are the
 		// final word.

@@ -72,10 +72,16 @@ func (g *Grid) styleFor(hlID int, cursor bool) lipgloss.Style {
 		a = g.HlAttrs[0]
 	}
 	fg := a.Fg
+	if a.TermFg > 0 && g.TermPaletteSet {
+		fg = g.TermPalette[a.TermFg-1]
+	}
 	if fg < 0 {
 		fg = g.DefaultFg
 	}
 	bg := a.Bg
+	if a.TermBg > 0 && g.TermPaletteSet {
+		bg = g.TermPalette[a.TermBg-1]
+	}
 	if bg < 0 {
 		bg = g.DefaultBg
 	}
