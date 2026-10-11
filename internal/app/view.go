@@ -159,6 +159,9 @@ func (m Model) overlayToastsInEditor(base string) string {
 		edPaneW -= m.explorerWidth
 	}
 	editorStart := m.w - edPaneW - m.actionsColumnWidth()
+	if m.h <= toastCompactMaxH || edPaneW < toastCompactMinW {
+		return m.overlayCompactToast(base, editorStart, edPaneW)
+	}
 	w := 52
 	if w > edPaneW-6 {
 		w = edPaneW - 6
@@ -179,6 +182,65 @@ func (m Model) overlayToastsInEditor(base string) string {
 			Animating: c.Slide != 0, Progress: 1 - c.Slide}
 		base = modalOverlay(base, strings.Join(c.Lines, "\n"), m.w, m.h, &o)
 		y-- // gap row (holds the shadow of the card above)
+	}
+	return base
+}
+
+// A window this short, or an editor pane this narrow, gets the compact
+// toast (see overlayCompactToast).
+const (
+	toastCompactMaxH = 30
+	toastCompactMinW = 72
+)
+
+// overlayCompactToast is the small-window toast, like VSCode's collapsed
+// notifications: 3-row cards (title · detail on one row) about half the
+// editor wide, with no drop shadow, stacked with no gap — only the newest
+// in a window of 30 rows or less, the newest two otherwise. The stack sits
+// in the bottom-right corner just above the status bar; when that would
+// cover the cursor line it moves to the top-right of the editor.
+func (m Model) overlayCompactToast(base string, editorStart, edPaneW int) string {
+	w := edPaneW / 2
+	if w > 40 {
+		w = 40
+	}
+	if w < 24 {
+		w = 24
+	}
+	if w > edPaneW-2 {
+		return base
+	}
+	n := 2
+	if m.h <= toastCompactMaxH {
+		n = 1
+	}
+	cards := m.toast.CompactCards(w, n)
+	if len(cards) == 0 {
+		return base
+	}
+	h := 0
+	for _, c := range cards {
+		h += len(c.Lines)
+	}
+	top := m.tabs.Height()
+	if m.replaceOpen {
+		top += 2
+	}
+	if len(m.breadcrumbs) > 0 || m.stickyContext != "" {
+		top++
+	}
+	y := m.h - 1 - h // the row above the status bar is the stack's last
+	if cur := top + m.editor.Cursor().Line; cur >= y && cur < y+h && top+h < y {
+		y = top
+	}
+	x := editorStart + edPaneW - w - 1
+	for _, c := range cards {
+		if y >= 1 {
+			o := ModalOpts{At: true, X: x, Y: y, NoDim: true, NoShadow: true, SlideX: w + 2,
+				Animating: c.Slide != 0, Progress: 1 - c.Slide}
+			base = modalOverlay(base, strings.Join(c.Lines, "\n"), m.w, m.h, &o)
+		}
+		y += len(c.Lines)
 	}
 	return base
 }
