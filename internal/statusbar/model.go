@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/theme"
 )
@@ -500,9 +501,12 @@ func renderLSPChip(clients []string) string {
 	return barFg(theme.TextSecondary).Render("{} " + strings.Join(clients, ", "))
 }
 
+// truncate clips s to n cells with a trailing "…". It counts cells, not
+// bytes, and never cuts a multi-byte glyph (a cut glyph is invalid UTF-8:
+// the terminal draws extra cells and the row wraps).
 func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
+	if n <= 0 {
+		return ""
 	}
-	return s[:n-1] + "…"
+	return ansi.Truncate(s, n, "…")
 }
