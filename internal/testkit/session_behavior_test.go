@@ -86,3 +86,55 @@ func TestDashboardRecentWorkspaces(t *testing.T) {
 		t.Fatalf("WORKSPACES does not list older-project:\n%s", screen(d))
 	}
 }
+
+// Spec: Given a.txt open,
+// when the user splits the editor (Ctrl+\) and opens b.txt in the new
+// pane, then two editor windows show a.txt and b.txt;
+// when the user runs Close Split, then one window is left.
+func TestSplitEditor(t *testing.T) {
+	d := editorDriver(t, nil)
+	open(d, "a.txt")
+	d.Key("ctrl+\\")
+	wins := func() string {
+		return lua(d, `local n = {}
+for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+  local b = vim.api.nvim_win_get_buf(w)
+  if vim.bo[b].buftype == '' then table.insert(n, vim.fn.fnamemodify(vim.api.nvim_buf_get_name(b), ':t')) end
+end
+table.sort(n)
+return table.concat(n, ',')`)
+	}
+	if got := wins(); got != "a.txt,a.txt" {
+		t.Fatalf("after split: editor windows %q, want a.txt twice", got)
+	}
+	open(d, "b.txt")
+	if got := wins(); got != "a.txt,b.txt" {
+		t.Fatalf("after opening b.txt in the split: %q", got)
+	}
+	if !d.WaitForText("bravo", 2*time.Second) || !strings.Contains(screen(d), "one") {
+		t.Errorf("both files not on screen:\n%s", screen(d))
+	}
+	d.Palette("close-split")
+	if got := wins(); strings.Count(got, ",") != 0 {
+		t.Errorf("after Close Split: editor windows %q, want one", got)
+	}
+}
+
+// Spec: Given a.txt then b.txt opened,
+// when the user presses Ctrl+Tab, then a.txt is active;
+// and Ctrl+Tab again goes back to b.txt.
+func TestAlternateFile(t *testing.T) {
+	d := editorDriver(t, nil)
+	open(d, "a.txt")
+	open(d, "b.txt")
+	d.Key("ctrl+tab")
+	if !d.WaitFor(func() bool { _, a := tabs(d); return a == "a.txt" }, 2*time.Second) {
+		_, a := tabs(d)
+		t.Fatalf("Ctrl+Tab: active %q, want a.txt", a)
+	}
+	d.Key("ctrl+tab")
+	if !d.WaitFor(func() bool { _, a := tabs(d); return a == "b.txt" }, 2*time.Second) {
+		_, a := tabs(d)
+		t.Fatalf("Ctrl+Tab again: active %q, want b.txt", a)
+	}
+}
