@@ -296,7 +296,8 @@ func EnvCatalog() []EnvVar {
 		{"OPENAI_API_KEY", "OpenAI API key. Also selects OpenAI when no provider is set."},
 		{"OPENROUTER_API_KEY", "OpenRouter API key."},
 		{"OLLAMA_HOST", "Ollama host, used for the base URL of the ollama provider."},
-	}
+		{"TERMOCODE_NO_SESSION", "Any value: run without a persistent session, like `--no-session`."},
+		{"XDG_RUNTIME_DIR", "Folder for the persistent-session sockets (`$XDG_RUNTIME_DIR/termocode`); without it they go to `~/.cache/termocode/sessions`."},	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
 }

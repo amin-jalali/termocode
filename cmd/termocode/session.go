@@ -6,6 +6,10 @@ import "github.com/amin-jalali/termocode/internal/session"
 // (`termocode __session-server <folder>`), started by the client.
 const serverArg = "__session-server"
 
+// envNoSession keeps --no-session across Reload Window / Open Recent
+// Workspace, which re-exec termocode without its flags.
+const envNoSession = "TERMOCODE_NO_SESSION"
+
 // wantSession decides whether `termocode` runs the UI in a persistent
 // session (see docs/adr/0007-persistent-sessions.md). setting is
 // persistent_session from config.json ("auto", "on", "off"; "" = auto).
@@ -14,7 +18,7 @@ const serverArg = "__session-server"
 func wantSession(setting string, noSession bool, getenv func(string) string, tty bool) bool {
 	// Inside a session (e.g. in its terminal panel): run directly, never
 	// nest or attach to ourselves.
-	if noSession || !tty || getenv(session.EnvSession) != "" {
+	if noSession || !tty || getenv(session.EnvSession) != "" || getenv(envNoSession) != "" {
 		return false
 	}
 	switch setting {

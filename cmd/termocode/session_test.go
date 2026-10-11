@@ -21,6 +21,7 @@ func TestWantSession(t *testing.T) {
 		{"flag wins", "on", true, ssh, true, false},
 		{"no tty", "on", false, ssh, false, false},
 		{"inside a session", "on", false, map[string]string{"TERMOCODE_SESSION": "abc"}, true, false},
+		{"--no-session before a re-exec", "on", false, map[string]string{"TERMOCODE_NO_SESSION": "1"}, true, false},
 	}
 	for _, c := range cases {
 		getenv := func(k string) string { return c.env[k] }
