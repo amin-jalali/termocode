@@ -11,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/search"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -38,6 +39,9 @@ type settingsConfig struct {
 	Icons      string `json:"icons,omitempty"`
 	Animations string `json:"animations,omitempty"`
 	Images     string `json:"images,omitempty"`
+	// TerminalSkipShell adds ("Name") or removes ("-Name") actions whose
+	// keys skip the focused terminal and reach termocode (default: Quit).
+	TerminalSkipShell []string `json:"terminal_skip_shell,omitempty"`
 }
 
 // settingsConfigPath returns the absolute path to config.json. We don't
@@ -414,6 +418,7 @@ func parseBoolLoose(s string) (bool, error) {
 // startup.
 func (m *Model) applyStartupSettings() {
 	cfg := loadSettings()
+	m.skipShell = keymap.SkipShellSet(cfg.TerminalSkipShell)
 	if cfg.AutoSave != nil && *cfg.AutoSave && !m.autoSaveOn {
 		_ = m.toggleAutoSave()
 	}

@@ -397,6 +397,9 @@ type Model struct {
 	// moment the user clicks back into the editor or runs `exit` in the
 	// shell. See shell.go::shouldPassToTerminal for the pass-through set.
 	inTerminal bool
+	// skipShell holds the actions whose keys reach termocode even while
+	// inTerminal (config.json "terminal_skip_shell"); nil = the defaults.
+	skipShell map[keymap.Action]bool
 	// termScrolled is true while the mouse wheel scrolls the terminal's
 	// scrollback (terminal_scroll.go): nvim stays in Terminal-Normal mode
 	// until the next key or click.
