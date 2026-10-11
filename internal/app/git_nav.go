@@ -77,16 +77,16 @@ func boolStr(b bool) string {
 	return "false"
 }
 
-// reloadBuffer triggers `:checktime` which forces nvim to compare the
-// buffer with disk and reload if it changed. autoread is on, so this
-// is rarely needed — but useful when the file changed in another tool
-// and you don't want to wait for the next focus event.
+// reloadBuffer is File: Revert / Reload from Disk: the active file is
+// read again from disk and unsaved edits are dropped (VSCode's Revert
+// File). A plain `:edit` refused to drop them (E37), so the command did
+// nothing on exactly the buffers it is for, while the toast said it had.
 func (m *Model) reloadBuffer() tea.Cmd {
 	if m.nvim == nil {
 		return nil
 	}
 	_ = m.nvim.Command("silent! checktime")
-	_ = m.nvim.Command("silent! edit")
+	_ = m.nvim.Command("if &buftype == '' && !empty(expand('%')) | silent! edit! | endif")
 	var toastCmd tea.Cmd
 	m.toast, toastCmd = m.toast.Push(toast.Info, "Buffer reloaded from disk")
 	return toastCmd

@@ -227,3 +227,24 @@ func TestToggleWordWrapKey(t *testing.T) {
 		t.Fatalf("Alt+W did not toggle wrap: %s → %s → %s", before, mid, after)
 	}
 }
+
+// Spec: Given a.txt open with unsaved edits,
+// when the user runs File: Revert / Reload from Disk,
+// then the edits are dropped, the buffer matches the file and the tab is
+// not dirty.
+func TestRevertDropsUnsavedEdits(t *testing.T) {
+	d := editorDriver(t, nil)
+	open(d, "a.txt")
+	d.Type("junk")
+	if !waitTabs(d, "a.txt*") {
+		t.Fatal("tab not dirty after typing")
+	}
+	d.Palette("reload-buffer")
+	if got := bufLines(d); got != "alpha\nbravo\ncharlie" {
+		t.Fatalf("after revert buffer = %q", got)
+	}
+	if !waitTabs(d, "a.txt") {
+		got, _ := tabs(d)
+		t.Errorf("tab still dirty after revert: %v", got)
+	}
+}
