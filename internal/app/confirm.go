@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -41,11 +42,46 @@ func (m Model) findBuffer(id int) (nvim.BufferInfo, bool) {
 	return nvim.BufferInfo{}, false
 }
 
+// liveBuffer is findBuffer with the path and modified flag read from nvim
+// itself. m.bufs lags up to one state refresh behind: a Ctrl+W right
+// after typing saw a clean buffer, so no question was asked and the
+// :bdelete failed on the modified buffer - the key did nothing.
+func (m Model) liveBuffer(id int) (nvim.BufferInfo, bool) {
+	if m.nvim == nil {
+		return m.findBuffer(id)
+	}
+	s, err := m.nvim.EvalLuaStringArgs(`local b = ...
+if not vim.api.nvim_buf_is_valid(b) then return '' end
+return (vim.bo[b].modified and '1' or '0') .. vim.api.nvim_buf_get_name(b)`, id)
+	if err != nil {
+		return m.findBuffer(id)
+	}
+	if s == "" {
+		return nvim.BufferInfo{}, false
+	}
+	buf, _ := m.findBuffer(id)
+	buf.ID, buf.Modified, buf.Path = id, s[0] == '1', s[1:]
+	return buf, true
+}
+
+// currentBufferID is the id of the buffer in nvim's current window (the
+// one :bdelete closes), or the last known active buffer without nvim.
+func (m Model) currentBufferID() int {
+	if m.nvim != nil {
+		if s, err := m.nvim.EvalLuaString(`return tostring(vim.api.nvim_get_current_buf())`); err == nil {
+			if id, err := strconv.Atoi(s); err == nil {
+				return id
+			}
+		}
+	}
+	return m.activeBuf
+}
+
 // promptCloseBuffer opens the unsaved-changes confirm dialog for the given id.
 // Returns true if a dialog was opened; false if the buffer is clean and the
 // caller should proceed with the close.
 func (m *Model) promptCloseBufferIfDirty(id int) bool {
-	buf, ok := m.findBuffer(id)
+	buf, ok := m.liveBuffer(id)
 	if !ok || !buf.Modified {
 		return false
 	}

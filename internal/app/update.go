@@ -1313,10 +1313,11 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case keymap.ActionCloseBuffer:
-		if m.activeBuf != 0 && m.promptCloseBufferIfDirty(m.activeBuf) {
+		id := m.currentBufferID()
+		if id != 0 && m.promptCloseBufferIfDirty(id) {
 			return m, nil
 		}
-		if buf, ok := m.findBuffer(m.activeBuf); ok {
+		if buf, ok := m.findBuffer(id); ok {
 			m.pushClosed(buf.Path)
 		}
 		if m.nvim != nil {

@@ -139,6 +139,25 @@ func TestTabsCloseDirtyAsks(t *testing.T) {
 	}
 }
 
+// Spec: Given a.txt open,
+// when the user types a letter and presses Ctrl+W at once (before the
+// tab bar has redrawn the dirty dot),
+// then the app still asks to save — the edit is never closed silently or
+// ignored.
+func TestTabsCloseRightAfterTyping(t *testing.T) {
+	d := editorDriver(t, nil)
+	open(d, "a.txt")
+	for i := range 5 {
+		d.Type("x")
+		d.Key("ctrl+w")
+		if _, _, ok := find(d, "unsaved changes"); !ok {
+			got, _ := tabs(d)
+			t.Fatalf("try %d: Ctrl+W right after typing did not ask (tabs %v):\n%s", i, got, screen(d))
+		}
+		clickButton(d, "Cancel")
+	}
+}
+
 // Spec: Given a.txt, b.txt, c.txt open,
 // when the user right-clicks the b.txt tab and picks Close Others,
 // then only b.txt stays open.
