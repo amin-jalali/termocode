@@ -27,9 +27,11 @@ func sandbox(t testing.TB, nvim bool) {
 	t.Helper()
 	root := looseTempDir(t)
 	home := filepath.Join(root, "home")
-	for _, d := range []string{"config/termocode", "data", "state", "cache", "plugins/vim-visual-multi/.git", "plugins/nvim-dap/.git", "tools",
-		// bracket_pair_lua.go looks here (not at TERMOCODE_PLUGINS_DIR).
-		".local/share/termocode/plugins/rainbow-delimiters.nvim"} {
+	// Pre-made (empty) plugin checkouts: no background git clone at
+	// startup (internal/app/plugins.go).
+	for _, d := range []string{"config/termocode", "data", "state", "cache", "tools",
+		"plugins/vim-visual-multi/.git", "plugins/nvim-dap/.git",
+		"plugins/rainbow-delimiters.nvim/lua/rainbow-delimiters"} {
 		_ = os.MkdirAll(filepath.Join(home, d), 0o755)
 	}
 	// Animations off: frames settle at once. Images as text blocks.

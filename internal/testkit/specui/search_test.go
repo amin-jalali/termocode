@@ -31,15 +31,20 @@ func TestFindInFileNextPrevMovesCursor(t *testing.T) {
 	if cur, n := findCount(t, lineWith(d, "Aa ab .*")); cur != "1" || n != "2" {
 		t.Errorf("after Enter: %s/%s, want 1/2\n%s", cur, n, screen(d))
 	}
-	if !strings.Contains(screen(d), "Ln 2,") {
+	// The status bar line follows nvim's cursor through the (throttled)
+	// state fetch: wait for it.
+	onLine := func(ln string) bool {
+		return d.WaitFor(func() bool { return cursorLine(d) == ln }, wait)
+	}
+	if !onLine("Ln 2") {
 		t.Errorf("cursor not on line 2:\n%s", statusBar(d))
 	}
 	d.Key("enter")
-	if cur, _ := findCount(t, lineWith(d, "Aa ab .*")); cur != "2" || !strings.Contains(screen(d), "Ln 4,") {
+	if cur, _ := findCount(t, lineWith(d, "Aa ab .*")); cur != "2" || !onLine("Ln 4") {
 		t.Errorf("after 2nd Enter want 2/2 on Ln 4:\n%s", screen(d))
 	}
 	d.Key("shift+tab")
-	if !strings.Contains(screen(d), "Ln 2,") {
+	if !onLine("Ln 2") {
 		t.Errorf("Shift+Tab did not go back to line 2:\n%s", statusBar(d))
 	}
 	d.Key("esc")

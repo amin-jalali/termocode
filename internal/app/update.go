@@ -493,7 +493,12 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 		// Persist the freshly-expanded set so a subsequent restart sees
 		// the same tree shape even if no further user interaction happens.
 		m.persistExplorerState()
-		return m, tea.Batch(m.extLoadCmd(false), m.keymapProblemsToast()), true // Group I: load extensions after the built-in Lua
+		// Group I: load extensions after the built-in Lua. Plugins not
+		// downloaded yet are cloned in the background (plugins.go).
+		cmds := append([]tea.Cmd{m.extLoadCmd(false), m.keymapProblemsToast()}, pluginBootstrapCmds()...)
+		return m, tea.Batch(cmds...), true
+	case pluginClonedMsg:
+		return m, m.onPluginCloned(msg), true
 	case nvim.RedrawMsg:
 		// Watch for mode_change events so we can update the hardware
 		// cursor shape (DECSCUSR) in View(). Events arrive as
@@ -558,6 +563,7 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 			m.preferredCodeAction = nil
 		}
 		m.cursorLine = msg.CursorLine
+		m.cursorCol = msg.CursorCol
 		m.indentLabel = msg.Indent
 		// File-watcher toast: surface "Reloaded <basename>" the first time
 		// we see a new reload-seq value so each external mutation fires
@@ -1128,6 +1134,7 @@ func (m Model) fetchStateCmd() tea.Cmd {
 			Errors:         s.Errors,
 			Warnings:       s.Warnings,
 			CursorLine:     s.CursorLine,
+			CursorCol:      s.CursorCol,
 			Cursors:        s.Cursors,
 			LastReloadPath: s.LastReloadPath,
 			LastReloadSeq:  s.LastReloadSeq,

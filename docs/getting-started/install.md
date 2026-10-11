@@ -50,8 +50,10 @@ termocode -h           # short help
 ```
 
 The first launch downloads three small Neovim plugins with `git clone`
-(`nvim-dap`, `vim-visual-multi`, `rainbow-delimiters`). If you are offline,
-termocode still starts. Those features stay off until the next online start.
+(`nvim-dap`, `vim-visual-multi`, `rainbow-delimiters`). The download runs in
+the background: you can work at once, and each feature turns on when its
+plugin arrives. If you are offline, a message says the download failed.
+Those features stay off until the next online start.
 
 ## Package managers
 

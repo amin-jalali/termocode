@@ -28,9 +28,14 @@ type ErrMsg struct{ Err error }
 // Client wraps a spawned `nvim --embed` subprocess and exposes its UI events
 // as a stream of tea.Msg values.
 type Client struct {
-	nv        *gonvim.Nvim
-	events    chan tea.Msg
-	fetchBusy atomic.Bool
+	nv     *gonvim.Nvim
+	events chan tea.Msg
+
+	// FetchState: fetching while a call runs; fetchQueued when another
+	// call came in meanwhile (one trailing refresh is owed).
+	fetchMu     sync.Mutex
+	fetching    bool
+	fetchQueued bool
 
 	// mouseQueue serialises mouse events on a dedicated dispatcher
 	// goroutine so MouseAsync can fire-and-forget without breaking
@@ -53,7 +58,7 @@ type mouseEvent struct {
 }
 
 // errFetchBusy is returned when FetchState is called while a previous call is
-// still in flight. The caller should drop the request.
+// still in flight. The caller drops it: the running call refreshes once more.
 var errFetchBusy = errors.New("nvim: fetch state busy")
 
 // IsFetchBusy reports whether err is FetchState's "previous call still in
@@ -112,6 +117,10 @@ func (c *Client) Attach(width, height int) error {
 	if err := c.nv.AttachUI(width, height, map[string]interface{}{
 		"ext_linegrid": true,
 		"rgb":          true,
+		// hl_attr_define then says which colours come from a :terminal
+		// palette, so the grid can recolour open terminals on a theme
+		// switch (grid.Attrs.TermFg).
+		"ext_hlstate": true,
 	}); err != nil {
 		return err
 	}
@@ -238,6 +247,9 @@ type State struct {
 	Errors     int
 	Warnings   int
 	CursorLine int // 1-based; 0 when unknown
+	// CursorCol is the 1-based screen column of the cursor in its line
+	// (virtcol: a tab counts its width); 0 when unknown.
+	CursorCol int
 	// Cursors maps each listed buffer's absolute path to its last-known
 	// (line, col), 1-based. The active buffer's entry reflects the live
 	// cursor; inactive buffers report the `"` mark (position on last
@@ -277,13 +289,36 @@ type State struct {
 	Indent string
 }
 
-// FetchState returns the current State in a single Lua call. If a previous
-// call is still in flight, returns errFetchBusy and the caller should drop.
+// FetchState returns the current State in a single Lua call.
+//
+// Only one fetch runs at a time. A call made while another is in flight
+// returns errFetchBusy (the caller drops it) but is not lost: it queues one
+// trailing refresh, which the running call does before it returns, so the
+// state it returns is never older than the newest request.
 func (c *Client) FetchState() (State, error) {
-	if !c.fetchBusy.CompareAndSwap(false, true) {
+	c.fetchMu.Lock()
+	if c.fetching {
+		c.fetchQueued = true
+		c.fetchMu.Unlock()
 		return State{}, errFetchBusy
 	}
-	defer c.fetchBusy.Store(false)
+	c.fetching = true
+	c.fetchMu.Unlock()
+	for {
+		s, err := c.fetchStateOnce()
+		c.fetchMu.Lock()
+		if err == nil && c.fetchQueued {
+			c.fetchQueued = false
+			c.fetchMu.Unlock()
+			continue
+		}
+		c.fetching, c.fetchQueued = false, false
+		c.fetchMu.Unlock()
+		return s, err
+	}
+}
+
+func (c *Client) fetchStateOnce() (State, error) {
 	var raw []interface{}
 	err := c.execLua(`
 		local bufs = {}
@@ -356,7 +391,8 @@ func (c *Client) FetchState() (State, error) {
 			lsp_names,
 			vim.bo.expandtab
 				and ('Spaces: ' .. (vim.bo.shiftwidth > 0 and vim.bo.shiftwidth or vim.bo.tabstop))
-				or ('Tabs: ' .. vim.bo.tabstop)
+				or ('Tabs: ' .. vim.bo.tabstop),
+			vim.fn.virtcol('.'),
 		}
 	`, &raw)
 	if err != nil {
@@ -440,6 +476,9 @@ func (c *Client) FetchState() (State, error) {
 	}
 	if len(raw) > 15 {
 		s.Indent = toString(raw[15])
+	}
+	if len(raw) > 16 {
+		s.CursorCol = toInt(raw[16])
 	}
 	return s, nil
 }
@@ -1180,4 +1219,3 @@ func (c *Client) Next() tea.Cmd {
 		return msg
 	}
 }
-
