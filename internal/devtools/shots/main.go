@@ -71,6 +71,9 @@ type scene struct {
 func act(id string) step         { return step{msg: app.DevActionMsg{ID: id}, wait: 400 * time.Millisecond} }
 func pause(d time.Duration) step { return step{wait: d} }
 func key(s string) step          { return step{msg: keyMsg(s), wait: 300 * time.Millisecond} }
+func hover(x, y int) step {
+	return step{msg: tea.MouseMsg{X: x, Y: y, Action: tea.MouseActionMotion, Button: tea.MouseButtonNone}, wait: 300 * time.Millisecond}
+}
 
 func main() {
 	out := flag.String("out", "assets/screenshots", "output directory")
@@ -81,8 +84,11 @@ func main() {
 	h := flag.Int("h", 42, "rows")
 	ansOnly := flag.Bool("ans", false, "also write the raw .ans frames")
 	fallback := flag.String("fallback", strings.Join(defaultFallbacks(), ","), "comma-separated fallback fonts for missing glyphs")
+	real := flag.Bool("real", false, "use the current repo as is (no demo workspace)")
 	flag.Parse()
-	if err := enterDemoWorkspace(); err != nil {
+	if *real {
+		// keep the working directory
+	} else if err := enterDemoWorkspace(); err != nil {
 		fmt.Fprintln(os.Stderr, "shots:", err)
 		os.Exit(1)
 	}
@@ -111,6 +117,8 @@ func main() {
 		{name: "palette", steps: append(append([]step{}, editorSteps...), key("f1"), key("t"), key("h"), key("e"), key("m"), pause(300*time.Millisecond))},
 		{name: "toast", steps: append(append([]step{}, editorSteps...), act("toast:Saved|internal/statusbar/model.go · 480 lines"), pause(200*time.Millisecond))},
 		{name: "scm", steps: append(append([]step{}, editorSteps...), act("view:git"), pause(1500*time.Millisecond))},
+		{name: "scm-hover", steps: []step{pause(800 * time.Millisecond), act("view:git"), pause(1500 * time.Millisecond),
+			hover(12, 20), hover(12, 26), hover(12, 32), pause(500 * time.Millisecond)}},
 	}
 	with := func(extra ...step) []step { return append(append([]step{}, editorSteps...), extra...) }
 	scenes = append(scenes,
