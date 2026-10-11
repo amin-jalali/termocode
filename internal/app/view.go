@@ -575,12 +575,22 @@ func (m Model) overlayFindBarInEditor(base string) string {
 	}
 	panelLines := strings.Split(panel, "\n")
 	baseLines := strings.Split(base, "\n")
+	// The panel has a minimum width; in a narrow editor pane it is
+	// clipped at the pane's right edge instead of sticking out past the
+	// window (an over-wide row wraps in the terminal).
+	room := editorStart + edPaneW - leftCol
+	if room <= 0 {
+		return base
+	}
 	for i, pline := range panelLines {
 		row := topRow + i
 		if row < 0 || row >= len(baseLines) {
 			continue
 		}
 		glassed := pline
+		if lipgloss.Width(glassed) > room {
+			glassed = ansi.Truncate(glassed, room, "")
+		}
 		baseLines[row] = spliceAt(baseLines[row], glassed, leftCol)
 	}
 	return strings.Join(baseLines, "\n")
