@@ -547,6 +547,7 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 			m.preferredCodeAction = nil
 		}
 		m.cursorLine = msg.CursorLine
+		m.indentLabel = msg.Indent
 		// File-watcher toast: surface "Reloaded <basename>" the first time
 		// we see a new reload-seq value so each external mutation fires
 		// exactly one toast (subsequent StateMsgs with the same seq pass
@@ -1118,6 +1119,7 @@ func (m Model) fetchStateCmd() tea.Cmd {
 			Mode:           s.Mode,
 			Diff:           s.Diff,
 			LSPClients:     s.LSPClients,
+			Indent:         s.Indent,
 		}
 	}
 }

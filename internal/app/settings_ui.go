@@ -386,6 +386,9 @@ func (m *Model) applySettingValue(value string) tea.Cmd {
 			_ = m.nvim.Command(fmt.Sprintf("set tabstop=%d shiftwidth=%d", n, n))
 		}
 		m.toast, toastCmd = m.toast.Push(toast.Info, fmt.Sprintf("tab_size = %d", n))
+		// Refresh the status bar's indent chip now: changing an option may
+		// not redraw anything.
+		toastCmd = tea.Batch(toastCmd, m.fetchStateCmd())
 	case "setting-search-max-results":
 		n, err := strconv.Atoi(value)
 		if err != nil || n < 0 {
