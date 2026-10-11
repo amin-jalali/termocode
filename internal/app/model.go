@@ -298,6 +298,9 @@ type Model struct {
 	// makes scrolling feel choppy on large files. We coalesce them down
 	// to ~10 Hz instead.
 	stateLastFetch time.Time
+	// stateFetchPending is true while a trailing fetch (stateFetchDueMsg)
+	// is scheduled for redraws that the throttle skipped.
+	stateFetchPending bool
 
 	// lastReloadSeq remembers the most recent FileChangedShellPost counter
 	// surfaced via FetchState. A higher value in the next StateMsg means a
