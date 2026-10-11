@@ -24,6 +24,7 @@ var (
 	iconChoices      = []string{"auto", "nerd", "unicode", "ascii"}
 	animationChoices = []string{"auto", "on", "off"}
 	imageChoices     = []string{"auto", "kitty", "sixel", "blocks", "off"}
+	sessionChoices   = []string{"auto", "on", "off"}
 )
 
 // settingChoices returns the fixed choices of an enum setting row.
@@ -35,6 +36,8 @@ func settingChoices(id string) []string {
 		return animationChoices
 	case "setting-images":
 		return imageChoices
+	case "setting-persistent-session":
+		return sessionChoices
 	}
 	return nil
 }
@@ -89,6 +92,8 @@ func displaySettingValue(id string, cfg settingsConfig) (string, bool) {
 		v = cfg.Animations
 	case "setting-images":
 		v = cfg.Images
+	case "setting-persistent-session":
+		v = cfg.PersistentSession
 	default:
 		return "", false
 	}
@@ -124,6 +129,8 @@ func (m *Model) applyDisplaySetting(id, value string) (tea.Cmd, bool) {
 		cfg.Animations = value
 	case "setting-images":
 		cfg.Images = value
+	case "setting-persistent-session":
+		cfg.PersistentSession = value
 	}
 	if err := saveSettings(cfg); err != nil {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Settings error", err.Error())
@@ -139,6 +146,8 @@ func (m *Model) applyDisplaySetting(id, value string) (tea.Cmd, bool) {
 		detail = "animations " + map[bool]string{true: "on", false: "off"}[anim.Enabled]
 	case "setting-images":
 		detail = "images: " + imageProtocol().String()
+	case "setting-persistent-session":
+		detail = "applies the next time termocode starts"
 	}
 	m.toast, toastCmd = m.toast.PushDetail(toast.Info, row.Label+" = "+value, detail)
 	return toastCmd, true

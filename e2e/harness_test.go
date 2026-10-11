@@ -86,7 +86,9 @@ type StartOpts struct {
 	Cols, Rows int
 	Workspace  string // defaults to a fresh repo from NewRepo
 	Args       []string
-	NvimInit   string // optional init.lua for the embedded nvim
+	NvimInit   string   // optional init.lua for the embedded nvim
+	Home       string   // reuse a HOME (e.g. to start again after a disconnect)
+	Env        []string // extra environment ("K=V")
 }
 
 // Start launches termocode in a fresh PTY with an isolated HOME.
@@ -98,7 +100,10 @@ func Start(t *testing.T, o StartOpts) *Term {
 	if o.Rows == 0 {
 		o.Rows = 36
 	}
-	home := t.TempDir()
+	home := o.Home
+	if home == "" {
+		home = t.TempDir()
+	}
 	ws := o.Workspace
 	if ws == "" {
 		ws = NewRepo(t)
@@ -134,7 +139,7 @@ func Start(t *testing.T, o StartOpts) *Term {
 	}
 	cmd := exec.Command(binPath, o.Args...)
 	cmd.Dir = ws
-	cmd.Env = isolatedEnv(home)
+	cmd.Env = append(isolatedEnv(home), o.Env...)
 
 	em := vt.NewEmulator(o.Cols, o.Rows)
 	// Like a real terminal: answer OSC 10/11 colour queries.

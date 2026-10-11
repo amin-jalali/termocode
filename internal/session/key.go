@@ -6,6 +6,11 @@ import (
 	"path/filepath"
 )
 
+// EnvSession is set in the UI's environment (and so in every shell it
+// starts) to the session key. A termocode started inside a session runs
+// directly instead of nesting another session.
+const EnvSession = "TERMOCODE_SESSION"
+
 // Key is the id of a workspace folder: a short hash of its absolute,
 // cleaned path. Sessions and hot-exit backups are stored under it.
 func Key(workspace string) string {

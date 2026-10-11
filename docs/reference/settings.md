@@ -30,6 +30,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `word_wrap` | bool | `false` | Soft-wrap long lines in the editor. |
 | `show_hidden` | bool | `false` | Show dot-files in the explorer. |
 | `tab_size` | int | `4` | Indent width in spaces (1-16). Sets tabstop and shiftwidth. |
+| `persistent_session` | enum | `auto` | Run the editor in a background session that survives a dropped connection; run termocode again in the same folder to get it back: on, off, or auto (on over SSH, off locally and inside tmux / screen). Applies the next time termocode starts; --no-session wins over it. |
 
 ## Search
 

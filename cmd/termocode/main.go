@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"golang.org/x/term"
 
 	"github.com/amin-jalali/termocode/internal/app"
 	"github.com/amin-jalali/termocode/internal/setup"
@@ -92,6 +93,30 @@ func probeTerminal() {
 }
 
 func main() {
+	args, noSession := extractFlag(os.Args[1:], "--no-session")
+	if len(args) == 2 && args[0] == serverArg {
+		os.Exit(runServer(args[1]))
+	}
+	if len(args) > 0 {
+		switch args[0] {
+		case "sessions":
+			os.Exit(cmdSessions())
+		case "attach", "kill":
+			dir := "."
+			if len(args) > 1 {
+				dir = args[1]
+			}
+			if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+				fmt.Fprintf(os.Stderr, "termocode: %s is not a folder\n", dir)
+				os.Exit(1)
+			}
+			if args[0] == "attach" {
+				os.Exit(runClient(dir, false))
+			}
+			os.Exit(cmdKill(dir))
+		}
+	}
+	os.Args = append(os.Args[:1], args...)
 	// If the user passed a folder as the first arg (and it's not a known
 	// subcommand), chdir into it so termocode opens that workspace.
 	if len(os.Args) > 1 {
@@ -119,6 +144,12 @@ func main() {
 			return
 		}
 	}
+	tty := term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd()))
+	if sessionsSupported && wantSession(app.ConfigPersistentSession(), noSession, os.Getenv, tty) {
+		if cwd, err := os.Getwd(); err == nil {
+			os.Exit(runClient(cwd, true))
+		}
+	}
 	runTUI()
 }
 
@@ -126,9 +157,17 @@ func printUsage() {
 	fmt.Println("termocode — terminal IDE")
 	fmt.Println()
 	fmt.Println("Usage:")
-	fmt.Println("  termocode          launch the editor")
-	fmt.Println("  termocode setup    install JetBrainsMono Nerd Font and check prerequisites")
-	fmt.Println("  termocode -h       show this help")
+	fmt.Println("  termocode [dir]            open dir (default: the current folder)")
+	fmt.Println("  termocode --no-session     run without a persistent session")
+	fmt.Println("  termocode sessions         list the running sessions")
+	fmt.Println("  termocode attach [dir]     attach to the session of dir")
+	fmt.Println("  termocode kill [dir]       end the session of dir")
+	fmt.Println("  termocode setup            install JetBrainsMono Nerd Font and check prerequisites")
+	fmt.Println("  termocode -h               show this help")
+	fmt.Println()
+	fmt.Println("Over SSH the editor runs in a persistent session: when the connection")
+	fmt.Println("drops, run termocode again in the same folder to get it back.")
+	fmt.Println("Setting persistent_session: auto (on over SSH), on, off.")
 }
 
 func runTUI() {
@@ -220,6 +259,7 @@ func runTUI() {
 		// leak (see the note above) can corrupt typed input.
 		tea.WithMouseAllMotion(),
 	)
+	watchRepaint(p)
 	if _, err := p.Run(); err != nil {
 		_, _ = os.Stdout.WriteString("\x1b]111\x07") // os.Exit skips the defer
 		fmt.Fprintln(os.Stderr, err)
