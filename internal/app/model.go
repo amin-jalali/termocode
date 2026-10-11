@@ -790,7 +790,9 @@ func (m Model) attachCmd() tea.Cmd {
 			// 2 trailing spaces — gives clear breathing room on BOTH sides
 			// of the digit (left padding from numberwidth=5, right from
 			// the trailing spaces).
-			`lua vim.opt.statuscolumn = '%=%l  '`,
+			// The last cell is the git change mark (git_signs_lua.go): this
+			// statuscolumn has no sign column, so signs alone never show.
+			`lua _G.TcGitMark = _G.TcGitMark or function() return ' ' end; vim.opt.statuscolumn = '%=%l %{%v:lua.TcGitMark()%}'`,
 			// Word jumps with Ctrl+Right / Ctrl+Left in both normal and insert
 			// mode. Insert-mode bindings use <C-O> so we don't drop out of insert.
 			"nnoremap <silent> <C-Right> w",
@@ -936,7 +938,7 @@ func (m Model) attachCmd() tea.Cmd {
 						vim.wo[w].signcolumn   = 'auto'
 						vim.wo[w].cursorline   = true
 						vim.wo[w].foldcolumn   = '0'
-						vim.wo[w].statuscolumn = vim.o.number and '%=%l  ' or ''
+						vim.wo[w].statuscolumn = vim.o.number and '%=%l %{%v:lua.TcGitMark()%}' or ''
 					end)
 				end,
 			})
