@@ -36,7 +36,7 @@ Option 3, built in (`internal/session`, `cmd/termocode/session_unix.go`):
 - A second client takes over; the first one gets its terminal reset and a
   short message (like `tmux attach -d`).
 - Quit ends the UI, and the server exits with it. `termocode kill` sends
-  SIGTERM to the UI.
+  SIGTERM to the UI (unsaved buffers go to the hot-exit backup).
 - Security: socket dir 0700, socket 0600, peer uid checked
   (SO_PEERCRED / LOCAL_PEERCRED), no network listener.
 - Setting `persistent_session`: `auto` (default), `on`, `off`; flag
@@ -48,7 +48,13 @@ rarely "drops", and a session there has costs users would notice: running
 `termocode` in a second window for the same folder takes the editor away
 from the first window, and the UI keeps the environment of the first
 start. Inside tmux the process already survives. Users who want it locally
-set `persistent_session` to `on`.
+set `persistent_session` to `on`. A crash or a closed window without a
+session is covered by the hot-exit backup of unsaved files
+(`internal/app/hot_exit.go`): nvim writes every modified buffer to
+`~/.local/state/termocode/backup/<key>/<pid>/` a moment after each change
+(our nvim runs with `-n`, so swap files were not an option, and a backup
+written at signal time comes too late when nvim gets the same hangup);
+the next start offers Restore / Discard / Later.
 
 ## Consequences
 - **+** A dropped SSH connection loses nothing: unsaved text, undo, terminal

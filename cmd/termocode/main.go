@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -173,6 +175,20 @@ func printUsage() {
 	fmt.Println("Setting persistent_session: auto (on over SSH), on, off.")
 }
 
+// watchHangup handles the signals that end termocode without a Quit (the
+// terminal hung up, kill, Ctrl+C outside raw mode, `termocode kill`):
+// unsaved buffers are written to the hot-exit backup, then the UI quits
+// without asking. The next start offers to restore them.
+func watchHangup(p *tea.Program) {
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGINT)
+	go func() {
+		<-sig
+		app.HotExitFlush(2 * time.Second)
+		p.Quit()
+	}()
+}
+
 func runTUI() {
 	// Probe the host terminal for icon-glyph cell widths BEFORE Bubble
 	// Tea grabs the TTY into raw/altscreen mode. The probe writes a few
@@ -199,6 +215,7 @@ func runTUI() {
 		// Restore font size by emitting the inverse delta.
 		applyFontDelta(-delta)
 		if r := recover(); r != nil {
+			app.HotExitFlush(2 * time.Second)
 			fmt.Fprintf(os.Stderr, "termocode panic: %v\n", r)
 			os.Exit(1)
 		}
@@ -226,6 +243,9 @@ func runTUI() {
 	p := tea.NewProgram(
 		app.New(),
 		tea.WithAltScreen(),
+		// SIGHUP / SIGTERM / SIGINT are ours (watchHangup): unsaved
+		// buffers go to the hot-exit backup before we quit.
+		tea.WithoutSignalHandler(),
 		// WithMouseCellMotion (xterm 1002) — button-event mode.
 		//
 		// ROOT-CAUSE FIX for "mouse SGR codes leak into picker/prompt
@@ -263,7 +283,10 @@ func runTUI() {
 		tea.WithMouseAllMotion(),
 	)
 	watchRepaint(p)
+	watchHangup(p)
 	if _, err := p.Run(); err != nil {
+		// A crash or a lost terminal: keep the unsaved buffers.
+		app.HotExitFlush(2 * time.Second)
 		_, _ = os.Stdout.WriteString("\x1b]111\x07") // os.Exit skips the defer
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

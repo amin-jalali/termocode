@@ -55,8 +55,13 @@ func newSessionRig(t *testing.T) *sessionRig {
 // socket is where the server of r.ws listens (session.Key: first 8 bytes
 // of sha256 of the absolute path, hex).
 func (r *sessionRig) socket() string {
-	sum := sha256.Sum256([]byte(filepath.Clean(r.ws)))
-	return filepath.Join(r.runtime, "termocode", hex.EncodeToString(sum[:8])+".sock")
+	return filepath.Join(r.runtime, "termocode", hashKey(r.ws)+".sock")
+}
+
+// hashKey is session.Key: the workspace id used for sockets and backups.
+func hashKey(ws string) string {
+	sum := sha256.Sum256([]byte(filepath.Clean(ws)))
+	return hex.EncodeToString(sum[:8])
 }
 
 // start runs one termocode client and waits for the editor frame.
@@ -113,10 +118,13 @@ func (tm *Term) Disconnect() {
 	}
 }
 
-// ClickText clicks the first cell of text on screen.
+// ClickText clicks the first cell of the lowest text on screen (a button
+// sits below a title that may contain the same word).
 func (tm *Term) ClickText(text string) {
 	tm.t.Helper()
-	for y, l := range tm.Lines() {
+	ls := tm.Lines()
+	for y := len(ls) - 1; y >= 0; y-- {
+		l := ls[y]
 		if i := strings.Index(l, text); i >= 0 {
 			tm.Click(ansi.StringWidth(l[:i]), y)
 			return
@@ -162,8 +170,10 @@ func TestSessionSurvivesDisconnect(t *testing.T) {
 
 	tm.OpenTerminal()
 	tm.Type("sleep 1000 & echo job-$! term-marker-7\r")
-	tm.WaitText("term-marker-7", uiTimeout)
-	m := regexp.MustCompile(`job-(\d+) term-marker-7`).FindStringSubmatch(tm.Screen())
+	jobRe := regexp.MustCompile(`job-(\d+) term-marker-7`)
+	// Not the echoed command line: its output.
+	tm.WaitFor("job output", uiTimeout, func(ls []string) bool { return jobRe.MatchString(strings.Join(ls, "\n")) })
+	m := jobRe.FindStringSubmatch(tm.Screen())
 	if m == nil {
 		t.Fatalf("no job pid on screen:\n%s", tm.Screen())
 	}
@@ -183,7 +193,7 @@ func TestSessionSurvivesDisconnect(t *testing.T) {
 	// Reconnect: a new terminal, a different size.
 	tm2 := Start(t, StartOpts{Home: r.home, Workspace: r.ws, Env: r.env, Cols: 110, Rows: 34})
 	tm2.WaitText("unsaved-marker-42", bootTimeout)
-	tm2.WaitText("term-marker-7", uiTimeout)
+	tm2.WaitText("job-"+m[1]+" term-marker-7", uiTimeout)
 	tm2.settle()
 	tm2.CheckScreen("reattached", mainFrame)
 	if !strings.Contains(tm2.Lines()[0], "notes.txt") {
@@ -265,7 +275,8 @@ func TestSessionNoSessionFlag(t *testing.T) {
 }
 
 // TestSessionStaleSocket: a socket left by a dead server is cleaned up
-// and a new session starts.
+// and a new session starts; `termocode kill` ends it and keeps unsaved
+// text in the hot-exit backup.
 func TestSessionStaleSocket(t *testing.T) {
 	r := newSessionRig(t)
 	if err := os.MkdirAll(filepath.Dir(r.socket()), 0o700); err != nil {
@@ -283,6 +294,13 @@ func TestSessionStaleSocket(t *testing.T) {
 
 	tm := r.start()
 	r.waitSocket(true)
+	// Unsaved text: kill must keep it in the hot-exit backup.
+	tm.OpenFile("notes.txt")
+	tm.WaitText("first note", uiTimeout)
+	tm.Send(KeyEsc)
+	tm.settle()
+	tm.Type("okilled-marker")
+	tm.WaitText("killed-marker", uiTimeout)
 	if out, err := r.output("kill"); err != nil {
 		t.Fatalf("kill: %v\n%s", err, out)
 	}
@@ -294,5 +312,14 @@ func TestSessionStaleSocket(t *testing.T) {
 	}
 	if out, err := r.output("attach"); err == nil || !strings.Contains(out, "no session") {
 		t.Errorf("attach without a session: %v\n%s", err, out)
+	}
+	found := false
+	for _, f := range backupFiles(r.home) {
+		if b, _ := os.ReadFile(f); strings.Contains(string(b), "killed-marker") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("kill lost the unsaved text: backups %v", backupFiles(r.home))
 	}
 }
