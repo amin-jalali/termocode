@@ -47,7 +47,7 @@ const (
 // is currently rendered. False when the user closed it OR when it's
 // unpinned (in which case only the launcher chip shows up).
 func (m Model) actionsPanelVisible() bool {
-	return m.actionsOpen && m.actionsPinned
+	return m.actionsOpen && m.actionsPinned && m.actionsColumnWidth() > 0
 }
 
 // actionsLauncherVisible reports whether the bottom-right launcher chip
@@ -64,11 +64,25 @@ func (m Model) actionsColumnWidth() int {
 	if !m.actionsPinned || !m.actionsOpen {
 		return 0
 	}
+	w := autoActionsWidth(m.w, m.showExp, m.explorerWidth)
 	if m.actionsWidthSet {
-		return m.actionsWidth
+		w = m.actionsWidth
 	}
-	return autoActionsWidth(m.w, m.showExp, m.explorerWidth)
+	// Never wider than the room left of the editor's minimum: a width
+	// set in a wide window (drag, saved session) would otherwise push
+	// rows past the right edge after the window shrinks.
+	room := m.w - activity.Width - editorScrollbarWidth - minEditorPaneWidth
+	if m.showExp {
+		room -= m.explorerWidth
+	}
+	if room < actionsMinWidth {
+		return 0 // no room: the panel hides until the window grows
+	}
+	return min(w, room)
 }
+
+// minEditorPaneWidth is the editor width the chat panel always leaves.
+const minEditorPaneWidth = 10
 
 // autoActionsWidth is the chat panel's width until the user drags its
 // edge: about 40% of the window (44–80 columns) so answers with code fit,
