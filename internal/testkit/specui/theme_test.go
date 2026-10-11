@@ -69,3 +69,32 @@ func TestThemePreviewEscRestores(t *testing.T) {
 		t.Errorf("Esc saved theme %v", got)
 	}
 }
+
+// Spec: Given an open terminal that printed red text (ANSI 31),
+// when the user picks "GitHub Dark" in Preferences: Color Theme,
+// then the red text already on screen and red text printed after the
+// switch both use the new theme's ANSI red.
+func TestThemeSwitchRecolorsOpenTerminal(t *testing.T) {
+	t.Cleanup(func() { theme.ApplyTheme("vscode-dark-plus") })
+	d := termDriver(t)
+	openTerminal(t, d)
+	run(t, d, `printf '\033[31mRED%s\033[0m\n' X`, "REDX")
+	old, _, ok := colorsAt(d, "REDX")
+	if !ok {
+		t.Fatalf("no red text:\n%s", screen(d))
+	}
+	pickTheme(t, d, "GitHub Dark")
+	want := theme.NvimColors("github-dark")["term_1"]
+	if want == old {
+		t.Fatalf("both themes show red as %s: test needs two different reds", want)
+	}
+	var fg string
+	d.WaitFor(func() bool { fg, _, _ = colorsAt(d, "REDX"); return fg == want }, wait)
+	if fg != want {
+		t.Errorf("red text already in the terminal = %s after the switch, want the theme's %s", fg, want)
+	}
+	run(t, d, `printf '\033[31mNEW%s\033[0m\n' Y`, "NEWY")
+	if fg, _, _ := colorsAt(d, "NEWY"); fg != want {
+		t.Errorf("red text printed after the switch = %s, want the theme's %s", fg, want)
+	}
+}

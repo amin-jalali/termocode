@@ -59,6 +59,14 @@ func (m *Model) SetSize(w, h int) {
 	m.w, m.h = w, h
 }
 
+// SetTermPalette sets the RGB of ANSI colours 0–15 used for :terminal
+// cells, so terminals that are already open follow a theme switch (nvim
+// itself reads g:terminal_color_N only when a terminal opens).
+func (m *Model) SetTermPalette(p [16]int) {
+	m.g.TermPalette = p
+	m.g.TermPaletteSet = true
+}
+
 // ApplyRedraw consumes a batch of nvim redraw events.
 func (m *Model) ApplyRedraw(events [][]any) {
 	m.g.Apply(events)

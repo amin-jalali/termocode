@@ -19,6 +19,13 @@ type Attrs struct {
 	Undercurl     bool
 	Strikethrough bool
 	Reverse       bool
+
+	// TermFg / TermBg are 1 + the ANSI palette index (0–15) of a colour
+	// that came from a :terminal cell (0 = not a terminal palette colour).
+	// nvim resolves those to RGB once, when the terminal opens; the
+	// renderer maps them through Grid.TermPalette instead, so open
+	// terminals follow a theme switch.
+	TermFg, TermBg int
 }
 
 // Grid is the cell buffer plus cursor position and highlight palette.
@@ -32,6 +39,11 @@ type Grid struct {
 	DefaultSp int
 
 	HlAttrs map[int]Attrs
+
+	// TermPalette, when TermPaletteSet, is the RGB of ANSI colours 0–15 for
+	// terminal cells (see Attrs.TermFg).
+	TermPalette    [16]int
+	TermPaletteSet bool
 }
 
 // New returns a freshly initialized Grid with default colors set to "use
@@ -117,7 +129,17 @@ func (g *Grid) applyOne(name string, args []any) {
 			return
 		}
 		id := toInt(args[0])
-		g.HlAttrs[id] = decodeAttrs(args[1])
+		a := decodeAttrs(args[1])
+		if len(args) >= 4 && termOnly(args[3]) {
+			c := decodeAttrs(args[2]) // cterm_attr: palette indexes
+			if c.Fg >= 0 && c.Fg < 16 {
+				a.TermFg = c.Fg + 1
+			}
+			if c.Bg >= 0 && c.Bg < 16 {
+				a.TermBg = c.Bg + 1
+			}
+		}
+		g.HlAttrs[id] = a
 	}
 }
 
@@ -271,4 +293,30 @@ func decodeAttrs(v any) Attrs {
 		a.Reverse = x
 	}
 	return a
+}
+
+// termOnly reports whether an hl_attr_define info list (ext_hlstate)
+// describes a pure :terminal cell colour: every item is kind "term". A cell
+// that some highlight group also styles (selection, search) keeps the RGB
+// nvim resolved.
+func termOnly(info any) bool {
+	items, ok := info.([]any)
+	if !ok || len(items) == 0 {
+		return false
+	}
+	for _, it := range items {
+		var kind any
+		switch m := it.(type) {
+		case map[string]any:
+			kind = m["kind"]
+		case map[any]any:
+			kind = m["kind"]
+		default:
+			return false
+		}
+		if k, _ := kind.(string); k != "term" {
+			return false
+		}
+	}
+	return true
 }
