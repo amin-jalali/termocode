@@ -242,6 +242,8 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case gitCommitDiffReadyMsg:
 		m.openCommitDiffBuffer(msg)
 		return m, nil
+	case gitRemoteDoneMsg:
+		return m, m.gitRemoteDone(msg)
 	case preview.CloseMsg:
 		m.previewOpen = false
 		return m, nil
