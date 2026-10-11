@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/muesli/termenv"
 
 	"github.com/amin-jalali/termocode/internal/theme"
@@ -118,6 +119,13 @@ func modalOverlay(base, box string, screenW, screenH int, opts *ModalOpts) strin
 		bl = edgeOnBackdrop(bl, under, leftCol, i == 0 || i == boxH-1, dim)
 		if p < 1 {
 			bl = fadeRow(bl, under, leftCol, p)
+		}
+		// A card sliding in from the right is partly off screen: clip it,
+		// or the row gets wider than the screen and the terminal wraps it.
+		if room := screenW - leftCol; room <= 0 {
+			continue
+		} else if lipgloss.Width(bl) > room {
+			bl = ansi.Truncate(bl, room, "")
 		}
 		lines[row] = spliceAt(lines[row], bl, leftCol)
 	}
