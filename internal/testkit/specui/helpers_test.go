@@ -107,6 +107,76 @@ func cursorLine(d *testkit.Driver) string {
 	return cursorRe.FindString(lineWith(d, "Ln "))
 }
 
+var sgrRe = regexp.MustCompile(`\x1b\[([0-9;]*)m`)
+
+// colorsAt returns the truecolor foreground and background ("#rrggbb",
+// "" when unset) of the first cell of text on screen.
+func colorsAt(d *testkit.Driver, text string) (fg, bg string, ok bool) {
+	for _, raw := range strings.Split(d.Frame(), "\n") {
+		plain := ansi.Strip(raw)
+		if !strings.Contains(plain, text) {
+			continue
+		}
+		// Walk the raw line, tracking SGR state, until the plain text
+		// seen so far ends with text's first rune.
+		var seen strings.Builder
+		first := []rune(text)[0]
+		target := strings.Index(plain, text)
+		for i := 0; i < len(raw); {
+			if loc := sgrRe.FindStringSubmatchIndex(raw[i:]); loc != nil && loc[0] == 0 {
+				fg, bg = applySGR(raw[i+loc[2]:i+loc[3]], fg, bg)
+				i += loc[1]
+				continue
+			}
+			if seen.Len() == target && []rune(raw[i:])[0] == first {
+				return fg, bg, true
+			}
+			r := []rune(raw[i:])[0]
+			seen.WriteRune(r)
+			i += len(string(r))
+		}
+	}
+	return "", "", false
+}
+
+// applySGR updates fg / bg with one SGR parameter list.
+func applySGR(params, fg, bg string) (string, string) {
+	if params == "" || params == "0" {
+		return "", ""
+	}
+	p := strings.Split(params, ";")
+	for i := 0; i < len(p); i++ {
+		switch p[i] {
+		case "0":
+			fg, bg = "", ""
+		case "39":
+			fg = ""
+		case "49":
+			bg = ""
+		case "38", "48":
+			if i+4 < len(p) && p[i+1] == "2" {
+				hex := "#" + hex2(p[i+2]) + hex2(p[i+3]) + hex2(p[i+4])
+				if p[i] == "38" {
+					fg = hex
+				} else {
+					bg = hex
+				}
+				i += 4
+			}
+		}
+	}
+	return fg, bg
+}
+
+func hex2(dec string) string {
+	n := 0
+	for _, c := range dec {
+		n = n*10 + int(c-'0')
+	}
+	const digits = "0123456789abcdef"
+	return string([]byte{digits[n>>4&15], digits[n&15]})
+}
+
 // slow skips a test in -short mode.
 func slow(t *testing.T) {
 	t.Helper()
