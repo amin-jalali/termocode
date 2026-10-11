@@ -138,7 +138,7 @@ func TestSCMStageAndUnstageFile(t *testing.T) {
 		r.write("main.go", "package main\n// edit\n")
 	})
 	d.WaitForText("main.go", 3*time.Second)
-	clickText(d, "main.go")
+	scmClickText(d, "main.go")
 	d.Key("s")
 	until(d, func() bool { return inSection(d, "STAGED", "main.go") })
 	if got := r.porcelain(); got != "M  main.go" {
@@ -151,7 +151,7 @@ func TestSCMStageAndUnstageFile(t *testing.T) {
 		t.Errorf("no 'Staged' toast:%s", dump(d))
 	}
 
-	clickText(d, "main.go") // the STAGED row now
+	scmClickText(d, "main.go") // the STAGED row now
 	d.Key("s")
 	until(d, func() bool { return inSection(d, "CHANGES", "main.go") })
 	if got := r.porcelain(); got != " M main.go" {
@@ -220,7 +220,7 @@ func TestSCMDiscardAsksFirst(t *testing.T) {
 		r.write("main.go", "package main\n// edit\n")
 	})
 	d.WaitForText("main.go", 3*time.Second)
-	clickText(d, "main.go")
+	scmClickText(d, "main.go")
 	d.Key("x")
 	if !strings.Contains(text(d), "Discard changes?") || !strings.Contains(text(d), `revert "main.go"`) {
 		t.Fatalf("x did not ask for confirmation:%s", dump(d))
@@ -229,7 +229,7 @@ func TestSCMDiscardAsksFirst(t *testing.T) {
 	if r.read("main.go") != "package main\n// edit\n" {
 		t.Fatalf("Esc discarded the change")
 	}
-	clickText(d, "main.go")
+	scmClickText(d, "main.go")
 	d.Key("x")
 	d.Key("right") // Cancel
 	d.Key("enter")
@@ -237,7 +237,7 @@ func TestSCMDiscardAsksFirst(t *testing.T) {
 		t.Fatalf("Cancel discarded the change")
 	}
 
-	clickText(d, "main.go")
+	scmClickText(d, "main.go")
 	d.Key("x")
 	d.Key("enter") // Discard is the default button
 	until(d, func() bool { return inSection(d, "CHANGES", "No changes") })
@@ -259,7 +259,7 @@ func TestSCMDiscardUntrackedDeletes(t *testing.T) {
 		r.write("scratch.txt", "tmp\n")
 	})
 	d.WaitForText("scratch.txt", 3*time.Second)
-	clickText(d, "scratch.txt")
+	scmClickText(d, "scratch.txt")
 	d.Key("x")
 	d.Key("enter")
 	until(d, func() bool { return rowWith(d, "scratch.txt") < 0 })
@@ -317,13 +317,13 @@ func TestSCMFileNamesWithSpacesAndUnicode(t *testing.T) {
 	if strings.Contains(text(d), `\346`) || strings.Contains(text(d), `"my notes`) {
 		t.Errorf("C-quoted path shown:%s", dump(d))
 	}
-	clickText(d, "my notes.txt")
+	scmClickText(d, "my notes.txt")
 	d.Key("s")
 	until(d, func() bool { return inSection(d, "STAGED", "my notes.txt") })
 	if got := r.porcelain(); !strings.Contains(got, "A  my notes.txt") {
 		t.Errorf("s did not stage %q: git status %q", "my notes.txt", got)
 	}
-	clickText(d, "日本.txt")
+	scmClickText(d, "日本.txt")
 	d.Key("s")
 	until(d, func() bool { return inSection(d, "STAGED", "日本.txt") })
 	if got := r.porcelain(); !strings.Contains(got, "A  日本.txt") {

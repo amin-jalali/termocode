@@ -47,7 +47,7 @@ func TestSCMPushToSilentRemoteKeepsUIResponsive(t *testing.T) {
 	if !strings.Contains(text(d), "Pushing") {
 		t.Errorf("no Pushing… note while the push runs:%s", dump(d))
 	}
-	clickText(d, "main.go")
+	scmClickText(d, "main.go")
 	d.Key("s")
 	until(d, func() bool { return inSection(d, "STAGED", "main.go") })
 	if got := r.porcelain(); got != "M  main.go" {

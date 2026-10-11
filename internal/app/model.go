@@ -263,6 +263,11 @@ type Model struct {
 	pinnedBufs map[int]int
 	pinOrder   int
 
+	// closeQueue holds the tabs Close Others / Close All to the Right
+	// still have to close while a "Save changes?" dialog is open
+	// (drainCloseQueue).
+	closeQueue []int
+
 	// snippetPickerIndex maps picker IDs (e.g. "snip-iferr") to the snippet
 	// body so insertSnippetBody knows what to expand. Populated each time
 	// the snippet picker opens.
@@ -775,6 +780,11 @@ func (m Model) attachCmd() tea.Cmd {
 			// mode highlighting, not Select mode.
 			"set keymodel=startsel,stopsel",
 			"set selectmode=",
+			// selection=exclusive: the character under the cursor is not
+			// part of the selection, as in VSCode. With the default
+			// (inclusive) Shift+Right ×3 selected 4 characters, and a
+			// mouse drag one more than the pointer covered.
+			"set selection=exclusive",
 			"set virtualedit=onemore",
 			"set clipboard=unnamedplus",
 			"set guicursor=n-v-c-sm:block,i-ci-ve:ver25,r-cr-o:hor20",
@@ -985,7 +995,10 @@ func (m Model) attachCmd() tea.Cmd {
 			})
 		`)
 		// Auto-save normal-file buffers on focus loss / buffer leave.
-		_ = m.nvim.Command("autocmd BufLeave,FocusLost * if &buftype == '' && !empty(expand('%')) | silent! write | endif")
+		// Only modified ones (`update`): a plain `write` re-created a file
+		// that was just deleted (explorer Delete, `rm` in the terminal)
+		// as soon as its tab was left or closed.
+		_ = m.nvim.Command("autocmd BufLeave,FocusLost * if &buftype == '' && &modified && !empty(expand('%')) | silent! update | endif")
 		// Auto-reload buffers when their on-disk file changes (e.g. `git pull`,
 		// edits from another editor). Combined with `set autoread` above, the
 		// reload is silent; buffers with unsaved local changes keep them

@@ -324,7 +324,7 @@ func (m *Model) handleMenuSelect(id string) tea.Cmd {
 			return c
 		}
 		if m.nvim != nil {
-			_ = m.nvim.Command("vsplit " + path)
+			_ = m.nvim.OpenFile("vsplit", path)
 		}
 		m.focus = FocusEditor
 	case "copy-path":
@@ -372,29 +372,24 @@ func (m *Model) handleMenuSelect(id string) tea.Cmd {
 
 // handleTabMenuSelect dispatches the action selected from the tab right-click
 // menu against m.menuTabID.
-//
-// TODO: "Close Others" / "Close All to the Right" fan out via tea.Batch, so if
-// any of the targeted buffers is dirty the first CloseMsg opens the unsaved-
-// changes confirm dialog and the remaining CloseMsgs are routed to the dialog
-// (and dropped). A proper fix needs to queue the pending closes and resume
-// after the dialog resolves.
 func (m *Model) handleTabMenuSelect(id string) tea.Cmd {
 	target := m.menuTabID
 	switch id {
 	case tabMenuClose:
 		return closeBufferCmd(target)
 	case tabMenuCloseOthers:
-		var cmds []tea.Cmd
+		m.closeQueue = nil
 		for _, b := range m.bufs {
-			if b.ID == target {
-				continue
+			if b.ID != target {
+				m.closeQueue = append(m.closeQueue, b.ID)
 			}
-			cmds = append(cmds, closeBufferCmd(b.ID))
 		}
-		return tea.Batch(cmds...)
+		m.drainCloseQueue()
 	case tabMenuCloseRight:
+		// "Right" in the order the tab bar shows (pinned tabs first).
+		shown, _ := m.tabs.Buffers()
 		idx := -1
-		for i, b := range m.bufs {
+		for i, b := range shown {
 			if b.ID == target {
 				idx = i
 				break
@@ -403,11 +398,11 @@ func (m *Model) handleTabMenuSelect(id string) tea.Cmd {
 		if idx < 0 {
 			return nil
 		}
-		var cmds []tea.Cmd
-		for i := idx + 1; i < len(m.bufs); i++ {
-			cmds = append(cmds, closeBufferCmd(m.bufs[i].ID))
+		m.closeQueue = nil
+		for _, b := range shown[idx+1:] {
+			m.closeQueue = append(m.closeQueue, b.ID)
 		}
-		return tea.Batch(cmds...)
+		m.drainCloseQueue()
 	case tabMenuCopyPath:
 		buf, ok := m.findBuffer(target)
 		if !ok || buf.Path == "" {
@@ -421,6 +416,27 @@ func (m *Model) handleTabMenuSelect(id string) tea.Cmd {
 
 // closeBufferCmd returns a tea.Cmd that emits a tabbar.CloseMsg for id, so the
 // existing CloseMsg handler (with its dirty-buffer prompt) processes it.
+// drainCloseQueue closes the queued tabs (Close Others / Close All to the
+// Right) one by one. At a tab with unsaved changes it stops and asks; the
+// confirm handler resumes the queue after Save or Don't Save and drops it
+// on Cancel. (A tea.Batch of CloseMsgs lost every close after the first
+// dirty tab: they reached the open dialog instead.)
+func (m *Model) drainCloseQueue() {
+	for len(m.closeQueue) > 0 {
+		id := m.closeQueue[0]
+		m.closeQueue = m.closeQueue[1:]
+		if m.promptCloseBufferIfDirty(id) {
+			return
+		}
+		if buf, ok := m.findBuffer(id); ok {
+			m.pushClosed(buf.Path)
+		}
+		if m.nvim != nil {
+			_ = m.nvim.Command(fmt.Sprintf("silent! bdelete %d", id))
+		}
+	}
+}
+
 func closeBufferCmd(id int) tea.Cmd {
 	return func() tea.Msg { return tabbar.CloseMsg{ID: id} }
 }

@@ -174,6 +174,12 @@ type welcomeCached struct {
 
 var welcomeCache *welcomeCached
 
+// invalidateWelcome drops the cached dashboard render. Called when the
+// recent files or workspaces change: the cache key does not cover them, so
+// the dashboard kept showing the old lists ("No files yet" right after
+// files were opened and closed).
+func invalidateWelcome() { welcomeCache = nil }
+
 // renderWelcomeLayout returns the recent + workspace hits expected by
 // mouse.go. Quick-action hits are surfaced via welcomeQuickActionHits.
 func renderWelcomeLayout(w, h, focusIdx int) (string, []welcomeRecentHit, []welcomeWorkspaceHit) {
