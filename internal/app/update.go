@@ -532,6 +532,12 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 			return m, tea.Batch(cmds...), true
 		}
 		return m, nil, true
+	case stateFetchBusyMsg:
+		if m.stateFetchPending || m.nvim == nil {
+			return m, nil, true
+		}
+		m.stateFetchPending = true
+		return m, tea.Tick(stateThrottle, func(time.Time) tea.Msg { return stateFetchDueMsg{} }), true
 	case stateFetchDueMsg:
 		m.stateFetchPending = false
 		if m.nvim == nil {
@@ -1077,6 +1083,11 @@ const stateThrottle = 100 * time.Millisecond
 // stateFetchDueMsg runs the trailing state fetch for throttled redraws.
 type stateFetchDueMsg struct{}
 
+// stateFetchBusyMsg: a state fetch was dropped because another was still
+// running. That one may have read nvim before the latest change (a jump
+// from the Problems panel), so one more fetch is scheduled.
+type stateFetchBusyMsg struct{}
+
 // stateFetchPlan decides what a redraw at now does: fetch the editor
 // state now (the last fetch is older than stateThrottle), or schedule one
 // trailing fetch after delay (none when one is already pending).
@@ -1098,6 +1109,9 @@ func (m Model) fetchStateCmd() tea.Cmd {
 	c := m.nvim
 	return func() tea.Msg {
 		s, err := c.FetchState()
+		if nvim.IsFetchBusy(err) {
+			return stateFetchBusyMsg{}
+		}
 		if err != nil {
 			return nil
 		}
