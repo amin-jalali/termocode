@@ -3,6 +3,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -57,6 +58,20 @@ func fetchGitCmd() tea.Cmd {
 		graph, _ := git.GraphLog(cwd, gitGraphLimit)
 		return GitMsg{IsRepo: true, Branch: branch, Files: files, Graph: graph}
 	}
+}
+
+// gitSnapshotChanged reports whether HEAD (the first commit of the graph)
+// or the changed-file list differs between two git snapshots.
+func gitSnapshotChanged(oldGraph []git.GraphLine, oldFiles []git.FileStatus, newGraph []git.GraphLine, newFiles []git.FileStatus) bool {
+	head := func(g []git.GraphLine) string {
+		for _, l := range g {
+			if l.Hash != "" {
+				return l.Hash
+			}
+		}
+		return ""
+	}
+	return head(oldGraph) != head(newGraph) || !slices.Equal(oldFiles, newFiles)
 }
 
 // gitFileAbsPath returns the absolute path of a git status entry.

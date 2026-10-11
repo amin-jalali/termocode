@@ -729,10 +729,19 @@ func (m *Model) openGitDiscardForActiveFile() {
 	m.confirmTargetPath = rel
 }
 
-// gitPush runs `git push`. If the current branch has no upstream we add the
-// `-u origin <branch>` form so the user doesn't have to drop to the
-// integrated terminal for the first push.
-func (m *Model) gitPush() tea.Cmd {
+// gitRemoteDoneMsg reports a finished push / pull / fetch / sync. These run
+// in a tea.Cmd, never in Update: a slow or silent remote would otherwise
+// freeze the whole UI until git gave up (git has no network timeout).
+type gitRemoteDoneMsg struct {
+	failTitle string // toast title when err != nil
+	okText    string // toast text on success
+	err       error
+	reload    bool // the working tree may have changed: re-read buffers
+}
+
+// gitRemoteOp shows a "running" toast and runs op off the main loop; its
+// result comes back as a gitRemoteDoneMsg.
+func (m *Model) gitRemoteOp(running string, op func(cwd string) gitRemoteDoneMsg) tea.Cmd {
 	if !m.gitIsRepo {
 		return nil
 	}
@@ -740,91 +749,81 @@ func (m *Model) gitPush() tea.Cmd {
 	if err != nil {
 		return nil
 	}
-	var opErr error
-	if git.HasUpstream(cwd) {
-		opErr = git.Push(cwd)
-	} else if m.gitBranch.Name != "" {
-		opErr = git.PushSetUpstream(cwd, m.gitBranch.Name)
-	} else {
-		opErr = fmt.Errorf("no current branch")
-	}
 	var toastCmd tea.Cmd
-	if opErr != nil {
-		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Push failed", opErr.Error())
+	m.toast, toastCmd = m.toast.Push(toast.Info, running)
+	return tea.Batch(toastCmd, func() tea.Msg { return op(cwd) })
+}
+
+// gitRemoteDone shows the result of a remote operation and refreshes the
+// git state.
+func (m *Model) gitRemoteDone(msg gitRemoteDoneMsg) tea.Cmd {
+	var toastCmd tea.Cmd
+	if msg.err != nil {
+		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, msg.failTitle, msg.err.Error())
 	} else {
-		m.toast, toastCmd = m.toast.Push(toast.Info, "Pushed to origin")
+		m.toast, toastCmd = m.toast.Push(toast.Info, msg.okText)
+	}
+	// A pull (even a failed one: it may stop half-way in a merge) can
+	// rewrite files on disk — nudge nvim to reload them.
+	if msg.reload && m.nvim != nil {
+		_ = m.nvim.Command("silent! checktime")
 	}
 	return tea.Batch(fetchGitCmd(), toastCmd)
 }
 
+// gitPush runs `git push`. If the current branch has no upstream we add the
+// `-u origin <branch>` form so the user doesn't have to drop to the
+// integrated terminal for the first push.
+func (m *Model) gitPush() tea.Cmd {
+	branch := m.gitBranch.Name
+	return m.gitRemoteOp("Pushing…", func(cwd string) gitRemoteDoneMsg {
+		return gitRemoteDoneMsg{failTitle: "Push failed", okText: "Pushed to origin", err: pushCurrent(cwd, branch)}
+	})
+}
+
+// pushCurrent pushes the current branch, setting origin as its upstream
+// when it has none.
+func pushCurrent(cwd, branch string) error {
+	switch {
+	case git.HasUpstream(cwd):
+		return git.Push(cwd)
+	case branch != "":
+		return git.PushSetUpstream(cwd, branch)
+	}
+	return fmt.Errorf("no current branch")
+}
+
 // gitPull runs `git pull`.
 func (m *Model) gitPull() tea.Cmd {
-	if !m.gitIsRepo {
-		return nil
-	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil
-	}
-	var toastCmd tea.Cmd
-	if err := git.Pull(cwd); err != nil {
-		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Pull failed", err.Error())
-	} else {
-		m.toast, toastCmd = m.toast.Push(toast.Info, "Pulled from origin")
-		// Buffers may be stale on disk after a pull — nudge nvim to reload.
-		if m.nvim != nil {
-			_ = m.nvim.Command("silent! checktime")
-		}
-	}
-	return tea.Batch(fetchGitCmd(), toastCmd)
+	return m.gitRemoteOp("Pulling…", func(cwd string) gitRemoteDoneMsg {
+		return gitRemoteDoneMsg{failTitle: "Pull failed", okText: "Pulled from origin", err: git.Pull(cwd), reload: true}
+	})
 }
 
 // gitFetch runs `git fetch --prune` — updates remote-tracking refs (so the
 // ahead/behind counters refresh) without touching the working tree.
 func (m *Model) gitFetch() tea.Cmd {
-	if !m.gitIsRepo {
-		return nil
-	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil
-	}
-	var toastCmd tea.Cmd
-	if err := git.Fetch(cwd); err != nil {
-		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Fetch failed", err.Error())
-	} else {
-		m.toast, toastCmd = m.toast.Push(toast.Info, "Fetched from origin")
-	}
-	return tea.Batch(fetchGitCmd(), toastCmd)
+	return m.gitRemoteOp("Fetching…", func(cwd string) gitRemoteDoneMsg {
+		return gitRemoteDoneMsg{failTitle: "Fetch failed", okText: "Fetched from origin", err: git.Fetch(cwd)}
+	})
 }
 
 // gitSync mirrors VSCode's "Sync Changes": pull, then push. With no upstream
 // configured it falls back to a first push (-u origin <branch>).
 func (m *Model) gitSync() tea.Cmd {
-	if !m.gitIsRepo {
-		return nil
-	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil
-	}
-	if !git.HasUpstream(cwd) {
-		return m.gitPush()
-	}
-	var toastCmd tea.Cmd
-	if err := git.Pull(cwd); err != nil {
-		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Sync failed (pull)", err.Error())
-		return tea.Batch(fetchGitCmd(), toastCmd)
-	}
-	if err := git.Push(cwd); err != nil {
-		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Sync failed (push)", err.Error())
-		return tea.Batch(fetchGitCmd(), toastCmd)
-	}
-	if m.nvim != nil {
-		_ = m.nvim.Command("silent! checktime")
-	}
-	m.toast, toastCmd = m.toast.Push(toast.Info, "Synced with origin")
-	return tea.Batch(fetchGitCmd(), toastCmd)
+	branch := m.gitBranch.Name
+	return m.gitRemoteOp("Syncing…", func(cwd string) gitRemoteDoneMsg {
+		if !git.HasUpstream(cwd) {
+			return gitRemoteDoneMsg{failTitle: "Push failed", okText: "Pushed to origin", err: pushCurrent(cwd, branch)}
+		}
+		if err := git.Pull(cwd); err != nil {
+			return gitRemoteDoneMsg{failTitle: "Sync failed (pull)", err: err, reload: true}
+		}
+		if err := git.Push(cwd); err != nil {
+			return gitRemoteDoneMsg{failTitle: "Sync failed (push)", err: err, reload: true}
+		}
+		return gitRemoteDoneMsg{okText: "Synced with origin", reload: true}
+	})
 }
 
 // gitInlineCommit commits the always-visible message box. amend rewords HEAD;

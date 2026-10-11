@@ -292,6 +292,7 @@ func Clone(opts CloneOptions) error {
 	cmd := exec.Command("git", "clone", "--progress", "--", url, opts.Dest)
 	cmd.Env = cloneEnv(os.Environ(), askpass, opts.Username, opts.Token)
 	cmd.Stdin = nil
+	detachTTY(cmd)
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return err
