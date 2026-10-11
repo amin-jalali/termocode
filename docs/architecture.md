@@ -89,6 +89,7 @@ Each is a self-contained Bubble Tea sub-component with its own `Model` / `Update
 | `ai`         | AI layer: streaming providers, config / secrets, chats, inline helpers, agent     |
 | `app`        | Master model — owns everything else                                               |
 | `clipring`   | Clipboard history ring                                                            |
+| `clock`      | Wall-clock seam for user-visible dates (golden tests freeze it)                   |
 | `confirm`    | "Are you sure?" modal                                                             |
 | `editor`     | Reads nvim grid via `ext_linegrid`, draws cells + scrollbar + cursor              |
 | `explorer`   | File tree sidebar; handles expand / collapse / multi-root                         |
@@ -112,7 +113,7 @@ Each is a self-contained Bubble Tea sub-component with its own `Model` / `Update
 | `theme`      | Palette tokens, built-in themes (`Spec` → palette), nvim colours, floating-card / pill / gradient helpers, icon sets |
 | `anim`       | Spring animations (harmonica); the `animations` setting                           |
 | `termimg`    | Terminal images: kitty / sixel / half-block detection, encoding, caching          |
-| `devtools`   | Developer tools: `shots` (screenshot renderer), `ansipng` (ANSI → PNG)            |
+| `devtools`   | Developer tools: `shotkit` (scripted app driver + golden screen tests), `shots` (screenshot renderer), `ansipng` (ANSI → PNG) |
 | `toast`      | Transient notifications (top-right of editor area)                                |
 
 ## AI assistant (`internal/ai` + `internal/app/ai_*.go`)

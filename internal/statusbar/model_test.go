@@ -134,6 +134,9 @@ func TestTruncate(t *testing.T) {
 	}{
 		{"abc", 5, "abc"},
 		{"abcdef", 5, "abcd…"},
+		// multi-byte glyphs are kept whole, counted by cell width
+		{"● TERM  Ln 3", 8, "● TERM …"},
+		{"日本語テキスト", 5, "日本…"},
 	}
 	for _, tc := range cases {
 		if got := truncate(tc.s, tc.n); got != tc.want {

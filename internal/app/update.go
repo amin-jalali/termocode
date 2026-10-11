@@ -2157,6 +2157,16 @@ func (m *Model) refreshBreadcrumbs(path string) {
 		}
 		return
 	}
+	// Terminal buffers are named term://{cwd}//{pid}:{cmd}; show
+	// "Terminal › sh" instead of the URI split on slashes (which showed
+	// "term: › ~ › … › 12345: › bin › sh").
+	if segs, ok := terminalBreadcrumbs(path); ok {
+		m.breadcrumbs = append(m.breadcrumbs, segs...)
+		if len(prev) == 0 {
+			m.applyLayout()
+		}
+		return
+	}
 	// Make the path repository-relative when the file lives under cwd.
 	if cwd, err := os.Getwd(); err == nil {
 		if rel, err := filepath.Rel(cwd, path); err == nil && !strings.HasPrefix(rel, "..") {
@@ -2262,4 +2272,26 @@ func saveDetail(path string) string {
 		lines++
 	}
 	return fmt.Sprintf("%s - %dL, %dB written", base, lines, bytes)
+}
+
+// terminalBreadcrumbs maps a terminal buffer name (term://{cwd}//{pid}:{cmd})
+// to the segments "Terminal", "<command name>". ok is false for other paths.
+func terminalBreadcrumbs(path string) (segs []string, ok bool) {
+	if !strings.HasPrefix(path, "term://") {
+		return nil, false
+	}
+	cmd := path
+	if i := strings.LastIndex(cmd, "//"); i >= 0 {
+		cmd = cmd[i+2:]
+	}
+	if _, after, found := strings.Cut(cmd, ":"); found {
+		cmd = after
+	}
+	if f := strings.Fields(cmd); len(f) > 0 {
+		cmd = filepath.Base(f[0])
+	}
+	if cmd == "" || cmd == "." || cmd == "/" {
+		return []string{"Terminal"}, true
+	}
+	return []string{"Terminal", cmd}, true
 }

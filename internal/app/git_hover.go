@@ -185,8 +185,8 @@ func renderCommitHoverCard(d git.CommitDetail, w int) []string {
 
 	pushPlain("", 0)
 	stat := st(addFG).Render(fmt.Sprintf("+%d", d.Add)) + pad.Render(" ") +
-		st(delFG).Render(fmt.Sprintf("−%d", d.Del)) + pad.Render(fmt.Sprintf("  %d files", d.Files))
-	statW := runewidth.StringWidth(fmt.Sprintf("+%d −%d  %d files", d.Add, d.Del, d.Files))
+		st(delFG).Render(fmt.Sprintf("−%d", d.Del)) + pad.Render(fmt.Sprintf("  %d file%s", d.Files, plural(d.Files)))
+	statW := runewidth.StringWidth(fmt.Sprintf("+%d −%d  %d file%s", d.Add, d.Del, d.Files, plural(d.Files)))
 	hash := st(dimFG).Render(d.Hash)
 	gap := inner - statW - runewidth.StringWidth(d.Hash)
 	if gap < 1 {
