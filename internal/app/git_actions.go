@@ -351,6 +351,9 @@ func (m Model) gitDiffCmd() tea.Cmd {
 // both in diff mode. Runs on the main loop (ExecLua is synchronous, so the
 // temp file is safe to remove afterwards).
 func (m *Model) openSideBySideDiff(msg gitDiffReadyMsg) {
+	// The temp file is only read here (ExecLua is synchronous): remove it on
+	// every path, also when there is no nvim to show it.
+	defer os.Remove(msg.headPath)
 	if m.nvim == nil {
 		return
 	}
@@ -358,7 +361,6 @@ func (m *Model) openSideBySideDiff(msg gitDiffReadyMsg) {
 	if err := m.nvim.ExecLua(buildDiffLua(msg.workPath, msg.headPath, msg.name, msg.hunkStarts, msg.changedLines, msg.totalLines)); err != nil {
 		m.err = "diff: " + err.Error()
 	}
-	_ = os.Remove(msg.headPath)
 	m.focus = FocusEditor
 	// The pointer now drives synced scrolling between the two panes.
 	m.gitDiffActive = true
@@ -1339,6 +1341,7 @@ func (m *Model) gitShowCommitCmd(hash string) tea.Cmd {
 // openCommitDiffBuffer renders a commit's diff into a read-only, syntax-
 // highlighted Neovim buffer in the editor window (GitLab-style single page).
 func (m *Model) openCommitDiffBuffer(msg gitCommitDiffReadyMsg) {
+	defer os.Remove(msg.path) // also when there is no nvim to show it
 	if m.nvim == nil {
 		return
 	}
@@ -1346,7 +1349,6 @@ func (m *Model) openCommitDiffBuffer(msg gitCommitDiffReadyMsg) {
 	if err := m.nvim.ExecLua(buildCommitDiffLua(msg.path, msg.name)); err != nil {
 		m.err = "diff: " + err.Error()
 	}
-	_ = os.Remove(msg.path)
 	m.focus = FocusEditor
 	m.gitDiffActive = false // single scrollable buffer — no pane sync needed
 }
