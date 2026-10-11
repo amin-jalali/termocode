@@ -514,11 +514,24 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 			// (every grid_line / grid_scroll / etc.) — at ~60fps during
 			// scroll that's a Lua roundtrip every 16ms. Coalesce to 100ms.
 			const stateThrottle = 100 * time.Millisecond
-			if time.Since(m.stateLastFetch) >= stateThrottle {
+			// A throttled redraw schedules one trailing fetch: otherwise
+			// the state after the burst's last redraw (cursor, buffer,
+			// filetype) stays unread until something else redraws.
+			if since := time.Since(m.stateLastFetch); since >= stateThrottle {
 				m.stateLastFetch = time.Now()
 				cmds = append(cmds, m.fetchStateCmd())
+			} else if !m.stateFetchPending {
+				m.stateFetchPending = true
+				cmds = append(cmds, tea.Tick(stateThrottle-since, func(time.Time) tea.Msg { return stateTrailingFetchMsg{} }))
 			}
 			return m, tea.Batch(cmds...), true
+		}
+		return m, nil, true
+	case stateTrailingFetchMsg:
+		m.stateFetchPending = false
+		if m.nvim != nil {
+			m.stateLastFetch = time.Now()
+			return m, m.fetchStateCmd(), true
 		}
 		return m, nil, true
 	case StateMsg:
@@ -1067,6 +1080,10 @@ func toNvimBufs(in []nvimBuffer) []nvim.BufferInfo {
 	}
 	return out
 }
+
+// stateTrailingFetchMsg runs the state fetch that the redraw throttle
+// put off.
+type stateTrailingFetchMsg struct{}
 
 func (m Model) fetchStateCmd() tea.Cmd {
 	if m.nvim == nil {

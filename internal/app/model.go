@@ -296,8 +296,10 @@ type Model struct {
 	// stateLastFetch throttles fetchStateCmd. nvim emits a burst of
 	// RedrawMsgs when scrolling — issuing a Lua FetchState per redraw
 	// makes scrolling feel choppy on large files. We coalesce them down
-	// to ~10 Hz instead.
-	stateLastFetch time.Time
+	// to ~10 Hz instead. stateFetchPending is set while a trailing fetch
+	// is scheduled, so the last redraw of a burst is never left unread.
+	stateLastFetch    time.Time
+	stateFetchPending bool
 
 	// lastReloadSeq remembers the most recent FileChangedShellPost counter
 	// surfaced via FetchState. A higher value in the next StateMsg means a
