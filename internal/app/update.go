@@ -1212,7 +1212,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	if m.inTerminal && shouldPassToTerminal(msg) {
+	if m.inTerminal && shouldPassToTerminal(msg) && !m.skipsShell(msg) {
 		var cmd tea.Cmd
 		m.editor, cmd = m.editor.Update(msg)
 		return m, cmd
