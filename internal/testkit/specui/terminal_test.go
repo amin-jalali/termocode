@@ -80,6 +80,25 @@ func TestTerminalCtrlCInterrupts(t *testing.T) {
 	run(t, d, "echo AFTER$((3))", "AFTER3")
 }
 
+// Spec: Given a terminal with 300 lines of output,
+// when the user turns the mouse wheel up over the panel,
+// then older lines show (scrollback) and the last line is gone; typing
+// a command returns to the prompt and runs it.
+func TestTerminalWheelScrollback(t *testing.T) {
+	d := termDriver(t)
+	openTerminal(t, d)
+	run(t, d, "seq 1 300 | sed s/^/L/", "L300")
+	x, y, _ := locate(d, "L299")
+	for range 4 {
+		d.Wheel(x, y, true)
+		d.Settle(100 * time.Millisecond)
+	}
+	if s := screen(d); strings.Contains(s, "L300") || !strings.Contains(s, "L28") {
+		t.Fatalf("wheel up did not scroll back:\n%s", s)
+	}
+	run(t, d, "echo BACK$((4))", "BACK4")
+}
+
 // Spec: Given an open terminal,
 // when the window gets smaller and then bigger,
 // then the shell still runs commands and the frame stays valid.
