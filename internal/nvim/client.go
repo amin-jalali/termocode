@@ -266,6 +266,10 @@ type State struct {
 	// LSPClients are the names of the LSP clients attached to the current
 	// buffer (status-bar chip).
 	LSPClients []string
+
+	// Indent describes the current buffer's indentation for the status
+	// bar: "Spaces: 2" (expandtab, shiftwidth) or "Tabs: 4" (tabstop).
+	Indent string
 }
 
 // FetchState returns the current State in a single Lua call. If a previous
@@ -344,7 +348,10 @@ func (c *Client) FetchState() (State, error) {
 			cur_win,
 			mode_first,
 			vim.wo.diff,
-			lsp_names
+			lsp_names,
+			vim.bo.expandtab
+				and ('Spaces: ' .. (vim.bo.shiftwidth > 0 and vim.bo.shiftwidth or vim.bo.tabstop))
+				or ('Tabs: ' .. vim.bo.tabstop)
 		}
 	`, &raw)
 	if err != nil {
@@ -425,6 +432,9 @@ func (c *Client) FetchState() (State, error) {
 				}
 			}
 		}
+	}
+	if len(raw) > 15 {
+		s.Indent = toString(raw[15])
 	}
 	return s, nil
 }
