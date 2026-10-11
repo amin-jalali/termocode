@@ -773,6 +773,11 @@ func (m Model) attachCmd() tea.Cmd {
 			// mode highlighting, not Select mode.
 			"set keymodel=startsel,stopsel",
 			"set selectmode=",
+			// selection=exclusive: the character under the cursor is not
+			// part of the selection, as in VSCode. With the default
+			// (inclusive) Shift+Right ×3 selected 4 characters, and a
+			// mouse drag one more than the pointer covered.
+			"set selection=exclusive",
 			"set virtualedit=onemore",
 			"set clipboard=unnamedplus",
 			"set guicursor=n-v-c-sm:block,i-ci-ve:ver25,r-cr-o:hor20",

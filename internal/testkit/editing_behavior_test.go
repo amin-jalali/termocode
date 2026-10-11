@@ -149,6 +149,48 @@ func TestClipboardWholeLineCut(t *testing.T) {
 	}
 }
 
+// Spec: Given a.txt open with the cursor at the start of line 1,
+// when the user selects with Shift+Right ×3, copies with Ctrl+C, moves to
+// the end of line 2 and pastes with Ctrl+V,
+// then exactly the 3 selected characters "alp" are inserted there.
+// And Shift+Right ×2 then Ctrl+X cuts exactly 2 characters.
+func TestClipboardSelectionCopyPaste(t *testing.T) {
+	d := editorDriver(t, nil)
+	open(d, "a.txt")
+	d.Key("shift+right", "shift+right", "shift+right")
+	d.Key("ctrl+c")
+	d.Key("down", "end")
+	d.Key("ctrl+v")
+	if got := bufLines(d); got != "alpha\nbravoalp\ncharlie" {
+		t.Fatalf("buffer = %q, want alp pasted after bravo", got)
+	}
+	d.Key("down", "home")
+	d.Key("shift+right", "shift+right")
+	d.Key("ctrl+x")
+	if got := bufLines(d); got != "alpha\nbravoalp\narlie" {
+		t.Fatalf("after cut buffer = %q, want ch cut from charlie", got)
+	}
+}
+
+// Spec: Given a.txt open,
+// when the user drags the mouse from the "a" of "alpha" to the "h"
+// and presses Ctrl+X,
+// then the cells the drag passed over ("alp") are cut, not one more.
+func TestMouseDragSelectionCut(t *testing.T) {
+	d := editorDriver(t, nil)
+	open(d, "a.txt")
+	x, y, ok := findIn(d, "alpha", sidebarW, d.W)
+	if !ok {
+		t.Fatalf("alpha not shown:\n%s", screen(d))
+	}
+	d.Drag(x, y, x+3, y)
+	d.Settle(200 * time.Millisecond)
+	d.Key("ctrl+x")
+	if got := bufLines(d); got != "ha\nbravo\ncharlie" {
+		t.Fatalf("after drag + Ctrl+X buffer = %q, want alp cut", got)
+	}
+}
+
 // Spec: Given a.txt open,
 // when the user presses Ctrl+G and enters 3,
 // then the cursor is on line 3.
