@@ -8,14 +8,13 @@ const debugBadgeText = "● DEBUG"
 
 // DebugBadgeSpan returns the [x0, x1) cell range of the "● DEBUG" badge
 // relative to the bar's left edge (Group D: a click opens the Run view);
-// ok=false when no session is live or the badge was truncated away.
+// ok=false when no session is live or the badge was dropped for width.
 func (m Model) DebugBadgeSpan(s State) (x0, x1 int, ok bool) {
 	if m.w <= 0 || !s.Debug {
 		return 0, 0, false
 	}
 	l := m.layout(s)
-	full := lipgloss.Width(m.renderRight(s))
-	if l.rightW < full {
+	if !l.debug {
 		return 0, 0, false
 	}
 	rightX := 1 + l.leftW + l.gapL + l.centerW + l.gapR
