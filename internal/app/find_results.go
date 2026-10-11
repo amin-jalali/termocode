@@ -175,6 +175,8 @@ vim.cmd('stopinsert')
 -- Remember the buffer so F4 / Shift+F4 can navigate even when the user
 -- is on a different file, and so later batches know where to append.
 vim.g.termocode_find_results_buf = buf
+-- A new search starts F4 from the top again.
+vim.b[buf].termocode_nav_row = nil
 `, tmp, query)
 	_ = m.nvim.ExecLua(lua)
 	m.focus = FocusEditor
