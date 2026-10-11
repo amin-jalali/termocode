@@ -67,3 +67,48 @@ func TestReplaceInFileWholeWordCaseLiteral(t *testing.T) {
 		t.Fatalf("got %q, want %q", body, want)
 	}
 }
+
+// replaceSteps opens Replace, fills find / replace, presses Enter n
+// times, closes the bar, saves and returns the file.
+func replaceSteps(t *testing.T, files map[string]string, rel, shown, find, repl string, n int) string {
+	t.Helper()
+	d := editorWith(t, files, rel, shown)
+	d.Key("ctrl+h")
+	d.Type(find)
+	d.Key("tab")
+	d.Type(repl)
+	for range n {
+		d.Key("enter")
+	}
+	d.Key("esc", "ctrl+s")
+	orig := files[rel]
+	return waitFile(t, d, rel, func(s string) bool { return s != orig })
+}
+
+// Spec: Given the cursor on the first of three "cat" matches,
+// when the user presses Enter in the Replace field once, twice, three
+// times, then the matches change one by one from the current one on
+// (first, then "concat", then "the cat").
+func TestReplaceInFileStartsAtCurrentMatch(t *testing.T) {
+	files := map[string]string{"pets.txt": "cat\nconcat\nthe cat sat\n"}
+	want := []string{
+		"dog\nconcat\nthe cat sat\n",
+		"dog\ncondog\nthe cat sat\n",
+		"dog\ncondog\nthe dog sat\n",
+	}
+	for i, w := range want {
+		if got := replaceSteps(t, files, "pets.txt", "the cat sat", "cat", "dog", i+1); got != w {
+			t.Errorf("after %d× Enter: got %q, want %q", i+1, got, w)
+		}
+	}
+}
+
+// Spec: Given a replacement that contains the query ("cat" → "cats"),
+// when the user presses Enter once per match,
+// then each match is replaced once — never "catss" in the same place.
+func TestReplaceInFileReplacementContainsQuery(t *testing.T) {
+	files := map[string]string{"pets.txt": "cat\nthe cat sat\n"}
+	if got, want := replaceSteps(t, files, "pets.txt", "the cat sat", "cat", "cats", 2), "cats\nthe cats sat\n"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
