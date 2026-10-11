@@ -24,6 +24,10 @@ type Model struct {
 // for scrollable display.
 func New(title, body string) Model {
 	body = strings.TrimRight(body, "\n")
+	// Expand tabs up front: lipgloss renders a tab as 4 spaces, so a
+	// width measured before rendering would be 3 cells short per tab and
+	// the row would end up wider than the screen.
+	body = strings.ReplaceAll(body, "\t", "    ")
 	return Model{title: title, lines: strings.Split(body, "\n")}
 }
 

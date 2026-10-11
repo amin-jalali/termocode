@@ -180,3 +180,14 @@ func TestViewIsExactlyWByH(t *testing.T) {
 		}
 	}
 }
+
+// Tabs (Lua error tracebacks in the Error Log) must not widen rows.
+func TestViewTabsKeepWidth(t *testing.T) {
+	m := New("Log", "stack traceback:\n\tno field package.preload['x']"+strings.Repeat("y", 30))
+	m.SetSize(40, 6)
+	for i, r := range strings.Split(m.View(), "\n") {
+		if w := lipgloss.Width(r); w != 40 {
+			t.Errorf("row %d is %d cells", i, w)
+		}
+	}
+}
