@@ -260,90 +260,33 @@ func dropLeftVisual(s string, cells int) string {
 	if cells <= 0 {
 		return s
 	}
-	var out []byte
-	var lastSGR []byte
-	visible := 0
-	emitted := false
-	i := 0
-	for i < len(s) {
-		c := s[i]
-		if c == 0x1b && i+1 < len(s) && s[i+1] == '[' {
-			// Properly skip ESC + '[', then params, then a single final
-			// byte in the CSI 0x40..0x7E range. '[' is NOT a terminator.
-			j := i + 2
-			for j < len(s) && (s[j] < 0x40 || s[j] > 0x7e) {
-				j++
-			}
-			if j < len(s) {
-				j++
-			}
-			sgr := s[i:j]
-			i = j
-			if visible >= cells {
-				if !emitted && len(lastSGR) > 0 {
-					out = append(out, lastSGR...)
-					emitted = true
-				}
-				out = append(out, sgr...)
-			} else {
-				lastSGR = []byte(sgr)
-			}
-			continue
-		}
-		if visible >= cells {
-			if !emitted && len(lastSGR) > 0 {
-				out = append(out, lastSGR...)
-				emitted = true
-			}
-			out = append(out, c)
-			i++
-			continue
-		}
-		if c < 0x80 || (c&0xC0) != 0x80 {
-			visible++
-		}
-		i++
+	want := ansi.StringWidth(s) - cells
+	out := ansi.TruncateLeft(s, cells, "")
+	if ansi.StringWidth(out) > want {
+		// The cut lands inside a wide glyph, which TruncateLeft keeps
+		// whole; drop it and keep its right half as a blank cell.
+		out = " " + ansi.TruncateLeft(s, cells+1, "")
 	}
-	return string(out)
+	if gap := want - ansi.StringWidth(out); gap > 0 {
+		out = strings.Repeat(" ", gap) + out
+	}
+	return out
 }
 
 // truncRightVisual keeps only the leftmost `cells` visible cells from s,
-// preserving ANSI escapes that apply to the kept range.
+// preserving ANSI escapes that apply to the kept range. It works on whole
+// grapheme clusters, so a multi-byte glyph is never split (a split rune is
+// invalid UTF-8; the terminal then draws extra cells, the line wraps and
+// the whole screen scrolls).
 func truncRightVisual(s string, cells int) string {
 	if cells <= 0 {
 		return ""
 	}
-	var out []byte
-	visible := 0
-	i := 0
-	for i < len(s) {
-		c := s[i]
-		if c == 0x1b && i+1 < len(s) && s[i+1] == '[' {
-			// CSI escape: skip ESC + '[' first, then read params
-			// (0x30..0x3F + 0x20..0x2F) until a final byte (0x40..0x7E).
-			// Treating '[' as a possible terminator is wrong — it's the
-			// CSI introducer, not the end byte.
-			j := i + 2
-			for j < len(s) && (s[j] < 0x40 || s[j] > 0x7e) {
-				j++
-			}
-			if j < len(s) {
-				j++ // consume final byte
-			}
-			out = append(out, s[i:j]...)
-			i = j
-			continue
-		}
-		out = append(out, c)
-		if c < 0x80 || (c&0xC0) != 0x80 {
-			visible++
-			if visible >= cells {
-				return string(out)
-			}
-		}
-		i++
+	out := ansi.Truncate(s, cells, "")
+	if w := ansi.StringWidth(out); w < cells && w < ansi.StringWidth(s) {
+		out += strings.Repeat(" ", cells-w)
 	}
-	return string(out)
+	return out
 }
 
 // renderBase composes the main layout as a horizontal stack of three

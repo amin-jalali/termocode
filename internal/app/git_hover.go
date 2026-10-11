@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/mattn/go-runewidth"
 
 	"github.com/amin-jalali/termocode/internal/activity"
@@ -147,6 +148,12 @@ func renderCommitHoverCard(d git.CommitDetail, w int) []string {
 
 	var lines []string
 	pushPlain := func(styled string, plainW int) {
+		// Measure like lipgloss does: runewidth and the renderer can
+		// disagree on symbols such as ⎇ or ⌥.
+		plainW = ansi.StringWidth(styled)
+		if plainW > inner {
+			styled, plainW = ansi.Truncate(styled, inner, "…"), inner
+		}
 		if g := inner - plainW; g > 0 {
 			styled += pad.Render(strings.Repeat(" ", g))
 		}
@@ -185,7 +192,7 @@ func renderCommitHoverCard(d git.CommitDetail, w int) []string {
 	if gap < 1 {
 		gap = 1
 	}
-	lines = append(lines, stat+pad.Render(strings.Repeat(" ", gap))+hash)
+	pushPlain(stat+pad.Render(strings.Repeat(" ", gap))+hash, 0)
 
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
