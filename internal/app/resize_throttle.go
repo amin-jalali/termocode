@@ -18,6 +18,12 @@ import (
 
 const dragIdleResize = 250 * time.Millisecond
 
+// winIdleResize is the same for terminal window resizes: dragging the
+// window's edge sends a burst of size events, and waiting on nvim for each
+// one made the whole resize stutter. nvim gets the size once the burst has
+// been quiet this long.
+const winIdleResize = 60 * time.Millisecond
+
 // resizeThrottle defers nvim resize requests during a drag.
 type resizeThrottle struct {
 	lastReq   time.Time // last size request while dragging
@@ -27,11 +33,11 @@ type resizeThrottle struct {
 }
 
 // request records a new size. It returns true when the caller should
-// resize now (no drag in progress); during a drag the size is kept for
-// the release / idle flush.
-func (t *resizeThrottle) request(w, h int, dragging bool, now time.Time) bool {
+// resize now (no drag or window resize in progress); otherwise the size is
+// kept for the release / idle flush.
+func (t *resizeThrottle) request(w, h int, deferring bool, now time.Time) bool {
 	t.w, t.h = w, h
-	if !dragging {
+	if !deferring {
 		t.pending = false
 		return true
 	}
@@ -40,14 +46,14 @@ func (t *resizeThrottle) request(w, h int, dragging bool, now time.Time) bool {
 	return false
 }
 
-// flush returns the pending size when it should go out now: always after
-// the drag ended, else only once the pointer rested for dragIdleResize.
-func (t *resizeThrottle) flush(dragging bool, now time.Time) (w, h int, ok bool) {
+// flush returns the pending size when it should go out now: at once when
+// idle is 0 (the drag ended), else only once no new size came for idle.
+func (t *resizeThrottle) flush(idle time.Duration, now time.Time) (w, h int, ok bool) {
 	t.scheduled = false
 	if !t.pending {
 		return 0, 0, false
 	}
-	if dragging && now.Sub(t.lastReq) < dragIdleResize {
+	if now.Sub(t.lastReq) < idle {
 		return 0, 0, false
 	}
 	t.pending = false
@@ -62,7 +68,7 @@ func (m *Model) sendNvimResize(w, h int) {
 	if m.nvim == nil {
 		return
 	}
-	if !m.resizeT.request(w, h, m.dragKind != dragNone, time.Now()) {
+	if !m.resizeT.request(w, h, m.resizeIdle(time.Now()) > 0, time.Now()) {
 		return
 	}
 	_ = m.nvim.Resize(w, h)
@@ -75,7 +81,8 @@ func (m *Model) resizeAfterUpdate() tea.Cmd {
 	if !m.resizeT.pending {
 		return nil
 	}
-	if m.dragKind == dragNone {
+	idle := m.resizeIdle(time.Now())
+	if idle == 0 {
 		m.onResizeFlush()
 		return nil
 	}
@@ -83,12 +90,25 @@ func (m *Model) resizeAfterUpdate() tea.Cmd {
 		return nil
 	}
 	m.resizeT.scheduled = true
-	return tea.Tick(dragIdleResize, func(time.Time) tea.Msg { return resizeFlushMsg{} })
+	return tea.Tick(idle, func(time.Time) tea.Msg { return resizeFlushMsg{} })
+}
+
+// resizeIdle is how long nvim resizes are held back right now: the drag
+// idle time during a splitter drag, the window idle time during a burst of
+// window size events, else 0 (resize at once).
+func (m *Model) resizeIdle(now time.Time) time.Duration {
+	switch {
+	case m.dragKind != dragNone:
+		return dragIdleResize
+	case now.Sub(m.lastWinResize) < winIdleResize:
+		return winIdleResize
+	}
+	return 0
 }
 
 // onResizeFlush sends the pending size if it is due.
 func (m *Model) onResizeFlush() {
-	if w, h, ok := m.resizeT.flush(m.dragKind != dragNone, time.Now()); ok && m.nvim != nil {
+	if w, h, ok := m.resizeT.flush(m.resizeIdle(time.Now()), time.Now()); ok && m.nvim != nil {
 		_ = m.nvim.Resize(w, h)
 		m.reapplyTerminalSplit()
 	}

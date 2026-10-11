@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"strconv"
 
 	"github.com/amin-jalali/termocode/internal/nvim"
 )
@@ -36,3 +37,9 @@ func (m Model) ExplorerCursor() (string, []string) {
 // FocusedEditor reports whether keys go to the editor (else the sidebar).
 // For tests.
 func (m Model) FocusedEditor() bool { return m.focus == FocusEditor }
+
+// EditorPaneSize is the nvim grid size ("COLSxROWS") the layout asked for
+// last. For tests.
+func (m Model) EditorPaneSize() string {
+	return strconv.Itoa(m.resizeT.w) + "x" + strconv.Itoa(m.resizeT.h)
+}

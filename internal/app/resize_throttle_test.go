@@ -17,7 +17,7 @@ func TestResizeThrottleDefersDrag(t *testing.T) {
 			sent++
 		}
 		if i%50 == 49 { // idle-check ticks while the pointer keeps moving
-			if _, _, ok := th.flush(true, now); ok {
+			if _, _, ok := th.flush(dragIdleResize, now); ok {
 				sent++
 			}
 		}
@@ -25,7 +25,7 @@ func TestResizeThrottleDefersDrag(t *testing.T) {
 	if sent != 0 {
 		t.Fatalf("%d resizes during an active drag, want 0", sent)
 	}
-	if w, _, ok := th.flush(false, t0.Add(301*time.Millisecond)); ok {
+	if w, _, ok := th.flush(0, t0.Add(301*time.Millisecond)); ok {
 		sent++
 		lastW = w
 	}
@@ -38,10 +38,10 @@ func TestResizeThrottleIdleDuringDrag(t *testing.T) {
 	var th resizeThrottle
 	t0 := time.Unix(0, 0)
 	th.request(90, 30, true, t0)
-	if _, _, ok := th.flush(true, t0.Add(100*time.Millisecond)); ok {
+	if _, _, ok := th.flush(dragIdleResize, t0.Add(100*time.Millisecond)); ok {
 		t.Fatal("resize before the pointer rested")
 	}
-	if w, _, ok := th.flush(true, t0.Add(dragIdleResize)); !ok || w != 90 {
+	if w, _, ok := th.flush(dragIdleResize, t0.Add(dragIdleResize)); !ok || w != 90 {
 		t.Fatal("a resting pointer should get one resize")
 	}
 }
@@ -54,7 +54,7 @@ func TestResizeThrottleNotDraggingSendsAtOnce(t *testing.T) {
 			t.Fatal("outside a drag every resize must go out immediately")
 		}
 	}
-	if _, _, ok := th.flush(false, now); ok {
+	if _, _, ok := th.flush(0, now); ok {
 		t.Error("nothing should be pending")
 	}
 }
