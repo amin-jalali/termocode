@@ -86,6 +86,59 @@ func TestTabsCloseAndReopen(t *testing.T) {
 	}
 }
 
+// Spec: Given b.txt active with unsaved edits,
+// when the user closes its tab and picks Cancel, then the tab stays dirty;
+// when the user closes it and picks Don't Save, then the tab is gone and
+// the file is unchanged;
+// and given c.txt active with unsaved edits, when the user closes it and
+// picks Save, then the edit is on disk and the tab is gone.
+func TestTabsCloseDirtyAsks(t *testing.T) {
+	d := editorDriver(t, nil)
+	openABC(d)
+	open(d, "b.txt")
+	d.Type("B")
+	if !waitTabs(d, "a.txt", "b.txt*", "c.txt") {
+		got, _ := tabs(d)
+		t.Fatalf("tabs = %v", got)
+	}
+
+	d.Key("ctrl+w")
+	if _, _, ok := find(d, "unsaved changes"); !ok {
+		t.Fatalf("closing a dirty tab did not ask:\n%s", screen(d))
+	}
+	clickButton(d, "Cancel")
+	if !waitTabs(d, "a.txt", "b.txt*", "c.txt") {
+		got, _ := tabs(d)
+		t.Fatalf("Cancel closed something: %v", got)
+	}
+
+	d.Key("ctrl+w")
+	clickButton(d, "Don't Save")
+	if !waitTabs(d, "a.txt", "c.txt") {
+		got, _ := tabs(d)
+		t.Fatalf("Don't Save: tabs %v", got)
+	}
+	if got := diskFile(d, "b.txt"); got != "one\ntwo\nthree\n" {
+		t.Errorf("Don't Save changed b.txt: %q", got)
+	}
+
+	open(d, "c.txt")
+	d.Type("C")
+	if !waitTabs(d, "a.txt", "c.txt*") {
+		got, _ := tabs(d)
+		t.Fatalf("tabs = %v", got)
+	}
+	d.Key("ctrl+w")
+	clickButton(d, "Save")
+	if !waitTabs(d, "a.txt") {
+		got, _ := tabs(d)
+		t.Fatalf("Save: tabs %v", got)
+	}
+	if got := diskFile(d, "c.txt"); got != "Cred\ngreen\nblue\n" {
+		t.Errorf("Save: c.txt = %q", got)
+	}
+}
+
 // Spec: Given a.txt, b.txt, c.txt open,
 // when the user right-clicks the b.txt tab and picks Close Others,
 // then only b.txt stays open.
