@@ -74,7 +74,7 @@ func TestTaskProblemMatcherFeedsProblems(t *testing.T) {
 	mustSee(t, d, "speclint")
 	d.Type("speclint")
 	d.Key("enter")
-	mustSee(t, d, "spec task problem")
+	mustSee(t, d, `Task "speclint" failed`) // the task has ended: its problems are final
 	d.Palette("problems-panel")
 	mustSee(t, d, "b.go  1")
 	d.Key("end", "enter") // the last row: the task's problem
