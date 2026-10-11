@@ -911,32 +911,38 @@ func vimReplaceEscape(s string) string {
 }
 
 // findbarPattern builds an nvim search/substitute LHS pattern from `find`,
-// honoring the findbar's case / word / regex toggles. Mirrors applySearch's
-// recipe so :s and the @/ search register agree.
+// honoring the findbar's case / word / regex toggles. applySearch uses it
+// too, so :s and the @/ search register agree. Regex mode takes
+// JavaScript syntax (see jsRegexToVim).
 func (m *Model) findbarPattern(find string) string {
-	pat := find
-	if !m.find.UseRegex() {
-		pat = `\V` + strings.ReplaceAll(pat, `\`, `\\`)
-		// Inside \V, slashes still need escaping for the :s delimiter.
-		pat = strings.ReplaceAll(pat, `/`, `\/`)
-	} else {
-		// In magic-regex mode escape only the :s delimiter.
-		pat = strings.ReplaceAll(pat, `/`, `\/`)
-	}
-	if m.find.WholeWord() {
-		if m.find.UseRegex() {
-			pat = `\<` + pat + `\>`
-		} else {
-			body := strings.TrimPrefix(pat, `\V`)
-			pat = `\<\V` + body + `\m\>`
+	var pat string
+	switch {
+	case m.find.UseRegex() && m.find.WholeWord():
+		// The group keeps an alternation (a|b) inside the word anchors.
+		pat = `\<\v%(` + strings.TrimPrefix(jsRegexToVim(find), `\v`) + `)\m\>`
+	case m.find.UseRegex():
+		pat = jsRegexToVim(find)
+	default:
+		// \V: every character is literal except \; / is escaped for the
+		// :s delimiter.
+		pat = `\V` + strings.ReplaceAll(strings.ReplaceAll(find, `\`, `\\`), `/`, `\/`)
+		if m.find.WholeWord() {
+			pat = `\<` + pat + `\m\>`
 		}
 	}
 	if m.find.CaseSensitive() {
-		pat = `\C` + pat
-	} else {
-		pat = `\c` + pat
+		return `\C` + pat
 	}
-	return pat
+	return `\c` + pat
+}
+
+// findbarReplacement escapes the Replace input for the right side of :s.
+// In regex mode $1 / $& / \n work as in VS Code.
+func (m *Model) findbarReplacement(replace string) string {
+	if m.find.UseRegex() {
+		return jsReplaceToVim(replace)
+	}
+	return vimReplaceEscape(replace)
 }
 
 // applyReplaceNext replaces the match under the cursor — or, when the
@@ -948,7 +954,7 @@ func (m *Model) applyReplaceNext(find, replace string) {
 	if m.nvim == nil || find == "" {
 		return
 	}
-	_ = m.nvim.ExecLuaArgs(replaceNextLua, m.findbarPattern(find), vimReplaceEscape(replace))
+	_ = m.nvim.ExecLuaArgs(replaceNextLua, m.findbarPattern(find), m.findbarReplacement(replace))
 }
 
 // replaceNextLua does one replace-and-advance (see applyReplaceNext). The
@@ -978,7 +984,7 @@ func (m *Model) applyReplaceAll(find, replace string) {
 		return
 	}
 	pat := m.findbarPattern(find)
-	rep := vimReplaceEscape(replace)
+	rep := m.findbarReplacement(replace)
 	_ = m.nvim.Command(fmt.Sprintf("silent! %%s/%s/%s/g", pat, rep))
 }
 
@@ -994,35 +1000,7 @@ func (m *Model) applySearch(q string) {
 		m.find.SetMatchCount("")
 		return
 	}
-	pattern := q
-	// Regex toggle off → treat the pattern as a literal substring. \V is
-	// nvim's "very nomagic" mode where every metachar except \ becomes
-	// literal; we still escape \ → \\ so users can search for a backslash.
-	if !m.find.UseRegex() {
-		pattern = `\V` + strings.ReplaceAll(pattern, `\`, `\\`)
-	}
-	// Whole-word toggle wraps the body in word-boundary anchors. \< and \>
-	// work in both magic and \V "very nomagic" mode, so we add them after
-	// the \V prefix is in place but before the case flag (which must come
-	// at the very front).
-	if m.find.WholeWord() {
-		if m.find.UseRegex() {
-			pattern = `\<` + pattern + `\>`
-		} else {
-			// In \V mode the whole literal sits between \V and the trailing
-			// chars; wrap with \<…\> outside the literal block by exiting
-			// \V via \m, then re-enter with a fresh \V on the body.
-			body := strings.TrimPrefix(pattern, `\V`)
-			pattern = `\<\V` + body + `\m\>`
-		}
-	}
-	// Case toggle inline — \C forces sensitive, \c forces insensitive,
-	// regardless of the user's 'ignorecase' / 'smartcase' settings.
-	if m.find.CaseSensitive() {
-		pattern = `\C` + pattern
-	} else {
-		pattern = `\c` + pattern
-	}
+	pattern := m.findbarPattern(q)
 	escaped := strings.ReplaceAll(pattern, "'", "''")
 	_ = m.nvim.Command(fmt.Sprintf("silent! let @/ = '%s' | set hlsearch", escaped))
 	m.find.SetMatchCount(m.fetchMatchCount())

@@ -135,3 +135,61 @@ func TestReplaceInFileReplacementContainsQuery(t *testing.T) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
+
+// Spec: Given a file with "foo" in several cases and words,
+// when the user opens Find (Ctrl+F) and types "foo",
+// then the panel counts every case-insensitive match; the Aa, ab and .*
+// toggles narrow the count to case-sensitive, whole-word and regex
+// matches, and the regex takes VS Code (JavaScript) syntax: "fo+b".
+func TestFindInFileCountsAndToggles(t *testing.T) {
+	files := map[string]string{"a.txt": "foo Foo foobar\nfoo FOO xfoo\nfob fooob\n"}
+	d := editorWith(t, files, "a.txt", "foobar")
+	d.Key("ctrl+f")
+	d.Type("foo")
+	total := func() string {
+		t.Helper()
+		_, n := findCount(t, lineWith(d, "Aa ab .*"))
+		return n
+	}
+	if got := total(); got != "7" {
+		t.Fatalf("case-insensitive count = %q, want 7\n%s", got, screen(d))
+	}
+	clickText(t, d, "Aa") // case sensitive
+	if got := total(); got != "5" {
+		t.Errorf("case-sensitive count = %q, want 5\n%s", got, screen(d))
+	}
+	clickText(t, d, "ab ") // + whole word
+	if got := total(); got != "2" {
+		t.Errorf("case + whole word count = %q, want 2\n%s", got, screen(d))
+	}
+	clickText(t, d, "ab ") // whole word off
+	clickText(t, d, ".*")  // regex on
+	d.Key("backspace", "backspace", "backspace")
+	d.Type("fo+b")
+	if got := total(); got != "3" {
+		t.Errorf("regex fo+b count = %q, want 3 (foobar, fob, fooob)\n%s", got, screen(d))
+	}
+	d.Key("backspace", "backspace", "backspace", "backspace")
+	d.Type("(fob|xfoo)")
+	if got := total(); got != "2" {
+		t.Errorf("regex (fob|xfoo) count = %q, want 2\n%s", got, screen(d))
+	}
+}
+
+// Spec: Given Replace in regex mode,
+// when the user replaces `(\w+)@(\w+)` with `$2 at $1` (Alt+Enter: all),
+// then each match is rewritten with its groups swapped.
+func TestReplaceInFileRegexGroups(t *testing.T) {
+	files := map[string]string{"mail.txt": "ann@home\nbob@work\n"}
+	d := editorWith(t, files, "mail.txt", "bob@work")
+	d.Key("ctrl+h")
+	clickText(t, d, ".*")
+	d.Type(`(\w+)@(\w+)`)
+	d.Key("tab")
+	d.Type("$2 at $1")
+	d.Key("alt+enter", "ctrl+s")
+	want := "home at ann\nwork at bob\n"
+	if got := waitFile(t, d, "mail.txt", func(s string) bool { return s == want }); got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
