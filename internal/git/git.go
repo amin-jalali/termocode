@@ -5,8 +5,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
-	"time"
+
+	"github.com/amin-jalali/termocode/internal/clock"
 )
 
 // FileStatus represents one entry from `git status --porcelain=v1`.
@@ -255,7 +257,7 @@ func relativeTimeFromEpoch(epoch int64) string {
 	if epoch <= 0 {
 		return ""
 	}
-	now := time.Now().Unix()
+	now := clock.Now().Unix()
 	diff := now - epoch
 	switch {
 	case diff < 0:
@@ -280,7 +282,7 @@ func FileHistory(dir, path string, limit int) ([]LogEntry, error) {
 	if limit <= 0 {
 		limit = 200
 	}
-	fmtArg := "--pretty=format:%h%x1f%s%x1f%an%x1f%ar%x1f%d%x1e"
+	fmtArg := "--pretty=format:%h%x1f%s%x1f%an%x1f%at%x1f%d%x1e"
 	out, err := runOut(dir, "git", "log", fmtArg, fmt.Sprintf("-n%d", limit), "--follow", "--", path)
 	if err != nil {
 		return nil, err
@@ -299,7 +301,7 @@ func FileHistory(dir, path string, limit int) ([]LogEntry, error) {
 			Hash:    fields[0],
 			Subject: fields[1],
 			Author:  fields[2],
-			When:    fields[3],
+			When:    relativeDate(fields[3]),
 			Refs:    strings.TrimSpace(fields[4]),
 		})
 	}
@@ -341,7 +343,7 @@ func Log(dir string, limit int) ([]LogEntry, error) {
 	// We use unit separators (\x1f) between fields and record separators
 	// (\x1e) between records so commit messages with arbitrary punctuation
 	// don't confuse the parser.
-	fmtArg := "--pretty=format:%h%x1f%s%x1f%an%x1f%ar%x1f%d%x1e"
+	fmtArg := "--pretty=format:%h%x1f%s%x1f%an%x1f%at%x1f%d%x1e"
 	out, err := runOut(dir, "git", "log", fmtArg, fmt.Sprintf("-n%d", limit))
 	if err != nil {
 		return nil, err
@@ -360,7 +362,7 @@ func Log(dir string, limit int) ([]LogEntry, error) {
 			Hash:    fields[0],
 			Subject: fields[1],
 			Author:  fields[2],
-			When:    fields[3],
+			When:    relativeDate(fields[3]),
 			Refs:    strings.TrimSpace(fields[4]),
 		})
 	}
@@ -393,7 +395,7 @@ func GraphLog(dir string, limit int) ([]GraphLine, error) {
 	// on each NODE line. Connector lines carry no format output, so they have
 	// no \x1f and parse as art-only. Fields: hash, subject, refs, committer
 	// relative date, parent hashes (for merge detection).
-	fmtArg := "--pretty=format:%h%x1f%s%x1f%d%x1f%cr%x1f%p"
+	fmtArg := "--pretty=format:%h%x1f%s%x1f%d%x1f%ct%x1f%p"
 	out, err := runOut(dir, "git", "log", "--graph", "--abbrev-commit", "--decorate", fmtArg, fmt.Sprintf("-n%d", limit))
 	if err != nil {
 		return nil, err
@@ -420,7 +422,7 @@ func GraphLog(dir string, limit int) ([]GraphLine, error) {
 			gl.Refs = strings.TrimSpace(fields[2])
 		}
 		if len(fields) > 3 {
-			gl.Age = compactAge(fields[3])
+			gl.Age = compactAge(relativeDate(fields[3]))
 		}
 		if len(fields) > 4 {
 			gl.IsMerge = strings.Contains(strings.TrimSpace(fields[4]), " ")
@@ -436,6 +438,65 @@ func GraphLog(dir string, limit int) ([]GraphLine, error) {
 		lines = append(lines, gl)
 	}
 	return lines, nil
+}
+
+// relativeDate formats a unix timestamp (git's %at / %ct) the way git's
+// %ar / %cr does ("3 days ago", "2 weeks ago", "1 year, 2 months ago"), but
+// against clock.Now so tests can freeze time. It ports show_date_relative
+// from git's date.c.
+func relativeDate(epoch string) string {
+	t, err := strconv.ParseInt(strings.TrimSpace(epoch), 10, 64)
+	if err != nil {
+		return ""
+	}
+	now := clock.Now().Unix()
+	if now < t {
+		return "in the future"
+	}
+	ago := func(n int64, unit string) string {
+		if n == 1 {
+			return fmt.Sprintf("1 %s ago", unit)
+		}
+		return fmt.Sprintf("%d %ss ago", n, unit)
+	}
+	diff := now - t
+	if diff < 90 {
+		return ago(diff, "second")
+	}
+	diff = (diff + 30) / 60 // minutes
+	if diff < 90 {
+		return ago(diff, "minute")
+	}
+	diff = (diff + 30) / 60 // hours
+	if diff < 36 {
+		return ago(diff, "hour")
+	}
+	diff = (diff + 12) / 24 // days
+	if diff < 14 {
+		return ago(diff, "day")
+	}
+	if diff < 70 {
+		return ago((diff+3)/7, "week")
+	}
+	if diff < 365 {
+		return ago((diff+15)/30, "month")
+	}
+	if diff < 1825 {
+		total := (diff*12*2 + 365) / (365 * 2)
+		years, months := total/12, total%12
+		if months == 0 {
+			return ago(years, "year")
+		}
+		y := "1 year"
+		if years != 1 {
+			y = fmt.Sprintf("%d years", years)
+		}
+		if months == 1 {
+			return y + ", 1 month ago"
+		}
+		return fmt.Sprintf("%s, %d months ago", y, months)
+	}
+	return ago((diff+183)/365, "year")
 }
 
 // compactAge squeezes git's `%cr` ("3 hours ago", "just now") into a 2-3 char
@@ -637,7 +698,7 @@ type CommitDetail struct {
 func ShowCommitDetail(dir, hash string) (CommitDetail, error) {
 	const sep = "\x1f"
 	// Fields, then \x1e, then git appends the --shortstat summary line.
-	fmtArg := "--format=%h" + sep + "%an" + sep + "%ae" + sep + "%ad" + sep + "%ar" + sep + "%s" + sep + "%b" + "\x1e"
+	fmtArg := "--format=%h" + sep + "%an" + sep + "%ae" + sep + "%ad" + sep + "%at" + sep + "%s" + sep + "%b" + "\x1e"
 	out, err := runOut(dir, "git", "show", "--no-color", "--shortstat",
 		"--date=format-local:%Y-%m-%d %H:%M", fmtArg, hash)
 	if err != nil {
@@ -651,7 +712,7 @@ func ShowCommitDetail(dir, hash string) (CommitDetail, error) {
 	f := strings.Split(meta, sep)
 	if len(f) >= 7 {
 		d.Hash, d.Author, d.Email = f[0], f[1], f[2]
-		d.DateAbs, d.DateRel, d.Subject = f[3], f[4], f[5]
+		d.DateAbs, d.DateRel, d.Subject = f[3], relativeDate(f[4]), f[5]
 		d.Body = strings.TrimSpace(f[6])
 	}
 	d.Files, d.Add, d.Del = parseShortstat(tail)

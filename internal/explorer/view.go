@@ -718,36 +718,38 @@ func gitBadgeStyle(code string) (theme.Color256, bool) {
 	return theme.TextMuted, false
 }
 
-// computeFolderCounts walks every root once and tallies the number of
-// changed descendant files (M/A/D/C/U) under each folder. Linear in the
-// total number of nodes.
+// computeFolderCounts tallies the changed entries (M/A/D/C/U; an untracked
+// folder counts once, as in Source Control) under each folder of every
+// root. It works from the status paths, not the loaded tree, so a
+// collapsed folder whose children were never read still shows its count
+// (before, the badge depended on whether something had happened to load
+// the folder). Linear in len(gs) × path depth.
 func computeFolderCounts(roots []*Node, gs GitStatus) map[string]int {
 	out := map[string]int{}
 	if gs == nil {
 		return out
 	}
-	var walk func(*Node) int
-	walk = func(n *Node) int {
-		if n == nil {
-			return 0
+	sep := string(filepath.Separator)
+	for p, code := range gs {
+		if code == "" || code == "I" {
+			continue
 		}
-		if !n.IsDir {
-			if code, ok := gs[n.Path]; ok && code != "" && code != "I" {
-				return 1
+		var root string
+		for _, r := range roots {
+			if r != nil && strings.HasPrefix(p, r.Path+sep) {
+				root = r.Path
+				break
 			}
-			return 0
 		}
-		total := 0
-		for _, c := range n.Children {
-			total += walk(c)
+		if root == "" {
+			continue
 		}
-		if total > 0 {
-			out[n.Path] = total
+		for dir := filepath.Dir(p); ; dir = filepath.Dir(dir) {
+			out[dir]++
+			if dir == root || len(dir) <= len(root) {
+				break
+			}
 		}
-		return total
-	}
-	for _, r := range roots {
-		walk(r)
 	}
 	return out
 }

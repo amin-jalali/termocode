@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 
+	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
@@ -990,7 +991,7 @@ func buildRecentsColumn(entries []RecentEntry, w int) ([]string, []int, []string
 		return lines, idxs, paths
 	}
 
-	now := time.Now()
+	now := clock.Now()
 	home, _ := os.UserHomeDir()
 
 	for i := 0; i < shown; i++ {
@@ -1142,7 +1143,7 @@ func buildWorkspacesColumn(entries []WorkspaceEntry, w int) ([]string, []int, []
 	if shown > maxShown {
 		shown = maxShown
 	}
-	now := time.Now()
+	now := clock.Now()
 	home, _ := os.UserHomeDir()
 	wsCounts := workspaceFileCounts()
 

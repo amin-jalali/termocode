@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 
 	"github.com/amin-jalali/termocode/internal/theme"
 )
@@ -148,8 +149,8 @@ func (m Model) layout(s State) barLayout {
 	if l.leftW+l.rightW > innerW {
 		// Truncate the right cluster first — the filename on the left
 		// is more critical than the trailing metadata when space is
-		// tight.
-		avail := innerW - l.leftW
+		// tight. Keep a small gap so the clusters don't touch.
+		avail := innerW - l.leftW - minClusterGap
 		if avail < 0 {
 			avail = 0
 		}
@@ -254,6 +255,10 @@ func (m Model) AIBadgeSpan(s State) (x0, x1 int, ok bool) {
 // stripping ANSI escapes, truncating with an ellipsis, and re-styling
 // the result with the status-bar palette. Good enough for the trailing
 // fields where we just need to fit.
+// minClusterGap is the blank space kept between the left and right
+// clusters when the right one has to be cut.
+const minClusterGap = 2
+
 func truncateStyled(s string, w int) string {
 	if w <= 0 {
 		return ""
@@ -500,9 +505,12 @@ func renderLSPChip(clients []string) string {
 	return barFg(theme.TextSecondary).Render("{} " + strings.Join(clients, ", "))
 }
 
+// truncate cuts s to n display cells, ending in "…". It counts cells, not
+// bytes, so it never splits a multi-byte glyph (a Nerd icon cut in half
+// printed "\xee…" at the right end of a narrow status bar).
 func truncate(s string, n int) string {
-	if len(s) <= n {
+	if runewidth.StringWidth(s) <= n {
 		return s
 	}
-	return s[:n-1] + "…"
+	return runewidth.Truncate(s, n, "…")
 }

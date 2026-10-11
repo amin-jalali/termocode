@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -578,7 +579,7 @@ func (m Model) renderRow(st styles, r Result, active bool, w int) []string {
 	if maxLeft < 8 {
 		maxLeft = 8
 	}
-	relpath := runewidth.Truncate(r.Path, maxLeft, "…")
+	relpath := runewidth.Truncate(m.displayPath(r.Path), maxLeft, "…")
 	body := " " + relpath
 	bodyW := lipgloss.Width(body) + lipgloss.Width(loc)
 	pad := w - bodyW
@@ -615,6 +616,29 @@ func (m Model) renderRow(st styles, r Result, active bool, w int) []string {
 		out = append(out, ctxLine(c))
 	}
 	return out
+}
+
+// displayPath shows a result path relative to the search root it lives
+// under (prefixed with the root's name when several roots are open), the
+// way the explorer names files. Paths outside every root stay as they are.
+func (m Model) displayPath(p string) string {
+	roots := m.roots
+	if len(roots) == 0 {
+		if cwd, err := os.Getwd(); err == nil {
+			roots = []string{cwd}
+		}
+	}
+	for _, root := range roots {
+		rel, err := filepath.Rel(root, p)
+		if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
+			continue
+		}
+		if len(m.roots) > 1 {
+			return filepath.Join(filepath.Base(root), rel)
+		}
+		return rel
+	}
+	return p
 }
 
 // renderHighlighted paints `preview` so each MatchRange (in raw byte
