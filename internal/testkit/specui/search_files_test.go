@@ -122,3 +122,72 @@ func TestQuickOpenFuzzyMatchOpensFile(t *testing.T) {
 		t.Errorf("active tab = %q, want util.go", got)
 	}
 }
+
+// Spec: Given a workspace where "Add" is in pkg/util/util.go,
+// when the user runs Find in Files for "Add",
+// then the Find Results list the file by its path relative to the
+// workspace (pkg/util/util.go), never by its absolute path.
+func TestFindInFilesShowsRelativePaths(t *testing.T) {
+	d := editorWith(t, searchFiles, "notes.txt", "nothing here")
+	d.Key("alt+f")
+	mustSee(t, d, "Find in Files")
+	d.Type("Add")
+	d.Key("enter")
+	mustSee(t, d, "3 matches across 2 files")
+	if !strings.Contains(lineWith(d, "util.go (2):"), " pkg/util/util.go (2):") {
+		t.Errorf("util.go header is not workspace-relative: %q", lineWith(d, "util.go (2):"))
+	}
+	if s := screen(d); strings.Contains(s, d.Dir) {
+		t.Errorf("Find Results show an absolute path:\n%s", s)
+	}
+}
+
+// Spec: Given a second workspace folder "otherproj" where lib/x.go has
+// "Add",
+// when the user runs Find in Files for "Add",
+// then each header starts with its folder's name, like VSCode
+// (otherproj/lib/x.go, <workspace>/main.go), and F4 still opens
+// otherproj's file at the hit line.
+func TestFindInFilesMultiRootPaths(t *testing.T) {
+	d := editorWith(t, searchFiles, "notes.txt", "nothing here")
+	other := filepath.Join(filepath.Dir(d.Dir), "otherproj")
+	if err := os.MkdirAll(filepath.Join(other, "lib"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(other, "lib", "x.go"), []byte("package lib\n\nvar _ = Add\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	d.Palette("workspace-add-folder")
+	for range len(os.Getenv("HOME")) + 1 {
+		d.Key("backspace")
+	}
+	d.Type(other)
+	d.Key("enter")
+	mustSee(t, d, "otherproj")
+
+	d.Key("alt+f")
+	mustSee(t, d, "Find in Files")
+	d.Type("Add")
+	d.Key("enter")
+	mustSee(t, d, "4 matches across 3 files")
+	s := screen(d)
+	ws := filepath.Base(d.Dir)
+	for _, want := range []string{" otherproj/lib/x.go (1):", " " + ws + "/main.go (1):", " " + ws + "/pkg/util/util.go (2):"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("Find Results lack %q:\n%s", want, s)
+		}
+	}
+	var stops []string
+	for range 4 {
+		d.Key("f4")
+		d.Settle(300 * time.Millisecond)
+		stops = append(stops, activeTab(d)+" "+cursorLine(d))
+	}
+	found := false
+	for _, s := range stops {
+		found = found || s == "x.go Ln 3"
+	}
+	if !found {
+		t.Errorf("F4 never opened otherproj/lib/x.go at Ln 3: %q", stops)
+	}
+}

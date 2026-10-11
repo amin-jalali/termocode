@@ -13,7 +13,7 @@ func TestFormatFindGroups(t *testing.T) {
 		{Path: "/a.go", Line: 9, Preview: "nine"},
 		{Path: "/b.go", Line: 1, Preview: "one"},
 		{Path: "/a.go", Line: 2, Preview: "two"},
-	})
+	}, nil)
 	want := []string{
 		"/a.go (2):",
 		"       2:    two",
@@ -130,5 +130,24 @@ func TestFindResultsLuaExportsNav(t *testing.T) {
 	}
 	if strings.Contains(findResultsLua, "'<F4>'") {
 		t.Error("findResultsLua should not map <F4> in nvim any more")
+	}
+}
+
+func TestFindDisplayPath(t *testing.T) {
+	cases := []struct {
+		abs   string
+		roots []string
+		want  string
+	}{
+		{"/ws/pkg/a.go", []string{"/ws"}, "pkg/a.go"},
+		{"/elsewhere/a.go", []string{"/ws"}, "/elsewhere/a.go"},
+		{"/ws/a.go", []string{"/ws", "/other"}, "ws/a.go"},
+		{"/other/lib/x.go", []string{"/ws", "/other"}, "other/lib/x.go"},
+		{"/ws/..x/a.go", []string{"/ws"}, "..x/a.go"},
+	}
+	for _, c := range cases {
+		if got := findDisplayPath(c.abs, c.roots); got != c.want {
+			t.Errorf("findDisplayPath(%q, %q) = %q, want %q", c.abs, c.roots, got, c.want)
+		}
 	}
 }
