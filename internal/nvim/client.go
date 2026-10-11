@@ -28,9 +28,14 @@ type ErrMsg struct{ Err error }
 // Client wraps a spawned `nvim --embed` subprocess and exposes its UI events
 // as a stream of tea.Msg values.
 type Client struct {
-	nv        *gonvim.Nvim
-	events    chan tea.Msg
-	fetchBusy atomic.Bool
+	nv     *gonvim.Nvim
+	events chan tea.Msg
+
+	// FetchState: fetching while a call runs; fetchQueued when another
+	// call came in meanwhile (one trailing refresh is owed).
+	fetchMu     sync.Mutex
+	fetching    bool
+	fetchQueued bool
 
 	// mouseQueue serialises mouse events on a dedicated dispatcher
 	// goroutine so MouseAsync can fire-and-forget without breaking
@@ -53,7 +58,7 @@ type mouseEvent struct {
 }
 
 // errFetchBusy is returned when FetchState is called while a previous call is
-// still in flight. The caller should drop the request.
+// still in flight. The caller drops it: the running call refreshes once more.
 var errFetchBusy = errors.New("nvim: fetch state busy")
 
 // New spawns nvim --embed and registers the redraw notification handler.
@@ -272,13 +277,36 @@ type State struct {
 	Indent string
 }
 
-// FetchState returns the current State in a single Lua call. If a previous
-// call is still in flight, returns errFetchBusy and the caller should drop.
+// FetchState returns the current State in a single Lua call.
+//
+// Only one fetch runs at a time. A call made while another is in flight
+// returns errFetchBusy (the caller drops it) but is not lost: it queues one
+// trailing refresh, which the running call does before it returns, so the
+// state it returns is never older than the newest request.
 func (c *Client) FetchState() (State, error) {
-	if !c.fetchBusy.CompareAndSwap(false, true) {
+	c.fetchMu.Lock()
+	if c.fetching {
+		c.fetchQueued = true
+		c.fetchMu.Unlock()
 		return State{}, errFetchBusy
 	}
-	defer c.fetchBusy.Store(false)
+	c.fetching = true
+	c.fetchMu.Unlock()
+	for {
+		s, err := c.fetchStateOnce()
+		c.fetchMu.Lock()
+		if err == nil && c.fetchQueued {
+			c.fetchQueued = false
+			c.fetchMu.Unlock()
+			continue
+		}
+		c.fetching, c.fetchQueued = false, false
+		c.fetchMu.Unlock()
+		return s, err
+	}
+}
+
+func (c *Client) fetchStateOnce() (State, error) {
 	var raw []interface{}
 	err := c.execLua(`
 		local bufs = {}
@@ -1175,4 +1203,3 @@ func (c *Client) Next() tea.Cmd {
 		return msg
 	}
 }
-
