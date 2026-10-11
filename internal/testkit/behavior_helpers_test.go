@@ -154,6 +154,22 @@ func clickText(d *Driver, text string) {
 	d.Click(x+1, y)
 }
 
+// clickButton clicks a dialog button: label on the row that also shows
+// the Cancel button (so a title with the same word is not hit).
+func clickButton(d *Driver, label string) {
+	d.T.Helper()
+	for y, line := range strings.Split(screen(d), "\n") {
+		if !strings.Contains(line, "Cancel") {
+			continue
+		}
+		if j := strings.Index(line, " "+label+" "); j >= 0 {
+			d.Click(ansi.StringWidth(line[:j])+2, y)
+			return
+		}
+	}
+	d.T.Fatalf("no %q button on screen:\n%s", label, screen(d))
+}
+
 // sidebarW is the width of activity bar + explorer in the default layout.
 const sidebarW = 33
 

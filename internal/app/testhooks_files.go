@@ -21,10 +21,10 @@ func (m Model) NvimLua(code string, args ...any) (string, error) {
 	return m.nvim.EvalLuaStringArgs(code, args...)
 }
 
-// OpenBuffers returns the editor tabs as the app knows them (in tab-bar
-// order) and the id of the active one. For tests.
+// OpenBuffers returns the editor tabs as the tab bar shows them (pinned
+// first) and the id of the active one. For tests.
 func (m Model) OpenBuffers() ([]nvim.BufferInfo, int) {
-	return append([]nvim.BufferInfo(nil), m.bufs...), m.activeBuf
+	return m.tabs.Buffers()
 }
 
 // ExplorerCursor returns the absolute path of the explorer row under the
