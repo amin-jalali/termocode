@@ -46,10 +46,8 @@ func (m *Model) clamp() {
 }
 
 func (m Model) contentHeight() int {
-	if m.h <= 4 {
-		return 1
-	}
-	return m.h - 4 // 1 title + 1 footer + 2 borders
+	// 1 title row + 1 footer row; there are no borders.
+	return max(m.h-2, 0)
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -186,12 +184,17 @@ func (m Model) View() string {
 	footerLeft := " esc · q  close"
 	footerRight := "↑↓ scroll  · g/G  top/bottom  · " + progress + " "
 	footerW := m.w - lipgloss.Width(footerLeft) - lipgloss.Width(footerRight)
-	if footerW < 0 {
-		footerW = 0
+	if footerW < 0 { // narrow: keep only the position
+		footerRight = progress + " "
+		footerW = max(m.w-lipgloss.Width(footerLeft)-lipgloss.Width(footerRight), 0)
 	}
 	footer := hintStyle.Render(footerLeft) + hintStyle.Render(strings.Repeat(" ", footerW)) + hintStyle.Render(footerRight)
+	if lipgloss.Width(footer) > m.w { // narrow window: never wrap
+		footer = ansi.Truncate(footer, m.w, "")
+	}
 
-	return strings.Join(append([]string{header}, append(contentLines, footer)...), "\n")
+	rows := append([]string{header}, append(contentLines, footer)...)
+	return strings.Join(rows[:min(len(rows), m.h)], "\n")
 }
 
 func scrollIndicator(visible, total int) string {
