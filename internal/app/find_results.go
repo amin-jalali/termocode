@@ -38,7 +38,8 @@ type findResultsRun struct {
 	gen    int
 	cancel context.CancelFunc
 	query  string
-	opened bool // the Find Results buffer exists for this run
+	opened bool     // the Find Results buffer exists for this run
+	roots  []string // workspace folders searched, for display paths
 }
 
 // findBatchMsg carries one search.Batch back into Update. ch rides along so
@@ -84,14 +85,15 @@ func (m *Model) runFindInFiles(query string) tea.Cmd {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	gen := m.findRun.gen + 1
-	m.findRun = findResultsRun{gen: gen, cancel: cancel, query: query}
+	roots := workspaceRoots()
+	m.findRun = findResultsRun{gen: gen, cancel: cancel, query: query, roots: roots}
 	// Same matching as before the overlay grew toggles: smart-case, regex
 	// through ripgrep, literal on the built-in walker.
 	opts := search.Options{
 		Regex:      search.Available(),
 		MaxResults: searchMaxResults(loadSettings()),
 	}
-	return waitFindBatch(gen, search.Stream(ctx, workspaceRoots(), q, opts))
+	return waitFindBatch(gen, search.Stream(ctx, roots, q, opts))
 }
 
 // handleFindBatch paints one streamed batch. The first non-empty batch
@@ -105,7 +107,7 @@ func (m *Model) handleFindBatch(msg findBatchMsg) tea.Cmd {
 	run := &m.findRun
 	b := msg.batch
 	if !b.Done {
-		lines := formatFindGroups(b.Results)
+		lines := formatFindGroups(b.Results, run.roots)
 		if !run.opened {
 			run.opened = true
 			m.openFindResultsBuffer(run.query, append([]string{
@@ -114,6 +116,7 @@ func (m *Model) handleFindBatch(msg findBatchMsg) tea.Cmd {
 		} else {
 			m.appendFindResults("", lines)
 		}
+		m.addFindPaths(b.Results, run.roots)
 		return waitFindBatch(msg.gen, msg.ch)
 	}
 
@@ -175,6 +178,8 @@ vim.cmd('stopinsert')
 -- Remember the buffer so F4 / Shift+F4 can navigate even when the user
 -- is on a different file, and so later batches know where to append.
 vim.g.termocode_find_results_buf = buf
+-- Display path -> absolute path, filled per batch (addFindPaths).
+_G._termocode_find_paths = {}
 -- A new search starts F4 from the top again.
 vim.b[buf].termocode_nav_row = nil
 `, tmp, query)
@@ -211,6 +216,47 @@ vim.bo[buf].modifiable = false
 `, tmp))
 }
 
+// addFindPaths tells the Find Results buffer which file each display path
+// stands for, so Enter / F4 open the right file whatever nvim's cwd is
+// (a multi-root header "otherproj/lib/x.go" is not a real path).
+func (m *Model) addFindPaths(results []search.Result, roots []string) {
+	if m.nvim == nil || len(results) == 0 {
+		return
+	}
+	paths := map[string]string{}
+	for _, r := range results {
+		paths[findDisplayPath(r.Path, roots)] = r.Path
+	}
+	_ = m.nvim.ExecLuaArgs(`local add = ...
+_G._termocode_find_paths = _G._termocode_find_paths or {}
+for k, v in pairs(add) do _G._termocode_find_paths[k] = v end`, paths)
+}
+
+// findDisplayPath is how a result file is named in Find Results: relative
+// to its workspace folder, and with several folders prefixed by the
+// folder's name (VSCode style: "otherproj/lib/x.go"). A path outside every
+// folder stays absolute.
+func findDisplayPath(abs string, roots []string) string {
+	best := ""
+	for _, r := range roots {
+		rel, err := filepath.Rel(r, abs)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			continue
+		}
+		if len(r) > len(best) {
+			best = r
+		}
+	}
+	if best == "" {
+		return abs
+	}
+	rel, _ := filepath.Rel(best, abs)
+	if len(roots) > 1 {
+		return filepath.Join(filepath.Base(best), rel)
+	}
+	return rel
+}
+
 // findResultsFooter is the last line of the buffer. When the
 // search_max_results cap dropped hits it says so: "Showing N of M …".
 func findResultsFooter(s search.Summary) string {
@@ -225,7 +271,7 @@ func findResultsFooter(s search.Summary) string {
 // formatFindGroups renders results as Sublime-style file groups, one
 // "path (N):" header per file followed by its rows and a blank line. A
 // streamed batch always holds whole files, so groups never split.
-func formatFindGroups(results []search.Result) []string {
+func formatFindGroups(results []search.Result, roots []string) []string {
 	// Group by Path while preserving first-seen order.
 	type bucket struct {
 		path string
@@ -247,10 +293,10 @@ func formatFindGroups(results []search.Result) []string {
 	var out []string
 	for _, bk := range order {
 		sort.SliceStable(bk.hits, func(i, j int) bool { return bk.hits[i].Line < bk.hits[j].Line })
-		// Header: "/abs/path (N):" — N hits in this file. The (N) is
+		// Header: "rel/path (N):" — N hits in this file. The (N) is
 		// rendered in the dim header colour (see syntax in find_results_lua.go),
 		// giving the user a per-file count at a glance.
-		out = append(out, fmt.Sprintf("%s (%d):", bk.path, len(bk.hits)))
+		out = append(out, fmt.Sprintf("%s (%d):", findDisplayPath(bk.path, roots), len(bk.hits)))
 		for _, h := range bk.hits {
 			content := strings.TrimRight(h.Preview, "\n")
 			if len([]rune(content)) > maxPreview {
@@ -297,7 +343,7 @@ func formatFindResults(query string, results []search.Result) string {
 	}
 	sum := search.Summary{Shown: len(results), Total: len(results), Files: len(files)}
 	lines := []string{fmt.Sprintf("Searching %d file%s for %q", sum.Files, plurals(sum.Files), query), ""}
-	lines = append(lines, formatFindGroups(results)...)
+	lines = append(lines, formatFindGroups(results, nil)...)
 	lines = append(lines, findResultsFooter(sum))
 	return strings.Join(lines, "\n") + "\n"
 }

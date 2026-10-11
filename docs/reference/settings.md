@@ -53,6 +53,12 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `ai_inline_model` | string | `(provider default)` | Model for inline ghost-text completions. Empty uses a fast model of the provider (for example Claude Haiku or gpt-4.1-mini). |
 | `ai_auto_approve` | string[] | `[]` | Agent tool classes that run without asking: fileWrite, git, run. Set with AI: Agent Auto-Approve…. |
 
+## Terminal (file only)
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `terminal_skip_shell` | string[] | `[]` | Actions (keymap.json names) whose keys reach termocode while the terminal has focus. Other Ctrl keys go to the shell. Quit (Ctrl+Q) is in the list by default; add a name, or remove one with "-Name" (for example `["QuickOpen", "-Quit"]`). |
+
 ## Environment variables
 
 | Variable | Description |

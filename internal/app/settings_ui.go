@@ -11,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/search"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -38,6 +39,9 @@ type settingsConfig struct {
 	Icons      string `json:"icons,omitempty"`
 	Animations string `json:"animations,omitempty"`
 	Images     string `json:"images,omitempty"`
+	// TerminalSkipShell adds ("Name") or removes ("-Name") actions whose
+	// keys skip the focused terminal and reach termocode (default: Quit).
+	TerminalSkipShell []string `json:"terminal_skip_shell,omitempty"`
 }
 
 // settingsConfigPath returns the absolute path to config.json. We don't
@@ -341,18 +345,7 @@ func (m *Model) applySettingValue(value string) tea.Cmd {
 			m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Settings error", err.Error())
 			return toastCmd
 		}
-		// Apply to every file window and to the global value, so files
-		// opened later wrap too (a :setlocal only changed the current
-		// window). Terminal and other special windows keep theirs.
-		if m.nvim != nil {
-			_ = m.nvim.ExecLuaArgs(`local on = ...
-				vim.go.wrap = on
-				for _, w in ipairs(vim.api.nvim_list_wins()) do
-					if vim.bo[vim.api.nvim_win_get_buf(w)].buftype == '' then
-						vim.wo[w].wrap = on
-					end
-				end`, b)
-		}
+		m.setWrapAll(b)
 		m.toast, toastCmd = m.toast.Push(toast.Info, fmt.Sprintf("word_wrap = %v", b))
 	case "setting-show-hidden":
 		b, err := parseBoolLoose(value)
@@ -425,6 +418,7 @@ func parseBoolLoose(s string) (bool, error) {
 // startup.
 func (m *Model) applyStartupSettings() {
 	cfg := loadSettings()
+	m.skipShell = keymap.SkipShellSet(cfg.TerminalSkipShell)
 	if cfg.AutoSave != nil && *cfg.AutoSave && !m.autoSaveOn {
 		_ = m.toggleAutoSave()
 	}
@@ -443,8 +437,7 @@ func (m *Model) applyStartupSettings() {
 		// A file shown again in a window gets the window options it had
 		// last time (nvim remembers them per buffer), so a word_wrap
 		// change did not reach files already open in other tabs. Apply the
-		// global value whenever a file enters a window; Alt+W still flips
-		// the current window until another file is shown there.
+		// global value whenever a file enters a window.
 		_ = m.nvim.ExecLua(`vim.api.nvim_create_augroup('TermocodeWordWrap', { clear = true })
 vim.api.nvim_create_autocmd('BufWinEnter', {
   group = 'TermocodeWordWrap',
@@ -461,4 +454,21 @@ vim.api.nvim_create_autocmd('BufWinEnter', {
 		// values still win for the files it covers.
 		_ = m.nvim.Command(fmt.Sprintf("setglobal tabstop=%d shiftwidth=%d", *cfg.TabSize, *cfg.TabSize))
 	}
+}
+
+// setWrapAll turns wrap on or off in every file window and in the global
+// value, so files opened later follow it too (a :setlocal only changed the
+// current window). Terminal and other special windows keep theirs. Used by
+// the word_wrap setting and the Toggle Word Wrap command.
+func (m *Model) setWrapAll(on bool) {
+	if m.nvim == nil {
+		return
+	}
+	_ = m.nvim.ExecLuaArgs(`local on = ...
+		vim.go.wrap = on
+		for _, w in ipairs(vim.api.nvim_list_wins()) do
+			if vim.bo[vim.api.nvim_win_get_buf(w)].buftype == '' then
+				vim.wo[w].wrap = on
+			end
+		end`, on)
 }
