@@ -274,6 +274,26 @@ func clickText(d *Driver, s string) {
 	d.Click(colOf(d, y, s), y)
 }
 
+// typeCommitMessage clicks the commit message box and types msg.
+func typeCommitMessage(d *Driver, msg string) {
+	d.T.Helper()
+	clickText(d, "Message…")
+	d.Type(msg)
+}
+
+// clickScreen left-clicks the first cell of the frame showing s (any panel
+// or overlay); it fails the test when s is not shown.
+func clickScreen(d *Driver, s string) {
+	d.T.Helper()
+	for y, l := range strings.Split(text(d), "\n") {
+		if strings.Contains(l, s) {
+			d.Click(colOf(d, y, s), y)
+			return
+		}
+	}
+	d.T.Fatalf("%q not on screen:%s", s, dump(d))
+}
+
 // rawRow returns row y of the frame with its ANSI codes.
 func rawRow(d *Driver, y int) string {
 	rows := strings.Split(d.Frame(), "\n")

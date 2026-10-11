@@ -1185,8 +1185,10 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Welcome-screen keyboard navigation: when the start page is
 	// rendered (no buffer, no terminal panel) we let arrow keys / Tab
 	// move the Quick Actions cursor and Enter dispatch the focused
-	// card. Falls through to normal handling otherwise.
-	if m.welcomeShowing() {
+	// card. Falls through to normal handling otherwise. Not while the
+	// Source Control panel has the focus: its list and commit box need
+	// the arrows, Tab and Enter.
+	if m.welcomeShowing() && !(m.focus == FocusExplorer && m.activity.Active() == activity.ViewGit) {
 		if newM, cmd, handled := m.handleWelcomeKey(msg); handled {
 			return newM, cmd
 		}
