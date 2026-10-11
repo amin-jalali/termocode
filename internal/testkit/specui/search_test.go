@@ -68,6 +68,29 @@ func TestReplaceInFileWholeWordCaseLiteral(t *testing.T) {
 	}
 }
 
+// Spec: Given Find is open (Ctrl+F) with a query,
+// when the user presses Ctrl+H, then Ctrl+F, then replaces all and
+// presses Ctrl+S without closing the bar,
+// then the Replace row opens and closes, and the file is saved.
+func TestFindBarKeepsEditorKeys(t *testing.T) {
+	files := map[string]string{"pets.txt": "cat cat\n"}
+	d := editorWith(t, files, "pets.txt", "cat cat")
+	d.Key("ctrl+f")
+	d.Type("cat")
+	d.Key("ctrl+h")
+	if !strings.Contains(screen(d), "↵ ⇒") {
+		t.Fatalf("Ctrl+H in the open find bar did not show the Replace row:\n%s", screen(d))
+	}
+	d.Key("ctrl+f")
+	mustNotSee(t, d, "↵ ⇒")
+	d.Key("ctrl+h") // focus moves to Replace: Find has a query
+	d.Type("dog")
+	d.Key("alt+enter", "ctrl+s")
+	if got := waitFile(t, d, "pets.txt", func(s string) bool { return s == "dog dog\n" }); got != "dog dog\n" {
+		t.Fatalf("Ctrl+S in the find bar did not save: %q", got)
+	}
+}
+
 // replaceSteps opens Replace, fills find / replace, presses Enter n
 // times, closes the bar, saves and returns the file.
 func replaceSteps(t *testing.T, files map[string]string, rel, shown, find, repl string, n int) string {

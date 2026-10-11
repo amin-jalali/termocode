@@ -844,6 +844,15 @@ func (m Model) routeToFind(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// rest of the UI for clicks outside the panel, so the user can
 		// still hit tabs / explorer without dismissing the bar first.
 		return m.handleMouse(msg)
+	case tea.KeyMsg:
+		// A few editor-wide keys still work while typing in the bar, as in
+		// VS Code: save, Ctrl+F / Ctrl+H (collapse / expand the Replace
+		// row) and the palette / quick open. The bar would swallow them.
+		switch m.keys.Match(msg) {
+		case keymap.ActionSave, keymap.ActionFind, keymap.ActionReplaceInFile,
+			keymap.ActionCommandPalette, keymap.ActionQuickOpen:
+			return m.handleGlobalKey(msg)
+		}
 	}
 	var cmd tea.Cmd
 	m.find, cmd = m.find.Update(msg)
