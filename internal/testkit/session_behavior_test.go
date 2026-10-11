@@ -1,9 +1,13 @@
 package testkit
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/app"
 )
 
 // Spec: Given a.txt and b.txt open, b.txt active with the cursor on line 3,
@@ -35,5 +39,50 @@ func TestSessionRestoreFilesAndCursor(t *testing.T) {
 	}
 	if !explorerShows(d, "todo.md") {
 		t.Errorf("notes not expanded after restart:\n%s", screen(d))
+	}
+}
+
+// Spec: Given the user opened a.txt and c.txt and then closed all tabs,
+// when the dashboard shows, then RECENT FILES lists both;
+// and when the user clicks a.txt there, then it opens.
+func TestDashboardRecentFiles(t *testing.T) {
+	d := editorDriver(t, nil)
+	open(d, "a.txt")
+	open(d, "c.txt")
+	d.Key("ctrl+w")
+	d.Key("ctrl+w")
+	if !waitTabs(d) {
+		got, _ := tabs(d)
+		t.Fatalf("tabs left open: %v", got)
+	}
+	if !d.WaitForText("R E C E N T", 3*time.Second) {
+		t.Fatalf("no dashboard after closing all tabs:\n%s", screen(d))
+	}
+	_, _, okA := findIn(d, "a.txt", sidebarW, d.W)
+	_, _, okC := findIn(d, "c.txt", sidebarW, d.W)
+	if !okA || !okC {
+		t.Fatalf("recent files not listed:\n%s", screen(d))
+	}
+	xa, ya, _ := findIn(d, "a.txt", sidebarW, d.W)
+	d.Click(xa+1, ya)
+	if !d.WaitFor(func() bool { _, a := tabs(d); return a == "a.txt" }, 3*time.Second) {
+		got, a := tabs(d)
+		t.Fatalf("click on recent a.txt: active %q tabs %v", a, got)
+	}
+}
+
+// Spec: Given termocode was used in another folder before (the app records
+// each folder it starts in),
+// when the dashboard shows, then WORKSPACES lists that folder.
+func TestDashboardRecentWorkspaces(t *testing.T) {
+	d := New(t, Options{Files: textFiles()})
+	other := filepath.Join(filepath.Dir(d.Dir), "older-project")
+	if err := os.MkdirAll(other, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	app.PushWorkspace(other)
+	d.Restart()
+	if _, _, ok := findIn(d, "older-project", sidebarW, d.W); !ok {
+		t.Fatalf("WORKSPACES does not list older-project:\n%s", screen(d))
 	}
 }
