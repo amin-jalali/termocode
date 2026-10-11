@@ -1108,6 +1108,9 @@ func refreshSidebarColors() {
 }
 
 func (m Model) renderGitSidebar(w, h int) string {
+	if !m.gitLoaded {
+		return placeholderSidebar(w, h, "Source Control", "Loading…")
+	}
 	if !m.gitIsRepo {
 		return placeholderSidebar(w, h, "Source Control", "Not a git repository.\n\nRun `git init` in a\nterminal to enable.")
 	}

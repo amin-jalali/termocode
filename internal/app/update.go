@@ -648,20 +648,7 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 		// user's section-collapse state, selection, or the commit message box.
 		return m, tea.Batch(fetchGitCmd(), gitAutoRefreshTick()), true
 	case GitMsg:
-		// Editor gutter signs compare buffers with HEAD; when HEAD or the
-		// changed-file list moved (commit, checkout, pull, discard …),
-		// repaint them now instead of on the next buffer event.
-		if m.nvim != nil && gitSnapshotChanged(m.gitGraph, m.gitFiles, msg.Graph, msg.Files) {
-			_ = m.nvim.ExecLua(`if _G.termocode_git_signs_refresh then _G.termocode_git_signs_refresh() end`)
-		}
-		m.gitIsRepo = msg.IsRepo
-		m.gitBranch = msg.Branch
-		m.gitFiles = msg.Files
-		m.gitGraph = msg.Graph
-		// Clamp against the visible-row count: the accordion interleaves
-		// section headers, dir headers, and graph rows, so the row count
-		// differs from len(gitFiles).
-		m.gitClampCursor()
+		m.applyGitSnapshot(msg)
 		return m, nil, true
 	case nvim.ErrMsg:
 		m.err = msg.Err.Error()

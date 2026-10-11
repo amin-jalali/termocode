@@ -162,6 +162,17 @@ var scmFiles = map[string]string{
 // dates render the same everywhere.
 func scmDriver(t *testing.T, setup func(r *repo)) (*Driver, *repo) {
 	t.Helper()
+	d, r := scmStart(t, setup)
+	// Git state loads in the background; wait for it.
+	if !until(d, func() bool { return section(d, "GRAPH") != nil && !inSection(d, "GRAPH", "No commits") }) {
+		t.Fatalf("Source Control did not load:%s", dump(d))
+	}
+	return d, r
+}
+
+// scmStart is scmDriver without waiting for the first git refresh.
+func scmStart(t *testing.T, setup func(r *repo)) (*Driver, *repo) {
+	t.Helper()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not on PATH")
 	}
@@ -178,10 +189,6 @@ func scmDriver(t *testing.T, setup func(r *repo)) (*Driver, *repo) {
 		}
 	}})
 	d.Action("view:git")
-	// Git state loads in the background; actions are no-ops before it.
-	if !until(d, func() bool { return section(d, "GRAPH") != nil && !inSection(d, "GRAPH", "No commits") }) {
-		t.Fatalf("Source Control did not load:%s", dump(d))
-	}
 	return d, r
 }
 

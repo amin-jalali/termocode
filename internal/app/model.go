@@ -143,10 +143,12 @@ type Model struct {
 	// fixed (closedRingCap); when full, the oldest entry is dropped.
 	closedRing []string
 
-	gitIsRepo bool
-	gitBranch git.Branch
-	gitFiles  []git.FileStatus
-	gitCursor int // index into gitVisibleRows() for the ViewGit sidebar
+	gitIsRepo     bool
+	gitLoaded     bool   // a GitMsg was applied (gitEnsureLoaded)
+	gitRemoteBusy string // running push/pull/fetch/sync note, "" when idle
+	gitBranch     git.Branch
+	gitFiles      []git.FileStatus
+	gitCursor     int // index into gitVisibleRows() for the ViewGit sidebar
 
 	// gitViewTree selects the Source-Control file list layout: true renders a
 	// collapsible directory tree (the default, like the file explorer), false
