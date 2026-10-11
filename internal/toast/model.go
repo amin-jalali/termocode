@@ -239,6 +239,23 @@ func (m Model) Cards(width int) []Card {
 	return out
 }
 
+// CompactCards returns the newest n toasts (oldest first), each as a
+// 3-row card `width` cells wide (title · detail on one row), for small
+// windows where a stack of 4-row cards would cover too much text.
+func (m Model) CompactCards(width, n int) []Card {
+	if len(m.toasts) == 0 || width <= 0 || n <= 0 {
+		return nil
+	}
+	if n > len(m.toasts) {
+		n = len(m.toasts)
+	}
+	out := make([]Card, 0, n)
+	for _, t := range m.toasts[len(m.toasts)-n:] {
+		out = append(out, Card{Lines: renderToastCompact(t, width), Slide: t.slide.Pos})
+	}
+	return out
+}
+
 // View returns the toast block as rows (cards separated by blank gap
 // rows). The app composites Cards directly; View is kept for callers that
 // want a flat block.
@@ -278,6 +295,47 @@ func severityIcon(s Severity) (string, theme.Color256) {
 		return ic.uni, c
 	}
 	return ic.ascii, c
+}
+
+// renderToastCompact draws one toast as a 3-row card exactly w cells wide:
+//
+//	╭──────────────────────────────╮
+//	│ ● Saved · internal/foo.go …  │
+//	╰──────────────────────────────╯
+func renderToastCompact(t Toast, w int) []string {
+	if w < 16 {
+		w = 16
+	}
+	f := theme.Float()
+	icon, sev := severityIcon(t.Severity)
+	bg := lipgloss.NewStyle().Background(f.Bg)
+	iconStyle := lipgloss.NewStyle().Background(f.Bg).Foreground(theme.LG(sev)).Bold(true)
+	titleStyle := lipgloss.NewStyle().Background(f.Bg).Foreground(f.Title).Bold(true)
+	detailStyle := lipgloss.NewStyle().Background(f.Bg).Foreground(f.Hint)
+
+	inner := w - 2
+	const lead = 3 // " ● "
+	avail := inner - lead - 1
+	if avail < 4 {
+		avail = 4
+	}
+	title := runewidth.Truncate(t.Title, avail, "…")
+	row := bg.Render(" ") + iconStyle.Render(icon) + bg.Render(" ") + titleStyle.Render(title)
+	if rest := avail - runewidth.StringWidth(title) - 3; t.Detail != "" && rest >= 4 {
+		row += detailStyle.Render(" · " + runewidth.Truncate(t.Detail, rest, "…"))
+	}
+	if used := lipgloss.Width(row); used < inner {
+		row += bg.Render(strings.Repeat(" ", inner-used))
+	}
+	rim := theme.Mix(theme.BorderDefault, sev, 0.45)
+	box := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(rim).
+		BorderBackground(f.Bg).
+		Background(f.Bg).
+		Width(inner).
+		Render(row)
+	return strings.Split(box, "\n")
 }
 
 // renderToast draws one toast as a rounded card exactly w cells wide:
