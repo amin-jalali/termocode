@@ -52,3 +52,63 @@ func TestExplorerDeleteModifiedOpenFile(t *testing.T) {
 		t.Errorf("tabs after delete = %v, want [a.txt]", got)
 	}
 }
+
+// Spec: Given a.txt open in a tab,
+// when the user renames it to z.txt in the explorer and then saves an edit,
+// then the tab shows z.txt, the edit lands in z.txt, and a.txt is not
+// written again.
+func TestExplorerRenameOpenFileFollowsTab(t *testing.T) {
+	d := editorDriver(t, nil)
+	open(d, "a.txt")
+	rightClickExplorer(d, "a.txt")
+	clickText(d, "Rename...")
+	for range len("a.txt") {
+		d.Key("backspace")
+	}
+	d.Type("z.txt")
+	d.Key("enter")
+	if !waitTabs(d, "z.txt") {
+		got, _ := tabs(d)
+		t.Fatalf("tab did not follow the rename: %v", got)
+	}
+	d.Palette("focus-editor")
+	d.Type("X")
+	d.Key("ctrl+s")
+	d.Settle(300 * time.Millisecond)
+	if exists(d, "a.txt") {
+		t.Errorf("saving after the rename wrote the old name a.txt again")
+	}
+	if got := diskFile(d, "z.txt"); got != "Xalpha\nbravo\ncharlie\n" {
+		t.Errorf("z.txt = %q, want the edit saved there", got)
+	}
+}
+
+// Spec: Given notes/todo.md open with unsaved edits,
+// when the user renames the folder notes to memo,
+// then the tab shows memo/todo.md, keeps the edits, and saving writes
+// memo/todo.md.
+func TestExplorerRenameFolderOfOpenFile(t *testing.T) {
+	d := editorDriver(t, nil)
+	open(d, "notes/todo.md")
+	d.Type("Z")
+	rightClickExplorer(d, "notes")
+	clickText(d, "Rename...")
+	for range len("notes") {
+		d.Key("backspace")
+	}
+	d.Type("memo")
+	d.Key("enter")
+	if !waitTabs(d, "memo/todo.md*") {
+		got, _ := tabs(d)
+		t.Fatalf("tab did not follow the folder rename: %v", got)
+	}
+	d.Palette("focus-editor")
+	d.Key("ctrl+s")
+	d.Settle(300 * time.Millisecond)
+	if got := diskFile(d, "memo/todo.md"); got != "Z# Todo\n\n- milk\n" {
+		t.Errorf("memo/todo.md = %q, want the edit saved", got)
+	}
+	if exists(d, "notes") {
+		t.Errorf("saving re-created the old folder notes")
+	}
+}
