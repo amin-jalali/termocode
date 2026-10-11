@@ -11,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -383,7 +384,7 @@ func (m *Model) openAIHistory() tea.Cmd {
 }
 
 func aiAge(ms int64) string {
-	d := time.Since(time.UnixMilli(ms))
+	d := clock.Since(time.UnixMilli(ms))
 	switch {
 	case d < time.Hour:
 		return fmt.Sprintf("%dm ago", int(d.Minutes()))
