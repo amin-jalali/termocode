@@ -64,12 +64,12 @@ var settingFiles = map[string]string{
 // then the status bar shows that buffer's indentation, not a fixed value.
 func TestStatusBarShowsBufferIndent(t *testing.T) {
 	d := editorWith(t, settingFiles, "a.go", "func A")
-	if l := lineWith(d, "Ln "); !strings.Contains(l, "Tabs: 4") {
+	if l := statusBar(d); !strings.Contains(l, "Tabs: 4") {
 		t.Errorf("Go file: status bar %q, want Tabs: 4", l)
 	}
 	d.Action("open:a.txt")
 	mustSee(t, d, "indented")
-	if l := lineWith(d, "Ln "); !strings.Contains(l, "Spaces: 4") {
+	if l := statusBar(d); !strings.Contains(l, "Spaces: 4") {
 		t.Errorf("text file: status bar %q, want Spaces: 4", l)
 	}
 }

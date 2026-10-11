@@ -102,9 +102,15 @@ func activeTab(d *testkit.Driver) string {
 	return ""
 }
 
+// statusBar is the last screen row.
+func statusBar(d *testkit.Driver) string {
+	s := screen(d)
+	return s[strings.LastIndex(s, "\n")+1:]
+}
+
 // cursorLine is the status bar's "Ln N".
 func cursorLine(d *testkit.Driver) string {
-	return cursorRe.FindString(lineWith(d, "Ln "))
+	return cursorRe.FindString(statusBar(d))
 }
 
 var sgrRe = regexp.MustCompile(`\x1b\[([0-9;]*)m`)

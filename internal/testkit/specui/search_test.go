@@ -32,7 +32,7 @@ func TestFindInFileNextPrevMovesCursor(t *testing.T) {
 		t.Errorf("after Enter: %s/%s, want 1/2\n%s", cur, n, screen(d))
 	}
 	if !strings.Contains(screen(d), "Ln 2,") {
-		t.Errorf("cursor not on line 2:\n%s", lineWith(d, "Ln "))
+		t.Errorf("cursor not on line 2:\n%s", statusBar(d))
 	}
 	d.Key("enter")
 	if cur, _ := findCount(t, lineWith(d, "Aa ab .*")); cur != "2" || !strings.Contains(screen(d), "Ln 4,") {
@@ -40,7 +40,7 @@ func TestFindInFileNextPrevMovesCursor(t *testing.T) {
 	}
 	d.Key("shift+tab")
 	if !strings.Contains(screen(d), "Ln 2,") {
-		t.Errorf("Shift+Tab did not go back to line 2:\n%s", lineWith(d, "Ln "))
+		t.Errorf("Shift+Tab did not go back to line 2:\n%s", statusBar(d))
 	}
 	d.Key("esc")
 	mustNotSee(t, d, "Aa ab .*")
