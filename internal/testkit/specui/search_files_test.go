@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/testkit"
 )
@@ -39,6 +40,30 @@ func TestFindInFilesListsResults(t *testing.T) {
 	}
 	if strings.Contains(s, "notes.txt (") {
 		t.Errorf("a file without a match is listed:\n%s", s)
+	}
+}
+
+// Spec: Given Find Results for "Add",
+// when the user presses F4 (next result) twice and Shift+F4 once,
+// then the editor opens each hit's file at the hit's line.
+func TestFindInFilesNextResultOpensFileAtLine(t *testing.T) {
+	d := editorWith(t, searchFiles, "notes.txt", "nothing here")
+	d.Key("alt+f")
+	d.Type("Add")
+	d.Key("enter")
+	mustSee(t, d, "3 matches across 2 files")
+	var stops []string
+	for _, k := range []string{"f4", "f4", "shift+f4"} {
+		d.Key(k)
+		d.Settle(300 * time.Millisecond)
+		stops = append(stops, activeTab(d)+" "+cursorLine(d))
+	}
+	// The results are sorted by path: main.go first, then pkg/util/util.go.
+	want := []string{"main.go Ln 3", "util.go Ln 3", "main.go Ln 3"}
+	for i := range want {
+		if stops[i] != want[i] {
+			t.Errorf("stop %d: got %q, want %q (all: %q)", i, stops[i], want[i], stops)
+		}
 	}
 }
 
