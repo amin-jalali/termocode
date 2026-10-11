@@ -3,12 +3,33 @@ package app
 import (
 	"errors"
 	"strconv"
+	"sync/atomic"
 
 	"github.com/amin-jalali/termocode/internal/nvim"
 )
 
 // Read-only views of the model for behaviour tests (internal/testkit).
 // Users never call these.
+
+// nvimSetupGate, when set, runs in the nvim setup (attachCmd) after the
+// base options, before the slower rest. Tests set it to hold setup
+// half-way.
+var nvimSetupGate atomic.Pointer[func()]
+
+func runNvimSetupGate() {
+	if g := nvimSetupGate.Load(); g != nil {
+		(*g)()
+	}
+}
+
+// SetNvimSetupGate makes the next nvim setups call gate half-way through
+// (after the base options and the always-on autocmds, before the LSP,
+// theme and plugin setup), so a test can act while setup still runs. It
+// returns a func that restores the default. For tests.
+func SetNvimSetupGate(gate func()) (restore func()) {
+	old := nvimSetupGate.Swap(&gate)
+	return func() { nvimSetupGate.Store(old) }
+}
 
 // errNoNvim is returned by NvimLua when the app runs without nvim.
 var errNoNvim = errors.New("no embedded nvim")

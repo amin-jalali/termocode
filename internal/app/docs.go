@@ -356,7 +356,7 @@ func ConfigFileCatalog() []ConfigFile {
 			"With care. Prefer AI: Configure Provider…. Never exported by Preferences: Export Settings…."},
 		{"config", "ai/chats/*.json", "Saved AI chats (newest 50 kept).",
 			"JSON, one file per chat.", "Safe to delete."},
-		{"data", "plugins/", "Neovim plugins cloned on first launch (nvim-dap, vim-visual-multi).",
+		{"data", "plugins/", "Neovim plugins cloned in the background on first launch (nvim-dap, vim-visual-multi, rainbow-delimiters).",
 			"Git checkouts. `$TERMOCODE_PLUGINS_DIR` moves it.", "Delete to re-clone on next launch."},
 		{"data", "tools/", "Language servers and debug adapters installed by LSP: Manage Language Servers… and DAP: Install Adapter….",
 			"One folder per tool; `tools/bin` holds shims on Neovim's PATH. `$TERMOCODE_TOOLS_DIR` moves it.",

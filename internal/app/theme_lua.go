@@ -1,6 +1,9 @@
 package app
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -25,13 +28,38 @@ func themeLua(themeID string, light bool) string {
 		themeLuaBody
 }
 
-// applyNvimTheme pushes the active theme into the embedded nvim.
+// applyNvimTheme pushes the active theme into the embedded nvim and
+// recolours the terminals that are already open.
 func (m *Model) applyNvimTheme() {
+	m.applyNvimThemeLua()
+	m.syncTermPalette()
+}
+
+// applyNvimThemeLua pushes the active theme's colourscheme into nvim. The
+// nvim setup (attachCmd, a background goroutine) calls only this: the
+// terminal palette below lives in the render grid.
+func (m *Model) applyNvimThemeLua() {
 	if m.nvim == nil {
 		return
 	}
 	t, _ := theme.LookupTheme(m.themeID)
 	_ = m.nvim.ExecLua(themeLua(t.ID, t.Light))
+}
+
+// syncTermPalette gives the editor grid the theme's ANSI colours 0–15.
+// nvim reads g:terminal_color_N only when a terminal opens and has no API
+// to change the palette of an open one, so the grid maps terminal palette
+// cells (ext_hlstate kind "term") to these colours itself.
+func (m *Model) syncTermPalette() {
+	c := theme.NvimColors(m.themeID)
+	var p [16]int
+	for i := range p {
+		p[i] = -1
+		if v, err := strconv.ParseInt(strings.TrimPrefix(c["term_"+strconv.Itoa(i)], "#"), 16, 32); err == nil {
+			p[i] = int(v)
+		}
+	}
+	m.editor.SetTermPalette(p)
 }
 
 const themeLuaBody = `

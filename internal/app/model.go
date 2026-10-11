@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"os"
 	"time"
 
@@ -331,6 +330,8 @@ type Model struct {
 	// cursorLine mirrors the most recent StateMsg's 1-based cursor line.
 	// Used by breadcrumbs to find the enclosing symbol.
 	cursorLine int
+	// cursorCol is the matching 1-based virtual column (status bar).
+	cursorCol int
 
 	// editorMode is the nvim mode short name ("insert", "normal",
 	// "replace", "visual", …) used to shape the terminal hardware cursor
@@ -862,6 +863,19 @@ func (m Model) attachCmd() tea.Cmd {
 		} {
 			_ = m.nvim.Command(cmd)
 		}
+		// VSCode-feel: stay in insert mode whenever a normal buffer is active.
+		// Guard on &modifiable && !&readonly so we don't trigger E5 on help
+		// buffers, find-results scratch (modifiable=false), or `:view`-opened
+		// readonly files. With cmdheight=0 an E5 becomes a hit-enter prompt
+		// that blocks ALL input until <Enter> — that's what locked the
+		// integrated terminal after the user clicked into a readonly buffer.
+		// Defined first, before the slow part of the setup (LSP, theme,
+		// plugins): the UI is usable before ReadyMsg, and a file opened in
+		// that time must start in Insert mode like any later one. A file
+		// opened even earlier (before this line) gets the startinsert below.
+		_ = m.nvim.Command("autocmd BufEnter,BufNewFile,WinEnter * if &buftype == '' && &modifiable && !&readonly | startinsert | endif")
+		_ = m.nvim.Command("if &buftype == '' && &modifiable && !&readonly && expand('%') != '' | startinsert | endif")
+		runNvimSetupGate()
 		// LSP setup must register the FileType autocmd before we apply the
 		// theme, so opening files later triggers Tree-sitter + LSP under the
 		// final palette.
@@ -888,45 +902,25 @@ func (m Model) attachCmd() tea.Cmd {
 		_ = m.nvim.ExecLua(gitSignsLua)
 		// Merge-conflict highlights + ]x / [x (git_conflicts.go).
 		_ = m.nvim.ExecLua(conflictLua())
-		// Multi-cursor: bootstrap-clone vim-visual-multi (silent, idempotent,
-		// non-fatal on failure), then run its setup Lua. If the clone fails
-		// we log a warning to stderr but the editor keeps running normally.
-		if path, warn := ensureVimVisualMulti(); warn != "" {
-			fmt.Fprintln(os.Stderr, warn)
-		} else if path != "" {
-			_ = m.nvim.ExecLua(multiCursorSetupLua(path))
-		}
-		// DAP: bootstrap-clone mfussenegger/nvim-dap, then register adapters
-		// for whichever debuggers are on PATH (delve, debugpy, node). Same
-		// idempotent / non-fatal contract as the multi-cursor clone — a clone
-		// failure surfaces a stderr warning and the Lua chunk still runs (it
-		// just registers stub helpers so the Go-side palette commands don't
-		// crash when the user invokes them).
-		dapPath, dapWarn := ensureNvimDap()
-		if dapWarn != "" {
-			fmt.Fprintln(os.Stderr, dapWarn)
-		}
-		_ = m.nvim.ExecLua(dapSetupLua(dapPath))
-		// Adapters installed by the managed installer (tools/bin shims).
-		_ = m.nvim.ExecLua(dapManagedLua)
-		m.debugLoadBreakpoints() // Group D: persisted breakpoints (m.debug is shared)
+		// Bundled plugins (plugins.go): set up the ones already downloaded.
+		// Missing ones are cloned in the background after ReadyMsg and set
+		// up when they arrive; never wait for the network here.
+		// Multi-cursor (vim-visual-multi).
+		m.setupPlugin(pluginMultiCursor, pluginMultiCursor.installedDir())
+		// DAP (nvim-dap): register adapters for whichever debuggers are on
+		// PATH (delve, debugpy, node). Runs without the plugin too: it then
+		// registers stub helpers so the Go-side palette commands don't crash.
+		m.setupPlugin(pluginDap, pluginDap.installedDir())
 		// Apply the active theme's colourscheme via Lua. Done after `syntax
 		// on` so the highlight groups override the default scheme.
-		m.applyNvimTheme()
+		m.applyNvimThemeLua()
 		// Bracket-pair colorization (HiPhish/rainbow-delimiters.nvim).
 		// Runs after the theme so its RainbowDelimiter* overrides are the
-		// final word; failure (offline, no git) is non-fatal.
-		_ = m.nvim.ExecLua(bracketPairLua)
+		// final word.
+		m.setupPlugin(pluginBracketPair, pluginBracketPair.installedDir())
 		// Group A: ghost-text colors (after the theme's `hi clear`) + the
 		// inline-completion toggle.
 		m.aiAfterAttach()
-		// VSCode-feel: stay in insert mode whenever a normal buffer is active.
-		// Guard on &modifiable && !&readonly so we don't trigger E5 on help
-		// buffers, find-results scratch (modifiable=false), or `:view`-opened
-		// readonly files. With cmdheight=0 an E5 becomes a hit-enter prompt
-		// that blocks ALL input until <Enter> — that's what locked the
-		// integrated terminal after the user clicked into a readonly buffer.
-		_ = m.nvim.Command("autocmd BufEnter,BufNewFile,WinEnter * if &buftype == '' && &modifiable && !&readonly | startinsert | endif")
 		// Same idea for the integrated terminal: every time focus lands on a
 		// terminal buffer, drop into terminal-insert mode automatically. Without
 		// this, leaving and returning to the terminal puts the user in normal

@@ -23,38 +23,6 @@ import (
 // need to maintain a plugin manager separately.
 const nvimDapRepo = "https://github.com/mfussenegger/nvim-dap.git"
 
-// ensureNvimDap clones mfussenegger/nvim-dap into the plugins dir if it's not
-// already present. Mirrors ensureVimVisualMulti's idempotent / non-fatal
-// contract: failures (no git, no network) return an empty path with a
-// human-readable warn string so the editor still launches without DAP.
-func ensureNvimDap() (path string, warn string) {
-	root, err := pluginsDir()
-	if err != nil {
-		return "", fmt.Sprintf("dap: locate plugins dir: %v", err)
-	}
-	dest := filepath.Join(root, "nvim-dap")
-
-	if st, err := os.Stat(filepath.Join(dest, ".git")); err == nil && st.IsDir() {
-		return dest, ""
-	}
-
-	if err := os.MkdirAll(root, 0o755); err != nil {
-		return "", fmt.Sprintf("dap: mkdir %s: %v", root, err)
-	}
-	if _, err := exec.LookPath("git"); err != nil {
-		return "", "dap: git not on PATH; skipping nvim-dap clone"
-	}
-
-	cmd := exec.Command("git", "clone", "--depth", "1", "--quiet", nvimDapRepo, dest)
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	if err := cmd.Run(); err != nil {
-		_ = os.RemoveAll(dest)
-		return "", fmt.Sprintf("dap: clone failed (%v); editor will run without DAP", err)
-	}
-	return dest, ""
-}
-
 // dapToggleBreakpoint toggles a breakpoint at the cursor line via nvim-dap
 // (works without a session — nvim-dap records the line and sends it once a
 // session starts), then persists the new set (debug_breakpoints.go).
