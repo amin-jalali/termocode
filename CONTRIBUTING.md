@@ -45,6 +45,40 @@ go test ./internal/search -run Fallback -v
 
 Debug a running session with `tail -f ~/.config/termocode/errors.log`.
 
+### Golden screen tests
+
+`internal/devtools/shotkit` renders the main screens (dashboard, editor,
+palette, Source Control + hover card, terminal, AI chat, settings, confirm,
+toast, explorer, search, a light and a dark theme, the icon sets) at
+150×42 and 100×30, and compares each frame with
+`internal/devtools/shotkit/testdata/golden/<screen>-<size>.ans` (text with
+ANSI colours, so a diff is readable). Any visual change fails the test.
+
+```sh
+go test ./internal/devtools/shotkit                       # compare
+go test ./internal/devtools/shotkit -run 'Golden/scm-'    # some screens
+go test ./internal/devtools/shotkit -update               # accept the new frames
+UPDATE_GOLDEN=1 go test ./internal/devtools/shotkit       # same
+```
+
+- On a failure the test prints the changed rows as plain text (or says that
+  only colours changed) and writes `<case>_actual.ans` next to the golden
+  (`cat` it in a terminal to see it). Set `TERMOCODE_SHOTS_FONT` to a Nerd
+  Font `.ttf` to also get `<case>_golden.png` and `<case>_actual.png`.
+- If the change is intended, run with `-update`, look at
+  `git diff internal/devtools/shotkit/testdata/golden`, and commit the new
+  goldens with your change.
+- Each case runs the real app with a real `nvim` in a child process with a
+  private HOME, a fixed demo workspace (`testdata/workspace`) and git
+  history, a frozen clock (`internal/clock`), and a PATH with only `nvim`,
+  `git`, `sh` and `ls`. The test skips without `nvim` or `git`, and with
+  `-short`. `SHOTKIT_GOLDEN_JOBS` sets how many cases run at once.
+- Syntax colours come from `nvim`, so a different `nvim` version can change
+  the editor frames; update the goldens when you upgrade it.
+- To add a screen, add a scene to `goldenScenes()` in `golden_test.go`
+  (steps: `Act` for an `app.DevActionMsg`, `Key`, `HoverText`, `Pause`)
+  and run with `-update`.
+
 ## Code layout
 
 ```text
