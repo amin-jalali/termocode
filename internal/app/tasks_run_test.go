@@ -166,6 +166,23 @@ func TestRunTaskProblemMatcherNvim(t *testing.T) {
 		t.Fatalf("Attach: %v", err)
 	}
 	_ = c.ExecLua(`vim.o.shell = '/bin/sh'`)
+	// Record the exit code the way the app gets it: the task's on_exit
+	// calls termocode_notify('termocode_task_exit', buf, code). Asking
+	// jobwait instead races the job's cleanup (it returns -3 once the job
+	// id is gone).
+	if err := c.ExecLua(`
+		_G.__task_exits = {}
+		local orig = _G.termocode_notify
+		_G.termocode_notify = function(method, ...)
+			if method == 'termocode_task_exit' then
+				local b, code = ...
+				_G.__task_exits[b] = code
+			end
+			if orig then return orig(method, ...) end
+		end
+	`); err != nil {
+		t.Fatalf("hook termocode_notify: %v", err)
+	}
 	m := Model{w: 100, h: 30, nvim: c, terminalRows: 8, output: newOutputStore(),
 		tasks: newTaskRunner(), problems: newProblemsPanel()}
 
@@ -183,12 +200,7 @@ func TestRunTaskProblemMatcherNvim(t *testing.T) {
 	var code int64 = -1
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
-		_ = c.EvalLuaArgs(`
-			local b = ...
-			local ch = vim.bo[b].channel
-			if not ch or ch <= 0 then return -2 end
-			return vim.fn.jobwait({ ch }, 100)[1]
-		`, &code, buf)
+		_ = c.EvalLuaArgs(`return _G.__task_exits[...] or -1`, &code, buf)
 		var text string
 		_ = c.EvalLuaArgs(`return table.concat(vim.api.nvim_buf_get_lines(..., 0, -1, false), '\n')`, &text, buf)
 		if code != -1 && strings.Contains(text, "boom") {
