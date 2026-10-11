@@ -12,6 +12,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 type promptKindEnum int
@@ -150,6 +151,15 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 	case promptKindRename:
 		dir := filepath.Dir(m.promptPath)
 		newPath := filepath.Join(dir, value)
+		// os.Rename replaces an existing file without a word: renaming
+		// a.txt to b.txt destroyed b.txt. Refuse, unless it is the same
+		// file (a case-only rename on a case-insensitive disk).
+		if fi, err := os.Lstat(newPath); err == nil && newPath != m.promptPath {
+			if old, err := os.Lstat(m.promptPath); err != nil || !os.SameFile(fi, old) {
+				m.err = value + " already exists"
+				return m.pushToastDetail(toast.Errr, "Rename failed", value+" already exists")
+			}
+		}
 		if err := os.Rename(m.promptPath, newPath); err != nil {
 			m.err = err.Error()
 			return nil
