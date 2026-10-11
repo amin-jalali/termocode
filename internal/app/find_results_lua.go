@@ -80,8 +80,11 @@ vim.api.nvim_create_autocmd('FileType', {
     -- formatter appends to header lines (e.g. "/abs/path (3):" → "/abs/path").
     -- Without this, :edit tried to open the literal "/abs/path (3)" string
     -- which doesn't exist, opening an empty buffer.
+    -- The header shows a workspace-relative path; _termocode_find_paths
+    -- maps it back to the absolute file (addFindPaths in Go).
     local function strip_count(p)
-      return (p:gsub(' %(%d+%)$', ''))
+      p = p:gsub(' %(%d+%)$', '')
+      return (_G._termocode_find_paths or {})[p] or p
     end
     local function jump_from_cursor()
       local row = vim.api.nvim_win_get_cursor(0)[1]
@@ -181,7 +184,11 @@ local function navigate_results(direction)
         local sline = vim.api.nvim_buf_get_lines(buf, s-1, s, false)[1] or ''
         local p = sline:match('^([^ \t].+):$')
         -- Drop the " (N)" hit count, same as strip_count above.
-        if p then file = (p:gsub(' %(%d+%)$', '')); break end
+        if p then
+          file = p:gsub(' %(%d+%)$', '')
+          file = (_G._termocode_find_paths or {})[file] or file
+          break
+        end
       end
       if file then
         vim.b[buf].termocode_nav_row = r

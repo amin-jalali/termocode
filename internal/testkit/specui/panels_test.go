@@ -3,6 +3,7 @@ package specui
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/testkit"
 )
@@ -79,7 +80,9 @@ func TestTaskProblemMatcherFeedsProblems(t *testing.T) {
 	mustSee(t, d, "b.go  1")
 	d.Key("end", "enter") // the last row: the task's problem
 	mustSee(t, d, "var x = 1")
-	d.WaitFor(func() bool { return cursorLine(d) == "Ln 3" }, wait)
+	// The tab bar and status bar follow nvim within a state refresh
+	// (~100 ms, waited up to 300 ms), even when a refresh was already running at the jump.
+	d.WaitFor(func() bool { return activeTab(d)+" "+cursorLine(d) == "b.go Ln 3" }, 300*time.Millisecond)
 	if got := activeTab(d) + " " + cursorLine(d); got != "b.go Ln 3" {
 		t.Errorf("Enter on the task problem went to %q, want b.go Ln 3", got)
 	}

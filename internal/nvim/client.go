@@ -61,6 +61,11 @@ type mouseEvent struct {
 // still in flight. The caller drops it: the running call refreshes once more.
 var errFetchBusy = errors.New("nvim: fetch state busy")
 
+// IsFetchBusy reports whether err is FetchState's "previous call still in
+// flight" error. That call may hold state from before the latest change,
+// so the caller should fetch again shortly.
+func IsFetchBusy(err error) bool { return errors.Is(err, errFetchBusy) }
+
 // New spawns nvim --embed and registers the redraw notification handler.
 // The caller must call Attach before any redraw events will be produced.
 func New() (*Client, error) {

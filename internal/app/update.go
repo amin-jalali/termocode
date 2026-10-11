@@ -537,6 +537,12 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 			return m, tea.Batch(cmds...), true
 		}
 		return m, nil, true
+	case stateFetchBusyMsg:
+		if m.stateFetchPending || m.nvim == nil {
+			return m, nil, true
+		}
+		m.stateFetchPending = true
+		return m, tea.Tick(stateThrottle, func(time.Time) tea.Msg { return stateFetchDueMsg{} }), true
 	case stateFetchDueMsg:
 		m.stateFetchPending = false
 		if m.nvim == nil {
@@ -654,20 +660,7 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 		// user's section-collapse state, selection, or the commit message box.
 		return m, tea.Batch(fetchGitCmd(), gitAutoRefreshTick()), true
 	case GitMsg:
-		// Editor gutter signs compare buffers with HEAD; when HEAD or the
-		// changed-file list moved (commit, checkout, pull, discard …),
-		// repaint them now instead of on the next buffer event.
-		if m.nvim != nil && gitSnapshotChanged(m.gitGraph, m.gitFiles, msg.Graph, msg.Files) {
-			_ = m.nvim.ExecLua(`if _G.termocode_git_signs_refresh then _G.termocode_git_signs_refresh() end`)
-		}
-		m.gitIsRepo = msg.IsRepo
-		m.gitBranch = msg.Branch
-		m.gitFiles = msg.Files
-		m.gitGraph = msg.Graph
-		// Clamp against the visible-row count: the accordion interleaves
-		// section headers, dir headers, and graph rows, so the row count
-		// differs from len(gitFiles).
-		m.gitClampCursor()
+		m.applyGitSnapshot(msg)
 		return m, nil, true
 	case nvim.ErrMsg:
 		m.err = msg.Err.Error()
@@ -1096,6 +1089,11 @@ const stateThrottle = 100 * time.Millisecond
 // stateFetchDueMsg runs the trailing state fetch for throttled redraws.
 type stateFetchDueMsg struct{}
 
+// stateFetchBusyMsg: a state fetch was dropped because another was still
+// running. That one may have read nvim before the latest change (a jump
+// from the Problems panel), so one more fetch is scheduled.
+type stateFetchBusyMsg struct{}
+
 // stateFetchPlan decides what a redraw at now does: fetch the editor
 // state now (the last fetch is older than stateThrottle), or schedule one
 // trailing fetch after delay (none when one is already pending).
@@ -1117,6 +1115,9 @@ func (m Model) fetchStateCmd() tea.Cmd {
 	c := m.nvim
 	return func() tea.Msg {
 		s, err := c.FetchState()
+		if nvim.IsFetchBusy(err) {
+			return stateFetchBusyMsg{}
+		}
 		if err != nil {
 			return nil
 		}
@@ -1219,7 +1220,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	if m.inTerminal && shouldPassToTerminal(msg) {
+	if m.inTerminal && shouldPassToTerminal(msg) && !m.skipsShell(msg) {
 		var cmd tea.Cmd
 		m.editor, cmd = m.editor.Update(msg)
 		return m, cmd
@@ -1272,10 +1273,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	switch matchedAction {
 	case keymap.ActionQuit:
-		if m.nvim != nil {
-			_ = m.nvim.Close()
-		}
-		return m, tea.Quit
+		return m, m.quit()
 	case keymap.ActionSave:
 		var toastCmd tea.Cmd
 		if err := m.editor.Save(); err != nil {

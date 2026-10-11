@@ -131,3 +131,48 @@ func TestTerminalSurvivesResize(t *testing.T) {
 	d.Resize(140, 44)
 	run(t, d, "echo BIG$((6))", "BIG6")
 }
+
+// Spec: Given an open terminal with keyboard focus,
+// when the user types a half line, presses Ctrl+U and runs a command,
+// then the shell gets Ctrl+U (it clears the line) like other Ctrl keys;
+// when the user presses Ctrl+Q,
+// then the app quits (Quit skips the shell, like VSCode's
+// "commands to skip shell").
+func TestTerminalCtrlQQuits(t *testing.T) {
+	d := termDriver(t)
+	openTerminal(t, d)
+	d.Type("echo LOST")
+	d.Key("ctrl+u")
+	run(t, d, "echo KEPT$((9))", "KEPT9")
+	if strings.Contains(screen(d), "LOSTecho") {
+		t.Fatalf("Ctrl+U did not reach the shell:\n%s", screen(d))
+	}
+	d.Key("ctrl+q")
+	if !d.Quit() {
+		t.Fatalf("Ctrl+Q in the terminal did not quit:\n%s", screen(d))
+	}
+}
+
+// Spec: Given config.json "terminal_skip_shell": ["QuickOpen", "-Quit"]
+// and an open terminal with keyboard focus,
+// when the user presses Ctrl+Q, then the app does not quit (the shell
+// gets it);
+// when the user presses Ctrl+P, then Quick Open opens.
+func TestTerminalSkipShellSetting(t *testing.T) {
+	slow(t)
+	t.Setenv("SHELL", "/bin/sh")
+	t.Setenv("PS1", "$ ")
+	d := testkit.New(t, testkit.Options{W: 120, H: 36, Nvim: true,
+		Files:  map[string]string{"main.go": "package main\n\nimport \"fmt\"\n\nfunc main() { fmt.Println() }\n"},
+		Config: map[string]string{"config.json": `{"terminal_skip_shell": ["QuickOpen", "-Quit"]}`}})
+	d.Action("open:main.go")
+	mustSee(t, d, "fmt.Println")
+	openTerminal(t, d)
+	run(t, d, "echo READY$((1))", "READY1")
+	d.Key("ctrl+q")
+	if d.Quit() {
+		t.Fatal("Ctrl+Q quit, but the setting gives it to the shell")
+	}
+	d.Key("ctrl+p")
+	mustSee(t, d, "Go to file")
+}
