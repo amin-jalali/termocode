@@ -56,6 +56,9 @@ type StateMsg struct {
 	// LSPClients are the LSP client names attached to the active buffer
 	// (status-bar chip).
 	LSPClients []string
+
+	// Indent is the active buffer's indentation ("Spaces: 2", "Tabs: 4").
+	Indent string
 }
 
 // nvimBuffer is a thin alias to avoid an import cycle in messages.go callers.

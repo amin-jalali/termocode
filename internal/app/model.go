@@ -395,6 +395,16 @@ type Model struct {
 	// moment the user clicks back into the editor or runs `exit` in the
 	// shell. See shell.go::shouldPassToTerminal for the pass-through set.
 	inTerminal bool
+	// termScrolled is true while the mouse wheel scrolls the terminal's
+	// scrollback (terminal_scroll.go): nvim stays in Terminal-Normal mode
+	// until the next key or click.
+	termScrolled bool
+	// indentLabel is the status bar's indentation chip, from StateMsg.
+	indentLabel string
+	// hiddenTerminalTabs are the tabs of a panel hidden with Ctrl+T; their
+	// shells keep running until the panel shows again (terminal_hide.go).
+	hiddenTerminalTabs   []terminalTab
+	hiddenTerminalActive int
 
 	// ── Bottom panel framework (panel.go) ──────────────────────────────
 	// panelTabs lists the open NON-terminal tabs (Output, Problems, …) in
@@ -610,6 +620,10 @@ func New() Model {
 	// session so the user's drag-set preference survives a relaunch. Missing
 	// / corrupt / out-of-range values fall back to the default.
 	sess := loadSession()
+	explorerW := defaultExplorerWidth
+	if w := sess.ExplorerWidth; w >= explorerMinWidth && w <= explorerMaxWidth {
+		explorerW = w // the sidebar width dragged last time
+	}
 	termRows := terminalRowsDefault
 	if r := sess.TerminalRows; r >= terminalRowsMin {
 		termRows = r
@@ -664,7 +678,7 @@ func New() Model {
 		mouseAllMotion:   true,
 		commitDetails:    map[string]git.CommitDetail{},
 		gitDiffHoverPane: -1,
-		explorerWidth:    defaultExplorerWidth,
+		explorerWidth:    explorerW,
 		terminalRows:     termRows,
 		actionsOpen:      actionsOpen,
 		actionsPinned:    actionsPinned,
@@ -987,6 +1001,8 @@ func (m Model) attachCmd() tea.Cmd {
 			vim.api.nvim_create_autocmd('ModeChanged', {
 				pattern = '*:nt',
 				callback = function()
+					-- The wheel scrolls the scrollback in nt mode (terminal_scroll.go).
+					if vim.g.termocode_term_scroll then return end
 					local b = vim.api.nvim_get_current_buf()
 					if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buftype == 'terminal' then
 						pcall(vim.cmd, 'startinsert')

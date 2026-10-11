@@ -206,7 +206,21 @@ func (m *Model) refilter() {
 		titles = append(titles, it.Title)
 		indexMap = append(indexMap, i)
 	}
-	hits := fuzzy.Find(m.input, titles)
+	hits := bestFirst(m.input, fuzzy.Find(m.input, titles), titles)
+	if !m.hasGroups() {
+		// Flat list: best match first, so Enter runs what was typed.
+		m.matches = make(fuzzy.Matches, len(hits))
+		for k, h := range hits {
+			h.Index = indexMap[h.Index]
+			m.matches[k] = h
+		}
+		m.cursor = 0
+		return
+	}
+	best := -1
+	if len(hits) > 0 {
+		best = indexMap[hits[0].Index]
+	}
 	// Find the most recent header index that precedes each item.
 	// Walk hits in their original item order so we can detect group
 	// boundaries and inject a header at the start of each new group.
@@ -252,6 +266,42 @@ func (m *Model) refilter() {
 	}
 	m.matches = out
 	m.cursor = m.firstSelectable(0)
+	// Grouped list: rows keep their group order, the cursor goes to the
+	// best match.
+	for k, mt := range out {
+		if mt.Index == best {
+			m.cursor = k
+			break
+		}
+	}
+}
+
+// hasGroups reports whether the list has section headers.
+func (m Model) hasGroups() bool {
+	for _, it := range m.items {
+		if it.Header || it.Group != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// bestFirst moves titles equal to the query (ignoring case) to the front
+// of hits, which fuzzy.Find already sorts by score. Typing a full title
+// must select that row even when a longer title scores as well.
+func bestFirst(query string, hits fuzzy.Matches, titles []string) fuzzy.Matches {
+	out := make(fuzzy.Matches, 0, len(hits))
+	for _, h := range hits {
+		if strings.EqualFold(titles[h.Index], query) {
+			out = append(out, h)
+		}
+	}
+	for _, h := range hits {
+		if !strings.EqualFold(titles[h.Index], query) {
+			out = append(out, h)
+		}
+	}
+	return out
 }
 
 // firstSelectable returns the index of the first non-header match starting

@@ -40,6 +40,8 @@ type SessionState struct {
 	// here so the height survives a relaunch). Zero means "never set" → use
 	// the default on first open.
 	TerminalRows int `json:"terminal_rows,omitempty"`
+	// ExplorerWidth is the sidebar width the user dragged (0 = default).
+	ExplorerWidth int `json:"explorer_width,omitempty"`
 
 	// Right-side Actions panel state. Pointers for the booleans so an
 	// unset field (nil) is distinguishable from explicitly-false — on first
@@ -112,6 +114,7 @@ func workspaceSessionPath() (string, error) {
 func layoutPart(s SessionState) SessionState {
 	return SessionState{
 		TerminalRows:  s.TerminalRows,
+		ExplorerWidth: s.ExplorerWidth,
 		ActionsOpen:   s.ActionsOpen,
 		ActionsPinned: s.ActionsPinned,
 		ActionsWidth:  s.ActionsWidth,
@@ -231,6 +234,7 @@ func loadSession() SessionState {
 	l := layoutPart(global)
 	s.TerminalRows, s.ActionsOpen, s.ActionsPinned = l.TerminalRows, l.ActionsOpen, l.ActionsPinned
 	s.ActionsWidth, s.GitViewTree = l.ActionsWidth, l.GitViewTree
+	s.ExplorerWidth = l.ExplorerWidth
 	cleaned := s.OpenFiles[:0]
 	for _, p := range s.OpenFiles {
 		if isPersistedZombiePath(p) {
@@ -299,5 +303,6 @@ func saveSession(s SessionState) {
 	l := layoutPart(s)
 	out.TerminalRows, out.ActionsOpen, out.ActionsPinned = l.TerminalRows, l.ActionsOpen, l.ActionsPinned
 	out.ActionsWidth, out.GitViewTree = l.ActionsWidth, l.GitViewTree
+	out.ExplorerWidth = l.ExplorerWidth
 	writeSessionFile(gpath, out)
 }

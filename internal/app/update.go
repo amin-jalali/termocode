@@ -515,27 +515,29 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 			// Throttle FetchState. RedrawMsg fires per nvim event batch
 			// (every grid_line / grid_scroll / etc.) — at ~60fps during
 			// scroll that's a Lua roundtrip every 16ms. Coalesce to 100ms.
-			const stateThrottle = 100 * time.Millisecond
-			// A throttled redraw schedules one trailing fetch: otherwise
-			// the state after the burst's last redraw (cursor, buffer,
-			// filetype) stays unread until something else redraws.
-			if since := time.Since(m.stateLastFetch); since >= stateThrottle {
-				m.stateLastFetch = time.Now()
+			// A redraw inside the window schedules one trailing fetch, so
+			// the last change of a burst (a file opened right after
+			// another) still reaches the tab bar, status bar and welcome
+			// check when nvim then goes quiet.
+			now := time.Now()
+			fetchNow, delay := stateFetchPlan(now, m.stateLastFetch, m.stateFetchPending)
+			if fetchNow {
+				m.stateLastFetch = now
 				cmds = append(cmds, m.fetchStateCmd())
-			} else if !m.stateFetchPending {
+			} else if delay > 0 {
 				m.stateFetchPending = true
-				cmds = append(cmds, tea.Tick(stateThrottle-since, func(time.Time) tea.Msg { return stateTrailingFetchMsg{} }))
+				cmds = append(cmds, tea.Tick(delay, func(time.Time) tea.Msg { return stateFetchDueMsg{} }))
 			}
 			return m, tea.Batch(cmds...), true
 		}
 		return m, nil, true
-	case stateTrailingFetchMsg:
+	case stateFetchDueMsg:
 		m.stateFetchPending = false
-		if m.nvim != nil {
-			m.stateLastFetch = time.Now()
-			return m, m.fetchStateCmd(), true
+		if m.nvim == nil {
+			return m, nil, true
 		}
-		return m, nil, true
+		m.stateLastFetch = time.Now()
+		return m, m.fetchStateCmd(), true
 	case StateMsg:
 		// Recents: push to disk only when the active path actually changes.
 		if msg.Path != "" && msg.Path != m.lastRecordedPath {
@@ -549,6 +551,7 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 			m.preferredCodeAction = nil
 		}
 		m.cursorLine = msg.CursorLine
+		m.indentLabel = msg.Indent
 		// File-watcher toast: surface "Reloaded <basename>" the first time
 		// we see a new reload-seq value so each external mutation fires
 		// exactly one toast (subsequent StateMsgs with the same seq pass
@@ -856,6 +859,15 @@ func (m Model) routeToFind(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// rest of the UI for clicks outside the panel, so the user can
 		// still hit tabs / explorer without dismissing the bar first.
 		return m.handleMouse(msg)
+	case tea.KeyMsg:
+		// A few editor-wide keys still work while typing in the bar, as in
+		// VS Code: save, Ctrl+F / Ctrl+H (collapse / expand the Replace
+		// row) and the palette / quick open. The bar would swallow them.
+		switch m.keys.Match(msg) {
+		case keymap.ActionSave, keymap.ActionFind, keymap.ActionReplaceInFile,
+			keymap.ActionCommandPalette, keymap.ActionQuickOpen:
+			return m.handleGlobalKey(msg)
+		}
 	}
 	var cmd tea.Cmd
 	m.find, cmd = m.find.Update(msg)
@@ -914,58 +926,70 @@ func vimReplaceEscape(s string) string {
 }
 
 // findbarPattern builds an nvim search/substitute LHS pattern from `find`,
-// honoring the findbar's case / word / regex toggles. Mirrors applySearch's
-// recipe so :s and the @/ search register agree.
+// honoring the findbar's case / word / regex toggles. applySearch uses it
+// too, so :s and the @/ search register agree. Regex mode takes
+// JavaScript syntax (see jsRegexToVim).
 func (m *Model) findbarPattern(find string) string {
-	pat := find
-	if !m.find.UseRegex() {
-		pat = `\V` + strings.ReplaceAll(pat, `\`, `\\`)
-		// Inside \V, slashes still need escaping for the :s delimiter.
-		pat = strings.ReplaceAll(pat, `/`, `\/`)
-	} else {
-		// In magic-regex mode escape only the :s delimiter.
-		pat = strings.ReplaceAll(pat, `/`, `\/`)
-	}
-	if m.find.WholeWord() {
-		if m.find.UseRegex() {
-			pat = `\<` + pat + `\>`
-		} else {
-			body := strings.TrimPrefix(pat, `\V`)
-			pat = `\<\V` + body + `\m\>`
+	var pat string
+	switch {
+	case m.find.UseRegex() && m.find.WholeWord():
+		// The group keeps an alternation (a|b) inside the word anchors.
+		pat = `\<\v%(` + strings.TrimPrefix(jsRegexToVim(find), `\v`) + `)\m\>`
+	case m.find.UseRegex():
+		pat = jsRegexToVim(find)
+	default:
+		// \V: every character is literal except \; / is escaped for the
+		// :s delimiter.
+		pat = `\V` + strings.ReplaceAll(strings.ReplaceAll(find, `\`, `\\`), `/`, `\/`)
+		if m.find.WholeWord() {
+			pat = `\<` + pat + `\m\>`
 		}
 	}
 	if m.find.CaseSensitive() {
-		pat = `\C` + pat
-	} else {
-		pat = `\c` + pat
+		return `\C` + pat
 	}
-	return pat
+	return `\c` + pat
 }
 
-// applyReplaceNext finds the next occurrence of `find` in the current buffer
-// (wrapping from the cursor) and replaces just that one with `replace`. After
-// the substitution the cursor is left on the replaced span so a follow-up
-// Enter advances to the next match. Honors the findbar toggles (case /
-// whole-word / regex) when constructing the pattern.
+// findbarReplacement escapes the Replace input for the right side of :s.
+// In regex mode $1 / $& / \n work as in VS Code.
+func (m *Model) findbarReplacement(replace string) string {
+	if m.find.UseRegex() {
+		return jsReplaceToVim(replace)
+	}
+	return vimReplaceEscape(replace)
+}
+
+// applyReplaceNext replaces the match under the cursor — or, when the
+// cursor is not on one, the next match after it (wrapping) — with
+// `replace`, then moves the cursor to the following match, as VS Code's
+// "Replace" does: repeated Enter walks through the file one match at a
+// time. Honors the findbar toggles (case / whole-word / regex).
 func (m *Model) applyReplaceNext(find, replace string) {
 	if m.nvim == nil || find == "" {
 		return
 	}
-	// Regex-mode off: the user typed a literal — escape it through \V (handled
-	// by findbarPattern). Regex-mode on: caller-supplied pattern stays raw,
-	// with only the :s delimiter (`/`) escaped.
-	pat := m.findbarPattern(find)
-	rep := vimReplaceEscape(replace)
-	cmds := []string{
-		fmt.Sprintf("let @/ = '%s'", strings.ReplaceAll(pat, "'", "''")),
-		"set hlsearch",
-		"silent! normal! n",
-		fmt.Sprintf("silent! s/\\%%#%s/%s/", pat, rep),
-	}
-	for _, c := range cmds {
-		_ = m.nvim.Command(c)
-	}
+	_ = m.nvim.ExecLuaArgs(replaceNextLua, m.findbarPattern(find), m.findbarReplacement(replace))
 }
+
+// replaceNextLua does one replace-and-advance (see applyReplaceNext). The
+// cursor is put right after the inserted text before it looks for the
+// next match, so a replacement that contains the query ("cat" → "cats")
+// is not matched again in place.
+const replaceNextLua = `local pat, rep = ...
+vim.fn.setreg('/', pat)
+vim.o.hlsearch = true
+local s = vim.fn.searchpos(pat, 'cw')
+if s[1] == 0 then return end
+local e = vim.fn.searchpos(pat, 'cenW')
+local l0 = #vim.fn.getline(s[1])
+vim.cmd('silent! keeppatterns s/\\%#' .. pat .. '/' .. rep .. '/')
+local after = s[2] - 1
+if e[1] == s[1] then
+  after = e[2] + (#vim.fn.getline(s[1]) - l0)
+end
+pcall(vim.api.nvim_win_set_cursor, 0, { s[1], math.max(after, 0) })
+vim.fn.searchpos(pat, 'cw')`
 
 // applyReplaceAll runs `:%s/pat/repl/g` on the current buffer. Empty `find`
 // is a no-op so we don't accidentally drop the buffer's contents. Honors
@@ -975,7 +999,7 @@ func (m *Model) applyReplaceAll(find, replace string) {
 		return
 	}
 	pat := m.findbarPattern(find)
-	rep := vimReplaceEscape(replace)
+	rep := m.findbarReplacement(replace)
 	_ = m.nvim.Command(fmt.Sprintf("silent! %%s/%s/%s/g", pat, rep))
 }
 
@@ -991,35 +1015,7 @@ func (m *Model) applySearch(q string) {
 		m.find.SetMatchCount("")
 		return
 	}
-	pattern := q
-	// Regex toggle off → treat the pattern as a literal substring. \V is
-	// nvim's "very nomagic" mode where every metachar except \ becomes
-	// literal; we still escape \ → \\ so users can search for a backslash.
-	if !m.find.UseRegex() {
-		pattern = `\V` + strings.ReplaceAll(pattern, `\`, `\\`)
-	}
-	// Whole-word toggle wraps the body in word-boundary anchors. \< and \>
-	// work in both magic and \V "very nomagic" mode, so we add them after
-	// the \V prefix is in place but before the case flag (which must come
-	// at the very front).
-	if m.find.WholeWord() {
-		if m.find.UseRegex() {
-			pattern = `\<` + pattern + `\>`
-		} else {
-			// In \V mode the whole literal sits between \V and the trailing
-			// chars; wrap with \<…\> outside the literal block by exiting
-			// \V via \m, then re-enter with a fresh \V on the body.
-			body := strings.TrimPrefix(pattern, `\V`)
-			pattern = `\<\V` + body + `\m\>`
-		}
-	}
-	// Case toggle inline — \C forces sensitive, \c forces insensitive,
-	// regardless of the user's 'ignorecase' / 'smartcase' settings.
-	if m.find.CaseSensitive() {
-		pattern = `\C` + pattern
-	} else {
-		pattern = `\c` + pattern
-	}
+	pattern := m.findbarPattern(q)
 	escaped := strings.ReplaceAll(pattern, "'", "''")
 	_ = m.nvim.Command(fmt.Sprintf("silent! let @/ = '%s' | set hlsearch", escaped))
 	m.find.SetMatchCount(m.fetchMatchCount())
@@ -1087,9 +1083,25 @@ func toNvimBufs(in []nvimBuffer) []nvim.BufferInfo {
 	return out
 }
 
-// stateTrailingFetchMsg runs the state fetch that the redraw throttle
-// put off.
-type stateTrailingFetchMsg struct{}
+// stateThrottle is the shortest gap between two editor-state fetches.
+const stateThrottle = 100 * time.Millisecond
+
+// stateFetchDueMsg runs the trailing state fetch for throttled redraws.
+type stateFetchDueMsg struct{}
+
+// stateFetchPlan decides what a redraw at now does: fetch the editor
+// state now (the last fetch is older than stateThrottle), or schedule one
+// trailing fetch after delay (none when one is already pending).
+func stateFetchPlan(now, last time.Time, pending bool) (fetchNow bool, delay time.Duration) {
+	since := now.Sub(last)
+	if since >= stateThrottle {
+		return true, 0
+	}
+	if pending {
+		return false, 0
+	}
+	return false, stateThrottle - since
+}
 
 func (m Model) fetchStateCmd() tea.Cmd {
 	if m.nvim == nil {
@@ -1121,6 +1133,7 @@ func (m Model) fetchStateCmd() tea.Cmd {
 			Mode:           s.Mode,
 			Diff:           s.Diff,
 			LSPClients:     s.LSPClients,
+			Indent:         s.Indent,
 		}
 	}
 }
@@ -1133,6 +1146,9 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// name), or (c) the action ran but failed (entry but no follow-up
 	// toast). Cheap: just appends to errors.log via recordError.
 	recordError("[key] " + msg.String())
+	// Any key ends a wheel scroll of the terminal scrollback; a key meant
+	// for the shell then goes to the prompt (terminal_scroll.go).
+	m.endTerminalScroll()
 
 	// Terminal pass-through: when the user is actively typing into the
 	// integrated terminal (current nvim window IS our terminal split AND
