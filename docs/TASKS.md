@@ -206,3 +206,9 @@ Best started after A/C/D/E so the API is shaped by real panels — but not block
 - [x] **C + E:** Tasks "Test" group runs through the Testing runner — a `test` task in tasks.json still runs as a task; detected test tasks are the fallback when no test framework is found
 - [x] **A + C:** "✦ Fix with AI" action on rows in the Problems panel — key `a`, a ✦ button on the selected row, and a right-click menu
 - [ ] **I + C:** move `commands.json` user commands into a built-in extension — not done on purpose: today edits to `commands.json` show up at once and work without nvim; through the extension host they would need **Extensions: Reload**, would be missing until extensions finish loading, and Go would still need a fallback reader. No user gain, so the current Go path (palette `User: <Title>` + Tasks) stays
+
+---
+
+## Android (APK) — later
+- [ ] Clipboard on Android: copy / paste uses X11 today (`golang.design/x/clipboard`, cgo) and does not work on Android. Connect it to Android's own clipboard (through the APK shell, e.g. a small bridge the shell exposes), keep OSC 52 as fallback.
+- Size estimate (2026-10-11): termocode arm64 binary 19 MB, ~6.5 MB compressed in an APK; plus Neovim for Android (~4–6 MB) and the terminal shell (Kotlin ~1–2 MB, Flutter ~8–10 MB) → APK ~12–20 MB.
