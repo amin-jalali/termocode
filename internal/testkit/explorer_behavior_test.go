@@ -17,7 +17,7 @@ func TestExplorerNewFileMakesParents(t *testing.T) {
 	clickText(d, "New File...")
 	d.Type("src/app/main.txt")
 	d.Key("enter")
-	if !exists(d, "src/app/main.txt") {
+	if !eventually(d, func() bool { return exists(d, "src/app/main.txt") }) {
 		t.Fatal("src/app/main.txt not created")
 	}
 	if !explorerShows(d, "src") {
@@ -48,6 +48,7 @@ func TestExplorerNewFolder(t *testing.T) {
 	clickText(d, "New Folder...")
 	d.Type("lib")
 	d.Key("enter")
+	eventually(d, func() bool { return exists(d, "lib") })
 	if fi, err := os.Stat(filepath.Join(d.Dir, "lib")); err != nil || !fi.IsDir() {
 		t.Fatalf("lib is not a folder: %v", err)
 	}
@@ -70,7 +71,7 @@ func TestExplorerRenameFile(t *testing.T) {
 	}
 	d.Type("z.txt")
 	d.Key("enter")
-	if exists(d, "a.txt") || diskFile(d, "z.txt") != "alpha\nbravo\ncharlie\n" {
+	if !eventually(d, func() bool { return !exists(d, "a.txt") && diskFile(d, "z.txt") == "alpha\nbravo\ncharlie\n" }) {
 		t.Fatalf("rename failed: a.txt exists=%v z.txt=%q", exists(d, "a.txt"), diskFile(d, "z.txt"))
 	}
 	if explorerShows(d, "a.txt") || !explorerShows(d, "z.txt") {
@@ -97,7 +98,7 @@ func TestExplorerDeleteConfirm(t *testing.T) {
 		t.Fatal("b.txt deleted before the user confirmed")
 	}
 	d.Key("enter")
-	if exists(d, "b.txt") {
+	if !eventually(d, func() bool { return !exists(d, "b.txt") }) {
 		t.Fatal("b.txt not deleted after confirm")
 	}
 	if explorerShows(d, "b.txt") {
@@ -124,7 +125,7 @@ func TestExplorerBulkDelete(t *testing.T) {
 		t.Fatalf("bulk confirm does not say 2 items:\n%s", screen(d))
 	}
 	d.Key("enter")
-	if exists(d, "a.txt") || exists(d, "b.txt") {
+	if !eventually(d, func() bool { return !exists(d, "a.txt") && !exists(d, "b.txt") }) {
 		t.Fatalf("selected files not deleted: a=%v b=%v", exists(d, "a.txt"), exists(d, "b.txt"))
 	}
 	if !exists(d, "c.txt") {
