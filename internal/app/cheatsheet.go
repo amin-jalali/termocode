@@ -1,168 +1,90 @@
 package app
 
-import "github.com/amin-jalali/termocode/internal/preview"
+import (
+	"fmt"
+	"strings"
 
-// openCheatSheet opens a non-interactive preview overlay listing every
-// keyboard shortcut and the most useful palette commands. Closes with
-// Esc / q like any other preview. Built statically here so it stays in
-// sync with keymap.go (no runtime introspection — that would force us
-// to surface internal action names which aren't user-meaningful).
-//
-// Anything reachable only via the palette (no default keybinding) is
-// tagged "Palette". The rendered overlay is scrollable so this list can
-// grow without worrying about a single-screen cap.
+	"github.com/amin-jalali/termocode/internal/keymap"
+	"github.com/amin-jalali/termocode/internal/preview"
+)
+
+// openCheatSheet opens a non-interactive preview overlay listing the
+// keyboard shortcuts. Closes with Esc / q like any other preview. The
+// list is built from the live keymap (defaults plus keymap.json), so a
+// rebound key shows where the user put it.
 func (m *Model) openCheatSheet() {
-	body := `
-FILE
-  Ctrl+S            Save
-  Ctrl+Q            Quit
-  Ctrl+W            Close current editor
-  Alt+Shift+T       Reopen closed editor (also Ctrl+Shift+T)
-  Ctrl+R            Open Recent file
-  Palette           Save All Files
-  Palette           Open Recent Workspace
-  Palette           Reveal in File System
-  Palette           Compare Two Files
-  Palette           Revert / Reload from Disk
-  Palette           Toggle Auto Save
-
-EDIT
-  Ctrl+C / X / V    Copy / Cut / Paste
-  Ctrl+Shift+V      Clipboard history
-  Ctrl+Z / Y        Undo / Redo
-  Ctrl+/            Toggle line comment
-  Alt+up/dn         Move line
-  Shift+Alt+up/dn   Duplicate line
-  Ctrl+D            Multi-cursor: select next occurrence
-  Ctrl+Alt+up/dn    Add cursor above / below
-  Shift+Alt+F       Format document
-  Ctrl+. / Alt+Ent  Quick fix (code actions)
-  Palette           Trim Trailing Whitespace
-  Palette           Collapse Blank Lines
-  Palette           Convert Tabs <-> Spaces
-  Palette           Sort Lines (Asc / Desc) / Reverse
-  Palette           UPPERCASE / lowercase
-  Palette           Join Lines
-
-SEARCH
-  Ctrl+F            Find in current file
-  Ctrl+H            Replace in current file
-  F8 / Alt+F        Find in workspace (ripgrep)
-  F4 / Shift+F4     Next / previous search result
-  Ctrl+Shift+H      Replace in workspace
-  Find/Replace bar  Aa case · ab word · .* regex toggles
-                    (selection is auto-prefilled when opened)
-
-NAVIGATION
-  Ctrl+P            Quick open file
-  F1                Command Palette
-  Ctrl+B            Toggle file explorer
-  F6                Switch focus (sidebar <-> editor)
-  Ctrl+Shift+E      Reveal active file in explorer
-  Ctrl+Tab          Alternate file (last two)
-  Ctrl+PgDn / PgUp  Next / previous editor tab
-  Ctrl+G            Go to line
-  Ctrl+Shift+O      Go to symbol in file
-  Palette           Go to Symbol in Workspace
-  F3 / Shift+F3     Toggle bookmark / show all
-  Palette           Bookmarks: Clear All
-  Alt+P             Pin / unpin current tab
-
-AI (needs a provider: Palette → AI: Configure Provider…)
-  Alt+A             AI chat panel (Enter send · Esc back · F6 cycles focus)
-  Tab               Accept AI ghost text
-  Alt+\             Ask for an inline completion now
-  Alt+|             Toggle automatic ghost text
-  Alt+I             Edit selection / line with AI
-  Ctrl+.            AI group: Explain / Fix / Edit / Doc comment
-  Palette           AI: Chat History / Pick Model / Auto-Approve
-
-LSP
-  F12               Go to definition
-  Ctrl+F12          Go to type definition
-  Palette           Go to Implementation
-  Shift+F12         Find references
-  K / Palette       Hover documentation
-  F2                Rename symbol
-  Ctrl+Space        Manual completion
-  Alt+L             Toggle inlay hints
-  F5 / Shift+F5     Next / previous diagnostic
-  Alt+M             View: Problems (panel; also Ctrl+Shift+M)
-  Palette           Go to Problem...
-
-TASKS
-  Alt+R             Run task...
-  Alt+Shift+R       Rerun last task
-  Palette           Tasks: Run Build / Test Task, Terminate, Configure
-  Click file:line   Open a link printed in a terminal tab
-
-VIEW
-  Alt+Z             Toggle Zen mode
-  Alt+W             Toggle word wrap
-  Ctrl+\            Split editor right
-  Palette           Editor: Split Down / Close Split
-  Palette           Fold All / Unfold All / Toggle Fold
-  Ctrl+Alt+I        Show buffer info
-  Palette           View: Open URL on Current Line
-  Palette           Files: Toggle Hidden Files
-  Palette           Help: Show Shortcuts (this overlay)
-  Palette           Help: Show Error Log
-  Palette           Help: Run Doctor (check nvim, rg, LSPs, font)
-
-GIT
-  Alt+] / Alt+[     Next / previous change (hunk)
-  Alt+B             Blame current line
-  Palette           Git: Stage Current File / Stage All
-  Palette           Git: Commit / Discard / Refresh
-  Palette           Git: Push / Pull / Switch Branch
-  Palette           Git: Show Log / File History / Tags
-  Palette           Git: Compare with Revision
-  Palette           Git: Stash / Pop Stash / Show Stash List
-  Palette           Git: Show Diff for Current File
-  Palette           Git: Focus Source Control
-
-TERMINAL & RUN
-  Ctrl+T            Toggle integrated terminal panel
-  Ctrl+` + "`" + ` / Alt+` + "`" + `    Alternate terminal toggles (best effort)
-  Palette           Terminal: Open External Shell
-  Alt+T             Run project tests
-  F7                Markdown preview (.md files only)
-
-DEBUG
-  F9                Toggle breakpoint
-  F10               Step over
-  F11 / Shift+F11   Step into / out (terminal-dependent)
-  Alt+F5            Start / continue debugging
-  Shift+Alt+F5      Stop debugging
-  Palette           View: Run and Debug / View: Debug Console
-  Palette           Debug: Run Without Debugging / Open launch.json
-
-WORKSPACE
-  Palette           Workspace: Add Folder
-  Palette           Workspace: Remove Folder
-  Palette           File: Open Recent Workspace
-  Palette           Copy: File:Line Reference
-  Palette           Snippets: Browse
-
-PREFERENCES
-  Palette           Preferences: Open Settings (UI)
-  Palette           Preferences: Color Theme
-  Palette           Preferences: Edit Custom Theme
-  Palette           Preferences: Customize Keybindings
-  Palette           Open Config: User Commands / Theme
-
-DEVELOPER
-  Palette           Developer: Reload Window
-  Palette           Developer: Reset Session
-
-ENV / TIPS
-  TERMOCODE_ICON_MODE=nerd_font|unicode|ascii  override icons
-  scripts/run-with-small-font.sh               wrapper to launch with
-                                               a smaller terminal font
-  Esc                                          drop into Vim Normal mode;
-                                               the editor is real Neovim
-`
-	m.preview = preview.New(" Keyboard Shortcuts ", body)
+	m.preview = preview.New(" Keyboard Shortcuts ", cheatSheetBody(m.keys))
 	m.preview.SetSize(m.w, m.h)
 	m.previewOpen = true
+}
+
+// cheatSheetKeyCol is the width of the key column. Longer keys push the
+// description to the right instead of being cut.
+const cheatSheetKeyCol = 20
+
+// cheatSheetBody renders the sheet for keymap k: every bound action
+// grouped by area (keymap.Areas), then the keys termocode adds inside
+// Neovim (EditorKeyCatalog), then a few tips.
+func cheatSheetBody(k keymap.KeyMap) string {
+	var b strings.Builder
+	row := func(keys, desc string) {
+		pad := cheatSheetKeyCol - len([]rune(keys))
+		if pad < 2 {
+			pad = 2
+		}
+		fmt.Fprintf(&b, "  %s%s%s\n", keys, strings.Repeat(" ", pad), strings.TrimSuffix(desc, "."))
+	}
+
+	byArea := map[string][]keymap.Action{}
+	for _, a := range keymap.AllActions() {
+		if len(k.KeysFor(a)) == 0 {
+			continue
+		}
+		area := keymap.Describe(a).Area
+		byArea[area] = append(byArea[area], a)
+	}
+	b.WriteString("\n")
+	for _, area := range keymap.Areas {
+		acts := byArea[area]
+		if len(acts) == 0 {
+			continue
+		}
+		b.WriteString(strings.ToUpper(area) + "\n")
+		for _, a := range acts {
+			row(humanKeys(k.KeysFor(a)), keymap.Describe(a).Description)
+		}
+		b.WriteString("\n")
+	}
+
+	b.WriteString("EDITOR (NEOVIM)\n")
+	for _, e := range EditorKeyCatalog() {
+		desc := e.Description
+		if e.Mode != "All" {
+			desc = strings.TrimSuffix(desc, ".") + " (" + e.Mode + ")"
+		}
+		row(e.Key, desc)
+	}
+	b.WriteString("\n")
+
+	b.WriteString("TIPS\n")
+	b.WriteString("  Every command is in the command palette, also the ones without a key.\n")
+	b.WriteString("  Change keys with Preferences: Customize Keybindings (keymap.json).\n")
+	b.WriteString("  In the terminal, Ctrl keys go to the shell (see terminal_skip_shell).\n")
+	b.WriteString("  TERMOCODE_ICON_MODE=nerd_font|unicode|ascii overrides the icons.\n")
+	return b.String()
+}
+
+// humanKeys joins key strings as the user reads them ("F8 / Alt+F"),
+// dropping duplicates (xterm's "f16" and "shift+f4" are both Shift+F4).
+func humanKeys(keys []string) string {
+	var out []string
+	seen := map[string]bool{}
+	for _, s := range keys {
+		h := keymap.HumanKey(s)
+		if !seen[h] {
+			seen[h] = true
+			out = append(out, h)
+		}
+	}
+	return strings.Join(out, " / ")
 }

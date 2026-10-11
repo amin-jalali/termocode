@@ -102,3 +102,24 @@ func TestPaletteHintFollowsKeymapOverride(t *testing.T) {
 	d.Key("ctrl+g")
 	mustNotSee(t, d, "EXPLORER")
 }
+
+// Spec: Given keymap.json moves Save to Alt+S and gives Ctrl+S to Zen mode,
+// when the user opens Help: Show Shortcuts,
+// then the sheet shows Alt+S for Save (not Ctrl+S) and Ctrl+S for Zen
+// mode: it is built from the live keymap.
+func TestCheatSheetShowsKeymapOverrides(t *testing.T) {
+	d := testkit.New(t, testkit.Options{W: 120, H: 60,
+		Config: map[string]string{"keymap.json": `{"alt+s": "Save", "ctrl+s": "ToggleZenMode"}`}})
+	d.Palette("cheat-sheet")
+	mustSee(t, d, "Keyboard Shortcuts")
+	save := lineWith(d, "Save the active file")
+	if !strings.Contains(save, "Alt+S") || strings.Contains(save, "Ctrl+S") {
+		t.Errorf("Save line = %q, want Alt+S only", save)
+	}
+	for i := 0; i < 20 && lineWith(d, "Zen mode") == ""; i++ {
+		d.Key("pgdown") // the sheet scrolls
+	}
+	if zen := lineWith(d, "Zen mode"); !strings.Contains(zen, "Ctrl+S") {
+		t.Errorf("Zen line = %q, want Ctrl+S", zen)
+	}
+}
