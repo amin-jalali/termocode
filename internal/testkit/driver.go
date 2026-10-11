@@ -146,7 +146,27 @@ func (d *Driver) Send(msg tea.Msg) string {
 	d.history = append(d.history, describe(msg))
 	d.deliver(msg)
 	d.settle(d.opt.MaxSettle)
+	d.checkNvim()
 	return d.render()
+}
+
+// checkNvim fails the test when nvim waits for input (hit-enter or
+// confirm prompt): the next RPC call from the app would hang.
+func (d *Driver) checkNvim() {
+	d.T.Helper()
+	if !d.opt.Nvim || d.quit {
+		return
+	}
+	m, ok := d.model.(app.Model)
+	if !ok {
+		return
+	}
+	var mode string
+	var blocking, alive bool
+	if d.call("nvim_get_mode", func() { mode, blocking, alive = m.NvimMode() }) && alive && blocking {
+		d.T.Fatalf("nvim is blocked waiting for input (mode %q): the app would freeze\nlast steps:\n  %s",
+			mode, strings.Join(tail(d.history, 12), "\n  "))
+	}
 }
 
 // Key sends one key per argument ("ctrl+p", "enter", "a").

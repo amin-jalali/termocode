@@ -32,6 +32,17 @@ import (
 //	aidemo                 load a sample AI conversation
 type DevActionMsg struct{ ID string }
 
+// NvimMode reports the embedded nvim's mode and whether it is blocked
+// waiting for input (a prompt that would freeze the app). ok is false
+// without nvim. For tests (internal/testkit checks it after every step).
+func (m Model) NvimMode() (mode string, blocking, ok bool) {
+	if m.nvim == nil {
+		return "", false, false
+	}
+	mode, blocking, err := m.nvim.Mode()
+	return mode, blocking, err == nil
+}
+
 func (m *Model) runDevAction(id string) tea.Cmd {
 	kind, arg, _ := strings.Cut(id, ":")
 	switch kind {
