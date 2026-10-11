@@ -226,6 +226,7 @@ func PaletteActionFor(id string) (keymap.Action, bool) {
 
 // SettingEntry is one config.json key.
 type SettingEntry struct {
+	ID          string // Settings row id ("setting-theme"); "" for file-only keys
 	Key         string
 	Type        string
 	Default     string
@@ -233,6 +234,8 @@ type SettingEntry struct {
 	// Category is the Settings modal group ("Appearance", "Editor", …).
 	// Keys that only exist in the file use "<group> (file only)".
 	Category string
+	// Choices are the values of an enum setting.
+	Choices []string
 }
 
 // fileOnlySettings are config.json keys with no row in the Settings modal.
@@ -259,7 +262,8 @@ func SettingsCatalog() []SettingEntry {
 			order = append(order, c)
 		}
 		byCat[c] = append(byCat[c], SettingEntry{
-			Key: r.Label, Type: r.Kind, Default: r.Default, Description: r.Desc, Category: c,
+			ID: r.ID, Key: r.Label, Type: r.Kind, Default: r.Default, Description: r.Desc, Category: c,
+			Choices: settingChoices(r.ID),
 		})
 	}
 	var out []SettingEntry

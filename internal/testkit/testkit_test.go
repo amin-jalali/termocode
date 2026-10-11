@@ -22,6 +22,7 @@ func TestFrameProblems(t *testing.T) {
 		"cursor":    "ab\x1b[2Jcd\nabcd",
 		"tab":       "ab\tc\nabcd",
 		"osc52":     "abcd\x1b]52;c;eA==\x07\nabcd",
+		"apc":       "abcd\x1b_Xfoo\x1b\\\nabcd",
 		"lone-esc":  "abcd\x1b\nabcd",
 		"cr":        "abc\r\nabcd",
 		"c1":        "abc\u0085\nabcd",
