@@ -362,6 +362,7 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
+		m.lastWinResize = time.Now()
 		m.applyLayout()
 		return m, nil
 
@@ -2024,9 +2025,7 @@ func (m *Model) applyLayout() {
 	// height, no chrome. Skip the rest of the math entirely.
 	if m.zenMode {
 		m.editor.SetSize(m.w, m.h)
-		if m.nvim != nil {
-			_ = m.nvim.Resize(m.w, m.h)
-		}
+		m.sendNvimResize(m.w, m.h)
 		return
 	}
 	bodyH := m.h - 1

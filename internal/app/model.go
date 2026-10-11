@@ -124,13 +124,15 @@ type Model struct {
 	// Animations (anim.go): overlay open progress 0→1, and whether a
 	// tick is already scheduled.
 	overlayAnim anim.Value
-	// resizeT coalesces nvim resizes during splitter drags.
-	resizeT     resizeThrottle
-	animTicking bool
-	keys        keymap.KeyMap
-	nvim        *nvim.Client
-	bufs        []nvim.BufferInfo
-	activeBuf   int
+	// resizeT coalesces nvim resizes during splitter drags and window
+	// resizes; lastWinResize is when the last WindowSizeMsg came.
+	resizeT       resizeThrottle
+	lastWinResize time.Time
+	animTicking   bool
+	keys          keymap.KeyMap
+	nvim          *nvim.Client
+	bufs          []nvim.BufferInfo
+	activeBuf     int
 
 	// keymapProblems are keymap.json entries dropped at startup (typos);
 	// shown once in a toast on nvim.ReadyMsg.

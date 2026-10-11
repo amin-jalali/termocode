@@ -52,15 +52,11 @@ func New(client *nvim.Client) Model {
 
 func (m Model) Init() tea.Cmd { return nil }
 
-// SetSize updates the pane size. If nvim is attached, the grid is resized too.
+// SetSize updates the pane size. It does not resize nvim's grid: the app
+// does that through its resize throttle (app/resize_throttle.go), so a
+// splitter drag or a window resize does not wait on nvim for every step.
 func (m *Model) SetSize(w, h int) {
-	if w == m.w && h == m.h {
-		return
-	}
 	m.w, m.h = w, h
-	if m.client != nil && w > 0 && h > 0 {
-		_ = m.client.Resize(w, h)
-	}
 }
 
 // ApplyRedraw consumes a batch of nvim redraw events.
