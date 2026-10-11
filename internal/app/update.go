@@ -242,6 +242,8 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case gitCommitDiffReadyMsg:
 		m.openCommitDiffBuffer(msg)
 		return m, nil
+	case gitRemoteDoneMsg:
+		return m, m.gitRemoteDone(msg)
 	case preview.CloseMsg:
 		m.previewOpen = false
 		return m, nil
@@ -512,11 +514,24 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 			// (every grid_line / grid_scroll / etc.) — at ~60fps during
 			// scroll that's a Lua roundtrip every 16ms. Coalesce to 100ms.
 			const stateThrottle = 100 * time.Millisecond
-			if time.Since(m.stateLastFetch) >= stateThrottle {
+			// A throttled redraw schedules one trailing fetch: otherwise
+			// the state after the burst's last redraw (cursor, buffer,
+			// filetype) stays unread until something else redraws.
+			if since := time.Since(m.stateLastFetch); since >= stateThrottle {
 				m.stateLastFetch = time.Now()
 				cmds = append(cmds, m.fetchStateCmd())
+			} else if !m.stateFetchPending {
+				m.stateFetchPending = true
+				cmds = append(cmds, tea.Tick(stateThrottle-since, func(time.Time) tea.Msg { return stateTrailingFetchMsg{} }))
 			}
 			return m, tea.Batch(cmds...), true
+		}
+		return m, nil, true
+	case stateTrailingFetchMsg:
+		m.stateFetchPending = false
+		if m.nvim != nil {
+			m.stateLastFetch = time.Now()
+			return m, m.fetchStateCmd(), true
 		}
 		return m, nil, true
 	case StateMsg:
@@ -623,6 +638,12 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 		// user's section-collapse state, selection, or the commit message box.
 		return m, tea.Batch(fetchGitCmd(), gitAutoRefreshTick()), true
 	case GitMsg:
+		// Editor gutter signs compare buffers with HEAD; when HEAD or the
+		// changed-file list moved (commit, checkout, pull, discard …),
+		// repaint them now instead of on the next buffer event.
+		if m.nvim != nil && gitSnapshotChanged(m.gitGraph, m.gitFiles, msg.Graph, msg.Files) {
+			_ = m.nvim.ExecLua(`if _G.termocode_git_signs_refresh then _G.termocode_git_signs_refresh() end`)
+		}
 		m.gitIsRepo = msg.IsRepo
 		m.gitBranch = msg.Branch
 		m.gitFiles = msg.Files
@@ -1060,6 +1081,10 @@ func toNvimBufs(in []nvimBuffer) []nvim.BufferInfo {
 	return out
 }
 
+// stateTrailingFetchMsg runs the state fetch that the redraw throttle
+// put off.
+type stateTrailingFetchMsg struct{}
+
 func (m Model) fetchStateCmd() tea.Cmd {
 	if m.nvim == nil {
 		return nil
@@ -1185,8 +1210,10 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Welcome-screen keyboard navigation: when the start page is
 	// rendered (no buffer, no terminal panel) we let arrow keys / Tab
 	// move the Quick Actions cursor and Enter dispatch the focused
-	// card. Falls through to normal handling otherwise.
-	if m.welcomeShowing() {
+	// card. Falls through to normal handling otherwise. Not while the
+	// Source Control panel has the focus: its list and commit box need
+	// the arrows, Tab and Enter.
+	if m.welcomeShowing() && !(m.focus == FocusExplorer && m.activity.Active() == activity.ViewGit) {
 		if newM, cmd, handled := m.handleWelcomeKey(msg); handled {
 			return newM, cmd
 		}

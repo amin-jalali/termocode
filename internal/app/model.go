@@ -296,8 +296,10 @@ type Model struct {
 	// stateLastFetch throttles fetchStateCmd. nvim emits a burst of
 	// RedrawMsgs when scrolling — issuing a Lua FetchState per redraw
 	// makes scrolling feel choppy on large files. We coalesce them down
-	// to ~10 Hz instead.
-	stateLastFetch time.Time
+	// to ~10 Hz instead. stateFetchPending is set while a trailing fetch
+	// is scheduled, so the last redraw of a burst is never left unread.
+	stateLastFetch    time.Time
+	stateFetchPending bool
 
 	// lastReloadSeq remembers the most recent FileChangedShellPost counter
 	// surfaced via FetchState. A higher value in the next StateMsg means a
@@ -566,7 +568,15 @@ type Model struct {
 // the editor pane (mirrors the same condition view.go uses to choose
 // renderWelcome over m.editor.View).
 func (m Model) welcomeShowing() bool {
-	return m.editor.Path() == "" && len(m.bufs) <= 1 && !m.termOpen
+	return m.editorEmpty()
+}
+
+// editorEmpty reports whether the editor has nothing to show, so the start
+// page takes its place: no file, no terminal, and the current buffer is not
+// one of termocode's nameless views — the side-by-side diff's HEAD pane
+// (gitDiffActive) or a commit diff / other scratch buffer with a filetype.
+func (m Model) editorEmpty() bool {
+	return m.editor.Path() == "" && len(m.bufs) <= 1 && !m.termOpen && !m.gitDiffActive && m.editor.Lang() == ""
 }
 
 func New() Model {
@@ -782,7 +792,9 @@ func (m Model) attachCmd() tea.Cmd {
 			// 2 trailing spaces — gives clear breathing room on BOTH sides
 			// of the digit (left padding from numberwidth=5, right from
 			// the trailing spaces).
-			`lua vim.opt.statuscolumn = '%=%l  '`,
+			// The last cell is the git change mark (git_signs_lua.go): this
+			// statuscolumn has no sign column, so signs alone never show.
+			`lua _G.TcGitMark = _G.TcGitMark or function() return ' ' end; vim.opt.statuscolumn = '%=%l %{%v:lua.TcGitMark()%}'`,
 			// Word jumps with Ctrl+Right / Ctrl+Left in both normal and insert
 			// mode. Insert-mode bindings use <C-O> so we don't drop out of insert.
 			"nnoremap <silent> <C-Right> w",
@@ -928,7 +940,7 @@ func (m Model) attachCmd() tea.Cmd {
 						vim.wo[w].signcolumn   = 'auto'
 						vim.wo[w].cursorline   = true
 						vim.wo[w].foldcolumn   = '0'
-						vim.wo[w].statuscolumn = vim.o.number and '%=%l  ' or ''
+						vim.wo[w].statuscolumn = vim.o.number and '%=%l %{%v:lua.TcGitMark()%}' or ''
 					end)
 				end,
 			})

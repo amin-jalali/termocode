@@ -61,28 +61,37 @@ func IsRepo(dir string) bool {
 	return strings.TrimSpace(string(out)) == "true"
 }
 
-// Status runs `git status --porcelain=v1` in dir and returns parsed entries.
+// Status runs `git status --porcelain=v1 -z` in dir and returns parsed
+// entries. -z gives raw paths: without it git C-quotes names with spaces or
+// non-ASCII letters ("\346\227\245.txt"), which then match no file.
 func Status(dir string) ([]FileStatus, error) {
-	cmd := exec.Command("git", "status", "--porcelain=v1")
+	cmd := exec.Command("git", "status", "--porcelain=v1", "-z")
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
+	return parseStatusZ(string(out)), nil
+}
+
+// parseStatusZ parses `git status --porcelain=v1 -z` output: NUL-terminated
+// "XY path" records; a rename or copy is followed by one more record with
+// the old path, which is skipped (the new name is the one on disk).
+func parseStatusZ(out string) []FileStatus {
 	var files []FileStatus
-	for _, line := range strings.Split(string(out), "\n") {
-		if len(line) < 4 {
+	recs := strings.Split(out, "\x00")
+	for i := 0; i < len(recs); i++ {
+		rec := recs[i]
+		if len(rec) < 4 {
 			continue
 		}
-		code := line[:2]
-		path := line[3:]
-		// Rename: "old -> new" — keep new name.
-		if i := strings.Index(path, " -> "); i >= 0 {
-			path = path[i+4:]
+		code := rec[:2]
+		files = append(files, FileStatus{Code: code, Path: rec[3:]})
+		if code[0] == 'R' || code[0] == 'C' {
+			i++ // the old path
 		}
-		files = append(files, FileStatus{Code: code, Path: path})
 	}
-	return files, nil
+	return files
 }
 
 // GetBranch returns current branch name and ahead/behind counts vs upstream.
@@ -185,7 +194,7 @@ func CommitWith(dir, message string, amend, signoff bool) error {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
@@ -774,7 +783,7 @@ func Stash(dir, message string) error {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	if strings.Contains(string(out), "No local changes to save") {
 		return fmt.Errorf("no local changes to save")
@@ -788,7 +797,7 @@ func StashPop(dir string) error {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
@@ -799,7 +808,7 @@ func StashApply(dir, ref string) error {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
@@ -810,7 +819,7 @@ func StashDrop(dir, ref string) error {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
@@ -840,11 +849,10 @@ func StashList(dir string) ([]StashEntry, error) {
 // failure so the caller can surface it (push errors usually contain
 // actionable messages — "no upstream", "non-fast-forward", auth failures).
 func Push(dir string) error {
-	cmd := exec.Command("git", "push")
-	cmd.Dir = dir
+	cmd := remoteCmd(dir, "push")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
@@ -854,22 +862,20 @@ func Push(dir string) error {
 // remote is `origin`; if the user has a different default remote they can
 // run the command from the integrated terminal instead.
 func PushSetUpstream(dir, branch string) error {
-	cmd := exec.Command("git", "push", "-u", "origin", branch)
-	cmd.Dir = dir
+	cmd := remoteCmd(dir, "push", "-u", "origin", branch)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
 
 // Pull runs `git pull` in dir. Same error-formatting strategy as Push.
 func Pull(dir string) error {
-	cmd := exec.Command("git", "pull")
-	cmd.Dir = dir
+	cmd := remoteCmd(dir, "pull")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
@@ -877,11 +883,10 @@ func Pull(dir string) error {
 // Fetch runs `git fetch --prune` in dir, updating remote-tracking refs without
 // touching the working tree. Same error-formatting strategy as Push/Pull.
 func Fetch(dir string) error {
-	cmd := exec.Command("git", "fetch", "--prune")
-	cmd.Dir = dir
+	cmd := remoteCmd(dir, "fetch", "--prune")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
@@ -912,7 +917,7 @@ func Checkout(dir, branch string) error {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
@@ -924,7 +929,7 @@ func CreateBranch(dir, name string) error {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return cmdError(err, out)
 	}
 	return nil
 }
