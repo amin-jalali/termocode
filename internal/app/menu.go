@@ -324,7 +324,7 @@ func (m *Model) handleMenuSelect(id string) tea.Cmd {
 			return c
 		}
 		if m.nvim != nil {
-			_ = m.nvim.Command("vsplit " + path)
+			_ = m.nvim.OpenFile("vsplit", path)
 		}
 		m.focus = FocusEditor
 	case "copy-path":

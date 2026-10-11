@@ -1833,7 +1833,7 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		}
 		if m.nvim != nil {
 			m.ensureEditorWindowCurrent()
-			_ = m.nvim.Command("edit " + msg.ID)
+			_ = m.nvim.OpenFile("edit", msg.ID)
 		}
 		m.explorer.RevealPath(msg.ID)
 		m.focus = FocusEditor
@@ -1879,7 +1879,7 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		}
 		if m.nvim != nil {
 			m.ensureEditorWindowCurrent()
-			_ = m.nvim.Command("edit " + msg.ID)
+			_ = m.nvim.OpenFile("edit", msg.ID)
 		}
 		m.explorer.RevealPath(msg.ID)
 		m.focus = FocusEditor

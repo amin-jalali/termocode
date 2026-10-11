@@ -223,7 +223,7 @@ func (m *Model) Open(path string) error {
 	if m.client == nil {
 		return nil
 	}
-	return m.client.Command("edit " + path)
+	return m.client.OpenFile("edit", path)
 }
 
 // Save issues `:silent w` in nvim. The `silent` keeps nvim's cmdline
