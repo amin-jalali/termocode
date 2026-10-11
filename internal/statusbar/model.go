@@ -149,8 +149,8 @@ func (m Model) layout(s State) barLayout {
 	if l.leftW+l.rightW > innerW {
 		// Truncate the right cluster first — the filename on the left
 		// is more critical than the trailing metadata when space is
-		// tight.
-		avail := innerW - l.leftW
+		// tight. Keep a small gap so the clusters don't touch.
+		avail := innerW - l.leftW - minClusterGap
 		if avail < 0 {
 			avail = 0
 		}
@@ -255,6 +255,10 @@ func (m Model) AIBadgeSpan(s State) (x0, x1 int, ok bool) {
 // stripping ANSI escapes, truncating with an ellipsis, and re-styling
 // the result with the status-bar palette. Good enough for the trailing
 // fields where we just need to fit.
+// minClusterGap is the blank space kept between the left and right
+// clusters when the right one has to be cut.
+const minClusterGap = 2
+
 func truncateStyled(s string, w int) string {
 	if w <= 0 {
 		return ""
