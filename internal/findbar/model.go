@@ -161,12 +161,14 @@ func (m Model) ReplaceMode() bool { return m.replaceMode }
 // ReplaceValue returns the current contents of the Replace input.
 func (m Model) ReplaceValue() string { return m.replace }
 
-// EnableReplace expands or collapses the Replace row. When expanding, the
-// input focus moves to the Replace field so Ctrl+H feels like "open with
-// the replace input ready".
+// EnableReplace expands or collapses the Replace row. When expanding with
+// a query already in Find (seeded from the selection, or typed before),
+// the input focus moves to the Replace field so Ctrl+H feels like "open
+// with the replace input ready". With an empty query the focus stays on
+// Find, as in VS Code: the user types what to find first.
 func (m *Model) EnableReplace(on bool) {
 	m.replaceMode = on
-	if on {
+	if on && m.input != "" {
 		m.focus = fieldReplace
 	} else {
 		m.focus = fieldFind

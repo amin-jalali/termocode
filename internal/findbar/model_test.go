@@ -517,13 +517,14 @@ func TestWholeWordToggleViaMouse(t *testing.T) {
 func TestTabTogglesFocusInReplaceMode(t *testing.T) {
 	m := New()
 	m.SetWidth(80)
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")})
 	m.EnableReplace(true)
-	// EnableReplace puts focus on Replace; Tab should hop back to Find.
+	// EnableReplace with a query puts focus on Replace; Tab should hop back to Find.
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
 	// Type into the focused field — should land in m.input (Find).
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
-	if m.Query() != "q" {
-		t.Fatalf("after Tab+typing, find input want 'q', got %q", m.Query())
+	if m.Query() != "pq" {
+		t.Fatalf("after Tab+typing, find input want 'pq', got %q", m.Query())
 	}
 	// Tab again → focus to Replace; typing should fill m.replace.
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
@@ -536,13 +537,27 @@ func TestTabTogglesFocusInReplaceMode(t *testing.T) {
 func TestTypingInReplaceFieldFillsReplace(t *testing.T) {
 	m := New()
 	m.SetWidth(80)
-	m.EnableReplace(true) // focus is on Replace
+	m.SetQuery("x")
+	m.EnableReplace(true) // focus is on Replace (Find has a query)
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("hi")})
 	if m.ReplaceValue() != "hi" {
 		t.Fatalf("replace want 'hi', got %q", m.ReplaceValue())
 	}
-	if m.Query() != "" {
-		t.Fatalf("find input must remain empty when typing in replace, got %q", m.Query())
+	if m.Query() != "x" {
+		t.Fatalf("find input must not change when typing in replace, got %q", m.Query())
+	}
+}
+
+// Spec: Given an empty Find input,
+// when Replace opens (Ctrl+H),
+// then the focus is on Find, so the user types the query first.
+func TestEnableReplaceWithEmptyQueryFocusesFind(t *testing.T) {
+	m := New()
+	m.SetWidth(80)
+	m.EnableReplace(true)
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("cat")})
+	if m.Query() != "cat" || m.ReplaceValue() != "" {
+		t.Fatalf("typing after Ctrl+H on an empty bar: find=%q replace=%q, want find=cat", m.Query(), m.ReplaceValue())
 	}
 }
 
@@ -632,6 +647,7 @@ func TestReplaceAllIconClickEmitsReplaceAllMsg(t *testing.T) {
 func TestResetClearsReplaceValue(t *testing.T) {
 	m := New()
 	m.SetWidth(80)
+	m.SetQuery("q")
 	m.EnableReplace(true)
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
 	if m.ReplaceValue() != "x" {
