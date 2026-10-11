@@ -608,6 +608,10 @@ func New() Model {
 	// session so the user's drag-set preference survives a relaunch. Missing
 	// / corrupt / out-of-range values fall back to the default.
 	sess := loadSession()
+	explorerW := defaultExplorerWidth
+	if w := sess.ExplorerWidth; w >= explorerMinWidth && w <= explorerMaxWidth {
+		explorerW = w // the sidebar width dragged last time
+	}
 	termRows := terminalRowsDefault
 	if r := sess.TerminalRows; r >= terminalRowsMin {
 		termRows = r
@@ -662,7 +666,7 @@ func New() Model {
 		mouseAllMotion:   true,
 		commitDetails:    map[string]git.CommitDetail{},
 		gitDiffHoverPane: -1,
-		explorerWidth:    defaultExplorerWidth,
+		explorerWidth:    explorerW,
 		terminalRows:     termRows,
 		actionsOpen:      actionsOpen,
 		actionsPinned:    actionsPinned,
