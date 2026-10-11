@@ -88,6 +88,25 @@ func TestAIChatApplyCodeBlock(t *testing.T) {
 	}
 }
 
+// Spec: Given a finished answer with a code block,
+// when the user clicks Copy on the code card, then clicks into the editor
+// and pastes (Ctrl+V),
+// then a toast confirms the copy and the code lands in the file.
+func TestAIChatCopyCodeBlock(t *testing.T) {
+	f := newFakeAI(t)
+	f.reply("```go\n// pasted from chat\n// it's line two\n```")
+	d := aiDriver(t, f)
+	ask(d, "a comment please")
+	mustSee(t, d, "Copy")
+	clickText(t, d, "Copy")
+	mustSee(t, d, "Copied code block")
+	clickText(t, d, "fmt.Println") // back into the editor
+	d.Key("ctrl+v", "ctrl+s")
+	if got := waitFile(t, d, "main.go", func(s string) bool { return strings.Contains(s, "pasted from chat") }); !strings.Contains(got, "// pasted from chat") || !strings.Contains(got, "// it's line two") {
+		t.Fatalf("main.go after paste = %q", got)
+	}
+}
+
 // Spec: Given a provider that answers 401,
 // when the user asks a question,
 // then the chat shows an error message with the status (no crash, no
