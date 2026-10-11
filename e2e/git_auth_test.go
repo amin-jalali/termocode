@@ -46,11 +46,20 @@ func TestGitPushAuthNeverPromptsOnTerminal(t *testing.T) {
 	tm.settle()
 
 	tm.Palette("Git: Push")
+	// git's own prompt is "Username for 'http://…': "; the error toast
+	// says "could not read Username for …", which is fine.
+	prompted := func(ls []string) bool {
+		for _, l := range ls {
+			if (strings.Contains(l, "Username for") || strings.Contains(l, "Password for")) && !strings.Contains(l, "could not read") {
+				return true
+			}
+		}
+		return false
+	}
 	tm.WaitFor("push result", uiTimeout, func(ls []string) bool {
-		s := strings.Join(ls, "\n")
-		return strings.Contains(s, "Push failed") || strings.Contains(s, "Username for")
+		return strings.Contains(strings.Join(ls, "\n"), "Push failed") || prompted(ls)
 	})
-	if tm.Has("Username for") || tm.Has("Password for") {
+	if prompted(tm.Lines()) {
 		t.Fatalf("git prompted on the terminal:\n%s", tm.Screen())
 	}
 	if hits.Load() == 0 {
