@@ -52,21 +52,17 @@ func (m *Model) openRecentFilePicker() tea.Cmd {
 	return m.recents.Init()
 }
 
-// toggleWordWrap flips nvim's `wrap` window-local option and surfaces a
-// toast with title "Word wrap" + body "enabled"/"disabled". Returns the
-// toast's tick cmd so the auto-dismiss timer actually fires (the
-// previous version dropped it via `_ = toastCmd` and the toast stuck
-// around forever).
+// toggleWordWrap flips wrap based on the current window and applies the
+// new value to every file window and to files opened later, like the
+// word_wrap setting (it does not change config.json). Shows a toast
+// "Word wrap" + "enabled"/"disabled" and returns its tick cmd so the
+// auto-dismiss timer fires.
 func (m *Model) toggleWordWrap() tea.Cmd {
 	if m.nvim == nil {
 		return nil
 	}
 	cur, _ := m.nvim.EvalLuaString(`return vim.wo.wrap and 'on' or 'off'`)
-	if cur == "on" {
-		_ = m.nvim.Command("setlocal nowrap")
-	} else {
-		_ = m.nvim.Command("setlocal wrap")
-	}
+	m.setWrapAll(cur != "on")
 	body := "disabled"
 	if cur == "off" {
 		body = "enabled"

@@ -78,5 +78,5 @@ to hide the sidebar.
 ## Help
 
 - **Help: Run Doctor** checks your tools. → [Check your setup](getting-started/help-doctor.md)
-- **Help: Show Shortcuts** shows a cheat sheet.
+- **Help: Show Shortcuts** shows a cheat sheet of your current keys (with your `keymap.json` changes).
 - The full lists: [Keyboard shortcuts](reference/keys.md) · [Commands](reference/commands.md) · [Settings](reference/settings.md).

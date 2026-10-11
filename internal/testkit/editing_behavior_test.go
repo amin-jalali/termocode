@@ -370,3 +370,38 @@ func TestRevertDropsUnsavedEdits(t *testing.T) {
 		t.Errorf("tab still dirty after revert: %v", got)
 	}
 }
+
+// Spec: Given a.txt and b.txt side by side in a split, with wrap off,
+// when the user runs Toggle Word Wrap,
+// then both file windows wrap (like the word_wrap setting), and so does
+// c.txt opened next; running it again unwraps them all.
+func TestToggleWordWrapAllWindows(t *testing.T) {
+	d := editorDriver(t, nil)
+	open(d, "a.txt")
+	d.Key("ctrl+\\")
+	open(d, "b.txt")
+	wraps := func() string {
+		return lua(d, `local n = {}
+for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+  local b = vim.api.nvim_win_get_buf(w)
+  if vim.bo[b].buftype == '' then table.insert(n, vim.fn.fnamemodify(vim.api.nvim_buf_get_name(b), ':t') .. '=' .. tostring(vim.wo[w].wrap)) end
+end
+table.sort(n)
+return table.concat(n, ',')`)
+	}
+	if got := wraps(); got != "a.txt=false,b.txt=false" {
+		t.Fatalf("before: %q", got)
+	}
+	d.Palette("toggle-wrap")
+	if got := wraps(); got != "a.txt=true,b.txt=true" {
+		t.Fatalf("after Toggle Word Wrap: %q, want both wrapped", got)
+	}
+	open(d, "c.txt")
+	if got := lua(d, `return tostring(vim.wo.wrap)`); got != "true" {
+		t.Errorf("c.txt opened after the toggle: wrap = %s", got)
+	}
+	d.Palette("toggle-wrap")
+	if got := wraps(); got != "b.txt=false,c.txt=false" && got != "a.txt=false,c.txt=false" {
+		t.Errorf("after the second toggle: %q, want none wrapped", got)
+	}
+}
