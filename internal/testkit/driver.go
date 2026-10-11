@@ -28,6 +28,9 @@ type Options struct {
 
 	// Files is the workspace content (path → body); nil means DefaultFiles.
 	Files map[string]string
+	// Setup, when set, runs on the workspace before the app starts (e.g. to
+	// build a git history with fixed dates or add a remote).
+	Setup func(t testing.TB, dir string)
 
 	// Quiet is how long no message may arrive before a step counts as
 	// settled (default 5ms, 40ms with nvim). MaxSettle caps a step's
@@ -86,6 +89,9 @@ func New(t testing.TB, opt Options) *Driver {
 
 	sandbox(t, opt.Nvim)
 	dir := makeWorkspace(t, opt.Files, opt.Git)
+	if opt.Setup != nil {
+		opt.Setup(t, dir)
+	}
 	t.Chdir(dir)
 	t.Setenv("PWD", dir)
 
