@@ -145,7 +145,7 @@ func (m *Model) toggleAutoSave() tea.Cmd {
 				group = 'TermocodeAutoSave',
 				callback = function()
 					if vim.bo.modified and vim.bo.buftype == '' and vim.fn.expand('%') ~= '' then
-						pcall(vim.cmd, 'silent! write')
+						pcall(vim.cmd, 'silent! update')
 					end
 				end,
 			})
