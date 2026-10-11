@@ -1,9 +1,7 @@
 package app
 
 import (
-	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 )
 
@@ -30,48 +28,6 @@ func pluginsDir() (string, error) {
 		return "", err
 	}
 	return filepath.Join(home, ".local", "share", "termocode", "plugins"), nil
-}
-
-// ensureVimVisualMulti clones mg979/vim-visual-multi into the plugins dir if
-// it's not already there. The clone is silent and idempotent: if the repo
-// already exists (detected by the .git subdirectory), this is a no-op.
-//
-// Network or git failures are non-fatal — the function returns the empty
-// string and a nil error so the editor still launches without multi-cursor
-// support. The actual error (if any) is reported via the returned warn string
-// so the caller can log it.
-func ensureVimVisualMulti() (path string, warn string) {
-	root, err := pluginsDir()
-	if err != nil {
-		return "", fmt.Sprintf("multi-cursor: locate plugins dir: %v", err)
-	}
-	dest := filepath.Join(root, "vim-visual-multi")
-
-	// Already cloned? Trust the .git marker; a half-clone is rare and would
-	// only cost the user one manual `rm -rf` to recover.
-	if st, err := os.Stat(filepath.Join(dest, ".git")); err == nil && st.IsDir() {
-		return dest, ""
-	}
-
-	if err := os.MkdirAll(root, 0o755); err != nil {
-		return "", fmt.Sprintf("multi-cursor: mkdir %s: %v", root, err)
-	}
-
-	// git must exist for the clone. If it's missing we degrade gracefully.
-	if _, err := exec.LookPath("git"); err != nil {
-		return "", "multi-cursor: git not on PATH; skipping vim-visual-multi clone"
-	}
-
-	cmd := exec.Command("git", "clone", "--depth", "1", "--quiet", vimVisualMultiRepo, dest)
-	// Discard output: keep the startup silent on success and on failure.
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	if err := cmd.Run(); err != nil {
-		// Best-effort cleanup of a partial clone so the next launch retries.
-		_ = os.RemoveAll(dest)
-		return "", fmt.Sprintf("multi-cursor: clone failed (%v); editor will run without multi-cursor", err)
-	}
-	return dest, ""
 }
 
 // multiCursorSetupLua returns the Lua chunk that:

@@ -10,8 +10,8 @@ import (
 	"github.com/amin-jalali/termocode/internal/nvim"
 )
 
-// A half-cloned plugin dir (first start interrupted) or a failed clone used
-// to vim.notify a warning. With cmdheight=0 that is a hit-enter prompt that
+// A half-cloned plugin dir (first start interrupted) or a missing plugin
+// used to vim.notify a warning. With cmdheight=0 that is a hit-enter prompt that
 // blocks every RPC and key: the editor froze at start-up (found by the e2e
 // suite with an empty plugin dir).
 func TestBracketPairSetupNeverBlocksNvim(t *testing.T) {
@@ -46,7 +46,7 @@ func TestBracketPairSetupNeverBlocksNvim(t *testing.T) {
 	// The old code blocked nvim forever; fail instead of hanging.
 	done := make(chan string, 1)
 	go func() {
-		_ = c.ExecLua(bracketPairLua)
+		_ = c.ExecLua(bracketPairLua(plugin))
 		m, _ := c.EvalLuaString(`local m = vim.api.nvim_get_mode() return m.mode .. (m.blocking and ':blocked' or '')`)
 		done <- m
 	}()
@@ -62,8 +62,5 @@ func TestBracketPairSetupNeverBlocksNvim(t *testing.T) {
 	why, _ := c.EvalLuaString(`return vim.g.termocode_bracket_pair_error or ''`)
 	if why == "" {
 		t.Fatalf("setup failure was not recorded")
-	}
-	if _, err := os.Stat(plugin); !os.IsNotExist(err) {
-		t.Fatalf("half-finished plugin dir was not removed (stat err=%v)", err)
 	}
 }

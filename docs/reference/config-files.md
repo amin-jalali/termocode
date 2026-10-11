@@ -33,7 +33,7 @@ Every file termocode reads or writes. termocode never fails to start because of 
 
 | File | Purpose | Format | Safe to edit? |
 | --- | --- | --- | --- |
-| `plugins/` | Neovim plugins cloned on first launch (nvim-dap, vim-visual-multi). | Git checkouts. `$TERMOCODE_PLUGINS_DIR` moves it. | Delete to re-clone on next launch. |
+| `plugins/` | Neovim plugins cloned in the background on first launch (nvim-dap, vim-visual-multi, rainbow-delimiters). | Git checkouts. `$TERMOCODE_PLUGINS_DIR` moves it. | Delete to re-clone on next launch. |
 | `tools/` | Language servers and debug adapters installed by LSP: Manage Language Servers… and DAP: Install Adapter…. | One folder per tool; `tools/bin` holds shims on Neovim's PATH. `$TERMOCODE_TOOLS_DIR` moves it. | Use the palette commands. Delete a tool folder to remove it. |
 | `tools/asked.json` | Filetypes already asked about in the "no language server" toast. | JSON `{"filetypes": [...]}`. | Safe to delete (the toasts come back). |
 
