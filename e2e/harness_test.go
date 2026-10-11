@@ -108,9 +108,15 @@ func Start(t *testing.T, o StartOpts) *Term {
 			t.Fatal(err)
 		}
 	}
-	// A stub rainbow-delimiters.nvim stops the first-run `git clone`: no
-	// network in tests, and nvim setup does not block for a second or more.
-	stub := filepath.Join(home, ".local/share/termocode/plugins/rainbow-delimiters.nvim/lua/rainbow-delimiters")
+	// Stub plugin checkouts stop the first-run background `git clone`s: no
+	// network in tests, and no "Plugin download failed" toast.
+	plugins := filepath.Join(home, ".local/share/termocode/plugins")
+	for _, d := range []string{"vim-visual-multi/.git", "nvim-dap/.git"} {
+		if err := os.MkdirAll(filepath.Join(plugins, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	stub := filepath.Join(plugins, "rainbow-delimiters.nvim/lua/rainbow-delimiters")
 	if err := os.MkdirAll(stub, 0o755); err != nil {
 		t.Fatal(err)
 	}

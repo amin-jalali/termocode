@@ -1,55 +1,33 @@
 package app
 
-// bracketPairLua bootstraps and configures HiPhish/rainbow-delimiters.nvim,
-// a Tree-sitter based bracket pair colorizer. It clones the plugin to
-// ~/.local/share/termocode/plugins/rainbow-delimiters.nvim on first run,
-// adds it to nvim's runtimepath, then overrides its highlight groups so
-// `()`, `[]`, and `{}` cycle through the termocode BracketPairs palette
-// (gold → magenta → azure) at each nesting level.
+// bracketPairLua configures HiPhish/rainbow-delimiters.nvim, a Tree-sitter
+// based bracket pair colorizer, from its checkout at pluginDir (cloned in
+// the background by plugins.go; "" or a missing checkout = not downloaded
+// yet). It adds the plugin to nvim's runtimepath, then overrides its
+// highlight groups so `()`, `[]`, and `{}` cycle through the termocode
+// BracketPairs palette (gold → magenta → azure) at each nesting level.
 //
-// The chunk is idempotent: subsequent runs short-circuit when the plugin
-// is already on the filesystem. A clone failure (e.g. no network) is
-// recorded in vim.g.termocode_bracket_pair_error and skipped so termocode
-// still starts. It never calls vim.notify: with cmdheight=0 a warning
-// becomes a hit-enter prompt that blocks every RPC and key, so a failed
-// clone (or a half-cloned plugin dir) froze the whole editor.
+// A missing plugin is recorded in vim.g.termocode_bracket_pair_error and
+// skipped. It never calls vim.notify: with cmdheight=0 a warning becomes a
+// hit-enter prompt that blocks every RPC and key.
 //
 // We deliberately set the highlight groups *after* adding the plugin to
 // runtimepath so any defaults the plugin ships with are overridden, and
 // we cycle our 3-color palette across all 7 RainbowDelimiter* groups so
 // deeper nestings keep rotating instead of falling back to plugin colors.
-const bracketPairLua = `
-local plugin_root = vim.fn.expand('~/.local/share/termocode/plugins')
-local plugin_dir  = plugin_root .. '/rainbow-delimiters.nvim'
+func bracketPairLua(pluginDir string) string {
+	return `
+local plugin_dir = '` + luaEscape(pluginDir) + `'
 
 -- Never vim.notify here (see the Go doc comment): record and move on.
 local function disable(why)
   vim.g.termocode_bracket_pair_error = why
 end
 
--- Bootstrap clone (idempotent, silent, non-fatal). A dir without the Lua
--- module is a half-finished clone (interrupted first start): start over.
-local module_dir = plugin_dir .. '/lua/rainbow-delimiters'
-if vim.fn.isdirectory(plugin_dir) == 1 and vim.fn.isdirectory(module_dir) == 0 then
-  vim.fn.delete(plugin_dir, 'rf')
+if plugin_dir == '' or vim.fn.isdirectory(plugin_dir .. '/lua/rainbow-delimiters') == 0 then
+  return disable('rainbow-delimiters is not downloaded (yet)')
 end
-if vim.fn.isdirectory(plugin_dir) == 0 then
-  vim.fn.mkdir(plugin_root, 'p')
-  if vim.fn.executable('git') == 1 then
-    local out = vim.fn.system({
-      'git', 'clone', '--depth=1',
-      '--branch', 'v0.10.0',
-      'https://github.com/HiPhish/rainbow-delimiters.nvim.git',
-      plugin_dir,
-    })
-    if vim.v.shell_error ~= 0 then
-      vim.fn.delete(plugin_dir, 'rf')
-      return disable('rainbow-delimiters bootstrap failed (offline?): ' .. (out or ''))
-    end
-  else
-    return disable('git not found')
-  end
-end
+vim.g.termocode_bracket_pair_error = nil
 
 -- Add to runtimepath. Prepend so plugin/*.lua loads before any user rtp.
 vim.opt.runtimepath:prepend(plugin_dir)
@@ -105,3 +83,4 @@ if not ok then
   disable('rainbow-delimiters require failed: ' .. tostring(err))
 end
 `
+}
