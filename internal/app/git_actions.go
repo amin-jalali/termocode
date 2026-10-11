@@ -740,7 +740,9 @@ type gitRemoteDoneMsg struct {
 }
 
 // gitRemoteOp shows a "running" toast and runs op off the main loop; its
-// result comes back as a gitRemoteDoneMsg.
+// result comes back as a gitRemoteDoneMsg. Only one runs at a time: a second
+// press while one runs (a double-clicked Push) shows a note and starts no
+// second git process.
 func (m *Model) gitRemoteOp(running string, op func(cwd string) gitRemoteDoneMsg) tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
@@ -750,6 +752,11 @@ func (m *Model) gitRemoteOp(running string, op func(cwd string) gitRemoteDoneMsg
 		return nil
 	}
 	var toastCmd tea.Cmd
+	if m.gitRemoteBusy != "" {
+		m.toast, toastCmd = m.toast.PushDetail(toast.Warn, "Git operation already running", m.gitRemoteBusy)
+		return toastCmd
+	}
+	m.gitRemoteBusy = running
 	m.toast, toastCmd = m.toast.Push(toast.Info, running)
 	return tea.Batch(toastCmd, func() tea.Msg { return op(cwd) })
 }
@@ -757,6 +764,7 @@ func (m *Model) gitRemoteOp(running string, op func(cwd string) gitRemoteDoneMsg
 // gitRemoteDone shows the result of a remote operation and refreshes the
 // git state.
 func (m *Model) gitRemoteDone(msg gitRemoteDoneMsg) tea.Cmd {
+	m.gitRemoteBusy = ""
 	var toastCmd tea.Cmd
 	if msg.err != nil {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, msg.failTitle, msg.err.Error())
