@@ -15,6 +15,7 @@ func TestCloseTwice(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
+	_ = c.Attach(80, 24) // an attached nvim exits at once on Close
 	_ = c.Close()
 	_ = c.Close()
 }

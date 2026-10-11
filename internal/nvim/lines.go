@@ -3,7 +3,7 @@ package nvim
 // CurrentBufLines returns every line of the current buffer.
 func (c *Client) CurrentBufLines() ([]string, error) {
 	var lines []string
-	err := c.nv.ExecLua(`return vim.api.nvim_buf_get_lines(0, 0, -1, false)`, &lines)
+	err := c.execLua(`return vim.api.nvim_buf_get_lines(0, 0, -1, false)`, &lines)
 	return lines, err
 }
 
@@ -17,7 +17,7 @@ func (c *Client) ReplaceCurrentBufLines(start, end int, lines []string) error {
 		lines = []string{}
 	}
 	var result interface{}
-	return c.nv.ExecLua(`
+	return c.execLua(`
 		local s, e, repl = ...
 		vim.api.nvim_buf_set_lines(0, s, e, false, repl)
 		local last = math.max(vim.api.nvim_buf_line_count(0), 1)
@@ -30,17 +30,17 @@ func (c *Client) ReplaceCurrentBufLines(start, end int, lines []string) error {
 // escaping.
 func (c *Client) ExecLuaArgs(code string, args ...interface{}) error {
 	var result interface{}
-	return c.nv.ExecLua(code, &result, args...)
+	return c.execLua(code, &result, args...)
 }
 
 // ExecLuaResult runs a Lua chunk with positional arguments and decodes its
 // return value into result (Group A: AI proposal apply).
 func (c *Client) ExecLuaResult(code string, result interface{}, args ...interface{}) error {
-	return c.nv.ExecLua(code, result, args...)
+	return c.execLua(code, result, args...)
 }
 
 // EvalLuaArgs is ExecLuaArgs that decodes the chunk's return value into
 // result (a pointer, e.g. *string, *[]string, *int64).
 func (c *Client) EvalLuaArgs(code string, result interface{}, args ...interface{}) error {
-	return c.nv.ExecLua(code, result, args...)
+	return c.execLua(code, result, args...)
 }

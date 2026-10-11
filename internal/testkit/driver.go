@@ -150,8 +150,10 @@ func (d *Driver) Send(msg tea.Msg) string {
 	return d.render()
 }
 
-// checkNvim fails the test when nvim waits for input (hit-enter or
-// confirm prompt): the next RPC call from the app would hang.
+// checkNvim fails the test when nvim stays in a hit-enter / more /
+// confirm prompt: the next RPC call from the app would hang. The nvim
+// client answers such prompts within ~100 ms, so only a prompt that is
+// still there half a second later counts.
 func (d *Driver) checkNvim() {
 	d.T.Helper()
 	if !d.opt.Nvim || d.quit {
@@ -161,10 +163,18 @@ func (d *Driver) checkNvim() {
 	if !ok {
 		return
 	}
-	var mode string
-	var blocking, alive bool
-	if d.call("nvim_get_mode", func() { mode, blocking, alive = m.NvimMode() }) && alive && blocking {
-		d.T.Fatalf("nvim is blocked waiting for input (mode %q): the app would freeze\nlast steps:\n  %s",
+	inPrompt := func() (string, bool) {
+		var mode string
+		var blocking, alive bool
+		ok := d.call("nvim_get_mode", func() { mode, blocking, alive = m.NvimMode() })
+		return mode, ok && alive && blocking && strings.HasPrefix(mode, "r")
+	}
+	if _, stuck := inPrompt(); !stuck {
+		return
+	}
+	time.Sleep(500 * time.Millisecond)
+	if mode, stuck := inPrompt(); stuck {
+		d.T.Fatalf("nvim is stuck in a prompt (mode %q): the app would freeze\nlast steps:\n  %s",
 			mode, strings.Join(tail(d.history, 12), "\n  "))
 	}
 }
@@ -320,9 +330,29 @@ func (d *Driver) call(what string, f func()) (ok bool) {
 	case <-time.After(d.opt.StepTimeout):
 		buf := make([]byte, 1<<20)
 		buf = buf[:runtime.Stack(buf, true)]
-		d.T.Fatalf("%s did not return within %v (hang)\nlast steps:\n  %s\ngoroutines:\n%s",
-			what, d.opt.StepTimeout, strings.Join(tail(d.history, 12), "\n  "), buf)
+		d.T.Fatalf("%s did not return within %v (hang)%s\nlast steps:\n  %s\ngoroutines:\n%s",
+			what, d.opt.StepTimeout, d.nvimModeNote(), strings.Join(tail(d.history, 12), "\n  "), buf)
 		return false
+	}
+}
+
+// nvimModeNote describes nvim's mode for a hang report (nvim answers
+// nvim_get_mode even while it blocks everything else).
+func (d *Driver) nvimModeNote() string {
+	m, ok := d.model.(app.Model)
+	if !d.opt.Nvim || !ok {
+		return ""
+	}
+	ch := make(chan string, 1)
+	go func() {
+		mode, blocking, alive := m.NvimMode()
+		ch <- fmt.Sprintf(" — nvim mode %q blocking=%v alive=%v", mode, blocking, alive)
+	}()
+	select {
+	case s := <-ch:
+		return s
+	case <-time.After(time.Second):
+		return " — nvim does not answer nvim_get_mode"
 	}
 }
 
