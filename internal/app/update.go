@@ -635,6 +635,19 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 	case nvim.ErrMsg:
 		m.err = msg.Err.Error()
 		return m, nil, true
+	case nvim.PromptMsg:
+		// nvim showed a blocking prompt (an error from a key, for example
+		// "E433: No tags file") and the client answered it. Show the
+		// message as a toast instead.
+		var cmd tea.Cmd
+		if m.nvim != nil {
+			text, _ := m.nvim.EvalLuaString(`local s = vim.trim(vim.fn.execute('messages')); return s:match('[^\n]*$') or ''`)
+			if text = strings.TrimSpace(text); text != "" {
+				m.toast, cmd = m.toast.Push(toast.Warn, text)
+			}
+			cmd = tea.Batch(m.nvim.Next(), cmd)
+		}
+		return m, cmd, true
 
 	// ── nvim → Go event channel (notify.go) ──
 	case nvim.NotifyMsg:
@@ -1677,7 +1690,7 @@ func (m *Model) editorPaste() {
 	// to "+ and then the unnamed register (last in-editor copy).
 	clip := readClipboardText()
 	_ = m.nvim.ExecLuaArgs(`
-local clip, linewise = ...
+local clip, line_copy = ...
 local mode = vim.api.nvim_get_mode().mode
 local m1 = mode:sub(1,1)
 local visual = m1 == 'v' or m1 == 'V' or mode:byte(1) == 22
@@ -1688,6 +1701,9 @@ if visual then
 end
 if clip == '' and vim.fn.has('clipboard') == 1 then clip = vim.fn.getreg('+') end
 if clip == '' then clip = vim.fn.getreg('"') end
+-- Whole-line copy: decided after the fallbacks, so it also works with no
+-- OS clipboard (the text then comes from the unnamed register).
+local linewise = line_copy ~= '' and clip == line_copy
 if clip ~= '' then
   if linewise and not visual then
     -- VSCode: a whole-line copy (no selection) pastes as a new line above.
@@ -1697,7 +1713,7 @@ if clip ~= '' then
   end
 end
 vim.cmd('startinsert')
-`, clip, clip != "" && clip == m.lastLineCopy)
+`, clip, m.lastLineCopy)
 }
 
 // noteLineCopy strips the "L:" / "C:" marker returned by the copy / cut
@@ -1978,6 +1994,12 @@ func (m *Model) applyLayout() {
 	// to the default explorer width so layout math doesn't divide by zero.
 	if m.explorerWidth <= 0 {
 		m.explorerWidth = defaultExplorerWidth
+	}
+	// A sidebar width dragged in a wide window must still leave the editor
+	// some room after the window shrinks; otherwise every row is wider
+	// than the screen and wraps.
+	if maxExp := m.w - activity.Width - editorScrollbarWidth - minEditorPaneWidth; m.w > 0 && m.explorerWidth > maxExp {
+		m.explorerWidth = max(maxExp, explorerMinWidth)
 	}
 
 	// Editor pane width = total - activity bar - sidebar (if shown) -

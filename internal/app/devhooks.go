@@ -24,9 +24,24 @@ import (
 //	termsend:<line>        type a line into the active terminal tab
 //	view:files|git         switch the sidebar view
 //	toast:<title>|<detail> push an info toast
+//	panel:<kind>           show a bottom-panel tab: terminal, problems,
+//	                       output, tests, debug-console
+//	setting:<row id>=<v>   apply a Settings row value, as the Settings UI
+//	                       does (row ids: SettingsCatalog().ID)
 //	theme:<id>             apply a color theme (not persisted)
 //	aidemo                 load a sample AI conversation
 type DevActionMsg struct{ ID string }
+
+// NvimMode reports the embedded nvim's mode and whether it is blocked
+// waiting for input (a prompt that would freeze the app). ok is false
+// without nvim. For tests (internal/testkit checks it after every step).
+func (m Model) NvimMode() (mode string, blocking, ok bool) {
+	if m.nvim == nil {
+		return "", false, false
+	}
+	mode, blocking, err := m.nvim.Mode()
+	return mode, blocking, err == nil
+}
 
 func (m *Model) runDevAction(id string) tea.Cmd {
 	kind, arg, _ := strings.Cut(id, ":")
@@ -58,6 +73,16 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 			m.activity.SetActive(activity.ViewFiles)
 		}
 		m.applyLayout()
+	case "panel":
+		kinds := map[string]panelKind{"terminal": panelKindTerminal, "problems": panelKindProblems,
+			"output": panelKindOutput, "tests": panelKindTests, "debug-console": panelKindDebugConsole}
+		if k, ok := kinds[arg]; ok {
+			m.showPanelTab(k)
+		}
+	case "setting":
+		id, value, _ := strings.Cut(arg, "=")
+		m.settingPromptID = id
+		return m.applySettingValue(value)
 	case "toast":
 		title, detail, _ := strings.Cut(arg, "|")
 		var cmd tea.Cmd

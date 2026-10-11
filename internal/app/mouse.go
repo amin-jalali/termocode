@@ -409,7 +409,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	if m.replaceOpen {
 		rowsAboveTabs += 2
 	}
-	tabsRow := rowsAboveTabs                    // first row of tab bar (accent strip)
+	tabsRow := rowsAboveTabs                     // first row of tab bar (accent strip)
 	tabsBodyRow := tabsRow + m.tabs.Height() - 1 // last row of tab bar (body)
 	editorTopRow := tabsBodyRow + 1
 	// Breadcrumbs and sticky-context now share ONE row (signature inline).

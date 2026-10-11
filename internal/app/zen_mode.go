@@ -18,6 +18,9 @@ import (
 // every tool we know about in sequence and silently no-ops on failure
 // (no toast — a missing tool isn't an error worth shouting about).
 func sendF11ToHost() {
+	if headless() {
+		return // tests / pipes: never press keys on the host desktop
+	}
 	switch runtime.GOOS {
 	case "darwin":
 		// AppleScript: System Events sends key code 111 = F11.
@@ -47,14 +50,14 @@ func (m *Model) toggleZenMode() tea.Cmd {
 	if m.zenMode {
 		m.showExp = false
 		// Try fullscreen ON via every escape we know …
-		_, _ = os.Stdout.WriteString("\x1b[10;1t" + "\x1b[10;2t")
+		writeTerminal("\x1b[10;1t" + "\x1b[10;2t")
 		// … and also fire an F11 at the OS keyboard layer so terminals
 		// that ignore the escape (kitty, iTerm2, Ghostty, alacritty)
 		// still toggle fullscreen via their native shortcut.
 		sendF11ToHost()
 	} else {
 		m.showExp = true
-		_, _ = os.Stdout.WriteString("\x1b[10;0t" + "\x1b[10;2t")
+		writeTerminal("\x1b[10;0t" + "\x1b[10;2t")
 		sendF11ToHost()
 	}
 	m.applyLayout()
@@ -105,6 +108,11 @@ func (m *Model) resetSession() tea.Cmd {
 // has changed config files or installed a new LSP server and wants a
 // fresh process without dropping back to the shell.
 func (m *Model) reloadWindow() tea.Cmd {
+	if headless() {
+		var toastCmd tea.Cmd
+		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Reload failed", errHeadless.Error())
+		return toastCmd
+	}
 	if m.nvim != nil {
 		_ = m.nvim.Close()
 	}

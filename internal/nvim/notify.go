@@ -109,7 +109,7 @@ func (c *Client) CursorContextWindow(linesBefore, linesAfter int) (CursorInfo, e
 		linesAfter = 0
 	}
 	var raw []interface{}
-	err := c.nv.ExecLua(fmt.Sprintf(`
+	err := c.execLua(fmt.Sprintf(`
 		local nb, na = %d, %d
 		local buf = vim.api.nvim_get_current_buf()
 		local pos = vim.api.nvim_win_get_cursor(0)

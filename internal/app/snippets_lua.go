@@ -8,11 +8,11 @@ package app
 // Loaded after the existing Tab keymap in lsp_lua.go, so this version wins.
 // The new Tab order of preference is:
 //
-//   0. Accept AI ghost text (Group A, ai_lua.go) when it is showing.
-//   1. Snippet expansion if the word before the cursor matches.
-//   2. Accept popup completion if pumvisible().
-//   3. Jump to next placeholder if a snippet session is active.
-//   4. Plain <Tab>.
+//  0. Accept AI ghost text (Group A, ai_lua.go) when it is showing.
+//  1. Snippet expansion if the word before the cursor matches.
+//  2. Accept popup completion if pumvisible().
+//  3. Jump to next placeholder if a snippet session is active.
+//  4. Plain <Tab>.
 //
 // Snippet bodies use LSP / VSCode syntax — `${N:placeholder}` for tab-stop
 // positions, `$0` for the final cursor position. nvim ≥ 0.10's

@@ -5,7 +5,7 @@ package nvim
 // need no Lua quoting. A non-string return yields "".
 func (c *Client) EvalLuaStringArgs(code string, args ...interface{}) (string, error) {
 	var s string
-	if err := c.nv.ExecLua(code, &s, args...); err != nil {
+	if err := c.execLua(code, &s, args...); err != nil {
 		return "", err
 	}
 	return s, nil
