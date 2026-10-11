@@ -51,6 +51,13 @@ func diskFile(d *Driver, rel string) string {
 	return string(b)
 }
 
+// eventually waits (up to 3 s) until cond holds: file operations finish
+// in commands that may still run when a step has settled.
+func eventually(d *Driver, cond func() bool) bool {
+	d.T.Helper()
+	return d.WaitFor(cond, 3*time.Second)
+}
+
 func exists(d *Driver, rel string) bool {
 	_, err := os.Stat(filepath.Join(d.Dir, rel))
 	return err == nil

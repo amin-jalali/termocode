@@ -112,3 +112,57 @@ func TestExplorerRenameFolderOfOpenFile(t *testing.T) {
 		t.Errorf("saving re-created the old folder notes")
 	}
 }
+
+// Spec: Given a workspace with a folder "notes",
+// when the user right-clicks it, picks New File... and types "idea.md",
+// then notes/idea.md exists (empty) and opens as the active tab.
+func TestExplorerNewFileInFolder(t *testing.T) {
+	d := editorDriver(t, nil)
+	rightClickExplorer(d, "notes")
+	clickText(d, "New File...")
+	d.Type("idea.md")
+	d.Key("enter")
+	if !exists(d, "notes/idea.md") || diskFile(d, "notes/idea.md") != "" {
+		t.Fatalf("notes/idea.md not created empty")
+	}
+	if !d.WaitFor(func() bool { _, a := tabs(d); return a == "notes/idea.md" }, 5*time.Second) {
+		got, a := tabs(d)
+		t.Fatalf("new file not the active tab: active %q, tabs %v", a, got)
+	}
+}
+
+// Spec: Given notes/todo.md open while the folder notes is collapsed,
+// when the user runs Reveal File (Ctrl+Shift+E),
+// then notes is expanded and the explorer cursor is on todo.md.
+func TestExplorerRevealActiveFile(t *testing.T) {
+	d := editorDriver(t, nil)
+	open(d, "notes/todo.md")
+	// Collapse notes again (opening may have revealed it).
+	if explorerShows(d, "todo.md") {
+		clickExplorer(d, "notes")
+	}
+	d.Palette("reveal-file")
+	if !explorerShows(d, "todo.md") {
+		t.Fatalf("todo.md not revealed:\n%s", screen(d))
+	}
+	if cur, _ := d.Model().ExplorerCursor(); relPath(d, cur) != "notes/todo.md" {
+		t.Errorf("explorer cursor on %q, want notes/todo.md", relPath(d, cur))
+	}
+}
+
+// Spec: Given a file whose name has a space and an accent ("my café.txt"),
+// when the user clicks it in the explorer,
+// then it opens as the active tab with its content.
+func TestExplorerOpenFileWithSpaceInName(t *testing.T) {
+	files := textFiles()
+	files["my café.txt"] = "latte\n"
+	d := editorDriver(t, files)
+	clickExplorer(d, "my café.txt")
+	if !d.WaitFor(func() bool { _, a := tabs(d); return a == "my café.txt" }, 5*time.Second) {
+		got, a := tabs(d)
+		t.Fatalf("active tab %q (tabs %v), want my café.txt", a, got)
+	}
+	if got := bufLines(d); got != "latte" {
+		t.Errorf("buffer = %q, want latte", got)
+	}
+}
