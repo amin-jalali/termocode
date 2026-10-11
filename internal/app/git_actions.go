@@ -35,7 +35,7 @@ import (
 //	x                  discard worktree changes (with confirm)
 //	r                  refresh
 func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
-	if !m.gitIsRepo {
+	if !m.gitEnsureLoaded() {
 		return m, nil, false
 	}
 	// When the always-visible message box has focus, keystrokes edit it (Enter
@@ -518,7 +518,7 @@ end
 // openCommitPrompt asks for a commit message via the standard prompt overlay.
 // Submission is handled in handlePromptSubmit (case promptKindCommit).
 func (m *Model) openCommitPrompt() {
-	if !m.gitIsRepo {
+	if !m.gitEnsureLoaded() {
 		return
 	}
 	// We surface staged-only as the line under the title so the user knows
@@ -646,7 +646,7 @@ func (m *Model) gitCommitFromPrompt(message string) tea.Cmd {
 // from the command palette so the user doesn't have to navigate the git
 // sidebar for the common single-file case.
 func (m *Model) gitStageActiveFile() tea.Cmd {
-	if !m.gitIsRepo {
+	if !m.gitEnsureLoaded() {
 		return nil
 	}
 	rel, ok := m.activeGitRel()
@@ -668,7 +668,7 @@ func (m *Model) gitStageActiveFile() tea.Cmd {
 
 // gitStageAll runs `git add -A`.
 func (m *Model) gitStageAll() tea.Cmd {
-	if !m.gitIsRepo {
+	if !m.gitEnsureLoaded() {
 		return nil
 	}
 	cwd, err := os.Getwd()
@@ -686,7 +686,7 @@ func (m *Model) gitStageAll() tea.Cmd {
 
 // gitDiffActiveFile opens the diff for the currently active editor buffer.
 func (m *Model) gitDiffActiveFile() tea.Cmd {
-	if !m.gitIsRepo {
+	if !m.gitEnsureLoaded() {
 		return nil
 	}
 	rel, ok := m.activeGitRel()
@@ -742,7 +742,7 @@ type gitRemoteDoneMsg struct {
 // gitRemoteOp shows a "running" toast and runs op off the main loop; its
 // result comes back as a gitRemoteDoneMsg.
 func (m *Model) gitRemoteOp(running string, op func(cwd string) gitRemoteDoneMsg) tea.Cmd {
-	if !m.gitIsRepo {
+	if !m.gitEnsureLoaded() {
 		return nil
 	}
 	cwd, err := os.Getwd()
@@ -775,6 +775,7 @@ func (m *Model) gitRemoteDone(msg gitRemoteDoneMsg) tea.Cmd {
 // `-u origin <branch>` form so the user doesn't have to drop to the
 // integrated terminal for the first push.
 func (m *Model) gitPush() tea.Cmd {
+	m.gitEnsureLoaded() // the branch name below comes from the snapshot
 	branch := m.gitBranch.Name
 	return m.gitRemoteOp("Pushing…", func(cwd string) gitRemoteDoneMsg {
 		return gitRemoteDoneMsg{failTitle: "Push failed", okText: "Pushed to origin", err: pushCurrent(cwd, branch)}
@@ -811,6 +812,7 @@ func (m *Model) gitFetch() tea.Cmd {
 // gitSync mirrors VSCode's "Sync Changes": pull, then push. With no upstream
 // configured it falls back to a first push (-u origin <branch>).
 func (m *Model) gitSync() tea.Cmd {
+	m.gitEnsureLoaded()
 	branch := m.gitBranch.Name
 	return m.gitRemoteOp("Syncing…", func(cwd string) gitRemoteDoneMsg {
 		if !git.HasUpstream(cwd) {
@@ -831,7 +833,7 @@ func (m *Model) gitSync() tea.Cmd {
 // if there are unstaged changes, offers to stage-all-and-commit) rather than
 // letting git fail. On success the box is cleared and blurred.
 func (m *Model) gitInlineCommit(amend, signoff bool) tea.Cmd {
-	if !m.gitIsRepo {
+	if !m.gitEnsureLoaded() {
 		return nil
 	}
 	cwd, err := os.Getwd()
@@ -933,7 +935,7 @@ func commitToastLabel(msg string, amend bool) string {
 // …" (id "new") so users can stay in the picker flow for the new-branch
 // case too.
 func (m *Model) openBranchPicker() tea.Cmd {
-	if !m.gitIsRepo {
+	if !m.gitEnsureLoaded() {
 		return nil
 	}
 	cwd, err := os.Getwd()
@@ -994,7 +996,7 @@ func (m *Model) gitCheckoutSelected(id string) tea.Cmd {
 // gitCreateBranchFromPrompt runs `git checkout -b <name>` after a successful
 // prompt submission for promptKindGitNewBranch.
 func (m *Model) gitCreateBranchFromPrompt(name string) tea.Cmd {
-	if !m.gitIsRepo {
+	if !m.gitEnsureLoaded() {
 		return nil
 	}
 	cwd, err := os.Getwd()
@@ -1016,7 +1018,7 @@ func (m *Model) gitCreateBranchFromPrompt(name string) tea.Cmd {
 // want a labelled stash can run `git stash push -m "label"` from the
 // integrated terminal.
 func (m *Model) gitStash() tea.Cmd {
-	if !m.gitIsRepo {
+	if !m.gitEnsureLoaded() {
 		return nil
 	}
 	cwd, err := os.Getwd()
@@ -1037,7 +1039,7 @@ func (m *Model) gitStash() tea.Cmd {
 
 // gitStashPop runs `git stash pop` (applies stash@{0} and removes it).
 func (m *Model) gitStashPop() tea.Cmd {
-	if !m.gitIsRepo {
+	if !m.gitEnsureLoaded() {
 		return nil
 	}
 	cwd, err := os.Getwd()
@@ -1060,7 +1062,7 @@ func (m *Model) gitStashPop() tea.Cmd {
 // dropping). Drop has to go through the terminal for safety — accidental
 // drops are unrecoverable.
 func (m *Model) openStashPicker() tea.Cmd {
-	if !m.gitIsRepo {
+	if !m.gitEnsureLoaded() {
 		return nil
 	}
 	cwd, err := os.Getwd()
@@ -1115,7 +1117,7 @@ func (m *Model) applyStashSelected(ref string) tea.Cmd {
 // it as a toast — quick "who wrote this" without taking the user out of
 // flow. (The full file-history picker is gitFileHistoryPicker, below.)
 func (m *Model) gitBlameCurrentLine() tea.Cmd {
-	if !m.gitIsRepo {
+	if !m.gitEnsureLoaded() {
 		return nil
 	}
 	path := m.editor.Path()
@@ -1148,7 +1150,7 @@ func (m *Model) gitBlameCurrentLine() tea.Cmd {
 // the active file. Selecting a commit shows its full diff, same as the
 // general "Show Log" picker.
 func (m *Model) gitFileHistoryPicker() tea.Cmd {
-	if !m.gitIsRepo {
+	if !m.gitEnsureLoaded() {
 		return nil
 	}
 	path := m.editor.Path()
@@ -1196,7 +1198,7 @@ func (m *Model) gitFileHistoryPicker() tea.Cmd {
 // gitTagPicker shows every tag; selection puts the tag name on the
 // clipboard as a small "did something" affordance.
 func (m *Model) gitTagPicker() tea.Cmd {
-	if !m.gitIsRepo {
+	if !m.gitEnsureLoaded() {
 		return nil
 	}
 	cwd, err := os.Getwd()
@@ -1247,7 +1249,7 @@ func (m *Model) checkoutTagSelected(id string) tea.Cmd {
 // gitLogPicker shows the recent commit history. Selecting a commit opens
 // its full diff in the preview overlay.
 func (m *Model) gitLogPicker() tea.Cmd {
-	if !m.gitIsRepo {
+	if !m.gitEnsureLoaded() {
 		return nil
 	}
 	cwd, err := os.Getwd()

@@ -81,7 +81,7 @@ func gitCommitMenuItems() []menu.Item {
 // clicked row becomes the cursor so the existing cursor-based git actions
 // target it.
 func (m *Model) openGitMenu(anchorX, anchorY int) {
-	if !m.gitIsRepo {
+	if !m.gitEnsureLoaded() {
 		return
 	}
 	top, bodyH, _ := m.gitPanelLayout(m.h)

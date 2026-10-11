@@ -144,6 +144,7 @@ type Model struct {
 	closedRing []string
 
 	gitIsRepo bool
+	gitLoaded bool // a GitMsg was applied (gitEnsureLoaded)
 	gitBranch git.Branch
 	gitFiles  []git.FileStatus
 	gitCursor int // index into gitVisibleRows() for the ViewGit sidebar
