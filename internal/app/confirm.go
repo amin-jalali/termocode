@@ -90,7 +90,7 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 				m.pushClosed(buf.Path)
 			}
 			if m.nvim != nil {
-				_ = m.nvim.Command(fmt.Sprintf("bdelete! %d", m.confirmTargetID))
+				_ = m.nvim.Command(discardBufferCmd(m.confirmTargetID))
 			}
 		}
 	case confirmKindDeletePath:
@@ -226,6 +226,14 @@ func (m *Model) closeBuffersForPaths(paths []string) {
 			}
 		}
 		m.pushClosed(b.Path)
-		_ = m.nvim.Command(fmt.Sprintf("bdelete! %d", b.ID))
+		_ = m.nvim.Command(discardBufferCmd(b.ID))
 	}
+}
+
+// discardBufferCmd is the Ex command that closes buffer id and drops its
+// unsaved edits. The buffer is marked unmodified first: closing the
+// current buffer fires BufLeave, whose auto-save would otherwise write the
+// edits the user chose not to save (Don't Save saved the file).
+func discardBufferCmd(id int) string {
+	return fmt.Sprintf("call setbufvar(%d, '&modified', 0) | bdelete! %d", id, id)
 }
