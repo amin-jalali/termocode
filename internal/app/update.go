@@ -511,14 +511,29 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 			// Throttle FetchState. RedrawMsg fires per nvim event batch
 			// (every grid_line / grid_scroll / etc.) — at ~60fps during
 			// scroll that's a Lua roundtrip every 16ms. Coalesce to 100ms.
-			const stateThrottle = 100 * time.Millisecond
-			if time.Since(m.stateLastFetch) >= stateThrottle {
-				m.stateLastFetch = time.Now()
+			// A redraw inside the window schedules one trailing fetch, so
+			// the last change of a burst (a file opened right after
+			// another) still reaches the tab bar, status bar and welcome
+			// check when nvim then goes quiet.
+			now := time.Now()
+			fetchNow, delay := stateFetchPlan(now, m.stateLastFetch, m.stateFetchPending)
+			if fetchNow {
+				m.stateLastFetch = now
 				cmds = append(cmds, m.fetchStateCmd())
+			} else if delay > 0 {
+				m.stateFetchPending = true
+				cmds = append(cmds, tea.Tick(delay, func(time.Time) tea.Msg { return stateFetchDueMsg{} }))
 			}
 			return m, tea.Batch(cmds...), true
 		}
 		return m, nil, true
+	case stateFetchDueMsg:
+		m.stateFetchPending = false
+		if m.nvim == nil {
+			return m, nil, true
+		}
+		m.stateLastFetch = time.Now()
+		return m, m.fetchStateCmd(), true
 	case StateMsg:
 		// Recents: push to disk only when the active path actually changes.
 		if msg.Path != "" && msg.Path != m.lastRecordedPath {
@@ -1058,6 +1073,26 @@ func toNvimBufs(in []nvimBuffer) []nvim.BufferInfo {
 		}
 	}
 	return out
+}
+
+// stateThrottle is the shortest gap between two editor-state fetches.
+const stateThrottle = 100 * time.Millisecond
+
+// stateFetchDueMsg runs the trailing state fetch for throttled redraws.
+type stateFetchDueMsg struct{}
+
+// stateFetchPlan decides what a redraw at now does: fetch the editor
+// state now (the last fetch is older than stateThrottle), or schedule one
+// trailing fetch after delay (none when one is already pending).
+func stateFetchPlan(now, last time.Time, pending bool) (fetchNow bool, delay time.Duration) {
+	since := now.Sub(last)
+	if since >= stateThrottle {
+		return true, 0
+	}
+	if pending {
+		return false, 0
+	}
+	return false, stateThrottle - since
 }
 
 func (m Model) fetchStateCmd() tea.Cmd {
