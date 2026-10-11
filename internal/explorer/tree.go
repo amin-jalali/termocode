@@ -118,8 +118,30 @@ func (n *Node) ExpandedPaths() []string {
 // ExpandPaths re-expands the directory paths in `set`, lazily loading
 // each directory's children as needed. Paths whose ancestors aren't
 // loaded yet are loaded on demand.
+//
+// Only the listed directories and their ancestors are read; other folders
+// stay unloaded (this used to read the whole tree, every folder, on each
+// session restore).
 func (n *Node) ExpandPaths(set map[string]bool) {
-	if !n.IsDir {
+	need := make(map[string]bool, len(set)*4)
+	for p := range set {
+		for d := p; ; {
+			if need[d] {
+				break
+			}
+			need[d] = true
+			parent := filepath.Dir(d)
+			if parent == d {
+				break
+			}
+			d = parent
+		}
+	}
+	n.expandPaths(set, need)
+}
+
+func (n *Node) expandPaths(set, need map[string]bool) {
+	if !n.IsDir || !need[n.Path] {
 		return
 	}
 	if !n.Loaded {
@@ -129,6 +151,6 @@ func (n *Node) ExpandPaths(set map[string]bool) {
 		n.Expanded = true
 	}
 	for _, c := range n.Children {
-		c.ExpandPaths(set)
+		c.expandPaths(set, need)
 	}
 }
