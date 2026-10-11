@@ -39,7 +39,7 @@ func (m Model) View() string {
 
 // welcomeVisible mirrors renderBase's welcome-screen condition.
 func (m Model) welcomeVisible() bool {
-	return m.editor.Path() == "" && len(m.bufs) <= 1 && !m.termOpen && !m.gitDiffActive && !m.zenMode
+	return m.editorEmpty() && !m.zenMode
 }
 
 // placeLogo draws the image wordmark over the half-block one.
@@ -364,7 +364,7 @@ func (m Model) renderBase() string {
 	// buffer (Path()=="" and not counted in m.bufs) — without the gitDiffActive
 	// guard, moving the mouse onto the HEAD pane would flip the whole editor to
 	// the welcome screen and the diff would appear to vanish.
-	if m.editor.Path() == "" && len(m.bufs) <= 1 && !m.termOpen && !m.gitDiffActive {
+	if m.editorEmpty() {
 		editorContent = renderWelcome(edPaneW, editorH, m.welcomeFocus)
 	} else {
 		editorContent = m.editor.View(m.focus == FocusEditor)

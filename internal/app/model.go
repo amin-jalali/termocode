@@ -566,7 +566,15 @@ type Model struct {
 // the editor pane (mirrors the same condition view.go uses to choose
 // renderWelcome over m.editor.View).
 func (m Model) welcomeShowing() bool {
-	return m.editor.Path() == "" && len(m.bufs) <= 1 && !m.termOpen
+	return m.editorEmpty()
+}
+
+// editorEmpty reports whether the editor has nothing to show, so the start
+// page takes its place: no file, no terminal, and the current buffer is not
+// one of termocode's nameless views — the side-by-side diff's HEAD pane
+// (gitDiffActive) or a commit diff / other scratch buffer with a filetype.
+func (m Model) editorEmpty() bool {
+	return m.editor.Path() == "" && len(m.bufs) <= 1 && !m.termOpen && !m.gitDiffActive && m.editor.Lang() == ""
 }
 
 func New() Model {

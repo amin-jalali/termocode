@@ -445,7 +445,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// Welcome screen: when no editor file is open we show the welcome
 	// content in the editor pane. A click on a recent-files row should
 	// open that file rather than fall through to the editor.
-	if (msg.Type == tea.MouseLeft || msg.Type == tea.MouseMotion) && m.editor.Path() == "" && len(m.bufs) <= 1 && !m.termOpen && !m.gitDiffActive {
+	if (msg.Type == tea.MouseLeft || msg.Type == tea.MouseMotion) && m.editorEmpty() {
 		// Reproduce edPaneW + editorH the same way renderBase does so
 		// the hit map matches what's actually on screen.
 		bodyH := m.h - 1
