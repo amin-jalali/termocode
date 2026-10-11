@@ -118,6 +118,10 @@ The bottom panel also holds **Problems**, **Output**, **Test Results** and the
 
 Click a `file:line` link printed in a terminal tab to open that spot.
 
+While the terminal has focus, Ctrl keys go to the shell (`Ctrl+C`, `Ctrl+R`,
+`Ctrl+U`, …). `Ctrl+Q` still quits termocode. Set `terminal_skip_shell` in
+`config.json` to change which actions skip the shell.
+
 ## Markdown, Zen and more
 
 | Key | Action |

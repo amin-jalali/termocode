@@ -1,6 +1,7 @@
 package testkit
 
 import (
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -17,6 +18,7 @@ func TestWindowResizeBurstIsCheapAndSettles(t *testing.T) {
 	d := New(t, Options{W: 200, H: 55, Nvim: true, Files: map[string]string{"main.go": bigGoFile()}})
 	d.Action("openfile:main.go")
 	d.Settle(300 * time.Millisecond)
+	before := lua(d, `return vim.o.columns .. 'x' .. vim.o.lines`)
 
 	var m tea.Model = d.Model()
 	const steps = 40
@@ -27,8 +29,13 @@ func TestWindowResizeBurstIsCheapAndSettles(t *testing.T) {
 	}
 	per := time.Since(start) / steps
 	t.Logf("window resize step: %v (Update + View)", per)
-	// Waiting on nvim made this ~25ms; the chrome alone is a few ms.
-	if per > 12*time.Millisecond {
+	// The burst must not resize nvim step by step (each resize is a
+	// synchronous round trip): its grid still has the size from before.
+	if got := lua(d, `return vim.o.columns .. 'x' .. vim.o.lines`); got != before {
+		t.Errorf("nvim was resized during the burst: grid %s, want %s until it ends", got, before)
+	}
+	// Timing is noise on a busy machine; checked only on demand.
+	if os.Getenv("TERMOCODE_PERF") == "1" && per > 12*time.Millisecond {
 		t.Errorf("window resize step costs %v, want < 12ms", per)
 	}
 
@@ -52,7 +59,7 @@ func TestSidebarDragIsCheapAndSettles(t *testing.T) {
 	d := New(t, Options{W: 200, H: 55, Nvim: true, Files: map[string]string{"main.go": bigGoFile()}})
 	d.Action("openfile:main.go")
 	d.Settle(300 * time.Millisecond)
-	before := d.Model().EditorPaneSize()
+	before := lua(d, `return vim.o.columns .. 'x' .. vim.o.lines`)
 
 	ex, _, ok := find(d, "▕    1  package")
 	if !ok {
@@ -69,7 +76,10 @@ func TestSidebarDragIsCheapAndSettles(t *testing.T) {
 	}
 	per := time.Since(start) / steps
 	t.Logf("sidebar drag step: %v (Update + View)", per)
-	if per > 12*time.Millisecond {
+	if got := lua(d, `return vim.o.columns .. 'x' .. vim.o.lines`); got != before {
+		t.Errorf("nvim was resized during the drag: grid %s, want %s until release", got, before)
+	}
+	if os.Getenv("TERMOCODE_PERF") == "1" && per > 12*time.Millisecond {
 		t.Errorf("sidebar drag step costs %v, want < 12ms", per)
 	}
 

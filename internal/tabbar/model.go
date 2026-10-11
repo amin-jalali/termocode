@@ -39,7 +39,7 @@ type Model struct {
 	bufs     []nvim.BufferInfo
 	activeID int
 	w        int
-	scrollX  int // horizontal offset into the virtual tab strip
+	first    int // index of the first visible tab when the strip overflows
 	regions  []tabRegion
 }
 
@@ -53,7 +53,6 @@ func (m *Model) SetBuffers(bufs []nvim.BufferInfo, active int) {
 	// SetBuffers call — buffer list churn (open / close / reorder) can
 	// shift the active tab's column even if its id didn't change.
 	_ = prev
-	m.clampScroll()
 	m.EnsureVisible(active)
 }
 
@@ -64,7 +63,7 @@ func (m Model) Buffers() ([]nvim.BufferInfo, int) {
 
 func (m *Model) SetWidth(w int) {
 	m.w = w
-	m.clampScroll()
+	m.EnsureVisible(m.activeID)
 }
 
 // Height returns the row count the tab bar occupies. Single-row layout —
@@ -73,92 +72,131 @@ func (m *Model) SetWidth(w int) {
 // blank row in most terminals.
 func (m Model) Height() int { return 1 }
 
-// virtualLayout returns each tab's virtual start column (unscrolled) and
-// the total virtual width (tabs + separators). Separators are 1 cell
-// between consecutive tabs.
-func (m Model) virtualLayout() (starts []int, widths []int, totalW int) {
-	starts = make([]int, len(m.bufs))
-	widths = make([]int, len(m.bufs))
-	x := 0
-	for i, b := range m.bufs {
-		w := len(renderTabCellsSfx(b, b.ID == m.activeID, m.suffix(b), m.isWelcome(b)))
-		starts[i] = x
-		widths[i] = w
-		x += w
-		if i < len(m.bufs)-1 {
-			x++ // separator
+// tabCells renders tab i at its full width.
+func (m Model) tabCells(i int) []string {
+	b := m.bufs[i]
+	return renderTabCellsSfx(b, b.ID == m.activeID, m.suffix(b), m.isWelcome(b), 0)
+}
+
+// tabWidths returns each tab's full width in cells.
+func (m Model) tabWidths() []int {
+	widths := make([]int, len(m.bufs))
+	for i := range m.bufs {
+		widths[i] = len(m.tabCells(i))
+	}
+	return widths
+}
+
+// totalWidth is the width of every tab plus the 1-cell separators.
+func totalWidth(widths []int) int {
+	t := 0
+	for i, w := range widths {
+		t += w
+		if i > 0 {
+			t++
 		}
 	}
-	totalW = x
-	return
+	return t
 }
 
-// indicatorLayout decides whether overflow indicators are visible and the
-// resulting body width (cells available for tab content).
-func (m Model) indicatorLayout(totalW int) (leftOverflow, rightOverflow bool, bodyW, leftReserve int) {
-	if m.w <= 0 {
-		return false, false, 0, 0
-	}
-	if totalW <= m.w {
-		return false, false, m.w, 0
-	}
-	leftOverflow = m.scrollX > 0
-	if leftOverflow {
-		leftReserve = 1
-	}
-	// Tentative body width with left reserve only.
-	bodyW = m.w - leftReserve
-	if m.scrollX+bodyW < totalW {
-		rightOverflow = true
-		bodyW--
-	}
-	if bodyW < 0 {
-		bodyW = 0
-	}
-	return
+// strip is the visible part of the tab bar: tabs [first, last] shown whole,
+// and the overflow indicators. Tabs are never cut at an edge (VSCode); a
+// single tab wider than the bar is shown alone with its name shortened
+// with "…" at the end (fitW > 0 is the width it must fit in).
+type strip struct {
+	first, last         int
+	leftOver, rightOver bool
+	fitW                int
 }
 
-// clampScroll keeps scrollX inside [0, max] so we can't scroll past the
-// content. Recomputes when buffers / width change.
-func (m *Model) clampScroll() {
-	if m.w <= 0 || len(m.bufs) == 0 {
-		m.scrollX = 0
-		return
+// layoutFrom lays the tabs out starting at tab first.
+func (m Model) layoutFrom(first int, widths []int) strip {
+	n := len(widths)
+	if n == 0 || m.w <= 0 {
+		return strip{first: 0, last: -1}
 	}
-	_, _, totalW := m.virtualLayout()
-	if totalW <= m.w {
-		m.scrollX = 0
-		return
+	if totalWidth(widths) <= m.w {
+		return strip{first: 0, last: n - 1}
 	}
-	if m.scrollX < 0 {
-		m.scrollX = 0
+	if first < 0 {
+		first = 0
 	}
-	// Max scroll: enough to put the right edge flush with body edge.
-	// Use the bodyW that *would* be active given the new scrollX. We
-	// approximate with the indicators-on case so we never clamp short.
-	maxBody := m.w - 1 // at minimum a left indicator is shown when scrolled
-	if maxBody < 1 {
-		maxBody = 1
+	if first >= n {
+		first = n - 1
 	}
-	max := totalW - maxBody
-	if max < 0 {
-		max = 0
+	st := strip{first: first, leftOver: first > 0}
+	avail := m.w
+	if st.leftOver {
+		avail--
 	}
-	if m.scrollX > max {
-		m.scrollX = max
+	// Fit tabs from first; reserve the ▶ cell unless the rest all fit.
+	fits := func(limit int) int {
+		used, last := 0, first-1
+		for i := first; i < n; i++ {
+			need := widths[i]
+			if i > first {
+				need++
+			}
+			if used+need > limit {
+				break
+			}
+			used += need
+			last = i
+		}
+		return last
+	}
+	last := fits(avail)
+	if last < n-1 {
+		st.rightOver = true
+		last = fits(avail - 1)
+	}
+	if last < first {
+		// The first tab alone is too wide: show it shortened.
+		last = first
+		st.fitW = avail
+		if st.rightOver {
+			st.fitW--
+		}
+		if st.fitW < 1 {
+			st.fitW = 1
+		}
+	}
+	st.last = last
+	return st
+}
+
+// layout is the strip for the current scroll position.
+func (m Model) layout() (strip, []int) {
+	widths := m.tabWidths()
+	return m.layoutFrom(m.first, widths), widths
+}
+
+// settle pulls first back while the tabs from an earlier start still show
+// everything up to the end, so the bar never scrolls past its content.
+func (m *Model) settle(widths []int) {
+	for m.first > 0 {
+		st := m.layoutFrom(m.first-1, widths)
+		if st.rightOver || st.fitW > 0 {
+			break
+		}
+		m.first--
 	}
 }
 
-// EnsureVisible scrolls horizontally so the tab with the given id becomes
-// fully visible. No-op if the id isn't an open buffer or already in view.
+// EnsureVisible scrolls so the tab with the given id is fully visible.
+// No-op if the id isn't an open buffer.
 func (m *Model) EnsureVisible(id int) {
 	if m.w <= 0 || len(m.bufs) == 0 {
+		m.first = 0
 		return
 	}
-	starts, widths, totalW := m.virtualLayout()
-	if totalW <= m.w {
-		m.scrollX = 0
+	widths := m.tabWidths()
+	if totalWidth(widths) <= m.w {
+		m.first = 0
 		return
+	}
+	if m.first >= len(m.bufs) {
+		m.first = len(m.bufs) - 1
 	}
 	idx := -1
 	for i, b := range m.bufs {
@@ -167,28 +205,15 @@ func (m *Model) EnsureVisible(id int) {
 			break
 		}
 	}
-	if idx < 0 {
-		return
+	if idx >= 0 {
+		if idx < m.first {
+			m.first = idx
+		}
+		for m.first < idx && m.layoutFrom(m.first, widths).last < idx {
+			m.first++
+		}
 	}
-	vStart := starts[idx]
-	vEnd := vStart + widths[idx]
-
-	// First pass body width assuming current scrollX.
-	_, _, bodyW, leftReserve := m.indicatorLayout(totalW)
-	_ = leftReserve
-	if bodyW < 1 {
-		bodyW = 1
-	}
-
-	// If the tab starts before the viewport, scroll left so vStart is at
-	// the body's leftmost cell. If it ends after, scroll right so vEnd
-	// sits at the right edge.
-	if vStart < m.scrollX {
-		m.scrollX = vStart
-	} else if vEnd > m.scrollX+bodyW {
-		m.scrollX = vEnd - bodyW
-	}
-	m.clampScroll()
+	m.settle(widths)
 }
 
 func (m Model) View() string {
@@ -199,139 +224,90 @@ func (m Model) View() string {
 		fill := theme.FgBg(theme.TextDim, theme.BgTitleBar)
 		return fill.Render(strings.Repeat(" ", m.w))
 	}
-
-	starts, widths, totalW := m.virtualLayout()
-	leftOver, rightOver, bodyW, _ := m.indicatorLayout(totalW)
-
-	// Build the virtual row as a flat list of styled cells, one per
-	// visual column. This makes cell-level slicing (for clipping at
-	// the viewport edges) straightforward — string-level slicing of
-	// ANSI escapes is fragile.
-	virt := make([]string, 0, totalW)
-	for i, b := range m.bufs {
-		cells := renderTabCellsSfx(b, b.ID == m.activeID, m.suffix(b), m.isWelcome(b))
-		// renderTabCells width must match widths[i]
-		_ = widths
-		virt = append(virt, cells...)
-		if i < len(m.bufs)-1 {
-			virt = append(virt, lipgloss.NewStyle().Background(theme.LG(theme.BgTitleBar)).
-				Foreground(theme.Mix(theme.BgTitleBar, theme.BorderDefault, 0.7)).Render("│"))
-		}
-	}
-	_ = starts
+	st, _ := m.layout()
 
 	var sb strings.Builder
 	indStyle := theme.FgBg(theme.TextMuted, theme.BgTitleBar)
-	if leftOver {
+	used := 0
+	if st.leftOver {
 		sb.WriteString(indStyle.Render("◀"))
+		used++
 	}
-
-	// Clip the visible window [scrollX, scrollX+bodyW).
-	lo := m.scrollX
-	hi := lo + bodyW
-	if lo < 0 {
-		lo = 0
+	sepCell := lipgloss.NewStyle().Background(theme.LG(theme.BgTitleBar)).
+		Foreground(theme.Mix(theme.BgTitleBar, theme.BorderDefault, 0.7)).Render("│")
+	for i := st.first; i <= st.last; i++ {
+		if i > st.first {
+			sb.WriteString(sepCell)
+			used++
+		}
+		b := m.bufs[i]
+		cells := renderTabCellsSfx(b, b.ID == m.activeID, m.suffix(b), m.isWelcome(b), st.fitW)
+		sb.WriteString(strings.Join(cells, ""))
+		used += len(cells)
 	}
-	if hi > len(virt) {
-		hi = len(virt)
+	right := 0
+	if st.rightOver {
+		right = 1
 	}
-	for i := lo; i < hi; i++ {
-		sb.WriteString(virt[i])
+	if fill := m.w - used - right; fill > 0 {
+		// Fill the slack with title-bar bg so the row stays at exactly
+		// m.w cells (render-width contract).
+		sb.WriteString(theme.Bg(theme.BgTitleBar).Render(strings.Repeat(" ", fill)))
 	}
-	emitted := hi - lo
-	if emitted < bodyW {
-		// Fill the trailing slack with title-bar bg so the row stays
-		// at exactly m.w cells (render-width contract).
-		sb.WriteString(theme.Bg(theme.BgTitleBar).Render(strings.Repeat(" ", bodyW-emitted)))
-	}
-
-	if rightOver {
+	if st.rightOver {
 		sb.WriteString(indStyle.Render("▶"))
 	}
-	out := sb.String()
-	// Defensive width check: if anything drifted, pad / truncate to m.w.
-	if w := lipgloss.Width(out); w < m.w {
-		out += theme.Bg(theme.BgTitleBar).Render(strings.Repeat(" ", m.w-w))
-	}
-	return out
+	return sb.String()
 }
 
-// scrollByTabs shifts scrollX by `n` whole tabs (negative = left). The
-// new scrollX lines up with the start column of a tab so the leftmost
-// visible tab is always fully shown — no half-clipped tabs at the
-// viewport edge after a wheel tick.
+// scrollByTabs shifts the strip by n whole tabs (negative = left).
 func (m *Model) scrollByTabs(n int) {
 	if len(m.bufs) == 0 {
 		return
 	}
-	starts, _, _ := m.virtualLayout()
-	// Find the index of the first tab that's at or past scrollX (i.e.
-	// the leftmost fully-visible tab in current scroll state).
-	cur := 0
-	for i, s := range starts {
-		if s >= m.scrollX {
-			cur = i
-			break
-		}
-		cur = i // keep advancing — last index <= scrollX is the partial one
+	widths := m.tabWidths()
+	if totalWidth(widths) <= m.w {
+		m.first = 0
+		return
 	}
-	target := cur + n
-	if target < 0 {
-		target = 0
+	m.first += n
+	if m.first < 0 {
+		m.first = 0
 	}
-	if target >= len(starts) {
-		target = len(starts) - 1
+	if m.first >= len(m.bufs) {
+		m.first = len(m.bufs) - 1
 	}
-	m.scrollX = starts[target]
-	m.clampScroll()
+	m.settle(widths)
 }
 
-// rebuildRegions recomputes click regions in SCREEN coords. Tabs (or
-// portions thereof) that fall outside the visible body get no region —
-// clicks outside the viewport miss them.
+// rebuildRegions recomputes click regions in SCREEN coords for the tabs
+// on show (hidden tabs get no region).
 func (m *Model) rebuildRegions() {
 	m.regions = m.regions[:0]
 	if m.w <= 0 || len(m.bufs) == 0 {
 		return
 	}
-	starts, widths, totalW := m.virtualLayout()
-	leftOver, _, bodyW, leftReserve := m.indicatorLayout(totalW)
-	_ = leftOver
-	bodyLeft := leftReserve            // first screen col of the body
-	bodyRight := bodyLeft + bodyW      // first screen col past body
-	for i, b := range m.bufs {
-		vStart := starts[i]
-		vEnd := vStart + widths[i]
-		// Translate to screen coords.
-		sStart := vStart - m.scrollX + bodyLeft
-		sEnd := vEnd - m.scrollX + bodyLeft
-		// Clip to body.
-		if sEnd <= bodyLeft || sStart >= bodyRight {
-			continue
+	st, widths := m.layout()
+	x := 0
+	if st.leftOver {
+		x = 1
+	}
+	for i := st.first; i <= st.last; i++ {
+		if i > st.first {
+			x++ // separator
 		}
-		clampedStart := sStart
-		if clampedStart < bodyLeft {
-			clampedStart = bodyLeft
-		}
-		clampedEnd := sEnd
-		if clampedEnd > bodyRight {
-			clampedEnd = bodyRight
-		}
-		// Close glyph is at vEnd-2 in virtual coords → vEnd-2-scrollX+bodyLeft
-		closeScreenX := vEnd - 2 - m.scrollX + bodyLeft
-		// closeX is only meaningful when actually visible; if it got
-		// clipped, leave it unreachable (set to -1) so a body click
-		// can't accidentally hit it.
-		if closeScreenX < clampedStart || closeScreenX >= clampedEnd {
-			closeScreenX = -1
+		w := widths[i]
+		if st.fitW > 0 {
+			b := m.bufs[i]
+			w = len(renderTabCellsSfx(b, b.ID == m.activeID, m.suffix(b), m.isWelcome(b), st.fitW))
 		}
 		m.regions = append(m.regions, tabRegion{
-			start:  clampedStart,
-			end:    clampedEnd,
-			closeX: closeScreenX,
-			id:     b.ID,
+			start:  x,
+			end:    x + w,
+			closeX: x + w - 2, // the close glyph sits before the trailing pad
+			id:     m.bufs[i].ID,
 		})
-		_ = i
+		x += w
 	}
 }
 
@@ -357,25 +333,19 @@ func (m Model) HandleMouse(x int, screenX, screenY int, t tea.MouseEventType) (M
 		return m, nil
 	}
 
-	// Indicator hit-tests come before per-tab regions.
-	_, _, totalW := m.virtualLayout()
-	leftOver, rightOver, bodyW, _ := m.indicatorLayout(totalW)
-	if leftOver && x == 0 && t == tea.MouseLeft {
-		step := bodyW
-		if step < 1 {
-			step = 1
-		}
-		m.scrollX -= step
-		m.clampScroll()
+	// Indicator hit-tests come before per-tab regions: each pages by
+	// the number of tabs on show.
+	st, _ := m.layout()
+	page := st.last - st.first + 1
+	if page < 1 {
+		page = 1
+	}
+	if st.leftOver && x == 0 && t == tea.MouseLeft {
+		m.scrollByTabs(-page)
 		return m, nil
 	}
-	if rightOver && x == m.w-1 && t == tea.MouseLeft {
-		step := bodyW
-		if step < 1 {
-			step = 1
-		}
-		m.scrollX += step
-		m.clampScroll()
+	if st.rightOver && x == m.w-1 && t == tea.MouseLeft {
+		m.scrollByTabs(page)
 		return m, nil
 	}
 
@@ -408,7 +378,7 @@ func renderTab(b nvim.BufferInfo, active bool) (string, int) {
 // Width = len(returned slice). Used by View() to enable cell-level
 // clipping at viewport edges.
 func renderTabCells(b nvim.BufferInfo, active bool) []string {
-	return renderTabCellsSfx(b, active, "", isWelcomeBuf(b))
+	return renderTabCellsSfx(b, active, "", isWelcomeBuf(b), 0)
 }
 
 // suffix is the dim parent-folder hint shown after a tab name when
@@ -451,7 +421,10 @@ func isWelcomeBuf(b nvim.BufferInfo) bool {
 	return isDir
 }
 
-func renderTabCellsSfx(b nvim.BufferInfo, active bool, suffix string, welcome bool) []string {
+// renderTabCellsSfx renders one tab. maxW > 0 is the most cells it may
+// take: the folder hint goes first, then the name is shortened with "…"
+// at its end.
+func renderTabCellsSfx(b nvim.BufferInfo, active bool, suffix string, welcome bool, maxW int) []string {
 	name := filepath.Base(b.Path)
 	if welcome {
 		name = "Welcome"
@@ -461,6 +434,21 @@ func renderTabCellsSfx(b nvim.BufferInfo, active bool, suffix string, welcome bo
 	}
 	name = ansi.Truncate(name, 40, "…")
 	suffix = ansi.Truncate(suffix, 16, "…")
+	if maxW > 0 {
+		cells := renderTabCellsSfx(b, active, suffix, welcome, 0)
+		if len(cells) <= maxW {
+			return cells
+		}
+		if suffix != "" {
+			return renderTabCellsSfx(b, active, "", welcome, maxW)
+		}
+		over := len(cells) - maxW
+		keep := ansi.StringWidth(name) - over
+		if keep < 1 {
+			keep = 1
+		}
+		name = ansi.Truncate(name, keep, "…")
+	}
 
 	bg, fg := theme.BgTitleBar, theme.TextMuted
 	if active {
@@ -545,6 +533,15 @@ func (m Model) extensionIcon(name string) string {
 // Width returns the configured pane width.
 func (m Model) Width() int { return m.w }
 
-// ScrollX returns the current horizontal scroll offset in virtual cells.
-// Exposed for tests and host code that wants to inspect the scroll state.
-func (m Model) ScrollX() int { return m.scrollX }
+// ScrollX returns the current horizontal scroll offset in cells (the
+// start of the first visible tab in the full strip). Exposed for tests.
+func (m Model) ScrollX() int {
+	x := 0
+	for i, w := range m.tabWidths() {
+		if i >= m.first {
+			break
+		}
+		x += w + 1
+	}
+	return x
+}

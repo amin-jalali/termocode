@@ -14,6 +14,7 @@ import (
 	"github.com/mattn/go-runewidth"
 	"golang.design/x/clipboard"
 
+	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -1503,6 +1504,9 @@ func (m *Model) refreshTerminalCwd() {
 //     / ActionTerminalPrevTab) — without these the user can't manage
 //     the panel from inside it. Ctrl+T (toggle) is the user's escape
 //     hatch back to the editor; it's intercepted instead of passed.
+//
+// Keys bound to a skip-shell action (Quit by default; see skipsShell) are
+// kept by termocode even when this returns true.
 func shouldPassToTerminal(msg tea.KeyMsg) bool {
 	s := msg.String()
 
@@ -1714,4 +1718,20 @@ func readClipboardText() string {
 	}
 	out = string(buf)
 	return out
+}
+
+// skipsShell reports whether msg is bound to an action that must reach
+// termocode even while the terminal has focus (keymap.DefaultSkipShell
+// plus config.json "terminal_skip_shell"), like VSCode's
+// terminal.integrated.commandsToSkipShell.
+func (m Model) skipsShell(msg tea.KeyMsg) bool {
+	a := m.keys.Match(msg)
+	if a == keymap.ActionNone {
+		return false
+	}
+	set := m.skipShell
+	if set == nil {
+		set = keymap.SkipShellSet(nil)
+	}
+	return set[a]
 }
