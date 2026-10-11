@@ -849,8 +849,7 @@ func StashList(dir string) ([]StashEntry, error) {
 // failure so the caller can surface it (push errors usually contain
 // actionable messages — "no upstream", "non-fast-forward", auth failures).
 func Push(dir string) error {
-	cmd := exec.Command("git", "push")
-	cmd.Dir = dir
+	cmd := remoteCmd(dir, "push")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return cmdError(err, out)
@@ -863,8 +862,7 @@ func Push(dir string) error {
 // remote is `origin`; if the user has a different default remote they can
 // run the command from the integrated terminal instead.
 func PushSetUpstream(dir, branch string) error {
-	cmd := exec.Command("git", "push", "-u", "origin", branch)
-	cmd.Dir = dir
+	cmd := remoteCmd(dir, "push", "-u", "origin", branch)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return cmdError(err, out)
@@ -874,8 +872,7 @@ func PushSetUpstream(dir, branch string) error {
 
 // Pull runs `git pull` in dir. Same error-formatting strategy as Push.
 func Pull(dir string) error {
-	cmd := exec.Command("git", "pull")
-	cmd.Dir = dir
+	cmd := remoteCmd(dir, "pull")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return cmdError(err, out)
@@ -886,8 +883,7 @@ func Pull(dir string) error {
 // Fetch runs `git fetch --prune` in dir, updating remote-tracking refs without
 // touching the working tree. Same error-formatting strategy as Push/Pull.
 func Fetch(dir string) error {
-	cmd := exec.Command("git", "fetch", "--prune")
-	cmd.Dir = dir
+	cmd := remoteCmd(dir, "fetch", "--prune")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return cmdError(err, out)
