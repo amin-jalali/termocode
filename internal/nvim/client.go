@@ -42,6 +42,9 @@ type Client struct {
 
 	closeOnce sync.Once
 	closeErr  error
+	done      chan struct{} // closed by Close; stops promptGuard
+	guardOnce sync.Once
+	closed    atomic.Bool
 }
 
 type mouseEvent struct {
@@ -59,6 +62,7 @@ func New() (*Client, error) {
 	c := &Client{
 		events:     make(chan tea.Msg, 1024),
 		mouseQueue: make(chan mouseEvent, 256),
+		done:       make(chan struct{}),
 	}
 	go c.mouseDispatcher()
 
@@ -108,6 +112,7 @@ func (c *Client) Attach(width, height int) error {
 	}
 	// Non-fatal: the editor works without the nvim → Go event channel.
 	_ = c.exportChannel()
+	c.guardOnce.Do(func() { go c.promptGuard() })
 	return nil
 }
 
@@ -115,6 +120,17 @@ func (c *Client) Attach(width, height int) error {
 func (c *Client) Input(keys string) error {
 	_, err := c.nv.Input(keys)
 	return err
+}
+
+// Mode returns nvim_get_mode(): the mode and whether nvim is blocked
+// waiting for input (hit-enter, confirm, …). nvim answers this call even
+// while blocked; every other call then hangs.
+func (c *Client) Mode() (mode string, blocking bool, err error) {
+	m, err := c.nv.Mode()
+	if err != nil {
+		return "", false, err
+	}
+	return m.Mode, m.Blocking, nil
 }
 
 // Command runs an Ex command (e.g. ":edit foo.go", ":w").
@@ -478,6 +494,9 @@ func (c *Client) Mouse(button, action, modifier string, row, col int) error {
 // visual selection stuck). In practice the queue never fills under
 // normal interactive use; the buffer exists to absorb brief stalls.
 func (c *Client) MouseAsync(button, action, modifier string, row, col int) {
+	if c.closed.Load() {
+		return // after Close the queue is closed; sending would panic
+	}
 	ev := mouseEvent{button: button, action: action, modifier: modifier, row: row, col: col}
 	if action == "drag" {
 		select {
@@ -1122,6 +1141,10 @@ func (c *Client) Close() error {
 	// Workspace, main's deferred Close); a second close of mouseQueue
 	// used to panic.
 	c.closeOnce.Do(func() {
+		c.closed.Store(true)
+		if c.done != nil {
+			close(c.done)
+		}
 		if c.mouseQueue != nil {
 			close(c.mouseQueue)
 		}

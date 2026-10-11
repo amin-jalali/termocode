@@ -679,6 +679,19 @@ end
 	case nvim.ErrMsg:
 		m.err = msg.Err.Error()
 		return m, nil, true
+	case nvim.PromptMsg:
+		// nvim showed a blocking prompt (an error from a key, for example
+		// "E433: No tags file") and the client answered it. Show the
+		// message as a toast instead.
+		var cmd tea.Cmd
+		if m.nvim != nil {
+			text, _ := m.nvim.EvalLuaString(`local s = vim.trim(vim.fn.execute('messages')); return s:match('[^\n]*$') or ''`)
+			if text = strings.TrimSpace(text); text != "" {
+				m.toast, cmd = m.toast.Push(toast.Warn, text)
+			}
+			cmd = tea.Batch(m.nvim.Next(), cmd)
+		}
+		return m, cmd, true
 
 	// ── nvim → Go event channel (notify.go) ──
 	case nvim.NotifyMsg:
