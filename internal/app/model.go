@@ -857,6 +857,19 @@ func (m Model) attachCmd() tea.Cmd {
 		} {
 			_ = m.nvim.Command(cmd)
 		}
+		// VSCode-feel: stay in insert mode whenever a normal buffer is active.
+		// Guard on &modifiable && !&readonly so we don't trigger E5 on help
+		// buffers, find-results scratch (modifiable=false), or `:view`-opened
+		// readonly files. With cmdheight=0 an E5 becomes a hit-enter prompt
+		// that blocks ALL input until <Enter> — that's what locked the
+		// integrated terminal after the user clicked into a readonly buffer.
+		// Defined first, before the slow part of the setup (LSP, theme,
+		// plugins): the UI is usable before ReadyMsg, and a file opened in
+		// that time must start in Insert mode like any later one. A file
+		// opened even earlier (before this line) gets the startinsert below.
+		_ = m.nvim.Command("autocmd BufEnter,BufNewFile,WinEnter * if &buftype == '' && &modifiable && !&readonly | startinsert | endif")
+		_ = m.nvim.Command("if &buftype == '' && &modifiable && !&readonly && expand('%') != '' | startinsert | endif")
+		runNvimSetupGate()
 		// LSP setup must register the FileType autocmd before we apply the
 		// theme, so opening files later triggers Tree-sitter + LSP under the
 		// final palette.
@@ -915,13 +928,6 @@ func (m Model) attachCmd() tea.Cmd {
 		// Group A: ghost-text colors (after the theme's `hi clear`) + the
 		// inline-completion toggle.
 		m.aiAfterAttach()
-		// VSCode-feel: stay in insert mode whenever a normal buffer is active.
-		// Guard on &modifiable && !&readonly so we don't trigger E5 on help
-		// buffers, find-results scratch (modifiable=false), or `:view`-opened
-		// readonly files. With cmdheight=0 an E5 becomes a hit-enter prompt
-		// that blocks ALL input until <Enter> — that's what locked the
-		// integrated terminal after the user clicked into a readonly buffer.
-		_ = m.nvim.Command("autocmd BufEnter,BufNewFile,WinEnter * if &buftype == '' && &modifiable && !&readonly | startinsert | endif")
 		// Same idea for the integrated terminal: every time focus lands on a
 		// terminal buffer, drop into terminal-insert mode automatically. Without
 		// this, leaving and returning to the terminal puts the user in normal

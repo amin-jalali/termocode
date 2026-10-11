@@ -44,6 +44,12 @@ type Options struct {
 	Quiet, MaxSettle time.Duration
 	// StepTimeout is the deadline for one Update or View (default 5s).
 	StepTimeout time.Duration
+
+	// BeforeReady, when set, runs right after Init (and a first window
+	// size, not settled), while the embedded nvim is still in its setup:
+	// the app is usable before nvim.ReadyMsg. New then waits for ReadyMsg
+	// as usual.
+	BeforeReady func(d *Driver)
 }
 
 // Driver runs the app model step by step. See the package doc.
@@ -132,6 +138,10 @@ func New(t testing.TB, opt Options) *Driver {
 		t.FailNow()
 	}
 	d.run(initCmd)
+	if opt.BeforeReady != nil {
+		d.deliver(tea.WindowSizeMsg{Width: opt.W, Height: opt.H})
+		opt.BeforeReady(d)
+	}
 	d.Send(tea.WindowSizeMsg{Width: opt.W, Height: opt.H})
 	if opt.Nvim {
 		d.WaitFor(func() bool { return d.ready }, 15*time.Second)
