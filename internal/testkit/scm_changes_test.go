@@ -298,3 +298,35 @@ func TestSCMDiscardKeepsStagedPart(t *testing.T) {
 		t.Errorf("git status %q, want %q", got, "M  main.go")
 	}
 }
+
+// Spec: Given untracked files whose names have a space and non-ASCII
+// letters, when Source Control lists them, then the real names show (not
+// git's C-quoted form) and pressing s on one stages that file.
+func TestSCMFileNamesWithSpacesAndUnicode(t *testing.T) {
+	d, r := scmDriver(t, func(r *repo) {
+		r.write("my notes.txt", "n\n")
+		r.write("日本.txt", "n\n")
+		r.write("docs/naïve café.md", "n\n")
+	})
+	d.WaitForText("my notes.txt", 3*time.Second)
+	for _, name := range []string{"my notes.txt", "日本.txt", "naïve café.md"} {
+		if !inSection(d, "CHANGES", name) {
+			t.Errorf("%q not listed by its real name:\n%s", name, strings.Join(section(d, "CHANGES"), "\n"))
+		}
+	}
+	if strings.Contains(text(d), `\346`) || strings.Contains(text(d), `"my notes`) {
+		t.Errorf("C-quoted path shown:%s", dump(d))
+	}
+	clickText(d, "my notes.txt")
+	d.Key("s")
+	until(d, func() bool { return inSection(d, "STAGED", "my notes.txt") })
+	if got := r.porcelain(); !strings.Contains(got, "A  my notes.txt") {
+		t.Errorf("s did not stage %q: git status %q", "my notes.txt", got)
+	}
+	clickText(d, "日本.txt")
+	d.Key("s")
+	until(d, func() bool { return inSection(d, "STAGED", "日本.txt") })
+	if got := r.porcelain(); !strings.Contains(got, "A  日本.txt") {
+		t.Errorf("s did not stage %q: git status %q", "日本.txt", got)
+	}
+}

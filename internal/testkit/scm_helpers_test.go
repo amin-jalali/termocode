@@ -121,8 +121,9 @@ func (r *repo) porcelain() string {
 	r.t.Helper()
 	cmd := exec.Command("git", "-c", "core.quotePath=false", "status", "--porcelain=v1")
 	cmd.Dir = r.dir
-	out, _ := cmd.Output()
-	return strings.Join(strings.Split(strings.TrimRight(string(out), "\n"), "\n"), "|")
+	b, _ := cmd.Output()
+	out := strings.ReplaceAll(string(b), `"`, "") // names with spaces are quoted
+	return strings.Join(strings.Split(strings.TrimRight(out, "\n"), "\n"), "|")
 }
 
 // scmFiles is a small workspace for the Source Control tests.

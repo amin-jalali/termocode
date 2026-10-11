@@ -61,28 +61,37 @@ func IsRepo(dir string) bool {
 	return strings.TrimSpace(string(out)) == "true"
 }
 
-// Status runs `git status --porcelain=v1` in dir and returns parsed entries.
+// Status runs `git status --porcelain=v1 -z` in dir and returns parsed
+// entries. -z gives raw paths: without it git C-quotes names with spaces or
+// non-ASCII letters ("\346\227\245.txt"), which then match no file.
 func Status(dir string) ([]FileStatus, error) {
-	cmd := exec.Command("git", "status", "--porcelain=v1")
+	cmd := exec.Command("git", "status", "--porcelain=v1", "-z")
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
+	return parseStatusZ(string(out)), nil
+}
+
+// parseStatusZ parses `git status --porcelain=v1 -z` output: NUL-terminated
+// "XY path" records; a rename or copy is followed by one more record with
+// the old path, which is skipped (the new name is the one on disk).
+func parseStatusZ(out string) []FileStatus {
 	var files []FileStatus
-	for _, line := range strings.Split(string(out), "\n") {
-		if len(line) < 4 {
+	recs := strings.Split(out, "\x00")
+	for i := 0; i < len(recs); i++ {
+		rec := recs[i]
+		if len(rec) < 4 {
 			continue
 		}
-		code := line[:2]
-		path := line[3:]
-		// Rename: "old -> new" — keep new name.
-		if i := strings.Index(path, " -> "); i >= 0 {
-			path = path[i+4:]
+		code := rec[:2]
+		files = append(files, FileStatus{Code: code, Path: rec[3:]})
+		if code[0] == 'R' || code[0] == 'C' {
+			i++ // the old path
 		}
-		files = append(files, FileStatus{Code: code, Path: path})
 	}
-	return files, nil
+	return files
 }
 
 // GetBranch returns current branch name and ahead/behind counts vs upstream.
