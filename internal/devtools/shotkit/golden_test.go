@@ -43,9 +43,6 @@ const (
 	goldenDir    = "testdata/golden"
 )
 
-// goldenNow is the frozen wall clock: a few days after the demo history.
-var goldenNow = time.Date(2026, 2, 1, 12, 0, 0, 0, time.UTC)
-
 type goldenCase struct {
 	name  string
 	scene Scene
@@ -107,7 +104,7 @@ func TestMain(m *testing.M) {
 
 // runChild renders one case inside the hermetic child process.
 func runChild(name string) int {
-	clock.Now = func() time.Time { return goldenNow }
+	clock.Now = func() time.Time { return DemoNow }
 	for _, c := range goldenCases() {
 		if c.name != name {
 			continue
