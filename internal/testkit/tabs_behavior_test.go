@@ -173,6 +173,58 @@ func TestTabsCloseOthers(t *testing.T) {
 	}
 }
 
+// Spec: Given a.txt, b.txt (unsaved edits), c.txt and two notes open,
+// when the user right-clicks the a.txt tab, picks Close Others and
+// answers Don't Save for b.txt,
+// then all four other tabs are closed (the clean ones are not forgotten
+// behind the question).
+func TestTabsCloseOthersWithDirtyTab(t *testing.T) {
+	d := editorDriver(t, nil)
+	openABC(d)
+	open(d, "notes/todo.md")
+	open(d, "notes/done.md")
+	open(d, "b.txt")
+	d.Type("B")
+	if !waitTabs(d, "a.txt", "b.txt*", "c.txt", "notes/todo.md", "notes/done.md") {
+		got, _ := tabs(d)
+		t.Fatalf("tabs = %v", got)
+	}
+	x, y, _ := find(d, "a.txt x")
+	d.RightClick(x+1, y)
+	clickText(d, "Close Others")
+	if _, _, ok := find(d, "unsaved changes"); !ok {
+		t.Fatalf("no question for the dirty b.txt:\n%s", screen(d))
+	}
+	clickButton(d, "Don't Save")
+	if !waitTabs(d, "a.txt") {
+		got, _ := tabs(d)
+		t.Fatalf("after Close Others + Don't Save tabs = %v, want [a.txt]", got)
+	}
+}
+
+// Spec: Given a.txt, b.txt (unsaved edits) and c.txt open,
+// when the user picks Close Others on the a.txt tab and answers Cancel,
+// then the closing stops: b.txt keeps its edits and c.txt stays open.
+func TestTabsCloseOthersCancel(t *testing.T) {
+	d := editorDriver(t, nil)
+	openABC(d)
+	open(d, "b.txt")
+	d.Type("B")
+	if !waitTabs(d, "a.txt", "b.txt*", "c.txt") {
+		got, _ := tabs(d)
+		t.Fatalf("tabs = %v", got)
+	}
+	x, y, _ := find(d, "a.txt x")
+	d.RightClick(x+1, y)
+	clickText(d, "Close Others")
+	clickButton(d, "Cancel")
+	d.Settle(200 * time.Millisecond)
+	if !waitTabs(d, "a.txt", "b.txt*", "c.txt") {
+		got, _ := tabs(d)
+		t.Fatalf("after Cancel tabs = %v, want all three", got)
+	}
+}
+
 // Spec: Given a.txt, b.txt, c.txt open,
 // when the user right-clicks the a.txt tab and picks Close All to the
 // Right, then only a.txt stays open.

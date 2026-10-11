@@ -113,6 +113,7 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 	case confirmKindCloseBuffer:
 		switch id {
 		case "cancel":
+			m.closeQueue = nil
 			return nil
 		case "save":
 			if buf, ok := m.findBuffer(m.confirmTargetID); ok {
@@ -129,6 +130,7 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 				_ = m.nvim.Command(discardBufferCmd(m.confirmTargetID))
 			}
 		}
+		m.drainCloseQueue() // Close Others / to the Right go on
 	case confirmKindDeletePath:
 		switch id {
 		case "cancel":
