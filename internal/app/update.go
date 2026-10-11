@@ -1721,7 +1721,7 @@ func (m *Model) editorPaste() {
 	// to "+ and then the unnamed register (last in-editor copy).
 	clip := readClipboardText()
 	_ = m.nvim.ExecLuaArgs(`
-local clip, linewise = ...
+local clip, line_copy = ...
 local mode = vim.api.nvim_get_mode().mode
 local m1 = mode:sub(1,1)
 local visual = m1 == 'v' or m1 == 'V' or mode:byte(1) == 22
@@ -1732,6 +1732,9 @@ if visual then
 end
 if clip == '' and vim.fn.has('clipboard') == 1 then clip = vim.fn.getreg('+') end
 if clip == '' then clip = vim.fn.getreg('"') end
+-- Whole-line copy: decided after the fallbacks, so it also works with no
+-- OS clipboard (the text then comes from the unnamed register).
+local linewise = line_copy ~= '' and clip == line_copy
 if clip ~= '' then
   if linewise and not visual then
     -- VSCode: a whole-line copy (no selection) pastes as a new line above.
@@ -1741,7 +1744,7 @@ if clip ~= '' then
   end
 end
 vim.cmd('startinsert')
-`, clip, clip != "" && clip == m.lastLineCopy)
+`, clip, m.lastLineCopy)
 }
 
 // noteLineCopy strips the "L:" / "C:" marker returned by the copy / cut
