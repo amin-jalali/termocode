@@ -3,6 +3,8 @@ package app
 import (
 	"encoding/base64"
 	"os"
+
+	"github.com/charmbracelet/x/term"
 )
 
 // osc52MaxBytes caps the raw text size we'll ship via OSC 52. Many
@@ -49,5 +51,18 @@ func emitOSC52(s string) {
 		_ = recover()
 	}()
 	b64 := base64.StdEncoding.EncodeToString([]byte(s))
-	_, _ = os.Stdout.WriteString("\x1b]52;c;" + b64 + "\x07")
+	writeTerminal("\x1b]52;c;" + b64 + "\x07")
+}
+
+// stdoutIsTerminal reports whether stdout is a terminal. Out-of-band
+// escapes (OSC 52, fullscreen) and host key presses are skipped when it is
+// not: under `go test` they would reach the developer's real terminal.
+func stdoutIsTerminal() bool { return term.IsTerminal(os.Stdout.Fd()) }
+
+// writeTerminal writes an out-of-band escape sequence to the terminal, if
+// stdout is one.
+func writeTerminal(seq string) {
+	if stdoutIsTerminal() {
+		_, _ = os.Stdout.WriteString(seq)
+	}
 }

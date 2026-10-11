@@ -583,7 +583,14 @@ func New() Model {
 	overrides, keymapProblems := keymap.LoadOverridesReport("")
 	keys := keymap.Default().MergeInto(overrides)
 
-	client, err := nvim.New()
+	// TERMOCODE_NO_NVIM=1 runs without the embedded editor (tests and
+	// internal/testkit use it for fast, nvim-free UI runs).
+	var client *nvim.Client
+	var err error
+	noNvim := os.Getenv("TERMOCODE_NO_NVIM") == "1"
+	if !noNvim {
+		client, err = nvim.New()
+	}
 	// Terminal panel height: prefer the value persisted from the previous
 	// session so the user's drag-set preference survives a relaunch. Missing
 	// / corrupt / out-of-range values fall back to the default.
@@ -657,7 +664,9 @@ func New() Model {
 		ai:               newAIState(),       // Group A
 		debug:            loadDebugState(),   // Group D (shared by Model copies)
 	}
-	if err != nil {
+	if noNvim {
+		m.editor = editor.New(nil)
+	} else if err != nil {
 		m.editor = editor.New(nil)
 		m.err = "nvim: " + err.Error()
 	} else {
