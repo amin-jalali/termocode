@@ -1,9 +1,12 @@
 package grid
 
 // Cell is one cell on the nvim grid: a rune plus a highlight attribute id.
+// Cont marks the right half of a double-width glyph: nvim sends it as an
+// empty string and it draws nothing (the glyph to its left covers it).
 type Cell struct {
 	Rune rune
 	HlID int
+	Cont bool
 }
 
 // Attrs is the resolved set of attributes nvim defines for one hl id.
@@ -158,11 +161,12 @@ func (g *Grid) applyLine(row, colStart int, cellsArr []any) {
 			r = x
 			break
 		}
+		cont := text == ""
 		for i := 0; i < repeat; i++ {
 			if col >= g.Width {
 				break
 			}
-			g.Cells[row][col] = Cell{Rune: r, HlID: hl}
+			g.Cells[row][col] = Cell{Rune: r, HlID: hl, Cont: cont}
 			col++
 		}
 	}
