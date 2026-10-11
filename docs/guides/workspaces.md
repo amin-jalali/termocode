@@ -63,6 +63,9 @@ choice are the same in every project. They stay in
     you open the project it belongs to, termocode moves it into
     `sessions/`. Other projects start empty.
 
+Over SSH the whole editor also survives a dropped connection: see
+[Remote and SSH](remote-ssh.md).
+
 ## Start fresh
 
 - **Developer: Reset Session** clears the saved tabs and cursor history of

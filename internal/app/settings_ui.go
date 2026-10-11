@@ -42,6 +42,9 @@ type settingsConfig struct {
 	// TerminalSkipShell adds ("Name") or removes ("-Name") actions whose
 	// keys skip the focused terminal and reach termocode (default: Quit).
 	TerminalSkipShell []string `json:"terminal_skip_shell,omitempty"`
+	// PersistentSession: "auto" (on over SSH), "on" or "off" ("" = auto).
+	// cmd/termocode reads it before the UI starts.
+	PersistentSession string `json:"persistent_session,omitempty"`
 }
 
 // settingsConfigPath returns the absolute path to config.json. We don't
@@ -64,6 +67,12 @@ func settingsConfigPath() (string, error) {
 // when it is not set. cmd/termocode reads it before the TUI starts.
 func ConfigFontDelta() *int {
 	return loadSettings().FontDelta
+}
+
+// ConfigPersistentSession returns the "persistent_session" value from
+// config.json ("" = auto). cmd/termocode reads it before the TUI starts.
+func ConfigPersistentSession() string {
+	return loadSettings().PersistentSession
 }
 
 // loadSettings reads config.json. Missing/corrupt = empty struct.
@@ -125,7 +134,7 @@ func saveSettings(cfg settingsConfig) error {
 	if cfg.SearchMaxResults != nil {
 		merged["search_max_results"] = *cfg.SearchMaxResults
 	}
-	for k, v := range map[string]string{"icons": cfg.Icons, "animations": cfg.Animations, "images": cfg.Images} {
+	for k, v := range map[string]string{"icons": cfg.Icons, "animations": cfg.Animations, "images": cfg.Images, "persistent_session": cfg.PersistentSession} {
 		if v != "" {
 			merged[k] = v
 		}
@@ -171,6 +180,8 @@ var settingsRows = []settingsRow{
 		Desc: "Indent width in spaces (1-16). Sets tabstop and shiftwidth."},
 	{ID: "setting-search-max-results", Label: "search_max_results", Kind: "int", Default: strconv.Itoa(search.DefaultMaxResults),
 		Desc: "Most results Find in Files shows. 0 means no limit."},
+	{ID: "setting-persistent-session", Label: "persistent_session", Kind: "enum", Default: "auto",
+		Desc: "Run the editor in a background session that survives a dropped connection; run termocode again in the same folder to get it back: on, off, or auto (on over SSH, off locally and inside tmux / screen). Applies the next time termocode starts; --no-session wins over it."},
 }
 
 // findSettingsRow looks up a row by ID. Returns the zero value + false on

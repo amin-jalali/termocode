@@ -30,7 +30,8 @@ const (
 	confirmKindKeybindingConflict
 	confirmKindSettingsImport
 	confirmKindSnippetAction
-	confirmKindQuit // unsaved files on quit (quit.go)
+	confirmKindQuit    // unsaved files on quit (quit.go)
+	confirmKindHotExit // restore unsaved files of a crashed run (hot_exit.go)
 )
 
 // findBuffer returns the buffer info for the given id, if known.
@@ -179,6 +180,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		return m.onSnippetActionConfirm(id)
 	case confirmKindQuit:
 		return m.onQuitConfirm(id)
+	case confirmKindHotExit:
+		return m.onHotExitConfirm(id)
 	}
 	return nil
 }
