@@ -121,57 +121,76 @@ type barLayout struct {
 	left, center, right    string
 	leftW, centerW, rightW int
 	gapL, gapR             int
-	chipStart, chipW       int // LSP chip offset inside right (chipW 0 = none)
-	aiStart, aiW           int // Group A: AI badge offset inside right (aiW 0 = none)
+	chipStart, chipW       int  // LSP chip offset inside right (chipW 0 = none)
+	aiStart, aiW           int  // Group A: AI badge offset inside right (aiW 0 = none)
+	debug                  bool // the DEBUG badge is shown (last in right)
 }
+
+// Drop order when the bar is too narrow (VSCode-like status-item
+// priority): low-value right items go first, then the center cluster,
+// then the language and TERM. Items are dropped whole, never cut, so the
+// "Ln, Col" pill (and the DEBUG badge) always show complete.
+var dropOrder = []rightItem{itemAI, itemLSP, itemEncoding, itemIndent, itemLang, itemCenter, itemTerm}
 
 // layout fits left / center / right into the bar width (see View).
 func (m Model) layout(s State) barLayout {
 	var l barLayout
 	l.left = m.renderLeft(s)
 	l.center = m.renderCenter(s)
-	l.right, l.chipStart, l.chipW, l.aiStart, l.aiW = m.renderRightChips(s)
-
 	l.leftW = lipgloss.Width(l.left)
 	l.centerW = lipgloss.Width(l.center)
-	l.rightW = lipgloss.Width(l.right)
 
 	innerW := m.w - 2 // subtract left+right edge pad
 	if innerW < 0 {
 		innerW = 0
 	}
 
-	// Drop center first if everything won't fit, then truncate right and
-	// left in turn so the bar never overflows m.w.
-	if l.leftW+l.centerW+l.rightW > innerW {
-		l.center, l.centerW = "", 0
-	}
-	if l.leftW+l.rightW > innerW {
-		// Truncate the right cluster first — the filename on the left
-		// is more critical than the trailing metadata when space is
-		// tight. Keep a small gap so the clusters don't touch.
-		avail := innerW - l.leftW - minClusterGap
-		if avail < 0 {
-			avail = 0
-		}
-		l.right = truncateStyled(l.right, avail)
+	drop := map[rightItem]bool{}
+	render := func() {
+		l.right, l.chipStart, l.chipW, l.aiStart, l.aiW = m.renderRightItems(s, drop)
 		l.rightW = lipgloss.Width(l.right)
 	}
-	if l.leftW+l.rightW > innerW {
-		avail := innerW - l.rightW
+	render()
+	// Gap needed between clusters that are both present.
+	need := func() int {
+		n := l.leftW + l.centerW + l.rightW
+		if l.centerW > 0 {
+			n += 2 * minClusterGap
+		} else if l.rightW > 0 {
+			n += minClusterGap
+		}
+		return n
+	}
+	for _, it := range dropOrder {
+		if need() <= innerW {
+			break
+		}
+		if it == itemCenter {
+			l.center, l.centerW = "", 0
+			continue
+		}
+		drop[it] = true
+		render()
+	}
+	// Still too wide: shorten the left (project) cluster.
+	if l.leftW+l.rightW+minClusterGap > innerW {
+		avail := innerW - l.rightW - minClusterGap
 		if avail < 0 {
 			avail = 0
 		}
 		l.left = truncateStyled(l.left, avail)
 		l.leftW = lipgloss.Width(l.left)
 	}
-	// A chip cut by truncation is not clickable.
-	if l.chipStart+l.chipW > l.rightW {
-		l.chipW = 0
+	// Tiny bar: drop the DEBUG badge, then the cursor pill; never cut one.
+	for _, it := range []rightItem{itemDebug, itemPos} {
+		if l.leftW+l.rightW <= innerW {
+			break
+		}
+		drop[it] = true
+		render()
 	}
-	if l.aiStart+l.aiW > l.rightW {
-		l.aiW = 0
-	}
+
+	l.debug = s.Debug && !drop[itemDebug]
 
 	contentW := l.leftW + l.centerW + l.rightW
 	gap := innerW - contentW
@@ -382,70 +401,89 @@ func (m Model) renderCenterDiag(s State) (string, int, int) {
 	return out, start, lipgloss.Width(out) - start
 }
 
+// rightItem names one part of the right cluster (see dropOrder).
+type rightItem int
+
+const (
+	itemIndent rightItem = iota
+	itemEncoding
+	itemLang
+	itemLSP
+	itemAI
+	itemTerm
+	itemPos
+	itemDebug
+	itemCenter // the whole center cluster (only used in dropOrder)
+)
+
 // renderRight shows cursor position, indent style, encoding, language,
-// the LSP chip, and (if active) TERM / DEBUG indicators — separated by dim
-// │ pipes.
+// the LSP chip, and (if active) TERM / DEBUG indicators.
 func (m Model) renderRight(s State) string {
-	out, _, _, _, _ := m.renderRightChips(s)
+	out, _, _, _, _ := m.renderRightItems(s, nil)
 	return out
 }
 
-// renderRightChips is renderRight plus the cell offset / width of the LSP
-// chip and the AI badge inside the returned string (width 0 = hidden).
-func (m Model) renderRightChips(s State) (string, int, int, int, int) {
+// renderRightItems is renderRight without the items in drop, plus the cell
+// offset / width of the LSP chip and the AI badge inside the returned
+// string (width 0 = hidden).
+func (m Model) renderRightItems(s State, drop map[rightItem]bool) (string, int, int, int, int) {
 	var parts []string
+	var kinds []rightItem
+	add := func(k rightItem, p string) {
+		if drop[k] {
+			return
+		}
+		parts = append(parts, p)
+		kinds = append(kinds, k)
+	}
 	if s.Indent != "" {
-		parts = append(parts, barFg(theme.TextSecondary).Render(s.Indent))
+		add(itemIndent, barFg(theme.TextSecondary).Render(s.Indent))
 	}
 	enc := s.Encoding
 	if enc == "" {
 		enc = "UTF-8"
 	}
-	parts = append(parts, barFg(theme.TextSecondary).Render(enc))
+	add(itemEncoding, barFg(theme.TextSecondary).Render(enc))
 	if s.Lang != "" {
-		lang := s.Lang
+		var lang string
 		if g, c := theme.FileIconFor(s.Path, false, false); s.Path != "" && theme.CurrentIconMode != theme.IconModeASCII {
 			lang = barFg(c).Render(g) + barBg().Render(" ") + barFg(theme.TextSecondary).Render(s.Lang)
 		} else {
 			lang = barFg(theme.TextSecondary).Render(s.Lang)
 		}
-		parts = append(parts, lang)
+		add(itemLang, lang)
 	}
-	chipIdx := -1
 	if s.ShowLSP {
-		chipIdx = len(parts)
-		parts = append(parts, renderLSPChip(s.LSP))
+		add(itemLSP, renderLSPChip(s.LSP))
 	}
-	aiIdx := -1
 	if s.AIState != AIOff {
-		aiIdx = len(parts)
-		parts = append(parts, renderAIBadge(s.AI, s.AIState))
+		add(itemAI, renderAIBadge(s.AI, s.AIState))
 	}
 	if s.Term {
 		// Subtle "TERM" indicator so the user can tell at a glance
 		// whether the integrated terminal panel is currently open.
-		parts = append(parts, barFg(theme.SyntaxString).Bold(true).Render("● TERM"))
+		add(itemTerm, barFg(theme.SyntaxString).Bold(true).Render("● TERM"))
 	}
 	// Cursor position sits in a soft accent pill near the right edge.
-	parts = append(parts, pill(fmt.Sprintf("Ln %d, Col %d", s.Line, s.Col), theme.TextWhite,
+	add(itemPos, pill(fmt.Sprintf("Ln %d, Col %d", s.Line, s.Col), theme.TextWhite,
 		theme.Mix(barBgColor(), theme.BorderFocus, 0.30), false))
 	if s.Debug {
 		// An active debug session is high-attention: a red pill, always
 		// last (DebugBadgeSpan relies on that).
-		parts = append(parts, pill(debugBadgeText, theme.OnAccent, theme.LG(theme.DiagError), true))
+		add(itemDebug, pill(debugBadgeText, theme.OnAccent, theme.LG(theme.DiagError), true))
 	}
-	span := func(idx int) (int, int) {
-		if idx < 0 {
-			return 0, 0
-		}
+	span := func(k rightItem) (int, int) {
 		start, sepW := 0, lipgloss.Width(sep())
-		for _, p := range parts[:idx] {
+		for i, p := range parts {
+			if kinds[i] == k {
+				return start, lipgloss.Width(p)
+			}
 			start += lipgloss.Width(p) + sepW
 		}
-		return start, lipgloss.Width(parts[idx])
+		return 0, 0
 	}
-	chipStart, chipW := span(chipIdx)
-	aiStart, aiW := span(aiIdx)
+	chipStart, chipW := span(itemLSP)
+	aiStart, aiW := span(itemAI)
 	return strings.Join(parts, sep()), chipStart, chipW, aiStart, aiW
 }
 
