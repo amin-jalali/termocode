@@ -3,6 +3,7 @@ package nvim
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"sync/atomic"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -38,6 +39,9 @@ type Client struct {
 	// drag is dropped (selection still ends correctly because we never
 	// drop press / release — see MouseAsync).
 	mouseQueue chan mouseEvent
+
+	closeOnce sync.Once
+	closeErr  error
 }
 
 type mouseEvent struct {
@@ -1114,10 +1118,16 @@ func (c *Client) BufferContent() (string, error) {
 
 // Close terminates the nvim subprocess.
 func (c *Client) Close() error {
-	if c.mouseQueue != nil {
-		close(c.mouseQueue)
-	}
-	return c.nv.Close()
+	// Idempotent: several paths close nvim (Quit, Reload Window, Open
+	// Workspace, main's deferred Close); a second close of mouseQueue
+	// used to panic.
+	c.closeOnce.Do(func() {
+		if c.mouseQueue != nil {
+			close(c.mouseQueue)
+		}
+		c.closeErr = c.nv.Close()
+	})
+	return c.closeErr
 }
 
 // Next returns a tea.Cmd that blocks for the next event from nvim and
