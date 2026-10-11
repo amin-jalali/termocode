@@ -91,6 +91,23 @@ func TestSettingTabSize(t *testing.T) {
 	mustSee(t, d, "Spaces: 2")
 }
 
+// Spec: Given a file with one long line,
+// when the user turns word_wrap on in the Settings UI and opens the file,
+// then the line wraps (its end is visible); after a restart it still
+// wraps.
+func TestSettingWordWrap(t *testing.T) {
+	d := editorWith(t, settingFiles, "a.txt", "indented")
+	setSetting(t, d, "word_wrap", "true")
+	d.Action("open:long.txt")
+	mustSee(t, d, "END")
+	if got := savedConfig(t)["word_wrap"]; got != true {
+		t.Fatalf("config.json word_wrap = %v", got)
+	}
+	d = restart(t, settingFiles)
+	d.Action("open:long.txt")
+	mustSee(t, d, "END")
+}
+
 // Spec: Given a workspace with a dot-file,
 // when the user turns show_hidden on,
 // then the explorer lists it, and turning it off hides it again.

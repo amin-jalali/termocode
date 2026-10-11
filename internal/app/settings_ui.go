@@ -341,18 +341,17 @@ func (m *Model) applySettingValue(value string) tea.Cmd {
 			m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Settings error", err.Error())
 			return toastCmd
 		}
-		// Sync the live nvim state with the new setting WITHOUT routing
-		// through toggleWordWrap (which would push a duplicate toast on
-		// top of the "word_wrap = …" toast we emit below).
+		// Apply to every file window and to the global value, so files
+		// opened later wrap too (a :setlocal only changed the current
+		// window). Terminal and other special windows keep theirs.
 		if m.nvim != nil {
-			cur, _ := m.nvim.EvalLuaString(`return vim.wo.wrap and 'on' or 'off'`)
-			if (cur == "on") != b {
-				cmd := "setlocal nowrap"
-				if b {
-					cmd = "setlocal wrap"
-				}
-				_ = m.nvim.Command(cmd)
-			}
+			_ = m.nvim.ExecLuaArgs(`local on = ...
+				vim.go.wrap = on
+				for _, w in ipairs(vim.api.nvim_list_wins()) do
+					if vim.bo[vim.api.nvim_win_get_buf(w)].buftype == '' then
+						vim.wo[w].wrap = on
+					end
+				end`, b)
 		}
 		m.toast, toastCmd = m.toast.Push(toast.Info, fmt.Sprintf("word_wrap = %v", b))
 	case "setting-show-hidden":
