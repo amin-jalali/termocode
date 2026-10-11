@@ -6,9 +6,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/theme"
-	"github.com/charmbracelet/x/ansi"
 )
 
 type State struct {
@@ -505,8 +505,12 @@ func renderLSPChip(clients []string) string {
 	return barFg(theme.TextSecondary).Render("{} " + strings.Join(clients, ", "))
 }
 
-// truncate clips s to n terminal cells, ending in "…" when cut. It counts
-// cells, not bytes, so it never splits a multi-byte glyph.
+// truncate clips s to n cells with a trailing "…". It counts cells, not
+// bytes, and never cuts a multi-byte glyph (a cut glyph is invalid UTF-8:
+// the terminal draws extra cells and the row wraps).
 func truncate(s string, n int) string {
+	if n <= 0 {
+		return ""
+	}
 	return ansi.Truncate(s, n, "…")
 }

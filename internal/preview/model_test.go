@@ -44,9 +44,9 @@ func TestNewSplitsBodyAndTrimsTrailingNewlines(t *testing.T) {
 func TestSetSizeClampsTop(t *testing.T) {
 	m := New("", "a\nb\nc\nd\ne\nf\ng")
 	m.top = 1000
-	m.SetSize(10, 6) // contentHeight 2 → max top = 5
-	if m.top != 5 {
-		t.Fatalf("top want clamped to 5, got %d", m.top)
+	m.SetSize(10, 6) // contentHeight 4 → max top = 3
+	if m.top != 3 {
+		t.Fatalf("top want clamped to 3, got %d", m.top)
 	}
 }
 
@@ -79,10 +79,10 @@ func TestUpdateScrollKeys(t *testing.T) {
 
 func TestUpdatePageDownAndEndClampToMax(t *testing.T) {
 	m := New("", strings.Repeat("y\n", 30))
-	m.SetSize(20, 10) // contentHeight 6 → max top = 30-6 = 24
+	m.SetSize(20, 10) // contentHeight 8 → max top = 30-8 = 22
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnd})
-	if m.top != 24 {
-		t.Fatalf("End: want top 24, got %d", m.top)
+	if m.top != 22 {
+		t.Fatalf("End: want top 22, got %d", m.top)
 	}
 }
 
@@ -160,6 +160,34 @@ func TestItoa(t *testing.T) {
 	for in, want := range cases {
 		if got := itoa(in); got != want {
 			t.Fatalf("itoa(%d) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// The preview fills the whole window: exactly h rows of w cells.
+func TestViewIsExactlyWByH(t *testing.T) {
+	for _, h := range []int{1, 2, 3, 10, 36} {
+		m := New("Title", strings.Repeat("line\n", 50))
+		m.SetSize(30, h)
+		rows := strings.Split(m.View(), "\n")
+		if len(rows) != h {
+			t.Errorf("h=%d: %d rows", h, len(rows))
+		}
+		for i, r := range rows {
+			if w := lipgloss.Width(r); w != 30 {
+				t.Errorf("h=%d: row %d is %d cells", h, i, w)
+			}
+		}
+	}
+}
+
+// Tabs (Lua error tracebacks in the Error Log) must not widen rows.
+func TestViewTabsKeepWidth(t *testing.T) {
+	m := New("Log", "stack traceback:\n\tno field package.preload['x']"+strings.Repeat("y", 30))
+	m.SetSize(40, 6)
+	for i, r := range strings.Split(m.View(), "\n") {
+		if w := lipgloss.Width(r); w != 40 {
+			t.Errorf("row %d is %d cells", i, w)
 		}
 	}
 }

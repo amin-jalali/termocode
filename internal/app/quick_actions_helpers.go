@@ -14,6 +14,9 @@ func defaultNowFunc() time.Time { return time.Now() }
 // stays interactive — the launched app gets stdout/stderr redirected to
 // /dev/null implicitly via Run() with default fields when we don't wait.
 func defaultOpen(path string) error {
+	if headless() {
+		return errHeadless
+	}
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "darwin":

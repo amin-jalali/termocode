@@ -123,7 +123,7 @@ GIT
 
 TERMINAL & RUN
   Ctrl+T            Toggle integrated terminal panel
-  Ctrl+` + "`" + ` / Alt+`   + "`" + `    Alternate terminal toggles (best effort)
+  Ctrl+` + "`" + ` / Alt+` + "`" + `    Alternate terminal toggles (best effort)
   Palette           Terminal: Open External Shell
   Alt+T             Run project tests
   F7                Markdown preview (.md files only)

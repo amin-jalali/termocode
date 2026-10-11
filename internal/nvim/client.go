@@ -3,6 +3,7 @@ package nvim
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"sync/atomic"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -38,6 +39,12 @@ type Client struct {
 	// drag is dropped (selection still ends correctly because we never
 	// drop press / release — see MouseAsync).
 	mouseQueue chan mouseEvent
+
+	closeOnce sync.Once
+	closeErr  error
+	done      chan struct{} // closed by Close; stops promptGuard
+	guardOnce sync.Once
+	closed    atomic.Bool
 }
 
 type mouseEvent struct {
@@ -55,6 +62,7 @@ func New() (*Client, error) {
 	c := &Client{
 		events:     make(chan tea.Msg, 1024),
 		mouseQueue: make(chan mouseEvent, 256),
+		done:       make(chan struct{}),
 	}
 	go c.mouseDispatcher()
 
@@ -104,6 +112,7 @@ func (c *Client) Attach(width, height int) error {
 	}
 	// Non-fatal: the editor works without the nvim → Go event channel.
 	_ = c.exportChannel()
+	c.guardOnce.Do(func() { go c.promptGuard() })
 	return nil
 }
 
@@ -113,9 +122,20 @@ func (c *Client) Input(keys string) error {
 	return err
 }
 
+// Mode returns nvim_get_mode(): the mode and whether nvim is blocked
+// waiting for input (hit-enter, confirm, …). nvim answers this call even
+// while blocked; every other call then hangs.
+func (c *Client) Mode() (mode string, blocking bool, err error) {
+	m, err := c.nv.Mode()
+	if err != nil {
+		return "", false, err
+	}
+	return m.Mode, m.Blocking, nil
+}
+
 // Command runs an Ex command (e.g. ":edit foo.go", ":w").
 func (c *Client) Command(cmd string) error {
-	return c.nv.Command(cmd)
+	return c.unblocked(func() error { return c.nv.Command(cmd) })
 }
 
 // BufferInfo describes one open nvim buffer.
@@ -130,7 +150,7 @@ type BufferInfo struct {
 // of the active one.
 func (c *Client) Buffers() ([]BufferInfo, int, error) {
 	var raw []interface{}
-	err := c.nv.ExecLua(`
+	err := c.execLua(`
 		local bufs = {}
 		for _, b in ipairs(vim.api.nvim_list_bufs()) do
 			if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buflisted then
@@ -256,7 +276,7 @@ func (c *Client) FetchState() (State, error) {
 	}
 	defer c.fetchBusy.Store(false)
 	var raw []interface{}
-	err := c.nv.ExecLua(`
+	err := c.execLua(`
 		local bufs = {}
 		local cursors = {}
 		local cur_buf = vim.api.nvim_get_current_buf()
@@ -411,7 +431,7 @@ func (c *Client) FetchState() (State, error) {
 
 // Resize tells nvim the UI grid has been resized.
 func (c *Client) Resize(width, height int) error {
-	return c.nv.TryResizeUI(width, height)
+	return c.unblocked(func() error { return c.nv.TryResizeUI(width, height) })
 }
 
 // DiagnosticMark is a single LSP diagnostic location used by the scrollbar
@@ -426,7 +446,7 @@ type DiagnosticMark struct {
 // list when there's no LSP attached or no diagnostics.
 func (c *Client) BufferDiagnosticsAndLines() ([]DiagnosticMark, int, error) {
 	var raw []interface{}
-	err := c.nv.ExecLua(`
+	err := c.execLua(`
 		local diags = {}
 		if vim.diagnostic and vim.diagnostic.get then
 			for _, d in ipairs(vim.diagnostic.get(0)) do
@@ -474,6 +494,9 @@ func (c *Client) Mouse(button, action, modifier string, row, col int) error {
 // visual selection stuck). In practice the queue never fills under
 // normal interactive use; the buffer exists to absorb brief stalls.
 func (c *Client) MouseAsync(button, action, modifier string, row, col int) {
+	if c.closed.Load() {
+		return // after Close the queue is closed; sending would panic
+	}
 	ev := mouseEvent{button: button, action: action, modifier: modifier, row: row, col: col}
 	if action == "drag" {
 		select {
@@ -525,7 +548,7 @@ type WorkspaceSymbol struct {
 // symbols", which is useful for the initial picker open.
 func (c *Client) WorkspaceSymbols(query string) ([]WorkspaceSymbol, error) {
 	var raw []interface{}
-	err := c.nv.ExecLua(fmt.Sprintf(`
+	err := c.execLua(fmt.Sprintf(`
 		local out = {}
 		if not (vim.lsp and vim.lsp.buf_request_sync) then
 			return out
@@ -595,7 +618,7 @@ func (c *Client) GotoImplementation() (bool, error) {
 // location that comes back, and `:edit` + `cursor()` over to it.
 func (c *Client) lspGotoMethod(method string) (bool, error) {
 	var raw interface{}
-	err := c.nv.ExecLua(fmt.Sprintf(`
+	err := c.execLua(fmt.Sprintf(`
 		if not (vim.lsp and vim.lsp.buf_request_sync) then return false end
 		local bufnr = vim.api.nvim_get_current_buf()
 		local clients = (vim.lsp.get_clients or vim.lsp.get_active_clients)({ bufnr = bufnr })
@@ -631,7 +654,7 @@ func (c *Client) lspGotoMethod(method string) (bool, error) {
 // attached or the server has nothing to say at the cursor.
 func (c *Client) Hover() (string, error) {
 	var raw interface{}
-	err := c.nv.ExecLua(`
+	err := c.execLua(`
 		if not (vim.lsp and vim.lsp.buf_request_sync) then return '' end
 		local bufnr = vim.api.nvim_get_current_buf()
 		local clients = (vim.lsp.get_clients or vim.lsp.get_active_clients)({ bufnr = bufnr })
@@ -676,7 +699,7 @@ type LocationItem struct {
 // location reported by the LSP server.
 func (c *Client) References() ([]LocationItem, error) {
 	var raw []interface{}
-	err := c.nv.ExecLua(`
+	err := c.execLua(`
 		local out = {}
 		if not (vim.lsp and vim.lsp.buf_request_sync) then return out end
 		local bufnr = vim.api.nvim_get_current_buf()
@@ -735,7 +758,7 @@ type BookmarkEntry struct {
 // they were assigned by ToggleBookmark's "lowest available letter" rule.
 func (c *Client) Bookmarks() ([]BookmarkEntry, error) {
 	var raw []interface{}
-	err := c.nv.ExecLua(`
+	err := c.execLua(`
 		local out = {}
 		for code = 65, 90 do
 			local letter = string.char(code)
@@ -789,7 +812,7 @@ type CodeAction struct {
 // empty picker.
 func (c *Client) FetchCodeActions() ([]CodeAction, error) {
 	var raw []interface{}
-	err := c.nv.ExecLua(`
+	err := c.execLua(`
 		local out = {}
 		_G._termocode_code_actions = {}
 		if not (vim.lsp and vim.lsp.buf_request_sync) then
@@ -874,7 +897,7 @@ func (c *Client) FetchCodeActions() ([]CodeAction, error) {
 // runs the standard "resolve → apply edit / execute command" dance there.
 func (c *Client) ApplyCodeAction(index int) error {
 	var dummy interface{}
-	return c.nv.ExecLua(fmt.Sprintf(`
+	return c.execLua(fmt.Sprintf(`
 		local entry = _G._termocode_code_actions and _G._termocode_code_actions[%d]
 		if not entry then return false end
 		local client = entry.client
@@ -911,7 +934,7 @@ func (c *Client) ApplyCodeAction(index int) error {
 // Problems pane shows the most-actionable items at the top.
 func (c *Client) AllDiagnostics() ([]Diagnostic, error) {
 	var raw []interface{}
-	err := c.nv.ExecLua(`
+	err := c.execLua(`
 		local out = {}
 		if not (vim.diagnostic and vim.diagnostic.get) then
 			return out
@@ -957,7 +980,7 @@ func (c *Client) AllDiagnostics() ([]Diagnostic, error) {
 // ExecLua runs a Lua chunk in nvim. Discards the return value.
 func (c *Client) ExecLua(code string) error {
 	var result interface{}
-	return c.nv.ExecLua(code, &result)
+	return c.execLua(code, &result)
 }
 
 // EvalLuaString runs a Lua chunk and returns its (string) return value.
@@ -967,7 +990,7 @@ func (c *Client) ExecLua(code string) error {
 // as "no value".
 func (c *Client) EvalLuaString(code string) (string, error) {
 	var s string
-	if err := c.nv.ExecLua(code, &s); err != nil {
+	if err := c.execLua(code, &s); err != nil {
 		return "", err
 	}
 	return s, nil
@@ -994,7 +1017,7 @@ type DocSymbol struct {
 // flat) are normalized into a tree.
 func (c *Client) DocumentSymbols() ([]DocSymbol, error) {
 	var raw interface{}
-	err := c.nv.ExecLua(`
+	err := c.execLua(`
 		local bufnr = vim.api.nvim_get_current_buf()
 		local clients = (vim.lsp.get_clients or vim.lsp.get_active_clients)({ bufnr = bufnr })
 		if not clients or #clients == 0 then
@@ -1108,16 +1131,26 @@ func rangeStart(r map[string]interface{}) (line, col int) {
 // BufferContent returns the active buffer's full text.
 func (c *Client) BufferContent() (string, error) {
 	var s string
-	err := c.nv.ExecLua(`return table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), '\n')`, &s)
+	err := c.execLua(`return table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), '\n')`, &s)
 	return s, err
 }
 
 // Close terminates the nvim subprocess.
 func (c *Client) Close() error {
-	if c.mouseQueue != nil {
-		close(c.mouseQueue)
-	}
-	return c.nv.Close()
+	// Idempotent: several paths close nvim (Quit, Reload Window, Open
+	// Workspace, main's deferred Close); a second close of mouseQueue
+	// used to panic.
+	c.closeOnce.Do(func() {
+		c.closed.Store(true)
+		if c.done != nil {
+			close(c.done)
+		}
+		if c.mouseQueue != nil {
+			close(c.mouseQueue)
+		}
+		c.closeErr = c.nv.Close()
+	})
+	return c.closeErr
 }
 
 // Next returns a tea.Cmd that blocks for the next event from nvim and

@@ -166,12 +166,12 @@ func TestCodeActionGroup(t *testing.T) {
 
 func TestCodeActionIcon(t *testing.T) {
 	cases := map[string]string{
-		"":                   "·",
-		"quickfix":           "🔧",
-		"quickfix.import":    "🔧",
-		"refactor.extract":   "✎",
-		"source.organize":    "✦",
-		"unknown.thing":      "·",
+		"":                 "·",
+		"quickfix":         "🔧",
+		"quickfix.import":  "🔧",
+		"refactor.extract": "✎",
+		"source.organize":  "✦",
+		"unknown.thing":    "·",
 	}
 	for kind, want := range cases {
 		if got := codeActionIcon(kind); got != want {
@@ -236,11 +236,11 @@ func TestClampInt(t *testing.T) {
 
 func TestLooksMarkdown(t *testing.T) {
 	cases := map[string]bool{
-		"plain text":            false,
-		"some `code` here":      false, // single backticks aren't enough
-		"```\ncode block\n```":  true,
-		"**bold** text":         true,
-		"## a heading":          true,
+		"plain text":           false,
+		"some `code` here":     false, // single backticks aren't enough
+		"```\ncode block\n```": true,
+		"**bold** text":        true,
+		"## a heading":         true,
 	}
 	for in, want := range cases {
 		if got := looksMarkdown(in); got != want {

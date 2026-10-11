@@ -834,7 +834,7 @@ func (m Model) computeTerminalTabBarLayout(width int) terminalTabBarLayout {
 	if rightStart < 0 {
 		rightStart = 0
 	}
-	layout.MaxStart = rightStart + 2     // dot(1) + gap(1) → ↑
+	layout.MaxStart = rightStart + 2      // dot(1) + gap(1) → ↑
 	layout.MinStart = layout.MaxStart + 1 // ↑(1) → −
 	layout.CloseStart = layout.MinStart + 1
 

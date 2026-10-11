@@ -583,7 +583,14 @@ func New() Model {
 	overrides, keymapProblems := keymap.LoadOverridesReport("")
 	keys := keymap.Default().MergeInto(overrides)
 
-	client, err := nvim.New()
+	// TERMOCODE_NO_NVIM=1 runs without the embedded editor (tests and
+	// internal/testkit use it for fast, nvim-free UI runs).
+	var client *nvim.Client
+	var err error
+	noNvim := os.Getenv("TERMOCODE_NO_NVIM") == "1"
+	if !noNvim {
+		client, err = nvim.New()
+	}
 	// Terminal panel height: prefer the value persisted from the previous
 	// session so the user's drag-set preference survives a relaunch. Missing
 	// / corrupt / out-of-range values fall back to the default.
@@ -657,7 +664,9 @@ func New() Model {
 		ai:               newAIState(),       // Group A
 		debug:            loadDebugState(),   // Group D (shared by Model copies)
 	}
-	if err != nil {
+	if noNvim {
+		m.editor = editor.New(nil)
+	} else if err != nil {
 		m.editor = editor.New(nil)
 		m.err = "nvim: " + err.Error()
 	} else {
@@ -687,6 +696,9 @@ func (m Model) attachCmd() tea.Cmd {
 		if err := m.nvim.Attach(80, 24); err != nil {
 			return ErrMsg{Err: err}
 		}
+		// First: vim.notify → toasts. With cmdheight=0 a notify would
+		// open a hit-enter prompt and block every later RPC call.
+		_ = m.nvim.ExecLua(notifyLua)
 		for _, cmd := range []string{
 			"set termguicolors",
 			"set number",
@@ -964,8 +976,8 @@ func (m Model) attachCmd() tea.Cmd {
 		_ = m.nvim.Command("autocmd BufLeave,FocusLost * if &buftype == '' && !empty(expand('%')) | silent! write | endif")
 		// Auto-reload buffers when their on-disk file changes (e.g. `git pull`,
 		// edits from another editor). Combined with `set autoread` above, the
-		// reload is silent; buffers with unsaved local changes are preserved
-		// by the default autoread behaviour.
+		// reload is silent; buffers with unsaved local changes keep them
+		// (fileReloadLua answers the W12 prompt that would block nvim).
 		_ = m.nvim.Command("autocmd FocusGained,BufEnter,CursorHold,CursorHoldI * silent! checktime")
 		// File-watcher toast: when a buffer is reloaded from disk (autoread
 		// kicks in after checktime detects a change), record the path in a
@@ -973,20 +985,7 @@ func (m Model) attachCmd() tea.Cmd {
 		// <basename>" toast. Lua side keeps it idempotent — the same path is
 		// not re-recorded back-to-back by tracking a monotonically-increasing
 		// counter the Go side compares against.
-		_ = m.nvim.ExecLua(`
-			vim.g.termocode_last_reload = ''
-			vim.g.termocode_reload_seq = 0
-			vim.api.nvim_create_augroup('TermocodeFileReload', { clear = true })
-			vim.api.nvim_create_autocmd('FileChangedShellPost', {
-				group = 'TermocodeFileReload',
-				callback = function(args)
-					local name = args.file or vim.api.nvim_buf_get_name(args.buf or 0)
-					if name == nil or name == '' then return end
-					vim.g.termocode_last_reload = name
-					vim.g.termocode_reload_seq = (vim.g.termocode_reload_seq or 0) + 1
-				end,
-			})
-		`)
+		_ = m.nvim.ExecLua(fileReloadLua)
 		_ = m.nvim.Command("startinsert")
 		return nvim.ReadyMsg{}
 	}

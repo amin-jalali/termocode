@@ -149,4 +149,3 @@ func (m *Model) clearAllBookmarks() tea.Cmd {
 	m.toast, toastCmd = m.toast.Push(toast.Info, "All bookmarks cleared")
 	return toastCmd
 }
-

@@ -2,7 +2,6 @@ package app
 
 import (
 	"encoding/base64"
-	"os"
 )
 
 // osc52MaxBytes caps the raw text size we'll ship via OSC 52. Many
@@ -49,5 +48,5 @@ func emitOSC52(s string) {
 		_ = recover()
 	}()
 	b64 := base64.StdEncoding.EncodeToString([]byte(s))
-	_, _ = os.Stdout.WriteString("\x1b]52;c;" + b64 + "\x07")
+	writeTerminal("\x1b]52;c;" + b64 + "\x07")
 }
