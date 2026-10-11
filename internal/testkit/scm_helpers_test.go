@@ -178,6 +178,10 @@ func scmDriver(t *testing.T, setup func(r *repo)) (*Driver, *repo) {
 		}
 	}})
 	d.Action("view:git")
+	// Git state loads in the background; actions are no-ops before it.
+	if !until(d, func() bool { return section(d, "GRAPH") != nil && !inSection(d, "GRAPH", "No commits") }) {
+		t.Fatalf("Source Control did not load:%s", dump(d))
+	}
 	return d, r
 }
 
