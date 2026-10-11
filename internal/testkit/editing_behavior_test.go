@@ -213,6 +213,34 @@ func TestSettingTabSize(t *testing.T) {
 }
 
 // Spec: Given a.txt open,
+// when the user turns word_wrap on in Settings,
+// then the a.txt window wraps, a file opened next wraps too, and so does
+// one opened after a restart; turning it off unwraps them again.
+func TestSettingWordWrap(t *testing.T) {
+	d := editorDriver(t, nil)
+	open(d, "a.txt")
+	wrap := func() string { return lua(d, `return tostring(vim.wo.wrap)`) }
+	d.Action("setting:setting-word-wrap=true")
+	if got := wrap(); got != "true" {
+		t.Fatalf("a.txt wrap = %s", got)
+	}
+	open(d, "b.txt")
+	if got := wrap(); got != "true" {
+		t.Errorf("b.txt opened after the setting: wrap = %s", got)
+	}
+	d.Restart()
+	open(d, "c.txt")
+	if got := wrap(); got != "true" {
+		t.Errorf("after restart: wrap = %s", got)
+	}
+	d.Action("setting:setting-word-wrap=false")
+	open(d, "a.txt")
+	if got := wrap(); got != "false" {
+		t.Errorf("after turning it off: wrap = %s", got)
+	}
+}
+
+// Spec: Given a.txt open,
 // when the user toggles word wrap with Alt+W twice,
 // then wrap goes on, then off.
 func TestToggleWordWrapKey(t *testing.T) {
