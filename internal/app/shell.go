@@ -210,7 +210,7 @@ func (m *Model) toggleTerminalPanel() {
 		return
 	}
 	if m.probeTerminalBufferLive() {
-		m.closeTerminalPanel()
+		m.hideTerminalPanel() // terminal_hide.go: the shells keep running
 		return
 	}
 	m.openTerminalPanel()
@@ -228,6 +228,9 @@ func (m *Model) openTerminalPanel() {
 		if len(m.terminalTabs) == 0 {
 			m.newTerminalTab()
 		}
+		return
+	}
+	if m.showHiddenTerminals() {
 		return
 	}
 	shell := os.Getenv("SHELL")
@@ -342,8 +345,16 @@ func (m *Model) closeTerminalPanel() {
 		end
 		vim.g.termocode_panel_buf = nil
 	`)
+	m.hiddenTerminalTabs = nil
+	m.resetTerminalState()
+}
+
+// resetTerminalState clears the Go-side panel state once the panel
+// window is gone (closed or hidden).
+func (m *Model) resetTerminalState() {
 	m.resetPanelState()
 	m.termOpen = false
+	m.inTerminal = false
 	m.terminalCwd = ""
 	m.terminalCwdAt = time.Time{}
 	m.terminalRowsLastSent = 0
@@ -714,6 +725,14 @@ func (m *Model) resizeTerminalSplit() {
 func (m *Model) persistTerminalRows() {
 	existing := loadSession()
 	existing.TerminalRows = m.terminalRows
+	saveSession(existing)
+}
+
+// persistExplorerWidth saves the dragged sidebar width (layout part of
+// the session, shared by all workspaces).
+func (m *Model) persistExplorerWidth() {
+	existing := loadSession()
+	existing.ExplorerWidth = m.explorerWidth
 	saveSession(existing)
 }
 
@@ -1285,8 +1304,10 @@ func (m Model) probeTerminalBufferLive() bool {
 	// The panel also counts as live while its non-terminal placeholder
 	// buffer (panel.go) is on display in a window.
 	out, _ := m.nvim.EvalLuaString(`
+		-- Only terminals on display: hidden ones (terminal_hide.go) do
+		-- not make the panel open.
 		for _, b in ipairs(vim.api.nvim_list_bufs()) do
-			if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buftype == 'terminal' then
+			if vim.api.nvim_buf_is_loaded(b) and vim.bo[b].buftype == 'terminal' and vim.fn.bufwinid(b) ~= -1 then
 				return '1'
 			end
 		end

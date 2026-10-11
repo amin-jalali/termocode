@@ -341,13 +341,17 @@ func (m *Model) applySettingValue(value string) tea.Cmd {
 			m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Settings error", err.Error())
 			return toastCmd
 		}
-		// Apply it like at startup: the global value (files opened later)
-		// and every open window. A `setlocal` only changed the current
-		// window, so other tabs, and files opened next, kept the old value.
+		// Apply to every file window and to the global value, so files
+		// opened later wrap too (a :setlocal only changed the current
+		// window). Terminal and other special windows keep theirs.
 		if m.nvim != nil {
 			_ = m.nvim.ExecLuaArgs(`local on = ...
-vim.go.wrap = on
-for _, w in ipairs(vim.api.nvim_list_wins()) do vim.wo[w].wrap = on end`, b)
+				vim.go.wrap = on
+				for _, w in ipairs(vim.api.nvim_list_wins()) do
+					if vim.bo[vim.api.nvim_win_get_buf(w)].buftype == '' then
+						vim.wo[w].wrap = on
+					end
+				end`, b)
 		}
 		m.toast, toastCmd = m.toast.Push(toast.Info, fmt.Sprintf("word_wrap = %v", b))
 	case "setting-show-hidden":
@@ -381,6 +385,9 @@ for _, w in ipairs(vim.api.nvim_list_wins()) do vim.wo[w].wrap = on end`, b)
 			_ = m.nvim.Command(fmt.Sprintf("set tabstop=%d shiftwidth=%d", n, n))
 		}
 		m.toast, toastCmd = m.toast.Push(toast.Info, fmt.Sprintf("tab_size = %d", n))
+		// Refresh the status bar's indent chip now: changing an option may
+		// not redraw anything.
+		toastCmd = tea.Batch(toastCmd, m.fetchStateCmd())
 	case "setting-search-max-results":
 		n, err := strconv.Atoi(value)
 		if err != nil || n < 0 {

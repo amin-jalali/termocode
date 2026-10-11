@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -525,12 +524,19 @@ vim.lsp.buf.definition({
 })
 `
 
+// copyToClipboard puts s in the unnamed register (what Ctrl+V falls back
+// to), nvim's + register and the OS clipboard. The text goes to Lua as an
+// argument: a multi-line string in a ':let' command broke the command,
+// and with no clipboard tool (xclip, wl-copy) the failing '@+' aborted the
+// whole line, so nothing was copied at all.
 func (m *Model) copyToClipboard(s string) {
 	if m.nvim == nil {
 		return
 	}
-	escaped := strings.ReplaceAll(s, "'", "''")
-	_ = m.nvim.Command(fmt.Sprintf("let @+ = '%s' | let @\" = @+", escaped))
+	_ = m.nvim.ExecLuaArgs(`local s = ...
+		vim.fn.setreg('"', s)
+		pcall(vim.fn.setreg, '+', s)`, s)
+	safeClipboardWrite(s)
 	// nvim's `+` register only reaches the *server's* clipboard
 	// (and only if xclip/xsel/wl-copy is installed). OSC 52 makes
 	// the menu "Copy Path" actions also land in the user's local

@@ -1977,7 +1977,7 @@ func (m Model) statusState() statusbar.State {
 		Branch:   m.gitBranch.Name,
 		Ahead:    m.gitBranch.Ahead,
 		Behind:   m.gitBranch.Behind,
-		Indent:   "Spaces: 4",
+		Indent:   m.statusIndent(),
 		Encoding: "UTF-8",
 		Term:     m.termOpen && len(m.terminalTabs) > 0,
 		Debug:    m.dapSessionActive,

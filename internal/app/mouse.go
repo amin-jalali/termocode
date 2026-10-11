@@ -325,7 +325,10 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		default:
 			// Any other event (release, wheel, right-click, etc.) ends the drag.
+			// Persist once, so the width survives a relaunch (like the
+			// terminal height and the AI panel width).
 			m.dragKind = dragNone
+			m.persistExplorerWidth()
 			return m, nil
 		}
 	}
@@ -588,6 +591,13 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			// on the non-interactive part. Drop it.
 			return m, nil
 		}
+		if localY > barLocalY && m.panelActive == panelKindTerminal &&
+			(msg.Type == tea.MouseWheelUp || msg.Type == tea.MouseWheelDown) {
+			return m.terminalWheel(localX, localY, msg.Type)
+		}
+	}
+	if m.termScrolled && msg.Type == tea.MouseLeft {
+		m.endTerminalScroll()
 	}
 
 	// Side-by-side diff scrolling. A mouse wheel is forwarded to BOTH panes at

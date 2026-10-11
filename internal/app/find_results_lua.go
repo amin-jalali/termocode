@@ -158,8 +158,10 @@ local function navigate_results(direction)
   if total == 0 then return 'none' end
 
   -- Find the row currently selected in the results window (if any). If
-  -- the results buffer isn't visible we start from the top.
-  local cur_row = 1
+  -- the results buffer isn't visible (the jump below replaced it in its
+  -- window), go on from the row of the last jump; else from the top.
+  local cur_row = vim.b[buf].termocode_nav_row or 1
+  if cur_row > total then cur_row = 1 end
   for _, win in ipairs(vim.api.nvim_list_wins()) do
     if vim.api.nvim_win_get_buf(win) == buf then
       cur_row = vim.api.nvim_win_get_cursor(win)[1]
@@ -182,6 +184,7 @@ local function navigate_results(direction)
         if p then file = (p:gsub(' %(%d+%)$', '')); break end
       end
       if file then
+        vim.b[buf].termocode_nav_row = r
         -- Move the cursor in the results buffer (best-effort visual
         -- feedback). Keep results window visible if any.
         for _, win in ipairs(vim.api.nvim_list_wins()) do
