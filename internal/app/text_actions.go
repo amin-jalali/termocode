@@ -7,6 +7,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/toast"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // copyFileLineRef puts "path:line" (or "path:line:col") on the system
@@ -78,9 +79,7 @@ func (m *Model) openSnippetPicker() tea.Cmd {
 		}
 		body = unescapeSnippetBody(body)
 		preview := firstLine(body)
-		if len(preview) > 50 {
-			preview = preview[:50] + "…"
-		}
+		preview = ansi.Truncate(preview, 51, "…")
 		id := "snip-" + trigger
 		items = append(items, picker.Item{
 			ID:    id,

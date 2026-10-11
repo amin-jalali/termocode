@@ -15,6 +15,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // handleGitSidebarKey routes key presses when the Git sidebar has focus.
@@ -635,9 +636,7 @@ func (m *Model) gitCommitFromPrompt(message string) tea.Cmd {
 		if i := strings.Index(first, "\n"); i >= 0 {
 			first = first[:i]
 		}
-		if len(first) > 50 {
-			first = first[:50] + "…"
-		}
+		first = ansi.Truncate(first, 51, "…")
 		m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Committed", first)
 	}
 	return tea.Batch(fetchGitCmd(), toastCmd)
@@ -923,9 +922,7 @@ func commitToastLabel(msg string, amend bool) string {
 	if first == "" && amend {
 		return "amended HEAD"
 	}
-	if len(first) > 50 {
-		first = first[:50] + "…"
-	}
+	first = ansi.Truncate(first, 51, "…")
 	if amend {
 		return "amended: " + first
 	}
