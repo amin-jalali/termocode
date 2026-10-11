@@ -210,6 +210,8 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleConfirmSelect(msg.ID)
 	case confirm.CloseMsg:
 		m.confirmOpen = false
+		// Esc on "Save changes?" also cancels a Close Others.
+		m.closeQueue = nil
 		return m, m.onAIConfirmClosed() // Group A: Esc denies an AI tool call
 	case activity.SwitchMsg:
 		// Settings is a one-shot action (open the modal Settings UI), not

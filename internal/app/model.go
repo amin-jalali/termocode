@@ -263,6 +263,11 @@ type Model struct {
 	pinnedBufs map[int]int
 	pinOrder   int
 
+	// closeQueue holds the tabs Close Others / Close All to the Right
+	// still have to close while a "Save changes?" dialog is open
+	// (drainCloseQueue).
+	closeQueue []int
+
 	// snippetPickerIndex maps picker IDs (e.g. "snip-iferr") to the snippet
 	// body so insertSnippetBody knows what to expand. Populated each time
 	// the snippet picker opens.
