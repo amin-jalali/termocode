@@ -41,8 +41,69 @@ jobs:
       - name: Download modules
         run: go mod download
 
+      - name: Build
+        run: go build ./...
+
       - name: Vet
         run: go vet ./...
 
       - name: Test
         run: go test ./... -race -count=1
+
+      - name: Reference docs up to date
+        if: runner.os == 'Linux'
+        run: go run ./cmd/docgen -check
+
+  # End-to-end: the real binary in a PTY + VT emulator (e2e/, build tag
+  # e2e). Needs nvim; on failure the screen dumps are uploaded.
+  e2e:
+    name: e2e (ubuntu-latest)
+    runs-on: ubuntu-latest
+    env:
+      NVIM_VERSION: v0.11.4
+      E2E_DUMP_DIR: ${{ github.workspace }}/e2e-dumps
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Install X11 dev headers
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-e2e-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-e2e-
+            ${{ runner.os }}-go-
+
+      - name: Install Neovim (pinned release)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/nvim.tar.gz \
+            "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz"
+          sudo tar -xzf /tmp/nvim.tar.gz -C /opt
+          echo "/opt/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
+
+      - name: Neovim version
+        run: nvim --version | head -1
+
+      - name: E2E tests
+        run: go -C e2e test -tags e2e -count=1 -v ./...
+
+      - name: Upload screen dumps
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screen-dumps
+          path: e2e-dumps/
+          if-no-files-found: ignore
