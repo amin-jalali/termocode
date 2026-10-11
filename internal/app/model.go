@@ -976,7 +976,10 @@ func (m Model) attachCmd() tea.Cmd {
 			})
 		`)
 		// Auto-save normal-file buffers on focus loss / buffer leave.
-		_ = m.nvim.Command("autocmd BufLeave,FocusLost * if &buftype == '' && !empty(expand('%')) | silent! write | endif")
+		// Only modified ones (`update`): a plain `write` re-created a file
+		// that was just deleted (explorer Delete, `rm` in the terminal)
+		// as soon as its tab was left or closed.
+		_ = m.nvim.Command("autocmd BufLeave,FocusLost * if &buftype == '' && &modified && !empty(expand('%')) | silent! update | endif")
 		// Auto-reload buffers when their on-disk file changes (e.g. `git pull`,
 		// edits from another editor). Combined with `set autoread` above, the
 		// reload is silent; buffers with unsaved local changes keep them

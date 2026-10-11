@@ -105,14 +105,15 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 				return m.runBulkDelete(m.confirmTargetPaths)
 			}
 			path := m.confirmTargetPath
+			// Close any open buffer pointing at the path first, so the
+			// user doesn't keep editing a phantom file, and so closing
+			// it (auto-save on BufLeave) can't write it back.
+			m.closeBuffersForPaths([]string{path})
 			if err := osRemoveAll(path); err != nil {
 				m.err = err.Error()
 				return nil
 			}
 			m.err = ""
-			// Close any open buffer pointing at the just-deleted path so
-			// the user doesn't keep editing a phantom file.
-			m.closeBuffersForPaths([]string{path})
 			m.explorer.Reload()
 		}
 	case confirmKindGitDiscard:
@@ -149,6 +150,9 @@ func (m *Model) runBulkDelete(paths []string) tea.Cmd {
 	if len(paths) == 0 {
 		return nil
 	}
+	// Close their buffers first: closing a modified one auto-saves it
+	// (BufLeave), which would re-create a file deleted before.
+	m.closeBuffersForPaths(paths)
 	deleted := 0
 	var failed []string
 	for _, p := range paths {
@@ -160,9 +164,6 @@ func (m *Model) runBulkDelete(paths []string) tea.Cmd {
 			continue
 		}
 		deleted++
-	}
-	if deleted > 0 {
-		m.closeBuffersForPaths(paths)
 	}
 	m.explorer.Reload()
 	m.explorer.ClearSelection()
