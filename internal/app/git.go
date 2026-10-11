@@ -60,6 +60,38 @@ func fetchGitCmd() tea.Cmd {
 	}
 }
 
+// applyGitSnapshot stores a git snapshot in the model.
+func (m *Model) applyGitSnapshot(msg GitMsg) {
+	// Editor gutter signs compare buffers with HEAD; when HEAD or the
+	// changed-file list moved (commit, checkout, pull, discard …),
+	// repaint them now instead of on the next buffer event.
+	if m.nvim != nil && gitSnapshotChanged(m.gitGraph, m.gitFiles, msg.Graph, msg.Files) {
+		_ = m.nvim.ExecLua(`if _G.termocode_git_signs_refresh then _G.termocode_git_signs_refresh() end`)
+	}
+	m.gitIsRepo = msg.IsRepo
+	m.gitLoaded = true
+	m.gitBranch = msg.Branch
+	m.gitFiles = msg.Files
+	m.gitGraph = msg.Graph
+	// Clamp against the visible-row count: the accordion interleaves
+	// section headers, dir headers, and graph rows, so the row count
+	// differs from len(gitFiles).
+	m.gitClampCursor()
+}
+
+// gitEnsureLoaded reports whether the cwd is a git repo. Before the first
+// background refresh has come back it reads the git state at once, so a
+// git action the user starts right after launch runs instead of being
+// dropped.
+func (m *Model) gitEnsureLoaded() bool {
+	if !m.gitLoaded {
+		if msg, ok := fetchGitCmd()().(GitMsg); ok {
+			m.applyGitSnapshot(msg)
+		}
+	}
+	return m.gitIsRepo
+}
+
 // gitSnapshotChanged reports whether HEAD (the first commit of the graph)
 // or the changed-file list differs between two git snapshots.
 func gitSnapshotChanged(oldGraph []git.GraphLine, oldFiles []git.FileStatus, newGraph []git.GraphLine, newFiles []git.FileStatus) bool {
@@ -124,7 +156,7 @@ func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (tea.Model,
 		return m, nil
 	}
 	m.focus = FocusExplorer
-	if !m.gitIsRepo {
+	if !m.gitEnsureLoaded() {
 		return m, nil
 	}
 	contentW := m.explorerWidth - 1
