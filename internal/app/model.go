@@ -696,6 +696,9 @@ func (m Model) attachCmd() tea.Cmd {
 		if err := m.nvim.Attach(80, 24); err != nil {
 			return ErrMsg{Err: err}
 		}
+		// First: vim.notify → toasts. With cmdheight=0 a notify would
+		// open a hit-enter prompt and block every later RPC call.
+		_ = m.nvim.ExecLua(notifyLua)
 		for _, cmd := range []string{
 			"set termguicolors",
 			"set number",

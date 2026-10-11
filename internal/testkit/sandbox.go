@@ -34,8 +34,6 @@ func sandbox(t testing.TB, nvim bool) {
 	// Animations off: frames settle at once. Images as text blocks.
 	_ = os.WriteFile(filepath.Join(home, "config/termocode/config.json"),
 		[]byte(`{"animations": "off", "images": "blocks"}`), 0o644)
-	_ = os.MkdirAll(filepath.Join(home, ".local/share/termocode/plugins/rainbow-delimiters.nvim/lua/rainbow-delimiters"), 0o755)
-	_ = os.WriteFile(filepath.Join(home, ".local/share/termocode/plugins/rainbow-delimiters.nvim/lua/rainbow-delimiters/setup.lua"), []byte("return {}\n"), 0o644)
 	env := map[string]string{
 		"HOME":            home,
 		"XDG_CONFIG_HOME": filepath.Join(home, "config"),
