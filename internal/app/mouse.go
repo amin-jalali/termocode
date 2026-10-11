@@ -325,7 +325,10 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		default:
 			// Any other event (release, wheel, right-click, etc.) ends the drag.
+			// Persist once, so the width survives a relaunch (like the
+			// terminal height and the AI panel width).
 			m.dragKind = dragNone
+			m.persistExplorerWidth()
 			return m, nil
 		}
 	}

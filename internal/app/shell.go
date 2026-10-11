@@ -728,6 +728,14 @@ func (m *Model) persistTerminalRows() {
 	saveSession(existing)
 }
 
+// persistExplorerWidth saves the dragged sidebar width (layout part of
+// the session, shared by all workspaces).
+func (m *Model) persistExplorerWidth() {
+	existing := loadSession()
+	existing.ExplorerWidth = m.explorerWidth
+	saveSession(existing)
+}
+
 // integratedTerminalHeight returns the total number of rows the integrated
 // terminal panel occupies when open. The bar/resizer is INSIDE this height
 // (it overpaints nvim's terminal split row 0), so the total = the panel's

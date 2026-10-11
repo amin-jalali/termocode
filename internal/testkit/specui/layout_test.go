@@ -1,6 +1,8 @@
 package specui
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -30,6 +32,33 @@ func TestSidebarToggle(t *testing.T) {
 	}
 	d.Key("ctrl+b")
 	mustSee(t, d, "EXPLORER")
+}
+
+// Spec: Given the editor,
+// when the user drags the sidebar's right edge 12 columns to the right,
+// then the sidebar is 12 columns wider, and after a restart it keeps that
+// width.
+func TestSidebarDragWidthPersists(t *testing.T) {
+	d := editorWith(t, nil, "main.go", "fmt.Println")
+	x0 := sidebarEdge(d)
+	if x0 < 0 {
+		t.Fatalf("no sidebar edge:\n%s", screen(d))
+	}
+	d.Drag(x0, 10, x0+12, 10)
+	if x := sidebarEdge(d); x != x0+12 {
+		t.Fatalf("after the drag the edge is at %d, want %d", x, x0+12)
+	}
+	sess, err := os.ReadFile(filepath.Join(filepath.Dir(configPath()), "session.json"))
+	if err != nil {
+		t.Fatalf("session.json: %v", err)
+	}
+	d = testkit.New(t, testkit.Options{W: 120, H: 36, Nvim: true,
+		Config: map[string]string{"session.json": string(sess)}})
+	d.Action("open:main.go")
+	mustSee(t, d, "fmt.Println")
+	if x := sidebarEdge(d); x != x0+12 {
+		t.Errorf("after a restart the edge is at %d, want %d", x, x0+12)
+	}
 }
 
 // Spec: Given the editor with sidebar and status bar,
