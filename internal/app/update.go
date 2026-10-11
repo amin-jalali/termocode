@@ -930,30 +930,36 @@ func (m *Model) findbarPattern(find string) string {
 	return pat
 }
 
-// applyReplaceNext finds the next occurrence of `find` in the current buffer
-// (wrapping from the cursor) and replaces just that one with `replace`. After
-// the substitution the cursor is left on the replaced span so a follow-up
-// Enter advances to the next match. Honors the findbar toggles (case /
-// whole-word / regex) when constructing the pattern.
+// applyReplaceNext replaces the match under the cursor — or, when the
+// cursor is not on one, the next match after it (wrapping) — with
+// `replace`, then moves the cursor to the following match, as VS Code's
+// "Replace" does: repeated Enter walks through the file one match at a
+// time. Honors the findbar toggles (case / whole-word / regex).
 func (m *Model) applyReplaceNext(find, replace string) {
 	if m.nvim == nil || find == "" {
 		return
 	}
-	// Regex-mode off: the user typed a literal — escape it through \V (handled
-	// by findbarPattern). Regex-mode on: caller-supplied pattern stays raw,
-	// with only the :s delimiter (`/`) escaped.
-	pat := m.findbarPattern(find)
-	rep := vimReplaceEscape(replace)
-	cmds := []string{
-		fmt.Sprintf("let @/ = '%s'", strings.ReplaceAll(pat, "'", "''")),
-		"set hlsearch",
-		"silent! normal! n",
-		fmt.Sprintf("silent! s/\\%%#%s/%s/", pat, rep),
-	}
-	for _, c := range cmds {
-		_ = m.nvim.Command(c)
-	}
+	_ = m.nvim.ExecLuaArgs(replaceNextLua, m.findbarPattern(find), vimReplaceEscape(replace))
 }
+
+// replaceNextLua does one replace-and-advance (see applyReplaceNext). The
+// cursor is put right after the inserted text before it looks for the
+// next match, so a replacement that contains the query ("cat" → "cats")
+// is not matched again in place.
+const replaceNextLua = `local pat, rep = ...
+vim.fn.setreg('/', pat)
+vim.o.hlsearch = true
+local s = vim.fn.searchpos(pat, 'cw')
+if s[1] == 0 then return end
+local e = vim.fn.searchpos(pat, 'cenW')
+local l0 = #vim.fn.getline(s[1])
+vim.cmd('silent! keeppatterns s/\\%#' .. pat .. '/' .. rep .. '/')
+local after = s[2] - 1
+if e[1] == s[1] then
+  after = e[2] + (#vim.fn.getline(s[1]) - l0)
+end
+pcall(vim.api.nvim_win_set_cursor, 0, { s[1], math.max(after, 0) })
+vim.fn.searchpos(pat, 'cw')`
 
 // applyReplaceAll runs `:%s/pat/repl/g` on the current buffer. Empty `find`
 // is a no-op so we don't accidentally drop the buffer's contents. Honors
