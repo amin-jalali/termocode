@@ -15,7 +15,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/devtools/ansipng"
 	"github.com/amin-jalali/termocode/internal/devtools/shotkit"
 	"github.com/amin-jalali/termocode/internal/theme"
@@ -39,6 +41,9 @@ func main() {
 	} else if err := enterDemoWorkspace(); err != nil {
 		fmt.Fprintln(os.Stderr, "shots:", err)
 		os.Exit(1)
+	} else {
+		// The demo history has fixed dates; show it a few days later.
+		clock.Now = func() time.Time { return shotkit.DemoNow }
 	}
 	if *fontPath == "" {
 		fmt.Fprintln(os.Stderr, "shots: -font is required (a Nerd Font .ttf)")

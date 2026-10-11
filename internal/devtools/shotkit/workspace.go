@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // DemoWorkspace copies src (without .git and build output) to
@@ -59,6 +60,10 @@ func DemoWorkspace(src, parent string) (string, error) {
 	writeDemoImage(filepath.Join(dst, "assets", "demo.png"))
 	return dst, nil
 }
+
+// DemoNow is the wall clock the demo is shown at: a few days after the
+// demo history, so ages read "4 days ago" (set clock.Now to it).
+var DemoNow = time.Date(2026, 2, 1, 12, 0, 0, 0, time.UTC)
 
 // demoHistory makes four commits on main (one is a merge of a feature
 // branch) with fixed authors and dates, and tags the merge v0.1.0.
