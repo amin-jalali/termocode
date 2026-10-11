@@ -106,6 +106,28 @@ func (r *repo) commit(msg string) {
 	r.clock = r.clock.Add(time.Hour)
 }
 
+// addOrigin makes a local bare repo, adds it as "origin" and pushes main to
+// it with upstream tracking. It returns the bare repo's path.
+func (r *repo) addOrigin() string {
+	r.t.Helper()
+	bare := filepath.Join(looseTempDir(r.t), "origin.git")
+	r.git("init", "-q", "--bare", "-b", "main", bare)
+	r.git("remote", "add", "origin", bare)
+	r.git("push", "-q", "-u", "origin", "main")
+	return bare
+}
+
+// otherClone clones the bare repo into a new dir: "someone else" who
+// pushes to origin. It shares this repo's fake clock.
+func (r *repo) otherClone(bare string) *repo {
+	r.t.Helper()
+	dir := filepath.Join(looseTempDir(r.t), "other")
+	r.git("clone", "-q", bare, dir)
+	o := &repo{t: r.t, dir: dir, clock: r.clock}
+	o.git("config", "commit.gpgsign", "false")
+	return o
+}
+
 // status is `git status --porcelain=v1` as one string per line.
 func (r *repo) status() []string {
 	r.t.Helper()
