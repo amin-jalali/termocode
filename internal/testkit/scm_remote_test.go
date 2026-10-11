@@ -1,8 +1,10 @@
 package testkit
 
 import (
+	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Source Control against a remote: ahead/behind, push, pull, fetch. The
@@ -145,3 +147,60 @@ func TestSCMSyncStopsWhenPullFails(t *testing.T) {
 		t.Errorf("no CONFLICTS section after the failed pull:%s", dump(d))
 	}
 }
+
+// Spec: Given a push that is still running (origin's pre-receive hook
+// waits), when the user presses Push again and then Pull, then no second
+// git process starts (the hook ran once) and a note says a git operation
+// is already running; when the first push ends, "Pushed" shows and a new
+// Push may run again.
+func TestSCMSecondRemoteOpWhileOneRunsIsRefused(t *testing.T) {
+	var bare string
+	d, r := scmDriver(t, func(r *repo) {
+		bare = r.addOrigin()
+		r.write("local.txt", "l\n")
+		r.commit("feat: local")
+	})
+	dir := looseTempDir(t)
+	log, gate := dir+"/hook.log", dir+"/gate"
+	if err := writeExec(bare+"/hooks/pre-receive", "#!/bin/sh\necho run >> '"+log+"'\n"+
+		"while [ -e '"+gate+"' ]; do sleep 0.02; done\ncat >/dev/null\n"); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeExec(gate, ""); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { removeFile(gate) })
+
+	d.Palette("git-push")
+	if !until(d, func() bool { return readFile(log) == "run\n" }) {
+		t.Fatalf("first push did not reach origin: hook log %q", readFile(log))
+	}
+	d.Palette("git-push")
+	d.Palette("git-pull")
+	if !strings.Contains(text(d), "already running") {
+		t.Errorf("no 'already running' note for the second press:%s", dump(d))
+	}
+	d.Settle(300 * time.Millisecond)
+	if got := readFile(log); got != "run\n" {
+		t.Errorf("hook ran %d times, want 1 (a second git process started)", strings.Count(got, "run"))
+	}
+	removeFile(gate)
+	if !until(d, func() bool { return strings.Contains(text(d), "Pushed") }) {
+		t.Fatalf("first push did not finish:%s", dump(d))
+	}
+	r.write("more.txt", "m\n")
+	r.commit("feat: more")
+	d.Palette("git-push")
+	if !until(d, func() bool { return strings.Count(readFile(log), "run") == 2 }) {
+		t.Errorf("push after the first one ended did not run: hook log %q", readFile(log))
+	}
+}
+
+func writeExec(path, body string) error { return os.WriteFile(path, []byte(body), 0o755) }
+
+func readFile(path string) string {
+	b, _ := os.ReadFile(path)
+	return string(b)
+}
+
+func removeFile(path string) { _ = os.Remove(path) }

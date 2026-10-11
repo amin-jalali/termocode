@@ -143,10 +143,12 @@ type Model struct {
 	// fixed (closedRingCap); when full, the oldest entry is dropped.
 	closedRing []string
 
-	gitIsRepo bool
-	gitBranch git.Branch
-	gitFiles  []git.FileStatus
-	gitCursor int // index into gitVisibleRows() for the ViewGit sidebar
+	gitIsRepo     bool
+	gitLoaded     bool   // a GitMsg was applied (gitEnsureLoaded)
+	gitRemoteBusy string // running push/pull/fetch/sync note, "" when idle
+	gitBranch     git.Branch
+	gitFiles      []git.FileStatus
+	gitCursor     int // index into gitVisibleRows() for the ViewGit sidebar
 
 	// gitViewTree selects the Source-Control file list layout: true renders a
 	// collapsible directory tree (the default, like the file explorer), false
@@ -1015,11 +1017,9 @@ func (m Model) attachCmd() tea.Cmd {
 				end,
 			})
 		`)
-		// Auto-save normal-file buffers on focus loss / buffer leave.
-		// Only modified ones (`update`): a plain `write` re-created a file
-		// that was just deleted (explorer Delete, `rm` in the terminal)
-		// as soon as its tab was left or closed.
-		_ = m.nvim.Command("autocmd BufLeave,FocusLost * if &buftype == '' && &modified && !empty(expand('%')) | silent! update | endif")
+		// No save on buffer leave / focus loss here: files are written only
+		// by the user (Ctrl+S, Save All, the quit / close questions) or by
+		// the auto_save setting when it is on (toggleAutoSave).
 		// Auto-reload buffers when their on-disk file changes (e.g. `git pull`,
 		// edits from another editor). Combined with `set autoread` above, the
 		// reload is silent; buffers with unsaved local changes keep them
