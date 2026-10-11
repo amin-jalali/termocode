@@ -2026,6 +2026,12 @@ func (m *Model) applyLayout() {
 	if m.explorerWidth <= 0 {
 		m.explorerWidth = defaultExplorerWidth
 	}
+	// A sidebar width dragged in a wide window must still leave the editor
+	// some room after the window shrinks; otherwise every row is wider
+	// than the screen and wraps.
+	if maxExp := m.w - activity.Width - editorScrollbarWidth - minEditorPaneWidth; m.w > 0 && m.explorerWidth > maxExp {
+		m.explorerWidth = max(maxExp, explorerMinWidth)
+	}
 
 	// Editor pane width = total - activity bar - sidebar (if shown) -
 	// scrollbar - right-side actions column (if pinned & open).

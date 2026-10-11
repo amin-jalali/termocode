@@ -19,6 +19,20 @@ func TestFindPanelInNarrowEditor(t *testing.T) {
 	}
 }
 
+// The sidebar dragged wide in a big window, then the window shrank
+// (monkey seed 8).
+func TestWideSidebarInNarrowWindow(t *testing.T) {
+	d := New(t, Options{W: 160, H: 40, Git: true})
+	d.Action("view:git")
+	for x := 30; x < 45; x++ { // the splitter is somewhere here
+		d.Drag(x, 20, 100, 20)
+	}
+	for _, w := range []int{120, 80, 61} {
+		d.Resize(w, 30)
+	}
+	d.Resize(160, 40)
+}
+
 // The AI chat panel opened in a wide window, then the window shrank:
 // sidebar + editor + chat no longer fit (monkey seeds 2 and 4).
 func TestAIPanelInNarrowWindow(t *testing.T) {
