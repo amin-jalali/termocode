@@ -311,6 +311,13 @@ func (m *Model) showProblemsPanel() tea.Cmd {
 		m.problems = newProblemsPanel()
 	}
 	m.showPanelTab(panelKindProblems)
+	// Keyboard focus moves to the list, as in VS Code: arrows / Enter pick
+	// a problem instead of editing the file under the panel. Esc gives
+	// focus back to the editor.
+	if m.termOpen && m.panelActive == panelKindProblems {
+		m.panelFocused = true
+		m.focus = FocusEditor
+	}
 	return m.refreshProblemsCmd()
 }
 
@@ -357,6 +364,7 @@ func (m *Model) openSelectedProblem() {
 		return
 	}
 	m.jumpToDiagnostic(r.Diag.Path, r.Diag.Line, r.Diag.Col)
+	m.panelFocused = false // the editor takes the keys at the problem
 }
 
 // ── Fix with AI (glue A + C) ─────────────────────────────────────────────
