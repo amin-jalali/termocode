@@ -2230,10 +2230,12 @@ func saveDetail(path string) string {
 //     fire for the active buffer only.
 //
 // nvim setup finishes (ReadyMsg) a second or two after the UI is usable,
-// so the user may already have opened a file. In that case the chunk keeps
-// the user's buffer current and leaves its cursor alone: the restore used
-// to `:edit` the old active file and pull the user away from the file they
-// just opened (found by the e2e suite).
+// so the user may already have opened a file or the terminal panel. Then
+// the chunk only adds the session's files to the buffer list (:badd) and
+// changes no window, buffer or cursor. It used to `:edit` the old active
+// file into whatever window was current: the file the user had just opened
+// was replaced, or the file landed inside the terminal panel (found by the
+// e2e suite).
 func sessionRestoreLua(open []string, active string, cursors map[string][2]int) string {
 	payload := struct {
 		Open    []string          `json:"open"`
@@ -2243,27 +2245,33 @@ func sessionRestoreLua(open []string, active string, cursors map[string][2]int) 
 	b, _ := json.Marshal(payload)
 	return `local p = vim.json.decode([==[` + string(b) + `]==])
 if type(p) ~= 'table' then return end
+local busy = vim.bo.buftype ~= ''
+for _, b in ipairs(vim.api.nvim_list_bufs()) do
+  if vim.bo[b].buflisted and vim.bo[b].buftype == '' and vim.api.nvim_buf_get_name(b) ~= '' then
+    busy = true
+  end
+end
+if busy then
+  for _, path in ipairs(p.open or {}) do
+    if path ~= '' then pcall(vim.cmd, 'silent! badd ' .. vim.fn.fnameescape(path)) end
+  end
+  return
+end
 local active = p.active or ''
 local cursors = p.cursors or {}
-local user_buf = vim.api.nvim_get_current_buf()
-local user_opened = vim.bo[user_buf].buftype == '' and vim.api.nvim_buf_get_name(user_buf) ~= ''
-if user_opened then active = '' end
 for _, path in ipairs(p.open or {}) do
-  if path ~= active and path ~= '' and not (user_opened and vim.fn.bufnr(path) == user_buf) then
+  if path ~= active and path ~= '' then
     pcall(vim.cmd, 'silent! noautocmd edit ' .. vim.fn.fnameescape(path))
   end
 end
 for path, pos in pairs(cursors) do
-  if path ~= '' and type(pos) == 'table' and (pos[1] or 0) > 0
-    and not (user_opened and vim.fn.bufnr(path) == user_buf) then
+  if path ~= '' and type(pos) == 'table' and (pos[1] or 0) > 0 then
     local col = math.max(pos[2] or 1, 1)
     pcall(vim.cmd, string.format('silent! noautocmd buffer %s | call cursor(%d, %d)',
       vim.fn.fnameescape(path), pos[1], col))
   end
 end
-if user_opened then
-  pcall(vim.cmd, 'silent! noautocmd buffer ' .. user_buf)
-elseif active ~= '' then
+if active ~= '' then
   pcall(vim.cmd, 'silent! edit ' .. vim.fn.fnameescape(active))
   local pos = cursors[active]
   if type(pos) == 'table' and (pos[1] or 0) > 0 then

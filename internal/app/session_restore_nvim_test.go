@@ -89,3 +89,23 @@ func TestSessionRestoreKeepsUserFileNvim(t *testing.T) {
 		}
 	}
 }
+
+// Same gap, but the user opened the terminal panel: the session's active
+// file must not be loaded into the terminal window.
+func TestSessionRestoreLeavesTerminalWindowNvim(t *testing.T) {
+	c := newRestoreNvim(t)
+	a, b, _ := restoreFiles(t)
+	if err := c.Command("botright 5new | terminal"); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.ExecLua(sessionRestoreLua([]string{a, b}, b, nil)); err != nil {
+		t.Fatal(err)
+	}
+	bt, _ := c.EvalLuaString(`return vim.bo.buftype`)
+	if bt != "terminal" {
+		t.Fatalf("current window now shows buftype %q (%s), want the terminal", bt, currentBufName(t, c))
+	}
+	if ok, _ := c.EvalLuaStringArgs(`return tostring(vim.fn.buflisted(...))`, b); ok != "1" {
+		t.Fatalf("%s not added to the buffer list", b)
+	}
+}
