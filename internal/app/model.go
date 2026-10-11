@@ -976,8 +976,8 @@ func (m Model) attachCmd() tea.Cmd {
 		_ = m.nvim.Command("autocmd BufLeave,FocusLost * if &buftype == '' && !empty(expand('%')) | silent! write | endif")
 		// Auto-reload buffers when their on-disk file changes (e.g. `git pull`,
 		// edits from another editor). Combined with `set autoread` above, the
-		// reload is silent; buffers with unsaved local changes are preserved
-		// by the default autoread behaviour.
+		// reload is silent; buffers with unsaved local changes keep them
+		// (fileReloadLua answers the W12 prompt that would block nvim).
 		_ = m.nvim.Command("autocmd FocusGained,BufEnter,CursorHold,CursorHoldI * silent! checktime")
 		// File-watcher toast: when a buffer is reloaded from disk (autoread
 		// kicks in after checktime detects a change), record the path in a
@@ -985,20 +985,7 @@ func (m Model) attachCmd() tea.Cmd {
 		// <basename>" toast. Lua side keeps it idempotent — the same path is
 		// not re-recorded back-to-back by tracking a monotonically-increasing
 		// counter the Go side compares against.
-		_ = m.nvim.ExecLua(`
-			vim.g.termocode_last_reload = ''
-			vim.g.termocode_reload_seq = 0
-			vim.api.nvim_create_augroup('TermocodeFileReload', { clear = true })
-			vim.api.nvim_create_autocmd('FileChangedShellPost', {
-				group = 'TermocodeFileReload',
-				callback = function(args)
-					local name = args.file or vim.api.nvim_buf_get_name(args.buf or 0)
-					if name == nil or name == '' then return end
-					vim.g.termocode_last_reload = name
-					vim.g.termocode_reload_seq = (vim.g.termocode_reload_seq or 0) + 1
-				end,
-			})
-		`)
+		_ = m.nvim.ExecLua(fileReloadLua)
 		_ = m.nvim.Command("startinsert")
 		return nvim.ReadyMsg{}
 	}
