@@ -155,6 +155,7 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 			return nil
 		}
 		m.err = ""
+		m.renameOpenBuffers(m.promptPath, newPath)
 		m.explorer.Reload()
 	case promptKindNewFile:
 		newPath := filepath.Join(m.promptPath, value)
@@ -246,4 +247,45 @@ func (m *Model) gotoLineFromPrompt(value string) tea.Cmd {
 	}
 	m.focus = FocusEditor
 	return nil
+}
+
+// renameBuffersLua points every buffer of a renamed file (or of a file
+// under a renamed folder) at its new path. `:edit!` then clears the
+// "not edited" mark a new name leaves, so the next save does not stop at
+// E13 (file exists); unsaved text is put back after it.
+const renameBuffersLua = `
+local old, new = ...
+for _, b in ipairs(vim.api.nvim_list_bufs()) do
+  local name = vim.api.nvim_buf_get_name(b)
+  local target
+  if name == old then
+    target = new
+  elseif name:sub(1, #old + 1) == old .. '/' then
+    target = new .. name:sub(#old + 1)
+  end
+  if target and vim.bo[b].buftype == '' then
+    vim.api.nvim_buf_set_name(b, target)
+    if vim.api.nvim_buf_is_loaded(b) then
+      vim.api.nvim_buf_call(b, function()
+        local lines = vim.bo.modified and vim.api.nvim_buf_get_lines(0, 0, -1, false)
+        local view = vim.fn.winsaveview()
+        vim.cmd('silent! keepalt edit!')
+        if lines then vim.api.nvim_buf_set_lines(0, 0, -1, false, lines) end
+        vim.fn.winrestview(view)
+      end)
+    end
+  end
+end
+`
+
+// renameOpenBuffers makes open editors follow a file or folder renamed in
+// the explorer: their tabs show the new name and saving writes the new
+// file, not the old one again.
+func (m *Model) renameOpenBuffers(oldPath, newPath string) {
+	if m.nvim == nil {
+		return
+	}
+	if err := m.nvim.ExecLuaArgs(renameBuffersLua, oldPath, newPath); err != nil {
+		recordError("rename buffers: " + err.Error())
+	}
 }
