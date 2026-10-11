@@ -2,7 +2,9 @@ package testkit
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"runtime/debug"
@@ -28,6 +30,10 @@ type Options struct {
 
 	// Files is the workspace content (path → body); nil means DefaultFiles.
 	Files map[string]string
+	// Config adds or replaces files in the sandboxed config dir
+	// (~/.config/termocode) before the app starts: "keymap.json", or a
+	// "config.json" saved by an earlier driver to test a restart.
+	Config map[string]string
 
 	// Quiet is how long no message may arrive before a step counts as
 	// settled (default 5ms, 40ms with nvim). MaxSettle caps a step's
@@ -85,6 +91,15 @@ func New(t testing.TB, opt Options) *Driver {
 	}
 
 	sandbox(t, opt.Nvim)
+	for name, body := range opt.Config {
+		p := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "termocode", name)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
 	dir := makeWorkspace(t, opt.Files, opt.Git)
 	t.Chdir(dir)
 	t.Setenv("PWD", dir)
