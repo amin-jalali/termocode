@@ -341,18 +341,13 @@ func (m *Model) applySettingValue(value string) tea.Cmd {
 			m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Settings error", err.Error())
 			return toastCmd
 		}
-		// Sync the live nvim state with the new setting WITHOUT routing
-		// through toggleWordWrap (which would push a duplicate toast on
-		// top of the "word_wrap = …" toast we emit below).
+		// Apply it like at startup: the global value (files opened later)
+		// and every open window. A `setlocal` only changed the current
+		// window, so other tabs, and files opened next, kept the old value.
 		if m.nvim != nil {
-			cur, _ := m.nvim.EvalLuaString(`return vim.wo.wrap and 'on' or 'off'`)
-			if (cur == "on") != b {
-				cmd := "setlocal nowrap"
-				if b {
-					cmd = "setlocal wrap"
-				}
-				_ = m.nvim.Command(cmd)
-			}
+			_ = m.nvim.ExecLuaArgs(`local on = ...
+vim.go.wrap = on
+for _, w in ipairs(vim.api.nvim_list_wins()) do vim.wo[w].wrap = on end`, b)
 		}
 		m.toast, toastCmd = m.toast.Push(toast.Info, fmt.Sprintf("word_wrap = %v", b))
 	case "setting-show-hidden":
@@ -438,6 +433,18 @@ func (m *Model) applyStartupSettings() {
 		} else {
 			_ = m.nvim.Command("set nowrap")
 		}
+		// A file shown again in a window gets the window options it had
+		// last time (nvim remembers them per buffer), so a word_wrap
+		// change did not reach files already open in other tabs. Apply the
+		// global value whenever a file enters a window; Alt+W still flips
+		// the current window until another file is shown there.
+		_ = m.nvim.ExecLua(`vim.api.nvim_create_augroup('TermocodeWordWrap', { clear = true })
+vim.api.nvim_create_autocmd('BufWinEnter', {
+  group = 'TermocodeWordWrap',
+  callback = function()
+    if vim.bo.buftype == '' then vim.wo.wrap = vim.go.wrap end
+  end,
+})`)
 	}
 	if cfg.ShowHidden != nil && *cfg.ShowHidden && !m.explorer.HiddenShown() {
 		_ = m.toggleHiddenFiles()
