@@ -1,0 +1,371 @@
+package shotkit
+
+// Golden screen tests: each case renders one scene at a fixed size and
+// compares the frame (text with ANSI colours) with testdata/golden/<name>.ans.
+//
+//	go test ./internal/devtools/shotkit                 # compare
+//	go test ./internal/devtools/shotkit -update         # accept new frames
+//	UPDATE_GOLDEN=1 go test ./internal/devtools/shotkit # same
+//	go test ./internal/devtools/shotkit -run 'Golden/scm'
+//
+// Every case runs in its own child process (the test binary re-executed,
+// see TestMain) with a private HOME, XDG dirs, workspace copy and a PATH that
+// only holds nvim, git, sh and ls, so cases can run in parallel and nothing
+// from the developer's machine (config, plugins, language servers, rg)
+// leaks into the frame. The clock is frozen (internal/clock), git dates are
+// fixed, animations are off and cursor blinking is dropped.
+
+import (
+	"flag"
+	"fmt"
+	"image/color"
+	"math/rand/v2"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+	"unicode/utf8"
+
+	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/devtools/ansipng"
+	"github.com/amin-jalali/termocode/internal/theme"
+)
+
+var update = flag.Bool("update", false, "rewrite the golden frames in testdata/golden")
+
+const (
+	childCaseEnv = "SHOTKIT_GOLDEN_CASE" // set in the child: which case to render
+	childOutEnv  = "SHOTKIT_GOLDEN_OUT"  // set in the child: where to write the frame
+	goldenDir    = "testdata/golden"
+)
+
+// goldenNow is the frozen wall clock: a few days after the demo history.
+var goldenNow = time.Date(2026, 2, 1, 12, 0, 0, 0, time.UTC)
+
+type goldenCase struct {
+	name  string
+	scene Scene
+	w, h  int
+}
+
+// goldenScenes are the screens under test. Each runs at every size in
+// goldenSizes; goldenExtras run at the first size only.
+func goldenScenes() []Scene {
+	return []Scene{
+		Dashboard(),
+		Editor(),
+		Palette(),
+		SCM(),
+		{Name: "scm-hover", Steps: append(scmStepsNoEditor(), HoverText("Merge branch"), Pause(600*time.Millisecond))},
+		Terminal(),
+		{Name: "ai-chat", Env: aiEnv, Steps: WithEditor(Act("palette:ai-open-chat"), Act("aidemo"), Pause(600*time.Millisecond))},
+		{Name: "settings", Steps: WithEditor(Act("palette:open-settings-ui"), Pause(600*time.Millisecond))},
+		Confirm(),
+		Toast(),
+		{Name: "explorer", Steps: []Step{Act("view:files"), Act("open:internal/theme/palette.go"), Act("palette:reveal-file"), Pause(600 * time.Millisecond)}},
+		{Name: "search", Steps: WithEditor(append(append([]Step{Act("palette:find-files-overlay")}, TypeKeys("Toast")...), Pause(1200*time.Millisecond))...)},
+	}
+}
+
+func scmStepsNoEditor() []Step { return []Step{Act("view:git"), Pause(1500 * time.Millisecond)} }
+
+var goldenSizes = [][2]int{{150, 42}, {100, 30}}
+
+func goldenExtras() []Scene {
+	return []Scene{
+		{Name: "theme-light", Theme: "catppuccin-latte", Steps: EditorSteps()},
+		{Name: "theme-dark", Theme: "tokyo-night", Steps: EditorSteps()},
+		{Name: "icons-unicode", Icons: "unicode", Steps: EditorSteps()},
+		{Name: "icons-ascii", Icons: "ascii", Steps: EditorSteps()},
+	}
+}
+
+func goldenCases() []goldenCase {
+	var out []goldenCase
+	for _, sc := range goldenScenes() {
+		for _, sz := range goldenSizes {
+			out = append(out, goldenCase{fmt.Sprintf("%s-%dx%d", sc.Name, sz[0], sz[1]), sc, sz[0], sz[1]})
+		}
+	}
+	for _, sc := range goldenExtras() {
+		sz := goldenSizes[0]
+		out = append(out, goldenCase{fmt.Sprintf("%s-%dx%d", sc.Name, sz[0], sz[1]), sc, sz[0], sz[1]})
+	}
+	return out
+}
+
+func TestMain(m *testing.M) {
+	if name := os.Getenv(childCaseEnv); name != "" {
+		os.Exit(runChild(name))
+	}
+	os.Exit(m.Run())
+}
+
+// runChild renders one case inside the hermetic child process.
+func runChild(name string) int {
+	clock.Now = func() time.Time { return goldenNow }
+	for _, c := range goldenCases() {
+		if c.name != name {
+			continue
+		}
+		frame, err := Run(c.scene, c.w, c.h, Options{Settle: true, Quiet: true, FinalQuiet: 2 * time.Second})
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "render:", err)
+			return 1
+		}
+		if err := os.WriteFile(os.Getenv(childOutEnv), []byte(frame), 0o644); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
+		return 0
+	}
+	fmt.Fprintln(os.Stderr, "unknown golden case", name)
+	return 2
+}
+
+func TestGoldenScreens(t *testing.T) {
+	if testing.Short() {
+		t.Skip("golden screens start nvim; skipped with -short")
+	}
+	if runtime.GOOS == "windows" {
+		t.Skip("golden screens need a Unix shell")
+	}
+	bin := hermeticBin(t)
+	updating := *update || os.Getenv("UPDATE_GOLDEN") == "1"
+	if updating {
+		if err := os.MkdirAll(goldenDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sem := make(chan struct{}, goldenJobs())
+	for _, c := range goldenCases() {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			got := renderInChild(t, bin, c)
+			if !utf8.ValidString(got) {
+				t.Errorf("%s: frame is not valid UTF-8 (a multi-byte glyph was cut)", c.name)
+			}
+			golden := filepath.Join(goldenDir, c.name+".ans")
+			actual := filepath.Join(goldenDir, c.name+"_actual.ans")
+			if updating {
+				if err := os.WriteFile(golden, []byte(got), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				_ = os.Remove(actual)
+				return
+			}
+			want, err := os.ReadFile(golden)
+			if err != nil {
+				t.Fatalf("no golden frame %s (run with -update to create it): %v", golden, err)
+			}
+			if string(want) == got {
+				_ = os.Remove(actual)
+				return
+			}
+			_ = os.WriteFile(actual, []byte(got), 0o644)
+			msg := frameDiff(string(want), got)
+			if pngs := writeReviewPNGs(c, string(want), got); pngs != "" {
+				msg += "\n" + pngs
+			}
+			t.Errorf("%s changed.\n%s\nactual frame: %s\nIf the change is intended, accept it with:\n  go test ./internal/devtools/shotkit -run 'TestGoldenScreens/%s' -update",
+				c.name, msg, actual, c.name)
+		})
+	}
+}
+
+// goldenJobs is how many child apps run at once (SHOTKIT_GOLDEN_JOBS).
+func goldenJobs() int {
+	if n, err := strconv.Atoi(os.Getenv("SHOTKIT_GOLDEN_JOBS")); err == nil && n > 0 {
+		return n
+	}
+	n := runtime.NumCPU() / 2
+	if n < 2 {
+		n = 2
+	}
+	if n > 8 {
+		n = 8
+	}
+	return n
+}
+
+// hermeticBin makes a PATH directory with only the tools the scenes need.
+// It skips the test when nvim or git is missing.
+func hermeticBin(t *testing.T) string {
+	bin := t.TempDir()
+	for _, tool := range []string{"nvim", "git", "sh", "ls"} {
+		p, err := exec.LookPath(tool)
+		if err != nil {
+			if tool == "nvim" || tool == "git" {
+				t.Skipf("golden screens need %s on PATH", tool)
+			}
+			continue
+		}
+		if err := os.Symlink(p, filepath.Join(bin, tool)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return bin
+}
+
+// renderInChild builds a private home + demo workspace for the case and
+// renders it in a child process with a fixed environment.
+func renderInChild(t *testing.T, bin string, c goldenCase) string {
+	// A fixed-length path under /tmp (not $TMPDIR, which differs between
+	// machines), so a screen that shows a path has the same layout
+	// everywhere; the random part is masked in the frame below.
+	tag := fmt.Sprintf("%08x", rand.Uint32())
+	root := "/tmp/termocode-golden-" + tag
+	if err := os.Mkdir(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(root) })
+	home := filepath.Join(root, "home")
+	plugins := filepath.Join(home, ".local", "share", "termocode", "plugins")
+	// Empty stand-ins for the auto-cloned nvim plugins, so nothing is
+	// fetched from the network and frames do not depend on what a machine
+	// has installed.
+	for _, d := range []string{
+		filepath.Join(plugins, "vim-visual-multi", ".git"),
+		filepath.Join(plugins, "nvim-dap", ".git"),
+		filepath.Join(plugins, "rainbow-delimiters.nvim", "lua", "rainbow-delimiters"),
+		filepath.Join(root, "tmp"),
+		filepath.Join(root, "tools"),
+	} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_ = os.WriteFile(filepath.Join(plugins, "rainbow-delimiters.nvim", "lua", "rainbow-delimiters", "setup.lua"), []byte("return {}\n"), 0o644)
+	// No "No language server for Go" toast over every editor screen.
+	_ = os.WriteFile(filepath.Join(root, "tools", "asked.json"),
+		[]byte(`{"filetypes": ["go", "markdown", "lua", "sh", "json", "gomod"]}`), 0o644)
+	src, err := filepath.Abs("testdata/workspace")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ws, err := DemoWorkspace(src, home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := filepath.Join(root, "frame.ans")
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(exe)
+	cmd.Dir = ws
+	cmd.Env = []string{
+		childCaseEnv + "=" + c.name,
+		childOutEnv + "=" + out,
+		"PATH=" + bin,
+		"HOME=" + home,
+		"PWD=" + ws,
+		"USER=demo", "LOGNAME=demo",
+		"XDG_CONFIG_HOME=" + filepath.Join(home, ".config"),
+		"XDG_DATA_HOME=" + filepath.Join(home, ".local", "share"),
+		"XDG_STATE_HOME=" + filepath.Join(home, ".local", "state"),
+		"XDG_CACHE_HOME=" + filepath.Join(home, ".cache"),
+		"TMPDIR=" + filepath.Join(root, "tmp"),
+		"TERM=xterm-256color", "COLORTERM=truecolor",
+		"LANG=C.UTF-8", "LC_ALL=C.UTF-8", "TZ=UTC",
+		"SHELL=/bin/sh", "PS1=$ ",
+		"GIT_CONFIG_NOSYSTEM=1",
+		"TERMOCODE_PLUGINS_DIR=" + plugins,
+		"TERMOCODE_TOOLS_DIR=" + filepath.Join(root, "tools"),
+		"TERMOCODE_AI_BASE_URL=http://127.0.0.1:9",
+	}
+	if v := os.Getenv("GOCOVERDIR"); v != "" {
+		cmd.Env = append(cmd.Env, "GOCOVERDIR="+v)
+	}
+	if b, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("render %s: %v\n%s", c.name, err, b)
+	}
+	frame, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.ReplaceAll(string(frame), tag, "XXXXXXXX")
+}
+
+// frameDiff describes how got differs from want: the changed rows as plain
+// text, or a note when only colours / styles changed.
+func frameDiff(want, got string) string {
+	wRows, gRows := strings.Split(want, "\n"), strings.Split(got, "\n")
+	n := len(wRows)
+	if len(gRows) > n {
+		n = len(gRows)
+	}
+	row := func(rows []string, i int) string {
+		if i < len(rows) {
+			return rows[i]
+		}
+		return ""
+	}
+	var b strings.Builder
+	textChanged, styleOnly, shown := 0, 0, 0
+	for i := 0; i < n; i++ {
+		w, g := row(wRows, i), row(gRows, i)
+		if w == g {
+			continue
+		}
+		pw, pg := strings.TrimRight(StripANSI(w), " "), strings.TrimRight(StripANSI(g), " ")
+		if pw == pg {
+			styleOnly++
+			continue
+		}
+		textChanged++
+		if shown < 30 {
+			shown++
+			fmt.Fprintf(&b, "row %2d - %s\n       + %s\n", i, pw, pg)
+		}
+	}
+	if textChanged == 0 {
+		return fmt.Sprintf("Only colours / styles changed (%d rows; the text is the same).", styleOnly)
+	}
+	head := fmt.Sprintf("%d rows changed text", textChanged)
+	if styleOnly > 0 {
+		head += fmt.Sprintf(", %d more rows changed only colours / styles", styleOnly)
+	}
+	if shown < textChanged {
+		head += fmt.Sprintf(" (first %d shown)", shown)
+	}
+	return head + ":\n" + b.String()
+}
+
+// writeReviewPNGs renders the golden and the actual frame to PNG next to
+// the .ans files when TERMOCODE_SHOTS_FONT names a font file.
+func writeReviewPNGs(c goldenCase, want, got string) string {
+	font := os.Getenv("TERMOCODE_SHOTS_FONT")
+	if font == "" {
+		return ""
+	}
+	r, err := ansipng.New(ansipng.Options{
+		FontRegular: font, FontBold: strings.Replace(font, "Regular", "Bold", 1), Size: 15,
+		DefaultBG: rgba(theme.Hex(theme.BgEditor)), DefaultFG: rgba(theme.Hex(theme.TextPrimary)),
+	})
+	if err != nil {
+		return "png: " + err.Error()
+	}
+	base := filepath.Join(goldenDir, c.name)
+	if err := r.WritePNG(base+"_golden.png", want, c.w); err != nil {
+		return "png: " + err.Error()
+	}
+	if err := r.WritePNG(base+"_actual.png", got, c.w); err != nil {
+		return "png: " + err.Error()
+	}
+	return "review images: " + base + "_golden.png, " + base + "_actual.png"
+}
+
+func rgba(h string) color.RGBA {
+	var r, g, b uint8
+	if _, err := fmt.Sscanf(strings.TrimPrefix(h, "#"), "%02x%02x%02x", &r, &g, &b); err != nil {
+		return color.RGBA{0x1e, 0x1e, 0x1e, 0xff}
+	}
+	return color.RGBA{r, g, b, 0xff}
+}

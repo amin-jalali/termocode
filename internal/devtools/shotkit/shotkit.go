@@ -75,6 +75,10 @@ type Options struct {
 	// Settle waits until the frame stops changing after start-up, after each
 	// step and at the end, instead of relying on the fixed waits alone.
 	Settle bool
+	// FinalQuiet is how long the last frame must stay unchanged with Settle
+	// (default 500ms). Background work such as the explorer's git badges can
+	// land a while after the last redraw, so tests use a longer window.
+	FinalQuiet time.Duration
 	// Quiet drops cursor-blink and toast-expiry ticks so the frame can
 	// settle and toasts stay on screen.
 	Quiet bool
@@ -177,13 +181,18 @@ func Run(sc Scene, w, h int, opt Options) (string, error) {
 		defer mu.Unlock()
 		return last, gen
 	}
+	const stepQuiet = 500 * time.Millisecond
+	finalQuiet := opt.FinalQuiet
+	if finalQuiet <= 0 {
+		finalQuiet = stepQuiet
+	}
 	// settle waits until no new frame has been drawn for quiet.
-	settle := func(min time.Duration) error {
+	settle := func(min, quiet time.Duration) error {
 		time.Sleep(min)
 		if !opt.Settle {
 			return nil
 		}
-		const quiet, limit = 500 * time.Millisecond, 20 * time.Second
+		const limit = 20 * time.Second
 		_, g := frame()
 		since, start := time.Now(), time.Now()
 		for time.Since(since) < quiet {
@@ -199,7 +208,7 @@ func Run(sc Scene, w, h int, opt Options) (string, error) {
 	}
 
 	p.Send(tea.WindowSizeMsg{Width: w, Height: h})
-	if err := settle(1500 * time.Millisecond); err != nil {
+	if err := settle(1500*time.Millisecond, stepQuiet); err != nil {
 		return "", fmt.Errorf("start-up: %w", err)
 	}
 	for i, st := range sc.Steps {
@@ -213,13 +222,13 @@ func Run(sc Scene, w, h int, opt Options) (string, error) {
 		if msg != nil {
 			p.Send(msg)
 		}
-		if err := settle(st.Wait); err != nil {
+		if err := settle(st.Wait, stepQuiet); err != nil {
 			return "", fmt.Errorf("step %d: %w", i+1, err)
 		}
 	}
 	// One more resize forces a fresh View with the final state.
 	p.Send(tea.WindowSizeMsg{Width: w, Height: h})
-	if err := settle(300 * time.Millisecond); err != nil {
+	if err := settle(300*time.Millisecond, finalQuiet); err != nil {
 		return "", fmt.Errorf("final frame: %w", err)
 	}
 	f, _ := frame()
