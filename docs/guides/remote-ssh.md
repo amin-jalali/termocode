@@ -107,9 +107,23 @@ belongs to another user or is open to others.
 :   Check that you are in the same folder: the session belongs to the folder
     you first started termocode in. `termocode sessions` lists the folders.
 
-**Icons or images look wrong after I attach from another terminal app**
-:   termocode checks the terminal once, when the session starts. Quit and
-    start again in the new terminal.
+**Colors or images after I attach from another terminal app**
+:   Each attach brings the new terminal's settings: `TERM`, `COLORTERM`,
+    `TERMOCODE_COLORS`, `LANG` and the image support (kitty, sixel). The
+    editor redraws with them, images too. Only the icon width check and
+    the Nerd Font check stay from the first start; if icons look wrong,
+    Quit and start again in the new terminal.
+
+**I use mosh**
+:   mosh does not set the `SSH_*` variables, so with `auto` termocode
+    does not start a session under mosh. Set `persistent_session` to `on`
+    on the remote machine.
+
+**The session is gone after I log out**
+:   Some systems (systemd with `KillUserProcesses=yes`) end all your
+    programs when you log out, the session too. Run
+    `loginctl enable-linger` once to keep them. Unsaved text is still in
+    the [hot-exit backup](#unsaved-files-after-a-crash).
 
 **A session is stuck**
 :   `termocode kill` ends it. If that does not work, the server log is in
