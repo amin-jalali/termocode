@@ -3,6 +3,7 @@
 package session
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -40,22 +41,35 @@ func Dir() (string, error) {
 	return dir, nil
 }
 
-// ensurePrivateDir creates dir (mode 0700) and refuses a dir that another
-// user owns or that others can open: the sockets inside give full control
-// of the editor.
+// ensurePrivateDir creates dir (mode 0700) and refuses a dir that is a
+// symlink, that another user owns or that others can open: the sockets
+// inside give full control of the editor, and the $TMPDIR fallback is
+// shared with other users, who could create it first.
 func ensurePrivateDir(dir string) error {
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dir), 0o700); err != nil {
 		return err
 	}
-	if err := os.Chmod(dir, 0o700); err != nil {
+	if err := os.Mkdir(dir, 0o700); err == nil {
+		// Ours and new: undo a umask that took the owner bits.
+		if err := os.Chmod(dir, 0o700); err != nil {
+			return err
+		}
+	} else if !errors.Is(err, os.ErrExist) {
 		return err
 	}
-	fi, err := os.Stat(dir)
+	fi, err := os.Lstat(dir)
 	if err != nil {
 		return err
 	}
-	if !ownedByMe(fi) {
+	switch {
+	case fi.Mode()&os.ModeSymlink != 0:
+		return fmt.Errorf("session dir %s is a symlink", dir)
+	case !fi.IsDir():
+		return fmt.Errorf("session dir %s is not a folder", dir)
+	case !ownedByMe(fi):
 		return fmt.Errorf("session dir %s is not owned by this user", dir)
+	case fi.Mode().Perm() != 0o700:
+		return fmt.Errorf("session dir %s has mode %o, want 700", dir, fi.Mode().Perm())
 	}
 	return nil
 }

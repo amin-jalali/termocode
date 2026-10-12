@@ -5,6 +5,7 @@ package e2e
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"net"
 	"os"
 	"os/exec"
@@ -388,5 +389,66 @@ func TestSessionAttachInsideRefused(t *testing.T) {
 	tm.Send(KeyCtrlT)
 	tm.settle()
 	tm.Quit()
+	r.waitSocket(false)
+}
+
+// TestSessionServerKilledRestore: the session server dies hard (SIGKILL,
+// no cleanup). The UI gets a hangup with its PTY, and the next start
+// offers the hot-exit backup and restores the unsaved text.
+func TestSessionServerKilledRestore(t *testing.T) {
+	r := newSessionRig(t)
+	tm := r.start()
+	r.waitSocket(true)
+	tm.OpenFile("notes.txt")
+	tm.WaitText("first note", uiTimeout)
+	tm.Send(KeyEsc)
+	tm.settle()
+	tm.Type("osigkill-marker-5")
+	tm.WaitText("sigkill-marker-5", uiTimeout)
+	deadline := time.Now().Add(5 * time.Second)
+	for len(backupFiles(r.home)) == 0 {
+		if time.Now().After(deadline) {
+			t.Fatalf("no hot-exit backup written")
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	var in struct {
+		PID   int `json:"pid"`
+		UIPID int `json:"ui_pid"`
+	}
+	b, err := os.ReadFile(strings.TrimSuffix(r.socket(), ".sock") + ".json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(b, &in); err != nil || in.PID == 0 || in.UIPID == 0 {
+		t.Fatalf("session info %s: %v", b, err)
+	}
+	if err := syscall.Kill(in.PID, syscall.SIGKILL); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-tm.exited:
+	case <-time.After(10 * time.Second):
+		t.Fatalf("client still running after the server died")
+	}
+	deadline = time.Now().Add(10 * time.Second)
+	for alive(in.UIPID) {
+		if time.Now().After(deadline) {
+			t.Fatalf("UI %d still running after the server died", in.UIPID)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	tm2 := Start(t, StartOpts{Home: r.home, Workspace: r.ws, Env: r.env})
+	tm2.WaitText("Restore unsaved changes?", bootTimeout)
+	tm2.WaitText("notes.txt", uiTimeout)
+	tm2.settle()
+	tm2.ClickText("Restore")
+	tm2.WaitText("sigkill-marker-5", uiTimeout)
+	tm2.WaitFor("notes.txt tab, modified", uiTimeout, func(ls []string) bool {
+		return strings.Contains(ls[0], "notes.txt ●")
+	})
+	tm2.quitDiscard()
 	r.waitSocket(false)
 }
