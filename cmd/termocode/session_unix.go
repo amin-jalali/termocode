@@ -43,7 +43,7 @@ func spawnServer(p session.Paths) error {
 	if err != nil {
 		return err
 	}
-	logf, err := os.OpenFile(p.Log, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+	logf, err := session.OpenLog(p)
 	if err != nil {
 		return err
 	}

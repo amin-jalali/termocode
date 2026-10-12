@@ -35,40 +35,51 @@ func Dial(p Paths) (*net.UnixConn, error) {
 	if err == nil {
 		return c, nil
 	}
-	if errors.Is(err, syscall.ENOENT) || errors.Is(err, syscall.ECONNREFUSED) {
-		if !locked(p.Lock) {
-			removeStale(p)
-		}
+	if errors.Is(err, syscall.ECONNREFUSED) {
+		removeStale(p)
+		return nil, ErrNoSession
+	}
+	if errors.Is(err, syscall.ENOENT) {
 		return nil, ErrNoSession
 	}
 	return nil, err
 }
 
-// removeStale deletes the files a dead server left behind.
+// removeStale deletes the files a dead server left behind (its log
+// stays, for the crash). It holds the lock while it does, so it cannot
+// remove the socket of a server that starts at the same moment; a live
+// or starting server holds the lock and nothing is removed.
 func removeStale(p Paths) {
+	lock, err := lockFile(p.Lock)
+	if err != nil {
+		return
+	}
+	defer lock.Close()
 	_ = os.Remove(p.Socket)
 	_ = os.Remove(p.Info)
+	_ = os.Remove(p.Lock)
 }
 
 // Ensure connects to the workspace session, starting a server with spawn
 // when none runs.
 func Ensure(p Paths, spawn func() error) (*net.UnixConn, error) {
-	if c, err := Dial(p); err == nil {
-		return c, nil
-	} else if !errors.Is(err, ErrNoSession) {
-		return nil, err
-	}
-	// A server that holds the lock is still starting: just wait for it.
-	if !locked(p.Lock) {
-		if err := spawn(); err != nil {
-			return nil, fmt.Errorf("start session server: %w", err)
-		}
-	}
+	spawned := false
 	deadline := time.Now().Add(10 * time.Second)
 	for {
 		c, err := Dial(p)
 		if err == nil {
 			return c, nil
+		}
+		if !errors.Is(err, ErrNoSession) {
+			return nil, err
+		}
+		// A server that holds the lock is starting (or ending): wait.
+		// Once it is gone, start our own.
+		if !spawned && !locked(p.Lock) {
+			if err := spawn(); err != nil {
+				return nil, fmt.Errorf("start session server: %w", err)
+			}
+			spawned = true
 		}
 		if time.Now().After(deadline) {
 			return nil, fmt.Errorf("session server did not start (see %s): %w", p.Log, err)
