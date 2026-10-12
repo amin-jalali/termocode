@@ -1545,6 +1545,8 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.toggleZenMode()
 	case keymap.ActionReloadWindow:
 		return m, m.reloadWindow()
+	case keymap.ActionDetachSession:
+		return m, m.detachSession()
 	case keymap.ActionToggleAutoSave:
 		return m, m.toggleAutoSave()
 	case keymap.ActionNextHunk:
