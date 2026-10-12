@@ -34,6 +34,8 @@ func (c *Client) promptGuard() {
 		select {
 		case <-c.done:
 			return
+		case <-c.exited:
+			return
 		case <-t.C:
 		}
 		m, err := c.nv.Mode()
