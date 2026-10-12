@@ -77,11 +77,11 @@ func Ensure(p Paths, spawn func() error) (*net.UnixConn, error) {
 	}
 }
 
-// Attach relays the terminal (in, out) to the session over c until the
-// UI exits (its exit code is returned), another client takes over, or
+// Attach relays the terminal (in, out) to the session of p over c until
+// the UI exits (its exit code is returned), another client takes over, or
 // this client is told to stop. The session keeps running in the last
 // two cases.
-func Attach(c *net.UnixConn, in, out *os.File) int {
+func Attach(c *net.UnixConn, p Paths, in, out *os.File) int {
 	defer c.Close()
 	cols, rows, err := term.GetSize(int(out.Fd()))
 	if err != nil || cols <= 0 || rows <= 0 {
@@ -159,7 +159,7 @@ func Attach(c *net.UnixConn, in, out *os.File) int {
 			}
 		case f := <-frames:
 			if f.err != nil {
-				_, _ = out.WriteString(plainReset + "termocode: lost the session server\r\n")
+				_, _ = out.WriteString(plainReset + lostMessage(p) + "\r\n")
 				return 1
 			}
 			switch f.typ {
@@ -173,6 +173,16 @@ func Attach(c *net.UnixConn, in, out *os.File) int {
 			}
 		}
 	}
+}
+
+// lostMessage says why the connection to the server ended without a
+// word: the server is gone, or it is alive and dropped us (it does that
+// to a client that stops reading, e.g. a frozen SSH link).
+func lostMessage(p Paths) string {
+	if locked(p.Lock) {
+		return "termocode: disconnected, the session keeps running. Run `termocode attach` to go back."
+	}
+	return "termocode: lost the session server"
 }
 
 // Status asks a running session for its Info.
