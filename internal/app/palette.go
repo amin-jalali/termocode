@@ -258,6 +258,7 @@ func paletteItems() []picker.Item {
 		{ID: "git-tags", Title: "Git: Show Tags..."},
 		{ID: "zen-mode", Title: "View: Toggle Zen Mode", Hint: "Alt+Z"},
 		{ID: "reload-window", Title: "Developer: Reload Window"},
+		{ID: "detach-session", Title: "Session: Detach"},
 		{ID: "reset-session", Title: "Developer: Reset Session (clears tabs / cursor history)"},
 		{ID: "toggle-auto-save", Title: "File: Toggle Auto Save"},
 		{ID: "next-hunk", Title: "Git: Go to Next Change", Hint: "Alt+]"},
@@ -620,6 +621,8 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.toggleZenMode()
 	case "reload-window":
 		return m.reloadWindow()
+	case "detach-session":
+		return m.detachSession()
 	case "reset-session":
 		return m.resetSession()
 	case "toggle-auto-save":
