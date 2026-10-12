@@ -90,7 +90,8 @@ Files that never had a name (new, unsaved buffers) are not backed up.
 Sessions listen on a unix socket only, never on the network. The socket
 folder (`$XDG_RUNTIME_DIR/termocode`, or `~/.cache/termocode/sessions`) is
 private to your user (mode 0700), and the session checks that every client
-runs as your user.
+runs as your user. termocode refuses a socket folder that is a symlink,
+belongs to another user or is open to others.
 
 ## Troubleshooting
 
@@ -104,7 +105,8 @@ runs as your user.
 
 **A session is stuck**
 :   `termocode kill` ends it. If that does not work, the server log is in
-    the socket folder (`<key>.log`).
+    the socket folder (`<key>.log`). The log is removed when a session ends
+    normally; it stays when the server crashed.
 
 **I use tmux already**
 :   With the default `auto`, termocode does not start its own session inside
