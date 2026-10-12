@@ -45,6 +45,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.stepAnimations()
 		return m, m.afterUpdateAnim(prevKind)
 	}
+	if tc, ok := msg.(TerminalChangedMsg); ok {
+		m.applyTerminalChange(tc)
+		return m, nil
+	}
 	if c, ok := m.handleImageMsg(msg); ok {
 		return m, tea.Batch(c, m.afterUpdateAnim(prevKind))
 	}

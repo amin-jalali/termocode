@@ -64,11 +64,34 @@ when termocode dies. The next start offers Restore / Discard / Later.
 - **+** No new external tool; one more Go dependency (`creack/pty`).
 - **−** Two extra processes per session (client + server) and one more hop
   for every byte (a plain copy over a local socket).
-- **−** The UI probes the terminal (icons, images) once, at the first
-  attach. A client in a different terminal program gets the first one's
-  capabilities.
-- **−** Graphics drawn with kitty / sixel are not repainted on attach until
-  the UI draws them again.
+- **+** Each attach brings the new terminal's capabilities (added
+  2026-10-12). The hello frame carries, after the size, a JSON object
+  with the client's terminal variables (`session.CapsEnvKeys`: `TERM`,
+  `COLORTERM`, `TERM_PROGRAM`, `LANG` / `LC_*`, `NO_COLOR`,
+  `TERMOCODE_COLORS`, …) and, when it attaches to a running UI, its own
+  graphics probe (kitty / sixel, cell size, tmux). An old server reads
+  only the size; a new server treats a size-only hello (old client) as
+  "no caps". The server writes the caps to `<key>.caps.json` (0600, path
+  in `TERMOCODE_SESSION_CAPS`) before RepaintSignal; the UI copies the
+  variables into its environment and re-applies the colour profile,
+  graphics protocol, icons and animations, then redraws every line.
+  Images are drawn again with the redraw (their carrier is part of the
+  frame). Each such attach has a number (`gen` in the caps); the UI starts
+  every frame with a private APC mark for it (`session.AttachedSeq`),
+  and until that mark comes the server sends the new client no output,
+  because it was drawn for the old terminal. After 2 s without the mark
+  the server sends the output anyway and asks for one more redraw. Not covered: the Kitty keyboard protocol (Bubble Tea does not
+  use it; pushed flags are replayed with the other modes) and OSC 52,
+  which is always sent.
+- **−** The icon width probe and the Nerd Font check still run only at
+  the first attach.
 - **−** Open Recent Workspace inside a session keeps the session keyed to
   the folder it started in.
+- **−** mosh does not set `SSH_CONNECTION` / `SSH_CLIENT` / `SSH_TTY`, so
+  `auto` stays off under mosh (mosh keeps the connection alive itself, but
+  not across a reboot of the client or `mosh-server` timeouts). Users set
+  `persistent_session` to `on`.
+- **−** With systemd-logind `KillUserProcesses=yes`, logging out kills the
+  session server with everything else; `loginctl enable-linger` keeps it.
+  The hot-exit backup still saves unsaved text.
 - Unix only (Linux, macOS); other systems run the UI directly.
