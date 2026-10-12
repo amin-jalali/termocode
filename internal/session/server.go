@@ -113,7 +113,8 @@ func Serve(workspace string, uiCmd func() *exec.Cmd) int {
 	go s.acceptLoop(ln)
 	code := <-s.done
 	// Children the UI left behind (it leads its own process group on the
-	// PTY) end with the session.
+	// PTY) end with the session. nvim is not in that group (own session);
+	// it exits on EOF of its embed pipe when the UI dies.
 	s.mu.Lock()
 	if s.cmd != nil && s.cmd.Process != nil {
 		_ = syscall.Kill(-s.cmd.Process.Pid, syscall.SIGKILL)
