@@ -57,6 +57,7 @@ func removeStale(p Paths) {
 	defer lock.Close()
 	_ = os.Remove(p.Socket)
 	_ = os.Remove(p.Info)
+	_ = os.Remove(p.Caps)
 	_ = os.Remove(p.Lock)
 }
 
@@ -91,8 +92,9 @@ func Ensure(p Paths, spawn func() error) (*net.UnixConn, error) {
 // Attach relays the terminal (in, out) to the session of p over c until
 // the UI exits (its exit code is returned), another client takes over, or
 // this client is told to stop. The session keeps running in the last
-// two cases.
-func Attach(c *net.UnixConn, p Paths, in, out *os.File) int {
+// two cases. caps (may be nil) describe this terminal; the UI switches to
+// them when it already runs.
+func Attach(c *net.UnixConn, p Paths, in, out *os.File, caps *ClientCaps) int {
 	defer c.Close()
 	cols, rows, err := term.GetSize(int(out.Fd()))
 	if err != nil || cols <= 0 || rows <= 0 {
@@ -104,7 +106,7 @@ func Attach(c *net.UnixConn, p Paths, in, out *os.File) int {
 		defer wmu.Unlock()
 		return writeFrame(c, typ, p)
 	}
-	if err := send(frameHello, encodeSize(cols, rows)); err != nil {
+	if err := send(frameHello, encodeHello(cols, rows, caps)); err != nil {
 		fmt.Fprintln(os.Stderr, "termocode:", err)
 		return 1
 	}
@@ -230,7 +232,7 @@ func List() ([]Info, error) {
 	var out []Info
 	for _, s := range socks {
 		base := strings.TrimSuffix(s, ".sock")
-		p := Paths{Key: filepath.Base(base), Socket: s, Lock: base + ".lock", Info: base + ".json", Log: base + ".log"}
+		p := Paths{Key: filepath.Base(base), Socket: s, Lock: base + ".lock", Info: base + ".json", Log: base + ".log", Caps: base + ".caps.json"}
 		in, err := Status(p)
 		if err != nil {
 			continue

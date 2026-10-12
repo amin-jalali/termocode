@@ -82,6 +82,7 @@ type Paths struct {
 	Lock      string // flock held by the live server
 	Info      string // JSON with the workspace, pid and start time
 	Log       string // server stderr
+	Caps      string // caps of the last client that attached (ClientCaps)
 }
 
 // PathsFor returns the session files for a workspace folder.
@@ -103,5 +104,6 @@ func PathsFor(workspace string) (Paths, error) {
 		Lock:      base + ".lock",
 		Info:      base + ".json",
 		Log:       base + ".log",
+		Caps:      base + ".caps.json",
 	}, nil
 }

@@ -14,7 +14,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"golang.org/x/term"
 
+	"github.com/amin-jalali/termocode/internal/app"
 	"github.com/amin-jalali/termocode/internal/session"
+	"github.com/amin-jalali/termocode/internal/termimg"
 )
 
 const sessionsSupported = true
@@ -76,6 +78,7 @@ func runClient(dir string, create bool) int {
 		return 1
 	}
 	conn, err := session.Dial(p)
+	running := err == nil
 	if errors.Is(err, session.ErrNoSession) && create {
 		conn, err = session.Ensure(p, func() error { return spawnServer(p) })
 	}
@@ -92,7 +95,74 @@ func runClient(dir string, create bool) int {
 		_ = conn.Close()
 		return 1
 	}
-	return session.Attach(conn, p, os.Stdin, os.Stdout)
+	return session.Attach(conn, p, os.Stdin, os.Stdout, clientCaps(running))
+}
+
+// clientCaps describes this terminal for the session. A running UI keeps
+// the caps of the terminal it started in, so for it we also probe the
+// graphics support here, before the attach takes the terminal (a new UI
+// probes by itself).
+func clientCaps(running bool) *session.ClientCaps {
+	c := session.EnvCaps(os.Getenv)
+	if running {
+		switch termimg.ParseMode(app.ConfigDisplay().Images) {
+		case termimg.ModeOff, termimg.ModeBlocks:
+		default:
+			c.Graphics = graphicsToSession(termimg.Probe(os.Stdin, os.Stdout, 250*time.Millisecond, os.Getenv))
+		}
+	}
+	return &c
+}
+
+func graphicsToSession(c termimg.Caps) *session.GraphicsCaps {
+	return &session.GraphicsCaps{
+		Protocol: c.Protocol.String(), CellW: c.CellW, CellH: c.CellH,
+		InTmux: c.InTmux, Passthrough: c.Passthrough, Reason: c.Reason,
+	}
+}
+
+// graphicsFromSession is the inverse of graphicsToSession; an unknown
+// protocol (a newer client) is Blocks, which works everywhere.
+func graphicsFromSession(g *session.GraphicsCaps) termimg.Caps {
+	c := termimg.Caps{Protocol: termimg.Blocks, CellW: g.CellW, CellH: g.CellH,
+		InTmux: g.InTmux, Passthrough: g.Passthrough, Reason: g.Reason}
+	switch g.Protocol {
+	case "kitty":
+		c.Protocol = termimg.Kitty
+	case "sixel":
+		c.Protocol = termimg.Sixel
+	case "off":
+		c.Protocol = termimg.None
+	}
+	return c
+}
+
+// applyClientEnv copies the terminal variables of the client that attached
+// into our environment (a variable it does not set is unset), so colour,
+// icon and graphics detection see the terminal that now shows the UI.
+func applyClientEnv(c *session.ClientCaps) {
+	for _, k := range session.CapsEnvKeys {
+		if v, ok := c.Env[k]; ok && v != "" {
+			_ = os.Setenv(k, v)
+		} else {
+			_ = os.Unsetenv(k)
+		}
+	}
+}
+
+// terminalChange builds the message that switches the UI to the client's
+// terminal. Without a probe from the client its environment decides.
+func terminalChange(c *session.ClientCaps) app.TerminalChangedMsg {
+	if c.Graphics != nil {
+		return app.TerminalChangedMsg{Graphics: graphicsFromSession(c.Graphics), Gen: c.Gen}
+	}
+	g := termimg.Caps{Protocol: termimg.Blocks, Reason: "no probe from the attaching terminal"}
+	switch termimg.ParseMode(app.ConfigDisplay().Images) {
+	case termimg.ModeOff, termimg.ModeBlocks:
+	default:
+		g.Protocol, _ = termimg.DetectEnv(func(k string) string { return c.Env[k] })
+	}
+	return app.TerminalChangedMsg{Graphics: g, Gen: c.Gen}
 }
 
 // cmdSessions prints the running sessions (`termocode sessions`).
@@ -136,17 +206,26 @@ func cmdKill(dir string) int {
 
 // watchRepaint redraws the whole UI when the session server asks (a
 // client attached): the new terminal starts empty, and Bubble Tea only
-// draws changed lines.
+// draws changed lines. The new terminal may be another program (kitty
+// first, a plain xterm later): its caps, stored by the server, replace
+// ours before the redraw.
 func watchRepaint(p *tea.Program) {
 	if os.Getenv(session.EnvSession) == "" {
 		return
 	}
+	capsFile := os.Getenv(session.EnvCapsFile)
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, session.RepaintSignal)
 	go func() {
 		for range sig {
 			if w, h, err := term.GetSize(int(os.Stdout.Fd())); err == nil {
 				p.Send(tea.WindowSizeMsg{Width: w, Height: h})
+			}
+			if capsFile != "" {
+				if c, err := session.ReadCaps(capsFile); err == nil && c != nil {
+					applyClientEnv(c)
+					p.Send(terminalChange(c))
+				}
 			}
 			p.Send(tea.ClearScreen())
 		}

@@ -187,6 +187,11 @@ type Model struct {
 	hoverX, hoverY int
 	mouseAllMotion bool
 
+	// termGen is the persistent-session attach whose terminal caps we
+	// draw for (TerminalChangedMsg); View marks every frame with it so
+	// the session server knows where output for that terminal starts.
+	termGen int
+
 	// Source Control commit hover card: the SHA the pointer is over and a
 	// cache of fetched commit metadata (author/date/body/stat) keyed by SHA.
 	hoverCommitHash string

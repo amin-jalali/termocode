@@ -34,7 +34,7 @@ func (m Model) View() string {
 	if !previewShown && m.overlayKind() == "" && !m.previewOpen && !m.searchOpen && m.welcomeVisible() {
 		frame, logoShown = m.placeLogo(frame)
 	}
-	return m.cleanupGraphics(frame, previewShown, logoShown)
+	return m.markAttach(m.cleanupGraphics(frame, previewShown, logoShown))
 }
 
 // welcomeVisible mirrors renderBase's welcome-screen condition.

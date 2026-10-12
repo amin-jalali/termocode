@@ -28,6 +28,11 @@ const RepaintSignal = syscall.SIGUSR1
 // variable so tests can make it short.
 var clientWriteTimeout = 5 * time.Second
 
+// holdTimeout bounds how long a new client waits for the UI to switch to
+// its caps (a UI that does not mark it, or is busy); then it gets the
+// output as it comes and the UI is asked to redraw once more.
+var holdTimeout = 2 * time.Second
+
 // Messages a client prints when the server lets it go.
 const (
 	msgTakenOver = "termocode: detached, the session was attached from another terminal"
@@ -51,15 +56,22 @@ type Server struct {
 	// the first client says hello.
 	uiCmd func() *exec.Cmd
 
-	mu      sync.Mutex
-	client  *net.UnixConn
-	cmd     *exec.Cmd
-	ptmx    *os.File
-	modes   *Modes
-	detach  detachFilter
-	started time.Time
-	exiting bool
-	done    chan int // UI exit code
+	mu     sync.Mutex
+	client *net.UnixConn
+	cmd    *exec.Cmd
+	ptmx   *os.File
+	modes  *Modes
+	detach detachFilter
+	marks  attachedFilter
+	// gen counts attaches with caps; while hold is not 0 the current
+	// client gets no output until the UI marks its switch to the caps of
+	// attach hold (AttachedSeq), or holdTimer fires.
+	gen       int
+	hold      int
+	holdTimer *time.Timer
+	started   time.Time
+	exiting   bool
+	done      chan int // UI exit code
 }
 
 // Serve runs a session server for the workspace until the UI exits. It
@@ -133,6 +145,7 @@ func (s *Server) cleanup(ln *net.UnixListener) {
 	_ = ln.Close()
 	_ = os.Remove(s.paths.Socket)
 	_ = os.Remove(s.paths.Info)
+	_ = os.Remove(s.paths.Caps)
 	_ = os.Remove(s.paths.Log)
 	_ = os.Remove(s.paths.Lock)
 	s.mu.Unlock()
@@ -175,12 +188,12 @@ func (s *Server) handle(c *net.UnixConn) {
 		s.terminate()
 		_ = c.Close()
 	case frameHello:
-		cols, rows, err := decodeSize(payload)
+		cols, rows, caps, err := decodeHello(payload)
 		if err != nil {
 			_ = c.Close()
 			return
 		}
-		if err := s.attach(c, cols, rows); err != nil {
+		if err := s.attach(c, cols, rows, caps); err != nil {
 			log.Printf("session: attach: %v", err)
 			_ = writeFrame(c, frameDetached, []byte("termocode: "+err.Error()))
 			_ = c.Close()
@@ -220,16 +233,34 @@ func (s *Server) writeInfo() {
 
 // attach makes c the client. The first client starts the UI; a later one
 // takes over from the current client, gets the terminal modes replayed
-// and the UI redraws everything.
-func (s *Server) attach(c *net.UnixConn, cols, rows int) error {
+// and the UI redraws everything — with the caps of the new client's
+// terminal, which wait in the caps file for the UI (nil caps, from an old
+// client, remove it: the UI then keeps what it has).
+func (s *Server) attach(c *net.UnixConn, cols, rows int, caps *ClientCaps) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.exiting {
 		return errors.New("session is ending")
 	}
+	if caps != nil {
+		s.gen++
+		caps.Gen = s.gen
+	}
+	if s.paths.Caps != "" {
+		if err := writeCaps(s.paths.Caps, caps); err != nil {
+			log.Printf("session: caps: %v", err)
+		}
+	}
+	s.stopHoldLocked()
 	size := &pty.Winsize{Cols: uint16(max(cols, 1)), Rows: uint16(max(rows, 1))}
 	if s.cmd == nil {
 		cmd := s.uiCmd()
+		if s.paths.Caps != "" {
+			if cmd.Env == nil {
+				cmd.Env = os.Environ()
+			}
+			cmd.Env = append(cmd.Env, EnvCapsFile+"="+s.paths.Caps)
+		}
 		ptmx, err := pty.StartWithSize(cmd, size)
 		if err != nil {
 			return fmt.Errorf("start UI: %w", err)
@@ -243,10 +274,69 @@ func (s *Server) attach(c *net.UnixConn, cols, rows int) error {
 	s.client = c
 	s.sendLocked(frameOutput, s.modes.Replay())
 	_ = pty.Setsize(s.ptmx, size)
+	if caps != nil && s.paths.Caps != "" {
+		// Until the UI has switched to these caps, its output was drawn
+		// for the old terminal: keep it from this one.
+		s.hold = caps.Gen
+		gen := caps.Gen
+		s.holdTimer = time.AfterFunc(holdTimeout, func() { s.holdExpired(gen) })
+	}
 	// The size may not have changed, so no SIGWINCH: ask for the redraw.
 	_ = s.cmd.Process.Signal(RepaintSignal)
 	go s.writeInfo()
 	return nil
+}
+
+// holdBack feeds UI output to the mode tracker and returns the part the
+// client may get: all of it, or during a hold only what follows the mark
+// of the held attach (then the hold ends). Holds s.mu.
+func (s *Server) holdBack(out []byte, marks []attachedMark) []byte {
+	if s.hold == 0 {
+		s.modes.Feed(out)
+		return out
+	}
+	for _, m := range marks {
+		if m.gen == s.hold {
+			s.modes.Feed(out[:m.pos])
+			s.releaseLocked()
+			out = out[m.pos:]
+			s.modes.Feed(out)
+			return out
+		}
+	}
+	s.modes.Feed(out)
+	return nil
+}
+
+// stopHoldLocked ends a hold without a release. Holds s.mu.
+func (s *Server) stopHoldLocked() {
+	s.hold = 0
+	if s.holdTimer != nil {
+		s.holdTimer.Stop()
+		s.holdTimer = nil
+	}
+}
+
+// releaseLocked ends the hold: the client gets the terminal modes as they
+// are now and the cursor home, where the UI's frames start. Holds s.mu.
+func (s *Server) releaseLocked() {
+	s.stopHoldLocked()
+	s.sendLocked(frameOutput, append(s.modes.Replay(), "\x1b[H"...))
+}
+
+// holdExpired: the UI did not mark the switch in time. Send the output
+// as it comes and ask for one more full redraw.
+func (s *Server) holdExpired(gen int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.hold != gen || s.exiting {
+		return
+	}
+	log.Printf("session: the UI did not confirm attach %d; redrawing", gen)
+	s.releaseLocked()
+	if s.cmd != nil && s.cmd.Process != nil {
+		_ = s.cmd.Process.Signal(RepaintSignal)
+	}
 }
 
 // dropLocked lets the current client go: its terminal is put back to
@@ -323,8 +413,9 @@ func (s *Server) pump() {
 			n, err := s.ptmx.Read(buf)
 			if n > 0 {
 				out, detach := s.detach.Filter(buf[:n])
+				out, marks := s.marks.Filter(out)
 				s.mu.Lock()
-				s.modes.Feed(out)
+				out = s.holdBack(out, marks)
 				if len(out) > 0 {
 					s.sendLocked(frameOutput, out)
 				}
