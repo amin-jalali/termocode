@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -12,6 +13,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/session"
@@ -30,7 +32,16 @@ import (
 // dir per running termocode, so two instances on one folder never delete
 // each other's files. Each .bak file is the buffer's path on the first
 // line, then its lines. Leftovers of dead processes are moved to
-// .../previous/ until the user answers Restore or Discard.
+// .../previous/ until the user answers Restore or Discard. A backup
+// nobody restored ages out after hotExitMaxAge, and previous/ keeps at most
+// hotExitMaxKept files (pruneHotBackups).
+
+// hotExitMaxAge and hotExitMaxKept bound previous/: "Later" keeps the
+// backups, so without a limit they would pile up forever.
+const (
+	hotExitMaxAge  = 7 * 24 * time.Hour
+	hotExitMaxKept = 50
+)
 
 // hotExitNvim is the nvim the signal handler flushes (set on ReadyMsg).
 var hotExitNvim atomic.Pointer[nvim.Client]
@@ -94,7 +105,7 @@ func collectHotBackups(root string, self int, alive func(pid int) bool) ([]hotBa
 		}
 		_ = os.RemoveAll(dir)
 	}
-	files, err := os.ReadDir(prev)
+	files, err := pruneHotBackups(prev, clock.Now())
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	}
@@ -110,6 +121,45 @@ func collectHotBackups(root string, self int, alive func(pid int) bool) ([]hotBa
 		if hb, ok := parseHotBackup(b); ok {
 			out = append(out, hb)
 		}
+	}
+	return out, nil
+}
+
+// pruneHotBackups deletes the files in prev older than hotExitMaxAge and
+// all but the newest hotExitMaxKept (by modification time: the last write
+// of the backup). It returns the files that are left.
+func pruneHotBackups(prev string, now time.Time) ([]os.DirEntry, error) {
+	files, err := os.ReadDir(prev)
+	if err != nil {
+		return nil, err
+	}
+	type aged struct {
+		f   os.DirEntry
+		mod time.Time
+	}
+	var keep []aged
+	for _, f := range files {
+		info, err := f.Info()
+		if err != nil {
+			continue
+		}
+		if now.Sub(info.ModTime()) > hotExitMaxAge {
+			_ = os.Remove(filepath.Join(prev, f.Name()))
+			continue
+		}
+		keep = append(keep, aged{f, info.ModTime()})
+	}
+	sort.SliceStable(keep, func(i, j int) bool { return keep[i].mod.After(keep[j].mod) })
+	out := make([]os.DirEntry, 0, len(keep))
+	for i, a := range keep {
+		if i >= hotExitMaxKept {
+			_ = os.Remove(filepath.Join(prev, a.f.Name()))
+			continue
+		}
+		out = append(out, a.f)
+	}
+	if len(out) == 0 {
+		_ = os.Remove(prev)
 	}
 	return out, nil
 }
