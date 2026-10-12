@@ -54,14 +54,24 @@ vim.api.nvim_create_autocmd({ 'TextChanged', 'TextChangedI', 'TextChangedP', 'Bu
 _G.termocode_hot_exit_flush = flush
 `
 
-// hotExitRestoreLua opens each backed-up file and puts the saved text in
-// its buffer (modified, so the user reviews and saves). Args: paths and
-// their lines. The first file ends up in front.
+// hotExitFlushLua writes the live backup now (see hotExitLua).
+const hotExitFlushLua = `if _G.termocode_hot_exit_flush then _G.termocode_hot_exit_flush() end`
+
+// hotExitRestoreLua puts the saved text in the buffer of each backed-up
+// file (modified, so the user reviews and saves). Args: paths, their
+// lines, keepCurrent. Without keepCurrent each file is opened and the
+// first ends up in front; with it (a reload) the buffers are loaded in
+// the background and the current window stays.
 const hotExitRestoreLua = `
-local paths, contents = ...
+local paths, contents, keep = ...
 for i = #paths, 1, -1 do
   local p = paths[i]
-  pcall(vim.cmd, 'silent! edit ' .. vim.fn.fnameescape(p))
+  if keep then
+    local b = vim.fn.bufadd(p)
+    pcall(vim.fn.bufload, b)
+  else
+    pcall(vim.cmd, 'silent! edit ' .. vim.fn.fnameescape(p))
+  end
   local b = vim.fn.bufnr(p)
   if b > 0 then
     vim.bo[b].buflisted = true
