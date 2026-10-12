@@ -26,7 +26,7 @@ func backupFiles(home string) []string {
 }
 
 // TestHotExitRestore: without a session, the terminal hangs up (SIGHUP to
-// the whole process group, so nvim dies too) while a file has unsaved
+// the whole process group) while a file has unsaved
 // text. The next start offers to restore it, and Restore brings the text
 // back as unsaved changes. A clean quit leaves no backup.
 func TestHotExitRestore(t *testing.T) {
@@ -83,6 +83,94 @@ func TestHotExitRestore(t *testing.T) {
 	tm2.quitDiscard()
 	if left := backupFiles(home); len(left) > 0 {
 		t.Errorf("backup left after a clean quit: %v", left)
+	}
+}
+
+// TestHotExitHangupFlushesLatest: the terminal hangs up right after a
+// keystroke, before the debounced backup runs. SIGHUP goes to the whole
+// process group, as on a dropped SSH connection. The backup must still
+// hold the latest text: termocode flushes it before nvim is gone.
+func TestHotExitHangupFlushesLatest(t *testing.T) {
+	home := t.TempDir()
+	ws := NewRepo(t)
+	tm := Start(t, StartOpts{Home: home, Workspace: ws, Args: []string{"--no-session"}})
+	tm.WaitFor("status bar", bootTimeout, func(ls []string) bool {
+		return mainFrame.Top(ls[0]) && mainFrame.Bottom(ls[len(ls)-1])
+	})
+	tm.settle()
+	tm.OpenFile("notes.txt")
+	tm.WaitText("first note", uiTimeout)
+	tm.Send(KeyEsc)
+	tm.settle()
+	tm.Send("ohangup-marker-7")
+	tm.WaitText("hangup-marker-7", uiTimeout)
+
+	// No wait for the debounced backup: hang up at once.
+	if err := syscall.Kill(-tm.cmd.Process.Pid, syscall.SIGHUP); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-tm.exited:
+	case <-time.After(10 * time.Second):
+		t.Fatalf("termocode did not exit on SIGHUP")
+	}
+	var got string
+	for _, f := range backupFiles(home) {
+		b, _ := os.ReadFile(f)
+		got += string(b)
+	}
+	if !strings.Contains(got, "hangup-marker-7") {
+		t.Fatalf("backup misses the last text; backup files %v hold %q", backupFiles(home), got)
+	}
+}
+
+// TestNvimEndsWithTermocode: nvim runs in its own session (a terminal
+// hangup does not reach it), so nothing kills it with termocode's
+// process group. When termocode dies hard (SIGKILL, no cleanup), nvim
+// must still exit (EOF on its embed pipe) and end its jobs.
+func TestNvimEndsWithTermocode(t *testing.T) {
+	tm := Start(t, StartOpts{Args: []string{"--no-session"},
+		NvimInit: "vim.fn.jobstart({ 'sleep', '300' })\n"})
+	tm.WaitFor("status bar", bootTimeout, func(ls []string) bool {
+		return mainFrame.Top(ls[0]) && mainFrame.Bottom(ls[len(ls)-1])
+	})
+	pgrep := func(args ...string) []string {
+		out, _ := exec.Command("pgrep", args...).Output()
+		return strings.Fields(string(out))
+	}
+	ppid := strconv.Itoa(tm.cmd.Process.Pid)
+	var nvims, jobs []string
+	deadline := time.Now().Add(5 * time.Second)
+	for len(nvims) == 0 || len(jobs) == 0 {
+		if time.Now().After(deadline) {
+			t.Fatalf("nvim %v or its job %v not found", nvims, jobs)
+		}
+		time.Sleep(50 * time.Millisecond)
+		nvims = pgrep("-P", ppid, "-x", "nvim")
+		if len(nvims) == 1 {
+			jobs = pgrep("-P", nvims[0], "-x", "sleep")
+		}
+	}
+
+	if err := tm.cmd.Process.Kill(); err != nil {
+		t.Fatal(err)
+	}
+	<-tm.exited
+	deadline = time.Now().Add(5 * time.Second)
+	for {
+		var left []string
+		for _, p := range append(nvims, jobs...) {
+			if n, _ := strconv.Atoi(p); syscall.Kill(n, 0) == nil {
+				left = append(left, p)
+			}
+		}
+		if len(left) == 0 {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("still running after termocode was killed: %v", left)
+		}
+		time.Sleep(50 * time.Millisecond)
 	}
 }
 

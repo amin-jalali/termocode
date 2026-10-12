@@ -52,9 +52,11 @@ set `persistent_session` to `on`. A crash or a closed window without a
 session is covered by the hot-exit backup of unsaved files
 (`internal/app/hot_exit.go`): nvim writes every modified buffer to
 `~/.local/state/termocode/backup/<key>/<pid>/` a moment after each change
-(our nvim runs with `-n`, so swap files were not an option, and a backup
-written at signal time comes too late when nvim gets the same hangup);
-the next start offers Restore / Discard / Later.
+(our nvim runs with `-n`, so swap files were not an option). On SIGHUP /
+SIGTERM termocode also writes the backup at once, so the last keystrokes
+are kept too: nvim runs in its own session (`internal/nvim/proc_unix.go`),
+so a hangup does not kill it first, and it exits on EOF of its embed pipe
+when termocode dies. The next start offers Restore / Discard / Later.
 
 ## Consequences
 - **+** A dropped SSH connection loses nothing: unsaved text, undo, terminal
