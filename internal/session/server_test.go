@@ -26,6 +26,7 @@ const (
 	envServe        = "TERMOCODE_TEST_SERVE"         // workspace to serve
 	envUI           = "TERMOCODE_TEST_UI"            // sh -c script of the UI
 	envWriteTimeout = "TERMOCODE_TEST_WRITE_TIMEOUT" // clientWriteTimeout
+	envHoldTimeout  = "TERMOCODE_TEST_HOLD_TIMEOUT"  // holdTimeout
 )
 
 // catUI echoes its input. It ignores RepaintSignal like the app does (a
@@ -39,6 +40,9 @@ func TestMain(m *testing.M) {
 	if ws := os.Getenv(envServe); ws != "" {
 		if d, err := time.ParseDuration(os.Getenv(envWriteTimeout)); err == nil {
 			clientWriteTimeout = d
+		}
+		if d, err := time.ParseDuration(os.Getenv(envHoldTimeout)); err == nil {
+			holdTimeout = d
 		}
 		os.Exit(Serve(ws, func() *exec.Cmd {
 			fmt.Fprintln(os.Stderr, serverMarker)
@@ -54,7 +58,8 @@ type rig struct {
 	p       Paths
 	ui      string
 	timeout time.Duration
-	uiPIDs  string // file each UI appends its pid (= process group) to
+	hold    time.Duration // holdTimeout of the server
+	uiPIDs  string        // file each UI appends its pid (= process group) to
 
 	mu    sync.Mutex
 	procs []*exec.Cmd
@@ -114,6 +119,9 @@ func (r *rig) spawn() (*exec.Cmd, error) {
 	cmd.Env = append(os.Environ(), envServe+"="+r.p.Workspace, envUI+"=echo $$ >>"+r.uiPIDs+"; "+r.ui)
 	if r.timeout > 0 {
 		cmd.Env = append(cmd.Env, envWriteTimeout+"="+r.timeout.String())
+	}
+	if r.hold > 0 {
+		cmd.Env = append(cmd.Env, envHoldTimeout+"="+r.hold.String())
 	}
 	cmd.Stdout, cmd.Stderr = logf, logf
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
@@ -344,6 +352,82 @@ func TestFrozenClientDropped(t *testing.T) {
 	}
 }
 
+// TestReattachPassesClientCaps: a client that attaches to a running UI
+// hands its terminal caps to the UI (a file named in its environment, then
+// RepaintSignal). A client without caps (an old one) leaves no stale file
+// from the client before.
+//
+// Output the UI writes before it marks the switch (AttachedSeq with the
+// attach number from the caps) was drawn for the old terminal and never
+// reaches the new client.
+func TestReattachPassesClientCaps(t *testing.T) {
+	r := newRig(t, `F="$`+EnvCapsFile+`"; trap 'if [ -f "$F" ]; then echo stale-output; `+
+		`printf "\033_termocode:attached;%s\033\\\\" "$(sed -n "s/.*\"gen\":\([0-9]*\).*/\1/p" "$F")"; `+
+		`cat "$F"; echo; echo caps-shown; else echo caps-none; fi' USR1; echo ui-up; while :; do sleep 0.02; done`)
+	first := r.ensure()
+	defer first.Close()
+	if err := writeFrame(first, frameHello, encodeHello(80, 24, &ClientCaps{Env: map[string]string{"TERM": "xterm-kitty"}})); err != nil {
+		t.Fatal(err)
+	}
+	readUntil(t, first, "ui-up", 0)
+
+	second := r.ensure()
+	defer second.Close()
+	caps := &ClientCaps{
+		Env:      map[string]string{"TERM": "xterm-second", "COLORTERM": "truecolor"},
+		Graphics: &GraphicsCaps{Protocol: "sixel", CellW: 8, CellH: 16},
+	}
+	if err := writeFrame(second, frameHello, encodeHello(100, 30, caps)); err != nil {
+		t.Fatal(err)
+	}
+	var seen strings.Builder
+	out, ok := readFramesUntil(t, second, func(typ byte, p []byte) bool {
+		if typ == frameOutput {
+			seen.Write(p)
+		}
+		return strings.Contains(seen.String(), "caps-shown")
+	})
+	if !ok {
+		t.Fatalf("no caps-shown; output %q", out)
+	}
+	if strings.Contains(out, "stale-output") || strings.Contains(out, "termocode:attached") {
+		t.Errorf("output from before the switch (or the mark) reached the new client: %q", out)
+	}
+	got, err := ReadCaps(r.p.Caps)
+	if err != nil || got == nil || got.Env["TERM"] != "xterm-second" || got.Graphics == nil || got.Graphics.Protocol != "sixel" {
+		t.Fatalf("caps file = %+v, %v", got, err)
+	}
+
+	old := r.ensure()
+	defer old.Close()
+	hello(t, old) // size only, like an old client
+	readUntil(t, old, "caps-none", 0)
+}
+
+// TestReattachHoldTimeout: a UI that never marks the switch (an older
+// one, or one that is stuck) does not leave the new client blank: after
+// holdTimeout it gets the output and the UI is asked to redraw again.
+func TestReattachHoldTimeout(t *testing.T) {
+	r := newRig(t, "n=0; trap 'n=$((n+1)); echo painted-$n' USR1; echo ui-up; while :; do sleep 0.02; done")
+	r.hold = 200 * time.Millisecond
+	first := r.ensure()
+	defer first.Close()
+	if err := writeFrame(first, frameHello, encodeHello(80, 24, &ClientCaps{})); err != nil {
+		t.Fatal(err)
+	}
+	readUntil(t, first, "ui-up", 0)
+	second := r.ensure()
+	defer second.Close()
+	start := time.Now()
+	if err := writeFrame(second, frameHello, encodeHello(80, 24, &ClientCaps{})); err != nil {
+		t.Fatal(err)
+	}
+	readUntil(t, second, "painted-2", 0)
+	if d := time.Since(start); d < r.hold {
+		t.Errorf("output after %v, before the hold timeout", d)
+	}
+}
+
 // TestKillAfterUIExit: kill when the UI has already exited (a child of
 // it still holds the PTY) ends the session without hanging, and the
 // child does not outlive the session.
@@ -559,7 +643,7 @@ func TestServerDetachRequest(t *testing.T) {
 	})
 
 	srv, cli := testConn(t)
-	if err := s.attach(srv, 80, 24); err != nil {
+	if err := s.attach(srv, 80, 24, nil); err != nil {
 		t.Fatal(err)
 	}
 	var msg string
@@ -588,7 +672,7 @@ func TestServerDetachRequest(t *testing.T) {
 
 	// A new client attaches to the same, still running UI.
 	srv2, cli2 := testConn(t)
-	if err := s.attach(srv2, 80, 24); err != nil {
+	if err := s.attach(srv2, 80, 24, nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(marker, nil, 0o600); err != nil {

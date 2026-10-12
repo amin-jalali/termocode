@@ -265,6 +265,72 @@ func TestSessionTakeover(t *testing.T) {
 	r.waitSocket(false)
 }
 
+// rawOutput is everything the client's terminal received so far.
+func (tm *Term) rawOutput() string {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	return tm.raw.String()
+}
+
+// TestSessionReattachNewTerminalCaps: the UI follows the terminal that
+// attaches, not the one it started in. A truecolor terminal starts the
+// session; a 256-colour terminal attaches next and must get 256-colour
+// SGR only; a kitty terminal then gets the welcome logo as a kitty image.
+//
+// TERM=xterm-256color without COLORTERM alone still means truecolor
+// (theme.DetectProfile: COLORTERM is rarely forwarded over SSH), so the
+// 256-colour terminal also sets TERMOCODE_COLORS=256, as a user of such
+// a terminal does.
+func TestSessionReattachNewTerminalCaps(t *testing.T) {
+	r := newSessionRig(t)
+	truecolor := regexp.MustCompile(`\x1b\[[0-9;]*[34]8;2;`)
+	color256 := regexp.MustCompile(`\x1b\[[0-9;]*[34]8;5;`)
+	// A kitty image put on screen (not the client's own graphics probe).
+	const kittyImage = "\x1b_Ga=T"
+
+	a := r.start() // TERM=xterm-256color COLORTERM=truecolor
+	r.waitSocket(true)
+	if !truecolor.MatchString(a.rawOutput()) {
+		t.Fatalf("first terminal: no truecolor SGR")
+	}
+	a.Disconnect()
+
+	env := append(append([]string(nil), r.env...), "COLORTERM=", "TERM=xterm-256color", "TERMOCODE_COLORS=256")
+	b := Start(t, StartOpts{Home: r.home, Workspace: r.ws, Env: env})
+	b.WaitFor("status bar", bootTimeout, func(ls []string) bool {
+		return mainFrame.Top(ls[0]) && mainFrame.Bottom(ls[len(ls)-1])
+	})
+	b.settle()
+	b.CheckScreen("256-colour reattach", mainFrame)
+	out := b.rawOutput()
+	if truecolor.MatchString(out) {
+		t.Errorf("24-bit SGR sent to a 256-colour terminal: %q", truecolor.FindString(out))
+	}
+	if !color256.MatchString(out) {
+		t.Errorf("no 256-colour SGR after the 256-colour terminal attached")
+	}
+	if strings.Contains(out, kittyImage) {
+		t.Errorf("kitty graphics sent to a terminal without them")
+	}
+	b.Disconnect()
+
+	env = append(append([]string(nil), r.env...), "TERM=xterm-kitty")
+	c := Start(t, StartOpts{Home: r.home, Workspace: r.ws, Env: env})
+	c.WaitFor("status bar", bootTimeout, func(ls []string) bool {
+		return mainFrame.Top(ls[0]) && mainFrame.Bottom(ls[len(ls)-1])
+	})
+	c.settle()
+	out = c.rawOutput()
+	if !truecolor.MatchString(out) {
+		t.Errorf("no truecolor SGR on the kitty terminal")
+	}
+	if !strings.Contains(out, kittyImage) {
+		t.Errorf("welcome logo not drawn as a kitty image after attach")
+	}
+	c.Quit()
+	r.waitSocket(false)
+}
+
 // TestSessionNoSessionFlag: --no-session runs the UI directly.
 func TestSessionNoSessionFlag(t *testing.T) {
 	r := newSessionRig(t)
