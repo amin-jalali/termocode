@@ -59,6 +59,11 @@ func (m Model) ExplorerCursor() (string, []string) {
 // For tests.
 func (m Model) FocusedEditor() bool { return m.focus == FocusEditor }
 
+// PrepareReload does what Reload Window does to the unsaved buffers
+// before it re-executes termocode (tests cannot re-exec): back them up for
+// the new image. Driver.Restart then plays the new image. For tests.
+func (m Model) PrepareReload() { m.flushHotExitForReload() }
+
 // EditorPaneSize is the nvim grid size ("COLSxROWS") the layout asked for
 // last. For tests.
 func (m Model) EditorPaneSize() string {
