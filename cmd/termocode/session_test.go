@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestWantSession(t *testing.T) {
 	ssh := map[string]string{"SSH_CONNECTION": "1.2.3.4 5 6.7.8.9 22"}
@@ -38,5 +41,25 @@ func TestExtractFlag(t *testing.T) {
 	}
 	if _, ok := extractFlag([]string{"dir"}, "--no-session"); ok {
 		t.Error("found a flag that is not there")
+	}
+}
+
+func TestAttachRefusal(t *testing.T) {
+	env := func(v string) func(string) string {
+		return func(k string) string {
+			if k == "TERMOCODE_SESSION" {
+				return v
+			}
+			return ""
+		}
+	}
+	if msg := attachRefusal(env(""), "abc"); msg != "" {
+		t.Errorf("outside a session: %q", msg)
+	}
+	if msg := attachRefusal(env("abc"), "abc"); !strings.Contains(msg, "already inside this session") {
+		t.Errorf("own session: %q", msg)
+	}
+	if msg := attachRefusal(env("def"), "abc"); !strings.Contains(msg, "inside another session") {
+		t.Errorf("other session: %q", msg)
 	}
 }
