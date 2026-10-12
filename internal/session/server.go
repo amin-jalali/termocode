@@ -27,6 +27,12 @@ const RepaintSignal = syscall.SIGUSR1
 // frozen SSH link) instead of letting the UI block on its output.
 const clientWriteTimeout = 5 * time.Second
 
+// Messages a client prints when the server lets it go.
+const (
+	msgTakenOver = "termocode: detached, the session was attached from another terminal"
+	msgDetached  = "termocode: detached, the session keeps running. Run `termocode attach` to go back."
+)
+
 // Info describes a running session (`termocode sessions`).
 type Info struct {
 	Workspace string    `json:"workspace"`
@@ -49,6 +55,7 @@ type Server struct {
 	cmd     *exec.Cmd
 	ptmx    *os.File
 	modes   *Modes
+	detach  detachFilter
 	started time.Time
 	exiting bool
 	done    chan int // UI exit code
@@ -194,11 +201,7 @@ func (s *Server) attach(c *net.UnixConn, cols, rows int) error {
 		go s.writeInfo()
 		return nil
 	}
-	if old := s.client; old != nil {
-		s.sendLocked(frameOutput, s.modes.Reset())
-		s.sendLocked(frameDetached, []byte("termocode: detached, the session was attached from another terminal"))
-		_ = old.Close()
-	}
+	s.dropLocked(msgTakenOver)
 	s.client = c
 	s.sendLocked(frameOutput, s.modes.Replay())
 	_ = pty.Setsize(s.ptmx, size)
@@ -206,6 +209,20 @@ func (s *Server) attach(c *net.UnixConn, cols, rows int) error {
 	_ = s.cmd.Process.Signal(RepaintSignal)
 	go s.writeInfo()
 	return nil
+}
+
+// dropLocked lets the current client go: its terminal is put back to
+// normal and it prints msg. The session keeps running. Holds s.mu.
+func (s *Server) dropLocked(msg string) {
+	old := s.client
+	if old == nil {
+		return
+	}
+	s.sendLocked(frameOutput, s.modes.Reset())
+	s.sendLocked(frameDetached, []byte(msg))
+	_ = old.Close()
+	s.client = nil
+	go s.writeInfo()
 }
 
 // sendLocked writes a frame to the current client; a client that fails
@@ -258,6 +275,7 @@ func (s *Server) readClient(c *net.UnixConn) {
 
 // pump relays UI output to the client (or drops it while detached; the
 // UI redraws on the next attach) and ends the session when the UI exits.
+// A DetachSeq in the output detaches the client.
 func (s *Server) pump() {
 	readDone := make(chan struct{})
 	go func() {
@@ -266,9 +284,15 @@ func (s *Server) pump() {
 		for {
 			n, err := s.ptmx.Read(buf)
 			if n > 0 {
+				out, detach := s.detach.Filter(buf[:n])
 				s.mu.Lock()
-				s.modes.Feed(buf[:n])
-				s.sendLocked(frameOutput, buf[:n])
+				s.modes.Feed(out)
+				if len(out) > 0 {
+					s.sendLocked(frameOutput, out)
+				}
+				if detach {
+					s.dropLocked(msgDetached)
+				}
 				s.mu.Unlock()
 			}
 			if err != nil {
