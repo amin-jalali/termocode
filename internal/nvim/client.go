@@ -25,6 +25,15 @@ type ReadyMsg struct{}
 // ErrMsg wraps a fatal nvim error.
 type ErrMsg struct{ Err error }
 
+// ExitedMsg reports that the nvim process went away on its own (a crash,
+// the OOM killer, a kill, :qa typed in nvim). Client is the client that
+// lost its nvim, so a message of an old, replaced client can be told
+// apart. It is never sent after Close: a normal quit shows no error.
+type ExitedMsg struct {
+	Client *Client
+	Err    error // why the RPC connection ended; nil on a plain EOF
+}
+
 // Client wraps a spawned `nvim --embed` subprocess and exposes its UI events
 // as a stream of tea.Msg values.
 type Client struct {
@@ -48,6 +57,10 @@ type Client struct {
 	closeOnce sync.Once
 	closeErr  error
 	done      chan struct{} // closed by Close; stops promptGuard
+	// exited is closed when the RPC connection to nvim ends: nvim quit
+	// or died, or Close ran. exitErr (set before) says why.
+	exited    chan struct{}
+	exitErr   error
 	guardOnce sync.Once
 	closed    atomic.Bool
 }
@@ -73,6 +86,7 @@ func New() (*Client, error) {
 		events:     make(chan tea.Msg, 1024),
 		mouseQueue: make(chan mouseEvent, 256),
 		done:       make(chan struct{}),
+		exited:     make(chan struct{}),
 	}
 	go c.mouseDispatcher()
 
@@ -87,6 +101,8 @@ func New() (*Client, error) {
 		// ~/.local/share/termocode/tools/bin; put that dir first on the
 		// embedded nvim's PATH so vim.lsp / nvim-dap find them.
 		gonvim.ChildProcessEnv(lspinstall.EnvWithToolsBin()),
+		// We run Serve ourselves (see serve) to learn when nvim is gone.
+		gonvim.ChildProcessServe(false),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("spawn nvim: %w", err)
@@ -107,8 +123,28 @@ func New() (*Client, error) {
 		_ = nv.Close()
 		return nil, fmt.Errorf("register redraw handler: %w", err)
 	}
+	go c.serve()
 
 	return c, nil
+}
+
+// serve reads nvim's RPC stream until it ends. That happens when nvim
+// exits for any reason (its stdout closes) or on Close. Every call still
+// waiting then fails with an error and later calls fail at once, so no
+// call hangs on a dead nvim. Next reports the end as ExitedMsg.
+func (c *Client) serve() {
+	c.exitErr = c.nv.Serve()
+	close(c.exited)
+}
+
+// Exited reports whether the RPC connection to nvim has ended.
+func (c *Client) Exited() bool {
+	select {
+	case <-c.exited:
+		return true
+	default:
+		return false
+	}
 }
 
 // Attach attaches as a UI client with ext_linegrid and rgb enabled, then
@@ -1212,10 +1248,17 @@ func (c *Client) Close() error {
 // flowing.
 func (c *Client) Next() tea.Cmd {
 	return func() tea.Msg {
-		msg, ok := <-c.events
-		if !ok {
-			return nil
+		select {
+		case msg, ok := <-c.events:
+			if !ok {
+				return nil
+			}
+			return msg
+		case <-c.exited:
+			if c.closed.Load() {
+				return nil // Close: a normal quit, not a crash
+			}
+			return ExitedMsg{Client: c, Err: c.exitErr}
 		}
-		return msg
 	}
 }
