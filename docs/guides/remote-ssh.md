@@ -30,6 +30,14 @@ are two sessions.
 
 Closing the terminal window or losing the connection does **not** end it.
 
+**Session: Detach** (command palette, or bind `DetachSession` in
+`keymap.json`) gives you back your shell and keeps the session running,
+like `tmux detach`. Run `termocode attach` to go back. Outside a session
+it only says "Not in a session".
+
+`termocode attach` refuses to run inside a session (for example in its own
+terminal panel): the session would show inside itself.
+
 ## Commands
 
 | Command | What it does |
@@ -107,6 +115,10 @@ belongs to another user or is open to others.
 :   `termocode kill` ends it. If that does not work, the server log is in
     the socket folder (`<key>.log`). The log is removed when a session ends
     normally; it stays when the server crashed.
+
+**"disconnected, the session keeps running"**
+:   The session stopped waiting for this terminal: it read nothing for 5
+    seconds (a frozen connection). Run `termocode attach` to go back.
 
 **I use tmux already**
 :   With the default `auto`, termocode does not start its own session inside

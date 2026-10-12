@@ -326,6 +326,7 @@ var actionNames = map[Action]string{
 	ActionTerminalPrevTab:    "TerminalPrevTab",
 	ActionNextSearchResult:   "NextSearchResult",
 	ActionPrevSearchResult:   "PrevSearchResult",
+	ActionDetachSession:      "DetachSession",
 }
 
 // ActionName returns the stable string name for an Action. Empty string

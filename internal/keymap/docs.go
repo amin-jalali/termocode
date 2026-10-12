@@ -33,6 +33,7 @@ var actionInfo = map[Action]ActionInfo{
 	ActionOpenRecent:     {"File", "Pick a recently opened file."},
 	ActionToggleAutoSave: {"File", "Turn auto save on or off."},
 	ActionReloadBuffer:   {"File", "Reload the active file from disk."},
+	ActionDetachSession:  {"File", "Detach this terminal from the persistent session; it keeps running."},
 
 	ActionCopy:                     {"Editor", "Copy the selection to the clipboard."},
 	ActionCut:                      {"Editor", "Cut the selection to the clipboard."},

@@ -156,6 +156,7 @@ You can give these a key in `keymap.json` (see below), or run them from the comm
 | --- | --- | --- |
 | `CloseSplit` | View | Close the active split. |
 | `CopyFileRef` | Editor | Copy a file:line reference for the cursor position. |
+| `DetachSession` | File | Detach this terminal from the persistent session; it keeps running. |
 | `DiscardHunk` | Git | Discard the hunk at the cursor. |
 | `DuplicateLine` | Editor | Duplicate the current line. |
 | `FileHistory` | Git | Show the commit history of the active file. |

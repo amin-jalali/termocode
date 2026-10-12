@@ -47,3 +47,21 @@ func extractFlag(args []string, flag string) ([]string, bool) {
 	}
 	return out, found
 }
+
+// attachRefusal returns why this terminal must not attach to the session
+// with key, or "" when it may. Inside a session (a shell in its terminal
+// panel) attaching to the same session would show the session inside
+// itself, and every key would loop back to it. Attaching to another
+// folder's session would nest one session in another, so it is refused
+// too: detach first, then attach from the outer terminal.
+func attachRefusal(getenv func(string) string, key string) string {
+	inside := getenv(session.EnvSession)
+	switch {
+	case inside == "":
+		return ""
+	case inside == key:
+		return "termocode: already inside this session (this is its terminal panel)"
+	default:
+		return "termocode: cannot attach from inside another session; detach it first (Session: Detach)"
+	}
+}

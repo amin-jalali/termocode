@@ -325,6 +325,73 @@ func TestSessionStaleSocket(t *testing.T) {
 	}
 }
 
+// TestSessionDetachCommand: "Session: Detach" gives the terminal back and
+// keeps the session; the next attach finds the same unsaved text.
+func TestSessionDetachCommand(t *testing.T) {
+	r := newSessionRig(t)
+	tm := r.start()
+	r.waitSocket(true)
+	tm.OpenFile("notes.txt")
+	tm.WaitText("first note", uiTimeout)
+	tm.Send(KeyEsc)
+	tm.settle()
+	tm.Type("odetach-marker-9")
+	tm.WaitText("detach-marker-9", uiTimeout)
+	tm.Send(KeyEsc)
+	tm.settle()
+
+	tm.Palette("Session: Detach")
+	select {
+	case <-tm.exited:
+	case <-time.After(10 * time.Second):
+		t.Fatalf("client still running after Session: Detach\n%s", tm.Screen())
+	}
+	if tm.exitErr != nil {
+		t.Errorf("client exit: %v", tm.exitErr)
+	}
+	tm.WaitText("the session keeps running", uiTimeout)
+	if tm.Has("termocode:detach") {
+		t.Errorf("the detach request reached the terminal:\n%s", tm.Screen())
+	}
+	tm.mu.Lock()
+	alt, mouse := tm.em.IsAltScreen(), tm.modes["?1003"]
+	tm.mu.Unlock()
+	if alt || mouse {
+		t.Errorf("terminal not restored after detach: alt=%v mouse=%v", alt, mouse)
+	}
+	out, err := r.output("sessions")
+	if err != nil || !strings.Contains(out, r.ws) || !strings.Contains(out, "detached") {
+		t.Errorf("sessions after detach: %v\n%s", err, out)
+	}
+
+	tm2 := Start(t, StartOpts{Home: r.home, Workspace: r.ws, Env: r.env, Args: []string{"attach"}})
+	tm2.WaitText("detach-marker-9", bootTimeout)
+	tm2.settle()
+	tm2.quitDiscard()
+	r.waitSocket(false)
+}
+
+// TestSessionAttachInsideRefused: `termocode attach` in the session's own
+// terminal panel must not attach the session to itself.
+func TestSessionAttachInsideRefused(t *testing.T) {
+	r := newSessionRig(t)
+	tm := r.start()
+	r.waitSocket(true)
+	tm.OpenTerminal()
+	tm.Type(binPath + " attach; echo rc-$?\r")
+	tm.WaitText("already inside this session", uiTimeout)
+	tm.WaitText("rc-1", uiTimeout)
+	select {
+	case <-tm.exited:
+		t.Fatalf("the outer client was taken over\n%s", tm.Screen())
+	default:
+	}
+	tm.Send(KeyCtrlT)
+	tm.settle()
+	tm.Quit()
+	r.waitSocket(false)
+}
+
 // TestSessionServerKilledRestore: the session server dies hard (SIGKILL,
 // no cleanup). The UI gets a hangup with its PTY, and the next start
 // offers the hot-exit backup and restores the unsaved text.
