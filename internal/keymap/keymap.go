@@ -136,6 +136,10 @@ const (
 	// has run yet.
 	ActionNextSearchResult
 	ActionPrevSearchResult
+	// ActionDetachSession detaches this terminal from a persistent session
+	// (the session keeps running; `termocode attach` comes back). No
+	// default key; palette "Session: Detach".
+	ActionDetachSession
 )
 
 type KeyMap struct {
