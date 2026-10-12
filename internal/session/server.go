@@ -86,7 +86,15 @@ func Serve(workspace string, uiCmd func() *exec.Cmd) int {
 
 	// No terminal of our own (setsid); SIGTERM ends the session the same
 	// way `termocode kill` does.
-	signal.Ignore(syscall.SIGHUP, syscall.SIGINT, syscall.SIGPIPE)
+	// Caught and dropped, not signal.Ignore: an ignored signal stays
+	// ignored in the UI and everything it starts (a UI deaf to SIGHUP
+	// outlives a dead server; SIGPIPE breaks pipes in its shells).
+	drop := make(chan os.Signal, 1)
+	signal.Notify(drop, syscall.SIGHUP, syscall.SIGINT, syscall.SIGPIPE)
+	go func() {
+		for range drop {
+		}
+	}()
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM)
 	go func() {
@@ -97,6 +105,13 @@ func Serve(workspace string, uiCmd func() *exec.Cmd) int {
 
 	go s.acceptLoop(ln)
 	code := <-s.done
+	// Children the UI left behind (it leads its own process group on the
+	// PTY) end with the session.
+	s.mu.Lock()
+	if s.cmd != nil && s.cmd.Process != nil {
+		_ = syscall.Kill(-s.cmd.Process.Pid, syscall.SIGKILL)
+	}
+	s.mu.Unlock()
 	return code
 }
 
