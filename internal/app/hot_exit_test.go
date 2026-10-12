@@ -1,11 +1,15 @@
 package app
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
 	"testing"
+	"time"
+
+	"github.com/amin-jalali/termocode/internal/clock"
 )
 
 func writeBak(t *testing.T, dir, name, body string) {
@@ -81,5 +85,66 @@ func TestHotExitRoot(t *testing.T) {
 	}
 	if filepath.Dir(got) != "/state/termocode/backup" || len(filepath.Base(got)) != 16 {
 		t.Errorf("root %s", got)
+	}
+}
+
+// TestCollectHotBackupsAgesOut: backups nobody restored ("Later") do not
+// pile up in previous/ forever. Older than 7 days: deleted. More than 50:
+// only the newest 50 stay.
+func TestCollectHotBackupsAgesOut(t *testing.T) {
+	now := time.Date(2026, 10, 12, 12, 0, 0, 0, time.UTC)
+	old := clock.Now
+	clock.Now = func() time.Time { return now }
+	t.Cleanup(func() { clock.Now = old })
+
+	root := t.TempDir()
+	prev := filepath.Join(root, "previous")
+	age := func(name string, d time.Duration) {
+		t.Helper()
+		if err := os.Chtimes(filepath.Join(prev, name), now.Add(-d), now.Add(-d)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeBak(t, prev, "old.bak", "/w/old.txt\neight days")
+	age("old.bak", 8*24*time.Hour)
+	writeBak(t, prev, "week.bak", "/w/week.txt\nsix days")
+	age("week.bak", 6*24*time.Hour)
+	got, err := collectHotBackups(root, 1, func(int) bool { return false })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].Path != "/w/week.txt" {
+		t.Errorf("got %+v, want only week.txt", got)
+	}
+	if _, err := os.Stat(filepath.Join(prev, "old.bak")); !os.IsNotExist(err) {
+		t.Errorf("8-day-old backup not deleted: %v", err)
+	}
+
+	// The newest hotExitMaxKept stay; the oldest go.
+	for i := range hotExitMaxKept + 5 {
+		name := fmt.Sprintf("n%03d.bak", i)
+		writeBak(t, prev, name, fmt.Sprintf("/w/n%03d.txt\nx", i))
+		age(name, time.Duration(i)*time.Minute)
+	}
+	got, err = collectHotBackups(root, 1, func(int) bool { return false })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != hotExitMaxKept {
+		t.Fatalf("kept %d backups, want %d", len(got), hotExitMaxKept)
+	}
+	for _, b := range got {
+		if b.Path == "/w/week.txt" || b.Path >= fmt.Sprintf("/w/n%03d.txt", hotExitMaxKept) {
+			t.Errorf("kept an old backup %s", b.Path)
+		}
+	}
+
+	// All aged out: previous/ itself is gone.
+	now = now.Add(30 * 24 * time.Hour)
+	if got, err := collectHotBackups(root, 1, func(int) bool { return false }); err != nil || len(got) != 0 {
+		t.Errorf("after 30 days: %+v %v", got, err)
+	}
+	if _, err := os.Stat(prev); !os.IsNotExist(err) {
+		t.Errorf("empty previous/ not removed: %v", err)
 	}
 }
