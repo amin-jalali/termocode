@@ -72,6 +72,7 @@ func (m *Model) sendNvimResize(w, h int) {
 		return
 	}
 	_ = m.nvim.Resize(w, h)
+	m.evenDiffPanes()
 	m.reapplyTerminalSplit()
 }
 
@@ -110,7 +111,20 @@ func (m *Model) resizeIdle(now time.Time) time.Duration {
 func (m *Model) onResizeFlush() {
 	if w, h, ok := m.resizeT.flush(m.resizeIdle(time.Now()), time.Now()); ok && m.nvim != nil {
 		_ = m.nvim.Resize(w, h)
+		m.evenDiffPanes()
 		m.reapplyTerminalSplit()
+	}
+}
+
+// evenDiffPanes gives the side-by-side diff's two panes equal widths
+// again after nvim's grid was resized. nvim takes the lost columns from
+// the right window only, so opening the AI panel (or a narrower window)
+// squeezed the working pane out of sight. The terminal split height is
+// set again right after (reapplyTerminalSplit), so equalizing heights
+// here does no harm.
+func (m *Model) evenDiffPanes() {
+	if m.gitDiffActive {
+		_ = m.nvim.Command("wincmd =")
 	}
 }
 

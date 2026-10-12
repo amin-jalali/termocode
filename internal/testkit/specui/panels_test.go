@@ -103,3 +103,21 @@ func TestOutputAndDebugConsoleTabs(t *testing.T) {
 		t.Errorf("panel bar lost the Output tab: %q", bar)
 	}
 }
+
+// Spec: Given the Problems panel and the AI chat panel open on the right,
+// when the user clicks the ⊟ (collapse all) chip at the right end of the
+// panel header, then the file groups collapse — the chip is hit where it
+// is drawn, at the editor's narrower width.
+func TestProblemsCollapseChipWithAIPanel(t *testing.T) {
+	d := diagDriver(t, nil)
+	mustSee(t, d, "E 1  W 1")
+	d.Key("alt+a")
+	mustSee(t, d, "AI CHAT")
+	d.Key("esc")
+	d.Palette("problems-panel")
+	mustSee(t, d, "spec warning there")
+	clickText(t, d, "⊟")
+	if !d.WaitFor(func() bool { return !strings.Contains(screen(d), "spec warning there") }, wait) {
+		t.Fatalf("⊟ click did not collapse the problems:\n%s", screen(d))
+	}
+}

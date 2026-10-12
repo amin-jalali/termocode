@@ -768,20 +768,10 @@ func (m Model) terminalTabBarRowAbsolute() int {
 	return m.h - 2 - m.integratedTerminalRows()
 }
 
-// editorPaneWidth duplicates the small bit of math from view.go::renderBase
-// that derives the editor pane's width from the global geometry. Pulled out
-// here so the terminal tab bar / mouse hit-test can share the same source
-// of truth without re-deriving it inline in three places.
-func (m Model) editorPaneWidth() int {
-	w := m.w - 4 - 0 // activity.Width is 4, scrollbar is 0
-	if m.showExp {
-		w -= m.explorerWidth
-	}
-	if w < 1 {
-		w = 1
-	}
-	return w
-}
+// editorPaneWidth is the editor pane's drawn width (see editorPaneLayout).
+// It used to leave out the AI panel, so with the panel open the bottom
+// panel's right-hand controls were hit-tested past where they are drawn.
+func (m Model) editorPaneWidth() int { return m.editorPaneLayout().W }
 
 // ── Tab-bar render ────────────────────────────────────────────────────────
 //
@@ -1200,8 +1190,8 @@ func (m Model) terminalTabBarHitTest(absX, absY int) (terminalTabBarHit, int) {
 	if y < 0 || absY != y {
 		return terminalHitNone, -1
 	}
-	edPaneW := m.editorPaneWidth()
-	editorStart := m.w - edPaneW
+	pane := m.editorPaneLayout()
+	edPaneW, editorStart := pane.W, pane.X
 	localX := absX - editorStart
 	if localX < 0 || localX >= edPaneW {
 		return terminalHitNone, -1

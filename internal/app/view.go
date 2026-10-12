@@ -154,11 +154,8 @@ func (m Model) overlayToastsInEditor(base string) string {
 	if m.toast.Empty() {
 		return base
 	}
-	edPaneW := m.w - activity.Width - editorScrollbarWidth - m.actionsColumnWidth()
-	if m.showExp {
-		edPaneW -= m.explorerWidth
-	}
-	editorStart := m.w - edPaneW - m.actionsColumnWidth()
+	pane := m.editorPaneLayout()
+	edPaneW, editorStart := pane.W, pane.X
 	if m.h <= toastCompactMaxH || edPaneW < toastCompactMinW {
 		return m.overlayCompactToast(base, editorStart, edPaneW)
 	}
@@ -383,42 +380,15 @@ func (m Model) renderBase() string {
 	}
 
 	var editorRegion string
-	// chromeRows accounts for everything that lives ABOVE the editor content
-	// inside the editor pane. Stack order, top-to-bottom:
-	//   replacebar (optional, 2 rows)
-	//   tabs (always, +1)
-	//   breadcrumbs (optional, +1)
-	//   sticky-scroll (optional, +1)
-	//   editor content (consumes the remainder)
-	//
-	// The find bar no longer reserves a chrome row — it's now a compact
-	// floating panel that gets spliced onto the top-right of the editor
-	// content area (see overlayFindBarInEditor below).
-	chromeRows := m.tabs.Height() // tabs (2 rows: accent strip + body)
-	if m.replaceOpen {
-		chromeRows += 2 // replacebar renders two rows
-	}
-	// Breadcrumbs row now carries the function signature inline (with syntax
-	// colours) instead of using a separate sticky-scroll row — saves one
-	// chrome row.
+	// Editor pane geometry (width between sidebar and AI panel; content
+	// height below replace bar, tabs and breadcrumbs). The mouse hit tests
+	// use the same editorPaneLayout, so clicks match what is drawn.
+	// The find bar is a floating panel spliced onto the top-right of the
+	// content area (see overlayFindBarInEditor), not a chrome row.
+	pane := m.editorPaneLayout()
+	edPaneW, editorH := pane.W, pane.H
 	hasBreadcrumbs := len(m.breadcrumbs) > 0 || m.stickyContext != ""
-	if hasBreadcrumbs {
-		chromeRows++
-	}
-	editorH := bodyH - chromeRows
-	if editorH < 1 {
-		editorH = 1
-	}
-	// Editor pane width = total - activity bar - sidebar (if shown) -
-	// scrollbar - right-side actions column (if pinned & open).
 	actionsColW := m.actionsColumnWidth()
-	edPaneW := m.w - activity.Width - editorScrollbarWidth - actionsColW
-	if m.showExp {
-		edPaneW -= m.explorerWidth
-	}
-	if edPaneW < 1 {
-		edPaneW = 1
-	}
 
 	var editorContent string
 	// The welcome screen shows only on a truly empty editor. During a Source
@@ -595,29 +565,11 @@ func (m Model) overlayFindBarInEditor(base string) string {
 		return base
 	}
 
-	// Recompute the editor pane's geometry — same recipe as renderBase so
-	// the splice column is exactly aligned with what got composed.
-	actionsColW := m.actionsColumnWidth()
-	edPaneW := m.w - activity.Width - editorScrollbarWidth - actionsColW
-	if m.showExp {
-		edPaneW -= m.explorerWidth
-	}
-	if edPaneW < 1 {
-		edPaneW = 1
-	}
-	editorStart := m.w - edPaneW - actionsColW
-
-	// Top of the editor content area: replacebar (if open) + tabs +
-	// breadcrumbs (if any). We want the find panel to overlay the editor
+	// Same editor pane geometry renderBase composed, so the splice
+	// column is exactly aligned. The find panel overlays the editor
 	// content (NOT the chrome above it).
-	topRow := 0
-	if m.replaceOpen {
-		topRow += 2
-	}
-	topRow += m.tabs.Height()
-	if len(m.breadcrumbs) > 0 || m.stickyContext != "" {
-		topRow++
-	}
+	pane := m.editorPaneLayout()
+	edPaneW, editorStart, topRow := pane.W, pane.X, pane.Top
 	// Hover 1 row down from the top of the editor body so the panel feels
 	// like it floats inside the editor (à la VS Code) rather than sitting
 	// flush against the breadcrumbs row.
@@ -2098,28 +2050,10 @@ func (m Model) overlayPreferredActionHint(base string) string {
 		hintFg.Render("Apply: "+applyKey) + chipBg.Render(" ")
 	chipW := lipgloss.Width(body)
 
-	// Editor pane geometry — same recipe as renderBase / overlayToastsInEditor
-	// so the splice column lands inside the editor.
-	actionsColW := m.actionsColumnWidth()
-	edPaneW := m.w - activity.Width - editorScrollbarWidth - actionsColW
-	if m.showExp {
-		edPaneW -= m.explorerWidth
-	}
-	if edPaneW < 1 {
-		return base
-	}
-	editorStart := m.w - edPaneW - actionsColW
-
-	// Compute chrome rows above the editor body.
-	chrome := 0
-	if m.replaceOpen {
-		chrome += 2
-	}
-	chrome += m.tabs.Height()
-	if len(m.breadcrumbs) > 0 || m.stickyContext != "" {
-		chrome++
-	}
-	editorTop := chrome
+	// Same editor pane geometry renderBase composed, so the splice
+	// column lands inside the editor.
+	pane := m.editorPaneLayout()
+	edPaneW, editorStart, editorTop := pane.W, pane.X, pane.Top
 	editorBottom := m.h - 2 // status bar lives on the last row; bottom-1 is our floor
 	if editorBottom <= editorTop {
 		return base
