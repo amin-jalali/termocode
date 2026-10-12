@@ -24,8 +24,9 @@ import (
 const RepaintSignal = syscall.SIGUSR1
 
 // clientWriteTimeout drops a client whose connection stopped reading (a
-// frozen SSH link) instead of letting the UI block on its output.
-const clientWriteTimeout = 5 * time.Second
+// frozen SSH link) instead of letting the UI block on its output. A
+// variable so tests can make it short.
+var clientWriteTimeout = 5 * time.Second
 
 // Info describes a running session (`termocode sessions`).
 type Info struct {
@@ -68,6 +69,7 @@ func Serve(workspace string, uiCmd func() *exec.Cmd) int {
 		return 0 // another server owns this workspace
 	}
 	defer lock.Close()
+	truncateOwnLog(p)
 	// We hold the lock, so a socket left on disk is stale.
 	_ = os.Remove(p.Socket)
 	old := unix.Umask(0o177)
@@ -98,10 +100,19 @@ func Serve(workspace string, uiCmd func() *exec.Cmd) int {
 	return code
 }
 
+// cleanup removes the session files when the session ends normally.
+// The lock goes too: we still hold it, and lockFile checks that the file
+// it locked is still the one on disk. Only a crashed server leaves its
+// log (and lock) behind.
 func (s *Server) cleanup(ln *net.UnixListener) {
+	s.mu.Lock()
+	s.exiting = true // no more writeInfo
 	_ = ln.Close()
 	_ = os.Remove(s.paths.Socket)
 	_ = os.Remove(s.paths.Info)
+	_ = os.Remove(s.paths.Log)
+	_ = os.Remove(s.paths.Lock)
+	s.mu.Unlock()
 }
 
 func (s *Server) acceptLoop(ln *net.UnixListener) {
@@ -161,6 +172,10 @@ func (s *Server) handle(c *net.UnixConn) {
 func (s *Server) info() Info {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.infoLocked()
+}
+
+func (s *Server) infoLocked() Info {
 	in := Info{Workspace: s.paths.Workspace, PID: os.Getpid(), Started: s.started, Attached: s.client != nil}
 	if s.cmd != nil && s.cmd.Process != nil {
 		in.UIPID = s.cmd.Process.Pid
@@ -168,8 +183,15 @@ func (s *Server) info() Info {
 	return in
 }
 
+// writeInfo writes the info file, unless the session is ending (a late
+// write would leave the file behind after cleanup).
 func (s *Server) writeInfo() {
-	b, _ := json.MarshalIndent(s.info(), "", "  ")
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.exiting {
+		return
+	}
+	b, _ := json.MarshalIndent(s.infoLocked(), "", "  ")
 	_ = os.WriteFile(s.paths.Info, b, 0o600)
 }
 
@@ -309,7 +331,10 @@ func (s *Server) terminate() {
 	cmd := s.cmd
 	s.mu.Unlock()
 	if cmd == nil || cmd.Process == nil {
-		s.done <- 0
+		select {
+		case s.done <- 0:
+		default: // already ending (a second kill)
+		}
 		return
 	}
 	_ = cmd.Process.Signal(syscall.SIGTERM)
@@ -319,26 +344,66 @@ func (s *Server) terminate() {
 	}()
 }
 
-// lockFile takes an exclusive, non-blocking flock on path. The lock lives
-// as long as the returned file is open (and dies with the process).
+// lockFile takes an exclusive, non-blocking flock on path, creating the
+// file. The lock lives as long as the returned file is open (and dies
+// with the process).
 func lockFile(path string) (*os.File, error) {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
-	if err != nil {
-		return nil, err
-	}
-	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
-		_ = f.Close()
-		return nil, err
-	}
-	return f, nil
+	return flockPath(path, true)
 }
 
-// locked reports whether a live server holds the workspace lock.
+// flockPath locks path. The holder may remove the file before it lets go
+// (cleanup), so a lock on a file that is no longer at path is worth
+// nothing: try again. Without create, a missing file is os.ErrNotExist.
+func flockPath(path string, create bool) (*os.File, error) {
+	flag := os.O_RDWR
+	if create {
+		flag |= os.O_CREATE
+	}
+	for range 10 {
+		f, err := os.OpenFile(path, flag, 0o600)
+		if err != nil {
+			return nil, err
+		}
+		if err := unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
+			_ = f.Close()
+			return nil, err
+		}
+		fi, ferr := f.Stat()
+		pi, perr := os.Stat(path)
+		if ferr == nil && perr == nil && os.SameFile(fi, pi) {
+			return f, nil
+		}
+		_ = f.Close()
+	}
+	return nil, errors.New("session: the lock file keeps changing")
+}
+
+// locked reports whether a live server holds the workspace lock. It
+// never creates the lock file.
 func locked(path string) bool {
-	f, err := lockFile(path)
+	f, err := flockPath(path, false)
 	if err != nil {
 		return !errors.Is(err, os.ErrNotExist)
 	}
 	_ = f.Close()
 	return false
+}
+
+// OpenLog opens the server log for the server's output. It appends: a
+// second server started at the same moment must not wipe the log of the
+// one that runs. The server that gets the lock empties it (Serve).
+func OpenLog(p Paths) (*os.File, error) {
+	return os.OpenFile(p.Log, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+}
+
+// truncateOwnLog empties the log when it is our stderr: a new session
+// starts a new log.
+func truncateOwnLog(p Paths) {
+	fi, err := os.Stderr.Stat()
+	if err != nil {
+		return
+	}
+	if li, err := os.Stat(p.Log); err == nil && os.SameFile(fi, li) {
+		_ = os.Stderr.Truncate(0)
+	}
 }
