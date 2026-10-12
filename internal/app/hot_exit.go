@@ -351,9 +351,10 @@ func (m *Model) dropHotExitBackup() {
 }
 
 // HotExitFlush writes the unsaved buffers to the hot-exit backup now.
-// cmd/termocode calls it on SIGHUP / SIGTERM and after a crash. nvim may
-// be gone already (it gets the same hangup); then the last periodic
-// backup stands.
+// cmd/termocode calls it on SIGHUP / SIGTERM and after a crash. A
+// terminal hangup does not reach nvim (it runs in its own session, see
+// nvim.New), so it is still there to write. If it is gone anyway, the
+// last debounced backup stands.
 func HotExitFlush(timeout time.Duration) {
 	c := hotExitNvim.Load()
 	if c == nil {

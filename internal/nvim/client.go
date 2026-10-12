@@ -3,8 +3,11 @@ package nvim
 import (
 	"errors"
 	"fmt"
+	"log"
+	"os/exec"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	gonvim "github.com/neovim/go-client/nvim"
@@ -38,6 +41,7 @@ type ExitedMsg struct {
 // as a stream of tea.Msg values.
 type Client struct {
 	nv     *gonvim.Nvim
+	cmd    *exec.Cmd // the nvim process; Close reaps it
 	events chan tea.Msg
 
 	// FetchState: fetching while a call runs; fetchQueued when another
@@ -90,24 +94,41 @@ func New() (*Client, error) {
 	}
 	go c.mouseDispatcher()
 
-	nv, err := gonvim.NewChildProcess(
-		gonvim.ChildProcessCommand("nvim"),
-		// -i NONE disables ShaDa (shared data) so termocode never reads or
-		// writes the user's nvim history / marks / registers. Avoids E576
-		// corruption errors and keeps each termocode session isolated.
-		// -n disables swap files (we own the buffers via nvim_input).
-		gonvim.ChildProcessArgs("--embed", "-i", "NONE", "-n"),
-		// Managed language servers / debug adapters live as shims in
-		// ~/.local/share/termocode/tools/bin; put that dir first on the
-		// embedded nvim's PATH so vim.lsp / nvim-dap find them.
-		gonvim.ChildProcessEnv(lspinstall.EnvWithToolsBin()),
-		// We run Serve ourselves (see serve) to learn when nvim is gone.
-		gonvim.ChildProcessServe(false),
-	)
+	// -i NONE disables ShaDa (shared data) so termocode never reads or
+	// writes the user's nvim history / marks / registers. Avoids E576
+	// corruption errors and keeps each termocode session isolated.
+	// -n disables swap files (we own the buffers via nvim_input).
+	cmd := exec.Command("nvim", "--embed", "-i", "NONE", "-n")
+	// Managed language servers / debug adapters live as shims in
+	// ~/.local/share/termocode/tools/bin; put that dir first on the
+	// embedded nvim's PATH so vim.lsp / nvim-dap find them.
+	cmd.Env = lspinstall.EnvWithToolsBin()
+	// Out of the terminal's process group: a hangup must reach only
+	// termocode, which then flushes the hot-exit backup (proc_unix.go).
+	// gonvim.NewChildProcess cannot set this, so nvim is started here.
+	detachTTY(cmd)
+	inw, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, fmt.Errorf("spawn nvim: %w", err)
 	}
+	outr, err := cmd.StdoutPipe()
+	if err != nil {
+		_ = inw.Close()
+		return nil, fmt.Errorf("spawn nvim: %w", err)
+	}
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("spawn nvim: %w", err)
+	}
+	// We run Serve ourselves (see serve) to learn when nvim is gone.
+	nv, err := gonvim.New(outr, inw, inw, log.Printf)
+	if err != nil {
+		_ = inw.Close()
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+		return nil, fmt.Errorf("spawn nvim: %w", err)
+	}
 	c.nv = nv
+	c.cmd = cmd
 
 	if err := nv.RegisterHandler("redraw", func(events ...[]interface{}) {
 		cp := make([][]any, len(events))
@@ -121,6 +142,8 @@ func New() (*Client, error) {
 		}
 	}); err != nil {
 		_ = nv.Close()
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
 		return nil, fmt.Errorf("register redraw handler: %w", err)
 	}
 	go c.serve()
@@ -1238,9 +1261,27 @@ func (c *Client) Close() error {
 		if c.mouseQueue != nil {
 			close(c.mouseQueue)
 		}
-		c.closeErr = c.nv.Close()
+		c.closeErr = c.closeProcess()
 	})
 	return c.closeErr
+}
+
+// closeProcess closes the RPC pipe (nvim exits on EOF), lets serve read
+// the rest of nvim's output, then reaps nvim. nvim is killed if it is
+// still there after 10 s.
+func (c *Client) closeProcess() error {
+	kill := time.AfterFunc(10*time.Second, func() { _ = c.cmd.Process.Kill() })
+	defer kill.Stop()
+	err := c.nv.Close()
+	select {
+	case <-c.exited:
+	case <-time.After(11 * time.Second):
+	}
+	// Wait closes the stdout pipe, so it runs after serve stopped reading.
+	if werr := c.cmd.Wait(); err == nil {
+		err = werr
+	}
+	return err
 }
 
 // Next returns a tea.Cmd that blocks for the next event from nvim and
