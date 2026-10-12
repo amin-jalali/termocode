@@ -101,6 +101,37 @@ func TestSCMNvimClickFileOpensSideBySideDiff(t *testing.T) {
 	}
 }
 
+// Spec: Given a side-by-side diff, when the user opens the AI chat panel
+// (the editor gets narrower), then both panes stay visible with about the
+// same width — the working pane is not squeezed out.
+func TestSCMNvimDiffPanesStayEvenWhenAIPanelOpens(t *testing.T) {
+	d, _ := scmNvimDriver(t, func(r *repo) {
+		r.write("main.go", "package main\n\nfunc main() { println(\"new\") }\n")
+	})
+	scmClickText(d, "main.go")
+	if !waitText(d, "working") {
+		t.Fatalf("no diff view:%s", dump(d))
+	}
+	openAIPanel(d)
+	edge := aiPanelEdge(d)
+	ok := d.WaitFor(func() bool {
+		// The winbar row: " ‹  ›  main.go · HEAD …│… main.go · working".
+		xh, y, okh := findIn(d, "‹  ›", 0, edge)
+		if !okh || !strings.Contains(strings.Split(screen(d), "\n")[y], "main.go  ·  wo") {
+			return false
+		}
+		sep, _, oks := findIn(d, "│", xh, edge)
+		if !oks {
+			return false
+		}
+		left, right := sep-xh, edge-sep
+		return left-right <= 4 && right-left <= 4
+	}, 3*time.Second)
+	if !ok {
+		t.Fatalf("diff panes not even after the AI panel opened (edge %d):%s", edge, dump(d))
+	}
+}
+
 // Spec: Given a side-by-side diff with the AI chat panel open, when the
 // pointer moves onto the working (right) pane, then that pane gets the
 // focus — the split point comes from the pane width the view draws, not
