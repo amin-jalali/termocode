@@ -86,6 +86,44 @@ func TestHotExitRestore(t *testing.T) {
 	}
 }
 
+// TestHotExitHangupFlushesLatest: the terminal hangs up right after a
+// keystroke, before the debounced backup runs. SIGHUP goes to the whole
+// process group, as on a dropped SSH connection. The backup must still
+// hold the latest text: termocode flushes it before nvim is gone.
+func TestHotExitHangupFlushesLatest(t *testing.T) {
+	home := t.TempDir()
+	ws := NewRepo(t)
+	tm := Start(t, StartOpts{Home: home, Workspace: ws, Args: []string{"--no-session"}})
+	tm.WaitFor("status bar", bootTimeout, func(ls []string) bool {
+		return mainFrame.Top(ls[0]) && mainFrame.Bottom(ls[len(ls)-1])
+	})
+	tm.settle()
+	tm.OpenFile("notes.txt")
+	tm.WaitText("first note", uiTimeout)
+	tm.Send(KeyEsc)
+	tm.settle()
+	tm.Send("ohangup-marker-7")
+	tm.WaitText("hangup-marker-7", uiTimeout)
+
+	// No wait for the debounced backup: hang up at once.
+	if err := syscall.Kill(-tm.cmd.Process.Pid, syscall.SIGHUP); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-tm.exited:
+	case <-time.After(10 * time.Second):
+		t.Fatalf("termocode did not exit on SIGHUP")
+	}
+	var got string
+	for _, f := range backupFiles(home) {
+		b, _ := os.ReadFile(f)
+		got += string(b)
+	}
+	if !strings.Contains(got, "hangup-marker-7") {
+		t.Fatalf("backup misses the last text; backup files %v hold %q", backupFiles(home), got)
+	}
+}
+
 // TestHotExitDiscard: Discard drops the backup; the file stays as saved.
 func TestHotExitDiscard(t *testing.T) {
 	home := t.TempDir()
