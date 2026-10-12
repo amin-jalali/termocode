@@ -112,9 +112,17 @@ func collectHotBackups(root string, self int, alive func(pid int) bool) ([]hotBa
 	if err != nil {
 		return nil, err
 	}
+	return readHotBackups(prev, files), nil
+}
+
+// readHotBackups reads the .bak files among files in dir.
+func readHotBackups(dir string, files []os.DirEntry) []hotBackup {
 	var out []hotBackup
 	for _, f := range files {
-		b, err := os.ReadFile(filepath.Join(prev, f.Name()))
+		if !strings.HasSuffix(f.Name(), ".bak") {
+			continue
+		}
+		b, err := os.ReadFile(filepath.Join(dir, f.Name()))
 		if err != nil {
 			continue
 		}
@@ -122,7 +130,7 @@ func collectHotBackups(root string, self int, alive func(pid int) bool) ([]hotBa
 			out = append(out, hb)
 		}
 	}
-	return out, nil
+	return out
 }
 
 // pruneHotBackups deletes the files in prev older than hotExitMaxAge and
@@ -167,6 +175,11 @@ func pruneHotBackups(prev string, now time.Time) ([]os.DirEntry, error) {
 // hotExitFoundMsg carries the backups left by an earlier run.
 type hotExitFoundMsg struct{ backups []hotBackup }
 
+// hotExitReloadMark in a live backup dir says the run before was a Reload
+// Window (the same process re-executed itself). Its backups are no crash:
+// they come back at once, without the Restore question.
+const hotExitReloadMark = "reload"
+
 // startHotExit turns on the live backup in nvim and looks for backups of
 // an earlier run (called on nvim.ReadyMsg).
 func (m *Model) startHotExit() tea.Cmd {
@@ -182,10 +195,22 @@ func (m *Model) startHotExit() tea.Cmd {
 		return nil
 	}
 	m.hotExitRoot = root
-	live := filepath.Join(root, strconv.Itoa(os.Getpid()))
-	// Leftovers first: the live dir of this pid may hold the backups of
-	// the image before a Reload Window.
-	backups, err := collectHotBackups(root, os.Getpid(), pidAlive)
+	self := os.Getpid()
+	live := filepath.Join(root, strconv.Itoa(self))
+	// After a Reload Window the live dir of this pid holds the backups of
+	// the image before; they are put back below. Otherwise (a re-exec
+	// that did not flush, e.g. a crash handler) they count as leftovers.
+	var reloaded []hotBackup
+	if os.Remove(filepath.Join(live, hotExitReloadMark)) == nil {
+		files, _ := os.ReadDir(live)
+		reloaded = readHotBackups(live, files)
+	}
+	alive, collectSelf := pidAlive, self
+	if len(reloaded) > 0 {
+		alive = func(pid int) bool { return pid == self || pidAlive(pid) }
+		collectSelf = 0 // keep our own dir: it is the live one again
+	}
+	backups, err := collectHotBackups(root, collectSelf, alive)
 	if err != nil {
 		recordError("hot exit: " + err.Error())
 	}
@@ -194,10 +219,56 @@ func (m *Model) startHotExit() tea.Cmd {
 	}
 	m.hotExitLive = live
 	hotExitNvim.Store(m.nvim)
-	if len(backups) == 0 {
-		return nil
+	var cmds []tea.Cmd
+	if len(reloaded) > 0 {
+		if err := m.restoreHotBackups(reloaded, true); err != nil {
+			recordError("hot exit: reload restore: " + err.Error())
+			// Not lost: ask about them like after a crash.
+			more, _ := collectHotBackups(root, self, pidAlive)
+			backups = more
+		} else {
+			cmds = append(cmds, m.fetchStateCmd())
+		}
 	}
-	return func() tea.Msg { return hotExitFoundMsg{backups: backups} }
+	if len(backups) > 0 {
+		cmds = append(cmds, func() tea.Msg { return hotExitFoundMsg{backups: backups} })
+	}
+	return tea.Batch(cmds...)
+}
+
+// restoreHotBackups puts the backed-up text into the buffers of its files
+// (modified, so the user reviews and saves) and writes the live backup.
+// keepCurrent leaves the current window alone (a reload: the session has
+// already reopened the files); otherwise the first file is shown.
+func (m *Model) restoreHotBackups(b []hotBackup, keepCurrent bool) error {
+	paths := make([]string, len(b))
+	contents := make([][]string, len(b))
+	for i, x := range b {
+		paths[i], contents[i] = x.Path, x.Lines
+	}
+	if err := m.nvim.ExecLuaArgs(hotExitRestoreLua, paths, contents, keepCurrent); err != nil {
+		return err
+	}
+	return m.nvim.ExecLua(hotExitFlushLua)
+}
+
+// flushHotExitForReload writes every unsaved buffer to the live backup
+// now (the debounce timer may not have fired yet: the last keys typed
+// before the reload would be lost) and marks the dir as a reload, so the
+// new image restores it without asking. Called right before nvim closes
+// for the re-exec; nothing writes the dir after that.
+func (m *Model) flushHotExitForReload() {
+	if m.nvim == nil || m.hotExitLive == "" {
+		return
+	}
+	if err := m.nvim.ExecLua(hotExitFlushLua); err != nil {
+		recordError("hot exit: " + err.Error())
+		return
+	}
+	if _, err := os.Stat(m.hotExitLive); err != nil {
+		return // nothing unsaved
+	}
+	_ = os.WriteFile(filepath.Join(m.hotExitLive, hotExitReloadMark), nil, 0o600)
 }
 
 // showWaitingHotExit asks about the backups found at start once no other
@@ -249,12 +320,7 @@ func (m *Model) onHotExitConfirm(id string) tea.Cmd {
 		if m.nvim == nil || len(backups) == 0 {
 			return nil
 		}
-		paths := make([]string, len(backups))
-		contents := make([][]string, len(backups))
-		for i, b := range backups {
-			paths[i], contents[i] = b.Path, b.Lines
-		}
-		if err := m.nvim.ExecLuaArgs(hotExitRestoreLua, paths, contents); err != nil {
+		if err := m.restoreHotBackups(backups, false); err != nil {
 			m.toast, cmd = m.toast.PushDetail(toast.Errr, "Restore failed", err.Error())
 			return cmd
 		}
@@ -296,7 +362,7 @@ func HotExitFlush(timeout time.Duration) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		_ = c.ExecLua(`if _G.termocode_hot_exit_flush then _G.termocode_hot_exit_flush() end`)
+		_ = c.ExecLua(hotExitFlushLua)
 	}()
 	select {
 	case <-done:

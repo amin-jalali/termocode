@@ -113,6 +113,9 @@ func (m *Model) reloadWindow() tea.Cmd {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Reload failed", errHeadless.Error())
 		return toastCmd
 	}
+	// Unsaved text: back it up to the last key and tell the new image to
+	// put it back (hot_exit.go). A reload is no unclean quit.
+	m.flushHotExitForReload()
 	if m.nvim != nil {
 		_ = m.nvim.Close()
 	}
