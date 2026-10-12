@@ -254,6 +254,12 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Search: Go to Previous Search Result | `search-prev-result` | `Shift+F4` | `Shift+F4` |
 | Search: Replace in Workspace... | `replace-workspace` | `Ctrl+Shift+H` | `Ctrl+Shift+H` |
 
+## Session
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Session: Detach | `detach-session` |   |   |
+
 ## Snippets
 
 | Title | ID | Key | Hint |

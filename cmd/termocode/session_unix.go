@@ -71,6 +71,10 @@ func runClient(dir string, create bool) int {
 		fmt.Fprintln(os.Stderr, "termocode:", err)
 		return 1
 	}
+	if msg := attachRefusal(os.Getenv, p.Key); msg != "" {
+		fmt.Fprintln(os.Stderr, msg)
+		return 1
+	}
 	conn, err := session.Dial(p)
 	if errors.Is(err, session.ErrNoSession) && create {
 		conn, err = session.Ensure(p, func() error { return spawnServer(p) })
@@ -88,7 +92,7 @@ func runClient(dir string, create bool) int {
 		_ = conn.Close()
 		return 1
 	}
-	return session.Attach(conn, os.Stdin, os.Stdout)
+	return session.Attach(conn, p, os.Stdin, os.Stdout)
 }
 
 // cmdSessions prints the running sessions (`termocode sessions`).

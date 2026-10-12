@@ -112,6 +112,7 @@ var paletteActions = map[string]keymap.Action{
 	"git-history":             keymap.ActionFileHistory,
 	"zen-mode":                keymap.ActionToggleZenMode,
 	"reload-window":           keymap.ActionReloadWindow,
+	"detach-session":          keymap.ActionDetachSession,
 	"toggle-auto-save":        keymap.ActionToggleAutoSave,
 	"next-hunk":               keymap.ActionNextHunk,
 	"prev-hunk":               keymap.ActionPrevHunk,
