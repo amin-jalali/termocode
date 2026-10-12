@@ -478,6 +478,9 @@ type Model struct {
 	w, h               int
 	err                string
 	nvimAttached       bool
+	// nvimDead: the nvim process stopped on its own; the "Editor process
+	// stopped" question is up (nvim_exit.go).
+	nvimDead bool
 
 	// inlayHintsOn mirrors the LSP inlay-hint display toggle for the
 	// "Toggle Inlay Hints" command. Hints start enabled on LspAttach
