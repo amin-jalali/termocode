@@ -588,10 +588,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// smooth. Plain motion still does focus-follows so the cursor sits on the
 	// pane under the pointer.
 	if m.gitDiffActive && m.nvim != nil {
-		edPaneW := m.w - activity.Width - editorScrollbarWidth
-		if m.showExp {
-			edPaneW -= m.explorerWidth
-		}
+		edPaneW := m.editorPaneLayout().W // drawn width (AI panel excluded)
 		switch msg.Type {
 		case tea.MouseLeft:
 			// Change-nav buttons live on the winbar (localY == 0) at the very
