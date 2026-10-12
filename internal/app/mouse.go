@@ -449,30 +449,11 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// content in the editor pane. A click on a recent-files row should
 	// open that file rather than fall through to the editor.
 	if (msg.Type == tea.MouseLeft || msg.Type == tea.MouseMotion) && m.editorEmpty() {
-		// Reproduce edPaneW + editorH the same way renderBase does so
-		// the hit map matches what's actually on screen.
-		bodyH := m.h - 1
-		if bodyH < 1 {
-			bodyH = 1
-		}
-		chromeRows := m.tabs.Height()
-		if m.replaceOpen {
-			chromeRows += 2
-		}
-		if len(m.breadcrumbs) > 0 || m.stickyContext != "" {
-			chromeRows++
-		}
-		editorH := bodyH - chromeRows
-		if editorH < 1 {
-			editorH = 1
-		}
-		edPaneW := m.w - activity.Width - editorScrollbarWidth
-		if m.showExp {
-			edPaneW -= m.explorerWidth
-		}
-		if edPaneW < 1 {
-			edPaneW = 1
-		}
+		// Same pane size renderBase draws the welcome screen at (the AI
+		// panel, when open, takes its width), so the hit map matches
+		// what's actually on screen.
+		pane := m.editorPaneLayout()
+		edPaneW, editorH := pane.W, pane.H
 		// Quick-action cards: dispatch the same keymap action the
 		// keyboard binding would fire. This goes first so a card click
 		// doesn't accidentally fall through to a recents row underneath.
@@ -607,10 +588,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// smooth. Plain motion still does focus-follows so the cursor sits on the
 	// pane under the pointer.
 	if m.gitDiffActive && m.nvim != nil {
-		edPaneW := m.w - activity.Width - editorScrollbarWidth
-		if m.showExp {
-			edPaneW -= m.explorerWidth
-		}
+		edPaneW := m.editorPaneLayout().W // drawn width (AI panel excluded)
 		switch msg.Type {
 		case tea.MouseLeft:
 			// Change-nav buttons live on the winbar (localY == 0) at the very

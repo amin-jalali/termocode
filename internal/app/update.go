@@ -2075,31 +2075,10 @@ func (m *Model) applyLayout() {
 		m.explorerWidth = max(maxExp, explorerMinWidth)
 	}
 
-	// Editor pane width = total - activity bar - sidebar (if shown) -
-	// scrollbar - right-side actions column (if pinned & open).
-	actionsColW := m.actionsColumnWidth()
-	edPaneW := m.w - activity.Width - editorScrollbarWidth - actionsColW
-	if m.showExp {
-		edPaneW -= m.explorerWidth
-	}
-	if edPaneW < 1 {
-		edPaneW = 1
-	}
-
-	chromeRows := m.tabs.Height() // tab bar (2 rows)
-	if m.replaceOpen {
-		chromeRows += 2 // replacebar is two rows tall
-	}
-	// Find bar is now a floating overlay (see overlayFindBarInEditor) — it
-	// no longer takes a chrome row.
-	// Breadcrumbs + signature share one row (signature is appended inline).
-	if len(m.breadcrumbs) > 0 || m.stickyContext != "" {
-		chromeRows++
-	}
-	editorH := bodyH - chromeRows
-	if editorH < 1 {
-		editorH = 1
-	}
+	// Editor pane geometry: one source of truth shared with renderBase
+	// and the mouse hit tests.
+	pane := m.editorPaneLayout()
+	edPaneW, editorH := pane.W, pane.H
 	// Integrated terminal tab bar: the bar lives INSIDE the terminal panel
 	// (it's the topmost row of the panel and doubles as the drag-resize
 	// handle — see spliceTerminalTabBar). nvim renders the full editorH
@@ -2129,16 +2108,8 @@ func (m *Model) applyLayout() {
 	// anchor matches where it actually renders. HandleMouse consumes this
 	// via Bounds() to do screen-coord hit-testing on the ↑ / ↓ / × glyphs.
 	{
-		editorStart := m.w - edPaneW - actionsColW
-		topRow := 0
-		if m.replaceOpen {
-			topRow += 2
-		}
-		topRow += m.tabs.Height()
-		if len(m.breadcrumbs) > 0 || m.stickyContext != "" {
-			topRow++
-		}
-		topRow++ // hover 1 row down from editor body top
+		editorStart := pane.X
+		topRow := pane.Top + 1 // hover 1 row down from editor body top
 		const rightInset = 2
 		leftCol := editorStart + edPaneW - m.find.PanelWidth() - rightInset
 		if leftCol < editorStart+1 {

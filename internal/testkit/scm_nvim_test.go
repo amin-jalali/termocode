@@ -101,6 +101,68 @@ func TestSCMNvimClickFileOpensSideBySideDiff(t *testing.T) {
 	}
 }
 
+// Spec: Given a side-by-side diff, when the user opens the AI chat panel
+// (the editor gets narrower), then both panes stay visible with about the
+// same width — the working pane is not squeezed out.
+func TestSCMNvimDiffPanesStayEvenWhenAIPanelOpens(t *testing.T) {
+	d, _ := scmNvimDriver(t, func(r *repo) {
+		r.write("main.go", "package main\n\nfunc main() { println(\"new\") }\n")
+	})
+	scmClickText(d, "main.go")
+	if !waitText(d, "working") {
+		t.Fatalf("no diff view:%s", dump(d))
+	}
+	openAIPanel(d)
+	edge := aiPanelEdge(d)
+	ok := d.WaitFor(func() bool {
+		// The winbar row: " ‹  ›  main.go · HEAD …│… main.go · working".
+		xh, y, okh := findIn(d, "‹  ›", 0, edge)
+		if !okh || !strings.Contains(strings.Split(screen(d), "\n")[y], "main.go  ·  wo") {
+			return false
+		}
+		sep, _, oks := findIn(d, "│", xh, edge)
+		if !oks {
+			return false
+		}
+		left, right := sep-xh, edge-sep
+		return left-right <= 4 && right-left <= 4
+	}, 3*time.Second)
+	if !ok {
+		t.Fatalf("diff panes not even after the AI panel opened (edge %d):%s", edge, dump(d))
+	}
+}
+
+// Spec: Given a side-by-side diff with the AI chat panel open, when the
+// pointer moves onto the working (right) pane, then that pane gets the
+// focus — the split point comes from the pane width the view draws, not
+// the width without the AI panel.
+func TestSCMNvimDiffHoverPaneWithAIPanel(t *testing.T) {
+	d, _ := scmNvimDriver(t, func(r *repo) {
+		r.write("main.go", "package main\n\nfunc main() { println(\"new\") }\n")
+	})
+	openAIPanel(d)
+	scmClickText(d, "main.go")
+	if !waitText(d, "working") {
+		t.Fatalf("no diff view:%s", dump(d))
+	}
+	edge := aiPanelEdge(d)
+	xw, y, ok := findIn(d, "main.go  ·  working", 0, edge)
+	if !ok {
+		t.Fatalf("no working pane label:%s", dump(d))
+	}
+	bufName := func() string { return lua(d, `return vim.api.nvim_buf_get_name(0)`) }
+	// Start in the HEAD pane (left), then move onto the working pane's
+	// first columns.
+	d.Move(sidebarW+2, y+3)
+	if !d.WaitFor(func() bool { return !strings.HasSuffix(bufName(), "main.go") }, 3*time.Second) {
+		t.Fatalf("hover on the left pane did not focus HEAD (buf %q):%s", bufName(), dump(d))
+	}
+	d.Move(xw+1, y+3)
+	if !d.WaitFor(func() bool { return strings.HasSuffix(bufName(), "main.go") }, 3*time.Second) {
+		t.Fatalf("hover on the working pane did not focus it (buf %q):%s", bufName(), dump(d))
+	}
+}
+
 // Spec: Given a merge conflict in main.go, when the user clicks it under
 // CONFLICTS, then it opens in the editor; when the user goes to the
 // conflict and picks "Accept Incoming Change" and saves, then the file has
