@@ -30,8 +30,9 @@ const (
 	confirmKindKeybindingConflict
 	confirmKindSettingsImport
 	confirmKindSnippetAction
-	confirmKindQuit    // unsaved files on quit (quit.go)
-	confirmKindHotExit // restore unsaved files of a crashed run (hot_exit.go)
+	confirmKindQuit       // unsaved files on quit (quit.go)
+	confirmKindHotExit    // restore unsaved files of a crashed run (hot_exit.go)
+	confirmKindNvimExited // nvim stopped on its own: Restart / Quit (nvim_exit.go)
 )
 
 // findBuffer returns the buffer info for the given id, if known.
@@ -182,6 +183,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		return m.onQuitConfirm(id)
 	case confirmKindHotExit:
 		return m.onHotExitConfirm(id)
+	case confirmKindNvimExited:
+		return m.onNvimExitedConfirm(id)
 	}
 	return nil
 }

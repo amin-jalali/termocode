@@ -210,6 +210,11 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleConfirmSelect(msg.ID)
 	case confirm.CloseMsg:
 		m.confirmOpen = false
+		if m.nvimDead {
+			// Esc: the editor is gone, so the question stays.
+			m.promptNvimExited()
+			return m, nil
+		}
 		// Esc on "Save changes?" also cancels a Close Others.
 		m.closeQueue = nil
 		return m, m.onAIConfirmClosed() // Group A: Esc denies an AI tool call
@@ -670,6 +675,8 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 	case nvim.ErrMsg:
 		m.err = msg.Err.Error()
 		return m, nil, true
+	case nvim.ExitedMsg:
+		return m, m.onNvimExited(msg), true
 	case nvim.PromptMsg:
 		// nvim showed a blocking prompt (an error from a key, for example
 		// "E433: No tags file") and the client answered it. Show the
