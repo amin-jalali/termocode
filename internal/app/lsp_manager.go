@@ -9,7 +9,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/lspinstall"
 	"github.com/amin-jalali/termocode/internal/picker"
@@ -346,16 +345,8 @@ func (m Model) lspClients() []string {
 // statusBarRect mirrors View's placement of the status bar
 // (it lives under the editor column only).
 func (m Model) statusBarRect() (x, w int) {
-	x = activity.Width
-	w = m.w - activity.Width - editorScrollbarWidth - m.actionsColumnWidth()
-	if m.showExp {
-		x += m.explorerWidth
-		w -= m.explorerWidth
-	}
-	if w < 1 {
-		w = 1
-	}
-	return x, w
+	pane := m.editorPaneLayout()
+	return pane.X, pane.W
 }
 
 // hitStatusLSPChip reports whether a click at (x, y) lands on the
