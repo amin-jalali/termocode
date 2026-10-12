@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/debounce"
 )
 
 func writeBak(t *testing.T, dir, name, body string) {
@@ -146,5 +148,33 @@ func TestCollectHotBackupsAgesOut(t *testing.T) {
 	}
 	if _, err := os.Stat(prev); !os.IsNotExist(err) {
 		t.Errorf("empty previous/ not removed: %v", err)
+	}
+}
+
+// TestHotExitPromptWaitsForOtherDialog: the backups are found while
+// another question is on screen. The Restore prompt must not replace it,
+// nor be skipped: it shows once that dialog closes.
+func TestHotExitPromptWaitsForOtherDialog(t *testing.T) {
+	m := Model{w: 120, h: 40, debounce: debounce.New(), ai: newAIState(), actionsWidth: defaultActionsWidth}
+	m.confirm = confirm.New("Delete?", "Delete a.txt?", []confirm.Button{{ID: "delete", Title: "Delete"}, {ID: "cancel", Title: "Cancel"}})
+	m.confirmOpen, m.confirmKind = true, confirmKindDeletePath
+
+	next, _ := m.Update(hotExitFoundMsg{backups: []hotBackup{{Path: "/w/a.txt", Lines: []string{"x"}}}})
+	m = next.(Model)
+	if !m.confirmOpen || m.confirmKind != confirmKindDeletePath {
+		t.Fatalf("the open dialog was replaced: open=%v kind=%v", m.confirmOpen, m.confirmKind)
+	}
+	next, _ = m.Update(confirm.SelectMsg{ID: "cancel"})
+	m = next.(Model)
+	if !m.confirmOpen || m.confirmKind != confirmKindHotExit {
+		t.Fatalf("no Restore prompt after the dialog closed: open=%v kind=%v", m.confirmOpen, m.confirmKind)
+	}
+	if len(m.hotExitPending) != 1 || m.hotExitPending[0].Path != "/w/a.txt" {
+		t.Errorf("pending %+v", m.hotExitPending)
+	}
+	// Answered once: it does not come back.
+	next, _ = m.Update(confirm.SelectMsg{ID: "later"})
+	if m = next.(Model); m.confirmOpen {
+		t.Errorf("Restore prompt shown again")
 	}
 }
