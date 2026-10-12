@@ -456,10 +456,12 @@ type Model struct {
 	confirmOpen bool
 	confirmKind confirmKindEnum
 	// Hot exit (hot_exit.go): this workspace's backup dir, this run's
-	// live dir, and the backups waiting for Restore / Discard.
+	// live dir, the backups waiting for Restore / Discard, and the ones
+	// found while another dialog was open (asked once it closes).
 	hotExitRoot       string
 	hotExitLive       string
 	hotExitPending    []hotBackup
+	hotExitWaiting    []hotBackup
 	confirmTargetID   int
 	confirmTargetPath string
 	// confirmTargetPaths is the absolute-path list for a bulk-delete

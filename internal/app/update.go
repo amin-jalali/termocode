@@ -64,6 +64,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if hoverCmd := nm.updateHoverCommit(); hoverCmd != nil {
 		cmd = tea.Batch(cmd, hoverCmd)
 	}
+	nm.showWaitingHotExit()
 	want := !nm.anyTextInputOpen()
 	if want != nm.mouseAllMotion {
 		nm.mouseAllMotion = want
@@ -498,9 +499,9 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 		cmds := append([]tea.Cmd{m.extLoadCmd(false), m.keymapProblemsToast(), m.startHotExit()}, pluginBootstrapCmds()...)
 		return m, tea.Batch(cmds...), true
 	case hotExitFoundMsg:
-		if len(msg.backups) > 0 && !m.confirmOpen {
-			m.promptHotExit(msg.backups)
-		}
+		// Another dialog open: wait until it closes (Update shows it).
+		m.hotExitWaiting = append(m.hotExitWaiting, msg.backups...)
+		m.showWaitingHotExit()
 		return m, nil, true
 	case pluginClonedMsg:
 		return m, m.onPluginCloned(msg), true

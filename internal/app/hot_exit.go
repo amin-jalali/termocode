@@ -200,6 +200,19 @@ func (m *Model) startHotExit() tea.Cmd {
 	return func() tea.Msg { return hotExitFoundMsg{backups: backups} }
 }
 
+// showWaitingHotExit asks about the backups found at start once no other
+// dialog is open: promptHotExit replaces m.confirm, so asking earlier
+// would throw away the question on screen (and a prompt dialog takes the
+// keys before a confirm).
+func (m *Model) showWaitingHotExit() {
+	if len(m.hotExitWaiting) == 0 || m.confirmOpen || m.promptOpen {
+		return
+	}
+	b := m.hotExitWaiting
+	m.hotExitWaiting = nil
+	m.promptHotExit(b)
+}
+
 // promptHotExit asks what to do with the backups of an earlier run.
 func (m *Model) promptHotExit(b []hotBackup) {
 	m.hotExitPending = b
