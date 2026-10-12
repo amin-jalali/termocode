@@ -680,8 +680,7 @@ func (m *Model) routeTerminalLinkClick(msg tea.MouseMsg) bool {
 		return false
 	}
 	bar := m.terminalTabBarRowAbsolute()
-	paneW := m.editorPaneWidth()
-	x0 := m.w - paneW
+	x0 := m.editorPaneLayout().X
 	if bar < 0 || msg.Y <= bar || msg.Y >= m.h-1 || msg.X < x0 {
 		return false
 	}

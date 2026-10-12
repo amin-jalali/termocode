@@ -795,12 +795,11 @@ func intToLua(n int) string {
 // the current model geometry. Returns -1 when the editor pane is too
 // narrow to host the glyph.
 func (m Model) overflowGlyphX() int {
-	edPaneW := m.editorPaneWidth()
-	if edPaneW < 4 {
+	pane := m.editorPaneLayout()
+	if pane.W < 4 {
 		return -1
 	}
-	editorStart := m.w - edPaneW - m.actionsColumnWidth()
-	return editorStart + edPaneW - overflowMenuRightInset - 1
+	return pane.X + pane.W - overflowMenuRightInset - 1
 }
 
 // overflowGlyphY returns the screen row where the ⋮ glyph sits — the
