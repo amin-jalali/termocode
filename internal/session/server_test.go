@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -53,6 +54,7 @@ type rig struct {
 	p       Paths
 	ui      string
 	timeout time.Duration
+	uiPIDs  string // file each UI appends its pid (= process group) to
 
 	mu    sync.Mutex
 	procs []*exec.Cmd
@@ -71,7 +73,7 @@ func newRig(t *testing.T, ui string) *rig {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := &rig{t: t, p: p, ui: ui, exits: map[*exec.Cmd]chan struct{}{}}
+	r := &rig{t: t, p: p, ui: ui, uiPIDs: filepath.Join(rt, "ui.pids"), exits: map[*exec.Cmd]chan struct{}{}}
 	t.Cleanup(func() {
 		r.mu.Lock()
 		procs := r.procs
@@ -80,6 +82,20 @@ func newRig(t *testing.T, ui string) *rig {
 			// SIGKILL: the master side closes and the UI gets a hangup.
 			_ = c.Process.Kill()
 			<-r.exits[c]
+		}
+		// No UI (or child of it) may outlive its server.
+		b, _ := os.ReadFile(r.uiPIDs)
+		for _, f := range strings.Fields(string(b)) {
+			pgid, _ := strconv.Atoi(f)
+			deadline := time.Now().Add(3 * time.Second)
+			for pgid > 0 && syscall.Kill(-pgid, 0) == nil {
+				if time.Now().After(deadline) {
+					t.Errorf("UI process group %d survived its server", pgid)
+					_ = syscall.Kill(-pgid, syscall.SIGKILL)
+					break
+				}
+				time.Sleep(10 * time.Millisecond)
+			}
 		}
 		_ = os.RemoveAll(rt)
 	})
@@ -95,7 +111,7 @@ func (r *rig) spawn() (*exec.Cmd, error) {
 	}
 	defer logf.Close()
 	cmd := exec.Command(os.Args[0], "-test.run=^$")
-	cmd.Env = append(os.Environ(), envServe+"="+r.p.Workspace, envUI+"="+r.ui)
+	cmd.Env = append(os.Environ(), envServe+"="+r.p.Workspace, envUI+"=echo $$ >>"+r.uiPIDs+"; "+r.ui)
 	if r.timeout > 0 {
 		cmd.Env = append(cmd.Env, envWriteTimeout+"="+r.timeout.String())
 	}
@@ -302,7 +318,7 @@ func TestConcurrentStart(t *testing.T) {
 // TestFrozenClientDropped: a client that stops reading is dropped after
 // the write timeout; the UI keeps running and a new client gets it.
 func TestFrozenClientDropped(t *testing.T) {
-	r := newRig(t, "trap '' USR1; while :; do echo flood-flood-flood-flood; done")
+	r := newRig(t, "trap '' USR1; while :; do echo flood-flood-flood-flood || exit; done")
 	r.timeout = 200 * time.Millisecond
 	frozen := r.ensure()
 	defer frozen.Close()
@@ -328,14 +344,19 @@ func TestFrozenClientDropped(t *testing.T) {
 	}
 }
 
-// TestKillAfterUIExit: kill when the UI has already exited (it still
-// holds the PTY through a child) ends the session without hanging.
+// TestKillAfterUIExit: kill when the UI has already exited (a child of
+// it still holds the PTY) ends the session without hanging, and the
+// child does not outlive the session.
 func TestKillAfterUIExit(t *testing.T) {
-	r := newRig(t, "sleep 30 & exit 3")
+	bg := filepath.Join(t.TempDir(), "bg.pid")
+	r := newRig(t, "trap '' USR1; sleep 30 & echo $! >"+bg+"; exit 3")
 	c := r.ensure()
 	defer c.Close()
 	hello(t, c)
-	waitFor(t, "the UI to start", func() bool { return r.status().UIPID != 0 })
+	waitFor(t, "the UI to start its child", func() bool {
+		b, _ := os.ReadFile(bg)
+		return strings.HasSuffix(string(b), "\n")
+	})
 	_ = Kill(r.p) // the session may already be gone
 	if typ := readUntil(t, c, "", frameExit); typ != frameExit {
 		t.Fatalf("no exit frame")
@@ -343,6 +364,25 @@ func TestKillAfterUIExit(t *testing.T) {
 	if err := Kill(r.p); !errors.Is(err, ErrNoSession) {
 		t.Errorf("second kill: %v, want ErrNoSession", err)
 	}
+	b, _ := os.ReadFile(bg)
+	pid, _ := strconv.Atoi(strings.TrimSpace(string(b)))
+	waitFor(t, "the UI's child to end", func() bool { return !alive(pid) })
+}
+
+// TestUIGetsHangupWhenServerDies: the UI must not inherit the server's
+// ignored SIGHUP: when the server dies, the hangup ends the UI even if
+// it never reads its terminal.
+func TestUIGetsHangupWhenServerDies(t *testing.T) {
+	r := newRig(t, "trap '' USR1; exec sleep 300")
+	c := r.ensure()
+	defer c.Close()
+	hello(t, c)
+	var in Info
+	waitFor(t, "the UI to start", func() bool { in = r.status(); return in.UIPID != 0 })
+	if err := syscall.Kill(in.PID, syscall.SIGKILL); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, "the UI to get the hangup", func() bool { return !alive(in.UIPID) })
 }
 
 // TestTerminateTwiceBeforeUI: two kills of a server whose UI never
