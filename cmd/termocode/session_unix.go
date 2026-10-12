@@ -88,7 +88,7 @@ func runClient(dir string, create bool) int {
 		_ = conn.Close()
 		return 1
 	}
-	return session.Attach(conn, os.Stdin, os.Stdout)
+	return session.Attach(conn, p, os.Stdin, os.Stdout)
 }
 
 // cmdSessions prints the running sessions (`termocode sessions`).
