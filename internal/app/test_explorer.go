@@ -983,14 +983,7 @@ func (m Model) fillTestsStatus(s *statusbar.State) {
 // hitStatusTestsChip reports whether a click at (x, y) lands on the
 // status-bar test chip.
 func (m Model) hitStatusTestsChip(x, y int) bool {
-	if m.zenMode || y != m.h-1 {
-		return false
-	}
-	bx, bw := m.statusBarRect()
-	sb := m.status
-	sb.SetWidth(bw)
-	x0, x1, ok := sb.TestsChipSpan(m.statusState())
-	return ok && x >= bx+x0 && x < bx+x1
+	return m.statusHitAt(x, y) == "status:tests"
 }
 
 // ── Palette + code actions ───────────────────────────────────────────────

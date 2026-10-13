@@ -442,7 +442,7 @@ func (m Model) panelContentRect() (x, y, w, h int, ok bool) {
 	pane := m.editorPaneLayout()
 	x, w = pane.X, pane.W
 	y = bar + 1
-	h = (m.h - 1) - y // status bar sits on the last row
+	h = pane.Top + pane.H - y // down to the bottom of the editor pane
 	if h <= 0 {
 		return 0, 0, 0, 0, false
 	}

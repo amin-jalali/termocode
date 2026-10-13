@@ -908,12 +908,5 @@ func (m *Model) openRunView(sec runSection, focusSection bool) {
 // hitStatusDebugBadge reports whether a click at (x, y) lands on the
 // status-bar "● DEBUG" badge.
 func (m Model) hitStatusDebugBadge(x, y int) bool {
-	if m.zenMode || y != m.h-1 || !m.dapSessionActive {
-		return false
-	}
-	bx, bw := m.statusBarRect()
-	sb := m.status
-	sb.SetWidth(bw)
-	x0, x1, ok := sb.DebugBadgeSpan(m.statusState())
-	return ok && x >= bx+x0 && x < bx+x1
+	return m.statusHitAt(x, y) == "status:debug"
 }

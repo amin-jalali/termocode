@@ -54,15 +54,15 @@ func (m Model) actionsPanelVisible() bool {
 // should be rendered. True only when the panel is "open but not pinned" —
 // once the user clicks × the chip goes away too.
 func (m Model) actionsLauncherVisible() bool {
-	return m.actionsOpen && !m.actionsPinned
+	return m.actionsOpen && !m.actionsPinned && !m.zenMode
 }
 
 // actionsColumnWidth returns the width in columns the pinned panel
 // currently occupies. Zero when the panel is not pinned-and-open — the
 // editor / chrome math collapses cleanly with that.
 func (m Model) actionsColumnWidth() int {
-	if !m.actionsPinned || !m.actionsOpen {
-		return 0
+	if !m.actionsPinned || !m.actionsOpen || m.zenMode {
+		return 0 // zen mode shows the editor only
 	}
 	w := autoActionsWidth(m.w, m.showExp, m.explorerWidth)
 	if m.actionsWidthSet {
