@@ -859,8 +859,13 @@ func (m Model) overflowMenuRect() (x, y, w, h int, ok bool) {
 	if !m.overflowMenuOpen {
 		return 0, 0, 0, 0, false
 	}
-	items := m.overflowMenuItems()
-	if len(items) == 0 {
+	return m.overflowMenuRectFor(m.overflowMenuItems())
+}
+
+// overflowMenuRectFor is overflowMenuRect for an already built item list
+// (building it formats every shortcut, so a mouse event builds it once).
+func (m Model) overflowMenuRectFor(items []overflowMenuItem) (x, y, w, h int, ok bool) {
+	if !m.overflowMenuOpen || len(items) == 0 {
 		return 0, 0, 0, 0, false
 	}
 	gx := m.overflowGlyphX()
@@ -1065,47 +1070,29 @@ func (m Model) overlayOverflowMenuDropdown(base string) string {
 	return strings.Join(lines, "\n")
 }
 
-// hitOverflowMenuRect reports whether (screenX, screenY) lands inside
-// the dropdown's bounding box (including the border).
-func (m Model) hitOverflowMenuRect(screenX, screenY int) bool {
-	x, y, w, h, ok := m.overflowMenuRect()
-	if !ok {
-		return false
+// overflowMenuHitAt hit-tests the open dropdown at a screen cell. inBox
+// reports whether the cell is inside its bounding box (border included);
+// row is the renderer row under it (what the cursor addresses, NOT an
+// index into the items slice — overflowMenuRows maps row→item), or -1 on
+// the border, a divider, or outside the box.
+func (m Model) overflowMenuHitAt(screenX, screenY int) (inBox bool, row int) {
+	if !m.overflowMenuOpen {
+		return false, -1
 	}
-	if screenY < y || screenY >= y+h {
-		return false
+	items := m.overflowMenuItems()
+	x, y, w, h, ok := m.overflowMenuRectFor(items)
+	if !ok || screenY < y || screenY >= y+h || screenX < x || screenX >= x+w {
+		return false, -1
 	}
-	if screenX < x || screenX >= x+w {
-		return false
-	}
-	return true
-}
-
-// overflowMenuItemRow returns the index into the renderer rows for a
-// click at screenY (or -1 if the row isn't on a clickable item — i.e.
-// the top/bottom border row, the divider row, or outside the box).
-//
-// Returns the row index (which is what cursor addresses), NOT the index
-// into the items slice — the caller maps row→item via overflowMenuRows.
-func (m Model) overflowMenuItemRow(screenY int) int {
-	x, y, _, h, ok := m.overflowMenuRect()
-	if !ok {
-		return -1
-	}
-	_ = x
-	if screenY <= y || screenY >= y+h-1 {
-		return -1
+	if screenY == y || screenY == y+h-1 {
+		return true, -1
 	}
 	rowIdx := screenY - y - 1
-	items := m.overflowMenuItems()
 	rows := overflowMenuRows(items)
-	if rowIdx < 0 || rowIdx >= len(rows) {
-		return -1
+	if rowIdx >= len(rows) || rows[rowIdx].isDivider {
+		return true, -1
 	}
-	if rows[rowIdx].isDivider {
-		return -1
-	}
-	return rowIdx
+	return true, rowIdx
 }
 
 // activateOverflowMenuItem invokes the cursor-pointed item's action and

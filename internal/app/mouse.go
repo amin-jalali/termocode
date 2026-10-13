@@ -54,16 +54,14 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	}
 	// Hover: move the overflow menu's highlight onto the row under the pointer.
 	if m.overflowMenuOpen && msg.Type == tea.MouseMotion {
-		if m.hitOverflowMenuRect(msg.X, msg.Y) {
-			if idx := m.overflowMenuItemRow(msg.Y); idx >= 0 {
-				m.overflowMenuCursor = idx
-			}
+		if _, idx := m.overflowMenuHitAt(msg.X, msg.Y); idx >= 0 {
+			m.overflowMenuCursor = idx
 		}
 		return m, nil
 	}
 	if m.overflowMenuOpen && msg.Type == tea.MouseLeft {
-		if m.hitOverflowMenuRect(msg.X, msg.Y) {
-			if idx := m.overflowMenuItemRow(msg.Y); idx >= 0 {
+		if inBox, idx := m.overflowMenuHitAt(msg.X, msg.Y); inBox {
+			if idx >= 0 {
 				if m.probed("overflow:item:" + itoa(idx)) {
 					return m, nil
 				}
