@@ -17,7 +17,8 @@ import (
 //     symbols (WezTerm, Ghostty, kitty); ASCII only on terminals that cannot draw Unicode
 //     (TERM=linux / dumb / vt*, or a non-UTF-8 locale); else the Unicode
 //     set, which renders in every modern terminal font. unicodeOK, when
-//     given, can veto Unicode (a width probe that saw wide glyphs).
+//     given, can veto Unicode (a width probe that saw wide glyphs); the
+//     app passes nil, since ProbeUnicode is not run at startup.
 func ResolveIconMode(setting string, nerdFont bool, unicodeOK func() bool, getenv func(string) string) IconMode {
 	if getenv == nil {
 		getenv = os.Getenv
@@ -48,7 +49,8 @@ func ResolveIconMode(setting string, nerdFont bool, unicodeOK func() bool, geten
 	// another font without fallback) shows tofu boxes for every icon. So
 	// auto only picks Nerd icons on terminals that bundle the Nerd
 	// symbols themselves; everyone else gets Unicode and can opt in with
-	// icons = "nerd" (nerdFont only feeds the Doctor / settings tip).
+	// icons = "nerd". nerdFont is not used here; the Doctor runs its own
+	// detection and suggests the switch.
 	_ = nerdFont
 	if bundlesNerdSymbols(getenv) {
 		return IconModeNerdFont
