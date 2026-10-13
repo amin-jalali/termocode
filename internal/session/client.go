@@ -142,6 +142,10 @@ func Attach(c *net.UnixConn, p Paths, in, out *os.File, caps *ClientCaps) int {
 		p   []byte
 		err error
 	}
+	// seen follows the UI's output like the server does, so a client that
+	// leaves without the server's reset (killed, server gone) can still
+	// undo what plainReset cannot know about (the font size).
+	seen := NewModes()
 	frames := make(chan frame, 16)
 	go func() {
 		for {
@@ -167,16 +171,17 @@ func Attach(c *net.UnixConn, p Paths, in, out *os.File, caps *ClientCaps) int {
 			case syscall.SIGHUP:
 				return 0 // the terminal is gone; nothing to restore
 			default:
-				_, _ = out.WriteString(plainReset)
+				_, _ = out.Write(append(seen.Reset(), plainReset...))
 				return 0
 			}
 		case f := <-frames:
 			if f.err != nil {
-				_, _ = out.WriteString(plainReset + lostMessage(p) + "\r\n")
+				_, _ = out.Write(append(seen.Reset(), plainReset+lostMessage(p)+"\r\n"...))
 				return 1
 			}
 			switch f.typ {
 			case frameOutput:
+				seen.Feed(f.p)
 				_, _ = out.Write(f.p)
 			case frameExit:
 				return decodeCode(f.p)
