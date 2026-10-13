@@ -3,6 +3,8 @@ package session
 import (
 	"strings"
 	"testing"
+
+	"github.com/amin-jalali/termocode/internal/termfont"
 )
 
 // feedSplit feeds s one byte at a time: sequences split across reads.
@@ -64,17 +66,31 @@ func TestModesSkipStrings(t *testing.T) {
 
 func TestModesKittyAndFont(t *testing.T) {
 	m := NewModes()
-	m.Feed([]byte("\x1b[>1u\x1b[>3u\x1b[<u\x1b]1337;ChangeFontSize=-2\x07"))
+	// The UI's font change: kitty remote control set-font-size, asking
+	// for an answer (split across reads like any other output).
+	feedSplit(m, "\x1b[>1u\x1b[>3u\x1b[<u"+termfont.Request(termfont.Kitty, -2, true))
 	got := string(m.Replay())
 	if !strings.Contains(got, "\x1b[>1u") || strings.Contains(got, "\x1b[>3u") {
 		t.Errorf("kitty stack wrong: %q", got)
 	}
-	if !strings.Contains(got, "ChangeFontSize=-2") {
+	// Replay and reset never ask for an answer: it would land in the UI's
+	// input (or the shell's, after a detach).
+	if !strings.Contains(got, termfont.Request(termfont.Kitty, -2, false)) {
 		t.Errorf("font delta not replayed: %q", got)
 	}
 	reset := string(m.Reset())
-	if !strings.Contains(reset, "\x1b[<1u") || !strings.Contains(reset, "ChangeFontSize=2") {
+	if !strings.Contains(reset, "\x1b[<1u") || !strings.Contains(reset, termfont.Request(termfont.Kitty, 2, false)) {
 		t.Errorf("reset does not undo kitty / font: %q", reset)
+	}
+	// The UI undid it on exit: nothing left to replay or reset.
+	m.Feed([]byte(termfont.Request(termfont.Kitty, 2, false)))
+	if got := string(m.Replay()) + string(m.Reset()); strings.Contains(got, "kitty-cmd") {
+		t.Errorf("font restored by the UI but still tracked: %q", got)
+	}
+	// Other kitty commands and other DCS strings are not font changes.
+	m.Feed([]byte("\x1bP@kitty-cmd{\"cmd\":\"ls\"}\x1b\\\x1bP+q544e\x1b\\"))
+	if got := string(m.Replay()); strings.Contains(got, "kitty-cmd") {
+		t.Errorf("unrelated DCS tracked: %q", got)
 	}
 }
 

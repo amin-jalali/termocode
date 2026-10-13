@@ -8,12 +8,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/amin-jalali/termocode/internal/termfont"
 )
 
 // attachDropped runs Attach against a server that hangs up right after
-// the hello, and returns what the client printed. serverAlive holds the
-// workspace lock, as a running server does.
-func attachDropped(t *testing.T, serverAlive bool) string {
+// the hello (after sending output, if any), and returns what the client
+// printed. serverAlive holds the workspace lock, as a running server does.
+func attachDropped(t *testing.T, serverAlive bool, output string) string {
 	t.Helper()
 	dir, err := os.MkdirTemp("", "tcc")
 	if err != nil {
@@ -39,7 +41,10 @@ func attachDropped(t *testing.T, serverAlive bool) string {
 			return
 		}
 		_, _, _ = readFrame(c) // hello
-		_ = c.Close()          // dropped, e.g. as a client that stopped reading
+		if output != "" {
+			_ = writeFrame(c, frameOutput, []byte(output))
+		}
+		_ = c.Close() // dropped, e.g. as a client that stopped reading
 	}()
 	c, err := Dial(p)
 	if err != nil {
@@ -64,12 +69,25 @@ func attachDropped(t *testing.T, serverAlive bool) string {
 // TestAttachDroppedByLiveServer: a server that is still running and drops
 // the client (it stopped reading for 5 s) is not "lost".
 func TestAttachDroppedByLiveServer(t *testing.T) {
-	got := attachDropped(t, true)
+	got := attachDropped(t, true, "")
 	if strings.Contains(got, "lost the session server") || !strings.Contains(got, "termocode attach") {
 		t.Errorf("live server, got %q", got)
 	}
-	got = attachDropped(t, false)
+	got = attachDropped(t, false, "")
 	if !strings.Contains(got, "lost the session server") {
 		t.Errorf("dead server, got %q", got)
+	}
+}
+
+// TestAttachLostRestoresFont: when the server dies with the UI's font
+// change in place, the client undoes it (the server's reset never comes).
+func TestAttachLostRestoresFont(t *testing.T) {
+	got := attachDropped(t, false, "\x1b[?1049h"+termfont.Request(termfont.Kitty, -2, true))
+	if !strings.Contains(got, termfont.Request(termfont.Kitty, 2, false)) {
+		t.Errorf("lost server, font not restored: %q", got)
+	}
+	got = attachDropped(t, false, termfont.Request(termfont.Kitty, -2, true)+termfont.Request(termfont.Kitty, 2, false))
+	if strings.Count(got, "kitty-cmd") != 2 {
+		t.Errorf("font already restored by the UI, restored again: %q", got)
 	}
 }
