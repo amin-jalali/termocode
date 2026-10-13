@@ -11,7 +11,7 @@ func TestResolveFontDelta(t *testing.T) {
 		cfg  *int
 		want int
 	}{
-		{"default", "", nil, -2},
+		{"default is off: few terminals can do it", "", nil, 0},
 		{"config", "", &three, 3},
 		{"config zero", "", &zero, 0},
 		{"env wins", "-4", &three, -4},

@@ -741,6 +741,9 @@ func (m Model) Init() tea.Cmd {
 	if cmd := m.initClipboardCapture(); cmd != nil {
 		cmds = append(cmds, cmd)
 	}
+	if cmd := fontTipCmd(); cmd != nil {
+		cmds = append(cmds, cmd)
+	}
 	if m.nvim != nil {
 		cmds = append(cmds, m.attachCmd(), m.nvim.Next())
 	}

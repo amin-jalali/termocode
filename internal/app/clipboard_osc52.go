@@ -28,8 +28,8 @@ const osc52MaxBytes = 6000
 // terminator). Bubble Tea's alt-screen renderer treats OSC sequences
 // as out-of-band terminal commands, so writing directly to os.Stdout
 // here does not corrupt the screen buffer — confirmed by the same
-// pattern used for DECSCUSR (`\x1b[0 q`) and OSC 1337 ChangeFontSize
-// in cmd/termocode/main.go.
+// pattern used for DECSCUSR (`\x1b[0 q`) and OSC 111 in
+// cmd/termocode/main.go.
 func emitOSC52(s string) {
 	if s == "" {
 		return

@@ -20,7 +20,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `icons` | enum | `auto` | Icon set: nerd (Nerd Font glyphs), unicode (plain symbols), ascii, or auto (nerd on terminals that bundle Nerd symbols — WezTerm, Ghostty, kitty — ascii on TERM=linux or a non-UTF-8 locale, else unicode). TERMOCODE_ICON_MODE wins over it. |
 | `animations` | enum | `auto` | Overlay / toast / list animations: on, off, or auto (off over SSH and when the terminal is not truecolor). The editor text itself never animates. |
 | `images` | enum | `auto` | Inline images (image preview, dashboard logo, Markdown preview): kitty, sixel, blocks (coloured half-blocks, works everywhere with colour), off, or auto (probe the terminal; blocks inside tmux without allow-passthrough). |
-| `font_delta` | int | `-2` | Font size change asked of the host terminal at launch (OSC 1337); 0 turns it off. TERMOCODE_FONT_DELTA wins over it. |
+| `font_delta` | int | `0` | Font size change (points) asked of the terminal at launch and undone on exit; 0 turns it off. Works only in kitty with allow_remote_control on; other terminals (iTerm2, WezTerm, Ghostty, GNOME, Windows Terminal …) have no way to do it, so use their zoom (Ctrl+-). TERMOCODE_FONT_DELTA wins over it. |
 
 ## Editor
 
@@ -72,7 +72,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `TERMOCODE_AI_BASE_URL` | AI API base URL; wins over `ai_base_url`. |
 | `TERMOCODE_AI_MODEL` | AI chat model; wins over `ai_model`. |
 | `TERMOCODE_AI_PROVIDER` | AI provider; wins over `ai_provider` in config.json. |
-| `TERMOCODE_FONT_DELTA` | Font size change asked of the terminal at launch; wins over font_delta in config.json (default -2, 0 turns it off). |
+| `TERMOCODE_FONT_DELTA` | Font size change asked of the terminal at launch (kitty with remote control only); wins over font_delta in config.json (default 0 = off). |
 | `TERMOCODE_ICON_MODE` | Icon set: `nerd_font`, `unicode` or `ascii`. |
 | `TERMOCODE_NERD_FONT` | Legacy: `1` is the same as `TERMOCODE_ICON_MODE=nerd_font`. |
 | `TERMOCODE_NO_SESSION` | Any value: run without a persistent session, like `--no-session`. |
