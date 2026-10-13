@@ -44,8 +44,9 @@ type Icon struct {
 // mode. Callers (e.g. the activity bar) opt into the bold artwork via
 // Icon.BoldRender().
 //
-// At runtime we still empirically probe each single-cell glyph (see
-// Probe()) — the curated list is the candidate set, not the final answer.
+// ProbeUnicode (detect.go) can measure every single-cell glyph on the
+// real terminal, but startup does not call it: ResolveIconMode picks the
+// tier from the "icons" setting and the environment alone.
 var (
 	// IconFiles — squared-with-horizontal-fill reads as a "file with lines"
 	// in most monospace fonts. U+25A4 is in EAW=Neutral, 1 cell.
@@ -165,13 +166,14 @@ const (
 	IconModeASCII
 )
 
-// CurrentIconMode is read by Icon.String. Set it once at startup.
+// CurrentIconMode is read by Icon.String.
 //
-// Defaults to ASCII — the user reported the curated Unicode + 2×2 quadrant
-// experiment looked broken on their setup. Plain ASCII letters render
-// identically on every terminal and font, so we lock the default there.
-// Users who want richer icons can opt in via TERMOCODE_ICON_MODE=unicode
-// or TERMOCODE_ICON_MODE=nerd_font.
+// The zero-config value is ASCII, which is safe before anything else
+// runs. cmd/termocode first sets it from the env overrides
+// (DetectIconMode), then app.ApplyDisplaySettings resolves the "icons"
+// setting with ResolveIconMode (detect.go): auto means Nerd Font glyphs
+// on kitty / WezTerm / Ghostty, ASCII on TERM=linux / dumb / vt* or a
+// non-UTF-8 locale, else Unicode. A settings change re-resolves it.
 var CurrentIconMode IconMode = IconModeASCII
 
 func (i Icon) String() string {
@@ -228,11 +230,10 @@ func envOverrideMode() (IconMode, bool) {
 	return IconModeASCII, false
 }
 
-// DetectIconMode reads environment hints to guess the safest fallback.
-//   - TERMOCODE_ICON_MODE wins if set: "nerd_font" | "unicode" | "ascii".
-//   - Otherwise ASCII — plain letters render identically everywhere and
-//     dodge the 2-cell Unicode glitches the user reported. Pretty icons
-//     are now strictly opt-in via the env vars above.
+// DetectIconMode is the early, env-only pick used before the settings are
+// read: TERMOCODE_ICON_MODE ("nerd_font" | "unicode" | "ascii") or
+// TERMOCODE_NERD_FONT=1 if set, else ASCII as a safe placeholder. The
+// real choice (including "auto") is ResolveIconMode in detect.go.
 func DetectIconMode() IconMode {
 	if m, ok := envOverrideMode(); ok {
 		return m
@@ -240,48 +241,9 @@ func DetectIconMode() IconMode {
 	return IconModeASCII
 }
 
-// Probe runs the cursor-position probe against stdin/stdout and returns
-// the safest IconMode for the current terminal.
-//
-// Fallback semantics:
-//   - TERMOCODE_ICON_MODE / TERMOCODE_NERD_FONT win immediately.
-//   - Otherwise ASCII (the user reported the Unicode glyphs looked
-//     broken on their setup, so we don't auto-promote — pretty icons
-//     are strictly opt-in via the env vars above).
-//
-// The CSI-6n probe code below is preserved for future re-enablement,
-// but currently short-circuits at the env-override step.
-//
-// Protocol: for each candidate glyph we
-//  1. ask the terminal for the current cursor column via CSI 6n,
-//  2. write the glyph,
-//  3. ask again,
-//  4. compute the cell delta. delta==1 means the glyph rendered as
-//     a single cell on the user's actual terminal/font combo.
-//
-// All probe output is hidden behind DECSC/DECRC (\x1b7 / \x1b8) and a
-// trailing CSI K erase, so the user sees no flicker.
-//
-// Total wall-clock budget is ProbeDeadline (200 ms). Past that we
-// fall back to ASCII regardless of how many glyphs were checked.
-func Probe() IconMode {
-	if m, ok := envOverrideMode(); ok {
-		return m
-	}
-	// Default locked to ASCII per user request — Unicode / Nerd Font is
-	// strictly opt-in via TERMOCODE_ICON_MODE. The CSI-6n probe
-	// infrastructure (probeGlyph, parseCPR, etc.) is still compiled in
-	// for future re-enablement.
-	return IconModeASCII
-}
-
-// ProbeDeadline caps the wall-clock budget for the whole probe.
-// Exposed for the test suite.
-var ProbeDeadline = 200 * time.Millisecond
-
 // unicodeCandidates returns every glyph that would actually be rendered
-// by the activity bar in Unicode mode. Tier passes only if all of these
-// probe as exactly 1 cell.
+// by the activity bar in Unicode mode. ProbeUnicode passes only if all of
+// these (plus the file-icon glyphs) probe as exactly 1 cell.
 func unicodeCandidates() []string {
 	icons := []Icon{
 		IconFiles, IconSearch, IconGit, IconOutline, IconRun, IconTests,

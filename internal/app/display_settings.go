@@ -56,11 +56,13 @@ func ConfigDisplay() DisplayConfig {
 // termCaps is the terminal's graphics support, probed at startup.
 var termCaps = termimg.Caps{Protocol: termimg.Blocks}
 
-// unicodeProbeOK remembers the startup Unicode width probe for live
-// re-resolution of icons=auto.
+// unicodeProbeOK is the startup Unicode width verdict. No probe runs
+// today (cmd/termocode passes true for icons=auto) and nothing reads it;
+// it is kept so a future ProbeUnicode result has a home.
 var unicodeProbeOK bool
 
-// nerdFontHint remembers whether a Nerd Font was detected at startup.
+// nerdFontHint is whether a Nerd Font was detected at startup (cached
+// fc-list, see setup.HasNerdFont). ResolveIconMode ignores it today.
 var nerdFontHint bool
 
 // SetTerminalCaps records the startup probe results (cmd/termocode).
