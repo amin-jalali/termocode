@@ -186,6 +186,10 @@ type Model struct {
 	// cmd/termocode/main.go).
 	hoverX, hoverY int
 	mouseAllMotion bool
+	// mouseProbe is set only on the copy a test probes (probeClick): the
+	// mouse code then records which target a click resolves to and stops
+	// before it acts (hit_targets.go).
+	mouseProbe *string
 
 	// termGen is the persistent-session attach whose terminal caps we
 	// draw for (TerminalChangedMsg); View marks every frame with it so

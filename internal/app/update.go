@@ -330,6 +330,16 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return newM, cmd
 	}
 
+	if _, ok := msg.(tea.MouseMsg); ok && m.mouseProbe != nil {
+		switch k := m.overlayKind(); {
+		case m.previewOpen, m.searchOpen, m.promptOpen:
+			m.probed("overlay")
+			return m, nil
+		case k == "settings", k == "recents", k == "menu":
+			m.probed("overlay:" + k)
+			return m, nil
+		}
+	}
 	if m.previewOpen {
 		return m.routeToPreview(msg)
 	}
@@ -731,6 +741,14 @@ func (m Model) routeToPicker(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.picker.SetSize(m.w, m.h)
 		return m, nil
 	case tea.MouseMsg:
+		if m.mouseProbe != nil {
+			if idx, ok := m.picker.RowAt(msg.X, msg.Y); ok {
+				m.probed("picker:row:" + itoa(idx))
+			} else {
+				m.probed("picker")
+			}
+			return m, nil
+		}
 		var cmd tea.Cmd
 		m.picker, cmd = m.picker.HandleMouse(msg.X, msg.Y, msg.Action, msg.Button)
 		m.previewThemeUnderCursor()
@@ -855,6 +873,14 @@ func (m Model) routeToConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// elsewhere (inside or outside the modal) are silently
 		// swallowed — destructive prompts must not be dismissed by a
 		// stray click; the user has to use Esc or pick a button.
+		if m.mouseProbe != nil {
+			if id := m.confirm.ButtonAt(msg.X, msg.Y); id != "" {
+				m.probed("confirm:" + id)
+			} else {
+				m.probed("confirm")
+			}
+			return m, nil
+		}
 		var cmd tea.Cmd
 		m.confirm, cmd, _ = m.confirm.HandleMouse(msg.X, msg.Y, msg.Action, msg.Button)
 		return m, cmd

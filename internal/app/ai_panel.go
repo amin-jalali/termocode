@@ -816,6 +816,60 @@ func (m *Model) submitAIInput() tea.Cmd {
 
 // ── Mouse ──────────────────────────────────────────────────────────────
 
+// aiPanelTargetAt returns what a left click at screen cell (x, y) hits in
+// the chat panel: "ai:new", "ai:history", "ai:btn:<id>" (a transcript or
+// divider span), "ai:transcript", "ai:input", "ai:body" (the rest of the
+// panel), or "" when the panel does not take the click (outside it, or
+// the pin / close header buttons, which mouse.go handles).
+func (m Model) aiPanelTargetAt(x, y int) string {
+	if !m.actionsPanelVisible() || m.dragKind != dragNone {
+		return ""
+	}
+	x0 := m.w - m.actionsColumnWidth()
+	if x < x0 || (x == x0 && y > 0) {
+		return ""
+	}
+	switch y {
+	case 0:
+		switch id := m.hitActionsButton(x, y); id {
+		case "new", "history":
+			return "ai:" + id
+		}
+		return ""
+	case 1:
+		return "ai:body"
+	}
+	localX := x - x0
+	width := m.actionsColumnWidth()
+	g := m.aiPanelGeom(width, m.h)
+	switch {
+	case y >= g.transTop && y < g.transTop+g.transH:
+		lines := m.aiTranscript(width)
+		scroll := 0
+		if m.ai != nil {
+			scroll = m.ai.scroll
+		}
+		start, _ := aiVisibleRange(len(lines), g.transH, scroll)
+		if idx := start + y - g.transTop; idx >= 0 && idx < len(lines) {
+			for _, b := range lines[idx].buttons {
+				if localX >= b.x0 && localX < b.x1 {
+					return "ai:btn:" + b.id
+				}
+			}
+		}
+		return "ai:transcript"
+	case !g.compact && y == g.dividerRow:
+		for _, b := range m.aiDividerLine(width).buttons {
+			if localX >= b.x0 && localX < b.x1 {
+				return "ai:btn:" + b.id
+			}
+		}
+	case !g.compact && y >= g.inputTop && y <= g.footerRow:
+		return "ai:input"
+	}
+	return "ai:body"
+}
+
 // handleAIPanelMouse handles wheel / clicks inside the chat panel body
 // and the extra header buttons (+ new chat, ≡ history). A left click
 // outside the panel while it has focus blurs it (and is not consumed).
@@ -842,46 +896,20 @@ func (m *Model) handleAIPanelMouse(msg tea.MouseMsg) (tea.Cmd, bool) {
 	default:
 		return nil, msg.Y > 0
 	}
-	if msg.Y == 0 {
-		switch m.hitActionsButton(msg.X, msg.Y) {
-		case "new":
-			return m.newAIChat(), true
-		case "history":
-			return m.openAIHistory(), true
-		}
+	switch id := m.aiPanelTargetAt(msg.X, msg.Y); {
+	case id == "":
 		return nil, false // pin / close handled by mouse.go
-	}
-	if msg.Y == 1 {
-		return nil, true
-	}
-	localX := msg.X - x0
-	width := m.actionsColumnWidth()
-	g := m.aiPanelGeom(width, m.h)
-	switch {
-	case msg.Y >= g.transTop && msg.Y < g.transTop+g.transH:
-		lines := m.aiTranscript(width)
-		start, _ := aiVisibleRange(len(lines), g.transH, s.scroll)
-		idx := start + msg.Y - g.transTop
-		if idx >= 0 && idx < len(lines) {
-			for _, b := range lines[idx].buttons {
-				if localX >= b.x0 && localX < b.x1 {
-					return m.onAIButton(b.id), true
-				}
-			}
-		}
+	case id == "ai:new":
+		return m.newAIChat(), true
+	case id == "ai:history":
+		return m.openAIHistory(), true
+	case strings.HasPrefix(id, "ai:btn:"):
+		return m.onAIButton(strings.TrimPrefix(id, "ai:btn:")), true
+	case id == "ai:transcript":
 		s.focused = true
-		return nil, true
-	case !g.compact && msg.Y == g.dividerRow:
-		for _, b := range m.aiDividerLine(width).buttons {
-			if localX >= b.x0 && localX < b.x1 {
-				return m.onAIButton(b.id), true
-			}
-		}
-		return nil, true
-	case !g.compact && msg.Y >= g.inputTop && msg.Y <= g.footerRow:
+	case id == "ai:input":
 		s.focused = true
 		s.caret = len(s.input)
-		return nil, true
 	}
 	return nil, true
 }

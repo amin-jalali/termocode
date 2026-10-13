@@ -340,32 +340,78 @@ func (m Model) HandleMouse(x int, screenX, screenY int, t tea.MouseEventType) (M
 	if page < 1 {
 		page = 1
 	}
-	if st.leftOver && x == 0 && t == tea.MouseLeft {
-		m.scrollByTabs(-page)
+	tg, ok := m.TargetAt(x)
+	if !ok {
 		return m, nil
 	}
-	if st.rightOver && x == m.w-1 && t == tea.MouseLeft {
-		m.scrollByTabs(page)
+	id := tg.ID
+	switch tg.Kind {
+	case TargetScrollLeft:
+		if t == tea.MouseLeft {
+			m.scrollByTabs(-page)
+		}
 		return m, nil
+	case TargetScrollRight:
+		if t == tea.MouseLeft {
+			m.scrollByTabs(page)
+		}
+		return m, nil
+	case TargetClose:
+		// Close glyph closes on either button.
+		return m, func() tea.Msg { return CloseMsg{ID: id} }
 	}
+	if t == tea.MouseRight {
+		sx, sy := screenX, screenY
+		return m, func() tea.Msg { return TabContextMsg{ID: id, X: sx, Y: sy} }
+	}
+	return m, func() tea.Msg { return SwitchMsg{ID: id} }
+}
 
+// Target kinds of the tab bar.
+const (
+	TargetTab         = "tab"
+	TargetClose       = "close"
+	TargetScrollLeft  = "scroll-left"
+	TargetScrollRight = "scroll-right"
+)
+
+// Target is one click target of the tab bar, in bar-local columns.
+type Target struct {
+	Kind string // TargetTab, TargetClose, TargetScrollLeft or TargetScrollRight
+	ID   int    // buffer id (tab and close targets)
+	X, W int
+}
+
+// Targets lists the click targets on show, in the order HandleMouse
+// tests them. A tab target spans the whole tab, its close glyph too.
+func (m Model) Targets() []Target {
+	if m.w <= 0 || len(m.bufs) == 0 {
+		return nil
+	}
+	var out []Target
+	st, _ := m.layout()
+	if st.leftOver {
+		out = append(out, Target{Kind: TargetScrollLeft, X: 0, W: 1})
+	}
+	if st.rightOver {
+		out = append(out, Target{Kind: TargetScrollRight, X: m.w - 1, W: 1})
+	}
 	m.rebuildRegions()
 	for _, r := range m.regions {
-		if x < r.start || x >= r.end {
-			continue
-		}
-		id := r.id
-		// Close glyph closes on either button.
-		if x == r.closeX {
-			return m, func() tea.Msg { return CloseMsg{ID: id} }
-		}
-		if t == tea.MouseRight {
-			sx, sy := screenX, screenY
-			return m, func() tea.Msg { return TabContextMsg{ID: id, X: sx, Y: sy} }
-		}
-		return m, func() tea.Msg { return SwitchMsg{ID: id} }
+		out = append(out, Target{Kind: TargetClose, ID: r.id, X: r.closeX, W: 1})
+		out = append(out, Target{Kind: TargetTab, ID: r.id, X: r.start, W: r.end - r.start})
 	}
-	return m, nil
+	return out
+}
+
+// TargetAt returns the click target at bar-local column x.
+func (m Model) TargetAt(x int) (Target, bool) {
+	for _, tg := range m.Targets() {
+		if x >= tg.X && x < tg.X+tg.W {
+			return tg, true
+		}
+	}
+	return Target{}, false
 }
 
 // renderTab returns the rendered tab string and its visible width.

@@ -352,12 +352,5 @@ func (m Model) statusBarRect() (x, w int) {
 // hitStatusLSPChip reports whether a click at (x, y) lands on the
 // status-bar LSP chip.
 func (m Model) hitStatusLSPChip(x, y int) bool {
-	if m.zenMode || y != m.h-1 {
-		return false
-	}
-	bx, bw := m.statusBarRect()
-	sb := m.status
-	sb.SetWidth(bw)
-	x0, x1, ok := sb.LSPChipSpan(m.statusState())
-	return ok && x >= bx+x0 && x < bx+x1
+	return m.statusHitAt(x, y) == "status:lsp"
 }
