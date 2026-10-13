@@ -17,7 +17,8 @@ import (
 //     symbols (WezTerm, Ghostty, kitty); ASCII only on terminals that cannot draw Unicode
 //     (TERM=linux / dumb / vt*, or a non-UTF-8 locale); else the Unicode
 //     set, which renders in every modern terminal font. unicodeOK, when
-//     given, can veto Unicode (a width probe that saw wide glyphs).
+//     given, can veto Unicode (a width probe that saw wide glyphs); the
+//     app passes nil, since ProbeUnicode is not run at startup.
 func ResolveIconMode(setting string, nerdFont bool, unicodeOK func() bool, getenv func(string) string) IconMode {
 	if getenv == nil {
 		getenv = os.Getenv
@@ -48,7 +49,8 @@ func ResolveIconMode(setting string, nerdFont bool, unicodeOK func() bool, geten
 	// another font without fallback) shows tofu boxes for every icon. So
 	// auto only picks Nerd icons on terminals that bundle the Nerd
 	// symbols themselves; everyone else gets Unicode and can opt in with
-	// icons = "nerd" (nerdFont only feeds the Doctor / settings tip).
+	// icons = "nerd". nerdFont is not used here; the Doctor runs its own
+	// detection and suggests the switch.
 	_ = nerdFont
 	if bundlesNerdSymbols(getenv) {
 		return IconModeNerdFont
@@ -95,6 +97,12 @@ func unicodeTerminal(getenv func(string) string) bool {
 // before / after each glyph) and reports whether all of them draw one cell
 // wide. It switches the TTY to raw mode itself and must run before Bubble
 // Tea starts. Output is hidden behind save / restore cursor and erased.
+//
+// Not called at startup, and not usable as is: readCPR relies on
+// os.Stdin.SetReadDeadline, which a TTY does not support ("file type does
+// not support deadline"), so this returns false at once without
+// measuring anything. Port it to a poll-based read (termimg.readSome)
+// before wiring it in.
 func ProbeUnicode(timeout time.Duration) bool {
 	in, out, ok := probeStreams()
 	if !ok {

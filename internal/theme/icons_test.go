@@ -116,10 +116,9 @@ func TestEnvOverrideMode(t *testing.T) {
 	}
 }
 
-func TestProbeFallsBackWhenNotTTY(t *testing.T) {
-	// In `go test`, stdout/stdin are usually pipes — Probe should detect
-	// not-a-TTY and return the curated Unicode default. ASCII is reserved
-	// for terminals that PROVE a glyph is 2-cell.
+func TestDetectIconModeDefaultASCII(t *testing.T) {
+	// Without env overrides the early pick is the ASCII placeholder;
+	// ResolveIconMode makes the real choice once settings are read.
 	saved := os.Getenv("TERMOCODE_ICON_MODE")
 	savedNF := os.Getenv("TERMOCODE_NERD_FONT")
 	savedNC := os.Getenv("NO_COLOR")
@@ -131,23 +130,21 @@ func TestProbeFallsBackWhenNotTTY(t *testing.T) {
 	_ = os.Unsetenv("TERMOCODE_ICON_MODE")
 	_ = os.Unsetenv("TERMOCODE_NERD_FONT")
 	_ = os.Unsetenv("NO_COLOR")
-	// Default is now locked to ASCII — Unicode is strictly opt-in via
-	// TERMOCODE_ICON_MODE.
-	if got := Probe(); got != IconModeASCII {
-		t.Fatalf("Probe() over non-tty = %v want %v", got, IconModeASCII)
+	if got := DetectIconMode(); got != IconModeASCII {
+		t.Fatalf("DetectIconMode() = %v want %v", got, IconModeASCII)
 	}
 }
 
-func TestProbeNoColor(t *testing.T) {
+func TestDetectIconModeNoColor(t *testing.T) {
 	saved := os.Getenv("NO_COLOR")
 	defer func() { _ = os.Setenv("NO_COLOR", saved) }()
 	_ = os.Setenv("NO_COLOR", "1")
-	if got := Probe(); got != IconModeASCII {
-		t.Fatalf("NO_COLOR Probe() = %v want ASCII", got)
+	if got := DetectIconMode(); got != IconModeASCII {
+		t.Fatalf("NO_COLOR DetectIconMode() = %v want ASCII", got)
 	}
 }
 
-func TestProbeEnvOverrideWins(t *testing.T) {
+func TestDetectIconModeEnvOverrideWins(t *testing.T) {
 	saved := os.Getenv("TERMOCODE_ICON_MODE")
 	defer func() { _ = os.Setenv("TERMOCODE_ICON_MODE", saved) }()
 
@@ -160,8 +157,8 @@ func TestProbeEnvOverrideWins(t *testing.T) {
 		{"ascii", IconModeASCII},
 	} {
 		_ = os.Setenv("TERMOCODE_ICON_MODE", env.v)
-		if got := Probe(); got != env.want {
-			t.Fatalf("Probe with TERMOCODE_ICON_MODE=%s = %v want %v", env.v, got, env.want)
+		if got := DetectIconMode(); got != env.want {
+			t.Fatalf("DetectIconMode with TERMOCODE_ICON_MODE=%s = %v want %v", env.v, got, env.want)
 		}
 	}
 }
