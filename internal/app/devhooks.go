@@ -24,6 +24,7 @@ import (
 //	termsend:<line>        type a line into the active terminal tab
 //	view:files|git         switch the sidebar view
 //	toast:<title>|<detail> push an info toast
+//	toasts:clear           drop every toast on show
 //	panel:<kind>           show a bottom-panel tab: terminal, problems,
 //	                       output, tests, debug-console
 //	setting:<row id>=<v>   apply a Settings row value, as the Settings UI
@@ -83,6 +84,10 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		id, value, _ := strings.Cut(arg, "=")
 		m.settingPromptID = id
 		return m.applySettingValue(value)
+	case "toasts":
+		if arg == "clear" {
+			m.toast = toast.New()
+		}
 	case "toast":
 		title, detail, _ := strings.Cut(arg, "|")
 		var cmd tea.Cmd
