@@ -138,6 +138,17 @@ var baseHitLayouts = []hitLayout{
 	{"AI panel, no sidebar", func(d *Driver) { tryAIPanel(d); d.Palette("toggle-explorer") }},
 	{"zen", func(d *Driver) { d.Palette("zen-mode") }},
 	{"palette", func(d *Driver) { d.Key("f1") }},
+	{"overflow menu", func(d *Driver) {
+		if x, y, ok := find(d, "⋮"); ok {
+			d.Click(x, y)
+		}
+	}},
+	{"overflow menu, AI panel", func(d *Driver) {
+		tryAIPanel(d)
+		if x, y, ok := find(d, "⋮"); ok {
+			d.Click(x, y)
+		}
+	}},
 	{"confirm", func(d *Driver) {
 		clickExplorer(d, "main.go")
 		d.Key("delete")

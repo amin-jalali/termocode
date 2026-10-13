@@ -106,6 +106,16 @@ func (m Model) hitTargets() []hitTarget {
 	if m.findOpen {
 		out = append(out, m.findTargets(pane)...)
 	}
+	if mx, my, mw, mh, ok := m.overflowMenuRect(); ok {
+		// The open ⋮ menu covers what is under it.
+		kept := out[:0]
+		for _, t := range out {
+			if t.X >= mx+mw || t.X+t.W <= mx || t.Y >= my+mh || t.Y+t.H <= my {
+				kept = append(kept, t)
+			}
+		}
+		out = append(kept, m.overflowMenuTargets()...)
+	}
 	if m.gitDiffActive && m.nvim != nil && diffNavShown(pane.W) {
 		// The change-nav buttons on the diff winbar (" ‹ " and " › ").
 		add(hitTarget{ID: "diff:prev", Label: "‹", X: pane.X, Y: pane.Top, W: 3, H: 1})
@@ -235,6 +245,57 @@ func (m Model) actionsTargets() []hitTarget {
 	// The splitter is the panel's left column below the header row (a
 	// press on row 0 there is the header's).
 	out = append(out, hitTarget{ID: "actions:splitter", X: x1, Y: 1, W: 1, H: m.h - 1})
+	return append(out, m.aiPanelTargets(x1, x2-x1)...)
+}
+
+// aiPanelTargets maps the chat panel body: the clickable spans of the
+// transcript and divider rows, and the input box (aiPanelTargetAt).
+func (m Model) aiPanelTargets(x0, width int) []hitTarget {
+	view := m.renderActionsPanel(width, m.h)
+	g := m.aiPanelGeom(width, m.h)
+	var out []hitTarget
+	addButtons := func(y int, buttons []aiLineButton) {
+		for _, b := range buttons {
+			// Column 0 of the panel is the splitter.
+			if lo := max(b.x0, 1); b.x1 > lo {
+				out = append(out, hitTarget{ID: "ai:btn:" + b.id, Label: cellText(view, y, lo, b.x1),
+					X: x0 + lo, Y: y, W: b.x1 - lo, H: 1})
+			}
+		}
+	}
+	lines := m.aiTranscript(width)
+	scroll := 0
+	if m.ai != nil {
+		scroll = m.ai.scroll
+	}
+	start, _ := aiVisibleRange(len(lines), g.transH, scroll)
+	for y := g.transTop; y < g.transTop+g.transH; y++ {
+		if idx := start + y - g.transTop; idx >= 0 && idx < len(lines) {
+			addButtons(y, lines[idx].buttons)
+		}
+	}
+	if !g.compact {
+		addButtons(g.dividerRow, m.aiDividerLine(width).buttons)
+		out = append(out, hitTarget{ID: "ai:input", X: x0 + 1, Y: g.inputTop, W: width - 1, H: g.footerRow - g.inputTop + 1})
+	}
+	return out
+}
+
+// overflowMenuTargets maps the rows of the open ⋮ menu.
+func (m Model) overflowMenuTargets() []hitTarget {
+	x, y, w, h, ok := m.overflowMenuRect()
+	if !ok {
+		return nil
+	}
+	box := m.renderOverflowMenu(w, h)
+	var out []hitTarget
+	for i, r := range overflowMenuRows(m.overflowMenuItems()) {
+		if r.isDivider || i+2 > h {
+			continue
+		}
+		out = append(out, hitTarget{ID: "overflow:item:" + itoa(i), Label: cellText(box, i+1, 1, w-1),
+			X: x, Y: y + 1 + i, W: w, H: 1})
+	}
 	return out
 }
 
