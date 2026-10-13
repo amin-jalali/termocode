@@ -69,7 +69,7 @@ func Probe(in, out *os.File, timeout time.Duration, getenv func(string) string) 
 	if _, err := out.WriteString(probeQuery); err != nil {
 		return caps
 	}
-	reply := readReplies(in, time.Now().Add(timeout))
+	reply := readUntil(in, time.Now().Add(timeout), hasDA1)
 	kitty, sixel, cw, ch, gotDA1 := parseProbeReply(reply)
 	caps.CellW, caps.CellH = cw, ch
 	switch {
@@ -88,9 +88,27 @@ func Probe(in, out *os.File, timeout time.Duration, getenv func(string) string) 
 	return caps
 }
 
-// readReplies reads until the DA1 reply ("\x1b[?…c") is in or the deadline
-// passes. readSome is platform specific (poll on unix).
-func readReplies(in *os.File, deadline time.Time) []byte {
+// Query writes q to the terminal (in raw mode) and reads its answer until
+// done says it is all in or timeout passes. Like Probe it must run before
+// Bubble Tea takes the TTY. nil when in or out is not a terminal.
+func Query(in, out *os.File, q string, timeout time.Duration, done func([]byte) bool) []byte {
+	if in == nil || out == nil || !term.IsTerminal(int(in.Fd())) || !term.IsTerminal(int(out.Fd())) {
+		return nil
+	}
+	state, err := term.MakeRaw(int(in.Fd()))
+	if err != nil {
+		return nil
+	}
+	defer func() { _ = term.Restore(int(in.Fd()), state) }()
+	if _, err := out.WriteString(q); err != nil {
+		return nil
+	}
+	return readUntil(in, time.Now().Add(timeout), done)
+}
+
+// readUntil reads until done (for Probe: the DA1 reply "\x1b[?…c") is true
+// or the deadline passes. readSome is platform specific (poll on unix).
+func readUntil(in *os.File, deadline time.Time, done func([]byte) bool) []byte {
 	var buf []byte
 	tmp := make([]byte, 256)
 	for {
@@ -103,7 +121,7 @@ func readReplies(in *os.File, deadline time.Time) []byte {
 			return buf
 		}
 		buf = append(buf, tmp[:n]...)
-		if hasDA1(buf) {
+		if done(buf) {
 			return buf
 		}
 	}
