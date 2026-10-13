@@ -283,13 +283,14 @@ func (m Model) aiPanelTargets(x0, width int) []hitTarget {
 
 // overflowMenuTargets maps the rows of the open ⋮ menu.
 func (m Model) overflowMenuTargets() []hitTarget {
-	x, y, w, h, ok := m.overflowMenuRect()
+	items := m.overflowMenuItems()
+	x, y, w, h, ok := m.overflowMenuRectFor(items)
 	if !ok {
 		return nil
 	}
 	box := m.renderOverflowMenu(w, h)
 	var out []hitTarget
-	for i, r := range overflowMenuRows(m.overflowMenuItems()) {
+	for i, r := range overflowMenuRows(items) {
 		if r.isDivider || i+2 > h {
 			continue
 		}
