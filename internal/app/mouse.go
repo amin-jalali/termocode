@@ -418,10 +418,17 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 				m.openExplorerMenu(msg.X, msg.Y, localY)
 				return m, nil
 			}
+			if msg.Type == tea.MouseMotion {
+				// Hover only: the tree does nothing with it, and the
+				// persist below reads and writes the session file.
+				return m, nil
+			}
 			var cmd tea.Cmd
 			m.explorer, cmd = m.explorer.HandleMouse(x, localY, msg.Type, msg.Ctrl, msg.Shift)
 			// A click may have toggled a directory — persist new state.
-			m.persistExplorerState()
+			if msg.Type == tea.MouseLeft {
+				m.persistExplorerState()
+			}
 			return m, cmd
 		case activity.ViewGit:
 			if msg.Type == tea.MouseRight {
