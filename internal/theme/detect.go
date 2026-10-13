@@ -97,6 +97,12 @@ func unicodeTerminal(getenv func(string) string) bool {
 // before / after each glyph) and reports whether all of them draw one cell
 // wide. It switches the TTY to raw mode itself and must run before Bubble
 // Tea starts. Output is hidden behind save / restore cursor and erased.
+//
+// Not called at startup, and not usable as is: readCPR relies on
+// os.Stdin.SetReadDeadline, which a TTY does not support ("file type does
+// not support deadline"), so this returns false at once without
+// measuring anything. Port it to a poll-based read (termimg.readSome)
+// before wiring it in.
 func ProbeUnicode(timeout time.Duration) bool {
 	in, out, ok := probeStreams()
 	if !ok {
