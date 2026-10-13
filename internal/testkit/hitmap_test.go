@@ -60,6 +60,14 @@ func hitProblems(d *Driver) []string {
 // checkHits fails t for every broken target; where names the layout.
 func checkHits(t testing.TB, d *Driver, where string) bool {
 	t.Helper()
+	if testing.Verbose() {
+		kinds := map[string]int{}
+		for _, h := range d.Model().HitTargets() {
+			kind, _, _ := strings.Cut(h.ID, ":")
+			kinds[kind]++
+		}
+		t.Logf("%s (%dx%d): targets %v", where, d.W, d.H, kinds)
+	}
 	probs := hitProblems(d)
 	if len(probs) > 0 {
 		t.Errorf("%s (%dx%d): %d hit-map problems:\n  %s\nframe:\n%s",
@@ -83,9 +91,14 @@ func dragSidebar(d *Driver, dx int) {
 // tryAIPanel opens the AI chat panel (Alt+A) and gives the focus back to
 // the editor. In a narrow window there is no room and it stays closed.
 func tryAIPanel(d *Driver) bool {
-	d.Key("alt+a", "esc")
-	_, y, ok := find(d, "AI CHAT")
-	return ok && y == 0
+	shown := func() bool {
+		_, y, ok := find(d, "AI CHAT")
+		return ok && y == 0
+	}
+	if !shown() {
+		d.Key("alt+a", "esc")
+	}
+	return shown()
 }
 
 func dragAIPanel(d *Driver, dx int) {
