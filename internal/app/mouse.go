@@ -93,7 +93,10 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
-	if msg.Y >= m.h-1 {
+	// The status bar is the last row under the editor column only; the
+	// activity bar and the sidebar run down to the bottom edge, so their
+	// last row is theirs (e.g. the lower half of the Settings gear).
+	if m.onStatusBar(msg.X, msg.Y) {
 		if msg.Type == tea.MouseLeft && m.probed(m.statusHitAt(msg.X, msg.Y)) {
 			return m, nil
 		}

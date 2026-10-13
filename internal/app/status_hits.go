@@ -45,6 +45,16 @@ func (m Model) statusSpans() []statusSpan {
 	return out
 }
 
+// onStatusBar reports whether screen cell (x, y) is on the status bar:
+// the last row, under the editor column (statusBarRect).
+func (m Model) onStatusBar(x, y int) bool {
+	if m.zenMode || y < m.h-1 {
+		return false
+	}
+	bx, bw := m.statusBarRect()
+	return x >= bx && x < bx+bw
+}
+
 // statusHitAt returns the id of the status-bar chip at screen cell
 // (x, y), or "".
 func (m Model) statusHitAt(x, y int) string {
