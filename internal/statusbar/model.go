@@ -382,6 +382,7 @@ func (m Model) renderCenterDiag(s State) (string, int, int) {
 		parts = append(parts, barFg(theme.DiagWarning).Bold(true).Render(
 			fmt.Sprintf("%s %d", theme.IconWarning.String(), s.Warnings)))
 	}
+	diagEnd := len(parts)
 	parts = append(parts, renderExtParts(s.Ext)...) // Group I
 	if chip := renderTestsChip(s); chip != "" {     // Group E (always last)
 		parts = append(parts, chip)
@@ -391,14 +392,16 @@ func (m Model) renderCenterDiag(s State) (string, int, int) {
 	}
 	gap := barBg().Render("  ")
 	out := strings.Join(parts, gap)
-	if diagIdx == len(parts) {
-		return out, 0, 0
+	if diagIdx == diagEnd {
+		return out, 0, 0 // no counters
 	}
 	start := 0
 	if diagIdx > 0 {
 		start = lipgloss.Width(strings.Join(parts[:diagIdx], gap) + gap)
 	}
-	return out, start, lipgloss.Width(out) - start
+	// Only the counters: the extension items and the test chip after them
+	// are click targets of their own.
+	return out, start, lipgloss.Width(strings.Join(parts[diagIdx:diagEnd], gap))
 }
 
 // rightItem names one part of the right cluster (see dropOrder).
