@@ -211,7 +211,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			// So solving for terminalRows when the bar should be at msg.Y:
 			//   terminalRows = m.h - 2 - msg.Y
 			// Dragging UP (smaller msg.Y) grows the panel — VSCode-style.
-			newRows := (m.h - 2) - msg.Y
+			pane := m.editorPaneLayout()
+			newRows := pane.Top + pane.H - 1 - msg.Y
 			// Snap-to-minimize: dragging the tab bar down past the min
 			// height collapses the panel to just the bar (no shell content
 			// visible). Spec calls for terminalRowsMin = 3, so anything
@@ -369,7 +370,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	}
-	if m.showExp && msg.Type == tea.MouseLeft && msg.X == splitterX {
+	if m.showExp && !m.zenMode && msg.Type == tea.MouseLeft && msg.X == splitterX {
 		if m.probed("sidebar:splitter") {
 			return m, nil
 		}
@@ -378,8 +379,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Activity bar (leftmost activity.Width cols)
-	if msg.X < activity.Width {
+	// Activity bar (leftmost activity.Width cols; none in zen mode)
+	if msg.X < activity.Width && !m.zenMode {
 		if m.mouseProbe != nil {
 			if it, ok := m.activity.ItemAt(msg.Y); ok {
 				m.probed("activity:" + it.Label)
@@ -397,7 +398,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	x := msg.X - activity.Width
 
 	// Sidebar pane (right of activity bar, left of editor)
-	if m.showExp && x < m.explorerWidth {
+	if m.showExp && !m.zenMode && x < m.explorerWidth {
 		if m.mouseProbe != nil {
 			m.probed(m.sidebarTargetAt(x, msg.Y))
 			return m, nil
@@ -451,33 +452,20 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Editor region (right of explorer or full width)
-	localX := x
-	if m.showExp {
-		localX = x - m.explorerWidth
-	}
+	// Editor region: the same pane geometry renderBase draws (replace
+	// bar → tab bar → breadcrumbs → content; zen mode has no chrome).
+	// The find bar is a floating overlay, not in the chrome stack.
+	pane := m.editorPaneLayout()
+	localX := msg.X - pane.X
+	tabsRow := m.tabBarRow()
+	tabsBodyRow := tabsRow + m.tabs.Height() - 1 // last row of the tab bar
+	editorTopRow := pane.Top
 
-	// Compute the chrome layout above editor content, matching the order
-	// in view.go::renderBase exactly:
-	//   replacebar (2) → tabs (2) → breadcrumbs (1) → editor
-	// (find bar is a floating overlay — it's not in the chrome stack)
-	rowsAboveTabs := 0
-	if m.replaceOpen {
-		rowsAboveTabs += 2
-	}
-	tabsRow := rowsAboveTabs                     // first row of tab bar (accent strip)
-	tabsBodyRow := tabsRow + m.tabs.Height() - 1 // last row of tab bar (body)
-	editorTopRow := tabsBodyRow + 1
-	// Breadcrumbs and sticky-context now share ONE row (signature inline).
-	if len(m.breadcrumbs) > 0 || m.stickyContext != "" {
-		editorTopRow++
-	}
-
-	if msg.Y < tabsRow {
-		// click landed inside findbar / replacebar — no mouse handling yet
+	if m.replaceOpen && msg.Y < 2 {
+		// click landed inside the replace bar — no mouse handling yet
 		return m, nil
 	}
-	if msg.Y >= tabsRow && msg.Y <= tabsBodyRow {
+	if tabsRow >= 0 && msg.Y >= tabsRow && msg.Y <= tabsBodyRow {
 		if m.mouseProbe != nil {
 			if tg, ok := m.tabs.TargetAt(localX); ok {
 				m.probed(tabTargetID(tg))
@@ -618,25 +606,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// terminal split at their natural Y; nvim's grid IS the editor pane,
 	// so screen-pane-local Y == nvim grid Y with no translation needed.
 	if m.termOpen {
-		bodyH := m.h - 1
-		if bodyH < 1 {
-			bodyH = 1
-		}
-		chromeRows := m.tabs.Height()
-		if m.replaceOpen {
-			chromeRows += 2
-		}
-		if len(m.breadcrumbs) > 0 || m.stickyContext != "" {
-			chromeRows++
-		}
-		editorH := bodyH - chromeRows
-		if editorH < 1 {
-			editorH = 1
-		}
-		barLocalY := editorH - m.integratedTerminalRows() - 1
-		if barLocalY < 0 {
-			barLocalY = 0
-		}
+		barLocalY := m.terminalBarIndex(pane.H)
 		if localY == barLocalY {
 			m.probed("panel:bar")
 			// Tab-bar row — terminalTabBarHitTest already handled every
