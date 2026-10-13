@@ -44,6 +44,8 @@ type Grid struct {
 	// terminal cells (see Attrs.TermFg).
 	TermPalette    [16]int
 	TermPaletteSet bool
+
+	styleCache // Render's cached escape codes; see render.go
 }
 
 // New returns a freshly initialized Grid with default colors set to "use
