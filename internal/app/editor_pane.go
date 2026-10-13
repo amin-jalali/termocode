@@ -53,6 +53,11 @@ func (m Model) editorPaneLayout() editorPane {
 	return p
 }
 
+// diffNavShown reports whether the ‹ › change buttons fit on the winbar
+// of a side-by-side diff in an editor pane paneW wide: they take the
+// first 6 columns of the left pane, which gets about half the pane.
+func diffNavShown(paneW int) bool { return (paneW-1)/2 >= 6 }
+
 // tabBarRow is the screen row of the editor tab bar (below the replace
 // bar when it is open), or -1 in zen mode, which has no tab bar.
 func (m Model) tabBarRow() int {
