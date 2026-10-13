@@ -32,6 +32,20 @@ func rectText(rows []string, t app.HitTarget) string {
 	return strings.Join(lines, "\n")
 }
 
+// labelShown reports whether text shows label, whole or cut short with
+// "…" (a narrow column ellipsizes names).
+func labelShown(text, label string) bool {
+	if strings.Contains(text, label) {
+		return true
+	}
+	for _, word := range strings.Fields(text) {
+		if head, ok := strings.CutSuffix(word, "…"); ok && head != "" && strings.HasPrefix(label, head) {
+			return true
+		}
+	}
+	return false
+}
+
 // hitProblems lists the targets of the current frame that break the
 // invariant.
 func hitProblems(d *Driver) []string {
@@ -45,7 +59,7 @@ func hitProblems(d *Driver) []string {
 			continue
 		}
 		if t.Label != "" {
-			if got := rectText(rows, t); !strings.Contains(got, t.Label) {
+			if got := rectText(rows, t); !labelShown(got, t.Label) {
 				out = append(out, fmt.Sprintf("%s: label %q not drawn there, the frame shows %q", where, t.Label, got))
 			}
 		}
