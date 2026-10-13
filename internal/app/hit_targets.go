@@ -103,6 +103,11 @@ func (m Model) hitTargets() []hitTarget {
 	if m.termOpen && !m.editorEmpty() {
 		out = append(out, m.panelBarTargets(pane)...)
 	}
+	if m.gitDiffActive && m.nvim != nil && diffNavShown(pane.W) {
+		// The change-nav buttons on the diff winbar (" ‹ " and " › ").
+		add(hitTarget{ID: "diff:prev", Label: "‹", X: pane.X, Y: pane.Top, W: 3, H: 1})
+		add(hitTarget{ID: "diff:next", Label: "›", X: pane.X + 3, Y: pane.Top, W: 3, H: 1})
+	}
 	return out
 }
 
@@ -169,7 +174,7 @@ func (m Model) sidebarTargets() []hitTarget {
 }
 
 func (m Model) tabTargets(pane editorPane) []hitTarget {
-	y := pane.Top - m.tabs.Height()
+	y := m.tabBarRow()
 	view := m.tabs.View()
 	var out []hitTarget
 	for _, tg := range m.tabs.Targets() {

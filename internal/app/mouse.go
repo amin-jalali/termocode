@@ -639,7 +639,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			if m.mouseProbe == nil {
 				recordError(fmt.Sprintf("[diffclick] localX=%d localY=%d msgX=%d msgY=%d edTop=%d", localX, localY, msg.X, msg.Y, editorTopRow))
 			}
-			if localY == 0 {
+			if localY == 0 && diffNavShown(edPaneW) {
 				switch {
 				case localX >= 0 && localX <= 2:
 					if m.probed("diff:prev") {
