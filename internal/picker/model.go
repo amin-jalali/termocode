@@ -406,23 +406,7 @@ func (m Model) handleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 	}
 	// Hover: move the highlight onto the result row under the pointer.
 	if action == tea.MouseActionMotion {
-		boxW, boxH, available := m.layoutDims()
-		boxLeft, boxTop := m.Origin(boxW, boxH)
-		if boxLeft < 0 {
-			boxLeft = 0
-		}
-		if boxTop < 0 {
-			boxTop = 0
-		}
-		if x < boxLeft || x >= boxLeft+boxW || y < boxTop || y >= boxTop+boxH {
-			return m, nil
-		}
-		yRel := y - boxTop - 4
-		if yRel < 0 || yRel >= available {
-			return m, nil
-		}
-		idx := m.viewTop(available) + yRel
-		if idx >= 0 && idx < len(m.matches) && !m.matchIsHeader(idx) {
+		if idx, ok := m.RowAt(x, y); ok && !m.matchIsHeader(idx) {
 			m.cursor = idx
 		}
 		return m, nil
@@ -432,29 +416,12 @@ func (m Model) handleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 		return m, nil
 	}
 
-	boxW, boxH, available := m.layoutDims()
-	boxLeft, boxTop := m.Origin(boxW, boxH)
-	if boxLeft < 0 {
-		boxLeft = 0
-	}
-	if boxTop < 0 {
-		boxTop = 0
-	}
-
 	// Click outside the box → close.
-	if x < boxLeft || x >= boxLeft+boxW || y < boxTop || y >= boxTop+boxH {
+	if !m.InBox(x, y) {
 		return m, func() tea.Msg { return CloseMsg{} }
 	}
-
-	// yRel is the index into the visible result slice (0-based).
-	// Inside box: y=0 border, y=1 header, y=2 hairline, y=3 input,
-	// y=4 result row 0, ... so subtract boxTop+1+3 = boxTop+4.
-	yRel := y - boxTop - 4
-	if yRel < 0 || yRel >= available {
-		return m, nil
-	}
-	idx := m.viewTop(available) + yRel
-	if idx < 0 || idx >= len(m.matches) {
+	idx, ok := m.RowAt(x, y)
+	if !ok {
 		return m, nil
 	}
 	match := m.matches[idx]
@@ -1073,4 +1040,51 @@ func sanitizeInput(s string) string {
 		i++
 	}
 	return string(b)
+}
+
+// boxRect is the box's screen rect.
+func (m Model) boxRect() (x, y, w, h int) {
+	w, h, _ = m.layoutDims()
+	x, y = m.Origin(w, h)
+	return x, y, w, h
+}
+
+// InBox reports whether screen cell (x, y) is inside the box.
+func (m Model) InBox(x, y int) bool {
+	bx, by, bw, bh := m.boxRect()
+	return x >= bx && x < bx+bw && y >= by && y < by+bh
+}
+
+// RowRect is where a visible result row sits on screen (one row tall).
+type RowRect struct {
+	Index   int // index into the matches (what the cursor addresses)
+	X, Y, W int
+}
+
+// RowRects lists the visible result rows with the screen cells
+// HandleMouse hit tests for them.
+func (m Model) RowRects() []RowRect {
+	if m.w <= 0 || m.h <= 0 {
+		return nil
+	}
+	bx, by, bw, _ := m.boxRect()
+	_, _, available := m.layoutDims()
+	top := m.viewTop(available)
+	var out []RowRect
+	// Inside the box: y=0 border, y=1 header, y=2 hairline, y=3 input,
+	// y=4 result row 0, …
+	for i := 0; i < available && top+i < len(m.matches); i++ {
+		out = append(out, RowRect{Index: top + i, X: bx, Y: by + 4 + i, W: bw})
+	}
+	return out
+}
+
+// RowAt returns the match index of the result row at screen cell (x, y).
+func (m Model) RowAt(x, y int) (int, bool) {
+	for _, r := range m.RowRects() {
+		if y == r.Y && x >= r.X && x < r.X+r.W {
+			return r.Index, true
+		}
+	}
+	return 0, false
 }
