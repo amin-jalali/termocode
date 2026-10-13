@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"sync"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
@@ -20,11 +21,28 @@ func ParseHex(s string) (RGB, bool) {
 	if len(s) != 6 {
 		return RGB{}, false
 	}
-	var r, g, b uint8
-	if _, err := fmt.Sscanf(s, "%02x%02x%02x", &r, &g, &b); err != nil {
-		return RGB{}, false
+	var v [3]uint8
+	for i := range v {
+		hi, ok1 := hexDigit(s[2*i])
+		lo, ok2 := hexDigit(s[2*i+1])
+		if !ok1 || !ok2 {
+			return RGB{}, false
+		}
+		v[i] = hi<<4 | lo
 	}
-	return RGB{r, g, b}, true
+	return RGB{v[0], v[1], v[2]}, true
+}
+
+func hexDigit(c byte) (uint8, bool) {
+	switch {
+	case c >= '0' && c <= '9':
+		return c - '0', true
+	case c >= 'a' && c <= 'f':
+		return c - 'a' + 10, true
+	case c >= 'A' && c <= 'F':
+		return c - 'A' + 10, true
+	}
+	return 0, false
 }
 
 // Hex formats c as "#rrggbb".
@@ -56,9 +74,41 @@ func Lerp(a, b RGB, t float64) RGB {
 
 // Mix blends two palette tokens and returns a lipgloss colour. Use it for
 // derived surfaces (hover tints, soft selection bars) instead of hex.
+//
+// Views call it many times per frame with the same few arguments, so the
+// result is memoized. The memo is keyed on the tokens' RGB values, not the
+// tokens, so a theme switch can never return a stale blend.
 func Mix(a, b Color256, t float64) lipgloss.Color {
-	return Lerp(ToRGB(a), ToRGB(b), t).LG()
+	k := mixKey{ToRGB(a), ToRGB(b), math.Float64bits(t)}
+	mixMemo.Lock()
+	c, ok := mixMemo.m[k]
+	mixMemo.Unlock()
+	if ok {
+		return c
+	}
+	c = Lerp(k.a, k.b, t).LG()
+	mixMemo.Lock()
+	if len(mixMemo.m) >= mixMemoMax {
+		clear(mixMemo.m) // blends churn (an animation?): start over
+	}
+	mixMemo.m[k] = c
+	mixMemo.Unlock()
+	return c
 }
+
+// mixMemoMax bounds Mix's memo. The UI uses a few dozen blends.
+const mixMemoMax = 512
+
+type mixKey struct {
+	a, b RGB
+	t    uint64
+}
+
+// mixMemo is guarded by its mutex: Mix may be called off the UI goroutine.
+var mixMemo = struct {
+	sync.Mutex
+	m map[mixKey]lipgloss.Color
+}{m: make(map[mixKey]lipgloss.Color)}
 
 // Luma is the perceived brightness 0..1.
 func (c RGB) Luma() float64 {
