@@ -796,8 +796,8 @@ func intToLua(n int) string {
 // narrow to host the glyph.
 func (m Model) overflowGlyphX() int {
 	pane := m.editorPaneLayout()
-	if pane.W < 4 {
-		return -1
+	if pane.W < 4 || m.zenMode {
+		return -1 // zen mode has no tab bar
 	}
 	return pane.X + pane.W - overflowMenuRightInset - 1
 }
@@ -806,13 +806,7 @@ func (m Model) overflowGlyphX() int {
 // last row of the tab bar (its "body" row, after the optional accent
 // strip).
 func (m Model) overflowGlyphY() int {
-	rowsAboveTabs := 0
-	if m.replaceOpen {
-		rowsAboveTabs += 2
-	}
-	tabsRow := rowsAboveTabs
-	tabsBodyRow := tabsRow + m.tabs.Height() - 1
-	return tabsBodyRow
+	return m.tabBarRow() + m.tabs.Height() - 1
 }
 
 // hitOverflowGlyph reports whether (screenX, screenY) lands on the ⋮

@@ -143,6 +143,59 @@ func (m Model) gitStatusMap() map[string]string {
 	return out
 }
 
+// gitSidebarHit is a click target of the Source Control view: sidebar
+// cells [x0, x1) of one row. row is the accordion row index (-1 for the
+// fixed chrome above it).
+type gitSidebarHit struct {
+	id     string // "scm:toggle-view", "scm:commit-input", "scm:btn:<id>", "scm:row:<i>"
+	x0, x1 int
+	row    int
+}
+
+// gitSidebarHits lists the click targets on sidebar row y (the title is
+// row 0) for content width w. The renderer draws with the same helpers
+// (gitPanelLayout, gitActionButtons), so a click hits what is drawn.
+func (m Model) gitSidebarHits(y, w int) []gitSidebarHit {
+	switch {
+	case y == gitSubheaderRow:
+		// The view-mode toggle glyph sits on the right edge of the sub-header.
+		return []gitSidebarHit{{id: "scm:toggle-view", x0: w - gitViewToggleWidth(m.gitViewTree), x1: w, row: -1}}
+	case y == gitCommitInputRow:
+		return []gitSidebarHit{{id: "scm:commit-input", x0: 0, x1: w, row: -1}}
+	case y == gitActionBarRow:
+		var out []gitSidebarHit
+		for _, b := range m.gitActionButtons(w) {
+			if b.x1 >= b.x0 {
+				out = append(out, gitSidebarHit{id: "scm:btn:" + b.id, x0: b.x0, x1: b.x1 + 1, row: -1})
+			}
+		}
+		return out
+	}
+	// Map the row to a body row through the same scroll layout the
+	// renderer used.
+	top, bodyH, _ := m.gitPanelLayout(m.h)
+	bodyRow := y - m.gitPanelTopOffset()
+	if bodyRow < 0 || bodyRow >= bodyH {
+		return nil
+	}
+	idx := top + bodyRow
+	rows := m.gitPanelRows()
+	if idx < 0 || idx >= len(rows) || !rows[idx].selectable() {
+		return nil
+	}
+	return []gitSidebarHit{{id: "scm:row:" + itoa(idx), x0: 0, x1: w, row: idx}}
+}
+
+// gitSidebarHitAt returns the target at sidebar cell (x, y).
+func (m Model) gitSidebarHitAt(x, y int) (gitSidebarHit, bool) {
+	for _, h := range m.gitSidebarHits(y, m.explorerWidth-1) {
+		if x >= h.x0 && x < h.x1 {
+			return h, true
+		}
+	}
+	return gitSidebarHit{}, false
+}
+
 // handleGitSidebarMouse processes a click inside the Git sidebar. x is
 // sidebar-relative (0 = first column), y is absolute with the title at row 0.
 //
@@ -165,34 +218,24 @@ func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (tea.Model,
 	if y != gitCommitInputRow {
 		m.gitCommitFocused = false
 	}
-	// The view-mode toggle glyph lives on the right edge of the sub-header row.
-	if y == gitSubheaderRow {
-		if x >= contentW-gitViewToggleWidth(m.gitViewTree) {
-			m.toggleGitViewMode()
+	h, ok := m.gitSidebarHitAt(x, y)
+	if !ok {
+		return m, nil
+	}
+	if h.id == "scm:toggle-view" {
+		m.toggleGitViewMode()
+		return m, nil
+	}
+	if h.row < 0 {
+		// Commit message box + action bar (fixed chrome between the
+		// sub-header and the accordion).
+		if newM, cmd, ok := m.gitCommitAreaClick(x, y, contentW); ok {
+			return newM, cmd
 		}
 		return m, nil
 	}
-	// Commit message box + action bar (fixed chrome between the sub-header and
-	// the accordion).
-	if newM, cmd, ok := m.gitCommitAreaClick(x, y, contentW); ok {
-		return newM, cmd
-	}
-	// The title + hairline rows above the sub-header are inert.
-	if y < gitSubheaderRow {
-		return m, nil
-	}
-	// Map the click to a body row through the same scroll layout the renderer
-	// used, so it lands on the row actually drawn there.
-	top, bodyH, _ := m.gitPanelLayout(m.h)
-	bodyRow := y - m.gitPanelTopOffset()
-	if bodyRow < 0 || bodyRow >= bodyH {
-		return m, nil
-	}
-	idx := top + bodyRow
+	idx := h.row
 	rows := m.gitPanelRows()
-	if idx < 0 || idx >= len(rows) || !rows[idx].selectable() {
-		return m, nil
-	}
 	m.gitCursor = idx
 	r := rows[idx]
 	switch r.kind {

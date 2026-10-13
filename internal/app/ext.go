@@ -955,24 +955,17 @@ func (m Model) extStatusTexts() []string {
 
 // hitExtStatusItem runs the command of the status item under (x, y).
 func (m *Model) hitExtStatusItem(x, y int) (tea.Cmd, bool) {
-	if m.ext == nil || m.zenMode || y != m.h-1 {
+	id, ok := strings.CutPrefix(m.statusHitAt(x, y), "status:ext:")
+	if !ok || m.ext == nil {
 		return nil, false
 	}
-	st := m.statusState()
-	if len(st.Ext) == 0 {
+	i, err := strconv.Atoi(id)
+	if err != nil || i < 0 || i >= len(m.ext.reg.Status) {
 		return nil, false
 	}
-	bx, bw := m.statusBarRect()
-	sb := m.status
-	sb.SetWidth(bw)
-	for _, sp := range sb.ExtItemSpans(st) {
-		if x >= bx+sp.X0 && x < bx+sp.X1 {
-			item := m.ext.reg.Status[sp.Index]
-			if item.Command == "" {
-				return nil, true
-			}
-			return m.runExtCommand(item.Command), true
-		}
+	item := m.ext.reg.Status[i]
+	if item.Command == "" {
+		return nil, true
 	}
-	return nil, false
+	return m.runExtCommand(item.Command), true
 }

@@ -765,7 +765,15 @@ func (m Model) terminalTabBarRowAbsolute() int {
 	if !m.termOpen {
 		return -1
 	}
-	return m.h - 2 - m.integratedTerminalRows()
+	pane := m.editorPaneLayout()
+	return pane.Top + m.terminalBarIndex(pane.H)
+}
+
+// terminalBarIndex is the pane row of the bottom panel's tab bar for an
+// editor pane editorH rows tall: one row above the panel's content, kept
+// inside the pane (spliceTerminalTabBar draws it there).
+func (m Model) terminalBarIndex(editorH int) int {
+	return max(min(editorH-m.integratedTerminalRows()-1, editorH-1), 0)
 }
 
 // editorPaneWidth is the editor pane's drawn width (see editorPaneLayout).
@@ -1118,13 +1126,7 @@ func (m Model) spliceTerminalTabBar(editorContent string, paneW, editorH int) st
 	}
 
 	// barIdx = the separator row, one row above where nvim's terminal split begins.
-	barIdx := editorH - m.integratedTerminalRows() - 1
-	if barIdx >= editorH {
-		barIdx = editorH - 1
-	}
-	if barIdx < 0 {
-		barIdx = 0
-	}
+	barIdx := m.terminalBarIndex(editorH)
 	rows[barIdx] = bar
 
 	// Non-terminal tab on show (Output, Problems, …): Go paints its

@@ -432,69 +432,97 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 		return m, nil
 	}
 
-	col := x - bx
 	row := y - by
-
+	switch m.ButtonAt(x, y) {
+	case "chevron":
+		m.replaceMode = !m.replaceMode
+		if m.replaceMode {
+			m.focus = fieldReplace
+		} else {
+			m.focus = fieldFind
+		}
+		return m, nil
+	case "case":
+		m.caseSensitive = !m.caseSensitive
+		return m, fireSearch(m.input)
+	case "word":
+		m.wholeWord = !m.wholeWord
+		return m, fireSearch(m.input)
+	case "regex":
+		m.useRegex = !m.useRegex
+		return m, fireSearch(m.input)
+	case "prev":
+		return m, func() tea.Msg { return FindPrevMsg{} }
+	case "next":
+		return m, func() tea.Msg { return FindNextMsg{} }
+	case "menu":
+		// Menu icon is reserved for a future dropdown; clicking is a no-op
+		// (consumed so it doesn't leak to the editor).
+		return m, nil
+	case "close":
+		return m, func() tea.Msg { return CloseMsg{} }
+	case "replace":
+		find, rep := m.input, m.replace
+		return m, func() tea.Msg { return ReplaceMsg{Find: find, Replace: rep} }
+	case "replace-all":
+		find, rep := m.input, m.replace
+		return m, func() tea.Msg { return ReplaceAllMsg{Find: find, Replace: rep} }
+	}
 	// Find row sits at by+1; replace row at by+2 (only when expanded).
-	if row == 1 {
-		chevCol, caseCol, wordCol, regexCol, prevCol, nextCol, menuCol, closeCol := m.buttonColumnsFind()
-		if chevCol < 0 {
-			return m, nil
-		}
-		switch col {
-		case chevCol:
-			m.replaceMode = !m.replaceMode
-			if m.replaceMode {
-				m.focus = fieldReplace
-			} else {
-				m.focus = fieldFind
-			}
-			return m, nil
-		case caseCol, caseCol + 1:
-			m.caseSensitive = !m.caseSensitive
-			return m, fireSearch(m.input)
-		case wordCol, wordCol + 1:
-			m.wholeWord = !m.wholeWord
-			return m, fireSearch(m.input)
-		case regexCol, regexCol + 1:
-			m.useRegex = !m.useRegex
-			return m, fireSearch(m.input)
-		case prevCol:
-			return m, func() tea.Msg { return FindPrevMsg{} }
-		case nextCol:
-			return m, func() tea.Msg { return FindNextMsg{} }
-		case menuCol:
-			// Menu icon is reserved for a future dropdown; clicking is a no-op
-			// (consumed so it doesn't leak to the editor).
-			return m, nil
-		case closeCol:
-			return m, func() tea.Msg { return CloseMsg{} }
-		}
+	switch {
+	case row == 1:
 		// Click on the find input area moves focus there.
 		if m.replaceMode {
 			m.focus = fieldFind
 		}
-		return m, nil
-	}
-
-	if row == 2 && m.replaceMode {
-		oneCol, allCol := m.buttonColumnsReplace()
-		switch col {
-		case oneCol:
-			find := m.input
-			rep := m.replace
-			return m, func() tea.Msg { return ReplaceMsg{Find: find, Replace: rep} }
-		case allCol:
-			find := m.input
-			rep := m.replace
-			return m, func() tea.Msg { return ReplaceAllMsg{Find: find, Replace: rep} }
-		}
+	case row == 2 && m.replaceMode:
 		// Click on the replace input area moves focus there.
 		m.focus = fieldReplace
-		return m, nil
 	}
-
 	return m, nil
+}
+
+// Button is a clickable glyph of the panel, in screen cells (one row).
+type Button struct {
+	ID      string // "chevron", "case", "word", "regex", "prev", "next", "menu", "close", "replace", "replace-all"
+	X, Y, W int
+}
+
+// Buttons lists the panel's glyph buttons on screen (see Bounds).
+func (m Model) Buttons() []Button {
+	bx, by, bw, bh := m.Bounds()
+	if bw <= 0 || bh <= 0 {
+		return nil
+	}
+	var out []Button
+	add := func(id string, col, row, w int) {
+		if col >= 0 {
+			out = append(out, Button{ID: id, X: bx + col, Y: by + row, W: w})
+		}
+	}
+	chev, caseCol, word, regex, prev, next, menu, closeCol := m.buttonColumnsFind()
+	add("chevron", chev, 1, 1)
+	add("case", caseCol, 1, 2)
+	add("word", word, 1, 2)
+	add("regex", regex, 1, 2)
+	add("prev", prev, 1, 1)
+	add("next", next, 1, 1)
+	add("menu", menu, 1, 1)
+	add("close", closeCol, 1, 1)
+	one, all := m.buttonColumnsReplace()
+	add("replace", one, 2, 1)
+	add("replace-all", all, 2, 1)
+	return out
+}
+
+// ButtonAt returns the id of the button at screen cell (x, y), or "".
+func (m Model) ButtonAt(x, y int) string {
+	for _, b := range m.Buttons() {
+		if y == b.Y && x >= b.X && x < b.X+b.W {
+			return b.ID
+		}
+	}
+	return ""
 }
 
 // Find row layout (columns are panel-local, including the rounded border).

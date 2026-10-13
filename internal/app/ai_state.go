@@ -177,14 +177,7 @@ func (m Model) aiStatus() (string, statusbar.AIState) {
 
 // hitStatusAIBadge reports whether (x, y) lands on the status-bar badge.
 func (m Model) hitStatusAIBadge(x, y int) bool {
-	if m.zenMode || y != m.h-1 {
-		return false
-	}
-	bx, bw := m.statusBarRect()
-	sb := m.status
-	sb.SetWidth(bw)
-	x0, x1, ok := sb.AIBadgeSpan(m.statusState())
-	return ok && x >= bx+x0 && x < bx+x1
+	return m.statusHitAt(x, y) == "status:ai"
 }
 
 // onAIBadgeClick: unconfigured → Configure; otherwise toggle the panel.

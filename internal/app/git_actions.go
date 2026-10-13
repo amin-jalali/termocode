@@ -484,7 +484,8 @@ vim.cmd('diffthis')
 vim.wo.foldenable = false
 vim.wo.number = true
 -- Nav buttons occupy columns 0-5 ( ‹ = 0-2, › = 3-5 ); termocode maps clicks there.
-vim.wo.winbar = '%#TcDiffNav# ‹ %#TcDiffNav# › %#TcDiffHdr# ' .. base .. '  %#TcDiffHdrDim#·  HEAD'
+-- %< after them: a narrow pane cuts the label, never the buttons.
+vim.wo.winbar = '%#TcDiffNav# ‹ %#TcDiffNav# › %<%#TcDiffHdr# ' .. base .. '  %#TcDiffHdrDim#·  HEAD'
 -- Per-side colours: red on the left (HEAD), green on the right (working).
 local nsL = vim.api.nvim_create_namespace('tcDiffL')
 vim.api.nvim_set_hl(nsL, 'DiffChange', { bg = C.diff_del })

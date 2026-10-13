@@ -473,3 +473,36 @@ func wrap(s string, w int) []string {
 	}
 	return out
 }
+
+// ButtonRect is where a button sits on screen (one row tall).
+type ButtonRect struct {
+	ID    string
+	Label string // the button text as drawn
+	X, Y  int
+	W     int
+}
+
+// ButtonRects lists the buttons with the screen cells HandleMouse hit
+// tests for them.
+func (m Model) ButtonRects() []ButtonRect {
+	if m.w <= 0 || m.h <= 0 {
+		return nil
+	}
+	dims := m.layoutDims()
+	_, rects := m.computeRects()
+	out := make([]ButtonRect, len(rects))
+	for i, r := range rects {
+		out[i] = ButtonRect{ID: m.buttons[i].ID, Label: dims.buttonLabels[i], X: r.x, Y: r.y, W: r.w}
+	}
+	return out
+}
+
+// ButtonAt returns the id of the button at screen cell (x, y), or "".
+func (m Model) ButtonAt(x, y int) string {
+	for _, b := range m.ButtonRects() {
+		if y == b.Y && x >= b.X && x < b.X+b.W {
+			return b.ID
+		}
+	}
+	return ""
+}

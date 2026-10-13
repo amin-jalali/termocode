@@ -25,6 +25,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// (msg.Y == m.h-2), so we have to handle it BEFORE the m.h-1 status-bar
 	// guard below — same row priority wise as the editor body.
 	if msg.Type == tea.MouseLeft && m.hitActionsLauncher(msg.X, msg.Y) {
+		if m.probed("actions:launcher") {
+			return m, nil
+		}
 		m.actionsPinned = true
 		m.actionsOpen = true
 		m.persistActionsState()
@@ -39,6 +42,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// through (so the user can still right-click the editor while the
 	// dropdown happens to be open — though typically they wouldn't).
 	if msg.Type == tea.MouseLeft && m.hitOverflowGlyph(msg.X, msg.Y) {
+		if m.probed("overflow:glyph") {
+			return m, nil
+		}
 		if m.overflowMenuOpen {
 			m.overflowMenuOpen = false
 		} else {
@@ -58,12 +64,16 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	if m.overflowMenuOpen && msg.Type == tea.MouseLeft {
 		if m.hitOverflowMenuRect(msg.X, msg.Y) {
 			if idx := m.overflowMenuItemRow(msg.Y); idx >= 0 {
+				if m.probed("overflow:item:" + itoa(idx)) {
+					return m, nil
+				}
 				m.overflowMenuCursor = idx
 				cmd := m.activateOverflowMenuItem()
 				return m, cmd
 			}
 			// Click landed on the border row — keep the menu open but
 			// absorb the click so it doesn't fall through.
+			m.probed("overflow:menu")
 			return m, nil
 		}
 		// Click-outside-close: drop the menu, then fall through so the
@@ -74,11 +84,22 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 	// Group A: AI chat panel body (wheel, clicks, input focus) — before the
 	// status-bar guard because the panel spans the full height.
-	if cmd, handled := m.handleAIPanelMouse(msg); handled {
+	if m.mouseProbe != nil {
+		if id := m.aiPanelTargetAt(msg.X, msg.Y); id != "" {
+			m.probed(id)
+			return m, nil
+		}
+	} else if cmd, handled := m.handleAIPanelMouse(msg); handled {
 		return m, cmd
 	}
 
-	if msg.Y >= m.h-1 {
+	// The status bar is the last row under the editor column only; the
+	// activity bar and the sidebar run down to the bottom edge, so their
+	// last row is theirs (e.g. the lower half of the Settings gear).
+	if m.onStatusBar(msg.X, msg.Y) {
+		if msg.Type == tea.MouseLeft && m.probed(m.statusHitAt(msg.X, msg.Y)) {
+			return m, nil
+		}
 		// Group A: status-bar "✦ model" badge → configure / toggle chat.
 		if msg.Type == tea.MouseLeft && m.hitStatusAIBadge(msg.X, msg.Y) {
 			return m, m.onAIBadgeClick()
@@ -115,6 +136,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// explorer's right-edge splitter).
 	if m.actionsPanelVisible() {
 		if msg.Type == tea.MouseLeft {
+			if id := m.hitActionsButton(msg.X, msg.Y); id != "" && m.probed("actions:"+id) {
+				return m, nil
+			}
 			switch m.hitActionsButton(msg.X, msg.Y) {
 			case "pin":
 				// Toggle pinned: collapse to launcher chip, panel stays
@@ -164,6 +188,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	if m.actionsPanelVisible() && msg.Type == tea.MouseLeft && msg.X == actionsLeftEdge {
+		if m.probed("actions:splitter") {
+			return m, nil
+		}
 		m.dragKind = dragActionsLeft
 		m.dragStartX = msg.X
 		return m, nil
@@ -184,7 +211,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			// So solving for terminalRows when the bar should be at msg.Y:
 			//   terminalRows = m.h - 2 - msg.Y
 			// Dragging UP (smaller msg.Y) grows the panel — VSCode-style.
-			newRows := (m.h - 2) - msg.Y
+			pane := m.editorPaneLayout()
+			newRows := pane.Top + pane.H - 1 - msg.Y
 			// Snap-to-minimize: dragging the tab bar down past the min
 			// height collapses the panel to just the bar (no shell content
 			// visible). Spec calls for terminalRowsMin = 3, so anything
@@ -228,6 +256,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// the entire row is the resize handle.
 	if m.termOpen && msg.Type == tea.MouseLeft {
 		hit, idx := m.terminalTabBarHitTest(msg.X, msg.Y)
+		if id := panelBarTargetID(hit, idx); id != "" && m.probed(id) {
+			return m, nil
+		}
 		switch hit {
 		case terminalHitTabClose:
 			m.closeTerminalTab(idx)
@@ -273,11 +304,15 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	}
 	// Content area of a non-terminal panel tab: Go owns it, so wheel and
 	// clicks must never reach the hidden nvim split underneath (panel.go).
+	if m.mouseProbe != nil && m.panelContentAt(msg.X, msg.Y) {
+		m.probed("panel:content")
+		return m, nil
+	}
 	if cmd, handled := m.routePanelContentMouse(msg); handled {
 		return m, cmd
 	}
 	// Group C: file:line links in terminal tabs (tasks_run.go).
-	if m.routeTerminalLinkClick(msg) {
+	if m.mouseProbe == nil && m.routeTerminalLinkClick(msg) {
 		return m, nil
 	}
 
@@ -291,6 +326,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		if bw > 0 && bh > 0 &&
 			msg.X >= bx && msg.X < bx+bw &&
 			msg.Y >= by && msg.Y < by+bh {
+			if m.probed(m.findTargetAt(msg.X, msg.Y)) {
+				return m, nil
+			}
 			var cmd tea.Cmd
 			m.find, cmd = m.find.HandleMouse(msg.X, msg.Y, msg.Action, msg.Button)
 			return m, cmd
@@ -332,14 +370,25 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	}
-	if m.showExp && msg.Type == tea.MouseLeft && msg.X == splitterX {
+	if m.showExp && !m.zenMode && msg.Type == tea.MouseLeft && msg.X == splitterX {
+		if m.probed("sidebar:splitter") {
+			return m, nil
+		}
 		m.dragKind = dragExplorerRight
 		m.dragStartX = msg.X
 		return m, nil
 	}
 
-	// Activity bar (leftmost activity.Width cols)
-	if msg.X < activity.Width {
+	// Activity bar (leftmost activity.Width cols; none in zen mode)
+	if msg.X < activity.Width && !m.zenMode {
+		if m.mouseProbe != nil {
+			if it, ok := m.activity.ItemAt(msg.Y); ok {
+				m.probed("activity:" + it.Label)
+			} else {
+				m.probed("activity")
+			}
+			return m, nil
+		}
 		var cmd tea.Cmd
 		m.activity, cmd = m.activity.HandleMouse(msg.X, msg.Y, msg.Type)
 		return m, cmd
@@ -349,7 +398,11 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	x := msg.X - activity.Width
 
 	// Sidebar pane (right of activity bar, left of editor)
-	if m.showExp && x < m.explorerWidth {
+	if m.showExp && !m.zenMode && x < m.explorerWidth {
+		if m.mouseProbe != nil {
+			m.probed(m.sidebarTargetAt(x, msg.Y))
+			return m, nil
+		}
 		if msg.Type == tea.MouseLeft {
 			m.focus = FocusExplorer
 		}
@@ -395,42 +448,39 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// pinned panel column but not on a button (already handled above),
 	// absorb it so it doesn't fall through to the editor.
 	if m.actionsPanelVisible() && msg.X >= m.w-m.actionsColumnWidth() {
+		m.probed("actions:body")
 		return m, nil
 	}
 
-	// Editor region (right of explorer or full width)
-	localX := x
-	if m.showExp {
-		localX = x - m.explorerWidth
-	}
+	// Editor region: the same pane geometry renderBase draws (replace
+	// bar → tab bar → breadcrumbs → content; zen mode has no chrome).
+	// The find bar is a floating overlay, not in the chrome stack.
+	pane := m.editorPaneLayout()
+	localX := msg.X - pane.X
+	tabsRow := m.tabBarRow()
+	tabsBodyRow := tabsRow + m.tabs.Height() - 1 // last row of the tab bar
+	editorTopRow := pane.Top
 
-	// Compute the chrome layout above editor content, matching the order
-	// in view.go::renderBase exactly:
-	//   replacebar (2) → tabs (2) → breadcrumbs (1) → editor
-	// (find bar is a floating overlay — it's not in the chrome stack)
-	rowsAboveTabs := 0
-	if m.replaceOpen {
-		rowsAboveTabs += 2
-	}
-	tabsRow := rowsAboveTabs                     // first row of tab bar (accent strip)
-	tabsBodyRow := tabsRow + m.tabs.Height() - 1 // last row of tab bar (body)
-	editorTopRow := tabsBodyRow + 1
-	// Breadcrumbs and sticky-context now share ONE row (signature inline).
-	if len(m.breadcrumbs) > 0 || m.stickyContext != "" {
-		editorTopRow++
-	}
-
-	if msg.Y < tabsRow {
-		// click landed inside findbar / replacebar — no mouse handling yet
+	if m.replaceOpen && msg.Y < 2 {
+		// click landed inside the replace bar — no mouse handling yet
 		return m, nil
 	}
-	if msg.Y >= tabsRow && msg.Y <= tabsBodyRow {
+	if tabsRow >= 0 && msg.Y >= tabsRow && msg.Y <= tabsBodyRow {
+		if m.mouseProbe != nil {
+			if tg, ok := m.tabs.TargetAt(localX); ok {
+				m.probed(tabTargetID(tg))
+			} else {
+				m.probed("tabs")
+			}
+			return m, nil
+		}
 		// any tab-bar row (accent strip OR body) routes to tabbar
 		var cmd tea.Cmd
 		m.tabs, cmd = m.tabs.HandleMouse(localX, msg.X, msg.Y, msg.Type)
 		return m, cmd
 	}
 	if msg.Y < editorTopRow {
+		m.probed("breadcrumbs")
 		// breadcrumb / sticky-scroll row — no clickable elements now that
 		// the Outline chip has been removed (the symbol picker is opened
 		// via Ctrl+Shift+O / palette / ⋮ menu).
@@ -477,6 +527,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			if localX < hit.ColStart || localX >= hit.ColEnd {
 				continue
 			}
+			if m.probed("welcome:card:" + itoa(hit.Index)) {
+				return m, nil
+			}
 			m.welcomeFocus = hit.Index
 			m.focus = FocusEditor
 			return m.runWelcomeCard(hit.Index)
@@ -489,6 +542,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			// only react when the click landed inside the recents column.
 			if hit.ColEnd > 0 && (localX < hit.ColStart || localX >= hit.ColEnd) {
 				continue
+			}
+			if m.probed("welcome:recent:" + hit.Path) {
+				return m, nil
 			}
 			// Sentinel: "View all →" row opens the dedicated recents
 			// modal (Ctrl+R) instead of `:edit`-ing a file.
@@ -509,6 +565,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			}
 			if hit.ColEnd > 0 && (localX < hit.ColStart || localX >= hit.ColEnd) {
 				continue
+			}
+			if m.probed("welcome:workspace:" + hit.Path) {
+				return m, nil
 			}
 			// "browse all → " sentinel opens the dedicated workspaces
 			// picker (same modal as "Workspaces: Open Recent" in the
@@ -547,26 +606,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	// terminal split at their natural Y; nvim's grid IS the editor pane,
 	// so screen-pane-local Y == nvim grid Y with no translation needed.
 	if m.termOpen {
-		bodyH := m.h - 1
-		if bodyH < 1 {
-			bodyH = 1
-		}
-		chromeRows := m.tabs.Height()
-		if m.replaceOpen {
-			chromeRows += 2
-		}
-		if len(m.breadcrumbs) > 0 || m.stickyContext != "" {
-			chromeRows++
-		}
-		editorH := bodyH - chromeRows
-		if editorH < 1 {
-			editorH = 1
-		}
-		barLocalY := editorH - m.integratedTerminalRows() - 1
-		if barLocalY < 0 {
-			barLocalY = 0
-		}
+		barLocalY := m.terminalBarIndex(pane.H)
 		if localY == barLocalY {
+			m.probed("panel:bar")
 			// Tab-bar row — terminalTabBarHitTest already handled every
 			// button at the top of this function, so any click here is
 			// on the non-interactive part. Drop it.
@@ -577,7 +619,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			return m.terminalWheel(localX, localY, msg.Type)
 		}
 	}
-	if m.termScrolled && msg.Type == tea.MouseLeft {
+	if m.termScrolled && msg.Type == tea.MouseLeft && m.mouseProbe == nil {
 		m.endTerminalScroll()
 	}
 
@@ -594,14 +636,22 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			// Change-nav buttons live on the winbar (localY == 0) at the very
 			// start of the left pane: " ‹ " spans cols 0-2, " › " cols 3-5.
 			// Clicking jumps to the prev/next change in BOTH panes (go-to-line).
-			recordError(fmt.Sprintf("[diffclick] localX=%d localY=%d msgX=%d msgY=%d edTop=%d", localX, localY, msg.X, msg.Y, editorTopRow))
-			if localY == 0 {
+			if m.mouseProbe == nil {
+				recordError(fmt.Sprintf("[diffclick] localX=%d localY=%d msgX=%d msgY=%d edTop=%d", localX, localY, msg.X, msg.Y, editorTopRow))
+			}
+			if localY == 0 && diffNavShown(edPaneW) {
 				switch {
 				case localX >= 0 && localX <= 2:
+					if m.probed("diff:prev") {
+						return m, nil
+					}
 					recordError("[diffclick] -> PREV")
 					_ = m.nvim.Command("lua _G.TcDiffPrev()")
 					return m, nil
 				case localX >= 3 && localX <= 5:
+					if m.probed("diff:next") {
+						return m, nil
+					}
 					recordError("[diffclick] -> NEXT")
 					_ = m.nvim.Command("lua _G.TcDiffNext()")
 					return m, nil
@@ -638,6 +688,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	if m.probed("editor") {
+		return m, nil
+	}
 	var cmd tea.Cmd
 	m.editor, cmd = m.editor.HandleMouse(localX, localY, msg.Type)
 	return m, cmd
