@@ -12,7 +12,7 @@ import (
 // attribute space (colours, defaults, bold/italic/underline/undercurl/
 // strikethrough/reverse, terminal palette colours), runs of varying length,
 // wide glyphs, odd whitespace and a cursor.
-func randomGrid(rng *rand.Rand, w, h, nhl int) *Grid {
+func randomGrid(rng *rand.Rand, w, h, nhl int, tabs bool) *Grid {
 	g := New()
 	g.Apply([][]any{{"grid_resize", []any{1, w, h}}})
 	switch rng.Intn(3) {
@@ -69,7 +69,9 @@ func randomGrid(rng *rand.Rand, w, h, nhl int) *Grid {
 				case 0:
 					rn = 0
 				case 1:
-					rn = '\t'
+					if tabs {
+						rn = '\t' // nvim expands tabs; only odd input has them
+					}
 				}
 				g.Cells[r][c] = Cell{Rune: rn, HlID: hl}
 				c++
@@ -85,10 +87,24 @@ func BenchmarkGridRender(b *testing.B) {
 	old := lipgloss.ColorProfile()
 	lipgloss.SetColorProfile(termenv.TrueColor)
 	defer lipgloss.SetColorProfile(old)
-	g := randomGrid(rand.New(rand.NewSource(1)), 200, 50, 40)
+	g := randomGrid(rand.New(rand.NewSource(1)), 200, 50, 40, false)
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = g.Render()
+	}
+}
+
+// BenchmarkGridRenderLegacy is the same screen through the old renderer,
+// for comparison.
+func BenchmarkGridRenderLegacy(b *testing.B) {
+	old := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	defer lipgloss.SetColorProfile(old)
+	g := randomGrid(rand.New(rand.NewSource(1)), 200, 50, 40, false)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = legacyRender(g)
 	}
 }
