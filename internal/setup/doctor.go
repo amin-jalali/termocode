@@ -90,16 +90,39 @@ func Doctor() []Check {
 	}
 	out = append(out, term)
 
-	font := Check{Group: "terminal", Name: "Nerd Font"}
-	if hasNerdFont() {
-		font.Status, font.Detail = OK, "found via fc-list"
-	} else {
-		font.Status = Warn
-		font.Detail = "not detected — run `termocode setup` (Linux) or install " + jbmName
-	}
-	out = append(out, font)
+	out = append(out, NerdFontCheck(DetectNerdFont(true), ""))
 	out = append(out, GraphicsCheck(termimg.Caps{}, false))
 	return out
+}
+
+// NerdFontCheck reports the Nerd Font detection. icons, when known (from
+// inside the app), is the icon set in use ("nerd", "unicode", "ascii");
+// the row then says how to switch if the glyphs look wrong.
+func NerdFontCheck(info NerdFontInfo, icons string) Check {
+	c := Check{Group: "terminal", Name: "Nerd Font"}
+	if info.Found {
+		c.Status = OK
+		c.Detail = "found via fc-list"
+		if info.Family != "" {
+			c.Detail = info.Family + " (fc-list)"
+		}
+	} else {
+		c.Status = Warn
+		c.Detail = "not detected — run `termocode setup` (Linux) or install " + jbmName
+	}
+	switch icons {
+	case "":
+	case "nerd":
+		c.Detail += " · icons: nerd — if icons show as boxes or '?', set the terminal font to a Nerd Font or set icons to unicode in Settings"
+	default:
+		c.Detail += " · icons: " + icons
+		if info.Found {
+			c.Detail += " — set icons to nerd in Settings if your terminal uses the Nerd Font"
+		} else {
+			c.Detail += " — if symbols look broken, set icons to ascii in Settings"
+		}
+	}
+	return c
 }
 
 // GraphicsCheck reports image support. With probed = true caps holds the
@@ -163,10 +186,6 @@ func Report(checks []Check) string {
 	b.WriteString("Run `termocode setup` in a shell to install the Nerd Font and gopls.")
 	return b.String()
 }
-
-// HasNerdFont reports whether a Nerd Font is installed (fc-list). The
-// "icons: auto" setting uses it as a hint.
-func HasNerdFont() bool { return hasNerdFont() }
 
 func firstLine(s string) string {
 	if i := strings.IndexByte(s, '\n'); i >= 0 {
