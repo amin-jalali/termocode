@@ -16,7 +16,18 @@ type editorPane struct {
 // geometry. The view, applyLayout, the overlays and the mouse hit tests
 // all use it, so what is drawn and what a click hits never disagree
 // (e.g. the Welcome cards when the AI panel takes room on the right).
+//
+// Zen mode has no chrome: the pane is the whole screen (below the
+// replace bar when it is open).
 func (m Model) editorPaneLayout() editorPane {
+	if m.zenMode {
+		p := editorPane{W: max(m.w-editorScrollbarWidth, 1)}
+		if m.replaceOpen {
+			p.Top = 2
+		}
+		p.H = max(m.h-p.Top, 1)
+		return p
+	}
 	p := editorPane{X: activity.Width}
 	p.W = m.w - activity.Width - editorScrollbarWidth - m.actionsColumnWidth()
 	if m.showExp {
@@ -26,10 +37,7 @@ func (m Model) editorPaneLayout() editorPane {
 	if p.W < 1 {
 		p.W = 1
 	}
-	if m.replaceOpen {
-		p.Top += 2 // the replace bar is two rows
-	}
-	p.Top += m.tabs.Height()
+	p.Top = m.tabBarRow() + m.tabs.Height()
 	// Breadcrumbs and the sticky signature share one row.
 	if len(m.breadcrumbs) > 0 || m.stickyContext != "" {
 		p.Top++
@@ -43,4 +51,16 @@ func (m Model) editorPaneLayout() editorPane {
 		p.H = 1
 	}
 	return p
+}
+
+// tabBarRow is the screen row of the editor tab bar (below the replace
+// bar when it is open), or -1 in zen mode, which has no tab bar.
+func (m Model) tabBarRow() int {
+	switch {
+	case m.zenMode:
+		return -1
+	case m.replaceOpen:
+		return 2 // the replace bar is two rows
+	}
+	return 0
 }

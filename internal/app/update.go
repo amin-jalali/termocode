@@ -2074,8 +2074,9 @@ func (m *Model) applyLayout() {
 	// Zen mode collapses the layout to just the editor — full width, full
 	// height, no chrome. Skip the rest of the math entirely.
 	if m.zenMode {
-		m.editor.SetSize(m.w, m.h)
-		m.sendNvimResize(m.w, m.h)
+		pane := m.editorPaneLayout()
+		m.editor.SetSize(pane.W, pane.H)
+		m.sendNvimResize(pane.W, pane.H)
 		return
 	}
 	bodyH := m.h - 1
