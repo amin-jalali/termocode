@@ -103,6 +103,9 @@ func (m Model) hitTargets() []hitTarget {
 	if m.termOpen && !m.editorEmpty() {
 		out = append(out, m.panelBarTargets(pane)...)
 	}
+	if m.findOpen {
+		out = append(out, m.findTargets(pane)...)
+	}
 	if m.gitDiffActive && m.nvim != nil && diffNavShown(pane.W) {
 		// The change-nav buttons on the diff winbar (" ‹ " and " › ").
 		add(hitTarget{ID: "diff:prev", Label: "‹", X: pane.X, Y: pane.Top, W: 3, H: 1})
@@ -317,6 +320,31 @@ func panelBarTargetID(hit terminalTabBarHit, idx int) string {
 
 // explorerTargetID names an explorer row.
 func explorerTargetID(path string) string { return "explorer:" + filepath.Clean(path) }
+
+// findTargetAt names what a click at (x, y) inside the find bar hits.
+func (m Model) findTargetAt(x, y int) string {
+	if id := m.find.ButtonAt(x, y); id != "" {
+		return "find:" + id
+	}
+	return "find"
+}
+
+// findTargets maps the find bar's glyph buttons. The bar is clipped at
+// the editor pane's right edge (overlayFindBarInEditor); a clipped
+// button is not drawn.
+func (m Model) findTargets(pane editorPane) []hitTarget {
+	bx, by, _, _ := m.find.Bounds()
+	view := m.find.View()
+	var out []hitTarget
+	for _, b := range m.find.Buttons() {
+		if b.X+b.W > pane.X+pane.W {
+			continue
+		}
+		out = append(out, hitTarget{ID: "find:" + b.ID, Label: cellText(view, b.Y-by, b.X-bx, b.X-bx+b.W),
+			X: b.X, Y: b.Y, W: b.W, H: 1})
+	}
+	return out
+}
 
 // panelContentAt reports whether (x, y) is on the content of a
 // non-terminal bottom-panel tab (routePanelContentMouse takes it).

@@ -35,6 +35,9 @@ var nvimHitSteps = []nvimHitStep{
 			open(d, f)
 		}
 	}},
+	{"find bar", func(d *Driver) { d.Key("ctrl+f") }},
+	{"find bar with replace", func(d *Driver) { d.Key("ctrl+h") }},
+	{"find bar closed", func(d *Driver) { d.Key("esc") }},
 	{"terminal panel", func(d *Driver) { d.Action("panel:terminal") }},
 	{"terminal panel taller", func(d *Driver) { dragPanelBar(d, -4) }},
 	{"problems tab", func(d *Driver) { d.Action("panel:problems") }},

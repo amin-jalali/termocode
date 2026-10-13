@@ -326,7 +326,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		if bw > 0 && bh > 0 &&
 			msg.X >= bx && msg.X < bx+bw &&
 			msg.Y >= by && msg.Y < by+bh {
-			if m.probed("find") {
+			if m.probed(m.findTargetAt(msg.X, msg.Y)) {
 				return m, nil
 			}
 			var cmd tea.Cmd
