@@ -141,14 +141,14 @@ type welcomeQuickActionHit struct {
 // renderWelcome returns the centered welcome screen for the editor pane.
 // `focusIdx` selects which action card is highlighted (0..3).
 func renderWelcome(w, h, focusIdx int) string {
-	key := welcomeKey{w: w, h: h, focus: focusIdx, theme: theme.Hex(theme.BgEditor) + theme.Hex(theme.BorderFocus), cfg: os.Getenv("XDG_CONFIG_HOME"),
-		icons: theme.CurrentIconMode, profile: int(theme.Profile())}
+	key := newWelcomeKey(w, h, focusIdx)
 	if c := welcomeCache; c != nil && c.key == key && time.Since(c.at) < welcomeCacheTTL {
 		welcomeLogoAt = c.logo
 		return c.out
 	}
-	rendered, _, _, _ := renderWelcomeFull(w, h, focusIdx)
-	welcomeCache = &welcomeCached{key: key, out: rendered, logo: welcomeLogoAt, at: time.Now()}
+	rendered, rh, wh, qh := renderWelcomeFull(w, h, focusIdx)
+	welcomeCache = &welcomeCached{key: key, out: rendered, logo: welcomeLogoAt, at: time.Now(),
+		hits: welcomeHits{recents: rh, workspaces: wh, actions: qh}}
 	return rendered
 }
 
@@ -165,11 +165,26 @@ type welcomeKey struct {
 	profile     int
 }
 
+func newWelcomeKey(w, h, focus int) welcomeKey {
+	return welcomeKey{w: w, h: h, focus: focus, theme: theme.Hex(theme.BgEditor) + theme.Hex(theme.BorderFocus),
+		cfg: os.Getenv("XDG_CONFIG_HOME"), icons: theme.CurrentIconMode, profile: int(theme.Profile())}
+}
+
+// welcomeHits are the click areas of one welcome render. They are
+// recorded by the same render that made the cached page, so the mouse
+// code hit-tests exactly what is on screen.
+type welcomeHits struct {
+	recents    []welcomeRecentHit
+	workspaces []welcomeWorkspaceHit
+	actions    []welcomeQuickActionHit
+}
+
 type welcomeCached struct {
 	key  welcomeKey
 	out  string
 	logo welcomeLogoRect
 	at   time.Time
+	hits welcomeHits
 }
 
 var welcomeCache *welcomeCached
@@ -180,6 +195,25 @@ var welcomeCache *welcomeCached
 // files were opened and closed).
 func invalidateWelcome() { welcomeCache = nil }
 
+// welcomeLayoutHits returns the click areas of the welcome page at w×h.
+// The card focus only changes colors, not the layout, so the hits of the
+// last render are reused whatever card it highlighted. Without a fresh
+// render (new size, theme, lists, or the cache is too old) it renders the
+// page once — the hover path used to re-render on every mouse move.
+func welcomeLayoutHits(w, h int) welcomeHits {
+	if c := welcomeCache; c != nil && time.Since(c.at) < welcomeCacheTTL {
+		key := newWelcomeKey(w, h, c.key.focus)
+		if c.key == key {
+			return c.hits
+		}
+	}
+	renderWelcome(w, h, 0)
+	if c := welcomeCache; c != nil {
+		return c.hits
+	}
+	return welcomeHits{} // w or h <= 0: nothing drawn, nothing to hit
+}
+
 // renderWelcomeLayout returns the recent + workspace hits expected by
 // mouse.go. Quick-action hits are surfaced via welcomeQuickActionHits.
 func renderWelcomeLayout(w, h, focusIdx int) (string, []welcomeRecentHit, []welcomeWorkspaceHit) {
@@ -187,26 +221,22 @@ func renderWelcomeLayout(w, h, focusIdx int) (string, []welcomeRecentHit, []welc
 	return rendered, rh, wh
 }
 
-// welcomeRecentHits computes the recents hit map without surfacing the
-// rendered string.
+// welcomeRecentHits returns the recents hit map of the welcome page.
 func welcomeRecentHits(w, h int) []welcomeRecentHit {
-	_, hits, _, _ := renderWelcomeFull(w, h, 0)
-	return hits
+	return welcomeLayoutHits(w, h).recents
 }
 
 // welcomeWorkspaceHits returns clickable workspace rectangles on the
 // welcome screen with their absolute editor-pane coordinates.
 func welcomeWorkspaceHits(w, h int) []welcomeWorkspaceHit {
-	_, _, hits, _ := renderWelcomeFull(w, h, 0)
-	return hits
+	return welcomeLayoutHits(w, h).workspaces
 }
 
 // welcomeQuickActionHits returns clickable rectangles for the action
 // cards. Each entry carries a keymap.Action that the mouse handler
 // dispatches through the same path the keyboard uses.
 func welcomeQuickActionHits(w, h int) []welcomeQuickActionHit {
-	_, _, _, hits := renderWelcomeFull(w, h, 0)
-	return hits
+	return welcomeLayoutHits(w, h).actions
 }
 
 // ─── Action card data ──────────────────────────────────────────────────
