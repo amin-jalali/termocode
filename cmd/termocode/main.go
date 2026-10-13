@@ -14,6 +14,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/app"
 	"github.com/amin-jalali/termocode/internal/setup"
+	"github.com/amin-jalali/termocode/internal/termfont"
 	"github.com/amin-jalali/termocode/internal/termimg"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
@@ -21,13 +22,14 @@ import (
 // fontDelta returns the number of font-points by which we ask the host
 // terminal to shrink (or grow) its font on launch. Negative = smaller.
 // TERMOCODE_FONT_DELTA wins, then "font_delta" in config.json (written by
-// the Settings UI), then the default -2. 0 disables it.
+// the Settings UI), then the default 0 (off: only kitty with remote
+// control can do it, see internal/termfont).
 func fontDelta() int {
 	return resolveFontDelta(os.Getenv("TERMOCODE_FONT_DELTA"), app.ConfigFontDelta())
 }
 
 // resolveFontDelta is the pure part of fontDelta: env (if it parses), else
-// cfg (if set), else -2.
+// cfg (if set), else 0.
 func resolveFontDelta(env string, cfg *int) int {
 	if env != "" {
 		if n, err := strconv.Atoi(env); err == nil {
@@ -37,25 +39,18 @@ func resolveFontDelta(env string, cfg *int) int {
 	if cfg != nil {
 		return *cfg
 	}
-	return -2
+	return 0
 }
 
-// applyFontDelta emits the OSC 1337 ChangeFontSize escape unconditionally
-// when delta ≠ 0. The format is "ESC ] 1337 ; ChangeFontSize=±N BEL".
-// Terminals that recognise it (iTerm2, WezTerm, Hyper, VSCode integrated
-// terminal) honour the request; others silently swallow the OSC sequence
-// without printing it (per VT100 spec). Detection-by-env-var doesn't
-// work over SSH because TERM_PROGRAM isn't usually forwarded, so we just
-// emit and let the host terminal decide.
-func applyFontDelta(delta int) {
-	if delta == 0 {
-		return
-	}
-	sign := "+"
-	if delta < 0 {
-		sign = "" // %d emits its own minus sign for negative values
-	}
-	_, _ = os.Stdout.WriteString(fmt.Sprintf("\x1b]1337;ChangeFontSize=%s%d\x07", sign, delta))
+// applyFontDelta asks the terminal for the font change (kitty only; it
+// must run before Bubble Tea takes the TTY, it reads kitty's answer) and
+// tells the UI, which shows a zoom tip when it was not done.
+func applyFontDelta(delta int) termfont.State {
+	s := termfont.Change(os.Getenv, delta, func(q string, done func([]byte) bool) []byte {
+		return termimg.Query(os.Stdin, os.Stdout, q, 500*time.Millisecond, done)
+	})
+	app.SetFontResult(delta, s)
+	return s
 }
 
 func init() {
@@ -197,8 +192,7 @@ func runTUI() {
 	// Honours TERMOCODE_ICON_MODE (manual override) and NO_COLOR.
 	probeTerminal()
 
-	delta := fontDelta()
-	applyFontDelta(delta)
+	font := applyFontDelta(fontDelta())
 	defer func() {
 		// Restore the terminal's default cursor shape — we set it via
 		// DECSCUSR `\x1b[<n> q` while running.
@@ -212,8 +206,8 @@ func runTUI() {
 		_, _ = os.Stdout.WriteString("\x1b[3J")
 		// Restore the terminal's default background (overridden below). OSC 111.
 		_, _ = os.Stdout.WriteString("\x1b]111\x07")
-		// Restore font size by emitting the inverse delta.
-		applyFontDelta(-delta)
+		// Undo the font change (if the terminal made one).
+		_, _ = os.Stdout.WriteString(font.Restore())
 		if r := recover(); r != nil {
 			app.HotExitFlush(2 * time.Second)
 			fmt.Fprintf(os.Stderr, "termocode panic: %v\n", r)
@@ -287,7 +281,7 @@ func runTUI() {
 	if _, err := p.Run(); err != nil {
 		// A crash or a lost terminal: keep the unsaved buffers.
 		app.HotExitFlush(2 * time.Second)
-		_, _ = os.Stdout.WriteString("\x1b]111\x07") // os.Exit skips the defer
+		_, _ = os.Stdout.WriteString("\x1b]111\x07" + font.Restore()) // os.Exit skips the defer
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

@@ -44,7 +44,7 @@ apply right away.
 | Setting | Default | What it does |
 |---|---|---|
 | `theme` | `vscode-dark-plus` | Color theme |
-| `font_delta` | `-2` | Ask the terminal to make the font smaller (negative) or bigger. Restart to apply. |
+| `font_delta` | `0` | Make the font smaller (negative) or bigger while termocode runs. Only kitty can do this, and only with `allow_remote_control yes` in `kitty.conf`. In other terminals, use the terminal's zoom (Ctrl+-). Restart to apply. |
 | `auto_save` | `false` | Save changed files after about one second |
 | `word_wrap` | `false` | Wrap long lines |
 | `show_hidden` | `false` | Show dotfiles in the explorer |
@@ -234,8 +234,14 @@ On 16 colours the dimmed background behind dialogs uses the terminal's
     Also check that the key name is one termocode knows (see the note above).
 
 **My terminal font changed size when termocode started**
-:   That is `font_delta` (default `-2`). Set it to `0` in Settings, or start with
-    `TERMOCODE_FONT_DELTA=0`.
+:   That is `font_delta` (kitty only). Set it to `0` in Settings, or start with
+    `TERMOCODE_FONT_DELTA=0`. termocode puts the size back when it exits.
+
+**`font_delta` does nothing**
+:   Most terminals (iTerm2, WezTerm, Ghostty, GNOME Terminal, Windows
+    Terminal, foot …) do not let programs change the font size. Use the
+    terminal's zoom (Ctrl+- / Ctrl+=). In kitty, add `allow_remote_control yes`
+    to `kitty.conf`. It does not work inside tmux.
 
 **I broke `keymap.json`**
 :   termocode ignores a broken file and uses the defaults. Fix the JSON or
