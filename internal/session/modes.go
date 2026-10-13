@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/termfont"
 )
 
 // Modes follows the terminal state the UI sets with escape sequences, so
@@ -27,7 +29,8 @@ type Modes struct {
 	cursor string
 	osc    map[string]string // OSC 10/11/12 colour → full sequence
 	kitty  []string          // pushed kitty keyboard flags (CSI > n u)
-	font   int               // net OSC 1337 ChangeFontSize delta
+	font   int               // net kitty set-font-size delta (termfont)
+	dcs    bool              // the string being skipped is a DCS
 }
 
 type parseState uint8
@@ -74,7 +77,7 @@ func (m *Modes) step(c byte) {
 		case ']':
 			m.st = stOSC
 		case 'P', '_', '^', 'X':
-			m.st = stStr
+			m.st, m.dcs = stStr, c == 'P'
 		case 0x1b:
 		default:
 			m.st = stGround
@@ -112,9 +115,14 @@ func (m *Modes) step(c byte) {
 	case stStr:
 		if c == 0x1b {
 			m.st = stStrEsc
+		} else if m.dcs {
+			m.add(c, maxOSC)
 		}
 	case stStrEsc:
 		if c == '\\' {
+			if d, ok := termfont.ParseKitty(string(m.buf)); ok && m.dcs && !m.overflow {
+				m.font += d
+			}
 			m.st = stGround
 			return
 		}
@@ -172,18 +180,12 @@ func (m *Modes) csi(params string, final byte) {
 }
 
 func (m *Modes) oscDone(data string) {
-	num, rest, _ := strings.Cut(data, ";")
+	num, _, _ := strings.Cut(data, ";")
 	switch num {
 	case "10", "11", "12":
 		m.osc[num] = "\x1b]" + data + "\x07"
 	case "110", "111", "112":
 		delete(m.osc, num[1:])
-	case "1337":
-		if v, ok := strings.CutPrefix(rest, "ChangeFontSize="); ok {
-			if n, err := strconv.Atoi(strings.TrimPrefix(v, "+")); err == nil {
-				m.font += n
-			}
-		}
 	}
 }
 
@@ -217,9 +219,7 @@ func (m *Modes) Replay() []byte {
 	for _, k := range m.kitty {
 		b.WriteString(k)
 	}
-	if m.font != 0 {
-		fmt.Fprintf(&b, "\x1b]1337;ChangeFontSize=%d\x07", m.font)
-	}
+	b.WriteString(termfont.Request(termfont.Kitty, m.font, false))
 	return []byte(b.String())
 }
 
@@ -242,9 +242,7 @@ func (m *Modes) Reset() []byte {
 	for _, k := range sortedKeys(m.osc) {
 		b.WriteString("\x1b]1" + k + "\x07")
 	}
-	if m.font != 0 {
-		fmt.Fprintf(&b, "\x1b]1337;ChangeFontSize=%d\x07", -m.font)
-	}
+	b.WriteString(termfont.Request(termfont.Kitty, -m.font, false))
 	b.WriteString("\x1b[?25h")
 	for _, n := range m.order {
 		if altModes[n] && m.dec[n] {
