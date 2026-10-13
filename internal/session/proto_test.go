@@ -127,7 +127,9 @@ func TestPeerUID(t *testing.T) {
 // limited to ~100 bytes and t.TempDir includes the test name.
 func shortTemp(t *testing.T) string {
 	t.Helper()
-	d, err := os.MkdirTemp("", "tcs")
+	// /tmp, not $TMPDIR: macOS's $TMPDIR (/var/folders/…/T/) is so long
+	// that socket paths under it pass maxSocketPath.
+	d, err := os.MkdirTemp("/tmp", "tcs")
 	if err != nil {
 		t.Fatal(err)
 	}
