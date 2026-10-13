@@ -240,19 +240,12 @@ func ensureNerdFont() error {
 
 	fmt.Printf("  Installing %s ...\n", jbmName)
 	dest, err := installJetBrainsMonoLinux()
+	InvalidateNerdFontCache()
 	if err != nil {
 		return err
 	}
 	fmt.Printf("  ✓ installed to %s\n", dest)
 	return nil
-}
-
-func hasNerdFont() bool {
-	out, err := exec.Command("fc-list").Output()
-	if err != nil {
-		return false
-	}
-	return strings.Contains(strings.ToLower(string(out)), "nerd")
 }
 
 func installJetBrainsMonoLinux() (string, error) {
