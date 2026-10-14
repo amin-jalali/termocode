@@ -251,7 +251,9 @@ TERMOCODE_CPUPROFILE / TERMOCODE_MEMPROFILE and a pty key-repeat test
 after the frame gate: 30% CPU editor only, 38% with the AI chat;
 live heap ~10 MB, RSS ~50 MB, ~50 MB/s short-lived allocations.
 
-- [x] P0 Frame gate (≤1 draw per 16 ms), fast cellWidth/joins, activity bar cache, GOGC 300, profile switches
-- [ ] P1 Cut allocations: cache the AI transcript lines between frames, fewer copies in handleNvimMsg, stop Model copies escaping to the heap; target ≥2× fewer bytes/s and lower CPU per key
-- [ ] P2 Cache the explorer / sidebar render by an exact state key (tree version counter)
-- [ ] P3 A perf guard in CI-safe form: allocation-count benchmarks with limits (not wall-clock), so regressions fail tests
+- [x] P0 Frame gate (≤1 draw per 16 ms), fast cellWidth/joins, activity bar cache, GOGC 300 (now 200, see P4), profile switches
+- [x] P1 Cut allocations: cache the AI transcript lines between frames, fewer copies in handleNvimMsg, stop Model copies escaping to the heap; target ≥2× fewer bytes/s and lower CPU per key
+  — done: transcript / input / header / tab bar / status bar / breadcrumbs caches, frame built as rows (one join), row-width memo, Model boxed once per message (theme.Theme by pointer). Soak 108 → 29 MB/s; ↓ held: editor 30% → 15% CPU (10.3 → 5.0 ms/key), AI chat 34% → 15% (11.5 → 5.4 ms/key)
+- [x] P2 Cache the explorer / sidebar render by an exact state key (tree version counter) — randomized test compares cached View with a fresh draw
+- [x] P3 A perf guard in CI-safe form: allocation-count benchmarks with limits (not wall-clock), so regressions fail tests — perf_guard_test.go (frame 5487 → 352 allocs, AI frame 7470 → 457)
+- [x] P4 RAM: measure RSS of termocode + nvim (idle, 11 files, long AI chat, after soak); GOGC 300 → 200 and soft limit 256 → 128 MB (100/200/300 compared); image cache bounded by bytes (16 MB); hidden chat panel drops its drawn rows; nvim already runs with `-i NONE -n` (no ShaDa / swap); live-heap guard test. termocode after soak 56 → 50 MB, total with nvim 80 → 74 MB

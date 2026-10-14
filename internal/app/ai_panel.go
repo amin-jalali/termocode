@@ -576,6 +576,15 @@ type aiMDKey struct {
 	streaming bool
 }
 
+// dropRenderCaches frees the drawn transcript, rendered answers and
+// input box (the panel was hidden); the next draw builds them again.
+func (s *aiState) dropRenderCaches() {
+	if !s.transcript.ok && !s.inputCache.ok && len(s.mdCache) == 0 {
+		return
+	}
+	s.transcript, s.inputCache, s.mdCache = aiTranscriptCache{}, aiInputCache{}, nil
+}
+
 // pruneMDCache drops rendered answers past the last message (a cleared
 // or switched chat), so the cache never holds more than the open chat.
 func (s *aiState) pruneMDCache(n int) {
