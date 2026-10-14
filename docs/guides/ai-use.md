@@ -180,6 +180,26 @@ Shell commands (`run_command`, the terminal) and LSP edits made with
 `ai_edit_review` = `auto` are not part of a restore point: use git for
 those.
 
+### Audit log
+
+Every tool call of the agent is one line in the **Output** panel, channel
+**AI** (**View: Output**, then the *AI* chip):
+
+```text
+14:03:22  write_file  content=<10 lines, 49 B> path=a.txt  gate=review  by=user (review)  → The user accepted 1 of 2 changes to a.txt; …
+14:03:25  git_commit  message="fix typo"  gate=confirm  by=user denied  → declined by user
+```
+
+- time, tool, the arguments (long text is shown as its size),
+- **gate**: *auto* (runs at once), *confirm* (the dialog), *review* (the
+  diff card), *invalid* (refused before any question),
+- **by**: who decided: *auto*, *user allowed*, *user denied*,
+  *auto-approved (class)*, *user (review)*,
+- then the first line of the result.
+
+**AI: Undo Last Turn** adds a line too. The log is kept while termocode
+runs (the last 5000 lines).
+
 ## Agent: let the chat use tools
 
 The chat is an agent. It can call tools to answer you:
