@@ -25,6 +25,11 @@ import (
 // View renders the frame, then lays the terminal-graphics layer (image
 // preview, dashboard logo) on top of it — see image_view.go.
 func (m Model) View() string {
+	return m.gatedView(m.drawView)
+}
+
+// drawView draws the whole screen (View goes through the frame gate).
+func (m Model) drawView() string {
 	frame := m.viewFrame()
 	if m.w == 0 || m.h == 0 {
 		return frame
@@ -301,12 +306,12 @@ var (
 )
 
 // spliceAt overlays `mid` onto `base` starting at the leftCol-th visible
-// cell, preserving base on both sides. lipgloss.Width(mid) cells of base
+// cell, preserving base on both sides. textWidth(mid) cells of base
 // are dropped under the overlay; SGR state for the right-side base is
 // rebuilt from the most recent SGR seen before the cut so colour bleed
 // doesn't carry over.
 func spliceAt(base, mid string, leftCol int) string {
-	rw := lipgloss.Width(mid)
+	rw := textWidth(mid)
 	left := truncRightVisual(base, leftCol)
 	right := dropLeftVisual(base, leftCol+rw)
 	return left + mid + right
@@ -440,7 +445,7 @@ func (m Model) renderBase() string {
 		tabs := m.tabs
 		tabs.SetFocused(m.editorHasKeys())
 		tabsRow := tabs.View()
-		if pad := edPaneW - lipgloss.Width(tabsRow); pad > 0 {
+		if pad := edPaneW - textWidth(tabsRow); pad > 0 {
 			tabsRow += theme.Bg(theme.BgTitleBar).Render(strings.Repeat(" ", pad))
 		}
 		rows = append(rows, tabsRow)
@@ -449,7 +454,7 @@ func (m Model) renderBase() string {
 		}
 	}
 	rows = append(rows, editorContent)
-	stack := lipgloss.JoinVertical(lipgloss.Left, rows...)
+	stack := joinRows(rows...)
 
 	// Scrollbar is disabled (editorScrollbarWidth = 0) for scroll perf.
 	// JoinHorizontal across the editor stack is the dominant cost during
@@ -458,7 +463,7 @@ func (m Model) renderBase() string {
 	editorRegion = stack
 	if editorScrollbarWidth > 0 {
 		scrollbar := m.renderEditorScrollbar(bodyH)
-		editorRegion = lipgloss.JoinHorizontal(lipgloss.Top, stack, scrollbar)
+		editorRegion = joinColumns(stack, scrollbar)
 	}
 
 	// Markdown live preview now lives as a regular nvim split window with
@@ -477,7 +482,7 @@ func (m Model) renderBase() string {
 	// rendered at edPaneW (not m.w), and the activity / sidebar columns
 	// are now full-screen tall (m.h) instead of bodyH.
 	m.status.SetWidth(edPaneW)
-	editorCol := lipgloss.JoinVertical(lipgloss.Left, editorRegion, m.status.View(m.statusState()))
+	editorCol := joinRows(editorRegion, m.status.View(m.statusState()))
 
 	activityCol := m.activity.View()
 
@@ -508,7 +513,7 @@ func (m Model) renderBase() string {
 	for i, c := range cols {
 		cols[i] = padColumnRowsToHeight(c, m.h, theme.Bg(theme.BgEditor))
 	}
-	middle = lipgloss.JoinHorizontal(lipgloss.Top, cols...)
+	middle = joinColumns(cols...)
 
 	if m.findOpen {
 		middle = m.overlayFindBarInEditor(middle)
@@ -606,7 +611,7 @@ func (m Model) overlayFindBarInEditor(base string) string {
 			continue
 		}
 		glassed := pline
-		if lipgloss.Width(glassed) > room {
+		if textWidth(glassed) > room {
 			glassed = ansi.Truncate(glassed, room, "")
 		}
 		baseLines[row] = spliceAt(baseLines[row], glassed, leftCol)
@@ -638,7 +643,7 @@ func (m Model) normalizeFrame(s string) string {
 	filler := theme.Bg(theme.BgEditor)
 	lines := strings.Split(s, "\n")
 	for i, line := range lines {
-		w := lipgloss.Width(line)
+		w := textWidth(line)
 		if w < m.w {
 			line += filler.Render(strings.Repeat(" ", m.w-w))
 		}
@@ -677,7 +682,7 @@ func padColumnRowsToHeight(col string, h int, filler lipgloss.Style) string {
 	// Width inferred from row 0; fallback to 1-cell pad if empty.
 	w := 0
 	if len(rows) > 0 {
-		w = lipgloss.Width(rows[0])
+		w = textWidth(rows[0])
 	}
 	if w <= 0 {
 		w = 1
@@ -714,7 +719,7 @@ func clipRowsToHeight(s string, h, w int, filler lipgloss.Style) string {
 	if w > 0 {
 		// Right-pad each existing row to `w` cells with styled filler.
 		for i, row := range rows {
-			rw := lipgloss.Width(row)
+			rw := textWidth(row)
 			switch {
 			case rw < w:
 				rows[i] = row + filler.Render(strings.Repeat(" ", w-rw))
@@ -858,7 +863,7 @@ func (m Model) renderBreadcrumbs(width int) string {
 			b.WriteString(renderSignature(signature))
 		}
 		out := b.String()
-		used := lipgloss.Width(out)
+		used := textWidth(out)
 		if used <= bcArea {
 			pad := bcArea - used
 			if pad > 0 {
@@ -944,7 +949,7 @@ func (m Model) renderStickyScroll(width int) string {
 		text = runewidth.Truncate(text, avail, "…")
 	}
 	out := bg.Render(" ") + style.Render(text)
-	pad := width - lipgloss.Width(out)
+	pad := width - textWidth(out)
 	if pad > 0 {
 		out += bg.Render(strings.Repeat(" ", pad))
 	}
@@ -1061,7 +1066,7 @@ func (m Model) renderSidebar(h int) string {
 	case activity.ViewSearch:
 		header := sidebarHeader(contentW, "SEARCH", "")
 		body := placeholderSidebar(contentW, h-1, "", "Press F8 for\nFind in Files.\n\nUse Ctrl+F for\nin-file find.")
-		content = lipgloss.JoinVertical(lipgloss.Left, header, body)
+		content = joinRows(header, body)
 	case activity.ViewGit:
 		content = m.renderGitSidebar(contentW, h)
 	case activity.ViewRun:
@@ -1074,7 +1079,7 @@ func (m Model) renderSidebar(h int) string {
 		}
 		content = m.renderExtSidebar(contentW, h)
 	}
-	return lipgloss.JoinHorizontal(lipgloss.Top, content, sidebarDivider(h))
+	return joinColumns(content, sidebarDivider(h))
 }
 
 func sidebarDivider(h int) string {
@@ -1119,7 +1124,7 @@ func sidebarHeader(w int, label, project string) string {
 	mutedStyle := theme.FgBg(theme.TextMuted, theme.BgSidebar)
 
 	left := fill.Render("  ") + labelStyle.Render(strings.ToUpper(label))
-	leftW := lipgloss.Width(left)
+	leftW := textWidth(left)
 
 	var right string
 	if project != "" {
@@ -1127,13 +1132,13 @@ func sidebarHeader(w int, label, project string) string {
 	} else {
 		right = mutedStyle.Render("⋯") + fill.Render(" ")
 	}
-	rightW := lipgloss.Width(right)
+	rightW := textWidth(right)
 
 	gap := w - leftW - rightW
 	if gap < 1 {
 		// Drop the project name and keep only the ⋯ if it doesn't fit.
 		right = mutedStyle.Render("⋯") + fill.Render(" ")
-		rightW = lipgloss.Width(right)
+		rightW = textWidth(right)
 		gap = w - leftW - rightW
 		if gap < 0 {
 			gap = 0
@@ -1390,7 +1395,7 @@ func renderGitFile(f git.FileStatus, active, focused bool, w int) string {
 // sub-header row against it. The width depends on the icon mode (a Nerd-Font
 // glyph is 1 cell; the ASCII fallback is the 4-cell word).
 func gitViewToggleWidth(viewTree bool) int {
-	return lipgloss.Width(gitViewToggleGlyph(viewTree)) + 1
+	return textWidth(gitViewToggleGlyph(viewTree)) + 1
 }
 
 // gitViewToggleGlyph is the toggle's glyph for the current view mode.
@@ -1448,7 +1453,7 @@ func renderGitSubheader(b git.Branch, viewTree bool, w int) string {
 
 	toggleGlyph := gitViewToggleGlyph(viewTree)
 	toggle := on.Render(toggleGlyph)
-	toggleW := lipgloss.Width(toggleGlyph)
+	toggleW := textWidth(toggleGlyph)
 
 	var sb strings.Builder
 	sb.WriteString(rowStyle.Render(" "))
@@ -1460,7 +1465,7 @@ func renderGitSubheader(b git.Branch, viewTree bool, w int) string {
 	if bi := theme.IconBranch.String(); bi != "" && bi != theme.IconBranch.ASCII {
 		sb.WriteString(branchStyle.Render(bi))
 		sb.WriteString(rowStyle.Render(" "))
-		used += lipgloss.Width(bi) + 1
+		used += textWidth(bi) + 1
 	}
 	if b.Name != "" {
 		sync := ""
@@ -1691,7 +1696,7 @@ func renderGitSectionHeader(label string, count int, hasCount, expanded, active,
 	chipTotal := 0
 	if hasCount {
 		chip = chipStyle.Render(" " + fmt.Sprintf("%d", count) + " ")
-		chipTotal = 1 + lipgloss.Width(chip) + 1
+		chipTotal = 1 + textWidth(chip) + 1
 	}
 	if rule := w - used - chipTotal; rule >= 1 {
 		sb.WriteString(ruleStyle.Render(strings.Repeat("─", rule)))
@@ -1813,7 +1818,7 @@ func renderGitGraphCommit(r gitPanelRow, active, focused bool, w int) string {
 
 	// Branch/tag pill, if there's comfortable room.
 	if pill := gitRefPill(r.refs); pill != "" {
-		pillW := lipgloss.Width(pill)
+		pillW := textWidth(pill)
 		if used+pillW+1+ageW+4 <= w {
 			sb.WriteString(pill)
 			sb.WriteString(rowStyle.Render(" "))
@@ -1966,7 +1971,7 @@ func gitStatusDot(f git.FileStatus) (string, lipgloss.Color) {
 }
 
 func padToWidth(s string, w int) string {
-	pad := w - lipgloss.Width(s)
+	pad := w - textWidth(s)
 	if pad <= 0 {
 		return s
 	}
@@ -1975,7 +1980,7 @@ func padToWidth(s string, w int) string {
 
 // padBgToWidth pads with the sidebar bg so empty space stays the panel color.
 func padBgToWidth(s string, w int) string {
-	width := lipgloss.Width(s)
+	width := textWidth(s)
 	if width > w {
 		// Truncate over-wide rows. A row wider than the sidebar would widen
 		// the whole sidebar column on JoinHorizontal and shove the editor
@@ -2097,7 +2102,7 @@ func (m Model) overlayPreferredActionHint(base string) string {
 		titleStyle.Render(rawTitle) + chipBg.Render("  ") +
 		hintFg.Render(pickerKey) + chipBg.Render("  ") +
 		hintFg.Render("Apply: "+applyKey) + chipBg.Render(" ")
-	chipW := lipgloss.Width(body)
+	chipW := textWidth(body)
 
 	// Same editor pane geometry renderBase composed, so the splice
 	// column lands inside the editor.

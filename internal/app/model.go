@@ -459,6 +459,7 @@ type Model struct {
 	ext *extState
 
 	focus       Focus
+	gate        *frameGate // draw at most once per frame (frame_gate.go)
 	showExp     bool
 	pickerOpen  bool
 	pickerKind  pickerKindEnum
@@ -701,6 +702,7 @@ func New() Model {
 		keys:             keys,
 		keymapProblems:   keymapProblems,
 		focus:            FocusEditor,
+		gate:             &frameGate{on: throttleFrames},
 		showExp:          true,
 		inlayHintsOn:     true,
 		lineNumbersOn:    true,

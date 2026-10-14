@@ -1001,7 +1001,7 @@ func (m Model) renderTerminalTabBar(width int) string {
 	}
 
 	// Pad with bg up to the right-controls region.
-	have := lipgloss.Width(out.String())
+	have := textWidth(out.String())
 	rightStart := width - 6 // see computeTerminalTabBarLayout
 	if rightStart < 0 {
 		rightStart = 0
@@ -1091,7 +1091,7 @@ func (m Model) activeTerminalLastExit() int {
 // leak terminal default bg under the bar. Trims from the right if the row
 // went over (defensive — shouldn't happen, but cheap insurance).
 func padTabBarToWidth(s string, w int, bgStyle lipgloss.Style) string {
-	have := lipgloss.Width(s)
+	have := textWidth(s)
 	if have == w {
 		return s
 	}

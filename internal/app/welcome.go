@@ -389,7 +389,7 @@ func renderWelcomePage(w, h, focusIdx int, hero, compact bool) (string, []welcom
 		}
 		contentLines = append(contentLines, centerInWidth(tagStyle.Render(tagline), innerW))
 		// A short lit rule under the hero.
-		if rw := lipgloss.Width(logo[0]); rw > 8 {
+		if rw := textWidth(logo[0]); rw > 8 {
 			contentLines = append(contentLines, centerInWidth(heroRule(rw/2), innerW))
 		} else {
 			contentLines = append(contentLines, blank(innerW))
@@ -478,7 +478,7 @@ func renderWelcomePage(w, h, focusIdx int, hero, compact bool) (string, []welcom
 
 	// ── Pad each row to exactly innerW ────────────────────────────────
 	for i, line := range contentLines {
-		cur := lipgloss.Width(line)
+		cur := textWidth(line)
 		if cur < innerW {
 			contentLines[i] = line + bgFill.Render(strings.Repeat(" ", innerW-cur))
 		}
@@ -502,7 +502,7 @@ func renderWelcomePage(w, h, focusIdx int, hero, compact bool) (string, []welcom
 	// image version on top of it (image_view.go / welcomeLogoImage).
 	welcomeLogoAt = welcomeLogoRect{}
 	if pixelLogo && len(logo) > 0 {
-		lw := lipgloss.Width(logo[0])
+		lw := textWidth(logo[0])
 		welcomeLogoAt = welcomeLogoRect{ok: true, x: leftPad + (innerW-lw)/2, y: topPad, cols: lw, rows: len(logo)}
 	}
 	bottomPad := h - rowsTotal - topPad
@@ -594,12 +594,12 @@ func footerRow(w int) string {
 	left := versionStyle.Render(welcomeVersionLine())
 	right := keycap("F1") + bg.Render(" ") + helpStyle.Render("for help")
 
-	leftW := lipgloss.Width(left)
-	rightW := lipgloss.Width(right)
+	leftW := textWidth(left)
+	rightW := textWidth(right)
 	// Docs: append the docs hint to the version line when it fits.
-	if docs := versionStyle.Render("  ·  Docs: " + docsHost); leftW+lipgloss.Width(docs)+rightW+1 <= w {
+	if docs := versionStyle.Render("  ·  Docs: " + docsHost); leftW+textWidth(docs)+rightW+1 <= w {
 		left += docs
-		leftW = lipgloss.Width(left)
+		leftW = textWidth(left)
 	}
 	gap := w - leftW - rightW
 	if gap < 1 {
@@ -717,7 +717,7 @@ func buildActionGrid(actions []quickAction, innerW, lineOffset, focusIdx int, wi
 			// If we have fewer cards than cols (last row, narrow odd
 			// count), pad the trailing column with bg-fill so the row
 			// width matches.
-			cur := lipgloss.Width(sb.String())
+			cur := textWidth(sb.String())
 			if cur < innerW {
 				sb.WriteString(bgFill.Render(strings.Repeat(" ", innerW-cur)))
 			}
@@ -1362,8 +1362,8 @@ func formatTimeShort(t time.Time, now time.Time) string {
 // styled BgEditor so the splice contract holds.
 func headerRow(left, right string, w int) string {
 	bg := theme.Bg(theme.BgEditor)
-	lw := lipgloss.Width(left)
-	rw := lipgloss.Width(right)
+	lw := textWidth(left)
+	rw := textWidth(right)
 	gap := w - lw - rw
 	if gap < 1 {
 		gap = 1
@@ -1415,7 +1415,7 @@ func spaceLetters(s string) string {
 
 // centerInWidth pads `s` so its visible width equals `w`, centered.
 func centerInWidth(s string, w int) string {
-	cur := lipgloss.Width(s)
+	cur := textWidth(s)
 	if cur >= w {
 		return s
 	}
@@ -1431,7 +1431,7 @@ func centerInWidth(s string, w int) string {
 // the editor bg, but the action card uses its own card bg for inner
 // rows).
 func padRowToWidth(s string, w int, bg lipgloss.Style) string {
-	cur := lipgloss.Width(s)
+	cur := textWidth(s)
 	if cur >= w {
 		return s
 	}

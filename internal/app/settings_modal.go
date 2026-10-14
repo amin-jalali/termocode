@@ -545,7 +545,7 @@ func (m settingsModal) Box() string {
 
 	// Pad helper: render `s` and right-pad with bg-coloured spaces to width w.
 	padBg := func(s string, w int) string {
-		used := lipgloss.Width(s)
+		used := textWidth(s)
 		if used >= w {
 			return s
 		}
@@ -575,7 +575,7 @@ func (m settingsModal) Box() string {
 	// matches "header(1) + top-sep(1) + input(1)" since this input row
 	// is now the FIRST content row.
 	inputContent := inputBgFill.Render(" › ") + inputStyle.Render(m.input) + inputCursorStyle.Render("▎")
-	if w := lipgloss.Width(inputContent); w < innerW {
+	if w := textWidth(inputContent); w < innerW {
 		inputContent += inputBgFill.Render(strings.Repeat(" ", innerW-w))
 	}
 	rows = append(rows, inputContent)
@@ -670,7 +670,7 @@ func padRight(s string, w int) string {
 // width w. Used so the soft selection bar extends across the whole inner
 // row, not just the label+value text.
 func padSelToWidth(s string, w int, bg lipgloss.Color) string {
-	used := lipgloss.Width(s)
+	used := textWidth(s)
 	if used >= w {
 		return s
 	}

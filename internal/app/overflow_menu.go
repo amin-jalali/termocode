@@ -1015,7 +1015,7 @@ func (m Model) renderOverflowMenu(w, h int) string {
 		}
 		body += rowBg.Render(" ")
 		// Defensive width pin so the splice math stays exact.
-		bodyW := lipgloss.Width(body)
+		bodyW := textWidth(body)
 		if bodyW < innerW {
 			body += rowBg.Render(strings.Repeat(" ", innerW-bodyW))
 		}

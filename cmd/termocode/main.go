@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime/debug"
+	"runtime/pprof"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -20,6 +23,41 @@ import (
 	"github.com/amin-jalali/termocode/internal/termimg"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
+
+// tuneGC makes the garbage collector run less often. Every frame builds
+// the screen as fresh strings, so with Go's default (GOGC=100) GC took
+// about a fifth of the CPU while a key was held. 300 cut CPU per key by a
+// quarter for ~9 MB more memory; the soft limit makes GC work harder
+// again before the heap grows large. GOGC / GOMEMLIMIT still win.
+func tuneGC() {
+	if os.Getenv("GOGC") == "" {
+		debug.SetGCPercent(300)
+	}
+	if os.Getenv("GOMEMLIMIT") == "" {
+		debug.SetMemoryLimit(256 << 20)
+	}
+}
+
+// startCPUProfile writes a Go CPU profile to $TERMOCODE_CPUPROFILE while
+// the UI runs, for finding slow paths ("go tool pprof termocode <file>").
+// Off unless the variable is set; the returned func stops it (safe to
+// call twice).
+func startCPUProfile() func() {
+	path := os.Getenv("TERMOCODE_CPUPROFILE")
+	if path == "" {
+		return func() {}
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		return func() {}
+	}
+	if pprof.StartCPUProfile(f) != nil {
+		_ = f.Close()
+		return func() {}
+	}
+	var once sync.Once
+	return func() { once.Do(func() { pprof.StopCPUProfile(); _ = f.Close() }) }
+}
 
 // fontDelta returns the number of font-points by which we ask the host
 // terminal to shrink (or grow) its font on launch. Negative = smaller.
@@ -93,6 +131,7 @@ func probeTerminal() {
 }
 
 func main() {
+	tuneGC()
 	args, noSession := extractFlag(os.Args[1:], "--no-session")
 	if noSession {
 		_ = os.Setenv(envNoSession, "1")
@@ -237,6 +276,7 @@ func runTUI() {
 	// in the defer above.
 	_, _ = os.Stdout.WriteString("\x1b]11;#121212\x07")
 
+	app.ThrottleFrames()
 	p := tea.NewProgram(
 		app.New(),
 		tea.WithAltScreen(),
@@ -281,7 +321,10 @@ func runTUI() {
 	)
 	watchRepaint(p)
 	watchHangup(p)
+	stopProfile := startCPUProfile()
+	defer stopProfile()
 	if _, err := p.Run(); err != nil {
+		stopProfile()
 		// A crash or a lost terminal: keep the unsaved buffers.
 		app.HotExitFlush(2 * time.Second)
 		_, _ = os.Stdout.WriteString("\x1b]111\x07" + font.Restore()) // os.Exit skips the defer
