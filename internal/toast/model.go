@@ -36,6 +36,9 @@ type Toast struct {
 	// Key, when set, identifies an updatable toast (PushKeyed): a later push
 	// with the same key replaces it in place instead of stacking.
 	Key string
+	// Click, when set, is the message a click on the toast sends (the app
+	// hit-tests the cards; see PushClick).
+	Click tea.Msg
 
 	// slide is the horizontal slide position: 0 = in place, 1 = fully
 	// off to the right. New toasts slide in, expired ones slide out.
@@ -125,6 +128,32 @@ func (m Model) PushKeyed(key string, severity Severity, title, detail string) (M
 	m, cmd := m.PushDetail(severity, title, detail)
 	m.toasts[len(m.toasts)-1].Key = key
 	return m, cmd
+}
+
+// clickLifetime is how long a clickable toast stays: long enough to
+// reach it with the mouse.
+const clickLifetime = 8 * time.Second
+
+// PushClick shows a toast that does something when clicked: the app
+// sends click (detail should say what, e.g. "Show in folder").
+func (m Model) PushClick(severity Severity, title, detail string, click tea.Msg) (Model, tea.Cmd) {
+	m, cmd := m.PushDetail(severity, title, detail)
+	t := &m.toasts[len(m.toasts)-1]
+	t.Click = click
+	t.ExpiresAt = time.Now().Add(clickLifetime)
+	return m, cmd
+}
+
+// DismissID removes the toast with the given ID, if any.
+func (m Model) DismissID(id int) Model {
+	out := make([]Toast, 0, len(m.toasts))
+	for _, t := range m.toasts {
+		if t.ID != id {
+			out = append(out, t)
+		}
+	}
+	m.toasts = out
+	return m
 }
 
 // Dismiss removes the toast with the given key, if any.
@@ -219,6 +248,8 @@ func (m Model) scheduleTick() tea.Cmd {
 type Card struct {
 	Lines []string
 	Slide float64
+	ID    int     // the toast's ID (DismissID)
+	Click tea.Msg // what a click sends; nil when the toast is not clickable
 }
 
 // Cards returns the visible toasts (oldest first), each as a rounded card
@@ -234,7 +265,7 @@ func (m Model) Cards(width int) []Card {
 	visible := m.toasts[len(m.toasts)-count:]
 	out := make([]Card, 0, count)
 	for _, t := range visible {
-		out = append(out, Card{Lines: renderToast(t, width), Slide: t.slide.Pos})
+		out = append(out, Card{Lines: renderToast(t, width), Slide: t.slide.Pos, ID: t.ID, Click: t.Click})
 	}
 	return out
 }
@@ -251,7 +282,7 @@ func (m Model) CompactCards(width, n int) []Card {
 	}
 	out := make([]Card, 0, n)
 	for _, t := range m.toasts[len(m.toasts)-n:] {
-		out = append(out, Card{Lines: renderToastCompact(t, width), Slide: t.slide.Pos})
+		out = append(out, Card{Lines: renderToastCompact(t, width), Slide: t.slide.Pos, ID: t.ID, Click: t.Click})
 	}
 	return out
 }

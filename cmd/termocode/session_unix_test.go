@@ -68,3 +68,22 @@ func TestTerminalChangeWithoutProbe(t *testing.T) {
 		t.Errorf("probed: %v gen %d", msg.Graphics.Protocol, msg.Gen)
 	}
 }
+
+// TestApplyClientEnvSSH: a local client attaching to a session that an
+// SSH client started clears the SSH variables, so transfers turn local;
+// an SSH client attaching later sets them again.
+func TestApplyClientEnvSSH(t *testing.T) {
+	t.Setenv("SSH_CONNECTION", "10.0.0.5 50000 10.0.0.9 22")
+	t.Setenv("SSH_TTY", "/dev/pts/2")
+	applyClientEnv(&session.ClientCaps{Env: map[string]string{"TERM": "xterm-256color"}})
+	if v, ok := os.LookupEnv("SSH_CONNECTION"); ok {
+		t.Errorf("SSH_CONNECTION still set to %q", v)
+	}
+	if v, ok := os.LookupEnv("SSH_TTY"); ok {
+		t.Errorf("SSH_TTY still set to %q", v)
+	}
+	applyClientEnv(&session.ClientCaps{Env: map[string]string{"SSH_CLIENT": "1.2.3.4 5 22"}})
+	if os.Getenv("SSH_CLIENT") != "1.2.3.4 5 22" {
+		t.Error("SSH_CLIENT not set from the client")
+	}
+}

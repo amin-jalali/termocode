@@ -36,10 +36,45 @@ type Model struct {
 	buttons []Button
 	cursor  int
 	w, h    int
+	code    string // a command shown on one line in a frame (WithCode)
+	note    string // text below the code
 }
 
 func New(title, message string, buttons []Button) Model {
 	return Model{title: title, message: message, buttons: buttons}
+}
+
+// WithCode shows code (a shell command) below the message on ONE line in
+// a frame, cut in the middle with … when the dialog is too narrow, and
+// note below it. The dialog grows wider (up to the window) to fit it.
+func (m Model) WithCode(code, note string) Model {
+	m.code, m.note = code, note
+	return m
+}
+
+// truncMiddle cuts s to w cells, keeping its start and end around a ….
+func truncMiddle(s string, w int) string {
+	if lipgloss.Width(s) <= w {
+		return s
+	}
+	if w <= 1 {
+		return "…"
+	}
+	r := []rune(s)
+	keep := w - 1
+	head := (keep + 1) / 2
+	// Cut by cells, not runes (wide characters count twice).
+	h, hw := 0, 0
+	for h < len(r) && hw+lipgloss.Width(string(r[h])) <= head {
+		hw += lipgloss.Width(string(r[h]))
+		h++
+	}
+	t, tw := len(r), 0
+	for t > h && tw+lipgloss.Width(string(r[t-1])) <= keep-hw {
+		tw += lipgloss.Width(string(r[t-1]))
+		t--
+	}
+	return string(r[:h]) + "…" + string(r[t:])
 }
 
 // Init satisfies the bubbletea.Model interface — confirm has no startup
@@ -199,6 +234,7 @@ type confirmDims struct {
 	footerSpacer int
 	buttonLabels []string
 	buttonXs     []int // inner-x offset of each button (relative to inner area)
+	codeAt       int   // index in bodyLines of the code frame's top row; -1 without code
 }
 
 // layoutDims is the single source of truth for confirm panel geometry.
@@ -206,6 +242,10 @@ type confirmDims struct {
 // positions and the hit-test rects line up exactly.
 func (m Model) layoutDims() confirmDims {
 	boxW := 60
+	if m.code != "" {
+		// Room for the command on one line: frame + padding + border.
+		boxW = max(boxW, min(lipgloss.Width(m.code)+10, 110))
+	}
 	if maxW := m.w - 8; boxW > maxW {
 		boxW = maxW
 	}
@@ -226,6 +266,19 @@ func (m Model) layoutDims() confirmDims {
 		extra := len(bodyLines) - maxBodyLines + 1
 		bodyLines = bodyLines[:maxBodyLines-1]
 		bodyLines = append(bodyLines, "…and "+strconv.Itoa(extra)+" more lines")
+	}
+	codeAt := -1
+	if m.code != "" {
+		code := truncMiddle(m.code, max(bodyW-4, 1))
+		cw := lipgloss.Width(code)
+		codeAt = len(bodyLines)
+		bodyLines = append(bodyLines,
+			"╭"+strings.Repeat("─", cw+2)+"╮",
+			"│ "+code+" │",
+			"╰"+strings.Repeat("─", cw+2)+"╯")
+		if m.note != "" {
+			bodyLines = append(bodyLines, wrap(m.note, bodyW)...)
+		}
 	}
 
 	// Button labels and their x-offsets (panel-bg gap of 2 between
@@ -262,6 +315,7 @@ func (m Model) layoutDims() confirmDims {
 		footerSpacer: footerSpacer,
 		buttonLabels: labels,
 		buttonXs:     xs,
+		codeAt:       codeAt,
 	}
 }
 
@@ -351,8 +405,19 @@ func (m Model) Box() string {
 	// breathing room either side. Multi-line preserved.
 	// One blank row above the body for breathing.
 	rows = append(rows, blank)
-	for _, line := range dims.bodyLines {
-		row := bgFill.Render("  ") + bodyStyle.Render(line)
+	codeStyle := lipgloss.NewStyle().Background(cmBoxBg).Foreground(cmTextPri).Bold(true)
+	for i, line := range dims.bodyLines {
+		style := bodyStyle
+		switch {
+		case dims.codeAt >= 0 && (i == dims.codeAt || i == dims.codeAt+2):
+			style = separatorStyle
+		case dims.codeAt >= 0 && i == dims.codeAt+1:
+			inner := strings.TrimSuffix(strings.TrimPrefix(line, "│ "), " │")
+			row := bgFill.Render("  ") + separatorStyle.Render("│ ") + codeStyle.Render(inner) + separatorStyle.Render(" │")
+			rows = append(rows, padBg(row, innerW))
+			continue
+		}
+		row := bgFill.Render("  ") + style.Render(line)
 		rows = append(rows, padBg(row, innerW))
 	}
 	// One blank row below the body before the button row.

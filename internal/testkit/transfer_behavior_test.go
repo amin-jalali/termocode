@@ -198,12 +198,39 @@ func TestDownloadFallbackShowsScp(t *testing.T) {
 	if !d.WaitForText("scp", 2*time.Second) || !strings.Contains(screen(d), "workspace/a.txt'") {
 		t.Fatalf("no scp command:\n%s", screen(d))
 	}
+	clip := &fakeClipboard{}
+	t.Cleanup(app.SetClipboardSink(func(s string) { clip.mu.Lock(); clip.last = s; clip.n++; clip.mu.Unlock() }))
 	clickText(d, "Copy Command")
 	if !d.WaitForText("Command copied", 2*time.Second) {
 		t.Errorf("no copied toast:\n%s", screen(d))
 	}
+	if got, _ := clip.get(); !strings.HasPrefix(got, "scp '") || !strings.HasSuffix(got, "workspace/a.txt' .") {
+		t.Errorf("copied %q", got)
+	}
 	if term.wrote() != 0 {
 		t.Errorf("wrote %d bytes to the terminal", term.wrote())
+	}
+}
+
+// Spec: Given the scp dialog and a clipboard that does not take the text,
+// when the user presses Copy Command,
+// then termocode does not claim it copied anything.
+func TestDownloadFallbackCopyFails(t *testing.T) {
+	t.Setenv(transfer.EnvOverride, "off")
+	newFakeTerminal(t, false)
+	d := New(t, Options{Files: textFiles()})
+	rightClickExplorer(d, "a.txt")
+	clickText(d, "Download")
+	if !d.WaitForText("Copy Command", 2*time.Second) {
+		t.Fatalf("no dialog:\n%s", screen(d))
+	}
+	// No sink: the test terminal is headless, so no clipboard is reached.
+	clickText(d, "Copy Command")
+	if !d.WaitForText("Could not copy", 2*time.Second) {
+		t.Errorf("no failure toast:\n%s", screen(d))
+	}
+	if strings.Contains(screen(d), "Command copied") {
+		t.Errorf("claims copied:\n%s", screen(d))
 	}
 }
 

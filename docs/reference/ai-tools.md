@@ -898,6 +898,7 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `toggle-wrap` | View: Toggle Word Wrap | auto |   |
 | `transfer-cancel` | File: Cancel Download | never | moves files between the user's machine and the server; user only |
 | `transfer-download` | File: Download to This Computer | never | moves files between the user's machine and the server; user only |
+| `transfer-reveal` | File: Show Last Download in Folder | never | moves files between the user's machine and the server; user only |
 | `transfer-upload` | File: Upload from This Computer... | never | moves files between the user's machine and the server; user only |
 | `trim-blanks` | Edit: Collapse Blank Lines | confirm (fileWrite) |   |
 | `trim-whitespace` | Edit: Trim Trailing Whitespace | confirm (fileWrite) |   |
