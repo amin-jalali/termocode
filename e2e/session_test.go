@@ -43,6 +43,8 @@ func newSessionRig(t *testing.T) *sessionRig {
 		t: t, home: t.TempDir(), ws: NewRepo(t), runtime: rt,
 		env: []string{"XDG_RUNTIME_DIR=" + rt, "SSH_CONNECTION=10.0.0.1 50000 10.0.0.2 22"},
 	}
+	// Runs after the cleanup below that ends the server.
+	watchLeaks(t, r.home, r.ws)
 	t.Cleanup(func() {
 		// Never leave a server behind, whatever the test did.
 		if _, err := os.Stat(r.socket()); err == nil {
@@ -377,6 +379,9 @@ func TestSessionStaleSocket(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Fatalf("client still running after kill")
 	}
+	if left := waitNoProcs(r.home, []string{r.home, r.ws}, 5*time.Second); len(left) > 0 {
+		t.Errorf("still running 5s after kill:\n%s", strings.Join(left, "\n"))
+	}
 	if out, err := r.output("attach"); err == nil || !strings.Contains(out, "no session") {
 		t.Errorf("attach without a session: %v\n%s", err, out)
 	}
@@ -504,6 +509,10 @@ func TestSessionServerKilledRestore(t *testing.T) {
 			t.Fatalf("UI %d still running after the server died", in.UIPID)
 		}
 		time.Sleep(20 * time.Millisecond)
+	}
+	// nvim (own session, not in the UI's group) must go with the UI.
+	if left := waitNoProcs(r.home, []string{r.home, r.ws}, 5*time.Second); len(left) > 0 {
+		t.Fatalf("still running 5s after the server and UI died:\n%s", strings.Join(left, "\n"))
 	}
 
 	tm2 := Start(t, StartOpts{Home: r.home, Workspace: r.ws, Env: r.env})
