@@ -300,6 +300,41 @@ func TestAIRunCommandReloadsOpenBuffers(t *testing.T) {
 	}
 }
 
+// Spec: the agent stops at ai_max_steps, the chat says so and offers to
+// continue; on "continue" the model sees the tool steps it already did
+// (they used to be left out of the history, so it started over).
+func TestAIStepLimitThenContinueKeepsToolSteps(t *testing.T) {
+	loop := toolCall("list_dir", map[string]any{"path": "."})
+	p := &scriptedAIProvider{replies: []ai.Chunk{loop, loop, {Delta: "went on"}}}
+	m, _, _ := aiSyncModel(t, p, map[string]string{"a.txt": "a\n"})
+	m.ai.settings.MaxSteps = 2
+	driveAIChat(t, m, m.sendAIChat("list a lot"), nil)
+	if p.calls != 2 {
+		t.Fatalf("provider called %d times, want the limit 2", p.calls)
+	}
+	msgs := m.ai.conv.Messages
+	last := msgs[len(msgs)-1]
+	if last.Role != ai.StoredAssistant || !strings.Contains(last.Text, "step limit (2 tool steps)") || !strings.Contains(last.Text, `"continue"`) {
+		t.Fatalf("last chat message %+v", last)
+	}
+	driveAIChat(t, m, m.sendAIChat("continue"), nil)
+	p.mu.Lock()
+	hist := p.seen[len(p.seen)-1]
+	p.mu.Unlock()
+	var asst string
+	for _, msg := range hist {
+		if msg.Role == ai.RoleAssistant {
+			asst += msg.Content
+		}
+	}
+	if !strings.Contains(asst, "List .") || !strings.Contains(asst, "a.txt") {
+		t.Errorf("history does not carry the earlier tool steps:\n%s", asst)
+	}
+	if hist[len(hist)-1].Role != ai.RoleUser || hist[len(hist)-1].Content != "continue" {
+		t.Errorf("history does not end with the user's continue: %+v", hist[len(hist)-1])
+	}
+}
+
 // Spec: git_checkout reloads open files that differ on the other branch,
 // also a tab in the background (a plain :checktime skips those).
 func TestAIGitCheckoutReloadsOpenBuffers(t *testing.T) {

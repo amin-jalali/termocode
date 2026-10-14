@@ -155,6 +155,32 @@ func waitReached(d *Driver, ch <-chan struct{}, what string) {
 	}
 }
 
+// Spec: Given ai_max_steps 2, when the agent keeps calling tools, then
+// the chat shows a clear "paused at the step limit" note that offers to
+// continue.
+func TestAIStepLimitNoteInChat(t *testing.T) {
+	loop := aiReply{tool: "list_dir", args: map[string]any{"path": "."}}
+	_, srv := newAIScript(t, loop, loop, loop)
+	if testing.Short() {
+		t.Skip("starts nvim")
+	}
+	d := New(t, Options{W: 160, H: 40, Nvim: true, Files: textFiles(),
+		Config: map[string]string{"config.json": `{"ai_max_steps": 2}`},
+		Setup: func(t testing.TB, _ string) {
+			t.Setenv("TERMOCODE_AI_PROVIDER", "ollama")
+			t.Setenv("TERMOCODE_AI_MODEL", "fake")
+			t.Setenv("TERMOCODE_AI_BASE_URL", srv.URL+"/v1")
+		}})
+	askAI(d, "list")
+	if !d.WaitForText("step limit (2 tool steps)", 5*time.Second) {
+		t.Fatalf("no step-limit note:\n%s", screen(d))
+	}
+	sc := screen(d)
+	if !strings.Contains(sc, "Paused") || !strings.Contains(sc, `"continue"`) || strings.Contains(sc, "**") {
+		t.Errorf("step-limit note not shown cleanly:\n%s", sc)
+	}
+}
+
 // Spec: Given b.txt open in a tab, when the agent deletes it, then its
 // tab closes and the explorer no longer lists it, during the turn.
 func TestAIDeleteClosesTabAndExplorerRow(t *testing.T) {
