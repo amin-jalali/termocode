@@ -51,19 +51,51 @@ function _G.TcGitMark()
 end
 
 -- Render: clears the buffer's sign group and re-paints from the diff hunks.
+local _git_signs_paint
+
+-- git runs in the background (vim.system), never in a blocking
+-- vim.fn.system(): that froze the editor while git ran, and nvim never
+-- ends an exit that starts during one (internal/nvim/watchdog.go). Only
+-- the newest run of a buffer paints (_git_signs_gen).
+local _git_signs_gen = {}
 local function _termocode_git_signs(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
-  _G._tc_git_marks[bufnr] = nil
   local file = vim.api.nvim_buf_get_name(bufnr)
-  if file == '' then return end
+  if file == '' then
+    _G._tc_git_marks[bufnr] = nil
+    return
+  end
+  local gen = (_git_signs_gen[bufnr] or 0) + 1
+  _git_signs_gen[bufnr] = gen
+  local function current()
+    return _git_signs_gen[bufnr] == gen and vim.api.nvim_buf_is_valid(bufnr)
+  end
+  local function git(args, done)
+    local ok = pcall(vim.system, args, { text = true }, function(r)
+      vim.schedule(function()
+        if current() then done(r) end
+      end)
+    end)
+    if not ok and current() then _G._tc_git_marks[bufnr] = nil end
+  end
   -- Only run inside git repos; checking the buffer's actual path lets us
   -- support files in nested git submodules without extra gymnastics.
-  local git_dir = vim.fn.systemlist('git -C ' .. vim.fn.shellescape(vim.fn.fnamemodify(file, ':h')) .. ' rev-parse --show-toplevel')[1]
-  if not git_dir or git_dir == '' or git_dir:match('fatal:') then return end
-  -- Diff -U0 produces compact hunk headers we can parse with a small regex.
-  -- Run against HEAD so both staged and unstaged changes show signs (we
-  -- want to surface "what's different from the last commit").
-  local diff = vim.fn.systemlist({ 'git', '-C', git_dir, 'diff', '--no-color', '-U0', 'HEAD', '--', file })
+  git({ 'git', '-C', vim.fn.fnamemodify(file, ':h'), 'rev-parse', '--show-toplevel' }, function(r)
+    local git_dir = r.code == 0 and vim.trim(r.stdout or '') or ''
+    if git_dir == '' then
+      _G._tc_git_marks[bufnr] = nil
+      return
+    end
+    -- Diff -U0 produces compact hunk headers we can parse with a small regex.
+    -- Run against HEAD so both staged and unstaged changes show signs (we
+    -- want to surface "what's different from the last commit").
+    git({ 'git', '-C', git_dir, 'diff', '--no-color', '-U0', 'HEAD', '--', file }, function(d)
+      _git_signs_paint(bufnr, vim.split(d.stdout or '', '\n', { trimempty = true }))
+    end)
+  end)
+end
+
+function _git_signs_paint(bufnr, diff)
   vim.fn.sign_unplace('TermocodeGitSigns', { buffer = bufnr })
   local marks = {}
   _G._tc_git_marks[bufnr] = marks
