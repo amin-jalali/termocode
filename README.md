@@ -7,12 +7,26 @@ A terminal IDE that feels like VSCode — built on Bubble Tea, powered by a real
 
 **Documentation: <https://amin-jalali.github.io/termocode/>**
 
-![termocode: explorer, tabs, editor and status bar](assets/screenshots/editor.png)
+![termocode: AI chat next to a real Neovim editor, with the explorer and git status](assets/screenshots/ai-chat-answer.png)
 
-| | |
-|---|---|
-| ![Start page](assets/screenshots/dashboard.png) | ![Command palette](assets/screenshots/palette.png) |
-| ![AI chat with a Markdown answer](assets/screenshots/ai-chat-answer.png) | ![Catppuccin Latte](assets/screenshots/theme-catppuccin-latte-dashboard.png) |
+<table>
+  <tr>
+    <td width="50%"><img src="assets/screenshots/editor.png" alt="Editor with explorer, tabs and git status"><br><sub><b>Editor</b> — real Neovim, explorer with git status, tabs, breadcrumbs.</sub></td>
+    <td width="50%"><img src="assets/screenshots/diff-review.png" alt="Review AI changes as a diff"><br><sub><b>AI edit review</b> — accept or reject each change, then apply.</sub></td>
+  </tr>
+  <tr>
+    <td><img src="assets/screenshots/dashboard.png" alt="Start page"><br><sub><b>Start page</b> — open files, search, shell, clone.</sub></td>
+    <td><img src="assets/screenshots/palette.png" alt="Command palette"><br><sub><b>Command palette</b> (<code>F1</code>) — every action, fuzzy search.</sub></td>
+  </tr>
+  <tr>
+    <td><img src="assets/screenshots/scm.png" alt="Source Control view"><br><sub><b>Source Control</b> — commit box, change tree and commit graph.</sub></td>
+    <td><img src="assets/screenshots/terminal.png" alt="Integrated terminal"><br><sub><b>Terminal</b> — integrated shell panel under the editor.</sub></td>
+  </tr>
+  <tr>
+    <td><img src="assets/screenshots/md-preview.png" alt="Markdown preview"><br><sub><b>Markdown preview</b> — a clean reader view for <code>.md</code> files.</sub></td>
+    <td><img src="assets/screenshots/theme-catppuccin-latte.png" alt="Catppuccin Latte light theme"><br><sub><b>Themes</b> — light and dark, here Catppuccin Latte.</sub></td>
+  </tr>
+</table>
 
 ## Highlights
 
