@@ -186,6 +186,8 @@ type Model struct {
 	// cmd/termocode/main.go).
 	hoverX, hoverY int
 	mouseAllMotion bool
+	// tip is the hover label over icon buttons (tooltip.go).
+	tip tooltipState
 	// mouseProbe is set only on the copy a test probes (probeClick): the
 	// mouse code then records which target a click resolves to and stops
 	// before it acts (hit_targets.go).
