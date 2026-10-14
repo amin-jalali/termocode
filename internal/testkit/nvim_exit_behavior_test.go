@@ -116,3 +116,48 @@ func TestNormalQuitNoNvimExitDialog(t *testing.T) {
 		t.Errorf("normal quit showed the nvim-exit dialog:\n%s", screen(d))
 	}
 }
+
+// Spec: Given a file open, when the user quits nvim on purpose (:qa,
+// :qa!, :wqa, :q on the last window), then termocode quits like a normal
+// quit: no "Editor process stopped" dialog.
+func TestNvimUserQuitQuitsApp(t *testing.T) {
+	for _, c := range []struct{ name, cmd string }{
+		{"qa", ":qa"}, {"qa!", ":qa!"}, {"wqa", ":wqa"}, {"q", ":q"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			d := editorDriver(t, nil)
+			open(d, "a.txt")
+			d.Key("esc")
+			d.Type(c.cmd)
+			d.Key("enter")
+			if !d.WaitFor(d.Quit, 5*time.Second) {
+				t.Fatalf("%s did not quit termocode:\n%s", c.cmd, screen(d))
+			}
+			if strings.Contains(screen(d), "Editor process stopped") {
+				t.Errorf("%s showed the nvim-exit dialog:\n%s", c.cmd, screen(d))
+			}
+		})
+	}
+}
+
+// Spec: Given unsaved text, when the user types :qa! (quit and discard),
+// then termocode quits and drops the hot-exit backup, as "Don't Save"
+// does.
+func TestNvimQaBangDropsBackup(t *testing.T) {
+	d := editorDriver(t, nil)
+	open(d, "a.txt")
+	d.Type("Hi ")
+	waitTabs(d, "a.txt*")
+	if !d.WaitFor(func() bool { return hotExitBackups() > 0 }, 5*time.Second) {
+		t.Fatalf("no hot-exit backup of a.txt")
+	}
+	d.Key("esc")
+	d.Type(":qa!")
+	d.Key("enter")
+	if !d.WaitFor(d.Quit, 5*time.Second) {
+		t.Fatalf(":qa! did not quit termocode:\n%s", screen(d))
+	}
+	if n := hotExitBackups(); n != 0 {
+		t.Errorf(":qa! kept %d backup(s) of discarded text", n)
+	}
+}

@@ -35,6 +35,10 @@ type ErrMsg struct{ Err error }
 type ExitedMsg struct {
 	Client *Client
 	Err    error // why the RPC connection ended; nil on a plain EOF
+	// UserQuit is true when nvim exited with status 0: the user quit it
+	// on purpose (:qa, :qa!, :wqa, :q on the last window). A crash, a
+	// signal or :cq leaves it false.
+	UserQuit bool
 }
 
 // Client wraps a spawned `nvim --embed` subprocess and exposes its UI events
@@ -66,8 +70,10 @@ type Client struct {
 	exited  chan struct{}
 	exitErr error
 	// reaped is closed once nvim's process is reaped (startProc keeps
-	// the thread that started it until then).
+	// the thread that started it until then). waitErr (set before) is
+	// the process's exit status: nil for exit code 0.
 	reaped     chan struct{}
+	waitErr    error
 	reapedOnce sync.Once
 	guardOnce  sync.Once
 	closed     atomic.Bool
@@ -163,9 +169,14 @@ func New() (*Client, error) {
 // exits for any reason (its stdout closes) or on Close. Every call still
 // waiting then fails with an error and later calls fail at once, so no
 // call hangs on a dead nvim. Next reports the end as ExitedMsg.
+// serve then reaps nvim, so its exit status tells a quit (:qa) from a
+// crash; Wait closes the stdout pipe, so it runs after Serve stopped
+// reading.
 func (c *Client) serve() {
 	c.exitErr = c.nv.Serve()
 	close(c.exited)
+	c.waitErr = c.cmd.Wait()
+	c.reapedOnce.Do(func() { close(c.reaped) })
 }
 
 // Exited reports whether the RPC connection to nvim has ended.
@@ -1275,21 +1286,18 @@ func (c *Client) Close() error {
 }
 
 // closeProcess closes the RPC pipe (nvim exits on EOF), lets serve read
-// the rest of nvim's output, then reaps nvim. nvim is killed if it is
-// still there after 10 s.
+// the rest of nvim's output and reap nvim. nvim is killed if it is still
+// there after 10 s.
 func (c *Client) closeProcess() error {
 	kill := time.AfterFunc(10*time.Second, func() { _ = c.cmd.Process.Kill() })
 	defer kill.Stop()
 	err := c.nv.Close()
 	select {
-	case <-c.exited:
-	case <-time.After(11 * time.Second):
-	}
-	// Wait closes the stdout pipe, so it runs after serve stopped reading.
-	werr := c.cmd.Wait()
-	c.reapedOnce.Do(func() { close(c.reaped) })
-	if err == nil {
-		err = werr
+	case <-c.reaped:
+		if err == nil {
+			err = c.waitErr
+		}
+	case <-time.After(12 * time.Second):
 	}
 	return err
 }
@@ -1309,7 +1317,18 @@ func (c *Client) Next() tea.Cmd {
 			if c.closed.Load() {
 				return nil // Close: a normal quit, not a crash
 			}
-			return ExitedMsg{Client: c, Err: c.exitErr}
+			// The exit status says whether the user quit nvim. serve
+			// reaps it right after the pipe ends.
+			quit := false
+			select {
+			case <-c.reaped:
+				quit = c.waitErr == nil
+			case <-time.After(3 * time.Second):
+			}
+			if c.closed.Load() {
+				return nil
+			}
+			return ExitedMsg{Client: c, Err: c.exitErr, UserQuit: quit}
 		}
 	}
 }
