@@ -981,9 +981,10 @@ func aiCodeBlock(text string, n int) (string, bool) {
 // when there is one.
 func (m *Model) aiSuggest(prompt string) tea.Cmd {
 	s := m.aiS()
+	var attach tea.Cmd // the attach toast's expiry timer
 	if m.editor.Path() != "" && len(s.attachments) == 0 {
-		_ = m.aiAttachCurrent()
+		attach = m.aiAttachCurrent()
 	}
 	s.input, s.caret = []rune(prompt), len([]rune(prompt))
-	return m.submitAIInput()
+	return tea.Batch(attach, m.submitAIInput())
 }

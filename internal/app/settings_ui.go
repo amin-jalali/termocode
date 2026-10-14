@@ -434,6 +434,9 @@ func parseBoolLoose(s string) (bool, error) {
 func (m *Model) applyStartupSettings() {
 	cfg := loadSettings()
 	m.skipShell = keymap.SkipShellSet(cfg.TerminalSkipShell)
+	// The toggles below push a toast; at startup they apply silently.
+	quiet := m.toast
+	defer func() { m.toast = quiet }()
 	if cfg.AutoSave != nil && *cfg.AutoSave && !m.autoSaveOn {
 		_ = m.toggleAutoSave()
 	}
