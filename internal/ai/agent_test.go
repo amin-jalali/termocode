@@ -109,6 +109,9 @@ func TestAgentConfirmGateAndAutoApprove(t *testing.T) {
 func TestAgentStepCapAndUnknownTool(t *testing.T) {
 	loop := Chunk{ToolCalls: []ToolCall{{ID: "z", Name: "nope"}}}
 	p := &scripted{tools: true, replies: []Chunk{loop, loop, loop, loop, loop, loop, loop}}
+	for range DefaultMaxSteps {
+		p.replies = append(p.replies, loop)
+	}
 	a := &Agent{Provider: p, Native: true}
 	evs, _ := collectEvents(a, nil)
 	if p.calls != DefaultMaxSteps || evs[len(evs)-1].Kind != EventDone {
@@ -116,6 +119,40 @@ func TestAgentStepCapAndUnknownTool(t *testing.T) {
 	}
 	if !strings.Contains(p.seen[1][1].Content, "does not exist") {
 		t.Errorf("unknown tool message: %+v", p.seen[1])
+	}
+}
+
+// Spec: the step limit is 25 (like Cursor), and when the agent hits it
+// the last text says so plainly and offers to continue.
+func TestAgentStepLimitSaysSoAndOffersContinue(t *testing.T) {
+	if DefaultMaxSteps != 25 {
+		t.Errorf("DefaultMaxSteps = %d, want 25", DefaultMaxSteps)
+	}
+	loop := Chunk{ToolCalls: []ToolCall{{ID: "z", Name: "nope"}}}
+	p := &scripted{tools: true, replies: []Chunk{loop, loop, loop, loop}}
+	evs, _ := collectEvents(&Agent{Provider: p, Native: true, MaxSteps: 3}, nil)
+	var last string
+	for _, e := range evs {
+		if e.Kind == EventText {
+			last = e.Text
+		}
+	}
+	if !strings.Contains(last, "step limit (3 tool steps)") || !strings.Contains(last, `"continue"`) {
+		t.Errorf("limit message %q", last)
+	}
+}
+
+// Spec: ai_max_steps in config.json round-trips.
+func TestSettingsMaxSteps(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := SaveSettings(path, Settings{MaxSteps: 40}); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(path); !strings.Contains(string(b), `"ai_max_steps": 40`) {
+		t.Fatalf("saved: %s", b)
+	}
+	if s := LoadSettings(path); s.MaxSteps != 40 {
+		t.Fatalf("loaded %d", s.MaxSteps)
 	}
 }
 
@@ -270,6 +307,14 @@ func TestSystemPromptMentionsIDETools(t *testing.T) {
 	for _, native := range []bool{true, false} {
 		if s := SystemPrompt("base", tools, native); !strings.Contains(s, "call open_file") {
 			t.Errorf("native=%v: no open_file hint:\n%s", native, s)
+		}
+	}
+	// The IDE follows file changes: the model must not tell the user to
+	// refresh the explorer or reopen a renamed tab.
+	for _, native := range []bool{true, false} {
+		s := SystemPrompt("base", tools, native)
+		if !strings.Contains(s, "explorer shows them at once") || !strings.Contains(s, "Never tell the user to refresh") {
+			t.Errorf("native=%v: no IDE-follows hint:\n%s", native, s)
 		}
 	}
 	if s := SystemPrompt("base", []Tool{{Name: "read_file"}}, true); strings.Contains(s, "open_file") {

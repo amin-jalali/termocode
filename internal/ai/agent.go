@@ -31,8 +31,9 @@ type Event struct {
 // (the TUI answers through a channel); return false to decline.
 type ConfirmFunc func(ctx context.Context, t Tool, human string) bool
 
-// DefaultMaxSteps caps tool round-trips per user turn.
-const DefaultMaxSteps = 6
+// DefaultMaxSteps caps tool round-trips per user turn (Cursor uses 25).
+// config.json "ai_max_steps" changes it.
+const DefaultMaxSteps = 25
 
 // Agent runs a tool-calling loop on top of a Provider. Port of mobocode's
 // ai_agent.dart: with Native it uses the provider's function calling
@@ -59,7 +60,12 @@ func SystemPrompt(base string, tools []Tool, native bool) string {
 	if _, ok := FindTool(tools, "open_file"); ok {
 		ide = " You also drive the IDE itself: open_file opens a file in the user's editor, get_editor_state " +
 			"tells you the active file / cursor / selection, show_panel, reveal_in_explorer, notify and execute_action " +
-			"control the UI. When the user asks to open or show a file, call open_file; never say you cannot."
+			"control the UI. When the user asks to open or show a file, call open_file; never say you cannot. " +
+			"The IDE follows your file changes: files and folders you create, rename or delete — also with run_command — " +
+			"the explorer shows them at once; an open tab follows a rename, closes on a delete and shows the new text " +
+			"after write_file; git tools refresh the git panel and branch. Never tell the user to refresh, reopen or " +
+			"rename a tab by hand. After creating a file the user asked for, open it with open_file. " +
+			"If a tool says a file has unsaved edits, ask the user to save or close it; do not work around it."
 	}
 	if native {
 		return base + "\n\nYou can call IDE tools (files, search, git, LSP, shell, editor). " +
@@ -155,9 +161,16 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 			return msgs[start:]
 		}
 	}
-	emit(Event{Kind: EventText, Text: fmt.Sprintf("\n(stopped after %d tool steps)", steps)})
+	emit(Event{Kind: EventText, Text: StepLimitText(steps)})
 	emit(Event{Kind: EventDone})
 	return msgs[start:]
+}
+
+// StepLimitText is the note shown when a turn hits the step limit. The
+// steps done so far stay in the chat, so "continue" goes on from there.
+func StepLimitText(steps int) string {
+	return fmt.Sprintf("\n\n**Paused: I reached the step limit (%d tool steps) for one message.** "+
+		"The work is not finished. Reply \"continue\" and I will go on from here.", steps)
 }
 
 // runTool executes one call through the confirm gate and returns the text

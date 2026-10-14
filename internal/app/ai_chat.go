@@ -71,25 +71,43 @@ func aiWorkspaceRoot() string {
 	return "."
 }
 
-// aiChatHistory rebuilds the provider messages from the stored chat (user
-// and assistant lines only — tool lines are display-only).
+// aiChatHistory rebuilds the provider messages from the stored chat. The
+// tool lines of a turn ("⚙ Create a.md → created a.md") go into that
+// turn's assistant message, so after a step-limit pause "continue" knows
+// what was done already.
 func (m *Model) aiChatHistory(system string) []ai.Message {
 	s := m.aiS()
 	msgs := []ai.Message{{Role: ai.RoleSystem, Content: system}}
+	var tools, text []string
+	flush := func() {
+		var parts []string
+		if len(tools) > 0 {
+			parts = append(parts, "[tools I ran]\n"+strings.Join(tools, "\n"))
+		}
+		if t := strings.TrimSpace(strings.Join(text, "")); t != "" {
+			parts = append(parts, t)
+		}
+		if len(parts) > 0 {
+			msgs = append(msgs, ai.Message{Role: ai.RoleAssistant, Content: strings.Join(parts, "\n\n")})
+		}
+		tools, text = nil, nil
+	}
 	for _, sm := range s.conv.Messages {
 		switch sm.Role {
 		case ai.StoredUser:
+			flush()
 			c := sm.Text
 			if sm.Context != "" {
 				c = sm.Context + "\n\n" + sm.Text
 			}
 			msgs = append(msgs, ai.Message{Role: ai.RoleUser, Content: c})
+		case ai.StoredTool:
+			tools = append(tools, sm.Text)
 		case ai.StoredAssistant:
-			if strings.TrimSpace(sm.Text) != "" {
-				msgs = append(msgs, ai.Message{Role: ai.RoleAssistant, Content: sm.Text})
-			}
+			text = append(text, sm.Text)
 		}
 	}
+	flush()
 	return msgs
 }
 
@@ -118,8 +136,10 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	ch := make(chan tea.Msg, 64)
 
 	root := aiWorkspaceRoot()
+	call := newAIIDECaller(gen, ch)
 	tools := append(ai.WorkspaceTools(ai.Workspace{Root: root}), m.aiEditorTools()...)
-	tools = append(tools, aiIDETools(root, newAIIDECaller(gen, ch))...)
+	tools = aiSyncTools(tools, root, call) // the IDE follows file / git changes
+	tools = append(tools, aiIDETools(root, call)...)
 	native := s.provider.SupportsTools()
 	sys := aiChatSystemPrompt + "\nWorkspace root: " + root
 	if p := m.editor.Path(); p != "" {
@@ -147,6 +167,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		Tools:       tools,
 		Native:      native,
 		AutoApprove: auto,
+		MaxSteps:    s.settings.MaxSteps, // 0: ai.DefaultMaxSteps
 		Confirm: func(ctx context.Context, t ai.Tool, human string) bool {
 			reply := make(chan bool, 1)
 			select {
@@ -288,11 +309,8 @@ func (m *Model) onAIChatDone(msg aiChatDoneMsg) tea.Cmd {
 		recordError("[ai] save chat: " + err.Error())
 	}
 	m.persistAIState()
-	if m.nvim != nil {
-		_ = m.nvim.Command("silent! checktime")
-	}
-	m.explorer.Reload()
-	return fetchGitCmd()
+	_, cmd := m.aiSyncIDE("", aiSyncDisk) // each tool synced already; this catches the rest
+	return cmd
 }
 
 // persistAIState stores the open chat id + scroll in session.json.

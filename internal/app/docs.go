@@ -7,6 +7,7 @@ package app
 
 import (
 	"sort"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -246,6 +247,8 @@ var fileOnlySettings = []SettingEntry{
 		Description: "Model for inline ghost-text completions. Empty uses a fast model of the provider (for example Claude Haiku or gpt-4.1-mini)."},
 	{Key: "ai_auto_approve", Type: "string[]", Default: "[]", Category: "AI (file only)",
 		Description: "Agent tool classes that run without asking: " + strings.Join(ai.ToolClasses, ", ") + ". Set with AI: Agent Auto-Approve…."},
+	{Key: "ai_max_steps", Type: "int", Default: strconv.Itoa(ai.DefaultMaxSteps), Category: "AI (file only)",
+		Description: "Most tool steps the AI agent takes for one chat message. At the limit it stops and asks you to send \"continue\"."},
 	{Key: "terminal_skip_shell", Type: "string[]", Default: "[]", Category: "Terminal (file only)",
 		Description: "Actions (keymap.json names) whose keys reach termocode while the terminal has focus. Other Ctrl keys go to the shell. Quit (Ctrl+Q) is in the list by default; add a name, or remove one with \"-Name\" (for example `[\"QuickOpen\", \"-Quit\"]`)."},
 }
