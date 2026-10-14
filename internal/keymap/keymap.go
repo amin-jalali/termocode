@@ -441,7 +441,7 @@ func Default() KeyMap {
 			// treesitter parser, and embedding glamour-rendered ANSI in a
 			// scratch buffer doesn't render either (regular buffers show
 			// escape codes verbatim). The F7 overlay does the right thing
-			// — render via glamour, show in a scrollable preview pane.
+			// — render via internal/mdview, show in a scrollable preview pane.
 
 			// Cheat sheet overlay. `?` is the closest thing to a "help" key
 			// that doesn't conflict with any common typing — but in Insert
