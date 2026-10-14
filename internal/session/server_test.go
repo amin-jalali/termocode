@@ -237,8 +237,19 @@ func TestServerKilledStaleSocket(t *testing.T) {
 	if err := syscall.Kill(in.PID, syscall.SIGKILL); err != nil {
 		t.Fatal(err)
 	}
-	if typ, _, err := readFrame(c); err == nil {
-		t.Fatalf("client still connected (frame %q)", typ)
+	// Frames the server sent just before the kill may still arrive; the
+	// connection must end soon after them.
+	_ = c.SetReadDeadline(time.Now().Add(5 * time.Second))
+	for {
+		_, _, err := readFrame(c)
+		if err == nil {
+			continue
+		}
+		var ne net.Error
+		if errors.As(err, &ne) && ne.Timeout() {
+			t.Fatal("client still connected 5 s after the server was killed")
+		}
+		break
 	}
 	_ = c.Close()
 	waitFor(t, "the UI to get the hangup", func() bool { return !alive(in.UIPID) })
