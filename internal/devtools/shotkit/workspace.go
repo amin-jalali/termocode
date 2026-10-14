@@ -1,6 +1,7 @@
 package shotkit
 
 import (
+	_ "embed"
 	"fmt"
 	"image"
 	"image/color"
@@ -51,6 +52,19 @@ func DemoWorkspace(src, parent string) (string, error) {
 	if err := demoHistory(dst); err != nil {
 		return "", err
 	}
+	// The Markdown preview scenes open docs/preview.md. It is added after
+	// the history and git-excluded, so commit ids and Source Control stay
+	// the same.
+	if md := filepath.Join(dst, "docs", "preview.md"); !fileExists(md) {
+		_ = os.MkdirAll(filepath.Dir(md), 0o755)
+		_ = os.WriteFile(md, previewSample, 0o644)
+		ex := filepath.Join(dst, ".git", "info", "exclude")
+		_ = os.MkdirAll(filepath.Dir(ex), 0o755)
+		if f, err := os.OpenFile(ex, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644); err == nil {
+			_, _ = f.WriteString("/docs/preview.md\n")
+			_ = f.Close()
+		}
+	}
 	// A few edits so Source Control has something to show.
 	appendTo(dst, "internal/statusbar/model.go", "\n// pill renders a rounded status segment.\n")
 	appendTo(dst, "internal/theme/palette.go", "\n// Shadow is the drop-shadow colour.\n")
@@ -59,6 +73,16 @@ func DemoWorkspace(src, parent string) (string, error) {
 	_ = os.MkdirAll(filepath.Join(dst, "assets"), 0o755)
 	writeDemoImage(filepath.Join(dst, "assets", "demo.png"))
 	return dst, nil
+}
+
+// previewSample is the Markdown sample for the md-preview scenes.
+//
+//go:embed testdata/preview.md
+var previewSample []byte
+
+func fileExists(p string) bool {
+	st, err := os.Stat(p)
+	return err == nil && st.Mode().IsRegular()
 }
 
 // DemoNow is the wall clock the demo is shown at: a few days after the

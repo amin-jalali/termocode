@@ -32,7 +32,7 @@ termocode is a single-window **Bubble Tea** application that wraps **a real Neov
 - **[Bubble Tea](https://github.com/charmbracelet/bubbletea)** — the Elm-style TUI runtime; everything routes through `Update(msg) → (model, cmd)`.
 - **[Lipgloss](https://github.com/charmbracelet/lipgloss)** — string styling, layout primitives (`JoinHorizontal`, `JoinVertical`), truecolor SGR output.
 - **[Chroma](https://github.com/alecthomas/chroma)** — fallback syntax highlighting for read-only previews.
-- **[Glamour](https://github.com/charmbracelet/glamour)** — markdown rendering for the `F7` preview overlay.
+- **[Goldmark](https://github.com/yuin/goldmark)** — Markdown parsing for the `F7` reader view (`internal/mdview` draws it).
 - **[neovim/go-client](https://github.com/neovim/go-client)** — msgpack-RPC client to the embedded Neovim process.
 - **[sahilm/fuzzy](https://github.com/sahilm/fuzzy)** — fuzzy matching for the picker (Quick Open, palette, …).
 - **Neovim 0.10+** (0.9.5 mostly works as fallback) — runs as `nvim --embed`; talks to the host via `ext_linegrid`.

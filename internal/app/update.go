@@ -265,7 +265,11 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		m.applyLayout()
 		return m, nil
 	case PreviewMsg:
-		m.preview = preview.New(msg.Title, msg.Body)
+		if msg.Doc != nil {
+			m.preview = preview.NewReader(msg.Title, msg.Badge, msg.Doc)
+		} else {
+			m.preview = preview.New(msg.Title, msg.Body)
+		}
 		m.preview.SetSize(m.w, m.h)
 		m.previewOpen = true
 		return m, nil
