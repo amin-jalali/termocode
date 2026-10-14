@@ -598,40 +598,6 @@ func (m *Model) openXferFallback(p xferPending, terminal, why string) tea.Cmd {
 	return nil
 }
 
-var (
-	xferClipMu sync.Mutex
-	xferClip   func(string) bool
-)
-
-// SetTransferClipboard replaces the clipboard that Copy Command writes
-// to; f reports whether the text was copied. It returns a restore func.
-// For tests: CI machines have no clipboard.
-func SetTransferClipboard(f func(string) bool) (restore func()) {
-	xferClipMu.Lock()
-	old := xferClip
-	xferClip = f
-	xferClipMu.Unlock()
-	return func() {
-		xferClipMu.Lock()
-		xferClip = old
-		xferClipMu.Unlock()
-	}
-}
-
-// copyCommand copies s to the user's clipboard and reports whether it
-// could: OSC 52 reaches the terminal (not headless), or the system
-// clipboard took it.
-func (m *Model) copyCommand(s string) bool {
-	xferClipMu.Lock()
-	f := xferClip
-	xferClipMu.Unlock()
-	if f != nil {
-		return f(s)
-	}
-	m.copyToClipboard(s)
-	return !headless() || clipboardReady()
-}
-
 // xferLookPath is exec.LookPath; tests replace it.
 var xferLookPath = exec.LookPath
 
@@ -674,10 +640,14 @@ func (m *Model) onXferConfirm(kind confirmKindEnum, id string) tea.Cmd {
 	case kind == confirmKindTransferLarge && id == "download":
 		return m.startDownload(p)
 	case kind == confirmKindTransferFallback && id == "copy":
-		if !m.copyCommand(p.scp) {
-			return m.pushToastDetail(toast.Warn, "Could not copy the command", p.scp)
+		// Only say "copied" when a clipboard took it (writeClipboard).
+		switch m.writeClipboard(p.scp) {
+		case clipLocal:
+			return m.pushToastDetail(toast.Info, "Command copied", p.scp)
+		case clipTerminal:
+			return m.pushToastDetail(toast.Info, "Command copied (via terminal)", p.scp)
 		}
-		return m.pushToastDetail(toast.Info, "Command copied", p.scp)
+		return m.pushToastDetail(toast.Warn, "Could not copy the command", clipboardHelp)
 	case kind == confirmKindTransferFallback && id == "trzsz":
 		return trzszCmd(p)
 	}
