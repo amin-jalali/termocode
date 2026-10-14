@@ -60,7 +60,12 @@ func SystemPrompt(base string, tools []Tool, native bool) string {
 	if _, ok := FindTool(tools, "open_file"); ok {
 		ide = " You also drive the IDE itself: open_file opens a file in the user's editor, get_editor_state " +
 			"tells you the active file / cursor / selection, show_panel, reveal_in_explorer, notify and execute_action " +
-			"control the UI. When the user asks to open or show a file, call open_file; never say you cannot."
+			"control the UI. When the user asks to open or show a file, call open_file; never say you cannot. " +
+			"The IDE follows your file changes: files and folders you create, rename or delete — also with run_command — " +
+			"the explorer shows them at once; an open tab follows a rename, closes on a delete and shows the new text " +
+			"after write_file; git tools refresh the git panel and branch. Never tell the user to refresh, reopen or " +
+			"rename a tab by hand. After creating a file the user asked for, open it with open_file. " +
+			"If a tool says a file has unsaved edits, ask the user to save or close it; do not work around it."
 	}
 	if native {
 		return base + "\n\nYou can call IDE tools (files, search, git, LSP, shell, editor). " +

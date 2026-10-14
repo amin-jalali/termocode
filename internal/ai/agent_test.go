@@ -309,6 +309,14 @@ func TestSystemPromptMentionsIDETools(t *testing.T) {
 			t.Errorf("native=%v: no open_file hint:\n%s", native, s)
 		}
 	}
+	// The IDE follows file changes: the model must not tell the user to
+	// refresh the explorer or reopen a renamed tab.
+	for _, native := range []bool{true, false} {
+		s := SystemPrompt("base", tools, native)
+		if !strings.Contains(s, "explorer shows them at once") || !strings.Contains(s, "Never tell the user to refresh") {
+			t.Errorf("native=%v: no IDE-follows hint:\n%s", native, s)
+		}
+	}
 	if s := SystemPrompt("base", []Tool{{Name: "read_file"}}, true); strings.Contains(s, "open_file") {
 		t.Errorf("hint without the tool:\n%s", s)
 	}
