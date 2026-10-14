@@ -139,6 +139,9 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools = append(tools, aiTasksTools(root, call)...) // Group K6: tasks and tests
 	tools = append(tools, aiAdminTools(root, call)...) // Group K8: installers, extensions, workspace folders
 	tools = append(tools, aiDebugTools(root, call)...) // Group K7
+	if m.aiReviewEdits() {                             // Group R2: file changes become diffs to review
+		tools = m.aiReviewTools(tools, root, call)
+	}
 	return tools
 }
 
@@ -161,6 +164,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		ctxParts = append(ctxParts, "Attached "+a.Label+":\n```\n"+a.Text+"\n```")
 	}
 	s.attachments = nil
+	s.turnMsg = len(s.conv.Messages) // restore points key on the turn's user message
 	s.conv.Messages = append(s.conv.Messages,
 		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: strings.Join(ctxParts, "\n\n"), Images: images},
 		ai.StoredMessage{Role: ai.StoredAssistant},
@@ -202,6 +206,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		Native:      native,
 		AutoApprove: auto,
 		MaxSteps:    s.settings.MaxSteps, // 0: ai.DefaultMaxSteps
+		BeforeCalls: aiBeforeCalls(root, call),
 		Confirm: func(ctx context.Context, t ai.Tool, human string) bool {
 			reply := make(chan bool, 1)
 			select {
@@ -250,7 +255,9 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 			s.conv.Messages = s.conv.Messages[:len(s.conv.Messages)-1]
 		}
 		s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredTool, Text: "⚙ " + msg.ev.Detail})
+		s.aiAuditStart(msg.ev)
 	case ai.EventToolResult:
+		m.aiAuditResult(msg.ev)
 		if l := last(); l != nil && l.Role == ai.StoredTool {
 			l.Text += " → " + aiShortResult(msg.ev.Detail)
 		}
@@ -342,6 +349,7 @@ func (m *Model) onAIChatDone(msg aiChatDoneMsg) tea.Cmd {
 	if err := s.store.Save(&s.conv); err != nil {
 		recordError("[ai] save chat: " + err.Error())
 	}
+	m.aiRestoreTurnDone()
 	m.persistAIState()
 	_, cmd := m.aiSyncIDE("", aiSyncDisk) // each tool synced already; this catches the rest
 	return cmd
@@ -408,6 +416,7 @@ func (m *Model) newAIChat() tea.Cmd {
 	s := m.aiS()
 	if s.chatCancel != nil {
 		s.chatCancel()
+		m.cancelAIReviewTurn()
 	}
 	s.chatGen++
 	s.streaming = false
@@ -457,6 +466,7 @@ func (m *Model) onAIHistoryPicked(id string) tea.Cmd {
 	}
 	if s.chatCancel != nil {
 		s.chatCancel()
+		m.cancelAIReviewTurn()
 	}
 	s.chatGen++
 	s.streaming = false

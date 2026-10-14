@@ -11,7 +11,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
-	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/prompt"
 )
 
@@ -333,42 +332,13 @@ func (m *Model) proposeWholeFile(code, title string) tea.Cmd {
 	return m.openAIProposal(aiProposal{target: t, repl: strings.Split(strings.TrimRight(code, "\n"), "\n"), title: title})
 }
 
-// openAIProposal shows the diff and the Apply / Discard / Review dialog.
+// openAIProposal shows the change in the review card (ai_review.go).
 func (m *Model) openAIProposal(p aiProposal) tea.Cmd {
 	t := p.target
 	if equalLines(t.full[t.start:t.end], p.repl) {
 		return m.aiInfo("AI suggests no changes")
 	}
-	proposed := make([]string, 0, len(t.full)-(t.end-t.start)+len(p.repl))
-	proposed = append(proposed, t.full[:t.start]...)
-	proposed = append(proposed, p.repl...)
-	proposed = append(proposed, t.full[t.end:]...)
-	m.aiS().proposal = &p
-	if m.nvim != nil {
-		if err := m.nvim.ExecLuaArgs(aiProposalDiffLua, t.buf, proposed, p.title, t.ft); err != nil {
-			recordError("[ai] proposal diff: " + err.Error())
-		}
-	}
-	return m.openAIProposalConfirm()
-}
-
-func (m *Model) openAIProposalConfirm() tea.Cmd {
-	p := m.aiS().proposal
-	if p == nil {
-		return nil
-	}
-	n := len(p.repl)
-	body := fmt.Sprintf("%s\n%s: lines %d-%d → %d line(s). The diff is open behind this dialog. Apply is one undo step.",
-		p.title, filepath.Base(p.target.path), p.target.start+1, p.target.end, n)
-	m.confirm = confirm.New("✦ Apply AI edit?", body, []confirm.Button{
-		{ID: "apply", Title: "Apply", Style: confirm.StylePrimary},
-		{ID: "review", Title: "Review diff"},
-		{ID: "discard", Title: "Discard", Style: confirm.StyleDestructive},
-	})
-	m.confirm.SetSize(m.w, m.h)
-	m.confirmOpen = true
-	m.confirmKind = confirmKindAIProposal
-	return nil
+	return m.openBufferProposal(p)
 }
 
 func equalLines(a, b []string) bool {
@@ -383,115 +353,6 @@ func equalLines(a, b []string) bool {
 	return true
 }
 
-// onAIProposalConfirm handles the dialog buttons (Esc = review).
-func (m *Model) onAIProposalConfirm(id string) tea.Cmd {
-	switch id {
-	case "apply":
-		return m.applyAIProposal()
-	case "discard":
-		return m.discardAIProposal(false)
-	}
-	return m.aiInfo("Review the diff — apply from the AI panel or the palette")
-}
-
-// applyAIProposal writes the proposal as one undo step (if the buffer did
-// not change meanwhile) and closes the diff.
-func (m *Model) applyAIProposal() tea.Cmd {
-	s := m.aiS()
-	p := s.proposal
-	if p == nil {
-		return m.aiInfo("No AI edit is pending")
-	}
-	if m.nvim == nil {
-		return nil
-	}
-	t := p.target
-	var res string
-	err := m.nvim.ExecLuaResult(aiProposalApplyLua, &res, t.buf, t.start, t.end, p.repl, t.full[t.start:t.end], len(t.full))
-	if err != nil {
-		return m.aiToastErr("Apply failed", err)
-	}
-	if res == "stale" {
-		m.closeAIProposalDiff()
-		s.proposal = nil
-		return m.aiInfo("The file changed since the AI read it — edit discarded")
-	}
-	s.proposal = nil
-	m.focus = FocusEditor
-	return m.aiInfo("Applied AI edit (one undo step)")
-}
-
-// discardAIProposal closes the diff and drops the proposal.
-func (m *Model) discardAIProposal(toastIt bool) tea.Cmd {
-	s := m.aiS()
-	if s.proposal == nil {
-		if toastIt {
-			return m.aiInfo("No AI edit is pending")
-		}
-		return nil
-	}
-	s.proposal = nil
-	m.closeAIProposalDiff()
-	return m.aiInfo("AI edit discarded")
-}
-
-func (m *Model) closeAIProposalDiff() {
-	if m.nvim != nil {
-		_ = m.nvim.ExecLua(aiProposalCloseLua)
-	}
-}
-
-// aiProposalCloseLua closes proposal windows and turns diff mode off.
-const aiProposalCloseLua = `
-for _, w in ipairs(vim.api.nvim_list_wins()) do
-  local b = vim.api.nvim_win_get_buf(w)
-  local ok, v = pcall(vim.api.nvim_buf_get_var, b, 'termocode_ai_proposal')
-  if ok and v then pcall(vim.api.nvim_win_close, w, true) end
-end
-pcall(vim.cmd, 'diffoff!')
-`
-
-// aiProposalDiffLua opens "current buffer | proposal" in diff mode.
-// Args: buf, proposed lines, title, filetype.
-const aiProposalDiffLua = aiProposalCloseLua + `
-local buf, lines, title, ft = ...
-local win = vim.fn.bufwinid(buf)
-if win == -1 then
-  pcall(vim.api.nvim_set_current_buf, buf)
-  win = vim.api.nvim_get_current_win()
-else
-  vim.api.nvim_set_current_win(win)
-end
-vim.cmd('diffthis')
-vim.wo[win].foldenable = false
-vim.cmd('rightbelow vnew')
-local pb = vim.api.nvim_get_current_buf()
-local pw = vim.api.nvim_get_current_win()
-vim.bo[pb].buftype = 'nofile'
-vim.bo[pb].swapfile = false
-vim.bo[pb].buflisted = false
-vim.bo[pb].bufhidden = 'wipe'
-vim.api.nvim_buf_set_var(pb, 'termocode_ai_proposal', true)
-vim.api.nvim_buf_set_lines(pb, 0, -1, false, lines)
-vim.bo[pb].modifiable = false
-if ft ~= '' then
-  local lang = ft
-  if vim.treesitter.language and vim.treesitter.language.get_lang then
-    lang = vim.treesitter.language.get_lang(ft) or ft
-  end
-  if not pcall(vim.treesitter.start, pb, lang) then
-    pcall(function() vim.bo[pb].syntax = ft end)
-  end
-end
-vim.cmd('diffthis')
-vim.wo[pw].foldenable = false
-vim.wo[pw].number = true
-vim.wo[pw].winbar = '%#TermocodeAIAccent# ✦ AI proposal %#Comment#· ' .. tostring(title):gsub('%%', '%%%%')
-vim.api.nvim_set_current_win(win)
-pcall(vim.cmd, 'syncbind')
-vim.cmd('stopinsert')
-`
-
 // aiProposalApplyLua replaces the range in ONE nvim_buf_set_lines call
 // after checking the buffer still matches what the model saw.
 // Args: buf, start, end, repl, orig range, original line count.
@@ -501,7 +362,6 @@ if not vim.api.nvim_buf_is_valid(buf) or vim.api.nvim_buf_line_count(buf) ~= tot
 local cur = vim.api.nvim_buf_get_lines(buf, s, e, false)
 if #cur ~= #orig then return 'stale' end
 for i = 1, #cur do if cur[i] ~= orig[i] then return 'stale' end end
-` + aiProposalCloseLua + `
 vim.api.nvim_buf_set_lines(buf, s, e, false, repl)
 local win = vim.fn.bufwinid(buf)
 if win ~= -1 then

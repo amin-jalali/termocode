@@ -69,7 +69,7 @@ func (m Model) hitTargets() []hitTarget {
 		return nil
 	}
 	switch {
-	case m.promptOpen, m.settingsModalOpen, m.recentsOpen, m.menuOpen:
+	case m.promptOpen, m.settingsModalOpen, m.recentsOpen, m.menuOpen, m.reviewOpen && !m.confirmOpen:
 		return nil // not mapped yet
 	case m.confirmOpen:
 		return m.confirmTargets()

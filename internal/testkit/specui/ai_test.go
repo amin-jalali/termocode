@@ -63,8 +63,8 @@ func TestAIChatStreamsMarkdown(t *testing.T) {
 }
 
 // Spec: Given a finished answer with a code block,
-// when the user clicks Apply on the code card and then Apply on the
-// "edit ready" bar,
+// when the user clicks Apply on the code card and then "Accept file" on
+// the review card,
 // then the open file is replaced by the code (saved with Ctrl+S).
 func TestAIChatApplyCodeBlock(t *testing.T) {
 	f := newFakeAI(t)
@@ -73,15 +73,8 @@ func TestAIChatApplyCodeBlock(t *testing.T) {
 	ask(d, "rewrite it")
 	mustSee(t, d, "Done.")
 	clickText(t, d, "Apply") // on the code card
-	mustSee(t, d, "Discard")
-	// The proposal bar's Apply sits left of its Discard, on the same row.
-	_, y, _ := locate(d, "Discard")
-	row := strings.Split(screen(d), "\n")[y]
-	i := strings.LastIndex(row[:strings.Index(row, "Discard")], "Apply")
-	if i < 0 {
-		t.Fatalf("no Apply next to Discard: %q", row)
-	}
-	d.Click(ansi.StringWidth(row[:i]), y)
+	mustSee(t, d, "Review AI changes")
+	clickText(t, d, "Accept file")
 	mustSee(t, d, "func Add(a, b int)")
 	d.Key("ctrl+s")
 	if got := waitFile(t, d, "main.go", func(s string) bool { return strings.Contains(s, "func Add") }); !strings.Contains(got, "func Add(a, b int) int") {

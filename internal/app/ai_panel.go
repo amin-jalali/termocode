@@ -316,6 +316,7 @@ type aiTranscriptCache struct {
 	hasProvider bool
 	configured  bool
 	label       string
+	restoreGen  int
 	msgs        []ai.StoredMessage
 	lines       []aiLine
 	rows        []string // edged rows by line index; "" = not drawn yet
@@ -325,7 +326,7 @@ type aiTranscriptCache struct {
 // matches reports whether the cache is valid for this state.
 func (c *aiTranscriptCache) matches(s *aiState, width int, rk theme.RenderKey, resizing bool) bool {
 	if !c.ok || c.width != width || c.rk != rk || c.resizing != resizing || c.streaming != s.streaming ||
-		c.hasProvider != (s.provider != nil) || len(c.msgs) != len(s.conv.Messages) {
+		c.hasProvider != (s.provider != nil) || len(c.msgs) != len(s.conv.Messages) || c.restoreGen != s.restoreGen {
 		return false
 	}
 	if s.provider != nil && (c.configured != s.provider.Configured() || c.label != s.modelLabel()) {
@@ -388,7 +389,7 @@ func (m Model) aiTranscriptCached(width int) *aiTranscriptCache {
 		s.aiKeepSelection(c.msgs, c.width, width)
 	}
 	*c = aiTranscriptCache{ok: true, width: width, rk: rk, resizing: resizing, streaming: s.streaming,
-		hasProvider: s.provider != nil, msgs: append([]ai.StoredMessage(nil), s.conv.Messages...),
+		hasProvider: s.provider != nil, restoreGen: s.restoreGen, msgs: append([]ai.StoredMessage(nil), s.conv.Messages...),
 		lines: lines, rows: make([]string, len(lines))}
 	if s.provider != nil {
 		c.configured, c.label = s.provider.Configured(), s.modelLabel()
@@ -453,9 +454,22 @@ func (m Model) buildAITranscript(width int) []aiLine {
 		return out
 	}
 	last := len(s.conv.Messages) - 1
+	turn := -1 // user message of the turn being drawn
+	undo := func() {
+		// R3: an "Undo AI changes" button under a finished turn that
+		// changed files.
+		if turn < 0 || (s.streaming && turn == s.turnMsg) {
+			return
+		}
+		if n := m.aiRestoreFiles(turn); n > 0 {
+			out = append(out, aiChip("↶ Undo AI changes ("+strconv.Itoa(n)+" file"+plural(n)+")", "undo-turn:"+strconv.Itoa(turn), width))
+		}
+	}
 	for i, msg := range s.conv.Messages {
 		switch msg.Role {
 		case ai.StoredUser:
+			undo()
+			turn = i
 			out = append(out, aiLine{sel: aiSel{ok: true, join: "\n"}})
 			out = append(out, aiUserBubble(aiCleanText(msg.Text), width, i)...)
 			if msg.Context != "" {
@@ -477,6 +491,7 @@ func (m Model) buildAITranscript(width int) []aiLine {
 			out = append(out, selPlain("⚠ "+aiCleanText(msg.Text), theme.DiagError, i)...)
 		}
 	}
+	undo()
 	out = append(out, aiLine{sel: aiSel{ok: true, join: "\n"}})
 	return out
 }
@@ -682,15 +697,12 @@ func (m Model) aiDividerLine(width int) aiLine {
 			Foreground(theme.LG(theme.TextPrimary)).Render(" " + label + " ")
 	}
 	bg := theme.Bg(theme.BgPanel)
-	if s != nil && s.proposal != nil {
-		head := " " + aiSpark() + " edit ready "
-		a, d := "Apply", "Discard"
-		x := runewidth.StringWidth(head)
-		ax := x
-		dx := ax + len(a) + 2 + 1
-		row := theme.FgBg(theme.AIAccent, theme.BgPanel).Bold(true).Render(head) +
-			chip(a, theme.AccentGreen, 0.25) + bg.Render(" ") + chip(d, theme.DiagError, 0.2)
-		return aiLine{styled: row, buttons: []aiLineButton{{ax, ax + len(a) + 2, "proposal-apply"}, {dx, dx + len(d) + 2, "proposal-discard"}}}
+	if n := m.aiReviewPending(); n > 0 && !m.reviewOpen {
+		head := " " + aiSpark() + " " + strconv.Itoa(n) + " file" + plural(n) + " to review "
+		a := "Review"
+		ax := runewidth.StringWidth(head)
+		row := theme.FgBg(theme.AIAccent, theme.BgPanel).Bold(true).Render(head) + chip(a, theme.AccentGreen, 0.25)
+		return aiLine{styled: row, buttons: []aiLineButton{{ax, ax + len(a) + 2, "review-open"}}}
 	}
 	if s != nil && len(s.attachments) > 0 {
 		// Each chip is " ⊕ label × "; its "× " removes it.
@@ -1198,10 +1210,13 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 	switch {
 	case id == "configure":
 		return m.openAIConfigure()
-	case id == "proposal-apply":
-		return m.applyAIProposal()
-	case id == "proposal-discard":
-		return m.discardAIProposal(true)
+	case id == "review-open":
+		return m.showAIReview()
+	case strings.HasPrefix(id, "undo-turn:"):
+		if i, err := strconv.Atoi(strings.TrimPrefix(id, "undo-turn:")); err == nil {
+			return m.aiUndoTurn(i)
+		}
+		return nil
 	case id == "attach-file":
 		return m.openAIAttachPicker()
 	case strings.HasPrefix(id, "rm-attach:"):

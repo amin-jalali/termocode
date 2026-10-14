@@ -83,6 +83,8 @@ func goldenExtras() []Scene {
 		// symbols, so the detection is the same on every machine.
 		{Name: "setup-card", SetupCard: true, Env: map[string]string{"TERM": "xterm-kitty"}, Steps: []Step{Pause(1500 * time.Millisecond)}},
 		{Name: "md-preview-light", Theme: "catppuccin-latte", Steps: MarkdownPreview().Steps},
+		DiffReview(),
+		{Name: "diff-review-light", Theme: "catppuccin-latte", Steps: DiffReview().Steps},
 	}
 }
 
