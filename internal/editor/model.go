@@ -63,8 +63,7 @@ func (m *Model) SetSize(w, h int) {
 // cells, so terminals that are already open follow a theme switch (nvim
 // itself reads g:terminal_color_N only when a terminal opens).
 func (m *Model) SetTermPalette(p [16]int) {
-	m.g.TermPalette = p
-	m.g.TermPaletteSet = true
+	m.g.SetTermPalette(p) // also drops the cached frame
 }
 
 // ApplyRedraw consumes a batch of nvim redraw events.

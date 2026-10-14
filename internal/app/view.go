@@ -745,6 +745,9 @@ func clipRowsToHeight(s string, h, w int, filler lipgloss.Style) string {
 // unstyled (e.g. a test environment with the lipgloss profile set to
 // "no color"): non-space content keeps its glyph.
 func restyleTrailingUnstyled(line string, filler lipgloss.Style) string {
+	if !mayEndWithUnstyledSpace(line) {
+		return line // the common case: nothing to rewrite, no parse
+	}
 	cells := parseANSIRow(line)
 	if len(cells) == 0 {
 		return line
@@ -767,6 +770,48 @@ func restyleTrailingUnstyled(line string, filler lipgloss.Style) string {
 	}
 	keep := cells[:len(cells)-trailing]
 	return renderCells(keep) + filler.Render(strings.Repeat(" ", trailing))
+}
+
+// mayEndWithUnstyledSpace is a quick, allocation-free scan that tells
+// restyleTrailingUnstyled when it can skip the full cell parse. It walks
+// the row the way parseANSIRow does, but only tracks whether a style is
+// active. It returns false only when parseANSIRow would surely end the
+// row with a cell that is not an unstyled space; when two styles stack
+// without a reset (their merge may cancel out) it stays on the safe side
+// and returns true.
+func mayEndWithUnstyledSpace(s string) bool {
+	styled, unsure := false, false
+	lastMaybe := false // last glyph is a lone ' ' with no style surely on it
+	for i := 0; i < len(s); {
+		if s[i] == 0x1b && i+1 < len(s) && s[i+1] == '[' {
+			j := i + 2
+			for j < len(s) && (s[j] < 0x40 || s[j] > 0x7e) {
+				j++
+			}
+			if j < len(s) {
+				j++
+			}
+			sgr := s[i:j]
+			switch {
+			case sgr == "\x1b[0m" || sgr == "\x1b[m":
+				styled, unsure = false, false
+			case sgr[len(sgr)-1] == 'm':
+				if styled {
+					unsure = true // mergeSGR may cancel the style out
+				}
+				styled = true
+			}
+			i = j
+			continue
+		}
+		start := i
+		i++
+		for i < len(s) && (s[i]&0xC0) == 0x80 {
+			i++
+		}
+		lastMaybe = i == start+1 && s[start] == ' ' && (!styled || unsure)
+	}
+	return lastMaybe
 }
 
 // renderBreadcrumbs renders one row of "seg › seg › seg", clipped from the

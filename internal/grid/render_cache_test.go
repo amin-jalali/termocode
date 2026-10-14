@@ -98,6 +98,7 @@ func TestRenderCacheFollowsChanges(t *testing.T) {
 	}
 	g.TermPaletteSet = true
 	g.HlAttrs[2] = Attrs{Fg: 0x123456, Bg: -1, Sp: -1, TermFg: 9}
+	g.Invalidate() // direct field writes skip Apply
 	assertSameAsLegacy(t, g, "term palette")
 
 	for _, p := range []termenv.Profile{termenv.ANSI256, termenv.ANSI, termenv.Ascii, termenv.TrueColor} {
@@ -113,6 +114,7 @@ func TestRenderCacheIsBounded(t *testing.T) {
 	g.CursorRow = -1
 	for i := 0; i < maxStyles*2; i++ {
 		g.HlAttrs[0] = Attrs{Fg: i, Bg: -1, Sp: -1}
+		g.Invalidate()
 		g.Render()
 	}
 	if n := len(g.styles); n > maxStyles+1 {
