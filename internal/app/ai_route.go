@@ -31,6 +31,16 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 	return nil, false
 }
 
+// editorHasKeys reports whether typed keys go to the editor: focus is on
+// the editor, not in the integrated terminal and not in the AI chat. The
+// active tab's accent is lit only then.
+func (m Model) editorHasKeys() bool {
+	if m.focus != FocusEditor || m.inTerminal {
+		return false
+	}
+	return m.ai == nil || !m.ai.focused || !m.actionsPanelVisible()
+}
+
 // aiFocusSwap puts the chat panel into the F6 cycle (explorer → editor →
 // AI panel → explorer). ok=false: let the default swap run.
 func (m *Model) aiFocusSwap() bool {

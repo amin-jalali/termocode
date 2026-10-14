@@ -41,6 +41,7 @@ type Model struct {
 	w        int
 	first    int // index of the first visible tab when the strip overflows
 	regions  []tabRegion
+	blurred  bool // the editor does not have focus (see SetFocused)
 }
 
 func New() Model { return Model{} }
@@ -60,6 +61,11 @@ func (m *Model) SetBuffers(bufs []nvim.BufferInfo, active int) {
 func (m Model) Buffers() ([]nvim.BufferInfo, int) {
 	return append([]nvim.BufferInfo(nil), m.bufs...), m.activeID
 }
+
+// SetFocused tells the bar whether the editor has the keys. Without focus
+// the active tab keeps its look but its ▎ accent is dimmed, so the bright
+// accent always marks the pane that takes the keys.
+func (m *Model) SetFocused(f bool) { m.blurred = !f }
 
 func (m *Model) SetWidth(w int) {
 	m.w = w
@@ -242,6 +248,9 @@ func (m Model) View() string {
 		}
 		b := m.bufs[i]
 		cells := renderTabCellsSfx(b, b.ID == m.activeID, m.suffix(b), m.isWelcome(b), st.fitW)
+		if b.ID == m.activeID && m.blurred && len(cells) > 0 {
+			cells[0] = theme.FgBg(theme.TextDimmer, theme.BgEditor).Render("▎")
+		}
 		sb.WriteString(strings.Join(cells, ""))
 		used += len(cells)
 	}
