@@ -723,6 +723,7 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `ai-new-chat` | AI: New Chat | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-open-chat` | AI: Open Chat | auto |   |
 | `ai-pick-model` | AI: Pick Model… | never | AI provider, credentials and approvals stay with the user |
+| `ai-review` | AI: Review Pending Changes | never | the user reviews proposed edits |
 | `ai-sign-in-claude` | AI: Sign in with Claude (OAuth, opt-in)… | never | AI provider, credentials and approvals stay with the user |
 | `ai-sign-out-claude` | AI: Sign out of Claude | never | AI provider, credentials and approvals stay with the user |
 | `ai-toggle-inline` | AI: Toggle Inline Completions | confirm (ide) |   |

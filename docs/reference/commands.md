@@ -23,6 +23,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: New Chat | `ai-new-chat` |   |   |
 | AI: Open Chat | `ai-open-chat` | `Alt+A` | `Alt+A` |
 | AI: Pick Model… | `ai-pick-model` |   |   |
+| AI: Review Pending Changes | `ai-review` |   |   |
 | AI: Sign in with Claude (OAuth, opt-in)… | `ai-sign-in-claude` |   |   |
 | AI: Sign out of Claude | `ai-sign-out-claude` |   |   |
 | AI: Stop Generating | `ai-cancel` |   |   |

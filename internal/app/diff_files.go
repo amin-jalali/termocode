@@ -2,10 +2,12 @@ package app
 
 import (
 	"fmt"
-	"os/exec"
+	"os"
+	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/diffview"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -40,28 +42,52 @@ func (m *Model) onDiffLeftPicked(id string) tea.Cmd {
 	return nil
 }
 
-// onDiffRightPicked runs `diff -u` between the two stored paths and shows
-// the result in the preview overlay (with the same colorising helper used
-// by the git diff viewer).
+// onDiffRightPicked reads both files and shows them in the diff card
+// (internal/diffview, read-only): side by side or unified, word-level
+// highlights, change navigation.
 func (m *Model) onDiffRightPicked(rightPath string) tea.Cmd {
 	leftPath := m.diffLeftPath
 	if leftPath == "" || rightPath == "" {
 		return nil
 	}
 	return func() tea.Msg {
-		out, err := exec.Command("diff", "-u", leftPath, rightPath).CombinedOutput()
-		// `diff` exits 1 when files differ — that's the normal case. Only
-		// treat exit ≥ 2 as a real failure.
-		if err != nil {
-			if ee, ok := err.(*exec.ExitError); ok && ee.ExitCode() == 1 {
-				err = nil
+		var text [2]string
+		for i, p := range []string{leftPath, rightPath} {
+			fi, err := os.Stat(p)
+			if err != nil {
+				return ErrMsg{Err: fmt.Errorf("compare: %w", err)}
 			}
+			if fi.Size() > maxCompareBytes {
+				return ErrMsg{Err: fmt.Errorf("compare: %s is too big (over %d MB)", filepath.Base(p), maxCompareBytes>>20)}
+			}
+			b, err := os.ReadFile(p)
+			if err != nil {
+				return ErrMsg{Err: fmt.Errorf("compare: %w", err)}
+			}
+			text[i] = string(b)
 		}
-		if err != nil {
-			return ErrMsg{Err: fmt.Errorf("diff: %w", err)}
-		}
-		body := colorizeDiff(string(out))
-		title := fmt.Sprintf("diff · %s ↔ %s", leftPath, rightPath)
-		return PreviewMsg{Title: title, Body: body}
+		rel := aiRel(aiWorkspaceRoot())
+		return compareReadyMsg{title: "Compare files", file: diffview.File{
+			Name: rel(leftPath) + " ↔ " + rel(rightPath), Old: text[0], New: text[1]}}
 	}
+}
+
+// maxCompareBytes caps each side of Compare Two Files.
+const maxCompareBytes = 4 << 20
+
+// compareReadyMsg opens a read-only diff card.
+type compareReadyMsg struct {
+	title string
+	file  diffview.File
+}
+
+// openCompareCard shows a read-only diff card. An AI review that is still
+// waiting keeps the card.
+func (m *Model) openCompareCard(msg compareReadyMsg) tea.Cmd {
+	s := m.aiS()
+	if s.review != nil && m.aiReviewPending() > 0 {
+		return m.aiInfo("Finish the AI review first (AI: Review Pending Changes)")
+	}
+	s.review = &aiReview{card: diffview.New(msg.title, []diffview.File{msg.file}, false)}
+	return m.showAIReview()
 }

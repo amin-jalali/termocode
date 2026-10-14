@@ -478,6 +478,9 @@ type Model struct {
 	replaceOpen bool
 	confirmOpen bool
 	confirmKind confirmKindEnum
+	// reviewOpen shows the AI review card (ai_review.go; its state is in
+	// m.ai.review).
+	reviewOpen bool
 	// Hot exit (hot_exit.go): this workspace's backup dir, this run's
 	// live dir, the backups waiting for Restore / Discard, and the ones
 	// found while another dialog was open (asked once it closes).
