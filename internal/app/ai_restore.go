@@ -355,6 +355,7 @@ func (m *Model) aiDoUndoTurn(msg int) tea.Cmd {
 		line += "; not restored: " + aiListNames(skipped)
 	}
 	s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredTool, Text: line})
+	m.aiAudit(clock.Now(), "undo_turn", fmt.Sprintf("turn=%d", msg), "user", "user", strings.TrimPrefix(line, "⚙ "))
 	if err := s.store.Save(&s.conv); err != nil {
 		recordError("[ai] save chat: " + err.Error())
 	}

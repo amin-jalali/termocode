@@ -76,7 +76,10 @@ type aiState struct {
 	restoreGen int
 	turnMsg    int
 	undoTurn   int
-	editTarget *aiRangeTarget // Edit-with-AI waiting for its instruction
+	// auditPending is the started tool call the audit log waits for
+	// (ai_audit.go).
+	auditPending *aiAuditPending
+	editTarget   *aiRangeTarget // Edit-with-AI waiting for its instruction
 
 	// configure / sign-in flow
 	cfgKind string

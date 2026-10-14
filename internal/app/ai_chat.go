@@ -255,7 +255,9 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 			s.conv.Messages = s.conv.Messages[:len(s.conv.Messages)-1]
 		}
 		s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredTool, Text: "⚙ " + msg.ev.Detail})
+		s.aiAuditStart(msg.ev)
 	case ai.EventToolResult:
+		m.aiAuditResult(msg.ev)
 		if l := last(); l != nil && l.Role == ai.StoredTool {
 			l.Text += " → " + aiShortResult(msg.ev.Detail)
 		}
