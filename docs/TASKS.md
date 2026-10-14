@@ -274,7 +274,7 @@ lib/features/ai/ai_surface.dart, lib/features/compare/compare_sheet.dart).
 
 The user: "do them in a loop; after finishing each item push it".
 
-- [ ] N1 (S) Less CPU while scrolling: save session.json less often (debounce / save on idle + on exit), keep crash safety
+- [x] N1 (S) Less CPU while scrolling: save session.json less often (debounce / save on idle + on exit), keep crash safety
 - [ ] N2 (S) Search results update after a rename/delete in the explorer (not only after AI changes)
 - [ ] N3 (S/M) First-run setup card on the welcome screen: icons, terminal font, AI provider in a few clicks
 - [ ] N4 (M) Easy install: release binaries (linux/macOS, amd64/arm64) and a one-line install script
