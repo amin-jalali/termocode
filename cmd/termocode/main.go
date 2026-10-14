@@ -69,14 +69,15 @@ func init() {
 func probeTerminal() {
 	disp := app.ConfigDisplay()
 	envIcons := os.Getenv("TERMOCODE_ICON_MODE") != "" || os.Getenv("TERMOCODE_NERD_FONT") == "1"
-	autoIcons := !envIcons && (disp.Icons == "" || disp.Icons == "auto")
 	nerd := false
 	unicodeOK := false
-	if autoIcons {
-		// The Unicode set renders in every modern terminal font, so auto
-		// picks it unless a Nerd Font is installed (ResolveIconMode keeps
-		// ASCII for TERM=linux and non-UTF-8 locales).
-		nerd = setup.HasNerdFont()
+	if !envIcons {
+		// auto picks Nerd icons only when the terminal's own font setting
+		// is a Nerd Font (GNOME profile, alacritty.toml, foot.ini; cached)
+		// or the terminal bundles the symbols; else Unicode, which renders
+		// in every modern font. Read even when icons != auto, so switching
+		// the setting to auto later has the answer.
+		nerd = setup.TerminalNerdFont()
 		unicodeOK = true
 	}
 	caps := termimg.Caps{Protocol: termimg.Blocks}

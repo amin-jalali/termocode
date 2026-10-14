@@ -172,7 +172,8 @@ const (
 // runs. cmd/termocode first sets it from the env overrides
 // (DetectIconMode), then app.ApplyDisplaySettings resolves the "icons"
 // setting with ResolveIconMode (detect.go): auto means Nerd Font glyphs
-// on kitty / WezTerm / Ghostty, ASCII on TERM=linux / dumb / vt* or a
+// on kitty / WezTerm / Ghostty or when the terminal's font setting is a
+// Nerd Font (internal/nerdterm), ASCII on TERM=linux / dumb / vt* or a
 // non-UTF-8 locale, else Unicode. A settings change re-resolves it.
 var CurrentIconMode IconMode = IconModeASCII
 

@@ -69,8 +69,9 @@ var termCaps = termimg.Caps{Protocol: termimg.Blocks}
 // it is kept so a future ProbeUnicode result has a home.
 var unicodeProbeOK bool
 
-// nerdFontHint is whether a Nerd Font was detected at startup (cached
-// fc-list, see setup.HasNerdFont). ResolveIconMode ignores it today.
+// nerdFontHint is whether the terminal's configured font is a Nerd Font,
+// read at startup (cached, see setup.TerminalNerdFont). icons = auto
+// picks Nerd icons when it is true.
 var nerdFontHint bool
 
 // SetTerminalCaps records the startup probe results (cmd/termocode).
