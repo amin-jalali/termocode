@@ -20,6 +20,12 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 	// event still flows through to the click/drag handlers below.
 	m.hoverX, m.hoverY = msg.X, msg.Y
 
+	// A clickable toast ("Saved to …: Show in folder") sits on top of
+	// everything below it.
+	if c, ok := m.clickToast(msg); ok {
+		return m, c
+	}
+
 	// Right-side Actions panel: click on the launcher chip re-opens (and
 	// re-pins) the panel. The chip lives one row above the status bar
 	// (msg.Y == m.h-2), so we have to handle it BEFORE the m.h-1 status-bar

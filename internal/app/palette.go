@@ -229,6 +229,7 @@ func paletteItems() []picker.Item {
 		{ID: "transfer-download", Title: "File: Download to This Computer"},
 		{ID: "transfer-upload", Title: "File: Upload from This Computer..."},
 		{ID: "transfer-cancel", Title: "File: Cancel Download"},
+		{ID: "transfer-reveal", Title: "File: Show Last Download in Folder"},
 		{ID: "diff-files", Title: "File: Compare Two Files..."},
 		{ID: "git-stash", Title: "Git: Stash Changes"},
 		{ID: "git-stash-pop", Title: "Git: Pop Latest Stash"},
@@ -568,6 +569,8 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.uploadTo(m.xferUploadTarget())
 	case "transfer-cancel":
 		return m.cancelDownload()
+	case "transfer-reveal":
+		return m.revealLast()
 	case "diff-files":
 		return m.openDiffFilesFlow()
 	case "git-stash":
