@@ -17,6 +17,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Discard Proposed Edit | `ai-discard-proposal` |   |   |
 | AI: Edit Selection… | `ai-edit` | `Alt+I` | `Alt+I` |
 | AI: Explain Selection / Line | `ai-explain` |   |   |
+| AI: Export Chat as Markdown | `ai-export-chat` |   |   |
 | AI: Fix Diagnostic at Cursor | `ai-fix` |   |   |
 | AI: Generate Doc Comment | `ai-doc` |   |   |
 | AI: New Chat | `ai-new-chat` |   |   |

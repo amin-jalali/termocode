@@ -466,35 +466,56 @@ func renderCodeCard(code []string, lang string, s mdStyles, width, indent, msgId
 	if label == "" {
 		label = "code"
 	}
-	copyL, applyL := "Copy", "Apply"
+	copyL, applyL, saveL := "Copy", "Apply", "Save as"
 	switch theme.CurrentIconMode {
 	case theme.IconModeNerdFont:
-		copyL, applyL = " Copy", " Apply"
+		copyL, applyL, saveL = " Copy", " Apply", " Save as…"
 	case theme.IconModeUnicode:
-		copyL, applyL = "⧉ Copy", "✓ Apply"
+		copyL, applyL, saveL = "⧉ Copy", "✓ Apply", "↓ Save as…"
 	}
-	btns := ""
-	var buttons []aiLineButton
-	if done {
-		btns = copyL + "  " + applyL
-	}
+	// The buttons that fit, widest set first (a narrow card drops
+	// "Save as…", then all).
+	ref := ":" + strconv.Itoa(msgIdx) + ":" + strconv.Itoa(block)
+	type btn struct{ label, id string }
+	var btns []btn
 	lw := runewidth.StringWidth(" " + label)
-	bw := runewidth.StringWidth(btns)
-	gap := cardW - lw - bw - 1
-	if gap < 1 {
-		btns, bw, gap = "", 0, cardW-lw
+	gap := cardW - lw
+	if done {
+		for _, set := range [][]btn{
+			{{copyL, "copy" + ref}, {applyL, "apply" + ref}, {saveL, "save" + ref}},
+			{{copyL, "copy" + ref}, {applyL, "apply" + ref}},
+		} {
+			bw := 0
+			for i, b := range set {
+				if i > 0 {
+					bw += 2
+				}
+				bw += runewidth.StringWidth(b.label)
+			}
+			if g := cardW - lw - bw - 1; g >= 1 {
+				btns, gap = set, g
+				break
+			}
+		}
 	}
 	if gap < 0 {
 		gap = 0
 	}
+	var buttons []aiLineButton
 	row := left + s.cardLabel.Render(" "+label) + head.Render(strings.Repeat(" ", gap))
-	if btns != "" {
-		x := indent + lw + gap
-		buttons = append(buttons,
-			aiLineButton{x, x + runewidth.StringWidth(copyL), "copy:" + strconv.Itoa(msgIdx) + ":" + strconv.Itoa(block)})
-		x += runewidth.StringWidth(copyL) + 2
-		buttons = append(buttons, aiLineButton{x, x + runewidth.StringWidth(applyL), "apply:" + strconv.Itoa(msgIdx) + ":" + strconv.Itoa(block)})
-		row += s.cardButton.Render(copyL) + head.Render("  ") + s.cardButton.Render(applyL) + head.Render(" ")
+	x := indent + lw + gap
+	for i, b := range btns {
+		if i > 0 {
+			row += head.Render("  ")
+			x += 2
+		}
+		w := runewidth.StringWidth(b.label)
+		buttons = append(buttons, aiLineButton{x, x + w, b.id})
+		row += s.cardButton.Render(b.label)
+		x += w
+	}
+	if len(btns) > 0 {
+		row += head.Render(" ")
 	}
 	out = append(out, aiLine{styled: row + right(indent+cardW), buttons: buttons})
 

@@ -20,11 +20,12 @@ var tooltipLabels = map[string]tooltipSpec{
 	"overflow:glyph": {name: "More actions"},
 
 	// AI chat panel header (+ ≡ ⚐ ×) and the launcher chip.
-	"ai:new":           {name: "New chat", local: "Ctrl+N"}, // aiPanelKey
-	"ai:history":       {name: "Chat history"},
-	"actions:pin":      {name: "Unpin panel"},
-	"actions:close":    {name: "Close panel", palette: "toggle-actions-panel"},
-	"actions:launcher": {name: "AI chat", palette: "toggle-actions-panel"},
+	"ai:new":             {name: "New chat", local: "Ctrl+N"}, // aiPanelKey
+	"ai:history":         {name: "Chat history"},
+	"ai:btn:attach-file": {name: "Attach file"},
+	"actions:pin":        {name: "Unpin panel"},
+	"actions:close":      {name: "Close panel", palette: "toggle-actions-panel"},
+	"actions:launcher":   {name: "AI chat", palette: "toggle-actions-panel"},
 
 	// Bottom panel tab bar.
 	"panel:new":         {name: "New terminal", palette: "terminal-new-tab"},

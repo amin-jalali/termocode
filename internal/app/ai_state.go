@@ -72,12 +72,21 @@ type aiState struct {
 
 	// mdCache holds rendered answers per message index (ai_panel.go).
 	mdCache map[int]aiMDEntry
+
+	// "Save as…" of a code block (ai_export.go): the code, and the path
+	// waiting for the overwrite confirm.
+	saveCode string
+	savePath string
 }
 
 // aiAttachment is file / selection context added to the next chat message.
 type aiAttachment struct {
 	Label string
 	Text  string
+	// Image is the path of an attached image (sent as an image, not as
+	// text); MediaType its type ("image/png").
+	Image     string
+	MediaType string
 }
 
 // newAIState loads settings + credentials and builds the provider.
@@ -237,6 +246,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-doc", "AI: Generate Doc Comment", ""},
 		{"ai-attach", "AI: Add File / Selection to Chat", ""},
 		{"ai-apply-code", "AI: Apply Last Code Block to File", ""},
+		{"ai-export-chat", "AI: Export Chat as Markdown", ""},
 		{"ai-apply-proposal", "AI: Apply Proposed Edit", ""},
 		{"ai-discard-proposal", "AI: Discard Proposed Edit", ""},
 		{"ai-trigger-inline", "AI: Trigger Inline Completion", "Alt+\\"},
@@ -288,6 +298,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.aiAttachCurrent(), true
 	case "ai-apply-code":
 		return m.aiApplyLastCodeBlock(), true
+	case "ai-export-chat":
+		return m.aiExportChat(), true
 	case "ai-apply-proposal":
 		return m.applyAIProposal(), true
 	case "ai-discard-proposal":
