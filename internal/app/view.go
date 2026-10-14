@@ -437,7 +437,9 @@ func (m Model) renderBase() string {
 		// matches the editor pane and overlayOverflowMenuGlyph has clean cells
 		// to overpaint. Zero-pad path stays a no-op when actions-panel /
 		// narrow-pane math collapses the reservation.
-		tabsRow := m.tabs.View()
+		tabs := m.tabs
+		tabs.SetFocused(m.editorHasKeys())
+		tabsRow := tabs.View()
 		if pad := edPaneW - lipgloss.Width(tabsRow); pad > 0 {
 			tabsRow += theme.Bg(theme.BgTitleBar).Render(strings.Repeat(" ", pad))
 		}

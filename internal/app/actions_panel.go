@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/mattn/go-runewidth"
 
 	"github.com/amin-jalali/termocode/internal/activity"
@@ -136,6 +137,14 @@ func (m Model) renderActionsPanel(width, height int) string {
 	}
 	if len(rows) > height {
 		rows = rows[:height]
+	}
+	// A thin edge on the panel's blank first column, the mirror of the
+	// sidebar's ▕, so the panel reads as its own pane next to the editor.
+	if width > 1 {
+		edge := theme.FgBg(theme.BorderSubtle, theme.BgPanel).Render("▏")
+		for i, r := range rows {
+			rows[i] = edge + ansi.Cut(r, 1, width)
+		}
 	}
 	return strings.Join(rows, "\n")
 }

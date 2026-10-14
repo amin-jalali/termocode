@@ -85,7 +85,7 @@ func (m Model) View(focused bool, activePath string, activeDirty bool, gitStatus
 	if chrome > 0 {
 		rows = append(rows, m.renderHeader())
 		if chrome == chromeFull {
-			rows = append(rows, m.renderHeaderHairline())
+			rows = append(rows, m.renderHeaderHairline(focused))
 		} else if chrome == chromeCompact {
 			rows = append(rows, sidebarDividerRow(m.w))
 		}
@@ -572,13 +572,18 @@ func sidebarDividerRow(w int) string {
 // renderHeaderHairline draws a 1/8-block (▔) underline beneath the EXPLORER
 // label. Uses U+2594 UPPER ONE EIGHTH BLOCK so the line sits at the TOP of
 // the row (right under the label text on the row above) rather than the
-// bottom — pulls the divider visually closer to the header.
-func (m Model) renderHeaderHairline() string {
+// bottom — pulls the divider visually closer to the header. It takes the
+// focus accent while the explorer has focus.
+func (m Model) renderHeaderHairline(focused bool) string {
 	if m.w <= 0 {
 		return ""
 	}
+	fg := theme.LG(theme.BorderSubtle)
+	if focused {
+		fg = theme.Mix(theme.BorderSubtle, theme.BorderFocus, 0.7)
+	}
 	style := lipgloss.NewStyle().
-		Foreground(theme.LG(theme.BorderSubtle)).
+		Foreground(fg).
 		Background(theme.LG(theme.BgSidebar))
 	return style.Render(strings.Repeat("▔", m.w))
 }
