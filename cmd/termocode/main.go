@@ -13,6 +13,8 @@ import (
 	"golang.org/x/term"
 
 	"github.com/amin-jalali/termocode/internal/app"
+	// Must init before bubbletea: no 5 s OSC 11 wait (see package doc).
+	_ "github.com/amin-jalali/termocode/internal/darkbg"
 	"github.com/amin-jalali/termocode/internal/setup"
 	"github.com/amin-jalali/termocode/internal/termfont"
 	"github.com/amin-jalali/termocode/internal/termimg"
