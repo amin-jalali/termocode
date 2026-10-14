@@ -260,6 +260,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-attach":           aiNever("adds to the chat input; read the file with read_file"),
 	"ai-apply-code":       aiNever("use write_file to change files"),
 	"ai-apply-proposal":   aiNever("the user reviews proposed edits"),
+	"ai-export-chat":      aiConfirm(ai.ClassFileWrite), // writes ai-chat-<date>.md
 	"ai-discard-proposal": aiNever("the user reviews proposed edits"),
 	"ai-trigger-inline":   aiNever("inline completion is for the user's typing"),
 	"ai-toggle-inline":    aiConfirm(ai.ClassIDE),
