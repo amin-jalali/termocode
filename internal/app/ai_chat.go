@@ -113,8 +113,13 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	)
 	s.scroll = 0
 
+	s.chatGen++
+	gen := s.chatGen
+	ch := make(chan tea.Msg, 64)
+
 	root := aiWorkspaceRoot()
 	tools := append(ai.WorkspaceTools(ai.Workspace{Root: root}), m.aiEditorTools()...)
+	tools = append(tools, aiIDETools(root, newAIIDECaller(gen, ch))...)
 	native := s.provider.SupportsTools()
 	sys := aiChatSystemPrompt + "\nWorkspace root: " + root
 	if p := m.editor.Path(); p != "" {
@@ -127,12 +132,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	for _, c := range s.settings.AutoApprove {
 		auto[c] = true
 	}
-	s.chatGen++
-	gen := s.chatGen
 	ctx, cancel := context.WithCancel(context.Background())
 	s.chatCancel = cancel
 	s.streaming = true
-	ch := make(chan tea.Msg, 64)
 	s.chatCh = ch
 	send := func(msg tea.Msg) {
 		select {

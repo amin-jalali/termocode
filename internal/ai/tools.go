@@ -27,7 +27,10 @@ type Tool struct {
 	Mutating    bool
 	Class       string
 	Describe    func(args map[string]any) string
-	Run         func(ctx context.Context, args map[string]any) (string, error)
+	// Validate (optional) rejects bad args before the confirm gate, so
+	// the user is never asked about a call that cannot run.
+	Validate func(args map[string]any) error
+	Run      func(ctx context.Context, args map[string]any) (string, error)
 }
 
 // Spec is the native tool-calling description of t.
@@ -57,10 +60,11 @@ const (
 	ClassFileWrite = "fileWrite"
 	ClassGit       = "git"
 	ClassRun       = "run"
+	ClassIDE       = "ide" // IDE commands the agent runs (execute_action)
 )
 
 // ToolClasses lists the auto-approve classes in UI order.
-var ToolClasses = []string{ClassFileWrite, ClassGit, ClassRun}
+var ToolClasses = []string{ClassFileWrite, ClassGit, ClassRun, ClassIDE}
 
 // FindTool looks a tool up by name.
 func FindTool(tools []Tool, name string) (Tool, bool) {
