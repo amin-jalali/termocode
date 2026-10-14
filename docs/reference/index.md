@@ -32,6 +32,13 @@ Use the guides to learn a task. Use the reference to look something up.
 
     Every file termocode reads or writes, where it lives, and what it holds.
 
+-   :material-robot-outline: **[AI tools](ai-tools.md)**
+
+    ---
+
+    Every tool the AI chat can call, its arguments, and when termocode
+    asks you first. Also what the AI may run from the palette.
+
 </div>
 
 ## Quick facts

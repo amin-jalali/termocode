@@ -1,6 +1,6 @@
 // Command docgen writes the reference pages under docs/reference/ from the
-// Go source of truth (keymap.Default, the palette, the settings rows and
-// the config file list), so the docs can never fall behind the code.
+// Go source of truth (keymap.Default, the palette, the settings rows, the
+// config file list and the AI chat tools with their policy), so the docs can never fall behind the code.
 //
 //	go run ./cmd/docgen          # write the files
 //	go run ./cmd/docgen -check   # exit 1 if any file is out of date
@@ -77,6 +77,7 @@ func render() map[string]string {
 		"commands.md":     renderCommands(),
 		"settings.md":     renderSettings(),
 		"config-files.md": renderConfigFiles(),
+		"ai-tools.md":     renderAITools(),
 	}
 }
 
@@ -342,4 +343,102 @@ func renderConfigFiles() string {
 		"except state files (`session.json`, `recents.json`, `workspaces.json`, `palette_recents.json`) " +
 		"and anything that looks like a secret.\n")
 	return b.String()
+}
+
+// ── ai-tools.md ─────────────────────────────────────────────────────────
+
+// firstSentence is s up to its first ". " (the short description).
+func firstSentence(s string) string {
+	if i := strings.Index(s, ". "); i > 0 {
+		return s[:i+1]
+	}
+	return s
+}
+
+// gateCell renders a gate; per-op gates go one per line.
+func gateCell(g string) string {
+	return cell(strings.ReplaceAll(g, "; ", "<br>"))
+}
+
+func renderAITools() string {
+	var b strings.Builder
+	b.WriteString(banner)
+	b.WriteString("# AI tools\n\n")
+	b.WriteString("The AI chat works with tools. This page lists every tool the model can call, " +
+		"its arguments and its **gate**: what happens before the tool runs.\n\n")
+	b.WriteString("- **auto**: runs at once. It only reads, or it only changes the view.\n")
+	b.WriteString("- **confirm (class)**: termocode asks you first. In the dialog, **Always allow** " +
+		"stops the questions for this class (`fileWrite`, `git`, `run`, `ide`, `settings`). " +
+		"Change it later with **AI: Agent Auto-Approve…**.\n")
+	b.WriteString("- **confirm (always asks)**: termocode asks every time, with no **Always allow**. " +
+		"These calls can lose data.\n")
+	b.WriteString("- **never**: the AI can not do it. The model gets the reason.\n\n")
+	b.WriteString("Some tools have an `op` argument; then each op has its own gate.\n\n")
+
+	tools := app.AIToolCatalog()
+	b.WriteString("## Overview\n\n")
+	t := newTable(&b, "Tool", "Gate", "What it does")
+	for _, d := range tools {
+		t.row("["+code(d.Name)+"](#"+d.Name+")", gateCell(d.Gate), cell(firstSentence(d.Description)))
+	}
+	b.WriteString("\n## Tools\n\n")
+	for _, d := range tools {
+		fmt.Fprintf(&b, "### %s\n\n", d.Name)
+		b.WriteString(d.Description + "\n\n")
+		fmt.Fprintf(&b, "**Gate:** %s\n\n", strings.ReplaceAll(d.Gate, "; ", " · "))
+		if len(d.Args) == 0 {
+			b.WriteString("No arguments.\n\n")
+			continue
+		}
+		at := newTable(&b, "Argument", "Type", "Required", "Description")
+		for _, a := range d.Args {
+			req := ""
+			if a.Required {
+				req = "yes"
+			}
+			desc := a.Description
+			if len(a.Enum) > 0 {
+				vals := make([]string, len(a.Enum))
+				for i, v := range a.Enum {
+					vals[i] = code(v)
+				}
+				if desc != "" {
+					desc += ". "
+				}
+				desc = cell(desc) + "One of: " + strings.Join(vals, ", ")
+			} else {
+				desc = cell(desc)
+			}
+			at.row(code(a.Name), cell(a.Type), req, desc)
+		}
+		b.WriteString("\n")
+	}
+
+	b.WriteString("## Palette actions\n\n")
+	b.WriteString("`execute_action` runs a command palette command by id, and `list_actions` finds the ids. " +
+		"This table says what the AI may run. Extension commands (`ext-<command id>`) and your own commands " +
+		"(`user-<name>`) always ask (class `run`).\n\n")
+	pt := newTable(&b, "ID", "Title", "Gate", "Reason")
+	for _, p := range app.AIActionPolicyCatalog() {
+		pt.row(code(p.ID), cell(p.Title), policyGate(p), cell(p.Reason))
+	}
+	b.WriteString("\n## Settings\n\n")
+	b.WriteString("`settings_set` changes one setting. It always asks first (class `settings`). " +
+		"The **never** settings are not shown to the AI.\n\n")
+	st := newTable(&b, "Key", "Gate", "Reason")
+	for _, p := range app.AISettingPolicyCatalog() {
+		st.row(code(p.ID), policyGate(p), cell(p.Reason))
+	}
+	return b.String()
+}
+
+// policyGate is "auto", "confirm (class)", "confirm (always asks)" or "never".
+func policyGate(p app.AIPolicyDoc) string {
+	if p.Gate != "confirm" {
+		return p.Gate
+	}
+	if p.Class == "" {
+		return "confirm (always asks)"
+	}
+	return "confirm (" + p.Class + ")"
 }
