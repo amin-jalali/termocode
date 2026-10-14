@@ -235,26 +235,53 @@ func TestAIGetEditorStateTool(t *testing.T) {
 	}
 }
 
-func TestAIExecuteActionAllowList(t *testing.T) {
-	// Not allowed: refused without asking.
-	p := &scriptedAIProvider{replies: []ai.Chunk{toolCall("execute_action", map[string]any{"id": "quit"})}}
+// execute_action follows aiActionPolicies: never ids are refused without
+// asking, auto ids run at once, confirm ids ask with their class (none
+// for destructive ones, so no "Always allow").
+func TestAIExecuteActionPolicy(t *testing.T) {
+	run := func(id string) (asked []string, results []string) {
+		t.Helper()
+		p := &scriptedAIProvider{replies: []ai.Chunk{toolCall("execute_action", map[string]any{"id": id})}}
+		m, _ := aiIDETestModel(t, p)
+		driveAIChat(t, m, m.sendAIChat(id), func(c aiChatConfirmMsg) string {
+			asked = append(asked, c.tool.Class)
+			return "deny"
+		})
+		return asked, p.toolResults()
+	}
+	// Never: refused, with the reason, without asking.
+	if asked, r := run("quit"); len(asked) != 0 || len(r) != 1 || !strings.Contains(r[0], "not allowed") ||
+		!strings.Contains(r[0], aiActionPolicies["quit"].Reason) {
+		t.Fatalf("quit: asked=%v result %v", asked, r)
+	}
+	// Unknown: refused, points to list_actions.
+	if asked, r := run("no-such"); len(asked) != 0 || len(r) != 1 || !strings.Contains(r[0], "list_actions") {
+		t.Fatalf("unknown: asked=%v result %v", asked, r)
+	}
+	// Auto: runs without asking.
+	if asked, r := run("git-refresh"); len(asked) != 0 || len(r) != 1 || r[0] != "ran git-refresh" {
+		t.Fatalf("git-refresh: asked=%v result %v", asked, r)
+	}
+	// Confirm with a class.
+	if asked, r := run("git-stage"); len(asked) != 1 || asked[0] != ai.ClassGit || !strings.Contains(r[0], "declined") {
+		t.Fatalf("git-stage: asked=%v result %v", asked, r)
+	}
+	// Destructive: asks with no class.
+	if asked, _ := run("git-push"); len(asked) != 1 || asked[0] != "" {
+		t.Fatalf("git-push: asked=%v", asked)
+	}
+}
+
+// list_actions runs without asking and lists live commands, never ids
+// left out.
+func TestAIListActionsTool(t *testing.T) {
+	p := &scriptedAIProvider{replies: []ai.Chunk{toolCall("list_actions", map[string]any{"query": "fold"})}}
 	m, _ := aiIDETestModel(t, p)
 	asked := 0
-	driveAIChat(t, m, m.sendAIChat("quit"), func(aiChatConfirmMsg) string { asked++; return "deny" })
-	if r := p.toolResults(); asked != 0 || len(r) != 1 || !strings.Contains(r[0], "not allowed") {
-		t.Fatalf("quit: asked=%d result %v", asked, r)
-	}
-
-	// Allowed: needs a confirm of class "ide".
-	p = &scriptedAIProvider{replies: []ai.Chunk{toolCall("execute_action", map[string]any{"id": "git-refresh"})}}
-	m, _ = aiIDETestModel(t, p)
-	var class string
-	driveAIChat(t, m, m.sendAIChat("refresh git"), func(c aiChatConfirmMsg) string { class = c.tool.Class; return "allow" })
-	if class != ai.ClassIDE {
-		t.Fatalf("confirm class %q, want %q", class, ai.ClassIDE)
-	}
-	if r := p.toolResults(); len(r) != 1 || strings.Contains(r[0], "error") {
-		t.Fatalf("git-refresh result %v", r)
+	driveAIChat(t, m, m.sendAIChat("fold"), func(aiChatConfirmMsg) string { asked++; return "deny" })
+	r := p.toolResults()
+	if asked != 0 || len(r) != 1 || !strings.Contains(r[0], "fold-all: View: Fold All (View; auto)") {
+		t.Fatalf("asked=%d result %v", asked, r)
 	}
 }
 

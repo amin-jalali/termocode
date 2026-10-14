@@ -3,6 +3,7 @@ package testkit
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -22,6 +23,31 @@ type aiScript struct {
 	n       int
 	hold    map[int]chan struct{}
 	reached map[int]chan struct{}
+	bodies  []string // request bodies, in order
+}
+
+// toolResults returns the tool results the app sent back to the model, in
+// order (from the role "tool" messages of the last request).
+func (s *aiScript) toolResults() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(s.bodies) == 0 {
+		return nil
+	}
+	var req struct {
+		Messages []struct {
+			Role    string `json:"role"`
+			Content string `json:"content"`
+		} `json:"messages"`
+	}
+	_ = json.Unmarshal([]byte(s.bodies[len(s.bodies)-1]), &req)
+	var out []string
+	for _, m := range req.Messages {
+		if m.Role == "tool" {
+			out = append(out, m.Content)
+		}
+	}
+	return out
 }
 
 type aiReply struct {
@@ -33,7 +59,9 @@ type aiReply struct {
 func newAIScript(t *testing.T, replies ...aiReply) (*aiScript, *httptest.Server) {
 	s := &aiScript{replies: replies, hold: map[int]chan struct{}{}, reached: map[int]chan struct{}{}}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
 		s.mu.Lock()
+		s.bodies = append(s.bodies, string(body))
 		i := s.n
 		s.n++
 		hold, reached := s.hold[i], s.reached[i]
