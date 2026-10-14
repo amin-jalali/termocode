@@ -14,7 +14,7 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		if !msg.manual && !m.aiInlineEnabled() {
 			return nil, true
 		}
-		return m.startAIInline(msg.manual), true
+		return m.startAIInline(msg.manual, msg.settled), true
 	case aiInlineResultMsg:
 		return m.onAIInlineResult(msg), true
 	case aiChatEventMsg:

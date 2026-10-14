@@ -39,6 +39,8 @@ type aiState struct {
 	// inline ghost text
 	inlineCancel context.CancelFunc
 	inlineBusy   bool
+	inlineCache  ai.InlineCache // type-through of the shown ghost
+	inlineImp    map[string]any // imports of the cached ghost
 
 	// chat panel
 	store       ai.ChatStore
