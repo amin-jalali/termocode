@@ -235,7 +235,7 @@ screen.
 - [x] K6 (S) Tasks/tests typed tools + `tests_results`
 - [ ] K7 (L) Debugger: breakpoints, start, continue/step/stop, state
 - [ ] K8 (S) LSP/DAP installer, extensions, workspace folders, docs reference page
-- [ ] K9 Leftovers from the sync audit: search results refresh after AI edits; rename updates closed-tabs list, recents and hot-exit backups; LSP re-attach after rename (test); test for `execute_action save` refreshing git
+- [x] K9 Leftovers from the sync audit: search results (Find Results buffer + overlay) search again after AI file changes; rename / delete (agent and explorer) update the closed-tabs list, recents and hot-exit backups; the language server stays attached after a rename (it was dropped); palette / `execute_action` save refreshes git
 
 ## Group L — Upload / download (2026-10-14)
 
