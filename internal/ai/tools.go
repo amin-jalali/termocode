@@ -30,7 +30,12 @@ type Tool struct {
 	// Validate (optional) rejects bad args before the confirm gate, so
 	// the user is never asked about a call that cannot run.
 	Validate func(args map[string]any) error
-	Run      func(ctx context.Context, args map[string]any) (string, error)
+	// Gate (optional) decides the confirm rule per call and replaces
+	// Mutating / Class for it: one tool (execute_action) runs a safe
+	// command at once and asks for a risky one. Class "" with mutating
+	// true always asks, with no "Always allow" button.
+	Gate func(args map[string]any) (mutating bool, class string)
+	Run  func(ctx context.Context, args map[string]any) (string, error)
 }
 
 // Spec is the native tool-calling description of t.
@@ -102,7 +107,9 @@ func ToolsPromptSpec(tools []Tool) string {
 			args = append(args, fmt.Sprintf("%q%s: %s", k, opt, typ))
 		}
 		gate := ""
-		if t.Mutating {
+		if t.Gate != nil {
+			gate = " (some calls need user confirmation)"
+		} else if t.Mutating {
 			gate = " (mutating — needs user confirmation)"
 		}
 		fmt.Fprintf(&b, "- %s {%s} — %s%s\n", t.Name, strings.Join(args, ", "), t.Description, gate)
