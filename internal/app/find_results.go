@@ -51,7 +51,7 @@ return b ~= nil and vim.api.nvim_buf_is_valid(b)`
 
 // refreshSearchResults searches again after files changed on disk (the
 // agent wrote, renamed or deleted files, ran a command, switched
-// branches…), so the results never point at old lines or gone files:
+// branches…; the user renamed, deleted or made a file in the explorer), so the results never point at old lines or gone files:
 // the Find Results buffer, when it is still open (shown or not), and the
 // Find in Files overlay, when it is open.
 func (m *Model) refreshSearchResults() tea.Cmd {
