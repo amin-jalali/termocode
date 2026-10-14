@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -171,6 +172,35 @@ func TestNvimEndsWithTermocode(t *testing.T) {
 			t.Fatalf("still running after termocode was killed: %v", left)
 		}
 		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+// TestNvimEndsWithTermocodeInSystem: termocode dies hard while nvim waits
+// in vim.fn.system() (as the git signs used to). nvim then never ends
+// the exit the EOF of its pipe starts, and ignores SIGTERM: it used to
+// stay forever. Nothing of the test may be left a few seconds later.
+func TestNvimEndsWithTermocodeInSystem(t *testing.T) {
+	home := t.TempDir()
+	ws := NewRepo(t)
+	tm := Start(t, StartOpts{Home: home, Workspace: ws, Args: []string{"--no-session"},
+		NvimInit: "vim.defer_fn(function() vim.fn.system({ 'sleep', '30' }) end, 1500)\n"})
+	tm.WaitFor("status bar", bootTimeout, func(ls []string) bool {
+		return mainFrame.Top(ls[0]) && mainFrame.Bottom(ls[len(ls)-1])
+	})
+	dirs := []string{home, ws}
+	deadline := time.Now().Add(10 * time.Second)
+	for !slices.ContainsFunc(procsOf(home, dirs), func(p string) bool { return strings.HasSuffix(p, "sleep 30") }) {
+		if time.Now().After(deadline) {
+			t.Fatalf("nvim did not start system(): %v", procsOf(home, dirs))
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	if err := tm.cmd.Process.Kill(); err != nil {
+		t.Fatal(err)
+	}
+	<-tm.exited
+	if left := waitNoProcs(home, dirs, 5*time.Second); len(left) > 0 {
+		t.Fatalf("still running 5s after termocode was killed:\n%s", strings.Join(left, "\n"))
 	}
 }
 
