@@ -9,21 +9,46 @@ permissions:
   contents: write
 
 jobs:
+  # Release builds use cgo: golang.design/x/clipboard needs it for the
+  # system clipboard (read, paste and the clipboard history watch). A
+  # CGO_ENABLED=0 binary still runs, but only copies via wl-copy / xclip /
+  # pbcopy and cannot paste from or watch the OS clipboard.
+  #
+  #   linux/amd64   ubuntu-22.04, native gcc + libx11-dev
+  #   linux/arm64   ubuntu-22.04, gcc-aarch64-linux-gnu cross compiler.
+  #                 The clipboard code dlopen()s libX11 at run time, so
+  #                 only the (arch-independent) X11 headers are needed.
+  #   darwin/*      macos-14 (Apple Silicon); amd64 via clang -arch x86_64
+  #
+  # ubuntu-22.04 keeps the glibc floor low (2.35) so the binaries run on
+  # older distros too. musl distros (Alpine) need a source build.
   build:
     name: build (${{ matrix.goos }}/${{ matrix.goarch }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - goos: linux
             goarch: amd64
+            runner: ubuntu-22.04
+            cc: gcc
+            native: true
           - goos: linux
             goarch: arm64
+            runner: ubuntu-22.04
+            cc: aarch64-linux-gnu-gcc
+            native: false
           - goos: darwin
             goarch: amd64
+            runner: macos-14
+            cc: clang -arch x86_64
+            native: false
           - goos: darwin
             goarch: arm64
+            runner: macos-14
+            cc: clang -arch arm64
+            native: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,39 +58,46 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Resolve version
-        id: version
-        run: echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-
-      - name: Build
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: 0
-        run: |
-          mkdir -p dist/staging
-          binary="termocode"
-          go build -trimpath -ldflags="-s -w" -o "dist/staging/${binary}" ./cmd/termocode
-
-      - name: Package tarball
-        id: package
+      - name: Install C toolchain and X11 headers (Linux)
+        if: runner.os == 'Linux'
         run: |
           set -euo pipefail
-          version="${{ steps.version.outputs.version }}"
-          os="${{ matrix.goos }}"
-          arch="${{ matrix.goarch }}"
-          name="termocode-${version}-${os}-${arch}"
-          mkdir -p "dist/${name}"
-          cp "dist/staging/termocode" "dist/${name}/termocode"
-          cp README.md "dist/${name}/README.md"
-          tar -czf "dist/${name}.tar.gz" -C dist "${name}"
-          echo "tarball=dist/${name}.tar.gz" >> "$GITHUB_OUTPUT"
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev
+          if [ "${{ matrix.goarch }}" = arm64 ]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu
+            # The cross compiler does not search /usr/include; give it
+            # only the X11 headers (plain C declarations, no arch bits).
+            mkdir -p "${RUNNER_TEMP}/x11inc"
+            cp -r /usr/include/X11 "${RUNNER_TEMP}/x11inc/"
+            echo "CGO_CFLAGS=-I${RUNNER_TEMP}/x11inc" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build and package
+        env:
+          CGO_ENABLED: "1"
+          CC: ${{ matrix.cc }}
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
+        run: ./scripts/build-release.sh "${GITHUB_REF_NAME}" "${{ matrix.goos }}" "${{ matrix.goarch }}" dist
+
+      - name: Check the binary
+        run: |
+          set -euo pipefail
+          name="termocode-${GITHUB_REF_NAME}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          mkdir -p check
+          tar -xzf "dist/${name}.tar.gz" -C check
+          file "check/${name}/termocode"
+          if [ "${{ matrix.native }}" = true ]; then
+            got="$("check/${name}/termocode" --version)"
+            echo "${got}"
+            [ "${got}" = "termocode ${GITHUB_REF_NAME}" ]
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: termocode-${{ steps.version.outputs.version }}-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: ${{ steps.package.outputs.tarball }}
+          name: termocode-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/termocode-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
           if-no-files-found: error
 
   release:
@@ -80,13 +112,35 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: dist
+          pattern: termocode-*
           merge-multiple: true
 
       - name: List artifacts
         run: ls -la dist
 
       - name: Write checksums
-        run: cd dist && sha256sum *.tar.gz > checksums.txt && cat checksums.txt
+        run: |
+          set -euo pipefail
+          cd dist
+          [ "$(ls -1 ./*.tar.gz | wc -l)" -eq 4 ] || { echo "expected 4 tarballs"; exit 1; }
+          sha256sum -- *.tar.gz > checksums.txt
+          cat checksums.txt
+
+      - name: Write release notes header
+        run: |
+          cat > notes.md <<EOF
+          ## Install
+
+          \`\`\`sh
+          curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/scripts/install.sh | sh
+          \`\`\`
+
+          Or download the tarball for your system below, check it against
+          \`checksums.txt\`, and put \`termocode\` on your \`PATH\`.
+          termocode needs Neovim 0.10 or newer. See the
+          [install guide](https://github.com/${GITHUB_REPOSITORY}/blob/main/docs/getting-started/install.md).
+
+          EOF
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -96,7 +150,9 @@ jobs:
           files: |
             dist/*.tar.gz
             dist/checksums.txt
+          body_path: notes.md
           generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
 
   # Renders packaging/homebrew + packaging/aur templates with the release
   # checksums and pushes them to the Homebrew tap and the AUR.

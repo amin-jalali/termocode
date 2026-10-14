@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
-# release.sh — cross-compile termocode for all supported targets and produce
-# tarballs ready to attach to a GitHub release. Mirrors .github/workflows/release.yml.
+# release.sh — local smoke build of all release tarballs into dist/, with
+# checksums.txt. Real releases come from .github/workflows/release.yml.
+#
+# The host target is built with cgo, like the CI release. The other
+# targets need a C cross-compiler for cgo, so here they are built with
+# CGO_ENABLED=0: they work, but the system clipboard falls back to
+# wl-copy / xclip / pbcopy (copy only). Do not publish those.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -17,50 +22,17 @@ DIST="${ROOT}/dist"
 rm -rf "${DIST}"
 mkdir -p "${DIST}"
 
-TARGETS=(
-  "linux/amd64"
-  "linux/arm64"
-  "darwin/amd64"
-  "darwin/arm64"
-)
-
-echo "==> termocode release build"
-echo "    version : ${VERSION}"
-echo "    output  : ${DIST}"
-echo
-
-for target in "${TARGETS[@]}"; do
-  os="${target%%/*}"
-  arch="${target##*/}"
-  name="termocode-${VERSION}-${os}-${arch}"
-  stage="${DIST}/${name}"
-  mkdir -p "${stage}"
-
-  binary="termocode"
-  if [[ "${os}" == "windows" ]]; then
-    binary="termocode.exe"
-  fi
-
-  echo "==> building ${os}/${arch}"
-  GOOS="${os}" GOARCH="${arch}" CGO_ENABLED=0 \
-    go build -trimpath -ldflags="-s -w" \
-    -o "${stage}/${binary}" ./cmd/termocode
-
-  cp README.md "${stage}/README.md"
-
-  tar -czf "${DIST}/${name}.tar.gz" -C "${DIST}" "${name}"
-  rm -rf "${stage}"
+host="$(go env GOOS)/$(go env GOARCH)"
+echo "==> termocode release build ${VERSION} -> ${DIST}"
+for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
+  cgo=0
+  [[ "${target}" == "${host}" ]] && cgo=1
+  CGO_ENABLED="${cgo}" ./scripts/build-release.sh "${VERSION}" "${target%%/*}" "${target##*/}" "${DIST}"
 done
 
-echo
-echo "==> done. artifacts in ${DIST}:"
-# Portable size listing (macOS BSD ls vs GNU ls).
-if ls -lh --help >/dev/null 2>&1; then
-  ls -lh "${DIST}"/*.tar.gz | awk '{printf "    %-10s  %s\n", $5, $NF}'
-else
-  ls -lh "${DIST}"/*.tar.gz | awk '{printf "    %-10s  %s\n", $5, $NF}'
-fi
+(cd "${DIST}" && if command -v sha256sum >/dev/null; then sha256sum ./*.tar.gz; else shasum -a 256 ./*.tar.gz; fi |
+  sed 's# \./# #' > checksums.txt)
 
 echo
-echo "==> total:"
-du -ch "${DIST}"/*.tar.gz | tail -n 1 | awk '{printf "    %s\n", $1}'
+echo "==> done:"
+ls -lh "${DIST}"
