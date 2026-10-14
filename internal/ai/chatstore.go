@@ -27,6 +27,9 @@ type StoredMessage struct {
 	// Context is attached file / selection text sent to the model with a
 	// user message but not shown in the transcript.
 	Context string `json:"context,omitempty"`
+	// Images are paths of image files sent with a user message. Only the
+	// path is stored; the file is read again for every request.
+	Images []string `json:"images,omitempty"`
 }
 
 // Conversation is one persisted chat. Port of mobocode's chat_store.dart,

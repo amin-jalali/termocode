@@ -276,6 +276,9 @@ func (m Model) aiPanelTargets(x0, width int) []hitTarget {
 	}
 	if !g.compact {
 		addButtons(g.dividerRow, m.aiDividerLine(width).buttons)
+		if bx0, bx1, _, ok := aiAttachButton(width); ok {
+			addButtons(g.footerRow, []aiLineButton{{bx0, bx1, "attach-file"}})
+		}
 		out = append(out, hitTarget{ID: "ai:input", X: x0 + 1, Y: g.inputTop, W: width - 1, H: g.footerRow - g.inputTop + 1})
 	}
 	return out

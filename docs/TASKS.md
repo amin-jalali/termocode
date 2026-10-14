@@ -239,6 +239,6 @@ screen.
 
 ## Group L — Upload / download (2026-10-14)
 
-- [ ] L1 (S) File → chat: dropped/pasted paths become attachment chips (text + images), attach button with file picker, `@file`
-- [ ] L2 (S) Chat → file: "Save as…" on code blocks, AI `save_file` result, export chat as .md
+- [x] L1 (S) File → chat: dropped/pasted paths become attachment chips (text + images), attach button with file picker, `@file`
+- [x] L2 (S) Chat → file: "Save as…" on code blocks, export chat as .md (the AI writes files with `write_file`; no extra `save_file` tool)
 - [ ] L3 (M) Local machine ↔ IDE over SSH: explorer "Download" / "Upload here" via kitty transfer, iTerm2 OSC 1337 File, trzsz; clear message when the terminal can't

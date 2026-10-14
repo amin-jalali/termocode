@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -33,7 +34,7 @@ func (p *openAIProvider) Stream(ctx context.Context, req Request) <-chan Chunk {
 // openAIMessage is the wire shape of one chat message.
 type openAIMessage struct {
 	Role       string           `json:"role"`
-	Content    *string          `json:"content"`
+	Content    any              `json:"content"` // string, nil or []part (images)
 	ToolCalls  []openAIToolCall `json:"tool_calls,omitempty"`
 	ToolCallID string           `json:"tool_call_id,omitempty"`
 }
@@ -52,7 +53,15 @@ func buildOpenAIBody(req Request, model string) map[string]any {
 	msgs := make([]openAIMessage, 0, len(req.Messages))
 	for _, m := range req.Messages {
 		content := m.Content
-		om := openAIMessage{Role: string(m.Role), Content: &content}
+		om := openAIMessage{Role: string(m.Role), Content: content}
+		if m.Role == RoleUser && len(m.Images) > 0 {
+			parts := []map[string]any{{"type": "text", "text": content}}
+			for _, im := range m.Images {
+				parts = append(parts, map[string]any{"type": "image_url", "image_url": map[string]any{
+					"url": "data:" + im.MediaType + ";base64," + base64.StdEncoding.EncodeToString(im.Data)}})
+			}
+			om.Content = parts
+		}
 		switch m.Role {
 		case RoleTool:
 			om.ToolCallID = m.ToolCallID
