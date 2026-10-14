@@ -21,7 +21,8 @@ import (
 //   ai_inline.go    — debounced inline completion requests
 //   ai_panel.go     — right-side chat panel rendering, keys, mouse
 //   ai_chat.go      — streaming chat turns through the tool agent
-//   ai_actions.go   — Explain / Fix / Edit / Doc proposals in the nvim diff
+//   ai_actions.go   — Explain / Fix / Edit / Doc proposals
+//   ai_review.go    — the review card for every proposed change
 //   ai_config_ui.go — Configure / Pick Model / OAuth sign-in flows
 //   ai_tools_app.go — editor-backed agent tools (LSP, buffers)
 //
@@ -63,8 +64,9 @@ type aiState struct {
 	actionGen    uint64
 	actionCancel context.CancelFunc
 	actionBusy   string
-	proposal     *aiProposal
-	editTarget   *aiRangeTarget // Edit-with-AI waiting for its instruction
+	// review is the open review card's files (ai_review.go).
+	review     *aiReview
+	editTarget *aiRangeTarget // Edit-with-AI waiting for its instruction
 
 	// configure / sign-in flow
 	cfgKind string
@@ -255,6 +257,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-export-chat", "AI: Export Chat as Markdown", ""},
 		{"ai-apply-proposal", "AI: Apply Proposed Edit", ""},
 		{"ai-discard-proposal", "AI: Discard Proposed Edit", ""},
+		{"ai-review", "AI: Review Pending Changes", ""},
 		{"ai-trigger-inline", "AI: Trigger Inline Completion", "Alt+\\"},
 		{"ai-toggle-inline", "AI: Toggle Inline Completions", "Alt+|"},
 		{"ai-configure", "AI: Configure Provider…", ""},
@@ -279,7 +282,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	// the configure / sign-in / credentials entries are the way out.
 	switch id {
 	case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials",
-		"ai-cancel", "ai-discard-proposal", "ai-history", "ai-pick-model", "ai-auto-approve":
+		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-history", "ai-pick-model", "ai-auto-approve":
 	default:
 		if c, ok := m.aiReady(); !ok {
 			return c, true
@@ -306,10 +309,12 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.aiApplyLastCodeBlock(), true
 	case "ai-export-chat":
 		return m.aiExportChat(), true
+	case "ai-review":
+		return m.showAIReview(), true
 	case "ai-apply-proposal":
-		return m.applyAIProposal(), true
+		return m.reviewDecideCurrent(true), true
 	case "ai-discard-proposal":
-		return m.discardAIProposal(true), true
+		return m.reviewDecideCurrent(false), true
 	case "ai-trigger-inline":
 		return m.aiTriggerInline(), true
 	case "ai-toggle-inline":

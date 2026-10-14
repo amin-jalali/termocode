@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/debounce"
+	"github.com/amin-jalali/termocode/internal/diffview"
 	"github.com/amin-jalali/termocode/internal/nvim"
 )
 
@@ -85,15 +86,13 @@ func TestAIGhostTextAndProposalNvim(t *testing.T) {
 	}
 	tgt.start, tgt.end = 5, 6
 	m.openAIProposal(aiProposal{target: tgt, repl: []string{"\tfmt.Println(\"hello\")", "\treturn"}, title: "test"})
-	wins, _ := c.EvalLuaString(`return tostring(#vim.api.nvim_list_wins())`)
-	if wins != "2" {
-		t.Fatalf("diff not opened, wins=%s", wins)
+	if !m.reviewOpen {
+		t.Fatal("review card not opened")
 	}
-	m.confirmOpen = false
-	m.applyAIProposal()
-	wins, _ = c.EvalLuaString(`return tostring(#vim.api.nvim_list_wins())`)
+	m.onAIReviewFinish(nextMsg(t, m.reviewDecideCurrent(true)).(diffview.FinishMsg))
+	wins, _ := c.EvalLuaString(`return tostring(#vim.api.nvim_list_wins())`)
 	lines, _ = c.CurrentBufLines()
-	if wins != "1" || lines[5] != "\tfmt.Println(\"hello\")" || lines[6] != "\treturn" {
+	if m.reviewOpen || wins != "1" || lines[5] != "\tfmt.Println(\"hello\")" || lines[6] != "\treturn" {
 		t.Fatalf("apply: wins=%s lines=%q", wins, lines)
 	}
 	_ = c.Command("silent! undo")

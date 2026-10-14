@@ -267,6 +267,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-apply-proposal":   aiNever("the user reviews proposed edits"),
 	"ai-export-chat":      aiConfirm(ai.ClassFileWrite), // writes ai-chat-<date>.md
 	"ai-discard-proposal": aiNever("the user reviews proposed edits"),
+	"ai-review":           aiNever("the user reviews proposed edits"),
 	"ai-trigger-inline":   aiNever("inline completion is for the user's typing"),
 	"ai-toggle-inline":    aiConfirm(ai.ClassIDE),
 	"ai-cancel":           aiNever("stops the model's own turn"),

@@ -682,15 +682,12 @@ func (m Model) aiDividerLine(width int) aiLine {
 			Foreground(theme.LG(theme.TextPrimary)).Render(" " + label + " ")
 	}
 	bg := theme.Bg(theme.BgPanel)
-	if s != nil && s.proposal != nil {
-		head := " " + aiSpark() + " edit ready "
-		a, d := "Apply", "Discard"
-		x := runewidth.StringWidth(head)
-		ax := x
-		dx := ax + len(a) + 2 + 1
-		row := theme.FgBg(theme.AIAccent, theme.BgPanel).Bold(true).Render(head) +
-			chip(a, theme.AccentGreen, 0.25) + bg.Render(" ") + chip(d, theme.DiagError, 0.2)
-		return aiLine{styled: row, buttons: []aiLineButton{{ax, ax + len(a) + 2, "proposal-apply"}, {dx, dx + len(d) + 2, "proposal-discard"}}}
+	if n := m.aiReviewPending(); n > 0 && !m.reviewOpen {
+		head := " " + aiSpark() + " " + strconv.Itoa(n) + " file" + plural(n) + " to review "
+		a := "Review"
+		ax := runewidth.StringWidth(head)
+		row := theme.FgBg(theme.AIAccent, theme.BgPanel).Bold(true).Render(head) + chip(a, theme.AccentGreen, 0.25)
+		return aiLine{styled: row, buttons: []aiLineButton{{ax, ax + len(a) + 2, "review-open"}}}
 	}
 	if s != nil && len(s.attachments) > 0 {
 		// Each chip is " ⊕ label × "; its "× " removes it.
@@ -1198,10 +1195,8 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 	switch {
 	case id == "configure":
 		return m.openAIConfigure()
-	case id == "proposal-apply":
-		return m.applyAIProposal()
-	case id == "proposal-discard":
-		return m.discardAIProposal(true)
+	case id == "review-open":
+		return m.showAIReview()
 	case id == "attach-file":
 		return m.openAIAttachPicker()
 	case strings.HasPrefix(id, "rm-attach:"):

@@ -79,8 +79,6 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 	switch m.confirmKind {
 	case confirmKindAITool:
 		return m.answerAIToolConfirm(id), true
-	case confirmKindAIProposal:
-		return m.onAIProposalConfirm(id), true
 	case confirmKindAIOAuth:
 		if id == "continue" {
 			return m.beginClaudeOAuth(), true
@@ -92,14 +90,11 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 	return nil, false
 }
 
-// onAIConfirmClosed handles Esc on an AI dialog: a tool call is denied,
-// a proposal stays open for review.
+// onAIConfirmClosed handles Esc on an AI dialog: a tool call is denied.
 func (m *Model) onAIConfirmClosed() tea.Cmd {
 	switch m.confirmKind {
 	case confirmKindAITool:
 		return m.answerAIToolConfirm("deny")
-	case confirmKindAIProposal:
-		return m.onAIProposalConfirm("review")
 	}
 	return nil
 }

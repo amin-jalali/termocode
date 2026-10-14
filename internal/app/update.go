@@ -377,6 +377,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	if m.confirmOpen {
 		return m.routeToConfirm(msg)
 	}
+	if m.reviewOpen {
+		return m.routeToReview(msg)
+	}
 	if m.settingsModalOpen {
 		return m.routeToSettingsModal(msg)
 	}
