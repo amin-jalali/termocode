@@ -79,6 +79,8 @@ type Term struct {
 	exited    chan struct{}
 	exitErr   error
 	readDone  chan struct{}
+	started   time.Time // when the process was started
+	altAt     time.Time // first alt-screen switch (\e[?1049h) seen
 }
 
 // StartOpts configures Start.
@@ -89,6 +91,9 @@ type StartOpts struct {
 	NvimInit   string   // optional init.lua for the embedded nvim
 	Home       string   // reuse a HOME (e.g. to start again after a disconnect)
 	Env        []string // extra environment ("K=V")
+	// Silent makes the terminal answer no queries at all (OSC 11, DA1,
+	// CSI 6n …), like some muxers, IDE terminals and dumb ptys.
+	Silent bool
 }
 
 // Start launches termocode in a fresh PTY with an isolated HOME.
@@ -160,6 +165,7 @@ func Start(t *testing.T, o StartOpts) *Term {
 		DisableMode:      func(m ansi.Mode) { delete(tm.modes, modeKey(m)) },
 	})
 
+	tm.started = time.Now()
 	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: uint16(o.Cols), Rows: uint16(o.Rows)})
 	if err != nil {
 		t.Fatalf("start termocode: %v", err)
@@ -185,7 +191,7 @@ func Start(t *testing.T, o StartOpts) *Term {
 		buf := make([]byte, 4096)
 		for {
 			n, err := em.Read(buf)
-			if n > 0 {
+			if n > 0 && !o.Silent {
 				_, _ = ptmx.Write(buf[:n])
 			}
 			if err != nil {
@@ -256,6 +262,9 @@ func (tm *Term) feed(p []byte) {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 	tm.raw.Write(p)
+	if tm.altAt.IsZero() && bytes.Contains(tm.raw.Bytes(), []byte("\x1b[?1049h")) {
+		tm.altAt = time.Now()
+	}
 	data := append(tm.pending, p...)
 	tm.pending = nil
 	for i := 0; i < len(data); {
