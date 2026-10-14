@@ -321,3 +321,66 @@ func TestSystemPromptMentionsIDETools(t *testing.T) {
 		t.Errorf("hint without the tool:\n%s", s)
 	}
 }
+
+// With list_actions there, the prompt says: for anything without a typed
+// tool, find the command with list_actions, then run it with execute_action.
+func TestSystemPromptMentionsListActions(t *testing.T) {
+	tools := []Tool{{Name: "open_file"}, {Name: "list_actions"}, {Name: "execute_action"}}
+	for _, native := range []bool{true, false} {
+		s := SystemPrompt("base", tools, native)
+		if !strings.Contains(s, "list_actions(query)") || !strings.Contains(s, "execute_action(id)") {
+			t.Errorf("native=%v: no list_actions hint:\n%s", native, s)
+		}
+	}
+	if s := SystemPrompt("base", []Tool{{Name: "open_file"}}, true); strings.Contains(s, "list_actions") {
+		t.Errorf("list_actions hint without the tool:\n%s", s)
+	}
+}
+
+// Gate picks the confirm rule per call: a safe call runs at once, a risky
+// one asks with the class Gate returns, and a call with class "" always
+// asks (the dialog has no "Always allow"), even when every class is
+// auto-approved.
+func TestAgentGateDecidesPerCall(t *testing.T) {
+	tool := Tool{Name: "act",
+		Gate: func(a map[string]any) (bool, string) {
+			switch ArgString(a, "id") {
+			case "safe":
+				return false, ""
+			case "risky":
+				return true, ClassGit
+			}
+			return true, ""
+		},
+		Run: func(_ context.Context, a map[string]any) (string, error) { return "ran " + ArgString(a, "id"), nil }}
+	run := func(id string, auto map[string]bool) (asked []string, res string) {
+		p := &scripted{tools: true, replies: []Chunk{
+			{ToolCalls: []ToolCall{{ID: "1", Name: "act", Args: map[string]any{"id": id}}}},
+		}}
+		a := &Agent{Provider: p, Tools: []Tool{tool}, Native: true, AutoApprove: auto,
+			Confirm: func(_ context.Context, t Tool, _ string) bool {
+				asked = append(asked, fmt.Sprintf("%v/%s", t.Mutating, t.Class))
+				return true
+			}}
+		_, added := collectEvents(a, []Message{{Role: RoleUser, Content: id}})
+		for _, m := range added {
+			if m.Role == RoleTool {
+				res = m.Content
+			}
+		}
+		return asked, res
+	}
+	if asked, res := run("safe", nil); len(asked) != 0 || res != "ran safe" {
+		t.Errorf("safe: asked %v, result %q", asked, res)
+	}
+	if asked, res := run("risky", nil); len(asked) != 1 || asked[0] != "true/git" || res != "ran risky" {
+		t.Errorf("risky: asked %v, result %q", asked, res)
+	}
+	if asked, _ := run("risky", map[string]bool{ClassGit: true}); len(asked) != 0 {
+		t.Errorf("risky with git auto-approved: asked %v", asked)
+	}
+	all := map[string]bool{ClassGit: true, ClassIDE: true, ClassRun: true, ClassFileWrite: true}
+	if asked, _ := run("drop", all); len(asked) != 1 || asked[0] != "true/" {
+		t.Errorf("destructive: asked %v, want one ask with no class", asked)
+	}
+}
