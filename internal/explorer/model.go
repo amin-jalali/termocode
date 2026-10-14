@@ -179,6 +179,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, nil
 	case "esc", "escape":
 		if len(m.selected) > 0 {
+			touch()
 			m.selected = nil
 			return m, nil
 		}
@@ -188,27 +189,32 @@ func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		// A plain arrow / motion clears the multi-selection so the user
 		// gets the "click somewhere fresh" semantics they expect when
 		// they're done with a selection.
+		touch()
 		m.selected = nil
 		if m.cursor < len(vis)-1 {
 			m.cursor++
 		}
 		m.anchorPath = vis[m.cursor].Node.Path
 	case "k", "up":
+		touch()
 		m.selected = nil
 		if m.cursor > 0 {
 			m.cursor--
 		}
 		m.anchorPath = vis[m.cursor].Node.Path
 	case "g", "home":
+		touch()
 		m.selected = nil
 		m.cursor = 0
 		m.anchorPath = vis[m.cursor].Node.Path
 	case "G", "end":
+		touch()
 		m.selected = nil
 		m.cursor = len(vis) - 1
 		m.anchorPath = vis[m.cursor].Node.Path
 	case "enter", " ":
 		node := vis[m.cursor].Node
+		touch()
 		m.selected = nil
 		m.anchorPath = node.Path
 		if node.IsDir {
@@ -305,6 +311,19 @@ func (m *Model) Reload() {
 // CountVisibleFiles returns the number of file (non-directory) entries
 // currently visible in the tree. Folders aren't counted.
 func (m Model) CountVisibleFiles() int {
+	k := countKey{gen: treeGen.Load(), root: m.root, extraRoots: m.extraRoots, showHidden: m.showHidden}
+	countCache.Lock()
+	defer countCache.Unlock()
+	if countCache.ok && countCache.key.equal(&k) {
+		return countCache.n
+	}
+	n := m.countVisibleFiles()
+	k.extraRoots = append([]*Node(nil), m.extraRoots...)
+	countCache.ok, countCache.key, countCache.n = true, k, n
+	return n
+}
+
+func (m Model) countVisibleFiles() int {
 	n := 0
 	for _, e := range m.visible() {
 		if !e.Node.IsDir {
@@ -426,6 +445,7 @@ func (m Model) HandleMouse(x, y int, t tea.MouseEventType, ctrl, shift bool) (Mo
 
 		// Plain click — clear any prior multi-selection, set cursor +
 		// anchor to the new row, then perform the row's primary action.
+		touch()
 		m.selected = nil
 		m.cursor = idx
 		m.anchorPath = path
@@ -469,6 +489,7 @@ func (m *Model) RevealPath(path string) {
 			}
 		}
 		if !cur.Expanded {
+			touch()
 			cur.Expanded = true
 		}
 		var next *Node
@@ -535,6 +556,7 @@ func (m Model) IsSelected(path string) bool {
 // row is left where it is; the next render will paint it as the only
 // highlighted row.
 func (m *Model) ClearSelection() {
+	touch()
 	m.selected = nil
 }
 
@@ -570,6 +592,7 @@ func (m *Model) SelectRange(anchor, target string) {
 	if ti < ai {
 		ai, ti = ti, ai
 	}
+	touch()
 	m.selected = make(map[string]struct{}, ti-ai+1)
 	for i := ai; i <= ti; i++ {
 		m.selected[vis[i].Node.Path] = struct{}{}
@@ -579,7 +602,9 @@ func (m *Model) SelectRange(anchor, target string) {
 // toggleSelection adds path if missing, removes if present. Called by
 // the public ToggleSelection and the Ctrl+click / Ctrl+Space handlers.
 func (m *Model) toggleSelection(path string) {
+	touch()
 	if m.selected == nil {
+		touch()
 		m.selected = make(map[string]struct{})
 	}
 	if _, ok := m.selected[path]; ok {
@@ -595,6 +620,7 @@ func (m *Model) toggleSelection(path string) {
 // the cursor row alone.
 func (m *Model) applyShiftRange(vis []VisibleEntry) {
 	if len(vis) == 0 {
+		touch()
 		m.selected = nil
 		return
 	}
@@ -622,6 +648,7 @@ func (m *Model) applyShiftRange(vis []VisibleEntry) {
 	if hi < lo {
 		lo, hi = hi, lo
 	}
+	touch()
 	m.selected = make(map[string]struct{}, hi-lo+1)
 	for i := lo; i <= hi; i++ {
 		m.selected[vis[i].Node.Path] = struct{}{}
@@ -635,6 +662,7 @@ func (m *Model) selectAllVisible(vis []VisibleEntry) {
 	if len(vis) == 0 {
 		return
 	}
+	touch()
 	m.selected = make(map[string]struct{}, len(vis))
 	for _, e := range vis {
 		m.selected[e.Node.Path] = struct{}{}
