@@ -49,6 +49,32 @@ To put code from the answer into your file, run
 Chats are saved. Run **AI: Chat History…** to open an old one, and
 **AI: New Chat** to start fresh. The last 50 chats are kept.
 
+### Files in and out of the chat
+
+Add files to your next message in three ways:
+
+- **Drag and drop.** Drop files from your file manager onto the terminal
+  while the chat input has focus. Each file becomes a chip above the input.
+  Pasting a file path works the same way.
+- **Attach button.** Click the paperclip at the right end of the input
+  box and pick a file.
+- **`@path`.** Write `@src/main.go` (or `@file src/main.go`) in your
+  message. The file is attached when you send.
+
+Text files are sent as text (up to 60 KB). Images (PNG, JPEG, GIF, WebP)
+are sent as images to Anthropic, OpenAI and OpenRouter. Other providers
+get a short note instead. Other binary files are refused.
+Click `×` on a chip to remove it, or press `Backspace` in the empty input.
+
+To get files out:
+
+- **Save as…** on a code block writes it to a file in the workspace. The
+  name comes from the answer (for example `cmd/main.go`) or from the
+  language (`snippet.go`). It asks before it replaces a file, and opens
+  the new file.
+- **AI: Export Chat as Markdown** writes the chat to
+  `ai-chat-<date>.md` in the workspace and opens it.
+
 ## AI code actions (review, then apply)
 
 1. Put the cursor on a line, or select some lines.

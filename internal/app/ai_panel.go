@@ -478,15 +478,18 @@ func (m Model) aiDividerLine(width int) aiLine {
 		return aiLine{styled: row, buttons: []aiLineButton{{ax, ax + len(a) + 2, "proposal-apply"}, {dx, dx + len(d) + 2, "proposal-discard"}}}
 	}
 	if s != nil && len(s.attachments) > 0 {
+		// Each chip is " ⊕ label × "; its "× " removes it.
 		row := bg.Render(" ")
 		x := 1
-		for _, at := range s.attachments {
-			lbl := aiAttachGlyph() + " " + at.Label
+		var buttons []aiLineButton
+		for i, at := range s.attachments {
+			lbl := aiAttachGlyph() + " " + at.Label + " ×"
 			row += chip(lbl, theme.TextPrimary, 0.10) + bg.Render(" ")
-			x += runewidth.StringWidth(lbl) + 3
+			w := runewidth.StringWidth(lbl)
+			buttons = append(buttons, aiLineButton{x + w, x + w + 2, "rm-attach:" + strconv.Itoa(i)})
+			x += w + 3
 		}
-		row += theme.FgBg(theme.TextDim, theme.BgPanel).Render("×")
-		return aiLine{styled: row, buttons: []aiLineButton{{x, x + 1, "clear-attach"}}}
+		return aiLine{styled: row, buttons: buttons}
 	}
 	return aiLine{}
 }
@@ -638,16 +641,26 @@ func (m Model) renderAIInput(width, rows int) []string {
 			out = append(out, line("", 0))
 		}
 	}
+	// The attach button sits at the right end of the bottom border.
+	btn, btnW := "", 0
+	if _, _, l, ok := aiAttachButton(width); ok {
+		btn, btnW = l, runewidth.StringWidth(l)
+	}
 	hint := ""
 	for _, h := range aiInputHints(m.ai) {
-		if runewidth.StringWidth(h)+4 <= inner {
+		if runewidth.StringWidth(h)+4+btnW+1 <= inner {
 			hint = " " + h + " "
 			break
 		}
 	}
 	hw := runewidth.StringWidth(hint)
-	bottom := edge.Render("╰─") + lipgloss.NewStyle().Background(theme.LG(theme.BgPanel)).Foreground(theme.LG(theme.TextDim)).Render(hint) +
-		edge.Render(strings.Repeat("─", maxInt(inner-1-hw, 0))+"╯")
+	bottom := edge.Render("╰─") + lipgloss.NewStyle().Background(theme.LG(theme.BgPanel)).Foreground(theme.LG(theme.TextDim)).Render(hint)
+	if btn != "" {
+		bottom += edge.Render(strings.Repeat("─", maxInt(inner-2-hw-btnW, 0))) +
+			theme.FgBg(theme.AIAccent, theme.BgPanel).Bold(true).Render(btn) + edge.Render("─╯")
+	} else {
+		bottom += edge.Render(strings.Repeat("─", maxInt(inner-1-hw, 0)) + "╯")
+	}
 	out = append(out, panel.Render(" ")+bottom+panel.Render(" "))
 	return out
 }
@@ -685,6 +698,10 @@ func (m *Model) routeAIPanelKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		m.aiInsert([]rune{'\n'})
 		return nil, true
 	case "backspace", "ctrl+h":
+		if s.caret == 0 && len(s.input) == 0 && len(s.attachments) > 0 {
+			s.attachments = s.attachments[:len(s.attachments)-1]
+			return nil, true
+		}
 		if s.caret > 0 {
 			s.input = append(s.input[:s.caret-1], s.input[s.caret:]...)
 			s.caret--
@@ -749,6 +766,11 @@ func (m *Model) routeAIPanelKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 	}
 	switch msg.Type {
 	case tea.KeyRunes:
+		if msg.Paste { // a dropped file arrives as a pasted path
+			if paths, ok := aiDroppedPaths(string(msg.Runes), aiWorkspaceRoot()); ok {
+				return m.aiAttachPaths(paths), true
+			}
+		}
 		m.aiInsert(msg.Runes)
 		return nil, true
 	case tea.KeySpace:
@@ -806,7 +828,11 @@ func (m *Model) submitAIInput() tea.Cmd {
 	if text == "" {
 		return nil
 	}
-	cmd := m.sendAIChat(text)
+	var attach tea.Cmd
+	if _, ok := m.aiReady(); ok && !s.streaming {
+		attach = m.aiAttachMentions(text) // "@path" words
+	}
+	cmd := tea.Batch(attach, m.sendAIChat(text))
 	if !s.streaming {
 		return cmd // not sent (unconfigured / busy) — keep the draft
 	}
@@ -865,6 +891,9 @@ func (m Model) aiPanelTargetAt(x, y int) string {
 			}
 		}
 	case !g.compact && y >= g.inputTop && y <= g.footerRow:
+		if bx0, bx1, _, ok := aiAttachButton(width); ok && y == g.footerRow && localX >= bx0 && localX < bx1 {
+			return "ai:btn:attach-file"
+		}
 		return "ai:input"
 	}
 	return "ai:body"
@@ -923,9 +952,16 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 		return m.applyAIProposal()
 	case id == "proposal-discard":
 		return m.discardAIProposal(true)
-	case id == "clear-attach":
-		m.aiS().attachments = nil
+	case id == "attach-file":
+		return m.openAIAttachPicker()
+	case strings.HasPrefix(id, "rm-attach:"):
+		s := m.aiS()
+		if i, err := strconv.Atoi(strings.TrimPrefix(id, "rm-attach:")); err == nil && i >= 0 && i < len(s.attachments) {
+			s.attachments = append(s.attachments[:i], s.attachments[i+1:]...)
+		}
 		return nil
+	case strings.HasPrefix(id, "save:"):
+		return m.aiSaveCodeBlockAs(id)
 	case strings.HasPrefix(id, "suggest:"):
 		for _, sg := range aiSuggestions {
 			if "suggest:"+sg.id == id {

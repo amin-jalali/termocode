@@ -41,6 +41,28 @@ type Message struct {
 	ToolCallID string
 	ToolName   string
 	Blocks     json.RawMessage
+	// Images are sent with a user message (providers with image input;
+	// see SupportsImages).
+	Images []Image
+}
+
+// Image is one picture attached to a user message.
+type Image struct {
+	MediaType string // image/png, image/jpeg, image/gif, image/webp
+	Data      []byte
+}
+
+// SupportsImages reports whether p sends images to the model: Anthropic
+// and the hosted OpenAI-style APIs (OpenAI, OpenRouter) do; local and
+// custom servers are not assumed to (their model may be text only).
+func SupportsImages(p Provider) bool {
+	switch p := p.(type) {
+	case *anthropicProvider:
+		return true
+	case *openAIProvider:
+		return p.cfg.Kind == KindOpenAI || p.cfg.Kind == KindOpenRouter
+	}
+	return false
 }
 
 // ToolSpec describes one callable tool for native tool calling. Schema is
