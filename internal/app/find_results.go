@@ -40,6 +40,33 @@ type findResultsRun struct {
 	query  string
 	opened bool     // the Find Results buffer exists for this run
 	roots  []string // workspace folders searched, for display paths
+	// reuse: a refresh after files changed. The results replace the text
+	// of the open Find Results buffer in place; no window switches to it.
+	reuse bool
+}
+
+// findResultsBufLua says whether the Find Results buffer still exists.
+const findResultsBufLua = `local b = vim.g.termocode_find_results_buf
+return b ~= nil and vim.api.nvim_buf_is_valid(b)`
+
+// refreshSearchResults searches again after files changed on disk (the
+// agent wrote, renamed or deleted files, ran a command, switched
+// branches…), so the results never point at old lines or gone files:
+// the Find Results buffer, when it is still open (shown or not), and the
+// Find in Files overlay, when it is open.
+func (m *Model) refreshSearchResults() tea.Cmd {
+	var cmds []tea.Cmd
+	if m.searchOpen {
+		cmds = append(cmds, m.search.Refresh())
+	}
+	if m.nvim != nil && strings.TrimSpace(m.findRun.query) != "" {
+		var open bool
+		if err := m.nvim.ExecLuaResult(findResultsBufLua, &open); err == nil && open {
+			cmds = append(cmds, m.runFindInFiles(m.findRun.query))
+			m.findRun.reuse = true
+		}
+	}
+	return tea.Batch(cmds...)
 }
 
 // findBatchMsg carries one search.Batch back into Update. ch rides along so
@@ -110,9 +137,12 @@ func (m *Model) handleFindBatch(msg findBatchMsg) tea.Cmd {
 		lines := formatFindGroups(b.Results, run.roots)
 		if !run.opened {
 			run.opened = true
-			m.openFindResultsBuffer(run.query, append([]string{
-				fmt.Sprintf("Searching for %q…", run.query), "",
-			}, lines...))
+			first := append([]string{fmt.Sprintf("Searching for %q…", run.query), ""}, lines...)
+			if run.reuse {
+				m.resetFindResults(first)
+			} else {
+				m.openFindResultsBuffer(run.query, first)
+			}
 		} else {
 			m.appendFindResults("", lines)
 		}
@@ -125,6 +155,11 @@ func (m *Model) handleFindBatch(msg findBatchMsg) tea.Cmd {
 		run.cancel = nil
 	}
 	var toastCmd tea.Cmd
+	if run.reuse && !run.opened && b.Err == nil {
+		// The refresh found nothing: the old results must go.
+		run.opened = true
+		m.resetFindResults([]string{fmt.Sprintf("Searching for %q…", run.query), ""})
+	}
 	switch {
 	case run.opened:
 		header := fmt.Sprintf("Searching %d file%s for %q", b.Summary.Files, plurals(b.Summary.Files), run.query)
@@ -185,6 +220,36 @@ vim.b[buf].termocode_nav_row = nil
 `, tmp, query)
 	_ = m.nvim.ExecLua(lua)
 	m.focus = FocusEditor
+}
+
+// resetFindResultsLua replaces the text of the Find Results buffer with
+// the lines in a file (arg). Windows showing it keep their cursor row.
+const resetFindResultsLua = `
+local file = ...
+local buf = vim.g.termocode_find_results_buf
+if not buf or not vim.api.nvim_buf_is_valid(buf) then return end
+local wins = {}
+for _, w in ipairs(vim.fn.win_findbuf(buf)) do wins[w] = vim.api.nvim_win_get_cursor(w) end
+vim.bo[buf].modifiable = true
+vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.fn.readfile(file))
+vim.bo[buf].modifiable = false
+local n = vim.api.nvim_buf_line_count(buf)
+for w, c in pairs(wins) do pcall(vim.api.nvim_win_set_cursor, w, { math.min(c[1], n), 0 }) end
+_G._termocode_find_paths = {}
+vim.b[buf].termocode_nav_row = nil
+`
+
+// resetFindResults replaces the text of the open Find Results buffer (a
+// refresh), without switching any window to it.
+func (m *Model) resetFindResults(lines []string) {
+	if m.nvim == nil {
+		return
+	}
+	tmp := filepath.Join(os.TempDir(), "termocode-find-results-reset.txt")
+	if err := os.WriteFile(tmp, []byte(strings.Join(lines, "\n")+"\n"), 0o644); err != nil {
+		return
+	}
+	_ = m.nvim.ExecLuaArgs(resetFindResultsLua, tmp)
 }
 
 // appendFindResults appends lines to the Find Results buffer and, when
