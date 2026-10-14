@@ -198,12 +198,13 @@ func TestDownloadFallbackShowsScp(t *testing.T) {
 	if !d.WaitForText("scp", 2*time.Second) || !strings.Contains(screen(d), "workspace/a.txt'") {
 		t.Fatalf("no scp command:\n%s", screen(d))
 	}
-	clip := stubClipboard(t, true)
+	clip := &fakeClipboard{}
+	t.Cleanup(app.SetClipboardSink(func(s string) { clip.mu.Lock(); clip.last = s; clip.n++; clip.mu.Unlock() }))
 	clickText(d, "Copy Command")
 	if !d.WaitForText("Command copied", 2*time.Second) {
 		t.Errorf("no copied toast:\n%s", screen(d))
 	}
-	if got := clip.text(); !strings.HasPrefix(got, "scp '") || !strings.HasSuffix(got, "workspace/a.txt' .") {
+	if got, _ := clip.get(); !strings.HasPrefix(got, "scp '") || !strings.HasSuffix(got, "workspace/a.txt' .") {
 		t.Errorf("copied %q", got)
 	}
 	if term.wrote() != 0 {
@@ -223,7 +224,7 @@ func TestDownloadFallbackCopyFails(t *testing.T) {
 	if !d.WaitForText("Copy Command", 2*time.Second) {
 		t.Fatalf("no dialog:\n%s", screen(d))
 	}
-	stubClipboard(t, false)
+	// No sink: the test terminal is headless, so no clipboard is reached.
 	clickText(d, "Copy Command")
 	if !d.WaitForText("Could not copy", 2*time.Second) {
 		t.Errorf("no failure toast:\n%s", screen(d))
@@ -231,33 +232,6 @@ func TestDownloadFallbackCopyFails(t *testing.T) {
 	if strings.Contains(screen(d), "Command copied") {
 		t.Errorf("claims copied:\n%s", screen(d))
 	}
-}
-
-// fakeClipboard records what Copy Command copied.
-type fakeClipboard struct {
-	mu  sync.Mutex
-	got string
-}
-
-func (c *fakeClipboard) text() string {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.got
-}
-
-// stubClipboard replaces the clipboard (CI machines have none); ok is
-// what the stub reports.
-func stubClipboard(t *testing.T, ok bool) *fakeClipboard {
-	c := &fakeClipboard{}
-	t.Cleanup(app.SetTransferClipboard(func(s string) bool {
-		c.mu.Lock()
-		defer c.mu.Unlock()
-		if ok {
-			c.got = s
-		}
-		return ok
-	}))
-	return c
 }
 
 // Spec: Given a terminal without file transfer,
