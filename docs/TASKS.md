@@ -231,7 +231,7 @@ screen.
 - [x] K2 (M) `settings_list` / `settings_set` (theme, tab size, icons, word wrap…; never credentials or ai_auto_approve), `layout_set` (sidebar width, panel size, zen, panels), `get_ide_state`, one-line capability summary in the system prompt — settings_set asks (class `settings`); layout_set runs at once and never hides the AI panel
 - [x] K3 (M) Terminal: `terminal_send`, `terminal_read`, `terminal_tabs` (visible integrated terminal)
 - [ ] K4 (M) Git: hunks (stage/unstage/discard), blame, log, stash, unstage, fetch
-- [ ] K5 (M) LSP: rename symbol, code actions (list/apply), symbols, type definition, implementation
+- [x] K5 (M) LSP: `lsp_hover`, `lsp_symbols` (file outline / workspace query), `lsp_nav` type_definition + implementation (auto); `lsp_rename` and `lsp_code_actions` apply (fileWrite, through nvim so undo works; save only files with no unsaved edits; no new tabs); clear "no language server" error with the installer hint
 - [ ] K6 (S) Tasks/tests typed tools + `tests_results`
 - [ ] K7 (L) Debugger: breakpoints, start, continue/step/stop, state
 - [ ] K8 (S) LSP/DAP installer, extensions, workspace folders, docs reference page
