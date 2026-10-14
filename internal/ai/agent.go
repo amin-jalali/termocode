@@ -78,6 +78,11 @@ func SystemPrompt(base string, tools []Tool, native bool) string {
 		ide += " run_command runs hidden and returns the output; terminal_send types into the user's visible terminal " +
 			"(dev servers, watchers, tests they want to watch) and terminal_read(wait_ms) reads the result."
 	}
+	if _, ok := FindTool(tools, "tests_run"); ok {
+		ide += " To run tests, call tests_run(scope) and then tests_results(wait_ms): it lists each failure with file:line. " +
+			"For build or other project tasks, tasks_list shows them, tasks_run runs one in a visible tab and " +
+			"tasks_status(wait_ms) gives the exit code and output."
+	}
 	if native {
 		return base + "\n\nYou can call IDE tools (files, search, git, LSP, shell, editor). " +
 			"Mutating tools ask the user first; if one is declined, do not retry it." + ide
