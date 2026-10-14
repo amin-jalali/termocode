@@ -33,6 +33,9 @@ const (
 	confirmKindQuit       // unsaved files on quit (quit.go)
 	confirmKindHotExit    // restore unsaved files of a crashed run (hot_exit.go)
 	confirmKindNvimExited // nvim stopped on its own: Restart / Quit (nvim_exit.go)
+	// Download / Upload (transfer.go).
+	confirmKindTransferLarge
+	confirmKindTransferFallback
 )
 
 // findBuffer returns the buffer info for the given id, if known.
@@ -185,6 +188,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		return m.onHotExitConfirm(id)
 	case confirmKindNvimExited:
 		return m.onNvimExitedConfirm(id)
+	case confirmKindTransferLarge, confirmKindTransferFallback:
+		return m.onXferConfirm(m.confirmKind, id)
 	}
 	return nil
 }

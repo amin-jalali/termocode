@@ -237,6 +237,8 @@ func explorerFileMenuItems() []menu.Item {
 		{Sep: true},
 		{ID: "copy-path", Title: "Copy Path", Icon: "⎘"},
 		{ID: "reveal-terminal", Title: "Reveal in Terminal", Icon: "❯"},
+		{Sep: true},
+		{ID: "download", Title: "Download", Icon: "↓"},
 	}
 }
 
@@ -250,6 +252,9 @@ func explorerDirMenuItems() []menu.Item {
 		{Sep: true},
 		{ID: "open-terminal", Title: "Open in Terminal", Icon: "❯"},
 		{ID: "copy-path", Title: "Copy Path", Icon: "⎘"},
+		{Sep: true},
+		{ID: "download", Title: "Download as .tar.gz", Icon: "↓"},
+		{ID: "upload", Title: "Upload Here...", Icon: "↑"},
 	}
 }
 
@@ -326,6 +331,10 @@ func (m *Model) handleMenuSelect(id string) tea.Cmd {
 			_ = m.nvim.OpenFile("vsplit", path)
 		}
 		m.focus = FocusEditor
+	case "download":
+		return m.downloadPath(path)
+	case "upload":
+		return m.uploadTo(path)
 	case "copy-path":
 		m.copyToClipboard(path)
 		m.err = "Copied: " + path
@@ -562,7 +571,7 @@ func openShellInDirCmd(dir string) tea.Cmd {
 	c := exec.Command("/bin/sh", "-c", banner)
 	c.Env = os.Environ()
 	c.Dir = dir
-	return tea.ExecProcess(c, func(err error) tea.Msg {
+	return execProcess(c, func(err error) tea.Msg {
 		if err != nil {
 			return ErrMsg{Err: err}
 		}

@@ -93,6 +93,10 @@ func (in *Input) Read(p []byte) (int, error) {
 	return c, err
 }
 
+// Feed filters bytes read elsewhere (an upload reads the terminal
+// itself): answers go to the listener, the other bytes are returned.
+func (in *Input) Feed(b []byte) []byte { return in.filter(b) }
+
 // filter returns b without answers (with the held tail of the last call
 // in front).
 func (in *Input) filter(b []byte) []byte {

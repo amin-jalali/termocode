@@ -93,6 +93,46 @@ something went wrong. Backups live in
 `~/.local/state/termocode/backup/` (or `$XDG_STATE_HOME/termocode/backup/`).
 Files that never had a name (new, unsaved buffers) are not backed up.
 
+## Download and upload files
+
+Move files between the workspace and your own computer through the
+terminal. No extra port and no second connection.
+
+- **Download**: right-click a file or folder in the explorer and pick
+  **Download** (a folder comes as one `.tar.gz`). Or run
+  **File: Download to This Computer** from the palette: it takes the
+  explorer row when the explorer has focus, else the open file.
+- **Upload**: right-click a folder and pick **Upload Here...**, or run
+  **File: Upload from This Computer...** (the explorer folder, else the
+  workspace root).
+
+A download runs in the background, with a progress toast. Stop it with
+**File: Cancel Download**. A file over 50 MB asks first.
+
+| Terminal | Download | Upload |
+| --- | --- | --- |
+| kitty | yes (kitty file transfer, saved in `~/Downloads`) | yes: type the path on your computer, for example `~/Documents/report.pdf` or a folder |
+| iTerm2 | yes (saved in your Downloads folder; up to 256 MB) | yes: iTerm2 opens its file picker |
+| WezTerm, Ghostty, GNOME Terminal, others | scp command | scp command |
+| any terminal, with [trzsz](https://trzsz.github.io/) | `tsz` (when installed on the server) | `trz` |
+
+- kitty asks you to allow every transfer. Click **Allow** in kitty.
+- During an upload termocode hands the terminal over for a moment and
+  shows what to do. Press `Ctrl+C` to cancel.
+- An upload never replaces a file: when the name is taken, the new file
+  gets ` (1)`. Uploads only go into the workspace.
+- When the terminal can do neither, a dialog shows a ready `scp` command
+  with the real host and path. **Copy Command** puts it in your local
+  clipboard (OSC 52). When `tsz` / `trz` are installed on the server, the
+  dialog also offers **Use trzsz** (needs trzsz-ssh or a trzsz terminal
+  plugin on your computer).
+- Over SSH, termocode finds iTerm2 by `LC_TERMINAL` (ssh sends `LC_*` by
+  default) and kitty by `TERM=xterm-kitty`. Inside tmux or screen the
+  terminal's answers do not reach termocode, so the scp dialog shows.
+- Force a protocol with `TERMOCODE_TRANSFER=kitty`, `iterm2` or `off`.
+- A persistent session passes the transfer to the attached terminal. A
+  download is lost when the terminal disconnects in the middle.
+
 ## Security
 
 Sessions listen on a unix socket only, never on the network. The socket

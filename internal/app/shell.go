@@ -31,7 +31,7 @@ func openShellCmd() tea.Cmd {
 	}
 	c := exec.Command(shell)
 	c.Env = os.Environ()
-	return tea.ExecProcess(c, func(err error) tea.Msg {
+	return execProcess(c, func(err error) tea.Msg {
 		if err != nil {
 			return ErrMsg{Err: err}
 		}
