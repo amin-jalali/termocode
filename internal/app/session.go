@@ -190,8 +190,8 @@ func writeSessionFile(path string, s SessionState) {
 	if err != nil {
 		return
 	}
-	// saveSession runs on every editor state change; skip the write when
-	// nothing changed.
+	// Skip the write when nothing changed (the layout half often is the
+	// same; see sessionWriter for how often this runs).
 	if old, err := os.ReadFile(path); err == nil && bytes.Equal(old, data) {
 		return
 	}
