@@ -70,6 +70,8 @@ type testsRunRequest struct {
 	file    string
 	caseKey []string
 	failed  bool
+	// name runs the tests with this name (exact, else containing it).
+	name string
 	// atLine with file runs the test declared nearest above that line
 	// (the whole file when none).
 	atLine int
@@ -154,21 +156,38 @@ func (m *Model) applyTestsDiscovered(msg testsDiscoveredMsg) tea.Cmd {
 	return nil
 }
 
+// testsRunProblem is why a request can not run: a toast for the user,
+// an error for the AI's tests_run.
+type testsRunProblem struct {
+	level toast.Severity
+	msg   string
+}
+
 // runTestsRequest resolves a request against the tree and starts the run.
 // With no tree yet it queues the request behind a discovery walk.
 func (m *Model) runTestsRequest(req testsRunRequest) tea.Cmd {
+	cmd, p := m.tryTestsRequest(req)
+	if p != nil {
+		var t tea.Cmd
+		m.toast, t = m.toast.Push(p.level, p.msg)
+		return t
+	}
+	return cmd
+}
+
+// tryTestsRequest is runTestsRequest that returns the problem instead of
+// showing it.
+func (m *Model) tryTestsRequest(req testsRunRequest) (tea.Cmd, *testsRunProblem) {
 	st := m.testView
 	if st == nil {
-		return nil
+		return nil, nil
 	}
 	if !st.discovered || st.tree == nil {
 		st.pending = &req
-		return m.refreshTests()
+		return m.refreshTests(), nil
 	}
 	if st.tree.FW == tests.FrameworkNone {
-		var t tea.Cmd
-		m.toast, t = m.toast.Push(toast.Warn, "No test runner detected for this project")
-		return t
+		return nil, &testsRunProblem{toast.Warn, "No test runner detected for this project"}
 	}
 	scope := tests.Scope{Kind: tests.ScopeAll}
 	switch {
@@ -180,11 +199,15 @@ func (m *Model) runTestsRequest(req testsRunRequest) tea.Cmd {
 			}
 		})
 		if len(failed) == 0 {
-			var t tea.Cmd
-			m.toast, t = m.toast.Push(toast.Info, "No failed tests to rerun")
-			return t
+			return nil, &testsRunProblem{toast.Info, "No failed tests to rerun"}
 		}
 		scope = tests.Scope{Kind: tests.ScopeCases, Cases: failed}
+	case req.name != "":
+		cs := testsByName(st.tree, req.name)
+		if len(cs) == 0 {
+			return nil, &testsRunProblem{toast.Warn, "No test named " + req.name}
+		}
+		scope = tests.Scope{Kind: tests.ScopeCases, Cases: cs}
 	case req.pkgDir != "":
 		for _, p := range st.tree.Packages {
 			if p.Dir == req.pkgDir {
@@ -198,9 +221,7 @@ func (m *Model) runTestsRequest(req testsRunRequest) tea.Cmd {
 	case req.file != "" && len(req.caseKey) == 0:
 		_, f := st.tree.FindFile(req.file)
 		if f == nil {
-			var t tea.Cmd
-			m.toast, t = m.toast.Push(toast.Warn, "No tests found in "+filepath.Base(req.file))
-			return t
+			return nil, &testsRunProblem{toast.Warn, "No tests found in " + filepath.Base(req.file)}
 		}
 		scope = tests.Scope{Kind: tests.ScopeFile, File: f}
 		if req.atLine > 0 {
@@ -223,13 +244,29 @@ func (m *Model) runTestsRequest(req testsRunRequest) tea.Cmd {
 			cs = []*tests.Case{{Name: req.goFunc, File: req.file}}
 		}
 		if len(cs) == 0 {
-			var t tea.Cmd
-			m.toast, t = m.toast.Push(toast.Warn, "Test not found — try Testing: Refresh")
-			return t
+			return nil, &testsRunProblem{toast.Warn, "Test not found — try Testing: Refresh"}
 		}
 		scope = tests.Scope{Kind: tests.ScopeCases, Cases: cs}
 	}
-	return m.startTestRun(scope)
+	return m.startTestRun(scope), nil
+}
+
+// testsByName finds the tests named name: exact names first, else the
+// names that contain it.
+func testsByName(t *tests.Tree, name string) []*tests.Case {
+	var exact, part []*tests.Case
+	t.Each(func(_ *tests.Package, _ *tests.File, c *tests.Case) {
+		switch {
+		case c.Name == name:
+			exact = append(exact, c)
+		case strings.Contains(c.Name, name):
+			part = append(part, c)
+		}
+	})
+	if len(exact) > 0 {
+		return exact
+	}
+	return part
 }
 
 // startTestRun launches the command for scope, replacing a running one.
