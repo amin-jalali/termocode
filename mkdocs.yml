@@ -100,6 +100,7 @@ nav:
       - Commands: reference/commands.md
       - Settings: reference/settings.md
       - Config files: reference/config-files.md
+      - AI tools: reference/ai-tools.md
   - Concepts:
       - How termocode works: concepts/how-it-works.md
       - Find in files, in depth: concepts/find-in-files.md

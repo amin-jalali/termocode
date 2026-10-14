@@ -63,7 +63,8 @@ type extState struct {
 	exts    []ext.Extension
 	loaded  bool
 	loading bool
-	gen     int // heartbeat generation; a reload starts a new one
+	loadErr string // last load error ("" after a good load)
+	gen     int    // heartbeat generation; a reload starts a new one
 	polling bool
 
 	lines  map[string][]string // panel id → last rendered lines
@@ -271,7 +272,9 @@ func (m *Model) onExtLoaded(msg extLoadedMsg) tea.Cmd {
 			recordError("[ext] " + x.Name + ": " + x.Problem)
 		}
 	}
+	s.loadErr = ""
 	if msg.err != nil {
+		s.loadErr = msg.err.Error()
 		recordError("[ext] load: " + msg.err.Error())
 		var c tea.Cmd
 		m.toast, c = m.toast.PushKeyed("ext-load", toast.Errr, "Extensions failed to load", msg.err.Error())
