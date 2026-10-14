@@ -63,10 +63,14 @@ type Client struct {
 	done      chan struct{} // closed by Close; stops promptGuard
 	// exited is closed when the RPC connection to nvim ends: nvim quit
 	// or died, or Close ran. exitErr (set before) says why.
-	exited    chan struct{}
-	exitErr   error
-	guardOnce sync.Once
-	closed    atomic.Bool
+	exited  chan struct{}
+	exitErr error
+	// reaped is closed once nvim's process is reaped (startProc keeps
+	// the thread that started it until then).
+	reaped     chan struct{}
+	reapedOnce sync.Once
+	guardOnce  sync.Once
+	closed     atomic.Bool
 }
 
 type mouseEvent struct {
@@ -91,6 +95,7 @@ func New() (*Client, error) {
 		mouseQueue: make(chan mouseEvent, 256),
 		done:       make(chan struct{}),
 		exited:     make(chan struct{}),
+		reaped:     make(chan struct{}),
 	}
 	go c.mouseDispatcher()
 
@@ -98,7 +103,8 @@ func New() (*Client, error) {
 	// writes the user's nvim history / marks / registers. Avoids E576
 	// corruption errors and keeps each termocode session isolated.
 	// -n disables swap files (we own the buffers via nvim_input).
-	cmd := exec.Command("nvim", "--embed", "-i", "NONE", "-n")
+	// --cmd: the watchdog (watchdog.go) runs before anything else.
+	cmd := exec.Command("nvim", "--embed", "-i", "NONE", "-n", "--cmd", watchdogLua)
 	// Managed language servers / debug adapters live as shims in
 	// ~/.local/share/termocode/tools/bin; put that dir first on the
 	// embedded nvim's PATH so vim.lsp / nvim-dap find them.
@@ -116,7 +122,7 @@ func New() (*Client, error) {
 		_ = inw.Close()
 		return nil, fmt.Errorf("spawn nvim: %w", err)
 	}
-	if err := cmd.Start(); err != nil {
+	if err := startProc(cmd, c.reaped); err != nil {
 		return nil, fmt.Errorf("spawn nvim: %w", err)
 	}
 	// We run Serve ourselves (see serve) to learn when nvim is gone.
@@ -125,6 +131,7 @@ func New() (*Client, error) {
 		_ = inw.Close()
 		_ = cmd.Process.Kill()
 		_ = cmd.Wait()
+		close(c.reaped)
 		return nil, fmt.Errorf("spawn nvim: %w", err)
 	}
 	c.nv = nv
@@ -144,6 +151,7 @@ func New() (*Client, error) {
 		_ = nv.Close()
 		_ = cmd.Process.Kill()
 		_ = cmd.Wait()
+		close(c.reaped)
 		return nil, fmt.Errorf("register redraw handler: %w", err)
 	}
 	go c.serve()
@@ -1278,7 +1286,9 @@ func (c *Client) closeProcess() error {
 	case <-time.After(11 * time.Second):
 	}
 	// Wait closes the stdout pipe, so it runs after serve stopped reading.
-	if werr := c.cmd.Wait(); err == nil {
+	werr := c.cmd.Wait()
+	c.reapedOnce.Do(func() { close(c.reaped) })
+	if err == nil {
 		err = werr
 	}
 	return err
