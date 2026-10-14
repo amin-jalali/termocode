@@ -164,7 +164,7 @@ vim.api.nvim_create_autocmd({ 'InsertLeave', 'BufLeave' }, {
   group = grp,
   callback = function()
     if A.ghost then A.clear() end
-    notify('termocode_ai_cancel')
+    notify('termocode_ai_cancel', 'leave')
   end,
 })
 `
