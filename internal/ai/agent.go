@@ -74,6 +74,10 @@ func SystemPrompt(base string, tools []Tool, native bool) string {
 		ide += " settings_list / settings_set read and change settings (theme, tab size, icons …); layout_set sizes " +
 			"and shows the sidebar and panels; get_ide_state reads the whole IDE (panels, git, problems, runs)."
 	}
+	if _, ok := FindTool(tools, "terminal_send"); ok {
+		ide += " run_command runs hidden and returns the output; terminal_send types into the user's visible terminal " +
+			"(dev servers, watchers, tests they want to watch) and terminal_read(wait_ms) reads the result."
+	}
 	if native {
 		return base + "\n\nYou can call IDE tools (files, search, git, LSP, shell, editor). " +
 			"Mutating tools ask the user first; if one is declined, do not retry it." + ide

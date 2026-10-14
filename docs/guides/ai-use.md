@@ -108,7 +108,8 @@ The chat is an agent. It can call tools to answer you:
 | Read | read a file, list a folder, search, git status / diff / branches, go to definition, diagnostics |
 | Write files | write, create, delete, rename files and folders, format |
 | Git | stage, commit, checkout, push, pull |
-| Run | run a shell command in the workspace (build, test, …) |
+| Run | run a shell command in the workspace (build, test, …); you see only its result |
+| Terminal | type a command in your terminal panel (`terminal_send`), read its last lines (`terminal_read`), list / open / show / close terminal tabs (`terminal_tabs`) |
 | Editor | open a file (at a line), read the cursor and selection, show a panel, reveal in the explorer, show a toast |
 | IDE commands | find a command palette command (`list_actions`) and run it (`execute_action`): fold, split, show a panel, save, run tests, … |
 | Settings | list settings with their values and allowed values (`settings_list`), change one (`settings_set`): theme, tab size, icons, word wrap, … |
@@ -143,6 +144,18 @@ Settings and layout have rules too:
   are kept in the same limits as a mouse drag, and the sidebar width and
   panel height are saved like a drag. The agent can not hide the AI panel:
   your chat is in it. Zen mode hides the chat too until you leave zen.
+
+The terminal tools use your real terminal panel, so you see the command run.
+The agent uses them for dev servers, watchers and tests you want to watch;
+for a quick command it uses the hidden **run** tool.
+
+- `terminal_send` asks first (kind *run*). It opens the panel and a tab
+  when needed. Your keys stay where they were.
+- `terminal_read` runs at once. It can wait (up to 30 s) until the
+  command is done, then it refreshes the explorer, git and open files.
+- `terminal_tabs`: list, new and show run at once. Close asks (kind
+  *ide*). Closing a tab that still runs a command always asks: there is
+  no "Always allow" for it.
 
 To skip the question for one kind, run **AI: Agent Auto-Approve…** and turn
 on *fileWrite*, *git*, *run*, *ide* or *settings*. Turn on only what you trust.
