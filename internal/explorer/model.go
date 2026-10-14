@@ -231,6 +231,7 @@ func (m *Model) Reload() {
 	if len(roots) == 0 {
 		return
 	}
+	cursorPath := m.CursorPath()
 	expanded := map[string]bool{}
 	var walk func(*Node)
 	walk = func(n *Node) {
@@ -283,6 +284,15 @@ func (m *Model) Reload() {
 	}
 	m.extraRoots = rebuilt
 
+	// Keep the cursor on the same entry when rows above it came or went.
+	if cursorPath != "" {
+		for i, e := range m.visible() {
+			if e.Node.Path == cursorPath {
+				m.cursor = i
+				break
+			}
+		}
+	}
 	if c := len(m.visible()); m.cursor >= c {
 		if c > 0 {
 			m.cursor = c - 1
