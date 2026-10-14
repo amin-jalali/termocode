@@ -150,10 +150,11 @@ var aiLSPToolCases = []aiToolCase{
 		},
 	},
 	{
-		name:    "lsp_rename asks, changes two files on screen and disk, no new tab",
-		call:    toolCall{"lsp_rename", map[string]any{"path": "a.txt", "line": 1, "character": 1, "new_name": "omega"}},
-		setup:   withFakeLSP,
-		confirm: true,
+		name:     "lsp_rename asks, changes two files on screen and disk, no new tab",
+		call:     toolCall{"lsp_rename", map[string]any{"path": "a.txt", "line": 1, "character": 1, "new_name": "omega"}},
+		setup:    withFakeLSP,
+		confirm:  true,
+		noReview: true,
 		check: func(t *testing.T, d *Driver, r []string) {
 			got := oneResult(t, r)
 			if !strings.Contains(got, "2 files") || !strings.Contains(got, "a.txt") || !strings.Contains(got, "b.txt") {
@@ -181,7 +182,8 @@ var aiLSPToolCases = []aiToolCase{
 			withFakeLSP(d)
 			lua(d, `vim.api.nvim_buf_set_lines(0, 2, 3, false, { "mine" }); return ''`)
 		},
-		confirm: true,
+		confirm:  true,
+		noReview: true,
 		check: func(t *testing.T, d *Driver, r []string) {
 			got := oneResult(t, r)
 			if !strings.Contains(got, "not saved") {
@@ -213,8 +215,9 @@ var aiLSPToolCases = []aiToolCase{
 		name: "lsp_code_actions apply asks, then applies and saves",
 		call: toolCall{"lsp_code_actions", map[string]any{"path": "a.txt", "line": 1, "character": 1,
 			"op": "apply", "title": "uppercase first line"}},
-		setup:   withFakeLSP,
-		confirm: true,
+		setup:    withFakeLSP,
+		confirm:  true,
+		noReview: true,
 		check: func(t *testing.T, d *Driver, r []string) {
 			got := oneResult(t, r)
 			if !strings.Contains(got, "a.txt") || !strings.Contains(got, "saved") {
@@ -225,6 +228,61 @@ var aiLSPToolCases = []aiToolCase{
 			}
 			if !eventually(d, func() bool { return strings.Contains(screen(d), "ALPHA") }) {
 				t.Errorf("ALPHA not on screen:\n%s", screen(d))
+			}
+		},
+	},
+	{
+		name:   "lsp_rename in review mode: both files in the review list, accepted, one undo step",
+		call:   toolCall{"lsp_rename", map[string]any{"path": "a.txt", "line": 1, "character": 1, "new_name": "omega"}},
+		setup:  withFakeLSP,
+		review: true,
+		check: func(t *testing.T, d *Driver, r []string) {
+			got := oneResult(t, r)
+			if !strings.Contains(got, "accepted the change to a.txt") || !strings.Contains(got, "accepted the change to b.txt") {
+				t.Errorf("result %q", got)
+			}
+			if diskFile(d, "a.txt") != "omega\nbravo\ncharlie\n" || diskFile(d, "b.txt") != "omega\ntwo\nthree\n" {
+				t.Errorf("disk a=%q b=%q", diskFile(d, "a.txt"), diskFile(d, "b.txt"))
+			}
+			if !eventually(d, func() bool { return strings.Contains(screen(d), "omega") }) {
+				t.Errorf("renamed text not on screen:\n%s", screen(d))
+			}
+			if u := lua(d, `vim.cmd('silent! undo'); return vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]`); u != "alpha" {
+				t.Errorf("after undo first line %q", u)
+			}
+		},
+	},
+	{
+		name: "lsp_rename in review mode refuses a tab with unsaved edits",
+		call: toolCall{"lsp_rename", map[string]any{"path": "a.txt", "line": 1, "character": 1, "new_name": "omega"}},
+		setup: func(d *Driver) {
+			withFakeLSP(d)
+			lua(d, `vim.api.nvim_buf_set_lines(0, 2, 3, false, { "mine" }); return ''`)
+		},
+		check: func(t *testing.T, d *Driver, r []string) {
+			if got := oneResult(t, r); !strings.Contains(got, "unsaved changes") {
+				t.Errorf("result %q", got)
+			}
+			if diskFile(d, "b.txt") != "one\ntwo\nthree\n" {
+				t.Errorf("b.txt changed: %q", diskFile(d, "b.txt"))
+			}
+			if bufLines(d) != "alpha\nbravo\nmine" {
+				t.Errorf("buffer %q", bufLines(d))
+			}
+		},
+	},
+	{
+		name: "lsp_code_actions apply in review mode shows the diff, then writes it",
+		call: toolCall{"lsp_code_actions", map[string]any{"path": "a.txt", "line": 1, "character": 1,
+			"op": "apply", "title": "uppercase first line"}},
+		setup:  withFakeLSP,
+		review: true,
+		check: func(t *testing.T, d *Driver, r []string) {
+			if got := oneResult(t, r); !strings.Contains(got, "accepted the change to a.txt") {
+				t.Errorf("result %q", got)
+			}
+			if diskFile(d, "a.txt") != "ALPHA\nbravo\ncharlie\n" {
+				t.Errorf("a.txt %q", diskFile(d, "a.txt"))
 			}
 		},
 	},

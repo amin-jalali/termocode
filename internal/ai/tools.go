@@ -67,7 +67,21 @@ const (
 	ClassRun       = "run"
 	ClassIDE       = "ide"      // IDE commands the agent runs (execute_action)
 	ClassSettings  = "settings" // settings_set: change a config.json setting
+	// ClassReview marks a file-changing tool that shows its change as a
+	// diff and waits for the user's accept / reject itself (Group R): no
+	// confirm dialog, never auto-approved. Not in ToolClasses.
+	ClassReview = "review"
 )
+
+// FindToolClass reports whether any tool has class c.
+func FindToolClass(tools []Tool, c string) bool {
+	for _, t := range tools {
+		if t.Class == c {
+			return true
+		}
+	}
+	return false
+}
 
 // ToolClasses lists the auto-approve classes in UI order.
 var ToolClasses = []string{ClassFileWrite, ClassGit, ClassRun, ClassIDE, ClassSettings}
@@ -108,7 +122,9 @@ func ToolsPromptSpec(tools []Tool) string {
 			args = append(args, fmt.Sprintf("%q%s: %s", k, opt, typ))
 		}
 		gate := ""
-		if t.Gate != nil {
+		if t.Class == ClassReview {
+			gate = " (the user reviews the change as a diff)"
+		} else if t.Gate != nil {
 			gate = " (some calls need user confirmation)"
 		} else if t.Mutating {
 			gate = " (mutating — needs user confirmation)"

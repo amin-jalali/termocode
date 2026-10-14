@@ -80,6 +80,8 @@ func goldenExtras() []Scene {
 		{Name: "icons-ascii", Icons: "ascii", Steps: EditorSteps()},
 		MarkdownPreview(),
 		{Name: "md-preview-light", Theme: "catppuccin-latte", Steps: MarkdownPreview().Steps},
+		DiffReview(),
+		{Name: "diff-review-light", Theme: "catppuccin-latte", Steps: DiffReview().Steps},
 	}
 }
 

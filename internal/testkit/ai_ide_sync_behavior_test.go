@@ -123,6 +123,12 @@ func (s *aiScript) holdAt(i int) (reached <-chan struct{}, release func()) {
 // tool classes auto-approved, and opens the AI chat panel.
 func aiDriver(t *testing.T, srvURL string, files map[string]string, git bool, auto ...string) *Driver {
 	t.Helper()
+	return aiDriverConfig(t, srvURL, files, git, "", auto...)
+}
+
+// aiDriverConfig is aiDriver with extra config.json keys (`"k":v`).
+func aiDriverConfig(t *testing.T, srvURL string, files map[string]string, git bool, extra string, auto ...string) *Driver {
+	t.Helper()
 	if testing.Short() {
 		t.Skip("starts nvim")
 	}
@@ -131,7 +137,7 @@ func aiDriver(t *testing.T, srvURL string, files map[string]string, git bool, au
 	}
 	approve, _ := json.Marshal(auto)
 	d := New(t, Options{W: 160, H: 40, Nvim: true, Git: git, Files: files,
-		Config: map[string]string{"config.json": `{"ai_auto_approve":` + string(approve) + `}`},
+		Config: map[string]string{"config.json": `{` + extra + comma(extra) + `"ai_auto_approve":` + string(approve) + `}`},
 		Setup: func(t testing.TB, _ string) {
 			t.Setenv("TERMOCODE_AI_PROVIDER", "ollama")
 			t.Setenv("TERMOCODE_AI_MODEL", "fake")
@@ -339,4 +345,11 @@ func TestAICreateOpenRenameFollowsInIDE(t *testing.T) {
 	if exists(d, "test.md") {
 		t.Errorf("saving re-created test.md")
 	}
+}
+
+func comma(s string) string {
+	if s == "" {
+		return ""
+	}
+	return ","
 }

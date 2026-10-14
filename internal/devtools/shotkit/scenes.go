@@ -64,6 +64,12 @@ func MarkdownPreview() Scene {
 	return Scene{Name: "md-preview", Steps: []Step{Act("open:docs/preview.md"), Pause(600 * time.Millisecond), Act("palette:preview-md"), Pause(800 * time.Millisecond)}}
 }
 
+// DiffReview is the AI review card (Group R) with two sample files, the
+// second change focused and the first accepted. Nothing is written.
+func DiffReview() Scene {
+	return Scene{Name: "diff-review", Theme: "tokyo-night", Steps: WithEditor(Act("diffdemo"), Pause(600*time.Millisecond))}
+}
+
 // Scenes is the screenshot set for assets/screenshots (the shots command).
 func Scenes() []Scene {
 	scenes := []Scene{
@@ -78,6 +84,8 @@ func Scenes() []Scene {
 		{Name: "run-debug", Steps: WithEditor(Act("palette:debug-view"), Pause(800*time.Millisecond))},
 		Terminal(),
 		MarkdownPreview(),
+		DiffReview(),
+		{Name: "diff-review-light", Theme: "catppuccin-latte", Steps: DiffReview().Steps},
 		{Name: "md-preview-light", Theme: "catppuccin-latte", Steps: MarkdownPreview().Steps},
 		{Name: "md-preview-ascii", Icons: "ascii", Steps: MarkdownPreview().Steps},
 		{Name: "image-preview", Steps: WithEditor(Act("openfile:assets/demo.png"), Pause(800*time.Millisecond))},

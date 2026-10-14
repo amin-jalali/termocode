@@ -26,6 +26,8 @@ func (m Model) overlayKind() string {
 		return "prompt"
 	case m.confirmOpen:
 		return "confirm"
+	case m.reviewOpen:
+		return "review"
 	case m.menuOpen:
 		return "menu"
 	case m.imageOpen:
