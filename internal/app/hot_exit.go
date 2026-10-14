@@ -271,6 +271,29 @@ func (m *Model) flushHotExitForReload() {
 	_ = os.WriteFile(filepath.Join(m.hotExitLive, hotExitReloadMark), nil, 0o600)
 }
 
+// leaveWorkspace closes nvim before Open Workspace re-execs termocode in
+// another folder. The unsaved buffers are written to the live backup
+// first (the debounce timer may not have fired yet), then moved to
+// previous/: the re-exec keeps our pid alive in the other folder, so a
+// live dir of this pid would look busy to the next start here. That
+// start offers the text back.
+func (m *Model) leaveWorkspace() {
+	if m.nvim != nil && m.hotExitLive != "" {
+		if err := m.nvim.ExecLua(hotExitFlushLua); err != nil {
+			recordError("hot exit: " + err.Error())
+		}
+	}
+	hotExitNvim.Store(nil)
+	if m.nvim != nil {
+		_ = m.nvim.Close()
+	}
+	if m.hotExitRoot != "" {
+		if _, err := collectHotBackups(m.hotExitRoot, os.Getpid(), pidAlive); err != nil {
+			recordError("hot exit: " + err.Error())
+		}
+	}
+}
+
 // showWaitingHotExit asks about the backups found at start once no other
 // dialog is open: promptHotExit replaces m.confirm, so asking earlier
 // would throw away the question on screen (and a prompt dialog takes the

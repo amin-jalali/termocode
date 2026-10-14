@@ -149,10 +149,8 @@ func (m *Model) openWorkspace(path string) tea.Cmd {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Exec failed", errHeadless.Error())
 		return toastCmd
 	}
-	// Persist any pending session state, close nvim cleanly, then re-exec.
-	if m.nvim != nil {
-		_ = m.nvim.Close()
-	}
+	// Back up the unsaved text, close nvim cleanly, then re-exec.
+	m.leaveWorkspace()
 	bin, err := os.Executable()
 	if err != nil {
 		bin = os.Args[0]
