@@ -165,6 +165,21 @@ func TestAICreateRevealsInExplorer(t *testing.T) {
 	}
 }
 
+// Spec: a new file the explorer hides (a dotfile) is not reported as
+// shown in the explorer.
+func TestAICreateHiddenFileSaysNotListed(t *testing.T) {
+	p := &scriptedAIProvider{replies: []ai.Chunk{toolCall("create_file", map[string]any{"path": ".env.local"})}}
+	m, _, _ := aiSyncModel(t, p, map[string]string{"a.txt": "a\n"})
+	driveAIChat(t, m, m.sendAIChat("make it"), nil)
+	r := oneResult(t, p)
+	if m.explorer.HiddenShown() {
+		t.Skip("explorer shows hidden files by default")
+	}
+	if strings.Contains(r, "shown in the explorer") || !strings.Contains(r, "hides it") {
+		t.Errorf("result %q", r)
+	}
+}
+
 // Spec: delete of an open file closes its tab (no ghost editor) and of a
 // folder closes the tabs of the files inside.
 func TestAIDeleteClosesOpenTabs(t *testing.T) {

@@ -103,11 +103,10 @@ func aiSyncTools(tools []ai.Tool, root string, call aiIDECaller) []ai.Tool {
 				}
 				abs, _ := ws.Resolve(ai.ArgString(a, "path"))
 				note := aiSyncAfter(ctx, call, abs, aiSyncDisk)
-				hint := "; it is shown in the explorer"
 				if t.Name == "create_file" {
-					hint += " (open it for the user with open_file)"
+					note += "; open it for the user with open_file when they want to see it"
 				}
-				return res + hint + note, nil
+				return res + note, nil
 			}
 		case "git_stage", "git_commit", "git_push":
 			t.Run = aiAfterRun(inner, call, aiSyncGit)
@@ -151,11 +150,16 @@ func aiSyncAfter(ctx context.Context, call aiIDECaller, reveal string, lvl aiSyn
 func (m *Model) aiSyncIDE(reveal string, lvl aiSyncLevel) (string, tea.Cmd) {
 	note := ""
 	if lvl == aiSyncDisk {
-		note = m.aiCheckTime()
 		m.explorer.Reload()
 		if reveal != "" {
 			m.explorer.RevealPath(reveal)
+			if m.explorer.CursorPath() == reveal {
+				note = "; it is shown in the explorer"
+			} else {
+				note = "; the explorer hides it (hidden or ignored file)"
+			}
 		}
+		note += m.aiCheckTime()
 	}
 	return note, tea.Batch(fetchGitCmd(), m.fetchStateCmd())
 }
@@ -334,7 +338,6 @@ func (m *Model) aiWriteFile(abs, rel, content string) (string, tea.Cmd, error) {
 	reveal := ""
 	if statErr != nil { // a new file
 		reveal = abs
-		out += "; it is shown in the explorer"
 	}
 	note, cmd := m.aiSyncIDE(reveal, aiSyncDisk)
 	return out + note, cmd, nil
@@ -405,7 +408,7 @@ func (m *Model) aiRenamePath(from, to string, rel func(string) string) (string, 
 		return "", nil, err
 	}
 	m.renameOpenBuffers(from, to)
-	out := "renamed " + rel(from) + " to " + rel(to) + "; the explorer shows " + rel(to)
+	out := "renamed " + rel(from) + " to " + rel(to)
 	var moved []string
 	for _, b := range bufs {
 		if b.Listed && b.Loaded {
