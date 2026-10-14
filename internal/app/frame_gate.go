@@ -48,7 +48,7 @@ func (m Model) gateUpdate(msg tea.Msg, cmd tea.Cmd) tea.Cmd {
 		return cmd
 	}
 	since := time.Since(g.at)
-	if g.frame == "" || since >= frameInterval {
+	if g.frame == "" || since >= frameInterval || drawAtOnce(msg) {
 		g.skip = false
 		return cmd
 	}
@@ -58,6 +58,19 @@ func (m Model) gateUpdate(msg tea.Msg, cmd tea.Cmd) tea.Cmd {
 		cmd = tea.Batch(cmd, tea.Tick(frameInterval-since, func(time.Time) tea.Msg { return frameTickMsg{} }))
 	}
 	return cmd
+}
+
+// drawAtOnce: messages whose frame must not wait for the tick. A
+// terminal change (a session client attached) marks its first frame for
+// the server (session.AttachedSeq); the server sends the new client only
+// what follows the mark, so the full repaint after it must come in that
+// same frame, not one tick later. A resize repaints the whole screen.
+func drawAtOnce(msg tea.Msg) bool {
+	switch msg.(type) {
+	case TerminalChangedMsg, tea.WindowSizeMsg:
+		return true
+	}
+	return false
 }
 
 // gatedView returns the last frame while the gate holds, else draws.

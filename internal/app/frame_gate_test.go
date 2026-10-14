@@ -46,7 +46,7 @@ func TestFrameGateDrawsOncePerFrame(t *testing.T) {
 	first := m.View()
 
 	// A change inside the same frame: not drawn yet, a tick is asked for.
-	nm, cmd := m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	nm, cmd := m.Update(DevActionMsg{ID: "toast:gate-test"})
 	m = nm.(Model)
 	if m.View() != first {
 		t.Fatal("redrew inside the same frame")
@@ -75,9 +75,28 @@ func TestFrameGateIdleDrawsAtOnce(t *testing.T) {
 	m := gateModel(t)
 	first := m.View()
 	time.Sleep(20 * time.Millisecond)
-	nm, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	nm, _ := m.Update(DevActionMsg{ID: "toast:gate-test"})
 	m = nm.(Model)
 	if m.View() == first {
 		t.Error("change after a quiet frame was not drawn at once")
+	}
+}
+
+// TestFrameGateDrawsAttachAtOnce: a terminal change (a session client
+// attached) and a resize draw at once, even inside a frame. The attach
+// frame carries the mark the session server waits for; held back for a
+// tick, the repaint went out before the mark and a new client saw a blank
+// screen.
+func TestFrameGateDrawsAttachAtOnce(t *testing.T) {
+	// Applying a TerminalChangedMsg changes global terminal caps, so the
+	// rule is checked directly; the resize goes through Update.
+	if !drawAtOnce(TerminalChangedMsg{}) {
+		t.Error("TerminalChangedMsg is held back for a tick")
+	}
+	m := gateModel(t)
+	nm, _ := m.Update(tea.WindowSizeMsg{Width: 100, Height: 30}) // inside the frame
+	m = nm.(Model)
+	if m.gate.skip {
+		t.Error("WindowSizeMsg held back for a tick")
 	}
 }
