@@ -25,8 +25,14 @@ if plugin_path ~= '' and vim.fn.isdirectory(plugin_path) == 1 then
   vim.opt.rtp:prepend(plugin_path)
 end
 
+local prev = _G._termocode_dap or {}
 local H = {}
 _G._termocode_dap = H
+-- Group K7 (AI tools): event counters the agent's waits compare. Kept
+-- across a re-run of this chunk (DAP: Install Adapter… runs it again).
+H.stop_seq, H.session_seq, H.msg_seq = prev.stop_seq or 0, prev.session_seq or 0, prev.msg_seq or 0
+H.last_reason, H.last_text, H.last_msg, H.last_exit = prev.last_reason or '', prev.last_text or '', prev.last_msg or '', prev.last_exit
+H.out = prev.out or {}
 
 local function enc(v)
   local ok, s = pcall(vim.json.encode, v)
@@ -102,6 +108,10 @@ if not ok then
   H.run         = function() return 'nvim-dap not installed' end
   H.run_ft      = H.run
   H.configs     = function() return '[]' end
+  H.ai_status   = function() return enc({ available = false }) end
+  H.ai_state    = H.ai_status
+  H.ai_eval     = function() return enc({ error = 'nvim-dap not installed' }) end
+  H.set_bp      = function() return 'the debugger (nvim-dap) is not downloaded yet' end
   return
 end
 
@@ -509,6 +519,157 @@ vim.api.nvim_create_autocmd('BufWritePost', {
   end,
 })
 
+-- ── AI tools (Group K7, ai_debug_tools.go) ─────────────────────────────
+-- Synchronous helpers: they wait (vim.wait, bounded) for the adapter's
+-- answers, so the agent gets one JSON value per call. They run from the
+-- tool goroutine, never from the UI loop.
+
+-- sync(fn, timeout): fn(cb) starts an async request; returns resp, err.
+local function sync(fn, timeout)
+  local done, e, r = false, nil, nil
+  fn(function(err, resp) e, r, done = err, resp, true end)
+  vim.wait(timeout, function() return done end, 5)
+  if not done then return nil, 'the debugger did not answer in time' end
+  if e then return nil, fmt_err(e) end
+  return r, nil
+end
+
+-- ai_status(): what the agent's waits compare (cheap, no requests).
+function H.ai_status()
+  local s = dap.session()
+  local t = stopped_thread(s)
+  return enc({
+    available = true, active = s ~= nil,
+    stopped = s ~= nil and s.stopped_thread_id ~= nil,
+    seq = H.stop_seq, sessions = H.session_seq, msgs = H.msg_seq,
+    frames = (t and t.frames and #t.frames) or 0,
+    reason = H.last_reason, exit = H.last_exit, msg = H.last_msg,
+    name = (s and s.config and s.config.name) or '',
+  })
+end
+
+-- ai_state(json): the session for the agent. opts: frames (max listed),
+-- depth (child levels under each variable), max_vars (total budget),
+-- watches (expressions), timeout_ms (budget for all requests).
+function H.ai_state(json)
+  local okd, o = pcall(vim.json.decode, json or '{}')
+  if not okd or type(o) ~= 'table' then o = {} end
+  local max_frames, depth, budget = o.frames or 10, o.depth or 1, o.max_vars or 60
+  local deadline = vim.uv.now() + (o.timeout_ms or 3000)
+  local function left() return math.max(deadline - vim.uv.now(), 1) end
+  local s = dap.session()
+  local out = {
+    available = true, active = s ~= nil, exit = H.last_exit, output = table.concat(H.out),
+    reason = H.last_reason, text = H.last_text,
+  }
+  if not s then return enc(out) end
+  out.name = (s.config and s.config.name) or ''
+  out.threads = #threads_tbl()
+  out.stopped = s.stopped_thread_id ~= nil
+  if not out.stopped then return enc(out) end
+  -- Frames and scopes arrive just after the stop.
+  vim.wait(left(), function()
+    local cur = dap.session()
+    local t = stopped_thread(cur)
+    return cur == nil or (t ~= nil and t.frames ~= nil and cur.current_frame ~= nil and cur.current_frame.scopes ~= nil)
+  end, 10)
+  s = dap.session()
+  if not s or not s.stopped_thread_id then return H.ai_state(json) end
+  local t = stopped_thread(s)
+  out.thread = { id = s.stopped_thread_id, name = (t and t.name) or '' }
+  local frames = {}
+  for i, f in ipairs((t and t.frames) or {}) do
+    if i > max_frames then break end
+    table.insert(frames, frame_tbl(f))
+  end
+  out.frames, out.frame_total = frames, #((t and t.frames) or {})
+  local f = s.current_frame
+  if f then out.frame = f.id end
+  local function expand(vars, d)
+    local list, more = {}, 0
+    for _, v in ipairs(vars or {}) do
+      if budget <= 0 then
+        more = more + 1
+      else
+        budget = budget - 1
+        local item = var_tbl(v)
+        if item.ref > 0 and d > 0 and left() > 1 then
+          local r = sync(function(cb) s:request('variables', { variablesReference = item.ref }, cb) end, math.min(left(), 1000))
+          if r then item.children, item.more = expand(r.variables, d - 1) end
+        end
+        table.insert(list, item)
+      end
+    end
+    return list, more
+  end
+  local scopes = {}
+  for _, sc in ipairs((f and f.scopes) or {}) do
+    local row = { name = sc.name or 'scope', expensive = sc.expensive == true }
+    if not row.expensive then
+      local vars, err = sc.variables, nil
+      if vars == nil then
+        local r
+        r, err = sync(function(cb) s:request('variables', { variablesReference = sc.variablesReference or 0 }, cb) end, math.min(left(), 1000))
+        vars = r and r.variables
+      end
+      if err then row.error = err else row.vars, row.more = expand(vars, depth) end
+    end
+    table.insert(scopes, row)
+  end
+  out.scopes = scopes
+  local watches = {}
+  for _, expr in ipairs(o.watches or {}) do
+    local r, err = sync(function(cb) s:evaluate({ expression = expr, context = 'watch' }, cb) end, math.min(left(), 1000))
+    table.insert(watches, { expr = expr, value = r and trunc(r.result, 500) or '', error = err })
+  end
+  out.watches = watches
+  return enc(out)
+end
+
+-- ai_eval(expr, timeout_ms): evaluate in the current frame; children of a
+-- structured result one level deep (capped).
+function H.ai_eval(expr, timeout)
+  local s = dap.session()
+  if not s then return enc({ error = 'No active debug session' }) end
+  timeout = timeout or 5000
+  local r, err = sync(function(cb) s:evaluate({ expression = expr, context = 'repl' }, cb) end, timeout)
+  if err then return enc({ error = err }) end
+  local out = { result = trunc(r and r.result, 4000), type = trunc(r and r.type or '', 100), ref = (r and r.variablesReference) or 0 }
+  if out.ref > 0 then
+    local kids = sync(function(cb) s:request('variables', { variablesReference = out.ref }, cb) end, 1000)
+    if kids then
+      local list, more = {}, 0
+      for i, v in ipairs(kids.variables or {}) do
+        if i > 30 then more = more + 1 else table.insert(list, var_tbl(v)) end
+      end
+      out.children, out.more = list, more
+    end
+  end
+  return enc(out)
+end
+
+-- set_bp(path, line, cond, log): a breakpoint in any file. A file that is
+-- not open is loaded as a hidden (unlisted) buffer, so a live session
+-- hears about it and the persisted copy is written like a UI toggle.
+function H.set_bp(path, line, cond, log)
+  local buf = vim.fn.bufnr(path)
+  local fresh = buf < 1
+  if fresh then buf = vim.fn.bufadd(path) end
+  if buf < 1 then return 'can not open ' .. path end
+  if not vim.api.nvim_buf_is_loaded(buf) then
+    local okl, e = pcall(vim.fn.bufload, buf)
+    if not okl then return tostring(e) end
+  end
+  if fresh then vim.bo[buf].buflisted = false end
+  local n = vim.api.nvim_buf_line_count(buf)
+  if type(line) ~= 'number' or line < 1 or line > n then
+    return string.format('line %s is outside the file (it has %d lines)', tostring(line), n)
+  end
+  bpmod.set({ condition = nonempty(cond), log_message = nonempty(log) }, buf, line)
+  push_to_sessions(buf)
+  return ''
+end
+
 -- ── Session events → Go ──────────────────────────────────────────────────
 
 local K = 'termocode'
@@ -518,6 +679,11 @@ end
 
 dap.listeners.on_session = dap.listeners.on_session or {}
 dap.listeners.on_session[K] = function(_, new)
+  if new then
+    H.session_seq = H.session_seq + 1
+    H.last_exit = nil
+    H.out = {}
+  end
   ev('session', { active = new ~= nil, name = (new and new.config and new.config.name) or '' })
 end
 dap.listeners.after.event_initialized[K] = function(s)
@@ -525,6 +691,8 @@ dap.listeners.after.event_initialized[K] = function(s)
 end
 dap.listeners.after.event_stopped[K] = function(_, body)
   body = body or {}
+  H.stop_seq = H.stop_seq + 1
+  H.last_reason, H.last_text = body.reason or '', body.description or body.text or ''
   ev('stopped', {
     reason = body.reason or '', thread = body.threadId or 0,
     text = body.description or body.text or '',
@@ -536,11 +704,17 @@ dap.listeners.after.event_terminated[K] = function()
   vim.schedule(function() ev('refresh') end)
 end
 dap.listeners.after.event_exited[K] = function(_, body)
+  H.last_exit = (body and body.exitCode) or 0
   ev('exited', { code = (body and body.exitCode) or 0 })
 end
 dap.listeners.after.event_output[K] = function(_, body)
   if not body or body.category == 'telemetry' then return end
   ev('output', { category = body.category or 'console', output = body.output or '' })
+  -- K7: the session's program output for the agent (last lines only).
+  if body.category == 'stdout' or body.category == 'stderr' then
+    table.insert(H.out, body.output or '')
+    if #H.out > 200 then table.remove(H.out, 1) end
+  end
 end
 for _, cmd in ipairs({ 'continue', 'next', 'stepIn', 'stepOut', 'stepBack', 'reverseContinue' }) do
   dap.listeners.after[cmd][K] = function() ev('continued') end
@@ -559,6 +733,9 @@ end
 if not H._orig_notify then H._orig_notify = vim.notify end
 vim.notify = function(msg, level, opts)
   if type(opts) == 'table' and opts.title == 'DAP' then
+    if (level or 0) >= vim.log.levels.WARN then
+      H.msg_seq, H.last_msg = H.msg_seq + 1, tostring(msg)
+    end
     ev('message', { level = level or vim.log.levels.INFO, text = tostring(msg) })
     return
   end

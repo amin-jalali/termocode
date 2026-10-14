@@ -121,6 +121,7 @@ The chat is an agent. It can call tools to answer you:
 
 | Tasks | list tasks with group, command and last run (`tasks_list`), run one in its terminal tab (`tasks_run`), read its exit code and output (`tasks_status`) |
 | Tests | run tests: all, a file, the test at the cursor, the failed ones or by name (`tests_run`); read the results with each failure's file:line and message (`tests_results`) |
+| Debug | list, set (with a condition or log message), remove and clear breakpoints (`debug_breakpoint`); start a launch configuration or debug a file (`debug_start`); read where it stopped, the call stack, variables and watches (`debug_state`); continue, pause, step over / into / out, stop, restart (`debug_control`); evaluate an expression (`debug_evaluate`) |
 | Editor | open a file (at a line), read the cursor and selection, show a panel, reveal in the explorer, show a toast |
 | IDE commands | find a command palette command (`list_actions`) and run it (`execute_action`): fold, split, show a panel, save, run tests, … |
 | Settings | list settings with their values and allowed values (`settings_list`), change one (`settings_set`): theme, tab size, icons, word wrap, … |
@@ -201,6 +202,26 @@ Tasks and tests use the same places as the palette, so you see them run.
 - `tasks_list`, `tasks_status` and `tests_results` run at once.
   `tasks_status` and `tests_results` can wait (up to 2 min) until the run
   ends. Stop ends the wait.
+
+The debug tools use the same session as **Run & Debug**, so you see it all.
+
+- `debug_breakpoint` list, set and remove run at once, like F9.
+  Clear asks first (kind *ide*). A breakpoint shows in the gutter and in
+  the Run & Debug view, and it is saved like yours. A file that is not
+  open gets the breakpoint without a new tab.
+- `debug_state` runs at once. It shows where the program stopped, the top
+  frames, the variables of the top frame (a few levels deep, capped) and
+  your watches. With no session it shows the configurations.
+- `debug_start` asks first (kind *run*): it runs your program. It starts a
+  configuration by name, or debugs a file (Go: its package). Then it waits
+  for the first stop.
+- `debug_control` asks first. Continue, steps and restart are kind *run*;
+  pause and stop are kind *ide*. It waits (up to 2 min, Stop ends the
+  wait) for the next stop and returns the new state.
+- `debug_evaluate` asks first (kind *run*): an expression can call code in
+  your program. The line and its result also show in the Debug Console.
+- At each stop the editor shows the stopped line, like when you debug.
+  Your keys stay in the chat.
 
 To skip the question for one kind, run **AI: Agent Auto-Approve…** and turn
 on *fileWrite*, *git*, *run*, *ide* or *settings*. Turn on only what you trust.
