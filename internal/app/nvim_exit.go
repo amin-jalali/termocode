@@ -16,7 +16,8 @@ import (
 // check finds this run's backups (our own pid counts as finished, see
 // collectHotBackups) and offers the unsaved text back. A normal quit
 // closes nvim first, so it never shows the question (nvim.ExitedMsg is
-// not sent after Close).
+// not sent after Close). A quit typed in nvim (:qa, exit status 0) quits
+// termocode without the question.
 
 // onNvimExited handles the end of the nvim process.
 func (m *Model) onNvimExited(msg nvim.ExitedMsg) tea.Cmd {
@@ -25,6 +26,13 @@ func (m *Model) onNvimExited(msg nvim.ExitedMsg) tea.Cmd {
 	}
 	m.nvimDead = true
 	m.nvimAttached = false
+	if msg.UserQuit {
+		// :qa, :qa!, :wqa or :q on the last window: the user quit on
+		// purpose, so termocode quits too, as after "Don't Save" (nvim
+		// itself refused :qa with unsaved changes, and :qa! discards
+		// them). nvim is reaped already, so Close does not wait.
+		return m.quitNow()
+	}
 	if msg.Err != nil {
 		recordError("nvim stopped: " + msg.Err.Error())
 	}
