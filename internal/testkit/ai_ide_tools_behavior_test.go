@@ -71,7 +71,35 @@ type aiToolCase struct {
 	git     bool
 	setup   func(d *Driver)
 	confirm bool
-	check   func(t *testing.T, d *Driver, results []string)
+	// review: the review card must show; the test accepts every file.
+	review bool
+	// noReview runs the case with ai_edit_review = auto (the old path).
+	noReview bool
+	check    func(t *testing.T, d *Driver, results []string)
+}
+
+// acceptAllReview clicks "Accept file" until the review card is gone.
+func acceptAllReview(d *Driver) {
+	d.T.Helper()
+	if !d.WaitForText("Review AI changes", 5*time.Second) {
+		d.T.Fatalf("no review card:\n%s", screen(d))
+	}
+	for i := 0; i < 10 && strings.Contains(screen(d), "Review AI changes"); i++ {
+		clickTextOn(d, "Accept file")
+		d.WaitFor(func() bool { return !strings.Contains(screen(d), "Accept file") || i > 8 }, 300*time.Millisecond)
+	}
+}
+
+// clickTextOn clicks the first place s shows on screen.
+func clickTextOn(d *Driver, s string) {
+	d.T.Helper()
+	for y, line := range strings.Split(screen(d), "\n") {
+		if j := strings.Index(line, s); j >= 0 {
+			d.Click(ansi.StringWidth(line[:j])+1, y)
+			return
+		}
+	}
+	d.T.Fatalf("%q not on screen:\n%s", s, screen(d))
 }
 
 // aiToolCases grow with every Group K step (K2–K8 add rows).
@@ -139,7 +167,12 @@ func TestAIToolsTable(t *testing.T) {
 	for _, tc := range aiToolCases {
 		t.Run(tc.name, func(t *testing.T) {
 			s, srv := fakeToolModel(t, tc.call)
-			d := aiDriver(t, srv.URL, nil, tc.git)
+			var d *Driver
+			if tc.noReview {
+				d = aiDriverConfig(t, srv.URL, nil, tc.git, `"ai_edit_review":"auto"`)
+			} else {
+				d = aiDriver(t, srv.URL, nil, tc.git)
+			}
 			open(d, "a.txt")
 			if tc.setup != nil {
 				tc.setup(d)
@@ -150,6 +183,9 @@ func TestAIToolsTable(t *testing.T) {
 					t.Fatalf("no confirm dialog:\n%s", screen(d))
 				}
 				clickAIAllow(d)
+			}
+			if tc.review {
+				acceptAllReview(d)
 			}
 			if !d.WaitForText("fake-done", 5*time.Second) {
 				t.Fatalf("no final answer (a dialog may be waiting):\n%s", screen(d))

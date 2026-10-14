@@ -124,7 +124,13 @@ func (m Model) viewFrame() string {
 	if m.confirmOpen {
 		base := m.renderBase()
 		base = m.overlayToastsInEditor(base)
+		base = m.reviewLayer(base) // a confirm can sit on the review card
 		return modalOverlay(base, m.confirm.Box(), m.w, m.h, m.modalOpts())
+	}
+	if m.reviewOpen {
+		base := m.renderBase()
+		base = m.overlayToastsInEditor(base)
+		return m.reviewLayer(base)
 	}
 
 	base := m.renderBase()
@@ -2362,4 +2368,16 @@ func prettyHintKey(s string) string {
 		}
 	}
 	return strings.Join(parts, "+")
+}
+
+// reviewLayer floats the AI review card (ai_review.go) over base.
+func (m Model) reviewLayer(base string) string {
+	if !m.reviewOpen || m.ai == nil || m.ai.review == nil {
+		return base
+	}
+	c := m.ai.review.card
+	o := m.overlayOpts()
+	o.At = true
+	o.X, o.Y = c.Origin()
+	return modalOverlay(base, c.Box(), m.w, m.h, &o)
 }

@@ -8,7 +8,9 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/diffview"
 	"github.com/amin-jalali/termocode/internal/explorer"
+	"github.com/amin-jalali/termocode/internal/textdiff"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -31,6 +33,8 @@ import (
 //	                       does (row ids: SettingsCatalog().ID)
 //	theme:<id>             apply a color theme (not persisted)
 //	aidemo                 load a sample AI conversation
+//	diffdemo               open the AI review card with sample files
+//	                       (nothing is written)
 //	plugin:nvim-dap=<dir>  set nvim-dap up from a checkout (tests: the
 //	                       sandbox has none; Group K7)
 type DevActionMsg struct{ ID string }
@@ -70,6 +74,17 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 			{Role: ai.StoredAssistant, Text: aiDemoAnswer},
 		}
 		s.scroll = 0
+	case "diffdemo": // the review card for the shots (writes nothing)
+		for _, f := range diffview.DemoFiles() {
+			m.addAIReview(&aiReviewItem{file: f, finish: func(_ *Model, d *textdiff.Diff, acc map[int]bool, _ bool) (string, tea.Cmd) {
+				return aiReviewSummary(d, acc), nil
+			}})
+		}
+		if r := m.ai.review; r != nil {
+			r.card.Select(0)
+			r.card.Action("next")
+			r.card.Action("accept")
+		}
 	case "openfile": // as if picked in the explorer (images open the preview)
 		return func() tea.Msg { return explorer.OpenFileMsg{Path: arg} }
 	case "view":

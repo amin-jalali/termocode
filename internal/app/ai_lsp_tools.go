@@ -424,7 +424,7 @@ return table.concat(out, '\n')
 // it saves what changed (only buffers with no unsaved user edits
 // before), drops buffers the edit loaded, and reports one line per
 // changed file: "saved|kept|failed<TAB>path<TAB>edits".
-const aiLSPEditLua = aiLSPPrelude + `
+const aiLSPEditLua = aiLSPPrelude + aiLSPPreviewLua + `
 local function snapshot()
   local s = {}
   for _, x in ipairs(vim.api.nvim_list_bufs()) do
@@ -480,7 +480,7 @@ end
 `
 
 const aiLSPRenameLua = aiLSPEditLua + `
-local path, root, line, ch, newname = ...
+local path, root, line, ch, newname, op = ...
 local before = snapshot()
 local b, clients = lspbuf(path)
 if #clients == 0 then return 'NOLSP\t' .. vim.bo[b].filetype end
@@ -492,6 +492,7 @@ local r = req(c, 'textDocument/rename', params, b)
 if not r then return 'ERR\tthe language server (' .. c.name .. ') did not answer' end
 if r.err then return 'ERR\trename failed: ' .. (r.err.message or vim.inspect(r.err)) end
 if not r.result then return 'ERR\tnothing to rename at this position' end
+if op == 'preview' then return preview(r.result, c.offset_encoding) end
 local counts = {}
 count_edits(r.result, counts)
 vim.lsp.util.apply_workspace_edit(r.result, c.offset_encoding or 'utf-16')
@@ -557,6 +558,10 @@ if a.edit == nil and a.command == nil or (type(a.command) ~= 'string' and a.edit
     local r = req(c, 'codeAction/resolve', a, b)
     if r and r.result then a = r.result end
   end
+end
+if op == 'preview' then
+  if a.command or a.edit == nil then return 'CMD\t' end
+  return preview(a.edit, c.offset_encoding)
 end
 local counts = {}
 if a.edit then

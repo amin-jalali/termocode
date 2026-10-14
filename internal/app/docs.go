@@ -247,6 +247,8 @@ var fileOnlySettings = []SettingEntry{
 		Description: "Model for inline ghost-text completions. Empty uses a fast model of the provider (for example Claude Haiku or gpt-4.1-mini)."},
 	{Key: "ai_auto_approve", Type: "string[]", Default: "[]", Category: "AI (file only)",
 		Description: "Agent tool classes that run without asking: " + strings.Join(ai.ToolClasses, ", ") + ". Set with AI: Agent Auto-Approve…."},
+	{Key: "ai_edit_review", Type: "enum", Default: "review", Category: "AI (file only)", Choices: []string{"review", "auto"},
+		Description: "review: the agent's file changes (write_file, create_file, LSP rename, code actions, format) open as a diff where you accept or reject each change; the agent waits and is told what was written. auto: the old way (a confirm dialog, or no question when fileWrite is auto-approved). Auto-approving fileWrite also skips the review. Toggle with AI: Toggle Edit Review."},
 	{Key: "ai_max_steps", Type: "int", Default: strconv.Itoa(ai.DefaultMaxSteps), Category: "AI (file only)",
 		Description: "Most tool steps the AI agent takes for one chat message. At the limit it stops and asks you to send \"continue\"."},
 	{Key: "terminal_skip_shell", Type: "string[]", Default: "[]", Category: "Terminal (file only)",

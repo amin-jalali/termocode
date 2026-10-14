@@ -21,7 +21,8 @@ import (
 //   ai_inline.go    — debounced inline completion requests
 //   ai_panel.go     — right-side chat panel rendering, keys, mouse
 //   ai_chat.go      — streaming chat turns through the tool agent
-//   ai_actions.go   — Explain / Fix / Edit / Doc proposals in the nvim diff
+//   ai_actions.go   — Explain / Fix / Edit / Doc proposals
+//   ai_review.go    — the review card for every proposed change
 //   ai_config_ui.go — Configure / Pick Model / OAuth sign-in flows
 //   ai_tools_app.go — editor-backed agent tools (LSP, buffers)
 //
@@ -63,7 +64,21 @@ type aiState struct {
 	actionGen    uint64
 	actionCancel context.CancelFunc
 	actionBusy   string
-	proposal     *aiProposal
+	// review is the open review card's files (ai_review.go).
+	review *aiReview
+	// preReview holds the proposals made for a step's later calls
+	// (aiBeforeCalls), by tool call id.
+	preReview map[string]aiProposed
+	// Restore points (ai_restore.go): the chat's points, a counter that
+	// changes with them (transcript cache), the user message of the
+	// running turn and the turn the undo dialog is about.
+	restore    *aiRestorePoints
+	restoreGen int
+	turnMsg    int
+	undoTurn   int
+	// auditPending is the started tool call the audit log waits for
+	// (ai_audit.go).
+	auditPending *aiAuditPending
 	editTarget   *aiRangeTarget // Edit-with-AI waiting for its instruction
 
 	// configure / sign-in flow
@@ -97,7 +112,7 @@ type aiAttachment struct {
 
 // newAIState loads settings + credentials and builds the provider.
 func newAIState() *aiState {
-	s := &aiState{store: ai.DefaultChatStore(), conv: ai.NewConversation()}
+	s := &aiState{store: ai.DefaultChatStore(), conv: ai.NewConversation(), turnMsg: -1, undoTurn: -1}
 	s.reload()
 	s.restoreAIChat() // last chat + scroll from session.json
 	return s
@@ -255,6 +270,9 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-export-chat", "AI: Export Chat as Markdown", ""},
 		{"ai-apply-proposal", "AI: Apply Proposed Edit", ""},
 		{"ai-discard-proposal", "AI: Discard Proposed Edit", ""},
+		{"ai-review", "AI: Review Pending Changes", ""},
+		{"ai-undo-turn", "AI: Undo Last Turn", ""},
+		{"ai-edit-review", "AI: Toggle Edit Review (diff / auto)", ""},
 		{"ai-trigger-inline", "AI: Trigger Inline Completion", "Alt+\\"},
 		{"ai-toggle-inline", "AI: Toggle Inline Completions", "Alt+|"},
 		{"ai-configure", "AI: Configure Provider…", ""},
@@ -279,7 +297,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	// the configure / sign-in / credentials entries are the way out.
 	switch id {
 	case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials",
-		"ai-cancel", "ai-discard-proposal", "ai-history", "ai-pick-model", "ai-auto-approve":
+		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve":
 	default:
 		if c, ok := m.aiReady(); !ok {
 			return c, true
@@ -306,10 +324,16 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.aiApplyLastCodeBlock(), true
 	case "ai-export-chat":
 		return m.aiExportChat(), true
+	case "ai-review":
+		return m.showAIReview(), true
+	case "ai-undo-turn":
+		return m.aiUndoTurn(-1), true
+	case "ai-edit-review":
+		return m.toggleAIEditReview(), true
 	case "ai-apply-proposal":
-		return m.applyAIProposal(), true
+		return m.reviewDecideCurrent(true), true
 	case "ai-discard-proposal":
-		return m.discardAIProposal(true), true
+		return m.reviewDecideCurrent(false), true
 	case "ai-trigger-inline":
 		return m.aiTriggerInline(), true
 	case "ai-toggle-inline":
@@ -338,6 +362,7 @@ func (m *Model) aiCancelAll() tea.Cmd {
 	stopped := s.streaming || s.actionBusy != ""
 	if s.chatCancel != nil {
 		s.chatCancel()
+		m.cancelAIReviewTurn()
 	}
 	if s.actionCancel != nil {
 		s.actionCancel()

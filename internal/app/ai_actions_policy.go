@@ -268,6 +268,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-apply-proposal":   aiNever("the user reviews proposed edits"),
 	"ai-export-chat":      aiConfirm(ai.ClassFileWrite), // writes ai-chat-<date>.md
 	"ai-discard-proposal": aiNever("the user reviews proposed edits"),
+	"ai-review":           aiNever("the user reviews proposed edits"),
+	"ai-edit-review":      aiNever(aiNoAIConfig),
+	"ai-undo-turn":        aiNever("the user undoes the AI's changes"),
 	"ai-trigger-inline":   aiNever("inline completion is for the user's typing"),
 	"ai-toggle-inline":    aiConfirm(ai.ClassIDE),
 	"ai-cancel":           aiNever("stops the model's own turn"),
@@ -317,6 +320,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_base_url":         aiNever(aiNoAIConfig),
 	"ai_auto_approve":     aiNever(aiNoAIConfig),
 	"ai_max_steps":        aiNever(aiNoAIConfig),
+	"ai_edit_review":      aiNever(aiNoAIConfig),
 }
 
 // aiListActionsMax caps list_actions results.

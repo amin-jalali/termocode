@@ -23,11 +23,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: New Chat | `ai-new-chat` |   |   |
 | AI: Open Chat | `ai-open-chat` | `Alt+A` | `Alt+A` |
 | AI: Pick Model… | `ai-pick-model` |   |   |
+| AI: Review Pending Changes | `ai-review` |   |   |
 | AI: Sign in with Claude (OAuth, opt-in)… | `ai-sign-in-claude` |   |   |
 | AI: Sign out of Claude | `ai-sign-out-claude` |   |   |
 | AI: Stop Generating | `ai-cancel` |   |   |
+| AI: Toggle Edit Review (diff / auto) | `ai-edit-review` |   |   |
 | AI: Toggle Inline Completions | `ai-toggle-inline` | <code>Alt+&#124;</code> | <code>Alt+&#124;</code> |
 | AI: Trigger Inline Completion | `ai-trigger-inline` | <code>Alt+&#92;</code> | <code>Alt+&#92;</code> |
+| AI: Undo Last Turn | `ai-undo-turn` |   |   |
 
 ## Bookmarks
 
