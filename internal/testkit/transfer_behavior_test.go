@@ -198,13 +198,66 @@ func TestDownloadFallbackShowsScp(t *testing.T) {
 	if !d.WaitForText("scp", 2*time.Second) || !strings.Contains(screen(d), "workspace/a.txt'") {
 		t.Fatalf("no scp command:\n%s", screen(d))
 	}
+	clip := stubClipboard(t, true)
 	clickText(d, "Copy Command")
 	if !d.WaitForText("Command copied", 2*time.Second) {
 		t.Errorf("no copied toast:\n%s", screen(d))
 	}
+	if got := clip.text(); !strings.HasPrefix(got, "scp '") || !strings.HasSuffix(got, "workspace/a.txt' .") {
+		t.Errorf("copied %q", got)
+	}
 	if term.wrote() != 0 {
 		t.Errorf("wrote %d bytes to the terminal", term.wrote())
 	}
+}
+
+// Spec: Given the scp dialog and a clipboard that does not take the text,
+// when the user presses Copy Command,
+// then termocode does not claim it copied anything.
+func TestDownloadFallbackCopyFails(t *testing.T) {
+	t.Setenv(transfer.EnvOverride, "off")
+	newFakeTerminal(t, false)
+	d := New(t, Options{Files: textFiles()})
+	rightClickExplorer(d, "a.txt")
+	clickText(d, "Download")
+	if !d.WaitForText("Copy Command", 2*time.Second) {
+		t.Fatalf("no dialog:\n%s", screen(d))
+	}
+	stubClipboard(t, false)
+	clickText(d, "Copy Command")
+	if !d.WaitForText("Could not copy", 2*time.Second) {
+		t.Errorf("no failure toast:\n%s", screen(d))
+	}
+	if strings.Contains(screen(d), "Command copied") {
+		t.Errorf("claims copied:\n%s", screen(d))
+	}
+}
+
+// fakeClipboard records what Copy Command copied.
+type fakeClipboard struct {
+	mu  sync.Mutex
+	got string
+}
+
+func (c *fakeClipboard) text() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.got
+}
+
+// stubClipboard replaces the clipboard (CI machines have none); ok is
+// what the stub reports.
+func stubClipboard(t *testing.T, ok bool) *fakeClipboard {
+	c := &fakeClipboard{}
+	t.Cleanup(app.SetTransferClipboard(func(s string) bool {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		if ok {
+			c.got = s
+		}
+		return ok
+	}))
+	return c
 }
 
 // Spec: Given a terminal without file transfer,

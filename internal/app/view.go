@@ -162,49 +162,66 @@ func (m Model) overlayToastsInEditor(base string) string {
 	if m.toast.Empty() {
 		return base
 	}
+	for _, p := range m.toastPlaces() {
+		o := ModalOpts{At: true, X: p.x, Y: p.y, NoDim: true, SlideX: p.w + 4,
+			Animating: p.card.Slide != 0, Progress: 1 - p.card.Slide}
+		if p.compact {
+			o.NoShadow, o.SlideX = true, p.w+2
+		}
+		base = modalOverlay(base, strings.Join(p.card.Lines, "\n"), m.w, m.h, &o)
+	}
+	return base
+}
+
+// toastPlaces lays out the toast cards (see overlayToastsInEditor); the
+// mouse hit-test (toastClickAt) uses the same places.
+func (m Model) toastPlaces() []toastPlace {
+	if m.toast.Empty() {
+		return nil
+	}
 	pane := m.editorPaneLayout()
 	edPaneW, editorStart := pane.W, pane.X
 	if m.h <= toastCompactMaxH || edPaneW < toastCompactMinW {
-		return m.overlayCompactToast(base, editorStart, edPaneW)
+		return m.compactToastPlaces(editorStart, edPaneW)
 	}
 	w := 52
 	if w > edPaneW-6 {
 		w = edPaneW - 6
 	}
 	if w < 24 {
-		return base
+		return nil
 	}
 	cards := m.toast.Cards(w)
 	x := editorStart + edPaneW - w - 2
 	y := m.h - 3 // the shadow row of the newest card sits just above the status bar
+	var out []toastPlace
 	for i := len(cards) - 1; i >= 0; i-- {
 		c := cards[i]
 		y -= len(c.Lines)
 		if y < 1 {
 			break
 		}
-		o := ModalOpts{At: true, X: x, Y: y, NoDim: true, SlideX: w + 4,
-			Animating: c.Slide != 0, Progress: 1 - c.Slide}
-		base = modalOverlay(base, strings.Join(c.Lines, "\n"), m.w, m.h, &o)
+		out = append(out, toastPlace{card: c, x: x, y: y, w: w})
 		y-- // gap row (holds the shadow of the card above)
 	}
-	return base
+	return out
 }
 
 // A window this short, or an editor pane this narrow, gets the compact
-// toast (see overlayCompactToast).
+// toast (see compactToastPlaces).
 const (
 	toastCompactMaxH = 30
 	toastCompactMinW = 72
 )
 
-// overlayCompactToast is the small-window toast, like VSCode's collapsed
-// notifications: 3-row cards (title · detail on one row) about half the
-// editor wide, with no drop shadow, stacked with no gap — only the newest
-// in a window of 30 rows or less, the newest two otherwise. The stack sits
-// in the bottom-right corner just above the status bar; when that would
-// cover the cursor line it moves to the top-right of the editor.
-func (m Model) overlayCompactToast(base string, editorStart, edPaneW int) string {
+// compactToastPlaces lays out the small-window toast, like VSCode's
+// collapsed notifications: 3-row cards (title · detail on one row) about
+// half the editor wide, with no drop shadow, stacked with no gap — only
+// the newest in a window of 30 rows or less, the newest two otherwise.
+// The stack sits in the bottom-right corner just above the status bar;
+// when that would cover the cursor line it moves to the top-right of the
+// editor.
+func (m Model) compactToastPlaces(editorStart, edPaneW int) []toastPlace {
 	w := edPaneW / 2
 	if w > 40 {
 		w = 40
@@ -213,7 +230,7 @@ func (m Model) overlayCompactToast(base string, editorStart, edPaneW int) string
 		w = 24
 	}
 	if w > edPaneW-2 {
-		return base
+		return nil
 	}
 	n := 2
 	if m.h <= toastCompactMaxH {
@@ -221,7 +238,7 @@ func (m Model) overlayCompactToast(base string, editorStart, edPaneW int) string
 	}
 	cards := m.toast.CompactCards(w, n)
 	if len(cards) == 0 {
-		return base
+		return nil
 	}
 	h := 0
 	for _, c := range cards {
@@ -239,15 +256,14 @@ func (m Model) overlayCompactToast(base string, editorStart, edPaneW int) string
 		y = top
 	}
 	x := editorStart + edPaneW - w - 1
+	var out []toastPlace
 	for _, c := range cards {
 		if y >= 1 {
-			o := ModalOpts{At: true, X: x, Y: y, NoDim: true, NoShadow: true, SlideX: w + 2,
-				Animating: c.Slide != 0, Progress: 1 - c.Slide}
-			base = modalOverlay(base, strings.Join(c.Lines, "\n"), m.w, m.h, &o)
+			out = append(out, toastPlace{card: c, x: x, y: y, w: w, compact: true})
 		}
 		y += len(c.Lines)
 	}
-	return base
+	return out
 }
 
 // queryGutterWidth asks nvim for the actual gutter width via

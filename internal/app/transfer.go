@@ -135,6 +135,7 @@ type xferProgressMsg struct{ done, total int64 }
 type xferDoneMsg struct {
 	name   string
 	method transfer.Method
+	saved  string // Local: the full path of the copy
 	err    error
 }
 
@@ -186,12 +187,31 @@ func insideWorkspace(p string) bool {
 	return false
 }
 
-func hostname() string {
-	h, _ := os.Hostname()
-	if h == "" {
-		return "HOST"
-	}
-	return h
+var (
+	sshHostOnce sync.Once
+	sshHostName string
+)
+
+// sshHost is this machine's name as the user's computer may reach it
+// (`hostname -f`, else the short name). The scp command uses the server
+// address of SSH_CONNECTION instead when it is set.
+func sshHost() string {
+	sshHostOnce.Do(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		if out, err := exec.CommandContext(ctx, "hostname", "-f").Output(); err == nil {
+			if h := strings.TrimSpace(string(out)); h != "" && !strings.ContainsAny(h, " \t") && h != "localhost" {
+				sshHostName = h
+			}
+		}
+		if sshHostName == "" {
+			sshHostName, _ = os.Hostname()
+		}
+		if sshHostName == "" {
+			sshHostName = "HOST"
+		}
+	})
+	return sshHostName
 }
 
 func randomID() string {
@@ -253,6 +273,9 @@ func (m *Model) downloadPath(path string) tea.Cmd {
 	}
 	sup := xferSupport()
 	method := sup.Download
+	if method == transfer.Local {
+		return m.startLocalDownload(path, size)
+	}
 	why := sup.Why
 	limit := xferMaxKitty
 	if method == transfer.ITerm2 {
@@ -395,6 +418,8 @@ func (m *Model) uploadTo(dir string) tea.Cmd {
 	}
 	sup := transfer.Detect(os.Getenv)
 	switch sup.Upload {
+	case transfer.Local:
+		return m.localUpload(dir)
 	case transfer.Kitty:
 		m.extras.xfer = xferPending{path: dir, upload: true, method: transfer.Kitty}
 		m.prompt = prompt.New("Upload with kitty", "File or folder on your computer:", "~/")
@@ -415,6 +440,9 @@ func (m *Model) onUploadSource(src string) tea.Cmd {
 	src = strings.TrimSpace(src)
 	if src == "" || p.path == "" {
 		return nil
+	}
+	if p.method == transfer.Local {
+		return localUploadCmd(p.path, []string{expandHome(src)})
 	}
 	return uploadExecCmd(transfer.Kitty, src, p.path)
 }
@@ -532,39 +560,76 @@ func runUpload(ctx context.Context, method transfer.Method, src, dir string, in 
 // openXferFallback explains how to move the file by hand: the scp
 // command (copied with one click), and trzsz when it is installed.
 func (m *Model) openXferFallback(p xferPending, terminal, why string) tea.Cmd {
-	var lines []string
-	reason := "Your terminal can not take files from termocode."
+	name := filepath.Base(p.path)
+	title := "Download " + name
+	msg := "To get " + name + ", run this command on your own computer. It saves the file in the folder where you run it."
+	if p.dir {
+		msg = "To get the folder " + name + ", run this command on your own computer. It copies the folder into the folder where you run it."
+	}
 	if p.upload {
-		reason = "Your terminal can not send files to termocode."
-	}
-	if terminal != "" {
-		reason = strings.Replace(reason, "Your terminal", terminal, 1)
-	}
-	lines = append(lines, reason)
-	if why != "" && !strings.HasPrefix(why, terminal+" has no") && !strings.HasPrefix(why, "this terminal") {
-		lines = append(lines, "("+why+")")
-	}
-	lines = append(lines, "kitty and iTerm2 can. Or run this on your computer:", "")
-	title := "Download " + filepath.Base(p.path)
-	if p.upload {
-		p.scp = transfer.ScpUpload(os.Getenv, hostname(), p.path)
-		title = "Upload to " + filepath.Base(p.path)
+		title = "Upload to " + name
+		p.scp = transfer.ScpUpload(os.Getenv, sshHost(), p.path)
+		msg = "To send files into " + name + ", run this command on your own computer. Put the path of your file in place of FILE."
 	} else {
-		p.scp = transfer.ScpDownload(os.Getenv, hostname(), p.path, p.dir)
+		p.scp = transfer.ScpDownload(os.Getenv, sshHost(), p.path, p.dir)
 	}
-	lines = append(lines, "  "+p.scp)
+	tool, side := "tsz", "Download"
+	if p.upload {
+		tool, side = "trz", "Upload"
+	}
+	var note []string
 	buttons := []confirm.Button{{ID: "copy", Title: "Copy Command", Style: confirm.StylePrimary}}
 	if trzszInstalled(p.upload) {
-		lines = append(lines, "", "trzsz is installed: it works with trzsz-ssh or a trzsz terminal plugin.")
+		note = append(note, "trzsz is installed here: with trzsz-ssh (or a trzsz terminal plugin) on your computer, press Use trzsz to send it in this window.")
 		buttons = append(buttons, confirm.Button{ID: "trzsz", Title: "Use trzsz"})
+	} else {
+		note = append(note, "Other ways: kitty and iTerm2 can "+strings.ToLower(side)+" with one click. "+
+			"Or install trzsz here ("+tool+") and connect with trzsz-ssh: then "+side+" works in any terminal.")
+	}
+	if why != "" && !strings.HasPrefix(why, "this terminal") && (terminal == "" || !strings.HasPrefix(why, terminal+" has no")) {
+		note = append(note, "("+why+")")
 	}
 	buttons = append(buttons, confirm.Button{ID: "close", Title: "Close"})
 	m.extras.xfer = p
-	m.confirm = confirm.New(title, strings.Join(lines, "\n"), buttons)
+	m.confirm = confirm.New(title, msg, buttons).WithCode(p.scp, strings.Join(note, "\n"))
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindTransferFallback
 	return nil
+}
+
+var (
+	xferClipMu sync.Mutex
+	xferClip   func(string) bool
+)
+
+// SetTransferClipboard replaces the clipboard that Copy Command writes
+// to; f reports whether the text was copied. It returns a restore func.
+// For tests: CI machines have no clipboard.
+func SetTransferClipboard(f func(string) bool) (restore func()) {
+	xferClipMu.Lock()
+	old := xferClip
+	xferClip = f
+	xferClipMu.Unlock()
+	return func() {
+		xferClipMu.Lock()
+		xferClip = old
+		xferClipMu.Unlock()
+	}
+}
+
+// copyCommand copies s to the user's clipboard and reports whether it
+// could: OSC 52 reaches the terminal (not headless), or the system
+// clipboard took it.
+func (m *Model) copyCommand(s string) bool {
+	xferClipMu.Lock()
+	f := xferClip
+	xferClipMu.Unlock()
+	if f != nil {
+		return f(s)
+	}
+	m.copyToClipboard(s)
+	return !headless() || clipboardReady()
 }
 
 // xferLookPath is exec.LookPath; tests replace it.
@@ -609,7 +674,9 @@ func (m *Model) onXferConfirm(kind confirmKindEnum, id string) tea.Cmd {
 	case kind == confirmKindTransferLarge && id == "download":
 		return m.startDownload(p)
 	case kind == confirmKindTransferFallback && id == "copy":
-		m.copyToClipboard(p.scp)
+		if !m.copyCommand(p.scp) {
+			return m.pushToastDetail(toast.Warn, "Could not copy the command", p.scp)
+		}
 		return m.pushToastDetail(toast.Info, "Command copied", p.scp)
 	case kind == confirmKindTransferFallback && id == "trzsz":
 		return trzszCmd(p)
@@ -650,12 +717,30 @@ func (m *Model) handleXferMsg(msg tea.Msg) (tea.Cmd, bool) {
 			m.toast, c = m.toast.Push(toast.Info, "Download canceled")
 		case msg.err != nil:
 			m.toast, c = m.toast.PushDetail(toast.Errr, "Download failed", msg.err.Error())
+		case msg.method == transfer.Local:
+			m.extras.xferLast = msg.saved
+			m.toast, c = m.toast.PushClick(toast.Info, "Saved to "+tildePath(msg.saved),
+				"Show in folder (click here)", xferRevealMsg{path: msg.saved})
 		case msg.method == transfer.Kitty:
 			m.toast, c = m.toast.PushDetail(toast.Info, "Downloaded "+msg.name, "Saved in "+xferKittyDest+" on your computer.")
 		default:
 			m.toast, c = m.toast.PushDetail(toast.Info, "Sent "+msg.name, "iTerm2 saves it in your Downloads folder.")
 		}
 		return c, true
+	case xferRevealMsg:
+		return revealCmd(msg.path), true
+	case xferChosenMsg:
+		switch {
+		case msg.err != nil:
+			// The chooser did not open: ask for the path instead.
+			c = m.openLocalUploadPrompt(msg.dir)
+			var tc tea.Cmd
+			m.toast, tc = m.toast.PushDetail(toast.Warn, "The file chooser did not open", msg.err.Error())
+			return tea.Batch(c, tc), true
+		case len(msg.paths) == 0:
+			return nil, true // canceled
+		}
+		return localUploadCmd(msg.dir, msg.paths), true
 	case xferUploadDoneMsg:
 		m.explorer.Reload()
 		switch {

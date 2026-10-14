@@ -188,6 +188,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"transfer-download":       aiNever(aiNoTransfer),
 	"transfer-upload":         aiNever(aiNoTransfer),
 	"transfer-cancel":         aiNever(aiNoTransfer),
+	"transfer-reveal":         aiNever(aiNoTransfer),
 	"open-url":                aiNever(aiNoOutside),
 	"reload-window":           aiNever(aiNoSession),
 	"detach-session":          aiNever(aiNoSession),
