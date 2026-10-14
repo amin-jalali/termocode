@@ -131,7 +131,36 @@ func renderChatMarkdown(text string, width, indent, msgIdx int, streaming bool) 
 		}
 		return aiLine{styled: b.String()}
 	}
-	blank := func() { out = append(out, pad(nil)) }
+	// sel makes a row selectable: text shown from column x, joined to
+	// the row above by join (see aiSel).
+	sel := func(l aiLine, x int, text, join string) aiLine {
+		l.sel = aiSel{ok: true, x: x, text: text, join: join}
+		return l
+	}
+	// wrapped appends spans wrapped to w, drawn after the lead spans (and
+	// a selectable start at x), with the joins of a wrapped source line.
+	wrapped := func(spans []mdSpan, w, x int, lead func(k int) []mdSpan) {
+		rows := wrapSpans(spans, w)
+		texts := make([]string, len(rows))
+		for k, r := range rows {
+			texts[k] = joinParts(r)
+		}
+		joins := aiJoins(joinParts(spans), texts)
+		for k, r := range rows {
+			var head []mdSpan
+			if lead != nil {
+				head = lead(k)
+			}
+			sx := x
+			if k == 0 && lead != nil {
+				// The first row's lead (a list marker) is part of the text.
+				sx -= runewidth.StringWidth(joinParts(head))
+				texts[k] = joinParts(head) + texts[k]
+			}
+			out = append(out, sel(pad(append(head, r...)), sx, texts[k], joins[k]))
+		}
+	}
+	blank := func() { out = append(out, sel(pad(nil), indent, "", "\n")) }
 
 	lines := strings.Split(strings.ReplaceAll(text, "\r", ""), "\n")
 	block := 0
@@ -140,9 +169,7 @@ func renderChatMarkdown(text string, width, indent, msgIdx int, streaming bool) 
 		if len(para) == 0 {
 			return
 		}
-		for _, l := range wrapSpans(parseInline(strings.Join(para, " "), s, s.text), inner) {
-			out = append(out, pad(l))
-		}
+		wrapped(parseInline(strings.Join(para, " "), s, s.text), inner, indent, nil)
 		para = nil
 	}
 	for i := 0; i < len(lines); i++ {
@@ -179,39 +206,43 @@ func renderChatMarkdown(text string, width, indent, msgIdx int, streaming bool) 
 			case 2:
 				hs = s.h2
 			}
-			for _, l := range wrapSpans(parseInline(title, s, hs), inner) {
-				out = append(out, pad(l))
-			}
+			wrapped(parseInline(title, s, hs), inner, indent, nil)
 		case trim == "---" || trim == "***" || trim == "___":
 			flushPara()
 			out = append(out, pad([]mdSpan{{text: strings.Repeat("─", inner), st: s.rule}}))
 		case strings.HasPrefix(trim, ">"):
 			flushPara()
 			body := strings.TrimSpace(strings.TrimPrefix(trim, ">"))
-			for _, l := range wrapSpans(parseInline(body, s, s.ital.Foreground(theme.LG(theme.TextSecondary))), inner-2) {
-				out = append(out, pad(append([]mdSpan{{text: "▎ ", st: s.quoteBar}}, l...)))
+			// The quote bar is not part of the selectable text.
+			bar := []mdSpan{{text: "▎ ", st: s.quoteBar}}
+			n := len(out)
+			wrapped(parseInline(body, s, s.ital.Foreground(theme.LG(theme.TextSecondary))), inner-2, indent+2,
+				func(int) []mdSpan { return bar })
+			for k := n; k < len(out); k++ { // undo the first-row lead text
+				out[k].sel.x, out[k].sel.text = indent+2, strings.TrimPrefix(out[k].sel.text, "▎ ")
 			}
 		case strings.HasPrefix(trim, "|"):
 			flushPara()
-			out = append(out, pad([]mdSpan{{text: runewidth.Truncate(trim, inner, "…"), st: s.dim}}))
+			row := runewidth.Truncate(trim, inner, "…")
+			out = append(out, sel(pad([]mdSpan{{text: row, st: s.dim}}), indent, row, "\n"))
 		default:
 			if marker, body, ok := listItem(raw); ok {
 				flushPara()
 				lead := strings.Repeat("  ", listDepth(raw))
 				mw := runewidth.StringWidth(lead + marker + " ")
-				wrapped := wrapSpans(parseInline(body, s, s.text), inner-mw)
-				for k, l := range wrapped {
-					head := mdSpan{text: strings.Repeat(" ", mw), st: s.text}
-					if k == 0 {
-						ms := s.bullet
-						if strings.HasSuffix(marker, ".") {
-							ms = s.dim
-						}
-						out = append(out, pad(append([]mdSpan{{text: lead, st: s.text}, {text: marker + " ", st: ms}}, l...)))
-						continue
-					}
-					out = append(out, pad(append([]mdSpan{head}, l...)))
+				ms := s.bullet
+				if strings.HasSuffix(marker, ".") {
+					ms = s.dim
 				}
+				first := []mdSpan{{text: lead, st: s.text}, {text: marker + " ", st: ms}}
+				hang := []mdSpan{{text: strings.Repeat(" ", mw), st: s.text}}
+				// The hanging indent of later rows is not text.
+				wrapped(parseInline(body, s, s.text), inner-mw, indent+mw, func(k int) []mdSpan {
+					if k == 0 {
+						return first
+					}
+					return hang
+				})
 				continue
 			}
 			para = append(para, trim)
@@ -220,6 +251,9 @@ func renderChatMarkdown(text string, width, indent, msgIdx int, streaming bool) 
 	flushPara()
 	for len(out) > 0 && isBlankAILine(out[len(out)-1]) {
 		out = out[:len(out)-1]
+	}
+	for k := range out {
+		out[k].msg = msgIdx + 1
 	}
 	return out
 }
@@ -517,12 +551,31 @@ func renderCodeCard(code []string, lang string, s mdStyles, width, indent, msgId
 	if len(btns) > 0 {
 		row += head.Render(" ")
 	}
-	out = append(out, aiLine{styled: row + right(indent+cardW), buttons: buttons})
+	out = append(out, aiLine{styled: row + right(indent+cardW), buttons: buttons, block: block + 1})
 
-	// Highlighted body.
+	// Highlighted body. Each row's selectable text leaves out the ↪
+	// prefix of a continuation; a source line's first row keeps the
+	// source line for a whole-line copy (tabs, not the spaces shown).
 	bodyBg := lipgloss.NewStyle().Background(s.cardBg)
-	for _, line := range highlightCode(strings.Join(code, "\n"), lang, s) {
-		for _, seg := range wrapStyledLine(line, cardW-2) {
+	for li, line := range highlightCode(strings.Join(code, "\n"), lang, s) {
+		segs := wrapStyledLine(line, cardW-2)
+		texts := make([]string, len(segs))
+		xs := make([]int, len(segs))
+		for k, seg := range segs {
+			xs[k] = indent + 1
+			if k > 0 && len(seg) >= 2 { // indent + "↪ " prefix spans
+				xs[k] += runewidth.StringWidth(seg[0].text + seg[1].text)
+				seg = seg[2:]
+			}
+			texts[k] = joinParts(seg)
+		}
+		full := joinParts(line)
+		joins := aiJoins(full, texts)
+		raw := full
+		if li < len(code) {
+			raw = code[li]
+		}
+		for k, seg := range segs {
 			w := 0
 			var b strings.Builder
 			for _, sp := range seg {
@@ -533,10 +586,17 @@ func renderCodeCard(code []string, lang string, s mdStyles, width, indent, msgId
 			if fill := cardW - 1 - w; fill > 0 {
 				r += bodyBg.Render(strings.Repeat(" ", fill))
 			}
-			out = append(out, aiLine{styled: r + right(indent+cardW)})
+			l := aiLine{styled: r + right(indent+cardW), block: block + 1,
+				sel: aiSel{ok: true, x: xs[k], text: texts[k], join: joins[k], code: true}}
+			if k == 0 {
+				l.sel.raw = raw
+			}
+			out = append(out, l)
 		}
 	}
-	out = append(out, aiLine{styled: left + bodyBg.Render(strings.Repeat(" ", cardW)) + right(indent+cardW)})
+	// The card's last row reads as the blank line after the code.
+	out = append(out, aiLine{styled: left + bodyBg.Render(strings.Repeat(" ", cardW)) + right(indent+cardW),
+		block: block + 1, sel: aiSel{ok: true, x: indent, join: "\n"}})
 	return out
 }
 
