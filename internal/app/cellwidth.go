@@ -5,6 +5,7 @@ import (
 	"sync"
 	"unicode"
 	"unicode/utf8"
+	"unsafe"
 
 	"github.com/charmbracelet/x/ansi"
 )
@@ -125,8 +126,16 @@ func joinColumns(cols ...string) string {
 			h = len(lines[i])
 		}
 	}
+	// One exact-size buffer: the frame is large and built every draw.
+	size := h
+	for i, c := range cols {
+		size += len(c) - (len(lines[i]) - 1) + maxW[i]*h
+		for _, w := range widths[i] {
+			size -= w
+		}
+	}
 	var b strings.Builder
-	b.Grow(len(cols[0]) * len(cols))
+	b.Grow(size)
 	for y := 0; y < h; y++ {
 		if y > 0 {
 			b.WriteByte('\n')
@@ -137,12 +146,22 @@ func joinColumns(cols ...string) string {
 				b.WriteString(lines[i][y])
 				w = widths[i][y]
 			}
-			if pad := maxW[i] - w; pad > 0 {
-				b.WriteString(strings.Repeat(" ", pad))
-			}
+			writeSpaces(&b, maxW[i]-w)
 		}
 	}
 	return b.String()
+}
+
+// spaces backs writeSpaces (padding without a strings.Repeat per row).
+const spaces = "                                                                                                                                "
+
+// writeSpaces writes n spaces to b (nothing when n <= 0).
+func writeSpaces(b *strings.Builder, n int) {
+	for n > 0 {
+		k := min(n, len(spaces))
+		b.WriteString(spaces[:k])
+		n -= k
+	}
 }
 
 // joinRows is lipgloss.JoinVertical(lipgloss.Left, blocks...) with
@@ -166,17 +185,199 @@ func joinRows(blocks ...string) string {
 			maxW = widths[i]
 		}
 	}
+	size := len(lines)
+	for i, l := range lines {
+		size += len(l) + maxW - widths[i]
+	}
 	var b strings.Builder
+	b.Grow(size)
 	for i, l := range lines {
 		if i > 0 {
 			b.WriteByte('\n')
 		}
 		b.WriteString(l)
-		if pad := maxW - widths[i]; pad > 0 {
-			b.WriteString(strings.Repeat(" ", pad))
-		}
+		writeSpaces(&b, maxW-widths[i])
 	}
 	return b.String()
+}
+
+// rowWidths remembers the cell width of frame rows for the frame
+// pipeline (renderBaseLines): a row is measured by several steps (clip,
+// stack join, column join, normalize), and rows from cached panels are
+// the same strings frame after frame. Entries are keyed by the string's
+// data pointer and hold the string, so the pointer cannot be reused while
+// the entry exists. Two generations: nextFrameWidths drops entries not
+// used in the last two frames, so the memo stays about a frame in size.
+var rowWidths struct {
+	sync.Mutex
+	cur, prev map[*byte]rowWidth
+}
+
+type rowWidth struct {
+	s string
+	w int
+}
+
+// minMemoRow: shorter rows are measured directly (a map lookup costs
+// about as much).
+const minMemoRow = 48
+
+// frameWidth is cellWidth(s) through rowWidths.
+func frameWidth(s string) int {
+	if strings.IndexByte(s, '\n') >= 0 {
+		return textWidth(s)
+	}
+	if len(s) < minMemoRow {
+		return cellWidth(s)
+	}
+	k := unsafe.StringData(s)
+	rowWidths.Lock()
+	if e, ok := rowWidths.cur[k]; ok && len(e.s) == len(s) {
+		rowWidths.Unlock()
+		return e.w
+	}
+	if e, ok := rowWidths.prev[k]; ok && len(e.s) == len(s) {
+		rowWidths.cur[k] = e
+		rowWidths.Unlock()
+		return e.w
+	}
+	rowWidths.Unlock()
+	w := cellWidth(s)
+	setFrameWidth(s, w)
+	return w
+}
+
+// setFrameWidth records that row s is w cells wide (a row the pipeline
+// just built, so its width is known without measuring).
+func setFrameWidth(s string, w int) {
+	if len(s) < minMemoRow {
+		return
+	}
+	rowWidths.Lock()
+	if rowWidths.cur == nil {
+		rowWidths.cur = make(map[*byte]rowWidth)
+	}
+	rowWidths.cur[unsafe.StringData(s)] = rowWidth{s, w}
+	rowWidths.Unlock()
+}
+
+// nextFrameWidths starts a new generation of rowWidths.
+func nextFrameWidths() {
+	rowWidths.Lock()
+	rowWidths.prev, rowWidths.cur = rowWidths.cur, make(map[*byte]rowWidth, len(rowWidths.cur))
+	rowWidths.Unlock()
+}
+
+// joinColumnsLines is joinColumns on columns given as rows: the result
+// is joinColumns(cols...) split into rows. All rows share one buffer.
+func joinColumnsLines(cols ...[]string) []string {
+	if len(cols) == 0 {
+		return []string{""}
+	}
+	if len(cols) == 1 {
+		return cols[0]
+	}
+	h := 0
+	maxW := make([]int, len(cols))
+	widths := make([][]int, len(cols))
+	size := 0
+	for i, c := range cols {
+		widths[i] = make([]int, len(c))
+		for j, l := range c {
+			w := frameWidth(l)
+			widths[i][j] = w
+			maxW[i] = max(maxW[i], w)
+			size += len(l) - w
+		}
+		h = max(h, len(c))
+	}
+	for i := range cols {
+		size += maxW[i] * h
+	}
+	var b strings.Builder
+	b.Grow(size)
+	ends := make([]int, h)
+	for y := 0; y < h; y++ {
+		for i, c := range cols {
+			w := 0
+			if y < len(c) {
+				b.WriteString(c[y])
+				w = widths[i][y]
+			}
+			writeSpaces(&b, maxW[i]-w)
+		}
+		ends[y] = b.Len()
+	}
+	all := b.String()
+	out := make([]string, h)
+	start, total := 0, 0
+	for _, w := range maxW {
+		total += w
+	}
+	for y, e := range ends {
+		out[y] = all[start:e]
+		start = e
+		setFrameWidth(out[y], total)
+	}
+	return out
+}
+
+// joinRowsLines is joinRows on blocks given as rows: the result is
+// joinRows(blocks...) split into rows.
+func joinRowsLines(blocks ...[]string) []string {
+	if len(blocks) == 0 {
+		return []string{""}
+	}
+	if len(blocks) == 1 {
+		return blocks[0]
+	}
+	n := 0
+	for _, bl := range blocks {
+		n += len(bl)
+	}
+	lines := make([]string, 0, n)
+	for _, bl := range blocks {
+		lines = append(lines, bl...)
+	}
+	widths := make([]int, len(lines))
+	maxW := 0
+	for i, l := range lines {
+		widths[i] = frameWidth(l)
+		maxW = max(maxW, widths[i])
+	}
+	size := 0
+	for i := range lines {
+		if widths[i] < maxW {
+			size += maxW - widths[i]
+		}
+	}
+	if size == 0 {
+		return lines
+	}
+	// Pad the short rows; one buffer holds all the padded rows.
+	for i, l := range lines {
+		if widths[i] < maxW {
+			size += len(l)
+		}
+	}
+	var b strings.Builder
+	b.Grow(size)
+	type span struct{ i, start, end int }
+	spans := make([]span, 0, len(lines))
+	for i, l := range lines {
+		if pad := maxW - widths[i]; pad > 0 {
+			st := b.Len()
+			b.WriteString(l)
+			writeSpaces(&b, pad)
+			spans = append(spans, span{i, st, b.Len()})
+		}
+	}
+	all := b.String()
+	for _, sp := range spans {
+		lines[sp.i] = all[sp.start:sp.end]
+		setFrameWidth(lines[sp.i], maxW)
+	}
+	return lines
 }
 
 // textWidth is lipgloss.Width (the widest line) with cellWidth.

@@ -2,6 +2,7 @@ package app
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
@@ -119,34 +120,41 @@ func autoActionsWidth(w int, showExp bool, explorerW int) int {
 // The full block uses BgPanel as background so it visually separates from
 // the editor (which uses BgEditor).
 func (m Model) renderActionsPanel(width, height int) string {
+	return strings.Join(m.renderActionsPanelLines(width, height), "\n")
+}
+
+// renderActionsPanelLines is renderActionsPanel as rows.
+func (m Model) renderActionsPanelLines(width, height int) []string {
 	if width <= 0 || height <= 0 {
-		return ""
+		return nil
 	}
 	bg := theme.Bg(theme.BgPanel)
 	rows := make([]string, 0, height)
+	// A thin edge on the panel's blank first column, the mirror of the
+	// sidebar's ▕, so the panel reads as its own pane next to the editor.
+	edge := func(r string) string { return r }
+	if width > 1 {
+		mark := theme.FgBg(theme.BorderSubtle, theme.BgPanel).Render("▏")
+		edge = func(r string) string { return mark + dropFirstCell(r, width) }
+	}
 
-	rows = append(rows, m.renderActionsHeader(width))
+	rows = append(rows, m.actionsHeaderEdged(width, edge))
 	if height > 1 {
-		rows = append(rows, renderActionsDivider(width))
+		rows = append(rows, edge(renderActionsDivider(width)))
 	}
 	if height > aiPanelTopRow {
-		rows = append(rows, m.renderAIPanelBody(width, height)...) // Group A: AI chat body
+		rows = append(rows, m.renderAIPanelBody(width, height, edge)...) // Group A: AI chat body
 	}
-	for len(rows) < height {
-		rows = append(rows, bg.Render(strings.Repeat(" ", width)))
+	if len(rows) < height {
+		blank := edge(bg.Render(strings.Repeat(" ", width)))
+		for len(rows) < height {
+			rows = append(rows, blank)
+		}
 	}
 	if len(rows) > height {
 		rows = rows[:height]
 	}
-	// A thin edge on the panel's blank first column, the mirror of the
-	// sidebar's ▕, so the panel reads as its own pane next to the editor.
-	if width > 1 {
-		edge := theme.FgBg(theme.BorderSubtle, theme.BgPanel).Render("▏")
-		for i, r := range rows {
-			rows[i] = edge + dropFirstCell(r, width)
-		}
-	}
-	return strings.Join(rows, "\n")
+	return rows
 }
 
 // dropFirstCell is ansi.Cut(row, 1, width) for rows that start with a
@@ -172,6 +180,41 @@ func dropFirstCell(row string, width int) string {
 // "ACTIONS" sits in TextSecondary bold uppercase on the LEFT; the pin and
 // close glyphs are right-aligned with 1 col of padding between them and a
 // 1-col right pad. The whole row uses BgPanel.
+// actionsHeaderMemo keeps the last header row (passed through edge): it
+// only changes with the width, pin state, hovered button and theme.
+var actionsHeaderMemo struct {
+	sync.Mutex
+	ok     bool
+	width  int
+	pinned bool
+	hover  string
+	rk     theme.RenderKey
+	out    string
+}
+
+// actionsHeaderEdged is edge(renderActionsHeader(width)) through
+// actionsHeaderMemo (edge is the same for the same width and theme).
+func (m Model) actionsHeaderEdged(width int, edge func(string) string) string {
+	hover, rk := m.actionsHeaderHover(), theme.CurrentRenderKey()
+	c := &actionsHeaderMemo
+	c.Lock()
+	defer c.Unlock()
+	if c.ok && c.width == width && c.pinned == m.actionsPinned && c.hover == hover && c.rk == rk {
+		return c.out
+	}
+	out := edge(m.renderActionsHeader(width))
+	c.ok, c.width, c.pinned, c.hover, c.rk, c.out = true, width, m.actionsPinned, hover, rk, out
+	return out
+}
+
+// actionsHeaderHover is the header button under the pointer ("" none).
+func (m Model) actionsHeaderHover() string {
+	if m.hoverY == 0 {
+		return m.hitActionsButton(m.hoverX, m.hoverY)
+	}
+	return ""
+}
+
 func (m Model) renderActionsHeader(width int) string {
 	bg := theme.Bg(theme.BgPanel)
 	labelStyle := theme.FgBg(theme.TextSecondary, theme.BgPanel).Bold(true)
@@ -189,10 +232,7 @@ func (m Model) renderActionsHeader(width int) string {
 	labelStyle = theme.FgBg(theme.AIAccent, theme.BgPanel).Bold(true)
 	left := bg.Render(" ") + labelStyle.Render(aiSpark()+" AI CHAT")
 	// Header buttons light up under the pointer.
-	hover := ""
-	if m.hoverY == 0 {
-		hover = m.hitActionsButton(m.hoverX, m.hoverY)
-	}
+	hover := m.actionsHeaderHover()
 	btn := func(id, glyph string, st lipgloss.Style) string {
 		if id == hover {
 			st = st.Background(theme.Mix(theme.BgPanel, theme.TextPrimary, 0.16)).Foreground(theme.LG(theme.TextWhite))

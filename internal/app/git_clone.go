@@ -207,7 +207,7 @@ const welcomeCardWorkspace = "workspace"
 
 // runWelcomeCard runs dashboard card i: cards with an id are handled here,
 // the rest go through their keymap action.
-func (m Model) runWelcomeCard(i int) (tea.Model, tea.Cmd) {
+func (m Model) runWelcomeCard(i int) (Model, tea.Cmd) {
 	actions := welcomeQuickActions()
 	if i < 0 || i >= len(actions) {
 		return m, nil

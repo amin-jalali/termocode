@@ -93,7 +93,7 @@ func TestPanelDragBarWaitsForNvim(t *testing.T) {
 
 	m.dragKind = dragTerminalTop
 	next, _ := m.handleMouse(tea.MouseMsg{X: 50, Y: bar - 3, Type: tea.MouseMotion})
-	m = next.(Model)
+	m = next
 	if m.integratedTerminalRows() != 11 {
 		t.Fatalf("drag did not grow the panel: rows=%d", m.integratedTerminalRows())
 	}
@@ -102,7 +102,7 @@ func TestPanelDragBarWaitsForNvim(t *testing.T) {
 	}
 
 	next, _, _ = m.handleNvimMsg(nvim.RedrawMsg{Events: [][]any{{"flush"}}})
-	m = next.(Model)
+	m = next
 	if got := m.terminalTabBarRowAbsolute(); got != bar-3 {
 		t.Errorf("after nvim redrew: bar at row %d, want %d", got, bar-3)
 	}
