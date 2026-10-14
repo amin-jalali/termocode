@@ -269,3 +269,14 @@ lib/features/ai/ai_surface.dart, lib/features/compare/compare_sheet.dart).
 - [ ] R2 AI change suggestions go through review: the agent's file edits become pending proposals shown in the diff viewer; accept / reject per hunk and all; one undo step; agent waits for the decision and is told the result
 - [ ] R3 Restore points: snapshot before an AI turn's first change; "AI: Undo last turn" restores
 - [ ] R4 AI audit log: Output channel "AI" with every tool call, args, result, who approved
+
+## Group N — Next loop (2026-10-15)
+
+The user: "do them in a loop; after finishing each item push it".
+
+- [ ] N1 (S) Less CPU while scrolling: save session.json less often (debounce / save on idle + on exit), keep crash safety
+- [ ] N2 (S) Search results update after a rename/delete in the explorer (not only after AI changes)
+- [ ] N3 (S/M) First-run setup card on the welcome screen: icons, terminal font, AI provider in a few clicks
+- [ ] N4 (M) Easy install: release binaries (linux/macOS, amd64/arm64) and a one-line install script
+- [ ] N5 (M) Persian/Arabic (right-to-left) text in the AI chat and the Markdown preview (bidi + shaping)
+- [ ] N6 Older items: README screenshots, Tier 2 process extensions, Android clipboard
