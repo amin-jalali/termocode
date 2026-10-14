@@ -248,7 +248,7 @@ func (m *Model) openTerminalPanel() {
 	//      tab switches and resize calls
 	//   4. defers startinsert via vim.schedule so the prompt is interactive
 	//      from the user's first keystroke
-	luaOpen := fmt.Sprintf(`
+	luaOpen := fmt.Sprintf(termExitedLua+`
 		vim.cmd('keepalt botright %dnew')
 		local buf = vim.api.nvim_get_current_buf()
 		vim.bo[buf].buflisted = false
@@ -260,11 +260,7 @@ func (m *Model) openTerminalPanel() {
 		local job = vim.fn.termopen(%q, {
 			on_exit = function(_, code, _)
 				vim.g.termocode_term_last_exit = code
-				pcall(function()
-					if vim.api.nvim_buf_is_valid(buf) then
-						vim.api.nvim_buf_delete(buf, { force = true })
-					end
-				end)
+				pcall(_G.termocode_term_exited, buf)
 			end,
 		})
 		if job <= 0 then
@@ -393,7 +389,7 @@ func (m *Model) newTerminalTab() {
 	if shell == "" {
 		shell = "/bin/bash"
 	}
-	luaNew := fmt.Sprintf(`
+	luaNew := fmt.Sprintf(termExitedLua+`
 		local termWin = %d
 		if not vim.api.nvim_win_is_valid(termWin) then return '0' end
 		local buf = vim.api.nvim_create_buf(false, true)
@@ -405,11 +401,7 @@ func (m *Model) newTerminalTab() {
 		local job = vim.fn.termopen(%q, {
 			on_exit = function(_, code, _)
 				vim.g.termocode_term_last_exit = code
-				pcall(function()
-					if vim.api.nvim_buf_is_valid(buf) then
-						vim.api.nvim_buf_delete(buf, { force = true })
-					end
-				end)
+				pcall(_G.termocode_term_exited, buf)
 			end,
 		})
 		if job <= 0 then return '0' end
@@ -1235,6 +1227,35 @@ func (m Model) terminalTabBarHitTest(absX, absY int) (terminalTabBarHit, int) {
 	return terminalHitDrag, -1
 }
 
+// termExitedLua defines the shells' on_exit handler. A shell that exits
+// (`exit`, Ctrl+D) closes its buffer; nvim would close the panel window
+// with it, and termocode would then see no terminal on screen and drop
+// every tab, the running shells too. So first the window gets another
+// open shell (or the panel placeholder), then the dead buffer goes.
+const termExitedLua = `
+	_G.termocode_term_exited = _G.termocode_term_exited or function(buf)
+		if not vim.api.nvim_buf_is_valid(buf) then return end
+		for _, w in ipairs(vim.fn.win_findbuf(buf)) do
+			local next
+			for _, o in ipairs(vim.api.nvim_list_bufs()) do
+				if o ~= buf and vim.api.nvim_buf_is_loaded(o) and vim.bo[o].buftype == 'terminal'
+					and vim.fn.bufwinid(o) == -1 then
+					next = o
+					break
+				end
+			end
+			local pb = vim.g.termocode_panel_buf
+			if not next and pb and vim.api.nvim_buf_is_valid(pb) then
+				next = pb
+			end
+			if next then
+				pcall(vim.api.nvim_win_set_buf, w, next)
+			end
+		end
+		vim.api.nvim_buf_delete(buf, { force = true })
+	end
+`
+
 // ── Probe / sync helpers ─────────────────────────────────────────────────
 
 const terminalProbeCacheTTL = 250 * time.Millisecond
@@ -1385,6 +1406,7 @@ func (m *Model) refreshTerminalCwd() {
 	// Filter out tabs whose buffers got nuked (user ran `exit` inside the
 	// tab, on_exit callback fired nvim_buf_delete). Keeps the tab bar in
 	// sync with reality without forcing the user to click the close-x.
+	before := len(m.terminalTabs)
 	alive := m.terminalTabs[:0]
 	for i := range m.terminalTabs {
 		buf := m.terminalTabs[i].BufID
@@ -1415,6 +1437,17 @@ func (m *Model) refreshTerminalCwd() {
 		alive[idx].Name = terminalCwdBasename(cwd)
 		if alive[idx].Name == "" {
 			alive[idx].Name = "shell"
+		}
+	}
+	if len(alive) < before && len(alive) > 0 && m.terminalWinID > 0 {
+		// A shell exited and on_exit put another one in the window:
+		// that one is the active tab now.
+		out, _ := m.nvim.EvalLuaString(fmt.Sprintf(`return tostring(vim.api.nvim_win_is_valid(%d) and vim.api.nvim_win_get_buf(%d) or 0)`, m.terminalWinID, m.terminalWinID))
+		shown := parseInt(out)
+		for i, tab := range alive {
+			if tab.BufID == shown {
+				m.terminalActiveTab = i
+			}
 		}
 	}
 	m.terminalTabs = alive
