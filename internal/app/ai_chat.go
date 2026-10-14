@@ -159,6 +159,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	tools = append(tools, aiIDETools(root, call)...)
 	// Group K2: settings, layout and IDE state.
 	tools = append(tools, aiSettingsTools(root, call)...)
+	tools = append(tools, aiGitTools(root, call)...) // Group K4
 	native := s.provider.SupportsTools()
 	sys := aiChatSystemPrompt + "\nWorkspace root: " + root
 	if p := m.editor.Path(); p != "" {

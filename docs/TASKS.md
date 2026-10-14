@@ -230,7 +230,7 @@ screen.
 - [x] K1 (S) Policy map for every palette action (auto/confirm/never + reason), `Gate` on ai.Tool, `list_actions(query)`, coverage test (every palette id and setting is exposed or listed "not for AI"), table-driven testkit harness
 - [x] K2 (M) `settings_list` / `settings_set` (theme, tab size, icons, word wrap…; never credentials or ai_auto_approve), `layout_set` (sidebar width, panel size, zen, panels), `get_ide_state`, one-line capability summary in the system prompt — settings_set asks (class `settings`); layout_set runs at once and never hides the AI panel
 - [ ] K3 (M) Terminal: `terminal_send`, `terminal_read`, `terminal_tabs` (visible integrated terminal)
-- [ ] K4 (M) Git: hunks (stage/unstage/discard), blame, log, stash, unstage, fetch
+- [x] K4 (M) Git: hunks (stage/unstage/discard), blame, log, stash, unstage, fetch — `git_log`, `git_blame` and stash list run at once; discard and stash drop ask with no "Always allow"; discard and stash push/apply/pop refuse files with unsaved edits
 - [ ] K5 (M) LSP: rename symbol, code actions (list/apply), symbols, type definition, implementation
 - [ ] K6 (S) Tasks/tests typed tools + `tests_results`
 - [ ] K7 (L) Debugger: breakpoints, start, continue/step/stop, state

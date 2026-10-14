@@ -105,9 +105,11 @@ The chat is an agent. It can call tools to answer you:
 
 | Kind | Tools |
 |---|---|
-| Read | read a file, list a folder, search, git status / diff / branches, go to definition, diagnostics |
+| Read | read a file, list a folder, search, git status / diff / branches / log (`git_log`) / blame (`git_blame`), go to definition, diagnostics |
 | Write files | write, create, delete, rename files and folders, format |
-| Git | stage, commit, checkout, push, pull |
+| Git | stage, unstage (`git_unstage`), commit, checkout, push, pull, fetch (`git_fetch`) |
+| Git hunks | stage, unstage or discard one diff hunk (`git_hunk`) |
+| Git stash | list, push, apply, pop, drop (`git_stash`) |
 | Run | run a shell command in the workspace (build, test, …) |
 | Editor | open a file (at a line), read the cursor and selection, show a panel, reveal in the explorer, show a toast |
 | IDE commands | find a command palette command (`list_actions`) and run it (`execute_action`): fold, split, show a panel, save, run tests, … |
@@ -143,6 +145,16 @@ Settings and layout have rules too:
   are kept in the same limits as a mouse drag, and the sidebar width and
   panel height are saved like a drag. The agent can not hide the AI panel:
   your chat is in it. Zen mode hides the chat too until you leave zen.
+
+Git tools have rules too:
+
+- `git_log`, `git_blame` and `git_stash` list run at once (read only).
+- `git_unstage`, `git_fetch`, hunk stage / unstage and stash push / apply /
+  pop ask first. *git* auto-approve covers them.
+- Hunk **discard** and stash **drop** can not be undone, so they always ask,
+  with no "Always allow".
+- Hunk discard and stash push / apply / pop are refused while a file has
+  unsaved edits in the editor; the agent asks you to save first.
 
 To skip the question for one kind, run **AI: Agent Auto-Approve…** and turn
 on *fileWrite*, *git*, *run*, *ide* or *settings*. Turn on only what you trust.
