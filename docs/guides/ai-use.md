@@ -108,7 +108,8 @@ The chat is an agent. It can call tools to answer you:
 | Read | read a file, list a folder, search, git status / diff / branches, go to definition, diagnostics |
 | Write files | write, create, delete, rename files and folders, format |
 | Git | stage, commit, checkout, push, pull |
-| Run | run a shell command in the workspace (build, test, …) |
+| Run | run a shell command in the workspace (build, test, …); you see only its result |
+| Terminal | type a command in your terminal panel (`terminal_send`), read its last lines (`terminal_read`), list / open / show / close terminal tabs (`terminal_tabs`) |
 | Editor | open a file (at a line), read the cursor and selection, show a panel, reveal in the explorer, show a toast |
 | IDE commands | find a command palette command (`list_actions`) and run it (`execute_action`): fold, split, show a panel, save, run tests, … |
 
@@ -127,6 +128,18 @@ Each palette command has a rule for the agent:
   a shell or browser outside the IDE, import / export settings, or touch
   AI keys, sign-in or auto-approve. Commands that open a picker only you
   can answer are left out too.
+
+The terminal tools use your real terminal panel, so you see the command run.
+The agent uses them for dev servers, watchers and tests you want to watch;
+for a quick command it uses the hidden **run** tool.
+
+- `terminal_send` asks first (kind *run*). It opens the panel and a tab
+  when needed. Your keys stay where they were.
+- `terminal_read` runs at once. It can wait (up to 30 s) until the
+  command is done, then it refreshes the explorer, git and open files.
+- `terminal_tabs`: list, new and show run at once. Close asks (kind
+  *ide*). Closing a tab that still runs a command always asks: there is
+  no "Always allow" for it.
 
 To skip the question for one kind, run **AI: Agent Auto-Approve…** and turn
 on *fileWrite*, *git*, *run* or *ide*. Turn on only what you trust.
