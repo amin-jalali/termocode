@@ -71,6 +71,10 @@ func Probe(in, out *os.File, timeout time.Duration, getenv func(string) string) 
 	}
 	reply := readUntil(in, time.Now().Add(timeout), hasDA1)
 	kitty, sixel, cw, ch, gotDA1 := parseProbeReply(reply)
+	kittyErr := ""
+	if msg, ok := kittyProbeAnswer(string(reply)); ok && msg != "OK" {
+		kittyErr = msg
+	}
 	caps.CellW, caps.CellH = cw, ch
 	switch {
 	case kitty:
@@ -79,6 +83,12 @@ func Probe(in, out *os.File, timeout time.Duration, getenv func(string) string) 
 	case sixel:
 		caps.Protocol = Sixel
 		caps.Reason = "DA1 lists sixel (4)"
+	case kittyErr != "":
+		// An explicit "no" beats the environment: a terminal that names
+		// itself kitty (e.g. a client reattaching through a layer without
+		// kitty graphics) would show nothing.
+		caps.Protocol = Blocks
+		caps.Reason = "kitty graphics query answered " + kittyErr
 	case gotDA1 && !envSure:
 		caps.Protocol = Blocks
 		caps.Reason = "terminal answered but has no graphics support"
@@ -147,21 +157,31 @@ func hasDA1(b []byte) bool {
 	return false
 }
 
+// kittyProbeAnswer finds the terminal's answer to the kitty graphics
+// query of probeQuery: ESC _ G i=31 ; OK ESC \ when it can draw kitty
+// images, another message ("ENOENT:…", "EINVAL:…") when it cannot.
+func kittyProbeAnswer(s string) (msg string, ok bool) {
+	i := strings.Index(s, "\x1b_G")
+	if i < 0 {
+		return "", false
+	}
+	rest := s[i+3:]
+	end := strings.Index(rest, "\x1b\\")
+	if end < 0 {
+		return "", false
+	}
+	keys, msg, found := strings.Cut(rest[:end], ";")
+	if !found || !strings.Contains(","+keys+",", ",i=31,") {
+		return "", false
+	}
+	return msg, true
+}
+
 // parseProbeReply decodes the terminal's answers to probeQuery.
 func parseProbeReply(b []byte) (kitty, sixel bool, cellW, cellH int, gotDA1 bool) {
 	s := string(b)
-	// Kitty: ESC _ G i=31 ; OK ESC \   (errors carry another message)
-	if i := strings.Index(s, "\x1b_G"); i >= 0 {
-		rest := s[i+3:]
-		if end := strings.Index(rest, "\x1b\\"); end >= 0 {
-			body := rest[:end]
-			if semi := strings.IndexByte(body, ';'); semi >= 0 {
-				keys, msg := body[:semi], body[semi+1:]
-				if strings.Contains(","+keys+",", ",i=31,") && msg == "OK" {
-					kitty = true
-				}
-			}
-		}
+	if msg, ok := kittyProbeAnswer(s); ok && msg == "OK" {
+		kitty = true
 	}
 	// Cell size: ESC [ 6 ; h ; w t
 	if i := strings.Index(s, "\x1b[6;"); i >= 0 {
