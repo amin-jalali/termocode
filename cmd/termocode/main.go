@@ -42,17 +42,19 @@ func writeHeapProfile() {
 	_ = pprof.WriteHeapProfile(f)
 }
 
-// tuneGC makes the garbage collector run less often. Every frame builds
-// the screen as fresh strings, so with Go's default (GOGC=100) GC took
-// about a fifth of the CPU while a key was held. 300 cut CPU per key by a
-// quarter for ~9 MB more memory; the soft limit makes GC work harder
-// again before the heap grows large. GOGC / GOMEMLIMIT still win.
+// tuneGC makes the garbage collector run less often than Go's default
+// (GOGC=100). Measured in a 60 s key / wheel / hover soak with the AI
+// chat open (Group P4), after the frame caches cut allocations ~6×:
+// GOGC 100 → 18-21% CPU, 44 MB RSS; 200 → 16%, 50 MB; 300 → 16%, 56 MB.
+// 200 keeps the CPU of 300 for 6 MB less. The soft limit makes GC work
+// harder before the heap grows large (the live heap is ~10 MB).
+// GOGC / GOMEMLIMIT still win.
 func tuneGC() {
 	if os.Getenv("GOGC") == "" {
-		debug.SetGCPercent(300)
+		debug.SetGCPercent(200)
 	}
 	if os.Getenv("GOMEMLIMIT") == "" {
-		debug.SetMemoryLimit(256 << 20)
+		debug.SetMemoryLimit(128 << 20)
 	}
 }
 

@@ -411,6 +411,9 @@ func (m Model) renderBase() string {
 func (m Model) renderBaseLines() []string {
 	refreshSidebarColorsIfStale()
 	nextFrameWidths()
+	if m.ai != nil && !m.actionsPanelVisible() {
+		m.ai.dropRenderCaches() // a hidden chat panel keeps no drawn rows
+	}
 	bodyH := m.h - 1
 	if bodyH < 1 {
 		bodyH = 1

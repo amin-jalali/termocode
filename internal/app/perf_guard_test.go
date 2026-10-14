@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -186,6 +187,56 @@ func TestPerfGuardNormalizeFrame(t *testing.T) {
 		t.Errorf("normalizeFrameLines: %.0f allocs, limit %d", n, maxAllocsNormalizeRows)
 	} else {
 		t.Logf("normalizeFrameLines: %.0f allocs (limit %d)", n, maxAllocsNormalizeRows)
+	}
+}
+
+// maxRetainedHeap bounds what a session keeps on the heap after a
+// scripted scenario (frames, a long chat, chats switched, the panel
+// closed): it catches a cache that grows without bound or keeps closed
+// chats. Generous on purpose (measured 0.2 MB): only leaks fail it.
+const maxRetainedHeap = 16 << 20
+
+func liveHeap() uint64 {
+	runtime.GC()
+	runtime.GC()
+	var ms runtime.MemStats
+	runtime.ReadMemStats(&ms)
+	return ms.HeapAlloc
+}
+
+func TestPerfGuardLiveHeap(t *testing.T) {
+	perfColour(t)
+	before := liveHeap()
+	m := perfModel(t, true)
+	answer := m.ai.conv.Messages[1].Text
+	for i := 0; i < 400; i++ {
+		m = cursorMove(m, i)
+		if i%40 == 0 {
+			// A new chat with a different long answer (the old one must
+			// not stay cached).
+			m.ai.conv.Messages = []ai.StoredMessage{
+				{Role: ai.StoredUser, Text: fmt.Sprintf("question %d", i)},
+				{Role: ai.StoredAssistant, Text: fmt.Sprintf("answer %d\n\n", i) + answer},
+			}
+		}
+		if i%7 == 0 {
+			m.hoverX, m.hoverY = i%240, i%62
+		}
+		_ = m.View()
+	}
+	m.actionsOpen = false
+	m.applyLayout()
+	_ = m.View()
+	after := liveHeap()
+	runtime.KeepAlive(m)
+	grew := int64(after) - int64(before)
+	if grew > maxRetainedHeap {
+		t.Errorf("live heap grew by %.1f MB over the scenario, limit %d MB", float64(grew)/(1<<20), maxRetainedHeap>>20)
+	} else {
+		t.Logf("live heap grew by %.1f MB (limit %d MB)", float64(grew)/(1<<20), maxRetainedHeap>>20)
+	}
+	if m.ai.transcript.ok || len(m.ai.mdCache) != 0 {
+		t.Error("a closed chat panel still holds its drawn transcript")
 	}
 }
 
