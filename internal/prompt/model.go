@@ -22,6 +22,8 @@ type Model struct {
 	value  string
 	masked bool // render the value as bullets (secrets: tokens, passwords)
 	w, h   int
+	// complete, when set, is what Tab does to the value (SetCompleter).
+	complete func(string) string
 }
 
 // SetMasked hides the typed value behind bullets (for secrets). The value
@@ -67,6 +69,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		}
 	case tea.KeySpace:
 		m.value += " "
+	case tea.KeyTab:
+		if m.complete != nil {
+			m.value = m.complete(m.value)
+		}
 	case tea.KeyRunes:
 		// Bubble Tea sometimes delivers a single mouse-tracking SGR
 		// (e.g. "[<35;70;19M") across MULTIPLE KeyRunes events. Drop

@@ -2,7 +2,11 @@
 // machine, reached over SSH) and the user's own computer, through the
 // terminal itself: no extra port, no second connection.
 //
-// Protocols, best first, picked per terminal (Detect):
+// Locally (no SSH, IsRemote) no protocol is needed: a download is a copy
+// into the Downloads folder (DownloadsDir, CopyInto) and an upload a copy
+// of the files picked in the desktop's chooser (PickChooser).
+//
+// Over SSH, protocols, best first, picked per terminal (Detect):
 //
 //   - kitty file transfer protocol (OSC 5113, the one `kitten transfer`
 //     uses): both directions. kitty asks the user to allow every session.

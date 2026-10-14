@@ -38,6 +38,8 @@ type extrasState struct {
 
 	// Download / Upload (transfer.go): the request a dialog waits on.
 	xfer xferPending
+	// xferLast is the last local download (File: Show Last Download).
+	xferLast string
 }
 
 // ─── Settings bundle (pure logic) ─────────────────────────────────────

@@ -95,17 +95,40 @@ Files that never had a name (new, unsaved buffers) are not backed up.
 
 ## Download and upload files
 
-Move files between the workspace and your own computer through the
-terminal. No extra port and no second connection.
+Move files between the workspace and your own computer. No extra port
+and no second connection.
 
 - **Download**: right-click a file or folder in the explorer and pick
-  **Download** (a folder comes as one `.tar.gz`). Or run
-  **File: Download to This Computer** from the palette: it takes the
-  explorer row when the explorer has focus, else the open file.
+  **Download**. Or run **File: Download to This Computer** from the
+  palette: it takes the explorer row when the explorer has focus, else
+  the open file.
 - **Upload**: right-click a folder and pick **Upload Here...**, or run
   **File: Upload from This Computer...** (the explorer folder, else the
   workspace root).
 
+### Local (no SSH)
+
+When termocode runs on your own computer, the files are already there.
+termocode is local when `SSH_CONNECTION`, `SSH_CLIENT` and `SSH_TTY` are
+not set (a container or WSL counts as local). In a persistent session
+the terminal that attached last decides.
+
+- **Download** copies the file, or the folder as it is, into your
+  Downloads folder (`xdg-user-dir DOWNLOAD`, else `XDG_DOWNLOAD_DIR` in
+  `~/.config/user-dirs.dirs`, else `~/Downloads`; on macOS
+  `~/Downloads`). A toast says **Saved to ~/Downloads/name**. Click it to
+  show the file in its folder, or run
+  **File: Show Last Download in Folder**.
+- **Upload Here...** opens your desktop's file chooser (zenity, kdialog
+  or yad on Linux; the Finder dialog on macOS). Pick one or more files.
+  Without a chooser, termocode asks for a path; **Tab** completes it.
+- Nothing is ever replaced: when the name is taken, the copy gets
+  ` (1)`. Big copies show their progress; **File: Cancel Download** stops
+  one.
+
+### Over SSH
+
+The file goes through the terminal. A folder comes as one `.tar.gz`.
 A download runs in the background, with a progress toast. Stop it with
 **File: Cancel Download**. A file over 50 MB asks first.
 
@@ -121,15 +144,18 @@ A download runs in the background, with a progress toast. Stop it with
   shows what to do. Press `Ctrl+C` to cancel.
 - An upload never replaces a file: when the name is taken, the new file
   gets ` (1)`. Uploads only go into the workspace.
-- When the terminal can do neither, a dialog shows a ready `scp` command
-  with the real host and path. **Copy Command** puts it in your local
-  clipboard (OSC 52). When `tsz` / `trz` are installed on the server, the
-  dialog also offers **Use trzsz** (needs trzsz-ssh or a trzsz terminal
-  plugin on your computer).
+- When the terminal can do neither, a dialog shows how: a ready `scp`
+  command on one line, with your user and the server address from
+  `SSH_CONNECTION` (else `hostname -f`). Run it on your own computer.
+  **Copy Command** puts the full command in your local clipboard
+  (OSC 52). When `tsz` / `trz` are installed on the server, the dialog
+  also offers **Use trzsz** (needs trzsz-ssh or a trzsz terminal plugin
+  on your computer); otherwise it tells you about trzsz.
 - Over SSH, termocode finds iTerm2 by `LC_TERMINAL` (ssh sends `LC_*` by
   default) and kitty by `TERM=xterm-kitty`. Inside tmux or screen the
   terminal's answers do not reach termocode, so the scp dialog shows.
-- Force a protocol with `TERMOCODE_TRANSFER=kitty`, `iterm2` or `off`.
+- Force a protocol with `TERMOCODE_TRANSFER=kitty`, `iterm2`, `local`
+  (plain copy) or `off` (scp dialog).
 - A persistent session passes the transfer to the attached terminal. A
   download is lost when the terminal disconnects in the middle.
 

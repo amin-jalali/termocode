@@ -132,6 +132,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | File: Revert / Reload from Disk | `reload-buffer` |   |   |
 | File: Save | `save` | `Ctrl+S` | `Ctrl+S` |
 | File: Save All Files | `save-all` |   |   |
+| File: Show Last Download in Folder | `transfer-reveal` |   |   |
 | File: Toggle Auto Save | `toggle-auto-save` |   |   |
 | File: Upload from This Computer... | `transfer-upload` |   |   |
 

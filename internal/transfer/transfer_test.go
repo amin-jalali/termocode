@@ -520,7 +520,13 @@ func TestDetect(t *testing.T) {
 		{map[string]string{"TERM_PROGRAM": "WezTerm", "TERMOCODE_TRANSFER": "iterm2"}, ITerm2, ITerm2, "WezTerm"},
 	}
 	for _, c := range cases {
-		s := Detect(func(k string) string { return c.env[k] })
+		// Over SSH: locally every case is a plain copy (TestDetectLocal).
+		s := Detect(func(k string) string {
+			if k == "SSH_TTY" {
+				return "/dev/pts/0"
+			}
+			return c.env[k]
+		})
 		if s.Download != c.down || s.Upload != c.up || s.Terminal != c.terminalName {
 			t.Errorf("%v: got %+v, want down=%v up=%v term=%q", c.env, s, c.down, c.up, c.terminalName)
 		}
