@@ -15,6 +15,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/fetch"
 	"github.com/amin-jalali/termocode/internal/lspinstall"
+	"github.com/amin-jalali/termocode/internal/nerdterm"
 )
 
 const (
@@ -50,13 +51,16 @@ func Run(args []string) int {
 		fmt.Printf("  ✗ font install failed: %v\n", err)
 		return 1
 	}
+	termFont := DetectTerminalFont(true)
+	nerdName := installedNerdName(DetectNerdFont(false))
+	printTerminalFont(os.Stdout, termFont, nerdName)
 
 	fmt.Println()
 	fmt.Println("== language servers ==")
 	reportLanguageServers()
 
 	fmt.Println()
-	printTerminalInstructions()
+	printTerminalInstructions(termFont, nerdName)
 	return 0
 }
 
@@ -284,9 +288,21 @@ func installJetBrainsMonoLinux() (string, error) {
 	return fontDir, nil
 }
 
-func printTerminalInstructions() {
+// printTerminalInstructions ends setup. When the terminal already draws
+// with a Nerd Font there is nothing left to do; when its font is known
+// the steps were printed above; else the generic list helps.
+func printTerminalInstructions(term nerdterm.Info, nerd string) {
 	fmt.Println("== final step ==")
-	fmt.Printf("Configure your terminal to use \"%s\".\n", jbmName)
+	if term.Nerd {
+		fmt.Println("Your terminal already draws Nerd Font icons. Run `termocode` to launch.")
+		return
+	}
+	if term.Known() {
+		fmt.Printf("Set your terminal font to \"%s\" (steps above), then run `termocode`.\n", nerd)
+		fmt.Println("Until then termocode shows Unicode icons, which work in any font.")
+		return
+	}
+	fmt.Printf("Configure your terminal to use \"%s\".\n", nerd)
 	fmt.Println()
 	fmt.Println("  gnome-terminal:    Preferences → Profiles → Text → Custom font")
 	fmt.Println("  alacritty:         ~/.config/alacritty/alacritty.toml → font.normal.family")

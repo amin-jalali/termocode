@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/nerdterm"
 )
 
 // TestMain keeps every test (Doctor runs a fresh detection and writes the
@@ -19,6 +21,13 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	_ = os.Setenv("XDG_STATE_HOME", dir)
+	// No real terminal: the GNOME / Alacritty / foot reads see nothing.
+	termEnv = nerdterm.Env{
+		Getenv:    func(string) string { return "" },
+		ReadFile:  func(string) ([]byte, error) { return nil, os.ErrNotExist },
+		Gsettings: func(context.Context, ...string) (string, error) { return "", errors.New("no gsettings in tests") },
+		Stat:      func(string) (time.Time, bool) { return time.Time{}, false },
+	}
 	code := m.Run()
 	_ = os.RemoveAll(dir)
 	os.Exit(code)
