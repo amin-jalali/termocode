@@ -8,6 +8,10 @@ it into another file.
 Files are named `<PREFIX>-<NN>-<unit>.md` and grouped in one folder per area.
 Copy [`TEMPLATE.md`](TEMPLATE.md) to start a new case.
 
+**Before a release:** walk through [MANUAL-CHECKLIST.md](MANUAL-CHECKLIST.md)
+— the checks that need a real terminal, desktop clipboard, real AI model or
+a human eye.
+
 ## Automation policy
 **Automate as much as possible; manual checks are the fallback.** When you fill
 in a case, set its `Automated check`:
