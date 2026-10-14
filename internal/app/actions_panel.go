@@ -143,10 +143,28 @@ func (m Model) renderActionsPanel(width, height int) string {
 	if width > 1 {
 		edge := theme.FgBg(theme.BorderSubtle, theme.BgPanel).Render("▏")
 		for i, r := range rows {
-			rows[i] = edge + ansi.Cut(r, 1, width)
+			rows[i] = edge + dropFirstCell(r, width)
 		}
 	}
 	return strings.Join(rows, "\n")
+}
+
+// dropFirstCell is ansi.Cut(row, 1, width) for rows that start with a
+// blank cell: it keeps the leading colour codes and drops the space, with
+// no full parse of the row (it runs on every row of every frame).
+func dropFirstCell(row string, width int) string {
+	i := 0
+	for i < len(row) && row[i] == 0x1b {
+		j, ok := skipCSI(row, i)
+		if !ok {
+			return ansi.Cut(row, 1, width)
+		}
+		i = j
+	}
+	if i < len(row) && row[i] == ' ' && cellWidth(row) == width {
+		return row[:i] + row[i+1:]
+	}
+	return ansi.Cut(row, 1, width)
 }
 
 // renderActionsHeader renders one row: " ACTIONS … ⚐ ×".
@@ -186,13 +204,13 @@ func (m Model) renderActionsHeader(width int) string {
 		btn("pin", actionsPanelGlyphPin, pinStyle) + bg.Render(" ") +
 		btn("close", actionsPanelGlyphClose, closeStyle) + bg.Render(" ")
 
-	leftW := lipgloss.Width(left)
-	rightW := lipgloss.Width(right)
+	leftW := textWidth(left)
+	rightW := textWidth(right)
 	gap := width - leftW - rightW
 	if gap < 1 {
 		// Pane too narrow for both label and buttons — drop the label.
 		left = bg.Render(" ")
-		leftW = lipgloss.Width(left)
+		leftW = textWidth(left)
 		gap = width - leftW - rightW
 		if gap < 0 {
 			gap = 0

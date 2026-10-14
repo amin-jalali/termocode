@@ -65,8 +65,9 @@ type Driver struct {
 	done    chan struct{}
 	frame   string
 	history []string
-	ready   bool // nvim.ReadyMsg seen
-	quit    bool // the app returned tea.Quit
+	ready   bool     // nvim.ReadyMsg seen
+	quit    bool     // the app returned tea.Quit
+	updates []string // every message Update got, in order (see Updates)
 }
 
 // New builds a sandboxed app model at opt.W × opt.H and settles it.
@@ -163,6 +164,15 @@ func (d *Driver) NvimReady() bool { return d.ready }
 
 // History returns the steps run so far, one line each.
 func (d *Driver) History() []string { return append([]string(nil), d.history...) }
+
+// Updates returns how many messages Update has handled so far and the
+// last few of them. Idle tests use it: a screen that nothing changes must
+// not keep the app busy (a timer that never stops costs CPU and makes
+// keys lag behind).
+func (d *Driver) Updates() (int, []string) {
+	n := len(d.updates)
+	return n, append([]string(nil), d.updates[max(0, n-20):]...)
+}
 
 // Failed reports whether the test has failed.
 func (d *Driver) Failed() bool { return d.T.Failed() }
@@ -393,6 +403,7 @@ func (d *Driver) deliver(msg tea.Msg) {
 	if _, ok := msg.(nvim.ReadyMsg); ok {
 		d.ready = true
 	}
+	d.updates = append(d.updates, describe(msg))
 	var cmd tea.Cmd
 	if d.call("Update("+describe(msg)+")", func() {
 		var nm tea.Model

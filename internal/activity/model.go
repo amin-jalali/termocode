@@ -1,6 +1,9 @@
 package activity
 
 import (
+	"sync"
+
+	"github.com/muesli/termenv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -66,6 +69,7 @@ type item struct {
 //   - Search was a stub that just reminded the user to press F8 / Ctrl+F.
 //   - Outline is now a floating glass-overlay symbol picker invoked via
 //     Ctrl+Shift+O / palette / ⋮ menu.
+//
 // ViewSearch's enum value is retained for back-compat.
 var topItems = []item{
 	{view: ViewFiles, icon: theme.IconFiles, label: "Explorer"},
@@ -182,11 +186,11 @@ func strideIndex(localY int) (int, bool) {
 type rowKind int
 
 const (
-	rowEmpty rowKind = iota
-	rowDivider          // top↔bottom group separator (existing)
-	rowInterItem        // thin hairline between two items in the same group
-	rowItemTop          // top half of an icon's 2-row pitch — bold[0]
-	rowItemBottom       // bottom half of an icon's 2-row pitch — bold[1]
+	rowEmpty      rowKind = iota
+	rowDivider            // top↔bottom group separator (existing)
+	rowInterItem          // thin hairline between two items in the same group
+	rowItemTop            // top half of an icon's 2-row pitch — bold[0]
+	rowItemBottom         // bottom half of an icon's 2-row pitch — bold[1]
 )
 
 func (m Model) classify(row int) (rowKind, *item) {
@@ -256,10 +260,40 @@ func newStyleSet() styleSet {
 	}
 }
 
+// viewKey is everything View depends on; viewCache keeps the last result.
+// The bar is drawn on every frame but almost never changes, and drawing
+// it styled every row again (a tenth of a frame while a key is held).
+type viewKey struct {
+	active  View
+	h       int
+	icons   theme.IconMode
+	profile termenv.Profile
+	colors  [5]string
+}
+
+var viewCache struct {
+	sync.Mutex
+	key viewKey
+	out string
+}
+
 func (m Model) View() string {
 	if m.h <= 0 {
 		return ""
 	}
+	key := viewKey{active: m.active, h: m.h, icons: theme.CurrentIconMode, profile: lipgloss.ColorProfile(),
+		colors: [5]string{theme.Hex(theme.BgActivityBar), theme.Hex(theme.BorderFocus), theme.Hex(theme.TextMuted),
+			theme.Hex(theme.TextWhite), theme.Hex(theme.BorderDefault)}}
+	viewCache.Lock()
+	defer viewCache.Unlock()
+	if viewCache.out != "" && viewCache.key == key {
+		return viewCache.out
+	}
+	viewCache.key, viewCache.out = key, m.draw()
+	return viewCache.out
+}
+
+func (m Model) draw() string {
 	st := newStyleSet()
 	rows := make([]string, m.h)
 	for r := 0; r < m.h; r++ {

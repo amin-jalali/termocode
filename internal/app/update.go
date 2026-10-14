@@ -35,6 +35,17 @@ import (
 // all-motion (1003) for hover, downgraded to button-only (1002) while a text
 // input is focused so the SGR-fragmentation leak can't corrupt typed input.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	next, cmd := m.update(msg)
+	if nm, ok := next.(Model); ok {
+		return nm, nm.gateUpdate(msg, cmd)
+	}
+	return next, cmd
+}
+
+func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if _, ok := msg.(frameTickMsg); ok {
+		return m, nil // only draws (see frameGate)
+	}
 	prevKind := m.overlayKind()
 	if _, ok := msg.(resizeFlushMsg); ok {
 		m.onResizeFlush()

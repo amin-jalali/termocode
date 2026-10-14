@@ -654,7 +654,7 @@ func (m Model) renderAIInput(width, rows int) []string {
 
 // padStyled pads (or cuts) a styled row to exactly width cells.
 func padStyled(s string, width int, bg lipgloss.Style) string {
-	w := lipgloss.Width(s)
+	w := textWidth(s)
 	if w > width {
 		return truncRightVisual(s, width)
 	}

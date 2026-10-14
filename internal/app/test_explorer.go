@@ -466,7 +466,7 @@ func testsFill(w int) string {
 
 // testsPad pads/clips a styled row to w with the sidebar background.
 func testsPad(s string, w int) string {
-	sw := lipgloss.Width(s)
+	sw := textWidth(s)
 	if sw > w {
 		return ansi.Truncate(s, w, "")
 	}

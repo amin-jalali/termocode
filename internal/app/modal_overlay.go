@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/muesli/termenv"
 
@@ -59,7 +58,7 @@ func modalOverlay(base, box string, screenW, screenH int, opts *ModalOpts) strin
 		return base
 	}
 	boxH := len(boxLines)
-	boxW := lipgloss.Width(boxLines[0])
+	boxW := textWidth(boxLines[0])
 	if boxW == 0 {
 		return base
 	}
@@ -124,7 +123,7 @@ func modalOverlay(base, box string, screenW, screenH int, opts *ModalOpts) strin
 		// or the row gets wider than the screen and the terminal wraps it.
 		if room := screenW - leftCol; room <= 0 {
 			continue
-		} else if lipgloss.Width(bl) > room {
+		} else if textWidth(bl) > room {
 			bl = ansi.Truncate(bl, room, "")
 		}
 		lines[row] = spliceAt(lines[row], bl, leftCol)

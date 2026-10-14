@@ -441,7 +441,7 @@ func itoa(n int) string {
 
 // padBgRight pads s on the right with spaces in bg until it reaches width w.
 func padBgRight(s string, w int, bg lipgloss.Color) string {
-	cur := lipgloss.Width(s)
+	cur := textWidth(s)
 	if cur >= w {
 		return s
 	}

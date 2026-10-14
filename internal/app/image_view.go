@@ -168,7 +168,7 @@ func (m Model) renderImageCard(l imageCardLayout) string {
 	inner := l.boxW - 2
 	bg := lipgloss.NewStyle().Background(f.Bg)
 	pad := func(s string) string {
-		if w := lipgloss.Width(s); w < inner {
+		if w := textWidth(s); w < inner {
 			s += bg.Render(strings.Repeat(" ", inner-w))
 		}
 		return s
@@ -187,9 +187,9 @@ func (m Model) renderImageCard(l imageCardLayout) string {
 		lipgloss.NewStyle().Background(f.Bg).Foreground(f.Title).Bold(true).Render(" "+name)
 	right := lipgloss.NewStyle().Background(f.Bg).Foreground(f.Dim).Render(info) + bg.Render("  ")
 	head := left
-	if gap := inner - lipgloss.Width(left) - lipgloss.Width(right); gap > 0 {
+	if gap := inner - textWidth(left) - textWidth(right); gap > 0 {
 		head += bg.Render(strings.Repeat(" ", gap)) + right
-	} else if lipgloss.Width(left) > inner {
+	} else if textWidth(left) > inner {
 		head = runewidth.Truncate(left, inner, "…")
 	}
 	rows := []string{pad(head), theme.Hairline(inner, theme.BgFloat), pad("")}

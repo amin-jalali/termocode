@@ -67,3 +67,46 @@ func TestStartupSettingsAreSilent(t *testing.T) {
 		}
 	}
 }
+
+// Spec: Given an AI chat answer has finished, when the user does nothing,
+// then the app is idle: no timer keeps sending messages. A timer left
+// running costs CPU all the time and makes held keys lag behind.
+func TestIdleAfterAIAnswer(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		fmt.Fprint(w, "data: {\"choices\":[{\"delta\":{\"content\":\"## fake-ai-answer\\n\\n```go\\nfunc x() {}\\n```\\n\"}}]}\n\n")
+		fmt.Fprint(w, "data: [DONE]\n\n")
+	}))
+	t.Cleanup(srv.Close)
+	if testing.Short() {
+		t.Skip("starts nvim")
+	}
+	d := New(t, Options{W: 160, H: 40, Nvim: true, Files: textFiles(),
+		Setup: func(t testing.TB, _ string) {
+			t.Setenv("TERMOCODE_AI_PROVIDER", "ollama")
+			t.Setenv("TERMOCODE_AI_MODEL", "fake")
+			t.Setenv("TERMOCODE_AI_BASE_URL", srv.URL+"/v1")
+		}})
+	open(d, "a.txt")
+	d.Key("alt+a")
+	clickText(d, "Explain this file")
+	if !d.WaitForText("fake-ai-answer", 5*time.Second) {
+		t.Fatalf("no answer:\n%s", screen(d))
+	}
+	never := func() bool { return false }
+	d.WaitFor(never, 5*time.Second) // toasts and animations end
+	n0, _ := d.Updates()
+	d.WaitFor(never, 3*time.Second)
+	n1, last := d.Updates()
+	// The git status poll (one check every 1.5 s) is expected; anything
+	// else in the window means a timer that never stops.
+	busy := 0
+	for _, msg := range last[max(0, len(last)-(n1-n0)):] {
+		if msg != "app.gitAutoRefreshMsg" && msg != "app.GitMsg" {
+			busy++
+		}
+	}
+	if busy > 0 {
+		t.Errorf("app not idle: %d messages in 3 s with nothing to do; last ones:\n%s", busy, strings.Join(last, "\n"))
+	}
+}
