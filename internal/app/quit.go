@@ -27,6 +27,7 @@ func (m *Model) quitNow() tea.Cmd {
 	if m.nvim != nil {
 		_ = m.nvim.Close()
 	}
+	m.sess.flush()
 	m.dropHotExitBackup()
 	return tea.Quit
 }

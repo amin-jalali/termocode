@@ -325,6 +325,10 @@ type Model struct {
 	stateLastFetch    time.Time
 	stateFetchPending bool
 
+	// sess keeps the editor part of the session (open files, cursors,
+	// expanded folders) in memory and writes it coalesced (N1).
+	sess *sessionWriter
+
 	// lastReloadSeq remembers the most recent FileChangedShellPost counter
 	// surfaced via FetchState. A higher value in the next StateMsg means a
 	// new external reload happened — we push a "Reloaded <basename>" toast
@@ -701,6 +705,7 @@ func New() Model {
 	}
 
 	m := Model{
+		sess:             newSessionWriter(),
 		activity:         activity.New(),
 		explorer:         explorer.New(),
 		tabs:             tabbar.New(),
@@ -1103,6 +1108,7 @@ func (m *Model) popClosed() (string, bool) {
 
 // Close releases nvim resources. Call from main after tea.Program exits.
 func (m *Model) Close() error {
+	m.sess.flush() // the last cursor positions, not yet written
 	if m.nvim == nil {
 		return nil
 	}

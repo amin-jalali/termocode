@@ -160,6 +160,7 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 			m.forgetPaths([]string{path})
 			m.err = ""
 			m.explorer.Reload()
+			return m.refreshSearchResults() // drop the deleted file (N2)
 		}
 	case confirmKindGitDiscard:
 		if id == "discard" {
@@ -242,6 +243,9 @@ func (m *Model) runBulkDelete(paths []string) tea.Cmd {
 			fmt.Sprintf("Deleted %d, %d failed", deleted, len(failed)),
 			body)
 		m.err = body
+	}
+	if deleted > 0 {
+		cmd = tea.Batch(cmd, m.refreshSearchResults()) // drop them from the results (N2)
 	}
 	return cmd
 }

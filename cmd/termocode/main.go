@@ -242,6 +242,7 @@ func watchHangup(p *tea.Program) {
 	signal.Notify(sig, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
 		<-sig
+		app.FlushSession() // the last cursor positions (N1)
 		app.HotExitFlush(2 * time.Second)
 		p.Quit()
 	}()
@@ -272,6 +273,7 @@ func runTUI() {
 		// Undo the font change (if the terminal made one).
 		_, _ = os.Stdout.WriteString(font.Restore())
 		if r := recover(); r != nil {
+			app.FlushSession() // the last cursor positions (N1)
 			app.HotExitFlush(2 * time.Second)
 			fmt.Fprintf(os.Stderr, "termocode panic: %v\n", r)
 			os.Exit(1)
@@ -352,11 +354,15 @@ func runTUI() {
 	if _, err := p.Run(); err != nil {
 		stopProfile()
 		// A crash or a lost terminal: keep the unsaved buffers.
+		app.FlushSession() // the last cursor positions (N1)
 		app.HotExitFlush(2 * time.Second)
 		_, _ = os.Stdout.WriteString("\x1b]111\x07" + font.Restore()) // os.Exit skips the defer
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	// Quit already wrote it; a hangup (p.Quit from watchHangup) too. A
+	// no-op then, but cheap insurance for any other way out of Run.
+	app.FlushSession()
 }
 
 // inputOption is Bubble Tea's input: stdin behind transfer.Input when

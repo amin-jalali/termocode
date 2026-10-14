@@ -634,37 +634,7 @@ func (m Model) handleNvimMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 			// so we don't repeatedly try to surface the missing event.
 			m.lastReloadSeq = msg.LastReloadSeq
 		}
-		// Persist current session. Files only update on a non-empty
-		// snapshot (so closing the last buffer doesn't clobber a good
-		// list); explorer expansion ALWAYS updates so tree state is
-		// preserved even when no files are currently open.
-		paths := make([]string, 0, len(msg.Bufs))
-		for _, b := range msg.Bufs {
-			if b.Path != "" {
-				paths = append(paths, b.Path)
-			}
-		}
-		existing := loadSession()
-		if len(paths) > 0 {
-			existing.OpenFiles = paths
-			existing.ActivePath = msg.Path
-		}
-		// Not before ReadyMsg: the session has not been restored then, and
-		// the fresh tree (root only) overwrote the saved expanded folders.
-		if m.nvimAttached {
-			existing.ExpandedDirs = m.explorer.ExpandedPaths()
-		}
-		// Merge (don't replace): a buffer that was just closed externally
-		// drops out of msg.Cursors but its last-known position is still
-		// useful if the user re-opens that file in the same session, so we
-		// keep stale entries until they're explicitly overwritten.
-		if existing.Cursors == nil {
-			existing.Cursors = map[string][2]int{}
-		}
-		for path, pos := range msg.Cursors {
-			existing.Cursors[path] = pos
-		}
-		saveSession(existing)
+		sessCmd := m.persistStateSession(msg)
 		m.editor.SetMeta(msg.Path, msg.Dirty, msg.Lang)
 		// LSP installer: status-bar chip + one-time missing-server toast.
 		m.setLSPClients(msg.LSPClients)
@@ -709,7 +679,10 @@ func (m Model) handleNvimMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 		m.inTerminal = m.termOpen && m.terminalWinID > 0 &&
 			m.panelActive == panelKindTerminal &&
 			msg.CurrentWin == m.terminalWinID && msg.Mode == "t"
-		return m, tea.Batch(m.maybeRefreshStickyContext(), m.maybeRefreshScrollbarMarkers(), reloadToastCmd, lspSuggestCmd), true
+		return m, tea.Batch(m.maybeRefreshStickyContext(), m.maybeRefreshScrollbarMarkers(), reloadToastCmd, lspSuggestCmd, sessCmd), true
+	case sessionIdleMsg:
+		m.sess.flushIdle(msg.gen)
+		return m, nil, true
 	case gitAutoRefreshMsg:
 		// Background poll: refresh git state and reschedule the next tick. The
 		// GitMsg handler only re-clamps the cursor, so this never disturbs the
@@ -2107,9 +2080,7 @@ func (m Model) dispatchToFocus(msg tea.Msg) (Model, tea.Cmd) {
 // expanded directories to the session file. Called whenever the explorer
 // might have changed shape (key toggle, click toggle).
 func (m *Model) persistExplorerState() {
-	existing := loadSession()
-	existing.ExpandedDirs = m.explorer.ExpandedPaths()
-	saveSession(existing)
+	m.ensureSessionWriter().expandedChanged(m.explorer.ExpandedPaths())
 }
 
 func (m *Model) applyLayout() {
