@@ -42,10 +42,12 @@ func (m Model) welcomeVisible() bool {
 	return m.editorEmpty() && !m.zenMode
 }
 
-// placeLogo draws the image wordmark over the half-block one.
+// placeLogo draws the image wordmark over the half-block one. Only with
+// dashboard_logo=image: images are the fragile part (sixel placement
+// differs between terminals), so the text logo is the default.
 func (m Model) placeLogo(frame string) (string, bool) {
 	r := welcomeLogoAt
-	if !r.ok || m.toast.Animating() || !m.toast.Empty() {
+	if dashboardLogo != "image" || !r.ok || m.toast.Animating() || !m.toast.Empty() {
 		return frame, false
 	}
 	cw, ch := termCaps.CellSize()
