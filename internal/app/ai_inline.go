@@ -22,9 +22,18 @@ import (
 // Any caret move / InsertLeave cancels the in-flight request; stale
 // replies (older generation, different changedtick or caret) are dropped
 // in Go and again in Lua.
+//
+// Suggestion policy (internal/ai/inline_policy.go): automatic requests
+// skip mid-word, code right of the caret, comments, top-level empty
+// lines and the empty line right after a closed block; an empty line in
+// a body waits for a longer pause. Answers are filtered (no invented
+// declarations, no repeats of nearby lines, one line mid-statement).
+// Typing the start of a shown ghost keeps the rest on screen with no new
+// request (type-through).
 
 const (
 	aiInlineDebounce   = 300 * time.Millisecond
+	aiInlineBlankPause = 700 * time.Millisecond // extra wait on an empty line
 	aiInlineTimeout    = 12 * time.Second
 	aiInlineMaxTokens  = 192
 	aiInlineCtxBefore  = 80
@@ -34,7 +43,8 @@ const (
 )
 
 // aiInlineTriggerMsg fires after the debounce (or on Alt+\).
-type aiInlineTriggerMsg struct{ manual bool }
+// settled: the extra empty-line pause has passed too.
+type aiInlineTriggerMsg struct{ manual, settled bool }
 
 // aiInlineSnapshot is the decoded _termocode_ai.context() result.
 type aiInlineSnapshot struct {
@@ -52,6 +62,12 @@ type aiInlineSnapshot struct {
 	LineAfter  string `json:"line_after"`
 }
 
+// inlineCtx is the policy view of the snapshot.
+func (s aiInlineSnapshot) inlineCtx() ai.InlineContext {
+	return ai.InlineContext{Filetype: s.Filetype, Before: s.Before, After: s.After,
+		LineBefore: s.LineBefore, LineAfter: s.LineAfter}
+}
+
 // aiInlineResultMsg carries the model's raw answer back to Update.
 type aiInlineResultMsg struct {
 	gen    uint64
@@ -67,12 +83,18 @@ func init() {
 			return nil
 		}
 		m.cancelAIInline()
+		if m.aiInlineTypeThrough() {
+			return nil
+		}
 		return m.debounce.Do(aiInlineDebounceID, aiInlineDebounce, func() tea.Msg {
 			return aiInlineTriggerMsg{}
 		})
 	})
 	registerNotifyHandler("termocode_ai_cancel", func(m *Model, args []any) tea.Cmd {
 		m.cancelAIInline()
+		if len(args) > 0 && args[0] == "leave" {
+			m.aiS().inlineCache.Reset()
+		}
 		return nil
 	})
 }
@@ -106,8 +128,48 @@ return vim.json.encode(_G._termocode_ai.context(` + itoa(aiInlineCtxBefore) + `,
 	return snap, true
 }
 
-// startAIInline snapshots the caret and launches one request.
-func (m *Model) startAIInline(manual bool) tea.Cmd {
+// aiInlineTypeThrough re-shows the rest of the last ghost when the user
+// typed its first characters. true: shown, no request needed.
+func (m *Model) aiInlineTypeThrough() bool {
+	s := m.aiS()
+	if s.inlineCache.Empty() {
+		return false
+	}
+	snap, ok := m.aiInlineSnapshotNow()
+	if !ok || !strings.HasPrefix(snap.Mode, "i") {
+		return false
+	}
+	rest, ok := s.inlineCache.Match(snap.Buf, snap.Row, snap.LineBefore)
+	if !ok {
+		s.inlineCache.Reset()
+		return false
+	}
+	if !m.aiShowGhost(snap, rest, 0, s.inlineImp) {
+		return false
+	}
+	s.inlineCache.Remember(snap.Buf, snap.Row, snap.LineBefore, rest)
+	return true
+}
+
+// aiShowGhost draws ghost text at the snapshot's caret (Lua re-checks
+// buffer, tick and caret).
+func (m *Model) aiShowGhost(snap aiInlineSnapshot, insert string, del int, imports map[string]any) bool {
+	if m.nvim == nil {
+		return false
+	}
+	if imports == nil {
+		imports = map[string]any{"at": 0, "lines": []string{}}
+	}
+	var out string
+	err := m.nvim.EvalLuaArgs(`local a = _G._termocode_ai
+if a and a.show(...) then return 'y' end
+return ''`, &out, snap.Buf, snap.Tick, snap.Row, snap.Col, insert, del, imports)
+	return err == nil && out == "y"
+}
+
+// startAIInline snapshots the caret and launches one request. Automatic
+// requests (not manual) go through the suggestion policy first.
+func (m *Model) startAIInline(manual, settled bool) tea.Cmd {
 	snap, ok := m.aiInlineSnapshotNow()
 	if !ok || !strings.HasPrefix(snap.Mode, "i") || snap.Buftype != "" {
 		if manual {
@@ -117,9 +179,16 @@ func (m *Model) startAIInline(manual bool) tea.Cmd {
 		}
 		return nil
 	}
-	// Skip pure-whitespace context (empty buffer): nothing to complete.
-	if strings.TrimSpace(snap.Before+snap.After) == "" && !manual {
-		return nil
+	if !manual {
+		c := snap.inlineCtx()
+		if ok, _ := ai.ShouldAutoTrigger(c); !ok {
+			return nil
+		}
+		if ai.NeedsLongerPause(c) && !settled {
+			return m.debounce.Do(aiInlineDebounceID, aiInlineBlankPause, func() tea.Msg {
+				return aiInlineTriggerMsg{settled: true}
+			})
+		}
 	}
 	s := m.aiS()
 	m.cancelAIInline()
@@ -168,7 +237,16 @@ func (m *Model) onAIInlineResult(msg aiInlineResultMsg) tea.Cmd {
 		}
 		return nil
 	}
-	res := ai.ResolveInlineCompletion(msg.snap.LineBefore, msg.snap.LineAfter, comp.InsertText)
+	text, ok := ai.FilterInlineCompletion(msg.snap.inlineCtx(), comp.InsertText, msg.manual)
+	if !ok {
+		if msg.manual {
+			var c tea.Cmd
+			m.toast, c = m.toast.Push(toast.Info, "AI has no suggestion here")
+			return c
+		}
+		return nil
+	}
+	res := ai.ResolveInlineCompletion(msg.snap.LineBefore, msg.snap.LineAfter, text)
 	if strings.TrimSpace(res.Insert) == "" {
 		return nil
 	}
@@ -181,9 +259,10 @@ func (m *Model) onAIInlineResult(msg aiInlineResultMsg) tea.Cmd {
 			}
 		}
 	}
-	if m.nvim != nil {
-		_ = m.nvim.ExecLuaArgs(`local a = _G._termocode_ai
-if a then a.show(...) end`, msg.snap.Buf, msg.snap.Tick, msg.snap.Row, msg.snap.Col, res.Insert, res.DeleteBefore, imports)
+	s.inlineCache.Reset()
+	if m.aiShowGhost(msg.snap, res.Insert, res.DeleteBefore, imports) && res.DeleteBefore == 0 {
+		s.inlineCache.Remember(msg.snap.Buf, msg.snap.Row, msg.snap.LineBefore, res.Insert)
+		s.inlineImp = imports
 	}
 	return nil
 }
@@ -193,7 +272,7 @@ func (m *Model) aiTriggerInline() tea.Cmd {
 	if c, ok := m.aiReady(); !ok {
 		return c
 	}
-	return m.startAIInline(true)
+	return m.startAIInline(true, true)
 }
 
 // aiToggleInline flips ai_inline, persists it and syncs Lua.
