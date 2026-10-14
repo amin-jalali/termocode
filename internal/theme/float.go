@@ -96,14 +96,16 @@ func HintBar(bg lipgloss.Color, pairs ...string) string {
 	return b.String()
 }
 
-// Pill renders text as a status-bar "pill": rounded Powerline caps in
-// Nerd Font mode, a padded block otherwise. outer is the surface the pill
-// sits on (the caps are drawn fg=pill bg on that surface).
+// Pill renders text as a status-bar "pill": half-block caps in Nerd Font
+// mode, a padded block otherwise. outer is the surface the pill sits on
+// (the caps are drawn fg=pill bg on that surface). Not the rounded
+// Powerline caps: without a Nerd terminal font, fallback draws those from
+// whatever text font claims U+E0B4/E0B6 (see glyph_clash_test.go).
 func Pill(text string, fg, bg, outer lipgloss.Color, bold bool) string {
 	body := lipgloss.NewStyle().Foreground(fg).Background(bg).Bold(bold)
 	if CurrentIconMode == IconModeNerdFont {
 		cap := lipgloss.NewStyle().Foreground(bg).Background(outer)
-		return cap.Render("") + body.Render(text) + cap.Render("")
+		return cap.Render("▐") + body.Render(text) + cap.Render("▌")
 	}
 	return body.Render(" " + text + " ")
 }

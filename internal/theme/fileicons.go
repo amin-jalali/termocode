@@ -172,7 +172,7 @@ var fileIconsByExt = map[string]fileIconDef{
 	"hs":      fiCode("", &AccentLavender), // seti-haskell
 	"ml":      fiCode("", &AccentAmber),    // seti-ocaml
 	"mli":     fiCode("", &AccentAmber),    // seti-ocaml
-	"nix":     fiCode("", &AccentBlue),     // dev-nixos
+	"nix":     fiCode("", &AccentBlue),     // linux-nixos
 	"zig":     fiCode("", &AccentAmber),    // seti-zig
 	"sql":     fiData("", &AccentAmber),    // dev-database
 	"db":      fiData("", &AccentAmber),    // dev-database

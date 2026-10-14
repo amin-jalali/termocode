@@ -855,7 +855,7 @@ func welcomeCardIcon(a quickAction) string {
 	case a.action == keymap.ActionCommandPalette:
 		return "\uf120" // nf-fa-terminal
 	case a.action == keymap.ActionWorkspaceSearch:
-		return "\uf002" // nf-fa-search
+		return "\uea6d" // nf-cod-search
 	case a.action == keymap.ActionToggleTerminal:
 		return "\uf489" // nf-oct-terminal
 	}
