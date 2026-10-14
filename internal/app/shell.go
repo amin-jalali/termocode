@@ -765,7 +765,21 @@ func (m Model) terminalTabBarRowAbsolute() int {
 // editor pane editorH rows tall: one row above the panel's content, kept
 // inside the pane (spliceTerminalTabBar draws it there).
 func (m Model) terminalBarIndex(editorH int) int {
-	return max(min(editorH-m.integratedTerminalRows()-1, editorH-1), 0)
+	rows := m.integratedTerminalRows()
+	if m.terminalBarHeld {
+		rows = m.terminalBarHoldRows
+	}
+	return max(min(editorH-rows-1, editorH-1), 0)
+}
+
+// holdTerminalBar keeps the bar where nvim has drawn the split until
+// nvim's next redraw (a drag step is about to change the height).
+func (m *Model) holdTerminalBar() {
+	if m.terminalBarHeld || m.nvim == nil {
+		return
+	}
+	m.terminalBarHeld = true
+	m.terminalBarHoldRows = m.integratedTerminalRows()
 }
 
 // editorPaneWidth is the editor pane's drawn width (see editorPaneLayout).

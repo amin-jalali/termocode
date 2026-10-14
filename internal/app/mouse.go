@@ -217,6 +217,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			// smaller flips to minimized.
 			if newRows < terminalRowsMin {
 				if !m.terminalMinimized {
+					m.holdTerminalBar()
 					m.terminalMinimized = true
 					m.applyLayout()
 					m.resizeTerminalSplit()
@@ -224,7 +225,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			// Coming back up: un-minimize.
-			if m.terminalMinimized {
+			wasMinimized := m.terminalMinimized
+			if wasMinimized {
+				m.holdTerminalBar()
 				m.terminalMinimized = false
 			}
 			// Leave at least 8 rows above the panel for editor + tabs +
@@ -233,7 +236,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			if max := m.h - 8; max > 0 && newRows > max {
 				newRows = max
 			}
-			if newRows != m.terminalRows {
+			if newRows != m.terminalRows || wasMinimized {
+				m.holdTerminalBar()
 				m.terminalRows = newRows
 				m.applyLayout()
 				m.resizeTerminalSplit()
@@ -243,6 +247,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			// Any other event (release, wheel, right-click) ends the drag.
 			// Persist once on release so the new height survives a relaunch.
 			m.dragKind = dragNone
+			m.terminalBarHeld = false
 			m.persistTerminalRows()
 			return m, nil
 		}

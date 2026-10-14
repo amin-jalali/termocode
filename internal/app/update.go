@@ -541,6 +541,9 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 			}
 		}
 		m.editor.ApplyRedraw(msg.Events)
+		// nvim has drawn the split at the dragged height: the bar may
+		// follow now.
+		m.terminalBarHeld = false
 		if m.nvim != nil {
 			cmds := []tea.Cmd{m.nvim.Next()}
 			// Throttle FetchState. RedrawMsg fires per nvim event batch

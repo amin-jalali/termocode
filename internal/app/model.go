@@ -378,6 +378,12 @@ type Model struct {
 	// (>20/sec) would issue a redundant nvim_win_set_height call even when
 	// the cell-aligned value didn't change.
 	terminalRowsLastSent int
+	// terminalBarHeld / terminalBarHoldRows: while the panel bar is
+	// dragged, the bar stays at the panel height nvim has drawn until
+	// nvim's redraw for the new height arrives, so the bar and the split
+	// under it move together (terminalBarIndex).
+	terminalBarHeld     bool
+	terminalBarHoldRows int
 
 	// terminalTabs is the list of integrated-terminal tabs. Each tab owns a
 	// distinct nvim terminal buffer; the active tab is rendered into the
