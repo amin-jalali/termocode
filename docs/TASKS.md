@@ -212,3 +212,33 @@ Best started after A/C/D/E so the API is shaped by real panels — but not block
 ## Android (APK) — later
 - [ ] Clipboard on Android: copy / paste uses X11 today (`golang.design/x/clipboard`, cgo) and does not work on Android. Connect it to Android's own clipboard (through the APK shell, e.g. a small bridge the shell exposes), keep OSC 52 as fallback.
 - Size estimate (2026-10-11): termocode arm64 binary 19 MB, ~6.5 MB compressed in an APK; plus Neovim for Android (~4–6 MB) and the terminal shell (Kotlin ~1–2 MB, Flutter ~8–10 MB) → APK ~12–20 MB.
+
+---
+
+## Group K — AI controls the IDE (2026-10-14)
+
+The user asked that the AI chat can manage every feature of the editor.
+Plan by Fable (inventory: the AI covered about a third of the features).
+Rules: every action is `auto`, `confirm` or `never` (with a reason);
+never: quit, reload, detach/reset session, API keys/credentials, the
+AI's own auto-approve, settings import/export. Each step gets a
+testkit test that runs the tool through the real app and checks the
+screen.
+
+- [x] K0 IDE tools: open_file, get_editor_state, notify, show_panel, reveal_in_explorer, execute_action (allow-list)
+- [x] K0 IDE follows AI changes: explorer, open tabs (write/rename/delete), git, checktime; step limit 25 + continue
+- [ ] K1 (S) Policy map for every palette action (auto/confirm/never + reason), `Gate` on ai.Tool, `list_actions(query)`, coverage test (every palette id and setting is exposed or listed "not for AI"), table-driven testkit harness
+- [ ] K2 (M) `settings_list` / `settings_set` (theme, tab size, icons, word wrap…; never credentials or ai_auto_approve), `layout_set` (sidebar width, panel size, zen, panels), `get_ide_state`, one-line capability summary in the system prompt
+- [ ] K3 (M) Terminal: `terminal_send`, `terminal_read`, `terminal_tabs` (visible integrated terminal)
+- [ ] K4 (M) Git: hunks (stage/unstage/discard), blame, log, stash, unstage, fetch
+- [ ] K5 (M) LSP: rename symbol, code actions (list/apply), symbols, type definition, implementation
+- [ ] K6 (S) Tasks/tests typed tools + `tests_results`
+- [ ] K7 (L) Debugger: breakpoints, start, continue/step/stop, state
+- [ ] K8 (S) LSP/DAP installer, extensions, workspace folders, docs reference page
+- [ ] K9 Leftovers from the sync audit: search results refresh after AI edits; rename updates closed-tabs list, recents and hot-exit backups; LSP re-attach after rename (test); test for `execute_action save` refreshing git
+
+## Group L — Upload / download (2026-10-14)
+
+- [ ] L1 (S) File → chat: dropped/pasted paths become attachment chips (text + images), attach button with file picker, `@file`
+- [ ] L2 (S) Chat → file: "Save as…" on code blocks, AI `save_file` result, export chat as .md
+- [ ] L3 (M) Local machine ↔ IDE over SSH: explorer "Download" / "Upload here" via kitty transfer, iTerm2 OSC 1337 File, trzsz; clear message when the terminal can't
