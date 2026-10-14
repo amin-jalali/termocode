@@ -174,6 +174,15 @@ func (d *Driver) Updates() (int, []string) {
 	return n, append([]string(nil), d.updates[max(0, n-20):]...)
 }
 
+// UpdatesSince returns every message Update has handled after the
+// from-th one (a count from Updates).
+func (d *Driver) UpdatesSince(from int) []string {
+	if from < 0 || from > len(d.updates) {
+		from = len(d.updates)
+	}
+	return append([]string(nil), d.updates[from:]...)
+}
+
 // Failed reports whether the test has failed.
 func (d *Driver) Failed() bool { return d.T.Failed() }
 

@@ -10,9 +10,7 @@ import (
 
 func TestRelativeDateMatchesGit(t *testing.T) {
 	now := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
-	old := clock.Now
-	clock.Now = func() time.Time { return now }
-	t.Cleanup(func() { clock.Now = old })
+	t.Cleanup(clock.Set(func() time.Time { return now }))
 	cases := []struct {
 		ago  time.Duration
 		want string

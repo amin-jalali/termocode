@@ -33,6 +33,11 @@ snippet, accept a completion, jump to the next placeholder, or insert a tab.
 To give the AI context, open a file or select code, then run
 **AI: Add File / Selection to Chat**.
 
+To copy from the chat, drag over the text: it is copied when you let go.
+Double-click copies a word, triple-click a whole paragraph. **Copy** on an
+answer copies the whole answer (Markdown); right-click a message for
+Copy Message / Copy Selection / Copy Code Block.
+
 To put code from the answer into your file, run
 **AI: Apply Last Code Block to File**. You see a diff first.
 
@@ -41,10 +46,10 @@ To put code from the answer into your file, run
 | `Enter` | Send |
 | `Shift+Enter`, `Alt+Enter` or `Ctrl+J` | New line |
 | `↑` / `↓`, `PgUp` / `PgDn` | Scroll the chat |
-| `Ctrl+C` | Stop generating |
+| `Ctrl+C` | Copy the selection; with none, stop generating |
 | `Ctrl+N` | New chat |
 | `Ctrl+U` | Clear the input |
-| `Esc` | Back to the editor |
+| `Esc` | Clear the selection, then back to the editor |
 
 Chats are saved. Run **AI: Chat History…** to open an old one, and
 **AI: New Chat** to start fresh. The last 50 chats are kept.
@@ -281,6 +286,11 @@ to go on. Change the limit with `ai_max_steps` in `config.json`.
 
 **The edit was not applied**
 :   The file changed after you asked. Ask again.
+
+**Copy says "no clipboard found" or "no system clipboard"**
+:   termocode found no system clipboard (the editor can still paste it). Install `wl-clipboard` (Wayland) or `xclip`
+    (X11). Over SSH, use a terminal with OSC 52 (kitty, WezTerm, foot,
+    Alacritty); GNOME Terminal does not support it.
 
 **The agent stopped in the middle**
 :   It hit the step limit (25 by default, `ai_max_steps`). Send "continue".
