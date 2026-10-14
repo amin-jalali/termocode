@@ -17,7 +17,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `theme` | string | `vscode-dark-plus` | Color theme ID. Same as Preferences: Color Theme. |
-| `icons` | enum | `auto` | Icon set: nerd (Nerd Font glyphs), unicode (plain symbols), ascii, or auto (nerd on terminals that bundle Nerd symbols — WezTerm, Ghostty, kitty — ascii on TERM=linux or a non-UTF-8 locale, else unicode). TERMOCODE_ICON_MODE wins over it. |
+| `icons` | enum | `auto` | Icon set: nerd (Nerd Font glyphs), unicode (plain symbols), ascii, or auto (nerd when the terminal bundles Nerd symbols — WezTerm, Ghostty, kitty — or its font setting is a Nerd Font — GNOME Terminal profile, Alacritty, foot; ascii on TERM=linux or a non-UTF-8 locale; else unicode). TERMOCODE_ICON_MODE wins over it. |
 | `animations` | enum | `auto` | Overlay / toast / list animations: on, off, or auto (off over SSH and when the terminal is not truecolor). The editor text itself never animates. |
 | `images` | enum | `auto` | Inline images (image preview, dashboard logo, Markdown preview): kitty, sixel, blocks (coloured half-blocks, works everywhere with colour), off, or auto (probe the terminal; blocks inside tmux without allow-passthrough). |
 | `dashboard_logo` | enum | `text` | The TERMOCODE wordmark on the Welcome page: text (half-blocks, works everywhere), image (a kitty / sixel picture; needs images on), or off. A short window hides it so the cards and recent files fit. |

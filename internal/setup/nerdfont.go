@@ -41,7 +41,8 @@ type NerdFontInfo struct {
 }
 
 // HasNerdFont reports whether a Nerd Font is installed, from the cache
-// when it is still valid. The "icons: auto" setting uses it as a hint.
+// when it is still valid. Installed is not "in use": icons = auto reads
+// the terminal's own font setting instead (TerminalNerdFont).
 func HasNerdFont() bool { return DetectNerdFont(false).Found }
 
 // DetectNerdFont returns the Nerd Font detection. fresh skips the cache

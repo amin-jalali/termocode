@@ -89,4 +89,6 @@ When a release is out, this page will show the exact commands.
 
 **Icons show as boxes or `?`**
 :   On Linux, run `termocode setup` to install the JetBrainsMono Nerd Font,
-    then pick it in your terminal. On macOS, install any Nerd Font by hand. Or set `TERMOCODE_ICON_MODE=ascii`.
+    then pick it in your terminal. `termocode setup` prints your terminal's
+    font and the exact steps (it never changes terminal settings). On macOS,
+    install any Nerd Font by hand. Or set `TERMOCODE_ICON_MODE=ascii`.
