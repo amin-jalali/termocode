@@ -88,6 +88,11 @@ func SystemPrompt(base string, tools []Tool, native bool) string {
 			"debug_state shows where it stopped and the variables; debug_control steps / continues / stops and " +
 			"debug_evaluate reads an expression. The editor follows each stop."
 	}
+	if _, ok := FindTool(tools, "lsp_servers"); ok {
+		ide += " lsp_servers / dap_adapters list, install and remove language servers and debug adapters; " +
+			"extensions lists, runs and reloads the user's Lua extensions; workspace_folders adds or removes " +
+			"explorer folders (you can not open another workspace: it would end this chat)."
+	}
 	if native {
 		return base + "\n\nYou can call IDE tools (files, search, git, LSP, shell, editor). " +
 			"Mutating tools ask the user first; if one is declined, do not retry it." + ide

@@ -76,7 +76,8 @@ type Model struct {
 	exclude       string
 	contextLines  string
 	focus         field
-	maxResults    int // 0 = unlimited; see SetMaxResults
+	maxResults    int  // 0 = unlimited; see SetMaxResults
+	keepCursor    bool // the running search is a Refresh: keep the cursor row
 }
 
 const debounce = 150 * time.Millisecond
@@ -86,6 +87,19 @@ func New() Model {
 }
 
 func (m *Model) SetSize(w, h int) { m.w, m.h = w, h }
+
+// Pending reports whether a search is scheduled or running.
+func (m Model) Pending() bool { return m.pending }
+
+// Refresh searches again with the same query and options (files changed
+// on disk). The cursor stays on its row while that row still exists.
+func (m *Model) Refresh() tea.Cmd {
+	cmd := m.scheduleSearch()
+	if cmd != nil {
+		m.pending, m.keepCursor = true, true
+	}
+	return cmd
+}
 
 // SetMaxResults sets the total result cap (the `search_max_results`
 // setting). 0 means unlimited; negative values are treated as 0.
@@ -154,7 +168,11 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		m.pending = false
 		m.results = msg.results
 		m.summary = msg.summary
-		m.cursor = 0
+		if !m.keepCursor {
+			m.cursor = 0
+		}
+		m.cursor = max(0, min(m.cursor, len(m.results)-1))
+		m.keepCursor = false
 		if msg.err != nil {
 			m.lastErr = msg.err.Error()
 		} else {
@@ -252,6 +270,7 @@ func (m *Model) focused() *string {
 
 func (m *Model) scheduleSearch() tea.Cmd {
 	m.queryVer++
+	m.keepCursor = false
 	v := m.queryVer
 	if strings.TrimSpace(m.input) == "" {
 		m.results = nil

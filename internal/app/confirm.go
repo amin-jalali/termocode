@@ -157,6 +157,7 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 				m.err = err.Error()
 				return nil
 			}
+			m.forgetPaths([]string{path})
 			m.err = ""
 			m.explorer.Reload()
 		}
@@ -206,7 +207,7 @@ func (m *Model) runBulkDelete(paths []string) tea.Cmd {
 	// (BufLeave), which would re-create a file deleted before.
 	m.closeBuffersForPaths(paths)
 	deleted := 0
-	var failed []string
+	var failed, gone []string
 	for _, p := range paths {
 		if p == "" {
 			continue
@@ -216,7 +217,9 @@ func (m *Model) runBulkDelete(paths []string) tea.Cmd {
 			continue
 		}
 		deleted++
+		gone = append(gone, p)
 	}
+	m.forgetPaths(gone)
 	m.explorer.Reload()
 	m.explorer.ClearSelection()
 

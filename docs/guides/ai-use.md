@@ -127,6 +127,7 @@ The chat is an agent. It can call tools to answer you:
 | Settings | list settings with their values and allowed values (`settings_list`), change one (`settings_set`): theme, tab size, icons, word wrap, … |
 | Layout | sidebar width, panel height, show / hide the sidebar and the bottom panel, zen mode, show the AI panel (`layout_set`) |
 | IDE state | read focus, panels, terminal tabs, layout, theme, git branch, language servers, problems, debug and running tasks / tests (`get_ide_state`) |
+| Setup | list, install and remove language servers (`lsp_servers`) and debug adapters (`dap_adapters`); list, run and reload extensions, read their log (`extensions`); add or remove explorer folders (`workspace_folders`) |
 
 Read and editor tools run freely. So "open it" opens the file in a tab.
 **Before any write, git or run tool, termocode asks you.** You see
@@ -222,6 +223,23 @@ The debug tools use the same session as **Run & Debug**, so you see it all.
   your program. The line and its result also show in the Debug Console.
 - At each stop the editor shows the stopped line, like when you debug.
   Your keys stay in the chat.
+
+Setup tools change the IDE itself:
+
+- `lsp_servers` / `dap_adapters`: list runs at once. It shows the servers
+  for the languages in your workspace and their state. Install asks
+  first (kind *run*: it downloads and runs code). It runs in the
+  background, with the same toasts as **LSP: Manage Language Servers...**;
+  the agent waits up to a minute, then checks again with list. Uninstall
+  always asks, with no "Always allow".
+- `extensions`: list and log run at once. Run a command and reload ask
+  first (kind *run*: they run extension code).
+- `workspace_folders`: list runs at once. Add and remove ask first (kind
+  *ide*). The new folder shows in the explorer. The agent can not open
+  another workspace: that restarts termocode and would end the chat.
+
+The [AI tools reference](../reference/ai-tools.md) lists every tool, its
+arguments and its rule.
 
 To skip the question for one kind, run **AI: Agent Auto-Approve…** and turn
 on *fileWrite*, *git*, *run*, *ide* or *settings*. Turn on only what you trust.
