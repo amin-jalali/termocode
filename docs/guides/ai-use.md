@@ -39,7 +39,8 @@ answer copies the whole answer (Markdown); right-click a message for
 Copy Message / Copy Selection / Copy Code Block.
 
 To put code from the answer into your file, run
-**AI: Apply Last Code Block to File**. You see a diff first.
+**AI: Apply Last Code Block to File**, or click **Apply** on the code
+card. You see the change in the review card first (see below).
 
 | Key (chat focused) | Action |
 |---|---|
@@ -88,12 +89,13 @@ To get files out:
     - **Fix with AI** — only on a line with an error or warning.
     - **Edit with AI…** — type an instruction, e.g. *add error handling*.
     - **Generate Doc Comment with AI**
-3. For Fix, Edit and Doc, a side-by-side diff opens. The right side shows
-   the proposal.
-4. Pick **Apply**, **Review diff** or **Discard**.
+3. For Fix, Edit and Doc, the [review card](#review-ai-changes) opens
+   with the proposal.
+4. Accept or reject each change, or the whole file.
 
-**Apply** is one edit. Press `u` once to undo it. If the file changed while
-the AI was working, termocode does not apply the edit.
+What you accept is one edit in the open tab (not saved yet, as if you
+typed it). Press `u` once to undo it. If the file changed while the AI was
+working, termocode does not apply the edit.
 
 Shortcut: `Alt+I` runs **Edit with AI** on the selection or the current line.
 
@@ -102,7 +104,59 @@ Shortcut: `Alt+I` runs **Edit with AI** on the selection or the current line.
 In the **Problems** panel (`Alt+M`), select a problem and press `a`. Or
 click **✦ Fix with AI** at the end of the selected row, or right-click the
 row and pick **Fix with AI**. termocode jumps to the problem and runs the
-same Fix flow: diff, then **Apply** as one undo step.
+same Fix flow: the review card, then the accepted change as one undo step.
+
+## Review AI changes
+
+Every change the AI suggests opens in the **review card** first: a diff
+over the editor, like in mobocode.
+
+- **Split / Unified** (top right, or `t`): old and new side by side, or one
+  column. Wide windows start split.
+- Changed words are brighter than the changed line, so you see the real
+  edit at a glance.
+- Long runs of unchanged lines fold into a band ("14 unchanged lines").
+  Click it, or press `z`, to unfold.
+- Each change has a header, **Change 2 of 5**, with **Accept** and
+  **Reject**. `n` / `p` (or `‹` / `›`) jump between changes; `a` / `r`
+  accept or reject the selected one. Click again (**Undo**) to change your
+  mind. When every change is decided, the file is done.
+- The footer has **Accept file** (`A`), **Reject file** (`R`), **Apply
+  selected** (`Enter`: only what you accepted) and **Accept & edit** (`e`:
+  write it, then open the file so you can change it by hand).
+- When one answer changes several files, a list on the left shows them.
+  `Tab` goes to the next file. A dot is waiting, ✓ accepted, ◐ partly,
+  ✗ rejected.
+- `Esc` hides the card. The chat shows "**N files to review**" with a
+  **Review** button; **AI: Review Pending Changes** opens it again.
+
+### The agent waits for you
+
+With the default setting, the agent's file changes are not written at
+once. `write_file`, `create_file`, `format`, `lsp_rename` and applying a
+code action (`lsp_code_actions`) open the review card, and the agent waits
+until you decide (at most 30 minutes; **Stop** ends the wait at once).
+There is no extra "AI wants to" question for them: the review is the
+question.
+
+The agent is told exactly what happened, for example *"The user accepted
+1 of 2 changes to main.go; only those were written. Rejected: change 2
+…"*. When you reject everything, nothing is written and the agent is told
+not to try the same change again.
+
+What you accept is written to disk. An open tab shows it as **one undo
+step** (`u`), and the explorer, git panel and open files follow, as
+before. A file whose tab has unsaved edits is refused: the agent asks you
+to save first. A code action that runs a language-server command can not
+be shown as a diff; it asks you with the usual dialog instead. Delete,
+rename of files and folders, git and run tools keep the usual dialog.
+
+To turn the review off, run **AI: Toggle Edit Review (diff / auto)**, or
+set `"ai_edit_review": "auto"` in `config.json`. Then file changes ask with
+the dialog as before. Auto-approving *fileWrite* (**AI: Agent
+Auto-Approve…**) also skips the review: changes are written at once.
+
+**File: Compare Two Files…** uses the same card, read-only.
 
 ## Agent: let the chat use tools
 
@@ -135,8 +189,9 @@ The chat is an agent. It can call tools to answer you:
 | Setup | list, install and remove language servers (`lsp_servers`) and debug adapters (`dap_adapters`); list, run and reload extensions, read their log (`extensions`); add or remove explorer folders (`workspace_folders`) |
 
 Read and editor tools run freely. So "open it" opens the file in a tab.
-**Before any write, git or run tool, termocode asks you.** You see
-what the tool will do, and you can say no.
+**Before any write, git or run tool, termocode asks you.** File changes
+open in the [review card](#review-ai-changes); other tools show a dialog
+with what the tool will do. You can always say no.
 
 Each palette command has a rule for the agent:
 
@@ -179,12 +234,13 @@ Language server tools have rules too:
 
 - **Read** — hover, symbols, go to definition and listing code actions run
   at once.
-- **Change** — `lsp_rename` and applying a code action ask you first
-  (kind *fileWrite*). The change goes through the editor: open tabs show
-  it and you can undo it. A changed file is saved only when it had no
-  unsaved edits before; your half-done edits stay unsaved. No new tab
-  opens for the other files. An action that does not exist is refused
-  before you are asked.
+- **Change** — `lsp_rename` and applying a code action open the review
+  card with every file they change. Accepted files are written; open tabs
+  show the change as one undo step. A file with unsaved edits is refused.
+  No new tab opens for the other files. An action that does not exist is
+  refused before you are asked. With `ai_edit_review` = `auto` they ask
+  first (kind *fileWrite*) and change the files through the editor; a
+  file with unsaved edits then keeps them unsaved.
 - With no language server for the file, the agent is told so, and which
   server **LSP: Manage Language Servers...** can install for it.
 

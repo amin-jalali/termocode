@@ -266,6 +266,6 @@ lib/features/scm/hunk_diff_view.dart, lib/core/diff/text_diff.dart,
 lib/features/ai/ai_surface.dart, lib/features/compare/compare_sheet.dart).
 
 - [x] R1 Port the diff engine and viewer (text_diff → Go; side-by-side / inline view, word-level highlights, hunk navigation)
-- [ ] R2 AI change suggestions go through review: the agent's file edits become pending proposals shown in the diff viewer; accept / reject per hunk and all; one undo step; agent waits for the decision and is told the result
+- [x] R2 AI change suggestions go through review: the agent's file edits become pending proposals shown in the diff viewer; accept / reject per hunk and all; one undo step; agent waits for the decision and is told the result
 - [ ] R3 Restore points: snapshot before an AI turn's first change; "AI: Undo last turn" restores
 - [ ] R4 AI audit log: Output channel "AI" with every tool call, args, result, who approved

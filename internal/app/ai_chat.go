@@ -139,6 +139,9 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools = append(tools, aiTasksTools(root, call)...) // Group K6: tasks and tests
 	tools = append(tools, aiAdminTools(root, call)...) // Group K8: installers, extensions, workspace folders
 	tools = append(tools, aiDebugTools(root, call)...) // Group K7
+	if m.aiReviewEdits() {                             // Group R2: file changes become diffs to review
+		tools = m.aiReviewTools(tools, root, call)
+	}
 	return tools
 }
 
@@ -202,6 +205,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		Native:      native,
 		AutoApprove: auto,
 		MaxSteps:    s.settings.MaxSteps, // 0: ai.DefaultMaxSteps
+		BeforeCalls: aiBeforeCalls(root, call),
 		Confirm: func(ctx context.Context, t ai.Tool, human string) bool {
 			reply := make(chan bool, 1)
 			select {
@@ -408,6 +412,7 @@ func (m *Model) newAIChat() tea.Cmd {
 	s := m.aiS()
 	if s.chatCancel != nil {
 		s.chatCancel()
+		m.cancelAIReviewTurn()
 	}
 	s.chatGen++
 	s.streaming = false
@@ -457,6 +462,7 @@ func (m *Model) onAIHistoryPicked(id string) tea.Cmd {
 	}
 	if s.chatCancel != nil {
 		s.chatCancel()
+		m.cancelAIReviewTurn()
 	}
 	s.chatGen++
 	s.streaming = false
