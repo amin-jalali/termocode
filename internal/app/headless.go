@@ -3,7 +3,9 @@ package app
 import (
 	"errors"
 	"os"
+	"os/exec"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/term"
 )
 
@@ -19,6 +21,22 @@ func headless() bool {
 
 // errHeadless is returned by host actions skipped in headless mode.
 var errHeadless = errors.New("not available without a terminal")
+
+// execProcess is tea.ExecProcess with the child on the real terminal.
+// Bubble Tea gives a child its input reader as stdin; termocode's input
+// is transfer.Input (not an *os.File), so the child would get a pipe and
+// no TTY. Use this, never tea.ExecProcess.
+func execProcess(c *exec.Cmd, fn tea.ExecCallback) tea.Cmd {
+	return tea.ExecProcess(withTTYStdin(c), fn)
+}
+
+// withTTYStdin gives c the process's own stdin unless it has one.
+func withTTYStdin(c *exec.Cmd) *exec.Cmd {
+	if c.Stdin == nil {
+		c.Stdin = os.Stdin
+	}
+	return c
+}
 
 // writeTerminal writes an out-of-band escape sequence to the host
 // terminal, unless headless.

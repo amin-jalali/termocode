@@ -122,7 +122,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| File: Cancel Download | `transfer-cancel` |   |   |
 | File: Compare Two Files... | `diff-files` |   |   |
+| File: Download to This Computer | `transfer-download` |   |   |
 | File: Open Recent Workspace... | `open-workspace` |   |   |
 | File: Open Recent... | `open-recent` | `Ctrl+R` | `Ctrl+R` |
 | File: Quit | `quit` | `Ctrl+Q` | `Ctrl+Q` |
@@ -131,6 +133,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | File: Save | `save` | `Ctrl+S` | `Ctrl+S` |
 | File: Save All Files | `save-all` |   |   |
 | File: Toggle Auto Save | `toggle-auto-save` |   |   |
+| File: Upload from This Computer... | `transfer-upload` |   |   |
 
 ## Files
 
