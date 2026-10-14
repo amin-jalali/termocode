@@ -46,6 +46,7 @@ func (n *Node) Load() error {
 	if err != nil {
 		return err
 	}
+	touch()
 	n.Children = nil
 	for _, e := range entries {
 		n.Children = append(n.Children, &Node{
@@ -74,6 +75,7 @@ func (n *Node) Toggle() error {
 			return err
 		}
 	}
+	touch()
 	n.Expanded = !n.Expanded
 	return nil
 }
@@ -148,6 +150,7 @@ func (n *Node) expandPaths(set, need map[string]bool) {
 		_ = n.Load()
 	}
 	if set[n.Path] {
+		touch()
 		n.Expanded = true
 	}
 	for _, c := range n.Children {
