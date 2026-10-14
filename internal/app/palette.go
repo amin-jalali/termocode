@@ -351,14 +351,16 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.runDebugPaletteCmd(id)
 	}
 	switch id {
-	case "save":
+	case "save": // git status / markers refresh as after Ctrl+S
 		if err := m.editor.Save(); err != nil {
 			m.err = err.Error()
 		}
+		return fetchGitCmd()
 	case "save-all":
 		if m.nvim != nil {
 			_ = m.nvim.Command(":wall")
 		}
+		return fetchGitCmd()
 	case "close-buffer":
 		if m.activeBuf != 0 && m.promptCloseBufferIfDirty(m.activeBuf) {
 			return nil

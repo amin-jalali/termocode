@@ -145,11 +145,14 @@ func aiSyncAfter(ctx context.Context, call aiIDECaller, reveal string, lvl aiSyn
 }
 
 // aiSyncIDE refreshes what changed: for aiSyncDisk the open buffers
-// (checktime) and the explorer tree, revealing reveal; always git status
-// (git panel, branch, explorer markers) and the tab bar.
+// (checktime), the explorer tree (revealing reveal) and the Find in Files
+// results; always git status (git panel, branch, explorer markers) and
+// the tab bar.
 func (m *Model) aiSyncIDE(reveal string, lvl aiSyncLevel) (string, tea.Cmd) {
 	note := ""
+	var search tea.Cmd
 	if lvl == aiSyncDisk {
+		search = m.refreshSearchResults()
 		m.explorer.Reload()
 		if reveal != "" {
 			m.explorer.RevealPath(reveal)
@@ -161,7 +164,7 @@ func (m *Model) aiSyncIDE(reveal string, lvl aiSyncLevel) (string, tea.Cmd) {
 		}
 		note += m.aiCheckTime()
 	}
-	return note, tea.Batch(fetchGitCmd(), m.fetchStateCmd())
+	return note, tea.Batch(fetchGitCmd(), m.fetchStateCmd(), search)
 }
 
 // aiCheckTimeLua reloads every open buffer whose file changed on disk and
@@ -362,7 +365,6 @@ func (m *Model) aiDeletePath(abs string, rel func(string) string) (string, tea.C
 	for _, b := range bufs {
 		if b.Listed && b.Loaded {
 			closed = append(closed, rel(b.Path))
-			m.pushClosed(b.Path)
 		}
 		if m.nvim != nil {
 			// bdelete moves the window to another buffer first; the
@@ -375,6 +377,7 @@ func (m *Model) aiDeletePath(abs string, rel func(string) string) (string, tea.C
 	if err := osRemoveAll(abs); err != nil {
 		return "", nil, err
 	}
+	m.forgetPaths([]string{abs}) // closed tabs, recents, hot-exit backups
 	out := "deleted " + rel(abs) + "; it is gone from the explorer"
 	if len(closed) > 0 {
 		out += "; closed its editor tab(s): " + strings.Join(closed, ", ")
@@ -384,7 +387,8 @@ func (m *Model) aiDeletePath(abs string, rel func(string) string) (string, tea.C
 }
 
 // aiRenamePath is rename on Update. Open tabs follow the new name and
-// keep unsaved edits (renameOpenBuffers); an existing target is refused
+// keep unsaved edits, closed tabs / recents / hot-exit backups follow too
+// (followRename); an existing target is refused
 // (os.Rename would silently replace it).
 func (m *Model) aiRenamePath(from, to string, rel func(string) string) (string, tea.Cmd, error) {
 	fi, err := os.Lstat(from)
@@ -407,7 +411,7 @@ func (m *Model) aiRenamePath(from, to string, rel func(string) string) (string, 
 	if err := os.Rename(from, to); err != nil {
 		return "", nil, err
 	}
-	m.renameOpenBuffers(from, to)
+	m.followRename(from, to)
 	out := "renamed " + rel(from) + " to " + rel(to)
 	var moved []string
 	for _, b := range bufs {

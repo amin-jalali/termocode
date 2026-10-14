@@ -25,12 +25,25 @@ type lspInstallState struct {
 	clients    []string        // LSP clients attached to the active buffer
 	pending    string          // tool the open confirm dialog is about
 	category   lspinstall.Category
+	// K8: what lsp_servers / dap_adapters report back to the AI.
+	progress map[string]string            // tool → last progress line of a running install
+	results  map[string]toolInstallResult // tool → result of the last install
+	byAI     map[string]bool              // installs the AI started: no failure preview over the chat
+}
+
+// toolInstallResult is the end of one background install.
+type toolInstallResult struct {
+	err    error
+	output string
 }
 
 func newLSPInstallState() *lspInstallState {
 	return &lspInstallState{
 		installing: map[string]bool{},
 		asked:      lspinstall.LoadAsked(),
+		progress:   map[string]string{},
+		results:    map[string]toolInstallResult{},
+		byAI:       map[string]bool{},
 	}
 }
 
@@ -201,10 +214,13 @@ func (m *Model) startToolInstall(t lspinstall.Tool) tea.Cmd {
 		return nil
 	}
 	m.lspMgr.installing[t.Name] = true
+	delete(m.lspMgr.results, t.Name)
+	m.lspMgr.progress[t.Name] = "starting"
+	install := toolInstaller().install
 	ch := make(chan lspInstallEventMsg, 32)
 	go func() {
 		defer close(ch)
-		out, err := lspinstall.Install(context.Background(), t, func(line string) {
+		out, err := install(context.Background(), t, func(line string) {
 			if line == "done" {
 				return
 			}
@@ -224,13 +240,23 @@ func (m *Model) startToolInstall(t lspinstall.Tool) tea.Cmd {
 func (m *Model) onToolInstallEvent(ev lspInstallEventMsg) tea.Cmd {
 	m.ensureLSPMgr()
 	if !ev.done {
+		m.lspMgr.progress[ev.name] = ev.line
 		var cmd tea.Cmd
 		m.toast, cmd = m.toast.PushDetail(toast.Info, "Installing "+ev.name+"…", ev.line)
 		return tea.Batch(cmd, waitLSPInstall(ev.ch))
 	}
 	delete(m.lspMgr.installing, ev.name)
+	delete(m.lspMgr.progress, ev.name)
+	m.lspMgr.results[ev.name] = toolInstallResult{err: ev.err, output: ev.output}
+	byAI := m.lspMgr.byAI[ev.name]
+	delete(m.lspMgr.byAI, ev.name)
 	t, _ := lspinstall.Lookup(ev.name)
 	if ev.err != nil {
+		if byAI { // the AI gets the output; a preview would cover the chat
+			var cmd tea.Cmd
+			m.toast, cmd = m.toast.PushDetail(toast.Errr, t.Name+" install failed", aiInstallErrText(ev.err))
+			return cmd
+		}
 		return m.toolErrorToast(t, ev.err, ev.output)
 	}
 	detail := "language server started for open files"
@@ -323,6 +349,15 @@ func (m *Model) maybeSuggestLanguageServer(ft string) tea.Cmd {
 func (m *Model) ensureLSPMgr() {
 	if m.lspMgr == nil {
 		m.lspMgr = newLSPInstallState()
+	}
+	if m.lspMgr.progress == nil {
+		m.lspMgr.progress = map[string]string{}
+	}
+	if m.lspMgr.results == nil {
+		m.lspMgr.results = map[string]toolInstallResult{}
+	}
+	if m.lspMgr.byAI == nil {
+		m.lspMgr.byAI = map[string]bool{}
 	}
 }
 

@@ -61,7 +61,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"reload-buffer":     aiDestructive(), // drops unsaved edits
 	"quick-open":        aiNever(aiNoPicker + " (open_file)"),
 	"open-recent":       aiNever(aiNoPicker + " (open_file)"),
-	"open-workspace":    aiNever(aiNoPicker),
+	"open-workspace":    aiNever("restarts termocode in another folder and ends this chat (workspace_folders adds a folder)"),
 	"diff-files":        aiNever(aiNoPicker),
 	"toggle-auto-save":  aiConfirm(ai.ClassIDE),
 	"copy-file-ref":     aiConfirm(ai.ClassIDE), // overwrites the system clipboard
@@ -145,7 +145,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"code-actions":          aiNever(aiNoPicker),
 	"goto-symbol-file":      aiNever(aiNoPicker + " (lsp_nav)"),
 	"goto-symbol-workspace": aiNever(aiNoPicker + " (lsp_nav)"),
-	"lsp-manage":            aiNever(aiNoPicker + "; it installs software"),
+	"lsp-manage":            aiNever(aiNoPicker + " (lsp_servers)"),
 
 	// ── Git ──
 	"git-stage":           aiConfirm(ai.ClassGit),
@@ -182,8 +182,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"git-clone":           aiNever("clones into a folder outside the workspace and opens it"),
 
 	// ── Workspace, session, settings ──
-	"workspace-add-folder":    aiNever(aiNoPicker),
-	"workspace-remove-folder": aiNever(aiNoPicker),
+	"workspace-add-folder":    aiNever(aiNoPicker + " (workspace_folders)"),
+	"workspace-remove-folder": aiNever(aiNoPicker + " (workspace_folders)"),
 	"reveal-fs":               aiNever(aiNoOutside),
 	"transfer-download":       aiNever(aiNoTransfer),
 	"transfer-upload":         aiNever(aiNoTransfer),
@@ -222,7 +222,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"debug-conditional-bp":    aiNever(aiNoPicker + " (debug_breakpoint with condition)"),
 	"debug-logpoint":          aiNever(aiNoPicker + " (debug_breakpoint with log_message)"),
 	"debug-add-watch":         aiNever(aiNoPicker + " (debug_evaluate; debug_state shows the watches)"),
-	"dap-install":             aiNever(aiNoPicker + "; it installs software"),
+	"dap-install":             aiNever(aiNoPicker + " (dap_adapters)"),
 
 	// ── Testing ──
 	"run-tests":            aiConfirm(ai.ClassRun),
@@ -247,9 +247,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"tasks-clear-problems": aiAuto(),
 
 	// ── Extensions ──
-	"ext-manage-reload":          aiConfirm(ai.ClassRun), // runs extension code
+	"ext-manage-reload":          aiConfirm(ai.ClassRun), // runs extension code; also extensions(op: reload)
 	"ext-manage-open-folder":     aiNever(aiNoOutside),
-	"ext-manage-log":             aiAuto(),
+	"ext-manage-log":             aiAuto(), // extensions(op: log) returns the text
 	"ext-manage-new":             aiNever(aiNoPicker),
 	"ext-manage-install-samples": aiConfirm(ai.ClassRun), // installs code that runs
 
