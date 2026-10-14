@@ -98,3 +98,16 @@ func TestCapsFile(t *testing.T) {
 		t.Errorf("nil caps left the file: %v", err)
 	}
 }
+
+// TestEnvCapsSendsSSH: the client's SSH variables travel with the caps,
+// so the UI knows whether the terminal that shows it is on another
+// machine (file transfer: local copy or scp).
+func TestEnvCapsSendsSSH(t *testing.T) {
+	env := map[string]string{"SSH_CONNECTION": "10.0.0.5 50000 10.0.0.9 22", "SSH_CLIENT": "10.0.0.5 50000 22", "SSH_TTY": "/dev/pts/2"}
+	c := EnvCaps(func(k string) string { return env[k] })
+	for k, v := range env {
+		if c.Env[k] != v {
+			t.Errorf("%s = %q, want %q", k, c.Env[k], v)
+		}
+	}
+}
