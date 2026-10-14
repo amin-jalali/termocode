@@ -231,9 +231,12 @@ func detectLaunchConfigs(root string) []launchConfig {
 	}
 	var out []launchConfig
 	if has("go.mod") {
+		// outputMode remote: the program's output reaches the Debug Console
+		// (dlv prints it on its own stdout otherwise, which nobody sees).
+		remote := map[string]any{"outputMode": "remote"}
 		out = append(out,
-			dapConfig("Go: Debug package", "delve", "${workspaceFolder}", nil),
-			dapConfig("Go: Debug current file", "delve", "${file}", nil),
+			dapConfig("Go: Debug package", "delve", "${workspaceFolder}", remote),
+			dapConfig("Go: Debug current file", "delve", "${file}", remote),
 			shellConfig("Go: Run package", "go run ."),
 			shellConfig("Go: Test", "go test ./..."),
 		)
