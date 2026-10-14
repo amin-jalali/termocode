@@ -475,7 +475,9 @@ func WorkspaceTools(w Workspace) []Tool {
 			Run:      func(context.Context, map[string]any) (string, error) { return "pulled", git.Pull(w.Root) },
 		},
 		{
-			Name: "run_command", Description: "Run a shell command in the workspace root and return its output (build, test, …).",
+			Name: "run_command", Description: "Run a shell command HIDDEN in the workspace root and return its captured output " +
+				"(one-shot: build, test, grep, …; 2 min limit). For a command the user wants to see, an interactive one or " +
+				"a long-running one (dev server, watcher), use terminal_send instead.",
 			Params: map[string]any{"command": strParam("shell command")}, Required: []string{"command"},
 			Mutating: true, Class: ClassRun,
 			Describe: func(a map[string]any) string { return "Run: " + ArgString(a, "command") },
