@@ -294,7 +294,13 @@ func (m *Model) onSettingsRowSelected(id string) tea.Cmd {
 // to config.json, and applies live (calls the appropriate toggleX helper
 // or runs an Ex command on nvim) so the user sees the change immediately.
 func (m *Model) applySettingValue(value string) tea.Cmd {
-	row, ok := findSettingsRow(m.settingPromptID)
+	return m.applySetting(m.settingPromptID, value)
+}
+
+// applySetting validates, saves and applies one settings row (by row ID).
+// The Settings UI and the AI's settings_set both use it.
+func (m *Model) applySetting(id, value string) tea.Cmd {
+	row, ok := findSettingsRow(id)
 	if !ok {
 		return nil
 	}

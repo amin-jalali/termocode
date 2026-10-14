@@ -273,6 +273,8 @@ func (m *Model) openAIAutoApprovePicker() tea.Cmd {
 		ai.ClassFileWrite: "write / create / delete / rename files",
 		ai.ClassGit:       "stage / commit / checkout / push / pull",
 		ai.ClassRun:       "run shell commands",
+		ai.ClassIDE:       "IDE commands (execute_action)",
+		ai.ClassSettings:  "change settings (settings_set)",
 	}
 	var items []picker.Item
 	for _, c := range ai.ToolClasses {

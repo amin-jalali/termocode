@@ -157,6 +157,8 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	tools := append(ai.WorkspaceTools(ai.Workspace{Root: root}), m.aiEditorTools()...)
 	tools = aiSyncTools(tools, root, call) // the IDE follows file / git changes
 	tools = append(tools, aiIDETools(root, call)...)
+	// Group K2: settings, layout and IDE state.
+	tools = append(tools, aiSettingsTools(root, call)...)
 	native := s.provider.SupportsTools()
 	sys := aiChatSystemPrompt + "\nWorkspace root: " + root
 	if p := m.editor.Path(); p != "" {

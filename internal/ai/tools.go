@@ -65,11 +65,12 @@ const (
 	ClassFileWrite = "fileWrite"
 	ClassGit       = "git"
 	ClassRun       = "run"
-	ClassIDE       = "ide" // IDE commands the agent runs (execute_action)
+	ClassIDE       = "ide"      // IDE commands the agent runs (execute_action)
+	ClassSettings  = "settings" // settings_set: change a config.json setting
 )
 
 // ToolClasses lists the auto-approve classes in UI order.
-var ToolClasses = []string{ClassFileWrite, ClassGit, ClassRun, ClassIDE}
+var ToolClasses = []string{ClassFileWrite, ClassGit, ClassRun, ClassIDE, ClassSettings}
 
 // FindTool looks a tool up by name.
 func FindTool(tools []Tool, name string) (Tool, bool) {

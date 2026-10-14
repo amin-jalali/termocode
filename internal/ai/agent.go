@@ -70,6 +70,10 @@ func SystemPrompt(base string, tools []Tool, native bool) string {
 	if _, ok := FindTool(tools, "list_actions"); ok {
 		ide += " For any IDE command without its own tool, call list_actions(query) to find it, then execute_action(id)."
 	}
+	if _, ok := FindTool(tools, "settings_list"); ok {
+		ide += " settings_list / settings_set read and change settings (theme, tab size, icons …); layout_set sizes " +
+			"and shows the sidebar and panels; get_ide_state reads the whole IDE (panels, git, problems, runs)."
+	}
 	if native {
 		return base + "\n\nYou can call IDE tools (files, search, git, LSP, shell, editor). " +
 			"Mutating tools ask the user first; if one is declined, do not retry it." + ide

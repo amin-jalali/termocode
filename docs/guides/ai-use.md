@@ -111,6 +111,9 @@ The chat is an agent. It can call tools to answer you:
 | Run | run a shell command in the workspace (build, test, …) |
 | Editor | open a file (at a line), read the cursor and selection, show a panel, reveal in the explorer, show a toast |
 | IDE commands | find a command palette command (`list_actions`) and run it (`execute_action`): fold, split, show a panel, save, run tests, … |
+| Settings | list settings with their values and allowed values (`settings_list`), change one (`settings_set`): theme, tab size, icons, word wrap, … |
+| Layout | sidebar width, panel height, show / hide the sidebar and the bottom panel, zen mode, show the AI panel (`layout_set`) |
+| IDE state | read focus, panels, terminal tabs, layout, theme, git branch, language servers, problems, debug and running tasks / tests (`get_ide_state`) |
 
 Read and editor tools run freely. So "open it" opens the file in a tab.
 **Before any write, git or run tool, termocode asks you.** You see
@@ -128,8 +131,21 @@ Each palette command has a rule for the agent:
   AI keys, sign-in or auto-approve. Commands that open a picker only you
   can answer are left out too.
 
+Settings and layout have rules too:
+
+- **Settings** — `settings_set` always asks you first. A theme change
+  repaints at once and every change is saved to `config.json`, like the
+  Settings screen does. The agent can not see or change the AI provider,
+  model, base URL, inline model, auto-approve, step limit, the terminal key
+  list or any key or credential. A wrong value is refused with the list of
+  good values.
+- **Layout** — `layout_set` runs at once (it only changes the view). Sizes
+  are kept in the same limits as a mouse drag, and the sidebar width and
+  panel height are saved like a drag. The agent can not hide the AI panel:
+  your chat is in it. Zen mode hides the chat too until you leave zen.
+
 To skip the question for one kind, run **AI: Agent Auto-Approve…** and turn
-on *fileWrite*, *git*, *run* or *ide*. Turn on only what you trust.
+on *fileWrite*, *git*, *run*, *ide* or *settings*. Turn on only what you trust.
 
 The IDE follows what the agent does: a new file shows in the explorer at once,
 a renamed open file keeps its tab under the new name, a deleted one closes its
