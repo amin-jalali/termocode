@@ -228,7 +228,7 @@ screen.
 - [x] K0 IDE tools: open_file, get_editor_state, notify, show_panel, reveal_in_explorer, execute_action (allow-list)
 - [x] K0 IDE follows AI changes: explorer, open tabs (write/rename/delete), git, checktime; step limit 25 + continue
 - [x] K1 (S) Policy map for every palette action (auto/confirm/never + reason), `Gate` on ai.Tool, `list_actions(query)`, coverage test (every palette id and setting is exposed or listed "not for AI"), table-driven testkit harness
-- [ ] K2 (M) `settings_list` / `settings_set` (theme, tab size, icons, word wrap…; never credentials or ai_auto_approve), `layout_set` (sidebar width, panel size, zen, panels), `get_ide_state`, one-line capability summary in the system prompt
+- [x] K2 (M) `settings_list` / `settings_set` (theme, tab size, icons, word wrap…; never credentials or ai_auto_approve), `layout_set` (sidebar width, panel size, zen, panels), `get_ide_state`, one-line capability summary in the system prompt — settings_set asks (class `settings`); layout_set runs at once and never hides the AI panel
 - [ ] K3 (M) Terminal: `terminal_send`, `terminal_read`, `terminal_tabs` (visible integrated terminal)
 - [ ] K4 (M) Git: hunks (stage/unstage/discard), blame, log, stash, unstage, fetch
 - [ ] K5 (M) LSP: rename symbol, code actions (list/apply), symbols, type definition, implementation

@@ -337,6 +337,37 @@ func TestSystemPromptMentionsListActions(t *testing.T) {
 	}
 }
 
+// K2: one short capability line names the settings / layout / state tools
+// (once, in native and text mode) and only when they are there.
+func TestSystemPromptIDECapabilityLine(t *testing.T) {
+	tools := []Tool{{Name: "open_file"}, {Name: "list_actions"}, {Name: "execute_action"},
+		{Name: "settings_list"}, {Name: "settings_set"}, {Name: "layout_set"}, {Name: "get_ide_state"}}
+	for _, native := range []bool{true, false} {
+		s := SystemPrompt("base", tools, native)
+		for _, want := range []string{"settings_list", "settings_set", "layout_set", "get_ide_state", "list_actions(query)"} {
+			if !strings.Contains(s, want) {
+				t.Errorf("native=%v: no %s:\n%s", native, want, s)
+			}
+		}
+		if native && strings.Count(s, "get_ide_state") != 1 {
+			t.Errorf("get_ide_state named %d times:\n%s", strings.Count(s, "get_ide_state"), s)
+		}
+	}
+	if s := SystemPrompt("base", tools[:3], true); strings.Contains(s, "settings_") || strings.Contains(s, "layout_set") {
+		t.Errorf("capability line without the tools:\n%s", s)
+	}
+}
+
+func TestToolClassesHaveSettings(t *testing.T) {
+	found := false
+	for _, c := range ToolClasses {
+		found = found || c == ClassSettings
+	}
+	if ClassSettings != "settings" || !found {
+		t.Errorf("ClassSettings %q in ToolClasses: %v", ClassSettings, found)
+	}
+}
+
 // Gate picks the confirm rule per call: a safe call runs at once, a risky
 // one asks with the class Gate returns, and a call with class "" always
 // asks (the dialog has no "Always allow"), even when every class is

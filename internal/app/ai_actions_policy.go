@@ -286,26 +286,25 @@ func aiActionPolicyFor(id string) (aiActionPolicy, bool) {
 	return aiActionPolicy{}, false
 }
 
-// aiSettingPolicies classifies every setting (SettingsCatalog keys). K2
-// adds settings_set; until then "planned" settings are not writable by
-// the AI either.
-const aiPlannedSettings = "planned: K2 settings_set"
-
+// aiSettingPolicies classifies every setting (SettingsCatalog keys) for
+// settings_list / settings_set (ai_settings_tools.go). Every exposed
+// setting asks first with class settings, so the user can "Always allow"
+// them in AI: Agent Auto-Approve…; never settings are not listed.
 var aiSettingPolicies = map[string]aiActionPolicy{
-	"theme":               {Gate: aiGateAuto, Reason: aiPlannedSettings},
-	"icons":               {Gate: aiGateAuto, Reason: aiPlannedSettings},
-	"animations":          {Gate: aiGateAuto, Reason: aiPlannedSettings},
-	"images":              {Gate: aiGateAuto, Reason: aiPlannedSettings},
-	"dashboard_logo":      {Gate: aiGateAuto, Reason: aiPlannedSettings},
-	"font_delta":          {Gate: aiGateAuto, Reason: aiPlannedSettings},
-	"auto_save":           {Gate: aiGateConfirm, Class: ai.ClassIDE, Reason: aiPlannedSettings},
-	"word_wrap":           {Gate: aiGateAuto, Reason: aiPlannedSettings},
-	"show_hidden":         {Gate: aiGateAuto, Reason: aiPlannedSettings},
-	"tab_size":            {Gate: aiGateAuto, Reason: aiPlannedSettings},
-	"persistent_session":  {Gate: aiGateConfirm, Class: ai.ClassIDE, Reason: aiPlannedSettings},
-	"search_max_results":  {Gate: aiGateAuto, Reason: aiPlannedSettings},
-	"terminal_skip_shell": {Gate: aiGateConfirm, Class: ai.ClassIDE, Reason: aiPlannedSettings},
-	"ai_inline":           {Gate: aiGateConfirm, Class: ai.ClassIDE, Reason: aiPlannedSettings},
+	"theme":               aiConfirm(ai.ClassSettings),
+	"icons":               aiConfirm(ai.ClassSettings),
+	"animations":          aiConfirm(ai.ClassSettings),
+	"images":              aiConfirm(ai.ClassSettings),
+	"dashboard_logo":      aiConfirm(ai.ClassSettings),
+	"font_delta":          aiConfirm(ai.ClassSettings),
+	"auto_save":           aiConfirm(ai.ClassSettings),
+	"word_wrap":           aiConfirm(ai.ClassSettings),
+	"show_hidden":         aiConfirm(ai.ClassSettings),
+	"tab_size":            aiConfirm(ai.ClassSettings),
+	"persistent_session":  aiConfirm(ai.ClassSettings),
+	"search_max_results":  aiConfirm(ai.ClassSettings),
+	"ai_inline":           aiConfirm(ai.ClassSettings),
+	"terminal_skip_shell": aiNever("decides which keys reach the shell; a file-only list the user edits in config.json"),
 	"ai_inline_model":     aiNever(aiNoAIConfig),
 	"ai_provider":         aiNever(aiNoAIConfig),
 	"ai_model":            aiNever(aiNoAIConfig),
