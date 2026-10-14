@@ -42,6 +42,10 @@ func (m Model) statusSpans() []statusSpan {
 		x0, x1, ok = sb.DebugBadgeSpan(st)
 		add("status:debug", x0, x1, ok)
 	}
+	// Plain items: a click does nothing, but a hover label names them.
+	for _, sp := range sb.ItemSpans(st) {
+		add("status:"+sp.ID, sp.X0, sp.X1, true)
+	}
 	return out
 }
 
