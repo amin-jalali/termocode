@@ -307,8 +307,7 @@ func (m *Model) pressSetupButton(id string) tea.Cmd {
 		m.applyTheme(strings.TrimPrefix(id, "theme:"))
 		return m.settleSetup("theme")
 	case id == "theme-more":
-		_ = m.settleSetup("theme")
-		return m.openThemePicker()
+		return m.openThemePicker() // a pick there is not a card answer
 	case id == "done", id == "hide":
 		return m.closeSetupCard(id == "done")
 	}
