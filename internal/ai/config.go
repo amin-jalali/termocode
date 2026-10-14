@@ -21,10 +21,24 @@ type Settings struct {
 	InlineModel string   `json:"ai_inline_model,omitempty"`
 	AutoApprove []string `json:"ai_auto_approve,omitempty"`
 	MaxSteps    int      `json:"ai_max_steps,omitempty"` // 0: DefaultMaxSteps
+	// EditReview is "review" (default: the agent's file changes open as a
+	// diff to accept or reject) or "auto" (they are written after the
+	// confirm dialog, or at once when fileWrite is auto-approved).
+	EditReview string `json:"ai_edit_review,omitempty"`
 }
+
+// Values of ai_edit_review.
+const (
+	EditReviewOn   = "review"
+	EditReviewAuto = "auto"
+)
 
 // InlineEnabled reports the ai_inline setting (default on).
 func (s Settings) InlineEnabled() bool { return s.Inline == nil || *s.Inline }
+
+// ReviewEdits reports whether the agent's file changes are reviewed as a
+// diff (ai_edit_review, default review).
+func (s Settings) ReviewEdits() bool { return s.EditReview != EditReviewAuto }
 
 // OAuthTokens is a stored Claude OAuth session.
 type OAuthTokens struct {
@@ -99,6 +113,7 @@ func SaveSettings(path string, s Settings) error {
 	set("ai_model", s.Model)
 	set("ai_base_url", s.BaseURL)
 	set("ai_inline_model", s.InlineModel)
+	set("ai_edit_review", s.EditReview)
 	if s.Inline != nil {
 		merged["ai_inline"] = *s.Inline
 	}

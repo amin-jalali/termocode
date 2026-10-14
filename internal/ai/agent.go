@@ -25,6 +25,29 @@ type Event struct {
 	Text   string
 	Tool   string
 	Detail string
+	// Tool events: Args are the call's arguments (EventToolStart); Gate
+	// is how it was cleared (auto, confirm, review, invalid) and Decision
+	// who decided (EventToolResult). The AI audit log uses them.
+	Args     map[string]any
+	Gate     string
+	Decision string
+}
+
+// Gates of a tool call (Event.Gate).
+const (
+	GateAuto    = "auto"    // read-only or a safe call: runs at once
+	GateConfirm = "confirm" // mutating: the user allows it (or its class is auto-approved)
+	GateReview  = "review"  // a file change the user reviews as a diff
+	GateInvalid = "invalid" // refused before any gate (bad arguments)
+)
+
+type callIDKey struct{}
+
+// CallID returns the id of the tool call a Run belongs to ("" outside a
+// call).
+func CallID(ctx context.Context) string {
+	s, _ := ctx.Value(callIDKey{}).(string)
+	return s
 }
 
 // ConfirmFunc asks the user to allow a mutating tool call. It may block
@@ -48,6 +71,10 @@ type Agent struct {
 	AutoApprove map[string]bool
 	Confirm     ConfirmFunc
 	Native      bool
+	// BeforeCalls (optional) sees every tool call of a step before the
+	// first one runs, so the app can show all the files a step changes
+	// in one review list.
+	BeforeCalls func(ctx context.Context, calls []ToolCall)
 }
 
 // SystemPrompt appends the tool protocol to base. Native tool calling only
@@ -92,6 +119,11 @@ func SystemPrompt(base string, tools []Tool, native bool) string {
 		ide += " lsp_servers / dap_adapters list, install and remove language servers and debug adapters; " +
 			"extensions lists, runs and reloads the user's Lua extensions; workspace_folders adds or removes " +
 			"explorer folders (you can not open another workspace: it would end this chat)."
+	}
+	if FindToolClass(tools, ClassReview) {
+		ide += " File changes (write_file, create_file, LSP rename, code actions, format) are shown to the user as a diff: " +
+			"they accept or reject each change. The result says exactly what was written; when only part was accepted, " +
+			"read the file again before you change it, and do not repeat a rejected change."
 	}
 	if native {
 		return base + "\n\nYou can call IDE tools (files, search, git, LSP, shell, editor). " +
@@ -174,6 +206,9 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 			emit(Event{Kind: EventDone})
 			return msgs[start:]
 		}
+		if a.BeforeCalls != nil {
+			a.BeforeCalls(ctx, calls)
+		}
 		for _, call := range calls {
 			result := a.runTool(ctx, call, emit)
 			if a.Native {
@@ -215,34 +250,43 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 		args = map[string]any{}
 	}
 	human := t.Human(args)
-	emit(Event{Kind: EventToolStart, Tool: t.Name, Detail: human})
+	emit(Event{Kind: EventToolStart, Tool: t.Name, Detail: human, Args: args})
 	if t.Validate != nil {
 		if err := t.Validate(args); err != nil {
 			result = "error: " + Redact(err.Error())
-			emit(Event{Kind: EventToolResult, Tool: t.Name, Detail: result})
+			emit(Event{Kind: EventToolResult, Tool: t.Name, Detail: result, Gate: GateInvalid, Decision: "refused"})
 			return result
 		}
 	}
 	if t.Gate != nil { // per-call rule; the confirm dialog sees it too
 		t.Mutating, t.Class = t.Gate(args)
 	}
-	if t.Mutating && !(t.Class != "" && a.AutoApprove[t.Class]) {
+	gate, decision := GateAuto, "auto"
+	switch {
+	case t.Class == ClassReview:
+		// The tool shows the change as a diff and waits for the user.
+		gate, decision = GateReview, "user (review)"
+	case t.Mutating && t.Class != "" && a.AutoApprove[t.Class]:
+		gate, decision = GateConfirm, "auto-approved ("+t.Class+")"
+	case t.Mutating:
+		gate = GateConfirm
 		if a.Confirm == nil || !a.Confirm(ctx, t, human) {
-			emit(Event{Kind: EventToolResult, Tool: t.Name, Detail: "declined by user"})
+			emit(Event{Kind: EventToolResult, Tool: t.Name, Detail: "declined by user", Gate: gate, Decision: "user denied"})
 			return t.Name + ": the user declined this action. Do not retry it; continue without it or ask what to do instead."
 		}
+		decision = "user allowed"
 	}
 	defer func() {
 		if r := recover(); r != nil {
 			result = fmt.Sprintf("error: %v", r)
-			emit(Event{Kind: EventToolResult, Tool: t.Name, Detail: result})
+			emit(Event{Kind: EventToolResult, Tool: t.Name, Detail: result, Gate: gate, Decision: decision})
 		}
 	}()
-	out, err := t.Run(ctx, args)
+	out, err := t.Run(context.WithValue(ctx, callIDKey{}, call.ID), args)
 	if err != nil {
 		out = "error: " + Redact(err.Error())
 	}
-	emit(Event{Kind: EventToolResult, Tool: t.Name, Detail: out})
+	emit(Event{Kind: EventToolResult, Tool: t.Name, Detail: out, Gate: gate, Decision: decision})
 	return out
 }
 

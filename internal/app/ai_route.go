@@ -3,6 +3,7 @@ package app
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/diffview"
 	"github.com/amin-jalali/termocode/internal/keymap"
 )
 
@@ -27,6 +28,16 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onAIChatDone(msg), true
 	case aiActionResultMsg:
 		return m.onAIActionResult(msg), true
+	case diffview.FinishMsg:
+		return m.onAIReviewFinish(msg), true
+	case diffview.HideMsg:
+		m.reviewOpen = false
+		if m.ai != nil && m.ai.review != nil && !m.ai.review.card.Review() {
+			m.ai.review = nil // a read-only compare card is done
+		}
+		return nil, true
+	case compareReadyMsg:
+		return m.openCompareCard(msg), true
 	case aiOAuthDoneMsg:
 		return m.onAIOAuthDone(msg), true
 	}

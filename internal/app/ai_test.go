@@ -12,6 +12,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/debounce"
+	"github.com/amin-jalali/termocode/internal/diffview"
 	"github.com/amin-jalali/termocode/internal/statusbar"
 )
 
@@ -20,6 +21,7 @@ import (
 func aiTestModel(t *testing.T) Model {
 	t.Helper()
 	withConfigDir(t)
+	t.Setenv("XDG_STATE_HOME", t.TempDir()) // AI restore points (ai_restore.go)
 	for _, k := range []string{"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY", "TERMOCODE_AI_PROVIDER", "TERMOCODE_AI_API_KEY", "TERMOCODE_AI_MODEL", "TERMOCODE_AI_BASE_URL", "OLLAMA_HOST"} {
 		t.Setenv(k, "")
 	}
@@ -294,18 +296,21 @@ func TestAIProposalNoChangeAndLines(t *testing.T) {
 	m := aiTestModel(t)
 	tgt := aiRangeTarget{full: []string{"a", "b", "c"}, start: 1, end: 2, path: "/x/f.go"}
 	m.openAIProposal(aiProposal{target: tgt, repl: []string{"b"}})
-	if m.ai.proposal != nil || m.confirmOpen {
+	if m.ai.review != nil || m.reviewOpen {
 		t.Fatal("identical proposal must not open")
 	}
 	m.openAIProposal(aiProposal{target: tgt, repl: []string{"B", "B2"}, title: "t"})
-	if m.ai.proposal == nil || !m.confirmOpen || m.confirmKind != confirmKindAIProposal {
-		t.Fatal("proposal dialog not opened")
+	if m.ai.review == nil || !m.reviewOpen || m.aiReviewPending() != 1 {
+		t.Fatal("review card not opened")
+	}
+	if d := m.ai.review.card.Diff(0); d.Added != 2 || d.Removed != 1 {
+		t.Errorf("diff +%d -%d", d.Added, d.Removed)
 	}
 	if !strings.Contains(aiEditPrompt(tgt, "do it"), "Range to replace (lines 2-2)") {
 		t.Error("edit prompt range")
 	}
-	m.discardAIProposal(false)
-	if m.ai.proposal != nil {
-		t.Error("discard")
+	m.onAIReviewFinish(nextMsg(t, m.reviewDecideCurrent(false)).(diffview.FinishMsg))
+	if m.ai.review != nil || m.reviewOpen {
+		t.Error("discard did not close the review")
 	}
 }
