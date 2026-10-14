@@ -2,6 +2,7 @@ package testkit
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -155,7 +156,10 @@ func TestTooltipStaysOnScreen(t *testing.T) {
 		d := New(t, Options{W: size[0], H: size[1], Git: true})
 		tryAIPanel(d)
 		d.Action("toasts:clear")
-		for _, h := range d.Model().HitTargets() {
+		// Git status loads in the background and reshapes the status bar
+		// (slow runners: after the targets were read). Read them once the
+		// layout stopped changing.
+		for _, h := range stableTargets(t, d) {
 			if d.Model().TooltipFor(h.ID) == "" {
 				continue
 			}
@@ -180,6 +184,25 @@ func TestTooltipStaysOnScreen(t *testing.T) {
 			})
 		}
 	}
+}
+
+// stableTargets returns the hit targets once two reads 300 ms apart are
+// the same (background loads such as git status have landed).
+func stableTargets(t *testing.T, d *Driver) []app.HitTarget {
+	t.Helper()
+	prev := d.Model().HitTargets()
+	var cur []app.HitTarget
+	stable := d.WaitFor(func() bool {
+		d.WaitFor(func() bool { return false }, 300*time.Millisecond) // pump a full 300 ms
+		cur = d.Model().HitTargets()
+		same := slices.Equal(prev, cur)
+		prev = cur
+		return same
+	}, 10*time.Second)
+	if !stable {
+		t.Fatalf("hit targets kept changing for 10 s")
+	}
+	return cur
 }
 
 // iconOnly reports whether a hit target is a button without a word on
