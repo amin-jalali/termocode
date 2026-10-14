@@ -65,7 +65,10 @@ type aiState struct {
 	actionCancel context.CancelFunc
 	actionBusy   string
 	// review is the open review card's files (ai_review.go).
-	review     *aiReview
+	review *aiReview
+	// preReview holds the proposals made for a step's later calls
+	// (aiBeforeCalls), by tool call id.
+	preReview  map[string]aiProposed
 	editTarget *aiRangeTarget // Edit-with-AI waiting for its instruction
 
 	// configure / sign-in flow
@@ -258,6 +261,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-apply-proposal", "AI: Apply Proposed Edit", ""},
 		{"ai-discard-proposal", "AI: Discard Proposed Edit", ""},
 		{"ai-review", "AI: Review Pending Changes", ""},
+		{"ai-edit-review", "AI: Toggle Edit Review (diff / auto)", ""},
 		{"ai-trigger-inline", "AI: Trigger Inline Completion", "Alt+\\"},
 		{"ai-toggle-inline", "AI: Toggle Inline Completions", "Alt+|"},
 		{"ai-configure", "AI: Configure Provider…", ""},
@@ -282,7 +286,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	// the configure / sign-in / credentials entries are the way out.
 	switch id {
 	case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials",
-		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-history", "ai-pick-model", "ai-auto-approve":
+		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-history", "ai-pick-model", "ai-auto-approve":
 	default:
 		if c, ok := m.aiReady(); !ok {
 			return c, true
@@ -311,6 +315,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.aiExportChat(), true
 	case "ai-review":
 		return m.showAIReview(), true
+	case "ai-edit-review":
+		return m.toggleAIEditReview(), true
 	case "ai-apply-proposal":
 		return m.reviewDecideCurrent(true), true
 	case "ai-discard-proposal":
@@ -343,6 +349,7 @@ func (m *Model) aiCancelAll() tea.Cmd {
 	stopped := s.streaming || s.actionBusy != ""
 	if s.chatCancel != nil {
 		s.chatCancel()
+		m.cancelAIReviewTurn()
 	}
 	if s.actionCancel != nil {
 		s.actionCancel()

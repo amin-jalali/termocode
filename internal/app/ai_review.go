@@ -150,6 +150,7 @@ func (m *Model) closeAIReview() {
 // Chat): they are marked "not applied" and the turn's tool calls return.
 func (m *Model) cancelAIReviewTurn() {
 	s := m.aiS()
+	s.preReview = nil
 	r := s.review
 	if r == nil {
 		return

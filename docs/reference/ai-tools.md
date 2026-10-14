@@ -21,8 +21,8 @@ Some tools have an `op` argument; then each op has its own gate.
 | [`git_status`](#git_status) | auto | Show the working-tree status (changed / staged files). |
 | [`git_diff`](#git_diff) | auto | Show the diff of one file vs HEAD, or of all changes when path is empty. |
 | [`git_branch`](#git_branch) | auto | List git branches (current marked with *). |
-| [`write_file`](#write_file) | confirm (fileWrite) | Write a file with new content (creates it if missing). |
-| [`create_file`](#create_file) | confirm (fileWrite) | Create a new file, optionally with content. |
+| [`write_file`](#write_file) | confirm (review) | Write a file with new content (creates it if missing). |
+| [`create_file`](#create_file) | confirm (review) | Create a new file, optionally with content. |
 | [`create_dir`](#create_dir) | confirm (fileWrite) | Create a directory (and missing parents). |
 | [`delete`](#delete) | confirm (fileWrite) | Delete a file or directory. |
 | [`rename`](#rename) | confirm (fileWrite) | Rename or move a file / directory. |
@@ -34,7 +34,7 @@ Some tools have an `op` argument; then each op has its own gate.
 | [`run_command`](#run_command) | confirm (run) | Run a shell command HIDDEN in the workspace root and return its captured output (one-shot: build, test, grep, …; 2 min limit). |
 | [`lsp_nav`](#lsp_nav) | auto | Go to definition, type definition, implementations or references of the symbol at a file position, via the language server. |
 | [`diagnostics`](#diagnostics) | auto | List language-server diagnostics (errors / warnings) for a file, or for all open files when path is empty. |
-| [`format`](#format) | confirm (fileWrite) | Format a file with its language server and save it. |
+| [`format`](#format) | confirm (review) | Format a file with its language server. |
 | [`open_file`](#open_file) | auto | Open a file in the user's editor (as the active tab), optionally at a line and column, and reveal it in the explorer. |
 | [`get_editor_state`](#get_editor_state) | auto | Read the editor state: active file, cursor, selection, visible lines, open tabs, unsaved files and focus. |
 | [`notify`](#notify) | auto | Show the user a short notification (toast) in the IDE. |
@@ -51,8 +51,8 @@ Some tools have an `op` argument; then each op has its own gate.
 | [`terminal_tabs`](#terminal_tabs) | list, new, focus: auto<br>close: auto for an idle tab, confirm (always asks) while a command runs | Manage the integrated terminal tabs: list (number, name, idle / running), new (open a shell tab), focus (show a tab), close (ends its shell; asks the user). |
 | [`lsp_hover`](#lsp_hover) | auto | Hover information (type, signature, docs) of the symbol at a file position, via the language server. |
 | [`lsp_symbols`](#lsp_symbols) | auto | Symbols via the language server: with path, the outline of that file (name, kind, line); with query, matching symbols in the whole workspace (name, kind, file:line). |
-| [`lsp_rename`](#lsp_rename) | confirm (fileWrite) | Rename the symbol at a file position in the whole workspace via the language server. |
-| [`lsp_code_actions`](#lsp_code_actions) | list: auto<br>apply: confirm (fileWrite) | Code actions (quick fixes, refactors) at a file position via the language server. |
+| [`lsp_rename`](#lsp_rename) | confirm (review) | Rename the symbol at a file position in the whole workspace via the language server. |
+| [`lsp_code_actions`](#lsp_code_actions) | list: auto<br>apply: confirm (review) | Code actions (quick fixes, refactors) at a file position via the language server. |
 | [`git_log`](#git_log) | auto | Recent commits, newest first: sha, age, author, subject, refs. |
 | [`git_blame`](#git_blame) | auto | Who last changed each line of a file: "lines sha author date subject", runs of lines from one commit grouped. |
 | [`git_unstage`](#git_unstage) | confirm (git) | Unstage files (keep their changes in the working tree). |
@@ -134,9 +134,9 @@ No arguments.
 
 ### write_file
 
-Write a file with new content (creates it if missing). If the file is open in the editor, its tab shows the new text (the user can undo it); a file with unsaved edits in the editor is refused.
+Write a file with new content (creates it if missing). If the file is open in the editor, its tab shows the new text (the user can undo it); a file with unsaved edits in the editor is refused. The user reviews the change as a diff and accepts or rejects each part; the result says what was written.
 
-**Gate:** confirm (fileWrite)
+**Gate:** confirm (review)
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -145,9 +145,9 @@ Write a file with new content (creates it if missing). If the file is open in th
 
 ### create_file
 
-Create a new file, optionally with content. Fails if it exists.
+Create a new file, optionally with content. Fails if it exists. The user reviews the change as a diff and accepts or rejects each part; the result says what was written.
 
-**Gate:** confirm (fileWrite)
+**Gate:** confirm (review)
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -267,9 +267,9 @@ List language-server diagnostics (errors / warnings) for a file, or for all open
 
 ### format
 
-Format a file with its language server and save it.
+Format a file with its language server. The user reviews the change as a diff; accepted parts are saved.
 
-**Gate:** confirm (fileWrite)
+**Gate:** confirm (review)
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -449,9 +449,9 @@ Symbols via the language server: with path, the outline of that file (name, kind
 
 ### lsp_rename
 
-Rename the symbol at a file position in the whole workspace via the language server. Open tabs show the change (undo works); changed files are saved unless they had unsaved user edits.
+Rename the symbol at a file position in the whole workspace via the language server. The user reviews the change as a diff and accepts or rejects each part; the result says what was written.
 
-**Gate:** confirm (fileWrite)
+**Gate:** confirm (review)
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -462,9 +462,9 @@ Rename the symbol at a file position in the whole workspace via the language ser
 
 ### lsp_code_actions
 
-Code actions (quick fixes, refactors) at a file position via the language server. op=list shows them numbered; op=apply runs one by index or title. Changed files are saved unless they had unsaved user edits.
+Code actions (quick fixes, refactors) at a file position via the language server. op=list shows them numbered; op=apply runs one by index or title. Changed files are saved unless they had unsaved user edits. op=apply shows the change as a diff for the user to review.
 
-**Gate:** list: auto · apply: confirm (fileWrite)
+**Gate:** list: auto · apply: confirm (review)
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -716,6 +716,7 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `ai-discard-proposal` | AI: Discard Proposed Edit | never | the user reviews proposed edits |
 | `ai-doc` | AI: Generate Doc Comment | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-edit` | AI: Edit Selection… | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `ai-edit-review` | AI: Toggle Edit Review (diff / auto) | never | AI provider, credentials and approvals stay with the user |
 | `ai-explain` | AI: Explain Selection / Line | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-export-chat` | AI: Export Chat as Markdown | confirm (fileWrite) |   |
 | `ai-fix` | AI: Fix Diagnostic at Cursor | never | starts or changes an AI chat or edit; answer in this chat instead |
@@ -918,6 +919,7 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | --- | --- | --- |
 | `ai_auto_approve` | never | AI provider, credentials and approvals stay with the user |
 | `ai_base_url` | never | AI provider, credentials and approvals stay with the user |
+| `ai_edit_review` | never | AI provider, credentials and approvals stay with the user |
 | `ai_inline` | confirm (settings) |   |
 | `ai_inline_model` | never | AI provider, credentials and approvals stay with the user |
 | `ai_max_steps` | never | AI provider, credentials and approvals stay with the user |
