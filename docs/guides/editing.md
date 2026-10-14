@@ -130,6 +130,13 @@ While the terminal has focus, Ctrl keys go to the shell (`Ctrl+C`, `Ctrl+R`,
 | `Alt+Z` | Zen mode — hide everything except the editor |
 | `Ctrl+Alt+I` | Buffer info |
 
+The Markdown preview shows Persian and Arabic text with joined letters,
+right to left, and right aligned (list markers on the right). English
+words, numbers and code keep their order. Tables keep their columns left
+to right. The `rtl` setting turns this off; see
+[Persian, Arabic and other right-to-left text](ai-use.md#persian-arabic-and-other-right-to-left-text).
+The editor itself shows the text as Neovim and your terminal do.
+
 ## Keys at a glance
 
 | Key | Action |

@@ -15,6 +15,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/rtl"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -251,6 +252,8 @@ var fileOnlySettings = []SettingEntry{
 		Description: "review: the agent's file changes (write_file, create_file, LSP rename, code actions, format) open as a diff where you accept or reject each change; the agent waits and is told what was written. auto: the old way (a confirm dialog, or no question when fileWrite is auto-approved). Auto-approving fileWrite also skips the review. Toggle with AI: Toggle Edit Review."},
 	{Key: "ai_max_steps", Type: "int", Default: strconv.Itoa(ai.DefaultMaxSteps), Category: "AI (file only)",
 		Description: "Most tool steps the AI agent takes for one chat message. At the limit it stops and asks you to send \"continue\"."},
+	{Key: "rtl", Type: "enum", Default: "auto", Category: "Appearance (file only)", Choices: rtl.Choices,
+		Description: "Right-to-left text (Persian, Arabic, Hebrew) in the AI chat and the Markdown preview. termocode: termocode joins the letters and puts them in reading order itself, right-aligns RTL paragraphs, and asks the terminal not to reorder (BDSM, CSI 8 l). terminal: termocode sends the text unchanged and the terminal does it. off: unchanged text, no request to the terminal. auto: terminal on Konsole and mlterm (they always reorder), else termocode. Read at start."},
 	{Key: "terminal_skip_shell", Type: "string[]", Default: "[]", Category: "Terminal (file only)",
 		Description: "Actions (keymap.json names) whose keys reach termocode while the terminal has focus. Other Ctrl keys go to the shell. Quit (Ctrl+Q) is in the list by default; add a name, or remove one with \"-Name\" (for example `[\"QuickOpen\", \"-Quit\"]`)."},
 }

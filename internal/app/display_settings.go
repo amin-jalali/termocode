@@ -8,6 +8,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/anim"
 	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/rtl"
 	"github.com/amin-jalali/termocode/internal/termimg"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -53,12 +54,13 @@ func settingChoices(id string) []string {
 type DisplayConfig struct {
 	Icons, Animations, Images string
 	Logo                      string // dashboard_logo ("" = text)
+	RTL                       string // rtl ("" = auto)
 }
 
 // ConfigDisplay reads the display settings from config.json ("" = auto).
 func ConfigDisplay() DisplayConfig {
 	c := loadSettings()
-	return DisplayConfig{Icons: c.Icons, Animations: c.Animations, Images: c.Images, Logo: c.DashboardLogo}
+	return DisplayConfig{Icons: c.Icons, Animations: c.Animations, Images: c.Images, Logo: c.DashboardLogo, RTL: c.RTL}
 }
 
 // termCaps is the terminal's graphics support, probed at startup.
@@ -91,6 +93,7 @@ func imageProtocol() termimg.Protocol {
 func ApplyDisplaySettings(cfg DisplayConfig) {
 	theme.CurrentIconMode = theme.ResolveIconMode(cfg.Icons, nerdFontHint, nil, os.Getenv)
 	anim.Enabled = anim.Resolve(anim.ParseMode(cfg.Animations), theme.TrueColor(), os.Getenv)
+	rtlMode = rtl.Resolve(cfg.RTL, os.Getenv)
 	dashboardLogo = logoChoices[0]
 	for _, c := range logoChoices {
 		if cfg.Logo == c {
@@ -157,7 +160,7 @@ func (m *Model) applyDisplaySetting(id, value string) (tea.Cmd, bool) {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Settings error", err.Error())
 		return toastCmd, true
 	}
-	ApplyDisplaySettings(DisplayConfig{Icons: cfg.Icons, Animations: cfg.Animations, Images: cfg.Images, Logo: cfg.DashboardLogo})
+	ApplyDisplaySettings(DisplayConfig{Icons: cfg.Icons, Animations: cfg.Animations, Images: cfg.Images, Logo: cfg.DashboardLogo, RTL: cfg.RTL})
 	m.applyLayout()
 	detail := ""
 	switch id {
