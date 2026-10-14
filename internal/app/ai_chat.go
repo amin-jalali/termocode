@@ -123,6 +123,24 @@ func (m *Model) aiChatHistory(system string) []ai.Message {
 	return msgs
 }
 
+// aiChatTools is every agent tool of a chat turn. The docs reference
+// (AIToolCatalog, cmd/docgen) is built from this list too, so a new tool
+// group goes here, with one appended line.
+func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
+	tools := append(ai.WorkspaceTools(ai.Workspace{Root: root}), m.aiEditorTools()...)
+	tools = aiSyncTools(tools, root, call) // the IDE follows file / git changes
+	tools = append(tools, aiIDETools(root, call)...)
+	// Group K2: settings, layout and IDE state.
+	tools = append(tools, aiSettingsTools(root, call)...)
+	// K3: the visible integrated terminal.
+	tools = append(tools, aiTerminalTools(call)...)
+	tools = append(tools, m.aiLSPTools(root, call)...) // Group K5: LSP hover, symbols, rename, code actions
+	tools = append(tools, aiGitTools(root, call)...)   // Group K4
+	tools = append(tools, aiTasksTools(root, call)...) // Group K6: tasks and tests
+	tools = append(tools, aiAdminTools(root, call)...) // Group K8: installers, extensions, workspace folders
+	return tools
+}
+
 // sendAIChat appends a user message and starts a streamed agent turn.
 func (m *Model) sendAIChat(text string) tea.Cmd {
 	if c, ok := m.aiReady(); !ok {
@@ -154,16 +172,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 
 	root := aiWorkspaceRoot()
 	call := newAIIDECaller(gen, ch)
-	tools := append(ai.WorkspaceTools(ai.Workspace{Root: root}), m.aiEditorTools()...)
-	tools = aiSyncTools(tools, root, call) // the IDE follows file / git changes
-	tools = append(tools, aiIDETools(root, call)...)
-	// Group K2: settings, layout and IDE state.
-	tools = append(tools, aiSettingsTools(root, call)...)
-	// K3: the visible integrated terminal.
-	tools = append(tools, aiTerminalTools(call)...)
-	tools = append(tools, m.aiLSPTools(root, call)...) // Group K5: LSP hover, symbols, rename, code actions
-	tools = append(tools, aiGitTools(root, call)...) // Group K4
-	tools = append(tools, aiTasksTools(root, call)...) // Group K6: tasks and tests
+	tools := m.aiChatTools(root, call)
 	native := s.provider.SupportsTools()
 	sys := aiChatSystemPrompt + "\nWorkspace root: " + root
 	if p := m.editor.Path(); p != "" {
