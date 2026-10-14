@@ -2,8 +2,10 @@ package theme
 
 import (
 	"fmt"
+	"sync/atomic"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 )
 
 // Color256 is an xterm-256 palette index (0–255). The package-level identifiers
@@ -269,11 +271,29 @@ func defaultIndexHex() map[Color256]string {
 	}
 }
 
+// paletteGen counts SetPalette calls (see Gen).
+var paletteGen atomic.Uint64
+
+// RenderKey is everything outside a widget's own state that changes how
+// it draws: the palette (every SetPalette bumps Gen), the icon mode and
+// the colour profile. Render caches compare it to know when to redraw.
+type RenderKey struct {
+	Gen     uint64
+	Icons   IconMode
+	Profile termenv.Profile
+}
+
+// CurrentRenderKey returns the RenderKey for the next draw.
+func CurrentRenderKey() RenderKey {
+	return RenderKey{Gen: paletteGen.Load(), Icons: CurrentIconMode, Profile: lipgloss.ColorProfile()}
+}
+
 // SetPalette swaps the active palette: every package-level identifier above
 // (BgEditor, TextPrimary, etc.) is updated in-place so existing callers like
 // theme.Bg(theme.BgEditor) automatically pick up the new theme on their next
 // call. The view layer must trigger a re-render after this returns.
 func SetPalette(p Palette256) {
+	paletteGen.Add(1)
 	BgEditor = p.BgEditor
 	BgSidebar = p.BgSidebar
 	BgActivityBar = p.BgActivityBar

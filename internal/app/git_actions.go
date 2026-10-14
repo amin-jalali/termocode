@@ -34,7 +34,7 @@ import (
 //	c                  commit (opens a text-input prompt)
 //	x                  discard worktree changes (with confirm)
 //	r                  refresh
-func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 	if !m.gitEnsureLoaded() {
 		return m, nil, false
 	}

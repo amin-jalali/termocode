@@ -1,6 +1,7 @@
 package app
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 
@@ -106,27 +107,65 @@ func maxInt(a, b int) int {
 	return b
 }
 
-// renderAIPanelBody renders the panel rows below the header divider.
-func (m Model) renderAIPanelBody(width, height int) []string {
+// renderAIPanelBody renders the panel rows below the header divider,
+// each passed through edge (the panel's left-edge marker, see
+// renderActionsPanel). The visible transcript rows come from the
+// transcript cache, so an unchanged chat costs no styling per frame.
+func (m Model) renderAIPanelBody(width, height int, edge func(string) string) []string {
 	g := m.aiPanelGeom(width, height)
-	bg := theme.Bg(theme.BgPanel)
-	blank := bg.Render(strings.Repeat(" ", width))
 	rows := make([]string, 0, height-aiPanelTopRow)
 
-	lines := m.aiTranscript(width)
-	start, end := aiVisibleRange(len(lines), g.transH, m.aiScroll())
+	tc := m.aiTranscriptCached(width)
+	start, end := aiVisibleRange(len(tc.lines), g.transH, m.aiScroll())
 	for i := start; i < end; i++ {
-		rows = append(rows, renderAILine(lines[i], width))
+		rows = append(rows, tc.row(i, width, edge))
 	}
-	for len(rows) < g.transH {
-		rows = append(rows, blank)
+	if len(rows) < g.transH {
+		blank := tc.blankRow(width, edge)
+		for len(rows) < g.transH {
+			rows = append(rows, blank)
+		}
 	}
 	if g.compact {
 		return rows
 	}
-	rows = append(rows, renderAILine(m.aiDividerLine(width), width))
-	rows = append(rows, m.renderAIInput(width, g.inputRows)...)
-	return rows
+	rows = append(rows, edge(renderAILine(m.aiDividerLine(width), width)))
+	return append(rows, m.aiInputEdged(width, g.inputRows, edge)...)
+}
+
+// aiInputCache keeps the input box rows (passed through edge) between
+// frames. The key is everything renderAIInput reads.
+type aiInputCache struct {
+	ok                 bool
+	width, rows, caret int
+	input              []rune
+	focused, streaming bool
+	rk                 theme.RenderKey
+	out                []string
+}
+
+// aiInputEdged is renderAIInput passed through edge, cached in aiState.
+func (m Model) aiInputEdged(width, rows int, edge func(string) string) []string {
+	draw := func() []string {
+		out := m.renderAIInput(width, rows)
+		for i, r := range out {
+			out[i] = edge(r)
+		}
+		return out
+	}
+	s := m.ai
+	if s == nil {
+		return draw()
+	}
+	rk := theme.CurrentRenderKey()
+	c := &s.inputCache
+	if c.ok && c.width == width && c.rows == rows && c.caret == s.caret && c.focused == s.focused &&
+		c.streaming == s.streaming && c.rk == rk && slices.Equal(c.input, s.input) {
+		return c.out
+	}
+	*c = aiInputCache{ok: true, width: width, rows: rows, caret: s.caret, input: slices.Clone(s.input),
+		focused: s.focused, streaming: s.streaming, rk: rk, out: draw()}
+	return c.out
 }
 
 // aiScroll is the clamped-later scroll offset (0 when no state).
@@ -250,10 +289,102 @@ func aiWrapCode(s string, w int) []string {
 	return out
 }
 
-// aiTranscript builds the transcript (panel-local columns): padded
+// aiTranscriptCache keeps the last transcript (aiTranscript) and its
+// drawn rows between frames. The key is everything the transcript reads:
+// width, theme / icons / colour profile, provider state, streaming,
+// resizing and the messages (strings compare by pointer first, so an
+// unchanged chat is a cheap check; any edit makes a new string).
+type aiTranscriptCache struct {
+	ok          bool
+	width       int
+	rk          theme.RenderKey
+	resizing    bool
+	streaming   bool
+	hasProvider bool
+	configured  bool
+	label       string
+	msgs        []ai.StoredMessage
+	lines       []aiLine
+	rows        []string // edged rows by line index; "" = not drawn yet
+	blank       string
+}
+
+// matches reports whether the cache is valid for this state.
+func (c *aiTranscriptCache) matches(s *aiState, width int, rk theme.RenderKey, resizing bool) bool {
+	if !c.ok || c.width != width || c.rk != rk || c.resizing != resizing || c.streaming != s.streaming ||
+		c.hasProvider != (s.provider != nil) || len(c.msgs) != len(s.conv.Messages) {
+		return false
+	}
+	if s.provider != nil && (c.configured != s.provider.Configured() || c.label != s.modelLabel()) {
+		return false
+	}
+	for i := range c.msgs {
+		a, b := &c.msgs[i], &s.conv.Messages[i]
+		if a.Role != b.Role || a.Text != b.Text || a.Context != b.Context {
+			return false
+		}
+	}
+	return true
+}
+
+// row returns transcript line i drawn at width and passed through edge.
+func (c *aiTranscriptCache) row(i, width int, edge func(string) string) string {
+	if c.rows == nil {
+		return edge(renderAILine(c.lines[i], width))
+	}
+	if c.rows[i] == "" {
+		c.rows[i] = edge(renderAILine(c.lines[i], width))
+	}
+	return c.rows[i]
+}
+
+// blankRow is an empty transcript row passed through edge.
+func (c *aiTranscriptCache) blankRow(width int, edge func(string) string) string {
+	if c.rows == nil {
+		return edge(theme.Bg(theme.BgPanel).Render(strings.Repeat(" ", width)))
+	}
+	if c.blank == "" {
+		c.blank = edge(theme.Bg(theme.BgPanel).Render(strings.Repeat(" ", width)))
+	}
+	return c.blank
+}
+
+// aiTranscript returns the transcript lines (see buildAITranscript),
+// reusing the last build while nothing it reads has changed. Callers
+// must not modify the result.
+func (m Model) aiTranscript(width int) []aiLine {
+	return m.aiTranscriptCached(width).lines
+}
+
+// aiTranscriptCached returns the transcript cache entry for width,
+// rebuilding it when stale. Without AI state nothing is cached (the
+// empty "not configured" page is short).
+func (m Model) aiTranscriptCached(width int) *aiTranscriptCache {
+	s := m.ai
+	if s == nil {
+		return &aiTranscriptCache{lines: m.buildAITranscript(width)}
+	}
+	rk := theme.CurrentRenderKey()
+	resizing := m.dragKind == dragActionsLeft
+	c := &s.transcript
+	if c.matches(s, width, rk, resizing) {
+		return c
+	}
+	lines := m.buildAITranscript(width)
+	*c = aiTranscriptCache{ok: true, width: width, rk: rk, resizing: resizing, streaming: s.streaming,
+		hasProvider: s.provider != nil, msgs: append([]ai.StoredMessage(nil), s.conv.Messages...),
+		lines: lines, rows: make([]string, len(lines))}
+	if s.provider != nil {
+		c.configured, c.label = s.provider.Configured(), s.modelLabel()
+	}
+	s.pruneMDCache(len(s.conv.Messages))
+	return c
+}
+
+// buildAITranscript builds the transcript (panel-local columns): padded
 // content, user messages as tinted bubbles on the right, AI answers as
 // rendered Markdown under an "✦ AI · model" line.
-func (m Model) aiTranscript(width int) []aiLine {
+func (m Model) buildAITranscript(width int) []aiLine {
 	inner := width - aiIndent - 1
 	if inner < 4 {
 		inner = 4
@@ -426,7 +557,7 @@ func (m Model) aiAnswerHeader(width int) aiLine {
 // a drag does not re-run Markdown + syntax highlighting on every step;
 // the release renders once at the final width.
 func (s *aiState) renderAnswer(i int, text string, width int, streaming, resizing bool) []aiLine {
-	key := aiMDKey{text: text, width: width, theme: theme.Hex(theme.BgPanel) + theme.Hex(theme.TextPrimary), icons: theme.CurrentIconMode, streaming: streaming}
+	key := aiMDKey{text: text, width: width, theme: theme.CurrentRenderKey(), streaming: streaming}
 	if s.mdCache == nil {
 		s.mdCache = map[int]aiMDEntry{}
 	}
@@ -441,9 +572,27 @@ func (s *aiState) renderAnswer(i int, text string, width int, streaming, resizin
 type aiMDKey struct {
 	text      string
 	width     int
-	theme     string
-	icons     theme.IconMode
+	theme     theme.RenderKey
 	streaming bool
+}
+
+// dropRenderCaches frees the drawn transcript, rendered answers and
+// input box (the panel was hidden); the next draw builds them again.
+func (s *aiState) dropRenderCaches() {
+	if !s.transcript.ok && !s.inputCache.ok && len(s.mdCache) == 0 {
+		return
+	}
+	s.transcript, s.inputCache, s.mdCache = aiTranscriptCache{}, aiInputCache{}, nil
+}
+
+// pruneMDCache drops rendered answers past the last message (a cleared
+// or switched chat), so the cache never holds more than the open chat.
+func (s *aiState) pruneMDCache(n int) {
+	for i := range s.mdCache {
+		if i >= n {
+			delete(s.mdCache, i)
+		}
+	}
 }
 
 type aiMDEntry struct {

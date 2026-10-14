@@ -110,12 +110,12 @@ func TestTestsRowsCollapse(t *testing.T) {
 	st := m.testView
 	all := len(st.rows())
 	m2, _ := m.handleTestsSidebarKey(tea.KeyMsg{Type: tea.KeyLeft}) // cursor 0 = first package
-	m = m2.(Model)
+	m = m2
 	if got := len(st.rows()); got >= all {
 		t.Fatalf("rows after collapse = %d, want < %d", got, all)
 	}
 	m2, _ = m.handleTestsSidebarKey(tea.KeyMsg{Type: tea.KeyRight})
-	m = m2.(Model)
+	m = m2
 	if got := len(st.rows()); got != all {
 		t.Fatalf("rows after expand = %d, want %d", got, all)
 	}

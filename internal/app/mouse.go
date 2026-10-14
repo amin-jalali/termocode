@@ -10,7 +10,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/lspinstall"
 )
 
-func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 	if m.h <= 0 || m.w <= 0 {
 		return m, nil
 	}
@@ -712,7 +712,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 // through 0..3 still reaches every card), and Enter dispatches the
 // focused card's action. Returns handled=true when the key was
 // consumed so handleGlobalKey skips its normal switch.
-func (m Model) handleWelcomeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+func (m Model) handleWelcomeKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 	actions := welcomeQuickActions()
 	if len(actions) == 0 {
 		return m, nil, false
@@ -751,7 +751,7 @@ func (m Model) handleWelcomeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
 // matching tea.KeyMsg and feeding it through handleGlobalKey would risk
 // drift if a binding ever changes, so we go straight to a synthetic
 // KeyMsg that matches what handleGlobalKey expects via keys.Match.
-func (m Model) dispatchWelcomeAction(action keymap.Action) (tea.Model, tea.Cmd) {
+func (m Model) dispatchWelcomeAction(action keymap.Action) (Model, tea.Cmd) {
 	// Pick a representative key string for the action that is in the
 	// default keymap. handleGlobalKey calls keys.Match(msg) which only
 	// looks at msg.String(), so a tea.KeyMsg with the right Type/Runes

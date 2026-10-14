@@ -336,6 +336,35 @@ func TestCache(t *testing.T) {
 	}
 }
 
+// TestCacheBytesBound: big renderings are evicted to stay under
+// maxCacheBytes, the newest one always stays, and Bytes follows.
+func TestCacheBytesBound(t *testing.T) {
+	c := NewCache(16)
+	k := func(p string) CacheKey { return CacheKey{Path: p, Cols: 1, Rows: 1} }
+	big := strings.Repeat("x", maxCacheBytes/3+1)
+	for _, p := range []string{"a", "b", "c", "d"} {
+		c.Put(k(p), Entry{Seq: big, Lines: []string{"ab"}})
+		if c.Bytes() > maxCacheBytes {
+			t.Fatalf("after %s: %d bytes cached, limit %d", p, c.Bytes(), maxCacheBytes)
+		}
+	}
+	if _, ok := c.Get(k("d")); !ok {
+		t.Error("newest entry evicted")
+	}
+	if _, ok := c.Get(k("a")); ok {
+		t.Error("oldest entry kept past the byte limit")
+	}
+	huge := strings.Repeat("y", maxCacheBytes+1)
+	c.Put(k("e"), Entry{Seq: huge})
+	if c.Len() != 1 || c.Bytes() != len(huge) {
+		t.Errorf("one oversized entry: len %d bytes %d", c.Len(), c.Bytes())
+	}
+	c.Put(k("e"), Entry{Seq: "small"})
+	if c.Bytes() != len("small") {
+		t.Errorf("replacing an entry: bytes %d", c.Bytes())
+	}
+}
+
 func TestProtocolString(t *testing.T) {
 	if Kitty.String() != "kitty" || None.String() != "off" || Blocks.String() != "blocks" || Sixel.String() != "sixel" {
 		t.Error("String")

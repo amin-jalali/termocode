@@ -131,7 +131,7 @@ func (m *Model) gitCommitMoveCaret(d int) {
 // handleGitCommitKey routes a key press while the message box is focused.
 // Returns (model, cmd, true) when it consumes the key. Enter commits; Esc/Tab
 // blur; the usual editing keys mutate the buffer.
-func (m Model) handleGitCommitKey(msg tea.KeyMsg) (tea.Model, tea.Cmd, bool) {
+func (m Model) handleGitCommitKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 	switch msg.Type {
 	case tea.KeyEnter:
 		cmd := m.gitInlineCommit(false, false)
@@ -372,7 +372,7 @@ func centerLabel(s string, width int) string {
 
 // gitCommitAreaClick handles a left click on the commit box or action bar rows.
 // Returns (model, cmd, true) when the click landed in the commit area.
-func (m Model) gitCommitAreaClick(x, y int, w int) (tea.Model, tea.Cmd, bool) {
+func (m Model) gitCommitAreaClick(x, y int, w int) (Model, tea.Cmd, bool) {
 	switch y {
 	case gitCommitInputRow:
 		m.gitFocusCommitBox()
@@ -401,7 +401,7 @@ func (m Model) gitCommitAreaClick(x, y int, w int) (tea.Model, tea.Cmd, bool) {
 
 // gitActionBarDispatch runs the chip action. Commit and Sync act immediately;
 // ⋯ opens the overflow menu anchored under the chip.
-func (m Model) gitActionBarDispatch(id string) (tea.Model, tea.Cmd, bool) {
+func (m Model) gitActionBarDispatch(id string) (Model, tea.Cmd, bool) {
 	switch id {
 	case gitBtnCommit:
 		cmd := m.gitInlineCommit(false, false)

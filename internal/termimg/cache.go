@@ -29,12 +29,27 @@ type Entry struct {
 }
 
 // Cache is a small LRU so moving between files or resizing does not
-// re-decode and re-encode images on every frame.
+// re-decode and re-encode images on every frame. It holds at most max
+// entries and about maxCacheBytes of rendered text (a Kitty / Sixel
+// sequence of a large image is megabytes); the newest entry always stays.
 type Cache struct {
 	mu    sync.Mutex
 	max   int
 	order []CacheKey // most recent last
 	items map[CacheKey]Entry
+	bytes int // sum of entrySize over items
+}
+
+// maxCacheBytes bounds the memory a Cache keeps for closed images.
+const maxCacheBytes = 16 << 20
+
+// entrySize is the bytes an entry holds (its strings).
+func entrySize(e Entry) int {
+	n := len(e.Seq)
+	for _, l := range e.Lines {
+		n += len(l)
+	}
+	return n
 }
 
 // NewCache returns a cache holding at most max entries (default 16).
@@ -60,18 +75,29 @@ func (c *Cache) Get(k CacheKey) (Entry, bool) {
 func (c *Cache) Put(k CacheKey, e Entry) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if _, ok := c.items[k]; ok {
+	if old, ok := c.items[k]; ok {
+		c.bytes -= entrySize(old)
 		c.items[k] = e
+		c.bytes += entrySize(e)
 		c.touch(k)
-		return
+	} else {
+		c.items[k] = e
+		c.bytes += entrySize(e)
+		c.order = append(c.order, k)
 	}
-	c.items[k] = e
-	c.order = append(c.order, k)
-	for len(c.order) > c.max {
+	for len(c.order) > c.max || (c.bytes > maxCacheBytes && len(c.order) > 1) {
 		old := c.order[0]
 		c.order = c.order[1:]
+		c.bytes -= entrySize(c.items[old])
 		delete(c.items, old)
 	}
+}
+
+// Bytes returns the bytes held by the cached entries.
+func (c *Cache) Bytes() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.bytes
 }
 
 // Len returns the number of cached entries.

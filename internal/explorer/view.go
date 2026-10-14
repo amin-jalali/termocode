@@ -1,6 +1,7 @@
 package explorer
 
 import (
+	"maps"
 	"path/filepath"
 	"strings"
 
@@ -52,7 +53,24 @@ func (m *Model) SetMeta(workspace, branch string, isRepo bool, totalFiles int) {
 // View renders the entire explorer panel: header, body (tree), footer. The
 // returned string is exactly m.w columns wide and m.h rows tall, with every
 // row's background filled by the appropriate theme token.
+//
+// The last result is reused while nothing it reads changed (cache.go).
 func (m Model) View(focused bool, activePath string, activeDirty bool, gitStatus GitStatus) string {
+	k := m.viewKey(focused, activePath, activeDirty, gitStatus)
+	viewCache.Lock()
+	defer viewCache.Unlock()
+	if viewCache.ok && viewCache.key.equal(&k) {
+		return viewCache.out
+	}
+	out := m.draw(focused, activePath, activeDirty, gitStatus)
+	k.extraRoots = append([]*Node(nil), m.extraRoots...)
+	k.git = maps.Clone(gitStatus)
+	viewCache.ok, viewCache.key, viewCache.out = true, k, out
+	return out
+}
+
+// draw renders the panel (View without the cache).
+func (m Model) draw(focused bool, activePath string, activeDirty bool, gitStatus GitStatus) string {
 	if m.err != "" {
 		return "explorer error: " + m.err
 	}

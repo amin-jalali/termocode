@@ -109,8 +109,10 @@ type Model struct {
 	replace  replacebar.Model
 	search   search.Model
 	toast    toast.Model
-	theme    theme.Theme
-	themeID  string // active theme id (drives the nvim colourscheme)
+	// theme is the active theme's styles. A pointer: theme.Theme is
+	// ~7 KB and the Model is copied (and boxed) on every message.
+	theme   *theme.Theme
+	themeID string // active theme id (drives the nvim colourscheme)
 	// Color Theme picker live preview: the theme to restore on Esc.
 	themePreviewFrom string
 	themePreviewing  bool
@@ -702,7 +704,7 @@ func New() Model {
 		toast:            toast.New(),
 		status:           statusbar.New(t),
 		lspMgr:           newLSPInstallState(),
-		theme:            t,
+		theme:            &t,
 		themeID:          named.ID,
 		keys:             keys,
 		keymapProblems:   keymapProblems,
