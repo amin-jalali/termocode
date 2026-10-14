@@ -68,6 +68,11 @@ Some tools have an `op` argument; then each op has its own gate.
 | [`dap_adapters`](#dap_adapters) | list: auto<br>install: confirm (run)<br>uninstall: confirm (always asks) | Manage the debug adapters termocode installs (like the manager picker). |
 | [`extensions`](#extensions) | list: auto<br>run: confirm (run)<br>reload: confirm (run)<br>log: auto | termocode's Lua extensions (~/.config/termocode/extensions). |
 | [`workspace_folders`](#workspace_folders) | list: auto<br>add: confirm (ide)<br>remove: confirm (ide)<br>open: never (refused) | The folders shown in the explorer (multi-root workspace). |
+| [`debug_breakpoint`](#debug_breakpoint) | list: auto<br>set: auto<br>remove: auto<br>clear: confirm (ide) | Breakpoints of the debugger (also used by a running session). |
+| [`debug_state`](#debug_state) | auto | The debug session: running or paused, stop reason, thread, top stack frames (file:line, function), the variables of the top frame (depth: child levels, default 1, max 3; capped) and the watch values. |
+| [`debug_start`](#debug_start) | confirm (run) | Start debugging (Run & Debug). |
+| [`debug_control`](#debug_control) | continue: confirm (run)<br>pause: confirm (ide)<br>step_over: confirm (run)<br>step_into: confirm (run)<br>step_out: confirm (run)<br>stop: confirm (ide)<br>restart: confirm (run) | Control the paused / running debug session: continue, pause, step_over, step_into, step_out, stop, restart. |
+| [`debug_evaluate`](#debug_evaluate) | confirm (run) | Evaluate an expression in the paused program's current frame (like the Debug Console). |
 
 ## Tools
 
@@ -638,6 +643,63 @@ The folders shown in the explorer (multi-root workspace). op list: every folder;
 | `op` | string | yes | what to do. One of: `list`, `add`, `remove`, `open` |
 | `path` | string |   | add / remove: folder path (absolute, ~/…, or relative to the workspace root); remove also takes the folder name |
 
+### debug_breakpoint
+
+Breakpoints of the debugger (also used by a running session). op: list; set (path, line, optional condition or log_message — a logpoint prints instead of stopping); remove (path, line); clear (all, or only path). They show in the editor gutter and the Run & Debug view and are saved.
+
+**Gate:** list: auto · set: auto · remove: auto · clear: confirm (ide)
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `list`, `set`, `remove`, `clear` |
+| `condition` | string |   | set: stop only when this expression is true |
+| `line` | integer |   | 1-based line (set, remove) |
+| `log_message` | string |   | set: print this message instead of stopping; {expr} is replaced by its value |
+| `path` | string |   | file (set: default the open file; clear: only this file) |
+
+### debug_state
+
+The debug session: running or paused, stop reason, thread, top stack frames (file:line, function), the variables of the top frame (depth: child levels, default 1, max 3; capped) and the watch values. Without a session: the last exit code, breakpoints and the debug configurations.
+
+**Gate:** auto
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `depth` | integer |   | child levels under each variable (default 1, max 3) |
+
+### debug_start
+
+Start debugging (Run & Debug). config: a launch configuration by name (.termocode/launch.json or auto-detected; debug_state lists them); or path: debug this file (Go: its package) with a configuration for its language; neither: the selected configuration or the open file. Set breakpoints first. Waits (wait_ms, default 30000) for the first stop and returns the state.
+
+**Gate:** confirm (run)
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `config` | string |   | launch configuration name |
+| `path` | string |   | file to debug |
+| `wait_ms` | integer |   | wait up to this long for the first stop (default 30000, max 120000) |
+
+### debug_control
+
+Control the paused / running debug session: continue, pause, step_over, step_into, step_out, stop, restart. Waits (wait_ms, default 10000) for the next stop or the end and returns the new state.
+
+**Gate:** continue: confirm (run) · pause: confirm (ide) · step_over: confirm (run) · step_into: confirm (run) · step_out: confirm (run) · stop: confirm (ide) · restart: confirm (run)
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `op` | string | yes | what to do. One of: `continue`, `pause`, `step_over`, `step_into`, `step_out`, `stop`, `restart` |
+| `wait_ms` | integer |   | wait up to this long for the next stop (default 10000, max 120000) |
+
+### debug_evaluate
+
+Evaluate an expression in the paused program's current frame (like the Debug Console). It can call functions and change the program's state. Returns the value, its type and its first fields.
+
+**Gate:** confirm (run)
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `expr` | string | yes | expression in the program's language |
+
 ## Palette actions
 
 `execute_action` runs a command palette command by id, and `list_actions` finds the ids. This table says what the AI may run. Extension commands (`ext-<command id>`) and your own commands (`user-<name>`) always ask (class `run`).
@@ -680,17 +742,17 @@ The folders shown in the explorer (multi-root workspace). op list: every folder;
 | `copy-file-ref` | Copy: File:Line Reference | confirm (ide) |   |
 | `customize-keybindings` | Preferences: Customize Keybindings | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `dap-install` | DAP: Install Adapter... | never | opens a picker or prompt that only the user can answer; use a typed tool (dap_adapters) |
-| `debug-add-watch` | Debug: Add Watch Expression... | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `debug-add-watch` | Debug: Add Watch Expression... | never | opens a picker or prompt that only the user can answer; use a typed tool (debug_evaluate; debug_state shows the watches) |
 | `debug-clear-bps` | Debug: Remove All Breakpoints | confirm (ide) |   |
-| `debug-conditional-bp` | Debug: Add Conditional Breakpoint... | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `debug-conditional-bp` | Debug: Add Conditional Breakpoint... | never | opens a picker or prompt that only the user can answer; use a typed tool (debug_breakpoint with condition) |
 | `debug-console` | View: Debug Console | auto |   |
 | `debug-continue` | Debug: Continue | confirm (run) |   |
-| `debug-logpoint` | Debug: Add Logpoint... | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `debug-logpoint` | Debug: Add Logpoint... | never | opens a picker or prompt that only the user can answer; use a typed tool (debug_breakpoint with log_message) |
 | `debug-open-launch` | Debug: Open launch.json | confirm (ide) |   |
 | `debug-pause` | Debug: Pause | confirm (ide) |   |
 | `debug-restart` | Debug: Restart | confirm (run) |   |
 | `debug-run-nodebug` | Debug: Run Without Debugging | confirm (run) |   |
-| `debug-select-config` | Debug: Select Configuration... | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `debug-select-config` | Debug: Select Configuration... | never | opens a picker or prompt that only the user can answer; use a typed tool (debug_start with config) |
 | `debug-show-stack` | Debug: Show Call Stack | auto |   |
 | `debug-show-vars` | Debug: Show Variables | auto |   |
 | `debug-start` | Debug: Start / Continue | confirm (run) |   |

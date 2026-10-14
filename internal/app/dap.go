@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -70,10 +71,23 @@ func (m *Model) dapStart() tea.Cmd {
 
 // debugStartConfig starts a launch.json-style config through nvim-dap.
 func (m *Model) debugStartConfig(cfg launchConfig) tea.Cmd {
+	cmd, err := m.tryDebugStartConfig(cfg)
+	if err != nil {
+		return m.debugErrorToast(err.Error())
+	}
+	return cmd
+}
+
+// tryDebugStartConfig is debugStartConfig that returns the problem
+// instead of a toast (the AI tool debug_start reports it to the model).
+func (m *Model) tryDebugStartConfig(cfg launchConfig) (tea.Cmd, error) {
+	if m.nvim == nil {
+		return nil, errors.New("the editor is not running")
+	}
 	d := m.ensureDebug()
 	if msg := missingAdapterMsg(dapTypeLang(cfg.Type)); msg != "" {
 		d.setHint(msg, dapTypeLang(cfg.Type))
-		return m.debugErrorToast(msg)
+		return nil, errors.New(msg)
 	}
 	raw := map[string]any{}
 	for k, v := range cfg.Raw {
@@ -84,23 +98,23 @@ func (m *Model) debugStartConfig(cfg launchConfig) tea.Cmd {
 	}
 	data, err := json.Marshal(raw)
 	if err != nil {
-		return m.debugErrorToast(err.Error())
+		return nil, err
 	}
 	m.ensureEditorWindowCurrent() // ${file} resolves against the current buffer
 	res, err := m.nvim.EvalLuaStringArgs(`local j = ...
 		if not (_G._termocode_dap and _G._termocode_dap.run) then return 'DAP not initialized' end
 		return _G._termocode_dap.run(j)`, string(data))
 	if err != nil {
-		return m.debugErrorToast(err.Error())
+		return nil, err
 	}
 	if res != "" {
 		if strings.Contains(res, "no debug adapter") {
 			d.setHint(res+" — Install Adapter…", dapTypeLang(cfg.Type))
 		}
 		d.console.AppendOutput("stderr", res+"\n")
-		return m.debugErrorToast(res)
+		return nil, errors.New(res)
 	}
-	return m.debugStarted(cfg.Name)
+	return m.debugStarted(cfg.Name), nil
 }
 
 // debugStarted is the shared bookkeeping after a successful dap.run.

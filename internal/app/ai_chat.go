@@ -138,6 +138,7 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools = append(tools, aiGitTools(root, call)...)   // Group K4
 	tools = append(tools, aiTasksTools(root, call)...) // Group K6: tasks and tests
 	tools = append(tools, aiAdminTools(root, call)...) // Group K8: installers, extensions, workspace folders
+	tools = append(tools, aiDebugTools(root, call)...) // Group K7
 	return tools
 }
 

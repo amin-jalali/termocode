@@ -310,6 +310,83 @@ func (m *Model) debugRemoveBreakpoint(path string, line int) tea.Cmd {
 	return m.debugSyncBreakpointsCmd()
 }
 
+// ── Breakpoints follow renames and deletes (path_follow.go) ─────────────
+
+// moveBreakpointStore rekeys the breakpoints of from (a file, or a folder
+// and everything under it) to to. Pure; changed is false when none moved.
+func moveBreakpointStore(store map[string][]storedBreakpoint, from, to string) (map[string][]storedBreakpoint, bool) {
+	out := make(map[string][]storedBreakpoint, len(store))
+	changed := false
+	for p, l := range store {
+		if n, ok := movedPath(p, from, to); ok {
+			p, changed = n, true
+		}
+		out[p] = l
+	}
+	return out, changed
+}
+
+// dropBreakpointStore drops the breakpoints of the deleted paths (and of
+// files under them). Pure.
+func dropBreakpointStore(store map[string][]storedBreakpoint, paths []string) (map[string][]storedBreakpoint, bool) {
+	out := make(map[string][]storedBreakpoint, len(store))
+	for p, l := range store {
+		if !underAny(p, paths) {
+			out[p] = l
+		}
+	}
+	return out, len(out) != len(store)
+}
+
+// debugSetStore installs a new store: saved, handed to Lua, and merged
+// with the live breakpoints of the (renamed) buffers.
+func (m *Model) debugSetStore(store map[string][]storedBreakpoint) {
+	d := m.debug
+	d.bps = store
+	if d.bpPath != "" {
+		if err := saveBreakpointFile(d.bpPath, store); err != nil {
+			recordError("[debug] save breakpoints: " + err.Error())
+		}
+	}
+	m.debugPushStored()
+}
+
+// debugFollowRename moves the breakpoints of a renamed file or folder.
+// Open buffers were renamed already (renameOpenBuffers); a buffer that
+// lost its signs on the reload gets them back from the store.
+func (m *Model) debugFollowRename(from, to string) {
+	if m.debug == nil {
+		return
+	}
+	store, changed := moveBreakpointStore(m.debug.bps, from, to)
+	if !changed {
+		return
+	}
+	m.debugSetStore(store)
+	if m.nvim != nil {
+		_ = m.nvim.ExecLuaArgs(`local to = ...
+			if not (_G._termocode_dap and _G._termocode_dap.restore) then return end
+			for _, b in ipairs(vim.api.nvim_list_bufs()) do
+				local n = vim.api.nvim_buf_get_name(b)
+				if vim.api.nvim_buf_is_loaded(b) and (n == to or n:sub(1, #to + 1) == to .. '/') then
+					pcall(_G._termocode_dap.restore, b)
+				end
+			end`, to)
+	}
+	m.debugSyncBreakpointsNow()
+}
+
+// debugForgetPaths drops the breakpoints of deleted files or folders.
+func (m *Model) debugForgetPaths(paths []string) {
+	if m.debug == nil {
+		return
+	}
+	if store, changed := dropBreakpointStore(m.debug.bps, paths); changed {
+		m.debugSetStore(store)
+		m.debugSyncBreakpointsNow()
+	}
+}
+
 // debugClearBreakpoints removes every breakpoint, loaded or not.
 func (m *Model) debugClearBreakpoints() tea.Cmd {
 	d := m.ensureDebug()

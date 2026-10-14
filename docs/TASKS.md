@@ -233,7 +233,7 @@ screen.
 - [x] K4 (M) Git: hunks (stage/unstage/discard), blame, log, stash, unstage, fetch
 - [x] K5 (M) LSP: `lsp_hover`, `lsp_symbols` (file outline / workspace query), `lsp_nav` type_definition + implementation (auto); `lsp_rename` and `lsp_code_actions` apply (fileWrite, through nvim so undo works; save only files with no unsaved edits; no new tabs); clear "no language server" error with the installer hint
 - [x] K6 (S) Tasks/tests typed tools + `tests_results`
-- [ ] K7 (L) Debugger: breakpoints, start, continue/step/stop, state
+- [x] K7 (L) Debugger: `debug_breakpoint` (list / set / remove auto, clear asks), `debug_state`, `debug_start`, `debug_control` (continue, pause, steps, stop, restart; waits for the next stop), `debug_evaluate`; the editor follows each stop
 - [x] K8 (S) LSP/DAP installer, extensions, workspace folders, docs reference page
 - [x] K9 Leftovers from the sync audit: search results (Find Results buffer + overlay) search again after AI file changes; rename / delete (agent and explorer) update the closed-tabs list, recents and hot-exit backups; the language server stays attached after a rename (it was dropped); palette / `execute_action` save refreshes git
 

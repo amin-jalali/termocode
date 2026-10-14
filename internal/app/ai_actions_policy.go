@@ -218,10 +218,10 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"debug-console":           aiAuto(),
 	"debug-view":              aiAuto(),
 	"debug-open-launch":       aiConfirm(ai.ClassIDE), // may create launch.json
-	"debug-select-config":     aiNever(aiNoPicker),
-	"debug-conditional-bp":    aiNever(aiNoPicker),
-	"debug-logpoint":          aiNever(aiNoPicker),
-	"debug-add-watch":         aiNever(aiNoPicker),
+	"debug-select-config":     aiNever(aiNoPicker + " (debug_start with config)"),
+	"debug-conditional-bp":    aiNever(aiNoPicker + " (debug_breakpoint with condition)"),
+	"debug-logpoint":          aiNever(aiNoPicker + " (debug_breakpoint with log_message)"),
+	"debug-add-watch":         aiNever(aiNoPicker + " (debug_evaluate; debug_state shows the watches)"),
 	"dap-install":             aiNever(aiNoPicker + " (dap_adapters)"),
 
 	// ── Testing ──

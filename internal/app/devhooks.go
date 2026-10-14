@@ -31,6 +31,8 @@ import (
 //	                       does (row ids: SettingsCatalog().ID)
 //	theme:<id>             apply a color theme (not persisted)
 //	aidemo                 load a sample AI conversation
+//	plugin:nvim-dap=<dir>  set nvim-dap up from a checkout (tests: the
+//	                       sandbox has none; Group K7)
 type DevActionMsg struct{ ID string }
 
 // NvimMode reports the embedded nvim's mode and whether it is blocked
@@ -55,6 +57,11 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		if m.nvim != nil && m.terminalWinID > 0 {
 			_ = m.nvim.ExecLua(fmt.Sprintf(`local b = vim.api.nvim_win_get_buf(%d); vim.api.nvim_chan_send(vim.bo[b].channel, %q)`,
 				m.terminalWinID, arg+"\r"))
+		}
+	case "plugin":
+		if name, dir, ok := strings.Cut(arg, "="); ok && name == pluginDap.name {
+			m.setupPlugin(pluginDap, dir)
+			return m.debugRefresh()
 		}
 	case "aidemo": // a sample conversation for the AI chat shot
 		s := m.aiS()
