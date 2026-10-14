@@ -286,6 +286,15 @@ for _, b in ipairs(vim.api.nvim_list_bufs()) do
     end
   end
 end
+-- nvim_buf_set_name leaves an unlisted, empty buffer under the old name
+-- (the alternate file). Wipe it: it is a ghost of a file that is gone.
+for _, b in ipairs(vim.api.nvim_list_bufs()) do
+  local name = vim.api.nvim_buf_get_name(b)
+  if (name == old or name:sub(1, #old + 1) == old .. '/') and not vim.bo[b].buflisted
+      and not vim.api.nvim_buf_is_loaded(b) then
+    pcall(vim.api.nvim_buf_delete, b, { force = true })
+  end
+end
 `
 
 // renameOpenBuffers makes open editors follow a file or folder renamed in

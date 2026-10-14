@@ -155,8 +155,13 @@ const aiFormatLua = aiBufForPath + `
 local path = ...
 local b, clients = bufclients(path)
 if #clients == 0 then return 'no language server attached to ' .. path .. ' (open it in the editor first)' end
+local unsaved = vim.bo[b].modified
 local ok, err = pcall(vim.lsp.buf.format, { bufnr = b, timeout_ms = 3000 })
 if not ok then return 'format failed: ' .. tostring(err) end
+-- Saving would also write the user's half-done edits: leave that to them.
+if unsaved then
+  return 'formatted ' .. path .. ' in the editor (the open tab shows it); not saved, because the tab has unsaved user edits'
+end
 vim.api.nvim_buf_call(b, function() vim.cmd('silent! write') end)
-return 'formatted and saved ' .. path
+return 'formatted and saved ' .. path .. '; the open tab shows it'
 `

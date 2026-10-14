@@ -20,6 +20,7 @@ type Settings struct {
 	Inline      *bool    `json:"ai_inline,omitempty"`
 	InlineModel string   `json:"ai_inline_model,omitempty"`
 	AutoApprove []string `json:"ai_auto_approve,omitempty"`
+	MaxSteps    int      `json:"ai_max_steps,omitempty"` // 0: DefaultMaxSteps
 }
 
 // InlineEnabled reports the ai_inline setting (default on).
@@ -105,6 +106,11 @@ func SaveSettings(path string, s Settings) error {
 		merged["ai_auto_approve"] = s.AutoApprove
 	} else {
 		delete(merged, "ai_auto_approve")
+	}
+	if s.MaxSteps > 0 {
+		merged["ai_max_steps"] = s.MaxSteps
+	} else {
+		delete(merged, "ai_max_steps")
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
