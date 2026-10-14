@@ -77,7 +77,7 @@ its name and key.
 - Tabs, cursors, folds, undo history and breakpoints come back after a restart.
 - Over SSH, a dropped connection loses nothing: run `termocode` again to get the same editor, terminals and jobs back. → [Remote and SSH](guides/remote-ssh.md)
 - Unsaved files survive a crash or a kill: the next start offers to restore them.
-- Download a file or folder to your own computer, or upload into a folder, through the terminal (kitty, iTerm2, trzsz; else a ready scp command). → [Remote and SSH](guides/remote-ssh.md#download-and-upload-files)
+- Download a file or folder to your own computer, or upload into a folder. Locally it is a plain copy (Downloads folder; the desktop file chooser for uploads); over SSH it goes through the terminal (kitty, iTerm2, trzsz; else a ready scp command). → [Remote and SSH](guides/remote-ssh.md#download-and-upload-files)
 
 ## Help
 
