@@ -34,6 +34,33 @@ func TestReloadKeepsUnsavedText(t *testing.T) {
 	}
 }
 
+// Spec: Given a.txt edited (not saved), the last keys not backed up yet,
+// when the user opens another workspace (termocode re-execs there),
+// then the unsaved text is backed up first, and the next start in this
+// folder offers it back.
+func TestOpenWorkspaceKeepsUnsavedText(t *testing.T) {
+	d := editorDriver(t, nil)
+	open(d, "a.txt")
+	d.Type("Hi ")
+	d.Model().PrepareOpenWorkspace() // at once: no time for the backup timer
+	m, _ := filepath.Glob(filepath.Join(os.Getenv("XDG_STATE_HOME"), "termocode", "backup", "*", "*", "*.bak"))
+	if len(m) == 0 {
+		t.Fatal("Open Workspace left no backup of the unsaved text")
+	}
+	d.Restart()
+	if !d.WaitForText("Restore unsaved", 5*time.Second) {
+		t.Fatalf("no Restore question after Open Workspace:\n%s", screen(d))
+	}
+	d.Key("enter") // Restore
+	if !waitTabs(d, "a.txt*") {
+		got, _ := tabs(d)
+		t.Fatalf("after Restore tabs = %v, want [a.txt*]", got)
+	}
+	if got := bufLines(d); got != "Hi alpha\nbravo\ncharlie" {
+		t.Errorf("after Restore a.txt holds %q", got)
+	}
+}
+
 // Spec: Given a.txt edited (not saved) and its backup written,
 // when termocode dies without a clean quit and starts again,
 // then it asks to restore; Restore brings the unsaved text back.

@@ -74,6 +74,9 @@ func TestExitedMsgWhenNvimDies(t *testing.T) {
 	if !ok || msg.Client != c {
 		t.Fatalf("got %#v, want ExitedMsg for this client", msg)
 	}
+	if msg.UserQuit {
+		t.Error("a killed nvim is reported as UserQuit")
+	}
 	if !c.Exited() {
 		t.Error("Exited() is false after nvim died")
 	}
@@ -94,6 +97,35 @@ func TestExitedMsgWhenNvimDies(t *testing.T) {
 		t.Fatal("call after nvim died hangs")
 	}
 	c.MouseAsync("left", "press", "", 0, 0) // must not panic or block
+}
+
+// :qa typed in nvim is reported as ExitedMsg with UserQuit; :cq (exit
+// code 1) is not a user quit.
+func TestExitedMsgUserQuit(t *testing.T) {
+	if _, err := exec.LookPath("nvim"); err != nil {
+		t.Skip("nvim not installed")
+	}
+	for _, c := range []struct {
+		cmd  string
+		want bool
+	}{{"qa", true}, {"cq", false}} {
+		cl, err := New()
+		if err != nil {
+			t.Fatalf("New: %v", err)
+		}
+		if err := cl.Attach(80, 24); err != nil {
+			t.Fatalf("Attach: %v", err)
+		}
+		_ = cl.Input(":" + c.cmd + "<CR>")
+		msg, ok := nextMsg(t, cl).(ExitedMsg)
+		if !ok || msg.Client != cl {
+			t.Fatalf(":%s: got %#v, want ExitedMsg", c.cmd, msg)
+		}
+		if msg.UserQuit != c.want {
+			t.Errorf(":%s: UserQuit = %v, want %v", c.cmd, msg.UserQuit, c.want)
+		}
+		_ = cl.Close()
+	}
 }
 
 // Close (a normal quit) is not reported as a crash.

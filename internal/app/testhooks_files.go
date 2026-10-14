@@ -64,6 +64,11 @@ func (m Model) FocusedEditor() bool { return m.focus == FocusEditor }
 // the new image. Driver.Restart then plays the new image. For tests.
 func (m Model) PrepareReload() { m.flushHotExitForReload() }
 
+// PrepareOpenWorkspace does what Open Workspace does before it
+// re-executes termocode in another folder (tests cannot re-exec): back up
+// the unsaved buffers and close nvim. For tests.
+func (m Model) PrepareOpenWorkspace() { m.leaveWorkspace() }
+
 // EditorPaneSize is the nvim grid size ("COLSxROWS") the layout asked for
 // last. For tests.
 func (m Model) EditorPaneSize() string {
