@@ -35,7 +35,19 @@ import (
 // all-motion (1003) for hover, downgraded to button-only (1002) while a text
 // input is focused so the SGR-fragmentation leak can't corrupt typed input.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	next, cmd := m.update(msg)
+	var next tea.Model
+	var cmd tea.Cmd
+	// Hover labels (tooltip.go) watch every user event first.
+	if t, ok := msg.(tooltipTickMsg); ok {
+		c := m.onTooltipTick(t)
+		next, cmd = m, c
+	} else {
+		tipCmd := m.tooltipOnInput(msg)
+		next, cmd = m.update(msg)
+		if tipCmd != nil {
+			cmd = tea.Batch(cmd, tipCmd)
+		}
+	}
 	if nm, ok := next.(Model); ok {
 		return nm, nm.gateUpdate(msg, cmd)
 	}

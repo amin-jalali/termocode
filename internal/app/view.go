@@ -138,7 +138,7 @@ func (m Model) viewFrame() string {
 		base = m.overlayOverflowMenuDropdown(base)
 	}
 	base = m.overlayCommitHoverCard(base)
-	return base
+	return m.overlayTooltip(base)
 }
 
 // glassyMenuOverlay floats the right-click menu over base with a drop

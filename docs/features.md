@@ -23,7 +23,8 @@ you how.
 The **activity bar** on the left switches the sidebar: **Explorer**,
 **Source Control**, **Run** (Run and Debug) and **Testing**, with **Settings**
 at the bottom. Extensions can add their own icons. Click the active icon again
-to hide the sidebar.
+to hide the sidebar. Rest the mouse on an icon button for half a second to see
+its name and key.
 
 ## Editing
 

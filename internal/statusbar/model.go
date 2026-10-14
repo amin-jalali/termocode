@@ -121,9 +121,10 @@ type barLayout struct {
 	left, center, right    string
 	leftW, centerW, rightW int
 	gapL, gapR             int
-	chipStart, chipW       int  // LSP chip offset inside right (chipW 0 = none)
-	aiStart, aiW           int  // Group A: AI badge offset inside right (aiW 0 = none)
-	debug                  bool // the DEBUG badge is shown (last in right)
+	chipStart, chipW       int                  // LSP chip offset inside right (chipW 0 = none)
+	aiStart, aiW           int                  // Group A: AI badge offset inside right (aiW 0 = none)
+	spans                  map[rightItem][2]int // offset, width of each right item shown
+	debug                  bool                 // the DEBUG badge is shown (last in right)
 }
 
 // Drop order when the bar is too narrow (VSCode-like status-item
@@ -147,7 +148,9 @@ func (m Model) layout(s State) barLayout {
 
 	drop := map[rightItem]bool{}
 	render := func() {
-		l.right, l.chipStart, l.chipW, l.aiStart, l.aiW = m.renderRightItems(s, drop)
+		l.right, l.spans = m.renderRightItems(s, drop)
+		l.chipStart, l.chipW = l.spans[itemLSP][0], l.spans[itemLSP][1]
+		l.aiStart, l.aiW = l.spans[itemAI][0], l.spans[itemAI][1]
 		l.rightW = lipgloss.Width(l.right)
 	}
 	render()
@@ -361,17 +364,7 @@ func (m Model) renderCenterDiag(s State) (string, int, int) {
 	}
 	var parts []string
 	if s.Branch != "" {
-		branchText := withGlyph(glyph("\ue725", "⌥"), s.Branch)
-		if theme.CurrentIconMode == theme.IconModeASCII {
-			branchText = theme.IconBranch.String() + " " + s.Branch
-		}
-		if s.Ahead > 0 {
-			branchText += fmt.Sprintf(" ↑%d", s.Ahead)
-		}
-		if s.Behind > 0 {
-			branchText += fmt.Sprintf(" ↓%d", s.Behind)
-		}
-		parts = append(parts, barFg(theme.TextSecondary).Render(branchText))
+		parts = append(parts, barFg(theme.TextSecondary).Render(branchText(s)))
 	}
 	diagIdx := len(parts)
 	if s.Errors > 0 {
@@ -404,6 +397,21 @@ func (m Model) renderCenterDiag(s State) (string, int, int) {
 	return out, start, lipgloss.Width(strings.Join(parts[diagIdx:diagEnd], gap))
 }
 
+// branchText is the center cluster's branch item ("⌥ main ↑1").
+func branchText(s State) string {
+	t := withGlyph(glyph("\ue725", "⌥"), s.Branch)
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		t = theme.IconBranch.String() + " " + s.Branch
+	}
+	if s.Ahead > 0 {
+		t += fmt.Sprintf(" ↑%d", s.Ahead)
+	}
+	if s.Behind > 0 {
+		t += fmt.Sprintf(" ↓%d", s.Behind)
+	}
+	return t
+}
+
 // rightItem names one part of the right cluster (see dropOrder).
 type rightItem int
 
@@ -422,14 +430,13 @@ const (
 // renderRight shows cursor position, indent style, encoding, language,
 // the LSP chip, and (if active) TERM / DEBUG indicators.
 func (m Model) renderRight(s State) string {
-	out, _, _, _, _ := m.renderRightItems(s, nil)
+	out, _ := m.renderRightItems(s, nil)
 	return out
 }
 
 // renderRightItems is renderRight without the items in drop, plus the cell
-// offset / width of the LSP chip and the AI badge inside the returned
-// string (width 0 = hidden).
-func (m Model) renderRightItems(s State, drop map[rightItem]bool) (string, int, int, int, int) {
+// offset and width of each item shown inside the returned string.
+func (m Model) renderRightItems(s State, drop map[rightItem]bool) (string, map[rightItem][2]int) {
 	var parts []string
 	var kinds []rightItem
 	add := func(k rightItem, p string) {
@@ -475,19 +482,48 @@ func (m Model) renderRightItems(s State, drop map[rightItem]bool) (string, int, 
 		// last (DebugBadgeSpan relies on that).
 		add(itemDebug, pill(debugBadgeText, theme.OnAccent, theme.LG(theme.DiagError), true))
 	}
-	span := func(k rightItem) (int, int) {
-		start, sepW := 0, lipgloss.Width(sep())
-		for i, p := range parts {
-			if kinds[i] == k {
-				return start, lipgloss.Width(p)
-			}
-			start += lipgloss.Width(p) + sepW
-		}
-		return 0, 0
+	spans := make(map[rightItem][2]int, len(parts))
+	start, sepW := 0, lipgloss.Width(sep())
+	for i, p := range parts {
+		w := lipgloss.Width(p)
+		spans[kinds[i]] = [2]int{start, w}
+		start += w + sepW
 	}
-	chipStart, chipW := span(itemLSP)
-	aiStart, aiW := span(itemAI)
-	return strings.Join(parts, sep()), chipStart, chipW, aiStart, aiW
+	return strings.Join(parts, sep()), spans
+}
+
+// ItemSpan is a plain status-bar item's cell range [X0, X1) relative to
+// the bar's left edge (hover labels name them).
+type ItemSpan struct {
+	ID     string // "branch", "indent", "encoding", "lang", "term", "pos"
+	X0, X1 int
+}
+
+// ItemSpans lists the plain items on show: the branch and the right
+// cluster's indent, encoding, language, TERM and cursor position. The
+// clickable chips have spans of their own (LSPChipSpan, …).
+func (m Model) ItemSpans(s State) []ItemSpan {
+	if m.w <= 0 {
+		return nil
+	}
+	l := m.layout(s)
+	var out []ItemSpan
+	if l.centerW > 0 && s.Err == "" && s.Branch != "" {
+		// The branch is always the first part of the center cluster.
+		cx := 1 + l.leftW + l.gapL
+		w := lipgloss.Width(branchText(s))
+		out = append(out, ItemSpan{"branch", cx, cx + w})
+	}
+	rightX := 1 + l.leftW + l.gapL + l.centerW + l.gapR
+	for _, it := range []struct {
+		k  rightItem
+		id string
+	}{{itemIndent, "indent"}, {itemEncoding, "encoding"}, {itemLang, "lang"}, {itemTerm, "term"}, {itemPos, "pos"}} {
+		if sp, ok := l.spans[it.k]; ok && sp[1] > 0 {
+			out = append(out, ItemSpan{it.id, rightX + sp[0], rightX + sp[0] + sp[1]})
+		}
+	}
+	return out
 }
 
 // renderAIBadge draws the Group A "✦ <model>" badge.
