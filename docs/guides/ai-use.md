@@ -106,6 +106,7 @@ The chat is an agent. It can call tools to answer you:
 | Kind | Tools |
 |---|---|
 | Read | read a file, list a folder, search, git status / diff / branches, go to definition, diagnostics |
+| Code (language server) | hover info (`lsp_hover`), file outline or workspace symbol search (`lsp_symbols`), go to definition / type definition / implementation / references (`lsp_nav`), rename a symbol in every file (`lsp_rename`), list and apply code actions (`lsp_code_actions`) |
 | Write files | write, create, delete, rename files and folders, format |
 | Git | stage, commit, checkout, push, pull |
 | Run | run a shell command in the workspace (build, test, …); you see only its result |
@@ -156,6 +157,19 @@ for a quick command it uses the hidden **run** tool.
 - `terminal_tabs`: list, new and show run at once. Close asks (kind
   *ide*). Closing a tab that still runs a command always asks: there is
   no "Always allow" for it.
+
+Language server tools have rules too:
+
+- **Read** — hover, symbols, go to definition and listing code actions run
+  at once.
+- **Change** — `lsp_rename` and applying a code action ask you first
+  (kind *fileWrite*). The change goes through the editor: open tabs show
+  it and you can undo it. A changed file is saved only when it had no
+  unsaved edits before; your half-done edits stay unsaved. No new tab
+  opens for the other files. An action that does not exist is refused
+  before you are asked.
+- With no language server for the file, the agent is told so, and which
+  server **LSP: Manage Language Servers...** can install for it.
 
 To skip the question for one kind, run **AI: Agent Auto-Approve…** and turn
 on *fileWrite*, *git*, *run*, *ide* or *settings*. Turn on only what you trust.

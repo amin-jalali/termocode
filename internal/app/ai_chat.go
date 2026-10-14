@@ -161,6 +161,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	tools = append(tools, aiSettingsTools(root, call)...)
 	// K3: the visible integrated terminal.
 	tools = append(tools, aiTerminalTools(call)...)
+	tools = append(tools, m.aiLSPTools(root, call)...) // Group K5: LSP hover, symbols, rename, code actions
 	native := s.provider.SupportsTools()
 	sys := aiChatSystemPrompt + "\nWorkspace root: " + root
 	if p := m.editor.Path(); p != "" {

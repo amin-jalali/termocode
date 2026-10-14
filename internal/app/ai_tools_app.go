@@ -34,10 +34,10 @@ func (m *Model) aiEditorTools() []ai.Tool {
 	return []ai.Tool{
 		{
 			Name:        "lsp_nav",
-			Description: "Go to definition or find references of the symbol at a file position, via the language server.",
+			Description: "Go to definition, type definition, implementations or references of the symbol at a file position, via the language server.",
 			Params: map[string]any{
 				"path": str("file path"), "line": num("1-based line"), "character": num("1-based column"),
-				"kind": map[string]any{"type": "string", "enum": []string{"definition", "references"}},
+				"kind": map[string]any{"type": "string", "enum": []string{"definition", "type_definition", "implementation", "references"}},
 			},
 			Required: []string{"path", "line", "character"},
 			Describe: func(a map[string]any) string {
@@ -52,11 +52,15 @@ func (m *Model) aiEditorTools() []ai.Tool {
 				if err != nil {
 					return "", err
 				}
-				method := "textDocument/definition"
-				if ai.ArgString(a, "kind") == "references" {
-					method = "textDocument/references"
+				method, ok := aiLspNavMethods[ai.ArgString(a, "kind")]
+				if !ok {
+					return "", errors.New("kind must be definition, type_definition, implementation or references")
 				}
-				return lua(aiLspNavLua, abs, method, ai.ArgInt(a, "line")-1, ai.ArgInt(a, "character")-1)
+				out, err := lua(aiLspNavLua, abs, method, ai.ArgInt(a, "line")-1, ai.ArgInt(a, "character")-1)
+				if err != nil {
+					return "", err
+				}
+				return aiLSPResult(abs, method, out)
 			},
 		},
 		{
@@ -87,10 +91,23 @@ func (m *Model) aiEditorTools() []ai.Tool {
 				if err != nil {
 					return "", err
 				}
-				return lua(aiFormatLua, abs)
+				out, err := lua(aiFormatLua, abs)
+				if err != nil {
+					return "", err
+				}
+				return aiLSPResult(abs, "formatting", out)
 			},
 		},
 	}
+}
+
+// aiLspNavMethods maps the lsp_nav kinds to LSP methods.
+var aiLspNavMethods = map[string]string{
+	"":                "textDocument/definition",
+	"definition":      "textDocument/definition",
+	"type_definition": "textDocument/typeDefinition",
+	"implementation":  "textDocument/implementation",
+	"references":      "textDocument/references",
 }
 
 // aiBufForPath (Lua prelude): returns the buffer for a path, loading it
@@ -107,10 +124,10 @@ local function bufclients(path)
 end
 `
 
-const aiLspNavLua = aiBufForPath + `
+const aiLspNavLua = aiLSPPrelude + `
 local path, method, line, ch = ...
-local b, clients = bufclients(path)
-if #clients == 0 then return 'no language server attached to ' .. path .. ' (open it in the editor first)' end
+local b, clients = lspbuf(path)
+if #clients == 0 then return 'NOLSP\t' .. vim.bo[b].filetype end
 local params = { textDocument = { uri = vim.uri_from_fname(path) }, position = { line = line, character = math.max(ch, 0) } }
 if method == 'textDocument/references' then params.context = { includeDeclaration = true } end
 local res = vim.lsp.buf_request_sync(b, method, params, 3000) or {}
@@ -151,10 +168,10 @@ if #out == 0 then return 'no diagnostics' end
 return table.concat(out, '\n')
 `
 
-const aiFormatLua = aiBufForPath + `
+const aiFormatLua = aiLSPPrelude + `
 local path = ...
-local b, clients = bufclients(path)
-if #clients == 0 then return 'no language server attached to ' .. path .. ' (open it in the editor first)' end
+local b, clients = lspbuf(path)
+if #clients == 0 then return 'NOLSP\t' .. vim.bo[b].filetype end
 local unsaved = vim.bo[b].modified
 local ok, err = pcall(vim.lsp.buf.format, { bufnr = b, timeout_ms = 3000 })
 if not ok then return 'format failed: ' .. tostring(err) end
