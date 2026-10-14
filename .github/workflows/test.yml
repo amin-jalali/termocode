@@ -54,6 +54,10 @@ jobs:
         if: runner.os == 'Linux'
         run: go run ./cmd/docgen -check
 
+      - name: Shellcheck release and install scripts
+        if: runner.os == 'Linux'
+        run: shellcheck scripts/install.sh scripts/build-release.sh scripts/release.sh
+
   # End-to-end: the real binary in a PTY + VT emulator (e2e/, build tag
   # e2e). Needs nvim; on failure the screen dumps are uploaded.
   e2e:

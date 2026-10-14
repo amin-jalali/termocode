@@ -223,7 +223,7 @@ extensions/           sample Lua extensions, embedded in the binary
 internal/             every package described above (~23 sub-packages)
 assets/screenshots/   README images + the vhs demo script
 packaging/            Homebrew formula + AUR PKGBUILD templates
-scripts/              dev.sh, release.sh, render-packaging.sh, run-with-small-font.sh
+scripts/              dev.sh, install.sh (one-line installer), release.sh, build-release.sh, render-packaging.sh, run-with-small-font.sh
 docs/                 this folder — plus adr/ (decisions) and qc/ (manual test cases)
 .github/workflows/    CI / release pipelines
 ```

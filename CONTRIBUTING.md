@@ -18,7 +18,7 @@ go build -o termocode ./cmd/termocode
 ./termocode [path]            # opens path, or the current folder
 
 ./scripts/dev.sh              # go vet + go test + build — run before every PR
-./scripts/release.sh          # cross-compile tarballs into dist/
+./scripts/release.sh          # local smoke build of the release tarballs into dist/
 ./termocode setup             # check prerequisites, install Nerd Font (Linux)
 ```
 
@@ -196,8 +196,14 @@ git tag v0.2.0 && git push origin v0.2.0
 
 `.github/workflows/release.yml` then:
 
-1. builds linux/darwin × amd64/arm64 tarballs;
-2. publishes a GitHub Release with the tarballs and `checksums.txt`;
+1. builds linux/darwin × amd64/arm64 tarballs with
+   `scripts/build-release.sh` (version linked in, so `termocode --version`
+   prints the tag). All four use cgo, for the full system clipboard:
+   Linux on `ubuntu-22.04` (arm64 with the `aarch64-linux-gnu-gcc` cross
+   compiler), macOS on `macos-14` (amd64 via `clang -arch x86_64`);
+2. publishes a GitHub Release with the tarballs, `checksums.txt`, install
+   notes and generated release notes (tags with a `-` are marked
+   pre-release). `scripts/install.sh` installs from these releases;
 3. renders `packaging/homebrew/termocode.rb.tmpl` and `packaging/aur/*.tmpl`
    with `scripts/render-packaging.sh` (the rendered files are kept as a
    workflow artifact) and pushes them to the Homebrew tap and the AUR.

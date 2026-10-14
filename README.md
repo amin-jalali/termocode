@@ -28,17 +28,18 @@ A terminal IDE that feels like VSCode — built on Bubble Tea, powered by a real
 
 ## Install
 
-termocode runs on Linux and macOS. Install it with Go (needs Go ≥ 1.26 and `nvim` ≥ 0.10):
+termocode runs on Linux and macOS (amd64 and arm64). It needs `nvim` ≥ 0.10.
+One line, no sudo — it installs to `~/.local/bin`:
 
 ```sh
-go install github.com/amin-jalali/termocode/cmd/termocode@latest
+curl -fsSL https://raw.githubusercontent.com/amin-jalali/termocode/main/scripts/install.sh | sh
 termocode            # opens the current folder
 ```
 
-To build from a clone instead: `git clone https://github.com/amin-jalali/termocode.git && cd termocode && go install ./cmd/termocode`.
-
-On Linux, install the X11 headers first (`sudo apt install libx11-dev`).
-Homebrew, AUR and release tarballs are **coming soon** — they are not published yet.
+Run the same line again to upgrade. Uninstall with `... | sh -s -- --uninstall`.
+You can also download a tarball from [Releases](https://github.com/amin-jalali/termocode/releases),
+or build with Go ≥ 1.26: `go install github.com/amin-jalali/termocode/cmd/termocode@latest`
+(on Linux, install the X11 headers first: `sudo apt install libx11-dev`).
 See the [install guide](https://amin-jalali.github.io/termocode/getting-started/install/).
 
 Something not working? Run `termocode setup`, or **Help: Run Doctor** from the palette (`F1`).

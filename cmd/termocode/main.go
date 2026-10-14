@@ -160,6 +160,10 @@ func main() {
 	if len(args) == 2 && args[0] == serverArg {
 		os.Exit(runServer(args[1]))
 	}
+	if len(args) > 0 && isVersionArg(args[0]) {
+		fmt.Println("termocode " + versionString())
+		return
+	}
 	if len(args) > 0 {
 		switch args[0] {
 		case "sessions":
@@ -226,6 +230,7 @@ func printUsage() {
 	fmt.Println("  termocode attach [dir]     attach to the session of dir")
 	fmt.Println("  termocode kill [dir]       end the session of dir")
 	fmt.Println("  termocode setup            install JetBrainsMono Nerd Font and check prerequisites")
+	fmt.Println("  termocode --version        print the version")
 	fmt.Println("  termocode -h               show this help")
 	fmt.Println()
 	fmt.Println("Over SSH the editor runs in a persistent session: when the connection")
