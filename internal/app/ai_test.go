@@ -21,6 +21,7 @@ import (
 func aiTestModel(t *testing.T) Model {
 	t.Helper()
 	withConfigDir(t)
+	t.Setenv("XDG_STATE_HOME", t.TempDir()) // AI restore points (ai_restore.go)
 	for _, k := range []string{"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY", "TERMOCODE_AI_PROVIDER", "TERMOCODE_AI_API_KEY", "TERMOCODE_AI_MODEL", "TERMOCODE_AI_BASE_URL", "OLLAMA_HOST"} {
 		t.Setenv(k, "")
 	}

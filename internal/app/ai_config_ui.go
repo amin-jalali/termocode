@@ -34,7 +34,7 @@ const (
 
 const (
 	confirmKindAITool confirmKindEnum = 900 + iota
-	confirmKindAIProposal
+	confirmKindAIUndoTurn
 	confirmKindAIOAuth
 )
 
@@ -79,6 +79,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 	switch m.confirmKind {
 	case confirmKindAITool:
 		return m.answerAIToolConfirm(id), true
+	case confirmKindAIUndoTurn:
+		return m.onAIUndoTurnConfirm(id), true
 	case confirmKindAIOAuth:
 		if id == "continue" {
 			return m.beginClaudeOAuth(), true

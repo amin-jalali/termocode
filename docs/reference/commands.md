@@ -30,6 +30,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Toggle Edit Review (diff / auto) | `ai-edit-review` |   |   |
 | AI: Toggle Inline Completions | `ai-toggle-inline` | <code>Alt+&#124;</code> | <code>Alt+&#124;</code> |
 | AI: Trigger Inline Completion | `ai-trigger-inline` | <code>Alt+&#92;</code> | <code>Alt+&#92;</code> |
+| AI: Undo Last Turn | `ai-undo-turn` |   |   |
 
 ## Bookmarks
 
