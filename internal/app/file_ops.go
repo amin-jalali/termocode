@@ -48,6 +48,8 @@ const (
 	promptKindDebugWatch
 	promptKindDebugCondition
 	promptKindDebugLogpoint
+	// Group L — Upload with kitty: the path on the user's computer (transfer.go).
+	promptKindUploadSource
 )
 
 func (m *Model) openRenamePrompt(path string) {
@@ -186,6 +188,8 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		if err := m.editor.Open(newPath); err == nil {
 			m.focus = FocusEditor
 		}
+	case promptKindUploadSource:
+		return m.onUploadSource(value)
 	case promptKindNewFolder:
 		newPath := filepath.Join(m.promptPath, value)
 		if err := os.MkdirAll(newPath, 0o755); err != nil {

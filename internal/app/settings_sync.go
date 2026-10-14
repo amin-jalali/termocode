@@ -35,6 +35,9 @@ type extrasState struct {
 	snipNewScope   string // scope chosen in step 1 of "New Snippet"
 	snipNewTrigger string // trigger chosen in step 1 of "New Snippet"
 	snipTarget     snippetRef
+
+	// Download / Upload (transfer.go): the request a dialog waits on.
+	xfer xferPending
 }
 
 // ─── Settings bundle (pure logic) ─────────────────────────────────────

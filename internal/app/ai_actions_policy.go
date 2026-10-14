@@ -45,6 +45,7 @@ const (
 	aiNoOutside  = "acts outside the IDE (OS shell, file manager or browser)"
 	aiNoAIConfig = "AI provider, credentials and approvals stay with the user"
 	aiNoNested   = "starts or changes an AI chat or edit; answer in this chat instead"
+	aiNoTransfer = "moves files between the user's machine and the server; user only"
 )
 
 var aiActionPolicies = map[string]aiActionPolicy{
@@ -184,6 +185,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"workspace-add-folder":    aiNever(aiNoPicker),
 	"workspace-remove-folder": aiNever(aiNoPicker),
 	"reveal-fs":               aiNever(aiNoOutside),
+	"transfer-download":       aiNever(aiNoTransfer),
+	"transfer-upload":         aiNever(aiNoTransfer),
+	"transfer-cancel":         aiNever(aiNoTransfer),
 	"open-url":                aiNever(aiNoOutside),
 	"reload-window":           aiNever(aiNoSession),
 	"detach-session":          aiNever(aiNoSession),

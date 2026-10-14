@@ -72,6 +72,9 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.applyTerminalChange(tc)
 		return m, nil
 	}
+	if c, ok := m.handleXferMsg(msg); ok {
+		return m, c
+	}
 	if c, ok := m.handleImageMsg(msg); ok {
 		return m, tea.Batch(c, m.afterUpdateAnim(prevKind))
 	}
