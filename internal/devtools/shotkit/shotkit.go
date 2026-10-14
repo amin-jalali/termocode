@@ -39,6 +39,8 @@ type Scene struct {
 	Icons string // nerd (default), unicode, ascii
 	Env   map[string]string
 	Steps []Step
+	// SetupCard shows the first-run setup card (a fresh config).
+	SetupCard bool
 }
 
 // Act sends app.DevActionMsg{ID: id} (see internal/app/devhooks.go).
@@ -141,7 +143,9 @@ func Run(sc Scene, w, h int, opt Options) (string, error) {
 	if icons == "" {
 		icons = "nerd"
 	}
-	conf := fmt.Sprintf(`{"theme": %q, "icons": %q, "animations": "off", "images": "blocks"}`, th, icons)
+	// The demo has finished the first-run setup card, unless the scene
+	// is about the card.
+	conf := fmt.Sprintf(`{"theme": %q, "icons": %q, "animations": "off", "images": "blocks", "setup_done": %v}`, th, icons, !sc.SetupCard)
 	_ = os.WriteFile(filepath.Join(cfg, "termocode", "config.json"), []byte(conf), 0o644)
 	os.Setenv("XDG_CONFIG_HOME", cfg)
 	if home, err := os.UserHomeDir(); err == nil && os.Getenv("TERMOCODE_PLUGINS_DIR") == "" {

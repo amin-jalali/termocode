@@ -20,6 +20,35 @@ Below them are your recent files and recent workspaces.
 
 Use the arrow keys and `Enter`, or click a card.
 
+### First run: the setup card
+
+The first time, a **Set up termocode** card shows under the cards. It has
+three steps. `Tab` moves between its buttons, `Enter` presses one. You can
+also click them.
+
+1. **Icons.** The card reads your terminal's font setting and tells you what
+   it found, for example "GNOME Terminal uses Ubuntu Mono 13, not a Nerd
+   Font". Nerd icons need a Nerd Font in the terminal itself; an installed
+   font is not enough.
+    - **Install Nerd Font** downloads JetBrainsMono Nerd Font into
+      `~/.local/share/fonts` in the background (Linux). It does not change
+      your terminal.
+    - **Font steps** shows the exact clicks for your terminal. After you
+      switch the font, press **Check again**.
+    - **Use Nerd icons** works only when the terminal's font is a Nerd Font.
+      If it is greyed out, pressing it tells you why.
+    - GNOME Terminal only: **Create termocode profile** makes a new terminal
+      profile "termocode" with the Nerd Font. It first shows exactly what it
+      will change. Your default profile stays as it is.
+    - **Keep Unicode** keeps the plain icons. They work in every font.
+2. **AI.** **Set up AI…** opens the provider setup (Claude, OpenAI,
+   OpenRouter, Ollama …). **Skip** is fine: termocode works without AI.
+3. **Theme** (optional). One press picks Dark+, Tokyo Night or a light
+   theme; **More…** opens the full list.
+
+**Done** or **Hide** removes the card. It stays hidden after a restart. To
+see it again, run **Setup: Show Setup Card** from `F1`.
+
 ## 2. Find a file with `Ctrl+P`
 
 1. Press `Ctrl+P`.

@@ -41,6 +41,7 @@ func TestMain(m *testing.M) {
 	} {
 		_ = os.Setenv(k, v)
 	}
+	setupCardOff = true // see setup_card_ui.go
 	code := m.Run()
 	_ = os.RemoveAll(dir)
 	os.Exit(code)

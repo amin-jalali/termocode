@@ -146,9 +146,8 @@ func renderWelcome(w, h, focusIdx int) string {
 		welcomeLogoAt = c.logo
 		return c.out
 	}
-	rendered, rh, wh, qh := renderWelcomeFull(w, h, focusIdx)
-	welcomeCache = &welcomeCached{key: key, out: rendered, logo: welcomeLogoAt, at: time.Now(),
-		hits: welcomeHits{recents: rh, workspaces: wh, actions: qh}}
+	rendered, hits := renderWelcomeHits(w, h, focusIdx)
+	welcomeCache = &welcomeCached{key: key, out: rendered, logo: welcomeLogoAt, at: time.Now(), hits: hits}
 	return rendered
 }
 
@@ -164,11 +163,13 @@ type welcomeKey struct {
 	icons       theme.IconMode
 	profile     int
 	logo        string
+	setup       string // the setup card's signature ("" = not shown)
 }
 
 func newWelcomeKey(w, h, focus int) welcomeKey {
 	return welcomeKey{w: w, h: h, focus: focus, theme: theme.Hex(theme.BgEditor) + theme.Hex(theme.BorderFocus),
-		cfg: os.Getenv("XDG_CONFIG_HOME"), icons: theme.CurrentIconMode, profile: int(theme.Profile()), logo: dashboardLogo}
+		cfg: os.Getenv("XDG_CONFIG_HOME"), icons: theme.CurrentIconMode, profile: int(theme.Profile()), logo: dashboardLogo,
+		setup: welcomeSetup.sig}
 }
 
 // welcomeHits are the click areas of one welcome render. They are
@@ -178,6 +179,7 @@ type welcomeHits struct {
 	recents    []welcomeRecentHit
 	workspaces []welcomeWorkspaceHit
 	actions    []welcomeQuickActionHit
+	setup      []welcomeSetupHit
 }
 
 type welcomeCached struct {
@@ -218,8 +220,8 @@ func welcomeLayoutHits(w, h int) welcomeHits {
 // renderWelcomeLayout returns the recent + workspace hits expected by
 // mouse.go. Quick-action hits are surfaced via welcomeQuickActionHits.
 func renderWelcomeLayout(w, h, focusIdx int) (string, []welcomeRecentHit, []welcomeWorkspaceHit) {
-	rendered, rh, wh, _ := renderWelcomeFull(w, h, focusIdx)
-	return rendered, rh, wh
+	rendered, hits := renderWelcomeHits(w, h, focusIdx)
+	return rendered, hits.recents, hits.workspaces
 }
 
 // welcomeRecentHits returns the recents hit map of the welcome page.
@@ -231,6 +233,11 @@ func welcomeRecentHits(w, h int) []welcomeRecentHit {
 // welcome screen with their absolute editor-pane coordinates.
 func welcomeWorkspaceHits(w, h int) []welcomeWorkspaceHit {
 	return welcomeLayoutHits(w, h).workspaces
+}
+
+// welcomeSetupHits returns the setup card's button rectangles.
+func welcomeSetupHits(w, h int) []welcomeSetupHit {
+	return welcomeLayoutHits(w, h).setup
 }
 
 // welcomeQuickActionHits returns clickable rectangles for the action
@@ -314,34 +321,44 @@ func welcomeQuickActions() []quickAction {
 // slices. Splitting the work this way keeps the public layout helpers
 // thin without recomputing layout for each accessor.
 func renderWelcomeFull(w, h, focusIdx int) (string, []welcomeRecentHit, []welcomeWorkspaceHit, []welcomeQuickActionHit) {
+	out, hits := renderWelcomeHits(w, h, focusIdx)
+	return out, hits.recents, hits.workspaces, hits.actions
+}
+
+// renderWelcomeHits renders the page (with the setup card when
+// welcomeSetup shows one) and returns every click area.
+func renderWelcomeHits(w, h, focusIdx int) (string, welcomeHits) {
 	hero := dashboardLogo != "off"
-	out, rh, wh, qh := renderWelcomePage(w, h, focusIdx, hero, false)
+	out, hits := renderWelcomePage(w, h, focusIdx, hero, false)
 	// A short pane drops the logo first, then the extra blank rows, so
 	// the cards, the recent files and the footer still fit.
 	tall := func() bool { return strings.Count(out, "\n")+1 > h }
 	if hero && tall() {
-		out, rh, wh, qh = renderWelcomePage(w, h, focusIdx, false, false)
+		out, hits = renderWelcomePage(w, h, focusIdx, false, false)
 	}
 	if tall() {
-		out, rh, wh, qh = renderWelcomePage(w, h, focusIdx, false, true)
+		out, hits = renderWelcomePage(w, h, focusIdx, false, true)
 	}
-	return out, rh, wh, qh
+	return out, hits
 }
 
 // renderWelcomePage renders the page, with or without the hero (logo,
 // tagline and rule); compact puts one blank row between sections, not
 // three, and drops the card subtitles.
-func renderWelcomePage(w, h, focusIdx int, hero, compact bool) (string, []welcomeRecentHit, []welcomeWorkspaceHit, []welcomeQuickActionHit) {
+func renderWelcomePage(w, h, focusIdx int, hero, compact bool) (string, welcomeHits) {
 	if w <= 0 || h <= 0 {
-		return "", nil, nil, nil
+		return "", welcomeHits{}
 	}
 
 	actions := welcomeQuickActions()
+	card := welcomeSetup
+	// The focus runs over the action cards, then the setup card buttons.
+	total := len(actions) + len(card.buttons())
 	if focusIdx < 0 {
 		focusIdx = 0
 	}
-	if len(actions) > 0 && focusIdx >= len(actions) {
-		focusIdx = len(actions) - 1
+	if total > 0 && focusIdx >= total {
+		focusIdx = total - 1
 	}
 
 	bgFill := theme.Bg(theme.BgEditor)
@@ -404,6 +421,15 @@ func renderWelcomePage(w, h, focusIdx int, hero, compact bool) (string, []welcom
 	contentLines = append(contentLines, qaLines...)
 
 	contentLines = append(contentLines, gap...)
+
+	// ── 2b. First-run setup card (setup_card_render.go) ───────────────
+	var setupHits []welcomeSetupHit
+	if card.show {
+		lines, hits := buildSetupCard(card, innerW, len(contentLines), focusIdx-len(actions), compact)
+		contentLines = append(contentLines, lines...)
+		contentLines = append(contentLines, gap...)
+		setupHits = hits
+	}
 
 	// ── 3. RECENT FILES + WORKSPACES ──────────────────────────────────
 	recents := loadRecents()
@@ -561,8 +587,15 @@ func renderWelcomePage(w, h, focusIdx int, hero, compact bool) (string, []welcom
 		h.ColEnd += leftPad
 		qHits = append(qHits, h)
 	}
+	sHits := make([]welcomeSetupHit, 0, len(setupHits))
+	for _, h := range setupHits {
+		h.Row += topPad
+		h.ColStart += leftPad
+		h.ColEnd += leftPad
+		sHits = append(sHits, h)
+	}
 
-	return sb.String(), rHits, wHits, qHits
+	return sb.String(), welcomeHits{recents: rHits, workspaces: wHits, actions: qHits, setup: sHits}
 }
 
 // ─── Section header / footer pieces ────────────────────────────────────
