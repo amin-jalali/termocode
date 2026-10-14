@@ -122,3 +122,32 @@ func TestModel_BoxShape(t *testing.T) {
 		}
 	}
 }
+
+// Spec (K9): Refresh searches again with the same query; the cursor stays
+// on its row (clamped when fewer results come back). A new query after it
+// starts at the top again.
+func TestRefreshKeepsCursor(t *testing.T) {
+	m := typeText(New(), "x")
+	three := []Result{{Path: "a"}, {Path: "b"}, {Path: "c"}}
+	m, _ = m.Update(resultsMsg{version: m.queryVer, results: three})
+	m.cursor = 2
+	if cmd := m.Refresh(); cmd == nil || !m.Pending() {
+		t.Fatal("Refresh did not schedule a search")
+	}
+	m, _ = m.Update(resultsMsg{version: m.queryVer, results: three})
+	if m.cursor != 2 {
+		t.Errorf("cursor %d after refresh, want 2", m.cursor)
+	}
+	m.Refresh()
+	m, _ = m.Update(resultsMsg{version: m.queryVer, results: three[:1]})
+	if m.cursor != 0 {
+		t.Errorf("cursor %d with one result, want 0", m.cursor)
+	}
+	m, _ = m.Update(resultsMsg{version: m.queryVer, results: three})
+	m.cursor = 2
+	m = typeText(m, "y")
+	m, _ = m.Update(resultsMsg{version: m.queryVer, results: three})
+	if m.cursor != 0 {
+		t.Errorf("cursor %d after a new query, want 0", m.cursor)
+	}
+}

@@ -167,7 +167,7 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 			return nil
 		}
 		m.err = ""
-		m.renameOpenBuffers(m.promptPath, newPath)
+		m.followRename(m.promptPath, newPath)
 		m.explorer.Reload()
 	case promptKindNewFile:
 		newPath := filepath.Join(m.promptPath, value)
@@ -278,6 +278,17 @@ for _, b in ipairs(vim.api.nvim_list_bufs()) do
     target = new .. name:sub(#old + 1)
   end
   if target and vim.bo[b].buftype == '' then
+    -- :edit! below drops the buffer's language servers (and they would
+    -- still have the old path open). Detach them first (the server
+    -- closes the old path) and attach them again at the end (it opens
+    -- the new path, with the unsaved text).
+    local clients = {}
+    if vim.lsp and vim.api.nvim_buf_is_loaded(b) then
+      for _, c in ipairs(vim.lsp.get_clients({ bufnr = b })) do
+        clients[#clients + 1] = c
+        pcall(vim.lsp.buf_detach_client, b, c.id)
+      end
+    end
     vim.api.nvim_buf_set_name(b, target)
     if vim.api.nvim_buf_is_loaded(b) then
       vim.api.nvim_buf_call(b, function()
@@ -287,6 +298,16 @@ for _, b in ipairs(vim.api.nvim_list_bufs()) do
         if lines then vim.api.nvim_buf_set_lines(0, 0, -1, false, lines) end
         vim.fn.winrestview(view)
       end)
+      -- Not when the new name is another language (a.txt -> a.go): the
+      -- FileType of the new name brings its own server.
+      local ft = vim.bo[b].filetype
+      for _, c in ipairs(clients) do
+        local fts = c.config and c.config.filetypes
+        if not c:is_stopped() and not vim.lsp.buf_is_attached(b, c.id)
+            and (fts == nil or vim.tbl_contains(fts, ft)) then
+          pcall(vim.lsp.buf_attach_client, b, c.id)
+        end
+      end
     end
   end
 end
