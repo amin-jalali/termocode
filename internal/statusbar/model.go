@@ -209,6 +209,10 @@ func (m Model) View(s State) string {
 	if m.w <= 0 {
 		return ""
 	}
+	return cachedView(m.w, s, func() string { return m.draw(s) })
+}
+
+func (m Model) draw(s State) string {
 	pad := barBg().Render(" ")
 	l := m.layout(s)
 	leftSpace := barBg().Render(strings.Repeat(" ", l.gapL))
