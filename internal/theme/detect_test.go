@@ -13,33 +13,29 @@ func TestResolveIconMode(t *testing.T) {
 	no := func() bool { return false }
 	cases := []struct {
 		setting string
-		nerd    bool
 		uni     func() bool
 		env     map[string]string
 		want    IconMode
 	}{
-		// An installed Nerd Font alone does not switch to Nerd icons: the
-		// running terminal may not draw with it (tofu boxes).
-		{"auto", true, nil, nil, IconModeUnicode},
-		{"auto", false, nil, map[string]string{"TERM_PROGRAM": "WezTerm"}, IconModeNerdFont},
-		{"auto", false, nil, map[string]string{"TERM": "xterm-kitty"}, IconModeNerdFont},
-		{"auto", false, nil, map[string]string{"TERM_PROGRAM": "ghostty"}, IconModeNerdFont},
-		{"auto", false, yes, nil, IconModeUnicode},
-		{"auto", false, nil, nil, IconModeUnicode},
-		{"auto", false, no, nil, IconModeASCII},
-		{"auto", false, nil, map[string]string{"TERM": "linux"}, IconModeASCII},
-		{"auto", false, nil, map[string]string{"LANG": "C"}, IconModeASCII},
-		{"auto", false, nil, map[string]string{"LANG": "en_US.UTF-8"}, IconModeUnicode},
-		{"auto", false, nil, map[string]string{"LC_ALL": "de_DE.utf8", "LANG": "C"}, IconModeUnicode},
-		{"", true, nil, map[string]string{"SSH_TTY": "x"}, IconModeUnicode},
-		{"ascii", true, yes, nil, IconModeASCII},
-		{"unicode", false, no, nil, IconModeUnicode},
-		{"nerd", false, no, nil, IconModeNerdFont},
-		{"ascii", false, no, map[string]string{"TERMOCODE_NERD_FONT": "1"}, IconModeNerdFont},
-		{"nerd", false, no, map[string]string{"TERMOCODE_ICON_MODE": "ascii"}, IconModeASCII},
+		{"auto", nil, map[string]string{"TERM_PROGRAM": "WezTerm"}, IconModeNerdFont},
+		{"auto", nil, map[string]string{"TERM": "xterm-kitty"}, IconModeNerdFont},
+		{"auto", nil, map[string]string{"TERM_PROGRAM": "ghostty"}, IconModeNerdFont},
+		{"auto", yes, nil, IconModeUnicode},
+		{"auto", nil, nil, IconModeUnicode},
+		{"auto", no, nil, IconModeASCII},
+		{"auto", nil, map[string]string{"TERM": "linux"}, IconModeASCII},
+		{"auto", nil, map[string]string{"LANG": "C"}, IconModeASCII},
+		{"auto", nil, map[string]string{"LANG": "en_US.UTF-8"}, IconModeUnicode},
+		{"auto", nil, map[string]string{"LC_ALL": "de_DE.utf8", "LANG": "C"}, IconModeUnicode},
+		{"", nil, map[string]string{"SSH_TTY": "x"}, IconModeUnicode},
+		{"ascii", yes, nil, IconModeASCII},
+		{"unicode", no, nil, IconModeUnicode},
+		{"nerd", no, nil, IconModeNerdFont},
+		{"ascii", no, map[string]string{"TERMOCODE_NERD_FONT": "1"}, IconModeNerdFont},
+		{"nerd", no, map[string]string{"TERMOCODE_ICON_MODE": "ascii"}, IconModeASCII},
 	}
 	for i, c := range cases {
-		if got := ResolveIconMode(c.setting, c.nerd, c.uni, envOf(c.env)); got != c.want {
+		if got := ResolveIconMode(c.setting, c.uni, envOf(c.env)); got != c.want {
 			t.Errorf("case %d: got %v want %v", i, got, c.want)
 		}
 	}

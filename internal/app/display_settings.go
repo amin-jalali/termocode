@@ -69,15 +69,10 @@ var termCaps = termimg.Caps{Protocol: termimg.Blocks}
 // it is kept so a future ProbeUnicode result has a home.
 var unicodeProbeOK bool
 
-// nerdFontHint is whether a Nerd Font was detected at startup (cached
-// fc-list, see setup.HasNerdFont). ResolveIconMode ignores it today.
-var nerdFontHint bool
-
 // SetTerminalCaps records the startup probe results (cmd/termocode).
-func SetTerminalCaps(c termimg.Caps, unicodeOK, nerdFont bool) {
+func SetTerminalCaps(c termimg.Caps, unicodeOK bool) {
 	termCaps = c
 	unicodeProbeOK = unicodeOK
-	nerdFontHint = nerdFont
 }
 
 // imageProtocol is the protocol images use with the current setting.
@@ -88,7 +83,7 @@ func imageProtocol() termimg.Protocol {
 // ApplyDisplaySettings resolves icons + animations from the settings and
 // the startup probes. Called by cmd/termocode and after a settings change.
 func ApplyDisplaySettings(cfg DisplayConfig) {
-	theme.CurrentIconMode = theme.ResolveIconMode(cfg.Icons, nerdFontHint, nil, os.Getenv)
+	theme.CurrentIconMode = theme.ResolveIconMode(cfg.Icons, nil, os.Getenv)
 	anim.Enabled = anim.Resolve(anim.ParseMode(cfg.Animations), theme.TrueColor(), os.Getenv)
 	dashboardLogo = logoChoices[0]
 	for _, c := range logoChoices {
