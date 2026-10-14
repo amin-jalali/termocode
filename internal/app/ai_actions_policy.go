@@ -313,6 +313,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"persistent_session":  aiConfirm(ai.ClassSettings),
 	"search_max_results":  aiConfirm(ai.ClassSettings),
 	"ai_inline":           aiConfirm(ai.ClassSettings),
+	"rtl":                 aiNever("a file-only display setting read at start; the user edits it in config.json"),
 	"terminal_skip_shell": aiNever("decides which keys reach the shell; a file-only list the user edits in config.json"),
 	"ai_inline_model":     aiNever(aiNoAIConfig),
 	"ai_provider":         aiNever(aiNoAIConfig),

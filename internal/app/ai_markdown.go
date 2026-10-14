@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 
+	"github.com/amin-jalali/termocode/internal/rtl"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -137,27 +138,60 @@ func renderChatMarkdown(text string, width, indent, msgIdx int, streaming bool) 
 		l.sel = aiSel{ok: true, x: x, text: text, join: join}
 		return l
 	}
-	// wrapped appends spans wrapped to w, drawn after the lead spans (and
-	// a selectable start at x), with the joins of a wrapped source line.
-	wrapped := func(spans []mdSpan, w, x int, lead func(k int) []mdSpan) {
+	// wrapped appends spans wrapped to w, drawn after the bar (not
+	// text) and the lead spans (a selectable start at x), with the
+	// joins of a wrapped source line. Rows of a right-to-left paragraph
+	// are shaped and reordered (ai_rtl.go), and right aligned when
+	// there is no lead.
+	wrapped := func(spans []mdSpan, w, x int, lead func(k int) []mdSpan, bar []mdSpan) {
 		rows := wrapSpans(spans, w)
 		texts := make([]string, len(rows))
 		for k, r := range rows {
 			texts[k] = joinParts(r)
 		}
 		joins := aiJoins(joinParts(spans), texts)
+		bidi, dir := rtlPara(joinParts(spans))
 		for k, r := range rows {
 			var head []mdSpan
 			if lead != nil {
 				head = lead(k)
 			}
 			sx := x
+			var bm *aiBidi
+			if bidi {
+				r, bm = bidiSpans(r, dir)
+				texts[k] = joinParts(r)
+				if dir == rtl.RTL {
+					// Right aligned; a list marker goes to the right end,
+					// mirrored ("1. " reads " .1"), like the text.
+					gap := max(w-runewidth.StringWidth(texts[k]), 0)
+					row := append(append([]mdSpan{}, bar...), mdSpan{text: strings.Repeat(" ", gap), st: s.text})
+					row = append(row, r...)
+					sx += gap - runewidth.StringWidth(joinParts(head))
+					if k == 0 && lead != nil {
+						m := mirrorSpans(head)
+						row = append(row, m...)
+						texts[k] += joinParts(m)
+						bm = bm.mirroredLead(joinParts(head))
+					} else {
+						row = append(row, head...)
+					}
+					l := sel(pad(row), sx, texts[k], joins[k])
+					l.sel.bidi = bm
+					out = append(out, l)
+					continue
+				}
+			}
 			if k == 0 && lead != nil {
 				// The first row's lead (a list marker) is part of the text.
 				sx -= runewidth.StringWidth(joinParts(head))
 				texts[k] = joinParts(head) + texts[k]
+				bm = bm.prefixed(joinParts(head))
 			}
-			out = append(out, sel(pad(append(head, r...)), sx, texts[k], joins[k]))
+			row := append(append(append([]mdSpan{}, bar...), head...), r...)
+			l := sel(pad(row), sx, texts[k], joins[k])
+			l.sel.bidi = bm
+			out = append(out, l)
 		}
 	}
 	blank := func() { out = append(out, sel(pad(nil), indent, "", "\n")) }
@@ -169,7 +203,7 @@ func renderChatMarkdown(text string, width, indent, msgIdx int, streaming bool) 
 		if len(para) == 0 {
 			return
 		}
-		wrapped(parseInline(strings.Join(para, " "), s, s.text), inner, indent, nil)
+		wrapped(parseInline(strings.Join(para, " "), s, s.text), inner, indent, nil, nil)
 		para = nil
 	}
 	for i := 0; i < len(lines); i++ {
@@ -206,7 +240,7 @@ func renderChatMarkdown(text string, width, indent, msgIdx int, streaming bool) 
 			case 2:
 				hs = s.h2
 			}
-			wrapped(parseInline(title, s, hs), inner, indent, nil)
+			wrapped(parseInline(title, s, hs), inner, indent, nil, nil)
 		case trim == "---" || trim == "***" || trim == "___":
 			flushPara()
 			out = append(out, pad([]mdSpan{{text: strings.Repeat("─", inner), st: s.rule}}))
@@ -215,12 +249,7 @@ func renderChatMarkdown(text string, width, indent, msgIdx int, streaming bool) 
 			body := strings.TrimSpace(strings.TrimPrefix(trim, ">"))
 			// The quote bar is not part of the selectable text.
 			bar := []mdSpan{{text: "▎ ", st: s.quoteBar}}
-			n := len(out)
-			wrapped(parseInline(body, s, s.ital.Foreground(theme.LG(theme.TextSecondary))), inner-2, indent+2,
-				func(int) []mdSpan { return bar })
-			for k := n; k < len(out); k++ { // undo the first-row lead text
-				out[k].sel.x, out[k].sel.text = indent+2, strings.TrimPrefix(out[k].sel.text, "▎ ")
-			}
+			wrapped(parseInline(body, s, s.ital.Foreground(theme.LG(theme.TextSecondary))), inner-2, indent+2, nil, bar)
 		case strings.HasPrefix(trim, "|"):
 			flushPara()
 			row := runewidth.Truncate(trim, inner, "…")
@@ -242,7 +271,7 @@ func renderChatMarkdown(text string, width, indent, msgIdx int, streaming bool) 
 						return first
 					}
 					return hang
-				})
+				}, nil)
 				continue
 			}
 			para = append(para, trim)
@@ -575,6 +604,20 @@ func renderCodeCard(code []string, lang string, s mdStyles, width, indent, msgId
 		if li < len(code) {
 			raw = code[li]
 		}
+		// Code keeps its left-to-right order; only RTL runs inside it (a
+		// Persian comment or string) are shaped and turned (ai_rtl.go).
+		maps := make([]*aiBidi, len(segs))
+		if on, _ := rtlPara(full); on {
+			for k, seg := range segs {
+				var pre []mdSpan
+				if k > 0 && len(seg) >= 2 {
+					pre, seg = seg[:2:2], seg[2:]
+				}
+				vis, bm := bidiSpans(seg, rtl.LTR)
+				segs[k], maps[k] = append(pre, vis...), bm
+				texts[k] = joinParts(vis)
+			}
+		}
 		for k, seg := range segs {
 			w := 0
 			var b strings.Builder
@@ -587,7 +630,7 @@ func renderCodeCard(code []string, lang string, s mdStyles, width, indent, msgId
 				r += bodyBg.Render(strings.Repeat(" ", fill))
 			}
 			l := aiLine{styled: r + right(indent+cardW), block: block + 1,
-				sel: aiSel{ok: true, x: xs[k], text: texts[k], join: joins[k], code: true}}
+				sel: aiSel{ok: true, x: xs[k], text: texts[k], join: joins[k], code: true, bidi: maps[k]}}
 			if k == 0 {
 				l.sel.raw = raw
 			}

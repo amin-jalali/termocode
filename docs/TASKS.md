@@ -278,5 +278,5 @@ The user: "do them in a loop; after finishing each item push it".
 - [x] N2 (S) Search results update after a rename/delete in the explorer (not only after AI changes)
 - [x] N3 (S/M) First-run setup card on the welcome screen: icons, terminal font, AI provider in a few clicks
 - [x] N4 (M) Easy install: release binaries (linux/macOS, amd64/arm64) and a one-line install script
-- [ ] N5 (M) Persian/Arabic (right-to-left) text in the AI chat and the Markdown preview (bidi + shaping)
+- [x] N5 (M) Persian/Arabic (right-to-left) text in the AI chat and the Markdown preview (bidi + shaping)
 - [ ] N6 Older items: README screenshots, Tier 2 process extensions, Android clipboard

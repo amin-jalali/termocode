@@ -21,6 +21,8 @@ var CapsEnvKeys = []string{
 	"LANG", "LC_ALL", "LC_CTYPE", "LC_TERMINAL", "LC_TERMINAL_VERSION",
 	"NO_COLOR", "TERMOCODE_COLORS", "TERMOCODE_ICON_MODE", "TERMOCODE_NERD_FONT",
 	"KITTY_WINDOW_ID", "GHOSTTY_RESOURCES_DIR", "WEZTERM_EXECUTABLE", "WT_SESSION", "VTE_VERSION",
+	// Terminals that reorder right-to-left text themselves (rtl = auto).
+	"KONSOLE_VERSION", "MLTERM",
 	// Whether the client runs over SSH (file transfer: a local copy, or
 	// scp / kitty / iTerm2 to the client's machine).
 	"SSH_CONNECTION", "SSH_CLIENT", "SSH_TTY",

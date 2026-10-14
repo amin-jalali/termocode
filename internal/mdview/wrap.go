@@ -5,6 +5,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+
+	"github.com/amin-jalali/termocode/internal/rtl"
 )
 
 // piece is a measured run of text inside one row.
@@ -13,6 +15,7 @@ type piece struct {
 	a    attrs
 	link string
 	w    int
+	code bool // inline code: moves as one unit in RTL rows
 }
 
 // word is a run of pieces with no break opportunity inside. space says
@@ -44,7 +47,7 @@ func words(spans []span) []word {
 			return
 		}
 		w := ansi.StringWidth(t)
-		cur.ps = append(cur.ps, piece{text: t, a: s.a, link: s.link, w: w})
+		cur.ps = append(cur.ps, piece{text: t, a: s.a, link: s.link, w: w, code: s.code})
 		cur.w += w
 	}
 	for _, s := range spans {
@@ -144,8 +147,65 @@ func wrap(ws []word, width int) [][]piece {
 func (r *renderer) wrapLines(spans []span, width int, bg lipgloss.Color) []line {
 	rows := wrap(words(spans), width)
 	out := make([]line, 0, len(rows))
+	bidi, dir := false, rtl.LTR
+	if r.opt.RTL {
+		if src := spansText(spans); rtl.HasRTL(src) {
+			bidi, dir = true, rtl.BaseDir(src)
+		}
+	}
 	for _, ps := range rows {
-		out = append(out, r.row(ps, width, bg, 'l'))
+		align := byte('l')
+		if bidi {
+			ps = bidiPieces(ps, dir)
+			// Right aligned, also in an RTL list item (marker on the right).
+			if dir == rtl.RTL && (r.depth == 0 || r.rtlList) {
+				align = 'r'
+			}
+		}
+		out = append(out, r.row(ps, width, bg, align))
+	}
+	return out
+}
+
+func spansText(spans []span) string {
+	var b strings.Builder
+	for _, s := range spans {
+		b.WriteString(s.text)
+	}
+	return b.String()
+}
+
+// bidiPieces lays out a wrapped row (logical order) for direction dir:
+// shaped, in reading order, inline code kept whole.
+func bidiPieces(ps []piece, dir rtl.Dir) []piece {
+	var rs []rune
+	var idx, atoms []int
+	for k, p := range ps {
+		for _, c := range p.text {
+			rs = append(rs, c)
+			idx = append(idx, k)
+			a := 0
+			if p.code {
+				a = k + 1
+			}
+			atoms = append(atoms, a)
+		}
+	}
+	var out []piece
+	last := -1
+	for _, g := range rtl.Line(rs, dir, atoms) {
+		k := idx[min(g.Lo, len(idx)-1)]
+		if k == last && len(out) > 0 {
+			out[len(out)-1].text += g.Text
+			continue
+		}
+		p := ps[k]
+		p.text = g.Text
+		out = append(out, p)
+		last = k
+	}
+	for i := range out {
+		out[i].w = ansi.StringWidth(out[i].text)
 	}
 	return out
 }

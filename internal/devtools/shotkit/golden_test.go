@@ -84,6 +84,8 @@ func goldenExtras() []Scene {
 		{Name: "setup-card", SetupCard: true, Env: map[string]string{"TERM": "xterm-kitty"}, Steps: []Step{Pause(1500 * time.Millisecond)}},
 		{Name: "md-preview-light", Theme: "catppuccin-latte", Steps: MarkdownPreview().Steps},
 		DiffReview(),
+		// Persian (right-to-left) chat: shaped letters in reading order.
+		{Name: "ai-chat-fa", Env: aiEnv, Steps: WithEditor(Act("palette:ai-open-chat"), Act("aidemo-fa"), Pause(600*time.Millisecond))},
 		{Name: "diff-review-light", Theme: "catppuccin-latte", Steps: DiffReview().Steps},
 	}
 }

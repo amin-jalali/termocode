@@ -38,6 +38,9 @@ type aiSel struct {
 	join string // what joins this row to the selectable row above
 	code bool   // a code-block row
 	raw  string // code rows starting a source line: the source line
+	// bidi maps a right-to-left row (text is the drawn, visual order)
+	// back to the logical text a copy gives (ai_rtl.go); nil otherwise.
+	bidi *aiBidi
 }
 
 // aiSelPos is a transcript row index and a panel-local column.
@@ -180,6 +183,9 @@ func aiSelectionText(lines []aiLine, start, end aiSelPos) string {
 			}
 		}
 		sub, _, _ := aiCellSlice(l.text, l.x, from, to)
+		if l.bidi != nil {
+			sub = l.bidi.slice(l.x, from, to)
+		}
 		if first && sub == "" {
 			continue
 		}
@@ -273,17 +279,6 @@ func aiJoins(src string, rows []string) []string {
 		out[i] = gap
 	}
 	return out
-}
-
-// aiWrapSel word-wraps text (newlines kept) like wrapPlain and returns
-// the rows with their selection joins.
-func aiWrapSel(text string, w int) (rows, joins []string) {
-	for _, para := range strings.Split(text, "\n") {
-		r := wrapPlain(para, w)
-		rows = append(rows, r...)
-		joins = append(joins, aiJoins(para, r)...)
-	}
-	return rows, joins
 }
 
 // aiSelStyle draws selected cells.

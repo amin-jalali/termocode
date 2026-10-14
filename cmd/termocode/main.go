@@ -262,7 +262,12 @@ func runTUI() {
 	probeTerminal()
 
 	font := applyFontDelta(fontDelta())
+	// Right-to-left text: termocode lays it out, so the terminal must not
+	// reorder it again (BDSM explicit mode; internal/rtl). Undone on exit.
+	rtlEnter, rtlLeave := app.RTLTerminalModes()
+	_, _ = os.Stdout.WriteString(rtlEnter)
 	defer func() {
+		_, _ = os.Stdout.WriteString(rtlLeave)
 		// Restore the terminal's default cursor shape — we set it via
 		// DECSCUSR `\x1b[<n> q` while running.
 		_, _ = os.Stdout.WriteString("\x1b[0 q")
@@ -361,7 +366,7 @@ func runTUI() {
 		// A crash or a lost terminal: keep the unsaved buffers.
 		app.FlushSession() // the last cursor positions (N1)
 		app.HotExitFlush(2 * time.Second)
-		_, _ = os.Stdout.WriteString("\x1b]111\x07" + font.Restore()) // os.Exit skips the defer
+		_, _ = os.Stdout.WriteString("\x1b]111\x07" + font.Restore() + rtlLeave) // os.Exit skips the defer
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

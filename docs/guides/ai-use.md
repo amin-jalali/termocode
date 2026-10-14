@@ -52,6 +52,41 @@ card. You see the change in the review card first (see below).
 | `Ctrl+U` | Clear the input |
 | `Esc` | Clear the selection, then back to the editor |
 
+### Persian, Arabic and other right-to-left text
+
+You can write and read Persian or Arabic in the chat. Most terminals do
+not do this themselves: they show the letters backwards and not joined.
+So termocode does it in the chat and in the Markdown preview:
+
+- Letters are joined (start, middle, end forms; لا as one letter;
+  پ چ ژ گ ک ی work). A ZWNJ (نیم‌فاصله) keeps two parts apart, as typed.
+- Each line is shown in reading order, right to left. English words,
+  numbers and `inline code` keep their own order.
+- A paragraph that starts with a Persian or Arabic letter is right
+  aligned. Your messages, answers, headings and list items too (the
+  list marker goes on the right).
+- Code blocks keep their left-to-right order. Only a Persian comment or
+  string inside them reads right to left.
+- Copy always gives the text as written, not as shown.
+
+Limits: in the input box the current line is shown joined and in reading
+order, but the arrow keys move in typing order (logical), not on screen.
+Tables keep their columns left to right. termocode does not handle
+explicit direction marks (LRE, RLO, …).
+
+The `rtl` setting in `config.json` chooses who does this. termocode asks
+the terminal not to reorder the text again (the BDSM escape `CSI 8 l`;
+GNOME Terminal and other VTE terminals and WezTerm follow it):
+
+| `rtl` | Meaning |
+|---|---|
+| `auto` (default) | `terminal` on Konsole and mlterm (they always reorder), else `termocode` |
+| `termocode` | termocode joins and reorders; the terminal is asked not to |
+| `terminal` | text is sent as written; the terminal must do it |
+| `off` | text is sent as written; nothing else changes |
+
+The setting is read when termocode starts.
+
 Chats are saved. Run **AI: Chat History…** to open an old one, and
 **AI: New Chat** to start fresh. The last 50 chats are kept.
 

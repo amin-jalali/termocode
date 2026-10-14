@@ -129,6 +129,7 @@ func defaultFallbacks() []string {
 	var out []string
 	for _, p := range []string{
 		"/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+		"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", // Arabic presentation forms (RTL chat)
 		"/usr/share/fonts/truetype/noto/NotoSansSymbols2-Regular.ttf",
 		"/usr/share/fonts/truetype/noto/NotoSansSymbols-Regular.ttf",
 		"/usr/share/fonts/truetype/noto/NotoSansMath-Regular.ttf",

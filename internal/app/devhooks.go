@@ -74,6 +74,13 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 			{Role: ai.StoredAssistant, Text: aiDemoAnswer},
 		}
 		s.scroll = 0
+	case "aidemo-fa": // a Persian (right-to-left) conversation for the shots
+		s := m.aiS()
+		s.conv.Messages = []ai.StoredMessage{
+			{Role: ai.StoredUser, Text: "چرا پیام toast دو بار بیرون می‌رود؟"},
+			{Role: ai.StoredAssistant, Text: aiDemoAnswerFa},
+		}
+		s.scroll = 0
 	case "diffdemo": // the review card for the shots (writes nothing)
 		for _, f := range diffview.DemoFiles() {
 			m.addAIReview(&aiReviewItem{file: f, finish: func(_ *Model, d *textdiff.Diff, acc map[int]bool, _ bool) (string, tea.Cmd) {
@@ -120,3 +127,7 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 }
 
 const aiDemoAnswer = "## Cause\n\n`Tick` marks an expired toast as **leaving** but keeps it in the list, and `Step` removes it only after the slide ends. When a second tick fires *before* that, the toast is marked again:\n\n1. first tick: `leaving = true`, slide starts\n2. second tick: the check runs again and **restarts** the slide\n\n### Fix\n\nSkip toasts that are already leaving:\n\n```go\nfor _, t := range m.toasts {\n\tif !t.ExpiresAt.After(now) && !t.leaving {\n\t\tt.leaving = true // slide out once\n\t\tt.slide.Set(1)\n\t}\n\tout = append(out, t)\n}\n```\n\n- keeps one slide per toast\n- no change when animations are off\n\n> Tip: run `go test ./internal/toast` after the change."
+
+// aiDemoAnswerFa is the Persian answer of the "aidemo-fa" shot: RTL
+// paragraphs with English words, numbers, inline code and a code block.
+const aiDemoAnswerFa = "## علت\n\nتابع `Tick` پیام منقضی را **در حال خروج** علامت می‌زند ولی آن را در فهرست نگه می‌دارد. اگر تیک دوم (پیش از پایان) برسد، حرکت دوباره شروع می‌شود.\n\n### راه حل\n\nپیام‌هایی را که در حال خروج هستند رد کن:\n\n```go\nif !t.ExpiresAt.After(now) && !t.leaving {\n\tt.leaving = true // فقط یک بار\n}\n```\n\n- هر پیام فقط 1 بار حرکت می‌کند\n- با animations خاموش تغییری نیست\n\n> نکته: بعد از تغییر، `go test ./internal/toast` را اجرا کن."

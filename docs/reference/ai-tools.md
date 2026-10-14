@@ -934,6 +934,7 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `icons` | confirm (settings) |   |
 | `images` | confirm (settings) |   |
 | `persistent_session` | confirm (settings) |   |
+| `rtl` | never | a file-only display setting read at start; the user edits it in config.json |
 | `search_max_results` | confirm (settings) |   |
 | `show_hidden` | confirm (settings) |   |
 | `tab_size` | confirm (settings) |   |
