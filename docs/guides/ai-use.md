@@ -110,6 +110,8 @@ The chat is an agent. It can call tools to answer you:
 | Git | stage, commit, checkout, push, pull |
 | Run | run a shell command in the workspace (build, test, …); you see only its result |
 | Terminal | type a command in your terminal panel (`terminal_send`), read its last lines (`terminal_read`), list / open / show / close terminal tabs (`terminal_tabs`) |
+| Tasks | list tasks with group, command and last run (`tasks_list`), run one in its terminal tab (`tasks_run`), read its exit code and output (`tasks_status`) |
+| Tests | run tests: all, a file, the test at the cursor, the failed ones or by name (`tests_run`); read the results with each failure's file:line and message (`tests_results`) |
 | Editor | open a file (at a line), read the cursor and selection, show a panel, reveal in the explorer, show a toast |
 | IDE commands | find a command palette command (`list_actions`) and run it (`execute_action`): fold, split, show a panel, save, run tests, … |
 | Settings | list settings with their values and allowed values (`settings_list`), change one (`settings_set`): theme, tab size, icons, word wrap, … |
@@ -156,6 +158,17 @@ for a quick command it uses the hidden **run** tool.
 - `terminal_tabs`: list, new and show run at once. Close asks (kind
   *ide*). Closing a tab that still runs a command always asks: there is
   no "Always allow" for it.
+
+Tasks and tests use the same places as the palette, so you see them run.
+
+- `tasks_run` asks first (kind *run*). It runs a task from
+  `.termocode/tasks.json` (or a detected one) by label, or the default
+  build / test task, in its own terminal tab.
+- `tests_run` asks first (kind *run*). It uses the Testing view's runner
+  and shows the Testing view.
+- `tasks_list`, `tasks_status` and `tests_results` run at once.
+  `tasks_status` and `tests_results` can wait (up to 2 min) until the run
+  ends. Stop ends the wait.
 
 To skip the question for one kind, run **AI: Agent Auto-Approve…** and turn
 on *fileWrite*, *git*, *run*, *ide* or *settings*. Turn on only what you trust.

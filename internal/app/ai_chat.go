@@ -161,6 +161,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	tools = append(tools, aiSettingsTools(root, call)...)
 	// K3: the visible integrated terminal.
 	tools = append(tools, aiTerminalTools(call)...)
+	tools = append(tools, aiTasksTools(root, call)...) // Group K6: tasks and tests
 	native := s.provider.SupportsTools()
 	sys := aiChatSystemPrompt + "\nWorkspace root: " + root
 	if p := m.editor.Path(); p != "" {
