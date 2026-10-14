@@ -31,8 +31,9 @@ type Event struct {
 // (the TUI answers through a channel); return false to decline.
 type ConfirmFunc func(ctx context.Context, t Tool, human string) bool
 
-// DefaultMaxSteps caps tool round-trips per user turn.
-const DefaultMaxSteps = 6
+// DefaultMaxSteps caps tool round-trips per user turn (Cursor uses 25).
+// config.json "ai_max_steps" changes it.
+const DefaultMaxSteps = 25
 
 // Agent runs a tool-calling loop on top of a Provider. Port of mobocode's
 // ai_agent.dart: with Native it uses the provider's function calling
@@ -155,9 +156,16 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 			return msgs[start:]
 		}
 	}
-	emit(Event{Kind: EventText, Text: fmt.Sprintf("\n(stopped after %d tool steps)", steps)})
+	emit(Event{Kind: EventText, Text: StepLimitText(steps)})
 	emit(Event{Kind: EventDone})
 	return msgs[start:]
+}
+
+// StepLimitText is the note shown when a turn hits the step limit. The
+// steps done so far stay in the chat, so "continue" goes on from there.
+func StepLimitText(steps int) string {
+	return fmt.Sprintf("\n\n**Paused: I reached the step limit (%d tool steps) for one message.** "+
+		"The work is not finished. Reply \"continue\" and I will go on from here.", steps)
 }
 
 // runTool executes one call through the confirm gate and returns the text

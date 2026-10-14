@@ -94,7 +94,14 @@ reload, discard changes or change settings.
 To skip the question for one kind, run **AI: Agent Auto-Approve…** and turn
 on *fileWrite*, *git*, *run* or *ide*. Turn on only what you trust.
 
-The agent stops after 6 tool steps per message. Ask again to continue.
+The IDE follows what the agent does: a new file shows in the explorer at once,
+a renamed open file keeps its tab under the new name, a deleted one closes its
+tab, and a written one shows the new text (undo with `u`). Git and shell tools
+refresh the git panel, the branch and open files. The agent never overwrites,
+deletes or saves a file whose tab has unsaved edits; it asks you to save first.
+
+The agent stops after 25 tool steps per message and says so. Send "continue"
+to go on. Change the limit with `ai_max_steps` in `config.json`.
 
 ## Keys at a glance
 
@@ -125,4 +132,4 @@ The agent stops after 6 tool steps per message. Ask again to continue.
 :   The file changed after you asked. Ask again.
 
 **The agent stopped in the middle**
-:   It hit the 6-step limit. Send "continue".
+:   It hit the step limit (25 by default, `ai_max_steps`). Send "continue".
