@@ -169,6 +169,7 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		m.err = ""
 		m.followRename(m.promptPath, newPath)
 		m.explorer.Reload()
+		return m.refreshSearchResults() // results show the new path (N2)
 	case promptKindNewFile:
 		newPath := filepath.Join(m.promptPath, value)
 		if err := os.MkdirAll(filepath.Dir(newPath), 0o755); err != nil {
@@ -188,6 +189,7 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		if err := m.editor.Open(newPath); err == nil {
 			m.focus = FocusEditor
 		}
+		return m.refreshSearchResults() // an empty file; kept in step (N2)
 	case promptKindUploadSource:
 		return m.onUploadSource(value)
 	case promptKindNewFolder:
