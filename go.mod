@@ -20,6 +20,7 @@ require (
 	golang.org/x/image v0.28.0
 	golang.org/x/sys v0.38.0
 	golang.org/x/term v0.36.0
+	golang.org/x/text v0.30.0
 )
 
 require (
@@ -40,5 +41,4 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/exp/shiny v0.0.0-20250606033433-dcc06ee1d476 // indirect
 	golang.org/x/mobile v0.0.0-20250606033058-a2a15c67f36f // indirect
-	golang.org/x/text v0.30.0 // indirect
 )

@@ -10,6 +10,7 @@ import (
 	"github.com/mattn/go-runewidth"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/rtl"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -154,6 +155,7 @@ type aiInputCache struct {
 	input              []rune
 	focused, streaming bool
 	rk                 theme.RenderKey
+	rtl                rtl.Mode // rtlMode the rows were laid out for
 	out                []string
 }
 
@@ -173,11 +175,11 @@ func (m Model) aiInputEdged(width, rows int, edge func(string) string) []string 
 	rk := theme.CurrentRenderKey()
 	c := &s.inputCache
 	if c.ok && c.width == width && c.rows == rows && c.caret == s.caret && c.focused == s.focused &&
-		c.streaming == s.streaming && c.rk == rk && slices.Equal(c.input, s.input) {
+		c.streaming == s.streaming && c.rk == rk && c.rtl == rtlMode && slices.Equal(c.input, s.input) {
 		return c.out
 	}
 	*c = aiInputCache{ok: true, width: width, rows: rows, caret: s.caret, input: slices.Clone(s.input),
-		focused: s.focused, streaming: s.streaming, rk: rk, out: draw()}
+		focused: s.focused, streaming: s.streaming, rk: rk, rtl: rtlMode, out: draw()}
 	return c.out
 }
 
@@ -311,6 +313,7 @@ type aiTranscriptCache struct {
 	ok          bool
 	width       int
 	rk          theme.RenderKey
+	rtl         rtl.Mode // rtlMode the rows were laid out for
 	resizing    bool
 	streaming   bool
 	hasProvider bool
@@ -325,7 +328,7 @@ type aiTranscriptCache struct {
 
 // matches reports whether the cache is valid for this state.
 func (c *aiTranscriptCache) matches(s *aiState, width int, rk theme.RenderKey, resizing bool) bool {
-	if !c.ok || c.width != width || c.rk != rk || c.resizing != resizing || c.streaming != s.streaming ||
+	if !c.ok || c.width != width || c.rk != rk || c.rtl != rtlMode || c.resizing != resizing || c.streaming != s.streaming ||
 		c.hasProvider != (s.provider != nil) || len(c.msgs) != len(s.conv.Messages) || c.restoreGen != s.restoreGen {
 		return false
 	}
@@ -388,7 +391,7 @@ func (m Model) aiTranscriptCached(width int) *aiTranscriptCache {
 	if c.ok {
 		s.aiKeepSelection(c.msgs, c.width, width)
 	}
-	*c = aiTranscriptCache{ok: true, width: width, rk: rk, resizing: resizing, streaming: s.streaming,
+	*c = aiTranscriptCache{ok: true, width: width, rk: rk, rtl: rtlMode, resizing: resizing, streaming: s.streaming,
 		hasProvider: s.provider != nil, restoreGen: s.restoreGen, msgs: append([]ai.StoredMessage(nil), s.conv.Messages...),
 		lines: lines, rows: make([]string, len(lines))}
 	if s.provider != nil {
@@ -412,12 +415,16 @@ func (m Model) buildAITranscript(width int) []aiLine {
 	}
 	// selPlain wraps text into selectable rows of message msgIdx.
 	selPlain := func(text string, tok theme.Color256, msgIdx int) []aiLine {
-		rows, joins := aiWrapSel(text, inner)
+		rows, joins, maps, right := aiBidiWrap(text, inner)
 		out := make([]aiLine, len(rows))
 		for k, r := range rows {
-			out[k] = plain(r, tok)
+			gap := 0
+			if right[k] {
+				gap = max(inner-runewidth.StringWidth(r), 0)
+			}
+			out[k] = plain(strings.Repeat(" ", gap)+r, tok)
 			out[k].msg = msgIdx + 1
-			out[k].sel = aiSel{ok: true, x: aiIndent, text: r, join: joins[k]}
+			out[k].sel = aiSel{ok: true, x: aiIndent + gap, text: r, join: joins[k], bidi: maps[k]}
 		}
 		return out
 	}
@@ -550,7 +557,7 @@ func aiUserBubble(text string, width, msgIdx int) []aiLine {
 	if maxW < 10 {
 		maxW = width - aiIndent - 1
 	}
-	lines, joins := aiWrapSel(text, maxW-2)
+	lines, joins, maps, right := aiBidiWrap(text, maxW-2)
 	bw := 0
 	for _, l := range lines {
 		if w := runewidth.StringWidth(l); w > bw {
@@ -570,14 +577,20 @@ func aiUserBubble(text string, width, msgIdx int) []aiLine {
 		if fill < 0 {
 			fill = 0
 		}
-		row := aiLine{styled: lead + bub.Render(" "+l+strings.Repeat(" ", fill)+" "), msg: msgIdx + 1,
-			sel: aiSel{ok: true, x: x + 1, text: l, join: joins[k]}}
+		body := " " + l + strings.Repeat(" ", fill) + " "
+		tx := x + 1
+		if right[k] { // a right-to-left row ends at the bubble's right side
+			body = " " + strings.Repeat(" ", fill) + l + " "
+			tx += fill
+		}
+		row := aiLine{styled: lead + bub.Render(body), msg: msgIdx + 1,
+			sel: aiSel{ok: true, x: tx, text: l, join: joins[k], bidi: maps[k]}}
 		// A copy button left of the bubble's first row.
 		if k == 0 && x >= 3 {
 			g := aiCopyGlyph()
 			gx := x - 1 - runewidth.StringWidth(g)
 			row.styled = theme.Bg(theme.BgPanel).Render(strings.Repeat(" ", gx)) +
-				theme.FgBg(theme.TextDim, theme.BgPanel).Render(g) + theme.Bg(theme.BgPanel).Render(" ") + bub.Render(" "+l+strings.Repeat(" ", fill)+" ")
+				theme.FgBg(theme.TextDim, theme.BgPanel).Render(g) + theme.Bg(theme.BgPanel).Render(" ") + bub.Render(body)
 			row.buttons = []aiLineButton{{gx, gx + runewidth.StringWidth(g), "copymsg:" + strconv.Itoa(msgIdx)}}
 		}
 		out = append(out, row)
@@ -638,7 +651,7 @@ func (m Model) aiAnswerHeader(width, msgIdx int, done bool) aiLine {
 // a drag does not re-run Markdown + syntax highlighting on every step;
 // the release renders once at the final width.
 func (s *aiState) renderAnswer(i int, text string, width int, streaming, resizing bool) []aiLine {
-	key := aiMDKey{text: text, width: width, theme: theme.CurrentRenderKey(), streaming: streaming}
+	key := aiMDKey{text: text, width: width, theme: theme.CurrentRenderKey(), streaming: streaming, rtl: rtlMode}
 	if s.mdCache == nil {
 		s.mdCache = map[int]aiMDEntry{}
 	}
@@ -655,6 +668,7 @@ type aiMDKey struct {
 	width     int
 	theme     theme.RenderKey
 	streaming bool
+	rtl       rtl.Mode
 }
 
 // dropRenderCaches frees the drawn transcript, rendered answers and
@@ -749,13 +763,18 @@ func (m Model) aiFooterLine(width int) aiLine {
 // aiInputWrapped wraps the input into rows and returns the row / column
 // of the caret.
 func aiInputWrapped(input []rune, caret, w int) ([]string, int, int) {
+	rows, _, cr, cc := aiInputRowStarts(input, caret, w)
+	return rows, cr, cc
+}
+
+// aiInputRowStarts is aiInputWrapped plus the input index where each row
+// starts.
+func aiInputRowStarts(input []rune, caret, w int) (rows []string, starts []int, cr, cc int) {
 	if w < 1 {
 		w = 1
 	}
-	var rows []string
-	cr, cc := 0, 0
 	line := []rune{}
-	lineW := 0
+	lineW, start := 0, 0
 	for i := 0; i <= len(input); i++ {
 		if i == caret {
 			cr, cc = len(rows), lineW
@@ -765,14 +784,14 @@ func aiInputWrapped(input []rune, caret, w int) ([]string, int, int) {
 		}
 		r := input[i]
 		if r == '\n' {
-			rows = append(rows, string(line))
-			line, lineW = line[:0:0], 0
+			rows, starts = append(rows, string(line)), append(starts, start)
+			line, lineW, start = line[:0:0], 0, i+1
 			continue
 		}
 		rw := runewidth.RuneWidth(r)
 		if lineW+rw > w {
-			rows = append(rows, string(line))
-			line, lineW = line[:0:0], 0
+			rows, starts = append(rows, string(line)), append(starts, start)
+			line, lineW, start = line[:0:0], 0, i
 			if i == caret {
 				cr, cc = len(rows), 0
 			}
@@ -780,14 +799,14 @@ func aiInputWrapped(input []rune, caret, w int) ([]string, int, int) {
 		line = append(line, r)
 		lineW += rw
 	}
-	rows = append(rows, string(line))
+	rows, starts = append(rows, string(line)), append(starts, start)
 	if cc >= w { // caret after a full row → start of next visual row
 		cr, cc = cr+1, 0
 		if cr >= len(rows) {
-			rows = append(rows, "")
+			rows, starts = append(rows, ""), append(starts, len(input))
 		}
 	}
-	return rows, cr, cc
+	return rows, starts, cr, cc
 }
 
 // renderAIInput draws the input box: a rounded border (accent while
@@ -841,13 +860,27 @@ func (m Model) renderAIInput(width, rows int) []string {
 			out = append(out, line("", 0))
 		}
 	} else {
-		wrapped, cr, cc := aiInputWrapped(input, caret, tw)
+		wrapped, starts, cr, cc := aiInputRowStarts(input, caret, tw)
 		first := 0
 		if cr >= rows {
 			first = cr - rows + 1
 		}
 		for i := first; i < len(wrapped) && len(out) < rows+1; i++ {
 			rs := []rune(wrapped[i])
+			if on, dir := rtlPara(aiInputPara(input, starts[i])); on {
+				// Right-to-left: drawn shaped and in reading order; the
+				// caret stays logical (on the glyph of the rune at it).
+				co := -1
+				if focused && i == cr {
+					co = caret - starts[i]
+				}
+				c, w := aiInputBidiRow(rs, dir, co, txt, cur)
+				if dir == rtl.RTL && w < tw {
+					c, w = fill.Render(strings.Repeat(" ", tw-w))+c, tw
+				}
+				out = append(out, line(c, w))
+				continue
+			}
 			if focused && i == cr {
 				idx, wsum := 0, 0
 				for idx < len(rs) && wsum+runewidth.RuneWidth(rs[idx]) <= cc {

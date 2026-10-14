@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	east "github.com/yuin/goldmark/extension/ast"
 
+	"github.com/amin-jalali/termocode/internal/rtl"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -32,7 +33,15 @@ func (r *renderer) code(src []string, lang string, width int) []line {
 	pad := r.fill(2, card)
 	for _, ps := range r.highlight(src, lang) {
 		ws := []word{{ps: ps, w: sumW(ps)}}
+		var text strings.Builder
+		for _, p := range ps {
+			text.WriteString(p.text)
+		}
+		turn := r.opt.RTL && rtl.HasRTL(text.String())
 		for k, row := range wrap(ws, inner) {
+			if turn { // code stays LTR; a Persian comment reads right to left
+				row = bidiPieces(row, rtl.LTR)
+			}
 			l := r.row(row, inner, card, 'l')
 			pre := pad
 			if k > 0 {
@@ -251,6 +260,15 @@ func (r *renderer) table(t *east.Table, wide int) []line {
 				}
 				if k < len(cells[c]) {
 					ps = cells[c][k]
+				}
+				if c < len(row) && r.opt.RTL { // a cell of RTL text: its own reading order
+					if src := spansText(row[c].spans); rtl.HasRTL(src) {
+						dir := rtl.BaseDir(src)
+						ps = bidiPieces(ps, dir)
+						if dir == rtl.RTL && al == 'l' {
+							al = 'r'
+						}
+					}
 				}
 				b.WriteString(r.fill(1, bg) + r.row(ps, w, bg, al).s + r.fill(1, bg))
 			}
