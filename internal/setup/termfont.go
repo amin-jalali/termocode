@@ -116,3 +116,8 @@ func printTerminalFont(w io.Writer, info nerdterm.Info, nerd string) {
 		fmt.Fprintln(w, "  "+l)
 	}
 }
+
+// SuggestedNerdFont is the Nerd Font family to tell the user to pick:
+// JetBrainsMono Nerd Font when it (or nothing) is installed, else the
+// installed family fc-list found.
+func SuggestedNerdFont(info NerdFontInfo) string { return installedNerdName(info) }

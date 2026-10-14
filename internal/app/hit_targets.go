@@ -304,6 +304,7 @@ func (m Model) overflowMenuTargets() []hitTarget {
 }
 
 func (m Model) welcomeTargets(pane editorPane) []hitTarget {
+	m.publishSetupCard()
 	view := renderWelcome(pane.W, pane.H, m.welcomeFocus)
 	var out []hitTarget
 	add := func(id string, row, c0, c1 int) {
@@ -323,6 +324,9 @@ func (m Model) welcomeTargets(pane editorPane) []hitTarget {
 	}
 	for _, h := range welcomeQuickActionHits(pane.W, pane.H) {
 		add("welcome:card:"+strconv.Itoa(h.Index), h.Row, h.ColStart, h.ColEnd)
+	}
+	for _, h := range welcomeSetupHits(pane.W, pane.H) {
+		add("welcome:setup:"+h.ID, h.Row, h.ColStart, h.ColEnd)
 	}
 	for _, h := range welcomeRecentHits(pane.W, pane.H) {
 		add("welcome:recent:"+h.Path, h.Row, h.ColStart, h.ColEnd)

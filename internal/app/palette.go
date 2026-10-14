@@ -248,6 +248,7 @@ func paletteItems() []picker.Item {
 		{ID: "buffer-info", Title: "View: Show Buffer Info", Hint: "Ctrl+Alt+I"},
 		{ID: "error-log", Title: "Help: Show Error Log"},
 		{ID: "run-doctor", Title: "Help: Run Doctor"},
+		{ID: "setup-show-card", Title: "Setup: Show Setup Card"},
 		{ID: "open-docs", Title: "Help: Open Documentation"}, // Docs
 		{ID: "hover", Title: "LSP: Show Hover Documentation"},
 		{ID: "find-references", Title: "LSP: Find All References", Hint: "Shift+F12"},
@@ -607,6 +608,8 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.openErrorLog()
 	case "run-doctor":
 		return runDoctorCmd()
+	case "setup-show-card":
+		return m.showSetupCard()
 	case "open-docs": // Docs
 		return m.openDocs()
 	case "hover":

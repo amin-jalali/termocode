@@ -265,6 +265,12 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Session: Detach | `detach-session` |   |   |
 
+## Setup
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Setup: Show Setup Card | `setup-show-card` |   |   |
+
 ## Snippets
 
 | Title | ID | Key | Hint |

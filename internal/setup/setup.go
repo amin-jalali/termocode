@@ -238,13 +238,12 @@ func ensureNerdFont() error {
 	fmt.Println("✗ Nerd Font not detected.")
 	if runtime.GOOS != "linux" {
 		fmt.Printf("  Auto-install supported on Linux only. Install %s manually:\n", jbmName)
-		fmt.Println("  https://www.nerdfonts.com/font-downloads")
+		fmt.Println("  " + NerdFontsURL)
 		return nil
 	}
 
 	fmt.Printf("  Installing %s ...\n", jbmName)
-	dest, err := installJetBrainsMonoLinux()
-	InvalidateNerdFontCache()
+	dest, err := InstallNerdFont(context.Background(), func(line string) { fmt.Println("    " + line) })
 	if err != nil {
 		return err
 	}
@@ -252,7 +251,29 @@ func ensureNerdFont() error {
 	return nil
 }
 
-func installJetBrainsMonoLinux() (string, error) {
+// NerdFontName is the Nerd Font family InstallNerdFont installs.
+const NerdFontName = jbmName
+
+// NerdFontsURL is where to get a Nerd Font by hand.
+const NerdFontsURL = "https://www.nerdfonts.com/font-downloads"
+
+// InstallNerdFont downloads JetBrainsMono Nerd Font into
+// ~/.local/share/fonts/JetBrainsMonoNF and refreshes the font cache
+// (Linux only). progress gets short status lines. It changes no terminal
+// setting: the terminal must still be told to use the font.
+func InstallNerdFont(ctx context.Context, progress func(string)) (string, error) {
+	if progress == nil {
+		progress = func(string) {}
+	}
+	if runtime.GOOS != "linux" {
+		return "", fmt.Errorf("automatic install works on Linux only; get %s from %s", jbmName, NerdFontsURL)
+	}
+	dest, err := installJetBrainsMonoLinux(ctx, progress)
+	InvalidateNerdFontCache()
+	return dest, err
+}
+
+func installJetBrainsMonoLinux(ctx context.Context, progress func(string)) (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
@@ -270,18 +291,28 @@ func installJetBrainsMonoLinux() (string, error) {
 	tmp.Close()
 	defer os.Remove(tmpPath)
 
-	fmt.Println("    downloading...")
-	if err := fetch.Download(context.Background(), jbmURL, tmpPath, nil); err != nil {
+	progress("downloading...")
+	last := int64(-1)
+	err = fetch.Download(ctx, jbmURL, tmpPath, func(done, total int64) {
+		if total <= 0 {
+			return
+		}
+		if pct := done * 100 / total; pct/10 != last/10 {
+			last = pct
+			progress(fmt.Sprintf("downloading... %d%%", pct))
+		}
+	})
+	if err != nil {
 		return "", fmt.Errorf("download: %w", err)
 	}
 
-	fmt.Println("    extracting...")
+	progress("extracting...")
 	if err := fetch.ExtractZip(tmpPath, fontDir, fetch.FlattenSuffix(".ttf", ".otf")); err != nil {
 		return "", fmt.Errorf("extract: %w", err)
 	}
 
-	fmt.Println("    refreshing font cache...")
-	if err := exec.Command("fc-cache", "-f", filepath.Join(home, ".local/share/fonts")).Run(); err != nil {
+	progress("refreshing font cache...")
+	if err := exec.CommandContext(ctx, "fc-cache", "-f", filepath.Join(home, ".local/share/fonts")).Run(); err != nil {
 		return "", fmt.Errorf("fc-cache: %w", err)
 	}
 

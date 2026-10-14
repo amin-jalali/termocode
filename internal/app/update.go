@@ -130,6 +130,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	if cmd, ok := m.routeDebugMsg(msg); ok { // Group D (debug_state.go)
 		return m, cmd
 	}
+	if cmd, ok := m.handleSetupMsg(msg); ok { // setup card (setup_card_ui.go)
+		return m, cmd
+	}
 	// Overlay control messages always handled regardless of state.
 	switch msg := msg.(type) {
 	case DevActionMsg:
@@ -243,6 +246,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		}
 		// Esc on "Save changes?" also cancels a Close Others.
 		m.closeQueue = nil
+		if cmd := m.onSetupConfirmClosed(); cmd != nil {
+			return m, cmd
+		}
 		return m, m.onAIConfirmClosed() // Group A: Esc denies an AI tool call
 	case activity.SwitchMsg:
 		// Settings is a one-shot action (open the modal Settings UI), not
