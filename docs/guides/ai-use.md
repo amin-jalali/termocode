@@ -111,6 +111,13 @@ The chat is an agent. It can call tools to answer you:
 | Git | stage, commit, checkout, push, pull |
 | Run | run a shell command in the workspace (build, test, …); you see only its result |
 | Terminal | type a command in your terminal panel (`terminal_send`), read its last lines (`terminal_read`), list / open / show / close terminal tabs (`terminal_tabs`) |
+
+| Read | read a file, list a folder, search, git status / diff / branches / log (`git_log`) / blame (`git_blame`), go to definition, diagnostics |
+| Write files | write, create, delete, rename files and folders, format |
+| Git | stage, unstage (`git_unstage`), commit, checkout, push, pull, fetch (`git_fetch`) |
+| Git hunks | stage, unstage or discard one diff hunk (`git_hunk`) |
+| Git stash | list, push, apply, pop, drop (`git_stash`) |
+| Run | run a shell command in the workspace (build, test, …) |
 | Editor | open a file (at a line), read the cursor and selection, show a panel, reveal in the explorer, show a toast |
 | IDE commands | find a command palette command (`list_actions`) and run it (`execute_action`): fold, split, show a panel, save, run tests, … |
 | Settings | list settings with their values and allowed values (`settings_list`), change one (`settings_set`): theme, tab size, icons, word wrap, … |
@@ -170,6 +177,16 @@ Language server tools have rules too:
   before you are asked.
 - With no language server for the file, the agent is told so, and which
   server **LSP: Manage Language Servers...** can install for it.
+
+Git tools have rules too:
+
+- `git_log`, `git_blame` and `git_stash` list run at once (read only).
+- `git_unstage`, `git_fetch`, hunk stage / unstage and stash push / apply /
+  pop ask first. *git* auto-approve covers them.
+- Hunk **discard** and stash **drop** can not be undone, so they always ask,
+  with no "Always allow".
+- Hunk discard and stash push / apply / pop are refused while a file has
+  unsaved edits in the editor; the agent asks you to save first.
 
 To skip the question for one kind, run **AI: Agent Auto-Approve…** and turn
 on *fileWrite*, *git*, *run*, *ide* or *settings*. Turn on only what you trust.
