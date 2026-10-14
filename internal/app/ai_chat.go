@@ -118,8 +118,10 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	ch := make(chan tea.Msg, 64)
 
 	root := aiWorkspaceRoot()
+	call := newAIIDECaller(gen, ch)
 	tools := append(ai.WorkspaceTools(ai.Workspace{Root: root}), m.aiEditorTools()...)
-	tools = append(tools, aiIDETools(root, newAIIDECaller(gen, ch))...)
+	tools = aiSyncTools(tools, root, call) // the IDE follows file / git changes
+	tools = append(tools, aiIDETools(root, call)...)
 	native := s.provider.SupportsTools()
 	sys := aiChatSystemPrompt + "\nWorkspace root: " + root
 	if p := m.editor.Path(); p != "" {
@@ -288,11 +290,8 @@ func (m *Model) onAIChatDone(msg aiChatDoneMsg) tea.Cmd {
 		recordError("[ai] save chat: " + err.Error())
 	}
 	m.persistAIState()
-	if m.nvim != nil {
-		_ = m.nvim.Command("silent! checktime")
-	}
-	m.explorer.Reload()
-	return fetchGitCmd()
+	_, cmd := m.aiSyncIDE("", aiSyncDisk) // each tool synced already; this catches the rest
+	return cmd
 }
 
 // persistAIState stores the open chat id + scroll in session.json.
