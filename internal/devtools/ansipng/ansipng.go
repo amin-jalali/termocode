@@ -139,7 +139,9 @@ func (r *Renderer) WritePNG(path, frame string, cols int) error {
 		return err
 	}
 	defer f.Close()
-	return png.Encode(f, img)
+	// Best compression keeps the committed README images small.
+	enc := png.Encoder{CompressionLevel: png.BestCompression}
+	return enc.Encode(f, img)
 }
 
 func (r *Renderer) drawCell(img *image.RGBA, px, py int, c Cell) {
