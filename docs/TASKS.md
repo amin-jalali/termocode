@@ -232,7 +232,7 @@ screen.
 - [x] K3 (M) Terminal: `terminal_send`, `terminal_read`, `terminal_tabs` (visible integrated terminal)
 - [ ] K4 (M) Git: hunks (stage/unstage/discard), blame, log, stash, unstage, fetch
 - [ ] K5 (M) LSP: rename symbol, code actions (list/apply), symbols, type definition, implementation
-- [ ] K6 (S) Tasks/tests typed tools + `tests_results`
+- [x] K6 (S) Tasks/tests typed tools: `tasks_list`, `tasks_run`, `tasks_status`, `tests_run`, `tests_results`
 - [ ] K7 (L) Debugger: breakpoints, start, continue/step/stop, state
 - [ ] K8 (S) LSP/DAP installer, extensions, workspace folders, docs reference page
 - [ ] K9 Leftovers from the sync audit: search results refresh after AI edits; rename updates closed-tabs list, recents and hot-exit backups; LSP re-attach after rename (test); test for `execute_action save` refreshing git

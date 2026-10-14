@@ -44,6 +44,7 @@ type taskRun struct {
 	Dir     string
 	Started time.Time
 	Running bool
+	Code    int // exit code once Running is false
 }
 
 // taskRunner holds the task state. Shared by pointer.
@@ -264,6 +265,16 @@ func (tr *taskRunner) running() []*taskRun {
 	return out
 }
 
+// lastRun returns the newest run of the task label ("" = any task).
+func (tr *taskRunner) lastRun(label string) *taskRun {
+	for i := len(tr.order) - 1; i >= 0; i-- {
+		if r := tr.runs[tr.order[i]]; r != nil && (label == "" || r.Task.Label == label) {
+			return r
+		}
+	}
+	return nil
+}
+
 // terminateTask stops the task in the active terminal tab, else the
 // newest running task.
 func (m *Model) terminateTask() tea.Cmd {
@@ -463,7 +474,7 @@ func (m *Model) onTaskExit(buf, code int) tea.Cmd {
 	if r == nil || !r.Running {
 		return nil
 	}
-	r.Running = false
+	r.Running, r.Code = false, code
 	took := time.Since(r.Started).Round(100 * time.Millisecond)
 	mark := "✓"
 	if code != 0 {
