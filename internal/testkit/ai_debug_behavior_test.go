@@ -242,6 +242,53 @@ var aiDebugToolCases = []aiToolCase{
 
 func init() { aiToolCases = append(aiToolCases, aiDebugToolCases...) }
 
+// Spec: breakpoints follow their file. When the agent renames b.txt (open
+// in a tab) and notes/ (todo.md is not open), the breakpoints move with
+// them: the list, the gutter and breakpoints.json have the new paths.
+// When it deletes a file, its breakpoints are gone.
+func TestAIDebugBreakpointsFollowRenameAndDelete(t *testing.T) {
+	s, srv := fakeToolModel(t,
+		toolCall{"debug_breakpoint", map[string]any{"op": "set", "path": "b.txt", "line": 2}},
+		toolCall{"debug_breakpoint", map[string]any{"op": "set", "path": "notes/todo.md", "line": 3}},
+		toolCall{"debug_breakpoint", map[string]any{"op": "set", "path": "c.txt", "line": 1}},
+		toolCall{"rename", map[string]any{"from": "b.txt", "to": "b2.txt"}},
+		toolCall{"rename", map[string]any{"from": "notes", "to": "memo"}},
+		toolCall{"delete", map[string]any{"path": "c.txt"}},
+		toolCall{"debug_breakpoint", map[string]any{"op": "list"}},
+	)
+	d := aiDriver(t, srv.URL, nil, false, "fileWrite")
+	withDap(d, false)
+	open(d, "b.txt")
+	askAI(d, "move them")
+	if !d.WaitForText("fake-done", 15*time.Second) {
+		t.Fatalf("no final answer:\n%s\nresults %q", screen(d), s.toolResults())
+	}
+	r := s.toolResults()
+	if len(r) != 7 {
+		t.Fatalf("results %q", r)
+	}
+	list := r[6]
+	for _, want := range []string{"2 breakpoints:", "- b2.txt:2: two", "- memo/todo.md:3: - milk"} {
+		if !strings.Contains(list, want) {
+			t.Errorf("list has no %q:\n%s", want, list)
+		}
+	}
+	for _, gone := range []string{"b.txt:", "notes/", "c.txt"} {
+		if strings.Contains(list, "- "+gone) {
+			t.Errorf("list still has %q:\n%s", gone, list)
+		}
+	}
+	if got := signsAt(d, "b2.txt"); got != "DapBreakpoint@2" {
+		t.Errorf("gutter of b2.txt: %q", got)
+	}
+	stored := storedBreakpoints(d)
+	if !strings.Contains(stored, filepath.Join(d.Dir, "b2.txt")) || !strings.Contains(stored, filepath.Join(d.Dir, "memo", "todo.md")) ||
+		strings.Contains(stored, filepath.Join(d.Dir, "b.txt")) || strings.Contains(stored, filepath.Join(d.Dir, "notes")) ||
+		strings.Contains(stored, filepath.Join(d.Dir, "c.txt")) {
+		t.Errorf("breakpoints.json: %s", stored)
+	}
+}
+
 // k7Main is a tiny Go program; line 8 is "s := a + b" in add.
 const k7Main = `package main
 

@@ -209,7 +209,8 @@ The debug tools use the same session as **Run & Debug**, so you see it all.
 - `debug_breakpoint` list, set and remove run at once, like F9.
   Clear asks first (kind *ide*). A breakpoint shows in the gutter and in
   the Run & Debug view, and it is saved like yours. A file that is not
-  open gets the breakpoint without a new tab.
+  open gets the breakpoint without a new tab. Breakpoints move with a
+  renamed file or folder, and go away with a deleted one.
 - `debug_state` runs at once. It shows where the program stopped, the top
   frames, the variables of the top frame (a few levels deep, capped) and
   your watches. With no session it shows the configurations.

@@ -57,6 +57,7 @@ func (m *Model) followRename(from, to string) {
 		}
 		return p, true
 	})
+	m.debugFollowRename(from, to) // breakpoints (K7)
 }
 
 // forgetPaths drops what remembers the deleted paths (or files under
@@ -75,6 +76,7 @@ func (m *Model) forgetPaths(paths []string) {
 	keep := func(p string) (string, bool) { return p, !underAny(p, paths) }
 	editRecents(keep)
 	m.editHotBackups(keep)
+	m.debugForgetPaths(paths) // breakpoints (K7)
 }
 
 // editRecents rewrites the recent files with f (false drops the entry)

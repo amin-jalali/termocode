@@ -258,6 +258,35 @@ func TestAIDebugToolGates(t *testing.T) {
 	}
 }
 
+// Spec: breakpoints follow a rename of their file or of a folder above it,
+// and a delete drops them.
+func TestBreakpointStoreFollowsPaths(t *testing.T) {
+	store := map[string][]storedBreakpoint{
+		"/w/a.go":       {{Line: 3}},
+		"/w/pkg/b.go":   {{Line: 5}},
+		"/w/pkgx/c.go":  {{Line: 7}},
+		"/w/other/d.go": {{Line: 9}},
+	}
+	got, changed := moveBreakpointStore(store, "/w/pkg", "/w/lib")
+	if !changed || got["/w/lib/b.go"] == nil || got["/w/pkg/b.go"] != nil || got["/w/pkgx/c.go"] == nil {
+		t.Errorf("folder rename: %v", got)
+	}
+	got, changed = moveBreakpointStore(got, "/w/a.go", "/w/z.go")
+	if !changed || got["/w/z.go"][0].Line != 3 || got["/w/a.go"] != nil {
+		t.Errorf("file rename: %v", got)
+	}
+	if _, changed := moveBreakpointStore(got, "/w/none.go", "/w/x.go"); changed {
+		t.Error("a rename of a file with no breakpoints changed the store")
+	}
+	got, changed = dropBreakpointStore(got, []string{"/w/lib", "/w/z.go"})
+	if !changed || len(got) != 2 || got["/w/pkgx/c.go"] == nil || got["/w/other/d.go"] == nil {
+		t.Errorf("delete: %v", got)
+	}
+	if len(store) != 4 || store["/w/a.go"] == nil {
+		t.Errorf("the input store was changed: %v", store)
+	}
+}
+
 // Spec: the program output in the report is its last lines.
 func TestAITailLines(t *testing.T) {
 	got := aiTailLines("a\r\nb\nc\nd\n", 2)
