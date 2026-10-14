@@ -108,6 +108,8 @@ func Start(t *testing.T, o StartOpts) *Term {
 	if ws == "" {
 		ws = NewRepo(t)
 	}
+	// Before the cleanup below that ends termocode: it runs after it.
+	watchLeaks(t, home, ws)
 	for _, d := range []string{".config", ".local/share", ".local/state", ".cache"} {
 		if err := os.MkdirAll(filepath.Join(home, d), 0o755); err != nil {
 			t.Fatal(err)
