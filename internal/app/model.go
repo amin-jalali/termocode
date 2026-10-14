@@ -291,6 +291,9 @@ type Model struct {
 	// settings export/import, user snippets manager). See settings_sync.go.
 	extras extrasState
 
+	// xfer is the running download (transfer.go), nil when none.
+	xfer *xferRun
+
 	// Markdown live preview: when on, a scratch buffer named
 	// "<basename> PREVIEW" carries the glamour-rendered output and lives
 	// in its own tab/window alongside the source. Refreshes on save.

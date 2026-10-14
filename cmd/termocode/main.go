@@ -23,6 +23,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/termfont"
 	"github.com/amin-jalali/termocode/internal/termimg"
 	"github.com/amin-jalali/termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/transfer"
 )
 
 // writeHeapProfile writes a Go heap profile to $TERMOCODE_MEMPROFILE when
@@ -298,6 +299,10 @@ func runTUI() {
 	p := tea.NewProgram(
 		app.New(),
 		tea.WithAltScreen(),
+		// Downloads with kitty read the terminal's answers: transfer.Input
+		// takes them out of the key stream while a download runs and
+		// passes every byte through otherwise (internal/transfer).
+		inputOption(),
 		// SIGHUP / SIGTERM / SIGINT are ours (watchHangup): unsaved
 		// buffers go to the hot-exit backup before we quit.
 		tea.WithoutSignalHandler(),
@@ -350,4 +355,16 @@ func runTUI() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+// inputOption is Bubble Tea's input: stdin behind transfer.Input when
+// stdin is a terminal (Bubble Tea still sets raw mode on its descriptor),
+// else the default (Bubble Tea opens the TTY itself).
+func inputOption() tea.ProgramOption {
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		return func(*tea.Program) {}
+	}
+	in := transfer.NewInput(os.Stdin)
+	transfer.Use(in)
+	return tea.WithInput(in)
 }

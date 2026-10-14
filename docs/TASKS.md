@@ -241,7 +241,7 @@ screen.
 
 - [x] L1 (S) File → chat: dropped/pasted paths become attachment chips (text + images), attach button with file picker, `@file`
 - [x] L2 (S) Chat → file: "Save as…" on code blocks, export chat as .md (the AI writes files with `write_file`; no extra `save_file` tool)
-- [ ] L3 (M) Local machine ↔ IDE over SSH: explorer "Download" / "Upload here" via kitty transfer, iTerm2 OSC 1337 File, trzsz; clear message when the terminal can't
+- [x] L3 (M) Local machine ↔ IDE over SSH: explorer "Download" / "Upload Here..." + palette (internal/transfer). kitty: download + upload (OSC 5113, kitty asks to allow); iTerm2: download (OSC 1337 File, ≤256 MB) + upload (RequestUpload tgz); trzsz: `tsz` / `trz` when installed; WezTerm, Ghostty, tmux, others: dialog with a ready scp command (Copy Command, OSC 52). Folders as .tar.gz; uploads never replace a file and stay in the workspace
 
 ## Group P — Performance (2026-10-14)
 
