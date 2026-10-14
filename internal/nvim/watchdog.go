@@ -17,7 +17,7 @@ package nvim
 // is the last resort. "Kill everything" first kills the processes of
 // nvim's jobs (a killed nvim cannot stop them), then nvim.
 const watchdogLua = `lua do
-  local uv = vim.uv
+  local uv = vim.uv or vim.loop
   local parent, me = uv.os_getppid(), uv.os_getpid()
   local orphan_at, exit_at, asked
   local function kill_all()
