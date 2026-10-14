@@ -28,16 +28,13 @@ func (m *Model) hoverCmd() tea.Cmd {
 		if strings.TrimSpace(body) == "" {
 			return hoverEmptyMsg{}
 		}
-		// If the response looks like markdown, render it; otherwise pass
-		// through plain. Renderer width = full terminal width minus a
-		// little padding for the preview chrome.
-		rendered := body
+		// If the response looks like markdown, show it in the reader
+		// view (it re-wraps for the window width); otherwise pass it
+		// through plain.
 		if looksMarkdown(body) {
-			if r, err := renderMarkdown(body, 100); err == nil && r != "" {
-				rendered = r
-			}
+			return PreviewMsg{Title: "Hover", Doc: markdownDoc(body, "")}
 		}
-		return PreviewMsg{Title: " Hover ", Body: rendered}
+		return PreviewMsg{Title: " Hover ", Body: body}
 	}
 }
 

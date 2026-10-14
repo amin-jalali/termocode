@@ -58,6 +58,12 @@ func AIChatAnswer() Scene {
 	return Scene{Name: "ai-chat-answer", Env: aiEnv, Steps: WithEditor(Act("palette:ai-open-chat"), Act("aidemo"), Pause(600*time.Millisecond))}
 }
 
+// MarkdownPreview opens docs/preview.md (a sample with every common block)
+// in the full-screen Markdown preview.
+func MarkdownPreview() Scene {
+	return Scene{Name: "md-preview", Steps: []Step{Act("open:docs/preview.md"), Pause(600 * time.Millisecond), Act("palette:preview-md"), Pause(800 * time.Millisecond)}}
+}
+
 // Scenes is the screenshot set for assets/screenshots (the shots command).
 func Scenes() []Scene {
 	scenes := []Scene{
@@ -71,6 +77,9 @@ func Scenes() []Scene {
 		{Name: "testing", Steps: WithEditor(Act("palette:testing-focus"), Pause(1500*time.Millisecond))},
 		{Name: "run-debug", Steps: WithEditor(Act("palette:debug-view"), Pause(800*time.Millisecond))},
 		Terminal(),
+		MarkdownPreview(),
+		{Name: "md-preview-light", Theme: "catppuccin-latte", Steps: MarkdownPreview().Steps},
+		{Name: "md-preview-ascii", Icons: "ascii", Steps: MarkdownPreview().Steps},
 		{Name: "image-preview", Steps: WithEditor(Act("openfile:assets/demo.png"), Pause(800*time.Millisecond))},
 		{Name: "quick-open", Steps: WithEditor(Key("ctrl+p"), Key("m"), Key("o"), Key("d"), Pause(800*time.Millisecond))},
 	}

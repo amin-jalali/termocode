@@ -94,20 +94,27 @@ func TestPlaceGraphicsAppendsCarrierToLastImageRow(t *testing.T) {
 func TestMarkdownImagesInline(t *testing.T) {
 	dir := t.TempDir()
 	writePNG(t, dir, 20, 10)
-	md := "# Title\n\n![logo](pic.png)\n\n![remote](https://x/y.png) ![svg](a.svg)\n"
-	content, paths := extractMarkdownImages(md, dir)
-	if len(paths) != 1 || paths[0] != filepath.Join(dir, "pic.png") {
-		t.Fatalf("paths = %v", paths)
+	img := markdownImage(dir)
+	if rows := img("pic.png", "logo", 60); len(rows) < 3 {
+		t.Fatalf("image rows missing: %d", len(rows))
+	} else {
+		for i, r := range rows {
+			if w := lipgloss.Width(r); w > 60 {
+				t.Errorf("row %d is %d cells, max 60", i, w)
+			}
+		}
 	}
-	if !strings.Contains(content, "https://x/y.png") || !strings.Contains(content, "a.svg") {
-		t.Error("remote / svg references must stay untouched")
+	for _, dest := range []string{"https://x/y.png", "a.svg", "missing.png"} {
+		if img(dest, "x", 60) != nil {
+			t.Errorf("%s: want nil (placeholder)", dest)
+		}
 	}
-	rendered := "line\n  " + mdImageToken(0) + "  \nend"
-	out := injectMarkdownImages(rendered, paths, 60)
-	if strings.Contains(out, "TCIMG") {
-		t.Error("placeholder left in output")
+	md := "# Title\n\n![logo](pic.png)\n\n![remote](https://x/y.png)\n"
+	out := strings.Join(markdownDoc(md, dir).Lines(80), "\n")
+	if !strings.Contains(stripANSI(out), "[image: remote]") {
+		t.Error("remote image must show the placeholder")
 	}
-	if strings.Count(out, "\n") < 4 {
-		t.Errorf("image rows missing:\n%s", out)
+	if strings.Count(out, "\n") < 8 {
+		t.Errorf("local image rows missing:\n%s", out)
 	}
 }

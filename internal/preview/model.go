@@ -15,12 +15,56 @@ type CloseMsg struct{}
 
 type Model struct {
 	title string
+	badge string
 	lines []string
+	doc   *Doc // set by NewReader: content rendered per width
 	top   int
 	w, h  int
 }
 
-// New takes already-styled content (e.g. glamour output) and stores it
+// Doc is content that renders itself for a width (the Markdown reader
+// view). It keeps the last render and only renders again when the width,
+// the theme, the icon mode or the colour profile changes, so scrolling
+// never re-renders. Model values share one Doc through the pointer.
+type Doc struct {
+	render func(width int) []string
+	w      int
+	key    theme.RenderKey
+	lines  []string
+}
+
+// NewDoc wraps a render function. Rows it returns should be exactly
+// width cells wide.
+func NewDoc(render func(width int) []string) *Doc { return &Doc{render: render} }
+
+// Lines returns the rows for width, rendering only when needed.
+func (d *Doc) Lines(width int) []string {
+	k := theme.CurrentRenderKey()
+	if d.lines == nil || d.w != width || d.key != k {
+		d.lines, d.w, d.key = d.render(max(width, 1)), width, k
+		if d.lines == nil {
+			d.lines = []string{}
+		}
+	}
+	return d.lines
+}
+
+// NewReader shows doc full screen with title and an optional badge
+// ("Preview") in the header.
+func NewReader(title, badge string, doc *Doc) Model {
+	return Model{title: title, badge: badge, doc: doc}
+}
+
+// content is the rows to show: the Doc's render for the current width,
+// or the fixed body.
+func (m Model) content() []string {
+	if m.doc != nil {
+		return m.doc.Lines(m.w)
+	}
+	return m.lines
+}
+
+// New takes already-styled content (e.g. a coloured diff) and stores it
 // for scrollable display.
 func New(title, body string) Model {
 	body = strings.TrimRight(body, "\n")
@@ -37,7 +81,7 @@ func (m *Model) SetSize(w, h int) {
 }
 
 func (m *Model) clamp() {
-	max := len(m.lines) - m.contentHeight()
+	max := len(m.content()) - m.contentHeight()
 	if max < 0 {
 		max = 0
 	}
@@ -79,7 +123,7 @@ func (m Model) handleKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	case tea.KeyHome:
 		m.top = 0
 	case tea.KeyEnd:
-		m.top = len(m.lines)
+		m.top = len(m.content())
 	case tea.KeyRunes:
 		if len(k.Runes) == 1 {
 			switch k.Runes[0] {
@@ -92,7 +136,7 @@ func (m Model) handleKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			case 'g':
 				m.top = 0
 			case 'G':
-				m.top = len(m.lines)
+				m.top = len(m.content())
 			}
 		}
 	}
@@ -112,11 +156,11 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 }
 
 var (
-	bgPanel lipgloss.Color
-	bgHeader lipgloss.Color
+	bgPanel    lipgloss.Color
+	bgHeader   lipgloss.Color
 	titleStyle lipgloss.Style
-	hintStyle lipgloss.Style
-	bodyFill lipgloss.Style
+	hintStyle  lipgloss.Style
+	bodyFill   lipgloss.Style
 )
 
 func init() { refreshColors() }
@@ -137,23 +181,22 @@ func (m Model) View() string {
 		return ""
 	}
 
-	// Truncate the title so a long "diff · <long/path>" can't wrap the header
-	// onto a second row and shift the whole frame down.
-	title := " " + m.title + " "
-	if ansi.StringWidth(title) > m.w {
-		title = ansi.Truncate(title, m.w, "…")
-	}
-	header := titleStyle.Width(m.w).Render(title)
-
+	header := m.header()
+	lines := m.content()
 	contentH := m.contentHeight()
+	top := min(m.top, max(len(lines)-contentH, 0)) // a re-render may have fewer rows
 	var contentLines []string
-	end := m.top + contentH
-	if end > len(m.lines) {
-		end = len(m.lines)
+	end := top + contentH
+	if end > len(lines) {
+		end = len(lines)
 	}
-	for i := m.top; i < end; i++ {
-		line := m.lines[i]
-		// glamour's output sometimes leaves an unterminated SGR sequence
+	for i := top; i < end; i++ {
+		line := lines[i]
+		if m.doc != nil && ansi.StringWidth(line) == m.w {
+			contentLines = append(contentLines, line) // exact rows: no re-wrap per frame
+			continue
+		}
+		// Styled input sometimes leaves an unterminated SGR sequence
 		// at the end of a line (open background, particularly inside a
 		// table block), which leaks the last cell's bg colour into the
 		// padding we add after it. We bracket every line in a hard
@@ -181,9 +224,9 @@ func (m Model) View() string {
 	}
 
 	progress := ""
-	if len(m.lines) > 0 {
+	if len(lines) > 0 {
 		visible := end
-		progress = scrollIndicator(visible, len(m.lines))
+		progress = scrollIndicator(visible, len(lines))
 	}
 	footerLeft := " esc · q  close"
 	footerRight := "↑↓ scroll  · g/G  top/bottom  · " + progress + " "
@@ -199,6 +242,35 @@ func (m Model) View() string {
 
 	rows := append([]string{header}, append(contentLines, footer)...)
 	return strings.Join(rows[:min(len(rows), m.h)], "\n")
+}
+
+// header is the title row. The reader view shows the file icon, the
+// name in bold and a small badge; other content just the title.
+func (m Model) header() string {
+	if m.doc == nil {
+		// Truncate the title so a long "diff · <long/path>" can't wrap the
+		// header onto a second row and shift the whole frame down.
+		title := " " + m.title + " "
+		if ansi.StringWidth(title) > m.w {
+			title = ansi.Truncate(title, m.w, "…")
+		}
+		return titleStyle.Width(m.w).Render(title)
+	}
+	s := hintStyle.Render(" ")
+	if g, c := theme.FileIconFor(m.title, false, false); g != "" && theme.CurrentIconMode != theme.IconModeASCII {
+		s += lipgloss.NewStyle().Background(bgHeader).Foreground(theme.LG(c)).Render(g) + hintStyle.Render(" ")
+	}
+	s += titleStyle.Render(m.title)
+	if m.badge != "" {
+		badge := lipgloss.NewStyle().Background(theme.Mix(theme.BgSidebar, theme.AccentBlue, 0.22)).
+			Foreground(theme.LG(theme.AccentBlue)).Render(" " + m.badge + " ")
+		s += hintStyle.Render("  ") + badge
+	}
+	w := ansi.StringWidth(s)
+	if w > m.w {
+		return ansi.Truncate(s, m.w, "") + "\x1b[0m"
+	}
+	return s + hintStyle.Render(strings.Repeat(" ", m.w-w))
 }
 
 func scrollIndicator(visible, total int) string {
