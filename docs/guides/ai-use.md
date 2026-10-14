@@ -84,12 +84,23 @@ The chat is an agent. It can call tools to answer you:
 | Git | stage, commit, checkout, push, pull |
 | Run | run a shell command in the workspace (build, test, …) |
 | Editor | open a file (at a line), read the cursor and selection, show a panel, reveal in the explorer, show a toast |
-| IDE commands | run a safe command: save, format, next problem, run tests, run the build task, … |
+| IDE commands | find a command palette command (`list_actions`) and run it (`execute_action`): fold, split, show a panel, save, run tests, … |
 
 Read and editor tools run freely. So "open it" opens the file in a tab.
-**Before any write, git, run or IDE command, termocode asks you.** You see
-what the tool will do, and you can say no. The agent can never quit,
-reload, discard changes or change settings.
+**Before any write, git or run tool, termocode asks you.** You see
+what the tool will do, and you can say no.
+
+Each palette command has a rule for the agent:
+
+- **auto** — safe, view-only commands (fold, split, toggle the explorer,
+  next problem) run at once.
+- **confirm** — commands that change files, git or run code ask you first.
+  Risky ones (discard changes, push, revert a file) always ask: there is
+  no "Always allow" for them.
+- **never** — the agent can not quit, reload or detach the session, open
+  a shell or browser outside the IDE, import / export settings, or touch
+  AI keys, sign-in or auto-approve. Commands that open a picker only you
+  can answer are left out too.
 
 To skip the question for one kind, run **AI: Agent Auto-Approve…** and turn
 on *fileWrite*, *git*, *run* or *ide*. Turn on only what you trust.

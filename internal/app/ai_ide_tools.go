@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/termimg"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -78,57 +78,34 @@ func (m *Model) onAIIDECall(msg aiIDECallMsg) tea.Cmd {
 	return tea.Batch(cmd, waitAIChat(msg.ch))
 }
 
-// aiExecuteActions are the palette ids execute_action may run. Each call
-// still asks the user (class "ide") unless they chose "Always allow ide".
-// Left out on purpose: quit, reload / reset / detach session, git discard
-// / push / stash / commit, settings / config writes, close buffer and any
-// text edit — those lose data or change things outside the editor view.
-var aiExecuteActions = map[string]string{
-	"save":                 "save the active file",
-	"save-all":             "save all files",
-	"format-document":      "format the active file",
-	"toggle-terminal":      "show or hide the terminal panel",
-	"view-output":          "show the Output panel",
-	"problems-panel":       "show the Problems panel",
-	"next-diagnostic":      "go to the next diagnostic",
-	"prev-diagnostic":      "go to the previous diagnostic",
-	"next-hunk":            "go to the next git change",
-	"prev-hunk":            "go to the previous git change",
-	"git-refresh":          "refresh git status",
-	"git-diff":             "show the diff of the active file",
-	"toggle-explorer":      "show or hide the sidebar",
-	"reveal-file":          "reveal the active file in the explorer",
-	"focus-editor":         "focus the editor",
-	"focus-explorer":       "focus the explorer",
-	"next-buffer":          "switch to the next tab",
-	"prev-buffer":          "switch to the previous tab",
-	"fold-all":             "fold everything",
-	"unfold-all":           "unfold everything",
-	"split-vertical":       "split the editor side by side",
-	"split-horizontal":     "split the editor top / bottom",
-	"hover":                "show hover info at the cursor",
-	"find-references":      "list references of the symbol at the cursor",
-	"testing-focus":        "show the Test Explorer",
-	"testing-run-all":      "run all tests",
-	"testing-rerun-failed": "rerun failed tests",
-	"testing-run-file":     "run the tests in the active file",
-	"testing-run-cursor":   "run the test at the cursor",
-	"testing-stop":         "stop the test run",
-	"testing-refresh":      "refresh the test list",
-	"testing-results":      "show the test results",
-	"tasks-build":          "run the build task",
-	"tasks-test":           "run the test task",
-	"tasks-rerun":          "rerun the last task",
-	"tasks-terminate":      "stop the running task",
+// aiActionTitle is the palette title of a built-in id ("" when none).
+func aiActionTitle(id string) string {
+	for _, it := range append(paletteItems(), tasksPaletteItems()...) {
+		if it.ID == id {
+			return it.Title
+		}
+	}
+	return ""
 }
 
-func aiExecuteActionIDs() []string {
-	ids := make([]string, 0, len(aiExecuteActions))
-	for id := range aiExecuteActions {
-		ids = append(ids, id)
+// aiCheckAction refuses ids execute_action must not run (ai_actions_policy.go).
+func aiCheckAction(id string) (aiActionPolicy, error) {
+	p, ok := aiActionPolicyFor(id)
+	if !ok {
+		return p, fmt.Errorf("%q is not an IDE command id; find ids with list_actions(query)", id)
 	}
-	sort.Strings(ids)
-	return ids
+	if p.Gate == aiGateNever {
+		return p, fmt.Errorf("command %q is not allowed for the AI: %s", id, p.Reason)
+	}
+	return p, nil
+}
+
+// aiLiveActions are the palette rows of this session: built-ins, tasks,
+// user commands and extension commands.
+func (m *Model) aiLiveActions() []picker.Item {
+	items := append(paletteItems(), tasksPaletteItems()...)
+	items = append(items, userCommandsItems()...)
+	return append(items, m.extPaletteItems()...)
 }
 
 // aiPanelNames are the show_panel targets.
@@ -242,30 +219,47 @@ func aiIDETools(root string, call aiIDECaller) []ai.Tool {
 			},
 		},
 		{
+			Name: "list_actions",
+			Description: "Find IDE commands (the command palette) for execute_action. Returns id, title, category " +
+				"and gate (auto runs at once, confirm asks the user). Every query word must match the id or title.",
+			Params:   map[string]any{"query": str("words to match, e.g. \"fold\" or \"git stage\"; empty lists all")},
+			Describe: func(a map[string]any) string { return "List IDE commands " + ai.ArgString(a, "query") },
+			Run: func(ctx context.Context, a map[string]any) (string, error) {
+				q := ai.ArgString(a, "query")
+				return call(ctx, func(m *Model) (string, tea.Cmd, error) {
+					return aiListActions(m.aiLiveActions(), q, aiListActionsMax), nil, nil
+				})
+			},
+		},
+		{
 			Name: "execute_action",
-			Description: "Run an IDE command by id. Allowed ids: " + strings.Join(aiExecuteActionIDs(), ", ") +
-				". Commands act on the active file / cursor.",
+			Description: "Run an IDE command (command palette) by id; find ids with list_actions. " +
+				"Safe commands run at once, others ask the user. Commands act on the active file / cursor.",
 			Params:   map[string]any{"id": str("command id")},
 			Required: []string{"id"},
-			Mutating: true, Class: ai.ClassIDE,
+			Mutating: true, Class: ai.ClassIDE, // Gate decides per id
 			Describe: func(a map[string]any) string {
 				id := ai.ArgString(a, "id")
-				if what, ok := aiExecuteActions[id]; ok {
-					return "IDE: " + what
+				if t := aiActionTitle(id); t != "" {
+					return "IDE: " + t
 				}
 				return "IDE command " + id
 			},
-			Validate: func(a map[string]any) error {
-				id := ai.ArgString(a, "id")
-				if _, ok := aiExecuteActions[id]; !ok {
-					return fmt.Errorf("command %q is not allowed; allowed: %s", id, strings.Join(aiExecuteActionIDs(), ", "))
+			Gate: func(a map[string]any) (bool, string) {
+				p, err := aiCheckAction(ai.ArgString(a, "id"))
+				if err != nil || p.Gate != aiGateAuto {
+					return true, p.Class
 				}
-				return nil
+				return false, ""
+			},
+			Validate: func(a map[string]any) error {
+				_, err := aiCheckAction(ai.ArgString(a, "id"))
+				return err
 			},
 			Run: func(ctx context.Context, a map[string]any) (string, error) {
 				id := ai.ArgString(a, "id")
-				if _, ok := aiExecuteActions[id]; !ok { // Validate ran first; keep Run safe alone
-					return "", fmt.Errorf("command %q is not allowed", id)
+				if _, err := aiCheckAction(id); err != nil { // Validate ran first; keep Run safe alone
+					return "", err
 				}
 				return call(ctx, func(m *Model) (string, tea.Cmd, error) {
 					return "ran " + id, m.dispatchPaletteAction(id), nil
