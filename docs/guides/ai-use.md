@@ -83,12 +83,16 @@ The chat is an agent. It can call tools to answer you:
 | Write files | write, create, delete, rename files and folders, format |
 | Git | stage, commit, checkout, push, pull |
 | Run | run a shell command in the workspace (build, test, …) |
+| Editor | open a file (at a line), read the cursor and selection, show a panel, reveal in the explorer, show a toast |
+| IDE commands | run a safe command: save, format, next problem, run tests, run the build task, … |
 
-Read tools run freely. **Before any write, git or run tool, termocode asks
-you.** You see what the tool will do, and you can say no.
+Read and editor tools run freely. So "open it" opens the file in a tab.
+**Before any write, git, run or IDE command, termocode asks you.** You see
+what the tool will do, and you can say no. The agent can never quit,
+reload, discard changes or change settings.
 
 To skip the question for one kind, run **AI: Agent Auto-Approve…** and turn
-on *fileWrite*, *git* or *run*. Turn on only what you trust.
+on *fileWrite*, *git*, *run* or *ide*. Turn on only what you trust.
 
 The agent stops after 6 tool steps per message. Ask again to continue.
 

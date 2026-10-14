@@ -230,3 +230,49 @@ func TestOAuthPKCEAndExchange(t *testing.T) {
 		t.Errorf("grants %d", grants.Load())
 	}
 }
+
+// A tool whose Validate rejects the args fails before the confirm gate:
+// the user is not asked about a call that cannot run.
+func TestAgentValidateRunsBeforeConfirm(t *testing.T) {
+	ran, asked := false, false
+	tool := Tool{Name: "act", Mutating: true, Class: ClassIDE,
+		Validate: func(a map[string]any) error {
+			if ArgString(a, "id") != "ok" {
+				return fmt.Errorf("id %q is not allowed", ArgString(a, "id"))
+			}
+			return nil
+		},
+		Run: func(context.Context, map[string]any) (string, error) { ran = true; return "ran", nil }}
+	p := &scripted{tools: true, replies: []Chunk{
+		{ToolCalls: []ToolCall{{ID: "1", Name: "act", Args: map[string]any{"id": "quit"}}}},
+	}}
+	a := &Agent{Provider: p, Tools: []Tool{tool}, Native: true,
+		Confirm: func(context.Context, Tool, string) bool { asked = true; return true }}
+	_, added := collectEvents(a, []Message{{Role: RoleUser, Content: "quit"}})
+	if asked || ran {
+		t.Fatalf("asked=%v ran=%v; want neither", asked, ran)
+	}
+	var res string
+	for _, m := range added {
+		if m.Role == RoleTool {
+			res = m.Content
+		}
+	}
+	if !strings.Contains(res, "not allowed") {
+		t.Fatalf("tool result %q", res)
+	}
+}
+
+// The prompt tells the model it can open files when open_file is there
+// (both protocols); without it, nothing changes.
+func TestSystemPromptMentionsIDETools(t *testing.T) {
+	tools := []Tool{{Name: "open_file", Description: "open"}}
+	for _, native := range []bool{true, false} {
+		if s := SystemPrompt("base", tools, native); !strings.Contains(s, "call open_file") {
+			t.Errorf("native=%v: no open_file hint:\n%s", native, s)
+		}
+	}
+	if s := SystemPrompt("base", []Tool{{Name: "read_file"}}, true); strings.Contains(s, "open_file") {
+		t.Errorf("hint without the tool:\n%s", s)
+	}
+}
