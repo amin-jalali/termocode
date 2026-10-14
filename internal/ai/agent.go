@@ -55,13 +55,19 @@ func SystemPrompt(base string, tools []Tool, native bool) string {
 	if len(tools) == 0 {
 		return base
 	}
-	if native {
-		return base + "\n\nYou can call IDE tools (files, search, git, LSP, shell). " +
-			"Mutating tools ask the user first; if one is declined, do not retry it."
+	ide := ""
+	if _, ok := FindTool(tools, "open_file"); ok {
+		ide = " You also drive the IDE itself: open_file opens a file in the user's editor, get_editor_state " +
+			"tells you the active file / cursor / selection, show_panel, reveal_in_explorer, notify and execute_action " +
+			"control the UI. When the user asks to open or show a file, call open_file; never say you cannot."
 	}
-	return base + "\n\nFor project actions (read or create files, search, run a command, git), call a tool: " +
+	if native {
+		return base + "\n\nYou can call IDE tools (files, search, git, LSP, shell, editor). " +
+			"Mutating tools ask the user first; if one is declined, do not retry it." + ide
+	}
+	return base + "\n\nFor project actions (read, create or open files, search, run a command, git, IDE panels), call a tool: " +
 		"reply with ONLY a fenced json block: ```json {\"tool\":\"<name>\",\"args\":{...}} ``` — one tool per reply. " +
-		"You will get the result in the next message. Tools:\n" + ToolsPromptSpec(tools)
+		"You will get the result in the next message." + ide + " Tools:\n" + ToolsPromptSpec(tools)
 }
 
 // Run executes one user turn. history must already end with the user
@@ -171,6 +177,13 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 	}
 	human := t.Human(args)
 	emit(Event{Kind: EventToolStart, Tool: t.Name, Detail: human})
+	if t.Validate != nil {
+		if err := t.Validate(args); err != nil {
+			result = "error: " + Redact(err.Error())
+			emit(Event{Kind: EventToolResult, Tool: t.Name, Detail: result})
+			return result
+		}
+	}
 	if t.Mutating && !(t.Class != "" && a.AutoApprove[t.Class]) {
 		if a.Confirm == nil || !a.Confirm(ctx, t, human) {
 			emit(Event{Kind: EventToolResult, Tool: t.Name, Detail: "declined by user"})
