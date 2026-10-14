@@ -257,3 +257,15 @@ live heap ~10 MB, RSS ~50 MB, ~50 MB/s short-lived allocations.
 - [x] P2 Cache the explorer / sidebar render by an exact state key (tree version counter) — randomized test compares cached View with a fresh draw
 - [x] P3 A perf guard in CI-safe form: allocation-count benchmarks with limits (not wall-clock), so regressions fail tests — perf_guard_test.go (frame 5487 → 352 allocs, AI frame 7470 → 457)
 - [x] P4 RAM: measure RSS of termocode + nvim (idle, 11 files, long AI chat, after soak); GOGC 300 → 200 and soft limit 256 → 128 MB (100/200/300 compared); image cache bounded by bytes (16 MB); hidden chat panel drops its drawn rows; nvim already runs with `-i NONE -n` (no ShaDa / swap); live-heap guard test. termocode after soak 56 → 50 MB, total with nvim 80 → 74 MB
+
+## Group R — AI edit review (port from mobocode) (2026-10-14)
+
+The user wants mobocode's diff viewer and its AI change-suggestion flow
+in termocode (`~/mobocode`: lib/features/diff/diff_viewer.dart,
+lib/features/scm/hunk_diff_view.dart, lib/core/diff/text_diff.dart,
+lib/features/ai/ai_surface.dart, lib/features/compare/compare_sheet.dart).
+
+- [ ] R1 Port the diff engine and viewer (text_diff → Go; side-by-side / inline view, word-level highlights, hunk navigation)
+- [ ] R2 AI change suggestions go through review: the agent's file edits become pending proposals shown in the diff viewer; accept / reject per hunk and all; one undo step; agent waits for the decision and is told the result
+- [ ] R3 Restore points: snapshot before an AI turn's first change; "AI: Undo last turn" restores
+- [ ] R4 AI audit log: Output channel "AI" with every tool call, args, result, who approved
