@@ -294,7 +294,9 @@ func TestSessionReattachNewTerminalCaps(t *testing.T) {
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(cfgDir, "config.json"), []byte(`{"dashboard_logo": "image"}`), 0o644); err != nil {
+	// setup_done: the first-run setup card makes the page taller, and a
+	// page that does not fit drops the logo.
+	if err := os.WriteFile(filepath.Join(cfgDir, "config.json"), []byte(`{"dashboard_logo": "image", "setup_done": true}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

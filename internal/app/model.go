@@ -620,6 +620,9 @@ type Model struct {
 	// ai is the Group A AI assistant state (ai_state.go). Pointer so value
 	// copies and the streaming goroutines share one instance.
 	ai *aiState
+	// setup is the first-run setup card on the Welcome page
+	// (setup_card*.go); shared by Model copies.
+	setup *setupState
 
 	// lastLineCopy is the text of the last whole-line Ctrl+C / Ctrl+X (no
 	// selection). While the OS clipboard still holds it, Ctrl+V pastes it
@@ -741,6 +744,7 @@ func New() Model {
 		testView:         newTestsState(),    // Group E
 		ext:              newExtState(),      // Group I
 		ai:               newAIState(),       // Group A
+		setup:            newSetupState(),    // setup card (setup_card_ui.go)
 		debug:            loadDebugState(),   // Group D (shared by Model copies)
 	}
 	if noNvim {
@@ -765,6 +769,9 @@ func (m Model) Init() tea.Cmd {
 		cmds = append(cmds, cmd)
 	}
 	if cmd := fontTipCmd(); cmd != nil {
+		cmds = append(cmds, cmd)
+	}
+	if cmd := m.setupInitCmd(); cmd != nil {
 		cmds = append(cmds, cmd)
 	}
 	if m.nvim != nil {

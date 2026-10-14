@@ -195,6 +195,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"reset-session":           aiNever(aiNoSession),
 	"pick-theme":              aiNever(aiNoPicker),
 	"open-settings-ui":        aiNever(aiNoPicker),
+	"setup-show-card":         aiAuto(),
 	"edit-custom-theme":       aiNever(aiNoPicker),
 	"customize-keybindings":   aiNever(aiNoPicker),
 	"settings-export":         aiNever("settings import / export stays with the user"),

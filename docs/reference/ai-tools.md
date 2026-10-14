@@ -858,6 +858,7 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `search-prev-result` | Search: Go to Previous Search Result | auto |   |
 | `settings-export` | Preferences: Export Settings... | never | settings import / export stays with the user |
 | `settings-import` | Preferences: Import Settings... | never | settings import / export stays with the user |
+| `setup-show-card` | Setup: Show Setup Card | auto |   |
 | `snippet-picker` | Snippets: Browse... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `snippets-manage` | Snippets: Manage... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `sort-asc` | Edit: Sort Lines Ascending | confirm (fileWrite) |   |

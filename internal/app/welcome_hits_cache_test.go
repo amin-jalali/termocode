@@ -28,7 +28,7 @@ func checkWelcomeHits(t *testing.T, m Model, stage string) Model {
 	frame := m.View()
 	_, rh, wh, qh := renderWelcomeFull(pane.W, pane.H, m.welcomeFocus)
 	if !reflect.DeepEqual(got.actions, qh) || !reflect.DeepEqual(got.recents, rh) || !reflect.DeepEqual(got.workspaces, wh) {
-		t.Fatalf("%s: stale welcome hits\ncached %+v\nfresh  %+v", stage, got, welcomeHits{rh, wh, qh})
+		t.Fatalf("%s: stale welcome hits\ncached %+v\nfresh  %+v", stage, got, welcomeHits{recents: rh, workspaces: wh, actions: qh})
 	}
 	actions := welcomeQuickActions()
 	titled := map[int]bool{} // cards whose title row is in the hit map
