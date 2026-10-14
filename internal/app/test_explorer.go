@@ -221,7 +221,7 @@ func (m *Model) showTestOutput(r *testRow) {
 
 // ── Keyboard ─────────────────────────────────────────────────────────────
 
-func (m Model) handleTestsSidebarKey(k tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleTestsSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	st := m.testView
 	rows := st.rows()
 	var cur *testRow
@@ -359,7 +359,7 @@ func testsActionLayout(running, hasFailed bool, w int) []testsAction {
 	return out
 }
 
-func (m Model) handleTestsSidebarMouse(x, y int, t tea.MouseEventType) (tea.Model, tea.Cmd) {
+func (m Model) handleTestsSidebarMouse(x, y int, t tea.MouseEventType) (Model, tea.Cmd) {
 	st := m.testView
 	switch t {
 	case tea.MouseWheelUp:

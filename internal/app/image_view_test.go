@@ -42,7 +42,7 @@ func TestImagePreviewOpensInsteadOfRefusing(t *testing.T) {
 	m0, _ := New().Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	m := m0.(Model)
 	next, cmd := m.updateInner(explorer.OpenFileMsg{Path: path})
-	mm := next.(Model)
+	mm := next
 	if !mm.imageOpen || cmd == nil {
 		t.Fatalf("image should open a preview (open=%v)", mm.imageOpen)
 	}

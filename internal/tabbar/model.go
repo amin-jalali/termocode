@@ -81,7 +81,7 @@ func (m Model) Height() int { return 1 }
 // tabCells renders tab i at its full width.
 func (m Model) tabCells(i int) []string {
 	b := m.bufs[i]
-	return renderTabCellsSfx(b, b.ID == m.activeID, m.suffix(b), m.isWelcome(b), 0)
+	return tabCellsCached(b, b.ID == m.activeID, m.suffix(b), m.isWelcome(b), 0)
 }
 
 // tabWidths returns each tab's full width in cells.
@@ -222,10 +222,25 @@ func (m *Model) EnsureVisible(id int) {
 	m.settle(widths)
 }
 
+// View draws the bar; the last result is reused while nothing it reads
+// changed (see cache.go).
 func (m Model) View() string {
 	if m.w <= 0 {
 		return ""
 	}
+	k := viewKey{bufs: m.bufs, activeID: m.activeID, w: m.w, first: m.first, blurred: m.blurred, rk: theme.CurrentRenderKey()}
+	viewCache.Lock()
+	defer viewCache.Unlock()
+	if viewCache.ok && viewCache.key.equal(&k) {
+		return viewCache.out
+	}
+	out := m.draw()
+	k.bufs = append([]nvim.BufferInfo(nil), m.bufs...)
+	viewCache.ok, viewCache.key, viewCache.out = true, k, out
+	return out
+}
+
+func (m Model) draw() string {
 	if len(m.bufs) == 0 {
 		fill := theme.FgBg(theme.TextDim, theme.BgTitleBar)
 		return fill.Render(strings.Repeat(" ", m.w))
@@ -247,8 +262,9 @@ func (m Model) View() string {
 			used++
 		}
 		b := m.bufs[i]
-		cells := renderTabCellsSfx(b, b.ID == m.activeID, m.suffix(b), m.isWelcome(b), st.fitW)
+		cells := tabCellsCached(b, b.ID == m.activeID, m.suffix(b), m.isWelcome(b), st.fitW)
 		if b.ID == m.activeID && m.blurred && len(cells) > 0 {
+			cells = append([]string(nil), cells...) // shared by the cache
 			cells[0] = theme.FgBg(theme.TextDimmer, theme.BgEditor).Render("▎")
 		}
 		sb.WriteString(strings.Join(cells, ""))
@@ -308,7 +324,7 @@ func (m *Model) rebuildRegions() {
 		w := widths[i]
 		if st.fitW > 0 {
 			b := m.bufs[i]
-			w = len(renderTabCellsSfx(b, b.ID == m.activeID, m.suffix(b), m.isWelcome(b), st.fitW))
+			w = len(tabCellsCached(b, b.ID == m.activeID, m.suffix(b), m.isWelcome(b), st.fitW))
 		}
 		m.regions = append(m.regions, tabRegion{
 			start:  x,

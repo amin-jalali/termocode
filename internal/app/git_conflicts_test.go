@@ -115,7 +115,7 @@ func TestWelcomeHasCloneCard(t *testing.T) {
 	}
 	m := Model{toast: toast.New()}
 	nm, _ := m.runWelcomeCard(idx)
-	mm := nm.(Model)
+	mm := nm
 	if !mm.promptOpen || mm.promptKind != promptKindCloneURL {
 		t.Errorf("clone card should open the URL prompt (open=%v kind=%v)", mm.promptOpen, mm.promptKind)
 	}

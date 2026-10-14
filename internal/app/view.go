@@ -5,6 +5,7 @@ import (
 	"image"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -317,6 +318,26 @@ func spliceAt(base, mid string, leftCol int) string {
 	return left + mid + right
 }
 
+// spliceMemo is spliceAt with the last call remembered (spliceAt is a
+// pure function of its arguments).
+type spliceMemo struct {
+	sync.Mutex
+	ok        bool
+	base, mid string
+	col       int
+	out       string
+}
+
+func (c *spliceMemo) splice(base, mid string, col int) string {
+	c.Lock()
+	defer c.Unlock()
+	if c.ok && c.col == col && c.mid == mid && c.base == base {
+		return c.out
+	}
+	c.ok, c.base, c.mid, c.col, c.out = true, base, mid, col, spliceAt(base, mid, col)
+	return c.out
+}
+
 // dropLeftVisual returns the suffix of s that remains after dropping the
 // leftmost `cells` visible cells. SGR escapes inside the dropped region
 // are not emitted, but the most recent SGR seen before the cut point is
@@ -380,13 +401,25 @@ func truncRightVisual(s string, cells int) string {
 // has a single ▕ in BorderDefault. Each component renders strictly
 // inside its column width so there are no overlaps.
 func (m Model) renderBase() string {
-	refreshSidebarColors()
+	return strings.Join(m.renderBaseLines(), "\n")
+}
+
+// renderBaseLines composes the frame as rows. The pieces are joined and
+// overlaid row by row and turned into one string only at the end: the
+// frame is large and drawn often, and every whole-frame join / split
+// was a full copy.
+func (m Model) renderBaseLines() []string {
+	refreshSidebarColorsIfStale()
+	nextFrameWidths()
+	if m.ai != nil && !m.actionsPanelVisible() {
+		m.ai.dropRenderCaches() // a hidden chat panel keeps no drawn rows
+	}
 	bodyH := m.h - 1
 	if bodyH < 1 {
 		bodyH = 1
 	}
 
-	var editorRegion string
+	var editorRegion []string
 	// Editor pane geometry (width between sidebar and AI panel; content
 	// height below replace bar, tabs and breadcrumbs). The mouse hit tests
 	// use the same editorPaneLayout, so clicks match what is drawn.
@@ -425,13 +458,13 @@ func (m Model) renderBase() string {
 	// in turn makes lipgloss.JoinHorizontal pad the shorter activity /
 	// sidebar columns with unstyled spaces (visible as a default-bg
 	// stripe along the LEFT edge).
-	editorContent = clipRowsToHeight(editorContent, editorH, edPaneW, theme.Bg(theme.BgEditor))
+	editorRows := clipRowsLines(strings.Split(editorContent, "\n"), editorH, edPaneW, theme.Bg(theme.BgEditor))
 
 	// Build the editor stack, then horizontally append the scrollbar so the
 	// scrollbar spans the full chrome height (tabs/breadcrumbs/sticky/editor).
-	rows := []string{}
+	var blocks [][]string
 	if m.replaceOpen {
-		rows = append(rows, m.replace.View())
+		blocks = append(blocks, strings.Split(m.replace.View(), "\n"))
 	}
 	// In Zen mode the user gets the editor and nothing else — no tabs,
 	// breadcrumbs, status bar, sidebar, or activity bar.
@@ -448,13 +481,13 @@ func (m Model) renderBase() string {
 		if pad := edPaneW - textWidth(tabsRow); pad > 0 {
 			tabsRow += theme.Bg(theme.BgTitleBar).Render(strings.Repeat(" ", pad))
 		}
-		rows = append(rows, tabsRow)
+		blocks = append(blocks, strings.Split(tabsRow, "\n"))
 		if hasBreadcrumbs {
-			rows = append(rows, m.renderBreadcrumbs(edPaneW))
+			blocks = append(blocks, strings.Split(m.renderBreadcrumbs(edPaneW), "\n"))
 		}
 	}
-	rows = append(rows, editorContent)
-	stack := joinRows(rows...)
+	blocks = append(blocks, editorRows)
+	stack := joinRowsLines(blocks...)
 
 	// Scrollbar is disabled (editorScrollbarWidth = 0) for scroll perf.
 	// JoinHorizontal across the editor stack is the dominant cost during
@@ -463,7 +496,7 @@ func (m Model) renderBase() string {
 	editorRegion = stack
 	if editorScrollbarWidth > 0 {
 		scrollbar := m.renderEditorScrollbar(bodyH)
-		editorRegion = joinColumns(stack, scrollbar)
+		editorRegion = joinColumnsLines(stack, strings.Split(scrollbar, "\n"))
 	}
 
 	// Markdown live preview now lives as a regular nvim split window with
@@ -473,7 +506,7 @@ func (m Model) renderBase() string {
 		// Zen: nothing but the editor stack stretched to full width. We
 		// already excluded tabs/breadcrumbs from `stack` above, so this
 		// is just the editor content with no chrome at all.
-		return m.normalizeFrame(editorRegion)
+		return m.normalizeFrameLines(editorRegion)
 	}
 
 	// The status bar now lives ONLY under the editor column — the
@@ -482,25 +515,24 @@ func (m Model) renderBase() string {
 	// rendered at edPaneW (not m.w), and the activity / sidebar columns
 	// are now full-screen tall (m.h) instead of bodyH.
 	m.status.SetWidth(edPaneW)
-	editorCol := joinRows(editorRegion, m.status.View(m.statusState()))
+	editorCol := joinRowsLines(editorRegion, strings.Split(m.status.View(m.statusState()), "\n"))
 
-	activityCol := m.activity.View()
+	activityCol := strings.Split(m.activity.View(), "\n")
 
 	// Right-side Actions panel column. Only rendered when pinned & open;
 	// height matches the editor column (editor body + status bar = m.h)
 	// so the JoinHorizontal aligns cleanly with the rest of the chrome.
-	var actionsCol string
+	var actionsCol []string
 	if m.actionsPanelVisible() {
-		actionsCol = m.renderActionsPanel(actionsColW, m.h)
+		actionsCol = m.renderActionsPanelLines(actionsColW, m.h)
 	}
 
-	var middle string
-	cols := []string{activityCol}
+	cols := [][]string{activityCol}
 	if m.showExp {
-		cols = append(cols, m.renderSidebar(m.h))
+		cols = append(cols, strings.Split(m.renderSidebar(m.h), "\n"))
 	}
 	cols = append(cols, editorCol)
-	if actionsCol != "" {
+	if len(actionsCol) > 0 {
 		cols = append(cols, actionsCol)
 	}
 	// Force every column to exactly m.h rows BEFORE the join. Without this,
@@ -511,53 +543,58 @@ func (m Model) renderBase() string {
 	// columns settle, e.g. the start page on a small terminal. Padding
 	// here uses the editor-bg filler so the safety net is invisible.
 	for i, c := range cols {
-		cols[i] = padColumnRowsToHeight(c, m.h, theme.Bg(theme.BgEditor))
+		cols[i] = padColumnLines(c, m.h, theme.Bg(theme.BgEditor))
 	}
-	middle = joinColumns(cols...)
+	middle := joinColumnsLines(cols...)
 
 	if m.findOpen {
-		middle = m.overlayFindBarInEditor(middle)
+		m.overlayFindBarInEditorLines(middle)
 	}
 
 	if m.actionsLauncherVisible() {
-		middle = m.overlayActionsLauncher(middle)
+		m.overlayActionsLauncherLines(middle)
 	}
 
 	// Overflow (⋮) glyph at the right edge of the tab bar's body row.
 	// Always rendered (even when the dropdown is closed) so the chevron
 	// is discoverable. Skipped in zen mode (no chrome at all).
 	if !m.zenMode {
-		middle = m.overlayOverflowMenuGlyph(middle)
+		m.overlayOverflowMenuGlyphLines(middle)
 	}
 
 	// Inline 💡 preferred-action hint, anchored to the editor cursor.
 	// Skipped while modal overlays / pickers are open (View() takes a
 	// different branch above) and in zen mode (no chrome / hint clutter).
 	if !m.zenMode && m.preferredCodeAction != nil {
-		middle = m.overlayPreferredActionHint(middle)
+		m.overlayPreferredActionHintLines(middle)
 	}
 
-	return m.normalizeFrame(middle)
+	return m.normalizeFrameLines(middle)
 }
 
 // overlayActionsLauncher splices the bottom-right launcher chip onto the
 // rendered base, one row above the status bar. The base row underneath is
 // preserved everywhere except the chip's exact column range.
 func (m Model) overlayActionsLauncher(base string) string {
+	lines := strings.Split(base, "\n")
+	m.overlayActionsLauncherLines(lines)
+	return strings.Join(lines, "\n")
+}
+
+// overlayActionsLauncherLines is overlayActionsLauncher on the frame rows (in place).
+func (m Model) overlayActionsLauncherLines(lines []string) {
 	x1, _, y, ok := m.actionsLauncherRect()
 	if !ok {
-		return base
+		return
 	}
 	chip := renderActionsLauncher()
 	if chip == "" {
-		return base
+		return
 	}
-	lines := strings.Split(base, "\n")
 	if y < 0 || y >= len(lines) {
-		return base
+		return
 	}
 	lines[y] = spliceAt(lines[y], chip, x1)
-	return strings.Join(lines, "\n")
 }
 
 // overlayFindBarInEditor splices the compact floating find panel onto the
@@ -568,10 +605,17 @@ func (m Model) overlayActionsLauncher(base string) string {
 // The panel sits 1 cell down from the editor content's top row and is
 // right-aligned with a 2-cell margin from the editor pane's right edge.
 func (m Model) overlayFindBarInEditor(base string) string {
+	lines := strings.Split(base, "\n")
+	m.overlayFindBarInEditorLines(lines)
+	return strings.Join(lines, "\n")
+}
+
+// overlayFindBarInEditorLines is overlayFindBarInEditor on the frame rows (in place).
+func (m Model) overlayFindBarInEditorLines(baseLines []string) {
 	pw := m.find.PanelWidth()
 	ph := m.find.PanelHeight()
 	if pw <= 0 || ph <= 0 {
-		return base
+		return
 	}
 
 	// Same editor pane geometry renderBase composed, so the splice
@@ -594,16 +638,15 @@ func (m Model) overlayFindBarInEditor(base string) string {
 	// Splice each line of the panel into the corresponding row of base.
 	panel := m.find.View()
 	if panel == "" {
-		return base
+		return
 	}
 	panelLines := strings.Split(panel, "\n")
-	baseLines := strings.Split(base, "\n")
 	// The panel has a minimum width; in a narrow editor pane it is
 	// clipped at the pane's right edge instead of sticking out past the
 	// window (an over-wide row wraps in the terminal).
 	room := editorStart + edPaneW - leftCol
 	if room <= 0 {
-		return base
+		return
 	}
 	for i, pline := range panelLines {
 		row := topRow + i
@@ -616,7 +659,6 @@ func (m Model) overlayFindBarInEditor(base string) string {
 		}
 		baseLines[row] = spliceAt(baseLines[row], glassed, leftCol)
 	}
-	return strings.Join(baseLines, "\n")
 }
 
 // normalizeFrame guarantees the rendered frame is exactly m.h rows tall and
@@ -640,10 +682,18 @@ func (m Model) normalizeFrame(s string) string {
 	if m.w <= 0 || m.h <= 0 {
 		return s
 	}
+	return strings.Join(m.normalizeFrameLines(strings.Split(s, "\n")), "\n")
+}
+
+// normalizeFrameLines is normalizeFrame on the frame rows (may reuse
+// lines' backing array).
+func (m Model) normalizeFrameLines(lines []string) []string {
+	if m.w <= 0 || m.h <= 0 {
+		return lines
+	}
 	filler := theme.Bg(theme.BgEditor)
-	lines := strings.Split(s, "\n")
 	for i, line := range lines {
-		w := textWidth(line)
+		w := frameWidth(line)
 		if w < m.w {
 			line += filler.Render(strings.Repeat(" ", m.w-w))
 		}
@@ -657,7 +707,7 @@ func (m Model) normalizeFrame(s string) string {
 		// last row and is the most important UI element to preserve.
 		lines = lines[len(lines)-m.h:]
 	}
-	return strings.Join(lines, "\n")
+	return lines
 }
 
 // padColumnRowsToHeight forces a column (assumed all rows the same width)
@@ -679,10 +729,18 @@ func padColumnRowsToHeight(col string, h int, filler lipgloss.Style) string {
 		// Don't trim from here — chrome/status-bar layout matters.
 		return col
 	}
+	return strings.Join(padColumnLines(rows, h, filler), "\n")
+}
+
+// padColumnLines is padColumnRowsToHeight on a column's rows.
+func padColumnLines(rows []string, h int, filler lipgloss.Style) []string {
+	if h <= 0 || len(rows) >= h {
+		return rows
+	}
 	// Width inferred from row 0; fallback to 1-cell pad if empty.
 	w := 0
 	if len(rows) > 0 {
-		w = textWidth(rows[0])
+		w = frameWidth(rows[0])
 	}
 	if w <= 0 {
 		w = 1
@@ -691,7 +749,7 @@ func padColumnRowsToHeight(col string, h int, filler lipgloss.Style) string {
 	for len(rows) < h {
 		rows = append(rows, pad)
 	}
-	return strings.Join(rows, "\n")
+	return rows
 }
 
 // clipRowsToHeight returns the first `h` rows of `s` — the rest are
@@ -712,14 +770,22 @@ func clipRowsToHeight(s string, h, w int, filler lipgloss.Style) string {
 	if h <= 0 {
 		return ""
 	}
-	rows := strings.Split(s, "\n")
+	return strings.Join(clipRowsLines(strings.Split(s, "\n"), h, w, filler), "\n")
+}
+
+// clipRowsLines is clipRowsToHeight on rows (may reuse rows' backing
+// array).
+func clipRowsLines(rows []string, h, w int, filler lipgloss.Style) []string {
+	if h <= 0 {
+		return nil
+	}
 	if len(rows) > h {
 		rows = rows[:h]
 	}
 	if w > 0 {
 		// Right-pad each existing row to `w` cells with styled filler.
 		for i, row := range rows {
-			rw := textWidth(row)
+			rw := frameWidth(row)
 			switch {
 			case rw < w:
 				rows[i] = row + filler.Render(strings.Repeat(" ", w-rw))
@@ -735,7 +801,7 @@ func clipRowsToHeight(s string, h, w int, filler lipgloss.Style) string {
 			rows = append(rows, pad)
 		}
 	}
-	return strings.Join(rows, "\n")
+	return rows
 }
 
 // restyleTrailingUnstyled rewrites trailing UNSTYLED SPACE cells so they
@@ -828,6 +894,32 @@ func (m Model) renderBreadcrumbs(width int) string {
 	if width <= 0 {
 		return ""
 	}
+	rk := theme.CurrentRenderKey()
+	c := &breadcrumbsMemo
+	c.Lock()
+	defer c.Unlock()
+	if c.ok && c.width == width && c.rk == rk && c.sticky == m.stickyContext && slices.Equal(c.segs, m.breadcrumbs) {
+		return c.out
+	}
+	out := m.drawBreadcrumbs(width)
+	c.ok, c.width, c.rk, c.sticky, c.segs, c.out = true, width, rk, m.stickyContext, slices.Clone(m.breadcrumbs), out
+	return out
+}
+
+// breadcrumbsMemo keeps the last breadcrumbs row: it is drawn on every
+// frame and changes only with the path, the sticky context, the width
+// and the theme.
+var breadcrumbsMemo struct {
+	sync.Mutex
+	ok     bool
+	width  int
+	rk     theme.RenderKey
+	sticky string
+	segs   []string
+	out    string
+}
+
+func (m Model) drawBreadcrumbs(width int) string {
 	// Quiet path trail on the editor surface: folders dim, the file name
 	// (with its type icon) one step brighter.
 	bg := theme.Bg(theme.BgEditor)
@@ -1037,9 +1129,22 @@ func (m Model) renderEditorScrollbar(height int) string {
 	return strings.Join(rows, "\n")
 }
 
+// sidebarFrameCache keeps the last sidebar column: the panel content,
+// the hovered row and the height in, the hover tint and the divider
+// joined on, out. The explorer's View is itself cached, so on a frame
+// where the sidebar did not change this is a pointer compare.
+var sidebarFrameCache struct {
+	sync.Mutex
+	content string
+	hy, h   int
+	rk      theme.RenderKey
+	out     string
+}
+
 func (m Model) renderSidebar(h int) string {
 	contentW := m.explorerWidth - 1 // 1 col reserved for the right-edge divider
 	var content string
+	hy := -1
 	switch m.activity.Active() {
 	case activity.ViewFiles:
 		// Explorer renders its own header + footer, so we use its output
@@ -1053,16 +1158,7 @@ func (m Model) renderSidebar(h int) string {
 			m.editor.IsDirty(),
 			m.gitStatusMap(),
 		)
-		// VSCode-style hover: tint the body row under the pointer. The re-tint
-		// only touches panel-bg cells, so the cursor/selection rows (which use a
-		// different bg) and blank rows are skipped automatically.
-		if hy := m.explorerHoverLine(); hy >= 0 {
-			lines := strings.Split(content, "\n")
-			if hy < len(lines) {
-				lines[hy] = sidebarHoverLineBg(lines[hy])
-				content = strings.Join(lines, "\n")
-			}
-		}
+		hy = m.explorerHoverLine()
 	case activity.ViewSearch:
 		header := sidebarHeader(contentW, "SEARCH", "")
 		body := placeholderSidebar(contentW, h-1, "", "Press F8 for\nFind in Files.\n\nUse Ctrl+F for\nin-file find.")
@@ -1079,7 +1175,27 @@ func (m Model) renderSidebar(h int) string {
 		}
 		content = m.renderExtSidebar(contentW, h)
 	}
-	return joinColumns(content, sidebarDivider(h))
+	rk := theme.CurrentRenderKey()
+	c := &sidebarFrameCache
+	c.Lock()
+	defer c.Unlock()
+	if c.out != "" && c.content == content && c.hy == hy && c.h == h && c.rk == rk {
+		return c.out
+	}
+	raw := content
+	// VSCode-style hover: tint the body row under the pointer. The re-tint
+	// only touches panel-bg cells, so the cursor/selection rows (which use a
+	// different bg) and blank rows are skipped automatically.
+	if hy >= 0 {
+		lines := strings.Split(content, "\n")
+		if hy < len(lines) {
+			lines[hy] = sidebarHoverLineBg(lines[hy])
+			content = strings.Join(lines, "\n")
+		}
+	}
+	out := joinColumns(content, sidebarDivider(h))
+	c.content, c.hy, c.h, c.rk, c.out = raw, hy, h, rk, out
+	return out
 }
 
 func sidebarDivider(h int) string {
@@ -1161,6 +1277,26 @@ var (
 )
 
 func init() { refreshSidebarColors() }
+
+// sidebarColorsKey is the theme the sidebar styles were last built for.
+var sidebarColorsKey struct {
+	sync.Mutex
+	ok bool
+	rk theme.RenderKey
+}
+
+// refreshSidebarColorsIfStale rebuilds the sidebar styles when the theme
+// changed since the last frame (they are built from the palette only).
+func refreshSidebarColorsIfStale() {
+	rk := theme.CurrentRenderKey()
+	sidebarColorsKey.Lock()
+	defer sidebarColorsKey.Unlock()
+	if sidebarColorsKey.ok && sidebarColorsKey.rk == rk {
+		return
+	}
+	refreshSidebarColors()
+	sidebarColorsKey.ok, sidebarColorsKey.rk = true, rk
+}
 
 func refreshSidebarColors() {
 	sidebarBg = theme.LG(theme.BgSidebar)
@@ -2072,8 +2208,15 @@ func (m Model) statusState() statusbar.State {
 // layer by cursor moves (StateMsg) and by any subsequent keystroke that
 // isn't the apply chord (handleGlobalKey).
 func (m Model) overlayPreferredActionHint(base string) string {
+	lines := strings.Split(base, "\n")
+	m.overlayPreferredActionHintLines(lines)
+	return strings.Join(lines, "\n")
+}
+
+// overlayPreferredActionHintLines is overlayPreferredActionHint on the frame rows (in place).
+func (m Model) overlayPreferredActionHintLines(lines []string) {
 	if m.preferredCodeAction == nil {
-		return base
+		return
 	}
 	// Compose the chip text with live keymap shortcuts so user
 	// rebindings stay in sync with what the hint advertises.
@@ -2110,14 +2253,14 @@ func (m Model) overlayPreferredActionHint(base string) string {
 	edPaneW, editorStart, editorTop := pane.W, pane.X, pane.Top
 	editorBottom := m.h - 2 // status bar lives on the last row; bottom-1 is our floor
 	if editorBottom <= editorTop {
-		return base
+		return
 	}
 
 	cur := m.editor.Cursor()
 	cursorRow := editorTop + cur.Line
 	if cursorRow < editorTop || cursorRow > editorBottom {
 		// Cursor outside visible viewport — nothing sensible to anchor to.
-		return base
+		return
 	}
 
 	// Prefer the row below the cursor; fall back to the row above when
@@ -2127,7 +2270,7 @@ func (m Model) overlayPreferredActionHint(base string) string {
 		row = cursorRow - 1
 	}
 	if row < editorTop || row > editorBottom {
-		return base
+		return
 	}
 
 	// Anchor the chip's left edge a few cells right of the gutter so it
@@ -2146,17 +2289,15 @@ func (m Model) overlayPreferredActionHint(base string) string {
 		// Last-ditch: chip wider than viewport — clip on the right.
 		chipW = m.w - leftCol
 		if chipW <= 0 {
-			return base
+			return
 		}
 		body = truncRightVisual(body, chipW)
 	}
 
-	lines := strings.Split(base, "\n")
 	if row < 0 || row >= len(lines) {
-		return base
+		return
 	}
 	lines[row] = spliceAt(lines[row], body, leftCol)
-	return strings.Join(lines, "\n")
 }
 
 // keyForAction walks the live keymap and returns the friendly-formatted

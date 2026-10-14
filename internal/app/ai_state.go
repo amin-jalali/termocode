@@ -72,6 +72,10 @@ type aiState struct {
 
 	// mdCache holds rendered answers per message index (ai_panel.go).
 	mdCache map[int]aiMDEntry
+	// transcript keeps the built transcript and its drawn rows between
+	// frames (ai_panel.go).
+	transcript aiTranscriptCache
+	inputCache aiInputCache
 
 	// "Save as…" of a code block (ai_export.go): the code, and the path
 	// waiting for the overwrite confirm.

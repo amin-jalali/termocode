@@ -1028,14 +1028,20 @@ func (m Model) renderOverflowMenu(w, h int) string {
 
 // overlayOverflowMenuGlyph paints the ⋮ chevron on the tab bar's body row.
 func (m Model) overlayOverflowMenuGlyph(base string) string {
+	lines := strings.Split(base, "\n")
+	m.overlayOverflowMenuGlyphLines(lines)
+	return strings.Join(lines, "\n")
+}
+
+// overlayOverflowMenuGlyphLines is overlayOverflowMenuGlyph on the frame rows (in place).
+func (m Model) overlayOverflowMenuGlyphLines(lines []string) {
 	gx := m.overflowGlyphX()
 	if gx < 0 {
-		return base
+		return
 	}
 	row := m.overflowGlyphY()
-	lines := strings.Split(base, "\n")
 	if row < 0 || row >= len(lines) {
-		return base
+		return
 	}
 	fg := theme.TextMuted
 	if m.overflowMenuOpen {
@@ -1043,9 +1049,12 @@ func (m Model) overlayOverflowMenuGlyph(base string) string {
 	}
 	style := theme.FgBg(fg, theme.BgTitleBar).Bold(true)
 	cell := style.Render(overflowMenuGlyph)
-	lines[row] = spliceAt(lines[row], cell, gx)
-	return strings.Join(lines, "\n")
+	lines[row] = glyphSplice.splice(lines[row], cell, gx)
 }
+
+// glyphSplice remembers the last ⋮ splice: the tab-bar row is the same
+// on most frames, and spliceAt parses the whole row.
+var glyphSplice spliceMemo
 
 // overlayOverflowMenuDropdown paints the dropdown box at its anchored
 // position.
@@ -1124,7 +1133,7 @@ func (m *Model) activateOverflowMenuItem() tea.Cmd {
 
 // routeToOverflowMenu handles keyboard input while the dropdown is open.
 // Up/Down navigate, skipping dividers; Enter selects; Esc closes.
-func (m Model) routeToOverflowMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) routeToOverflowMenu(msg tea.Msg) (Model, tea.Cmd) {
 	key, ok := msg.(tea.KeyMsg)
 	if !ok {
 		return m, nil

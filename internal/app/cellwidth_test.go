@@ -83,6 +83,20 @@ func TestJoinsMatchLipgloss(t *testing.T) {
 		if got, want := joinRows(cols...), lipgloss.JoinVertical(lipgloss.Left, cols...); got != want {
 			t.Fatalf("joinRows differs from lipgloss for %q", cols)
 		}
+		// The row versions (renderBaseLines) give the same rows.
+		split := make([][]string, len(cols))
+		for i, c := range cols {
+			split[i] = strings.Split(c, "\n")
+		}
+		if got, want := strings.Join(joinColumnsLines(split...), "\n"), joinColumns(cols...); got != want {
+			t.Fatalf("joinColumnsLines differs from joinColumns for %q", cols)
+		}
+		for i, c := range cols {
+			split[i] = strings.Split(c, "\n")
+		}
+		if got, want := strings.Join(joinRowsLines(split...), "\n"), joinRows(cols...); got != want {
+			t.Fatalf("joinRowsLines differs from joinRows for %q", cols)
+		}
 	}
 }
 

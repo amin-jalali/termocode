@@ -15,7 +15,7 @@ import tea "github.com/charmbracelet/bubbletea"
 
 // terminalWheel forwards a wheel notch over the terminal split and keeps
 // nvim in scrollback mode.
-func (m Model) terminalWheel(localX, localY int, t tea.MouseEventType) (tea.Model, tea.Cmd) {
+func (m Model) terminalWheel(localX, localY int, t tea.MouseEventType) (Model, tea.Cmd) {
 	if m.nvim != nil && !m.termScrolled {
 		m.termScrolled = true
 		_ = m.nvim.ExecLua(`vim.g.termocode_term_scroll = true`)
