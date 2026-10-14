@@ -83,6 +83,11 @@ func SystemPrompt(base string, tools []Tool, native bool) string {
 			"For build or other project tasks, tasks_list shows them, tasks_run runs one in a visible tab and " +
 			"tasks_status(wait_ms) gives the exit code and output."
 	}
+	if _, ok := FindTool(tools, "lsp_servers"); ok {
+		ide += " lsp_servers / dap_adapters list, install and remove language servers and debug adapters; " +
+			"extensions lists, runs and reloads the user's Lua extensions; workspace_folders adds or removes " +
+			"explorer folders (you can not open another workspace: it would end this chat)."
+	}
 	if native {
 		return base + "\n\nYou can call IDE tools (files, search, git, LSP, shell, editor). " +
 			"Mutating tools ask the user first; if one is declined, do not retry it." + ide
