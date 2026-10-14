@@ -62,7 +62,7 @@ func DemoWorkspace(src, parent string) (string, error) {
 }
 
 // DemoNow is the wall clock the demo is shown at: a few days after the
-// demo history, so ages read "4 days ago" (set clock.Now to it).
+// demo history, so ages read "4 days ago" (freeze clock.Now with clock.Set).
 var DemoNow = time.Date(2026, 2, 1, 12, 0, 0, 0, time.UTC)
 
 // demoHistory makes four commits on main (one is a merge of a feature

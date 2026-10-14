@@ -95,9 +95,7 @@ func TestHotExitRoot(t *testing.T) {
 // only the newest 50 stay.
 func TestCollectHotBackupsAgesOut(t *testing.T) {
 	now := time.Date(2026, 10, 12, 12, 0, 0, 0, time.UTC)
-	old := clock.Now
-	clock.Now = func() time.Time { return now }
-	t.Cleanup(func() { clock.Now = old })
+	t.Cleanup(clock.Set(func() time.Time { return now }))
 
 	root := t.TempDir()
 	prev := filepath.Join(root, "previous")

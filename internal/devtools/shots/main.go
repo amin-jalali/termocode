@@ -43,7 +43,7 @@ func main() {
 		os.Exit(1)
 	} else {
 		// The demo history has fixed dates; show it a few days later.
-		clock.Now = func() time.Time { return shotkit.DemoNow }
+		clock.Set(func() time.Time { return shotkit.DemoNow })
 	}
 	if *fontPath == "" {
 		fmt.Fprintln(os.Stderr, "shots: -font is required (a Nerd Font .ttf)")
