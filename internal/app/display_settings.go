@@ -25,7 +25,12 @@ var (
 	animationChoices = []string{"auto", "on", "off"}
 	imageChoices     = []string{"auto", "kitty", "sixel", "blocks", "off"}
 	sessionChoices   = []string{"auto", "on", "off"}
+	logoChoices      = []string{"text", "image", "off"}
 )
+
+// dashboardLogo is the dashboard_logo setting: the Welcome wordmark as
+// half-block text, as a terminal image (kitty / sixel), or off.
+var dashboardLogo = "text"
 
 // settingChoices returns the fixed choices of an enum setting row.
 func settingChoices(id string) []string {
@@ -38,6 +43,8 @@ func settingChoices(id string) []string {
 		return imageChoices
 	case "setting-persistent-session":
 		return sessionChoices
+	case "setting-dashboard-logo":
+		return logoChoices
 	}
 	return nil
 }
@@ -45,12 +52,13 @@ func settingChoices(id string) []string {
 // DisplayConfig is what cmd/termocode needs before the TUI starts.
 type DisplayConfig struct {
 	Icons, Animations, Images string
+	Logo                      string // dashboard_logo ("" = text)
 }
 
 // ConfigDisplay reads the display settings from config.json ("" = auto).
 func ConfigDisplay() DisplayConfig {
 	c := loadSettings()
-	return DisplayConfig{Icons: c.Icons, Animations: c.Animations, Images: c.Images}
+	return DisplayConfig{Icons: c.Icons, Animations: c.Animations, Images: c.Images, Logo: c.DashboardLogo}
 }
 
 // termCaps is the terminal's graphics support, probed at startup.
@@ -82,6 +90,12 @@ func imageProtocol() termimg.Protocol {
 func ApplyDisplaySettings(cfg DisplayConfig) {
 	theme.CurrentIconMode = theme.ResolveIconMode(cfg.Icons, nerdFontHint, nil, os.Getenv)
 	anim.Enabled = anim.Resolve(anim.ParseMode(cfg.Animations), theme.TrueColor(), os.Getenv)
+	dashboardLogo = logoChoices[0]
+	for _, c := range logoChoices {
+		if cfg.Logo == c {
+			dashboardLogo = c
+		}
+	}
 }
 
 // displaySettingValue is the current value of a display setting row.
@@ -96,11 +110,13 @@ func displaySettingValue(id string, cfg settingsConfig) (string, bool) {
 		v = cfg.Images
 	case "setting-persistent-session":
 		v = cfg.PersistentSession
+	case "setting-dashboard-logo":
+		v = cfg.DashboardLogo
 	default:
 		return "", false
 	}
 	if v == "" {
-		v = "auto"
+		v = settingChoices(id)[0]
 	}
 	return v, true
 }
@@ -133,12 +149,14 @@ func (m *Model) applyDisplaySetting(id, value string) (tea.Cmd, bool) {
 		cfg.Images = value
 	case "setting-persistent-session":
 		cfg.PersistentSession = value
+	case "setting-dashboard-logo":
+		cfg.DashboardLogo = value
 	}
 	if err := saveSettings(cfg); err != nil {
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Settings error", err.Error())
 		return toastCmd, true
 	}
-	ApplyDisplaySettings(DisplayConfig{Icons: cfg.Icons, Animations: cfg.Animations, Images: cfg.Images})
+	ApplyDisplaySettings(DisplayConfig{Icons: cfg.Icons, Animations: cfg.Animations, Images: cfg.Images, Logo: cfg.DashboardLogo})
 	m.applyLayout()
 	detail := ""
 	switch id {
@@ -150,6 +168,8 @@ func (m *Model) applyDisplaySetting(id, value string) (tea.Cmd, bool) {
 		detail = "images: " + imageProtocol().String()
 	case "setting-persistent-session":
 		detail = "applies the next time termocode starts"
+	case "setting-dashboard-logo":
+		invalidateWelcome()
 	}
 	m.toast, toastCmd = m.toast.PushDetail(toast.Info, row.Label+" = "+value, detail)
 	return toastCmd, true

@@ -106,6 +106,7 @@ func settingsCategories() map[string]string {
 		"setting-icons":              "Appearance",
 		"setting-animations":         "Appearance",
 		"setting-images":             "Appearance",
+		"setting-dashboard-logo":     "Appearance",
 		"setting-font-delta":         "Appearance",
 		"setting-auto-save":          "Editor",
 		"setting-word-wrap":          "Editor",

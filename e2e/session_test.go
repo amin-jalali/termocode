@@ -287,8 +287,16 @@ func TestSessionReattachNewTerminalCaps(t *testing.T) {
 	r := newSessionRig(t)
 	truecolor := regexp.MustCompile(`\x1b\[[0-9;]*[34]8;2;`)
 	color256 := regexp.MustCompile(`\x1b\[[0-9;]*[34]8;5;`)
-	// A kitty image put on screen (not the client's own graphics probe).
+	// A kitty image put on screen (not the client's own graphics probe):
+	// the Welcome logo, which is an image only with dashboard_logo=image.
 	const kittyImage = "\x1b_Ga=T"
+	cfgDir := filepath.Join(r.home, ".config", "termocode")
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cfgDir, "config.json"), []byte(`{"dashboard_logo": "image"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	a := r.start() // TERM=xterm-256color COLORTERM=truecolor
 	r.waitSocket(true)
@@ -317,7 +325,8 @@ func TestSessionReattachNewTerminalCaps(t *testing.T) {
 	b.Disconnect()
 
 	env = append(append([]string(nil), r.env...), "TERM=xterm-kitty")
-	c := Start(t, StartOpts{Home: r.home, Workspace: r.ws, Env: env})
+	// Tall enough for the logo: a short window hides it.
+	c := Start(t, StartOpts{Home: r.home, Workspace: r.ws, Env: env, Rows: 50})
 	c.WaitFor("status bar", bootTimeout, func(ls []string) bool {
 		return mainFrame.Top(ls[0]) && mainFrame.Bottom(ls[len(ls)-1])
 	})

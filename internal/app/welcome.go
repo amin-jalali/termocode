@@ -163,11 +163,12 @@ type welcomeKey struct {
 	cfg         string
 	icons       theme.IconMode
 	profile     int
+	logo        string
 }
 
 func newWelcomeKey(w, h, focus int) welcomeKey {
 	return welcomeKey{w: w, h: h, focus: focus, theme: theme.Hex(theme.BgEditor) + theme.Hex(theme.BorderFocus),
-		cfg: os.Getenv("XDG_CONFIG_HOME"), icons: theme.CurrentIconMode, profile: int(theme.Profile())}
+		cfg: os.Getenv("XDG_CONFIG_HOME"), icons: theme.CurrentIconMode, profile: int(theme.Profile()), logo: dashboardLogo}
 }
 
 // welcomeHits are the click areas of one welcome render. They are
@@ -313,6 +314,24 @@ func welcomeQuickActions() []quickAction {
 // slices. Splitting the work this way keeps the public layout helpers
 // thin without recomputing layout for each accessor.
 func renderWelcomeFull(w, h, focusIdx int) (string, []welcomeRecentHit, []welcomeWorkspaceHit, []welcomeQuickActionHit) {
+	hero := dashboardLogo != "off"
+	out, rh, wh, qh := renderWelcomePage(w, h, focusIdx, hero, false)
+	// A short pane drops the logo first, then the extra blank rows, so
+	// the cards, the recent files and the footer still fit.
+	tall := func() bool { return strings.Count(out, "\n")+1 > h }
+	if hero && tall() {
+		out, rh, wh, qh = renderWelcomePage(w, h, focusIdx, false, false)
+	}
+	if tall() {
+		out, rh, wh, qh = renderWelcomePage(w, h, focusIdx, false, true)
+	}
+	return out, rh, wh, qh
+}
+
+// renderWelcomePage renders the page, with or without the hero (logo,
+// tagline and rule); compact puts one blank row between sections, not
+// three, and drops the card subtitles.
+func renderWelcomePage(w, h, focusIdx int, hero, compact bool) (string, []welcomeRecentHit, []welcomeWorkspaceHit, []welcomeQuickActionHit) {
 	if w <= 0 || h <= 0 {
 		return "", nil, nil, nil
 	}
@@ -340,34 +359,43 @@ func renderWelcomeFull(w, h, focusIdx int) (string, []welcomeRecentHit, []welcom
 		}
 	}
 	wide := innerW >= welcomeWideMin
-	showSubtitle := innerW >= welcomeNarrowMin
+	// Compact (a short pane): one-line cards.
+	showSubtitle := innerW >= welcomeNarrowMin && !compact
 
 	var contentLines []string
+	gap := []string{blank(innerW), blank(innerW), blank(innerW)}
+	if compact {
+		gap = gap[:1]
+	}
 
 	// ── 1. Logo + tagline ─────────────────────────────────────────────
-	logoStyle := theme.FgBg(theme.AccentBlue, theme.BgEditor).Bold(true)
-	tagStyle := theme.FgBg(theme.TextMuted, theme.BgEditor)
-	logo := welcomeLogo(innerW)
-	pixelLogo := logo != nil
-	if logo == nil {
-		logo = welcomeBanner(logoStyle, innerW)
-	}
-	for _, b := range logo {
-		contentLines = append(contentLines, centerInWidth(b, innerW))
-	}
-	contentLines = append(contentLines, blank(innerW))
-	tagline := "A TERMINAL-NATIVE EDITOR"
-	if wide {
-		tagline = spaceLetters(tagline)
-	}
-	contentLines = append(contentLines, centerInWidth(tagStyle.Render(tagline), innerW))
-	// A short lit rule under the hero.
-	if rw := lipgloss.Width(logo[0]); rw > 8 {
-		contentLines = append(contentLines, centerInWidth(heroRule(rw/2), innerW))
-	} else {
+	var logo []string
+	pixelLogo := false
+	if hero {
+		logoStyle := theme.FgBg(theme.AccentBlue, theme.BgEditor).Bold(true)
+		tagStyle := theme.FgBg(theme.TextMuted, theme.BgEditor)
+		logo = welcomeLogo(innerW)
+		pixelLogo = logo != nil
+		if logo == nil {
+			logo = welcomeBanner(logoStyle, innerW)
+		}
+		for _, b := range logo {
+			contentLines = append(contentLines, centerInWidth(b, innerW))
+		}
 		contentLines = append(contentLines, blank(innerW))
+		tagline := "A TERMINAL-NATIVE EDITOR"
+		if wide {
+			tagline = spaceLetters(tagline)
+		}
+		contentLines = append(contentLines, centerInWidth(tagStyle.Render(tagline), innerW))
+		// A short lit rule under the hero.
+		if rw := lipgloss.Width(logo[0]); rw > 8 {
+			contentLines = append(contentLines, centerInWidth(heroRule(rw/2), innerW))
+		} else {
+			contentLines = append(contentLines, blank(innerW))
+		}
+		contentLines = append(contentLines, blank(innerW), blank(innerW))
 	}
-	contentLines = append(contentLines, blank(innerW), blank(innerW))
 
 	// ── 2. START — 2×2 (or 1×4 on narrow) grid of action cards ────────
 	contentLines = append(contentLines, padRowToWidth(sectionHeader("START"), innerW, bgFill))
@@ -375,7 +403,7 @@ func renderWelcomeFull(w, h, focusIdx int) (string, []welcomeRecentHit, []welcom
 	qaLines, qaHits := buildActionGrid(actions, innerW, len(contentLines), focusIdx, wide, showSubtitle)
 	contentLines = append(contentLines, qaLines...)
 
-	contentLines = append(contentLines, blank(innerW), blank(innerW), blank(innerW))
+	contentLines = append(contentLines, gap...)
 
 	// ── 3. RECENT FILES + WORKSPACES ──────────────────────────────────
 	recents := loadRecents()
@@ -442,7 +470,7 @@ func renderWelcomeFull(w, h, focusIdx int) (string, []welcomeRecentHit, []welcom
 	}
 
 	// ── 4. Footer ─────────────────────────────────────────────────────
-	contentLines = append(contentLines, blank(innerW), blank(innerW), blank(innerW))
+	contentLines = append(contentLines, gap...)
 	rule := footerRule(innerW)
 	contentLines = append(contentLines, rule)
 	contentLines = append(contentLines, blank(innerW))
