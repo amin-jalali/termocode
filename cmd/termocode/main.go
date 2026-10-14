@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"runtime/debug"
 	"runtime/pprof"
 	"strconv"
@@ -23,6 +24,23 @@ import (
 	"github.com/amin-jalali/termocode/internal/termimg"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
+
+// writeHeapProfile writes a Go heap profile to $TERMOCODE_MEMPROFILE when
+// the UI ends, for finding what holds memory ("go tool pprof -sample_index=
+// inuse_space termocode <file>"). Off unless the variable is set.
+func writeHeapProfile() {
+	path := os.Getenv("TERMOCODE_MEMPROFILE")
+	if path == "" {
+		return
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	runtime.GC() // up-to-date live heap
+	_ = pprof.WriteHeapProfile(f)
+}
 
 // tuneGC makes the garbage collector run less often. Every frame builds
 // the screen as fresh strings, so with Go's default (GOGC=100) GC took
@@ -323,6 +341,7 @@ func runTUI() {
 	watchHangup(p)
 	stopProfile := startCPUProfile()
 	defer stopProfile()
+	defer writeHeapProfile()
 	if _, err := p.Run(); err != nil {
 		stopProfile()
 		// A crash or a lost terminal: keep the unsaved buffers.
