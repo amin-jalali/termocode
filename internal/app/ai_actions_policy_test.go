@@ -92,8 +92,8 @@ func TestAIActionPolicyRules(t *testing.T) {
 	}
 }
 
-// Every setting must have a policy too (K2 adds settings_set; until then
-// most are "planned").
+// Every setting must have a policy too: exposed to settings_set or never
+// (TestAISettingPolicyExposedOrNever checks the gates).
 func TestAISettingPolicyCoversEverySetting(t *testing.T) {
 	keys := map[string]bool{}
 	for _, s := range SettingsCatalog() {
