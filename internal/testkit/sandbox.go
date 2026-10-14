@@ -43,6 +43,10 @@ func sandbox(t testing.TB, nvim bool) {
 		"XDG_DATA_HOME":   filepath.Join(home, "data"),
 		"XDG_STATE_HOME":  filepath.Join(home, "state"),
 		"XDG_CACHE_HOME":  filepath.Join(home, "cache"),
+		// gopls (started by nvim for .go files) writes its cache while it
+		// exits, after the test removed its folder: a per-test cache came
+		// back as a leftover folder every time. One shared cache instead.
+		"GOPLSCACHE": filepath.Join(os.TempDir(), "termocode-testkit-gopls-cache"),
 		// Pre-made (empty) plugin checkouts: no git clone at startup.
 		"TERMOCODE_PLUGINS_DIR": filepath.Join(home, "plugins"),
 		"TERMOCODE_TOOLS_DIR":   filepath.Join(home, "tools"),
