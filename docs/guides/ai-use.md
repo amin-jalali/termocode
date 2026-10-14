@@ -158,6 +158,28 @@ Auto-Approve…**) also skips the review: changes are written at once.
 
 **File: Compare Two Files…** uses the same card, read-only.
 
+### Undo a whole AI turn
+
+Before an agent turn first changes a file, termocode keeps the file's old
+text (a *restore point*). This covers `write_file`, `create_file`,
+`delete`, `rename` and every change you accept in the review card.
+
+- Under the turn, the chat shows **↶ Undo AI changes (N files)**.
+- Or run **AI: Undo Last Turn** from the palette.
+
+Undo puts every file back: changed files get their old text (an open tab
+shows it as one undo step), files the turn created are deleted. If a file
+changed again after the turn, a dialog lists it and asks first. A file
+whose tab has unsaved edits is skipped and named. The chat gets a line
+saying what was restored, so the agent knows.
+
+Restore points are saved with the chat (in
+`~/.local/state/termocode/ai-restore/`), so the button still works after a
+restart. The last 30 turns per chat are kept; files over 2 MB are not.
+Shell commands (`run_command`, the terminal) and LSP edits made with
+`ai_edit_review` = `auto` are not part of a restore point: use git for
+those.
+
 ## Agent: let the chat use tools
 
 The chat is an agent. It can call tools to answer you:

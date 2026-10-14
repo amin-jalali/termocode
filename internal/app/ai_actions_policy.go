@@ -269,6 +269,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-discard-proposal": aiNever("the user reviews proposed edits"),
 	"ai-review":           aiNever("the user reviews proposed edits"),
 	"ai-edit-review":      aiNever(aiNoAIConfig),
+	"ai-undo-turn":        aiNever("the user undoes the AI's changes"),
 	"ai-trigger-inline":   aiNever("inline completion is for the user's typing"),
 	"ai-toggle-inline":    aiConfirm(ai.ClassIDE),
 	"ai-cancel":           aiNever("stops the model's own turn"),

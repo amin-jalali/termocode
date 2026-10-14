@@ -97,6 +97,11 @@ func aiSyncTools(tools []ai.Tool, root string, call aiIDECaller) []ai.Tool {
 			}
 		case "create_file", "create_dir":
 			t.Run = func(ctx context.Context, a map[string]any) (string, error) {
+				if t.Name == "create_file" {
+					if abs, err := ws.Resolve(ai.ArgString(a, "path")); err == nil {
+						_, _ = call(ctx, func(m *Model) (string, tea.Cmd, error) { m.aiRestoreNote(abs); return "", nil, nil })
+					}
+				}
 				res, err := inner(ctx, a)
 				if err != nil {
 					return res, err
@@ -306,6 +311,7 @@ return ''
 // refused: overwriting would throw the user's work away, and writing the
 // agent's text into the buffer would mix it with half-done edits.
 func (m *Model) aiWriteFile(abs, rel, content string) (string, tea.Cmd, error) {
+	m.aiRestoreNote(abs) // R3: keep the old text for "AI: Undo Last Turn"
 	fi, statErr := os.Stat(abs)
 	if statErr == nil && fi.IsDir() {
 		return "", nil, fmt.Errorf("%s is a folder", rel)
@@ -374,6 +380,7 @@ func (m *Model) aiDeletePath(abs string, rel func(string) string) (string, tea.C
 				if vim.api.nvim_buf_is_valid(b) then pcall(vim.api.nvim_buf_delete, b, { force = true }) end`, b.ID)
 		}
 	}
+	m.aiRestoreNote(abs)
 	if err := osRemoveAll(abs); err != nil {
 		return "", nil, err
 	}
@@ -408,6 +415,8 @@ func (m *Model) aiRenamePath(from, to string, rel func(string) string) (string, 
 	if err := os.MkdirAll(filepath.Dir(to), 0o755); err != nil {
 		return "", nil, err
 	}
+	m.aiRestoreNote(from)
+	m.aiRestoreNote(to)
 	if err := os.Rename(from, to); err != nil {
 		return "", nil, err
 	}

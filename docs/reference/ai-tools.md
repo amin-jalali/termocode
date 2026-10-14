@@ -729,6 +729,7 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `ai-sign-out-claude` | AI: Sign out of Claude | never | AI provider, credentials and approvals stay with the user |
 | `ai-toggle-inline` | AI: Toggle Inline Completions | confirm (ide) |   |
 | `ai-trigger-inline` | AI: Trigger Inline Completion | never | inline completion is for the user's typing |
+| `ai-undo-turn` | AI: Undo Last Turn | never | the user undoes the AI's changes |
 | `alternate-file` | View: Switch to Last File | auto |   |
 | `bookmark-clear` | Bookmarks: Clear All | confirm (ide) |   |
 | `bookmark-list` | Bookmarks: Show List | never | opens a picker or prompt that only the user can answer; use a typed tool |

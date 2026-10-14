@@ -164,6 +164,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		ctxParts = append(ctxParts, "Attached "+a.Label+":\n```\n"+a.Text+"\n```")
 	}
 	s.attachments = nil
+	s.turnMsg = len(s.conv.Messages) // restore points key on the turn's user message
 	s.conv.Messages = append(s.conv.Messages,
 		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: strings.Join(ctxParts, "\n\n"), Images: images},
 		ai.StoredMessage{Role: ai.StoredAssistant},
@@ -346,6 +347,7 @@ func (m *Model) onAIChatDone(msg aiChatDoneMsg) tea.Cmd {
 	if err := s.store.Save(&s.conv); err != nil {
 		recordError("[ai] save chat: " + err.Error())
 	}
+	m.aiRestoreTurnDone()
 	m.persistAIState()
 	_, cmd := m.aiSyncIDE("", aiSyncDisk) // each tool synced already; this catches the rest
 	return cmd
