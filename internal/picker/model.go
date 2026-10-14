@@ -754,7 +754,7 @@ func titleGlyph() string {
 func searchGlyph() string {
 	switch theme.CurrentIconMode {
 	case theme.IconModeNerdFont:
-		return "\uf002" // nf-fa-search
+		return "\uea6d" // nf-cod-search
 	case theme.IconModeUnicode:
 		return "⌕"
 	}

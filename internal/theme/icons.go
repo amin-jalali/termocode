@@ -60,7 +60,7 @@ var (
 	// monospace sizes. U+2315, EAW=Neutral.
 	// Bold: rounded lens (▛▜) on top, lens body + handle dot (▙▖) below.
 	IconSearch = Icon{
-		NerdFont: "", Unicode: "⌕", ASCII: "S", // fa-search, ⌕
+		NerdFont: "", Unicode: "⌕", ASCII: "S", // cod-search, ⌕
 		Bold: [2]string{"▛▜", "▙▖"},
 	}
 	// IconGit — alternative-key symbol is a fork glyph used by some
@@ -151,7 +151,7 @@ var (
 
 // Status-bar markers.
 var (
-	IconBranch  = Icon{NerdFont: "", Unicode: "⑂", ASCII: "git:"}
+	IconBranch  = Icon{NerdFont: "", Unicode: "⑂", ASCII: "git:"}
 	IconError   = Icon{NerdFont: "", Unicode: "✗", ASCII: "E"}
 	IconWarning = Icon{NerdFont: "", Unicode: "⚠", ASCII: "W"}
 	IconDirty   = Icon{NerdFont: "●", Unicode: "●", ASCII: "*"}
