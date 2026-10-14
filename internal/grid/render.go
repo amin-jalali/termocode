@@ -58,15 +58,28 @@ type runStyle struct {
 // lipgloss style gives, but the escape codes of each style are worked out
 // once and cached, so a frame costs a few allocations instead of several
 // per run.
+//
+// When nothing changed since the last call (no Apply that draws, same
+// cursor, same colour profile) the last frame is returned as is.
 func (g *Grid) Render() string {
 	if g.Width == 0 || g.Height == 0 {
 		return ""
 	}
-	if p := lipgloss.ColorProfile(); g.styles == nil || p != g.stylesProfile || len(g.styles) > maxStyles {
+	p := lipgloss.ColorProfile()
+	f := &g.frame
+	if f.ok && f.gen == g.gen && f.profile == p && f.curR == g.CursorRow && f.curC == g.CursorCol {
+		return f.out
+	}
+	if g.styles == nil || p != g.stylesProfile || len(g.styles) > maxStyles {
 		g.styles = make(map[styleKey]*runStyle)
 		g.stylesProfile = p
 	}
+	out := g.render()
+	*f = frameCache{ok: true, gen: g.gen, profile: p, curR: g.CursorRow, curC: g.CursorCol, out: out}
+	return out
+}
 
+func (g *Grid) render() string {
 	var sb strings.Builder
 	sb.Grow(g.lastRenderLen)
 	for r := 0; r < g.Height; r++ {
@@ -297,4 +310,31 @@ type styleCache struct {
 	styles        map[styleKey]*runStyle
 	stylesProfile termenv.Profile
 	lastRenderLen int
+
+	// gen counts changes to what the grid draws (see Invalidate). The last
+	// frame is reused while gen, the cursor and the colour profile match.
+	gen   uint64
+	frame frameCache
+}
+
+// frameCache is the last frame Render built and what it was built from.
+type frameCache struct {
+	ok         bool
+	gen        uint64
+	profile    termenv.Profile
+	curR, curC int
+	out        string
+}
+
+// Invalidate drops the cached frame, so the next Render draws again.
+// Apply and SetTermPalette call it; code that writes Cells, HlAttrs or
+// the default colours directly must call it too.
+func (g *Grid) Invalidate() { g.gen++ }
+
+// SetTermPalette sets the RGB of ANSI colours 0–15 for terminal cells
+// (see Attrs.TermFg).
+func (g *Grid) SetTermPalette(p [16]int) {
+	g.TermPalette = p
+	g.TermPaletteSet = true
+	g.Invalidate()
 }

@@ -91,6 +91,7 @@ func BenchmarkGridRender(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		g.Invalidate() // a full draw every time, not the reused frame
 		_ = g.Render()
 	}
 }
