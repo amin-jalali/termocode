@@ -23,6 +23,8 @@ var tooltipLabels = map[string]tooltipSpec{
 	"ai:new":             {name: "New chat", local: "Ctrl+N"}, // aiPanelKey
 	"ai:history":         {name: "Chat history"},
 	"ai:btn:attach-file": {name: "Attach file"},
+	"ai:btn:copymsg:":    {name: "Copy message"},
+	"ai:btn:copy:":       {name: "Copy code block"},
 	"actions:pin":        {name: "Unpin panel"},
 	"actions:close":      {name: "Close panel", palette: "toggle-actions-panel"},
 	"actions:launcher":   {name: "AI chat", palette: "toggle-actions-panel"},

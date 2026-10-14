@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/amin-jalali/termocode/internal/app"
 	"github.com/amin-jalali/termocode/internal/testkit"
 )
 
@@ -95,11 +96,24 @@ func TestAIChatApplyCodeBlock(t *testing.T) {
 func TestAIChatCopyCodeBlock(t *testing.T) {
 	f := newFakeAI(t)
 	f.reply("```go\n// pasted from chat\n// it's line two\n```")
+	var clip string
+	t.Cleanup(app.SetClipboardSink(func(s string) { clip = s })) // never the real clipboard
 	d := aiDriver(t, f)
 	ask(d, "a comment please")
-	mustSee(t, d, "Copy")
-	clickText(t, d, "Copy")
+	mustSee(t, d, "Apply")
+	// The card's Copy sits left of its Apply (the answer header has a
+	// Copy of its own, for the whole answer).
+	_, y, _ := locate(d, "Apply")
+	row := strings.Split(screen(d), "\n")[y]
+	i := strings.LastIndex(row[:strings.Index(row, "Apply")], "Copy")
+	if i < 0 {
+		t.Fatalf("no Copy next to Apply: %q", row)
+	}
+	d.Click(ansi.StringWidth(row[:i]), y)
 	mustSee(t, d, "Copied code block")
+	if clip != "// pasted from chat\n// it's line two" {
+		t.Errorf("clipboard = %q", clip)
+	}
 	clickText(t, d, "fmt.Println") // back into the editor
 	d.Key("ctrl+v", "ctrl+s")
 	if got := waitFile(t, d, "main.go", func(s string) bool { return strings.Contains(s, "pasted from chat") }); !strings.Contains(got, "// pasted from chat") || !strings.Contains(got, "// it's line two") {
