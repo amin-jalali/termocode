@@ -34,9 +34,10 @@ func sandbox(t testing.TB, nvim bool) {
 		"plugins/rainbow-delimiters.nvim/lua/rainbow-delimiters"} {
 		_ = os.MkdirAll(filepath.Join(home, d), 0o755)
 	}
-	// Animations off: frames settle at once. Images as text blocks.
+	// Animations off: frames settle at once. Images as text blocks. The
+	// first-run setup card is done (setup tests pass their own config).
 	_ = os.WriteFile(filepath.Join(home, "config/termocode/config.json"),
-		[]byte(`{"animations": "off", "images": "blocks"}`), 0o644)
+		[]byte(`{"animations": "off", "images": "blocks", "setup_done": true}`), 0o644)
 	env := map[string]string{
 		"HOME":            home,
 		"XDG_CONFIG_HOME": filepath.Join(home, "config"),

@@ -115,6 +115,9 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 	if cmd, ok := m.handleAIConfirm(id); ok { // Group A
 		return cmd
 	}
+	if cmd, ok := m.handleSetupConfirm(id); ok { // setup card: GNOME profile
+		return cmd
+	}
 	switch m.confirmKind {
 	case confirmKindCloseBuffer:
 		switch id {

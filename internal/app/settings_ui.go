@@ -47,6 +47,13 @@ type settingsConfig struct {
 	PersistentSession string `json:"persistent_session,omitempty"`
 	// DashboardLogo: "text", "image" or "off" ("" = text).
 	DashboardLogo string `json:"dashboard_logo,omitempty"`
+	// First-run setup card (setup_card.go). Done = the user finished it,
+	// Dismissed = hidden with "Hide"; either keeps it off the Welcome
+	// page until "Setup: Show Setup Card". Settled lists the steps the
+	// user answered on the card ("icons", "ai", "theme").
+	SetupDone      *bool    `json:"setup_done,omitempty"`
+	SetupDismissed *bool    `json:"setup_dismissed,omitempty"`
+	SetupSettled   []string `json:"setup_settled,omitempty"`
 }
 
 // settingsConfigPath returns the absolute path to config.json. We don't
@@ -135,6 +142,15 @@ func saveSettings(cfg settingsConfig) error {
 	}
 	if cfg.SearchMaxResults != nil {
 		merged["search_max_results"] = *cfg.SearchMaxResults
+	}
+	if cfg.SetupDone != nil {
+		merged["setup_done"] = *cfg.SetupDone
+	}
+	if cfg.SetupDismissed != nil {
+		merged["setup_dismissed"] = *cfg.SetupDismissed
+	}
+	if cfg.SetupSettled != nil {
+		merged["setup_settled"] = cfg.SetupSettled
 	}
 	for k, v := range map[string]string{"icons": cfg.Icons, "animations": cfg.Animations, "images": cfg.Images, "persistent_session": cfg.PersistentSession, "dashboard_logo": cfg.DashboardLogo} {
 		if v != "" {

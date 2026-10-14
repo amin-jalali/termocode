@@ -459,6 +459,7 @@ func (m Model) renderBaseLines() []string {
 	// guard, moving the mouse onto the HEAD pane would flip the whole editor to
 	// the welcome screen and the diff would appear to vanish.
 	if m.editorEmpty() {
+		m.publishSetupCard()
 		editorContent = renderWelcome(edPaneW, editorH, m.welcomeFocus)
 	} else {
 		editorContent = m.editor.View(m.focus == FocusEditor)

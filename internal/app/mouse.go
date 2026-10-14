@@ -520,6 +520,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 		// what's actually on screen.
 		pane := m.editorPaneLayout()
 		edPaneW, editorH := pane.W, pane.H
+		m.publishSetupCard()
+		nActions := len(welcomeQuickActions())
 		// Quick-action cards: dispatch the same keymap action the
 		// keyboard binding would fire. This goes first so a card click
 		// doesn't accidentally fall through to a recents row underneath.
@@ -534,7 +536,25 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 					break
 				}
 			}
+			for _, hit := range welcomeSetupHits(edPaneW, editorH) {
+				if localY == hit.Row && localX >= hit.ColStart && localX < hit.ColEnd {
+					m.welcomeFocus = nActions + hit.Index
+					break
+				}
+			}
 			return m, nil
+		}
+		// Setup card buttons (setup_card*.go).
+		for _, hit := range welcomeSetupHits(edPaneW, editorH) {
+			if localY != hit.Row || localX < hit.ColStart || localX >= hit.ColEnd {
+				continue
+			}
+			if m.probed("welcome:setup:" + hit.ID) {
+				return m, nil
+			}
+			m.welcomeFocus = nActions + hit.Index
+			m.focus = FocusEditor
+			return m, m.pressSetupButton(hit.ID)
 		}
 		for _, hit := range welcomeQuickActionHits(edPaneW, editorH) {
 			if localY != hit.Row {
@@ -720,31 +740,29 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 // consumed so handleGlobalKey skips its normal switch.
 func (m Model) handleWelcomeKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 	actions := welcomeQuickActions()
-	if len(actions) == 0 {
+	// The setup card's buttons follow the action cards in the cycle.
+	buttons := m.setupCardView().buttons()
+	n := len(actions) + len(buttons)
+	if n == 0 {
 		return m, nil, false
 	}
+	if m.welcomeFocus < 0 || m.welcomeFocus >= n {
+		m.welcomeFocus = 0
+	}
 	switch msg.String() {
-	case "left":
-		m.welcomeFocus = (m.welcomeFocus - 1 + len(actions)) % len(actions)
-		return m, nil, true
-	case "right", "tab":
-		m.welcomeFocus = (m.welcomeFocus + 1) % len(actions)
-		return m, nil, true
-	case "shift+tab":
-		m.welcomeFocus = (m.welcomeFocus - 1 + len(actions)) % len(actions)
-		return m, nil, true
-	case "up":
-		// On a single-row layout, map up/down to left/right so users
+	case "left", "shift+tab", "up":
+		// On a single-row layout, up/down map to left/right so users
 		// who reach for the vertical arrows still navigate. Wraps.
-		m.welcomeFocus = (m.welcomeFocus - 1 + len(actions)) % len(actions)
+		m.welcomeFocus = (m.welcomeFocus - 1 + n) % n
 		return m, nil, true
-	case "down":
-		m.welcomeFocus = (m.welcomeFocus + 1) % len(actions)
+	case "right", "tab", "down":
+		m.welcomeFocus = (m.welcomeFocus + 1) % n
 		return m, nil, true
 	case "enter":
 		idx := m.welcomeFocus
-		if idx < 0 || idx >= len(actions) {
-			idx = 0
+		if idx >= len(actions) {
+			cmd := m.pressSetupButton(buttons[idx-len(actions)].id)
+			return m, cmd, true
 		}
 		newM, cmd := m.runWelcomeCard(idx)
 		return newM, cmd, true
