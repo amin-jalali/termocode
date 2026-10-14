@@ -139,12 +139,7 @@ func aiIDETools(root string, call aiIDECaller) []ai.Tool {
 	ws := ai.Workspace{Root: root}
 	str := func(d string) map[string]any { return map[string]any{"type": "string", "description": d} }
 	num := func(d string) map[string]any { return map[string]any{"type": "integer", "description": d} }
-	rel := func(abs string) string {
-		if r, err := filepath.Rel(root, abs); err == nil && !strings.HasPrefix(r, "..") {
-			return filepath.ToSlash(r)
-		}
-		return abs
-	}
+	rel := aiRel(root)
 	// existing resolves a workspace path that must exist.
 	existing := func(a map[string]any) (string, os.FileInfo, error) {
 		p := ai.ArgString(a, "path")
