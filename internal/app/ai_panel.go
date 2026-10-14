@@ -40,6 +40,10 @@ type aiLine struct {
 	bg      theme.Color256
 	buttons []aiLineButton
 	styled  string
+	sel     aiSel // selectable text (ai_select.go)
+	// msg and block are the message and code block the row belongs to,
+	// index+1 (0 = none): the right-click menu's target.
+	msg, block int
 }
 
 // aiLineButton is a clickable span on a transcript / divider row.
@@ -117,7 +121,16 @@ func (m Model) renderAIPanelBody(width, height int, edge func(string) string) []
 
 	tc := m.aiTranscriptCached(width)
 	start, end := aiVisibleRange(len(tc.lines), g.transH, m.aiScroll())
+	// The selection is drawn over the cached rows: only selected rows
+	// are drawn again, the cache stays as it is.
+	s0, s1, hasSel := m.aiSelRange(width)
 	for i := start; i < end; i++ {
+		if hasSel && i >= s0.row && i <= s1.row {
+			if c0, c1, ok := aiSelRowSpan(tc.lines[i], i, s0, s1); ok {
+				rows = append(rows, edge(aiHighlight(renderAILine(tc.lines[i], width), c0, c1, width)))
+				continue
+			}
+		}
 		rows = append(rows, tc.row(i, width, edge))
 	}
 	if len(rows) < g.transH {
@@ -371,6 +384,9 @@ func (m Model) aiTranscriptCached(width int) *aiTranscriptCache {
 		return c
 	}
 	lines := m.buildAITranscript(width)
+	if c.ok {
+		s.aiKeepSelection(c.msgs, c.width, width)
+	}
 	*c = aiTranscriptCache{ok: true, width: width, rk: rk, resizing: resizing, streaming: s.streaming,
 		hasProvider: s.provider != nil, msgs: append([]ai.StoredMessage(nil), s.conv.Messages...),
 		lines: lines, rows: make([]string, len(lines))}
@@ -392,6 +408,17 @@ func (m Model) buildAITranscript(width int) []aiLine {
 	ind := strings.Repeat(" ", aiIndent)
 	plain := func(s string, tok theme.Color256) aiLine {
 		return aiLine{text: ind + s, style: theme.Fg(tok)}
+	}
+	// selPlain wraps text into selectable rows of message msgIdx.
+	selPlain := func(text string, tok theme.Color256, msgIdx int) []aiLine {
+		rows, joins := aiWrapSel(text, inner)
+		out := make([]aiLine, len(rows))
+		for k, r := range rows {
+			out[k] = plain(r, tok)
+			out[k].msg = msgIdx + 1
+			out[k].sel = aiSel{ok: true, x: aiIndent, text: r, join: joins[k]}
+		}
+		return out
 	}
 	var out []aiLine
 	s := m.ai
@@ -429,32 +456,28 @@ func (m Model) buildAITranscript(width int) []aiLine {
 	for i, msg := range s.conv.Messages {
 		switch msg.Role {
 		case ai.StoredUser:
-			out = append(out, aiLine{})
-			out = append(out, aiUserBubble(aiCleanText(msg.Text), width)...)
+			out = append(out, aiLine{sel: aiSel{ok: true, join: "\n"}})
+			out = append(out, aiUserBubble(aiCleanText(msg.Text), width, i)...)
 			if msg.Context != "" {
 				out = append(out, aiRightChip(aiAttachGlyph()+" "+aiContextLabel(msg.Context), width))
 			}
 		case ai.StoredAssistant:
-			out = append(out, aiLine{})
-			out = append(out, m.aiAnswerHeader(width))
+			out = append(out, aiLine{sel: aiSel{ok: true, join: "\n"}})
 			text := aiCleanText(msg.Text)
 			streaming := s.streaming && i == last
+			out = append(out, m.aiAnswerHeader(width, i, !streaming))
 			if strings.TrimSpace(text) == "" && streaming {
 				out = append(out, aiLine{text: ind + "thinking…", style: theme.Fg(theme.TextDim).Italic(true)})
 				break
 			}
 			out = append(out, s.renderAnswer(i, text, width, streaming, m.dragKind == dragActionsLeft)...)
 		case ai.StoredTool:
-			for _, l := range wrapPlain(aiCleanText(msg.Text), inner) {
-				out = append(out, plain(l, theme.TextDim))
-			}
+			out = append(out, selPlain(aiCleanText(msg.Text), theme.TextDim, i)...)
 		case ai.StoredError:
-			for _, l := range wrapPlain("⚠ "+aiCleanText(msg.Text), inner) {
-				out = append(out, plain(l, theme.DiagError))
-			}
+			out = append(out, selPlain("⚠ "+aiCleanText(msg.Text), theme.DiagError, i)...)
 		}
 	}
-	out = append(out, aiLine{})
+	out = append(out, aiLine{sel: aiSel{ok: true, join: "\n"}})
 	return out
 }
 
@@ -507,12 +530,12 @@ func aiRightChip(label string, width int) aiLine {
 }
 
 // aiUserBubble renders a user message as a tinted bubble on the right.
-func aiUserBubble(text string, width int) []aiLine {
+func aiUserBubble(text string, width, msgIdx int) []aiLine {
 	maxW := (width - aiIndent - 1) * 85 / 100
 	if maxW < 10 {
 		maxW = width - aiIndent - 1
 	}
-	lines := wrapPlain(text, maxW-2)
+	lines, joins := aiWrapSel(text, maxW-2)
 	bw := 0
 	for _, l := range lines {
 		if w := runewidth.StringWidth(l); w > bw {
@@ -527,25 +550,68 @@ func aiUserBubble(text string, width int) []aiLine {
 	bub := lipgloss.NewStyle().Background(theme.Mix(theme.BgPanel, theme.BorderFocus, 0.20)).Foreground(theme.LG(theme.TextWhite))
 	lead := theme.Bg(theme.BgPanel).Render(strings.Repeat(" ", x))
 	out := make([]aiLine, 0, len(lines))
-	for _, l := range lines {
+	for k, l := range lines {
 		fill := bw - 2 - runewidth.StringWidth(l)
 		if fill < 0 {
 			fill = 0
 		}
-		out = append(out, aiLine{styled: lead + bub.Render(" "+l+strings.Repeat(" ", fill)+" ")})
+		row := aiLine{styled: lead + bub.Render(" "+l+strings.Repeat(" ", fill)+" "), msg: msgIdx + 1,
+			sel: aiSel{ok: true, x: x + 1, text: l, join: joins[k]}}
+		// A copy button left of the bubble's first row.
+		if k == 0 && x >= 3 {
+			g := aiCopyGlyph()
+			gx := x - 1 - runewidth.StringWidth(g)
+			row.styled = theme.Bg(theme.BgPanel).Render(strings.Repeat(" ", gx)) +
+				theme.FgBg(theme.TextDim, theme.BgPanel).Render(g) + theme.Bg(theme.BgPanel).Render(" ") + bub.Render(" "+l+strings.Repeat(" ", fill)+" ")
+			row.buttons = []aiLineButton{{gx, gx + runewidth.StringWidth(g), "copymsg:" + strconv.Itoa(msgIdx)}}
+		}
+		out = append(out, row)
 	}
 	return out
 }
 
-// aiAnswerHeader is the "✦ AI · model" line above an answer.
-func (m Model) aiAnswerHeader(width int) aiLine {
+// aiCopyGlyph is the icon of a message's copy button.
+func aiCopyGlyph() string {
+	switch theme.CurrentIconMode {
+	case theme.IconModeNerdFont:
+		return "\uf0c5" // nf-fa-copy
+	case theme.IconModeUnicode:
+		return "⧉"
+	}
+	return "c"
+}
+
+// aiCopyLabel is the label of the copy buttons ("⧉ Copy").
+func aiCopyLabel() string {
+	switch theme.CurrentIconMode {
+	case theme.IconModeNerdFont:
+		return "\uf0c5 Copy"
+	case theme.IconModeUnicode:
+		return "⧉ Copy"
+	}
+	return "Copy"
+}
+
+// aiAnswerHeader is the "✦ AI · model" line above answer msgIdx, with a
+// Copy button (the whole answer) on the right once it is done.
+func (m Model) aiAnswerHeader(width, msgIdx int, done bool) aiLine {
 	bg := theme.Bg(theme.BgPanel)
 	row := bg.Render(strings.Repeat(" ", aiIndent)) +
 		theme.FgBg(theme.AIAccent, theme.BgPanel).Bold(true).Render(aiSpark()+" AI")
 	if s := m.ai; s != nil && s.provider != nil {
 		row += theme.FgBg(theme.TextDim, theme.BgPanel).Render(" · " + s.modelLabel())
 	}
-	return aiLine{styled: row}
+	l := aiLine{styled: row, msg: msgIdx + 1}
+	if !done {
+		return l
+	}
+	label := aiCopyLabel()
+	bw, used := runewidth.StringWidth(label), textWidth(row)
+	if x := width - 2 - bw; x >= used+2 {
+		l.styled += bg.Render(strings.Repeat(" ", x-used)) + theme.FgBg(theme.TextDim, theme.BgPanel).Render(label)
+		l.buttons = []aiLineButton{{x, x + bw, "copymsg:" + strconv.Itoa(msgIdx)}}
+	}
+	return l
 }
 
 // renderAnswer renders (and caches) an assistant message. Finished
@@ -838,6 +904,10 @@ func (m *Model) routeAIPanelKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 	}
 	switch msg.String() {
 	case "esc":
+		if _, _, ok := s.sel.rng(); ok {
+			s.sel.clear() // the first Esc drops the selection
+			return nil, true
+		}
 		s.focused = false
 		m.focus = FocusEditor
 		return nil, true
@@ -903,7 +973,14 @@ func (m *Model) routeAIPanelKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 	case "pgdown":
 		m.scrollAIPanel(-maxInt(aiGeom(m.h).transH-2, 1))
 		return nil, true
-	case "ctrl+c":
+	case "ctrl+c", "ctrl+shift+c":
+		// With a selection: copy it. Without: Ctrl+C stops the AI.
+		if cmd, ok := m.aiCopySelection(); ok {
+			return cmd, true
+		}
+		if msg.String() == "ctrl+shift+c" {
+			return nil, false
+		}
 		return m.aiCancelAll(), true
 	case "ctrl+n":
 		return m.newAIChat(), true
@@ -1056,10 +1133,24 @@ func (m *Model) handleAIPanelMouse(msg tea.MouseMsg) (tea.Cmd, bool) {
 		return nil, false
 	}
 	s := m.aiS()
+	// A selection drag follows the pointer anywhere (and scrolls the
+	// transcript above / below it) until the button is released.
+	if s.sel.dragging {
+		switch {
+		case msg.Action == tea.MouseActionMotion:
+			m.aiSelDragTo(msg.X, msg.Y)
+			return nil, true
+		case msg.Action == tea.MouseActionRelease:
+			return m.aiSelRelease(), true
+		}
+	}
 	x0 := m.w - m.actionsColumnWidth()
 	if msg.X < x0 || (msg.X == x0 && msg.Y > 0) {
-		if msg.Type == tea.MouseLeft && s.focused {
-			s.focused = false
+		if msg.Type == tea.MouseLeft {
+			s.sel.clear()
+			if s.focused {
+				s.focused = false
+			}
 		}
 		return nil, false
 	}
@@ -1071,10 +1162,19 @@ func (m *Model) handleAIPanelMouse(msg tea.MouseMsg) (tea.Cmd, bool) {
 		m.scrollAIPanel(-3)
 		return nil, true
 	case tea.MouseLeft:
+	case tea.MouseRight:
+		if msg.Action == tea.MouseActionPress && msg.Y > 1 {
+			m.aiChatRightClick(msg.X, msg.Y)
+		}
+		return nil, msg.Y > 0
 	default:
 		return nil, msg.Y > 0
 	}
-	switch id := m.aiPanelTargetAt(msg.X, msg.Y); {
+	id := m.aiPanelTargetAt(msg.X, msg.Y)
+	if id != "ai:transcript" && id != "" {
+		s.sel.clear() // a click elsewhere in the panel drops the selection
+	}
+	switch {
 	case id == "":
 		return nil, false // pin / close handled by mouse.go
 	case id == "ai:new":
@@ -1085,6 +1185,7 @@ func (m *Model) handleAIPanelMouse(msg tea.MouseMsg) (tea.Cmd, bool) {
 		return m.onAIButton(strings.TrimPrefix(id, "ai:btn:")), true
 	case id == "ai:transcript":
 		s.focused = true
+		m.aiSelPress(msg.X, msg.Y)
 	case id == "ai:input":
 		s.focused = true
 		s.caret = len(s.input)
@@ -1111,6 +1212,12 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 		return nil
 	case strings.HasPrefix(id, "save:"):
 		return m.aiSaveCodeBlockAs(id)
+	case strings.HasPrefix(id, "copymsg:"):
+		i, err := strconv.Atoi(strings.TrimPrefix(id, "copymsg:"))
+		if err != nil {
+			return nil
+		}
+		return m.aiCopyMessage(i)
 	case strings.HasPrefix(id, "suggest:"):
 		for _, sg := range aiSuggestions {
 			if "suggest:"+sg.id == id {
@@ -1134,8 +1241,7 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 			return nil
 		}
 		if strings.HasPrefix(id, "copy:") {
-			m.copyToClipboard(code)
-			return m.aiInfo("Copied code block")
+			return m.copyWithToast(code, "Copied code block")
 		}
 		return m.proposeWholeFile(code, "chat code block")
 	}
