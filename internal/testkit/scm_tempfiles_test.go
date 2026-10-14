@@ -26,6 +26,19 @@ func diffTempFiles(dir string) []string {
 	return out
 }
 
+// handled waits (up to 10 s: git is slow on CI runners) until Update got a
+// message of the given type since the from-th one (from Driver.Updates).
+func handled(d *Driver, from int, msgType string) bool {
+	return d.WaitFor(func() bool {
+		for _, m := range d.UpdatesSince(from) {
+			if m == msgType {
+				return true
+			}
+		}
+		return false
+	}, 10*time.Second)
+}
+
 // Spec: Given the app runs without nvim and main.go is changed, when the
 // user clicks main.go in CHANGES (side-by-side diff) and a commit in GRAPH
 // (commit diff), then no diff temp file is left behind.
@@ -36,8 +49,13 @@ func TestSCMDiffLeavesNoTempFileWithoutNvim(t *testing.T) {
 		r.write("main.go", "package main\n// edit\n")
 	})
 	d.WaitForText("main.go", 3*time.Second)
+	// The diff is built in the background (slow git on CI runners): wait
+	// until its message was handled, then no temp file may be left.
+	from, _ := d.Updates()
 	scmClickText(d, "main.go")
-	d.Settle(200 * time.Millisecond)
+	if !handled(d, from, "app.gitDiffReadyMsg") {
+		t.Fatal("the file diff never arrived")
+	}
 	if left := diffTempFiles(tmp); len(left) > 0 {
 		t.Errorf("file diff left temp files: %v", left)
 	}
@@ -45,8 +63,11 @@ func TestSCMDiffLeavesNoTempFileWithoutNvim(t *testing.T) {
 	if len(g) == 0 || !strings.Contains(g[len(g)-1], "init") {
 		t.Fatalf("no init commit in GRAPH: %q", g)
 	}
+	from, _ = d.Updates()
 	scmClickText(d, "init")
-	d.Settle(200 * time.Millisecond)
+	if !handled(d, from, "app.gitCommitDiffReadyMsg") {
+		t.Fatal("the commit diff never arrived")
+	}
 	if left := diffTempFiles(tmp); len(left) > 0 {
 		t.Errorf("commit diff left temp files: %v", left)
 	}

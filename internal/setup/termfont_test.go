@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -17,14 +18,16 @@ const testProfileID = "b1dcc9dd"
 // fakeGNOME makes termEnv a GNOME Terminal whose font is *font (system
 // monospace font). It returns the gsettings call counter and a setter
 // for the dconf mtime (the cache key).
-func fakeGNOME(t *testing.T, font *string) (calls *int, touch func(time.Time)) {
+// calls counts gsettings runs; detection runs them in parallel, so the
+// counter is atomic.
+func fakeGNOME(t *testing.T, font *string) (calls *atomic.Int32, touch func(time.Time)) {
 	t.Helper()
 	t.Setenv("XDG_STATE_HOME", t.TempDir())
-	old, oldNow := termEnv, clock.Now
-	t.Cleanup(func() { termEnv, clock.Now = old, oldNow })
+	old := termEnv
+	t.Cleanup(func() { termEnv = old })
 	now := time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)
-	clock.Now = func() time.Time { return now }
-	n := 0
+	t.Cleanup(clock.Set(func() time.Time { return now }))
+	var n atomic.Int32
 	mtime := time.Unix(100, 0)
 	termEnv = nerdterm.Env{
 		Getenv: func(k string) string {
@@ -39,7 +42,7 @@ func fakeGNOME(t *testing.T, font *string) (calls *int, touch func(time.Time)) {
 		ReadFile: func(string) ([]byte, error) { return nil, errors.New("no file") },
 		Stat:     func(string) (time.Time, bool) { return mtime, true },
 		Gsettings: func(_ context.Context, args ...string) (string, error) {
-			n++
+			n.Add(1)
 			switch args[2] {
 			case "default":
 				return "'" + testProfileID + "'", nil
@@ -60,10 +63,10 @@ func TestDetectTerminalFontCache(t *testing.T) {
 	if got := DetectTerminalFont(false); got.Nerd || got.Font != "Ubuntu Mono 11" {
 		t.Fatalf("first: %+v", got)
 	}
-	first := *calls
+	first := calls.Load()
 	font = "JetBrainsMono Nerd Font 11"
-	if got := DetectTerminalFont(false); got.Nerd || *calls != first {
-		t.Fatalf("cached call ran gsettings (%d -> %d) or changed: %+v", first, *calls, got)
+	if got := DetectTerminalFont(false); got.Nerd || calls.Load() != first {
+		t.Fatalf("cached call ran gsettings (%d -> %d) or changed: %+v", first, calls.Load(), got)
 	}
 	// A settings change rewrites dconf's user file: the cache is stale.
 	touch(time.Unix(200, 0))

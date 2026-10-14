@@ -40,15 +40,15 @@ func fakeNerdEnv(t *testing.T) (calls *int, setOut func(string), fontDir string,
 	t.Helper()
 	t.Setenv("XDG_STATE_HOME", t.TempDir())
 	fontDir = t.TempDir()
-	oldFC, oldDirs, oldNow := fcList, fontDirs, clock.Now
-	t.Cleanup(func() { fcList, fontDirs, clock.Now = oldFC, oldDirs, oldNow })
+	oldFC, oldDirs := fcList, fontDirs
+	t.Cleanup(func() { fcList, fontDirs = oldFC, oldDirs })
 
 	n := 0
 	out := "JetBrainsMono Nerd Font,JetBrainsMono NF\nDejaVu Sans Mono\n"
 	fcList = func() (string, error) { n++; return out, nil }
 	fontDirs = func() []string { return []string{fontDir} }
 	now := time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)
-	clock.Now = func() time.Time { return now }
+	t.Cleanup(clock.Set(func() time.Time { return now }))
 	return &n, func(s string) { out = s }, fontDir, func(d time.Duration) { now = now.Add(d) }
 }
 

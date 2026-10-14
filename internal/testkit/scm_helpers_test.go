@@ -176,9 +176,7 @@ func scmStart(t *testing.T, setup func(r *repo)) (*Driver, *repo) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not on PATH")
 	}
-	old := clock.Now
-	clock.Now = func() time.Time { return scmNow }
-	t.Cleanup(func() { clock.Now = old })
+	t.Cleanup(clock.Set(func() time.Time { return scmNow }))
 	t.Setenv("TZ", "UTC")
 	var r *repo
 	d := New(t, Options{W: 140, H: 44, Files: scmFiles, Setup: func(tb testing.TB, dir string) {
