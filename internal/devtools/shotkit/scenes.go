@@ -79,6 +79,7 @@ func Scenes() []Scene {
 		Confirm(),
 		{Name: "ai-chat", Env: aiEnv, Steps: WithEditor(Act("palette:ai-open-chat"), Pause(600*time.Millisecond))},
 		AIChatAnswer(),
+		{Name: "ai-chat-fa", Env: aiEnv, Steps: WithEditor(Act("palette:ai-open-chat"), Act("aidemo-fa"), Pause(600*time.Millisecond))},
 		{Name: "problems", Steps: WithEditor(Act("palette:problems-panel"), Pause(800*time.Millisecond))},
 		{Name: "testing", Steps: WithEditor(Act("palette:testing-focus"), Pause(1500*time.Millisecond))},
 		{Name: "run-debug", Steps: WithEditor(Act("palette:debug-view"), Pause(800*time.Millisecond))},

@@ -57,6 +57,12 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `ai_edit_review` | enum | `review` | review: the agent's file changes (write_file, create_file, LSP rename, code actions, format) open as a diff where you accept or reject each change; the agent waits and is told what was written. auto: the old way (a confirm dialog, or no question when fileWrite is auto-approved). Auto-approving fileWrite also skips the review. Toggle with AI: Toggle Edit Review. |
 | `ai_max_steps` | int | `25` | Most tool steps the AI agent takes for one chat message. At the limit it stops and asks you to send "continue". |
 
+## Appearance (file only)
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `rtl` | enum | `auto` | Right-to-left text (Persian, Arabic, Hebrew) in the AI chat and the Markdown preview. termocode: termocode joins the letters and puts them in reading order itself, right-aligns RTL paragraphs, and asks the terminal not to reorder (BDSM, CSI 8 l). terminal: termocode sends the text unchanged and the terminal does it. off: unchanged text, no request to the terminal. auto: terminal on Konsole and mlterm (they always reorder), else termocode. Read at start. |
+
 ## Terminal (file only)
 
 | Key | Type | Default | Description |

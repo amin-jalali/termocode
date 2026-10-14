@@ -47,6 +47,9 @@ type settingsConfig struct {
 	PersistentSession string `json:"persistent_session,omitempty"`
 	// DashboardLogo: "text", "image" or "off" ("" = text).
 	DashboardLogo string `json:"dashboard_logo,omitempty"`
+	// RTL: who lays out right-to-left text: "auto", "termocode",
+	// "terminal" or "off" ("" = auto; ai_rtl.go).
+	RTL string `json:"rtl,omitempty"`
 	// First-run setup card (setup_card.go). Done = the user finished it,
 	// Dismissed = hidden with "Hide"; either keeps it off the Welcome
 	// page until "Setup: Show Setup Card". Settled lists the steps the
@@ -152,7 +155,7 @@ func saveSettings(cfg settingsConfig) error {
 	if cfg.SetupSettled != nil {
 		merged["setup_settled"] = cfg.SetupSettled
 	}
-	for k, v := range map[string]string{"icons": cfg.Icons, "animations": cfg.Animations, "images": cfg.Images, "persistent_session": cfg.PersistentSession, "dashboard_logo": cfg.DashboardLogo} {
+	for k, v := range map[string]string{"icons": cfg.Icons, "animations": cfg.Animations, "images": cfg.Images, "persistent_session": cfg.PersistentSession, "dashboard_logo": cfg.DashboardLogo, "rtl": cfg.RTL} {
 		if v != "" {
 			merged[k] = v
 		}

@@ -29,7 +29,7 @@ func markdownDoc(content, baseDir string) *preview.Doc {
 		img = markdownImage(baseDir)
 	}
 	return preview.NewDoc(func(width int) []string {
-		return mdview.Render(content, mdview.Options{Width: width, Image: img})
+		return mdview.Render(content, mdview.Options{Width: width, Image: img, RTL: rtlOn()})
 	})
 }
 

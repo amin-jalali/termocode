@@ -12,6 +12,7 @@ import (
 	east "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/text"
 
+	"github.com/amin-jalali/termocode/internal/rtl"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -31,6 +32,12 @@ type Options struct {
 	// stands alone in a paragraph. It returns styled rows no wider than
 	// width, or nil to show the "[image: alt]" placeholder instead.
 	Image func(dest, alt string, width int) []string
+	// RTL lays out right-to-left text (Persian, Arabic) here: each
+	// wrapped row is shaped and put in reading order, and rows of an RTL
+	// paragraph are right aligned. Code keeps its LTR order (only RTL runs
+	// inside it turn). Off, the
+	// text is drawn as written (for terminals that reorder by themselves).
+	RTL bool
 }
 
 // Layout returns the left margin and the width of the reading column for
@@ -119,13 +126,14 @@ type glyphs struct {
 }
 
 type renderer struct {
-	src    []byte
-	opt    Options
-	p      palette
-	g      glyphs
-	base   attrs // the look of plain text in the current block
-	depth  int   // list nesting
-	styles map[attrs]lipgloss.Style
+	src     []byte
+	opt     Options
+	p       palette
+	g       glyphs
+	base    attrs // the look of plain text in the current block
+	depth   int   // list nesting
+	rtlList bool  // inside a right-to-left list item: rows right aligned
+	styles  map[attrs]lipgloss.Style
 }
 
 func newRenderer(src []byte, opt Options) *renderer {
@@ -375,7 +383,16 @@ func (r *renderer) list(l *ast.List, width int) []line {
 			}
 		}
 		ind := lead + ansi.StringWidth(marker) + 1
+		// A right-to-left item: text right aligned, marker on the right.
+		rtlItem := false
+		if r.opt.RTL {
+			src := r.plain(it)
+			rtlItem = rtl.HasRTL(src) && rtl.BaseDir(src) == rtl.RTL
+		}
+		savedRTL := r.rtlList
+		r.rtlList = rtlItem
 		inner := r.blocks(it, max(width-ind, 4), max(width-ind, 4), l.IsTight)
+		r.rtlList = savedRTL
 		r.base = saved
 		if len(inner) == 0 {
 			inner = []line{r.blank(max(width-ind, 4))}
@@ -384,6 +401,15 @@ func (r *renderer) list(l *ast.List, width int) []line {
 			out = append(out, r.blank(width))
 		}
 		for k, ln := range inner {
+			if rtlItem {
+				post := r.fill(ind, r.p.bg)
+				if k == 0 {
+					mk := strings.TrimLeft(marker, " ")
+					post = r.fill(1, r.p.bg) + r.text(mk, ma) + r.fill(ind-1-ansi.StringWidth(mk), r.p.bg)
+				}
+				out = append(out, line{ln.s + post, ind + ln.w})
+				continue
+			}
 			pre := r.fill(ind, r.p.bg)
 			if k == 0 {
 				pre = r.fill(lead, r.p.bg) + r.text(marker, ma) + r.fill(1, r.p.bg)
