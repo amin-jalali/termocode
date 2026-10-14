@@ -242,3 +242,16 @@ screen.
 - [x] L1 (S) File → chat: dropped/pasted paths become attachment chips (text + images), attach button with file picker, `@file`
 - [x] L2 (S) Chat → file: "Save as…" on code blocks, export chat as .md (the AI writes files with `write_file`; no extra `save_file` tool)
 - [ ] L3 (M) Local machine ↔ IDE over SSH: explorer "Download" / "Upload here" via kitty transfer, iTerm2 OSC 1337 File, trzsz; clear message when the terminal can't
+
+## Group P — Performance (2026-10-14)
+
+The user wants termocode "super fast and light". Measure with
+TERMOCODE_CPUPROFILE / TERMOCODE_MEMPROFILE and a pty key-repeat test
+(hold ↓ 30 keys/s in 240×62, with and without the AI chat). Baseline
+after the frame gate: 30% CPU editor only, 38% with the AI chat;
+live heap ~10 MB, RSS ~50 MB, ~50 MB/s short-lived allocations.
+
+- [x] P0 Frame gate (≤1 draw per 16 ms), fast cellWidth/joins, activity bar cache, GOGC 300, profile switches
+- [ ] P1 Cut allocations: cache the AI transcript lines between frames, fewer copies in handleNvimMsg, stop Model copies escaping to the heap; target ≥2× fewer bytes/s and lower CPU per key
+- [ ] P2 Cache the explorer / sidebar render by an exact state key (tree version counter)
+- [ ] P3 A perf guard in CI-safe form: allocation-count benchmarks with limits (not wall-clock), so regressions fail tests
