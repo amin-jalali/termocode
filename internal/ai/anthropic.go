@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -61,7 +62,19 @@ func buildAnthropicBody(req Request, model string, oauth bool) map[string]any {
 				system = append(system, map[string]any{"type": "text", "text": m.Content})
 			}
 		case RoleUser:
-			msgs = append(msgs, map[string]any{"role": "user", "content": m.Content})
+			if len(m.Images) == 0 {
+				msgs = append(msgs, map[string]any{"role": "user", "content": m.Content})
+				continue
+			}
+			blocks := make([]map[string]any, 0, len(m.Images)+1)
+			for _, im := range m.Images {
+				blocks = append(blocks, map[string]any{"type": "image", "source": map[string]any{
+					"type": "base64", "media_type": im.MediaType, "data": base64.StdEncoding.EncodeToString(im.Data)}})
+			}
+			if m.Content != "" {
+				blocks = append(blocks, map[string]any{"type": "text", "text": m.Content})
+			}
+			msgs = append(msgs, map[string]any{"role": "user", "content": blocks})
 		case RoleAssistant:
 			if len(m.Blocks) > 0 {
 				msgs = append(msgs, map[string]any{"role": "assistant", "content": m.Blocks})

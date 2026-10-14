@@ -100,7 +100,19 @@ func (m *Model) aiChatHistory(system string) []ai.Message {
 			if sm.Context != "" {
 				c = sm.Context + "\n\n" + sm.Text
 			}
-			msgs = append(msgs, ai.Message{Role: ai.RoleUser, Content: c})
+			um := ai.Message{Role: ai.RoleUser, Content: c}
+			if len(sm.Images) > 0 {
+				if s.provider != nil && ai.SupportsImages(s.provider) {
+					imgs, note := aiHistoryImages(sm.Images)
+					um.Images = imgs
+					if note != "" {
+						um.Content = note + "\n\n" + um.Content
+					}
+				} else {
+					um.Content = "(images not sent: provider has no image input: " + strings.Join(sm.Images, ", ") + ")\n\n" + um.Content
+				}
+			}
+			msgs = append(msgs, um)
 		case ai.StoredTool:
 			tools = append(tools, sm.Text)
 		case ai.StoredAssistant:
@@ -120,13 +132,18 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	if s.streaming {
 		return m.aiInfo("AI is still answering — Ctrl+C to stop")
 	}
-	var ctxParts []string
+	var ctxParts, images []string
 	for _, a := range s.attachments {
+		if a.Image != "" {
+			images = append(images, a.Image)
+			ctxParts = append(ctxParts, "Attached image "+a.Label+" (sent as an image).")
+			continue
+		}
 		ctxParts = append(ctxParts, "Attached "+a.Label+":\n```\n"+a.Text+"\n```")
 	}
 	s.attachments = nil
 	s.conv.Messages = append(s.conv.Messages,
-		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: strings.Join(ctxParts, "\n\n")},
+		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: strings.Join(ctxParts, "\n\n"), Images: images},
 		ai.StoredMessage{Role: ai.StoredAssistant},
 	)
 	s.scroll = 0
@@ -459,9 +476,8 @@ func (m *Model) aiAttachCurrent() tea.Cmd {
 	} else {
 		text = strings.Join(t.full, "\n")
 	}
-	const maxAttach = 60 * 1024
-	if len(text) > maxAttach {
-		text = text[:maxAttach] + "\n… [truncated]"
+	if len(text) > aiMaxAttach {
+		text = text[:aiMaxAttach] + "\n… [truncated]"
 	}
 	s.attachments = append(s.attachments, aiAttachment{Label: label, Text: text})
 	m.openAIPanel(true)
