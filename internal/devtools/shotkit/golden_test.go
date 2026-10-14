@@ -104,7 +104,7 @@ func TestMain(m *testing.M) {
 
 // runChild renders one case inside the hermetic child process.
 func runChild(name string) int {
-	clock.Now = func() time.Time { return DemoNow }
+	clock.Set(func() time.Time { return DemoNow })
 	for _, c := range goldenCases() {
 		if c.name != name {
 			continue

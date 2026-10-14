@@ -26,6 +26,7 @@ const (
 	menuKindGitCommit
 	menuKindGitActions
 	menuKindProblems // problems_panel.go
+	menuKindAIChat   // ai_select.go
 )
 
 // Source Control context-menu action IDs.
@@ -296,6 +297,9 @@ func (m *Model) handleMenuSelect(id string) tea.Cmd {
 	if m.menuKind == menuKindProblems {
 		return m.handleProblemsMenuSelect(id)
 	}
+	if m.menuKind == menuKindAIChat {
+		return m.handleAIChatMenuSelect(id)
+	}
 	path := m.menuPath
 	switch id {
 	case "open":
@@ -534,23 +538,11 @@ vim.lsp.buf.definition({
 `
 
 // copyToClipboard puts s in the unnamed register (what Ctrl+V falls back
-// to), nvim's + register and the OS clipboard. The text goes to Lua as an
-// argument: a multi-line string in a ':let' command broke the command,
-// and with no clipboard tool (xclip, wl-copy) the failing '@+' aborted the
-// whole line, so nothing was copied at all.
+// to), nvim's + register, the OS clipboard and, over SSH, the terminal's
+// clipboard (OSC 52). See writeClipboard; callers that tell the user
+// "Copied" use copyWithToast, which checks the result.
 func (m *Model) copyToClipboard(s string) {
-	if m.nvim == nil {
-		return
-	}
-	_ = m.nvim.ExecLuaArgs(`local s = ...
-		vim.fn.setreg('"', s)
-		pcall(vim.fn.setreg, '+', s)`, s)
-	safeClipboardWrite(s)
-	// nvim's `+` register only reaches the *server's* clipboard
-	// (and only if xclip/xsel/wl-copy is installed). OSC 52 makes
-	// the menu "Copy Path" actions also land in the user's local
-	// clipboard when termocode runs over SSH.
-	emitOSC52(s)
+	_ = m.writeClipboard(s)
 }
 
 func openShellInDirCmd(dir string) tea.Cmd {

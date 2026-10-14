@@ -76,6 +76,8 @@ type aiState struct {
 	// frames (ai_panel.go).
 	transcript aiTranscriptCache
 	inputCache aiInputCache
+	// sel is the transcript text selection (ai_select.go).
+	sel aiSelState
 
 	// "Save as…" of a code block (ai_export.go): the code, and the path
 	// waiting for the overwrite confirm.
