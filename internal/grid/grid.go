@@ -82,6 +82,11 @@ func (g *Grid) Apply(events [][]any) {
 
 func (g *Grid) applyOne(name string, args []any) {
 	switch name {
+	case "grid_resize", "grid_clear", "grid_line", "grid_scroll",
+		"default_colors_set", "hl_attr_define":
+		g.Invalidate() // Render must draw again; the cursor is checked there
+	}
+	switch name {
 	case "grid_resize":
 		if len(args) < 3 {
 			return
