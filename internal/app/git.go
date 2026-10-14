@@ -4,7 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sync"
 	"time"
+	"unsafe"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -115,7 +117,19 @@ func gitFileAbsPath(rel string) string {
 	return filepath.Join(cwd, rel)
 }
 
-// gitStatusMap builds an absolute-path → status-letter map for the explorer.
+// gitStatusMapCache keeps the last gitStatusMap: it is asked for on
+// every frame, and m.gitFiles is only ever replaced as a whole (git.go),
+// so the same slice and folder give the same map. The cache holds the
+// slice, so its address cannot be reused by a new one.
+var gitStatusMapCache struct {
+	sync.Mutex
+	files []git.FileStatus
+	cwd   string
+	out   map[string]string
+}
+
+// gitStatusMap builds an absolute-path → status-letter map for the
+// explorer. Callers must not modify the result (it is cached).
 func (m Model) gitStatusMap() map[string]string {
 	if !m.gitIsRepo || len(m.gitFiles) == 0 {
 		return nil
@@ -124,8 +138,20 @@ func (m Model) gitStatusMap() map[string]string {
 	if err != nil {
 		return nil
 	}
-	out := make(map[string]string, len(m.gitFiles))
-	for _, f := range m.gitFiles {
+	c := &gitStatusMapCache
+	c.Lock()
+	defer c.Unlock()
+	if c.out != nil && c.cwd == cwd && len(c.files) == len(m.gitFiles) && unsafe.SliceData(c.files) == unsafe.SliceData(m.gitFiles) {
+		return c.out
+	}
+	out := buildGitStatusMap(m.gitFiles, cwd)
+	c.files, c.cwd, c.out = m.gitFiles, cwd, out
+	return out
+}
+
+func buildGitStatusMap(files []git.FileStatus, cwd string) map[string]string {
+	out := make(map[string]string, len(files))
+	for _, f := range files {
 		abs := filepath.Join(cwd, f.Path)
 		// Pick the more meaningful column: index col first, then worktree col.
 		var letter string
@@ -204,7 +230,7 @@ func (m Model) gitSidebarHitAt(x, y int) (gitSidebarHit, bool) {
 //   - A directory header folds/unfolds it.
 //   - A changed file shows its diff (VSCode-style single click).
 //   - A graph commit shows that commit's diff.
-func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (tea.Model, tea.Cmd) {
+func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (Model, tea.Cmd) {
 	if t != tea.MouseLeft {
 		return m, nil
 	}

@@ -34,27 +34,26 @@ import (
 // Update wraps updateInner and keeps the xterm mouse-tracking mode in sync:
 // all-motion (1003) for hover, downgraded to button-only (1002) while a text
 // input is focused so the SGR-fragmentation leak can't corrupt typed input.
+//
+// The Model is a large value (~10 KB): every conversion to tea.Model
+// copies it to the heap, so the helpers below return Model and only this
+// final return converts (once per message).
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var next tea.Model
 	var cmd tea.Cmd
 	// Hover labels (tooltip.go) watch every user event first.
 	if t, ok := msg.(tooltipTickMsg); ok {
-		c := m.onTooltipTick(t)
-		next, cmd = m, c
+		cmd = m.onTooltipTick(t)
 	} else {
 		tipCmd := m.tooltipOnInput(msg)
-		next, cmd = m.update(msg)
+		m, cmd = m.update(msg)
 		if tipCmd != nil {
 			cmd = tea.Batch(cmd, tipCmd)
 		}
 	}
-	if nm, ok := next.(Model); ok {
-		return nm, nm.gateUpdate(msg, cmd)
-	}
-	return next, cmd
+	return m, m.gateUpdate(msg, cmd)
 }
 
-func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if _, ok := msg.(frameTickMsg); ok {
 		return m, nil // only draws (see frameGate)
 	}
@@ -75,11 +74,7 @@ func (m Model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if c, ok := m.handleImageMsg(msg); ok {
 		return m, tea.Batch(c, m.afterUpdateAnim(prevKind))
 	}
-	next, cmd := m.updateInner(msg)
-	nm, ok := next.(Model)
-	if !ok {
-		return next, cmd
-	}
+	nm, cmd := m.updateInner(msg)
 	if animCmd := nm.afterUpdateAnim(prevKind); animCmd != nil {
 		cmd = tea.Batch(cmd, animCmd)
 	}
@@ -120,7 +115,7 @@ func (m Model) anyTextInputOpen() bool {
 		(m.ai != nil && m.ai.focused) // Group A: typing in the AI chat input
 }
 
-func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	// Group I: extension host messages (ext.go).
 	if cmd, ok := m.updateExt(msg); ok {
 		return m, cmd
@@ -499,7 +494,7 @@ func (m Model) updateInner(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
+func (m Model) handleNvimMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case nvim.ReadyMsg:
 		m.nvimAttached = true
@@ -734,19 +729,14 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 
 	// ── nvim → Go event channel (notify.go) ──
 	case nvim.NotifyMsg:
-		cmd := m.dispatchNotify(msg)
-		if m.nvim != nil {
-			// Re-arm the stream, same as RedrawMsg.
-			cmd = tea.Batch(m.nvim.Next(), cmd)
-		}
-		return m, cmd, true
+		return m.onNvimNotify(msg)
 	case OutputMsg:
 		// Output panel append from a tea.Cmd (output.go). Lives here so it
 		// works with overlays open, like the nvim stream.
 		m.output.Append(msg.Channel, msg.Lines...)
 		return m, nil, true
 	case applyMsg: // Group C — background results (problems_panel.go)
-		return m, msg(&m), true
+		return m.onApplyMsg(msg)
 	// ── Group E: test runner stream (test_runner.go). Handled here so the
 	// stream keeps draining while an overlay is open. ──
 	case testsDiscoveredMsg:
@@ -759,7 +749,23 @@ func (m Model) handleNvimMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 	return m, nil, false
 }
 
-func (m Model) routeToPicker(msg tea.Msg) (tea.Model, tea.Cmd) {
+// onNvimNotify and onApplyMsg pass &m to code that keeps the pointer, so
+// their m lives on the heap. Kept out of handleNvimMsg, which every
+// message goes through, so only these messages pay for that copy.
+func (m Model) onNvimNotify(msg nvim.NotifyMsg) (Model, tea.Cmd, bool) {
+	cmd := m.dispatchNotify(msg)
+	if m.nvim != nil {
+		// Re-arm the stream, same as RedrawMsg.
+		cmd = tea.Batch(m.nvim.Next(), cmd)
+	}
+	return m, cmd, true
+}
+
+func (m Model) onApplyMsg(msg applyMsg) (Model, tea.Cmd, bool) {
+	return m, msg(&m), true
+}
+
+func (m Model) routeToPicker(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
@@ -790,7 +796,7 @@ func (m Model) routeToPicker(msg tea.Msg) (tea.Model, tea.Cmd) {
 // events are routed to the modal's HandleMouse for click-to-select and
 // wheel-to-scroll; keyboard events go through Update() like any other
 // component.
-func (m Model) routeToRecents(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) routeToRecents(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
@@ -810,7 +816,7 @@ func (m Model) routeToRecents(msg tea.Msg) (tea.Model, tea.Cmd) {
 // routeToSettingsModal feeds events to the dedicated Settings overlay. The
 // modal only consumes keys (no fuzzy search, no mouse navigation yet); window
 // resize updates its remembered geometry so Box() lays out correctly.
-func (m Model) routeToSettingsModal(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) routeToSettingsModal(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
@@ -827,7 +833,7 @@ func (m Model) routeToSettingsModal(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) routeToMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) routeToMenu(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
@@ -840,7 +846,7 @@ func (m Model) routeToMenu(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) routeToSearch(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) routeToSearch(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
@@ -858,7 +864,7 @@ func (m Model) routeToSearch(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) routeToPrompt(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) routeToPrompt(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
@@ -874,7 +880,7 @@ func (m Model) routeToPrompt(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) routeToPreview(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) routeToPreview(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
@@ -887,7 +893,7 @@ func (m Model) routeToPreview(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) routeToConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) routeToConfirm(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
@@ -916,7 +922,7 @@ func (m Model) routeToConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) routeToFind(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) routeToFind(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
@@ -943,7 +949,7 @@ func (m Model) routeToFind(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) routeToReplace(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) routeToReplace(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
@@ -1216,7 +1222,7 @@ func (m Model) fetchStateCmd() tea.Cmd {
 	}
 }
 
-func (m Model) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	// Debug: log every key the app actually receives so when a binding
 	// "doesn't work" we can tell from the log whether (a) the host
 	// terminal swallowed the key (no entry), (b) Bubble Tea reported it
@@ -2028,7 +2034,7 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 	return nil
 }
 
-func (m Model) dispatchToFocus(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) dispatchToFocus(msg tea.Msg) (Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch m.focus {
 	case FocusExplorer:
