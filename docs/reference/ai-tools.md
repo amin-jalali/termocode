@@ -708,6 +708,10 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 
 | ID | Title | Gate | Reason |
 | --- | --- | --- | --- |
+| `agent-start-claude` | Agent: Start Claude Code | confirm (run) |   |
+| `agent-start-codex` | Agent: Start Codex | confirm (run) |   |
+| `agent-start-gemini` | Agent: Start Gemini CLI | confirm (run) |   |
+| `agent-start-opencode` | Agent: Start OpenCode | confirm (run) |   |
 | `ai-apply-code` | AI: Apply Last Code Block to File | never | use write_file to change files |
 | `ai-apply-proposal` | AI: Apply Proposed Edit | never | the user reviews proposed edits |
 | `ai-attach` | AI: Add File / Selection to Chat | never | adds to the chat input; read the file with read_file |
@@ -885,6 +889,7 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `tasks-terminate` | Tasks: Terminate Task | confirm (ide) |   |
 | `tasks-test` | Tasks: Run Test Task | confirm (run) |   |
 | `terminal-close-tab` | Terminal: Close Active Tab | confirm (always asks) |   |
+| `terminal-fix-ai` | Terminal: Fix Last Command with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `terminal-maximize` | Terminal: Maximize Panel | auto |   |
 | `terminal-minimize` | Terminal: Minimize Panel | auto |   |
 | `terminal-new-tab` | Terminal: New Tab | auto |   |
@@ -956,6 +961,7 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `search_max_results` | confirm (settings) |   |
 | `show_hidden` | confirm (settings) |   |
 | `tab_size` | confirm (settings) |   |
+| `terminal_shell_integration` | never | changes how the user's shell starts; a file-only switch the user edits in config.json |
 | `terminal_skip_shell` | never | decides which keys reach the shell; a file-only list the user edits in config.json |
 | `theme` | confirm (settings) |   |
 | `word_wrap` | confirm (settings) |   |

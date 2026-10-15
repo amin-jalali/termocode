@@ -769,7 +769,7 @@ func (m *Model) openTerminalLinksPicker() tea.Cmd {
 
 // tasksPaletteItems are the Group C palette rows.
 func tasksPaletteItems() []picker.Item {
-	return []picker.Item{
+	return append([]picker.Item{
 		{ID: "tasks-run", Title: "Tasks: Run Task...", Hint: "Alt+R"},
 		{ID: "tasks-build", Title: "Tasks: Run Build Task"},
 		{ID: "tasks-test", Title: "Tasks: Run Test Task"},
@@ -779,7 +779,9 @@ func tasksPaletteItems() []picker.Item {
 		{ID: "tasks-clear-problems", Title: "Tasks: Clear Task Problems"},
 		{ID: "terminal-open-link", Title: "Terminal: Open File Link..."},
 		{ID: "problems-panel", Title: "View: Problems", Hint: "Ctrl+Shift+M / Alt+M"},
-	}
+		// U9b (term_fix.go) and U8 (agent_tabs.go).
+		{ID: "terminal-fix-ai", Title: "Terminal: Fix Last Command with AI", Hint: "Alt+\\ in the terminal"},
+	}, agentPaletteItems()...)
 }
 
 // dispatchTasksPalette handles the Group C palette IDs.
@@ -803,8 +805,10 @@ func (m *Model) dispatchTasksPalette(id string) (tea.Cmd, bool) {
 		return m.openTerminalLinksPicker(), true
 	case "problems-panel":
 		return m.showProblemsPanel(), true
+	case "terminal-fix-ai":
+		return m.termFixPalette(), true
 	}
-	return nil, false
+	return m.dispatchAgentPalette(id)
 }
 
 func init() {
