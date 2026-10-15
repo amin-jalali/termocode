@@ -65,7 +65,7 @@ func TestK9FindResultsRefreshAfterAIChange(t *testing.T) {
 		"a.txt": "needle\n", "b.txt": "x\nneedle\n", "c.txt": "nothing\n"})
 	pumpFind(t, m, m.runFindInFiles("needle"))
 	before := findResultsText(t, m)
-	if !strings.Contains(before, "a.txt (1):") || !strings.Contains(before, "b.txt (1):") {
+	if !strings.Contains(before, "      a.txt\n") || !strings.Contains(before, "      b.txt\n") {
 		t.Fatalf("first search:\n%s", before)
 	}
 	a := filepath.Join(dir, "a.txt")
@@ -79,8 +79,8 @@ func TestK9FindResultsRefreshAfterAIChange(t *testing.T) {
 	pumpFind(t, m, cmd)
 
 	after := findResultsText(t, m)
-	if strings.Contains(after, "b.txt") || !strings.Contains(after, "c.txt (1):") ||
-		!strings.Contains(after, "   3:    needle here") {
+	if strings.Contains(after, "b.txt") || !strings.Contains(after, "      c.txt\n") ||
+		!strings.Contains(after, "      3   needle here") {
 		t.Errorf("results not refreshed:\n%s", after)
 	}
 	if name, _ := c.EvalLuaString(`return vim.api.nvim_buf_get_name(0)`); name != a {

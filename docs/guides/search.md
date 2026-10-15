@@ -39,12 +39,28 @@ This is normal Neovim editing, so `Ctrl+Z` undoes it.
 
 1. Press `F8` (or `Alt+F`).
 2. Type your text and press `Enter`.
-3. A **Find Results** tab opens. Hits are grouped by file.
-4. Move to a hit and press `Enter`, or click it, to open that line.
+3. A **Find Results** tab opens. Hits are grouped by file. The matched
+   text is highlighted.
+4. Move to a hit and press `Enter` (or `o`), or click it, to open that line.
 5. Press `F4` / `Shift+F4` anywhere to jump to the next / previous hit.
 
 Results stream in while the search runs. The tab stays open, so you can
 come back to it.
+
+On the page:
+
+| Key / click | Does |
+|---|---|
+| `Enter`, `o`, click a hit | open the file at the hit |
+| `Tab`, click a file name | fold / unfold that file's hits (`zM` / `zR` fold / unfold all) |
+| double-click a file name | open the file |
+| `R` | Replace in Workspace, with the query filled in |
+| `F8` | edit the query |
+| click `Aa` / `ab` / `.*` | search again with match case / whole word / regex flipped |
+| `q`, `Esc` | close the page |
+
+The top rows show the query, the options, the engine (`rg`, or `basic`
+without ripgrep) and, for slow searches, how long it took.
 
 The search uses *smart case*: all-lowercase text matches any case; text with a
 capital letter matches exactly. When `rg` is installed, the text is a regular

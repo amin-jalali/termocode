@@ -342,5 +342,29 @@ function _G.termocode_diff_hl()
   hi('diffIndexLine',{ fg = C.fg_muted })
 end
 _G.termocode_diff_hl()
+
+-- Find Results page (find_results_lua.go draws with these).
+hi('TermocodeFindIcon',    { fg = c.fg_muted })
+hi('TermocodeFindQuery',   { fg = c.fg_sel, bg = c.bg_input })
+hi('TermocodeFindChipOn',  { fg = c.fg_sel, bg = c.bg_list_in })
+hi('TermocodeFindChipOff', { fg = c.fg_muted })
+hi('TermocodeFindMeta',    { fg = c.inlay })
+hi('TermocodeFindSummary', { fg = c.fg_muted })
+hi('TermocodeFindWarn',    { fg = c.warn })
+hi('TermocodeFindError',   { fg = c.error_ })
+hi('TermocodeFindHair1',   { fg = c.accent })
+hi('TermocodeFindHair2',   { fg = c.find_hair_mid })
+hi('TermocodeFindHair3',   { fg = c.find_hair })
+hi('TermocodeFindFold',    { fg = c.fg_muted })
+hi('TermocodeFindDir',     { fg = c.fg_muted })
+hi('TermocodeFindName',    { fg = c.fg })
+hi('TermocodeFindCount',   { fg = c.fg_muted, bg = c.bg_input })
+hi('TermocodeFindLineNr',  { fg = c.inlay })
+hi('TermocodeFindMatch',   { fg = c.fg_sel, bg = c.bg_match })
+hi('TermocodeFindCursor',  { bg = c.find_cursor })
+hi('TermocodeFindFolded',  { fg = c.fg, bg = c.bg })
+hi('TermocodeFindKeycap',  { fg = c.fg_sel, bg = c.bg_input })
+hi('TermocodeFindHint',    { fg = c.inlay })
+if _G._termocode_find_rehl then _G._termocode_find_rehl() end
 if _G.termocode_bracket_hl then _G.termocode_bracket_hl() end
 `
