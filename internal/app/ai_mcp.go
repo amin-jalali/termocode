@@ -17,6 +17,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // ── MCP client glue (MC-3 / MC-4) ───────────────────────────────────────
@@ -106,6 +107,10 @@ func (m *Model) aiMCP() *mcp.Manager {
 			return mcp.LoadSettings(mcpConfigPath()).Trusted[sv.Name] == sv.Hash()
 		},
 		SaveTrust: func(sv mcp.Server) { _ = mcp.SaveTrusted(mcpConfigPath(), sv.Name, sv.Hash()) },
+		TrustedTools: func(name string) string {
+			return mcp.LoadSettings(mcpConfigPath()).TrustedTools[name]
+		},
+		SaveTrustedTools: func(name, hash string) { _ = mcp.SaveTrustedTools(mcpConfigPath(), name, hash) },
 	})
 	mcpTarget.Store(s.mcp)
 	return s.mcp
@@ -125,7 +130,9 @@ func (m *Model) aiMCPTurn(gen uint64, ch chan tea.Msg) func(ctx context.Context)
 		mgr.Reload()
 		var out []ai.Tool
 		for _, st := range mgr.Tools(ctx, ask) {
-			out = append(out, mcp.AITools(st.Server, st.Tools, mgr.Caller(ask), opts)...)
+			o := opts
+			o.ToolsChanged = st.ToolsChanged
+			out = append(out, mcp.AITools(st.Server, st.Tools, mgr.Caller(ask), o)...)
 		}
 		return out
 	}
@@ -155,9 +162,10 @@ type aiMCPTrustMsg struct {
 // aiMCPTrustPending is the open trust dialog: a chat turn waits on
 // reply, or (reply nil) the servers picker connects afterwards.
 type aiMCPTrustPending struct {
-	server  string
-	reply   chan mcp.TrustAnswer
-	connect bool
+	server       string
+	reply        chan mcp.TrustAnswer
+	connect      bool
+	toolsChanged bool // the question was ReasonToolsChanged
 }
 
 func mcpChatAsker(gen uint64, ch chan tea.Msg) mcp.AskTrust {
@@ -180,6 +188,20 @@ func mcpChatAsker(gen uint64, ch chan tea.Msg) mcp.AskTrust {
 // mcpTrustDialog builds "Start MCP server X?" with the file, command and
 // env keys (never their values).
 func (m *Model) mcpTrustDialog(s mcp.Server) {
+	if s.TrustReason == mcp.ReasonToolsChanged {
+		m.confirm = confirm.New("MCP "+s.Name+": its tools changed",
+			"The tools of "+s.Name+" are not the ones you trusted before: a server can change what its tools do. "+
+				"Review them in AI: MCP Servers… → "+s.Name+" → Show tools.\nUntil you trust them, each of its tools asks before it runs.",
+			[]confirm.Button{
+				{ID: "once", Title: "Trust once", Style: confirm.StylePrimary},
+				{ID: "always", Title: "Trust the new tools"},
+				{ID: "deny", Title: "Not now", Style: confirm.StyleDestructive},
+			})
+		m.confirm.SetSize(m.w, m.h)
+		m.confirmOpen = true
+		m.confirmKind = confirmKindMCPTrust
+		return
+	}
 	from := "your mcp.json (" + s.SourcePath + ")"
 	if s.Source == mcp.SourceProject {
 		from = "this project's .termocode/mcp.json"
@@ -214,7 +236,8 @@ func (m *Model) onAIMCPTrust(msg aiMCPTrustMsg) tea.Cmd {
 		msg.reply <- mcp.TrustDeny
 		return waitAIChat(msg.ch)
 	}
-	s.mcpTrust = &aiMCPTrustPending{server: msg.server.Name, reply: msg.reply}
+	s.mcpTrust = &aiMCPTrustPending{server: msg.server.Name, reply: msg.reply,
+		toolsChanged: msg.server.TrustReason == mcp.ReasonToolsChanged}
 	m.mcpTrustDialog(msg.server)
 	return waitAIChat(msg.ch)
 }
@@ -236,12 +259,24 @@ func (m *Model) answerMCPTrust(id string) tea.Cmd {
 	}
 	if p.reply != nil {
 		p.reply <- a
+		if p.toolsChanged && a == mcp.TrustDeny {
+			return m.mcpToolsChangedToast(p.server)
+		}
 		return nil
 	}
 	if p.connect && a != mcp.TrustDeny {
 		return m.mcpConnect(p.server, a)
 	}
 	return nil
+}
+
+// mcpToolsChangedToast warns that a server's tools changed since the
+// user trusted them.
+func (m *Model) mcpToolsChangedToast(name string) tea.Cmd {
+	var c tea.Cmd
+	m.toast, c = m.toast.PushDetail(toast.Warn, "MCP "+name+": its tools changed",
+		"Review them in AI: MCP Servers… → "+name+" → Show tools, then Trust the new tools. Until then each tool asks first.")
+	return c
 }
 
 // ── Servers picker ─────────────────────────────────────────────────────
@@ -273,6 +308,9 @@ func mcpStatusHint(st mcp.Status) string {
 	}
 	if !st.Trusted {
 		parts = append(parts, "not trusted")
+	}
+	if st.ToolsChanged {
+		parts = append(parts, "tools changed")
 	}
 	if st.Source == mcp.SourceProject {
 		parts = append(parts, "project")
@@ -331,6 +369,9 @@ func (m *Model) openMCPServerActions(name string) tea.Cmd {
 	if !st.Trusted {
 		items = append(items, picker.Item{ID: "trust", Title: "Trust (always allow this entry)", Hint: "asks again when the entry changes"})
 	}
+	if st.ToolsChanged {
+		items = append(items, picker.Item{ID: "accept-tools", Title: "Trust the new tools", Hint: "review them with Show tools first"})
+	}
 	items = append(items,
 		picker.Item{ID: "edit", Title: "Edit in mcp.json", Hint: st.Source},
 		picker.Item{ID: "log", Title: "Show log", Hint: "Output: MCP"},
@@ -365,6 +406,9 @@ func (m *Model) onMCPConnectDone(msg mcpConnectDoneMsg) tea.Cmd {
 	}
 	for _, st := range m.aiMCP().Servers() {
 		if st.Name == msg.name {
+			if st.ToolsChanged {
+				return m.mcpToolsChangedToast(msg.name)
+			}
 			return m.aiInfo("MCP " + msg.name + ": " + mcpStatusHint(st))
 		}
 	}
@@ -406,6 +450,9 @@ func (m *Model) onMCPServerAction(id string) tea.Cmd {
 			}
 		}
 		return m.aiInfo("MCP " + name + ": trusted")
+	case "accept-tools":
+		mgr.AcceptTools(name)
+		return m.aiInfo("MCP " + name + ": new tools trusted")
 	case "edit":
 		for _, sv := range mcpServerEntries(name) {
 			m.openFileAtLine(sv.SourcePath, 1)

@@ -207,6 +207,40 @@ func TestAIMCPIdleStopBehavior(t *testing.T) {
 	}
 }
 
+// Spec (rug pull): when a server's tool list differs from the one the
+// user trusted, the next turn asks again ("its tools changed"). "Not
+// now" keeps the tools, but each one asks first, even a read-only one,
+// with no "Always allow"; the servers list says "tools changed".
+func TestAIMCPToolsChangedBehavior(t *testing.T) {
+	f := newMCPFake(t)
+	s, srv := fakeToolModel(t, toolCall{"mcp__fake__echo", map[string]any{"text": "v2"}})
+	cfg := mcptest.Config(map[string]map[string]string{"fake": {"FAKE_LOG": f.log, "FAKE_TOOLSET": "2"}})
+	d := mcpDriver(t, srv.URL, cfg, "", `"mcp_trusted_tools":{"fake":"an-older-tool-list"}`)
+	askAI(d, "echo")
+	if !d.WaitForText("its tools changed", 15*time.Second) {
+		t.Fatalf("no tools-changed dialog:\n%s", screen(d))
+	}
+	if !strings.Contains(screen(d), "Show tools") {
+		t.Errorf("dialog does not say how to review:\n%s", screen(d))
+	}
+	clickTextOn(d, "Not now")
+	if !d.WaitForText("AI wants to: mcp.fake.echo", 15*time.Second) {
+		t.Fatalf("a read-only tool of a changed server did not ask:\n%s", screen(d))
+	}
+	if strings.Contains(screen(d), "Always allow") {
+		t.Errorf("changed server offers Always allow:\n%s", screen(d))
+	}
+	clickAIAllow(d)
+	waitDone(t, d)
+	if r := s.toolResults(); len(r) != 1 || !strings.HasPrefix(r[0], "echo: v2") {
+		t.Errorf("tool results %q", r)
+	}
+	runPalette(d, "AI: MCP Servers")
+	if !d.WaitForText("tools changed", 5*time.Second) {
+		t.Errorf("servers list does not say tools changed:\n%s", screen(d))
+	}
+}
+
 // runPalette runs a palette command by its title.
 func runPalette(d *Driver, title string) {
 	d.T.Helper()

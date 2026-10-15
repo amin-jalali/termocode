@@ -2,6 +2,8 @@ package mcp
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -46,6 +48,10 @@ type AskTrust func(ctx context.Context, s Server) TrustAnswer
 // ErrNotTrusted is returned for a server the user did not allow.
 var ErrNotTrusted = errors.New("server not trusted: the user did not allow it (AI: MCP Servers… to trust it)")
 
+// ErrToolsChanged is returned by a call to a server whose tools changed
+// since the user trusted them, before the user was asked about it.
+var ErrToolsChanged = errors.New("the server's tools changed since you trusted them: review them in AI: MCP Servers… → Show tools; do not retry this call now")
+
 // ManagerOptions wire the Manager to the app. All fields are optional.
 type ManagerOptions struct {
 	UserPath, ProjectPath string
@@ -63,6 +69,12 @@ type ManagerOptions struct {
 	// User entries are always trusted (the user wrote them).
 	IsTrusted func(s Server) bool
 	SaveTrust func(s Server)
+	// TrustedTools is the hash (ToolsHash) of the tool list the user
+	// accepted for a server ("" none yet); SaveTrustedTools stores one.
+	// The first list of a server is accepted by itself; a later list
+	// that differs asks again (ReasonToolsChanged). Both nil: no check.
+	TrustedTools     func(name string) string
+	SaveTrustedTools func(name, hash string)
 }
 
 // Status is one row of the servers list.
@@ -74,13 +86,19 @@ type Status struct {
 	Tools              int  // known tools (live or cached)
 	Cached             bool // tool list from the disk cache, server not asked yet
 	Trusted            bool
-	server             Server
+	// ToolsChanged: the tools differ from the list the user trusted and
+	// the user did not accept the new list (its tools all ask first).
+	ToolsChanged bool
+	server       Server
 }
 
 // ServerTools is one server's tools for a chat turn.
 type ServerTools struct {
 	Server Server
 	Tools  []Tool
+	// ToolsChanged: the user did not accept the server's new tool list,
+	// so every tool asks first (AdapterOptions.ToolsChanged).
+	ToolsChanged bool
 }
 
 type serverState struct {
@@ -98,6 +116,9 @@ type serverState struct {
 	idleGen   int
 	trusted   string // entry hash trusted for this session
 	denied    string // entry hash denied for this session
+	toolsHash string // ToolsHash of tools
+	toolsOK   string // tools hash accepted for this session
+	toolsNo   string // tools hash the user did not accept (asked once)
 }
 
 // Manager is the set of configured servers.
@@ -197,7 +218,8 @@ func (m *Manager) Servers() []Status {
 	for _, st := range m.servers {
 		m.loadCacheLocked(st)
 		s := Status{Name: st.cfg.Name, Type: st.cfg.Type, Source: st.cfg.Source, State: st.state,
-			Problem: st.problem, Tools: len(st.tools), Cached: st.cached, Trusted: m.trustedLocked(st), server: st.cfg}
+			Problem: st.problem, Tools: len(st.tools), Cached: st.cached, Trusted: m.trustedLocked(st),
+			ToolsChanged: m.toolsChangedLocked(st) && st.toolsOK != st.toolsHash, server: st.cfg}
 		if st.proc != nil {
 			s.Pid = st.proc.Pid()
 		}
@@ -400,6 +422,7 @@ func (m *Manager) loadCacheLocked(st *serverState) {
 		return
 	}
 	st.tools, st.haveTools, st.cached = c.Tools, true, true
+	st.toolsHash = ToolsHash(c.Tools)
 }
 
 func (m *Manager) saveCache(cfg Server, info ServerInfo, tools []Tool) {
@@ -431,14 +454,97 @@ func (m *Manager) list(ctx context.Context, st *serverState, ask AskTrust) ([]To
 		m.log(st.cfg.Name, "tools/list failed: %v", err)
 		return nil, err
 	}
+	m.storeTools(st, p, tools)
+	m.armIdle(st)
+	return tools, nil
+}
+
+// storeTools keeps a fresh tool list (memory + disk cache) and checks
+// it against the list the user trusted: the first list is accepted by
+// itself, a different one is logged as changed.
+func (m *Manager) storeTools(st *serverState, p *Process, tools []Tool) {
+	h := ToolsHash(tools)
 	m.mu.Lock()
-	st.tools, st.haveTools, st.cached = tools, true, false
+	st.tools, st.haveTools, st.cached, st.toolsHash = tools, true, false, h
 	cfg := st.cfg
+	changed := m.toolsChangedLocked(st)
 	m.mu.Unlock()
 	m.saveCache(cfg, p.Client.ServerInfo(), tools)
 	m.log(cfg.Name, "%d tools", len(tools))
-	m.armIdle(st)
-	return tools, nil
+	if m.opts.TrustedTools != nil && m.opts.SaveTrustedTools != nil && m.opts.TrustedTools(cfg.Name) == "" {
+		m.opts.SaveTrustedTools(cfg.Name, h)
+	}
+	if changed {
+		m.log(cfg.Name, "its tools changed since you trusted them: review them with Show tools")
+	}
+}
+
+// toolsChangedLocked reports a tool list that differs from the trusted
+// one (whatever the user answered this session).
+func (m *Manager) toolsChangedLocked(st *serverState) bool {
+	if m.opts.TrustedTools == nil || st.toolsHash == "" {
+		return false
+	}
+	want := m.opts.TrustedTools(st.cfg.Name)
+	return want != "" && want != st.toolsHash
+}
+
+// ToolsHash identifies a tool list: names, descriptions, schemas and
+// annotations, in any order.
+func ToolsHash(tools []Tool) string {
+	sorted := append([]Tool(nil), tools...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
+	b, _ := json.Marshal(sorted)
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:])
+}
+
+// AcceptTools trusts a server's current tool list (saved), so its tools
+// use the normal gates again.
+func (m *Manager) AcceptTools(name string) {
+	m.mu.Lock()
+	st, ok := m.servers[name]
+	h := ""
+	if ok {
+		m.loadCacheLocked(st)
+		h = st.toolsHash
+		st.toolsOK = h
+	}
+	m.mu.Unlock()
+	if h != "" && m.opts.SaveTrustedTools != nil {
+		m.opts.SaveTrustedTools(name, h)
+	}
+}
+
+// checkTools asks the user about a changed tool list once per session
+// and per list. ok=false: the user did not accept it (the tools then all
+// ask first).
+func (m *Manager) checkTools(ctx context.Context, st *serverState, ask AskTrust) (ok bool) {
+	m.mu.Lock()
+	changed := m.toolsChangedLocked(st)
+	h, cfg := st.toolsHash, st.cfg
+	accepted, refused := st.toolsOK == h, st.toolsNo == h
+	m.mu.Unlock()
+	switch {
+	case !changed || accepted:
+		return true
+	case refused || ask == nil:
+		return false
+	}
+	q := cfg
+	q.TrustReason = ReasonToolsChanged
+	a := ask(ctx, q)
+	m.mu.Lock()
+	if a == TrustDeny {
+		st.toolsNo = h
+	} else {
+		st.toolsOK = h
+	}
+	m.mu.Unlock()
+	if a == TrustAlways && m.opts.SaveTrustedTools != nil {
+		m.opts.SaveTrustedTools(cfg.Name, h)
+	}
+	return a != TrustDeny
 }
 
 // Tools returns the tools of every usable server for a chat turn: from
@@ -474,7 +580,8 @@ func (m *Manager) Tools(ctx context.Context, ask AskTrust) []ServerTools {
 			}
 		}
 		if len(tools) > 0 {
-			out = append(out, ServerTools{Server: cfg, Tools: tools})
+			ok := m.checkTools(ctx, st, ask)
+			out = append(out, ServerTools{Server: cfg, Tools: tools, ToolsChanged: !ok})
 		}
 	}
 	return out
@@ -512,9 +619,29 @@ func (m *Manager) Call(ctx context.Context, ask AskTrust, server, tool string, a
 	}
 	st.op.Lock()
 	defer st.op.Unlock()
+	m.mu.Lock()
+	wasRunning := st.proc != nil
+	m.mu.Unlock()
 	p, err := m.ensure(ctx, st, ask)
 	if err != nil {
 		return CallResult{}, err
+	}
+	if !wasRunning && m.opts.TrustedTools != nil {
+		// A fresh start: list again, so a changed tool list is noticed
+		// before the call runs.
+		lctx, cancel := context.WithTimeout(ctx, initTimeout)
+		tools, lerr := p.Client.ListTools(lctx)
+		cancel()
+		if lerr == nil {
+			m.storeTools(st, p, tools)
+		}
+		m.mu.Lock()
+		blocked := m.toolsChangedLocked(st) && st.toolsOK != st.toolsHash && st.toolsNo != st.toolsHash
+		m.mu.Unlock()
+		if blocked {
+			m.armIdle(st)
+			return CallResult{}, fmt.Errorf("MCP %s: %w", server, ErrToolsChanged)
+		}
 	}
 	timeout := m.opts.CallTimeout
 	if t := st.cfg.Timeout; t > 0 {

@@ -71,8 +71,23 @@ type Server struct {
 	// servers list shows it; it never blocks startup.
 	Problem string
 
+	// TrustReason is set on the copy given to AskTrust: why the user is
+	// asked (not part of the file).
+	TrustReason TrustReason
+
 	raw json.RawMessage
 }
+
+// TrustReason says why AskTrust asks.
+type TrustReason int
+
+const (
+	// ReasonStart: an untrusted (project) server is about to start.
+	ReasonStart TrustReason = iota
+	// ReasonToolsChanged: the server's tools differ from the list the
+	// user trusted before (a "rug pull" check).
+	ReasonToolsChanged
+)
 
 // entry is the JSON shape of one server. Claude Desktop's "transport" is
 // an alias of "type".
