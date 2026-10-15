@@ -386,6 +386,8 @@ func panelBarTargetID(hit terminalTabBarHit, idx int) string {
 		return "panel:term-close:" + n
 	case terminalHitTabActivate:
 		return "panel:term:" + n
+	case terminalHitFixChip:
+		return "panel:term-fix:" + n
 	case terminalHitNewTab:
 		return "panel:new"
 	case terminalHitMaximize:

@@ -77,6 +77,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 			{Role: ai.StoredAssistant, Text: aiDemoAnswer},
 		}
 		s.scroll = 0
+	case "termdemo": // terminal tab marks for the shots (term_fix.go, agent_tabs.go)
+		m.termDemo()
 	case "aidemo-fa": // a Persian (right-to-left) conversation for the shots
 		s := m.aiS()
 		s.conv.Messages = []ai.StoredMessage{

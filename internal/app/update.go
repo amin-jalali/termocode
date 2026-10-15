@@ -1487,7 +1487,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		// Splice user-defined commands at the bottom so they're visible but
 		// don't push built-ins down the fuzzy-match list.
 		items := paletteItems()
-		items = append(items, tasksPaletteItems()...) // Group C
+		items = append(items, agentPaletteFilter(tasksPaletteItems())...) // Group C; agents only when installed
 		// Hints come from the live keymap (keymap.json overrides too).
 		items = withKeyHints(items, m.keys)
 		items = append(items, userCommandsItems()...)
@@ -1707,6 +1707,11 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, nil
 	// Group A — AI keys.
 	case keymap.ActionAITriggerInline, keymap.ActionAIEditSelection, keymap.ActionAIToggleInline:
+		if matchedAction == keymap.ActionAITriggerInline {
+			if cmd, ok := m.termFixKey(); ok { // U9b: Alt+\ on a failed command
+				return m, cmd
+			}
+		}
 		cmd, _ := m.dispatchAIPalette(aiActionForKey(matchedAction))
 		return m, cmd
 	}
