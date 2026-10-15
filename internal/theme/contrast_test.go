@@ -77,3 +77,19 @@ func TestFindResultsContrast(t *testing.T) {
 		}
 	}
 }
+
+// Source Control GRAPH pills (branch, tag) read on every theme.
+func TestGraphPillContrast(t *testing.T) {
+	defer ApplyTheme("vscode-dark-plus")
+	for _, nt := range AvailableThemes() {
+		ApplyTheme(nt.ID)
+		for name, acc := range map[string]Color256{"branch": AccentBlue, "tag": AccentAmber} {
+			fg, bg := TintPill(acc, BgSidebar)
+			f, _ := ParseHex(string(fg))
+			b, _ := ParseHex(string(bg))
+			if r := contrastRatio(f, b); r < 4.5 {
+				t.Errorf("%s: %s pill %.2f < 4.5", nt.ID, name, r)
+			}
+		}
+	}
+}

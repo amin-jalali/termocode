@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -1492,14 +1493,21 @@ func (m Model) renderGitPanelRow(r gitPanelRow, active, focused bool, w int) str
 		switch r.section {
 		case gitSecStaged:
 			staged, _ := m.gitFileCounts()
-			return renderGitSectionHeader("STAGED", staged, true, !m.gitStagedCollapsed, active, focused, w)
+			return renderGitSectionHeader("STAGED", strconv.Itoa(staged), !m.gitStagedCollapsed, active, focused, w)
 		case gitSecChanges:
 			_, changed := m.gitFileCounts()
-			return renderGitSectionHeader("CHANGES", changed, true, !m.gitChangesCollapsed, active, focused, w)
+			return renderGitSectionHeader("CHANGES", strconv.Itoa(changed), !m.gitChangesCollapsed, active, focused, w)
 		case gitSecConflicts:
-			return renderGitSectionHeader("CONFLICTS", m.gitConflictCount(), true, !m.gitConflictsCollapsed, active, focused, w)
+			return renderGitSectionHeader("CONFLICTS", strconv.Itoa(m.gitConflictCount()), !m.gitConflictsCollapsed, active, focused, w)
 		default:
-			return renderGitSectionHeader("GRAPH", 0, false, !m.gitGraphCollapsed, active, focused, w)
+			n := ""
+			if len(m.gitCommits) > 0 {
+				n = strconv.Itoa(len(m.gitCommits))
+				if m.gitGraphMore {
+					n += "+"
+				}
+			}
+			return renderGitSectionHeader("GRAPH", n, !m.gitGraphCollapsed, active, focused, w)
 		}
 	case gitRowDir:
 		name := r.dirPath
@@ -1513,9 +1521,11 @@ func (m Model) renderGitPanelRow(r gitPanelRow, active, focused bool, w int) str
 		}
 		return renderGitFile(m.gitFiles[r.fileIndex], active, focused, w)
 	case gitRowCommit:
-		return renderGitGraphCommit(r, active, focused, w)
-	case gitRowConnector:
-		return renderGitGraphConnector(r, w)
+		return renderGitGraphCommit(m.gitCommits[r.ci], active, focused, w)
+	case gitRowGroup:
+		return renderGitGroupRow(r.group, r.groupN, m.gitGroupFolded[r.group], active, focused, w)
+	case gitRowMore:
+		return renderGitMoreRow(r.older, active, focused, w)
 	case gitRowNote:
 		return padBgToWidth(gitBranchStyle.Render("   "+r.note), w)
 	case gitRowSpacer:
@@ -1834,23 +1844,9 @@ func clampSidebarRow(row string, width, w int, rowStyle lipgloss.Style) string {
 
 // ── Accordion section + graph rows ──────────────────────────────────────────
 
-var (
-	gitLaneColor    lipgloss.Color
-	gitNodeColor    lipgloss.Color
-	gitMergeColor   lipgloss.Color
-	gitHeadColor    lipgloss.Color
-	gitAgeColor     lipgloss.Color
-	gitSubjectColor lipgloss.Color
-)
-
-func refreshGitGraphColors() {
-	gitLaneColor = theme.LG(theme.TextDimmer)     // one clean dim slate for every lane/spine line
-	gitNodeColor = theme.LG(theme.AccentBlue)     // a regular commit node ●
-	gitMergeColor = theme.LG(theme.AccentMagenta) // a merge node (magenta ●)
-	gitHeadColor = theme.LG(theme.AccentGreen)    // the HEAD node ◉
-	gitAgeColor = theme.LG(theme.TextDim)         // dim relative timestamp
-	gitSubjectColor = theme.LG(theme.TextPrimary)
-}
+// refreshGitGraphColors is kept for the theme hook; the GRAPH rows read
+// their colours from the theme on every render.
+func refreshGitGraphColors() {}
 
 // renderGitSectionHeader renders a collapsible accordion divider as a quiet
 // letter-spaced caption with a trailing count:
@@ -1860,7 +1856,7 @@ func refreshGitGraphColors() {
 // Expanded sections show just the spaced label (clean); a collapsed one gets a
 // leading "▸" so the folded state is visible. The cursor row gets the accent
 // bar + subtle bg like every other row.
-func renderGitSectionHeader(label string, count int, hasCount, expanded, active, focused bool, w int) string {
+func renderGitSectionHeader(label, count string, expanded, active, focused bool, w int) string {
 	bg := gitSelBg(active, focused)
 	chevFG := theme.LG(theme.TextDim)
 	labelFG := theme.LG(theme.TextSecondary)
@@ -1898,8 +1894,8 @@ func renderGitSectionHeader(label string, count int, hasCount, expanded, active,
 	// chipTotal = leading space + chip + trailing breather.
 	chip := ""
 	chipTotal := 0
-	if hasCount {
-		chip = chipStyle.Render(" " + fmt.Sprintf("%d", count) + " ")
+	if count != "" {
+		chip = chipStyle.Render(" " + count + " ")
 		chipTotal = 1 + textWidth(chip) + 1
 	}
 	if rule := w - used - chipTotal; rule >= 1 {
@@ -1932,198 +1928,210 @@ func letterSpace(s string) string {
 	return string(out)
 }
 
-// gitSubjectTypeColor returns the conventional-commit type colour for a subject
-// ("feat: …" → green), or (_, false) when there's no recognised type prefix.
-func gitSubjectTypeColor(subject string) (lipgloss.Color, bool) {
-	colon := strings.IndexByte(subject, ':')
-	if colon <= 0 || colon > 20 {
-		return "", false
+// gitTypePrefix is the length of a conventional-commit prefix ("fix: ",
+// "feat(git)!: "), 0 when the subject has none. The row shows it muted.
+func gitTypePrefix(subject string) int {
+	colon := strings.Index(subject, ": ")
+	if colon <= 0 || colon > 24 {
+		return 0
 	}
-	head := subject[:colon]
-	typ := head
+	head := strings.TrimSuffix(subject[:colon], "!")
 	if p := strings.IndexByte(head, '('); p >= 0 {
-		typ = head[:p]
-	}
-	return gitCommitTypeColor(strings.ToLower(strings.TrimSpace(typ)))
-}
-
-// renderGitArt renders the graph topology prefix: lane glyphs (│ ╲ ╱) in the
-// uniform lane colour, and the commit node "*" replaced by the given glyph and
-// colour. Returns the rendered string and its width.
-func renderGitArt(art, node string, nodeColor, bg lipgloss.Color) (string, int) {
-	laneStyle := lipgloss.NewStyle().Background(bg).Foreground(gitLaneColor)
-	nodeStyle := lipgloss.NewStyle().Background(bg).Foreground(nodeColor).Bold(true)
-	rowStyle := lipgloss.NewStyle().Background(bg)
-
-	var sb strings.Builder
-	width := 0
-	for _, r := range art {
-		switch r {
-		case '*':
-			sb.WriteString(nodeStyle.Render(node))
-		case '|', '│':
-			sb.WriteString(laneStyle.Render("│"))
-		case '/':
-			sb.WriteString(laneStyle.Render("╱"))
-		case '\\':
-			sb.WriteString(laneStyle.Render("╲"))
-		case '_', '-':
-			sb.WriteString(laneStyle.Render("─"))
-		default:
-			sb.WriteString(rowStyle.Render(string(r)))
+		if !strings.HasSuffix(head, ")") {
+			return 0
 		}
-		width += runewidth.RuneWidth(r)
+		head = head[:p]
 	}
-	return sb.String(), width
+	for _, r := range head {
+		if r < 'a' || r > 'z' {
+			return 0
+		}
+	}
+	if head == "" {
+		return 0
+	}
+	return colon + 2
 }
 
-// renderGitGraphCommit renders one commit as a "ribbon" timeline row: a solid
-// vertical bar (▌) at the left whose colour encodes the conventional-commit
-// type (feat=green, fix=amber, …) — consecutive rows form one continuous
-// colour-segmented rail — followed by an optional branch/tag pill, the clean
-// commit message (type prefix stripped), and a right-aligned relative age.
-func renderGitGraphCommit(r gitPanelRow, active, focused bool, w int) string {
+// gitRefPills renders a commit's refs as quiet pills (local blue, tag
+// amber, remote grey) while they fit in room cells; the rest fold into a
+// dim "+N". It returns the text and its width.
+func gitRefPills(refs []git.Ref, room int, bg lipgloss.Color) (string, int) {
+	var sb strings.Builder
+	used := 0
+	for i, r := range refs {
+		name := r.Name
+		if runewidth.StringWidth(name) > 12 {
+			name = runewidth.Truncate(name, 12, "…")
+		}
+		var fg, pbg lipgloss.Color
+		switch r.Kind {
+		case git.RefTag:
+			fg, pbg = theme.TintPill(theme.AccentAmber, theme.BgSidebar)
+		case git.RefRemote:
+			fg, pbg = theme.LG(theme.TextMuted), theme.Wash(theme.BgSidebar, theme.WashHover)
+		default:
+			fg, pbg = theme.TintPill(theme.AccentBlue, theme.BgSidebar)
+		}
+		pw := theme.PillWidth(name) + 1
+		rest := len(refs) - i - 1
+		fold := 0
+		if rest > 0 {
+			fold = 2 + len(strconv.Itoa(rest)) // "+N "
+		}
+		if used+pw+fold > room {
+			n := len(refs) - i
+			plus := "+" + strconv.Itoa(n) + " "
+			if used+len(plus) <= room {
+				sb.WriteString(lipgloss.NewStyle().Background(bg).Foreground(theme.LG(theme.TextDim)).Render(plus))
+				used += len(plus)
+			}
+			break
+		}
+		sb.WriteString(theme.Pill(name, fg, pbg, bg, false))
+		sb.WriteString(lipgloss.NewStyle().Background(bg).Render(" "))
+		used += pw
+	}
+	return sb.String(), used
+}
+
+// renderGitGraphCommit renders one GRAPH commit on the quiet grid:
+//
+//	lead · node · pills · subject …  initials  ⇡  age
+//
+// The node is the only colour (accent on HEAD); a conventional-commit
+// prefix is muted (hidden below 40 cells, where the message needs the
+// room); ⇡ marks commits not pushed yet; initials show from 40 cells.
+func renderGitGraphCommit(c git.GraphCommit, active, focused bool, w int) string {
 	bg, _, _ := gitRowColors(active, focused, theme.LG(theme.TextMuted))
 	rowStyle := lipgloss.NewStyle().Background(bg)
+	fg := func(c lipgloss.Color) lipgloss.Style { return lipgloss.NewStyle().Background(bg).Foreground(c) }
 
-	// Ribbon colour: commit type, with HEAD (teal) and merge (magenta) overrides.
-	ribbonColor := gitNodeColor
-	if tc, ok := gitSubjectTypeColor(r.subject); ok {
-		ribbonColor = tc
-	}
+	node, nodeFG, subjFG := theme.GlyphCommit.String(), theme.LG(theme.TextDimmer), theme.LG(theme.TextPrimary)
 	switch {
-	case r.isHead:
-		ribbonColor = gitHeadColor
-	case r.isMerge:
-		ribbonColor = gitMergeColor
+	case c.IsHead:
+		node, nodeFG, subjFG = theme.GlyphHead.String(), theme.LG(theme.BorderFocus), theme.LG(theme.TextWhite)
+	case c.IsMerge:
+		node, nodeFG, subjFG = theme.GlyphMerge.String(), theme.LG(theme.TextMuted), theme.LG(theme.TextSecondary)
 	}
-	ribbonStyle := lipgloss.NewStyle().Background(bg).Foreground(ribbonColor)
-
-	subjFG := gitSubjectColor
-	if r.isHead {
-		subjFG = theme.LG(theme.TextWhite) // the current commit reads brightest
-	}
-	subjStyle := lipgloss.NewStyle().Background(bg).Foreground(subjFG).Bold(r.isHead)
 	if active && focused {
-		subjStyle = subjStyle.Foreground(theme.LG(theme.TextWhite))
+		subjFG = theme.LG(theme.TextWhite)
 	}
-	ageStyle := lipgloss.NewStyle().Background(bg).Foreground(gitAgeColor)
 
 	var sb strings.Builder
-	sb.WriteString(gitLead(active, focused, bg)) // selection accent column
-	sb.WriteString(ribbonStyle.Render("▌"))      // type-coloured ribbon rail
+	sb.WriteString(gitLead(active, focused, bg))
+	sb.WriteString(fg(nodeFG).Render(node))
 	sb.WriteString(rowStyle.Render(" "))
 	used := 3
 
-	ageW := 0
-	if r.age != "" {
-		ageW = 1 + runewidth.StringWidth(r.age)
+	// The right edge: [ AJ] ⇡ age — age right-aligned in 3 cells.
+	age := git.CompactAge(c.Committed)
+	initials := ""
+	if w >= 40 {
+		initials = git.Initials(c.Author)
+	}
+	tail := 1 + 3 // " " + age
+	if c.Unpushed {
+		tail += 2 // "⇡ "
+	}
+	if initials != "" {
+		tail += 1 + runewidth.StringWidth(initials)
 	}
 
-	// Branch/tag pill, if there's comfortable room.
-	if pill := gitRefPill(r.refs); pill != "" {
-		pillW := textWidth(pill)
-		if used+pillW+1+ageW+4 <= w {
-			sb.WriteString(pill)
-			sb.WriteString(rowStyle.Render(" "))
-			used += pillW + 1
-		}
+	const minSubject = 10
+	if len(c.Refs) > 0 {
+		pills, pw := gitRefPills(c.Refs, w-used-tail-minSubject, bg)
+		sb.WriteString(pills)
+		used += pw
 	}
 
-	// Clean message (type prefix stripped — the ribbon colour carries the type).
-	subject := gitStripCommitType(r.subject)
-	if avail := w - used - ageW; avail >= 1 && subject != "" {
+	subject := c.Subject
+	pre := gitTypePrefix(subject)
+	if w < 40 && pre > 0 {
+		// Narrow: the prefix would leave too little of the message.
+		subject, pre = subject[pre:], 0
+	}
+	if avail := w - used - tail; avail >= 1 {
 		if runewidth.StringWidth(subject) > avail {
 			subject = runewidth.Truncate(subject, avail, "…")
 		}
-		sb.WriteString(subjStyle.Render(subject))
+		if pre > 0 && pre <= len(subject) {
+			sb.WriteString(fg(theme.LG(theme.TextMuted)).Render(subject[:pre]))
+			sb.WriteString(fg(subjFG).Render(subject[pre:]))
+		} else {
+			sb.WriteString(fg(subjFG).Render(subject))
+		}
 		used += runewidth.StringWidth(subject)
 	}
-
-	// Age, right-aligned.
-	if r.age != "" {
-		if pad := w - used - ageW; pad > 0 {
-			sb.WriteString(rowStyle.Render(strings.Repeat(" ", pad)))
-			used += pad
-		}
+	if pad := w - used - tail; pad > 0 {
+		sb.WriteString(rowStyle.Render(strings.Repeat(" ", pad)))
+		used += pad
+	}
+	if initials != "" {
 		sb.WriteString(rowStyle.Render(" "))
-		sb.WriteString(ageStyle.Render(r.age))
-		used += ageW
+		sb.WriteString(fg(theme.LG(theme.TextDim)).Render(initials))
+		used += 1 + runewidth.StringWidth(initials)
+	}
+	if c.Unpushed {
+		sb.WriteString(rowStyle.Render(" "))
+		sb.WriteString(fg(theme.LG(theme.GitAdded)).Render(theme.GlyphUnpushed.String()))
+	}
+	sb.WriteString(rowStyle.Render(" "))
+	sb.WriteString(fg(theme.LG(theme.TextDim)).Render(fmt.Sprintf("%3s", age)))
+	used += 4
+	if c.Unpushed {
+		used += 2
 	}
 	return clampSidebarRow(sb.String(), used, w, rowStyle)
 }
 
-// gitStripCommitType removes a recognised conventional-commit prefix
-// ("feat(git): ", "fix: ") so the ribbon colour carries the type and the row
-// shows just the message. Unrecognised subjects are returned unchanged.
-func gitStripCommitType(subject string) string {
-	if _, ok := gitSubjectTypeColor(subject); ok {
-		if colon := strings.IndexByte(subject, ':'); colon >= 0 {
-			return strings.TrimSpace(subject[colon+1:])
+// renderGitGroupRow renders a GRAPH date group header: a dim label and
+// its commit count on the right; a folded group shows ▸.
+func renderGitGroupRow(label string, n int, folded, active, focused bool, w int) string {
+	bg := gitSelBg(active, focused)
+	rowStyle := lipgloss.NewStyle().Background(bg)
+	dim := lipgloss.NewStyle().Background(bg).Foreground(theme.LG(theme.TextDim))
+	if active {
+		dim = dim.Foreground(theme.LG(theme.TextSecondary))
+	}
+	mark := "  "
+	if folded {
+		mark = theme.IconFolderClosed.Unicode + " "
+		if theme.CurrentIconMode == theme.IconModeASCII {
+			mark = "> "
 		}
 	}
-	return subject
+	count := strconv.Itoa(n)
+	var sb strings.Builder
+	sb.WriteString(gitLead(active, focused, bg))
+	sb.WriteString(dim.Render(" " + mark + label))
+	used := 1 + 1 + 2 + runewidth.StringWidth(label)
+	if pad := w - used - len(count) - 1; pad > 0 {
+		sb.WriteString(rowStyle.Render(strings.Repeat(" ", pad)))
+		sb.WriteString(dim.Render(count))
+		sb.WriteString(rowStyle.Render(" "))
+		used += pad + len(count) + 1
+	}
+	return clampSidebarRow(sb.String(), used, w, rowStyle)
 }
 
-// gitCommitTypeColor maps a conventional-commit type to its accent colour.
-func gitCommitTypeColor(typ string) (lipgloss.Color, bool) {
-	switch typ {
-	case "feat":
-		return theme.LG(theme.GitAdded), true // green
-	case "fix":
-		return theme.LG(theme.GitModified), true // amber
-	case "docs":
-		return theme.LG(theme.AccentBlue), true // blue
-	case "refactor":
-		return theme.LG(theme.AccentMagenta), true // magenta
-	case "perf":
-		return theme.LG(theme.AccentGreen), true // teal
-	case "test":
-		return theme.LG(theme.SyntaxType), true // cyan
-	case "style":
-		return theme.LG(theme.SyntaxString), true // olive
-	case "revert":
-		return theme.LG(theme.AccentRedCoral), true // red-orange
-	case "chore", "ci", "build", "deps":
-		return theme.LG(theme.TextMuted), true // muted
+// renderGitMoreRow renders "Show 15 more ▾" or "Load older commits ▾".
+func renderGitMoreRow(older, active, focused bool, w int) string {
+	bg := gitSelBg(active, focused)
+	rowStyle := lipgloss.NewStyle().Background(bg)
+	fgc := theme.LG(theme.TextSecondary)
+	if active && focused {
+		fgc = theme.LG(theme.TextWhite)
 	}
-	return "", false
-}
-
-// renderGitGraphConnector renders a topology-only line ("|/", "| |") in one
-// clean, uniform lane colour so the rail reads as a single tidy thread.
-func renderGitGraphConnector(r gitPanelRow, w int) string {
-	rowStyle := lipgloss.NewStyle().Background(sidebarBg)
-	artStr, artW := renderGitArt(r.art, "●", gitNodeColor, sidebarBg)
-	return clampSidebarRow(rowStyle.Render(" ")+artStr, 1+artW, w, rowStyle)
-}
-
-// gitRefPill renders the first branch/tag decoration as a small coloured pill
-// (e.g. a green " main "), or "" when there's no ref. Tags get an amber pill.
-func gitRefPill(refs string) string {
-	r := strings.TrimSpace(refs)
-	r = strings.TrimPrefix(r, "(")
-	r = strings.TrimSuffix(r, ")")
-	if r == "" {
-		return ""
+	label := fmt.Sprintf("Show %d more", gitGraphStep)
+	if older {
+		label = "Load older commits"
 	}
-	r = strings.ReplaceAll(r, "HEAD -> ", "")
-	if i := strings.IndexByte(r, ','); i >= 0 {
-		r = r[:i]
-	}
-	r = strings.TrimSpace(r)
-	if r == "" {
-		return ""
-	}
-	pillBg, pillFG := theme.Mix(theme.BgSidebar, theme.GitAdded, 0.25), theme.LG(theme.GitAdded) // branch: green
-	if strings.HasPrefix(r, "tag:") {
-		r = strings.TrimSpace(strings.TrimPrefix(r, "tag:"))
-		pillBg, pillFG = theme.Mix(theme.BgSidebar, theme.GitModified, 0.25), theme.LG(theme.GitModified) // tag: amber
-	}
-	if runewidth.StringWidth(r) > 12 {
-		r = runewidth.Truncate(r, 12, "…")
-	}
-	return lipgloss.NewStyle().Background(pillBg).Foreground(pillFG).Render(" " + r + " ")
+	label += " " + theme.GlyphExpand.String()
+	var sb strings.Builder
+	sb.WriteString(gitLead(active, focused, bg))
+	sb.WriteString(lipgloss.NewStyle().Background(bg).Foreground(fgc).Render("   " + label))
+	return clampSidebarRow(sb.String(), 1+3+runewidth.StringWidth(label), w, rowStyle)
 }
 
 // leftEllipsize keeps the tail of s and prepends "…" when the string is wider

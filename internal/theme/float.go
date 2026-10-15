@@ -269,3 +269,11 @@ func HintSpans(pairs ...string) []HintSpan {
 	}
 	return out
 }
+
+// TintPill is a quiet pill in an accent: the accent text on a 14% tint of
+// bg. The text moves toward the body text until it reads (≥ 4.5:1), so
+// pale accents on light themes stay legible.
+func TintPill(accent, bg Color256) (fg, pillBg lipgloss.Color) {
+	b := Lerp(ToRGB(bg), ToRGB(accent), 0.14).Hex()
+	return lipgloss.Color(readableOn(ToRGB(accent).Hex(), b, ToRGB(TextPrimary).Hex(), 4.5)), lipgloss.Color(b)
+}

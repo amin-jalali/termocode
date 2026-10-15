@@ -1,8 +1,17 @@
 package app
 
+import (
+	"os"
+	"slices"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/amin-jalali/termocode/internal/git"
+)
+
 // The Source Control panel is an accordion of collapsible sections —
 // CHANGES (the working-tree file list, tree or flat) and GRAPH (the current
-// branch's commit graph with merge topology). gitPanelRows flattens both
+// branch's history in date groups). gitPanelRows flattens both
 // sections, their headers, and (when expanded) their contents into one row
 // list. The cursor, keyboard navigation, mouse hit-testing, and the renderer
 // all index into this single list so the two sections share one model.
@@ -14,7 +23,8 @@ const (
 	gitRowDir                         // CHANGES: directory header (tree mode)
 	gitRowFile                        // CHANGES: a changed file
 	gitRowCommit                      // GRAPH: a commit node
-	gitRowConnector                   // GRAPH: a topology-only line (not selectable)
+	gitRowGroup                       // GRAPH: a date group header (Today, …); folds
+	gitRowMore                        // GRAPH: "Show 15 more" / "Load older commits"
 	gitRowNote                        // empty-section note ("No changes") (not selectable)
 	gitRowSpacer                      // blank separator between sections (not selectable)
 )
@@ -39,23 +49,21 @@ type gitPanelRow struct {
 	dirPath   string // gitRowDir → collapse key
 
 	// GRAPH rows:
-	art     string // graph topology prefix (e.g. "* ", "| * ", "|\\ ")
+	ci      int    // gitRowCommit → index into m.gitCommits
 	hash    string // gitRowCommit → short SHA
 	subject string
-	refs    string
-	age     string // compact relative date ("2h")
-	isMerge bool
-	isHead  bool
+	group   string // gitRowGroup → its label (also the fold key)
+	groupN  int    // gitRowGroup → commits loaded in the group
+	older   bool   // gitRowMore → "Load older commits" (else "Show 15 more")
 
 	note string // gitRowNote → the dim placeholder text
 }
 
-// selectable reports whether the cursor may land on this row. Topology-only
-// connector lines, empty-section notes, and spacers are skipped during
-// navigation and ignored on click.
+// selectable reports whether the cursor may land on this row. Empty-section
+// notes and spacers are skipped during navigation and ignored on click.
 func (r gitPanelRow) selectable() bool {
 	switch r.kind {
-	case gitRowConnector, gitRowNote, gitRowSpacer:
+	case gitRowNote, gitRowSpacer:
 		return false
 	}
 	return true
@@ -65,7 +73,7 @@ func (r gitPanelRow) selectable() bool {
 // STAGED section, the CHANGES section, then the GRAPH section — each a header
 // plus its contents (unless collapsed), separated by spacer rows.
 func (m Model) gitPanelRows() []gitPanelRow {
-	rows := make([]gitPanelRow, 0, len(m.gitFiles)+len(m.gitGraph)*2+4)
+	rows := make([]gitPanelRow, 0, len(m.gitFiles)+len(m.gitCommits)+16)
 
 	// Partition files: a file with index-side changes is "staged"; one with
 	// worktree changes (or untracked) is "changed". A file edited after staging
@@ -128,23 +136,124 @@ func (m Model) gitPanelRows() []gitPanelRow {
 	rows = append(rows, gitPanelRow{kind: gitRowSpacer})
 	rows = append(rows, gitPanelRow{kind: gitRowSection, section: gitSecGraph})
 	if !m.gitGraphCollapsed {
-		if len(m.gitGraph) == 0 {
-			rows = append(rows, gitPanelRow{kind: gitRowNote, note: "No commits"})
-		}
-		for _, g := range m.gitGraph {
-			// The timeline renders each commit as a colour-coded ribbon row, so
-			// git's ASCII topology connector lines (the art-only rows) are
-			// skipped — the ribbon itself is the continuous rail.
-			if g.Hash == "" {
-				continue
-			}
-			rows = append(rows, gitPanelRow{
-				kind: gitRowCommit, art: g.Art, hash: g.Hash, subject: g.Subject,
-				refs: g.Refs, age: g.Age, isMerge: g.IsMerge, isHead: g.IsHead,
-			})
-		}
+		rows = m.appendGraphRows(rows)
 	}
 	return rows
+}
+
+// gitGraphStep is how many commits "Show more" adds.
+const gitGraphStep = 15
+
+// gitGraphVisible is how many commits GRAPH shows: all of Today and
+// Yesterday, at least 8, at most 15 — until "Show more" raises it.
+func (m Model) gitGraphVisible() int {
+	n := len(m.gitCommits)
+	if m.gitGraphShown > 0 {
+		return min(m.gitGraphShown, n)
+	}
+	recent := 0
+	for _, g := range m.gitCommitGroups {
+		if g != "Today" && g != "Yesterday" {
+			break
+		}
+		recent++
+	}
+	return min(n, max(8, min(gitGraphStep, recent)))
+}
+
+// appendGraphRows adds the GRAPH body: date group headers, the commits of
+// unfolded groups, then "Show 15 more" or "Load older commits".
+func (m Model) appendGraphRows(rows []gitPanelRow) []gitPanelRow {
+	if len(m.gitCommits) == 0 {
+		return append(rows, gitPanelRow{kind: gitRowNote, note: "No commits"})
+	}
+	counts := map[string]int{}
+	for _, g := range m.gitCommitGroups {
+		counts[g]++
+	}
+	vis := m.gitGraphVisible()
+	last := ""
+	for i := 0; i < vis && i < len(m.gitCommitGroups); i++ {
+		g := m.gitCommitGroups[i]
+		if g != last {
+			rows = append(rows, gitPanelRow{kind: gitRowGroup, group: g, groupN: counts[g]})
+			last = g
+		}
+		if m.gitGroupFolded[g] {
+			continue
+		}
+		c := m.gitCommits[i]
+		rows = append(rows, gitPanelRow{kind: gitRowCommit, ci: i, hash: c.Hash, subject: c.Subject})
+	}
+	switch {
+	case vis < len(m.gitCommits):
+		rows = append(rows, gitPanelRow{kind: gitRowMore})
+	case m.gitGraphMore:
+		rows = append(rows, gitPanelRow{kind: gitRowMore, older: true})
+	}
+	return rows
+}
+
+// setGitCommits stores a new history and its date groups.
+func (m *Model) setGitCommits(cs []git.GraphCommit, more bool) {
+	m.gitCommits, m.gitGraphMore = cs, more
+	groups := make([]string, len(cs))
+	for i, c := range cs {
+		groups[i] = git.GroupLabel(c.Committed)
+	}
+	m.gitCommitGroups = groups
+}
+
+// gitToggleGroup folds / unfolds a GRAPH date group.
+func (m *Model) gitToggleGroup(g string) {
+	if m.gitGroupFolded == nil {
+		m.gitGroupFolded = map[string]bool{}
+	}
+	m.gitGroupFolded[g] = !m.gitGroupFolded[g]
+	m.gitClampCursor()
+}
+
+// gitShowMore shows gitGraphStep more commits, loading the next page
+// from git when every loaded one is already on show.
+func (m *Model) gitShowMore() tea.Cmd {
+	vis := m.gitGraphVisible()
+	if vis < len(m.gitCommits) {
+		m.gitGraphShown = vis + gitGraphStep
+		return nil
+	}
+	if !m.gitGraphMore {
+		return nil
+	}
+	return gitLoadOlderCmd(len(m.gitCommits))
+}
+
+// gitOlderMsg carries the next page of commits.
+type gitOlderMsg struct {
+	skip    int
+	commits []git.GraphCommit
+	more    bool
+}
+
+// gitLoadOlderCmd reads gitGraphLimit commits after the first skip.
+func gitLoadOlderCmd(skip int) tea.Cmd {
+	return func() tea.Msg {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return nil
+		}
+		cs, more, _ := git.Commits(cwd, skip, gitGraphLimit)
+		return gitOlderMsg{skip: skip, commits: cs, more: more}
+	}
+}
+
+// onGitOlder appends a page of older commits (when it still follows the
+// loaded ones) and shows the next gitGraphStep of them.
+func (m *Model) onGitOlder(msg gitOlderMsg) {
+	if msg.skip != len(m.gitCommits) {
+		return
+	}
+	m.setGitCommits(append(slices.Clip(m.gitCommits), msg.commits...), msg.more)
+	m.gitGraphShown = msg.skip + gitGraphStep
 }
 
 // gitFileCounts returns how many files have staged (index-side) changes and

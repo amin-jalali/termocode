@@ -57,7 +57,7 @@ func goldenScenes() []Scene {
 		Editor(),
 		Palette(),
 		SCM(),
-		{Name: "scm-hover", Steps: append(scmStepsNoEditor(), HoverText("Merge branch"), Pause(600*time.Millisecond))},
+		{Name: "scm-hover", Steps: append(scmStepsNoEditor(), HoverText("Merge branc"), Pause(600*time.Millisecond))},
 		Terminal(),
 		{Name: "ai-chat", Env: aiEnv, Steps: WithEditor(Act("palette:ai-open-chat"), Act("aidemo"), Pause(600*time.Millisecond))},
 		{Name: "settings", Steps: WithEditor(Act("palette:open-settings-ui"), Pause(600*time.Millisecond))},

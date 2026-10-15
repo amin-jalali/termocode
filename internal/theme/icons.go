@@ -404,8 +404,10 @@ var (
 	GlyphCollapse = Icon{NerdFont: "", Unicode: "⊟", ASCII: "-"} // nf-fa-minus_square_o
 
 	// Source Control GRAPH (scm-graph design §2.3).
-	GlyphCommit   = Icon{NerdFont: "\uf111", Unicode: "◦", ASCII: "o"} // nf-fa-circle
-	GlyphHead     = Icon{NerdFont: "\uf192", Unicode: "◉", ASCII: "@"} // nf-fa-dot_circle_o
+	// The Nerd Font circles (nf-fa-circle, nf-fa-dot_circle_o) are wider
+	// than a cell and draw clipped; the geometric shapes fit.
+	GlyphCommit   = Icon{NerdFont: "◦", Unicode: "◦", ASCII: "o"}
+	GlyphHead     = Icon{NerdFont: "◉", Unicode: "◉", ASCII: "@"}
 	GlyphMerge    = Icon{NerdFont: "\uf126", Unicode: "⑂", ASCII: "*"} // nf-fa-code_fork
 	GlyphUnpushed = Icon{NerdFont: "\uf0aa", Unicode: "⇡", ASCII: "^"} // nf-fa-arrow_circle_up
 	GlyphExpand   = Icon{NerdFont: "\uf107", Unicode: "▾", ASCII: "v"} // nf-fa-angle_down

@@ -63,6 +63,8 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 				m.gitToggleSection(cur.section)
 			case cur.kind == gitRowDir && !m.gitCollapsed[cur.dirPath]:
 				m.gitToggleCollapse(cur.dirPath)
+			case cur.kind == gitRowGroup && !m.gitGroupFolded[cur.group]:
+				m.gitToggleGroup(cur.group)
 			}
 		}
 		return m, nil, true
@@ -73,6 +75,8 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 				m.gitToggleSection(cur.section)
 			case cur.kind == gitRowDir && m.gitCollapsed[cur.dirPath]:
 				m.gitToggleCollapse(cur.dirPath)
+			case cur.kind == gitRowGroup && m.gitGroupFolded[cur.group]:
+				m.gitToggleGroup(cur.group)
 			}
 		}
 		return m, nil, true
@@ -87,6 +91,10 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 			m.gitToggleCollapse(cur.dirPath)
 		case gitRowCommit:
 			return m, m.gitShowCommitCmd(cur.hash), true
+		case gitRowGroup:
+			m.gitToggleGroup(cur.group)
+		case gitRowMore:
+			return m, m.gitShowMore(), true
 		case gitRowFile:
 			if cur.section == gitSecConflicts {
 				return m, m.gitOpenConflictFile(cur.fileIndex), true

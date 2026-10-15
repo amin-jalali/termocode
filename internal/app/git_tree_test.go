@@ -3,6 +3,7 @@ package app
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 
@@ -27,12 +28,13 @@ func TestGitSidebarRowsFitWidth(t *testing.T) {
 			"deeply/nested/path/that/keeps/going/file.go",
 			"README.md",
 		),
-		gitGraph: []git.GraphLine{
-			{Art: "* ", Hash: "a1b2c3d", Subject: "a very long commit subject that should be truncated hard", Refs: "(HEAD -> main, origin/main)"},
-			{Art: "|\\ "},
-			{Art: "| * ", Hash: "e5f6a7b", Subject: "feature work on the side branch"},
-		},
 	}
+	m.setGitCommits([]git.GraphCommit{
+		{Hash: "a1b2c3d", Subject: "a very long commit subject that should be truncated hard", IsHead: true, Unpushed: true,
+			Author: "Amin Jalali", Committed: time.Now().Unix(),
+			Refs: []git.Ref{{Name: "main"}, {Name: "origin/main", Kind: git.RefRemote}, {Name: "v1.2", Kind: git.RefTag}}},
+		{Hash: "e5f6a7b", Subject: "feat(ui): feature work on the side branch", IsMerge: true, Committed: time.Now().Add(-48 * time.Hour).Unix()},
+	}, true)
 	for i, row := range strings.Split(m.renderGitSidebar(w, h), "\n") {
 		if got := lipgloss.Width(row); got > w {
 			t.Errorf("git sidebar row %d width = %d exceeds %d: %q", i, got, w, row)
@@ -159,17 +161,13 @@ func TestGitPanelRows_Structure(t *testing.T) {
 		gitViewTree:  false, // flat changes for simpler indexing
 		gitCollapsed: map[string]bool{},
 		gitFiles:     gitFiles("a.go", "b.go"),
-		gitGraph: []git.GraphLine{
-			{Art: "* ", Hash: "a1b2", Subject: "fix", Refs: "(HEAD -> main)"},
-			{Art: "|\\ "},
-			{Art: "* ", Hash: "c3d4", Subject: "feat"},
-		},
 	}
+	now := time.Now().Unix()
+	m.setGitCommits([]git.GraphCommit{{Hash: "a1b2", Subject: "fix", IsHead: true, Committed: now}, {Hash: "c3d4", Subject: "feat", Committed: now}}, false)
 	rows := m.gitPanelRows()
-	// CHANGES hdr, a.go, b.go, spacer, GRAPH hdr, commit, commit = 7. The git
-	// "|\\" topology connector line is skipped (the ribbon is the rail).
-	if len(rows) != 7 {
-		t.Fatalf("rows = %d, want 7: %+v", len(rows), rows)
+	// CHANGES hdr, a.go, b.go, spacer, GRAPH hdr, Today, commit, commit = 8.
+	if len(rows) != 8 {
+		t.Fatalf("rows = %d, want 8: %+v", len(rows), rows)
 	}
 	if rows[0].kind != gitRowSection || rows[0].section != gitSecChanges {
 		t.Errorf("row0 should be CHANGES header: %+v", rows[0])
@@ -180,19 +178,22 @@ func TestGitPanelRows_Structure(t *testing.T) {
 	if rows[4].kind != gitRowSection || rows[4].section != gitSecGraph {
 		t.Errorf("row4 should be GRAPH header: %+v", rows[4])
 	}
-	if rows[5].kind != gitRowCommit || rows[5].hash != "a1b2" {
-		t.Errorf("row5 should be commit a1b2: %+v", rows[5])
+	if rows[5].kind != gitRowGroup || rows[5].group != "Today" || rows[5].groupN != 2 {
+		t.Errorf("row5 should be the Today group: %+v", rows[5])
 	}
-	if rows[6].kind != gitRowCommit || rows[6].hash != "c3d4" {
-		t.Errorf("row6 should be commit c3d4 (connector skipped): %+v", rows[6])
+	if rows[6].kind != gitRowCommit || rows[6].hash != "a1b2" {
+		t.Errorf("row6 should be commit a1b2: %+v", rows[6])
+	}
+	if rows[7].kind != gitRowCommit || rows[7].hash != "c3d4" {
+		t.Errorf("row7 should be commit c3d4: %+v", rows[7])
 	}
 
 	// Collapsing CHANGES hides its file rows but keeps the GRAPH section.
 	m.gitChangesCollapsed = true
 	rows = m.gitPanelRows()
-	// CHANGES hdr, spacer, GRAPH hdr, commit, commit = 5.
-	if len(rows) != 5 {
-		t.Fatalf("collapsed rows = %d, want 5: %+v", len(rows), rows)
+	// CHANGES hdr, spacer, GRAPH hdr, Today, commit, commit = 6.
+	if len(rows) != 6 {
+		t.Fatalf("collapsed rows = %d, want 6: %+v", len(rows), rows)
 	}
 	for _, r := range rows {
 		if r.kind == gitRowFile {
@@ -248,21 +249,18 @@ func TestGitMoveCursorSkipsNonSelectable(t *testing.T) {
 	m := Model{
 		gitViewTree:         false,
 		gitChangesCollapsed: true, // empty CHANGES so only the header + spacer sit above GRAPH
-		gitGraph: []git.GraphLine{
-			{Art: "* ", Hash: "a1", Subject: "x"},
-			{Art: "|\\ "}, // git topology connector — now skipped entirely
-			{Art: "* ", Hash: "b2", Subject: "y"},
-		},
 	}
-	// Rows: [0 CHANGES hdr][1 spacer][2 GRAPH hdr][3 commit a1][4 commit b2].
+	now := time.Now().Unix()
+	m.setGitCommits([]git.GraphCommit{{Hash: "a1", Subject: "x", Committed: now}, {Hash: "b2", Subject: "y", Committed: now}}, false)
+	// Rows: [0 CHANGES hdr][1 spacer][2 GRAPH hdr][3 Today][4 commit a1][5 commit b2].
 	m.gitCursor = 0 // CHANGES header
 	m.gitMoveCursor(1)
 	if m.gitCursor != 2 { // skip the non-selectable spacer at index 1
 		t.Errorf("down from CHANGES header landed on %d, want 2 (skipping the spacer)", m.gitCursor)
 	}
-	m.gitCursor = 3 // commit a1
+	m.gitCursor = 4 // commit a1
 	m.gitMoveCursor(1)
-	if m.gitCursor != 4 { // adjacent commit (no connector between)
-		t.Errorf("down from commit a1 landed on %d, want 4", m.gitCursor)
+	if m.gitCursor != 5 {
+		t.Errorf("down from commit a1 landed on %d, want 5", m.gitCursor)
 	}
 }

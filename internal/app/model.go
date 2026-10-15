@@ -158,7 +158,7 @@ type Model struct {
 	gitCollapsed map[string]bool
 
 	// Source Control accordion section fold state (in-memory; all expanded by
-	// default). gitGraph holds the current branch's commit graph for the GRAPH
+	// default). gitCommits holds the current branch's history for the GRAPH
 	// section, refreshed alongside status.
 	gitStagedCollapsed  bool
 	gitChangesCollapsed bool
@@ -167,8 +167,18 @@ type Model struct {
 	gitConflictsCollapsed bool
 	// clone is the in-flight "Clone Repository" request (git_clone.go).
 	clone    cloneState
-	gitGraph []git.GraphLine
-	// gitGraphAt is when gitGraph was last read (pollGitCmd reads it
+	gitCommits []git.GraphCommit
+	// gitCommitGroups[i] is the GRAPH group (Today, Yesterday, …) of
+	// gitCommits[i], worked out when the commits arrive.
+	gitCommitGroups []string
+	// gitGraphMore: older commits exist past the loaded ones.
+	gitGraphMore bool
+	// gitGraphShown is how many commits GRAPH shows (0 = the default);
+	// "Show 15 more" raises it.
+	gitGraphShown int
+	// gitGroupFolded holds the GRAPH groups the user folded.
+	gitGroupFolded map[string]bool
+	// gitGraphAt is when gitCommits was last read (pollGitCmd reads it
 	// again when it is older than gitGraphMaxAge).
 	gitGraphAt time.Time
 	// termBlurred: the terminal said its window lost focus (BlurMsg);

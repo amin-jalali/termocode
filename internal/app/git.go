@@ -58,7 +58,9 @@ type GitMsg struct {
 	IsRepo bool
 	Branch git.Branch
 	Files  []git.FileStatus
-	Graph  []git.GraphLine
+	Graph  []git.GraphCommit
+	// More: older commits exist past Graph.
+	More bool
 	// KeepGraph: the poll found HEAD where it was, so Graph is empty and
 	// the graph already shown stays.
 	KeepGraph bool
@@ -85,8 +87,8 @@ func fetchGitCmd() tea.Cmd {
 		}
 		branch, _ := git.GetBranch(cwd)
 		files, _ := git.Status(cwd)
-		graph, _ := git.GraphLog(cwd, gitGraphLimit)
-		return GitMsg{IsRepo: true, Branch: branch, Files: files, Graph: graph}
+		graph, more, _ := git.Commits(cwd, 0, gitGraphLimit)
+		return GitMsg{IsRepo: true, Branch: branch, Files: files, Graph: graph, More: more}
 	}
 }
 
@@ -95,7 +97,9 @@ func fetchGitCmd() tea.Cmd {
 // graph is read again only when HEAD, the branch or ahead/behind moved,
 // or the graph is older than gitGraphMaxAge.
 func (m *Model) pollGitCmd() tea.Cmd {
-	graphHead := gitGraphHead(m.gitGraph)
+	graphHead := gitGraphHead(m.gitCommits)
+	// Keep the pages "Load older commits" brought in.
+	limit := max(gitGraphLimit, len(m.gitCommits))
 	branch := m.gitBranch
 	stale := clock.Now().Sub(m.gitGraphAt) > gitGraphMaxAge
 	return func() tea.Msg {
@@ -112,7 +116,7 @@ func (m *Model) pollGitCmd() tea.Cmd {
 			msg.KeepGraph = true
 			return msg
 		}
-		msg.Graph, _ = git.GraphLog(cwd, gitGraphLimit)
+		msg.Graph, msg.More, _ = git.Commits(cwd, 0, limit)
 		return msg
 	}
 }
@@ -120,7 +124,7 @@ func (m *Model) pollGitCmd() tea.Cmd {
 // applyGitSnapshot stores a git snapshot in the model.
 func (m *Model) applyGitSnapshot(msg GitMsg) {
 	if msg.KeepGraph {
-		msg.Graph = m.gitGraph
+		msg.Graph, msg.More = m.gitCommits, m.gitGraphMore
 	} else {
 		m.gitGraphAt = clock.Now()
 	}
@@ -131,14 +135,14 @@ func (m *Model) applyGitSnapshot(msg GitMsg) {
 	// Editor gutter signs compare buffers with HEAD; when HEAD or the
 	// changed-file list moved (commit, checkout, pull, discard …),
 	// repaint them now instead of on the next buffer event.
-	if m.nvim != nil && gitSnapshotChanged(m.gitGraph, m.gitFiles, msg.Graph, msg.Files) {
+	if m.nvim != nil && gitSnapshotChanged(m.gitCommits, m.gitFiles, msg.Graph, msg.Files) {
 		_ = m.nvim.ExecLua(`if _G.termocode_git_signs_refresh then _G.termocode_git_signs_refresh() end`)
 	}
 	m.gitIsRepo = msg.IsRepo
 	m.gitLoaded = true
 	m.gitBranch = msg.Branch
 	m.gitFiles = msg.Files
-	m.gitGraph = msg.Graph
+	m.setGitCommits(msg.Graph, msg.More)
 	// Clamp against the visible-row count: the accordion interleaves
 	// section headers, dir headers, and graph rows, so the row count
 	// differs from len(gitFiles).
@@ -160,19 +164,17 @@ func (m *Model) gitEnsureLoaded() bool {
 
 // gitSnapshotChanged reports whether HEAD (the first commit of the graph)
 // or the changed-file list differs between two git snapshots.
-func gitSnapshotChanged(oldGraph []git.GraphLine, oldFiles []git.FileStatus, newGraph []git.GraphLine, newFiles []git.FileStatus) bool {
+func gitSnapshotChanged(oldGraph []git.GraphCommit, oldFiles []git.FileStatus, newGraph []git.GraphCommit, newFiles []git.FileStatus) bool {
 	return gitGraphHead(oldGraph) != gitGraphHead(newGraph) || !slices.Equal(oldFiles, newFiles)
 }
 
 // gitGraphHead returns the short hash of the first commit in the graph:
-// HEAD, since the graph is `git log --graph` of HEAD.
-func gitGraphHead(g []git.GraphLine) string {
-	for _, l := range g {
-		if l.Hash != "" {
-			return l.Hash
-		}
+// HEAD, since the graph is `git log` of HEAD.
+func gitGraphHead(g []git.GraphCommit) string {
+	if len(g) == 0 {
+		return ""
 	}
-	return ""
+	return g[0].Hash
 }
 
 // gitFileAbsPath returns the absolute path of a git status entry.
@@ -343,6 +345,10 @@ func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (Model, tea
 		return m, m.gitDiffCmd()
 	case gitRowCommit:
 		return m, m.gitShowCommitCmd(r.hash)
+	case gitRowGroup:
+		m.gitToggleGroup(r.group)
+	case gitRowMore:
+		return m, m.gitShowMore()
 	}
 	return m, nil
 }
