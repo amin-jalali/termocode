@@ -28,6 +28,10 @@ type State struct {
 	Encoding string // e.g. "UTF-8"
 	Term     bool   // integrated terminal panel is open
 	Debug    bool   // a Debug Adapter Protocol session is active
+	// TermFocused: the integrated terminal has the keyboard. The right
+	// side then shows TermLabel ("zsh · ~/proj") instead of editor facts.
+	TermFocused bool
+	TermLabel   string
 
 	// LSP chip: ShowLSP turns it on (a file buffer is open); LSP lists the
 	// attached client names ("{} gopls"), empty → dim "{} none".
@@ -131,7 +135,7 @@ type barLayout struct {
 // priority): low-value right items go first, then the center cluster,
 // then the language and TERM. Items are dropped whole, never cut, so the
 // "Ln, Col" pill (and the DEBUG badge) always show complete.
-var dropOrder = []rightItem{itemAI, itemLSP, itemEncoding, itemIndent, itemLang, itemCenter, itemTerm}
+var dropOrder = []rightItem{itemAI, itemLSP, itemEncoding, itemIndent, itemLang, itemCenter, itemTermLabel}
 
 // layout fits left / center / right into the bar width (see View).
 func (m Model) layout(s State) barLayout {
@@ -341,13 +345,34 @@ func (m Model) renderLeft(s State) string {
 		// fall back to the placeholder so the left zone is never empty.
 		return barFg(theme.TextDim).Render("[no file]")
 	}
-	// The project pill is the bar's anchor: accent fill, bold. A modified
-	// buffer shows a dot inside it.
+	// The project pill is the bar's anchor: a soft tint whose colour
+	// says what is going on (projectPillTint). A modified buffer shows a
+	// dot inside it.
 	text := withGlyph(glyph("\uf07c", "◆"), truncate(s.Project, 40))
 	if s.Dirty && s.Path != "" {
 		text += " " + theme.IconDirty.String()
 	}
-	return pill(text, theme.OnAccent, theme.LG(theme.BorderFocus), true)
+	return pill(text, theme.TextWhite, projectPillBg(s), true)
+}
+
+// projectPillTint is the state colour of the project pill: red in a debug
+// session, the AI colour while the AI answers, amber with unsaved changes,
+// the accent otherwise.
+func projectPillTint(s State) theme.Color256 {
+	switch {
+	case s.Debug:
+		return theme.DiagError
+	case s.AIState == AIStreaming:
+		return theme.AIAccent
+	case s.Dirty && s.Path != "":
+		return theme.GitModified
+	}
+	return theme.BorderFocus
+}
+
+// projectPillBg is the pill fill: the bar tinted toward projectPillTint.
+func projectPillBg(s State) lipgloss.Color {
+	return theme.Mix(barBgColor(), projectPillTint(s), 0.38)
 }
 
 // renderCenter shows git branch + LSP diagnostic counters. These are
@@ -425,14 +450,15 @@ const (
 	itemLang
 	itemLSP
 	itemAI
-	itemTerm
+	itemTermLabel
 	itemPos
 	itemDebug
 	itemCenter // the whole center cluster (only used in dropOrder)
 )
 
 // renderRight shows cursor position, indent style, encoding, language,
-// the LSP chip, and (if active) TERM / DEBUG indicators.
+// the LSP chip, and (if active) the DEBUG pill; with the terminal focused,
+// the shell and its folder instead.
 func (m Model) renderRight(s State) string {
 	out, _ := m.renderRightItems(s, nil)
 	return out
@@ -449,6 +475,19 @@ func (m Model) renderRightItems(s State, drop map[rightItem]bool) (string, map[r
 		}
 		parts = append(parts, p)
 		kinds = append(kinds, k)
+	}
+	if s.TermFocused {
+		// The terminal has the keyboard: editor facts do not apply.
+		if s.TermLabel != "" {
+			add(itemTermLabel, barFg(theme.TextSecondary).Render(s.TermLabel))
+		}
+		if s.AIState != AIOff {
+			add(itemAI, renderAIBadge(s.AI, s.AIState))
+		}
+		if s.Debug {
+			add(itemDebug, pill(debugBadgeText, theme.OnAccent, theme.LG(theme.DiagError), true))
+		}
+		return m.joinRight(parts, kinds)
 	}
 	if s.Indent != "" {
 		add(itemIndent, barFg(theme.TextSecondary).Render(s.Indent))
@@ -473,11 +512,6 @@ func (m Model) renderRightItems(s State, drop map[rightItem]bool) (string, map[r
 	if s.AIState != AIOff {
 		add(itemAI, renderAIBadge(s.AI, s.AIState))
 	}
-	if s.Term {
-		// Subtle "TERM" indicator so the user can tell at a glance
-		// whether the integrated terminal panel is currently open.
-		add(itemTerm, barFg(theme.SyntaxString).Bold(true).Render("● TERM"))
-	}
 	// Cursor position sits in a soft accent pill near the right edge.
 	add(itemPos, pill(fmt.Sprintf("Ln %d, Col %d", s.Line, s.Col), theme.TextWhite,
 		theme.Wash(barBgColor(), theme.WashPressed), false))
@@ -486,6 +520,11 @@ func (m Model) renderRightItems(s State, drop map[rightItem]bool) (string, map[r
 		// last (DebugBadgeSpan relies on that).
 		add(itemDebug, pill(debugBadgeText, theme.OnAccent, theme.LG(theme.DiagError), true))
 	}
+	return m.joinRight(parts, kinds)
+}
+
+// joinRight joins the right-side items and records each one's span.
+func (m Model) joinRight(parts []string, kinds []rightItem) (string, map[rightItem][2]int) {
 	spans := make(map[rightItem][2]int, len(parts))
 	start, sepW := 0, lipgloss.Width(sep())
 	for i, p := range parts {
@@ -522,7 +561,7 @@ func (m Model) ItemSpans(s State) []ItemSpan {
 	for _, it := range []struct {
 		k  rightItem
 		id string
-	}{{itemIndent, "indent"}, {itemEncoding, "encoding"}, {itemLang, "lang"}, {itemTerm, "term"}, {itemPos, "pos"}} {
+	}{{itemIndent, "indent"}, {itemEncoding, "encoding"}, {itemLang, "lang"}, {itemTermLabel, "term"}, {itemPos, "pos"}} {
 		if sp, ok := l.spans[it.k]; ok && sp[1] > 0 {
 			out = append(out, ItemSpan{it.id, rightX + sp[0], rightX + sp[0] + sp[1]})
 		}

@@ -2248,13 +2248,48 @@ func (m Model) statusState() statusbar.State {
 		Indent:   m.statusIndent(),
 		Encoding: "UTF-8",
 		Term:     m.termOpen && len(m.terminalTabs) > 0,
-		Debug:    m.dapSessionActive,
-		ShowLSP:  m.editor.Path() != "",
-		LSP:      m.lspClients(),
-		Ext:      m.extStatusTexts(), // Group I
+		// The terminal has the keyboard: show its shell and folder.
+		TermFocused: m.inTerminal && m.termOpen && len(m.terminalTabs) > 0,
+		TermLabel:   m.terminalStatusLabel(),
+		Debug:       m.dapSessionActive,
+		ShowLSP:     m.editor.Path() != "",
+		LSP:         m.lspClients(),
+		Ext:         m.extStatusTexts(), // Group I
 	}
 	m.fillTestsStatus(&st) // Group E: ✓ n ✗ n chip (test_explorer.go)
 	return st
+}
+
+// terminalStatusLabel is "zsh · ~/proj" for the active terminal tab.
+func (m Model) terminalStatusLabel() string {
+	if len(m.terminalTabs) == 0 {
+		return ""
+	}
+	i := min(max(m.terminalActiveTab, 0), len(m.terminalTabs)-1)
+	tab := m.terminalTabs[i]
+	dir := tab.Cwd
+	// Before the shell reports its folder this is nvim's terminal name,
+	// term://DIR//PID:CMD; keep DIR.
+	if rest, ok := strings.CutPrefix(dir, "term://"); ok {
+		if j := strings.Index(rest, "//"); j >= 0 {
+			rest = rest[:j]
+		}
+		dir = rest
+	}
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		if dir == home {
+			dir = "~"
+		} else if strings.HasPrefix(dir, home+string(os.PathSeparator)) {
+			dir = "~" + dir[len(home):]
+		}
+	}
+	switch {
+	case tab.Shell != "" && dir != "":
+		return tab.Shell + " · " + dir
+	case tab.Shell != "":
+		return tab.Shell
+	}
+	return dir
 }
 
 // overlayPreferredActionHint splices a 1-row "💡 <Title>  Ctrl+. ▸ Apply
