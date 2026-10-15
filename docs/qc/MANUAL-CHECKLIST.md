@@ -242,6 +242,58 @@ panel. ☐
 **H9 — Tilix / Terminator.** If you use one: icons are Unicode (no tofu
 boxes) unless you set Nerd icons yourself. ☐
 
+## S. Over SSH (2026-10-15)
+
+Automated: e2e `TestSSHClipboardOSC52`, `TestSlowLink`,
+`TestSSHClientLook`, `TestInsideMultiplexer`, `TestSSHSessionPrivateAndRSS`
+(a fake terminal and a fake slow line). These steps check the real thing.
+
+**S1a — Copy over SSH, kitty.** `ssh` from kitty into a server, run
+termocode, select a word in the editor, copy (palette "Copy: File:Line
+Reference" too). Paste on your **own** computer (gedit, browser).
+Expected: the same text; toast "Copied (via terminal)". ☐
+
+**S1b — Copy over SSH, GNOME Terminal.** Same in GNOME Terminal (it does
+not take OSC 52). Expected: the toast does not say "Copied" for your own
+clipboard; it says how to make copying work. ☐
+
+**S1c — Copy inside tmux on the server.** In kitty: `ssh` → `tmux` →
+termocode, copy, paste locally. Try `tmux set -g set-clipboard on` and,
+on tmux 3.3+, `tmux set -g allow-passthrough on`; with either one the
+text arrives. Note your tmux version. ☐
+
+**S1d — Copy inside GNU screen on the server.** In kitty: `ssh` →
+`screen` → termocode, copy a word and a long block (~3000 characters),
+paste locally. Expected: both arrive whole. ☐
+
+**S2 — Slow line.** On a real slow line (phone hotspot, or on a test
+server as root: `tc qdisc add dev eth0 root netem delay 150ms rate
+1mbit`; remove it after with `tc qdisc del dev eth0 root`). Hold ↓ for
+3 s in a long file, let go; scroll with the wheel, stop; type fast.
+Expected: everything stops within about half a second of letting go; no
+`^[[0n` or other junk in the shell after quitting. ☐
+
+**S3a — No Nerd Font on your computer.** From a terminal with a normal
+font (GNOME Terminal, Ubuntu Mono) `ssh` and run termocode. Expected:
+Unicode icons, no boxes with hex numbers. ☐
+
+**S3b — No truecolor.** From a terminal that shows only 256 colours (or
+Terminal.app before macOS 26) run `TERMOCODE_COLORS=256 termocode` on the
+server. Expected: colours look right, no wrong bright blocks. Without the
+variable, write down whether colours look right. ☐
+
+**S3c — Mouse and Persian with no server locale.** On a server where
+`locale` shows `LANG=` (or run `env -u LANG -u LC_ALL termocode`), open a
+file with Persian text, click in it, scroll with the wheel. Expected:
+Persian letters joined and right-to-left, not `<d8>` codes; mouse clicks
+land on the right cell. ☐
+
+**S4 — termocode inside tmux / screen on the server.** In tmux: arrows,
+Home / End, Ctrl+←/→, Shift+Tab, `F1`, Alt+X, mouse click and wheel all
+work; colours look right; `termocode sessions` lists no session (tmux
+keeps it alive); quit: the pane has its normal colours and scrollback.
+Repeat in `screen`. ☐
+
 ---
 
 **When something fails:** note the case ID, what you did, what you saw
