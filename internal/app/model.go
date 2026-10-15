@@ -171,6 +171,13 @@ type Model struct {
 	// clone is the in-flight "Clone Repository" request (git_clone.go).
 	clone    cloneState
 	gitGraph []git.GraphLine
+	// gitGraphAt is when gitGraph was last read (pollGitCmd reads it
+	// again when it is older than gitGraphMaxAge).
+	gitGraphAt time.Time
+	// termBlurred: the terminal said its window lost focus (BlurMsg);
+	// gitBlurredSkips counts git ticks skipped meanwhile.
+	termBlurred     bool
+	gitBlurredSkips int
 
 	// Always-visible commit box (VSCode-style). gitCommitMsg is the single-line
 	// inline message buffer; gitCommitFocused routes keystrokes to it (vs the

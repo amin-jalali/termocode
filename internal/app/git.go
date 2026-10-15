@@ -4,12 +4,14 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 	"unsafe"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/git"
 )
 
@@ -28,6 +30,24 @@ type gitAutoRefreshMsg struct{}
 // who want an instant update can still trigger a manual refresh.
 const gitPollInterval = 2 * time.Second
 
+// gitBlurredEvery: while the terminal window is in the background
+// (focus events), only every gitBlurredEvery-th tick polls (10 s).
+const gitBlurredEvery = 5
+
+// onTerminalFocus handles the terminal's focus events (xterm 1004). In
+// the background termocode polls git less often and stops reading the
+// clipboard; back in front it reads both at once.
+func (m *Model) onTerminalFocus(msg tea.Msg) tea.Cmd {
+	clipFocus(msg)
+	_, blurred := msg.(tea.BlurMsg)
+	m.termBlurred = blurred
+	m.gitBlurredSkips = 0
+	if blurred || !m.gitLoaded {
+		return nil
+	}
+	return m.pollGitCmd()
+}
+
 // gitAutoRefreshTick schedules the next git poll.
 func gitAutoRefreshTick() tea.Cmd {
 	return tea.Tick(gitPollInterval, func(time.Time) tea.Msg { return gitAutoRefreshMsg{} })
@@ -39,7 +59,15 @@ type GitMsg struct {
 	Branch git.Branch
 	Files  []git.FileStatus
 	Graph  []git.GraphLine
+	// KeepGraph: the poll found HEAD where it was, so Graph is empty and
+	// the graph already shown stays.
+	KeepGraph bool
 }
+
+// gitGraphMaxAge is how long the poll keeps a graph while HEAD stays put.
+// Refs that do not move HEAD (a new tag, a fetched branch) show up after
+// at most this long.
+const gitGraphMaxAge = 30 * time.Second
 
 // gitGraphLimit caps how many commits the Source Control GRAPH section loads.
 const gitGraphLimit = 200
@@ -62,8 +90,44 @@ func fetchGitCmd() tea.Cmd {
 	}
 }
 
+// pollGitCmd is the background poll: one `git status --porcelain=v2
+// --branch` (instead of rev-parse, branch, rev-list, status and log). The
+// graph is read again only when HEAD, the branch or ahead/behind moved,
+// or the graph is older than gitGraphMaxAge.
+func (m *Model) pollGitCmd() tea.Cmd {
+	graphHead := gitGraphHead(m.gitGraph)
+	branch := m.gitBranch
+	stale := clock.Now().Sub(m.gitGraphAt) > gitGraphMaxAge
+	return func() tea.Msg {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return GitMsg{}
+		}
+		st, err := git.StatusBranch(cwd)
+		if err != nil {
+			return GitMsg{IsRepo: false}
+		}
+		msg := GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files}
+		if !stale && graphHead != "" && strings.HasPrefix(st.OID, graphHead) && st.Branch == branch {
+			msg.KeepGraph = true
+			return msg
+		}
+		msg.Graph, _ = git.GraphLog(cwd, gitGraphLimit)
+		return msg
+	}
+}
+
 // applyGitSnapshot stores a git snapshot in the model.
 func (m *Model) applyGitSnapshot(msg GitMsg) {
+	if msg.KeepGraph {
+		msg.Graph = m.gitGraph
+	} else {
+		m.gitGraphAt = clock.Now()
+	}
+	if slices.Equal(msg.Files, m.gitFiles) {
+		// Same list: keep the old slice so caches keyed on it stay warm.
+		msg.Files = m.gitFiles
+	}
 	// Editor gutter signs compare buffers with HEAD; when HEAD or the
 	// changed-file list moved (commit, checkout, pull, discard …),
 	// repaint them now instead of on the next buffer event.
@@ -97,15 +161,18 @@ func (m *Model) gitEnsureLoaded() bool {
 // gitSnapshotChanged reports whether HEAD (the first commit of the graph)
 // or the changed-file list differs between two git snapshots.
 func gitSnapshotChanged(oldGraph []git.GraphLine, oldFiles []git.FileStatus, newGraph []git.GraphLine, newFiles []git.FileStatus) bool {
-	head := func(g []git.GraphLine) string {
-		for _, l := range g {
-			if l.Hash != "" {
-				return l.Hash
-			}
+	return gitGraphHead(oldGraph) != gitGraphHead(newGraph) || !slices.Equal(oldFiles, newFiles)
+}
+
+// gitGraphHead returns the short hash of the first commit in the graph:
+// HEAD, since the graph is `git log --graph` of HEAD.
+func gitGraphHead(g []git.GraphLine) string {
+	for _, l := range g {
+		if l.Hash != "" {
+			return l.Hash
 		}
-		return ""
 	}
-	return head(oldGraph) != head(newGraph) || !slices.Equal(oldFiles, newFiles)
+	return ""
 }
 
 // gitFileAbsPath returns the absolute path of a git status entry.

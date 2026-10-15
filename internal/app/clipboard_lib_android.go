@@ -2,10 +2,7 @@
 
 package app
 
-import (
-	"context"
-	"errors"
-)
+import "errors"
 
 // On Android (Termux) there is no X11 clipboard, and golang.design's
 // Android backend needs an APK with a Java VM, so the library is left out
@@ -17,5 +14,3 @@ func clipLibInit() error { return errors.New("no native clipboard library on And
 func clipLibRead() []byte { return nil }
 
 func clipLibWrite(string) bool { return false }
-
-func clipLibWatch(context.Context) <-chan []byte { return nil }

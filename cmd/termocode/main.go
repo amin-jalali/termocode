@@ -357,6 +357,9 @@ func runTUI() {
 		// input is focused, which is the only place the 1003 SGR-fragmentation
 		// leak (see the note above) can corrupt typed input.
 		tea.WithMouseAllMotion(),
+		// Focus events (xterm 1004): in the background termocode polls
+		// git less and stops reading the clipboard (app/clip_watch.go).
+		tea.WithReportFocus(),
 	)
 	watchRepaint(p)
 	watchHangup(p)

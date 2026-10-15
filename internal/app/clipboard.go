@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
@@ -36,7 +37,8 @@ func clipboardReady() (ok bool) {
 type clipPushMsg struct{ Content string }
 
 // initClipboardCapture spins up a goroutine that watches the OS clipboard
-// for changes and pushes them into the app's ring. The picker reads
+// for changes and pushes them into the app's ring (clip_watch.go: on
+// focus-in when the terminal reports focus, else every second). The picker reads
 // snapshot via Items() at render time. Silently no-ops if the clipboard
 // library can't initialise (no display, SSH without forwarding, etc.)
 // and in Termux, where watching would mean polling termux-clipboard-get
@@ -53,15 +55,10 @@ func (m Model) initClipboardCapture() tea.Cmd {
 	if !realClipHost().watch() || !clipboardReady() {
 		return nil
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	_ = cancel // we let the watcher die when the program exits
-	ch := clipLibWatch(ctx)
+	w := newClipWatcher(clipLibRead, ring.Push, time.Second)
 	return func() tea.Msg {
-		go func() {
-			for buf := range ch {
-				ring.Push(string(buf))
-			}
-		}()
+		activeClipWatcher.Store(w)
+		go w.run(context.Background()) // lives until the program exits
 		return nil
 	}
 }

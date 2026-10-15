@@ -77,6 +77,12 @@ type Client struct {
 	reapedOnce sync.Once
 	guardOnce  sync.Once
 	closed     atomic.Bool
+	// redrawn gets a token on every redraw batch; promptGuard sleeps
+	// on it while nvim is quiet. lastRedraw is that batch's time
+	// (UnixNano). guardPolls counts the guard's mode checks (tests).
+	redrawn    chan struct{}
+	lastRedraw atomic.Int64
+	guardPolls atomic.Int64
 }
 
 type mouseEvent struct {
@@ -102,6 +108,7 @@ func New() (*Client, error) {
 		done:       make(chan struct{}),
 		exited:     make(chan struct{}),
 		reaped:     make(chan struct{}),
+		redrawn:    make(chan struct{}, 1),
 	}
 	go c.mouseDispatcher()
 
@@ -147,6 +154,11 @@ func New() (*Client, error) {
 		cp := make([][]any, len(events))
 		for i, e := range events {
 			cp[i] = e
+		}
+		c.lastRedraw.Store(time.Now().UnixNano())
+		select {
+		case c.redrawn <- struct{}{}:
+		default:
 		}
 		select {
 		case c.events <- RedrawMsg{Events: cp}:
