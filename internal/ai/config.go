@@ -164,6 +164,10 @@ func SaveCredentials(path string, c Credentials) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
+	// The folder may be older and wider (Group S6: shared servers).
+	if err := os.Chmod(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
 	b, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return err

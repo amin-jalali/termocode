@@ -62,14 +62,11 @@ func pushPaletteRecent(id string) {
 	if err != nil {
 		return
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return
-	}
 	data, err := json.Marshal(out)
 	if err != nil {
 		return
 	}
-	_ = os.WriteFile(path, data, 0o644)
+	_ = writePrivate(path, data)
 }
 
 // promoteRecents reorders `items` so that any with IDs in the recent list

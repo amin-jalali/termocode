@@ -106,6 +106,34 @@ func TestCredentialsMCPSecrets(t *testing.T) {
 	}
 }
 
+// Spec (Group S6): on a shared server the folder that holds the keys is
+// private, also when it already existed with a wider mode; no temp file
+// is left beside it.
+func TestCredentialsDirPrivate(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "ai")
+	if err := os.Mkdir(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "credentials.json")
+	if err := SaveCredentials(path, Credentials{Keys: map[string]string{"anthropic": "sk-ant-dirmode-abcdefghijkl"}}); err != nil {
+		t.Fatal(err)
+	}
+	st, err := os.Stat(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Mode().Perm() != 0o700 {
+		t.Errorf("credentials folder mode %o, want 700", st.Mode().Perm())
+	}
+	ents, _ := os.ReadDir(dir)
+	if len(ents) != 1 {
+		t.Errorf("files beside credentials.json: %v", ents)
+	}
+}
+
 func TestRedact(t *testing.T) {
 	RegisterSecret("my-very-secret-value")
 	in := `failed: my-very-secret-value; key sk-ant-api03-ABCDEFGHIJKL; Authorization: Bearer eyJhbGciOi.xyz; {"access_token":"tokenvalue123"} x-api-key: abcdefgh12345 sk-proj-abcdefghijklmnopqrs`

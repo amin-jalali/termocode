@@ -58,14 +58,11 @@ func saveWorkspaces(entries []WorkspaceEntry) {
 	if err != nil {
 		return
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return
-	}
 	data, err := json.MarshalIndent(entries, "", "  ")
 	if err != nil {
 		return
 	}
-	_ = os.WriteFile(path, data, 0o644)
+	_ = writePrivate(path, data)
 }
 
 // PushWorkspace records cwd as the most recent workspace. Called from main()
