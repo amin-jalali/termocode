@@ -337,6 +337,8 @@ func runTUI() {
 		app.New(),
 		tea.WithAltScreen(),
 		kittyKeyboardOption(kittyKeys),
+		// Over SSH: no run-on after a held key on a slow line.
+		framePacingOption(framePacing(os.Getenv)),
 		// Downloads with kitty read the terminal's answers: transfer.Input
 		// takes them out of the key stream while a download runs and
 		// passes every byte through otherwise (internal/transfer).

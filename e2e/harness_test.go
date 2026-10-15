@@ -81,6 +81,9 @@ type Term struct {
 	readDone  chan struct{}
 	started   time.Time // when the process was started
 	altAt     time.Time // first alt-screen switch (\e[?1049h) seen
+
+	// With StartOpts.Link: the slow network each way (nil: direct).
+	toApp, toTerm *linkDir
 }
 
 // StartOpts configures Start.
@@ -100,6 +103,9 @@ type StartOpts struct {
 	// KittyKeys makes the terminal answer the kitty keyboard query
 	// (CSI ? u) before DA1, as kitty, Ghostty, foot, WezTerm do.
 	KittyKeys bool
+	// Link puts a slow network (latency, bandwidth) between the terminal
+	// and termocode, both ways, like an SSH connection (Group S2).
+	Link *SlowLink
 }
 
 // Start launches termocode in a fresh PTY with an isolated HOME.
@@ -177,6 +183,10 @@ func Start(t *testing.T, o StartOpts) *Term {
 		t.Fatalf("start termocode: %v", err)
 	}
 	tm.ptmx = ptmx
+	if o.Link != nil {
+		tm.toApp = o.Link.dir(func(p []byte) { _, _ = ptmx.Write(p) })
+		tm.toTerm = o.Link.dir(tm.feed)
+	}
 
 	// PTY → emulator.
 	go func() {
@@ -193,7 +203,11 @@ func Start(t *testing.T, o StartOpts) *Term {
 				if o.KittyKeys && !o.Silent && bytes.Contains(buf[:n], []byte("\x1b[?u")) {
 					_, _ = ptmx.Write([]byte("\x1b[?0u"))
 				}
-				tm.feed(buf[:n])
+				if tm.toTerm != nil {
+					tm.toTerm.Write(buf[:n])
+				} else {
+					tm.feed(buf[:n])
+				}
 			}
 			if err != nil {
 				return
@@ -206,7 +220,7 @@ func Start(t *testing.T, o StartOpts) *Term {
 		for {
 			n, err := em.Read(buf)
 			if n > 0 && !o.Silent {
-				_, _ = ptmx.Write(buf[:n])
+				_ = tm.write(buf[:n])
 			}
 			if err != nil {
 				return
@@ -229,6 +243,8 @@ func Start(t *testing.T, o StartOpts) *Term {
 			<-tm.exited
 		}
 		_ = ptmx.Close()
+		tm.toApp.Close()
+		tm.toTerm.Close()
 		tm.mu.Lock()
 		_ = em.Close()
 		tm.mu.Unlock()
@@ -366,9 +382,19 @@ func (tm *Term) Screen() string { return strings.Join(tm.Lines(), "\n") }
 // Send writes raw bytes to the app (as typed keys).
 func (tm *Term) Send(s string) {
 	tm.t.Helper()
-	if _, err := tm.ptmx.Write([]byte(s)); err != nil {
+	if err := tm.write([]byte(s)); err != nil {
 		tm.t.Fatalf("send %q: %v", s, err)
 	}
+}
+
+// write sends bytes to the app: through the slow link when there is one.
+func (tm *Term) write(p []byte) error {
+	if tm.toApp != nil {
+		tm.toApp.Write(p)
+		return nil
+	}
+	_, err := tm.ptmx.Write(p)
+	return err
 }
 
 // Type sends text one rune at a time with a small gap so Bubble Tea sees
@@ -535,6 +561,11 @@ func (tm *Term) Quit() {
 	select {
 	case <-tm.readDone:
 	case <-time.After(3 * time.Second):
+	}
+	if tm.toTerm != nil {
+		// The last bytes are still on the slow link.
+		tm.toTerm.Close()
+		<-tm.toTerm.done
 	}
 	if tm.exitErr != nil {
 		var ee *exec.ExitError

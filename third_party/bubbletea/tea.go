@@ -138,6 +138,9 @@ type Program struct {
 	// kittyFlags: see WithKittyKeyboard. termocode patch.
 	kittyFlags int
 
+	// pacer: see WithFramePacing (nil: off). termocode patch.
+	pacer *framePacer
+
 	// handlers is a list of channels that need to be waited on before the
 	// program can exit.
 	handlers channelHandlers
@@ -392,6 +395,13 @@ func (p *Program) eventLoop(model Model, cmds chan Cmd) (Model, error) {
 			return model, err
 
 		case msg := <-p.msgs:
+			// termocode patch: the terminal's answers to the frame
+			// pacing query never reach the model.
+			if p.pacer != nil && isStatusAnswer(msg) {
+				p.pacer.answer()
+				continue
+			}
+
 			// Filter messages.
 			if p.filter != nil {
 				msg = p.filter(model, msg)
@@ -648,6 +658,7 @@ func (p *Program) Run() (returnModel Model, returnErr error) {
 		p.renderer = newRenderer(p.output, p.startupOptions.has(withANSICompressor), p.fps)
 		if sr, ok := p.renderer.(*standardRenderer); ok { // termocode patch
 			sr.kittyFlags = p.kittyFlags
+			sr.pacer = p.pacer
 		}
 	}
 
@@ -814,6 +825,9 @@ func (p *Program) Wait() {
 // Doing so can lead to race conditions with the eventual call at the program's end.
 // As alternatives, the [Quit] or [Kill] convenience methods should be used instead.
 func (p *Program) shutdown(kill bool) {
+	if !kill {
+		p.drainAnswers() // termocode patch
+	}
 	p.cancel()
 
 	// Wait for all handlers to finish.
