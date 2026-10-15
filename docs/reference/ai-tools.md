@@ -773,6 +773,7 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `ext-manage-install-samples` | Extensions: Install Sample Extensions | confirm (run) |   |
 | `ext-manage-log` | Extensions: Show Log | auto |   |
 | `ext-manage-new` | Extensions: New Extension... | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `ext-manage-new-process` | Extensions: New Process Extension (Python)... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ext-manage-open-folder` | Extensions: Open Folder | never | acts outside the IDE (OS shell, file manager or browser) |
 | `ext-manage-reload` | Extensions: Reload | confirm (run) |   |
 | `find-files` | Search: Find in Files | never | opens a picker or prompt that only the user can answer; use a typed tool (search) |

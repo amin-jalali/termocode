@@ -33,6 +33,9 @@ var extraItems []item
 
 // SetExtraItems replaces the extension items. Pass nil to remove them.
 func SetExtraItems(items []ExtraItem) {
+	viewCache.Lock()
+	viewCache.out = "" // the cache key does not cover the item list
+	viewCache.Unlock()
 	extraItems = extraItems[:0:0]
 	for i, it := range items {
 		extraItems = append(extraItems, item{

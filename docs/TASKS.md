@@ -5,7 +5,7 @@ Sizes: **S** ≈ 1–3 days · **M** ≈ 1–2 weeks · **L** ≈ 3–6 weeks.
 "Port" = logic ported from `/home/fu/mobocode` (Dart → Go).
 
 **Status:** groups 0 and A–J are merged and checked against the code. Still
-open: Tier 2 process extensions (I), screenshots (J), and the I + C glue task
+open: screenshots (J), and the I + C glue task
 (left out on purpose, see its note).
 
 ## How the groups work
@@ -186,7 +186,7 @@ Best started after A/C/D/E so the API is shaped by real panels — but not block
 - [x] A broken extension never blocks startup (pcall + toast + Error Log)
 - [x] Sample extensions: TODO tree, word count, Open in GitHub
 - [x] REST client (`.http` files) as an extension — port `http_file_parser.dart`
-- [ ] Later: Tier 2 process extensions over JSON-RPC (reuse `mobocode/agent/rpc.go`) — not started; only a follow-up note in ADR 0006
+- [x] Tier 2 process extensions over JSON-RPC (framing from `mobocode/agent/rpc.go`): `internal/extproc`, `internal/app/ext_proc.go`, ADR 0009, Python sample `word-frequency`, "Extensions: New Process Extension (Python)"
 
 ---
 
@@ -282,5 +282,5 @@ The user: "do them in a loop; after finishing each item push it".
 - [x] N4 (M) Easy install: release binaries (linux/macOS, amd64/arm64) and a one-line install script
 - [x] N5 (M) Persian/Arabic (right-to-left) text in the AI chat and the Markdown preview (bidi + shaping)
 - [x] N6a README screenshots: hero + 8-image gallery in README (160x44 PNGs from the shots tool, best compression, each < 300 KB); images also in docs/features.md. Animated `demo.gif` still waits for vhs (not installed)
-- [ ] N6b Tier 2 process extensions
+- [x] N6b Tier 2 process extensions
 - [x] N6c Android clipboard: works in Termux (termux-api), android/arm64 build checked in CI; see "Android (APK) — later"

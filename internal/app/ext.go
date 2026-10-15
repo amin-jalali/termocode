@@ -16,6 +16,7 @@ import (
 	"github.com/amin-jalali/termocode/extensions"
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/ext"
+	"github.com/amin-jalali/termocode/internal/extproc"
 	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/picker"
@@ -59,7 +60,8 @@ const (
 // extState lives behind a pointer so every copy of the value-type Model
 // shares it.
 type extState struct {
-	reg     ext.Registry
+	reg     ext.Registry // Lua + process registrations (extRebuild)
+	luaReg  ext.Registry // what the Lua side reported
 	exts    []ext.Extension
 	loaded  bool
 	loading bool
@@ -76,14 +78,26 @@ type extState struct {
 
 	pendingPrompt int // Lua request id of the open prompt (0 = none)
 	pendingPick   int // Lua request id of the open picker (0 = none)
+
+	// Tier 2 process extensions (ext_proc.go).
+	proc        *extproc.Host
+	procBase    int                  // events with Gen <= procBase are from before the last reload
+	procRegs    map[string]*procReg  // extension name → registrations
+	procCmd     map[string]string    // command id → process extension name
+	procPanel   map[string]string    // panel id → process extension name
+	pendingProc *procPending         // prompt / pick a process waits for
+	barItems    []activity.ExtraItem // last list given to activity.SetExtraItems
+	newProcess  bool                 // the New Extension prompt makes a process extension
 }
 
 func newExtState() *extState {
 	return &extState{
-		lines:  map[string][]string{},
-		status: map[string]string{},
-		cursor: map[string]int{},
-		scroll: map[string]int{},
+		lines:    map[string][]string{},
+		status:   map[string]string{},
+		cursor:   map[string]int{},
+		scroll:   map[string]int{},
+		proc:     newExtHost(),
+		procRegs: map[string]*procReg{},
 	}
 }
 
@@ -113,6 +127,9 @@ type extCallDoneMsg struct {
 // updateExt handles the extension messages. Called first from updateInner
 // so no shared switch needs a case per message.
 func (m *Model) updateExt(msg tea.Msg) (tea.Cmd, bool) {
+	if cmd, ok := m.updateExtProc(msg); ok {
+		return cmd, true
+	}
 	switch msg := msg.(type) {
 	case extLoadedMsg:
 		return m.onExtLoaded(msg), true
@@ -141,7 +158,7 @@ func extTick(gen int) tea.Cmd {
 }
 
 func (m *Model) extNeedsHeartbeat() bool {
-	return m.ext != nil && (len(m.ext.reg.Panels) > 0 || len(m.ext.reg.Status) > 0)
+	return m.ext != nil && (len(m.ext.luaReg.Panels) > 0 || len(m.ext.luaReg.Status) > 0)
 }
 
 // ── Lua plumbing ─────────────────────────────────────────────────────────
@@ -230,6 +247,9 @@ func (m *Model) extLoadCmd(reload bool) tea.Cmd {
 		}
 		list := make([]wire, 0, len(exts))
 		for _, x := range exts {
+			if x.IsProcess() {
+				continue // Tier 2: ext_proc.go runs it
+			}
 			list = append(list, wire{x.Name, x.Dir, x.Init, x.Version})
 		}
 		b, _ := json.Marshal(list)
@@ -242,6 +262,7 @@ func (m *Model) extLoadCmd(reload bool) tea.Cmd {
 		if err := c.ExecLua(extLua); err != nil {
 			return extLoadedMsg{exts: exts, skipped: skipped, err: fmt.Errorf("install API: %w", err)}
 		}
+		_ = c.ExecLua(extProcEventLua) // save / open events for process extensions
 		code := reset + "local r = _G._termocode_ext.load(" + luaQuote(string(b)) + ")\n" +
 			"_G._termocode_ext.emit('ready')\nreturn r"
 		out, err := extEval(c, code, extLoadTimeout)
@@ -280,21 +301,11 @@ func (m *Model) onExtLoaded(msg extLoadedMsg) tea.Cmd {
 		m.toast, c = m.toast.PushKeyed("ext-load", toast.Errr, "Extensions failed to load", msg.err.Error())
 		return tea.Batch(append(cmds, c)...)
 	}
-	s.reg = msg.reg
+	s.luaReg = msg.reg
 	s.loaded = true
 	s.keys = keymap.LoadExtBindings("")
-	// Activity bar: one item per panel. If the active view pointed at a
-	// panel that is gone after a reload, fall back to the explorer.
-	items := make([]activity.ExtraItem, 0, len(s.reg.Panels))
-	for _, p := range s.reg.Panels {
-		items = append(items, activity.ExtraItem{Label: p.Title, Glyph: p.Icon})
-	}
-	activity.SetExtraItems(items)
-	if v := m.activity.Active(); v >= activity.ViewExtBase {
-		if _, ok := activity.ExtIndex(v); !ok {
-			m.activity.SetActive(activity.ViewFiles)
-		}
-	}
+	// Merge with the process extensions; one activity-bar item per panel.
+	m.extRebuild()
 	s.gen++
 	cmds = append(cmds, m.extPollCmd())
 	if m.extNeedsHeartbeat() {
@@ -311,10 +322,10 @@ func (m *Model) extReload() tea.Cmd {
 	m.ext.loaded = false
 	m.ext.lines = map[string][]string{}
 	m.ext.status = map[string]string{}
-	m.cancelExtRequests()
+	cancel := m.cancelExtRequests()
 	var c tea.Cmd
 	m.toast, c = m.toast.Push(toast.Info, "Reloading extensions…")
-	return tea.Batch(c, m.extLoadCmd(true))
+	return tea.Batch(cancel, c, m.extLoadCmd(true), m.extProcSetCmd())
 }
 
 // ── heartbeat poll ───────────────────────────────────────────────────────
@@ -353,7 +364,7 @@ func (m *Model) extPollCmd() tea.Cmd {
 		return nil
 	}
 	panelID := ""
-	if p, ok := m.extActivePanel(); ok {
+	if p, ok := m.extActivePanel(); ok && m.ext.procPanel[p.ID] == "" {
 		panelID = p.ID
 	}
 	w, h := m.extPanelSize()
@@ -533,6 +544,10 @@ func (m *Model) cancelExtRequests() tea.Cmd {
 		return nil
 	}
 	var cmds []tea.Cmd
+	if p := m.ext.pendingProc; p != nil {
+		m.ext.pendingProc = nil
+		cmds = append(cmds, m.procReply(p, nil))
+	}
 	if m.ext.pendingPrompt > 0 {
 		cmds = append(cmds, m.resolveExt(m.ext.pendingPrompt, nil))
 		m.ext.pendingPrompt = 0
@@ -549,6 +564,10 @@ func (m *Model) extPromptSubmit(value string) tea.Cmd {
 	if m.ext == nil {
 		return nil
 	}
+	if p := m.ext.pendingProc; p != nil && p.kind == "prompt" {
+		m.ext.pendingProc = nil
+		return m.procReply(p, value)
+	}
 	req := m.ext.pendingPrompt
 	m.ext.pendingPrompt = 0
 	return m.resolveExt(req, value)
@@ -558,6 +577,13 @@ func (m *Model) extPromptSubmit(value string) tea.Cmd {
 func (m *Model) extPickSelect(id string) tea.Cmd {
 	if m.ext == nil {
 		return nil
+	}
+	if p := m.ext.pendingProc; p != nil && p.kind == "pick" {
+		m.ext.pendingProc = nil
+		if idx, err := strconv.Atoi(id); err == nil {
+			return m.procReply(p, idx)
+		}
+		return m.procReply(p, nil)
 	}
 	req := m.ext.pendingPick
 	m.ext.pendingPick = 0
@@ -573,6 +599,11 @@ func (m *Model) extPickSelect(id string) tea.Cmd {
 func (m *Model) extOverlayClosed() tea.Cmd {
 	if m.ext == nil {
 		return nil
+	}
+	if p := m.ext.pendingProc; p != nil &&
+		(p.kind == "prompt" && m.promptKind == promptKindExt || p.kind == "pick" && m.pickerKind == pickerKindExt) {
+		m.ext.pendingProc = nil
+		return m.procReply(p, nil)
 	}
 	if m.ext.pendingPrompt > 0 && m.promptKind == promptKindExt {
 		req := m.ext.pendingPrompt
@@ -591,6 +622,11 @@ func (m *Model) extOverlayClosed() tea.Cmd {
 
 // runExtCommand runs a registered command by id.
 func (m *Model) runExtCommand(id string) tea.Cmd {
+	if m.ext != nil {
+		if name, ok := m.ext.procCmd[id]; ok {
+			return m.extProcExecute(name, id)
+		}
+	}
 	if m.ext == nil || !m.ext.loaded {
 		var c tea.Cmd
 		m.toast, c = m.toast.PushDetail(toast.Warn, "Extensions are not loaded", id)
@@ -647,6 +683,7 @@ func extManagePaletteItems() []picker.Item {
 		{ID: "ext-manage-open-folder", Title: "Extensions: Open Folder"},
 		{ID: "ext-manage-log", Title: "Extensions: Show Log"},
 		{ID: "ext-manage-new", Title: "Extensions: New Extension..."},
+		{ID: "ext-manage-new-process", Title: "Extensions: New Process Extension (Python)..."},
 		{ID: "ext-manage-install-samples", Title: "Extensions: Install Sample Extensions"},
 	}
 }
@@ -660,8 +697,15 @@ func (m *Model) dispatchExtPalette(id string) (tea.Cmd, bool) {
 		return m.extOpenFolder(), true
 	case "ext-manage-log":
 		return m.extShowLog(), true
-	case "ext-manage-new":
-		m.prompt = prompt.New("New Extension", "Name (letters, digits, _ . -):", "")
+	case "ext-manage-new", "ext-manage-new-process":
+		title := "New Extension"
+		if m.ext != nil {
+			m.ext.newProcess = id == "ext-manage-new-process"
+			if m.ext.newProcess {
+				title = "New Process Extension"
+			}
+		}
+		m.prompt = prompt.New(title, "Name (letters, digits, _ . -):", "")
 		m.prompt.SetSize(m.w, m.h)
 		m.promptOpen = true
 		m.promptKind = promptKindExtNew
@@ -721,6 +765,7 @@ func (m *Model) extShowLog() tea.Cmd {
 		fmt.Fprintf(&b, "\n%d commands · %d panels · %d status items\n",
 			len(m.ext.reg.Commands), len(m.ext.reg.Panels), len(m.ext.reg.Status))
 	}
+	b.WriteString(m.procLogText())
 	if m.nvim != nil {
 		if out, err := extEval(m.nvim, "local H = _G._termocode_ext; return H and H.log_text() or ''", extCallTimeout); err == nil && out != "" {
 			b.WriteString("\n── log ──\n")
@@ -738,7 +783,11 @@ func (m *Model) extNewSubmit(name string) tea.Cmd {
 	dir, err := ext.Dir()
 	var initPath string
 	if err == nil {
-		initPath, err = ext.Scaffold(dir, name)
+		if m.ext != nil && m.ext.newProcess {
+			initPath, err = ext.ScaffoldProcess(dir, name, extensions.FS)
+		} else {
+			initPath, err = ext.Scaffold(dir, name)
+		}
 	}
 	if err != nil {
 		var c tea.Cmd
@@ -797,7 +846,7 @@ func (m Model) renderExtSidebar(w, h int) string {
 	body := h - 1
 	if len(lines) == 0 && body > 0 {
 		msg := "Loading…"
-		if !m.ext.loaded {
+		if !m.ext.loaded && m.ext.procPanel[p.ID] == "" {
 			msg = "Extensions are not loaded."
 		}
 		rows = append(rows, extPadRow(ext.Render("  {{muted}}"+msg+"{{/}}", theme.TextPrimary, bg), w, fill))
@@ -865,6 +914,10 @@ func (m *Model) extSelectRow(row int) tea.Cmd {
 	}
 	m.ext.cursor[p.ID] = row
 	m.clampExtCursor(p.ID)
+	if name := m.ext.procPanel[p.ID]; name != "" {
+		m.extProcSelect(name, p.ID, row+1, ext.PlainText(lines[row]))
+		return nil
+	}
 	return m.extCall("select "+p.ID, fmt.Sprintf("H.select(%s, %d, %s)",
 		luaQuote(p.ID), row+1, luaQuote(ext.PlainText(lines[row]))))
 }
@@ -946,7 +999,7 @@ func (m *Model) handleExtSidebarMouse(y int, t tea.MouseEventType) tea.Cmd {
 
 // extStatusTexts returns the status item texts in registration order.
 func (m Model) extStatusTexts() []string {
-	if m.ext == nil || !m.ext.loaded || len(m.ext.reg.Status) == 0 {
+	if m.ext == nil || len(m.ext.reg.Status) == 0 {
 		return nil
 	}
 	out := make([]string, len(m.ext.reg.Status))

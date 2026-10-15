@@ -774,6 +774,9 @@ func (m Model) Init() tea.Cmd {
 	if cmd := m.setupInitCmd(); cmd != nil {
 		cmds = append(cmds, cmd)
 	}
+	if cmd := m.extProcInitCmd(); cmd != nil { // N6b: process extensions
+		cmds = append(cmds, cmd)
+	}
 	if m.nvim != nil {
 		cmds = append(cmds, m.attachCmd(), m.nvim.Next())
 	}
@@ -1116,6 +1119,9 @@ func (m *Model) popClosed() (string, bool) {
 // Close releases nvim resources. Call from main after tea.Program exits.
 func (m *Model) Close() error {
 	m.sess.flush() // the last cursor positions, not yet written
+	if m.ext != nil && m.ext.proc != nil {
+		m.ext.proc.Close() // process extensions and their children
+	}
 	if m.nvim == nil {
 		return nil
 	}
