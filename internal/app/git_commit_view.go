@@ -304,12 +304,10 @@ func (m Model) routeToCommitView(msg tea.Msg) (Model, tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
 		c := m.commitCard()
-		x, y := c.Origin()
-		box := c.Box()
-		w, h := textWidth(strings.SplitN(box, "\n", 2)[0]), strings.Count(box, "\n")+1
+		x, y, w, h := c.Rect()
 		inside := msg.X >= x && msg.X < x+w && msg.Y >= y && msg.Y < y+h
 		if docked && !inside {
-			if msg.Action == tea.MouseActionPress {
+			if msg.Action == tea.MouseActionPress && m.mouseProbe == nil {
 				cv.focused = false
 			}
 			return m, nil, false

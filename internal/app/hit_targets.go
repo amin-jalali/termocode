@@ -125,10 +125,7 @@ func (m Model) hitTargets() []hitTarget {
 	}
 	if m.commitViewShown() {
 		// The docked commit card covers the editor side.
-		c := m.commitCard()
-		cx, cy := c.Origin()
-		box := c.Box()
-		cw, ch := textWidth(strings.SplitN(box, "\n", 2)[0]), strings.Count(box, "\n")+1
+		cx, cy, cw, ch := m.commitCard().Rect()
 		kept := out[:0]
 		for _, t := range out {
 			if t.X >= cx+cw || t.X+t.W <= cx || t.Y >= cy+ch || t.Y+t.H <= cy {

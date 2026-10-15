@@ -123,6 +123,13 @@ func (m *Model) SetBounds(x, y, w, h int) {
 	m.bx, m.by, m.bw, m.bh = x, y, w, h
 }
 
+// Rect is the card's box on screen (no drawing: cheap enough for every
+// mouse event).
+func (m Model) Rect() (x, y, w, h int) {
+	g := m.geom()
+	return g.x, g.y, g.w, g.h
+}
+
 // Hit is a click target of the card in screen cells.
 type Hit struct {
 	ID      string
