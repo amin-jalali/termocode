@@ -59,6 +59,7 @@ func goldenScenes() []Scene {
 		Palette(),
 		SCM(),
 		{Name: "scm-hover", Steps: append(scmStepsNoEditor(), HoverText("Merge branc"), Pause(600*time.Millisecond))},
+		SCMCommit(),
 		Terminal(),
 		{Name: "ai-chat", Env: aiEnv, Steps: WithEditor(Act("palette:ai-open-chat"), Act("aidemo"), Pause(600*time.Millisecond))},
 		{Name: "settings", Steps: WithEditor(Act("palette:open-settings-ui"), Pause(600*time.Millisecond))},
@@ -107,7 +108,7 @@ func goldenCases() []goldenCase {
 	}
 	// The smallest common window (80x24) for the screens that have a
 	// compact layout: start page, editor, palette, toast.
-	for _, sc := range []Scene{Dashboard(), Editor(), Palette(), Toast(), FindResults()} {
+	for _, sc := range []Scene{Dashboard(), Editor(), Palette(), Toast(), FindResults(), SCMCommit()} {
 		out = append(out, goldenCase{fmt.Sprintf("%s-80x24", sc.Name), sc, 80, 24})
 	}
 	return out

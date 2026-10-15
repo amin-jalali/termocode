@@ -52,6 +52,13 @@ func SCM() Scene      { return Scene{Name: "scm", Steps: scmSteps()} }
 func Confirm() Scene  { return Scene{Name: "confirm", Steps: confirmSteps()} }
 func Terminal() Scene { return Scene{Name: "terminal", Steps: terminalSteps()} }
 
+// SCMCommit is the commit view: HEAD (the demo merge) in the diff card,
+// docked over the editor when it is wide enough, floating otherwise.
+func SCMCommit() Scene {
+	return Scene{Name: "scm-commit", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond),
+		Act("commit:HEAD"), Pause(1200 * time.Millisecond)}}
+}
+
 // AIChatAnswer is the AI chat panel with the canned demo conversation (no
 // network).
 func AIChatAnswer() Scene {
