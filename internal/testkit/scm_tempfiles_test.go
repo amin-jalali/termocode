@@ -40,8 +40,9 @@ func handled(d *Driver, from int, msgType string) bool {
 }
 
 // Spec: Given the app runs without nvim and main.go is changed, when the
-// user clicks main.go in CHANGES (side-by-side diff) and a commit in GRAPH
-// (commit diff), then no diff temp file is left behind.
+// user clicks main.go in CHANGES (side-by-side diff) and opens a commit's
+// raw diff (GRAPH click, then Raw on the commit card), then no diff temp
+// file is left behind.
 func TestSCMDiffLeavesNoTempFileWithoutNvim(t *testing.T) {
 	var tmp string
 	d, _ := scmDriver(t, func(r *repo) {
@@ -63,8 +64,12 @@ func TestSCMDiffLeavesNoTempFileWithoutNvim(t *testing.T) {
 	if len(g) == 0 || !strings.Contains(g[len(g)-1], "init") {
 		t.Fatalf("no init commit in GRAPH: %q", g)
 	}
-	from, _ = d.Updates()
 	scmClickText(d, "init")
+	if !until(d, func() bool { return strings.Contains(text(d), " Raw ") }) {
+		t.Fatalf("no commit card:%s", dump(d))
+	}
+	from, _ = d.Updates()
+	clickScreen(d, " Raw ")
 	if !handled(d, from, "app.gitCommitDiffReadyMsg") {
 		t.Fatal("the commit diff never arrived")
 	}
@@ -90,6 +95,10 @@ func TestSCMNvimDiffLeavesNoTempFile(t *testing.T) {
 		t.Errorf("side-by-side diff left temp files: %v", left)
 	}
 	scmClickText(d, "init")
+	if !waitText(d, " Raw ") {
+		t.Fatalf("no commit card:%s", dump(d))
+	}
+	clickScreen(d, " Raw ")
 	if !waitText(d, "· commit") {
 		t.Fatalf("no commit diff view:%s", dump(d))
 	}

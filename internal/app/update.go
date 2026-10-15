@@ -290,6 +290,11 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	case gitCommitDiffReadyMsg:
 		m.openCommitDiffBuffer(msg)
 		return m, nil
+	case commitViewReadyMsg:
+		return m, m.onCommitViewReady(msg)
+	case commitFileTextMsg:
+		m.onCommitFileText(msg)
+		return m, nil
 	case gitRemoteDoneMsg:
 		return m, m.gitRemoteDone(msg)
 	case preview.CloseMsg:
@@ -402,6 +407,11 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	}
 	if m.menuOpen {
 		return m.routeToMenu(msg)
+	}
+	if m.commitViewShown() {
+		if newM, cmd, ok := m.routeToCommitView(msg); ok {
+			return newM, cmd
+		}
 	}
 	if m.findOpen {
 		return m.routeToFind(msg)

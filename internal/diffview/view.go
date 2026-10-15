@@ -64,7 +64,7 @@ func (m Model) geom() geom {
 		for _, f := range m.files {
 			longest = max(longest, runewidth.StringWidth(path.Base(f.Name)))
 		}
-		g.listW = min(max(longest+16, 26), g.iw/4) + 1
+		g.listW = min(max(longest+16, 26), max(g.iw/4, min(g.iw/3, 34))) + 1
 	case m.header == nil && len(m.files) > 1:
 		longest := 0
 		for _, f := range m.files {
@@ -669,6 +669,12 @@ func (m Model) layout(draw bool) layoutOut {
 		if m.header != nil {
 			hints = theme.HintBar(p.bg, "n/p", "change", "tab", "file", "t", "split/unified", "o", "open",
 				"O", "at commit", "y", "copy SHA", "r", "raw", "esc", "close")
+			if lipgloss.Width(hints)+1 > g.iw {
+				hints = theme.HintBar(p.bg, "n/p", "change", "tab", "file", "o", "open", "y", "copy SHA", "r", "raw", "esc", "close")
+			}
+			if lipgloss.Width(hints)+1 > g.iw {
+				hints = theme.HintBar(p.bg, "n/p", "change", "y", "copy SHA", "r", "raw", "esc", "close")
+			}
 		} else if m.review {
 			hints = theme.HintBar(p.bg, "a/r", "change", "A/R", "file", "n/p", "next/prev", "enter", "apply", "e", "edit", "esc", "hide")
 		} else {

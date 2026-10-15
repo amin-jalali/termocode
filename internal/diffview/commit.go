@@ -121,7 +121,25 @@ func (m *Model) SetFileNote(i int, note string) {
 // width or height centres it on the screen again.
 func (m *Model) SetBounds(x, y, w, h int) {
 	m.bx, m.by, m.bw, m.bh = x, y, w, h
-	m.cache.reset()
+}
+
+// Hit is a click target of the card in screen cells.
+type Hit struct {
+	ID      string
+	X, Y, W int
+}
+
+// Hits lists the card's click targets (for the app's hit map).
+func (m Model) Hits() []Hit {
+	l := m.layout(false)
+	out := make([]Hit, 0, len(l.hits))
+	for _, h := range l.hits {
+		if h.id == "" {
+			continue // the FILES title row
+		}
+		out = append(out, Hit{ID: h.id, X: l.x + h.x0, Y: l.y + h.y, W: h.x1 - h.x0})
+	}
+	return out
 }
 
 // ToggleBody folds or opens the commit message body.
@@ -149,6 +167,9 @@ func (h *Header) bodyLines(width int) []string {
 	}
 	var out []string
 	for _, para := range strings.Split(body, "\n") {
+		if strings.TrimSpace(para) == "" {
+			continue // blank lines between paragraphs cost a row each
+		}
 		out = append(out, wrapWords(strings.TrimRight(expandTabs(para), " "), width)...)
 	}
 	return out

@@ -38,7 +38,7 @@ func (m Model) drawView() string {
 	}
 	previewShown := m.imageOpen && m.imagePrev != nil && m.imagePrev.img != nil
 	logoShown := false
-	if !previewShown && m.overlayKind() == "" && !m.previewOpen && !m.searchOpen && m.welcomeVisible() {
+	if !previewShown && m.overlayKind() == "" && !m.previewOpen && !m.searchOpen && !m.commitViewShown() && m.welcomeVisible() {
 		frame, logoShown = m.placeLogo(frame)
 	}
 	return m.markAttach(m.cleanupGraphics(frame, previewShown, logoShown))
@@ -426,7 +426,7 @@ func truncRightVisual(s string, cells int) string {
 // has a single ▕ in BorderDefault. Each component renders strictly
 // inside its column width so there are no overlaps.
 func (m Model) renderBase() string {
-	return strings.Join(m.renderBaseLines(), "\n")
+	return m.commitViewLayer(strings.Join(m.renderBaseLines(), "\n"))
 }
 
 // renderBaseLines composes the frame as rows. The pieces are joined and

@@ -124,7 +124,7 @@ func (m *Model) handleGitMenuSelect(id string) tea.Cmd {
 	switch id {
 	case gitMenuDiff:
 		if cur, ok := m.gitCurrentRow(); ok && cur.kind == gitRowCommit {
-			return m.gitShowCommitCmd(cur.hash)
+			return m.gitOpenCommitViewCmd(cur.hash)
 		}
 		return m.gitDiffCmd()
 	case gitMenuStage:
