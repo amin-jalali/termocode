@@ -284,3 +284,48 @@ The user: "do them in a loop; after finishing each item push it".
 - [x] N6a README screenshots: hero + 8-image gallery in README (160x44 PNGs from the shots tool, best compression, each < 300 KB); images also in docs/features.md. Animated `demo.gif` still waits for vhs (not installed)
 - [x] N6b Tier 2 process extensions
 - [x] N6c Android clipboard: works in Termux (termux-api), android/arm64 build checked in CI; see "Android (APK) — later"
+
+## Group S — Over SSH (2026-10-15, done 2026-10-16)
+
+Someone runs `ssh` to a server and works in termocode there.
+
+- [x] S1 Clipboard over SSH: OSC 52, also inside tmux (passthrough) and screen (chunked DCS)
+- [x] S2 Slow link: frames paced over SSH, so a held key stops when let go (`TERMOCODE_FRAME_PACING`); e2e slow-link proxy
+- [x] S3 Client-side look: no locale, no truecolor, no Nerd Font (e2e)
+- [x] S4 Inside tmux / screen (e2e; real tmux / screen: manual)
+- [x] S5 Shared server: state files 0600, config folder 0700, session socket checks; idle RSS measured (~260 MB, gopls most of it)
+- [x] S6 AI keys: never in logs or the error list; keys folder 0700
+- [x] S7 Manual steps in docs/qc/MANUAL-CHECKLIST.md (section S)
+
+## Android — Play Store Termux (done 2026-10-16)
+
+- [x] A1 Child processes start through `internal/spawn` (ADR 0011); guard test `TestNoDirectExec`
+- [x] A2 Doubled program path in `os.Args` under termux-exec fixed; checked on a tablet (Android 16): editor, nvim, terminal, git, detach / reattach, quit
+
+## Group U — Task list (2026-10-16)
+
+The user: "prepare a task list". Plans for each are in `docs/plans/` (local).
+
+In progress (agents):
+- [x] U1 (M) Start page redesign: one calm column, setup as a 3-row checklist (start-page-redesign.md T1–T8)
+- [ ] U2 (L) MCP phase B: Streamable HTTP + OAuth (Linear, GitHub, GitLab, Slack, Notion, Sentry, ClickUp…), plus the phase A leftovers (panel chip, Settings section, tools-changed check, e2e)
+- [ ] U3 (M) Source Control leftovers: compare marks 1/2, hover card polish, syntax colours in the commit diff, goldens (compare / light / ascii), guide, perf benchmarks
+- [ ] U4 (S) REST client plan (Fable) — then build it
+
+Next:
+- [ ] U5 (L) REST client: `.http` files (same format as mobocode), send with Ctrl+Enter, response panel, env variables, history, curl import / export, AI tools (send, read response, save) with approval and redaction
+- [ ] U6 (M) Services panel (from mobocode): start / stop Postgres, Redis… through `docker compose`; status and logs; AI can check them — plan first
+- [ ] U7 (S) AI chat: "what the model is doing" line and a stall warning (no ticker when idle)
+- [ ] U8 (S) "Waiting for you" mark on a terminal tab running Claude Code / Codex / Gemini CLI
+- [ ] U9 (M) Shell integration (OSC 133): command end and exit code per terminal tab; "Fix?" chip on a failed command
+- [ ] U10 (M) Terminal compatibility leftovers: slow startup probes, mouse traffic, macOS Alt, synchronized output, one termcaps package
+- [ ] U11 (S) Devcontainer: offer to set up the project's tools when `.devcontainer` exists (never without the user's OK)
+
+Needs the user:
+- [ ] U12 Mouse in AI Chat History: not reproduced — needs the exact place of the click
+- [ ] U13 Manual checks: MANUAL-CHECKLIST H1–H9 and S1–S4
+
+Last:
+- [ ] U14 (M) Release v0.1.0 + launch texts (launch-plan.md: HN, r/neovim, lists, Persian community)
+
+Not now (decided 2026-10-16): parallel agents as a DAG with an AGENTS panel (Claude Code already does this; low value for the cost).
