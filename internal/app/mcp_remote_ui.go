@@ -13,6 +13,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/mcp/auth"
+	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/prompt"
 )
 
@@ -207,6 +208,47 @@ func (m *Model) onMCPSignInDone(msg mcpSignInDoneMsg) tea.Cmd {
 		}
 	}
 	return m.aiInfo("MCP " + msg.name + ": signed in")
+}
+
+// ── Presets ("+ Add a server…") ──────────────────────────────────────────
+
+// mcpAddID is the servers picker's add row (not a valid server name).
+const mcpAddID = "+add"
+
+const pickerKindMCPPresets pickerKindEnum = 955
+
+// openMCPPresets lists the well-known remote servers.
+func (m *Model) openMCPPresets() tea.Cmd {
+	var items []picker.Item
+	for _, p := range mcp.Presets() {
+		items = append(items, picker.Item{ID: p.Name, Title: p.Title, Hint: p.URL})
+	}
+	items = append(items, picker.Item{ID: "+json", Title: "Other (edit mcp.json)…", Hint: "paste a Claude / Cursor mcpServers block"})
+	m.picker = picker.NewItems(" Add an MCP server ", items)
+	m.picker.SetSize(m.w, m.h)
+	m.pickerOpen = true
+	m.pickerKind = pickerKindMCPPresets
+	return nil
+}
+
+// onMCPPresetPicked writes the preset into the user mcp.json and opens
+// its actions (Sign in, Set secret …).
+func (m *Model) onMCPPresetPicked(id string) tea.Cmd {
+	if id == "+json" {
+		return m.editMCPConfig()
+	}
+	for _, p := range mcp.Presets() {
+		if p.Name != id {
+			continue
+		}
+		if err := mcp.AddServer(mcpUserPath(), p.Name, p.Entry()); err != nil {
+			return m.aiToastErr("MCP "+p.Title, err)
+		}
+		m.aiMCP().Reload()
+		info := m.aiInfo("MCP " + p.Name + " added: " + p.Note)
+		return tea.Batch(info, m.openMCPServerActions(p.Name))
+	}
+	return nil
 }
 
 // mcpSignOut forgets a server's tokens.
