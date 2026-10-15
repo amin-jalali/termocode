@@ -402,4 +402,11 @@ var (
 	GlyphHistory  = Icon{NerdFont: "", Unicode: "↺", ASCII: "h"} // nf-fa-history
 	GlyphNew      = Icon{NerdFont: "", Unicode: "+", ASCII: "+"} // nf-fa-plus
 	GlyphCollapse = Icon{NerdFont: "", Unicode: "⊟", ASCII: "-"} // nf-fa-minus_square_o
+
+	// Source Control GRAPH (scm-graph design §2.3).
+	GlyphCommit   = Icon{NerdFont: "\uf111", Unicode: "◦", ASCII: "o"} // nf-fa-circle
+	GlyphHead     = Icon{NerdFont: "\uf192", Unicode: "◉", ASCII: "@"} // nf-fa-dot_circle_o
+	GlyphMerge    = Icon{NerdFont: "\uf126", Unicode: "⑂", ASCII: "*"} // nf-fa-code_fork
+	GlyphUnpushed = Icon{NerdFont: "\uf0aa", Unicode: "⇡", ASCII: "^"} // nf-fa-arrow_circle_up
+	GlyphExpand   = Icon{NerdFont: "\uf107", Unicode: "▾", ASCII: "v"} // nf-fa-angle_down
 )

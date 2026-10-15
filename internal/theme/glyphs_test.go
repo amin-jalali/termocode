@@ -16,7 +16,10 @@ import (
 func TestGlyphTable(t *testing.T) {
 	defer func(m IconMode) { CurrentIconMode = m }(CurrentIconMode)
 	glyphs := map[string]Icon{"more": GlyphMore, "close": GlyphClose, "pin": GlyphPin,
-		"history": GlyphHistory, "new": GlyphNew, "collapse": GlyphCollapse}
+		"history": GlyphHistory, "new": GlyphNew, "collapse": GlyphCollapse,
+		// Source Control GRAPH (scm-graph design §2.3).
+		"commit": GlyphCommit, "head": GlyphHead, "merge": GlyphMerge,
+		"unpushed": GlyphUnpushed, "expand": GlyphExpand}
 	for name, g := range glyphs {
 		for _, m := range []IconMode{IconModeNerdFont, IconModeUnicode, IconModeASCII} {
 			CurrentIconMode = m
