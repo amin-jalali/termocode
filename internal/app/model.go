@@ -109,7 +109,7 @@ type Model struct {
 	replace  replacebar.Model
 	search   search.Model
 	toast    toast.Model
-	themeID string // active theme id (drives the nvim colourscheme)
+	themeID  string // active theme id (drives the nvim colourscheme)
 	// Color Theme picker live preview: the theme to restore on Esc.
 	themePreviewFrom string
 	themePreviewing  bool

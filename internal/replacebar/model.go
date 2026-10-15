@@ -125,11 +125,11 @@ func (m *Model) setValue(v string) {
 }
 
 var (
-	bgStyle lipgloss.Style
+	bgStyle    lipgloss.Style
 	labelStyle lipgloss.Style
 	inputStyle lipgloss.Style
-	inputDim lipgloss.Style
-	hintStyle lipgloss.Style
+	inputDim   lipgloss.Style
+	hintStyle  lipgloss.Style
 )
 
 func init() { refreshColors() }
@@ -139,18 +139,18 @@ func init() { refreshColors() }
 func refreshColors() {
 	bgStyle = lipgloss.NewStyle().Background(theme.LG(theme.BgSidebar))
 	labelStyle = lipgloss.NewStyle().
-			Background(theme.LG(theme.BgKeycap)).
-			Foreground(theme.LG(theme.AccentAmber)).
-			Bold(true)
+		Background(theme.LG(theme.BgKeycap)).
+		Foreground(theme.LG(theme.AccentAmber)).
+		Bold(true)
 	inputStyle = lipgloss.NewStyle().
-			Background(theme.LG(theme.BgEditor)).
-			Foreground(theme.LG(theme.TextWhite))
+		Background(theme.LG(theme.BgEditor)).
+		Foreground(theme.LG(theme.TextWhite))
 	inputDim = lipgloss.NewStyle().
-			Background(theme.LG(theme.BgEditor)).
-			Foreground(theme.LG(theme.TextMuted))
+		Background(theme.LG(theme.BgEditor)).
+		Foreground(theme.LG(theme.TextMuted))
 	hintStyle = lipgloss.NewStyle().
-			Background(theme.LG(theme.BgSidebar)).
-			Foreground(theme.LG(theme.TextMuted))
+		Background(theme.LG(theme.BgSidebar)).
+		Foreground(theme.LG(theme.TextMuted))
 }
 
 func (m Model) View() string {

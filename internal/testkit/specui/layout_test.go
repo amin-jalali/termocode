@@ -99,4 +99,3 @@ func TestNotifyBecomesToast(t *testing.T) {
 		t.Errorf("the toast never went away:\n%s", screen(d))
 	}
 }
-

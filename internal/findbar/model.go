@@ -690,32 +690,32 @@ func (m Model) buttonColumnsReplace() (oneCol, allCol int) {
 
 // ── styling ───────────────────────────────────────────────────────────────
 var (
-	PanelBg lipgloss.Color
-	PanelBorder lipgloss.Color
-	InputBg lipgloss.Color
-	TextPrimary lipgloss.Color
-	TextMuted lipgloss.Color
-	TextDim lipgloss.Color
-	BtnFg lipgloss.Color
-	BtnDim lipgloss.Color
-	AccentFocus lipgloss.Color
-	CountFg lipgloss.Color
-	WarnFg lipgloss.Color
-	bodyStyle lipgloss.Style
-	chevronStyle lipgloss.Style
-	chevronActive lipgloss.Style
-	inputBgStyle lipgloss.Style
-	queryStyle lipgloss.Style
+	PanelBg          lipgloss.Color
+	PanelBorder      lipgloss.Color
+	InputBg          lipgloss.Color
+	TextPrimary      lipgloss.Color
+	TextMuted        lipgloss.Color
+	TextDim          lipgloss.Color
+	BtnFg            lipgloss.Color
+	BtnDim           lipgloss.Color
+	AccentFocus      lipgloss.Color
+	CountFg          lipgloss.Color
+	WarnFg           lipgloss.Color
+	bodyStyle        lipgloss.Style
+	chevronStyle     lipgloss.Style
+	chevronActive    lipgloss.Style
+	inputBgStyle     lipgloss.Style
+	queryStyle       lipgloss.Style
 	placeholderStyle lipgloss.Style
-	cursorStyle lipgloss.Style
-	countStyle lipgloss.Style
-	countWarnStyle lipgloss.Style
-	ctrlStyle lipgloss.Style
-	ctrlDim lipgloss.Style
-	closeStyle lipgloss.Style
-	toggleOff lipgloss.Style
-	toggleOnBg lipgloss.Color
-	toggleOn lipgloss.Style
+	cursorStyle      lipgloss.Style
+	countStyle       lipgloss.Style
+	countWarnStyle   lipgloss.Style
+	ctrlStyle        lipgloss.Style
+	ctrlDim          lipgloss.Style
+	closeStyle       lipgloss.Style
+	toggleOff        lipgloss.Style
+	toggleOnBg       lipgloss.Color
+	toggleOn         lipgloss.Style
 )
 
 func init() { refreshColors() }
@@ -736,47 +736,47 @@ func refreshColors() {
 	WarnFg = theme.Float().Danger
 	bodyStyle = lipgloss.NewStyle().Background(PanelBg)
 	chevronStyle = lipgloss.NewStyle().
-			Background(PanelBg).
-			Foreground(BtnFg)
+		Background(PanelBg).
+		Foreground(BtnFg)
 	chevronActive = lipgloss.NewStyle().
-			Background(PanelBg).
-			Foreground(AccentFocus).
-			Bold(true)
+		Background(PanelBg).
+		Foreground(AccentFocus).
+		Bold(true)
 	inputBgStyle = lipgloss.NewStyle().Background(InputBg)
 	queryStyle = lipgloss.NewStyle().
-			Background(InputBg).
-			Foreground(TextPrimary)
+		Background(InputBg).
+		Foreground(TextPrimary)
 	placeholderStyle = lipgloss.NewStyle().
-				Background(InputBg).
-				Foreground(TextDim).
-				Italic(true)
+		Background(InputBg).
+		Foreground(TextDim).
+		Italic(true)
 	cursorStyle = lipgloss.NewStyle().
-			Background(InputBg).
-			Foreground(AccentFocus).
-			Bold(true)
+		Background(InputBg).
+		Foreground(AccentFocus).
+		Bold(true)
 	countStyle = lipgloss.NewStyle().
-			Background(PanelBg).
-			Foreground(CountFg)
+		Background(PanelBg).
+		Foreground(CountFg)
 	countWarnStyle = lipgloss.NewStyle().
-			Background(PanelBg).
-			Foreground(WarnFg)
+		Background(PanelBg).
+		Foreground(WarnFg)
 	ctrlStyle = lipgloss.NewStyle().
-			Background(PanelBg).
-			Foreground(BtnFg)
+		Background(PanelBg).
+		Foreground(BtnFg)
 	ctrlDim = lipgloss.NewStyle().
 		Background(PanelBg).
 		Foreground(BtnDim)
 	closeStyle = lipgloss.NewStyle().
-			Background(PanelBg).
-			Foreground(BtnFg)
+		Background(PanelBg).
+		Foreground(BtnFg)
 	toggleOff = lipgloss.NewStyle().
-			Background(PanelBg).
-			Foreground(BtnFg)
+		Background(PanelBg).
+		Foreground(BtnFg)
 	toggleOnBg = theme.Wash(theme.BgFloat, theme.WashPressed)
 	toggleOn = lipgloss.NewStyle().
-			Background(toggleOnBg).
-			Foreground(TextPrimary).
-			Bold(true)
+		Background(toggleOnBg).
+		Foreground(TextPrimary).
+		Bold(true)
 }
 
 // PanelWidth returns the cell width of the rendered floating panel.

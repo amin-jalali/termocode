@@ -90,8 +90,9 @@ func (m Model) BoxWidth() int {
 
 // BoxHeight returns the rendered box height in cells (border + chrome +
 // list rows). Must stay in sync with renderBox()'s row composition:
-//   2 border + 9 chrome (blank, header, blank, search, hairline,
-//   hairline, blank, footer, blank) + rowsVisible.
+//
+//	2 border + 9 chrome (blank, header, blank, search, hairline,
+//	hairline, blank, footer, blank) + rowsVisible.
 func (m Model) BoxHeight() int {
 	_, rv := m.layoutDims()
 	return 11 + rv
@@ -281,27 +282,27 @@ func (m Model) Box() string {
 // the per-cell dim-and-tint replacement. Other surfaces use distinct
 // values so they pass through the overlay untouched and read as crisp.
 var (
-	PanelBg lipgloss.Color
-	PanelBorder lipgloss.Color
-	HairlineFg lipgloss.Color
-	InputBg lipgloss.Color
-	InputFg lipgloss.Color
-	InputCursor lipgloss.Color
-	Placeholder lipgloss.Color
-	SelBg lipgloss.Color
-	SelDot lipgloss.Color
-	NameFg lipgloss.Color
-	SelNameFg lipgloss.Color
-	PathFg lipgloss.Color
-	SelPathFg lipgloss.Color
-	TitleFg lipgloss.Color
-	HeaderIcon lipgloss.Color
-	PillBg lipgloss.Color
-	PillFg lipgloss.Color
-	FooterFg lipgloss.Color
+	PanelBg      lipgloss.Color
+	PanelBorder  lipgloss.Color
+	HairlineFg   lipgloss.Color
+	InputBg      lipgloss.Color
+	InputFg      lipgloss.Color
+	InputCursor  lipgloss.Color
+	Placeholder  lipgloss.Color
+	SelBg        lipgloss.Color
+	SelDot       lipgloss.Color
+	NameFg       lipgloss.Color
+	SelNameFg    lipgloss.Color
+	PathFg       lipgloss.Color
+	SelPathFg    lipgloss.Color
+	TitleFg      lipgloss.Color
+	HeaderIcon   lipgloss.Color
+	PillBg       lipgloss.Color
+	PillFg       lipgloss.Color
+	FooterFg     lipgloss.Color
 	FooterChipBg lipgloss.Color
 	FooterChipFg lipgloss.Color
-	BulletFg lipgloss.Color
+	BulletFg     lipgloss.Color
 )
 
 func init() { refreshColors() }
