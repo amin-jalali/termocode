@@ -97,7 +97,7 @@ func run() {
 				_ = c.Notify("registerCommand", map[string]any{"id": id, "title": title})
 			}
 			_ = c.Notify("registerStatusItem", map[string]any{"id": "pid", "text": fmt.Sprintf("fake pid %d", os.Getpid()), "command": "hello"})
-			_ = c.Notify("registerPanel", map[string]any{"id": "main", "title": "Fake", "icon": "F"})
+			_ = c.Notify("registerPanel", map[string]any{"id": "main", "title": "Fake", "icon": "Z"})
 			_ = c.Notify("panel/setContent", map[string]any{"id": "main", "lines": []string{"{{accent}}line one{{/}}", "line two"}})
 		case "command/execute":
 			switch p.ID {

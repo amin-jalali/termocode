@@ -280,6 +280,7 @@ func runTUI() {
 		if r := recover(); r != nil {
 			app.FlushSession() // the last cursor positions (N1)
 			app.HotExitFlush(2 * time.Second)
+			app.StopExtensions() // N6b: no extension process outlives us
 			fmt.Fprintf(os.Stderr, "termocode panic: %v\n", r)
 			os.Exit(1)
 		}
@@ -305,6 +306,7 @@ func runTUI() {
 	_, _ = os.Stdout.WriteString("\x1b]11;#121212\x07")
 
 	app.ThrottleFrames()
+	app.SetVersion(versionString()) // sent to process extensions (N6b)
 	p := tea.NewProgram(
 		app.New(),
 		tea.WithAltScreen(),
@@ -361,6 +363,7 @@ func runTUI() {
 		// A crash or a lost terminal: keep the unsaved buffers.
 		app.FlushSession() // the last cursor positions (N1)
 		app.HotExitFlush(2 * time.Second)
+		app.StopExtensions()                                          // N6b
 		_, _ = os.Stdout.WriteString("\x1b]111\x07" + font.Restore()) // os.Exit skips the defer
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -368,6 +371,8 @@ func runTUI() {
 	// Quit already wrote it; a hangup (p.Quit from watchHangup) too. A
 	// no-op then, but cheap insurance for any other way out of Run.
 	app.FlushSession()
+	// Process extensions (N6b): shutdown, then kill their process groups.
+	app.StopExtensions()
 }
 
 // inputOption is Bubble Tea's input: stdin behind transfer.Input when

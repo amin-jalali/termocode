@@ -253,6 +253,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ext-manage-open-folder":     aiNever(aiNoOutside),
 	"ext-manage-log":             aiAuto(), // extensions(op: log) returns the text
 	"ext-manage-new":             aiNever(aiNoPicker),
+	"ext-manage-new-process":     aiNever(aiNoPicker),
 	"ext-manage-install-samples": aiConfirm(ai.ClassRun), // installs code that runs
 
 	// ── AI (the model's own chat and settings) ──

@@ -150,6 +150,7 @@ type Host struct {
 	procs map[string]*proc
 	order []string
 	log   []string
+	gen   int // last run number, host-wide (Event.Gen)
 }
 
 const logMax = 500
@@ -164,6 +165,9 @@ func NewHost(cfg Config) *Host {
 		procs:  map[string]*proc{},
 	}
 }
+
+// Done is closed by Close.
+func (h *Host) Done() <-chan struct{} { return h.closed }
 
 // Events delivers what the extensions do. Read it all the time: a full
 // channel slows the extensions down (never the reader).
@@ -187,30 +191,37 @@ func (h *Host) logf(name, format string, args ...any) {
 	h.mu.Unlock()
 }
 
-// Set replaces the extension list: it stops every running process, keeps
-// the process extensions of exts and starts the ones that start at
-// startup. Lua extensions in exts are ignored.
-func (h *Host) Set(exts []ext.Extension) {
+// Set replaces the extension list: it stops every running process and
+// keeps the process extensions of exts (Lua ones are ignored). Nothing
+// starts yet: call StartAtStartup (the UI does, once it knows the new
+// list). Every later event has a Gen above the returned base, so events
+// of the old processes still in the channel can be told apart.
+func (h *Host) Set(exts []ext.Extension) (base int) {
 	h.StopAll()
 	h.mu.Lock()
+	defer h.mu.Unlock()
 	h.procs = map[string]*proc{}
 	h.order = nil
-	var start []*proc
 	for _, x := range exts {
 		if !x.IsProcess() {
 			continue
 		}
-		p := &proc{h: h, x: x}
-		h.procs[x.Name] = p
+		h.procs[x.Name] = &proc{h: h, x: x}
 		h.order = append(h.order, x.Name)
-		if x.Manifest.StartsAtStartup() {
-			start = append(start, p)
+	}
+	return h.gen
+}
+
+// StartAtStartup starts the extensions that start with termocode
+// (ext.Manifest.StartsAtStartup). It does not wait.
+func (h *Host) StartAtStartup() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for _, n := range h.order {
+		if p := h.procs[n]; p.x.Manifest.StartsAtStartup() {
+			p.startLocked()
 		}
 	}
-	for _, p := range start {
-		p.startLocked()
-	}
-	h.mu.Unlock()
 }
 
 // Status lists the process extensions in name order.
@@ -574,7 +585,8 @@ func (p *proc) runOnce(stop <-chan struct{}) (exitErr string, stopped bool, star
 	pid := cmd.Process.Pid
 
 	h.mu.Lock()
-	p.gen++
+	h.gen++
+	p.gen = h.gen
 	gen := p.gen
 	p.pid = pid
 	conn := NewConn(outR, inW, p.handler(gen, stop))
