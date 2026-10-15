@@ -253,6 +253,26 @@ func watchHangup(p *tea.Program) {
 	}()
 }
 
+// hostEscapes returns what termocode writes to the host terminal before
+// Bubble Tea starts (enter) and after it stops (leave). Only for VTE
+// (GNOME Terminal, Tilix …), and never inside tmux / screen, where the
+// pane would keep the change:
+//
+//   - CSI 3 J on the PRIMARY buffer (before the alt-screen switch) clears
+//     the scrollback so VTE hides its scrollbar overlay while termocode
+//     runs. Elsewhere it would only delete the user's shell history, and
+//     it is never sent on the way out.
+//   - OSC 11 paints the terminal's default background. The window height
+//     is rarely a whole number of rows, and VTE fills the leftover strip
+//     under the last row with its own background (purple on Ubuntu);
+//     #121212 (the status bar) makes it blend in. leave resets it (OSC 111).
+func hostEscapes(getenv func(string) string) (enter, leave string) {
+	if getenv("VTE_VERSION") == "" || getenv("TMUX") != "" || getenv("STY") != "" {
+		return "", ""
+	}
+	return "\x1b[3J" + "\x1b]11;#121212\x07", "\x1b]111\x07"
+}
+
 func runTUI() {
 	// Probe the host terminal for icon-glyph cell widths BEFORE Bubble
 	// Tea grabs the TTY into raw/altscreen mode. The probe writes a few
@@ -262,6 +282,7 @@ func runTUI() {
 	probeTerminal()
 
 	font := applyFontDelta(fontDelta())
+	hostEnter, hostLeave := hostEscapes(os.Getenv)
 	// Right-to-left text: termocode lays it out, so the terminal must not
 	// reorder it again (BDSM explicit mode; internal/rtl). Undone on exit.
 	rtlEnter, rtlLeave := app.RTLTerminalModes()
@@ -271,15 +292,8 @@ func runTUI() {
 		// Restore the terminal's default cursor shape — we set it via
 		// DECSCUSR `\x1b[<n> q` while running.
 		_, _ = os.Stdout.WriteString("\x1b[0 q")
-		// Erase Saved Lines (CSI 3 J) — drops the host terminal's
-		// scrollback buffer on the way out so the user doesn't return to
-		// a session with the editor's transient state still scrollable.
-		// Mirrors the pre-Run write below (must run in BOTH places —
-		// pre-Run is on the primary buffer, this defer fires AFTER the
-		// alt-screen flip-back, which lands us on primary again).
-		_, _ = os.Stdout.WriteString("\x1b[3J")
-		// Restore the terminal's default background (overridden below). OSC 111.
-		_, _ = os.Stdout.WriteString("\x1b]111\x07")
+		// Undo the host background (see hostEscapes).
+		_, _ = os.Stdout.WriteString(hostLeave)
 		// Undo the font change (if the terminal made one).
 		_, _ = os.Stdout.WriteString(font.Restore())
 		if r := recover(); r != nil {
@@ -291,24 +305,7 @@ func runTUI() {
 		}
 	}()
 
-	// CSI 3 J on the PRIMARY buffer — clears the host terminal's
-	// scrollback so VTE-family emulators (GNOME Terminal, …) hide the
-	// scrollbar overlay while we're inside alt-screen. Must be written
-	// BEFORE tea.NewProgram → Run() emits `\x1b[?1049h` (the alt-screen
-	// switch); after the switch any erase escape lands on alt, which is
-	// already empty.
-	_, _ = os.Stdout.WriteString("\x1b[3J")
-
-	// The window height is rarely an exact multiple of the cell height, so the
-	// terminal fills the ~1-row leftover strip at the bottom with its OWN
-	// default background (a jarring purple on Ubuntu/GNOME). We can't paint
-	// there (it's below the character grid), but OSC 11 sets the terminal's
-	// default bg, so the strip blends in instead of flashing purple. We use the
-	// status-bar bg (#121212) since the status bar spans most of the bottom
-	// width. A single colour can't match every region — the strip fully
-	// vanishes only when the window is sized to whole rows. Reset via OSC 111
-	// in the defer above.
-	_, _ = os.Stdout.WriteString("\x1b]11;#121212\x07")
+	_, _ = os.Stdout.WriteString(hostEnter)
 
 	app.ThrottleFrames()
 	app.SetVersion(versionString()) // sent to process extensions (N6b)
