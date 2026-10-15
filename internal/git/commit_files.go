@@ -24,6 +24,7 @@ type CommitInfo struct {
 	Parents  []string // short hashes
 	Refs     []Ref
 	Files    []CommitFile
+	Commits  int // CommitFilesBetween: commits in the range
 }
 
 // CommitFiles loads a commit's meta and changed files in one git call. A
@@ -51,6 +52,26 @@ func CommitFiles(dir, hash string) (CommitInfo, error) {
 	for _, cf := range c.Files {
 		c.Add += cf.Add
 		c.Del += cf.Del
+	}
+	return c, nil
+}
+
+// CommitFilesBetween lists the files that changed from a to b (`git diff
+// a b`) with their counts; Commits is the number of commits in a..b.
+func CommitFilesBetween(dir, a, b string) (CommitInfo, error) {
+	out, err := runOut(dir, "git", "diff", "--no-color", "--no-ext-diff", "--raw", "--numstat", "-z", "-M", a, b, "--")
+	if err != nil {
+		return CommitInfo{}, fmt.Errorf("git diff %s %s: %w", a, b, err)
+	}
+	var c CommitInfo
+	c.Files = parseRawNumstat(out)
+	c.CommitDetail.Files = len(c.Files)
+	for _, cf := range c.Files {
+		c.Add += cf.Add
+		c.Del += cf.Del
+	}
+	if n, err := runOut(dir, "git", "rev-list", "--count", a+".."+b, "--"); err == nil {
+		c.Commits, _ = strconv.Atoi(strings.TrimSpace(n))
 	}
 	return c, nil
 }

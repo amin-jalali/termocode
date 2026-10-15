@@ -60,6 +60,14 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 			m.closeCommitView()
 			return m, nil, true
 		}
+		if m.commitView != nil && m.commitView.mark != "" {
+			m.commitView.mark = "" // drop the compare mark
+			return m, nil, true
+		}
+	case tea.KeySpace:
+		if hasCur && cur.kind == gitRowCommit {
+			return m, m.gitCompareMark(cur.ci), true
+		}
 	case tea.KeyLeft:
 		// Collapse the section/dir under the cursor.
 		if hasCur {

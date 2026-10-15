@@ -39,18 +39,27 @@ type commitViewState struct {
 	blobs   map[string][2]string
 	order   []string // blobs, oldest first
 	pick    string   // the commit a revert / cherry-pick confirm is about
+	// The two sides of the files on show: sha^ and sha for a commit, a
+	// and b for a compare.
+	oldRev, newRev string
+	compare        *commitRange // set: the card compares two commits
+	mark           string       // a GRAPH commit marked for compare (Space)
 }
 
-// commitViewReadyMsg carries a commit's meta and files.
+// commitRange is a compare: full and short hashes, older first.
+type commitRange struct{ a, b, sa, sb string }
+
+// commitViewReadyMsg carries a commit's (or a range's) meta and files.
 type commitViewReadyMsg struct {
-	want string
-	info git.CommitInfo
-	err  error
+	want    string
+	info    git.CommitInfo
+	compare *commitRange
+	err     error
 }
 
 // commitFileTextMsg carries one file's two sides (or a note).
 type commitFileTextMsg struct {
-	sha      string
+	sides    string // oldRev..newRev they were read at
 	file     int
 	path     string
 	old, new string
@@ -66,11 +75,8 @@ func (m *Model) gitOpenCommitViewCmd(hash string) tea.Cmd {
 	if hash == "" {
 		return nil
 	}
-	if m.commitView == nil {
-		m.commitView = &commitViewState{blobs: map[string][2]string{}}
-	}
-	cv := m.commitView
-	if cv.open && (cv.info.FullHash == hash || cv.info.Hash == hash) {
+	cv := m.commitViewS()
+	if cv.open && cv.compare == nil && (cv.info.FullHash == hash || cv.info.Hash == hash) {
 		cv.want = hash
 		return nil
 	}
@@ -83,6 +89,61 @@ func (m *Model) gitOpenCommitViewCmd(hash string) tea.Cmd {
 		info, err := git.CommitFiles(cwd, hash)
 		return commitViewReadyMsg{want: hash, info: info, err: err}
 	}
+}
+
+// commitViewS is the commit view state (made on first use).
+func (m *Model) commitViewS() *commitViewState {
+	if m.commitView == nil {
+		m.commitView = &commitViewState{blobs: map[string][2]string{}}
+	}
+	return m.commitView
+}
+
+// gitOpenCompareCmd opens the card on the change from commit a to b
+// (a older).
+func (m *Model) gitOpenCompareCmd(r commitRange) tea.Cmd {
+	cv := m.commitViewS()
+	cv.want = r.a + ".." + r.b
+	want := cv.want
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil
+	}
+	return func() tea.Msg {
+		info, err := git.CommitFilesBetween(cwd, r.a, r.b)
+		return commitViewReadyMsg{want: want, info: info, compare: &r, err: err}
+	}
+}
+
+// gitCompareMark marks GRAPH commit ci for compare; with another commit
+// marked already it opens the compare card (older → newer).
+func (m *Model) gitCompareMark(ci int) tea.Cmd {
+	if ci < 0 || ci >= len(m.gitCommits) {
+		return nil
+	}
+	cv := m.commitViewS()
+	c := m.gitCommits[ci]
+	var cmd tea.Cmd
+	if cv.mark == "" || cv.mark == c.FullHash {
+		cv.mark = c.FullHash
+		m.toast, cmd = m.toast.Push(toast.Info, "Marked "+c.Hash+" · Space on another commit to compare")
+		return cmd
+	}
+	other := -1
+	for i, g := range m.gitCommits {
+		if g.FullHash == cv.mark {
+			other = i
+		}
+	}
+	cv.mark = ""
+	if other < 0 {
+		return nil
+	}
+	older, newer := m.gitCommits[other], c
+	if other < ci { // the list is newest first
+		older, newer = c, m.gitCommits[other]
+	}
+	return m.gitOpenCompareCmd(commitRange{a: older.FullHash, b: newer.FullHash, sa: older.Hash, sb: newer.Hash})
 }
 
 // onCommitViewReady builds the card for a loaded commit.
@@ -98,8 +159,18 @@ func (m *Model) onCommitViewReady(msg commitViewReadyMsg) tea.Cmd {
 	}
 	info := msg.info
 	wasOpen := cv.open
-	cv.info = info
-	cv.card = diffview.NewCommit(commitHeader(info), commitFiles(info), commitButtons())
+	cv.info, cv.compare = info, msg.compare
+	if r := msg.compare; r != nil {
+		cv.oldRev, cv.newRev = r.a, r.b
+		cv.card = diffview.NewCommit(compareHeader(info, *r), commitFiles(info), []diffview.Button{
+			{ID: "copy-range", Label: "Copy range"}, {ID: "open-file", Label: "Open file"}, {ID: "hide", Label: "Close"}})
+	} else {
+		cv.oldRev, cv.newRev = "", info.FullHash
+		if len(info.Parents) > 0 {
+			cv.oldRev = info.FullHash + "^"
+		}
+		cv.card = diffview.NewCommit(commitHeader(info), commitFiles(info), commitButtons())
+	}
 	cv.open = true
 	if !wasOpen {
 		cv.focused = false
@@ -125,6 +196,20 @@ func commitHeader(info git.CommitInfo) diffview.Header {
 		h.OldLabel = "− " + info.Parents[0] + " (parent)"
 	}
 	return h
+}
+
+// compareHeader is the header of a compare card.
+func compareHeader(info git.CommitInfo, r commitRange) diffview.Header {
+	word := "commits"
+	if info.Commits == 1 {
+		word = "commit"
+	}
+	return diffview.Header{
+		Title:   "Compare " + r.sa + " → " + r.sb,
+		Subject: fmt.Sprintf("%d %s from %s to %s", info.Commits, word, r.sa, r.sb),
+		Files:   info.CommitDetail.Files, Add: info.Add, Del: info.Del,
+		OldLabel: "− " + r.sa, NewLabel: "+ " + r.sb,
+	}
 }
 
 func commitFiles(info git.CommitInfo) []diffview.File {
@@ -288,8 +373,8 @@ func (m *Model) commitLoadFile(i int) tea.Cmd {
 	if !f.Pending {
 		return nil
 	}
-	sha := cv.info.FullHash
-	key := sha + ":" + f.Name
+	sides := cv.oldRev + ".." + cv.newRev
+	key := sides + ":" + f.Name
 	if t, ok := cv.blobs[key]; ok {
 		cv.card.SetFileText(i, t[0], t[1])
 		return nil
@@ -298,22 +383,22 @@ func (m *Model) commitLoadFile(i int) tea.Cmd {
 	if i >= 0 && i < len(cv.info.Files) {
 		cf = cv.info.Files[i]
 	}
-	hasParent := len(cv.info.Parents) > 0
+	oldRev, newRev := cv.oldRev, cv.newRev
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil
 	}
 	return func() tea.Msg {
-		out := commitFileTextMsg{sha: sha, file: i, path: cf.Path}
+		out := commitFileTextMsg{sides: sides, file: i, path: cf.Path}
 		oldPath := cf.Path
 		if cf.OldPath != "" {
 			oldPath = cf.OldPath
 		}
-		if hasParent && cf.Status != 'A' {
-			out.old, _ = git.ShowFileAtRevision(cwd, sha+"^", oldPath)
+		if oldRev != "" && cf.Status != 'A' {
+			out.old, _ = git.ShowFileAtRevision(cwd, oldRev, oldPath)
 		}
 		if cf.Status != 'D' {
-			out.new, _ = git.ShowFileAtRevision(cwd, sha, cf.Path)
+			out.new, _ = git.ShowFileAtRevision(cwd, newRev, cf.Path)
 		}
 		if tooBigToDiff(out.old) || tooBigToDiff(out.new) {
 			out.old, out.new, out.note = "", "", commitTooBig
@@ -330,7 +415,7 @@ func tooBigToDiff(s string) bool {
 // commit on show) and keeps it in the cache.
 func (m *Model) onCommitFileText(msg commitFileTextMsg) {
 	cv := m.commitView
-	if cv == nil || !cv.open || cv.info.FullHash != msg.sha {
+	if cv == nil || !cv.open || cv.oldRev+".."+cv.newRev != msg.sides {
 		return
 	}
 	if msg.note != "" {
@@ -338,7 +423,7 @@ func (m *Model) onCommitFileText(msg commitFileTextMsg) {
 		return
 	}
 	cv.card.SetFileText(msg.file, msg.old, msg.new)
-	key := msg.sha + ":" + msg.path
+	key := msg.sides + ":" + msg.path
 	if _, ok := cv.blobs[key]; !ok {
 		cv.order = append(cv.order, key)
 		if len(cv.order) > commitBlobCache {
@@ -368,6 +453,19 @@ func (m *Model) commitAction(id string, i int) tea.Cmd {
 		return nil
 	}
 	info := cv.info
+	if r := cv.compare; r != nil {
+		switch id {
+		case "copy-sha", "copy-range":
+			m.copyToClipboard(r.a + ".." + r.b)
+			var cmd tea.Cmd
+			m.toast, cmd = m.toast.Push(toast.Info, "Copied "+r.sa+".."+r.sb)
+			return cmd
+		case "raw", "revert", "cherry-pick", "open-at-commit", "more":
+			if id != "more" {
+				return nil // commit-only actions
+			}
+		}
+	}
 	switch {
 	case id == "copy-sha":
 		m.copyToClipboard(info.FullHash)
