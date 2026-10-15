@@ -36,7 +36,7 @@ version, it does nothing.
 Options (after `sh -s --`):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/amin-jalali/termocode/main/scripts/install.sh | sh -s -- --version v0.3.0
+curl -fsSL https://raw.githubusercontent.com/amin-jalali/termocode/main/scripts/install.sh | sh -s -- --version v0.1.0
 curl -fsSL https://raw.githubusercontent.com/amin-jalali/termocode/main/scripts/install.sh | sh -s -- --uninstall
 curl -fsSL https://raw.githubusercontent.com/amin-jalali/termocode/main/scripts/install.sh | PREFIX=/opt/termocode sh
 ```
@@ -75,7 +75,7 @@ has four tarballs and a `checksums.txt`:
 | `termocode-vX.Y.Z-darwin-arm64.tar.gz` | macOS on Apple Silicon (M1 and newer) |
 
 ```sh
-v=v0.3.0; f=termocode-$v-linux-amd64          # pick yours
+v=v0.1.0; f=termocode-$v-linux-amd64          # pick yours
 curl -fsSLO https://github.com/amin-jalali/termocode/releases/download/$v/$f.tar.gz
 curl -fsSLO https://github.com/amin-jalali/termocode/releases/download/$v/checksums.txt
 sha256sum --ignore-missing -c checksums.txt   # macOS: shasum -a 256 --ignore-missing -c checksums.txt

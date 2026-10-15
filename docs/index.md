@@ -6,7 +6,7 @@ hide:
 
 # termocode
 
-**A terminal IDE that feels like VSCode — with a real Neovim inside.**
+**A terminal IDE that feels like VS Code — with a real Neovim inside.**
 
 ![termocode: explorer, tabs, editor and status bar](assets/screenshots/editor.png)
 
@@ -103,8 +103,13 @@ Hero GIF (not committed yet): `vhs assets/screenshots/demo.tape`, then:
 
 ## Install
 
-termocode is installed with Go for now. You need Go 1.26 or newer and
-`nvim` 0.10 or newer.
+One line, no sudo. It installs to `~/.local/bin` and needs `nvim` 0.10 or newer:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/amin-jalali/termocode/main/scripts/install.sh | sh
+```
+
+Or build it with Go 1.26 or newer:
 
 ```sh
 go install github.com/amin-jalali/termocode/cmd/termocode@latest
