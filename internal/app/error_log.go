@@ -1,7 +1,6 @@
 package app
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -59,9 +58,7 @@ func recordError(msg string) {
 	errorRingMu.Unlock()
 	// Best-effort disk persistence (silent on failure).
 	if dir, err := configDir(); err == nil {
-		_ = os.MkdirAll(dir, 0o755)
-		if f, err := os.OpenFile(filepath.Join(dir, "errors.log"),
-			os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644); err == nil {
+		if f, err := openPrivateAppend(filepath.Join(dir, "errors.log")); err == nil {
 			_, _ = f.WriteString(entry + "\n")
 			_ = f.Close()
 		}

@@ -183,9 +183,6 @@ func readSessionFile(path string) (SessionState, bool) {
 }
 
 func writeSessionFile(path string, s SessionState) {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return
-	}
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return
@@ -195,7 +192,7 @@ func writeSessionFile(path string, s SessionState) {
 	if old, err := os.ReadFile(path); err == nil && bytes.Equal(old, data) {
 		return
 	}
-	_ = os.WriteFile(path, data, 0o644)
+	_ = writePrivate(path, data)
 }
 
 // loadSession reads the session of the current workspace merged with the
