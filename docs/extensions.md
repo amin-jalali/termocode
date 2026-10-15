@@ -4,6 +4,9 @@ termocode extensions are small Lua programs that run inside the embedded
 Neovim. They can add palette commands, sidebar panels and status-bar items.
 Why Lua-in-nvim: see [ADR 0006](adr/0006-lua-extension-host.md).
 
+An extension can also be a separate program in **any language** that talks
+JSON-RPC with termocode: see [Process extensions (Tier 2)](#process-extensions-tier-2).
+
 ## Quick start
 
 1. Command palette → **Extensions: New Extension...** → type a name.
@@ -13,8 +16,9 @@ Why Lua-in-nvim: see [ADR 0006](adr/0006-lua-extension-host.md).
 3. Your command shows up in the palette as **Ext: <Title>**.
 
 Or try the samples: **Extensions: Install Sample Extensions** copies
-`todo-tree`, `word-count`, `open-in-github` and `rest-client` into the
-folder (existing folders are never overwritten).
+`todo-tree`, `word-count`, `open-in-github`, `rest-client` and
+`word-frequency` (a Python process extension) into the folder (existing
+folders are never overwritten).
 
 | Palette command | What it does |
 |---|---|
@@ -22,6 +26,7 @@ folder (existing folders are never overwritten).
 | Extensions: Open Folder | Open the extensions folder in the file manager |
 | Extensions: Show Log | Load results + every extension log / error line |
 | Extensions: New Extension... | Scaffold a commented `init.lua` + `extension.json` |
+| Extensions: New Process Extension (Python)... | Scaffold a Python process extension (`main.py`, `termocode_ext.py`, `extension.json`) |
 | Extensions: Install Sample Extensions | Copy the bundled samples |
 
 ## Layout
@@ -125,3 +130,111 @@ as the hint.
 | `word-count` | Status item with the word count; click for details |
 | `open-in-github` | Commands "Open in GitHub" / "Copy GitHub Link" (GitHub, GitLab, Bitbucket, Codeberg) |
 | `rest-client` | `.http` / `.rest` files: panel of requests, send with curl, response preview. Port of mobocode's `http_file_parser.dart`; supports `@var = value` and `{{var}}` |
+| `word-frequency` | **Process extension (Python)**: panel with the most used words of the file you open or save, status item with its word count |
+
+
+## Process extensions (Tier 2)
+
+A process extension is a program in any language (Python, Node, Go, Rust,
+a shell script…). termocode starts it and talks **JSON-RPC 2.0** with it
+over **stdin / stdout**. It gets the same things as a Lua extension:
+palette commands, a sidebar panel with the same markup, status items,
+toasts, prompts and pickers. Design: [ADR 0009](adr/0009-process-extensions.md).
+
+Quick start: **Extensions: New Process Extension (Python)...** makes
+`~/.config/termocode/extensions/<name>/` with `extension.json`, `main.py`
+and the helper `termocode_ext.py` (standard library only). The sample
+`word-frequency` uses the same helper.
+
+### extension.json
+
+```json
+{
+  "name": "word-frequency",
+  "version": "0.1.0",
+  "run": { "command": "python3", "args": ["-B", "main.py"], "env": { "MY_VAR": "1" } },
+  "runtime": "python",
+  "activationEvents": ["onStartup"],
+  "contributes": { "commands": [ { "id": "refresh", "title": "Word Frequency: Refresh" } ] }
+}
+```
+
+- `run` makes the folder a process extension (an `init.lua` next to it is
+  ignored). `command` is looked up on `PATH`; a command with a `/` is
+  relative to the extension folder. The working folder is the extension
+  folder. `runtime` is only a hint for people.
+- The process gets `TERMOCODE_EXTENSION`, `TERMOCODE_WORKSPACE` and
+  `TERMOCODE_VERSION` in its environment.
+- **When it starts:** with `"onStartup"` (or `"*"`) at termocode start.
+  With `"onSave"` / `"onOpen"` on the first such event. Commands listed in
+  `contributes.commands` are in the palette at once, and the first run
+  starts the process (lazy start). With no `activationEvents` and no
+  `contributes`, it starts at startup.
+- One process per extension. **Extensions: Reload** stops every process
+  and starts them again.
+
+### Protocol
+
+Each message is framed like LSP:
+
+```text
+Content-Length: 52\r\n
+\r\n
+{"jsonrpc":"2.0","method":"notify","params":{...}}
+```
+
+Requests have an `id` and get an answer; notifications do not. Ids
+without a dot are prefixed with the extension name (`refresh` →
+`word-frequency.refresh`), as in the Lua API. Never write anything else
+to stdout; stderr goes to **Extensions: Show Log**.
+
+termocode → extension:
+
+| Method | Kind | Params | Notes |
+|---|---|---|---|
+| `initialize` | request | `protocolVersion` (1), `name`, `extensionDir`, `workspaceRoot`, `termocodeVersion`, `capabilities` | Answer within 10 s; register things after it |
+| `command/execute` | request | `id` (full id), `args` | Answer within 30 s |
+| `event/notify` | notification | `event` (`open`, `save`), `path` | Sent to every running extension |
+| `panel/select` | notification | `panel`, `row` (1-based), `text` | Enter / click on a panel row |
+| `shutdown` | request | — | Then `exit`; then stdin closes |
+| `exit` | notification | — | Exit now |
+
+Extension → termocode:
+
+| Method | Params | Lua API |
+|---|---|---|
+| `registerCommand` | `id`, `title`, `hint` | `register_command` |
+| `registerStatusItem` | `id`, `text`, `command` | `register_status_item` |
+| `statusItem/update` | `id`, `text` | (text function) |
+| `registerPanel` | `id`, `title`, `icon` | `register_panel` |
+| `panel/setContent` | `id`, `lines` (markup) | (render function) |
+| `notify` | `message`, `detail`, `level` (`info`/`warn`/`error`) | `notify` |
+| `preview` | `title`, `body` | `preview` |
+| `openFile` | `path`, `line`, `col` | `open` |
+| `prompt` *(request)* | `title`, `label`, `value` → the text, or `null` when cancelled | `prompt` |
+| `pick` *(request)* | `title`, `items` `[{title, hint}]` → 1-based index or `null` | `pick` |
+| `readFile` *(request)* | `path` → `{ "text": … }` (max 4 MB) | — |
+| `log` | `message` | `log` |
+
+Panels and status texts use the same [markup](#markup) as Lua extensions.
+Any of these may also be sent as a request; termocode answers `null`.
+
+### Life cycle and safety
+
+- **Never blocks the UI.** All RPC runs on background goroutines with
+  time limits; a slow or stuck extension only makes its own command late.
+- **Crash:** its commands, panels and status items go away, a toast says
+  it restarts, and it starts again (after 0.5 s, then 1 s, then 2 s). If
+  it crashes a 4th time (a run of a minute or more resets the count), it
+  stays off until **Extensions: Reload** (toast + Error Log).
+- **Stop:** on quit (and on reload) termocode sends `shutdown` and `exit`,
+  closes stdin, waits 2 s, then kills the extension's whole **process
+  group** (so children it started go too). On Linux the process also gets
+  SIGTERM if termocode dies hard; everywhere, **exit when stdin closes**
+  (the helpers do).
+- **Files:** `readFile` and `openFile` work only inside the workspace
+  (symlinks that point out are refused). This is not a sandbox: the process
+  runs with your user rights and can do anything you can. Only install
+  extensions you trust.
+- **AI:** the AI can run extension commands only after you confirm (class
+  *run*), the same as Lua extension commands.
