@@ -89,9 +89,11 @@ type aiState struct {
 
 	// MCP (ai_mcp.go): the servers, the open trust dialog and the
 	// server the actions picker is about.
-	mcp      *mcp.Manager
-	mcpTrust *aiMCPTrustPending
-	mcpSel   string
+	mcp       *mcp.Manager
+	mcpTrust  *aiMCPTrustPending
+	mcpSel    string
+	mcpSignIn *mcpSignInState // the open OAuth sign-in (mcp_remote_ui.go)
+	mcpSecret string          // the ${secret:NAME} being entered
 
 	// configure / sign-in flow
 	cfgKind string

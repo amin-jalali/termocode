@@ -128,6 +128,16 @@ func TestParseOAuthAndLocalHTTP(t *testing.T) {
 	}
 }
 
+// SecretNames lists the ${secret:NAME} references of an entry, sorted,
+// once each (the servers list offers "Set secret NAME…" for them).
+func TestSecretNames(t *testing.T) {
+	s := Server{Command: "x", Args: []string{"${secret:b}"}, Env: map[string]string{"A": "${secret:a}-${secret:b}"},
+		Headers: map[string]string{"Authorization": "Bearer ${secret:c}"}, OAuth: &OAuthConfig{ClientSecret: "${secret:d}"}}
+	if got := strings.Join(s.SecretNames(), ","); got != "a,b,c,d" {
+		t.Errorf("names %q", got)
+	}
+}
+
 // A project entry overrides the user entry of the same name;
 // "disabled": true in the project hides a user server there.
 func TestLoadMerge(t *testing.T) {

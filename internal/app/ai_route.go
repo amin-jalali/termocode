@@ -45,7 +45,7 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 	case aiOAuthDoneMsg:
 		return m.onAIOAuthDone(msg), true
 	}
-	return nil, false
+	return m.handleMCPMsg(msg)
 }
 
 // editorHasKeys reports whether typed keys go to the editor: focus is on

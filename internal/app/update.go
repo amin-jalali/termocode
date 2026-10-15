@@ -315,7 +315,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.handlePromptSubmit(msg.Value)
 	case prompt.CloseMsg:
 		m.promptOpen = false
-		return m, tea.Batch(m.handleClonePromptClose(), m.extOverlayClosed()) // Group G / Group I: no-op unless theirs
+		return m, tea.Batch(m.handleClonePromptClose(), m.extOverlayClosed(), m.mcpSignInPromptClosed()) // Group G / Group I / MCP: no-op unless theirs
 	// ── Group G: background clone (git_clone.go) ──
 	case cloneProgressMsg:
 		return m, m.handleCloneProgress(msg)

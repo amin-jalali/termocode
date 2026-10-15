@@ -1,0 +1,10 @@
+{
+  "client_id": "https://amin-jalali.github.io/termocode/mcp/client.json",
+  "client_name": "termocode",
+  "client_uri": "https://amin-jalali.github.io/termocode/",
+  "redirect_uris": ["http://127.0.0.1/callback"],
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "none",
+  "application_type": "native"
+}

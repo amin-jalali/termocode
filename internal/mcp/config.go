@@ -247,6 +247,32 @@ func (s Server) Hash() string {
 	return hex.EncodeToString(sum[:])
 }
 
+// SecretNames lists the NAMEs of the entry's ${secret:NAME} references,
+// sorted, once each.
+func (s Server) SecretNames() []string {
+	vals := append([]string{s.Command, s.Cwd, s.URL}, s.Args...)
+	for _, m := range []map[string]string{s.Env, s.Headers} {
+		for _, v := range m {
+			vals = append(vals, v)
+		}
+	}
+	if s.OAuth != nil {
+		vals = append(vals, s.OAuth.ClientID, s.OAuth.ClientSecret)
+	}
+	seen := map[string]bool{}
+	var out []string
+	for _, v := range vals {
+		for _, m := range refRe.FindAllStringSubmatch(v, -1) {
+			if name, ok := strings.CutPrefix(m[1], "secret:"); ok && !seen[name] {
+				seen[name] = true
+				out = append(out, name)
+			}
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
 // Raw is the entry as written in the file.
 func (s Server) Raw() json.RawMessage { return s.raw }
 

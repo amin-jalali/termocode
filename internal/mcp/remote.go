@@ -253,6 +253,22 @@ func (m *Manager) FinishSignIn(name string, e ai.MCPOAuth) error {
 	return nil
 }
 
+// Trust trusts a server's current entry for this session (always: also
+// saved through SaveTrust), as the trust dialog's answer does.
+func (m *Manager) Trust(name string, always bool) {
+	st, err := m.get(name)
+	if err != nil {
+		return
+	}
+	m.mu.Lock()
+	cfg := st.cfg
+	st.trusted, st.denied = cfg.Hash(), ""
+	m.mu.Unlock()
+	if always && m.opts.SaveTrust != nil {
+		m.opts.SaveTrust(cfg)
+	}
+}
+
 // SignOut forgets a server's sign-in and ends its session.
 func (m *Manager) SignOut(name string) {
 	if m.opts.Tokens != nil {
