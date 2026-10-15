@@ -116,31 +116,58 @@ go install ./cmd/termocode       # or: go build -o termocode ./cmd/termocode
 
 ## Android (Termux)
 
-termocode runs on an Android phone or tablet inside the
-[Termux](https://termux.dev) app. There is no release binary for Android
-yet (the install script tells you so), so build it with Go. It takes a
-few minutes on a phone.
+termocode runs on an Android phone or tablet (arm64) inside the
+[Termux](https://termux.dev) app.
 
 1. Install Termux **and the Termux:API app** from the same place
    (F-Droid or GitHub). Do not mix them with the Play Store build.
 2. In Termux, install the tools:
 
     ```sh
-    pkg install neovim golang git termux-api
+    pkg install neovim git termux-api
     pkg install ripgrep    # optional: fast search
     ```
 
-3. Build and install termocode:
+3. Install termocode with the same script as on Linux:
 
     ```sh
-    go install github.com/amin-jalali/termocode/cmd/termocode@latest
-    export PATH="$PATH:$HOME/go/bin"    # add this line to ~/.bashrc too
+    curl -fsSL https://raw.githubusercontent.com/amin-jalali/termocode/main/scripts/install.sh | sh
     termocode
     ```
 
-This needs Go 1.26 or newer (`go version`; run `pkg upgrade` if it is
-older). No X11 headers are needed: the Android build leaves the X11
-clipboard library out.
+    The script sees Termux and gets the Android build. It puts
+    `termocode` in Termux's own `bin` folder, which is already on your
+    `PATH`.
+
+**Build it yourself** (also for x86_64 Termux in an emulator, which has
+no release build): `pkg install golang`, then
+`go install github.com/amin-jalali/termocode/cmd/termocode@latest` and
+add `$HOME/go/bin` to your `PATH`. This needs Go 1.26 or newer. No X11
+headers are needed: the Android build leaves the X11 clipboard library
+out.
+
+**Language servers.** Most install from the language server manager as
+on Linux (`gopls` needs `pkg install golang`, the npm ones need
+`pkg install nodejs`, the pip ones need `pkg install python`). A few
+cannot: their downloads are built for normal Linux, and `rustup` does
+not exist in Termux. For these the manager shows the Termux package:
+
+| Server | In Termux |
+|---|---|
+| rust-analyzer | `pkg install rust-analyzer` |
+| clangd | `pkg install clang` |
+| lua-language-server | `pkg install lua-language-server` |
+
+Language servers use a lot of memory (`gopls` 300–700 MB, rust-analyzer
+1 GB or more). On a phone with little RAM, Android may close Termux in
+the background. termocode works without them; you only lose completion,
+errors as you type and go to definition.
+
+**Android 12 and newer** can stop child processes of apps it thinks run
+too many ("phantom process killer"). If language servers or the
+terminal die without a reason, turn it off: Developer options →
+"Disable child process restrictions", or from a computer with adb:
+`adb shell settings put global settings_enable_monitor_phantom_procs false`.
 
 **Clipboard.** termocode uses `termux-clipboard-set` and
 `termux-clipboard-get` (package `termux-api`) for the Android clipboard,

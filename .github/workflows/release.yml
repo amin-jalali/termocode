@@ -19,6 +19,13 @@ jobs:
   #                 The clipboard code dlopen()s libX11 at run time, so
   #                 only the (arch-independent) X11 headers are needed.
   #   darwin/*      macos-14 (Apple Silicon); amd64 via clang -arch x86_64
+  #   android/arm64 ubuntu-22.04, the runner's Android NDK clang (API 24 =
+  #                 Android 7, Termux's floor). For Termux. cgo here is
+  #                 not for the clipboard (the android build leaves it
+  #                 out) but for DNS: pure-Go DNS reads /etc/resolv.conf,
+  #                 which Android does not have, so a CGO_ENABLED=0 binary
+  #                 cannot reach the AI providers. With cgo, Go asks
+  #                 Android's libc, which knows the phone's DNS servers.
   #
   # ubuntu-22.04 keeps the glibc floor low (2.35) so the binaries run on
   # older distros too. musl distros (Alpine) need a source build.
@@ -38,6 +45,11 @@ jobs:
             goarch: arm64
             runner: ubuntu-22.04
             cc: aarch64-linux-gnu-gcc
+            native: false
+          - goos: android
+            goarch: arm64
+            runner: ubuntu-22.04
+            cc: ndk
             native: false
           - goos: darwin
             goarch: amd64
@@ -64,7 +76,12 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y libx11-dev
-          if [ "${{ matrix.goarch }}" = arm64 ]; then
+          if [ "${{ matrix.goos }}" = android ]; then
+            ndk="${ANDROID_NDK_LATEST_HOME:-${ANDROID_NDK_HOME:-}}"
+            cc="${ndk}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
+            [ -x "${cc}" ] || { echo "no Android NDK clang at ${cc}" >&2; exit 1; }
+            echo "NDK_CC=${cc}" >> "$GITHUB_ENV"
+          elif [ "${{ matrix.goarch }}" = arm64 ]; then
             sudo apt-get install -y gcc-aarch64-linux-gnu
             # The cross compiler does not search /usr/include; give it
             # only the X11 headers (plain C declarations, no arch bits).
@@ -76,9 +93,12 @@ jobs:
       - name: Build and package
         env:
           CGO_ENABLED: "1"
-          CC: ${{ matrix.cc }}
+          MATRIX_CC: ${{ matrix.cc }}
           MACOSX_DEPLOYMENT_TARGET: "11.0"
-        run: ./scripts/build-release.sh "${GITHUB_REF_NAME}" "${{ matrix.goos }}" "${{ matrix.goarch }}" dist
+        run: |
+          set -euo pipefail
+          if [ "${MATRIX_CC}" = ndk ]; then export CC="${NDK_CC}"; else export CC="${MATRIX_CC}"; fi
+          ./scripts/build-release.sh "${GITHUB_REF_NAME}" "${{ matrix.goos }}" "${{ matrix.goarch }}" dist
 
       - name: Check the binary
         run: |
@@ -87,6 +107,11 @@ jobs:
           mkdir -p check
           tar -xzf "dist/${name}.tar.gz" -C check
           file "check/${name}/termocode"
+          if [ "${{ matrix.goos }}" = android ]; then
+            # Must load with Android's linker and use the libc resolver.
+            file "check/${name}/termocode" | grep -q '/system/bin/linker64'
+            go version -m "check/${name}/termocode" | grep -q 'CGO_ENABLED=1'
+          fi
           if [ "${{ matrix.native }}" = true ]; then
             got="$("check/${name}/termocode" --version)"
             echo "${got}"
@@ -122,7 +147,7 @@ jobs:
         run: |
           set -euo pipefail
           cd dist
-          [ "$(ls -1 ./*.tar.gz | wc -l)" -eq 4 ] || { echo "expected 4 tarballs"; exit 1; }
+          [ "$(ls -1 ./*.tar.gz | wc -l)" -eq 5 ] || { echo "expected 5 tarballs"; exit 1; }
           sha256sum -- *.tar.gz > checksums.txt
           cat checksums.txt
 

@@ -115,6 +115,9 @@ type Tool struct {
 	// Fallback is a manual install hint shown when no automatic recipe fits
 	// this host (e.g. clangd on linux/arm64).
 	Fallback string
+	// Termux is the Termux package to point to on Android, for tools whose
+	// recipe cannot work there (glibc release downloads, rustup).
+	Termux string
 }
 
 // tools is the registry. Order is the display order in the manager and the
@@ -160,8 +163,9 @@ var tools = []Tool{
 		Filetypes:   []string{"rust"},
 		Bin:         "rust-analyzer",
 		InstallKind: KindRustup, Spec: "rust-analyzer", Version: "stable",
-		Cmd:  []string{"rust-analyzer"},
-		Root: []string{"Cargo.toml", ".git"},
+		Cmd:    []string{"rust-analyzer"},
+		Root:   []string{"Cargo.toml", ".git"},
+		Termux: "rust-analyzer",
 	},
 	{
 		Name: "clangd", Label: "C/C++", Category: CategoryLSP,
@@ -178,19 +182,21 @@ var tools = []Tool{
 		Cmd:       []string{"clangd"},
 		Root:      []string{"compile_commands.json", "compile_flags.txt", ".clangd", ".git"},
 		Fallback:  "install clangd with your package manager (e.g. sudo apt install clangd)",
+		Termux:    "clang",
 	},
 	{
 		Name: "lua_ls", Label: "Lua", Category: CategoryLSP,
 		Filetypes:   []string{"lua"},
 		Bin:         "lua-language-server",
 		InstallKind: KindGitHubRelease, Spec: "LuaLS/lua-language-server", Version: "3.13.5",
-		Tag:   "{version}",
-		Asset: "lua-language-server-{version}-{os}-{arch}.tar.gz",
-		OS:    map[string]string{"linux": "linux", "darwin": "darwin"},
-		Arch:  map[string]string{"amd64": "x64", "arm64": "arm64"},
-		Exec:  []string{"{dir}/bin/lua-language-server"},
-		Cmd:   []string{"lua-language-server"},
-		Root:  []string{".luarc.json", ".luarc.jsonc", ".luacheckrc", ".git"},
+		Tag:    "{version}",
+		Asset:  "lua-language-server-{version}-{os}-{arch}.tar.gz",
+		OS:     map[string]string{"linux": "linux", "darwin": "darwin"},
+		Arch:   map[string]string{"amd64": "x64", "arm64": "arm64"},
+		Exec:   []string{"{dir}/bin/lua-language-server"},
+		Cmd:    []string{"lua-language-server"},
+		Root:   []string{".luarc.json", ".luarc.jsonc", ".luacheckrc", ".git"},
+		Termux: "lua-language-server",
 	},
 	{
 		Name: "bashls", Label: "Shell", Category: CategoryLSP,

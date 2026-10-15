@@ -11,7 +11,8 @@
 #
 # Environment:
 #   TERMOCODE_VERSION      same as --version
-#   PREFIX                 install to $PREFIX/bin (default: $HOME/.local)
+#   PREFIX                 install to $PREFIX/bin (default: $HOME/.local;
+#                          Termux sets it to its own usr dir, already on PATH)
 #   TERMOCODE_RELEASE_URL  base URL of the releases (default:
 #                          https://github.com/amin-jalali/termocode/releases);
 #                          used by the tests with a local server
@@ -95,10 +96,14 @@ latest_tag() {
 	esac
 }
 
+is_termux() { [ -n "${TERMUX_VERSION:-}" ]; }
+
 detect_os() {
-	# Termux (Android) says Linux, but the release binaries need glibc.
-	if [ -n "${TERMUX_VERSION:-}" ]; then
-		die "no release build for Android (Termux) yet. Build it instead: pkg install neovim golang git termux-api && go install github.com/amin-jalali/termocode/cmd/termocode@latest"
+	# Termux (Android) says Linux, but the linux builds need glibc; the
+	# android build is linked against Android's own libc (bionic).
+	if is_termux; then
+		echo android
+		return
 	fi
 	case "$(uname -s)" in
 	Linux) echo linux ;;
@@ -122,6 +127,13 @@ detect_arch() {
 	aarch64 | arm64) echo arm64 ;;
 	*) die "unsupported CPU: ${arch} (release builds exist for amd64 and arm64)" ;;
 	esac
+}
+
+# check_target stops on a platform without a release build.
+check_target() {
+	if [ "$1" = android ] && [ "$2" != arm64 ]; then
+		die "the Android (Termux) release build is arm64 only. Build it instead: pkg install golang && go install github.com/amin-jalali/termocode/cmd/termocode@latest"
+	fi
 }
 
 # sha256_of FILE prints the file's sha256.
@@ -159,6 +171,10 @@ check_path() {
 }
 
 nvim_hint() {
+	if is_termux; then
+		say "  pkg install neovim"
+		return
+	fi
 	if [ "$(uname -s)" = Darwin ]; then
 		say "  brew install neovim"
 		return
@@ -217,6 +233,7 @@ do_uninstall() {
 do_install() {
 	os=$(detect_os)
 	arch=$(detect_arch)
+	check_target "${os}" "${arch}"
 
 	tag="${WANT_VERSION}"
 	if [ -z "${tag}" ]; then
@@ -268,6 +285,11 @@ do_install() {
 	fi
 	check_path
 	check_nvim
+	if is_termux; then
+		say ""
+		say "On Android also install git and the clipboard tools:"
+		say "  pkg install git termux-api   (and the Termux:API app)"
+	fi
 	say ""
 	say "Next: run 'termocode setup' to check your system (on Linux it can install a Nerd Font)."
 	say "Then: cd into a project and run 'termocode'."

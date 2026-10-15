@@ -201,6 +201,10 @@ func BuildPlan(t Tool, dir, goos, goarch string) (Plan, error) {
 		return Plan{}, &UnsupportedError{Tool: t.Name, Platform: goos + "/" + goarch,
 			Hint: "the managed installer supports Linux and macOS"}
 	}
+	if goos == "android" && t.Termux != "" {
+		return Plan{}, &UnsupportedError{Tool: t.Name, Platform: goos + "/" + goarch,
+			Hint: "pkg install " + t.Termux}
+	}
 	p := Plan{Tool: t, Dir: dir}
 	p.Requires = append(p.Requires, kindRequires(t.InstallKind)...)
 	p.Requires = append(p.Requires, t.Needs...)
