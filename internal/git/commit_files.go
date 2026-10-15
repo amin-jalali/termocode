@@ -2,9 +2,10 @@ package git
 
 import (
 	"fmt"
-	"os/exec"
 	"strconv"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // CommitFile is one file a commit changed.
@@ -160,7 +161,7 @@ func pickLike(dir, verb, hash string) ([]string, error) {
 	if isMerge(dir, hash) {
 		args = append(args, "-m", "1")
 	}
-	cmd := exec.Command("git", append(args, hash)...)
+	cmd := spawn.Command("git", append(args, hash)...)
 	cmd.Dir = dir
 	cmd.Env = append(cmd.Environ(), "GIT_EDITOR=true")
 	out, err := cmd.CombinedOutput()

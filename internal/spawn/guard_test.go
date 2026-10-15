@@ -22,6 +22,7 @@ func TestNoDirectExec(t *testing.T) {
 		if d.IsDir() {
 			switch {
 			case d.Name() == "third_party", d.Name() == "e2e", d.Name() == ".git", d.Name() == "node_modules",
+				d.Name() == ".claude",                            // agent worktrees: other checkouts
 				path == filepath.Join(root, "internal", "spawn"): // this package
 				return filepath.SkipDir
 			}
