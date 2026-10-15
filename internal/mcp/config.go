@@ -58,6 +58,9 @@ type Server struct {
 	Cwd     string
 	URL     string
 	Headers map[string]string
+	// OAuth is a pre-registered OAuth app (Slack): client id, secret (a
+	// ${secret:NAME}), scopes. nil: discovery + dynamic registration.
+	OAuth *OAuthConfig
 
 	Disabled    bool
 	ReadOnly    bool     // expose only read-only tools
@@ -89,6 +92,13 @@ const (
 	ReasonToolsChanged
 )
 
+// OAuthConfig is the termocode "oauth" key of an http entry.
+type OAuthConfig struct {
+	ClientID     string   `json:"client_id,omitempty"`
+	ClientSecret string   `json:"client_secret,omitempty"`
+	Scopes       []string `json:"scopes,omitempty"`
+}
+
 // entry is the JSON shape of one server. Claude Desktop's "transport" is
 // an alias of "type".
 type entry struct {
@@ -100,6 +110,7 @@ type entry struct {
 	Cwd         string            `json:"cwd"`
 	URL         string            `json:"url"`
 	Headers     map[string]string `json:"headers"`
+	OAuth       *OAuthConfig      `json:"oauth"`
 	Disabled    bool              `json:"disabled"`
 	ReadOnly    bool              `json:"readOnly"`
 	AutoApprove []string          `json:"autoApprove"`
@@ -142,7 +153,7 @@ func parseEntry(name string, raw json.RawMessage) Server {
 		return s
 	}
 	s.Command, s.Args, s.Env, s.Cwd = e.Command, e.Args, e.Env, e.Cwd
-	s.URL, s.Headers = e.URL, e.Headers
+	s.URL, s.Headers, s.OAuth = e.URL, e.Headers, e.OAuth
 	s.Disabled, s.ReadOnly, s.AutoApprove, s.Deny, s.Timeout = e.Disabled, e.ReadOnly, e.AutoApprove, e.Deny, e.Timeout
 	t := strings.ToLower(strings.TrimSpace(e.Type))
 	if t == "" {
@@ -173,6 +184,12 @@ func parseEntry(name string, raw json.RawMessage) Server {
 		s.Problem = "invalid: unknown type " + t
 	case t == TypeStdio && e.Command == "":
 		s.Problem = "invalid: stdio needs a command"
+	case t == TypeHTTP && e.URL == "":
+		s.Problem = "invalid: http needs a url"
+	case t == TypeHTTP && !strings.Contains(e.URL, "${"):
+		if err := checkURL(e.URL); err != nil {
+			s.Problem = err.Error()
+		}
 	}
 	return s
 }
@@ -306,6 +323,11 @@ func (s Server) Expand(x Expander) (Server, error) {
 	}
 	out.Env = expandMap(s.Env, one)
 	out.Headers = expandMap(s.Headers, one)
+	if s.OAuth != nil {
+		o := *s.OAuth
+		o.ClientID, o.ClientSecret = one(o.ClientID), one(o.ClientSecret)
+		out.OAuth = &o
+	}
 	return out, err
 }
 
@@ -331,6 +353,9 @@ var secretLiteralRe = regexp.MustCompile(`(?i)(ghp_|github_pat_|glpat-|xox[pbas]
 // secretLiteral names the first header / env key whose literal value
 // looks like a token ("" when none).
 func secretLiteral(s Server) string {
+	if s.OAuth != nil && strings.TrimSpace(refRe.ReplaceAllString(s.OAuth.ClientSecret, "")) != "" {
+		return "oauth.client_secret"
+	}
 	for _, m := range []struct {
 		kind string
 		vals map[string]string

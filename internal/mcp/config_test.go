@@ -68,7 +68,9 @@ func TestParseValidation(t *testing.T) {
 	  "both": {"command": "x", "url": "https://a"},
 	  "none": {},
 	  "bad name!": {"command": "x"},
-	  "sse": {"type": "sse", "url": "https://a/sse"}
+	  "sse": {"type": "sse", "url": "https://a/sse"},
+	  "plain": {"type": "http", "url": "http://mcp.example.com/mcp"},
+	  "scheme": {"url": "ftp://mcp.example.com/mcp"}
 	}}`
 	got, _, err := ParseFile([]byte(body), SourceUser, "p")
 	if err != nil {
@@ -79,6 +81,8 @@ func TestParseValidation(t *testing.T) {
 		"none":      "needs command or url",
 		"bad name!": "name may only use letters, digits, - and _",
 		"sse":       "sse transport is not supported yet",
+		"plain":     "insecure url: use https://",
+		"scheme":    "invalid url scheme",
 	}
 	for _, s := range got {
 		if !strings.Contains(s.Problem, want[s.Name]) || want[s.Name] == "" {
@@ -87,6 +91,40 @@ func TestParseValidation(t *testing.T) {
 	}
 	if _, _, err := ParseFile([]byte(`{nope`), SourceUser, "p"); err == nil {
 		t.Error("bad JSON: want an error")
+	}
+}
+
+// The termocode "oauth" key (a pre-registered app like Slack's): the
+// client id and scopes are read, and client_secret may be a
+// ${secret:NAME} that Expand resolves. http to localhost is allowed.
+func TestParseOAuthAndLocalHTTP(t *testing.T) {
+	body := `{"mcpServers": {
+	  "slack": {"type": "http", "url": "https://mcp.slack.com/mcp",
+	            "oauth": {"client_id": "A0123", "client_secret": "${secret:slack_client_secret}",
+	                      "scopes": ["search:read.public", "chat:write"]}},
+	  "local": {"url": "http://127.0.0.1:8080/mcp"}
+	}}`
+	got, _, err := ParseFile([]byte(body), SourceUser, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	by := map[string]Server{}
+	for _, s := range got {
+		by[s.Name] = s
+	}
+	if by["local"].Problem != "" {
+		t.Errorf("local http: %q", by["local"].Problem)
+	}
+	s := by["slack"]
+	if s.Problem != "" || s.OAuth == nil || s.OAuth.ClientID != "A0123" || len(s.OAuth.Scopes) != 2 {
+		t.Fatalf("slack = %+v (oauth %+v)", s, s.OAuth)
+	}
+	x, err := s.Expand(Expander{Secrets: map[string]string{"slack_client_secret": "s3cret-value"}})
+	if err != nil || x.OAuth.ClientSecret != "s3cret-value" || s.OAuth.ClientSecret != "${secret:slack_client_secret}" {
+		t.Errorf("expand: %v %+v (original %+v)", err, x.OAuth, s.OAuth)
+	}
+	if _, err := s.Expand(Expander{}); err == nil || !strings.Contains(err.Error(), "slack_client_secret") {
+		t.Errorf("missing secret: %v", err)
 	}
 }
 
@@ -170,13 +208,16 @@ func TestSecretLiteralWarning(t *testing.T) {
 	body := `{"mcpServers": {
 	  "gh": {"url": "https://api.githubcopilot.com/mcp/", "headers": {"Authorization": "Bearer ghp_abcdefghijklmnopqrstuvwxyz0123"}},
 	  "ok": {"url": "https://a", "headers": {"Authorization": "Bearer ${secret:gh}"}},
-	  "sl": {"command": "x", "env": {"SLACK": "xoxp-1234567890-abc"}}
+	  "sl": {"command": "x", "env": {"SLACK": "xoxp-1234567890-abc"}},
+	  "zapp": {"url": "https://mcp.slack.com/mcp", "oauth": {"client_id": "A1", "client_secret": "plain-secret-value"}},
+	  "zok": {"url": "https://mcp.slack.com/mcp", "oauth": {"client_id": "A1", "client_secret": "${secret:x}"}}
 	}}`
 	_, warns, err := ParseFile([]byte(body), SourceProject, "/p/.termocode/mcp.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(warns) != 2 || !strings.Contains(warns[0], "gh") || !strings.Contains(warns[1], "sl") {
+	if len(warns) != 3 || !strings.Contains(warns[0], "gh") || !strings.Contains(warns[1], "sl") ||
+		!strings.Contains(warns[2], "zapp") || !strings.Contains(warns[2], "oauth.client_secret") {
 		t.Errorf("warnings %q", warns)
 	}
 }
