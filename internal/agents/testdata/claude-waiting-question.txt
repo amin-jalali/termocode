@@ -1,0 +1,13 @@
+⏺ Which database should the tests use?
+
+ ☐ Database
+
+ Which database do you want for the integration tests?
+
+ ❯ 1. SQLite
+      Fast, no server needed
+   2. Postgres
+      Same as production
+   3. Type something.
+
+ Enter to select · ↑/↓ to navigate · Esc to cancel

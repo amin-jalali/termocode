@@ -1,0 +1,6 @@
+Aider v0.86.1
+Main model: anthropic/claude-sonnet-4 with diff edit format
+────────────────────────────────────────────────────────────────────────────────
+> fix the parser test
+
+░█        Waiting for anthropic/claude-sonnet-4
