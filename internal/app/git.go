@@ -344,7 +344,7 @@ func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (Model, tea
 		}
 		return m, m.gitDiffCmd()
 	case gitRowCommit:
-		return m, m.gitShowCommitCmd(r.hash)
+		return m, m.gitOpenCommitViewCmd(r.hash)
 	case gitRowGroup:
 		m.gitToggleGroup(r.group)
 	case gitRowMore:

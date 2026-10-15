@@ -51,10 +51,15 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 	switch msg.Type {
 	case tea.KeyDown:
 		m.gitMoveCursor(1)
-		return m, nil, true
+		return m, m.commitViewFollow(), true
 	case tea.KeyUp:
 		m.gitMoveCursor(-1)
-		return m, nil, true
+		return m, m.commitViewFollow(), true
+	case tea.KeyEsc:
+		if m.commitViewShown() {
+			m.closeCommitView()
+			return m, nil, true
+		}
 	case tea.KeyLeft:
 		// Collapse the section/dir under the cursor.
 		if hasCur {
@@ -90,7 +95,7 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 		case gitRowDir:
 			m.gitToggleCollapse(cur.dirPath)
 		case gitRowCommit:
-			return m, m.gitShowCommitCmd(cur.hash), true
+			return m, m.gitOpenCommitViewCmd(cur.hash), true
 		case gitRowGroup:
 			m.gitToggleGroup(cur.group)
 		case gitRowMore:
@@ -114,10 +119,10 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 		switch msg.Runes[0] {
 		case 'j':
 			m.gitMoveCursor(1)
-			return m, nil, true
+			return m, m.commitViewFollow(), true
 		case 'k':
 			m.gitMoveCursor(-1)
-			return m, nil, true
+			return m, m.commitViewFollow(), true
 		case 'g':
 			m.gitCursor = 0
 			m.gitClampCursor()
@@ -131,7 +136,7 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 		case 'd':
 			// On a graph commit, diff that commit; otherwise the file's diff.
 			if hasCur && cur.kind == gitRowCommit {
-				return m, m.gitShowCommitCmd(cur.hash), true
+				return m, m.gitOpenCommitViewCmd(cur.hash), true
 			}
 			return m, m.gitDiffCmd(), true
 		case 'c':

@@ -75,6 +75,8 @@ func (m Model) hitTargets() []hitTarget {
 		return m.confirmTargets()
 	case m.pickerOpen:
 		return m.pickerTargets()
+	case m.commitViewShown() && !m.commitIsDocked():
+		return m.commitTargets()
 	}
 	var out []hitTarget
 	add := func(t hitTarget) {
@@ -120,6 +122,33 @@ func (m Model) hitTargets() []hitTarget {
 		// The change-nav buttons on the diff winbar (" ‹ " and " › ").
 		add(hitTarget{ID: "diff:prev", Label: "‹", X: pane.X, Y: pane.Top, W: 3, H: 1})
 		add(hitTarget{ID: "diff:next", Label: "›", X: pane.X + 3, Y: pane.Top, W: 3, H: 1})
+	}
+	if m.commitViewShown() {
+		// The docked commit card covers the editor side.
+		c := m.commitCard()
+		cx, cy := c.Origin()
+		box := c.Box()
+		cw, ch := textWidth(strings.SplitN(box, "\n", 2)[0]), strings.Count(box, "\n")+1
+		kept := out[:0]
+		for _, t := range out {
+			if t.X >= cx+cw || t.X+t.W <= cx || t.Y >= cy+ch || t.Y+t.H <= cy {
+				kept = append(kept, t)
+			}
+		}
+		out = append(kept, m.commitTargets()...)
+	}
+	return out
+}
+
+// commitTargets are the commit card's buttons, file rows and bands.
+func (m Model) commitTargets() []hitTarget {
+	c := m.commitCard()
+	box := c.Box()
+	ox, oy := c.Origin()
+	var out []hitTarget
+	for _, h := range c.Hits() {
+		out = append(out, hitTarget{ID: "commit:" + h.ID, Label: cellText(box, h.Y-oy, h.X-ox, h.X-ox+h.W),
+			X: h.X, Y: h.Y, W: h.W, H: 1})
 	}
 	return out
 }
