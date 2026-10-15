@@ -26,8 +26,9 @@ const (
 	menuKindGitFile
 	menuKindGitCommit
 	menuKindGitActions
-	menuKindProblems // problems_panel.go
-	menuKindAIChat   // ai_select.go
+	menuKindProblems   // problems_panel.go
+	menuKindAIChat     // ai_select.go
+	menuKindCommitMore // the commit view's ⋯ (git_commit_view.go)
 )
 
 // Source Control context-menu action IDs.
@@ -295,6 +296,12 @@ func (m *Model) handleMenuSelect(id string) tea.Cmd {
 	}
 	if m.menuKind == menuKindGitActions {
 		return m.handleGitActionsMenuSelect(id)
+	}
+	if m.menuKind == menuKindCommitMore {
+		if m.commitViewShown() {
+			return m.commitAction(id, m.commitView.card.Current())
+		}
+		return nil
 	}
 	if m.menuKind == menuKindProblems {
 		return m.handleProblemsMenuSelect(id)

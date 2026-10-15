@@ -8,8 +8,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/diffview"
 	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/menu"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -21,9 +23,9 @@ import (
 
 const (
 	commitDockMinW  = 80
-	commitBlobCache = 32               // file pairs kept (sha:path)
-	commitMaxBytes  = 2 << 20          // a side over this is not diffed
-	commitMaxLines  = 20000            // nor over this many lines
+	commitBlobCache = 32      // file pairs kept (sha:path)
+	commitMaxBytes  = 2 << 20 // a side over this is not diffed
+	commitMaxLines  = 20000   // nor over this many lines
 	commitTooBig    = "Too big to diff here · r raw"
 )
 
@@ -36,6 +38,7 @@ type commitViewState struct {
 	focused bool // keys go to a docked card (a floating one always has them)
 	blobs   map[string][2]string
 	order   []string // blobs, oldest first
+	pick    string   // the commit a revert / cherry-pick confirm is about
 }
 
 // commitViewReadyMsg carries a commit's meta and files.
@@ -376,8 +379,201 @@ func (m *Model) commitAction(id string, i int) tea.Cmd {
 		return m.gitShowCommitCmd(info.Hash)
 	case strings.HasPrefix(id, "parent:"):
 		return m.gitOpenCommitViewCmd(strings.TrimPrefix(id, "parent:"))
+	case id == "more":
+		m.openCommitMoreMenu()
+		return nil
+	case id == "revert", id == "cherry-pick":
+		return m.openCommitPickConfirm(id)
+	}
+	if i < 0 || i >= len(info.Files) {
+		return nil
+	}
+	f := info.Files[i]
+	switch id {
+	case "open-file":
+		abs := gitFileAbsPath(f.Path)
+		if _, err := os.Stat(abs); err != nil {
+			var cmd tea.Cmd
+			m.toast, cmd = m.toast.Push(toast.Warn, f.Path+" is not in the working tree")
+			return cmd
+		}
+		m.closeCommitView()
+		if m.nvim != nil {
+			m.ensureEditorWindowCurrent()
+			if err := m.nvim.OpenFile("edit", abs); err != nil {
+				m.err = err.Error()
+			}
+		}
+		m.focus = FocusEditor
+	case "open-at-commit":
+		if f.Status == 'D' {
+			var cmd tea.Cmd
+			m.toast, cmd = m.toast.Push(toast.Warn, f.Path+" was deleted in this commit")
+			return cmd
+		}
+		cwd, err := os.Getwd()
+		if err != nil {
+			return nil
+		}
+		sha, short := info.FullHash, info.Hash
+		return func() tea.Msg {
+			text, _ := git.ShowFileAtRevision(cwd, sha, f.Path)
+			return commitFileAtMsg{path: f.Path, short: short, text: text}
+		}
 	}
 	return nil
+}
+
+// commitFileAtMsg carries a file as it was in a commit (File @ commit).
+type commitFileAtMsg struct {
+	path, short, text string
+}
+
+// openFileAtCommit shows a file at a commit in a read-only scratch buffer
+// named "path @ sha" (no temp file: the text goes over RPC).
+func (m *Model) openFileAtCommit(msg commitFileAtMsg) {
+	m.closeCommitView()
+	m.focus = FocusEditor
+	if m.nvim == nil {
+		return
+	}
+	m.ensureEditorWindowCurrent()
+	if err := m.nvim.ExecLuaArgs(fileAtCommitLua, msg.path+" @ "+msg.short, msg.text, msg.path); err != nil {
+		m.err = "file at commit: " + err.Error()
+	}
+}
+
+const fileAtCommitLua = `
+local name, text, path = ...
+vim.cmd('enew')
+local buf = vim.api.nvim_get_current_buf()
+vim.bo[buf].buftype = 'nofile'
+vim.bo[buf].swapfile = false
+vim.bo[buf].bufhidden = 'wipe'
+local old = vim.fn.bufnr(name)
+if old > 0 and old ~= buf then pcall(vim.api.nvim_buf_delete, old, { force = true }) end
+pcall(vim.api.nvim_buf_set_name, buf, name)
+local lines = vim.split(text, '\n', { plain = true })
+if #lines > 1 and lines[#lines] == '' then table.remove(lines) end
+vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+vim.bo[buf].modifiable = false
+vim.bo[buf].readonly = true
+local ft = vim.filetype.match({ filename = path })
+if ft then vim.bo[buf].filetype = ft end
+pcall(vim.api.nvim_win_set_cursor, 0, { 1, 0 })
+vim.cmd('stopinsert')
+`
+
+// openCommitMoreMenu lists the footer buttons that folded into ⋯.
+func (m *Model) openCommitMoreMenu() {
+	c := m.commitCard()
+	var items []menu.Item
+	for _, b := range c.FoldedButtons() {
+		items = append(items, menu.Item{ID: b.ID, Title: b.Label})
+	}
+	if len(items) == 0 {
+		return
+	}
+	x, y := c.Origin()
+	for _, h := range c.Hits() {
+		if h.ID == "more" {
+			x, y = h.X, h.Y
+		}
+	}
+	m.menu = menu.New(items, x, y)
+	m.menu.SetScreenSize(m.w, m.h)
+	m.menuOpen = true
+	m.menuKind = menuKindCommitMore
+}
+
+// openCommitPickConfirm asks before a revert or cherry-pick of the
+// commit on show.
+func (m *Model) openCommitPickConfirm(verb string) tea.Cmd {
+	cv := m.commitView
+	info := cv.info
+	if verb == "cherry-pick" {
+		for _, c := range m.gitCommits {
+			if c.IsHead && c.FullHash == info.FullHash {
+				var cmd tea.Cmd
+				m.toast, cmd = m.toast.Push(toast.Info, "This commit is HEAD already")
+				return cmd
+			}
+		}
+	}
+	title, body, button := "Revert commit?",
+		fmt.Sprintf("Revert %s? This creates a new commit that undoes it.", commitViewTitle(info)), "Revert"
+	kind := confirmKindCommitRevert
+	if verb == "cherry-pick" {
+		title, body, button = "Cherry-pick commit?",
+			fmt.Sprintf("Apply %s on top of HEAD? This creates a new commit.", commitViewTitle(info)), "Cherry-pick"
+		kind = confirmKindCommitCherryPick
+	}
+	cv.pick = info.FullHash
+	m.confirm = confirm.New(title, body, []confirm.Button{
+		{ID: verb, Title: button, Style: confirm.StylePrimary},
+		{ID: "cancel", Title: "Cancel"},
+	})
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = kind
+	return nil
+}
+
+// commitPickDoneMsg is the end of a revert / cherry-pick.
+type commitPickDoneMsg struct {
+	verb, short string
+	conflicts   []string
+	err         error
+}
+
+// runCommitPick runs the confirmed revert / cherry-pick off the loop.
+func (m *Model) runCommitPick(id string) tea.Cmd {
+	cv := m.commitView
+	if cv == nil || cv.pick == "" || id == "cancel" {
+		return nil
+	}
+	sha, short := cv.pick, cv.info.Hash
+	cv.pick = ""
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil
+	}
+	return func() tea.Msg {
+		var conflicts []string
+		var err error
+		if id == "revert" {
+			conflicts, err = git.Revert(cwd, sha)
+		} else {
+			conflicts, err = git.CherryPick(cwd, sha)
+		}
+		return commitPickDoneMsg{verb: id, short: short, conflicts: conflicts, err: err}
+	}
+}
+
+// onCommitPickDone says how it went and refreshes Source Control (a
+// conflict shows in CONFLICTS).
+func (m *Model) onCommitPickDone(msg commitPickDoneMsg) tea.Cmd {
+	m.closeCommitView()
+	what := "Revert"
+	done := "Reverted " + msg.short
+	if msg.verb == "cherry-pick" {
+		what, done = "Cherry-pick", "Cherry-picked "+msg.short
+	}
+	var cmd tea.Cmd
+	switch {
+	case len(msg.conflicts) > 0:
+		word := "conflicts"
+		if len(msg.conflicts) == 1 {
+			word = "conflict"
+		}
+		m.toast, cmd = m.toast.PushDetail(toast.Warn, fmt.Sprintf("%s stopped: %d %s", what, len(msg.conflicts), word),
+			"Fix them in CONFLICTS, then commit.")
+	case msg.err != nil:
+		m.toast, cmd = m.toast.PushDetail(toast.Errr, what+" failed", msg.err.Error())
+	default:
+		m.toast, cmd = m.toast.Push(toast.Info, done)
+	}
+	return tea.Batch(cmd, fetchGitCmd())
 }
 
 // commitViewTitle is the card's title for messages ("a1b2c3d \"Fix…\"").

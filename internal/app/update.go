@@ -295,6 +295,11 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	case commitFileTextMsg:
 		m.onCommitFileText(msg)
 		return m, nil
+	case commitFileAtMsg:
+		m.openFileAtCommit(msg)
+		return m, nil
+	case commitPickDoneMsg:
+		return m, m.onCommitPickDone(msg)
 	case gitRemoteDoneMsg:
 		return m, m.gitRemoteDone(msg)
 	case preview.CloseMsg:

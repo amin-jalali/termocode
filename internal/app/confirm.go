@@ -36,6 +36,9 @@ const (
 	// Download / Upload (transfer.go).
 	confirmKindTransferLarge
 	confirmKindTransferFallback
+	// Commit view (git_commit_view.go).
+	confirmKindCommitRevert
+	confirmKindCommitCherryPick
 )
 
 // findBuffer returns the buffer info for the given id, if known.
@@ -119,6 +122,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		return cmd
 	}
 	switch m.confirmKind {
+	case confirmKindCommitRevert, confirmKindCommitCherryPick:
+		return m.runCommitPick(id)
 	case confirmKindCloseBuffer:
 		switch id {
 		case "cancel":
