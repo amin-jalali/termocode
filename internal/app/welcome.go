@@ -1081,7 +1081,7 @@ func buildRecentsColumn(entries []RecentEntry, w int) ([]string, []int, []string
 	if total == 0 {
 		// Empty state.
 		emptyTitle := theme.FgBg(theme.TextSecondary, theme.BgEditor).Render("No files yet")
-		emptyHint := theme.FgBg(theme.TextDim, theme.BgEditor).Italic(true).
+		emptyHint := theme.FgBg(theme.TextDim, theme.BgEditor).
 			Render("Open a file or start a new project")
 		lines = append(lines, padRowToWidth(emptyTitle, w, bgFill))
 		lines = append(lines, padRowToWidth(emptyHint, w, bgFill))
@@ -1231,8 +1231,9 @@ func buildWorkspacesColumn(entries []WorkspaceEntry, w int) ([]string, []int, []
 	const maxShown = 3
 	total := len(entries)
 	if total == 0 {
-		emptyStyle := theme.FgBg(theme.TextDim, theme.BgEditor).Italic(true)
-		lines = append(lines, padRowToWidth(emptyStyle.Render("No recent workspaces"), w, bgFill))
+		// The same two-line empty state as Recent files.
+		lines = append(lines, padRowToWidth(theme.FgBg(theme.TextSecondary, theme.BgEditor).Render("No recent workspaces"), w, bgFill))
+		lines = append(lines, padRowToWidth(theme.FgBg(theme.TextDim, theme.BgEditor).Render("Open a folder to see it here"), w, bgFill))
 		return lines, idxs, paths
 	}
 

@@ -87,6 +87,8 @@ func goldenExtras() []Scene {
 		// Persian (right-to-left) chat: shaped letters in reading order.
 		{Name: "ai-chat-fa", Env: aiEnv, Steps: WithEditor(Act("palette:ai-open-chat"), Act("aidemo-fa"), Pause(600*time.Millisecond))},
 		{Name: "diff-review-light", Theme: "catppuccin-latte", Steps: DiffReview().Steps},
+		// The Problems panel with nothing to show (the empty state).
+		{Name: "problems", Steps: WithEditor(Act("palette:problems-panel"), Pause(800*time.Millisecond))},
 	}
 }
 
