@@ -63,8 +63,10 @@ func refreshCommitBoxColors() {
 	gitInputRail = theme.LG(theme.BorderDefault) // quiet rail when the field is blurred
 	gitCommitReadyBg = theme.LG(theme.BorderFocus)
 	gitCommitReadyFg = theme.LG(theme.OnAccent)
-	gitCommitIdleBg = theme.Mix(theme.BgSidebar, theme.TextPrimary, 0.12)
-	gitCommitIdleFg = theme.LG(theme.TextSecondary)
+	// Idle Commit still reads as the panel's main button: accent tint and
+	// accent text (it was a grey chip that looked disabled).
+	gitCommitIdleBg = theme.Wash(theme.BgSidebar, theme.WashSelected)
+	gitCommitIdleFg = theme.LG(theme.BorderFocus)
 	gitChipBg = theme.Mix(theme.BgSidebar, theme.TextPrimary, 0.14) // raised, lighter than the panel
 	gitChipFg = theme.LG(theme.TextSecondary)
 }
