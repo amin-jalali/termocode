@@ -269,16 +269,32 @@ func renderAILine(l aiLine, width int) string {
 	return b.String() + theme.Bg(bgTok).Render(strings.Repeat(" ", pad))
 }
 
-// aiCleanText expands tabs and drops control characters.
+// aiCleanText expands tabs and drops what must never reach the screen
+// from model or tool text: whole escape sequences (CSI, OSC such as
+// OSC 52 clipboard writes; not just the ESC byte, or "[2J" stays behind),
+// C0/C1 control characters, and the bidi overrides and isolates
+// (U+202A–202E, U+2066–2069) that can make "exe.txt" read as "txt.exe".
+// The plain marks U+200E / U+200F stay: they do not reorder text.
 func aiCleanText(s string) string {
+	if strings.IndexByte(s, 0x1b) >= 0 {
+		s = outputANSIRe.ReplaceAllString(s, "")
+	}
 	s = strings.ReplaceAll(s, "\t", "    ")
 	s = strings.ReplaceAll(s, "\r", "")
 	return strings.Map(func(r rune) rune {
-		if (r < 0x20 && r != '\n') || r == 0x7f {
+		if r != '\n' && unsafeScreenRune(r) {
 			return -1
 		}
 		return r
 	}, s)
+}
+
+// unsafeScreenRune reports runes that outside text (model output, tool
+// results, task output, extensions) must not put on the screen: C0 / C1
+// controls and the bidi overrides and isolates.
+func unsafeScreenRune(r rune) bool {
+	return r < 0x20 || (r >= 0x7f && r <= 0x9f) ||
+		(r >= 0x202a && r <= 0x202e) || (r >= 0x2066 && r <= 0x2069)
 }
 
 // aiWrapCode hard-wraps a code line, keeping its indentation.

@@ -483,14 +483,18 @@ func argList(args []any, i int) ([]any, bool) {
 	return l, ok
 }
 
-// sanitizeExtText drops ESC and other control bytes (except newline and
-// tab) so an extension cannot inject terminal escapes into the preview.
+// sanitizeExtText drops escape sequences, control characters (except
+// newline and tab) and bidi overrides so an extension cannot inject
+// terminal escapes into the preview.
 func sanitizeExtText(s string) string {
+	if strings.IndexByte(s, 0x1b) >= 0 {
+		s = outputANSIRe.ReplaceAllString(s, "")
+	}
 	return strings.Map(func(r rune) rune {
 		if r == '\n' || r == '\t' {
 			return r
 		}
-		if r < 0x20 || r == 0x7f {
+		if unsafeScreenRune(r) {
 			return -1
 		}
 		return r

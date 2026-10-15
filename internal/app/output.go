@@ -269,7 +269,7 @@ func sanitizeOutputLine(s string) string {
 	s = outputANSIRe.ReplaceAllString(s, "")
 	s = strings.ReplaceAll(s, "\t", "    ")
 	return strings.Map(func(r rune) rune {
-		if r < 0x20 || r == 0x7f {
+		if unsafeScreenRune(r) {
 			return -1
 		}
 		return r
