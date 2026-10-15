@@ -94,6 +94,9 @@ type StartOpts struct {
 	// Silent makes the terminal answer no queries at all (OSC 11, DA1,
 	// CSI 6n …), like some muxers, IDE terminals and dumb ptys.
 	Silent bool
+	// KittyGraphics makes the terminal answer the kitty graphics query
+	// (a=q) with OK before DA1, as kitty, Ghostty and WezTerm do.
+	KittyGraphics bool
 }
 
 // Start launches termocode in a fresh PTY with an isolated HOME.
@@ -179,6 +182,11 @@ func Start(t *testing.T, o StartOpts) *Term {
 		for {
 			n, err := ptmx.Read(buf)
 			if n > 0 {
+				// Answer before the emulator sees the batch, so the reply
+				// comes ahead of its DA1 answer like a real kitty's.
+				if o.KittyGraphics && !o.Silent && bytes.Contains(buf[:n], []byte("\x1b_Gi=31,")) {
+					_, _ = ptmx.Write([]byte("\x1b_Gi=31;OK\x1b\\"))
+				}
 				tm.feed(buf[:n])
 			}
 			if err != nil {

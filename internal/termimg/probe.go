@@ -89,9 +89,16 @@ func Probe(in, out *os.File, timeout time.Duration, getenv func(string) string) 
 		// kitty graphics) would show nothing.
 		caps.Protocol = Blocks
 		caps.Reason = "kitty graphics query answered " + kittyErr
-	case gotDA1 && !envSure:
+	case gotDA1:
+		// It answered DA1 without a kitty reply or sixel: no graphics,
+		// whatever the environment says (kitty, Ghostty and WezTerm always
+		// answer the query first; KITTY_WINDOW_ID / WT_SESSION leak into
+		// nested terminals, and Windows Terminal before 1.22 has no sixel).
 		caps.Protocol = Blocks
 		caps.Reason = "terminal answered but has no graphics support"
+		if envSure {
+			caps.Reason += " (overrules the environment hint)"
+		}
 	case !gotDA1:
 		caps.Reason += " (terminal did not answer the query)"
 	}
