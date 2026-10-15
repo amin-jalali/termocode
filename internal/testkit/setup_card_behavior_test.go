@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -239,6 +240,14 @@ func TestSetupCardFontInstallInBackground(t *testing.T) {
 		t.Fatalf("no install button:\n%s", screen(d))
 	}
 	clickText(d, "Install Nerd Font")
+	if runtime.GOOS != "linux" {
+		// The automatic install is Linux-only: elsewhere the card says so
+		// instead of pretending to install.
+		if !d.WaitForText("Automatic install works on Linux only", 2*time.Second) {
+			t.Fatalf("no honest 'Linux only' message:\n%s", screen(d))
+		}
+		return
+	}
 	if !d.WaitForText("50%", 2*time.Second) {
 		t.Fatalf("no progress shown:\n%s", screen(d))
 	}
