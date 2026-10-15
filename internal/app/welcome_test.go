@@ -3,6 +3,10 @@ package app
 import (
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/x/ansi"
+
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // TestWelcome_RendersWithEmptyRecents asserts the start page renders a
@@ -24,14 +28,17 @@ func TestWelcome_RendersWithEmptyRecents(t *testing.T) {
 	mustContain(t, out, "No files yet")
 	mustContain(t, out, "Open a file or start a new project")
 	mustContain(t, out, "No recent workspaces")
-	// Action card titles + subtitles + shortcut keycaps.
+	// START rows + shortcut keycaps; no subtitles.
 	for _, label := range []string{
-		"Open file", "Command palette", "Find in files", "Open shell",
-		"browse your filesystem", "run any action",
-		"project-wide search", "integrated terminal",
+		"Open file", "Open workspace", "Clone repository", "Find in files", "Command palette", "New terminal",
 		"Ctrl+P", "F1", "F8", "Ctrl+T", // UI review #3: one key notation
 	} {
 		mustContain(t, out, label)
+	}
+	for _, noise := range []string{"browse your filesystem", "run any action", "integrated terminal"} {
+		if strings.Contains(out, noise) {
+			t.Errorf("subtitle %q still on the page", noise)
+		}
 	}
 	// Footer keycap + help hint.
 	mustContain(t, out, "for help")
@@ -78,23 +85,45 @@ func TestWelcome_RecentsHits(t *testing.T) {
 	mustContain(t, out, "view all")
 }
 
-// TestWelcome_QuickActionHits ensures each action card emits at least
-// one hit rectangle pointing at the right keymap action.
+// TestWelcome_QuickActionHits: START is a list of 6 one-line rows, each
+// one hit as wide as the content column, in reading order.
 func TestWelcome_QuickActionHits(t *testing.T) {
 	withConfigDir(t)
 	hits := welcomeQuickActionHits(120, 36)
-	if len(hits) < 4 {
-		t.Fatalf("expected ≥4 quick-action hits (one per card), got %d", len(hits))
+	if len(hits) != 6 {
+		t.Fatalf("got %d quick-action hits, want 6 (one per row): %+v", len(hits), hits)
 	}
-	seen := map[int]bool{}
-	for _, h := range hits {
-		if h.ColEnd <= h.ColStart {
-			t.Errorf("hit has empty column range: %+v", h)
+	w := hits[0].ColEnd - hits[0].ColStart
+	for i, h := range hits {
+		if h.Index != i {
+			t.Errorf("hit %d has index %d", i, h.Index)
 		}
-		seen[int(h.Action)] = true
+		if h.ColEnd-h.ColStart != w || w < 40 {
+			t.Errorf("hit %d is %d cells wide, want the row width %d", i, h.ColEnd-h.ColStart, w)
+		}
+		if i > 0 && h.Row != hits[i-1].Row+1 {
+			t.Errorf("hit %d on row %d, want %d (one row each, no gaps)", i, h.Row, hits[i-1].Row+1)
+		}
 	}
-	if len(seen) < 4 {
-		t.Errorf("expected hits for 4 distinct actions, got %d", len(seen))
+	want := []string{"Open file", "Open workspace", "Clone repository", "Find in files", "Command palette", "New terminal"}
+	for i, a := range welcomeQuickActions() {
+		if a.title != want[i] {
+			t.Errorf("row %d = %q, want %q", i, a.title, want[i])
+		}
+	}
+}
+
+// TestWelcome_NoTiles: no boxes on the start page (rounded borders are
+// for floating surfaces only).
+func TestWelcome_NoTiles(t *testing.T) {
+	withConfigDir(t)
+	for _, sz := range [][2]int{{120, 36}, {64, 28}, {44, 22}} {
+		out := ansi.Strip(renderWelcome(sz[0], sz[1], 0))
+		for _, g := range []string{"╭", "╰", "╮", "╯"} {
+			if strings.Contains(out, g) {
+				t.Errorf("%v: border glyph %q on the start page", sz, g)
+			}
+		}
 	}
 }
 
@@ -120,16 +149,24 @@ func TestWelcome_NarrowDoesNotPanic(t *testing.T) {
 // specific glyph.
 func TestWelcome_FocusHighlightsCard(t *testing.T) {
 	withConfigDir(t)
-	out0 := renderWelcome(120, 36, 0)
-	out2 := renderWelcome(120, 36, 2)
-	if out0 == "" || out2 == "" {
-		t.Fatal("expected non-empty welcome output")
-	}
-	// Focusing different cards must produce a different rendered
-	// frame (style escapes / color bytes flip even when plain text
-	// stays the same).
-	if out0 == out2 {
-		t.Errorf("expected focus=0 and focus=2 to render differently")
+	old := theme.CurrentIconMode
+	theme.CurrentIconMode = theme.IconModeUnicode
+	defer func() { theme.CurrentIconMode = old; invalidateWelcome() }()
+	for focus, title := range []string{"Open file", "Open workspace", "Clone repository"} {
+		out := ansi.Strip(renderWelcome(120, 36, focus))
+		bars := 0
+		for _, line := range strings.Split(out, "\n") {
+			if !strings.Contains(line, "▎") {
+				continue
+			}
+			bars++
+			if !strings.Contains(line, "▎  "+title) {
+				t.Errorf("focus %d: bar on the wrong row %q", focus, line)
+			}
+		}
+		if bars != 1 {
+			t.Errorf("focus %d: %d rows carry the cursor bar, want 1", focus, bars)
+		}
 	}
 }
 

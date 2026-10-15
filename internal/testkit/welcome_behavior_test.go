@@ -138,7 +138,7 @@ func TestWelcomeCardsClickAfterAIPanelDragResize(t *testing.T) {
 	})
 }
 
-// A hover lights up the card under the pointer (the ▌ focus bar), also
+// A hover moves the cursor to the row under the pointer (the ▎ bar), also
 // with the AI panel open.
 func TestWelcomeCardHoverWithAIPanel(t *testing.T) {
 	d := New(t, welcomeOpts(160))
@@ -149,7 +149,7 @@ func TestWelcomeCardHoverWithAIPanel(t *testing.T) {
 	}
 	d.Move(x+1, y)
 	line := strings.Split(screen(d), "\n")[y]
-	if !strings.Contains(line, "▌  ↓  Clone repository") {
+	if !strings.Contains(line, "▎  Clone repository") && !strings.Contains(line, ">  Clone repository") {
 		t.Fatalf("hovered card not lit, row %d: %q\n%s", y, line, screen(d))
 	}
 }
@@ -193,12 +193,12 @@ func TestWelcomeRecentFileClickWithAIPanel(t *testing.T) {
 	}
 }
 
-// "Open shell" needs nvim (the terminal runs inside it).
+// "New terminal" needs nvim (the terminal runs inside it).
 func TestWelcomeOpenShellClickWithAIPanel(t *testing.T) {
 	d := editorDriver(t, nil)
 	openAIPanel(d)
-	clickCard(d, "Open shell", aiPanelEdge(d))
+	clickCard(d, "New terminal", aiPanelEdge(d))
 	if !d.WaitForText("Terminal ›", 5*time.Second) {
-		t.Fatalf("Open shell click did not open the terminal:\n%s", screen(d))
+		t.Fatalf("New terminal click did not open the terminal:\n%s", screen(d))
 	}
 }

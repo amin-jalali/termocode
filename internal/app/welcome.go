@@ -267,52 +267,12 @@ type quickAction struct {
 
 func welcomeQuickActions() []quickAction {
 	return []quickAction{
-		{
-			icon:     "+",
-			title:    "Open file",
-			subtitle: "browse your filesystem",
-			shortcut: "Ctrl+P",
-			iconTok:  theme.AccentBlue,
-			action:   keymap.ActionQuickOpen,
-		},
-		{
-			icon:     ">",
-			title:    "Command palette",
-			subtitle: "run any action",
-			shortcut: "F1",
-			iconTok:  theme.AccentGreen,
-			action:   keymap.ActionCommandPalette,
-		},
-		{
-			icon:     "?",
-			title:    "Find in files",
-			subtitle: "project-wide search",
-			shortcut: "F8",
-			iconTok:  theme.AccentAmber,
-			action:   keymap.ActionWorkspaceSearch,
-		},
-		{
-			icon:     "$",
-			title:    "Open shell",
-			subtitle: "integrated terminal",
-			shortcut: "Ctrl+T",
-			iconTok:  theme.AccentMagenta,
-			action:   keymap.ActionToggleTerminal,
-		},
-		{
-			icon:     "~",
-			title:    "Open workspace",
-			subtitle: "recent folders",
-			iconTok:  theme.AccentLavender,
-			id:       welcomeCardWorkspace,
-		},
-		{
-			icon:     "↓",
-			title:    "Clone repository",
-			subtitle: "git clone, then open it",
-			iconTok:  theme.AccentRedCoral,
-			id:       welcomeCardClone,
-		},
+		{title: "Open file", shortcut: "Ctrl+P", action: keymap.ActionQuickOpen},
+		{title: "Open workspace", id: welcomeCardWorkspace},
+		{title: "Clone repository", id: welcomeCardClone},
+		{title: "Find in files", shortcut: "F8", action: keymap.ActionWorkspaceSearch},
+		{title: "Command palette", shortcut: "F1", action: keymap.ActionCommandPalette},
+		{title: "New terminal", shortcut: "Ctrl+T", action: keymap.ActionToggleTerminal},
 	}
 }
 
@@ -377,8 +337,6 @@ func renderWelcomePage(w, h, focusIdx int, hero, compact bool) (string, welcomeH
 		}
 	}
 	wide := innerW >= welcomeWideMin
-	// Compact (a short pane): one-line cards.
-	showSubtitle := innerW >= welcomeNarrowMin && !compact
 
 	var contentLines []string
 	gap := []string{blank(innerW), blank(innerW), blank(innerW)}
@@ -417,8 +375,7 @@ func renderWelcomePage(w, h, focusIdx int, hero, compact bool) (string, welcomeH
 
 	// ── 2. START — 2×2 (or 1×4 on narrow) grid of action cards ────────
 	contentLines = append(contentLines, padRowToWidth(sectionHeader("START"), innerW, bgFill))
-	contentLines = append(contentLines, blank(innerW))
-	qaLines, qaHits := buildActionGrid(actions, innerW, len(contentLines), focusIdx, wide, showSubtitle)
+	qaLines, qaHits := buildActionList(actions, innerW, len(contentLines), focusIdx)
 	contentLines = append(contentLines, qaLines...)
 
 	contentLines = append(contentLines, gap...)
@@ -677,6 +634,25 @@ func shortGoVersion() string {
 		return parts[0] + "." + parts[1]
 	}
 	return v
+}
+
+// ─── START list ────────────────────────────────────────────────────────
+
+// buildActionList draws the START actions as one-line rows (title left,
+// keycap right). lineOffset is the page row of the first one.
+func buildActionList(actions []quickAction, innerW, lineOffset, focusIdx int) ([]string, []welcomeQuickActionHit) {
+	var lines []string
+	var hits []welcomeQuickActionHit
+	for i, a := range actions {
+		st := rowRest
+		if i == focusIdx {
+			st = rowCursorFocused
+		}
+		r := welcomeRow{id: "card:" + itoa(i), title: a.title, right: a.shortcut, rightIsKeycap: true, interactive: true}
+		hits = append(hits, welcomeQuickActionHit{Row: lineOffset + len(lines), ColStart: 0, ColEnd: innerW, Action: a.action, Index: i})
+		lines = append(lines, renderWelcomeRow(r, innerW, st))
+	}
+	return lines, hits
 }
 
 // ─── Action grid ───────────────────────────────────────────────────────
