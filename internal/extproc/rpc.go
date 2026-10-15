@@ -146,6 +146,75 @@ func ReadMessage(r *bufio.Reader) ([]byte, error) {
 	return body, nil
 }
 
+// Framing is how messages are cut on the wire.
+type Framing int
+
+const (
+	// FramingContentLength is the LSP framing (extensions, the default).
+	FramingContentLength Framing = iota
+	// FramingNewline is one JSON message per line (MCP stdio).
+	FramingNewline
+)
+
+// WriteLineMessage writes v as one line of JSON. encoding/json escapes
+// newlines inside strings, so the body never holds a raw '\n'.
+func WriteLineMessage(w io.Writer, v any) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	return writeLine(w, b)
+}
+
+func writeLine(w io.Writer, body []byte) error {
+	buf := make([]byte, 0, len(body)+1)
+	buf = append(buf, body...)
+	buf = append(buf, '\n')
+	_, err := w.Write(buf)
+	return err
+}
+
+// ReadLineMessage reads the next JSON line. Empty lines are dropped;
+// lines that do not start like JSON ('{' or '[') are dropped too and
+// passed to skipped (when not nil): servers print banners on stdout. A
+// line longer than MaxMessage is an error. io.EOF: clean end.
+func ReadLineMessage(r *bufio.Reader, skipped func(line string)) ([]byte, error) {
+	for {
+		var line []byte
+		for {
+			part, err := r.ReadSlice('\n')
+			if len(line)+len(part) > MaxMessage+2 {
+				return nil, fmt.Errorf("message too big (over %d bytes)", MaxMessage)
+			}
+			line = append(line, part...)
+			if err == bufio.ErrBufferFull {
+				continue
+			}
+			if err != nil {
+				if errors.Is(err, io.EOF) && len(bytes.TrimSpace(line)) > 0 {
+					break // last line without '\n'
+				}
+				if errors.Is(err, io.EOF) {
+					return nil, io.EOF
+				}
+				return nil, fmt.Errorf("reading line: %w", err)
+			}
+			break
+		}
+		t := bytes.TrimSpace(line)
+		if len(t) == 0 {
+			continue
+		}
+		if t[0] != '{' && t[0] != '[' {
+			if skipped != nil {
+				skipped(string(t))
+			}
+			continue
+		}
+		return t, nil
+	}
+}
+
 // response builds a success or error response. JSON-RPC wants "result"
 // present (null is fine) on success, so it is not omitempty here.
 func response(id json.RawMessage, result any, rerr *Error) any {
@@ -182,6 +251,7 @@ type Conn struct {
 	r       io.Reader
 	w       io.Writer
 	handler Handler
+	opts    ConnOptions
 
 	out    chan []byte
 	nextID atomic.Int64
@@ -196,10 +266,26 @@ type Conn struct {
 	quit      chan struct{} // closed by Close
 }
 
+// ConnOptions changes how a Conn talks. The zero value is the extension
+// protocol (Content-Length framing).
+type ConnOptions struct {
+	Framing Framing
+	// Skipped (optional) gets the non-JSON lines a newline peer printed.
+	Skipped func(line string)
+	// OnCancel (optional) is called with the id of a Call whose ctx ended
+	// before the answer (MCP tells the server with notifications/cancelled).
+	OnCancel func(c *Conn, id json.RawMessage)
+}
+
 // NewConn starts the reader and writer goroutines.
 func NewConn(r io.Reader, w io.Writer, h Handler) *Conn {
+	return NewConnWith(r, w, h, ConnOptions{})
+}
+
+// NewConnWith is NewConn with options (newline framing for MCP).
+func NewConnWith(r io.Reader, w io.Writer, h Handler, opts ConnOptions) *Conn {
 	c := &Conn{
-		r: r, w: w, handler: h,
+		r: r, w: w, handler: h, opts: opts,
 		out:     make(chan []byte, queueSize),
 		pending: map[string]chan Message{},
 		done:    make(chan struct{}),
@@ -252,7 +338,13 @@ func (c *Conn) readLoop() {
 	defer c.failPending()
 	br := bufio.NewReaderSize(c.r, 64<<10)
 	for {
-		body, err := ReadMessage(br)
+		var body []byte
+		var err error
+		if c.opts.Framing == FramingNewline {
+			body, err = ReadLineMessage(br, c.opts.Skipped)
+		} else {
+			body, err = ReadMessage(br)
+		}
 		if err != nil {
 			if !errors.Is(err, io.EOF) {
 				c.mu.Lock()
@@ -289,7 +381,11 @@ func (c *Conn) writeLoop() {
 	for {
 		select {
 		case b := <-c.out:
-			if err := writeFrame(c.w, b); err != nil {
+			write := writeFrame
+			if c.opts.Framing == FramingNewline {
+				write = writeLine
+			}
+			if err := write(c.w, b); err != nil {
 				c.Close()
 				return
 			}
@@ -358,6 +454,9 @@ func (c *Conn) Call(ctx context.Context, method string, params any) (json.RawMes
 		c.mu.Lock()
 		delete(c.pending, key)
 		c.mu.Unlock()
+		if c.opts.OnCancel != nil {
+			c.opts.OnCancel(c, json.RawMessage(key))
+		}
 		return nil, fmt.Errorf("%s: %w", method, ErrTimeout)
 	}
 }
