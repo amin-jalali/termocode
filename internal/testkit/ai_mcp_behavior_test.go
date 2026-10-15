@@ -100,6 +100,10 @@ func TestAIMCPReadOnlyToolBehavior(t *testing.T) {
 	if !strings.Contains(f.received(), "call echo") {
 		t.Errorf("fake got %q", f.received())
 	}
+	// The chat header chip counts the connected server.
+	if !d.WaitForText("1 MCP", 5*time.Second) {
+		t.Errorf("no MCP chip in the chat header:\n%s", screen(d))
+	}
 
 	runPalette(d, "AI: MCP: Show Log")
 	if !d.WaitForText("fake: connected: fake-mcp 1.0.0", 5*time.Second) {
