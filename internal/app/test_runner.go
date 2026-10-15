@@ -12,6 +12,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/tests"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -306,7 +307,7 @@ func (m *Model) startTestRun(scope tests.Scope) tea.Cmd {
 	st.log = []string{"$ " + cmd.Label()}
 	st.resultsScroll = 0
 
-	c := exec.Command(cmd.Args[0], cmd.Args[1:]...)
+	c := spawn.Command(cmd.Args[0], cmd.Args[1:]...)
 	c.Dir = cmd.Dir
 	c.Env = append(os.Environ(), cmd.Env...)
 	setTestProcGroup(c)

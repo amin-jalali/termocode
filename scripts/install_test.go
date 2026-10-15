@@ -317,7 +317,11 @@ func TestInstallTermuxUsesAndroidBuild(t *testing.T) {
 		t.Fatalf("install on Termux failed:\n%s", out)
 	}
 	mustContain(t, out, "(android/arm64)")
-	mustContain(t, out, "pkg install git termux-api")
+	// git is on this test machine's PATH, termux-clipboard-set is not.
+	mustContain(t, out, "pkg install termux-api")
+	if strings.Contains(out, "pkg install git") {
+		t.Fatalf("asks for git, which is installed:\n%s", out)
+	}
 	got, err := exec.Command(filepath.Join(prefix, "bin", "termocode"), "--version").Output()
 	if err != nil || strings.TrimSpace(string(got)) != "termocode v0.1.0" {
 		t.Fatalf("installed binary: %q %v", got, err)

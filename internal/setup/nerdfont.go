@@ -3,12 +3,12 @@ package setup
 import (
 	"encoding/json"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // Nerd Font detection runs `fc-list`, which lists every installed font
@@ -24,7 +24,7 @@ const nerdCacheTTL = 24 * time.Hour
 
 // fcList is the seam tests replace with a fake fc-list.
 var fcList = func() (string, error) {
-	out, err := exec.Command("fc-list", ":", "family").Output()
+	out, err := spawn.Command("fc-list", ":", "family").Output()
 	return string(out), err
 }
 

@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/toast"
 	"github.com/charmbracelet/x/ansi"
 )
@@ -124,7 +124,7 @@ func (m *Model) runUserCommandPreview(id string) tea.Cmd {
 		// We use sh -c so users can pipe / chain commands without us having
 		// to parse arguments ourselves. Trade-off: depends on a POSIX shell
 		// being on PATH (true for any termocode-supported platform).
-		c := exec.Command("sh", "-c", cmd.Cmd)
+		c := spawn.Command("sh", "-c", cmd.Cmd)
 		c.Dir = cwd
 		out, err := c.CombinedOutput()
 		body := string(out)

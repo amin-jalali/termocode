@@ -2,12 +2,11 @@ package app
 
 import (
 	"os"
-	"os/exec"
 	"runtime"
-	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -24,13 +23,13 @@ func sendF11ToHost() {
 	switch runtime.GOOS {
 	case "darwin":
 		// AppleScript: System Events sends key code 111 = F11.
-		_ = exec.Command("osascript", "-e",
+		_ = spawn.Command("osascript", "-e",
 			`tell application "System Events" to key code 111`).Start()
 	case "linux", "freebsd", "openbsd", "netbsd":
 		// X11: xdotool. Wayland: wtype. Try both — only one will exist
 		// on a given system; the other returns "command not found".
-		_ = exec.Command("xdotool", "key", "F11").Start()
-		_ = exec.Command("wtype", "-k", "F11").Start()
+		_ = spawn.Command("xdotool", "key", "F11").Start()
+		_ = spawn.Command("wtype", "-k", "F11").Start()
 	}
 }
 
@@ -119,12 +118,12 @@ func (m *Model) reloadWindow() tea.Cmd {
 	if m.nvim != nil {
 		_ = m.nvim.Close()
 	}
-	bin, err := os.Executable()
+	bin, err := spawn.Executable()
 	if err != nil {
 		bin = os.Args[0]
 	}
 	args := []string{bin}
-	if err := syscall.Exec(bin, args, os.Environ()); err != nil {
+	if err := spawn.Exec(bin, args, os.Environ()); err != nil {
 		var toastCmd tea.Cmd
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Reload failed", err.Error())
 		return toastCmd

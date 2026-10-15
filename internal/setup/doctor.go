@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/termimg"
 )
 
@@ -30,7 +31,7 @@ type Check struct {
 var (
 	lookPath  = exec.LookPath
 	runOutput = func(name string, args ...string) (string, error) {
-		out, err := exec.Command(name, args...).Output()
+		out, err := spawn.Command(name, args...).Output()
 		return string(out), err
 	}
 )

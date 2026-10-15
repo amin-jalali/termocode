@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -14,6 +13,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // K3: the agent uses the VISIBLE integrated terminal, as a user does.
@@ -407,7 +407,7 @@ func aiTermBusy(ctx context.Context, pid int) int {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	ps := func(fields string, p int) []string {
-		out, err := exec.CommandContext(ctx, "ps", "-o", fields, "-p", strconv.Itoa(p)).Output()
+		out, err := spawn.CommandContext(ctx, "ps", "-o", fields, "-p", strconv.Itoa(p)).Output()
 		if err != nil {
 			return nil
 		}

@@ -22,6 +22,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/toast"
 	"github.com/amin-jalali/termocode/internal/transfer"
 )
@@ -199,7 +200,7 @@ func sshHost() string {
 	sshHostOnce.Do(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
-		if out, err := exec.CommandContext(ctx, "hostname", "-f").Output(); err == nil {
+		if out, err := spawn.CommandContext(ctx, "hostname", "-f").Output(); err == nil {
 			if h := strings.TrimSpace(string(out)); h != "" && !strings.ContainsAny(h, " \t") && h != "localhost" {
 				sshHostName = h
 			}
@@ -614,12 +615,12 @@ func trzszInstalled(upload bool) bool {
 func trzszCmd(p xferPending) tea.Cmd {
 	var c *exec.Cmd
 	if p.upload {
-		c = exec.Command("trz", "-d")
+		c = spawn.Command("trz", "-d")
 		c.Dir = p.path
 	} else if p.dir {
-		c = exec.Command("tsz", "-d", p.path)
+		c = spawn.Command("tsz", "-d", p.path)
 	} else {
-		c = exec.Command("tsz", p.path)
+		c = spawn.Command("tsz", p.path)
 	}
 	return execProcess(c, func(err error) tea.Msg {
 		if p.upload {

@@ -27,11 +27,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/extproc"
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // Env is the variable that turns a test binary into the fake extension.
@@ -134,7 +134,7 @@ func run() {
 					toast("read: " + out.Text)
 				}()
 			case "fake.spawn":
-				child := exec.Command(os.Args[0], "-test.run=^$")
+				child := spawn.Command(os.Args[0], "-test.run=^$")
 				child.Env = append(os.Environ(), Env+"=sleep")
 				if err := child.Start(); err != nil {
 					toast("spawn error: " + err.Error())

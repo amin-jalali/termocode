@@ -5,13 +5,13 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
 
 	"github.com/amin-jalali/termocode/internal/fetch"
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // Progress receives short human-readable status lines while an install
@@ -106,7 +106,7 @@ func Install(ctx context.Context, t Tool, progress Progress) (string, error) {
 			}
 		case StepRustupWhich:
 			var which bytes.Buffer
-			c := exec.CommandContext(ctx, step.Argv[0], step.Argv[1:]...)
+			c := spawn.CommandContext(ctx, step.Argv[0], step.Argv[1:]...)
 			c.Stdout = &which
 			c.Stderr = out
 			if err := c.Run(); err != nil {
@@ -146,7 +146,7 @@ func Install(ctx context.Context, t Tool, progress Progress) (string, error) {
 }
 
 func runStep(ctx context.Context, step Step, dir string, out *tailBuffer) error {
-	c := exec.CommandContext(ctx, step.Argv[0], step.Argv[1:]...)
+	c := spawn.CommandContext(ctx, step.Argv[0], step.Argv[1:]...)
 	c.Dir = dir
 	c.Env = append(os.Environ(), step.Env...)
 	c.Stdout = out

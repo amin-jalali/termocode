@@ -3,12 +3,12 @@ package git
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // FileStatus represents one entry from `git status --porcelain=v1`.
@@ -52,7 +52,7 @@ type Branch struct {
 
 // IsRepo reports whether dir is inside a git work tree.
 func IsRepo(dir string) bool {
-	cmd := exec.Command("git", "rev-parse", "--is-inside-work-tree")
+	cmd := spawn.Command("git", "rev-parse", "--is-inside-work-tree")
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
@@ -65,7 +65,7 @@ func IsRepo(dir string) bool {
 // entries. -z gives raw paths: without it git C-quotes names with spaces or
 // non-ASCII letters ("\346\227\245.txt"), which then match no file.
 func Status(dir string) ([]FileStatus, error) {
-	cmd := exec.Command("git", "status", "--porcelain=v1", "-z")
+	cmd := spawn.Command("git", "status", "--porcelain=v1", "-z")
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
@@ -120,7 +120,7 @@ func GetBranch(dir string) (Branch, error) {
 }
 
 func runOut(dir, name string, args ...string) (string, error) {
-	cmd := exec.Command(name, args...)
+	cmd := spawn.Command(name, args...)
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	return string(out), err
@@ -129,7 +129,7 @@ func runOut(dir, name string, args ...string) (string, error) {
 // Stage adds path to the index (`git add -- path`). For untracked files this
 // stages the new file; for modified files it stages the working-tree diff.
 func Stage(dir, path string) error {
-	cmd := exec.Command("git", "add", "--", path)
+	cmd := spawn.Command("git", "add", "--", path)
 	cmd.Dir = dir
 	return cmd.Run()
 }
@@ -137,7 +137,7 @@ func Stage(dir, path string) error {
 // Unstage removes path from the index without touching the working tree
 // (`git restore --staged -- path`).
 func Unstage(dir, path string) error {
-	cmd := exec.Command("git", "restore", "--staged", "--", path)
+	cmd := spawn.Command("git", "restore", "--staged", "--", path)
 	cmd.Dir = dir
 	return cmd.Run()
 }
@@ -156,7 +156,7 @@ func Discard(dir, path string) error {
 	if strings.HasPrefix(strings.TrimLeft(statusOut, " "), "??") {
 		return os.RemoveAll(abs)
 	}
-	cmd := exec.Command("git", "restore", "--", path)
+	cmd := spawn.Command("git", "restore", "--", path)
 	cmd.Dir = dir
 	return cmd.Run()
 }
@@ -190,7 +190,7 @@ func CommitWith(dir, message string, amend, signoff bool) error {
 	} else {
 		args = append(args, "-m", message)
 	}
-	cmd := exec.Command("git", args...)
+	cmd := spawn.Command("git", args...)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -548,7 +548,7 @@ func ShowCommit(dir, hash string) (string, error) {
 // runStdin runs a command feeding `stdin` to it, returning a combined-output
 // error so `git apply` rejections surface their reason.
 func runStdin(dir, stdin, name string, args ...string) error {
-	cmd := exec.Command(name, args...)
+	cmd := spawn.Command(name, args...)
 	cmd.Dir = dir
 	cmd.Stdin = strings.NewReader(stdin)
 	if out, err := cmd.CombinedOutput(); err != nil {
@@ -779,7 +779,7 @@ func Stash(dir, message string) error {
 	if message != "" {
 		args = append(args, "-m", message)
 	}
-	cmd := exec.Command("git", args...)
+	cmd := spawn.Command("git", args...)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -793,7 +793,7 @@ func Stash(dir, message string) error {
 
 // StashPop runs `git stash pop` (applies stash@{0} and removes it).
 func StashPop(dir string) error {
-	cmd := exec.Command("git", "stash", "pop")
+	cmd := spawn.Command("git", "stash", "pop")
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -804,7 +804,7 @@ func StashPop(dir string) error {
 
 // StashApply runs `git stash apply <ref>` — applies but doesn't drop.
 func StashApply(dir, ref string) error {
-	cmd := exec.Command("git", "stash", "apply", ref)
+	cmd := spawn.Command("git", "stash", "apply", ref)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -815,7 +815,7 @@ func StashApply(dir, ref string) error {
 
 // StashDrop runs `git stash drop <ref>`.
 func StashDrop(dir, ref string) error {
-	cmd := exec.Command("git", "stash", "drop", ref)
+	cmd := spawn.Command("git", "stash", "drop", ref)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -913,7 +913,7 @@ func Branches(dir string) ([]string, error) {
 // Checkout switches to the named branch. Fails if the working tree has
 // changes that would be overwritten — git's own safety net, surfaced as-is.
 func Checkout(dir, branch string) error {
-	cmd := exec.Command("git", "checkout", branch)
+	cmd := spawn.Command("git", "checkout", branch)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -925,7 +925,7 @@ func Checkout(dir, branch string) error {
 // CreateBranch creates a new branch from HEAD and switches to it
 // (`git checkout -b <name>`).
 func CreateBranch(dir, name string) error {
-	cmd := exec.Command("git", "checkout", "-b", name)
+	cmd := spawn.Command("git", "checkout", "-b", name)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -937,7 +937,7 @@ func CreateBranch(dir, name string) error {
 // HasUpstream reports whether the current branch has a tracked upstream.
 // Used to pick between Push and PushSetUpstream from the UI.
 func HasUpstream(dir string) bool {
-	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "@{upstream}")
+	cmd := spawn.Command("git", "rev-parse", "--abbrev-ref", "@{upstream}")
 	cmd.Dir = dir
 	return cmd.Run() == nil
 }

@@ -1,9 +1,10 @@
 package git
 
 import (
-	"os/exec"
 	"strconv"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // BranchStatus is the result of StatusBranch.
@@ -19,7 +20,7 @@ type BranchStatus struct {
 // gives the same answer as GetBranch + Status, which start three or
 // four git processes; the background poll runs it every 2 s.
 func StatusBranch(dir string) (BranchStatus, error) {
-	cmd := exec.Command("git", "status", "--porcelain=v2", "--branch", "-z")
+	cmd := spawn.Command("git", "status", "--porcelain=v2", "--branch", "-z")
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {

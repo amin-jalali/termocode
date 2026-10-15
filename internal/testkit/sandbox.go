@@ -8,6 +8,8 @@ import (
 	"slices"
 	"testing"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // DefaultFiles is the workspace content when Options.Files is nil. It has
@@ -121,7 +123,7 @@ func makeWorkspace(t testing.TB, files map[string]string, withGit bool) string {
 		t.Skip("git not on PATH")
 	}
 	git := func(args ...string) {
-		cmd := exec.Command("git", args...)
+		cmd := spawn.Command("git", args...)
 		cmd.Dir = dir
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("git %v: %v\n%s", args, err, out)

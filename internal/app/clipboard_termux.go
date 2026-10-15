@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // clipHost is what the clipboard code needs from the machine: the OS, the
@@ -27,7 +29,7 @@ func realClipHost() clipHost {
 }
 
 func runClipCommand(ctx context.Context, stdin string, argv []string) (string, error) {
-	c := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	c := spawn.CommandContext(ctx, argv[0], argv[1:]...)
 	c.Stdin = strings.NewReader(stdin)
 	var out bytes.Buffer
 	c.Stdout = &out

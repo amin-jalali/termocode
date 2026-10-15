@@ -2,10 +2,11 @@ package git
 
 import (
 	"fmt"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // BlameRangeLine is who last changed one line of a file.
@@ -95,7 +96,7 @@ func parseBlameRange(s string) []BlameRangeLine {
 // runCombined runs a command and returns stdout; on failure the error
 // carries git's message.
 func runCombined(dir, name string, args ...string) (string, error) {
-	cmd := exec.Command(name, args...)
+	cmd := spawn.Command(name, args...)
 	cmd.Dir = dir
 	var stderr strings.Builder
 	cmd.Stderr = &stderr

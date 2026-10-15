@@ -5,10 +5,11 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // A separate GNOME Terminal profile that uses a Nerd Font. It is made
@@ -29,7 +30,7 @@ type Gsettings func(ctx context.Context, args ...string) (string, error)
 
 // RunGsettings runs the real gsettings tool.
 func RunGsettings(ctx context.Context, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, "gsettings", args...)
+	cmd := spawn.CommandContext(ctx, "gsettings", args...)
 	cmd.WaitDelay = 100 * time.Millisecond
 	out, err := cmd.Output()
 	return string(out), err

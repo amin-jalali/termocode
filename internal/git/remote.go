@@ -3,6 +3,8 @@ package git
 import (
 	"os"
 	"os/exec"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // remoteCmd builds a git command that may talk to a remote (push, pull,
@@ -14,7 +16,7 @@ import (
 // opens /dev/tty fails instead of blocking), and with no stdin.
 // Credential helpers, askpass programs and ssh-agent still work.
 func remoteCmd(dir string, args ...string) *exec.Cmd {
-	cmd := exec.Command("git", args...)
+	cmd := spawn.Command("git", args...)
 	cmd.Dir = dir
 	cmd.Env = cloneEnv(os.Environ(), "", "", "")
 	cmd.Stdin = nil

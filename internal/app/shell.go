@@ -3,7 +3,6 @@ package app
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -14,6 +13,7 @@ import (
 	"github.com/mattn/go-runewidth"
 
 	"github.com/amin-jalali/termocode/internal/keymap"
+	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -28,7 +28,7 @@ func openShellCmd() tea.Cmd {
 	if shell == "" {
 		shell = "/bin/sh"
 	}
-	c := exec.Command(shell)
+	c := spawn.Command(shell)
 	c.Env = os.Environ()
 	return execProcess(c, func(err error) tea.Msg {
 		if err != nil {

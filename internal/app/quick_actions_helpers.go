@@ -4,6 +4,8 @@ import (
 	"os/exec"
 	"runtime"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // defaultNowFunc is the production clock used by the recent-files hint code.
@@ -20,12 +22,12 @@ func defaultOpen(path string) error {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "darwin":
-		cmd = exec.Command("open", path)
+		cmd = spawn.Command("open", path)
 	case "windows":
-		cmd = exec.Command("cmd", "/C", "start", "", path)
+		cmd = spawn.Command("cmd", "/C", "start", "", path)
 	default:
 		// Linux + most BSDs: xdg-open is the standard de-facto launcher.
-		cmd = exec.Command("xdg-open", path)
+		cmd = spawn.Command("xdg-open", path)
 	}
 	// Start (not Run) so we don't block the UI on a spawned GUI process.
 	return cmd.Start()

@@ -11,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -104,7 +105,7 @@ func clonePlugin(p plugin) (string, error) {
 	args = append(args, p.repo, out)
 	ctx, cancel := context.WithTimeout(context.Background(), pluginCloneTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd := spawn.CommandContext(ctx, "git", args...)
 	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 	if b, err := cmd.CombinedOutput(); err != nil {
 		msg := strings.TrimSpace(string(b))

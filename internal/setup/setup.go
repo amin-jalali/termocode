@@ -16,6 +16,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/fetch"
 	"github.com/amin-jalali/termocode/internal/lspinstall"
 	"github.com/amin-jalali/termocode/internal/nerdterm"
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 const (
@@ -312,7 +313,7 @@ func installJetBrainsMonoLinux(ctx context.Context, progress func(string)) (stri
 	}
 
 	progress("refreshing font cache...")
-	if err := exec.CommandContext(ctx, "fc-cache", "-f", filepath.Join(home, ".local/share/fonts")).Run(); err != nil {
+	if err := spawn.CommandContext(ctx, "fc-cache", "-f", filepath.Join(home, ".local/share/fonts")).Run(); err != nil {
 		return "", fmt.Errorf("fc-cache: %w", err)
 	}
 
