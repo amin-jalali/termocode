@@ -274,6 +274,15 @@ func (m Model) FitWidth(max int) int {
 	return w
 }
 
+// CompactTitleWidth is the compact card width that shows the newest
+// visible toast's title in full (renderToastCompact: border, " ● ", pad).
+func (m Model) CompactTitleWidth() int {
+	if len(m.toasts) == 0 {
+		return 0
+	}
+	return runewidth.StringWidth(m.toasts[len(m.toasts)-1].Title) + 6
+}
+
 func maxInt(a int, bs ...int) int {
 	for _, b := range bs {
 		if b > a {

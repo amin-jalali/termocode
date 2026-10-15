@@ -31,12 +31,15 @@ const (
 //
 //	col 0  accent — cyan ▎ when the row's item is active, else BgActivityBar
 //	col 1  left padding (BgActivityBar)
-//	col 2  icon glyph
+//	col 2  icon glyph — the exact middle of the bar
 //	col 3  right padding (BgActivityBar)
+//	col 4  right padding (BgActivityBar)
 //
+// An odd width puts a one-cell icon (and the 3-cell termocode mark) in the
+// middle of the bar; with 4 cells they sat half a cell off.
 // Visual separation with the next pane comes from the BgActivityBar↔BgSidebar
 // contrast — we never draw an explicit divider column.
-const Width = 4
+const Width = 5
 
 // itemPitch is the row count reserved per icon: the bold artwork is
 // 2-rows tall (top half + letter half).
@@ -447,7 +450,7 @@ func renderActivityGlyphRow(ic theme.Icon, iconRow, isActive bool, st styleSet) 
 		fg = theme.LG(theme.BorderFocus)
 	}
 	icon := lipgloss.NewStyle().Background(bg).Foreground(fg).Bold(true).Render(g)
-	return st.rowFrame.Render(lead + fill.Render(" ") + icon + fill.Render(" "))
+	return st.rowFrame.Render(lead + fill.Render(" ") + icon + fill.Render(strings.Repeat(" ", Width-3)))
 }
 
 // renderInterItemDivider draws the hairline that sits between two
@@ -475,15 +478,17 @@ func renderMarkRow(row int, st styleSet) string {
 	cell := func(c theme.Color256, s string) string {
 		return lipgloss.NewStyle().Background(bg).Foreground(theme.LG(c)).Render(s)
 	}
+	// The mark is 3 cells wide, centred on col 2 (the icons' column).
 	if theme.CurrentIconMode == theme.IconModeASCII {
 		if row == 0 {
-			return st.rowFrame.Render(st.bgFill.Render("  ") + cell(theme.BorderFocus, "T") + st.bgFill.Render(" "))
+			return st.rowFrame.Render(st.bgFill.Render("  ") + cell(theme.BorderFocus, "T") + st.bgFill.Render(strings.Repeat(" ", Width-3)))
 		}
 		return st.bgFill.Render(strings.Repeat(" ", Width))
 	}
 	if row == 0 {
 		return st.rowFrame.Render(st.bgFill.Render(" ") +
-			cell(theme.BorderFocus, "▀") + cell(theme.AccentLavender, "█") + cell(theme.AccentMagenta, "▀"))
+			cell(theme.BorderFocus, "▀") + cell(theme.AccentLavender, "█") + cell(theme.AccentMagenta, "▀") +
+			st.bgFill.Render(strings.Repeat(" ", Width-4)))
 	}
-	return st.rowFrame.Render(st.bgFill.Render("  ") + cell(theme.AccentLavender, "▀") + st.bgFill.Render(" "))
+	return st.rowFrame.Render(st.bgFill.Render("  ") + cell(theme.AccentLavender, "▀") + st.bgFill.Render(strings.Repeat(" ", Width-3)))
 }

@@ -233,6 +233,10 @@ func (m Model) compactToastPlaces(editorStart, edPaneW int) []toastPlace {
 	if w < 24 {
 		w = 24
 	}
+	// Never so narrow that the title is cut ("Tests: 1 failed, 1 passed").
+	if need := m.toast.CompactTitleWidth(); need > w {
+		w = min(need, edPaneW-2)
+	}
 	if w > edPaneW-2 {
 		return nil
 	}
