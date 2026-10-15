@@ -101,6 +101,16 @@ func TestDetect(t *testing.T) {
 			map[string]string{"/h/.config/foot/foot.ini": "[main]\nfont=DejaVu Sans Mono:size=12\n"},
 			Foot, "DejaVu Sans Mono", false},
 		{"unknown terminal", with(home, "TERM", "xterm-256color"), nil, nil, "", "", false},
+		// Terminal R7: other VTE terminals keep their font elsewhere;
+		// GNOME Terminal's settings say nothing about them.
+		{"Tilix is not GNOME Terminal", with(home, "VTE_VERSION", "7600", "TILIX_ID", "x"),
+			gnomeKeys("false", "JetBrainsMono Nerd Font 11", ""), nil, "", "", false},
+		{"Terminator is not GNOME Terminal", with(home, "VTE_VERSION", "7600", "TERMINATOR_UUID", "urn:x"),
+			gnomeKeys("false", "JetBrainsMono Nerd Font 11", ""), nil, "", "", false},
+		{"Ptyxis is not GNOME Terminal", with(home, "VTE_VERSION", "7800", "PTYXIS_VERSION", "47"),
+			gnomeKeys("false", "JetBrainsMono Nerd Font 11", ""), nil, "", "", false},
+		{"GNOME Terminal inside a Tilix-started shell", with(home, "VTE_VERSION", "7600", "TILIX_ID", "x", "GNOME_TERMINAL_SCREEN", "/y"),
+			gnomeKeys("false", "JetBrainsMono Nerd Font 11", ""), nil, GNOME, "JetBrainsMono Nerd Font 11", true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

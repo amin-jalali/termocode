@@ -149,11 +149,19 @@ func which(getenv func(string) string) string {
 		return Alacritty
 	case term == "foot" || strings.HasPrefix(term, "foot-"):
 		return Foot
-	case getenv("GNOME_TERMINAL_SCREEN") != "" || getenv("GNOME_TERMINAL_SERVICE") != "" ||
-		getenv("VTE_VERSION") != "":
+	case getenv("GNOME_TERMINAL_SCREEN") != "" || getenv("GNOME_TERMINAL_SERVICE") != "":
+		return GNOME
+	case getenv("VTE_VERSION") != "" && !otherVTE(getenv):
 		return GNOME
 	}
 	return ""
+}
+
+// otherVTE reports a VTE terminal that is not GNOME Terminal (Tilix,
+// Terminator, Ptyxis): it keeps its font in its own settings, so GNOME
+// Terminal's say nothing about it.
+func otherVTE(getenv func(string) string) bool {
+	return getenv("TILIX_ID") != "" || getenv("TERMINATOR_UUID") != "" || getenv("PTYXIS_VERSION") != ""
 }
 
 func overSSH(getenv func(string) string) bool {
