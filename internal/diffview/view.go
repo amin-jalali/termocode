@@ -508,7 +508,7 @@ func (m Model) layout(draw bool) layoutOut {
 			row := vr[k]
 			switch row.kind {
 			case vHead:
-				if m.review && !f.done && len(f.dec) > 0 {
+				if m.review && !f.done && len(f.dec) > 0 && row.hunk == f.focus {
 					bx := g.diffX + g.diffW - headButtonsW(f.dec[row.hunk])
 					a, rj := headButtons(f.dec[row.hunk])
 					addHit(bx, runewidth.StringWidth(a), y, "hacc:"+strconv.Itoa(row.hunk))
@@ -598,7 +598,7 @@ func (m Model) layout(draw bool) layoutOut {
 	if draw {
 		var hints string
 		if m.review {
-			hints = theme.HintBar(p.bg, "a/r", "accept/reject change", "n/p", "next/prev", "A/R", "whole file", "↵", "apply", "e", "edit", "t", "view", "esc", "hide")
+			hints = theme.HintBar(p.bg, "a/r", "change", "A/R", "file", "n/p", "next/prev", "enter", "apply", "e", "edit", "esc", "hide")
 		} else {
 			hints = theme.HintBar(p.bg, "n/p", "next/prev change", "t", "split/unified", "z", "unfold", "←→", "scroll", "esc", "close")
 		}
@@ -807,6 +807,19 @@ func (m Model) renderHead(row vrow, g geom, f *fileState, p pal, ic glyphs) stri
 	}
 	d := f.dec[row.hunk]
 	var right []seg
+	if !f.done && !focus {
+		// Only the focused change carries buttons (UI review #12); the
+		// others show a quiet mark of their state.
+		switch d {
+		case Accepted:
+			right = []seg{{ic.check + " ", st.Foreground(p.add)}}
+		case Rejected:
+			right = []seg{{ic.cross + " ", st.Foreground(p.dim)}}
+		default:
+			right = []seg{{ic.pend + " ", st.Foreground(p.dim)}}
+		}
+		return joinLR(segs, right, g.diffW, st)
+	}
 	if !f.done {
 		a, r := headButtons(d)
 		as, rs := buttonStyle(p, ""), buttonStyle(p, "")
