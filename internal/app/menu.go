@@ -40,6 +40,7 @@ const (
 	gitMenuCopyHash = "git-copy-hash"
 	gitMenuCopyMsg  = "git-copy-message"
 	gitMenuRefresh  = "git-refresh"
+	gitMenuShowRaw  = "git-show-raw"
 
 	// Action-bar overflow (⋯) menu.
 	gitMenuAmend     = "git-amend"
@@ -75,6 +76,7 @@ func gitCommitMenuItems() []menu.Item {
 		{ID: gitMenuDiff, Title: "Open Changes", Icon: "≢"},
 		{ID: gitMenuCopyHash, Title: "Copy Commit Hash", Icon: "⎘"},
 		{ID: gitMenuCopyMsg, Title: "Copy Commit Message", Icon: "⎘"},
+		{ID: gitMenuShowRaw, Title: "Show Raw (git show)", Icon: "≢"},
 		{Sep: true},
 		{ID: gitMenuRefresh, Title: "Refresh", Icon: "⟳"},
 	}
@@ -137,6 +139,11 @@ func (m *Model) handleGitMenuSelect(id string) tea.Cmd {
 	case gitMenuCopyHash, gitMenuCopyMsg:
 		if cur, ok := m.gitCurrentRow(); ok && cur.kind == gitRowCommit {
 			return m.gitCopyCommit(cur.ci, id == gitMenuCopyMsg)
+		}
+	case gitMenuShowRaw:
+		if cur, ok := m.gitCurrentRow(); ok && cur.kind == gitRowCommit {
+			m.closeCommitView()
+			return m.gitShowCommitCmd(cur.hash)
 		}
 	case gitMenuRefresh:
 		return fetchGitCmd()
