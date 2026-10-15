@@ -24,7 +24,11 @@ import (
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
-func main() {
+func main() { os.Exit(run()) }
+
+// run does the work and returns the exit code, so deferred cleanup
+// (the demo workspace) runs on every path.
+func run() int {
 	out := flag.String("out", "assets/screenshots", "output directory")
 	fontPath := flag.String("font", os.Getenv("TERMOCODE_SHOTS_FONT"), "Nerd Font TTF (regular)")
 	boldPath := flag.String("bold", "", "Nerd Font TTF (bold); default: -font with Regular→Bold")
@@ -40,23 +44,24 @@ func main() {
 	absOut, _ := filepath.Abs(*out)
 	if *real {
 		// keep the working directory
-	} else if err := enterDemoWorkspace(); err != nil {
+	} else if cleanup, err := enterDemoWorkspace(); err != nil {
 		fmt.Fprintln(os.Stderr, "shots:", err)
-		os.Exit(1)
+		return 1
 	} else {
+		defer cleanup()
 		// The demo history has fixed dates; show it a few days later.
 		clock.Set(func() time.Time { return shotkit.DemoNow })
 	}
 	if *fontPath == "" {
 		fmt.Fprintln(os.Stderr, "shots: -font is required (a Nerd Font .ttf)")
-		os.Exit(2)
+		return 2
 	}
 	if *boldPath == "" {
 		*boldPath = strings.Replace(*fontPath, "Regular", "Bold", 1)
 	}
 	if err := os.MkdirAll(absOut, 0o755); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
 	if *gifPath != "" {
 		if !filepath.IsAbs(*gifPath) {
@@ -64,10 +69,10 @@ func main() {
 		}
 		if err := recordGIF(*gifPath, *fontPath, *boldPath, splitList(*fallback), *w, *h); err != nil {
 			fmt.Fprintln(os.Stderr, "shots:", err)
-			os.Exit(1)
+			return 1
 		}
 		fmt.Println("wrote", *gifPath)
-		return
+		return 0
 	}
 	scenes := shotkit.Scenes()
 
@@ -94,18 +99,19 @@ func main() {
 		})
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return 1
 		}
 		path := filepath.Join(absOut, sc.Name+".png")
 		if err := r.WritePNG(path, frame, *w); err != nil {
 			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+			return 1
 		}
 		if *ansOnly {
 			_ = os.WriteFile(filepath.Join(absOut, sc.Name+".ans"), []byte(frame), 0o644)
 		}
 		fmt.Println("wrote", path)
 	}
+	return 0
 }
 
 func hexRGBA(h string) color.RGBA {
@@ -118,24 +124,36 @@ func hexRGBA(h string) color.RGBA {
 
 // enterDemoWorkspace copies the repository into a temp folder named
 // "termocode" with a small fixed git history and a few edits (see
-// shotkit.DemoWorkspace) and makes it the working directory.
-func enterDemoWorkspace() error {
+// shotkit.DemoWorkspace) and makes it the working directory. The returned
+// cleanup removes the folder.
+func enterDemoWorkspace() (cleanup func(), err error) {
+	noop := func() {}
 	repo, err := os.Getwd()
 	if err != nil {
-		return err
+		return noop, err
 	}
 	tmp, err := os.MkdirTemp("", "termocode-demo-")
 	if err != nil {
-		return err
+		return noop, err
+	}
+	cleanup = func() {
+		_ = os.Chdir(repo) // do not stay inside the folder we delete
+		_ = os.RemoveAll(tmp)
 	}
 	dst, err := shotkit.DemoWorkspace(repo, tmp)
 	if err != nil {
-		return err
+		cleanup()
+		return noop, err
 	}
 	if err := os.Chdir(dst); err != nil {
-		return err
+		cleanup()
+		return noop, err
 	}
-	return os.Setenv("PWD", dst)
+	if err := os.Setenv("PWD", dst); err != nil {
+		cleanup()
+		return noop, err
+	}
+	return cleanup, nil
 }
 
 func defaultFallbacks() []string {

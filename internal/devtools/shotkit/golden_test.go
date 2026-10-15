@@ -16,6 +16,7 @@ package shotkit
 // fixed, animations are off and cursor blinking is dropped.
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"image/color"
@@ -272,7 +273,12 @@ func renderInChild(t *testing.T, bin string, c goldenCase) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command(exe)
+	// A stuck child (e.g. a hung nvim) must not hang the test: a hang
+	// ends in a kill, and the test's own cleanup then removes root.
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, exe)
+	cmd.WaitDelay = 5 * time.Second
 	cmd.Dir = ws
 	cmd.Env = []string{
 		childCaseEnv + "=" + c.name,
