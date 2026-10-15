@@ -13,6 +13,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/search"
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // Tool is one capability the agent can call. Port of mobocode's AiTool:
@@ -541,7 +542,7 @@ func firstLine(s string) string { return strings.SplitN(strings.TrimSpace(s), "\
 func runCmd(ctx context.Context, dir string, timeout time.Duration, name string, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, name, args...)
+	cmd := spawn.CommandContext(ctx, name, args...)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	s := capOut(string(out), maxOutBytes)

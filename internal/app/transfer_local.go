@@ -16,6 +16,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/toast"
 	"github.com/amin-jalali/termocode/internal/transfer"
 )
@@ -92,7 +93,7 @@ func xdgUserDir() string {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "xdg-user-dir", "DOWNLOAD").Output()
+	out, err := spawn.CommandContext(ctx, "xdg-user-dir", "DOWNLOAD").Output()
 	if err != nil {
 		return ""
 	}
@@ -175,11 +176,11 @@ func reveal(path string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if runtime.GOOS == "darwin" {
-		return exec.CommandContext(ctx, "open", "-R", path).Run()
+		return spawn.CommandContext(ctx, "open", "-R", path).Run()
 	}
 	if _, err := xferLookPath("gdbus"); err == nil {
 		uri := (&url.URL{Scheme: "file", Path: path}).String()
-		err := exec.CommandContext(ctx, "gdbus", "call", "--session",
+		err := spawn.CommandContext(ctx, "gdbus", "call", "--session",
 			"--dest", "org.freedesktop.FileManager1", "--object-path", "/org/freedesktop/FileManager1",
 			"--method", "org.freedesktop.FileManager1.ShowItems", "['"+strings.ReplaceAll(uri, "'", "%27")+"']", "").Run()
 		if err == nil {
@@ -187,7 +188,7 @@ func reveal(path string) error {
 		}
 	}
 	// xdg-open may stay running (it waits for the app on some desktops).
-	c := exec.Command("xdg-open", filepath.Dir(path))
+	c := spawn.Command("xdg-open", filepath.Dir(path))
 	if err := c.Start(); err != nil {
 		return err
 	}
@@ -233,7 +234,7 @@ func (m *Model) localUpload(dir string) tea.Cmd {
 // runChooser runs the file chooser (a window of its own: the app keeps
 // running) and returns the chosen paths; none when the user canceled.
 func runChooser(ch transfer.Chooser) ([]string, error) {
-	c := exec.Command(ch.Argv[0], ch.Argv[1:]...)
+	c := spawn.Command(ch.Argv[0], ch.Argv[1:]...)
 	var stderr strings.Builder
 	c.Stderr = &stderr
 	out, err := c.Output()

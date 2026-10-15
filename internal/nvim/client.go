@@ -13,6 +13,7 @@ import (
 	gonvim "github.com/neovim/go-client/nvim"
 
 	"github.com/amin-jalali/termocode/internal/lspinstall"
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // RedrawMsg carries one batch of nvim redraw events. Each element is an event
@@ -117,7 +118,7 @@ func New() (*Client, error) {
 	// corruption errors and keeps each termocode session isolated.
 	// -n disables swap files (we own the buffers via nvim_input).
 	// --cmd: the watchdog (watchdog.go) runs before anything else.
-	cmd := exec.Command("nvim", "--embed", "-i", "NONE", "-n", "--cmd", watchdogLua)
+	cmd := spawn.Command("nvim", "--embed", "-i", "NONE", "-n", "--cmd", watchdogLua)
 	// Managed language servers / debug adapters live as shims in
 	// ~/.local/share/termocode/tools/bin; put that dir first on the
 	// embedded nvim's PATH so vim.lsp / nvim-dap find them.

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/ext"
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // ProtocolVersion is sent in "initialize"; it changes only when a method
@@ -532,7 +533,7 @@ func (p *proc) command() *exec.Cmd {
 	if !filepath.IsAbs(name) && strings.ContainsRune(name, '/') {
 		name = filepath.Join(p.x.Dir, name)
 	}
-	cmd := exec.Command(name, run.Args...)
+	cmd := spawn.Command(name, run.Args...)
 	cmd.Dir = p.x.Dir
 	env := append(os.Environ(),
 		"TERMOCODE_EXTENSION="+p.x.Name,

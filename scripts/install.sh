@@ -286,9 +286,15 @@ do_install() {
 	check_path
 	check_nvim
 	if is_termux; then
-		say ""
-		say "On Android also install git and the clipboard tools:"
-		say "  pkg install git termux-api   (and the Termux:API app)"
+		missing=""
+		has git || missing="git"
+		has termux-clipboard-set || missing="${missing:+${missing} }termux-api"
+		if [ -n "${missing}" ]; then
+			say ""
+			say "On Android also install:"
+			say "  pkg install ${missing}"
+			case "${missing}" in *termux-api*) say "  (and the Termux:API app, for the clipboard)" ;; esac
+		fi
 	fi
 	say ""
 	say "Next: run 'termocode setup' to check your system (on Linux it can install a Nerd Font)."

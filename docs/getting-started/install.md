@@ -120,7 +120,9 @@ termocode runs on an Android phone or tablet (arm64) inside the
 [Termux](https://termux.dev) app.
 
 1. Install Termux **and the Termux:API app** from the same place
-   (F-Droid or GitHub). Do not mix them with the Play Store build.
+   (F-Droid, GitHub or the Play Store). Do not mix builds from different
+   places. termocode works with both the F-Droid and the Play Store
+   Termux.
 2. In Termux, install the tools:
 
     ```sh

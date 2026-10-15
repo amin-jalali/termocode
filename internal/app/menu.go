@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/menu"
+	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/tabbar"
 	"github.com/amin-jalali/termocode/internal/termimg"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -576,7 +576,7 @@ func openShellInDirCmd(dir string) tea.Cmd {
 			"echo '   type \\033[1mexit\\033[0;2m to return to the editor ──\\033[0m';"+
 			"exec %s",
 		dir, shell)
-	c := exec.Command("/bin/sh", "-c", banner)
+	c := spawn.Command("/bin/sh", "-c", banner)
 	c.Env = os.Environ()
 	c.Dir = dir
 	return execProcess(c, func(err error) tea.Msg {

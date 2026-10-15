@@ -17,6 +17,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/lspinstall"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // nvimDapRepo is the upstream URL for mfussenegger/nvim-dap, the de-facto
@@ -513,7 +514,7 @@ func missingAdapterMsg(lang string) string {
 			return "DAP: no python on PATH"
 		}
 		// Cheap import check; identical to the Lua-side gate.
-		check := exec.Command(py, "-c", "import debugpy")
+		check := spawn.Command(py, "-c", "import debugpy")
 		if err := check.Run(); err != nil {
 			return "DAP: debugpy missing — palette → DAP: Install Adapter..."
 		}

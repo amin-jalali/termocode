@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -148,14 +148,14 @@ func (m *Model) openWorkspace(path string) tea.Cmd {
 	}
 	// Back up the unsaved text, close nvim cleanly, then re-exec.
 	m.leaveWorkspace()
-	bin, err := os.Executable()
+	bin, err := spawn.Executable()
 	if err != nil {
 		bin = os.Args[0]
 	}
 	args := []string{filepath.Base(bin), path}
 	env := os.Environ()
-	// syscall.Exec replaces this process; if it returns, it failed.
-	if err := syscall.Exec(bin, args, env); err != nil {
+	// spawn.Exec replaces this process; if it returns, it failed.
+	if err := spawn.Exec(bin, args, env); err != nil {
 		var toastCmd tea.Cmd
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Exec failed", err.Error())
 		return toastCmd

@@ -8,10 +8,11 @@ import (
 	"image/png"
 	"math"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // DemoWorkspace copies the files git tracks in src (never untracked files:
@@ -92,7 +93,7 @@ func demoHistory(dir string) error {
 		if firstErr != nil {
 			return
 		}
-		cmd := exec.Command("git", args...)
+		cmd := spawn.Command("git", args...)
 		cmd.Dir = dir
 		cmd.Env = append(os.Environ(),
 			"GIT_AUTHOR_NAME=termocode", "GIT_AUTHOR_EMAIL=demo@example.com",
@@ -120,7 +121,7 @@ func demoHistory(dir string) error {
 
 // trackedFiles lists the files git tracks in src (relative paths).
 func trackedFiles(src string) ([]string, error) {
-	cmd := exec.Command("git", "ls-files", "-z")
+	cmd := spawn.Command("git", "ls-files", "-z")
 	cmd.Dir = src
 	out, err := cmd.Output()
 	if err != nil {

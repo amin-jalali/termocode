@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"os"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"golang.org/x/term"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // probeQuery is written to the terminal in one go: a kitty graphics query
@@ -46,7 +47,7 @@ func ProbeKittyKeyboard(in, out *os.File, timeout time.Duration, getenv func(str
 var tmuxPassthrough = func() bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "tmux", "show", "-gv", "allow-passthrough").Output()
+	out, err := spawn.CommandContext(ctx, "tmux", "show", "-gv", "allow-passthrough").Output()
 	if err != nil {
 		return false
 	}

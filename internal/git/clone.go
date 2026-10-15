@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // Clone support for the dashboard "Clone repository" card.
@@ -289,7 +290,7 @@ func Clone(opts CloneOptions) error {
 		}
 	}
 
-	cmd := exec.Command("git", "clone", "--progress", "--", url, opts.Dest)
+	cmd := spawn.Command("git", "clone", "--progress", "--", url, opts.Dest)
 	cmd.Env = cloneEnv(os.Environ(), askpass, opts.Username, opts.Token)
 	cmd.Stdin = nil
 	detachTTY(cmd)

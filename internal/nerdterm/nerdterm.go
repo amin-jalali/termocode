@@ -20,11 +20,12 @@ import (
 	"bufio"
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // Terminal names in Info.Terminal.
@@ -109,7 +110,7 @@ func (e Env) withDefaults() Env {
 }
 
 func runGsettings(ctx context.Context, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, "gsettings", args...)
+	cmd := spawn.CommandContext(ctx, "gsettings", args...)
 	cmd.WaitDelay = 50 * time.Millisecond
 	out, err := cmd.Output()
 	return string(out), err

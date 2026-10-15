@@ -17,6 +17,8 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // MatchRange marks one highlighted span inside a Result.Preview, using
@@ -336,7 +338,7 @@ func rgArgs(query string, opts Options) []string {
 // through parseStream so results reach onFile while rg is still running.
 // Paths stay relative to dir — search() decides whether to absolutise.
 func runRg(ctx context.Context, dir, query string, opts Options, onFile func([]Result)) error {
-	cmd := exec.CommandContext(ctx, "rg", rgArgs(query, opts)...)
+	cmd := spawn.CommandContext(ctx, "rg", rgArgs(query, opts)...)
 	cmd.Dir = dir
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr

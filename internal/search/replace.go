@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // FileCount is one file that contains a literal needle and how many times.
@@ -64,7 +66,7 @@ func CountLiteral(dirs []string, needle string) ([]FileCount, error) {
 // rgFilesWithMatches lists files under dir containing the literal needle,
 // as absolute paths.
 func rgFilesWithMatches(dir, needle string) ([]string, error) {
-	cmd := exec.Command("rg", "--files-with-matches", "--null", "--fixed-strings", "--case-sensitive", "--", needle)
+	cmd := spawn.Command("rg", "--files-with-matches", "--null", "--fixed-strings", "--case-sensitive", "--", needle)
 	cmd.Dir = dir
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
