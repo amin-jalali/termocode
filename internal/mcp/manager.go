@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"crypto/sha256"
+	"net/http"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -30,6 +31,7 @@ const (
 	StateRunning = "running"
 	StateFailed  = "failed"  // the last start failed (Problem says why); the next call tries again
 	StateInvalid = "invalid" // the entry can not run (Problem says why)
+	StateSignIn  = "sign-in needed"
 )
 
 // TrustAnswer is the user's answer to "start this server?".
@@ -75,6 +77,16 @@ type ManagerOptions struct {
 	// that differs asks again (ReasonToolsChanged). Both nil: no check.
 	TrustedTools     func(name string) string
 	SaveTrustedTools func(name, hash string)
+
+	// Tokens keeps OAuth sign-ins (CredStore in production); nil: remote
+	// servers can only use static headers.
+	Tokens TokenStore
+	// HTTP is the client for remote servers and OAuth (nil: default).
+	HTTP *http.Client
+	// OAuthPort is mcp_oauth_port (0: a free port per sign-in).
+	OAuthPort func() int
+	// CIMDURL is termocode's OAuth client metadata document.
+	CIMDURL string
 }
 
 // Status is one row of the servers list.
@@ -86,6 +98,7 @@ type Status struct {
 	Tools              int  // known tools (live or cached)
 	Cached             bool // tool list from the disk cache, server not asked yet
 	Trusted            bool
+	SignedIn           bool // an OAuth sign-in is stored (remote servers)
 	// ToolsChanged: the tools differ from the list the user trusted and
 	// the user did not accept the new list (its tools all ask first).
 	ToolsChanged bool
@@ -119,6 +132,8 @@ type serverState struct {
 	toolsHash string // ToolsHash of tools
 	toolsOK   string // tools hash accepted for this session
 	toolsNo   string // tools hash the user did not accept (asked once)
+	authMeta  string // resource_metadata URL of the last 401
+	authScope string // scope of the last 401
 }
 
 // Manager is the set of configured servers.
@@ -167,8 +182,6 @@ func (m *Manager) Reload() []string {
 		st := &serverState{cfg: s, state: StateStopped}
 		if s.Problem != "" {
 			st.state, st.problem = StateInvalid, s.Problem
-		} else if s.Type != TypeStdio {
-			st.state, st.problem = StateInvalid, "remote ("+s.Type+") servers are not supported yet"
 		}
 		next[s.Name] = st
 	}
@@ -220,6 +233,9 @@ func (m *Manager) Servers() []Status {
 		s := Status{Name: st.cfg.Name, Type: st.cfg.Type, Source: st.cfg.Source, State: st.state,
 			Problem: st.problem, Tools: len(st.tools), Cached: st.cached, Trusted: m.trustedLocked(st),
 			ToolsChanged: m.toolsChangedLocked(st) && st.toolsOK != st.toolsHash, server: st.cfg}
+		if st.cfg.Type == TypeHTTP && m.opts.Tokens != nil {
+			_, s.SignedIn = m.opts.Tokens.Load(st.cfg.Name)
+		}
 		if st.proc != nil {
 			s.Pid = st.proc.Pid()
 		}
@@ -315,7 +331,7 @@ func (m *Manager) ensure(ctx context.Context, st *serverState, ask AskTrust) (*P
 		return nil, err
 	}
 	name := cfg.Name
-	p, err := StartStdio(ctx, exp, Options{
+	opts := Options{
 		Roots: m.opts.Roots,
 		Log:   func(line string) { m.log(name, "%s", line) },
 		ToolsChanged: func() {
@@ -323,9 +339,17 @@ func (m *Manager) ensure(ctx context.Context, st *serverState, ask AskTrust) (*P
 			st.haveTools = false // listed again on the next turn
 			m.mu.Unlock()
 		},
-	})
+	}
+	var p *Process
+	if cfg.Type == TypeHTTP {
+		p, err = m.startHTTP(ctx, st, exp, opts)
+	} else {
+		p, err = StartStdio(ctx, exp, opts)
+	}
 	if err != nil {
-		m.setFailed(st, err)
+		if !errors.Is(err, ErrSignInNeeded) {
+			m.setFailed(st, err)
+		}
 		return nil, err
 	}
 	info := p.Client.ServerInfo()
@@ -591,7 +615,7 @@ func (m *Manager) Tools(ctx context.Context, ask AskTrust) []ServerTools {
 	m.mu.Lock()
 	var names []string
 	for name, st := range m.servers {
-		if st.state != StateInvalid {
+		if st.state != StateInvalid && st.state != StateSignIn { // no 401 round trip per turn
 			names = append(names, name)
 		}
 	}
@@ -687,6 +711,19 @@ func (m *Manager) Call(ctx context.Context, ask AskTrust, server, tool string, a
 		timeout = time.Duration(t) * time.Second
 	}
 	res, err := p.Client.CallToolTimeout(ctx, tool, args, timeout)
+	if errors.Is(err, ErrSessionExpired) {
+		// The remote server forgot the session: connect again, once.
+		m.log(server, "session ended by the server: connecting again")
+		m.mu.Lock()
+		if st.proc == p {
+			st.proc, st.state = nil, StateStopped
+		}
+		m.mu.Unlock()
+		if p, err = m.ensure(ctx, st, ask); err != nil {
+			return CallResult{}, err
+		}
+		res, err = p.Client.CallToolTimeout(ctx, tool, args, timeout)
+	}
 	m.armIdle(st)
 	if errors.Is(err, ErrCallTimeout) {
 		m.log(server, "%s: no answer in %v", tool, timeout)
