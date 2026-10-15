@@ -129,10 +129,11 @@ func (m *Model) aiMCPTurn(gen uint64, ch chan tea.Msg) func(ctx context.Context)
 	return func(ctx context.Context) []ai.Tool {
 		mgr.Reload()
 		var out []ai.Tool
+		call := mcp.TurnCaller(mgr.Caller(ask)) // two failures: the server is out for this turn
 		for _, st := range mgr.Tools(ctx, ask) {
 			o := opts
 			o.ToolsChanged = st.ToolsChanged
-			out = append(out, mcp.AITools(st.Server, st.Tools, mgr.Caller(ask), o)...)
+			out = append(out, mcp.AITools(st.Server, st.Tools, call, o)...)
 		}
 		return out
 	}
