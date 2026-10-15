@@ -157,6 +157,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	case picker.CloseMsg:
 		m.pickerOpen = false
 		m.endThemePreview(false)
+		if m.pickerKind == pickerKindTheme {
+			_ = m.onSetupThemePicked(false)
+		}
 		return m, m.extOverlayClosed() // Group I: nil unless an extension pick
 	case recents.SelectMsg:
 		// Recents modal selection: close the overlay, open the file via
@@ -1982,6 +1985,7 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 	case pickerKindTheme:
 		m.endThemePreview(true)
 		m.applyTheme(msg.ID)
+		return m.onSetupThemePicked(true)
 	case pickerKindSettingChoice:
 		m.settingPromptID = m.settingChoiceRow
 		return m.applySettingValue(msg.ID)

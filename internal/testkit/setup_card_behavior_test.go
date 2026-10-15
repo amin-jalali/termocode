@@ -417,6 +417,34 @@ func TestSetupCardGnomeProfilePreviewThenConfirm(t *testing.T) {
 	}
 }
 
+// The Theme row opens the theme picker (every theme, live preview); a
+// pick there answers the step, Esc does not.
+func TestSetupCardThemeRowOpensThemePicker(t *testing.T) {
+	d, _ := setupDriver(t, fakeUbuntuMono)
+	clickText(d, "Change")
+	if !d.WaitForText("Color Theme", time.Second) {
+		t.Fatalf("Change… did not open the theme picker:\n%s", screen(d))
+	}
+	d.Key("esc")
+	if settled, _ := readConfig(t)["setup_settled"].([]any); len(settled) != 0 {
+		t.Fatalf("Esc settled the theme step: %v", settled)
+	}
+	clickText(d, "Change")
+	if !d.WaitForText("Color Theme", time.Second) {
+		t.Fatalf("theme picker did not open again:\n%s", screen(d))
+	}
+	d.Key("enter")
+	if !d.WaitFor(func() bool {
+		settled, _ := readConfig(t)["setup_settled"].([]any)
+		return len(settled) == 1 && settled[0] == "theme"
+	}, time.Second) {
+		t.Fatalf("a theme pick did not settle the step: %v\n%s", readConfig(t)["setup_settled"], screen(d))
+	}
+	if strings.Contains(screen(d), "Change") {
+		t.Errorf("theme step still offers Change… after the pick:\n%s", screen(d))
+	}
+}
+
 // lineWith is the first screen line containing s.
 func lineWith(scr, s string) string {
 	for _, l := range strings.Split(scr, "\n") {

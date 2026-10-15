@@ -83,6 +83,9 @@ func goldenExtras() []Scene {
 		{Name: "icons-ascii", Icons: "ascii", Steps: EditorSteps()},
 		MarkdownPreview(),
 		setupCardScene(),
+		// The AI step's chooser (↓ past START to the AI row, Enter).
+		{Name: "setup-card-ai-chooser", SetupCard: true, Env: setupCardScene().Env,
+			Steps: append(setupCardScene().Steps, Key("down"), Key("down"), Key("down"), Key("down"), Key("down"), Key("down"), Key("enter"), Pause(400*time.Millisecond))},
 		// The start page: a returning user, the light theme, ASCII icons.
 		DashboardRecent(),
 		// The cursor moved down onto the second recent file.
