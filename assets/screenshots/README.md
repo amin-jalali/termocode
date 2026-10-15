@@ -33,15 +33,20 @@ go run ./internal/devtools/shots -font … -only dashboard,palette   # some scen
 | `theme-*.png` | each new theme (`-dashboard` = start page in Catppuccin Latte) |
 | `icons-unicode.png` | the Unicode icon set (no Nerd Font) |
 
-## Animated: `demo.tape` (vhs)
+## Animated: `demo.gif`
 
-[`demo.tape`](demo.tape) is a [vhs](https://github.com/charmbracelet/vhs) script
-for an animated `demo.gif` (not committed yet):
+`demo.gif` is the README demo. The shots tool records it from
+`shotkit.DemoScene` (no vhs, ttyd or ffmpeg needed):
 
 ```sh
-go build -o termocode ./cmd/termocode
-vhs assets/screenshots/demo.tape
+go run ./internal/devtools/shots -font ~/fonts/JetBrainsMonoNerdFont-Regular.ttf \
+  -w 120 -h 34 -out assets/screenshots -gif demo.gif
 ```
+
+Each step's `Hold` sets how long its frame shows. Frames after the first
+store only the part of the screen that changed.
+[`demo.tape`](demo.tape) is an older vhs script for a recording of the real
+binary.
 
 ## Rules
 
