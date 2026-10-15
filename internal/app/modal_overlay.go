@@ -49,7 +49,9 @@ type ModalOpts struct {
 	SlideX int // columns the card travels while animating (toasts)
 }
 
-const defaultOutsideDim = 0.62
+// defaultOutsideDim keeps the page readable under a card (≥ 3:1 text,
+// see modal_soft_test.go); stronger dims made the page look switched off.
+const defaultOutsideDim = 0.72
 
 // modalOverlay centres box over base and composites it (see above).
 func modalOverlay(base, box string, screenW, screenH int, opts *ModalOpts) string {
@@ -217,9 +219,11 @@ func fadeRow(row string, under []cellData, leftCol int, p float64) string {
 
 // paintShadow darkens the L-shaped strip right of and below the card.
 func paintShadow(lines []string, leftCol, topRow, boxW, boxH int, p float64) {
-	strength := 0.7 * p
+	// A soft step, not a black bar: the shadow keeps over half of the
+	// brightness under it (modal_soft_test.go).
+	strength := 0.4 * p
 	if theme.IsLight() {
-		strength = 0.35 * p
+		strength = 0.2 * p
 	}
 	shadow := theme.ToRGB(theme.Shadow)
 	shade := func(row, from, to int) {
