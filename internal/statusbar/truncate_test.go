@@ -5,8 +5,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/charmbracelet/x/ansi"
-
-	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // truncate used to cut by bytes, so a narrow window split "◆" (3 bytes) and
@@ -27,7 +25,7 @@ func TestTruncateKeepsGlyphsWhole(t *testing.T) {
 }
 
 func TestNarrowStatusBarIsValidUTF8(t *testing.T) {
-	m := New(theme.Theme{})
+	m := New()
 	s := State{Path: "/a/界.go", Project: "◆ 界界 proj", Lang: "Go", Line: 1, Col: 1, Branch: "feature/⎇-界"}
 	for w := 4; w <= 60; w++ {
 		m.SetWidth(w)

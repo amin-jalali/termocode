@@ -3,12 +3,10 @@ package statusbar
 import (
 	"strings"
 	"testing"
-
-	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 func TestLSPChipRendersClientsOrNone(t *testing.T) {
-	m := New(theme.Theme{})
+	m := New()
 	m.SetWidth(120)
 	got := stripCSI(m.View(State{Path: "/a.go", Lang: "Go", ShowLSP: true, LSP: []string{"gopls"}}))
 	if !strings.Contains(got, "{} gopls") {
@@ -25,7 +23,7 @@ func TestLSPChipRendersClientsOrNone(t *testing.T) {
 }
 
 func TestLSPChipSpanMatchesRenderedText(t *testing.T) {
-	m := New(theme.Theme{})
+	m := New()
 	m.SetWidth(120)
 	s := State{Path: "/a.go", Project: "proj", Lang: "Go", Line: 1, Col: 1,
 		Branch: "main", Term: true, ShowLSP: true, LSP: []string{"gopls"}}

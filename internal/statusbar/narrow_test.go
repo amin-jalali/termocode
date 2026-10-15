@@ -6,8 +6,6 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
-
-	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 func fullState() State {
@@ -27,7 +25,7 @@ func fullState() State {
 // whole, and no item is cut with "…" (a tiny bar may shorten the
 // project name).
 func TestNarrowBarKeepsCursorPillWhole(t *testing.T) {
-	m := New(theme.Theme{})
+	m := New()
 	s := fullState()
 	pos := "Ln 123, Col 45"
 	for w := 30; w <= 160; w++ {
@@ -51,7 +49,7 @@ func TestNarrowBarKeepsCursorPillWhole(t *testing.T) {
 // Then the AI chip goes first, then LSP, encoding, indent, while the
 // language and the branch stay.
 func TestNarrowBarDropOrder(t *testing.T) {
-	m := New(theme.Theme{})
+	m := New()
 	s := fullState()
 	m.SetWidth(80)
 	out := ansi.Strip(m.View(s))

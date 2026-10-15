@@ -21,7 +21,7 @@ func TestProjectPillTintFollowsState(t *testing.T) {
 	old := lipgloss.ColorProfile()
 	lipgloss.SetColorProfile(termenv.TrueColor)
 	defer lipgloss.SetColorProfile(old)
-	m := New(theme.Theme{})
+	m := New()
 	base := State{Project: "proj", Path: "/p/a.go", Line: 1, Col: 1}
 	cases := []struct {
 		name string
@@ -55,7 +55,7 @@ func TestProjectPillTintFollowsState(t *testing.T) {
 // shell and its folder instead of editor facts (indent, encoding,
 // language, cursor), and there is no separate "● TERM" item any more.
 func TestStatusRightWhenTerminalFocused(t *testing.T) {
-	m := New(theme.Theme{})
+	m := New()
 	s := State{Project: "p", Path: "/p/a.go", Line: 3, Col: 4, Indent: "Spaces: 4", Lang: "Go", Term: true,
 		TermFocused: true, TermLabel: "zsh · ~/proj"}
 	out := ansi.Strip(m.renderRight(s))

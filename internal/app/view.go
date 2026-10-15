@@ -2194,18 +2194,6 @@ func padBgToWidth(s string, w int) string {
 	return s
 }
 
-// buildSeparator is no longer used — boundaries are now expressed via
-// background-color transitions. Kept here so callers from older revisions
-// still compile if they reference it.
-func buildSeparator(h int, t theme.Theme) string {
-	_ = t
-	var lines []string
-	for i := 0; i < h; i++ {
-		lines = append(lines, "")
-	}
-	return strings.Join(lines, "\n")
-}
-
 func (m Model) statusState() statusbar.State {
 	lang := m.editor.Lang()
 	if lang != "" {

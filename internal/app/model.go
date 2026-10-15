@@ -109,9 +109,6 @@ type Model struct {
 	replace  replacebar.Model
 	search   search.Model
 	toast    toast.Model
-	// theme is the active theme's styles. A pointer: theme.Theme is
-	// ~7 KB and the Model is copied (and boxed) on every message.
-	theme   *theme.Theme
 	themeID string // active theme id (drives the nvim colourscheme)
 	// Color Theme picker live preview: the theme to restore on Esc.
 	themePreviewFrom string
@@ -658,7 +655,6 @@ func New() Model {
 	// or corrupt config falls back to VSCode Dark+ silently — see
 	// theme.LoadAndApply for the precise rules.
 	named := theme.LoadAndApply()
-	t := named.Styles
 
 	// Layer the user's keymap overrides on top of the defaults. Missing /
 	// corrupt files yield an empty map so startup is uninterruptible by a
@@ -720,9 +716,8 @@ func New() Model {
 		explorer:         explorer.New(),
 		tabs:             tabbar.New(),
 		toast:            toast.New(),
-		status:           statusbar.New(t),
+		status:           statusbar.New(),
 		lspMgr:           newLSPInstallState(),
-		theme:            &t,
 		themeID:          named.ID,
 		keys:             keys,
 		keymapProblems:   keymapProblems,
