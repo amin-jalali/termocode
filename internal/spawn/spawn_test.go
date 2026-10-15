@@ -3,6 +3,7 @@ package spawn
 import (
 	"os/exec"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -88,5 +89,30 @@ func TestNotAndroidLeavesCommandsAlone(t *testing.T) {
 	cmd := Command("sh", "-c", "true")
 	if cmd.Args[0] != "sh" || len(cmd.Args) != 3 {
 		t.Fatalf("args changed: %q", cmd.Args)
+	}
+}
+
+// On Play Store Termux, termux-exec starts a Go program through the
+// system linker and the program sees its own path twice in os.Args
+// (checked on the tablet: [tc, tc, --version]); flags were never seen.
+func TestLinkerArgs(t *testing.T) {
+	const self = "/data/data/com.termux/files/home/tc"
+	cases := []struct {
+		args         []string
+		exe, selfExe string
+		want         []string
+	}{
+		{[]string{self, self, "--version"}, "/apex/com.android.runtime/bin/linker64", self, []string{self, "--version"}},
+		{[]string{self, self}, "/system/bin/linker64", self, []string{self}},
+		// Not started through the linker: leave it.
+		{[]string{self, self, "x"}, self, "", []string{self, self, "x"}},
+		// Through the linker, but the first argument is not the program.
+		{[]string{self, "--version"}, "/system/bin/linker64", self, []string{self, "--version"}},
+	}
+	for _, c := range cases {
+		got := linkerArgs(c.args, c.exe, c.selfExe)
+		if strings.Join(got, "|") != strings.Join(c.want, "|") {
+			t.Errorf("linkerArgs(%q, %q) = %q, want %q", c.args, c.exe, got, c.want)
+		}
 	}
 }
