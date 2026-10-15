@@ -5,6 +5,7 @@
 package shotkit
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -20,6 +21,7 @@ import (
 	"github.com/muesli/termenv"
 
 	"github.com/amin-jalali/termocode/internal/app"
+	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -47,6 +49,32 @@ type Scene struct {
 	Steps []Step
 	// SetupCard shows the first-run setup card (a fresh config).
 	SetupCard bool
+	// Recents are files (relative to the working directory) written to
+	// recents.json, newest first; Workspaces likewise ("." = the working
+	// directory) to workspaces.json. The start page lists them.
+	Recents, Workspaces []string
+}
+
+// demoAges are how long ago the seeded recents / workspaces were opened.
+var demoAges = []time.Duration{2 * time.Hour, 3 * time.Hour, 5 * time.Hour, 26 * time.Hour, 9 * 24 * time.Hour}
+
+// writeOpened writes paths (relative to the working directory) as a
+// recents / workspaces list with opened_at times from demoAges.
+func writeOpened(file string, rel []string) {
+	if len(rel) == 0 {
+		return
+	}
+	wd, _ := os.Getwd()
+	type entry struct {
+		Path     string    `json:"path"`
+		OpenedAt time.Time `json:"opened_at"`
+	}
+	var es []entry
+	for i, r := range rel {
+		es = append(es, entry{filepath.Clean(filepath.Join(wd, r)), clock.Now().Add(-demoAges[min(i, len(demoAges)-1)])})
+	}
+	b, _ := json.Marshal(es)
+	_ = os.WriteFile(file, b, 0o644)
 }
 
 // Act sends app.DevActionMsg{ID: id} (see internal/app/devhooks.go).
@@ -156,6 +184,8 @@ func Run(sc Scene, w, h int, opt Options) (string, error) {
 	// is about the card.
 	conf := fmt.Sprintf(`{"theme": %q, "icons": %q, "animations": "off", "images": "blocks", "setup_done": %v}`, th, icons, !sc.SetupCard)
 	_ = os.WriteFile(filepath.Join(cfg, "termocode", "config.json"), []byte(conf), 0o644)
+	writeOpened(filepath.Join(cfg, "termocode", "recents.json"), sc.Recents)
+	writeOpened(filepath.Join(cfg, "termocode", "workspaces.json"), sc.Workspaces)
 	os.Setenv("XDG_CONFIG_HOME", cfg)
 	if home, err := os.UserHomeDir(); err == nil && os.Getenv("TERMOCODE_PLUGINS_DIR") == "" {
 		if p := filepath.Join(home, ".local", "share", "termocode", "plugins"); dirExists(p) {
