@@ -67,6 +67,9 @@ type Caps struct {
 	InTmux      bool
 	Passthrough bool   // tmux allow-passthrough is on
 	Reason      string // short human text for the Doctor
+	// KittyKeys: the terminal answered the kitty keyboard query (CSI ? u),
+	// so termocode may turn the protocol on (ctrl+shift+o, ctrl+. …).
+	KittyKeys bool
 }
 
 // CellSize returns the cell size in pixels, with a sane default when the

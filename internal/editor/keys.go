@@ -13,6 +13,9 @@ import (
 // Where possible, common VSCode-style shortcuts are mapped to their nvim
 // equivalents (e.g. Ctrl+Z → undo from insert mode).
 func translateKey(k tea.KeyMsg) string {
+	if k.Type == tea.KeyExtended {
+		return extendedKeyToNvim(k.Name)
+	}
 	if k.Alt {
 		switch k.Type {
 		case tea.KeyUp:
@@ -215,4 +218,51 @@ func escapeRunes(s string) string {
 		}
 	}
 	return b.String()
+}
+
+// extendedKeyToNvim turns a kitty-protocol key name ("ctrl+shift+o",
+// "shift+enter", "ctrl+.") into nvim key notation ("<C-S-o>", "<S-CR>",
+// "<C-.>").
+func extendedKeyToNvim(name string) string {
+	var mods strings.Builder
+	key := name
+	for {
+		switch {
+		case strings.HasPrefix(key, "ctrl+") && len(key) > len("ctrl+"):
+			mods.WriteString("C-")
+			key = key[len("ctrl+"):]
+			continue
+		case strings.HasPrefix(key, "alt+") && len(key) > len("alt+"):
+			mods.WriteString("M-")
+			key = key[len("alt+"):]
+			continue
+		case strings.HasPrefix(key, "shift+") && len(key) > len("shift+"):
+			mods.WriteString("S-")
+			key = key[len("shift+"):]
+			continue
+		}
+		break
+	}
+	switch key {
+	case "enter":
+		key = "CR"
+	case "tab":
+		key = "Tab"
+	case "esc":
+		key = "Esc"
+	case "backspace":
+		key = "BS"
+	case "space":
+		key = "Space"
+	case "<":
+		key = "lt"
+	case "\\":
+		key = "Bslash"
+	case "|":
+		key = "Bar"
+	}
+	if key == "" {
+		return ""
+	}
+	return "<" + mods.String() + key + ">"
 }

@@ -250,3 +250,12 @@ func WithReportFocus() ProgramOption {
 		p.startupOptions |= withReportFocus
 	}
 }
+
+// WithKittyKeyboard turns on the kitty keyboard protocol with flags (1 =
+// disambiguate escape codes) while the program is in the alt screen. Use
+// it only when the terminal answered the CSI ? u query. termocode patch.
+func WithKittyKeyboard(flags int) ProgramOption {
+	return func(p *Program) {
+		p.kittyFlags = flags
+	}
+}

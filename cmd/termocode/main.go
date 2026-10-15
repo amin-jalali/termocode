@@ -127,7 +127,9 @@ func init() {
 // probeTerminal resolves the display settings (icons, animations, images)
 // against what the terminal can do. The probes write queries and read the
 // replies in raw mode, so this must run before Bubble Tea owns the TTY.
-func probeTerminal() {
+// It reports whether the terminal can take the kitty keyboard protocol
+// (see kittyKeyboardOption).
+func probeTerminal() (kittyKeys bool) {
 	disp := app.ConfigDisplay()
 	envIcons := os.Getenv("TERMOCODE_ICON_MODE") != "" || os.Getenv("TERMOCODE_NERD_FONT") == "1"
 	nerd := false
@@ -144,11 +146,32 @@ func probeTerminal() {
 	caps := termimg.Caps{Protocol: termimg.Blocks}
 	switch termimg.ParseMode(disp.Images) {
 	case termimg.ModeOff, termimg.ModeBlocks:
+		if keysWanted(os.Getenv) {
+			caps.KittyKeys = termimg.ProbeKittyKeyboard(os.Stdin, os.Stdout, 250*time.Millisecond, os.Getenv)
+		}
 	default:
 		caps = termimg.Probe(os.Stdin, os.Stdout, 250*time.Millisecond, os.Getenv)
 	}
 	app.SetTerminalCaps(caps, unicodeOK, nerd)
 	app.ApplyDisplaySettings(disp)
+	return caps.KittyKeys && keysWanted(os.Getenv)
+}
+
+// keysWanted: TERMOCODE_KEYS=legacy keeps the kitty keyboard protocol off.
+func keysWanted(getenv func(string) string) bool {
+	return getenv("TERMOCODE_KEYS") != "legacy"
+}
+
+// kittyKeyboardOption turns on the kitty keyboard protocol ("disambiguate"
+// flag) when the terminal answered the query. Then keys that legacy
+// terminals cannot send reach termocode: Ctrl+Shift+O, Ctrl+., Ctrl+Tab,
+// Shift+Enter … (the patched Bubble Tea parses CSI u; third_party/
+// bubbletea/key_csiu.go). Flag 1 only: higher flags change every key.
+func kittyKeyboardOption(on bool) tea.ProgramOption {
+	if !on {
+		return func(*tea.Program) {}
+	}
+	return tea.WithKittyKeyboard(1)
 }
 
 func main() {
@@ -279,7 +302,7 @@ func runTUI() {
 	// CSI sequences and reads cursor-position reports; doing this after
 	// tea.NewProgram would race with Bubble Tea's own input reader.
 	// Honours TERMOCODE_ICON_MODE (manual override) and NO_COLOR.
-	probeTerminal()
+	kittyKeys := probeTerminal()
 
 	font := applyFontDelta(fontDelta())
 	hostEnter, hostLeave := hostEscapes(os.Getenv)
@@ -312,6 +335,7 @@ func runTUI() {
 	p := tea.NewProgram(
 		app.New(),
 		tea.WithAltScreen(),
+		kittyKeyboardOption(kittyKeys),
 		// Downloads with kitty read the terminal's answers: transfer.Input
 		// takes them out of the key stream while a download runs and
 		// passes every byte through otherwise (internal/transfer).

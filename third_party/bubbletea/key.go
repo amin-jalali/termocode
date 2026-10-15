@@ -56,6 +56,9 @@ type Key struct {
 	Runes []rune
 	Alt   bool
 	Paste bool
+	// Name is the key's full name ("ctrl+shift+o") when Type is
+	// KeyExtended. termocode patch (key_csiu.go).
+	Name string
 }
 
 // String returns a friendly string representation for a key. It's safe (and
@@ -65,6 +68,9 @@ type Key struct {
 //	fmt.Println(k)
 //	// Output: enter
 func (k Key) String() (str string) {
+	if k.Type == KeyExtended { // termocode patch: Name holds the modifiers too
+		return k.Name
+	}
 	var buf strings.Builder
 	if k.Alt {
 		buf.WriteString("alt+")
@@ -255,6 +261,11 @@ const (
 	KeyF18
 	KeyF19
 	KeyF20
+
+	// KeyExtended is a key combo that only the kitty keyboard protocol
+	// can report (ctrl+shift+o, ctrl+., ctrl+tab, shift+enter); Key.Name
+	// holds its name. termocode patch (key_csiu.go).
+	KeyExtended
 )
 
 // Mappings for control keys and other special keys to friendly consts.
@@ -639,6 +650,11 @@ func detectOneMsg(b []byte, canHaveMoreData bool) (w int, msg Msg) {
 	var foundbp bool
 	foundbp, w, msg = detectBracketedPaste(b)
 	if foundbp {
+		return w, msg
+	}
+
+	// termocode patch: kitty keyboard protocol keys (CSI … u).
+	if found, w, msg := detectCSIu(b); found {
 		return w, msg
 	}
 

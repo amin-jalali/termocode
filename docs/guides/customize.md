@@ -194,6 +194,17 @@ It uses fewer colours on its own for `TERM=linux`, `TERM=dumb` / `NO_COLOR`
 On 16 colours the dimmed background behind dialogs uses the terminal's
 "faint" style instead of colour blending.
 
+### Keys
+
+On terminals that support the kitty keyboard protocol (kitty, Ghostty,
+WezTerm, foot, Alacritty, iTerm2 3.5+, Windows Terminal 1.25+) termocode
+turns it on while it runs. Then shortcuts that older terminals cannot send
+work too: `Ctrl+Shift+O` (symbols), `Ctrl+Shift+M` (problems), `Ctrl+.`
+(code actions), `Ctrl+Tab`, `Shift+Enter`. termocode asks the terminal
+first and turns the protocol off again when it quits. Set
+`TERMOCODE_KEYS=legacy` to keep it off. On other terminals these actions
+are in the command palette (`F1` or `Alt+X`).
+
 ### What works where
 
 | Terminal | Colours | Images | Notes |

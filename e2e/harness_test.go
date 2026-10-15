@@ -97,6 +97,9 @@ type StartOpts struct {
 	// KittyGraphics makes the terminal answer the kitty graphics query
 	// (a=q) with OK before DA1, as kitty, Ghostty and WezTerm do.
 	KittyGraphics bool
+	// KittyKeys makes the terminal answer the kitty keyboard query
+	// (CSI ? u) before DA1, as kitty, Ghostty, foot, WezTerm do.
+	KittyKeys bool
 }
 
 // Start launches termocode in a fresh PTY with an isolated HOME.
@@ -186,6 +189,9 @@ func Start(t *testing.T, o StartOpts) *Term {
 				// comes ahead of its DA1 answer like a real kitty's.
 				if o.KittyGraphics && !o.Silent && bytes.Contains(buf[:n], []byte("\x1b_Gi=31,")) {
 					_, _ = ptmx.Write([]byte("\x1b_Gi=31;OK\x1b\\"))
+				}
+				if o.KittyKeys && !o.Silent && bytes.Contains(buf[:n], []byte("\x1b[?u")) {
+					_, _ = ptmx.Write([]byte("\x1b[?0u"))
 				}
 				tm.feed(buf[:n])
 			}
