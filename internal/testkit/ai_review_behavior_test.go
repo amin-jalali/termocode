@@ -63,10 +63,23 @@ func TestAIReviewWriteFileOnScreen(t *testing.T) {
 		t.Fatal("written before the review")
 	}
 	clickNth(d, " Accept ", 0) // change 1
-	if !d.WaitForText(" Accepted ", 2*time.Second) {
+	// Accepted: change 1 shows a ✓ mark and the buttons move to change 2
+	// (only the focused change has buttons).
+	if !d.WaitFor(func() bool {
+		var one, two string
+		for _, l := range strings.Split(screen(d), "\n") {
+			switch {
+			case strings.Contains(l, "Change 1 of 2 ·"):
+				one = l
+			case strings.Contains(l, "Change 2 of 2 ·"):
+				two = l
+			}
+		}
+		return one != "" && !strings.Contains(one, " Accept ") && strings.Contains(two, " Accept ")
+	}, 2*time.Second) {
 		t.Fatalf("change 1 not accepted:\n%s", screen(d))
 	}
-	clickNth(d, " Reject ", 0) // change 2 (change 1 now shows Accepted / Undo)
+	clickNth(d, " Reject ", 0) // change 2, the only change with buttons now
 	if !d.WaitForText("fake-done", 5*time.Second) {
 		t.Fatalf("the turn did not finish:\n%s", screen(d))
 	}
