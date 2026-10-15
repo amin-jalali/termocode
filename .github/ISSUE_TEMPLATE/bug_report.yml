@@ -1,0 +1,63 @@
+name: Bug report
+description: Something does not work as it should.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What did you do, what did you expect, and what did you see? A screenshot helps a lot.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a Go project with `termocode .`
+        2. Press F1 and run "…"
+        3. …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: termocode version
+      description: Output of `termocode --version`.
+    validations:
+      required: true
+  - type: input
+    id: nvim
+    attributes:
+      label: Neovim version
+      description: First line of `nvim --version`.
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: Ubuntu 24.04 / macOS 15 / Termux on Android 16
+    validations:
+      required: true
+  - type: input
+    id: terminal
+    attributes:
+      label: Terminal app
+      placeholder: GNOME Terminal 3.52 / kitty 0.39 / iTerm2 3.5 / Windows Terminal + WSL
+    validations:
+      required: true
+  - type: checkboxes
+    id: where
+    attributes:
+      label: Where does it run?
+      options:
+        - label: Over SSH
+        - label: Inside tmux / screen / zellij
+        - label: In Termux (Android)
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Doctor output
+      description: Output of `termocode setup`, or the result of **Help: Run Doctor** from the palette (F1).
+      render: text

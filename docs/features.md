@@ -78,7 +78,7 @@ its name and key.
 
 ## Make it yours
 
-- Four themes plus a custom theme editor. → [Customize](guides/customize.md)
+- Nine themes (dark and light) plus a custom theme editor. → [Customize](guides/customize.md)
 - A settings UI, key rebinding, your own snippets and commands.
 - First run: a **Set up termocode** card on the welcome screen sets icons (Nerd Font), AI and theme in a few clicks. → [First 5 minutes](getting-started/first-steps.md#first-run-the-setup-card)
 - Export / import your settings (secrets are left out).

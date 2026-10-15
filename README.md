@@ -3,7 +3,9 @@
 [![Docs](https://img.shields.io/badge/docs-amin--jalali.github.io%2Ftermocode-4051b5)](https://amin-jalali.github.io/termocode/)
 [![test](https://github.com/amin-jalali/termocode/actions/workflows/test.yml/badge.svg)](https://github.com/amin-jalali/termocode/actions/workflows/test.yml)
 
-A terminal IDE that feels like VSCode — built on Bubble Tea, powered by a real Neovim process under the hood.
+A terminal IDE that feels like VS Code — built on Bubble Tea, powered by a real Neovim process under the hood.
+
+**Status:** early release (v0.1.x). Linux, macOS and Android (Termux). No Windows build yet; use WSL.
 
 **Documentation: <https://amin-jalali.github.io/termocode/>**
 
@@ -49,6 +51,10 @@ One line, no sudo — it installs to `~/.local/bin`:
 curl -fsSL https://raw.githubusercontent.com/amin-jalali/termocode/main/scripts/install.sh | sh
 termocode            # opens the current folder
 ```
+
+On the first start termocode downloads three Neovim plugins from GitHub in the
+background (multi-cursor, debugger, bracket colours). Until they arrive those
+features are off; everything else works offline.
 
 Run the same line again to upgrade. Uninstall with `... | sh -s -- --uninstall`.
 You can also download a tarball from [Releases](https://github.com/amin-jalali/termocode/releases),
