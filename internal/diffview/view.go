@@ -2,6 +2,7 @@ package diffview
 
 import (
 	"fmt"
+	"path"
 	"strconv"
 	"strings"
 
@@ -53,8 +54,18 @@ func (m Model) geom() geom {
 		g.h = max(m.h, 6)
 	}
 	g.x, g.y = (m.w-g.w)/2, (m.h-g.h)/2
+	if m.bw > 0 && m.bh > 0 {
+		g.x, g.y, g.w, g.h = m.bx, m.by, m.bw, m.bh
+	}
 	g.iw, g.ih = g.w-2, g.h-2
-	if len(m.files) > 1 {
+	switch {
+	case m.header != nil && len(m.files) > 1 && g.iw >= 90:
+		longest := 0
+		for _, f := range m.files {
+			longest = max(longest, runewidth.StringWidth(path.Base(f.Name)))
+		}
+		g.listW = min(max(longest+16, 26), g.iw/4) + 1
+	case m.header == nil && len(m.files) > 1:
 		longest := 0
 		for _, f := range m.files {
 			longest = max(longest, runewidth.StringWidth(f.Name))
@@ -63,8 +74,9 @@ func (m Model) geom() geom {
 	}
 	g.diffX = g.listW
 	g.diffW = g.iw - g.listW - 1
-	g.bodyTop = 3
-	g.bodyH = max(g.ih-6, 1)
+	hr := m.headerRows(g.h, g.iw)
+	g.bodyTop = 3 + hr
+	g.bodyH = max(g.ih-6-hr, 1)
 	switch m.mode {
 	case ModeSplit:
 		g.split = true
@@ -130,6 +142,14 @@ func (m Model) vrows(g geom) []vrow {
 }
 
 func buildRows(f *fileState, split bool) []vrow {
+	switch {
+	case f.Pending:
+		return []vrow{{kind: vNote, n: 2, hunk: -1}}
+	case f.Binary:
+		return []vrow{{kind: vNote, n: 3, hunk: -1}}
+	case f.Note != "":
+		return []vrow{{kind: vNote, n: 4, hunk: -1}}
+	}
 	d := f.diff
 	if !d.HasChanges() {
 		if d.EOLOnly() {
@@ -397,7 +417,43 @@ func (m Model) layout(draw bool) layoutOut {
 	}
 
 	// Row 0: title · file · tag, then change nav and the view switch.
-	{
+	if m.header != nil {
+		l, r := m.commitTitle(g, f, p, ic)
+		for _, h := range l.hits {
+			addHit(h.x0, h.x1-h.x0, 0, h.id)
+		}
+		rx := g.iw - r.width()
+		for _, h := range r.hits {
+			addHit(rx+h.x0, h.x1-h.x0, 0, h.id)
+		}
+		if draw {
+			inner = append(inner, joinLR(l.segs, r.segs, g.iw, bg))
+		}
+		// The commit: subject, body, meta.
+		rows := [][2]rowB{}
+		l, r = m.commitSubject(g, p, ic)
+		rows = append(rows, [2]rowB{l, r})
+		for _, line := range m.shownBody(g.h, g.iw) {
+			var b rowB
+			b.add(" "+line, bg.Foreground(p.muted), "")
+			rows = append(rows, [2]rowB{b, {}})
+		}
+		l, r = m.commitMeta(g, p)
+		rows = append(rows, [2]rowB{l, r})
+		for i, lr := range rows {
+			y := 1 + i
+			for _, h := range lr[0].hits {
+				addHit(h.x0, h.x1-h.x0, y, h.id)
+			}
+			rx := g.iw - lr[1].width()
+			for _, h := range lr[1].hits {
+				addHit(rx+h.x0, h.x1-h.x0, y, h.id)
+			}
+			if draw {
+				inner = append(inner, joinLR(lr[0].segs, lr[1].segs, g.iw, bg))
+			}
+		}
+	} else {
 		left := []seg{
 			{" " + ic.spark + " ", lipgloss.NewStyle().Background(p.bg).Foreground(p.accent).Bold(true)},
 			{m.title, lipgloss.NewStyle().Background(p.bg).Foreground(p.white).Bold(true)},
@@ -449,6 +505,9 @@ func (m Model) layout(draw bool) layoutOut {
 		if !m.review {
 			oldC, newC = chip("− Old", p.del, p.delBg), chip("+ New", p.add, p.addBg)
 		}
+		if h := m.header; h != nil && h.OldLabel != "" {
+			oldC, newC = chip(h.OldLabel, p.del, p.delBg), chip(h.NewLabel, p.add, p.addBg)
+		}
 		var left []seg
 		left = append(left, seg{strings.Repeat(" ", g.diffX+1), bg})
 		left = append(left, oldC...)
@@ -471,6 +530,9 @@ func (m Model) layout(draw bool) layoutOut {
 			{" ", bg},
 			{fmt.Sprintf("−%d", f.diff.Removed), bg.Foreground(p.del).Bold(true)},
 			{fmt.Sprintf(" · %d %s ", n, word), bg.Foreground(p.dim)},
+		}
+		if m.header != nil && (f.Pending || f.Binary || f.Note != "") {
+			right = nil
 		}
 		if segsWidth(left)+segsWidth(right)+1 > g.iw {
 			right = nil
@@ -574,6 +636,13 @@ func (m Model) layout(draw bool) layoutOut {
 					ids = append(ids, b.id)
 				}
 			}
+		} else if m.header != nil {
+			left = []seg{{m.commitFooterLeft(f, m.footerLeftW(g)), bg.Foreground(p.muted)}}
+			shown, _ := m.footerButtons(g.iw - m.footerLeftW(g) - 1)
+			for _, b := range shown {
+				right = append(right, seg{" " + b.Label + " ", buttonStyle(p, b.Kind)}, seg{" ", bg})
+				ids = append(ids, b.ID)
+			}
 		} else {
 			left = []seg{{" " + f.Name, bg.Foreground(p.muted)}}
 			right = []seg{{" Close ", buttonStyle(p, "")}, {" ", bg}}
@@ -597,12 +666,15 @@ func (m Model) layout(draw bool) layoutOut {
 	}
 	if draw {
 		var hints string
-		if m.review {
+		if m.header != nil {
+			hints = theme.HintBar(p.bg, "n/p", "change", "tab", "file", "t", "split/unified", "o", "open",
+				"O", "at commit", "y", "copy SHA", "r", "raw", "esc", "close")
+		} else if m.review {
 			hints = theme.HintBar(p.bg, "a/r", "change", "A/R", "file", "n/p", "next/prev", "enter", "apply", "e", "edit", "esc", "hide")
 		} else {
 			hints = theme.HintBar(p.bg, "n/p", "next/prev change", "t", "split/unified", "z", "unfold", "←→", "scroll", "esc", "close")
 		}
-		if len(m.files) > 1 {
+		if len(m.files) > 1 && m.header == nil {
 			hints = theme.HintBar(p.bg, "tab", "next file") + bg.Render("   ") + hints
 		}
 		inner = append(inner, padStyled(bg.Render(" ")+hints, g.iw, bg))
@@ -665,6 +737,12 @@ func (m Model) fileList(g geom, p pal, ic glyphs) []listItem {
 	bg := lipgloss.NewStyle().Background(p.bg)
 	w := g.listW - 1
 	out := []listItem{{text: []seg{{fmt.Sprintf(" FILES  %d", len(m.files)), bg.Foreground(p.dim).Bold(true)}}, title: true}}
+	if m.header != nil {
+		for i, f := range m.files {
+			out = append(out, commitListItem(i, f, i == m.cur, w, p))
+		}
+		return out
+	}
 	for i, f := range m.files {
 		glyph, gc := ic.pend, p.accent
 		if !m.review {
@@ -743,8 +821,17 @@ func (m Model) renderRow(row vrow, g geom, f *fileState, p pal, ic glyphs) strin
 	switch row.kind {
 	case vNote:
 		msg := "No changes: the proposed text is the same as the current text."
-		if row.n == 1 {
+		switch {
+		case row.n == 1:
 			msg = "Only the final newline differs."
+		case row.n == 2:
+			msg = "Loading…"
+		case row.n == 3:
+			msg = "Binary file: not shown here · r raw"
+		case row.n == 4:
+			msg = f.Note
+		case m.header != nil:
+			msg = "No text changes in this file."
 		}
 		return paint([]seg{{"   " + msg, bg.Foreground(p.dim).Italic(true)}}, 0, g.diffW, bg)
 	case vBand:
