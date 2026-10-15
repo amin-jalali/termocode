@@ -126,6 +126,9 @@ func TestSCMCompareTwoCommits(t *testing.T) {
 	if !until(d, func() bool { return strings.Contains(text(d), "Space on another commit") }) {
 		t.Fatalf("no hint after the first mark:%s", dump(d))
 	}
+	if !until(d, func() bool { return strings.Contains(sidebar(d)[mustRow(d, "after merge")], " 1 ") }) {
+		t.Errorf("the marked row shows no 1:%s", dump(d))
+	}
 	scmClickText(d, "add parser")
 	d.Key(" ")
 	a, b := r.git("rev-parse", "--short", "v1.0"), r.git("rev-parse", "--short", "HEAD")
@@ -135,6 +138,11 @@ func TestSCMCompareTwoCommits(t *testing.T) {
 	n := len(strings.Split(r.git("diff", "--name-only", "v1.0", "HEAD"), "\n"))
 	if !until(d, func() bool { return strings.Contains(text(d), fmt.Sprintf("%d files", n)) }) {
 		t.Errorf("compare does not count %d files:%s", n, dump(d))
+	}
+	for _, l := range sidebar(d) {
+		if strings.Contains(l, "add parser") && strings.Contains(l, " 2 ") || strings.Contains(l, "after merge") && strings.Contains(l, " 1 ") {
+			t.Errorf("a compare mark stays after the compare opened: %q", l)
+		}
 	}
 	if strings.Contains(text(d), " Raw ") || strings.Contains(text(d), "Revert…") {
 		t.Errorf("compare card offers commit-only actions:%s", dump(d))

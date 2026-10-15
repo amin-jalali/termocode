@@ -60,8 +60,7 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 			m.closeCommitView()
 			return m, nil, true
 		}
-		if m.commitView != nil && m.commitView.mark != "" {
-			m.commitView.mark = "" // drop the compare mark
+		if m.clearCompareMarks() { // drop the compare marks
 			return m, nil, true
 		}
 	case tea.KeySpace:
