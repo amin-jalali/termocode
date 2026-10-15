@@ -103,6 +103,16 @@ func TestDetectProfile(t *testing.T) {
 		{map[string]string{"NO_COLOR": "1"}, termenv.Ascii},
 		{map[string]string{"TERMOCODE_COLORS": "256"}, termenv.ANSI256},
 		{map[string]string{"TERMOCODE_COLORS": "16", "TERM": "xterm-kitty"}, termenv.ANSI},
+		// Terminal R11: macOS Terminal.app before macOS 26 and GNU screen
+		// before 5.0 have no 24-bit colour; they get 256 colours unless
+		// they say otherwise (COLORTERM) or the user overrides it.
+		{map[string]string{"TERM_PROGRAM": "Apple_Terminal", "TERM": "xterm-256color"}, termenv.ANSI256},
+		{map[string]string{"TERM_PROGRAM": "Apple_Terminal", "COLORTERM": "truecolor"}, termenv.TrueColor},
+		{map[string]string{"STY": "123.pts-0", "TERM": "screen-256color"}, termenv.ANSI256},
+		{map[string]string{"STY": "123.pts-0", "COLORTERM": "truecolor"}, termenv.TrueColor},
+		// tmux converts 24-bit colour itself: stay truecolor.
+		{map[string]string{"TMUX": "/tmp/t,1,0", "TERM": "screen-256color"}, termenv.TrueColor},
+		{map[string]string{"TERM_PROGRAM": "Apple_Terminal", "TERMOCODE_COLORS": "truecolor"}, termenv.TrueColor},
 	}
 	for i, c := range cases {
 		if got := DetectProfile(envOf(c.env)); got != c.want {
