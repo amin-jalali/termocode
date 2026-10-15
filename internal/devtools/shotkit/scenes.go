@@ -45,6 +45,16 @@ var (
 func Dashboard() Scene {
 	return Scene{Name: "dashboard", Steps: []Step{Pause(1500 * time.Millisecond)}}
 }
+
+// DashboardRecent is the start page of a returning user: recent files and
+// two workspaces.
+func DashboardRecent() Scene {
+	return Scene{Name: "dashboard-recent", Steps: []Step{Pause(1500 * time.Millisecond)},
+		Recents: []string{"internal/statusbar/model.go", "internal/theme/palette.go", "internal/toast/model.go",
+			"docs/preview.md", "go.mod", "README.md", "internal/app/view.go"},
+		Workspaces: []string{".", "../play/httpd"}}
+}
+
 func Editor() Scene   { return Scene{Name: "editor", Steps: EditorSteps()} }
 func Palette() Scene  { return Scene{Name: "palette", Steps: paletteSteps()} }
 func Toast() Scene    { return Scene{Name: "toast", Steps: toastSteps()} }

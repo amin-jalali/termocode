@@ -202,3 +202,19 @@ func TestWelcomeOpenShellClickWithAIPanel(t *testing.T) {
 		t.Fatalf("New terminal click did not open the terminal:\n%s", screen(d))
 	}
 }
+
+// More recent files than the page lists: the "All N recent files…" row
+// opens the recent files picker (the same as Ctrl+R).
+func TestWelcomeAllRecentRowOpensPicker(t *testing.T) {
+	d := New(t, Options{W: 160, H: 40, Files: textFiles(),
+		Setup: func(t testing.TB, dir string) {
+			writeRecents(t, dir, "a.txt", "b.txt", "c.txt", "notes/todo.md", "notes/done.md", "x.txt", "y.txt")
+		}})
+	if !d.WaitForText("All 7 recent files", 2*time.Second) {
+		t.Fatalf("no All… row:\n%s", screen(d))
+	}
+	clickCard(d, "All 7 recent files", d.W)
+	if !d.WaitForText("Open Recent File", 2*time.Second) {
+		t.Fatalf("All… row did not open the recent files picker:\n%s", screen(d))
+	}
+}

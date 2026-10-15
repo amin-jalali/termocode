@@ -128,6 +128,9 @@ func renderWelcomeRow(r welcomeRow, w int, st welcomeRowState) string {
 		return lipgloss.NewStyle().Background(bgC).Foreground(theme.LG(c))
 	}
 	bg := lipgloss.NewStyle().Background(bgC)
+	// Dim text (directory, time, setup status) is lifted to 3:1 on the
+	// editor where a theme's TextDim is lower (contrast_test.go).
+	dim := bg.Foreground(theme.Readable(theme.TextDim, theme.BgEditor, 3.0))
 	pad := func(n int) string {
 		if n <= 0 {
 			return ""
@@ -171,14 +174,14 @@ func renderWelcomeRow(r welcomeRow, w int, st welcomeRowState) string {
 			right = theme.Keycap(txt, bgC)
 			rightW = runewidth.StringWidth(theme.KeyLabel(txt)) + 2
 		} else {
-			tok := theme.TextSecondary
+			st2 := fg(theme.TextSecondary)
 			if r.rightDim {
-				tok = theme.TextDim
+				st2 = dim
 			}
 			if st == rowCursorFocused {
-				tok = theme.TextWhite
+				st2 = fg(theme.TextWhite)
 			}
-			right = fg(tok).Render(txt)
+			right = st2.Render(txt)
 			rightW = runewidth.StringWidth(txt)
 		}
 	}
@@ -219,7 +222,7 @@ func renderWelcomeRow(r welcomeRow, w int, st welcomeRowState) string {
 		} else {
 			s = welcomeCut(s, end-col)
 		}
-		put(fg(theme.TextDim).Render(s), runewidth.StringWidth(s))
+		put(dim.Render(s), runewidth.StringWidth(s))
 	}
 	if rightW > 0 {
 		put(pad(w-1-rightW-col), w-1-rightW-col)
@@ -234,6 +237,7 @@ func renderWelcomeRow(r welcomeRow, w int, st welcomeRowState) string {
 func renderWelcomeNote(text string, indent, w int) string {
 	bg := theme.Bg(theme.BgEditor)
 	s := welcomeCut(welcomeText(text), w-1-indent)
-	out := bg.Render(strings.Repeat(" ", max(indent, 0))) + theme.FgBg(theme.TextDim, theme.BgEditor).Render(s)
+	dim := lipgloss.NewStyle().Background(theme.LG(theme.BgEditor)).Foreground(theme.Readable(theme.TextDim, theme.BgEditor, 3.0))
+	out := bg.Render(strings.Repeat(" ", max(indent, 0))) + dim.Render(s)
 	return padRowToWidth(out, w, bg)
 }

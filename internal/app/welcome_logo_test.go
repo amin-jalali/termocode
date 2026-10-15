@@ -44,8 +44,8 @@ func TestWelcomeFitsShortPane(t *testing.T) {
 		if len(lines) > h {
 			t.Errorf("h=%d: page is %d rows, taller than the pane", h, len(lines))
 		}
-		if !strings.Contains(ansi.Strip(out), "for help") {
-			t.Errorf("h=%d: footer cut off", h)
+		if !strings.Contains(ansi.Strip(out), "commands") {
+			t.Errorf("h=%d: hint bar cut off", h)
 		}
 		if !strings.Contains(ansi.Strip(out), "RECENT FILES") {
 			t.Errorf("h=%d: recent files cut off", h)

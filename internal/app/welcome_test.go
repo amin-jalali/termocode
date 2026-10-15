@@ -9,25 +9,26 @@ import (
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
-// TestWelcome_RendersWithEmptyRecents asserts the start page renders a
-// non-empty string when there are no recents and surfaces the empty-state
-// copy.
+// TestWelcome_RendersWithEmptyRecents: with nothing recent the page is
+// the wordmark, START and the hint bar; empty sections are not drawn.
 func TestWelcome_RendersWithEmptyRecents(t *testing.T) {
 	withConfigDir(t)
+	old := theme.CurrentIconMode
+	theme.CurrentIconMode = theme.IconModeUnicode
+	defer func() { theme.CurrentIconMode = old; invalidateWelcome() }()
 	out := renderWelcome(120, 36, 0)
 	if out == "" {
 		t.Fatal("expected non-empty welcome output")
 	}
 	// Tagline (letter-spaced caps).
 	mustContain(t, out, "T E R M I N A L")
-	// Section headers.
 	mustContain(t, out, "START")
-	mustContain(t, out, "RECENT FILES")
-	mustContain(t, out, "WORKSPACES")
-	// Empty state copy: present when there are no recents/workspaces.
-	mustContain(t, out, "No files yet")
-	mustContain(t, out, "Open a file or start a new project")
-	mustContain(t, out, "No recent workspaces")
+	for _, gone := range []string{"RECENT FILES", "WORKSPACES", "No files yet", "Open a file or start a new project",
+		"No recent workspaces", "go 1.", "Docs:", "for help"} {
+		if strings.Contains(out, gone) {
+			t.Errorf("empty page still shows %q", gone)
+		}
+	}
 	// START rows + shortcut keycaps; no subtitles.
 	for _, label := range []string{
 		"Open file", "Open workspace", "Clone repository", "Find in files", "Command palette", "New terminal",
@@ -40,49 +41,42 @@ func TestWelcome_RendersWithEmptyRecents(t *testing.T) {
 			t.Errorf("subtitle %q still on the page", noise)
 		}
 	}
-	// Footer keycap + help hint.
-	mustContain(t, out, "for help")
+	// The hint bar: how to move, open and reach every command.
+	for _, hint := range []string{"move", "open", "commands", "v0."} {
+		mustContain(t, out, hint)
+	}
 }
 
-// TestWelcome_RecentsHits returns hit-zones for each rendered recent entry
-// plus the "view all" sentinel when there are more than 3 entries.
+// TestWelcome_RecentsHits: up to 5 recent files, one hit each, then an
+// "All N recent files…" row (Ctrl+R) when there are more.
 func TestWelcome_RecentsHits(t *testing.T) {
 	withConfigDir(t)
-	pushRecent("/tmp/welcome-test-a.go")
-	pushRecent("/tmp/welcome-test-b.go")
-	pushRecent("/tmp/welcome-test-c.go")
-	pushRecent("/tmp/welcome-test-d.go") // four entries → "view all" sentinel appears
-
-	out, rHits, _, qHits := renderWelcomeFull(120, 36, 0)
-	if out == "" {
-		t.Fatal("expected non-empty welcome output")
+	for _, n := range []string{"a", "b", "c", "d", "e", "f", "g"} {
+		pushRecent("/tmp/welcome-test-" + n + ".go")
 	}
+	out, rHits, _, qHits := renderWelcomeFull(120, 40, 0)
 	if len(qHits) == 0 {
 		t.Fatal("expected quick-action hits")
 	}
-	if len(rHits) == 0 {
-		t.Fatal("expected at least one recent hit")
+	if len(rHits) != 6 {
+		t.Fatalf("got %d recent hits, want 6 (5 files + All…): %+v", len(rHits), rHits)
 	}
-	// Each entry now spans two rows (name + path) and both rows
-	// register a hit so a click on either line opens the file.
-	// 3 entries × 2 rows + 1 view-all sentinel = 7 hits.
-	if len(rHits) != 7 {
-		t.Errorf("got %d recent hits, want 7 (3 entries × 2 lines + view-all)", len(rHits))
+	if rHits[5].Path != welcomeSentinelViewAll {
+		t.Errorf("last recent hit is %q, want the All… row", rHits[5].Path)
 	}
-	hasSentinel := false
-	for _, h := range rHits {
-		if h.Path == welcomeSentinelViewAll {
-			hasSentinel = true
+	for i := 1; i < len(rHits); i++ {
+		if rHits[i].Row != rHits[i-1].Row+1 {
+			t.Errorf("recent hit %d on row %d, want %d", i, rHits[i].Row, rHits[i-1].Row+1)
 		}
 	}
-	if !hasSentinel {
-		t.Error("expected welcomeSentinelViewAll hit when len(recents) > 3")
+	for _, n := range []string{"g", "f", "e", "d", "c"} {
+		mustContain(t, out, "welcome-test-"+n+".go")
 	}
-	// Up to 3 file entries rendered (most-recent-first → d, c, b).
-	mustContain(t, out, "welcome-test-d.go")
-	mustContain(t, out, "welcome-test-c.go")
-	mustContain(t, out, "welcome-test-b.go")
-	mustContain(t, out, "view all")
+	mustContain(t, out, "All 7 recent files")
+	mustContain(t, out, "Ctrl+R")
+	if strings.Contains(out, "view all") || strings.Contains(out, "of 7") {
+		t.Error("old link / counter still drawn")
+	}
 }
 
 // TestWelcome_QuickActionHits: START is a list of 6 one-line rows, each
@@ -170,19 +164,21 @@ func TestWelcome_FocusHighlightsCard(t *testing.T) {
 	}
 }
 
-// TestWelcome_RecentEntryHasTwoLines verifies the new hierarchy:
-// each recent entry renders the file name and path on separate
-// rows so the visual hierarchy is name-primary / path-secondary.
-func TestWelcome_RecentEntryHasTwoLines(t *testing.T) {
+// TestWelcome_RecentEntryHasOneLine: a recent file is one row: glyph,
+// name, directory, time.
+func TestWelcome_RecentEntryHasOneLine(t *testing.T) {
 	withConfigDir(t)
-	pushRecent("/tmp/welcome-2line-a.go")
-	out := renderWelcome(120, 36, 0)
-	if !strings.Contains(out, "welcome-2line-a.go") {
-		t.Fatal("expected entry name in output")
+	pushRecent("/tmp/welcome-1line/a.go")
+	out := ansi.Strip(renderWelcome(120, 36, 0))
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, "a.go") {
+			if !strings.Contains(line, "/tmp/welcome-1line") {
+				t.Errorf("name and directory not on one row: %q", line)
+			}
+			return
+		}
 	}
-	if !strings.Contains(out, "/tmp") {
-		t.Errorf("expected entry directory '/tmp' in output (path line missing)")
-	}
+	t.Fatal("recent file not on the page")
 }
 
 func mustContain(t *testing.T, hay, needle string) {

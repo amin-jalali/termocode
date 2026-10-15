@@ -94,7 +94,7 @@ func (tm *Term) OpenTerminal() {
 
 func TestDashboard(t *testing.T) {
 	tm := boot(t, 120, 36)
-	for _, want := range []string{"Open file", "Command palette", "RECENT FILES", "WORKSPACES"} {
+	for _, want := range []string{"START", "Open file", "Command palette", "New terminal", "commands"} {
 		if !tm.Has(want) {
 			t.Errorf("dashboard is missing %q", want)
 		}

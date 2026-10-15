@@ -97,7 +97,7 @@ func TestSetupCardShowsOnFreshConfig(t *testing.T) {
 	if !cardShown(d) {
 		t.Fatalf("no setup card:\n%s", screen(d))
 	}
-	for _, want := range []string{"Icons", "Ubuntu Mono", "not a Nerd Font", "AI", "Not set up", "Theme", "0 of 2 done"} {
+	for _, want := range []string{"Icons", "Ubuntu Mono", "Nerd Font", "AI", "Not set up", "Theme", "0 of 2 done"} {
 		if !strings.Contains(screen(d), want) {
 			t.Errorf("card does not show %q:\n%s", want, screen(d))
 		}
@@ -320,7 +320,7 @@ func TestSetupCardGnomeProfilePreviewThenConfirm(t *testing.T) {
 	d, _ := setupDriver(t, fakeUbuntuMono)
 
 	// The preview shows first; Esc changes nothing.
-	clickText(d, "Create termocode profile")
+	clickText(d, "Create termocode prof")
 	if !d.WaitForText("NEW GNOME Terminal profile", time.Second) {
 		t.Fatalf("no preview:\n%s", screen(d))
 	}
@@ -338,7 +338,7 @@ func TestSetupCardGnomeProfilePreviewThenConfirm(t *testing.T) {
 	}
 
 	// Confirm: only the new profile and the list change.
-	clickText(d, "Create termocode profile")
+	clickText(d, "Create termocode prof")
 	if !d.WaitForText("Create profile", time.Second) {
 		t.Fatalf("no preview the second time:\n%s", screen(d))
 	}

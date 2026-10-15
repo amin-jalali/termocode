@@ -240,3 +240,9 @@ func xterm256(n int) RGB {
 	v := uint8(8 + (n-232)*10)
 	return RGB{v, v, v}
 }
+
+// Readable is fg, moved toward TextPrimary just enough to reach a WCAG
+// contrast of min on bg. A colour that already passes is unchanged.
+func Readable(fg, bg Color256, min float64) lipgloss.Color {
+	return lipgloss.Color(readableOn(Hex(fg), Hex(bg), Hex(TextPrimary), min))
+}

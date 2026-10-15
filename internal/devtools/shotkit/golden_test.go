@@ -85,6 +85,10 @@ func goldenExtras() []Scene {
 		// The first-run setup card (fresh config). kitty bundles the Nerd
 		// symbols, so the detection is the same on every machine.
 		{Name: "setup-card", SetupCard: true, Env: map[string]string{"TERM": "xterm-kitty"}, Steps: []Step{Pause(1500 * time.Millisecond)}},
+		// The start page: a returning user, the light theme, ASCII icons.
+		DashboardRecent(),
+		{Name: "theme-catppuccin-latte-dashboard", Theme: "catppuccin-latte", Steps: DashboardRecent().Steps, Recents: DashboardRecent().Recents, Workspaces: DashboardRecent().Workspaces},
+		{Name: "dashboard-ascii", Icons: "ascii", Steps: DashboardRecent().Steps, Recents: DashboardRecent().Recents, Workspaces: DashboardRecent().Workspaces},
 		{Name: "md-preview-light", Theme: "catppuccin-latte", Steps: MarkdownPreview().Steps},
 		DiffReview(),
 		// Persian (right-to-left) chat: shaped letters in reading order.
@@ -108,7 +112,7 @@ func goldenCases() []goldenCase {
 	}
 	// The smallest common window (80x24) for the screens that have a
 	// compact layout: start page, editor, palette, toast.
-	for _, sc := range []Scene{Dashboard(), Editor(), Palette(), Toast(), FindResults(), SCMCommit()} {
+	for _, sc := range []Scene{Dashboard(), DashboardRecent(), Editor(), Palette(), Toast(), FindResults(), SCMCommit()} {
 		out = append(out, goldenCase{fmt.Sprintf("%s-80x24", sc.Name), sc, 80, 24})
 	}
 	return out

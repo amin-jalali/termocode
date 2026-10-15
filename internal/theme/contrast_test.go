@@ -93,3 +93,20 @@ func TestGraphPillContrast(t *testing.T) {
 		}
 	}
 }
+
+// The start page's directory / time column and its version line use
+// Readable(TextDim, BgEditor, 3): at least 3:1 in every theme, without
+// changing TextDim elsewhere.
+func TestStartPageDimContrast(t *testing.T) {
+	defer ApplyTheme("vscode-dark-plus")
+	for _, nt := range AvailableThemes() {
+		ApplyTheme(nt.ID)
+		c, _ := ParseHex(string(Readable(TextDim, BgEditor, 3.0)))
+		if r := contrastRatio(c, ToRGB(BgEditor)); r < 3.0 {
+			t.Errorf("%s: start page dim text contrast %.2f < 3.00", nt.ID, r)
+		}
+		if contrastRatio(ToRGB(TextDim), ToRGB(BgEditor)) >= 3.0 && string(Readable(TextDim, BgEditor, 3.0)) != Hex(TextDim) {
+			t.Errorf("%s: a passing TextDim was changed", nt.ID)
+		}
+	}
+}
