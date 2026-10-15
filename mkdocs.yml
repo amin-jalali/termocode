@@ -104,6 +104,7 @@ nav:
   - Concepts:
       - How termocode works: concepts/how-it-works.md
       - Find in files, in depth: concepts/find-in-files.md
+      - "Benchmarks: CPU, memory, big files": benchmarks.md
       - Architecture: architecture.md
       - Decisions (ADRs):
           - adr/README.md
