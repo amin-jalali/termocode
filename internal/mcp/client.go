@@ -35,9 +35,22 @@ func (o Options) log(format string, args ...any) {
 	}
 }
 
-// Client is one MCP connection (any transport that gives a byte stream).
+// rpcConn is what a Client needs from a transport: the stdio one is an
+// extproc.Conn (newline framing), the remote one an httpConn (Streamable
+// HTTP, transport_http.go).
+type rpcConn interface {
+	Call(ctx context.Context, method string, params any) (json.RawMessage, error)
+	Notify(method string, params any) error
+	Close()
+	Done() <-chan struct{}
+}
+
+// replyFunc answers one server→client request (nil for notifications).
+type replyFunc func(result any, err *extproc.Error)
+
+// Client is one MCP connection.
 type Client struct {
-	conn *extproc.Conn
+	conn rpcConn
 	opts Options
 
 	mu       sync.Mutex
@@ -51,7 +64,10 @@ type Client struct {
 // Call Initialize before anything else.
 func NewClient(r io.Reader, w io.Writer, opts Options) *Client {
 	c := &Client{opts: opts}
-	c.conn = extproc.NewConnWith(r, w, c.handle, extproc.ConnOptions{
+	h := func(conn *extproc.Conn, m extproc.Message) {
+		c.handle(m, func(result any, err *extproc.Error) { _ = conn.Reply(m.ID, result, err) })
+	}
+	c.conn = extproc.NewConnWith(r, w, h, extproc.ConnOptions{
 		Framing: extproc.FramingNewline,
 		Skipped: func(line string) { opts.log("stdout (not JSON): %s", line) },
 		OnCancel: func(conn *extproc.Conn, id json.RawMessage) {
@@ -116,6 +132,10 @@ func (c *Client) Initialize(ctx context.Context) error {
 	c.mu.Lock()
 	c.version, c.info = res.ProtocolVersion, res.ServerInfo
 	c.mu.Unlock()
+	// HTTP sends the negotiated version on every later request.
+	if pv, ok := c.conn.(interface{ setProtocolVersion(string) }); ok {
+		pv.setProtocolVersion(res.ProtocolVersion)
+	}
 	return c.conn.Notify("notifications/initialized", nil)
 }
 
@@ -210,10 +230,10 @@ func (c *Client) callTool(ctx context.Context, name string, args map[string]any,
 
 // handle answers the server's requests and notifications. It runs on the
 // reader goroutine, so it never blocks.
-func (c *Client) handle(conn *extproc.Conn, m extproc.Message) {
+func (c *Client) handle(m extproc.Message, reply replyFunc) {
 	switch m.Method {
 	case "ping":
-		_ = conn.Reply(m.ID, map[string]any{}, nil)
+		reply(map[string]any{}, nil)
 	case "roots/list":
 		roots := []map[string]any{}
 		if c.opts.Roots != nil {
@@ -222,7 +242,7 @@ func (c *Client) handle(conn *extproc.Conn, m extproc.Message) {
 				roots = append(roots, map[string]any{"uri": u.String(), "name": filepath.Base(r)})
 			}
 		}
-		_ = conn.Reply(m.ID, map[string]any{"roots": roots}, nil)
+		reply(map[string]any{"roots": roots}, nil)
 	case "notifications/tools/list_changed":
 		c.opts.log("tools changed")
 		if c.opts.ToolsChanged != nil {
@@ -258,7 +278,7 @@ func (c *Client) handle(conn *extproc.Conn, m extproc.Message) {
 		// sampling/createMessage and elicitation/create are refused on
 		// purpose: a server must never drive our model or the user.
 		if m.IsRequest() {
-			_ = conn.Reply(m.ID, nil, &extproc.Error{Code: extproc.CodeMethodNotFound, Message: "termocode does not support " + m.Method})
+			reply(nil, &extproc.Error{Code: extproc.CodeMethodNotFound, Message: "termocode does not support " + m.Method})
 		}
 	}
 }
