@@ -63,3 +63,4 @@ folder for `require()`.
   returns; nothing in Lua can interrupt it.
 - Follow-up (Tier 2): out-of-process extensions over JSON-RPC for other
   languages and real isolation. The Tier 1 API names should map onto it.
+  Done in [ADR 0009](0009-process-extensions.md).
