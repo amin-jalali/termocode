@@ -237,6 +237,7 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 	if msg.gen != s.chatGen {
 		return waitAIChat(msg.ch) // stale: keep draining
 	}
+	s.streamSteps++
 	last := func() *ai.StoredMessage {
 		if n := len(s.conv.Messages); n > 0 {
 			return &s.conv.Messages[n-1]

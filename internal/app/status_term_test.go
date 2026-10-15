@@ -34,3 +34,19 @@ func TestTerminalStatusLabelFromTermURI(t *testing.T) {
 		t.Errorf("label %q, want %q", got, "sh · ~/termocode")
 	}
 }
+
+// Spec (UI review signature #4): while the AI answers, the status bar is
+// busy and its comet step is the number of chat events received.
+func TestStatusBusyWhileAIStreams(t *testing.T) {
+	m := Model{}
+	s := m.aiS()
+	if m.statusState().Busy {
+		t.Fatal("busy while idle")
+	}
+	s.streaming, s.streamSteps = true, 7
+	s.provider = fakeAIProvider{}
+	st := m.statusState()
+	if !st.Busy || st.BusyStep != 7 {
+		t.Errorf("Busy=%v step=%d, want true 7", st.Busy, st.BusyStep)
+	}
+}

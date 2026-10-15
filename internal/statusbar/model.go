@@ -32,6 +32,11 @@ type State struct {
 	// side then shows TermLabel ("zsh · ~/proj") instead of editor facts.
 	TermFocused bool
 	TermLabel   string
+	// Busy: work is streaming in (the AI answering). A small comet after
+	// the project pill moves one step per event (BusyStep), never on a
+	// timer, so an idle bar costs nothing.
+	Busy     bool
+	BusyStep int
 
 	// LSP chip: ShowLSP turns it on (a file buffer is open); LSP lists the
 	// attached client names ("{} gopls"), empty → dim "{} none".
@@ -352,7 +357,34 @@ func (m Model) renderLeft(s State) string {
 	if s.Dirty && s.Path != "" {
 		text += " " + theme.IconDirty.String()
 	}
-	return pill(text, theme.TextWhite, projectPillBg(s), true)
+	out := pill(text, theme.TextWhite, projectPillBg(s), true)
+	if s.Busy {
+		out += barBg().Render(" ") + busyComet(s.BusyStep)
+	}
+	return out
+}
+
+// busyComet is a 6-cell track with a 3-cell comet at position step mod 4,
+// bright at its head, in the project pill's tint.
+func busyComet(step int) string {
+	const track, comet = 6, 3
+	pos := ((step % (track - comet + 1)) + (track - comet + 1)) % (track - comet + 1)
+	trackCh, cometCh := "─", "━"
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		trackCh, cometCh = "-", "="
+	}
+	var b strings.Builder
+	for i := 0; i < track; i++ {
+		switch {
+		case i >= pos && i < pos+comet:
+			t := float64(i-pos+1) / comet // tail dim → head bright
+			b.WriteString(lipgloss.NewStyle().Background(theme.LG(barBgColor())).
+				Foreground(theme.Mix(barBgColor(), theme.AIAccent, 0.35+0.65*t)).Render(cometCh))
+		default:
+			b.WriteString(barFg(theme.TextDimmer).Render(trackCh))
+		}
+	}
+	return b.String()
 }
 
 // projectPillTint is the state colour of the project pill: red in a debug

@@ -28,6 +28,7 @@ func sameState(a, b *State) bool {
 		a.Ahead == b.Ahead && a.Behind == b.Behind && a.Indent == b.Indent &&
 		a.Encoding == b.Encoding && a.Term == b.Term && a.Debug == b.Debug &&
 		a.TermFocused == b.TermFocused && a.TermLabel == b.TermLabel &&
+		a.Busy == b.Busy && a.BusyStep == b.BusyStep &&
 		a.ShowLSP == b.ShowLSP && slices.Equal(a.LSP, b.LSP) &&
 		a.ShowTests == b.ShowTests && a.TestsRunning == b.TestsRunning &&
 		a.TestsPassed == b.TestsPassed && a.TestsFailed == b.TestsFailed &&
