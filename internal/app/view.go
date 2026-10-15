@@ -1219,7 +1219,8 @@ func (m Model) renderSidebar(h int) string {
 		hy = m.explorerHoverLine()
 	case activity.ViewSearch:
 		header := sidebarHeader(contentW, "SEARCH", "")
-		body := placeholderSidebar(contentW, h-1, "", "Press F8 for\nFind in Files.\n\nUse Ctrl+F for\nin-file find.")
+		body := strings.Join(renderEmptyState(contentW, h-1, theme.BgSidebar, emptyState{Glyph: theme.IconSearch,
+			Title: "Find in files", Hint: "Search the whole workspace. Ctrl+F finds in the current file.", Key: "f8"}), "\n")
 		content = joinRows(header, body)
 	case activity.ViewGit:
 		content = m.renderGitSidebar(contentW, h)
@@ -1371,10 +1372,10 @@ func refreshSidebarColors() {
 
 func (m Model) renderGitSidebar(w, h int) string {
 	if !m.gitLoaded {
-		return placeholderSidebar(w, h, "Source Control", "Loading…")
+		return strings.Join(renderEmptyState(w, h, theme.BgSidebar, emptyState{Title: "Loading…"}), "\n")
 	}
 	if !m.gitIsRepo {
-		return placeholderSidebar(w, h, "Source Control", "Not a git repository.\n\nRun `git init` in a\nterminal to enable.")
+		return strings.Join(scmNotRepoEmpty(w, h), "\n")
 	}
 
 	focused := m.focus == FocusExplorer
@@ -2186,16 +2187,6 @@ func padBgToWidth(s string, w int) string {
 		return s + sidebarFill.Render(strings.Repeat(" ", pad))
 	}
 	return s
-}
-
-func placeholderSidebar(w, h int, title, body string) string {
-	titleStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(theme.LG(theme.TextPrimary)).Bold(true)
-	bodyStyle := lipgloss.NewStyle().Background(sidebarBg).Foreground(theme.LG(theme.TextMuted))
-	content := titleStyle.Render(title) + "\n\n" + bodyStyle.Render(body)
-	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, content,
-		lipgloss.WithWhitespaceChars(" "),
-		lipgloss.WithWhitespaceBackground(sidebarBg),
-	)
 }
 
 // buildSeparator is no longer used — boundaries are now expressed via

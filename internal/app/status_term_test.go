@@ -14,7 +14,7 @@ func TestStatusStateTerminalFocused(t *testing.T) {
 		t.Skip("no home")
 	}
 	m := Model{termOpen: true, inTerminal: true,
-		terminalTabs: []terminalTab{{Shell: "bash", Cwd: "/tmp"}, {Shell: "zsh", Cwd: filepath.Join(home, "proj")}},
+		terminalTabs:      []terminalTab{{Shell: "bash", Cwd: "/tmp"}, {Shell: "zsh", Cwd: filepath.Join(home, "proj")}},
 		terminalActiveTab: 1}
 	st := m.statusState()
 	if !st.TermFocused || st.TermLabel != "zsh · ~/proj" {

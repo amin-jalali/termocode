@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/charmbracelet/x/ansi"
 	"reflect"
 	"strings"
 	"testing"
@@ -97,8 +98,9 @@ func TestProblemsRenderAndTitle(t *testing.T) {
 		t.Errorf("empty title = %q", got)
 	}
 	rows := renderProblemsTab(&m, 60, 8)
-	if len(rows) != 2 {
-		t.Fatalf("empty render rows = %d", len(rows))
+	// The empty state fills the panel (UI review #10).
+	if len(rows) != 8 || !strings.Contains(ansi.Strip(strings.Join(rows, "\n")), "No problems") {
+		t.Fatalf("empty render: %d rows, %q", len(rows), ansi.Strip(strings.Join(rows, "\n")))
 	}
 	m.problems.setItems(sampleDiags())
 	if got := problemsTitle(&m); got != "PROBLEMS (4)" {

@@ -545,11 +545,11 @@ func renderProblemsTab(m *Model, w, h int) []string {
 	p.viewH = bodyH
 	list := p.rows()
 	if len(list) == 0 {
-		msg := " No problems have been detected in the workspace."
+		es := emptyState{Glyph: theme.Icon{NerdFont: "\uf00c", Unicode: "✓", ASCII: "+"}, Title: "No problems", Hint: "No problems have been detected in the workspace."}
 		if len(p.items) > 0 {
-			msg = " All problems are hidden by the filters."
+			es = emptyState{Title: "All problems are hidden", Hint: "Change the filters above to see them."}
 		}
-		return append(rows, theme.FgBg(theme.TextMuted, theme.BgEditor).Render(msg))
+		return append(rows, renderEmptyState(w, bodyH, theme.BgEditor, es)...)
 	}
 	p.clamp(len(list))
 	sevColor := map[int]theme.Color256{1: theme.DiagError, 2: theme.DiagWarning, 3: theme.DiagInfo, 4: theme.DiagHint}
