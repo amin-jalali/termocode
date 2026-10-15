@@ -707,6 +707,9 @@ func (m Model) handleNvimMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 	case GitMsg:
 		m.applyGitSnapshot(msg)
 		return m, nil, true
+	case gitOlderMsg:
+		m.onGitOlder(msg)
+		return m, nil, true
 	case nvim.ErrMsg:
 		m.err = msg.Err.Error()
 		return m, nil, true

@@ -180,3 +180,12 @@ func Initials(name string) string {
 	}
 	return string(out)
 }
+
+// CompactAge is a commit time as a 2–3 cell badge ("now", "5m", "2h",
+// "3d", "2w", "4mo", "1y"), against clock.Now.
+func CompactAge(epoch int64) string {
+	if epoch >= clock.Now().Unix() {
+		return "now" // clock skew: a commit "from the future"
+	}
+	return compactAge(relativeDate(strconv.FormatInt(epoch, 10)))
+}

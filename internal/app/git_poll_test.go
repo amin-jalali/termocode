@@ -43,7 +43,7 @@ func TestGitPollKeepsGraphUntilHeadMoves(t *testing.T) {
 
 	m := &Model{}
 	m.applyGitSnapshot(fetchGitCmd()().(GitMsg))
-	if len(m.gitGraph) == 0 {
+	if len(m.gitCommits) == 0 {
 		t.Fatal("no graph after the first full fetch")
 	}
 	poll := func() GitMsg {
@@ -61,7 +61,7 @@ func TestGitPollKeepsGraphUntilHeadMoves(t *testing.T) {
 	if len(m.gitFiles) != 1 || m.gitFiles[0].Code != " M" {
 		t.Errorf("files = %+v, want a.txt modified", m.gitFiles)
 	}
-	if len(m.gitGraph) == 0 {
+	if len(m.gitCommits) == 0 {
 		t.Fatal("kept graph is empty")
 	}
 
@@ -70,8 +70,8 @@ func TestGitPollKeepsGraphUntilHeadMoves(t *testing.T) {
 	if msg := poll(); msg.KeepGraph {
 		t.Error("graph kept after a new commit")
 	}
-	if m.gitGraph[0].Subject != "two" {
-		t.Errorf("graph head = %+v, want the new commit", m.gitGraph[0])
+	if m.gitCommits[0].Subject != "two" {
+		t.Errorf("graph head = %+v, want the new commit", m.gitCommits[0])
 	}
 
 	// Tags and other refs do not move HEAD; an old graph is read again.

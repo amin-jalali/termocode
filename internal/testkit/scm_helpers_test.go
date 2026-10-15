@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -283,10 +284,18 @@ func section(d *Driver, title string) []string {
 		if l == "" {
 			break
 		}
+		// GRAPH: only the commit rows (not the date groups or "Show more").
+		if title == "GRAPH" && (graphGroupRow.MatchString(l) || strings.HasPrefix(l, "Show ") || strings.HasPrefix(l, "Load older")) {
+			continue
+		}
 		out = append(out, l)
 	}
 	return out
 }
+
+// graphGroupRow matches a GRAPH date group header ("Today  3", "> October
+// 12", "December 2025  4").
+var graphGroupRow = regexp.MustCompile(`^(?:[▸>] )?(Today|Yesterday|This week|January|February|March|April|May|June|July|August|September|October|November|December)( \d{4})? +\d+$`)
 
 // inSection reports whether some row of the section contains s.
 func inSection(d *Driver, title, s string) bool {
