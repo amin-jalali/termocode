@@ -14,6 +14,7 @@
 //	manager.go   — every configured server: lazy start, idle stop, trust,
 //	               tool cache, status
 //	adapter.go   — MCP tool → ai.Tool (wire names, gates, result caps)
+//	settings.go  — the mcp_* keys of config.json (timeouts, trust)
 //	mcptest/     — a fake stdio server for tests (re-exec of the test binary)
 //
 // The app glue is internal/app/ai_mcp.go; the user docs are

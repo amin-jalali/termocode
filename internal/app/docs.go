@@ -381,6 +381,9 @@ func ConfigFileCatalog() []ConfigFile {
 			"With care. Prefer AI: Configure Provider…. Never exported by Preferences: Export Settings…."},
 		{"config", "ai/chats/*.json", "Saved AI chats (newest 50 kept).",
 			"JSON, one file per chat.", "Safe to delete."},
+		{"config", "mcp.json", "Your MCP servers: their tools are offered to the AI chat. See the MCP guide.",
+			"Claude Desktop / Claude Code / Cursor shape: `{\"mcpServers\": {name: {\"command\", \"args\", \"env\", \"cwd\"}}}`, plus `readOnly`, `autoApprove`, `deny`, `timeout`, `disabled`. Secrets as `${secret:NAME}` (from `mcp_secrets` in ai/credentials.json) or `${VAR}`.",
+			"Yes. Open with Open Config: MCP Servers."},
 		{"data", "plugins/", "Neovim plugins cloned in the background on first launch (nvim-dap, vim-visual-multi, rainbow-delimiters).",
 			"Git checkouts. `$TERMOCODE_PLUGINS_DIR` moves it.", "Delete to re-clone on next launch."},
 		{"data", "tools/", "Language servers and debug adapters installed by LSP: Manage Language Servers… and DAP: Install Adapter….",
@@ -393,6 +396,8 @@ func ConfigFileCatalog() []ConfigFile {
 			"Yes. Tasks: Configure Tasks creates it."},
 		{"workspace", launchJSONRel, "Debug and run configurations.",
 			"VS Code `launch.json` shape; comments allowed.", "Yes. Debug: Open launch.json creates it."},
+		{"workspace", ".termocode/mcp.json", "Project MCP servers. An entry with the same name as one in your mcp.json replaces it; `\"disabled\": true` hides it in this project.",
+			"Same shape as the user mcp.json.", "Yes. termocode asks before it starts a project server the first time (and again when the entry changes)."},
 		{"workspace", ".editorconfig", "Indent and whitespace rules, read by Neovim's EditorConfig support.",
 			"EditorConfig INI.", "Yes (read only for termocode)."},
 		{"other", "~/termocode-settings.json", "Default target of Preferences: Export Settings….",
@@ -400,6 +405,8 @@ func ConfigFileCatalog() []ConfigFile {
 			"Yes, but re-export is easier."},
 		{"other", "~/.local/share/fonts/JetBrainsMonoNF/", "Nerd Font installed by `termocode setup` (Linux).",
 			"Font files.", "Safe to delete."},
+		{"other", "~/.cache/termocode/mcp/<name>.tools.json", "Tool list of each MCP server, so a chat turn does not start the server just to list its tools. `$XDG_CACHE_HOME` moves it.",
+			"JSON, written by termocode; keyed by a hash of the server's mcp.json entry.", "Safe to delete."},
 	}
 	return out
 }

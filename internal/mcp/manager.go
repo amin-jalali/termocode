@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -156,8 +157,14 @@ func (m *Manager) Reload() []string {
 		}
 	}
 	m.servers = next
+	changed := strings.Join(warns, "\n") != strings.Join(m.warnings, "\n")
 	m.warnings = warns
 	m.mu.Unlock()
+	if changed { // once per new set, not on every chat turn
+		for _, w := range warns {
+			m.log("config", "%s", w)
+		}
+	}
 	for _, p := range stop {
 		go p.Close()
 	}
