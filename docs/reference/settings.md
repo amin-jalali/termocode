@@ -88,6 +88,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `TERMOCODE_AI_MODEL` | AI chat model; wins over `ai_model`. |
 | `TERMOCODE_AI_PROVIDER` | AI provider; wins over `ai_provider` in config.json. |
 | `TERMOCODE_FONT_DELTA` | Font size change asked of the terminal at launch (kitty with remote control only); wins over font_delta in config.json (default 0 = off). |
+| `TERMOCODE_FRAME_PACING` | on / off: wait for the terminal before sending more frames, so a held key stops at once on a slow line (default: on over SSH). |
 | `TERMOCODE_ICON_MODE` | Icon set: `nerd_font`, `unicode` or `ascii`. |
 | `TERMOCODE_NERD_FONT` | Legacy: `1` is the same as `TERMOCODE_ICON_MODE=nerd_font`. |
 | `TERMOCODE_NO_SESSION` | Any value: run without a persistent session, like `--no-session`. |
