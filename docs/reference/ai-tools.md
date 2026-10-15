@@ -723,6 +723,9 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `ai-export-chat` | AI: Export Chat as Markdown | confirm (fileWrite) |   |
 | `ai-fix` | AI: Fix Diagnostic at Cursor | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-history` | AI: Chat History… | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `ai-history-clear` | AI: Clear Chat History | never | deletes saved chats; only the user may |
+| `ai-history-delete` | AI: Delete Chat… | never | deletes saved chats; only the user may |
+| `ai-history-rename` | AI: Rename Chat… | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-mcp-config` | Open Config: MCP Servers | never | AI provider, credentials and approvals stay with the user |
 | `ai-mcp-log` | AI: MCP: Show Log | auto |   |
 | `ai-mcp-servers` | AI: MCP Servers… | never | opens a picker or prompt that only the user can answer; use a typed tool |
