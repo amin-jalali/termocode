@@ -179,6 +179,10 @@ func Default() KeyMap {
 			// Overlays
 			"ctrl+p": ActionQuickOpen,
 			"f1":     ActionCommandPalette,
+			// A second palette key: VS Code's and JetBrains' terminals keep
+			// F1 for their own palette (Emacs users know Alt+X as "run a
+			// command").
+			"alt+x":  ActionCommandPalette,
 			"ctrl+f": ActionFind,
 			"ctrl+h": ActionReplaceInFile,
 
