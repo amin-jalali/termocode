@@ -981,10 +981,10 @@ var breadcrumbsMemo struct {
 }
 
 func (m Model) drawBreadcrumbs(width int) string {
-	// Quiet path trail on the editor surface: folders dim, the file name
+	// Quiet path trail on the editor surface: folders muted, the file name
 	// (with its type icon) one step brighter.
 	bg := theme.Bg(theme.BgEditor)
-	seg := theme.FgBg(theme.TextDim, theme.BgEditor)
+	seg := theme.FgBg(theme.TextMuted, theme.BgEditor)
 	last := theme.FgBg(theme.TextSecondary, theme.BgEditor)
 	sep := theme.FgBg(theme.TextDimmer, theme.BgEditor)
 
@@ -1038,21 +1038,20 @@ func (m Model) drawBreadcrumbs(width int) string {
 }
 
 // renderSignature paints `sig` with three colour roles: leading language
-// keyword (func/class/def/…) in SyntaxKeyword bold, function name in
-// SyntaxFunction, everything else in TextPrimary. It's not a real parser
+// keyword (func/class/def/…) in SyntaxKeyword, function name in
+// SyntaxFunction, everything else in TextSecondary. It's not a real parser
 // — just enough tokenisation to make the breadcrumb feel like code. The
-// background is BgHover to match the breadcrumb strip.
+// background is BgEditor, like the breadcrumb strip.
 func renderSignature(sig string) string {
 	// Trim trailing language brackets / colons that aren't part of the
 	// useful signature: `func foo() {` → `func foo()`.
 	sig = strings.TrimRight(strings.TrimSpace(sig), "{:")
 	sig = strings.TrimSpace(sig)
-	// Faint(true) emits SGR 2 — most terminals render that with a thinner
-	// weight, approximating a smaller font without actually changing the
-	// per-cell font size (which terminals don't support).
-	kwStyle := theme.FgBg(theme.SyntaxKeyword, theme.BgEditor).Faint(true)
-	nameStyle := theme.FgBg(theme.SyntaxFunction, theme.BgEditor).Faint(true)
-	restStyle := theme.FgBg(theme.TextPrimary, theme.BgEditor).Faint(true)
+	// No Faint (SGR 2): many terminals ignore it or make it unreadable on
+	// light themes. The rest of the signature is one tier quieter instead.
+	kwStyle := theme.FgBg(theme.SyntaxKeyword, theme.BgEditor)
+	nameStyle := theme.FgBg(theme.SyntaxFunction, theme.BgEditor)
+	restStyle := theme.FgBg(theme.TextSecondary, theme.BgEditor)
 	keywords := []string{"func ", "class ", "def ", "interface ", "type ", "impl ", "struct ", "fn "}
 	for _, kw := range keywords {
 		if strings.HasPrefix(sig, kw) {

@@ -423,14 +423,14 @@ func renderActivityGlyphRow(ic theme.Icon, iconRow, isActive bool, st styleSet) 
 // renderInterItemDivider draws the hairline that sits between two
 // consecutive items. `─` (U+2500 LIGHT HORIZONTAL) sits visually at the
 // middle of its cell — the closest the unicode block-drawing range
-// offers to a "middle 1/8 stroke." Rendered in TextQuaternary +
-// Faint(true) so the stroke reads as an almost-imperceptible whisker
-// rather than a styled rule. A 2-cell segment centred in the 4-cell
+// offers to a "middle 1/8 stroke." Rendered in TextQuaternary (no Faint:
+// terminals differ too much on SGR 2) so the stroke reads as a quiet
+// whisker rather than a styled rule. A 2-cell segment centred in the 4-cell
 // column keeps the line short of the bar's edges.
 func renderInterItemDivider(st styleSet) string {
 	const segW = 2
 	pad := (Width - segW) / 2
-	style := theme.FgBg(theme.TextQuaternary, theme.BgActivityBar).Faint(true)
+	style := theme.FgBg(theme.TextQuaternary, theme.BgActivityBar)
 	out := st.bgFill.Render(strings.Repeat(" ", pad)) +
 		style.Render(strings.Repeat("─", segW)) +
 		st.bgFill.Render(strings.Repeat(" ", Width-pad-segW))
