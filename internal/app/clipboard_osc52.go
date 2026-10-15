@@ -2,6 +2,8 @@ package app
 
 import (
 	"encoding/base64"
+	"os"
+	"strings"
 )
 
 // osc52MaxBytes caps the raw text size we'll ship via OSC 52. Many
@@ -47,6 +49,36 @@ func emitOSC52(s string) {
 		// editor mid-keystroke.
 		_ = recover()
 	}()
+	writeTerminal(osc52Seq(s, os.Getenv))
+}
+
+// screenPiece is the largest base64 run per screen DCS piece; screen
+// drops a DCS string longer than 768 bytes.
+const screenPiece = 512
+
+// osc52Seq is the OSC 52 copy of s for the terminal getenv describes.
+// Inside tmux (TMUX, or TERM=tmux* when tmux runs on the client across
+// ssh) it is the raw sequence, which tmux forwards with set-clipboard on,
+// plus a DCS passthrough copy, which tmux forwards with
+// allow-passthrough on. Inside GNU screen (STY) it is a DCS passthrough
+// in pieces; screen ignores a raw OSC 52.
+func osc52Seq(s string, getenv func(string) string) string {
 	b64 := base64.StdEncoding.EncodeToString([]byte(s))
-	writeTerminal("\x1b]52;c;" + b64 + "\x07")
+	raw := "\x1b]52;c;" + b64 + "\x07"
+	switch {
+	case getenv("TMUX") != "" || strings.HasPrefix(getenv("TERM"), "tmux"):
+		return raw + "\x1bPtmux;" + strings.ReplaceAll(raw, "\x1b", "\x1b\x1b") + "\x1b\\"
+	case getenv("STY") != "":
+		var b strings.Builder
+		b.WriteString("\x1bP\x1b]52;c;")
+		for i := 0; i < len(b64); i += screenPiece {
+			if i > 0 {
+				b.WriteString("\x1b\\\x1bP")
+			}
+			b.WriteString(b64[i:min(i+screenPiece, len(b64))])
+		}
+		b.WriteString("\x07\x1b\\")
+		return b.String()
+	}
+	return raw
 }

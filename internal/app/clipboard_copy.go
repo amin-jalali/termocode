@@ -73,11 +73,11 @@ func (m *Model) writeClipboard(s string) clipVia {
 // osc52Honoured reports whether the terminal may act on an OSC 52 copy.
 // VTE (GNOME Terminal, Tilix …), macOS Terminal.app, xterm (off unless
 // allowWindowOps), the Linux console and JetBrains' terminal ignore it.
-// Inside tmux the outer terminal decides and the inherited variables may
-// be stale, so tmux counts as yes (it forwards OSC 52 with set-clipboard).
-// Unknown terminals get the benefit of the doubt.
+// Inside tmux or screen the outer terminal decides and the inherited
+// variables may be stale, so they count as yes (osc52Seq wraps the copy
+// so they forward it). Unknown terminals get the benefit of the doubt.
 func osc52Honoured(getenv func(string) string) bool {
-	if getenv("TMUX") != "" {
+	if getenv("TMUX") != "" || getenv("STY") != "" {
 		return true
 	}
 	switch {
