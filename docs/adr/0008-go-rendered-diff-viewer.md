@@ -39,3 +39,12 @@ stages in place, which the card can not do.
 - **−** No syntax colours in the card (mobocode does not colour its diff
   either: the add / remove colours dominate).
 - **−** Two diff UIs exist (card for review, nvim for git).
+
+## Note (2026-10-16): commits and compare use the card too
+The Source Control commit view and "compare two commits" now open in
+this card (commit mode: a header, a file list loaded lazily, commit
+buttons). The card also paints syntax colours: chroma tokens are made
+once per loaded file off the UI loop, the card shows plain first and
+coloured when the tokens arrive, and changed-word spans keep their
+highlight. The working-tree side-by-side diff stays in nvim diff mode,
+where the user edits and stages in place.

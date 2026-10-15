@@ -1,7 +1,8 @@
 # Git: stage, commit, sync, conflicts, clone
 
 termocode has a full git panel. You can stage single hunks, commit, push,
-pull, fix merge conflicts and clone a repository.
+pull, read the history, compare commits, fix merge conflicts and clone a
+repository.
 
 ## Open the Source Control panel
 
@@ -64,7 +65,86 @@ You can also run **Git: Push**, **Git: Pull** or **Git: Fetch** on their own.
 | **Git: Stash Changes** / **Pop Latest Stash** / **Show Stash List...** | Stash work |
 | **Git: Show Tags...** | Check out a tag |
 
-Hover over a commit in **GRAPH** to see its details.
+## The GRAPH
+
+**GRAPH** lists the commits, newest first. Each row shows a node, the
+branch and tag names, the message and the age (`2h`, `3d`, `4w`).
+
+- **Date groups.** Commits sit under **Today**, **Yesterday**, **This
+  week**, then one group per month. Press `Enter` or `←` on a group (or
+  click it) to fold it. `→` or a second click opens it again.
+- **Show more.** GRAPH shows the recent commits first (8 to 15). Click
+  **Show 15 more** for more. When all loaded commits are on screen the row
+  says **Load older commits**: it loads the next page.
+- **Nodes.** `◉` is `HEAD`. A fork glyph is a merge. Other commits get a
+  small dot. In ASCII mode they are `@`, `*` and `o`.
+- **Not pushed yet.** `⇡` on the right means the commit is not on the
+  upstream branch yet. It goes away after a push.
+- **Names.** Branches, tags and remote branches show as small pills. When
+  they do not fit, the rest fold into `+N`. The hover card lists them all.
+- **Hover card.** Rest the pointer on a commit. A card shows the author,
+  the date, the message, all names, `+N −M  K files` and the short SHA.
+
+Keys on a commit row:
+
+| Key | Action |
+|---|---|
+| `Enter` or `d` | Open the commit view |
+| `y` | Copy the short SHA |
+| `Space` | Mark the commit for compare (see below) |
+| `Esc` | Close the commit view, or clear the compare marks |
+
+Right-click a commit for a menu: **Open Changes**, **Copy Commit Hash**,
+**Copy Commit Message**, **Show Raw (git show)** and **Refresh**.
+
+## The commit view
+
+Open a commit from GRAPH. Its diff opens in a card:
+
+- the SHA, the message, the author, the dates, the parents and the names,
+- a file list with `+N −M` per file (`A` added, `M` changed, `D` deleted,
+  `R` renamed),
+- the diff, side by side or in one column, with syntax colours.
+
+When the editor area is 80 cells or wider, the card sits over the editor.
+The sidebar stays visible. Click another commit, or press `j` / `k` in
+GRAPH, and the card follows. On a narrow screen the card floats over
+everything.
+
+Keys in the commit view:
+
+| Key | Action |
+|---|---|
+| `n` / `p` (or `]` / `[`) | Next / previous change |
+| `Tab` / `Shift+Tab` | Next / previous file |
+| `t` | Side by side / one column |
+| `z` | Unfold all unchanged lines |
+| `o` | Open the file in the editor |
+| `O` | Open the file as it was in this commit (read-only) |
+| `y` | Copy the full SHA |
+| `r` | Raw: the `git show` text in the editor |
+| `b` | Show / fold the long message |
+| `v` | Revert this commit |
+| `c` | Cherry-pick this commit |
+| `Esc` / `q` | Close |
+
+The buttons at the bottom do the same: **Copy SHA**, **Open file**,
+**File @ commit**, **Revert…**, **Cherry-pick…** and **Close**. Click a
+parent SHA in the header to open that commit.
+
+**Revert** makes a new commit that undoes this one. **Cherry-pick** puts
+this commit on top of your branch as a new commit. Both ask first. If git
+stops with conflicts, the **CONFLICTS** section appears and a toast says
+how many. Fix them as in [Resolve a merge conflict](#resolve-a-merge-conflict).
+
+### Compare two commits
+
+1. Move to a commit in GRAPH. Press `Space`. The row shows a small `1`.
+2. Move to another commit. Press `Space` again.
+
+The card opens on all changes from the older commit to the newer one. The
+title says `Compare a1b2c3d → f31bb77`. Press `y` (or **Copy range**) to
+copy the range. `Esc` in the sidebar clears a mark.
 
 ## Resolve a merge conflict
 
@@ -102,10 +182,13 @@ In the Source Control panel:
 |---|---|
 | `j` / `k` | Move |
 | `g` / `G` | Top / bottom |
-| `Enter` | Open the file, fold a section, or show a commit |
+| `Enter` | Open the file, fold a section or group, or show a commit |
 | `←` / `→` | Collapse / expand |
 | `s` | Stage / unstage |
 | `d` | Diff (file) or show commit |
+| `y` | Copy the commit's short SHA |
+| `Space` | Mark a commit for compare |
+| `Esc` | Close the commit view / clear marks |
 | `c` | Go to the message box |
 | `x` | Discard changes (asks first) |
 | `r` | Refresh |
