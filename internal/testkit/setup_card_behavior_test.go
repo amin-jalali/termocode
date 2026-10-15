@@ -68,7 +68,7 @@ func setupDriver(t *testing.T, term nerdterm.Info) (*Driver, *fakeProbe) {
 	return d, fp
 }
 
-func cardShown(d *Driver) bool { return strings.Contains(screen(d), "S E T   U P") }
+func cardShown(d *Driver) bool { return strings.Contains(screen(d), "SET UP TERMOCODE") }
 
 func setupButton(d *Driver, id string) (app.SetupButtonInfo, bool) {
 	for _, b := range d.Model().SetupCardButtons() {
@@ -132,7 +132,7 @@ func TestSetupCardHideStaysAfterRestart(t *testing.T) {
 		t.Fatalf("card back after restart:\n%s", screen(d))
 	}
 	d.Palette("setup-show-card")
-	if !d.WaitForText("S E T   U P", 2*time.Second) {
+	if !d.WaitForText("SET UP TERMOCODE", 2*time.Second) {
 		t.Fatalf("Setup: Show Setup Card did not bring it back:\n%s", screen(d))
 	}
 	if v := readConfig(t)["setup_dismissed"]; v != false {
