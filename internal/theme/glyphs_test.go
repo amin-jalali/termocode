@@ -19,7 +19,10 @@ func TestGlyphTable(t *testing.T) {
 		"history": GlyphHistory, "new": GlyphNew, "collapse": GlyphCollapse,
 		// Source Control GRAPH (scm-graph design §2.3).
 		"commit": GlyphCommit, "head": GlyphHead, "merge": GlyphMerge,
-		"unpushed": GlyphUnpushed, "expand": GlyphExpand}
+		"unpushed": GlyphUnpushed, "expand": GlyphExpand,
+		// Terminal tabs: the Fix chip and the CLI agent marks (U9b, U8).
+		"ai": GlyphAI, "agent-working": GlyphAgentWorking,
+		"agent-waiting": GlyphAgentWaiting, "agent-done": GlyphAgentDone}
 	for name, g := range glyphs {
 		for _, m := range []IconMode{IconModeNerdFont, IconModeUnicode, IconModeASCII} {
 			CurrentIconMode = m
