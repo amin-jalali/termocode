@@ -52,6 +52,9 @@ type OAuthTokens struct {
 type Credentials struct {
 	Keys        map[string]string `json:"keys,omitempty"`
 	ClaudeOAuth *OAuthTokens      `json:"claude_oauth,omitempty"`
+	// MCPSecrets are the values of ${secret:NAME} in mcp.json (tokens,
+	// connection strings), so mcp.json itself never holds a secret.
+	MCPSecrets map[string]string `json:"mcp_secrets,omitempty"`
 }
 
 // ConfigDir is termocode's config directory ($XDG_CONFIG_HOME/termocode or
@@ -192,6 +195,9 @@ func SaveCredentials(path string, c Credentials) error {
 func (c Credentials) register() {
 	for _, k := range c.Keys {
 		RegisterSecret(k)
+	}
+	for _, v := range c.MCPSecrets {
+		RegisterSecret(v)
 	}
 	if c.ClaudeOAuth != nil {
 		RegisterSecret(c.ClaudeOAuth.AccessToken)
