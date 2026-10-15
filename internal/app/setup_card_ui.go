@@ -32,6 +32,7 @@ type setupState struct {
 	settled     map[string]bool
 	plan        *setup.GnomeProfilePlan // waiting for the user's confirm
 	doneSaved   bool                    // setup_done written this session
+	themeAsked  bool                    // the theme picker was opened from the card
 }
 
 // setupCardOff hides the card whatever config.json says. This package's
@@ -359,11 +360,26 @@ func (m *Model) pressSetupButton(id string) tea.Cmd {
 	case id == "ai-skip":
 		return m.settleSetup("ai")
 	case id == "theme-more":
-		return m.openThemePicker() // a pick there is not a card answer
+		// A pick there answers the step (onSetupThemePicked); Esc not.
+		s.themeAsked = true
+		return m.openThemePicker()
 	case id == "hide":
 		return m.closeSetupCard(false)
 	}
 	return nil
+}
+
+// onSetupThemePicked: a theme picked in the picker the card opened
+// settles the Theme step. picked=false (Esc) only forgets the question.
+func (m *Model) onSetupThemePicked(picked bool) tea.Cmd {
+	if m.setup == nil || !m.setup.themeAsked {
+		return nil
+	}
+	m.setup.themeAsked = false
+	if !picked {
+		return nil
+	}
+	return m.settleSetup("theme")
 }
 
 func (m *Model) setupErr(err error) tea.Cmd {
