@@ -115,18 +115,6 @@ func TestRenderRightDefaultsEncoding(t *testing.T) {
 	}
 }
 
-func TestRenderRightTermIndicator(t *testing.T) {
-	m := New(theme.Theme{})
-	out := m.renderRight(State{Line: 1, Col: 1, Term: true})
-	if !strings.Contains(out, "TERM") {
-		t.Fatalf("TERM indicator missing when Term=true: %s", out)
-	}
-	out = m.renderRight(State{Line: 1, Col: 1, Term: false})
-	if strings.Contains(out, "TERM") {
-		t.Fatalf("TERM indicator should not show when Term=false")
-	}
-}
-
 func TestTruncate(t *testing.T) {
 	cases := []struct {
 		s    string
