@@ -252,6 +252,27 @@ func TestManagerHTTPSessionIdleAndExpiry(t *testing.T) {
 	}
 }
 
+// Spec: a project server is not trusted by itself, so it can not start a
+// sign-in until the user trusts it (Manager.Trust, the dialog's answer).
+func TestManagerSignInNeedsTrust(t *testing.T) {
+	o := newOAuthEnv(t, mcptest.HTTPOptions{})
+	o.write(t, o.user, map[string]any{})
+	o.write(t, o.project, map[string]any{"lin": map[string]any{"type": "http", "url": o.srv.MCPURL()}})
+	o.m.Reload()
+	if _, err := o.m.BeginSignIn(context.Background(), "lin"); !errors.Is(err, ErrNotTrusted) {
+		t.Fatalf("untrusted: %v", err)
+	}
+	o.m.Trust("lin", false)
+	fl, err := o.m.BeginSignIn(context.Background(), "lin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fl.Close()
+	if !status(o.m, "lin").Trusted {
+		t.Error("not trusted after Trust")
+	}
+}
+
 // CredStore keeps sign-ins in credentials.json (0600) and secrets in
 // mcp_secrets.
 func TestCredStore(t *testing.T) {

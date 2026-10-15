@@ -113,6 +113,9 @@ func (m *Model) aiMCP() *mcp.Manager {
 			return mcp.LoadSettings(mcpConfigPath()).TrustedTools[name]
 		},
 		SaveTrustedTools: func(name, hash string) { _ = mcp.SaveTrustedTools(mcpConfigPath(), name, hash) },
+		Tokens:           mcp.CredStore{Path: mcpCredPath()},
+		OAuthPort:        func() int { return mcp.LoadSettings(mcpConfigPath()).OAuthPort },
+		CIMDURL:          mcpCIMDURL,
 	})
 	mcpTarget.Store(s.mcp)
 	return s.mcp
@@ -168,6 +171,7 @@ type aiMCPTrustPending struct {
 	server       string
 	reply        chan mcp.TrustAnswer
 	connect      bool
+	signin       bool // sign in after the answer (servers picker)
 	toolsChanged bool // the question was ReasonToolsChanged
 }
 
@@ -267,10 +271,25 @@ func (m *Model) answerMCPTrust(id string) tea.Cmd {
 		}
 		return nil
 	}
+	if p.signin && a != mcp.TrustDeny {
+		m.aiMCP().Trust(p.server, a == mcp.TrustAlways)
+		return m.mcpSignIn(p.server)
+	}
 	if p.connect && a != mcp.TrustDeny {
 		return m.mcpConnect(p.server, a)
 	}
 	return nil
+}
+
+// mcpHasAuthHeader: the entry sends its own Authorization (a PAT), so
+// it has no OAuth sign-in.
+func mcpHasAuthHeader(s mcp.Server) bool {
+	for k := range s.Headers {
+		if strings.EqualFold(k, "Authorization") {
+			return true
+		}
+	}
+	return false
 }
 
 // mcpToolsChangedToast warns that a server's tools changed since the
@@ -296,8 +315,13 @@ func mcpStatusHint(st mcp.Status) string {
 		parts = append(parts, st.Problem)
 	case st.State == mcp.StateFailed:
 		parts = append(parts, "failed: "+st.Problem)
+	case st.State == mcp.StateRunning && kind == "remote":
+		parts = append(parts, "connected")
 	default:
 		parts = append(parts, st.State)
+	}
+	if st.SignedIn {
+		parts = append(parts, "signed in")
 	}
 	if st.Pid > 0 {
 		parts = append(parts, fmt.Sprintf("pid %d", st.Pid))
@@ -327,6 +351,8 @@ func mcpStatusIcon(st mcp.Status) string {
 		return "●"
 	case mcp.StateFailed, mcp.StateInvalid:
 		return "✗"
+	case mcp.StateSignIn:
+		return "!"
 	}
 	return "○"
 }
@@ -374,6 +400,30 @@ func (m *Model) openMCPServerActions(name string) tea.Cmd {
 	}
 	if st.ToolsChanged {
 		items = append(items, picker.Item{ID: "accept-tools", Title: "Trust the new tools", Hint: "review them with Show tools first"})
+	}
+	entry := mcpServerEntries(name)
+	if st.Type == mcp.TypeHTTP && st.State != mcp.StateInvalid && (len(entry) == 0 || !mcpHasAuthHeader(entry[0])) {
+		hint := "OAuth in the browser"
+		if mcpOverSSH() {
+			hint = "OAuth: paste the address back (SSH)"
+		}
+		items = append(items, picker.Item{ID: "signin", Title: "Sign in", Hint: hint})
+	}
+	if st.SignedIn {
+		items = append(items, picker.Item{ID: "signout", Title: "Sign out", Hint: "forget its tokens"})
+	}
+	for _, e := range entry {
+		missing := map[string]bool{}
+		for _, n := range mcpMissingSecrets(e) {
+			missing[n] = true
+		}
+		for _, n := range e.SecretNames() {
+			hint := "saved"
+			if missing[n] {
+				hint = "not set"
+			}
+			items = append(items, picker.Item{ID: "secret:" + n, Title: "Set secret " + n + "…", Hint: hint})
+		}
 	}
 	items = append(items,
 		picker.Item{ID: "edit", Title: "Edit in mcp.json", Hint: st.Source},
@@ -463,6 +513,20 @@ func (m *Model) onMCPServerAction(id string) tea.Cmd {
 		return nil
 	case "log":
 		return m.showMCPLog()
+	case "signin":
+		if !st.Trusted {
+			for _, sv := range mcpServerEntries(name) {
+				m.aiS().mcpTrust = &aiMCPTrustPending{server: name, signin: true}
+				m.mcpTrustDialog(sv)
+				return nil
+			}
+		}
+		return m.mcpSignIn(name)
+	case "signout":
+		return m.mcpSignOut(name)
+	}
+	if secret, ok := strings.CutPrefix(id, "secret:"); ok {
+		return m.mcpAskSecret(secret)
 	}
 	return nil
 }
