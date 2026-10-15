@@ -26,6 +26,10 @@ func key(s string) tea.KeyMsg {
 		return tea.KeyMsg{Type: tea.KeyCtrlD}
 	case "f6":
 		return tea.KeyMsg{Type: tea.KeyF6}
+	case "f1":
+		return tea.KeyMsg{Type: tea.KeyF1}
+	case "alt+x":
+		return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}, Alt: true}
 	case "tab":
 		return tea.KeyMsg{Type: tea.KeyTab}
 	case "a":
@@ -53,6 +57,10 @@ func TestDefaultBindings(t *testing.T) {
 		// forwards it to nvim untouched.
 		{"ctrl+d", ActionNone},
 		{"tab", ActionNone}, // Tab is no longer a focus swap; passes through to focused pane
+		// Terminal R12: VS Code's and JetBrains' terminals take F1 for
+		// their own palette; Alt+X opens termocode's there.
+		{"f1", ActionCommandPalette},
+		{"alt+x", ActionCommandPalette},
 		{"a", ActionNone},
 	}
 	for _, tc := range cases {

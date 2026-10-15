@@ -37,6 +37,7 @@ These are the default keys. The **Key** column is the key you press. The **Key s
 | Key | Key string | Action | Description |
 | --- | --- | --- | --- |
 | `Ctrl+Tab` | `ctrl+tab` | `AlternateFile` | Switch between the two most recent files. |
+| `Alt+X` | `alt+x` | `CommandPalette` | Open the command palette. |
 | `F1` | `f1` | `CommandPalette` | Open the command palette. |
 | `F6` | `f6` | `FocusSwap` | Switch focus between the sidebar and the editor. |
 | `Ctrl+G` | `ctrl+g` | `GotoLine` | Jump to a line number. |
