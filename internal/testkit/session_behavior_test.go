@@ -55,7 +55,7 @@ func TestDashboardRecentFiles(t *testing.T) {
 		got, _ := tabs(d)
 		t.Fatalf("tabs left open: %v", got)
 	}
-	if !d.WaitForText("R E C E N T", 3*time.Second) {
+	if !d.WaitForText("RECENT FILES", 3*time.Second) {
 		t.Fatalf("no dashboard after closing all tabs:\n%s", screen(d))
 	}
 	_, _, okA := findIn(d, "a.txt", sidebarW, d.W)
