@@ -117,6 +117,9 @@ func TestBoundsDock(t *testing.T) {
 	if len(rows) != 39 || ansi.StringWidth(rows[0]) != 116 {
 		t.Errorf("box %dx%d, want 116x39", ansi.StringWidth(rows[0]), len(rows))
 	}
+	if x, y, w, h := m.Rect(); x != 34 || y != 1 || w != 116 || h != 39 {
+		t.Errorf("Rect %d,%d %dx%d", x, y, w, h)
+	}
 	if _, _, in := m.HandleMouse(10, 10, tea.MouseActionPress, tea.MouseButtonLeft); in {
 		t.Error("a click left of a docked card landed on it")
 	}
