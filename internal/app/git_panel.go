@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // The Source Control panel is an accordion of collapsible sections —
@@ -386,4 +387,28 @@ func (m Model) gitPanelLayout(h int) (top, bodyH, footerRows int) {
 		top = 0
 	}
 	return top, bodyH, footerRows
+}
+
+// gitCopyCommit copies GRAPH commit ci's full SHA (or, with message, its
+// whole message) and says so in a toast.
+func (m *Model) gitCopyCommit(ci int, message bool) tea.Cmd {
+	if ci < 0 || ci >= len(m.gitCommits) {
+		return nil
+	}
+	c := m.gitCommits[ci]
+	text, what := c.FullHash, c.Hash
+	if message {
+		cwd, _ := os.Getwd()
+		msg, err := git.CommitMessage(cwd, c.FullHash)
+		if err != nil {
+			var cmd tea.Cmd
+			m.toast, cmd = m.toast.PushDetail(toast.Errr, "Could not read the message", err.Error())
+			return cmd
+		}
+		text, what = msg, "the message of "+c.Hash
+	}
+	m.copyToClipboard(text)
+	var cmd tea.Cmd
+	m.toast, cmd = m.toast.Push(toast.Info, "Copied "+what)
+	return cmd
 }

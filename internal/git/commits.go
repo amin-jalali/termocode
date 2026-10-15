@@ -189,3 +189,9 @@ func CompactAge(epoch int64) string {
 	}
 	return compactAge(relativeDate(strconv.FormatInt(epoch, 10)))
 }
+
+// CommitMessage is a commit's whole message (subject, blank line, body).
+func CommitMessage(dir, hash string) (string, error) {
+	out, err := runOut(dir, "git", "log", "-1", "--format=%B", hash, "--")
+	return strings.TrimRight(out, "\n"), err
+}

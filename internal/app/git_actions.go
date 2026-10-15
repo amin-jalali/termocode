@@ -142,6 +142,11 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 		case 'x':
 			m.openGitDiscardConfirm()
 			return m, nil, true
+		case 'y':
+			if hasCur && cur.kind == gitRowCommit {
+				return m, m.gitCopyCommit(cur.ci, false), true
+			}
+			return m, nil, true
 		case 'r':
 			return m, fetchGitCmd(), true
 		case 't':

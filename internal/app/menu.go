@@ -37,6 +37,7 @@ const (
 	gitMenuDiscard  = "git-discard"
 	gitMenuCommit   = "git-commit"
 	gitMenuCopyHash = "git-copy-hash"
+	gitMenuCopyMsg  = "git-copy-message"
 	gitMenuRefresh  = "git-refresh"
 
 	// Action-bar overflow (⋯) menu.
@@ -72,6 +73,7 @@ func gitCommitMenuItems() []menu.Item {
 	return []menu.Item{
 		{ID: gitMenuDiff, Title: "Open Changes", Icon: "≢"},
 		{ID: gitMenuCopyHash, Title: "Copy Commit Hash", Icon: "⎘"},
+		{ID: gitMenuCopyMsg, Title: "Copy Commit Message", Icon: "⎘"},
 		{Sep: true},
 		{ID: gitMenuRefresh, Title: "Refresh", Icon: "⟳"},
 	}
@@ -131,10 +133,9 @@ func (m *Model) handleGitMenuSelect(id string) tea.Cmd {
 		m.openGitDiscardConfirm()
 	case gitMenuCommit:
 		m.openCommitPrompt()
-	case gitMenuCopyHash:
-		if cur, ok := m.gitCurrentRow(); ok && cur.hash != "" {
-			m.copyToClipboard(cur.hash)
-			m.err = "Copied: " + cur.hash
+	case gitMenuCopyHash, gitMenuCopyMsg:
+		if cur, ok := m.gitCurrentRow(); ok && cur.kind == gitRowCommit {
+			return m.gitCopyCommit(cur.ci, id == gitMenuCopyMsg)
 		}
 	case gitMenuRefresh:
 		return fetchGitCmd()
