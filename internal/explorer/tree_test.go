@@ -1,6 +1,7 @@
 package explorer
 
 import (
+	"github.com/amin-jalali/termocode/internal/theme"
 	"os"
 	"path/filepath"
 	"strings"
@@ -285,7 +286,7 @@ func TestViewSmokeLandmarks(t *testing.T) {
 	if !strings.Contains(out, "feature/red…") && !strings.Contains(out, "feature/red") {
 		t.Fatalf("missing truncated branch name:\n%s", out)
 	}
-	if !strings.Contains(out, "⋯") {
+	if !strings.Contains(out, theme.GlyphMore.String()) {
 		t.Fatalf("missing kebab `⋯`:\n%s", out)
 	}
 

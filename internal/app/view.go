@@ -1302,16 +1302,16 @@ func sidebarHeader(w int, label, project string) string {
 
 	var right string
 	if project != "" {
-		right = mutedStyle.Render(strings.ToUpper(project)) + fill.Render(" ") + mutedStyle.Render("⋯") + fill.Render(" ")
+		right = mutedStyle.Render(strings.ToUpper(project)) + fill.Render(" ") + mutedStyle.Render(theme.GlyphMore.String()) + fill.Render(" ")
 	} else {
-		right = mutedStyle.Render("⋯") + fill.Render(" ")
+		right = mutedStyle.Render(theme.GlyphMore.String()) + fill.Render(" ")
 	}
 	rightW := textWidth(right)
 
 	gap := w - leftW - rightW
 	if gap < 1 {
 		// Drop the project name and keep only the ⋯ if it doesn't fit.
-		right = mutedStyle.Render("⋯") + fill.Render(" ")
+		right = mutedStyle.Render(theme.GlyphMore.String()) + fill.Render(" ")
 		rightW = textWidth(right)
 		gap = w - leftW - rightW
 		if gap < 0 {

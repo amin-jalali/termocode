@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/amin-jalali/termocode/internal/theme"
 	"strings"
 	"testing"
 
@@ -37,11 +38,11 @@ func TestRenderTerminalTabBarTwoTabs(t *testing.T) {
 		"$", // bash icon (inactive tab)
 		"termocode",
 		"scratch",
-		"×", // tab close glyphs + panel close glyph
-		"+", // new-tab button
-		"●", // status dot
-		"↑", // maximize
-		"−", // minimize
+		theme.GlyphClose.String(), // tab close glyphs + panel close glyph
+		"+",                       // new-tab button
+		"●",                       // status dot
+		"↑",                       // maximize
+		"−",                       // minimize
 	}
 	for _, s := range mustContain {
 		if !strings.Contains(out, s) {
@@ -146,7 +147,7 @@ func TestSpliceTerminalTabBarRowCount(t *testing.T) {
 	// Tab bar carries the "+" new-tab button — pinpoint the row.
 	tabBarIdx := -1
 	for i, r := range gotRows {
-		if strings.Contains(r, "↑−×") {
+		if strings.Contains(r, "↑−"+theme.GlyphClose.String()) {
 			tabBarIdx = i
 			break
 		}
@@ -185,7 +186,7 @@ func TestSpliceTerminalTabBarMinimized(t *testing.T) {
 	if len(gotRows) != editorH {
 		t.Fatalf("minimized rows = %d, want %d", len(gotRows), editorH)
 	}
-	if !strings.Contains(gotRows[editorH-1], "↑−×") {
+	if !strings.Contains(gotRows[editorH-1], "↑−"+theme.GlyphClose.String()) {
 		t.Errorf("bar should be on the last row, got %q", stripANSITerminal(gotRows[editorH-1]))
 	}
 	// Ensure the second-to-last editor row is preserved (we replaced only

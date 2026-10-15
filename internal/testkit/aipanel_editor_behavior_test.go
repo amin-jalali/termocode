@@ -1,6 +1,7 @@
 package testkit
 
 import (
+	"github.com/amin-jalali/termocode/internal/theme"
 	"strings"
 	"testing"
 	"time"
@@ -20,12 +21,12 @@ func TestTerminalBarControlsWithAIPanel(t *testing.T) {
 	if !d.WaitForText("Terminal ›", 5*time.Second) {
 		t.Fatalf("terminal did not open:\n%s", screen(d))
 	}
-	x, y, ok := findIn(d, "↑−×", 0, aiPanelEdge(d))
+	x, y, ok := findIn(d, "↑−"+theme.GlyphClose.String(), 0, aiPanelEdge(d))
 	if !ok {
 		t.Fatalf("no terminal controls:\n%s", screen(d))
 	}
 	d.Click(x+2, y) // ×: close the panel
-	if !d.WaitFor(func() bool { return !strings.Contains(screen(d), "↑−×") }, 3*time.Second) {
+	if !d.WaitFor(func() bool { return !strings.Contains(screen(d), "↑−"+theme.GlyphClose.String()) }, 3*time.Second) {
 		t.Fatalf("× on the terminal bar did not close the panel:\n%s", screen(d))
 	}
 }

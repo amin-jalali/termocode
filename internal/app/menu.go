@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"github.com/amin-jalali/termocode/internal/theme"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -210,7 +211,7 @@ const (
 
 func tabMenuItems() []menu.Item {
 	return []menu.Item{
-		{ID: tabMenuClose, Title: "Close", Icon: "×"},
+		{ID: tabMenuClose, Title: "Close", Icon: theme.GlyphClose.String()},
 		{ID: tabMenuCloseOthers, Title: "Close Others", Icon: "⊘"},
 		{ID: tabMenuCloseRight, Title: "Close All to the Right", Icon: "→"},
 		{Sep: true},
@@ -234,7 +235,7 @@ func explorerFileMenuItems() []menu.Item {
 		{ID: "open-side", Title: "Open to the Side", Icon: "▷"},
 		{Sep: true},
 		{ID: "rename", Title: "Rename...", Icon: "✎"},
-		{ID: "delete", Title: "Delete", Icon: "×"},
+		{ID: "delete", Title: "Delete", Icon: theme.GlyphClose.String()},
 		{Sep: true},
 		{ID: "copy-path", Title: "Copy Path", Icon: "⎘"},
 		{ID: "reveal-terminal", Title: "Reveal in Terminal", Icon: "❯"},
@@ -249,7 +250,7 @@ func explorerDirMenuItems() []menu.Item {
 		{ID: "new-folder", Title: "New Folder...", Icon: "+"},
 		{Sep: true},
 		{ID: "rename", Title: "Rename...", Icon: "✎"},
-		{ID: "delete", Title: "Delete", Icon: "×"},
+		{ID: "delete", Title: "Delete", Icon: theme.GlyphClose.String()},
 		{Sep: true},
 		{ID: "open-terminal", Title: "Open in Terminal", Icon: "❯"},
 		{ID: "copy-path", Title: "Copy Path", Icon: "⎘"},

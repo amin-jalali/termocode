@@ -338,7 +338,7 @@ func testsActionLayout(running, hasFailed bool, w int) []testsAction {
 	if hasFailed {
 		labels = append(labels, [2]string{"failed", "↻ Failed"})
 	}
-	icons := [][2]string{{"refresh", "⟳"}, {"collapse", "⊟"}}
+	icons := [][2]string{{"refresh", "⟳"}, {"collapse", theme.GlyphCollapse.String()}}
 	iconStart := w - 2*len(icons)
 	var out []testsAction
 	col := 1

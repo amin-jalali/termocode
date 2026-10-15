@@ -177,9 +177,9 @@ func (m Model) renderHeader() string {
 		if runewidth.StringWidth(br) > 12 {
 			br = runewidth.Truncate(br, 12, "…")
 		}
-		right = muted.Render(br) + bg.Render(" ") + muted.Render("⋯")
+		right = muted.Render(br) + bg.Render(" ") + muted.Render(theme.GlyphMore.String())
 	} else {
-		right = muted.Render("⋯")
+		right = muted.Render(theme.GlyphMore.String())
 	}
 	rightW = lipgloss.Width(right)
 

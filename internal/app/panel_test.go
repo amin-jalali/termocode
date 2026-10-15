@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/amin-jalali/termocode/internal/theme"
 	"strings"
 	"testing"
 
@@ -111,7 +112,7 @@ func TestTabBarWithOutputTab(t *testing.T) {
 		t.Fatalf("tab bar width = %d, want %d", w, width)
 	}
 	plain := stripANSITerminal(out)
-	if !strings.HasPrefix(plain, "  ≡ Output ×") || strings.Count(plain, "Output") != 1 {
+	if !strings.HasPrefix(plain, "  ≡ Output "+theme.GlyphClose.String()) || strings.Count(plain, "Output") != 1 {
 		t.Errorf("bar should lead with the Output tab (title shown once), got %q", plain)
 	}
 	if !strings.Contains(plain, "termocode") || !strings.Contains(plain, "scratch") {
@@ -128,7 +129,7 @@ func TestTabBarWithOutputTab(t *testing.T) {
 	// Rendered text and slot geometry agree: the Output slot covers
 	// "≡ Output ×".
 	s := layout.Tabs[0]
-	if got := strings.TrimSpace(string([]rune(plain)[s.Start:s.End])); got != "≡ Output ×" {
+	if got := strings.TrimSpace(string([]rune(plain)[s.Start:s.End])); got != "≡ Output "+theme.GlyphClose.String() {
 		t.Errorf("slot text = %q", got)
 	}
 

@@ -29,21 +29,10 @@ import (
 // mouse.go can call `m.hitActionsHeader(...)` / `m.hitActionsLauncher(...)`
 // without having to know the panel's internal layout.
 
-// actionsPanelGlyphPin is the pin glyph drawn in the header. ⚐ is a
-// "white flag" — at the cell-grid scale it reads as a small flag (i.e.
-// "pinned to this corner") which is more intuitive than the other
-// candidate glyphs.
-const (
-	actionsPanelGlyphPin   = "⚐"
-	actionsPanelGlyphClose = "×"
-	// Group A: the panel hosts the AI chat — new-chat and history buttons.
-	actionsPanelGlyphNew     = "+"
-	actionsPanelGlyphHistory = "≡"
+// The header's buttons use the shared chrome glyphs (theme.Glyph*).
 
-	// Launcher chip glyph + label shown when unpinned. "Actions" is a
-	// reasonable hint of what the chip does without leaning on tooltips.
-	actionsLauncherLabel = "▸ ✦ AI"
-)
+// actionsLauncherLabel is the launcher chip shown when unpinned.
+const actionsLauncherLabel = "▸ ✦ AI"
 
 // actionsPanelVisible reports whether the pinned (column-occupying) panel
 // is currently rendered. False when the user closed it OR when it's
@@ -239,10 +228,10 @@ func (m Model) renderActionsHeader(width int) string {
 		}
 		return st.Render(glyph)
 	}
-	right := btn("new", actionsPanelGlyphNew, closeStyle) + bg.Render(" ") +
-		btn("history", actionsPanelGlyphHistory, closeStyle) + bg.Render(" ") +
-		btn("pin", actionsPanelGlyphPin, pinStyle) + bg.Render(" ") +
-		btn("close", actionsPanelGlyphClose, closeStyle) + bg.Render(" ")
+	right := btn("new", theme.GlyphNew.String(), closeStyle) + bg.Render(" ") +
+		btn("history", theme.GlyphHistory.String(), closeStyle) + bg.Render(" ") +
+		btn("pin", theme.GlyphPin.String(), pinStyle) + bg.Render(" ") +
+		btn("close", theme.GlyphClose.String(), closeStyle) + bg.Render(" ")
 
 	leftW := textWidth(left)
 	rightW := textWidth(right)

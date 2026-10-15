@@ -582,16 +582,8 @@ func renderTabCellsSfx(b nvim.BufferInfo, active bool, suffix string, welcome bo
 	return cells
 }
 
-// closeGlyph is the tab close button for the active icon mode.
-func closeGlyph() string {
-	switch theme.CurrentIconMode {
-	case theme.IconModeNerdFont:
-		return "\uf00d" // nf-fa-times
-	case theme.IconModeUnicode:
-		return "×"
-	}
-	return "x"
-}
+// closeGlyph is the tab close button: the shared close glyph.
+func closeGlyph() string { return theme.GlyphClose.String() }
 
 func (m Model) extensionIcon(name string) string {
 	// Reserved for a Nerd-Font-driven extension→icon map. For now keep the

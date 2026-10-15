@@ -16,13 +16,17 @@ const (
 	uiTimeout   = 8 * time.Second
 )
 
-// mainFrame: the tab bar (with its overflow "⋮") is row 0 and the status
+// mainFrame: the tab bar (with its "more" button ⋯) is row 0 and the status
 // bar (encoding, "Ln N, Col M") is the last row.
 var mainFrame = Frame{
-	Top: func(l string) bool { return strings.Contains(l, "⋮") },
+	// ⋯ with Unicode icons, nf-fa-ellipsis_h with Nerd icons (kitty).
+	Top: func(l string) bool { return strings.Contains(l, "⋯") || strings.Contains(l, "\uf141") },
 	Bottom: func(l string) bool {
-		// Narrow widths cut the right side ("UTF…"), so match any status item.
-		return strings.Contains(l, "UTF") || strings.Contains(l, "Ln ") || strings.Contains(l, "Spaces:")
+		// Narrow widths cut the right side ("UTF…"), so match any status
+		// item; with the terminal focused the right side is the shell and
+		// its folder, so the project pill (◆, or the Nerd folder) counts.
+		return strings.Contains(l, "UTF") || strings.Contains(l, "Ln ") || strings.Contains(l, "Spaces:") ||
+			strings.Contains(l, "◆ ") || strings.Contains(l, "\uf07c ")
 	},
 }
 
@@ -269,7 +273,7 @@ func TestResize(t *testing.T) {
 	tm.WaitFor("prompt below the panel tab bar", uiTimeout, func(ls []string) bool {
 		tab, prompt := -1, -1
 		for y, l := range ls {
-			if strings.Contains(l, "×  +") {
+			if strings.Contains(l, "✕  +") {
 				tab = y
 			}
 			if strings.HasSuffix(l, "$") {
@@ -281,7 +285,7 @@ func TestResize(t *testing.T) {
 	// Ctrl+Q goes to the shell while the terminal has focus; close the
 	// panel first.
 	tm.Send(KeyCtrlT)
-	tm.WaitGone("×  +", uiTimeout)
+	tm.WaitGone("✕  +", uiTimeout)
 	tm.step("terminal closed")
 	tm.Quit()
 }

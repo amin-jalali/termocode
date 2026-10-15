@@ -34,10 +34,10 @@ import (
 // language, terminal focus, …). The BOTTOM section is a fixed set of
 // always-available toggles. A 1-row dim divider sits between them.
 
-// overflowMenuGlyph is the chevron rendered at the right edge of the tab
-// bar's body row. U+22EE (vertical ellipsis) is the closest single-cell
-// glyph to the "⋮" the spec requested.
-const overflowMenuGlyph = "⋮"
+// overflowMenuGlyph is the "more" button at the right edge of the tab
+// bar: the shared more glyph (theme.GlyphMore), like every other "more"
+// button.
+func overflowMenuGlyph() string { return theme.GlyphMore.String() }
 
 // overflowMenuRightInset is how many cells from the right edge of the
 // editor pane the glyph sits at. 1 leaves a 1-cell breather on the right
@@ -1048,7 +1048,7 @@ func (m Model) overlayOverflowMenuGlyphLines(lines []string) {
 		fg = theme.TextPrimary
 	}
 	style := theme.FgBg(fg, theme.BgTitleBar).Bold(true)
-	cell := style.Render(overflowMenuGlyph)
+	cell := style.Render(overflowMenuGlyph())
 	lines[row] = glyphSplice.splice(lines[row], cell, gx)
 }
 

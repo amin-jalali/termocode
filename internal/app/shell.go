@@ -967,7 +967,7 @@ func (m Model) renderTerminalTabBar(width int) string {
 			out.WriteString(editorBg.Render(" "))
 			out.WriteString(primary.Render(name))
 			out.WriteString(editorBg.Render(" "))
-			out.WriteString(closeOnEditor.Render("×"))
+			out.WriteString(closeOnEditor.Render(theme.GlyphClose.String()))
 			out.WriteString(editorBg.Render(" "))
 		} else {
 			out.WriteString(bg.Render(" "))
@@ -975,7 +975,7 @@ func (m Model) renderTerminalTabBar(width int) string {
 			out.WriteString(bg.Render(" "))
 			out.WriteString(muted.Render(name))
 			out.WriteString(bg.Render(" "))
-			out.WriteString(closeOnPanel.Render("×"))
+			out.WriteString(closeOnPanel.Render(theme.GlyphClose.String()))
 			out.WriteString(bg.Render(" "))
 		}
 		// Inter-tab separator. Skip when adjacent to the active tab
@@ -1021,7 +1021,7 @@ func (m Model) renderTerminalTabBar(width int) string {
 	out.WriteString(bg.Render(" "))
 	out.WriteString(mutedDim.Render("↑"))
 	out.WriteString(mutedDim.Render("−"))
-	out.WriteString(mutedDim.Render("×"))
+	out.WriteString(mutedDim.Render(theme.GlyphClose.String()))
 	out.WriteString(bg.Render(" "))
 
 	return padTabBarToWidth(out.String(), width, bg)
