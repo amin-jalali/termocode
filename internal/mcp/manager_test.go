@@ -279,6 +279,27 @@ func TestManagerProblems(t *testing.T) {
 	}
 }
 
+// Config warnings (a literal token) go to the log once, not on every
+// reload.
+func TestManagerLogsWarningsOnce(t *testing.T) {
+	e := newManagerEnv(t)
+	e.write(t, e.user, map[string]any{"gh": map[string]any{"command": "x", "env": map[string]string{"TOKEN": "ghp_abcdefghijklmnopqrstuvwxyz0123"}}})
+	var ll logLines
+	m := NewManager(ManagerOptions{UserPath: e.user, Log: func(s, l string) { ll.add(s + ": " + l) }})
+	t.Cleanup(m.Close)
+	m.Reload()
+	m.Reload()
+	n := 0
+	for _, l := range ll.lines {
+		if strings.Contains(l, "literal secret") {
+			n++
+		}
+	}
+	if n != 1 || !strings.HasPrefix(ll.lines[0], "config: ") {
+		t.Errorf("warning logged %d times: %q", n, ll.lines)
+	}
+}
+
 // Reload stops a server whose entry changed; Close stops everything.
 func TestManagerReloadAndClose(t *testing.T) {
 	e := newManagerEnv(t)

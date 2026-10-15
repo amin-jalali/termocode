@@ -86,6 +86,7 @@ nav:
       - "Git: stage, commit, sync, conflicts": guides/git.md
       - Set up AI: guides/ai-setup.md
       - Use AI: guides/ai-use.md
+      - Connect MCP servers: guides/mcp.md
       - Debug a program: guides/debug.md
       - Run and explore tests: guides/tests.md
       - Tasks and problems: guides/tasks-problems.md

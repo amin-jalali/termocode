@@ -374,6 +374,10 @@ func renderAITools() string {
 		"These calls can lose data.\n")
 	b.WriteString("- **never**: the AI can not do it. The model gets the reason.\n\n")
 	b.WriteString("Some tools have an `op` argument; then each op has its own gate.\n\n")
+	b.WriteString("**MCP tools** are not listed here: they come from the MCP servers in your `mcp.json` " +
+		"(see the MCP guide). They are named `mcp__<server>__<tool>`. A tool the server marks read-only runs at once; " +
+		"the others ask, with **Always allow mcp:<server>**; a tool whose name says delete, remove, archive, destroy, " +
+		"purge or drop always asks.\n\n")
 
 	tools := app.AIToolCatalog()
 	b.WriteString("## Overview\n\n")

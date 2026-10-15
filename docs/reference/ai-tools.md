@@ -11,6 +11,8 @@ The AI chat works with tools. This page lists every tool the model can call, its
 
 Some tools have an `op` argument; then each op has its own gate.
 
+**MCP tools** are not listed here: they come from the MCP servers in your `mcp.json` (see the MCP guide). They are named `mcp__<server>__<tool>`. A tool the server marks read-only runs at once; the others ask, with **Always allow mcp:<server>**; a tool whose name says delete, remove, archive, destroy, purge or drop always asks.
+
 ## Overview
 
 | Tool | Gate | What it does |
