@@ -120,3 +120,18 @@ func realExecutable(exe, self string) string {
 	}
 	return exe
 }
+
+// linkerArgs undoes a doubled program path. termux-exec starts a program
+// in the app's data dir as `linker64 <path> <args>`; the linker hands
+// the program argv with <path> twice, so os.Args[1] is the program again
+// instead of its first argument. exe is os.Executable (the linker in
+// that case) and selfExe what termux-exec says the program is.
+func linkerArgs(args []string, exe, selfExe string) []string {
+	if b := filepath.Base(exe); b != "linker64" && b != "linker" {
+		return args
+	}
+	if len(args) < 2 || args[0] != args[1] || (selfExe != "" && args[1] != selfExe) {
+		return args
+	}
+	return args[1:]
+}

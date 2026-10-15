@@ -36,6 +36,12 @@ never parsed by the shell (`"$@"`).
 `spawn.Executable` uses `TERMUX_EXEC__PROC_SELF_EXE` when
 `/proc/self/exe` is the linker.
 
+Started through the linker, a Go program also sees its own path twice in
+`os.Args` (`[tc, tc, --version]`, checked on the tablet), so no argument
+reached main: `--version` opened the UI and the session server never
+started ("no session for …"). An `init` in `internal/spawn` (Android only)
+drops the doubled path when `os.Executable` is the linker.
+
 On other systems the package changes nothing. A test
 (`TestNoDirectExec`) fails when code outside the package calls
 `exec.Command`, `exec.CommandContext`, `syscall.Exec` or `os.Executable`.
