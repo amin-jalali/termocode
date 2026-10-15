@@ -98,6 +98,11 @@ func goldenExtras() []Scene {
 		// Persian (right-to-left) chat: shaped letters in reading order.
 		{Name: "ai-chat-fa", Env: aiEnv, Steps: WithEditor(Act("palette:ai-open-chat"), Act("aidemo-fa"), Pause(600*time.Millisecond))},
 		{Name: "diff-review-light", Theme: "catppuccin-latte", Steps: DiffReview().Steps},
+		// Source Control: compare two commits; the commit view in a light
+		// theme and with ASCII icons.
+		SCMCompare(),
+		{Name: "scm-commit-light", Theme: "catppuccin-latte", Steps: SCMCommit().Steps},
+		{Name: "scm-commit-ascii", Icons: "ascii", Steps: SCMCommit().Steps},
 		// The Problems panel with nothing to show (the empty state).
 		{Name: "problems", Steps: WithEditor(Act("palette:problems-panel"), Pause(800*time.Millisecond))},
 	}
