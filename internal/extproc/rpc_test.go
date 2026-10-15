@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -166,6 +167,86 @@ func TestErrorResponseAndNotify(t *testing.T) {
 	m := <-notes
 	if m.Method != "echo" || !m.IsNotification() || string(m.Params) != `{"a":"b"}` {
 		t.Fatalf("notification = %+v", m)
+	}
+}
+
+// MC-0: newline-delimited JSON (MCP stdio). Empty lines and lines that
+// are not JSON (a server printing a banner on stdout) are skipped and
+// reported; \r\n works; a line over MaxMessage is an error.
+func TestReadLineMessage(t *testing.T) {
+	var skipped []string
+	in := "{\"a\":1}\n\nnpm WARN banner\r\n{\"b\":2}\r\n  [1,2]\n{\"c\":3}"
+	r := bufio.NewReader(strings.NewReader(in))
+	var got []string
+	for {
+		b, err := ReadLineMessage(r, func(l string) { skipped = append(skipped, l) })
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, string(b))
+	}
+	want := []string{`{"a":1}`, `{"b":2}`, `[1,2]`, `{"c":3}`}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Errorf("got %q, want %q", got, want)
+	}
+	if len(skipped) != 1 || skipped[0] != "npm WARN banner" {
+		t.Errorf("skipped %q", skipped)
+	}
+
+	big := "{\"x\":\"" + strings.Repeat("a", MaxMessage) + "\"}\n"
+	if _, err := ReadLineMessage(bufio.NewReader(strings.NewReader(big)), nil); err == nil || errors.Is(err, io.EOF) {
+		t.Errorf("line over MaxMessage: err = %v, want a size error", err)
+	}
+}
+
+func TestWriteLineMessage(t *testing.T) {
+	var buf bytes.Buffer
+	if err := WriteLineMessage(&buf, map[string]any{"jsonrpc": "2.0", "method": "x", "params": map[string]any{"s": "a\nb"}}); err != nil {
+		t.Fatal(err)
+	}
+	s := buf.String()
+	if strings.Count(s, "\n") != 1 || !strings.HasSuffix(s, "}\n") || strings.Contains(s, "Content-Length") {
+		t.Fatalf("frame %q", s)
+	}
+}
+
+// Two newline Conns back to back: calls, notifications and replies use
+// one JSON object per line. A Call whose ctx ends reports its id to
+// OnCancel (MCP sends notifications/cancelled with it).
+func TestNewlineConn(t *testing.T) {
+	ar, bw := io.Pipe()
+	br, aw := io.Pipe()
+	var mu sync.Mutex
+	var cancelled []string
+	opts := ConnOptions{Framing: FramingNewline, OnCancel: func(c *Conn, id json.RawMessage) {
+		mu.Lock()
+		cancelled = append(cancelled, string(id))
+		mu.Unlock()
+	}}
+	a := NewConnWith(ar, aw, nil, opts)
+	b := NewConnWith(br, bw, func(c *Conn, m Message) {
+		if m.Method == "never" {
+			return
+		}
+		_ = c.Reply(m.ID, map[string]string{"m": m.Method}, nil)
+	}, ConnOptions{Framing: FramingNewline})
+	t.Cleanup(func() { a.Close(); b.Close(); _ = ar.Close(); _ = br.Close() })
+	r, err := a.Call(context.Background(), "hello", nil)
+	if err != nil || string(r) != `{"m":"hello"}` {
+		t.Fatalf("call = %s, %v", r, err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+	if _, err := a.Call(ctx, "never", nil); !errors.Is(err, ErrTimeout) {
+		t.Fatalf("err = %v", err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(cancelled) != 1 || cancelled[0] != "2" {
+		t.Errorf("OnCancel ids %q, want [2]", cancelled)
 	}
 }
 
