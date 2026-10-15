@@ -39,7 +39,7 @@ type mdStyles struct {
 	bg                     theme.Color256
 	text, bold, ital, dim  lipgloss.Style
 	link, strike, code     lipgloss.Style
-	h1, h2, h3             lipgloss.Style
+	h1, h2, h3, h4, h1Rule lipgloss.Style
 	bullet, quoteBar, rule lipgloss.Style
 	cardBg, cardHead       lipgloss.Color
 	cardLabel, cardButton  lipgloss.Style
@@ -57,17 +57,20 @@ func newMDStyles(bg theme.Color256) mdStyles {
 	}
 	head := theme.Mix(bg, theme.TextPrimary, 0.08)
 	s := mdStyles{
-		bg:         bg,
-		text:       st(theme.TextPrimary),
-		bold:       st(theme.TextWhite).Bold(true),
-		ital:       st(theme.TextPrimary).Italic(true),
-		dim:        st(theme.TextDim),
-		link:       st(theme.AccentBlue).Underline(true),
-		strike:     st(theme.TextMuted).Strikethrough(true),
-		code:       lipgloss.NewStyle().Background(theme.Mix(bg, theme.TextPrimary, 0.12)).Foreground(theme.LG(theme.AccentAmber)),
-		h1:         st(theme.BorderFocus).Bold(true),
-		h2:         st(theme.TextWhite).Bold(true),
-		h3:         st(theme.TextSecondary).Bold(true),
+		bg:     bg,
+		text:   st(theme.TextPrimary),
+		bold:   st(theme.TextWhite).Bold(true),
+		ital:   st(theme.TextPrimary).Italic(true),
+		dim:    st(theme.TextDim),
+		link:   st(theme.AccentBlue).Underline(true),
+		strike: st(theme.TextMuted).Strikethrough(true),
+		code:   lipgloss.NewStyle().Background(theme.Mix(bg, theme.TextPrimary, 0.12)).Foreground(theme.LG(theme.AccentAmber)),
+		// The heading ladder, as in the Markdown preview (UI review #11).
+		h1:         st(theme.TextWhite).Bold(true),
+		h2:         st(theme.AccentBlue).Bold(true),
+		h3:         st(theme.TextWhite).Bold(true),
+		h4:         st(theme.TextSecondary).Bold(true),
+		h1Rule:     lipgloss.NewStyle().Background(b).Foreground(theme.Mix(theme.AccentBlue, bg, 0.35)),
 		bullet:     st(theme.AIAccent),
 		quoteBar:   st(theme.AIAccent),
 		rule:       st(theme.BorderSubtle),
@@ -233,14 +236,22 @@ func renderChatMarkdown(text string, width, indent, msgIdx int, streaming bool) 
 			flushPara()
 			level := len(trim) - len(strings.TrimLeft(trim, "#"))
 			title := strings.TrimSpace(trim[level:])
-			hs := s.h3
+			hs := s.h4
 			switch level {
 			case 1:
 				hs = s.h1
 			case 2:
 				hs = s.h2
+			case 3:
+				hs = s.h3
 			}
 			wrapped(parseInline(title, s, hs), inner, indent, nil, nil)
+			switch level {
+			case 1:
+				out = append(out, pad([]mdSpan{{text: strings.Repeat("━", inner), st: s.h1Rule}}))
+			case 2:
+				out = append(out, pad([]mdSpan{{text: strings.Repeat("─", inner), st: s.rule}}))
+			}
 		case trim == "---" || trim == "***" || trim == "___":
 			flushPara()
 			out = append(out, pad([]mdSpan{{text: strings.Repeat("─", inner), st: s.rule}}))
