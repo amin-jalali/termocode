@@ -42,6 +42,13 @@ type File struct {
 	Name     string // display path
 	Old, New string
 	Tag      string // "new file", "delete" … shown next to the name
+
+	// Commit mode (NewCommit) only.
+	Status   byte   // 'A', 'M', 'D', 'R' (the list's status letter)
+	Add, Del int    // line counts from git's numstat (shown before the text loads)
+	Binary   bool   // no text diff: the body says so
+	Pending  bool   // Old / New are not loaded yet: the body says Loading…
+	Note     string // shown instead of the diff ("Too big to diff here")
 }
 
 // FinishMsg says the user finished a file: Accepted holds the accepted
@@ -81,6 +88,15 @@ type Model struct {
 	mode   Mode
 	w, h   int // screen size
 
+	// Commit mode (NewCommit): a header above the labels, footer buttons,
+	// keys that emit ActionMsg. nil header: review / compare files.
+	header   *Header
+	buttons  []Button
+	bodyOpen bool
+	// bounds docks the card at a screen rectangle (w, h > 0); otherwise
+	// it is centred on the screen.
+	bx, by, bw, bh int
+
 	// cache of the built display rows of the current file (a pointer:
 	// View runs on value copies)
 	cache *cache
@@ -96,6 +112,9 @@ func New(title string, files []File, review bool) Model {
 }
 
 func newFileState(f File) *fileState {
+	if f.Pending || f.Binary || f.Note != "" {
+		return &fileState{File: f, diff: textdiff.Compute("", ""), expanded: map[int]bool{}}
+	}
 	d := textdiff.Compute(f.Old, f.New)
 	n := len(d.Hunks)
 	if n == 0 && d.EOLOnly() {
@@ -168,12 +187,14 @@ func (m *Model) MarkDone(i int, summary string) {
 // SetMode sets the layout.
 func (m *Model) SetMode(mode Mode) { m.mode = mode; m.cache.reset() }
 
-// Select shows file i.
-func (m *Model) Select(i int) {
+// Select shows file i. In commit mode a file whose text is not loaded
+// yet returns a Cmd that asks the app for it (LoadFileMsg).
+func (m *Model) Select(i int) tea.Cmd {
 	if i >= 0 && i < len(m.files) {
 		m.cur = i
 		m.cache.reset()
 	}
+	return m.loadCmd()
 }
 
 // SetDecision sets the decision of hunk h of the current file.
@@ -243,13 +264,21 @@ func (m *Model) Action(id string) tea.Cmd {
 	case "prev":
 		m.jump(-1)
 	case "next-file":
-		m.stepFile(1)
+		return m.stepFile(1)
 	case "prev-file":
-		m.stepFile(-1)
+		return m.stepFile(-1)
 	case "expand":
 		if f != nil {
 			f.expandAll = !f.expandAll
 			m.cache.reset()
+		}
+	case "body":
+		m.ToggleBody()
+	default:
+		if m.header != nil && id != "" {
+			// Commit actions (copy, open, raw, revert …) are the app's.
+			cur := m.cur
+			return func() tea.Msg { return ActionMsg{ID: id, File: cur} }
 		}
 	}
 	if f == nil || !m.review || f.done {
@@ -314,12 +343,11 @@ func (m Model) AllDecided() bool {
 	return true
 }
 
-func (m *Model) stepFile(dir int) {
+func (m *Model) stepFile(dir int) tea.Cmd {
 	if len(m.files) < 2 {
-		return
+		return nil
 	}
-	m.cur = (m.cur + dir + len(m.files)) % len(m.files)
-	m.cache.reset()
+	return m.Select((m.cur + dir + len(m.files)) % len(m.files))
 }
 
 // jump focuses the next / previous change and scrolls to it.
@@ -399,6 +427,15 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 	}
 	g := m.geom()
+	if m.header != nil {
+		if id, ok := commitKeys[k.String()]; ok {
+			return m, m.Action(id)
+		}
+		switch k.String() {
+		case "x", "a", "A", "R", "e":
+			return m, nil
+		}
+	}
 	switch k.String() {
 	case "esc", "q":
 		return m, m.Action("hide")
@@ -423,9 +460,9 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case "p", "[", "K":
 		m.jump(-1)
 	case "tab":
-		m.stepFile(1)
+		return m, m.stepFile(1)
 	case "shift+tab":
-		m.stepFile(-1)
+		return m, m.stepFile(-1)
 	case "t", "v":
 		return m, m.Action("mode")
 	case "z":
@@ -491,8 +528,7 @@ func (m *Model) click(id string) tea.Cmd {
 	case id == "":
 		return nil
 	case scanID(id, "file:", &n):
-		m.Select(n)
-		return nil
+		return m.Select(n)
 	case scanID(id, "band:", &n):
 		if f := m.file(); f != nil {
 			f.expanded[n] = true
