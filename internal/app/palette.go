@@ -46,6 +46,7 @@ const (
 	pickerKindTasks          // Group C — Run Task… / Open Link… (tasks_run.go)
 	pickerKindExt            // Group I — termocode.pick() from an extension
 	pickerKindDebugConfig    // Group D — debug configuration pickers (dap.go)
+	pickerKindSetupStep      // the setup card's step chooser (setup_card_ui.go)
 )
 
 // loadFiles walks the cwd and returns one picker.Item per file (relative path).

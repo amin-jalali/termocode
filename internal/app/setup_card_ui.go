@@ -12,6 +12,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/nerdterm"
+	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/setup"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -30,6 +31,7 @@ type setupState struct {
 	profileMade bool
 	settled     map[string]bool
 	plan        *setup.GnomeProfilePlan // waiting for the user's confirm
+	doneSaved   bool                    // setup_done written this session
 }
 
 // setupCardOff hides the card whatever config.json says. This package's
@@ -255,9 +257,62 @@ func (m *Model) setupCardView() setupCardView {
 }
 
 // publishSetupCard hands the card to the Welcome renderer, which is a
-// plain function (cached by its own key, see welcome.go).
+// plain function (cached by its own key, see welcome.go). The first time
+// every required step is done it saves setup_done: the card stays for
+// this session ("SET UP · done") and is gone on the next start.
 func (m Model) publishSetupCard() {
-	welcomeSetup = m.setupCardView()
+	v := m.setupCardView()
+	if v.show && v.allDone && !m.setup.doneSaved {
+		m.setup.doneSaved = true
+		_ = saveSetupConfig(func(c *settingsConfig) { c.SetupDone = boolPtr(true) })
+	}
+	welcomeSetup = v
+}
+
+// pressSetupRow runs checklist row id (a step id or "hide"): a step with
+// one choice runs it, a step with several opens the step chooser.
+func (m *Model) pressSetupRow(id string) tea.Cmd {
+	if id == "hide" {
+		return m.closeSetupCard(false)
+	}
+	for _, s := range m.setupCardView().steps {
+		if s.id != id {
+			continue
+		}
+		switch {
+		case s.action == "" || len(s.buttons) == 0:
+			return nil
+		case s.id == "icons" && m.setupS().showSteps:
+			return m.pressSetupButton("font-steps") // "Hide steps"
+		case len(s.buttons) == 1:
+			return m.pressSetupButton(s.buttons[0].id)
+		}
+		return m.openSetupChooser(s)
+	}
+	return nil
+}
+
+// openSetupChooser lists step s's choices in a picker, the recommended
+// (first available) one first; the step's full sentence is the note.
+func (m *Model) openSetupChooser(s setupStep) tea.Cmd {
+	items := make([]picker.Item, 0, len(s.buttons))
+	rec := false
+	for _, b := range s.buttons {
+		hint := ""
+		switch {
+		case b.disabled:
+			hint = "not available"
+		case !rec:
+			hint, rec = "recommended", true
+		}
+		items = append(items, picker.Item{ID: b.id, Title: b.label, Hint: hint})
+	}
+	m.picker = picker.NewItems(" "+s.title+" ", items)
+	m.picker.SetNote(wrapWords(s.detail, 50))
+	m.picker.SetSize(m.w, m.h)
+	m.pickerOpen = true
+	m.pickerKind = pickerKindSetupStep
+	return m.picker.Init()
 }
 
 // ─── Button presses ────────────────────────────────────────────────────
@@ -303,13 +358,10 @@ func (m *Model) pressSetupButton(id string) tea.Cmd {
 		return m.openAIConfigure()
 	case id == "ai-skip":
 		return m.settleSetup("ai")
-	case strings.HasPrefix(id, "theme:"):
-		m.applyTheme(strings.TrimPrefix(id, "theme:"))
-		return m.settleSetup("theme")
 	case id == "theme-more":
 		return m.openThemePicker() // a pick there is not a card answer
-	case id == "done", id == "hide":
-		return m.closeSetupCard(id == "done")
+	case id == "hide":
+		return m.closeSetupCard(false)
 	}
 	return nil
 }

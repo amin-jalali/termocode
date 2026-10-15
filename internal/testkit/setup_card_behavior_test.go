@@ -68,7 +68,18 @@ func setupDriver(t *testing.T, term nerdterm.Info) (*Driver, *fakeProbe) {
 	return d, fp
 }
 
-func cardShown(d *Driver) bool { return strings.Contains(screen(d), "SET UP TERMOCODE") }
+func cardShown(d *Driver) bool { return strings.Contains(screen(d), "Hide setup") }
+
+// choose clicks a step row's action word (it opens the step chooser),
+// then the choice label in the chooser.
+func choose(d *Driver, action, choice string) {
+	d.T.Helper()
+	clickText(d, action)
+	if !d.WaitForText(choice, time.Second) {
+		d.T.Fatalf("%q did not open a chooser with %q:\n%s", action, choice, screen(d))
+	}
+	clickText(d, choice)
+}
 
 func setupButton(d *Driver, id string) (app.SetupButtonInfo, bool) {
 	for _, b := range d.Model().SetupCardButtons() {
@@ -97,9 +108,14 @@ func TestSetupCardShowsOnFreshConfig(t *testing.T) {
 	if !cardShown(d) {
 		t.Fatalf("no setup card:\n%s", screen(d))
 	}
-	for _, want := range []string{"Icons", "Ubuntu Mono", "Nerd Font", "AI", "Not set up", "Theme", "0 of 2 done"} {
+	for _, want := range []string{"SET UP", "Icons", "Ubuntu Mono", "Fix", "AI", "Not set up", "Set up", "Theme", "Change", "Hide setup"} {
 		if !strings.Contains(screen(d), want) {
 			t.Errorf("card does not show %q:\n%s", want, screen(d))
+		}
+	}
+	for _, gone := range []string{"of 2 done", "Done ", "Bring it back", "Tokyo Night", "Font steps"} {
+		if strings.Contains(screen(d), gone) {
+			t.Errorf("card still shows %q:\n%s", gone, screen(d))
 		}
 	}
 	if got := fp.calls(); len(got) == 0 || got[0] {
@@ -117,7 +133,7 @@ func TestSetupCardHiddenByDefaultInTests(t *testing.T) {
 
 func TestSetupCardHideStaysAfterRestart(t *testing.T) {
 	d, _ := setupDriver(t, fakeUbuntuMono)
-	clickText(d, "Hide")
+	clickText(d, "Hide setup")
 	if cardShown(d) {
 		t.Fatalf("Hide did not hide the card:\n%s", screen(d))
 	}
@@ -132,7 +148,7 @@ func TestSetupCardHideStaysAfterRestart(t *testing.T) {
 		t.Fatalf("card back after restart:\n%s", screen(d))
 	}
 	d.Palette("setup-show-card")
-	if !d.WaitForText("SET UP TERMOCODE", 2*time.Second) {
+	if !d.WaitForText("Hide setup", 2*time.Second) {
 		t.Fatalf("Setup: Show Setup Card did not bring it back:\n%s", screen(d))
 	}
 	if v := readConfig(t)["setup_dismissed"]; v != false {
@@ -140,15 +156,51 @@ func TestSetupCardHideStaysAfterRestart(t *testing.T) {
 	}
 }
 
-func TestSetupCardDoneStaysAfterRestart(t *testing.T) {
-	d, _ := setupDriver(t, fakeUbuntuMono)
-	clickText(d, "Done ")
-	if cardShown(d) {
-		t.Fatalf("Done did not hide the card:\n%s", screen(d))
+// Answering both required steps finishes the card: "SET UP · done" for
+// this session, setup_done saved, gone after a restart. No Done button.
+func TestSetupCardAutoDoneStaysAfterRestart(t *testing.T) {
+	d, _ := setupDriver(t, fakeNerdFont)
+	choose(d, "Use Nerd", "Use Nerd icons")
+	if !d.WaitForText("Nerd icons ·", time.Second) {
+		t.Fatalf("icons step not done:\n%s", screen(d))
+	}
+	choose(d, "Set up", "Skip for now")
+	if !d.WaitForText("SET UP · done", time.Second) {
+		t.Fatalf("card not marked done:\n%s", screen(d))
+	}
+	if v := readConfig(t)["setup_done"]; v != true {
+		t.Fatalf("setup_done = %v", v)
 	}
 	d.Restart()
 	if cardShown(d) {
 		t.Fatalf("card back after restart:\n%s", screen(d))
+	}
+}
+
+// Enter on the Icons row opens the step chooser: the reason on top, the
+// recommended choice first.
+func TestSetupCardIconsRowOpensChooser(t *testing.T) {
+	d, _ := setupDriver(t, fakeUbuntuMono)
+	for i := 0; i < 6; i++ { // past the six START rows
+		d.Key("down")
+	}
+	d.Key("enter")
+	if !d.WaitForText("recommended", time.Second) {
+		t.Fatalf("no chooser:\n%s", screen(d))
+	}
+	scr := screen(d)
+	note := strings.Index(scr, "not a Nerd Font")
+	first := strings.Index(scr, `Create a "termocode" terminal profile`)
+	if note < 0 || first < 0 || note > first {
+		t.Fatalf("chooser: want the reason, then the profile choice first:\n%s", scr)
+	}
+	for _, want := range []string{"Show the font steps", "Check again", "Keep Unicode icons"} {
+		if !strings.Contains(scr, want) {
+			t.Errorf("chooser misses %q:\n%s", want, scr)
+		}
+	}
+	if line := lineWith(scr, `Create a "termocode" terminal profile`); !strings.Contains(line, "recommended") {
+		t.Errorf("first choice not marked recommended: %q", line)
 	}
 }
 
@@ -158,12 +210,12 @@ func TestSetupCardUseNerdDisabledWithUbuntuMono(t *testing.T) {
 	if !ok || !b.Disabled || !strings.Contains(b.Why, "Ubuntu Mono") {
 		t.Fatalf("Use Nerd icons: %+v", b)
 	}
-	clickText(d, "Use Nerd icons")
+	choose(d, "Fix", "Use Nerd icons")
 	if !d.WaitForText("not available", time.Second) {
-		t.Errorf("pressing the disabled button said nothing:\n%s", screen(d))
+		t.Errorf("choosing the disabled choice said nothing:\n%s", screen(d))
 	}
 	if v := readConfig(t)["icons"]; v != nil {
-		t.Fatalf("a disabled button changed icons to %v", v)
+		t.Fatalf("a disabled choice changed icons to %v", v)
 	}
 }
 
@@ -173,21 +225,21 @@ func TestSetupCardUseNerdEnabledWithNerdFont(t *testing.T) {
 	if !ok || b.Disabled {
 		t.Fatalf("Use Nerd icons with a Nerd Font: %+v", b)
 	}
-	clickText(d, "Use Nerd icons")
+	choose(d, "Use Nerd", "Use Nerd icons")
 	if v := readConfig(t)["icons"]; v != "nerd" {
 		t.Fatalf("icons = %v, want nerd", v)
 	}
-	if !d.WaitForText("1 of 2 done", time.Second) {
+	if !d.WaitForText("Nerd icons ·", time.Second) {
 		t.Errorf("icons step not done:\n%s", screen(d))
 	}
 }
 
-// The user switches the terminal font, then presses Check again: the
-// detection runs fresh (no termfont.json cache) and the button wakes up.
+// The user switches the terminal font, then chooses Check again: the
+// detection runs fresh (no termfont.json cache) and Use Nerd icons wakes up.
 func TestSetupCardCheckAgainRedetects(t *testing.T) {
 	d, fp := setupDriver(t, fakeUbuntuMono)
 	fp.set(fakeNerdFont)
-	clickText(d, "Check again")
+	choose(d, "Fix", "Check again")
 	if !d.WaitFor(func() bool { b, _ := setupButton(d, "use-nerd"); return !b.Disabled }, 2*time.Second) {
 		t.Fatalf("Use Nerd icons still disabled after the font change:\n%s", screen(d))
 	}
@@ -199,23 +251,27 @@ func TestSetupCardCheckAgainRedetects(t *testing.T) {
 
 func TestSetupCardAIStepOpensProviderSetup(t *testing.T) {
 	d, _ := setupDriver(t, fakeUbuntuMono)
-	clickText(d, "Set up AI…")
+	choose(d, "Set up", "Set up AI…")
 	if !d.WaitForText("AI Provider", time.Second) {
 		t.Fatalf("provider setup did not open:\n%s", screen(d))
 	}
 }
 
+// Keyboard only: ↓ to the AI row, Enter opens its chooser, ↓ Enter picks
+// "Skip for now".
 func TestSetupCardAISkipByKeyboard(t *testing.T) {
 	d, _ := setupDriver(t, fakeUbuntuMono)
-	for i := 0; i < 40 && !strings.Contains(screen(d), "▌Skip"); i++ {
-		d.Key("tab")
-	}
-	if !strings.Contains(screen(d), "▌Skip") {
-		t.Fatalf("Tab never reached Skip:\n%s", screen(d))
+	for i := 0; i < 7; i++ { // six START rows, then Icons
+		d.Key("down")
 	}
 	d.Key("enter")
+	if !d.WaitForText("Skip for now", time.Second) {
+		t.Fatalf("Enter on the AI row opened no chooser:\n%s", screen(d))
+	}
+	d.Key("down")
+	d.Key("enter")
 	if !d.WaitForText("Skipped", time.Second) {
-		t.Fatalf("Enter on Skip did nothing:\n%s", screen(d))
+		t.Fatalf("Skip for now did nothing:\n%s", screen(d))
 	}
 	settled, _ := readConfig(t)["setup_settled"].([]any)
 	if len(settled) != 1 || settled[0] != "ai" {
@@ -236,10 +292,10 @@ func TestSetupCardFontInstallInBackground(t *testing.T) {
 		return "/fake/fonts", nil
 	}))
 	d := New(t, Options{W: 150, H: 50, Config: map[string]string{"config.json": freshConfig}})
-	if !d.WaitForText("Install Nerd Font", 2*time.Second) {
-		t.Fatalf("no install button:\n%s", screen(d))
+	if !d.WaitForText("Fix", 2*time.Second) {
+		t.Fatalf("no icons action:\n%s", screen(d))
 	}
-	clickText(d, "Install Nerd Font")
+	choose(d, "Fix", "Install Nerd Font")
 	if runtime.GOOS != "linux" {
 		// The automatic install is Linux-only: elsewhere the card says so
 		// instead of pretending to install.
@@ -320,7 +376,8 @@ func TestSetupCardGnomeProfilePreviewThenConfirm(t *testing.T) {
 	d, _ := setupDriver(t, fakeUbuntuMono)
 
 	// The preview shows first; Esc changes nothing.
-	clickText(d, "Create termocode prof")
+	profile := `Create a "termocode" terminal profile`
+	choose(d, "Fix", profile)
 	if !d.WaitForText("NEW GNOME Terminal profile", time.Second) {
 		t.Fatalf("no preview:\n%s", screen(d))
 	}
@@ -338,7 +395,7 @@ func TestSetupCardGnomeProfilePreviewThenConfirm(t *testing.T) {
 	}
 
 	// Confirm: only the new profile and the list change.
-	clickText(d, "Create termocode prof")
+	choose(d, "Fix", profile)
 	if !d.WaitForText("Create profile", time.Second) {
 		t.Fatalf("no preview the second time:\n%s", screen(d))
 	}
@@ -358,4 +415,14 @@ func TestSetupCardGnomeProfilePreviewThenConfirm(t *testing.T) {
 	if !strings.Contains(screen(d), "--profile=termocode") {
 		t.Errorf("how to open the profile not told:\n%s", screen(d))
 	}
+}
+
+// lineWith is the first screen line containing s.
+func lineWith(scr, s string) string {
+	for _, l := range strings.Split(scr, "\n") {
+		if strings.Contains(l, s) {
+			return l
+		}
+	}
+	return ""
 }

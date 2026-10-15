@@ -82,9 +82,7 @@ func goldenExtras() []Scene {
 		{Name: "icons-unicode", Icons: "unicode", Steps: EditorSteps()},
 		{Name: "icons-ascii", Icons: "ascii", Steps: EditorSteps()},
 		MarkdownPreview(),
-		// The first-run setup card (fresh config). kitty bundles the Nerd
-		// symbols, so the detection is the same on every machine.
-		{Name: "setup-card", SetupCard: true, Env: map[string]string{"TERM": "xterm-kitty"}, Steps: []Step{Pause(1500 * time.Millisecond)}},
+		setupCardScene(),
 		// The start page: a returning user, the light theme, ASCII icons.
 		DashboardRecent(),
 		// The cursor moved down onto the second recent file.
@@ -102,6 +100,12 @@ func goldenExtras() []Scene {
 	}
 }
 
+// setupCardScene is the first-run setup checklist (a fresh config). kitty
+// bundles the Nerd symbols, so the detection is the same on every machine.
+func setupCardScene() Scene {
+	return Scene{Name: "setup-card", SetupCard: true, Env: map[string]string{"TERM": "xterm-kitty"}, Steps: []Step{Pause(1500 * time.Millisecond)}}
+}
+
 func goldenCases() []goldenCase {
 	var out []goldenCase
 	for _, sc := range goldenScenes() {
@@ -115,9 +119,10 @@ func goldenCases() []goldenCase {
 	}
 	// The smallest common window (80x24) for the screens that have a
 	// compact layout: start page, editor, palette, toast.
-	for _, sc := range []Scene{Dashboard(), DashboardRecent(), Editor(), Palette(), Toast(), FindResults(), SCMCommit()} {
+	for _, sc := range []Scene{Dashboard(), DashboardRecent(), setupCardScene(), Editor(), Palette(), Toast(), FindResults(), SCMCommit()} {
 		out = append(out, goldenCase{fmt.Sprintf("%s-80x24", sc.Name), sc, 80, 24})
 	}
+	out = append(out, goldenCase{"setup-card-100x30", setupCardScene(), 100, 30})
 	return out
 }
 

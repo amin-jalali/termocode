@@ -383,15 +383,18 @@ func renderWelcomePage(w, h, focusIdx int, focused bool, lay welcomeLayout, d we
 	// ── SET UP (setup_card_render.go) ─────────────────────────────────
 	if d.card.show {
 		gap()
-		sl, sh := buildSetupCard(d.card, W, len(lines), focusIdx-len(hits.rows), focused, true)
-		for _, x := range sh {
-			x.ColStart += leftPad
-			x.ColEnd += leftPad
-			hits.setup = append(hits.setup, x)
-			hits.rows = append(hits.rows, welcomeRowHit{Row: x.Row, ColStart: x.ColStart, ColEnd: x.ColEnd, ID: "setup:" + x.ID})
-		}
-		for _, l := range sl {
-			add(l)
+		for _, l := range setupCardLines(d.card, W) {
+			if l.row == nil {
+				add(l.text(W))
+				continue
+			}
+			st := rowRest
+			if l.row.interactive {
+				hits.setup = append(hits.setup, welcomeSetupHit{Row: len(lines), ColStart: leftPad, ColEnd: leftPad + W,
+					ID: strings.TrimPrefix(l.row.id, "setup:")})
+				st = row(l.row.id)
+			}
+			add(renderWelcomeRow(*l.row, W, st))
 		}
 	}
 
