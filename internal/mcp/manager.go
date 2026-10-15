@@ -352,19 +352,48 @@ func (m *Manager) setFailed(st *serverState, err error) {
 	m.log(st.cfg.Name, "failed: %v", err)
 }
 
-// armIdle (re)starts the idle timer of a running server.
-func (m *Manager) armIdle(st *serverState) {
-	d := m.opts.IdleTimeout
-	if d <= 0 {
-		return
+// SetTimeouts changes the idle and call timeouts (the Settings modal);
+// running servers get the new idle timeout at once. call <= 0 keeps
+// the call timeout.
+func (m *Manager) SetTimeouts(idle, call time.Duration) {
+	m.mu.Lock()
+	m.opts.IdleTimeout = idle
+	if call > 0 {
+		m.opts.CallTimeout = call
 	}
+	var running []*serverState
+	for _, st := range m.servers {
+		if st.proc != nil {
+			running = append(running, st)
+		}
+	}
+	m.mu.Unlock()
+	for _, st := range running {
+		m.armIdle(st)
+	}
+}
+
+// Timeouts returns the idle and call timeouts in use.
+func (m *Manager) Timeouts() (idle, call time.Duration) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	return m.opts.IdleTimeout, m.opts.CallTimeout
+}
+
+// armIdle (re)starts the idle timer of a running server.
+func (m *Manager) armIdle(st *serverState) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	d := m.opts.IdleTimeout
 	if st.proc == nil {
 		return
 	}
 	if st.idle != nil {
 		st.idle.Stop()
+		st.idle = nil
+	}
+	if d <= 0 {
+		return
 	}
 	st.idleGen++
 	gen := st.idleGen
@@ -643,7 +672,9 @@ func (m *Manager) Call(ctx context.Context, ask AskTrust, server, tool string, a
 			return CallResult{}, fmt.Errorf("MCP %s: %w", server, ErrToolsChanged)
 		}
 	}
+	m.mu.Lock()
 	timeout := m.opts.CallTimeout
+	m.mu.Unlock()
 	if t := st.cfg.Timeout; t > 0 {
 		timeout = time.Duration(t) * time.Second
 	}

@@ -947,6 +947,7 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `mcp_enabled` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_idle_timeout` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_max_result_kb` | never | AI provider, credentials and approvals stay with the user |
+| `mcp_oauth_port` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_trust_annotations` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_trusted` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_trusted_tools` | never | AI provider, credentials and approvals stay with the user |
