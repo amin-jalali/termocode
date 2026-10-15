@@ -482,7 +482,11 @@ func (c *Client) fetchStateOnce() (State, error) {
 			vim.bo.expandtab
 				and ('Spaces: ' .. (vim.bo.shiftwidth > 0 and vim.bo.shiftwidth or vim.bo.tabstop))
 				or ('Tabs: ' .. vim.bo.tabstop),
-			vim.fn.virtcol('.'),
+			-- The display column (a tab counts its width). virtcol walks the
+			-- whole line, and with breakindent / linebreak that costs ~0.2 s
+			-- on a 10 MB line (minified JSON) after every key; past 4096
+			-- bytes the byte column is shown instead.
+			(vim.fn.col('$') > 4096 and ok_live and live_pos) and (live_pos[2] + 1) or vim.fn.virtcol('.'),
 		}
 	`, &raw)
 	if err != nil {

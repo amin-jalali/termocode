@@ -50,3 +50,47 @@ func TestFetchStateQueuesTrailingRefresh(t *testing.T) {
 		t.Errorf("second FetchState was dropped (%v) and the first returned stale state (Dirty=false): the buffer change is never reported", err2)
 	}
 }
+
+// Spec (benchmarks 2026-10-15): FetchState runs after every cursor move, so
+// it must not walk the current line. On a 20 MB one-line file (minified
+// JSON) with termocode's options (breakindent, linebreak) and the cursor at
+// the end, virtcol took ~0.2–0.5 s per call and key presses piled up for
+// tens of seconds. Short lines still get the display column (tabs count).
+func TestFetchStateFastOnHugeLine(t *testing.T) {
+	c := newAttachedClient(t)
+	go func() {
+		for range c.events {
+		}
+	}()
+	if err := c.ExecLua(`
+		vim.o.breakindent, vim.o.linebreak = true, true
+		vim.api.nvim_buf_set_lines(0, 0, -1, false, { string.rep('{"a":1},', 20 * 1024 * 1024 / 8) })
+		vim.cmd('normal! $')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.FetchState(); err != nil { // warm up
+		t.Fatal(err)
+	}
+	start := time.Now()
+	s, err := c.FetchState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d := time.Since(start); d > 100*time.Millisecond {
+		t.Errorf("FetchState took %v at the end of a 20 MB line, want < 100ms", d)
+	}
+	if s.CursorCol < 20*1024*1024-8 {
+		t.Errorf("column %d, want about the line length", s.CursorCol)
+	}
+
+	if err := c.ExecLua(`vim.api.nvim_buf_set_lines(0, 0, -1, false, { '\tx' }); vim.cmd('normal! $')`); err != nil {
+		t.Fatal(err)
+	}
+	s, err = c.FetchState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := 9; s.CursorCol != want { // tab = 8 display columns, then x
+		t.Errorf("short line: display column %d, want %d", s.CursorCol, want)
+	}
+}

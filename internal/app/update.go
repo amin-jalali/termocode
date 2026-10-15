@@ -2321,19 +2321,26 @@ func (m *Model) maybeRefreshStickyContext() tea.Cmd {
 	m.stickyLastFetch = now
 	c := m.nvim
 	return func() tea.Msg {
-		s, err := c.EvalLuaString(`
-			local pat = [[^\s*\(func\|class\|def\|interface\|type\|impl\|struct\)\>]]
-			local lnum = vim.fn.search(pat, 'bWnc')
-			if lnum == 0 then return '' end
-			local line = vim.api.nvim_buf_get_lines(0, lnum-1, lnum, false)[1] or ''
-			return line
-		`)
+		s, err := c.EvalLuaString(stickyContextLua)
 		if err != nil {
 			return stickyContextMsg{Signature: ""}
 		}
 		return stickyContextMsg{Signature: strings.TrimSpace(s)}
 	}
 }
+
+// stickyContextLua finds the enclosing func / class line. It looks back at
+// most 2000 lines and gives up after 50 ms: a backward search over a
+// 1-million-line log blocked nvim for ~0.3 s on every refresh. The line
+// comes back cut to 300 bytes (a minified file can match).
+const stickyContextLua = `
+	local pat = [[^\s*\(func\|class\|def\|interface\|type\|impl\|struct\)\>]]
+	local stop = math.max(1, vim.fn.line('.') - 2000)
+	local lnum = vim.fn.search(pat, 'bWnc', stop, 50)
+	if lnum == 0 then return '' end
+	local line = vim.api.nvim_buf_get_lines(0, lnum-1, lnum, false)[1] or ''
+	return line:sub(1, 300)
+`
 
 // saveDetail returns the secondary line shown in the post-save toast:
 // "<basename> — <N>L, <B>B written". Falls back to just the basename on
