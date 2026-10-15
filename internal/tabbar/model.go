@@ -529,11 +529,7 @@ func renderTabCellsSfx(b nvim.BufferInfo, active bool, suffix string, welcome bo
 	bgStyle := theme.Bg(bg)
 	textStyle := theme.FgBg(fg, bg).Bold(active)
 	dirtyStyle := theme.FgBg(theme.AccentAmber, bg).Bold(true)
-	closeFg := theme.TextDimmer
-	if active {
-		closeFg = theme.TextMuted
-	}
-	closeStyle := theme.FgBg(closeFg, bg)
+	closeStyle := theme.FgBg(theme.TextMuted, bg)
 	accentStyle := theme.FgBg(theme.BorderFocus, bg).Bold(true)
 
 	cells := make([]string, 0, 8+len(name))
@@ -572,11 +568,15 @@ func renderTabCellsSfx(b nvim.BufferInfo, active bool, suffix string, welcome bo
 	}
 	cells = append(cells, bgStyle.Render(" "))
 	// A modified buffer shows the dirty dot where the close glyph sits
-	// (VSCode); the slot still closes the tab on click.
-	if b.Modified {
+	// (VSCode); the slot still closes the tab on click. Only the active
+	// tab shows ×: on every tab it was a row of noise (UI review #8).
+	switch {
+	case b.Modified:
 		cells = append(cells, dirtyStyle.Render("●"))
-	} else {
+	case active:
 		cells = append(cells, closeStyle.Render(closeGlyph()))
+	default:
+		cells = append(cells, bgStyle.Render(" "))
 	}
 	cells = append(cells, bgStyle.Render(" "))
 	return cells
