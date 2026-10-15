@@ -47,8 +47,9 @@ const welcomeContentWidth = 88
 
 // welcomeWideMin is the threshold below which the action grid collapses
 // to a single column and the recent-files / workspaces row stacks
-// vertically. Mirrors the spec's "narrower than ~80 cols" rule.
-const welcomeWideMin = 80
+// vertically (about 80 columns; 76 so a 120-column window with the
+// explorer open keeps two columns).
+const welcomeWideMin = 76
 
 // welcomeNarrowMin is the floor below which subtitles drop from the
 // action cards (icon + title + shortcut only).

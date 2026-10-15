@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/amin-jalali/termocode/internal/activity"
 	"strings"
 	"testing"
 )
@@ -39,10 +40,10 @@ func TestAutoActionsWidth(t *testing.T) {
 	if got := autoActionsWidth(200, true, 30); got != 80 {
 		t.Errorf("wide window: %d, want 80", got)
 	}
-	if got := autoActionsWidth(150, true, 30); got != 56 {
-		t.Errorf("150 cols: %d, want 56 (editor keeps 60)", got)
+	if want := 150 - activity.Width - 30 - 1 - 60 + 1; autoActionsWidth(150, true, 30) != want {
+		t.Errorf("150 cols: %d, want %d (editor keeps 60)", autoActionsWidth(150, true, 30), want)
 	}
-	if got := autoActionsWidth(120, true, 30); got < defaultActionsWidth || 120-4-30-got < 60-1 && got > defaultActionsWidth {
+	if got := autoActionsWidth(120, true, 30); got < defaultActionsWidth || 120-activity.Width-30-got < 60-1 && got > defaultActionsWidth {
 		t.Errorf("120 cols: %d leaves the editor too narrow", got)
 	}
 }

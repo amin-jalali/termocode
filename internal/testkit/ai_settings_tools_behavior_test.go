@@ -3,6 +3,7 @@ package testkit
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/amin-jalali/termocode/internal/activity"
 	"os"
 	"path/filepath"
 	"strings"
@@ -124,8 +125,8 @@ var aiSettingsToolCases = []aiToolCase{
 			if len(r) != 1 || !strings.Contains(r[0], "sidebar width 45") {
 				t.Errorf("results %q", r)
 			}
-			// activity bar (4 cols) + sidebar 45 cols; the edge is the splitter column.
-			if !eventually(d, func() bool { return explorerEdgeCol(d) == 4+45-1 }) {
+			// activity bar + sidebar 45 cols; the edge is the splitter column.
+			if !eventually(d, func() bool { return explorerEdgeCol(d) == activity.Width+45-1 }) {
 				t.Errorf("explorer edge at col %d:\n%s", explorerEdgeCol(d), screen(d))
 			}
 		},

@@ -66,3 +66,14 @@ func itoa(n int) string {
 	}
 	return s
 }
+
+// A compact card is never narrower than its title needs.
+func TestCompactTitleWidth(t *testing.T) {
+	m := New()
+	m, _ = m.PushDetail(Warn, "Tests: 1 failed, 1 passed", "go test ./...")
+	w := m.CompactTitleWidth()
+	lines := renderToastCompact(m.toasts[0], w)
+	if !strings.Contains(ansi.Strip(strings.Join(lines, "\n")), "Tests: 1 failed, 1 passed") {
+		t.Errorf("title cut at width %d:\n%s", w, ansi.Strip(strings.Join(lines, "\n")))
+	}
+}
