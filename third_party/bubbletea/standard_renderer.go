@@ -33,6 +33,10 @@ type standardRenderer struct {
 	// alt screen and popped (CSI < u) before leaving it. termocode patch.
 	kittyFlags int
 
+	// pacer, when set, holds frames back while the terminal has not
+	// answered enough of the earlier ones (pacing.go). termocode patch.
+	pacer *framePacer
+
 	buf                bytes.Buffer
 	queuedMessageLines []string
 	framerate          time.Duration
@@ -165,13 +169,22 @@ func (r *standardRenderer) listen() {
 			return
 
 		case <-r.ticker.C:
-			r.flush()
+			// termocode patch: wait for the terminal (pacing.go); the
+			// ticker keeps running, so the latest frame goes out later.
+			if r.pacer != nil && !r.pacer.ready() {
+				continue
+			}
+			r.flushFrame(r.pacer != nil)
 		}
 	}
 }
 
 // flush renders the buffer.
-func (r *standardRenderer) flush() {
+func (r *standardRenderer) flush() { r.flushFrame(false) }
+
+// flushFrame renders the buffer; with query the frame ends with the
+// pacing query (pacing.go). termocode patch.
+func (r *standardRenderer) flushFrame(query bool) {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 
@@ -304,7 +317,13 @@ func (r *standardRenderer) flush() {
 		buf.WriteByte('\r')
 	}
 
+	if query {
+		buf.WriteString(statusQuery)
+	}
 	_, _ = r.out.Write(buf.Bytes())
+	if query {
+		r.pacer.frameSent(buf.Len())
+	}
 	r.lastRender = frame
 
 	// Save previously rendered lines for comparison in the next render. If we

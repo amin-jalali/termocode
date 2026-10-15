@@ -100,6 +100,7 @@ func (c *osExecCommand) SetStderr(w io.Writer) {
 
 // exec runs an ExecCommand and delivers the results to the program as a Msg.
 func (p *Program) exec(c ExecCommand, fn ExecCallback) {
+	p.drainAnswers() // termocode patch: the child must not get them
 	if err := p.ReleaseTerminal(); err != nil {
 		// If we can't release input, abort.
 		if fn != nil {

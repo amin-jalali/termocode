@@ -13,6 +13,19 @@ Changed files are marked with "termocode patch". The renderer:
 
 `idle_renderer_test.go` is new.
 
+Frame pacing for slow links (termocode Group S2):
+
+- `pacing.go` (new): `WithFramePacing(window)`. Each frame ends with a
+  status query (`CSI 5 n`); the renderer holds frames back while more
+  than `window` bytes are unanswered, so a slow SSH line never queues
+  seconds of frames (run-on after a held key). Terminals that never
+  answer are not paced; a lost answer is forgiven after 1 s.
+- `standard_renderer.go`: `flushFrame(query)`; `listen` waits for the
+  pacer. `tea.go`: the answers (`CSI 0 n`) are taken out of the message
+  stream; `shutdown` and `exec.go` wait briefly for the last answers so
+  they never reach the shell or a child program.
+- Test: `pacing_test.go`.
+
 Kitty keyboard protocol (termocode terminal-compat R1):
 
 - `key_csiu.go` (new) parses `CSI code[:alts] ; mods[:event] u`. Keys a
