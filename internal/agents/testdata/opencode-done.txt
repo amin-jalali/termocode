@@ -1,0 +1,7 @@
+┃  The parser test passes now.
+┃
+
+┃
+┃  >
+┃
+  enter send                                  Build  claude-sonnet-4
