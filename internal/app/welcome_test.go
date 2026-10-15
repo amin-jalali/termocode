@@ -16,7 +16,7 @@ func TestWelcome_RendersWithEmptyRecents(t *testing.T) {
 	old := theme.CurrentIconMode
 	theme.CurrentIconMode = theme.IconModeUnicode
 	defer func() { theme.CurrentIconMode = old; invalidateWelcome() }()
-	out := renderWelcome(120, 36, 0)
+	out := renderWelcome(120, 36, 0, true)
 	if out == "" {
 		t.Fatal("expected non-empty welcome output")
 	}
@@ -112,7 +112,7 @@ func TestWelcome_QuickActionHits(t *testing.T) {
 func TestWelcome_NoTiles(t *testing.T) {
 	withConfigDir(t)
 	for _, sz := range [][2]int{{120, 36}, {64, 28}, {44, 22}} {
-		out := ansi.Strip(renderWelcome(sz[0], sz[1], 0))
+		out := ansi.Strip(renderWelcome(sz[0], sz[1], 0, true))
 		for _, g := range []string{"╭", "╰", "╮", "╯"} {
 			if strings.Contains(out, g) {
 				t.Errorf("%v: border glyph %q on the start page", sz, g)
@@ -127,9 +127,9 @@ func TestWelcome_NarrowDoesNotPanic(t *testing.T) {
 	withConfigDir(t)
 	for _, w := range []int{20, 40, 64, 100} {
 		for _, h := range []int{6, 12, 30} {
-			out := renderWelcome(w, h, 0)
+			out := renderWelcome(w, h, 0, true)
 			if out == "" {
-				t.Errorf("renderWelcome(%d, %d) returned empty", w, h)
+				t.Errorf("renderWelcome(%d, %d, true) returned empty", w, h)
 			}
 		}
 	}
@@ -147,7 +147,7 @@ func TestWelcome_FocusHighlightsCard(t *testing.T) {
 	theme.CurrentIconMode = theme.IconModeUnicode
 	defer func() { theme.CurrentIconMode = old; invalidateWelcome() }()
 	for focus, title := range []string{"Open file", "Open workspace", "Clone repository"} {
-		out := ansi.Strip(renderWelcome(120, 36, focus))
+		out := ansi.Strip(renderWelcome(120, 36, focus, true))
 		bars := 0
 		for _, line := range strings.Split(out, "\n") {
 			if !strings.Contains(line, "▎") {
@@ -169,7 +169,7 @@ func TestWelcome_FocusHighlightsCard(t *testing.T) {
 func TestWelcome_RecentEntryHasOneLine(t *testing.T) {
 	withConfigDir(t)
 	pushRecent("/tmp/welcome-1line/a.go")
-	out := ansi.Strip(renderWelcome(120, 36, 0))
+	out := ansi.Strip(renderWelcome(120, 36, 0, true))
 	for _, line := range strings.Split(out, "\n") {
 		if strings.Contains(line, "a.go") {
 			if !strings.Contains(line, "/tmp/welcome-1line") {

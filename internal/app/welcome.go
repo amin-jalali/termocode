@@ -77,6 +77,15 @@ type welcomeWorkspaceHit struct {
 	ColEnd   int
 }
 
+// welcomeRowHit is one interactive row: its place and id ("card:N",
+// "setup:<button>", "recent:<path>", "workspace:<path>").
+type welcomeRowHit struct {
+	Row      int
+	ColStart int
+	ColEnd   int
+	ID       string
+}
+
 // welcomeQuickActionHit binds a row to a START action; clicks dispatch
 // the same handler as the keyboard binding.
 type welcomeQuickActionHit struct {
@@ -90,14 +99,15 @@ type welcomeQuickActionHit struct {
 // ─── Public API ────────────────────────────────────────────────────────
 
 // renderWelcome returns the start page for the editor pane. focusIdx is
-// the keyboard cursor.
-func renderWelcome(w, h, focusIdx int) string {
-	key := newWelcomeKey(w, h, focusIdx)
+// the keyboard cursor (an index into welcomeHits.rows); focused says the
+// editor pane has the keys (the cursor is lit) or not (quieter).
+func renderWelcome(w, h, focusIdx int, focused bool) string {
+	key := newWelcomeKey(w, h, focusIdx, focused)
 	if c := welcomeCache; c != nil && c.key == key && time.Since(c.at) < welcomeCacheTTL {
 		welcomeLogoAt = c.logo
 		return c.out
 	}
-	rendered, hits := renderWelcomeHits(w, h, focusIdx)
+	rendered, hits := renderWelcomeHits(w, h, focusIdx, focused)
 	welcomeCache = &welcomeCached{key: key, out: rendered, logo: welcomeLogoAt, at: time.Now(), hits: hits}
 	return rendered
 }
@@ -109,6 +119,7 @@ const welcomeCacheTTL = time.Second
 
 type welcomeKey struct {
 	w, h, focus int
+	focused     bool
 	theme       string
 	cfg         string
 	icons       theme.IconMode
@@ -117,8 +128,8 @@ type welcomeKey struct {
 	setup       string // the setup card's signature ("" = not shown)
 }
 
-func newWelcomeKey(w, h, focus int) welcomeKey {
-	return welcomeKey{w: w, h: h, focus: focus, theme: theme.Hex(theme.BgEditor) + theme.Hex(theme.BorderFocus),
+func newWelcomeKey(w, h, focus int, focused bool) welcomeKey {
+	return welcomeKey{w: w, h: h, focus: focus, focused: focused, theme: theme.Hex(theme.BgEditor) + theme.Hex(theme.BorderFocus),
 		cfg: os.Getenv("XDG_CONFIG_HOME"), icons: theme.CurrentIconMode, profile: int(theme.Profile()), logo: dashboardLogo,
 		setup: welcomeSetup.sig}
 }
@@ -127,6 +138,7 @@ func newWelcomeKey(w, h, focus int) welcomeKey {
 // recorded by the same render that made the cached page, so the mouse
 // code hit-tests exactly what is on screen.
 type welcomeHits struct {
+	rows       []welcomeRowHit // every interactive row, in cursor order
 	recents    []welcomeRecentHit
 	workspaces []welcomeWorkspaceHit
 	actions    []welcomeQuickActionHit
@@ -154,12 +166,12 @@ func invalidateWelcome() { welcomeCache = nil }
 // page once — the hover path used to re-render on every mouse move.
 func welcomeLayoutHits(w, h int) welcomeHits {
 	if c := welcomeCache; c != nil && time.Since(c.at) < welcomeCacheTTL {
-		key := newWelcomeKey(w, h, c.key.focus)
+		key := newWelcomeKey(w, h, c.key.focus, c.key.focused)
 		if c.key == key {
 			return c.hits
 		}
 	}
-	renderWelcome(w, h, 0)
+	renderWelcome(w, h, 0, true)
 	if c := welcomeCache; c != nil {
 		return c.hits
 	}
@@ -184,6 +196,12 @@ func welcomeSetupHits(w, h int) []welcomeSetupHit {
 // welcomeQuickActionHits returns the START rows.
 func welcomeQuickActionHits(w, h int) []welcomeQuickActionHit {
 	return welcomeLayoutHits(w, h).actions
+}
+
+// welcomeRows returns the interactive rows of the welcome page at w×h in
+// cursor order (START, setup, recent files, workspaces).
+func welcomeRows(w, h int) []welcomeRowHit {
+	return welcomeLayoutHits(w, h).rows
 }
 
 // ─── START actions ─────────────────────────────────────────────────────
@@ -214,7 +232,7 @@ func welcomeQuickActions() []quickAction {
 // renderWelcomeFull returns the page and the recent / workspace / START
 // hits (tests).
 func renderWelcomeFull(w, h, focusIdx int) (string, []welcomeRecentHit, []welcomeWorkspaceHit, []welcomeQuickActionHit) {
-	out, hits := renderWelcomeHits(w, h, focusIdx)
+	out, hits := renderWelcomeHits(w, h, focusIdx, true)
 	return out, hits.recents, hits.workspaces, hits.actions
 }
 
@@ -267,7 +285,7 @@ func welcomeColumn(w int) (W, leftPad int) {
 // renderWelcomeHits renders the page (with the setup card when
 // welcomeSetup shows one) and returns every click area. It walks the
 // shrink ladder until the page fits h.
-func renderWelcomeHits(w, h, focusIdx int) (string, welcomeHits) {
+func renderWelcomeHits(w, h, focusIdx int, focused bool) (string, welcomeHits) {
 	if w <= 0 || h <= 0 {
 		welcomeLogoAt = welcomeLogoRect{}
 		return "", welcomeHits{}
@@ -279,7 +297,7 @@ func renderWelcomeHits(w, h, focusIdx int) (string, welcomeHits) {
 	var hits welcomeHits
 	var logo welcomeLogoRect
 	for _, lay := range welcomeLadder(pixelOK) {
-		lines, hits, logo = renderWelcomePage(w, h, focusIdx, lay, d)
+		lines, hits, logo = renderWelcomePage(w, h, focusIdx, focused, lay, d)
 		if len(lines) <= h {
 			break
 		}
@@ -303,7 +321,7 @@ func renderWelcomeHits(w, h, focusIdx int) (string, welcomeHits) {
 // renderWelcomePage lays the page out with lay: every line is w cells
 // wide; the result may be taller than h (the ladder then tries the next
 // rung).
-func renderWelcomePage(w, h, focusIdx int, lay welcomeLayout, d welcomeData) ([]string, welcomeHits, welcomeLogoRect) {
+func renderWelcomePage(w, h, focusIdx int, focused bool, lay welcomeLayout, d welcomeData) ([]string, welcomeHits, welcomeLogoRect) {
 	W, leftPad := welcomeColumn(w)
 	bg := theme.Bg(theme.BgEditor)
 	left := bg.Render(strings.Repeat(" ", leftPad))
@@ -314,10 +332,18 @@ func renderWelcomePage(w, h, focusIdx int, lay welcomeLayout, d welcomeData) ([]
 	add := func(s string) { lines = append(lines, left+padRowToWidth(s, W, bg)+right) }
 	gap := func() { add(blank(W)) }
 
-	// The keyboard cursor runs over the START rows, then the setup card.
-	total := len(d.actions) + len(d.card.buttons())
-	if focusIdx < 0 || focusIdx >= total {
-		focusIdx = 0
+	// The keyboard cursor runs over every interactive row in reading
+	// order; row adds one and says how to draw it.
+	cursorSt := rowCursorFocused
+	if !focused {
+		cursorSt = rowCursorBlurred
+	}
+	row := func(id string) welcomeRowState {
+		hits.rows = append(hits.rows, welcomeRowHit{Row: len(lines), ColStart: leftPad, ColEnd: leftPad + W, ID: id})
+		if len(hits.rows)-1 == focusIdx {
+			return cursorSt
+		}
+		return rowRest
 	}
 
 	top := 1
@@ -348,10 +374,7 @@ func renderWelcomePage(w, h, focusIdx int, lay welcomeLayout, d welcomeData) ([]
 	// ── START ─────────────────────────────────────────────────────────
 	add(sectionHeader("START"))
 	for i, a := range d.actions {
-		st := rowRest
-		if i == focusIdx {
-			st = rowCursorFocused
-		}
+		st := row("card:" + itoa(i))
 		r := welcomeRow{id: "card:" + itoa(i), title: a.title, right: a.shortcut, rightIsKeycap: true, interactive: true}
 		hits.actions = append(hits.actions, welcomeQuickActionHit{Row: len(lines), ColStart: leftPad, ColEnd: leftPad + W, Action: a.action, Index: i})
 		add(renderWelcomeRow(r, W, st))
@@ -360,14 +383,15 @@ func renderWelcomePage(w, h, focusIdx int, lay welcomeLayout, d welcomeData) ([]
 	// ── SET UP (setup_card_render.go) ─────────────────────────────────
 	if d.card.show {
 		gap()
-		sl, sh := buildSetupCard(d.card, W, len(lines), focusIdx-len(d.actions), true)
-		for _, l := range sl {
-			add(l)
-		}
+		sl, sh := buildSetupCard(d.card, W, len(lines), focusIdx-len(hits.rows), focused, true)
 		for _, x := range sh {
 			x.ColStart += leftPad
 			x.ColEnd += leftPad
 			hits.setup = append(hits.setup, x)
+			hits.rows = append(hits.rows, welcomeRowHit{Row: x.Row, ColStart: x.ColStart, ColEnd: x.ColEnd, ID: "setup:" + x.ID})
+		}
+		for _, l := range sl {
+			add(l)
 		}
 	}
 
@@ -378,7 +402,7 @@ func renderWelcomePage(w, h, focusIdx int, lay welcomeLayout, d welcomeData) ([]
 		for _, r := range welcomeRecentRows(d.recents, lay.recentMax, W) {
 			path := strings.TrimPrefix(r.id, "recent:")
 			hits.recents = append(hits.recents, welcomeRecentHit{Row: len(lines), Path: path, ColStart: leftPad, ColEnd: leftPad + W})
-			add(renderWelcomeRow(r, W, rowRest))
+			add(renderWelcomeRow(r, W, row(r.id)))
 		}
 	}
 
@@ -389,7 +413,7 @@ func renderWelcomePage(w, h, focusIdx int, lay welcomeLayout, d welcomeData) ([]
 		for _, r := range welcomeWorkspaceRows(d.workspaces, lay.wsMax, lay.allWs, W) {
 			path := strings.TrimPrefix(r.id, "workspace:")
 			hits.workspaces = append(hits.workspaces, welcomeWorkspaceHit{Row: len(lines), Path: path, ColStart: leftPad, ColEnd: leftPad + W})
-			add(renderWelcomeRow(r, W, rowRest))
+			add(renderWelcomeRow(r, W, row(r.id)))
 		}
 	}
 

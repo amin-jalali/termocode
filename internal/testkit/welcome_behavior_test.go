@@ -203,6 +203,24 @@ func TestWelcomeOpenShellClickWithAIPanel(t *testing.T) {
 	}
 }
 
+// The keyboard reaches the recent files: ↓ past the six START rows lands
+// on the newest file, Enter opens it.
+func TestWelcomeKeyboardOpensRecentFile(t *testing.T) {
+	if testing.Short() {
+		t.Skip("starts nvim")
+	}
+	d := New(t, Options{W: 160, H: 40, Nvim: true, Files: textFiles(),
+		Setup: func(t testing.TB, dir string) { writeRecents(t, dir, "b.txt", "a.txt") }})
+	for i := 0; i < 6; i++ {
+		d.Key("down")
+	}
+	d.Key("enter")
+	if !waitTabs(d, "b.txt") {
+		got, _ := tabs(d)
+		t.Fatalf("Enter on the first recent file did not open b.txt, tabs %v:\n%s", got, screen(d))
+	}
+}
+
 // More recent files than the page lists: the "All N recent files…" row
 // opens the recent files picker (the same as Ctrl+R).
 func TestWelcomeAllRecentRowOpensPicker(t *testing.T) {

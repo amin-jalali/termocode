@@ -44,7 +44,7 @@ func TestWelcome_FitsPane(t *testing.T) {
 					invalidateWelcome()
 					w, h := sz[0], sz[1]
 					tag := fmt.Sprintf("%v %dx%d prof=%v icons=%v", lists, w, h, prof, icons)
-					out, hits := renderWelcomeHits(w, h, 0)
+					out, hits := renderWelcomeHits(w, h, 0, true)
 					rows := strings.Split(out, "\n")
 					if len(rows) > h {
 						t.Fatalf("%s: %d rows", tag, len(rows))
@@ -97,7 +97,7 @@ func TestWelcome_ShrinkOrder(t *testing.T) {
 	withWelcomeLists(t, 20, 3)
 	sawPixelWith3 := false
 	for h := 44; h >= 22; h-- {
-		_, hits := renderWelcomeHits(109, h, 0)
+		_, hits := renderWelcomeHits(109, h, 0, true)
 		pixel, n := welcomeLogoAt.ok, recentRowsShown(hits)
 		if h >= welcomePixelMinH && !pixel && n == 5 {
 			t.Errorf("h=%d: wordmark dropped while 5 recent files show", h)
@@ -110,7 +110,7 @@ func TestWelcome_ShrinkOrder(t *testing.T) {
 		t.Error("no height shows the pixel wordmark with 3 recent files: the ladder skips step 1")
 	}
 	// The top of the page never floats: START starts near the top.
-	out, _ := renderWelcomeHits(109, 60, 0)
+	out, _ := renderWelcomeHits(109, 60, 0, true)
 	for i, line := range strings.Split(ansi.Strip(out), "\n") {
 		if strings.Contains(line, "START") {
 			if i > 12 {
@@ -132,7 +132,7 @@ func TestWelcome_NoSecondAccent(t *testing.T) {
 	defer func() { lipgloss.SetColorProfile(oldP); theme.CurrentIconMode = oldI }()
 	withWelcomeLists(t, 0, 0)
 	accent := theme.ToRGB(theme.BorderFocus)
-	out, _ := renderWelcomeHits(109, 28, 0) // h < 30: text wordmark
+	out, _ := renderWelcomeHits(109, 28, 0, true) // h < 30: text wordmark
 	for _, m := range fgRGB.FindAllStringSubmatch(out, -1) {
 		r, _ := strconv.Atoi(m[1])
 		g, _ := strconv.Atoi(m[2])
