@@ -293,6 +293,23 @@ func TestInstallPrefixOnPathAndOldNvim(t *testing.T) {
 	mustContain(t, out, "Your nvim is 0.9")
 }
 
+func TestInstallTermuxPointsToBuildFromSource(t *testing.T) {
+	// Termux reports Linux, but the glibc release binary does not run on
+	// Android: say how to build it instead of installing a broken binary.
+	e := newInstallEnv(t)
+	e.rel.publish("v0.1.0", false)
+	e.rel.setLatest("v0.1.0")
+	out, ok := e.run([]string{"TERMUX_VERSION=0.118.0"})
+	if ok {
+		t.Fatalf("install on Termux succeeded:\n%s", out)
+	}
+	mustContain(t, out, "Termux")
+	mustContain(t, out, "go install")
+	if _, err := os.Stat(e.bin()); !os.IsNotExist(err) {
+		t.Fatal("a binary was installed")
+	}
+}
+
 func TestInstallUnknownOption(t *testing.T) {
 	e := newInstallEnv(t)
 	out, ok := e.run(nil, "--bogus")

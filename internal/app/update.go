@@ -9,7 +9,6 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"golang.design/x/clipboard"
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/anim"
@@ -1787,15 +1786,22 @@ return (visual and 'C:' or 'L:') .. text
 // from golang.design/x/clipboard — the library hard-panics when built
 // with CGO_ENABLED=0 (its native backend is unavailable). In that case
 // we fall back to nvim's own `+` register clipboard provider, which the
-// caller already populated via `"+y` / `"+d` before calling here.
+// caller already populated via `"+y` / `"+d` before calling here. In
+// Termux it runs termux-clipboard-set (clipHost).
 func safeClipboardWrite(s string) {
+	if h := realClipHost(); h.termux() {
+		if clipboardSink.Load() == nil && !headless() {
+			h.toolWrite(s)
+		}
+		return
+	}
 	if !clipboardReady() {
 		return
 	}
 	defer func() {
 		_ = recover()
 	}()
-	clipboard.Write(clipboard.FmtText, []byte(s))
+	clipLibWrite(s)
 }
 
 // editorPaste replaces the selection (or inserts at cursor) with the

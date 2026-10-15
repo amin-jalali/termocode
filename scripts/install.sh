@@ -96,6 +96,10 @@ latest_tag() {
 }
 
 detect_os() {
+	# Termux (Android) says Linux, but the release binaries need glibc.
+	if [ -n "${TERMUX_VERSION:-}" ]; then
+		die "no release build for Android (Termux) yet. Build it instead: pkg install neovim golang git termux-api && go install github.com/amin-jalali/termocode/cmd/termocode@latest"
+	fi
 	case "$(uname -s)" in
 	Linux) echo linux ;;
 	Darwin) echo darwin ;;
