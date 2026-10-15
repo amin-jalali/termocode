@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // initTimeout caps the handshake of a fresh server (npx downloads can be
@@ -46,7 +48,7 @@ func StartStdio(ctx context.Context, s Server, opts Options) (*Process, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s not found (install it, or set command to a full path)", s.Command)
 	}
-	cmd := exec.Command(path, s.Args...)
+	cmd := spawn.Command(path, s.Args...)
 	cmd.Dir = s.Cwd
 	cmd.Env = childEnv(os.Environ(), s.Env)
 	setProcGroup(cmd)
