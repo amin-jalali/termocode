@@ -185,7 +185,7 @@ func (m Model) renderGitCommitBox(w int) string {
 func (m Model) renderGitCommitField(w int) string {
 	inputBg := gitInputBg
 	if m.gitCommitFocused {
-		inputBg = theme.Mix(theme.BgSidebar, theme.BorderFocus, 0.14)
+		inputBg = theme.Wash(theme.BgSidebar, theme.WashSelected)
 	}
 	gitInputBg := inputBg
 	field := lipgloss.NewStyle().Background(gitInputBg)

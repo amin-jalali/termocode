@@ -1365,7 +1365,7 @@ func refreshSidebarColors() {
 	gitBranchStyle = lipgloss.NewStyle().Background(sidebarBg).Foreground(theme.LG(theme.TextMuted))
 	gitNameStyle = lipgloss.NewStyle().Background(sidebarBg).Foreground(theme.LG(theme.TextPrimary))
 	gitDirStyle = lipgloss.NewStyle().Background(sidebarBg).Foreground(theme.LG(theme.TextMuted))
-	gitCursorBlur = lipgloss.NewStyle().Background(theme.Mix(theme.BgSidebar, theme.BorderFocus, 0.10)).Foreground(theme.LG(theme.TextPrimary))
+	gitCursorBlur = lipgloss.NewStyle().Background(theme.Wash(theme.BgSidebar, theme.WashSelected)).Foreground(theme.LG(theme.TextPrimary))
 	gitCursorFocus = lipgloss.NewStyle().Background(theme.LG(theme.BorderFocus)).Foreground(theme.LG(theme.OnAccent))
 	refreshGitGraphColors()
 	refreshCommitBoxColors()
@@ -1472,7 +1472,7 @@ func sidebarHoverLineBg(line string) string {
 		return line
 	}
 	from := theme.ToRGB(theme.BgSidebar)
-	to := theme.Lerp(from, theme.ToRGB(theme.BorderFocus), 0.07)
+	to, _ := theme.ParseHex(string(theme.Wash(theme.BgSidebar, theme.WashHover)))
 	cells := parseANSIRow(line)
 	for i := range cells {
 		if bg, ok := extractBgRGB(cells[i].sgr); ok && bg == from {
@@ -1720,9 +1720,9 @@ func gitRowColors(active, focused bool, statusFG lipgloss.Color) (bg, name, stat
 func gitSelBg(active, focused bool) lipgloss.Color {
 	switch {
 	case active && focused:
-		return theme.Mix(theme.BgSidebar, theme.BorderFocus, 0.20)
+		return theme.Wash(theme.BgSidebar, theme.WashSelectedFocused)
 	case active:
-		return theme.Mix(theme.BgSidebar, theme.BorderFocus, 0.08)
+		return theme.Wash(theme.BgSidebar, theme.WashSelected)
 	default:
 		return sidebarBg
 	}
@@ -1862,7 +1862,7 @@ func renderGitSectionHeader(label string, count int, hasCount, expanded, active,
 		chevFG = theme.LG(theme.TextSecondary)
 		labelFG = theme.LG(theme.TextPrimary)
 		ruleFG = theme.LG(theme.BorderDefault)
-		chipBg, chipFG = theme.Mix(theme.BgSidebar, theme.BorderFocus, 0.25), theme.LG(theme.TextWhite)
+		chipBg, chipFG = theme.Wash(theme.BgSidebar, theme.WashPressed), theme.LG(theme.TextWhite)
 		if focused {
 			labelFG = theme.LG(theme.TextWhite)
 		}

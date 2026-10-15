@@ -480,7 +480,7 @@ func (m Model) renderRightItems(s State, drop map[rightItem]bool) (string, map[r
 	}
 	// Cursor position sits in a soft accent pill near the right edge.
 	add(itemPos, pill(fmt.Sprintf("Ln %d, Col %d", s.Line, s.Col), theme.TextWhite,
-		theme.Mix(barBgColor(), theme.BorderFocus, 0.30), false))
+		theme.Wash(barBgColor(), theme.WashPressed), false))
 	if s.Debug {
 		// An active debug session is high-attention: a red pill, always
 		// last (DebugBadgeSpan relies on that).

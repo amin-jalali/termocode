@@ -772,7 +772,7 @@ func refreshColors() {
 	toggleOff = lipgloss.NewStyle().
 			Background(PanelBg).
 			Foreground(BtnFg)
-	toggleOnBg = theme.Mix(theme.BgFloat, theme.BorderFocus, 0.3)
+	toggleOnBg = theme.Wash(theme.BgFloat, theme.WashPressed)
 	toggleOn = lipgloss.NewStyle().
 			Background(toggleOnBg).
 			Foreground(TextPrimary).

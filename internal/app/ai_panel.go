@@ -585,7 +585,7 @@ func aiUserBubble(text string, width, msgIdx int) []aiLine {
 	if x < aiIndent {
 		x = aiIndent
 	}
-	bub := lipgloss.NewStyle().Background(theme.Mix(theme.BgPanel, theme.BorderFocus, 0.20)).Foreground(theme.LG(theme.TextWhite))
+	bub := lipgloss.NewStyle().Background(theme.Wash(theme.BgPanel, theme.WashSelectedFocused)).Foreground(theme.LG(theme.TextWhite))
 	lead := theme.Bg(theme.BgPanel).Render(strings.Repeat(" ", x))
 	out := make([]aiLine, 0, len(lines))
 	for k, l := range lines {

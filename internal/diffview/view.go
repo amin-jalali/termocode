@@ -236,7 +236,7 @@ func colors() pal {
 		mod:      theme.LG(theme.GitModified),
 		accent:   theme.LG(theme.AIAccent),
 		hair:     fc.Hairline,
-		sel:      theme.Mix(theme.BgFloat, theme.BorderFocus, 0.18),
+		sel:      theme.Wash(theme.BgFloat, theme.WashSelectedFocused),
 		white:    fc.Title,
 		warn:     theme.LG(theme.DiagWarning),
 		onAccent: fc.PrimaryFg,

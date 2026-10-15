@@ -334,11 +334,11 @@ func (m Model) renderTreeRow(
 	if highlighted {
 		// Soft accent wash for the cursor / selection; stronger while the
 		// panel has focus.
-		t := 0.10
+		lvl := theme.WashSelected
 		if focused {
-			t = 0.20
+			lvl = theme.WashSelectedFocused
 		}
-		rowBgC = theme.Mix(theme.BgSidebar, theme.BorderFocus, t)
+		rowBgC = theme.Wash(theme.BgSidebar, lvl)
 	}
 	bgStyle := lipgloss.NewStyle().Background(rowBgC)
 
