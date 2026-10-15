@@ -126,6 +126,7 @@ func ProbeUnicode(timeout time.Duration) bool {
 //	NO_COLOR (any value)                     no colour
 //	TERM=dumb                                no colour
 //	TERM=linux, vt100, vt220, ansi, cons25    16 colours
+//	Terminal.app or GNU screen (no COLORTERM) 256 colours
 func DetectProfile(getenv func(string) string) termenv.Profile {
 	if getenv == nil {
 		getenv = os.Getenv
@@ -149,6 +150,14 @@ func DetectProfile(getenv func(string) string) termenv.Profile {
 		return termenv.Ascii
 	case t == "linux" || t == "ansi" || t == "cons25" || strings.HasPrefix(t, "vt1") || strings.HasPrefix(t, "vt2"):
 		return termenv.ANSI
+	}
+	// macOS Terminal.app before macOS 26 and GNU screen before 5.0 show
+	// 24-bit colour wrong (clamped or dropped). They get 256 colours unless
+	// they advertise truecolor. tmux converts colours itself.
+	ct := strings.ToLower(getenv("COLORTERM"))
+	advertised := ct == "truecolor" || ct == "24bit"
+	if !advertised && (getenv("TERM_PROGRAM") == "Apple_Terminal" || (getenv("STY") != "" && getenv("TMUX") == "")) {
+		return termenv.ANSI256
 	}
 	return termenv.TrueColor
 }
