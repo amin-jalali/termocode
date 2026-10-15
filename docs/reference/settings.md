@@ -62,6 +62,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `mcp_max_result_kb` | int | `32` | Cut an MCP tool result to this many KB before the model sees it. |
 | `mcp_trust_annotations` | bool | `true` | Let MCP tools the server marks read-only run without asking. false: every MCP tool asks, except the ones in the server's "autoApprove" list. |
 | `mcp_trusted` | object | `{}` | Project MCP servers you allowed with "Always allow": server name → hash of its mcp.json entry. A changed entry asks again. Written by the trust dialog and AI: MCP Servers…. |
+| `mcp_trusted_tools` | object | `{}` | The tool list you trusted per MCP server: server name → hash of its tools. The first list is kept by itself; when a server's tools change, termocode asks again and, until you trust the new list, every tool of that server asks first. |
 
 ## Appearance (file only)
 
