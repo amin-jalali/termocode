@@ -6,12 +6,11 @@ import (
 )
 
 // NamedTheme bundles a human-readable label, a stable ID used in the
-// persisted config, and the Palette256 + Theme styles to apply.
+// persisted config, and the Palette256 to apply.
 type NamedTheme struct {
 	ID      string
 	Name    string
 	Palette Palette256
-	Styles  Theme
 	// Light marks a light-background theme (nvim 'background' = light).
 	Light bool
 }
@@ -29,25 +28,21 @@ var allThemes = map[string]NamedTheme{
 		ID:      "vscode-dark-plus",
 		Name:    "VSCode Dark+",
 		Palette: vscodeDarkPlusPalette(),
-		Styles:  DarkPlus(),
 	},
 	"github-dark": {
 		ID:      "github-dark",
 		Name:    "GitHub Dark",
 		Palette: githubDarkPalette(),
-		Styles:  GitHubDark(),
 	},
 	"one-dark": {
 		ID:      "one-dark",
 		Name:    "One Dark",
 		Palette: oneDarkPalette(),
-		Styles:  OneDark(),
 	},
 	"solarized-dark": {
 		ID:      "solarized-dark",
 		Name:    "Solarized Dark",
 		Palette: solarizedDarkPalette(),
-		Styles:  SolarizedDark(),
 	},
 }
 
@@ -94,7 +89,6 @@ func customUserTheme() NamedTheme {
 		// per-field knobs the user theme covers, and lipgloss styles
 		// don't show up in the editor area itself (which reads from the
 		// 256-index palette directly).
-		Styles: DarkPlus(),
 	}
 }
 

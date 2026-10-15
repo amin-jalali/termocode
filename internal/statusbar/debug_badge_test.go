@@ -2,12 +2,10 @@ package statusbar
 
 import (
 	"testing"
-
-	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 func TestDebugBadgeSpanMatchesRenderedText(t *testing.T) {
-	m := New(theme.Theme{})
+	m := New()
 	m.SetWidth(120)
 	s := State{Path: "/a.go", Project: "proj", Lang: "Go", Line: 1, Col: 1,
 		Branch: "main", Term: true, Debug: true}

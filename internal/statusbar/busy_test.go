@@ -5,15 +5,13 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/x/ansi"
-
-	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // Spec (UI review signature #4): while work streams in (the AI answering)
 // a small comet next to the project pill moves one step per event. It is
 // drawn from the event count, never from a timer, and is gone when idle.
 func TestBusyComet(t *testing.T) {
-	m := New(theme.Theme{})
+	m := New()
 	base := State{Project: "p", Path: "/p/a.go", Line: 1, Col: 1}
 	idle := ansi.Strip(m.renderLeft(base))
 	s := base

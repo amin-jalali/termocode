@@ -76,7 +76,7 @@ type Model struct {
 
 // New keeps the legacy constructor signature so existing callers compile;
 // the bar styles itself directly from the palette and ignores the argument.
-func New(_ theme.Theme) Model { return Model{} }
+func New() Model { return Model{} }
 
 func (m Model) Init() tea.Cmd { return nil }
 

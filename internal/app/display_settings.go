@@ -219,7 +219,6 @@ func (m *Model) previewThemeUnderCursor() {
 		return
 	}
 	t, _ := theme.ApplyTheme(it.ID)
-	m.theme = &t.Styles
 	m.themeID = t.ID
 	m.applyNvimTheme()
 	m.refreshAIHighlights()
@@ -236,7 +235,6 @@ func (m *Model) endThemePreview(keep bool) {
 		return
 	}
 	t, _ := theme.ApplyTheme(m.themePreviewFrom)
-	m.theme = &t.Styles
 	m.themeID = t.ID
 	m.applyNvimTheme()
 	m.refreshAIHighlights()

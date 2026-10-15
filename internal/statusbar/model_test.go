@@ -6,12 +6,10 @@ import (
 	"unicode/utf8"
 
 	"github.com/charmbracelet/lipgloss"
-
-	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 func TestNewAndUpdateAreInert(t *testing.T) {
-	m := New(theme.Theme{})
+	m := New()
 	if cmd := m.Init(); cmd != nil {
 		t.Fatal("Init must be nil-cmd")
 	}
@@ -21,14 +19,14 @@ func TestNewAndUpdateAreInert(t *testing.T) {
 }
 
 func TestViewEmptyAtZeroWidth(t *testing.T) {
-	m := New(theme.Theme{})
+	m := New()
 	if v := m.View(State{}); v != "" {
 		t.Fatalf("zero width view want empty, got %q", v)
 	}
 }
 
 func TestViewFitsWidthExactly(t *testing.T) {
-	m := New(theme.Theme{})
+	m := New()
 	m.SetWidth(80)
 	out := m.View(State{
 		Path:   "/x/y/main.go",
@@ -46,7 +44,7 @@ func TestViewIncludesProjectLineColAndBranch(t *testing.T) {
 	// In the redesigned bar the left zone carries the project name
 	// (not the filename — that lives in the breadcrumbs row), the
 	// center carries the branch, and the right carries Ln/Col + lang.
-	m := New(theme.Theme{})
+	m := New()
 	m.SetWidth(120)
 	out := m.View(State{
 		Path:    "/work/repo/file.go",
@@ -70,7 +68,7 @@ func TestViewIncludesProjectLineColAndBranch(t *testing.T) {
 func TestRenderLeftDirtyDotWithProject(t *testing.T) {
 	// With a buffer open + Dirty=true, the left zone shows the dirty
 	// dot followed by the project name. No filename, no directory.
-	m := New(theme.Theme{})
+	m := New()
 	out := m.renderLeft(State{Path: "/x/y/main.go", Project: "termocode", Dirty: true})
 	if !strings.Contains(out, "termocode") {
 		t.Fatalf("project name missing in left segment: %s", out)
@@ -84,7 +82,7 @@ func TestRenderLeftDirtyDotWithProject(t *testing.T) {
 }
 
 func TestViewErrTakesOverLeft(t *testing.T) {
-	m := New(theme.Theme{})
+	m := New()
 	m.SetWidth(80)
 	out := m.View(State{Err: "something bad", Branch: "main", Errors: 5})
 	if !strings.Contains(out, "something bad") {
@@ -100,7 +98,7 @@ func TestRenderLeftWithoutPath(t *testing.T) {
 	// In the redesigned bar the active filename lives in the left
 	// zone; with no path open we expect the muted "[no file]"
 	// placeholder there.
-	m := New(theme.Theme{})
+	m := New()
 	out := m.renderLeft(State{})
 	if !strings.Contains(out, "[no file]") {
 		t.Fatalf("no-file placeholder missing: %s", out)
@@ -108,7 +106,7 @@ func TestRenderLeftWithoutPath(t *testing.T) {
 }
 
 func TestRenderRightDefaultsEncoding(t *testing.T) {
-	m := New(theme.Theme{})
+	m := New()
 	out := m.renderRight(State{Line: 1, Col: 1})
 	if !strings.Contains(out, "UTF-8") {
 		t.Fatalf("default encoding UTF-8 missing: %s", out)

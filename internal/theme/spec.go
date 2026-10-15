@@ -1,7 +1,5 @@
 package theme
 
-import "github.com/charmbracelet/lipgloss"
-
 // Spec describes a theme by its upstream colour names (Catppuccin-style
 // "base / mantle / crust / surface / overlay / text" ladder plus accents).
 // FromSpec turns it into a Palette256, so a new theme is one Spec literal:
@@ -176,17 +174,8 @@ func lightReadable(s Spec) Spec {
 	return s
 }
 
-// stylesFromSpec builds the composite lipgloss styles for a Spec theme.
-func stylesFromSpec(s Spec) Theme {
-	c := func(h string) lipgloss.Color { return lipgloss.Color(h) }
-	return buildTheme(c(s.Base), c(s.Text), c(s.Mantle), c(Lerp(mustHex(s.Base), mustHex(s.Surface0), 0.45).Hex()),
-		c(s.Overlay1), c(s.Surface1), c(s.Accent), c(s.Surface1))
-}
-
-func mustHex(h string) RGB { c, _ := ParseHex(h); return c }
-
 func specTheme(s Spec) NamedTheme {
-	return NamedTheme{ID: s.ID, Name: s.Name, Palette: FromSpec(s), Styles: stylesFromSpec(s), Light: s.Light}
+	return NamedTheme{ID: s.ID, Name: s.Name, Palette: FromSpec(s), Light: s.Light}
 }
 
 // ─── Spec themes ───────────────────────────────────────────────────────
