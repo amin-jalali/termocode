@@ -17,7 +17,7 @@ A terminal IDE that feels like VS Code — built on Bubble Tea, powered by a rea
     <td width="50%"><img src="assets/screenshots/diff-review.png" alt="Review AI changes as a diff"><br><sub><b>AI edit review</b> — accept or reject each change, then apply.</sub></td>
   </tr>
   <tr>
-    <td><img src="assets/screenshots/dashboard.png" alt="Start page"><br><sub><b>Start page</b> — open files, search, shell, clone.</sub></td>
+    <td><img src="assets/screenshots/dashboard.png" alt="Start page"><br><sub><b>Start page</b> — open files, recent files, workspaces, clone.</sub></td>
     <td><img src="assets/screenshots/palette.png" alt="Command palette"><br><sub><b>Command palette</b> (<code>F1</code>) — every action, fuzzy search.</sub></td>
   </tr>
   <tr>
