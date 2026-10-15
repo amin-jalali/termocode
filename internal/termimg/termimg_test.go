@@ -69,6 +69,9 @@ func TestDetectEnv(t *testing.T) {
 		{map[string]string{"TERM": "foot-extra"}, Sixel, true},
 		{map[string]string{"WT_SESSION": "x"}, Sixel, true},
 		{map[string]string{"TERM_PROGRAM": "vscode"}, Blocks, true},
+		// VS Code started from a kitty shell inherits KITTY_WINDOW_ID;
+		// TERM_PROGRAM names the terminal that is really drawing.
+		{map[string]string{"TERM_PROGRAM": "vscode", "KITTY_WINDOW_ID": "1"}, Blocks, true},
 		{map[string]string{"TERM": "xterm-256color", "SSH_TTY": "/dev/pts/1"}, Blocks, false},
 	}
 	for _, c := range cases {

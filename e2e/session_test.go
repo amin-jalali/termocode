@@ -328,7 +328,7 @@ func TestSessionReattachNewTerminalCaps(t *testing.T) {
 
 	env = append(append([]string(nil), r.env...), "TERM=xterm-kitty")
 	// Tall enough for the logo: a short window hides it.
-	c := Start(t, StartOpts{Home: r.home, Workspace: r.ws, Env: env, Rows: 50})
+	c := Start(t, StartOpts{Home: r.home, Workspace: r.ws, Env: env, Rows: 50, KittyGraphics: true})
 	c.WaitFor("status bar", bootTimeout, func(ls []string) bool {
 		return mainFrame.Top(ls[0]) && mainFrame.Bottom(ls[len(ls)-1])
 	})

@@ -85,6 +85,10 @@ func DetectEnv(getenv func(string) string) (Protocol, bool) {
 	term := strings.ToLower(getenv("TERM"))
 	prog := strings.ToLower(getenv("TERM_PROGRAM"))
 	switch {
+	// TERM_PROGRAM first: a nested terminal (VS Code started from a kitty
+	// shell) inherits the parent's KITTY_WINDOW_ID / WT_SESSION.
+	case prog == "vscode":
+		return Blocks, true
 	case getenv("KITTY_WINDOW_ID") != "" || term == "xterm-kitty":
 		return Kitty, true
 	case prog == "ghostty" || getenv("GHOSTTY_RESOURCES_DIR") != "" || term == "xterm-ghostty":
@@ -97,8 +101,6 @@ func DetectEnv(getenv func(string) string) (Protocol, bool) {
 		return Sixel, true
 	case getenv("WT_SESSION") != "":
 		return Sixel, true
-	case prog == "vscode":
-		return Blocks, true
 	}
 	return Blocks, false
 }

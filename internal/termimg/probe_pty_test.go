@@ -50,14 +50,34 @@ func TestProbeKittyErrorReply(t *testing.T) {
 		{"ok", kittyEnv, "\x1b_Gi=31;OK\x1b\\\x1b[?62;22c", Kitty},
 		{"enoent", kittyEnv, "\x1b_Gi=31;ENOENT:No such image\x1b\\\x1b[?62;22c", Blocks},
 		{"einval sixel", kittyEnv, "\x1b_Gi=31;EINVAL:bad\x1b\\\x1b[?62;4;22c", Sixel},
-		// No kitty answer at all (a terminal that ignores APC): the
-		// environment still decides, as before.
-		{"silent", kittyEnv, "\x1b[?62;22c", Kitty},
+		// DA1 but no kitty answer: not kitty, whatever the environment
+		// says (kitty, Ghostty and WezTerm always answer before DA1). A
+		// KITTY_WINDOW_ID leaks into VS Code's or JetBrains' terminal
+		// started from a kitty shell; sending kitty images there prints
+		// garbage. (terminal R8)
+		{"no kitty answer", kittyEnv, "\x1b[?62;22c", Blocks},
+		{"wt env, DA1 with sixel", map[string]string{"WT_SESSION": "x"}, "\x1b[?61;4;6c", Sixel},
+		{"wt env, old WT without sixel", map[string]string{"WT_SESSION": "x"}, "\x1b[?61;6c", Blocks},
 		{"error no env", nil, "\x1b_Gi=31;ENOENT:x\x1b\\\x1b[?62;22c", Blocks},
 	}
 	for _, c := range cases {
 		if got := probeWithReply(t, c.envm, c.reply); got.Protocol != c.want {
 			t.Errorf("%s: protocol %v (%s), want %v", c.name, got.Protocol, got.Reason, c.want)
 		}
+	}
+}
+
+// A terminal that does not answer at all keeps the environment's guess.
+func TestProbeNoAnswerKeepsEnv(t *testing.T) {
+	ptm, tty, err := pty.Open()
+	if err != nil {
+		t.Skipf("no pty: %v", err)
+	}
+	defer ptm.Close()
+	defer tty.Close()
+	go func() { _, _ = ptm.Read(make([]byte, 256)) }()
+	got := Probe(tty, tty, 150*time.Millisecond, env(map[string]string{"TERM": "xterm-kitty"}))
+	if got.Protocol != Kitty {
+		t.Errorf("protocol %v (%s), want Kitty", got.Protocol, got.Reason)
 	}
 }
