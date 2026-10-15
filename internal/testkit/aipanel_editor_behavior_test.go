@@ -17,7 +17,7 @@ import (
 func TestTerminalBarControlsWithAIPanel(t *testing.T) {
 	d := editorDriver(t, nil)
 	openAIPanel(d)
-	clickCard(d, "Open shell", aiPanelEdge(d))
+	clickCard(d, "New terminal", aiPanelEdge(d))
 	if !d.WaitForText("Terminal ›", 5*time.Second) {
 		t.Fatalf("terminal did not open:\n%s", screen(d))
 	}
