@@ -9,7 +9,7 @@ A terminal IDE that feels like VS Code — built on Bubble Tea, powered by a rea
 
 **Documentation: <https://amin-jalali.github.io/termocode/>**
 
-![termocode: AI chat next to a real Neovim editor, with the explorer and git status](assets/screenshots/ai-chat-answer.png)
+![termocode demo: Quick Open, Neovim motions, the command palette, an AI answer, the AI change review and the terminal](assets/screenshots/demo.gif)
 
 <table>
   <tr>

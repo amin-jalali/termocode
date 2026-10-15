@@ -8,12 +8,7 @@ hide:
 
 **A terminal IDE that feels like VS Code — with a real Neovim inside.**
 
-![termocode: explorer, tabs, editor and status bar](assets/screenshots/editor.png)
-
-<!--
-Hero GIF (not committed yet): `vhs assets/screenshots/demo.tape`, then:
-![termocode demo](assets/screenshots/demo.gif)
--->
+![termocode demo: Quick Open, Neovim motions, the command palette, an AI answer, the AI change review and the terminal](assets/screenshots/demo.gif)
 
 ## Why termocode
 

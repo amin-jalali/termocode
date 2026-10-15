@@ -14,40 +14,35 @@ import (
 	"time"
 )
 
-// DemoWorkspace copies src (without .git and build output) to
+// DemoWorkspace copies the files git tracks in src (never untracked files:
+// private notes or local builds must not reach a published image) to
 // parent/termocode, gives it a small fixed git history (a feature branch
 // merged back, a tag; fixed authors and dates) and then makes a few edits,
 // so Source Control shows a stable set of changes and a graph. It returns
 // the new folder.
 func DemoWorkspace(src, parent string) (string, error) {
 	dst := filepath.Join(parent, "termocode")
-	err := filepath.WalkDir(src, func(p string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		rel, _ := filepath.Rel(src, p)
-		switch d.Name() {
-		case ".git", "dist", ".venv", "site":
-			if d.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		target := filepath.Join(dst, rel)
-		if d.IsDir() {
-			return os.MkdirAll(target, 0o755)
-		}
-		if !d.Type().IsRegular() {
-			return nil
+	files, err := trackedFiles(src)
+	if err != nil {
+		return "", err
+	}
+	for _, rel := range files {
+		p := filepath.Join(src, rel)
+		info, err := os.Lstat(p)
+		if err != nil || !info.Mode().IsRegular() { // deleted in the checkout, or a link
+			continue
 		}
 		b, err := os.ReadFile(p)
 		if err != nil {
-			return err
+			return "", err
 		}
-		return os.WriteFile(target, b, 0o644)
-	})
-	if err != nil {
-		return "", err
+		target := filepath.Join(dst, rel)
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			return "", err
+		}
+		if err := os.WriteFile(target, b, 0o644); err != nil {
+			return "", err
+		}
 	}
 	if err := demoHistory(dst); err != nil {
 		return "", err
@@ -121,6 +116,23 @@ func demoHistory(dir string) error {
 	vcs(d4, "merge", "-q", "--no-ff", "--no-gpg-sign", "-m", "Merge branch 'toast-slide'", "toast-slide")
 	vcs(d4, "tag", "v0.1.0")
 	return firstErr
+}
+
+// trackedFiles lists the files git tracks in src (relative paths).
+func trackedFiles(src string) ([]string, error) {
+	cmd := exec.Command("git", "ls-files", "-z")
+	cmd.Dir = src
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git ls-files in %s: %w", src, err)
+	}
+	var files []string
+	for _, f := range strings.Split(string(out), "\x00") {
+		if f != "" {
+			files = append(files, f)
+		}
+	}
+	return files, nil
 }
 
 func appendTo(root, rel, text string) {

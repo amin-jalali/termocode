@@ -11,6 +11,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"image"
 	"image/color"
 	"os"
 	"path/filepath"
@@ -33,6 +34,7 @@ func main() {
 	ansOnly := flag.Bool("ans", false, "also write the raw .ans frames")
 	fallback := flag.String("fallback", strings.Join(defaultFallbacks(), ","), "comma-separated fallback fonts for missing glyphs")
 	real := flag.Bool("real", false, "use the current repo as is (no demo workspace)")
+	gifPath := flag.String("gif", "", "record the README demo (shotkit.DemoScene) to this GIF instead of the PNG set")
 	flag.Parse()
 	// Resolve -out before entering the demo workspace (it changes directory).
 	absOut, _ := filepath.Abs(*out)
@@ -55,6 +57,17 @@ func main() {
 	if err := os.MkdirAll(absOut, 0o755); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+	if *gifPath != "" {
+		if !filepath.IsAbs(*gifPath) {
+			*gifPath = filepath.Join(absOut, filepath.Base(*gifPath))
+		}
+		if err := recordGIF(*gifPath, *fontPath, *boldPath, splitList(*fallback), *w, *h); err != nil {
+			fmt.Fprintln(os.Stderr, "shots:", err)
+			os.Exit(1)
+		}
+		fmt.Println("wrote", *gifPath)
+		return
 	}
 	scenes := shotkit.Scenes()
 
@@ -149,4 +162,39 @@ func splitList(s string) []string {
 		}
 	}
 	return out
+}
+
+// recordGIF plays shotkit.DemoScene and writes its frames as a GIF.
+func recordGIF(path, font, bold string, fallbacks []string, w, h int) error {
+	type shot struct {
+		frame string
+		hold  time.Duration
+	}
+	var shots []shot
+	_, err := shotkit.Run(shotkit.DemoScene(), w, h, shotkit.Options{Settle: true, Quiet: true,
+		OnFrame: func(f string, hold time.Duration) { shots = append(shots, shot{f, hold}) }})
+	if err != nil {
+		return err
+	}
+	r, err := ansipng.New(ansipng.Options{
+		FontRegular: font, FontBold: bold, Size: 14, Fallbacks: fallbacks,
+		DefaultBG: hexRGBA(theme.Hex(theme.BgEditor)), DefaultFG: hexRGBA(theme.Hex(theme.TextPrimary)),
+	})
+	if err != nil {
+		return err
+	}
+	frames := make([]*image.RGBA, len(shots))
+	delays := make([]time.Duration, len(shots))
+	for i, s := range shots {
+		frames[i], delays[i] = r.Render(s.frame, w), s.hold
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	if err := ansipng.EncodeGIF(f, frames, delays); err != nil {
+		f.Close()
+		return err
+	}
+	return f.Close()
 }

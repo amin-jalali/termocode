@@ -29,7 +29,13 @@ type Step struct {
 	Msg   tea.Msg
 	Build func(frame string) (tea.Msg, error)
 	Wait  time.Duration
+	// Hold is how long a recording (Options.OnFrame) shows the frame after
+	// this step; 0 = defaultHold.
+	Hold time.Duration
 }
+
+// defaultHold is the recording time of a step without Hold.
+const defaultHold = 600 * time.Millisecond
 
 // Scene is a named script: a fresh app with the given theme / icon mode,
 // extra environment and steps.
@@ -84,6 +90,9 @@ type Options struct {
 	// Quiet drops cursor-blink and toast-expiry ticks so the frame can
 	// settle and toasts stay on screen.
 	Quiet bool
+	// OnFrame, when set, gets the settled frame after start-up and after
+	// every step, with how long a recording should show it (Step.Hold).
+	OnFrame func(frame string, hold time.Duration)
 }
 
 // quietMsgs are message types dropped in Quiet mode (by %T).
@@ -211,10 +220,21 @@ func Run(sc Scene, w, h int, opt Options) (string, error) {
 		return nil
 	}
 
+	record := func(hold time.Duration) {
+		if opt.OnFrame == nil {
+			return
+		}
+		if hold <= 0 {
+			hold = defaultHold
+		}
+		f, _ := frame()
+		opt.OnFrame(f, hold)
+	}
 	p.Send(tea.WindowSizeMsg{Width: w, Height: h})
 	if err := settle(1500*time.Millisecond, stepQuiet); err != nil {
 		return "", fmt.Errorf("start-up: %w", err)
 	}
+	record(0)
 	for i, st := range sc.Steps {
 		msg := st.Msg
 		if st.Build != nil {
@@ -229,6 +249,7 @@ func Run(sc Scene, w, h int, opt Options) (string, error) {
 		if err := settle(st.Wait, stepQuiet); err != nil {
 			return "", fmt.Errorf("step %d: %w", i+1, err)
 		}
+		record(st.Hold)
 	}
 	// One more resize forces a fresh View with the final state.
 	p.Send(tea.WindowSizeMsg{Width: w, Height: h})

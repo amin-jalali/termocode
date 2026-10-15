@@ -105,3 +105,45 @@ func Scenes() []Scene {
 	}
 	return scenes
 }
+
+// DemoScene is the README demo (shots -gif): start page, Quick Open, real
+// Neovim motions, the command palette, an AI answer, the AI change review
+// and the terminal. Holds set how long each frame shows in the GIF.
+func DemoScene() Scene {
+	hold := func(st Step, d time.Duration) Step { st.Hold = d; return st }
+	typed := func(s string) []Step {
+		var out []Step
+		for _, st := range TypeKeys(s) {
+			out = append(out, hold(st, 110*time.Millisecond))
+		}
+		return out
+	}
+	steps := []Step{hold(Pause(200*time.Millisecond), 1800*time.Millisecond)}
+	// Quick Open a file by typing part of its path.
+	steps = append(steps, hold(Key("ctrl+p"), 500*time.Millisecond))
+	steps = append(steps, typed("statusbar/model")...)
+	steps = append(steps, hold(Pause(300*time.Millisecond), 900*time.Millisecond),
+		hold(Key("enter"), 1600*time.Millisecond))
+	// Real Neovim: leave insert mode, move by lines and words, select lines.
+	steps = append(steps, hold(Key("esc"), 400*time.Millisecond))
+	for _, k := range []string{"j", "j", "j", "w", "w"} {
+		steps = append(steps, hold(Key(k), 220*time.Millisecond))
+	}
+	steps = append(steps, hold(Key("V"), 300*time.Millisecond), hold(Key("j"), 300*time.Millisecond),
+		hold(Key("j"), 1200*time.Millisecond), hold(Key("esc"), 400*time.Millisecond))
+	// Every action in the palette.
+	steps = append(steps, hold(Key("f1"), 500*time.Millisecond))
+	steps = append(steps, typed("theme")...)
+	steps = append(steps, hold(Pause(200*time.Millisecond), 1400*time.Millisecond), hold(Key("esc"), 400*time.Millisecond))
+	// AI chat next to the editor, then its change as a reviewable diff.
+	steps = append(steps,
+		hold(Act("palette:ai-open-chat"), 800*time.Millisecond),
+		hold(Act("aidemo"), 3500*time.Millisecond),
+		hold(Act("diffdemo"), 3500*time.Millisecond),
+		hold(Key("esc"), 500*time.Millisecond),
+		// The integrated terminal.
+		hold(Act("palette:toggle-terminal"), 800*time.Millisecond),
+		hold(Act("termsend:ls --color=always -F"), 2500*time.Millisecond),
+	)
+	return Scene{Name: "demo", Env: aiEnv, Steps: steps}
+}
