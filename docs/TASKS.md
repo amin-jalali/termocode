@@ -210,7 +210,9 @@ Best started after A/C/D/E so the API is shaped by real panels — but not block
 ---
 
 ## Android (APK) — later
-- [ ] Clipboard on Android: copy / paste uses X11 today (`golang.design/x/clipboard`, cgo) and does not work on Android. Connect it to Android's own clipboard (through the APK shell, e.g. a small bridge the shell exposes), keep OSC 52 as fallback.
+- [x] Clipboard in Termux (N6c, 2026-10-15): the Android build leaves out `golang.design/x/clipboard` (build tag; CI checks the android/arm64 build). Copy / paste use `termux-clipboard-set` / `-get` (package `termux-api`), first in the order on Android; OSC 52 stays as fallback (Termux supports it). No clipboard watcher in Termux (polling would cost battery) — the history keeps in-editor yanks. Missing termux-api → toast says to install the Termux:API app and `pkg install termux-api`. The install script stops on Termux and points to `go install` (docs: install.md "Android (Termux)").
+- [ ] Clipboard in the APK: an APK has no Termux:API. Connect it to Android's own clipboard through the APK shell (e.g. a small bridge the shell exposes, plugged in as one more `clipHost` command), keep OSC 52 as fallback.
+- [ ] Release builds for android/arm64 (follow-up): `CGO_ENABLED=0 GOOS=android GOARCH=arm64` already builds; add it to `build-release.sh` / release.yml and let `install.sh` use it on Termux instead of stopping.
 - Size estimate (2026-10-11): termocode arm64 binary 19 MB, ~6.5 MB compressed in an APK; plus Neovim for Android (~4–6 MB) and the terminal shell (Kotlin ~1–2 MB, Flutter ~8–10 MB) → APK ~12–20 MB.
 
 ---
@@ -281,4 +283,4 @@ The user: "do them in a loop; after finishing each item push it".
 - [x] N5 (M) Persian/Arabic (right-to-left) text in the AI chat and the Markdown preview (bidi + shaping)
 - [x] N6a README screenshots: hero + 8-image gallery in README (160x44 PNGs from the shots tool, best compression, each < 300 KB); images also in docs/features.md. Animated `demo.gif` still waits for vhs (not installed)
 - [ ] N6b Tier 2 process extensions
-- [ ] N6c Android clipboard
+- [x] N6c Android clipboard: works in Termux (termux-api), android/arm64 build checked in CI; see "Android (APK) — later"
