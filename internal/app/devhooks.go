@@ -33,6 +33,7 @@ import (
 //	                       does (row ids: SettingsCatalog().ID)
 //	theme:<id>             apply a color theme (not persisted)
 //	aidemo                 load a sample AI conversation
+//	commit:<rev>           open the Source Control commit view on rev
 //	diffdemo               open the AI review card with sample files
 //	                       (nothing is written)
 //	plugin:nvim-dap=<dir>  set nvim-dap up from a checkout (tests: the
@@ -92,6 +93,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 			r.card.Action("next")
 			r.card.Action("accept")
 		}
+	case "commit": // open the commit view on a revision (HEAD, a SHA …)
+		return m.gitOpenCommitViewCmd(arg)
 	case "openfile": // as if picked in the explorer (images open the preview)
 		return func() tea.Msg { return explorer.OpenFileMsg{Path: arg} }
 	case "view":
