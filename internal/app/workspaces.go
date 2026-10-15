@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -79,6 +80,14 @@ func pushWorkspace(path string) {
 	if err != nil {
 		abs = path
 	}
+	// A temp folder (a test run, a screenshot demo, an extracted archive)
+	// is gone soon; it does not belong on the start page. A config that
+	// itself lives in a temp folder (a sandbox) keeps everything.
+	if inTempDir(abs) {
+		if cfg, err := workspacesPath(); err != nil || !inTempDir(cfg) {
+			return
+		}
+	}
 	entries := loadWorkspaces()
 	out := make([]WorkspaceEntry, 0, len(entries)+1)
 	out = append(out, WorkspaceEntry{Path: abs, OpenedAt: time.Now()})
@@ -92,6 +101,12 @@ func pushWorkspace(path string) {
 		}
 	}
 	saveWorkspaces(out)
+}
+
+// inTempDir reports whether p is the system temp folder or inside it.
+func inTempDir(p string) bool {
+	tmp := filepath.Clean(os.TempDir())
+	return p == tmp || strings.HasPrefix(p, tmp+string(filepath.Separator))
 }
 
 // openWorkspacePicker shows the recent-workspaces list. Selection re-execs
