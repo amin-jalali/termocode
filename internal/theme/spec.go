@@ -68,6 +68,9 @@ func FromSpec(s Spec) Palette256 {
 	}
 
 	white, black := "#ffffff", "#000000"
+	if s.Light {
+		s = lightReadable(s)
+	}
 	p := Palette256{
 		BgEditor:      idx(s.Base),
 		BgSidebar:     idx(s.Mantle),
@@ -144,6 +147,33 @@ func FromSpec(s Spec) Palette256 {
 	}
 	p.IndexHex = hex
 	return p
+}
+
+// lightReadable adjusts a light spec so the chrome reads (contrast_test.go):
+// the sidebar and panel (Mantle, Crust) are never brighter than the editor
+// (Base) — upstream Rosé Pine Dawn has them brighter, which turns the panes
+// inside out — and the dim text tiers and the pane divider are moved
+// toward Text until they reach their contrast on every background.
+func lightReadable(s Spec) Spec {
+	lum := func(h string) float64 { c, _ := ParseHex(h); return relLuminance(c) }
+	darker := func(h string) string { c, _ := ParseHex(h); return Lerp(c, RGB{}, 0.04).Hex() }
+	if lum(s.Mantle) > lum(s.Base) {
+		s.Mantle = darker(s.Base)
+	}
+	if lum(s.Crust) > lum(s.Mantle) {
+		s.Crust = darker(s.Mantle)
+	}
+	reach := func(h string, min float64) string {
+		for _, bg := range []string{s.Base, s.Mantle, s.Crust} {
+			h = readableOn(h, bg, s.Text, min)
+		}
+		return h
+	}
+	s.Overlay0 = reach(s.Overlay0, 3.0)
+	s.Overlay1 = reach(s.Overlay1, 3.0)
+	s.Surface1 = reach(s.Surface1, 2.2)
+	s.Surface0 = readableOn(s.Surface0, s.Mantle, s.Text, 1.15)
+	return s
 }
 
 // stylesFromSpec builds the composite lipgloss styles for a Spec theme.
