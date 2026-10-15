@@ -56,6 +56,12 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `ai_auto_approve` | string[] | `[]` | Agent tool classes that run without asking: fileWrite, git, run, ide, settings. Set with AI: Agent Auto-Approve…. |
 | `ai_edit_review` | enum | `review` | review: the agent's file changes (write_file, create_file, LSP rename, code actions, format) open as a diff where you accept or reject each change; the agent waits and is told what was written. auto: the old way (a confirm dialog, or no question when fileWrite is auto-approved). Auto-approving fileWrite also skips the review. Toggle with AI: Toggle Edit Review. |
 | `ai_max_steps` | int | `25` | Most tool steps the AI agent takes for one chat message. At the limit it stops and asks you to send "continue". |
+| `mcp_enabled` | bool | `true` | Offer the tools of the MCP servers in mcp.json to the AI chat. false hides them all without touching mcp.json. |
+| `mcp_idle_timeout` | duration | `10m` | Stop a local MCP server after this long without a tool call (it starts again on the next one). "0" never stops it. Read when MCP first runs. |
+| `mcp_call_timeout` | duration | `60s` | Longest wait for one MCP tool call. A server's "timeout" (seconds) in mcp.json wins. Read when MCP first runs. |
+| `mcp_max_result_kb` | int | `32` | Cut an MCP tool result to this many KB before the model sees it. |
+| `mcp_trust_annotations` | bool | `true` | Let MCP tools the server marks read-only run without asking. false: every MCP tool asks, except the ones in the server's "autoApprove" list. |
+| `mcp_trusted` | object | `{}` | Project MCP servers you allowed with "Always allow": server name → hash of its mcp.json entry. A changed entry asks again. Written by the trust dialog and AI: MCP Servers…. |
 
 ## Appearance (file only)
 

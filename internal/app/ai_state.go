@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/statusbar"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -85,6 +86,12 @@ type aiState struct {
 	// (ai_audit.go).
 	auditPending *aiAuditPending
 	editTarget   *aiRangeTarget // Edit-with-AI waiting for its instruction
+
+	// MCP (ai_mcp.go): the servers, the open trust dialog and the
+	// server the actions picker is about.
+	mcp      *mcp.Manager
+	mcpTrust *aiMCPTrustPending
+	mcpSel   string
 
 	// configure / sign-in flow
 	cfgKind string
@@ -289,6 +296,9 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-sign-in-claude", "AI: Sign in with Claude (OAuth, opt-in)…", ""},
 		{"ai-sign-out-claude", "AI: Sign out of Claude", ""},
 		{"ai-credentials", "Open Config: AI Credentials", ""},
+		{"ai-mcp-servers", "AI: MCP Servers…", ""},
+		{"ai-mcp-log", "AI: MCP: Show Log", ""},
+		{"ai-mcp-config", "Open Config: MCP Servers", ""},
 		{"ai-cancel", "AI: Stop Generating", ""},
 	}
 }
@@ -306,7 +316,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	switch id {
 	case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials",
 		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
-		"ai-history-rename", "ai-history-delete", "ai-history-clear":
+		"ai-history-rename", "ai-history-delete", "ai-history-clear",
+		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config":
 	default:
 		if c, ok := m.aiReady(); !ok {
 			return c, true
@@ -365,6 +376,12 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.claudeSignOut(), true
 	case "ai-credentials":
 		return m.editAICredentials(), true
+	case "ai-mcp-servers":
+		return m.openMCPServers(), true
+	case "ai-mcp-log":
+		return m.showMCPLog(), true
+	case "ai-mcp-config":
+		return m.editMCPConfig(), true
 	case "ai-cancel":
 		return m.aiCancelAll(), true
 	}

@@ -473,6 +473,19 @@ func (m *Manager) Tools(ctx context.Context, ask AskTrust) []ServerTools {
 	return out
 }
 
+// KnownTools returns a server's tools from memory or the disk cache; it
+// never starts the server (the UI's Show tools).
+func (m *Manager) KnownTools(name string) (Server, []Tool, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	st, ok := m.servers[name]
+	if !ok {
+		return Server{}, nil, false
+	}
+	m.loadCacheLocked(st)
+	return st.cfg, st.tools, st.haveTools
+}
+
 // Connect starts a server and lists its tools (the UI's Connect /
 // Refresh tools).
 func (m *Manager) Connect(ctx context.Context, ask AskTrust, name string) error {

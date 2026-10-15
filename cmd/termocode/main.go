@@ -323,6 +323,7 @@ func runTUI() {
 			app.FlushSession() // the last cursor positions (N1)
 			app.HotExitFlush(2 * time.Second)
 			app.StopExtensions() // N6b: no extension process outlives us
+			app.StopMCP()        // MCP servers too
 			fmt.Fprintf(os.Stderr, "termocode panic: %v\n", r)
 			os.Exit(1)
 		}
@@ -392,7 +393,8 @@ func runTUI() {
 		// A crash or a lost terminal: keep the unsaved buffers.
 		app.FlushSession() // the last cursor positions (N1)
 		app.HotExitFlush(2 * time.Second)
-		app.StopExtensions()                                                     // N6b
+		app.StopExtensions() // N6b
+		app.StopMCP()
 		_, _ = os.Stdout.WriteString("\x1b]111\x07" + font.Restore() + rtlLeave) // os.Exit skips the defer
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -402,6 +404,7 @@ func runTUI() {
 	app.FlushSession()
 	// Process extensions (N6b): shutdown, then kill their process groups.
 	app.StopExtensions()
+	app.StopMCP() // MCP servers (and their children)
 }
 
 // inputOption is Bubble Tea's input: stdin behind transfer.Input when

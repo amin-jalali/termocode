@@ -285,6 +285,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-sign-in-claude":   aiNever(aiNoAIConfig),
 	"ai-sign-out-claude":  aiNever(aiNoAIConfig),
 	"ai-credentials":      aiNever(aiNoAIConfig),
+	"ai-mcp-servers":      aiNever(aiNoPicker),
+	"ai-mcp-log":          aiAuto(),
+	"ai-mcp-config":       aiNever(aiNoAIConfig),
 }
 
 // aiActionPolicyFor returns the policy of a palette id, including the
@@ -327,6 +330,14 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_auto_approve":     aiNever(aiNoAIConfig),
 	"ai_max_steps":        aiNever(aiNoAIConfig),
 	"ai_edit_review":      aiNever(aiNoAIConfig),
+	// MCP servers run programs and reach outside services: their
+	// settings stay with the user.
+	"mcp_enabled":           aiNever(aiNoAIConfig),
+	"mcp_idle_timeout":      aiNever(aiNoAIConfig),
+	"mcp_call_timeout":      aiNever(aiNoAIConfig),
+	"mcp_max_result_kb":     aiNever(aiNoAIConfig),
+	"mcp_trust_annotations": aiNever(aiNoAIConfig),
+	"mcp_trusted":           aiNever(aiNoAIConfig),
 }
 
 // aiListActionsMax caps list_actions results.

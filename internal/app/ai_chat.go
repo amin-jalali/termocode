@@ -179,12 +179,12 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	call := newAIIDECaller(gen, ch)
 	tools := m.aiChatTools(root, call)
 	native := s.provider.SupportsTools()
-	sys := aiChatSystemPrompt + "\nWorkspace root: " + root
+	base := aiChatSystemPrompt + "\nWorkspace root: " + root
 	if p := m.editor.Path(); p != "" {
-		sys += "\nThe open file is: " + p
+		base += "\nThe open file is: " + p
 	}
-	sys = ai.SystemPrompt(sys, tools, native)
-	history := m.aiChatHistory(sys)
+	history := m.aiChatHistory(ai.SystemPrompt(base, tools, native))
+	mcpTools := m.aiMCPTurn(gen, ch) // MCP servers' tools, built on the goroutine
 
 	auto := map[string]bool{}
 	for _, c := range s.settings.AutoApprove {
@@ -216,6 +216,14 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 			}
 			select {
 			case ok := <-reply:
+				// "Always allow" saved the class before replying: it
+				// applies to the rest of this turn too (auto is only
+				// read on this goroutine).
+				if ok && t.Class != "" {
+					if p, err := ai.ConfigPath(); err == nil && contains(ai.LoadSettings(p).AutoApprove, t.Class) {
+						auto[t.Class] = true
+					}
+				}
 				return ok
 			case <-ctx.Done():
 				return false
@@ -224,6 +232,12 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	}
 	go func() {
 		defer cancel()
+		if mcpTools != nil {
+			if extra := mcpTools(ctx); len(extra) > 0 {
+				agent.Tools = append(agent.Tools, extra...)
+				history[0].Content = ai.SystemPrompt(base, agent.Tools, native)
+			}
+		}
 		agent.Run(ctx, history, func(ev ai.Event) { send(aiChatEventMsg{gen: gen, ev: ev, ch: ch}) })
 		ch <- aiChatDoneMsg{gen: gen}
 		close(ch)
@@ -296,7 +310,7 @@ func (m *Model) onAIChatConfirm(msg aiChatConfirmMsg) tea.Cmd {
 		buttons = append(buttons, confirm.Button{ID: "always", Title: "Always allow " + msg.tool.Class})
 	}
 	buttons = append(buttons, confirm.Button{ID: "deny", Title: "Deny", Style: confirm.StyleDestructive})
-	m.confirm = confirm.New("✦ AI wants to: "+msg.tool.Name, msg.human, buttons)
+	m.confirm = confirm.New("✦ AI wants to: "+msg.tool.Label(), msg.human, buttons)
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindAITool
