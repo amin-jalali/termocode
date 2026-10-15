@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -155,6 +156,21 @@ func TestWelcome_NoSecondAccent(t *testing.T) {
 			continue
 		}
 		t.Errorf("non-grey foreground %v on the start page", m[1:])
+	}
+}
+
+// TestWelcome_NoRawHex: the start page takes every colour from theme
+// tokens (a raw hex would not follow the theme).
+func TestWelcome_NoRawHex(t *testing.T) {
+	raw := regexp.MustCompile(`Color\("#`)
+	for _, f := range []string{"welcome.go", "welcome_row.go", "setup_card_render.go"} {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if loc := raw.FindIndex(b); loc != nil {
+			t.Errorf("%s: raw hex colour at byte %d", f, loc[0])
+		}
 	}
 }
 

@@ -274,7 +274,7 @@ func (m Model) publishSetupCard() {
 // one choice runs it, a step with several opens the step chooser.
 func (m *Model) pressSetupRow(id string) tea.Cmd {
 	if id == "hide" {
-		return m.closeSetupCard(false)
+		return m.closeSetupCard()
 	}
 	for _, s := range m.setupCardView().steps {
 		if s.id != id {
@@ -364,7 +364,7 @@ func (m *Model) pressSetupButton(id string) tea.Cmd {
 		s.themeAsked = true
 		return m.openThemePicker()
 	case id == "hide":
-		return m.closeSetupCard(false)
+		return m.closeSetupCard()
 	}
 	return nil
 }
@@ -396,27 +396,16 @@ func (m *Model) settleSetup(step string) tea.Cmd {
 	return nil
 }
 
-// closeSetupCard hides the card for good (Done) or until the palette
-// brings it back (Hide; the same, but the toast says how).
-func (m *Model) closeSetupCard(done bool) tea.Cmd {
+// closeSetupCard is "Hide setup": the card is gone until the palette
+// brings it back (the toast says how).
+func (m *Model) closeSetupCard() tea.Cmd {
 	m.setupS().visible = false
 	m.welcomeFocus = 0
-	err := saveSetupConfig(func(c *settingsConfig) {
-		if done {
-			c.SetupDone = boolPtr(true)
-		} else {
-			c.SetupDismissed = boolPtr(true)
-		}
-	})
-	if err != nil {
+	if err := saveSetupConfig(func(c *settingsConfig) { c.SetupDismissed = boolPtr(true) }); err != nil {
 		return m.setupErr(err)
 	}
 	var cmd tea.Cmd
-	title := "Setup card hidden"
-	if done {
-		title = "Setup done"
-	}
-	m.toast, cmd = m.toast.PushDetail(toast.Info, title, "Bring it back: F1 → Setup: Show Setup Card")
+	m.toast, cmd = m.toast.PushDetail(toast.Info, "Setup card hidden", "Bring it back: F1 → Setup: Show Setup Card")
 	return cmd
 }
 

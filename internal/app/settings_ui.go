@@ -190,7 +190,7 @@ var settingsRows = []settingsRow{
 	{ID: "setting-images", Label: "images", Kind: "enum", Default: "auto",
 		Desc: "Inline images (image preview, dashboard logo, Markdown preview): kitty, sixel, blocks (coloured half-blocks, works everywhere with colour), off, or auto (probe the terminal; blocks inside tmux without allow-passthrough)."},
 	{ID: "setting-dashboard-logo", Label: "dashboard_logo", Kind: "enum", Default: "text",
-		Desc: "The TERMOCODE wordmark on the Welcome page: text (half-blocks, works everywhere), image (a kitty / sixel picture; needs images on), or off. A short window hides it so the cards and recent files fit."},
+		Desc: "The TERMOCODE wordmark on the Welcome page: text (half-blocks, works everywhere), image (a kitty / sixel picture; needs images on), or off. A short window shows a one-line text wordmark instead, so the page fits."},
 	{ID: "setting-font-delta", Label: "font_delta", Kind: "int", Default: "0",
 		Desc: "Font size change (points) asked of the terminal at launch and undone on exit; 0 turns it off. Works only in kitty with allow_remote_control on; other terminals (iTerm2, WezTerm, Ghostty, GNOME, Windows Terminal …) have no way to do it, so use their zoom (Ctrl+-). TERMOCODE_FONT_DELTA wins over it."},
 	{ID: "setting-auto-save", Label: "auto_save", Kind: "bool", Default: "false",

@@ -20,7 +20,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `icons` | enum | `auto` | Icon set: nerd (Nerd Font glyphs), unicode (plain symbols), ascii, or auto (nerd when the terminal bundles Nerd symbols — WezTerm, Ghostty, kitty — or its font setting is a Nerd Font — GNOME Terminal profile, Alacritty, foot; ascii on TERM=linux or a non-UTF-8 locale; else unicode). TERMOCODE_ICON_MODE wins over it. |
 | `animations` | enum | `auto` | Overlay / toast / list animations: on, off, or auto (off over SSH and when the terminal is not truecolor). The editor text itself never animates. |
 | `images` | enum | `auto` | Inline images (image preview, dashboard logo, Markdown preview): kitty, sixel, blocks (coloured half-blocks, works everywhere with colour), off, or auto (probe the terminal; blocks inside tmux without allow-passthrough). |
-| `dashboard_logo` | enum | `text` | The TERMOCODE wordmark on the Welcome page: text (half-blocks, works everywhere), image (a kitty / sixel picture; needs images on), or off. A short window hides it so the cards and recent files fit. |
+| `dashboard_logo` | enum | `text` | The TERMOCODE wordmark on the Welcome page: text (half-blocks, works everywhere), image (a kitty / sixel picture; needs images on), or off. A short window shows a one-line text wordmark instead, so the page fits. |
 | `font_delta` | int | `0` | Font size change (points) asked of the terminal at launch and undone on exit; 0 turns it off. Works only in kitty with allow_remote_control on; other terminals (iTerm2, WezTerm, Ghostty, GNOME, Windows Terminal …) have no way to do it, so use their zoom (Ctrl+-). TERMOCODE_FONT_DELTA wins over it. |
 
 ## Editor
