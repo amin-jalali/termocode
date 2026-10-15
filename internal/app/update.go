@@ -56,6 +56,10 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if _, ok := msg.(frameTickMsg); ok {
 		return m, nil // only draws (see frameGate)
 	}
+	switch msg.(type) {
+	case tea.FocusMsg, tea.BlurMsg:
+		return m, m.onTerminalFocus(msg)
+	}
 	prevKind := m.overlayKind()
 	if _, ok := msg.(resizeFlushMsg); ok {
 		m.onResizeFlush()
@@ -692,7 +696,12 @@ func (m Model) handleNvimMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 		// Background poll: refresh git state and reschedule the next tick. The
 		// GitMsg handler only re-clamps the cursor, so this never disturbs the
 		// user's section-collapse state, selection, or the commit message box.
-		return m, tea.Batch(fetchGitCmd(), gitAutoRefreshTick()), true
+		if m.termBlurred && m.gitBlurredSkips < gitBlurredEvery-1 {
+			m.gitBlurredSkips++ // in the background: poll less often
+			return m, gitAutoRefreshTick(), true
+		}
+		m.gitBlurredSkips = 0
+		return m, tea.Batch(m.pollGitCmd(), gitAutoRefreshTick()), true
 	case GitMsg:
 		m.applyGitSnapshot(msg)
 		return m, nil, true

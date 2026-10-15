@@ -10,7 +10,8 @@
 #     folder (/tmp/termocode-*, Go's /tmp/Test*) or an agent worktree
 #     (.claude/worktrees/);
 #   - temp folders /tmp/termocode-testkit-*, termocode-demo-*,
-#     termocode-app-test-*, go-build* older than 30 minutes.
+#     termocode-app-test-*, go-build*, gopls-tempmod* older than
+#     30 minutes.
 # It never touches processes started from a normal folder (your own
 # termocode, its nvim, editors' gopls) or the session socket folder.
 #
@@ -71,6 +72,7 @@ while IFS= read -r -d '' d; do
 		rm -rf "$d" && removed=$((removed + 1))
 	fi
 done < <(find /tmp -maxdepth 1 -user "$me" -mmin +30 \( -name 'termocode-testkit-[0-9]*' \
-	-o -name 'termocode-demo-*' -o -name 'termocode-app-test-*' -o -name 'go-build*' \) -print0 2>/dev/null)
+	-o -name 'termocode-demo-*' -o -name 'termocode-app-test-*' -o -name 'go-build*' \
+	-o -name 'gopls-tempmod*' \) -print0 2>/dev/null)
 
 echo "done: $killed process(es) stopped, $removed folder(s) removed$([ $dry = 1 ] && echo ' (dry run)')"

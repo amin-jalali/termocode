@@ -63,3 +63,42 @@ func TestMouseAsyncAfterClose(t *testing.T) {
 	_ = c.Close()
 	c.MouseAsync("left", "press", "", 1, 1)
 }
+
+// The guard asked nvim for its mode 10 times a second forever, which
+// woke both processes while the editor sat idle. With nvim quiet it
+// should hardly poll; a prompt still always comes with a redraw, which
+// wakes the guard, so a late error (from a timer here) is still answered.
+func TestPromptGuardSleepsWhileIdle(t *testing.T) {
+	if _, err := exec.LookPath("nvim"); err != nil {
+		t.Skip("nvim not installed")
+	}
+	c, err := New()
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	if err := c.Attach(80, 24); err != nil {
+		t.Fatalf("Attach: %v", err)
+	}
+	_ = c.Command("set cmdheight=0")
+	time.Sleep(promptGuardQuiet + 500*time.Millisecond)
+	before := c.guardPolls.Load()
+	time.Sleep(2 * time.Second)
+	if n := c.guardPolls.Load() - before; n > 2 {
+		t.Errorf("guard polled nvim %d times in 2 s while idle, want ≤ 2", n)
+	}
+
+	// A message from a timer opens a hit-enter prompt with no key pressed.
+	_ = c.Command(`lua vim.defer_fn(function() vim.api.nvim_echo({{"a\nb\nc"}}, true, {}) end, 300)`)
+	time.Sleep(time.Second)
+	done := make(chan struct{})
+	go func() {
+		_, _ = c.EvalLuaString(`return vim.api.nvim_get_mode().mode`)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("nvim stayed in the prompt from the timer (RPC hung)")
+	}
+}

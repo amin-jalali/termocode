@@ -2,11 +2,7 @@
 
 package app
 
-import (
-	"context"
-
-	"golang.design/x/clipboard"
-)
+import "golang.design/x/clipboard"
 
 // The golang.design/x/clipboard calls live here so Android builds can
 // leave the library out: on Android it needs cgo, golang.org/x/mobile and
@@ -20,8 +16,4 @@ func clipLibRead() []byte { return clipboard.Read(clipboard.FmtText) }
 // a nil channel when it could not).
 func clipLibWrite(s string) bool {
 	return clipboard.Write(clipboard.FmtText, []byte(s)) != nil
-}
-
-func clipLibWatch(ctx context.Context) <-chan []byte {
-	return clipboard.Watch(ctx, clipboard.FmtText)
 }

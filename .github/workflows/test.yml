@@ -63,6 +63,10 @@ jobs:
       - name: Test
         run: go test ./... -race -count=1
 
+      # The patched Bubble Tea renderer (third_party/bubbletea/PATCHES.md).
+      - name: Test the renderer patch
+        run: go -C third_party/bubbletea test -race -count=1 -run TestRendererIdlesAndWakes .
+
       - name: Reference docs up to date
         if: runner.os == 'Linux'
         run: go run ./cmd/docgen -check

@@ -873,9 +873,46 @@ func restyleTrailingUnstyled(line string, filler lipgloss.Style) string {
 // row with a cell that is not an unstyled space; when two styles stack
 // without a reset (their merge may cancel out) it stays on the safe side
 // and returns true.
+//
+// Only the text after the last reset matters (a reset clears the style
+// state), so the scan starts there and walks back one reset at a time
+// only while that tail holds no glyph. Rows end soon after their last
+// reset, so this reads a few cells instead of the whole row.
 func mayEndWithUnstyledSpace(s string) bool {
+	end := len(s)
+	for {
+		r, rlen := lastSGRReset(s[:end])
+		if r < 0 {
+			last, _ := scanUnstyledSpace(s[:end])
+			return last
+		}
+		// s[r:end] starts with the reset, so the scan starts unstyled.
+		if last, glyph := scanUnstyledSpace(s[r+rlen : end]); glyph {
+			return last
+		}
+		end = r
+	}
+}
+
+// lastSGRReset returns where the last "\x1b[0m" or "\x1b[m" in s starts
+// and its length, or -1.
+func lastSGRReset(s string) (int, int) {
+	for i := strings.LastIndexByte(s, 0x1b); i >= 0; i = strings.LastIndexByte(s[:i], 0x1b) {
+		switch {
+		case strings.HasPrefix(s[i:], "\x1b[0m"):
+			return i, 4
+		case strings.HasPrefix(s[i:], "\x1b[m"):
+			return i, 3
+		}
+	}
+	return -1, 0
+}
+
+// scanUnstyledSpace is the forward scan behind mayEndWithUnstyledSpace,
+// starting with no style. glyph reports whether s holds any glyph.
+// lastMaybe: the last glyph is a lone ' ' with no style surely on it.
+func scanUnstyledSpace(s string) (lastMaybe, glyph bool) {
 	styled, unsure := false, false
-	lastMaybe := false // last glyph is a lone ' ' with no style surely on it
 	for i := 0; i < len(s); {
 		if s[i] == 0x1b && i+1 < len(s) && s[i+1] == '[' {
 			j := i + 2
@@ -904,8 +941,9 @@ func mayEndWithUnstyledSpace(s string) bool {
 			i++
 		}
 		lastMaybe = i == start+1 && s[start] == ' ' && (!styled || unsure)
+		glyph = true
 	}
-	return lastMaybe
+	return lastMaybe, glyph
 }
 
 // renderBreadcrumbs renders one row of "seg › seg › seg", clipped from the

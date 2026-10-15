@@ -1373,8 +1373,8 @@ func (m Model) probeTerminalWindowID() int {
 // the terminal buffer but our flag stays true; this catches that drift on
 // the next render and flips the flag back.
 func (m *Model) syncTerminalState() (changed bool) {
-	if m.nvim == nil {
-		return false
+	if m.nvim == nil || !m.termOpen {
+		return false // only an open panel can go stale
 	}
 	terminalProbeMu.Lock()
 	now := time.Now()
