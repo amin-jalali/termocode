@@ -28,7 +28,13 @@ import (
 
 // openReplaceInWorkspacePrompt is step 1 — ask for the search pattern.
 func (m *Model) openReplaceInWorkspacePrompt() {
-	m.prompt = prompt.New("Replace in Workspace", "Find:", "")
+	m.openReplaceInWorkspacePromptWith("")
+}
+
+// openReplaceInWorkspacePromptWith opens the prompt with find filled in
+// (R on the Find Results page passes its query).
+func (m *Model) openReplaceInWorkspacePromptWith(find string) {
+	m.prompt = prompt.New("Replace in Workspace", "Find:", find)
 	m.prompt.SetSize(m.w, m.h)
 	m.promptOpen = true
 	m.promptKind = promptKindReplaceFind

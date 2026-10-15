@@ -60,3 +60,20 @@ func lightOr(light, dark float64) float64 {
 	}
 	return dark
 }
+
+// The Find Results page: body text on its cursor row and white text on
+// its match wash read on every theme.
+func TestFindResultsContrast(t *testing.T) {
+	defer ApplyTheme("vscode-dark-plus")
+	for _, nt := range AvailableThemes() {
+		ApplyTheme(nt.ID)
+		c := NvimColors(nt.ID)
+		for _, p := range [][3]string{{"fg", "find_cursor", "text on cursor row"}, {"fg_sel", "bg_match", "white on match"}} {
+			fg, _ := ParseHex(c[p[0]])
+			bg, _ := ParseHex(c[p[1]])
+			if r := contrastRatio(fg, bg); r < 4.5 {
+				t.Errorf("%s: %s %.2f < 4.5", nt.ID, p[2], r)
+			}
+		}
+	}
+}

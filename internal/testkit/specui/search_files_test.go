@@ -29,17 +29,22 @@ func TestFindInFilesListsResults(t *testing.T) {
 	mustSee(t, d, "3 matches across 2 files")
 	s := screen(d)
 	for _, want := range []string{
-		filepath.Join("pkg", "util", "util.go") + " (2):",
-		"main.go (1):",
-		"3:    func main() { Add(1, 2) }",
-		"4:    func Add(a, b int)",
+		filepath.Join("pkg", "util", "util.go"),
+		"main.go",
+		"3   func main() { Add(1, 2) }",
+		"4   func Add(a, b int)",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("Find Results lack %q:\n%s", want, s)
 		}
 	}
-	if strings.Contains(s, "notes.txt (") {
-		t.Errorf("a file without a match is listed:\n%s", s)
+	// Each file header ends with its hit count in a pill.
+	if l := lineWith(d, "util.go"); !strings.HasSuffix(strings.TrimRight(l, " │"), " 2") {
+		t.Errorf("util.go header has no count 2: %q", l)
+	}
+	page, err := d.Model().NvimLua(`return table.concat(vim.api.nvim_buf_get_lines(vim.g.termocode_find_results_buf, 0, -1, false), '\n')`)
+	if err != nil || strings.Contains(page, "notes.txt") {
+		t.Errorf("a file without a match is listed (%v):\n%s", err, page)
 	}
 }
 
@@ -134,8 +139,8 @@ func TestFindInFilesShowsRelativePaths(t *testing.T) {
 	d.Type("Add")
 	d.Key("enter")
 	mustSee(t, d, "3 matches across 2 files")
-	if !strings.Contains(lineWith(d, "util.go (2):"), " pkg/util/util.go (2):") {
-		t.Errorf("util.go header is not workspace-relative: %q", lineWith(d, "util.go (2):"))
+	if !strings.Contains(lineWith(d, "util.go"), " pkg/util/util.go") {
+		t.Errorf("util.go header is not workspace-relative: %q", lineWith(d, "util.go"))
 	}
 	if s := screen(d); strings.Contains(s, d.Dir) {
 		t.Errorf("Find Results show an absolute path:\n%s", s)
@@ -172,7 +177,7 @@ func TestFindInFilesMultiRootPaths(t *testing.T) {
 	mustSee(t, d, "4 matches across 3 files")
 	s := screen(d)
 	ws := filepath.Base(d.Dir)
-	for _, want := range []string{" otherproj/lib/x.go (1):", " " + ws + "/main.go (1):", " " + ws + "/pkg/util/util.go (2):"} {
+	for _, want := range []string{" otherproj/lib/x.go ", " " + ws + "/main.go ", " " + ws + "/pkg/util/util.go "} {
 		if !strings.Contains(s, want) {
 			t.Errorf("Find Results lack %q:\n%s", want, s)
 		}
@@ -190,4 +195,114 @@ func TestFindInFilesMultiRootPaths(t *testing.T) {
 	if !found {
 		t.Errorf("F4 never opened otherproj/lib/x.go at Ln 3: %q", stops)
 	}
+}
+
+// Spec: Given Find in Files results for "Add",
+// then the page opens with the cursor on the first match (not on the
+// query row), with no line-number gutter, and Enter opens that match.
+func TestFindResultsPageStartsOnFirstMatch(t *testing.T) {
+	d := editorWith(t, searchFiles, "notes.txt", "nothing here")
+	d.Key("alt+f")
+	d.Type("Add")
+	d.Key("enter")
+	mustSee(t, d, "3 matches across 2 files")
+	got, err := d.Model().NvimLua(`return vim.api.nvim_get_current_line() .. "|" .. tostring(vim.wo.number)`)
+	if err != nil || got != "      3   func main() { Add(1, 2) }|false" {
+		t.Fatalf("current row|number = %q (%v)", got, err)
+	}
+	d.Key("enter")
+	d.Settle(300 * time.Millisecond)
+	if tab, ln := activeTab(d), cursorLine(d); tab != "main.go" || ln != "Ln 3" {
+		t.Errorf("Enter opened %q %q, want main.go Ln 3", tab, ln)
+	}
+}
+
+// findPage is the text of the Find Results page.
+func findPage(t *testing.T, d *testkit.Driver) string {
+	t.Helper()
+	s, err := d.Model().NvimLua(`local b = vim.g.termocode_find_results_buf
+if not b or not vim.api.nvim_buf_is_valid(b) then return '' end
+return table.concat(vim.api.nvim_buf_get_lines(b, 0, -1, false), '\n')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+// Spec: Given Find Results for "Add" (main.go first, then util.go),
+// when the user presses Tab on main.go's match, its group folds: the
+// row is hidden and F4 goes to util.go; Tab again opens it.
+func TestFindResultsTabFoldsAGroup(t *testing.T) {
+	d := editorWith(t, searchFiles, "notes.txt", "nothing here")
+	d.Key("alt+f")
+	d.Type("Add")
+	d.Key("enter")
+	mustSee(t, d, "3 matches across 2 files")
+	d.Key("tab")
+	d.Settle(200 * time.Millisecond)
+	if strings.Contains(screen(d), "func main() { Add(1, 2) }") {
+		t.Fatalf("Tab did not fold main.go's group:\n%s", screen(d))
+	}
+	d.Key("f4")
+	d.Settle(300 * time.Millisecond)
+	if tab := activeTab(d); tab != "util.go" {
+		t.Errorf("F4 with main.go folded opened %q, want util.go", tab)
+	}
+}
+
+// Spec: Given Find Results for "Add",
+// when the user presses R, Replace in Workspace opens with "Add" filled;
+// F8 opens Find in Files with "Add" filled; q closes the page.
+func TestFindResultsPageKeys(t *testing.T) {
+	d := editorWith(t, searchFiles, "notes.txt", "nothing here")
+	d.Key("alt+f")
+	d.Type("Add")
+	d.Key("enter")
+	mustSee(t, d, "3 matches across 2 files")
+
+	d.Key("R")
+	mustSee(t, d, "Replace in Workspace")
+	if !strings.Contains(screen(d), "│  Add▏") {
+		t.Errorf("Replace prompt not filled:\n%s", screen(d))
+	}
+	d.Key("esc")
+	d.Settle(200 * time.Millisecond)
+
+	d.Key("f8")
+	mustSee(t, d, "Find in Files")
+	if !strings.Contains(screen(d), "│  Add▏") {
+		t.Errorf("Find prompt not filled:\n%s", screen(d))
+	}
+	d.Key("esc")
+	d.Settle(200 * time.Millisecond)
+
+	d.Key("q")
+	start := time.Now()
+	d.WaitFor(func() bool { return findPage(t, d) == "" && !strings.Contains(screen(d), "Find Results") }, wait)
+	if strings.Contains(screen(d), "Find Results") || findPage(t, d) != "" {
+		t.Errorf("q left the Find Results tab:\n%s", screen(d))
+	}
+	if took := time.Since(start); took > time.Second {
+		t.Errorf("the tab strip took %v to drop the closed page", took)
+	}
+}
+
+// Spec: Given Find Results for "add" (smart-case: the lines with "Add"
+// and "add" match),
+// when the user clicks the Aa chip, the search runs again case-sensitive
+// (only the "add" line); a second click turns it off again.
+func TestFindResultsCaseChipClick(t *testing.T) {
+	files := map[string]string{"a.go": "package a\n\n// Add it.\nfunc add() {}\n"}
+	d := editorWith(t, files, "a.go", "package a")
+	d.Key("alt+f")
+	d.Type("add")
+	d.Key("enter")
+	mustSee(t, d, "2 matches across 1 file")
+	clickText(t, d, "Aa")
+	mustSee(t, d, "1 match across 1 file")
+	if p := findPage(t, d); !strings.Contains(p, "func add()") || strings.Contains(p, "// Add it.") {
+		t.Errorf("case-sensitive results:\n%s", p)
+	}
+	clickText(t, d, "Aa")
+	mustSee(t, d, "2 matches across 1 file")
 }

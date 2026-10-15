@@ -89,6 +89,10 @@ func NvimColors(themeID string) map[string]string {
 		"br1":         h(bracket(0)),
 		"br2":         h(bracket(1)),
 		"br3":         h(bracket(2)),
+		// Find Results page (find_results_lua.go).
+		"find_cursor":   string(Wash(bg, WashSelected)),
+		"find_hair_mid": Lerp(ToRGB(BorderFocus), ToRGB(AccentLavender), 0.5).Hex(),
+		"find_hair":     mix(bg, BorderDefault, 0.75),
 	}
 	// Terminal ANSI colours (term_0 … term_15 → g:terminal_color_N) so
 	// the integrated terminal follows the theme instead of nvim's harsh

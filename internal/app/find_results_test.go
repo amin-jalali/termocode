@@ -2,51 +2,12 @@ package app
 
 import (
 	"errors"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/amin-jalali/termocode/internal/search"
 )
-
-func TestFormatFindGroups(t *testing.T) {
-	lines := formatFindGroups([]search.Result{
-		{Path: "/a.go", Line: 9, Preview: "nine"},
-		{Path: "/b.go", Line: 1, Preview: "one"},
-		{Path: "/a.go", Line: 2, Preview: "two"},
-	}, nil)
-	want := []string{
-		"/a.go (2):",
-		"       2:    two",
-		"       9:    nine",
-		"",
-		"/b.go (1):",
-		"       1:    one",
-		"",
-	}
-	if strings.Join(lines, "\n") != strings.Join(want, "\n") {
-		t.Errorf("got\n%s\nwant\n%s", strings.Join(lines, "\n"), strings.Join(want, "\n"))
-	}
-}
-
-func TestFindResultsFooter(t *testing.T) {
-	if got := findResultsFooter(search.Summary{Shown: 3, Total: 3, Files: 1}); got != "3 matches across 1 file" {
-		t.Errorf("uncapped footer = %q", got)
-	}
-	got := findResultsFooter(search.Summary{Shown: 2000, Total: 5123, Files: 40})
-	if !strings.HasPrefix(got, "Showing 2000 of 5123 matches across 40 files") {
-		t.Errorf("capped footer = %q", got)
-	}
-}
-
-func TestFormatFindResults_Shape(t *testing.T) {
-	body := formatFindResults("q", []search.Result{{Path: "/a", Line: 1, Preview: "q"}})
-	if !strings.HasPrefix(body, "Searching 1 file for \"q\"\n\n/a (1):\n") {
-		t.Errorf("header: %q", body)
-	}
-	if !strings.HasSuffix(body, "\n1 match across 1 file\n") {
-		t.Errorf("footer: %q", body)
-	}
-}
 
 func TestSearchMaxResultsSetting(t *testing.T) {
 	if got := searchMaxResults(settingsConfig{}); got != search.DefaultMaxResults {
@@ -150,4 +111,40 @@ func TestFindDisplayPath(t *testing.T) {
 			t.Errorf("findDisplayPath(%q, %q) = %q, want %q", c.abs, c.roots, got, c.want)
 		}
 	}
+}
+
+// The page takes every colour from the theme: each TermocodeFind* group
+// it draws with is defined in themeLuaBody, and the Lua holds no hex
+// colours or global highlight overrides (they leaked to other windows).
+func TestFindResultsLuaUsesThemeGroups(t *testing.T) {
+	re := regexp.MustCompile(`TermocodeFind[A-Za-z0-9]+`)
+	for _, g := range re.FindAllString(findResultsLua+findResultsGoGroups(), -1) {
+		if g == "TermocodeFindResults" { // the augroup
+			continue
+		}
+		if !strings.Contains(themeLuaBody, "hi('"+g+"'") {
+			t.Errorf("%s is used but not defined in themeLuaBody", g)
+		}
+	}
+	if m := regexp.MustCompile(`#[0-9a-fA-F]{6}`).FindString(findResultsLua); m != "" {
+		t.Errorf("hex colour %s in findResultsLua", m)
+	}
+	if strings.Contains(findResultsLua, "highlight default") || strings.Contains(findResultsLua, "set_hl(0, 'CursorLine'") {
+		t.Error("findResultsLua changes global highlights")
+	}
+}
+
+// findResultsGoGroups is the Go code's group names, joined.
+func findResultsGoGroups() string {
+	var b strings.Builder
+	for _, st := range []findState{{searching: true}, {errText: "x"}, {sum: search.Summary{Shown: 2, Total: 9, Files: 1}}} {
+		_, hl := findSummaryLine(st)
+		b.WriteString(hl + " ")
+	}
+	for _, r := range findEmptyRows() {
+		if h, ok := r["hl"].(string); ok {
+			b.WriteString(h + " ")
+		}
+	}
+	return b.String()
 }

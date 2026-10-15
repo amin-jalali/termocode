@@ -456,6 +456,8 @@ end
 local function _render_indent_guides(buf)
   if not vim.api.nvim_buf_is_loaded(buf) then return end
   vim.api.nvim_buf_clear_namespace(buf, _termocode_indent_ns, 0, -1)
+  -- The Find Results page lays out its own columns.
+  if vim.bo[buf].filetype == 'findresults' then return end
 
   local total = vim.api.nvim_buf_line_count(buf)
   if total > 5000 then return end

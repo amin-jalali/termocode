@@ -60,6 +60,12 @@ func AIChatAnswer() Scene {
 
 // MarkdownPreview opens docs/preview.md (a sample with every common block)
 // in the full-screen Markdown preview.
+// FindResults is the Find Results page for "Toast" (Find in Files).
+func FindResults() Scene {
+	steps := append([]Step{Act("palette:find-files")}, TypeKeys("Toast")...)
+	return Scene{Name: "find-results", Steps: WithEditor(append(steps, Key("enter"), Pause(1500*time.Millisecond))...)}
+}
+
 func MarkdownPreview() Scene {
 	return Scene{Name: "md-preview", Steps: []Step{Act("open:docs/preview.md"), Pause(600 * time.Millisecond), Act("palette:preview-md"), Pause(800 * time.Millisecond)}}
 }

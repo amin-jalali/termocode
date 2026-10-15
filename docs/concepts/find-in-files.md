@@ -148,74 +148,56 @@ When you press Enter, `handlePromptSubmit` (via `file_ops.go`, which routes `pro
 3. `search.Stream(ctx, roots, q, opts)` starts the search; results arrive in batches about every 100 ms, and a new search cancels the old one.
 4. **Error** → red toast *"Find failed"* with detail. **Zero results** → info toast *"No matches for «query»"*. Either way, no buffer is opened.
 
-### Step 4 — Format the results body (`formatFindResults`)
+### Step 4 — Build the rows (`find_rows.go`)
 
-On success the results are rendered into a Sublime-style text body:
+Each streamed batch is turned into plain text lines plus a **row table**
+entry per line (`buildFindRows`). The page looks like this (the icons, fold
+marks, count pills, hint bar and the rule are drawn by nvim, not stored):
 
 ```
-Searching 3 files for "query"
+    query                                       Aa  ab  .*   rg
+ 3 matches across 2 files             Enter open  Tab fold  Esc close
+──────────────────────────────────────────────────────────────────────
+ ▾  ◆ pkg/util/util.go                                               2
+      3   // Add adds.
+      4   func Add(a, b int) int { return a + b }
 
-/abs/path/to/file.go (2):
-      42:    matched line content
-      45:    another match
-
-/abs/path/to/other.go (1):
-      13:    yet another match
-
-3 matches across 3 files
+ ▾  ◆ main.go                                                        1
+      3   func main() { Add(1, 2) }
 ```
 
 Details that matter:
 
-- Results are **grouped by file**, preserving first-seen order; within a file, hits are sorted by line number.
-- Each file header is `"<abs path> (N):"` where **N** is that file's hit count.
-- Each match row is `"    %4d:    <content>"` — 4-space indent, line number right-padded to 4, a **`:` sigil**, then a 4-space gap before the content. (The format reserves a space sigil `" "` for context rows; the click/nav code uses `:`-vs-` ` to tell match rows from context rows.)
-- Preview content is truncated to **250 runes** with a `…` suffix.
-- Footer: `"M matches across N files"` (correctly pluralized). A truly empty set would render `0 matches for "query"`, but in practice the zero case is intercepted by the toast in Step 3.
+- Results are **grouped by file**, first-seen order; within a file, hits are sorted by line number.
+- A header line is the display path (workspace-relative; with several folders prefixed by the folder name) after 6 cells of padding for the fold mark and the file icon.
+- A match row is `"  %5d   <code>"`: the code has tabs expanded and indentation dropped. If the first match starts far right the row starts with `…` and keeps 24 cells before it; rows are cut at 160 cells with `…`.
+- The row table (`_G._termocode_find.rows[lnum]`) holds the kind (`q` query, `s` summary, `r` rule, `h` header, `m` match, `e` empty-state text, empty for a blank line), the absolute file, the line and column, and the **byte ranges of the matches** (from `search.Result.Matches`, shifted for the prefix and the cut). Nothing ever parses the text back.
+- Row 2 is the summary (`findSummaryLine`): `Searching… N matches in M files so far` while it streams, then `M matches across N files`, `Showing N of M … · search_max_results` (warning colour) when capped, or `Search failed: …` (error colour).
 
-### Step 5 — Open it as a scratch buffer
+### Step 5 — Open the page
 
-The body is written to `‹tmpdir›/termocode-find-results.txt`, then a Lua chunk opens it and turns it into a proper results pane:
+The first batch opens `‹tmpdir›/termocode-find-results.txt` with `keepalt edit`, renames the buffer to `…/Find Results`, sets `buftype=nofile`, `buflisted`, `modifiable=false`, remembers it in `vim.g.termocode_find_results_buf`, and sets `filetype=findresults` **last** (the FileType autocmd installs the keys and the window look). `stopinsert` is forced (a global `BufEnter * startinsert` fires before `buftype` is set). Then `_G._termocode_find_set(head, lines, rows)` fills it and puts the cursor on the first match; later batches go through `_G._termocode_find_append` (one `ExecLuaArgs` call each — msgpack, no escaping, no temp files).
 
-- `keepalt edit` the temp file, then rename the buffer to `…/Find Results`.
-- Set `buftype=nofile`, `swapfile=false`, `buflisted=true`, `modifiable=false`.
-- Stash the query in `vim.g.termocode_find_query` (re-set every search so re-running re-paints the highlight).
-- Set `filetype=findresults` **last** — this is the trigger that fires the FileType autocmd which paints syntax and installs key maps.
-- `stopinsert` is forced immediately. (There's a global `BufEnter * startinsert` autocmd that fires *before* `buftype` is set, so without this you'd land in insert mode on a non-modifiable buffer and your first `<Enter>` would be swallowed — this is a deliberate fix.)
-- Remember the buffer id in `vim.g.termocode_find_results_buf` so `F4`/`Shift+F4` can navigate it from anywhere.
-- Focus switches to the editor.
+A refresh (files changed on disk, or a chip click) replaces the page in place; when nothing matches any more, the page shows `No matches for "query"` with the `F8` hint instead of closing.
 
-### Step 6 — Syntax highlighting (`find_results_lua.go`)
+### Step 6 — Drawing (`find_results_lua.go`)
 
-The `FileType=findresults` autocmd paints the buffer using VSCode Dark+ colors so it feels like a sibling of the editor:
+A **decoration provider** draws everything that is not text with *ephemeral* extmarks, for the visible rows only, at redraw time: the search icon and the query chip, the option chips and engine, the hint bar (pairs drop from the middle when narrow), the lit rule, fold marks, file icons (one highlight group per icon colour), folder / name tints, count pills, the dim line numbers, the match wash and the `…` cut marks. Nothing is stored, so a 2 000-row page has no extmarks and idle costs nothing.
 
-| Element | Group | Color |
-|---|---|---|
-| File path header | `findResultsHeader` | teal `#4ec9b0`, bold |
-| The `(N)` hit count | `findResultsHeaderCount` | dim grey `#6c7080`, italic |
-| Line-number column | `findResultsLineNum` | gutter grey `#858585` |
-| Footer / "Searching…" line | `findResultsFooter` | comment green `#6a9955`, italic |
-| Every literal match of the query | `findResultsMatch` | dark-green **background** `#2a3f24` (foreground unchanged, so it reads as "tinted content") |
-| Cursor row | `CursorLine` | `#23262e` |
+Every colour is a `TermocodeFind*` group defined by the theme (`themeLuaBody`, from `theme.NvimColors`), so the page follows theme switches. The window gets no number gutter or indent guides, `winhighlight` for the cursor row (the selection wash), and `foldmethod=expr` with one fold per file (from the row table).
 
-The per-query highlight is built by escaping the query and adding a `syntax match findResultsMatch /\V…/` rule, so **every occurrence** of the search term is tinted, not just the matched column.
+### Step 7 — Keys and mouse on the page
 
-### Step 7 — Jumping to a result
-
-Inside the buffer:
-
-- **`<CR>`** (or a click) runs `jump_from_cursor`: it reads the current line, and
-  - if it's a **header** (`…:$`), it `:edit`s that file (after `strip_count` removes the trailing `" (N)"` — otherwise it'd try to open the literal `"/path (3)"`);
-  - if it's a **match row** (`^\s+NNN[: ] …`), it grabs the line number and scans **upward** to the nearest header, then `:edit +NNN <file>`.
-- **Mouse** is special-cased: `<LeftMouse>` and `<2-LeftMouse>` both position-and-jump, while `<LeftDrag>` and `<LeftRelease>` are mapped to `<Nop>`. This fixes a reported bug where a single click in the buffer turned into a stuck visual-drag selection.
+- **`Enter`** / **`o`** / a click on a match opens the file at the match (line and column). On a header they open the file.
+- **`Tab`** and a click on a header fold / unfold that file. A double-click on a header opens the file.
+- **`R`** opens Replace in Workspace with the query filled in; **`F8`** on the page opens the Find prompt with it.
+- A click on **`Aa` / `ab` / `.*`** searches again with that option flipped (`termocode_find_toggle`).
+- **`q`** / **`Esc`** close the page through the app (so the tab strip updates at once).
+- `<LeftDrag>` / `<LeftRelease>` are `<Nop>`: a click never becomes a stuck selection.
 
 ### Step 8 — Global next/previous match (`F4` / `Shift+F4`)
 
-`F4` / `Shift+F4` are termocode keymap actions (`NextSearchResult` / `PrevSearchResult`, also in the palette as *Search: Go to Next / Previous Search Result*). They work in every mode, so you can cycle matches without returning to the results buffer. The app calls the Lua function `_G._termocode_find_nav(dir)`:
-
-- `navigate_results(+1)` / `navigate_results(-1)` walk the saved results buffer (`vim.g.termocode_find_results_buf`) from the currently-selected row, looking for the next/previous **match row** (identified by the `:` sigil — context rows with a space sigil are skipped).
-- On finding one, it moves the cursor in the results window (visual feedback) and `:edit +line <file>` to jump there.
-- It returns `'none'` when there is no results buffer and `'end'` when there is no more match in that direction; the app shows a toast for both.
+`F4` / `Shift+F4` are termocode keymap actions (`NextSearchResult` / `PrevSearchResult`, also in the palette as *Search: Go to Next / Previous Search Result*). They work in every mode. The app calls `_G._termocode_find_nav(dir)`, which walks the **row table** from the page's cursor (or the last jump) to the next / previous match row, skipping folded files, moves the page's cursor there and opens the match. The first `F4` after a search opens the match under the cursor. It returns `'none'` without a page and `'end'` when there is no more match; the app shows a toast for both.
 
 ---
 

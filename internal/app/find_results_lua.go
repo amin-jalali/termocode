@@ -1,215 +1,338 @@
 package app
 
-// findResultsLua wires up the scratch "Find Results" buffer:
+// findResultsLua wires up the "Find Results" page (ADR 0002, design in
+// docs/plans/find-results-design.md):
 //
-//   - syntax highlighting per Sublime convention (path headers,
-//     line numbers, footer summary)
-//   - buffer-local <CR> / <2-LeftMouse>  → open the file at the cursor's
-//     result row
-//   - _G._termocode_find_nav(dir) → next / previous match (works from
-//     anywhere in the editor). The app calls it for F4 / Shift+F4
-//     (keymap.ActionNextSearchResult / ActionPrevSearchResult).
+//   - the buffer holds plain text; _G._termocode_find.rows[lnum] says
+//     what each line is (k = 'q' query, 's' summary, 'r' rule, 'h' file
+//     header, 'm' match, 'e' empty-state text, empty for a blank line). Go fills both
+//     through _termocode_find_set / _append / _head (find_results.go).
+//   - a decoration provider draws all the chrome (icons, fold marks,
+//     count pills, match washes, hint bar, hairline) with ephemeral
+//     extmarks for the visible rows only: nothing is stored, idle costs 0.
+//   - folds per file group come from the row table (foldexpr).
+//   - Enter / o / mouse / F4 (_G._termocode_find_nav) jump from the row
+//     table; no text is parsed back.
 //
-// Loaded once during attach (see model.go::attachCmd) and triggers on
-// the FileType autocmd whenever a buffer announces filetype=findresults.
+// Loaded once during attach (model.go::attachCmd).
 const findResultsLua = `
--- Syntax — applied per-buffer via FileType autocmd below.
-vim.api.nvim_create_augroup('TermocodeFindResults', { clear = true })
+local api = vim.api
+_G._termocode_find = _G._termocode_find or { rows = {}, icon_hls = {}, head = {} }
+local F = _G._termocode_find
+local ns = api.nvim_create_namespace('termocode_find')
 
+-- File icon colours: one group per colour, defined on first use and
+-- again after every theme switch (themeLuaBody calls this).
+function _G._termocode_find_rehl()
+  for name, fg in pairs(F.icon_hls) do api.nvim_set_hl(0, name, { fg = fg }) end
+end
+
+local function the_buf()
+  local b = vim.g.termocode_find_results_buf
+  if b and api.nvim_buf_is_valid(b) then return b end
+end
+
+local function put(b, s, e, lines)
+  vim.bo[b].modifiable = true
+  api.nvim_buf_set_lines(b, s, e, false, lines)
+  vim.bo[b].modifiable = false
+end
+
+local function add_rows(base, rows)
+  for i, r in ipairs(rows) do
+    F.rows[base + i] = r
+    if r.icon_hl and r.icon_fg and F.icon_hls[r.icon_hl] ~= r.icon_fg then
+      F.icon_hls[r.icon_hl] = r.icon_fg
+      api.nvim_set_hl(0, r.icon_hl, { fg = r.icon_fg })
+    end
+  end
+end
+
+local function head_text(h) return { '    ' .. (h.query or ''), ' ' .. (h.summary or '') } end
+
+-- _termocode_find_head(h) rewrites the query and summary rows.
+function _G._termocode_find_head(h)
+  local b = the_buf(); if not b then return end
+  F.head = h
+  put(b, 0, 2, head_text(h))
+end
+
+-- _termocode_find_set(h, lines, rows) replaces the whole page (a new
+-- search or a refresh). Windows showing it keep their cursor row.
+function _G._termocode_find_set(h, lines, rows)
+  local b = the_buf(); if not b then return end
+  F.head = h
+  local wins = {}
+  for _, w in ipairs(vim.fn.win_findbuf(b)) do wins[w] = api.nvim_win_get_cursor(w) end
+  local all = head_text(h)
+  all[3] = ''
+  vim.list_extend(all, lines)
+  -- The row table first: the fold levels are computed when lines change.
+  F.rows = { { k = 'q' }, { k = 's' }, { k = 'r' } }
+  add_rows(3, rows)
+  put(b, 0, -1, all)
+  local n = api.nvim_buf_line_count(b)
+  -- A window on the top rows (a new search) starts on the first match.
+  local first = 4
+  while first < n and not (F.rows[first] and F.rows[first].k == 'm') do first = first + 1 end
+  for w, c in pairs(wins) do
+    local row = c[1] <= 3 and first or math.min(c[1], n)
+    pcall(api.nvim_win_set_cursor, w, { row, 0 })
+  end
+  vim.b[b].termocode_nav_row = nil
+  -- The first F4 opens the match under the cursor, not the one after it.
+  vim.b[b].termocode_nav_fresh = true
+end
+
+-- _termocode_find_append(h, lines, rows) adds one streamed batch.
+function _G._termocode_find_append(h, lines, rows)
+  local b = the_buf(); if not b then return end
+  F.head = h
+  put(b, 0, 2, head_text(h))
+  if #lines == 0 then return end
+  local base = api.nvim_buf_line_count(b)
+  add_rows(base, rows)
+  put(b, -1, -1, lines)
+end
+
+-- Folds: one per file group.
+function _G._termocode_find_fold(lnum)
+  local r = F.rows[lnum]
+  if not r then return '0' end
+  if r.k == 'h' then return '>1' end
+  if r.k == 'm' then return '1' end
+  return '0'
+end
+
+local function width(s) return vim.fn.strdisplaywidth(s) end
+
+-- The hint bar, dropping pairs from the middle until it fits in room
+-- cells ("Enter open" and the last pair always stay while they fit).
+local function hint_chunks(room)
+  local hs = F.head.hints or {}
+  local keep = {}
+  for i = 1, #hs do keep[i] = true end
+  local function build()
+    local out, w = {}, 0
+    for i, p in ipairs(hs) do
+      if keep[i] then
+        out[#out + 1] = { ' ' .. p[1] .. ' ', 'TermocodeFindKeycap' }
+        out[#out + 1] = { ' ' .. p[2] .. '  ', 'TermocodeFindHint' }
+        w = w + width(p[1]) + width(p[2]) + 5
+      end
+    end
+    return out, w
+  end
+  local out, w = build()
+  local drop = #hs - 1
+  while w > room and drop > 1 do
+    keep[drop] = false
+    drop = drop - 1
+    out, w = build()
+  end
+  if w > room then return {} end
+  return out
+end
+
+local function chips()
+  local out = {}
+  for _, c in ipairs(F.head.chips or {}) do
+    out[#out + 1] = { ' ' .. c[1] .. ' ', c[2] and 'TermocodeFindChipOn' or 'TermocodeFindChipOff' }
+    out[#out + 1] = { ' ', 'Normal' }
+  end
+  if F.head.meta and F.head.meta ~= '' then out[#out + 1] = { ' ' .. F.head.meta .. ' ', 'TermocodeFindMeta' } end
+  return out
+end
+
+local function hairline(w)
+  local a = math.max(1, math.floor(w / 6))
+  local bar = '─'
+  return {
+    { bar:rep(a), 'TermocodeFindHair1' },
+    { bar:rep(a), 'TermocodeFindHair2' },
+    { bar:rep(math.max(0, w - 2 * a)), 'TermocodeFindHair3' },
+  }
+end
+
+local cur_win, cur_w = nil, 80
+api.nvim_set_decoration_provider(ns, {
+  on_win = function(_, win, b)
+    if vim.bo[b].filetype ~= 'findresults' then return false end
+    cur_win, cur_w = win, api.nvim_win_get_width(win)
+  end,
+  on_line = function(_, win, b, row)
+    local r = F.rows[row + 1]
+    if not r or r.k == '' then return end
+    local line = api.nvim_buf_get_lines(b, row, row + 1, false)[1] or ''
+    local function E(col, o)
+      o.ephemeral = true
+      pcall(api.nvim_buf_set_extmark, b, ns, row, col, o)
+    end
+    local g = F.head.g or {}
+    if r.k == 'q' then
+      E(0, { virt_text = { { ' ' .. (g.search or '') .. '  ', 'TermocodeFindIcon' } }, virt_text_pos = 'overlay' })
+      E(4, { end_col = #line, hl_group = 'TermocodeFindQuery' })
+      E(0, { virt_text = chips(), virt_text_pos = 'right_align' })
+    elseif r.k == 's' then
+      E(0, { end_col = #line, hl_group = F.head.summary_hl or 'TermocodeFindSummary' })
+      E(0, { virt_text = hint_chunks(cur_w - width(line) - 3), virt_text_pos = 'right_align' })
+    elseif r.k == 'r' then
+      E(0, { virt_text = hairline(cur_w), virt_text_pos = 'overlay' })
+    elseif r.k == 'h' then
+      local closed = api.nvim_win_call(win, function() return vim.fn.foldclosed(row + 1) end) ~= -1
+      E(0, { virt_text = {
+        { ' ' .. ((closed and g.closed or g.open) or '') .. '  ', 'TermocodeFindFold' },
+        { (r.icon or '') .. ' ', r.icon_hl or 'TermocodeFindDir' },
+      }, virt_text_pos = 'overlay' })
+      E(0, { end_col = r.name_at, hl_group = 'TermocodeFindDir' })
+      E(r.name_at, { end_col = #line, hl_group = 'TermocodeFindName' })
+      E(0, { virt_text = { { ' ' .. r.n .. ' ', 'TermocodeFindCount' } }, virt_text_pos = 'right_align' })
+    elseif r.k == 'm' then
+      E(0, { end_col = 7, hl_group = 'TermocodeFindLineNr' })
+      for _, x in ipairs(r.hl or {}) do
+        E(x[1], { end_col = x[2], hl_group = 'TermocodeFindMatch', priority = 200 })
+      end
+      if r.cut and r.cut:find('l') then E(10, { end_col = 13, hl_group = 'TermocodeFindMeta' }) end
+      if r.cut and r.cut:find('r') then E(#line - 3, { end_col = #line, hl_group = 'TermocodeFindMeta' }) end
+    elseif r.k == 'e' then
+      E(0, { end_col = #line, hl_group = r.hl or 'TermocodeFindSummary' })
+    end
+  end,
+})
+
+-- Window look: no number gutter (the rows carry their own line numbers),
+-- the cursor row in the selection wash, folds per file.
+local function set_win(win)
+  local o = vim.wo[win]
+  o.number, o.relativenumber = false, false
+  o.signcolumn, o.foldcolumn = 'no', '0'
+  pcall(function() o.statuscolumn = '' end)
+  o.cursorline, o.wrap, o.list = true, false, true
+  o.listchars = 'extends:…,tab:  '
+  o.winhighlight = 'CursorLine:TermocodeFindCursor,Folded:TermocodeFindFolded'
+  o.foldmethod = 'expr'
+  o.foldexpr = 'v:lua._termocode_find_fold(v:lnum)'
+  if not pcall(function() o.foldtext = '' end) then o.foldtext = 'getline(v:foldstart)' end
+  o.foldlevel, o.fillchars = 1, 'fold: '
+  o.conceallevel, o.scrolloff = 0, 2
+end
+
+local function open_row(r)
+  if not r then return end
+  if r.k == 'h' then
+    vim.cmd('edit ' .. vim.fn.fnameescape(r.file))
+  elseif r.k == 'm' then
+    vim.cmd('edit +' .. r.line .. ' ' .. vim.fn.fnameescape(r.file))
+    pcall(api.nvim_win_set_cursor, 0, { r.line, math.max(0, (r.col or 1) - 1) })
+  end
+end
+
+local function toggle_fold(lnum)
+  local r = F.rows[lnum]
+  if r and (r.k == 'h' or r.k == 'm') then pcall(vim.cmd, lnum .. 'foldclose') end
+end
+
+vim.api.nvim_create_augroup('TermocodeFindResults', { clear = true })
 vim.api.nvim_create_autocmd('FileType', {
   group = 'TermocodeFindResults',
   pattern = 'findresults',
   callback = function(args)
     local buf = args.buf
-
-    -- Syntax. Colours pulled from the editor's own VSCode Dark+ palette
-    -- so the results buffer feels like a sibling of the main editor.
-    vim.cmd([[
-      syntax clear
-      " Path header (with optional " (N)" hit count). The trailing
-      " count is captured in its own group so we can paint it dimmer.
-      syntax match findResultsHeaderCount /\s(\d\+):$/ contained
-      syntax match findResultsHeader      /^[^ \t].*:$/  contains=findResultsHeaderCount
-      " Line-number column (4-space indent + line number).
-      syntax match findResultsLineNum     /^\s\+\d\+[: ] /
-      " Footer summary + the initial "Searching N files for ..." line.
-      syntax match findResultsFooter      /^\d\+ match\(es\)\? \(across\|for\) .*$/
-      syntax match findResultsFooter      /^Searching \d\+ files\? for ".*"$/
-      " While the search streams in: "Searching for "q"…". When the
-      " search_max_results cap was hit: "Showing N of M matches …".
-      syntax match findResultsFooter      /^Searching for ".*"…$/
-      syntax match findResultsFooter      /^Showing \d\+ of \d\+ match\(es\)\? across .*$/
-
-      " File path header: teal (editor "type" colour), bold.
-      highlight default findResultsHeader      guifg=#4ec9b0 gui=bold
-      " The "(N)" hit count uses the dim header grey — readable but
-      " visibly secondary to the path.
-      highlight default findResultsHeaderCount guifg=#6c7080 gui=italic
-      " Line numbers: gutter grey.
-      highlight default findResultsLineNum     guifg=#858585
-      " Footer / searching line: comment green italic.
-      highlight default findResultsFooter      guifg=#6a9955 gui=italic
-      " Match highlight: subtle dark-green background ONLY. Foreground
-      " stays at the default content colour so the match reads as
-      " "content with a tint" rather than "stand-out coloured token".
-      highlight default findResultsMatch       guibg=#2a3f24
-      " Active line in the results buffer — one shade lighter than the
-      " editor bg so the cursor row is unambiguous without being loud.
-      highlight default CursorLine             guibg=#23262e
-    ]])
-
-    -- Per-search query highlight: every literal occurrence of the
-    -- query gets the match bg via a syntax rule.
-    local q = vim.g.termocode_find_query or ''
-    if q ~= '' then
-      local escaped = q:gsub('\\', '\\\\'):gsub('/', '\\/')
-      vim.cmd(string.format(
-        [[syntax match findResultsMatch /\V%s/ contained containedin=ALL]], escaped))
+    vim.bo[buf].swapfile, vim.bo[buf].buflisted = false, true
+    set_win(0)
+    local function map(lhs, fn) vim.keymap.set('n', lhs, fn, { buffer = buf, silent = true, nowait = true }) end
+    local function at_cursor() return F.rows[api.nvim_win_get_cursor(0)[1]] end
+    map('<CR>', function() open_row(at_cursor()) end)
+    map('o', function() open_row(at_cursor()) end)
+    map('<Tab>', function()
+      local l = api.nvim_win_get_cursor(0)[1]
+      if vim.fn.foldclosed(l) ~= -1 then vim.cmd(l .. 'foldopen') else toggle_fold(l) end
+    end)
+    -- q / Esc close the page through the app, so the tab strip updates
+    -- at once (a bdelete from here alone shows up on the next poll).
+    local function close()
+      if _G.termocode_notify then _G.termocode_notify('termocode_find_close') else pcall(vim.cmd, 'bdelete') end
     end
-
-    -- Buffer-local options that make the view feel like a results pane.
-    vim.bo[buf].swapfile  = false
-    vim.bo[buf].buflisted = true
-    vim.wo.cursorline     = true
-    vim.wo.wrap           = false
-
-    -- <CR> on a result line: parse "    NNN: ..." or "    NNN  ..." for
-    -- the line number, then scan upward for the nearest "/path:" header.
-    -- On a header itself, just :edit the file from line 1.
-    -- strip_count removes the trailing " (N)" hit-count suffix the
-    -- formatter appends to header lines (e.g. "/abs/path (3):" → "/abs/path").
-    -- Without this, :edit tried to open the literal "/abs/path (3)" string
-    -- which doesn't exist, opening an empty buffer.
-    -- The header shows a workspace-relative path; _termocode_find_paths
-    -- maps it back to the absolute file (addFindPaths in Go).
-    local function strip_count(p)
-      p = p:gsub(' %(%d+%)$', '')
-      return (_G._termocode_find_paths or {})[p] or p
-    end
-    local function jump_from_cursor()
-      local row = vim.api.nvim_win_get_cursor(0)[1]
-      local cur = vim.api.nvim_buf_get_lines(0, row-1, row, false)[1] or ''
-      -- Header line?
-      local p = cur:match('^([^ \t].+):$')
-      if p then
-        vim.cmd('edit ' .. vim.fn.fnameescape(strip_count(p)))
-        return
-      end
-      -- Result / context line?
-      local lineno = cur:match('^%s+(%d+)[: ] ')
-      if not lineno then return end
-      local file
-      for r = row-1, 1, -1 do
-        local s = vim.api.nvim_buf_get_lines(0, r-1, r, false)[1] or ''
-        local hp = s:match('^([^ \t].+):$')
-        if hp then file = strip_count(hp); break end
-      end
-      if file then
-        vim.cmd('edit +' .. lineno .. ' ' .. vim.fn.fnameescape(file))
+    map('q', close)
+    map('<Esc>', close)
+    map('R', function()
+      if _G.termocode_notify then _G.termocode_notify('termocode_find_replace', F.head.query or '') end
+    end)
+    -- Mouse: a click is "position + act", never a drag selection. A click
+    -- on a file header opens / closes its group; a double click opens
+    -- the file; a click on a match opens it at the match.
+    local function mouse(double)
+      return function()
+        local pos = vim.fn.getmousepos()
+        if pos.winid ~= api.nvim_get_current_win() and pos.winid ~= 0 then pcall(api.nvim_set_current_win, pos.winid) end
+        if pos.line <= 0 then return end
+        pcall(api.nvim_win_set_cursor, 0, { pos.line, math.max(0, pos.column - 1) })
+        local r = F.rows[pos.line]
+        if r and r.k == 'q' then
+          -- The chips sit right-aligned: find the one under the pointer.
+          local col = api.nvim_win_get_width(0) - 1
+          local hit
+          local cs = chips()
+          for i = #cs, 1, -1 do
+            local w = width(cs[i][1])
+            if pos.wincol - 1 >= col - w + 1 and pos.wincol - 1 <= col then hit = cs[i]; break end
+            col = col - w
+          end
+          local label = hit and vim.trim(hit[1]) or ''
+          if (label == 'Aa' or label == 'ab' or label == '.*') and _G.termocode_notify then
+            _G.termocode_notify('termocode_find_toggle', label)
+          end
+          return
+        end
+        if r and r.k == 'h' and not double then
+          if vim.fn.foldclosed(pos.line) ~= -1 then vim.cmd(pos.line .. 'foldopen') else toggle_fold(pos.line) end
+          return
+        end
+        open_row(r)
       end
     end
-
-    vim.keymap.set('n', '<CR>', jump_from_cursor, { buffer = buf, silent = true })
-
-    -- Mouse handling. nvim's default mouse=a behaviour is:
-    --   <LeftMouse>   = position cursor + start visual selection
-    --   <LeftDrag>    = extend the selection
-    --   <LeftRelease> = finalise it
-    -- That makes a single click in a results buffer feel like the
-    -- cursor "stuck on" mid-drag — the user reported this as
-    -- "click stays held down and turns into selection mode". We
-    -- override every mouse event so a click is just "position +
-    -- jump" with NO visual / drag side effects.
-    local function mouse_jump()
-      local pos = vim.fn.getmousepos()
-      if pos.line > 0 then
-        local col = pos.column - 1
-        if col < 0 then col = 0 end
-        pcall(vim.api.nvim_win_set_cursor, 0, { pos.line, col })
-      end
-      jump_from_cursor()
-    end
-    vim.keymap.set('n', '<LeftMouse>',    mouse_jump, { buffer = buf, silent = true })
-    vim.keymap.set('n', '<2-LeftMouse>',  mouse_jump, { buffer = buf, silent = true })
-    vim.keymap.set('n', '<LeftDrag>',     '<Nop>',    { buffer = buf, silent = true })
-    vim.keymap.set('n', '<LeftRelease>',  '<Nop>',    { buffer = buf, silent = true })
-
-    -- Force normal mode every time the user enters this buffer. The
-    -- global "BufEnter * if &buftype=='' | startinsert" autocmd fires
-    -- BEFORE we (re-)set buftype on a freshly-created buffer, so a
-    -- second visit to the results tab can land in insert mode on a
-    -- non-modifiable buffer — the "E21 modifiable is off" the user
-    -- reported. A buffer-local BufEnter / WinEnter that calls
-    -- stopinsert undoes that.
-    vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter' }, {
+    map('<LeftMouse>', mouse(false))
+    map('<2-LeftMouse>', mouse(true))
+    map('<LeftDrag>', '<Nop>')
+    map('<LeftRelease>', '<Nop>')
+    -- Force normal mode every time the page is entered (the global
+    -- "BufEnter * startinsert" fires before buftype is set), and give any
+    -- window that shows the page its look.
+    api.nvim_create_autocmd({ 'BufEnter', 'WinEnter', 'BufWinEnter' }, {
       buffer = buf,
-      callback = function() vim.cmd('stopinsert') end,
+      callback = function() vim.cmd('stopinsert'); set_win(0) end,
     })
   end,
 })
 
--- Next / previous result navigation (F4 / Shift+F4 in the app). Walks the saved Find Results buffer
--- looking for the next / previous match line (those have ":" between
--- the line number and the content; context lines have " "). Opens the
--- corresponding file as if the user pressed <CR> on the row, AND moves
--- the cursor in the results buffer so the user sees what they jumped
--- from.
+-- Next / previous match (F4 / Shift+F4 in the app), from anywhere. Walks
+-- the row table from the page's cursor (or the last jump), skipping
+-- closed groups, and opens the match. Returns 'ok', 'end' or 'none'.
 local function navigate_results(direction)
-  local buf = vim.g.termocode_find_results_buf
-  if not buf or not vim.api.nvim_buf_is_valid(buf) then return 'none' end
-  local total = vim.api.nvim_buf_line_count(buf)
-  if total == 0 then return 'none' end
-
-  -- Find the row currently selected in the results window (if any). If
-  -- the results buffer isn't visible (the jump below replaced it in its
-  -- window), go on from the row of the last jump; else from the top.
-  local cur_row = vim.b[buf].termocode_nav_row or 1
-  if cur_row > total then cur_row = 1 end
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
-    if vim.api.nvim_win_get_buf(win) == buf then
-      cur_row = vim.api.nvim_win_get_cursor(win)[1]
-      break
-    end
+  local b = the_buf()
+  if not b then return 'none' end
+  local total = api.nvim_buf_line_count(b)
+  local win
+  for _, w in ipairs(api.nvim_list_wins()) do
+    if api.nvim_win_get_buf(w) == b then win = w; break end
   end
-
-  local step = direction
-  local r = cur_row + step
+  local cur = vim.b[b].termocode_nav_row or (direction > 0 and 0 or total + 1)
+  if win then cur = api.nvim_win_get_cursor(win)[1] end
+  if vim.b[b].termocode_nav_fresh and direction > 0 then cur = cur - 1 end
+  vim.b[b].termocode_nav_fresh = nil
+  local r = cur + direction
   while r >= 1 and r <= total do
-    local line = vim.api.nvim_buf_get_lines(buf, r-1, r, false)[1] or ''
-    if line:match('^%s+%d+:') then
-      -- Found a match row. Walk back to the nearest header and edit.
-      local lineno = line:match('^%s+(%d+):')
-      local file
-      for s = r-1, 1, -1 do
-        local sline = vim.api.nvim_buf_get_lines(buf, s-1, s, false)[1] or ''
-        local p = sline:match('^([^ \t].+):$')
-        -- Drop the " (N)" hit count, same as strip_count above.
-        if p then
-          file = p:gsub(' %(%d+%)$', '')
-          file = (_G._termocode_find_paths or {})[file] or file
-          break
-        end
-      end
-      if file then
-        vim.b[buf].termocode_nav_row = r
-        -- Move the cursor in the results buffer (best-effort visual
-        -- feedback). Keep results window visible if any.
-        for _, win in ipairs(vim.api.nvim_list_wins()) do
-          if vim.api.nvim_win_get_buf(win) == buf then
-            vim.api.nvim_win_set_cursor(win, { r, 0 })
-            break
-          end
-        end
-        vim.cmd('edit +' .. lineno .. ' ' .. vim.fn.fnameescape(file))
-      end
+    local row = F.rows[r]
+    local hidden = win and api.nvim_win_call(win, function() return vim.fn.foldclosed(r) end) ~= -1
+    if row and row.k == 'm' and not hidden then
+      vim.b[b].termocode_nav_row = r
+      if win then api.nvim_win_set_cursor(win, { r, 0 }) end
+      open_row(row)
       return 'ok'
     end
-    r = r + step
+    r = r + direction
   end
   return 'end'
 end
-
--- Called from Go (findResultNav). Returns 'ok', 'end' (no more results in
--- that direction) or 'none' (no Find Results buffer).
 _G._termocode_find_nav = navigate_results
 `

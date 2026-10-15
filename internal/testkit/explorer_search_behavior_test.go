@@ -13,6 +13,9 @@ if not b or not vim.api.nvim_buf_is_valid(b) then return '' end
 return table.concat(vim.api.nvim_buf_get_lines(b, 0, -1, false), '\n')`)
 }
 
+// findHeader is how a file's header line reads in the Find Results text.
+func findHeader(name string) string { return "\n      " + name + "\n" }
+
 // searchNeedle starts the app with "needle" in d.txt and e.txt and runs
 // Find in Files for it.
 func searchNeedle(t *testing.T) *Driver {
@@ -26,7 +29,7 @@ func searchNeedle(t *testing.T) *Driver {
 	d.Key("enter")
 	if !eventually(d, func() bool {
 		r := findResults(d)
-		return strings.Contains(r, "d.txt (1):") && strings.Contains(r, "e.txt (1):")
+		return strings.Contains(r, findHeader("d.txt")) && strings.Contains(r, findHeader("e.txt"))
 	}) {
 		t.Fatalf("first search:\n%s", findResults(d))
 	}
@@ -50,7 +53,7 @@ func TestExplorerRenameDeleteRefreshFindResults(t *testing.T) {
 	d.Key("enter")
 	if !eventually(d, func() bool {
 		r := findResults(d)
-		return strings.Contains(r, "z.txt (1):") && !strings.Contains(r, "d.txt")
+		return strings.Contains(r, findHeader("z.txt")) && !strings.Contains(r, "d.txt")
 	}) {
 		t.Fatalf("results after rename d.txt -> z.txt:\n%s", findResults(d))
 	}
@@ -61,7 +64,7 @@ func TestExplorerRenameDeleteRefreshFindResults(t *testing.T) {
 	if !eventually(d, func() bool { return !exists(d, "e.txt") && !strings.Contains(findResults(d), "e.txt") }) {
 		t.Fatalf("results after deleting e.txt (exists=%v):\n%s", exists(d, "e.txt"), findResults(d))
 	}
-	if !strings.Contains(findResults(d), "z.txt (1):") {
+	if !strings.Contains(findResults(d), findHeader("z.txt")) {
 		t.Errorf("z.txt dropped from the results:\n%s", findResults(d))
 	}
 }
@@ -81,5 +84,12 @@ func TestExplorerBulkDeleteRefreshFindResults(t *testing.T) {
 			!strings.Contains(r, "d.txt") && !strings.Contains(r, "e.txt")
 	}) {
 		t.Fatalf("results after bulk delete (d=%v e=%v):\n%s", exists(d, "d.txt"), exists(d, "e.txt"), findResults(d))
+	}
+	// The page says so in place (empty state), with the way out.
+	if !eventually(d, func() bool { return strings.Contains(findResults(d), `No matches for "needle"`) }) {
+		t.Fatalf("no empty state after the last match went:\n%s", findResults(d))
+	}
+	if r := findResults(d); !strings.Contains(r, "\n No matches\n") || !strings.Contains(r, "F8") {
+		t.Errorf("empty state lacks the summary or the F8 hint:\n%s", r)
 	}
 }

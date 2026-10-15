@@ -271,7 +271,7 @@ func isPersistedZombiePath(path string) bool {
 	if len(path) >= 8 && path[len(path)-8:] == " PREVIEW" {
 		return true
 	}
-	if strings.HasSuffix(path, "/Find Results") || path == "Find Results" {
+	if isFindResultsPath(path) {
 		return true
 	}
 	if strings.HasSuffix(path, "termocode-find-results.txt") {

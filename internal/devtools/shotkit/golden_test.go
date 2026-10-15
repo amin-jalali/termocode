@@ -64,6 +64,7 @@ func goldenScenes() []Scene {
 		Confirm(),
 		Toast(),
 		{Name: "explorer", Steps: []Step{Act("view:files"), Act("open:internal/theme/palette.go"), Act("palette:reveal-file"), Pause(600 * time.Millisecond)}},
+		FindResults(),
 		{Name: "search", Steps: WithEditor(append(append([]Step{Act("palette:find-files-overlay")}, TypeKeys("Toast")...), Pause(1200*time.Millisecond))...)},
 	}
 }
@@ -105,7 +106,7 @@ func goldenCases() []goldenCase {
 	}
 	// The smallest common window (80x24) for the screens that have a
 	// compact layout: start page, editor, palette, toast.
-	for _, sc := range []Scene{Dashboard(), Editor(), Palette(), Toast()} {
+	for _, sc := range []Scene{Dashboard(), Editor(), Palette(), Toast(), FindResults()} {
 		out = append(out, goldenCase{fmt.Sprintf("%s-80x24", sc.Name), sc, 80, 24})
 	}
 	return out

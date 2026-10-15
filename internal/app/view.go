@@ -2200,7 +2200,9 @@ func padBgToWidth(s string, w int) string {
 
 func (m Model) statusState() statusbar.State {
 	lang := m.editor.Lang()
-	if lang != "" {
+	if lang == "findresults" {
+		lang = "Find Results"
+	} else if lang != "" {
 		lang = strings.ToUpper(lang[:1]) + lang[1:]
 	}
 	// Project name is the cwd basename — the breadcrumbs row above the
