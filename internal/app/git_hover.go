@@ -90,14 +90,21 @@ func (m Model) overlayCommitHoverCard(base string) string {
 		return base
 	}
 	sidebarRight := activity.Width + m.explorerWidth
-	cardW := 48
+	cardW := commitHoverCardW
 	if avail := m.w - sidebarRight - 2; cardW > avail {
 		cardW = avail
 	}
 	if cardW < 28 {
 		return base
 	}
-	card := renderCommitHoverCard(d, cardW)
+	var refs []git.Ref
+	for _, c := range m.gitCommits {
+		if c.Hash == m.hoverCommitHash || c.FullHash == m.hoverCommitHash {
+			refs = c.Refs
+			break
+		}
+	}
+	card := renderCommitHoverCard(d, refs, cardW)
 	if len(card) == 0 {
 		return base
 	}
@@ -124,9 +131,16 @@ func (m Model) overlayCommitHoverCard(base string) string {
 	return strings.Join(lines, "\n")
 }
 
+// commitHoverCardW is the hover card width (scm-graph §2.7).
+const commitHoverCardW = 44
+
+// commitHoverBodyMax is the most body lines the hover card shows.
+const commitHoverBodyMax = 8
+
 // renderCommitHoverCard builds the bordered commit card (author + date,
-// subject, wrapped body, a +/- stat line and the short hash).
-func renderCommitHoverCard(d git.CommitDetail, w int) []string {
+// subject, wrapped body, the refs as pills, a +/- stat line with the
+// short hash and a key hint).
+func renderCommitHoverCard(d git.CommitDetail, refs []git.Ref, w int) []string {
 	var (
 		panelBg  = theme.LG(theme.BgFloat)
 		border   = theme.Float().Border
@@ -175,8 +189,10 @@ func renderCommitHoverCard(d git.CommitDetail, w int) []string {
 	if d.Body != "" {
 		pushPlain("", 0)
 		bodyLines := wrapPlain(d.Body, inner)
-		if len(bodyLines) > 12 {
-			bodyLines = append(bodyLines[:12], "…")
+		if len(bodyLines) > commitHoverBodyMax {
+			bodyLines = bodyLines[:commitHoverBodyMax]
+			last := runewidth.Truncate(bodyLines[commitHoverBodyMax-1], inner-1, "")
+			bodyLines[commitHoverBodyMax-1] = last + "…"
 		}
 		for _, l := range bodyLines {
 			pushPlain(st(bodyFG).Render(l), runewidth.StringWidth(l))
@@ -184,6 +200,9 @@ func renderCommitHoverCard(d git.CommitDetail, w int) []string {
 	}
 
 	pushPlain("", 0)
+	for _, row := range hoverRefPillRows(refs, inner, panelBg) {
+		pushPlain(row, 0)
+	}
 	stat := st(addFG).Render(fmt.Sprintf("+%d", d.Add)) + pad.Render(" ") +
 		st(delFG).Render(fmt.Sprintf("−%d", d.Del)) + pad.Render(fmt.Sprintf("  %d file%s", d.Files, plural(d.Files)))
 	statW := runewidth.StringWidth(fmt.Sprintf("+%d −%d  %d file%s", d.Add, d.Del, d.Files, plural(d.Files)))
@@ -193,6 +212,8 @@ func renderCommitHoverCard(d git.CommitDetail, w int) []string {
 		gap = 1
 	}
 	pushPlain(stat+pad.Render(strings.Repeat(" ", gap))+hash, 0)
+	key, label := st(theme.LG(theme.TextSecondary)), st(dimFG)
+	pushPlain(key.Render("Enter")+label.Render(" open   ")+key.Render("y")+label.Render(" copy SHA"), 0)
 
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
@@ -238,4 +259,44 @@ func wrapPlain(s string, w int) []string {
 		}
 	}
 	return out
+}
+
+// hoverRefPillRows lays all refs out as pills (local, tag, remote tints
+// on the card background), wrapping to more rows when they do not fit.
+func hoverRefPillRows(refs []git.Ref, inner int, bg lipgloss.Color) []string {
+	var rows []string
+	var sb strings.Builder
+	used := 0
+	gap := lipgloss.NewStyle().Background(bg).Render(" ")
+	for _, r := range refs {
+		name := r.Name
+		if runewidth.StringWidth(name) > inner-2 {
+			name = runewidth.Truncate(name, inner-2, "…")
+		}
+		var fg, pbg lipgloss.Color
+		switch r.Kind {
+		case git.RefTag:
+			fg, pbg = theme.TintPill(theme.AccentAmber, theme.BgFloat)
+		case git.RefRemote:
+			fg, pbg = theme.LG(theme.TextMuted), theme.Wash(theme.BgFloat, theme.WashHover)
+		default:
+			fg, pbg = theme.TintPill(theme.AccentBlue, theme.BgFloat)
+		}
+		pw := theme.PillWidth(name)
+		if used > 0 && used+1+pw > inner {
+			rows = append(rows, sb.String())
+			sb.Reset()
+			used = 0
+		}
+		if used > 0 {
+			sb.WriteString(gap)
+			used++
+		}
+		sb.WriteString(theme.Pill(name, fg, pbg, bg, false))
+		used += pw
+	}
+	if used > 0 {
+		rows = append(rows, sb.String())
+	}
+	return rows
 }

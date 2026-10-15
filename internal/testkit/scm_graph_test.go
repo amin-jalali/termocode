@@ -134,6 +134,69 @@ func TestSCMHoverCardContent(t *testing.T) {
 	}
 }
 
+// cardText cuts the hover card out of a frame: it finds the card's left
+// border on the row that holds want, then takes the rows from the top
+// border ╭ to the bottom border ╰, from the border column on.
+func cardText(frame, want string) []string {
+	lines := strings.Split(frame, "\n")
+	rows := make([][]rune, len(lines))
+	at, col := -1, -1
+	for y, l := range lines {
+		rows[y] = []rune(l)
+		if at < 0 {
+			if i := strings.Index(l, want); i >= 0 {
+				for x := len([]rune(l[:i])) - 1; x >= 0; x-- {
+					if rows[y][x] == '│' {
+						at, col = y, x
+						break
+					}
+				}
+			}
+		}
+	}
+	if at < 0 {
+		return nil
+	}
+	top := at
+	for top > 0 && col < len(rows[top]) && rows[top][col] != '╭' {
+		top--
+	}
+	var out []string
+	for y := top; y < len(rows) && col < len(rows[y]); y++ {
+		out = append(out, string(rows[y][col:]))
+		if rows[y][col] == '╰' {
+			break
+		}
+	}
+	return out
+}
+
+// Spec (scm-graph §2.7): the hover card is 44 cells wide, lists the
+// commit's refs as pills and ends with the hint "Enter open   y copy SHA".
+func TestSCMHoverCardRefsAndHint(t *testing.T) {
+	d, r := scmDriver(t, graphRepo)
+	hoverCard(t, d, r, "add parser", "v1.0")
+	card := cardText(text(d), "Enter open")
+	if len(card) < 3 {
+		t.Fatalf("no card:%s", dump(d))
+	}
+	if top := []rune(card[0]); len(top) < 44 || top[43] != '╮' {
+		t.Errorf("card is not 44 cells wide: %q", card[0])
+	}
+	body := strings.Join(card, "\n")
+	if !strings.Contains(card[len(card)-2], "Enter open   y copy SHA") {
+		t.Errorf("last card row is not the key hint:\n%s", body)
+	}
+	if !strings.Contains(body, "v1.0") {
+		t.Errorf("card does not show the tag v1.0:\n%s", body)
+	}
+	d.Move(100, 30)
+	hoverCard(t, d, r, "after merge", "HEAD")
+	if body := strings.Join(cardText(text(d), "Enter open"), "\n"); !strings.Contains(body, "main") {
+		t.Errorf("HEAD card does not show main:\n%s", body)
+	}
+}
+
 // Spec: Given a commit that touched one file, when hovered, then the card
 // says "1 file" (singular).
 func TestSCMHoverCardOneFile(t *testing.T) {
