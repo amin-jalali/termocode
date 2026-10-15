@@ -214,17 +214,17 @@ var confirmHints = []string{"←→", "move", "enter", "select", "esc", "cancel"
 // idiom — same panel bg, dim rim, hairline separators, soft selection
 // bar tint.
 var (
-	cmBoxBg lipgloss.Color
-	cmBorderRim lipgloss.Color
-	cmIconWarn lipgloss.Color
-	cmTextPri lipgloss.Color
-	cmTextBody lipgloss.Color
-	cmTextDim lipgloss.Color
-	cmGuideColor lipgloss.Color
-	cmSubtitleFg lipgloss.Color
-	cmSelBg lipgloss.Color
-	cmSelFg lipgloss.Color
-	cmPrimaryBg lipgloss.Color
+	cmBoxBg         lipgloss.Color
+	cmBorderRim     lipgloss.Color
+	cmIconWarn      lipgloss.Color
+	cmTextPri       lipgloss.Color
+	cmTextBody      lipgloss.Color
+	cmTextDim       lipgloss.Color
+	cmGuideColor    lipgloss.Color
+	cmSubtitleFg    lipgloss.Color
+	cmSelBg         lipgloss.Color
+	cmSelFg         lipgloss.Color
+	cmPrimaryBg     lipgloss.Color
 	cmDestructiveBg lipgloss.Color
 )
 
