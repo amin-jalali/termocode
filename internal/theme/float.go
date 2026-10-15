@@ -277,3 +277,9 @@ func TintPill(accent, bg Color256) (fg, pillBg lipgloss.Color) {
 	b := Lerp(ToRGB(bg), ToRGB(accent), 0.14).Hex()
 	return lipgloss.Color(readableOn(ToRGB(accent).Hex(), b, ToRGB(TextPrimary).Hex(), 4.5)), lipgloss.Color(b)
 }
+
+// ReadableOn is c on bg, moved toward the body text until it reads at
+// least min:1 (colours that already pass are unchanged).
+func ReadableOn(c Color256, bg lipgloss.Color, min float64) lipgloss.Color {
+	return lipgloss.Color(readableOn(ToRGB(c).Hex(), string(bg), ToRGB(TextPrimary).Hex(), min))
+}

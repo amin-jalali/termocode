@@ -296,7 +296,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	case commitViewReadyMsg:
 		return m, m.onCommitViewReady(msg)
 	case commitFileTextMsg:
-		m.onCommitFileText(msg)
+		return m, m.onCommitFileText(msg)
+	case commitFileSyntaxMsg:
+		m.onCommitFileSyntax(msg)
 		return m, nil
 	case commitFileAtMsg:
 		m.openFileAtCommit(msg)
