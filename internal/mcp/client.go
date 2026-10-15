@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/extproc"
 )
@@ -38,9 +40,11 @@ type Client struct {
 	conn *extproc.Conn
 	opts Options
 
-	mu      sync.Mutex
-	version string
-	info    ServerInfo
+	mu       sync.Mutex
+	version  string
+	info     ServerInfo
+	progress map[string]func() // progress token → push the call's deadline back
+	tokens   atomic.Int64
 }
 
 // NewClient starts the JSON-RPC connection on r / w (newline framing).
@@ -147,10 +151,53 @@ func (c *Client) ListTools(ctx context.Context) ([]Tool, error) {
 // CallTool runs one tool. A JSON-RPC error is an error; a tool failure
 // (isError) is a result whose Text starts with "error: ".
 func (c *Client) CallTool(ctx context.Context, name string, args map[string]any) (CallResult, error) {
+	return c.callTool(ctx, name, args, nil)
+}
+
+// ErrCallTimeout: a tools/call got no answer and no progress within its
+// timeout.
+var ErrCallTimeout = errors.New("no answer in time")
+
+// CallToolTimeout is CallTool with a deadline that each progress
+// notification of the call pushes back (long Playwright runs report
+// progress). It returns ErrCallTimeout when the server stays silent for
+// timeout; timeout <= 0 means no deadline.
+func (c *Client) CallToolTimeout(ctx context.Context, name string, args map[string]any, timeout time.Duration) (CallResult, error) {
+	if timeout <= 0 {
+		return c.CallTool(ctx, name, args)
+	}
+	token := fmt.Sprintf("termocode-%d", c.tokens.Add(1))
+	cctx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+	timer := time.AfterFunc(timeout, func() { cancel(ErrCallTimeout) })
+	defer timer.Stop()
+	c.mu.Lock()
+	if c.progress == nil {
+		c.progress = map[string]func(){}
+	}
+	c.progress[token] = func() { timer.Reset(timeout) }
+	c.mu.Unlock()
+	defer func() {
+		c.mu.Lock()
+		delete(c.progress, token)
+		c.mu.Unlock()
+	}()
+	res, err := c.callTool(cctx, name, args, map[string]any{"progressToken": token})
+	if err != nil && ctx.Err() == nil && errors.Is(context.Cause(cctx), ErrCallTimeout) {
+		return res, ErrCallTimeout
+	}
+	return res, err
+}
+
+func (c *Client) callTool(ctx context.Context, name string, args map[string]any, meta map[string]any) (CallResult, error) {
 	if args == nil {
 		args = map[string]any{}
 	}
-	raw, err := c.call(ctx, "tools/call", map[string]any{"name": name, "arguments": args})
+	params := map[string]any{"name": name, "arguments": args}
+	if meta != nil {
+		params["_meta"] = meta
+	}
+	raw, err := c.call(ctx, "tools/call", params)
 	if err != nil {
 		return CallResult{}, err
 	}
@@ -180,6 +227,21 @@ func (c *Client) handle(conn *extproc.Conn, m extproc.Message) {
 		c.opts.log("tools changed")
 		if c.opts.ToolsChanged != nil {
 			c.opts.ToolsChanged()
+		}
+	case "notifications/progress":
+		var p struct {
+			Token json.RawMessage `json:"progressToken"`
+		}
+		_ = json.Unmarshal(m.Params, &p)
+		var tok string
+		if json.Unmarshal(p.Token, &tok) != nil {
+			tok = string(p.Token)
+		}
+		c.mu.Lock()
+		f := c.progress[tok]
+		c.mu.Unlock()
+		if f != nil {
+			f()
 		}
 	case "notifications/message":
 		var p struct {
