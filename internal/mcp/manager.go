@@ -3,11 +3,11 @@ package mcp
 import (
 	"context"
 	"crypto/sha256"
-	"net/http"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
