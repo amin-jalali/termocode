@@ -252,6 +252,37 @@ type Card struct {
 	Click tea.Msg // what a click sends; nil when the toast is not clickable
 }
 
+// FitWidth is the card width the visible toasts need: the longest title
+// or detail plus the icon lead, padding and border (renderToast), at least
+// 28 and at most max. 0 when there are none.
+func (m Model) FitWidth(max int) int {
+	if len(m.toasts) == 0 {
+		return 0
+	}
+	count := min(len(m.toasts), maxStacked)
+	need := 0
+	for _, t := range m.toasts[len(m.toasts)-count:] {
+		need = maxInt(need, runewidth.StringWidth(t.Title), runewidth.StringWidth(t.Detail))
+	}
+	w := need + 8 // "  ●  " lead, one pad cell, two border cells
+	if w < 28 {
+		w = 28
+	}
+	if w > max {
+		w = max
+	}
+	return w
+}
+
+func maxInt(a int, bs ...int) int {
+	for _, b := range bs {
+		if b > a {
+			a = b
+		}
+	}
+	return a
+}
+
 // Cards returns the visible toasts (oldest first), each as a rounded card
 // `width` cells wide.
 func (m Model) Cards(width int) []Card {
@@ -358,10 +389,10 @@ func renderToastCompact(t Toast, w int) []string {
 	if used := lipgloss.Width(row); used < inner {
 		row += bg.Render(strings.Repeat(" ", inner-used))
 	}
-	rim := theme.Mix(theme.BorderDefault, sev, 0.45)
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(rim).
+		BorderForeground(f.Border).
+		BorderLeftForeground(theme.LG(sev)).
 		BorderBackground(f.Bg).
 		Background(f.Bg).
 		Width(inner).
@@ -408,10 +439,11 @@ func renderToast(t Toast, w int) []string {
 	if t.Detail != "" {
 		rows = append(rows, pad(bg.Render(strings.Repeat(" ", lead))+detailStyle.Render(fit(t.Detail))))
 	}
-	rim := theme.Mix(theme.BorderDefault, sev, 0.45)
+	// The normal card frame; the severity shows as the left edge only.
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(rim).
+		BorderForeground(f.Border).
+		BorderLeftForeground(theme.LG(sev)).
 		BorderBackground(f.Bg).
 		Background(f.Bg).
 		Width(inner).

@@ -190,13 +190,11 @@ func (m Model) toastPlaces() []toastPlace {
 	if m.h <= toastCompactMaxH || edPaneW < toastCompactMinW {
 		return m.compactToastPlaces(editorStart, edPaneW)
 	}
-	w := 52
-	if w > edPaneW-6 {
-		w = edPaneW - 6
-	}
-	if w < 24 {
+	if edPaneW-6 < 24 {
 		return nil
 	}
+	// As wide as the text needs (28..52 cells), not always 52.
+	w := m.toast.FitWidth(min(52, edPaneW-6))
 	cards := m.toast.Cards(w)
 	x := editorStart + edPaneW - w - 2
 	y := m.h - 3 // the shadow row of the newest card sits just above the status bar
