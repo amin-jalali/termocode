@@ -1,16 +1,10 @@
 package app
 
 import (
-	"context"
 	"os"
-	"os/exec"
-	"runtime"
-	"strings"
 	"sync/atomic"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"golang.design/x/clipboard"
 
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -42,7 +36,8 @@ func SetClipboardSink(f func(string)) (restore func()) {
 // writeClipboard puts s in nvim's unnamed and + registers, the system
 // clipboard and (OSC 52) the terminal's clipboard, and reports what it
 // reached. The system clipboard is golang.design/x/clipboard (X11, also
-// XWayland) and, when that fails, wl-copy / xclip / xsel / pbcopy.
+// XWayland) and, when that fails, wl-copy / xclip / xsel / pbcopy. In
+// Termux it is termux-clipboard-set.
 //
 // OSC 52 cannot be checked. It counts only when the local clipboard
 // failed or termocode runs over SSH (then the local clipboard is the
@@ -76,59 +71,30 @@ func (m *Model) writeClipboard(s string) clipVia {
 	return clipFailed
 }
 
-// systemClipboardWrite writes the OS clipboard and reports success.
+// systemClipboardWrite writes the OS clipboard and reports success. In
+// Termux the golang.design library is skipped: it cannot reach Android's
+// clipboard, and termux-clipboard-set can.
 func systemClipboardWrite(s string) bool {
-	if clipboardReady() && clipboardLibWrite(s) {
+	h := realClipHost()
+	if !h.termux() && clipboardReady() && clipboardLibWrite(s) {
 		return true
 	}
-	return clipboardToolWrite(s)
+	return h.toolWrite(s)
 }
 
-// clipboardLibWrite is golang.design/x/clipboard's Write; it returns nil
-// when it could not take the clipboard.
+// clipboardLibWrite is golang.design/x/clipboard's Write; it returns
+// false when it could not take the clipboard.
 func clipboardLibWrite(s string) (ok bool) {
 	defer func() {
 		if recover() != nil {
 			ok = false
 		}
 	}()
-	return clipboard.Write(clipboard.FmtText, []byte(s)) != nil
+	return clipLibWrite(s)
 }
 
-// clipboardTools are the clipboard commands to try, in order.
-func clipboardTools() [][]string {
-	var out [][]string
-	if runtime.GOOS == "darwin" {
-		out = append(out, []string{"pbcopy"})
-	}
-	if os.Getenv("WAYLAND_DISPLAY") != "" {
-		out = append(out, []string{"wl-copy"})
-	}
-	if os.Getenv("DISPLAY") != "" {
-		out = append(out, []string{"xclip", "-selection", "clipboard"}, []string{"xsel", "--clipboard", "--input"})
-	}
-	return out
-}
-
-// clipboardToolWrite pipes s into the first clipboard command that works.
-func clipboardToolWrite(s string) bool {
-	for _, argv := range clipboardTools() {
-		if _, err := exec.LookPath(argv[0]); err != nil {
-			continue
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		c := exec.CommandContext(ctx, argv[0], argv[1:]...)
-		c.Stdin = strings.NewReader(s)
-		err := c.Run()
-		cancel()
-		if err == nil {
-			return true
-		}
-	}
-	return false
-}
-
-// clipboardHelp says how to make copying work.
+// clipboardHelp says how to make copying work on a desktop (see
+// clipHost.help for Termux).
 const clipboardHelp = "Install wl-clipboard (Wayland) or xclip (X11), or use a terminal with OSC 52 (kitty, WezTerm, foot, Alacritty)."
 
 // copyWithToast copies text and tells the user what happened: done on
@@ -142,6 +108,14 @@ func (m *Model) copyWithToast(text, done string) tea.Cmd {
 	case clipLocal:
 		m.toast, c = m.toast.Push(toast.Info, done)
 	case clipTerminal:
+		if h := realClipHost(); h.termux() {
+			// Termux's terminal takes OSC 52, but reading the Android
+			// clipboard (paste from other apps) needs termux-api.
+			if _, err := h.lookPath("termux-clipboard-get"); err != nil {
+				m.toast, c = m.toast.PushDetail(toast.Info, done+" (via terminal)", "To paste from other apps: "+termuxHelp)
+				break
+			}
+		}
 		m.toast, c = m.toast.Push(toast.Info, done+" (via terminal)")
 	default:
 		// nvim's registers took it: Ctrl+V in the editor still pastes.
@@ -149,7 +123,7 @@ func (m *Model) copyWithToast(text, done string) tea.Cmd {
 		if m.nvim != nil {
 			title = "Copied to the editor only: no system clipboard"
 		}
-		m.toast, c = m.toast.PushDetail(toast.Warn, title, clipboardHelp)
+		m.toast, c = m.toast.PushDetail(toast.Warn, title, realClipHost().help())
 	}
 	return c
 }

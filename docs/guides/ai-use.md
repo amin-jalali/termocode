@@ -423,7 +423,8 @@ to go on. Change the limit with `ai_max_steps` in `config.json`.
 **Copy says "no clipboard found" or "no system clipboard"**
 :   termocode found no system clipboard (the editor can still paste it). Install `wl-clipboard` (Wayland) or `xclip`
     (X11). Over SSH, use a terminal with OSC 52 (kitty, WezTerm, foot,
-    Alacritty); GNOME Terminal does not support it.
+    Alacritty); GNOME Terminal does not support it. On Android (Termux),
+    install the Termux:API app and run `pkg install termux-api`.
 
 **The agent stopped in the middle**
 :   It hit the step limit (25 by default, `ai_max_steps`). Send "continue".

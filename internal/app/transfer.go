@@ -647,7 +647,7 @@ func (m *Model) onXferConfirm(kind confirmKindEnum, id string) tea.Cmd {
 		case clipTerminal:
 			return m.pushToastDetail(toast.Info, "Command copied (via terminal)", p.scp)
 		}
-		return m.pushToastDetail(toast.Warn, "Could not copy the command", clipboardHelp)
+		return m.pushToastDetail(toast.Warn, "Could not copy the command", realClipHost().help())
 	case kind == confirmKindTransferFallback && id == "trzsz":
 		return trzszCmd(p)
 	}

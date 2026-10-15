@@ -12,7 +12,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
-	"golang.design/x/clipboard"
 
 	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/theme"
@@ -1742,21 +1741,23 @@ func (m Model) terminalCopyToClipboard() int {
 }
 
 // readClipboardText returns the host OS clipboard as a string. Wraps
-// clipboard.Read in the same defer-recover guard as safeClipboardWrite —
+// the library read in the same defer-recover guard as safeClipboardWrite —
 // the library hard-panics on CGO_ENABLED=0 builds. Returns "" on panic
-// or when the clipboard is empty / non-text.
+// or when the clipboard is empty / non-text. In Termux it runs
+// termux-clipboard-get.
 func readClipboardText() string {
-	var out string
+	if h := realClipHost(); h.termux() {
+		if headless() {
+			return ""
+		}
+		out, _ := h.termuxRead()
+		return out
+	}
 	if !clipboardReady() {
 		return ""
 	}
 	defer func() { _ = recover() }()
-	buf := clipboard.Read(clipboard.FmtText)
-	if len(buf) == 0 {
-		return ""
-	}
-	out = string(buf)
-	return out
+	return string(clipLibRead())
 }
 
 // skipsShell reports whether msg is bound to an action that must reach

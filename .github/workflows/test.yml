@@ -47,6 +47,19 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      # Termux on Android: the binary must build without cgo, and the
+      # cgo build must not pull in golang.design/x/clipboard (its Android
+      # backend needs an APK with a Java VM).
+      - name: Android (Termux) build
+        if: runner.os == 'Linux'
+        run: |
+          GOOS=android GOARCH=arm64 go vet ./...
+          CGO_ENABLED=0 GOOS=android GOARCH=arm64 go build -o /dev/null ./cmd/termocode
+          if CGO_ENABLED=1 GOOS=android GOARCH=arm64 go list -deps ./cmd/termocode | grep -q '^golang.design/x/clipboard$'; then
+            echo "android build must not import golang.design/x/clipboard" >&2
+            exit 1
+          fi
+
       - name: Test
         run: go test ./... -race -count=1
 
