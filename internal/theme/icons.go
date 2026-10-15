@@ -133,11 +133,13 @@ var (
 	}
 )
 
-// File-tree icons.
+// File-tree icons. Unicode glyphs here and below avoid
+// East-Asian-Ambiguous code points (ambiguous_test.go): CJK locales draw
+// those 2 cells wide.
 var (
-	IconFolderClosed = Icon{NerdFont: "", Unicode: "▶", ASCII: ">"}
-	IconFolderOpen   = Icon{NerdFont: "", Unicode: "▼", ASCII: "v"}
-	IconFile         = Icon{NerdFont: "", Unicode: "·", ASCII: " "}
+	IconFolderClosed = Icon{NerdFont: "", Unicode: "▸", ASCII: ">"}
+	IconFolderOpen   = Icon{NerdFont: "", Unicode: "▾", ASCII: "v"}
+	IconFile         = Icon{NerdFont: "", Unicode: "⋅", ASCII: " "}
 )
 
 // Source Control "view as tree / view as list" toggle — the VSCode SCM
@@ -146,7 +148,7 @@ var (
 // Nerd Font.
 var (
 	IconViewTree = Icon{NerdFont: "", Unicode: "⊟", ASCII: "tree"}
-	IconViewFlat = Icon{NerdFont: "", Unicode: "≡", ASCII: "flat"}
+	IconViewFlat = Icon{NerdFont: "", Unicode: "☰", ASCII: "flat"}
 )
 
 // Status-bar markers.
@@ -154,7 +156,7 @@ var (
 	IconBranch  = Icon{NerdFont: "", Unicode: "⑂", ASCII: "git:"}
 	IconError   = Icon{NerdFont: "", Unicode: "✗", ASCII: "E"}
 	IconWarning = Icon{NerdFont: "", Unicode: "⚠", ASCII: "W"}
-	IconDirty   = Icon{NerdFont: "●", Unicode: "●", ASCII: "*"}
+	IconDirty   = Icon{NerdFont: "●", Unicode: "◉", ASCII: "*"}
 )
 
 // IconMode selects which variant Icon.String returns.
