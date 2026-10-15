@@ -201,6 +201,47 @@ if it is not a Nerd Font, exact steps for your terminal. ☐
 
 **G2 — Doctor.** Help → Doctor: the "terminal font" row is correct. ☐
 
+## H. Terminals and look (2026-10-15)
+
+**H1 — kitty keys** (kitty, Ghostty, WezTerm or foot). In a Go file press
+`Ctrl+Shift+M` → the Problems panel; `Ctrl+Shift+O` → symbols in the
+file; `Ctrl+.` → code actions; open two files, `Ctrl+Tab` switches between
+them; in the AI input `Shift+Enter` makes a new line. `Ctrl+[` still
+leaves insert mode. Quit, then in the shell `Ctrl+C` and arrow keys work
+as before. ☐
+
+**H2 — GNOME Terminal unchanged.** In GNOME Terminal all your usual keys
+work exactly as before (the protocol stays off there). Quit: the
+terminal's background colour comes back. ☐
+
+**H3 — Scrollback kept** (kitty or Windows Terminal). Run a few commands,
+start termocode, quit. Expected: the earlier commands are still in the
+scrollback and the background colour is unchanged. ☐
+
+**H4 — Alt+X palette.** Press `Alt+X` → the command palette opens. Also
+inside the VS Code integrated terminal, where `F1` is taken by VS Code. ☐
+
+**H5 — Copy toast** (xterm or macOS Terminal.app, no wl-copy / xclip).
+Copy a word. Expected: a warning that says how to make copying work, not
+"Copied (via terminal)". ☐
+
+**H6 — Light themes.** Theme Catppuccin Latte, then Rosé Pine Dawn.
+Expected: the breadcrumb folders, "AI off", the hints at the bottom of
+dialogs and the version line on the start page are easy to read; on Dawn
+the sidebar is not brighter than the editor. ☐
+
+**H7 — Dialog shadow.** Open the palette (`F1`) and a toast (save a
+file). Expected: a soft shadow, not a black bar; the page behind the
+palette is dimmed but readable. ☐
+
+**H8 — Hover and selection.** Move the mouse over the explorer, Source
+Control and the activity bar; select rows with the keyboard in each.
+Expected: hover, selection and focused selection look the same in every
+panel. ☐
+
+**H9 — Tilix / Terminator.** If you use one: icons are Unicode (no tofu
+boxes) unless you set Nerd icons yourself. ☐
+
 ---
 
 **When something fails:** note the case ID, what you did, what you saw
