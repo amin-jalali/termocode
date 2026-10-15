@@ -96,7 +96,7 @@ func DiffReview() Scene {
 // Scenes is the screenshot set for assets/screenshots (the shots command).
 func Scenes() []Scene {
 	scenes := []Scene{
-		Dashboard(), Editor(), Palette(), Toast(), SCM(),
+		withName(DashboardRecent(), "dashboard"), Editor(), Palette(), Toast(), SCM(),
 		{Name: "scm-hover", Steps: []Step{Pause(800 * time.Millisecond), Act("view:git"), Pause(1500 * time.Millisecond),
 			Hover(12, 20), Hover(12, 26), Hover(12, 32), Pause(500 * time.Millisecond)}},
 		Confirm(),
@@ -120,7 +120,7 @@ func Scenes() []Scene {
 		scenes = append(scenes, Scene{Name: "theme-" + th + "-palette", Theme: th, Steps: paletteSteps()})
 	}
 	scenes = append(scenes,
-		Scene{Name: "theme-catppuccin-latte-dashboard", Theme: "catppuccin-latte", Steps: []Step{Pause(1500 * time.Millisecond)}},
+		withTheme(withName(DashboardRecent(), "theme-catppuccin-latte-dashboard"), "catppuccin-latte"),
 		Scene{Name: "theme-catppuccin-latte-scm", Theme: "catppuccin-latte", Steps: scmSteps()},
 	)
 	for _, mode := range []string{"unicode", "ascii"} {
@@ -128,6 +128,9 @@ func Scenes() []Scene {
 	}
 	return scenes
 }
+
+func withName(sc Scene, name string) Scene   { sc.Name = name; return sc }
+func withTheme(sc Scene, theme string) Scene { sc.Theme = theme; return sc }
 
 // DemoScene is the README demo (shots -gif): start page, Quick Open, real
 // Neovim motions, the command palette, an AI answer, the AI change review

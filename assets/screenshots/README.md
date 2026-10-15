@@ -18,7 +18,7 @@ go run ./internal/devtools/shots -font … -only dashboard,palette   # some scen
 
 | File | Shows |
 |---|---|
-| `dashboard.png` | start page: gradient wordmark, action tiles |
+| `dashboard.png` | start page: gradient wordmark, START list, recent files, workspaces |
 | `editor.png` | explorer, tabs, breadcrumbs, editor, status bar |
 | `palette.png` | command palette over the dimmed editor, with its shadow |
 | `toast.png` | a toast card |
