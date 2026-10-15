@@ -362,10 +362,8 @@ func (m *Model) openMCPServers() tea.Cmd {
 	mgr := m.aiMCP()
 	mgr.Reload()
 	list := mgr.Servers()
-	if len(list) == 0 {
-		return m.aiInfo("No MCP servers yet: add them to " + mcpUserPath() + " (Open Config: MCP Servers)")
-	}
-	items := make([]picker.Item, 0, len(list))
+	items := make([]picker.Item, 0, len(list)+1)
+	items = append(items, picker.Item{ID: mcpAddID, Title: "+ Add a server…", Hint: "Linear, GitHub, GitLab, Slack, Notion …"})
 	for _, st := range list {
 		items = append(items, picker.Item{ID: st.Name, Title: mcpStatusIcon(st) + " " + st.Name, Hint: mcpStatusHint(st)})
 	}
@@ -606,7 +604,12 @@ func (m *Model) editMCPConfig() tea.Cmd {
 func (m *Model) handleMCPPickerSelect(id string) (tea.Cmd, bool) {
 	switch m.pickerKind {
 	case pickerKindMCPServers:
+		if id == mcpAddID {
+			return m.openMCPPresets(), true
+		}
 		return m.openMCPServerActions(id), true
+	case pickerKindMCPPresets:
+		return m.onMCPPresetPicked(id), true
 	case pickerKindMCPServer:
 		return m.onMCPServerAction(id), true
 	case pickerKindMCPTools:

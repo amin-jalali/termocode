@@ -170,6 +170,35 @@ func TestAIMCPRemoteSignInPasteOverSSHBehavior(t *testing.T) {
 	}
 }
 
+// Spec: AI: MCP Servers… starts with "+ Add a server…"; it lists the
+// presets (Linear, GitHub, GitLab, Atlassian, Slack, Notion, Sentry,
+// ClickUp); picking one writes it into the user mcp.json and opens its
+// actions with Sign in. Nothing connects by itself.
+func TestAIMCPPresetsBehavior(t *testing.T) {
+	_, model := fakeToolModel(t)
+	d := remoteDriver(t, model.URL, `{"mcpServers":{}}`, "", false)
+	runPalette(d, "AI: MCP Servers")
+	if !d.WaitForText("+ Add a server", 5*time.Second) {
+		t.Fatalf("no add row:\n%s", screen(d))
+	}
+	d.Type("Add a server")
+	d.Key("enter")
+	for _, p := range []string{"Linear", "GitHub", "GitLab", "Atlassian", "Slack", "Notion", "Sentry", "ClickUp"} {
+		if !d.WaitForText(p, 5*time.Second) {
+			t.Fatalf("no preset %s:\n%s", p, screen(d))
+		}
+	}
+	d.Type("Notion")
+	d.Key("enter")
+	if !d.WaitForText("Sign in", 5*time.Second) {
+		t.Fatalf("no actions after adding:\n%s", screen(d))
+	}
+	b, _ := os.ReadFile(filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "termocode", "mcp.json"))
+	if !strings.Contains(string(b), `"notion"`) || !strings.Contains(string(b), "https://mcp.notion.com/mcp") {
+		t.Errorf("mcp.json: %s", b)
+	}
+}
+
 // Spec (MC-5): a remote server with a PAT from ${secret:NAME} runs its
 // tools; the token never shows on screen, in the MCP log or errors.log.
 func TestAIMCPRemotePATBehavior(t *testing.T) {
