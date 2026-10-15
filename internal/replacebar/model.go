@@ -158,8 +158,8 @@ func (m Model) View() string {
 	if m.w <= 0 {
 		return ""
 	}
-	findRow := m.renderRow(" Find    ", m.find, m.focus == fieldFind, " ↵ replace · ⇥ next field · esc close ")
-	replRow := m.renderRow(" Replace ", m.replace, m.focus == fieldReplace, " ⌃↵ / ⌥↵ replace all · esc close ")
+	findRow := m.renderRow(" Find    ", m.find, m.focus == fieldFind, " Enter replace · Tab next field · Esc close ")
+	replRow := m.renderRow(" Replace ", m.replace, m.focus == fieldReplace, " Ctrl+Enter / Alt+Enter replace all · Esc close ")
 	return findRow + "\n" + replRow
 }
 

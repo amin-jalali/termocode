@@ -29,7 +29,7 @@ func TestWelcome_RendersWithEmptyRecents(t *testing.T) {
 		"Open file", "Command palette", "Find in files", "Open shell",
 		"browse your filesystem", "run any action",
 		"project-wide search", "integrated terminal",
-		"^P", "F1", "F8", "^T",
+		"Ctrl+P", "F1", "F8", "Ctrl+T", // UI review #3: one key notation
 	} {
 		mustContain(t, out, label)
 	}
