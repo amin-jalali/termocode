@@ -92,7 +92,7 @@ func (m Model) hitTargets() []hitTarget {
 		}
 		out = append(out, m.tabTargets(pane)...)
 		if gx := m.overflowGlyphX(); gx >= 0 {
-			add(hitTarget{ID: "overflow:glyph", Label: overflowMenuGlyph, X: gx, Y: m.overflowGlyphY(), W: 1, H: 1})
+			add(hitTarget{ID: "overflow:glyph", Label: overflowMenuGlyph(), X: gx, Y: m.overflowGlyphY(), W: 1, H: 1})
 		}
 		out = append(out, m.statusTargets()...)
 		out = append(out, m.actionsTargets()...)

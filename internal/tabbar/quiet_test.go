@@ -27,8 +27,8 @@ func TestCloseGlyphOnlyOnActiveTab(t *testing.T) {
 	m.SetWidth(120)
 	m.rebuildRegions()
 	plain := ansi.Strip(m.View())
-	if n := strings.Count(plain, "×"); n != 1 {
-		t.Errorf("× shown %d times, want 1 (active tab only): %q", n, plain)
+	if n := strings.Count(plain, theme.GlyphClose.String()); n != 1 {
+		t.Errorf("close glyph shown %d times, want 1 (active tab only): %q", n, plain)
 	}
 	if !strings.Contains(plain, "●") {
 		t.Error("modified tab lost its dot")

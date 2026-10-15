@@ -391,3 +391,15 @@ func atoiStrict(s string) (int, error) {
 	}
 	return n, nil
 }
+
+// Chrome glyphs: one per meaning, used by every widget (UI review #4).
+// Each tier is one cell; Unicode and ASCII avoid ambiguous-width code
+// points (glyphs_test.go).
+var (
+	GlyphMore     = Icon{NerdFont: "", Unicode: "⋯", ASCII: ":"} // nf-fa-ellipsis_h
+	GlyphClose    = Icon{NerdFont: "", Unicode: "✕", ASCII: "x"} // nf-fa-times
+	GlyphPin      = Icon{NerdFont: "", Unicode: "⚐", ASCII: "p"} // nf-fa-thumb_tack
+	GlyphHistory  = Icon{NerdFont: "", Unicode: "↺", ASCII: "h"} // nf-fa-history
+	GlyphNew      = Icon{NerdFont: "", Unicode: "+", ASCII: "+"} // nf-fa-plus
+	GlyphCollapse = Icon{NerdFont: "", Unicode: "⊟", ASCII: "-"} // nf-fa-minus_square_o
+)
