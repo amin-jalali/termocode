@@ -1,0 +1,56 @@
+# termocode shell integration for zsh (OSC 133 + OSC 7). Loads the
+# user's .zshrc first, then adds small hooks that tell termocode where a
+# prompt starts, which command runs, its exit code and the current
+# folder. Set "terminal_shell_integration": false in config.json to turn
+# it off.
+ZDOTDIR=$TERMOCODE_ZDOTDIR
+if [[ -r $ZDOTDIR/.zshrc ]]; then
+	builtin source "$ZDOTDIR/.zshrc"
+fi
+TERMOCODE_ZDOTDIR=${ZDOTDIR:-$HOME}
+if [[ -o login ]]; then
+	ZDOTDIR=$__tc_shim # .zlogin still comes; it puts ZDOTDIR back
+else
+	if [[ -n ${TERMOCODE_ZDOTDIR_UNSET-} && $ZDOTDIR == $HOME ]]; then unset ZDOTDIR; fi
+	unset TERMOCODE_ZDOTDIR TERMOCODE_ZDOTDIR_UNSET __tc_shim
+fi
+unset TERMOCODE_SHELL_INTEGRATION
+
+if [[ -z ${__tc_si-} ]]; then
+	typeset -g __tc_si=1
+
+	# __tc_enc puts $1 into __tc_r with the characters that would end or
+	# split an OSC sequence percent-encoded.
+	__tc_enc() {
+		typeset -g __tc_r=${1//\%/%25}
+		__tc_r=${__tc_r//;/%3B}
+		__tc_r=${__tc_r//$'\n'/%0A}
+		__tc_r=${__tc_r//$'\r'/%0D}
+		__tc_r=${__tc_r//$'\a'/%07}
+		__tc_r=${__tc_r//$'\e'/%1B}
+	}
+
+	# First precmd hook: command end (D with the exit code), the folder
+	# (OSC 7) and prompt start (A).
+	__tc_precmd() {
+		local st=$?
+		if (( ${+__tc_ran} )); then
+			unset __tc_ran
+			builtin print -nr -- $'\e]133;D;'"$st"$'\a'
+		fi
+		__tc_enc "$PWD"
+		builtin print -nr -- $'\e]7;file://'"${HOST-}$__tc_r"$'\a\e]133;A\a'
+		return $st
+	}
+
+	# preexec gets the command line as typed: command start (C).
+	__tc_preexec() {
+		typeset -g __tc_ran=1
+		__tc_enc "$1"
+		builtin print -nr -- $'\e]133;C;cmdline_url='"$__tc_r"$'\a'
+	}
+
+	typeset -ga precmd_functions preexec_functions
+	precmd_functions=(__tc_precmd $precmd_functions)
+	preexec_functions+=(__tc_preexec)
+fi
