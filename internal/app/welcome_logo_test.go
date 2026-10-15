@@ -47,7 +47,7 @@ func TestWelcomeFitsShortPane(t *testing.T) {
 		if !strings.Contains(ansi.Strip(out), "for help") {
 			t.Errorf("h=%d: footer cut off", h)
 		}
-		if !strings.Contains(ansi.Strip(out), "R E C E N T") {
+		if !strings.Contains(ansi.Strip(out), "RECENT FILES") {
 			t.Errorf("h=%d: recent files cut off", h)
 		}
 	}
@@ -70,7 +70,7 @@ func TestWelcomeLogoOff(t *testing.T) {
 	if welcomeLogoAt.ok {
 		t.Error("logo off: logo still placed")
 	}
-	if !strings.Contains(ansi.Strip(out), "S T A R T") {
+	if !strings.Contains(ansi.Strip(out), "START") {
 		t.Error("logo off: page body missing")
 	}
 	withDashboardLogo(t, "text")

@@ -17,9 +17,9 @@ func TestWelcome_RendersWithEmptyRecents(t *testing.T) {
 	// Tagline (letter-spaced caps).
 	mustContain(t, out, "T E R M I N A L")
 	// Section headers.
-	mustContain(t, out, "S T A R T")
-	mustContain(t, out, "R E C E N T   F I L E S")
-	mustContain(t, out, "W O R K S P A C E S")
+	mustContain(t, out, "START")
+	mustContain(t, out, "RECENT FILES")
+	mustContain(t, out, "WORKSPACES")
 	// Empty state copy: present when there are no recents/workspaces.
 	mustContain(t, out, "No files yet")
 	mustContain(t, out, "Open a file or start a new project")

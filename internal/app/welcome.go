@@ -600,12 +600,11 @@ func renderWelcomePage(w, h, focusIdx int, hero, compact bool) (string, welcomeH
 
 // ─── Section header / footer pieces ────────────────────────────────────
 
-// sectionHeader renders a small caps + letter-spaced section header
-// in the muted (TextDim) color. Used for "START", "RECENT FILES",
-// "WORKSPACES".
+// sectionHeader renders a section header ("START", "RECENT FILES",
+// "WORKSPACES") in plain bold caps and secondary text, like every panel
+// title; letter spacing is kept for the logo's tagline only (UI review).
 func sectionHeader(s string) string {
-	style := theme.FgBg(theme.TextDim, theme.BgEditor)
-	return style.Render(spaceLetters(s))
+	return theme.FgBg(theme.TextSecondary, theme.BgEditor).Bold(true).Render(s)
 }
 
 // footerRule renders a horizontal divider made of a single-row run of
