@@ -420,6 +420,22 @@ func (m Model) handleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 	if !m.InBox(x, y) {
 		return m, func() tea.Msg { return CloseMsg{} }
 	}
+	// The footer hints are buttons: Enter selects, Esc closes.
+	switch m.footerKeyAt(x, y) {
+	case "esc":
+		return m, func() tea.Msg { return CloseMsg{} }
+	case "enter":
+		idx := m.cursor
+		if idx < 0 || idx >= len(m.matches) {
+			return m, nil
+		}
+		match := m.matches[idx]
+		if match.Index < 0 || match.Index >= len(m.items) || m.items[match.Index].Header {
+			return m, nil
+		}
+		it := m.items[match.Index]
+		return m, func() tea.Msg { return SelectMsg{ID: it.ID, Title: it.Title} }
+	}
 	idx, ok := m.RowAt(x, y)
 	if !ok {
 		return m, nil
@@ -730,13 +746,35 @@ func (m Model) renderBox() string {
 
 	// ── Footer: keycap hints ──────────────────────────────────────────
 	rows = append(rows, lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmGuide).Render(strings.Repeat("─", innerW)))
-	footer := theme.HintBar(pmBoxBg, "↑↓", "navigate", "enter", "select", "esc", "close")
-	if lipgloss.Width(footer)+2 > innerW {
-		footer = theme.HintBar(pmBoxBg, "enter", "select", "esc", "close")
-	}
+	footer := theme.HintBar(pmBoxBg, footerPairs(innerW)...)
 	rows = append(rows, padBg(bgFill.Render("  ")+footer, innerW))
 
 	return theme.FloatBox(lipgloss.JoinVertical(lipgloss.Left, rows...), boxW)
+}
+
+// footerPairs are the footer hints that fit innerW cells.
+func footerPairs(innerW int) []string {
+	full := []string{"↑↓", "navigate", "enter", "select", "esc", "close"}
+	if sp := theme.HintSpans(full...); sp[len(sp)-1].X1+2 > innerW {
+		return full[2:]
+	}
+	return full
+}
+
+// footerKeyAt is the footer hint key under screen cell (x, y) ("" none).
+// The footer is the last row inside the border, after a 2-cell margin.
+func (m Model) footerKeyAt(x, y int) string {
+	bx, by, bw, bh := m.boxRect()
+	if y != by+bh-2 {
+		return ""
+	}
+	rel := x - (bx + 1 + 2)
+	for _, sp := range theme.HintSpans(footerPairs(bw - 2)...) {
+		if rel >= sp.X0 && rel < sp.X1 {
+			return sp.Key
+		}
+	}
+	return ""
 }
 
 // titleGlyph / searchGlyph follow the icon mode (Nerd Font, Unicode,

@@ -1,6 +1,7 @@
 package theme
 
 import (
+	"github.com/charmbracelet/x/ansi"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -244,4 +245,27 @@ func PaneHairline(w int, bg Color256, focused bool) string {
 		return Hairline(w, bg)
 	}
 	return lipgloss.NewStyle().Foreground(LG(BorderSubtle)).Background(LG(bg)).Render(strings.Repeat("─", w))
+}
+
+// HintSpan is where one "key label" pair of a HintBar sits, in cells from
+// the bar's start (X1 exclusive). Key is the key as passed to HintBar.
+type HintSpan struct {
+	Key    string
+	X0, X1 int
+}
+
+// HintSpans lays out HintBar(pairs...) without drawing it, so a click on a
+// hint can do what the key does.
+func HintSpans(pairs ...string) []HintSpan {
+	var out []HintSpan
+	x := 0
+	for i := 0; i+1 < len(pairs); i += 2 {
+		if i > 0 {
+			x += 3
+		}
+		w := ansi.StringWidth(" "+KeyLabel(pairs[i])+" ") + 1 + ansi.StringWidth(pairs[i+1])
+		out = append(out, HintSpan{Key: pairs[i], X0: x, X1: x + w})
+		x += w
+	}
+	return out
 }
