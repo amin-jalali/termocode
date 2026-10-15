@@ -4,7 +4,9 @@
 // Framing is the LSP one ("Content-Length: N\r\n\r\n" + N bytes of UTF-8
 // JSON), so every language that has an LSP library already has a codec.
 // The message shapes follow mobocode's agent/rpc.go (request, response,
-// notification, error object).
+// notification, error object). The MCP client (internal/mcp) uses the
+// same Conn with newline framing: one JSON object per line
+// (NewConnWith, FramingNewline).
 //
 // This file is the codec and Conn (request/response matching, timeouts,
 // a non-blocking write queue). host.go starts, supervises and stops the

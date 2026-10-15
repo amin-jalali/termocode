@@ -85,6 +85,27 @@ func TestCredentialsFileMode(t *testing.T) {
 	}
 }
 
+// MC-1: MCP secrets (${secret:NAME} in mcp.json) live in credentials.json
+// and are redacted everywhere once loaded.
+func TestCredentialsMCPSecrets(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ai", "credentials.json")
+	c := Credentials{MCPSecrets: map[string]string{"pg_uri": "postgres://user:mcp-secret-pw@h/db"}}
+	if err := SaveCredentials(path, c); err != nil {
+		t.Fatal(err)
+	}
+	got, err := LoadCredentials(path)
+	if err != nil || got.MCPSecrets["pg_uri"] != c.MCPSecrets["pg_uri"] {
+		t.Fatalf("load: %+v %v", got, err)
+	}
+	b, _ := os.ReadFile(path)
+	if !strings.Contains(string(b), `"mcp_secrets"`) {
+		t.Errorf("file has no mcp_secrets key: %s", b)
+	}
+	if out := Redact("dial postgres://user:mcp-secret-pw@h/db failed"); strings.Contains(out, "mcp-secret-pw") {
+		t.Errorf("MCP secret not redacted: %q", out)
+	}
+}
+
 func TestRedact(t *testing.T) {
 	RegisterSecret("my-very-secret-value")
 	in := `failed: my-very-secret-value; key sk-ant-api03-ABCDEFGHIJKL; Authorization: Bearer eyJhbGciOi.xyz; {"access_token":"tokenvalue123"} x-api-key: abcdefgh12345 sk-proj-abcdefghijklmnopqrs`
