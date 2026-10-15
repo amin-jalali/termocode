@@ -10,6 +10,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -56,7 +57,7 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 	case pickerKindAIAttach:
 		return m.onAIAttachPicked(id), true
 	}
-	return nil, false
+	return m.handleMCPPickerSelect(id)
 }
 
 // handleAIPromptSubmit routes the AI prompt kinds. ok=false: not ours.
@@ -98,6 +99,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.onAIHistoryDeleteConfirm(id), true
 	case confirmKindAIHistoryClear:
 		return m.onAIHistoryClearConfirm(id), true
+	case confirmKindMCPTrust:
+		return m.answerMCPTrust(id), true
 	}
 	return nil, false
 }
@@ -107,6 +110,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 	switch m.confirmKind {
 	case confirmKindAITool:
 		return m.answerAIToolConfirm("deny")
+	case confirmKindMCPTrust:
+		return m.answerMCPTrust("deny")
 	}
 	return nil
 }
@@ -290,6 +295,13 @@ func (m *Model) openAIAutoApprovePicker() tea.Cmd {
 			state = "AUTO"
 		}
 		items = append(items, picker.Item{ID: c, Title: c + " — " + desc[c], Hint: state})
+	}
+	for _, c := range m.mcpAutoApproveClasses() { // one row per MCP server
+		state := "ask"
+		if contains(s.settings.AutoApprove, c) {
+			state = "AUTO"
+		}
+		items = append(items, picker.Item{ID: c, Title: c + " — mutating tools of MCP server " + strings.TrimPrefix(c, mcp.ClassPrefix), Hint: state})
 	}
 	m.picker = picker.NewItems(" ✦ Agent auto-approve (Enter toggles) ", items)
 	m.picker.SetSize(m.w, m.h)

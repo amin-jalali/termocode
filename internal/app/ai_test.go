@@ -52,7 +52,8 @@ func TestAIUnconfiguredEntriesOnlyToast(t *testing.T) {
 	for _, e := range aiPaletteItems() {
 		switch e.id {
 		case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials", "ai-cancel",
-			"ai-discard-proposal", "ai-history", "ai-pick-model", "ai-auto-approve":
+			"ai-discard-proposal", "ai-history", "ai-pick-model", "ai-auto-approve",
+			"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config": // MCP setup works before a provider
 			continue
 		}
 		mm := m

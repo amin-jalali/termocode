@@ -22,6 +22,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Export Chat as Markdown | `ai-export-chat` |   |   |
 | AI: Fix Diagnostic at Cursor | `ai-fix` |   |   |
 | AI: Generate Doc Comment | `ai-doc` |   |   |
+| AI: MCP Servers… | `ai-mcp-servers` |   |   |
+| AI: MCP: Show Log | `ai-mcp-log` |   |   |
 | AI: New Chat | `ai-new-chat` |   |   |
 | AI: Open Chat | `ai-open-chat` | `Alt+A` | `Alt+A` |
 | AI: Pick Model… | `ai-pick-model` |   |   |
@@ -231,6 +233,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Open Config: AI Credentials | `ai-credentials` |   |   |
+| Open Config: MCP Servers | `ai-mcp-config` |   |   |
 | Open Config: Theme | `config-theme` |   |   |
 | Open Config: User Commands | `config-commands` |   |   |
 

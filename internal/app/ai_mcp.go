@@ -1,0 +1,512 @@
+package app
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"sync/atomic"
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/mcp"
+	"github.com/amin-jalali/termocode/internal/picker"
+)
+
+// ── MCP client glue (MC-3 / MC-4) ───────────────────────────────────────
+//
+// internal/mcp runs the servers; this file wires them into the chat:
+//
+//   - aiMCPTurn gives each chat turn the tools of every configured server.
+//     It runs on the turn's goroutine (it may start a server once to list
+//     its tools, and ask the user to trust a project server through the
+//     chat channel, like a tool confirm).
+//   - Mutating MCP tools use the normal confirm gate; "Always allow
+//     mcp:<server>" goes into ai_auto_approve like fileWrite.
+//   - Server lifecycle lines go to the Output channel "MCP".
+//   - Palette: AI: MCP Servers… (status, connect, stop, tools, trust),
+//     AI: MCP: Show Log, Open Config: MCP Servers.
+
+// mcpLogChannel is the Output channel of the MCP lifecycle log.
+const mcpLogChannel = "MCP"
+
+// mcpTarget is the Manager StopMCP stops.
+var mcpTarget atomic.Pointer[mcp.Manager]
+
+// StopMCP stops every MCP server (and its children). cmd/termocode calls
+// it when Bubble Tea returns, next to StopExtensions.
+func StopMCP() {
+	if m := mcpTarget.Load(); m != nil {
+		m.Close()
+	}
+}
+
+// mcpCacheDir holds the tool lists ($XDG_CACHE_HOME/termocode/mcp).
+func mcpCacheDir() string {
+	cache := os.Getenv("XDG_CACHE_HOME")
+	if cache == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return ""
+		}
+		cache = filepath.Join(home, ".cache")
+	}
+	return filepath.Join(cache, "termocode", "mcp")
+}
+
+func mcpConfigPath() string {
+	p, _ := ai.ConfigPath()
+	return p
+}
+
+func mcpUserPath() string {
+	d, err := ai.ConfigDir()
+	if err != nil {
+		return ""
+	}
+	return mcp.UserPath(d)
+}
+
+// aiMCP returns the Manager, made on first use (it starts nothing).
+// Timeouts are read then; a restart applies new ones.
+func (m *Model) aiMCP() *mcp.Manager {
+	s := m.aiS()
+	if s.mcp != nil {
+		return s.mcp
+	}
+	root := aiWorkspaceRoot()
+	set := mcp.LoadSettings(mcpConfigPath())
+	out := m.output
+	home, _ := os.UserHomeDir()
+	s.mcp = mcp.NewManager(mcp.ManagerOptions{
+		UserPath:    mcpUserPath(),
+		ProjectPath: mcp.ProjectPath(root),
+		CacheDir:    mcpCacheDir(),
+		Expander: func() mcp.Expander {
+			var secrets map[string]string
+			if p, err := ai.CredentialsPath(); err == nil {
+				c, _ := ai.LoadCredentials(p) // registers the secrets for Redact
+				secrets = c.MCPSecrets
+			}
+			return mcp.Expander{Env: os.LookupEnv, Secrets: secrets, Workspace: root, Home: home}
+		},
+		Roots: func() []string { return []string{root} },
+		Log: func(server, line string) {
+			out.Append(mcpLogChannel, clock.Now().Format("15:04:05")+"  "+server+": "+ai.Redact(aiCleanText(line)))
+		},
+		IdleTimeout: set.IdleTimeout,
+		CallTimeout: set.CallTimeout,
+		IsTrusted: func(sv mcp.Server) bool {
+			return mcp.LoadSettings(mcpConfigPath()).Trusted[sv.Name] == sv.Hash()
+		},
+		SaveTrust: func(sv mcp.Server) { _ = mcp.SaveTrusted(mcpConfigPath(), sv.Name, sv.Hash()) },
+	})
+	mcpTarget.Store(s.mcp)
+	return s.mcp
+}
+
+// aiMCPTurn returns the goroutine part of a chat turn: it reloads
+// mcp.json and builds the MCP tools (nil when mcp_enabled is false).
+func (m *Model) aiMCPTurn(gen uint64, ch chan tea.Msg) func(ctx context.Context) []ai.Tool {
+	set := mcp.LoadSettings(mcpConfigPath())
+	if !set.Enabled {
+		return nil
+	}
+	mgr := m.aiMCP()
+	ask := mcpChatAsker(gen, ch)
+	opts := mcp.AdapterOptions{TrustAnnotations: set.TrustAnnotations, MaxResult: set.MaxResultKB << 10, Clean: aiCleanText}
+	return func(ctx context.Context) []ai.Tool {
+		mgr.Reload()
+		var out []ai.Tool
+		for _, st := range mgr.Tools(ctx, ask) {
+			out = append(out, mcp.AITools(st.Server, st.Tools, mgr.Caller(ask), opts)...)
+		}
+		return out
+	}
+}
+
+// ── Trust dialog ───────────────────────────────────────────────────────
+
+const (
+	confirmKindMCPTrust confirmKindEnum = 950 + iota
+)
+
+const (
+	pickerKindMCPServers pickerKindEnum = 950 + iota
+	pickerKindMCPServer
+	pickerKindMCPTools
+)
+
+// aiMCPTrustMsg asks the user to trust a server (sent by the chat
+// goroutine; the reply is buffered).
+type aiMCPTrustMsg struct {
+	gen    uint64
+	server mcp.Server
+	reply  chan mcp.TrustAnswer
+	ch     chan tea.Msg
+}
+
+// aiMCPTrustPending is the open trust dialog: a chat turn waits on
+// reply, or (reply nil) the servers picker connects afterwards.
+type aiMCPTrustPending struct {
+	server  string
+	reply   chan mcp.TrustAnswer
+	connect bool
+}
+
+func mcpChatAsker(gen uint64, ch chan tea.Msg) mcp.AskTrust {
+	return func(ctx context.Context, s mcp.Server) mcp.TrustAnswer {
+		reply := make(chan mcp.TrustAnswer, 1)
+		select {
+		case ch <- aiMCPTrustMsg{gen: gen, server: s, reply: reply, ch: ch}:
+		case <-ctx.Done():
+			return mcp.TrustDeny
+		}
+		select {
+		case a := <-reply:
+			return a
+		case <-ctx.Done():
+			return mcp.TrustDeny
+		}
+	}
+}
+
+// mcpTrustDialog builds "Start MCP server X?" with the file, command and
+// env keys (never their values).
+func (m *Model) mcpTrustDialog(s mcp.Server) {
+	from := "your mcp.json (" + s.SourcePath + ")"
+	if s.Source == mcp.SourceProject {
+		from = "this project's .termocode/mcp.json"
+	}
+	var env []string
+	for k := range s.Env {
+		env = append(env, k)
+	}
+	sort.Strings(env)
+	msg := "From " + from + ". It runs on your computer with your rights: only allow servers you trust."
+	if len(env) > 0 {
+		msg += "\nEnv: " + strings.Join(env, ", ")
+	}
+	code := strings.TrimSpace(s.Command + " " + strings.Join(s.Args, " "))
+	if s.Type != mcp.TypeStdio {
+		code = s.URL
+	}
+	m.confirm = confirm.New("Start MCP server "+s.Name+"?", msg, []confirm.Button{
+		{ID: "once", Title: "Allow once", Style: confirm.StylePrimary},
+		{ID: "always", Title: "Always allow"},
+		{ID: "deny", Title: "Deny", Style: confirm.StyleDestructive},
+	}).WithCode(code, "")
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = confirmKindMCPTrust
+}
+
+// onAIMCPTrust opens the trust dialog for a chat turn.
+func (m *Model) onAIMCPTrust(msg aiMCPTrustMsg) tea.Cmd {
+	s := m.aiS()
+	if msg.gen != s.chatGen {
+		msg.reply <- mcp.TrustDeny
+		return waitAIChat(msg.ch)
+	}
+	s.mcpTrust = &aiMCPTrustPending{server: msg.server.Name, reply: msg.reply}
+	m.mcpTrustDialog(msg.server)
+	return waitAIChat(msg.ch)
+}
+
+// answerMCPTrust handles the trust dialog's button (Esc = deny).
+func (m *Model) answerMCPTrust(id string) tea.Cmd {
+	s := m.aiS()
+	p := s.mcpTrust
+	s.mcpTrust = nil
+	if p == nil {
+		return nil
+	}
+	a := mcp.TrustDeny
+	switch id {
+	case "once":
+		a = mcp.TrustOnce
+	case "always":
+		a = mcp.TrustAlways
+	}
+	if p.reply != nil {
+		p.reply <- a
+		return nil
+	}
+	if p.connect && a != mcp.TrustDeny {
+		return m.mcpConnect(p.server, a)
+	}
+	return nil
+}
+
+// ── Servers picker ─────────────────────────────────────────────────────
+
+// mcpStatusHint is a server row's hint: "local · running · pid 42 · 10 tools".
+func mcpStatusHint(st mcp.Status) string {
+	kind := "local"
+	if st.Type != mcp.TypeStdio {
+		kind = "remote"
+	}
+	parts := []string{kind}
+	switch {
+	case st.State == mcp.StateInvalid:
+		parts = append(parts, st.Problem)
+	case st.State == mcp.StateFailed:
+		parts = append(parts, "failed: "+st.Problem)
+	default:
+		parts = append(parts, st.State)
+	}
+	if st.Pid > 0 {
+		parts = append(parts, fmt.Sprintf("pid %d", st.Pid))
+	}
+	if st.Tools > 0 {
+		t := fmt.Sprintf("%d tools", st.Tools)
+		if st.Cached {
+			t += " (cached)"
+		}
+		parts = append(parts, t)
+	}
+	if !st.Trusted {
+		parts = append(parts, "not trusted")
+	}
+	if st.Source == mcp.SourceProject {
+		parts = append(parts, "project")
+	}
+	return ai.Redact(strings.Join(parts, " · "))
+}
+
+func mcpStatusIcon(st mcp.Status) string {
+	switch st.State {
+	case mcp.StateRunning:
+		return "●"
+	case mcp.StateFailed, mcp.StateInvalid:
+		return "✗"
+	}
+	return "○"
+}
+
+// openMCPServers lists every configured server.
+func (m *Model) openMCPServers() tea.Cmd {
+	mgr := m.aiMCP()
+	mgr.Reload()
+	list := mgr.Servers()
+	if len(list) == 0 {
+		return m.aiInfo("No MCP servers yet: add them to " + mcpUserPath() + " (Open Config: MCP Servers)")
+	}
+	items := make([]picker.Item, 0, len(list))
+	for _, st := range list {
+		items = append(items, picker.Item{ID: st.Name, Title: mcpStatusIcon(st) + " " + st.Name, Hint: mcpStatusHint(st)})
+	}
+	m.picker = picker.NewItems(" MCP servers (Enter: actions) ", items)
+	m.picker.SetSize(m.w, m.h)
+	m.pickerOpen = true
+	m.pickerKind = pickerKindMCPServers
+	return nil
+}
+
+// openMCPServerActions is the second picker for one server.
+func (m *Model) openMCPServerActions(name string) tea.Cmd {
+	var st mcp.Status
+	for _, x := range m.aiMCP().Servers() {
+		if x.Name == name {
+			st = x
+		}
+	}
+	if st.Name == "" {
+		return nil
+	}
+	m.aiS().mcpSel = name
+	items := []picker.Item{
+		{ID: "connect", Title: "Connect / Refresh tools", Hint: "start it and list its tools"},
+		{ID: "tools", Title: "Show tools", Hint: fmt.Sprintf("%d tools", st.Tools)},
+	}
+	if st.Pid > 0 {
+		items = append(items, picker.Item{ID: "stop", Title: "Stop", Hint: fmt.Sprintf("pid %d", st.Pid)})
+	}
+	if !st.Trusted {
+		items = append(items, picker.Item{ID: "trust", Title: "Trust (always allow this entry)", Hint: "asks again when the entry changes"})
+	}
+	items = append(items,
+		picker.Item{ID: "edit", Title: "Edit in mcp.json", Hint: st.Source},
+		picker.Item{ID: "log", Title: "Show log", Hint: "Output: MCP"},
+	)
+	m.picker = picker.NewItems(" MCP "+name+" — "+mcpStatusHint(st)+" ", items)
+	m.picker.SetSize(m.w, m.h)
+	m.pickerOpen = true
+	m.pickerKind = pickerKindMCPServer
+	return nil
+}
+
+// mcpConnectDoneMsg ends a Connect from the servers picker.
+type mcpConnectDoneMsg struct {
+	name string
+	err  error
+}
+
+// mcpConnect starts a server and lists its tools on a Cmd goroutine.
+func (m *Model) mcpConnect(name string, answer mcp.TrustAnswer) tea.Cmd {
+	mgr := m.aiMCP()
+	ask := func(context.Context, mcp.Server) mcp.TrustAnswer { return answer }
+	return tea.Batch(m.aiInfo("MCP "+name+": starting…"), func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		return mcpConnectDoneMsg{name: name, err: mgr.Connect(ctx, ask, name)}
+	})
+}
+
+func (m *Model) onMCPConnectDone(msg mcpConnectDoneMsg) tea.Cmd {
+	if msg.err != nil {
+		return m.aiToastErr("MCP "+msg.name, msg.err)
+	}
+	for _, st := range m.aiMCP().Servers() {
+		if st.Name == msg.name {
+			return m.aiInfo("MCP " + msg.name + ": " + mcpStatusHint(st))
+		}
+	}
+	return nil
+}
+
+// onMCPServerAction runs one action of the server picker.
+func (m *Model) onMCPServerAction(id string) tea.Cmd {
+	name := m.aiS().mcpSel
+	mgr := m.aiMCP()
+	var st mcp.Status
+	for _, x := range mgr.Servers() {
+		if x.Name == name {
+			st = x
+		}
+	}
+	if st.Name == "" {
+		return nil
+	}
+	switch id {
+	case "connect":
+		if !st.Trusted {
+			for _, sv := range mcpServerEntries(name) {
+				m.aiS().mcpTrust = &aiMCPTrustPending{server: name, connect: true}
+				m.mcpTrustDialog(sv)
+				return nil
+			}
+		}
+		return m.mcpConnect(name, mcp.TrustDeny)
+	case "stop":
+		mgr.Stop(name)
+		return m.aiInfo("MCP " + name + ": stopped")
+	case "tools":
+		return m.openMCPTools(name)
+	case "trust":
+		for _, sv := range mcpServerEntries(name) {
+			if err := mcp.SaveTrusted(mcpConfigPath(), sv.Name, sv.Hash()); err != nil {
+				return m.aiToastErr("MCP "+name, err)
+			}
+		}
+		return m.aiInfo("MCP " + name + ": trusted")
+	case "edit":
+		for _, sv := range mcpServerEntries(name) {
+			m.openFileAtLine(sv.SourcePath, 1)
+		}
+		return nil
+	case "log":
+		return m.showMCPLog()
+	}
+	return nil
+}
+
+// mcpServerEntries is the current mcp.json entry of name (0 or 1).
+func mcpServerEntries(name string) []mcp.Server {
+	list, _ := mcp.Load(mcpUserPath(), mcp.ProjectPath(aiWorkspaceRoot()))
+	for _, s := range list {
+		if s.Name == name {
+			return []mcp.Server{s}
+		}
+	}
+	return nil
+}
+
+// openMCPTools shows a server's tools with how each one is gated, so the
+// user can review them (tool poisoning).
+func (m *Model) openMCPTools(name string) tea.Cmd {
+	srv, tools, ok := m.aiMCP().KnownTools(name)
+	if !ok || len(tools) == 0 {
+		return m.aiInfo("MCP " + name + ": no tools known yet — Connect first")
+	}
+	trust := mcp.LoadSettings(mcpConfigPath()).TrustAnnotations
+	var items []picker.Item
+	for _, t := range tools {
+		exposed, mutating, class := mcp.Gate(srv, t, trust)
+		gate := "runs at once"
+		switch {
+		case !exposed:
+			gate = "hidden"
+		case mutating && class == "":
+			gate = "always asks"
+		case mutating:
+			gate = "asks"
+		}
+		desc := aiCleanText(strings.SplitN(t.Description, "\n", 2)[0])
+		if r := []rune(desc); len(r) > 80 {
+			desc = string(r[:79]) + "…"
+		}
+		items = append(items, picker.Item{ID: t.Name, Title: t.Name + "  " + desc, Hint: gate})
+	}
+	m.picker = picker.NewItems(" MCP "+name+" tools ", items)
+	m.picker.SetSize(m.w, m.h)
+	m.pickerOpen = true
+	m.pickerKind = pickerKindMCPTools
+	return nil
+}
+
+// showMCPLog opens the Output panel on the MCP channel.
+func (m *Model) showMCPLog() tea.Cmd {
+	m.aiMCP() // the channel exists once MCP ran; show it empty otherwise
+	m.output.SetActive(mcpLogChannel)
+	m.showPanelTab(panelKindOutput)
+	return nil
+}
+
+// editMCPConfig opens the user mcp.json in the editor (created with an
+// empty mcpServers block when missing).
+func (m *Model) editMCPConfig() tea.Cmd {
+	p := mcpUserPath()
+	if p == "" {
+		return nil
+	}
+	if _, err := os.Stat(p); os.IsNotExist(err) {
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			return m.aiToastErr("MCP config", err)
+		}
+		if err := os.WriteFile(p, []byte("{\n  \"mcpServers\": {\n  }\n}\n"), 0o644); err != nil {
+			return m.aiToastErr("MCP config", err)
+		}
+	}
+	m.openFileAtLine(p, 1)
+	return m.aiInfo("Add servers (Claude / Cursor format), save; the next chat message uses them")
+}
+
+// handleMCPPickerSelect routes the MCP picker kinds. ok=false: not ours.
+func (m *Model) handleMCPPickerSelect(id string) (tea.Cmd, bool) {
+	switch m.pickerKind {
+	case pickerKindMCPServers:
+		return m.openMCPServerActions(id), true
+	case pickerKindMCPServer:
+		return m.onMCPServerAction(id), true
+	case pickerKindMCPTools:
+		return nil, true
+	}
+	return nil, false
+}
+
+// mcpAutoApproveClasses are the "mcp:<server>" rows of AI: Agent
+// Auto-Approve….
+func (m *Model) mcpAutoApproveClasses() []string {
+	var out []string
+	for _, st := range m.aiMCP().Servers() {
+		out = append(out, mcp.ClassPrefix+st.Name)
+	}
+	return out
+}

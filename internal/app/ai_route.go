@@ -24,6 +24,10 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onAIChatConfirm(msg), true
 	case aiIDECallMsg:
 		return m.onAIIDECall(msg), true
+	case aiMCPTrustMsg:
+		return m.onAIMCPTrust(msg), true
+	case mcpConnectDoneMsg:
+		return m.onMCPConnectDone(msg), true
 	case aiChatDoneMsg:
 		return m.onAIChatDone(msg), true
 	case aiActionResultMsg:

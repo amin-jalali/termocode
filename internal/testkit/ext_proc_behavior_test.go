@@ -12,12 +12,15 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/extproc/extproctest"
+	"github.com/amin-jalali/termocode/internal/mcp/mcptest"
 )
 
 // TestMain lets this test binary also be the fake Tier 2 extension
-// (extproctest): the app starts it as a separate process.
+// (extproctest) and the fake MCP server (mcptest): the app starts them as
+// separate processes.
 func TestMain(m *testing.M) {
 	extproctest.RunIfHelper()
+	mcptest.RunIfHelper()
 	os.Exit(m.Run())
 }
 

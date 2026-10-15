@@ -155,6 +155,10 @@ func TestManagerCall(t *testing.T) {
 	if m.Running() != 1 {
 		t.Errorf("running = %d", m.Running())
 	}
+	r, err = m.Call(context.Background(), nil, "fake", "write_note", map[string]any{"title": "two"})
+	if err != nil || r.Text() != "wrote two" {
+		t.Fatalf("second call = %q, %v", r.Text(), err)
+	}
 	pid := status(m, "fake").Pid
 	m.Stop("fake")
 	waitGone(t, pid, 5*time.Second)
