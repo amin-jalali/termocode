@@ -15,7 +15,7 @@ func TestSetExtraItems(t *testing.T) {
 	m := New()
 	m.SetHeight(40)
 	// First extension item sits right after the built-in top items.
-	y := len(topItems) * itemStride
+	y := topStart + len(topItems)*itemStride()
 	v, ok := m.itemAt(y)
 	if !ok || v != ViewExtBase {
 		t.Fatalf("itemAt(%d) = %v, %v; want ViewExtBase", y, v, ok)
