@@ -756,22 +756,22 @@ func (m Model) aiDividerLine(width int) aiLine {
 func aiInputHints(s *aiState) []string {
 	switch {
 	case s != nil && s.streaming:
-		return []string{"generating · ctrl+c stop", "ctrl+c stop"}
+		return []string{"generating · Ctrl+C stop", "Ctrl+C stop"}
 	case s != nil && s.focused:
-		return []string{"enter send · shift+enter newline", "enter send"}
+		return []string{"Enter send · Shift+Enter newline", "Enter send"}
 	}
-	return []string{"alt+a chat · F6 focus", "F6 focus"}
+	return []string{"Alt+A chat · F6 focus", "F6 focus"}
 }
 
 // aiFooterLine is the key hint shown inside the input box's bottom border.
 func (m Model) aiFooterLine(width int) aiLine {
 	s := m.ai
-	hint := "enter send · shift+enter newline"
+	hint := "Enter send · Shift+Enter newline"
 	switch {
 	case s != nil && s.streaming:
-		hint = "■ generating — ctrl+c stop"
+		hint = "■ generating — Ctrl+C stop"
 	case s != nil && !s.focused:
-		hint = "alt+a chat · F6 focus"
+		hint = "Alt+A chat · F6 focus"
 	}
 	return aiLine{text: hint, style: theme.Fg(theme.TextDim)}
 }

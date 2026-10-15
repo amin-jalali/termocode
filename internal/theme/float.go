@@ -75,7 +75,66 @@ func FloatBox(content string, width int) string {
 func Keycap(key string, bg lipgloss.Color) string {
 	c := Float()
 	_ = bg
-	return lipgloss.NewStyle().Background(c.KeycapBg).Foreground(c.KeycapFg).Bold(true).Render(" " + key + " ")
+	return lipgloss.NewStyle().Background(c.KeycapBg).Foreground(c.KeycapFg).Bold(true).Render(" " + KeyLabel(key) + " ")
+}
+
+// KeyLabel writes a key the way every hint in termocode does, the keyboard
+// reference's notation (UI review #3): "enter" → "Enter", "ctrl+c" →
+// "Ctrl+C", "^P" → "Ctrl+P", "⌃↵" → "Ctrl+Enter". Single letters ("a",
+// "A/R") and arrows stay as they are: their case is the key.
+func KeyLabel(key string) string {
+	if strings.HasPrefix(key, "^") && len(key) == 2 {
+		return "Ctrl+" + strings.ToUpper(key[1:])
+	}
+	if r := []rune(key); len(r) == 2 && (r[0] == '⌃' || r[0] == '⌥' || r[0] == '⇧') {
+		return map[rune]string{'⌃': "Ctrl+", '⌥': "Alt+", '⇧': "Shift+"}[r[0]] + KeyLabel(string(r[1]))
+	}
+	parts := strings.Split(key, "+")
+	if len(parts) > 1 && parts[len(parts)-1] == "" { // "ctrl++"
+		parts = append(parts[:len(parts)-2], "+")
+	}
+	for i, p := range parts {
+		parts[i] = keyWord(p, len(parts) > 1)
+	}
+	return strings.Join(parts, "+")
+}
+
+// keyWord names one part of a key. A single letter keeps its case unless
+// it follows a modifier (ctrl+c → Ctrl+C).
+func keyWord(p string, combo bool) string {
+	switch strings.ToLower(p) {
+	case "ctrl":
+		return "Ctrl"
+	case "alt":
+		return "Alt"
+	case "shift":
+		return "Shift"
+	case "enter", "↵", "return":
+		return "Enter"
+	case "esc", "escape":
+		return "Esc"
+	case "tab", "⇥":
+		return "Tab"
+	case "space":
+		return "Space"
+	case "backspace":
+		return "Backspace"
+	case "pgup":
+		return "PgUp"
+	case "pgdown":
+		return "PgDn"
+	case "home":
+		return "Home"
+	case "end":
+		return "End"
+	}
+	if len(p) >= 2 && (p[0] == 'f' || p[0] == 'F') && p[1] >= '0' && p[1] <= '9' {
+		return "F" + p[1:]
+	}
+	if combo && len(p) == 1 {
+		return strings.ToUpper(p)
+	}
+	return p
 }
 
 // HintBar renders "key label  key label …" footer hints on bg, e.g.
