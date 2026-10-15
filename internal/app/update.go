@@ -871,8 +871,10 @@ func (m Model) routeToPrompt(msg tea.Msg) (Model, tea.Cmd) {
 		m.prompt.SetSize(m.w, m.h)
 		return m, nil
 	case tea.MouseMsg:
-		_ = msg
-		return m, nil
+		// The footer hints are buttons (Enter submit, Esc cancel).
+		var cmd tea.Cmd
+		m.prompt, cmd = m.prompt.HandleMouse(msg.X, msg.Y, msg.Action, msg.Button)
+		return m, cmd
 	}
 	var cmd tea.Cmd
 	m.prompt, cmd = m.prompt.Update(msg)

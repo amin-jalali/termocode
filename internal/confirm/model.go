@@ -174,6 +174,26 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 		return m, nil, inside
 	}
 
+	// The footer hints are buttons too: Enter picks the highlighted
+	// button, Esc cancels.
+	if inside && y == boxRect.y+boxRect.h-2 {
+		rel := x - (boxRect.x + 1 + 2)
+		for _, sp := range theme.HintSpans(confirmHints...) {
+			if rel < sp.X0 || rel >= sp.X1 {
+				continue
+			}
+			switch sp.Key {
+			case "enter":
+				if m.cursor >= 0 && m.cursor < len(m.buttons) {
+					id := m.buttons[m.cursor].ID
+					return m, func() tea.Msg { return SelectMsg{ID: id} }, true
+				}
+			case "esc":
+				return m, func() tea.Msg { return CloseMsg{} }, true
+			}
+		}
+	}
+
 	// Hit-test each button rect (1-row tall).
 	for i, br := range buttonRects {
 		if x >= br.x && x < br.x+br.w && y == br.y {
@@ -187,6 +207,8 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 	// (destructive: no implicit dismiss).
 	return m, nil, inside
 }
+
+var confirmHints = []string{"←→", "move", "enter", "select", "esc", "cancel"}
 
 // Palette mirrors the Settings modal so confirm shares the same visual
 // idiom — same panel bg, dim rim, hairline separators, soft selection
@@ -437,7 +459,7 @@ func (m Model) Box() string {
 	// Bottom hairline separator + footer key-hints.
 	rows = append(rows, separatorStyle.Render(strings.Repeat("─", innerW)))
 	_ = footerStyle
-	footer := theme.HintBar(cmBoxBg, "←→", "move", "enter", "select", "esc", "cancel")
+	footer := theme.HintBar(cmBoxBg, confirmHints...)
 	rows = append(rows, padBg(bgFill.Render("  ")+footer, innerW))
 
 	content := lipgloss.JoinVertical(lipgloss.Left, rows...)

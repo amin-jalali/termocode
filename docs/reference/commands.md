@@ -13,7 +13,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Apply Last Code Block to File | `ai-apply-code` |   |   |
 | AI: Apply Proposed Edit | `ai-apply-proposal` |   |   |
 | AI: Chat History… | `ai-history` |   |   |
+| AI: Clear Chat History | `ai-history-clear` |   |   |
 | AI: Configure Provider… | `ai-configure` |   |   |
+| AI: Delete Chat… | `ai-history-delete` |   |   |
 | AI: Discard Proposed Edit | `ai-discard-proposal` |   |   |
 | AI: Edit Selection… | `ai-edit` | `Alt+I` | `Alt+I` |
 | AI: Explain Selection / Line | `ai-explain` |   |   |
@@ -23,6 +25,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: New Chat | `ai-new-chat` |   |   |
 | AI: Open Chat | `ai-open-chat` | `Alt+A` | `Alt+A` |
 | AI: Pick Model… | `ai-pick-model` |   |   |
+| AI: Rename Chat… | `ai-history-rename` |   |   |
 | AI: Review Pending Changes | `ai-review` |   |   |
 | AI: Sign in with Claude (OAuth, opt-in)… | `ai-sign-in-claude` |   |   |
 | AI: Sign out of Claude | `ai-sign-out-claude` |   |   |

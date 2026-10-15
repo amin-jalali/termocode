@@ -47,6 +47,10 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAIModelPicked(id), true
 	case pickerKindAIHistory:
 		return m.onAIHistoryPicked(id), true
+	case pickerKindAIHistoryDelete:
+		return m.onAIHistoryDeletePicked(id), true
+	case pickerKindAIHistoryRename:
+		return m.onAIHistoryRenamePicked(id), true
 	case pickerKindAIAutoApprove:
 		return m.onAIAutoApproveToggled(id), true
 	case pickerKindAIAttach:
@@ -68,6 +72,8 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAIBaseURLEntered(value), true
 	case promptKindAIOAuthCode:
 		return m.onClaudeCodePasted(value), true
+	case promptKindAIHistoryRename:
+		return m.onAIHistoryRenamed(strings.TrimSpace(value)), true
 	case promptKindAISaveAs:
 		return m.onAISaveAsPath(value), true
 	}
@@ -88,6 +94,10 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return nil, true
 	case confirmKindAISaveOverwrite:
 		return m.onAISaveOverwrite(id), true
+	case confirmKindAIHistoryDelete:
+		return m.onAIHistoryDeleteConfirm(id), true
+	case confirmKindAIHistoryClear:
+		return m.onAIHistoryClearConfirm(id), true
 	}
 	return nil, false
 }

@@ -209,6 +209,43 @@ func (m Model) View() string { return m.Box() }
 //	╰──────────────────────────────────────╯
 //
 // Colours come from theme.Float(), shared with every floating card.
+// Origin is the box's top-left cell when the app centres it (modalOverlay
+// default placement).
+func (m Model) Origin() (x, y int) {
+	box := m.Box()
+	return (m.w - lipgloss.Width(box)) / 2, (m.h - lipgloss.Height(box)) / 2
+}
+
+// HandleMouse makes the footer hints buttons: a click on "Enter submit"
+// submits, on "Esc cancel" closes. Other clicks do nothing.
+func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseButton) (Model, tea.Cmd) {
+	if action != tea.MouseActionPress || button != tea.MouseButtonLeft || m.w <= 0 {
+		return m, nil
+	}
+	bx, by := m.Origin()
+	box := m.Box()
+	if y != by+lipgloss.Height(box)-2 {
+		return m, nil
+	}
+	rel := x - (bx + 1 + 2)
+	for _, sp := range theme.HintSpans(promptHints...) {
+		if rel < sp.X0 || rel >= sp.X1 {
+			continue
+		}
+		switch sp.Key {
+		case "enter":
+			if v := strings.TrimSpace(m.value); v != "" {
+				return m, func() tea.Msg { return SubmitMsg{Value: v} }
+			}
+		case "esc":
+			return m, func() tea.Msg { return CloseMsg{} }
+		}
+	}
+	return m, nil
+}
+
+var promptHints = []string{"enter", "submit", "esc", "cancel"}
+
 func (m Model) Box() string {
 	if m.w <= 0 || m.h <= 0 {
 		return ""
@@ -273,7 +310,7 @@ func (m Model) Box() string {
 	}
 	rows = append(rows, field+bgFill.Render(" "))
 	rows = append(rows, blank)
-	rows = append(rows, padBg(bgFill.Render("  ")+theme.HintBar(f.Bg, "enter", "submit", "esc", "cancel"), innerW))
+	rows = append(rows, padBg(bgFill.Render("  ")+theme.HintBar(f.Bg, promptHints...), innerW))
 
 	return theme.FloatBox(lipgloss.JoinVertical(lipgloss.Left, rows...), boxW)
 }

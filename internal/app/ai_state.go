@@ -32,6 +32,8 @@ import (
 // aiState is the AI feature state. Held by pointer on Model so Bubble Tea
 // value copies and background goroutines share one instance.
 type aiState struct {
+	// historyTarget is the chat a Delete / Rename dialog is about.
+	historyTarget string
 	// streamSteps counts chat events; the status bar's busy comet moves
 	// one step per event (no timer).
 	streamSteps int
@@ -264,6 +266,9 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-open-chat", "AI: Open Chat", "Alt+A"},
 		{"ai-new-chat", "AI: New Chat", ""},
 		{"ai-history", "AI: Chat History…", ""},
+		{"ai-history-rename", "AI: Rename Chat…", ""},
+		{"ai-history-delete", "AI: Delete Chat…", ""},
+		{"ai-history-clear", "AI: Clear Chat History", ""},
 		{"ai-explain", "AI: Explain Selection / Line", ""},
 		{"ai-fix", "AI: Fix Diagnostic at Cursor", ""},
 		{"ai-edit", "AI: Edit Selection…", "Alt+I"},
@@ -300,7 +305,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	// the configure / sign-in / credentials entries are the way out.
 	switch id {
 	case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials",
-		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve":
+		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
+		"ai-history-rename", "ai-history-delete", "ai-history-clear":
 	default:
 		if c, ok := m.aiReady(); !ok {
 			return c, true
@@ -313,6 +319,12 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.newAIChat(), true
 	case "ai-history":
 		return m.openAIHistory(), true
+	case "ai-history-rename":
+		return m.openAIHistoryFor(pickerKindAIHistoryRename, " Rename Chat "), true
+	case "ai-history-delete":
+		return m.openAIHistoryFor(pickerKindAIHistoryDelete, " Delete Chat "), true
+	case "ai-history-clear":
+		return m.confirmAIHistoryClear(), true
 	case "ai-explain":
 		return m.aiExplain(), true
 	case "ai-fix":
