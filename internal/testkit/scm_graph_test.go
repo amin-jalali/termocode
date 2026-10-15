@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/app"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -213,5 +214,45 @@ func TestSCMGraphUnpushedMark(t *testing.T) {
 	d.Action("palette:git-refresh")
 	if !until(d, func() bool { return !strings.Contains(sidebar(d)[mustRow(d, "local work")], mark) }) {
 		t.Errorf("mark stays after push: %q", sidebar(d)[mustRow(d, "local work")])
+	}
+}
+
+// sinkClipboard catches copies for the rest of the test.
+func sinkClipboard(t *testing.T) *fakeClipboard {
+	clip := &fakeClipboard{}
+	t.Cleanup(app.SetClipboardSink(func(s string) {
+		clip.mu.Lock()
+		clip.last, clip.n = s, clip.n+1
+		clip.mu.Unlock()
+	}))
+	return clip
+}
+
+// Spec (scm-graph §2.7): with the cursor on a GRAPH commit, y copies the
+// full SHA and a toast names the short one; the right-click menu also
+// offers Copy Commit Message.
+func TestSCMCopyShaAndMessage(t *testing.T) {
+	clip := sinkClipboard(t)
+	d, r := scmDriver(t, graphRepo)
+	y := mustRow(d, "add parser")
+	d.Click(colOf(d, y, "add parser"), y)
+	d.Key("y")
+	full := r.git("rev-parse", "v1.0")
+	if !until(d, func() bool { got, _ := clip.get(); return got == full }) {
+		got, _ := clip.get()
+		t.Fatalf("y copied %q, want %q", got, full)
+	}
+	if short := r.git("rev-parse", "--short", "v1.0"); !until(d, func() bool { return strings.Contains(text(d), "Copied "+short) }) {
+		t.Errorf("no toast for the copy:%s", dump(d))
+	}
+	y = mustRow(d, "add parser")
+	d.RightClick(colOf(d, y, "add parser"), y)
+	if !until(d, func() bool { return strings.Contains(text(d), "Copy Commit Message") }) {
+		t.Fatalf("menu lacks Copy Commit Message:%s", dump(d))
+	}
+	clickText(d, "Copy Commit Message")
+	if !until(d, func() bool { got, _ := clip.get(); return strings.HasPrefix(got, "feat: add parser\n\nThe parser reads") }) {
+		got, _ := clip.get()
+		t.Errorf("message copied = %q", got)
 	}
 }
