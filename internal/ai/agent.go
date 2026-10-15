@@ -21,9 +21,12 @@ const (
 
 // Event is one agent progress report.
 type Event struct {
-	Kind   EventKind
-	Text   string
-	Tool   string
+	Kind EventKind
+	Text string
+	Tool string
+	// Label is the tool's name for people (Tool.Label: the display name
+	// of an MCP tool, mcp.<server>.<tool>); tool events only.
+	Label  string
 	Detail string
 	// Tool events: Args are the call's arguments (EventToolStart); Gate
 	// is how it was cleared (auto, confirm, review, invalid) and Decision
@@ -257,11 +260,11 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 		args = map[string]any{}
 	}
 	human := t.Human(args)
-	emit(Event{Kind: EventToolStart, Tool: t.Name, Detail: human, Args: args})
+	emit(Event{Kind: EventToolStart, Tool: t.Name, Label: t.Label(), Detail: human, Args: args})
 	if t.Validate != nil {
 		if err := t.Validate(args); err != nil {
 			result = "error: " + Redact(err.Error())
-			emit(Event{Kind: EventToolResult, Tool: t.Name, Detail: result, Gate: GateInvalid, Decision: "refused"})
+			emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: result, Gate: GateInvalid, Decision: "refused"})
 			return result
 		}
 	}
@@ -278,7 +281,7 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 	case t.Mutating:
 		gate = GateConfirm
 		if a.Confirm == nil || !a.Confirm(ctx, t, human) {
-			emit(Event{Kind: EventToolResult, Tool: t.Name, Detail: "declined by user", Gate: gate, Decision: "user denied"})
+			emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: "declined by user", Gate: gate, Decision: "user denied"})
 			return t.Name + ": the user declined this action. Do not retry it; continue without it or ask what to do instead."
 		}
 		decision = "user allowed"
@@ -286,14 +289,14 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 	defer func() {
 		if r := recover(); r != nil {
 			result = fmt.Sprintf("error: %v", r)
-			emit(Event{Kind: EventToolResult, Tool: t.Name, Detail: result, Gate: gate, Decision: decision})
+			emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: result, Gate: gate, Decision: decision})
 		}
 	}()
 	out, err := t.Run(context.WithValue(ctx, callIDKey{}, call.ID), args)
 	if err != nil {
 		out = "error: " + Redact(err.Error())
 	}
-	emit(Event{Kind: EventToolResult, Tool: t.Name, Detail: out, Gate: gate, Decision: decision})
+	emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: out, Gate: gate, Decision: decision})
 	return out
 }
 
