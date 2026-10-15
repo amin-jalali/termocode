@@ -39,7 +39,7 @@ func withRecents(t *testing.T, n int) {
 func TestWelcomeFitsShortPane(t *testing.T) {
 	withRecents(t, 5)
 	for _, h := range []int{37, 34} {
-		out := renderWelcome(120, h, 0)
+		out := renderWelcome(120, h, 0, true)
 		lines := strings.Split(out, "\n")
 		if len(lines) > h {
 			t.Errorf("h=%d: page is %d rows, taller than the pane", h, len(lines))
@@ -56,7 +56,7 @@ func TestWelcomeFitsShortPane(t *testing.T) {
 // TestWelcomeTallPaneKeepsLogo: with room to spare the logo stays.
 func TestWelcomeTallPaneKeepsLogo(t *testing.T) {
 	withRecents(t, 5)
-	renderWelcome(120, 60, 0)
+	renderWelcome(120, 60, 0, true)
 	if !welcomeLogoAt.ok {
 		t.Error("tall pane: logo missing")
 	}
@@ -66,7 +66,7 @@ func TestWelcomeTallPaneKeepsLogo(t *testing.T) {
 func TestWelcomeLogoOff(t *testing.T) {
 	withRecents(t, 5)
 	withDashboardLogo(t, "off")
-	out := renderWelcome(120, 60, 0)
+	out := renderWelcome(120, 60, 0, true)
 	if welcomeLogoAt.ok {
 		t.Error("logo off: logo still placed")
 	}
@@ -74,7 +74,7 @@ func TestWelcomeLogoOff(t *testing.T) {
 		t.Error("logo off: page body missing")
 	}
 	withDashboardLogo(t, "text")
-	if renderWelcome(120, 60, 0); !welcomeLogoAt.ok {
+	if renderWelcome(120, 60, 0, true); !welcomeLogoAt.ok {
 		t.Error("logo text: logo missing")
 	}
 }
@@ -94,7 +94,7 @@ func TestLogoImageOnlyWhenAsked(t *testing.T) {
 		want bool
 	}{{"text", false}, {"off", false}, {"image", true}} {
 		withDashboardLogo(t, c.mode)
-		renderWelcome(120, 57, 0)
+		renderWelcome(120, 57, 0, true)
 		if _, shown := m.placeLogo(frame); shown != c.want {
 			t.Errorf("dashboard_logo=%s: image shown=%v, want %v", c.mode, shown, c.want)
 		}

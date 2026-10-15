@@ -175,10 +175,10 @@ func renderWelcomeRow(r welcomeRow, w int, st welcomeRowState) string {
 			rightW = runewidth.StringWidth(theme.KeyLabel(txt)) + 2
 		} else {
 			st2 := fg(theme.TextSecondary)
-			if r.rightDim {
+			switch {
+			case r.rightDim: // a time stays quiet, also on the cursor
 				st2 = dim
-			}
-			if st == rowCursorFocused {
+			case st == rowCursorFocused:
 				st2 = fg(theme.TextWhite)
 			}
 			right = st2.Render(txt)

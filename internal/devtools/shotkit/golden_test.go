@@ -87,6 +87,9 @@ func goldenExtras() []Scene {
 		{Name: "setup-card", SetupCard: true, Env: map[string]string{"TERM": "xterm-kitty"}, Steps: []Step{Pause(1500 * time.Millisecond)}},
 		// The start page: a returning user, the light theme, ASCII icons.
 		DashboardRecent(),
+		// The cursor moved down onto the second recent file.
+		{Name: "dashboard-recent-cursor", Steps: append(DashboardRecent().Steps, Key("down"), Key("down"), Key("down"), Key("down"), Key("down"), Key("down"), Key("down")),
+			Recents: DashboardRecent().Recents, Workspaces: DashboardRecent().Workspaces},
 		{Name: "theme-catppuccin-latte-dashboard", Theme: "catppuccin-latte", Steps: DashboardRecent().Steps, Recents: DashboardRecent().Recents, Workspaces: DashboardRecent().Workspaces},
 		{Name: "dashboard-ascii", Icons: "ascii", Steps: DashboardRecent().Steps, Recents: DashboardRecent().Recents, Workspaces: DashboardRecent().Workspaces},
 		{Name: "md-preview-light", Theme: "catppuccin-latte", Steps: MarkdownPreview().Steps},

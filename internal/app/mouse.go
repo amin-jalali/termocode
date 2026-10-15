@@ -2,6 +2,8 @@ package app
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -521,100 +523,24 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 		pane := m.editorPaneLayout()
 		edPaneW, editorH := pane.W, pane.H
 		m.publishSetupCard()
-		nActions := len(welcomeQuickActions())
-		// Quick-action cards: dispatch the same keymap action the
-		// keyboard binding would fire. This goes first so a card click
-		// doesn't accidentally fall through to a recents row underneath.
-		// Also moves the keyboard focus to the clicked card so a
-		// follow-up Enter / arrow press stays in sync with what the
-		// user just pointed at.
-		if msg.Type == tea.MouseMotion {
-			// Hover: the card under the pointer lights up.
-			for _, hit := range welcomeQuickActionHits(edPaneW, editorH) {
-				if localY == hit.Row && localX >= hit.ColStart && localX < hit.ColEnd {
-					m.welcomeFocus = hit.Index
-					break
-				}
-			}
-			for _, hit := range welcomeSetupHits(edPaneW, editorH) {
-				if localY == hit.Row && localX >= hit.ColStart && localX < hit.ColEnd {
-					m.welcomeFocus = nActions + hit.Index
-					break
-				}
-			}
-			return m, nil
-		}
-		// Setup card buttons (setup_card*.go).
-		for _, hit := range welcomeSetupHits(edPaneW, editorH) {
+		for i, hit := range welcomeRows(edPaneW, editorH) {
 			if localY != hit.Row || localX < hit.ColStart || localX >= hit.ColEnd {
 				continue
 			}
-			if m.probed("welcome:setup:" + hit.ID) {
+			// Hover and click move the one cursor to the row under the
+			// pointer; a click also runs it.
+			m.welcomeFocus = i
+			if msg.Type == tea.MouseMotion {
 				return m, nil
 			}
-			m.welcomeFocus = nActions + hit.Index
+			if m.probed("welcome:" + hit.ID) {
+				return m, nil
+			}
 			m.focus = FocusEditor
-			return m, m.pressSetupButton(hit.ID)
+			return m.activateWelcomeRow(hit.ID)
 		}
-		for _, hit := range welcomeQuickActionHits(edPaneW, editorH) {
-			if localY != hit.Row {
-				continue
-			}
-			if localX < hit.ColStart || localX >= hit.ColEnd {
-				continue
-			}
-			if m.probed("welcome:card:" + itoa(hit.Index)) {
-				return m, nil
-			}
-			m.welcomeFocus = hit.Index
-			m.focus = FocusEditor
-			return m.runWelcomeCard(hit.Index)
-		}
-		for _, hit := range welcomeRecentHits(edPaneW, editorH) {
-			if localY != hit.Row {
-				continue
-			}
-			// ColEnd == 0 means full-row hit (stacked layout); otherwise
-			// only react when the click landed inside the recents column.
-			if hit.ColEnd > 0 && (localX < hit.ColStart || localX >= hit.ColEnd) {
-				continue
-			}
-			if m.probed("welcome:recent:" + hit.Path) {
-				return m, nil
-			}
-			// Sentinel: "View all →" row opens the dedicated recents
-			// modal (Ctrl+R) instead of `:edit`-ing a file.
-			if hit.Path == welcomeSentinelViewAll {
-				m.focus = FocusEditor
-				return m, m.openRecentFilePicker()
-			}
-			if m.nvim != nil {
-				m.ensureEditorWindowCurrent()
-				_ = m.nvim.OpenFile("edit", hit.Path)
-			}
-			m.focus = FocusEditor
+		if msg.Type == tea.MouseMotion {
 			return m, nil
-		}
-		for _, hit := range welcomeWorkspaceHits(edPaneW, editorH) {
-			if localY != hit.Row {
-				continue
-			}
-			if hit.ColEnd > 0 && (localX < hit.ColStart || localX >= hit.ColEnd) {
-				continue
-			}
-			if m.probed("welcome:workspace:" + hit.Path) {
-				return m, nil
-			}
-			// "browse all → " sentinel opens the dedicated workspaces
-			// picker (same modal as "Workspaces: Open Recent" in the
-			// command palette) instead of re-execing.
-			if hit.Path == welcomeSentinelBrowseAll {
-				m.focus = FocusEditor
-				return m, m.openWorkspacePicker()
-			}
-			// Workspace click re-execs termocode in that folder; openWorkspace
-			// returns a toast cmd on failure (success replaces the process).
-			return m, m.openWorkspace(hit.Path)
 		}
 	}
 
@@ -732,17 +658,16 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 	return m, cmd
 }
 
-// handleWelcomeKey lets the Quick Actions row act as a keyboard menu
-// while the welcome screen is showing: ←/→/Tab cycle focus, ↑/↓ mirror
-// (since the card row may wrap to 2×2 on narrow widths, but cycling
-// through 0..3 still reaches every card), and Enter dispatches the
-// focused card's action. Returns handled=true when the key was
-// consumed so handleGlobalKey skips its normal switch.
+// handleWelcomeKey moves the start page cursor over every interactive row
+// (START, setup, recent files, workspaces): ↓ / ↑ / Tab / Shift+Tab (and
+// → / ←) step and wrap, Home / End jump, Enter runs the row. Returns
+// handled=true when the key was consumed so handleGlobalKey skips its
+// normal switch; every other key (Ctrl+P, F1, …) falls through.
 func (m Model) handleWelcomeKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
-	actions := welcomeQuickActions()
-	// The setup card's buttons follow the action cards in the cycle.
-	buttons := m.setupCardView().buttons()
-	n := len(actions) + len(buttons)
+	m.publishSetupCard()
+	pane := m.editorPaneLayout()
+	rows := welcomeRows(pane.W, pane.H)
+	n := len(rows)
 	if n == 0 {
 		return m, nil, false
 	}
@@ -751,23 +676,50 @@ func (m Model) handleWelcomeKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 	}
 	switch msg.String() {
 	case "left", "shift+tab", "up":
-		// On a single-row layout, up/down map to left/right so users
-		// who reach for the vertical arrows still navigate. Wraps.
 		m.welcomeFocus = (m.welcomeFocus - 1 + n) % n
 		return m, nil, true
 	case "right", "tab", "down":
 		m.welcomeFocus = (m.welcomeFocus + 1) % n
 		return m, nil, true
+	case "home":
+		m.welcomeFocus = 0
+		return m, nil, true
+	case "end":
+		m.welcomeFocus = n - 1
+		return m, nil, true
 	case "enter":
-		idx := m.welcomeFocus
-		if idx >= len(actions) {
-			cmd := m.pressSetupButton(buttons[idx-len(actions)].id)
-			return m, cmd, true
-		}
-		newM, cmd := m.runWelcomeCard(idx)
+		newM, cmd := m.activateWelcomeRow(rows[m.welcomeFocus].ID)
 		return newM, cmd, true
 	}
 	return m, nil, false
+}
+
+// activateWelcomeRow runs start page row id (welcomeRowHit.ID).
+func (m Model) activateWelcomeRow(id string) (Model, tea.Cmd) {
+	kind, arg, _ := strings.Cut(id, ":")
+	switch kind {
+	case "card":
+		i, _ := strconv.Atoi(arg)
+		return m.runWelcomeCard(i)
+	case "setup":
+		return m, m.pressSetupButton(arg)
+	case "recent":
+		if arg == welcomeSentinelViewAll {
+			return m, m.openRecentFilePicker()
+		}
+		if m.nvim != nil {
+			m.ensureEditorWindowCurrent()
+			_ = m.nvim.OpenFile("edit", arg)
+		}
+		return m, nil
+	case "workspace":
+		if arg == welcomeSentinelBrowseAll {
+			return m, m.openWorkspacePicker()
+		}
+		// Re-execs termocode in that folder; a toast on failure.
+		return m, m.openWorkspace(arg)
+	}
+	return m, nil
 }
 
 // dispatchWelcomeAction routes a Quick-Action card click to the same

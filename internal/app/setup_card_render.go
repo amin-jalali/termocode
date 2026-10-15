@@ -49,7 +49,7 @@ func setupIndent(innerW int) int {
 // buildSetupCard renders the card at innerW. lineOffset is the row of its
 // first line in the page; focus is the focused button (index into
 // v.buttons(), out of range = none).
-func buildSetupCard(v setupCardView, innerW, lineOffset, focus int, compact bool) ([]string, []welcomeSetupHit) {
+func buildSetupCard(v setupCardView, innerW, lineOffset, focus int, focused, compact bool) ([]string, []welcomeSetupHit) {
 	bg := theme.Bg(theme.BgEditor)
 	dim := theme.FgBg(theme.TextDim, theme.BgEditor)
 	muted := theme.FgBg(theme.TextMuted, theme.BgEditor)
@@ -94,7 +94,7 @@ func buildSetupCard(v setupCardView, innerW, lineOffset, focus int, compact bool
 				row += pad(setupButtonGap)
 				col += setupButtonGap
 			}
-			row += renderSetupButton(b, btnIdx == focus, min(w, innerW-col))
+			row += renderSetupButton(b, btnIdx == focus && focused, min(w, innerW-col))
 			hits = append(hits, welcomeSetupHit{Row: lineOffset + len(lines), ColStart: col, ColEnd: min(col+w, innerW), ID: b.id, Index: btnIdx})
 			col += w
 			btnIdx++

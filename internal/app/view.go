@@ -463,7 +463,7 @@ func (m Model) renderBaseLines() []string {
 	// the welcome screen and the diff would appear to vanish.
 	if m.editorEmpty() {
 		m.publishSetupCard()
-		editorContent = renderWelcome(edPaneW, editorH, m.welcomeFocus)
+		editorContent = renderWelcome(edPaneW, editorH, m.welcomeFocus, m.editorHasKeys())
 	} else {
 		editorContent = m.editor.View(m.focus == FocusEditor)
 		// When the integrated terminal panel is open, applyLayout shrinks

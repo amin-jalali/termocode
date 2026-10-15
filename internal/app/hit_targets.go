@@ -331,7 +331,7 @@ func (m Model) overflowMenuTargets() []hitTarget {
 
 func (m Model) welcomeTargets(pane editorPane) []hitTarget {
 	m.publishSetupCard()
-	view := renderWelcome(pane.W, pane.H, m.welcomeFocus)
+	view := renderWelcome(pane.W, pane.H, m.welcomeFocus, m.editorHasKeys())
 	var out []hitTarget
 	add := func(id string, row, c0, c1 int) {
 		if row < 0 || row >= pane.H {
@@ -348,17 +348,8 @@ func (m Model) welcomeTargets(pane editorPane) []hitTarget {
 		out = append(out, hitTarget{ID: id, Label: cellText(view, row, c0, c1),
 			X: pane.X + c0, Y: pane.Top + row, W: c1 - c0, H: 1})
 	}
-	for _, h := range welcomeQuickActionHits(pane.W, pane.H) {
-		add("welcome:card:"+strconv.Itoa(h.Index), h.Row, h.ColStart, h.ColEnd)
-	}
-	for _, h := range welcomeSetupHits(pane.W, pane.H) {
-		add("welcome:setup:"+h.ID, h.Row, h.ColStart, h.ColEnd)
-	}
-	for _, h := range welcomeRecentHits(pane.W, pane.H) {
-		add("welcome:recent:"+h.Path, h.Row, h.ColStart, h.ColEnd)
-	}
-	for _, h := range welcomeWorkspaceHits(pane.W, pane.H) {
-		add("welcome:workspace:"+h.Path, h.Row, h.ColStart, h.ColEnd)
+	for _, h := range welcomeRows(pane.W, pane.H) {
+		add("welcome:"+h.ID, h.Row, h.ColStart, h.ColEnd)
 	}
 	return out
 }
