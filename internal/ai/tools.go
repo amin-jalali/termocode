@@ -24,9 +24,16 @@ type Tool struct {
 	Description string
 	Params      map[string]any // JSON-Schema properties
 	Required    []string
-	Mutating    bool
-	Class       string
-	Describe    func(args map[string]any) string
+	// Schema (optional) is a whole JSON Schema object sent as is by Spec
+	// (MCP tools bring one with $defs, anyOf …). Params stays the list the
+	// text protocol shows.
+	Schema map[string]any
+	// Display (optional) is the name people see in the confirm dialog
+	// ("mcp.linear.create_issue"); Name is the wire name the model calls.
+	Display  string
+	Mutating bool
+	Class    string
+	Describe func(args map[string]any) string
 	// Validate (optional) rejects bad args before the confirm gate, so
 	// the user is never asked about a call that cannot run.
 	Validate func(args map[string]any) error
@@ -40,6 +47,9 @@ type Tool struct {
 
 // Spec is the native tool-calling description of t.
 func (t Tool) Spec() ToolSpec {
+	if t.Schema != nil {
+		return ToolSpec{Name: t.Name, Description: t.Description, Schema: t.Schema}
+	}
 	props := t.Params
 	if props == nil {
 		props = map[string]any{}
@@ -49,6 +59,14 @@ func (t Tool) Spec() ToolSpec {
 		schema["required"] = t.Required
 	}
 	return ToolSpec{Name: t.Name, Description: t.Description, Schema: schema}
+}
+
+// Label is the name shown to people: Display, or Name.
+func (t Tool) Label() string {
+	if t.Display != "" {
+		return t.Display
+	}
+	return t.Name
 }
 
 // Human returns the one-line description of a specific call (shown in the
