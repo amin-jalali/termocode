@@ -1,7 +1,8 @@
 # Install
 
 termocode runs on **Linux** and **macOS**, on amd64 (x86-64) and arm64
-(Apple Silicon, ARM servers). It takes about one minute.
+(Apple Silicon, ARM servers). It takes about one minute. On Android it
+runs inside Termux: see [Android (Termux)](#android-termux).
 
 ## What you need
 
@@ -112,6 +113,50 @@ git clone https://github.com/amin-jalali/termocode.git
 cd termocode
 go install ./cmd/termocode       # or: go build -o termocode ./cmd/termocode
 ```
+
+## Android (Termux)
+
+termocode runs on an Android phone or tablet inside the
+[Termux](https://termux.dev) app. There is no release binary for Android
+yet (the install script tells you so), so build it with Go. It takes a
+few minutes on a phone.
+
+1. Install Termux **and the Termux:API app** from the same place
+   (F-Droid or GitHub). Do not mix them with the Play Store build.
+2. In Termux, install the tools:
+
+    ```sh
+    pkg install neovim golang git termux-api
+    pkg install ripgrep    # optional: fast search
+    ```
+
+3. Build and install termocode:
+
+    ```sh
+    go install github.com/amin-jalali/termocode/cmd/termocode@latest
+    export PATH="$PATH:$HOME/go/bin"    # add this line to ~/.bashrc too
+    termocode
+    ```
+
+This needs Go 1.26 or newer (`go version`; run `pkg upgrade` if it is
+older). No X11 headers are needed: the Android build leaves the X11
+clipboard library out.
+
+**Clipboard.** termocode uses `termux-clipboard-set` and
+`termux-clipboard-get` (package `termux-api`) for the Android clipboard,
+so copy and paste work with other apps. Without them, copies still reach
+Android through the terminal (OSC 52, Termux supports it), but pasting
+from other apps does not work. termocode then says: install the
+Termux:API app and run `pkg install termux-api`. Neovim's own `+`
+register also uses these commands.
+
+To save battery, termocode does not watch the Android clipboard. The
+clipboard history (`Ctrl+Shift+V`) shows copies made in the editor, not
+copies made in other apps.
+
+**Icons.** `termocode setup` does not install fonts on Android. To get
+Nerd Font icons, copy a Nerd Font `.ttf` to `~/.termux/font.ttf` and run
+`termux-reload-settings`. Or set `TERMOCODE_ICON_MODE=ascii`.
 
 ## Run it
 
