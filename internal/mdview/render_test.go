@@ -223,7 +223,7 @@ func TestHeadingsRulesAndSpacing(t *testing.T) {
 	if r := trim(rows[at("Two")+1]); r != strings.Repeat("─", col) {
 		t.Errorf("H2 rule = %q (want %d ─)", r, col)
 	}
-	if r := trim(rows[at("Three")]); r != "▸ Three" {
+	if r := trim(rows[at("Three")]); r != "Three" { // UI review #11: no chevron (it suggests folding)
 		t.Errorf("H3 row = %q", r)
 	}
 	if r := trim(rows[at("Three")+1]); r != "" {

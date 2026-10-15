@@ -122,7 +122,7 @@ type palette struct {
 type glyphs struct {
 	bullets            []string
 	checked, unchecked string
-	h3, quote, cont    string
+	quote, cont        string
 }
 
 type renderer struct {
@@ -165,9 +165,9 @@ func newRenderer(src []byte, opt Options) *renderer {
 		cardLabel: c(theme.TextMuted),
 		headBg:    theme.Mix(bg, theme.AccentBlue, 0.14),
 	}
-	g := glyphs{bullets: []string{"•", "◦", "▪"}, checked: "☑", unchecked: "☐", h3: "▸", quote: "▎", cont: "↪"}
+	g := glyphs{bullets: []string{"•", "◦", "▪"}, checked: "☑", unchecked: "☐", quote: "▎", cont: "↪"}
 	if theme.CurrentIconMode == theme.IconModeASCII {
-		g = glyphs{bullets: []string{"-", "*", "+"}, checked: "[x]", unchecked: "[ ]", h3: "", quote: "|", cont: ">"}
+		g = glyphs{bullets: []string{"-", "*", "+"}, checked: "[x]", unchecked: "[ ]", quote: "|", cont: ">"}
 	}
 	r := &renderer{src: src, opt: opt, p: p, g: g, styles: map[attrs]lipgloss.Style{}}
 	r.base = attrs{fg: p.text, bg: p.bg}
@@ -263,32 +263,26 @@ func (r *renderer) rawLines(segs *text.Segments) []string {
 	return out
 }
 
-// heading: H1 and H2 get a rule under the text; H3 and H4 a small marker.
+// heading draws one step of the heading ladder (UI review #11): H1 in the
+// brightest text over an accent rule, H2 in the accent over a thin rule,
+// H3 bold bright text, H4 and below bold secondary text. No markers: a
+// chevron reads as "fold here".
 func (r *renderer) heading(h *ast.Heading, width int) []line {
 	a := attrs{bg: r.p.bg, bold: true}
-	marker, markerFg := "", r.p.accent
 	switch h.Level {
-	case 1, 2:
+	case 1:
+		a.fg = r.p.strong
+	case 2:
 		a.fg = r.p.accent
 	case 3:
-		a.fg, marker = r.p.h3, r.g.h3
-	case 4:
-		a.fg, marker, markerFg = r.p.h4, r.g.h3, r.p.muted
+		a.fg = r.p.h3
 	default:
-		a.fg, a.ital = r.p.muted, true
+		a.fg = r.p.h4
 	}
-	mw := 0
-	if marker != "" {
-		mw = ansi.StringWidth(marker) + 1
-	}
-	body := r.wrapLines(r.inline(h, a), width-mw, r.p.bg)
+	body := r.wrapLines(r.inline(h, a), width, r.p.bg)
 	out := make([]line, 0, len(body)+1)
-	for i, l := range body {
-		pre := r.fill(mw, r.p.bg)
-		if i == 0 && marker != "" {
-			pre = r.text(marker, attrs{fg: markerFg, bg: r.p.bg, bold: true}) + r.fill(1, r.p.bg)
-		}
-		out = append(out, line{pre + l.s, width})
+	for _, l := range body {
+		out = append(out, line{l.s, width})
 	}
 	switch h.Level {
 	case 1:
