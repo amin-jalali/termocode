@@ -65,6 +65,22 @@ func TestSCMCommitViewMoreMenu(t *testing.T) {
 	_ = clip
 }
 
+// Spec (§2.7): the GRAPH right-click menu keeps the raw git show view as
+// "Show Raw (git show)".
+func TestSCMCommitMenuShowRaw(t *testing.T) {
+	d, _ := scmDriver(t, graphRepo)
+	y := mustRow(d, "add parser")
+	d.RightClick(colOf(d, y, "add parser"), y)
+	if !until(d, func() bool { return strings.Contains(text(d), "Show Raw (git show)") }) {
+		t.Fatalf("menu lacks Show Raw:%s", dump(d))
+	}
+	from, _ := d.Updates()
+	clickText(d, "Show Raw (git show)")
+	if !handled(d, from, "app.gitCommitDiffReadyMsg") {
+		t.Fatal("Show Raw did not load git show")
+	}
+}
+
 // Spec (§3.5, V3): Open file closes the card and opens the file of the
 // working tree in the editor.
 func TestSCMCommitViewOpenFile(t *testing.T) {
