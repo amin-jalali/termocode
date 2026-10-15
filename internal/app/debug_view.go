@@ -393,8 +393,8 @@ func (m Model) renderRunSidebar(w, h int) string {
 	blank := fill.Render(strings.Repeat(" ", w))
 
 	var lines []string
-	lines = append(lines, padRunRow(sidebarTitle("RUN AND DEBUG", w), w))
-	lines = append(lines, theme.FgBg(theme.BorderSubtle, theme.BgSidebar).Render(strings.Repeat("▔", maxInt(w, 0))))
+	lines = append(lines, padRunRow(sidebarTitle("RUN AND DEBUG", w, focused), w))
+	lines = append(lines, theme.PaneHairline(maxInt(w, 0), theme.BgSidebar, focused))
 	lines = append(lines, m.renderRunToolbar(w))
 	lines = append(lines, blank)
 

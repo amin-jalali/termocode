@@ -1,13 +1,18 @@
 package app
 
 import (
+	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/tabbar"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // TestTabAccentFollowsKeys: the active tab is lit only while keys go to
@@ -49,4 +54,34 @@ func TestAIPanelHasEdge(t *testing.T) {
 			t.Fatalf("row %d: width %d, want 50", i, w)
 		}
 	}
+}
+
+// Spec (UI review #6): side panel titles (Source Control, Run and Debug,
+// Testing) and the AI chat title use the accent only while that pane has
+// the keyboard.
+func TestPaneTitlesFollowFocus(t *testing.T) {
+	old := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	defer lipgloss.SetColorProfile(old)
+	accent := fgSGR(theme.BorderFocus)
+	if !strings.Contains(sidebarTitle("SOURCE CONTROL", 30, true), accent) {
+		t.Error("focused sidebar title not in the accent")
+	}
+	if strings.Contains(sidebarTitle("SOURCE CONTROL", 30, false), accent) {
+		t.Error("unfocused sidebar title in the accent")
+	}
+	m := Model{w: 150, h: 30}
+	ai := fgSGR(theme.AIAccent)
+	if strings.Contains(m.renderActionsHeader(50), ai) {
+		t.Error("AI chat title lit while the chat has no focus")
+	}
+	m.aiS().focused = true
+	if !strings.Contains(m.renderActionsHeader(50), ai) {
+		t.Error("AI chat title not lit while the chat has focus")
+	}
+}
+
+func fgSGR(c theme.Color256) string {
+	r, _ := theme.ParseHex(theme.Hex(c))
+	return "38;2;" + strconv.Itoa(int(r.R)) + ";" + strconv.Itoa(int(r.G)) + ";" + strconv.Itoa(int(r.B))
 }

@@ -223,3 +223,25 @@ func Wash(bg Color256, level WashLevel) lipgloss.Color {
 	}
 	return lipgloss.Color(Lerp(b, a, t).Hex())
 }
+
+// PaneTitle is the colour of a pane's title: the accent while the pane has
+// the keyboard, secondary text otherwise (UI review #6).
+func PaneTitle(focused bool) lipgloss.Color {
+	if focused {
+		return LG(BorderFocus)
+	}
+	return LG(TextSecondary)
+}
+
+// PaneHairline is the line under a pane's header, w cells on bg. The pane
+// with the keyboard gets the lit Hairline (accent fading out): termocode's
+// mark of "you are here"; the others a quiet rule.
+func PaneHairline(w int, bg Color256, focused bool) string {
+	if w <= 0 {
+		return ""
+	}
+	if focused {
+		return Hairline(w, bg)
+	}
+	return lipgloss.NewStyle().Foreground(LG(BorderSubtle)).Background(LG(bg)).Render(strings.Repeat("─", w))
+}
