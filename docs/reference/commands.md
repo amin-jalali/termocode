@@ -117,6 +117,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Extensions: Install Sample Extensions | `ext-manage-install-samples` |   |   |
 | Extensions: New Extension... | `ext-manage-new` |   |   |
+| Extensions: New Process Extension (Python)... | `ext-manage-new-process` |   |   |
 | Extensions: Open Folder | `ext-manage-open-folder` |   |   |
 | Extensions: Reload | `ext-manage-reload` |   |   |
 | Extensions: Show Log | `ext-manage-log` |   |   |

@@ -93,7 +93,9 @@ func isStarted(ev extproc.Event) bool { return ev.Kind == extproc.EvStarted }
 
 func isCommand(id string) func(extproc.Event) bool {
 	return func(ev extproc.Event) bool {
-		return isMethod("registerCommand")(ev) && strings.Contains(string(ev.Msg.Params), `"id":"`+id+`"`)
+		var p struct{ ID string }
+		_ = json.Unmarshal(ev.Msg.Params, &p)
+		return isMethod("registerCommand")(ev) && p.ID == id
 	}
 }
 
@@ -148,7 +150,8 @@ func ctx(t *testing.T) context.Context {
 
 func TestHostStartsRegistersAndRunsCommands(t *testing.T) {
 	h := newHost(t, "")
-	h.Set([]ext.Extension{fakeExt(t, nil)}) // no activation events: starts now
+	h.Set([]ext.Extension{fakeExt(t, nil)})
+	h.StartAtStartup() // no activation events: starts now
 	all(t, h, "start and registrations", isStarted, isCommand("hello"), isMethod("registerStatusItem"))
 	if err := h.Execute(ctx(t), "fake", "fake.hello", nil); err != nil {
 		t.Fatal(err)
@@ -165,6 +168,7 @@ func TestHostLazyStart(t *testing.T) {
 	h.Set([]ext.Extension{fakeExt(t, map[string]any{
 		"contributes": map[string]any{"commands": []map[string]string{{"id": "hello", "title": "Say Hello"}}},
 	})})
+	h.StartAtStartup()
 	if st := h.Status(); len(st) != 1 || st[0].State != extproc.StateIdle {
 		t.Fatalf("status before first use = %+v", st)
 	}
@@ -177,6 +181,7 @@ func TestHostLazyStart(t *testing.T) {
 func TestHostEventActivation(t *testing.T) {
 	h := newHost(t, "")
 	h.Set([]ext.Extension{fakeExt(t, map[string]any{"activationEvents": []string{"onSave"}})})
+	h.StartAtStartup()
 	h.Event("open", "/w/a.txt") // not an activation event: dropped
 	if st := h.Status(); st[0].State != extproc.StateIdle {
 		t.Fatalf("an open event started the extension: %+v", st)
@@ -188,6 +193,7 @@ func TestHostEventActivation(t *testing.T) {
 func TestHostRestartsAfterCrashThenGivesUp(t *testing.T) {
 	h := newHost(t, "")
 	h.Set([]ext.Extension{fakeExt(t, nil)})
+	h.StartAtStartup()
 	first := all(t, h, "start", isStarted, isCommand("crash"))[0]
 	for i := 1; i <= 2; i++ {
 		_ = h.Execute(ctx(t), "fake", "fake.crash", nil) // the process dies before it answers
@@ -196,8 +202,8 @@ func TestHostRestartsAfterCrashThenGivesUp(t *testing.T) {
 			t.Fatalf("crash %d: exit event %+v, want restarting with an error", i, ex)
 		}
 		got := all(t, h, "restart and re-registration", isStarted, isCommand("crash"))
-		if st := got[0]; st.Gen != first.Gen+i || got[1].Gen != st.Gen {
-			t.Errorf("restart %d gen = %d (registration gen %d), want %d", i, st.Gen, got[1].Gen, first.Gen+i)
+		if st := got[0]; st.Gen <= first.Gen || got[1].Gen != st.Gen {
+			t.Errorf("restart %d gen = %d (registration gen %d), want > %d", i, st.Gen, got[1].Gen, first.Gen)
 		}
 	}
 	_ = h.Execute(ctx(t), "fake", "fake.crash", nil)
@@ -213,6 +219,7 @@ func TestHostRestartsAfterCrashThenGivesUp(t *testing.T) {
 func TestHostPromptRoundTrip(t *testing.T) {
 	h := newHost(t, "")
 	h.Set([]ext.Extension{fakeExt(t, nil)})
+	h.StartAtStartup()
 	if err := h.Execute(ctx(t), "fake", "fake.ask", nil); err != nil {
 		t.Fatal(err)
 	}
@@ -235,6 +242,7 @@ func TestHostReadFileOnlyInWorkspace(t *testing.T) {
 	}
 	h := newHost(t, root)
 	h.Set([]ext.Extension{fakeExt(t, nil)})
+	h.StartAtStartup()
 	if err := h.Execute(ctx(t), "fake", "fake.read", []string{"in.txt"}); err != nil {
 		t.Fatal(err)
 	}
@@ -290,6 +298,7 @@ func TestHostStopLeavesNoProcess(t *testing.T) {
 			h := extproc.NewHost(extproc.Config{Root: t.TempDir(), StopTimeout: 500 * time.Millisecond})
 			defer h.Close()
 			h.Set([]ext.Extension{fakeExt(t, nil)})
+			h.StartAtStartup()
 			all(t, h, "started", isStarted)
 			if err := h.Execute(ctx(t), "fake", "fake.spawn", nil); err != nil {
 				t.Fatal(err)

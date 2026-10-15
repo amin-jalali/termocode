@@ -515,7 +515,20 @@ func aiExtRun(ctx context.Context, call aiIDECaller, id string) (string, error) 
 	id = strings.TrimPrefix(id, extPaletteIDPfx)
 	var title string
 	var client func(code string) (string, error)
+	var proc func() error // a process extension's command (N6b)
 	if _, err := call(ctx, func(m *Model) (string, tea.Cmd, error) {
+		if m.ext != nil && m.ext.proc != nil {
+			if name, ok := m.ext.procCmd[id]; ok {
+				for _, c := range m.ext.reg.Commands {
+					if c.ID == id {
+						title = c.Title
+					}
+				}
+				h := m.ext.proc
+				proc = func() error { return h.Execute(ctx, name, id, nil) }
+				return "", nil, nil
+			}
+		}
 		if m.ext == nil || m.nvim == nil {
 			return "", nil, errors.New("extensions are not available (no editor)")
 		}
@@ -535,6 +548,12 @@ func aiExtRun(ctx context.Context, call aiIDECaller, id string) (string, error) 
 		return "", nil, nil
 	}); err != nil {
 		return "", err
+	}
+	if proc != nil {
+		if err := proc(); err != nil {
+			return "", fmt.Errorf("extension command %s: %w", id, err)
+		}
+		return fmt.Sprintf("ran %s (%s)", id, title), nil
 	}
 	logged, err := client(fmt.Sprintf(aiExtRunLua, luaQuote(id)))
 	// The command may have changed panels or status items.

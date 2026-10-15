@@ -174,7 +174,7 @@ func TestInstallBundled(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"open-in-github", "rest-client", "todo-tree"}
+	want := []string{"open-in-github", "rest-client", "todo-tree", "word-frequency"}
 	if !reflect.DeepEqual(names, want) {
 		t.Errorf("installed = %v, want %v", names, want)
 	}
@@ -185,7 +185,7 @@ func TestInstallBundled(t *testing.T) {
 		t.Error("nested module not copied:", err)
 	}
 	exts, skipped := Discover(dir)
-	if len(exts) != 4 || len(skipped) != 0 {
+	if len(exts) != 5 || len(skipped) != 0 {
 		t.Errorf("discover = %d exts, skipped %v", len(exts), skipped)
 	}
 	for _, e := range exts {
