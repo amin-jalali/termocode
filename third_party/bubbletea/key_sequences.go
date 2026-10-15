@@ -66,6 +66,11 @@ func detectSequence(input []byte) (hasSeq bool, width int, msg Msg) {
 			return true, sz, KeyMsg(key)
 		}
 	}
+	// termocode patch: a modified special key the table above does not
+	// list (Ctrl+F12, Ctrl+Shift+PgUp, Shift+Alt+F5 …).
+	if ok, w, msg := detectModifiedSpecial(input); ok {
+		return true, w, msg
+	}
 	// Is this an unknown CSI sequence?
 	if loc := unknownCSIRe.FindIndex(input); loc != nil {
 		return true, loc[1], unknownCSISequenceMsg(input[:loc[1]])

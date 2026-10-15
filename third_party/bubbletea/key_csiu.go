@@ -157,3 +157,48 @@ func csiuKey(code, mods int) (Key, bool) {
 	}
 	return Key{Type: KeyRunes, Runes: []rune{r}, Alt: alt}, true
 }
+
+// modSpecialRe matches a modified special key: CSI n ; m ~ (Insert,
+// Delete, PgUp/PgDn, F5–F12) or CSI 1 ; m X (arrows, Home, End, F1–F4).
+var modSpecialRe = regexp.MustCompile(`^\x1b\[(\d+);(\d+)([~ABCDFHPQRS])`)
+
+var tildeKeys = map[int]string{2: "insert", 3: "delete", 5: "pgup", 6: "pgdown",
+	15: "f5", 17: "f6", 18: "f7", 19: "f8", 20: "f9", 21: "f10", 23: "f11", 24: "f12"}
+
+var letterKeys = map[byte]string{'A': "up", 'B': "down", 'C': "right", 'D': "left",
+	'F': "end", 'H': "home", 'P': "f1", 'Q': "f2", 'R': "f3", 'S': "f4"}
+
+// detectModifiedSpecial names a modified special key as KeyExtended
+// ("ctrl+shift+pgup"), modifiers in the order ctrl, alt, shift. It is only
+// asked after the fixed sequence table, so keys that table lists keep
+// their names.
+func detectModifiedSpecial(b []byte) (bool, int, Msg) {
+	m := modSpecialRe.FindSubmatch(b)
+	if m == nil {
+		return false, 0, nil
+	}
+	n, _ := strconv.Atoi(string(m[1]))
+	mods, _ := strconv.Atoi(string(m[2]))
+	var name string
+	if m[3][0] == '~' {
+		name = tildeKeys[n]
+	} else if n == 1 {
+		name = letterKeys[m[3][0]]
+	}
+	mods = (mods - 1) &^ csiuLocks
+	if name == "" || mods <= 0 || mods&csiuOther != 0 {
+		return false, 0, nil
+	}
+	var sb strings.Builder
+	if mods&csiuCtrl != 0 {
+		sb.WriteString("ctrl+")
+	}
+	if mods&csiuAlt != 0 {
+		sb.WriteString("alt+")
+	}
+	if mods&csiuShift != 0 {
+		sb.WriteString("shift+")
+	}
+	sb.WriteString(name)
+	return true, len(m[0]), KeyMsg{Type: KeyExtended, Name: sb.String()}
+}

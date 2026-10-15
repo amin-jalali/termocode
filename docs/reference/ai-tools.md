@@ -739,6 +739,7 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `clipboard-history` | Edit: Clipboard History | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `close-buffer` | View: Close Editor | confirm (ide) |   |
 | `close-split` | Editor: Close Split | auto |   |
+| `code-action-apply-preferred` | Edit: Apply Preferred Quick Fix | never | applies an edit chosen by the language server; the AI uses lsp tools instead |
 | `code-actions` | Edit: Quick Fix... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `config-commands` | Open Config: User Commands | confirm (ide) |   |
 | `config-theme` | Open Config: Theme | confirm (ide) |   |

@@ -109,3 +109,33 @@ func TestCSIuMatchesLegacy(t *testing.T) {
 		}
 	}
 }
+
+// Modified special keys the v1 tables do not list (Ctrl+F12, Ctrl+Shift+
+// PgUp, Shift+F12, Shift+Alt+F5 …) still come through, named with the
+// modifiers in the order ctrl, alt, shift; listed ones keep their names.
+func TestModifiedSpecialKeys(t *testing.T) {
+	for in, want := range map[string]string{
+		"\x1b[24;5~": "ctrl+f12",
+		"\x1b[5;6~":  "ctrl+shift+pgup",
+		"\x1b[6;6~":  "ctrl+shift+pgdown",
+		"\x1b[24;2~": "shift+f12",
+		"\x1b[23;2~": "shift+f11",
+		"\x1b[15;4~": "alt+shift+f5",
+		"\x1b[3;5~":  "ctrl+delete",
+		"\x1b[3;2~":  "shift+delete", // upstream v1 table said alt+insert
+		"\x1b[2;3~":  "alt+insert",
+		"\x1b[1;7P":  "ctrl+alt+f1",
+		"\x1b[1;5A":  "ctrl+up",   // listed: unchanged
+		"\x1b[5;5~":  "ctrl+pgup", // listed: unchanged
+		"\x1b[1;2R":  "f15",       // listed (xterm Shift+F3): unchanged
+	} {
+		msgs := ParseInput([]byte(in))
+		if len(msgs) != 1 {
+			t.Errorf("%q: %d msgs", in, len(msgs))
+			continue
+		}
+		if k, ok := msgs[0].(KeyMsg); !ok || k.String() != want {
+			t.Errorf("%q: got %v (%T), want %s", in, msgs[0], msgs[0], want)
+		}
+	}
+}

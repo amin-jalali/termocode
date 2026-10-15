@@ -209,6 +209,7 @@ func paletteItems() []picker.Item {
 		{ID: "git-branch", Title: "Git: Switch Branch..."},
 		{ID: "problems", Title: "Go to Problem..."}, // Group C: "View: Problems" opens the panel now
 		{ID: "code-actions", Title: "Edit: Quick Fix...", Hint: "Ctrl+. / Alt+Enter"},
+		{ID: "code-action-apply-preferred", Title: "Edit: Apply Preferred Quick Fix", Hint: "Ctrl+Shift+."},
 		{ID: "goto-symbol-file", Title: "Go to Symbol in File...", Hint: "Ctrl+Shift+O"},
 		{ID: "goto-symbol-workspace", Title: "Go to Symbol in Workspace..."},
 		{ID: "bookmark-toggle", Title: "Bookmarks: Toggle on Current Line", Hint: "F3"},
@@ -523,6 +524,11 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 	case "problems":
 		return m.openProblemsPicker()
 	case "code-actions":
+		return m.fetchCodeActionsCmd()
+	case "code-action-apply-preferred":
+		if m.preferredCodeAction != nil {
+			return m.applyPreferredCodeActionFromCache()
+		}
 		return m.fetchCodeActionsCmd()
 	case "goto-symbol-file":
 		return m.fetchSymbolsCmd()

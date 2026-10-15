@@ -1,6 +1,11 @@
 package keymap
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	"strconv"
+	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+)
 
 type Action int
 
@@ -141,6 +146,19 @@ const (
 	// default key; palette "Session: Detach".
 	ActionDetachSession
 )
+
+// KittyOnlyKeys are default bindings a legacy terminal cannot send (or
+// sends as another key: Ctrl+Alt+I arrives as Alt+Tab). They work on
+// terminals with the kitty keyboard protocol; elsewhere their actions are
+// reachable through another key or the command palette (app tests check
+// this). Adding a binding that no legacy terminal can send means adding it
+// here on purpose (reachable_test.go fails otherwise).
+var KittyOnlyKeys = map[string]bool{
+	"ctrl+.": true, "ctrl+shift+.": true, "ctrl+/": true, "ctrl+`": true, "ctrl+shift+`": true,
+	"ctrl+tab": true, "ctrl+alt+i": true,
+	"ctrl+shift+e": true, "ctrl+shift+h": true, "ctrl+shift+m": true, "ctrl+shift+o": true,
+	"ctrl+shift+t": true, "ctrl+shift+v": true, "ctrl+shift+w": true,
+}
 
 type KeyMap struct {
 	bindings map[string]Action
@@ -462,8 +480,62 @@ func Default() KeyMap {
 }
 
 func (k KeyMap) Match(msg tea.KeyMsg) Action {
-	if a, ok := k.bindings[msg.String()]; ok {
+	s := msg.String()
+	if a, ok := k.bindings[s]; ok {
 		return a
 	}
+	// The same key spelled differently: "f15" from xterm is "shift+f3"
+	// in the keymap, "alt+F" is "shift+alt+f". Only keys with a modifier
+	// or a high F-key can differ, so plain typing never pays this loop.
+	if strings.ContainsRune(s, '+') || (len(s) > 2 && s[0] == 'f') {
+		c := canonicalKey(s)
+		for key, a := range k.bindings {
+			if canonicalKey(key) == c {
+				return a
+			}
+		}
+	}
 	return ActionNone
+}
+
+// canonicalKey is the one name of a key: modifiers in the order ctrl, alt,
+// shift; xterm's F13–F24 are Shift+F1–F12; an upper-case letter after Alt
+// or Ctrl means Shift.
+func canonicalKey(s string) string {
+	parts := strings.Split(s, "+")
+	if len(parts) > 1 && parts[len(parts)-1] == "" { // "ctrl++"
+		parts = append(parts[:len(parts)-2], "+")
+	}
+	name := parts[len(parts)-1]
+	var ctrl, alt, shift bool
+	for _, p := range parts[:len(parts)-1] {
+		switch p {
+		case "ctrl":
+			ctrl = true
+		case "alt":
+			alt = true
+		case "shift":
+			shift = true
+		}
+	}
+	if len(name) > 1 && name[0] == 'f' {
+		if n, err := strconv.Atoi(name[1:]); err == nil && n >= 13 && n <= 24 {
+			name, shift = "f"+strconv.Itoa(n-12), true
+		}
+	}
+	if (ctrl || alt) && len(name) == 1 && name[0] >= 'A' && name[0] <= 'Z' {
+		name, shift = strings.ToLower(name), true
+	}
+	var b strings.Builder
+	if ctrl {
+		b.WriteString("ctrl+")
+	}
+	if alt {
+		b.WriteString("alt+")
+	}
+	if shift {
+		b.WriteString("shift+")
+	}
+	b.WriteString(name)
+	return b.String()
 }
