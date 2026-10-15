@@ -41,8 +41,7 @@ func SetClipboardSink(f func(string)) (restore func()) {
 //
 // OSC 52 cannot be checked. It counts only when the local clipboard
 // failed or termocode runs over SSH (then the local clipboard is the
-// server's), and not in VTE terminals (GNOME Terminal, Tilix …), which
-// ignore it.
+// server's), and only in terminals that do not ignore it (osc52Honoured).
 func (m *Model) writeClipboard(s string) clipVia {
 	if m.nvim != nil {
 		_ = m.nvim.ExecLuaArgs(`local s = ...
@@ -59,7 +58,7 @@ func (m *Model) writeClipboard(s string) clipVia {
 	remote := os.Getenv("SSH_CONNECTION") != "" || os.Getenv("SSH_TTY") != ""
 	local := systemClipboardWrite(s)
 	emitOSC52(s)
-	osc := len(s) <= osc52MaxBytes && os.Getenv("VTE_VERSION") == ""
+	osc := len(s) <= osc52MaxBytes && osc52Honoured(os.Getenv)
 	switch {
 	case local && !remote:
 		return clipLocal
@@ -69,6 +68,27 @@ func (m *Model) writeClipboard(s string) clipVia {
 		return clipLocal
 	}
 	return clipFailed
+}
+
+// osc52Honoured reports whether the terminal may act on an OSC 52 copy.
+// VTE (GNOME Terminal, Tilix …), macOS Terminal.app, xterm (off unless
+// allowWindowOps), the Linux console and JetBrains' terminal ignore it.
+// Inside tmux the outer terminal decides and the inherited variables may
+// be stale, so tmux counts as yes (it forwards OSC 52 with set-clipboard).
+// Unknown terminals get the benefit of the doubt.
+func osc52Honoured(getenv func(string) string) bool {
+	if getenv("TMUX") != "" {
+		return true
+	}
+	switch {
+	case getenv("VTE_VERSION") != "",
+		getenv("TERM_PROGRAM") == "Apple_Terminal",
+		getenv("XTERM_VERSION") != "",
+		getenv("TERM") == "linux",
+		getenv("TERMINAL_EMULATOR") == "JetBrains-JediTerm":
+		return false
+	}
+	return true
 }
 
 // systemClipboardWrite writes the OS clipboard and reports success. In
