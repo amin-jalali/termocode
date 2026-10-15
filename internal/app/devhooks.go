@@ -34,6 +34,8 @@ import (
 //	theme:<id>             apply a color theme (not persisted)
 //	aidemo                 load a sample AI conversation
 //	commit:<rev>           open the Source Control commit view on rev
+//	compare:<i>,<j>        compare GRAPH commits i and j (0 = newest), as
+//	                       Space on both does
 //	diffdemo               open the AI review card with sample files
 //	                       (nothing is written)
 //	plugin:nvim-dap=<dir>  set nvim-dap up from a checkout (tests: the
@@ -95,6 +97,12 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		}
 	case "commit": // open the commit view on a revision (HEAD, a SHA …)
 		return m.gitOpenCommitViewCmd(arg)
+	case "compare": // Space on GRAPH commits i and j
+		var i, j int
+		if _, err := fmt.Sscanf(arg, "%d,%d", &i, &j); err == nil && i >= 0 && i < len(m.gitCommits) {
+			m.commitViewS().mark = m.gitCommits[i].FullHash // no "Marked" toast in the shot
+			return m.gitCompareMark(j)
+		}
 	case "openfile": // as if picked in the explorer (images open the preview)
 		return func() tea.Msg { return explorer.OpenFileMsg{Path: arg} }
 	case "view":

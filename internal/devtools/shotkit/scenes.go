@@ -69,6 +69,13 @@ func SCMCommit() Scene {
 		Act("commit:HEAD"), Pause(1200 * time.Millisecond)}}
 }
 
+// SCMCompare compares the oldest demo commit with HEAD (Space on both
+// GRAPH rows).
+func SCMCompare() Scene {
+	return Scene{Name: "scm-compare", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond),
+		Act("compare:3,0"), Pause(1200 * time.Millisecond)}}
+}
+
 // AIChatAnswer is the AI chat panel with the canned demo conversation (no
 // network).
 func AIChatAnswer() Scene {
