@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -547,6 +549,34 @@ func (m *Model) handleMCPPickerSelect(id string) (tea.Cmd, bool) {
 		return nil, true
 	}
 	return nil, false
+}
+
+// mcpGlyph marks MCP in the chat header chip.
+func mcpGlyph() string {
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		return "~"
+	}
+	return "⌁"
+}
+
+// mcpChipLabel is the chat header chip "⌁ N MCP" (N = connected
+// servers), or "" when no server is configured or MCP never ran (the
+// header never creates the Manager).
+func (m Model) mcpChipLabel() string {
+	n := m.mcpChipState()
+	if n < 0 {
+		return ""
+	}
+	return mcpGlyph() + " " + strconv.Itoa(n) + " MCP"
+}
+
+// mcpChipState is -1 when there is no chip, else the connected count
+// (no allocation: the header memo compares it every frame).
+func (m Model) mcpChipState() int {
+	if m.ai == nil || m.ai.mcp == nil || m.ai.mcp.Count() == 0 {
+		return -1
+	}
+	return m.ai.mcp.Running()
 }
 
 // mcpAutoApproveClasses are the "mcp:<server>" rows of AI: Agent

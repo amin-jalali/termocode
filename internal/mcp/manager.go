@@ -229,6 +229,14 @@ func (m *Manager) Servers() []Status {
 	return out
 }
 
+// Count is the number of configured servers (cheap: the chat header
+// reads it every frame).
+func (m *Manager) Count() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.servers)
+}
+
 // Running counts running servers.
 func (m *Manager) Running() int {
 	m.mu.Lock()
