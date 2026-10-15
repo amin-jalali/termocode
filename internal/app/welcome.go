@@ -822,7 +822,7 @@ func renderActionCard(a quickAction, cardW, contentRows int, focused, showSubtit
 	cardBgC := theme.LG(theme.BgEditor)
 	borderC := theme.Mix(theme.BgEditor, theme.BorderDefault, 0.85)
 	if focused {
-		cardBgC = theme.Mix(theme.BgEditor, theme.BorderFocus, 0.10)
+		cardBgC = theme.Wash(theme.BgEditor, theme.WashSelected)
 		borderC = theme.LG(theme.BorderFocus)
 	}
 	cardBg := lipgloss.NewStyle().Background(cardBgC)

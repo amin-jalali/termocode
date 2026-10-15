@@ -38,7 +38,7 @@ func Float() FloatColors {
 		Hairline:  Mix(BgFloat, BorderDefault, 0.75),
 		InputBg:   Mix(BgFloat, TextPrimary, in),
 		InputFg:   LG(TextWhite),
-		SelBg:     Mix(BgFloat, BorderFocus, 0.24),
+		SelBg:     Wash(BgFloat, WashSelectedFocused),
 		SelFg:     LG(TextWhite),
 		SelAccent: LG(BorderFocus),
 		Title:     LG(TextWhite),
@@ -137,4 +137,30 @@ func Hairline(w int, bg Color256) string {
 		out += lipgloss.NewStyle().Foreground(hair.LG()).Background(LG(bg)).Render(strings.Repeat("─", rest))
 	}
 	return out
+}
+
+// WashLevel is one step of the accent tint ladder used for interactive
+// states. Every widget uses these four steps, so the same state looks the
+// same everywhere (one hover, one selection, ...).
+type WashLevel float64
+
+const (
+	WashHover           WashLevel = 0.08 // pointer over a row or button
+	WashSelected        WashLevel = 0.12 // selected / cursor row, pane not focused
+	WashSelectedFocused WashLevel = 0.22 // selected / cursor row in the focused pane
+	WashPressed         WashLevel = 0.30 // toggled on, active chip, cursor pill
+)
+
+// Wash is bg tinted toward the accent by level. On themes where the full
+// step would drop body text under 4.5:1 (Solarized, Latte) the tint is
+// lightened until text reads (wash_test.go).
+func Wash(bg Color256, level WashLevel) lipgloss.Color {
+	b, a, fg := ToRGB(bg), ToRGB(BorderFocus), ToRGB(TextPrimary)
+	t := float64(level)
+	for ; t > 0.02; t -= 0.02 {
+		if contrastRatio(fg, Lerp(b, a, t)) >= 4.5 {
+			break
+		}
+	}
+	return lipgloss.Color(Lerp(b, a, t).Hex())
 }

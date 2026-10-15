@@ -635,7 +635,7 @@ func renderTimeChip(text string, rowBg lipgloss.Color) string {
 	// On selected rows, lift the chip's bg one notch lighter than SelBg so
 	// the time still reads as a distinct pill (not a fade-out).
 	if rowBg == SelBg {
-		chipBg = theme.Mix(theme.BgFloat, theme.BorderFocus, 0.3)
+		chipBg = theme.Wash(theme.BgFloat, theme.WashPressed)
 	}
 	return lipgloss.NewStyle().
 		Background(chipBg).

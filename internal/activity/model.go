@@ -395,7 +395,7 @@ func renderActivityBoldRow(ic theme.Icon, boldRow int, isActive bool, st styleSe
 func renderActivityGlyphRow(ic theme.Icon, iconRow, isActive bool, st styleSet) string {
 	bg := theme.LG(theme.BgActivityBar)
 	if isActive {
-		bg = theme.Mix(theme.BgActivityBar, theme.BorderFocus, 0.16)
+		bg = theme.Wash(theme.BgActivityBar, theme.WashSelected)
 	}
 	fill := lipgloss.NewStyle().Background(bg)
 	lead := st.bgFill.Render(" ")

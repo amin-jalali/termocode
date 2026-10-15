@@ -180,7 +180,7 @@ func renderSetupButton(b setupButton, focused bool, w int) string {
 	left := " "
 	switch {
 	case focused:
-		bgC = theme.Mix(theme.BgEditor, theme.BorderFocus, 0.35)
+		bgC = theme.Wash(theme.BgEditor, theme.WashPressed)
 		fgC = theme.LG(theme.TextWhite)
 		left = "▌"
 	case b.disabled:
