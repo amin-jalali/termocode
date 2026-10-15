@@ -1,6 +1,7 @@
 package testkit
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -111,5 +112,31 @@ func TestSCMRevertConflictShowsConflicts(t *testing.T) {
 	}
 	if !until(d, func() bool { return section(d, "CONFLICTS") != nil && inSection(d, "CONFLICTS", "f.txt") }) {
 		t.Errorf("CONFLICTS does not list f.txt:%s", dump(d))
+	}
+}
+
+// Spec (§2.7, §3.5): Space marks a GRAPH commit, Space on a second one
+// opens the compare card (older → newer) with the files between them;
+// Esc in the sidebar clears a mark.
+func TestSCMCompareTwoCommits(t *testing.T) {
+	d, r := scmDriver(t, graphRepo)
+	scmClickText(d, "after merge") // the cursor (this opens the view too)
+	d.Key("esc")
+	d.Key(" ")
+	if !until(d, func() bool { return strings.Contains(text(d), "Space on another commit") }) {
+		t.Fatalf("no hint after the first mark:%s", dump(d))
+	}
+	scmClickText(d, "add parser")
+	d.Key(" ")
+	a, b := r.git("rev-parse", "--short", "v1.0"), r.git("rev-parse", "--short", "HEAD")
+	if !until(d, func() bool { return strings.Contains(text(d), "Compare "+a+" → "+b) }) {
+		t.Fatalf("no compare card:%s", dump(d))
+	}
+	n := len(strings.Split(r.git("diff", "--name-only", "v1.0", "HEAD"), "\n"))
+	if !until(d, func() bool { return strings.Contains(text(d), fmt.Sprintf("%d files", n)) }) {
+		t.Errorf("compare does not count %d files:%s", n, dump(d))
+	}
+	if strings.Contains(text(d), " Raw ") || strings.Contains(text(d), "Revert…") {
+		t.Errorf("compare card offers commit-only actions:%s", dump(d))
 	}
 }

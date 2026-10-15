@@ -158,3 +158,24 @@ func TestCherryPick(t *testing.T) {
 		t.Errorf("subject %q", s)
 	}
 }
+
+// Spec (§4.1): CommitFilesBetween lists what changed from a to b.
+func TestCommitFilesBetween(t *testing.T) {
+	r := newGitTestRepo(t)
+	r.commitN(t, "one")
+	r.git(t, "tag", "a")
+	r.commitN(t, "two")
+	r.write(t, "new.txt", "x\ny\n")
+	r.git(t, "add", "-A")
+	r.git(t, "commit", "-q", "-m", "three")
+	info, err := CommitFilesBetween(r.dir, "a", "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(info.Files) != 2 || info.Add != 3 || info.Del != 1 || info.CommitDetail.Files != 2 {
+		t.Errorf("between: %+v", info)
+	}
+	if f := fileOf(t, info, "new.txt"); f.Status != 'A' || f.Add != 2 {
+		t.Errorf("new.txt %+v", f)
+	}
+}
