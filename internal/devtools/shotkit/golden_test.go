@@ -103,6 +103,11 @@ func goldenCases() []goldenCase {
 		sz := goldenSizes[0]
 		out = append(out, goldenCase{fmt.Sprintf("%s-%dx%d", sc.Name, sz[0], sz[1]), sc, sz[0], sz[1]})
 	}
+	// The smallest common window (80x24) for the screens that have a
+	// compact layout: start page, editor, palette, toast.
+	for _, sc := range []Scene{Dashboard(), Editor(), Palette(), Toast()} {
+		out = append(out, goldenCase{fmt.Sprintf("%s-80x24", sc.Name), sc, 80, 24})
+	}
 	return out
 }
 
