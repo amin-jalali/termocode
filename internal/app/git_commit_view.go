@@ -44,6 +44,7 @@ type commitViewState struct {
 	oldRev, newRev string
 	compare        *commitRange // set: the card compares two commits
 	mark           string       // a GRAPH commit marked for compare (Space)
+	mark2          string       // the second mark, until the compare opens
 }
 
 // commitRange is a compare: full and short hashes, older first.
@@ -135,10 +136,11 @@ func (m *Model) gitCompareMark(ci int) tea.Cmd {
 			other = i
 		}
 	}
-	cv.mark = ""
 	if other < 0 {
+		cv.mark = ""
 		return nil
 	}
+	cv.mark2 = c.FullHash // both show until the compare card is ready
 	older, newer := m.gitCommits[other], c
 	if other < ci { // the list is newest first
 		older, newer = c, m.gitCommits[other]
@@ -146,11 +148,39 @@ func (m *Model) gitCompareMark(ci int) tea.Cmd {
 	return m.gitOpenCompareCmd(commitRange{a: older.FullHash, b: newer.FullHash, sa: older.Hash, sb: newer.Hash})
 }
 
+// gitCompareMarkOf is the compare mark ("1", "2" or "") of a GRAPH commit.
+func (m Model) gitCompareMarkOf(full string) string {
+	cv := m.commitView
+	switch {
+	case cv == nil || full == "":
+		return ""
+	case full == cv.mark:
+		return "1"
+	case full == cv.mark2:
+		return "2"
+	}
+	return ""
+}
+
+// clearCompareMarks drops the GRAPH compare marks; it reports whether
+// there were any.
+func (m *Model) clearCompareMarks() bool {
+	cv := m.commitView
+	if cv == nil || cv.mark == "" && cv.mark2 == "" {
+		return false
+	}
+	cv.mark, cv.mark2 = "", ""
+	return true
+}
+
 // onCommitViewReady builds the card for a loaded commit.
 func (m *Model) onCommitViewReady(msg commitViewReadyMsg) tea.Cmd {
 	cv := m.commitView
 	if cv == nil || msg.want != cv.want {
 		return nil
+	}
+	if msg.compare != nil {
+		m.clearCompareMarks() // the compare is open (or failed): marks done
 	}
 	if msg.err != nil {
 		var cmd tea.Cmd
