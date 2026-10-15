@@ -34,42 +34,53 @@ func withWelcomeLists(t *testing.T, n, m int) {
 func TestWelcome_FitsPane(t *testing.T) {
 	oldP, oldI := lipgloss.ColorProfile(), theme.CurrentIconMode
 	defer func() { lipgloss.SetColorProfile(oldP); theme.CurrentIconMode = oldI }()
-	for _, lists := range [][2]int{{0, 0}, {20, 3}} {
-		withWelcomeLists(t, lists[0], lists[1])
-		for _, sz := range [][2]int{{109, 40}, {64, 28}, {44, 22}, {76, 22}, {40, 12}} {
-			for _, prof := range []termenv.Profile{termenv.TrueColor, termenv.ANSI, termenv.Ascii} {
-				for _, icons := range []theme.IconMode{theme.IconModeNerdFont, theme.IconModeUnicode, theme.IconModeASCII} {
-					lipgloss.SetColorProfile(prof)
-					theme.CurrentIconMode = icons
-					invalidateWelcome()
-					w, h := sz[0], sz[1]
-					tag := fmt.Sprintf("%v %dx%d prof=%v icons=%v", lists, w, h, prof, icons)
-					out, hits := renderWelcomeHits(w, h, 0, true)
-					rows := strings.Split(out, "\n")
-					if len(rows) > h {
-						t.Fatalf("%s: %d rows", tag, len(rows))
-					}
-					for i, r := range rows {
-						if got := ansi.StringWidth(r); got != w {
-							t.Fatalf("%s: row %d is %d cells: %q", tag, i, got, ansi.Strip(r))
+	oldSetup := welcomeSetup
+	defer func() { welcomeSetup = oldSetup }()
+	for _, setupOn := range []bool{false, true} {
+		welcomeSetup = setupCardView{}
+		if setupOn {
+			welcomeSetup = setupCardFromFacts(baseFacts(ubuntuMono))
+		}
+		for _, lists := range [][2]int{{0, 0}, {20, 3}} {
+			withWelcomeLists(t, lists[0], lists[1])
+			for _, sz := range [][2]int{{109, 40}, {64, 28}, {44, 22}, {76, 22}, {40, 12}} {
+				for _, prof := range []termenv.Profile{termenv.TrueColor, termenv.ANSI, termenv.Ascii} {
+					for _, icons := range []theme.IconMode{theme.IconModeNerdFont, theme.IconModeUnicode, theme.IconModeASCII} {
+						lipgloss.SetColorProfile(prof)
+						theme.CurrentIconMode = icons
+						invalidateWelcome()
+						w, h := sz[0], sz[1]
+						tag := fmt.Sprintf("setup=%v %v %dx%d prof=%v icons=%v", setupOn, lists, w, h, prof, icons)
+						out, hits := renderWelcomeHits(w, h, 0, true)
+						rows := strings.Split(out, "\n")
+						if len(rows) > h {
+							t.Fatalf("%s: %d rows", tag, len(rows))
 						}
-					}
-					if h < 22 {
-						continue
-					}
-					plain := ansi.Strip(out)
-					for _, a := range welcomeQuickActions() {
-						if !strings.Contains(plain, a.title) {
-							t.Errorf("%s: START row %q missing", tag, a.title)
+						for i, r := range rows {
+							if got := ansi.StringWidth(r); got != w {
+								t.Fatalf("%s: row %d is %d cells: %q", tag, i, got, ansi.Strip(r))
+							}
 						}
-					}
-					for _, hh := range hits.recents {
-						if hh.Row >= h {
-							t.Errorf("%s: recent row %d below the pane", tag, hh.Row)
+						if h < 22 {
+							continue
 						}
-					}
-					if lists[0] > 0 && !strings.Contains(plain, "RECENT FILES") {
-						t.Errorf("%s: recent files dropped although they fit:\n%s", tag, plain)
+						plain := ansi.Strip(out)
+						for _, a := range welcomeQuickActions() {
+							if !strings.Contains(plain, a.title) {
+								t.Errorf("%s: START row %q missing", tag, a.title)
+							}
+						}
+						for _, hh := range hits.recents {
+							if hh.Row >= h {
+								t.Errorf("%s: recent row %d below the pane", tag, hh.Row)
+							}
+						}
+						if setupOn && !strings.Contains(plain, "Hide setup") {
+							t.Errorf("%s: setup checklist cut", tag)
+						}
+						if !setupOn && lists[0] > 0 && !strings.Contains(plain, "RECENT FILES") {
+							t.Errorf("%s: recent files dropped although they fit:\n%s", tag, plain)
+						}
 					}
 				}
 			}

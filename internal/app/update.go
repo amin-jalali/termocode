@@ -2050,6 +2050,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.onSnippetManagerSelected(msg.ID)
 	case pickerKindDebugConfig: // Group D
 		return m.onDebugConfigPicked(msg.ID)
+	case pickerKindSetupStep:
+		return m.pressSetupButton(msg.ID)
 	case pickerKindExt: // Group I
 		return m.extPickSelect(msg.ID)
 	default:

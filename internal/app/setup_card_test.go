@@ -6,6 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/x/ansi"
+	"github.com/mattn/go-runewidth"
+
 	"github.com/amin-jalali/termocode/internal/nerdterm"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
@@ -56,10 +59,13 @@ func TestSetupIconsStepUbuntuMono(t *testing.T) {
 	if icons.done {
 		t.Fatal("icons step done with a non-Nerd font and no answer")
 	}
-	for _, want := range []string{"Unicode", "Ubuntu Mono", "not a Nerd Font"} {
+	for _, want := range []string{"Unicode", "Ubuntu Mono"} {
 		if !strings.Contains(icons.status, want) {
 			t.Errorf("status %q does not say %q", icons.status, want)
 		}
+	}
+	if !strings.Contains(icons.detail, "not a Nerd Font") {
+		t.Errorf("detail %q does not say why", icons.detail)
 	}
 	use, ok := buttonByID(icons, "use-nerd")
 	if !ok || !use.disabled || !strings.Contains(use.why, "Ubuntu Mono") {
@@ -104,7 +110,7 @@ func TestSetupIconsStepNerdOnWrongFont(t *testing.T) {
 	f := baseFacts(ubuntuMono)
 	f.iconMode = theme.IconModeNerdFont
 	icons := stepByID(t, buildSetupSteps(f), "icons")
-	if icons.done || !strings.Contains(icons.status, "boxes") {
+	if icons.done || !strings.Contains(icons.detail, "boxes") {
 		t.Fatalf("got %+v", icons)
 	}
 	if _, ok := buttonByID(icons, "keep-unicode"); !ok {
@@ -136,14 +142,14 @@ func TestSetupIconsStepInstallButton(t *testing.T) {
 	if inst, _ := buttonByID(icons, "install-font"); !inst.disabled || !strings.Contains(inst.label, "Installing") {
 		t.Fatalf("install button while installing: %+v", inst)
 	}
-	if !strings.Contains(strings.Join(icons.notes, "\n"), "40%") {
-		t.Errorf("install progress not shown: %v", icons.notes)
+	if !strings.Contains(icons.status, "40%") || icons.action != "" {
+		t.Errorf("install progress: status %q, action %q (want the progress, no action)", icons.status, icons.action)
 	}
 }
 
 func TestSetupIconsStepUnknownAndSSH(t *testing.T) {
 	icons := stepByID(t, buildSetupSteps(baseFacts(nerdterm.Info{})), "icons")
-	if !strings.Contains(icons.status, "can't read") {
+	if !strings.Contains(icons.detail, "can't read") {
 		t.Errorf("unknown terminal: %q", icons.status)
 	}
 	if _, ok := buttonByID(icons, "gnome-profile"); ok {
@@ -206,29 +212,88 @@ func TestSetupAIStep(t *testing.T) {
 	}
 }
 
+// The theme step is optional and has one action: the theme picker (no
+// quick-pick chips).
 func TestSetupThemeStepOptional(t *testing.T) {
 	th := stepByID(t, buildSetupSteps(baseFacts(kittyInfo)), "theme")
-	if !th.optional || len(th.buttons) < 3 {
+	if !th.optional || len(th.buttons) != 1 || th.buttons[0].id != "theme-more" || th.action != "Change…" {
 		t.Fatalf("theme step: %+v", th)
 	}
-	if b, _ := buttonByID(th, "theme:vscode-dark-plus"); !b.active {
-		t.Errorf("current theme not marked: %+v", b)
+	if th.status != "VSCode Dark+" {
+		t.Errorf("theme status %q", th.status)
 	}
 }
 
-func TestSetupProgressCountsRequiredSteps(t *testing.T) {
-	f := baseFacts(kittyInfo)
-	f.iconMode = theme.IconModeNerdFont
+// Each step that still needs an answer shows one action word; done steps
+// none. The only footer action is Hide (no Done button, no counter).
+func TestSetupPrimaryActionPerStep(t *testing.T) {
+	f := baseFacts(ubuntuMono)
 	v := setupCardFromFacts(f)
-	if v.progress != "1 of 2 done" {
-		t.Fatalf("progress %q", v.progress)
+	for _, s := range v.steps {
+		if s.done && s.action != "" {
+			t.Errorf("done step %s has action %q", s.id, s.action)
+		}
+		if !s.done && s.action == "" {
+			t.Errorf("open step %s has no action", s.id)
+		}
 	}
-	ids := map[string]bool{}
-	for _, b := range v.buttons() {
-		ids[b.id] = true
+	if a := stepByID(t, v.steps, "icons").action; a != "Fix…" {
+		t.Errorf("icons action %q, want Fix…", a)
 	}
-	if !ids["done"] || !ids["hide"] {
-		t.Fatalf("footer buttons missing: %v", ids)
+	if a := stepByID(t, v.steps, "ai").action; a != "Set up…" {
+		t.Errorf("AI action %q, want Set up…", a)
+	}
+	if len(v.footer) != 1 || v.footer[0].id != "hide" {
+		t.Fatalf("footer %+v, want just hide", v.footer)
+	}
+	f = baseFacts(kittyInfo)
+	f.iconMode = theme.IconModeNerdFont
+	if icons := stepByID(t, setupCardFromFacts(f).steps, "icons"); !icons.done || icons.action != "" {
+		t.Fatalf("done icons: %+v", icons)
+	}
+	if a := stepByID(t, buildSetupSteps(baseFacts(gnomeNerd)), "icons").action; a != "Use Nerd…" {
+		t.Errorf("Nerd font found: action %q, want Use Nerd…", a)
+	}
+}
+
+// Every status is one short line; the long sentence is the detail (the
+// step chooser shows it).
+func TestSetupStatusOneLine(t *testing.T) {
+	cases := map[string]setupFacts{}
+	cases["ubuntu"] = baseFacts(ubuntuMono)
+	cases["nerd-found"] = baseFacts(gnomeNerd)
+	cases["kitty"] = baseFacts(kittyInfo)
+	cases["unknown"] = baseFacts(nerdterm.Info{})
+	cases["ssh"] = baseFacts(nerdterm.Info{Terminal: nerdterm.GNOME, Source: "over SSH"})
+	f := baseFacts(ubuntuMono)
+	f.iconMode = theme.IconModeNerdFont
+	cases["nerd-on-wrong"] = f
+	f = baseFacts(ubuntuMono)
+	f.installing, f.installLine = true, "downloading... 42%"
+	cases["installing"] = f
+	f = baseFacts(ubuntuMono)
+	f.aiConfigured, f.aiProvider, f.aiModel = true, "Claude", "claude-opus-5-5"
+	cases["ai"] = f
+	f = baseFacts(ubuntuMono)
+	f.probed = false
+	cases["probing"] = f
+	for name, f := range cases {
+		for _, s := range buildSetupSteps(f) {
+			if strings.Contains(s.status, "\n") || len([]rune(s.status)) > 60 {
+				t.Errorf("%s/%s: status %q is not one short line", name, s.id, s.status)
+			}
+		}
+		// Drawn at W = 68 the status is one line, cut with "…" to the
+		// room left of the action word.
+		for _, l := range setupCardLines(setupCardFromFacts(f), 68) {
+			if l.row == nil || l.row.status == "" {
+				continue
+			}
+			plain := ansi.Strip(renderWelcomeRow(*l.row, 68, rowRest))
+			if st := strings.TrimSpace(plain[strings.Index(plain, l.row.title)+len(l.row.title):]); runewidth.StringWidth(st) > 55 {
+				t.Errorf("%s: drawn status %q is too long", name, st)
+			}
+		}
 	}
 }
 

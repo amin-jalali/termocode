@@ -702,7 +702,7 @@ func (m Model) activateWelcomeRow(id string) (Model, tea.Cmd) {
 		i, _ := strconv.Atoi(arg)
 		return m.runWelcomeCard(i)
 	case "setup":
-		return m, m.pressSetupButton(arg)
+		return m, m.pressSetupRow(arg)
 	case "recent":
 		if arg == welcomeSentinelViewAll {
 			return m, m.openRecentFilePicker()

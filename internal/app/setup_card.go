@@ -13,11 +13,13 @@ import (
 
 // ─── First-run setup card (Welcome page) ───────────────────────────────
 //
-// A "Set up termocode" card under the START cards with three steps:
-// icons (terminal font), AI provider and an optional theme pick. It stays
-// until the user presses Done or Hide (setup_done / setup_dismissed in
-// config.json); the palette command "Setup: Show Setup Card" brings it
-// back. Every status line says only what termocode knows: the terminal's
+// A SET UP checklist under START with three steps: icons (terminal
+// font), AI provider and an optional theme. Each step is one row with a
+// short status and one action word; a step with several choices opens a
+// chooser (setup_card_ui.go). When every required step is done the card
+// saves setup_done (it does not show on the next start); "Hide setup"
+// saves setup_dismissed. The palette command "Setup: Show Setup Card"
+// brings it back. Every status line says only what termocode knows: the terminal's
 // font comes from internal/nerdterm (read-only), and nothing outside
 // termocode changes before an explicit button press with a preview.
 //
@@ -52,27 +54,24 @@ type setupFacts struct {
 	settled            map[string]bool // steps answered on the card
 }
 
-// setupButton is one card button.
+// setupButton is one choice of a step (the step chooser lists them).
 type setupButton struct {
 	id, label string
 	disabled  bool
 	why       string // disabled: the reason, told when it is pressed
-	active    bool   // theme picks: the current theme
 }
 
 // setupStep is one row of the card.
 type setupStep struct {
-	id, title, status string
-	done, optional    bool
-	notes             []string
-	buttons           []setupButton
-}
-
-// setupQuickThemes are the theme step's one-press picks.
-var setupQuickThemes = []struct{ id, label string }{
-	{"vscode-dark-plus", "Dark+"},
-	{"tokyo-night", "Tokyo Night"},
-	{"catppuccin-latte", "Light (Latte)"},
+	id, title string
+	status    string // one short line on the row
+	detail    string // the full sentence (the step chooser's note)
+	// action is the row's one action word ("Fix…", "Set up…"); "" = the
+	// row has nothing to do (done, still checking, installing).
+	action         string
+	done, optional bool
+	notes          []string // shown under the row (font steps, profile)
+	buttons        []setupButton
 }
 
 func iconModeTitle(m theme.IconMode) string {
@@ -99,65 +98,77 @@ func setupIconsStep(f setupFacts) setupStep {
 	s := setupStep{id: "icons", title: "Icons"}
 	if !f.probed {
 		s.status = "Checking your terminal font…"
+		s.detail = s.status
 		return s
 	}
 	t := f.probe.Terminal
 	mode := iconModeTitle(f.iconMode)
 	nerd := nerdFamilyFor(f.probe)
 	fontKnownBad := t.Font != "" && !t.Nerd
+	termFont := t.Terminal + ": " + t.Font
 
 	switch {
 	case f.iconMode == theme.IconModeNerdFont && !fontKnownBad:
 		s.done = true
-		if t.Known() {
-			s.status = "Nerd icons — " + t.Describe() + "."
+		if t.Terminal != "" {
+			s.status = "Nerd icons · " + t.Terminal
 		} else {
-			s.status = "Nerd icons are on."
+			s.status = "Nerd icons are on"
+		}
+		if t.Known() {
+			s.detail = "Nerd icons — " + t.Describe() + "."
+		} else {
+			s.detail = "Nerd icons are on."
 		}
 		return s
 	case f.iconMode == theme.IconModeNerdFont:
-		s.status = "Nerd icons are on, but " + t.Terminal + " uses " + t.Font + " — icons may show as boxes."
+		s.status = "Nerd icons on · " + termFont
+		s.detail = "Nerd icons are on, but " + t.Terminal + " uses " + t.Font + ", so icons may show as boxes."
 	case t.Nerd:
-		s.status = mode + " icons — " + t.Describe() + ". You can turn on Nerd icons."
+		s.status = mode + " icons · " + termFont
+		s.detail = mode + " icons — " + t.Describe() + ". You can turn on Nerd icons."
 	case t.Source == "over SSH":
-		s.status = mode + " icons — over SSH termocode can't read your local terminal's font."
+		s.status = mode + " icons · font not readable over SSH"
+		s.detail = mode + " icons — over SSH termocode can't read your local terminal's font."
 	case t.Terminal == "":
-		s.status = mode + " icons — termocode can't read this terminal's font."
+		s.status = mode + " icons · terminal font unknown"
+		s.detail = mode + " icons — termocode can't read this terminal's font."
 	case t.Font == "":
-		s.status = mode + " icons — termocode can't read " + t.Terminal + "'s font."
+		s.status = mode + " icons · " + t.Terminal + ": font unknown"
+		s.detail = mode + " icons — termocode can't read " + t.Terminal + "'s font."
 	default:
-		s.status = mode + " icons — " + t.Terminal + " uses " + t.Font + ", not a Nerd Font."
+		s.status = mode + " icons · " + termFont
+		s.detail = mode + " icons — " + t.Terminal + " uses " + t.Font + ", not a Nerd Font."
 	}
 	if f.iconEnv != "" {
-		s.notes = append(s.notes, f.iconEnv+" is set: it wins over the buttons here.")
+		s.notes = append(s.notes, f.iconEnv+" is set: it wins over the choices here.")
 	}
 	if f.settled["icons"] && f.iconMode != theme.IconModeNerdFont {
 		s.done = true
+		s.status = mode + " icons (kept)"
 		return s
 	}
 
-	// Notes: what is installed, install progress, steps, the profile.
+	// What is installed goes into the detail; install progress is the
+	// status (no action while it runs).
 	switch {
 	case f.installing:
 		line := f.installLine
 		if line == "" {
 			line = "starting"
 		}
-		s.notes = append(s.notes, "Installing "+setup.NerdFontName+"… "+line)
+		s.status = "Installing " + setup.NerdFontName + " · " + line
 	case f.probe.NerdInstalled && t.Font != "" && !t.Nerd:
-		s.notes = append(s.notes, nerd+" is installed, but the terminal does not use it yet.")
+		s.detail += " " + nerd + " is installed, but the terminal does not use it yet."
 	case f.probe.NerdInstalled && !t.Nerd:
-		s.notes = append(s.notes, nerd+" is installed. termocode can't see if your terminal uses it.")
+		s.detail += " " + nerd + " is installed. termocode can't see if your terminal uses it."
 	}
 	gnome := t.Terminal == nerdterm.GNOME && t.Font != "" && !t.Nerd
 	profileReady := gnome && (f.probe.ProfileExists || f.profileMade)
 	if f.showSteps && !t.Nerd {
 		for _, l := range nerdterm.FixHint(t, nerd) {
 			// The card re-checks live: no restart needed.
-			s.notes = append(s.notes, strings.Replace(l, "Then restart termocode.", "Then press Check again.", 1))
-		}
-		if gnome && !profileReady {
-			s.notes = append(s.notes, "Or press \"Create termocode profile\": a new profile with the Nerd Font; your default profile stays as it is.")
+			s.notes = append(s.notes, strings.Replace(l, "Then restart termocode.", "Then choose Check again (Fix…).", 1))
 		}
 	}
 	if profileReady {
@@ -167,7 +178,7 @@ func setupIconsStep(f setupFacts) setupStep {
 			"termocode reads only your default profile, so the command turns Nerd icons on in that window.")
 	}
 
-	// Buttons.
+	// Choices, recommended first.
 	if f.iconMode != theme.IconModeNerdFont {
 		if !f.probe.NerdInstalled && !t.Nerd {
 			b := setupButton{id: "install-font", label: "Install Nerd Font"}
@@ -184,7 +195,7 @@ func setupIconsStep(f setupFacts) setupStep {
 			use.disabled = true
 			switch {
 			case t.Font != "":
-				use.why = "Your terminal font (" + t.Font + ") is not a Nerd Font. Switch the terminal to " + nerd + " (Font steps), then press Check again."
+				use.why = "Your terminal font (" + t.Font + ") is not a Nerd Font. Switch the terminal to " + nerd + " (Show the font steps), then Check again."
 			default:
 				use.why = "termocode can't see your terminal's font. If it is a Nerd Font, set icons = nerd in Settings."
 			}
@@ -192,25 +203,39 @@ func setupIconsStep(f setupFacts) setupStep {
 		s.buttons = append(s.buttons, use)
 	}
 	if !t.Nerd {
-		label := "Font steps"
-		if f.showSteps {
-			label = "Hide steps"
-		}
-		s.buttons = append(s.buttons, setupButton{id: "font-steps", label: label})
 		if gnome && !profileReady && t.Source != "over SSH" {
-			b := setupButton{id: "gnome-profile", label: "Create termocode profile"}
+			b := setupButton{id: "gnome-profile", label: "Create a \"" + setup.GnomeProfileName + "\" terminal profile"}
 			if !f.probe.NerdInstalled {
 				b.disabled, b.why = true, "Install a Nerd Font first: the new profile needs one."
 			}
 			s.buttons = append(s.buttons, b)
 		}
+		label := "Show the font steps"
+		if t.Terminal != "" {
+			label += " for " + t.Terminal
+		}
+		if f.showSteps {
+			label = "Hide the font steps"
+		}
+		s.buttons = append(s.buttons, setupButton{id: "font-steps", label: label})
 		s.buttons = append(s.buttons, setupButton{id: "check-again", label: "Check again"})
 	}
-	keep := "Keep Unicode"
+	keep := "Keep Unicode icons"
 	if f.iconMode == theme.IconModeNerdFont {
-		keep = "Use Unicode icons"
+		keep = "Use Unicode icons instead"
 	}
 	s.buttons = append(s.buttons, setupButton{id: "keep-unicode", label: keep})
+
+	switch {
+	case f.installing:
+		s.action = ""
+	case f.showSteps && !t.Nerd:
+		s.action = "Hide steps"
+	case t.Nerd && f.iconMode != theme.IconModeNerdFont:
+		s.action = "Use Nerd…"
+	default:
+		s.action = "Fix…"
+	}
 	return s
 }
 
@@ -223,36 +248,41 @@ func setupAIStep(f setupFacts) setupStep {
 		if f.aiModel != "" {
 			s.status += " · " + f.aiModel
 		}
+		s.detail = s.status
 	case f.settled["ai"]:
 		s.done = true
-		s.status = "Skipped. Set it up later: F1 → AI: Configure Provider…"
+		s.status = "Skipped · F1 → AI: Configure Provider…"
+		s.detail = "Skipped. Set it up later: F1 → AI: Configure Provider…"
 	default:
-		s.status = "Not set up. termocode works fine without AI."
-		s.buttons = []setupButton{{id: "ai-setup", label: "Set up AI…"}, {id: "ai-skip", label: "Skip"}}
+		s.status = "Not set up · termocode works without it"
+		s.detail = "AI is not set up. termocode works fine without it; you can also set it up later (F1 → AI: Configure Provider…)."
+		s.action = "Set up…"
+		s.buttons = []setupButton{{id: "ai-setup", label: "Set up AI…"}, {id: "ai-skip", label: "Skip for now"}}
 	}
 	return s
 }
 
 func setupThemeStep(f setupFacts) setupStep {
 	s := setupStep{id: "theme", title: "Theme", optional: true, done: f.settled["theme"]}
-	s.status = f.themeName + " (optional)"
-	for _, q := range setupQuickThemes {
-		s.buttons = append(s.buttons, setupButton{id: "theme:" + q.id, label: q.label, active: q.id == f.themeID})
+	s.status = f.themeName
+	s.detail = f.themeName
+	s.buttons = []setupButton{{id: "theme-more", label: "Change…"}}
+	if !s.done {
+		s.action = "Change…"
 	}
-	s.buttons = append(s.buttons, setupButton{id: "theme-more", label: "More…"})
 	return s
 }
 
 // setupCardView is what the Welcome page draws.
 type setupCardView struct {
-	show     bool
-	steps    []setupStep
-	footer   []setupButton
-	progress string
-	sig      string // changes whenever the drawing would
+	show    bool
+	steps   []setupStep
+	footer  []setupButton // Hide
+	allDone bool          // every required step is done
+	sig     string        // changes whenever the drawing would
 }
 
-// buttons lists every button in Tab order.
+// buttons lists every button (all steps' choices, then Hide).
 func (v setupCardView) buttons() []setupButton {
 	if !v.show {
 		return nil
@@ -265,34 +295,21 @@ func (v setupCardView) buttons() []setupButton {
 }
 
 func setupCardFromFacts(f setupFacts) setupCardView {
-	v := setupCardView{show: true, steps: buildSetupSteps(f)}
-	done, need := 0, 0
+	v := setupCardView{show: true, steps: buildSetupSteps(f), allDone: true}
 	for _, s := range v.steps {
-		if s.optional {
-			continue
-		}
-		need++
-		if s.done {
-			done++
+		if !s.optional && !s.done {
+			v.allDone = false
 		}
 	}
-	v.progress = itoa(done) + " of " + itoa(need) + " done"
-	v.footer = []setupButton{{id: "done", label: "Done"}, {id: "hide", label: "Hide"}}
+	v.footer = []setupButton{{id: "hide", label: "Hide setup"}}
 	var sb strings.Builder
-	sb.WriteString(v.progress)
+	if v.allDone {
+		sb.WriteString("done")
+	}
 	for _, s := range v.steps {
-		sb.WriteString("|" + s.id + s.status + strings.Join(s.notes, "\x00"))
+		sb.WriteString("|" + s.id + s.status + "\x01" + s.action + "\x01" + strings.Join(s.notes, "\x00"))
 		if s.done {
 			sb.WriteString("+")
-		}
-		for _, b := range s.buttons {
-			sb.WriteString("," + b.id + b.label)
-			if b.disabled {
-				sb.WriteString("-")
-			}
-			if b.active {
-				sb.WriteString("*")
-			}
 		}
 	}
 	v.sig = sb.String()

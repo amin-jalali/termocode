@@ -57,6 +57,21 @@ type Model struct {
 	// long jumps (PgDn, wheel, typing) glide instead of snapping.
 	top    int
 	scroll anim.Value
+	// note is a few lines of plain text shown above the search field
+	// (SetNote); empty = none.
+	note []string
+}
+
+// SetNote shows lines of plain text above the search field, e.g. why a
+// choice is needed. Each line should fit the box (about 50 cells).
+func (m *Model) SetNote(lines []string) { m.note = lines }
+
+// noteRows is how many box rows the note takes (its lines + a blank).
+func (m Model) noteRows() int {
+	if len(m.note) == 0 {
+		return 0
+	}
+	return len(m.note) + 1
 }
 
 // NewWith returns a picker with a provided loader. The loader runs on Init.
@@ -625,7 +640,7 @@ func (m Model) layoutDims() (boxW, boxH, available int) {
 		resultCount = 1 // "loading…" / "no results" placeholder row
 	}
 	// Cap visible rows at a sensible band so the modal stays compact.
-	maxRows := m.h - 12 // leave room for header+input+seps+footer+spacer+border
+	maxRows := m.h - 12 - m.noteRows() // leave room for header+input+seps+footer+spacer+border
 	if maxRows < 1 {
 		maxRows = 1
 	}
@@ -640,7 +655,7 @@ func (m Model) layoutDims() (boxW, boxH, available int) {
 		available = 1
 	}
 
-	contentRows := 1 /*header*/ + 1 /*top sep*/ + 1 /*input*/ + available
+	contentRows := 1 /*header*/ + 1 /*top sep*/ + m.noteRows() + 1 /*input*/ + available
 	// The list is sized to its content; one blank row before the footer.
 	spacer := 1
 	innerH := contentRows + spacer + 1 /*bottom sep*/ + 1 /*footer*/
@@ -689,6 +704,16 @@ func (m Model) renderBox() string {
 
 	// ── Lit hairline under the title ──────────────────────────────────
 	rows = append(rows, theme.Hairline(innerW, theme.BgFloat))
+
+	// ── Note (SetNote) ────────────────────────────────────────────────
+	if len(m.note) > 0 {
+		noteStyle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmTextSec)
+		for _, l := range m.note {
+			l = runewidth.Truncate(l, max(innerW-3, 1), "…")
+			rows = append(rows, padBg(bgFill.Render("  ")+noteStyle.Render(l), innerW))
+		}
+		rows = append(rows, blank)
+	}
 
 	// ── Search field ──────────────────────────────────────────────────
 	field := inputBgFill.Render(" ") + caret.Render(searchGlyph()) + inputBgFill.Render(" ")
@@ -1109,10 +1134,11 @@ func (m Model) RowRects() []RowRect {
 	_, _, available := m.layoutDims()
 	top := m.viewTop(available)
 	var out []RowRect
-	// Inside the box: y=0 border, y=1 header, y=2 hairline, y=3 input,
-	// y=4 result row 0, …
+	// Inside the box: y=0 border, y=1 header, y=2 hairline, the note,
+	// then the input and result row 0, …
+	first := by + 4 + m.noteRows()
 	for i := 0; i < available && top+i < len(m.matches); i++ {
-		out = append(out, RowRect{Index: top + i, X: bx, Y: by + 4 + i, W: bw})
+		out = append(out, RowRect{Index: top + i, X: bx, Y: first + i, W: bw})
 	}
 	return out
 }
