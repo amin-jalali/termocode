@@ -55,6 +55,9 @@ jobs:
         run: |
           GOOS=android GOARCH=arm64 go vet ./...
           CGO_ENABLED=0 GOOS=android GOARCH=arm64 go build -o /dev/null ./cmd/termocode
+          # The release build: cgo with the NDK clang (see release.yml).
+          CC="${ANDROID_NDK_LATEST_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang" \
+            CGO_ENABLED=1 GOOS=android GOARCH=arm64 go build -o /dev/null ./cmd/termocode
           if CGO_ENABLED=1 GOOS=android GOARCH=arm64 go list -deps ./cmd/termocode | grep -q '^golang.design/x/clipboard$'; then
             echo "android build must not import golang.design/x/clipboard" >&2
             exit 1

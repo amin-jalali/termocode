@@ -47,7 +47,8 @@ func newFakeRelease(t *testing.T) *fakeRelease {
 	return f
 }
 
-// publish adds release tag with tarballs for this OS (amd64 + arm64).
+// publish adds release tag with tarballs for this OS and for android
+// (amd64 + arm64 each).
 // When badSum is set, checksums.txt lists a wrong hash.
 func (f *fakeRelease) publish(tag string, badSum bool) {
 	f.t.Helper()
@@ -56,8 +57,9 @@ func (f *fakeRelease) publish(tag string, badSum bool) {
 		f.t.Fatal(err)
 	}
 	var sums strings.Builder
-	for _, arch := range []string{"amd64", "arm64"} {
-		name := fmt.Sprintf("termocode-%s-%s-%s", tag, runtime.GOOS, arch)
+	for _, plat := range []string{runtime.GOOS + "/amd64", runtime.GOOS + "/arm64", "android/arm64"} {
+		goos, arch, _ := strings.Cut(plat, "/")
+		name := fmt.Sprintf("termocode-%s-%s-%s", tag, goos, arch)
 		data := tarball(f.t, name, "#!/bin/sh\necho termocode "+tag+"\n")
 		if err := os.WriteFile(filepath.Join(dir, name+".tar.gz"), data, 0o644); err != nil {
 			f.t.Fatal(err)
@@ -293,21 +295,64 @@ func TestInstallPrefixOnPathAndOldNvim(t *testing.T) {
 	mustContain(t, out, "Your nvim is 0.9")
 }
 
-func TestInstallTermuxPointsToBuildFromSource(t *testing.T) {
-	// Termux reports Linux, but the glibc release binary does not run on
-	// Android: say how to build it instead of installing a broken binary.
+// fakeUname puts a `uname` first on PATH that reports Linux on CPU m.
+func (e *installEnv) fakeUname(m string) {
+	e.t.Helper()
+	script := "#!/bin/sh\ncase \"$1\" in -m) echo " + m + " ;; *) echo Linux ;; esac\n"
+	if err := os.WriteFile(filepath.Join(e.fakeBin, "uname"), []byte(script), 0o755); err != nil {
+		e.t.Fatal(err)
+	}
+}
+
+func TestInstallTermuxUsesAndroidBuild(t *testing.T) {
+	// Termux reports Linux, but the glibc linux build does not run on
+	// Android: it must get the android build, into Termux's $PREFIX.
 	e := newInstallEnv(t)
+	e.fakeUname("aarch64")
+	e.rel.publish("v0.1.0", false)
+	e.rel.setLatest("v0.1.0")
+	prefix := filepath.Join(e.home, "usr")
+	out, ok := e.run([]string{"TERMUX_VERSION=0.118.0", "PREFIX=" + prefix})
+	if !ok {
+		t.Fatalf("install on Termux failed:\n%s", out)
+	}
+	mustContain(t, out, "(android/arm64)")
+	mustContain(t, out, "pkg install git termux-api")
+	got, err := exec.Command(filepath.Join(prefix, "bin", "termocode"), "--version").Output()
+	if err != nil || strings.TrimSpace(string(got)) != "termocode v0.1.0" {
+		t.Fatalf("installed binary: %q %v", got, err)
+	}
+}
+
+func TestInstallTermuxNotArm64PointsToBuildFromSource(t *testing.T) {
+	// The android release build is arm64 only (x86_64 Termux runs in
+	// emulators): say how to build it instead of failing on a 404.
+	e := newInstallEnv(t)
+	e.fakeUname("x86_64")
 	e.rel.publish("v0.1.0", false)
 	e.rel.setLatest("v0.1.0")
 	out, ok := e.run([]string{"TERMUX_VERSION=0.118.0"})
 	if ok {
-		t.Fatalf("install on Termux succeeded:\n%s", out)
+		t.Fatalf("install on x86_64 Termux succeeded:\n%s", out)
 	}
-	mustContain(t, out, "Termux")
+	mustContain(t, out, "arm64 only")
 	mustContain(t, out, "go install")
 	if _, err := os.Stat(e.bin()); !os.IsNotExist(err) {
 		t.Fatal("a binary was installed")
 	}
+}
+
+func TestInstallTermuxNvimHint(t *testing.T) {
+	e := newInstallEnv(t)
+	e.fakeUname("aarch64")
+	e.fakeNvim("v0.9.5")
+	e.rel.publish("v0.1.0", false)
+	e.rel.setLatest("v0.1.0")
+	out, ok := e.run([]string{"TERMUX_VERSION=0.118.0", "PREFIX=" + filepath.Join(e.home, "usr")})
+	if !ok {
+		t.Fatalf("install failed:\n%s", out)
+	}
+	mustContain(t, out, "pkg install neovim")
 }
 
 func TestInstallUnknownOption(t *testing.T) {

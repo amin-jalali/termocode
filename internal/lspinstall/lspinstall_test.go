@@ -301,3 +301,35 @@ func TestLuaServersTable(t *testing.T) {
 		t.Error("lua quoting")
 	}
 }
+
+func TestBuildPlanTermuxUsesPkg(t *testing.T) {
+	// On Android (Termux) the glibc release downloads do not run and
+	// rustup does not exist: point to Termux's own package instead.
+	for name, pkg := range map[string]string{
+		"rust_analyzer": "rust-analyzer",
+		"clangd":        "clang",
+		"lua_ls":        "lua-language-server",
+	} {
+		tool, ok := Lookup(name)
+		if !ok {
+			t.Fatalf("%s not in the registry", name)
+		}
+		_, err := BuildPlan(tool, t.TempDir(), "android", "arm64")
+		var ue *UnsupportedError
+		if !errors.As(err, &ue) {
+			t.Fatalf("%s on android: err = %v, want UnsupportedError", name, err)
+		}
+		if want := "pkg install " + pkg; ue.Hint != want {
+			t.Errorf("%s hint = %q, want %q", name, ue.Hint, want)
+		}
+		// Other hosts keep their normal recipe.
+		if _, err := BuildPlan(tool, t.TempDir(), "linux", "amd64"); err != nil {
+			t.Errorf("%s on linux/amd64: %v", name, err)
+		}
+	}
+	// Tools that work in Termux as they are keep their recipe.
+	gopls, _ := Lookup("gopls")
+	if _, err := BuildPlan(gopls, t.TempDir(), "android", "arm64"); err != nil {
+		t.Errorf("gopls on android: %v", err)
+	}
+}
