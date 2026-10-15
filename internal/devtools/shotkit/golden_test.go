@@ -91,8 +91,8 @@ func goldenExtras() []Scene {
 		// The cursor moved down onto the second recent file.
 		{Name: "dashboard-recent-cursor", Steps: append(DashboardRecent().Steps, Key("down"), Key("down"), Key("down"), Key("down"), Key("down"), Key("down"), Key("down")),
 			Recents: DashboardRecent().Recents, Workspaces: DashboardRecent().Workspaces},
-		{Name: "theme-catppuccin-latte-dashboard", Theme: "catppuccin-latte", Steps: DashboardRecent().Steps, Recents: DashboardRecent().Recents, Workspaces: DashboardRecent().Workspaces},
-		{Name: "dashboard-ascii", Icons: "ascii", Steps: DashboardRecent().Steps, Recents: DashboardRecent().Recents, Workspaces: DashboardRecent().Workspaces},
+		withTheme(withName(DashboardRecent(), "theme-catppuccin-latte-dashboard"), "catppuccin-latte"),
+		func() Scene { sc := withName(DashboardRecent(), "dashboard-ascii"); sc.Icons = "ascii"; return sc }(),
 		{Name: "md-preview-light", Theme: "catppuccin-latte", Steps: MarkdownPreview().Steps},
 		DiffReview(),
 		// Persian (right-to-left) chat: shaped letters in reading order.

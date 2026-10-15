@@ -192,6 +192,17 @@ func Run(sc Scene, w, h int, opt Options) (string, error) {
 			os.Setenv("TERMOCODE_PLUGINS_DIR", p)
 		}
 	}
+	// The start page writes paths under the home directory as "~/…". With
+	// seeded lists the working directory's parent plays the home, so the
+	// shots read "~/termocode/…" like on a real machine (the golden child
+	// has that layout already).
+	if len(sc.Recents)+len(sc.Workspaces) > 0 {
+		if wd, err := os.Getwd(); err == nil {
+			old := os.Getenv("HOME")
+			os.Setenv("HOME", filepath.Dir(wd))
+			defer os.Setenv("HOME", old)
+		}
+	}
 	for k, v := range sc.Env {
 		os.Setenv(k, v)
 		defer os.Unsetenv(k)
