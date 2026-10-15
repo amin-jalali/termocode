@@ -286,3 +286,24 @@ func TestReviewKeepsReject(t *testing.T) {
 		t.Errorf("r in review: %v", d)
 	}
 }
+
+// Spec (commit view §3.5): a compare card (no commit hash) offers only
+// what it can do: its hint row says "y copy range" and never names the
+// commit-only keys (copy SHA, at commit, raw).
+func TestCompareHints(t *testing.T) {
+	h := Header{Title: "Compare f31bb77 → a1b2c3d", Files: 1, Add: 1, OldLabel: "− f31bb77", NewLabel: "+ a1b2c3d"}
+	m := NewCommit(h, []File{{Name: "x.txt", Status: 'M', Old: oldText, New: newText}},
+		[]Button{{ID: "copy-range", Label: "Copy range"}, {ID: "open-file", Label: "Open file"}, {ID: "hide", Label: "Close"}})
+	for _, w := range []int{150, 100} {
+		m.SetSize(w, 30)
+		s := plain(m)
+		if !strings.Contains(s, "copy range") {
+			t.Errorf("w=%d: no copy range hint:\n%s", w, s)
+		}
+		for _, bad := range []string{"copy SHA", "at commit", " raw "} {
+			if strings.Contains(s, bad) {
+				t.Errorf("w=%d: compare hint names %q:\n%s", w, bad, s)
+			}
+		}
+	}
+}
