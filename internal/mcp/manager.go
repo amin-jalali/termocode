@@ -647,11 +647,9 @@ func (m *Manager) Call(ctx context.Context, ask AskTrust, server, tool string, a
 	if t := st.cfg.Timeout; t > 0 {
 		timeout = time.Duration(t) * time.Second
 	}
-	cctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-	res, err := p.Client.CallTool(cctx, tool, args)
+	res, err := p.Client.CallToolTimeout(ctx, tool, args, timeout)
 	m.armIdle(st)
-	if errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil {
+	if errors.Is(err, ErrCallTimeout) {
 		m.log(server, "%s: no answer in %v", tool, timeout)
 		return res, fmt.Errorf("MCP %s: no answer in %v (raise \"timeout\" for this server in mcp.json)", server, timeout)
 	}
