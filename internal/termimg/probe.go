@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -16,7 +17,30 @@ import (
 // (1×1 RGB pixel, a=q only checks support and stores nothing), a cell-size
 // query (CSI 16 t → CSI 6;h;w t) and DA1 last. Every terminal answers DA1, so
 // its reply marks the end of all replies.
-const probeQuery = "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\" + "\x1b[16t" + "\x1b[c"
+const probeQuery = "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\" + "\x1b[16t" + keysQuery + "\x1b[c"
+
+// keysQuery asks for the kitty keyboard flags; a terminal with the
+// protocol answers CSI ? flags u (before DA1). See hasKittyKeys.
+const keysQuery = "\x1b[?u"
+
+// hasKittyKeys reports a CSI ? flags u answer in reply.
+func hasKittyKeys(reply []byte) bool { return kittyKeysRe.Match(reply) }
+
+var kittyKeysRe = regexp.MustCompile(`\x1b\[\?\d+u`)
+
+// ProbeKittyKeyboard asks only the keyboard question (images are off, so
+// Probe does not run). Like Probe it must run before Bubble Tea takes the
+// TTY. false inside tmux (its extended keys are a different scheme) and
+// when the terminal does not answer.
+func ProbeKittyKeyboard(in, out *os.File, timeout time.Duration, getenv func(string) string) bool {
+	if getenv == nil {
+		getenv = os.Getenv
+	}
+	if getenv("TMUX") != "" {
+		return false
+	}
+	return hasKittyKeys(Query(in, out, keysQuery+"\x1b[c", timeout, hasDA1))
+}
 
 // tmuxPassthrough reports tmux's allow-passthrough option. A seam for tests.
 var tmuxPassthrough = func() bool {
@@ -76,6 +100,7 @@ func Probe(in, out *os.File, timeout time.Duration, getenv func(string) string) 
 		kittyErr = msg
 	}
 	caps.CellW, caps.CellH = cw, ch
+	caps.KittyKeys = hasKittyKeys(reply)
 	switch {
 	case kitty:
 		caps.Protocol = Kitty

@@ -135,6 +135,9 @@ func (h channelHandlers) shutdown() {
 type Program struct {
 	initialModel Model
 
+	// kittyFlags: see WithKittyKeyboard. termocode patch.
+	kittyFlags int
+
 	// handlers is a list of channels that need to be waited on before the
 	// program can exit.
 	handlers channelHandlers
@@ -643,6 +646,9 @@ func (p *Program) Run() (returnModel Model, returnErr error) {
 	// If no renderer is set use the standard one.
 	if p.renderer == nil {
 		p.renderer = newRenderer(p.output, p.startupOptions.has(withANSICompressor), p.fps)
+		if sr, ok := p.renderer.(*standardRenderer); ok { // termocode patch
+			sr.kittyFlags = p.kittyFlags
+		}
 	}
 
 	// Check if output is a TTY before entering raw mode, hiding the cursor and

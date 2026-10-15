@@ -81,3 +81,42 @@ func TestProbeNoAnswerKeepsEnv(t *testing.T) {
 		t.Errorf("protocol %v (%s), want Kitty", got.Protocol, got.Reason)
 	}
 }
+
+// Terminal R1: the probe also asks for the kitty keyboard flags (CSI ? u).
+// Only a terminal that answers gets the protocol turned on.
+func TestProbeKittyKeyboard(t *testing.T) {
+	if got := probeWithReply(t, nil, "\x1b[?0u\x1b[?62;22c"); !got.KittyKeys {
+		t.Errorf("answered CSI ? u: KittyKeys = false (%s)", got.Reason)
+	}
+	if got := probeWithReply(t, nil, "\x1b[?62;22c"); got.KittyKeys {
+		t.Error("no CSI ? u answer: KittyKeys = true")
+	}
+}
+
+// With images off the keyboard question is asked on its own.
+func TestProbeKeysOnly(t *testing.T) {
+	ptm, tty, err := pty.Open()
+	if err != nil {
+		t.Skipf("no pty: %v", err)
+	}
+	defer ptm.Close()
+	defer tty.Close()
+	go func() {
+		var got []byte
+		buf := make([]byte, 256)
+		for !bytes.Contains(got, []byte("\x1b[c")) {
+			n, err := ptm.Read(buf)
+			if err != nil {
+				return
+			}
+			got = append(got, buf[:n]...)
+		}
+		if bytes.Contains(got, []byte("\x1b_G")) {
+			_, _ = ptm.WriteString("unexpected graphics query")
+		}
+		_, _ = ptm.WriteString("\x1b[?1u\x1b[?62c")
+	}()
+	if !ProbeKittyKeyboard(tty, tty, 2*time.Second, env(nil)) {
+		t.Error("answered CSI ? u: false")
+	}
+}

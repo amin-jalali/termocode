@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -27,6 +28,10 @@ const (
 type standardRenderer struct {
 	mtx *sync.Mutex
 	out io.Writer
+
+	// kittyFlags, when > 0, are pushed (CSI > flags u) after entering the
+	// alt screen and popped (CSI < u) before leaving it. termocode patch.
+	kittyFlags int
 
 	buf                bytes.Buffer
 	queuedMessageLines []string
@@ -400,6 +405,11 @@ func (r *standardRenderer) enterAltScreen() {
 	// Entering the alt screen resets the lines rendered count.
 	r.altLinesRendered = 0
 
+	// termocode patch: the alt screen has its own kitty keyboard stack.
+	if r.kittyFlags > 0 {
+		r.execute("\x1b[>" + strconv.Itoa(r.kittyFlags) + "u")
+	}
+
 	r.repaint()
 }
 
@@ -412,6 +422,10 @@ func (r *standardRenderer) exitAltScreen() {
 	}
 
 	r.altScreenActive = false
+	// termocode patch: give the flags back before the main screen returns.
+	if r.kittyFlags > 0 {
+		r.execute("\x1b[<u")
+	}
 	r.execute(ansi.ResetAltScreenSaveCursorMode)
 
 	// cmd.exe and other terminals keep separate cursor states for the AltScreen

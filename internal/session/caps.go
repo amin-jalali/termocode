@@ -23,6 +23,10 @@ var CapsEnvKeys = []string{
 	"KITTY_WINDOW_ID", "GHOSTTY_RESOURCES_DIR", "WEZTERM_EXECUTABLE", "WT_SESSION", "VTE_VERSION",
 	// Terminals that reorder right-to-left text themselves (rtl = auto).
 	"KONSOLE_VERSION", "MLTERM",
+	// Terminals that ignore OSC 52, and VTE terminals that are not GNOME
+	// Terminal (clipboard and icon checks).
+	"XTERM_VERSION", "TERMINAL_EMULATOR", "TILIX_ID", "TERMINATOR_UUID", "PTYXIS_VERSION",
+	"GNOME_TERMINAL_SCREEN", "GNOME_TERMINAL_SERVICE",
 	// Whether the client runs over SSH (file transfer: a local copy, or
 	// scp / kitty / iTerm2 to the client's machine).
 	"SSH_CONNECTION", "SSH_CLIENT", "SSH_TTY",
