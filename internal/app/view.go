@@ -1605,13 +1605,13 @@ func gitViewToggleGlyph(viewTree bool) string {
 // title, mirroring the file-explorer's "E X P L O R E R" header. Falls back to
 // the plain title when the panel is too narrow for the spaced form.
 func renderGitTitleRow(w int, focused bool) string {
-	return sidebarTitle("SOURCE CONTROL", w, focused)
+	return sidebarTitle("SOURCE CONTROL", w, focused, projectName())
 }
 
 // sidebarTitle is the title row of a side panel: plain caps (no letter
 // spacing, so long titles fit), bold, in the accent while the panel has the
 // keyboard (theme.PaneTitle), with a two-cell margin. Exactly w cells.
-func sidebarTitle(label string, w int, focused bool) string {
+func sidebarTitle(label string, w int, focused bool, project ...string) string {
 	if w <= 0 {
 		return ""
 	}
@@ -1620,7 +1620,18 @@ func sidebarTitle(label string, w int, focused bool) string {
 	}
 	st := lipgloss.NewStyle().Background(theme.LG(theme.BgSidebar)).
 		Foreground(theme.PaneTitle(focused)).Bold(true)
-	return padBgToWidth(theme.Bg(theme.BgSidebar).Render("  ")+st.Render(label), w)
+	row := theme.Bg(theme.BgSidebar).Render("  ") + st.Render(label)
+	// "· PROJECT" after the title, like the Explorer's, when it fits.
+	if len(project) > 0 && project[0] != "" {
+		if room := w - textWidth(row) - 4; room >= 4 {
+			p := project[0]
+			if runewidth.StringWidth(p) > room {
+				p = runewidth.Truncate(p, room, "…")
+			}
+			row += theme.FgBg(theme.TextMuted, theme.BgSidebar).Render(" · ") + theme.FgBg(theme.TextSecondary, theme.BgSidebar).Render(p)
+		}
+	}
+	return padBgToWidth(row, w)
 }
 
 // renderGitHairline draws the line under the title — the same pane
