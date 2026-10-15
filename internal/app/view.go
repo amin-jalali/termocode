@@ -1384,8 +1384,8 @@ func (m Model) renderGitSidebar(w, h int) string {
 	// title, a hairline underline, then a branch + tree·flat sub-row, then a
 	// blank spacer. gitPanelTopOffset() must stay in sync (4 rows).
 	var header []string
-	header = append(header, renderGitTitleRow(w))
-	header = append(header, renderGitHairline(w))
+	header = append(header, renderGitTitleRow(w, focused))
+	header = append(header, renderGitHairline(w, focused))
 	header = append(header, renderGitSubheader(m.gitBranch, m.gitViewTree, w))
 	header = append(header, sidebarFill.Render(strings.Repeat(" ", w)))
 	header = append(header, m.renderGitCommitBox(w))
@@ -1604,14 +1604,14 @@ func gitViewToggleGlyph(viewTree bool) string {
 // renderGitTitleRow draws the letter-spaced " S O U R C E   C O N T R O L "
 // title, mirroring the file-explorer's "E X P L O R E R" header. Falls back to
 // the plain title when the panel is too narrow for the spaced form.
-func renderGitTitleRow(w int) string {
-	return sidebarTitle("SOURCE CONTROL", w)
+func renderGitTitleRow(w int, focused bool) string {
+	return sidebarTitle("SOURCE CONTROL", w, focused)
 }
 
 // sidebarTitle is the title row of a side panel: plain caps (no letter
-// spacing, so long titles fit), bold, in a dimmed accent, with a two-cell
-// margin. Exactly w cells.
-func sidebarTitle(label string, w int) string {
+// spacing, so long titles fit), bold, in the accent while the panel has the
+// keyboard (theme.PaneTitle), with a two-cell margin. Exactly w cells.
+func sidebarTitle(label string, w int, focused bool) string {
 	if w <= 0 {
 		return ""
 	}
@@ -1619,20 +1619,14 @@ func sidebarTitle(label string, w int) string {
 		label = runewidth.Truncate(label, max, "…")
 	}
 	st := lipgloss.NewStyle().Background(theme.LG(theme.BgSidebar)).
-		Foreground(theme.Mix(theme.TextSecondary, theme.BorderFocus, 0.35)).Bold(true)
+		Foreground(theme.PaneTitle(focused)).Bold(true)
 	return padBgToWidth(theme.Bg(theme.BgSidebar).Render("  ")+st.Render(label), w)
 }
 
-// renderGitHairline draws the 1/8-block underline beneath the title — the same
-// hairline the explorer header uses to separate itself from the body.
-func renderGitHairline(w int) string {
-	if w <= 0 {
-		return ""
-	}
-	return lipgloss.NewStyle().
-		Background(sidebarBg).
-		Foreground(theme.LG(theme.BorderSubtle)).
-		Render(strings.Repeat("▔", w))
+// renderGitHairline draws the line under the title — the same pane
+// hairline the explorer uses (lit while the panel has the keyboard).
+func renderGitHairline(w int, focused bool) string {
+	return theme.PaneHairline(w, theme.BgSidebar, focused)
 }
 
 // gitViewToggleWidth (declared above) is hit-tested on the sub-header row.

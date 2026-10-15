@@ -101,7 +101,7 @@ func (m Model) draw(focused bool, activePath string, activeDirty bool, gitStatus
 	// divider row. Compact mode swaps the hairline for a regular divider
 	// when the panel is tall enough but not full.
 	if chrome > 0 {
-		rows = append(rows, m.renderHeader())
+		rows = append(rows, m.renderHeader(focused))
 		if chrome == chromeFull {
 			rows = append(rows, m.renderHeaderHairline(focused))
 		} else if chrome == chromeCompact {
@@ -137,10 +137,10 @@ func (m Model) draw(focused bool, activePath string, activeDirty bool, gitStatus
 //
 // — caps + letter-spaced label, dim separator, secondary workspace name,
 // muted branch (right-aligned, ≤12 chars), muted ⋯ kebab.
-func (m Model) renderHeader() string {
+func (m Model) renderHeader(focused bool) string {
 	bg := theme.Bg(theme.BgSidebar)
 	primary := lipgloss.NewStyle().Background(theme.LG(theme.BgSidebar)).
-		Foreground(theme.Mix(theme.TextSecondary, theme.BorderFocus, 0.35)).Bold(true)
+		Foreground(theme.PaneTitle(focused)).Bold(true)
 	secondary := theme.FgBg(theme.TextSecondary, theme.BgSidebar)
 	muted := theme.FgBg(theme.TextMuted, theme.BgSidebar)
 
@@ -596,14 +596,7 @@ func (m Model) renderHeaderHairline(focused bool) string {
 	if m.w <= 0 {
 		return ""
 	}
-	fg := theme.LG(theme.BorderSubtle)
-	if focused {
-		fg = theme.Mix(theme.BorderSubtle, theme.BorderFocus, 0.7)
-	}
-	style := lipgloss.NewStyle().
-		Foreground(fg).
-		Background(theme.LG(theme.BgSidebar))
-	return style.Render(strings.Repeat("▔", m.w))
+	return theme.PaneHairline(m.w, theme.BgSidebar, focused)
 }
 
 // padOrTruncRow guarantees the row is exactly w cells wide. If it's already

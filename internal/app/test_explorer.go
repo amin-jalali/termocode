@@ -534,8 +534,8 @@ func (m Model) renderTestsSidebar(w, h int) string {
 	focused := m.focus == FocusExplorer
 	var lines []string
 
-	lines = append(lines, testsPad(sidebarTitle("TESTING", w), w))
-	lines = append(lines, theme.FgBg(theme.BorderDefault, theme.BgSidebar).Render(strings.Repeat("▔", w)))
+	lines = append(lines, testsPad(sidebarTitle("TESTING", w, focused), w))
+	lines = append(lines, theme.PaneHairline(w, theme.BgSidebar, focused))
 
 	c := st.tree.Counts()
 	// Action bar.

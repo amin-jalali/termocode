@@ -170,29 +170,31 @@ func dropFirstCell(row string, width int) string {
 // close glyphs are right-aligned with 1 col of padding between them and a
 // 1-col right pad. The whole row uses BgPanel.
 // actionsHeaderMemo keeps the last header row (passed through edge): it
-// only changes with the width, pin state, hovered button and theme.
+// only changes with the width, pin state, focus, hovered button and theme.
 var actionsHeaderMemo struct {
 	sync.Mutex
-	ok     bool
-	width  int
-	pinned bool
-	hover  string
-	rk     theme.RenderKey
-	out    string
+	ok      bool
+	width   int
+	pinned  bool
+	focused bool
+	hover   string
+	rk      theme.RenderKey
+	out     string
 }
 
 // actionsHeaderEdged is edge(renderActionsHeader(width)) through
 // actionsHeaderMemo (edge is the same for the same width and theme).
 func (m Model) actionsHeaderEdged(width int, edge func(string) string) string {
 	hover, rk := m.actionsHeaderHover(), theme.CurrentRenderKey()
+	focused := m.ai != nil && m.ai.focused
 	c := &actionsHeaderMemo
 	c.Lock()
 	defer c.Unlock()
-	if c.ok && c.width == width && c.pinned == m.actionsPinned && c.hover == hover && c.rk == rk {
+	if c.ok && c.width == width && c.pinned == m.actionsPinned && c.focused == focused && c.hover == hover && c.rk == rk {
 		return c.out
 	}
 	out := edge(m.renderActionsHeader(width))
-	c.ok, c.width, c.pinned, c.hover, c.rk, c.out = true, width, m.actionsPinned, hover, rk, out
+	c.ok, c.width, c.pinned, c.focused, c.hover, c.rk, c.out = true, width, m.actionsPinned, focused, hover, rk, out
 	return out
 }
 
@@ -218,7 +220,10 @@ func (m Model) renderActionsHeader(width int) string {
 	pinStyle := theme.FgBg(pinTok, theme.BgPanel).Bold(true)
 	closeStyle := theme.FgBg(theme.TextSecondary, theme.BgPanel).Bold(true)
 
-	labelStyle = theme.FgBg(theme.AIAccent, theme.BgPanel).Bold(true)
+	// The AI colour while the chat has the keyboard (UI review #6).
+	if m.ai != nil && m.ai.focused {
+		labelStyle = theme.FgBg(theme.AIAccent, theme.BgPanel).Bold(true)
+	}
 	left := bg.Render(" ") + labelStyle.Render(aiSpark()+" AI CHAT")
 	// Header buttons light up under the pointer.
 	hover := m.actionsHeaderHover()
