@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Settings is the NON-secret AI configuration, stored in config.json next
@@ -55,6 +56,32 @@ type Credentials struct {
 	// MCPSecrets are the values of ${secret:NAME} in mcp.json (tokens,
 	// connection strings), so mcp.json itself never holds a secret.
 	MCPSecrets map[string]string `json:"mcp_secrets,omitempty"`
+	// MCPOAuth are the OAuth sign-ins of remote MCP servers, by server
+	// name (internal/mcp/auth).
+	MCPOAuth map[string]MCPOAuth `json:"mcp_oauth,omitempty"`
+}
+
+// MCPOAuth is one MCP server's OAuth sign-in. Issuer and Resource bind
+// the tokens: they are only sent to Resource (the server URL) and only
+// refreshed at this issuer's TokenEndpoint.
+type MCPOAuth struct {
+	Issuer        string          `json:"issuer"`
+	Resource      string          `json:"resource"`
+	TokenEndpoint string          `json:"token_endpoint"`
+	ClientID      string          `json:"client_id"`
+	ClientSecret  string          `json:"client_secret,omitempty"`
+	AuthMethod    string          `json:"token_endpoint_auth_method,omitempty"`
+	RedirectURI   string          `json:"redirect_uri,omitempty"`
+	Registration  json.RawMessage `json:"registration,omitempty"`
+	AccessToken   string          `json:"access_token"`
+	RefreshToken  string          `json:"refresh_token,omitempty"`
+	ExpiresAtMs   int64           `json:"expires_at_ms,omitempty"`
+	Scope         string          `json:"scope,omitempty"`
+}
+
+// Expired reports a token that ends within a minute (0: no end known).
+func (e MCPOAuth) Expired(now time.Time) bool {
+	return e.ExpiresAtMs != 0 && now.UnixMilli() >= e.ExpiresAtMs-60_000
 }
 
 // ConfigDir is termocode's config directory ($XDG_CONFIG_HOME/termocode or
@@ -202,6 +229,11 @@ func (c Credentials) register() {
 	}
 	for _, v := range c.MCPSecrets {
 		RegisterSecret(v)
+	}
+	for _, e := range c.MCPOAuth {
+		RegisterSecret(e.AccessToken)
+		RegisterSecret(e.RefreshToken)
+		RegisterSecret(e.ClientSecret)
 	}
 	if c.ClaudeOAuth != nil {
 		RegisterSecret(c.ClaudeOAuth.AccessToken)
