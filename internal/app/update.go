@@ -253,6 +253,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 			return m, cmd
 		}
 		return m, m.onAIConfirmClosed() // Group A: Esc denies an AI tool call
+	case activity.OpenPaletteMsg: // the termocode mark at the top of the bar
+		return m.dispatchWelcomeAction(keymap.ActionCommandPalette)
 	case activity.SwitchMsg:
 		// Settings is a one-shot action (open the modal Settings UI), not
 		// a sidebar view — clicking it should pop the picker instead of

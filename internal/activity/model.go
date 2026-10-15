@@ -42,16 +42,31 @@ const Width = 4
 // 2-rows tall (top half + letter half).
 const itemPitch = 2
 
-// interItemDivider is the number of rows between consecutive items. The
-// row holds a thin faint hairline that doesn't span the full bar width
-// (rendered as a short centred segment), giving the eye a soft separation
-// between F / G / R without the heaviness of a full-width rule.
-const interItemDivider = 1
+// interItemDivider is the number of rows between consecutive items. With
+// the ASCII bold artwork the row holds a short hairline between the 2×2
+// blocks; single-cell icons (Nerd / Unicode) already have a blank second
+// row, so they need no gap (UI review #9).
+func interItemDivider() int {
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		return 1
+	}
+	return 0
+}
 
 // itemStride is the row count an item occupies including its trailing
 // divider. The last item in a group has no trailing divider, so total
 // rows per group = len(items)*itemPitch + (len(items)-1)*interItemDivider.
-const itemStride = itemPitch + interItemDivider
+func itemStride() int { return itemPitch + interItemDivider() }
+
+// markRows is the height of the termocode mark at the top of the bar (the
+// logo's pixel "T"); topStart leaves one blank row under it.
+const (
+	markRows = 2
+	topStart = markRows + 1
+)
+
+// OpenPaletteMsg fires when the user clicks the termocode mark.
+type OpenPaletteMsg struct{}
 
 // SwitchMsg fires when the user clicks an icon.
 type SwitchMsg struct{ View View }
@@ -106,6 +121,9 @@ func (m Model) HandleMouse(x, y int, t tea.MouseEventType) (Model, tea.Cmd) {
 	if y < 0 || y >= m.h {
 		return m, nil
 	}
+	if y < markRows {
+		return m, func() tea.Msg { return OpenPaletteMsg{} }
+	}
 	target, ok := m.itemAt(y)
 	if !ok {
 		return m, nil
@@ -123,7 +141,7 @@ func topGroupRows() int {
 	if len(items) == 0 {
 		return 0
 	}
-	return len(items)*itemPitch + (len(items)-1)*interItemDivider
+	return len(items)*itemPitch + (len(items)-1)*interItemDivider()
 }
 
 // bottomGroupRows returns the row count taken by the bottom-of-bar group.
@@ -131,14 +149,14 @@ func bottomGroupRows() int {
 	if len(bottomItems) == 0 {
 		return 0
 	}
-	return len(bottomItems)*itemPitch + (len(bottomItems)-1)*interItemDivider
+	return len(bottomItems)*itemPitch + (len(bottomItems)-1)*interItemDivider()
 }
 
 // bottomGroupStart returns the first row of the bottom group given the
 // current bar height. -1 means there isn't room for a separate bottom group.
 func (m Model) bottomGroupStart() int {
 	start := m.h - bottomGroupRows()
-	if start < topGroupRows()+1 {
+	if start < topStart+topGroupRows()+1 {
 		return -1
 	}
 	return start
@@ -148,8 +166,11 @@ func (m Model) bottomGroupStart() int {
 // clickable — they return ok=false so a click in the gap is a no-op
 // (matches the visual cue that nothing's there).
 func (m Model) itemAt(y int) (View, bool) {
-	if y < topGroupRows() {
-		idx, isItem := strideIndex(y)
+	if y < topStart {
+		return 0, false
+	}
+	if y < topStart+topGroupRows() {
+		idx, isItem := strideIndex(y - topStart)
 		items := topAll() // Group I: + extension items
 		if !isItem || idx >= len(items) {
 			return 0, false
@@ -175,8 +196,8 @@ func (m Model) itemAt(y int) (View, bool) {
 // Rows within an item's pitch (top half + letter half) both return the
 // same itemIdx so the click target spans both rows of the icon.
 func strideIndex(localY int) (int, bool) {
-	idx := localY / itemStride
-	off := localY % itemStride
+	idx := localY / itemStride()
+	off := localY % itemStride()
 	if off < itemPitch {
 		return idx, true
 	}
@@ -191,11 +212,18 @@ const (
 	rowInterItem          // thin hairline between two items in the same group
 	rowItemTop            // top half of an icon's 2-row pitch — bold[0]
 	rowItemBottom         // bottom half of an icon's 2-row pitch — bold[1]
+	rowMark               // the termocode mark (rows 0..markRows-1)
 )
 
 func (m Model) classify(row int) (rowKind, *item) {
-	if row < topGroupRows() {
-		return classifyInGroup(row, topAll()) // Group I: + extension items
+	if row < markRows {
+		return rowMark, nil
+	}
+	if row < topStart {
+		return rowEmpty, nil
+	}
+	if row < topStart+topGroupRows() {
+		return classifyInGroup(row-topStart, topAll()) // Group I: + extension items
 	}
 	bs := m.bottomGroupStart()
 	if bs < 0 {
@@ -211,8 +239,8 @@ func (m Model) classify(row int) (rowKind, *item) {
 }
 
 func classifyInGroup(localY int, items []item) (rowKind, *item) {
-	idx := localY / itemStride
-	off := localY % itemStride
+	idx := localY / itemStride()
+	off := localY % itemStride()
 	if idx >= len(items) {
 		return rowEmpty, nil
 	}
@@ -310,6 +338,8 @@ func (m Model) renderRow(row int, st styleSet) string {
 		return emptyRow
 	case rowDivider:
 		return st.divider.Render(strings.Repeat("─", Width))
+	case rowMark:
+		return renderMarkRow(row, st)
 	case rowItemTop, rowItemBottom:
 		if theme.CurrentIconMode != theme.IconModeASCII {
 			return renderActivityGlyphRow(it.icon, kind == rowItemTop, it.view == m.active, st)
@@ -414,7 +444,7 @@ func renderActivityGlyphRow(ic theme.Icon, iconRow, isActive bool, st styleSet) 
 	}
 	fg := theme.LG(theme.TextMuted)
 	if isActive {
-		fg = theme.LG(theme.TextWhite)
+		fg = theme.LG(theme.BorderFocus)
 	}
 	icon := lipgloss.NewStyle().Background(bg).Foreground(fg).Bold(true).Render(g)
 	return st.rowFrame.Render(lead + fill.Render(" ") + icon + fill.Render(" "))
@@ -435,4 +465,25 @@ func renderInterItemDivider(st styleSet) string {
 		style.Render(strings.Repeat("─", segW)) +
 		st.bgFill.Render(strings.Repeat(" ", Width-pad-segW))
 	return st.rowFrame.Render(out)
+}
+
+// renderMarkRow draws one row of the termocode mark: the pixel "T" of the
+// start-page logo in half blocks (top bar, then the stem), in the accent
+// colours. ASCII mode shows a plain "T".
+func renderMarkRow(row int, st styleSet) string {
+	bg := theme.LG(theme.BgActivityBar)
+	cell := func(c theme.Color256, s string) string {
+		return lipgloss.NewStyle().Background(bg).Foreground(theme.LG(c)).Render(s)
+	}
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		if row == 0 {
+			return st.rowFrame.Render(st.bgFill.Render("  ") + cell(theme.BorderFocus, "T") + st.bgFill.Render(" "))
+		}
+		return st.bgFill.Render(strings.Repeat(" ", Width))
+	}
+	if row == 0 {
+		return st.rowFrame.Render(st.bgFill.Render(" ") +
+			cell(theme.BorderFocus, "▀") + cell(theme.AccentLavender, "█") + cell(theme.AccentMagenta, "▀"))
+	}
+	return st.rowFrame.Render(st.bgFill.Render("  ") + cell(theme.AccentLavender, "▀") + st.bgFill.Render(" "))
 }

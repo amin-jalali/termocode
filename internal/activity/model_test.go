@@ -39,9 +39,8 @@ func TestUpdateIsNoop(t *testing.T) {
 func TestHandleMouseClickOnIconRow(t *testing.T) {
 	m := New()
 	m.SetHeight(40)
-	// First item (Files, active by default) — its 2-row icon block sits
-	// at y=0,1. Click the icon's top row.
-	_, cmd := m.HandleMouse(1, 1, tea.MouseLeft)
+	// First item (Files, active by default): click its top row.
+	_, cmd := m.HandleMouse(1, m.Items()[0].Y, tea.MouseLeft)
 	if cmd == nil {
 		t.Fatal("click on active icon must emit ToggleSidebar")
 	}
@@ -53,10 +52,8 @@ func TestHandleMouseClickOnIconRow(t *testing.T) {
 func TestHandleMouseClickOnInactiveSwitches(t *testing.T) {
 	m := New() // ViewFiles active
 	m.SetHeight(40)
-	// Stride is itemPitch+interItemDivider = 3. Git is the second top item
-	// (Search was removed), so its block sits at y=3,4 (after the 1-row
-	// hairline at y=2).
-	_, cmd := m.HandleMouse(1, 3, tea.MouseLeft)
+	// Git is the second top item (Search was removed).
+	_, cmd := m.HandleMouse(1, m.Items()[1].Y, tea.MouseLeft)
 	if cmd == nil {
 		t.Fatal("click on inactive icon must emit SwitchMsg")
 	}
@@ -72,9 +69,15 @@ func TestHandleMouseClickOnInactiveSwitches(t *testing.T) {
 func TestHandleMouseClickOnHairlineIsNoop(t *testing.T) {
 	m := New()
 	m.SetHeight(40)
-	// y=2 is the hairline between Files (y=0,1) and Git (y=3,4).
-	// Clicks on the hairline are intentionally non-clickable.
-	if _, cmd := m.HandleMouse(1, 2, tea.MouseLeft); cmd != nil {
+	// The row under the mark, above the first icon, is not clickable; nor
+	// is the hairline between icons (ASCII art only).
+	if _, cmd := m.HandleMouse(1, topStart-1, tea.MouseLeft); cmd != nil {
+		t.Fatal("click on the gap under the mark must be a no-op")
+	}
+	old := theme.CurrentIconMode
+	theme.CurrentIconMode = theme.IconModeASCII
+	defer func() { theme.CurrentIconMode = old }()
+	if _, cmd := m.HandleMouse(1, m.Items()[0].Y+itemPitch, tea.MouseLeft); cmd != nil {
 		t.Fatal("click on inter-item hairline must be a no-op")
 	}
 }
@@ -99,7 +102,7 @@ func TestHandleMouseOutOfBoundsIsNoop(t *testing.T) {
 func TestHandleMouseIgnoresNonLeftButtons(t *testing.T) {
 	m := New()
 	m.SetHeight(40)
-	if _, cmd := m.HandleMouse(0, 1, tea.MouseRight); cmd != nil {
+	if _, cmd := m.HandleMouse(0, m.Items()[0].Y, tea.MouseRight); cmd != nil {
 		t.Fatal("non-left clicks must be ignored")
 	}
 }
@@ -109,10 +112,10 @@ func TestHandleMouseClickInGapBetweenGroups(t *testing.T) {
 	m.SetHeight(40)
 	// Find a row that classifies as rowEmpty between top and bottom groups.
 	bs := m.bottomGroupStart()
-	if bs <= topGroupRows() {
+	if bs <= topStart+topGroupRows() {
 		t.Skip("layout has no gap row at this height")
 	}
-	gapY := topGroupRows() // first row past top group
+	gapY := topStart + topGroupRows() // first row past top group
 	if _, cmd := m.HandleMouse(0, gapY, tea.MouseLeft); cmd != nil {
 		t.Fatalf("click in empty gap should be a no-op (y=%d, bs=%d)", gapY, bs)
 	}
@@ -146,8 +149,8 @@ func TestViewRendersBoldArtwork(t *testing.T) {
 	if len(rows) < 2 {
 		t.Fatalf("expected at least 2 rows, got %d", len(rows))
 	}
-	row0 := stripANSI(rows[0])
-	row1 := stripANSI(rows[1])
+	row0 := stripANSI(rows[topStart])
+	row1 := stripANSI(rows[topStart+1])
 	bold := theme.IconFiles.BoldRender()
 	if !strings.Contains(row0, bold[0]) {
 		t.Fatalf("row 0 missing Bold[0] %q; got %q", bold[0], row0)
@@ -159,7 +162,7 @@ func TestViewRendersBoldArtwork(t *testing.T) {
 
 // TestViewRendersBoldForEachItem walks every top-group item and confirms
 // its Bold[0]/Bold[1] glyphs show up in the rows reserved for that item.
-// Stride = itemPitch + interItemDivider so item N starts at idx*stride.
+// Item N starts at topStart + N*itemStride().
 func TestViewRendersBoldForEachItem(t *testing.T) {
 	for idx, it := range topItems {
 		m := New()
@@ -167,7 +170,7 @@ func TestViewRendersBoldForEachItem(t *testing.T) {
 		m.SetHeight(40)
 		out := m.View()
 		rows := strings.Split(out, "\n")
-		topRow := idx * itemStride
+		topRow := topStart + idx*itemStride()
 		botRow := topRow + 1
 		if botRow >= len(rows) {
 			t.Fatalf("not enough rendered rows for item %d", idx)

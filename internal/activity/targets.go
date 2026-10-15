@@ -12,7 +12,7 @@ type Item struct {
 func (m Model) Items() []Item {
 	var out []Item
 	for i, it := range topAll() {
-		y := i * itemStride
+		y := topStart + i*itemStride()
 		if y+itemPitch > m.h {
 			break
 		}
@@ -20,7 +20,7 @@ func (m Model) Items() []Item {
 	}
 	if bs := m.bottomGroupStart(); bs >= 0 {
 		for i, it := range bottomItems {
-			out = append(out, Item{View: it.view, Label: it.label, Y: bs + i*itemStride, H: itemPitch})
+			out = append(out, Item{View: it.view, Label: it.label, Y: bs + i*itemStride(), H: itemPitch})
 		}
 	}
 	return out
