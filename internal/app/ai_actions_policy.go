@@ -138,14 +138,15 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"bookmark-clear":     aiConfirm(ai.ClassIDE),
 
 	// ── LSP ──
-	"hover":                 aiAuto(),
-	"find-references":       aiAuto(),
-	"goto-type-def":         aiAuto(),
-	"goto-impl":             aiAuto(),
-	"code-actions":          aiNever(aiNoPicker),
-	"goto-symbol-file":      aiNever(aiNoPicker + " (lsp_nav)"),
-	"goto-symbol-workspace": aiNever(aiNoPicker + " (lsp_nav)"),
-	"lsp-manage":            aiNever(aiNoPicker + " (lsp_servers)"),
+	"hover":                       aiAuto(),
+	"find-references":             aiAuto(),
+	"goto-type-def":               aiAuto(),
+	"goto-impl":                   aiAuto(),
+	"code-actions":                aiNever(aiNoPicker),
+	"code-action-apply-preferred": aiNever("applies an edit chosen by the language server; the AI uses lsp tools instead"),
+	"goto-symbol-file":            aiNever(aiNoPicker + " (lsp_nav)"),
+	"goto-symbol-workspace":       aiNever(aiNoPicker + " (lsp_nav)"),
+	"lsp-manage":                  aiNever(aiNoPicker + " (lsp_servers)"),
 
 	// ── Git ──
 	"git-stage":           aiConfirm(ai.ClassGit),

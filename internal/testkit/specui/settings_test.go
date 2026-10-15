@@ -18,7 +18,7 @@ func setSetting(t *testing.T, d *testkit.Driver, name, value string) {
 	mustSee(t, d, "⚙ Settings")
 	d.Type(name)
 	d.Key("enter")
-	if strings.Contains(screen(d), "Setting") && strings.Contains(screen(d), name) && strings.Contains(screen(d), "enter  submit") {
+	if strings.Contains(screen(d), "Setting") && strings.Contains(screen(d), name) && strings.Contains(screen(d), "Enter  submit") {
 		for range 12 {
 			d.Key("backspace")
 		}

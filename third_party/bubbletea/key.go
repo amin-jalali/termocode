@@ -69,6 +69,12 @@ type Key struct {
 //	// Output: enter
 func (k Key) String() (str string) {
 	if k.Type == KeyExtended { // termocode patch: Name holds the modifiers too
+		if k.Alt && !strings.Contains(k.Name, "alt+") { // ESC-prefixed: add Alt after Ctrl
+			if rest, ok := strings.CutPrefix(k.Name, "ctrl+"); ok {
+				return "ctrl+alt+" + rest
+			}
+			return "alt+" + k.Name
+		}
 		return k.Name
 	}
 	var buf strings.Builder
@@ -415,7 +421,10 @@ var sequences = map[string]Key{
 	"\x1b[Z": {Type: KeyShiftTab},
 
 	"\x1b[2~":   {Type: KeyInsert},
-	"\x1b[3;2~": {Type: KeyInsert, Alt: true},
+	// termocode patch: upstream had "\x1b[3;2~" (xterm Shift+Delete) as
+	// Alt+Insert; Alt+Insert is "\x1b[2;3~".
+	"\x1b[2;3~": {Type: KeyInsert, Alt: true},
+	"\x1b[3;2~": {Type: KeyExtended, Name: "shift+delete"},
 
 	"\x1b[3~":   {Type: KeyDelete},
 	"\x1b[3;3~": {Type: KeyDelete, Alt: true},

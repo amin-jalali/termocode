@@ -1,6 +1,7 @@
 package specui
 
 import (
+	"github.com/amin-jalali/termocode/internal/theme"
 	"strings"
 	"testing"
 	"time"
@@ -36,7 +37,7 @@ func run(t *testing.T, d *testkit.Driver, line, marker string) {
 // terminalTabs counts the tabs on the terminal tab bar ("name ×" each;
 // the panel's own close button is "−×").
 func terminalTabs(d *testkit.Driver) int {
-	return strings.Count(lineWith(d, "↑−×"), " ×")
+	return strings.Count(lineWith(d, "↑−"+theme.GlyphClose.String()), " "+theme.GlyphClose.String())
 }
 
 // Spec: Given the editor,
@@ -71,7 +72,7 @@ func TestTerminalTabs(t *testing.T) {
 	d.Palette("terminal-new-tab")
 	d.Settle(500 * time.Millisecond)
 	if n := terminalTabs(d); n != 2 {
-		t.Fatalf("after New Tab: %d tabs\n%s", n, lineWith(d, "↑−×"))
+		t.Fatalf("after New Tab: %d tabs\n%s", n, lineWith(d, "↑−"+theme.GlyphClose.String()))
 	}
 	mustNotSee(t, d, "ONE1")
 	run(t, d, "echo TWO$((2))", "TWO2")
@@ -84,7 +85,7 @@ func TestTerminalTabs(t *testing.T) {
 		t.Errorf("after Close Tab: %d tabs", n)
 	}
 	d.Palette("terminal-close-tab")
-	mustNotSee(t, d, "↑−×")
+	mustNotSee(t, d, "↑−"+theme.GlyphClose.String())
 }
 
 // Spec: Given a long-running command in the terminal,

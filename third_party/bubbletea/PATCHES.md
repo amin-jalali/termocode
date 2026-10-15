@@ -25,7 +25,13 @@ Kitty keyboard protocol (termocode terminal-compat R1):
 - `WithKittyKeyboard(flags)` (`options.go`, `tea.go`): the standard
   renderer pushes `CSI > flags u` after entering the alt screen and pops
   `CSI < u` before leaving it (`standard_renderer.go`).
-- Tests: `key_csiu_test.go`, `kitty_keyboard_test.go`.
+- `key.go` sequences: `\x1b[3;2~` is Shift+Delete (upstream had it as
+  Alt+Insert); Alt+Insert is `\x1b[2;3~`. `key_sequences.go`: modified
+  special keys the table does not list (Ctrl+F12, Ctrl+Shift+PgUp …) are
+  named by `detectModifiedSpecial` instead of dropped.
+- `ParseInput` (`key_parse.go`): decodes a burst of input bytes into
+  messages, so termocode's tests can check every shortcut end to end.
+- Tests: `key_csiu_test.go`, `kitty_keyboard_test.go`, `key_parse_test.go`.
 
 All other files are unchanged.
 
