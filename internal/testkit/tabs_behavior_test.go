@@ -41,11 +41,12 @@ func openABC(d *Driver) {
 func TestTabsSwitch(t *testing.T) {
 	d := editorDriver(t, nil)
 	openABC(d)
-	_, y, ok := find(d, "b.txt x")
+	_, y, ok := findTab(d, "b.txt")
 	if !ok || y != 0 {
 		t.Fatalf("b.txt tab not in the tab bar:\n%s", screen(d))
 	}
-	clickText(d, "b.txt x")
+	tx, ty, _ := findTab(d, "b.txt")
+	d.Click(tx+1, ty)
 	if !d.WaitFor(func() bool { _, a := tabs(d); return a == "b.txt" }, 3*time.Second) {
 		t.Fatalf("click on tab: active %v", d.Model().FocusedEditor())
 	}
@@ -164,7 +165,7 @@ func TestTabsCloseRightAfterTyping(t *testing.T) {
 func TestTabsCloseOthers(t *testing.T) {
 	d := editorDriver(t, nil)
 	openABC(d)
-	x, y, _ := find(d, "b.txt x")
+	x, y, _ := findTab(d, "b.txt")
 	d.RightClick(x+1, y)
 	clickText(d, "Close Others")
 	if !waitTabs(d, "b.txt") {
@@ -189,7 +190,7 @@ func TestTabsCloseOthersWithDirtyTab(t *testing.T) {
 		got, _ := tabs(d)
 		t.Fatalf("tabs = %v", got)
 	}
-	x, y, _ := find(d, "a.txt x")
+	x, y, _ := findTab(d, "a.txt")
 	d.RightClick(x+1, y)
 	clickText(d, "Close Others")
 	if _, _, ok := find(d, "unsaved changes"); !ok {
@@ -214,7 +215,7 @@ func TestTabsCloseOthersCancel(t *testing.T) {
 		got, _ := tabs(d)
 		t.Fatalf("tabs = %v", got)
 	}
-	x, y, _ := find(d, "a.txt x")
+	x, y, _ := findTab(d, "a.txt")
 	d.RightClick(x+1, y)
 	clickText(d, "Close Others")
 	clickButton(d, "Cancel")
@@ -231,7 +232,7 @@ func TestTabsCloseOthersCancel(t *testing.T) {
 func TestTabsCloseToTheRight(t *testing.T) {
 	d := editorDriver(t, nil)
 	openABC(d)
-	x, y, _ := find(d, "a.txt x")
+	x, y, _ := findTab(d, "a.txt")
 	d.RightClick(x+1, y)
 	clickText(d, "Close All to the Right")
 	if !waitTabs(d, "a.txt") {

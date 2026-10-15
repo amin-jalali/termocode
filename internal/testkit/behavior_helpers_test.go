@@ -143,6 +143,15 @@ func find(d *Driver, text string) (x, y int, ok bool) {
 	return 0, 0, false
 }
 
+// findTab finds a tab by name in the tab bar (row 0), not in the explorer.
+func findTab(d *Driver, name string) (x, y int, ok bool) {
+	line := strings.Split(screen(d), "\n")[0]
+	if j := strings.Index(line, name); j >= 0 {
+		return ansi.StringWidth(line[:j]), 0, true
+	}
+	return 0, 0, false
+}
+
 // findIn is find limited to the columns [x0, x1).
 func findIn(d *Driver, text string, x0, x1 int) (x, y int, ok bool) {
 	for i, line := range strings.Split(screen(d), "\n") {
