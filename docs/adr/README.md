@@ -20,6 +20,7 @@ picked over a clear alternative. A normal feature does not need one.
 | [0006](0006-lua-extension-host.md) | Extensions run as Lua inside the embedded Neovim | Accepted |
 | [0007](0007-persistent-sessions.md) | Persistent sessions: the UI runs behind a socket, on over SSH | Accepted |
 | [0008](0008-go-rendered-diff-viewer.md) | A Go-rendered diff card for reviewing changes | Accepted |
+| [0009](0009-process-extensions.md) | Process extensions (Tier 2) over JSON-RPC on stdio | Accepted |
 
 > The folder was started after the project was already running, so 0001–0005
 > backfill decisions that were made earlier. Dates are the best guess from git

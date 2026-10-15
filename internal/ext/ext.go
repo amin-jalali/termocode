@@ -8,6 +8,9 @@
 //	    extension.json   optional — {"name", "version", "description"}
 //	    lua/             optional — modules the extension can require()
 //
+// or, for a Tier 2 process extension (any language, JSON-RPC over stdio,
+// internal/extproc), an extension.json with "run": {"command", "args"}.
+//
 // The Lua side (the _G.termocode API) lives in internal/app/ext_lua.go;
 // this package is pure Go so discovery, manifests, markup and scaffolding
 // can be unit-tested without nvim. See docs/adr/0006-lua-extension-host.md.
@@ -42,11 +45,18 @@ func Dir() (string, error) {
 	return filepath.Join(home, ".config", "termocode", "extensions"), nil
 }
 
-// Manifest is the optional extension.json. Every field is optional.
+// Manifest is the optional extension.json. Every field is optional, but
+// "run" makes the folder a Tier 2 process extension (see process.go).
 type Manifest struct {
 	Name        string `json:"name,omitempty"`
 	Version     string `json:"version,omitempty"`
 	Description string `json:"description,omitempty"`
+
+	// Tier 2 (process extensions, docs/adr/0009-process-extensions.md).
+	Run              *RunSpec    `json:"run,omitempty"`
+	Runtime          string      `json:"runtime,omitempty"` // hint only: "node", "python", …
+	ActivationEvents []string    `json:"activationEvents,omitempty"`
+	Contributes      Contributes `json:"contributes,omitempty"`
 }
 
 // Extension is one folder found by Discover.
@@ -54,8 +64,9 @@ type Extension struct {
 	// Name is the folder name. It is the extension's identity: commands
 	// without a dot in their id are prefixed with it, and its autocmds
 	// live in the augroup "termocode_ext_<Name>".
-	Name     string `json:"name"`
-	Dir      string `json:"dir"`
+	Name string `json:"name"`
+	Dir  string `json:"dir"`
+	// Init is the init.lua path; empty for a process extension.
 	Init     string `json:"init"`
 	Version  string `json:"version"`
 	Manifest Manifest
@@ -71,9 +82,12 @@ var validName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
 // ValidName reports whether s can be used as an extension name.
 func ValidName(s string) bool { return validName.MatchString(s) && len(s) <= 64 }
 
+// IsProcess reports whether x is a Tier 2 process extension.
+func (x Extension) IsProcess() bool { return x.Manifest.Run != nil }
+
 // Discover lists the extensions in dir, sorted by name. Folders without an
-// init.lua, hidden folders ("." prefix) and folders whose name ends in
-// ".disabled" are skipped. A missing dir is not an error. Problems with a
+// init.lua (and without a "run" in extension.json), hidden folders ("."
+// prefix) and folders whose name ends in ".disabled" are skipped. A missing dir is not an error. Problems with a
 // single extension never stop the others: they are reported in
 // Extension.Problem. Folders that cannot load at all (bad name) are
 // listed in skipped with the reason.
@@ -93,18 +107,38 @@ func Discover(dir string) (exts []Extension, skipped []string) {
 			continue
 		}
 		initPath := filepath.Join(full, InitFile)
-		if st, err := os.Stat(initPath); err != nil || st.IsDir() {
+		hasInit := false
+		if st, err := os.Stat(initPath); err == nil && !st.IsDir() {
+			hasInit = true
+		}
+		var man Manifest
+		manErr := ""
+		manOK := false
+		if b, err := os.ReadFile(filepath.Join(full, ManifestFile)); err == nil {
+			if err := json.Unmarshal(b, &man); err != nil {
+				manErr = "extension.json: " + err.Error()
+				man = Manifest{}
+			} else {
+				manOK = true
+			}
+		}
+		isProc := manOK && man.Run != nil
+		if !hasInit && !isProc {
 			continue
 		}
 		if !ValidName(name) {
 			skipped = append(skipped, fmt.Sprintf("%s: folder name has unsupported characters (use letters, digits, _ . -)", name))
 			continue
 		}
-		x := Extension{Name: name, Dir: full, Init: initPath}
-		if b, err := os.ReadFile(filepath.Join(full, ManifestFile)); err == nil {
-			if err := json.Unmarshal(b, &x.Manifest); err != nil {
-				x.Problem = "extension.json: " + err.Error()
-				x.Manifest = Manifest{}
+		if isProc && strings.TrimSpace(man.Run.Command) == "" {
+			skipped = append(skipped, name+`: extension.json "run" has no "command"`)
+			continue
+		}
+		x := Extension{Name: name, Dir: full, Init: initPath, Manifest: man, Problem: manErr}
+		if isProc {
+			x.Init = ""
+			if hasInit {
+				x.Problem = `init.lua is ignored: extension.json has "run" (a process extension)`
 			}
 		}
 		x.Version = x.Manifest.Version

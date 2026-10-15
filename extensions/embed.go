@@ -8,5 +8,5 @@ import "embed"
 
 // FS holds one folder per sample extension.
 //
-//go:embed todo-tree word-count open-in-github rest-client
+//go:embed todo-tree word-count open-in-github rest-client word-frequency
 var FS embed.FS

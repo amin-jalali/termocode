@@ -1,0 +1,8 @@
+{
+  "name": "word-frequency",
+  "version": "0.1.0",
+  "description": "Most used words of the open file, in a sidebar panel (a Python process extension)",
+  "run": { "command": "python3", "args": ["-B", "main.py"] },
+  "runtime": "python",
+  "activationEvents": ["onStartup"]
+}
