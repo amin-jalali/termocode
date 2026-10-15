@@ -2245,6 +2245,8 @@ func (m Model) statusState() statusbar.State {
 		// The terminal has the keyboard: show its shell and folder.
 		TermFocused: m.inTerminal && m.termOpen && len(m.terminalTabs) > 0,
 		TermLabel:   m.terminalStatusLabel(),
+		Busy:        aiState == statusbar.AIStreaming,
+		BusyStep:    m.aiStreamSteps(),
 		Debug:       m.dapSessionActive,
 		ShowLSP:     m.editor.Path() != "",
 		LSP:         m.lspClients(),
@@ -2252,6 +2254,14 @@ func (m Model) statusState() statusbar.State {
 	}
 	m.fillTestsStatus(&st) // Group E: ✓ n ✗ n chip (test_explorer.go)
 	return st
+}
+
+// aiStreamSteps is the AI chat's event count (the busy comet's step).
+func (m Model) aiStreamSteps() int {
+	if m.ai == nil {
+		return 0
+	}
+	return m.ai.streamSteps
 }
 
 // terminalStatusLabel is "zsh · ~/proj" for the active terminal tab.

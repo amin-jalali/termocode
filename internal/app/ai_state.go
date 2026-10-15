@@ -32,10 +32,13 @@ import (
 // aiState is the AI feature state. Held by pointer on Model so Bubble Tea
 // value copies and background goroutines share one instance.
 type aiState struct {
-	settings ai.Settings
-	cfg      ai.Config
-	provider ai.Provider
-	loadErr  string
+	// streamSteps counts chat events; the status bar's busy comet moves
+	// one step per event (no timer).
+	streamSteps int
+	settings    ai.Settings
+	cfg         ai.Config
+	provider    ai.Provider
+	loadErr     string
 
 	// inline ghost text
 	inlineCancel context.CancelFunc
