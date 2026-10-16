@@ -63,15 +63,31 @@ if [ -z "${__tc_si-}" ] && [[ $- == *i* ]]; then
 		builtin printf '\e]133;C;cmdline_url=%s\a' "$__tc_r"
 	}
 
-	if [ "${BASH_VERSINFO[0]}" -gt 4 ] || { [ "${BASH_VERSINFO[0]}" -eq 4 ] && [ "${BASH_VERSINFO[1]}" -ge 4 ]; }; then
+	if [ -z "${TERMOCODE_SI_FORCE_DEBUG-}" ] && { [ "${BASH_VERSINFO[0]}" -gt 4 ] || { [ "${BASH_VERSINFO[0]}" -eq 4 ] && [ "${BASH_VERSINFO[1]}" -ge 4 ]; }; }; then
 		# ${__tc_ran=} marks "a command ran" in this shell (PS0 expands
 		# here, not in a subshell); $(...) prints the C sequence.
 		PS0=${PS0-}'${__tc_ran=}$(__tc_preexec)'
+	elif [ -z "$(builtin trap -p DEBUG)" ]; then
+		# bash before 4.4 (macOS ships 3.2) has no PS0: the DEBUG trap
+		# runs before every command, so it reports only the first one
+		# after a prompt (__tc_ready is set as the last step of
+		# PROMPT_COMMAND). A DEBUG trap of the user's own is left alone.
+		__tc_debug() {
+			[ -n "${__tc_ready-}" ] || return 0
+			[ -z "${COMP_LINE-}" ] || return 0
+			unset __tc_ready
+			__tc_ran=
+			__tc_preexec
+		}
+		builtin trap '__tc_debug' DEBUG
+		__tc_tail=1
 	fi
 
 	if [[ "$(builtin declare -p PROMPT_COMMAND 2>/dev/null)" == "declare -a"* ]]; then
 		PROMPT_COMMAND=(__tc_precmd "${PROMPT_COMMAND[@]}")
+		[ -z "${__tc_tail-}" ] || PROMPT_COMMAND+=('__tc_ready=1')
 	else
 		PROMPT_COMMAND="__tc_precmd${PROMPT_COMMAND:+;$PROMPT_COMMAND}"
+		[ -z "${__tc_tail-}" ] || PROMPT_COMMAND="$PROMPT_COMMAND;__tc_ready=1"
 	fi
 fi

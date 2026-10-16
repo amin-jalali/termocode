@@ -115,7 +115,8 @@ func TestBashScript(t *testing.T) {
 	if len(exits) < 3 || exits[0] != 0 || exits[1] != 1 || exits[2] != 0 {
 		t.Errorf("exit codes %v", exits)
 	}
-	if cwd != sub {
+	// macOS: /var is a link to /private/var, and bash reports the real path.
+	if real, _ := filepath.EvalSymlinks(sub); cwd != sub && cwd != real {
 		t.Errorf("cwd %q, want %q", cwd, sub)
 	}
 	if strings.Contains(out, "TERMOCODE_SHELL_INTEGRATION=1") {
@@ -220,5 +221,29 @@ func TestForFallbacks(t *testing.T) {
 	st2, _ := os.Stat(p)
 	if !st.ModTime().Equal(st2.ModTime()) {
 		t.Error("Install rewrote an unchanged file")
+	}
+}
+
+// Spec (T1, macOS): bash before 4.4 has no PS0 (macOS ships bash 3.2);
+// the DEBUG-trap fallback still reports each command and its exit code.
+// TERMOCODE_SI_FORCE_DEBUG makes a newer bash take that path in tests.
+func TestBashScriptOldBashFallback(t *testing.T) {
+	home := t.TempDir()
+	out := runShell(t, "bash", home, map[string]string{"TERMOCODE_SI_FORCE_DEBUG": "1"}, "echo one\nfalse\nexit\n")
+	var cmds []string
+	var exits []int
+	for _, e := range oscEvents(out) {
+		switch e.Kind {
+		case CommandStart:
+			cmds = append(cmds, e.Cmd)
+		case CommandEnd:
+			exits = append(exits, e.Exit)
+		}
+	}
+	if strings.Join(cmds, "|") != "echo one|false|exit" {
+		t.Errorf("commands %q (events %s)", cmds, kinds(oscEvents(out)))
+	}
+	if len(exits) < 2 || exits[0] != 0 || exits[1] != 1 {
+		t.Errorf("exit codes %v", exits)
 	}
 }
