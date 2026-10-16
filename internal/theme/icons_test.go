@@ -194,6 +194,7 @@ func TestActivityBarBoldIconsAreTwoByTwo(t *testing.T) {
 		{"IconOutline", IconOutline},
 		{"IconRun", IconRun},
 		{"IconTests", IconTests}, // Group E
+		{"IconServices", IconServices},
 		{"IconDebug", IconDebug},
 		{"IconExtensions", IconExtensions},
 		{"IconTerminal", IconTerminal},
@@ -249,6 +250,7 @@ func TestActivityBarBoldUsesQuadrantBlocks(t *testing.T) {
 		{"IconOutline", IconOutline},
 		{"IconRun", IconRun},
 		{"IconTests", IconTests}, // Group E
+		{"IconServices", IconServices},
 		{"IconDebug", IconDebug},
 		{"IconExtensions", IconExtensions},
 		{"IconTerminal", IconTerminal},

@@ -50,6 +50,16 @@ type State struct {
 	TestsPassed  int
 	TestsFailed  int
 
+	// Services chip "☷ 3/4" (running / declared), before the test chip;
+	// "· ✘ n" when n services are unhealthy or exited non-zero. Shown once
+	// the Services view was opened (ServicesChipSpan for the click).
+	// ServicesStale: the view is hidden, the counts may be old.
+	ShowServices  bool
+	ServicesUp    int
+	ServicesTotal int
+	ServicesBad   int
+	ServicesStale bool
+
 	// Ext holds extension status items (Group I), as {{token}} markup.
 	// They render at the end of the center cluster; see ext_items.go.
 	Ext []string
@@ -438,7 +448,10 @@ func (m Model) renderCenterDiag(s State) (string, int, int) {
 	}
 	diagEnd := len(parts)
 	parts = append(parts, renderExtParts(s.Ext)...) // Group I
-	if chip := renderTestsChip(s); chip != "" {     // Group E (always last)
+	if chip := renderServicesChip(s); chip != "" {
+		parts = append(parts, chip)
+	}
+	if chip := renderTestsChip(s); chip != "" { // Group E (always last)
 		parts = append(parts, chip)
 	}
 	if len(parts) == 0 {
@@ -647,6 +660,40 @@ func (m Model) TestsChipSpan(s State) (x0, x1 int, ok bool) {
 	cw := lipgloss.Width(chip)
 	end := 1 + l.leftW + l.gapL + l.centerW
 	return end - cw, end, true
+}
+
+// renderServicesChip is "☷ 3/4" plus "· ✘ n" when something is bad.
+func renderServicesChip(s State) string {
+	if !s.ShowServices {
+		return ""
+	}
+	fg := theme.TextSecondary
+	if s.ServicesStale {
+		fg = theme.TextDim
+	}
+	out := barFg(fg).Render(fmt.Sprintf("%s %d/%d", theme.IconServices.String(), s.ServicesUp, s.ServicesTotal))
+	if s.ServicesBad > 0 {
+		out += barFg(theme.TextDim).Render(" · ") + barFg(theme.DiagError).Render(fmt.Sprintf("%s %d", theme.GlyphSvcExited.String(), s.ServicesBad))
+	}
+	return out
+}
+
+// ServicesChipSpan returns the [x0, x1) cell range of the services chip;
+// it sits right before the test chip (or last when there is none).
+func (m Model) ServicesChipSpan(s State) (x0, x1 int, ok bool) {
+	chip := renderServicesChip(s)
+	if m.w <= 0 || chip == "" || s.Err != "" {
+		return 0, 0, false
+	}
+	l := m.layout(s)
+	if l.centerW == 0 {
+		return 0, 0, false
+	}
+	end := 1 + l.leftW + l.gapL + l.centerW
+	if t := renderTestsChip(s); t != "" {
+		end -= lipgloss.Width(t) + 2
+	}
+	return end - lipgloss.Width(chip), end, true
 }
 
 // renderLSPChip is "{} gopls" (attached clients) or a dim "{} none".

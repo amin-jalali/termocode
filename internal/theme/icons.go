@@ -95,6 +95,13 @@ var (
 		NerdFont: "", Unicode: "✓", ASCII: "T", // fa-flask, ✓
 		Bold: [2]string{" ▞", "▚▘"},
 	}
+	// IconServices — the Services view (dev services: compose, local
+	// commands). fa-server / ☷ (U+2637, EAW=Neutral). Bold: two stacked
+	// rack units.
+	IconServices = Icon{
+		NerdFont: "\uf233", Unicode: "☷", ASCII: "=",
+		Bold: [2]string{"▀▀", "▀▀"},
+	}
 	// IconDebug — fisheye, reads as a "bug eye". U+25C9, EAW=Neutral.
 	// Bold: solid bug body (▟▙) on top, two small leg/foot dots (▘▝) below.
 	IconDebug = Icon{
@@ -249,7 +256,7 @@ func DetectIconMode() IconMode {
 // these (plus the file-icon glyphs) probe as exactly 1 cell.
 func unicodeCandidates() []string {
 	icons := []Icon{
-		IconFiles, IconSearch, IconGit, IconOutline, IconRun, IconTests,
+		IconFiles, IconSearch, IconGit, IconOutline, IconRun, IconTests, IconServices,
 		IconDebug, IconExtensions, IconTerminal, IconAccount, IconSettings,
 	}
 	out := make([]string, 0, len(icons))
@@ -411,4 +418,17 @@ var (
 	GlyphMerge    = Icon{NerdFont: "\uf126", Unicode: "⑂", ASCII: "*"} // nf-fa-code_fork
 	GlyphUnpushed = Icon{NerdFont: "\uf0aa", Unicode: "⇡", ASCII: "^"} // nf-fa-arrow_circle_up
 	GlyphExpand   = Icon{NerdFont: "\uf107", Unicode: "▾", ASCII: "v"} // nf-fa-angle_down
+
+	// Services view (services panel plan §2.2). The colour carries the
+	// health (GitAdded / GitModified / DiagError); the ASCII tier spells it.
+	GlyphSvcUp         = Icon{NerdFont: "●", Unicode: "◉", ASCII: "*"} // running / healthy
+	GlyphSvcBad        = Icon{NerdFont: "●", Unicode: "◉", ASCII: "!"} // running, unhealthy
+	GlyphSvcStarting   = Icon{NerdFont: "◌", Unicode: "◌", ASCII: "~"} // starting / pulling / stopping
+	GlyphSvcRestarting = Icon{NerdFont: "\uf021", Unicode: "↻", ASCII: "r"}
+	GlyphSvcStopped    = Icon{NerdFont: "○", Unicode: "◦", ASCII: "o"}      // stopped / not created
+	GlyphSvcExited     = Icon{NerdFont: "✘", Unicode: "✘", ASCII: "x"}      // exited non-zero
+	GlyphSvcUnknown    = Icon{NerdFont: "?", Unicode: "?", ASCII: "?"}      // Docker not answering
+	GlyphStart         = Icon{NerdFont: "\uf04b", Unicode: "▸", ASCII: ">"} // nf-fa-play
+	GlyphStop          = Icon{NerdFont: "\uf04d", Unicode: "▪", ASCII: "#"} // nf-fa-stop
+	GlyphRefresh       = Icon{NerdFont: "\uf021", Unicode: "↻", ASCII: "R"} // nf-fa-refresh
 )

@@ -268,6 +268,12 @@ func (m Model) layoutDims() confirmDims {
 		// Room for the command on one line: frame + padding + border.
 		boxW = max(boxW, min(lipgloss.Width(m.code)+10, 110))
 	}
+	// Room for the button row on one line (four buttons need more than 60).
+	btnW := 2 * max(len(m.buttons)-1, 0)
+	for _, b := range m.buttons {
+		btnW += lipgloss.Width(m.buttonLabel(b))
+	}
+	boxW = max(boxW, min(btnW+4, 110))
 	if maxW := m.w - 8; boxW > maxW {
 		boxW = maxW
 	}

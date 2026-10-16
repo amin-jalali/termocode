@@ -2,6 +2,7 @@ package services
 
 import (
 	"bufio"
+	"net/url"
 	"os"
 	"regexp"
 	"sort"
@@ -71,14 +72,33 @@ func envLines(path string) map[string]string {
 	return out
 }
 
-// EnvFileSecrets returns the values of secret-looking keys (≥ 8 chars)
-// in a .env file, for ai.RegisterSecret.
+// SecretValue is what of one env value must be hidden from the model:
+// the password of a URL (the rest of a URL is the diagnosis), else the
+// whole value when the key looks secret. Values under 8 characters are
+// never secrets (they would shred normal text).
+func SecretValue(key, value string) []string {
+	value = strings.TrimSpace(value)
+	if u, err := url.Parse(value); err == nil && u.Scheme != "" && u.Host != "" {
+		if p, ok := u.User.Password(); ok && len(p) >= 8 {
+			return []string{p}
+		}
+		return nil
+	}
+	if IsSecretKey(key) && !urlKey.MatchString(key) && len(value) >= 8 {
+		return []string{value}
+	}
+	return nil
+}
+
+// urlKey names keys that hold an address: only a password inside is secret.
+var urlKey = regexp.MustCompile(`(?i)(^|_)(url|uri|dsn|host|addr|address|endpoint)$`)
+
+// EnvFileSecrets returns the secret parts of a .env file's values (see
+// SecretValue), for ai.RegisterSecret.
 func EnvFileSecrets(path string) []string {
 	var out []string
 	for k, v := range envLines(path) {
-		if IsSecretKey(k) && len(v) >= 8 {
-			out = append(out, v)
-		}
+		out = append(out, SecretValue(k, v)...)
 	}
 	sort.Strings(out)
 	return out

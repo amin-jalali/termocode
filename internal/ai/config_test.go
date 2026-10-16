@@ -150,3 +150,14 @@ func TestRedact(t *testing.T) {
 		t.Error("plain text changed")
 	}
 }
+
+// RedactSecrets masks only registered literals: API-key-looking text the
+// user wrote in a file stays (tool results pass through it).
+func TestRedactSecretsOnlyRegistered(t *testing.T) {
+	RegisterSecret("db-pass-1234567")
+	in := "password=db-pass-1234567 key=sk-ant-abcdefghijklmnop"
+	got := RedactSecrets(in)
+	if got != "password=[REDACTED] key=sk-ant-abcdefghijklmnop" {
+		t.Errorf("RedactSecrets = %q", got)
+	}
+}
