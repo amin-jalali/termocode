@@ -1233,6 +1233,8 @@ func (m Model) renderSidebar(h int) string {
 		content = m.renderRunSidebar(contentW, h) // Group D (debug_view.go)
 	case activity.ViewTests: // Group E (test_explorer.go)
 		content = m.renderTestsSidebar(contentW, h)
+	case activity.ViewServices: // services_view.go
+		content = m.renderServicesSidebar(contentW, h)
 	default:
 		if !m.isExtSidebar() { // Group I: extension panels (ext.go)
 			return ""
@@ -2267,6 +2269,7 @@ func (m Model) statusState() statusbar.State {
 		Ext:         m.extStatusTexts(), // Group I
 	}
 	m.fillTestsStatus(&st) // Group E: ✓ n ✗ n chip (test_explorer.go)
+	m.fillServicesStatus(&st)
 	return st
 }
 

@@ -62,6 +62,14 @@ type SessionState struct {
 	// from the bottom).
 	AILastChat   string `json:"ai_last_chat,omitempty"`
 	AIChatScroll int    `json:"ai_chat_scroll,omitempty"`
+
+	// Services view (services_state.go): "Always in this project" for the
+	// AI's start / stop / restart, the compose services termocode started
+	// (only those are offered to stop on quit), and the local command
+	// lines the user approved once (hashes).
+	ServicesAIAllowed bool     `json:"services_ai_allowed,omitempty"`
+	ServicesStarted   []string `json:"services_started,omitempty"`
+	ServicesLocalOK   []string `json:"services_local_ok,omitempty"`
 }
 
 // sessionPath is the global session.json: layout preferences, plus the
@@ -132,6 +140,10 @@ func workspacePart(s SessionState) SessionState {
 		Roots:        s.Roots,
 		AILastChat:   s.AILastChat,
 		AIChatScroll: s.AIChatScroll,
+
+		ServicesAIAllowed: s.ServicesAIAllowed,
+		ServicesStarted:   s.ServicesStarted,
+		ServicesLocalOK:   s.ServicesLocalOK,
 	}
 }
 

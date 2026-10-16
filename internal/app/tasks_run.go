@@ -152,6 +152,10 @@ func (m *Model) openTasksPickerItems(title string, items []picker.Item) {
 // handleTasksPickerSelect runs the picked task or opens the picked link.
 func (m *Model) handleTasksPickerSelect(id string) tea.Cmd {
 	switch {
+	case strings.HasPrefix(id, "svc:"): // the Services pickers (services_actions.go)
+		return m.handleServicesPickerSelect(id)
+	case strings.HasPrefix(id, "svc-trust:"): // AI: Services Trust… (ai_services_tools.go)
+		return m.handleServicesTrustSelect(id)
 	case strings.HasPrefix(id, "task:"):
 		return m.runTaskByLabel(strings.TrimPrefix(id, "task:"))
 	case strings.HasPrefix(id, "link:"):
@@ -453,7 +457,9 @@ func (m *Model) spawnTerminalJob(j terminalJob) (int, error) {
 	m.panelFocused = false
 	m.terminalMinimized = false
 	m.inTerminal = false
-	m.focus = FocusEditor
+	if j.Service == "" || m.focus != FocusExplorer { // the Services view keeps the keyboard
+		m.focus = FocusEditor
+	}
 	m.applyLayout()
 	m.resizeTerminalSplit()
 	m.invalidateTerminalProbeCache()
