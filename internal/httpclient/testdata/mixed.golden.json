@@ -1,0 +1,41 @@
+{
+  "requests": [
+    {
+      "method": "GET",
+      "url": "https://api.example.com/items?page=1",
+      "name": "list",
+      "line": 3,
+      "start_line": 1,
+      "end_line": 4
+    },
+    {
+      "method": "GET",
+      "url": "https://api.example.com/old",
+      "headers": [
+        {
+          "name": "X-Custom",
+          "value": "value:with:colons"
+        },
+        {
+          "name": "Accept",
+          "value": "text/plain"
+        }
+      ],
+      "line": 8,
+      "start_line": 5,
+      "end_line": 12,
+      "directives": {
+        "no-redirect": "",
+        "timeout": "10s"
+      }
+    },
+    {
+      "method": "PUT",
+      "url": "https://api.example.com/items/1",
+      "body": "line one\n\n# kept: comment-looking body line",
+      "line": 16,
+      "start_line": 15,
+      "end_line": 23
+    }
+  ]
+}

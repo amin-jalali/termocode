@@ -1,0 +1,12 @@
+### list
+GET https://api.example.com/items?page=1
+###
+GET https://api.example.com/old
+X-Custom: value:with:colons
+Accept: text/plain
+###
+PUT https://api.example.com/items/1
+
+line one
+
+# kept: comment-looking body line
