@@ -36,6 +36,8 @@ import (
 //	commit:<rev>           open the Source Control commit view on rev
 //	diffdemo               open the AI review card with sample files
 //	                       (nothing is written)
+//	httpdemo:<variant>     docs/users.http and a canned HTTP answer:
+//	                       file, response, headers or tls (no network)
 //	plugin:nvim-dap=<dir>  set nvim-dap up from a checkout (tests: the
 //	                       sandbox has none; Group K7)
 type DevActionMsg struct{ ID string }
@@ -93,6 +95,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 			r.card.Action("next")
 			r.card.Action("accept")
 		}
+	case "httpdemo": // the .http file / HTTP Response page shots (no network)
+		return m.httpDemo(arg)
 	case "commit": // open the commit view on a revision (HEAD, a SHA …)
 		return m.gitOpenCommitViewCmd(arg)
 	case "openfile": // as if picked in the explorer (images open the preview)

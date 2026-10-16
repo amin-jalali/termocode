@@ -83,6 +83,21 @@ func FindResults() Scene {
 	return Scene{Name: "find-results", Steps: WithEditor(append(steps, Key("enter"), Pause(1500*time.Millisecond))...)}
 }
 
+// HTTPFile is an .http file with the request lenses (no network).
+func HTTPFile() Scene {
+	return Scene{Name: "http-file", Steps: []Step{Act("httpdemo:file"), Pause(900 * time.Millisecond)}}
+}
+
+// HTTPResponse is the HTTP Response page with a canned JSON answer.
+func HTTPResponse() Scene {
+	return Scene{Name: "http-response", Steps: []Step{Act("httpdemo:response"), Pause(900 * time.Millisecond)}}
+}
+
+// HTTPResponseTLS is the page's TLS error state.
+func HTTPResponseTLS() Scene {
+	return Scene{Name: "http-response-tls", Steps: []Step{Act("httpdemo:tls"), Pause(900 * time.Millisecond)}}
+}
+
 func MarkdownPreview() Scene {
 	return Scene{Name: "md-preview", Steps: []Step{Act("open:docs/preview.md"), Pause(600 * time.Millisecond), Act("palette:preview-md"), Pause(800 * time.Millisecond)}}
 }

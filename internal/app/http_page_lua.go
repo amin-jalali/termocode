@@ -115,6 +115,12 @@ end
 
 local function width(s) return vim.fn.strdisplaywidth(s) end
 
+local function chunks_width(cs)
+  local w = 0
+  for _, c in ipairs(cs) do w = w + width(c[1]) end
+  return w
+end
+
 local function chips(w)
   local out = {}
   for i, name in ipairs(H.head.chips or {}) do
@@ -173,12 +179,18 @@ api.nvim_set_decoration_provider(ns, {
       local right = {}
       if h.by and h.by ~= '' then right[#right + 1] = { ' ' .. h.by .. ' ', 'TermocodeHttpByAI' } end
       if h.name and h.name ~= '' then right[#right + 1] = { ' ' .. h.name .. ' ', 'TermocodeHttpName' } end
-      if #right > 0 then E(0, { virt_text = right, virt_text_pos = 'right_align' }) end
+      -- Only when it fits after the URL (never over the text).
+      if #right > 0 and width(line) + chunks_width(right) + 1 <= cur_w then
+        E(0, { virt_text = right, virt_text_pos = 'right_align' })
+      end
     elseif lnum == 2 then
       E(0, { end_col = #line, hl_group = 'TermocodeHttpSummary' })
-      if (h.st_n or 0) > 0 then E(0, { end_col = math.min(h.st_n, #line), hl_group = h.st_hl, priority = 200 }) end
+      if (h.st_n or 0) > 0 then E(0, { end_col = math.min(h.st_n, #line), hl_group = h.st_hl, priority = 5000 }) end
       if line ~= '' and h.summary and not h.summary:find('sending', 1, true) then
-        E(0, { virt_text = chips(cur_w), virt_text_pos = 'right_align' })
+        local cs = chips(cur_w)
+        if width(line) + chunks_width(cs) + 1 <= cur_w then
+          E(0, { virt_text = cs, virt_text_pos = 'right_align' })
+        end
       end
     elseif lnum == 3 then
       local hints, hw = hint_chunks(cur_w - 8)
