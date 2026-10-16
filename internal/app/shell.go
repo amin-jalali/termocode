@@ -71,7 +71,14 @@ type terminalTab struct {
 	// glyph shows ▶ while Running, then ✓ / ✘ from LastExit.
 	Task    string
 	Running bool
+	// Service is the services-view key ("postgres", "logs:postgres",
+	// "up") for tabs the Services view started; they behave like task
+	// tabs (fixed name, ▶ / ✓ / ✘ glyph).
+	Service string
 }
+
+// isJob reports a tab started by the task runner or the Services view.
+func (t terminalTab) isJob() bool { return t.Task != "" || t.Service != "" }
 
 // integratedTerminalRows returns the live total height (in cells) of the
 // embedded terminal panel when toggled open. The bar/resizer is INSIDE
@@ -1050,7 +1057,7 @@ func (m Model) panelEntryGlyph(e panelBarEntry) string {
 	if e.Index < 0 || e.Index >= len(m.terminalTabs) {
 		return shellGlyphFor("")
 	}
-	if t := m.terminalTabs[e.Index]; t.Task != "" { // Group C
+	if t := m.terminalTabs[e.Index]; t.isJob() { // Group C
 		return taskTabGlyph(t)
 	}
 	return shellGlyphFor(m.terminalTabs[e.Index].Shell)
@@ -1435,7 +1442,7 @@ func (m *Model) refreshTerminalCwd() {
 			continue
 		}
 		alive = append(alive, m.terminalTabs[i])
-		if err != nil || out == "" || m.terminalTabs[i].Task != "" { // Group C: task tabs keep their name
+		if err != nil || out == "" || m.terminalTabs[i].isJob() { // Group C: job tabs keep their name
 			continue
 		}
 		cwd := strings.TrimSpace(out)
