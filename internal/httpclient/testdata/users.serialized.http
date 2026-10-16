@@ -1,0 +1,15 @@
+### getUser
+GET {{host}}/users/42
+Accept: application/json
+Authorization: Bearer {{token}}
+###
+### createUser
+POST {{host}}/users
+Content-Type: application/json
+
+{
+  "name": "Ada",
+  "email": "ada@example.com"
+}
+###
+DELETE {{host}}/users/{{$guid}}

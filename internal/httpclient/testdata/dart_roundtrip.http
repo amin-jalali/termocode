@@ -1,0 +1,10 @@
+### Get user
+GET https://api.example.com/users/1
+Accept: application/json
+
+###
+### Create user
+POST https://api.example.com/users
+Content-Type: application/json
+
+{"name":"Alice"}
