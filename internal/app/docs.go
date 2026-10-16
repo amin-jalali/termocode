@@ -410,7 +410,7 @@ func ConfigFileCatalog() []ConfigFile {
 		{"other", "~/.cache/termocode/mcp/<name>.tools.json", "Tool list of each MCP server, so a chat turn does not start the server just to list its tools. `$XDG_CACHE_HOME` moves it.",
 			"JSON, written by termocode; keyed by a hash of the server's mcp.json entry.", "Safe to delete."},
 	}
-	return out
+	return append(out, httpConfigFiles()...) // HTTP client (http_settings.go)
 }
 
 // ── Neovim-side keys ────────────────────────────────────────────────────

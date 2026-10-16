@@ -104,6 +104,9 @@ func aiSettingsList() string {
 
 // aiSettingRange is the allowed range of an int setting.
 func aiSettingRange(key string) (lo, hi int) {
+	if lo, hi, ok := httpSettingRange(key); ok {
+		return lo, hi
+	}
 	switch key {
 	case "tab_size":
 		return 1, 16

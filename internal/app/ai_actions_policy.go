@@ -355,6 +355,15 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"mcp_max_result_kb":     aiNever(aiNoAIConfig),
 	"mcp_trust_annotations": aiNever(aiNoAIConfig),
 	"mcp_trusted":           aiNever(aiNoAIConfig),
+	// HTTP client: limits the user may let the AI change; the AI never
+	// raises its own budgets or turns TLS checks off.
+	"http_timeout":       aiConfirm(ai.ClassSettings),
+	"http_max_redirects": aiConfirm(ai.ClassSettings),
+	"http_cookie_jar":    aiConfirm(ai.ClassSettings),
+	"http_history_max":   aiConfirm(ai.ClassSettings),
+	"http_tls_insecure":  aiNever(aiNoAIConfig),
+	"http_max_body_mb":   aiNever(aiNoAIConfig),
+	"http_ai_max_kb":     aiNever(aiNoAIConfig),
 }
 
 // aiListActionsMax caps list_actions results.

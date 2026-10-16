@@ -956,6 +956,13 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `auto_save` | confirm (settings) |   |
 | `dashboard_logo` | confirm (settings) |   |
 | `font_delta` | confirm (settings) |   |
+| `http_ai_max_kb` | never | AI provider, credentials and approvals stay with the user |
+| `http_cookie_jar` | confirm (settings) |   |
+| `http_history_max` | confirm (settings) |   |
+| `http_max_body_mb` | never | AI provider, credentials and approvals stay with the user |
+| `http_max_redirects` | confirm (settings) |   |
+| `http_timeout` | confirm (settings) |   |
+| `http_tls_insecure` | never | AI provider, credentials and approvals stay with the user |
 | `icons` | confirm (settings) |   |
 | `images` | confirm (settings) |   |
 | `mcp_call_timeout` | never | AI provider, credentials and approvals stay with the user |
