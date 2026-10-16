@@ -47,6 +47,7 @@ var tooltipLabels = map[string]tooltipSpec{
 	"status:lsp":      {name: "Language servers"},
 	"status:diag":     {name: "Problems", palette: "problems-panel"},
 	"status:tests":    {name: "Test results"},
+	"status:services": {name: "Services"},
 	"status:debug":    {name: "Call stack"},
 	"status:branch":   {name: "Git branch"},
 	"status:indent":   {name: "Indentation"},

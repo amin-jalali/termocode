@@ -123,6 +123,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 			m.revealTestsView(true)
 			return m, m.ensureTestsDiscovered()
 		}
+		if msg.Type == tea.MouseLeft && m.statusHitAt(msg.X, msg.Y) == "status:services" {
+			return m, m.revealServicesView(true)
+		}
 		// Group I: extension status items.
 		if msg.Type == tea.MouseLeft {
 			if cmd, ok := m.hitExtStatusItem(msg.X, msg.Y); ok {
@@ -456,6 +459,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 			return m, m.handleRunSidebarMouse(x, msg.Y, msg.Type)
 		case activity.ViewTests: // Group E (test_explorer.go)
 			return m.handleTestsSidebarMouse(x, msg.Y, msg.Type)
+		case activity.ViewServices: // services_actions.go
+			return m.handleServicesSidebarMouse(x, msg.Y, msg.Type)
 		}
 		if m.isExtSidebar() { // Group I: extension panels (ext.go)
 			return m, m.handleExtSidebarMouse(msg.Y, msg.Type)

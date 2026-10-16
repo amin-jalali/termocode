@@ -1,0 +1,690 @@
+package app
+
+import (
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
+
+	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/services"
+	"github.com/amin-jalali/termocode/internal/theme"
+)
+
+// ── Services sidebar view: rows and rendering ────────────────────────────
+//
+// Layout (sidebar-local rows):
+//
+//	0  SERVICES · PROJECT
+//	1  hairline
+//	2  compose · termocode            3/4 up
+//	3
+//	4  ▸ Start all  ▪ Stop all  ↻         (action bar)
+//	5
+//	6… COMPOSE ───────── 4 / service rows / LOCAL … / note rows
+//	   (blank)
+//	h-2 footer: image · ports of the cursor row
+//	h-1 footer: the raw status text
+//
+// Row anatomy at w = 29: lead, glyph, space, name (12), space, port (6),
+// space, uptime (6, right). Below 28 cells the uptime goes, below 22 the
+// port.
+
+const (
+	svcSummaryRow = 2
+	svcActionRow  = 4
+	svcListTop    = 6
+	svcFooterRows = 2
+)
+
+type svcRowKind int
+
+const (
+	svcRowSection svcRowKind = iota
+	svcRowService
+	svcRowNote // a problem line (red)
+	svcRowHint // what to do about it
+	svcRowCode // a command to copy (y)
+)
+
+type svcRow struct {
+	kind    svcRowKind
+	section string // svcSecCompose / svcSecLocal
+	name    string // service rows
+	text    string // note / hint / code rows
+}
+
+func (r svcRow) selectable() bool { return r.kind == svcRowSection || r.kind == svcRowService }
+
+// rows flattens the view: sections, problem notes, services.
+func (st *servicesState) rows() []svcRow {
+	if st == nil {
+		return nil
+	}
+	var out []svcRow
+	if len(st.det.ComposeFiles) > 0 {
+		out = append(out, svcRow{kind: svcRowSection, section: svcSecCompose})
+		if !st.collapsed[svcSecCompose] {
+			out = append(out, st.problemRows()...)
+			for _, s := range st.compose {
+				out = append(out, svcRow{kind: svcRowService, section: svcSecCompose, name: s.Name})
+			}
+			if len(st.compose) == 0 && st.problem.Kind == services.ProblemNone && st.loaded {
+				out = append(out, svcRow{kind: svcRowHint, section: svcSecCompose, text: "No services in " + st.det.ComposeFiles[0]})
+			}
+		}
+	}
+	if len(st.local) > 0 || st.det.ConfigErr != nil {
+		out = append(out, svcRow{kind: svcRowSection, section: svcSecLocal})
+		if !st.collapsed[svcSecLocal] {
+			if err := st.det.ConfigErr; err != nil {
+				out = append(out, svcRow{kind: svcRowNote, section: svcSecLocal, text: err.Error()},
+					svcRow{kind: svcRowHint, section: svcSecLocal, text: "o opens services.json"})
+			}
+			for _, s := range st.local {
+				out = append(out, svcRow{kind: svcRowService, section: svcSecLocal, name: s.Name})
+			}
+		}
+	}
+	return out
+}
+
+// problemRows are the note rows of a compose problem (plan §1.3).
+func (st *servicesState) problemRows() []svcRow {
+	note := func(s string) svcRow { return svcRow{kind: svcRowNote, section: svcSecCompose, text: s} }
+	hint := func(s string) svcRow { return svcRow{kind: svcRowHint, section: svcSecCompose, text: s} }
+	p := st.problem
+	switch p.Kind {
+	case services.ProblemNoDocker:
+		return []svcRow{note("Docker not found"), hint("Install Docker, then R to retry")}
+	case services.ProblemNoCompose:
+		return []svcRow{note("Docker Compose v2 is needed"), hint("Update Docker, then R to retry")}
+	case services.ProblemDaemonDown:
+		return []svcRow{note("Docker is not running"), hint("Start Docker, then R to retry")}
+	case services.ProblemNoPermission:
+		return []svcRow{note("No access to the Docker socket"),
+			{kind: svcRowCode, section: svcSecCompose, text: svcPermissionFix},
+			hint("y copies it · the docker group is root-equal")}
+	case services.ProblemBadConfig:
+		return []svcRow{note(st.det.ComposeFiles[0] + ": " + p.Detail), hint("o opens the file · R retry")}
+	case services.ProblemOther:
+		return []svcRow{note(p.Detail), hint("R retry")}
+	}
+	return nil
+}
+
+// svcPermissionFix is shown (never run) when the socket is not ours.
+const svcPermissionFix = "sudo usermod -aG docker $USER"
+
+// servicesCurrentRow is the row under the cursor.
+func (m Model) servicesCurrentRow() (svcRow, bool) {
+	st := m.services
+	rows := st.rows()
+	if st.cursor < 0 || st.cursor >= len(rows) {
+		return svcRow{}, false
+	}
+	return rows[st.cursor], true
+}
+
+// servicesClampCursor keeps the cursor on a selectable row.
+func (m *Model) servicesClampCursor() {
+	st := m.services
+	rows := st.rows()
+	if len(rows) == 0 {
+		st.cursor = 0
+		return
+	}
+	if st.cursor >= len(rows) {
+		st.cursor = len(rows) - 1
+	}
+	if st.cursor < 0 {
+		st.cursor = 0
+	}
+	if rows[st.cursor].selectable() {
+		return
+	}
+	for i := st.cursor + 1; i < len(rows); i++ {
+		if rows[i].selectable() {
+			st.cursor = i
+			return
+		}
+	}
+	for i := st.cursor - 1; i >= 0; i-- {
+		if rows[i].selectable() {
+			st.cursor = i
+			return
+		}
+	}
+}
+
+// servicesMove moves the cursor by d selectable rows.
+func (m *Model) servicesMove(d int) {
+	st := m.services
+	rows := st.rows()
+	step := 1
+	if d < 0 {
+		step, d = -1, -d
+	}
+	i := st.cursor
+	for ; d > 0; d-- {
+		j := i + step
+		for j >= 0 && j < len(rows) && !rows[j].selectable() {
+			j += step
+		}
+		if j < 0 || j >= len(rows) {
+			break
+		}
+		i = j
+	}
+	st.cursor = i
+	st.touch()
+}
+
+// ── Look of one row ──────────────────────────────────────────────────────
+
+// svcGlyph is a state's glyph and colour.
+func svcGlyph(s services.Status) (theme.Icon, theme.Color256) {
+	switch s.State {
+	case services.Healthy:
+		return theme.GlyphSvcUp, theme.GitAdded
+	case services.Running:
+		if s.PortOpen != nil && !*s.PortOpen {
+			return theme.GlyphSvcUp, theme.GitModified
+		}
+		return theme.GlyphSvcUp, theme.GitAdded
+	case services.Unhealthy:
+		return theme.GlyphSvcBad, theme.DiagError
+	case services.Starting, services.Pulling, services.Stopping:
+		return theme.GlyphSvcStarting, theme.GitModified
+	case services.Restarting:
+		return theme.GlyphSvcRestarting, theme.GitModified
+	case services.Exited:
+		if s.ExitCode != 0 {
+			return theme.GlyphSvcExited, theme.DiagError
+		}
+	case services.Unknown:
+		return theme.GlyphSvcUnknown, theme.TextDim
+	}
+	return theme.GlyphSvcStopped, theme.TextDim
+}
+
+// svcUptime is the right column: uptime, exit code or a short state word.
+func svcUptime(s services.Status, now time.Time) (string, theme.Color256) {
+	switch s.State {
+	case services.Running, services.Healthy, services.Unhealthy:
+		if !s.StartedAt.IsZero() {
+			return services.FormatUptime(now.Sub(s.StartedAt)), theme.TextMuted
+		}
+	case services.Starting:
+		if !s.StartedAt.IsZero() {
+			return services.FormatUptime(now.Sub(s.StartedAt)), theme.TextMuted
+		}
+	case services.Pulling:
+		return "pull", theme.TextMuted
+	case services.Stopping:
+		return "stop", theme.TextMuted
+	case services.Restarting:
+		return "—", theme.TextMuted
+	case services.Exited:
+		if s.ExitCode != 0 {
+			return "exit " + strconv.Itoa(s.ExitCode), theme.DiagError
+		}
+		return "done", theme.TextMuted
+	case services.Stopped:
+		if strings.HasPrefix(s.Text, "Exited (0)") {
+			return "done", theme.TextMuted
+		}
+	}
+	return "", theme.TextMuted
+}
+
+// svcPortText is the port column: the first published port, else the
+// declared one; "—" for a running service with none.
+func svcPortText(svc services.Service, s services.Status) string {
+	for _, p := range s.Ports {
+		if p.Published > 0 {
+			return ":" + strconv.Itoa(p.Published)
+		}
+	}
+	if s.State.Up() && svc.Backend == svcSecCompose {
+		return "—"
+	}
+	for _, p := range svc.Ports {
+		if p.Published > 0 {
+			return ":" + strconv.Itoa(p.Published)
+		}
+	}
+	return ""
+}
+
+// svcTruncMiddle cuts s to w cells with … in the middle.
+func svcTruncMiddle(s string, w int) string {
+	if runewidth.StringWidth(s) <= w {
+		return s
+	}
+	if w <= 1 {
+		return runewidth.Truncate(s, w, "")
+	}
+	r := []rune(s)
+	keep := w - 1
+	head := (keep + 1) / 2
+	tail := keep - head
+	return string(r[:head]) + "…" + string(r[len(r)-tail:])
+}
+
+// svcRowColumns is the width ladder: name, port and uptime widths for w.
+func svcRowColumns(w int) (nameW, portW, upW int) {
+	switch {
+	case w >= 28:
+		return w - 3 - 1 - 6 - 1 - 6, 6, 6
+	case w >= 22:
+		return w - 3 - 1 - 6, 6, 0
+	}
+	return max(w-4, 1), 0, 0
+}
+
+// renderServiceRow draws one service row exactly w cells wide.
+func renderServiceRow(svc services.Service, s services.Status, active, focused bool, w int, now time.Time) string {
+	bg := gitSelBg(active, focused)
+	row := lipgloss.NewStyle().Background(bg)
+	fg := func(c theme.Color256) lipgloss.Style {
+		return lipgloss.NewStyle().Background(bg).Foreground(theme.LG(c))
+	}
+	glyph, gcol := svcGlyph(s)
+	nameW, portW, upW := svcRowColumns(w)
+	var sb strings.Builder
+	sb.WriteString(gitLead(active, focused, bg))
+	sb.WriteString(fg(gcol).Render(glyph.String()))
+	sb.WriteString(row.Render(" "))
+	nameCol := theme.TextPrimary
+	if s.State == services.Unknown {
+		nameCol = theme.TextDim
+	}
+	name := svcTruncMiddle(svc.Name, nameW)
+	sb.WriteString(fg(nameCol).Render(name))
+	used := 3 + runewidth.StringWidth(name)
+	if pad := 3 + nameW + 1 - used; pad > 0 {
+		sb.WriteString(row.Render(strings.Repeat(" ", pad)))
+		used += pad
+	}
+	if portW > 0 {
+		port := runewidth.Truncate(svcPortText(svc, s), portW, "")
+		sb.WriteString(fg(theme.TextSecondary).Render(port))
+		sb.WriteString(row.Render(strings.Repeat(" ", portW-runewidth.StringWidth(port))))
+		used += portW
+	}
+	if upW > 0 {
+		up, ucol := svcUptime(s, now)
+		if s.State == services.Unknown {
+			up = ""
+		}
+		up = runewidth.Truncate(up, upW, "")
+		sb.WriteString(row.Render(strings.Repeat(" ", 1+upW-runewidth.StringWidth(up))))
+		sb.WriteString(fg(ucol).Render(up))
+		used += 1 + upW
+	}
+	return clampSidebarRow(sb.String(), used, w, row)
+}
+
+// renderServiceSection is a section header: "COMPOSE ──── 4" (only the
+// count is bold: one bold element per region).
+func renderServiceSection(label string, n int, collapsed, active, focused bool, w int) string {
+	bg := gitSelBg(active, focused)
+	row := lipgloss.NewStyle().Background(bg)
+	fg := func(c theme.Color256) lipgloss.Style {
+		return lipgloss.NewStyle().Background(bg).Foreground(theme.LG(c))
+	}
+	labelCol := theme.TextSecondary
+	if active && focused {
+		labelCol = theme.BorderFocus
+	}
+	var sb strings.Builder
+	sb.WriteString(gitLead(active, focused, bg))
+	used := 1
+	if collapsed {
+		sb.WriteString(fg(theme.TextDim).Render(theme.GlyphExpand.String()))
+		sb.WriteString(row.Render(" "))
+		used += 2
+	}
+	sb.WriteString(fg(labelCol).Render(label))
+	sb.WriteString(row.Render(" "))
+	used += runewidth.StringWidth(label) + 1
+	count := strconv.Itoa(n)
+	if rule := w - used - len(count) - 2; rule > 0 {
+		sb.WriteString(fg(theme.BorderSubtle).Render(strings.Repeat("─", rule)))
+		used += rule
+	}
+	sb.WriteString(row.Render(" "))
+	sb.WriteString(fg(theme.TextMuted).Bold(true).Render(count))
+	used += 1 + len(count)
+	return clampSidebarRow(sb.String(), used, w, row)
+}
+
+// renderServiceNote draws a note / hint / code row.
+func renderServiceNote(r svcRow, w int) string {
+	row := lipgloss.NewStyle().Background(theme.LG(theme.BgSidebar))
+	col, lead := theme.TextMuted, "   "
+	switch r.kind {
+	case svcRowNote:
+		col = theme.DiagError
+	case svcRowCode:
+		col, lead = theme.TextSecondary, "   $ "
+	}
+	text := runewidth.Truncate(r.text, max(w-runewidth.StringWidth(lead)-1, 1), "…")
+	s := row.Render(lead) + lipgloss.NewStyle().Background(theme.LG(theme.BgSidebar)).Foreground(theme.LG(col)).Render(text)
+	return clampSidebarRow(s, runewidth.StringWidth(lead)+runewidth.StringWidth(text), w, row)
+}
+
+// svcAction is one clickable label on the action bar.
+type svcAction struct {
+	id, label  string
+	start, end int
+}
+
+// svcActionLayout lays out the action bar for width w (labels that do
+// not fit are dropped; the refresh icon sits at the right edge).
+func svcActionLayout(w int) []svcAction {
+	labels := [][2]string{{"start-all", theme.GlyphStart.String() + " Start all"}, {"stop-all", theme.GlyphStop.String() + " Stop all"}}
+	iconAt := w - 2
+	var out []svcAction
+	col := 1
+	for _, l := range labels {
+		lw := runewidth.StringWidth(l[1])
+		if col+lw > iconAt-1 {
+			break
+		}
+		out = append(out, svcAction{id: l[0], label: l[1], start: col, end: col + lw})
+		col += lw + 2
+	}
+	if iconAt >= col-1 && iconAt > 0 {
+		out = append(out, svcAction{id: "refresh", label: theme.GlyphRefresh.String(), start: iconAt, end: iconAt + 1})
+	}
+	return out
+}
+
+// svcFooter is the two footer lines for the cursor row (plan §2.7).
+func (m Model) svcFooter() (string, string) {
+	st := m.services
+	r, ok := m.servicesCurrentRow()
+	if !ok {
+		return "", ""
+	}
+	if r.kind == svcRowSection {
+		if r.section == svcSecCompose {
+			l1 := strings.Join(st.det.ComposeFiles, ", ")
+			if st.project != "" {
+				l1 += " · " + st.project
+			}
+			return l1, "⏎ logs of all · space fold"
+		}
+		return "local commands", "space fold"
+	}
+	svc, ok := st.findService(r.section, r.name)
+	if !ok {
+		return "", ""
+	}
+	s := st.statusOf(r.section, r.name)
+	var l1 string
+	if svc.Backend == svcSecLocal {
+		l1 = svc.Command
+	} else {
+		img := s.Image
+		if img == "" {
+			img = svc.Image
+		}
+		if img == "" {
+			img = "build: " + svc.Name
+		}
+		ports := s.Ports
+		if len(ports) == 0 {
+			ports = svc.Ports
+		}
+		var ps []string
+		for _, p := range ports {
+			if p.Published > 0 {
+				ps = append(ps, p.String())
+			}
+		}
+		l1 = img
+		if len(ps) > 0 {
+			l1 += " · " + strings.Join(ps, ", ")
+		} else if s.State.Up() {
+			l1 += " · no published ports"
+		}
+	}
+	return l1, svcStatusLine(svc, s)
+}
+
+// svcFooterFit drops the host part of "0.0.0.0:5432→5432" when line 1
+// does not fit w cells.
+func svcFooterFit(l1 string, w int) string {
+	if runewidth.StringWidth(l1) <= w {
+		return l1
+	}
+	return svcHostRe.ReplaceAllString(l1, ":$1→")
+}
+
+var svcHostRe = regexp.MustCompile(`(?:\d{1,3}(?:\.\d{1,3}){3}|\[?[0-9a-fA-F:]*::[0-9a-fA-F:]*\]?):(\d+)→`)
+
+// svcStatusLine is footer line 2.
+func svcStatusLine(svc services.Service, s services.Status) string {
+	port := func() string {
+		if s.PortOpen == nil {
+			return ""
+		}
+		p := 0
+		for _, pp := range s.Ports {
+			p = pp.Published
+			break
+		}
+		if p == 0 {
+			p = svc.Health.TCP
+		}
+		if p == 0 && len(svc.Ports) > 0 {
+			p = svc.Ports[0].Published
+		}
+		if *s.PortOpen {
+			return fmt.Sprintf(" · port %d open", p)
+		}
+		return fmt.Sprintf(" · port %d not open", p)
+	}
+	text := s.Text
+	if svc.Backend == svcSecLocal {
+		switch s.State {
+		case services.Running:
+			return "running" + port()
+		case services.Exited:
+			return fmt.Sprintf("exited (%d) · l logs · r restart", s.ExitCode)
+		case services.Starting:
+			return "starting…"
+		case services.Stopping:
+			return "stopping…"
+		}
+		return "stopped · s start"
+	}
+	switch s.State {
+	case services.NotCreated:
+		return "not created · s start"
+	case services.Starting:
+		if text != "" && s.Health == "starting" {
+			return text
+		}
+		return "starting…"
+	case services.Pulling:
+		return "pulling " + svc.Image + " — see the services: up tab"
+	case services.Stopping:
+		return "stopping…"
+	case services.Running:
+		return text + port()
+	case services.Unhealthy:
+		return text + " · l logs"
+	case services.Exited:
+		if s.ExitCode != 0 {
+			return text + " · l logs · r restart"
+		}
+	case services.Unknown:
+		return "Docker is not answering · R retry"
+	}
+	return text
+}
+
+// ── The whole view ───────────────────────────────────────────────────────
+
+// svcBodyH is the list height for sidebar height h.
+func svcBodyH(h int) int { return max(h-svcListTop-svcFooterRows, 1) }
+
+// svcBodyLines maps the visible list lines to row indexes, scrolled so
+// the cursor shows; -1 is the blank line before a second section.
+func svcBodyLines(rows []svcRow, cursor, bodyH int) []int {
+	var all []int
+	pos := 0
+	for i, r := range rows {
+		if r.kind == svcRowSection && i > 0 {
+			all = append(all, -1)
+		}
+		if i == cursor {
+			pos = len(all)
+		}
+		all = append(all, i)
+	}
+	top := 0
+	if pos >= bodyH {
+		top = pos - bodyH + 1
+	}
+	end := min(top+bodyH, len(all))
+	return all[top:end]
+}
+
+type svcRenderCache struct {
+	sync.Mutex
+	key string
+	out string
+}
+
+func (m Model) renderServicesSidebar(w, h int) string {
+	st := m.services
+	focused := m.focus == FocusExplorer
+	now := clock.Now()
+	hy := -1
+	if m.hoverX >= activity.Width && m.hoverX < activity.Width+m.explorerWidth-1 {
+		hy = m.hoverY
+	}
+	hx := m.hoverX - activity.Width
+	key := fmt.Sprintf("%d|%d|%d|%d|%d|%d|%v|%v|%d", st.seq, st.cursor, hy, hx, w, h, focused, theme.CurrentRenderKey(), now.Unix()/60)
+	st.render.Lock()
+	defer st.render.Unlock()
+	if st.render.key == key && st.render.out != "" {
+		return st.render.out
+	}
+	out := m.renderServicesSidebarRaw(w, h, focused, now, hy, hx)
+	st.render.key, st.render.out = key, out
+	return out
+}
+
+func (m Model) renderServicesSidebarRaw(w, h int, focused bool, now time.Time, hy, hx int) string {
+	st := m.services
+	fill := func() string { return theme.Bg(theme.BgSidebar).Render(strings.Repeat(" ", max(w, 0))) }
+	muted := func(s string) string { return theme.FgBg(theme.TextMuted, theme.BgSidebar).Render(s) }
+	lines := []string{
+		sidebarTitle("SERVICES", w, focused, projectName()),
+		theme.PaneHairline(w, theme.BgSidebar, focused),
+	}
+	if !st.loaded {
+		lines = append(lines, testsPad(muted("  Looking for services…"), w))
+		for len(lines) < h {
+			lines = append(lines, fill())
+		}
+		return strings.Join(lines[:h], "\n")
+	}
+	if st.det.Empty() {
+		lines = append(lines, renderEmptyState(w, h-2, theme.BgSidebar, emptyState{Glyph: theme.IconServices,
+			Title: "No services", Hint: "Add compose.yaml, a Procfile or .termocode/services.json", Key: "o"})...)
+		return strings.Join(lines[:h], "\n")
+	}
+	// Summary: backend · project, then "3/4 up" on the right.
+	{
+		left := "local"
+		if len(st.det.ComposeFiles) > 0 {
+			left = "compose"
+			if st.project != "" {
+				left += " · " + st.project
+			}
+		}
+		up, total, _ := st.counts()
+		right := fmt.Sprintf("%d/%d up", up, total)
+		if st.stale {
+			right = "? " + right
+		}
+		gap := w - 2 - runewidth.StringWidth(left) - runewidth.StringWidth(right)
+		if gap < 1 {
+			left = runewidth.Truncate(left, max(w-3-runewidth.StringWidth(right), 1), "…")
+			gap = max(w-2-runewidth.StringWidth(left)-runewidth.StringWidth(right), 1)
+		}
+		s := theme.Bg(theme.BgSidebar).Render(" ") + muted(left) + theme.Bg(theme.BgSidebar).Render(strings.Repeat(" ", gap)) +
+			theme.FgBg(theme.TextSecondary, theme.BgSidebar).Render(right)
+		lines = append(lines, testsPad(s, w), fill())
+	}
+	// Action bar.
+	{
+		var b strings.Builder
+		col := 0
+		for _, a := range svcActionLayout(w) {
+			b.WriteString(testsFill(a.start - col))
+			st := theme.FgBg(theme.TextSecondary, theme.BgSidebar)
+			if hy == svcActionRow && hx >= a.start && hx < a.end {
+				st = lipgloss.NewStyle().Background(theme.Wash(theme.BgSidebar, theme.WashHover)).Foreground(theme.LG(theme.TextPrimary))
+			}
+			b.WriteString(st.Render(a.label))
+			col = a.end
+		}
+		lines = append(lines, testsPad(b.String(), w), fill())
+	}
+	rows := st.rows()
+	var body []string
+	for _, i := range svcBodyLines(rows, st.cursor, svcBodyH(h)) {
+		if i < 0 {
+			body = append(body, fill())
+			continue
+		}
+		r := rows[i]
+		active := i == st.cursor
+		var line string
+		switch r.kind {
+		case svcRowSection:
+			label, n := "COMPOSE", len(st.compose)
+			if r.section == svcSecLocal {
+				label, n = "LOCAL", len(st.local)
+			}
+			line = renderServiceSection(label, n, st.collapsed[r.section], active, focused, w)
+		case svcRowService:
+			svc, _ := st.findService(r.section, r.name)
+			line = renderServiceRow(svc, st.statusOf(r.section, r.name), active, focused, w, now)
+		default:
+			line = renderServiceNote(r, w)
+		}
+		if svcListTop+len(body) == hy && !active && r.selectable() {
+			line = sidebarHoverLineBg(line)
+		}
+		body = append(body, line)
+	}
+	for len(body) < svcBodyH(h) {
+		body = append(body, fill())
+	}
+	lines = append(lines, body...)
+	f1, f2 := m.svcFooter()
+	f1 = svcFooterFit(f1, w-2)
+	for _, f := range []string{f1, f2} {
+		f = runewidth.Truncate(f, max(w-2, 1), "…")
+		lines = append(lines, testsPad(theme.Bg(theme.BgSidebar).Render(" ")+muted(f), w))
+	}
+	for len(lines) < h {
+		lines = append(lines, fill())
+	}
+	return strings.Join(lines[:h], "\n")
+}

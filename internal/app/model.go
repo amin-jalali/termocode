@@ -166,7 +166,7 @@ type Model struct {
 	// gitConflictsCollapsed folds the CONFLICTS section (git_conflicts.go).
 	gitConflictsCollapsed bool
 	// clone is the in-flight "Clone Repository" request (git_clone.go).
-	clone    cloneState
+	clone      cloneState
 	gitCommits []git.GraphCommit
 	// gitCommitGroups[i] is the GRAPH group (Today, Yesterday, …) of
 	// gitCommits[i], worked out when the commits arrive.
@@ -479,6 +479,9 @@ type Model struct {
 	// testView is the Testing view + test runner state (Group E,
 	// test_runner.go / test_explorer.go). Pointer, shared by copies.
 	testView *testsState
+	// services is the Services view state (services_state.go). Pointer,
+	// shared by copies; idle (no process, no goroutine) until shown.
+	services *servicesState
 	// ext is the extension host state (Group I, ext.go). Pointer so
 	// Model copies share it; nil in bare test Models.
 	ext *extState
@@ -757,10 +760,11 @@ func New() Model {
 		problems:         newProblemsPanel(), // Group C
 		tasks:            newTaskRunner(),    // Group C
 		testView:         newTestsState(),    // Group E
-		ext:              newExtState(),      // Group I
-		ai:               newAIState(),       // Group A
-		setup:            newSetupState(),    // setup card (setup_card_ui.go)
-		debug:            loadDebugState(),   // Group D (shared by Model copies)
+		services:         newServicesState(),
+		ext:              newExtState(),    // Group I
+		ai:               newAIState(),     // Group A
+		setup:            newSetupState(),  // setup card (setup_card_ui.go)
+		debug:            loadDebugState(), // Group D (shared by Model copies)
 	}
 	if noNvim {
 		m.editor = editor.New(nil)
@@ -1137,6 +1141,7 @@ func (m *Model) Close() error {
 	if m.ext != nil && m.ext.proc != nil {
 		m.ext.proc.Close() // process extensions and their children
 	}
+	m.services.shutdown() // the docker events watcher (services_state.go)
 	if m.nvim == nil {
 		return nil
 	}
