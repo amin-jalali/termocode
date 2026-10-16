@@ -140,6 +140,9 @@ func TestAIActivityStallWarning(t *testing.T) {
 	if !warned {
 		t.Fatal("the stall line is not in the warning colour")
 	}
+	if v := ansi.Strip(r.m.renderActionsPanel(defaultActionsWidth, r.m.h)); !strings.Contains(v, "Esc to stop") {
+		t.Fatalf("the warning is cut in a narrow chat:\n%s", v)
+	}
 
 	r.p.steps <- []ai.Chunk{{Delta: "Hello"}}
 	r.nextEvent(ai.EventText)
