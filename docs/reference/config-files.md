@@ -27,6 +27,9 @@ Every file termocode reads or writes. termocode never fails to start because of 
 | `ai/credentials.json` | AI API keys and Claude OAuth tokens. File mode 0600. | JSON `{"keys": {provider: key}, "claude_oauth": {...}}`. | With care. Prefer AI: Configure Provider…. Never exported by Preferences: Export Settings…. |
 | `ai/chats/*.json` | Saved AI chats (newest 50 kept). | JSON, one file per chat. | Safe to delete. |
 | `mcp.json` | Your MCP servers: their tools are offered to the AI chat. See the MCP guide. | Claude Desktop / Claude Code / Cursor shape: `{"mcpServers": {name: {"command", "args", "env", "cwd"}}}`, plus `readOnly`, `autoApprove`, `deny`, `timeout`, `disabled`. Secrets as `${secret:NAME}` (from `mcp_secrets` in ai/credentials.json) or `${VAR}`. | Yes. Open with Open Config: MCP Servers. |
+| `http/saved.http` | Requests saved with HTTP: Save Request to Saved… (S on the response page). | A normal `.http` file (the format mobocode reads too). File mode 0600. | Yes. HTTP: Saved Requests… → Open saved.http. |
+| `http/history.jsonl` | HTTP history: one JSON line per send (yours and the AI's). Holds the request as written (`{{templates}}`, secret headers `[REDACTED]`), never the resolved values; the first 256 KB of a text answer. File mode 0600, folder 0700. | JSON lines, written by termocode; `http_history_max` trims it. | No (state). HTTP: History… → Clear history…, or delete it. |
+| `http/state.json` | The HTTP environment chosen per workspace (HTTP: Select Environment…). | JSON `{"envs": {workspace: env}}`. | Not needed. |
 
 ## Data folder
 
@@ -48,6 +51,8 @@ Inside the folder you open.
 | `.termocode/launch.json` | Debug and run configurations. | VS Code `launch.json` shape; comments allowed. | Yes. Debug: Open launch.json creates it. |
 | `.termocode/mcp.json` | Project MCP servers. An entry with the same name as one in your mcp.json replaces it; `"disabled": true` hides it in this project. | Same shape as the user mcp.json. | Yes. termocode asks before it starts a project server the first time (and again when the entry changes). |
 | `.editorconfig` | Indent and whitespace rules, read by Neovim's EditorConfig support. | EditorConfig INI. | Yes (read only for termocode). |
+| `http-client.env.json` | HTTP environments for `{{name}}` in `.http` files, next to them or in a parent folder up to the workspace root (the nearest wins). `$shared` applies to every environment. | JSON `{"$shared": {...}, "dev": {"host": "…"}, …}` (VS Code REST Client / JetBrains shape). | Yes. HTTP: Open Environment File creates it. |
+| `http-client.private.env.json` | Secret values (tokens) for the same environments; they win over http-client.env.json, are hidden from the AI and the logs, and must stay out of git. | Same shape as http-client.env.json. | Yes. HTTP: Open Private Environment File creates it (mode 0600) and offers to add it to .gitignore. |
 
 ## Other files
 

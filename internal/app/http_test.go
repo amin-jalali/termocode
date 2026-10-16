@@ -176,6 +176,83 @@ func TestHTTPBodyFileName(t *testing.T) {
 	}
 }
 
+// HC-7: the http_* settings are Settings rows in an "HTTP" group, with
+// AI policies (the budgets and the TLS switch never), and the HTTP
+// files are in the config-file catalog.
+func TestHTTPSettingsCatalog(t *testing.T) {
+	want := map[string]string{
+		"http_timeout": "30", "http_max_redirects": "10", "http_max_body_mb": "20", "http_ai_max_kb": "32",
+		"http_tls_insecure": "false", "http_cookie_jar": "true", "http_history_max": "200",
+	}
+	got := map[string]SettingEntry{}
+	for _, e := range SettingsCatalog() {
+		got[e.Key] = e
+	}
+	for k, def := range want {
+		e, ok := got[k]
+		if !ok {
+			t.Errorf("setting %s missing", k)
+			continue
+		}
+		if e.Default != def || e.Category != "HTTP" || e.ID == "" || e.Description == "" {
+			t.Errorf("%s: %+v", k, e)
+		}
+	}
+	for _, k := range []string{"http_timeout", "http_max_redirects", "http_cookie_jar", "http_history_max"} {
+		if p := aiSettingPolicies[k]; p.Gate != aiGateConfirm || p.Class != "settings" {
+			t.Errorf("%s policy %+v", k, p)
+		}
+	}
+	for _, k := range []string{"http_tls_insecure", "http_max_body_mb", "http_ai_max_kb"} {
+		if p := aiSettingPolicies[k]; p.Gate != aiGateNever {
+			t.Errorf("%s must be never for the AI: %+v", k, p)
+		}
+	}
+	files := map[string]bool{}
+	for _, f := range ConfigFileCatalog() {
+		files[f.Path] = true
+	}
+	for _, p := range []string{"http/saved.http", "http/history.jsonl", "http/state.json", "http-client.env.json", "http-client.private.env.json"} {
+		if !files[p] {
+			t.Errorf("config file %s not in ConfigFileCatalog", p)
+		}
+	}
+}
+
+// The values round-trip through config.json and the settings code.
+func TestHTTPSettingApply(t *testing.T) {
+	withConfigDir(t)
+	m := New()
+	row, ok := findSettingsRow("setting-http-timeout")
+	if !ok {
+		t.Fatal("no row")
+	}
+	if v := currentSettingValue(row, loadSettings()); v != "30" {
+		t.Fatalf("default %q", v)
+	}
+	m.applySetting("setting-http-timeout", "5")
+	if v := currentSettingValue(row, loadSettings()); v != "5" || loadHTTPSettings().timeout() != 5*time.Second {
+		t.Fatalf("after set %q %v", v, loadHTTPSettings().timeout())
+	}
+	m.applySetting("setting-http-timeout", "abc")
+	if loadHTTPSettings().timeout() != 5*time.Second {
+		t.Fatal("a bad value must not be saved")
+	}
+	m.applySetting("setting-http-cookie-jar", "false")
+	if loadHTTPSettings().cookieJar() {
+		t.Fatal("cookie jar still on")
+	}
+	if _, _, err := aiValidateSetting("http_tls_insecure", "true"); err == nil {
+		t.Fatal("the AI must not turn TLS checks off")
+	}
+	if _, v, err := aiValidateSetting("http_timeout", "7"); err != nil || v != "7" {
+		t.Fatalf("http_timeout via AI: %v %q", err, v)
+	}
+	if _, _, err := aiValidateSetting("http_timeout", "0"); err == nil {
+		t.Fatal("http_timeout 0 must be refused")
+	}
+}
+
 // The ⋮ menu's context section offers the HTTP rows on .http files.
 func TestHTTPOverflowMenuRows(t *testing.T) {
 	if got := overflowMenuDetectLang("/w/api/users.REST", ""); got != "http" {
