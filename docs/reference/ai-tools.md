@@ -828,6 +828,21 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `goto-symbol-workspace` | Go to Symbol in Workspace... | never | opens a picker or prompt that only the user can answer; use a typed tool (lsp_nav) |
 | `goto-type-def` | LSP: Go to Type Definition | auto |   |
 | `hover` | LSP: Show Hover Documentation | auto |   |
+| `http-cancel` | HTTP: Cancel Request | confirm (ide) |   |
+| `http-copy-curl` | HTTP: Copy as curl | confirm (ide) |   |
+| `http-env-open` | HTTP: Open Environment File | auto |   |
+| `http-env-open-private` | HTTP: Open Private Environment File | never | opens the file that holds the user's secrets |
+| `http-env-select` | HTTP: Select Environment… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_set_environment) |
+| `http-history` | HTTP: History… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_history) |
+| `http-import-curl` | HTTP: Import from curl… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_save_request) |
+| `http-last-response` | HTTP: Show Last Response | auto |   |
+| `http-new-file` | HTTP: New .http File… | never | opens a picker or prompt that only the user can answer; use a typed tool (create_file) |
+| `http-quick` | HTTP: Quick Request… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_send with method and url) |
+| `http-save` | HTTP: Save Request to Saved… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_save_request) |
+| `http-save-body` | HTTP: Save Response Body… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_get_last_response, write_file) |
+| `http-saved` | HTTP: Saved Requests… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_list_requests on http/saved.http) |
+| `http-send` | HTTP: Send Request at Cursor | never | sends a network request; use http_send (gated by host and method) |
+| `http-send-pick` | HTTP: Send Request… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_list_requests, http_send) |
 | `join-lines` | Edit: Join Lines | confirm (fileWrite) |   |
 | `lowercase` | Edit: Convert to lowercase | confirm (fileWrite) |   |
 | `lsp-manage` | LSP: Manage Language Servers... | never | opens a picker or prompt that only the user can answer; use a typed tool (lsp_servers) |

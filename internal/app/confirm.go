@@ -121,6 +121,9 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 	if cmd, ok := m.handleSetupConfirm(id); ok { // setup card: GNOME profile
 		return cmd
 	}
+	if cmd, ok := m.handleHTTPConfirm(id); ok { // HTTP client
+		return cmd
+	}
 	switch m.confirmKind {
 	case confirmKindCommitRevert, confirmKindCommitCherryPick:
 		return m.runCommitPick(id)

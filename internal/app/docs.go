@@ -116,6 +116,7 @@ var paletteActions = map[string]keymap.Action{
 	"zen-mode":                    keymap.ActionToggleZenMode,
 	"reload-window":               keymap.ActionReloadWindow,
 	"detach-session":              keymap.ActionDetachSession,
+	"http-send":                   keymap.ActionHTTPSend,
 	"toggle-auto-save":            keymap.ActionToggleAutoSave,
 	"next-hunk":                   keymap.ActionNextHunk,
 	"prev-hunk":                   keymap.ActionPrevHunk,
