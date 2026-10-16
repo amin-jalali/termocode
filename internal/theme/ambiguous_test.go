@@ -13,7 +13,7 @@ import (
 func TestUnicodeIconsNotAmbiguousWidth(t *testing.T) {
 	icons := map[string]Icon{
 		"Files": IconFiles, "Search": IconSearch, "Git": IconGit, "Outline": IconOutline,
-		"Run": IconRun, "Tests": IconTests, "Debug": IconDebug, "Extensions": IconExtensions,
+		"Run": IconRun, "Tests": IconTests, "Services": IconServices, "Debug": IconDebug, "Extensions": IconExtensions,
 		"Terminal": IconTerminal, "Account": IconAccount, "Settings": IconSettings,
 		"FolderClosed": IconFolderClosed, "FolderOpen": IconFolderOpen, "File": IconFile,
 		"ViewTree": IconViewTree, "ViewFlat": IconViewFlat,

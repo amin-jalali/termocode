@@ -175,7 +175,7 @@ func TestParseConfig(t *testing.T) {
 	}
 	// Secret-looking values come back for the redactor; plain ones do not.
 	got := strings.Join(cfg.SecretValues, ",")
-	if !strings.Contains(got, "hunter2hunter2") || !strings.Contains(got, "postgres://app:hunter2hunter2@localhost:5432/app") {
+	if !strings.Contains(got, "hunter2hunter2") || strings.Contains(got, "postgres://") {
 		t.Errorf("secrets = %v", cfg.SecretValues)
 	}
 	if strings.Contains(got, "abc") || strings.Contains(got, ",postgres,") || strings.HasPrefix(got, "postgres,") {

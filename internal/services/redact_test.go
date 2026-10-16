@@ -47,7 +47,12 @@ func TestEnvFileSecrets(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := strings.Join(EnvFileSecrets(p), "|")
-	for _, want := range []string{"hunter2hunter2", "k-1234567890", "postgres://app:hunter2hunter2@db/app"} {
+	// A URL is not a secret as a whole (the host is the diagnosis): only
+	// its password is.
+	if strings.Contains(got, "postgres://") {
+		t.Errorf("a whole URL is registered: %q", got)
+	}
+	for _, want := range []string{"hunter2hunter2", "k-1234567890"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("missing %q in %q", want, got)
 		}
@@ -57,6 +62,15 @@ func TestEnvFileSecrets(t *testing.T) {
 		if v == "postgres" || v == "abc" || v == "postgresql-server" {
 			t.Errorf("must not register %q", v)
 		}
+	}
+	if v := SecretValue("REDIS_URL", "redis://:longpassword9@redis:6379/0"); len(v) != 1 || v[0] != "longpassword9" {
+		t.Errorf("URL password = %v", v)
+	}
+	if v := SecretValue("API_URL", "http://localhost:8080"); len(v) != 0 {
+		t.Errorf("a plain URL is no secret: %v", v)
+	}
+	if v := SecretValue("TOKEN", "short"); len(v) != 0 {
+		t.Errorf("short values are not registered: %v", v)
 	}
 	keys := EnvFileKeys(p)
 	if strings.Join(keys, ",") != "API_KEY,DATABASE_URL,NAME,POSTGRES_PASSWORD,POSTGRES_USER,SHORT_SECRET" {

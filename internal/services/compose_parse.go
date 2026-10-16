@@ -250,9 +250,14 @@ func ParseConfig(data []byte) (Config, error) {
 		}
 		for k, v := range s.Environment {
 			svc.EnvKeys = append(svc.EnvKeys, k)
-			if v != nil && IsSecretKey(k) && len(strings.TrimSpace(*v)) >= 8 && !seen[*v] {
-				seen[*v] = true
-				cfg.SecretValues = append(cfg.SecretValues, *v)
+			if v == nil {
+				continue
+			}
+			for _, sv := range SecretValue(k, *v) {
+				if !seen[sv] {
+					seen[sv] = true
+					cfg.SecretValues = append(cfg.SecretValues, sv)
+				}
 			}
 		}
 		sort.Strings(svc.EnvKeys)
