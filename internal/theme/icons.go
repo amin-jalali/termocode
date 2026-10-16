@@ -413,12 +413,12 @@ var (
 
 	// AI chat activity line (B1): waiting for the model, writing, a
 	// tool running (nf-fa-cog), a retry (nf-fa-refresh) and a stall
-	// (nf-fa-warning).
+	// (nf-cod-warning).
 	GlyphAIWaiting = Icon{NerdFont: "◷", Unicode: "◷", ASCII: "~"}
 	GlyphAIWriting = Icon{NerdFont: "✎", Unicode: "✎", ASCII: ">"}
 	GlyphAITool    = Icon{NerdFont: "\uf013", Unicode: "⚙", ASCII: "#"}
 	GlyphAIRetry   = Icon{NerdFont: "\uf021", Unicode: "↻", ASCII: "@"}
-	GlyphAIStall   = Icon{NerdFont: "\uf071", Unicode: "⚠", ASCII: "!"}
+	GlyphAIStall   = Icon{NerdFont: "\uea6c", Unicode: "⚠", ASCII: "!"}
 
 	// Source Control GRAPH (scm-graph design §2.3).
 	// The Nerd Font circles (nf-fa-circle, nf-fa-dot_circle_o) are wider

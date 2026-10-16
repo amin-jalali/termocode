@@ -104,6 +104,10 @@ func goldenExtras() []Scene {
 		SCMCompare(),
 		{Name: "scm-commit-light", Theme: "catppuccin-latte", Steps: SCMCommit().Steps},
 		{Name: "scm-commit-ascii", Icons: "ascii", Steps: SCMCommit().Steps},
+		// A running AI turn: the activity line under the last message
+		// (a tool running) and the stall warning (B1).
+		{Name: "ai-chat-activity", Env: aiEnv, Steps: WithEditor(Act("palette:ai-open-chat"), Act("aidemo-busy:tool"), Pause(600*time.Millisecond))},
+		{Name: "ai-chat-stall", Env: aiEnv, Steps: WithEditor(Act("palette:ai-open-chat"), Act("aidemo-busy:stall"), Pause(600*time.Millisecond))},
 		// The Problems panel with nothing to show (the empty state).
 		{Name: "problems", Steps: WithEditor(Act("palette:problems-panel"), Pause(800*time.Millisecond))},
 	}
