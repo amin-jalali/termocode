@@ -10,6 +10,7 @@ import (
 	"github.com/mattn/go-runewidth"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/rtl"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
@@ -336,6 +337,7 @@ type aiTranscriptCache struct {
 	configured  bool
 	label       string
 	restoreGen  int
+	act         aiActivityView
 	msgs        []ai.StoredMessage
 	lines       []aiLine
 	rows        []string // edged rows by line index; "" = not drawn yet
@@ -343,8 +345,8 @@ type aiTranscriptCache struct {
 }
 
 // matches reports whether the cache is valid for this state.
-func (c *aiTranscriptCache) matches(s *aiState, width int, rk theme.RenderKey, resizing bool) bool {
-	if !c.ok || c.width != width || c.rk != rk || c.rtl != rtlMode || c.resizing != resizing || c.streaming != s.streaming ||
+func (c *aiTranscriptCache) matches(s *aiState, width int, rk theme.RenderKey, resizing bool, act aiActivityView) bool {
+	if !c.ok || c.width != width || c.rk != rk || c.rtl != rtlMode || c.resizing != resizing || c.streaming != s.streaming || c.act != act ||
 		c.hasProvider != (s.provider != nil) || len(c.msgs) != len(s.conv.Messages) || c.restoreGen != s.restoreGen {
 		return false
 	}
@@ -400,14 +402,15 @@ func (m Model) aiTranscriptCached(width int) *aiTranscriptCache {
 	rk := theme.CurrentRenderKey()
 	resizing := m.dragKind == dragActionsLeft
 	c := &s.transcript
-	if c.matches(s, width, rk, resizing) {
+	act := s.activityView(clock.Now())
+	if c.matches(s, width, rk, resizing, act) {
 		return c
 	}
-	lines := m.buildAITranscript(width)
+	lines := m.buildAITranscriptAt(width, act)
 	if c.ok {
 		s.aiKeepSelection(c.msgs, c.width, width)
 	}
-	*c = aiTranscriptCache{ok: true, width: width, rk: rk, rtl: rtlMode, resizing: resizing, streaming: s.streaming,
+	*c = aiTranscriptCache{ok: true, width: width, rk: rk, rtl: rtlMode, resizing: resizing, streaming: s.streaming, act: act,
 		hasProvider: s.provider != nil, restoreGen: s.restoreGen, msgs: append([]ai.StoredMessage(nil), s.conv.Messages...),
 		lines: lines, rows: make([]string, len(lines))}
 	if s.provider != nil {
@@ -421,6 +424,11 @@ func (m Model) aiTranscriptCached(width int) *aiTranscriptCache {
 // content, user messages as tinted bubbles on the right, AI answers as
 // rendered Markdown under an "✦ AI · model" line.
 func (m Model) buildAITranscript(width int) []aiLine {
+	return m.buildAITranscriptAt(width, m.aiActivityView(clock.Now()))
+}
+
+// buildAITranscriptAt builds the transcript with the activity line act.
+func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 	inner := width - aiIndent - 1
 	if inner < 4 {
 		inner = 4
@@ -504,8 +512,7 @@ func (m Model) buildAITranscript(width int) []aiLine {
 			streaming := s.streaming && i == last
 			out = append(out, m.aiAnswerHeader(width, i, !streaming))
 			if strings.TrimSpace(text) == "" && streaming {
-				out = append(out, aiLine{text: ind + "thinking…", style: theme.Fg(theme.TextDim).Italic(true)})
-				break
+				break // the activity line below says what the model does
 			}
 			out = append(out, s.renderAnswer(i, text, width, streaming, m.dragKind == dragActionsLeft)...)
 		case ai.StoredTool:
@@ -515,6 +522,9 @@ func (m Model) buildAITranscript(width int) []aiLine {
 		}
 	}
 	undo()
+	if l, ok := act.line(ind); ok {
+		out = append(out, l)
+	}
 	out = append(out, aiLine{sel: aiSel{ok: true, join: "\n"}})
 	return out
 }
@@ -968,6 +978,9 @@ func (m *Model) routeAIPanelKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		if _, _, ok := s.sel.rng(); ok {
 			s.sel.clear() // the first Esc drops the selection
 			return nil, true
+		}
+		if s.streaming { // then Esc stops a running answer (B1)
+			return m.aiCancelAll(), true
 		}
 		s.focused = false
 		m.focus = FocusEditor

@@ -48,6 +48,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if tipCmd != nil {
 			cmd = tea.Batch(cmd, tipCmd)
 		}
+		if t := m.aiActivityTick(); t != nil { // the chat's 1 s clock, only during a turn
+			cmd = tea.Batch(cmd, t)
+		}
 	}
 	return m, m.gateUpdate(msg, cmd)
 }

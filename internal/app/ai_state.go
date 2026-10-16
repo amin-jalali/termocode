@@ -60,6 +60,7 @@ type aiState struct {
 	chatGen     uint64
 	chatCancel  context.CancelFunc
 	chatCh      chan tea.Msg
+	act         aiActivity // the activity line (ai_activity.go)
 	attachments []aiAttachment
 	restored    bool
 
