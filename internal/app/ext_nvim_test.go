@@ -1,7 +1,6 @@
 package app
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -345,7 +344,8 @@ termocode.register_panel({ id = 'p', title = 'Slow', render = function() while t
 }
 
 // TestSampleExtensionsLoadNvim installs the bundled samples and loads
-// them: none may report an error, and the REST parser module works.
+// them: none may report an error. (The REST client sample was retired
+// for the built-in HTTP client, internal/httpclient.)
 func TestSampleExtensionsLoadNvim(t *testing.T) {
 	cfg := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", cfg)
@@ -360,14 +360,14 @@ func TestSampleExtensionsLoadNvim(t *testing.T) {
 			t.Errorf("sample %s failed: %s", x.Name, x.Error)
 		}
 	}
-	if len(m.ext.reg.Extensions) != 4 {
-		t.Errorf("loaded %d samples, want 4", len(m.ext.reg.Extensions))
+	if len(m.ext.reg.Extensions) != 3 {
+		t.Errorf("loaded %d samples, want 3", len(m.ext.reg.Extensions))
 	}
 	ids := map[string]bool{}
 	for _, c := range m.ext.reg.Commands {
 		ids[c.ID] = true
 	}
-	for _, id := range []string{"todo-tree.refresh", "word-count.details", "open-in-github.open", "rest-client.send"} {
+	for _, id := range []string{"todo-tree.refresh", "word-count.details", "open-in-github.open"} {
 		if !ids[id] {
 			t.Errorf("missing command %s (have %v)", id, ids)
 		}
@@ -383,74 +383,6 @@ func TestSampleExtensionsLoadNvim(t *testing.T) {
 		if pm.err != nil || len(pm.poll.Lines) == 0 || strings.Contains(strings.Join(pm.poll.Lines, "\n"), "render failed") {
 			t.Errorf("panel %s: lines=%q err=%v", p.ID, pm.poll.Lines, pm.err)
 		}
-	}
-
-	// REST parser (port of http_file_parser.dart).
-	out := evalLua(t, m, `
-local p = require('rest_client.parser')
-local src = table.concat({
-  '@host = https://api.example.com',
-  '@token = abc',
-  '',
-  '### List items',
-  '# @name list',
-  'GET {{host}}/items HTTP/1.1',
-  'Accept: application/json',
-  'Authorization: Bearer {{token}}',
-  '',
-  '###',
-  'POST {{host}}/items',
-  'Content-Type: application/json',
-  '',
-  '{',
-  '  "name": "{{missing}}"',
-  '}',
-  '',
-  '',
-  '### only comments',
-  '# nothing here',
-  '###',
-  'https://example.com/plain',
-}, '\n')
-local reqs, vars = p.parse(src)
-local r1 = p.resolve(reqs[1], vars)
-local r2 = p.resolve(reqs[2], vars)
-return vim.json.encode({
-  n = #reqs,
-  name1 = reqs[1].name, url1 = r1.url, auth = r1.headers.Authorization, start1 = reqs[1].start_line,
-  m2 = r2.method, body2 = r2.body, ct = r2.headers['Content-Type'],
-  m3 = reqs[3].method, url3 = reqs[3].url,
-  at = p.at_line(reqs, 13).method,
-  pretty = require('rest_client.format').pretty_json('{"a":[1,2],"b":{},"c":"x,y"}'),
-})`)
-	var r struct {
-		N      int    `json:"n"`
-		Name1  string `json:"name1"`
-		URL1   string `json:"url1"`
-		Auth   string `json:"auth"`
-		Start1 int    `json:"start1"`
-		M2     string `json:"m2"`
-		Body2  string `json:"body2"`
-		CT     string `json:"ct"`
-		M3     string `json:"m3"`
-		URL3   string `json:"url3"`
-		At     string `json:"at"`
-		Pretty string `json:"pretty"`
-	}
-	if err := json.Unmarshal([]byte(out), &r); err != nil {
-		t.Fatalf("%v: %s", err, out)
-	}
-	if r.N != 3 || r.Name1 != "list" || r.URL1 != "https://api.example.com/items" || r.Auth != "Bearer abc" || r.Start1 != 6 {
-		t.Errorf("request 1 = %+v", r)
-	}
-	if r.M2 != "POST" || r.Body2 != "{\n  \"name\": \"{{missing}}\"\n}" || r.CT != "application/json" {
-		t.Errorf("request 2 = %+v", r)
-	}
-	if r.M3 != "GET" || r.URL3 != "https://example.com/plain" || r.At != "POST" {
-		t.Errorf("request 3 / at_line = %+v", r)
-	}
-	if r.Pretty != "{\n  \"a\": [\n    1,\n    2\n  ],\n  \"b\": {},\n  \"c\": \"x,y\"\n}" {
-		t.Errorf("pretty = %q", r.Pretty)
 	}
 }
 
