@@ -210,6 +210,25 @@ func TestHTTPBufferLens(t *testing.T) {
 	}
 }
 
+// A click on the lens sends that request; a click on the text does not.
+func TestHTTPLensClick(t *testing.T) {
+	api := newHTTPAPI(t, false)
+	d := httpDriver(t, api.srv.URL, 140, 36, "")
+	if !d.WaitForText("send Ctrl+Alt+R", 5*time.Second) {
+		t.Fatalf("no lens:\n%s", screen(d))
+	}
+	clickText(d, "GET {{host}}/users/42")
+	d.Settle(200 * time.Millisecond)
+	if api.count("/users/42") != 0 {
+		t.Fatal("a click on the text sent the request")
+	}
+	clickText(d, "send Ctrl+Alt+R")
+	waitPage(d, "200 OK")
+	if api.count("/users/42") != 1 {
+		t.Fatalf("hits %d", api.count("/users/42"))
+	}
+}
+
 // The ASCII icon tier draws the lens with ">".
 func TestHTTPBufferLensASCII(t *testing.T) {
 	api := newHTTPAPI(t, false)

@@ -19,7 +19,9 @@ func TestGlyphTable(t *testing.T) {
 		"history": GlyphHistory, "new": GlyphNew, "collapse": GlyphCollapse,
 		// Source Control GRAPH (scm-graph design §2.3).
 		"commit": GlyphCommit, "head": GlyphHead, "merge": GlyphMerge,
-		"unpushed": GlyphUnpushed, "expand": GlyphExpand}
+		"unpushed": GlyphUnpushed, "expand": GlyphExpand,
+		// HTTP client.
+		"send": GlyphSend, "sending": GlyphSending, "fail": GlyphFail, "redirect": GlyphRedirect}
 	for name, g := range glyphs {
 		for _, m := range []IconMode{IconModeNerdFont, IconModeUnicode, IconModeASCII} {
 			CurrentIconMode = m

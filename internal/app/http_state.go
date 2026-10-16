@@ -567,10 +567,10 @@ func (m Model) httpStatusTexts() []string {
 	return []string{text}
 }
 
-// Glyphs (1 cell, EAW neutral) with ASCII fallbacks (plan 2.7).
+// Glyphs from the theme table (1 cell, ASCII fallbacks; plan 2.7).
 var (
-	httpGlyphSend   = theme.Icon{NerdFont: "▸", Unicode: "▸", ASCII: ">"}
-	httpGlyphFlight = theme.Icon{NerdFont: "⇄", Unicode: "⇄", ASCII: "~"}
-	httpGlyphError  = theme.Icon{NerdFont: "✘", Unicode: "✘", ASCII: "x"}
-	httpGlyphHop    = theme.Icon{NerdFont: "↳", Unicode: "↳", ASCII: "->"}
+	httpGlyphSend   = theme.GlyphSend
+	httpGlyphFlight = theme.GlyphSending
+	httpGlyphError  = theme.GlyphFail
+	httpGlyphHop    = theme.GlyphRedirect
 )

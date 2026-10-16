@@ -32,7 +32,9 @@ function _G._termocode_http_buf_set(buf, rows, running)
   for _, r in ipairs(rows) do t[r.l] = r end
   B[buf] = t
   _G._termocode_http_running = running
-  for _, w in ipairs(vim.fn.win_findbuf(buf)) do pcall(api.nvim__redraw, { win = w, valid = false }) end
+  for _, w in ipairs(vim.fn.win_findbuf(buf)) do
+    if not pcall(api.nvim__redraw, { win = w, valid = false }) then pcall(api.nvim__buf_redraw_range, buf, 0, -1) end
+  end
 end
 
 local function width(s) return vim.fn.strdisplaywidth(s) end
@@ -45,15 +47,31 @@ local function lens_width(r)
   return w
 end
 
+local text_w = 80
 api.nvim_set_decoration_provider(ns, {
-  on_win = function(_, _, b)
+  on_win = function(_, win, b)
     if vim.bo[b].filetype ~= 'http' or not B[b] then return false end
+    local info = vim.fn.getwininfo(win)[1]
+    text_w = api.nvim_win_get_width(win) - ((info and info.textoff) or 0)
   end,
   on_line = function(_, _, b, row)
     local r = B[b] and B[b][row + 1]
     if not r then return end
+    -- The lens sits after the text, never over it: no room, no lens.
     if r.lens and #r.lens > 0 then
-      pcall(api.nvim_buf_set_extmark, b, ns, row, 0, { virt_text = r.lens, virt_text_pos = 'right_align', ephemeral = true })
+      local line = api.nvim_buf_get_lines(b, row, row + 1, false)[1] or ''
+      local lw = width(line)
+      if lw + lens_width(r) + 1 <= text_w then
+        r.drawn = lens_width(r)
+        pcall(api.nvim_buf_set_extmark, b, ns, row, 0, { virt_text = r.lens, virt_text_pos = 'right_align', ephemeral = true })
+      elseif lw + 4 <= text_w then
+        -- Narrow window: only the glyph (still a click target).
+        local g = (r.lens[1][1]:match('^%s*(%S+)')) or ''
+        r.drawn = width(g) + 2
+        pcall(api.nvim_buf_set_extmark, b, ns, row, 0, { virt_text = { { ' ' .. g .. ' ', r.lens[1][2] } }, virt_text_pos = 'right_align', ephemeral = true })
+      else
+        r.drawn = 0
+      end
     end
     for _, c in ipairs(r.curls or {}) do
       pcall(api.nvim_buf_set_extmark, b, ns, row, c[1], { end_col = c[2], hl_group = 'TermocodeHttpUnresolved', ephemeral = true })
@@ -65,10 +83,10 @@ local syntax = [==[
 syntax clear
 syntax case match
 syntax match TermocodeHttpPlaceholder /{{[^{}]*}}/ containedin=ALL
-syntax match TermocodeHttpSep /^###.*$/ contains=TermocodeHttpSepTitle
-syntax match TermocodeHttpSepTitle /^###\zs.*$/ contained
 syntax match TermocodeHttpComment /^\s*\(#\|\/\/\).*$/ contains=TermocodeHttpDirective
 syntax match TermocodeHttpDirective /^\s*\(#\|\/\/\)\s*\zs@\S\+.*$/ contained
+syntax match TermocodeHttpSep /^###.*$/ contains=TermocodeHttpSepTitle
+syntax match TermocodeHttpSepTitle /^###\zs.*$/ contained
 syntax match TermocodeHttpVarLine /^@[A-Za-z0-9_.-]\+\s*=.*$/ contains=TermocodeHttpVarName,TermocodeHttpVarValue
 syntax match TermocodeHttpVarName /^@[A-Za-z0-9_.-]\+/ contained
 syntax match TermocodeHttpVarValue /=\s*\zs.*$/ contained contains=TermocodeHttpPlaceholder
@@ -112,7 +130,8 @@ local function lens_hit(buf)
   local r = B[buf] and B[buf][pos.line]
   if not r or not r.lens or #r.lens == 0 then return nil end
   local ww = api.nvim_win_get_width(pos.winid)
-  if pos.wincol > ww - lens_width(r) and pos.wincol <= ww then return pos.line end
+  local w = r.drawn or lens_width(r)
+  if w > 0 and pos.wincol > ww - w and pos.wincol <= ww then return pos.line end
 end
 
 vim.api.nvim_create_augroup('termocode_http', { clear = true })

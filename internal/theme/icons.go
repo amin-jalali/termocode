@@ -411,4 +411,12 @@ var (
 	GlyphMerge    = Icon{NerdFont: "\uf126", Unicode: "⑂", ASCII: "*"} // nf-fa-code_fork
 	GlyphUnpushed = Icon{NerdFont: "\uf0aa", Unicode: "⇡", ASCII: "^"} // nf-fa-arrow_circle_up
 	GlyphExpand   = Icon{NerdFont: "\uf107", Unicode: "▾", ASCII: "v"} // nf-fa-angle_down
+
+	// HTTP client (rest-client plan 2.7): the lens' send mark, a request
+	// in flight, a failed send and a redirect hop. Glyphs every common
+	// monospace font has (JetBrains Mono lacks ⇄, ✘ and ↳).
+	GlyphSend     = Icon{NerdFont: "▸", Unicode: "▸", ASCII: ">"}
+	GlyphSending  = Icon{NerdFont: "↝", Unicode: "↝", ASCII: "~"}
+	GlyphFail     = Icon{NerdFont: "✗", Unicode: "✗", ASCII: "x"}
+	GlyphRedirect = Icon{NerdFont: "↪", Unicode: "↪", ASCII: ">"}
 )

@@ -121,7 +121,7 @@ func buildHTTPPage(run *httpRun, view int, reveal, sending bool) httpPage {
 	if resp.Err != "" && view == httpViewBody && len(resp.Body) == 0 {
 		for _, l := range httpErrorHelp(run) {
 			if strings.HasPrefix(l, "  ") && len(l) > 4 && l[3] == ' ' {
-				add("key", l, "n", 3)
+				add("key", l, "n", 1)
 			} else {
 				add("note", l)
 			}
@@ -262,7 +262,7 @@ func httpErrorHelp(run *httpRun) []string {
 	default:
 		out = append(out, "The request failed.", "")
 	}
-	out = append(out, "  r   resend          h  history          q  close")
+	out = append(out, "  r   resend", "  h   history", "  q   close")
 	return out
 }
 

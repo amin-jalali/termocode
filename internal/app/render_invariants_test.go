@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
 
+	"github.com/amin-jalali/termocode/internal/httpclient"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -47,8 +48,17 @@ func TestRenderInvariantsPoorTerminals(t *testing.T) {
 			return m
 		},
 		"theme-picker": func(m Model) Model { m.openThemePicker(); return m },
+		// HTTP client: the status chip and the "Send anyway?" card.
+		"http": func(m Model) Model {
+			m.http = newHTTPState()
+			m.http.last = &httpRun{rr: httpclient.Resolved{Request: httpclient.Request{Method: "GET"}},
+				resp: &httpclient.Response{Status: 200, StatusText: "OK", Elapsed: 118e6}}
+			_ = m.httpSendRequest("", nil, httpclient.Request{Method: "GET", URL: "http://127.0.0.1:9/{{nope}}"}, "-")
+			return m
+		},
 	}
-	sceneMarker := map[string]string{"palette": "Command Palette", "confirm": "Delete", "toast": "Something happened", "theme-picker": "Color Theme", "settings": "icons"}
+	sceneMarker := map[string]string{"palette": "Command Palette", "confirm": "Delete", "toast": "Something happened", "theme-picker": "Color Theme", "settings": "icons",
+		"http": "Send anyway?"}
 	truecolor := regexp.MustCompile(`\x1b\[[0-9;]*[34]8;[25];`)
 	anyColor := regexp.MustCompile(`\x1b\[[0-9;]*([34][0-9]|9[0-7]|10[0-7])(;[0-9;]*)?m`)
 

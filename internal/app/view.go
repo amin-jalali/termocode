@@ -2210,6 +2210,8 @@ func (m Model) statusState() statusbar.State {
 	lang := m.editor.Lang()
 	if lang == "findresults" {
 		lang = "Find Results"
+	} else if lang == "httpresponse" || lang == "http" {
+		lang = map[string]string{"httpresponse": "HTTP Response", "http": "HTTP"}[lang]
 	} else if lang != "" {
 		lang = strings.ToUpper(lang[:1]) + lang[1:]
 	}

@@ -121,7 +121,7 @@ func TestBuildHTTPPageViews(t *testing.T) {
 	}
 	p = buildHTTPPage(run, httpViewHeaders, false, false)
 	text = strings.Join(p.lines, "\n")
-	for _, want := range []string{"REQUEST", "authorization: Bearer [REDACTED]", "RESPONSE  HTTP/1.1 500", "set-cookie: s=[REDACTED]; Path=/", "TIMING  connect 2 · first byte 30 · total 41 ms", "↳ 301 → http://localhost:8080/users"} {
+	for _, want := range []string{"REQUEST", "authorization: Bearer [REDACTED]", "RESPONSE  HTTP/1.1 500", "set-cookie: s=[REDACTED]; Path=/", "TIMING  connect 2 · first byte 30 · total 41 ms", "↪ 301 → http://localhost:8080/users"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("headers view lacks %q:\n%s", want, text)
 		}
@@ -146,7 +146,7 @@ func TestBuildHTTPPageStates(t *testing.T) {
 	run.by = "user"
 	p := buildHTTPPage(run, httpViewBody, false, false)
 	text := strings.Join(p.lines, "\n")
-	if p.lines[1] != "✘ TLS: x509: certificate signed by unknown authority" || !strings.Contains(text, "k   retry once without TLS verification") {
+	if p.lines[1] != "✗ TLS: x509: certificate signed by unknown authority" || !strings.Contains(text, "k   retry once without TLS verification") {
 		t.Fatalf("tls state:\n%s", text)
 	}
 	if hs := p.head["hints"].([][]string); hs[0][0] != "k" {
@@ -159,7 +159,7 @@ func TestBuildHTTPPageStates(t *testing.T) {
 	run.resp = nil
 	run.progress = 1258291
 	p = buildHTTPPage(run, httpViewBody, false, true)
-	if p.lines[1] != "⇄ sending… · 1.2 MB received" {
+	if p.lines[1] != "↝ sending… · 1.2 MB received" {
 		t.Fatalf("sending %q", p.lines[1])
 	}
 	run.resp = &httpclient.Response{Status: 200, StatusText: "OK", ContentType: "image/png", IsBinary: true, Size: 48 << 10, Body: []byte{1, 2}}
