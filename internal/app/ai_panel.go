@@ -522,9 +522,7 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 		}
 	}
 	undo()
-	if l, ok := act.line(ind); ok {
-		out = append(out, l)
-	}
+	out = append(out, act.lines(ind, inner)...)
 	out = append(out, aiLine{sel: aiSel{ok: true, join: "\n"}})
 	return out
 }

@@ -136,15 +136,17 @@ func aiSecs(n int) string {
 	return strconv.Itoa(n/60) + " m " + strconv.Itoa(n%60) + " s"
 }
 
-// line is the activity row (ok=false: none).
-func (v aiActivityView) line(ind string) (aiLine, bool) {
+// lines are the activity rows, wrapped to inner columns (none without
+// a running turn).
+func (v aiActivityView) lines(ind string, inner int) []aiLine {
 	var text string
+	style := theme.Fg(theme.TextDim).Italic(true)
 	switch {
 	case v.phase == aiPhaseNone:
-		return aiLine{}, false
+		return nil
 	case v.stalled:
-		return aiLine{text: ind + theme.GlyphAIStall.String() + " no answer for " + aiSecs(v.secs) + " — Esc to stop",
-			style: theme.Fg(theme.DiagWarning)}, true
+		text = theme.GlyphAIStall.String() + " no answer for " + aiSecs(v.secs) + " — Esc to stop"
+		style = theme.Fg(theme.DiagWarning)
 	case v.phase == aiPhaseWaiting:
 		text = theme.GlyphAIWaiting.String() + " waiting for the model · " + aiSecs(v.secs)
 	case v.phase == aiPhaseWriting:
@@ -154,7 +156,11 @@ func (v aiActivityView) line(ind string) (aiLine, bool) {
 	case v.phase == aiPhaseRetry:
 		text = theme.GlyphAIRetry.String() + " retry " + strconv.Itoa(v.retry) + " of " + strconv.Itoa(v.retries)
 	}
-	return aiLine{text: ind + text, style: theme.Fg(theme.TextDim).Italic(true)}, true
+	var out []aiLine
+	for _, l := range wrapPlain(text, inner) {
+		out = append(out, aiLine{text: ind + l, style: style})
+	}
+	return out
 }
 
 // aiActivityTick arms the 1 s redraw tick while a turn runs, at most one
