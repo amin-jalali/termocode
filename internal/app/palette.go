@@ -338,6 +338,7 @@ func paletteItems() []picker.Item {
 		{ID: "quit", Title: "File: Quit", Hint: "Ctrl+Q"},
 	}
 	items = append(items, extManagePaletteItems()...) // Group I — Extensions: Reload / Open Folder / …
+	items = append(items, httpPaletteItems()...)      // HTTP client (http_commands.go)
 	// Group A — AI commands (ai_state.go).
 	for _, e := range aiPaletteItems() {
 		items = append(items, picker.Item{ID: e.id, Title: e.title, Hint: e.hint})
@@ -712,6 +713,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.openSnippetManager()
 	default:
 		if cmd, ok := m.dispatchAIPalette(id); ok { // Group A
+			return cmd
+		}
+		if cmd, ok := m.dispatchHTTPPalette(id); ok { // HTTP client
 			return cmd
 		}
 		// Group G: merge conflicts + clone (git_conflicts.go, git_clone.go).

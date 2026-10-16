@@ -2252,7 +2252,7 @@ func (m Model) statusState() statusbar.State {
 		Debug:       m.dapSessionActive,
 		ShowLSP:     m.editor.Path() != "",
 		LSP:         m.lspClients(),
-		Ext:         m.extStatusTexts(), // Group I
+		Ext:         append(m.extStatusTexts(), m.httpStatusTexts()...), // Group I, HTTP client
 	}
 	m.fillTestsStatus(&st) // Group E: ✓ n ✗ n chip (test_explorer.go)
 	return st

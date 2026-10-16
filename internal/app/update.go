@@ -136,6 +136,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	if cmd, ok := m.handleSetupMsg(msg); ok { // setup card (setup_card_ui.go)
 		return m, cmd
 	}
+	if cmd, ok := m.handleHTTPMsg(msg); ok { // HTTP client (http_state.go)
+		return m, cmd
+	}
 	// Overlay control messages always handled regardless of state.
 	switch msg := msg.(type) {
 	case DevActionMsg:
@@ -805,6 +808,11 @@ func (m Model) routeToPicker(msg tea.Msg) (Model, tea.Cmd) {
 		m.picker, cmd = m.picker.HandleMouse(msg.X, msg.Y, msg.Action, msg.Button)
 		m.previewThemeUnderCursor()
 		return m, cmd
+	}
+	if k, ok := msg.(tea.KeyMsg); ok {
+		if c, ok := m.httpPickerKey(k); ok { // HTTP history / saved keys
+			return m, c
+		}
 	}
 	var cmd tea.Cmd
 	m.picker, cmd = m.picker.Update(msg)
@@ -1699,6 +1707,8 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.dapStop()
 	case keymap.ActionShowBufferInfo:
 		return m, m.openBufferInfo()
+	case keymap.ActionHTTPSend:
+		return m, m.httpSendAction()
 	case keymap.ActionToggleActionsPanel:
 		m.toggleActionsPanel()
 		m.applyLayout()
@@ -2060,6 +2070,9 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.extPickSelect(msg.ID)
 	default:
 		if cmd, ok := m.handleAIPickerSelect(msg.ID); ok { // Group A
+			return cmd
+		}
+		if cmd, ok := m.handleHTTPPickerSelect(msg.ID); ok { // HTTP client
 			return cmd
 		}
 	}

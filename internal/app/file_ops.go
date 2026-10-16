@@ -149,6 +149,9 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 	if cmd, ok := m.handleAIPromptSubmit(value); ok { // Group A
 		return cmd
 	}
+	if cmd, ok := m.handleHTTPPromptSubmit(value); ok { // HTTP client
+		return cmd
+	}
 	switch m.promptKind {
 	case promptKindRename:
 		dir := filepath.Dir(m.promptPath)

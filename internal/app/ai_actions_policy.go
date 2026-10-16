@@ -288,6 +288,23 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-mcp-servers":      aiNever(aiNoPicker),
 	"ai-mcp-log":          aiAuto(),
 	"ai-mcp-config":       aiNever(aiNoAIConfig),
+
+	// ── HTTP client ──
+	"http-send":             aiNever("sends a network request; use http_send (gated by host and method)"),
+	"http-send-pick":        aiNever(aiNoPicker + " (http_list_requests, http_send)"),
+	"http-quick":            aiNever(aiNoPicker + " (http_send with method and url)"),
+	"http-cancel":           aiConfirm(ai.ClassIDE), // stops the user's request
+	"http-last-response":    aiAuto(),
+	"http-history":          aiNever(aiNoPicker + " (http_history)"),
+	"http-env-select":       aiNever(aiNoPicker + " (http_set_environment)"),
+	"http-env-open":         aiAuto(),
+	"http-env-open-private": aiNever("opens the file that holds the user's secrets"),
+	"http-saved":            aiNever(aiNoPicker + " (http_list_requests on http/saved.http)"),
+	"http-save":             aiNever(aiNoPicker + " (http_save_request)"),
+	"http-copy-curl":        aiConfirm(ai.ClassIDE), // overwrites the system clipboard
+	"http-import-curl":      aiNever(aiNoPicker + " (http_save_request)"),
+	"http-new-file":         aiNever(aiNoPicker + " (create_file)"),
+	"http-save-body":        aiNever(aiNoPicker + " (http_get_last_response, write_file)"),
 }
 
 // aiActionPolicyFor returns the policy of a palette id, including the

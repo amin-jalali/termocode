@@ -202,6 +202,26 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |
 
+## HTTP
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| HTTP: Cancel Request | `http-cancel` |   |   |
+| HTTP: Copy as curl | `http-copy-curl` |   |   |
+| HTTP: History… | `http-history` |   |   |
+| HTTP: Import from curl… | `http-import-curl` |   |   |
+| HTTP: New .http File… | `http-new-file` |   |   |
+| HTTP: Open Environment File | `http-env-open` |   |   |
+| HTTP: Open Private Environment File | `http-env-open-private` |   |   |
+| HTTP: Quick Request… | `http-quick` |   |   |
+| HTTP: Save Request to Saved… | `http-save` |   |   |
+| HTTP: Save Response Body… | `http-save-body` |   |   |
+| HTTP: Saved Requests… | `http-saved` |   |   |
+| HTTP: Select Environment… | `http-env-select` |   |   |
+| HTTP: Send Request at Cursor | `http-send` | `Ctrl+Alt+R` | `Ctrl+Alt+R` |
+| HTTP: Send Request… | `http-send-pick` |   |   |
+| HTTP: Show Last Response | `http-last-response` |   |   |
+
 ## Help
 
 | Title | ID | Key | Hint |
