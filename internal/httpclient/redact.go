@@ -89,6 +89,37 @@ func RedactHeaders(hs []Header) []Header {
 	return out
 }
 
+// RedactTemplateHeaders hides secret header values in a request
+// template, but keeps values that are only placeholders ("Bearer
+// {{token}}"), so a re-send from history resolves them again.
+func RedactTemplateHeaders(hs []Header) []Header {
+	if len(hs) == 0 {
+		return nil
+	}
+	out := make([]Header, len(hs))
+	for i, h := range hs {
+		out[i] = h
+		if SecretHeader(h.Name) && !onlyPlaceholders(h.Value) {
+			out[i].Value = RedactHeaderValue(h.Name, h.Value)
+		}
+	}
+	return out
+}
+
+// onlyPlaceholders: v is {{…}} placeholders, optionally after an auth
+// scheme word (Bearer, Basic, Token).
+func onlyPlaceholders(v string) bool {
+	if !strings.Contains(v, "{{") {
+		return false
+	}
+	rest := strings.TrimSpace(placeholderRe.ReplaceAllString(v, ""))
+	switch strings.ToLower(rest) {
+	case "", "bearer", "basic", "token", "digest":
+		return true
+	}
+	return false
+}
+
 // secretQueryRe finds secret-looking query parameters anywhere in a
 // text (URLs inside error messages too).
 var secretQueryRe = regexp.MustCompile(`(?i)([?&;](?:[\w.-]*(?:token|secret|password|passwd|pwd|api[_-]?key|apikey|signature|sig|auth|session|code|key)[\w.-]*)=)([^&#\s"']+)`)
