@@ -37,7 +37,10 @@ if [ -z "${__tc_si-}" ] && [[ $- == *i* ]]; then
 		fi
 		__tc_enc "$PWD"
 		builtin printf '\e]7;file://%s%s\a\e]133;A\a' "${HOSTNAME-}" "$__tc_r"
-		__tc_hn=$HISTCMD
+		# The newest history number now; the next command line is new
+		# only if its number is above this one.
+		__tc_hread
+		__tc_seen=${__tc_n:-0}
 		case $PS1 in
 		*'133;B'*) ;;
 		*) PS1=$PS1'\[\e]133;B\a\]' ;;
@@ -45,22 +48,33 @@ if [ -z "${__tc_si-}" ] && [[ $- == *i* ]]; then
 		return $__tc_st
 	}
 
-	# Printed by PS0 (bash 4.4+) when a command line was read: command
-	# start (C) with the command text from history. When history did not
-	# keep the line (HISTCONTROL=ignorespace, history off), the text is
-	# left empty instead of naming the previous command.
+	# Printed by PS0 (bash 4.4+, or the DEBUG trap below) when a command
+	# line was read: command start (C) with the command text from history.
+	# When history did not keep the line (HISTCONTROL=ignorespace,
+	# history off), the text is left empty instead of naming the previous
+	# command.
 	__tc_preexec() {
-		local h n
-		h=$(HISTTIMEFORMAT= builtin history 1)
-		n=${h#"${h%%[![:space:]]*}"}
-		n=${n%%[!0-9]*}
-		h=${h#*[0-9] }
-		h=${h#"${h%%[![:space:]]*}"}
-		if [ -z "$n" ] || [ "$n" != "${__tc_hn-}" ]; then
+		__tc_hread
+		local h=$__tc_h
+		if [ -z "$__tc_n" ] || [ "$__tc_n" -le "${__tc_seen:-0}" ]; then
 			h=
 		fi
 		__tc_enc "$h"
 		builtin printf '\e]133;C;cmdline_url=%s\a' "$__tc_r"
+	}
+
+	# __tc_hread puts the newest history entry in __tc_h and its number
+	# in __tc_n. A line counts as new only when its number is above the
+	# one seen at the prompt (__tc_precmd, in this shell: PS0 runs
+	# __tc_preexec in a subshell). HISTCMD is not used: bash 3.2 counts
+	# it differently.
+	__tc_hread() {
+		local h
+		h=$(HISTTIMEFORMAT= builtin history 1)
+		__tc_n=${h#"${h%%[![:space:]]*}"}
+		__tc_n=${__tc_n%%[!0-9]*}
+		h=${h#*[0-9] }
+		__tc_h=${h#"${h%%[![:space:]]*}"}
 	}
 
 	if [ -z "${TERMOCODE_SI_FORCE_DEBUG-}" ] && { [ "${BASH_VERSINFO[0]}" -gt 4 ] || { [ "${BASH_VERSINFO[0]}" -eq 4 ] && [ "${BASH_VERSINFO[1]}" -ge 4 ]; }; }; then
