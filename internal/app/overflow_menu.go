@@ -151,6 +151,8 @@ func overflowMenuDetectLang(path, nvimFiletype string) string {
 			return "json"
 		case ".yaml", ".yml":
 			return "yaml"
+		case ".http", ".rest":
+			return "http"
 		}
 	}
 	switch strings.ToLower(strings.TrimSpace(nvimFiletype)) {
@@ -375,6 +377,27 @@ func overflowMenuAllItems(hints map[keymap.Action]string) []overflowMenuItem {
 			shortcut: hint(keymap.ActionMarkdownPreview),
 			visible:  func(c overflowMenuContext) bool { return !c.InTerminal && c.Lang == "markdown" },
 			action:   func(m *Model) tea.Cmd { return m.openPreviewCmd() },
+		},
+
+		// .http / .rest: the HTTP client (http_commands.go).
+		{
+			label:    "Send Request",
+			group:    groupContext,
+			shortcut: hint(keymap.ActionHTTPSend),
+			visible:  func(c overflowMenuContext) bool { return !c.InTerminal && c.Lang == "http" },
+			action:   func(m *Model) tea.Cmd { return m.httpSendAction() },
+		},
+		{
+			label:   "Copy as curl",
+			group:   groupContext,
+			visible: func(c overflowMenuContext) bool { return !c.InTerminal && c.Lang == "http" },
+			action:  func(m *Model) tea.Cmd { return m.httpCopyCurlAction() },
+		},
+		{
+			label:   "Select Environment…",
+			group:   groupContext,
+			visible: func(c overflowMenuContext) bool { return !c.InTerminal && c.Lang == "http" },
+			action:  func(m *Model) tea.Cmd { return m.openHTTPEnvPicker() },
 		},
 
 		// JSON / YAML: Format / Collapse / Expand.

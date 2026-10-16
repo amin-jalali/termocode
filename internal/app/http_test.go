@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/httpclient"
+	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -172,6 +173,23 @@ func TestHTTPBodyFileName(t *testing.T) {
 	r := testRun()
 	if got := httpBodyFileName(r); got != "users.json" {
 		t.Fatalf("got %q", got)
+	}
+}
+
+// The ⋮ menu's context section offers the HTTP rows on .http files.
+func TestHTTPOverflowMenuRows(t *testing.T) {
+	if got := overflowMenuDetectLang("/w/api/users.REST", ""); got != "http" {
+		t.Fatalf("lang %q", got)
+	}
+	var labels []string
+	for _, it := range overflowMenuAllItems(map[keymap.Action]string{keymap.ActionHTTPSend: "Ctrl+Alt+R"}) {
+		if it.visible != nil && it.visible(overflowMenuContext{Lang: "http"}) && it.group == groupContext {
+			labels = append(labels, it.label+"|"+it.shortcut)
+		}
+	}
+	want := []string{"Send Request|Ctrl+Alt+R", "Copy as curl|", "Select Environment…|"}
+	if !reflect.DeepEqual(labels, want) {
+		t.Fatalf("context rows %v, want %v", labels, want)
 	}
 }
 
