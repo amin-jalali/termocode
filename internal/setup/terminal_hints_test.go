@@ -3,6 +3,8 @@ package setup
 import (
 	"strings"
 	"testing"
+
+	"github.com/amin-jalali/termocode/internal/termimg"
 )
 
 func hintEnv(m map[string]string) func(string) string {
@@ -58,6 +60,30 @@ func TestTerminalHints(t *testing.T) {
 				t.Errorf("%s: detail %q lacks %q", c.name, found.Detail, w)
 			}
 		}
+	}
+}
+
+// §4 Doctor row 1: the terminal profile termocode found, the layer, SSH,
+// and (from inside the app) what the terminal answered.
+func TestTerminalCheck(t *testing.T) {
+	env := hintEnv(map[string]string{"TERM_PROGRAM": "WezTerm", "TMUX": "/t,1,0"})
+	c := TerminalCheck(env, nil)
+	if c.Name != "terminal" || c.Status != OK || !strings.Contains(c.Detail, "wezterm · in tmux") {
+		t.Errorf("env only: %+v", c)
+	}
+	if !strings.Contains(c.Detail, "probed at start") {
+		t.Errorf("env only, no probe note: %q", c.Detail)
+	}
+	caps := &termimg.Caps{Answered: true, KittyKeys: true, SyncOutput: true}
+	c = TerminalCheck(env, caps)
+	for _, w := range []string{"kitty keyboard: yes", "synchronized output: yes"} {
+		if !strings.Contains(c.Detail, w) {
+			t.Errorf("probed: %q lacks %q", c.Detail, w)
+		}
+	}
+	c = TerminalCheck(env, &termimg.Caps{})
+	if !strings.Contains(c.Detail, "did not answer") {
+		t.Errorf("silent: %q", c.Detail)
 	}
 }
 

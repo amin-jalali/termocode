@@ -95,6 +95,7 @@ func Doctor() []Check {
 	out = append(out, NerdFontCheck(nerd, ""))
 	out = append(out, TerminalFontCheck(DetectTerminalFont(true), installedNerdName(nerd)))
 	out = append(out, GraphicsCheck(termimg.Caps{}, false))
+	out = append(out, TerminalCheck(os.Getenv, nil))
 	out = append(out, TerminalHints(os.Getenv)...)
 	return out
 }

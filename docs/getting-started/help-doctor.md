@@ -18,6 +18,9 @@ It checks:
 - language servers and debug adapters,
 - truecolor support,
 - the Nerd Font,
+- your terminal: its name, tmux / screen / SSH, and (inside the app) what
+  it answered at start: the kitty keyboard protocol and synchronized
+  output,
 - settings of your terminal that termocode cannot change: the Option key
   on macOS (Terminal, iTerm2), the F1 key in VS Code and JetBrains, the
   bidi setting of Konsole, and the Linux console. These rows show only in

@@ -1,6 +1,8 @@
 package app
 
 import (
+	"os"
+
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/setup"
@@ -19,6 +21,9 @@ func runDoctorCmd() tea.Cmd {
 			case "graphics (images)":
 				checks[i] = setup.GraphicsCheck(termCaps, true)
 				checks[i].Detail += " · using: " + imageProtocol().String()
+			case "terminal":
+				caps := termCaps
+				checks[i] = setup.TerminalCheck(os.Getenv, &caps)
 			case "Nerd Font":
 				// Doctor() just ran a fresh fc-list and refreshed the cache.
 				checks[i] = setup.NerdFontCheck(setup.DetectNerdFont(false), iconModeName(theme.CurrentIconMode))
