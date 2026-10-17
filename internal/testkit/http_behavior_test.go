@@ -3,6 +3,8 @@ package testkit
 import (
 	"bytes"
 	"encoding/json"
+	"image"
+	"image/png"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -67,7 +69,8 @@ func newHTTPAPI(t *testing.T, tlsServer bool) *httpAPI {
 			}
 		case "/png":
 			w.Header().Set("Content-Type", "image/png")
-			w.Write([]byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"))
+			img := image.NewRGBA(image.Rect(0, 0, 4, 4))
+			_ = png.Encode(w, img)
 		case "/old":
 			http.Redirect(w, r, "/users/42", 301)
 		case "/big":
@@ -270,8 +273,92 @@ return s .. '|' .. table.concat(words, ',')`)
 	d.Type("Auth")
 	d.Key("ctrl+x")
 	d.Key("ctrl+o")
-	if !d.WaitFor(func() bool { return strings.Contains(lua(d, `return vim.api.nvim_get_current_line()`), "Authorization: ") }, 3*time.Second) {
+	if !d.WaitFor(func() bool {
+		return strings.Contains(lua(d, `return vim.api.nvim_get_current_line()`), "Authorization: ")
+	}, 3*time.Second) {
 		t.Fatalf("line after <C-x><C-o>: %q", lua(d, `return vim.api.nvim_get_current_line()`))
+	}
+}
+
+// HC-15: x reveals secret header values, a click on a redirect hop
+// copies its URL, a click on the request name jumps to the block, S
+// saves with a default name, o opens an image, history can be cleared.
+func TestHTTPPolish(t *testing.T) {
+	var copied atomic.Value
+	copied.Store("")
+	restore := app.SetClipboardSink(func(s string) { copied.Store(s) })
+	defer restore()
+	api := newHTTPAPI(t, false)
+	d := httpDriver(t, api.srv.URL, 110, 32, "")
+
+	// Redirect hop click.
+	httpCursor(d, 27)
+	d.Palette("http-send")
+	waitPage(d, "1 redirect")
+	clickText(d, "301 → ")
+	if !d.WaitFor(func() bool { return copied.Load().(string) == api.srv.URL+"/users/42" }, 3*time.Second) {
+		t.Fatalf("hop click copied %q", copied.Load())
+	}
+	// x on the Headers view.
+	d.Key("2")
+	waitPage(d, "session=[REDACTED]")
+	d.Key("x")
+	waitPage(d, "session=cookie-secret-77")
+	d.Key("x")
+	waitPage(d, "session=[REDACTED]")
+
+	// S: save with the default name (the request name).
+	d.Key("1")
+	d.Key("q")
+	open(d, "api/users.http")
+	httpCursor(d, 5)
+	d.Palette("http-send")
+	waitPage(d, "200 OK")
+	d.Key("S")
+	if !d.WaitForText("getUser", 3*time.Second) {
+		t.Fatalf("no save prompt:\n%s", screen(d))
+	}
+	d.Key("enter")
+	saved := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "termocode", "http", "saved.http")
+	if !d.WaitFor(func() bool {
+		b, _ := os.ReadFile(saved)
+		return strings.Contains(string(b), "### getUser\nGET {{host}}/users/42")
+	}, 3*time.Second) {
+		b, _ := os.ReadFile(saved)
+		t.Fatalf("saved.http:\n%s", b)
+	}
+
+	// A click on the request name jumps to its block.
+	clickText(d, "getUser")
+	if !d.WaitFor(func() bool { _, a := tabs(d); return a == "api/users.http" && strings.HasPrefix(cursor(d), "5:") }, 3*time.Second) {
+		_, a := tabs(d)
+		t.Fatalf("name click: tab %q cursor %s", a, cursor(d))
+	}
+
+	// o: the image preview of a PNG answer.
+	httpCursor(d, 24)
+	d.Palette("http-send")
+	waitPage(d, "binary · image/png")
+	d.Key("o")
+	if !d.WaitForText(".png", 3*time.Second) {
+		t.Fatalf("no image preview:\n%s", screen(d))
+	}
+	d.Key("esc")
+
+	// History: Clear history… asks, then empties the file.
+	d.Palette("http-history")
+	if !d.WaitForText("Clear history", 3*time.Second) {
+		t.Fatalf("history:\n%s", screen(d))
+	}
+	d.Type("Clear history")
+	d.Key("enter")
+	if !d.WaitForText("Clear HTTP history?", 3*time.Second) {
+		t.Fatalf("no confirm:\n%s", screen(d))
+	}
+	clickButton(d, "Clear")
+	hist := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "termocode", "http", "history.jsonl")
+	if !d.WaitFor(func() bool { b, _ := os.ReadFile(hist); return len(strings.TrimSpace(string(b))) == 0 }, 3*time.Second) {
+		t.Fatal("history not cleared")
 	}
 }
 
