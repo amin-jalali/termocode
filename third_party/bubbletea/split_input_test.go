@@ -67,6 +67,35 @@ func TestHeldTailFlushedAfterWait(t *testing.T) {
 	}
 }
 
+// A held lone Esc must not swallow the next sequence: the Esc key, then
+// the terminal's answer to the frame pacing query, read 5 ms apart, are
+// Esc + the answer. (Joined they read as Alt+Esc and the typed text
+// "[?0n": the "n" ran a search in the editor, and the pacer lost an
+// answer and stalled the screen — TestSlowLink run-on.)
+func TestHeldEscNotJoinedWithNextSequence(t *testing.T) {
+	for _, next := range []string{"\x1b[?0n", "\x1b[0n", "\x1b[B", "\x1b[<35;1;1M"} {
+		r := &chunkReader{chunks: [][]byte{[]byte("\x1b"), []byte(next)}, gap: 5 * time.Millisecond}
+		msgs := testReadInputs(t, r)
+		if len(msgs) != 2 {
+			t.Errorf("esc + %q: %d msgs %v, want 2", next, len(msgs), msgs)
+			continue
+		}
+		if k, ok := msgs[0].(KeyMsg); !ok || k.Type != KeyEscape || k.Alt {
+			t.Errorf("esc + %q: first msg %v, want esc", next, msgs[0])
+		}
+		if k, ok := msgs[1].(KeyMsg); ok && k.Type == KeyRunes {
+			t.Errorf("esc + %q: typed %q", next, string(k.Runes))
+		}
+	}
+	// A string terminator split after its ESC still joins.
+	r := &chunkReader{chunks: [][]byte{[]byte("\x1b_Gi=31;OK\x1b"), []byte("\\")}, gap: 5 * time.Millisecond}
+	for _, m := range testReadInputs(t, r) {
+		if k, ok := m.(KeyMsg); ok {
+			t.Errorf("split APC terminator: key %q", k.String())
+		}
+	}
+}
+
 // Terminal-compat R6: a burst of plain pointer motion in one read is one
 // event (the last position); clicks and drags are never merged.
 func TestMotionBurstCoalesced(t *testing.T) {
