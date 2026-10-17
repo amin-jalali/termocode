@@ -109,7 +109,7 @@ func (m *Model) aiLiveActions() []picker.Item {
 }
 
 // aiPanelNames are the show_panel targets.
-var aiPanelNames = []string{"problems", "output", "terminal", "tests", "test-results", "explorer", "git", "search"}
+var aiPanelNames = []string{"problems", "output", "terminal", "tests", "test-results", "explorer", "git", "search", "http-response"}
 
 // aiIDETools are the tools that act on the IDE through call.
 func aiIDETools(root string, call aiIDECaller) []ai.Tool {
@@ -335,6 +335,8 @@ func (m *Model) aiShowPanel(name string) tea.Cmd {
 		return m.aiShowSidebar(activity.ViewGit)
 	case "search":
 		return m.aiShowSidebar(activity.ViewSearch)
+	case "http-response": // the HTTP client's page (http_page.go)
+		return m.httpShowLast()
 	}
 	return nil
 }

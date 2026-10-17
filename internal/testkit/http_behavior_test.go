@@ -67,6 +67,11 @@ func newHTTPAPI(t *testing.T, tlsServer bool) *httpAPI {
 			w.Write([]byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"))
 		case "/old":
 			http.Redirect(w, r, "/users/42", 301)
+		case "/big":
+			w.Header().Set("Content-Type", "application/json")
+			io.WriteString(w, `{"items":[`+strings.Repeat(`{"id":1,"name":"item"},`, 400)+`{"id":2}]}`)
+		case "/auth":
+			io.WriteString(w, "auth="+r.Header.Get("Authorization"))
 		default:
 			http.NotFound(w, r)
 		}

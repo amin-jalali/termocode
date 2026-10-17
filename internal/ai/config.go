@@ -355,6 +355,22 @@ var redactPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)([?&](?:code|key|token)=)[^&\s"]{8,}`),
 }
 
+// redactKeywords[i] are lower-case words one of which is in every match
+// of redactPatterns[i].
+var redactKeywords = [][]string{
+	{"sk-ant-"}, {"sk-"}, {"bearer"}, {"x-api-key"},
+	{"access_token", "refresh_token", "api_key", "apikey"}, {"code=", "key=", "token="},
+}
+
+func containsAny(s string, words []string) bool {
+	for _, w := range words {
+		if strings.Contains(s, w) {
+			return true
+		}
+	}
+	return false
+}
+
 // Redact hides API keys, OAuth tokens and bearer credentials in s. Every
 // AI error is passed through it before it reaches a toast or errors.log.
 func Redact(s string) string {
@@ -371,7 +387,13 @@ func Redact(s string) string {
 	for _, k := range list {
 		s = strings.ReplaceAll(s, k, "[REDACTED]")
 	}
+	// A pattern runs only when its keyword is in the text: the
+	// case-insensitive regexps cost ~2 ms each on a 32 KB HTTP body.
+	lower := strings.ToLower(s)
 	for i, re := range redactPatterns {
+		if !containsAny(lower, redactKeywords[i]) {
+			continue
+		}
 		if i < 2 {
 			s = re.ReplaceAllString(s, "[REDACTED]")
 			continue

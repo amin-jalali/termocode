@@ -268,6 +268,17 @@ func (m Model) layoutDims() confirmDims {
 		// Room for the command on one line: frame + padding + border.
 		boxW = max(boxW, min(lipgloss.Width(m.code)+10, 110))
 	}
+	// Room for the button row on one line ("Always allow
+	// http:127.0.0.1:41383/write" is long): a wider card, not a button
+	// cut in two.
+	btnW := 0
+	for i, b := range m.buttons {
+		if i > 0 {
+			btnW += 2
+		}
+		btnW += lipgloss.Width(m.buttonLabel(b))
+	}
+	boxW = max(boxW, min(btnW+6, 110))
 	if maxW := m.w - 8; boxW > maxW {
 		boxW = maxW
 	}
