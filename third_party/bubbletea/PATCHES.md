@@ -46,6 +46,16 @@ Kitty keyboard protocol (termocode terminal-compat R1):
   messages, so termocode's tests can check every shortcut end to end.
 - Tests: `key_csiu_test.go`, `kitty_keyboard_test.go`, `key_parse_test.go`.
 
+Terminal answers are not keys (termocode terminal-compat R3):
+
+- `key_strings.go` (new): a complete escape string in the input (APC
+  `ESC _ … ST`, DCS `ESC P … ST`, OSC `ESC ] … BEL/ST`, PM, SOS) is one
+  `escapeStringMsg`, not Alt+_ plus typed text. A late answer to the
+  startup probe (kitty graphics `ESC _ Gi=31;OK ESC \`) can no longer
+  type into the editor. Without a terminator the bytes stay keys.
+- `key.go`: `detectOneMsg` tries `detectEscapeString` first after paste.
+- Test: `key_strings_test.go`.
+
 All other files are unchanged.
 
 To update: copy the new upstream release here, apply the same change,
