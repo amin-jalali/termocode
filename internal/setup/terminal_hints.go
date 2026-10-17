@@ -1,6 +1,34 @@
 package setup
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/amin-jalali/termocode/internal/termcaps"
+	"github.com/amin-jalali/termocode/internal/termimg"
+)
+
+// TerminalCheck is the Doctor's "terminal" row: the profile termocode
+// found in the environment (internal/termcaps), the layer and SSH, and
+// with caps (the startup probe, from inside the app) what the terminal
+// answered.
+func TerminalCheck(getenv func(string) string, caps *termimg.Caps) Check {
+	c := Check{Group: "terminal", Name: "terminal", Status: OK, Detail: termcaps.FromEnv(getenv).String()}
+	yes := func(b bool) string {
+		if b {
+			return "yes"
+		}
+		return "no"
+	}
+	switch {
+	case caps == nil:
+		c.Detail += " · keys and synchronized output are probed at start by the app"
+	case !caps.Answered:
+		c.Detail += " · the terminal did not answer the startup probe (or was not asked)"
+	default:
+		c.Detail += " · kitty keyboard: " + yes(caps.KittyKeys) + " · synchronized output: " + yes(caps.SyncOutput)
+	}
+	return c
+}
 
 // TerminalHints are Doctor rows for settings of the host terminal that
 // termocode cannot change (and never changes itself): the Option key on
