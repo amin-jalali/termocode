@@ -259,3 +259,35 @@ func TestSvcActionLayout(t *testing.T) {
 		t.Errorf("narrow layout = %+v", acts)
 	}
 }
+
+// The action bar labels and the service rows are hit targets (the hit-map
+// tests and the hover labels see them).
+func TestServicesHitTargets(t *testing.T) {
+	defer func(m theme.IconMode) { theme.CurrentIconMode = m }(theme.CurrentIconMode)
+	theme.CurrentIconMode = theme.IconModeUnicode
+	st := svcTestState()
+	m := svcTestModel(st, 100, 30)
+	got := map[string]string{}
+	for _, h := range m.sidebarTargets() {
+		got[h.ID] = h.Label
+	}
+	for id, label := range map[string]string{"svc:btn:start-all": "▸ Start all", "svc:btn:stop-all": "▪ Stop all",
+		"svc:btn:refresh": "↻", "svc:row:compose/postgres": "", "svc:row:local/web": ""} {
+		l, ok := got[id]
+		if !ok {
+			t.Errorf("no target %s in %v", id, got)
+			continue
+		}
+		if label != "" && l != label {
+			t.Errorf("%s label %q, want %q", id, l, label)
+		}
+	}
+	if id := m.sidebarTargetAt(2, svcActionRow); id != "svc:btn:start-all" {
+		t.Errorf("target at the start button = %q", id)
+	}
+	for _, id := range []string{"svc:btn:start-all", "svc:btn:stop-all", "svc:btn:refresh"} {
+		if m.tooltipText(id) == "" {
+			t.Errorf("%s has no hover label", id)
+		}
+	}
+}
