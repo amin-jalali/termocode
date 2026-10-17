@@ -222,6 +222,7 @@ type EntryOptions struct {
 	Writes      bool   // the full endpoint and the write scopes
 	GHUser      string // MethodCLI: the gh account
 	AppClientID string // the user's own app id (Slack, GitLab device)
+	Secret      string // MethodToken: the mcp_secrets name ("" = <preset>_token)
 }
 
 // EntryFor is the mcpServers entry the wizard writes for a method.
@@ -240,7 +241,11 @@ func (p Preset) EntryFor(m Method, o EntryOptions) map[string]any {
 		if p.Token != nil && p.Token.Scheme != "" {
 			scheme = p.Token.Scheme
 		}
-		e["headers"] = map[string]string{"Authorization": scheme + " ${secret:" + p.SecretName() + "}"}
+		secret := o.Secret
+		if secret == "" {
+			secret = p.SecretName()
+		}
+		e["headers"] = map[string]string{"Authorization": scheme + " ${secret:" + secret + "}"}
 	default:
 		scopes := p.ReadScopes
 		if o.Writes && p.WriteScopes != nil {

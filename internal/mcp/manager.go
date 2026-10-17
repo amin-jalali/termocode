@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/ai"
 )
 
 // Manager holds every configured server (MC-3). Nothing runs at startup:
@@ -99,6 +101,9 @@ type Status struct {
 	Cached             bool // tool list from the disk cache, server not asked yet
 	Trusted            bool
 	SignedIn           bool // an OAuth sign-in is stored (remote servers)
+	// Expired: the stored sign-in has ended and can not be refreshed
+	// (ClickUp has no refresh grant): sign in again.
+	Expired bool
 	// ToolsChanged: the tools differ from the list the user trusted and
 	// the user did not accept the new list (its tools all ask first).
 	ToolsChanged bool
@@ -234,7 +239,9 @@ func (m *Manager) Servers() []Status {
 			Problem: st.problem, Tools: len(st.tools), Cached: st.cached, Trusted: m.trustedLocked(st),
 			ToolsChanged: m.toolsChangedLocked(st) && st.toolsOK != st.toolsHash, server: st.cfg}
 		if st.cfg.Type == TypeHTTP && m.opts.Tokens != nil {
-			_, s.SignedIn = m.opts.Tokens.Load(st.cfg.Name)
+			var e ai.MCPOAuth
+			e, s.SignedIn = m.opts.Tokens.Load(st.cfg.Name)
+			s.Expired = s.SignedIn && e.RefreshToken == "" && e.Expired(time.Now())
 		}
 		if st.proc != nil {
 			s.Pid = st.proc.Pid()
