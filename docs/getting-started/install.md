@@ -247,3 +247,22 @@ Those features stay off until the next online start.
     then pick it in your terminal. `termocode setup` prints your terminal's
     font and the exact steps (it never changes terminal settings). On macOS,
     install any Nerd Font by hand. Or set `TERMOCODE_ICON_MODE=ascii`.
+
+**On macOS, Alt shortcuts type `å`, `ƒ`, `Ω` instead**
+:   macOS sends a letter for Option by default. Make Option act as Alt:
+    in Terminal, Settings → Profiles → Keyboard → **Use Option as Meta
+    key**; in iTerm2, Settings → Profiles → Keys → Left / Right Option key
+    → **Esc+**. **Help: Run Doctor** shows this hint in both terminals.
+
+**F1 opens the palette of VS Code (or JetBrains), not termocode's**
+:   The IDE keeps F1 for itself. Press `Alt+X` to open termocode's command
+    palette.
+
+**Persian or Arabic text crosses the pane borders in Konsole**
+:   Konsole reorders right-to-left rows itself. Turn off Profile →
+    Advanced → **Bi-Directional text rendering**, then set `"rtl":
+    "termocode"` in `config.json`.
+
+**On the Linux console (no desktop)**
+:   termocode works with 16 colours, ASCII icons and no mouse. It clears
+    the screen when it quits, because the console has no alternate screen.

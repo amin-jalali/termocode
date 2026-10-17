@@ -17,7 +17,11 @@ It checks:
 - `rg` (ripgrep) and `git`,
 - language servers and debug adapters,
 - truecolor support,
-- the Nerd Font.
+- the Nerd Font,
+- settings of your terminal that termocode cannot change: the Option key
+  on macOS (Terminal, iTerm2), the F1 key in VS Code and JetBrains, the
+  bidi setting of Konsole, and the Linux console. These rows show only in
+  that terminal.
 
 ## Run the same checks in a shell
 
