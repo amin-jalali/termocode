@@ -26,8 +26,22 @@ const probeQuery = kittyGraphicsQuery + baseQuery
 const kittyGraphicsQuery = "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\"
 
 // baseQuery is what every terminal is asked: cell size, kitty keyboard
-// flags, DA1 last.
-const baseQuery = "\x1b[16t" + keysQuery + "\x1b[c"
+// flags, synchronized output, DA1 last.
+const baseQuery = "\x1b[16t" + keysQuery + syncQuery + "\x1b[c"
+
+// syncQuery asks DECRQM for mode 2026 (synchronized output); a terminal
+// that knows it answers CSI ? 2026 ; Ps $ y (terminal-compat R10).
+const syncQuery = "\x1b[?2026$p"
+
+// hasSyncOutput reports a DECRQM answer for mode 2026 with Ps 1 (set),
+// 2 (reset) or 3 (permanently set). 0 (unknown) and 4 (permanently
+// reset) mean no.
+func hasSyncOutput(reply []byte) bool {
+	m := syncRe.FindSubmatch(reply)
+	return m != nil && (m[1][0] == '1' || m[1][0] == '2' || m[1][0] == '3')
+}
+
+var syncRe = regexp.MustCompile(`\x1b\[\?2026;(\d)\$y`)
 
 // keysQuery asks for the kitty keyboard flags; a terminal with the
 // protocol answers CSI ? flags u (before DA1). See hasKittyKeys.
@@ -38,20 +52,22 @@ func hasKittyKeys(reply []byte) bool { return kittyKeysRe.Match(reply) }
 
 var kittyKeysRe = regexp.MustCompile(`\x1b\[\?\d+u`)
 
-// ProbeKittyKeyboard asks only the keyboard question (images are off, so
-// Probe does not run). Like Probe it must run before Bubble Tea takes the
-// TTY. false inside tmux (its extended keys are a different scheme) and
-// when the terminal does not answer.
-// answered: the terminal answered DA1 (for the probe cache, R3).
-func ProbeKittyKeyboard(in, out *os.File, timeout time.Duration, getenv func(string) string) (keys, answered bool) {
+// ProbeTerminal asks only the questions that need no images (images
+// are off, so Probe does not run): kitty keyboard flags, synchronized
+// output, DA1. Like Probe it must run before Bubble Tea takes the TTY.
+// Nothing is asked inside tmux (its extended keys are a different
+// scheme).
+func ProbeTerminal(in, out *os.File, timeout time.Duration, getenv func(string) string) Caps {
 	if getenv == nil {
 		getenv = os.Getenv
 	}
+	c := Caps{Protocol: Blocks}
 	if getenv("TMUX") != "" {
-		return false, false
+		return c
 	}
-	reply := Query(in, out, keysQuery+"\x1b[c", timeout, hasDA1)
-	return hasKittyKeys(reply), hasDA1(reply)
+	reply := Query(in, out, keysQuery+syncQuery+"\x1b[c", timeout, hasDA1)
+	c.KittyKeys, c.SyncOutput, c.Answered = hasKittyKeys(reply), hasSyncOutput(reply), hasDA1(reply)
+	return c
 }
 
 // ProbeOpts tunes ProbeWith.
@@ -134,6 +150,7 @@ func ProbeWith(in, out *os.File, timeout time.Duration, getenv func(string) stri
 	}
 	caps.CellW, caps.CellH = cw, ch
 	caps.KittyKeys = hasKittyKeys(reply)
+	caps.SyncOutput = hasSyncOutput(reply)
 	switch {
 	case kitty:
 		caps.Protocol = Kitty

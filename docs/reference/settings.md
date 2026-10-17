@@ -103,6 +103,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `TERMOCODE_NO_SESSION` | Any value: run without a persistent session, like `--no-session`. |
 | `TERMOCODE_PLUGINS_DIR` | Folder for the Neovim plugins termocode clones on first launch. |
 | `TERMOCODE_PROBE` | `off`: never ask the terminal what it can do at start (images, cell size, kitty keyboard); the environment decides. A terminal that did not answer is not asked again for 7 days (`$XDG_STATE_HOME/termocode/termcaps.json`). |
+| `TERMOCODE_SYNC` | on / off: draw each frame as one (synchronized output, mode 2026), so no half-drawn frame shows on a slow link (default: on when the terminal says it supports it). |
 | `TERMOCODE_TOOLS_DIR` | Folder for language servers and debug adapters installed by termocode. |
 | `XDG_CONFIG_HOME` | Moves the config folder to `$XDG_CONFIG_HOME/termocode`. |
 | `XDG_DATA_HOME` | Moves the data folder to `$XDG_DATA_HOME/termocode`. |

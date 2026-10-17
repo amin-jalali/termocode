@@ -115,10 +115,32 @@ func TestProbeKeysOnly(t *testing.T) {
 		if bytes.Contains(got, []byte("\x1b_G")) {
 			_, _ = ptm.WriteString("unexpected graphics query")
 		}
-		_, _ = ptm.WriteString("\x1b[?1u\x1b[?62c")
+		if !bytes.Contains(got, []byte("\x1b[?2026$p")) {
+			_, _ = ptm.WriteString("no sync query")
+		}
+		_, _ = ptm.WriteString("\x1b[?1u\x1b[?2026;2$y\x1b[?62c")
 	}()
-	if keys, answered := ProbeKittyKeyboard(tty, tty, 2*time.Second, env(nil)); !keys || !answered {
-		t.Errorf("answered CSI ? u: keys=%v answered=%v", keys, answered)
+	if c := ProbeTerminal(tty, tty, 2*time.Second, env(nil)); !c.KittyKeys || !c.Answered || !c.SyncOutput {
+		t.Errorf("answered CSI ? u and DECRQM 2026: %+v", c)
+	}
+}
+
+// Terminal R10: the probe asks DECRQM for mode 2026 (synchronized
+// output). Only "set" / "reset" / "permanently set" mean the terminal
+// knows the mode.
+func TestProbeSyncOutput(t *testing.T) {
+	for reply, want := range map[string]bool{
+		"\x1b[?2026;2$y\x1b[?62;22c": true,
+		"\x1b[?2026;1$y\x1b[?62;22c": true,
+		"\x1b[?2026;3$y\x1b[?62;22c": true,
+		"\x1b[?2026;0$y\x1b[?62;22c": false, // not recognised
+		"\x1b[?2026;4$y\x1b[?62;22c": false, // permanently reset
+		"\x1b[?62;22c":               false,
+		"\x1b[?1004;2$y\x1b[?62;22c": false, // another mode
+	} {
+		if got := probeWithReply(t, nil, reply); got.SyncOutput != want {
+			t.Errorf("%q: SyncOutput = %v, want %v", reply, got.SyncOutput, want)
+		}
 	}
 }
 
