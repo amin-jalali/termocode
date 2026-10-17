@@ -742,6 +742,11 @@ func (m Model) aiDividerLine(width int) aiLine {
 		row := theme.FgBg(theme.AIAccent, theme.BgPanel).Bold(true).Render(head) + chip(a, theme.AccentGreen, 0.25)
 		return aiLine{styled: row, buttons: []aiLineButton{{ax, ax + len(a) + 2, "review-open"}}}
 	}
+	if s != nil && len(s.attachments) == 0 {
+		if l, ok := m.mcpSignInBar(); ok {
+			return l
+		}
+	}
 	if s != nil && len(s.attachments) > 0 {
 		// Each chip is " ⊕ label × "; its "× " removes it.
 		row := bg.Render(" ")
@@ -1254,7 +1259,7 @@ func (m *Model) handleAIPanelMouse(msg tea.MouseMsg) (tea.Cmd, bool) {
 	case id == "ai:history":
 		return m.openAIHistory(), true
 	case id == "ai:mcp":
-		return m.openMCPServers(), true
+		return m.onMCPChip(), true
 	case strings.HasPrefix(id, "ai:btn:"):
 		return m.onAIButton(strings.TrimPrefix(id, "ai:btn:")), true
 	case id == "ai:transcript":
@@ -1272,6 +1277,15 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 	switch {
 	case id == "configure":
 		return m.openAIConfigure()
+	case strings.HasPrefix(id, "mcp-signin:"):
+		return m.mcpConnectServer(strings.TrimPrefix(id, "mcp-signin:"))
+	case strings.HasPrefix(id, "mcp-notnow:"):
+		s := m.aiS()
+		if s.mcpNotNow == nil {
+			s.mcpNotNow = map[string]bool{}
+		}
+		s.mcpNotNow[strings.TrimPrefix(id, "mcp-notnow:")] = true
+		return nil
 	case id == "review-open":
 		return m.showAIReview()
 	case strings.HasPrefix(id, "undo-turn:"):

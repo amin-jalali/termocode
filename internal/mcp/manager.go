@@ -253,6 +253,21 @@ func (m *Manager) Count() int {
 	return len(m.servers)
 }
 
+// NeedSignIn lists the servers whose last answer was "sign-in needed",
+// sorted (cheap: the chat header reads it every frame).
+func (m *Manager) NeedSignIn() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var out []string
+	for name, st := range m.servers {
+		if st.state == StateSignIn {
+			out = append(out, name)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
 // Running counts running servers.
 func (m *Manager) Running() int {
 	m.mu.Lock()

@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/amin-jalali/termocode/internal/mcp"
 	"os"
 	"path/filepath"
 	"strings"
@@ -405,6 +406,9 @@ func (s *aiState) restoreAIChat() {
 func (m *Model) openAIPanel(focus bool) tea.Cmd {
 	s := m.aiS()
 	s.restoreAIChat()
+	if mcp.LoadSettings(mcpConfigPath()).Enabled {
+		m.aiMCP() // reads mcp.json (starts nothing): the header chip knows the services
+	}
 	if !m.actionsPanelVisible() {
 		m.actionsOpen = true
 		m.actionsPinned = true
