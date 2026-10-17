@@ -141,6 +141,9 @@ type Program struct {
 	// pacer: see WithFramePacing (nil: off). termocode patch.
 	pacer *framePacer
 
+	// syncOutput: see WithSynchronizedOutput. termocode patch.
+	syncOutput bool
+
 	// handlers is a list of channels that need to be waited on before the
 	// program can exit.
 	handlers channelHandlers
@@ -664,6 +667,7 @@ func (p *Program) Run() (returnModel Model, returnErr error) {
 		if sr, ok := p.renderer.(*standardRenderer); ok { // termocode patch
 			sr.kittyFlags = p.kittyFlags
 			sr.pacer = p.pacer
+			sr.syncOutput = p.syncOutput
 		}
 	}
 

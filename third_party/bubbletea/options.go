@@ -259,3 +259,18 @@ func WithKittyKeyboard(flags int) ProgramOption {
 		p.kittyFlags = flags
 	}
 }
+
+// WithSynchronizedOutput draws every frame between CSI ? 2026 h and
+// CSI ? 2026 l, so the terminal shows it at once. Use it only when the
+// terminal answered DECRQM for mode 2026. termocode patch.
+func WithSynchronizedOutput() ProgramOption {
+	return func(p *Program) {
+		p.syncOutput = true
+	}
+}
+
+// Synchronized output marks (mode 2026). termocode patch.
+const (
+	syncOutputBegin = "\x1b[?2026h"
+	syncOutputEnd   = "\x1b[?2026l"
+)
