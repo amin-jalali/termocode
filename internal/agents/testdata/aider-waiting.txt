@@ -1,0 +1,9 @@
+Aider v0.86.1
+Main model: anthropic/claude-sonnet-4 with diff edit format
+Git repo: .git with 42 files
+Repo-map: using 4096 tokens, auto refresh
+────────────────────────────────────────────────────────────────────────────────
+> fix the parser test
+
+parser_test.go
+Add file to the chat? (Y)es/(N)o/(D)on't ask again [Yes]:

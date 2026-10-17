@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func envMap(m map[string]string) func(string) string {
@@ -103,6 +104,36 @@ func TestCredentialsMCPSecrets(t *testing.T) {
 	}
 	if out := Redact("dial postgres://user:mcp-secret-pw@h/db failed"); strings.Contains(out, "mcp-secret-pw") {
 		t.Errorf("MCP secret not redacted: %q", out)
+	}
+}
+
+// MC-6: MCP OAuth sign-ins (mcp_oauth.<server>) are stored in the 0600
+// credentials file and their tokens and client secret are redacted once
+// loaded or saved.
+func TestCredentialsMCPOAuth(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ai", "credentials.json")
+	c := Credentials{MCPOAuth: map[string]MCPOAuth{"linear": {Issuer: "https://as.example", Resource: "https://mcp.example/mcp",
+		TokenEndpoint: "https://as.example/token", ClientID: "c1", ClientSecret: "client-secret-zzz",
+		AccessToken: "mcp-access-token-123", RefreshToken: "mcp-refresh-token-456", ExpiresAtMs: 42}}}
+	if err := SaveCredentials(path, c); err != nil {
+		t.Fatal(err)
+	}
+	got, err := LoadCredentials(path)
+	if err != nil || got.MCPOAuth["linear"].RefreshToken != "mcp-refresh-token-456" || got.MCPOAuth["linear"].ExpiresAtMs != 42 {
+		t.Fatalf("load: %+v %v", got, err)
+	}
+	if st, _ := os.Stat(path); st.Mode().Perm() != 0o600 {
+		t.Errorf("mode %o", st.Mode().Perm())
+	}
+	out := Redact("tokens mcp-access-token-123 mcp-refresh-token-456 client-secret-zzz")
+	for _, s := range []string{"mcp-access-token-123", "mcp-refresh-token-456", "client-secret-zzz"} {
+		if strings.Contains(out, s) {
+			t.Errorf("%s not redacted: %q", s, out)
+		}
+	}
+	e := MCPOAuth{ExpiresAtMs: 1000_000}
+	if e.Expired(time.UnixMilli(900_000)) || !e.Expired(time.UnixMilli(950_000)) || (MCPOAuth{}).Expired(time.Now()) {
+		t.Error("Expired: refresh 60 s before the end; 0 never expires")
 	}
 }
 

@@ -279,6 +279,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 		case terminalHitTabActivate:
 			m.switchTerminalTab(idx)
 			return m, nil
+		case terminalHitFixChip: // U9b
+			return m, m.termFixWithAI(idx)
 		case terminalHitNewTab:
 			m.newTerminalTab()
 			m.applyLayout()

@@ -247,7 +247,7 @@ func TestManagerProblems(t *testing.T) {
 	e := newManagerEnv(t)
 	e.write(t, e.user, map[string]any{
 		"needs":  map[string]any{"command": "x", "args": []string{"${TERMOCODE_TEST_UNSET_VAR}"}},
-		"remote": map[string]any{"type": "http", "url": "https://mcp.example.com/mcp"},
+		"remote": map[string]any{"type": "http", "url": "http://mcp.example.com/mcp"},
 		"bad":    map[string]any{"command": "x", "url": "https://a"},
 		"gone":   map[string]any{"command": "termocode-no-such-mcp-server"},
 	})
@@ -257,7 +257,7 @@ func TestManagerProblems(t *testing.T) {
 	}
 	want := map[string]string{
 		"needs":  "needs ${TERMOCODE_TEST_UNSET_VAR}",
-		"remote": "remote (http) servers are not supported yet",
+		"remote": "insecure url: use https://",
 		"bad":    "url and command both set",
 		"gone":   "termocode-no-such-mcp-server not found",
 	}

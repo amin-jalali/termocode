@@ -86,6 +86,24 @@ Window 200 × 50 cells. Two files in the folder: a 100 MB log
 termocode itself stays at about 34 MB with big files: the text lives in
 Neovim, and termocode only draws the rows on screen.
 
+## Source Control
+
+Go benchmarks, measured on 2026-10-16 on the same machine
+(`go test -bench … ./internal/git ./internal/app ./internal/diffview`).
+They time one step on its own, not the whole app.
+
+| Step | Time | Budget |
+|---|---|---|
+| Read one GRAPH page (200 commits of 2 000) | 8.6 ms | 30 ms |
+| Build the panel rows with 200 commits | 18 µs | 50 µs |
+| Draw 40 GRAPH rows | 0.38 ms | 1 ms |
+| Draw the commit card, 150x42 | 2.4 ms | 5 ms |
+| First diff of a 5 000-line file (diff + first frame) | 20 ms | 100 ms |
+| Syntax tokens for both sides of a 5 000-line file | 385 ms | runs off the UI loop |
+
+The card shows the diff plain first. The syntax colours come when the
+tokens are ready, so the slow tokenizer never blocks typing.
+
 ## What is not measured yet
 
 - Other editors on the same machine with the same method. Comparisons

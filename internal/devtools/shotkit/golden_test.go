@@ -61,6 +61,7 @@ func goldenScenes() []Scene {
 		{Name: "scm-hover", Steps: append(scmStepsNoEditor(), HoverText("Merge branc"), Pause(600*time.Millisecond))},
 		SCMCommit(),
 		Terminal(),
+		TerminalMarks(),
 		{Name: "ai-chat", Env: aiEnv, Steps: WithEditor(Act("palette:ai-open-chat"), Act("aidemo"), Pause(600*time.Millisecond))},
 		{Name: "settings", Steps: WithEditor(Act("palette:open-settings-ui"), Pause(600*time.Millisecond))},
 		Confirm(),
@@ -100,6 +101,15 @@ func goldenExtras() []Scene {
 		// Persian (right-to-left) chat: shaped letters in reading order.
 		{Name: "ai-chat-fa", Env: aiEnv, Steps: WithEditor(Act("palette:ai-open-chat"), Act("aidemo-fa"), Pause(600*time.Millisecond))},
 		{Name: "diff-review-light", Theme: "catppuccin-latte", Steps: DiffReview().Steps},
+		// Source Control: compare two commits; the commit view in a light
+		// theme and with ASCII icons.
+		SCMCompare(),
+		{Name: "scm-commit-light", Theme: "catppuccin-latte", Steps: SCMCommit().Steps},
+		{Name: "scm-commit-ascii", Icons: "ascii", Steps: SCMCommit().Steps},
+		// A running AI turn: the activity line under the last message
+		// (a tool running) and the stall warning (B1).
+		{Name: "ai-chat-activity", Env: aiEnv, Steps: WithEditor(Act("palette:ai-open-chat"), Act("aidemo-busy:tool"), Pause(600*time.Millisecond))},
+		{Name: "ai-chat-stall", Env: aiEnv, Steps: WithEditor(Act("palette:ai-open-chat"), Act("aidemo-busy:stall"), Pause(600*time.Millisecond))},
 		// The HTTP Response page: the Headers view, and in a light theme.
 		{Name: "http-response-headers", Steps: []Step{Act("httpdemo:headers"), Pause(900 * time.Millisecond)}},
 		withTheme(withName(HTTPResponse(), "http-response-light"), "catppuccin-latte"),
@@ -127,7 +137,7 @@ func goldenCases() []goldenCase {
 	}
 	// The smallest common window (80x24) for the screens that have a
 	// compact layout: start page, editor, palette, toast.
-	for _, sc := range []Scene{Dashboard(), DashboardRecent(), setupCardScene(), Editor(), Palette(), Toast(), FindResults(), SCMCommit(), HTTPFile(), HTTPResponse(), HTTPResponseTLS()} {
+	for _, sc := range []Scene{Dashboard(), DashboardRecent(), setupCardScene(), Editor(), Palette(), Toast(), FindResults(), SCMCommit(), TerminalMarks(), HTTPFile(), HTTPResponse(), HTTPResponseTLS()} {
 		out = append(out, goldenCase{fmt.Sprintf("%s-80x24", sc.Name), sc, 80, 24})
 	}
 	out = append(out, goldenCase{"setup-card-100x30", setupCardScene(), 100, 30})

@@ -77,6 +77,8 @@ type fileState struct {
 	scroll    int
 	hscroll   int
 	focus     int // focused hunk
+	// syntax runs per line of Old / New (nil: plain); SetFileSyntax
+	synOld, synNew [][]Tok
 }
 
 // Model is the diff card.

@@ -1,0 +1,12 @@
+⏺ The test passes now. I changed the tokenizer to keep the trailing
+  newline, which the parser expected.
+
+  Do you want to proceed with the other two parsers as well? Say so and I
+  will update them the same way.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ >                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                         ⧉ In parser_test.go
+
+

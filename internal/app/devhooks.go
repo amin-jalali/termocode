@@ -3,11 +3,13 @@ package app
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/diffview"
 	"github.com/amin-jalali/termocode/internal/explorer"
 	"github.com/amin-jalali/termocode/internal/textdiff"
@@ -33,7 +35,10 @@ import (
 //	                       does (row ids: SettingsCatalog().ID)
 //	theme:<id>             apply a color theme (not persisted)
 //	aidemo                 load a sample AI conversation
+//	aidemo-busy:tool|stall a running AI turn with its activity line
 //	commit:<rev>           open the Source Control commit view on rev
+//	compare:<i>,<j>        compare GRAPH commits i and j (0 = newest), as
+//	                       Space on both does
 //	diffdemo               open the AI review card with sample files
 //	                       (nothing is written)
 //	httpdemo:<variant>     docs/users.http and a canned HTTP answer:
@@ -77,6 +82,22 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 			{Role: ai.StoredAssistant, Text: aiDemoAnswer},
 		}
 		s.scroll = 0
+	case "aidemo-busy": // a running turn with its activity line (B1): arg tool or stall
+		s := m.aiS()
+		s.conv.Messages = []ai.StoredMessage{
+			{Role: ai.StoredUser, Text: "Why does the toast slide out twice?"},
+			{Role: ai.StoredTool, Text: "⚙ Search \"leaving\" in internal/toast → 3 matches"},
+			{Role: ai.StoredAssistant, Text: "The toast is marked as leaving in `Tick`. Let me read the code that removes it."},
+		}
+		s.scroll, s.turnMsg, s.streaming = 0, 0, true
+		now := clock.Now()
+		if arg == "stall" {
+			s.act = aiActivity{phase: aiPhaseWriting, since: now.Add(-40 * time.Second), lastAt: now.Add(-35 * time.Second)}
+		} else {
+			s.act = aiActivity{phase: aiPhaseTool, tool: "read_file", since: now.Add(-2 * time.Second), lastAt: now.Add(-2 * time.Second)}
+		}
+	case "termdemo": // terminal tab marks for the shots (term_fix.go, agent_tabs.go)
+		m.termDemo()
 	case "aidemo-fa": // a Persian (right-to-left) conversation for the shots
 		s := m.aiS()
 		s.conv.Messages = []ai.StoredMessage{
@@ -99,6 +120,12 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		return m.httpDemo(arg)
 	case "commit": // open the commit view on a revision (HEAD, a SHA …)
 		return m.gitOpenCommitViewCmd(arg)
+	case "compare": // Space on GRAPH commits i and j
+		var i, j int
+		if _, err := fmt.Sscanf(arg, "%d,%d", &i, &j); err == nil && i >= 0 && i < len(m.gitCommits) {
+			m.commitViewS().mark = m.gitCommits[i].FullHash // no "Marked" toast in the shot
+			return m.gitCompareMark(j)
+		}
 	case "openfile": // as if picked in the explorer (images open the preview)
 		return func() tea.Msg { return explorer.OpenFileMsg{Path: arg} }
 	case "view":

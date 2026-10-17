@@ -37,6 +37,7 @@ type commitViewState struct {
 	card    diffview.Model
 	focused bool // keys go to a docked card (a floating one always has them)
 	blobs   map[string][2]string
+	syn     map[string][2][][]diffview.Tok // tokens of the cached blobs
 	order   []string // blobs, oldest first
 	pick    string   // the commit a revert / cherry-pick confirm is about
 	// The two sides of the files on show: sha^ and sha for a commit, a
@@ -44,6 +45,7 @@ type commitViewState struct {
 	oldRev, newRev string
 	compare        *commitRange // set: the card compares two commits
 	mark           string       // a GRAPH commit marked for compare (Space)
+	mark2          string       // the second mark, until the compare opens
 }
 
 // commitRange is a compare: full and short hashes, older first.
@@ -64,6 +66,14 @@ type commitFileTextMsg struct {
 	path     string
 	old, new string
 	note     string
+}
+
+// commitFileSyntaxMsg carries one loaded file's syntax tokens.
+type commitFileSyntaxMsg struct {
+	sides    string
+	file     int
+	path     string
+	old, new [][]diffview.Tok
 }
 
 // commitViewShown reports whether the commit card is on screen.
@@ -94,7 +104,7 @@ func (m *Model) gitOpenCommitViewCmd(hash string) tea.Cmd {
 // commitViewS is the commit view state (made on first use).
 func (m *Model) commitViewS() *commitViewState {
 	if m.commitView == nil {
-		m.commitView = &commitViewState{blobs: map[string][2]string{}}
+		m.commitView = &commitViewState{blobs: map[string][2]string{}, syn: map[string][2][][]diffview.Tok{}}
 	}
 	return m.commitView
 }
@@ -135,10 +145,11 @@ func (m *Model) gitCompareMark(ci int) tea.Cmd {
 			other = i
 		}
 	}
-	cv.mark = ""
 	if other < 0 {
+		cv.mark = ""
 		return nil
 	}
+	cv.mark2 = c.FullHash // both show until the compare card is ready
 	older, newer := m.gitCommits[other], c
 	if other < ci { // the list is newest first
 		older, newer = c, m.gitCommits[other]
@@ -146,11 +157,39 @@ func (m *Model) gitCompareMark(ci int) tea.Cmd {
 	return m.gitOpenCompareCmd(commitRange{a: older.FullHash, b: newer.FullHash, sa: older.Hash, sb: newer.Hash})
 }
 
+// gitCompareMarkOf is the compare mark ("1", "2" or "") of a GRAPH commit.
+func (m Model) gitCompareMarkOf(full string) string {
+	cv := m.commitView
+	switch {
+	case cv == nil || full == "":
+		return ""
+	case full == cv.mark:
+		return "1"
+	case full == cv.mark2:
+		return "2"
+	}
+	return ""
+}
+
+// clearCompareMarks drops the GRAPH compare marks; it reports whether
+// there were any.
+func (m *Model) clearCompareMarks() bool {
+	cv := m.commitView
+	if cv == nil || cv.mark == "" && cv.mark2 == "" {
+		return false
+	}
+	cv.mark, cv.mark2 = "", ""
+	return true
+}
+
 // onCommitViewReady builds the card for a loaded commit.
 func (m *Model) onCommitViewReady(msg commitViewReadyMsg) tea.Cmd {
 	cv := m.commitView
 	if cv == nil || msg.want != cv.want {
 		return nil
+	}
+	if msg.compare != nil {
+		m.clearCompareMarks() // the compare is open (or failed): marks done
 	}
 	if msg.err != nil {
 		var cmd tea.Cmd
@@ -375,7 +414,11 @@ func (m *Model) commitLoadFile(i int) tea.Cmd {
 	key := sides + ":" + f.Name
 	if t, ok := cv.blobs[key]; ok {
 		cv.card.SetFileText(i, t[0], t[1])
-		return nil
+		if s, ok := cv.syn[key]; ok {
+			cv.card.SetFileSyntax(i, s[0], s[1])
+			return nil
+		}
+		return commitTokenizeCmd(sides, i, f.Name, t[0], t[1])
 	}
 	var cf git.CommitFile
 	if i >= 0 && i < len(cv.info.Files) {
@@ -410,15 +453,16 @@ func tooBigToDiff(s string) bool {
 }
 
 // onCommitFileText puts a loaded file on the card (if it is still the
-// commit on show) and keeps it in the cache.
-func (m *Model) onCommitFileText(msg commitFileTextMsg) {
+// commit on show) and keeps it in the cache. It returns the Cmd that
+// computes the file's syntax tokens: the card shows plain until then.
+func (m *Model) onCommitFileText(msg commitFileTextMsg) tea.Cmd {
 	cv := m.commitView
 	if cv == nil || !cv.open || cv.oldRev+".."+cv.newRev != msg.sides {
-		return
+		return nil
 	}
 	if msg.note != "" {
 		cv.card.SetFileNote(msg.file, msg.note)
-		return
+		return nil
 	}
 	cv.card.SetFileText(msg.file, msg.old, msg.new)
 	key := msg.sides + ":" + msg.path
@@ -426,10 +470,47 @@ func (m *Model) onCommitFileText(msg commitFileTextMsg) {
 		cv.order = append(cv.order, key)
 		if len(cv.order) > commitBlobCache {
 			delete(cv.blobs, cv.order[0])
+			delete(cv.syn, cv.order[0])
 			cv.order = cv.order[1:]
 		}
 	}
 	cv.blobs[key] = [2]string{msg.old, msg.new}
+	return commitTokenizeCmd(msg.sides, msg.file, msg.path, msg.old, msg.new)
+}
+
+// commitTokenizeCmd computes a file's syntax tokens off the loop (both
+// sides at once); nil when chroma does not know the file type.
+func commitTokenizeCmd(sides string, file int, path, old, new string) tea.Cmd {
+	if !diffview.HasLexer(path) {
+		return nil
+	}
+	return func() tea.Msg {
+		out := commitFileSyntaxMsg{sides: sides, file: file, path: path}
+		done := make(chan struct{})
+		go func() {
+			out.old = diffview.Tokenize(path, old)
+			close(done)
+		}()
+		out.new = diffview.Tokenize(path, new)
+		<-done
+		return out
+	}
+}
+
+// onCommitFileSyntax colours a loaded file (if it is still on show) and
+// keeps the tokens next to its cached text.
+func (m *Model) onCommitFileSyntax(msg commitFileSyntaxMsg) {
+	cv := m.commitView
+	if cv == nil || !cv.open || cv.oldRev+".."+cv.newRev != msg.sides {
+		return
+	}
+	key := msg.sides + ":" + msg.path
+	if _, ok := cv.blobs[key]; ok {
+		cv.syn[key] = [2][][]diffview.Tok{msg.old, msg.new}
+	}
+	if f := cv.card.File(msg.file); f.Name == msg.path && !f.Pending {
+		cv.card.SetFileSyntax(msg.file, msg.old, msg.new)
+	}
 }
 
 // commitViewFollow moves an open card to the GRAPH commit under the

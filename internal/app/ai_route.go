@@ -30,6 +30,8 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onMCPConnectDone(msg), true
 	case aiChatDoneMsg:
 		return m.onAIChatDone(msg), true
+	case aiActivityTickMsg:
+		return m.onAIActivityTick(), true
 	case aiActionResultMsg:
 		return m.onAIActionResult(msg), true
 	case diffview.FinishMsg:
@@ -45,7 +47,7 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 	case aiOAuthDoneMsg:
 		return m.onAIOAuthDone(msg), true
 	}
-	return nil, false
+	return m.handleMCPMsg(msg)
 }
 
 // editorHasKeys reports whether typed keys go to the editor: focus is on

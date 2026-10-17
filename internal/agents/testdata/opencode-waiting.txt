@@ -1,0 +1,9 @@
+┃  # Run the tests
+┃
+┃  $ go test ./...
+┃
+┃  △ Permission required
+┃  Run command go test ./...
+┃
+┃  Allow once   Allow always   Reject
+┃  enter accept   a accept always   esc reject
