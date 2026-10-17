@@ -86,6 +86,7 @@ const (
 	ClassRun       = "run"
 	ClassIDE       = "ide"      // IDE commands the agent runs (execute_action)
 	ClassSettings  = "settings" // settings_set: change a config.json setting
+	ClassServices  = "services" // services_start / stop / restart (the Services view)
 	// ClassReview marks a file-changing tool that shows its change as a
 	// diff and waits for the user's accept / reject itself (Group R): no
 	// confirm dialog, never auto-approved. Not in ToolClasses.
@@ -103,7 +104,7 @@ func FindToolClass(tools []Tool, c string) bool {
 }
 
 // ToolClasses lists the auto-approve classes in UI order.
-var ToolClasses = []string{ClassFileWrite, ClassGit, ClassRun, ClassIDE, ClassSettings}
+var ToolClasses = []string{ClassFileWrite, ClassGit, ClassRun, ClassIDE, ClassSettings, ClassServices}
 
 // FindTool looks a tool up by name.
 func FindTool(tools []Tool, name string) (Tool, bool) {

@@ -72,6 +72,10 @@ type terminalTab struct {
 	// glyph shows ▶ while Running, then ✓ / ✘ from LastExit.
 	Task    string
 	Running bool
+	// Service is the services-view key ("postgres", "logs:postgres",
+	// "up") for tabs the Services view started; they behave like task
+	// tabs (fixed name, ▶ / ✓ / ✘ glyph).
+	Service string
 
 	// Shell integration (term_integration.go): set by OSC 133 / OSC 7.
 	// Integrated is true once the shell sent one; then Cwd comes from
@@ -91,6 +95,9 @@ type terminalTab struct {
 	AgentState   agents.State
 	agentFromCmd bool
 }
+
+// isJob reports a tab started by the task runner or the Services view.
+func (t terminalTab) isJob() bool { return t.Task != "" || t.Service != "" }
 
 // integratedTerminalRows returns the live total height (in cells) of the
 // embedded terminal panel when toggled open. The bar/resizer is INSIDE
@@ -1093,7 +1100,7 @@ func (m Model) panelEntryGlyph(e panelBarEntry) string {
 	if e.Index < 0 || e.Index >= len(m.terminalTabs) {
 		return shellGlyphFor("")
 	}
-	if t := m.terminalTabs[e.Index]; t.Task != "" { // Group C
+	if t := m.terminalTabs[e.Index]; t.isJob() { // Group C
 		return taskTabGlyph(t)
 	}
 	return shellGlyphFor(m.terminalTabs[e.Index].Shell)
@@ -1472,7 +1479,7 @@ func (m *Model) refreshTerminalCwd() {
 	ids := make([]string, len(m.terminalTabs))
 	for i, t := range m.terminalTabs {
 		title := 1
-		if t.Integrated || t.Task != "" { // Group C: task tabs keep their name
+		if t.Integrated || t.isJob() { // Group C: task and service tabs keep their name
 			title = 0
 		}
 		ids[i] = fmt.Sprintf("{%d,%d}", t.BufID, title)

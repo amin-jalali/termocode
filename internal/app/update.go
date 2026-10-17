@@ -87,6 +87,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if c, ok := m.handleImageMsg(msg); ok {
 		return m, tea.Batch(c, m.afterUpdateAnim(prevKind))
 	}
+	if c, ok := m.handleServicesMsg(msg); ok { // services_state.go
+		return m, c
+	}
 	nm, cmd := m.updateInner(msg)
 	if animCmd := nm.afterUpdateAnim(prevKind); animCmd != nil {
 		cmd = tea.Batch(cmd, animCmd)
@@ -98,6 +101,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	// commit row in the Source Control panel.
 	if hoverCmd := nm.updateHoverCommit(); hoverCmd != nil {
 		cmd = tea.Batch(cmd, hoverCmd)
+	}
+	if sc := nm.servicesSyncWatch(); sc != nil { // the Services view shown / hidden
+		cmd = tea.Batch(cmd, sc)
 	}
 	nm.showWaitingHotExit()
 	if mode := nm.syncMouseMode(); mode != nil { // mouse_hover.go
@@ -1642,6 +1648,8 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.reloadWindow()
 	case keymap.ActionDetachSession:
 		return m, m.detachSession()
+	case keymap.ActionServicesFocus: // services_state.go
+		return m, m.revealServicesView(true)
 	case keymap.ActionToggleAutoSave:
 		return m, m.toggleAutoSave()
 	case keymap.ActionNextHunk:
@@ -2100,6 +2108,10 @@ func (m Model) dispatchToFocus(msg tea.Msg) (Model, tea.Cmd) {
 		case activity.ViewTests: // Group E: Testing view keys (test_explorer.go)
 			if k, ok := msg.(tea.KeyMsg); ok {
 				return m.handleTestsSidebarKey(k)
+			}
+		case activity.ViewServices: // services_actions.go
+			if k, ok := msg.(tea.KeyMsg); ok {
+				return m.handleServicesSidebarKey(k)
 			}
 		default:
 			// Files pane: intercept the Delete / `d` chord here so the

@@ -5,7 +5,7 @@
 The AI chat works with tools. This page lists every tool the model can call, its arguments and its **gate**: what happens before the tool runs.
 
 - **auto**: runs at once. It only reads, or it only changes the view.
-- **confirm (class)**: termocode asks you first. In the dialog, **Always allow** stops the questions for this class (`fileWrite`, `git`, `run`, `ide`, `settings`). Change it later with **AI: Agent Auto-Approve…**.
+- **confirm (class)**: termocode asks you first. In the dialog, **Always allow** stops the questions for this class (`fileWrite`, `git`, `run`, `ide`, `settings`, `services`). Change it later with **AI: Agent Auto-Approve…**. The `services` tools also offer **Always in project** (this project only; **AI: Services Trust…** forgets it).
 - **confirm (always asks)**: termocode asks every time, with no **Always allow**. These calls can lose data.
 - **never**: the AI can not do it. The model gets the reason.
 
@@ -75,6 +75,12 @@ Some tools have an `op` argument; then each op has its own gate.
 | [`debug_start`](#debug_start) | confirm (run) | Start debugging (Run & Debug). |
 | [`debug_control`](#debug_control) | continue: confirm (run)<br>pause: confirm (ide)<br>step_over: confirm (run)<br>step_into: confirm (run)<br>step_out: confirm (run)<br>stop: confirm (ide)<br>restart: confirm (run) | Control the paused / running debug session: continue, pause, step_over, step_into, step_out, stop, restart. |
 | [`debug_evaluate`](#debug_evaluate) | confirm (run) | Evaluate an expression in the paused program's current frame (like the Debug Console). |
+| [`services_list`](#services_list) | auto | List the project's dev services: Docker Compose services (compose.yaml) and local commands (.termocode/services.json, Procfile). |
+| [`services_status`](#services_status) | auto | Current state of one service (name) or all: running / healthy / unhealthy / exited (code), up since, docker's status text, published ports and whether they accept a TCP connection. |
+| [`services_logs`](#services_logs) | auto | The last log lines of a service (name, or "all" for every compose service), with secrets redacted. |
+| [`services_start`](#services_start) | confirm (services) | Start a service (name) or all (all: true): compose runs `docker compose up -d` in a visible terminal tab (pulls show there); a local service runs in its own tab. |
+| [`services_stop`](#services_stop) | confirm (services) | Stop a service (name) or all (all: true): `docker compose stop` (containers and volumes stay) or SIGTERM to a local service. |
+| [`services_restart`](#services_restart) | confirm (services) | Restart one service (`docker compose restart`, or stop + start for a local one). |
 
 ## Tools
 
@@ -702,6 +708,70 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | --- | --- | --- | --- |
 | `expr` | string | yes | expression in the program's language |
 
+### services_list
+
+List the project's dev services: Docker Compose services (compose.yaml) and local commands (.termocode/services.json, Procfile). Per service: image, declared ports (published→target), depends_on, profiles, healthcheck, env key NAMES (never values), source file:line, last known state.
+
+**Gate:** auto
+
+No arguments.
+
+### services_status
+
+Current state of one service (name) or all: running / healthy / unhealthy / exited (code), up since, docker's status text, published ports and whether they accept a TCP connection. wait_ms waits (max 120000) until the service is healthy (running when it has no healthcheck) or exits.
+
+**Gate:** auto
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string |   | service name from services_list; default all |
+| `probe` | boolean |   | TCP-probe published ports (default true) |
+| `wait_ms` | integer |   | wait up to this long (ms, max 120000) for healthy / running / exited |
+
+### services_logs
+
+The last log lines of a service (name, or "all" for every compose service), with secrets redacted. lines default 100, max 1000; since like "10m" (compose only). Local services: their terminal tab.
+
+**Gate:** auto
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | service name from services_list, or "all" |
+| `lines` | integer |   | how many last lines (default 100, max 1000) |
+| `since` | string |   | only newer than this, e.g. 10m or 1h (compose only) |
+
+### services_start
+
+Start a service (name) or all (all: true): compose runs `docker compose up -d` in a visible terminal tab (pulls show there); a local service runs in its own tab. Then call services_status(name, wait_ms).
+
+**Gate:** confirm (services)
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `all` | boolean |   | start every service |
+| `name` | string |   | service name from services_list |
+
+### services_stop
+
+Stop a service (name) or all (all: true): `docker compose stop` (containers and volumes stay) or SIGTERM to a local service. Returns the new state.
+
+**Gate:** confirm (services)
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `all` | boolean |   | stop every service |
+| `name` | string |   | service name from services_list |
+
+### services_restart
+
+Restart one service (`docker compose restart`, or stop + start for a local one). Returns the new state; says so when it exits again at once.
+
+**Gate:** confirm (services)
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | service name from services_list |
+
 ## Palette actions
 
 `execute_action` runs a command palette command by id, and `list_actions` finds the ids. This table says what the AI may run. Extension commands (`ext-<command id>`) and your own commands (`user-<name>`) always ask (class `run`).
@@ -870,6 +940,17 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `save-all` | File: Save All Files | confirm (fileWrite) |   |
 | `search-next-result` | Search: Go to Next Search Result | auto |   |
 | `search-prev-result` | Search: Go to Previous Search Result | auto |   |
+| `services-configure` | Services: Configure (services.json) | confirm (ide) |   |
+| `services-focus` | Services: Focus Services | auto |   |
+| `services-logs` | Services: Show Logs... | never | opens a picker or prompt that only the user can answer; use a typed tool (services_logs) |
+| `services-open-compose` | Services: Open Compose File | auto |   |
+| `services-refresh` | Services: Refresh | auto |   |
+| `services-restart` | Services: Restart Service... | never | opens a picker or prompt that only the user can answer; use a typed tool (services_restart) |
+| `services-start` | Services: Start Service... | never | opens a picker or prompt that only the user can answer; use a typed tool (services_start) |
+| `services-start-all` | Services: Start All | confirm (services) |   |
+| `services-stop` | Services: Stop Service... | never | opens a picker or prompt that only the user can answer; use a typed tool (services_stop) |
+| `services-stop-all` | Services: Stop All | confirm (services) |   |
+| `services-trust` | AI: Services Trust... | never | AI provider, credentials and approvals stay with the user |
 | `settings-export` | Preferences: Export Settings... | never | settings import / export stays with the user |
 | `settings-import` | Preferences: Import Settings... | never | settings import / export stays with the user |
 | `setup-show-card` | Setup: Show Setup Card | auto |   |
@@ -960,6 +1041,8 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `persistent_session` | confirm (settings) |   |
 | `rtl` | never | a file-only display setting read at start; the user edits it in config.json |
 | `search_max_results` | confirm (settings) |   |
+| `services_max_log_kb` | confirm (settings) |   |
+| `services_on_quit` | confirm (settings) |   |
 | `show_hidden` | confirm (settings) |   |
 | `tab_size` | confirm (settings) |   |
 | `terminal_shell_integration` | never | changes how the user's shell starts; a file-only switch the user edits in config.json |

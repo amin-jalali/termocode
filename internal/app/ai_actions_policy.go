@@ -240,6 +240,19 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"testing-collapse":     aiAuto(),
 	"testing-results":      aiAuto(),
 
+	// ── Services (services_actions.go; typed tools in ai_services_tools.go) ──
+	"services-focus":        aiAuto(),
+	"services-refresh":      aiAuto(),
+	"services-start-all":    aiConfirm(ai.ClassServices),
+	"services-stop-all":     aiConfirm(ai.ClassServices),
+	"services-start":        aiNever(aiNoPicker + " (services_start)"),
+	"services-stop":         aiNever(aiNoPicker + " (services_stop)"),
+	"services-restart":      aiNever(aiNoPicker + " (services_restart)"),
+	"services-logs":         aiNever(aiNoPicker + " (services_logs)"),
+	"services-configure":    aiConfirm(ai.ClassIDE), // may create .termocode/services.json
+	"services-open-compose": aiAuto(),
+	"services-trust":        aiNever(aiNoAIConfig),
+
 	// ── Tasks ──
 	"tasks-run":            aiNever(aiNoPicker),
 	"tasks-build":          aiConfirm(ai.ClassRun),
@@ -339,8 +352,11 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"mcp_max_result_kb":     aiNever(aiNoAIConfig),
 	"mcp_trust_annotations": aiNever(aiNoAIConfig),
 	"mcp_trusted":           aiNever(aiNoAIConfig),
-	"mcp_trusted_tools":     aiNever(aiNoAIConfig),
-	"mcp_oauth_port":        aiNever(aiNoAIConfig),
+	// Services view (services_quit.go).
+	"services_on_quit":    aiConfirm(ai.ClassSettings),
+	"services_max_log_kb": aiConfirm(ai.ClassSettings),
+	"mcp_trusted_tools":   aiNever(aiNoAIConfig),
+	"mcp_oauth_port":      aiNever(aiNoAIConfig),
 }
 
 // aiListActionsMax caps list_actions results.

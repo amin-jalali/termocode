@@ -47,6 +47,7 @@ var tooltipLabels = map[string]tooltipSpec{
 	"status:lsp":      {name: "Language servers"},
 	"status:diag":     {name: "Problems", palette: "problems-panel"},
 	"status:tests":    {name: "Test results"},
+	"status:services": {name: "Services"},
 	"status:debug":    {name: "Call stack"},
 	"status:branch":   {name: "Git branch"},
 	"status:indent":   {name: "Indentation"},
@@ -54,6 +55,11 @@ var tooltipLabels = map[string]tooltipSpec{
 	"status:lang":     {name: "Language"},
 	"status:term":     {name: "Terminal", palette: "toggle-terminal"},
 	"status:pos":      {name: "Line and column"},
+
+	// Services view action bar (services_view.go).
+	"svc:btn:start-all": {name: "Start all services", local: "a"},
+	"svc:btn:stop-all":  {name: "Stop all services", local: "A"},
+	"svc:btn:refresh":   {name: "Refresh", local: "R"},
 
 	// Source Control header.
 	"scm:toggle-view": {name: "Tree or list view"},

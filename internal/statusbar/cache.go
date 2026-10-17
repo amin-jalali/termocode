@@ -32,6 +32,8 @@ func sameState(a, b *State) bool {
 		a.ShowLSP == b.ShowLSP && slices.Equal(a.LSP, b.LSP) &&
 		a.ShowTests == b.ShowTests && a.TestsRunning == b.TestsRunning &&
 		a.TestsPassed == b.TestsPassed && a.TestsFailed == b.TestsFailed &&
+		a.ShowServices == b.ShowServices && a.ServicesUp == b.ServicesUp &&
+		a.ServicesTotal == b.ServicesTotal && a.ServicesBad == b.ServicesBad && a.ServicesStale == b.ServicesStale &&
 		slices.Equal(a.Ext, b.Ext) && a.AI == b.AI && a.AIState == b.AIState
 }
 

@@ -337,6 +337,7 @@ func paletteItems() []picker.Item {
 		// ── end Group E ──
 		{ID: "quit", Title: "File: Quit", Hint: "Ctrl+Q"},
 	}
+	items = append(items, servicesPaletteItems()...)  // services_actions.go
 	items = append(items, extManagePaletteItems()...) // Group I — Extensions: Reload / Open Folder / …
 	// Group A — AI commands (ai_state.go).
 	for _, e := range aiPaletteItems() {
@@ -724,6 +725,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		}
 		// Group E: Testing (test_explorer.go).
 		if cmd, ok := m.dispatchTestingPalette(id); ok {
+			return cmd
+		}
+		if cmd, ok := m.dispatchServicesPalette(id); ok { // services_actions.go
 			return cmd
 		}
 		// Group I: "Ext: …" commands + "Extensions: …" management (ext.go).

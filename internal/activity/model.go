@@ -23,6 +23,7 @@ const (
 	ViewRun
 	ViewSettings // bottom group; not yet wired to a sidebar
 	ViewTests    // Group E: Testing view (test explorer)
+	ViewServices // dev services: Docker Compose and local commands
 )
 
 // Width is the column count taken by the activity bar.
@@ -94,6 +95,7 @@ var topItems = []item{
 	{view: ViewGit, icon: theme.IconGit, label: "Source Control"},
 	{view: ViewRun, icon: theme.IconRun, label: "Run"},
 	{view: ViewTests, icon: theme.IconTests, label: "Testing"}, // Group E
+	{view: ViewServices, icon: theme.IconServices, label: "Services"},
 }
 
 var bottomItems = []item{

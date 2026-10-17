@@ -152,6 +152,10 @@ func (m *Model) openTasksPickerItems(title string, items []picker.Item) {
 // handleTasksPickerSelect runs the picked task or opens the picked link.
 func (m *Model) handleTasksPickerSelect(id string) tea.Cmd {
 	switch {
+	case strings.HasPrefix(id, "svc:"): // the Services pickers (services_actions.go)
+		return m.handleServicesPickerSelect(id)
+	case strings.HasPrefix(id, "svc-trust:"): // AI: Services Trust… (ai_services_tools.go)
+		return m.handleServicesTrustSelect(id)
 	case strings.HasPrefix(id, "task:"):
 		return m.runTaskByLabel(strings.TrimPrefix(id, "task:"))
 	case strings.HasPrefix(id, "link:"):
@@ -387,6 +391,81 @@ const taskSpawnLua = `
 	return buf
 `
 
+// terminalJob is a command for a job tab (tasks and services).
+type terminalJob struct {
+	Label   string         // tab name
+	Cmdline string         // shell line, run with vim.o.shell -c
+	Dir     string         // cwd
+	Env     map[string]any // extra env
+	Task    string         // task label (task tabs)
+	Service string         // services key (services tabs)
+}
+
+// spawnTerminalJob opens a job tab in the panel running j.Cmdline. A tab
+// with the same Task / Service key is replaced (its job stopped); focus
+// stays in the editor. Returns the new buffer.
+func (m *Model) spawnTerminalJob(j terminalJob) (int, error) {
+	if m.nvim == nil {
+		return 0, fmt.Errorf("no editor")
+	}
+	if !m.termOpen || m.terminalWinID <= 0 {
+		if !m.ensurePanelHost(true) {
+			return 0, fmt.Errorf("cannot open the panel")
+		}
+	}
+	env := j.Env
+	if env == nil {
+		env = map[string]any{}
+	}
+	var bufNum int64
+	if err := m.nvim.EvalLuaArgs(taskSpawnLua, &bufNum, m.terminalWinID, j.Cmdline, j.Dir, env, j.Label); err != nil {
+		return 0, err
+	}
+	if bufNum <= 0 {
+		return 0, fmt.Errorf("cannot start %s", j.Cmdline)
+	}
+	buf := int(bufNum)
+	for i := len(m.terminalTabs) - 1; i >= 0; i-- {
+		t := m.terminalTabs[i]
+		if (j.Task != "" && t.Task == j.Task) || (j.Service != "" && t.Service == j.Service) {
+			m.terminalTabs = append(m.terminalTabs[:i:i], m.terminalTabs[i+1:]...)
+			_ = m.nvim.ExecLua(fmt.Sprintf(`
+				local b = %d
+				if vim.api.nvim_buf_is_loaded(b) then
+					local ok, chan = pcall(function() return vim.bo[b].channel end)
+					if ok and chan and chan > 0 then pcall(vim.fn.jobstop, chan) end
+					pcall(vim.api.nvim_buf_delete, b, { force = true })
+				end
+			`, t.BufID))
+			if m.tasks != nil {
+				delete(m.tasks.runs, t.BufID)
+			}
+		}
+	}
+	m.terminalTabs = append(m.terminalTabs, terminalTab{
+		BufID:    buf,
+		Cwd:      j.Dir,
+		Name:     j.Label,
+		Shell:    detectShellBasename(),
+		LastExit: -1,
+		Task:     j.Task,
+		Service:  j.Service,
+		Running:  true,
+	})
+	m.terminalActiveTab = len(m.terminalTabs) - 1
+	m.panelActive = panelKindTerminal
+	m.panelFocused = false
+	m.terminalMinimized = false
+	m.inTerminal = false
+	if j.Service == "" || m.focus != FocusExplorer { // the Services view keeps the keyboard
+		m.focus = FocusEditor
+	}
+	m.applyLayout()
+	m.resizeTerminalSplit()
+	m.invalidateTerminalProbeCache()
+	return buf, nil
+}
+
 // runTask starts t in a new terminal tab. A finished tab of the same task
 // is replaced; a running one is stopped first (restart).
 func (m *Model) runTask(t tasks.Task) tea.Cmd {
@@ -401,58 +480,12 @@ func (m *Model) runTask(t tasks.Task) tea.Cmd {
 	for k, val := range t.Env {
 		env[k] = tasks.Expand(val, v)
 	}
-	if !m.termOpen || m.terminalWinID <= 0 {
-		if !m.ensurePanelHost(true) {
-			return nil
-		}
-	}
-	var bufNum int64
-	err := m.nvim.EvalLuaArgs(taskSpawnLua, &bufNum, m.terminalWinID, cmdline, dir, env, t.Label)
-	if err != nil || bufNum <= 0 {
+	buf, err := m.spawnTerminalJob(terminalJob{Label: t.Label, Cmdline: cmdline, Dir: dir, Env: env, Task: t.Label})
+	if err != nil {
 		var c tea.Cmd
-		detail := cmdline
-		if err != nil {
-			detail = err.Error()
-		}
-		m.toast, c = m.toast.PushDetail(toast.Errr, "Task failed to start", detail)
+		m.toast, c = m.toast.PushDetail(toast.Errr, "Task failed to start", err.Error())
 		return c
 	}
-	buf := int(bufNum)
-	// Old tab(s) of the same task go away (the new one replaces them).
-	for i := len(m.terminalTabs) - 1; i >= 0; i-- {
-		if m.terminalTabs[i].Task == t.Label {
-			old := m.terminalTabs[i].BufID
-			m.terminalTabs = append(m.terminalTabs[:i:i], m.terminalTabs[i+1:]...)
-			_ = m.nvim.ExecLua(fmt.Sprintf(`
-				local b = %d
-				if vim.api.nvim_buf_is_loaded(b) then
-					local ok, chan = pcall(function() return vim.bo[b].channel end)
-					if ok and chan and chan > 0 then pcall(vim.fn.jobstop, chan) end
-					pcall(vim.api.nvim_buf_delete, b, { force = true })
-				end
-			`, old))
-			delete(tr.runs, old)
-		}
-	}
-	m.terminalTabs = append(m.terminalTabs, terminalTab{
-		BufID:    buf,
-		Cwd:      dir,
-		Name:     t.Label,
-		Shell:    detectShellBasename(),
-		LastExit: -1,
-		Task:     t.Label,
-		Running:  true,
-	})
-	m.terminalActiveTab = len(m.terminalTabs) - 1
-	m.panelActive = panelKindTerminal
-	m.panelFocused = false
-	m.terminalMinimized = false
-	m.inTerminal = false
-	m.focus = FocusEditor
-	m.applyLayout()
-	m.resizeTerminalSplit()
-	m.invalidateTerminalProbeCache()
-
 	tt := t
 	tr.last = &tt
 	tr.runs[buf] = &taskRun{Task: t, Buf: buf, Dir: dir, Started: time.Now(), Running: true}
@@ -464,11 +497,16 @@ func (m *Model) runTask(t tasks.Task) tea.Cmd {
 // onTaskExit handles termocode_task_exit(buf, code).
 func (m *Model) onTaskExit(buf, code int) tea.Cmd {
 	tr := m.ensureTasks()
+	service := ""
 	for i := range m.terminalTabs {
 		if m.terminalTabs[i].BufID == buf {
 			m.terminalTabs[i].LastExit = code
 			m.terminalTabs[i].Running = false
+			service = m.terminalTabs[i].Service
 		}
+	}
+	if service != "" {
+		return m.onServiceJobExit(service, code)
 	}
 	r := tr.runs[buf]
 	if r == nil || !r.Running {

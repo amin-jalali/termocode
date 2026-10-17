@@ -139,10 +139,11 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools = append(tools, aiTasksTools(root, call)...) // Group K6: tasks and tests
 	tools = append(tools, aiAdminTools(root, call)...) // Group K8: installers, extensions, workspace folders
 	tools = append(tools, aiDebugTools(root, call)...) // Group K7
+	tools = append(tools, m.aiServicesTools(call)...)  // the Services view (ai_services_tools.go)
 	if m.aiReviewEdits() {                             // Group R2: file changes become diffs to review
 		tools = m.aiReviewTools(tools, root, call)
 	}
-	return tools
+	return aiRedactResults(tools) // known secrets (.env passwords, API keys) never reach the model
 }
 
 // sendAIChat appends a user message and starts a streamed agent turn.
@@ -179,7 +180,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	call := newAIIDECaller(gen, ch)
 	tools := m.aiChatTools(root, call)
 	native := s.provider.SupportsTools()
-	base := aiChatSystemPrompt + "\nWorkspace root: " + root
+	base := aiChatSystemPrompt + "\nWorkspace root: " + root + m.aiServicesPromptLine(root)
 	if p := m.editor.Path(); p != "" {
 		base += "\nThe open file is: " + p
 	}
@@ -311,6 +312,7 @@ func (m *Model) onAIChatConfirm(msg aiChatConfirmMsg) tea.Cmd {
 	if msg.tool.Class != "" {
 		buttons = append(buttons, confirm.Button{ID: "always", Title: "Always allow " + msg.tool.Class})
 	}
+	buttons = append(buttons, aiServicesConfirmButton(msg.tool.Class)...) // "Always in this project"
 	buttons = append(buttons, confirm.Button{ID: "deny", Title: "Deny", Style: confirm.StyleDestructive})
 	m.confirm = confirm.New("✦ AI wants to: "+msg.tool.Label(), msg.human, buttons)
 	m.confirm.SetSize(m.w, m.h)
@@ -327,7 +329,10 @@ func (m *Model) answerAIToolConfirm(id string) tea.Cmd {
 	if p == nil {
 		return nil
 	}
-	ok := id == "allow" || id == "always"
+	ok := id == "allow" || id == "always" || id == "project"
+	if id == "project" { // services: "Always in this project" (ai_services_tools.go)
+		m.aiServicesAllowProject()
+	}
 	if id == "always" && p.tool.Class != "" {
 		if path, err := ai.ConfigPath(); err == nil {
 			cur := ai.LoadSettings(path)

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 func sampleButtons() []Button {
@@ -236,5 +237,27 @@ func TestBoundsTracksGeometry(t *testing.T) {
 	}
 	if x+w > 80 || y+h > 24 {
 		t.Fatalf("bounds must fit screen: rect=(%d,%d,%d,%d) screen=80x24", x, y, w, h)
+	}
+}
+
+// Four buttons (the AI card for services) fit on one row: the card
+// widens to its button row, still inside the screen.
+func TestBoxWidensForButtons(t *testing.T) {
+	btns := []Button{{ID: "allow", Title: "Allow"}, {ID: "always", Title: "Always allow services"},
+		{ID: "project", Title: "Always in project"}, {ID: "deny", Title: "Deny"}}
+	for _, w := range []int{80, 160} {
+		m := New("AI wants to: services_restart", "Restart service api", btns)
+		m.SetSize(w, 30)
+		for i, line := range strings.Split(m.Box(), "\n") {
+			if lw := lipgloss.Width(line); lw > w-4 {
+				t.Errorf("w=%d line %d is %d wide", w, i, lw)
+			}
+		}
+		_, rects := m.computeRects()
+		box, _ := m.computeRects()
+		last := rects[len(rects)-1]
+		if last.x+last.w > box.x+box.w-1 || last.y != rects[0].y {
+			t.Errorf("w=%d: buttons leave the card or wrap: %+v in %+v", w, rects, box)
+		}
 	}
 }

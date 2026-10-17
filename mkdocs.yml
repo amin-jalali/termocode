@@ -89,6 +89,7 @@ nav:
       - Connect MCP servers: guides/mcp.md
       - Debug a program: guides/debug.md
       - Run and explore tests: guides/tests.md
+      - Dev services: guides/services.md
       - Tasks and problems: guides/tasks-problems.md
       - Install language servers and debuggers: guides/language-servers.md
       - Workspaces and sessions: guides/workspaces.md

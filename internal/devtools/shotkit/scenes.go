@@ -83,6 +83,17 @@ func SCMCompare() Scene {
 		Act("compare:3,0"), Pause(1200 * time.Millisecond)}}
 }
 
+// Services is the Services view with the canned demo snapshot (no
+// docker): the editor on the right, postgres under the cursor.
+func Services() Scene {
+	return Scene{Name: "services", Steps: WithEditor(Act("svcdemo"), Pause(400*time.Millisecond))}
+}
+
+// ServicesVariant is Services with the "down" or "empty" snapshot.
+func ServicesVariant(name, variant string) Scene {
+	return Scene{Name: name, Steps: WithEditor(Act("svcdemo:"+variant), Pause(400*time.Millisecond))}
+}
+
 // AIChatAnswer is the AI chat panel with the canned demo conversation (no
 // network).
 func AIChatAnswer() Scene {

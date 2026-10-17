@@ -20,6 +20,10 @@ func TestGlyphTable(t *testing.T) {
 		// Source Control GRAPH (scm-graph design §2.3).
 		"commit": GlyphCommit, "head": GlyphHead, "merge": GlyphMerge,
 		"unpushed": GlyphUnpushed, "expand": GlyphExpand,
+		// Services view (services panel plan §2.2).
+		"svc-up": GlyphSvcUp, "svc-bad": GlyphSvcBad, "svc-starting": GlyphSvcStarting,
+		"svc-restarting": GlyphSvcRestarting, "svc-stopped": GlyphSvcStopped, "svc-exited": GlyphSvcExited,
+		"svc-unknown": GlyphSvcUnknown, "start": GlyphStart, "stop": GlyphStop, "refresh": GlyphRefresh,
 		// Terminal tabs: the Fix chip and the CLI agent marks (U9b, U8).
 		"ai": GlyphAI, "agent-working": GlyphAgentWorking,
 		"agent-waiting": GlyphAgentWaiting, "agent-done": GlyphAgentDone,

@@ -300,3 +300,41 @@ Repeat in `screen`. ☐
 (a screenshot helps), and paste it to the AI/maintainer. Most cases map
 to a test in `internal/testkit` or `e2e/` that should then be extended so
 the bug can not come back.
+
+## V. Services view with real Docker (2026-10-17)
+
+Automated: `internal/services` (fake `docker`), testkit
+`TestServices*`, `TestAIServicesDatabaseFlow`. These steps need a real
+Docker and are never run by the tests.
+
+**V1 — Pull progress.** A project with `compose.yaml` using an image you do
+not have (`docker image rm redis:7` first). Services view → `s` on redis.
+Expected: the **services: up** tab shows the pull progress bars; the row is
+`◌` until it runs, then `◉`. ☐
+
+**V2 — Permission denied.** As a user outside the `docker` group, open the
+view. Expected: "No access to the Docker socket", the `sudo usermod` line,
+`y` copies it, nothing runs `sudo`. ☐
+
+**V3 — Daemon down.** `sudo systemctl stop docker docker.socket`, then `R`.
+Expected: "Docker is not running", rows keep their names with `?`. Start
+Docker, `R`: the rows come back. ☐
+
+**V4 — Events.** With the view open, `docker compose stop redis` in another
+terminal. Expected: the row turns `◦` within a second, without `R`. Hide
+the view (Explorer): `pgrep -af "docker events"` shows nothing. ☐
+
+**V5 — Exit toast.** Make a service that exits 1 (`command: sh -c "exit
+1"`), start it. Expected: `✘ exit 1`, one toast "Service … exited with code
+1". ☐
+
+**V6 — Podman shim.** With `podman-docker` (a `docker` that is podman) and
+`podman compose`: the list and start / stop work, or the view shows a clear
+note. Note the podman version. ☐
+
+**V7 — SSH copy hint.** Over SSH, `y` on postgres. Expected: toast shows
+`ssh -L 5432:localhost:5432 <server ip>`. ☐
+
+**V8 — Quit.** Start mailhog from the view, Ctrl+Q. Expected: the card
+lists mailhog only; **Keep running and quit** leaves it running (`docker
+compose ps`). ☐

@@ -46,9 +46,11 @@ func TestRenderInvariantsPoorTerminals(t *testing.T) {
 			m.toast, _ = m.toast.PushDetail(toast.Warn, "Something happened", "with a detail line")
 			return m
 		},
-		"theme-picker": func(m Model) Model { m.openThemePicker(); return m },
+		"theme-picker":  func(m Model) Model { m.openThemePicker(); return m },
+		"services":      func(m Model) Model { m.runDevAction("svcdemo"); return m },
+		"services-down": func(m Model) Model { m.runDevAction("svcdemo:down"); return m },
 	}
-	sceneMarker := map[string]string{"palette": "Command Palette", "confirm": "Delete", "toast": "Something happened", "theme-picker": "Color Theme", "settings": "icons"}
+	sceneMarker := map[string]string{"palette": "Command Palette", "confirm": "Delete", "toast": "Something happened", "theme-picker": "Color Theme", "settings": "icons", "services": "COMPOSE", "services-down": "Docker is not running"}
 	truecolor := regexp.MustCompile(`\x1b\[[0-9;]*[34]8;[25];`)
 	anyColor := regexp.MustCompile(`\x1b\[[0-9;]*([34][0-9]|9[0-7]|10[0-7])(;[0-9;]*)?m`)
 
