@@ -157,7 +157,7 @@ func connectScene(step string) Scene {
 
 func connectScenes() []Scene {
 	var out []Scene
-	for _, step := range []string{"pick", "gh", "device", "browser", "ssh", "done", "error", "token", "slack"} {
+	for _, step := range []string{"pick", "gh", "device", "browser", "ssh", "done", "error", "token", "slack", "paste"} {
 		out = append(out, connectScene(step))
 	}
 	return out
