@@ -7,14 +7,14 @@ import "testing"
 // the TTY. They must never become typed keys (terminal-compat R3).
 func TestEscapeStringsAreNotKeys(t *testing.T) {
 	for _, in := range []string{
-		"\x1b_Gi=31;OK\x1b\\",                  // kitty graphics answer (APC, ST)
+		"\x1b_Gi=31;OK\x1b\\",                   // kitty graphics answer (APC, ST)
 		"\x1b_Gi=31;ENOENT:no such image\x1b\\", // kitty "no"
-		"\x1bP>|kitty(0.36.4)\x1b\\",           // XTVERSION (DCS)
-		"\x1bP1$r0m\x1b\\",                     // DECRQSS
+		"\x1bP>|kitty(0.36.4)\x1b\\",            // XTVERSION (DCS)
+		"\x1bP1$r0m\x1b\\",                      // DECRQSS
 		"\x1b]11;rgb:1010/1010/1010\x07",        // OSC 11 (BEL)
 		"\x1b]11;rgb:1010/1010/1010\x1b\\",      // OSC 11 (ST)
-		"\x1b^private\x1b\\",                   // PM
-		"\x1bXsos\x1b\\",                       // SOS
+		"\x1b^private\x1b\\",                    // PM
+		"\x1bXsos\x1b\\",                        // SOS
 	} {
 		for _, m := range ParseInput([]byte(in)) {
 			if k, ok := m.(KeyMsg); ok {
