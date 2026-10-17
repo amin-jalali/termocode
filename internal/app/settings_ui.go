@@ -39,6 +39,8 @@ type settingsConfig struct {
 	Icons      string `json:"icons,omitempty"`
 	Animations string `json:"animations,omitempty"`
 	Images     string `json:"images,omitempty"`
+	// MouseHover: "off" keeps button-only mouse tracking (file only).
+	MouseHover string `json:"mouse_hover,omitempty"`
 	// TerminalSkipShell adds ("Name") or removes ("-Name") actions whose
 	// keys skip the focused terminal and reach termocode (default: Quit).
 	TerminalSkipShell []string `json:"terminal_skip_shell,omitempty"`

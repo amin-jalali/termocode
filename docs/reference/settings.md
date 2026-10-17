@@ -74,6 +74,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
+| `mouse_hover` | enum | `auto` | auto: the terminal reports plain pointer motion (xterm mode 1003) while termocode has focus and no text input is open, for hover labels and row highlights. off: only clicks, drags and the wheel (mode 1002), for terminals or links where motion is slow or dropped. Read at start. |
 | `rtl` | enum | `auto` | Right-to-left text (Persian, Arabic, Hebrew) in the AI chat and the Markdown preview. termocode: termocode joins the letters and puts them in reading order itself, right-aligns RTL paragraphs, and asks the terminal not to reorder (BDSM, CSI 8 l). terminal: termocode sends the text unchanged and the terminal does it. off: unchanged text, no request to the terminal. auto: terminal on Konsole and mlterm (they always reorder), else termocode. Read at start. |
 
 ## Terminal (file only)

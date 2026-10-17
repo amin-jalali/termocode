@@ -257,6 +257,8 @@ var fileOnlySettings = []SettingEntry{
 		Description: "Project MCP servers you allowed with \"Always allow\": server name → hash of its mcp.json entry. A changed entry asks again. Written by the trust dialog and AI: MCP Servers…."},
 	{Key: "mcp_trusted_tools", Type: "object", Default: "{}", Category: "AI (file only)",
 		Description: "The tool list you trusted per MCP server: server name → hash of its tools. The first list is kept by itself; when a server's tools change, termocode asks again and, until you trust the new list, every tool of that server asks first."},
+	{Key: "mouse_hover", Type: "enum", Default: "auto", Category: "Appearance (file only)", Choices: []string{"auto", "off"},
+		Description: "auto: the terminal reports plain pointer motion (xterm mode 1003) while termocode has focus and no text input is open, for hover labels and row highlights. off: only clicks, drags and the wheel (mode 1002), for terminals or links where motion is slow or dropped. Read at start."},
 	{Key: "rtl", Type: "enum", Default: "auto", Category: "Appearance (file only)", Choices: rtl.Choices,
 		Description: "Right-to-left text (Persian, Arabic, Hebrew) in the AI chat and the Markdown preview. termocode: termocode joins the letters and puts them in reading order itself, right-aligns RTL paragraphs, and asks the terminal not to reorder (BDSM, CSI 8 l). terminal: termocode sends the text unchanged and the terminal does it. off: unchanged text, no request to the terminal. auto: terminal on Konsole and mlterm (they always reorder), else termocode. Read at start."},
 	{Key: "terminal_skip_shell", Type: "string[]", Default: "[]", Category: "Terminal (file only)",

@@ -87,6 +87,10 @@ func TestGitPollKeepsGraphUntilHeadMoves(t *testing.T) {
 // In the background (BlurMsg) only every gitBlurredEvery-th git tick
 // polls; focus back polls at once.
 func TestGitPollSlowerInBackground(t *testing.T) {
+	// Mouse mode switches on focus (mouse_hover.go) would add their own
+	// command to the batch this test counts.
+	defer func(v bool) { mouseHover = v }(mouseHover)
+	mouseHover = false
 	m := Model{gitLoaded: true}
 	polls := func(n int) int {
 		got := 0

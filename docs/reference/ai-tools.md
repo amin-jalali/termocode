@@ -956,6 +956,7 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `mcp_trust_annotations` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_trusted` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_trusted_tools` | never | AI provider, credentials and approvals stay with the user |
+| `mouse_hover` | never | a file-only terminal setting read at start; the user edits it in config.json |
 | `persistent_session` | confirm (settings) |   |
 | `rtl` | never | a file-only display setting read at start; the user edits it in config.json |
 | `search_max_results` | confirm (settings) |   |
