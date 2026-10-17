@@ -534,6 +534,28 @@ func svcStatusLine(svc services.Service, s services.Status) string {
 	return text
 }
 
+// servicesHits are the view's click targets, sidebar-local x: the action
+// bar labels and the service rows.
+func (m Model) servicesHits(w int) []hitTarget {
+	st := m.services
+	if st == nil || !st.loaded || st.det.Empty() {
+		return nil
+	}
+	var out []hitTarget
+	for _, a := range svcActionLayout(w) {
+		out = append(out, hitTarget{ID: "svc:btn:" + a.id, Label: a.label, X: a.start, Y: svcActionRow, W: a.end - a.start, H: 1})
+	}
+	rows := st.rows()
+	for i, idx := range svcBodyLines(rows, st.cursor, svcBodyH(m.h)) {
+		if idx < 0 || rows[idx].kind != svcRowService {
+			continue
+		}
+		r := rows[idx]
+		out = append(out, hitTarget{ID: "svc:row:" + svcKey(r.section, r.name), Label: r.name, X: 0, Y: svcListTop + i, W: w, H: 1})
+	}
+	return out
+}
+
 // ── The whole view ───────────────────────────────────────────────────────
 
 // svcBodyH is the list height for sidebar height h.

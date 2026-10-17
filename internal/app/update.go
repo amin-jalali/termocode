@@ -1647,6 +1647,8 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.reloadWindow()
 	case keymap.ActionDetachSession:
 		return m, m.detachSession()
+	case keymap.ActionServicesFocus: // services_state.go
+		return m, m.revealServicesView(true)
 	case keymap.ActionToggleAutoSave:
 		return m, m.toggleAutoSave()
 	case keymap.ActionNextHunk:

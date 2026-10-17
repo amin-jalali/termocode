@@ -145,6 +145,10 @@ const (
 	// (the session keeps running; `termocode attach` comes back). No
 	// default key; palette "Session: Detach".
 	ActionDetachSession
+	// ActionServicesFocus shows and focuses the Services view. No default
+	// key (the activity bar and the palette reach it); keymap.json may
+	// bind one.
+	ActionServicesFocus
 )
 
 // KittyOnlyKeys are default bindings a legacy terminal cannot send (or

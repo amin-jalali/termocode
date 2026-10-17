@@ -56,6 +56,11 @@ var tooltipLabels = map[string]tooltipSpec{
 	"status:term":     {name: "Terminal", palette: "toggle-terminal"},
 	"status:pos":      {name: "Line and column"},
 
+	// Services view action bar (services_view.go).
+	"svc:btn:start-all": {name: "Start all services", local: "a"},
+	"svc:btn:stop-all":  {name: "Stop all services", local: "A"},
+	"svc:btn:refresh":   {name: "Refresh", local: "R"},
+
 	// Source Control header.
 	"scm:toggle-view": {name: "Tree or list view"},
 	"scm:btn:sync":    {name: "Sync changes"},
