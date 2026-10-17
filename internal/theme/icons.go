@@ -448,4 +448,11 @@ var (
 	GlyphStart         = Icon{NerdFont: "\uf04b", Unicode: "▸", ASCII: ">"} // nf-fa-play
 	GlyphStop          = Icon{NerdFont: "\uf04d", Unicode: "▪", ASCII: "#"} // nf-fa-stop
 	GlyphRefresh       = Icon{NerdFont: "\uf021", Unicode: "↻", ASCII: "R"} // nf-fa-refresh
+	// HTTP client (rest-client plan 2.7): the lens' send mark, a request
+	// in flight, a failed send and a redirect hop. Glyphs every common
+	// monospace font has (JetBrains Mono lacks ⇄, ✘ and ↳).
+	GlyphSend     = Icon{NerdFont: "▸", Unicode: "▸", ASCII: ">"}
+	GlyphSending  = Icon{NerdFont: "↝", Unicode: "↝", ASCII: "~"}
+	GlyphFail     = Icon{NerdFont: "✗", Unicode: "✗", ASCII: "x"}
+	GlyphRedirect = Icon{NerdFont: "↪", Unicode: "↪", ASCII: ">"}
 )

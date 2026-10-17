@@ -110,6 +110,12 @@ These are the default keys. The **Key** column is the key you press. The **Key s
 | `Alt+Shift+R` | `alt+shift+r` | `RerunTask` | Run the last task again. |
 | `Alt+R` | `alt+r` | `RunTask` | Pick a task and run it. |
 
+## HTTP
+
+| Key | Key string | Action | Description |
+| --- | --- | --- | --- |
+| `Ctrl+Alt+R` | `ctrl+alt+r` | `HTTPSend` | Send the request at the cursor of an .http file (on the response page: send it again). |
+
 ## AI
 
 | Key | Key string | Action | Description |

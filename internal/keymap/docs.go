@@ -22,7 +22,7 @@ type ActionInfo struct {
 // Areas lists the documentation areas in display order.
 var Areas = []string{
 	"File", "Editor", "Navigation", "Search", "LSP", "Git", "Debug",
-	"Tests", "Tasks", "AI", "Terminal", "Panels", "View", "Preferences",
+	"Tests", "Tasks", "HTTP", "AI", "Terminal", "Panels", "View", "Preferences",
 	"Help", "Developer",
 }
 
@@ -35,6 +35,7 @@ var actionInfo = map[Action]ActionInfo{
 	ActionReloadBuffer:   {"File", "Reload the active file from disk."},
 	ActionDetachSession:  {"File", "Detach this terminal from the persistent session; it keeps running."},
 	ActionServicesFocus:  {"View", "Show the Services view (Docker Compose and local dev services)."},
+	ActionHTTPSend:       {"HTTP", "Send the request at the cursor of an .http file (on the response page: send it again)."},
 
 	ActionCopy:                     {"Editor", "Copy the selection to the clipboard."},
 	ActionCut:                      {"Editor", "Cut the selection to the clipboard."},

@@ -16,9 +16,9 @@ JSON-RPC with termocode: see [Process extensions (Tier 2)](#process-extensions-t
 3. Your command shows up in the palette as **Ext: <Title>**.
 
 Or try the samples: **Extensions: Install Sample Extensions** copies
-`todo-tree`, `word-count`, `open-in-github`, `rest-client` and
-`word-frequency` (a Python process extension) into the folder (existing
-folders are never overwritten).
+`todo-tree`, `word-count`, `open-in-github` and `word-frequency` (a
+Python process extension) into the folder (existing folders are never
+overwritten).
 
 | Palette command | What it does |
 |---|---|
@@ -101,7 +101,7 @@ the active theme.
 Bind any command in `~/.config/termocode/keymap.json`:
 
 ```json
-{ "ctrl+alt+r": "ext:rest-client.send" }
+{ "alt+w": "ext:word-count.details" }
 ```
 
 The key is matched against the raw key name (no default binding needed)
@@ -115,7 +115,7 @@ as the hint.
   (`~/.config/termocode/errors.log`); the other extensions still load.
 - Each call has a time budget: 2 s for `init.lua`, 250 ms for commands,
   renders, events and callbacks. Longer work must run in a job
-  (`vim.fn.jobstart`) — see `todo-tree` and `rest-client`.
+  (`vim.fn.jobstart`) — see `todo-tree`.
 - A panel render or status item that fails 3 times is switched off until
   **Extensions: Reload**.
 - Extension code runs with the LuaJIT compiler off (so the budget can
@@ -129,8 +129,13 @@ as the hint.
 | `todo-tree` | Panel with every TODO / FIXME / HACK of the workspace (ripgrep job), click to open |
 | `word-count` | Status item with the word count; click for details |
 | `open-in-github` | Commands "Open in GitHub" / "Copy GitHub Link" (GitHub, GitLab, Bitbucket, Codeberg) |
-| `rest-client` | `.http` / `.rest` files: panel of requests, send with curl, response preview. Port of mobocode's `http_file_parser.dart`; supports `@var = value` and `{{var}}` |
 | `word-frequency` | **Process extension (Python)**: panel with the most used words of the file you open or save, status item with its word count |
+
+The `rest-client` sample is retired: termocode has a built-in HTTP client
+for `.http` / `.rest` files (no curl needed; see the
+[HTTP client guide](guides/http-client.md)). If you installed the sample,
+delete `~/.config/termocode/extensions/rest-client`; termocode never
+deletes your files.
 
 
 ## Process extensions (Tier 2)

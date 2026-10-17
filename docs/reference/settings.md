@@ -48,6 +48,18 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `ai_model` | string | `(default)` | Chat model ID. Empty uses the provider's default model. |
 | `ai_base_url` | string | `(default)` | API base URL, for local or OpenAI-compatible servers. Empty uses the provider's default. |
 
+## HTTP
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `http_timeout` | int | `30` | Seconds an HTTP request may take (from .http files, Quick Request and the AI's http_send); # @timeout in a request wins. |
+| `http_max_redirects` | int | `10` | Most redirects an HTTP request follows; # @no-redirect in a request shows the 3xx itself. |
+| `http_max_body_mb` | int | `20` | Largest HTTP response body read, in MB; a bigger one is cut and marked truncated. |
+| `http_ai_max_kb` | int | `32` | Most KB of a response body the AI sees per http_send / http_get_last_response call (it can page on with offset). |
+| `http_tls_insecure` | bool | `false` | Skip TLS certificate checks for your own HTTP requests (never for the AI's). Prefer the k retry on the response page, which is per host and per session. |
+| `http_cookie_jar` | bool | `true` | Keep cookies between HTTP requests (in memory only, per session); # @no-cookie-jar in a request turns it off for that request. |
+| `http_history_max` | int | `200` | Most entries kept in http/history.jsonl. |
+
 ## MCP
 
 | Key | Type | Default | Description |

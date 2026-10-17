@@ -43,6 +43,8 @@ import (
 //	                       (nothing is written)
 //	svcdemo[:down|empty]   show the Services view with a canned snapshot
 //	                       (no docker; the shots and goldens)
+//	httpdemo:<variant>     docs/users.http and a canned HTTP answer:
+//	                       file, response, headers or tls (no network)
 //	plugin:nvim-dap=<dir>  set nvim-dap up from a checkout (tests: the
 //	                       sandbox has none; Group K7)
 type DevActionMsg struct{ ID string }
@@ -118,6 +120,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 			r.card.Action("next")
 			r.card.Action("accept")
 		}
+	case "httpdemo": // the .http file / HTTP Response page shots (no network)
+		return m.httpDemo(arg)
 	case "commit": // open the commit view on a revision (HEAD, a SHA …)
 		return m.gitOpenCommitViewCmd(arg)
 	case "compare": // Space on GRAPH commits i and j

@@ -1,0 +1,51 @@
+{
+  "requests": [
+    {
+      "method": "GET",
+      "url": "{{host}}/users/42",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{token}}"
+        }
+      ],
+      "name": "getUser",
+      "line": 5,
+      "start_line": 3,
+      "end_line": 8
+    },
+    {
+      "method": "POST",
+      "url": "{{host}}/users",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": "{\n  \"name\": \"Ada\",\n  \"email\": \"ada@example.com\"\n}",
+      "name": "createUser",
+      "line": 11,
+      "start_line": 9,
+      "end_line": 18
+    },
+    {
+      "method": "DELETE",
+      "url": "{{host}}/users/{{$guid}}",
+      "line": 20,
+      "start_line": 19,
+      "end_line": 21
+    }
+  ],
+  "vars": [
+    {
+      "name": "host",
+      "value": "{{baseUrl}}",
+      "line": 1
+    }
+  ]
+}

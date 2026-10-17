@@ -143,6 +143,7 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	if m.aiReviewEdits() {                             // Group R2: file changes become diffs to review
 		tools = m.aiReviewTools(tools, root, call)
 	}
+	tools = append(tools, m.aiHTTPTools(root, call, tools)...) // HC-9: HTTP client
 	return aiRedactResults(tools) // known secrets (.env passwords, API keys) never reach the model
 }
 
