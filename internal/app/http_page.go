@@ -398,7 +398,7 @@ if b and vim.api.nvim_buf_is_valid(b) then
   for _, w in ipairs(vim.fn.win_findbuf(b)) do
     if #vim.api.nvim_tabpage_list_wins(0) > 1 then pcall(vim.api.nvim_win_close, w, true) end
   end
-  pcall(vim.cmd, 'bdelete ' .. b)
+  pcall(vim.cmd, 'bwipeout ' .. b) -- not bdelete: a reused unlisted buffer loses its filetype
 end`)
 	return m.fetchStateCmd()
 }
