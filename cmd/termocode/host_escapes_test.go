@@ -40,3 +40,23 @@ func TestHostEscapes(t *testing.T) {
 		}
 	}
 }
+
+// Terminal R14: the Linux console has no alternate screen, so the IDE
+// frame would stay on the TTY after quit; the screen is cleared on the
+// way out. No background paint, no BDSM request (CSI 8 l) there.
+func TestHostEscapesLinuxConsole(t *testing.T) {
+	getenv := func(k string) string { return map[string]string{"TERM": "linux"}[k] }
+	enter, leave := hostEscapes(getenv)
+	if enter != "" {
+		t.Errorf("enter = %q, want nothing", enter)
+	}
+	if !strings.HasSuffix(leave, "\x1b[2J\x1b[H") {
+		t.Errorf("leave = %q, want the screen cleared", leave)
+	}
+	if e, l := rtlEscapes("\x1b[8l", "\x1b[8h", getenv); e != "" || l != "" {
+		t.Errorf("BDSM on the console: %q %q", e, l)
+	}
+	if e, _ := rtlEscapes("\x1b[8l", "\x1b[8h", func(string) string { return "" }); e != "\x1b[8l" {
+		t.Errorf("BDSM dropped elsewhere: %q", e)
+	}
+}

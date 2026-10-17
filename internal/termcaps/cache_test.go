@@ -91,6 +91,9 @@ func TestProbeAllowed(t *testing.T) {
 		// tmux also sets TERM=screen*, but not STY; tmux has its own path.
 		{"tmux screen term", map[string]string{"TERM": "screen-256color", "TMUX": "/tmp/t,1,0"}, true},
 		{"dumb", map[string]string{"TERM": "dumb"}, false},
+		// Terminal R14: the Linux console answers DA1 but has nothing to
+		// find (no images, no kitty keys, no mode 2026).
+		{"linux console", map[string]string{"TERM": "linux"}, false},
 	}
 	for _, c := range cases {
 		if ok, why := ProbeAllowed(envOf(c.env)); ok != c.ok || (!ok && why == "") {

@@ -122,8 +122,10 @@ func ProbeAllowed(getenv func(string) string) (bool, string) {
 		// GNU screen is not tmux: no passthrough, and what it does with
 		// an APC string is unknown.
 		return false, "inside GNU screen"
-	case term == "dumb":
-		return false, "TERM=dumb"
+	case term == "dumb", term == "linux":
+		// The Linux console has nothing to find (no images, kitty keys
+		// or mode 2026).
+		return false, "TERM=" + term
 	}
 	return true, ""
 }

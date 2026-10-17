@@ -351,7 +351,13 @@ func watchHangup(p *tea.Program) {
 //     is rarely a whole number of rows, and VTE fills the leftover strip
 //     under the last row with its own background (purple on Ubuntu);
 //     #121212 (the status bar) makes it blend in. leave resets it (OSC 111).
+//
+// The Linux console (TERM=linux) has no alternate screen: the IDE frame
+// would stay on the TTY after quit, so leave clears it (terminal R14).
 func hostEscapes(getenv func(string) string) (enter, leave string) {
+	if getenv("TERM") == "linux" {
+		return "", "\x1b[2J\x1b[H"
+	}
 	if getenv("VTE_VERSION") == "" || getenv("TMUX") != "" || getenv("STY") != "" {
 		return "", ""
 	}
@@ -371,6 +377,7 @@ func runTUI() {
 	// Right-to-left text: termocode lays it out, so the terminal must not
 	// reorder it again (BDSM explicit mode; internal/rtl). Undone on exit.
 	rtlEnter, rtlLeave := app.RTLTerminalModes()
+	rtlEnter, rtlLeave = rtlEscapes(rtlEnter, rtlLeave, os.Getenv)
 	_, _ = os.Stdout.WriteString(rtlEnter)
 	defer func() {
 		_, _ = os.Stdout.WriteString(rtlLeave)
@@ -445,6 +452,15 @@ func runTUI() {
 	// Process extensions (N6b): shutdown, then kill their process groups.
 	app.StopExtensions()
 	app.StopMCP() // MCP servers (and their children)
+}
+
+// rtlEscapes drops the BDSM request on the Linux console, which has no
+// bidi at all (terminal R14).
+func rtlEscapes(enter, leave string, getenv func(string) string) (string, string) {
+	if getenv("TERM") == "linux" {
+		return "", ""
+	}
+	return enter, leave
 }
 
 // mouseOption picks the first mouse tracking mode: all motion (hover) or
