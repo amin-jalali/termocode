@@ -731,6 +731,7 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `ai-history-delete` | AI: Delete Chat… | never | deletes saved chats; only the user may |
 | `ai-history-rename` | AI: Rename Chat… | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-mcp-config` | Open Config: MCP Servers | never | AI provider, credentials and approvals stay with the user |
+| `ai-mcp-connect` | AI: Connect a Service… (GitHub, Linear, Slack, Notion, Sentry) | never | AI provider, credentials and approvals stay with the user (signing in to services is the user's) |
 | `ai-mcp-log` | AI: MCP: Show Log | auto |   |
 | `ai-mcp-servers` | AI: MCP Servers… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-new-chat` | AI: New Chat | never | starts or changes an AI chat or edit; answer in this chat instead |
@@ -950,6 +951,7 @@ Evaluate an expression in the paused program's current frame (like the Debug Con
 | `images` | confirm (settings) |   |
 | `mcp_call_timeout` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_enabled` | never | AI provider, credentials and approvals stay with the user |
+| `mcp_github_client_id` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_idle_timeout` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_max_result_kb` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_oauth_port` | never | AI provider, credentials and approvals stay with the user |

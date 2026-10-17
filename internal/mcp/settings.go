@@ -19,7 +19,8 @@ type Settings struct {
 	CallTimeout      time.Duration     // mcp_call_timeout ("60s")
 	MaxResultKB      int               // mcp_max_result_kb (32)
 	TrustAnnotations bool              // mcp_trust_annotations (true)
-	OAuthPort        int               // mcp_oauth_port (0: a random loopback port for sign-in)
+	OAuthPort        int               // mcp_oauth_port (0: the first free of 47391–47395)
+	GitHubClientID   string            // mcp_github_client_id ("" = the build-time GitHubClientID)
 	Trusted          map[string]string // mcp_trusted: server name → entry hash ("Always allow")
 	TrustedTools     map[string]string // mcp_trusted_tools: server name → accepted ToolsHash
 }
@@ -48,6 +49,7 @@ func LoadSettings(configPath string) Settings {
 		MaxResultKB      int               `json:"mcp_max_result_kb"`
 		TrustAnnotations *bool             `json:"mcp_trust_annotations"`
 		OAuthPort        int               `json:"mcp_oauth_port"`
+		GitHubClientID   string            `json:"mcp_github_client_id"`
 		Trusted          map[string]string `json:"mcp_trusted"`
 		TrustedTools     map[string]string `json:"mcp_trusted_tools"`
 	}
@@ -72,6 +74,9 @@ func LoadSettings(configPath string) Settings {
 	if raw.OAuthPort > 0 && raw.OAuthPort < 65536 {
 		s.OAuthPort = raw.OAuthPort
 	}
+	if ValidClientID(raw.GitHubClientID) {
+		s.GitHubClientID = raw.GitHubClientID
+	}
 	for k, v := range raw.Trusted {
 		s.Trusted[k] = v
 	}
@@ -79,6 +84,20 @@ func LoadSettings(configPath string) Settings {
 		s.TrustedTools[k] = v
 	}
 	return s
+}
+
+// ValidClientID reports a plausible OAuth client id (letters, digits,
+// . _ -; at most 100).
+func ValidClientID(s string) bool {
+	if s == "" || len(s) > 100 {
+		return false
+	}
+	for _, r := range s {
+		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '.' || r == '_' || r == '-') {
+			return false
+		}
+	}
+	return true
 }
 
 // ParseDuration reads a duration setting: "0" or a Go duration ("90s",
