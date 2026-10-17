@@ -64,8 +64,9 @@ You can write and read Persian or Arabic in the chat. Most terminals do
 not do this themselves: they show the letters backwards and not joined.
 So termocode does it in the chat and in the Markdown preview:
 
-- Letters are joined (start, middle, end forms; لا as one letter;
-  پ چ ژ گ ک ی work). A ZWNJ (نیم‌فاصله) keeps two parts apart, as typed.
+- Letters are joined in their initial, medial and final forms; the
+  lam-alef ligature and Persian-specific letters are supported. A ZWNJ
+  keeps word parts apart as typed.
 - Each line is shown in reading order, right to left. English words,
   numbers and `inline code` keep their own order.
 - A paragraph that starts with a Persian or Arabic letter is right

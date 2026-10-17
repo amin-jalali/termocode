@@ -224,11 +224,10 @@ internal/             every package described above (~23 sub-packages)
 assets/screenshots/   README images + the vhs demo script
 packaging/            Homebrew formula + AUR PKGBUILD templates
 scripts/              dev.sh, install.sh (one-line installer), release.sh, build-release.sh, render-packaging.sh, run-with-small-font.sh
-docs/                 this folder — plus adr/ (decisions) and qc/ (manual test cases)
+docs/                 user guides, reference, concepts and adr/ (decisions)
 .github/workflows/    CI / release pipelines
 ```
 
-## Decisions and QC
+## Architecture decisions
 
 - **[`docs/adr/`](adr/README.md)** — Architecture Decision Records: why the big choices were made. Add one when you make a choice that is hard to undo.
-- **[`docs/qc/`](qc/README.md)** — small, focused QC cases (one behaviour per file) for checks a unit test can't cover.

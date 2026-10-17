@@ -6,111 +6,102 @@ hide:
 
 # termocode
 
-**A terminal IDE that feels like VS Code — with a real Neovim inside.**
+## Your whole coding workflow, right in the terminal.
 
-![termocode demo: Quick Open, Neovim motions, the command palette, an AI answer, the AI change review and the terminal](assets/screenshots/demo.gif)
+termocode is an open-source development environment for terminal workflows. Edit code, explore a project, review changes, run tests, debug programs, and get help from an AI assistant—all in one place.
 
-## Why termocode
+[Get started in five minutes :material-arrow-right:](getting-started/first-steps.md){ .md-button .md-button--primary }
+[Install termocode](getting-started/install.md){ .md-button }
+[View the source on GitHub](https://github.com/amin-jalali/termocode){ .md-button }
 
-- **Real Neovim, not a copy.** The editor is a real `nvim --embed` process.
-  Your motions, registers, undo tree and Lua config all work.
-- **IDE chrome around it.** You get tabs, a file explorer, a command palette,
-  a git panel, a terminal, a debugger view and a test explorer.
-- **Runs anywhere.** It is one binary in your terminal. It works over SSH,
-  in tmux and on a fresh server.
+**Open source under MIT** · **Linux and macOS** · **Android with Termux**
 
-## Highlights
+![termocode in action: code editing, search, AI assistance, and the integrated terminal](assets/screenshots/demo.gif)
+
+## The tools for your work, together in one workspace
+
+Move through your project, make changes, and handle the work around your code without switching between separate windows.
 
 <div class="grid cards" markdown>
 
--   :material-keyboard-outline: **Easy to learn**
+-   :material-file-code-outline: **Edit and navigate**
 
     ---
 
-    Press `F1` for the command palette. Every action is there, with its key.
+    Keep files, tabs, breadcrumbs, quick open, and a searchable command palette close at hand. Add code completion and diagnostics with language servers.
 
-    [:octicons-arrow-right-24: First 5 minutes](getting-started/first-steps.md)
+    [Explore editing and navigation](guides/editing.md)
 
--   :material-robot-outline: **AI assistant**
-
-    ---
-
-    Ghost-text completion, a chat panel, an agent with tools, and
-    review-then-apply edits. Works with Anthropic, OpenAI, OpenRouter
-    or a local Ollama.
-
-    [:octicons-arrow-right-24: Set up AI](guides/ai-setup.md)
-
--   :material-bug-outline: **Run and debug**
+-   :material-source-branch: **Review and manage changes**
 
     ---
 
-    Breakpoints, step, call stack, variables, watch and a Debug Console.
-    Uses `launch.json`, like VSCode.
+    Stage files or individual hunks, inspect diffs, commit, sync, and resolve merge conflicts from the source control view.
 
-    [:octicons-arrow-right-24: Debug a program](guides/debug.md)
+    [Explore source control](guides/git.md)
 
--   :material-test-tube: **Test explorer**
-
-    ---
-
-    See every test in a tree. Run one, a file, or all. Failures link to
-    the line.
-
-    [:octicons-arrow-right-24: Run tests](guides/tests.md)
-
--   :material-source-branch: **Git built in**
+-   :material-play-circle-outline: **Run, test, and debug**
 
     ---
 
-    Stage hunks, commit, sync, resolve merge conflicts and clone — without
-    leaving the editor.
+    Run project tasks, explore tests, and debug with breakpoints, variables, a call stack, and a debug console.
 
-    [:octicons-arrow-right-24: Git guide](guides/git.md)
+    [Debug a program](guides/debug.md) · [Explore tests](guides/tests.md)
 
--   :material-magnify: **Fast search**
-
-    ---
-
-    Find and replace across every folder with ripgrep. Case, word and
-    regex toggles, plus include / exclude globs.
-
-    [:octicons-arrow-right-24: Search guide](guides/search.md)
-
--   :material-format-list-checks: **Tasks and Problems**
+-   :material-robot-outline: **Get AI help, on your terms**
 
     ---
 
-    Run build and test tasks in a terminal tab. Compiler errors land in
-    the Problems panel.
+    Ask questions, get code suggestions, or request an explanation, fix, or edit. Review proposed changes as a diff and choose what to apply. Connect a hosted or local model.
 
-    [:octicons-arrow-right-24: Tasks guide](guides/tasks-problems.md)
+    [Set up the AI assistant](guides/ai-setup.md)
 
--   :material-puzzle-outline: **Lua extensions**
+-   :material-lan-connect: **Keep working over SSH**
 
     ---
 
-    Add commands, sidebar panels and status items with a few lines of Lua.
+    Reconnect to the same session after a dropped connection. Your open tabs, unsaved text, terminal output, and running jobs are still there.
 
-    [:octicons-arrow-right-24: Write an extension](extensions.md)
+    [Work remotely](guides/remote-ssh.md)
+
+-   :material-tune-variant: **Make it yours**
+
+    ---
+
+    Customize themes, key bindings, and settings. Add your own commands and panels with Lua extensions.
+
+    [Customize termocode](guides/customize.md) · [Build an extension](extensions.md)
 
 </div>
 
-## Install
+## Built for real projects
 
-One line, no sudo. It installs to `~/.local/bin` and needs `nvim` 0.10 or newer:
+Search across your workspace, see errors in the Problems panel, and keep your terminal, tests, tasks, and debugging tools close to the code. Language servers are available for Go, Python, JavaScript and TypeScript, Rust, C and C++, Lua, and more, with an installer built in.
+
+Press `F1` to find a command, or `Ctrl+P` to open a file. termocode runs locally or on a remote machine over SSH.
+
+![Editor with the project explorer, tabs, and source control status](assets/screenshots/editor.png)
+
+## Get started
+
+On Linux or macOS, run the installer, then open a project folder with termocode. It installs to `~/.local/bin` without requiring `sudo`. See the install guide for other methods and Android instructions.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/amin-jalali/termocode/main/scripts/install.sh | sh
+cd ~/code/my-project
+termocode
 ```
 
-Or build it with Go 1.26 or newer:
+Prerequisites: `nvim` 0.10 or newer and `git`. Fast search uses `ripgrep`; if it is not installed, built-in search is available.
 
-```sh
-go install github.com/amin-jalali/termocode/cmd/termocode@latest
-```
+[Read the install guide](getting-started/install.md){ .md-button .md-button--primary }
+[Take the first five minutes](getting-started/first-steps.md){ .md-button }
 
-Then run `termocode` in any project folder. See [Install](getting-started/install.md)
-for the details, and for Homebrew / AUR (coming soon).
+## Open source, built in the open
 
-[Start here: your first 5 minutes :material-arrow-right:](getting-started/first-steps.md){ .md-button .md-button--primary }
+termocode is released under the **MIT License**. Read the source, report an issue, suggest an improvement, or contribute on GitHub.
+
+[Explore the repository](https://github.com/amin-jalali/termocode)
+· [Contribution guide](https://github.com/amin-jalali/termocode/blob/main/CONTRIBUTING.md)
+
+<small>termocode is in early 0.1.x releases. On Windows, use WSL.</small>

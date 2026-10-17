@@ -3,17 +3,17 @@
 [![Docs](https://img.shields.io/badge/docs-amin--jalali.github.io%2Ftermocode-4051b5)](https://amin-jalali.github.io/termocode/)
 [![test](https://github.com/amin-jalali/termocode/actions/workflows/test.yml/badge.svg)](https://github.com/amin-jalali/termocode/actions/workflows/test.yml)
 
-A terminal IDE that feels like VS Code — built on Bubble Tea, powered by a real Neovim process under the hood.
+An open-source development environment for terminal workflows. Edit code, explore projects, review changes, run tests, debug, and get AI help — all in one place.
 
 **Status:** early release (v0.1.x). Linux, macOS and Android (Termux). No Windows build yet; use WSL.
 
 **Documentation: <https://amin-jalali.github.io/termocode/>**
 
-![termocode demo: Quick Open, Neovim motions, the command palette, an AI answer, the AI change review and the terminal](assets/screenshots/demo.gif)
+![termocode demo: code editing, project navigation, AI assistance, change review and the integrated terminal](assets/screenshots/demo.gif)
 
 <table>
   <tr>
-    <td width="50%"><img src="assets/screenshots/editor.png" alt="Editor with explorer, tabs and git status"><br><sub><b>Editor</b> — real Neovim, explorer with git status, tabs, breadcrumbs.</sub></td>
+    <td width="50%"><img src="assets/screenshots/editor.png" alt="Editor with project explorer, tabs and source control status"><br><sub><b>Editor</b> — project explorer, tabs, breadcrumbs and source control status.</sub></td>
     <td width="50%"><img src="assets/screenshots/diff-review.png" alt="Review AI changes as a diff"><br><sub><b>AI edit review</b> — accept or reject each change, then apply.</sub></td>
   </tr>
   <tr>
@@ -32,14 +32,14 @@ A terminal IDE that feels like VS Code — built on Bubble Tea, powered by a rea
 
 ## Highlights
 
-- **Real Neovim** as the editor — your motions, registers and `init.lua` — inside tabs, an explorer and a command palette (`F1`).
-- **AI assistant** — ghost-text completion, a chat panel with an agent, and Explain / Fix / Edit actions you review as a diff. Anthropic, OpenAI, OpenRouter or local Ollama.
+- **Editor and navigation** — tabs, a project explorer, breadcrumbs, a command palette (`F1`), multi-cursor editing and language-aware tools.
+- **AI assistant** — ghost-text completion, a chat panel with an agent, and Explain / Fix / Edit actions you review as a diff. Connect a hosted provider, a compatible endpoint or a local model.
 - **Run and Debug** — breakpoints, watch, call stack and a Debug Console for Go, Python and Node, with `launch.json`.
 - **Test explorer** for Go, pytest, Rust, Jest and Vitest, plus **tasks** and a **Problems** panel.
 - **Git** — stage hunks, commit, sync, stash, blame, a commit graph, a merge-conflict resolver and clone.
 - **Language servers** for Go, Python, JS/TS, Rust, C/C++, Lua and more — with a built-in installer.
 - **Fast search** across every workspace folder with ripgrep: case / word / regex toggles and globs.
-- **Make it yours** — themes (VSCode Dark+, Catppuccin Mocha / Latte, Tokyo Night, Rosé Pine / Dawn, …), a custom theme editor, Nerd Font / Unicode / ASCII icons, key rebinding, snippets, settings export, and **Lua extensions**.
+- **Make it yours** — dark and light themes, a custom theme editor, Nerd Font / Unicode / ASCII icons, key rebinding, snippets, settings export, and **Lua extensions**.
 - **Looks good everywhere** — rounded floating cards, status pills, smooth animations, inline images (kitty / sixel / half-blocks), and a clean fallback on 16-colour, no-Nerd-Font and SSH sessions.
 
 ## Install
@@ -52,7 +52,7 @@ curl -fsSL https://raw.githubusercontent.com/amin-jalali/termocode/main/scripts/
 termocode            # opens the current folder
 ```
 
-On the first start termocode downloads three Neovim plugins from GitHub in the
+On the first start termocode downloads three editor plugins from GitHub in the
 background (multi-cursor, debugger, bracket colours). Until they arrive those
 features are off; everything else works offline.
 

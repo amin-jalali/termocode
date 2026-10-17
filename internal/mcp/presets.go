@@ -10,9 +10,9 @@ import (
 	"sync"
 )
 
-// GitHubClientID is termocode's own GitHub OAuth App (device flow, no
-// secret). It is empty until the maintainer registers the app (see
-// docs/guides/mcp-maintainer.md); a release sets it at build time:
+// GitHubClientID is termocode's public GitHub OAuth App client ID for
+// device flow. Builds without a registered app leave it empty; release
+// builds may set it at build time:
 //
 //	go build -ldflags "-X github.com/amin-jalali/termocode/internal/mcp.GitHubClientID=Ov23li…"
 //
@@ -21,8 +21,8 @@ import (
 var GitHubClientID = ""
 
 // Preset is a well-known remote server for the "Connect a service"
-// wizard. Endpoints are the vendors' public ones (checked 2026-10-17,
-// docs/plans/mcp-connect-ux.md §3); tokens are never literal.
+// wizard. Endpoints are the services' public endpoints; tokens are never
+// stored in this list.
 type Preset struct {
 	Name  string // the entry name ("linear")
 	Title string // "Linear"

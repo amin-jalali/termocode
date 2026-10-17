@@ -39,8 +39,8 @@ go test ./internal/search -run Fallback -v
   `internal/setup/doctor.go`, or `TERMOCODE_PLUGINS_DIR` for plugin clones).
 - Tests that need real tools (`rg`, `nvim`, `git`) must `t.Skip` when the tool
   is missing.
-- For behaviour a test can't cover (rendering, mouse, terminal keys), add a QC
-  case under [docs/qc/](docs/qc/README.md).
+- For behaviour a test can't cover (rendering, mouse, terminal keys), include
+  the manual checks you performed in the pull request description.
 - Tests cache hard. If a result looks stale: `go clean -testcache`.
 
 Debug a running session with `tail -f ~/.config/termocode/errors.log`.
@@ -89,7 +89,7 @@ internal/nvim/        msgpack-RPC client for `nvim --embed`
 internal/setup/       `termocode setup` + Doctor checks
 packaging/            Homebrew formula + AUR PKGBUILD templates
 scripts/              dev / release / packaging helpers
-docs/                 features, architecture, adr/, qc/, reference/ (generated)
+docs/                 features, architecture, adr/, reference/ (generated)
 cmd/docgen/           generates docs/reference/ from the code
 ```
 
@@ -182,7 +182,7 @@ ci+docs: install libx11-dev on linux runner; fix README placeholders
 ## Pull requests
 
 1. Branch from `main`.
-2. Keep the PR focused; describe what you tested (unit tests, QC cases, terminal).
+2. Keep the PR focused; describe what you tested (unit tests and any manual terminal checks).
 3. Add screenshots for visible UI changes.
 4. For a choice that is hard to undo, add an ADR in [docs/adr/](docs/adr/README.md).
 

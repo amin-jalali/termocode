@@ -31,6 +31,5 @@ work for each platform.
 - **−** The fallback is simpler: no regex, no `.gitignore`, slower on big repos.
   ripgrep stays the recommended engine and `Help: Run Doctor` lists it.
 - **−** Two code paths to keep in sync; `TestRunFallback*` in
-  `internal/search/search_test.go` covers the fallback, and QC cases
-  [SR-02](../qc/search/SR-02-fallback-without-rg.md) /
-  [SR-03](../qc/search/SR-03-fallback-skips-dirs-and-binaries.md) cover it by hand.
+  `internal/search/search_test.go` covers the fallback. Terminal-specific
+  behaviour still needs a manual check.

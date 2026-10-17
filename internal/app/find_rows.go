@@ -15,8 +15,8 @@ import (
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
-// Find Results rows (docs/plans/find-results-design.md §3.1, §3.3). The
-// buffer holds plain text; every row also has an entry in a Lua row table
+// Find Results rows. The buffer holds plain text; every row also has an
+// entry in a Lua row table
 // that the jump keys, F4, folds and the decoration provider read, so
 // nothing ever parses the text back.
 

@@ -1,7 +1,6 @@
 package app
 
-// findResultsLua wires up the "Find Results" page (ADR 0002, design in
-// docs/plans/find-results-design.md):
+// findResultsLua wires up the "Find Results" page:
 //
 //   - the buffer holds plain text; _G._termocode_find.rows[lnum] says
 //     what each line is (k = 'q' query, 's' summary, 'r' rule, 'h' file

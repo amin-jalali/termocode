@@ -64,7 +64,7 @@ func TestAIActionPolicyWellFormed(t *testing.T) {
 	}
 }
 
-// The rules from docs/TASKS.md Group K.
+// Protect the AI action policies for sensitive operations.
 func TestAIActionPolicyRules(t *testing.T) {
 	for _, id := range []string{"quit", "reload-window", "detach-session", "reset-session",
 		"settings-import", "settings-export", "ai-credentials", "ai-sign-in-claude", "ai-sign-out-claude",

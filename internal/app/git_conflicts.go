@@ -11,7 +11,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
-// Merge-conflict resolver (FEATURE.md §8, Group G).
+// Merge-conflict resolver.
 //
 //   - Highlighting + `]x` / `[x` live in nvim (conflictLua): a debounced
 //     scan paints the <<<<<<< / ||||||| / ======= / >>>>>>> regions with
