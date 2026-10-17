@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/spawn"
+	"github.com/amin-jalali/termocode/internal/termcaps"
 )
 
 // Terminal names in Info.Terminal.
@@ -165,9 +166,7 @@ func otherVTE(getenv func(string) string) bool {
 	return getenv("TILIX_ID") != "" || getenv("TERMINATOR_UUID") != "" || getenv("PTYXIS_VERSION") != ""
 }
 
-func overSSH(getenv func(string) string) bool {
-	return getenv("SSH_CONNECTION") != "" || getenv("SSH_CLIENT") != "" || getenv("SSH_TTY") != ""
-}
+func overSSH(getenv func(string) string) bool { return termcaps.SSH(getenv) }
 
 // Detect reads the terminal's configured font. It never changes anything.
 func Detect(e Env) Info {

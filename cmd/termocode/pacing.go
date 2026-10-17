@@ -1,6 +1,10 @@
 package main
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/amin-jalali/termocode/internal/termcaps"
+)
 
 // pacingWindow is how many frame bytes may wait in the network before the
 // next frame waits for the terminal (Group S2). Over a 1 Mbit/s line it
@@ -17,7 +21,7 @@ func framePacing(getenv func(string) string) bool {
 	case "off", "0":
 		return false
 	}
-	return getenv("SSH_CONNECTION") != "" || getenv("SSH_CLIENT") != "" || getenv("SSH_TTY") != ""
+	return termcaps.SSH(getenv)
 }
 
 func framePacingOption(on bool) tea.ProgramOption {
