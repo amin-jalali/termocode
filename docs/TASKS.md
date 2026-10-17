@@ -313,17 +313,19 @@ In progress (agents):
 - [x] U4 (S) REST client plan (Fable) — then build it
 
 Next:
-- [ ] U5 (L) REST client: `.http` files (same format as mobocode), send with Ctrl+Enter, response panel, env variables, history, curl import / export, AI tools (send, read response, save) with approval and redaction
-- [ ] U6 (M) Services panel (from mobocode): start / stop Postgres, Redis… through `docker compose`; status and logs; AI can check them — plan first
+- [x] U5 (L) REST client: `.http` files (same format as mobocode), send with Ctrl+Enter, response panel, env variables, history, curl import / export, AI tools (send, read response, save) with approval and redaction
+- [x] U6 (M) Services panel (from mobocode): start / stop Postgres, Redis… through `docker compose`; status and logs; AI can check them — plan first
 - [x] U7 (S) AI chat: "what the model is doing" line and a stall warning (no ticker when idle)
 - [x] U8 (S) "Waiting for you" mark on a terminal tab running Claude Code / Codex / Gemini CLI
 - [x] U9 (M) Shell integration (OSC 133): command end and exit code per terminal tab; "Fix?" chip on a failed command
-- [ ] U10 (M) Terminal compatibility leftovers: slow startup probes, mouse traffic, macOS Alt, synchronized output, one termcaps package
+- [x] U10 (M) Terminal compatibility leftovers: slow startup probes, mouse traffic, macOS Alt, synchronized output, one termcaps package
 - [ ] U11 (S) Devcontainer: offer to set up the project's tools when `.devcontainer` exists (never without the user's OK)
 
 Needs the user:
 - [ ] U12 Mouse in AI Chat History: not reproduced — needs the exact place of the click
 - [ ] U13 Manual checks: MANUAL-CHECKLIST H1–H9 and S1–S4
+
+- [x] U15 (M) MCP "Connect a service" wizard (one button per service; gh, device code, browser; token only as fallback). Maintainer: register the GitHub OAuth app (docs/guides/mcp-maintainer.md)
 
 Last:
 - [ ] U14 (M) Release v0.1.0 + launch texts (launch-plan.md: HN, r/neovim, lists, Persian community)
