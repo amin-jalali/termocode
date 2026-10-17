@@ -87,6 +87,8 @@ func (m *Model) handleMCPMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onMCPSignInReady(msg), true
 	case mcpSignInDoneMsg:
 		return m.onMCPSignInDone(msg), true
+	case mcpSignedOutMsg:
+		return m.aiInfo("MCP " + msg.name + ": signed out"), true
 	}
 	return nil, false
 }
@@ -253,9 +255,17 @@ func (m *Model) onMCPPresetPicked(id string) tea.Cmd {
 
 // mcpSignOut forgets a server's tokens.
 func (m *Model) mcpSignOut(name string) tea.Cmd {
-	m.aiMCP().SignOut(name)
-	return m.aiInfo("MCP " + name + ": signed out")
+	mgr := m.aiMCP()
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		mgr.SignOut(ctx, name)
+		return mcpSignedOutMsg{name: name}
+	}
 }
+
+// mcpSignedOutMsg ends a Sign out (revoked and forgotten).
+type mcpSignedOutMsg struct{ name string }
 
 // mcpMissingSecrets are the ${secret:NAME} of an entry that have no
 // value in credentials.json yet.

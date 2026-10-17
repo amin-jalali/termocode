@@ -294,9 +294,18 @@ func (m *Manager) Trust(name string, always bool) {
 	}
 }
 
-// SignOut forgets a server's sign-in and ends its session.
-func (m *Manager) SignOut(name string) {
+// SignOut forgets a server's sign-in and ends its session. When the
+// authorization server has a revocation endpoint the tokens are revoked
+// there first (best effort, bounded by ctx; a failure is only logged).
+func (m *Manager) SignOut(ctx context.Context, name string) {
 	if m.opts.Tokens != nil {
+		if e, ok := m.opts.Tokens.Load(name); ok && e.RevocationEndpoint != "" {
+			if err := auth.Revoke(ctx, m.opts.HTTP, e); err != nil {
+				m.log(name, "revoke failed (the sign-in is forgotten here anyway): %s", ai.Redact(err.Error()))
+			} else {
+				m.log(name, "tokens revoked")
+			}
+		}
 		_ = m.opts.Tokens.Delete(name)
 	}
 	m.Stop(name)
