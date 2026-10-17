@@ -428,4 +428,13 @@ var (
 	GlyphMerge    = Icon{NerdFont: "\uf126", Unicode: "⑂", ASCII: "*"} // nf-fa-code_fork
 	GlyphUnpushed = Icon{NerdFont: "\uf0aa", Unicode: "⇡", ASCII: "^"} // nf-fa-arrow_circle_up
 	GlyphExpand   = Icon{NerdFont: "\uf107", Unicode: "▾", ASCII: "v"} // nf-fa-angle_down
+
+	// Connect a service (MCP wizard): a choice on / off, success,
+	// failure, and the MCP mark of the chat header chip.
+	GlyphRadioOn  = Icon{NerdFont: "◉", Unicode: "◉", ASCII: "*"}
+	GlyphRadioOff = Icon{NerdFont: "◦", Unicode: "◦", ASCII: "o"}
+	GlyphOK       = Icon{NerdFont: "✓", Unicode: "✓", ASCII: "v"}
+	GlyphFail     = Icon{NerdFont: "✗", Unicode: "✗", ASCII: "x"}
+	GlyphMCP      = Icon{NerdFont: "⌁", Unicode: "⌁", ASCII: "~"}
+	GlyphWait     = Icon{NerdFont: "\uf017", Unicode: "◷", ASCII: "~"} // nf-fa-clock_o
 )

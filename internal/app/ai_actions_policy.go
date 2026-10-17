@@ -286,6 +286,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-sign-out-claude":  aiNever(aiNoAIConfig),
 	"ai-credentials":      aiNever(aiNoAIConfig),
 	"ai-mcp-servers":      aiNever(aiNoPicker),
+	"ai-mcp-connect":      aiNever(aiNoAIConfig + " (signing in to services is the user's)"),
 	"ai-mcp-log":          aiAuto(),
 	"ai-mcp-config":       aiNever(aiNoAIConfig),
 }

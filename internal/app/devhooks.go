@@ -36,6 +36,9 @@ import (
 //	theme:<id>             apply a color theme (not persisted)
 //	aidemo                 load a sample AI conversation
 //	aidemo-busy:tool|stall a running AI turn with its activity line
+//	connectdemo:<step>     a Connect-a-service step with sample data: pick,
+//	                       gh, device, browser, ssh, done, error, token,
+//	                       slack (nothing connects)
 //	commit:<rev>           open the Source Control commit view on rev
 //	compare:<i>,<j>        compare GRAPH commits i and j (0 = newest), as
 //	                       Space on both does
@@ -94,6 +97,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		} else {
 			s.act = aiActivity{phase: aiPhaseTool, tool: "read_file", since: now.Add(-2 * time.Second), lastAt: now.Add(-2 * time.Second)}
 		}
+	case "connectdemo": // a Connect-a-service step for the shots
+		return m.connectDemo(arg)
 	case "termdemo": // terminal tab marks for the shots (term_fix.go, agent_tabs.go)
 		m.termDemo()
 	case "aidemo-fa": // a Persian (right-to-left) conversation for the shots

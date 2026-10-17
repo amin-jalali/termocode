@@ -207,10 +207,10 @@ func basePresets() []Preset {
 			App: &AppRecipe{Page: "https://api.slack.com/apps?new_app=1", Port: 47391, RedirectHost: "localhost",
 				UserScopes: []string{"search:read.public", "channels:history", "users:read"},
 				Steps: []string{
-					"Open api.slack.com/apps → Create New App → From a manifest, pick your workspace.",
+					"api.slack.com/apps → Create New App → From a manifest.",
 					"Paste the manifest (it is copied) → Create.",
-					"OAuth & Permissions: turn on PKCE. Agents & AI Apps: turn on the MCP server.",
-					"Basic Information: copy the Client ID (not the secret) and paste it here.",
+					"Turn on PKCE (OAuth & Permissions) and the MCP server (Agents & AI Apps).",
+					"Copy the Client ID from Basic Information (not the secret).",
 				}},
 			Token: &TokenRecipe{Page: "https://api.slack.com/apps", Scopes: []string{"a user token (xoxp-…) from your app"}, Scheme: "Bearer"},
 			Note:  "Slack lets only registered apps in; a workspace admin may need to approve yours."},

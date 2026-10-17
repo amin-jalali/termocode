@@ -128,6 +128,14 @@ func (m Model) viewFrame() string {
 		base = m.reviewLayer(base) // a confirm can sit on the review card
 		return modalOverlay(base, m.confirm.Box(), m.w, m.h, m.modalOpts())
 	}
+	if m.connectOpen {
+		base := m.renderBase()
+		base = m.overlayToastsInEditor(base)
+		o := m.overlayOpts()
+		o.At = true
+		o.X, o.Y = m.connect.Origin()
+		return modalOverlay(base, m.connect.Box(), m.w, m.h, &o)
+	}
 	if m.reviewOpen {
 		base := m.renderBase()
 		base = m.overlayToastsInEditor(base)
