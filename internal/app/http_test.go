@@ -253,6 +253,16 @@ func TestHTTPSettingApply(t *testing.T) {
 	}
 }
 
+// The HTTP Response page is no recent file (it showed on the Welcome page).
+func TestHTTPPageNotRecent(t *testing.T) {
+	withConfigDir(t)
+	pushRecent("/tmp/HTTP Response")
+	pushRecent("/tmp/Find Results")
+	if got := loadRecents(); len(got) != 0 {
+		t.Fatalf("recents %v", got)
+	}
+}
+
 // The ⋮ menu's context section offers the HTTP rows on .http files.
 func TestHTTPOverflowMenuRows(t *testing.T) {
 	if got := overflowMenuDetectLang("/w/api/users.REST", ""); got != "http" {

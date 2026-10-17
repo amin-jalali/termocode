@@ -294,6 +294,35 @@ work; colours look right; `termocode sessions` lists no session (tmux
 keeps it alive); quit: the pane has its normal colours and scrollback.
 Repeat in `screen`. ☐
 
+## T. HTTP client (2026-10-17)
+
+Automated: testkit `TestHTTP*` / `TestAIHTTP*`, goldens `http-file`,
+`http-response*`, e2e `TestHTTPClient` (httptest servers only). These
+steps check the real network and terminals.
+
+**T1 — Real API.** In a `.http` file: `GET https://httpbin.org/get`,
+Ctrl+Alt+R. Expected: `200 OK`, JSON body folds with `zc`; Tab shows the
+headers and timing. If Ctrl+Alt+R does nothing in your terminal, note it
+and use the ⋮ menu → Send Request. ☐
+
+**T2 — TLS error.** `GET https://self-signed.badssl.com/`. Expected:
+`✗ TLS: x509 …`; `k` retries and shows the page. ☐
+
+**T3 — Proxy.** `HTTPS_PROXY=http://<your proxy> termocode`, send a
+request. Expected: it goes through the proxy (proxy log); `NO_PROXY`
+hosts do not. ☐
+
+**T4 — Termux.** On the phone, send a GET and a POST (no curl
+installed). Expected: both work; the page fits the screen. ☐
+
+**T5 — Over SSH, copy as curl.** Over SSH from kitty: `C` on the page,
+paste locally. Expected: one curl line; a token shows as `{{token}}`
+unless you chose "Copy with secrets". ☐
+
+**T6 — AI.** Ask the AI "test getUser". Expected: GET to localhost runs
+at once; a POST asks with "Always allow http:localhost:PORT/write"; the
+page shows "by AI". ☐
+
 ---
 
 **When something fails:** note the case ID, what you did, what you saw

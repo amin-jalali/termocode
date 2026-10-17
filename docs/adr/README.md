@@ -23,6 +23,7 @@ picked over a clear alternative. A normal feature does not need one.
 | [0009](0009-process-extensions.md) | Process extensions (Tier 2) over JSON-RPC on stdio | Accepted |
 | [0010](0010-patched-bubbletea-renderer.md) | A patched copy of Bubble Tea's renderer | Accepted |
 | [0011](0011-android-spawn-trampoline.md) | Start child processes through Android's shell | Accepted |
+| [0012](0012-http-client-engine.md) | HTTP client engine in Go; `.http` grammar shared with mobocode | Accepted |
 
 > The folder was started after the project was already running, so 0001–0005
 > backfill decisions that were made earlier. Dates are the best guess from git
