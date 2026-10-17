@@ -26,11 +26,50 @@ local B = _G._termocode_http_bufs
 local ns = api.nvim_create_namespace('termocode_http')
 pcall(vim.filetype.add, { extension = { http = 'http', rest = 'http' } })
 
-function _G._termocode_http_buf_set(buf, rows, running)
+_G._termocode_http_vars = _G._termocode_http_vars or {}
+
+-- Completion (omnifunc, <C-x><C-o>): header names at the start of a
+-- line, variable names after {{ (names only, never values).
+local HEADERS = {
+  'Accept', 'Accept-Charset', 'Accept-Encoding', 'Accept-Language', 'Access-Control-Request-Headers',
+  'Access-Control-Request-Method', 'Authorization', 'Cache-Control', 'Connection', 'Content-Disposition',
+  'Content-Encoding', 'Content-Language', 'Content-Length', 'Content-Type', 'Cookie', 'Date', 'DNT', 'Expect',
+  'Forwarded', 'From', 'Host', 'If-Match', 'If-Modified-Since', 'If-None-Match', 'If-Range',
+  'If-Unmodified-Since', 'Origin', 'Pragma', 'Prefer', 'Proxy-Authorization', 'Range', 'Referer', 'TE',
+  'Upgrade', 'User-Agent', 'Via', 'X-Api-Key', 'X-Correlation-Id', 'X-Forwarded-For', 'X-Request-Id',
+}
+local DYNAMIC = { '$guid', '$uuid', '$timestamp', '$isoTimestamp', '$datetime iso8601', '$datetime rfc1123',
+  '$randomInt 0 100', '$dotenv ', '$processEnv ', '$secret ' }
+
+function _G._termocode_http_omni(findstart, base)
+  local line = api.nvim_get_current_line()
+  local col = api.nvim_win_get_cursor(0)[2]
+  local before = line:sub(1, col)
+  local open = before:match('.*(){{[^{}]*$')
+  if findstart == 1 then
+    if open then return open + 1 end
+    if before:match('^[%w-]*$') then return 0 end
+    return -3
+  end
+  local out = {}
+  local function add(word, kind)
+    if word:lower():sub(1, #base) == base:lower() then out[#out + 1] = { word = word, kind = kind } end
+  end
+  if open then
+    for _, v in ipairs(_G._termocode_http_vars[api.nvim_get_current_buf()] or {}) do add(v, 'var') end
+    for _, v in ipairs(DYNAMIC) do add(v, 'fn') end
+  else
+    for _, h in ipairs(HEADERS) do add(h .. ': ', 'header') end
+  end
+  return out
+end
+
+function _G._termocode_http_buf_set(buf, rows, running, vars)
   if not api.nvim_buf_is_valid(buf) then return end
   local t = {}
   for _, r in ipairs(rows) do t[r.l] = r end
   B[buf] = t
+  if vars then _G._termocode_http_vars[buf] = vars end
   _G._termocode_http_running = running
   for _, w in ipairs(vim.fn.win_findbuf(buf)) do
     if not pcall(api.nvim__redraw, { win = w, valid = false }) then pcall(api.nvim__buf_redraw_range, buf, 0, -1) end
@@ -141,6 +180,7 @@ vim.api.nvim_create_autocmd('FileType', {
   callback = function(args)
     local buf = args.buf
     vim.bo[buf].commentstring = '# %s'
+    vim.bo[buf].omnifunc = 'v:lua._termocode_http_omni'
     set_syntax(buf)
     api.nvim_create_autocmd('BufEnter', { group = 'termocode_http', buffer = buf, callback = function() changed(buf) end })
     -- Every change (typing, undo, the API, the AI) reaches on_lines.
