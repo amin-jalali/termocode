@@ -237,6 +237,44 @@ func TestHTTPLensClick(t *testing.T) {
 	}
 }
 
+// HC-14: <C-x><C-o> completes header names and {{variable}} names.
+func TestHTTPCompletion(t *testing.T) {
+	api := newHTTPAPI(t, false)
+	d := httpDriver(t, api.srv.URL, 120, 34, "")
+	if !d.WaitFor(func() bool { return strings.Contains(httpLensRow(d, 5), "send") }, 5*time.Second) {
+		t.Fatal("no lens")
+	}
+	if ofu := lua(d, `return vim.bo.omnifunc`); ofu != "v:lua._termocode_http_omni" {
+		t.Fatalf("omnifunc %q", ofu)
+	}
+	got := lua(d, `vim.api.nvim_buf_set_lines(0, 5, 6, false, { 'Auth' })
+vim.api.nvim_win_set_cursor(0, { 6, 4 })
+local s = _G._termocode_http_omni(1, '')
+local words = {}
+for _, it in ipairs(_G._termocode_http_omni(0, 'Auth')) do words[#words + 1] = it.word end
+return s .. '|' .. table.concat(words, ',')`)
+	if got != "0|Authorization: " {
+		t.Fatalf("header completion %q", got)
+	}
+	got = lua(d, `vim.api.nvim_buf_set_lines(0, 5, 6, false, { 'X-A: {{ho' })
+vim.api.nvim_win_set_cursor(0, { 6, 9 })
+local s = _G._termocode_http_omni(1, '')
+local words = {}
+for _, it in ipairs(_G._termocode_http_omni(0, 'ho')) do words[#words + 1] = it.word end
+return s .. '|' .. table.concat(words, ',')`)
+	if got != "7|host" {
+		t.Fatalf("variable completion %q", got)
+	}
+	// Through the keys: Insert mode, "Auth", Ctrl+X Ctrl+O.
+	lua(d, `vim.api.nvim_buf_set_lines(0, 5, 6, false, { '' }); vim.api.nvim_win_set_cursor(0, { 6, 0 }); vim.cmd('startinsert'); return ''`)
+	d.Type("Auth")
+	d.Key("ctrl+x")
+	d.Key("ctrl+o")
+	if !d.WaitFor(func() bool { return strings.Contains(lua(d, `return vim.api.nvim_get_current_line()`), "Authorization: ") }, 3*time.Second) {
+		t.Fatalf("line after <C-x><C-o>: %q", lua(d, `return vim.api.nvim_get_current_line()`))
+	}
+}
+
 // The ASCII icon tier draws the lens with ">".
 func TestHTTPBufferLensASCII(t *testing.T) {
 	api := newHTTPAPI(t, false)

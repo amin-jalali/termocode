@@ -203,8 +203,24 @@ func (m *Model) httpRefreshBuf(buf int) string {
 			fmt.Sscan(b, &buf)
 		}
 	}
-	if err := m.nvim.ExecLuaArgs(`local b, r, run = ...
-if _G._termocode_http_buf_set then _G._termocode_http_buf_set(b, r, run) end`, buf, rows, s.running != nil); err != nil {
+	// Completion names: file variables, then the environment's (names
+	// only; values never reach the menu).
+	seen := map[string]bool{}
+	vars := []string{}
+	for _, v := range f.Vars {
+		if !seen[v.Name] {
+			seen[v.Name] = true
+			vars = append(vars, v.Name)
+		}
+	}
+	for _, n := range rv.Envs.VarNames(rv.Env) {
+		if !seen[n] {
+			seen[n] = true
+			vars = append(vars, n)
+		}
+	}
+	if err := m.nvim.ExecLuaArgs(`local b, r, run, v = ...
+if _G._termocode_http_buf_set then _G._termocode_http_buf_set(b, r, run, v) end`, buf, rows, s.running != nil, vars); err != nil {
 		recordError(fmt.Sprintf("http lens: %v", err))
 	}
 	return name
