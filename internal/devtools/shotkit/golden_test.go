@@ -69,6 +69,7 @@ func goldenScenes() []Scene {
 		{Name: "explorer", Steps: []Step{Act("view:files"), Act("open:internal/theme/palette.go"), Act("palette:reveal-file"), Pause(600 * time.Millisecond)}},
 		FindResults(),
 		{Name: "search", Steps: WithEditor(append(append([]Step{Act("palette:find-files-overlay")}, TypeKeys("Toast")...), Pause(1200*time.Millisecond))...)},
+		Services(),
 	}
 }
 
@@ -108,6 +109,11 @@ func goldenExtras() []Scene {
 		// (a tool running) and the stall warning (B1).
 		{Name: "ai-chat-activity", Env: aiEnv, Steps: WithEditor(Act("palette:ai-open-chat"), Act("aidemo-busy:tool"), Pause(600*time.Millisecond))},
 		{Name: "ai-chat-stall", Env: aiEnv, Steps: WithEditor(Act("palette:ai-open-chat"), Act("aidemo-busy:stall"), Pause(600*time.Millisecond))},
+		// The Services view: Docker down, no services, light, ASCII.
+		ServicesVariant("services-docker-down", "down"),
+		ServicesVariant("services-empty", "empty"),
+		{Name: "services-light", Theme: "catppuccin-latte", Steps: Services().Steps},
+		{Name: "services-ascii", Icons: "ascii", Steps: Services().Steps},
 		// The Problems panel with nothing to show (the empty state).
 		{Name: "problems", Steps: WithEditor(Act("palette:problems-panel"), Pause(800*time.Millisecond))},
 	}
@@ -132,7 +138,7 @@ func goldenCases() []goldenCase {
 	}
 	// The smallest common window (80x24) for the screens that have a
 	// compact layout: start page, editor, palette, toast.
-	for _, sc := range []Scene{Dashboard(), DashboardRecent(), setupCardScene(), Editor(), Palette(), Toast(), FindResults(), SCMCommit(), TerminalMarks()} {
+	for _, sc := range []Scene{Dashboard(), DashboardRecent(), setupCardScene(), Editor(), Palette(), Toast(), FindResults(), SCMCommit(), TerminalMarks(), Services()} {
 		out = append(out, goldenCase{fmt.Sprintf("%s-80x24", sc.Name), sc, 80, 24})
 	}
 	out = append(out, goldenCase{"setup-card-100x30", setupCardScene(), 100, 30})

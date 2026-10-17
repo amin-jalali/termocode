@@ -102,11 +102,11 @@ func (st *servicesState) problemRows() []svcRow {
 	p := st.problem
 	switch p.Kind {
 	case services.ProblemNoDocker:
-		return []svcRow{note("Docker not found"), hint("Install Docker, then R to retry")}
+		return []svcRow{note("Docker not found"), hint("Install Docker · R retry")}
 	case services.ProblemNoCompose:
-		return []svcRow{note("Docker Compose v2 is needed"), hint("Update Docker, then R to retry")}
+		return []svcRow{note("Docker Compose v2 is needed"), hint("Update Docker · R retry")}
 	case services.ProblemDaemonDown:
-		return []svcRow{note("Docker is not running"), hint("Start Docker, then R to retry")}
+		return []svcRow{note("Docker is not running"), hint("Start Docker · R retry")}
 	case services.ProblemNoPermission:
 		return []svcRow{note("No access to the Docker socket"),
 			{kind: svcRowCode, section: svcSecCompose, text: svcPermissionFix},
@@ -701,6 +701,9 @@ func (m Model) renderServicesSidebarRaw(w, h int, focused bool, now time.Time, h
 	lines = append(lines, body...)
 	f1, f2 := m.svcFooter()
 	f1 = svcFooterFit(f1, w-2)
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		f1 = strings.ReplaceAll(f1, "→", "->")
+	}
 	for _, f := range []string{f1, f2} {
 		f = runewidth.Truncate(f, max(w-2, 1), "…")
 		lines = append(lines, testsPad(theme.Bg(theme.BgSidebar).Render(" ")+muted(f), w))
