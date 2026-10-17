@@ -41,6 +41,8 @@ import (
 //	                       Space on both does
 //	diffdemo               open the AI review card with sample files
 //	                       (nothing is written)
+//	svcdemo[:down|empty]   show the Services view with a canned snapshot
+//	                       (no docker; the shots and goldens)
 //	plugin:nvim-dap=<dir>  set nvim-dap up from a checkout (tests: the
 //	                       sandbox has none; Group K7)
 type DevActionMsg struct{ ID string }
@@ -73,6 +75,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 			m.setupPlugin(pluginDap, dir)
 			return m.debugRefresh()
 		}
+	case "svcdemo": // the Services view with a canned snapshot (services_demo.go)
+		m.servicesDemo(arg)
 	case "aidemo": // a sample conversation for the AI chat shot
 		s := m.aiS()
 		s.conv.Messages = []ai.StoredMessage{

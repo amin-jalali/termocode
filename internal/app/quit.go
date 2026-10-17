@@ -24,6 +24,9 @@ func (m *Model) quit() tea.Cmd {
 
 // quitNow closes nvim and quits without asking.
 func (m *Model) quitNow() tea.Cmd {
+	if c, wait := m.servicesBeforeQuit(); wait { // services_quit.go
+		return c
+	}
 	if m.nvim != nil {
 		_ = m.nvim.Close()
 	}

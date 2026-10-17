@@ -34,6 +34,7 @@ var actionInfo = map[Action]ActionInfo{
 	ActionToggleAutoSave: {"File", "Turn auto save on or off."},
 	ActionReloadBuffer:   {"File", "Reload the active file from disk."},
 	ActionDetachSession:  {"File", "Detach this terminal from the persistent session; it keeps running."},
+	ActionServicesFocus:  {"View", "Show the Services view (Docker Compose and local dev services)."},
 
 	ActionCopy:                     {"Editor", "Copy the selection to the clipboard."},
 	ActionCut:                      {"Editor", "Cut the selection to the clipboard."},

@@ -110,3 +110,17 @@ func TestStartPageDimContrast(t *testing.T) {
 		}
 	}
 }
+
+// The Services view's state glyphs (GitAdded running, GitModified
+// starting, DiagError exited) must read on the sidebar in every theme.
+func TestServicesStateContrast(t *testing.T) {
+	defer ApplyTheme("vscode-dark-plus")
+	for _, nt := range AvailableThemes() {
+		ApplyTheme(nt.ID)
+		for name, c := range map[string]Color256{"running": GitAdded, "starting": GitModified, "exited": DiagError} {
+			if r := contrastRatio(ToRGB(c), ToRGB(BgSidebar)); r < 2.0 {
+				t.Errorf("%s: %s glyph contrast %.2f < 2.0 on the sidebar", nt.ID, name, r)
+			}
+		}
+	}
+}

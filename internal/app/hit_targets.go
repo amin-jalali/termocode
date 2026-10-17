@@ -208,6 +208,11 @@ func (m Model) sidebarTargets() []hitTarget {
 					X: x0 + h.x0, Y: y, W: h.x1 - h.x0, H: 1})
 			}
 		}
+	case activity.ViewServices: // services_view.go
+		for _, h := range m.servicesHits(w) {
+			h.X += x0
+			out = append(out, h)
+		}
 	}
 	return out
 }
@@ -452,6 +457,12 @@ func (m Model) sidebarTargetAt(x, y int) string {
 	case activity.ViewGit:
 		if h, ok := m.gitSidebarHitAt(x, y); ok {
 			return h.id
+		}
+	case activity.ViewServices:
+		for _, h := range m.servicesHits(m.explorerWidth - 1) {
+			if x >= h.X && x < h.X+h.W && y == h.Y {
+				return h.ID
+			}
 		}
 	}
 	return "sidebar"

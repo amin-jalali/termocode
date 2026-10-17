@@ -368,8 +368,9 @@ func renderAITools() string {
 		"its arguments and its **gate**: what happens before the tool runs.\n\n")
 	b.WriteString("- **auto**: runs at once. It only reads, or it only changes the view.\n")
 	b.WriteString("- **confirm (class)**: termocode asks you first. In the dialog, **Always allow** " +
-		"stops the questions for this class (`fileWrite`, `git`, `run`, `ide`, `settings`). " +
-		"Change it later with **AI: Agent Auto-Approve…**.\n")
+		"stops the questions for this class (`fileWrite`, `git`, `run`, `ide`, `settings`, `services`). " +
+		"Change it later with **AI: Agent Auto-Approve…**. The `services` tools also offer **Always in project** " +
+		"(this project only; **AI: Services Trust…** forgets it).\n")
 	b.WriteString("- **confirm (always asks)**: termocode asks every time, with no **Always allow**. " +
 		"These calls can lose data.\n")
 	b.WriteString("- **never**: the AI can not do it. The model gets the reason.\n\n")

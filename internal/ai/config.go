@@ -355,6 +355,29 @@ var redactPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)([?&](?:code|key|token)=)[^&\s"]{8,}`),
 }
 
+// RedactSecrets hides only the registered literal secrets (no
+// patterns): the app passes every agent tool result through it, so a
+// secret the IDE knows (an API key, a password from the project's .env)
+// never reaches the model, while ordinary text stays as written.
+func RedactSecrets(s string) string {
+	if s == "" {
+		return s
+	}
+	secretsMu.RLock()
+	list := make([]string, 0, len(secrets))
+	for k := range secrets {
+		if strings.Contains(s, k) {
+			list = append(list, k)
+		}
+	}
+	secretsMu.RUnlock()
+	sort.Slice(list, func(i, j int) bool { return len(list[i]) > len(list[j]) })
+	for _, k := range list {
+		s = strings.ReplaceAll(s, k, "[REDACTED]")
+	}
+	return s
+}
+
 // Redact hides API keys, OAuth tokens and bearer credentials in s. Every
 // AI error is passed through it before it reaches a toast or errors.log.
 func Redact(s string) string {

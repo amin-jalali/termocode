@@ -29,6 +29,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Pick Model… | `ai-pick-model` |   |   |
 | AI: Rename Chat… | `ai-history-rename` |   |   |
 | AI: Review Pending Changes | `ai-review` |   |   |
+| AI: Services Trust... | `services-trust` |   |   |
 | AI: Sign in with Claude (OAuth, opt-in)… | `ai-sign-in-claude` |   |   |
 | AI: Sign out of Claude | `ai-sign-out-claude` |   |   |
 | AI: Stop Generating | `ai-cancel` |   |   |
@@ -278,6 +279,21 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Search: Go to Next Search Result | `search-next-result` | `F4` | `F4` |
 | Search: Go to Previous Search Result | `search-prev-result` | `Shift+F4` | `Shift+F4` |
 | Search: Replace in Workspace... | `replace-workspace` | `Ctrl+Shift+H` | `Ctrl+Shift+H` |
+
+## Services
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Services: Configure (services.json) | `services-configure` |   |   |
+| Services: Focus Services | `services-focus` |   |   |
+| Services: Open Compose File | `services-open-compose` |   |   |
+| Services: Refresh | `services-refresh` |   |   |
+| Services: Restart Service... | `services-restart` |   |   |
+| Services: Show Logs... | `services-logs` |   |   |
+| Services: Start All | `services-start-all` |   |   |
+| Services: Start Service... | `services-start` |   |   |
+| Services: Stop All | `services-stop-all` |   |   |
+| Services: Stop Service... | `services-stop` |   |   |
 
 ## Session
 
