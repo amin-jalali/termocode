@@ -179,6 +179,7 @@ var actionsHeaderMemo struct {
 	focused bool
 	hover   string
 	rk      theme.RenderKey
+	mcp     int // mcpChipState: -1 no chip, else connected servers
 	out     string
 }
 
@@ -187,14 +188,15 @@ var actionsHeaderMemo struct {
 func (m Model) actionsHeaderEdged(width int, edge func(string) string) string {
 	hover, rk := m.actionsHeaderHover(), theme.CurrentRenderKey()
 	focused := m.ai != nil && m.ai.focused
+	mcpState := m.mcpChipState()
 	c := &actionsHeaderMemo
 	c.Lock()
 	defer c.Unlock()
-	if c.ok && c.width == width && c.pinned == m.actionsPinned && c.focused == focused && c.hover == hover && c.rk == rk {
+	if c.ok && c.width == width && c.pinned == m.actionsPinned && c.focused == focused && c.hover == hover && c.rk == rk && c.mcp == mcpState {
 		return c.out
 	}
 	out := edge(m.renderActionsHeader(width))
-	c.ok, c.width, c.pinned, c.focused, c.hover, c.rk, c.out = true, width, m.actionsPinned, focused, hover, rk, out
+	c.ok, c.width, c.pinned, c.focused, c.hover, c.rk, c.mcp, c.out = true, width, m.actionsPinned, focused, hover, rk, mcpState, out
 	return out
 }
 
@@ -232,6 +234,10 @@ func (m Model) renderActionsHeader(width int) string {
 			st = st.Background(theme.Mix(theme.BgPanel, theme.TextPrimary, 0.16)).Foreground(theme.LG(theme.TextWhite))
 		}
 		return st.Render(glyph)
+	}
+	// MCP chip (ai_mcp.go): "⌁ N MCP", a click opens AI: MCP Servers….
+	if chip := m.mcpChipLabel(); chip != "" && width >= actionsChipMinWidth {
+		left += bg.Render(" ") + btn("mcp", chip, theme.FgBg(theme.TextSecondary, theme.BgPanel))
 	}
 	right := btn("new", theme.GlyphNew.String(), closeStyle) + bg.Render(" ") +
 		btn("history", theme.GlyphHistory.String(), closeStyle) + bg.Render(" ") +
@@ -328,8 +334,19 @@ func (m Model) hitActionsButton(screenX, screenY int) string {
 	if screenX == x1+w-8 {
 		return "new" // Group A
 	}
+	// The MCP chip right after " ✦ AI CHAT " (renderActionsHeader).
+	if chip := m.mcpChipLabel(); chip != "" && w >= actionsChipMinWidth {
+		c0 := x1 + runewidth.StringWidth(" "+aiSpark()+" AI CHAT ")
+		if screenX >= c0 && screenX < c0+runewidth.StringWidth(chip) {
+			return "mcp"
+		}
+	}
 	return ""
 }
+
+// actionsChipMinWidth is the narrowest header that still shows the MCP
+// chip next to the label and the buttons.
+const actionsChipMinWidth = 34
 
 // actionsLauncherRect returns the screen rectangle of the bottom-right
 // launcher chip when it should be visible. The chip lives one row above

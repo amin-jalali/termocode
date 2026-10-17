@@ -1,0 +1,7 @@
+# termocode shell integration for zsh (see .zshenv in this folder).
+ZDOTDIR=$TERMOCODE_ZDOTDIR
+if [[ -r $ZDOTDIR/.zlogin ]]; then
+	builtin source "$ZDOTDIR/.zlogin"
+fi
+if [[ -n ${TERMOCODE_ZDOTDIR_UNSET-} && $ZDOTDIR == $HOME ]]; then unset ZDOTDIR; fi
+unset TERMOCODE_ZDOTDIR TERMOCODE_ZDOTDIR_UNSET __tc_shim

@@ -308,16 +308,16 @@ The user: "prepare a task list". Plans for each are in `docs/plans/` (local).
 
 In progress (agents):
 - [x] U1 (M) Start page redesign: one calm column, setup as a 3-row checklist (start-page-redesign.md T1–T8)
-- [ ] U2 (L) MCP phase B: Streamable HTTP + OAuth (Linear, GitHub, GitLab, Slack, Notion, Sentry, ClickUp…), plus the phase A leftovers (panel chip, Settings section, tools-changed check, e2e)
-- [ ] U3 (M) Source Control leftovers: compare marks 1/2, hover card polish, syntax colours in the commit diff, goldens (compare / light / ascii), guide, perf benchmarks
-- [ ] U4 (S) REST client plan (Fable) — then build it
+- [x] U2 (L) MCP phase B: Streamable HTTP + OAuth (Linear, GitHub, GitLab, Slack, Notion, Sentry, ClickUp…), plus the phase A leftovers (panel chip, Settings section, tools-changed check, e2e)
+- [x] U3 (M) Source Control leftovers: compare marks 1/2, hover card polish, syntax colours in the commit diff, goldens (compare / light / ascii), guide, perf benchmarks
+- [x] U4 (S) REST client plan (Fable) — then build it
 
 Next:
 - [ ] U5 (L) REST client: `.http` files (same format as mobocode), send with Ctrl+Enter, response panel, env variables, history, curl import / export, AI tools (send, read response, save) with approval and redaction
 - [ ] U6 (M) Services panel (from mobocode): start / stop Postgres, Redis… through `docker compose`; status and logs; AI can check them — plan first
-- [ ] U7 (S) AI chat: "what the model is doing" line and a stall warning (no ticker when idle)
-- [ ] U8 (S) "Waiting for you" mark on a terminal tab running Claude Code / Codex / Gemini CLI
-- [ ] U9 (M) Shell integration (OSC 133): command end and exit code per terminal tab; "Fix?" chip on a failed command
+- [x] U7 (S) AI chat: "what the model is doing" line and a stall warning (no ticker when idle)
+- [x] U8 (S) "Waiting for you" mark on a terminal tab running Claude Code / Codex / Gemini CLI
+- [x] U9 (M) Shell integration (OSC 133): command end and exit code per terminal tab; "Fix?" chip on a failed command
 - [ ] U10 (M) Terminal compatibility leftovers: slow startup probes, mouse traffic, macOS Alt, synchronized output, one termcaps package
 - [ ] U11 (S) Devcontainer: offer to set up the project's tools when `.devcontainer` exists (never without the user's OK)
 

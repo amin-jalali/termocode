@@ -1,0 +1,16 @@
+> fix the failing test in parser_test.go
+
+⏺ Read(parser_test.go)
+  ⎿  Read 120 lines
+
+⏺ Bash(go test ./parser/...)
+  ⎿  Running…
+
+✻ Pondering… (14s · ↓ 1.2k tokens · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ >                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+
+

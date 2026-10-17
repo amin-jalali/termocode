@@ -18,18 +18,20 @@ import (
 // slow, but a hung server must not hang the chat turn).
 const initTimeout = 15 * time.Second
 
-// Process is a running stdio server: the child process and its Client.
+// Process is a connected server and its Client: a child process (stdio)
+// or a remote session (HTTP, cmd nil).
 type Process struct {
 	Client *Client
 
 	cmd       *exec.Cmd
-	done      chan struct{} // closed when the process exited
+	done      chan struct{} // closed when the process exited / the session ended
 	closeOnce sync.Once
+	closeFn   func() // HTTP: end the session
 }
 
-// Pid is the server's process id.
+// Pid is the server's process id (0 for a remote server).
 func (p *Process) Pid() int {
-	if p.cmd.Process == nil {
+	if p.cmd == nil || p.cmd.Process == nil {
 		return 0
 	}
 	return p.cmd.Process.Pid
@@ -101,6 +103,13 @@ func StartStdio(ctx context.Context, s Server, opts Options) (*Process, error) {
 // process group gets SIGTERM after 1 s and SIGKILL after 2 s.
 func (p *Process) Close() {
 	p.closeOnce.Do(func() {
+		if p.cmd == nil {
+			if p.closeFn != nil {
+				p.closeFn()
+			}
+			<-p.done
+			return
+		}
 		p.Client.Close()
 		pid := p.Pid()
 		select {

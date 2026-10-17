@@ -1,0 +1,7 @@
+# termocode shell integration for zsh (see .zshenv in this folder).
+ZDOTDIR=$TERMOCODE_ZDOTDIR
+if [[ -r $ZDOTDIR/.zprofile ]]; then
+	builtin source "$ZDOTDIR/.zprofile"
+fi
+TERMOCODE_ZDOTDIR=${ZDOTDIR:-$HOME}
+ZDOTDIR=$__tc_shim

@@ -37,6 +37,15 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Trigger Inline Completion | `ai-trigger-inline` | <code>Alt+&#92;</code> | <code>Alt+&#92;</code> |
 | AI: Undo Last Turn | `ai-undo-turn` |   |   |
 
+## Agent
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Agent: Start Claude Code | `agent-start-claude` |   |   |
+| Agent: Start Codex | `agent-start-codex` |   |   |
+| Agent: Start Gemini CLI | `agent-start-gemini` |   |   |
+| Agent: Start OpenCode | `agent-start-opencode` |   |   |
+
 ## Bookmarks
 
 | Title | ID | Key | Hint |
@@ -312,6 +321,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Terminal: Close Active Tab | `terminal-close-tab` | `Ctrl+Shift+W` | `Ctrl+Shift+W` |
+| Terminal: Fix Last Command with AI | `terminal-fix-ai` |   | <code>Alt+&#92; in the terminal</code> |
 | Terminal: Maximize Panel | `terminal-maximize` |   |   |
 | Terminal: Minimize Panel | `terminal-minimize` |   |   |
 | Terminal: New Tab | `terminal-new-tab` | <code>Ctrl+Shift+&#96;</code> | <code>Ctrl+Shift+&#96;</code> |

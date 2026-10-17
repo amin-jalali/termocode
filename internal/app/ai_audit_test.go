@@ -41,6 +41,19 @@ func TestAIAuditLog(t *testing.T) {
 	}
 }
 
+// Spec (MC-3): an MCP tool's audit line shows its display name
+// (mcp.<server>.<tool>), not the wire name sent to the provider.
+func TestAIAuditShowsToolLabel(t *testing.T) {
+	t.Cleanup(clock.Set(func() time.Time { return time.Date(2026, 10, 15, 14, 3, 22, 0, time.Local) }))
+	m := &Model{output: newOutputStore()}
+	m.aiS().aiAuditStart(ai.Event{Kind: ai.EventToolStart, Tool: "mcp__fake__echo", Label: "mcp.fake.echo", Args: map[string]any{"text": "hi"}})
+	m.aiAuditResult(ai.Event{Kind: ai.EventToolResult, Tool: "mcp__fake__echo", Label: "mcp.fake.echo", Detail: "echo: hi", Gate: ai.GateAuto, Decision: "auto"})
+	lines := m.output.Lines(aiAuditChannel)
+	if len(lines) != 1 || !strings.HasPrefix(lines[0], "14:03:22  mcp.fake.echo  text=hi  gate=auto") {
+		t.Errorf("audit lines %q", lines)
+	}
+}
+
 func TestAIAuditArgs(t *testing.T) {
 	got := aiAuditArgs(map[string]any{"b": 2.0, "a": strings.Repeat("x", 60), "c": "two\nlines", "d": ""})
 	want := `a="` + strings.Repeat("x", 39) + `…" b=2 c=<2 lines, 9 B> d=""`

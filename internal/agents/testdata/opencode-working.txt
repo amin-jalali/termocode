@@ -1,0 +1,10 @@
+┃  fix the parser test
+┃
+┃  Read parser_test.go
+┃
+
+  ⬝⬝⬝■■■■⬝  esc interrupt
+┃
+┃  >
+┃
+  enter send                                  Build  claude-sonnet-4

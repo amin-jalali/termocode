@@ -31,7 +31,16 @@ type aiAuditPending struct {
 
 // aiAuditStart remembers a tool call start.
 func (s *aiState) aiAuditStart(ev ai.Event) {
-	s.auditPending = &aiAuditPending{at: clock.Now(), tool: ev.Tool, args: aiAuditArgs(ev.Args)}
+	s.auditPending = &aiAuditPending{at: clock.Now(), tool: aiAuditTool(ev), args: aiAuditArgs(ev.Args)}
+}
+
+// aiAuditTool is the tool name of an audit line: the display name
+// (mcp.linear.create_issue) when the tool has one.
+func aiAuditTool(ev ai.Event) string {
+	if ev.Label != "" {
+		return ev.Label
+	}
+	return ev.Tool
 }
 
 // aiAuditResult writes the line of a finished tool call.
@@ -39,8 +48,8 @@ func (m *Model) aiAuditResult(ev ai.Event) {
 	s := m.aiS()
 	p := s.auditPending
 	s.auditPending = nil
-	if p == nil || p.tool != ev.Tool {
-		p = &aiAuditPending{at: clock.Now(), tool: ev.Tool}
+	if p == nil || p.tool != aiAuditTool(ev) {
+		p = &aiAuditPending{at: clock.Now(), tool: aiAuditTool(ev)}
 	}
 	m.aiAudit(p.at, p.tool, p.args, ev.Gate, ev.Decision, ev.Detail)
 }

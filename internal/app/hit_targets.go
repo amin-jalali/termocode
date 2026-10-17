@@ -265,7 +265,7 @@ func (m Model) actionsTargets() []hitTarget {
 	for x := x1; x < x2; x++ {
 		if id := m.hitActionsButton(x, y); id != "" {
 			// New chat and History belong to the chat panel (aiPanelTargetAt).
-			if id == "new" || id == "history" {
+			if id == "new" || id == "history" || id == "mcp" {
 				id = "ai:" + id
 			} else {
 				id = "actions:" + id
@@ -391,6 +391,8 @@ func panelBarTargetID(hit terminalTabBarHit, idx int) string {
 		return "panel:term-close:" + n
 	case terminalHitTabActivate:
 		return "panel:term:" + n
+	case terminalHitFixChip:
+		return "panel:term-fix:" + n
 	case terminalHitNewTab:
 		return "panel:new"
 	case terminalHitMaximize:

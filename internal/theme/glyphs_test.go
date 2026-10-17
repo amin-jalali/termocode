@@ -23,7 +23,13 @@ func TestGlyphTable(t *testing.T) {
 		// Services view (services panel plan §2.2).
 		"svc-up": GlyphSvcUp, "svc-bad": GlyphSvcBad, "svc-starting": GlyphSvcStarting,
 		"svc-restarting": GlyphSvcRestarting, "svc-stopped": GlyphSvcStopped, "svc-exited": GlyphSvcExited,
-		"svc-unknown": GlyphSvcUnknown, "start": GlyphStart, "stop": GlyphStop, "refresh": GlyphRefresh}
+		"svc-unknown": GlyphSvcUnknown, "start": GlyphStart, "stop": GlyphStop, "refresh": GlyphRefresh,
+		// Terminal tabs: the Fix chip and the CLI agent marks (U9b, U8).
+		"ai": GlyphAI, "agent-working": GlyphAgentWorking,
+		"agent-waiting": GlyphAgentWaiting, "agent-done": GlyphAgentDone,
+		// AI chat activity line (B1).
+		"ai-waiting": GlyphAIWaiting, "ai-writing": GlyphAIWriting, "ai-tool": GlyphAITool,
+		"ai-retry": GlyphAIRetry, "ai-stall": GlyphAIStall}
 	for name, g := range glyphs {
 		for _, m := range []IconMode{IconModeNerdFont, IconModeUnicode, IconModeASCII} {
 			CurrentIconMode = m

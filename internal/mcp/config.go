@@ -58,6 +58,9 @@ type Server struct {
 	Cwd     string
 	URL     string
 	Headers map[string]string
+	// OAuth is a pre-registered OAuth app (Slack): client id, secret (a
+	// ${secret:NAME}), scopes. nil: discovery + dynamic registration.
+	OAuth *OAuthConfig
 
 	Disabled    bool
 	ReadOnly    bool     // expose only read-only tools
@@ -71,7 +74,29 @@ type Server struct {
 	// servers list shows it; it never blocks startup.
 	Problem string
 
+	// TrustReason is set on the copy given to AskTrust: why the user is
+	// asked (not part of the file).
+	TrustReason TrustReason
+
 	raw json.RawMessage
+}
+
+// TrustReason says why AskTrust asks.
+type TrustReason int
+
+const (
+	// ReasonStart: an untrusted (project) server is about to start.
+	ReasonStart TrustReason = iota
+	// ReasonToolsChanged: the server's tools differ from the list the
+	// user trusted before (a "rug pull" check).
+	ReasonToolsChanged
+)
+
+// OAuthConfig is the termocode "oauth" key of an http entry.
+type OAuthConfig struct {
+	ClientID     string   `json:"client_id,omitempty"`
+	ClientSecret string   `json:"client_secret,omitempty"`
+	Scopes       []string `json:"scopes,omitempty"`
 }
 
 // entry is the JSON shape of one server. Claude Desktop's "transport" is
@@ -85,6 +110,7 @@ type entry struct {
 	Cwd         string            `json:"cwd"`
 	URL         string            `json:"url"`
 	Headers     map[string]string `json:"headers"`
+	OAuth       *OAuthConfig      `json:"oauth"`
 	Disabled    bool              `json:"disabled"`
 	ReadOnly    bool              `json:"readOnly"`
 	AutoApprove []string          `json:"autoApprove"`
@@ -127,7 +153,7 @@ func parseEntry(name string, raw json.RawMessage) Server {
 		return s
 	}
 	s.Command, s.Args, s.Env, s.Cwd = e.Command, e.Args, e.Env, e.Cwd
-	s.URL, s.Headers = e.URL, e.Headers
+	s.URL, s.Headers, s.OAuth = e.URL, e.Headers, e.OAuth
 	s.Disabled, s.ReadOnly, s.AutoApprove, s.Deny, s.Timeout = e.Disabled, e.ReadOnly, e.AutoApprove, e.Deny, e.Timeout
 	t := strings.ToLower(strings.TrimSpace(e.Type))
 	if t == "" {
@@ -158,6 +184,12 @@ func parseEntry(name string, raw json.RawMessage) Server {
 		s.Problem = "invalid: unknown type " + t
 	case t == TypeStdio && e.Command == "":
 		s.Problem = "invalid: stdio needs a command"
+	case t == TypeHTTP && e.URL == "":
+		s.Problem = "invalid: http needs a url"
+	case t == TypeHTTP && !strings.Contains(e.URL, "${"):
+		if err := checkURL(e.URL); err != nil {
+			s.Problem = err.Error()
+		}
 	}
 	return s
 }
@@ -213,6 +245,32 @@ func (s Server) Hash() string {
 	b, _ := json.Marshal(v) // maps marshal with sorted keys
 	sum := sha256.Sum256(append([]byte(s.Name+"\x00"), b...))
 	return hex.EncodeToString(sum[:])
+}
+
+// SecretNames lists the NAMEs of the entry's ${secret:NAME} references,
+// sorted, once each.
+func (s Server) SecretNames() []string {
+	vals := append([]string{s.Command, s.Cwd, s.URL}, s.Args...)
+	for _, m := range []map[string]string{s.Env, s.Headers} {
+		for _, v := range m {
+			vals = append(vals, v)
+		}
+	}
+	if s.OAuth != nil {
+		vals = append(vals, s.OAuth.ClientID, s.OAuth.ClientSecret)
+	}
+	seen := map[string]bool{}
+	var out []string
+	for _, v := range vals {
+		for _, m := range refRe.FindAllStringSubmatch(v, -1) {
+			if name, ok := strings.CutPrefix(m[1], "secret:"); ok && !seen[name] {
+				seen[name] = true
+				out = append(out, name)
+			}
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 // Raw is the entry as written in the file.
@@ -291,6 +349,11 @@ func (s Server) Expand(x Expander) (Server, error) {
 	}
 	out.Env = expandMap(s.Env, one)
 	out.Headers = expandMap(s.Headers, one)
+	if s.OAuth != nil {
+		o := *s.OAuth
+		o.ClientID, o.ClientSecret = one(o.ClientID), one(o.ClientSecret)
+		out.OAuth = &o
+	}
 	return out, err
 }
 
@@ -316,6 +379,9 @@ var secretLiteralRe = regexp.MustCompile(`(?i)(ghp_|github_pat_|glpat-|xox[pbas]
 // secretLiteral names the first header / env key whose literal value
 // looks like a token ("" when none).
 func secretLiteral(s Server) string {
+	if s.OAuth != nil && strings.TrimSpace(refRe.ReplaceAllString(s.OAuth.ClientSecret, "")) != "" {
+		return "oauth.client_secret"
+	}
 	for _, m := range []struct {
 		kind string
 		vals map[string]string

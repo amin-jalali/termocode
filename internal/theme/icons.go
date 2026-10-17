@@ -410,6 +410,23 @@ var (
 	GlyphNew      = Icon{NerdFont: "", Unicode: "+", ASCII: "+"} // nf-fa-plus
 	GlyphCollapse = Icon{NerdFont: "", Unicode: "⊟", ASCII: "-"} // nf-fa-minus_square_o
 
+	// GlyphAI marks AI chrome, like the terminal tab's "Fix?" chip.
+	GlyphAI = Icon{NerdFont: "✦", Unicode: "✦", ASCII: "*"}
+	// External CLI agent in a terminal tab (U8): working, waiting for
+	// the user (nf-fa-bell), done (back at its input box).
+	GlyphAgentWorking = Icon{NerdFont: "◷", Unicode: "◷", ASCII: "~"}
+	GlyphAgentWaiting = Icon{NerdFont: "", Unicode: "‼", ASCII: "!"}
+	GlyphAgentDone    = Icon{NerdFont: "✓", Unicode: "✓", ASCII: "v"}
+
+	// AI chat activity line (B1): waiting for the model, writing, a
+	// tool running (nf-fa-cog), a retry (nf-fa-refresh) and a stall
+	// (nf-cod-warning).
+	GlyphAIWaiting = Icon{NerdFont: "◷", Unicode: "◷", ASCII: "~"}
+	GlyphAIWriting = Icon{NerdFont: "✎", Unicode: "✎", ASCII: ">"}
+	GlyphAITool    = Icon{NerdFont: "\uf013", Unicode: "⚙", ASCII: "#"}
+	GlyphAIRetry   = Icon{NerdFont: "\uf021", Unicode: "↻", ASCII: "@"}
+	GlyphAIStall   = Icon{NerdFont: "\uea6c", Unicode: "⚠", ASCII: "!"}
+
 	// Source Control GRAPH (scm-graph design §2.3).
 	// The Nerd Font circles (nf-fa-circle, nf-fa-dot_circle_o) are wider
 	// than a cell and draw clipped; the geometric shapes fit.
