@@ -18,7 +18,16 @@ import (
 // (1×1 RGB pixel, a=q only checks support and stores nothing), a cell-size
 // query (CSI 16 t → CSI 6;h;w t) and DA1 last. Every terminal answers DA1, so
 // its reply marks the end of all replies.
-const probeQuery = "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\" + "\x1b[16t" + keysQuery + "\x1b[c"
+const probeQuery = kittyGraphicsQuery + baseQuery
+
+// kittyGraphicsQuery is an APC string. A terminal that does not know APC
+// may print it, so it is sent only to terminals that can take it (see
+// ProbeOpts).
+const kittyGraphicsQuery = "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\"
+
+// baseQuery is what every terminal is asked: cell size, kitty keyboard
+// flags, DA1 last.
+const baseQuery = "\x1b[16t" + keysQuery + "\x1b[c"
 
 // keysQuery asks for the kitty keyboard flags; a terminal with the
 // protocol answers CSI ? flags u (before DA1). See hasKittyKeys.
@@ -33,14 +42,24 @@ var kittyKeysRe = regexp.MustCompile(`\x1b\[\?\d+u`)
 // Probe does not run). Like Probe it must run before Bubble Tea takes the
 // TTY. false inside tmux (its extended keys are a different scheme) and
 // when the terminal does not answer.
-func ProbeKittyKeyboard(in, out *os.File, timeout time.Duration, getenv func(string) string) bool {
+// answered: the terminal answered DA1 (for the probe cache, R3).
+func ProbeKittyKeyboard(in, out *os.File, timeout time.Duration, getenv func(string) string) (keys, answered bool) {
 	if getenv == nil {
 		getenv = os.Getenv
 	}
 	if getenv("TMUX") != "" {
-		return false
+		return false, false
 	}
-	return hasKittyKeys(Query(in, out, keysQuery+"\x1b[c", timeout, hasDA1))
+	reply := Query(in, out, keysQuery+"\x1b[c", timeout, hasDA1)
+	return hasKittyKeys(reply), hasDA1(reply)
+}
+
+// ProbeOpts tunes ProbeWith.
+type ProbeOpts struct {
+	// AnsweredBefore: this terminal answered the probe on an earlier run
+	// (the termcaps cache), so the kitty graphics query is safe to send
+	// even without an environment hint.
+	AnsweredBefore bool
 }
 
 // tmuxPassthrough reports tmux's allow-passthrough option. A seam for tests.
@@ -60,6 +79,14 @@ var tmuxPassthrough = func() bool {
 // out is not a TTY, or the terminal does not answer within timeout, the
 // environment hints decide.
 func Probe(in, out *os.File, timeout time.Duration, getenv func(string) string) Caps {
+	return ProbeWith(in, out, timeout, getenv, ProbeOpts{})
+}
+
+// ProbeWith is Probe with options. The kitty graphics query goes out only
+// when the environment names a kitty-graphics terminal or the terminal
+// answered on an earlier run (terminal-compat R3): a terminal that does
+// not know APC strings prints them.
+func ProbeWith(in, out *os.File, timeout time.Duration, getenv func(string) string, o ProbeOpts) Caps {
 	if getenv == nil {
 		getenv = os.Getenv
 	}
@@ -91,11 +118,16 @@ func Probe(in, out *os.File, timeout time.Duration, getenv func(string) string) 
 		return caps
 	}
 	defer func() { _ = term.Restore(int(in.Fd()), state) }()
-	if _, err := out.WriteString(probeQuery); err != nil {
+	q := baseQuery
+	if envSure && envProto == Kitty || o.AnsweredBefore {
+		q = probeQuery
+	}
+	if _, err := out.WriteString(q); err != nil {
 		return caps
 	}
 	reply := readUntil(in, time.Now().Add(timeout), hasDA1)
 	kitty, sixel, cw, ch, gotDA1 := parseProbeReply(reply)
+	caps.Answered = gotDA1
 	kittyErr := ""
 	if msg, ok := kittyProbeAnswer(string(reply)); ok && msg != "OK" {
 		kittyErr = msg
