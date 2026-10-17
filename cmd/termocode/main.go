@@ -374,6 +374,7 @@ func runTUI() {
 
 	_, _ = os.Stdout.WriteString(hostEnter)
 
+	app.SetMouseHover(app.ResolveMouseHover(app.ConfigMouseHover()))
 	app.ThrottleFrames()
 	app.SetVersion(versionString()) // sent to process extensions (N6b)
 	p := tea.NewProgram(
@@ -389,41 +390,13 @@ func runTUI() {
 		// SIGHUP / SIGTERM / SIGINT are ours (watchHangup): unsaved
 		// buffers go to the hot-exit backup before we quit.
 		tea.WithoutSignalHandler(),
-		// WithMouseCellMotion (xterm 1002) — button-event mode.
-		//
-		// ROOT-CAUSE FIX for "mouse SGR codes leak into picker/prompt
-		// input fields as KeyRunes":
-		//
-		// We previously used WithMouseAllMotion (1003) which forwards
-		// EVERY pixel of cursor motion, even with no button held. At
-		// high motion rates the SGR sequence (e.g. "\x1b[<35;70;19M")
-		// can be split across multiple TTY Read() syscalls. Bubble
-		// Tea v1.3.10's input parser only waits for "more data" when
-		// the read filled its 256-byte buffer; if the buffer was a
-		// short read AND the trailing `M`/`m` of the mouse SGR is in
-		// a NEXT chunk, the parser falls through to the rune scanner
-		// and emits each fragment ("[", "<35;70;", "19M") as a
-		// KeyRunes event. Those then leak into focused text inputs
-		// (search box of the picker, prompt input, etc.).
-		//
-		// 1002 sends events ONLY on press / release / drag (motion
-		// with button held) / wheel — i.e. orders of magnitude fewer
-		// events than 1003. The high-rate stream that triggers the
-		// fragmentation race goes away. Drag-select still works
-		// (drag = motion + held button, included in 1002), and
-		// neither nvim nor any termocode UI relies on no-button
-		// motion (every MouseMotion handler in the codebase already
-		// gates on `mouseDown`/`dragKind != none`).
-		//
-		// Note: a defensive sanitiser still lives in
-		// internal/picker/model.go and internal/prompt/model.go in
-		// case the fragmentation race somehow triggers under 1002
-		// too — it's a belt-and-suspenders.
-		// All-motion (xterm 1003) so the UI can react to plain hover. The
-		// Update loop downgrades to button-only (cell motion) whenever a text
-		// input is focused, which is the only place the 1003 SGR-fragmentation
-		// leak (see the note above) can corrupt typed input.
-		tea.WithMouseAllMotion(),
+		// All-motion (xterm 1003) so the UI can react to plain hover;
+		// button-only (1002) with mouse_hover = off. The Update loop
+		// switches to 1002 while a text input is open or the window is in
+		// the background (internal/app/mouse_hover.go). Split SGR reports
+		// are joined and motion bursts merged in the patched input reader
+		// (third_party/bubbletea/input_hold.go).
+		mouseOption(app.MouseHoverEnabled()),
 		// Focus events (xterm 1004): in the background termocode polls
 		// git less and stops reading the clipboard (app/clip_watch.go).
 		tea.WithReportFocus(),
@@ -450,6 +423,15 @@ func runTUI() {
 	// Process extensions (N6b): shutdown, then kill their process groups.
 	app.StopExtensions()
 	app.StopMCP() // MCP servers (and their children)
+}
+
+// mouseOption picks the first mouse tracking mode: all motion (hover) or
+// button events only (mouse_hover = off).
+func mouseOption(hover bool) tea.ProgramOption {
+	if hover {
+		return tea.WithMouseAllMotion()
+	}
+	return tea.WithMouseCellMotion()
 }
 
 // inputOption is Bubble Tea's input: stdin behind transfer.Input when

@@ -743,7 +743,7 @@ func New() Model {
 		gitCollapsed:     map[string]bool{},
 		hoverX:           -1,
 		hoverY:           -1,
-		mouseAllMotion:   true,
+		mouseAllMotion:   mouseHover,
 		commitDetails:    map[string]git.CommitDetail{},
 		gitDiffHoverPane: -1,
 		explorerWidth:    explorerW,

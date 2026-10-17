@@ -61,7 +61,11 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 	switch msg.(type) {
 	case tea.FocusMsg, tea.BlurMsg:
-		return m, m.onTerminalFocus(msg)
+		cmd := m.onTerminalFocus(msg)
+		if mc := m.syncMouseMode(); mc != nil {
+			cmd = tea.Batch(cmd, mc)
+		}
+		return m, cmd
 	}
 	prevKind := m.overlayKind()
 	if _, ok := msg.(resizeFlushMsg); ok {
@@ -96,13 +100,7 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 		cmd = tea.Batch(cmd, hoverCmd)
 	}
 	nm.showWaitingHotExit()
-	want := !nm.anyTextInputOpen()
-	if want != nm.mouseAllMotion {
-		nm.mouseAllMotion = want
-		mode := tea.EnableMouseCellMotion
-		if want {
-			mode = tea.EnableMouseAllMotion
-		}
+	if mode := nm.syncMouseMode(); mode != nil { // mouse_hover.go
 		return nm, tea.Batch(cmd, mode)
 	}
 	return nm, cmd
