@@ -74,6 +74,17 @@ Input reader and mouse modes (termocode terminal-compat R6):
   `mouse_switch` case).
 - Test: `split_input_test.go`.
 
+Synchronized output (termocode terminal-compat R10):
+
+- `WithSynchronizedOutput()` (`options.go`, `tea.go`): `flushFrame`
+  (`standard_renderer.go`) writes each frame between `CSI ? 2026 h` and
+  `CSI ? 2026 l`, in the same single write, so the terminal shows it at
+  once (images in the frame included). With frame pacing the status
+  query goes after the end mark. `kill` writes the end mark too, so a
+  frame is never left open. termocode turns it on only when the terminal
+  answered DECRQM for mode 2026 (or `TERMOCODE_SYNC=on`).
+- Test: `sync_output_test.go`.
+
 All other files are unchanged.
 
 To update: copy the new upstream release here, apply the same change,

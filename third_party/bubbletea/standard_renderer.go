@@ -37,6 +37,10 @@ type standardRenderer struct {
 	// answered enough of the earlier ones (pacing.go). termocode patch.
 	pacer *framePacer
 
+	// syncOutput wraps every frame in mode 2026 (synchronized output) so
+	// the terminal shows it at once. termocode patch (terminal-compat R10).
+	syncOutput bool
+
 	buf                bytes.Buffer
 	queuedMessageLines []string
 	framerate          time.Duration
@@ -155,6 +159,9 @@ func (r *standardRenderer) kill() {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 
+	if r.syncOutput { // termocode patch: never leave a frame open
+		r.execute(syncOutputEnd)
+	}
 	r.execute(ansi.EraseEntireLine)
 	// Move the cursor back to the beginning of the line
 	r.execute("\r")
@@ -201,6 +208,9 @@ func (r *standardRenderer) flushFrame(query bool) {
 
 	// Output buffer.
 	buf := &bytes.Buffer{}
+	if r.syncOutput { // termocode patch
+		buf.WriteString(syncOutputBegin)
+	}
 
 	// Moving to the beginning of the section, that we rendered.
 	if r.altScreenActive {
@@ -317,6 +327,9 @@ func (r *standardRenderer) flushFrame(query bool) {
 		buf.WriteByte('\r')
 	}
 
+	if r.syncOutput { // termocode patch
+		buf.WriteString(syncOutputEnd)
+	}
 	if query {
 		buf.WriteString(statusQuery)
 	}
