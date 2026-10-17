@@ -159,13 +159,38 @@ func (m *Manager) startHTTP(ctx context.Context, st *serverState, exp Server, op
 		ai.RegisterSecret(v)
 	}
 	ho := HTTPOptions{Client: m.opts.HTTP}
-	if !static && m.opts.Tokens != nil {
+	gh := ""
+	if exp.Auth != nil && !static {
+		gh = exp.Auth.GH
+	}
+	if gh != "" {
+		// The GitHub CLI's token, in memory only for this connection.
+		tok, err := GHTokenFor(ctx, gh)
+		if err != nil {
+			return nil, fmt.Errorf("gh (%s): %w", gh, err)
+		}
+		var mu sync.Mutex
+		ho.Token = func(context.Context) string { mu.Lock(); defer mu.Unlock(); return tok }
+		ho.Refresh = func(ctx context.Context) bool {
+			nt, err := GHTokenFor(ctx, gh)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil || nt == tok {
+				return false
+			}
+			tok = nt
+			return true
+		}
+	} else if !static && m.opts.Tokens != nil {
 		ho.Token = func(ctx context.Context) string { return m.accessToken(ctx, name, exp.URL) }
 		ho.Refresh = func(ctx context.Context) bool { return m.refresh(ctx, name, exp.URL) }
 	}
 	p, err := StartHTTP(ctx, exp, ho, opts)
 	var ae *AuthError
 	if errors.As(err, &ae) {
+		if gh != "" {
+			return nil, fmt.Errorf("not authorized: the server refused the gh token of %s (gh auth refresh adds scopes): %w", gh, err)
+		}
 		if static || m.opts.Tokens == nil {
 			return nil, fmt.Errorf("not authorized: the server refused the token in \"headers\" (check its scopes): %w", err)
 		}

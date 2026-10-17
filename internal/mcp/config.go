@@ -61,6 +61,10 @@ type Server struct {
 	// OAuth is a pre-registered OAuth app (Slack): client id, secret (a
 	// ${secret:NAME}), scopes. nil: discovery + dynamic registration.
 	OAuth *OAuthConfig
+	// Auth is termocode's own sign-in source ("auth": {"gh": "<login>"}):
+	// the token comes from the GitHub CLI at connect time. Only allowed in
+	// the user file.
+	Auth *AuthConfig
 
 	Disabled    bool
 	ReadOnly    bool     // expose only read-only tools
@@ -99,6 +103,12 @@ type OAuthConfig struct {
 	Scopes       []string `json:"scopes,omitempty"`
 }
 
+// AuthConfig is the termocode "auth" key of an http entry.
+type AuthConfig struct {
+	// GH is the github.com login whose `gh auth token` is the bearer.
+	GH string `json:"gh,omitempty"`
+}
+
 // entry is the JSON shape of one server. Claude Desktop's "transport" is
 // an alias of "type".
 type entry struct {
@@ -111,6 +121,7 @@ type entry struct {
 	URL         string            `json:"url"`
 	Headers     map[string]string `json:"headers"`
 	OAuth       *OAuthConfig      `json:"oauth"`
+	Auth        *AuthConfig       `json:"auth"`
 	Disabled    bool              `json:"disabled"`
 	ReadOnly    bool              `json:"readOnly"`
 	AutoApprove []string          `json:"autoApprove"`
@@ -135,6 +146,9 @@ func ParseFile(b []byte, source, path string) ([]Server, []string, error) {
 	for name, raw := range f.MCPServers {
 		s := parseEntry(name, raw)
 		s.Source, s.SourcePath = source, path
+		if s.Auth != nil && s.Auth.GH != "" && source != SourceUser && s.Problem == "" {
+			s.Problem = "invalid: auth.gh is only allowed in your own mcp.json"
+		}
 		if w := secretLiteral(s); w != "" {
 			warns = append(warns, fmt.Sprintf("%s: server %s has a literal secret in %s; use ${secret:NAME} or ${VAR}", path, name, w))
 		}
@@ -153,7 +167,7 @@ func parseEntry(name string, raw json.RawMessage) Server {
 		return s
 	}
 	s.Command, s.Args, s.Env, s.Cwd = e.Command, e.Args, e.Env, e.Cwd
-	s.URL, s.Headers, s.OAuth = e.URL, e.Headers, e.OAuth
+	s.URL, s.Headers, s.OAuth, s.Auth = e.URL, e.Headers, e.OAuth, e.Auth
 	s.Disabled, s.ReadOnly, s.AutoApprove, s.Deny, s.Timeout = e.Disabled, e.ReadOnly, e.AutoApprove, e.Deny, e.Timeout
 	t := strings.ToLower(strings.TrimSpace(e.Type))
 	if t == "" {
@@ -186,6 +200,10 @@ func parseEntry(name string, raw json.RawMessage) Server {
 		s.Problem = "invalid: stdio needs a command"
 	case t == TypeHTTP && e.URL == "":
 		s.Problem = "invalid: http needs a url"
+	case e.Auth != nil && e.Auth.GH != "" && t != TypeHTTP:
+		s.Problem = "invalid: auth.gh needs an http server"
+	case e.Auth != nil && e.Auth.GH != "" && !ValidGHLogin(e.Auth.GH):
+		s.Problem = "invalid: auth.gh must be a GitHub login"
 	case t == TypeHTTP && !strings.Contains(e.URL, "${"):
 		if err := checkURL(e.URL); err != nil {
 			s.Problem = err.Error()
