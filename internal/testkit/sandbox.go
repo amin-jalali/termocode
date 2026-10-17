@@ -53,6 +53,11 @@ func sandbox(t testing.TB, nvim bool) {
 		// Pre-made (empty) plugin checkouts: no git clone at startup.
 		"TERMOCODE_PLUGINS_DIR": filepath.Join(home, "plugins"),
 		"TERMOCODE_TOOLS_DIR":   filepath.Join(home, "tools"),
+		// gh reads its logins from $XDG_CONFIG_HOME/gh (empty here) and
+		// these variables: a real gh is never signed in inside a test.
+		"GH_TOKEN":            "",
+		"GITHUB_TOKEN":        "",
+		"GH_ENTERPRISE_TOKEN": "",
 		// No system clipboard, no AI provider, no network.
 		"DISPLAY":               "",
 		"WAYLAND_DISPLAY":       "",

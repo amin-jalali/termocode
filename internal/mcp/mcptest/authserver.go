@@ -25,6 +25,42 @@ type AuthOptions struct {
 	PreSecret   string // … and its secret
 	PlainOnly   bool   // advertise code_challenge_methods_supported ["plain"]
 	WrongIssuer bool   // metadata "issuer" is not this server (must be refused)
+
+	// Device turns on the device authorization grant (RFC 8628): the
+	// metadata lists device_authorization_endpoint, /device/code hands
+	// out codes and /token answers the device_code grant.
+	Device bool
+	// DeviceMode: "" approves after PendingPolls "authorization_pending"
+	// answers; "manual" waits for ApproveDevice; "denied" answers
+	// access_denied; "expired" answers expired_token.
+	DeviceMode     string
+	PendingPolls   int  // pending answers before an automatic approval
+	SlowDown       bool // the first poll answers slow_down
+	DeviceInterval int  // "interval" in seconds (default 1)
+	DeviceExpires  int  // "expires_in" in seconds (default 900)
+	// GitHubStyle answers device errors with HTTP 200 (as github.com does).
+	GitHubStyle bool
+	// NoRefresh leaves refresh_token out of token answers (a GitHub
+	// OAuth app).
+	NoRefresh bool
+	// Revocation lists revocation_endpoint (RFC 7009) at /revoke.
+	Revocation bool
+	// NoNone: Dynamic Client Registration hands out a client secret
+	// (GitLab-style confidential clients).
+	NoNone bool
+	// DCRStatus answers /register with this status (403: only approved
+	// clients).
+	DCRStatus int
+}
+
+// deviceGrant is the device_code grant type (RFC 8628).
+const deviceGrant = "urn:ietf:params:oauth:grant-type:device_code"
+
+type deviceCode struct {
+	client, scope, user string
+	polls               int
+	approved, denied    bool
+	slowed              bool
 }
 
 type authCode struct {
@@ -48,12 +84,16 @@ type AuthServer struct {
 	Authorizes    []url.Values
 	TokenForms    []url.Values
 	TokenAuth     []string // Authorization header of each /token request
+
+	devices     map[string]*deviceCode // device_code → state
+	devicePolls int
+	revoked     []string
 }
 
 // NewAuthServer starts the fake; it closes with the test.
 func NewAuthServer(t testing.TB, o AuthOptions) *AuthServer {
 	a := &AuthServer{O: o, clients: map[string]string{}, codes: map[string]authCode{},
-		access: map[string]string{}, refresh: map[string]string{}}
+		access: map[string]string{}, refresh: map[string]string{}, devices: map[string]*deviceCode{}}
 	if o.PreClientID != "" {
 		a.clients[o.PreClientID] = o.PreSecret
 	}
@@ -66,6 +106,8 @@ func NewAuthServer(t testing.TB, o AuthOptions) *AuthServer {
 	mux.HandleFunc(o.Path+"/register", a.register)
 	mux.HandleFunc(o.Path+"/authorize", a.authorize)
 	mux.HandleFunc(o.Path+"/token", a.token)
+	mux.HandleFunc(o.Path+"/device/code", a.deviceCode)
+	mux.HandleFunc(o.Path+"/revoke", a.revoke)
 	a.Server = httptest.NewServer(mux)
 	t.Cleanup(a.Close)
 	return a
@@ -146,12 +188,23 @@ func (a *AuthServer) metadata(w http.ResponseWriter, r *http.Request) {
 	if a.O.CIMD {
 		md["client_id_metadata_document_supported"] = true
 	}
+	if a.O.Device {
+		md["device_authorization_endpoint"] = a.Issuer() + "/device/code"
+		md["grant_types_supported"] = []string{"authorization_code", "refresh_token", deviceGrant}
+	}
+	if a.O.Revocation {
+		md["revocation_endpoint"] = a.Issuer() + "/revoke"
+	}
 	writeJSON(w, md)
 }
 
 func (a *AuthServer) register(w http.ResponseWriter, r *http.Request) {
 	if a.O.NoDCR || r.Method != http.MethodPost {
 		http.NotFound(w, r)
+		return
+	}
+	if a.O.DCRStatus != 0 {
+		http.Error(w, "registration is closed", a.O.DCRStatus)
 		return
 	}
 	var body map[string]any
@@ -162,12 +215,20 @@ func (a *AuthServer) register(w http.ResponseWriter, r *http.Request) {
 	a.mu.Lock()
 	a.Registrations = append(a.Registrations, body)
 	id := a.next("client")
-	a.clients[id] = ""
+	secret := ""
+	if a.O.NoNone {
+		secret = a.next("secret")
+	}
+	a.clients[id] = secret
 	a.mu.Unlock()
 	w.WriteHeader(http.StatusCreated)
 	out := map[string]any{"client_id": id}
 	for k, v := range body {
 		out[k] = v
+	}
+	if secret != "" {
+		out["client_secret"] = secret
+		out["token_endpoint_auth_method"] = "client_secret_post"
 	}
 	writeJSON(w, out)
 }
@@ -260,6 +321,12 @@ func (a *AuthServer) token(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		resource, scope = c.resource, c.scope
+	case deviceGrant:
+		var done bool
+		if _, scope, done = a.devicePoll(w, f.Get("device_code"), client); !done {
+			return
+		}
+		resource = f.Get("resource")
 	case "refresh_token":
 		owner, ok := a.refresh[f.Get("refresh_token")]
 		if !ok || owner != client {
@@ -274,12 +341,130 @@ func (a *AuthServer) token(w http.ResponseWriter, r *http.Request) {
 	}
 	at, rt := a.next("at"), a.next("rt")
 	a.access[at] = resource
-	a.refresh[rt] = client
 	exp := a.O.ExpiresIn
 	if exp == 0 {
 		exp = 3600
 	}
+	out := map[string]any{"access_token": at, "token_type": "Bearer", "expires_in": exp, "scope": scope}
+	if !a.O.NoRefresh {
+		a.refresh[rt] = client
+		out["refresh_token"] = rt
+	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"access_token": at, "token_type": "Bearer", "expires_in": exp,
-		"refresh_token": rt, "scope": scope})
+	_ = json.NewEncoder(w).Encode(out)
+}
+
+// deviceError answers a device poll error: HTTP 400 as RFC 8628 says,
+// or 200 as github.com does.
+func (a *AuthServer) deviceError(w http.ResponseWriter, code string) {
+	if !a.O.GitHubStyle {
+		oauthError(w, code, "")
+		return
+	}
+	writeJSON(w, map[string]string{"error": code})
+}
+
+// devicePoll answers one device_code poll; done=false: an error was sent.
+// Caller holds a.mu.
+func (a *AuthServer) devicePoll(w http.ResponseWriter, code, client string) (resource, scope string, done bool) {
+	a.devicePolls++
+	d, ok := a.devices[code]
+	switch {
+	case !a.O.Device || !ok || d.client != client:
+		a.deviceError(w, "invalid_grant")
+		return "", "", false
+	case a.O.DeviceMode == "denied":
+		a.deviceError(w, "access_denied")
+		return "", "", false
+	case a.O.DeviceMode == "expired":
+		a.deviceError(w, "expired_token")
+		return "", "", false
+	case a.O.SlowDown && !d.slowed:
+		d.slowed = true
+		a.deviceError(w, "slow_down")
+		return "", "", false
+	}
+	d.polls++
+	if a.O.DeviceMode == "" && d.polls > a.O.PendingPolls {
+		d.approved = true
+	}
+	if !d.approved {
+		a.deviceError(w, "authorization_pending")
+		return "", "", false
+	}
+	delete(a.devices, code)
+	return "", d.scope, true
+}
+
+// deviceCode hands out a device code and a user code.
+func (a *AuthServer) deviceCode(w http.ResponseWriter, r *http.Request) {
+	if !a.O.Device || r.Method != http.MethodPost {
+		http.NotFound(w, r)
+		return
+	}
+	b, _ := io.ReadAll(r.Body)
+	f, _ := url.ParseQuery(string(b))
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if _, ok := a.clients[f.Get("client_id")]; !ok {
+		oauthError(w, "invalid_client", "unknown client")
+		return
+	}
+	dc := a.next("dc")
+	uc := fmt.Sprintf("WDJB-%04d", a.n)
+	a.devices[dc] = &deviceCode{client: f.Get("client_id"), scope: f.Get("scope"), user: uc}
+	iv, exp := a.O.DeviceInterval, a.O.DeviceExpires
+	if iv == 0 {
+		iv = 1
+	}
+	if exp == 0 {
+		exp = 900
+	}
+	writeJSON(w, map[string]any{"device_code": dc, "user_code": uc, "verification_uri": a.Issuer() + "/device",
+		"verification_uri_complete": a.Issuer() + "/device?user_code=" + uc, "interval": iv, "expires_in": exp})
+}
+
+// ApproveDevice approves the device code with this user code (the user
+// typed it on the web page and pressed Authorize).
+func (a *AuthServer) ApproveDevice(userCode string) bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for _, d := range a.devices {
+		if d.user == userCode {
+			d.approved = true
+			return true
+		}
+	}
+	return false
+}
+
+// DevicePolls counts device_code polls at /token.
+func (a *AuthServer) DevicePolls() int {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.devicePolls
+}
+
+// revoke takes a token (RFC 7009) and forgets it.
+func (a *AuthServer) revoke(w http.ResponseWriter, r *http.Request) {
+	if !a.O.Revocation || r.Method != http.MethodPost {
+		http.NotFound(w, r)
+		return
+	}
+	b, _ := io.ReadAll(r.Body)
+	f, _ := url.ParseQuery(string(b))
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	tok := f.Get("token")
+	a.revoked = append(a.revoked, tok)
+	delete(a.access, tok)
+	delete(a.refresh, tok)
+	w.WriteHeader(http.StatusOK)
+}
+
+// Revoked lists the tokens posted to /revoke.
+func (a *AuthServer) Revoked() []string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return append([]string(nil), a.revoked...)
 }

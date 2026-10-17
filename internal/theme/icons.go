@@ -455,4 +455,11 @@ var (
 	GlyphSending  = Icon{NerdFont: "↝", Unicode: "↝", ASCII: "~"}
 	GlyphFail     = Icon{NerdFont: "✗", Unicode: "✗", ASCII: "x"}
 	GlyphRedirect = Icon{NerdFont: "↪", Unicode: "↪", ASCII: ">"}
+	// Connect a service (MCP wizard): a choice on / off, success,
+	// failure, and the MCP mark of the chat header chip.
+	GlyphRadioOn  = Icon{NerdFont: "◉", Unicode: "◉", ASCII: "*"}
+	GlyphRadioOff = Icon{NerdFont: "◦", Unicode: "◦", ASCII: "o"}
+	GlyphOK       = Icon{NerdFont: "✓", Unicode: "✓", ASCII: "v"}
+	GlyphMCP      = Icon{NerdFont: "\uf1e6", Unicode: "⌁", ASCII: "~"} // nf-fa-plug
+	GlyphWait     = Icon{NerdFont: "\uf017", Unicode: "◷", ASCII: "~"} // nf-fa-clock_o
 )

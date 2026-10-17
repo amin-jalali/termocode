@@ -31,7 +31,9 @@ func TestGlyphTable(t *testing.T) {
 		"ai-waiting": GlyphAIWaiting, "ai-writing": GlyphAIWriting, "ai-tool": GlyphAITool,
 		"ai-retry": GlyphAIRetry, "ai-stall": GlyphAIStall,
 		// HTTP client.
-		"send": GlyphSend, "sending": GlyphSending, "fail": GlyphFail, "redirect": GlyphRedirect}
+		"send": GlyphSend, "sending": GlyphSending, "fail": GlyphFail, "redirect": GlyphRedirect,
+		// Connect a service (MCP wizard).
+		"radio-on": GlyphRadioOn, "radio-off": GlyphRadioOff, "ok": GlyphOK, "mcp": GlyphMCP, "wait": GlyphWait}
 	for name, g := range glyphs {
 		for _, m := range []IconMode{IconModeNerdFont, IconModeUnicode, IconModeASCII} {
 			CurrentIconMode = m

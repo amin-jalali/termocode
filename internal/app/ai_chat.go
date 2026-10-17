@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/amin-jalali/termocode/internal/mcp"
 	"os"
 	"path/filepath"
 	"strings"
@@ -187,6 +188,10 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	}
 	history := m.aiChatHistory(ai.SystemPrompt(base, tools, native))
 	mcpTools := m.aiMCPTurn(gen, ch) // MCP servers' tools, built on the goroutine
+	mcpLines := ""
+	if mcpTools != nil {
+		mcpLines = m.mcpPromptLines() // "GitHub is connected as … (read only)."
+	}
 
 	auto := map[string]bool{}
 	for _, c := range s.settings.AutoApprove {
@@ -238,7 +243,11 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		if mcpTools != nil {
 			if extra := mcpTools(ctx); len(extra) > 0 {
 				agent.Tools = append(agent.Tools, extra...)
-				history[0].Content = ai.SystemPrompt(base, agent.Tools, native)
+				b := base
+				if mcpLines != "" {
+					b += "\nConnected services (MCP tools mcp__<server>__*):\n" + mcpLines
+				}
+				history[0].Content = ai.SystemPrompt(b, agent.Tools, native)
 			}
 		}
 		agent.Run(ctx, history, func(ev ai.Event) { send(aiChatEventMsg{gen: gen, ev: ev, ch: ch}) })
@@ -411,6 +420,9 @@ func (s *aiState) restoreAIChat() {
 func (m *Model) openAIPanel(focus bool) tea.Cmd {
 	s := m.aiS()
 	s.restoreAIChat()
+	if mcp.LoadSettings(mcpConfigPath()).Enabled {
+		m.aiMCP() // reads mcp.json (starts nothing): the header chip knows the services
+	}
 	if !m.actionsPanelVisible() {
 		m.actionsOpen = true
 		m.actionsPinned = true

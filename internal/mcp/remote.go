@@ -159,13 +159,38 @@ func (m *Manager) startHTTP(ctx context.Context, st *serverState, exp Server, op
 		ai.RegisterSecret(v)
 	}
 	ho := HTTPOptions{Client: m.opts.HTTP}
-	if !static && m.opts.Tokens != nil {
+	gh := ""
+	if exp.Auth != nil && !static {
+		gh = exp.Auth.GH
+	}
+	if gh != "" {
+		// The GitHub CLI's token, in memory only for this connection.
+		tok, err := GHTokenFor(ctx, gh)
+		if err != nil {
+			return nil, fmt.Errorf("gh (%s): %w", gh, err)
+		}
+		var mu sync.Mutex
+		ho.Token = func(context.Context) string { mu.Lock(); defer mu.Unlock(); return tok }
+		ho.Refresh = func(ctx context.Context) bool {
+			nt, err := GHTokenFor(ctx, gh)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil || nt == tok {
+				return false
+			}
+			tok = nt
+			return true
+		}
+	} else if !static && m.opts.Tokens != nil {
 		ho.Token = func(ctx context.Context) string { return m.accessToken(ctx, name, exp.URL) }
 		ho.Refresh = func(ctx context.Context) bool { return m.refresh(ctx, name, exp.URL) }
 	}
 	p, err := StartHTTP(ctx, exp, ho, opts)
 	var ae *AuthError
 	if errors.As(err, &ae) {
+		if gh != "" {
+			return nil, fmt.Errorf("not authorized: the server refused the gh token of %s (gh auth refresh adds scopes): %w", gh, err)
+		}
 		if static || m.opts.Tokens == nil {
 			return nil, fmt.Errorf("not authorized: the server refused the token in \"headers\" (check its scopes): %w", err)
 		}
@@ -184,6 +209,18 @@ func (m *Manager) startHTTP(ctx context.Context, st *serverState, exp Server, op
 // Flow.AuthURL, waits with Flow.Wait (or feeds Flow.Paste) and calls
 // FinishSignIn.
 func (m *Manager) BeginSignIn(ctx context.Context, name string) (*auth.Flow, error) {
+	return m.BeginSignInWith(ctx, name, SignInOptions{})
+}
+
+// SignInOptions change one sign-in: a fixed port and a localhost
+// redirect (a Slack app registered with http://localhost:47391/callback).
+type SignInOptions struct {
+	Port         int
+	RedirectHost string
+}
+
+// BeginSignInWith is BeginSignIn with options.
+func (m *Manager) BeginSignInWith(ctx context.Context, name string, so SignInOptions) (*auth.Flow, error) {
 	st, err := m.get(name)
 	if err != nil {
 		return nil, err
@@ -225,6 +262,10 @@ func (m *Manager) BeginSignIn(ctx context.Context, name string) (*auth.Flow, err
 	if m.opts.OAuthPort != nil {
 		c.Port = m.opts.OAuthPort()
 	}
+	if so.Port > 0 {
+		c.Port = so.Port
+	}
+	c.RedirectHost = so.RedirectHost
 	m.log(name, "sign-in started")
 	fl, err := auth.Begin(ctx, c)
 	if err != nil {
@@ -269,9 +310,18 @@ func (m *Manager) Trust(name string, always bool) {
 	}
 }
 
-// SignOut forgets a server's sign-in and ends its session.
-func (m *Manager) SignOut(name string) {
+// SignOut forgets a server's sign-in and ends its session. When the
+// authorization server has a revocation endpoint the tokens are revoked
+// there first (best effort, bounded by ctx; a failure is only logged).
+func (m *Manager) SignOut(ctx context.Context, name string) {
 	if m.opts.Tokens != nil {
+		if e, ok := m.opts.Tokens.Load(name); ok && e.RevocationEndpoint != "" {
+			if err := auth.Revoke(ctx, m.opts.HTTP, e); err != nil {
+				m.log(name, "revoke failed (the sign-in is forgotten here anyway): %s", ai.Redact(err.Error()))
+			} else {
+				m.log(name, "tokens revoked")
+			}
+		}
 		_ = m.opts.Tokens.Delete(name)
 	}
 	m.Stop(name)

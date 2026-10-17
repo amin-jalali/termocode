@@ -26,6 +26,7 @@ var mcpSettingKeys = map[string]string{
 	"setting-mcp-max-result-kb":     "mcp_max_result_kb",
 	"setting-mcp-trust-annotations": "mcp_trust_annotations",
 	"setting-mcp-oauth-port":        "mcp_oauth_port",
+	"setting-mcp-github-client-id":  "mcp_github_client_id",
 }
 
 func init() {
@@ -41,7 +42,9 @@ func init() {
 		settingsRow{ID: "setting-mcp-trust-annotations", Label: "mcp_trust_annotations", Kind: "bool", Default: "true",
 			Desc: "Let MCP tools the server marks read-only run without asking. false: every MCP tool asks, except the ones in the server's \"autoApprove\" list."},
 		settingsRow{ID: "setting-mcp-oauth-port", Label: "mcp_oauth_port", Kind: "int", Default: "0",
-			Desc: "Port of the sign-in listener on 127.0.0.1 for MCP servers with OAuth. 0 picks a free port each time; set a fixed one for an app that needs a fixed redirect URL (Slack) or for ssh -L port forwarding."},
+			Desc: "Port of the sign-in listener on 127.0.0.1 for MCP servers with OAuth. 0 takes the first free one of 47391–47395 (the ports termocode's client document lists, so ssh -L 47391:127.0.0.1:47391 works); set another only for an app registered with that port."},
+		settingsRow{ID: "setting-mcp-github-client-id", Label: "mcp_github_client_id", Kind: "string", Default: "(built in)",
+			Desc: "Client ID of a GitHub OAuth App with Device Flow on, for the GitHub sign-in with a code (Connect a service). Empty uses the one built into termocode (none until it is registered). Not a secret."},
 	)
 }
 
@@ -89,6 +92,8 @@ func mcpSettingValue(id string) (string, bool) {
 		return strconv.FormatBool(s.TrustAnnotations), true
 	case "setting-mcp-oauth-port":
 		return strconv.Itoa(s.OAuthPort), true
+	case "setting-mcp-github-client-id":
+		return s.GitHubClientID, true
 	}
 	return "", false
 }
@@ -129,15 +134,26 @@ func (m *Model) applyMCPSetting(id, value string) (tea.Cmd, bool) {
 	case "setting-mcp-oauth-port":
 		n, err := strconv.Atoi(value)
 		if err != nil || n < 0 || n > 65535 {
-			return bad("0 (any free port) or a port up to 65535")
+			return bad("0 (the default ports) or a port up to 65535")
 		}
 		v = n
+	case "setting-mcp-github-client-id":
+		if value == "(built in)" {
+			value = ""
+		}
+		if value != "" && !mcp.ValidClientID(value) {
+			return bad("a client id (letters, digits, . _ -)")
+		}
+		if value != "" {
+			v = value
+		}
 	}
 	if err := mcp.SaveSetting(mcpConfigPath(), key, v); err != nil {
 		return m.aiToastErr("Settings error", err), true
 	}
+	set := mcp.LoadSettings(mcpConfigPath())
+	mcp.SetGitHubClientID(set.GitHubClientID)
 	if s := m.aiS(); s.mcp != nil {
-		set := mcp.LoadSettings(mcpConfigPath())
 		s.mcp.SetTimeouts(set.IdleTimeout, set.CallTimeout)
 	}
 	var c tea.Cmd

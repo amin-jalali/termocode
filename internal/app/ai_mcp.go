@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 	"os"
 	"path/filepath"
 	"sort"
@@ -85,6 +87,7 @@ func (m *Model) aiMCP() *mcp.Manager {
 	}
 	root := aiWorkspaceRoot()
 	set := mcp.LoadSettings(mcpConfigPath())
+	mcp.SetGitHubClientID(set.GitHubClientID)
 	out := m.output
 	home, _ := os.UserHomeDir()
 	s.mcp = mcp.NewManager(mcp.ManagerOptions{
@@ -273,7 +276,7 @@ func (m *Model) answerMCPTrust(id string) tea.Cmd {
 	}
 	if p.signin && a != mcp.TrustDeny {
 		m.aiMCP().Trust(p.server, a == mcp.TrustAlways)
-		return m.mcpSignIn(p.server)
+		return m.mcpConnectServer(p.server)
 	}
 	if p.connect && a != mcp.TrustDeny {
 		return m.mcpConnect(p.server, a)
@@ -303,8 +306,13 @@ func (m *Model) mcpToolsChangedToast(name string) tea.Cmd {
 
 // ── Servers picker ─────────────────────────────────────────────────────
 
-// mcpStatusHint is a server row's hint: "local · running · pid 42 · 10 tools".
+// mcpStatusHint is a server row's hint: "local · running · pid 42 · 10
+// tools"; a known service reads "amin-jalali · read only · connected ·
+// 28 tools".
 func mcpStatusHint(st mcp.Status) string {
+	if h := mcpServiceHint(st); h != "" {
+		return h
+	}
 	kind := "local"
 	if st.Type != mcp.TypeStdio {
 		kind = "remote"
@@ -346,6 +354,9 @@ func mcpStatusHint(st mcp.Status) string {
 }
 
 func mcpStatusIcon(st mcp.Status) string {
+	if st.Expired {
+		return "!"
+	}
 	switch st.State {
 	case mcp.StateRunning:
 		return "●"
@@ -363,7 +374,7 @@ func (m *Model) openMCPServers() tea.Cmd {
 	mgr.Reload()
 	list := mgr.Servers()
 	items := make([]picker.Item, 0, len(list)+1)
-	items = append(items, picker.Item{ID: mcpAddID, Title: "+ Add a server…", Hint: "Linear, GitHub, GitLab, Slack, Notion …"})
+	items = append(items, picker.Item{ID: mcpAddID, Title: "+ Connect a service…", Hint: "GitHub, Linear, GitLab, Slack, Notion …"})
 	for _, st := range list {
 		items = append(items, picker.Item{ID: st.Name, Title: mcpStatusIcon(st) + " " + st.Name, Hint: mcpStatusHint(st)})
 	}
@@ -386,6 +397,22 @@ func (m *Model) openMCPServerActions(name string) tea.Cmd {
 		return nil
 	}
 	m.aiS().mcpSel = name
+	items := mcpServerActionItems(m, name)
+	m.picker = picker.NewItems(" MCP "+name+" — "+mcpStatusHint(st)+" ", items)
+	m.picker.SetSize(m.w, m.h)
+	m.pickerOpen = true
+	m.pickerKind = pickerKindMCPServer
+	return nil
+}
+
+// mcpServerActionItems are the rows of a server's actions picker.
+func mcpServerActionItems(m *Model, name string) []picker.Item {
+	var st mcp.Status
+	for _, x := range m.aiMCP().Servers() {
+		if x.Name == name {
+			st = x
+		}
+	}
 	items := []picker.Item{
 		{ID: "connect", Title: "Connect / Refresh tools", Hint: "start it and list its tools"},
 		{ID: "tools", Title: "Show tools", Hint: fmt.Sprintf("%d tools", st.Tools)},
@@ -401,11 +428,24 @@ func (m *Model) openMCPServerActions(name string) tea.Cmd {
 	}
 	entry := mcpServerEntries(name)
 	if st.Type == mcp.TypeHTTP && st.State != mcp.StateInvalid && (len(entry) == 0 || !mcpHasAuthHeader(entry[0])) {
-		hint := "OAuth in the browser"
-		if mcpOverSSH() {
-			hint = "OAuth: paste the address back (SSH)"
+		hint := "in the browser"
+		switch {
+		case st.Expired:
+			hint = "the sign-in ended"
+		case mcpOverSSH():
+			hint = "paste the address back (SSH)"
 		}
 		items = append(items, picker.Item{ID: "signin", Title: "Sign in", Hint: hint})
+	}
+	if p, ok := mcpPresetFor(name); ok && len(entry) > 0 && st.State != mcp.StateInvalid {
+		if p.ReadOnlyURL != "" || p.WriteScopes != nil {
+			if mcpEntryReadOnly(entry[0], p) {
+				items = append(items, picker.Item{ID: "writes", Title: "Allow writes", Hint: "create, comment, change (each write asks first)"})
+			} else {
+				items = append(items, picker.Item{ID: "readonly", Title: "Read only", Hint: "turn writes off"})
+			}
+		}
+		items = append(items, picker.Item{ID: "add-account", Title: "Add another account", Hint: "a second " + p.Title + " entry"})
 	}
 	if st.SignedIn {
 		items = append(items, picker.Item{ID: "signout", Title: "Sign out", Hint: "forget its tokens"})
@@ -427,11 +467,7 @@ func (m *Model) openMCPServerActions(name string) tea.Cmd {
 		picker.Item{ID: "edit", Title: "Edit in mcp.json", Hint: st.Source},
 		picker.Item{ID: "log", Title: "Show log", Hint: "Output: MCP"},
 	)
-	m.picker = picker.NewItems(" MCP "+name+" — "+mcpStatusHint(st)+" ", items)
-	m.picker.SetSize(m.w, m.h)
-	m.pickerOpen = true
-	m.pickerKind = pickerKindMCPServer
-	return nil
+	return items
 }
 
 // mcpConnectDoneMsg ends a Connect from the servers picker.
@@ -519,9 +555,13 @@ func (m *Model) onMCPServerAction(id string) tea.Cmd {
 				return nil
 			}
 		}
-		return m.mcpSignIn(name)
+		return m.mcpConnectServer(name)
 	case "signout":
 		return m.mcpSignOut(name)
+	case "writes", "readonly":
+		return m.mcpSetWrites(name, id == "writes")
+	case "add-account":
+		return m.mcpAddAccount(name)
 	}
 	if secret, ok := strings.CutPrefix(id, "secret:"); ok {
 		return m.mcpAskSecret(secret)
@@ -605,11 +645,11 @@ func (m *Model) handleMCPPickerSelect(id string) (tea.Cmd, bool) {
 	switch m.pickerKind {
 	case pickerKindMCPServers:
 		if id == mcpAddID {
-			return m.openMCPPresets(), true
+			return m.openMCPConnect(), true
 		}
 		return m.openMCPServerActions(id), true
-	case pickerKindMCPPresets:
-		return m.onMCPPresetPicked(id), true
+	case pickerKindMCPConnect:
+		return m.onMCPConnectPicked(id), true
 	case pickerKindMCPServer:
 		return m.onMCPServerAction(id), true
 	case pickerKindMCPTools:
@@ -619,31 +659,85 @@ func (m *Model) handleMCPPickerSelect(id string) (tea.Cmd, bool) {
 }
 
 // mcpGlyph marks MCP in the chat header chip.
-func mcpGlyph() string {
-	if theme.CurrentIconMode == theme.IconModeASCII {
-		return "~"
-	}
-	return "⌁"
-}
+func mcpGlyph() string { return theme.GlyphMCP.String() }
 
-// mcpChipLabel is the chat header chip "⌁ N MCP" (N = connected
-// servers), or "" when no server is configured or MCP never ran (the
-// header never creates the Manager).
+// mcpChipLabel is the chat header chip: "⌁ N MCP" (N = connected
+// servers), "⌁ Connect…" without any service, "⌁ N needs sign-in" when
+// servers wait for a sign-in; "" before MCP was loaded (the header never
+// creates the Manager; opening the chat does).
 func (m Model) mcpChipLabel() string {
 	n := m.mcpChipState()
-	if n < 0 {
+	switch {
+	case n == mcpChipNone:
 		return ""
+	case n == mcpChipConnect:
+		return mcpGlyph() + " Connect…"
+	case n <= mcpChipSignIn:
+		return mcpGlyph() + " " + strconv.Itoa(mcpChipSignIn-n+1) + " needs sign-in"
 	}
 	return mcpGlyph() + " " + strconv.Itoa(n) + " MCP"
 }
 
-// mcpChipState is -1 when there is no chip, else the connected count
-// (no allocation: the header memo compares it every frame).
+// mcpChipState values below 0 (≥ 0 is the connected count).
+const (
+	mcpChipNone    = -1
+	mcpChipConnect = -2
+	mcpChipSignIn  = -3 // -3 = 1 server needs a sign-in, -4 = 2, …
+)
+
+// mcpChipState is the chip as one int (no allocation: the header memo
+// compares it every frame).
 func (m Model) mcpChipState() int {
-	if m.ai == nil || m.ai.mcp == nil || m.ai.mcp.Count() == 0 {
-		return -1
+	if m.ai == nil || m.ai.mcp == nil {
+		return mcpChipNone
+	}
+	if m.ai.mcp.Count() == 0 {
+		return mcpChipConnect
+	}
+	if n := len(m.ai.mcp.NeedSignIn()); n > 0 {
+		return mcpChipSignIn - n + 1
 	}
 	return m.ai.mcp.Running()
+}
+
+// onMCPChip runs a click on the chip: the wizard without services or for
+// the server that needs a sign-in, else AI: MCP Servers….
+func (m *Model) onMCPChip() tea.Cmd {
+	switch n := m.mcpChipState(); {
+	case n == mcpChipConnect:
+		return m.openMCPConnect()
+	case n <= mcpChipSignIn:
+		return m.mcpConnectServer(m.aiMCP().NeedSignIn()[0])
+	}
+	return m.openMCPServers()
+}
+
+// mcpSignInBar is the row above the chat input while a server waits
+// for a sign-in ("⌁ GitHub needs a sign-in  Sign in  Not now"); ok=false
+// when there is none (or the user said Not now).
+func (m Model) mcpSignInBar() (aiLine, bool) {
+	if m.ai == nil || m.ai.mcp == nil {
+		return aiLine{}, false
+	}
+	for _, name := range m.ai.mcp.NeedSignIn() {
+		if m.ai.mcpNotNow[name] {
+			continue
+		}
+		title := name
+		if p, ok := mcpPresetFor(name); ok && p.Name == name {
+			title = p.Title
+		}
+		bg := theme.Bg(theme.BgPanel)
+		chip := func(label string, t float64) string {
+			return lipgloss.NewStyle().Background(theme.Mix(theme.BgPanel, theme.AIAccent, t)).
+				Foreground(theme.LG(theme.TextPrimary)).Render(" " + label + " ")
+		}
+		head := " " + mcpGlyph() + " " + title + " needs a sign-in "
+		x := runewidth.StringWidth(head)
+		row := theme.FgBg(theme.TextSecondary, theme.BgPanel).Render(head) + chip("Sign in", 0.30) + bg.Render(" ") + chip("Not now", 0.10)
+		return aiLine{styled: row, buttons: []aiLineButton{{x, x + 9, "mcp-signin:" + name}, {x + 10, x + 19, "mcp-notnow:" + name}}}, true
+	}
+	return aiLine{}, false
 }
 
 // mcpAutoApproveClasses are the "mcp:<server>" rows of AI: Agent
@@ -654,4 +748,180 @@ func (m *Model) mcpAutoApproveClasses() []string {
 		out = append(out, mcp.ClassPrefix+st.Name)
 	}
 	return out
+}
+
+// mcpEntryReadOnly reports an entry on the service's read-only endpoint
+// or read scopes.
+func mcpEntryReadOnly(e mcp.Server, p mcp.Preset) bool {
+	if p.ReadOnlyURL != "" {
+		return strings.TrimSuffix(e.URL, "/") == strings.TrimSuffix(p.ReadOnlyURL, "/")
+	}
+	if p.WriteScopes == nil {
+		return false
+	}
+	if e.OAuth == nil {
+		return false
+	}
+	return strings.Join(e.OAuth.Scopes, " ") == strings.Join(p.ReadScopes, " ")
+}
+
+// mcpServiceHint is the row hint of a known service (a preset entry):
+// account · access · state · tools ("" for other servers).
+func mcpServiceHint(st mcp.Status) string {
+	p, ok := mcpPresetFor(st.Name)
+	if !ok || st.Type != mcp.TypeHTTP || st.State == mcp.StateInvalid {
+		return ""
+	}
+	entries := mcpServerEntries(st.Name)
+	if len(entries) == 0 {
+		return ""
+	}
+	e := entries[0]
+	var parts []string
+	acc := (mcp.CredStore{Path: mcpCredPath()}).Account(st.Name)
+	if acc == "" && e.Auth != nil {
+		acc = e.Auth.GH
+	}
+	if acc != "" {
+		parts = append(parts, acc)
+	}
+	if p.ReadOnlyURL != "" || p.WriteScopes != nil {
+		if mcpEntryReadOnly(e, p) {
+			parts = append(parts, "read only")
+		} else {
+			parts = append(parts, "read and write")
+		}
+	}
+	switch {
+	case st.Expired:
+		parts = append(parts, "sign-in expired")
+	case st.State == mcp.StateSignIn:
+		parts = append(parts, "sign-in needed")
+	case st.State == mcp.StateFailed:
+		parts = append(parts, "failed: "+st.Problem)
+	case st.State == mcp.StateRunning:
+		parts = append(parts, "connected")
+	case !st.SignedIn && (e.Auth == nil || e.Auth.GH == "") && !mcpHasAuthHeader(e):
+		parts = append(parts, "not signed in")
+	}
+	if st.Tools > 0 {
+		parts = append(parts, fmt.Sprintf("%d tools", st.Tools))
+	}
+	if !st.Trusted {
+		parts = append(parts, "not trusted")
+	}
+	if st.Source == mcp.SourceProject {
+		parts = append(parts, "project")
+	}
+	return ai.Redact(strings.Join(parts, " · "))
+}
+
+// mcpSetWrites turns a service's writes on or off: the full or the
+// read-only endpoint (the sign-in stays: same resource), and, where the
+// service limits writes by scope (Linear, ClickUp), the scopes and a new
+// sign-in.
+func (m *Model) mcpSetWrites(name string, on bool) tea.Cmd {
+	p, ok := mcpPresetFor(name)
+	entries := mcpServerEntries(name)
+	if !ok || len(entries) == 0 {
+		return nil
+	}
+	e := entries[0]
+	if p.ReadOnlyURL != "" {
+		u := p.ReadOnlyURL
+		if on {
+			u = p.URL
+		}
+		if err := mcp.SetServerKey(mcpUserPath(), name, "url", u); err != nil {
+			return m.aiToastErr("MCP "+name, err)
+		}
+	}
+	resign := false
+	if p.WriteScopes != nil && e.OAuth != nil && (e.Auth == nil || e.Auth.GH == "") && !mcpHasAuthHeader(e) {
+		scopes := p.ReadScopes
+		if on {
+			scopes = p.WriteScopes
+		}
+		if strings.Join(scopes, " ") != strings.Join(e.OAuth.Scopes, " ") {
+			o := *e.OAuth
+			o.Scopes = scopes
+			if err := mcp.SetServerKey(mcpUserPath(), name, "oauth", &o); err != nil {
+				return m.aiToastErr("MCP "+name, err)
+			}
+			resign = on // more scopes need a new consent; fewer do not
+		}
+	}
+	mgr := m.aiMCP()
+	mgr.Reload()
+	mgr.Stop(name)
+	if resign {
+		return m.mcpConnectServer(name)
+	}
+	if on {
+		return m.aiInfo("MCP " + name + ": writes are on (each write asks first)")
+	}
+	return m.aiInfo("MCP " + name + ": read only")
+}
+
+// mcpAddAccount runs the wizard for a second entry of the same service.
+func (m *Model) mcpAddAccount(name string) tea.Cmd {
+	p, ok := mcpPresetFor(name)
+	if !ok {
+		return nil
+	}
+	next := p.Name + "-2"
+	for i := 3; len(mcpServerEntries(next)) > 0; i++ {
+		next = fmt.Sprintf("%s-%d", p.Name, i)
+	}
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
+		defer cancel()
+		acc, _ := mcp.GHAccounts(ctx)
+		return mcpWizEnvMsg{accounts: acc, then: p.Name, name: next, another: true}
+	}
+}
+
+// mcpPromptLines are the system-prompt lines about connected services
+// (plan §4.11): "GitHub is connected as amin-jalali (read only)." The
+// account is a cleaned label, never a token.
+func (m *Model) mcpPromptLines() string {
+	if m.ai == nil || m.ai.mcp == nil {
+		return ""
+	}
+	cs := mcp.CredStore{Path: mcpCredPath()}
+	var out []string
+	for _, st := range m.ai.mcp.Servers() {
+		p, ok := mcpPresetFor(st.Name)
+		if !ok || st.Type != mcp.TypeHTTP || st.State == mcp.StateInvalid {
+			continue
+		}
+		entries := mcpServerEntries(st.Name)
+		if len(entries) == 0 {
+			continue
+		}
+		e := entries[0]
+		acc := cs.Account(st.Name)
+		if acc == "" && e.Auth != nil {
+			acc = e.Auth.GH
+		}
+		if !st.SignedIn && acc == "" && !mcpHasAuthHeader(e) {
+			continue
+		}
+		line := p.Title + " is connected"
+		if st.Name != p.Name {
+			line = p.Title + " (" + st.Name + ") is connected"
+		}
+		if acc != "" {
+			line += " as " + mcp.CleanAccount(acc)
+		}
+		if p.ReadOnlyURL != "" || p.WriteScopes != nil {
+			if mcpEntryReadOnly(e, p) {
+				line += " (read only)"
+			} else {
+				line += " (read and write)"
+			}
+		}
+		out = append(out, line+".")
+	}
+	return strings.Join(out, "\n")
 }

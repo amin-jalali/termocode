@@ -60,7 +60,13 @@ type Model struct {
 	// note is a few lines of plain text shown above the search field
 	// (SetNote); empty = none.
 	note []string
+	// width is the box width asked for (SetWidth); 0 = the default 56.
+	width int
 }
+
+// SetWidth asks for a wider box (rows with a hint column, like the
+// Connect-a-service list); it still fits the window.
+func (m *Model) SetWidth(w int) { m.width = w }
 
 // SetNote shows lines of plain text above the search field, e.g. why a
 // choice is needed. Each line should fit the box (about 50 cells).
@@ -628,6 +634,9 @@ func (m *Model) AnimStep() { m.scroll.Step() }
 // boxH = innerH + 2 (top + bottom border).
 func (m Model) layoutDims() (boxW, boxH, available int) {
 	boxW = 56
+	if m.width > boxW {
+		boxW = m.width
+	}
 	if maxW := m.w - 4; boxW > maxW {
 		boxW = maxW
 	}
