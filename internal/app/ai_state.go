@@ -100,6 +100,7 @@ type aiState struct {
 	mcpWiz        *mcpWizard
 	mcpWizGen     int
 	mcpGHAccounts []mcp.GHAccount
+	mcpNotNow     map[string]bool // "Not now" on a server's sign-in row
 
 	// configure / sign-in flow
 	cfgKind string

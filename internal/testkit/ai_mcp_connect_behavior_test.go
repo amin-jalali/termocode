@@ -466,3 +466,41 @@ func TestConnectCancel(t *testing.T) {
 		t.Error("signed in after Esc")
 	}
 }
+
+// Spec (CX-6): after a chat turn whose server answers 401, the row above
+// the input says "GitHub needs a sign-in" with Sign in / Not now; the
+// header chip counts it; Sign in opens the wizard on GitHub.
+func TestConnectChatSignInButton(t *testing.T) {
+	noGH(t)
+	as := mcptest.NewAuthServer(t, mcptest.AuthOptions{})
+	srv := mcptest.NewHTTPServer(t, mcptest.HTTPOptions{Validate: as.Valid, AuthServer: as.Issuer()})
+	pointPreset(t, "github", func(p *mcp.Preset) {
+		p.URL, p.ReadOnlyURL = srv.MCPURL(), srv.MCPURL()+"/readonly"
+		p.Device.ClientID = func() string { return "" }
+	})
+	_, model := fakeToolModel(t)
+	d := remoteDriver(t, model.URL, `{"mcpServers":{"github":{"type":"http","url":"`+srv.MCPURL()+`/readonly"}}}`, "", false)
+	askAI(d, "list my pull requests")
+	waitDone(t, d)
+	if !d.WaitForText("GitHub needs a sign-in", 10*time.Second) {
+		t.Fatalf("no sign-in row:\n%s", screen(d))
+	}
+	if !strings.Contains(screen(d), "1 needs sign-in") {
+		t.Errorf("chip does not count it:\n%s", screen(d))
+	}
+	clicked := false
+	for y, line := range strings.Split(screen(d), "\n") {
+		if i := strings.Index(line, "needs a sign-in  Sign in"); i >= 0 {
+			x := len([]rune(line[:i])) + len("needs a sign-in  ") + 2
+			d.Click(x, y)
+			clicked = true
+			break
+		}
+	}
+	if !clicked {
+		t.Fatalf("no Sign in button:\n%s", screen(d))
+	}
+	if !d.WaitForText("Connect GitHub", 10*time.Second) {
+		t.Fatalf("Sign in did not open the wizard:\n%s", screen(d))
+	}
+}

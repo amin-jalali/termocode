@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 	"os"
 	"path/filepath"
 	"sort"
@@ -619,31 +621,85 @@ func (m *Model) handleMCPPickerSelect(id string) (tea.Cmd, bool) {
 }
 
 // mcpGlyph marks MCP in the chat header chip.
-func mcpGlyph() string {
-	if theme.CurrentIconMode == theme.IconModeASCII {
-		return "~"
-	}
-	return "⌁"
-}
+func mcpGlyph() string { return theme.GlyphMCP.String() }
 
-// mcpChipLabel is the chat header chip "⌁ N MCP" (N = connected
-// servers), or "" when no server is configured or MCP never ran (the
-// header never creates the Manager).
+// mcpChipLabel is the chat header chip: "⌁ N MCP" (N = connected
+// servers), "⌁ Connect…" without any service, "⌁ N needs sign-in" when
+// servers wait for a sign-in; "" before MCP was loaded (the header never
+// creates the Manager; opening the chat does).
 func (m Model) mcpChipLabel() string {
 	n := m.mcpChipState()
-	if n < 0 {
+	switch {
+	case n == mcpChipNone:
 		return ""
+	case n == mcpChipConnect:
+		return mcpGlyph() + " Connect…"
+	case n <= mcpChipSignIn:
+		return mcpGlyph() + " " + strconv.Itoa(mcpChipSignIn-n+1) + " needs sign-in"
 	}
 	return mcpGlyph() + " " + strconv.Itoa(n) + " MCP"
 }
 
-// mcpChipState is -1 when there is no chip, else the connected count
-// (no allocation: the header memo compares it every frame).
+// mcpChipState values below 0 (≥ 0 is the connected count).
+const (
+	mcpChipNone    = -1
+	mcpChipConnect = -2
+	mcpChipSignIn  = -3 // -3 = 1 server needs a sign-in, -4 = 2, …
+)
+
+// mcpChipState is the chip as one int (no allocation: the header memo
+// compares it every frame).
 func (m Model) mcpChipState() int {
-	if m.ai == nil || m.ai.mcp == nil || m.ai.mcp.Count() == 0 {
-		return -1
+	if m.ai == nil || m.ai.mcp == nil {
+		return mcpChipNone
+	}
+	if m.ai.mcp.Count() == 0 {
+		return mcpChipConnect
+	}
+	if n := len(m.ai.mcp.NeedSignIn()); n > 0 {
+		return mcpChipSignIn - n + 1
 	}
 	return m.ai.mcp.Running()
+}
+
+// onMCPChip runs a click on the chip: the wizard without services or for
+// the server that needs a sign-in, else AI: MCP Servers….
+func (m *Model) onMCPChip() tea.Cmd {
+	switch n := m.mcpChipState(); {
+	case n == mcpChipConnect:
+		return m.openMCPConnect()
+	case n <= mcpChipSignIn:
+		return m.mcpConnectServer(m.aiMCP().NeedSignIn()[0])
+	}
+	return m.openMCPServers()
+}
+
+// mcpSignInBar is the row above the chat input while a server waits
+// for a sign-in ("⌁ GitHub needs a sign-in  Sign in  Not now"); ok=false
+// when there is none (or the user said Not now).
+func (m Model) mcpSignInBar() (aiLine, bool) {
+	if m.ai == nil || m.ai.mcp == nil {
+		return aiLine{}, false
+	}
+	for _, name := range m.ai.mcp.NeedSignIn() {
+		if m.ai.mcpNotNow[name] {
+			continue
+		}
+		title := name
+		if p, ok := mcpPresetFor(name); ok && p.Name == name {
+			title = p.Title
+		}
+		bg := theme.Bg(theme.BgPanel)
+		chip := func(label string, t float64) string {
+			return lipgloss.NewStyle().Background(theme.Mix(theme.BgPanel, theme.AIAccent, t)).
+				Foreground(theme.LG(theme.TextPrimary)).Render(" " + label + " ")
+		}
+		head := " " + mcpGlyph() + " " + title + " needs a sign-in "
+		x := runewidth.StringWidth(head)
+		row := theme.FgBg(theme.TextSecondary, theme.BgPanel).Render(head) + chip("Sign in", 0.30) + bg.Render(" ") + chip("Not now", 0.10)
+		return aiLine{styled: row, buttons: []aiLineButton{{x, x + 9, "mcp-signin:" + name}, {x + 10, x + 19, "mcp-notnow:" + name}}}, true
+	}
+	return aiLine{}, false
 }
 
 // mcpAutoApproveClasses are the "mcp:<server>" rows of AI: Agent

@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/amin-jalali/termocode/internal/mcp"
 	"strings"
 	"sync"
 	"time"
@@ -33,6 +34,7 @@ type setupState struct {
 	plan        *setup.GnomeProfilePlan // waiting for the user's confirm
 	doneSaved   bool                    // setup_done written this session
 	themeAsked  bool                    // the theme picker was opened from the card
+	services    int                     // MCP servers in mcp.json (-1: count again)
 }
 
 // setupCardOff hides the card whatever config.json says. This package's
@@ -42,7 +44,7 @@ var setupCardOff bool
 
 func newSetupState() *setupState {
 	c := loadSettings()
-	s := &setupState{visible: !setupCardOff && setupCardWanted(c), settled: map[string]bool{}}
+	s := &setupState{visible: !setupCardOff && setupCardWanted(c), settled: map[string]bool{}, services: -1}
 	for _, id := range c.SetupSettled {
 		s.settled[id] = true
 	}
@@ -232,6 +234,11 @@ func (m *Model) setupFacts() setupFacts {
 	if m.aiConfigured() {
 		cfg := m.aiS().cfg
 		f.aiConfigured = true
+		if s.services < 0 || (m.ai != nil && m.ai.mcpWiz != nil) {
+			list, _ := mcp.Load(mcpUserPath(), "")
+			s.services = len(list)
+		}
+		f.services = s.services
 		f.aiProvider = ai.KindLabel(cfg.Kind)
 		f.aiModel = cfg.Model
 		if f.aiModel == "" {
@@ -359,6 +366,11 @@ func (m *Model) pressSetupButton(id string) tea.Cmd {
 		return m.openAIConfigure()
 	case id == "ai-skip":
 		return m.settleSetup("ai")
+	case id == "services-connect":
+		s.services = -1 // count again when the wizard is done
+		return m.openMCPConnect()
+	case id == "services-skip":
+		return m.settleSetup("services")
 	case id == "theme-more":
 		// A pick there answers the step (onSetupThemePicked); Esc not.
 		s.themeAsked = true

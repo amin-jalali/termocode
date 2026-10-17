@@ -435,6 +435,6 @@ var (
 	GlyphRadioOff = Icon{NerdFont: "◦", Unicode: "◦", ASCII: "o"}
 	GlyphOK       = Icon{NerdFont: "✓", Unicode: "✓", ASCII: "v"}
 	GlyphFail     = Icon{NerdFont: "✗", Unicode: "✗", ASCII: "x"}
-	GlyphMCP      = Icon{NerdFont: "⌁", Unicode: "⌁", ASCII: "~"}
+	GlyphMCP      = Icon{NerdFont: "\uf1e6", Unicode: "⌁", ASCII: "~"} // nf-fa-plug
 	GlyphWait     = Icon{NerdFont: "\uf017", Unicode: "◷", ASCII: "~"} // nf-fa-clock_o
 )
