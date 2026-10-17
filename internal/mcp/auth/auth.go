@@ -242,7 +242,8 @@ type Config struct {
 	Scopes           []string // from mcp.json "oauth" (wins over the server's list)
 	ClientID         string   // pre-registered client (mcp.json "oauth")
 	ClientSecret     string
-	Port             int    // loopback port; 0 picks a free one
+	Port             int    // loopback port; 0 takes the first free one of LoopbackPorts
+	RedirectHost     string // "localhost" for services that want it (Slack); default 127.0.0.1
 	CIMDURL          string // our client id metadata document ("" none)
 	ClientName       string // for DCR ("termocode")
 	HTTP             *http.Client
@@ -285,6 +286,42 @@ func (f *Flow) RedirectURI() string { return f.redirect }
 // Port is the loopback port (for "ssh -L port:127.0.0.1:port host").
 func (f *Flow) Port() int { return f.port }
 
+// LoopbackPorts are the sign-in listener's ports: the first free one is
+// used. They are fixed (not random) so the redirect URIs in termocode's
+// client metadata document (docs/mcp/client.json) match exactly, and so
+// "ssh -L 47391:127.0.0.1:47391" can live in ~/.ssh/config.
+var LoopbackPorts = []int{47391, 47392, 47393, 47394, 47395}
+
+// LoopbackRedirects are the redirect URIs of LoopbackPorts, 127.0.0.1
+// first, then localhost (docs/mcp/client.json lists exactly these).
+func LoopbackRedirects() []string {
+	var out []string
+	for _, h := range []string{"127.0.0.1", "localhost"} {
+		for _, p := range LoopbackPorts {
+			out = append(out, fmt.Sprintf("http://%s:%d/callback", h, p))
+		}
+	}
+	return out
+}
+
+// listen opens the one-shot listener on 127.0.0.1 only.
+func listen(port int) (net.Listener, error) {
+	if port > 0 {
+		ln, err := net.Listen("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
+		if err != nil {
+			return nil, fmt.Errorf("sign-in listener on 127.0.0.1:%d (mcp_oauth_port): %w", port, err)
+		}
+		return ln, nil
+	}
+	for _, p := range LoopbackPorts {
+		if ln, err := net.Listen("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(p))); err == nil {
+			return ln, nil
+		}
+	}
+	return nil, fmt.Errorf("the sign-in ports %d–%d are all busy (another sign-in is open?); close it, or set mcp_oauth_port",
+		LoopbackPorts[0], LoopbackPorts[len(LoopbackPorts)-1])
+}
+
 // Begin discovers the server's authorization server, gets a client id,
 // starts the loopback listener and builds the authorize URL.
 func Begin(ctx context.Context, cfg Config) (*Flow, error) {
@@ -292,13 +329,17 @@ func Begin(ctx context.Context, cfg Config) (*Flow, error) {
 	if err != nil {
 		return nil, err
 	}
-	ln, err := net.Listen("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(cfg.Port)))
+	ln, err := listen(cfg.Port)
 	if err != nil {
-		return nil, fmt.Errorf("sign-in listener on 127.0.0.1:%d: %w", cfg.Port, err)
+		return nil, err
 	}
 	port := ln.Addr().(*net.TCPAddr).Port
+	host := "127.0.0.1"
+	if cfg.RedirectHost == "localhost" {
+		host = "localhost"
+	}
 	f := &Flow{md: md, hc: cfg.HTTP, port: port, ln: ln, results: make(chan callback, 1),
-		redirect: fmt.Sprintf("http://127.0.0.1:%d/callback", port)}
+		redirect: fmt.Sprintf("http://%s:%d/callback", host, port)}
 	life := cfg.Lifetime
 	if life <= 0 {
 		life = DefaultLifetime
@@ -320,12 +361,14 @@ func Begin(ctx context.Context, cfg Config) (*Flow, error) {
 				f.authMethod = "client_secret_basic"
 			}
 		}
+	// The MCP spec's order: pre-registered, then a Client ID Metadata
+	// Document, then Dynamic Client Registration.
+	case md.CIMD && cfg.CIMDURL != "":
+		f.clientID = cfg.CIMDURL
 	case md.RegistrationEndpoint != "":
 		if err := f.register(ctx, cfg.ClientName); err != nil {
 			return nil, err
 		}
-	case md.CIMD && cfg.CIMDURL != "":
-		f.clientID = cfg.CIMDURL
 	default:
 		return nil, ErrNeedsApp
 	}
@@ -519,7 +562,7 @@ func (f *Flow) Wait(ctx context.Context) (ai.MCPOAuth, error) {
 	form.Set("resource", f.md.Resource)
 	e := ai.MCPOAuth{Issuer: f.md.Issuer, Resource: f.md.Resource, TokenEndpoint: f.md.TokenEndpoint,
 		ClientID: f.clientID, ClientSecret: f.clientSecret, AuthMethod: f.authMethod, RedirectURI: f.redirect,
-		Registration: f.registration, Scope: f.scope}
+		Registration: f.registration, Scope: f.scope, RevocationEndpoint: f.md.RevocationEndpoint}
 	return tokenRequest(ctx, f.hc, e, form)
 }
 
@@ -553,6 +596,36 @@ func Refresh(ctx context.Context, hc *http.Client, e ai.MCPOAuth) (ai.MCPOAuth, 
 		form.Set("resource", e.Resource)
 	}
 	return tokenRequest(ctx, hc, e, form)
+}
+
+// Revoke asks the authorization server to forget a sign-in (RFC 7009):
+// the refresh token first, then the access token. Without a revocation
+// endpoint it does nothing. Callers log a failure; the local sign-in is
+// forgotten anyway.
+func Revoke(ctx context.Context, hc *http.Client, e ai.MCPOAuth) error {
+	if e.RevocationEndpoint == "" {
+		return nil
+	}
+	if err := checkEndpoint(e.RevocationEndpoint); err != nil {
+		return err
+	}
+	var first error
+	for _, tok := range []struct{ v, hint string }{{e.RefreshToken, "refresh_token"}, {e.AccessToken, "access_token"}} {
+		if tok.v == "" {
+			continue
+		}
+		form := url.Values{"token": {tok.v}, "token_type_hint": {tok.hint}}
+		r := e
+		r.TokenEndpoint = e.RevocationEndpoint
+		status, b, err := postToken(ctx, hc, r, form)
+		if err == nil && status != http.StatusOK {
+			err = fmt.Errorf("revoke: HTTP %d: %s", status, ai.Redact(oauthErrText(b)))
+		}
+		if err != nil && first == nil {
+			first = err
+		}
+	}
+	return first
 }
 
 // tokenRequest posts to the token endpoint and fills e with the answer.

@@ -16,7 +16,7 @@ func TestPresets(t *testing.T) {
 		"linear":    "https://mcp.linear.app/mcp",
 		"github":    "https://api.githubcopilot.com/mcp/",
 		"gitlab":    "https://gitlab.com/api/v4/mcp",
-		"atlassian": "https://mcp.atlassian.com/v1/mcp",
+		"atlassian": "https://mcp.atlassian.com/v2/mcp",
 		"slack":     "https://mcp.slack.com/mcp",
 		"notion":    "https://mcp.notion.com/mcp",
 		"sentry":    "https://mcp.sentry.dev/mcp",

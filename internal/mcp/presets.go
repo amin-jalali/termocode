@@ -43,7 +43,7 @@ func Presets() []Preset {
 			Note:    "Needs a personal access token (scopes: repo, read:org): Set secret github_pat…. Not for GitHub Enterprise Server."},
 		{Name: "gitlab", Title: "GitLab", URL: "https://gitlab.com/api/v4/mcp", OAuth: &OAuthConfig{Scopes: []string{"mcp"}},
 			Note: "Sign in in the browser (scope mcp; GitLab Premium / Ultimate with Duo). Self-managed: change the url to your host."},
-		{Name: "atlassian", Title: "Atlassian (Jira, Confluence)", URL: "https://mcp.atlassian.com/v1/mcp",
+		{Name: "atlassian", Title: "Atlassian (Jira, Confluence)", URL: "https://mcp.atlassian.com/v2/mcp",
 			Note: "Sign in in the browser. If Atlassian refuses this client, use an API token header instead (see the MCP guide)."},
 		{Name: "slack", Title: "Slack", URL: "https://mcp.slack.com/mcp",
 			OAuth: &OAuthConfig{ClientID: "${secret:slack_client_id}", ClientSecret: "${secret:slack_client_secret}",

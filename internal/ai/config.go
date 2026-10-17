@@ -59,6 +59,9 @@ type Credentials struct {
 	// MCPOAuth are the OAuth sign-ins of remote MCP servers, by server
 	// name (internal/mcp/auth).
 	MCPOAuth map[string]MCPOAuth `json:"mcp_oauth,omitempty"`
+	// MCPAccounts are the account labels of servers that have no OAuth
+	// sign-in (the gh and token ways), by server name.
+	MCPAccounts map[string]string `json:"mcp_accounts,omitempty"`
 }
 
 // MCPOAuth is one MCP server's OAuth sign-in. Issuer and Resource bind
@@ -77,6 +80,11 @@ type MCPOAuth struct {
 	RefreshToken  string          `json:"refresh_token,omitempty"`
 	ExpiresAtMs   int64           `json:"expires_at_ms,omitempty"`
 	Scope         string          `json:"scope,omitempty"`
+	// RevocationEndpoint is where Sign out revokes the tokens ("" none).
+	RevocationEndpoint string `json:"revocation_endpoint,omitempty"`
+	// Account is who signed in ("amin-jalali"), from the service's
+	// identity tool; shown as "connected as …", never sent anywhere.
+	Account string `json:"account,omitempty"`
 }
 
 // Expired reports a token that ends within a minute (0: no end known).

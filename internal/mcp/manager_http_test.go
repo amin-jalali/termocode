@@ -175,7 +175,7 @@ func TestManagerOAuthSignIn(t *testing.T) {
 	if hs := authHeaders(o.srv); hs[len(hs)-1] != "Bearer "+tok.AccessToken {
 		t.Errorf("last Authorization %q", hs[len(hs)-1])
 	}
-	o.m.SignOut("lin")
+	o.m.SignOut(context.Background(), "lin")
 	if _, ok := o.tokens.Load("lin"); ok || status(o.m, "lin").State == StateRunning {
 		t.Errorf("after sign out: %+v", status(o.m, "lin"))
 	}
