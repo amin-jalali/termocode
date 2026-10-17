@@ -321,6 +321,8 @@ Next:
 - [x] U10 (M) Terminal compatibility leftovers: slow startup probes, mouse traffic, macOS Alt, synchronized output, one termcaps package
 - [ ] U11 (S) Devcontainer: offer to set up the project's tools when `.devcontainer` exists (never without the user's OK)
 
+- [ ] U16 (S) HTTP image preview leaves /tmp/termocode-http-*.png files (tests and real use): remove them when the preview closes
+
 Needs the user:
 - [ ] U12 Mouse in AI Chat History: not reproduced — needs the exact place of the click
 - [ ] U13 Manual checks: MANUAL-CHECKLIST H1–H9 and S1–S4
