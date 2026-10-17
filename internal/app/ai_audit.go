@@ -8,6 +8,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/httpclient"
 )
 
 // AI audit log (Group R4): every agent tool call is one line in the
@@ -93,6 +94,8 @@ func aiAuditValue(v any) string {
 	if !ok {
 		s = fmt.Sprint(v)
 	}
+	// Before any cut: a token cut in half would slip past Redact.
+	s = ai.Redact(httpclient.RedactURL(s))
 	if n := strings.Count(strings.TrimSuffix(s, "\n"), "\n"); n > 0 {
 		return fmt.Sprintf("<%d lines, %d B>", n+1, len(s))
 	}

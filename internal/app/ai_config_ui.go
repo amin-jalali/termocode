@@ -303,6 +303,15 @@ func (m *Model) openAIAutoApprovePicker() tea.Cmd {
 		}
 		items = append(items, picker.Item{ID: c, Title: c + " — mutating tools of MCP server " + strings.TrimPrefix(c, mcp.ClassPrefix), Hint: state})
 	}
+	for _, c := range s.settings.AutoApprove { // HTTP hosts allowed with "Always allow"
+		if strings.HasPrefix(c, "http:") {
+			what := "GET / HEAD / OPTIONS"
+			if strings.HasSuffix(c, "/write") {
+				what = "all methods"
+			}
+			items = append(items, picker.Item{ID: c, Title: c + " — HTTP requests (" + what + ") to " + strings.TrimSuffix(strings.TrimPrefix(c, "http:"), "/write"), Hint: "AUTO"})
+		}
+	}
 	m.picker = picker.NewItems(" ✦ Agent auto-approve (Enter toggles) ", items)
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
