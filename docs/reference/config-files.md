@@ -45,6 +45,7 @@ Inside the folder you open.
 | File | Purpose | Format | Safe to edit? |
 | --- | --- | --- | --- |
 | `.termocode/tasks.json` | Workspace tasks for Tasks: Run Task…. | VS Code style tasks: `label`, `command`, `args`, `cwd`, `env`, `group`, `problemMatcher`. | Yes. Tasks: Configure Tasks creates it. |
+| `.termocode/services.json` | Local dev services for the Services view (and the compose file / profiles to use). | JSONC: `compose` {`file`, `profiles`, `project`}, `services` [{`name`, `command`, `cwd`, `env`, `port`, `health` {`tcp` \| `http`}}]. | Yes. Services: Configure creates it. A local command asks once before its first start. |
 | `.termocode/launch.json` | Debug and run configurations. | VS Code `launch.json` shape; comments allowed. | Yes. Debug: Open launch.json creates it. |
 | `.termocode/mcp.json` | Project MCP servers. An entry with the same name as one in your mcp.json replaces it; `"disabled": true` hides it in this project. | Same shape as the user mcp.json. | Yes. termocode asks before it starts a project server the first time (and again when the entry changes). |
 | `.editorconfig` | Indent and whitespace rules, read by Neovim's EditorConfig support. | EditorConfig INI. | Yes (read only for termocode). |

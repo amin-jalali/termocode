@@ -64,11 +64,18 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `ai_inline_model` | string | `(provider default)` | Model for inline ghost-text completions. Empty uses a fast model of the provider (for example Claude Haiku or gpt-4.1-mini). |
-| `ai_auto_approve` | string[] | `[]` | Agent tool classes that run without asking: fileWrite, git, run, ide, settings. Set with AI: Agent Auto-Approve…. |
+| `ai_auto_approve` | string[] | `[]` | Agent tool classes that run without asking: fileWrite, git, run, ide, settings, services. Set with AI: Agent Auto-Approve…. |
 | `ai_edit_review` | enum | `review` | review: the agent's file changes (write_file, create_file, LSP rename, code actions, format) open as a diff where you accept or reject each change; the agent waits and is told what was written. auto: the old way (a confirm dialog, or no question when fileWrite is auto-approved). Auto-approving fileWrite also skips the review. Toggle with AI: Toggle Edit Review. |
 | `ai_max_steps` | int | `25` | Most tool steps the AI agent takes for one chat message. At the limit it stops and asks you to send "continue". |
 | `mcp_trusted` | object | `{}` | Project MCP servers you allowed with "Always allow": server name → hash of its mcp.json entry. A changed entry asks again. Written by the trust dialog and AI: MCP Servers…. |
 | `mcp_trusted_tools` | object | `{}` | The tool list you trusted per MCP server: server name → hash of its tools. The first list is kept by itself; when a server's tools change, termocode asks again and, until you trust the new list, every tool of that server asks first. |
+
+## Services (file only)
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `services_on_quit` | enum | `ask` | On quit, the Docker Compose services termocode started in this session (never the ones that were already running): ask shows a card (Keep running and quit / Stop and quit / Cancel), keep leaves them running, stop runs docker compose stop for them first. Local services always stop with the editor. |
+| `services_max_log_kb` | int | `16` | Cut the log text the AI's services_logs tool returns to this many KB (the newest lines stay). |
 
 ## Appearance (file only)
 
