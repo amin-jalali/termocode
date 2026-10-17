@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/termcaps"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -76,20 +77,7 @@ func (m *Model) writeClipboard(s string) clipVia {
 // Inside tmux or screen the outer terminal decides and the inherited
 // variables may be stale, so they count as yes (osc52Seq wraps the copy
 // so they forward it). Unknown terminals get the benefit of the doubt.
-func osc52Honoured(getenv func(string) string) bool {
-	if getenv("TMUX") != "" || getenv("STY") != "" {
-		return true
-	}
-	switch {
-	case getenv("VTE_VERSION") != "",
-		getenv("TERM_PROGRAM") == "Apple_Terminal",
-		getenv("XTERM_VERSION") != "",
-		getenv("TERM") == "linux",
-		getenv("TERMINAL_EMULATOR") == "JetBrains-JediTerm":
-		return false
-	}
-	return true
-}
+func osc52Honoured(getenv func(string) string) bool { return termcaps.OSC52Honoured(getenv) }
 
 // systemClipboardWrite writes the OS clipboard and reports success. In
 // Termux the golang.design library is skipped: it cannot reach Android's
