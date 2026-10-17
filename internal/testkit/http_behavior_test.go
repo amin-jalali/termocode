@@ -468,6 +468,23 @@ func TestHTTPImportCurl(t *testing.T) {
 	}
 }
 
+// HC-8: a private env file that git would commit gets one warning when
+// an .http file opens.
+func TestHTTPPrivateEnvGitWarning(t *testing.T) {
+	if testing.Short() {
+		t.Skip("starts nvim")
+	}
+	files := textFiles()
+	files["api/a.http"] = "GET {{host}}/x\n"
+	files["http-client.private.env.json"] = `{"dev": {"token": "abcdefgh12345"}}`
+	d := New(t, Options{W: 120, H: 34, Nvim: true, Git: true, Files: files})
+	open(d, "api/a.http")
+	if !d.WaitForText("Secrets file", 5*time.Second) {
+		_, ups := d.Updates()
+		t.Fatalf("no warning:\n%s\n%v", screen(d), ups)
+	}
+}
+
 // keymap.json can move the send key.
 func TestHTTPKeymapOverride(t *testing.T) {
 	api := newHTTPAPI(t, false)
