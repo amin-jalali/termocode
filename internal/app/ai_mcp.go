@@ -273,7 +273,7 @@ func (m *Model) answerMCPTrust(id string) tea.Cmd {
 	}
 	if p.signin && a != mcp.TrustDeny {
 		m.aiMCP().Trust(p.server, a == mcp.TrustAlways)
-		return m.mcpSignIn(p.server)
+		return m.mcpConnectServer(p.server)
 	}
 	if p.connect && a != mcp.TrustDeny {
 		return m.mcpConnect(p.server, a)
@@ -363,7 +363,7 @@ func (m *Model) openMCPServers() tea.Cmd {
 	mgr.Reload()
 	list := mgr.Servers()
 	items := make([]picker.Item, 0, len(list)+1)
-	items = append(items, picker.Item{ID: mcpAddID, Title: "+ Add a server…", Hint: "Linear, GitHub, GitLab, Slack, Notion …"})
+	items = append(items, picker.Item{ID: mcpAddID, Title: "+ Connect a service…", Hint: "GitHub, Linear, GitLab, Slack, Notion …"})
 	for _, st := range list {
 		items = append(items, picker.Item{ID: st.Name, Title: mcpStatusIcon(st) + " " + st.Name, Hint: mcpStatusHint(st)})
 	}
@@ -519,7 +519,7 @@ func (m *Model) onMCPServerAction(id string) tea.Cmd {
 				return nil
 			}
 		}
-		return m.mcpSignIn(name)
+		return m.mcpConnectServer(name)
 	case "signout":
 		return m.mcpSignOut(name)
 	}
@@ -605,11 +605,11 @@ func (m *Model) handleMCPPickerSelect(id string) (tea.Cmd, bool) {
 	switch m.pickerKind {
 	case pickerKindMCPServers:
 		if id == mcpAddID {
-			return m.openMCPPresets(), true
+			return m.openMCPConnect(), true
 		}
 		return m.openMCPServerActions(id), true
-	case pickerKindMCPPresets:
-		return m.onMCPPresetPicked(id), true
+	case pickerKindMCPConnect:
+		return m.onMCPConnectPicked(id), true
 	case pickerKindMCPServer:
 		return m.onMCPServerAction(id), true
 	case pickerKindMCPTools:

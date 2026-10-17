@@ -73,6 +73,8 @@ func (m Model) hitTargets() []hitTarget {
 		return nil // not mapped yet
 	case m.confirmOpen:
 		return m.confirmTargets()
+	case m.connectOpen:
+		return m.connectTargets()
 	case m.pickerOpen:
 		return m.pickerTargets()
 	case m.commitViewShown() && !m.commitIsDocked():

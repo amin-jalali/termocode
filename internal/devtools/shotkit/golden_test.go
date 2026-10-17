@@ -136,6 +136,30 @@ func goldenCases() []goldenCase {
 		out = append(out, goldenCase{fmt.Sprintf("%s-80x24", sc.Name), sc, 80, 24})
 	}
 	out = append(out, goldenCase{"setup-card-100x30", setupCardScene(), 100, 30})
+	// Connect a service (CX-5): every wizard step at 160x40 and 80x24;
+	// the pick and done steps also in a light theme and in ASCII icons.
+	for _, sc := range connectScenes() {
+		out = append(out, goldenCase{sc.Name + "-160x40", sc, 160, 40}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
+	}
+	for _, step := range []string{"pick", "done"} {
+		sc := connectScene(step)
+		light, ascii := withTheme(withName(sc, sc.Name+"-light"), "catppuccin-latte"), withName(sc, sc.Name+"-ascii")
+		ascii.Icons = "ascii"
+		out = append(out, goldenCase{light.Name + "-160x40", light, 160, 40}, goldenCase{ascii.Name + "-160x40", ascii, 160, 40})
+	}
+	return out
+}
+
+// connectScene is one step of the Connect wizard with sample data.
+func connectScene(step string) Scene {
+	return Scene{Name: "mcp-connect-" + step, Steps: []Step{Pause(800 * time.Millisecond), Act("connectdemo:" + step), Pause(600 * time.Millisecond)}}
+}
+
+func connectScenes() []Scene {
+	var out []Scene
+	for _, step := range []string{"pick", "gh", "device", "browser", "ssh", "done", "error", "token", "slack"} {
+		out = append(out, connectScene(step))
+	}
 	return out
 }
 

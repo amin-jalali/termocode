@@ -209,6 +209,18 @@ func (m *Manager) startHTTP(ctx context.Context, st *serverState, exp Server, op
 // Flow.AuthURL, waits with Flow.Wait (or feeds Flow.Paste) and calls
 // FinishSignIn.
 func (m *Manager) BeginSignIn(ctx context.Context, name string) (*auth.Flow, error) {
+	return m.BeginSignInWith(ctx, name, SignInOptions{})
+}
+
+// SignInOptions change one sign-in: a fixed port and a localhost
+// redirect (a Slack app registered with http://localhost:47391/callback).
+type SignInOptions struct {
+	Port         int
+	RedirectHost string
+}
+
+// BeginSignInWith is BeginSignIn with options.
+func (m *Manager) BeginSignInWith(ctx context.Context, name string, so SignInOptions) (*auth.Flow, error) {
 	st, err := m.get(name)
 	if err != nil {
 		return nil, err
@@ -250,6 +262,10 @@ func (m *Manager) BeginSignIn(ctx context.Context, name string) (*auth.Flow, err
 	if m.opts.OAuthPort != nil {
 		c.Port = m.opts.OAuthPort()
 	}
+	if so.Port > 0 {
+		c.Port = so.Port
+	}
+	c.RedirectHost = so.RedirectHost
 	m.log(name, "sign-in started")
 	fl, err := auth.Begin(ctx, c)
 	if err != nil {
