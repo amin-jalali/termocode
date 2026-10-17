@@ -193,6 +193,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	ctx, cancel := context.WithCancel(context.Background())
 	s.chatCancel = cancel
 	s.streaming = true
+	s.act.begin(clock.Now())
 	s.chatCh = ch
 	send := func(msg tea.Msg) {
 		select {
@@ -252,6 +253,7 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 		return waitAIChat(msg.ch) // stale: keep draining
 	}
 	s.streamSteps++
+	s.act.onEvent(msg.ev, clock.Now())
 	last := func() *ai.StoredMessage {
 		if n := len(s.conv.Messages); n > 0 {
 			return &s.conv.Messages[n-1]
