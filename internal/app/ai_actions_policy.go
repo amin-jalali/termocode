@@ -341,6 +341,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"mcp_trusted":           aiNever(aiNoAIConfig),
 	"mcp_trusted_tools":     aiNever(aiNoAIConfig),
 	"mcp_oauth_port":        aiNever(aiNoAIConfig),
+	"mcp_github_client_id":  aiNever(aiNoAIConfig),
 }
 
 // aiListActionsMax caps list_actions results.

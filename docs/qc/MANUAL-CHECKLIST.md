@@ -296,6 +296,98 @@ Repeat in `screen`. ☐
 
 ---
 
+## I. Connect a service (MCP, real accounts)
+
+The automated tests use fake sign-in servers, a fake MCP server and a
+fake `gh`. These checks use the real services and your own accounts.
+Do them by hand; never paste a token into a chat or an issue. Over SSH
+means: termocode on a server, the browser on your laptop.
+
+**I1 — GitHub with gh (several accounts).** `gh auth status` lists your
+accounts. **AI: Connect a Service…** → GitHub. Expected: the list shows
+`gh is signed in`; the GitHub screen lists every gh account, the active
+one first. Pick one → **Use gh**. Expected: `connected as <login> ·
+N tools · read only`. Ask "show my open pull requests in termocode":
+works without a confirm. `grep -r gho_ ~/.config/termocode` finds
+nothing. ☐
+
+**I2 — GitHub writes.** **AI: MCP Servers…** → github → **Allow
+writes**. Ask "create a test issue in <a test repo>". Expected: a
+confirm dialog first, then the issue exists. **Read only** turns it off
+again. ☐
+
+**I3 — A second GitHub account.** github → **Add another account** →
+pick another gh account. Expected: a new entry `github-<login>`; the
+Done screen and `get_me` name that account; the chat sees both. ☐
+
+**I4 — GitHub code sign-in (device flow).** Needs termocode's GitHub
+OAuth App (see the maintainer page, or set `mcp_github_client_id`).
+Hide gh (`PATH` without it) and connect GitHub. Expected: a code like
+`ABCD-1234`, the page `https://github.com/login/device` opens (copied).
+Type the code on your phone → Authorize. Expected: Done within one poll
+interval (about 5 s). Try once more and press **Cancel** on github.com:
+expected `The sign-in was cancelled on the web page`. Over SSH: the same,
+nothing to paste. ☐
+
+**I5 — Without a registered GitHub app.** A build with an empty
+`GitHubClientID` and no gh: the wizard says the code sign-in is not set
+up and goes to the token screen. A fine-grained token with repo access
+connects. ☐
+
+**I6 — Linear, Notion, Sentry, ClickUp, Atlassian (v2), GitLab on a
+laptop.** For each: Connect → the browser opens → Allow → Done names the
+account (write down the identity tool each service has, if any, for the
+presets' `Identity`). Linear and ClickUp ask only for `read`. ☐
+
+**I7 — The same over SSH.** For one loopback service (Linear): the SSH
+screen, open the link on the laptop, Allow, copy the "can't connect"
+address, paste. Expected: Done. Then again with
+`ssh -L 47391:127.0.0.1:47391 <server>` started first: Done without a
+paste. ☐
+
+**I8 — GitLab extras.** Over SSH with your own GitLab app id (a public
+app with the `device_code` grant, put into the entry's `oauth.client_id`):
+the code sign-in works. A fine-grained token ("MCP tool: Execute") works
+through **Use a token instead**. ☐
+
+**I9 — Sentry token.** **Use a token instead** with a user token
+(`org:read`, `project:read`, `event:read`): connects (header
+`Sentry-Bearer`). A wrong token shows `Sentry refused the token (401)`. ☐
+
+**I10 — ClickUp expiry.** After ClickUp's token ends (or edit
+`expires_at_ms` in credentials.json to the past): the row says
+`sign-in expired` with `!`; **Sign in** fixes it in one step. ☐
+
+**I11 — Atlassian writes and scopes.** On the consent page the first
+sign-in asks for read access only (write down the scopes shown). Check
+whether the v2 server accepts the read scopes termocode could send, so
+the preset can ask for less. ☐
+
+**I12 — Slack app recipe.** In a test workspace: the manifest from the
+wizard creates the app; turn on PKCE and the MCP server; paste the Client
+ID. Expected: the browser sign-in works **without a client secret**
+(Slack's metadata lists only `client_secret_post`: if it needs a secret,
+note the error). Search works; posting asks first. ☐
+
+**I13 — Sign out revokes.** Atlassian or Sentry → **Sign out**. Expected:
+the service's connected-apps page no longer lists termocode (or its
+token is gone). ☐
+
+**I14 — Discovery.** A fresh config with AI set up: the setup card shows
+**Apps · None yet**; the chat header shows `Connect…`. After a server
+answers 401: `1 needs sign-in` and the row above the input with
+**Sign in** / **Not now**. ☐
+
+**I15 — 80×24 and Termux.** Every wizard screen fits 80×24, no clipped
+buttons; `c` copies over SSH (OSC 52). ☐
+
+**I16 — No leaks.** After all of the above:
+`grep -rE 'gho_|ghp_|glpat|lin_api|xoxp|sntrys_|pk_' ~/.config/termocode ~/.cache/termocode ~/.local/state/termocode`
+matches only `ai/credentials.json`; the Output panel (MCP, AI) and
+`errors.log` show no token. ☐
+
+---
+
 **When something fails:** note the case ID, what you did, what you saw
 (a screenshot helps), and paste it to the AI/maintainer. Most cases map
 to a test in `internal/testkit` or `e2e/` that should then be extended so

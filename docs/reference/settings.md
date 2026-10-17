@@ -57,7 +57,8 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `mcp_call_timeout` | string | `60s` | Longest wait for one MCP tool call without an answer or a progress report. A server's "timeout" (seconds) in mcp.json wins. |
 | `mcp_max_result_kb` | int | `32` | Cut an MCP tool result to this many KB before the model sees it. |
 | `mcp_trust_annotations` | bool | `true` | Let MCP tools the server marks read-only run without asking. false: every MCP tool asks, except the ones in the server's "autoApprove" list. |
-| `mcp_oauth_port` | int | `0` | Port of the sign-in listener on 127.0.0.1 for MCP servers with OAuth. 0 picks a free port each time; set a fixed one for an app that needs a fixed redirect URL (Slack) or for ssh -L port forwarding. |
+| `mcp_oauth_port` | int | `0` | Port of the sign-in listener on 127.0.0.1 for MCP servers with OAuth. 0 takes the first free one of 47391–47395 (the ports termocode's client document lists, so ssh -L 47391:127.0.0.1:47391 works); set another only for an app registered with that port. |
+| `mcp_github_client_id` | string | `(built in)` | Client ID of a GitHub OAuth App with Device Flow on, for the GitHub sign-in with a code (Connect a service). Empty uses the one built into termocode (none until it is registered). Not a secret. |
 
 ## AI (file only)
 

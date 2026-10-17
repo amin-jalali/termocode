@@ -87,6 +87,7 @@ func (m *Model) aiMCP() *mcp.Manager {
 	}
 	root := aiWorkspaceRoot()
 	set := mcp.LoadSettings(mcpConfigPath())
+	mcp.SetGitHubClientID(set.GitHubClientID)
 	out := m.output
 	home, _ := os.UserHomeDir()
 	s.mcp = mcp.NewManager(mcp.ManagerOptions{
