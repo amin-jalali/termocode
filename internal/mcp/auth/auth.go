@@ -55,6 +55,8 @@ type Metadata struct {
 	Scopes                []string // scopes_supported of the protected resource
 	CIMD                  bool     // client_id_metadata_document_supported
 	AuthMethods           []string // token_endpoint_auth_methods_supported
+	DeviceEndpoint        string   // device_authorization_endpoint (RFC 8628), "" none
+	RevocationEndpoint    string   // revocation_endpoint (RFC 7009), "" none
 }
 
 // DefaultLifetime is how long the loopback listener waits.
@@ -171,6 +173,8 @@ func Discover(ctx context.Context, hc *http.Client, serverURL, resourceMetadata 
 		PKCE         []string `json:"code_challenge_methods_supported"`
 		CIMD         bool     `json:"client_id_metadata_document_supported"`
 		AuthMethods  []string `json:"token_endpoint_auth_methods_supported"`
+		Device       string   `json:"device_authorization_endpoint"`
+		Revocation   string   `json:"revocation_endpoint"`
 	}
 	oa, oaRoot := wellKnown(issuer, "oauth-authorization-server")
 	oi, _ := wellKnown(issuer, "openid-configuration")
@@ -213,6 +217,12 @@ func Discover(ctx context.Context, hc *http.Client, serverURL, resourceMetadata 
 	}
 	md.Issuer, md.AuthorizationEndpoint, md.TokenEndpoint = issuer, as.Authorize, as.Token
 	md.RegistrationEndpoint, md.CIMD, md.AuthMethods = as.Registration, as.CIMD, as.AuthMethods
+	if as.Device != "" && checkEndpoint(as.Device) == nil {
+		md.DeviceEndpoint = as.Device
+	}
+	if as.Revocation != "" && checkEndpoint(as.Revocation) == nil {
+		md.RevocationEndpoint = as.Revocation
+	}
 	return md, nil
 }
 
@@ -547,8 +557,21 @@ func Refresh(ctx context.Context, hc *http.Client, e ai.MCPOAuth) (ai.MCPOAuth, 
 
 // tokenRequest posts to the token endpoint and fills e with the answer.
 func tokenRequest(ctx context.Context, hc *http.Client, e ai.MCPOAuth, form url.Values) (ai.MCPOAuth, error) {
-	if err := checkEndpoint(e.TokenEndpoint); err != nil {
+	status, b, err := postToken(ctx, hc, e, form)
+	if err != nil {
 		return e, err
+	}
+	if status != http.StatusOK {
+		return e, fmt.Errorf("token request: HTTP %d: %s", status, ai.Redact(oauthErrText(b)))
+	}
+	return tokenAnswer(e, b)
+}
+
+// postToken posts form to e's token endpoint with e's client
+// authentication and returns the status and body.
+func postToken(ctx context.Context, hc *http.Client, e ai.MCPOAuth, form url.Values) (int, []byte, error) {
+	if err := checkEndpoint(e.TokenEndpoint); err != nil {
+		return 0, nil, err
 	}
 	if e.AuthMethod != "client_secret_basic" {
 		form.Set("client_id", e.ClientID)
@@ -558,7 +581,7 @@ func tokenRequest(ctx context.Context, hc *http.Client, e ai.MCPOAuth, form url.
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.TokenEndpoint, strings.NewReader(form.Encode()))
 	if err != nil {
-		return e, err
+		return 0, nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
@@ -567,13 +590,15 @@ func tokenRequest(ctx context.Context, hc *http.Client, e ai.MCPOAuth, form url.
 	}
 	resp, err := client(hc).Do(req)
 	if err != nil {
-		return e, fmt.Errorf("token request: %w", err)
+		return 0, nil, fmt.Errorf("token request: %w", err)
 	}
 	defer resp.Body.Close()
 	b, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if resp.StatusCode != http.StatusOK {
-		return e, fmt.Errorf("token request: HTTP %d: %s", resp.StatusCode, ai.Redact(oauthErrText(b)))
-	}
+	return resp.StatusCode, b, nil
+}
+
+// tokenAnswer fills e from a token endpoint's success answer.
+func tokenAnswer(e ai.MCPOAuth, b []byte) (ai.MCPOAuth, error) {
 	var t struct {
 		AccessToken  string `json:"access_token"`
 		TokenType    string `json:"token_type"`
