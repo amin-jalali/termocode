@@ -99,6 +99,7 @@ func runClient(dir string, create bool) int {
 	// The UI asks for BDSM explicit mode when it starts; a later attach
 	// from another terminal needs it too (internal/rtl).
 	rtlEnter, rtlLeave := app.RTLTerminalModes()
+	rtlEnter, rtlLeave = rtlEscapes(rtlEnter, rtlLeave, os.Getenv)
 	_, _ = os.Stdout.WriteString(rtlEnter)
 	defer func() { _, _ = os.Stdout.WriteString(rtlLeave) }()
 	return session.Attach(conn, p, os.Stdin, os.Stdout, clientCaps(running))
