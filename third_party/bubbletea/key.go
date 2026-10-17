@@ -1,9 +1,7 @@
 package tea
 
 import (
-	"context"
 	"fmt"
-	"io"
 	"regexp"
 	"strings"
 	"unicode/utf8"
@@ -573,58 +571,7 @@ func (u unknownCSISequenceMsg) String() string {
 
 var spaceRunes = []rune{' '}
 
-// readAnsiInputs reads keypress and mouse inputs from a TTY and produces messages
-// containing information about the key or mouse events accordingly.
-func readAnsiInputs(ctx context.Context, msgs chan<- Msg, input io.Reader) error {
-	var buf [256]byte
-
-	var leftOverFromPrevIteration []byte
-loop:
-	for {
-		// Read and block.
-		numBytes, err := input.Read(buf[:])
-		if err != nil {
-			return fmt.Errorf("error reading input: %w", err)
-		}
-		b := buf[:numBytes]
-		if leftOverFromPrevIteration != nil {
-			b = append(leftOverFromPrevIteration, b...)
-		}
-
-		// If we had a short read (numBytes < len(buf)), we're sure that
-		// the end of this read is an event boundary, so there is no doubt
-		// if we are encountering the end of the buffer while parsing a message.
-		// However, if we've succeeded in filling up the buffer, there may
-		// be more data in the OS buffer ready to be read in, to complete
-		// the last message in the input. In that case, we will retry with
-		// the left over data in the next iteration.
-		canHaveMoreData := numBytes == len(buf)
-
-		var i, w int
-		for i, w = 0, 0; i < len(b); i += w {
-			var msg Msg
-			w, msg = detectOneMsg(b[i:], canHaveMoreData)
-			if w == 0 {
-				// Expecting more bytes beyond the current buffer. Try waiting
-				// for more input.
-				leftOverFromPrevIteration = make([]byte, 0, len(b[i:])+len(buf))
-				leftOverFromPrevIteration = append(leftOverFromPrevIteration, b[i:]...)
-				continue loop
-			}
-
-			select {
-			case msgs <- msg:
-			case <-ctx.Done():
-				err := ctx.Err()
-				if err != nil {
-					err = fmt.Errorf("found context error while reading input: %w", err)
-				}
-				return err
-			}
-		}
-		leftOverFromPrevIteration = nil
-	}
-}
+// readAnsiInputs: termocode patch, see input_hold.go.
 
 var (
 	unknownCSIRe  = regexp.MustCompile(`^\x1b\[[\x30-\x3f]*[\x20-\x2f]*[\x40-\x7e]`)
