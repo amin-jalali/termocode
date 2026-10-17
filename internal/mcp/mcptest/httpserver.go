@@ -41,6 +41,12 @@ type HTTPOptions struct {
 	NoMetadataHeader bool
 	// Toolset "2" lists the changed tool set (ToolList).
 	Toolset string
+	// Login adds an identity tool get_me that answers {"login": Login}
+	// (GitHub's MCP server has one).
+	Login string
+	// BearerScheme is the scheme Bearer must come with ("" = "Bearer";
+	// Sentry's token mode uses "Sentry-Bearer").
+	BearerScheme string
 }
 
 // Recorded is one request the fake got.
@@ -70,6 +76,9 @@ func NewHTTPServer(t testing.TB, o HTTPOptions) *HTTPServer {
 	s := &HTTPServer{O: o, sessions: map[string]bool{}, events: map[string][]string{}}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/mcp", s.serveMCP)
+	// The read-only endpoint (GitHub /mcp/readonly, Linear …/readonly):
+	// the same server with the read-only tools only.
+	mux.HandleFunc("/mcp/readonly", s.serveMCP)
 	prm := func(w http.ResponseWriter, r *http.Request) {
 		if s.O.AuthServer == "" {
 			http.NotFound(w, r)
@@ -80,6 +89,7 @@ func NewHTTPServer(t testing.TB, o HTTPOptions) *HTTPServer {
 	}
 	mux.HandleFunc("/.well-known/oauth-protected-resource/mcp", prm)
 	mux.HandleFunc("/.well-known/oauth-protected-resource", prm)
+	mux.HandleFunc("/.well-known/oauth-protected-resource/mcp/readonly", prm)
 	s.Server = httptest.NewServer(mux)
 	t.Cleanup(s.Close)
 	return s
@@ -125,7 +135,11 @@ func (s *HTTPServer) authorized(w http.ResponseWriter, r *http.Request) bool {
 	if s.O.Bearer == "" && s.O.Validate == nil {
 		return true
 	}
-	tok, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	scheme := s.O.BearerScheme
+	if scheme == "" {
+		scheme = "Bearer"
+	}
+	tok, ok := strings.CutPrefix(r.Header.Get("Authorization"), scheme+" ")
 	if ok && ((s.O.Bearer != "" && tok == s.O.Bearer) || (s.O.Validate != nil && s.O.Validate(tok))) {
 		return true
 	}
@@ -232,7 +246,7 @@ func (s *HTTPServer) serveMCP(w http.ResponseWriter, r *http.Request) {
 	case "ping":
 		writeJSON(w, response(m.ID, map[string]any{}, nil))
 	case "tools/list":
-		res := map[string]any{"tools": ToolList(s.O.Toolset)}
+		res := map[string]any{"tools": s.tools(r.URL.Path == "/mcp/readonly")}
 		if s.O.SSE {
 			s.stream(w, []any{response(m.ID, res, nil)}, false)
 			return
@@ -243,6 +257,27 @@ func (s *HTTPServer) serveMCP(w http.ResponseWriter, r *http.Request) {
 	default:
 		writeJSON(w, response(m.ID, nil, &extproc.Error{Code: extproc.CodeMethodNotFound, Message: "method not found: " + m.Method}))
 	}
+}
+
+// tools is the tool list: ToolList plus get_me with Login, only the
+// read-only ones at /mcp/readonly.
+func (s *HTTPServer) tools(readOnly bool) []map[string]any {
+	list := ToolList(s.O.Toolset)
+	if s.O.Login != "" {
+		list = append(list, map[string]any{"name": "get_me", "description": "The signed-in user.",
+			"inputSchema": map[string]any{"type": "object", "properties": map[string]any{}},
+			"annotations": map[string]any{"readOnlyHint": true}})
+	}
+	if !readOnly {
+		return list
+	}
+	var out []map[string]any
+	for _, t := range list {
+		if a, _ := t["annotations"].(map[string]any); a != nil && a["readOnlyHint"] == true {
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 func response(id json.RawMessage, result any, rerr *extproc.Error) map[string]any {
@@ -319,6 +354,11 @@ func (s *HTTPServer) call(w http.ResponseWriter, ctx context.Context, m extproc.
 		} `json:"_meta"`
 	}
 	_ = json.Unmarshal(m.Params, &p)
+	if p.Name == "get_me" && s.O.Login != "" {
+		b, _ := json.Marshal(map[string]any{"login": s.O.Login, "name": "Test User"})
+		writeJSON(w, response(m.ID, text(string(b)), nil))
+		return
+	}
 	if !s.O.SSE {
 		res, rerr := call(ctx, sseCaller{}, p.Name, p.Arguments, p.Meta.ProgressToken)
 		if ctx.Err() != nil {
