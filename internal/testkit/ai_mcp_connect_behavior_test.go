@@ -504,3 +504,53 @@ func TestConnectChatSignInButton(t *testing.T) {
 		t.Fatalf("Sign in did not open the wizard:\n%s", screen(d))
 	}
 }
+
+// Spec (CX-7): Add another account on a gh-connected GitHub entry runs
+// the wizard again; the new entry is named after the account and both
+// entries stay.
+func TestConnectAddAnotherAccount(t *testing.T) {
+	mcptest.FakeGH(t, ghAccounts, "amin-jalali")
+	srv := mcptest.NewHTTPServer(t, mcptest.HTTPOptions{Bearer: mcptest.GHToken("perkino-deals"), Login: "perkino-deals"})
+	pointPreset(t, "github", func(p *mcp.Preset) { p.URL, p.ReadOnlyURL = srv.MCPURL(), srv.MCPURL()+"/readonly" })
+	_, model := fakeToolModel(t)
+	d := remoteDriver(t, model.URL, `{"mcpServers":{"github":{"type":"http","url":"`+srv.MCPURL()+`/readonly","auth":{"gh":"amin-jalali"}}}}`, "", false)
+	openServerAction(d, "github", "Add another account")
+	if !d.WaitForText("You are signed in to GitHub with the gh command", 10*time.Second) {
+		t.Fatalf("no gh screen:\n%s", screen(d))
+	}
+	d.Key("right")
+	d.Key("enter")
+	waitConnected(t, d, "connected as perkino-deals")
+	j := userMCPJSON(t)
+	if !strings.Contains(j, `"github-perkino-deals"`) || !strings.Contains(j, `"github"`) || !strings.Contains(j, `"gh": "amin-jalali"`) {
+		t.Errorf("mcp.json %s", j)
+	}
+}
+
+// Spec (CX-3/CX-7): Sign out from the servers list revokes the tokens at
+// the service (fake AS with a revocation endpoint) and forgets them.
+func TestSignOutRevokesBehavior(t *testing.T) {
+	noGH(t)
+	clip := sinkClipboard(t)
+	as := mcptest.NewAuthServer(t, mcptest.AuthOptions{Revocation: true})
+	srv := mcptest.NewHTTPServer(t, mcptest.HTTPOptions{Validate: as.Valid, AuthServer: as.Issuer()})
+	pointPreset(t, "linear", func(p *mcp.Preset) { p.URL, p.ReadOnlyURL = srv.MCPURL(), srv.MCPURL()+"/readonly" })
+	_, model := fakeToolModel(t)
+	d := remoteDriver(t, model.URL, `{"mcpServers":{}}`, "", false)
+	pickService(d, "Linear")
+	var authURL string
+	if !d.WaitFor(func() bool { authURL, _ = clip.get(); return strings.HasPrefix(authURL, as.Issuer()+"/authorize?") }, 10*time.Second) {
+		t.Fatalf("no sign-in:\n%s", screen(d))
+	}
+	resp, err := http.Get(authURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	waitConnected(t, d, "Linear — connected")
+	d.Key("tab", "right", "enter") // Done
+	openServerAction(d, "linear", "Sign out")
+	if !d.WaitFor(func() bool { return !signedIn(t, "linear") && len(as.Revoked()) == 2 }, 10*time.Second) {
+		t.Errorf("signed in %v, revoked %v", signedIn(t, "linear"), as.Revoked())
+	}
+}

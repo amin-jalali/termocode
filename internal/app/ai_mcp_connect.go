@@ -69,6 +69,7 @@ type mcpWizard struct {
 	step     mcpWizStep
 	method   mcp.Method
 	writes   bool
+	another  bool // a second account: the entry is named after it
 	ssh      bool // the browser is on another machine
 	accounts []mcp.GHAccount
 	ghUser   string
@@ -98,6 +99,7 @@ type (
 		accounts []mcp.GHAccount
 		then     string // a preset to start at once ("" the picker) …
 		name     string // … for this entry
+		another  bool   // … as another account of the service
 	}
 	mcpWizDeviceMsg struct {
 		gen  int
@@ -166,7 +168,8 @@ func (m *Model) onMCPWizEnv(msg mcpWizEnvMsg) tea.Cmd {
 		if !ok {
 			return nil
 		}
-		m.newWizard(p, msg.name)
+		w := m.newWizard(p, msg.name)
+		w.another = msg.another
 		return m.wizStart()
 	}
 	m.picker = picker.NewItems(" Connect a service ", m.mcpConnectItems())
@@ -285,6 +288,9 @@ func (m *Model) wizStart() tea.Cmd {
 	w := m.wiz()
 	w.env = m.mcpPlanEnv(w.preset)
 	w.ssh = w.env.SSH
+	for _, e := range mcpServerEntries(w.name) {
+		w.writes = mcpIsPreset(w.preset.Name) && (w.preset.ReadOnlyURL != "" || w.preset.WriteScopes != nil) && !mcpEntryReadOnly(e, w.preset)
+	}
 	w.plan = mcp.Plan(w.preset, w.env)
 	w.accounts = w.env.GHAccounts
 	if w.preset.Device != nil && w.env.GitHubClientID == "" && w.preset.NoBrowser {
@@ -336,7 +342,7 @@ func (m *Model) closeWizard() {
 // wizEntry writes the mcp.json entry for a method (read-only first).
 func (m *Model) wizEntry(meth mcp.Method) error {
 	w := m.wiz()
-	e := w.preset.EntryFor(meth, mcp.EntryOptions{Writes: w.writes, GHUser: w.ghUser, AppClientID: w.env.AppClientID})
+	e := w.preset.EntryFor(meth, mcp.EntryOptions{Writes: w.writes, GHUser: w.ghUser, AppClientID: w.env.AppClientID, Secret: w.name + "_token"})
 	if !mcpIsPreset(w.preset.Name) {
 		if len(mcpServerEntries(w.name)) > 0 && meth != mcp.MethodToken {
 			return nil // the user's own entry stays as it is
@@ -542,6 +548,20 @@ func (m *Model) onMCPWizDone(msg mcpWizDoneMsg) tea.Cmd {
 	w.result, w.step = msg.res, wizDone
 	cs := mcp.CredStore{Path: mcpCredPath()}
 	_ = cs.SetAccount(w.name, msg.res.Account)
+	if w.another && msg.res.Account != "" && strings.HasPrefix(w.name, w.preset.Name+"-") {
+		// "github-2" → "github-perkino-deals" now that the account is known.
+		if n := mcp.EntryName(w.preset.Name, msg.res.Account); n != "" && n != w.name && len(mcpServerEntries(n)) == 0 {
+			mgr := m.aiMCP()
+			mgr.Stop(w.name)
+			if err := mcp.RenameServer(mcpUserPath(), cs, w.name, n); err == nil {
+				w.name = n
+				mgr.Reload()
+			}
+		}
+	}
+	if m.setup != nil {
+		m.setup.services = -1 // the setup card counts again
+	}
 	return m.showWizard()
 }
 
@@ -820,7 +840,7 @@ func (m *Model) wizDoneCard() connectcard.Card {
 	}
 	if w.readOnly() {
 		rows = append(rows, connectcard.Row{Kind: connectcard.Blank},
-			connectcard.Row{Kind: connectcard.Dim, Text: "Writes (create, comment, change) are off. Turn them on any time: AI: Services… → " + w.name + " → Allow writes."})
+			connectcard.Row{Kind: connectcard.Dim, Text: "Writes (create, comment, change) are off. Turn them on any time: AI: MCP Servers… → " + w.name + " → Allow writes."})
 	}
 	btns := []connectcard.Button{{ID: "done", Title: "Done", Primary: true}}
 	if p.Try != "" {
@@ -854,6 +874,11 @@ func (m *Model) onMCPWizButton(id string) tea.Cmd {
 		}
 		w.ghUser = w.accounts[clampIdx(m.connect.Choice("account"), len(w.accounts))].Login
 		w.writes = m.connect.Choice("access") == 1
+		if w.another {
+			if n := mcp.EntryName(w.preset.Name, w.ghUser); n != "" && len(mcpServerEntries(n)) == 0 {
+				w.name = n
+			}
+		}
 		if err := m.wizEntry(mcp.MethodCLI); err != nil {
 			return m.wizFail(err)
 		}
