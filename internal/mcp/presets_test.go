@@ -8,13 +8,14 @@ import (
 	"testing"
 )
 
-// Spec (plan §1): presets for the servers people ask for, with the
-// public endpoints from the plan. None holds a literal secret: tokens
-// are ${secret:NAME}.
+// Spec (connect plan §3): the services of the Connect wizard with their
+// public endpoints; the default entry is the read-only endpoint when the
+// service has one. None holds a secret: GitHub no longer asks for a PAT
+// header, Slack no longer for a client secret.
 func TestPresets(t *testing.T) {
 	want := map[string]string{
-		"linear":    "https://mcp.linear.app/mcp",
-		"github":    "https://api.githubcopilot.com/mcp/",
+		"linear":    "https://mcp.linear.app/mcp/readonly",
+		"github":    "https://api.githubcopilot.com/mcp/readonly",
 		"gitlab":    "https://gitlab.com/api/v4/mcp",
 		"atlassian": "https://mcp.atlassian.com/v2/mcp",
 		"slack":     "https://mcp.slack.com/mcp",
@@ -38,22 +39,21 @@ func TestPresets(t *testing.T) {
 			t.Errorf("%s: %v %v %+v", name, err, warns, list)
 			continue
 		}
-		if s := list[0]; s.Type != TypeHTTP || s.URL != url {
-			t.Errorf("%s = %s %s, want http %s", name, s.Type, s.URL, url)
+		if s := list[0]; s.Type != TypeHTTP || s.URL != url || len(s.Headers) != 0 {
+			t.Errorf("%s = %s %s %v, want http %s", name, s.Type, s.URL, s.Headers, url)
 		}
-		if p.Title == "" || p.Note == "" {
-			t.Errorf("%s: no title or note", name)
+		if p.Title == "" || p.Blurb == "" || p.Try == "" {
+			t.Errorf("%s: no title, blurb or try", name)
+		}
+		if strings.Contains(string(b), "secret") {
+			t.Errorf("%s entry mentions a secret: %s", name, b)
 		}
 	}
-	gh := got["github"].Entry()
-	if h, _ := gh["headers"].(map[string]string); h["Authorization"] != "Bearer ${secret:github_pat}" {
-		t.Errorf("github headers %v", gh["headers"])
+	if got["slack"].App == nil {
+		t.Error("slack has no app recipe")
 	}
-	if o, _ := got["gitlab"].Entry()["oauth"].(*OAuthConfig); o == nil || strings.Join(o.Scopes, " ") != "mcp" {
-		t.Errorf("gitlab oauth %+v", got["gitlab"].Entry()["oauth"])
-	}
-	if o, _ := got["slack"].Entry()["oauth"].(*OAuthConfig); o == nil || !strings.Contains(o.ClientSecret, "${secret:") {
-		t.Errorf("slack oauth %+v", got["slack"].Entry()["oauth"])
+	if got["github"].Device == nil || got["github"].CLI != "gh" || !got["github"].NoBrowser {
+		t.Errorf("github %+v", got["github"])
 	}
 }
 
