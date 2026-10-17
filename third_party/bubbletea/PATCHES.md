@@ -63,7 +63,10 @@ Input reader and mouse modes (termocode terminal-compat R6):
   read (lone ESC, `ESC [` with only parameter bytes, `ESC O`, an escape
   string without its terminator) is held until the next read or
   `holdWait` (50 ms), so a split SGR mouse report is one `MouseMsg`, not
-  typed text. A lone Esc key is delivered after that wait. Reads happen
+  typed text. A lone Esc key is delivered after that wait, or at once
+  when the next read starts a new sequence (a held tail is never joined
+  with a following ESC, except an escape string's `ESC \`: a lone Esc
+  joined with the pacing answer read as Alt+Esc and the text `[?0n`). Reads happen
   one at a time on request (a goroutine that never reads ahead), so a
   released terminal loses no input.
 - In one read, a run of plain pointer motion (no button) is delivered
