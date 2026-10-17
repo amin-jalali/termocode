@@ -20,6 +20,7 @@ import (
 	// Must init before bubbletea: no 5 s OSC 11 wait (see package doc).
 	_ "github.com/amin-jalali/termocode/internal/darkbg"
 	"github.com/amin-jalali/termocode/internal/setup"
+	"github.com/amin-jalali/termocode/internal/termcaps"
 	"github.com/amin-jalali/termocode/internal/termfont"
 	"github.com/amin-jalali/termocode/internal/termimg"
 	"github.com/amin-jalali/termocode/internal/theme"
@@ -143,18 +144,60 @@ func probeTerminal() (kittyKeys bool) {
 		nerd = setup.TerminalNerdFont()
 		unicodeOK = true
 	}
-	caps := termimg.Caps{Protocol: termimg.Blocks}
-	switch termimg.ParseMode(disp.Images) {
-	case termimg.ModeOff, termimg.ModeBlocks:
-		if keysWanted(os.Getenv) {
-			caps.KittyKeys = termimg.ProbeKittyKeyboard(os.Stdin, os.Stdout, 250*time.Millisecond, os.Getenv)
-		}
-	default:
-		caps = termimg.Probe(os.Stdin, os.Stdout, 250*time.Millisecond, os.Getenv)
-	}
+	caps := startupProbe(termimg.ParseMode(disp.Images), os.Getenv, time.Now())
 	app.SetTerminalCaps(caps, unicodeOK, nerd)
 	app.ApplyDisplaySettings(disp)
 	return caps.KittyKeys && keysWanted(os.Getenv)
+}
+
+// probeTimeout bounds the startup probe: a terminal that does not answer
+// costs this once (then the cache remembers it, internal/termcaps).
+const probeTimeout = 250 * time.Millisecond
+
+// startupProbe asks the terminal what it can do (images, cell size, kitty
+// keyboard) in one raw-mode round, unless it may not be asked
+// (TERMOCODE_PROBE=off, GNU screen, TERM=dumb) or it was silent on an
+// earlier run (terminal-compat R3). The answer, or the silence, is kept in
+// $XDG_STATE_HOME/termocode/termcaps.json for termcaps.CacheTTL.
+func startupProbe(mode termimg.Mode, getenv func(string) string, now time.Time) termimg.Caps {
+	images := mode != termimg.ModeOff && mode != termimg.ModeBlocks
+	// What the environment alone says (no query is written: no TTY).
+	envOnly := func(why string) termimg.Caps {
+		c := termimg.Caps{Protocol: termimg.Blocks}
+		if images {
+			c = termimg.ProbeWith(nil, nil, 0, getenv, termimg.ProbeOpts{})
+			c.Reason += " (not probed: " + why + ")"
+		}
+		return c
+	}
+	if ok, why := termcaps.ProbeAllowed(getenv); !ok {
+		return envOnly(why)
+	}
+	path, key := termcaps.CachePath(getenv), termcaps.CacheKey(getenv)
+	seen, cached := termcaps.Lookup(path, key, now)
+	if cached && !seen.Answers {
+		return envOnly("the terminal did not answer last time")
+	}
+	caps := termimg.Caps{Protocol: termimg.Blocks}
+	switch {
+	case images:
+		caps = termimg.ProbeWith(os.Stdin, os.Stdout, probeTimeout, getenv, termimg.ProbeOpts{AnsweredBefore: cached && seen.Answers})
+	case keysWanted(getenv):
+		caps.KittyKeys, caps.Answered = termimg.ProbeKittyKeyboard(os.Stdin, os.Stdout, probeTimeout, getenv)
+	default:
+		return caps
+	}
+	// Only a real round counts (not a TTY or inside tmux: nothing asked).
+	if asked(getenv) && (!cached || seen.Answers != caps.Answered || now.Sub(seen.At) > termcaps.CacheTTL/2) {
+		termcaps.Remember(path, key, termcaps.Entry{Answers: caps.Answered}, now)
+	}
+	return caps
+}
+
+// asked reports whether the probe really writes to the terminal: both
+// ends are a TTY and we are not inside tmux (which has its own path).
+func asked(getenv func(string) string) bool {
+	return getenv("TMUX") == "" && term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd()))
 }
 
 // keysWanted: TERMOCODE_KEYS=legacy keeps the kitty keyboard protocol off.

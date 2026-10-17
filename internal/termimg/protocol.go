@@ -70,6 +70,9 @@ type Caps struct {
 	// KittyKeys: the terminal answered the kitty keyboard query (CSI ? u),
 	// so termocode may turn the protocol on (ctrl+shift+o, ctrl+. …).
 	KittyKeys bool
+	// Answered: the terminal answered the DA1 query (false when it was
+	// silent or not asked). Kept in the probe cache (internal/termcaps).
+	Answered bool
 }
 
 // CellSize returns the cell size in pixels, with a sane default when the
