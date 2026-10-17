@@ -62,11 +62,25 @@ func SCM() Scene      { return Scene{Name: "scm", Steps: scmSteps()} }
 func Confirm() Scene  { return Scene{Name: "confirm", Steps: confirmSteps()} }
 func Terminal() Scene { return Scene{Name: "terminal", Steps: terminalSteps()} }
 
+// TerminalMarks is the terminal tab bar with a CLI agent waiting for the
+// user (first tab) and the "✦ Fix?" chip of a failed command (U8, U9b).
+func TerminalMarks() Scene {
+	return Scene{Name: "terminal-marks", Env: aiEnv, Steps: WithEditor(Act("palette:toggle-terminal"), Pause(1500*time.Millisecond),
+		Act("palette:terminal-new-tab"), Pause(1000*time.Millisecond), Act("termdemo"), Pause(300*time.Millisecond))}
+}
+
 // SCMCommit is the commit view: HEAD (the demo merge) in the diff card,
 // docked over the editor when it is wide enough, floating otherwise.
 func SCMCommit() Scene {
 	return Scene{Name: "scm-commit", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond),
 		Act("commit:HEAD"), Pause(1200 * time.Millisecond)}}
+}
+
+// SCMCompare compares the oldest demo commit with HEAD (Space on both
+// GRAPH rows).
+func SCMCompare() Scene {
+	return Scene{Name: "scm-compare", Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond),
+		Act("compare:3,0"), Pause(1200 * time.Millisecond)}}
 }
 
 // AIChatAnswer is the AI chat panel with the canned demo conversation (no

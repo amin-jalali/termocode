@@ -27,7 +27,13 @@ snippet, accept a completion, jump to the next placeholder, or insert a tab.
 
 1. Press `Alt+A` (or run **AI: Open Chat**). The chat opens on the right.
 2. Type your question. Press `Enter` to send.
-3. The answer streams in. Press `Ctrl+C` to stop it.
+3. The answer streams in. Press `Ctrl+C` or `Esc` to stop it.
+   One quiet line under the last message says what the model does:
+   `◷ waiting for the model · 4 s`, `✎ writing`, `⚙ read_file · 2 s`
+   (a tool runs) or `↻ retry 2 of 3` (the server was busy; termocode
+   tries again up to 3 times). When no text comes for 90 s (or 30 s in
+   the middle of an answer) it turns yellow: `no answer for 35 s — Esc
+   to stop`. A running tool never shows this warning.
 4. Press `Esc` to go back to the editor. `F6` also moves focus.
 
 To give the AI context, open a file or select code, then run
@@ -50,7 +56,7 @@ card. You see the change in the review card first (see below).
 | `Ctrl+C` | Copy the selection; with none, stop generating |
 | `Ctrl+N` | New chat |
 | `Ctrl+U` | Clear the input |
-| `Esc` | Clear the selection, then back to the editor |
+| `Esc` | Clear the selection, then stop a running answer, then back to the editor |
 
 ### Persian, Arabic and other right-to-left text
 

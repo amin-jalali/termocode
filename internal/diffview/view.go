@@ -231,6 +231,7 @@ type pal struct {
 	bg, sunken, addBg, delBg, addWord, delWord, blank  lipgloss.Color
 	text, muted, dim, add, del, accent, hair, sel, mod lipgloss.Color
 	white, warn, onAccent, primary                     lipgloss.Color
+	syn                                                synPalette // token colours per background
 }
 
 func colors() pal {
@@ -240,7 +241,7 @@ func colors() pal {
 	if light {
 		wash, word = 0.13, 0.32
 	}
-	return pal{
+	p := pal{
 		bg:       fc.Bg,
 		sunken:   theme.Mix(theme.BgFloat, theme.TextPrimary, 0.05),
 		addBg:    theme.Mix(theme.BgFloat, theme.GitAdded, wash),
@@ -262,6 +263,8 @@ func colors() pal {
 		onAccent: fc.PrimaryFg,
 		primary:  fc.Primary,
 	}
+	p.syn = synColours(p.bg, p.addBg, p.delBg)
+	return p
 }
 
 // ── Painting helpers ──────────────────────────────────────────────────────
@@ -666,7 +669,13 @@ func (m Model) layout(draw bool) layoutOut {
 	}
 	if draw {
 		var hints string
-		if m.header != nil {
+		if m.header != nil && m.header.Hash == "" {
+			// A compare: no commit, so no SHA, raw or file @ commit.
+			hints = theme.HintBar(p.bg, "n/p", "change", "tab", "file", "t", "split/unified", "o", "open", "y", "copy range", "esc", "close")
+			if lipgloss.Width(hints)+1 > g.iw {
+				hints = theme.HintBar(p.bg, "n/p", "change", "tab", "file", "y", "copy range", "esc", "close")
+			}
+		} else if m.header != nil {
 			hints = theme.HintBar(p.bg, "n/p", "change", "tab", "file", "t", "split/unified", "o", "open",
 				"O", "at commit", "y", "copy SHA", "r", "raw", "esc", "close")
 			if lipgloss.Width(hints)+1 > g.iw {
@@ -857,18 +866,18 @@ func (m Model) renderRow(row vrow, g geom, f *fileState, p pal, ic glyphs) strin
 	rej := m.review && row.hunk >= 0 && row.hunk < len(f.dec) && f.dec[row.hunk] == Rejected
 	rows := f.diff.Rows
 	if !g.split {
-		return renderCell(rows[row.a], 0, g.numW, g.diffW, f.hscroll, p, rej)
+		return renderCell(rows[row.a], 0, g.numW, g.diffW, f.hscroll, p, rej, rowToks(f, rows[row.a], 0))
 	}
 	lw := (g.diffW - 1) / 2
 	rw := g.diffW - 1 - lw
 	var l, r string
 	if row.a >= 0 {
-		l = renderCell(rows[row.a], 1, g.numW, lw, f.hscroll, p, rej)
+		l = renderCell(rows[row.a], 1, g.numW, lw, f.hscroll, p, rej, rowToks(f, rows[row.a], 1))
 	} else {
 		l = blankCell(lw, p)
 	}
 	if row.b >= 0 {
-		r = renderCell(rows[row.b], 2, g.numW, rw, f.hscroll, p, rej)
+		r = renderCell(rows[row.b], 2, g.numW, rw, f.hscroll, p, rej, rowToks(f, rows[row.b], 2))
 	} else {
 		r = blankCell(rw, p)
 	}
@@ -959,8 +968,9 @@ func blankCell(w int, p pal) string {
 }
 
 // renderCell renders one diff row in width cells. side: 0 unified (two
-// number columns), 1 old pane, 2 new pane.
-func renderCell(r textdiff.Row, side int, numW, width, hscroll int, p pal, rejected bool) string {
+// number columns), 1 old pane, 2 new pane. toks (may be nil) colour the
+// text under the row wash; changed-word spans keep their highlight.
+func renderCell(r textdiff.Row, side int, numW, width, hscroll int, p pal, rejected bool, toks []Tok) string {
 	var rowBg, wordBg, mark lipgloss.Color
 	marker := " "
 	textFg := p.muted
@@ -997,20 +1007,62 @@ func renderCell(r textdiff.Row, side int, numW, width, hscroll int, p pal, rejec
 	gw := segsWidth(gutter)
 	var code []seg
 	base := st.Foreground(textFg)
+	if rejected {
+		toks = nil
+	}
+	syn := &p.syn[synCtx]
+	switch r.Kind {
+	case textdiff.Added:
+		syn = &p.syn[synAdd]
+	case textdiff.Removed:
+		syn = &p.syn[synDel]
+	}
 	if r.Paired && len(r.Spans) > 0 && !rejected {
 		hi := lipgloss.NewStyle().Background(wordBg).Foreground(p.white).Bold(true)
+		off := 0
 		for _, s := range r.Spans {
-			t := expandTabs(s.Text)
 			if s.Changed {
-				code = append(code, seg{t, hi})
+				code = append(code, seg{expandTabs(s.Text), hi})
 			} else {
-				code = append(code, seg{t, base})
+				code = tokSegs(code, s.Text, off, toks, base, st, syn)
 			}
+			off += len(s.Text)
 		}
 	} else {
-		code = []seg{{expandTabs(r.Text), base}}
+		code = tokSegs(code, r.Text, 0, toks, base, st, syn)
 	}
 	return paint(gutter, 0, gw, st) + paint(code, hscroll, max(width-gw, 0), st)
+}
+
+// tokSegs appends text (which starts off bytes into its line) cut at
+// the token runs: a run of a syntax class gets its colour on the row
+// background, plain text keeps base.
+func tokSegs(code []seg, text string, off int, toks []Tok, base, row lipgloss.Style, syn *[synClasses]lipgloss.Color) []seg {
+	if len(toks) == 0 {
+		return append(code, seg{expandTabs(text), base})
+	}
+	pos := 0 // byte offset of the current run in the line
+	for _, t := range toks {
+		if len(text) == 0 {
+			break
+		}
+		end := pos + t.N
+		if end <= off {
+			pos = end
+			continue
+		}
+		n := min(end-off, len(text))
+		st := base
+		if t.C != SynPlain {
+			st = row.Foreground(syn[t.C])
+		}
+		code = append(code, seg{expandTabs(text[:n]), st})
+		text, off, pos = text[n:], off+n, end
+	}
+	if text != "" {
+		code = append(code, seg{expandTabs(text), base})
+	}
+	return code
 }
 
 // rulerCells is the overview ruler: a tick where changes are, a lighter

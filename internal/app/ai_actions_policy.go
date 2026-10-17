@@ -355,6 +355,8 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"mcp_max_result_kb":     aiNever(aiNoAIConfig),
 	"mcp_trust_annotations": aiNever(aiNoAIConfig),
 	"mcp_trusted":           aiNever(aiNoAIConfig),
+	"mcp_trusted_tools":     aiNever(aiNoAIConfig),
+	"mcp_oauth_port":        aiNever(aiNoAIConfig),
 	// HTTP client: limits the user may let the AI change; the AI never
 	// raises its own budgets or turns TLS checks off.
 	"http_timeout":       aiConfirm(ai.ClassSettings),

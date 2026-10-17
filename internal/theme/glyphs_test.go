@@ -20,6 +20,12 @@ func TestGlyphTable(t *testing.T) {
 		// Source Control GRAPH (scm-graph design §2.3).
 		"commit": GlyphCommit, "head": GlyphHead, "merge": GlyphMerge,
 		"unpushed": GlyphUnpushed, "expand": GlyphExpand,
+		// Terminal tabs: the Fix chip and the CLI agent marks (U9b, U8).
+		"ai": GlyphAI, "agent-working": GlyphAgentWorking,
+		"agent-waiting": GlyphAgentWaiting, "agent-done": GlyphAgentDone,
+		// AI chat activity line (B1).
+		"ai-waiting": GlyphAIWaiting, "ai-writing": GlyphAIWriting, "ai-tool": GlyphAITool,
+		"ai-retry": GlyphAIRetry, "ai-stall": GlyphAIStall,
 		// HTTP client.
 		"send": GlyphSend, "sending": GlyphSending, "fail": GlyphFail, "redirect": GlyphRedirect}
 	for name, g := range glyphs {

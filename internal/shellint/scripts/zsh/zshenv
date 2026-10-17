@@ -1,0 +1,17 @@
+# termocode shell integration for zsh: ZDOTDIR points at this folder so
+# zsh reads these small files; each one loads the user's own file of the
+# same name from the user's real ZDOTDIR (or $HOME), unchanged.
+__tc_shim=${${(%):-%x}:A:h}
+ZDOTDIR=${TERMOCODE_ZDOTDIR:-$HOME}
+if [[ -r $ZDOTDIR/.zshenv ]]; then
+	builtin source "$ZDOTDIR/.zshenv"
+fi
+# The user's .zshenv may move ZDOTDIR: remember where, then come back.
+TERMOCODE_ZDOTDIR=${ZDOTDIR:-$HOME}
+if [[ -o interactive ]]; then
+	ZDOTDIR=$__tc_shim
+else
+	# Not interactive: no prompt, nothing to add. Put everything back.
+	if [[ -n ${TERMOCODE_ZDOTDIR_UNSET-} ]]; then unset ZDOTDIR; fi
+	unset TERMOCODE_ZDOTDIR TERMOCODE_ZDOTDIR_UNSET __tc_shim
+fi

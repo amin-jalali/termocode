@@ -1,0 +1,13 @@
+╭──────────────────────────────────────────────────────────────────────────╮
+│ ? Shell  npm test (Run the test suite)                                   │
+│                                                                          │
+│   npm test                                                               │
+│                                                                          │
+│ Allow execution of: 'npm'?                                               │
+│                                                                          │
+│ ● 1. Yes, allow once                                                     │
+│   2. Yes, allow always ...                                               │
+│   3. No, suggest changes (esc)                                           │
+╰──────────────────────────────────────────────────────────────────────────╯
+
+⠏ Waiting for user confirmation...

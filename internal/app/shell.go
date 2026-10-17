@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
 
+	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/theme"
@@ -71,6 +72,24 @@ type terminalTab struct {
 	// glyph shows ▶ while Running, then ✓ / ✘ from LastExit.
 	Task    string
 	Running bool
+
+	// Shell integration (term_integration.go): set by OSC 133 / OSC 7.
+	// Integrated is true once the shell sent one; then Cwd comes from
+	// OSC 7 and the b:term_title poll skips the tab.
+	Integrated bool
+	LastCmd    string    // the last command line (OSC 133 C)
+	CmdAt      time.Time // when it started
+	Busy       bool      // a command runs (between C and D)
+	// FixChip shows "✦ Fix?" on the tab (U9b): its last command failed
+	// while it was on show. Cleared by the next command or a click.
+	FixChip bool
+
+	// External CLI agent in the tab (U8, agent_tabs.go): its registry id,
+	// and what its screen says. agentFromCmd: found from the shell's
+	// command line, so it ends with that command.
+	Agent        string
+	AgentState   agents.State
+	agentFromCmd bool
 }
 
 // integratedTerminalRows returns the live total height (in cells) of the
@@ -247,7 +266,7 @@ func (m *Model) openTerminalPanel() {
 	//      tab switches and resize calls
 	//   4. defers startinsert via vim.schedule so the prompt is interactive
 	//      from the user's first keystroke
-	luaOpen := fmt.Sprintf(termExitedLua+`
+	luaOpen := fmt.Sprintf(termExitedLua+termShellIntLua+`
 		vim.cmd('keepalt botright %dnew')
 		local buf = vim.api.nvim_get_current_buf()
 		vim.bo[buf].buflisted = false
@@ -256,7 +275,9 @@ func (m *Model) openTerminalPanel() {
 		-- Tag the panel split so ensureEditorWindowCurrent never picks it
 		-- (it may later hold the non-terminal placeholder buffer).
 		vim.w[termWin].termocode_panel = true
-		local job = vim.fn.termopen(%q, {
+		local cmd, env = _G.termocode_shellint(vim.json.decode(%q))
+		local job = vim.fn.termopen(cmd, {
+			env = env,
 			on_exit = function(_, code, _)
 				vim.g.termocode_term_last_exit = code
 				pcall(_G.termocode_term_exited, buf)
@@ -284,7 +305,7 @@ func (m *Model) openTerminalPanel() {
 			pcall(vim.cmd, 'startinsert')
 		end
 		return tostring(termWin) .. ':' .. tostring(buf)
-	`, m.integratedTerminalRows(), shell)
+	`, m.integratedTerminalRows(), termShellSpecJSON(shell))
 	out, err := m.nvim.EvalLuaString(luaOpen)
 	if err != nil {
 		m.err = "terminal: " + err.Error()
@@ -388,7 +409,7 @@ func (m *Model) newTerminalTab() {
 	if shell == "" {
 		shell = "/bin/bash"
 	}
-	luaNew := fmt.Sprintf(termExitedLua+`
+	luaNew := fmt.Sprintf(termExitedLua+termShellIntLua+`
 		local termWin = %d
 		if not vim.api.nvim_win_is_valid(termWin) then return '0' end
 		local buf = vim.api.nvim_create_buf(false, true)
@@ -397,7 +418,9 @@ func (m *Model) newTerminalTab() {
 		vim.bo[buf].swapfile  = false
 		pcall(vim.api.nvim_win_set_buf, termWin, buf)
 		pcall(vim.api.nvim_set_current_win, termWin)
-		local job = vim.fn.termopen(%q, {
+		local cmd, env = _G.termocode_shellint(vim.json.decode(%q))
+		local job = vim.fn.termopen(cmd, {
+			env = env,
 			on_exit = function(_, code, _)
 				vim.g.termocode_term_last_exit = code
 				pcall(_G.termocode_term_exited, buf)
@@ -421,7 +444,7 @@ func (m *Model) newTerminalTab() {
 			pcall(vim.cmd, 'startinsert')
 		end
 		return tostring(buf)
-	`, m.terminalWinID, shell)
+	`, m.terminalWinID, termShellSpecJSON(shell))
 	out, err := m.nvim.EvalLuaString(luaNew)
 	if err != nil {
 		m.err = "terminal: " + err.Error()
@@ -819,6 +842,9 @@ type terminalTabSlot struct {
 	Start, End int
 	// Half-open column range for the close-x button inside the tab.
 	CloseStart, CloseEnd int
+	// Half-open column range of the "✦ Fix?" chip (U9b); both 0 when
+	// the tab has none.
+	ChipStart, ChipEnd int
 }
 
 // terminalTabBarLayout is the precomputed hit-map for the tab bar, used
@@ -881,6 +907,11 @@ func (m Model) computeTerminalTabBarLayout(width int) terminalTabBarLayout {
 		if segW < terminalTabBarMinTabW {
 			segW = terminalTabBarMinTabW
 		}
+		chipW := 0
+		if m.termTabHasChip(e) { // " ✦ Fix?" after the name (U9b)
+			chipW = 1 + termFixChipW
+			segW += chipW
+		}
 		// Bail out gracefully if we'd overflow into the right controls
 		// region (or the "+" / right-margin reservations).
 		// Need to leave at least: 1 col gap + 1 col "+" + 1 col gap + right.
@@ -895,6 +926,10 @@ func (m Model) computeTerminalTabBarLayout(width int) terminalTabBarLayout {
 			End:        col + segW,
 			CloseStart: col + segW - 2, // " ×"
 			CloseEnd:   col + segW - 1, // half-open; just the ×
+		}
+		if chipW > 0 {
+			slot.ChipStart = col + 3 + nameW + 1 // " <icon> <name> " then the chip
+			slot.ChipEnd = slot.ChipStart + termFixChipW
 		}
 		layout.Tabs = append(layout.Tabs, slot)
 		col += segW
@@ -961,23 +996,28 @@ func (m Model) renderTerminalTabBar(width int) string {
 			name = runewidth.Truncate(name, terminalTabMaxNameW, "…")
 		}
 		glyph := m.panelEntryGlyph(e)
+		segBg, glyphStyle, nameStyle, closeStyle := bg, mutedShellOnPanel, muted, closeOnPanel
+		segTok := theme.BgPanel
 		if slot.Active {
-			out.WriteString(editorBg.Render(" "))
-			out.WriteString(accent.Render(glyph))
-			out.WriteString(editorBg.Render(" "))
-			out.WriteString(primary.Render(name))
-			out.WriteString(editorBg.Render(" "))
-			out.WriteString(closeOnEditor.Render(theme.GlyphClose.String()))
-			out.WriteString(editorBg.Render(" "))
-		} else {
-			out.WriteString(bg.Render(" "))
-			out.WriteString(mutedShellOnPanel.Render(glyph))
-			out.WriteString(bg.Render(" "))
-			out.WriteString(muted.Render(name))
-			out.WriteString(bg.Render(" "))
-			out.WriteString(closeOnPanel.Render(theme.GlyphClose.String()))
-			out.WriteString(bg.Render(" "))
+			segBg, glyphStyle, nameStyle, closeStyle = editorBg, accent, primary, closeOnEditor
+			segTok = theme.BgEditor
 		}
+		// An agent tab (U8) shows its state mark in the glyph cell.
+		if t, ok := m.termTabAt(e); ok && t.Agent != "" {
+			mark, c := agentMark(t.AgentState)
+			glyph, glyphStyle = mark, theme.FgBg(c, segTok)
+		}
+		out.WriteString(segBg.Render(" "))
+		out.WriteString(glyphStyle.Render(glyph))
+		out.WriteString(segBg.Render(" "))
+		out.WriteString(nameStyle.Render(name))
+		out.WriteString(segBg.Render(" "))
+		if slot.ChipEnd > slot.ChipStart {
+			out.WriteString(theme.FgBg(theme.AIAccent, segTok).Render(termFixChipLabel()))
+			out.WriteString(segBg.Render(" "))
+		}
+		out.WriteString(closeStyle.Render(theme.GlyphClose.String()))
+		out.WriteString(segBg.Render(" "))
 		// Inter-tab separator. Skip when adjacent to the active tab
 		// (matches computeTerminalTabBarLayout's column math).
 		if i < len(layout.Tabs)-1 {
@@ -1035,6 +1075,9 @@ func (m Model) panelEntryName(e panelBarEntry) string {
 	}
 	if e.Index < 0 || e.Index >= len(m.terminalTabs) {
 		return "shell"
+	}
+	if title := m.terminalTabs[e.Index].agentTitle(); title != "" { // U8
+		return title
 	}
 	if name := m.terminalTabs[e.Index].Name; name != "" {
 		return name
@@ -1183,6 +1226,8 @@ const (
 	// counterparts (Output, Problems, …); the index is into m.panelTabs.
 	panelHitTabClose
 	panelHitTabActivate
+	// terminalHitFixChip is the "✦ Fix?" chip of a terminal tab (U9b).
+	terminalHitFixChip
 )
 
 // terminalTabBarHitTest maps an absolute screen coordinate to a tab-bar
@@ -1218,8 +1263,11 @@ func (m Model) terminalTabBarHitTest(absX, absY int) (terminalTabBarHit, int) {
 	if layout.NewStart >= 0 && localX >= layout.NewStart && localX < layout.NewEnd {
 		return terminalHitNewTab, -1
 	}
-	// Per-tab close-x.
+	// Per-tab close-x, and the Fix chip (U9b).
 	for _, slot := range layout.Tabs {
+		if slot.Kind == panelKindTerminal && localX >= slot.ChipStart && localX < slot.ChipEnd {
+			return terminalHitFixChip, slot.Index
+		}
 		if localX >= slot.CloseStart && localX < slot.CloseEnd {
 			if slot.Kind != panelKindTerminal {
 				return panelHitTabClose, slot.Index
@@ -1419,23 +1467,45 @@ func (m *Model) refreshTerminalCwd() {
 	// Filter out tabs whose buffers got nuked (user ran `exit` inside the
 	// tab, on_exit callback fired nvim_buf_delete). Keeps the tab bar in
 	// sync with reality without forcing the user to click the close-x.
+	// One call for every tab. A tab with shell integration gets its
+	// folder from OSC 7 (term_integration.go): only its liveness is read.
+	ids := make([]string, len(m.terminalTabs))
+	for i, t := range m.terminalTabs {
+		title := 1
+		if t.Integrated || t.Task != "" { // Group C: task tabs keep their name
+			title = 0
+		}
+		ids[i] = fmt.Sprintf("{%d,%d}", t.BufID, title)
+	}
+	raw, err := m.nvim.EvalLuaString(`local out = {}
+		for _, e in ipairs({` + strings.Join(ids, ",") + `}) do
+			local b, r = e[1], ''
+			if not vim.api.nvim_buf_is_loaded(b) then
+				r = '__DEAD__'
+			elseif e[2] == 1 then
+				local ok, t = pcall(vim.api.nvim_buf_get_var, b, 'term_title')
+				if ok and type(t) == 'string' then r = t:gsub('[\r\n]', ' ') end
+			end
+			out[#out + 1] = r
+		end
+		return table.concat(out, '\n')`)
+	if err != nil {
+		return
+	}
+	titles := strings.Split(raw, "\n")
 	before := len(m.terminalTabs)
 	alive := m.terminalTabs[:0]
 	for i := range m.terminalTabs {
-		buf := m.terminalTabs[i].BufID
-		out, err := m.nvim.EvalLuaString(fmt.Sprintf(`
-			local b = %d
-			if not vim.api.nvim_buf_is_loaded(b) then return '__DEAD__' end
-			local ok, t = pcall(vim.api.nvim_buf_get_var, b, 'term_title')
-			if ok and type(t) == 'string' and t ~= '' then return t end
-			return ''
-		`, buf))
+		out := ""
+		if i < len(titles) {
+			out = titles[i]
+		}
 		if out == "__DEAD__" {
 			// Skip this tab — it's gone.
 			continue
 		}
 		alive = append(alive, m.terminalTabs[i])
-		if err != nil || out == "" || m.terminalTabs[i].Task != "" { // Group C: task tabs keep their name
+		if out == "" {
 			continue
 		}
 		cwd := strings.TrimSpace(out)

@@ -1,0 +1,8 @@
+✦ The parser package turns the token stream into an AST. The main entry
+  point is Parse in parser.go.
+
+Using: 1 GEMINI.md file
+╭──────────────────────────────────────────────────────────────────────────╮
+│ >   Type your message or @path/to/file                                   │
+╰──────────────────────────────────────────────────────────────────────────╯
+~/proj (main*)            no sandbox (see /docs)          gemini-2.5-pro (97% context left)

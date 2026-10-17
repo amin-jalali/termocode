@@ -1,0 +1,16 @@
+⏺ I'll remove the old build folder first.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Bash command                                                                 │
+│                                                                              │
+│   rm -rf build                                                               │
+│   Remove the old build output                                                │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Yes                                                                     │
+│   2. Yes, and don't ask again for rm commands in /home/u/proj                │
+│   3. No, and tell Claude what to do differently (esc)                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+

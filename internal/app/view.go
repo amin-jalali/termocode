@@ -1521,7 +1521,8 @@ func (m Model) renderGitPanelRow(r gitPanelRow, active, focused bool, w int) str
 		}
 		return renderGitFile(m.gitFiles[r.fileIndex], active, focused, w)
 	case gitRowCommit:
-		return renderGitGraphCommit(m.gitCommits[r.ci], active, focused, w)
+		c := m.gitCommits[r.ci]
+		return renderGitGraphCommitMark(c, m.gitCompareMarkOf(c.FullHash), active, focused, w)
 	case gitRowGroup:
 		return renderGitGroupRow(r.group, r.groupN, m.gitGroupFolded[r.group], active, focused, w)
 	case gitRowMore:
@@ -2003,6 +2004,12 @@ func gitRefPills(refs []git.Ref, room int, bg lipgloss.Color) (string, int) {
 // prefix is muted (hidden below 40 cells, where the message needs the
 // room); ⇡ marks commits not pushed yet; initials show from 40 cells.
 func renderGitGraphCommit(c git.GraphCommit, active, focused bool, w int) string {
+	return renderGitGraphCommitMark(c, "", active, focused, w)
+}
+
+// renderGitGraphCommitMark is renderGitGraphCommit with a compare mark
+// ("1" / "2", BorderFocus) in the mark column in place of ⇡.
+func renderGitGraphCommitMark(c git.GraphCommit, mark string, active, focused bool, w int) string {
 	bg, _, _ := gitRowColors(active, focused, theme.LG(theme.TextMuted))
 	rowStyle := lipgloss.NewStyle().Background(bg)
 	fg := func(c lipgloss.Color) lipgloss.Style { return lipgloss.NewStyle().Background(bg).Foreground(c) }
@@ -2031,7 +2038,8 @@ func renderGitGraphCommit(c git.GraphCommit, active, focused bool, w int) string
 		initials = git.Initials(c.Author)
 	}
 	tail := 1 + 3 // " " + age
-	if c.Unpushed {
+	marked := c.Unpushed || mark != ""
+	if marked {
 		tail += 2 // "⇡ "
 	}
 	if initials != "" {
@@ -2072,14 +2080,18 @@ func renderGitGraphCommit(c git.GraphCommit, active, focused bool, w int) string
 		sb.WriteString(fg(theme.LG(theme.TextDim)).Render(initials))
 		used += 1 + runewidth.StringWidth(initials)
 	}
-	if c.Unpushed {
+	switch {
+	case mark != "":
+		sb.WriteString(rowStyle.Render(" "))
+		sb.WriteString(fg(theme.LG(theme.BorderFocus)).Render(mark))
+	case c.Unpushed:
 		sb.WriteString(rowStyle.Render(" "))
 		sb.WriteString(fg(theme.LG(theme.GitAdded)).Render(theme.GlyphUnpushed.String()))
 	}
 	sb.WriteString(rowStyle.Render(" "))
 	sb.WriteString(fg(theme.LG(theme.TextDim)).Render(fmt.Sprintf("%3s", age)))
 	used += 4
-	if c.Unpushed {
+	if marked {
 		used += 2
 	}
 	return clampSidebarRow(sb.String(), used, w, rowStyle)

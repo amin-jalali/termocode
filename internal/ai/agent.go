@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // EventKind tags what the agent reports while it works.
@@ -17,13 +18,18 @@ const (
 	EventToolResult                  // a tool finished (Tool, Detail = result / "declined")
 	EventDone                        // the turn is complete
 	EventError                       // the turn failed (Detail)
+	EventTurnStart                   // a request went to the model; no token yet
+	EventRetry                       // the server was busy; trying again (Attempt of Attempts)
 )
 
 // Event is one agent progress report.
 type Event struct {
-	Kind   EventKind
-	Text   string
-	Tool   string
+	Kind EventKind
+	Text string
+	Tool string
+	// Label is the tool's name for people (Tool.Label: the display name
+	// of an MCP tool, mcp.<server>.<tool>); tool events only.
+	Label  string
 	Detail string
 	// Tool events: Args are the call's arguments (EventToolStart); Gate
 	// is how it was cleared (auto, confirm, review, invalid) and Decision
@@ -31,6 +37,8 @@ type Event struct {
 	Args     map[string]any
 	Gate     string
 	Decision string
+	// EventRetry: this is retry Attempt of at most Attempts.
+	Attempt, Attempts int
 }
 
 // Gates of a tool call (Event.Gate).
@@ -75,6 +83,31 @@ type Agent struct {
 	// first one runs, so the app can show all the files a step changes
 	// in one review list.
 	BeforeCalls func(ctx context.Context, calls []ToolCall)
+	// RetryWait (optional) pauses before retry attempt n (1-based) and
+	// returns ctx's error when the turn is stopped. nil waits
+	// retryBackoff(n).
+	RetryWait func(ctx context.Context, n int) error
+}
+
+// DefaultRetries is how often a request is tried again when the server
+// is busy (429 / 5xx) before the first token.
+const DefaultRetries = 3
+
+// retryBackoff is the pause before retry n: 1 s, 2 s, 4 s.
+func retryBackoff(n int) time.Duration { return time.Second << (n - 1) }
+
+func (a *Agent) retryWait(ctx context.Context, n int) error {
+	if a.RetryWait != nil {
+		return a.RetryWait(ctx, n)
+	}
+	t := time.NewTimer(retryBackoff(n))
+	defer t.Stop()
+	select {
+	case <-t.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // SystemPrompt appends the tool protocol to base. Native tool calling only
@@ -164,28 +197,19 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 		var buf strings.Builder
 		prose := 0 // 0 undecided, 1 stream as text, -1 looks like tool json
 		var last Chunk
-		for c := range a.Provider.Stream(ctx, req) {
-			if c.Delta != "" {
-				buf.WriteString(c.Delta)
-				switch {
-				case a.Native:
-					emit(Event{Kind: EventText, Text: c.Delta})
-				case prose == 0:
-					lead := strings.TrimLeft(buf.String(), " \t\r\n")
-					if lead != "" {
-						if strings.HasPrefix(lead, "{") || strings.HasPrefix(lead, "```") {
-							prose = -1
-						} else {
-							prose = 1
-							emit(Event{Kind: EventText, Text: lead})
-						}
-					}
-				case prose == 1:
-					emit(Event{Kind: EventText, Text: c.Delta})
-				}
+		for try := 0; ; try++ {
+			buf.Reset()
+			prose, last = 0, Chunk{}
+			emit(Event{Kind: EventTurnStart})
+			a.stream(ctx, req, &buf, &prose, &last, emit)
+			// A busy server before any token: wait and send it again.
+			if last.Err == nil || buf.Len() > 0 || try >= DefaultRetries || !Retryable(last.Err) || ctx.Err() != nil {
+				break
 			}
-			if c.Done {
-				last = c
+			emit(Event{Kind: EventRetry, Attempt: try + 1, Attempts: DefaultRetries, Detail: Redact(last.Err.Error())})
+			if err := a.retryWait(ctx, try+1); err != nil {
+				last.Err = err
+				break
 			}
 		}
 		if last.Err != nil {
@@ -234,6 +258,36 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 	return msgs[start:]
 }
 
+// stream reads one model reply into buf, emitting text as it arrives
+// (prose: 0 undecided, 1 stream as text, -1 looks like tool json) and
+// keeping the final chunk in last.
+func (a *Agent) stream(ctx context.Context, req Request, buf *strings.Builder, prose *int, last *Chunk, emit func(Event)) {
+	for c := range a.Provider.Stream(ctx, req) {
+		if c.Delta != "" {
+			buf.WriteString(c.Delta)
+			switch {
+			case a.Native:
+				emit(Event{Kind: EventText, Text: c.Delta})
+			case *prose == 0:
+				lead := strings.TrimLeft(buf.String(), " \t\r\n")
+				if lead != "" {
+					if strings.HasPrefix(lead, "{") || strings.HasPrefix(lead, "```") {
+						*prose = -1
+					} else {
+						*prose = 1
+						emit(Event{Kind: EventText, Text: lead})
+					}
+				}
+			case *prose == 1:
+				emit(Event{Kind: EventText, Text: c.Delta})
+			}
+		}
+		if c.Done {
+			*last = c
+		}
+	}
+}
+
 // StepLimitText is the note shown when a turn hits the step limit. The
 // steps done so far stay in the chat, so "continue" goes on from there.
 func StepLimitText(steps int) string {
@@ -257,11 +311,11 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 		args = map[string]any{}
 	}
 	human := t.Human(args)
-	emit(Event{Kind: EventToolStart, Tool: t.Name, Detail: human, Args: args})
+	emit(Event{Kind: EventToolStart, Tool: t.Name, Label: t.Label(), Detail: human, Args: args})
 	if t.Validate != nil {
 		if err := t.Validate(args); err != nil {
 			result = "error: " + Redact(err.Error())
-			emit(Event{Kind: EventToolResult, Tool: t.Name, Detail: result, Gate: GateInvalid, Decision: "refused"})
+			emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: result, Gate: GateInvalid, Decision: "refused"})
 			return result
 		}
 	}
@@ -278,7 +332,7 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 	case t.Mutating:
 		gate = GateConfirm
 		if a.Confirm == nil || !a.Confirm(ctx, t, human) {
-			emit(Event{Kind: EventToolResult, Tool: t.Name, Detail: "declined by user", Gate: gate, Decision: "user denied"})
+			emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: "declined by user", Gate: gate, Decision: "user denied"})
 			return t.Name + ": the user declined this action. Do not retry it; continue without it or ask what to do instead."
 		}
 		decision = "user allowed"
@@ -286,14 +340,14 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 	defer func() {
 		if r := recover(); r != nil {
 			result = fmt.Sprintf("error: %v", r)
-			emit(Event{Kind: EventToolResult, Tool: t.Name, Detail: result, Gate: gate, Decision: decision})
+			emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: result, Gate: gate, Decision: decision})
 		}
 	}()
 	out, err := t.Run(context.WithValue(ctx, callIDKey{}, call.ID), args)
 	if err != nil {
 		out = "error: " + Redact(err.Error())
 	}
-	emit(Event{Kind: EventToolResult, Tool: t.Name, Detail: out, Gate: gate, Decision: decision})
+	emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: out, Gate: gate, Decision: decision})
 	return out
 }
 

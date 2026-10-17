@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/extproc"
 )
@@ -33,21 +35,39 @@ func (o Options) log(format string, args ...any) {
 	}
 }
 
-// Client is one MCP connection (any transport that gives a byte stream).
+// rpcConn is what a Client needs from a transport: the stdio one is an
+// extproc.Conn (newline framing), the remote one an httpConn (Streamable
+// HTTP, transport_http.go).
+type rpcConn interface {
+	Call(ctx context.Context, method string, params any) (json.RawMessage, error)
+	Notify(method string, params any) error
+	Close()
+	Done() <-chan struct{}
+}
+
+// replyFunc answers one server→client request (nil for notifications).
+type replyFunc func(result any, err *extproc.Error)
+
+// Client is one MCP connection.
 type Client struct {
-	conn *extproc.Conn
+	conn rpcConn
 	opts Options
 
-	mu      sync.Mutex
-	version string
-	info    ServerInfo
+	mu       sync.Mutex
+	version  string
+	info     ServerInfo
+	progress map[string]func() // progress token → push the call's deadline back
+	tokens   atomic.Int64
 }
 
 // NewClient starts the JSON-RPC connection on r / w (newline framing).
 // Call Initialize before anything else.
 func NewClient(r io.Reader, w io.Writer, opts Options) *Client {
 	c := &Client{opts: opts}
-	c.conn = extproc.NewConnWith(r, w, c.handle, extproc.ConnOptions{
+	h := func(conn *extproc.Conn, m extproc.Message) {
+		c.handle(m, func(result any, err *extproc.Error) { _ = conn.Reply(m.ID, result, err) })
+	}
+	c.conn = extproc.NewConnWith(r, w, h, extproc.ConnOptions{
 		Framing: extproc.FramingNewline,
 		Skipped: func(line string) { opts.log("stdout (not JSON): %s", line) },
 		OnCancel: func(conn *extproc.Conn, id json.RawMessage) {
@@ -112,6 +132,10 @@ func (c *Client) Initialize(ctx context.Context) error {
 	c.mu.Lock()
 	c.version, c.info = res.ProtocolVersion, res.ServerInfo
 	c.mu.Unlock()
+	// HTTP sends the negotiated version on every later request.
+	if pv, ok := c.conn.(interface{ setProtocolVersion(string) }); ok {
+		pv.setProtocolVersion(res.ProtocolVersion)
+	}
 	return c.conn.Notify("notifications/initialized", nil)
 }
 
@@ -147,10 +171,53 @@ func (c *Client) ListTools(ctx context.Context) ([]Tool, error) {
 // CallTool runs one tool. A JSON-RPC error is an error; a tool failure
 // (isError) is a result whose Text starts with "error: ".
 func (c *Client) CallTool(ctx context.Context, name string, args map[string]any) (CallResult, error) {
+	return c.callTool(ctx, name, args, nil)
+}
+
+// ErrCallTimeout: a tools/call got no answer and no progress within its
+// timeout.
+var ErrCallTimeout = errors.New("no answer in time")
+
+// CallToolTimeout is CallTool with a deadline that each progress
+// notification of the call pushes back (long Playwright runs report
+// progress). It returns ErrCallTimeout when the server stays silent for
+// timeout; timeout <= 0 means no deadline.
+func (c *Client) CallToolTimeout(ctx context.Context, name string, args map[string]any, timeout time.Duration) (CallResult, error) {
+	if timeout <= 0 {
+		return c.CallTool(ctx, name, args)
+	}
+	token := fmt.Sprintf("termocode-%d", c.tokens.Add(1))
+	cctx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+	timer := time.AfterFunc(timeout, func() { cancel(ErrCallTimeout) })
+	defer timer.Stop()
+	c.mu.Lock()
+	if c.progress == nil {
+		c.progress = map[string]func(){}
+	}
+	c.progress[token] = func() { timer.Reset(timeout) }
+	c.mu.Unlock()
+	defer func() {
+		c.mu.Lock()
+		delete(c.progress, token)
+		c.mu.Unlock()
+	}()
+	res, err := c.callTool(cctx, name, args, map[string]any{"progressToken": token})
+	if err != nil && ctx.Err() == nil && errors.Is(context.Cause(cctx), ErrCallTimeout) {
+		return res, ErrCallTimeout
+	}
+	return res, err
+}
+
+func (c *Client) callTool(ctx context.Context, name string, args map[string]any, meta map[string]any) (CallResult, error) {
 	if args == nil {
 		args = map[string]any{}
 	}
-	raw, err := c.call(ctx, "tools/call", map[string]any{"name": name, "arguments": args})
+	params := map[string]any{"name": name, "arguments": args}
+	if meta != nil {
+		params["_meta"] = meta
+	}
+	raw, err := c.call(ctx, "tools/call", params)
 	if err != nil {
 		return CallResult{}, err
 	}
@@ -163,10 +230,10 @@ func (c *Client) CallTool(ctx context.Context, name string, args map[string]any)
 
 // handle answers the server's requests and notifications. It runs on the
 // reader goroutine, so it never blocks.
-func (c *Client) handle(conn *extproc.Conn, m extproc.Message) {
+func (c *Client) handle(m extproc.Message, reply replyFunc) {
 	switch m.Method {
 	case "ping":
-		_ = conn.Reply(m.ID, map[string]any{}, nil)
+		reply(map[string]any{}, nil)
 	case "roots/list":
 		roots := []map[string]any{}
 		if c.opts.Roots != nil {
@@ -175,11 +242,26 @@ func (c *Client) handle(conn *extproc.Conn, m extproc.Message) {
 				roots = append(roots, map[string]any{"uri": u.String(), "name": filepath.Base(r)})
 			}
 		}
-		_ = conn.Reply(m.ID, map[string]any{"roots": roots}, nil)
+		reply(map[string]any{"roots": roots}, nil)
 	case "notifications/tools/list_changed":
 		c.opts.log("tools changed")
 		if c.opts.ToolsChanged != nil {
 			c.opts.ToolsChanged()
+		}
+	case "notifications/progress":
+		var p struct {
+			Token json.RawMessage `json:"progressToken"`
+		}
+		_ = json.Unmarshal(m.Params, &p)
+		var tok string
+		if json.Unmarshal(p.Token, &tok) != nil {
+			tok = string(p.Token)
+		}
+		c.mu.Lock()
+		f := c.progress[tok]
+		c.mu.Unlock()
+		if f != nil {
+			f()
 		}
 	case "notifications/message":
 		var p struct {
@@ -196,7 +278,7 @@ func (c *Client) handle(conn *extproc.Conn, m extproc.Message) {
 		// sampling/createMessage and elicitation/create are refused on
 		// purpose: a server must never drive our model or the user.
 		if m.IsRequest() {
-			_ = conn.Reply(m.ID, nil, &extproc.Error{Code: extproc.CodeMethodNotFound, Message: "termocode does not support " + m.Method})
+			reply(nil, &extproc.Error{Code: extproc.CodeMethodNotFound, Message: "termocode does not support " + m.Method})
 		}
 	}
 }
