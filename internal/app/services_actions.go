@@ -329,7 +329,7 @@ func (m *Model) servicesLocalExitToast(name string, code int) tea.Cmd {
 // ── Confirm cards ────────────────────────────────────────────────────────
 
 const (
-	confirmKindServicesLocal confirmKindEnum = 980 + iota
+	confirmKindServicesLocal confirmKindEnum = 990 + iota
 	confirmKindServicesDown
 	confirmKindServicesQuit
 )
