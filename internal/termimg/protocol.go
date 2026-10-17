@@ -73,6 +73,9 @@ type Caps struct {
 	// Answered: the terminal answered the DA1 query (false when it was
 	// silent or not asked). Kept in the probe cache (internal/termcaps).
 	Answered bool
+	// SyncOutput: the terminal knows mode 2026 (DECRQM answer), so frames
+	// can be drawn as one (terminal-compat R10).
+	SyncOutput bool
 }
 
 // CellSize returns the cell size in pixels, with a sane default when the

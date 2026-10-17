@@ -107,3 +107,20 @@ func TestModesReset(t *testing.T) {
 		t.Errorf("alt screen must be left last: %q", got)
 	}
 }
+
+// Terminal R10: synchronized output (mode 2026) frames each repaint; it
+// is never a lasting state, so attach and detach never replay it (a frame
+// cut off by a detach must not leave the new terminal frozen).
+func TestModesNeverReplaySyncOutput(t *testing.T) {
+	m := NewModes()
+	m.Feed([]byte(appStart + "\x1b[?2026hframe\x1b[?2026l\x1b[?2026hcut off"))
+	if got := string(m.Replay()); strings.Contains(got, "2026") {
+		t.Errorf("replay has mode 2026: %q", got)
+	}
+	if got := string(m.Reset()); strings.Contains(got, "2026h") {
+		t.Errorf("reset has mode 2026 on: %q", got)
+	}
+	if m.Mode(2026) {
+		t.Error("mode 2026 recorded")
+	}
+}

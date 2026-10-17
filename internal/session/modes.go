@@ -146,12 +146,16 @@ func (m *Modes) endOSC() {
 	m.st = stGround
 }
 
+// syncOutputMode (2026, synchronized output) brackets each frame; it is
+// not a lasting state and is never recorded (terminal-compat R10).
+const syncOutputMode = 2026
+
 func (m *Modes) csi(params string, final byte) {
 	switch {
 	case strings.HasPrefix(params, "?") && (final == 'h' || final == 'l'):
 		for _, f := range strings.Split(params[1:], ";") {
 			n, err := strconv.Atoi(f)
-			if err != nil {
+			if err != nil || n == syncOutputMode {
 				continue
 			}
 			if _, seen := m.dec[n]; !seen {

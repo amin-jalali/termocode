@@ -130,7 +130,7 @@ func init() {
 // replies in raw mode, so this must run before Bubble Tea owns the TTY.
 // It reports whether the terminal can take the kitty keyboard protocol
 // (see kittyKeyboardOption).
-func probeTerminal() (kittyKeys bool) {
+func probeTerminal() (kittyKeys, syncOutput bool) {
 	disp := app.ConfigDisplay()
 	envIcons := os.Getenv("TERMOCODE_ICON_MODE") != "" || os.Getenv("TERMOCODE_NERD_FONT") == "1"
 	nerd := false
@@ -147,7 +147,28 @@ func probeTerminal() (kittyKeys bool) {
 	caps := startupProbe(termimg.ParseMode(disp.Images), os.Getenv, time.Now())
 	app.SetTerminalCaps(caps, unicodeOK, nerd)
 	app.ApplyDisplaySettings(disp)
-	return caps.KittyKeys && keysWanted(os.Getenv)
+	return caps.KittyKeys && keysWanted(os.Getenv), syncOutputWanted(caps.SyncOutput, os.Getenv)
+}
+
+// syncOutputWanted: draw each frame as one (mode 2026, synchronized
+// output) when the terminal answered DECRQM for it. TERMOCODE_SYNC=on /
+// off overrides the answer (terminal-compat R10).
+func syncOutputWanted(answered bool, getenv func(string) string) bool {
+	switch getenv("TERMOCODE_SYNC") {
+	case "on", "1":
+		return true
+	case "off", "0":
+		return false
+	}
+	return answered
+}
+
+// syncOutputOption turns synchronized output on in the renderer.
+func syncOutputOption(on bool) tea.ProgramOption {
+	if !on {
+		return func(*tea.Program) {}
+	}
+	return tea.WithSynchronizedOutput()
 }
 
 // probeTimeout bounds the startup probe: a terminal that does not answer
@@ -182,10 +203,8 @@ func startupProbe(mode termimg.Mode, getenv func(string) string, now time.Time) 
 	switch {
 	case images:
 		caps = termimg.ProbeWith(os.Stdin, os.Stdout, probeTimeout, getenv, termimg.ProbeOpts{AnsweredBefore: cached && seen.Answers})
-	case keysWanted(getenv):
-		caps.KittyKeys, caps.Answered = termimg.ProbeKittyKeyboard(os.Stdin, os.Stdout, probeTimeout, getenv)
 	default:
-		return caps
+		caps = termimg.ProbeTerminal(os.Stdin, os.Stdout, probeTimeout, getenv)
 	}
 	// Only a real round counts (not a TTY or inside tmux: nothing asked).
 	if asked(getenv) && (!cached || seen.Answers != caps.Answered || now.Sub(seen.At) > termcaps.CacheTTL/2) {
@@ -345,7 +364,7 @@ func runTUI() {
 	// CSI sequences and reads cursor-position reports; doing this after
 	// tea.NewProgram would race with Bubble Tea's own input reader.
 	// Honours TERMOCODE_ICON_MODE (manual override) and NO_COLOR.
-	kittyKeys := probeTerminal()
+	kittyKeys, syncOutput := probeTerminal()
 
 	font := applyFontDelta(fontDelta())
 	hostEnter, hostLeave := hostEscapes(os.Getenv)
@@ -381,6 +400,9 @@ func runTUI() {
 		app.New(),
 		tea.WithAltScreen(),
 		kittyKeyboardOption(kittyKeys),
+		// Each frame drawn at once where the terminal can (no torn rows on
+		// a slow link; the pacing query of framePacingOption follows it).
+		syncOutputOption(syncOutput),
 		// Over SSH: no run-on after a held key on a slow line.
 		framePacingOption(framePacing(os.Getenv)),
 		// Downloads with kitty read the terminal's answers: transfer.Input

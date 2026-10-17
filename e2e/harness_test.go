@@ -103,6 +103,9 @@ type StartOpts struct {
 	// KittyKeys makes the terminal answer the kitty keyboard query
 	// (CSI ? u) before DA1, as kitty, Ghostty, foot, WezTerm do.
 	KittyKeys bool
+	// SyncOutput makes the terminal answer DECRQM for mode 2026
+	// (synchronized output) with "reset", as kitty, foot, WezTerm do.
+	SyncOutput bool
 	// Link puts a slow network (latency, bandwidth) between the terminal
 	// and termocode, both ways, like an SSH connection (Group S2).
 	Link *SlowLink
@@ -202,6 +205,9 @@ func Start(t *testing.T, o StartOpts) *Term {
 				}
 				if o.KittyKeys && !o.Silent && bytes.Contains(buf[:n], []byte("\x1b[?u")) {
 					_, _ = ptmx.Write([]byte("\x1b[?0u"))
+				}
+				if o.SyncOutput && !o.Silent && bytes.Contains(buf[:n], []byte("\x1b[?2026$p")) {
+					_, _ = ptmx.Write([]byte("\x1b[?2026;2$y"))
 				}
 				if tm.toTerm != nil {
 					tm.toTerm.Write(buf[:n])

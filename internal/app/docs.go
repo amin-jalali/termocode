@@ -304,6 +304,7 @@ func EnvCatalog() []EnvVar {
 		{"TERMOCODE_FRAME_PACING", "on / off: wait for the terminal before sending more frames, so a held key stops at once on a slow line (default: on over SSH)."},
 		{"TERMOCODE_FONT_DELTA","Font size change asked of the terminal at launch (kitty with remote control only); wins over font_delta in config.json (default 0 = off)."},
 		{"TERMOCODE_PROBE", "`off`: never ask the terminal what it can do at start (images, cell size, kitty keyboard); the environment decides. A terminal that did not answer is not asked again for 7 days (`$XDG_STATE_HOME/termocode/termcaps.json`)."},
+		{"TERMOCODE_SYNC", "on / off: draw each frame as one (synchronized output, mode 2026), so no half-drawn frame shows on a slow link (default: on when the terminal says it supports it)."},
 		{"TERMOCODE_ICON_MODE", "Icon set: `nerd_font`, `unicode` or `ascii`."},
 		{"TERMOCODE_NERD_FONT", "Legacy: `1` is the same as `TERMOCODE_ICON_MODE=nerd_font`."},
 		{"TERMOCODE_PLUGINS_DIR", "Folder for the Neovim plugins termocode clones on first launch."},
