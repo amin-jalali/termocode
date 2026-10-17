@@ -1,11 +1,14 @@
 package testkit
 
 import (
+	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -483,6 +486,74 @@ func TestHTTPPrivateEnvGitWarning(t *testing.T) {
 		_, ups := d.Updates()
 		t.Fatalf("no warning:\n%s\n%v", screen(d), ups)
 	}
+}
+
+// HC-13: a 5 MB JSON answer arrives in batches, every line lands, a
+// redraw of the page stays within 5 ms, and the lens of a 2 000-request
+// file redraws within the budget.
+func TestHTTPPerfBigPage(t *testing.T) {
+	var sb strings.Builder
+	sb.WriteString(`{"items":[`)
+	for i := 0; sb.Len() < 5<<20; i++ {
+		if i > 0 {
+			sb.WriteString(",")
+		}
+		sb.WriteString(`{"id":1,"name":"user","tags":["a","b"]}`)
+	}
+	sb.WriteString("]}")
+	big := sb.String()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, big)
+	}))
+	defer srv.Close()
+	if testing.Short() {
+		t.Skip("starts nvim")
+	}
+	var reqs strings.Builder
+	reqs.WriteString("GET " + srv.URL + "/big\n")
+	for i := 0; i < 2000; i++ {
+		reqs.WriteString("\n###\n# @name r" + strconv.Itoa(i) + "\nGET {{host}}/users/" + strconv.Itoa(i) + "\n")
+	}
+	files := textFiles()
+	files["big.http"] = reqs.String()
+	d := New(t, Options{W: 120, H: 34, Nvim: true, Files: files})
+	open(d, "big.http")
+	if !d.WaitFor(func() bool { return strings.Contains(httpLensRow(d, 5), "send") }, 5*time.Second) {
+		t.Fatal("no lens")
+	}
+	redraw := `local best = 1e9
+for _ = 1, 5 do
+  local t = vim.loop.hrtime(); vim.cmd('redraw!'); best = math.min(best, vim.loop.hrtime() - t)
+end
+return tostring(best / 1e6)`
+	lensMS := lua(d, redraw)
+	httpCursor(d, 1)
+	start := time.Now()
+	d.Palette("http-send")
+	// Every line of the pretty body arrives (~150 k lines, 5 000 a batch).
+	want := strings.Count(string(mustIndent(big)), "\n") + 1 + 3
+	if !d.WaitFor(func() bool {
+		return lua(d, `local b = vim.g.termocode_http_buf; return b and tostring(vim.api.nvim_buf_line_count(b)) or '0'`) == strconv.Itoa(want)
+	}, 30*time.Second) {
+		t.Fatalf("page lines never reached %d", want)
+	}
+	all := time.Since(start)
+	httpFocusPage(d)
+	pageMS := lua(d, redraw)
+	t.Logf("lens redraw %s ms, page redraw %s ms, send → all lines %v", lensMS, pageMS, all)
+	if f, _ := strconv.ParseFloat(pageMS, 64); f > 5 && !raceOn() {
+		t.Errorf("page redraw %s ms with 5 MB loaded (budget 5 ms)", pageMS)
+	}
+	if f, _ := strconv.ParseFloat(lensMS, 64); f > 5 && !raceOn() {
+		t.Errorf("lens redraw %s ms on a 2 000-request file (budget 1 ms target, 5 ms limit)", lensMS)
+	}
+}
+
+func mustIndent(s string) []byte {
+	var b bytes.Buffer
+	_ = json.Indent(&b, []byte(s), "", "  ")
+	return b.Bytes()
 }
 
 // keymap.json can move the send key.
