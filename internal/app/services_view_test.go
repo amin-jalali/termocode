@@ -291,3 +291,16 @@ func TestServicesHitTargets(t *testing.T) {
 		}
 	}
 }
+
+// Regression: the services confirm kinds shared 980 with the setup card,
+// so "Run" on the first-start card was handled as the setup question.
+func TestServicesConfirmKindsUnique(t *testing.T) {
+	seen := map[confirmKindEnum]string{confirmKindSetupProfile: "setup", confirmKindAISaveOverwrite: "ai-save",
+		confirmKindAITool: "ai-tool", confirmKindMCPTrust: "mcp", confirmKindAIHistoryDelete: "ai-history"}
+	for k, name := range map[confirmKindEnum]string{confirmKindServicesLocal: "local", confirmKindServicesDown: "down", confirmKindServicesQuit: "quit"} {
+		if other, ok := seen[k]; ok {
+			t.Errorf("services %s uses %d, taken by %s", name, k, other)
+		}
+		seen[k] = name
+	}
+}
