@@ -554,3 +554,31 @@ func TestSignOutRevokesBehavior(t *testing.T) {
 		t.Errorf("signed in %v, revoked %v", signedIn(t, "linear"), as.Revoked())
 	}
 }
+
+// Spec (plan CX-12): Paste a config… takes a Claude / Cursor block; the
+// token in it goes to credentials.json and mcp.json gets ${secret:…}.
+func TestConnectPasteConfig(t *testing.T) {
+	noGH(t)
+	_, model := fakeToolModel(t)
+	d := remoteDriver(t, model.URL, `{"mcpServers":{}}`, "", false)
+	pickService(d, "Paste a config")
+	if !d.WaitForText("Paste an mcpServers block", 10*time.Second) {
+		t.Fatalf("no paste screen:\n%s", screen(d))
+	}
+	d.Type(`{"mcpServers":{"gh":{"type":"http","url":"https://api.githubcopilot.com/mcp/","headers":{"Authorization":"Bearer ghp_abcdefghijklmnopqrstuvwxyz123456"}},"notes":{"command":"npx","args":["-y","notes-mcp"]}}}`)
+	if strings.Contains(screen(d), "ghp_") {
+		t.Error("the pasted token is shown")
+	}
+	d.Key("enter")
+	if !d.WaitForText("Added gh, notes.", 10*time.Second) {
+		t.Fatalf("not added:\n%s", screen(d))
+	}
+	j := userMCPJSON(t)
+	if strings.Contains(j, "ghp_") || !strings.Contains(j, "Bearer ${secret:gh_authorization}") || !strings.Contains(j, "notes-mcp") {
+		t.Errorf("mcp.json %s", j)
+	}
+	c, mode := credentials(t)
+	if s, _ := c["mcp_secrets"].(map[string]any); s["gh_authorization"] != "ghp_abcdefghijklmnopqrstuvwxyz123456" || mode != 0o600 {
+		t.Errorf("credentials (mode %o) %v", mode, c)
+	}
+}

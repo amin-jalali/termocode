@@ -55,6 +55,7 @@ const (
 	wizToken                     // paste a token
 	wizApp                       // Slack: create your app
 	wizURL                       // Custom URL: type it
+	wizPaste                     // Paste a config: a Claude / Cursor block
 	wizDone
 	wizError
 )
@@ -188,7 +189,7 @@ func (m *Model) mcpConnectItems() []picker.Item {
 	}
 	items = append(items,
 		picker.Item{ID: mcpConnectURLID, Title: fmt.Sprintf("%-15s %s", "Custom URL…", "any MCP server"), Hint: "type its address"},
-		picker.Item{ID: mcpConnectJSONID, Title: fmt.Sprintf("%-15s %s", "Paste a config…", "a Claude or Cursor block"), Hint: "opens mcp.json"})
+		picker.Item{ID: mcpConnectJSONID, Title: fmt.Sprintf("%-15s %s", "Paste a config…", "a Claude or Cursor block"), Hint: "tokens move to credentials"})
 	return items
 }
 
@@ -260,7 +261,9 @@ func (m *Model) mcpPlanEnv(p mcp.Preset) mcp.PlanEnv {
 func (m *Model) onMCPConnectPicked(id string) tea.Cmd {
 	switch id {
 	case mcpConnectJSONID:
-		return m.editMCPConfig()
+		w := m.newWizard(mcp.Preset{Name: "pasted", Title: "pasted servers"}, "")
+		w.step = wizPaste
+		return m.showWizard()
 	case mcpConnectURLID:
 		w := m.newWizard(mcp.Preset{Name: "custom", Title: "a custom server"}, "")
 		w.step = wizURL
@@ -794,7 +797,7 @@ func (m *Model) wizCard() connectcard.Card {
 		for i, s := range r.Steps {
 			rows = append(rows, connectcard.Row{Kind: connectcard.Text, Text: fmt.Sprintf("%d. %s", i+1, s)})
 		}
-		rows = append(rows, connectcard.Row{Kind: connectcard.Input, ID: "client", Text: "Client ID:"},
+		rows = append(rows, connectcard.Row{Kind: connectcard.Blank}, connectcard.Row{Kind: connectcard.Input, ID: "client", Text: "Client ID:"},
 			connectcard.Row{Kind: connectcard.Dim, Text: "The manifest has no secret. c: copy it again  ·  o: open api.slack.com"})
 		return connectcard.Card{Title: title + " — create your Slack app", Rows: rows,
 			Buttons: []connectcard.Button{{ID: "submit", Title: "Connect", Primary: true}, cancel}, Keys: []string{"c", "copy manifest", "o", "open"}}
@@ -806,7 +809,26 @@ func (m *Model) wizCard() connectcard.Card {
 		}
 		return connectcard.Card{Title: "Connect a custom server", Rows: rows,
 			Buttons: []connectcard.Button{{ID: "submit", Title: "Connect", Primary: true}, cancel}}
+	case wizPaste:
+		rows := []connectcard.Row{
+			{Kind: connectcard.Text, Text: "Paste an mcpServers block from Claude Desktop, Claude Code or Cursor (the whole file or some servers)."},
+			{Kind: connectcard.Blank},
+			{Kind: connectcard.Input, ID: "config", Text: "The block:", Masked: true},
+			{Kind: connectcard.Blank},
+			{Kind: connectcard.Dim, Text: "Tokens in it are moved to credentials.json (only you can read it); mcp.json gets ${secret:…} instead."},
+		}
+		if w.pasteErr != "" {
+			rows = append(rows, connectcard.Row{Kind: connectcard.Fail, Text: w.pasteErr})
+		}
+		return connectcard.Card{Title: "Paste a config", Rows: rows,
+			Buttons: []connectcard.Button{{ID: "submit", Title: "Add", Primary: true}, {ID: "edit-json", Title: "Open mcp.json"}, cancel}}
 	case wizDone:
+		if w.preset.Name == "pasted" {
+			rows := []connectcard.Row{{Kind: connectcard.OK, Text: w.errText}}
+			rows = append(rows, connectcard.Row{Kind: connectcard.Blank},
+				connectcard.Row{Kind: connectcard.Dim, Text: "Local servers start on the first chat message that needs them. A remote one that needs a sign-in: AI: MCP Servers… → the server → Sign in."})
+			return connectcard.Card{Title: "Added", Rows: rows, Buttons: []connectcard.Button{{ID: "servers", Title: "Show servers", Primary: true}, {ID: "done", Title: "Done"}}}
+		}
 		return m.wizDoneCard()
 	case wizError:
 		return connectcard.Card{Title: title, Rows: []connectcard.Row{{Kind: connectcard.Fail, Text: w.errText}}, Buttons: w.errBtns}
@@ -890,6 +912,12 @@ func (m *Model) onMCPWizButton(id string) tea.Cmd {
 	case "edit-token":
 		w.method = ""
 		return m.wizGo(mcp.MethodToken)
+	case "edit-json":
+		m.closeWizard()
+		return m.editMCPConfig()
+	case "servers":
+		m.closeWizard()
+		return m.openMCPServers()
 	case "retry":
 		if w.method == "" {
 			return m.wizStart()
@@ -968,6 +996,8 @@ func (m *Model) onMCPWizSubmit(id, v string) tea.Cmd {
 		w.env.AppClientID = v
 		w.plan = mcp.Plan(w.preset, w.env)
 		return m.wizGo(w.plan[0])
+	case "config":
+		return m.wizImport(v)
 	case "url":
 		u, err := url.Parse(v)
 		if err != nil || u.Host == "" || (u.Scheme != "https" && !(u.Scheme == "http" && isLoopbackHost(u.Hostname()))) {
@@ -1121,7 +1151,7 @@ func (m *Model) connectDemo(step string) tea.Cmd {
 		return m.onMCPWizEnv(mcpWizEnvMsg{accounts: s.mcpGHAccounts})
 	}
 	name := map[string]string{"gh": "github", "device": "github", "browser": "linear", "ssh": "linear",
-		"done": "github", "error": "gitlab", "token": "sentry", "slack": "slack", "url": "linear"}[step]
+		"done": "github", "error": "gitlab", "token": "sentry", "slack": "slack", "url": "linear", "paste": "linear"}[step]
 	p, ok := mcp.PresetByName(name)
 	if !ok {
 		return nil
@@ -1154,8 +1184,59 @@ func (m *Model) connectDemo(step string) tea.Cmd {
 		w.step, w.method = wizToken, mcp.MethodToken
 	case "slack":
 		w.step, w.method, w.link = wizApp, mcp.MethodApp, p.App.Page
+	case "paste":
+		w.preset, w.step = mcp.Preset{Name: "pasted", Title: "pasted servers"}, wizPaste
 	default:
 		return nil
 	}
+	return m.showWizard()
+}
+
+// wizImport adds the servers of a pasted block (Paste a config…): the
+// tokens go to credentials.json, the entries to the user mcp.json; a
+// name that exists is skipped.
+func (m *Model) wizImport(text string) tea.Cmd {
+	w := m.wiz()
+	list, problems, err := mcp.ParseImport(text)
+	if err != nil {
+		w.pasteErr = err.Error()
+		m.connect = connectcard.New(m.wizCard())
+		m.connect.SetSize(m.w, m.h)
+		return nil
+	}
+	cs := mcp.CredStore{Path: mcpCredPath()}
+	var added []string
+	skipped := problems
+	for _, im := range list {
+		if len(mcpServerEntries(im.Name)) > 0 {
+			skipped = append(skipped, im.Name+": already in mcp.json")
+			continue
+		}
+		ok := true
+		for k, v := range im.Secrets {
+			ai.RegisterSecret(v)
+			if err := cs.SetSecret(k, v); err != nil {
+				skipped = append(skipped, im.Name+": "+err.Error())
+				ok = false
+				break
+			}
+		}
+		if !ok {
+			continue
+		}
+		if err := mcp.AddServer(mcpUserPath(), im.Name, im.Entry); err != nil {
+			skipped = append(skipped, im.Name+": "+ai.Redact(err.Error()))
+			continue
+		}
+		added = append(added, im.Name)
+	}
+	m.aiMCP().Reload()
+	if len(added) == 0 {
+		w.pasteErr = "Nothing added. " + mcp.ImportSummary(nil, skipped)
+		m.connect = connectcard.New(m.wizCard())
+		m.connect.SetSize(m.w, m.h)
+		return nil
+	}
+	w.step, w.errText = wizDone, mcp.ImportSummary(added, skipped)
 	return m.showWizard()
 }

@@ -302,11 +302,15 @@ func clamp(v, n int) int {
 	return v
 }
 
-// clean drops control bytes from typed or pasted text.
+// clean drops control bytes from typed or pasted text; line breaks and
+// tabs of a pasted block become spaces.
 func clean(s string) string {
 	var b strings.Builder
 	for _, r := range s {
-		if r >= 0x20 && r != 0x7f {
+		switch {
+		case r == '\n' || r == '\r' || r == '\t':
+			b.WriteRune(' ')
+		case r >= 0x20 && r != 0x7f:
 			b.WriteRune(r)
 		}
 	}

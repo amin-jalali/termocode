@@ -156,9 +156,14 @@ The AI's instructions name each connected service and its access
 
 ## Add a server by hand
 
-Run **Open Config: MCP Servers** (or **Paste a config…** in the
-wizard). It opens `~/.config/termocode/mcp.json` (created when missing).
-Paste servers and save:
+**Paste a config…** in the Connect wizard takes a block from Claude
+Desktop, Claude Code or Cursor as it is: tokens in it move to
+`credentials.json` and the entries get `${secret:…}` instead. Names that
+already exist are skipped.
+
+Or run **Open Config: MCP Servers**. It opens
+`~/.config/termocode/mcp.json` (created when missing). Paste servers and
+save:
 
 ```json
 {
