@@ -464,12 +464,12 @@ func (m *Model) handleHTTPMsg(msg tea.Msg) (tea.Cmd, bool) {
 	case httpAppendMsg:
 		return m.httpPageAppend(msg), true
 	case httpPrivateEnvCheckMsg:
-		what := "is not git-ignored"
+		title := "Secrets file not git-ignored"
 		if msg.state == httpGitTracked {
-			what = "is tracked by git"
+			title = "Secrets file tracked by git"
 		}
-		return m.pushToastDetail(toast.Warn, filepath.ToSlash(msg.rel)+" "+what,
-			"It holds secrets. HTTP: Open Private Environment File offers to add it to .gitignore."), true
+		return m.pushToastDetail(toast.Warn, title,
+			filepath.ToSlash(msg.rel)+" holds tokens. HTTP: Open Private Environment File offers to add it to .gitignore."), true
 	}
 	return nil, false
 }
