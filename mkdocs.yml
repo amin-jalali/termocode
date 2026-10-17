@@ -87,6 +87,7 @@ nav:
       - Set up AI: guides/ai-setup.md
       - Use AI: guides/ai-use.md
       - Connect MCP servers: guides/mcp.md
+      - Test an HTTP API (.http files): guides/http-client.md
       - Debug a program: guides/debug.md
       - Run and explore tests: guides/tests.md
       - Tasks and problems: guides/tasks-problems.md
@@ -118,6 +119,7 @@ nav:
           - "0007 Persistent sessions": adr/0007-persistent-sessions.md
           - "0008 Diff card for reviews": adr/0008-go-rendered-diff-viewer.md
           - "0009 Process extensions": adr/0009-process-extensions.md
+          - "0012 HTTP client engine": adr/0012-http-client-engine.md
   - Project:
       - Roadmap (task list): TASKS.md
       - QC test cases: qc/README.md

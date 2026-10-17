@@ -67,7 +67,8 @@ func saveRecents(entries []RecentEntry) {
 // Existing entries for the same path are removed and re-prepended so the
 // newest is always at the front. The list is capped at recentsCap.
 func pushRecent(path string) {
-	if path == "" {
+	// Scratch pages (Find Results, HTTP Response) are not files.
+	if path == "" || isFindResultsPath(path) || isHTTPPagePath(path) {
 		return
 	}
 	abs, err := filepath.Abs(path)
