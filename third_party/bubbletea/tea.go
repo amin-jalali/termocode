@@ -434,9 +434,14 @@ func (p *Program) eventLoop(model Model, cmds chan Cmd) (Model, error) {
 
 			case enableMouseCellMotionMsg, enableMouseAllMotionMsg:
 				switch msg.(type) {
+				// termocode patch: switching modes turns the other one
+				// off, so the terminal (and a session's mode replay) never
+				// keeps 1003 on under 1002.
 				case enableMouseCellMotionMsg:
+					p.renderer.disableMouseAllMotion()
 					p.renderer.enableMouseCellMotion()
 				case enableMouseAllMotionMsg:
+					p.renderer.disableMouseCellMotion()
 					p.renderer.enableMouseAllMotion()
 				}
 				// mouse mode (1006) is a no-op if the terminal doesn't support it.

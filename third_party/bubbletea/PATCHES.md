@@ -56,6 +56,24 @@ Terminal answers are not keys (termocode terminal-compat R3):
 - `key.go`: `detectOneMsg` tries `detectEscapeString` first after paste.
 - Test: `key_strings_test.go`.
 
+Input reader and mouse modes (termocode terminal-compat R6):
+
+- `input_hold.go` (new) replaces upstream's `readAnsiInputs` (removed
+  from `key.go`). An incomplete escape sequence at the end of a short
+  read (lone ESC, `ESC [` with only parameter bytes, `ESC O`, an escape
+  string without its terminator) is held until the next read or
+  `holdWait` (50 ms), so a split SGR mouse report is one `MouseMsg`, not
+  typed text. A lone Esc key is delivered after that wait. Reads happen
+  one at a time on request (a goroutine that never reads ahead), so a
+  released terminal loses no input.
+- In one read, a run of plain pointer motion (no button) is delivered
+  as its last event; clicks, drags and wheel are never merged.
+- `tea.go`: `EnableMouseCellMotion` turns 1003 off first and
+  `EnableMouseAllMotion` turns 1002 off first, so switching modes never
+  leaves both on (`screen_test.go` expectations updated, new
+  `mouse_switch` case).
+- Test: `split_input_test.go`.
+
 All other files are unchanged.
 
 To update: copy the new upstream release here, apply the same change,

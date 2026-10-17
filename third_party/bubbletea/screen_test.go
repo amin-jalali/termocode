@@ -29,17 +29,23 @@ func TestClearMsg(t *testing.T) {
 		{
 			name:     "mouse_cellmotion",
 			cmds:     []Cmd{EnableMouseCellMotion},
-			expected: "\x1b[?25l\x1b[?2004h\x1b[?1002h\x1b[?1006h\rsuccess\x1b[K\r\n\x1b[K\r\x1b[2K\r\x1b[?2004l\x1b[?25h\x1b[?1002l\x1b[?1003l\x1b[?1006l",
+			expected: "\x1b[?25l\x1b[?2004h\x1b[?1003l\x1b[?1002h\x1b[?1006h\rsuccess\x1b[K\r\n\x1b[K\r\x1b[2K\r\x1b[?2004l\x1b[?25h\x1b[?1002l\x1b[?1003l\x1b[?1006l",
 		},
 		{
 			name:     "mouse_allmotion",
 			cmds:     []Cmd{EnableMouseAllMotion},
-			expected: "\x1b[?25l\x1b[?2004h\x1b[?1003h\x1b[?1006h\rsuccess\x1b[K\r\n\x1b[K\r\x1b[2K\r\x1b[?2004l\x1b[?25h\x1b[?1002l\x1b[?1003l\x1b[?1006l",
+			expected: "\x1b[?25l\x1b[?2004h\x1b[?1002l\x1b[?1003h\x1b[?1006h\rsuccess\x1b[K\r\n\x1b[K\r\x1b[2K\r\x1b[?2004l\x1b[?25h\x1b[?1002l\x1b[?1003l\x1b[?1006l",
+		},
+		{
+			// termocode patch: switching turns the other mode off.
+			name:     "mouse_switch",
+			cmds:     []Cmd{EnableMouseAllMotion, EnableMouseCellMotion},
+			expected: "\x1b[?25l\x1b[?2004h\x1b[?1002l\x1b[?1003h\x1b[?1006h\x1b[?1003l\x1b[?1002h\x1b[?1006h\rsuccess\x1b[K\r\n\x1b[K\r\x1b[2K\r\x1b[?2004l\x1b[?25h\x1b[?1002l\x1b[?1003l\x1b[?1006l",
 		},
 		{
 			name:     "mouse_disable",
 			cmds:     []Cmd{EnableMouseAllMotion, DisableMouse},
-			expected: "\x1b[?25l\x1b[?2004h\x1b[?1003h\x1b[?1006h\x1b[?1002l\x1b[?1003l\x1b[?1006l\rsuccess\x1b[K\r\n\x1b[K\r\x1b[2K\r\x1b[?2004l\x1b[?25h\x1b[?1002l\x1b[?1003l\x1b[?1006l",
+			expected: "\x1b[?25l\x1b[?2004h\x1b[?1002l\x1b[?1003h\x1b[?1006h\x1b[?1002l\x1b[?1003l\x1b[?1006l\rsuccess\x1b[K\r\n\x1b[K\r\x1b[2K\r\x1b[?2004l\x1b[?25h\x1b[?1002l\x1b[?1003l\x1b[?1006l",
 		},
 		{
 			name:     "cursor_hide",
