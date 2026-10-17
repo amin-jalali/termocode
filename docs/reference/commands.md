@@ -15,6 +15,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Chat History… | `ai-history` |   |   |
 | AI: Clear Chat History | `ai-history-clear` |   |   |
 | AI: Configure Provider… | `ai-configure` |   |   |
+| AI: Connect a Service… (GitHub, Linear, Slack, Notion, Sentry) | `ai-mcp-connect` |   |   |
 | AI: Delete Chat… | `ai-history-delete` |   |   |
 | AI: Discard Proposed Edit | `ai-discard-proposal` |   |   |
 | AI: Edit Selection… | `ai-edit` | `Alt+I` | `Alt+I` |

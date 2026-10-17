@@ -299,6 +299,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-sign-out-claude":  aiNever(aiNoAIConfig),
 	"ai-credentials":      aiNever(aiNoAIConfig),
 	"ai-mcp-servers":      aiNever(aiNoPicker),
+	"ai-mcp-connect":      aiNever(aiNoAIConfig + " (signing in to services is the user's)"),
 	"ai-mcp-log":          aiAuto(),
 	"ai-mcp-config":       aiNever(aiNoAIConfig),
 
@@ -376,13 +377,14 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"mcp_oauth_port":      aiNever(aiNoAIConfig),
 	// HTTP client: limits the user may let the AI change; the AI never
 	// raises its own budgets or turns TLS checks off.
-	"http_timeout":       aiConfirm(ai.ClassSettings),
-	"http_max_redirects": aiConfirm(ai.ClassSettings),
-	"http_cookie_jar":    aiConfirm(ai.ClassSettings),
-	"http_history_max":   aiConfirm(ai.ClassSettings),
-	"http_tls_insecure":  aiNever(aiNoAIConfig),
-	"http_max_body_mb":   aiNever(aiNoAIConfig),
-	"http_ai_max_kb":     aiNever(aiNoAIConfig),
+	"http_timeout":         aiConfirm(ai.ClassSettings),
+	"http_max_redirects":   aiConfirm(ai.ClassSettings),
+	"http_cookie_jar":      aiConfirm(ai.ClassSettings),
+	"http_history_max":     aiConfirm(ai.ClassSettings),
+	"http_tls_insecure":    aiNever(aiNoAIConfig),
+	"http_max_body_mb":     aiNever(aiNoAIConfig),
+	"http_ai_max_kb":       aiNever(aiNoAIConfig),
+	"mcp_github_client_id": aiNever(aiNoAIConfig),
 }
 
 // aiListActionsMax caps list_actions results.

@@ -4,6 +4,7 @@ import (
 	"os"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/nerdterm"
@@ -49,6 +50,7 @@ type setupFacts struct {
 
 	aiConfigured        bool
 	aiProvider, aiModel string
+	services            int // MCP servers in the user mcp.json
 
 	themeID, themeName string
 	settled            map[string]bool // steps answered on the card
@@ -91,7 +93,31 @@ func nerdFamilyFor(p SetupProbe) string {
 
 // buildSetupSteps computes the three steps.
 func buildSetupSteps(f setupFacts) []setupStep {
-	return []setupStep{setupIconsStep(f), setupAIStep(f), setupThemeStep(f)}
+	steps := []setupStep{setupIconsStep(f), setupAIStep(f)}
+	if f.aiConfigured {
+		steps = append(steps, setupServicesStep(f))
+	}
+	return append(steps, setupThemeStep(f))
+}
+
+// setupServicesStep is the optional "Apps" row once AI works:
+// connect GitHub, Linear, Slack … for the chat (the Connect wizard).
+func setupServicesStep(f setupFacts) setupStep {
+	s := setupStep{id: "services", title: "Apps", optional: true}
+	switch {
+	case f.services > 0:
+		s.done = true
+		s.status = strconv.Itoa(f.services) + " connected · F1 → AI: Connect a Service…"
+	case f.settled["services"]:
+		s.done = true
+		s.status = "Skipped · F1 → AI: Connect a Service…"
+	default:
+		s.status = "None yet · GitHub, Slack…"
+		s.action = "Connect…"
+		s.buttons = []setupButton{{id: "services-connect", label: "Connect a service…"}, {id: "services-skip", label: "Skip for now"}}
+	}
+	s.detail = s.status
+	return s
 }
 
 func setupIconsStep(f setupFacts) setupStep {

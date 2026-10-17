@@ -93,8 +93,14 @@ type aiState struct {
 	mcp       *mcp.Manager
 	mcpTrust  *aiMCPTrustPending
 	mcpSel    string
-	mcpSignIn *mcpSignInState // the open OAuth sign-in (mcp_remote_ui.go)
-	mcpSecret string          // the ${secret:NAME} being entered
+	mcpSecret string // the ${secret:NAME} being entered
+	// mcpWiz is the open Connect-a-service wizard (ai_mcp_connect.go);
+	// mcpWizGen drops messages of a closed one; mcpGHAccounts are gh's
+	// accounts from the last open.
+	mcpWiz        *mcpWizard
+	mcpWizGen     int
+	mcpGHAccounts []mcp.GHAccount
+	mcpNotNow     map[string]bool // "Not now" on a server's sign-in row
 
 	// configure / sign-in flow
 	cfgKind string
@@ -299,6 +305,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-sign-in-claude", "AI: Sign in with Claude (OAuth, opt-in)…", ""},
 		{"ai-sign-out-claude", "AI: Sign out of Claude", ""},
 		{"ai-credentials", "Open Config: AI Credentials", ""},
+		{"ai-mcp-connect", "AI: Connect a Service… (GitHub, Linear, Slack, Notion, Sentry)", ""},
 		{"ai-mcp-servers", "AI: MCP Servers…", ""},
 		{"ai-mcp-log", "AI: MCP: Show Log", ""},
 		{"ai-mcp-config", "Open Config: MCP Servers", ""},
@@ -320,7 +327,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials",
 		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
 		"ai-history-rename", "ai-history-delete", "ai-history-clear",
-		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config":
+		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect":
 	default:
 		if c, ok := m.aiReady(); !ok {
 			return c, true
@@ -379,6 +386,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.claudeSignOut(), true
 	case "ai-credentials":
 		return m.editAICredentials(), true
+	case "ai-mcp-connect":
+		return m.openMCPConnect(), true
 	case "ai-mcp-servers":
 		return m.openMCPServers(), true
 	case "ai-mcp-log":

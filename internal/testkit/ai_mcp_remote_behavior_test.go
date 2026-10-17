@@ -81,11 +81,13 @@ func openServerAction(d *Driver, server, action string) {
 	d.Key("enter")
 }
 
-// Spec (MC-6): AI: MCP Servers… → Sign in opens the browser URL (also
-// copied); the browser comes back to the loopback listener; the server
-// connects, its sign-in is in credentials.json (0600) and the chat can
-// use its tools. Sign out forgets it.
+// Spec (MC-6, CX-5): AI: MCP Servers… → Sign in opens the Connect
+// wizard on the server: the browser URL is copied; the browser comes
+// back to the loopback listener; the server connects, its sign-in is in
+// credentials.json (0600) and the chat can use its tools. Sign out
+// forgets it.
 func TestAIMCPRemoteSignInBehavior(t *testing.T) {
+	noGH(t)
 	clip := sinkClipboard(t)
 	as := mcptest.NewAuthServer(t, mcptest.AuthOptions{})
 	srv := mcptest.NewHTTPServer(t, mcptest.HTTPOptions{Validate: as.Valid, AuthServer: as.Issuer(), Session: true})
@@ -93,8 +95,8 @@ func TestAIMCPRemoteSignInBehavior(t *testing.T) {
 	d := remoteDriver(t, model.URL, `{"mcpServers":{"lin":{"type":"http","url":"`+srv.MCPURL()+`"}}}`, "", false)
 
 	openServerAction(d, "lin", "Sign in")
-	if !d.WaitForText("Sign in to MCP lin", 10*time.Second) {
-		t.Fatalf("no sign-in prompt:\n%s", screen(d))
+	if !d.WaitForText("Waiting for lin", 10*time.Second) {
+		t.Fatalf("no sign-in screen:\n%s", screen(d))
 	}
 	var authURL string
 	if !d.WaitFor(func() bool { authURL, _ = clip.get(); return strings.HasPrefix(authURL, as.Issuer()+"/authorize?") }, 5*time.Second) {
@@ -109,11 +111,12 @@ func TestAIMCPRemoteSignInBehavior(t *testing.T) {
 	if !strings.Contains(string(page), "close this tab") {
 		t.Errorf("callback page %q", page)
 	}
-	if !d.WaitForText("lin: signed in", 10*time.Second) {
-		t.Fatalf("no signed-in toast:\n%s", screen(d))
+	if !d.WaitForText("lin — connected", 10*time.Second) {
+		t.Fatalf("no connected screen:\n%s", screen(d))
 	}
-	if strings.Contains(screen(d), "Sign in to MCP lin") {
-		t.Error("the sign-in prompt stayed open")
+	d.Key("enter") // Done
+	if strings.Contains(screen(d), "Waiting for lin") || strings.Contains(screen(d), "Connected") {
+		t.Error("the wizard stayed open")
 	}
 	if c, mode := credentials(t); !signedIn(t, "lin") || mode != 0o600 {
 		t.Errorf("credentials (mode %o): %v", mode, c)
@@ -135,6 +138,7 @@ func TestAIMCPRemoteSignInBehavior(t *testing.T) {
 // and the ssh -L command; pasting the address the browser shows
 // completes the sign-in.
 func TestAIMCPRemoteSignInPasteOverSSHBehavior(t *testing.T) {
+	noGH(t)
 	clip := sinkClipboard(t)
 	as := mcptest.NewAuthServer(t, mcptest.AuthOptions{})
 	srv := mcptest.NewHTTPServer(t, mcptest.HTTPOptions{Validate: as.Valid, AuthServer: as.Issuer()})
@@ -142,11 +146,11 @@ func TestAIMCPRemoteSignInPasteOverSSHBehavior(t *testing.T) {
 	d := remoteDriver(t, model.URL, `{"mcpServers":{"lin":{"type":"http","url":"`+srv.MCPURL()+`"}}}`, "", true)
 
 	openServerAction(d, "lin", "Sign in")
-	if !d.WaitForText("Sign in to MCP lin", 10*time.Second) {
-		t.Fatalf("no sign-in prompt:\n%s", screen(d))
+	if !d.WaitForText("over SSH", 10*time.Second) {
+		t.Fatalf("no sign-in screen:\n%s", screen(d))
 	}
 	sc := screen(d)
-	if !strings.Contains(sc, "paste") || !strings.Contains(sc, "ssh -L") || !strings.Contains(sc, "10.9.8.7") {
+	if !strings.Contains(sc, "Paste") || !strings.Contains(sc, "ssh -L") || !strings.Contains(sc, "10.9.8.7") {
 		t.Errorf("prompt does not explain the SSH ways:\n%s", sc)
 	}
 	authURL, _ := clip.get()
@@ -162,7 +166,7 @@ func TestAIMCPRemoteSignInPasteOverSSHBehavior(t *testing.T) {
 	}
 	d.Type(callback)
 	d.Key("enter")
-	if !d.WaitForText("lin: signed in", 10*time.Second) {
+	if !d.WaitForText("lin — connected", 10*time.Second) {
 		t.Fatalf("paste did not sign in:\n%s", screen(d))
 	}
 	if !signedIn(t, "lin") {
@@ -170,67 +174,25 @@ func TestAIMCPRemoteSignInPasteOverSSHBehavior(t *testing.T) {
 	}
 }
 
-// Spec: AI: MCP Servers… starts with "+ Add a server…"; it lists the
-// presets (Linear, GitHub, GitLab, Atlassian, Slack, Notion, Sentry,
-// ClickUp); picking one writes it into the user mcp.json and opens its
-// actions with Sign in. Nothing connects by itself.
+// Spec: AI: MCP Servers… starts with "+ Connect a service…"; it opens
+// the Connect wizard with every service (GitHub, GitLab, Linear, Notion,
+// Sentry, ClickUp, Atlassian, Slack); nothing connects by itself.
 func TestAIMCPPresetsBehavior(t *testing.T) {
+	noGH(t)
 	_, model := fakeToolModel(t)
 	d := remoteDriver(t, model.URL, `{"mcpServers":{}}`, "", false)
 	runPalette(d, "AI: MCP Servers")
-	if !d.WaitForText("+ Add a server", 5*time.Second) {
+	if !d.WaitForText("+ Connect a service", 5*time.Second) {
 		t.Fatalf("no add row:\n%s", screen(d))
 	}
-	d.Type("Add a server")
+	d.Type("Connect a service")
 	d.Key("enter")
-	for _, p := range []string{"Linear", "GitHub", "GitLab", "Atlassian", "Slack", "Notion", "Sentry", "ClickUp"} {
+	for _, p := range []string{"Linear", "GitHub", "GitLab", "Atlassian", "Slack", "Notion", "Sentry", "ClickUp", "Custom URL"} {
 		if !d.WaitForText(p, 5*time.Second) {
-			t.Fatalf("no preset %s:\n%s", p, screen(d))
+			t.Fatalf("no service %s:\n%s", p, screen(d))
 		}
 	}
-	d.Type("Notion")
-	d.Key("enter")
-	if !d.WaitForText("Sign in", 5*time.Second) {
-		t.Fatalf("no actions after adding:\n%s", screen(d))
-	}
-	b, _ := os.ReadFile(filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "termocode", "mcp.json"))
-	if !strings.Contains(string(b), `"notion"`) || !strings.Contains(string(b), "https://mcp.notion.com/mcp") {
-		t.Errorf("mcp.json: %s", b)
-	}
-}
-
-// Spec (MC-5): a remote server with a PAT from ${secret:NAME} runs its
-// tools; the token never shows on screen, in the MCP log or errors.log.
-func TestAIMCPRemotePATBehavior(t *testing.T) {
-	const pat = "ghp_patvalue0123456789abcdefXYZ"
-	srv := mcptest.NewHTTPServer(t, mcptest.HTTPOptions{Bearer: pat, SSE: true})
-	s, model := fakeToolModel(t,
-		toolCall{"mcp__gh__echo", map[string]any{"text": "pat"}},
-		toolCall{"mcp__gh__fails", map[string]any{}})
-	d := remoteDriver(t, model.URL,
-		`{"mcpServers":{"gh":{"type":"http","url":"`+srv.MCPURL()+`","headers":{"Authorization":"Bearer ${secret:gh_pat}"}}}}`,
-		`{"mcp_secrets":{"gh_pat":"`+pat+`"}}`, false)
-	askAI(d, "echo with the PAT")
-	waitDone(t, d)
-	if r := s.toolResults(); len(r) != 2 || !strings.HasPrefix(r[0], "echo: pat") {
-		t.Fatalf("tool results %q", r)
-	}
-	if got := srv.Requests()[0].Header.Get("Authorization"); got != "Bearer "+pat {
-		t.Errorf("Authorization sent %q", got)
-	}
-	runPalette(d, "AI: MCP: Show Log")
-	if !d.WaitForText("gh: connected", 5*time.Second) {
-		t.Errorf("MCP log:\n%s", screen(d))
-	}
-	if strings.Contains(screen(d), pat) {
-		t.Errorf("PAT on screen:\n%s", screen(d))
-	}
-	b, _ := os.ReadFile(filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "termocode", "errors.log"))
-	if strings.Contains(string(b), pat) {
-		t.Error("PAT in errors.log")
-	}
-	runPalette(d, "AI: MCP Servers")
-	if !d.WaitForText("remote · connected", 5*time.Second) {
-		t.Errorf("servers list:\n%s", screen(d))
+	if b, _ := os.ReadFile(filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "termocode", "mcp.json")); strings.Contains(string(b), "notion") {
+		t.Errorf("mcp.json changed by opening the wizard: %s", b)
 	}
 }

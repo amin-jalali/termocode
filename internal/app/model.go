@@ -11,6 +11,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/anim"
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/connectcard"
 	"github.com/amin-jalali/termocode/internal/debounce"
 	"github.com/amin-jalali/termocode/internal/editor"
 	"github.com/amin-jalali/termocode/internal/explorer"
@@ -502,6 +503,9 @@ type Model struct {
 	// reviewOpen shows the AI review card (ai_review.go; its state is in
 	// m.ai.review).
 	reviewOpen bool
+	// connectOpen shows the Connect-a-service card (ai_mcp_connect.go).
+	connectOpen bool
+	connect     connectcard.Model
 	// commitView is the Source Control commit view (git_commit_view.go;
 	// nil until a commit is opened).
 	commitView *commitViewState

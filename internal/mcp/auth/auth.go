@@ -55,6 +55,8 @@ type Metadata struct {
 	Scopes                []string // scopes_supported of the protected resource
 	CIMD                  bool     // client_id_metadata_document_supported
 	AuthMethods           []string // token_endpoint_auth_methods_supported
+	DeviceEndpoint        string   // device_authorization_endpoint (RFC 8628), "" none
+	RevocationEndpoint    string   // revocation_endpoint (RFC 7009), "" none
 }
 
 // DefaultLifetime is how long the loopback listener waits.
@@ -171,6 +173,8 @@ func Discover(ctx context.Context, hc *http.Client, serverURL, resourceMetadata 
 		PKCE         []string `json:"code_challenge_methods_supported"`
 		CIMD         bool     `json:"client_id_metadata_document_supported"`
 		AuthMethods  []string `json:"token_endpoint_auth_methods_supported"`
+		Device       string   `json:"device_authorization_endpoint"`
+		Revocation   string   `json:"revocation_endpoint"`
 	}
 	oa, oaRoot := wellKnown(issuer, "oauth-authorization-server")
 	oi, _ := wellKnown(issuer, "openid-configuration")
@@ -213,6 +217,12 @@ func Discover(ctx context.Context, hc *http.Client, serverURL, resourceMetadata 
 	}
 	md.Issuer, md.AuthorizationEndpoint, md.TokenEndpoint = issuer, as.Authorize, as.Token
 	md.RegistrationEndpoint, md.CIMD, md.AuthMethods = as.Registration, as.CIMD, as.AuthMethods
+	if as.Device != "" && checkEndpoint(as.Device) == nil {
+		md.DeviceEndpoint = as.Device
+	}
+	if as.Revocation != "" && checkEndpoint(as.Revocation) == nil {
+		md.RevocationEndpoint = as.Revocation
+	}
 	return md, nil
 }
 
@@ -232,7 +242,8 @@ type Config struct {
 	Scopes           []string // from mcp.json "oauth" (wins over the server's list)
 	ClientID         string   // pre-registered client (mcp.json "oauth")
 	ClientSecret     string
-	Port             int    // loopback port; 0 picks a free one
+	Port             int    // loopback port; 0 takes the first free one of LoopbackPorts
+	RedirectHost     string // "localhost" for services that want it (Slack); default 127.0.0.1
 	CIMDURL          string // our client id metadata document ("" none)
 	ClientName       string // for DCR ("termocode")
 	HTTP             *http.Client
@@ -275,6 +286,42 @@ func (f *Flow) RedirectURI() string { return f.redirect }
 // Port is the loopback port (for "ssh -L port:127.0.0.1:port host").
 func (f *Flow) Port() int { return f.port }
 
+// LoopbackPorts are the sign-in listener's ports: the first free one is
+// used. They are fixed (not random) so the redirect URIs in termocode's
+// client metadata document (docs/mcp/client.json) match exactly, and so
+// "ssh -L 47391:127.0.0.1:47391" can live in ~/.ssh/config.
+var LoopbackPorts = []int{47391, 47392, 47393, 47394, 47395}
+
+// LoopbackRedirects are the redirect URIs of LoopbackPorts, 127.0.0.1
+// first, then localhost (docs/mcp/client.json lists exactly these).
+func LoopbackRedirects() []string {
+	var out []string
+	for _, h := range []string{"127.0.0.1", "localhost"} {
+		for _, p := range LoopbackPorts {
+			out = append(out, fmt.Sprintf("http://%s:%d/callback", h, p))
+		}
+	}
+	return out
+}
+
+// listen opens the one-shot listener on 127.0.0.1 only.
+func listen(port int) (net.Listener, error) {
+	if port > 0 {
+		ln, err := net.Listen("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
+		if err != nil {
+			return nil, fmt.Errorf("sign-in listener on 127.0.0.1:%d (mcp_oauth_port): %w", port, err)
+		}
+		return ln, nil
+	}
+	for _, p := range LoopbackPorts {
+		if ln, err := net.Listen("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(p))); err == nil {
+			return ln, nil
+		}
+	}
+	return nil, fmt.Errorf("the sign-in ports %d–%d are all busy (another sign-in is open?); close it, or set mcp_oauth_port",
+		LoopbackPorts[0], LoopbackPorts[len(LoopbackPorts)-1])
+}
+
 // Begin discovers the server's authorization server, gets a client id,
 // starts the loopback listener and builds the authorize URL.
 func Begin(ctx context.Context, cfg Config) (*Flow, error) {
@@ -282,13 +329,17 @@ func Begin(ctx context.Context, cfg Config) (*Flow, error) {
 	if err != nil {
 		return nil, err
 	}
-	ln, err := net.Listen("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(cfg.Port)))
+	ln, err := listen(cfg.Port)
 	if err != nil {
-		return nil, fmt.Errorf("sign-in listener on 127.0.0.1:%d: %w", cfg.Port, err)
+		return nil, err
 	}
 	port := ln.Addr().(*net.TCPAddr).Port
+	host := "127.0.0.1"
+	if cfg.RedirectHost == "localhost" {
+		host = "localhost"
+	}
 	f := &Flow{md: md, hc: cfg.HTTP, port: port, ln: ln, results: make(chan callback, 1),
-		redirect: fmt.Sprintf("http://127.0.0.1:%d/callback", port)}
+		redirect: fmt.Sprintf("http://%s:%d/callback", host, port)}
 	life := cfg.Lifetime
 	if life <= 0 {
 		life = DefaultLifetime
@@ -310,12 +361,14 @@ func Begin(ctx context.Context, cfg Config) (*Flow, error) {
 				f.authMethod = "client_secret_basic"
 			}
 		}
+	// The MCP spec's order: pre-registered, then a Client ID Metadata
+	// Document, then Dynamic Client Registration.
+	case md.CIMD && cfg.CIMDURL != "":
+		f.clientID = cfg.CIMDURL
 	case md.RegistrationEndpoint != "":
 		if err := f.register(ctx, cfg.ClientName); err != nil {
 			return nil, err
 		}
-	case md.CIMD && cfg.CIMDURL != "":
-		f.clientID = cfg.CIMDURL
 	default:
 		return nil, ErrNeedsApp
 	}
@@ -509,7 +562,7 @@ func (f *Flow) Wait(ctx context.Context) (ai.MCPOAuth, error) {
 	form.Set("resource", f.md.Resource)
 	e := ai.MCPOAuth{Issuer: f.md.Issuer, Resource: f.md.Resource, TokenEndpoint: f.md.TokenEndpoint,
 		ClientID: f.clientID, ClientSecret: f.clientSecret, AuthMethod: f.authMethod, RedirectURI: f.redirect,
-		Registration: f.registration, Scope: f.scope}
+		Registration: f.registration, Scope: f.scope, RevocationEndpoint: f.md.RevocationEndpoint}
 	return tokenRequest(ctx, f.hc, e, form)
 }
 
@@ -545,10 +598,53 @@ func Refresh(ctx context.Context, hc *http.Client, e ai.MCPOAuth) (ai.MCPOAuth, 
 	return tokenRequest(ctx, hc, e, form)
 }
 
+// Revoke asks the authorization server to forget a sign-in (RFC 7009):
+// the refresh token first, then the access token. Without a revocation
+// endpoint it does nothing. Callers log a failure; the local sign-in is
+// forgotten anyway.
+func Revoke(ctx context.Context, hc *http.Client, e ai.MCPOAuth) error {
+	if e.RevocationEndpoint == "" {
+		return nil
+	}
+	if err := checkEndpoint(e.RevocationEndpoint); err != nil {
+		return err
+	}
+	var first error
+	for _, tok := range []struct{ v, hint string }{{e.RefreshToken, "refresh_token"}, {e.AccessToken, "access_token"}} {
+		if tok.v == "" {
+			continue
+		}
+		form := url.Values{"token": {tok.v}, "token_type_hint": {tok.hint}}
+		r := e
+		r.TokenEndpoint = e.RevocationEndpoint
+		status, b, err := postToken(ctx, hc, r, form)
+		if err == nil && status != http.StatusOK {
+			err = fmt.Errorf("revoke: HTTP %d: %s", status, ai.Redact(oauthErrText(b)))
+		}
+		if err != nil && first == nil {
+			first = err
+		}
+	}
+	return first
+}
+
 // tokenRequest posts to the token endpoint and fills e with the answer.
 func tokenRequest(ctx context.Context, hc *http.Client, e ai.MCPOAuth, form url.Values) (ai.MCPOAuth, error) {
-	if err := checkEndpoint(e.TokenEndpoint); err != nil {
+	status, b, err := postToken(ctx, hc, e, form)
+	if err != nil {
 		return e, err
+	}
+	if status != http.StatusOK {
+		return e, fmt.Errorf("token request: HTTP %d: %s", status, ai.Redact(oauthErrText(b)))
+	}
+	return tokenAnswer(e, b)
+}
+
+// postToken posts form to e's token endpoint with e's client
+// authentication and returns the status and body.
+func postToken(ctx context.Context, hc *http.Client, e ai.MCPOAuth, form url.Values) (int, []byte, error) {
+	if err := checkEndpoint(e.TokenEndpoint); err != nil {
+		return 0, nil, err
 	}
 	if e.AuthMethod != "client_secret_basic" {
 		form.Set("client_id", e.ClientID)
@@ -558,7 +654,7 @@ func tokenRequest(ctx context.Context, hc *http.Client, e ai.MCPOAuth, form url.
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.TokenEndpoint, strings.NewReader(form.Encode()))
 	if err != nil {
-		return e, err
+		return 0, nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
@@ -567,13 +663,15 @@ func tokenRequest(ctx context.Context, hc *http.Client, e ai.MCPOAuth, form url.
 	}
 	resp, err := client(hc).Do(req)
 	if err != nil {
-		return e, fmt.Errorf("token request: %w", err)
+		return 0, nil, fmt.Errorf("token request: %w", err)
 	}
 	defer resp.Body.Close()
 	b, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if resp.StatusCode != http.StatusOK {
-		return e, fmt.Errorf("token request: HTTP %d: %s", resp.StatusCode, ai.Redact(oauthErrText(b)))
-	}
+	return resp.StatusCode, b, nil
+}
+
+// tokenAnswer fills e from a token endpoint's success answer.
+func tokenAnswer(e ai.MCPOAuth, b []byte) (ai.MCPOAuth, error) {
 	var t struct {
 		AccessToken  string `json:"access_token"`
 		TokenType    string `json:"token_type"`
