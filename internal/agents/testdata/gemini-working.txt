@@ -1,0 +1,9 @@
+> explain the parser package
+
+⠹ Analyzing the code structure (esc to cancel, 4s)
+
+Using: 1 GEMINI.md file
+╭──────────────────────────────────────────────────────────────────────────╮
+│ >   Type your message or @path/to/file                                   │
+╰──────────────────────────────────────────────────────────────────────────╯
+~/proj (main*)            no sandbox (see /docs)          gemini-2.5-pro (98% context left)

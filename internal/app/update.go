@@ -48,6 +48,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if tipCmd != nil {
 			cmd = tea.Batch(cmd, tipCmd)
 		}
+		if t := m.aiActivityTick(); t != nil { // the chat's 1 s clock, only during a turn
+			cmd = tea.Batch(cmd, t)
+		}
 	}
 	return m, m.gateUpdate(msg, cmd)
 }
@@ -321,7 +324,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.handlePromptSubmit(msg.Value)
 	case prompt.CloseMsg:
 		m.promptOpen = false
-		return m, tea.Batch(m.handleClonePromptClose(), m.extOverlayClosed()) // Group G / Group I: no-op unless theirs
+		return m, tea.Batch(m.handleClonePromptClose(), m.extOverlayClosed(), m.mcpSignInPromptClosed()) // Group G / Group I / MCP: no-op unless theirs
 	// ── Group G: background clone (git_clone.go) ──
 	case cloneProgressMsg:
 		return m, m.handleCloneProgress(msg)
@@ -1493,7 +1496,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		// Splice user-defined commands at the bottom so they're visible but
 		// don't push built-ins down the fuzzy-match list.
 		items := paletteItems()
-		items = append(items, tasksPaletteItems()...) // Group C
+		items = append(items, agentPaletteFilter(tasksPaletteItems())...) // Group C; agents only when installed
 		// Hints come from the live keymap (keymap.json overrides too).
 		items = withKeyHints(items, m.keys)
 		items = append(items, userCommandsItems()...)
@@ -1715,6 +1718,11 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, nil
 	// Group A — AI keys.
 	case keymap.ActionAITriggerInline, keymap.ActionAIEditSelection, keymap.ActionAIToggleInline:
+		if matchedAction == keymap.ActionAITriggerInline {
+			if cmd, ok := m.termFixKey(); ok { // U9b: Alt+\ on a failed command
+				return m, cmd
+			}
+		}
 		cmd, _ := m.dispatchAIPalette(aiActionForKey(matchedAction))
 		return m, cmd
 	}

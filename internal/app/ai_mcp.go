@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -17,6 +18,8 @@ import (
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // ── MCP client glue (MC-3 / MC-4) ───────────────────────────────────────
@@ -106,6 +109,13 @@ func (m *Model) aiMCP() *mcp.Manager {
 			return mcp.LoadSettings(mcpConfigPath()).Trusted[sv.Name] == sv.Hash()
 		},
 		SaveTrust: func(sv mcp.Server) { _ = mcp.SaveTrusted(mcpConfigPath(), sv.Name, sv.Hash()) },
+		TrustedTools: func(name string) string {
+			return mcp.LoadSettings(mcpConfigPath()).TrustedTools[name]
+		},
+		SaveTrustedTools: func(name, hash string) { _ = mcp.SaveTrustedTools(mcpConfigPath(), name, hash) },
+		Tokens:           mcp.CredStore{Path: mcpCredPath()},
+		OAuthPort:        func() int { return mcp.LoadSettings(mcpConfigPath()).OAuthPort },
+		CIMDURL:          mcpCIMDURL,
 	})
 	mcpTarget.Store(s.mcp)
 	return s.mcp
@@ -124,8 +134,11 @@ func (m *Model) aiMCPTurn(gen uint64, ch chan tea.Msg) func(ctx context.Context)
 	return func(ctx context.Context) []ai.Tool {
 		mgr.Reload()
 		var out []ai.Tool
+		call := mcp.TurnCaller(mgr.Caller(ask)) // two failures: the server is out for this turn
 		for _, st := range mgr.Tools(ctx, ask) {
-			out = append(out, mcp.AITools(st.Server, st.Tools, mgr.Caller(ask), opts)...)
+			o := opts
+			o.ToolsChanged = st.ToolsChanged
+			out = append(out, mcp.AITools(st.Server, st.Tools, call, o)...)
 		}
 		return out
 	}
@@ -155,9 +168,11 @@ type aiMCPTrustMsg struct {
 // aiMCPTrustPending is the open trust dialog: a chat turn waits on
 // reply, or (reply nil) the servers picker connects afterwards.
 type aiMCPTrustPending struct {
-	server  string
-	reply   chan mcp.TrustAnswer
-	connect bool
+	server       string
+	reply        chan mcp.TrustAnswer
+	connect      bool
+	signin       bool // sign in after the answer (servers picker)
+	toolsChanged bool // the question was ReasonToolsChanged
 }
 
 func mcpChatAsker(gen uint64, ch chan tea.Msg) mcp.AskTrust {
@@ -180,6 +195,20 @@ func mcpChatAsker(gen uint64, ch chan tea.Msg) mcp.AskTrust {
 // mcpTrustDialog builds "Start MCP server X?" with the file, command and
 // env keys (never their values).
 func (m *Model) mcpTrustDialog(s mcp.Server) {
+	if s.TrustReason == mcp.ReasonToolsChanged {
+		m.confirm = confirm.New("MCP "+s.Name+": its tools changed",
+			"The tools of "+s.Name+" are not the ones you trusted before: a server can change what its tools do. "+
+				"Review them in AI: MCP Servers… → "+s.Name+" → Show tools.\nUntil you trust them, each of its tools asks before it runs.",
+			[]confirm.Button{
+				{ID: "once", Title: "Trust once", Style: confirm.StylePrimary},
+				{ID: "always", Title: "Trust the new tools"},
+				{ID: "deny", Title: "Not now", Style: confirm.StyleDestructive},
+			})
+		m.confirm.SetSize(m.w, m.h)
+		m.confirmOpen = true
+		m.confirmKind = confirmKindMCPTrust
+		return
+	}
 	from := "your mcp.json (" + s.SourcePath + ")"
 	if s.Source == mcp.SourceProject {
 		from = "this project's .termocode/mcp.json"
@@ -214,7 +243,8 @@ func (m *Model) onAIMCPTrust(msg aiMCPTrustMsg) tea.Cmd {
 		msg.reply <- mcp.TrustDeny
 		return waitAIChat(msg.ch)
 	}
-	s.mcpTrust = &aiMCPTrustPending{server: msg.server.Name, reply: msg.reply}
+	s.mcpTrust = &aiMCPTrustPending{server: msg.server.Name, reply: msg.reply,
+		toolsChanged: msg.server.TrustReason == mcp.ReasonToolsChanged}
 	m.mcpTrustDialog(msg.server)
 	return waitAIChat(msg.ch)
 }
@@ -236,12 +266,39 @@ func (m *Model) answerMCPTrust(id string) tea.Cmd {
 	}
 	if p.reply != nil {
 		p.reply <- a
+		if p.toolsChanged && a == mcp.TrustDeny {
+			return m.mcpToolsChangedToast(p.server)
+		}
 		return nil
+	}
+	if p.signin && a != mcp.TrustDeny {
+		m.aiMCP().Trust(p.server, a == mcp.TrustAlways)
+		return m.mcpSignIn(p.server)
 	}
 	if p.connect && a != mcp.TrustDeny {
 		return m.mcpConnect(p.server, a)
 	}
 	return nil
+}
+
+// mcpHasAuthHeader: the entry sends its own Authorization (a PAT), so
+// it has no OAuth sign-in.
+func mcpHasAuthHeader(s mcp.Server) bool {
+	for k := range s.Headers {
+		if strings.EqualFold(k, "Authorization") {
+			return true
+		}
+	}
+	return false
+}
+
+// mcpToolsChangedToast warns that a server's tools changed since the
+// user trusted them.
+func (m *Model) mcpToolsChangedToast(name string) tea.Cmd {
+	var c tea.Cmd
+	m.toast, c = m.toast.PushDetail(toast.Warn, "MCP "+name+": its tools changed",
+		"Review them in AI: MCP Servers… → "+name+" → Show tools, then Trust the new tools. Until then each tool asks first.")
+	return c
 }
 
 // ── Servers picker ─────────────────────────────────────────────────────
@@ -258,8 +315,13 @@ func mcpStatusHint(st mcp.Status) string {
 		parts = append(parts, st.Problem)
 	case st.State == mcp.StateFailed:
 		parts = append(parts, "failed: "+st.Problem)
+	case st.State == mcp.StateRunning && kind == "remote":
+		parts = append(parts, "connected")
 	default:
 		parts = append(parts, st.State)
+	}
+	if st.SignedIn {
+		parts = append(parts, "signed in")
 	}
 	if st.Pid > 0 {
 		parts = append(parts, fmt.Sprintf("pid %d", st.Pid))
@@ -274,6 +336,9 @@ func mcpStatusHint(st mcp.Status) string {
 	if !st.Trusted {
 		parts = append(parts, "not trusted")
 	}
+	if st.ToolsChanged {
+		parts = append(parts, "tools changed")
+	}
 	if st.Source == mcp.SourceProject {
 		parts = append(parts, "project")
 	}
@@ -286,6 +351,8 @@ func mcpStatusIcon(st mcp.Status) string {
 		return "●"
 	case mcp.StateFailed, mcp.StateInvalid:
 		return "✗"
+	case mcp.StateSignIn:
+		return "!"
 	}
 	return "○"
 }
@@ -295,10 +362,8 @@ func (m *Model) openMCPServers() tea.Cmd {
 	mgr := m.aiMCP()
 	mgr.Reload()
 	list := mgr.Servers()
-	if len(list) == 0 {
-		return m.aiInfo("No MCP servers yet: add them to " + mcpUserPath() + " (Open Config: MCP Servers)")
-	}
-	items := make([]picker.Item, 0, len(list))
+	items := make([]picker.Item, 0, len(list)+1)
+	items = append(items, picker.Item{ID: mcpAddID, Title: "+ Add a server…", Hint: "Linear, GitHub, GitLab, Slack, Notion …"})
 	for _, st := range list {
 		items = append(items, picker.Item{ID: st.Name, Title: mcpStatusIcon(st) + " " + st.Name, Hint: mcpStatusHint(st)})
 	}
@@ -330,6 +395,33 @@ func (m *Model) openMCPServerActions(name string) tea.Cmd {
 	}
 	if !st.Trusted {
 		items = append(items, picker.Item{ID: "trust", Title: "Trust (always allow this entry)", Hint: "asks again when the entry changes"})
+	}
+	if st.ToolsChanged {
+		items = append(items, picker.Item{ID: "accept-tools", Title: "Trust the new tools", Hint: "review them with Show tools first"})
+	}
+	entry := mcpServerEntries(name)
+	if st.Type == mcp.TypeHTTP && st.State != mcp.StateInvalid && (len(entry) == 0 || !mcpHasAuthHeader(entry[0])) {
+		hint := "OAuth in the browser"
+		if mcpOverSSH() {
+			hint = "OAuth: paste the address back (SSH)"
+		}
+		items = append(items, picker.Item{ID: "signin", Title: "Sign in", Hint: hint})
+	}
+	if st.SignedIn {
+		items = append(items, picker.Item{ID: "signout", Title: "Sign out", Hint: "forget its tokens"})
+	}
+	for _, e := range entry {
+		missing := map[string]bool{}
+		for _, n := range mcpMissingSecrets(e) {
+			missing[n] = true
+		}
+		for _, n := range e.SecretNames() {
+			hint := "saved"
+			if missing[n] {
+				hint = "not set"
+			}
+			items = append(items, picker.Item{ID: "secret:" + n, Title: "Set secret " + n + "…", Hint: hint})
+		}
 	}
 	items = append(items,
 		picker.Item{ID: "edit", Title: "Edit in mcp.json", Hint: st.Source},
@@ -365,6 +457,9 @@ func (m *Model) onMCPConnectDone(msg mcpConnectDoneMsg) tea.Cmd {
 	}
 	for _, st := range m.aiMCP().Servers() {
 		if st.Name == msg.name {
+			if st.ToolsChanged {
+				return m.mcpToolsChangedToast(msg.name)
+			}
 			return m.aiInfo("MCP " + msg.name + ": " + mcpStatusHint(st))
 		}
 	}
@@ -406,6 +501,9 @@ func (m *Model) onMCPServerAction(id string) tea.Cmd {
 			}
 		}
 		return m.aiInfo("MCP " + name + ": trusted")
+	case "accept-tools":
+		mgr.AcceptTools(name)
+		return m.aiInfo("MCP " + name + ": new tools trusted")
 	case "edit":
 		for _, sv := range mcpServerEntries(name) {
 			m.openFileAtLine(sv.SourcePath, 1)
@@ -413,6 +511,20 @@ func (m *Model) onMCPServerAction(id string) tea.Cmd {
 		return nil
 	case "log":
 		return m.showMCPLog()
+	case "signin":
+		if !st.Trusted {
+			for _, sv := range mcpServerEntries(name) {
+				m.aiS().mcpTrust = &aiMCPTrustPending{server: name, signin: true}
+				m.mcpTrustDialog(sv)
+				return nil
+			}
+		}
+		return m.mcpSignIn(name)
+	case "signout":
+		return m.mcpSignOut(name)
+	}
+	if secret, ok := strings.CutPrefix(id, "secret:"); ok {
+		return m.mcpAskSecret(secret)
 	}
 	return nil
 }
@@ -492,13 +604,46 @@ func (m *Model) editMCPConfig() tea.Cmd {
 func (m *Model) handleMCPPickerSelect(id string) (tea.Cmd, bool) {
 	switch m.pickerKind {
 	case pickerKindMCPServers:
+		if id == mcpAddID {
+			return m.openMCPPresets(), true
+		}
 		return m.openMCPServerActions(id), true
+	case pickerKindMCPPresets:
+		return m.onMCPPresetPicked(id), true
 	case pickerKindMCPServer:
 		return m.onMCPServerAction(id), true
 	case pickerKindMCPTools:
 		return nil, true
 	}
 	return nil, false
+}
+
+// mcpGlyph marks MCP in the chat header chip.
+func mcpGlyph() string {
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		return "~"
+	}
+	return "⌁"
+}
+
+// mcpChipLabel is the chat header chip "⌁ N MCP" (N = connected
+// servers), or "" when no server is configured or MCP never ran (the
+// header never creates the Manager).
+func (m Model) mcpChipLabel() string {
+	n := m.mcpChipState()
+	if n < 0 {
+		return ""
+	}
+	return mcpGlyph() + " " + strconv.Itoa(n) + " MCP"
+}
+
+// mcpChipState is -1 when there is no chip, else the connected count
+// (no allocation: the header memo compares it every frame).
+func (m Model) mcpChipState() int {
+	if m.ai == nil || m.ai.mcp == nil || m.ai.mcp.Count() == 0 {
+		return -1
+	}
+	return m.ai.mcp.Running()
 }
 
 // mcpAutoApproveClasses are the "mcp:<server>" rows of AI: Agent

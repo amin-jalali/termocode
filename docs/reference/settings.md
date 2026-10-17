@@ -48,6 +48,17 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `ai_model` | string | `(default)` | Chat model ID. Empty uses the provider's default model. |
 | `ai_base_url` | string | `(default)` | API base URL, for local or OpenAI-compatible servers. Empty uses the provider's default. |
 
+## MCP
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `mcp_enabled` | bool | `true` | Offer the tools of the MCP servers in mcp.json to the AI chat. false hides them all without touching mcp.json. |
+| `mcp_idle_timeout` | string | `10m` | Stop an MCP server after this long without a tool call (a local one ends, a remote one drops its session); it starts again on the next call. "0" never stops it. A Go duration: 90s, 10m, 1h. |
+| `mcp_call_timeout` | string | `60s` | Longest wait for one MCP tool call without an answer or a progress report. A server's "timeout" (seconds) in mcp.json wins. |
+| `mcp_max_result_kb` | int | `32` | Cut an MCP tool result to this many KB before the model sees it. |
+| `mcp_trust_annotations` | bool | `true` | Let MCP tools the server marks read-only run without asking. false: every MCP tool asks, except the ones in the server's "autoApprove" list. |
+| `mcp_oauth_port` | int | `0` | Port of the sign-in listener on 127.0.0.1 for MCP servers with OAuth. 0 picks a free port each time; set a fixed one for an app that needs a fixed redirect URL (Slack) or for ssh -L port forwarding. |
+
 ## AI (file only)
 
 | Key | Type | Default | Description |
@@ -56,12 +67,8 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `ai_auto_approve` | string[] | `[]` | Agent tool classes that run without asking: fileWrite, git, run, ide, settings. Set with AI: Agent Auto-Approve…. |
 | `ai_edit_review` | enum | `review` | review: the agent's file changes (write_file, create_file, LSP rename, code actions, format) open as a diff where you accept or reject each change; the agent waits and is told what was written. auto: the old way (a confirm dialog, or no question when fileWrite is auto-approved). Auto-approving fileWrite also skips the review. Toggle with AI: Toggle Edit Review. |
 | `ai_max_steps` | int | `25` | Most tool steps the AI agent takes for one chat message. At the limit it stops and asks you to send "continue". |
-| `mcp_enabled` | bool | `true` | Offer the tools of the MCP servers in mcp.json to the AI chat. false hides them all without touching mcp.json. |
-| `mcp_idle_timeout` | duration | `10m` | Stop a local MCP server after this long without a tool call (it starts again on the next one). "0" never stops it. Read when MCP first runs. |
-| `mcp_call_timeout` | duration | `60s` | Longest wait for one MCP tool call. A server's "timeout" (seconds) in mcp.json wins. Read when MCP first runs. |
-| `mcp_max_result_kb` | int | `32` | Cut an MCP tool result to this many KB before the model sees it. |
-| `mcp_trust_annotations` | bool | `true` | Let MCP tools the server marks read-only run without asking. false: every MCP tool asks, except the ones in the server's "autoApprove" list. |
 | `mcp_trusted` | object | `{}` | Project MCP servers you allowed with "Always allow": server name → hash of its mcp.json entry. A changed entry asks again. Written by the trust dialog and AI: MCP Servers…. |
+| `mcp_trusted_tools` | object | `{}` | The tool list you trusted per MCP server: server name → hash of its tools. The first list is kept by itself; when a server's tools change, termocode asks again and, until you trust the new list, every tool of that server asks first. |
 
 ## Appearance (file only)
 
@@ -74,6 +81,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `terminal_skip_shell` | string[] | `[]` | Actions (keymap.json names) whose keys reach termocode while the terminal has focus. Other Ctrl keys go to the shell. Quit (Ctrl+Q) is in the list by default; add a name, or remove one with "-Name" (for example `["QuickOpen", "-Quit"]`). |
+| `terminal_shell_integration` | bool | `true` | bash, zsh and fish terminal tabs load a small script (after your own rc file) that tells termocode each command, its exit code and the folder (OSC 133 / OSC 7). It gives the tab its folder name, the "✦ Fix?" chip on a failed command and the CLI agent marks. false starts the shell exactly as before. Read when a terminal tab opens; needs Neovim 0.10+. |
 
 ## Environment variables
 

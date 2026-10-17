@@ -1,0 +1,10 @@
+› run the unit tests and fix what fails
+
+• Explored
+  └ Read parser.go, parser_test.go
+
+• Working (23s • esc to interrupt)
+
+
+› Ask Codex to do anything
+  100% context left · ? for shortcuts

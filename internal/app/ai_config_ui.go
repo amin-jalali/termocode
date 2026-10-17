@@ -78,7 +78,7 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 	case promptKindAISaveAs:
 		return m.onAISaveAsPath(value), true
 	}
-	return nil, false
+	return m.handleMCPPromptSubmit(value)
 }
 
 // handleAIConfirm routes the AI confirm kinds. ok=false: not ours.

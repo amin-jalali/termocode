@@ -114,6 +114,10 @@ type AdapterOptions struct {
 	TrustAnnotations bool
 	MaxResult        int                 // bytes of result text; 0: DefaultMaxResult
 	Clean            func(string) string // strips escape sequences and control runes
+	// ToolsChanged (ServerTools.ToolsChanged): the user did not accept
+	// the server's new tool list, so every tool asks first, with no
+	// "Always allow" (annotations and autoApprove are not trusted).
+	ToolsChanged bool
 }
 
 // DefaultMaxResult caps a result (mcp_max_result_kb default 32).
@@ -134,6 +138,9 @@ func AITools(s Server, tools []Tool, call CallFunc, o AdapterOptions) []ai.Tool 
 		exposed, mutating, class := Gate(s, t, o.TrustAnnotations)
 		if !exposed {
 			continue
+		}
+		if o.ToolsChanged {
+			mutating, class = true, ""
 		}
 		t := t
 		display := DisplayName(s.Name, t.Name)

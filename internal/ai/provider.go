@@ -11,6 +11,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -315,10 +316,32 @@ func httpError(code int, body []byte) error {
 		}
 	}
 	msg = ansi.Truncate(msg, 301, "…")
-	return errString(Redact("HTTP " + itoa(code) + ": " + msg))
+	return statusError{code: code, msg: Redact("HTTP " + itoa(code) + ": " + msg)}
 }
 
 func itoa(n int) string {
 	b, _ := json.Marshal(n)
 	return string(b)
+}
+
+// statusError is an HTTP error answer of a provider.
+type statusError struct {
+	code int
+	msg  string
+}
+
+func (e statusError) Error() string { return e.msg }
+
+// Retryable reports whether err is a busy server (HTTP 429, 500, 502,
+// 503, 504 or Anthropic's 529 "overloaded") worth trying again.
+func Retryable(err error) bool {
+	var se statusError
+	if !errors.As(err, &se) {
+		return false
+	}
+	switch se.code {
+	case 429, 500, 502, 503, 504, 529:
+		return true
+	}
+	return false
 }

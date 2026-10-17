@@ -60,6 +60,7 @@ type aiState struct {
 	chatGen     uint64
 	chatCancel  context.CancelFunc
 	chatCh      chan tea.Msg
+	act         aiActivity // the activity line (ai_activity.go)
 	attachments []aiAttachment
 	restored    bool
 
@@ -89,9 +90,11 @@ type aiState struct {
 
 	// MCP (ai_mcp.go): the servers, the open trust dialog and the
 	// server the actions picker is about.
-	mcp      *mcp.Manager
-	mcpTrust *aiMCPTrustPending
-	mcpSel   string
+	mcp       *mcp.Manager
+	mcpTrust  *aiMCPTrustPending
+	mcpSel    string
+	mcpSignIn *mcpSignInState // the open OAuth sign-in (mcp_remote_ui.go)
+	mcpSecret string          // the ${secret:NAME} being entered
 
 	// configure / sign-in flow
 	cfgKind string
@@ -430,11 +433,14 @@ func aiSettingsCategories(cats map[string]string) map[string]string {
 	for _, id := range []string{"setting-ai-inline", "setting-ai-provider", "setting-ai-model", "setting-ai-base-url"} {
 		cats[id] = "AI"
 	}
-	return cats
+	return mcpSettingsCategories(cats)
 }
 
 // aiSettingValue renders an AI row's current value. ok=false: not ours.
 func aiSettingValue(id string) (string, bool) {
+	if v, ok := mcpSettingValue(id); ok {
+		return v, true
+	}
 	path, _ := ai.ConfigPath()
 	s := ai.LoadSettings(path)
 	switch id {
@@ -465,6 +471,9 @@ func aiSettingValue(id string) (string, bool) {
 // applyAISetting persists one AI row and reloads the provider. ok=false
 // when the row is not an AI one.
 func (m *Model) applyAISetting(id, value string) (tea.Cmd, bool) {
+	if cmd, ok := m.applyMCPSetting(id, value); ok {
+		return cmd, true
+	}
 	path, err := ai.ConfigPath()
 	if err != nil {
 		return nil, false

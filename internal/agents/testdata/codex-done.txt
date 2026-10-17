@@ -1,0 +1,8 @@
+• Updated parser.go so the tokenizer keeps the final newline. All 42
+  tests pass.
+
+─ Worked for 1m 12s ───────────────────────────────────────────────────────
+
+
+› Ask Codex to do anything
+  98% context left · ? for shortcuts

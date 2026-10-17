@@ -24,6 +24,42 @@ type Model struct {
 	w, h   int
 	// complete, when set, is what Tab does to the value (SetCompleter).
 	complete func(string) string
+	// note is extra text under the label, wrapped to the card (SetNote).
+	note string
+}
+
+// SetNote shows text (several lines, wrapped) between the label and the
+// input: instructions that do not fit the one-line label.
+func (m *Model) SetNote(text string) { m.note = text }
+
+// wrapWords wraps s to width w by words; a word longer than w is cut.
+func wrapWords(s string, w int) []string {
+	var out []string
+	for _, para := range strings.Split(s, "\n") {
+		line := ""
+		for _, word := range strings.Fields(para) {
+			for runewidth.StringWidth(word) > w {
+				if line != "" {
+					out = append(out, line)
+					line = ""
+				}
+				cut := runewidth.Truncate(word, w, "")
+				out = append(out, cut)
+				word = word[len(cut):]
+			}
+			switch {
+			case line == "":
+				line = word
+			case runewidth.StringWidth(line)+1+runewidth.StringWidth(word) <= w:
+				line += " " + word
+			default:
+				out = append(out, line)
+				line = word
+			}
+		}
+		out = append(out, line)
+	}
+	return out
 }
 
 // SetMasked hides the typed value behind bullets (for secrets). The value
@@ -286,6 +322,11 @@ func (m Model) Box() string {
 		rows = append(rows, padBg(bgFill.Render("  ")+labelStyle.Render(label), innerW))
 	} else {
 		rows = append(rows, blank)
+	}
+	if strings.TrimSpace(m.note) != "" {
+		for _, l := range wrapWords(m.note, innerW-4) {
+			rows = append(rows, padBg(bgFill.Render("  ")+labelStyle.Render(l), innerW))
+		}
 	}
 
 	value := m.value
