@@ -30,6 +30,8 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onMCPConnectDone(msg), true
 	case aiChatDoneMsg:
 		return m.onAIChatDone(msg), true
+	case aiActivityTickMsg:
+		return m.onAIActivityTick(), true
 	case aiActionResultMsg:
 		return m.onAIActionResult(msg), true
 	case diffview.FinishMsg:
