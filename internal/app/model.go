@@ -640,6 +640,8 @@ type Model struct {
 	// ai is the Group A AI assistant state (ai_state.go). Pointer so value
 	// copies and the streaming goroutines share one instance.
 	ai *aiState
+	// HTTP client for .http files (http_state.go); made on first use.
+	http *httpState
 	// setup is the first-run setup card on the Welcome page
 	// (setup_card*.go); shared by Model copies.
 	setup *setupState
@@ -970,6 +972,9 @@ func (m Model) attachCmd() tea.Cmd {
 		// global F4/Shift+F4 navigation. Filetype-driven so a fresh
 		// search buffer just sets filetype=findresults to wire up.
 		_ = m.nvim.ExecLua(findResultsLua)
+		// HTTP client: .http filetype + lens, the HTTP Response page.
+		_ = m.nvim.ExecLua(httpBufferLua)
+		_ = m.nvim.ExecLua(httpPageLua)
 		// Inline git diff gutter signs: green +, blue ~, red −. Refreshes
 		// on save / buffer enter / 1-second idle. Failure is non-fatal —
 		// non-git buffers just stay sign-less.

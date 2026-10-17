@@ -430,6 +430,7 @@ func init() {
 
 // aiSettingsCategories puts the AI rows in their own Settings group.
 func aiSettingsCategories(cats map[string]string) map[string]string {
+	httpSettingsCategories(cats) // the HTTP client's group (http_settings.go)
 	for _, id := range []string{"setting-ai-inline", "setting-ai-provider", "setting-ai-model", "setting-ai-base-url"} {
 		cats[id] = "AI"
 	}
@@ -439,6 +440,9 @@ func aiSettingsCategories(cats map[string]string) map[string]string {
 // aiSettingValue renders an AI row's current value. ok=false: not ours.
 func aiSettingValue(id string) (string, bool) {
 	if v, ok := mcpSettingValue(id); ok {
+		return v, true
+	}
+	if v, ok := httpSettingValue(id); ok { // HTTP client (http_settings.go)
 		return v, true
 	}
 	path, _ := ai.ConfigPath()
@@ -473,6 +477,9 @@ func aiSettingValue(id string) (string, bool) {
 func (m *Model) applyAISetting(id, value string) (tea.Cmd, bool) {
 	if cmd, ok := m.applyMCPSetting(id, value); ok {
 		return cmd, true
+	}
+	if c, ok := m.applyHTTPSetting(id, value); ok { // HTTP client (http_settings.go)
+		return c, true
 	}
 	path, err := ai.ConfigPath()
 	if err != nil {

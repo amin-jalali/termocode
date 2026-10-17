@@ -149,6 +149,10 @@ const (
 	// key (the activity bar and the palette reach it); keymap.json may
 	// bind one.
 	ActionServicesFocus
+	// ActionHTTPSend sends the request at the cursor of an .http file,
+	// resends on the HTTP Response page, else resends the last request
+	// (Ctrl+Alt+R, like VS Code REST Client).
+	ActionHTTPSend
 )
 
 // KittyOnlyKeys are default bindings a legacy terminal cannot send (or
@@ -450,6 +454,11 @@ func Default() KeyMap {
 			// ghostty); legacy terminals fall back to the palette
 			// ("View: Show Buffer Info") which always works.
 			"ctrl+alt+i": ActionShowBufferInfo,
+
+			// HTTP client: send the request at the cursor (VS Code REST
+			// Client's key). Legacy terminals send it as Esc + Ctrl+R,
+			// which canonicalKey matches too; the palette always works.
+			"ctrl+alt+r": ActionHTTPSend,
 
 			// Right-side Actions panel toggle. Alt+A is universally free
 			// (Ctrl+Shift+A is grabbed by most terminals for "select all").

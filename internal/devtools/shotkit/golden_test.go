@@ -70,6 +70,8 @@ func goldenScenes() []Scene {
 		FindResults(),
 		{Name: "search", Steps: WithEditor(append(append([]Step{Act("palette:find-files-overlay")}, TypeKeys("Toast")...), Pause(1200*time.Millisecond))...)},
 		Services(),
+		HTTPFile(),
+		HTTPResponse(),
 	}
 }
 
@@ -114,6 +116,9 @@ func goldenExtras() []Scene {
 		ServicesVariant("services-empty", "empty"),
 		{Name: "services-light", Theme: "catppuccin-latte", Steps: Services().Steps},
 		{Name: "services-ascii", Icons: "ascii", Steps: Services().Steps},
+		// The HTTP Response page: the Headers view, and in a light theme.
+		{Name: "http-response-headers", Steps: []Step{Act("httpdemo:headers"), Pause(900 * time.Millisecond)}},
+		withTheme(withName(HTTPResponse(), "http-response-light"), "catppuccin-latte"),
 		// The Problems panel with nothing to show (the empty state).
 		{Name: "problems", Steps: WithEditor(Act("palette:problems-panel"), Pause(800*time.Millisecond))},
 	}
@@ -138,7 +143,7 @@ func goldenCases() []goldenCase {
 	}
 	// The smallest common window (80x24) for the screens that have a
 	// compact layout: start page, editor, palette, toast.
-	for _, sc := range []Scene{Dashboard(), DashboardRecent(), setupCardScene(), Editor(), Palette(), Toast(), FindResults(), SCMCommit(), TerminalMarks(), Services()} {
+	for _, sc := range []Scene{Dashboard(), DashboardRecent(), setupCardScene(), Editor(), Palette(), Toast(), FindResults(), SCMCommit(), TerminalMarks(), Services(), HTTPFile(), HTTPResponse(), HTTPResponseTLS()} {
 		out = append(out, goldenCase{fmt.Sprintf("%s-80x24", sc.Name), sc, 80, 24})
 	}
 	out = append(out, goldenCase{"setup-card-100x30", setupCardScene(), 100, 30})

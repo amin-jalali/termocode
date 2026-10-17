@@ -301,6 +301,23 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-mcp-servers":      aiNever(aiNoPicker),
 	"ai-mcp-log":          aiAuto(),
 	"ai-mcp-config":       aiNever(aiNoAIConfig),
+
+	// ── HTTP client ──
+	"http-send":             aiNever("sends a network request; use http_send (gated by host and method)"),
+	"http-send-pick":        aiNever(aiNoPicker + " (http_list_requests, http_send)"),
+	"http-quick":            aiNever(aiNoPicker + " (http_send with method and url)"),
+	"http-cancel":           aiConfirm(ai.ClassIDE), // stops the user's request
+	"http-last-response":    aiAuto(),
+	"http-history":          aiNever(aiNoPicker + " (http_history)"),
+	"http-env-select":       aiNever(aiNoPicker + " (http_set_environment)"),
+	"http-env-open":         aiAuto(),
+	"http-env-open-private": aiNever("opens the file that holds the user's secrets"),
+	"http-saved":            aiNever(aiNoPicker + " (http_list_requests on http/saved.http)"),
+	"http-save":             aiNever(aiNoPicker + " (http_save_request)"),
+	"http-copy-curl":        aiConfirm(ai.ClassIDE), // overwrites the system clipboard
+	"http-import-curl":      aiNever(aiNoPicker + " (http_save_request)"),
+	"http-new-file":         aiNever(aiNoPicker + " (create_file)"),
+	"http-save-body":        aiNever(aiNoPicker + " (http_get_last_response, write_file)"),
 }
 
 // aiActionPolicyFor returns the policy of a palette id, including the
@@ -357,6 +374,15 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"services_max_log_kb": aiConfirm(ai.ClassSettings),
 	"mcp_trusted_tools":   aiNever(aiNoAIConfig),
 	"mcp_oauth_port":      aiNever(aiNoAIConfig),
+	// HTTP client: limits the user may let the AI change; the AI never
+	// raises its own budgets or turns TLS checks off.
+	"http_timeout":       aiConfirm(ai.ClassSettings),
+	"http_max_redirects": aiConfirm(ai.ClassSettings),
+	"http_cookie_jar":    aiConfirm(ai.ClassSettings),
+	"http_history_max":   aiConfirm(ai.ClassSettings),
+	"http_tls_insecure":  aiNever(aiNoAIConfig),
+	"http_max_body_mb":   aiNever(aiNoAIConfig),
+	"http_ai_max_kb":     aiNever(aiNoAIConfig),
 }
 
 // aiListActionsMax caps list_actions results.

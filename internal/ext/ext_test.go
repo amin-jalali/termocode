@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/amin-jalali/termocode/extensions"
 )
@@ -174,18 +175,15 @@ func TestInstallBundled(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"open-in-github", "rest-client", "todo-tree", "word-frequency"}
+	want := []string{"open-in-github", "todo-tree", "word-frequency"}
 	if !reflect.DeepEqual(names, want) {
 		t.Errorf("installed = %v, want %v", names, want)
 	}
 	if b, _ := os.ReadFile(filepath.Join(dir, "word-count", "init.lua")); string(b) != "-- mine" {
 		t.Error("existing extension was overwritten")
 	}
-	if _, err := os.Stat(filepath.Join(dir, "rest-client", "lua", "rest_client", "parser.lua")); err != nil {
-		t.Error("nested module not copied:", err)
-	}
 	exts, skipped := Discover(dir)
-	if len(exts) != 5 || len(skipped) != 0 {
+	if len(exts) != 4 || len(skipped) != 0 {
 		t.Errorf("discover = %d exts, skipped %v", len(exts), skipped)
 	}
 	for _, e := range exts {
@@ -196,5 +194,25 @@ func TestInstallBundled(t *testing.T) {
 	again, err := InstallBundled(extensions.FS, dir)
 	if err != nil || len(again) != 0 {
 		t.Errorf("second install = %v, %v", again, err)
+	}
+}
+
+// The REST client sample (the only one with a lua/ module folder) was
+// retired for the built-in HTTP client; nested folders still copy.
+func TestInstallBundledNested(t *testing.T) {
+	dir := t.TempDir()
+	src := fstest.MapFS{
+		"x/extension.json":     {Data: []byte(`{"name": "x"}`)},
+		"x/init.lua":           {Data: []byte("-- x")},
+		"x/lua/x/mod.lua":      {Data: []byte("return {}")},
+		"x/lua/x/deep/two.lua": {Data: []byte("return 2")},
+	}
+	if _, err := InstallBundled(src, dir); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{"x/lua/x/mod.lua", "x/lua/x/deep/two.lua"} {
+		if _, err := os.Stat(filepath.Join(dir, p)); err != nil {
+			t.Error("nested module not copied:", err)
+		}
 	}
 }

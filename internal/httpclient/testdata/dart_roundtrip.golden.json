@@ -1,0 +1,33 @@
+{
+  "requests": [
+    {
+      "method": "GET",
+      "url": "https://api.example.com/users/1",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "name": "Get user",
+      "line": 2,
+      "start_line": 1,
+      "end_line": 4
+    },
+    {
+      "method": "POST",
+      "url": "https://api.example.com/users",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": "{\"name\":\"Alice\"}",
+      "name": "Create user",
+      "line": 7,
+      "start_line": 6,
+      "end_line": 11
+    }
+  ]
+}

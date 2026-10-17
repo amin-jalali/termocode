@@ -280,7 +280,7 @@ func isPersistedZombiePath(path string) bool {
 	if len(path) >= 8 && path[len(path)-8:] == " PREVIEW" {
 		return true
 	}
-	if isFindResultsPath(path) {
+	if isFindResultsPath(path) || isHTTPPagePath(path) {
 		return true
 	}
 	if strings.HasSuffix(path, "termocode-find-results.txt") {

@@ -1,0 +1,22 @@
+// JetBrains style
+// @name list
+https://api.example.com/items?page=1 HTTP/1.1
+
+###
+# @no-redirect
+# @timeout 10s
+get https://api.example.com/old
+X-Custom: value:with:colons
+# comment in headers
+Accept: text/plain
+
+###
+# just a comment block
+###
+PUT https://api.example.com/items/1
+
+line one
+
+# kept: comment-looking body line
+
+

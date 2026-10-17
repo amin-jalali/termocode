@@ -2224,6 +2224,8 @@ func (m Model) statusState() statusbar.State {
 	lang := m.editor.Lang()
 	if lang == "findresults" {
 		lang = "Find Results"
+	} else if lang == "httpresponse" || lang == "http" {
+		lang = map[string]string{"httpresponse": "HTTP Response", "http": "HTTP"}[lang]
 	} else if lang != "" {
 		lang = strings.ToUpper(lang[:1]) + lang[1:]
 	}
@@ -2266,7 +2268,7 @@ func (m Model) statusState() statusbar.State {
 		Debug:       m.dapSessionActive,
 		ShowLSP:     m.editor.Path() != "",
 		LSP:         m.lspClients(),
-		Ext:         m.extStatusTexts(), // Group I
+		Ext:         append(m.extStatusTexts(), m.httpStatusTexts()...), // Group I, HTTP client
 	}
 	m.fillTestsStatus(&st) // Group E: ✓ n ✗ n chip (test_explorer.go)
 	m.fillServicesStatus(&st)
