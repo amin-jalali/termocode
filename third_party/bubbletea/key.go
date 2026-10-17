@@ -662,6 +662,12 @@ func detectOneMsg(b []byte, canHaveMoreData bool) (w int, msg Msg) {
 		return w, msg
 	}
 
+	// termocode patch: terminal answers sent as strings (APC, DCS, OSC …)
+	// are not keys (key_strings.go).
+	if found, w, msg := detectEscapeString(b); found {
+		return w, msg
+	}
+
 	// termocode patch: kitty keyboard protocol keys (CSI … u).
 	if found, w, msg := detectCSIu(b); found {
 		return w, msg
