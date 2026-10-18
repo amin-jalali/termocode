@@ -50,6 +50,23 @@ type imagePreview struct {
 	mod     int64
 	loading bool
 	err     string
+	// tmp: path is a temp copy termocode wrote (an HTTP image body); it
+	// is removed when the preview closes or another one replaces it.
+	tmp bool
+}
+
+// closeImagePreview hides the card and removes a temp copy.
+func (m *Model) closeImagePreview() {
+	m.imageOpen = false
+	m.dropImageTemp()
+}
+
+// dropImageTemp removes the open preview's temp copy, if it has one.
+func (m *Model) dropImageTemp() {
+	if p := m.imagePrev; p != nil && p.tmp {
+		_ = os.Remove(p.path)
+		p.tmp = false
+	}
 }
 
 type imageLoadedMsg struct {
@@ -63,6 +80,7 @@ var imageCache = termimg.NewCache(16)
 
 // openImagePreview starts decoding path and opens the preview card.
 func (m *Model) openImagePreview(path string) tea.Cmd {
+	m.dropImageTemp()
 	m.imagePrev = &imagePreview{path: path, loading: true}
 	m.imageOpen = true
 	if imageProtocol() == termimg.Kitty {
@@ -91,7 +109,7 @@ func (m *Model) handleImageMsg(msg tea.Msg) (tea.Cmd, bool) {
 			m.imagePrev.err = msg.err.Error()
 			var c tea.Cmd
 			m.toast, c = m.toast.PushDetail(toast.Warn, "Cannot show image", msg.err.Error())
-			m.imageOpen = false
+			m.closeImagePreview()
 			return c, true
 		}
 		m.imagePrev.img, m.imagePrev.size, m.imagePrev.mod = msg.img, msg.size, msg.mod
@@ -104,12 +122,12 @@ func (m *Model) handleImageMsg(msg tea.Msg) (tea.Cmd, bool) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc", "q", "enter", "ctrl+c", " ":
-			m.imageOpen = false
+			m.closeImagePreview()
 		}
 		return nil, true
 	case tea.MouseMsg:
 		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
-			m.imageOpen = false
+			m.closeImagePreview()
 		}
 		return nil, true
 	}

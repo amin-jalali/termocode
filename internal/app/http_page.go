@@ -493,7 +493,9 @@ func (m *Model) httpPreviewImage() tea.Cmd {
 	}
 	_, _ = f.Write(s.shown.resp.Body)
 	_ = f.Close()
-	return m.openImagePreview(f.Name())
+	cmd := m.openImagePreview(f.Name())
+	m.imagePrev.tmp = true // removed when the preview closes (U16)
+	return cmd
 }
 
 // httpRetryInsecure resends the shown request once without TLS checks
