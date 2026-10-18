@@ -44,6 +44,10 @@ func Redact(s string) (string, int) {
 	return s, n
 }
 
+// EnvFileValues reads the KEY=value pairs of a .env file (nil when it
+// cannot be read). The secret store's ${dotenv:NAME} uses it.
+func EnvFileValues(path string) map[string]string { return envLines(path) }
+
 // envLines reads KEY=value pairs from a .env file.
 func envLines(path string) map[string]string {
 	f, err := os.Open(path)
