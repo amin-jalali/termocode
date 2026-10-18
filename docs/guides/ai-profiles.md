@@ -339,13 +339,14 @@ chat back.
 
 | Key | What it does |
 |---|---|
-| `Tab` / `↓` | Select the next step (in wave order) |
-| `Shift+Tab` / `↑` | Select the previous step |
+| `Tab` / `↓` / `j` | Select the next step (in wave order) |
+| `Shift+Tab` / `↑` / `k` | Select the previous step |
 | `Space` / `Enter` | Fold or unfold the selected card (the same choice as its card in the chat) |
 | `d` | Show or hide the node details |
 | `f` | Follow the running step again |
-| `←` / `→` | Show the previous / next run of this chat |
+| `←` / `→` (or `h` / `l`) | Show the previous / next run of this chat |
 | `PgUp` / `PgDn` | Scroll the panel |
+| `Home` | Scroll to the top |
 | `Esc` / `q` | Back to the chat |
 | `Ctrl+C` | Stop the run |
 
@@ -397,7 +398,9 @@ steps before it.
 A run lives in termocode's session process. When your SSH connection
 drops, the run goes on. Run `termocode attach` (or open termocode again
 in the same folder): you see the run still going, or done, with its
-cards. See [Remote and SSH](remote-ssh.md).
+cards. This is the same for a planned run: its steps go on in waves with
+no client attached, and the AGENTS panel shows the graph again when you
+come back. See [Remote and SSH](remote-ssh.md).
 
 ## Tokens and cost
 
@@ -491,3 +494,22 @@ All files: [Config files](../reference/config-files.md). All settings:
 
 **`Alt+Shift+P` does nothing**
 :   Your terminal does not send the key. Use **AI: Next Profile**.
+
+**`Alt+Shift+A` does nothing**
+:   Your terminal does not send the key. Use **AI: Toggle Agents Panel**,
+    a click on the run row of a planned run, or bind another key to
+    `AIToggleAgents` in `keymap.json`.
+
+**"the plan is not valid after one repair"**
+:   The planner's plan broke a rule twice (see
+    [Planned runs](#planned-runs-and-waves)). Send the message again, or
+    give the planner a stronger model with `"categories": {"deep": …}` in
+    your own planned profile.
+
+**Planned steps run one at a time**
+:   `ai_parallel_max` is set to `1` in `config.json`. Remove it (a
+    planned run then uses 3) or set it to 2 or more.
+
+**A planned run stopped with `Budget … reached`**
+:   The profile's `budget_usd` was reached. Press **Continue** to run the
+    rest, or **Stop**. See [Budget pause](#budget-pause).

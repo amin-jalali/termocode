@@ -79,5 +79,23 @@ Alternatives on the table:
   `.termocode/ai-profiles.json`, `ai_models`, `ai_parallel_max`,
   `ai_prices`, `ai_context_windows`. The built-in price table needs
   updates; a model with no price shows tokens and no dollars.
-- Follow-ups: a planner node with `quick` / `deep` categories, a budget
-  pause, and the agents panel.
+- Phase 2 (built on the same `agentdag.Run`, no rewrite):
+  - **Planned runs.** A planner node answers a plan JSON;
+    `agentrun.ParsePlan` checks it strictly (12 nodes, 6 waves, one final
+    node, no unknown keys), with one repair request. The run grows by the
+    plan's nodes while it goes, so the graph is no longer fixed at start.
+    A planned run therefore has no "Retry from step N" once the plan
+    exists: the plan is not part of the profile.
+  - **Waves.** A planned run runs up to 3 nodes at once when
+    `ai_parallel_max` is not set; other profiles keep the default 1.
+    Confirm dialogs and review cards of parallel nodes take turns through
+    one cancellable gate, so the user sees one card at a time.
+  - **Budget pause.** `budget_usd` on a profile pauses the run before its
+    next node; the user continues or stops. Only nodes with a known price
+    count.
+  - **AGENTS panel.** A second view of the chat's runs (`Alt+Shift+A`). It
+    draws from the saved step cards and the run snapshots, so it needs no
+    new state; a run a restart interrupted replays its last snapshot. Its
+    1 s activity tick runs only while a run goes and the view is shown.
+  - The end-to-end tests prove that a two-step run and a planned diamond
+    run both go on with no client attached and show again after attach.
