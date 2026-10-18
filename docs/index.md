@@ -60,15 +60,48 @@ hide:
 
 The AI is not a chat window on the side. It works in the same workspace you do.
 
-- **Real operations.** Agents create and edit files, run commands and tasks, and read diagnostics, test results and service logs.
-- **You decide.** Every proposed change opens as a diff. Accept or reject each hunk, then apply.
-- **Fix from the terminal.** A failed command gets a **Fix** button that hands the error to the AI.
-- **Your models.** Use a hosted provider, an OpenAI-compatible endpoint or a local model.
-- **MCP.** Connect local and remote MCP servers. The *Connect a service* wizard signs in to GitHub, GitLab, Linear, Notion, Sentry, Slack, ClickUp and Atlassian.
+<div class="grid cards" markdown>
+
+-   :material-file-edit-outline:{ .lg } **Real operations**
+
+    ---
+
+    Agents create and edit files, run commands and tasks, and read
+    diagnostics, test results and service logs.
+
+-   :material-check-decagram-outline:{ .lg } **You decide**
+
+    ---
+
+    Every proposed change opens as a diff. Accept or reject each hunk,
+    then apply.
+
+-   :material-wrench-outline:{ .lg } **Fix from the terminal**
+
+    ---
+
+    A failed command gets a **Fix** button that hands the error to the AI.
+
+-   :material-server-outline:{ .lg } **Your models**
+
+    ---
+
+    A hosted provider, an OpenAI-compatible endpoint or a local model.
+
+    [:octicons-arrow-right-24: Set up the AI](guides/ai-setup.md)
+
+-   :material-connection:{ .lg } **MCP and services**
+
+    ---
+
+    Local and remote MCP servers. *Connect a service* signs in to GitHub,
+    GitLab, Linear, Notion, Sentry, Slack, ClickUp and Atlassian.
+
+    [:octicons-arrow-right-24: Connect services](guides/mcp.md)
+
+</div>
 
 ![Reviewing an AI change hunk by hunk](assets/screenshots/diff-review.png){ .tc-shot }
-
-[Set up the AI](guides/ai-setup.md){ .md-button } [Connect services with MCP](guides/mcp.md){ .md-button }
 
 ## Your Workspace Survives Disconnects.
 
@@ -87,42 +120,54 @@ The session lives on the machine that runs termocode. It survives a dropped conn
 
 <div class="grid cards" markdown>
 
--   **Git, Without Context Switching.**
+-   :material-source-branch:{ .lg } **Git, Without Context Switching.**
+
+    ---
 
     Stage hunks, commit, sync, stash, blame, a commit graph, a merge-conflict
     resolver and clone.
 
     [:octicons-arrow-right-24: Source control](guides/git.md)
 
--   **Debug and Test Where You Code.**
+-   :material-bug-outline:{ .lg } **Debug and Test Where You Code.**
+
+    ---
 
     Breakpoints, watch and a Debug Console for Go, Python and Node. A test
     explorer for Go, pytest, Rust, Jest and Vitest.
 
     [:octicons-arrow-right-24: Debug](guides/debug.md) · [Tests](guides/tests.md)
 
--   **Manage Your Development Stack.**
+-   :material-docker:{ .lg } **Manage Your Development Stack.**
+
+    ---
 
     Start and stop Docker Compose services, follow their logs, open a shell
     in a container, and send HTTP requests from `.http` files.
 
     [:octicons-arrow-right-24: Services](guides/services.md) · [HTTP client](guides/http-client.md)
 
--   **Find Anything.**
+-   :material-magnify:{ .lg } **Find Anything.**
+
+    ---
 
     Search and replace across the whole project, with regex and globs. It
     works even without ripgrep installed.
 
     [:octicons-arrow-right-24: Search](guides/search.md)
 
--   **Language-Aware.**
+-   :material-code-braces:{ .lg } **Language-Aware.**
+
+    ---
 
     Completion, diagnostics and go-to-definition through language servers for
     Go, Python, JS/TS, Rust, C/C++, Lua and more, with an installer built in.
 
     [:octicons-arrow-right-24: Language servers](guides/language-servers.md)
 
--   **Tasks and Problems.**
+-   :material-format-list-checks:{ .lg } **Tasks and Problems.**
+
+    ---
 
     Run build and test tasks in terminal tabs. Errors land in the Problems
     panel and link to the line.
@@ -150,12 +195,38 @@ Measured on a Linux laptop (Intel i7-13700H). Language servers use their own mem
 
 ## Work From Anywhere. Make It Yours.
 
-- **Platforms.** Linux and macOS (amd64, arm64), Android via Termux, and any machine you reach over SSH, with file upload and download.
-- **Any terminal.** Rich colours and icons where your terminal has them, a clean fallback where it does not.
-- **Customize.** Themes and a theme editor, key bindings, snippets, settings export, and Lua extensions.
-- **Right to left.** Persian and Arabic text shows correctly in the AI chat and in Markdown.
+<div class="grid cards" markdown>
 
-[Customize termocode](guides/customize.md){ .md-button } [Build an extension](extensions.md){ .md-button }
+-   :material-devices:{ .lg } **Platforms**
+
+    ---
+
+    Linux and macOS (amd64, arm64), Android via Termux, and any machine
+    you reach over SSH, with file upload and download.
+
+-   :material-console:{ .lg } **Any terminal**
+
+    ---
+
+    Rich colours and icons where your terminal has them, a clean fallback
+    where it does not.
+
+-   :material-palette-outline:{ .lg } **Customize**
+
+    ---
+
+    Themes and a theme editor, key bindings, snippets, settings export, and
+    Lua extensions.
+
+    [:octicons-arrow-right-24: Customize](guides/customize.md) · [Extensions](extensions.md)
+
+-   :material-format-textdirection-r-to-l:{ .lg } **Right to left**
+
+    ---
+
+    Persian and Arabic text shows correctly in the AI chat and in Markdown.
+
+</div>
 
 ## Get Started
 
