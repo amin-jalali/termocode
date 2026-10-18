@@ -32,7 +32,9 @@ func TestSCMCommitViewParentClick(t *testing.T) {
 	if !until(d, func() bool { return strings.Contains(text(d), "Commit "+parent) }) {
 		t.Fatalf("parent not shown:%s", dump(d))
 	}
-	if !until(d, func() bool { return strings.Contains(text(d), "Merge branch 'topic'") && strings.Contains(text(d), "parents ") }) {
+	if !until(d, func() bool {
+		return strings.Contains(text(d), "Merge branch 'topic'") && strings.Contains(text(d), "parents ")
+	}) {
 		t.Errorf("merge header lacks its parents:%s", dump(d))
 	}
 }

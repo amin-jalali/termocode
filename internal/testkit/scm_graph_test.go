@@ -314,7 +314,10 @@ func TestSCMCopyShaAndMessage(t *testing.T) {
 		t.Fatalf("menu lacks Copy Commit Message:%s", dump(d))
 	}
 	clickText(d, "Copy Commit Message")
-	if !until(d, func() bool { got, _ := clip.get(); return strings.HasPrefix(got, "feat: add parser\n\nThe parser reads") }) {
+	if !until(d, func() bool {
+		got, _ := clip.get()
+		return strings.HasPrefix(got, "feat: add parser\n\nThe parser reads")
+	}) {
 		got, _ := clip.get()
 		t.Errorf("message copied = %q", got)
 	}

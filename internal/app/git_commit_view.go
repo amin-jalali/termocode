@@ -38,8 +38,8 @@ type commitViewState struct {
 	focused bool // keys go to a docked card (a floating one always has them)
 	blobs   map[string][2]string
 	syn     map[string][2][][]diffview.Tok // tokens of the cached blobs
-	order   []string // blobs, oldest first
-	pick    string   // the commit a revert / cherry-pick confirm is about
+	order   []string                       // blobs, oldest first
+	pick    string                         // the commit a revert / cherry-pick confirm is about
 	// The two sides of the files on show: sha^ and sha for a commit, a
 	// and b for a compare.
 	oldRev, newRev string

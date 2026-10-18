@@ -84,7 +84,9 @@ func BenchmarkHTTPLensRows2000(b *testing.B) {
 	src := sb.String()
 	lines := strings.Split(src, "\n")
 	known := func(n string) bool { return n == "host" }
-	lens := func(r *httpclient.Request) [][]string { return [][]string{{" ▸ send Ctrl+Alt+R ", "TermocodeHttpLens"}} }
+	lens := func(r *httpclient.Request) [][]string {
+		return [][]string{{" ▸ send Ctrl+Alt+R ", "TermocodeHttpLens"}}
+	}
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		f := httpclient.Parse(src)

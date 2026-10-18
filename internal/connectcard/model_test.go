@@ -9,7 +9,7 @@ import (
 )
 
 func key(t tea.KeyType) tea.KeyMsg { return tea.KeyMsg{Type: t} }
-func runes(s string) tea.KeyMsg  { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)} }
+func runes(s string) tea.KeyMsg    { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)} }
 
 func run(c tea.Cmd) tea.Msg {
 	if c == nil {

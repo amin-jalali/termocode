@@ -20,14 +20,14 @@ import (
 type gitRowKind int
 
 const (
-	gitRowSection   gitRowKind = iota // accordion header: CHANGES / GRAPH
-	gitRowDir                         // CHANGES: directory header (tree mode)
-	gitRowFile                        // CHANGES: a changed file
-	gitRowCommit                      // GRAPH: a commit node
-	gitRowGroup                       // GRAPH: a date group header (Today, …); folds
-	gitRowMore                        // GRAPH: "Show 15 more" / "Load older commits"
-	gitRowNote                        // empty-section note ("No changes") (not selectable)
-	gitRowSpacer                      // blank separator between sections (not selectable)
+	gitRowSection gitRowKind = iota // accordion header: CHANGES / GRAPH
+	gitRowDir                       // CHANGES: directory header (tree mode)
+	gitRowFile                      // CHANGES: a changed file
+	gitRowCommit                    // GRAPH: a commit node
+	gitRowGroup                     // GRAPH: a date group header (Today, …); folds
+	gitRowMore                      // GRAPH: "Show 15 more" / "Load older commits"
+	gitRowNote                      // empty-section note ("No changes") (not selectable)
+	gitRowSpacer                    // blank separator between sections (not selectable)
 )
 
 type gitSection int
