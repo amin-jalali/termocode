@@ -15,12 +15,16 @@ import (
 type CloseMsg struct{}
 
 type Model struct {
-	title string
-	badge string
-	lines []string
-	doc   *Doc // set by NewReader: content rendered per width
-	top   int
-	w, h  int
+	title       string
+	badge       string
+	lines       []string
+	doc         *Doc // set by NewReader: content rendered per width
+	top         int
+	w, h        int
+	guideAnchor string
+	guideFind   string
+	guidePlace  bool
+	scrolled    bool
 
 	icon    string // header icon set by SetHeader (replaces the file icon)
 	iconSet bool
@@ -99,9 +103,71 @@ func New(title, body string) Model {
 }
 
 func (m *Model) SetSize(w, h int) {
+	resized := w != m.w || h != m.h
+	oldTop := m.top
+	oldText := ""
+	oldHeading := ""
+	oldHeadingOffset := 0
+	if resized && m.w > 0 && m.h > 0 {
+		oldTop = m.Top()
+		oldRows, oldMarks := m.Marks()
+		if oldTop < len(oldRows) {
+			oldText = ansi.Strip(oldRows[oldTop])
+		}
+		for _, heading := range oldMarks.Headings {
+			if heading.Row >= oldTop {
+				oldHeading = heading.Slug
+				oldHeadingOffset = heading.Row - oldTop
+				break
+			}
+		}
+	}
 	m.w, m.h = w, h
 	m.clamp()
+	if m.guidePlace && !m.scrolled {
+		m.restoreGuideLocation()
+	} else if m.scrolled && resized {
+		if oldText != "" {
+			rows, _ := m.Marks()
+			for i, row := range rows {
+				if strings.TrimSpace(ansi.Strip(row)) == strings.TrimSpace(oldText) {
+					m.ScrollToRow(i)
+					return
+				}
+			}
+		}
+		if oldHeading != "" && m.ScrollToSlug(oldHeading) {
+			m.ScrollToRow(m.Top() - oldHeadingOffset)
+			return
+		}
+		m.ScrollToRow(oldTop)
+	}
 	m.dropHiddenLink()
+}
+
+// SetGuideLocation makes future resizes preserve the current location unless
+// the reader has been scrolled by the user.
+func (m *Model) SetGuideLocation(anchor, find string) {
+	m.guideAnchor, m.guideFind, m.guidePlace, m.scrolled = anchor, find, true, false
+}
+
+func (m *Model) restoreGuideLocation() {
+	if m.guideAnchor == "" {
+		m.ScrollToRow(0)
+		return
+	}
+	if !m.ScrollToSlug(m.guideAnchor) {
+		m.ScrollToRow(0)
+		return
+	}
+	if m.guideFind == "" {
+		return
+	}
+	top := m.Top()
+	r := m.FindBelow(top, strings.ReplaceAll(m.guideFind, "`", ""))
+	if view := max(m.h-2, 1); r >= top+view {
+		m.ScrollToRow(r - view/2)
+	}
 }
 
 func (m *Model) clamp() {
@@ -123,11 +189,20 @@ func (m Model) contentHeight() int {
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	oldTop := m.Top()
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		return m.handleKey(msg)
+		m, cmd := m.handleKey(msg)
+		if m.Top() != oldTop {
+			m.scrolled = true
+		}
+		return m, cmd
 	case tea.MouseMsg:
-		return m.handleMouse(msg)
+		m, cmd := m.handleMouse(msg)
+		if m.Top() != oldTop {
+			m.scrolled = true
+		}
+		return m, cmd
 	}
 	return m, nil
 }

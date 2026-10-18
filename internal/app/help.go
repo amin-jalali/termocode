@@ -102,6 +102,7 @@ func (m *Model) showHelpPage(msg PreviewMsg) tea.Cmd {
 		m.preview.ScrollToRow(hp.top)
 	} else {
 		cmd = m.helpScrollTo(hp.loc)
+		m.preview.SetGuideLocation(hp.loc.Anchor, hp.loc.Find)
 	}
 	m.helpHints()
 	return cmd
@@ -163,6 +164,7 @@ func (m *Model) onHelpLink(dest string) tea.Cmd {
 		m.help.stack = append(m.help.stack, helpPlace{loc: m.help.cur, top: m.preview.Top()})
 		m.help.cur = l
 		cmd := m.helpScrollTo(l)
+		m.preview.SetGuideLocation(l.Anchor, l.Find)
 		m.helpHints()
 		return cmd
 	}

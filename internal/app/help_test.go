@@ -113,6 +113,31 @@ func TestHelpOpensAtFindRow(t *testing.T) {
 	}
 }
 
+func TestHelpResizeKeepsAnchorUntilScrolled(t *testing.T) {
+	m := helpTestModel(t)
+	m = helpFeed(t, m, m.openHelp(help.Loc{Page: "guides/ai-use.md", Anchor: "chat-panel"}))
+	m = helpSend(t, m, tea.WindowSizeMsg{Width: 70, Height: 24})
+	if got, want := m.preview.Top(), headingRow(t, m, "chat-panel"); got != want {
+		t.Errorf("resize top = %d, want anchor row %d", got, want)
+	}
+	m = helpSend(t, m, tea.KeyMsg{Type: tea.KeyDown})
+	beforeTop := m.preview.Top()
+	beforeOffset := 0
+	beforeSlug := ""
+	_, beforeMarks := m.preview.Marks()
+	for _, h := range beforeMarks.Headings {
+		if h.Row >= beforeTop {
+			beforeOffset = h.Row - beforeTop
+			beforeSlug = h.Slug
+			break
+		}
+	}
+	m = helpSend(t, m, tea.WindowSizeMsg{Width: 55, Height: 20})
+	if got, want := m.preview.Top(), headingRow(t, m, beforeSlug)-beforeOffset; got != want {
+		t.Errorf("after scroll and resize top = %d, want %d to preserve the position before the heading", got, want)
+	}
+}
+
 // Spec: a missing anchor opens the page at the top and says so.
 func TestHelpMissingAnchor(t *testing.T) {
 	m := helpTestModel(t)
