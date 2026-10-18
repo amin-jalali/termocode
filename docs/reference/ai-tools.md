@@ -872,6 +872,7 @@ Add a request to a .http file, or with replace=true change the request with that
 | `agent-start-codex` | Agent: Start Codex | confirm (run) |   |
 | `agent-start-gemini` | Agent: Start Gemini CLI | confirm (run) |   |
 | `agent-start-opencode` | Agent: Start OpenCode | confirm (run) |   |
+| `ai-agents` | AI: Toggle Agents Panel | auto |   |
 | `ai-apply-code` | AI: Apply Last Code Block to File | never | use write_file to change files |
 | `ai-apply-proposal` | AI: Apply Proposed Edit | never | the user reviews proposed edits |
 | `ai-attach` | AI: Add File / Selection to Chat | never | adds to the chat input; read the file with read_file |

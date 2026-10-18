@@ -34,6 +34,8 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onAIChatDone(msg), true
 	case aiActivityTickMsg:
 		return m.onAIActivityTick(), true
+	case aiAgentsSnapMsg:
+		return m.onAIAgentsSnap(msg), true
 	case aiActionResultMsg:
 		return m.onAIActionResult(msg), true
 	case diffview.FinishMsg:
@@ -92,6 +94,8 @@ func aiActionForKey(a keymap.Action) string {
 		return "ai-toggle-inline"
 	case keymap.ActionAINextProfile:
 		return "ai-profile-next"
+	case keymap.ActionAIToggleAgents:
+		return "ai-agents"
 	}
 	return ""
 }

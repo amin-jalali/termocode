@@ -135,7 +135,24 @@ func (m Model) aiRunLines(i int, msg ai.StoredMessage, width, inner int) []aiLin
 		out = append(out, m.aiAnswerHeaderModel(width, i, true, model))
 		out = append(out, s.renderAnswer(i, text, width, false, m.dragKind == dragActionsLeft)...)
 	}
+	dash := "─"
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		dash = "-"
+	}
+	// A planned (graph) run's row opens it in the AGENTS view on a click.
+	waves := s.aiRunWaveText(i)
+	var agentsBtn []aiLineButton
+	if waves != "" {
+		agentsBtn = []aiLineButton{{0, width, "agents:" + msg.Run.ID}}
+	}
 	if msg.Run.State == ai.RunStateRunning {
+		if waves != "" { // where the run is: "wave 2/4 · done 1/5 · 2 running"
+			row := dash + " run · " + waves + " "
+			if pad := inner - runewidth.StringWidth(row); pad > 0 {
+				row += strings.Repeat(dash, pad)
+			}
+			out = append(out, aiLine{text: ind + row, style: theme.Fg(theme.TextDim), buttons: agentsBtn})
+		}
 		return out
 	}
 	if msg.Run.State == ai.RunStatePaused { // the budget pause: ask in the chat too
@@ -146,15 +163,11 @@ func (m Model) aiRunLines(i int, msg ai.StoredMessage, width, inner int) []aiLin
 		out = append(out, aiChip("Continue", "run-continue:"+strconv.Itoa(i), width), aiChip("Stop", "run-stop:"+strconv.Itoa(i), width))
 		return out
 	}
-	dash := "─"
-	if theme.CurrentIconMode == theme.IconModeASCII {
-		dash = "-"
-	}
 	row := dash + " " + aiRunSummaryText(msg.Run, msg.Steps) + " "
 	if pad := inner - runewidth.StringWidth(row); pad > 0 {
 		row += strings.Repeat(dash, pad)
 	}
-	out = append(out, aiLine{text: ind + row, style: theme.Fg(theme.TextDim)})
+	out = append(out, aiLine{text: ind + row, style: theme.Fg(theme.TextDim), buttons: agentsBtn})
 	if msg.Run.State == ai.RunStateInterrupted {
 		out = append(out, aiLine{text: ind + "✘ run interrupted (termocode restarted)", style: theme.Fg(theme.DiagError)})
 	}

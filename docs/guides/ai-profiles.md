@@ -283,6 +283,84 @@ after it in the list run after the plan:
 Once the planner made its plan, the run has no **Retry from step N** button (the plan is
 not part of the profile). Send the message again instead.
 
+While a planned run goes, the chat shows where it is under its cards:
+`─ run · wave 3/4 · done 2/5 · 2 running ──`. A click on that row opens
+the run in the AGENTS panel.
+
+## The AGENTS panel
+
+The AGENTS panel shows the runs of the current chat as a graph. It uses
+the same place on the right as the chat. **Alt+Shift+A** (palette
+**AI: Toggle Agents Panel**) shows it, and pressed again goes back to the
+chat. **Alt+A**, the `‹ chat` chip in the header, or `Esc` also bring the
+chat back.
+
+```text
+ ✦ AGENTS ‹ chat
+ run ml3ov4001 · plan              wave 3/4 · done 2/5
+ ● 2 running · following
+ ┌ ▸ Map the parser ─────┐
+ │ ✓ done · 12 s · 2 tu… │
+ └───────────────────────┘
+             │
+             ├──────────────────────────┐
+             ▼                          ▼
+ ┌ ▾ Faster lexer ───────┐  ┌ ▾ Token cache ────────┐
+ │ ● running · quick     │  │ ● running · quick     │
+ │ ✎ now · …so that      │  │ waiting for the model │
+ │ 21 s · 1 turn         │  │ 21 s · 2 turns · 1 t… │
+ └───────────────────────┘  └───────────────────────┘
+ Dependencies
+   Map the parser → Faster lexer
+   …
+ Node details · Faster lexer
+   quick · gpt-5-mini
+   ● running · 21 s · 1 turn
+   task · speed up the lexer.
+```
+
+- **Cards.** One card per step, one row of cards per wave. A card shows
+  the step's state (`● running`, `○ pending`, `✓ done`, `✘ failed`,
+  `⊘ blocked`, `◌ cancelled`), its category, what it does now (the tool
+  it runs, or the end of what it writes), or which steps it waits for,
+  and its time, turns (model requests) and tools. Lines with `│ ├ ┐ ▼`
+  join one wave to the next; the **Dependencies** list says exactly
+  which step feeds which.
+- **Header.** The run id, the profile, `wave i/n` (the first wave that
+  is not done) and `done k/m` (steps done of all steps).
+- **Node details** of the selected step: category, model, tokens, cost,
+  context, its state and times, its task while the run goes, its last
+  tool calls and the end of its answer (or its error).
+- **Follow mode** is on when the panel opens: the selection follows the
+  running step. Moving the selection yourself turns it off; `f` turns it
+  on again. The status row says `following` while it is on.
+- **Narrow panels** show one card per row. With ASCII icons the panel
+  draws `+ - | v` instead of box lines and arrows.
+
+| Key | What it does |
+|---|---|
+| `Tab` / `↓` | Select the next step (in wave order) |
+| `Shift+Tab` / `↑` | Select the previous step |
+| `Space` / `Enter` | Fold or unfold the selected card (the same choice as its card in the chat) |
+| `d` | Show or hide the node details |
+| `f` | Follow the running step again |
+| `←` / `→` | Show the previous / next run of this chat |
+| `PgUp` / `PgDn` | Scroll the panel |
+| `Esc` / `q` | Back to the chat |
+| `Ctrl+C` | Stop the run |
+
+A click on a card selects it; the mouse wheel scrolls.
+
+**After a restart.** A run that termocode's restart interrupted shows the
+states of its last snapshot (written at each step's end), marked
+`✘ run interrupted · last snapshot 12:04`. A step that was running then
+shows `◌ was running`. Snapshots hold step ids, titles and states only,
+never prompts or answers.
+
+**No cost when idle.** The panel draws from the run's saved cards. It
+redraws once a second only while a run goes and the panel (or the chat)
+is shown; at all other times it uses no CPU.
+
 ## Budget pause
 
 Set `budget_usd` on a profile to cap what one run may cost. When the

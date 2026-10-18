@@ -108,6 +108,14 @@ func AIPipeline(variant string) Scene {
 		Steps: WithEditor(Act("palette:ai-open-chat"), Act("aipipedemo:"+variant), Pause(900*time.Millisecond))}
 }
 
+// AgentsPanel is the AGENTS view (U20 AP-9) of a planned diamond run on
+// scripted models: "running" with its two middle steps working,
+// "done" when the run finished.
+func AgentsPanel(variant string) Scene {
+	return Scene{Name: "agents-panel-" + variant, Env: aiEnv,
+		Steps: WithEditor(Act("palette:ai-open-chat"), Act("agentsdemo:"+variant), Pause(1200*time.Millisecond))}
+}
+
 // AIProfile is the agent profile UI (U20 AP-5) with sample data:
 // "chip" the chat header chip "✦ review ▾" (and the status badge),
 // "picker" the profile picker with an untrusted project profile,

@@ -23,6 +23,8 @@ var tooltipLabels = map[string]tooltipSpec{
 	"ai:new":             {name: "New chat", local: "Ctrl+N"}, // aiPanelKey
 	"ai:history":         {name: "Chat history"},
 	"ai:profile":         {name: "Agent profile", palette: "ai-profile-next"},
+	"ai:chat":            {name: "Back to the chat", palette: "ai-agents"},
+	"ai:btn:agents:":     {name: "Show in AGENTS", palette: "ai-agents"},
 	"ai:btn:attach-file": {name: "Attach file"},
 	"ai:btn:copymsg:":    {name: "Copy message"},
 	"ai:btn:copy:":       {name: "Copy code block"},

@@ -267,7 +267,7 @@ func (m Model) actionsTargets() []hitTarget {
 	for x := x1; x < x2; x++ {
 		if id := m.hitActionsButton(x, y); id != "" {
 			// New chat and History belong to the chat panel (aiPanelTargetAt).
-			if id == "new" || id == "history" || id == "mcp" || id == "profile" {
+			if id == "new" || id == "history" || id == "mcp" || id == "profile" || id == "chat" {
 				id = "ai:" + id
 			} else {
 				id = "actions:" + id

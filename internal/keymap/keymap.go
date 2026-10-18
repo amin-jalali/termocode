@@ -156,6 +156,10 @@ const (
 	// ActionAINextProfile switches the AI chat to the next agent profile
 	// (U20 AP-5): Alt+Shift+P (Alt+P is Pin Tab).
 	ActionAINextProfile
+	// ActionAIToggleAgents shows the AGENTS view (the chat's agent runs)
+	// in the chat slot, or switches the slot back to the chat (U20 AP-9):
+	// Alt+Shift+A.
+	ActionAIToggleAgents
 )
 
 // KittyOnlyKeys are default bindings a legacy terminal cannot send (or
@@ -475,6 +479,10 @@ func Default() KeyMap {
 			// terminals and "alt+shift+p" on CSI-u ones.
 			"alt+P":       ActionAINextProfile,
 			"alt+shift+p": ActionAINextProfile,
+			// The AGENTS view in the chat slot. Alt+Shift+A arrives as
+			// "alt+A" on legacy terminals and "alt+shift+a" on CSI-u ones.
+			"alt+A":       ActionAIToggleAgents,
+			"alt+shift+a": ActionAIToggleAgents,
 
 			// Markdown preview: F7 (the canonical one-shot overlay) is the
 			// only binding now. We had a tab-based "live preview" attempt

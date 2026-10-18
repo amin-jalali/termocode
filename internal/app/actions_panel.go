@@ -131,7 +131,11 @@ func (m Model) renderActionsPanelLines(width, height int) []string {
 	if height > 1 {
 		rows = append(rows, edge(renderActionsDivider(width)))
 	}
-	if height > aiPanelTopRow {
+	switch {
+	case height <= aiPanelTopRow:
+	case m.agentsShowing():
+		rows = append(rows, m.renderAgentsBody(width, height, edge)...) // U20 AP-9: the AGENTS view
+	default:
 		rows = append(rows, m.renderAIPanelBody(width, height, edge)...) // Group A: AI chat body
 	}
 	if len(rows) < height {
@@ -182,6 +186,7 @@ var actionsHeaderMemo struct {
 	mcp     int // mcpChipState: -1 no chip, else connected servers
 	profile string
 	running bool // a pipeline run is active (the profile chip's colour)
+	agents  bool // the slot shows the AGENTS view
 	out     string
 }
 
@@ -192,16 +197,17 @@ func (m Model) actionsHeaderEdged(width int, edge func(string) string) string {
 	focused := m.ai != nil && m.ai.focused
 	mcpState := m.mcpChipState()
 	profile, running := m.aiProfileChipLabel(), m.aiRunActive()
+	agents := m.agentsShowing()
 	c := &actionsHeaderMemo
 	c.Lock()
 	defer c.Unlock()
 	if c.ok && c.width == width && c.pinned == m.actionsPinned && c.focused == focused && c.hover == hover && c.rk == rk && c.mcp == mcpState &&
-		c.profile == profile && c.running == running {
+		c.profile == profile && c.running == running && c.agents == agents {
 		return c.out
 	}
 	out := edge(m.renderActionsHeader(width))
 	c.ok, c.width, c.pinned, c.focused, c.hover, c.rk, c.mcp, c.out = true, width, m.actionsPinned, focused, hover, rk, mcpState, out
-	c.profile, c.running = profile, running
+	c.profile, c.running, c.agents = profile, running, agents
 	return out
 }
 
@@ -231,7 +237,7 @@ func (m Model) renderActionsHeader(width int) string {
 	if m.ai != nil && m.ai.focused {
 		labelStyle = theme.FgBg(theme.AIAccent, theme.BgPanel).Bold(true)
 	}
-	left := bg.Render(" ") + labelStyle.Render(aiSpark()+" AI CHAT")
+	left := bg.Render(" ") + labelStyle.Render(m.actionsHeaderLabel())
 	// Header buttons light up under the pointer.
 	hover := m.actionsHeaderHover()
 	btn := func(id, glyph string, st lipgloss.Style) string {
@@ -354,6 +360,17 @@ func (m Model) hitActionsButton(screenX, screenY int) string {
 	return ""
 }
 
+// agentsShowing reports whether the chat slot shows the AGENTS view.
+func (m Model) agentsShowing() bool { return m.ai != nil && m.ai.agents.on }
+
+// actionsHeaderLabel is the slot's title: "✦ AI CHAT" or "✦ AGENTS".
+func (m Model) actionsHeaderLabel() string {
+	if m.agentsShowing() {
+		return aiSpark() + " AGENTS"
+	}
+	return aiSpark() + " AI CHAT"
+}
+
 // actionsChipMinWidth is the narrowest header that still shows a chip
 // next to the label and the buttons.
 const actionsChipMinWidth = 34
@@ -374,7 +391,7 @@ type actionsHeaderChip struct {
 // chip that does not fit before the buttons (with a 1-cell gap) is left
 // out.
 func (m Model) actionsHeaderChips(width int) []actionsHeaderChip {
-	x := runewidth.StringWidth(" " + aiSpark() + " AI CHAT")
+	x := runewidth.StringWidth(" " + m.actionsHeaderLabel())
 	var out []actionsHeaderChip
 	add := func(id, label string) {
 		w := runewidth.StringWidth(label)
@@ -383,6 +400,14 @@ func (m Model) actionsHeaderChips(width int) []actionsHeaderChip {
 		}
 		out = append(out, actionsHeaderChip{id: id, label: label, x0: x + 1})
 		x += 1 + w
+	}
+	if m.agentsShowing() { // the AGENTS view: one chip back to the chat
+		back := "‹ chat"
+		if theme.CurrentIconMode == theme.IconModeASCII {
+			back = "< chat"
+		}
+		add("chat", back)
+		return out
 	}
 	add("profile", m.aiProfileChipLabel())
 	if width >= actionsChipMinWidth {
@@ -437,13 +462,20 @@ func (m Model) hitActionsLauncher(screenX, screenY int) bool {
 // always re-pin on open, the practical net is "Alt+A always lands you in
 // the pinned panel."
 func (m *Model) toggleActionsPanel() {
-	if m.actionsOpen {
+	switch {
+	case m.actionsPanelVisible() && m.aiS().agents.on:
+		// The slot shows AGENTS: Alt+A brings the chat back (U20 AP-9).
+		m.ai.agents.on = false
+		m.ai.focused = true
+		return
+	case m.actionsOpen:
 		m.actionsOpen = false
 		m.aiS().focused = false // Group A
-	} else {
+	default:
 		m.actionsOpen = true
 		m.actionsPinned = true
 		m.aiS().focused = true // Group A: Alt+A lands in the chat input
+		m.ai.agents.on = false
 	}
 	m.persistActionsState()
 }

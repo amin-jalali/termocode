@@ -389,6 +389,7 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 		*st = ai.StoredStep{ID: st.ID, Title: st.Title, Slot: st.Slot, Model: st.Model, Category: st.Category,
 			Deps: st.Deps, Planned: st.Planned, State: string(agentdag.StateRunning)}
 		s.act.begin(now)
+		s.agentsNodeStart(ev.RunID, st.ID, now)
 		s.runFiles[st.ID] = m.aiRestoreFiles(s.turnMsg)
 	case agentrun.NodeText:
 		st.Text = ev.Tail
@@ -406,6 +407,9 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 		}
 	case agentrun.NodeAI:
 		s.act.onEvent(ev.AI, now)
+		if ev.AI.Kind == ai.EventTurnStart {
+			s.agentsNodeTurn(ev.RunID, st.ID) // the AGENTS card's turns
+		}
 	case agentrun.NodeDone:
 		st.State, st.Text = string(agentdag.StateCompleted), ev.Output
 		m.aiStepFinished(st, ev)

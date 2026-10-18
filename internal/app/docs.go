@@ -140,6 +140,7 @@ var paletteActions = map[string]keymap.Action{
 	"ai-edit":                     keymap.ActionAIEditSelection,
 	"ai-toggle-inline":            keymap.ActionAIToggleInline,
 	"ai-profile-next":             keymap.ActionAINextProfile,
+	"ai-agents":                   keymap.ActionAIToggleAgents,
 	"quit":                        keymap.ActionQuit,
 }
 

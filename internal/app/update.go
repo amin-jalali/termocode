@@ -1728,7 +1728,8 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.applyLayout()
 		return m, nil
 	// Group A — AI keys.
-	case keymap.ActionAITriggerInline, keymap.ActionAIEditSelection, keymap.ActionAIToggleInline, keymap.ActionAINextProfile:
+	case keymap.ActionAITriggerInline, keymap.ActionAIEditSelection, keymap.ActionAIToggleInline, keymap.ActionAINextProfile,
+		keymap.ActionAIToggleAgents:
 		if matchedAction == keymap.ActionAITriggerInline {
 			if cmd, ok := m.termFixKey(); ok { // U9b: Alt+\ on a failed command
 				return m, cmd

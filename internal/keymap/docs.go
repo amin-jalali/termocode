@@ -106,6 +106,7 @@ var actionInfo = map[Action]ActionInfo{
 	ActionAIEditSelection: {"AI", "Edit the selection (or line) with an AI instruction."},
 	ActionAIToggleInline:  {"AI", "Turn automatic AI ghost text on or off."},
 	ActionAINextProfile:   {"AI", "Switch the AI chat to the next agent profile."},
+	ActionAIToggleAgents:  {"AI", "Show the AGENTS view of the chat's agent runs, or go back to the chat."},
 
 	ActionToggleTerminal:   {"Terminal", "Show or hide the integrated terminal panel."},
 	ActionOpenShell:        {"Terminal", "Open an external shell in the workspace folder."},

@@ -991,6 +991,9 @@ func (m *Model) routeAIPanelKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		s.focused = false
 		return nil, false
 	}
+	if s.agents.on { // U20 AP-9: the AGENTS view has its own keys
+		return m.routeAgentsKey(msg)
+	}
 	switch msg.String() {
 	case "esc":
 		if s.cardSel != "" { // drop the step card selection first
@@ -1190,7 +1193,7 @@ func (m Model) aiPanelTargetAt(x, y int) string {
 	switch y {
 	case 0:
 		switch id := m.hitActionsButton(x, y); id {
-		case "new", "history", "mcp", "profile":
+		case "new", "history", "mcp", "profile", "chat":
 			return "ai:" + id
 		}
 		return ""
@@ -1198,6 +1201,9 @@ func (m Model) aiPanelTargetAt(x, y int) string {
 		return "ai:body"
 	}
 	localX := x - x0
+	if m.agentsShowing() {
+		return m.agentsTargetAt(localX, y)
+	}
 	width := m.actionsColumnWidth()
 	g := m.aiPanelGeom(width, m.h)
 	switch {
@@ -1262,9 +1268,17 @@ func (m *Model) handleAIPanelMouse(msg tea.MouseMsg) (tea.Cmd, bool) {
 	}
 	switch msg.Type {
 	case tea.MouseWheelUp:
+		if s.agents.on {
+			m.agentsScroll(-3)
+			return nil, true
+		}
 		m.scrollAIPanel(3)
 		return nil, true
 	case tea.MouseWheelDown:
+		if s.agents.on {
+			m.agentsScroll(3)
+			return nil, true
+		}
 		m.scrollAIPanel(-3)
 		return nil, true
 	case tea.MouseLeft:
@@ -1284,9 +1298,18 @@ func (m *Model) handleAIPanelMouse(msg tea.MouseMsg) (tea.Cmd, bool) {
 	case id == "":
 		return nil, false // pin / close handled by mouse.go
 	case id == "ai:new":
+		s.agents.on = false
 		return m.newAIChat(), true
 	case id == "ai:history":
+		s.agents.on = false
 		return m.openAIHistory(), true
+	case id == "ai:chat":
+		s.agents.on, s.focused = false, true
+	case strings.HasPrefix(id, "ai:agents"):
+		s.focused = true
+		if node := strings.TrimPrefix(id, "ai:agents:"); node != id {
+			s.agents.sel, s.agents.manual, s.agents.free = node, true, false
+		}
 	case id == "ai:mcp":
 		return m.onMCPChip(), true
 	case id == "ai:profile":
@@ -1322,6 +1345,8 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 	case strings.HasPrefix(id, "step:"):
 		m.aiToggleCard(id)
 		return nil
+	case strings.HasPrefix(id, "agents:"): // a planned run's row: show it in AGENTS
+		return m.showAgents(strings.TrimPrefix(id, "agents:"))
 	case strings.HasPrefix(id, "run-retry:"):
 		if i, err := strconv.Atoi(strings.TrimPrefix(id, "run-retry:")); err == nil {
 			return m.aiRetryRun(i)

@@ -163,12 +163,14 @@ func (v aiActivityView) lines(ind string, inner int) []aiLine {
 	return out
 }
 
-// aiActivityTick arms the 1 s redraw tick while a turn runs, at most one
-// at a time. Update calls it after every message; the tick's own message
-// re-arms it, so the chain ends by itself one tick after the turn.
+// aiActivityTick arms the 1 s redraw tick while a turn runs and the
+// chat slot (the chat or the AGENTS view) is shown, at most one at a
+// time. Update calls it after every message (so showing the slot arms
+// it again); the tick's own message re-arms it, so the chain ends by
+// itself one tick after the turn or after the slot hides.
 func (m *Model) aiActivityTick() tea.Cmd {
 	s := m.ai
-	if s == nil || !s.streaming || s.act.ticking {
+	if s == nil || !s.streaming || s.act.ticking || !m.actionsPanelVisible() {
 		return nil
 	}
 	s.act.ticking = true

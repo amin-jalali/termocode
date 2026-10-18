@@ -37,6 +37,8 @@ import (
 //	aidemo                 load a sample AI conversation
 //	aidemo-busy:tool|stall a running AI turn with its activity line
 //	aipipedemo:running|done a two-step agent pipeline run (scripted models)
+//	agentsdemo:running|done a planned diamond run in the AGENTS view
+//	                       (scripted models)
 //	profiledemo:chip|picker|trust the agent profile chip, its picker, or
 //	                       a project profile's trust card (sample data)
 //	connectdemo:<step>     a Connect-a-service step with sample data: pick,
@@ -112,6 +114,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		m.termDemo()
 	case "aipipedemo": // a two-step agent pipeline run (ai_run_demo.go): arg running or done
 		return m.aiPipelineDemo(arg)
+	case "agentsdemo": // a planned diamond run in the AGENTS view (ai_run_demo.go)
+		return m.aiAgentsDemo(arg)
 	case "profiledemo": // the profile chip / picker / trust card (ai_run_demo.go)
 		return m.aiProfileDemo(arg)
 	case "aidemo-fa": // a Persian (right-to-left) conversation for the shots

@@ -76,6 +76,8 @@ type aiState struct {
 	runGen     int
 	cardSel    string
 	reviewGate agentrun.Gate
+	// agents is the AGENTS view of the chat's runs (agents_panel.go).
+	agents aiAgentsState
 
 	// inline ghost text
 	inlineCancel context.CancelFunc
@@ -343,6 +345,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-auto-approve", "AI: Agent Auto-Approve…", ""},
 		{"ai-profile-switch", "AI: Switch Profile…", ""},
 		{"ai-profile-next", "AI: Next Profile", "Alt+Shift+P"},
+		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
 		{"ai-profile-edit", "AI: Edit Profiles", ""},
 		{"ai-profile-new", "AI: New Profile from Current…", ""},
 		{"ai-profile-trust", "AI: Project Profiles Trust…", ""},
@@ -380,6 +383,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	}
 	switch id {
 	case "ai-open-chat":
+		m.aiS().agents.on = false // the slot shows the chat
 		return m.openAIPanel(true), true
 	case "ai-new-chat":
 		return m.newAIChat(), true
@@ -445,6 +449,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIProfilePicker(), true
 	case "ai-profile-next":
 		return m.cycleAIProfile(), true
+	case "ai-agents":
+		return m.toggleAgentsView(), true
 	case "ai-profile-edit":
 		return m.editAIProfiles(), true
 	case "ai-profile-new":
