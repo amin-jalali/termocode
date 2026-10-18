@@ -1,0 +1,1 @@
+[{"Id":"9f3c2e1a1234","Name":"/api-1","Config":{"Image":"ghcr.io/acme/api:1.4","Labels":{"com.docker.compose.project":"termocode"}},"State":{"Status":"running"}}]

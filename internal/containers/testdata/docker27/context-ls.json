@@ -1,0 +1,2 @@
+{"Name":"default","Current":"*","DockerEndpoint":"unix:///var/run/docker.sock","Description":"Current DOCKER_HOST based configuration"}
+{"Name":"prod","Current":"","DockerEndpoint":"ssh://deploy@prod.example"}

@@ -1,0 +1,1 @@
+{"Driver":"local","Name":"termocode_db","Mountpoint":"/var/lib/docker/volumes/termocode_db/_data","Labels":"com.docker.compose.project=termocode","Scope":"local","CreatedAt":"2026-10-18T09:00:00Z"}

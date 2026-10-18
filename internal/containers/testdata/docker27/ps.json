@@ -1,0 +1,2 @@
+{"ID":"9f3c2e1a1234","Names":"termocode-api-1","Image":"ghcr.io/acme/api:1.4","ImageID":"sha256:abcd","Command":"\"./api\"","CreatedAt":"2026-10-18 09:30:00 +0000 UTC","State":"running","Status":"Up 2 hours (healthy)","Ports":"0.0.0.0:8081->8080/tcp, :::8443->443/tcp","Labels":"com.docker.compose.project=termocode,com.docker.compose.project.working_dir=/work/termocode","Size":"1.2GB","Networks":"termocode_default"}
+{"ID":"aabbccdd","Names":["nginx","proxy"],"Image":"nginx:1.27","State":"exited","Status":"Exited (1) 3 days ago","Ports":"80/tcp","Labels":{},"Size":"0B"}

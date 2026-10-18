@@ -1,0 +1,1 @@
+[{"Id":"a1b2c3d4","Name":"/worker-1","Config":{"Image":"redis:7","Labels":{"com.docker.compose.project":"shop"}},"State":{"Status":"running","StartedAt":"2026-10-18T08:00:00Z"}}]

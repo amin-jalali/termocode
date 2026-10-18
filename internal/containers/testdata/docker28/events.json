@@ -1,0 +1,1 @@
+{"Type":"image","Action":"pull","Actor":{"ID":"sha256:abc","Attributes":{"name":"redis:7"}},"time":1792319400}

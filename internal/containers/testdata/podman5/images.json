@@ -1,0 +1,2 @@
+{"Id":"987654321","Names":["docker.io/library/nginx:1.27"],"Digest":"sha256:123","Created":"2026-10-17T10:00:00Z","Size":"421MB","Labels":{"vendor":"nginx"}}
+{"Id":"123456789","Names":[],"Created":0,"Size":"0B"}

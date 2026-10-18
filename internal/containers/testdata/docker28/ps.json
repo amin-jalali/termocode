@@ -1,0 +1,2 @@
+{"ID":"a1b2c3d4","Names":"worker-1","Image":"redis:7","CreatedAt":"2 hours ago","State":"running","Status":"Up 2 hours","Ports":"6379/tcp","Labels":{"com.docker.compose.project":"shop","com.docker.compose.project.working_dir":"/srv/shop"},"Networks":"shop_default","Mounts":"shop_cache"}
+{"ID":"e5f6g7h8","Names":"builder","Image":"alpine:3.20","State":"paused","Status":"Up 4 hours (Paused)","Ports":"","Labels":"team=build,io.podman.compose.project=legacy","Size":"12.4MB (virtual 8.1MB)"}

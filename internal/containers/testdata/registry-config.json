@@ -1,0 +1,9 @@
+{
+  "auths": {
+    "https://index.docker.io/v1/": {"auth":"c2VjcmV0LW5ldmVyLXJldHVybg=="},
+    "ghcr.io": {"auth":"another-secret-value"}
+  },
+  "credsStore": "desktop",
+  "credHelpers": {"ghcr.io":"secretservice", "quay.io":"pass"},
+  "currentContext": "default"
+}

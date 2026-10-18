@@ -1,0 +1,1 @@
+[{"Id":"7ca1d0e2","Name":"rootless-web","Config":{"Image":"docker.io/library/nginx:1.27","Labels":{"io.podman.compose.project":"legacy"}},"State":{"Status":"running"}}]

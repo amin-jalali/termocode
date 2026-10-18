@@ -1,0 +1,2 @@
+{"ID":"sha256:abc","RepoTags":["redis:7","redis:latest"],"RepoDigests":["redis@sha256:123"],"CreatedAt":"2026-10-17 08:10:00 +0000 UTC","Size":"117MB","SharedSize":0,"VirtualSize":"117MB"}
+{"ID":"sha256:def","Repository":"<none>","Tag":"<none>","CreatedAt":"2 months ago","Size":"1.2GB"}

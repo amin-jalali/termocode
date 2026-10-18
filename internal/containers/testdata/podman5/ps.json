@@ -1,0 +1,2 @@
+{"ID":"7ca1d0e2","Names":["rootless-web"],"Image":"docker.io/library/nginx:1.27","ImageID":"sha256:987","Command":"nginx -g daemon off;","CreatedAt":"2026-10-18 08:15:00 +0000 UTC","State":"running","Status":"Up 1 hour","Ports":[{"host_ip":"127.0.0.1","host_port":8080,"container_port":80,"protocol":"tcp"}],"Labels":"io.podman.compose.project=legacy,io.podman.compose.project.working_dir=/home/dev/legacy","Size":"421MB"}
+{"ID":"bad0cafe","Names":"old-job","Image":"busybox:latest","CreatedAt":"","State":"exited","Status":"Exited (0) 5 days ago","Ports":"","Labels":null}
