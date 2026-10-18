@@ -3,7 +3,13 @@
 [![Docs](https://img.shields.io/badge/docs-amin--jalali.github.io%2Ftermocode-4051b5)](https://amin-jalali.github.io/termocode/)
 [![test](https://github.com/amin-jalali/termocode/actions/workflows/test.yml/badge.svg)](https://github.com/amin-jalali/termocode/actions/workflows/test.yml)
 
-An open-source development environment for terminal workflows. Edit code, explore projects, review changes, run tests, debug, and get AI help — all in one place.
+**The AI-Integrated Terminal IDE.**
+
+Full-Featured. AI-Integrated. Persistent.
+
+A fast, full-featured IDE that runs entirely in your terminal. Code, debug, test, manage Git, run your Docker services, and work with integrated AI agents that create files, edit code and run development tasks, with every change under your control.
+
+**Your Connection Dies. Your Work Lives On.** Terminal sessions, running processes and AI agents keep working after you disconnect. Reconnect and pick up where you left off.
 
 **Status:** early release (v0.1.x). Linux, macOS and Android (Termux). No Windows build yet; use WSL.
 
@@ -32,15 +38,17 @@ An open-source development environment for terminal workflows. Edit code, explor
 
 ## Highlights
 
-- **Editor and navigation** — tabs, a project explorer, breadcrumbs, a command palette (`F1`), multi-cursor editing and language-aware tools.
-- **AI assistant** — ghost-text completion, a chat panel with an agent, and Explain / Fix / Edit actions you review as a diff. Connect a hosted provider, a compatible endpoint or a local model.
-- **Run and Debug** — breakpoints, watch, call stack and a Debug Console for Go, Python and Node, with `launch.json`.
-- **Test explorer** for Go, pytest, Rust, Jest and Vitest, plus **tasks** and a **Problems** panel.
+- **A full IDE, in your terminal** — explorer, tabs, command palette (`F1`), multi-cursor, an integrated terminal with tabs, project-wide search, tasks and a Problems panel. Mouse works everywhere.
+- **AI agents in your workflow** — agents create files, edit code and run commands inside the IDE. You review and approve each change, hunk by hunk. Chat, ghost-text completion and Explain / Fix / Edit. Hosted providers or a local model.
+- **Disconnect, keep working** — lose your SSH connection and the editor, terminals, running jobs and AI agents keep going. Run `termocode` again in the same folder to get everything back. On by default over SSH; turn on `persistent_session` to get the same when you close a local terminal.
+- **MCP** — local and remote MCP servers, and a *Connect a service* wizard for GitHub, GitLab, Linear, Notion, Sentry, Slack, ClickUp and Atlassian.
 - **Git** — stage hunks, commit, sync, stash, blame, a commit graph, a merge-conflict resolver and clone.
-- **Language servers** for Go, Python, JS/TS, Rust, C/C++, Lua and more — with a built-in installer.
-- **Fast search** across every workspace folder with ripgrep: case / word / regex toggles and globs.
-- **Make it yours** — dark and light themes, a custom theme editor, Nerd Font / Unicode / ASCII icons, key rebinding, snippets, settings export, and **Lua extensions**.
-- **Looks good everywhere** — rounded floating cards, status pills, smooth animations, inline images (kitty / sixel / half-blocks), and a clean fallback on 16-colour, no-Nerd-Font and SSH sessions.
+- **Debug and test** — breakpoints, watch, call stack and a Debug Console for Go, Python and Node; a test explorer for Go, pytest, Rust, Jest and Vitest.
+- **Your dev stack** — Docker Compose services (start, stop, logs, shell in a container) and an HTTP client for `.http` files.
+- **Language servers** for Go, Python, JS/TS, Rust, C/C++, Lua and more, with a built-in installer.
+- **Fast and light** — one binary, starts in under 70 ms, about 60 MB of RAM with its editor engine, near-zero CPU when idle ([benchmarks](https://amin-jalali.github.io/termocode/benchmarks/)).
+- **Works where you do** — Linux, macOS, over SSH (with file upload and download) and Android via Termux.
+- **Make it yours** — themes, a theme editor, key bindings, snippets, settings export and Lua extensions. Persian and Arabic text shows right to left in the AI chat and Markdown.
 
 ## Install
 
