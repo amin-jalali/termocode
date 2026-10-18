@@ -1,5 +1,6 @@
 theme = "base16_default_dark"
 [editor]
 soft-wrap = true
+auto-save = false
 [keys.normal]
 "C-p" = "file_picker"

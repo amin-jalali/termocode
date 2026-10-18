@@ -189,14 +189,19 @@ func ReadJetBrains(dir string) (Document, error) {
 			Actions []struct {
 				ID        string `xml:"id,attr"`
 				Shortcuts []struct {
-					First string `xml:"first-keystroke,attr"`
+					First  string `xml:"first-keystroke,attr"`
+					Second string `xml:"second-keystroke,attr"`
 				} `xml:"keyboard-shortcut"`
 			} `xml:"action"`
 		}
 		if xml.Unmarshal(bb, &x) == nil {
 			for _, a := range x.Actions {
 				for _, k := range a.Shortcuts {
-					d.Keys = append(d.Keys, KeyBinding{k.First, a.ID})
+					key := k.First
+					if k.Second != "" {
+						key += ", " + k.Second
+					}
+					d.Keys = append(d.Keys, KeyBinding{key, a.ID})
 				}
 			}
 		}

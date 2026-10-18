@@ -28,6 +28,35 @@ func TestReadSources(t *testing.T) {
 	}
 }
 
+func TestHelixSectionAndJetBrainsSecondStrokeArePreserved(t *testing.T) {
+	helia, err := ReadHelix(filepath.Join("testdata", "helix"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var autoSave any
+	for _, setting := range helia.Settings {
+		if setting.Name == "[editor].auto-save" {
+			autoSave = setting.Value
+		}
+	}
+	if autoSave != "false" {
+		t.Fatalf("Helix section/value lost: %+v", helia.Settings)
+	}
+	jb, err := ReadJetBrains(filepath.Join("testdata", "jetbrains"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, binding := range jb.Keys {
+		if binding.Command == "GotoFile" && binding.Key == "control shift N, control shift S" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("JetBrains second stroke lost: %+v", jb.Keys)
+	}
+}
+
 func TestDetectAndVim(t *testing.T) {
 	home := t.TempDir()
 	dir := filepath.Join(home, ".config", "Code", "User")

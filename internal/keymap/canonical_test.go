@@ -24,6 +24,12 @@ func TestCanonicalKey(t *testing.T) {
 	}
 }
 
+func TestExportedCanonicalKey(t *testing.T) {
+	if got := CanonicalKey("shift+alt+f"); got != "alt+shift+f" {
+		t.Fatalf("CanonicalKey = %q, want alt+shift+f", got)
+	}
+}
+
 // Spec: Shift+F1 opens the guide for the focused item, whether the
 // terminal sends it as shift+f1 (kitty) or f13 (xterm); plain F1 stays
 // the palette.

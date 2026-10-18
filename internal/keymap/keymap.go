@@ -576,3 +576,7 @@ func canonicalKey(s string) string {
 	b.WriteString(name)
 	return b.String()
 }
+
+// CanonicalKey returns the keymap package's canonical spelling for a key.
+// Modifier order and terminal function-key aliases match the active keymap.
+func CanonicalKey(s string) string { return canonicalKey(s) }
