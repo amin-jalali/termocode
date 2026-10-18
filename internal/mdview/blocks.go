@@ -27,7 +27,7 @@ func (r *renderer) code(src []string, lang string, width int) []line {
 		lw := ansi.StringWidth(label)
 		top = r.fill(width-lw-2, card) + r.text(label, attrs{fg: r.p.cardLabel, bg: card, ital: true}) + r.fill(2, card)
 	}
-	out = append(out, line{top, width})
+	out = append(out, line{s: top, w: width})
 
 	cont := r.text(r.g.cont, attrs{fg: r.p.dim, bg: card}) + r.fill(1, card)
 	pad := r.fill(2, card)
@@ -47,10 +47,10 @@ func (r *renderer) code(src []string, lang string, width int) []line {
 			if k > 0 {
 				pre = cont
 			}
-			out = append(out, line{pre + l.s + pad, width})
+			out = append(out, line{s: pre + l.s + pad, w: width})
 		}
 	}
-	return append(out, line{r.fill(width, card), width})
+	return append(out, line{s: r.fill(width, card), w: width})
 }
 
 func sumW(ps []piece) int {
@@ -229,7 +229,7 @@ func (r *renderer) table(t *east.Table, wide int) []line {
 			b.WriteString(strings.Repeat("─", w+2))
 		}
 		b.WriteString(rr)
-		return line{r.text(b.String(), bd), total}
+		return line{s: r.text(b.String(), bd), w: total}
 	}
 	out := []line{rule("┌", "┬", "┐")}
 	for ri, row := range rows {
@@ -273,7 +273,7 @@ func (r *renderer) table(t *east.Table, wide int) []line {
 				b.WriteString(r.fill(1, bg) + r.row(ps, w, bg, al).s + r.fill(1, bg))
 			}
 			b.WriteString(r.text("│", bd))
-			out = append(out, line{b.String(), total})
+			out = append(out, line{s: b.String(), w: total})
 		}
 		if ri == 0 && len(rows) > 1 {
 			out = append(out, rule("├", "┼", "┤"))

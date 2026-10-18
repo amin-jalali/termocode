@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/amin-jalali/termocode/internal/mdview"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/charmbracelet/x/ansi"
 )
@@ -20,6 +21,11 @@ type Model struct {
 	doc   *Doc // set by NewReader: content rendered per width
 	top   int
 	w, h  int
+
+	icon    string // header icon set by SetHeader (replaces the file icon)
+	iconSet bool
+	hints   string // footer keys set by SetHints ("" = the default footer)
+	cur     int    // focused link (mdview.Link.ID), 0 = none
 }
 
 // Doc is content that renders itself for a width (the Markdown reader
@@ -27,27 +33,41 @@ type Model struct {
 // the theme, the icon mode or the colour profile changes, so scrolling
 // never re-renders. Model values share one Doc through the pointer.
 type Doc struct {
-	render func(width int) []string
+	render func(width int) ([]string, mdview.Marks)
 	w      int
 	key    theme.RenderKey
 	lines  []string
+	marks  mdview.Marks
 }
 
 // NewDoc wraps a render function. Rows it returns should be exactly
 // width cells wide.
-func NewDoc(render func(width int) []string) *Doc { return &Doc{render: render} }
+func NewDoc(render func(width int) []string) *Doc {
+	return &Doc{render: func(w int) ([]string, mdview.Marks) { return render(w), mdview.Marks{} }}
+}
+
+// NewMarkedDoc wraps a render function that also says where headings
+// and links are (mdview.RenderDoc): the reader can then scroll to an
+// anchor and follow links.
+func NewMarkedDoc(render func(width int) ([]string, mdview.Marks)) *Doc {
+	return &Doc{render: render}
+}
 
 // Lines returns the rows for width, rendering only when needed.
 func (d *Doc) Lines(width int) []string {
 	k := theme.CurrentRenderKey()
 	if d.lines == nil || d.w != width || d.key != k {
-		d.lines, d.w, d.key = d.render(max(width, 1)), width, k
+		d.lines, d.marks = d.render(max(width, 1))
+		d.w, d.key = width, k
 		if d.lines == nil {
 			d.lines = []string{}
 		}
 	}
 	return d.lines
 }
+
+// Marks returns the marks of the last render (call Lines first).
+func (d *Doc) Marks() mdview.Marks { return d.marks }
 
 // NewReader shows doc full screen with title and an optional badge
 // ("Preview") in the header.
@@ -78,6 +98,7 @@ func New(title, body string) Model {
 func (m *Model) SetSize(w, h int) {
 	m.w, m.h = w, h
 	m.clamp()
+	m.dropHiddenLink()
 }
 
 func (m *Model) clamp() {
@@ -124,11 +145,26 @@ func (m Model) handleKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		m.top = 0
 	case tea.KeyEnd:
 		m.top = len(m.content())
+	case tea.KeyTab:
+		m.cycleLink(1)
+		return m, nil
+	case tea.KeyShiftTab:
+		m.cycleLink(-1)
+		return m, nil
+	case tea.KeyEnter:
+		if l, ok := m.focusedLink(); ok {
+			return m, linkCmd(l.Dest)
+		}
+		return m, nil
+	case tea.KeyBackspace:
+		return m, func() tea.Msg { return BackMsg{} }
 	case tea.KeyRunes:
 		if len(k.Runes) == 1 {
 			switch k.Runes[0] {
 			case 'q':
 				return m, func() tea.Msg { return CloseMsg{} }
+			case 'u':
+				return m, func() tea.Msg { return BackMsg{} }
 			case 'j':
 				m.top++
 			case 'k':
@@ -141,10 +177,18 @@ func (m Model) handleKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 	}
 	m.clamp()
+	m.dropHiddenLink()
 	return m, nil
 }
 
 func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
+	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
+		if l, ok := m.LinkAt(msg.X, msg.Y); ok {
+			m.cur = l.ID
+			return m, linkCmd(l.Dest)
+		}
+		return m, nil
+	}
 	switch msg.Type {
 	case tea.MouseWheelUp:
 		m.top -= 3
@@ -152,6 +196,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 		m.top += 3
 	}
 	m.clamp()
+	m.dropHiddenLink()
 	return m, nil
 }
 
@@ -161,6 +206,7 @@ var (
 	titleStyle lipgloss.Style
 	hintStyle  lipgloss.Style
 	bodyFill   lipgloss.Style
+	linkSel    lipgloss.Style
 )
 
 func init() { refreshColors() }
@@ -173,6 +219,8 @@ func refreshColors() {
 	titleStyle = lipgloss.NewStyle().Background(bgHeader).Foreground(theme.LG(theme.TextWhite)).Bold(true)
 	hintStyle = lipgloss.NewStyle().Background(bgHeader).Foreground(theme.LG(theme.TextMuted))
 	bodyFill = lipgloss.NewStyle().Background(bgPanel)
+	linkSel = lipgloss.NewStyle().Background(theme.Wash(theme.BgEditor, theme.WashSelectedFocused)).
+		Foreground(theme.LG(theme.TextWhite)).Underline(true)
 }
 
 func (m Model) View() string {
@@ -193,6 +241,9 @@ func (m Model) View() string {
 	for i := top; i < end; i++ {
 		line := lines[i]
 		if m.doc != nil && ansi.StringWidth(line) == m.w {
+			if m.cur != 0 {
+				line = m.highlightLinks(line, i)
+			}
 			contentLines = append(contentLines, line) // exact rows: no re-wrap per frame
 			continue
 		}
@@ -230,6 +281,12 @@ func (m Model) View() string {
 	}
 	footerLeft := " esc · q  close"
 	footerRight := "↑↓ scroll  · g/G  top/bottom  · " + progress + " "
+	if m.hints != "" { // the guide reader
+		footerLeft, footerRight = m.hints, "↑↓ scroll · "+progress+" "
+		if m.w < 60 {
+			footerLeft, footerRight = " esc close", progress+" "
+		}
+	}
 	footerW := m.w - lipgloss.Width(footerLeft) - lipgloss.Width(footerRight)
 	if footerW < 0 { // narrow: keep only the position
 		footerRight = progress + " "
@@ -257,7 +314,11 @@ func (m Model) header() string {
 		return titleStyle.Width(m.w).Render(title)
 	}
 	s := hintStyle.Render(" ")
-	if g, c := theme.FileIconFor(m.title, false, false); g != "" && theme.CurrentIconMode != theme.IconModeASCII {
+	if m.iconSet {
+		if m.icon != "" {
+			s += lipgloss.NewStyle().Background(bgHeader).Foreground(theme.LG(theme.AccentBlue)).Render(m.icon) + hintStyle.Render(" ")
+		}
+	} else if g, c := theme.FileIconFor(m.title, false, false); g != "" && theme.CurrentIconMode != theme.IconModeASCII {
 		s += lipgloss.NewStyle().Background(bgHeader).Foreground(theme.LG(c)).Render(g) + hintStyle.Render(" ")
 	}
 	s += titleStyle.Render(m.title)

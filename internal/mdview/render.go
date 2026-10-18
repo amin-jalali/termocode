@@ -12,6 +12,7 @@ import (
 	east "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/text"
 
+	"github.com/amin-jalali/termocode/internal/help"
 	"github.com/amin-jalali/termocode/internal/rtl"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
@@ -38,6 +39,33 @@ type Options struct {
 	// inside it turn). Off, the
 	// text is drawn as written (for terminals that reorder by themselves).
 	RTL bool
+	// Links records where links are drawn (RenderDoc's Marks.Links), for
+	// a reader that follows them (the in-app guide). The rows do not
+	// change: relative links never become OSC 8 hyperlinks either way.
+	Links bool
+}
+
+// Mark is a heading in the rendered rows.
+type Mark struct {
+	Row   int    // the heading's first row
+	Level int    // 1 for #, 2 for ##, …
+	Text  string // plain text: code spans included, markup removed
+	Slug  string // the website's anchor, unique on the page (help.Slug)
+}
+
+// Link is where one row of a link is drawn: cells X0 up to (not
+// including) X1 of row Row. A link that wraps has one Link per row, all
+// with the same ID.
+type Link struct {
+	Row, X0, X1 int
+	Dest        string // as written: "guides/git.md#x", "#frag", "https://…"
+	ID          int    // the link's number in the document, from 1
+}
+
+// Marks is what RenderDoc found in the document besides the rows.
+type Marks struct {
+	Headings []Mark
+	Links    []Link // only with Options.Links
 }
 
 // Layout returns the left margin and the width of the reading column for
@@ -62,6 +90,13 @@ var md = goldmark.New(goldmark.WithExtensions(extension.GFM))
 // Render renders src and returns the rows, each exactly opt.Width cells,
 // with one blank row above and below the content.
 func Render(src string, opt Options) []string {
+	rows, _ := RenderDoc(src, opt)
+	return rows
+}
+
+// RenderDoc is Render that also returns where the headings and (with
+// opt.Links) the links are drawn. The rows are the same as Render's.
+func RenderDoc(src string, opt Options) ([]string, Marks) {
 	w := max(opt.Width, 1)
 	left, col := Layout(w, opt.MaxColumn)
 	source := []byte(src)
@@ -73,6 +108,7 @@ func Render(src string, opt Options) []string {
 	blank := r.fill(w, r.p.bg)
 	out := make([]string, 0, len(body)+2)
 	out = append(out, blank)
+	var mk Marks
 	for _, l := range body {
 		l.w = ansi.StringWidth(l.s) // measure: at tiny widths a block can overflow its claim
 		off := left
@@ -87,15 +123,52 @@ func Render(src string, opt Options) []string {
 			s = ansi.Truncate(s, w-off, "") + "\x1b[0m"
 			l.w = w - off
 		}
+		if l.head != nil {
+			mk.Headings = append(mk.Headings, Mark{Row: len(out), Level: l.head.level, Text: l.head.text, Slug: l.head.slug})
+		}
+		for _, k := range l.links {
+			x0, x1 := k.x0+off, min(k.x1+off, w)
+			if x0 < x1 {
+				mk.Links = append(mk.Links, Link{Row: len(out), X0: x0, X1: x1, Dest: k.dest, ID: k.id})
+			}
+		}
 		out = append(out, r.fill(off, r.p.bg)+s+r.fill(w-off-l.w, r.p.bg))
 	}
-	return append(out, blank)
+	return append(out, blank), mk
 }
 
-// line is one rendered row and its width in cells.
+// line is one rendered row and its width in cells, with the heading
+// that starts on it and the links drawn on it (cells from its start).
 type line struct {
-	s string
-	w int
+	s     string
+	w     int
+	head  *headMark
+	links []linkSpan
+}
+
+type headMark struct {
+	level      int
+	text, slug string
+}
+
+type linkSpan struct {
+	x0, x1 int
+	dest   string
+	id     int
+}
+
+// shift returns the line's links moved right by n cells (for a prefix).
+func (l line) shift(n int) []linkSpan {
+	if len(l.links) == 0 || n == 0 {
+		return l.links
+	}
+	out := make([]linkSpan, len(l.links))
+	for i, k := range l.links {
+		k.x0 += n
+		k.x1 += n
+		out[i] = k
+	}
+	return out
 }
 
 // attrs is the look of a run of text. It is comparable, so equal runs
@@ -106,11 +179,15 @@ type attrs struct {
 }
 
 // span is a run of inline text with one look. code spans never break.
+// link is the OSC 8 target (web and mail links only); dest and lid are
+// set inside every link when Options.Links is on.
 type span struct {
 	text string
 	a    attrs
 	link string
 	code bool
+	dest string
+	lid  int
 }
 
 type palette struct {
@@ -134,6 +211,10 @@ type renderer struct {
 	depth   int   // list nesting
 	rtlList bool  // inside a right-to-left list item: rows right aligned
 	styles  map[attrs]lipgloss.Style
+	slugs   help.Slugger // heading anchors, in document order
+	nlinks  int          // links seen so far (Options.Links)
+	dest    string       // the link being walked (Options.Links)
+	lid     int
 }
 
 func newRenderer(src []byte, opt Options) *renderer {
@@ -194,7 +275,7 @@ func (r *renderer) fill(n int, bg lipgloss.Color) string {
 
 func (r *renderer) text(s string, a attrs) string { return r.style(a).Render(s) }
 
-func (r *renderer) blank(width int) line { return line{r.fill(width, r.p.bg), width} }
+func (r *renderer) blank(width int) line { return line{s: r.fill(width, r.p.bg), w: width} }
 
 // ── blocks ──────────────────────────────────────────────────────────────
 
@@ -233,7 +314,7 @@ func (r *renderer) block(n ast.Node, width, wide int) []line {
 	case *ast.Blockquote:
 		return r.quote(v, width)
 	case *ast.ThematicBreak:
-		return []line{{r.text(strings.Repeat("─", width), attrs{fg: r.p.rule, bg: r.p.bg}), width}}
+		return []line{{s: r.text(strings.Repeat("─", width), attrs{fg: r.p.rule, bg: r.p.bg}), w: width}}
 	case *ast.HTMLBlock:
 		ls := r.rawLines(v.Lines())
 		if v.HasClosure() {
@@ -282,13 +363,16 @@ func (r *renderer) heading(h *ast.Heading, width int) []line {
 	body := r.wrapLines(r.inline(h, a), width, r.p.bg)
 	out := make([]line, 0, len(body)+1)
 	for _, l := range body {
-		out = append(out, line{l.s, width})
+		l.w = width
+		out = append(out, l)
 	}
+	text := strings.TrimSpace(help.PlainText(h, r.src))
+	out[0].head = &headMark{level: h.Level, text: text, slug: r.slugs.Next(text)}
 	switch h.Level {
 	case 1:
-		out = append(out, line{r.text(strings.Repeat("━", width), attrs{fg: r.p.h1Rule, bg: r.p.bg}), width})
+		out = append(out, line{s: r.text(strings.Repeat("━", width), attrs{fg: r.p.h1Rule, bg: r.p.bg}), w: width})
 	case 2:
-		out = append(out, line{r.text(strings.Repeat("─", width), attrs{fg: r.p.rule, bg: r.p.bg}), width})
+		out = append(out, line{s: r.text(strings.Repeat("─", width), attrs{fg: r.p.rule, bg: r.p.bg}), w: width})
 	}
 	return out
 }
@@ -327,7 +411,7 @@ func (r *renderer) imageBlock(n ast.Node, width int) ([]line, bool) {
 			if w > width {
 				s, w = ansi.Truncate(s, width, "")+"\x1b[0m", width
 			}
-			out = append(out, line{s + "\x1b[0m" + r.fill(width-w, r.p.bg), width})
+			out = append(out, line{s: s + "\x1b[0m" + r.fill(width-w, r.p.bg), w: width})
 		}
 	}
 	return out, true
@@ -401,14 +485,14 @@ func (r *renderer) list(l *ast.List, width int) []line {
 					mk := strings.TrimLeft(marker, " ")
 					post = r.fill(1, r.p.bg) + r.text(mk, ma) + r.fill(ind-1-ansi.StringWidth(mk), r.p.bg)
 				}
-				out = append(out, line{ln.s + post, ind + ln.w})
+				out = append(out, line{s: ln.s + post, w: ind + ln.w, head: ln.head, links: ln.links})
 				continue
 			}
 			pre := r.fill(ind, r.p.bg)
 			if k == 0 {
 				pre = r.fill(lead, r.p.bg) + r.text(marker, ma) + r.fill(1, r.p.bg)
 			}
-			out = append(out, line{pre + ln.s, ind + ln.w})
+			out = append(out, line{s: pre + ln.s, w: ind + ln.w, head: ln.head, links: ln.shift(ind)})
 		}
 		i++
 	}
@@ -433,7 +517,7 @@ func (r *renderer) quote(q *ast.Blockquote, width int) []line {
 	bar := r.text(r.g.quote, attrs{fg: r.p.quoteBar, bg: r.p.bg}) + r.fill(1, r.p.bg)
 	out := make([]line, 0, len(inner))
 	for _, l := range inner {
-		out = append(out, line{bar + l.s, l.w + 2})
+		out = append(out, line{s: bar + l.s, w: l.w + 2, head: l.head, links: l.shift(2)})
 	}
 	return out
 }
@@ -451,18 +535,18 @@ func (r *renderer) walkInline(n ast.Node, a attrs, link string, out *[]span) {
 	for c := n.FirstChild(); c != nil; c = c.NextSibling() {
 		switch v := c.(type) {
 		case *ast.Text:
-			*out = append(*out, span{text: string(v.Value(r.src)), a: a, link: link})
+			*out = append(*out, span{text: string(v.Value(r.src)), a: a, link: link, dest: r.dest, lid: r.lid})
 			switch {
 			case v.HardLineBreak():
 				*out = append(*out, span{text: "\n", a: a})
 			case v.SoftLineBreak():
-				*out = append(*out, span{text: " ", a: a, link: link})
+				*out = append(*out, span{text: " ", a: a, link: link, dest: r.dest, lid: r.lid})
 			}
 		case *ast.String:
-			*out = append(*out, span{text: string(v.Value), a: a, link: link})
+			*out = append(*out, span{text: string(v.Value), a: a, link: link, dest: r.dest, lid: r.lid})
 		case *ast.CodeSpan:
 			ca := attrs{fg: r.p.codeFg, bg: r.p.codeBg, under: a.under}
-			*out = append(*out, span{text: " " + r.plain(v) + " ", a: ca, link: link, code: true})
+			*out = append(*out, span{text: " " + r.plain(v) + " ", a: ca, link: link, code: true, dest: r.dest, lid: r.lid})
 		case *ast.Emphasis:
 			b := a
 			if v.Level >= 2 {
@@ -482,7 +566,13 @@ func (r *renderer) walkInline(n ast.Node, a attrs, link string, out *[]span) {
 			b := a
 			b.fg, b.under = r.p.link, true
 			dest := string(v.Destination)
+			saved, savedID := r.dest, r.lid
+			if r.opt.Links && dest != "" {
+				r.nlinks++
+				r.dest, r.lid = dest, r.nlinks
+			}
 			r.walkInline(v, b, clickable(dest), out)
+			r.dest, r.lid = saved, savedID
 			if u := shortURL(dest); u != "" && u != strings.TrimSpace(r.plain(v)) {
 				*out = append(*out, span{text: " ", a: a}, span{text: u, a: attrs{fg: r.p.dim, bg: a.bg}, link: clickable(dest), code: true})
 			}
@@ -490,7 +580,12 @@ func (r *renderer) walkInline(n ast.Node, a attrs, link string, out *[]span) {
 			b := a
 			b.fg, b.under = r.p.link, true
 			url := string(v.URL(r.src))
-			*out = append(*out, span{text: string(v.Label(r.src)), a: b, link: clickable(url)})
+			s := span{text: string(v.Label(r.src)), a: b, link: clickable(url)}
+			if r.opt.Links && url != "" {
+				r.nlinks++
+				s.dest, s.lid = url, r.nlinks
+			}
+			*out = append(*out, s)
 		case *ast.Image:
 			s := r.imageSpan(r.plain(v), string(v.Destination))
 			s.a.bg = a.bg

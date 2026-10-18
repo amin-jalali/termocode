@@ -15,7 +15,9 @@ type piece struct {
 	a    attrs
 	link string
 	w    int
-	code bool // inline code: moves as one unit in RTL rows
+	code bool   // inline code: moves as one unit in RTL rows
+	dest string // the link this piece is part of (Options.Links)
+	lid  int
 }
 
 // word is a run of pieces with no break opportunity inside. space says
@@ -47,7 +49,7 @@ func words(spans []span) []word {
 			return
 		}
 		w := ansi.StringWidth(t)
-		cur.ps = append(cur.ps, piece{text: t, a: s.a, link: s.link, w: w, code: s.code})
+		cur.ps = append(cur.ps, piece{text: t, a: s.a, link: s.link, w: w, code: s.code, dest: s.dest, lid: s.lid})
 		cur.w += w
 	}
 	for _, s := range spans {
@@ -129,7 +131,7 @@ func wrap(ws []word, width int) [][]piece {
 						push()
 						continue
 					}
-					cur = append(cur, piece{text: head, a: p.a, link: p.link, w: hw})
+					cur = append(cur, piece{text: head, a: p.a, link: p.link, w: hw, dest: p.dest, lid: p.lid})
 					curW += hw
 					p.text = ansi.TruncateLeft(p.text, hw, "")
 					p.w -= hw
@@ -232,9 +234,28 @@ func (r *renderer) row(ps []piece, width int, bg lipgloss.Color, align byte) lin
 	gap := max(width-w, 0)
 	switch align {
 	case 'r':
-		return line{r.fill(gap, bg) + b.String(), max(w, width)}
+		return line{s: r.fill(gap, bg) + b.String(), w: max(w, width), links: linkSpans(ps, gap)}
 	case 'c':
-		return line{r.fill(gap/2, bg) + b.String() + r.fill(gap-gap/2, bg), max(w, width)}
+		return line{s: r.fill(gap/2, bg) + b.String() + r.fill(gap-gap/2, bg), w: max(w, width), links: linkSpans(ps, gap/2)}
 	}
-	return line{b.String() + r.fill(gap, bg), max(w, width)}
+	return line{s: b.String() + r.fill(gap, bg), w: max(w, width), links: linkSpans(ps, 0)}
+}
+
+// linkSpans returns where the link pieces of a row are drawn, from cell
+// off. Pieces of one link next to each other, or one space apart (the
+// space between two words of the link), make one span.
+func linkSpans(ps []piece, off int) []linkSpan {
+	var out []linkSpan
+	x := off
+	for _, p := range ps {
+		if p.lid != 0 && p.w > 0 {
+			if n := len(out); n > 0 && out[n-1].id == p.lid && x-out[n-1].x1 <= 1 {
+				out[n-1].x1 = x + p.w
+			} else {
+				out = append(out, linkSpan{x0: x, x1: x + p.w, dest: p.dest, id: p.lid})
+			}
+		}
+		x += p.w
+	}
+	return out
 }
