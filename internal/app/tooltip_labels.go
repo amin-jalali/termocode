@@ -11,6 +11,34 @@ type tooltipSpec struct {
 	palette string
 	// local is a key the widget handles itself (not in the keymap).
 	local string
+	// help is the guide section that explains the button
+	// ("guides/ai-use.md#chat-panel", see internal/help). The label gets a
+	// "More info" line only when it is set; TestHelpTopicsResolve checks
+	// every topic against the built-in guide.
+	help string
+}
+
+// Guide sections the labels point at.
+const (
+	helpChat      = "guides/ai-use.md#chat-panel"
+	helpAgents    = "guides/ai-profiles.md#the-agents-panel"
+	helpTerminal  = "guides/editing.md#terminal"
+	helpTabs      = "guides/editing.md#tabs-and-splits"
+	helpServices  = "guides/services.md#keys"
+	helpBranches  = "guides/git.md#branches-history-and-stash"
+	helpFind      = "guides/search.md#find-in-this-file"
+	helpReplace   = "guides/search.md#replace-in-this-file"
+	helpStageHunk = "guides/git.md#stage-one-hunk"
+)
+
+// activityHelp is the guide section of each activity-bar view, by its
+// label (activity labels are not in tooltipLabels).
+var activityHelp = map[string]string{
+	"Explorer":       "guides/editing.md#open-files",
+	"Source Control": "guides/git.md#open-the-source-control-panel",
+	"Run":            "guides/debug.md#debug-in-five-steps",
+	"Testing":        "guides/tests.md#open-the-testing-view",
+	"Services":       "guides/services.md#the-view",
 }
 
 // tooltipLabels maps a hit target id (see hit_targets.go) to its label.
@@ -20,70 +48,70 @@ var tooltipLabels = map[string]tooltipSpec{
 	"overflow:glyph": {name: "More actions"},
 
 	// AI chat panel header (+ ≡ ⚐ ×) and the launcher chip.
-	"ai:new":             {name: "New chat", local: "Ctrl+N"}, // aiPanelKey
-	"ai:history":         {name: "Chat history"},
-	"ai:profile":         {name: "Agent profile", palette: "ai-profile-next"},
-	"ai:chat":            {name: "Back to the chat", palette: "ai-agents"},
-	"ai:btn:agents:":     {name: "Show in AGENTS", palette: "ai-agents"},
-	"ai:btn:attach-file": {name: "Attach file"},
-	"ai:btn:copymsg:":    {name: "Copy message"},
-	"ai:btn:copy:":       {name: "Copy code block"},
-	"actions:pin":        {name: "Unpin panel"},
-	"actions:close":      {name: "Close panel", palette: "toggle-actions-panel"},
-	"actions:launcher":   {name: "AI chat", palette: "toggle-actions-panel"},
+	"ai:new":             {name: "New chat", local: "Ctrl+N", help: helpChat}, // aiPanelKey
+	"ai:history":         {name: "Chat history", help: helpChat},
+	"ai:profile":         {name: "Agent profile", palette: "ai-profile-next", help: "guides/ai-profiles.md#pick-a-profile"},
+	"ai:chat":            {name: "Back to the chat", palette: "ai-agents", help: helpAgents},
+	"ai:btn:agents:":     {name: "Show in AGENTS", palette: "ai-agents", help: helpAgents},
+	"ai:btn:attach-file": {name: "Attach file", help: "guides/ai-use.md#files-in-and-out-of-the-chat"},
+	"ai:btn:copymsg:":    {name: "Copy message", help: helpChat},
+	"ai:btn:copy:":       {name: "Copy code block", help: helpChat},
+	"actions:pin":        {name: "Unpin panel", help: helpChat},
+	"actions:close":      {name: "Close panel", palette: "toggle-actions-panel", help: helpChat},
+	"actions:launcher":   {name: "AI chat", palette: "toggle-actions-panel", help: helpChat},
 
 	// Bottom panel tab bar.
-	"panel:new":         {name: "New terminal", palette: "terminal-new-tab"},
-	"panel:maximize":    {name: "Maximize panel"},
-	"panel:minimize":    {name: "Minimize panel"},
-	"panel:close":       {name: "Close panel", palette: "toggle-terminal"},
-	"panel:term-close:": {name: "Close terminal", palette: "terminal-close-tab"},
+	"panel:new":         {name: "New terminal", palette: "terminal-new-tab", help: helpTerminal},
+	"panel:maximize":    {name: "Maximize panel", help: helpTerminal},
+	"panel:minimize":    {name: "Minimize panel", help: helpTerminal},
+	"panel:close":       {name: "Close panel", palette: "toggle-terminal", help: helpTerminal},
+	"panel:term-close:": {name: "Close terminal", palette: "terminal-close-tab", help: helpTerminal},
 	"panel:tab-close:":  {name: "Close tab"},
 
 	// Editor tab bar.
-	"close:":            {name: "Close", palette: "close-buffer"},
-	"tabs:scroll-left":  {name: "Scroll tabs left"},
-	"tabs:scroll-right": {name: "Scroll tabs right"},
+	"close:":            {name: "Close", palette: "close-buffer", help: helpTabs},
+	"tabs:scroll-left":  {name: "Scroll tabs left", help: helpTabs},
+	"tabs:scroll-right": {name: "Scroll tabs right", help: helpTabs},
 
 	// Status bar.
-	"status:ai":       {name: "AI chat", palette: "toggle-actions-panel"},
-	"status:lsp":      {name: "Language servers"},
-	"status:diag":     {name: "Problems", palette: "problems-panel"},
-	"status:tests":    {name: "Test results"},
-	"status:services": {name: "Services"},
-	"status:debug":    {name: "Call stack"},
-	"status:branch":   {name: "Git branch"},
+	"status:ai":       {name: "AI chat", palette: "toggle-actions-panel", help: helpChat},
+	"status:lsp":      {name: "Language servers", help: "guides/language-servers.md#install-a-language-server"},
+	"status:diag":     {name: "Problems", palette: "problems-panel", help: "guides/tasks-problems.md#the-problems-panel"},
+	"status:tests":    {name: "Test results", help: "guides/tests.md#read-a-failure"},
+	"status:services": {name: "Services", help: "guides/services.md#the-view"},
+	"status:debug":    {name: "Call stack", help: "guides/debug.md#step-through-code"},
+	"status:branch":   {name: "Git branch", help: helpBranches},
 	"status:indent":   {name: "Indentation"},
 	"status:encoding": {name: "File encoding"},
-	"status:lang":     {name: "Language"},
-	"status:term":     {name: "Terminal", palette: "toggle-terminal"},
+	"status:lang":     {name: "Language", help: "guides/language-servers.md#which-tools-are-supported"},
+	"status:term":     {name: "Terminal", palette: "toggle-terminal", help: helpTerminal},
 	"status:pos":      {name: "Line and column"},
 
 	// Services view action bar (services_view.go).
-	"svc:btn:start-all": {name: "Start all services", local: "a"},
-	"svc:btn:stop-all":  {name: "Stop all services", local: "A"},
-	"svc:btn:refresh":   {name: "Refresh", local: "R"},
+	"svc:btn:start-all": {name: "Start all services", local: "a", help: helpServices},
+	"svc:btn:stop-all":  {name: "Stop all services", local: "A", help: helpServices},
+	"svc:btn:refresh":   {name: "Refresh", local: "R", help: helpServices},
 
 	// Source Control header.
-	"scm:toggle-view": {name: "Tree or list view"},
-	"scm:btn:sync":    {name: "Sync changes"},
-	"scm:btn:more":    {name: "More git actions"},
+	"scm:toggle-view": {name: "Tree or list view", help: "guides/git.md#open-the-source-control-panel"},
+	"scm:btn:sync":    {name: "Sync changes", help: "guides/git.md#sync-with-the-remote"},
+	"scm:btn:more":    {name: "More git actions", help: helpBranches},
 
 	// Find bar.
-	"find:chevron":     {name: "Toggle replace"},
-	"find:case":        {name: "Match case"},
-	"find:word":        {name: "Match whole word"},
-	"find:regex":       {name: "Use regular expression"},
-	"find:prev":        {name: "Previous match"},
-	"find:next":        {name: "Next match"},
-	"find:menu":        {name: "More options"},
-	"find:close":       {name: "Close"},
-	"find:replace":     {name: "Replace"},
-	"find:replace-all": {name: "Replace all"},
+	"find:chevron":     {name: "Toggle replace", help: helpReplace},
+	"find:case":        {name: "Match case", help: helpFind},
+	"find:word":        {name: "Match whole word", help: helpFind},
+	"find:regex":       {name: "Use regular expression", help: helpFind},
+	"find:prev":        {name: "Previous match", help: helpFind},
+	"find:next":        {name: "Next match", help: helpFind},
+	"find:menu":        {name: "More options", help: helpFind},
+	"find:close":       {name: "Close", help: helpFind},
+	"find:replace":     {name: "Replace", help: helpReplace},
+	"find:replace-all": {name: "Replace all", help: helpReplace},
 
 	// Side-by-side diff winbar.
-	"diff:prev": {name: "Previous change"},
-	"diff:next": {name: "Next change"},
+	"diff:prev": {name: "Previous change", help: helpStageHunk},
+	"diff:next": {name: "Next change", help: helpStageHunk},
 }
 
 // tooltipSpecFor finds the spec of hit target id.
@@ -143,4 +171,13 @@ func (m Model) tooltipText(id string) string {
 		return name
 	}
 	return name + " (" + key + ")"
+}
+
+// tooltipHelp is the guide topic of hit target id ("" = none).
+func tooltipHelp(id string) string {
+	if label, ok := strings.CutPrefix(id, "activity:"); ok {
+		return activityHelp[label]
+	}
+	s, _ := tooltipSpecFor(id)
+	return s.help
 }

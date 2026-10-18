@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/amin-jalali/termocode/internal/help"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -17,11 +18,17 @@ import (
 // the hit map (hit_targets.go), the same one the click tests check, so
 // the label always names the button a click would reach.
 //
+// A button with a guide section (tooltipSpec.help) gets a second row,
+// "ⓘ More info": a click on it opens the guide there (help.go). So the
+// pointer can reach that row, the label rect counts as "still on" the
+// button, and leaving both keeps the label until the tick in flight
+// fires and finds the pointer still outside (the grace).
+//
 // Cost: a mouse motion only stores the time (and, while a label shows,
-// checks the pointer is still in its target's rect). One tea.Tick is in
-// flight at most; when it fires before the pointer has rested long
-// enough it waits for the rest. Clicks, keys, scrolls and resizes bump
-// the generation, so a tick from before them does nothing.
+// checks the pointer is still in its target's or label's rect). One
+// tea.Tick is in flight at most; when it fires before the pointer has
+// rested long enough it waits for the rest. Clicks, keys, scrolls and
+// resizes bump the generation, so a tick from before them does nothing.
 
 // tooltipDelay is how long the pointer must rest before the label shows.
 const tooltipDelay = 500 * time.Millisecond
@@ -36,7 +43,38 @@ type tooltipState struct {
 	key     string    // the key part of text ("" = none), drawn dimmer
 	x, y    int       // screen cell of the label's first column
 	target  hitTarget // the button it names
+	// help is the guide topic of the button ("" = no help line); when
+	// set, row y+1 shows helpText, as wide as text.
+	help     string
+	helpText string
 }
+
+// rows is how many screen rows the label takes.
+func (t *tooltipState) rows() int {
+	if t.help != "" {
+		return 2
+	}
+	return 1
+}
+
+// onLabel reports whether (x, y) is on the shown label.
+func (t *tooltipState) onLabel(x, y int) bool {
+	return t.shown && y >= t.y && y < t.y+t.rows() && x >= t.x && x < t.x+ansi.StringWidth(t.text)
+}
+
+// onHelpLine reports whether (x, y) is on the shown help line.
+func (t *tooltipState) onHelpLine(x, y int) bool {
+	return t.shown && t.help != "" && y == t.y+1 && x >= t.x && x < t.x+ansi.StringWidth(t.helpText)
+}
+
+// onTarget reports whether (x, y) is on the button the label names.
+func (t *tooltipState) onTarget(x, y int) bool {
+	r := t.target
+	return x >= r.X && x < r.X+r.W && y >= r.Y && y < r.Y+r.H
+}
+
+// tooltipHelpLine is the text of the help line, without padding.
+func tooltipHelpLine() string { return helpIcon() + " More info" }
 
 // tooltipTickMsg fires tooltipDelay after a motion; gen ties it to the
 // state that scheduled it.
@@ -66,11 +104,15 @@ func (m *Model) tooltipOnInput(msg tea.Msg) tea.Cmd {
 			return nil
 		}
 		if t.shown {
-			r := t.target
-			if msg.X >= r.X && msg.X < r.X+r.W && msg.Y >= r.Y && msg.Y < r.Y+r.H {
+			if t.onTarget(msg.X, msg.Y) {
 				return nil // still on the same button
 			}
-			t.shown = false
+			if t.help == "" {
+				t.shown = false
+			} else if t.onLabel(msg.X, msg.Y) {
+				return nil // on the label, on its way to the help line
+			}
+			// else the grace: the tick below hides it if still outside.
 		}
 		t.moved = time.Now()
 		if t.pending {
@@ -87,17 +129,40 @@ func (m *Model) tooltipOnInput(msg tea.Msg) tea.Cmd {
 }
 
 // onTooltipTick shows the label once the pointer has rested long enough.
+// It also ends the grace: a label the pointer left goes.
 func (m *Model) onTooltipTick(msg tooltipTickMsg) tea.Cmd {
 	t := &m.tip
 	if msg.gen != t.gen || !t.pending {
 		return nil // stale: a click, key or scroll came after it
 	}
+	if t.shown && !t.onTarget(m.hoverX, m.hoverY) && !t.onLabel(m.hoverX, m.hoverY) {
+		t.shown = false
+	}
 	if left := tooltipDelay - time.Since(t.moved); left > 0 {
 		return tooltipTick(t.gen, left)
 	}
 	t.pending = false
-	m.showTooltipAt(m.hoverX, m.hoverY)
+	if !t.shown {
+		m.showTooltipAt(m.hoverX, m.hoverY)
+	}
 	return nil
+}
+
+// tooltipHelpPress opens the guide when msg is a left press on the shown
+// help line; ok reports that the press was taken (nothing under the
+// label gets it).
+func (m *Model) tooltipHelpPress(msg tea.Msg) (cmd tea.Cmd, ok bool) {
+	mm, isMouse := msg.(tea.MouseMsg)
+	if !isMouse || mm.Action != tea.MouseActionPress || mm.Button != tea.MouseButtonLeft ||
+		!m.tip.onHelpLine(mm.X, mm.Y) {
+		return nil, false
+	}
+	l, err := help.Parse(m.tip.help)
+	m.tip.hide()
+	if err != nil {
+		return nil, true
+	}
+	return m.openHelp(l), true
 }
 
 // showTooltipAt shows the label of the button at (x, y), if it has one.
@@ -114,15 +179,31 @@ func (m *Model) showTooltipAt(x, y int) {
 	if key != "" {
 		text = " " + name + " (" + key + ") "
 	}
+	topic, helpText := tooltipHelp(target.ID), ""
+	if topic != "" {
+		helpText = " " + tooltipHelpLine() + " "
+		if hw := ansi.StringWidth(helpText); hw > m.w {
+			topic, helpText = "", "" // no room: the label alone
+		} else if w := ansi.StringWidth(text); w < hw {
+			text += strings.Repeat(" ", hw-w)
+		}
+	}
 	if w := ansi.StringWidth(text); w > m.w {
 		text, key = ansi.Truncate(text, m.w, "…"), ""
 	}
-	lx, ly, ok := placeTooltip(ansi.StringWidth(text), x, y, target, m.w, m.h)
+	w := ansi.StringWidth(text)
+	rows := 1
+	if topic != "" {
+		helpText += strings.Repeat(" ", w-ansi.StringWidth(helpText))
+		rows = 2
+	}
+	lx, ly, ok := placeTooltip(w, rows, x, y, target, m.w, m.h)
 	if !ok {
 		return
 	}
 	m.tip.shown, m.tip.text, m.tip.key = true, text, key
 	m.tip.x, m.tip.y, m.tip.target = lx, ly, target
+	m.tip.help, m.tip.helpText = topic, helpText
 }
 
 // tooltipTargetAt is the hit target under (x, y): the smallest one when
@@ -141,25 +222,27 @@ func (m Model) tooltipTargetAt(x, y int) (hitTarget, bool) {
 	return best, found
 }
 
-// placeTooltip puts a w-wide label for target near the pointer (px, py):
-// on the row below the target, or above it at the bottom edge; starting
-// at the pointer, or ending there at the right edge. A target as tall as
-// the screen gets the label beside it. ok is false when it does not fit.
-func placeTooltip(w, px, py int, target hitTarget, sw, sh int) (x, y int, ok bool) {
-	if w <= 0 || w > sw || sh <= 0 {
+// placeTooltip puts a w-wide, h-tall label for target near the pointer
+// (px, py): on the rows below the target, or above it at the bottom
+// edge; starting at the pointer, or ending there at the right edge. A
+// target as tall as the screen gets the label beside it. ok is false
+// when it does not fit.
+func placeTooltip(w, h, px, py int, target hitTarget, sw, sh int) (x, y int, ok bool) {
+	if w <= 0 || w > sw || h <= 0 || h > sh {
 		return 0, 0, false
 	}
 	switch {
-	case target.Y+target.H < sh:
+	case target.Y+target.H+h <= sh:
 		y = target.Y + target.H
-	case target.Y-1 >= 0:
-		y = target.Y - 1
-	default: // beside it, on the pointer's row
+	case target.Y-h >= 0:
+		y = target.Y - h
+	default: // beside it, from the pointer's row
+		y = min(py, sh-h)
 		switch {
 		case target.X+target.W+w <= sw:
-			return target.X + target.W, py, true
+			return target.X + target.W, y, true
 		case target.X-w >= 0:
-			return target.X - w, py, true
+			return target.X - w, y, true
 		}
 		return 0, 0, false
 	}
@@ -171,7 +254,8 @@ func placeTooltip(w, px, py int, target hitTarget, sw, sh int) (x, y int, ok boo
 	return x, y, true
 }
 
-// overlayTooltip draws the label over the frame.
+// overlayTooltip draws the label over the frame. The help line takes
+// the primary colours while the pointer is on it.
 func (m Model) overlayTooltip(base string) string {
 	t := m.tip
 	if !t.shown || t.y < 0 || t.y >= m.h {
@@ -190,5 +274,12 @@ func (m Model) overlayTooltip(base string) string {
 		}
 	}
 	lines[t.y] = spliceAt(lines[t.y], row, t.x)
+	if t.help != "" && t.y+1 < len(lines) {
+		hs := lipgloss.NewStyle().Background(c.Bg).Foreground(c.Hint)
+		if t.onHelpLine(m.hoverX, m.hoverY) {
+			hs = lipgloss.NewStyle().Background(c.Primary).Foreground(c.PrimaryFg)
+		}
+		lines[t.y+1] = spliceAt(lines[t.y+1], hs.Render(t.helpText), t.x)
+	}
 	return strings.Join(lines, "\n")
 }

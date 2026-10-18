@@ -39,7 +39,13 @@ func hoverTarget(t *testing.T, d *Driver, id string) app.HitTarget {
 	t.Helper()
 	h := targetByID(t, d, id)
 	d.Move(h.X+h.W/2, h.Y+h.H/2)
-	if !d.WaitFor(func() bool { return tipShown(d) }, 3*time.Second) {
+	// The label of this target: the one of the last target may stay a
+	// moment (the grace of a label with a help line).
+	want := d.Model().TooltipFor(id)
+	if !d.WaitFor(func() bool {
+		text, _, _, ok := d.Model().Tooltip()
+		return ok && strings.Contains(text, want)
+	}, 3*time.Second) {
 		t.Fatalf("no hover label on %s after 3 s:\n%s", id, screen(d))
 	}
 	return h
@@ -84,12 +90,22 @@ func TestTooltipShowsAndHides(t *testing.T) {
 		t.Errorf("close button label has no Alt+A:\n%s", screen(d))
 	}
 
-	// Move to another target: gone at once.
-	hoverTarget(t, d, "ai:new")
+	// Move to another target: a label without a help line goes at once.
+	hoverTarget(t, d, "status:pos")
 	o := targetByID(t, d, "overflow:glyph")
 	d.Move(o.X, o.Y)
-	if tipShown(d) || strings.Contains(screen(d), "New chat") {
+	if tipShown(d) || strings.Contains(screen(d), "Line and column") {
 		t.Errorf("label stays after moving to another target:\n%s", screen(d))
+	}
+	// A label with a help line stays for the grace, then the tick swaps
+	// it for the new button's label: never two labels.
+	hoverTarget(t, d, "ai:new")
+	d.Move(o.X, o.Y)
+	if !d.WaitFor(func() bool { return strings.Contains(screen(d), "More actions") }, 3*time.Second) {
+		t.Fatalf("no label on the next button:\n%s", screen(d))
+	}
+	if strings.Contains(screen(d), "New chat") {
+		t.Errorf("two labels on screen:\n%s", screen(d))
 	}
 
 	// Small moves inside the same target keep it.
@@ -179,6 +195,17 @@ func TestTooltipStaysOnScreen(t *testing.T) {
 				}
 				if gx, gy, ok := tipRow(d, strings.TrimSpace(text)); !ok || gy != y || gx < x {
 					t.Errorf("label %q not drawn at (%d,%d) (found %v at %d,%d):\n%s", text, x, y, ok, gx, gy, screen(d))
+				}
+				if ht, hx, hy, _, ok := d.Model().TooltipHelp(); ok {
+					if hy >= d.H || hx+ansi.StringWidth(ht) > d.W {
+						t.Errorf("help line %q at (%d,%d) is off screen", ht, hx, hy)
+					}
+					if hy >= h.Y && hy < h.Y+h.H && hx < h.X+h.W && hx+ansi.StringWidth(ht) > h.X {
+						t.Errorf("help line at (%d,%d) covers its target %+v", hx, hy, h)
+					}
+					if got := strings.TrimSpace(ansi.Strip(ansi.Cut(strings.Split(d.Frame(), "\n")[hy], hx, hx+ansi.StringWidth(ht)))); got != strings.TrimSpace(ht) {
+						t.Errorf("help line drawn as %q, want %q", got, strings.TrimSpace(ht))
+					}
 				}
 				d.Move(0, d.H/2) // off the target: the next one starts clean
 			})

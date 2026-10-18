@@ -158,6 +158,13 @@ func DiffReview() Scene {
 	return Scene{Name: "diff-review", Theme: "tokyo-night", Steps: WithEditor(Act("diffdemo"), Pause(600*time.Millisecond))}
 }
 
+// HelpTooltip is the hover label of the status bar's git branch with its
+// "More info" line, the pointer resting on that line (it lights up).
+func HelpTooltip() Scene {
+	return Scene{Name: "help-tooltip", KeepHover: true, Steps: WithEditor(HoverLastText("main"), Pause(900*time.Millisecond),
+		HoverText("More info"), Pause(700*time.Millisecond))}
+}
+
 // Scenes is the screenshot set for assets/screenshots (the shots command).
 func Scenes() []Scene {
 	scenes := []Scene{

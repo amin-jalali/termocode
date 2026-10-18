@@ -53,6 +53,9 @@ type Scene struct {
 	// recents.json, newest first; Workspaces likewise ("." = the working
 	// directory) to workspaces.json. The start page lists them.
 	Recents, Workspaces []string
+	// KeepHover skips the final resize (it hides a hover label), so a
+	// scene can show one.
+	KeepHover bool
 }
 
 // demoAges are how long ago the seeded recents / workspaces were opened.
@@ -96,6 +99,20 @@ func HoverText(text string) Step {
 		for y, line := range strings.Split(StripANSI(frame), "\n") {
 			if i := strings.Index(line, text); i >= 0 {
 				return motion(len([]rune(line[:i])), y), nil
+			}
+		}
+		return nil, fmt.Errorf("hover: %q not on screen", text)
+	}}
+}
+
+// HoverLastText is HoverText searching from the bottom row up (the
+// status bar first).
+func HoverLastText(text string) Step {
+	return Step{Wait: 300 * time.Millisecond, Build: func(frame string) (tea.Msg, error) {
+		lines := strings.Split(StripANSI(frame), "\n")
+		for y := len(lines) - 1; y >= 0; y-- {
+			if i := strings.Index(lines[y], text); i >= 0 {
+				return motion(len([]rune(lines[y][:i])), y), nil
 			}
 		}
 		return nil, fmt.Errorf("hover: %q not on screen", text)
@@ -293,7 +310,9 @@ func Run(sc Scene, w, h int, opt Options) (string, error) {
 		record(st.Hold)
 	}
 	// One more resize forces a fresh View with the final state.
-	p.Send(tea.WindowSizeMsg{Width: w, Height: h})
+	if !sc.KeepHover {
+		p.Send(tea.WindowSizeMsg{Width: w, Height: h})
+	}
 	if err := settle(300*time.Millisecond, finalQuiet); err != nil {
 		return "", fmt.Errorf("final frame: %w", err)
 	}

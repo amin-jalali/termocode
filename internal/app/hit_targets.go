@@ -49,6 +49,9 @@ func (m Model) probeClick(x, y int) string {
 	if m.imageOpen {
 		return "overlay:image"
 	}
+	if m.tip.onHelpLine(x, y) { // taken in Update before the routing
+		return "tip:help"
+	}
 	m.updateInner(tea.MouseMsg{X: x, Y: y, Type: tea.MouseLeft,
 		Action: tea.MouseActionPress, Button: tea.MouseButtonLeft})
 	return got
@@ -63,8 +66,20 @@ func cellText(render string, row, x0, x1 int) string {
 	return strings.TrimSpace(ansi.Strip(ansi.Cut(lines[row], x0, x1)))
 }
 
-// hitTargets lists the click targets of the current state.
+// hitTargets lists the click targets of the current state. A shown
+// hover label's help line ("tip:help") comes first: a press there is
+// taken before anything under it (Update, tooltipHelpPress).
 func (m Model) hitTargets() []hitTarget {
+	out := m.screenTargets()
+	if t := &m.tip; t.shown && t.help != "" {
+		tip := hitTarget{ID: "tip:help", Label: tooltipHelpLine(), X: t.x, Y: t.y + 1, W: ansi.StringWidth(t.helpText), H: 1}
+		out = append([]hitTarget{tip}, out...)
+	}
+	return out
+}
+
+// screenTargets lists the click targets drawn by the screen itself.
+func (m Model) screenTargets() []hitTarget {
 	if m.w <= 0 || m.h <= 0 || m.imageOpen || m.previewOpen || m.searchOpen {
 		return nil
 	}

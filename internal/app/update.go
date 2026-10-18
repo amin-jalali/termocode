@@ -42,6 +42,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Hover labels (tooltip.go) watch every user event first.
 	if t, ok := msg.(tooltipTickMsg); ok {
 		cmd = m.onTooltipTick(t)
+	} else if c, ok := m.tooltipHelpPress(msg); ok {
+		cmd = c // "More info" on a hover label: the press goes nowhere else
 	} else {
 		tipCmd := m.tooltipOnInput(msg)
 		m, cmd = m.update(msg)

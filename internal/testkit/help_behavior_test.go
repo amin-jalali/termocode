@@ -15,6 +15,49 @@ func waitHeader(d *Driver, text string) bool {
 	return d.WaitFor(func() bool { return strings.Contains(header(d), text) }, 3*time.Second)
 }
 
+// Spec: the hover label of the chat's + button ends with its own line
+// "More info"; the pointer can move onto that line (the label stays,
+// the line lights up) and a click there opens "Use AI" at "Chat panel",
+// that heading on the first content row. The click reaches nothing else.
+func TestTooltipMoreInfoOpensGuide(t *testing.T) {
+	d := New(t, Options{W: 120, H: 40, Git: true})
+	if !tryAIPanel(d) {
+		t.Fatal("no AI panel")
+	}
+	d.Action("toasts:clear")
+	hoverTarget(t, d, "ai:new")
+	text, x, y, topic, ok := d.Model().TooltipHelp()
+	if !ok || topic != "guides/ai-use.md#chat-panel" || !strings.Contains(text, "More info") {
+		t.Fatalf("ai:new help line: ok=%v topic=%q text=%q\n%s", ok, topic, text, screen(d))
+	}
+	if _, gy, found := find(d, "More info"); !found || gy != y {
+		t.Fatalf("More info not drawn on row %d:\n%s", y, screen(d))
+	}
+	label, _, ly, _ := d.Model().Tooltip()
+	if ly != y-1 || !strings.Contains(label, "New chat") {
+		t.Errorf("help line is not the label's last line: label row %d %q, help row %d", ly, label, y)
+	}
+	d.Move(x+1, y)
+	d.Settle(700 * time.Millisecond) // past the tick: the label stays
+	if _, _, _, _, ok := d.Model().TooltipHelp(); !ok {
+		t.Fatalf("label hid when the pointer moved onto More info:\n%s", screen(d))
+	}
+	if got := d.Model().ProbeClick(x+1, y); got != "tip:help" {
+		t.Errorf("probeClick on More info = %q, want tip:help", got)
+	}
+	d.Click(x+1, y)
+	if !waitHeader(d, "Use AI") || !strings.Contains(header(d), "Guide") {
+		t.Fatalf("click on More info did not open the guide:\n%s", screen(d))
+	}
+	if first := strings.TrimSpace(strings.Split(screen(d), "\n")[1]); first != "Chat panel" {
+		t.Errorf("first content row = %q, want Chat panel:\n%s", first, screen(d))
+	}
+	d.Key("esc")
+	if strings.Contains(header(d), "Guide") {
+		t.Fatalf("esc did not close the guide:\n%s", screen(d))
+	}
+}
+
 // "Help: Open Guide…" opens a built-in guide page in the reader with
 // the Guide badge; Tab + Enter and a click follow links inside the
 // viewer, Backspace comes back, Esc closes to the screen as before.
