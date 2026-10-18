@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/secrets"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -40,6 +42,33 @@ import (
 
 // mcpLogChannel is the Output channel of the MCP lifecycle log.
 const mcpLogChannel = "MCP"
+
+var secretStoreConfig struct {
+	sync.Mutex
+	path string
+}
+
+func configurePlainSecretStore() {
+	dir, err := ai.ConfigDir()
+	if err != nil {
+		return
+	}
+	path, err := ai.CredentialsPath()
+	if err != nil {
+		return
+	}
+	secretStoreConfig.Lock()
+	defer secretStoreConfig.Unlock()
+	if secretStoreConfig.path == path {
+		return
+	}
+	store, err := secrets.Open(secrets.Options{Dir: dir, PlainPath: path, Backend: "plain", Register: ai.RegisterSecret, Redact: ai.Redact})
+	if err != nil {
+		return
+	}
+	ai.SetSecretStoreForPath(path, store)
+	secretStoreConfig.path = path
+}
 
 // mcpTarget is the Manager StopMCP stops.
 var mcpTarget atomic.Pointer[mcp.Manager]
@@ -81,6 +110,7 @@ func mcpUserPath() string {
 // aiMCP returns the Manager, made on first use (it starts nothing).
 // Timeouts are read then; a restart applies new ones.
 func (m *Model) aiMCP() *mcp.Manager {
+	configurePlainSecretStore()
 	s := m.aiS()
 	if s.mcp != nil {
 		return s.mcp
@@ -95,12 +125,14 @@ func (m *Model) aiMCP() *mcp.Manager {
 		ProjectPath: mcp.ProjectPath(root),
 		CacheDir:    mcpCacheDir(),
 		Expander: func() mcp.Expander {
-			var secrets map[string]string
+			var storeSecretLookup func(string) (string, bool)
 			if p, err := ai.CredentialsPath(); err == nil {
-				c, _ := ai.LoadCredentials(p) // registers the secrets for Redact
-				secrets = c.MCPSecrets
+				if c, err := ai.LoadCredentials(p); err == nil {
+					_ = c // loading registers the secrets for Redact
+				}
+				storeSecretLookup = ai.LookupMCPSecret
 			}
-			return mcp.Expander{Env: os.LookupEnv, Secrets: secrets, Workspace: root, Home: home}
+			return mcp.Expander{Env: os.LookupEnv, SecretLookup: storeSecretLookup, Workspace: root, Home: home}
 		},
 		Roots: func() []string { return []string{root} },
 		Log: func(server, line string) {

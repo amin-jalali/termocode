@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	secretstore "github.com/amin-jalali/termocode/internal/secrets"
 )
 
 // Settings is the NON-secret AI configuration, stored in config.json next
@@ -162,6 +164,53 @@ func CredentialsPath() (string, error) {
 	return filepath.Join(d, "ai", "credentials.json"), nil
 }
 
+var credentialStore struct {
+	sync.RWMutex
+	store secretstore.Store
+	path  string
+}
+
+// SetSecretStore sets the store used by credential loads and saves. A nil
+// store keeps the original credentials.json behavior.
+func SetSecretStore(store secretstore.Store) {
+	credentialStore.Lock()
+	credentialStore.store = store
+	credentialStore.path = ""
+	credentialStore.Unlock()
+}
+
+// SetSecretStoreForPath sets the store used for one credentials file.
+func SetSecretStoreForPath(path string, store secretstore.Store) {
+	credentialStore.Lock()
+	credentialStore.store = store
+	credentialStore.path = path
+	credentialStore.Unlock()
+}
+
+func currentSecretStore(path string) secretstore.Store {
+	credentialStore.RLock()
+	defer credentialStore.RUnlock()
+	if credentialStore.path != "" && credentialStore.path != path {
+		return nil
+	}
+	return credentialStore.store
+}
+
+// LookupMCPSecret resolves a named MCP secret through the configured store.
+func LookupMCPSecret(name string) (string, bool) {
+	path, _ := CredentialsPath()
+	store := currentSecretStore(path)
+	if store == nil {
+		return "", false
+	}
+	v, ok, err := store.Get("mcp.secret." + name)
+	if err != nil || !ok {
+		return "", false
+	}
+	RegisterSecret(v)
+	return v, true
+}
+
 // LoadSettings reads the ai_* keys from config.json at path. Missing or
 // corrupt files yield zero Settings (never an error that blocks startup).
 func LoadSettings(path string) Settings {
@@ -217,6 +266,9 @@ func SaveSettings(path string, s Settings) error {
 // LoadCredentials reads credentials.json. Missing → empty; corrupt →
 // empty plus an error the caller may log.
 func LoadCredentials(path string) (Credentials, error) {
+	if store := currentSecretStore(path); store != nil {
+		return loadCredentialsFromStore(path, store)
+	}
 	var c Credentials
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -235,6 +287,9 @@ func LoadCredentials(path string) (Credentials, error) {
 // SaveCredentials writes credentials.json atomically with mode 0600 (the
 // directory gets 0700).
 func SaveCredentials(path string, c Credentials) error {
+	if store := currentSecretStore(path); store != nil {
+		return saveCredentialsToStore(path, c, store)
+	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
@@ -268,6 +323,127 @@ func SaveCredentials(path string, c Credentials) error {
 	}
 	c.register()
 	return os.Chmod(path, 0o600)
+}
+
+func loadCredentialsFromStore(path string, store secretstore.Store) (Credentials, error) {
+	// The plain backend is the existing file. Decode it to discover its keys,
+	// then make the store the source of each secret value.
+	var c Credentials
+	b, err := os.ReadFile(path)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return c, err
+	}
+	if err == nil {
+		if err := json.Unmarshal(b, &c); err != nil {
+			return Credentials{}, errors.New("ai/credentials.json is not valid JSON")
+		}
+	}
+	for k, v := range c.Keys {
+		c.Keys[k] = storeCredentialValue(store, "ai.key."+k, v)
+	}
+	if c.ClaudeOAuth != nil {
+		if v := storeCredentialValue(store, "ai.claude_oauth", marshalCredential(c.ClaudeOAuth)); v != "" {
+			_ = json.Unmarshal([]byte(v), c.ClaudeOAuth)
+		}
+	}
+	for k, v := range c.MCPSecrets {
+		c.MCPSecrets[k] = storeCredentialValue(store, "mcp.secret."+k, v)
+	}
+	for k, v := range c.MCPOAuth {
+		if raw := storeCredentialValue(store, "mcp.oauth."+k, marshalCredential(v)); raw != "" {
+			_ = json.Unmarshal([]byte(raw), &v)
+			c.MCPOAuth[k] = v
+		}
+	}
+	c.register()
+	return c, nil
+}
+
+func storeCredentialValue(store secretstore.Store, name, old string) string {
+	v, ok, err := store.Get(name)
+	if err == nil && ok {
+		return v
+	}
+	if old != "" && err == nil {
+		if store.Set(name, old) == nil {
+			return old
+		}
+	}
+	return old
+}
+
+func saveCredentialsToStore(path string, c Credentials, store secretstore.Store) error {
+	// Seed the index from an existing old-format file before writing so keys
+	// removed from the in-memory view can be deleted through the store.
+	old, _ := loadCredentialsFromFile(path)
+	for k := range old.Keys {
+		if _, ok := c.Keys[k]; !ok {
+			if err := store.Delete("ai.key." + k); err != nil {
+				return err
+			}
+		}
+	}
+	for k, v := range c.Keys {
+		if err := store.Set("ai.key."+k, v); err != nil {
+			return err
+		}
+	}
+	if old.ClaudeOAuth != nil && c.ClaudeOAuth == nil {
+		if err := store.Delete("ai.claude_oauth"); err != nil {
+			return err
+		}
+	}
+	if c.ClaudeOAuth != nil {
+		if err := store.Set("ai.claude_oauth", marshalCredential(c.ClaudeOAuth)); err != nil {
+			return err
+		}
+	}
+	for k := range old.MCPSecrets {
+		if _, ok := c.MCPSecrets[k]; !ok {
+			if err := store.Delete("mcp.secret." + k); err != nil {
+				return err
+			}
+		}
+	}
+	for k, v := range c.MCPSecrets {
+		if err := store.Set("mcp.secret."+k, v); err != nil {
+			return err
+		}
+	}
+	for k := range old.MCPOAuth {
+		if _, ok := c.MCPOAuth[k]; !ok {
+			if err := store.Delete("mcp.oauth." + k); err != nil {
+				return err
+			}
+		}
+	}
+	for k, v := range c.MCPOAuth {
+		if err := store.Set("mcp.oauth."+k, marshalCredential(v)); err != nil {
+			return err
+		}
+	}
+	c.register()
+	return nil
+}
+
+func loadCredentialsFromFile(path string) (Credentials, error) {
+	var c Credentials
+	b, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return c, nil
+	}
+	if err != nil {
+		return c, err
+	}
+	if err := json.Unmarshal(b, &c); err != nil {
+		return Credentials{}, err
+	}
+	return c, nil
+}
+
+func marshalCredential(v any) string {
+	b, _ := json.Marshal(v)
+	return string(b)
 }
 
 func (c Credentials) register() {

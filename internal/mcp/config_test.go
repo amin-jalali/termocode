@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -125,6 +126,21 @@ func TestParseOAuthAndLocalHTTP(t *testing.T) {
 	}
 	if _, err := s.Expand(Expander{}); err == nil || !strings.Contains(err.Error(), "slack_client_secret") {
 		t.Errorf("missing secret: %v", err)
+	}
+}
+
+func TestExpandSecretLookup(t *testing.T) {
+	s := Server{Name: "x", Command: "run", Env: map[string]string{"TOKEN": "${secret:token}"}}
+	got, err := s.Expand(Expander{SecretLookup: func(name string) (string, bool) {
+		return "stored-value", name == "token"
+	}})
+	if err != nil || got.Env["TOKEN"] != "stored-value" {
+		t.Fatalf("expanded %+v, err %v", got, err)
+	}
+	_, err = s.Expand(Expander{SecretLookup: func(string) (string, bool) { return "", false }})
+	var needs *NeedsError
+	if !errors.As(err, &needs) || needs.What != "secret token" {
+		t.Fatalf("missing secret error = %v", err)
 	}
 }
 

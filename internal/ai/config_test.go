@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	secretstore "github.com/amin-jalali/termocode/internal/secrets"
 )
 
 func envMap(m map[string]string) func(string) string {
@@ -83,6 +85,37 @@ func TestCredentialsFileMode(t *testing.T) {
 	}
 	if _, err := LoadCredentials(filepath.Join(t.TempDir(), "missing.json")); err != nil {
 		t.Fatal("missing file is not an error")
+	}
+}
+
+func TestCredentialsRoundTripThroughStoreKeepsUnknownFields(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ai", "credentials.json")
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(`{"mcp_accounts":{"github":"amin"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	store, err := secretstore.Open(secretstore.Options{Dir: filepath.Dir(filepath.Dir(path)), PlainPath: path, Backend: "plain"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	SetSecretStore(store)
+	t.Cleanup(func() { SetSecretStore(nil) })
+	want := Credentials{Keys: map[string]string{"openai": "sk-store-roundtrip-123456"}, MCPSecrets: map[string]string{"TOKEN": "github_pat_store_value"}}
+	if err := SaveCredentials(path, want); err != nil {
+		t.Fatal(err)
+	}
+	got, err := LoadCredentials(path)
+	if err != nil || got.Keys["openai"] != want.Keys["openai"] || got.MCPSecrets["TOKEN"] != want.MCPSecrets["TOKEN"] {
+		t.Fatalf("credentials = %+v, err %v", got, err)
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(b), `"mcp_accounts"`) || !strings.Contains(string(b), `"github": "amin"`) {
+		t.Fatalf("unknown field lost: %s", b)
 	}
 }
 

@@ -299,10 +299,11 @@ func (s Server) Raw() json.RawMessage { return s.raw }
 // Expander resolves ${VAR}, ${VAR:-default}, ${secret:NAME},
 // ${workspaceFolder} and ${userHome}.
 type Expander struct {
-	Env       func(string) (string, bool) // os.LookupEnv in production
-	Secrets   map[string]string           // credentials.json mcp_secrets
-	Workspace string
-	Home      string
+	Env          func(string) (string, bool) // os.LookupEnv in production
+	Secrets      map[string]string           // compatibility for callers with an in-memory map
+	SecretLookup func(string) (string, bool) // store lookup; resolved lazily
+	Workspace    string
+	Home         string
 }
 
 // NeedsError: a reference has no value (the server is not started).
@@ -323,6 +324,11 @@ func (x Expander) expand(s string) (string, error) {
 			return x.Home
 		case strings.HasPrefix(ref, "secret:"):
 			name := strings.TrimPrefix(ref, "secret:")
+			if x.SecretLookup != nil {
+				if v, ok := x.SecretLookup(name); ok && v != "" {
+					return v
+				}
+			}
 			if v, ok := x.Secrets[name]; ok && v != "" {
 				return v
 			}
