@@ -10,6 +10,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/tabbar"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // A hit map for tests: every click target the mouse code knows about in
@@ -209,6 +210,15 @@ func (m Model) sidebarTargets() []hitTarget {
 	var out []hitTarget
 	switch m.activity.Active() {
 	case activity.ViewFiles:
+		if m.explorer.HeaderChromeRows() > 0 {
+			if lines := strings.Split(m.renderSidebar(m.h), "\n"); len(lines) > 0 {
+				plain := ansi.Strip(lines[0])
+				if i := strings.LastIndex(plain, theme.GlyphMore.String()); i >= 0 {
+					col := ansi.StringWidth(plain[:i])
+					out = append(out, hitTarget{ID: "explorer:header:actions", Label: theme.GlyphMore.String(), X: x0 + col, Y: 0, W: 1, H: 1})
+				}
+			}
+		}
 		for y := 0; y < m.h; y++ {
 			if n, ok := m.explorer.VisibleAt(y); ok {
 				out = append(out, hitTarget{ID: explorerTargetID(n.Path), Label: n.Name, X: x0, Y: y, W: w, H: 1})
@@ -468,6 +478,13 @@ func (m Model) panelContentAt(x, y int) bool {
 func (m Model) sidebarTargetAt(x, y int) string {
 	switch m.activity.Active() {
 	case activity.ViewFiles:
+		if y == 0 {
+			for _, h := range m.sidebarTargets() {
+				if h.ID == "explorer:header:actions" && x+activity.Width == h.X {
+					return h.ID
+				}
+			}
+		}
 		if n, ok := m.explorer.VisibleAt(y); ok {
 			return explorerTargetID(n.Path)
 		}

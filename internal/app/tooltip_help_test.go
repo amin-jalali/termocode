@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/help"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
@@ -78,6 +79,7 @@ func TestHelpTopicsResolve(t *testing.T) {
 		}
 		topics = append(topics, topic)
 	}
+	topics = append(topics, tooltipHelp("welcome:card:0"), tooltipHelp("welcome:recent:x"), tooltipHelp("explorer:/tmp/file"))
 	for _, err := range help.CheckAll(topics) {
 		t.Error(err)
 	}
@@ -97,6 +99,39 @@ func TestHelpTopicsResolve(t *testing.T) {
 		if activityHelp[name] == "" {
 			t.Errorf("activity %s has no help topic", name)
 		}
+	}
+}
+
+func TestWelcomeAndExplorerTooltipKinds(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	m := welcomeModel(t)
+	if name, _ := m.tooltipLabel("welcome:card:0"); name != "Open file" {
+		t.Fatalf("welcome label = %q", name)
+	}
+	if got := m.helpTopicForFocus(); got != "getting-started/first-steps.md#1-open-a-project" {
+		t.Fatalf("welcome focus topic = %q", got)
+	}
+	m.showExp = true
+	n := m.explorerNodeForTarget(explorerTargetID(m.explorer.PrimaryRoot()))
+	if n == nil {
+		t.Fatal("workspace root not visible")
+	}
+	if name, _ := m.tooltipLabel(explorerTargetID(n.Path)); name != "Workspace" {
+		t.Fatalf("root label = %q", name)
+	}
+	m.showExp = true
+	m.activity.SetActive(activity.ViewFiles)
+	found := false
+	for _, h := range m.sidebarTargets() {
+		if h.ID == "explorer:header:actions" {
+			found = true
+			if name, _ := m.tooltipLabel(h.ID); name != "Explorer actions" {
+				t.Errorf("header label = %q", name)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("Explorer header action has no hover target")
 	}
 }
 

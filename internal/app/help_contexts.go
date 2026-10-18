@@ -135,6 +135,13 @@ func (m Model) helpTopicForFocus() string {
 	case isHTTPPath(m.editor.Path()):
 		return helpContexts["http-file"]
 	case m.welcomeShowing():
+		pane := m.editorPaneLayout()
+		rows := welcomeRows(pane.W, pane.H)
+		if m.welcomeFocus >= 0 && m.welcomeFocus < len(rows) {
+			if topic := tooltipHelp("welcome:" + rows[m.welcomeFocus].ID); topic != "" {
+				return topic
+			}
+		}
 		return helpContexts["welcome"]
 	}
 	return helpContexts["editor"]

@@ -184,6 +184,9 @@ func goldenCases() []goldenCase {
 		sc := HelpTooltip()
 		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
+	for _, sc := range []Scene{WelcomeHover(), ExplorerHover()} {
+		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
+	}
 	// The in-app guide at the Chat panel section, in both window sizes,
 	// light theme and ASCII icon mode (U21 CH-5).
 	{

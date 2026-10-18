@@ -170,6 +170,17 @@ func HelpViewer() Scene {
 	return Scene{Name: "help-viewer", Steps: WithEditor(Act("helpdemo"), Pause(700*time.Millisecond))}
 }
 
+// WelcomeHover is the START tile hover label on the welcome dashboard.
+func WelcomeHover() Scene {
+	return Scene{Name: "welcome-hover", KeepHover: true, Steps: []Step{HoverText("Open file"), Pause(900 * time.Millisecond)}}
+}
+
+// ExplorerHover is the fixed-kind hover label on a folder row. No file is
+// opened or revealed first: that loads async and made the frame flaky.
+func ExplorerHover() Scene {
+	return Scene{Name: "explorer-hover", KeepHover: true, Steps: []Step{Act("view:files"), Pause(900 * time.Millisecond), HoverText("assets"), Pause(900 * time.Millisecond)}}
+}
+
 // Scenes is the screenshot set for assets/screenshots (the shots command).
 func Scenes() []Scene {
 	scenes := []Scene{

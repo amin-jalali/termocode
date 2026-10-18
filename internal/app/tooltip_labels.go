@@ -1,6 +1,11 @@
 package app
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+
+	"github.com/amin-jalali/termocode/internal/explorer"
+)
 
 // tooltipSpec is the hover label of one kind of hit target.
 type tooltipSpec struct {
@@ -129,6 +134,44 @@ func tooltipSpecFor(id string) (tooltipSpec, bool) {
 
 // tooltipLabel is the name and key of hit target id ("" name = none).
 func (m Model) tooltipLabel(id string) (name, key string) {
+	if strings.HasPrefix(id, "welcome:card:") {
+		idx, err := strconv.Atoi(strings.TrimPrefix(id, "welcome:card:"))
+		if err == nil && idx >= 0 && idx < len(welcomeQuickActions()) {
+			return welcomeQuickActions()[idx].title, welcomeQuickActions()[idx].shortcut
+		}
+	}
+	if strings.HasPrefix(id, "welcome:") {
+		name := "Start page item"
+		switch {
+		case strings.HasPrefix(id, "welcome:recent:"):
+			name = "Recent file"
+		case strings.HasPrefix(id, "welcome:workspace:"):
+			name = "Workspace"
+		case strings.Contains(id, "view-all"):
+			name = "All recent files"
+		case strings.Contains(id, "browse-all"):
+			name = "All workspaces"
+		case strings.HasPrefix(id, "welcome:setup:"):
+			name = "Setup step"
+		}
+		return name, ""
+	}
+	if strings.HasPrefix(id, "explorer:") {
+		if id == "explorer:header:actions" {
+			return "Explorer actions", ""
+		}
+		if n := m.explorerNodeForTarget(id); n != nil {
+			for _, root := range m.explorer.Roots() {
+				if root == n.Path {
+					return "Workspace", ""
+				}
+			}
+			if n.IsDir {
+				return "Folder", ""
+			}
+			return "File", ""
+		}
+	}
 	if label, ok := strings.CutPrefix(id, "activity:"); ok {
 		key := ""
 		if label == "Explorer" {
@@ -144,6 +187,16 @@ func (m Model) tooltipLabel(id string) (name, key string) {
 		return s.name, m.paletteKey(s.palette)
 	}
 	return s.name, s.local
+}
+
+func (m Model) explorerNodeForTarget(id string) *explorer.Node {
+	path := strings.TrimPrefix(id, "explorer:")
+	for y := 0; y < m.h; y++ {
+		if n, ok := m.explorer.VisibleAt(y); ok && n.Path == path {
+			return n
+		}
+	}
+	return nil
 }
 
 // paletteKey is the main key of palette command id: the first key the
@@ -175,6 +228,15 @@ func (m Model) tooltipText(id string) string {
 
 // tooltipHelp is the guide topic of hit target id ("" = none).
 func tooltipHelp(id string) string {
+	if strings.HasPrefix(id, "welcome:card:") {
+		return "getting-started/first-steps.md#1-open-a-project"
+	}
+	if strings.HasPrefix(id, "welcome:") {
+		return "getting-started/first-steps.md#1-open-a-project"
+	}
+	if strings.HasPrefix(id, "explorer:") {
+		return "guides/editing.md#open-files"
+	}
 	if label, ok := strings.CutPrefix(id, "activity:"); ok {
 		return activityHelp[label]
 	}
