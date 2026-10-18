@@ -340,7 +340,7 @@ func (m Model) welcomeTargets(pane editorPane) []hitTarget {
 	m.publishSetupCard()
 	view := renderWelcome(pane.W, pane.H, m.welcomeFocus, m.editorHasKeys())
 	var out []hitTarget
-	add := func(id string, row, c0, c1 int) {
+	add := func(id string, row, c0, c1, rows int) {
 		if row < 0 || row >= pane.H {
 			return // the page is taller than the pane: clipped, not drawn
 		}
@@ -353,10 +353,10 @@ func (m Model) welcomeTargets(pane editorPane) []hitTarget {
 			return
 		}
 		out = append(out, hitTarget{ID: id, Label: cellText(view, row, c0, c1),
-			X: pane.X + c0, Y: pane.Top + row, W: c1 - c0, H: 1})
+			X: pane.X + c0, Y: pane.Top + row, W: c1 - c0, H: min(rows, pane.H-row)})
 	}
 	for _, h := range welcomeRows(pane.W, pane.H) {
-		add("welcome:"+h.ID, h.Row, h.ColStart, h.ColEnd)
+		add("welcome:"+h.ID, h.Row, h.ColStart, h.ColEnd, h.height())
 	}
 	return out
 }

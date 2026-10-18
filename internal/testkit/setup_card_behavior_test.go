@@ -181,8 +181,8 @@ func TestSetupCardAutoDoneStaysAfterRestart(t *testing.T) {
 // recommended choice first.
 func TestSetupCardIconsRowOpensChooser(t *testing.T) {
 	d, _ := setupDriver(t, fakeUbuntuMono)
-	for i := 0; i < 6; i++ { // past the six START rows
-		d.Key("down")
+	for i := 0; i < 6; i++ { // past the six START tiles
+		d.Key("tab")
 	}
 	d.Key("enter")
 	if !d.WaitForText("recommended", time.Second) {
@@ -261,8 +261,8 @@ func TestSetupCardAIStepOpensProviderSetup(t *testing.T) {
 // "Skip for now".
 func TestSetupCardAISkipByKeyboard(t *testing.T) {
 	d, _ := setupDriver(t, fakeUbuntuMono)
-	for i := 0; i < 7; i++ { // six START rows, then Icons
-		d.Key("down")
+	for i := 0; i < 7; i++ { // six START tiles, then Icons
+		d.Key("tab")
 	}
 	d.Key("enter")
 	if !d.WaitForText("Skip for now", time.Second) {

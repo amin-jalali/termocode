@@ -34,8 +34,11 @@ func checkWelcomeHits(t *testing.T, m Model, stage string) Model {
 	titled := map[int]bool{} // cards whose title row is in the hit map
 	for _, h := range qh {
 		x, y := pane.X+h.ColStart+2, pane.Top+h.Row
-		if label := cellText(frame, y, pane.X+h.ColStart, pane.X+h.ColEnd); strings.Contains(label, actions[h.Index].title) {
-			titled[h.Index] = true
+		// A tile is several lines tall: its title is on one of them.
+		for k := 0; k < 4; k++ {
+			if label := cellText(frame, y+k, pane.X+h.ColStart, pane.X+h.ColEnd); strings.Contains(label, actions[h.Index].title) {
+				titled[h.Index] = true
+			}
 		}
 		m = hoverAt(m, x, y)
 		if m.welcomeFocus != h.Index {

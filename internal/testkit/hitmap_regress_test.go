@@ -30,20 +30,20 @@ func TestActivityBarLastRowClick(t *testing.T) {
 func TestZenWelcomeCardClick(t *testing.T) {
 	d := New(t, Options{W: 120, H: 40})
 	d.Palette("zen-mode")
-	for i, title := range []string{"Open file", "Open workspace", "Clone repository", "Find in files", "Command palette", "New terminal"} {
+	for i, title := range []string{"Open file", "Command palette", "Find in files", "New terminal", "Open workspace", "Clone repository"} {
 		x, y, ok := find(d, title)
 		if !ok {
 			t.Fatalf("no %q row:\n%s", title, screen(d))
 		}
-		// The row starts 3 cells before the title (the cursor bar column).
-		x -= 3
+		// The tile starts 6 cells before the title; click 2 cells inside it.
+		x -= 4
 		want := "welcome:card:" + strconv.Itoa(i)
 		if got := d.Model().ProbeClick(x, y); got != want {
 			t.Errorf("a click on the %q card at (%d,%d) reaches %q, want %q", title, x, y, got, want)
 		}
 	}
 	x, y, _ := find(d, "Command palette")
-	d.Click(x-3, y)
+	d.Click(x-4, y)
 	if !strings.Contains(screen(d), "Command Palette") {
 		t.Errorf("the command palette did not open:\n%s", screen(d))
 	}

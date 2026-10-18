@@ -149,7 +149,8 @@ func TestWelcomeCardHoverWithAIPanel(t *testing.T) {
 	}
 	d.Move(x+1, y)
 	line := strings.Split(screen(d), "\n")[y]
-	if !strings.Contains(line, "▎  Clone repository") && !strings.Contains(line, ">  Clone repository") {
+	// The hovered tile has the accent edge (▌, or > in ASCII) on its lines.
+	if !strings.Contains(line, "▌") && !strings.Contains(line, ">  v  Clone repository") {
 		t.Fatalf("hovered card not lit, row %d: %q\n%s", y, line, screen(d))
 	}
 }
@@ -203,7 +204,7 @@ func TestWelcomeOpenShellClickWithAIPanel(t *testing.T) {
 	}
 }
 
-// The keyboard reaches the recent files: ↓ past the six START rows lands
+// The keyboard reaches the recent files: Tab past the six START tiles lands
 // on the newest file, Enter opens it.
 func TestWelcomeKeyboardOpensRecentFile(t *testing.T) {
 	if testing.Short() {
@@ -212,7 +213,7 @@ func TestWelcomeKeyboardOpensRecentFile(t *testing.T) {
 	d := New(t, Options{W: 160, H: 40, Nvim: true, Files: textFiles(),
 		Setup: func(t testing.TB, dir string) { writeRecents(t, dir, "b.txt", "a.txt") }})
 	for i := 0; i < 6; i++ {
-		d.Key("down")
+		d.Key("tab")
 	}
 	d.Key("enter")
 	if !waitTabs(d, "b.txt") {

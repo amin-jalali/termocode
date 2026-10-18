@@ -531,7 +531,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 		edPaneW, editorH := pane.W, pane.H
 		m.publishSetupCard()
 		for i, hit := range welcomeRows(edPaneW, editorH) {
-			if localY != hit.Row || localX < hit.ColStart || localX >= hit.ColEnd {
+			if localY < hit.Row || localY >= hit.Row+hit.height() || localX < hit.ColStart || localX >= hit.ColEnd {
 				continue
 			}
 			// Hover and click move the one cursor to the row under the
@@ -682,10 +682,13 @@ func (m Model) handleWelcomeKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 		m.welcomeFocus = 0
 	}
 	switch msg.String() {
-	case "left", "shift+tab", "up":
+	case "up", "down":
+		m.welcomeFocus = welcomeStep(m.welcomeFocus, n, msg.String() == "down", welcomeTileCount(rows), welcomeLayoutHits(pane.W, pane.H).tileCols)
+		return m, nil, true
+	case "left", "shift+tab":
 		m.welcomeFocus = (m.welcomeFocus - 1 + n) % n
 		return m, nil, true
-	case "right", "tab", "down":
+	case "right", "tab":
 		m.welcomeFocus = (m.welcomeFocus + 1) % n
 		return m, nil, true
 	case "home":
@@ -699,6 +702,49 @@ func (m Model) handleWelcomeKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 		return newM, cmd, true
 	}
 	return m, nil, false
+}
+
+// welcomeTileCount is how many leading rows are START tiles.
+func welcomeTileCount(rows []welcomeRowHit) int {
+	n := 0
+	for _, r := range rows {
+		if r.H == 0 {
+			break
+		}
+		n++
+	}
+	return n
+}
+
+// welcomeStep moves the cursor one row up or down among n rows. The first
+// tiles rows are a grid cols wide: up / down move a whole tile row (and
+// keep the column); leaving the grid goes to the neighbouring list row.
+func welcomeStep(cur, n int, down bool, tiles, cols int) int {
+	if tiles == 0 || cols < 2 {
+		if down {
+			return (cur + 1) % n
+		}
+		return (cur - 1 + n) % n
+	}
+	switch {
+	case cur >= tiles && down:
+		return (cur + 1) % n
+	case cur >= tiles:
+		if cur == tiles {
+			return tiles - cols // the last tile row, first column
+		}
+		return cur - 1
+	case down:
+		if cur+cols < tiles {
+			return cur + cols
+		}
+		return tiles % n // the first list row (the top when there is none)
+	default:
+		if cur-cols >= 0 {
+			return cur - cols
+		}
+		return n - 1
+	}
 }
 
 // activateWelcomeRow runs start page row id (welcomeRowHit.ID).

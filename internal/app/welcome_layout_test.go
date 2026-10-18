@@ -155,6 +155,20 @@ func TestWelcome_NoSecondAccent(t *testing.T) {
 		if abs(r-int(accent.R)) <= 2 && abs(g-int(accent.G)) <= 2 && abs(b-int(accent.B)) <= 2 {
 			continue
 		}
+		// The START tiles' glyphs carry their own colour.
+		isTile := false
+		for _, a := range welcomeQuickActions() {
+			hx := string(theme.Readable(a.iconTok, theme.BgEditor, 3.0))
+			tr, _ := strconv.ParseInt(hx[1:3], 16, 32)
+			tg, _ := strconv.ParseInt(hx[3:5], 16, 32)
+			tb, _ := strconv.ParseInt(hx[5:7], 16, 32)
+			if abs(r-int(tr)) <= 2 && abs(g-int(tg)) <= 2 && abs(b-int(tb)) <= 2 {
+				isTile = true
+			}
+		}
+		if isTile {
+			continue
+		}
 		t.Errorf("non-grey foreground %v on the start page", m[1:])
 	}
 }
@@ -163,7 +177,7 @@ func TestWelcome_NoSecondAccent(t *testing.T) {
 // tokens (a raw hex would not follow the theme).
 func TestWelcome_NoRawHex(t *testing.T) {
 	raw := regexp.MustCompile(`Color\("#`)
-	for _, f := range []string{"welcome.go", "welcome_row.go", "setup_card_render.go"} {
+	for _, f := range []string{"welcome.go", "welcome_row.go", "welcome_tiles.go", "setup_card_render.go"} {
 		b, err := os.ReadFile(f)
 		if err != nil {
 			t.Fatal(err)

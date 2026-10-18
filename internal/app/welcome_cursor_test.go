@@ -32,7 +32,8 @@ func pressKey(m Model, k tea.KeyMsg) Model {
 }
 
 // cursorLine is the plain text of the editor-pane row that carries the
-// cursor bar.
+// cursor bar (▎), or of the focused tile's title line (▌ edge, text up
+// to the tile's right border).
 func cursorLine(t *testing.T, m Model) string {
 	t.Helper()
 	pane := m.editorPaneLayout()
@@ -44,6 +45,18 @@ func cursorLine(t *testing.T, m Model) string {
 		cell := strings.TrimLeft(ansi.Strip(ansi.Cut(line, pane.X, pane.X+pane.W)), " ")
 		if strings.HasPrefix(cell, "▎") {
 			found = append(found, strings.TrimSpace(strings.TrimPrefix(cell, "▎")))
+		}
+	}
+	if len(found) == 0 {
+		for y, line := range strings.Split(m.View(), "\n") {
+			if y < pane.Top || y >= pane.Top+pane.H {
+				continue
+			}
+			cell := ansi.Strip(ansi.Cut(line, pane.X, pane.X+pane.W))
+			if _, after, ok := strings.Cut(cell, "▌"); ok {
+				after, _, _ = strings.Cut(after, "│")
+				return strings.TrimSpace(after) // the first ▌ line is the title line
+			}
 		}
 	}
 	if len(found) != 1 {
@@ -58,10 +71,13 @@ func TestWelcome_CursorCyclesAllRows(t *testing.T) {
 	m := welcomeModel(t)
 	down := tea.KeyMsg{Type: tea.KeyDown}
 	up := tea.KeyMsg{Type: tea.KeyUp}
-	if got := cursorLine(t, m); !strings.HasPrefix(got, "Open file") {
+	if got := cursorLine(t, m); !strings.Contains(got, "Open file") {
 		t.Fatalf("start: cursor on %q", got)
 	}
-	want := []string{"Open workspace", "Clone repository", "Find in files", "Command palette", "New terminal",
+	// Tab walks every row in reading order (the arrows move through the
+	// tile grid, see welcome_tiles_test.go).
+	down = tea.KeyMsg{Type: tea.KeyTab}
+	want := []string{"Command palette", "Find in files", "New terminal", "Open workspace", "Clone repository",
 		"file-06.go", "file-05.go", "file-04.go", "file-03.go", "file-02.go", "All 7 recent files",
 		"welcome-ws-1", "welcome-ws-0", "All workspaces", "Open file"}
 	for i, w := range want {
@@ -75,7 +91,7 @@ func TestWelcome_CursorCyclesAllRows(t *testing.T) {
 		t.Fatalf("up from the top: cursor on %q, want the last row", got)
 	}
 	m = pressKey(m, tea.KeyMsg{Type: tea.KeyHome})
-	if got := cursorLine(t, m); !strings.HasPrefix(got, "Open file") {
+	if got := cursorLine(t, m); !strings.Contains(got, "Open file") {
 		t.Fatalf("Home: cursor on %q", got)
 	}
 	m = pressKey(m, tea.KeyMsg{Type: tea.KeyEnd})
