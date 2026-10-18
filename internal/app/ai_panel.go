@@ -337,6 +337,7 @@ type aiTranscriptCache struct {
 	configured  bool
 	label       string
 	restoreGen  int
+	runGen      int
 	act         aiActivityView
 	msgs        []ai.StoredMessage
 	lines       []aiLine
@@ -347,7 +348,8 @@ type aiTranscriptCache struct {
 // matches reports whether the cache is valid for this state.
 func (c *aiTranscriptCache) matches(s *aiState, width int, rk theme.RenderKey, resizing bool, act aiActivityView) bool {
 	if !c.ok || c.width != width || c.rk != rk || c.rtl != rtlMode || c.resizing != resizing || c.streaming != s.streaming || c.act != act ||
-		c.hasProvider != (s.provider != nil) || len(c.msgs) != len(s.conv.Messages) || c.restoreGen != s.restoreGen {
+		c.hasProvider != (s.provider != nil) || len(c.msgs) != len(s.conv.Messages) || c.restoreGen != s.restoreGen ||
+		c.runGen != s.runGen {
 		return false
 	}
 	if s.provider != nil && (c.configured != s.provider.Configured() || c.label != s.modelLabel()) {
@@ -411,7 +413,7 @@ func (m Model) aiTranscriptCached(width int) *aiTranscriptCache {
 		s.aiKeepSelection(c.msgs, c.width, width)
 	}
 	*c = aiTranscriptCache{ok: true, width: width, rk: rk, rtl: rtlMode, resizing: resizing, streaming: s.streaming, act: act,
-		hasProvider: s.provider != nil, restoreGen: s.restoreGen, msgs: append([]ai.StoredMessage(nil), s.conv.Messages...),
+		hasProvider: s.provider != nil, restoreGen: s.restoreGen, runGen: s.runGen, msgs: append([]ai.StoredMessage(nil), s.conv.Messages...),
 		lines: lines, rows: make([]string, len(lines))}
 	if s.provider != nil {
 		c.configured, c.label = s.provider.Configured(), s.modelLabel()
@@ -507,6 +509,10 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 				out = append(out, aiRightChip(aiAttachGlyph()+" "+aiContextLabel(msg.Context), width))
 			}
 		case ai.StoredAssistant:
+			if msg.Run != nil { // a pipeline run: step cards (ai_run_cards.go)
+				out = append(out, m.aiRunLines(i, msg, width, inner)...)
+				break
+			}
 			out = append(out, aiLine{sel: aiSel{ok: true, join: "\n"}})
 			text := aiCleanText(msg.Text)
 			streaming := s.streaming && i == last
@@ -647,11 +653,20 @@ func aiCopyLabel() string {
 // aiAnswerHeader is the "✦ AI · model" line above answer msgIdx, with a
 // Copy button (the whole answer) on the right once it is done.
 func (m Model) aiAnswerHeader(width, msgIdx int, done bool) aiLine {
+	label := ""
+	if s := m.ai; s != nil && s.provider != nil {
+		label = s.modelLabel()
+	}
+	return m.aiAnswerHeaderModel(width, msgIdx, done, label)
+}
+
+// aiAnswerHeaderModel is aiAnswerHeader naming model ("" = none).
+func (m Model) aiAnswerHeaderModel(width, msgIdx int, done bool, model string) aiLine {
 	bg := theme.Bg(theme.BgPanel)
 	row := bg.Render(strings.Repeat(" ", aiIndent)) +
 		theme.FgBg(theme.AIAccent, theme.BgPanel).Bold(true).Render(aiSpark()+" AI")
-	if s := m.ai; s != nil && s.provider != nil {
-		row += theme.FgBg(theme.TextDim, theme.BgPanel).Render(" · " + s.modelLabel())
+	if model != "" {
+		row += theme.FgBg(theme.TextDim, theme.BgPanel).Render(" · " + model)
 	}
 	l := aiLine{styled: row, msg: msgIdx + 1}
 	if !done {
@@ -978,6 +993,11 @@ func (m *Model) routeAIPanelKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 	}
 	switch msg.String() {
 	case "esc":
+		if s.cardSel != "" { // drop the step card selection first
+			s.cardSel = ""
+			s.runGen++
+			return nil, true
+		}
 		if _, _, ok := s.sel.rng(); ok {
 			s.sel.clear() // the first Esc drops the selection
 			return nil, true
@@ -989,6 +1009,10 @@ func (m *Model) routeAIPanelKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		m.focus = FocusEditor
 		return nil, true
 	case "enter":
+		if s.cardSel != "" && len(s.input) == 0 { // Enter toggles the selected step card
+			m.aiToggleCard(s.cardSel)
+			return nil, true
+		}
 		return m.submitAIInput(), true
 	case "shift+enter", "alt+enter", "ctrl+j":
 		m.aiInsert([]rune{'\n'})
@@ -1061,7 +1085,12 @@ func (m *Model) routeAIPanelKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		return m.aiCancelAll(), true
 	case "ctrl+n":
 		return m.newAIChat(), true
-	case "tab", "shift+tab":
+	case "tab", "shift+tab": // select a step card (Enter toggles it)
+		dir := 1
+		if msg.String() == "shift+tab" {
+			dir = -1
+		}
+		m.aiCycleCard(dir)
 		return nil, true
 	}
 	if msg.Alt {
@@ -1288,6 +1317,14 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 		return nil
 	case id == "review-open":
 		return m.showAIReview()
+	case strings.HasPrefix(id, "step:"):
+		m.aiToggleCard(id)
+		return nil
+	case strings.HasPrefix(id, "run-retry:"):
+		if i, err := strconv.Atoi(strings.TrimPrefix(id, "run-retry:")); err == nil {
+			return m.aiRetryRun(i)
+		}
+		return nil
 	case strings.HasPrefix(id, "undo-turn:"):
 		if i, err := strconv.Atoi(strings.TrimPrefix(id, "undo-turn:")); err == nil {
 			return m.aiUndoTurn(i)

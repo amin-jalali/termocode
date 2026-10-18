@@ -30,6 +30,49 @@ type StoredMessage struct {
 	// Images are paths of image files sent with a user message. Only the
 	// path is stored; the file is read again for every request.
 	Images []string `json:"images,omitempty"`
+	// Run and Steps are set on the assistant message of an agent
+	// pipeline run (U20): the run's summary and one card per step. A
+	// plain chat turn has neither.
+	Run   *StoredRun   `json:"run,omitempty"`
+	Steps []StoredStep `json:"steps,omitempty"`
+}
+
+// Run states (StoredRun.State).
+const (
+	RunStateRunning     = "running"
+	RunStateDone        = "done"
+	RunStateFailed      = "failed"
+	RunStateCancelled   = "cancelled"
+	RunStateInterrupted = "interrupted" // termocode stopped while it ran
+)
+
+// StoredRun is the summary of one pipeline run.
+type StoredRun struct {
+	ID        string `json:"id"`
+	Profile   string `json:"profile,omitempty"`
+	State     string `json:"state"`
+	ElapsedMs int64  `json:"elapsed_ms,omitempty"`
+}
+
+// StoredStep is one step card of a pipeline run.
+type StoredStep struct {
+	ID       string `json:"id"`
+	Title    string `json:"title,omitempty"`
+	Slot     string `json:"slot,omitempty"`
+	Model    string `json:"model,omitempty"`
+	Category string `json:"category,omitempty"`
+	// Text is the step's final text (while it runs: the end of what it
+	// wrote so far).
+	Text      string   `json:"text,omitempty"`
+	Tools     []string `json:"tools,omitempty"` // tool rows ("⚙ Read a.go → 10 lines")
+	ElapsedMs int64    `json:"elapsed_ms,omitempty"`
+	Usage     *Usage   `json:"usage,omitempty"`
+	// Cost in dollars and context use in percent; nil when unknown.
+	Cost       *float64 `json:"cost,omitempty"`
+	ContextPct *float64 `json:"context_pct,omitempty"`
+	Files      int      `json:"files,omitempty"` // files the step changed
+	Error      string   `json:"error,omitempty"`
+	State      string   `json:"state,omitempty"` // an agentdag state
 }
 
 // Conversation is one persisted chat. Port of mobocode's chat_store.dart,
@@ -40,6 +83,9 @@ type Conversation struct {
 	Title       string          `json:"title"`
 	Messages    []StoredMessage `json:"messages"`
 	UpdatedAtMs int64           `json:"updated_at_ms"`
+	// Folded holds the user's fold choices on step cards by card id
+	// ("step:<run>:<step>"; true = folded).
+	Folded map[string]bool `json:"folded,omitempty"`
 }
 
 const (

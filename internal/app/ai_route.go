@@ -20,6 +20,8 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onAIInlineResult(msg), true
 	case aiChatEventMsg:
 		return m.onAIChatEvent(msg), true
+	case aiRunEventMsg:
+		return m.onAIRunEvent(msg), true
 	case aiChatConfirmMsg:
 		return m.onAIChatConfirm(msg), true
 	case aiIDECallMsg:

@@ -11,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/confirm"
@@ -40,6 +41,8 @@ type aiChatConfirmMsg struct {
 
 type aiChatDoneMsg struct {
 	gen uint64
+	// run is the final event of a pipeline run (nil for a plain turn).
+	run *agentrun.Event
 }
 
 // aiPendingConfirm is a tool call waiting for the user.
@@ -77,6 +80,12 @@ func aiWorkspaceRoot() string {
 // turn's assistant message, so after a step-limit pause "continue" knows
 // what was done already.
 func (m *Model) aiChatHistory(system string) []ai.Message {
+	return m.aiChatHistoryN(system, len(m.aiS().conv.Messages))
+}
+
+// aiChatHistoryN is aiChatHistory of the first n stored messages. A
+// pipeline run's step tool lines count as the turn's tools.
+func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 	s := m.aiS()
 	msgs := []ai.Message{{Role: ai.RoleSystem, Content: system}}
 	var tools, text []string
@@ -93,7 +102,7 @@ func (m *Model) aiChatHistory(system string) []ai.Message {
 		}
 		tools, text = nil, nil
 	}
-	for _, sm := range s.conv.Messages {
+	for _, sm := range s.conv.Messages[:n] {
 		switch sm.Role {
 		case ai.StoredUser:
 			flush()
@@ -117,6 +126,9 @@ func (m *Model) aiChatHistory(system string) []ai.Message {
 		case ai.StoredTool:
 			tools = append(tools, sm.Text)
 		case ai.StoredAssistant:
+			for _, st := range sm.Steps {
+				tools = append(tools, st.Tools...)
+			}
 			text = append(text, sm.Text)
 		}
 	}
@@ -145,10 +157,13 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 		tools = m.aiReviewTools(tools, root, call)
 	}
 	tools = append(tools, m.aiHTTPTools(root, call, tools)...) // HC-9: HTTP client
-	return aiRedactResults(tools) // known secrets (.env passwords, API keys) never reach the model
+	return aiRedactResults(tools)                              // known secrets (.env passwords, API keys) never reach the model
 }
 
 // sendAIChat appends a user message and starts a streamed agent turn.
+// The active profile decides how: one step is the plain chat turn below
+// (the default profile is exactly today's chat); more steps run as a
+// pipeline (ai_runs.go).
 func (m *Model) sendAIChat(text string) tea.Cmd {
 	if c, ok := m.aiReady(); !ok {
 		return c
@@ -157,19 +172,19 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	if s.streaming {
 		return m.aiInfo("AI is still answering — Ctrl+C to stop")
 	}
-	var ctxParts, images []string
-	for _, a := range s.attachments {
-		if a.Image != "" {
-			images = append(images, a.Image)
-			ctxParts = append(ctxParts, "Attached image "+a.Label+" (sent as an image).")
-			continue
-		}
-		ctxParts = append(ctxParts, "Attached "+a.Label+":\n```\n"+a.Text+"\n```")
+	prof := s.activeProfile()
+	if len(prof.Steps) > 1 {
+		return m.startAIRun(text, prof)
 	}
-	s.attachments = nil
+	step := prof.Run("").Nodes[0]
+	slot, err := s.resolveSlot(step.Slot)
+	if err != nil {
+		return m.aiProfileProblem(prof.Name, err)
+	}
+	ctxText, images := s.takeAttachments()
 	s.turnMsg = len(s.conv.Messages) // restore points key on the turn's user message
 	s.conv.Messages = append(s.conv.Messages,
-		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: strings.Join(ctxParts, "\n\n"), Images: images},
+		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Images: images},
 		ai.StoredMessage{Role: ai.StoredAssistant},
 	)
 	s.scroll = 0
@@ -180,12 +195,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 
 	root := aiWorkspaceRoot()
 	call := newAIIDECaller(gen, ch)
-	tools := m.aiChatTools(root, call)
-	native := s.provider.SupportsTools()
-	base := aiChatSystemPrompt + "\nWorkspace root: " + root + m.aiServicesPromptLine(root)
-	if p := m.editor.Path(); p != "" {
-		base += "\nThe open file is: " + p
-	}
+	tools := aiFilterTools(m.aiChatTools(root, call), step.Tools)
+	native := slot.p.SupportsTools()
+	base := m.aiChatBasePrompt(root) + aiStepSystem(step.System)
 	history := m.aiChatHistory(ai.SystemPrompt(base, tools, native))
 	mcpTools := m.aiMCPTurn(gen, ch) // MCP servers' tools, built on the goroutine
 	mcpLines := ""
@@ -193,10 +205,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		mcpLines = m.mcpPromptLines() // "GitHub is connected as … (read only)."
 	}
 
-	auto := map[string]bool{}
-	for _, c := range s.settings.AutoApprove {
-		auto[c] = true
-	}
+	auto := s.autoApproveSet()
 	ctx, cancel := context.WithCancel(context.Background())
 	s.chatCancel = cancel
 	s.streaming = true
@@ -209,39 +218,18 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		}
 	}
 	agent := &ai.Agent{
-		Provider:    s.provider,
+		Provider:    slot.p,
 		Tools:       tools,
 		Native:      native,
 		AutoApprove: auto,
 		MaxSteps:    s.settings.MaxSteps, // 0: ai.DefaultMaxSteps
 		BeforeCalls: aiBeforeCalls(root, call),
-		Confirm: func(ctx context.Context, t ai.Tool, human string) bool {
-			reply := make(chan bool, 1)
-			select {
-			case ch <- aiChatConfirmMsg{gen: gen, tool: t, human: human, reply: reply, ch: ch}:
-			case <-ctx.Done():
-				return false
-			}
-			select {
-			case ok := <-reply:
-				// "Always allow" saved the class before replying: it
-				// applies to the rest of this turn too (auto is only
-				// read on this goroutine).
-				if ok && t.Class != "" {
-					if p, err := ai.ConfigPath(); err == nil && contains(ai.LoadSettings(p).AutoApprove, t.Class) {
-						auto[t.Class] = true
-					}
-				}
-				return ok
-			case <-ctx.Done():
-				return false
-			}
-		},
+		Confirm:     aiChatConfirmFunc(gen, ch, auto),
 	}
 	go func() {
 		defer cancel()
 		if mcpTools != nil {
-			if extra := mcpTools(ctx); len(extra) > 0 {
+			if extra := aiFilterTools(mcpTools(ctx), step.Tools); len(extra) > 0 {
 				agent.Tools = append(agent.Tools, extra...)
 				b := base
 				if mcpLines != "" {
@@ -255,6 +243,68 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		close(ch)
 	}()
 	return waitAIChat(ch)
+}
+
+// takeAttachments returns the attachments as the user message's context
+// and image paths, and clears them.
+func (s *aiState) takeAttachments() (string, []string) {
+	var ctxParts, images []string
+	for _, a := range s.attachments {
+		if a.Image != "" {
+			images = append(images, a.Image)
+			ctxParts = append(ctxParts, "Attached image "+a.Label+" (sent as an image).")
+			continue
+		}
+		ctxParts = append(ctxParts, "Attached "+a.Label+":\n```\n"+a.Text+"\n```")
+	}
+	s.attachments = nil
+	return strings.Join(ctxParts, "\n\n"), images
+}
+
+// aiChatBasePrompt is the chat's system prompt before the tool protocol.
+func (m *Model) aiChatBasePrompt(root string) string {
+	base := aiChatSystemPrompt + "\nWorkspace root: " + root + m.aiServicesPromptLine(root)
+	if p := m.editor.Path(); p != "" {
+		base += "\nThe open file is: " + p
+	}
+	return base
+}
+
+// autoApproveSet is ai_auto_approve as a set (one per agent: "Always
+// allow" adds to it while the agent runs).
+func (s *aiState) autoApproveSet() map[string]bool {
+	auto := map[string]bool{}
+	for _, c := range s.settings.AutoApprove {
+		auto[c] = true
+	}
+	return auto
+}
+
+// aiChatConfirmFunc asks the user through the chat channel to allow a
+// mutating tool call. auto is the agent's auto-approve set: "Always
+// allow" adds the class for the rest of the agent's turn (it is only
+// read on the agent's goroutine).
+func aiChatConfirmFunc(gen uint64, ch chan tea.Msg, auto map[string]bool) ai.ConfirmFunc {
+	return func(ctx context.Context, t ai.Tool, human string) bool {
+		reply := make(chan bool, 1)
+		select {
+		case ch <- aiChatConfirmMsg{gen: gen, tool: t, human: human, reply: reply, ch: ch}:
+		case <-ctx.Done():
+			return false
+		}
+		select {
+		case ok := <-reply:
+			// "Always allow" saved the class before replying.
+			if ok && t.Class != "" {
+				if p, err := ai.ConfigPath(); err == nil && contains(ai.LoadSettings(p).AutoApprove, t.Class) {
+					auto[t.Class] = true
+				}
+			}
+			return ok
+		case <-ctx.Done():
+			return false
+		}
+	}
 }
 
 // onAIChatEvent applies one streamed agent event to the transcript.
@@ -376,9 +426,12 @@ func (m *Model) onAIChatDone(msg aiChatDoneMsg) tea.Cmd {
 	if msg.gen != s.chatGen {
 		return nil
 	}
+	if msg.run != nil {
+		m.finishAIRun(*msg.run)
+	}
 	s.streaming = false
 	s.chatCancel = nil
-	if n := len(s.conv.Messages); n > 0 && s.conv.Messages[n-1].Role == ai.StoredAssistant && strings.TrimSpace(s.conv.Messages[n-1].Text) == "" {
+	if n := len(s.conv.Messages); n > 0 && s.conv.Messages[n-1].Role == ai.StoredAssistant && s.conv.Messages[n-1].Run == nil && strings.TrimSpace(s.conv.Messages[n-1].Text) == "" {
 		s.conv.Messages = s.conv.Messages[:n-1]
 	}
 	if err := s.store.Save(&s.conv); err != nil {
@@ -414,6 +467,7 @@ func (s *aiState) restoreAIChat() {
 		return
 	}
 	if c, err := s.store.Load(sess.AILastChat); err == nil {
+		aiMarkInterrupted(&c)
 		s.conv = c
 		s.scroll = sess.AIChatScroll
 	}
@@ -458,6 +512,7 @@ func (m *Model) newAIChat() tea.Cmd {
 	}
 	s.chatGen++
 	s.streaming = false
+	s.run = nil
 	s.conv = ai.NewConversation()
 	s.attachments = nil
 	s.scroll = 0
@@ -508,6 +563,8 @@ func (m *Model) onAIHistoryPicked(id string) tea.Cmd {
 	}
 	s.chatGen++
 	s.streaming = false
+	s.run = nil
+	aiMarkInterrupted(&c)
 	s.conv = c
 	s.scroll = 0
 	s.restored = true

@@ -6,16 +6,16 @@ package ai
 type Usage struct {
 	// Model is the id the provider answered with (it may carry a date
 	// suffix, e.g. gpt-4.1-mini-2025-04-14); "" when it did not say.
-	Model      string
-	Input      int // prompt tokens read at the full price
-	Output     int // generated tokens (thinking included)
-	CacheRead  int // prompt tokens read from the cache
-	CacheWrite int // prompt tokens written to the cache
+	Model      string `json:"model,omitempty"`
+	Input      int    `json:"input,omitempty"`       // prompt tokens read at the full price
+	Output     int    `json:"output,omitempty"`      // generated tokens (thinking included)
+	CacheRead  int    `json:"cache_read,omitempty"`  // prompt tokens read from the cache
+	CacheWrite int    `json:"cache_write,omitempty"` // prompt tokens written to the cache
 	// Requests is how many requests the counts cover.
-	Requests int
+	Requests int `json:"requests,omitempty"`
 	// PeakContext is the biggest prompt of one request
 	// (Input + CacheRead + CacheWrite): the context window use.
-	PeakContext int
+	PeakContext int `json:"peak_context,omitempty"`
 }
 
 // Add returns u + v. A nil side counts as nothing; nil + nil is nil. The

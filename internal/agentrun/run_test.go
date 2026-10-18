@@ -520,3 +520,61 @@ func TestStartRejectsBadRun(t *testing.T) {
 		t.Error("no Build")
 	}
 }
+
+// Spec (AP-4 retry from step): a completed node with a saved output does
+// not run again; its dependents get the saved output as input.
+func TestRetryFromStepUsesSavedOutputs(t *testing.T) {
+	h := newHarness(map[string]*fakeProv{
+		"a": {replies: []ai.Chunk{{Delta: "new a"}}},
+		"b": {replies: []ai.Chunk{{Delta: "fixed"}}},
+	})
+	r := chain("a", "b")
+	r.Nodes[0].State = agentdag.StateCompleted
+	o := h.options(1)
+	o.Outputs = map[string]string{"a": "saved review"}
+	run, err := Start(context.Background(), r, o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	end := wait(t, run)
+	if end.Kind != RunDone || end.Output != "fixed" {
+		t.Fatalf("end %+v", end)
+	}
+	if n := h.provs["a"].callCount(); n != 0 {
+		t.Errorf("a ran again (%d calls)", n)
+	}
+	if got := h.input("b"); !strings.Contains(got, "### Output of step \"A\"\nsaved review") {
+		t.Errorf("b input %q", got)
+	}
+	if k := h.kinds("a"); len(k) != 0 {
+		t.Errorf("a events %v", k)
+	}
+}
+
+// Spec (AP-4 review locker): every node's tools see the run's review
+// locker in their context, so file reviews of parallel nodes take turns.
+func TestReviewLockerInToolContext(t *testing.T) {
+	call := ai.ToolCall{ID: "c1", Name: "edit"}
+	h := newHarness(map[string]*fakeProv{
+		"a": {replies: []ai.Chunk{{ToolCalls: []ai.ToolCall{call}}, {Delta: "done"}}},
+	})
+	var lk sync.Mutex
+	var got sync.Locker
+	h.tools = []ai.Tool{{Name: "edit", Run: func(ctx context.Context, _ map[string]any) (string, error) {
+		got = ReviewLocker(ctx)
+		return "ok", nil
+	}}}
+	o := h.options(1)
+	o.Review = &lk
+	run, err := Start(context.Background(), chain("a"), o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wait(t, run)
+	if got != &lk {
+		t.Errorf("tool saw locker %v", got)
+	}
+	if ReviewLocker(context.Background()) != nil {
+		t.Error("a plain context has no locker")
+	}
+}

@@ -100,6 +100,14 @@ func AIChatAnswer() Scene {
 	return Scene{Name: "ai-chat-answer", Env: aiEnv, Steps: WithEditor(Act("palette:ai-open-chat"), Act("aidemo"), Pause(600*time.Millisecond))}
 }
 
+// AIPipeline is a two-step agent pipeline run (the built-in "review"
+// profile on scripted models, no network): "running" while the second
+// step writes, "done" with the folded cards and the run row (U20 AP-4).
+func AIPipeline(variant string) Scene {
+	return Scene{Name: "ai-pipeline-" + variant, Env: aiEnv,
+		Steps: WithEditor(Act("palette:ai-open-chat"), Act("aipipedemo:"+variant), Pause(900*time.Millisecond))}
+}
+
 // MarkdownPreview opens docs/preview.md (a sample with every common block)
 // in the full-screen Markdown preview.
 // FindResults is the Find Results page for "Toast" (Find in Files).

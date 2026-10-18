@@ -14,6 +14,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/diffview"
@@ -217,6 +218,10 @@ func aiBeforeCalls(root string, call aiIDECaller) func(context.Context, []ai.Too
 // aiReviewChanges proposes changes and waits for the user's decision on
 // each; it returns the text for the model.
 func aiReviewChanges(ctx context.Context, call aiIDECaller, changes []aiFileChange) (string, error) {
+	if l := agentrun.ReviewLocker(ctx); l != nil { // pipeline steps review one at a time
+		l.Lock()
+		defer l.Unlock()
+	}
 	id := ai.CallID(ctx)
 	var p aiProposed
 	if _, err := call(ctx, func(m *Model) (string, tea.Cmd, error) {

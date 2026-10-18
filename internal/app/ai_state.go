@@ -4,9 +4,11 @@ import (
 	"context"
 	"os"
 	"strings"
+	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/statusbar"
@@ -47,6 +49,25 @@ type aiState struct {
 	// one provider per model slot, built on first use (ai_profiles.go).
 	profiles ai.ProfileSet
 	slots    *ai.SlotPool
+	// profile is the active profile's name ("" = default); profErrShown
+	// is the profile errors already shown as a toast.
+	profile      string
+	profErrShown string
+	// slotFake replaces model slots by name (tests and the demo shots).
+	slotFake map[string]aiSlot
+
+	// The running pipeline run (ai_runs.go): its handle, the index of
+	// its assistant message, its slots, the restore files counted when
+	// each step started, a counter that changes with any card
+	// (transcript cache), the card the keyboard selected and the review
+	// locker its steps share.
+	run      *agentrun.Handle
+	runMsg   int
+	runSlots map[string]aiSlot
+	runFiles map[string]int
+	runGen   int
+	cardSel  string
+	reviewMu sync.Mutex
 
 	// inline ghost text
 	inlineCancel context.CancelFunc

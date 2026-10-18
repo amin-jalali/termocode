@@ -82,6 +82,22 @@ type Options struct {
 	// Emit receives the events, one call at a time (never concurrently),
 	// from the run's goroutines. It must not block for long.
 	Emit func(Event)
+	// Outputs are the saved outputs of nodes that are already completed
+	// (retry from a step): those nodes do not run again and their
+	// dependents get this text as input.
+	Outputs map[string]string
+	// Review (optional) is the app's review locker: node contexts carry
+	// it (ReviewLocker), so file reviews of nodes take turns.
+	Review sync.Locker
+}
+
+type reviewKey struct{}
+
+// ReviewLocker returns the review locker of the run ctx belongs to (nil
+// outside a run or when the run has none).
+func ReviewLocker(ctx context.Context) sync.Locker {
+	l, _ := ctx.Value(reviewKey{}).(sync.Locker)
+	return l
 }
 
 // Handle is a started run.
@@ -136,6 +152,9 @@ func Start(ctx context.Context, r agentdag.Run, o Options) (*Handle, error) {
 	}
 	for i, nd := range n.Nodes {
 		h.order[nd.ID] = i
+		if nd.State == agentdag.StateCompleted {
+			h.outputs[nd.ID] = o.Outputs[nd.ID]
+		}
 	}
 	runCtx, cancel := context.WithCancel(ctx)
 	h.cancel = cancel
@@ -291,6 +310,9 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 		res.elapsed = clock.Since(start)
 		out <- res
 	}()
+	if h.o.Review != nil {
+		ctx = context.WithValue(ctx, reviewKey{}, h.o.Review)
+	}
 	agent, history, err := h.o.Build(ctx, n, input)
 	switch {
 	case ctx.Err() != nil:

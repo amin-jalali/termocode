@@ -36,6 +36,7 @@ import (
 //	theme:<id>             apply a color theme (not persisted)
 //	aidemo                 load a sample AI conversation
 //	aidemo-busy:tool|stall a running AI turn with its activity line
+//	aipipedemo:running|done a two-step agent pipeline run (scripted models)
 //	connectdemo:<step>     a Connect-a-service step with sample data: pick,
 //	                       gh, device, browser, ssh, done, error, token,
 //	                       slack (nothing connects)
@@ -107,6 +108,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		return m.connectDemo(arg)
 	case "termdemo": // terminal tab marks for the shots (term_fix.go, agent_tabs.go)
 		m.termDemo()
+	case "aipipedemo": // a two-step agent pipeline run (ai_run_demo.go): arg running or done
+		return m.aiPipelineDemo(arg)
 	case "aidemo-fa": // a Persian (right-to-left) conversation for the shots
 		s := m.aiS()
 		s.conv.Messages = []ai.StoredMessage{

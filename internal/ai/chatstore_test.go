@@ -1,9 +1,11 @@
 package ai
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -54,5 +56,50 @@ func TestChatStorePrunes(t *testing.T) {
 	}
 	if DeriveTitle(nil) != defaultChatTitle {
 		t.Error("default title")
+	}
+}
+
+// Spec (U20 AP-4): a pipeline run keeps its step cards and the user's
+// fold choices in the chat file; an old file without them still loads.
+func TestChatStoreStepsAndFolds(t *testing.T) {
+	s := ChatStore{Dir: t.TempDir()}
+	c := NewConversation()
+	cost := 0.013
+	c.Messages = []StoredMessage{
+		{Role: StoredUser, Text: "review"},
+		{Role: StoredAssistant, Text: "fixed",
+			Run: &StoredRun{ID: "r1", Profile: "review", State: RunStateDone, ElapsedMs: 36000},
+			Steps: []StoredStep{{ID: "reviewer", Title: "Reviewer", Slot: "main", Model: "claude-sonnet-4-5", Category: "deep",
+				Text: "two problems", Tools: []string{"⚙ Read a.go → 10 lines"}, ElapsedMs: 14000,
+				Usage: &Usage{Model: "claude-sonnet-4-5", Input: 4000, Output: 100, Requests: 1, PeakContext: 4000},
+				Cost:  &cost, Files: 1, State: "completed"}}},
+	}
+	c.Folded = map[string]bool{"step:r1:reviewer": false}
+	if err := s.Save(&c); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(filepath.Join(s.Dir, c.ID+".json"))
+	for _, want := range []string{`"steps"`, `"folded"`, `"input": 4000`, `"elapsed_ms": 14000`} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("chat file has no %s:\n%s", want, b)
+		}
+	}
+	got, err := s.Load(c.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := got.Messages[1]
+	if m.Run == nil || m.Run.ID != "r1" || len(m.Steps) != 1 || m.Steps[0].Usage.Input != 4000 || *m.Steps[0].Cost != cost ||
+		m.Steps[0].Tools[0] != "⚙ Read a.go → 10 lines" || got.Folded["step:r1:reviewer"] != false || len(got.Folded) != 1 {
+		t.Errorf("loaded %+v folded %v", m, got.Folded)
+	}
+	old := `{"id":"x","title":"t","messages":[{"role":"user","text":"hi"}],"updated_at_ms":1}`
+	_ = os.WriteFile(filepath.Join(s.Dir, "x.json"), []byte(old), 0o600)
+	if o, err := s.Load("x"); err != nil || o.Messages[0].Steps != nil || o.Folded != nil {
+		t.Errorf("old file: %+v %v", o, err)
+	}
+	plain, _ := json.Marshal(StoredMessage{Role: StoredUser, Text: "hi"})
+	if strings.Contains(string(plain), "steps") || strings.Contains(string(plain), "run") {
+		t.Errorf("a plain message stays as before: %s", plain)
 	}
 }
