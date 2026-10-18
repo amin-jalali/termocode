@@ -1,9 +1,11 @@
 package setup
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/spawn"
@@ -90,6 +92,7 @@ func Doctor() []Check {
 		term.Detail = "COLORTERM not set — run `termocode setup --test-colors` to check visually"
 	}
 	out = append(out, term)
+	out = append(out, secretStoreCheck())
 
 	nerd := DetectNerdFont(true)
 	out = append(out, NerdFontCheck(nerd, ""))
@@ -98,6 +101,36 @@ func Doctor() []Check {
 	out = append(out, TerminalCheck(os.Getenv, nil))
 	out = append(out, TerminalHints(os.Getenv)...)
 	return out
+}
+
+func secretStoreCheck() Check {
+	c := Check{Group: "security", Name: "Secret store", Status: Warn}
+	config, err := os.UserConfigDir()
+	if err != nil {
+		c.Detail = "keyring (Secret Service) / encrypted file / plain; choose a store in Settings"
+		return c
+	}
+	b, err := os.ReadFile(filepath.Join(config, "termocode", "secrets.json"))
+	var index struct {
+		Backend string `json:"backend"`
+	}
+	if err == nil {
+		_ = json.Unmarshal(b, &index)
+	}
+	switch index.Backend {
+	case "keyring":
+		c.Detail = "keyring (Secret Service)"
+	case "age":
+		c.Detail = "encrypted file"
+	case "plain":
+		c.Detail = "plain"
+	default:
+		c.Detail = "not configured — choose keyring (Secret Service), encrypted file, or plain in Settings"
+	}
+	if index.Backend == "plain" {
+		c.Detail += " — values are stored without encryption"
+	}
+	return c
 }
 
 // NerdFontCheck reports the Nerd Font detection. icons, when known (from

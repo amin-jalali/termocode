@@ -148,7 +148,7 @@ func TestOpenSelection(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		s, err := Open(Options{Dir: dir, Backend: c.setting})
+		s, err := Open(Options{Dir: dir, Backend: c.setting, KeyringProbe: func() bool { return false }})
 		if c.err != nil {
 			if !errors.Is(err, c.err) {
 				t.Errorf("%q/%q: err = %v, want %v", c.setting, c.recorded, err, c.err)
@@ -166,6 +166,16 @@ func TestOpenSelection(t *testing.T) {
 		if idx.Backend != c.want {
 			t.Errorf("%q/%q: recorded %q, want %q", c.setting, c.recorded, idx.Backend, c.want)
 		}
+	}
+}
+
+func TestOpenSelectsAvailableKeyring(t *testing.T) {
+	s, err := Open(Options{Dir: t.TempDir(), Backend: "auto", KeyringProbe: func() bool { return true }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Backend() != "keyring" {
+		t.Fatalf("backend = %q", s.Backend())
 	}
 }
 

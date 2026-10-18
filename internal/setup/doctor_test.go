@@ -25,6 +25,7 @@ func TestDoctorReport(t *testing.T) {
 	report := Report(checks)
 
 	for _, want := range []string{
+		"Secret store",
 		"== core ==",
 		"✓ neovim (editor engine) — NVIM v0.10.1 · /usr/bin/nvim",
 		"✓ git (Source Control)",

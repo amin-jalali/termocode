@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/zalando/go-keyring"
 )
 
 // Errors. They never carry a secret value.
@@ -87,6 +88,10 @@ type Options struct {
 	Register func(string)
 	// Redact cleans ${cmd:} stderr before it goes into an error. nil: none.
 	Redact func(string) string
+	// KeyringOverSSH permits probing the OS keyring in an SSH session.
+	KeyringOverSSH bool
+	// KeyringProbe overrides the system probe, primarily for tests.
+	KeyringProbe func() bool
 }
 
 // IndexFile and AgeFile are the file names inside Options.Dir.
@@ -110,8 +115,22 @@ func Open(o Options) (Store, error) {
 	if err != nil {
 		return nil, err
 	}
+	if (o.Backend == "" || o.Backend == "auto") && idx.Backend == "" {
+		probe := o.KeyringProbe
+		if probe == nil {
+			probe = func() bool { return ProbeKeyring(o.Getenv, o.KeyringOverSSH) }
+		}
+		if probe() {
+			name = "keyring"
+		}
+	}
 	var b Backend
 	switch name {
+	case "keyring":
+		if o.Backend == "keyring" && !probeKeyringOption(o) {
+			return nil, fmt.Errorf("%w: no usable OS keyring", ErrKeyringUnavailable)
+		}
+		b = newKeyringBackend(keyring.Set, keyring.Get, keyring.Delete)
 	case "age":
 		b = newAgeFile(filepath.Join(o.Dir, AgeFile), o.ScryptWorkFactor)
 	case "plain":
@@ -129,16 +148,25 @@ func Open(o Options) (Store, error) {
 	return NewStore(b, o), nil
 }
 
-// chooseBackend applies the order rule (plan §3.3). The keyring probe
-// comes in a later phase; until then auto means age.
+func probeKeyringOption(o Options) bool {
+	if o.KeyringProbe != nil {
+		return o.KeyringProbe()
+	}
+	return ProbeKeyring(o.Getenv, o.KeyringOverSSH)
+}
+
+// chooseBackend applies the setting and any previously recorded choice.
 func chooseBackend(setting, recorded string) (string, error) {
 	switch setting {
 	case "age", "plain":
 		return setting, nil
 	case "keyring":
-		return "", ErrKeyringUnavailable
+		return "keyring", nil
 	case "", "auto":
 		// auto never picks plain, even when the index recorded it.
+		if recorded == "age" || recorded == "keyring" {
+			return recorded, nil
+		}
 		return "age", nil
 	}
 	return "", fmt.Errorf("%w: %q", ErrUnknownBackend, setting)
