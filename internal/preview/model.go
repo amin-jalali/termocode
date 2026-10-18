@@ -69,6 +69,9 @@ func (d *Doc) Lines(width int) []string {
 // Marks returns the marks of the last render (call Lines first).
 func (d *Doc) Marks() mdview.Marks { return d.marks }
 
+// Doc returns the Doc the reader shows (nil for fixed content).
+func (m Model) Doc() *Doc { return m.doc }
+
 // NewReader shows doc full screen with title and an optional badge
 // ("Preview") in the header.
 func NewReader(title, badge string, doc *Doc) Model {

@@ -999,6 +999,7 @@ Add a request to a .http file, or with replace=true change the request with that
 | `goto-symbol-file` | Go to Symbol in File... | never | opens a picker or prompt that only the user can answer; use a typed tool (lsp_nav) |
 | `goto-symbol-workspace` | Go to Symbol in Workspace... | never | opens a picker or prompt that only the user can answer; use a typed tool (lsp_nav) |
 | `goto-type-def` | LSP: Go to Type Definition | auto |   |
+| `help-guide` | Help: Open Guide… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `hover` | LSP: Show Hover Documentation | auto |   |
 | `http-cancel` | HTTP: Cancel Request | confirm (ide) |   |
 | `http-copy-curl` | HTTP: Copy as curl | confirm (ide) |   |

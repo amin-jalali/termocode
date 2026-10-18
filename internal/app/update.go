@@ -289,6 +289,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		m.applyLayout()
 		return m, nil
 	case PreviewMsg:
+		if msg.help != nil {
+			return m, m.showHelpPage(msg)
+		}
+		m.closeHelp()
 		if msg.Doc != nil {
 			m.preview = preview.NewReader(msg.Title, msg.Badge, msg.Doc)
 		} else {
@@ -319,7 +323,12 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.gitRemoteDone(msg)
 	case preview.CloseMsg:
 		m.previewOpen = false
+		m.closeHelp()
 		return m, nil
+	case preview.LinkMsg: // the guide viewer follows a link (help.go)
+		return m, m.onHelpLink(msg.Dest)
+	case preview.BackMsg: // the guide viewer goes back; F7 has no history
+		return m, m.onHelpBack()
 	case prompt.SubmitMsg:
 		m.promptOpen = false
 		return m, m.handlePromptSubmit(msg.Value)
@@ -391,9 +400,17 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return newM, cmd
 	}
 
-	if _, ok := msg.(tea.MouseMsg); ok && m.mouseProbe != nil {
+	if mm, ok := msg.(tea.MouseMsg); ok && m.mouseProbe != nil {
 		switch k := m.overlayKind(); {
-		case m.previewOpen, m.searchOpen, m.promptOpen:
+		case m.previewOpen:
+			// A link in the reader takes the click (preview.LinkMsg).
+			if l, ok := m.preview.LinkAt(mm.X, mm.Y); ok {
+				m.probed("preview:link:" + l.Dest)
+			} else {
+				m.probed("overlay")
+			}
+			return m, nil
+		case m.searchOpen, m.promptOpen:
 			m.probed("overlay")
 			return m, nil
 		case k == "settings", k == "recents", k == "menu":
@@ -2068,6 +2085,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.showCommitFromPicker(msg.ID)
 	case pickerKindTags:
 		return m.checkoutTagSelected(msg.ID)
+	case pickerKindHelpGuide:
+		return m.onHelpGuidePicked(msg.ID)
 	case pickerKindSnippet:
 		return m.insertSnippetBody(msg.ID)
 	case pickerKindRemoveRoot:

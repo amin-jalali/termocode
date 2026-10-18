@@ -47,6 +47,7 @@ const (
 	pickerKindExt            // Group I — termocode.pick() from an extension
 	pickerKindDebugConfig    // Group D — debug configuration pickers (dap.go)
 	pickerKindSetupStep      // the setup card's step chooser (setup_card_ui.go)
+	pickerKindHelpGuide      // Help: Open Guide… (help.go)
 )
 
 // loadFiles walks the cwd and returns one picker.Item per file (relative path).
@@ -252,6 +253,7 @@ func paletteItems() []picker.Item {
 		{ID: "run-doctor", Title: "Help: Run Doctor"},
 		{ID: "setup-show-card", Title: "Setup: Show Setup Card"},
 		{ID: "open-docs", Title: "Help: Open Documentation"}, // Docs
+		{ID: "help-guide", Title: "Help: Open Guide…"},
 		{ID: "hover", Title: "LSP: Show Hover Documentation"},
 		{ID: "find-references", Title: "LSP: Find All References", Hint: "Shift+F12"},
 		{ID: "replace-workspace", Title: "Search: Replace in Workspace...", Hint: "Ctrl+Shift+H"},
@@ -621,6 +623,8 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.showSetupCard()
 	case "open-docs": // Docs
 		return m.openDocs()
+	case "help-guide":
+		m.openHelpGuidePicker()
 	case "hover":
 		return m.hoverCmd()
 	case "find-references":

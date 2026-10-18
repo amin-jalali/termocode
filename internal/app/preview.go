@@ -19,6 +19,8 @@ type PreviewMsg struct {
 	Body  string
 	Doc   *preview.Doc
 	Badge string // a small label next to the title ("Preview"); Doc only
+
+	help *helpPage // set when the Doc is a page of the built-in guide (help.go)
 }
 
 // markdownDoc returns a preview.Doc that renders markdown with mdview.

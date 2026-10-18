@@ -525,6 +525,7 @@ type Model struct {
 	// confirmTargetPath; populated means bulk delete.
 	confirmTargetPaths []string
 	previewOpen        bool
+	help               helpState // the guide viewer's place and history (help.go)
 	promptOpen         bool
 	promptKind         promptKindEnum
 	promptPath         string

@@ -89,6 +89,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"output-clear":         aiConfirm(ai.ClassIDE),
 	"problems-panel":       aiAuto(),
 	"cheat-sheet":          aiAuto(),
+	"help-guide":           aiNever(aiNoPicker),
 	"buffer-info":          aiAuto(),
 	"error-log":            aiAuto(),
 	"run-doctor":           aiAuto(),
