@@ -112,6 +112,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerMCPTrust(id), true
 	case confirmKindAIProfileTrust:
 		return m.answerAIProfileTrust(id), true
+	case confirmKindAIProfileSave:
+		return m.onAIProfileSaveChoice(id), true
 	}
 	return nil, false
 }
@@ -125,6 +127,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerMCPTrust("deny")
 	case confirmKindAIProfileTrust:
 		return m.answerAIProfileTrust("") // Esc: no answer, ask again next time
+	case confirmKindAIProfileSave:
+		return m.onAIProfileSaveChoice("cancel")
 	}
 	return nil
 }

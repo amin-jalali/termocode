@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -31,6 +32,7 @@ const (
 const promptKindAIProfileNew promptKindEnum = 1000
 
 const confirmKindAIProfileTrust confirmKindEnum = 1000
+const confirmKindAIProfileSave confirmKindEnum = 1001
 
 // The trust state of a project profile in this workspace.
 const (
@@ -51,6 +53,11 @@ type aiProfileTrustPending struct {
 	name, hash string
 	after      int
 	text       string // the chat message waiting for the answer
+}
+
+type aiProfileSavePending struct {
+	name    string
+	profile ai.Profile
 }
 
 // aiProfileTrust is the user's answer for a project profile ("use" for
@@ -265,6 +272,86 @@ func (m *Model) askAIProfileTrust(p ai.Profile, after int, text string) tea.Cmd 
 	return nil
 }
 
+func (m *Model) askAIProfileSave(p ai.Profile, updated bool) tea.Cmd {
+	var b strings.Builder
+	for i, st := range p.Steps {
+		title := st.Title
+		if title == "" {
+			title = st.ID
+		}
+		tools := st.Tools.Preset
+		if tools == "" {
+			tools = agentdag.PresetAll
+		}
+		fmt.Fprintf(&b, "%d · %s · %s · tools %s", i+1, title, p.SlotFor(st), tools)
+		if head := aiProfilePromptHead(st.System); head != "" {
+			fmt.Fprintf(&b, "\n    %s", head)
+		}
+		if i+1 < len(p.Steps) {
+			b.WriteString("\n")
+		}
+	}
+	id, label, cancel := "save", "Save", "Cancel"
+	title := fmt.Sprintf("Save profile %q?", p.Name)
+	if updated {
+		id, label, cancel = "use", "Use now", "Later"
+		title = fmt.Sprintf("Use updated profile %q?", p.Name)
+	}
+	m.aiS().profileSave = &aiProfileSavePending{name: p.Name, profile: p}
+	m.confirm = confirm.New(title, b.String(), []confirm.Button{{ID: id, Title: label, Style: confirm.StylePrimary}, {ID: cancel, Title: cancel}})
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = confirmKindAIProfileSave
+	return nil
+}
+
+func (m *Model) onAIProfilesSaved(path string) tea.Cmd {
+	want, err := ai.ProfilesPath()
+	if err != nil || filepath.Clean(path) != filepath.Clean(want) {
+		return nil
+	}
+	b, err := os.ReadFile(want)
+	if err != nil {
+		m.toast, _ = m.toast.Push(toast.Errr, "Profiles not updated: could not read file: "+err.Error())
+		return nil
+	}
+	s := m.aiS()
+	updated, err := ai.ParseProfiles(b, want, ai.ProfileSourceUser, s.slotKnown, s.settings.Parallel())
+	if err != nil {
+		m.toast, _ = m.toast.PushDetail(toast.Errr, "Profiles not updated", err.Error())
+		return nil
+	}
+	old := s.profiles
+	s.reloadProfiles()
+	names := make([]string, 0, len(updated))
+	for _, p := range updated {
+		names = append(names, p.Name)
+		before, ok := old.Get(p.Name)
+		if ok && profileToolsPromptsEqual(before, p) {
+			continue
+		}
+		m.askAIProfileSave(p, true)
+	}
+	label := strings.Join(names, ", ")
+	if label == "" {
+		label = "none"
+	}
+	m.toast, _ = m.toast.Push(toast.Info, "Profiles updated: "+label)
+	return nil
+}
+
+func profileToolsPromptsEqual(a, b ai.Profile) bool {
+	if len(a.Steps) != len(b.Steps) {
+		return false
+	}
+	for i := range a.Steps {
+		if !reflect.DeepEqual(a.Steps[i].Tools, b.Steps[i].Tools) || a.Steps[i].System != b.Steps[i].System {
+			return false
+		}
+	}
+	return true
+}
+
 // answerAIProfileTrust stores the trust card's answer (Esc = no answer).
 func (m *Model) answerAIProfileTrust(id string) tea.Cmd {
 	s := m.aiS()
@@ -355,21 +442,32 @@ func (m *Model) onAIProfileNewName(name string) tea.Cmd {
 	if name == "" {
 		return nil
 	}
+	p := m.aiS().activeProfile()
+	p.Name = name
+	return m.askAIProfileSave(p, false)
+}
+
+func (m *Model) onAIProfileSaveChoice(id string) tea.Cmd {
+	s := m.aiS()
+	pending := s.profileSave
+	s.profileSave = nil
+	if pending == nil || id != "save" {
+		return m.aiInfo("Profile not saved")
+	}
 	path, err := ai.ProfilesPath()
 	if err != nil {
 		return m.aiToastErr("New profile", err)
 	}
-	s := m.aiS()
-	if err := ai.SaveProfileAs(path, name, s.activeProfile()); err != nil {
+	if err := ai.SaveProfileAs(path, pending.name, pending.profile); err != nil {
 		var c tea.Cmd
 		m.toast, c = m.toast.PushDetail(toast.Warn, "Profile not saved", err.Error())
 		return c
 	}
 	s.reloadProfiles()
-	if _, ok := s.profiles.Get(name); !ok {
+	if _, ok := s.profiles.Get(pending.name); !ok {
 		return m.aiProfileErrorsCmd()
 	}
-	return m.setAIProfile(name)
+	return m.setAIProfile(pending.name)
 }
 
 // handleAIProfilePrompt routes the profile prompt. ok=false: not ours.

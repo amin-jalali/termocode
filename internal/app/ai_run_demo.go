@@ -104,6 +104,8 @@ func (m *Model) aiProfileDemo(arg string) tea.Cmd {
 		return m.openAIProfilePicker()
 	case "trust":
 		return m.askAIProfileTrust(house, aiTrustAfterSwitch, "")
+	case "save":
+		return m.askAIProfileSave(ai.Profile{Name: "my-review", Title: "Review then fix", Steps: ai.BuiltinProfiles()[1].Steps}, false)
 	}
 	return nil
 }

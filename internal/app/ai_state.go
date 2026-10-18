@@ -53,7 +53,8 @@ type aiState struct {
 	slotKnown map[string]bool
 	slotErrs  []string
 	// profTrust is the open project-profile trust card (ai_profiles_ui.go).
-	profTrust *aiProfileTrustPending
+	profTrust   *aiProfileTrustPending
+	profileSave *aiProfileSavePending
 	// profile is the active profile's name ("" = default); profErrShown
 	// is the profile errors already shown as a toast.
 	profile      string

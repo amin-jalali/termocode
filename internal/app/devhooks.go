@@ -40,8 +40,7 @@ import (
 //	aipipedemo:running|done a two-step agent pipeline run (scripted models)
 //	agentsdemo:running|done a planned diamond run in the AGENTS view
 //	                       (scripted models)
-//	profiledemo:chip|picker|trust the agent profile chip, its picker, or
-//	                       a project profile's trust card (sample data)
+//	profiledemo:chip|picker|trust|save the agent profile UI (sample data)
 //	connectdemo:<step>     a Connect-a-service step with sample data: pick,
 //	                       gh, device, browser, ssh, done, error, token,
 //	                       slack (nothing connects)

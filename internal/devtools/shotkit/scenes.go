@@ -119,7 +119,7 @@ func AgentsPanel(variant string) Scene {
 // AIProfile is the agent profile UI (U20 AP-5) with sample data:
 // "chip" the chat header chip "✦ review ▾" (and the status badge),
 // "picker" the profile picker with an untrusted project profile,
-// "trust" that project profile's trust card.
+// "trust" that project profile's trust card, "save" the save preview.
 func AIProfile(variant string) Scene {
 	return Scene{Name: "ai-profile-" + variant, Env: aiEnv,
 		Steps: WithEditor(Act("palette:ai-open-chat"), Act("profiledemo:"+variant), Pause(600*time.Millisecond))}

@@ -29,6 +29,20 @@ while a pipeline runs.
     Your terminal may not send `Alt+Shift+P`. Use the palette, or bind
     another key to `AINextProfile` in `keymap.json`.
 
+## Create and edit profiles
+
+**AI: New Profile from Current…** copies the active profile. After you
+name it, a preview card lists each step, its model slot and category,
+tools, and the first line of its prompt. **Save** writes the profile to
+`~/.config/termocode/ai/profiles.json` and switches to it. **Cancel** or
+`Esc` leaves the file unchanged and shows that the profile was not saved.
+
+**AI: Edit Profiles** opens that JSON file in the editor (with an example
+when the file is missing). Saving it reloads the profile list and shows
+`Profiles updated: <names>`. If a profile's tools or prompts changed, a
+preview card shows the steps and asks **Use now** or **Later**. A broken
+file shows the problem and line; built-in profiles remain available.
+
 ## Built-in profiles
 
 | Profile | Steps | Use it for |

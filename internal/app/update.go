@@ -613,6 +613,9 @@ func (m Model) handleNvimMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 		// Group I: load extensions after the built-in Lua. Plugins not
 		// downloaded yet are cloned in the background (plugins.go).
 		cmds := append([]tea.Cmd{m.extLoadCmd(false), m.keymapProblemsToast(), m.startHotExit()}, pluginBootstrapCmds()...)
+		_ = m.nvim.ExecLua(`vim.api.nvim_create_autocmd('BufWritePost', { callback = function(ev)
+  if _G.termocode_notify then _G.termocode_notify('termocode_profiles_saved', ev.file) end
+end })`)
 		return m, tea.Batch(cmds...), true
 	case hotExitFoundMsg:
 		// Another dialog open: wait until it closes (Update shows it).
@@ -1423,6 +1426,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 			m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Save failed", err.Error())
 		} else if p := m.editor.Path(); p != "" {
 			m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Saved", saveDetail(p))
+			m.onAIProfilesSaved(p)
 		}
 		return m, tea.Batch(fetchGitCmd(), toastCmd)
 	case keymap.ActionSaveAll:

@@ -44,6 +44,43 @@ func aiProfileTestModel(t *testing.T) (*Model, string) {
 	return m, dir
 }
 
+func TestAIProfileBufferSaved(t *testing.T) {
+	m, _ := aiProfileTestModel(t)
+	path, _ := ai.ProfilesPath()
+	if c := m.onAIProfilesSaved(filepath.Join(filepath.Dir(path), "other.json")); c != nil || m.confirmOpen || aiToastText(m) != "" {
+		t.Fatal("saving another file had an effect")
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	initial := `{"profiles":{"zeta":{"steps":[{"id":"one","system":"same prompt","tools":{"preset":"all"}}]}}}`
+	if err := os.WriteFile(path, []byte(initial), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m.ai.reloadProfiles()
+	good := `{"profiles":{"zeta":{"steps":[{"id":"one","system":"same prompt","tools":{"preset":"read-only"}}]}}}`
+	if err := os.WriteFile(path, []byte(good), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m.onAIProfilesSaved(path)
+	if !strings.Contains(aiToastText(m), "Profiles updated: zeta") {
+		t.Fatalf("toast: %q", aiToastText(m))
+	}
+	if !m.confirmOpen || m.confirmKind != confirmKindAIProfileSave {
+		t.Fatal("updated profile card missing")
+	}
+	if c := m.onAIProfilesSaved(path); c != nil {
+		t.Fatal("unexpected command")
+	}
+	if err := os.WriteFile(path, []byte(`{"profiles":{`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m.onAIProfilesSaved(path)
+	if !strings.Contains(aiToastText(m), "line 1") {
+		t.Fatalf("parse error toast: %q", aiToastText(m))
+	}
+}
+
 // Spec (§2.1): the chat header shows "✦ <profile> ▾" after the title; a
 // click on it opens the profile picker.
 func TestAIProfileChipInHeader(t *testing.T) {
@@ -280,6 +317,13 @@ func TestAIProfileEditAndNew(t *testing.T) {
 	}
 	m.promptOpen = false
 	m.handleAIPromptSubmit("my-review")
+	if !m.confirmOpen || m.confirmKind != confirmKindAIProfileSave {
+		t.Fatal("new profile did not show its preview")
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("profile file missing before confirmation: %v", err)
+	}
+	m.handleAIConfirm("save")
 	if m.ai.activeProfile().Name != "my-review" {
 		t.Fatalf("active %q after New Profile", m.ai.activeProfile().Name)
 	}
@@ -289,6 +333,7 @@ func TestAIProfileEditAndNew(t *testing.T) {
 	m.dispatchAIPalette("ai-profile-new")
 	m.promptOpen = false
 	m.handleAIPromptSubmit("review")
+	m.handleAIConfirm("save")
 	if txt := aiToastText(m); !strings.Contains(txt, "built-in") {
 		t.Errorf("a built-in name gave no error toast: %q", txt)
 	}
@@ -298,6 +343,27 @@ func TestAIProfileEditAndNew(t *testing.T) {
 	cfg, _ := ai.ConfigPath()
 	if _, err := os.Stat(cfg); err != nil {
 		t.Errorf("config.json not there: %v", err)
+	}
+}
+
+func TestAIProfileSaveCancelAndEsc(t *testing.T) {
+	for _, esc := range []bool{false, true} {
+		m, _ := aiProfileTestModel(t)
+		path, _ := ai.ProfilesPath()
+		_ = os.Remove(path)
+		m.promptKind = promptKindAIProfileNew
+		m.handleAIProfilePrompt("copy")
+		if esc {
+			m.onAIConfirmClosed()
+		} else {
+			m.handleAIConfirm("cancel")
+		}
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("cancel wrote profile: %v", err)
+		}
+		if txt := aiToastText(m); !strings.Contains(txt, "not saved") {
+			t.Errorf("cancel toast: %q", txt)
+		}
 	}
 }
 

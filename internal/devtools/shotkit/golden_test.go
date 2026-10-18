@@ -154,7 +154,7 @@ func goldenCases() []goldenCase {
 	}
 	// The agent profile chip, its picker and the project profile trust
 	// card (U20 AP-5).
-	for _, v := range []string{"chip", "picker", "trust"} {
+	for _, v := range []string{"chip", "picker", "trust", "save"} {
 		sc := AIProfile(v)
 		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
