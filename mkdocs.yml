@@ -8,6 +8,11 @@ copyright: termocode — see LICENSE in the repository
 
 docs_dir: docs
 
+# docs/embed.go embeds the guide into the app (internal/help); it is
+# not a page.
+exclude_docs: |
+  /embed.go
+
 theme:
   name: material
   language: en
