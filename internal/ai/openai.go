@@ -107,6 +107,19 @@ func buildOpenAIBody(req Request, model string) map[string]any {
 	return body
 }
 
+// openAISendsUsage reports whether requests of kind ask for token counts
+// with stream_options.include_usage (one last chunk with "usage" and no
+// choices). OpenAI, OpenRouter, Ollama and LM Studio accept it; a custom
+// URL may be a strict server that rejects unknown fields, so it is not
+// sent there (counts the server sends anyway are still read).
+func openAISendsUsage(kind string) bool {
+	switch kind {
+	case KindOpenAI, KindOpenRouter, KindOllama, KindLMStudio:
+		return true
+	}
+	return false
+}
+
 // run performs the request, forwards text deltas to ch and returns the
 // final Done chunk.
 func (p *openAIProvider) run(ctx context.Context, req Request, ch chan<- Chunk) Chunk {
@@ -117,7 +130,11 @@ func (p *openAIProvider) run(ctx context.Context, req Request, ch chan<- Chunk) 
 	if model == "" {
 		model = p.cfg.Model
 	}
-	payload, err := json.Marshal(buildOpenAIBody(req, model))
+	body := buildOpenAIBody(req, model)
+	if openAISendsUsage(p.cfg.Kind) {
+		body["stream_options"] = map[string]any{"include_usage": true}
+	}
+	payload, err := json.Marshal(body)
 	if err != nil {
 		return Chunk{Done: true, Err: err}
 	}
@@ -145,6 +162,39 @@ func (p *openAIProvider) run(ctx context.Context, req Request, ch chan<- Chunk) 
 	return parseOpenAISSE(ctx, resp.Body, ch)
 }
 
+// openAIUsage is the "usage" object of a chat-completions chunk. The
+// cached tokens are part of prompt_tokens.
+type openAIUsage struct {
+	PromptTokens        int `json:"prompt_tokens"`
+	CompletionTokens    int `json:"completion_tokens"`
+	PromptTokensDetails *struct {
+		CachedTokens int `json:"cached_tokens"`
+	} `json:"prompt_tokens_details"`
+}
+
+// usage maps u (or, without it, Ollama's prompt_eval_count /
+// eval_count) to one request's Usage; nil when neither is there.
+func (u *openAIUsage) usage(promptEval, eval *int) *Usage {
+	if u == nil {
+		if promptEval == nil && eval == nil {
+			return nil
+		}
+		var in, out int
+		if promptEval != nil {
+			in = *promptEval
+		}
+		if eval != nil {
+			out = *eval
+		}
+		return finishUsage("", in, out, 0, 0, true)
+	}
+	cached := 0
+	if u.PromptTokensDetails != nil {
+		cached = min(u.PromptTokensDetails.CachedTokens, u.PromptTokens)
+	}
+	return finishUsage("", u.PromptTokens-cached, u.CompletionTokens, cached, 0, true)
+}
+
 // parseOpenAISSE reads the SSE stream. Text deltas go to ch as they arrive;
 // tool-call fragments (streamed per index) are accumulated and returned on
 // the final chunk. Malformed lines are skipped.
@@ -154,8 +204,13 @@ func parseOpenAISSE(ctx context.Context, r io.Reader, ch chan<- Chunk) Chunk {
 		args     strings.Builder
 	}
 	calls := map[int]*partial{}
+	var model string
+	var usage *Usage
 	finish := func() Chunk {
-		out := Chunk{Done: true}
+		out := Chunk{Done: true, Usage: usage}
+		if usage != nil && usage.Model == "" {
+			usage.Model = model
+		}
 		idx := make([]int, 0, len(calls))
 		for i := range calls {
 			idx = append(idx, i)
@@ -199,7 +254,12 @@ func parseOpenAISSE(ctx context.Context, r io.Reader, ch chan<- Chunk) Chunk {
 					} `json:"tool_calls"`
 				} `json:"delta"`
 			} `json:"choices"`
-			Error any `json:"error"`
+			Error any          `json:"error"`
+			Model string       `json:"model"`
+			Usage *openAIUsage `json:"usage"`
+			// Ollama's own names for the counts.
+			PromptEvalCount *int `json:"prompt_eval_count"`
+			EvalCount       *int `json:"eval_count"`
 		}
 		if err := json.Unmarshal([]byte(data), &ev); err != nil {
 			continue
@@ -207,6 +267,12 @@ func parseOpenAISSE(ctx context.Context, r io.Reader, ch chan<- Chunk) Chunk {
 		if ev.Error != nil {
 			b, _ := json.Marshal(ev.Error)
 			return Chunk{Done: true, Err: errString(Redact(string(b)))}
+		}
+		if ev.Model != "" {
+			model = ev.Model
+		}
+		if u := ev.Usage.usage(ev.PromptEvalCount, ev.EvalCount); u != nil {
+			usage = u // the last report wins: counts are totals
 		}
 		if len(ev.Choices) == 0 {
 			continue

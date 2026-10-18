@@ -35,7 +35,7 @@ func (s *scripted) Stream(_ context.Context, req Request) <-chan Chunk {
 	}
 	s.calls++
 	ch <- Chunk{Delta: r.Delta}
-	ch <- Chunk{Done: true, ToolCalls: r.ToolCalls, Err: r.Err}
+	ch <- Chunk{Done: true, ToolCalls: r.ToolCalls, Err: r.Err, Usage: r.Usage}
 	close(ch)
 	return ch
 }

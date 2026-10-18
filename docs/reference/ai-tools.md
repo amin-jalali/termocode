@@ -1123,11 +1123,13 @@ Add a request to a .http file, or with replace=true change the request with that
 | --- | --- | --- |
 | `ai_auto_approve` | never | AI provider, credentials and approvals stay with the user |
 | `ai_base_url` | never | AI provider, credentials and approvals stay with the user |
+| `ai_context_windows` | never | AI provider, credentials and approvals stay with the user |
 | `ai_edit_review` | never | AI provider, credentials and approvals stay with the user |
 | `ai_inline` | confirm (settings) |   |
 | `ai_inline_model` | never | AI provider, credentials and approvals stay with the user |
 | `ai_max_steps` | never | AI provider, credentials and approvals stay with the user |
 | `ai_model` | never | AI provider, credentials and approvals stay with the user |
+| `ai_prices` | never | AI provider, credentials and approvals stay with the user |
 | `ai_provider` | never | AI provider, credentials and approvals stay with the user |
 | `animations` | confirm (settings) |   |
 | `auto_save` | confirm (settings) |   |

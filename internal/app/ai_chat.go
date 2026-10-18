@@ -292,6 +292,9 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 	case ai.EventError:
 		s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredError, Text: ai.Redact(msg.ev.Detail)})
 		recordError("[ai] chat: " + ai.Redact(msg.ev.Detail))
+		m.aiAuditUsage(msg.ev)
+	case ai.EventDone:
+		m.aiAuditUsage(msg.ev)
 	}
 	return waitAIChat(msg.ch)
 }

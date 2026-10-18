@@ -94,13 +94,16 @@ type Request struct {
 
 // Chunk is one streamed piece of a reply. The final chunk has Done set; it
 // carries Err on failure and, when the model called tools, ToolCalls (and,
-// for Anthropic, the raw assistant Blocks to replay next turn).
+// for Anthropic, the raw assistant Blocks to replay next turn). Usage is
+// set on the Done chunk when the server reported token counts (nil when
+// it did not).
 type Chunk struct {
 	Delta     string
 	Done      bool
 	Err       error
 	ToolCalls []ToolCall
 	Blocks    json.RawMessage
+	Usage     *Usage
 }
 
 // Provider streams chat completions. Stream never blocks the caller: it

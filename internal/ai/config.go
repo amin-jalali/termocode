@@ -26,6 +26,12 @@ type Settings struct {
 	// diff to accept or reject) or "auto" (they are written after the
 	// confirm dialog, or at once when fileWrite is auto-approved).
 	EditReview string `json:"ai_edit_review,omitempty"`
+	// Prices override or add model prices ($ per million tokens, by
+	// model id prefix) over the built-in table (pricing.go).
+	// ContextWindows do the same for context windows (tokens). Both are
+	// edited by hand; SaveSettings leaves them as they are.
+	Prices         map[string]Price `json:"ai_prices,omitempty"`
+	ContextWindows map[string]int   `json:"ai_context_windows,omitempty"`
 }
 
 // Values of ai_edit_review.

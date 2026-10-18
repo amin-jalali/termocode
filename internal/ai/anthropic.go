@@ -195,14 +195,47 @@ type anthropicBlock struct {
 	Input     map[string]any
 }
 
+// anthropicUsage is the usage object of message_start / message_delta.
+// Pointers tell a missing field from a 0.
+type anthropicUsage struct {
+	InputTokens  *int `json:"input_tokens"`
+	OutputTokens *int `json:"output_tokens"`
+	CacheRead    *int `json:"cache_read_input_tokens"`
+	CacheWrite   *int `json:"cache_creation_input_tokens"`
+}
+
 // parseAnthropicSSE reads the event stream: text deltas go to ch live;
 // thinking / tool_use blocks are accumulated and returned (with the raw
 // replay Blocks) on the final chunk.
 func parseAnthropicSSE(ctx context.Context, r io.Reader, ch chan<- Chunk) Chunk {
 	blocks := map[int]*anthropicBlock{}
 	stopReason := ""
+	// Token counts: message_start has the input side (and output 1),
+	// message_delta the running totals (output; newer API versions
+	// repeat the input fields too).
+	var model string
+	var in, outTok, cacheRead, cacheWrite int
+	seenUsage := false
+	takeUsage := func(u *anthropicUsage) {
+		if u == nil {
+			return
+		}
+		seenUsage = true
+		if u.InputTokens != nil {
+			in = *u.InputTokens
+		}
+		if u.OutputTokens != nil {
+			outTok = *u.OutputTokens
+		}
+		if u.CacheRead != nil {
+			cacheRead = *u.CacheRead
+		}
+		if u.CacheWrite != nil {
+			cacheWrite = *u.CacheWrite
+		}
+	}
 	finish := func() Chunk {
-		out := Chunk{Done: true}
+		out := Chunk{Done: true, Usage: finishUsage(model, in, outTok, cacheRead, cacheWrite, seenUsage)}
 		if stopReason == "refusal" {
 			out.Err = anthropicRefusalError
 		}
@@ -280,11 +313,21 @@ func parseAnthropicSSE(ctx context.Context, r io.Reader, ch chan<- Chunk) Chunk 
 				Type    string `json:"type"`
 				Message string `json:"message"`
 			} `json:"error"`
+			Message struct {
+				Model string          `json:"model"`
+				Usage *anthropicUsage `json:"usage"`
+			} `json:"message"`
+			Usage *anthropicUsage `json:"usage"`
 		}
 		if err := json.Unmarshal([]byte(data), &ev); err != nil {
 			continue
 		}
 		switch ev.Type {
+		case "message_start":
+			if ev.Message.Model != "" {
+				model = ev.Message.Model
+			}
+			takeUsage(ev.Message.Usage)
 		case "content_block_start":
 			b := &anthropicBlock{Type: ev.ContentBlock.Type, ID: ev.ContentBlock.ID, Name: ev.ContentBlock.Name, Data: ev.ContentBlock.Data, Input: ev.ContentBlock.Input}
 			if ev.ContentBlock.Text != "" {
@@ -324,6 +367,7 @@ func parseAnthropicSSE(ctx context.Context, r io.Reader, ch chan<- Chunk) Chunk 
 			if ev.Delta.StopReason != "" {
 				stopReason = ev.Delta.StopReason
 			}
+			takeUsage(ev.Usage)
 		case "message_stop":
 			return finish()
 		case "error":

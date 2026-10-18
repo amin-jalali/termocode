@@ -362,6 +362,8 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_auto_approve":     aiNever(aiNoAIConfig),
 	"ai_max_steps":        aiNever(aiNoAIConfig),
 	"ai_edit_review":      aiNever(aiNoAIConfig),
+	"ai_prices":           aiNever(aiNoAIConfig),
+	"ai_context_windows":  aiNever(aiNoAIConfig),
 	// MCP servers run programs and reach outside services: their
 	// settings stay with the user.
 	"mcp_enabled":           aiNever(aiNoAIConfig),

@@ -39,6 +39,9 @@ type Event struct {
 	Decision string
 	// EventRetry: this is retry Attempt of at most Attempts.
 	Attempt, Attempts int
+	// EventDone / EventError: the summed token usage of every request
+	// of the turn (nil when the provider reported none).
+	Usage *Usage
 }
 
 // Gates of a tool call (Event.Gate).
@@ -198,6 +201,7 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 			specs = append(specs, t.Spec())
 		}
 	}
+	var usage *Usage // summed over every request of the turn
 	for step := 0; step < steps; step++ {
 		req := Request{Messages: msgs, Model: a.Model, Tools: specs}
 		var buf strings.Builder
@@ -208,6 +212,7 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 			prose, last = 0, Chunk{}
 			emit(Event{Kind: EventTurnStart})
 			a.stream(ctx, req, &buf, &prose, &last, emit)
+			usage = usage.Add(last.Usage)
 			// A busy server before any token: wait and send it again.
 			if last.Err == nil || buf.Len() > 0 || try >= DefaultRetries || !Retryable(last.Err) || ctx.Err() != nil {
 				break
@@ -219,7 +224,7 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 			}
 		}
 		if last.Err != nil {
-			emit(Event{Kind: EventError, Detail: Redact(last.Err.Error())})
+			emit(Event{Kind: EventError, Detail: Redact(last.Err.Error()), Usage: usage})
 			return msgs[start:]
 		}
 		reply := buf.String()
@@ -240,7 +245,7 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 			if prose == -1 {
 				emit(Event{Kind: EventText, Text: reply})
 			}
-			emit(Event{Kind: EventDone})
+			emit(Event{Kind: EventDone, Usage: usage})
 			return msgs[start:]
 		}
 		if a.BeforeCalls != nil {
@@ -255,12 +260,12 @@ func (a *Agent) Run(ctx context.Context, history []Message, emit func(Event)) []
 			}
 		}
 		if ctx.Err() != nil {
-			emit(Event{Kind: EventError, Detail: ctx.Err().Error()})
+			emit(Event{Kind: EventError, Detail: ctx.Err().Error(), Usage: usage})
 			return msgs[start:]
 		}
 	}
 	emit(Event{Kind: EventText, Text: StepLimitText(steps)})
-	emit(Event{Kind: EventDone})
+	emit(Event{Kind: EventDone, Usage: usage})
 	return msgs[start:]
 }
 

@@ -43,7 +43,7 @@ func (p *scriptedAIProvider) Stream(_ context.Context, req ai.Request) <-chan ai
 	if r.Delta != "" {
 		ch <- ai.Chunk{Delta: r.Delta}
 	}
-	ch <- ai.Chunk{Done: true, ToolCalls: r.ToolCalls}
+	ch <- ai.Chunk{Done: true, ToolCalls: r.ToolCalls, Usage: r.Usage}
 	close(ch)
 	return ch
 }
