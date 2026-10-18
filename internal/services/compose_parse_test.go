@@ -203,8 +203,11 @@ func TestProblemFromStderr(t *testing.T) {
 		want ProblemKind
 	}{
 		{"Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?", ProblemDaemonDown},
+		{"Cannot connect to Podman. Please verify your connection", ProblemDaemonDown},
 		{"permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get ...", ProblemNoPermission},
 		{"docker: 'compose' is not a docker command.\nSee 'docker --help'", ProblemNoCompose},
+		{"docker: 'context' is not a docker command.", ProblemOther},
+		{"podman: permission denied while connecting to /run/user/1000/podman/podman.sock", ProblemNoPermission},
 		{"unknown shorthand flag: 'f' in -f", ProblemNoCompose},
 		{"validating /w/compose.yaml: services.api Additional property foo is not allowed", ProblemBadConfig},
 		{"yaml: line 5: mapping values are not allowed in this context", ProblemBadConfig},

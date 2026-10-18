@@ -20,6 +20,7 @@ const MaxCapture = 1 << 20
 // a long one (docker events) read line by line until stop is called.
 type Exec interface {
 	Capture(ctx context.Context, dir string, argv ...string) (stdout, stderr string, code int, err error)
+	CaptureInput(ctx context.Context, dir string, input []byte, argv ...string) (stdout, stderr string, code int, err error)
 	Stream(ctx context.Context, dir string, argv ...string) (out io.ReadCloser, stop func(), err error)
 }
 
@@ -70,6 +71,34 @@ func (e SpawnExec) Capture(ctx context.Context, dir string, argv ...string) (str
 	}
 	var out, errb capBuf
 	cmd := e.cmd(ctx, dir, argv)
+	cmd.Stdout, cmd.Stderr = &out, &errb
+	exited, err := startAndWait(cmd)
+	if err != nil {
+		return "", "", -1, err
+	}
+	err = <-exited
+	if ctx.Err() != nil {
+		return out.b.String(), errb.b.String(), -1, ctx.Err()
+	}
+	var ee *exec.ExitError
+	if errors.As(err, &ee) {
+		return out.b.String(), errb.b.String(), ee.ExitCode(), nil
+	}
+	if err != nil {
+		return out.b.String(), errb.b.String(), -1, err
+	}
+	return out.b.String(), errb.b.String(), 0, nil
+}
+
+// CaptureInput runs argv with input on stdin. Input is never included in
+// process arguments or error text.
+func (e SpawnExec) CaptureInput(ctx context.Context, dir string, input []byte, argv ...string) (string, string, int, error) {
+	if len(argv) == 0 {
+		return "", "", -1, errors.New("no command")
+	}
+	var out, errb capBuf
+	cmd := e.cmd(ctx, dir, argv)
+	cmd.Stdin = bytes.NewReader(input)
 	cmd.Stdout, cmd.Stderr = &out, &errb
 	exited, err := startAndWait(cmd)
 	if err != nil {

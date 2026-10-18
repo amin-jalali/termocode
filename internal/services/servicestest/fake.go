@@ -42,6 +42,17 @@ if [ "$1" = "events" ]; then
   touch "$D/events.log"
   exec tail -n 0 -f "$D/events.log"
 fi
+if [ "$1" = "login" ]; then cat > "$D/login.stdin"; exit 0; fi
+if [ "$1" = "version" ]; then cat "$D/version.json" 2>/dev/null; exit 0; fi
+if [ "$1" = "ps" ]; then cat "$D/ps.json" 2>/dev/null; exit 0; fi
+if [ "$1" = "images" ]; then cat "$D/images.json" 2>/dev/null; exit 0; fi
+if [ "$1" = "network" ]; then cat "$D/network-ls.json" 2>/dev/null; exit 0; fi
+if [ "$1" = "volume" ]; then cat "$D/volume-ls.json" 2>/dev/null; exit 0; fi
+if [ "$1" = "context" ]; then cat "$D/context-ls.json" 2>/dev/null; exit 0; fi
+if [ "$1" = "inspect" ]; then cat "$D/inspect.json" 2>/dev/null; exit 0; fi
+if [ "$1" = "stats" ]; then cat "$D/stats.json" 2>/dev/null; exit 0; fi
+if [ "$1" = "history" ]; then cat "$D/history.json" 2>/dev/null; exit 0; fi
+if [ "$1" = "system" ] && [ "$2" = "df" ]; then cat "$D/df.txt" 2>/dev/null; exit 0; fi
 if [ "$1" != "compose" ]; then exit 0; fi
 shift
 while [ $# -gt 0 ]; do

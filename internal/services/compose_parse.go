@@ -312,10 +312,13 @@ func ProblemFromStderr(stderr string) Problem {
 	first = strings.TrimSpace(first)
 	low := strings.ToLower(s)
 	switch {
-	case strings.Contains(low, "cannot connect to the docker daemon"), strings.Contains(low, "is the docker daemon running"):
+	case strings.Contains(low, "cannot connect to the docker daemon"), strings.Contains(low, "is the docker daemon running"),
+		strings.Contains(low, "cannot connect to podman"), strings.Contains(low, "connection refused"):
 		return Problem{Kind: ProblemDaemonDown, Detail: first}
-	case strings.Contains(low, "permission denied") && strings.Contains(low, "docker"):
+	case strings.Contains(low, "permission denied"):
 		return Problem{Kind: ProblemNoPermission, Detail: first}
+	case strings.Contains(low, "docker: 'context' is not a docker command"), strings.Contains(low, "unknown command \"context\""):
+		return Problem{Kind: ProblemOther, Detail: "docker context commands are unavailable; update Docker"}
 	case strings.Contains(low, "'compose' is not a docker command"), strings.Contains(low, "unknown shorthand flag: 'f'"),
 		strings.Contains(low, "unknown command \"compose\""):
 		return Problem{Kind: ProblemNoCompose, Detail: first}
