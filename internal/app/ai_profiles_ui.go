@@ -318,7 +318,14 @@ func (m *Model) onAIProfilesSaved(path string) tea.Cmd {
 	s := m.aiS()
 	updated, err := ai.ParseProfiles(b, want, ai.ProfileSourceUser, s.slotKnown, s.settings.Parallel())
 	if err != nil {
-		m.toast, _ = m.toast.PushDetail(toast.Errr, "Profiles not updated", err.Error())
+		detail := err.Error()
+		if _, rest, ok := strings.Cut(detail, " line "); ok {
+			line, message, found := strings.Cut(rest, ": ")
+			if found {
+				detail = fmt.Sprintf("%s, line %s: %s", filepath.Base(want), line, message)
+			}
+		}
+		m.toast, _ = m.toast.PushDetail(toast.Errr, "Profiles not updated", detail)
 		return nil
 	}
 	old := s.profiles

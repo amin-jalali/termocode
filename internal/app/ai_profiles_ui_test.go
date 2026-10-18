@@ -76,7 +76,8 @@ func TestAIProfileBufferSaved(t *testing.T) {
 		t.Fatal(err)
 	}
 	m.onAIProfilesSaved(path)
-	if !strings.Contains(aiToastText(m), "line 1") {
+	parseToast := strings.Join(strings.Fields(aiToastText(m)), " ")
+	if !strings.Contains(parseToast, "profiles.json, line 1") {
 		t.Fatalf("parse error toast: %q", aiToastText(m))
 	}
 }

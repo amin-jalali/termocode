@@ -72,5 +72,9 @@ func TestGitPushAuthNeverPromptsOnTerminal(t *testing.T) {
 	tm.WaitText("Command Palette", uiTimeout)
 	tm.Send(KeyEsc)
 	tm.WaitGone("Command Palette", 3*time.Second)
+	// WaitGone can observe the brief frame between closing and any pending
+	// UI update. Let the screen settle before sending Ctrl+Q so it cannot be
+	// consumed by a palette that has just reopened.
+	tm.settle()
 	tm.Quit()
 }
