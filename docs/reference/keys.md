@@ -159,6 +159,12 @@ These are the default keys. The **Key** column is the key you press. The **Key s
 | `Alt+W` | `alt+w` | `ToggleWordWrap` | Turn soft word wrap on or off. |
 | `Alt+Z` | `alt+z` | `ToggleZenMode` | Turn Zen mode on or off. |
 
+## Help
+
+| Key | Key string | Action | Description |
+| --- | --- | --- | --- |
+| `Shift+F1` | `shift+f1` | `ContextHelp` | Open the guide section for the focused item, or for the hover label on screen. |
+
 ## Actions without a default key
 
 You can give these a key in `keymap.json` (see below), or run them from the command palette.

@@ -160,6 +160,10 @@ const (
 	// in the chat slot, or switches the slot back to the chat (U20 AP-9):
 	// Alt+Shift+A.
 	ActionAIToggleAgents
+	// ActionContextHelp opens the built-in guide at the section for the
+	// hover label on screen, else the focused item (app/help_contexts.go).
+	// Shift+F1; xterm sends it as f13, which canonicalKey matches.
+	ActionContextHelp
 )
 
 // KittyOnlyKeys are default bindings a legacy terminal cannot send (or
@@ -483,6 +487,11 @@ func Default() KeyMap {
 			// "alt+A" on legacy terminals and "alt+shift+a" on CSI-u ones.
 			"alt+A":       ActionAIToggleAgents,
 			"alt+shift+a": ActionAIToggleAgents,
+
+			// Help for the focused item (or the hover label on screen).
+			// F1 is the palette; Shift+F1 is free in every terminal we
+			// test (xterm sends f13).
+			"shift+f1": ActionContextHelp,
 
 			// Markdown preview: F7 (the canonical one-shot overlay) is the
 			// only binding now. We had a tab-based "live preview" attempt

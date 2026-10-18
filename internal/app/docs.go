@@ -103,6 +103,7 @@ var paletteActions = map[string]keymap.Action{
 	"prev-diagnostic":             keymap.ActionPrevDiagnostic,
 	"toggle-hidden":               keymap.ActionToggleHidden,
 	"cheat-sheet":                 keymap.ActionShowCheatSheet,
+	"help-context":                keymap.ActionContextHelp,
 	"buffer-info":                 keymap.ActionShowBufferInfo,
 	"hover":                       keymap.ActionHover,
 	"find-references":             keymap.ActionFindReferences,
@@ -278,7 +279,7 @@ var fileOnlySettings = []SettingEntry{
 	{Key: "rtl", Type: "enum", Default: "auto", Category: "Appearance (file only)", Choices: rtl.Choices,
 		Description: "Right-to-left text (Persian, Arabic, Hebrew) in the AI chat and the Markdown preview. termocode: termocode joins the letters and puts them in reading order itself, right-aligns RTL paragraphs, and asks the terminal not to reorder (BDSM, CSI 8 l). terminal: termocode sends the text unchanged and the terminal does it. off: unchanged text, no request to the terminal. auto: terminal on Konsole and mlterm (they always reorder), else termocode. Read at start."},
 	{Key: "terminal_skip_shell", Type: "string[]", Default: "[]", Category: "Terminal (file only)",
-		Description: "Actions (keymap.json names) whose keys reach termocode while the terminal has focus. Other Ctrl keys go to the shell. Quit (Ctrl+Q) is in the list by default; add a name, or remove one with \"-Name\" (for example `[\"QuickOpen\", \"-Quit\"]`)."},
+		Description: "Actions (keymap.json names) whose keys reach termocode while the terminal has focus. Other Ctrl keys go to the shell. Quit (Ctrl+Q) and ContextHelp (Shift+F1) are in the list by default; add a name, or remove one with \"-Name\" (for example `[\"QuickOpen\", \"-Quit\"]`)."},
 	{Key: "terminal_shell_integration", Type: "bool", Default: "true", Category: "Terminal (file only)",
 		Description: "bash, zsh and fish terminal tabs load a small script (after your own rc file) that tells termocode each command, its exit code and the folder (OSC 133 / OSC 7). It gives the tab its folder name, the \"✦ Fix?\" chip on a failed command and the CLI agent marks. false starts the shell exactly as before. Read when a terminal tab opens; needs Neovim 0.10+."},
 }

@@ -131,6 +131,7 @@ var actionInfo = map[Action]ActionInfo{
 	ActionPickTheme: {"Preferences", "Pick a color theme."},
 
 	ActionShowCheatSheet: {"Help", "Show the keyboard shortcuts overlay."},
+	ActionContextHelp:    {"Help", "Open the guide section for the focused item, or for the hover label on screen."},
 
 	ActionReloadWindow: {"Developer", "Reload the window (restart the UI, keep the session)."},
 }

@@ -90,7 +90,11 @@ func (m Model) viewFrame() string {
 	// All pickers and prompts share the same modalOverlay recipe so
 	// pseudo-transparency reads consistently across the UI. Other
 	// overlays (preview / search / confirm) are full-screen and keep
-	// their own rendering.
+	// their own rendering. The preview comes first: it takes the keys
+	// first too (the guide opens over Settings or the palette, Shift+F1).
+	if m.previewOpen {
+		return m.preview.View()
+	}
 	if m.settingsModalOpen {
 		base := m.renderBase()
 		base = m.overlayToastsInEditor(base)
@@ -110,9 +114,6 @@ func (m Model) viewFrame() string {
 		base := m.renderBase()
 		base = m.overlayToastsInEditor(base)
 		return modalOverlay(base, m.recents.Box(), m.w, m.h, m.modalOpts())
-	}
-	if m.previewOpen {
-		return m.preview.View()
 	}
 	if m.searchOpen {
 		return m.search.View()

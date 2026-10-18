@@ -254,6 +254,7 @@ func paletteItems() []picker.Item {
 		{ID: "setup-show-card", Title: "Setup: Show Setup Card"},
 		{ID: "open-docs", Title: "Help: Open Documentation"}, // Docs
 		{ID: "help-guide", Title: "Help: Open Guide…"},
+		{ID: "help-context", Title: "Help: Explain This…", Hint: "Shift+F1"},
 		{ID: "hover", Title: "LSP: Show Hover Documentation"},
 		{ID: "find-references", Title: "LSP: Find All References", Hint: "Shift+F12"},
 		{ID: "replace-workspace", Title: "Search: Replace in Workspace...", Hint: "Ctrl+Shift+H"},
@@ -625,6 +626,8 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.openDocs()
 	case "help-guide":
 		m.openHelpGuidePicker()
+	case "help-context":
+		return m.openContextHelp()
 	case "hover":
 		return m.hoverCmd()
 	case "find-references":

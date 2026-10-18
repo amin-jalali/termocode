@@ -244,6 +244,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| Help: Explain This… | `help-context` | `Shift+F1` | `Shift+F1` |
 | Help: Open Documentation | `open-docs` |   |   |
 | Help: Open Guide… | `help-guide` |   |   |
 | Help: Run Doctor | `run-doctor` |   |   |

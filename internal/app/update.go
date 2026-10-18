@@ -420,6 +420,12 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 			return m, nil
 		}
 	}
+	// Shift+F1 explains the focused item, also over overlays that take
+	// every other key (help_contexts.go). In the terminal it reaches the
+	// shell unless ContextHelp is in terminal_skip_shell (the default).
+	if km, ok := msg.(tea.KeyMsg); ok && m.keys.Match(km) == keymap.ActionContextHelp && (!m.inTerminal || m.skipsShell(km)) {
+		return m, m.openContextHelp()
+	}
 	if m.previewOpen {
 		return m.routeToPreview(msg)
 	}

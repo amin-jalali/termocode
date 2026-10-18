@@ -6,7 +6,7 @@ import "strings"
 // the integrated terminal has keyboard focus, like VSCode's
 // terminal.integrated.commandsToSkipShell. Every other plain Ctrl+letter
 // goes to the shell (Ctrl+C, Ctrl+R, Ctrl+U, …).
-var DefaultSkipShell = []Action{ActionQuit}
+var DefaultSkipShell = []Action{ActionQuit, ActionContextHelp}
 
 // SkipShellSet builds the skip-shell set from DefaultSkipShell and the
 // user's config.json "terminal_skip_shell" list of action names (as in

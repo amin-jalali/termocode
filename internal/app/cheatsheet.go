@@ -68,6 +68,9 @@ func cheatSheetBody(k keymap.KeyMap) string {
 
 	b.WriteString("TIPS\n")
 	b.WriteString("  Every command is in the command palette, also the ones without a key.\n")
+	if keys := humanKeys(k.KeysFor(keymap.ActionContextHelp)); keys != "" {
+		b.WriteString("  " + keys + " opens the guide for the focused item; on a hover label, click More info.\n")
+	}
 	b.WriteString("  Change keys with Preferences: Customize Keybindings (keymap.json).\n")
 	b.WriteString("  In the terminal, Ctrl keys go to the shell (see terminal_skip_shell).\n")
 	b.WriteString("  TERMOCODE_ICON_MODE=nerd_font|unicode|ascii overrides the icons.\n")

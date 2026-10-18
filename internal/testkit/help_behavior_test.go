@@ -4,6 +4,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/amin-jalali/termocode/internal/app"
 )
 
 // header is the first row of the screen (the reader's title row).
@@ -56,6 +60,56 @@ func TestTooltipMoreInfoOpensGuide(t *testing.T) {
 	if strings.Contains(header(d), "Guide") {
 		t.Fatalf("esc did not close the guide:\n%s", screen(d))
 	}
+}
+
+// shiftF1 is Shift+F1 as xterm sends it (f13).
+var shiftF1 = tea.KeyMsg{Type: tea.KeyF13}
+
+// firstContentRow is the guide's first row under the title row.
+func firstContentRow(d *Driver) string { return strings.TrimSpace(strings.Split(screen(d), "\n")[1]) }
+
+// Spec: Shift+F1 opens the guide for the focused item: the chat input
+// gives "Use AI" at "Chat panel"; it works with mouse hover off; with no
+// focus on anything special the editor (here the welcome page) section
+// opens; Esc goes back.
+func TestShiftF1OpensFocusedHelp(t *testing.T) {
+	d := New(t, Options{W: 120, H: 40, Git: true, Config: map[string]string{"config.json": `{"mouse_hover":"off"}`}})
+	d.Action("toasts:clear")
+	d.Send(shiftF1)
+	if !waitHeader(d, "First 5 minutes") || firstContentRow(d) != "1. Open a project" {
+		t.Fatalf("Shift+F1 on the welcome page:\n%s", screen(d))
+	}
+	d.Key("esc")
+	if strings.Contains(header(d), "Guide") {
+		t.Fatalf("esc did not close the guide:\n%s", screen(d))
+	}
+
+	d.Key("alt+a") // open the chat with the input focused
+	if _, y, ok := find(d, "AI CHAT"); !ok || y != 0 {
+		t.Fatalf("no AI panel:\n%s", screen(d))
+	}
+	d.Send(shiftF1)
+	if !waitHeader(d, "Use AI") || firstContentRow(d) != "Chat panel" {
+		t.Fatalf("Shift+F1 in the chat:\n%s", screen(d))
+	}
+	d.Key("esc")
+}
+
+// Spec: termocode takes Shift+F1 also in a terminal tab (ContextHelp is
+// in the default terminal_skip_shell list): the terminal section opens.
+func TestShiftF1InTerminal(t *testing.T) {
+	if testing.Short() {
+		t.Skip("starts nvim")
+	}
+	d := New(t, Options{W: 120, H: 40, Nvim: true})
+	d.Palette("toggle-terminal")
+	waitTerm(d, 0, "no tab", func(app.TerminalTabState) bool { return true })
+	d.Settle(300 * time.Millisecond)
+	d.Send(shiftF1)
+	if !waitHeader(d, "Edit and move around") || firstContentRow(d) != "Terminal" {
+		t.Fatalf("Shift+F1 in the terminal:\n%s", screen(d))
+	}
+	d.Key("esc")
 }
 
 // "Help: Open Guide…" opens a built-in guide page in the reader with

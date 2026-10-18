@@ -90,6 +90,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"problems-panel":       aiAuto(),
 	"cheat-sheet":          aiAuto(),
 	"help-guide":           aiNever(aiNoPicker),
+	"help-context":         aiAuto(),
 	"buffer-info":          aiAuto(),
 	"error-log":            aiAuto(),
 	"run-doctor":           aiAuto(),
