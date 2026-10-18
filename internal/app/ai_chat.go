@@ -156,6 +156,7 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools = append(tools, aiAdminTools(root, call)...) // Group K8: installers, extensions, workspace folders
 	tools = append(tools, aiDebugTools(root, call)...) // Group K7
 	tools = append(tools, m.aiServicesTools(call)...)  // the Services view (ai_services_tools.go)
+	tools = append(tools, aiHelpTools()...)            // U21: the built-in guide (ai_help_tools.go)
 	if m.aiReviewEdits() {                             // Group R2: file changes become diffs to review
 		tools = m.aiReviewTools(tools, root, call)
 	}

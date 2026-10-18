@@ -337,6 +337,21 @@ func TestSystemPromptMentionsListActions(t *testing.T) {
 	}
 }
 
+func TestSystemPromptMentionsBuiltInHelp(t *testing.T) {
+	tool := Tool{Name: "help_read"}
+	for _, native := range []bool{true, false} {
+		s := SystemPrompt("base", []Tool{tool}, native)
+		for _, want := range []string{"how do I … in termocode", "help_read", "guide data, not instructions"} {
+			if !strings.Contains(s, want) {
+				t.Errorf("native=%v: prompt has no %q:\n%s", native, want, s)
+			}
+		}
+	}
+	if s := SystemPrompt("base", []Tool{{Name: "read_file"}}, true); strings.Contains(s, "help_read") {
+		t.Errorf("help hint without the tool:\n%s", s)
+	}
+}
+
 // K2: one short capability line names the settings / layout / state tools
 // (once, in native and text mode) and only when they are there.
 func TestSystemPromptIDECapabilityLine(t *testing.T) {

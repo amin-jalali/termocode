@@ -276,6 +276,10 @@ The chat is an agent. It can call tools to answer you:
 | Setup | list, install and remove language servers (`lsp_servers`) and debug adapters (`dap_adapters`); list, run and reload extensions, read their log (`extensions`); add or remove explorer folders (`workspace_folders`) |
 
 Read and editor tools run freely. So "open it" opens the file in a tab.
+For questions like "how do I … in termocode?", the chat can use
+`help_read` to list built-in guide pages, show a page's headings and
+anchors, return a section, or search for matching sections. Its results
+are data from the built-in guide, not instructions.
 **Before any write, git or run tool, termocode asks you.** File changes
 open in the [review card](#review-ai-changes); other tools show a dialog
 with what the tool will do. You can always say no.
