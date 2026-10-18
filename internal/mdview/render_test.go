@@ -107,6 +107,27 @@ func decodeRune(s string) (rune, int) {
 	return 0xFFFD, 1
 }
 
+// Spec: a code span that runs over a line break in the source stays on
+// rendered rows (the break is a space, as in CommonMark); no row holds a
+// raw newline.
+func TestCodeSpanAcrossLineBreak(t *testing.T) {
+	src := "it turns yellow: `no answer for 35 s — Esc\nto stop`. Then more.\n"
+	for _, w := range []int{20, 40, 80} {
+		rows := Render(src, Options{Width: w})
+		for i, r := range rows {
+			if strings.Contains(r, "\n") {
+				t.Fatalf("width %d: row %d holds a newline: %q", w, i, ansi.Strip(r))
+			}
+			if got := ansi.StringWidth(r); got != w {
+				t.Fatalf("width %d: row %d is %d cells: %q", w, i, got, ansi.Strip(r))
+			}
+		}
+	}
+	if all := ansi.Strip(strings.Join(Render(src, Options{Width: 80}), " ")); !strings.Contains(all, "Esc to stop") {
+		t.Errorf("code span text lost: %q", all)
+	}
+}
+
 // Every row is exactly the view width and every cell has a background,
 // at any width and in every icon mode.
 func TestRowsExactWidthAndStyled(t *testing.T) {

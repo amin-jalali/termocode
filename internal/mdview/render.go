@@ -546,7 +546,9 @@ func (r *renderer) walkInline(n ast.Node, a attrs, link string, out *[]span) {
 			*out = append(*out, span{text: string(v.Value), a: a, link: link, dest: r.dest, lid: r.lid})
 		case *ast.CodeSpan:
 			ca := attrs{fg: r.p.codeFg, bg: r.p.codeBg, under: a.under}
-			*out = append(*out, span{text: " " + r.plain(v) + " ", a: ca, link: link, code: true, dest: r.dest, lid: r.lid})
+			// A line break in the source is a space (CommonMark).
+			code := strings.ReplaceAll(r.plain(v), "\n", " ")
+			*out = append(*out, span{text: " " + code + " ", a: ca, link: link, code: true, dest: r.dest, lid: r.lid})
 		case *ast.Emphasis:
 			b := a
 			if v.Level >= 2 {
