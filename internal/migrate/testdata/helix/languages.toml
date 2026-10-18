@@ -1,0 +1,3 @@
+[[language]]
+name = "go"
+language-servers = ["gopls"]
