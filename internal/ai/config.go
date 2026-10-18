@@ -32,6 +32,26 @@ type Settings struct {
 	// edited by hand; SaveSettings leaves them as they are.
 	Prices         map[string]Price `json:"ai_prices,omitempty"`
 	ContextWindows map[string]int   `json:"ai_context_windows,omitempty"`
+	// Models are the named model slots agent profiles use (profiles.go);
+	// ParallelMax is how many pipeline steps may run at once (0: 1).
+	// Both are edited by hand; SaveSettings leaves them as they are.
+	Models      map[string]ModelSlot `json:"ai_models,omitempty"`
+	ParallelMax int                  `json:"ai_parallel_max,omitempty"`
+}
+
+// MaxParallel caps ai_parallel_max.
+const MaxParallel = 8
+
+// Parallel is the effective ai_parallel_max: 1 by default, at most
+// MaxParallel.
+func (s Settings) Parallel() int {
+	switch {
+	case s.ParallelMax < 1:
+		return 1
+	case s.ParallelMax > MaxParallel:
+		return MaxParallel
+	}
+	return s.ParallelMax
 }
 
 // Values of ai_edit_review.
@@ -322,11 +342,7 @@ func Resolve(s Settings, c Credentials, getenv func(string) string) Config {
 	if v := getenv("TERMOCODE_AI_BASE_URL"); v != "" {
 		cfg.BaseURL = v
 	} else if kind == KindOllama && getenv("OLLAMA_HOST") != "" {
-		h := trimSlash(getenv("OLLAMA_HOST"))
-		if !strings.HasPrefix(h, "http") {
-			h = "http://" + h
-		}
-		cfg.BaseURL = h + "/v1"
+		cfg.BaseURL = ollamaHostURL(getenv("OLLAMA_HOST"))
 	}
 	if cfg.BaseURL == "" {
 		cfg.BaseURL = DefaultBaseURL(kind)
@@ -339,6 +355,16 @@ func Resolve(s Settings, c Credentials, getenv func(string) string) Config {
 	}
 	RegisterSecret(cfg.APIKey)
 	return cfg
+}
+
+// ollamaHostURL turns OLLAMA_HOST ("box:11434") into the OpenAI-style
+// base URL.
+func ollamaHostURL(host string) string {
+	h := trimSlash(host)
+	if !strings.HasPrefix(h, "http") {
+		h = "http://" + h
+	}
+	return h + "/v1"
 }
 
 // ── Redaction ─────────────────────────────────────────────────────────

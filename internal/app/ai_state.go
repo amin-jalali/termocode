@@ -42,6 +42,11 @@ type aiState struct {
 	cfg         ai.Config
 	provider    ai.Provider
 	loadErr     string
+	// profiles are the agent profiles (built-ins + profiles.json + the
+	// project's ai-profiles.json, with their load errors); slots holds
+	// one provider per model slot, built on first use (ai_profiles.go).
+	profiles ai.ProfileSet
+	slots    *ai.SlotPool
 
 	// inline ghost text
 	inlineCancel context.CancelFunc
@@ -161,6 +166,7 @@ func (s *aiState) reload() {
 		s.cfg.Token = src.Token
 	}
 	s.provider = ai.NewProvider(s.cfg)
+	s.loadProfiles(creds)
 }
 
 // ai returns the AI state, creating it on first use (tests build Model

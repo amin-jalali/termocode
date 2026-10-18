@@ -1129,6 +1129,8 @@ Add a request to a .http file, or with replace=true change the request with that
 | `ai_inline_model` | never | AI provider, credentials and approvals stay with the user |
 | `ai_max_steps` | never | AI provider, credentials and approvals stay with the user |
 | `ai_model` | never | AI provider, credentials and approvals stay with the user |
+| `ai_models` | never | AI provider, credentials and approvals stay with the user |
+| `ai_parallel_max` | never | AI provider, credentials and approvals stay with the user |
 | `ai_prices` | never | AI provider, credentials and approvals stay with the user |
 | `ai_provider` | never | AI provider, credentials and approvals stay with the user |
 | `animations` | confirm (settings) |   |
