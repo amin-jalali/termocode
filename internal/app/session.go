@@ -62,6 +62,13 @@ type SessionState struct {
 	// from the bottom).
 	AILastChat   string `json:"ai_last_chat,omitempty"`
 	AIChatScroll int    `json:"ai_chat_scroll,omitempty"`
+	// AIProfile is the active agent profile in this workspace ("" =
+	// default). AIProfilesTrusted / AIProfilesRefused are the answers of
+	// the project-profile trust card: profile name → ai.ProfileHash of
+	// the content the user said Use / Not in this project to (U20 AP-5).
+	AIProfile         string            `json:"ai_profile,omitempty"`
+	AIProfilesTrusted map[string]string `json:"ai_profiles_trusted,omitempty"`
+	AIProfilesRefused map[string]string `json:"ai_profiles_refused,omitempty"`
 
 	// Services view (services_state.go): "Always in this project" for the
 	// AI's start / stop / restart, the compose services termocode started
@@ -140,6 +147,10 @@ func workspacePart(s SessionState) SessionState {
 		Roots:        s.Roots,
 		AILastChat:   s.AILastChat,
 		AIChatScroll: s.AIChatScroll,
+
+		AIProfile:         s.AIProfile,
+		AIProfilesTrusted: s.AIProfilesTrusted,
+		AIProfilesRefused: s.AIProfilesRefused,
 
 		ServicesAIAllowed: s.ServicesAIAllowed,
 		ServicesStarted:   s.ServicesStarted,

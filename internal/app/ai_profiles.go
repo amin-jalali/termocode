@@ -18,9 +18,24 @@ func (s *aiState) loadProfiles(creds ai.Credentials) {
 	for n := range cfgs {
 		known[n] = true
 	}
+	s.slotKnown, s.slotErrs = known, errs
+	s.reloadProfiles()
+}
+
+// reloadProfiles reads profiles.json and the project's ai-profiles.json
+// again (the slots stay): the picker and the cycle key see an edit at
+// once.
+func (s *aiState) reloadProfiles() {
+	known := s.slotKnown
+	if known == nil {
+		known = map[string]bool{ai.SlotMain: true, ai.SlotQuick: true, ai.SlotLocal: true}
+	}
 	user, _ := ai.ProfilesPath()
 	s.profiles = ai.LoadProfiles(user, ai.ProjectProfilesPath(aiWorkspaceRoot()), known, s.settings.Parallel())
-	s.profiles.Errors = append(errs, s.profiles.Errors...)
+	s.profiles.Errors = append(append([]string(nil), s.slotErrs...), s.profiles.Errors...)
+	for _, p := range s.profFake {
+		s.profiles.Add(p)
+	}
 }
 
 // slotProvider returns the provider of a model slot. "main" (or "") is

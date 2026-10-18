@@ -173,6 +173,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		return m.aiInfo("AI is still answering — Ctrl+C to stop")
 	}
 	prof := s.activeProfile()
+	if prof.Source == ai.ProfileSourceProject && m.aiProfileTrust(prof) != aiTrustUse {
+		return m.askAIProfileTrust(prof, aiTrustAfterSend, text) // F4: a repo's prompts are shown first
+	}
 	if len(prof.Steps) > 1 {
 		return m.startAIRun(text, prof)
 	}
@@ -463,6 +466,7 @@ func (s *aiState) restoreAIChat() {
 	}
 	s.restored = true
 	sess := loadSession()
+	s.profile = sess.AIProfile // the workspace's agent profile (U20 AP-5)
 	if sess.AILastChat == "" {
 		return
 	}

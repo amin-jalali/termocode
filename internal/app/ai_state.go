@@ -49,10 +49,19 @@ type aiState struct {
 	// one provider per model slot, built on first use (ai_profiles.go).
 	profiles ai.ProfileSet
 	slots    *ai.SlotPool
+	// slotKnown / slotErrs are the slot names and slot errors of the last
+	// loadProfiles (reloadProfiles reuses them).
+	slotKnown map[string]bool
+	slotErrs  []string
+	// profTrust is the open project-profile trust card (ai_profiles_ui.go).
+	profTrust *aiProfileTrustPending
 	// profile is the active profile's name ("" = default); profErrShown
 	// is the profile errors already shown as a toast.
 	profile      string
 	profErrShown string
+	// profFake are profiles added after every profile load (the demo
+	// shots' project profile, which has no file).
+	profFake []ai.Profile
 	// slotFake replaces model slots by name (tests and the demo shots).
 	slotFake map[string]aiSlot
 
@@ -249,10 +258,14 @@ func (m Model) aiStatus() (string, statusbar.AIState) {
 	if s.provider == nil || !s.provider.Configured() {
 		return "AI", statusbar.AIUnconfigured
 	}
-	if s.streaming || s.inlineBusy || s.actionBusy != "" {
-		return s.modelLabel(), statusbar.AIStreaming
+	label := s.modelLabel()
+	if p := s.activeProfile().Name; p != ai.ProfileDefault {
+		label = p + " · " + label // U20 AP-5: a non-default profile shows in the badge
 	}
-	return s.modelLabel(), statusbar.AIIdle
+	if s.streaming || s.inlineBusy || s.actionBusy != "" {
+		return label, statusbar.AIStreaming
+	}
+	return label, statusbar.AIIdle
 }
 
 // hitStatusAIBadge reports whether (x, y) lands on the status-bar badge.
@@ -329,6 +342,12 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-configure", "AI: Configure Provider…", ""},
 		{"ai-pick-model", "AI: Pick Model…", ""},
 		{"ai-auto-approve", "AI: Agent Auto-Approve…", ""},
+		{"ai-profile-switch", "AI: Switch Profile…", ""},
+		{"ai-profile-next", "AI: Next Profile", "Alt+Shift+P"},
+		{"ai-profile-edit", "AI: Edit Profiles", ""},
+		{"ai-profile-new", "AI: New Profile from Current…", ""},
+		{"ai-profile-trust", "AI: Project Profiles Trust…", ""},
+		{"ai-models-edit", "AI: Edit Model Slots", ""},
 		{"ai-sign-in-claude", "AI: Sign in with Claude (OAuth, opt-in)…", ""},
 		{"ai-sign-out-claude", "AI: Sign out of Claude", ""},
 		{"ai-credentials", "Open Config: AI Credentials", ""},
@@ -423,6 +442,18 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.editMCPConfig(), true
 	case "ai-cancel":
 		return m.aiCancelAll(), true
+	case "ai-profile-switch":
+		return m.openAIProfilePicker(), true
+	case "ai-profile-next":
+		return m.cycleAIProfile(), true
+	case "ai-profile-edit":
+		return m.editAIProfiles(), true
+	case "ai-profile-new":
+		return m.openAIProfileNewPrompt(), true
+	case "ai-profile-trust":
+		return m.openAIProfileTrustPicker(), true
+	case "ai-models-edit":
+		return m.editAIModelSlots(), true
 	}
 	return nil, false
 }

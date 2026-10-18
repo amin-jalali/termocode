@@ -180,6 +180,8 @@ var actionsHeaderMemo struct {
 	hover   string
 	rk      theme.RenderKey
 	mcp     int // mcpChipState: -1 no chip, else connected servers
+	profile string
+	running bool // a pipeline run is active (the profile chip's colour)
 	out     string
 }
 
@@ -189,14 +191,17 @@ func (m Model) actionsHeaderEdged(width int, edge func(string) string) string {
 	hover, rk := m.actionsHeaderHover(), theme.CurrentRenderKey()
 	focused := m.ai != nil && m.ai.focused
 	mcpState := m.mcpChipState()
+	profile, running := m.aiProfileChipLabel(), m.aiRunActive()
 	c := &actionsHeaderMemo
 	c.Lock()
 	defer c.Unlock()
-	if c.ok && c.width == width && c.pinned == m.actionsPinned && c.focused == focused && c.hover == hover && c.rk == rk && c.mcp == mcpState {
+	if c.ok && c.width == width && c.pinned == m.actionsPinned && c.focused == focused && c.hover == hover && c.rk == rk && c.mcp == mcpState &&
+		c.profile == profile && c.running == running {
 		return c.out
 	}
 	out := edge(m.renderActionsHeader(width))
 	c.ok, c.width, c.pinned, c.focused, c.hover, c.rk, c.mcp, c.out = true, width, m.actionsPinned, focused, hover, rk, mcpState, out
+	c.profile, c.running = profile, running
 	return out
 }
 
@@ -235,9 +240,15 @@ func (m Model) renderActionsHeader(width int) string {
 		}
 		return st.Render(glyph)
 	}
-	// MCP chip (ai_mcp.go): "⌁ N MCP", a click opens AI: MCP Servers….
-	if chip := m.mcpChipLabel(); chip != "" && width >= actionsChipMinWidth {
-		left += bg.Render(" ") + btn("mcp", chip, theme.FgBg(theme.TextSecondary, theme.BgPanel))
+	// Chips after the label (actionsHeaderChips): the agent profile
+	// "✦ <profile> ▾" (ai_profiles_ui.go, a click opens the picker) and
+	// MCP "⌁ N MCP" (ai_mcp.go, a click opens AI: MCP Servers…).
+	for _, c := range m.actionsHeaderChips(width) {
+		tok := theme.TextSecondary
+		if c.id == "profile" {
+			tok = m.aiProfileChipTok()
+		}
+		left += bg.Render(" ") + btn(c.id, c.label, theme.FgBg(tok, theme.BgPanel))
 	}
 	right := btn("new", theme.GlyphNew.String(), closeStyle) + bg.Render(" ") +
 		btn("history", theme.GlyphHistory.String(), closeStyle) + bg.Render(" ") +
@@ -334,19 +345,51 @@ func (m Model) hitActionsButton(screenX, screenY int) string {
 	if screenX == x1+w-8 {
 		return "new" // Group A
 	}
-	// The MCP chip right after " ✦ AI CHAT " (renderActionsHeader).
-	if chip := m.mcpChipLabel(); chip != "" && w >= actionsChipMinWidth {
-		c0 := x1 + runewidth.StringWidth(" "+aiSpark()+" AI CHAT ")
-		if screenX >= c0 && screenX < c0+runewidth.StringWidth(chip) {
-			return "mcp"
+	// The chips after " ✦ AI CHAT " (renderActionsHeader).
+	for _, c := range m.actionsHeaderChips(w) {
+		if c0 := x1 + c.x0; screenX >= c0 && screenX < c0+runewidth.StringWidth(c.label) {
+			return c.id
 		}
 	}
 	return ""
 }
 
-// actionsChipMinWidth is the narrowest header that still shows the MCP
-// chip next to the label and the buttons.
+// actionsChipMinWidth is the narrowest header that still shows a chip
+// next to the label and the buttons.
 const actionsChipMinWidth = 34
+
+// actionsHeaderButtonsW is the width of the header's right side
+// " + ≡ ⚐ × " without its leading gap (hitActionsButton's columns).
+const actionsHeaderButtonsW = 8
+
+// actionsHeaderChip is one chip of the header, x0 its first cell from
+// the panel's left edge.
+type actionsHeaderChip struct {
+	id, label string
+	x0        int
+}
+
+// actionsHeaderChips lays out the header chips after " ✦ AI CHAT": the
+// profile chip, then the MCP chip (only from actionsChipMinWidth on); a
+// chip that does not fit before the buttons (with a 1-cell gap) is left
+// out.
+func (m Model) actionsHeaderChips(width int) []actionsHeaderChip {
+	x := runewidth.StringWidth(" " + aiSpark() + " AI CHAT")
+	var out []actionsHeaderChip
+	add := func(id, label string) {
+		w := runewidth.StringWidth(label)
+		if label == "" || x+1+w+1+actionsHeaderButtonsW > width {
+			return
+		}
+		out = append(out, actionsHeaderChip{id: id, label: label, x0: x + 1})
+		x += 1 + w
+	}
+	add("profile", m.aiProfileChipLabel())
+	if width >= actionsChipMinWidth {
+		add("mcp", m.mcpChipLabel())
+	}
+	return out
+}
 
 // actionsLauncherRect returns the screen rectangle of the bottom-right
 // launcher chip when it should be visible. The chip lives one row above

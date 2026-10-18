@@ -18,6 +18,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Connect a Service… (GitHub, Linear, Slack, Notion, Sentry) | `ai-mcp-connect` |   |   |
 | AI: Delete Chat… | `ai-history-delete` |   |   |
 | AI: Discard Proposed Edit | `ai-discard-proposal` |   |   |
+| AI: Edit Model Slots | `ai-models-edit` |   |   |
+| AI: Edit Profiles | `ai-profile-edit` |   |   |
 | AI: Edit Selection… | `ai-edit` | `Alt+I` | `Alt+I` |
 | AI: Explain Selection / Line | `ai-explain` |   |   |
 | AI: Export Chat as Markdown | `ai-export-chat` |   |   |
@@ -26,14 +28,18 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: MCP Servers… | `ai-mcp-servers` |   |   |
 | AI: MCP: Show Log | `ai-mcp-log` |   |   |
 | AI: New Chat | `ai-new-chat` |   |   |
+| AI: New Profile from Current… | `ai-profile-new` |   |   |
+| AI: Next Profile | `ai-profile-next` | `Alt+Shift+P` | `Alt+Shift+P` |
 | AI: Open Chat | `ai-open-chat` | `Alt+A` | `Alt+A` |
 | AI: Pick Model… | `ai-pick-model` |   |   |
+| AI: Project Profiles Trust… | `ai-profile-trust` |   |   |
 | AI: Rename Chat… | `ai-history-rename` |   |   |
 | AI: Review Pending Changes | `ai-review` |   |   |
 | AI: Services Trust... | `services-trust` |   |   |
 | AI: Sign in with Claude (OAuth, opt-in)… | `ai-sign-in-claude` |   |   |
 | AI: Sign out of Claude | `ai-sign-out-claude` |   |   |
 | AI: Stop Generating | `ai-cancel` |   |   |
+| AI: Switch Profile… | `ai-profile-switch` |   |   |
 | AI: Toggle Edit Review (diff / auto) | `ai-edit-review` |   |   |
 | AI: Toggle Inline Completions | `ai-toggle-inline` | <code>Alt+&#124;</code> | <code>Alt+&#124;</code> |
 | AI: Trigger Inline Completion | `ai-trigger-inline` | <code>Alt+&#92;</code> | <code>Alt+&#92;</code> |

@@ -894,9 +894,15 @@ Add a request to a .http file, or with replace=true change the request with that
 | `ai-mcp-connect` | AI: Connect a Service… (GitHub, Linear, Slack, Notion, Sentry) | never | AI provider, credentials and approvals stay with the user (signing in to services is the user's) |
 | `ai-mcp-log` | AI: MCP: Show Log | auto |   |
 | `ai-mcp-servers` | AI: MCP Servers… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `ai-models-edit` | AI: Edit Model Slots | never | AI provider, credentials and approvals stay with the user |
 | `ai-new-chat` | AI: New Chat | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-open-chat` | AI: Open Chat | auto |   |
 | `ai-pick-model` | AI: Pick Model… | never | AI provider, credentials and approvals stay with the user |
+| `ai-profile-edit` | AI: Edit Profiles | never | AI provider, credentials and approvals stay with the user |
+| `ai-profile-new` | AI: New Profile from Current… | never | AI provider, credentials and approvals stay with the user |
+| `ai-profile-next` | AI: Next Profile | never | AI provider, credentials and approvals stay with the user (ai-profile-switch asks the user) |
+| `ai-profile-switch` | AI: Switch Profile… | confirm (settings) |   |
+| `ai-profile-trust` | AI: Project Profiles Trust… | never | trusting a project's prompts is the user's decision |
 | `ai-review` | AI: Review Pending Changes | never | the user reviews proposed edits |
 | `ai-sign-in-claude` | AI: Sign in with Claude (OAuth, opt-in)… | never | AI provider, credentials and approvals stay with the user |
 | `ai-sign-out-claude` | AI: Sign out of Claude | never | AI provider, credentials and approvals stay with the user |

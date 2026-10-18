@@ -90,6 +90,8 @@ func aiActionForKey(a keymap.Action) string {
 		return "ai-edit"
 	case keymap.ActionAIToggleInline:
 		return "ai-toggle-inline"
+	case keymap.ActionAINextProfile:
+		return "ai-profile-next"
 	}
 	return ""
 }

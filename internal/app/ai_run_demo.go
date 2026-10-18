@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
 )
 
@@ -73,4 +74,35 @@ func (m *Model) aiPipelineDemo(arg string) tea.Cmd {
 	}
 	s.profile = ai.ProfileReview
 	return m.sendAIChat("review my last commit and fix what you find")
+}
+
+// aiProfileDemo sets up the profile UI shots (dev action
+// "profiledemo:chip|picker|trust"): a sample chat with the "review"
+// profile active, the profile picker with an untrusted project profile,
+// or that profile's trust card.
+func (m *Model) aiProfileDemo(arg string) tea.Cmd {
+	s := m.aiS()
+	s.conv.Messages = []ai.StoredMessage{
+		{Role: ai.StoredUser, Text: "Why does the toast slide out twice?"},
+		{Role: ai.StoredAssistant, Text: aiDemoAnswer},
+	}
+	s.scroll = 0
+	house := ai.Profile{Name: "house-review", Title: "House style review", Source: ai.ProfileSourceProject,
+		Steps: []ai.ProfileStep{
+			{ID: "style", Title: "Style check", Category: agentdag.CategoryQuick,
+				System: "Check the change against docs/STYLE.md. List each problem with file:line.\nDo not edit files.",
+				Tools:  agentdag.ToolRule{Preset: agentdag.PresetReadOnly}},
+			{ID: "fix", Title: "Fixer", System: "Fix the problems the style check listed. Keep the changes small.",
+				Tools: agentdag.ToolRule{Preset: agentdag.PresetAll}},
+		}}
+	s.profFake = []ai.Profile{house}
+	s.reloadProfiles()
+	s.profile = ai.ProfileReview
+	switch arg {
+	case "picker":
+		return m.openAIProfilePicker()
+	case "trust":
+		return m.askAIProfileTrust(house, aiTrustAfterSwitch, "")
+	}
+	return nil
 }

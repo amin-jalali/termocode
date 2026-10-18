@@ -302,6 +302,14 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-mcp-connect":      aiNever(aiNoAIConfig + " (signing in to services is the user's)"),
 	"ai-mcp-log":          aiAuto(),
 	"ai-mcp-config":       aiNever(aiNoAIConfig),
+	// Agent profiles (U20 AP-5): the model may suggest a profile (the
+	// user confirms the switch); editing and trusting stay with the user.
+	"ai-profile-switch": aiConfirm(ai.ClassSettings),
+	"ai-profile-next":   aiNever(aiNoAIConfig + " (ai-profile-switch asks the user)"),
+	"ai-profile-edit":   aiNever(aiNoAIConfig),
+	"ai-profile-new":    aiNever(aiNoAIConfig),
+	"ai-profile-trust":  aiNever("trusting a project's prompts is the user's decision"),
+	"ai-models-edit":    aiNever(aiNoAIConfig),
 
 	// ── HTTP client ──
 	"http-send":             aiNever("sends a network request; use http_send (gated by host and method)"),

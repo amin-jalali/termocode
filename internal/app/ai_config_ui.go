@@ -57,6 +57,9 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 	case pickerKindAIAttach:
 		return m.onAIAttachPicked(id), true
 	}
+	if cmd, ok := m.handleAIProfilePickerSelect(id); ok {
+		return cmd, true
+	}
 	return m.handleMCPPickerSelect(id)
 }
 
@@ -77,6 +80,9 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.onAIHistoryRenamed(strings.TrimSpace(value)), true
 	case promptKindAISaveAs:
 		return m.onAISaveAsPath(value), true
+	}
+	if cmd, ok := m.handleAIProfilePrompt(value); ok {
+		return cmd, true
 	}
 	return m.handleMCPPromptSubmit(value)
 }
@@ -101,6 +107,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.onAIHistoryClearConfirm(id), true
 	case confirmKindMCPTrust:
 		return m.answerMCPTrust(id), true
+	case confirmKindAIProfileTrust:
+		return m.answerAIProfileTrust(id), true
 	}
 	return nil, false
 }
@@ -112,6 +120,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAIToolConfirm("deny")
 	case confirmKindMCPTrust:
 		return m.answerMCPTrust("deny")
+	case confirmKindAIProfileTrust:
+		return m.answerAIProfileTrust("") // Esc: no answer, ask again next time
 	}
 	return nil
 }

@@ -153,6 +153,9 @@ const (
 	// resends on the HTTP Response page, else resends the last request
 	// (Ctrl+Alt+R, like VS Code REST Client).
 	ActionHTTPSend
+	// ActionAINextProfile switches the AI chat to the next agent profile
+	// (U20 AP-5): Alt+Shift+P (Alt+P is Pin Tab).
+	ActionAINextProfile
 )
 
 // KittyOnlyKeys are default bindings a legacy terminal cannot send (or
@@ -468,6 +471,10 @@ func Default() KeyMap {
 			"alt+\\": ActionAITriggerInline,
 			"alt+i":  ActionAIEditSelection,
 			"alt+|":  ActionAIToggleInline,
+			// Next agent profile. Alt+Shift+P arrives as "alt+P" on legacy
+			// terminals and "alt+shift+p" on CSI-u ones.
+			"alt+P":       ActionAINextProfile,
+			"alt+shift+p": ActionAINextProfile,
 
 			// Markdown preview: F7 (the canonical one-shot overlay) is the
 			// only binding now. We had a tab-based "live preview" attempt

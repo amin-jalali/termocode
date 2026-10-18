@@ -316,6 +316,7 @@ var actionNames = map[Action]string{
 	ActionAITriggerInline: "AITriggerInline",
 	ActionAIEditSelection: "AIEditSelection",
 	ActionAIToggleInline:  "AIToggleInline",
+	ActionAINextProfile:   "AINextProfile",
 	// Docs: these had default keys but no name, so keymap.json could not
 	// rebind them.
 	ActionShowBufferInfo:     "ShowBufferInfo",
