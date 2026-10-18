@@ -165,6 +165,11 @@ func HelpTooltip() Scene {
 		HoverText("More info"), Pause(700*time.Millisecond))}
 }
 
+// HelpViewer is the in-app guide at the Chat panel section.
+func HelpViewer() Scene {
+	return Scene{Name: "help-viewer", Steps: WithEditor(Act("helpdemo"), Pause(700*time.Millisecond))}
+}
+
 // Scenes is the screenshot set for assets/screenshots (the shots command).
 func Scenes() []Scene {
 	scenes := []Scene{

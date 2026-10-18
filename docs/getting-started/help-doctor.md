@@ -1,5 +1,17 @@
 # Check your setup (Doctor)
 
+## Help inside termocode
+
+Hover over a button with a help topic to see an **ⓘ More info** line in its
+tooltip. Click that line to open the matching guide section. With the item
+focused, press **Shift+F1** to open its guide section from the keyboard.
+
+The command palette also has **Help: Open Guide…** for browsing the built-in
+guides and **Help: Explain This…** for the focused item. In the guide viewer,
+press **Tab** to move between links and **Enter** to follow one. Press
+**Backspace** to return to the previous page or position; **Esc** closes the
+viewer.
+
 termocode needs a few outside tools. **Doctor** checks them for you and
 tells you what is missing.
 

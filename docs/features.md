@@ -97,6 +97,7 @@ its name and key.
 
 ## Help
 
+- Hover over a button's **ⓘ More info** line or press **Shift+F1** to open its guide section. **Help: Open Guide…** browses the built-in guides; **Help: Explain This…** opens help for the focused item. → [Help inside termocode](getting-started/help-doctor.md#help-inside-termocode)
 - **Help: Run Doctor** checks your tools. → [Check your setup](getting-started/help-doctor.md)
 - **Help: Show Shortcuts** shows a cheat sheet of your current keys (with your `keymap.json` changes).
 - The full lists: [Keyboard shortcuts](reference/keys.md) · [Commands](reference/commands.md) · [Settings](reference/settings.md).

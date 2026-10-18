@@ -12,6 +12,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/diffview"
 	"github.com/amin-jalali/termocode/internal/explorer"
+	"github.com/amin-jalali/termocode/internal/help"
 	"github.com/amin-jalali/termocode/internal/textdiff"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -53,6 +54,7 @@ import (
 //	                       (no docker; the shots and goldens)
 //	httpdemo:<variant>     docs/users.http and a canned HTTP answer:
 //	                       file, response, headers or tls (no network)
+//	helpdemo               open the in-app guide at the chat panel section
 //	plugin:nvim-dap=<dir>  set nvim-dap up from a checkout (tests: the
 //	                       sandbox has none; Group K7)
 type DevActionMsg struct{ ID string }
@@ -138,6 +140,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		}
 	case "httpdemo": // the .http file / HTTP Response page shots (no network)
 		return m.httpDemo(arg)
+	case "helpdemo":
+		return m.openHelp(help.Loc{Page: "guides/ai-use.md", Anchor: "chat-panel"})
 	case "commit": // open the commit view on a revision (HEAD, a SHA …)
 		return m.gitOpenCommitViewCmd(arg)
 	case "compare": // Space on GRAPH commits i and j

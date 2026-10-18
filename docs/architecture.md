@@ -127,6 +127,14 @@ AI is optional: with no provider, every AI entry only shows a "configure" toast.
 - **Chat**: the right-side panel (`actions_panel.go` frame, `ai_panel.go` body). A turn runs `ai.Agent` on a goroutine; events reach `Update` through a channel (`aiChatEventMsg` … `aiChatDoneMsg`), tagged with a generation so New Chat / Stop drops late events. Mutating tools wait on a confirm dialog (per-class auto-approve: fileWrite / git / run). Chats are saved in `ai/chats/<id>.json`.
 - **Code actions**: Explain goes to the chat; Fix / Edit / Doc build a range proposal that opens in a side-by-side nvim diff, and Apply replaces the range with one `nvim_buf_set_lines` call (one undo step), after checking the buffer did not change.
 
+## Built-in guide
+
+`docs/embed.go` embeds the getting-started pages, guides, reference and feature
+pages into the binary. `internal/help` prepares those pages for terminal
+reading and resolves their headings and links. The read-only guide viewer uses
+the `internal/preview` reader, so help works offline and shares its scrolling,
+link navigation and Markdown rendering with the file preview.
+
 ## Overlay rendering (`modal_overlay.go`)
 
 Floating chrome (pickers, prompts, confirms, menus, toasts, the image preview) is composited by `modalOverlay`: the rendered base is parsed into ANSI cells, everything outside the card is dimmed (the backdrop), the opaque card (`theme.FloatBox`, `BgFloat`, rounded border) is spliced in with its border glyphs sitting on the backdrop, and a drop shadow is blended toward the theme's `Shadow` token. Colour math only runs on truecolor / 256-colour profiles; on 16 colours the backdrop uses the SGR "faint" attribute, so no 24-bit sequence is ever written (`render_invariants_test.go` checks this).
