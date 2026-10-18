@@ -29,17 +29,15 @@ func TestWelcome_RendersWithEmptyRecents(t *testing.T) {
 			t.Errorf("empty page still shows %q", gone)
 		}
 	}
-	// START rows + shortcut keycaps; no subtitles.
+	// START tiles: title, subtitle and shortcut keycap.
 	for _, label := range []string{
 		"Open file", "Open workspace", "Clone repository", "Find in files", "Command palette", "New terminal",
 		"Ctrl+P", "F1", "F8", "Ctrl+T", // UI review #3: one key notation
 	} {
 		mustContain(t, out, label)
 	}
-	for _, noise := range []string{"browse your filesystem", "run any action", "integrated terminal"} {
-		if strings.Contains(out, noise) {
-			t.Errorf("subtitle %q still on the page", noise)
-		}
+	for _, sub := range []string{"browse your filesystem", "run any action", "integrated terminal"} {
+		mustContain(t, out, sub)
 	}
 	// The hint bar: how to move, open and reach every command.
 	for _, hint := range []string{"move", "open", "commands", "v0."} {
@@ -79,8 +77,8 @@ func TestWelcome_RecentsHits(t *testing.T) {
 	}
 }
 
-// TestWelcome_QuickActionHits: START is a list of 6 one-line rows, each
-// one hit as wide as the content column, in reading order.
+// TestWelcome_QuickActionHits: START is 6 tiles in 2 columns, one hit
+// each, in reading order (left to right, top to bottom).
 func TestWelcome_QuickActionHits(t *testing.T) {
 	withConfigDir(t)
 	hits := welcomeQuickActionHits(120, 36)
@@ -92,14 +90,17 @@ func TestWelcome_QuickActionHits(t *testing.T) {
 		if h.Index != i {
 			t.Errorf("hit %d has index %d", i, h.Index)
 		}
-		if h.ColEnd-h.ColStart != w || w < 40 {
-			t.Errorf("hit %d is %d cells wide, want the row width %d", i, h.ColEnd-h.ColStart, w)
+		if h.ColEnd-h.ColStart != w || w < 30 {
+			t.Errorf("hit %d is %d cells wide, want the tile width %d", i, h.ColEnd-h.ColStart, w)
 		}
-		if i > 0 && h.Row != hits[i-1].Row+1 {
-			t.Errorf("hit %d on row %d, want %d (one row each, no gaps)", i, h.Row, hits[i-1].Row+1)
+		if i%2 == 1 && (h.Row != hits[i-1].Row || h.ColStart <= hits[i-1].ColEnd-1) {
+			t.Errorf("hit %d is not right of hit %d: %+v %+v", i, i-1, h, hits[i-1])
+		}
+		if i >= 2 && h.Row <= hits[i-2].Row {
+			t.Errorf("hit %d on row %d, not below hit %d", i, h.Row, i-2)
 		}
 	}
-	want := []string{"Open file", "Open workspace", "Clone repository", "Find in files", "Command palette", "New terminal"}
+	want := []string{"Open file", "Command palette", "Find in files", "New terminal", "Open workspace", "Clone repository"}
 	for i, a := range welcomeQuickActions() {
 		if a.title != want[i] {
 			t.Errorf("row %d = %q, want %q", i, a.title, want[i])
@@ -107,11 +108,11 @@ func TestWelcome_QuickActionHits(t *testing.T) {
 	}
 }
 
-// TestWelcome_NoTiles: no boxes on the start page (rounded borders are
-// for floating surfaces only).
-func TestWelcome_NoTiles(t *testing.T) {
+// TestWelcome_NoBoxesWhenShort: when the tiles do not fit, START is the
+// one-line rows and no box is drawn.
+func TestWelcome_NoBoxesWhenShort(t *testing.T) {
 	withConfigDir(t)
-	for _, sz := range [][2]int{{120, 36}, {64, 28}, {44, 22}} {
+	for _, sz := range [][2]int{{120, 18}, {64, 16}, {44, 14}} {
 		out := ansi.Strip(renderWelcome(sz[0], sz[1], 0, true))
 		for _, g := range []string{"╭", "╰", "╮", "╯"} {
 			if strings.Contains(out, g) {
@@ -146,8 +147,9 @@ func TestWelcome_FocusHighlightsCard(t *testing.T) {
 	old := theme.CurrentIconMode
 	theme.CurrentIconMode = theme.IconModeUnicode
 	defer func() { theme.CurrentIconMode = old; invalidateWelcome() }()
-	for focus, title := range []string{"Open file", "Open workspace", "Clone repository"} {
-		out := ansi.Strip(renderWelcome(120, 36, focus, true))
+	// Short pane: the one-line rows carry the cursor bar.
+	for focus, title := range []string{"Open file", "Command palette", "Find in files"} {
+		out := ansi.Strip(renderWelcome(120, 14, focus, true))
 		bars := 0
 		for _, line := range strings.Split(out, "\n") {
 			if !strings.Contains(line, "▎") {

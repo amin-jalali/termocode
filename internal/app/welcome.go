@@ -84,7 +84,11 @@ type welcomeRowHit struct {
 	ColStart int
 	ColEnd   int
 	ID       string
+	H        int // lines tall; 0 = one line (a tile is 3 or 4)
 }
+
+// height is the number of editor rows the hit covers.
+func (h welcomeRowHit) height() int { return max(h.H, 1) }
 
 // welcomeQuickActionHit binds a row to a START action; clicks dispatch
 // the same handler as the keyboard binding.
@@ -139,6 +143,7 @@ func newWelcomeKey(w, h, focus int, focused bool) welcomeKey {
 // code hit-tests exactly what is on screen.
 type welcomeHits struct {
 	rows       []welcomeRowHit // every interactive row, in cursor order
+	tileCols   int             // START tile columns (0 = one-line rows)
 	recents    []welcomeRecentHit
 	workspaces []welcomeWorkspaceHit
 	actions    []welcomeQuickActionHit
@@ -208,7 +213,10 @@ func welcomeRows(w, h int) []welcomeRowHit {
 
 // quickAction is one START row.
 type quickAction struct {
+	icon     string // tile glyph
+	iconTok  theme.Color256
 	title    string
+	subtitle string // tile second line
 	shortcut string
 	action   keymap.Action
 	// id names a row that has no keymap action (action == ActionNone);
@@ -218,12 +226,12 @@ type quickAction struct {
 
 func welcomeQuickActions() []quickAction {
 	return []quickAction{
-		{title: "Open file", shortcut: "Ctrl+P", action: keymap.ActionQuickOpen},
-		{title: "Open workspace", id: welcomeCardWorkspace},
-		{title: "Clone repository", id: welcomeCardClone},
-		{title: "Find in files", shortcut: "F8", action: keymap.ActionWorkspaceSearch},
-		{title: "Command palette", shortcut: "F1", action: keymap.ActionCommandPalette},
-		{title: "New terminal", shortcut: "Ctrl+T", action: keymap.ActionToggleTerminal},
+		{icon: "+", iconTok: theme.AccentBlue, title: "Open file", subtitle: "browse your filesystem", shortcut: "Ctrl+P", action: keymap.ActionQuickOpen},
+		{icon: ">", iconTok: theme.AccentGreen, title: "Command palette", subtitle: "run any action", shortcut: "F1", action: keymap.ActionCommandPalette},
+		{icon: "?", iconTok: theme.AccentAmber, title: "Find in files", subtitle: "project-wide search", shortcut: "F8", action: keymap.ActionWorkspaceSearch},
+		{icon: "$", iconTok: theme.AccentMagenta, title: "New terminal", subtitle: "integrated terminal", shortcut: "Ctrl+T", action: keymap.ActionToggleTerminal},
+		{icon: "~", iconTok: theme.AccentLavender, title: "Open workspace", subtitle: "recent folders", id: welcomeCardWorkspace},
+		{icon: "↓", iconTok: theme.AccentRedCoral, title: "Clone repository", subtitle: "git clone, then open it", id: welcomeCardClone},
 	}
 }
 
@@ -245,6 +253,7 @@ type welcomeLayout struct {
 	hint             bool
 	showRecent       bool
 	showWs           bool
+	tiles            int // START as tiles in this many columns (0 = one-line rows)
 }
 
 // welcomeLadder is the shrink order (§5.4 of the start page design):
@@ -296,10 +305,30 @@ func renderWelcomeHits(w, h, focusIdx int, focused bool) (string, welcomeHits) {
 	var lines []string
 	var hits welcomeHits
 	var logo welcomeLogoRect
-	for _, lay := range welcomeLadder(pixelOK) {
-		lines, hits, logo = renderWelcomePage(w, h, focusIdx, focused, lay, d)
-		if len(lines) <= h {
+	fit := false
+	// START as tiles first: two columns, then one; a rung is accepted
+	// only while the recent files and workspaces stay on the page.
+	for _, cols := range welcomeTileModes(W) {
+		for _, lay := range welcomeLadder(pixelOK) {
+			if !lay.showRecent || !lay.showWs {
+				continue
+			}
+			lay.tiles = cols
+			lines, hits, logo = renderWelcomePage(w, h, focusIdx, focused, lay, d)
+			if fit = len(lines) <= h; fit {
+				break
+			}
+		}
+		if fit {
 			break
+		}
+	}
+	if !fit { // the calm one-line rows
+		for _, lay := range welcomeLadder(pixelOK) {
+			lines, hits, logo = renderWelcomePage(w, h, focusIdx, focused, lay, d)
+			if len(lines) <= h {
+				break
+			}
 		}
 	}
 	welcomeLogoAt = logo
@@ -373,11 +402,42 @@ func renderWelcomePage(w, h, focusIdx int, focused bool, lay welcomeLayout, d we
 
 	// ── START ─────────────────────────────────────────────────────────
 	add(sectionHeader("START"))
-	for i, a := range d.actions {
-		st := row("card:" + itoa(i))
-		r := welcomeRow{id: "card:" + itoa(i), title: a.title, right: a.shortcut, rightIsKeycap: true, interactive: true}
-		hits.actions = append(hits.actions, welcomeQuickActionHit{Row: len(lines), ColStart: leftPad, ColEnd: leftPad + W, Action: a.action, Index: i})
-		add(renderWelcomeRow(r, W, st))
+	if lay.tiles > 0 {
+		hits.tileCols = lay.tiles
+		cols := lay.tiles
+		cardW, tileH := welcomeTileSize(W, cols)
+		for r0 := 0; r0 < len(d.actions); r0 += cols {
+			var bodies [][]string
+			for i := r0; i < min(r0+cols, len(d.actions)); i++ {
+				a := d.actions[i]
+				c0 := (i - r0) * (cardW + welcomeTileGap)
+				hits.rows = append(hits.rows, welcomeRowHit{Row: len(lines), ColStart: leftPad + c0, ColEnd: leftPad + c0 + cardW,
+					ID: "card:" + itoa(i), H: tileH})
+				st := rowRest
+				if len(hits.rows)-1 == focusIdx {
+					st = cursorSt
+				}
+				hits.actions = append(hits.actions, welcomeQuickActionHit{Row: len(lines), ColStart: leftPad + c0, ColEnd: leftPad + c0 + cardW, Action: a.action, Index: i})
+				bodies = append(bodies, renderWelcomeTile(a, cardW, tileH, st))
+			}
+			for k := 0; k < tileH; k++ {
+				var sb strings.Builder
+				for ci, body := range bodies {
+					if ci > 0 {
+						sb.WriteString(bg.Render(strings.Repeat(" ", welcomeTileGap)))
+					}
+					sb.WriteString(body[k])
+				}
+				add(sb.String())
+			}
+		}
+	} else {
+		for i, a := range d.actions {
+			st := row("card:" + itoa(i))
+			r := welcomeRow{id: "card:" + itoa(i), title: a.title, right: a.shortcut, rightIsKeycap: true, interactive: true}
+			hits.actions = append(hits.actions, welcomeQuickActionHit{Row: len(lines), ColStart: leftPad, ColEnd: leftPad + W, Action: a.action, Index: i})
+			add(renderWelcomeRow(r, W, st))
+		}
 	}
 
 	// ── SET UP (setup_card_render.go) ─────────────────────────────────
