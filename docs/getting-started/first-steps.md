@@ -79,7 +79,7 @@ Commands you use often move to the top of the list.
 
 The editor is a real Neovim. You can work in two ways:
 
-- **Like VSCode.** Type to insert text. Use `Shift+arrows` to select,
+- **Like a modern IDE.** Type to insert text. Use `Shift+arrows` to select,
   `Ctrl+C` / `Ctrl+V` to copy and paste, `Ctrl+Z` to undo.
 - **Like Vim.** Press `Esc` to go to Normal mode. All Vim motions work:
   `dd`, `ciw`, `gg`, `.` and the rest.

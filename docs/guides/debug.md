@@ -1,6 +1,6 @@
 # Debug a program
 
-termocode has a **Run and Debug** view, like VSCode. It uses the Debug
+termocode has a **Run and Debug** view. It uses the Debug
 Adapter Protocol (DAP) through `nvim-dap`.
 
 Supported out of the box:

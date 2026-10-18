@@ -1,7 +1,7 @@
 # Test an HTTP API (.http files)
 
-termocode has a built-in HTTP client in the style of VS Code REST Client
-and the JetBrains HTTP Client. The request is a `.http` (or `.rest`) file
+termocode has a built-in HTTP client. It reads the common `.http` file
+format, so existing request files work. The request is a `.http` (or `.rest`) file
 in the editor; the answer opens as an **HTTP Response** page next to it.
 It needs no curl and no browser, so it works over SSH and in Termux.
 

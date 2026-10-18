@@ -57,8 +57,8 @@ gopls numbers are from 2 of the 3 runs: in one run it had not started
 yet when the measurement began.
 
 Most of the memory and of the CPU while typing is the language server, not
-the editor. It is the same gopls that VS Code, Neovim setups and other
-editors run, so it costs about the same everywhere. `gopls telemetry off`
+the editor. It is the same gopls that other editors run, so it costs
+about the same everywhere. `gopls telemetry off`
 removes the helper process.
 
 From process start to the file explorer on screen: 46–69 ms.

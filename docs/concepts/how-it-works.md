@@ -1,14 +1,14 @@
 # How termocode works
 
-Most terminal editors make you choose. You get a real editor (Vim, Neovim)
-with a bare screen, or a friendly IDE (VSCode) that is not really in the
-terminal. termocode does not make you choose.
+Most terminal tools make you choose. You get a powerful editor with a bare
+screen, or a friendly IDE that does not run in the terminal. termocode does
+not make you choose.
 
 It runs a real `nvim --embed` process as its editing engine. Around it, it
 draws IDE chrome: tabs, an explorer, a command palette, a git panel, a
-terminal, a debugger view and a test explorer. You get VSCode's
-**discoverability** and Vim's **power** in one window — over SSH, in any
-terminal.
+terminal, a debugger view and a test explorer. You get an IDE that is easy
+to **discover** and an editor with real **power**, in one window — over
+SSH, in any terminal.
 
 ## The three layers
 
@@ -37,7 +37,7 @@ too.
 
 ### 2. The Go / TUI chrome (the face)
 
-Everything that looks like VSCode — tabs, the activity bar, the git panel,
+Everything around the text — tabs, the activity bar, the git panel,
 pickers, dialogs, toasts, the welcome screen, mouse support — is drawn by
 termocode on top of the editor grid, with [Bubble Tea](https://github.com/charmbracelet/bubbletea).
 

@@ -8,7 +8,6 @@ window.
 | | Add Folder (multi-root) | Open Recent Workspace |
 |---|---|---|
 | What it does | adds a folder to **this** window | switches to **another** project |
-| Like | VSCode "Add Folder to Workspace" | `cd` + restart |
 | Main folder | stays the same | becomes the new folder |
 | Saved in | the workspace session (`sessions/`) | `workspaces.json` |
 

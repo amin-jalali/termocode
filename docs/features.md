@@ -31,7 +31,7 @@ its name and key.
 ## Editing
 
 - Real Neovim: motions, registers, macros, your `init.lua`. → [Edit and move around](guides/editing.md)
-- VSCode-style keys: `Ctrl+C/V/Z`, `Ctrl+/`, `Alt+↑↓`, `Shift+Alt+F`.
+- Familiar IDE keys: `Ctrl+C/V/Z`, `Ctrl+/`, `Alt+↑↓`, `Shift+Alt+F`.
 - Multi-cursor (`Ctrl+D`), clipboard history (`Ctrl+Shift+V`), snippets, bookmarks (`F3`).
 - Format on save, auto-save, word wrap, Zen mode (`Alt+Z`), Markdown preview (`F7`).
 
