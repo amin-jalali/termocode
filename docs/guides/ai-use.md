@@ -7,6 +7,9 @@ Set up a provider first: [Set up AI](ai-setup.md). Then you have four tools:
 3. **AI code actions** — explain, fix, edit or document code, then review the diff.
 4. **Agent** — the chat can read files, search, run commands and edit, with your OK.
 
+To send one message through several agents (for example one model reviews,
+another fixes), pick a profile: see [AI profiles and pipelines](ai-profiles.md).
+
 ## Ghost text (inline completion)
 
 1. Type in Insert mode and pause. After a short moment, a grey suggestion
@@ -408,6 +411,7 @@ to go on. Change the limit with `ai_max_steps` in `config.json`.
 | `Alt+\` | Suggest now |
 | `Alt+|` | Toggle automatic ghost text |
 | `Alt+I` | Edit selection with AI |
+| `Alt+Shift+P` | Next AI profile ([AI profiles](ai-profiles.md)) |
 | `Ctrl+.` | AI code actions (Explain / Fix / Edit / Doc) |
 
 ## Troubleshooting
