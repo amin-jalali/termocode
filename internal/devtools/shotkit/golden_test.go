@@ -158,6 +158,13 @@ func goldenCases() []goldenCase {
 		sc := AIProfile(v)
 		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
+	// The finished run and the trust card in a light theme and in ASCII
+	// icons (U20 AP-7).
+	for _, sc := range []Scene{AIPipeline("done"), AIProfile("trust")} {
+		light, ascii := withTheme(withName(sc, sc.Name+"-light"), "catppuccin-latte"), withName(sc, sc.Name+"-ascii")
+		ascii.Icons = "ascii"
+		out = append(out, goldenCase{light.Name + "-150x42", light, 150, 42}, goldenCase{ascii.Name + "-150x42", ascii, 150, 42})
+	}
 	// Connect a service (CX-5): every wizard step at 160x40 and 80x24;
 	// the pick and done steps also in a light theme and in ASCII icons.
 	for _, sc := range connectScenes() {
