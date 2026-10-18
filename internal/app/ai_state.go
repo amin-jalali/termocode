@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"strings"
-	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -68,15 +67,15 @@ type aiState struct {
 	// The running pipeline run (ai_runs.go): its handle, the index of
 	// its assistant message, its slots, the restore files counted when
 	// each step started, a counter that changes with any card
-	// (transcript cache), the card the keyboard selected and the review
-	// locker its steps share.
-	run      *agentrun.Handle
-	runMsg   int
-	runSlots map[string]aiSlot
-	runFiles map[string]int
-	runGen   int
-	cardSel  string
-	reviewMu sync.Mutex
+	// (transcript cache), the card the keyboard selected and the gate
+	// its steps share for confirm and review cards (one at a time).
+	run        *agentrun.Handle
+	runMsg     int
+	runSlots   map[string]aiSlot
+	runFiles   map[string]int
+	runGen     int
+	cardSel    string
+	reviewGate agentrun.Gate
 
 	// inline ghost text
 	inlineCancel context.CancelFunc

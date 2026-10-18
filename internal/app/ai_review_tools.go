@@ -187,8 +187,8 @@ func aiBeforeCalls(root string, call aiIDECaller) func(context.Context, []ai.Too
 	ws := ai.Workspace{Root: root}
 	rel := aiRel(root)
 	return func(ctx context.Context, calls []ai.ToolCall) {
-		if len(calls) < 2 {
-			return
+		if len(calls) < 2 || agentrun.Parallel(ctx) {
+			return // steps that run at once propose their files one review at a time
 		}
 		seen := map[string]bool{}
 		for _, c := range calls {
@@ -218,9 +218,11 @@ func aiBeforeCalls(root string, call aiIDECaller) func(context.Context, []ai.Too
 // aiReviewChanges proposes changes and waits for the user's decision on
 // each; it returns the text for the model.
 func aiReviewChanges(ctx context.Context, call aiIDECaller, changes []aiFileChange) (string, error) {
-	if l := agentrun.ReviewLocker(ctx); l != nil { // pipeline steps review one at a time
-		l.Lock()
-		defer l.Unlock()
+	if g := agentrun.ReviewGate(ctx); g != nil { // pipeline steps review one at a time
+		if g.Acquire(ctx) != nil { // the run stopped while this step waited
+			return "", errAIChatStopped
+		}
+		defer g.Release()
 	}
 	id := ai.CallID(ctx)
 	var p aiProposed
@@ -584,6 +586,12 @@ func applyTextEdits(text string, edits []lspTextEdit, enc string) (string, error
 // aiAskConfirm opens the "AI wants to" dialog from inside a tool run (a
 // code action that can not be previewed) and waits for the answer.
 func aiAskConfirm(ctx context.Context, call aiIDECaller, t ai.Tool, human string) bool {
+	if g := agentrun.ReviewGate(ctx); g != nil { // one card at a time over a run's steps
+		if g.Acquire(ctx) != nil {
+			return false
+		}
+		defer g.Release()
+	}
 	reply := make(chan bool, 1)
 	if _, err := call(ctx, func(m *Model) (string, tea.Cmd, error) {
 		s := m.aiS()

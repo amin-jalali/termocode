@@ -15,7 +15,7 @@ import (
 var testSlots = map[string]bool{SlotMain: true, SlotQuick: true, SlotLocal: true, "gpt": true}
 
 func TestBuiltinProfiles(t *testing.T) {
-	want := []string{ProfileDefault, ProfileReview, ProfileFast, ProfileLocalOnly}
+	want := []string{ProfileDefault, ProfileReview, ProfileFast, ProfileLocalOnly, ProfilePlan}
 	got := BuiltinProfiles()
 	if len(got) != len(want) {
 		t.Fatalf("builtins: %d", len(got))
@@ -156,7 +156,7 @@ func TestLoadProfilesMerge(t *testing.T) {
 	if len(set.Errors) != 0 {
 		t.Fatalf("errors: %v", set.Errors)
 	}
-	want := []string{"default", "review", "fast", "local-only", "alpha", "zeta"}
+	want := []string{"default", "review", "fast", "local-only", "plan", "alpha", "zeta"}
 	if got := set.Names(); strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("names = %v, want %v", got, want)
 	}
@@ -181,12 +181,12 @@ func TestLoadProfilesBrokenFileKeepsBuiltins(t *testing.T) {
 	if len(set.Errors) != 1 || !strings.Contains(set.Errors[0], "profiles.json") || !strings.Contains(set.Errors[0], "line") {
 		t.Fatalf("errors: %v", set.Errors)
 	}
-	if len(set.Names()) != 4 {
+	if len(set.Names()) != len(BuiltinProfiles()) {
 		t.Errorf("builtins must stay: %v", set.Names())
 	}
 	// No files at all: only the built-ins, no errors.
 	set = LoadProfiles("", "", testSlots, 1)
-	if len(set.Errors) != 0 || len(set.Names()) != 4 {
+	if len(set.Errors) != 0 || len(set.Names()) != len(BuiltinProfiles()) {
 		t.Errorf("no files: %v %v", set.Names(), set.Errors)
 	}
 }

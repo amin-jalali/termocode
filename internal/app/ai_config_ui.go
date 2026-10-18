@@ -37,6 +37,7 @@ const (
 	confirmKindAITool confirmKindEnum = 900 + iota
 	confirmKindAIUndoTurn
 	confirmKindAIOAuth
+	confirmKindAIBudget
 )
 
 // handleAIPickerSelect routes the AI picker kinds. ok=false: not ours.
@@ -94,6 +95,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIToolConfirm(id), true
 	case confirmKindAIUndoTurn:
 		return m.onAIUndoTurnConfirm(id), true
+	case confirmKindAIBudget:
+		return m.answerAIBudget(id), true
 	case confirmKindAIOAuth:
 		if id == "continue" {
 			return m.beginClaudeOAuth(), true

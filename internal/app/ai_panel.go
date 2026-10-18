@@ -1327,6 +1327,10 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 			return m.aiRetryRun(i)
 		}
 		return nil
+	case strings.HasPrefix(id, "run-continue:"):
+		return m.answerAIBudget("continue")
+	case strings.HasPrefix(id, "run-stop:"):
+		return m.answerAIBudget("stop")
 	case strings.HasPrefix(id, "undo-turn:"):
 		if i, err := strconv.Atoi(strings.TrimPrefix(id, "undo-turn:")); err == nil {
 			return m.aiUndoTurn(i)

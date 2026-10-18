@@ -1,8 +1,12 @@
 // Package agentrun runs an agent pipeline (an agentdag.Run): every ready
 // node runs as its own ai.Agent in its own goroutine, at most Parallel
-// at once. A node's input is the user message plus the final text of the
-// nodes it depends on. A failed node blocks its dependents and stops the
-// run; Cancel stops every node.
+// at once (the nodes that are ready together form a "wave"). A node's
+// input is the user message plus the final text of the nodes it depends
+// on. A failed node blocks its dependents and stops the run; Cancel
+// stops every node. A planner node grows the run by the nodes of its
+// plan (plan.go); a budget pauses the run before the next node until
+// Continue or Cancel; the nodes' confirm and review cards take turns
+// through one Gate (gate.go).
 //
 // The package does no I/O and knows nothing about the UI: the app builds
 // each node's agent (provider for its slot, tools, system prompt) in
@@ -39,6 +43,10 @@ const (
 	RunDone                        // every node completed (Output = the last node's text, Usage = the sum)
 	RunFailed                      // a node failed (Err names it; Usage = the sum)
 	RunCancelled                   // Cancel or the parent context stopped the run
+	NodeRepair                     // a planner's plan is not valid (Err); the planner is asked once more
+	RunPlanned                     // a planner's plan grew the run (NodeID = the planner, Nodes = the new nodes)
+	RunPaused                      // the budget is reached (Cost, Budget): nothing new starts until Continue
+	RunResumed                     // Continue after a pause
 )
 
 // Final reports whether k ends the run (exactly one such event is sent).
@@ -55,6 +63,11 @@ type Event struct {
 	Usage         *ai.Usage
 	Err           string
 	Elapsed       time.Duration
+	// Nodes are the nodes a plan added, with their slots (RunPlanned).
+	Nodes []agentdag.Node
+	// Cost is what the run has cost so far in dollars, Budget its budget
+	// (RunPaused).
+	Cost, Budget float64
 }
 
 // TailLen is the length (in runes) of Event.Tail.
@@ -86,18 +99,20 @@ type Options struct {
 	// (retry from a step): those nodes do not run again and their
 	// dependents get this text as input.
 	Outputs map[string]string
-	// Review (optional) is the app's review locker: node contexts carry
-	// it (ReviewLocker), so file reviews of nodes take turns.
-	Review sync.Locker
-}
-
-type reviewKey struct{}
-
-// ReviewLocker returns the review locker of the run ctx belongs to (nil
-// outside a run or when the run has none).
-func ReviewLocker(ctx context.Context) sync.Locker {
-	l, _ := ctx.Value(reviewKey{}).(sync.Locker)
-	return l
+	// Review (optional) is the app's gate for cards that wait for the
+	// user: node contexts carry it (ReviewGate) so file reviews take
+	// turns, and every node's Confirm waits for it, so the confirm cards
+	// of parallel nodes come one at a time.
+	Review *Gate
+	// Categories map quick / deep to the model slot of the nodes a
+	// planner adds.
+	Categories map[string]string
+	// Budget in dollars (0: none) pauses the run before the next node
+	// once the nodes' cost reaches it (RunPaused); Continue lifts it for
+	// the rest of the run. Cost prices one node's usage (ok=false:
+	// unknown, counts as nothing).
+	Budget float64
+	Cost   func(n agentdag.Node, u ai.Usage) (float64, bool)
 }
 
 // Handle is a started run.
@@ -106,13 +121,16 @@ type Handle struct {
 	id     string // the run id (read by every goroutine; never changes)
 	cancel context.CancelFunc
 	done   chan struct{}
-	layer  map[string]int
-	order  map[string]int
+	resume chan struct{}
 
 	emitMu sync.Mutex
 
+	// run, layer and order change only on the loop goroutine (a plan
+	// grows them), always under mu; the loop reads them without it.
 	mu      sync.Mutex
 	run     agentdag.Run
+	layer   map[string]int
+	order   map[string]int
 	outputs map[string]string
 	final   Event
 }
@@ -124,6 +142,9 @@ type result struct {
 	err       error
 	cancelled bool
 	elapsed   time.Duration
+	// the checked plan of a planner node
+	plan      []agentdag.Node
+	planEdges []agentdag.Edge
 }
 
 // Start checks r and starts it. It returns at once; the run goes on in
@@ -143,15 +164,10 @@ func Start(ctx context.Context, r agentdag.Run, o Options) (*Handle, error) {
 	if o.InputMaxBytes <= 0 {
 		o.InputMaxBytes = DefaultInputMaxBytes
 	}
-	h := &Handle{o: o, id: n.ID, done: make(chan struct{}), run: n, outputs: map[string]string{},
-		layer: map[string]int{}, order: map[string]int{}}
-	for i, l := range ls {
-		for _, id := range l {
-			h.layer[id] = i
-		}
-	}
-	for i, nd := range n.Nodes {
-		h.order[nd.ID] = i
+	h := &Handle{o: o, id: n.ID, done: make(chan struct{}), resume: make(chan struct{}, 1), run: n,
+		outputs: map[string]string{}}
+	h.index(ls)
+	for _, nd := range n.Nodes {
 		if nd.State == agentdag.StateCompleted {
 			h.outputs[nd.ID] = o.Outputs[nd.ID]
 		}
@@ -162,9 +178,31 @@ func Start(ctx context.Context, r agentdag.Run, o Options) (*Handle, error) {
 	return h, nil
 }
 
+// index rebuilds the layer and order maps of h.run.
+func (h *Handle) index(ls [][]string) {
+	h.layer, h.order = map[string]int{}, map[string]int{}
+	for i, l := range ls {
+		for _, id := range l {
+			h.layer[id] = i
+		}
+	}
+	for i, nd := range h.run.Nodes {
+		h.order[nd.ID] = i
+	}
+}
+
 // Cancel stops every node; the run then ends with RunCancelled. Safe to
 // call more than once and after the end.
 func (h *Handle) Cancel() { h.cancel() }
+
+// Continue resumes a run that its budget paused; the budget no longer
+// applies to this run. A no-op when the run is not paused.
+func (h *Handle) Continue() {
+	select {
+	case h.resume <- struct{}{}:
+	default:
+	}
+}
 
 // Done is closed when the run has ended (after its final event).
 func (h *Handle) Done() <-chan struct{} { return h.done }
@@ -222,21 +260,55 @@ func (h *Handle) loop(runCtx context.Context) {
 	nodeCtx, stopNodes := context.WithCancel(runCtx)
 	defer stopNodes()
 	start := clock.Now()
-	results := make(chan result, len(h.run.Nodes))
+	results := make(chan result, 2*agentdag.MaxNodes)
 	running := 0
 	var total *ai.Usage
 	failErr := ""
+	spent, budget := 0.0, h.o.Budget
+	fail := func(id, msg string, usage *ai.Usage, elapsed time.Duration) {
+		h.setState(id, func(n *agentdag.Node) {
+			n.State = agentdag.StateFailed
+			n.Error = cutRunes(agentdag.Clean(msg), agentdag.MaxErrorLen)
+		})
+		h.emit(Event{NodeID: id, Kind: NodeFailed, Err: msg, Usage: usage, Elapsed: elapsed})
+		if failErr == "" {
+			failErr = fmt.Sprintf("step %q: %s", h.title(id), msg)
+		}
+		stopNodes() // one failed step stops the run
+		h.mu.Lock()
+		blocked, ids := agentdag.Block(h.run)
+		h.run = blocked
+		h.mu.Unlock()
+		for _, id := range ids {
+			h.emit(Event{NodeID: id, Kind: NodeBlocked})
+		}
+	}
 	for {
-		if nodeCtx.Err() == nil {
-			for _, id := range agentdag.Ready(h.run) {
-				if running >= h.o.Parallel {
-					break
+		if ready := agentdag.Ready(h.run); nodeCtx.Err() == nil && len(ready) > 0 {
+			if budget > 0 && spent >= budget {
+				// Pause before the next node: the running nodes end
+				// first, then the run waits for Continue or Cancel.
+				if running == 0 {
+					h.emit(Event{Kind: RunPaused, Cost: spent, Budget: budget, Usage: total})
+					select {
+					case <-h.resume:
+						budget = 0
+						h.emit(Event{Kind: RunResumed})
+						continue
+					case <-nodeCtx.Done():
+					}
 				}
-				input := h.input(id)
-				h.setState(id, func(n *agentdag.Node) { n.State = agentdag.StateRunning; n.Attempt++; n.Error = "" })
-				h.emit(Event{NodeID: id, Kind: NodeStart})
-				running++
-				go h.runNode(nodeCtx, *h.node(id), input, results)
+			} else {
+				for _, id := range ready {
+					if running >= h.o.Parallel {
+						break
+					}
+					input := h.input(id)
+					h.setState(id, func(n *agentdag.Node) { n.State = agentdag.StateRunning; n.Attempt++; n.Error = "" })
+					h.emit(Event{NodeID: id, Kind: NodeStart})
+					running++
+					go h.runNode(nodeCtx, *h.node(id), input, results)
+				}
 			}
 		}
 		if running == 0 {
@@ -245,34 +317,41 @@ func (h *Handle) loop(runCtx context.Context) {
 		res := <-results
 		running--
 		total = total.Add(res.usage)
+		if res.usage != nil && h.o.Cost != nil {
+			if c, ok := h.o.Cost(*h.node(res.id), *res.usage); ok {
+				spent += c
+			}
+		}
 		switch {
 		case res.cancelled:
 			h.setState(res.id, func(n *agentdag.Node) { n.State = agentdag.StateCancelled })
 			h.emit(Event{NodeID: res.id, Kind: NodeCancelled, Usage: res.usage, Elapsed: res.elapsed})
 		case res.err != nil:
-			msg := ai.Redact(res.err.Error())
-			h.setState(res.id, func(n *agentdag.Node) {
-				n.State = agentdag.StateFailed
-				n.Error = cutRunes(agentdag.Clean(msg), agentdag.MaxErrorLen)
-			})
-			h.emit(Event{NodeID: res.id, Kind: NodeFailed, Err: msg, Usage: res.usage, Elapsed: res.elapsed})
-			if failErr == "" {
-				failErr = fmt.Sprintf("step %q: %s", h.title(res.id), msg)
-			}
-			stopNodes() // v1: one failed step stops the run
-			h.mu.Lock()
-			blocked, ids := agentdag.Block(h.run)
-			h.run = blocked
-			h.mu.Unlock()
-			for _, id := range ids {
-				h.emit(Event{NodeID: id, Kind: NodeBlocked})
-			}
+			fail(res.id, ai.Redact(res.err.Error()), res.usage, res.elapsed)
 		default:
+			var grown agentdag.Run
+			var ls [][]string
+			if len(res.plan) > 0 {
+				var err error
+				if grown, ls, err = h.grown(res); err != nil {
+					fail(res.id, "the plan does not fit the run: "+err.Error(), res.usage, res.elapsed)
+					continue
+				}
+			}
 			h.mu.Lock()
 			h.node(res.id).State = agentdag.StateCompleted
 			h.outputs[res.id] = res.output
 			h.mu.Unlock()
 			h.emit(Event{NodeID: res.id, Kind: NodeDone, Output: res.output, Usage: res.usage, Elapsed: res.elapsed})
+			if len(res.plan) > 0 {
+				grown.Nodes[h.order[res.id]].State = agentdag.StateCompleted
+				h.mu.Lock()
+				h.run = grown
+				h.index(ls)
+				h.mu.Unlock()
+				added := append([]agentdag.Node(nil), grown.Nodes[len(grown.Nodes)-len(res.plan):]...)
+				h.emit(Event{NodeID: res.id, Kind: RunPlanned, Nodes: added})
+			}
 		}
 	}
 	// Whatever did not run is cancelled (the run stopped early).
@@ -299,6 +378,21 @@ func (h *Handle) loop(runCtx context.Context) {
 	close(h.done)
 }
 
+// grown is the run with a planner's plan added (see grow) and its
+// layers; it is checked again as a whole.
+func (h *Handle) grown(res result) (agentdag.Run, [][]string, error) {
+	g := grow(h.run, res.id, res.plan, res.planEdges, h.o.Categories)
+	n, err := agentdag.Normalize(g)
+	if err != nil {
+		return agentdag.Run{}, nil, errors.New(strings.TrimPrefix(err.Error(), "agentdag: "))
+	}
+	ls, err := agentdag.Layers(n)
+	if err != nil {
+		return agentdag.Run{}, nil, err
+	}
+	return n, ls, nil
+}
+
 // runNode builds and runs one node's agent and sends its result.
 func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out chan<- result) {
 	start := clock.Now()
@@ -310,8 +404,11 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 		res.elapsed = clock.Since(start)
 		out <- res
 	}()
-	if h.o.Review != nil {
-		ctx = context.WithValue(ctx, reviewKey{}, h.o.Review)
+	if g := h.o.Review; g != nil {
+		ctx = context.WithValue(ctx, reviewKey{}, g)
+	}
+	if h.o.Parallel > 1 {
+		ctx = context.WithValue(ctx, parallelKey{}, true)
 	}
 	agent, history, err := h.o.Build(ctx, n, input)
 	switch {
@@ -328,9 +425,20 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 	if n.Input.MaxSteps > 0 {
 		agent.MaxSteps = n.Input.MaxSteps
 	}
+	if g, ask := h.o.Review, agent.Confirm; g != nil && ask != nil {
+		// The confirm queue: one card at a time over all nodes; a node
+		// that waits for its turn stops with the run.
+		agent.Confirm = func(ctx context.Context, t ai.Tool, human string) bool {
+			if g.Acquire(ctx) != nil {
+				return false
+			}
+			defer g.Release()
+			return ask(ctx, t, human)
+		}
+	}
 	var raw []byte // the end of the streamed text, for Tail
 	fail := ""
-	added := agent.Run(ctx, history, func(e ai.Event) {
+	emit := func(e ai.Event) {
 		switch e.Kind {
 		case ai.EventText:
 			raw = appendTail(raw, e.Text)
@@ -338,13 +446,34 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 		case ai.EventToolStart, ai.EventToolResult:
 			h.emit(Event{NodeID: n.ID, Kind: NodeTool, AI: e})
 		case ai.EventDone:
-			res.usage = e.Usage
+			res.usage = res.usage.Add(e.Usage)
 		case ai.EventError:
-			res.usage, fail = e.Usage, e.Detail
+			res.usage, fail = res.usage.Add(e.Usage), e.Detail
 		default:
 			h.emit(Event{NodeID: n.ID, Kind: NodeAI, AI: e})
 		}
-	})
+	}
+	added := agent.Run(ctx, history, emit)
+	if ctx.Err() == nil && fail == "" && n.Plan {
+		taken := map[string]bool{}
+		for _, x := range h.Snapshot().Nodes {
+			taken[x.ID] = true
+		}
+		res.plan, res.planEdges, err = ParsePlan(finalText(added), taken)
+		if err != nil { // one repair request with the error
+			h.emit(Event{NodeID: n.ID, Kind: NodeRepair, Err: err.Error()})
+			hist := append(append(history[:len(history):len(history)], added...),
+				ai.Message{Role: ai.RoleUser, Content: RepairPrompt(err)})
+			raw = nil
+			added = agent.Run(ctx, hist, emit)
+			if ctx.Err() == nil && fail == "" {
+				res.plan, res.planEdges, err = ParsePlan(finalText(added), taken)
+				if err != nil {
+					fail = "the plan is not valid after one repair: " + err.Error()
+				}
+			}
+		}
+	}
 	switch {
 	case ctx.Err() != nil:
 		res.cancelled = true
@@ -355,14 +484,17 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 	}
 }
 
-// input is node id's input: the user message (unless NoUser), then the
-// output of each dependency (limited by InputRule.Deps) in layer order,
+// input is node id's input: the user message (unless NoUser), the task
+// of a planned node, then the output of each dependency (limited by InputRule.Deps) in layer order,
 // cut at InputMaxBytes.
 func (h *Handle) input(id string) string {
 	n := h.node(id)
 	var parts []string
 	if !n.Input.NoUser && strings.TrimSpace(h.o.User) != "" {
 		parts = append(parts, h.o.User)
+	}
+	if n.Prompt != "" {
+		parts = append(parts, "### Task\n"+n.Prompt)
 	}
 	deps := agentdag.Deps(h.run, id)
 	sort.SliceStable(deps, func(i, j int) bool {

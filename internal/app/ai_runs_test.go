@@ -492,8 +492,8 @@ func TestAIRunReviewLockerHeldDuringReview(t *testing.T) {
 		if !m.reviewOpen {
 			t.Fatal("review card not open")
 		}
-		if m.ai.reviewMu.TryLock() {
-			m.ai.reviewMu.Unlock()
+		if m.ai.reviewGate.TryAcquire() {
+			m.ai.reviewGate.Release()
 		} else {
 			held = true
 		}
@@ -506,7 +506,7 @@ func TestAIRunReviewLockerHeldDuringReview(t *testing.T) {
 	if got := readFile(filepath.Join(dir, "a.txt")); got != reviewNew {
 		t.Errorf("a.txt %q", got)
 	}
-	if !m.ai.reviewMu.TryLock() {
+	if !m.ai.reviewGate.TryAcquire() {
 		t.Error("the review locker stays held after the review")
 	}
 }

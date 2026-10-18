@@ -107,9 +107,15 @@ type Node struct {
 	Tools    ToolRule  `json:"tools,omitempty"`
 	Input    InputRule `json:"input,omitempty"`
 	Output   string    `json:"output,omitempty"` // shown | folded (default) | hidden
-	State    State     `json:"state,omitempty"`
-	Attempt  int       `json:"attempt,omitempty"`
-	Error    string    `json:"error,omitempty"` // ≤ MaxErrorLen runes, cleaned
+	// Plan marks a planner node: its answer is a plan whose nodes the
+	// run grows by (agentrun.ParsePlan).
+	Plan bool `json:"plan,omitempty"`
+	// Prompt is the task of a node a planner added (it goes into the
+	// node's input after the user's message).
+	Prompt  string `json:"prompt,omitempty"`
+	State   State  `json:"state,omitempty"`
+	Attempt int    `json:"attempt,omitempty"`
+	Error   string `json:"error,omitempty"` // ≤ MaxErrorLen runes, cleaned
 }
 
 // Edge says To runs after From.

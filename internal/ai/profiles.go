@@ -37,6 +37,7 @@ const (
 	ProfileReview    = "review"
 	ProfileFast      = "fast"
 	ProfileLocalOnly = "local-only"
+	ProfilePlan      = "plan"
 )
 
 // Where a profile comes from (Profile.Source).
@@ -72,6 +73,9 @@ type ProfileStep struct {
 	// Deps turn the step list into a graph (needs ai_parallel_max > 1).
 	// Without deps anywhere the steps run one after the other.
 	Deps []string `json:"deps,omitempty"`
+	// Plan makes the step a planner: it answers with a plan and the run
+	// grows by the plan's nodes (at most one per profile).
+	Plan bool `json:"plan,omitempty"`
 }
 
 // Profile is a named pipeline.
@@ -81,7 +85,30 @@ type Profile struct {
 	// Categories maps quick / deep to slot names for this profile.
 	Categories map[string]string `json:"categories,omitempty"`
 	Steps      []ProfileStep     `json:"steps"`
-	Source     string            `json:"-"`
+	// BudgetUSD (0: none) pauses a run of this profile before its next
+	// step once the steps with a known price have cost this much.
+	BudgetUSD float64 `json:"budget_usd,omitempty"`
+	Source    string  `json:"-"`
+}
+
+// Planned reports whether p has a planner step.
+func (p Profile) Planned() bool {
+	for _, st := range p.Steps {
+		if st.Plan {
+			return true
+		}
+	}
+	return false
+}
+
+// CategorySlots maps quick and deep to their slots in p (the slots of
+// the steps a planner adds): the profile's categories, else quick →
+// "quick" and deep → "main".
+func (p Profile) CategorySlots() map[string]string {
+	return map[string]string{
+		agentdag.CategoryQuick: p.SlotFor(ProfileStep{Category: agentdag.CategoryQuick}),
+		agentdag.CategoryDeep:  p.SlotFor(ProfileStep{Category: agentdag.CategoryDeep}),
+	}
 }
 
 // SlotFor is the slot a step runs on: its own slot, else its category's
@@ -114,7 +141,7 @@ func (p Profile) Run(id string) agentdag.Run {
 		}
 		r.Nodes = append(r.Nodes, agentdag.Node{
 			ID: st.ID, Title: title, Slot: p.SlotFor(st), Category: st.Category,
-			System: st.System, Tools: st.Tools, Output: st.Output,
+			System: st.System, Tools: st.Tools, Output: st.Output, Plan: st.Plan,
 			Input: agentdag.InputRule{MaxSteps: st.MaxSteps},
 		})
 		ids = append(ids, st.ID)
@@ -152,6 +179,9 @@ func BuiltinProfiles() []Profile {
 				Tools: agentdag.ToolRule{Preset: agentdag.PresetReadOnly}}}},
 		{Name: ProfileLocalOnly, Title: "Local only", Source: ProfileSourceBuiltin,
 			Steps: []ProfileStep{{ID: "answer", Title: "Answer", Slot: SlotLocal}}},
+		{Name: ProfilePlan, Title: "Plan, then run in waves", Source: ProfileSourceBuiltin,
+			Steps: []ProfileStep{{ID: "planner", Title: "Planner", Category: agentdag.CategoryDeep, Plan: true,
+				Tools: agentdag.ToolRule{Preset: agentdag.PresetReadOnly}}}},
 	}
 }
 
@@ -275,6 +305,17 @@ func validateProfile(p *Profile, slots map[string]bool, parallelMax int) error {
 		return errors.New("has no steps")
 	case len(p.Steps) > MaxProfileSteps:
 		return fmt.Errorf("too many steps (%d, at most %d)", len(p.Steps), MaxProfileSteps)
+	case p.BudgetUSD < 0:
+		return errors.New("budget_usd is negative")
+	}
+	planners := 0
+	for _, st := range p.Steps {
+		if st.Plan {
+			planners++
+		}
+	}
+	if planners > 1 {
+		return errors.New("at most one planner step (plan: true)")
 	}
 	for cat, slot := range p.Categories {
 		if cat != agentdag.CategoryQuick && cat != agentdag.CategoryDeep {

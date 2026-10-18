@@ -79,8 +79,9 @@ func (p *fakeProv) callCount() int {
 // harness builds agents from per-node providers and records the inputs
 // and events.
 type harness struct {
-	provs map[string]*fakeProv
-	tools []ai.Tool
+	provs   map[string]*fakeProv
+	tools   []ai.Tool
+	confirm ai.ConfirmFunc
 
 	mu     sync.Mutex
 	inputs map[string]string
@@ -103,7 +104,7 @@ func (h *harness) options(parallel int) Options {
 			if !ok {
 				return nil, nil, errors.New("no provider for " + n.ID)
 			}
-			a := &ai.Agent{Provider: p, Native: true, Tools: h.tools}
+			a := &ai.Agent{Provider: p, Native: true, Tools: h.tools, Confirm: h.confirm}
 			return a, []ai.Message{{Role: ai.RoleSystem, Content: "sys"}, {Role: ai.RoleUser, Content: input}}, nil
 		},
 		Emit: func(e Event) {
@@ -551,30 +552,30 @@ func TestRetryFromStepUsesSavedOutputs(t *testing.T) {
 	}
 }
 
-// Spec (AP-4 review locker): every node's tools see the run's review
-// locker in their context, so file reviews of parallel nodes take turns.
-func TestReviewLockerInToolContext(t *testing.T) {
+// Spec (AP-4 review gate): every node's tools see the run's review
+// gate in their context, so file reviews of parallel nodes take turns.
+func TestReviewGateInToolContext(t *testing.T) {
 	call := ai.ToolCall{ID: "c1", Name: "edit"}
 	h := newHarness(map[string]*fakeProv{
 		"a": {replies: []ai.Chunk{{ToolCalls: []ai.ToolCall{call}}, {Delta: "done"}}},
 	})
-	var lk sync.Mutex
-	var got sync.Locker
+	lk := &Gate{}
+	var got *Gate
 	h.tools = []ai.Tool{{Name: "edit", Run: func(ctx context.Context, _ map[string]any) (string, error) {
-		got = ReviewLocker(ctx)
+		got = ReviewGate(ctx)
 		return "ok", nil
 	}}}
 	o := h.options(1)
-	o.Review = &lk
+	o.Review = lk
 	run, err := Start(context.Background(), chain("a"), o)
 	if err != nil {
 		t.Fatal(err)
 	}
 	wait(t, run)
-	if got != &lk {
-		t.Errorf("tool saw locker %v", got)
+	if got != lk {
+		t.Errorf("tool saw gate %v", got)
 	}
-	if ReviewLocker(context.Background()) != nil {
-		t.Error("a plain context has no locker")
+	if ReviewGate(context.Background()) != nil {
+		t.Error("a plain context has no gate")
 	}
 }

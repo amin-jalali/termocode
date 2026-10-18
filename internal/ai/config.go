@@ -54,6 +54,19 @@ func (s Settings) Parallel() int {
 	return s.ParallelMax
 }
 
+// DefaultPlannedParallel is how many nodes of a planned run (a profile
+// with a planner step) run at once when ai_parallel_max is not set.
+const DefaultPlannedParallel = 3
+
+// PlannedParallel is the effective ai_parallel_max of a planned run:
+// DefaultPlannedParallel when it is not set, at most MaxParallel.
+func (s Settings) PlannedParallel() int {
+	if s.ParallelMax < 1 {
+		return DefaultPlannedParallel
+	}
+	return s.Parallel()
+}
+
 // Values of ai_edit_review.
 const (
 	EditReviewOn   = "review"

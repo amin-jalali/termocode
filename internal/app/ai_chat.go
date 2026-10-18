@@ -37,6 +37,9 @@ type aiChatConfirmMsg struct {
 	human string
 	reply chan bool
 	ch    chan tea.Msg
+	// step is the title of the pipeline step that asks ("" in a plain
+	// chat turn).
+	step string
 }
 
 type aiChatDoneMsg struct {
@@ -176,7 +179,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	if prof.Source == ai.ProfileSourceProject && m.aiProfileTrust(prof) != aiTrustUse {
 		return m.askAIProfileTrust(prof, aiTrustAfterSend, text) // F4: a repo's prompts are shown first
 	}
-	if len(prof.Steps) > 1 {
+	if len(prof.Steps) > 1 || prof.Planned() {
 		return m.startAIRun(text, prof)
 	}
 	step := prof.Run("").Nodes[0]
@@ -227,7 +230,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		AutoApprove: auto,
 		MaxSteps:    s.settings.MaxSteps, // 0: ai.DefaultMaxSteps
 		BeforeCalls: aiBeforeCalls(root, call),
-		Confirm:     aiChatConfirmFunc(gen, ch, auto),
+		Confirm:     aiChatConfirmFunc(gen, ch, auto, ""),
 	}
 	go func() {
 		defer cancel()
@@ -286,12 +289,13 @@ func (s *aiState) autoApproveSet() map[string]bool {
 // aiChatConfirmFunc asks the user through the chat channel to allow a
 // mutating tool call. auto is the agent's auto-approve set: "Always
 // allow" adds the class for the rest of the agent's turn (it is only
-// read on the agent's goroutine).
-func aiChatConfirmFunc(gen uint64, ch chan tea.Msg, auto map[string]bool) ai.ConfirmFunc {
+// read on the agent's goroutine). step names the pipeline step that asks
+// ("" in a plain turn).
+func aiChatConfirmFunc(gen uint64, ch chan tea.Msg, auto map[string]bool, step string) ai.ConfirmFunc {
 	return func(ctx context.Context, t ai.Tool, human string) bool {
 		reply := make(chan bool, 1)
 		select {
-		case ch <- aiChatConfirmMsg{gen: gen, tool: t, human: human, reply: reply, ch: ch}:
+		case ch <- aiChatConfirmMsg{gen: gen, tool: t, human: human, reply: reply, ch: ch, step: step}:
 		case <-ctx.Done():
 			return false
 		}
@@ -380,7 +384,11 @@ func (m *Model) onAIChatConfirm(msg aiChatConfirmMsg) tea.Cmd {
 	}
 	buttons = append(buttons, aiServicesConfirmButton(msg.tool.Class)...) // "Always in this project"
 	buttons = append(buttons, confirm.Button{ID: "deny", Title: "Deny", Style: confirm.StyleDestructive})
-	m.confirm = confirm.New("✦ AI wants to: "+msg.tool.Label(), msg.human, buttons)
+	who := "AI"
+	if msg.step != "" {
+		who = aiOneLine(aiCleanText(msg.step)) // which step of the run asks
+	}
+	m.confirm = confirm.New("✦ "+who+" wants to: "+msg.tool.Label(), msg.human, buttons)
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindAITool

@@ -30,7 +30,7 @@ func TestAIStateBrokenProfilesKeepBuiltins(t *testing.T) {
 	t.Setenv("OPENAI_API_KEY", "")
 	writeAIConfig(t, dir, "ai/profiles.json", "{\n\"profiles\": {\n\"x\": [\n")
 	s := newAIState()
-	if got := s.profiles.Names(); len(got) != 4 || got[0] != ai.ProfileDefault {
+	if got := s.profiles.Names(); len(got) != len(ai.BuiltinProfiles()) || got[0] != ai.ProfileDefault {
 		t.Fatalf("names %v", got)
 	}
 	if len(s.profiles.Errors) != 1 || !strings.Contains(s.profiles.Errors[0], "profiles.json line") {

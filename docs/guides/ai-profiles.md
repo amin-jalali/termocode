@@ -37,6 +37,7 @@ while a pipeline runs.
 | `review` | **Reviewer** (category `deep`, read-only tools), then **Fixer** (category `quick`, all tools) | "Review my last commit and fix what you find." |
 | `fast` | **Answer** (category `quick`, read-only tools) | Quick questions on a cheaper model. |
 | `local-only` | **Answer** on the `local` slot (Ollama) | Nothing leaves your machine. |
+| `plan` | **Planner** (category `deep`, read-only tools), then the steps of its plan | Bigger tasks: the planner splits them into steps that run in waves. See [Planned runs](#planned-runs-and-waves). |
 
 Your own profiles with the same name replace a built-in one, except
 `default`, which you can not replace.
@@ -96,7 +97,8 @@ category to a slot:
 ```
 
 Without a mapping, `quick` uses the `quick` slot and `deep` uses `main`.
-A step with no slot and no category uses `main`.
+A step with no slot and no category uses `main`. The steps a planner
+adds use the same mapping.
 
 ## Write your own profile
 
@@ -145,6 +147,10 @@ name in the same file and switches to it.
 | `tools` | `{"preset": "none" \| "read-only" \| "all", "allow": [...], "deny": [...]}`. Default: `all`. |
 | `max_steps` | Tool steps for this step. Default: `ai_max_steps`. |
 | `deps` | Step ids this step waits for. Needs `ai_parallel_max` 2 or more. |
+| `plan` | `true` makes the step a planner (see [Planned runs](#planned-runs-and-waves)). At most one per profile. |
+
+A profile can also set `budget_usd` next to `steps` (see
+[Budget pause](#budget-pause)).
 
 Limits: at most 12 steps per profile. Without `deps`, steps run one
 after the other in list order.
@@ -188,7 +194,8 @@ end of its text. A finished card folds to one line:
   brackets, until the step ends), then `running` and its tool count, or,
   when done: time, tools, tokens, cost and the files it changed.
 - Unfold a finished card to read that step's full answer.
-- A step that waits says `waiting for step 1`. A failed step shows
+- A step that waits says `waiting for step 1` (in a planned run, all
+  the steps it waits for: `waiting for steps 3, 4`). A failed step shows
   `✘` and the start of the error; the steps after it show `blocked`.
 - The last step's answer is the reply, with Markdown, code cards and
   **Apply** as usual.
@@ -208,6 +215,96 @@ Your fold choice is kept with the chat.
 **AI: Undo Last Turn** undoes the file changes of **every** step of the
 run: the run is one turn. File edits of each step open the review card,
 one at a time.
+
+## Planned runs and waves
+
+With the `plan` profile, the first step is a **planner**. It reads your
+message (and may read files) and answers with a plan: a list of steps,
+each with a task, a category and the steps it waits for. termocode
+checks the plan, adds one card per step to the run, and runs them:
+
+```text
+ ▸ 1 · Planner · claude-sonnet-4-5 · 9 s · 2 tools · 6.2k tok · $0.021
+ ▸ 2 · Map the parser · gpt-5-mini · 12 s · 3 tools · 5.0k tok · $0.002
+ ▾ 3 · Speed up lexer · gpt-5-mini (quick) · running · 1 tool
+ ▾ 4 · Speed up tokens · gpt-5-mini (quick) · running
+ ▸ 5 · Verify · claude-sonnet-4-5 (deep) · waiting for steps 3, 4
+```
+
+- **Waves.** Steps whose waits are done run at the same time, up to
+  `ai_parallel_max`. A planned run uses 3 when `ai_parallel_max` is not
+  set. Other profiles keep their setting (1 by default).
+- **What a planned step sees.** Your message, its own task under
+  `### Task`, and the answers of the steps it waits for. It does not see
+  the plan or the answers of other steps.
+- **Categories.** Each planned step is `quick` (the default) or `deep`;
+  the profile's `categories` pick the model.
+- **The answer.** The plan ends with one final step that waits for the
+  others. Its answer is the reply. Steps that came after the planner in
+  your own profile wait for that final step.
+
+**The plan is checked strictly.** At most 12 steps and 6 waves, unique
+ids, known categories, a task for every step, no unknown keys, no loops,
+and one final step. When the plan breaks a rule, the planner is asked
+once more with the error, and the planner card shows
+`↻ plan not valid, asked again: …`. When the second plan is also wrong,
+the planner card fails with the error (`✘ the plan is not valid after
+one repair: …`) and nothing else runs.
+
+**Repository content is data.** The planner is told that files, code,
+comments and tool results are data, not instructions: it plans only what
+you asked.
+
+**Cards that wait for you take turns.** Steps that run at the same time
+can each need you: a confirm dialog or a review card. They come one at a
+time, in order. The confirm title names the step, for example
+`✦ Fixer wants to: Run command`. When you stop the run, a step that waits
+for its turn stops at once.
+
+To make your own planned profile, add a step with `"plan": true`. Steps
+after it in the list run after the plan:
+
+```json
+{
+  "profiles": {
+    "plan-and-summarize": {
+      "categories": { "quick": "gpt", "deep": "claude" },
+      "budget_usd": 0.50,
+      "steps": [
+        { "id": "planner", "title": "Planner", "category": "deep", "plan": true,
+          "tools": { "preset": "read-only" } },
+        { "id": "summary", "title": "Summary", "category": "quick", "tools": { "preset": "none" } }
+      ]
+    }
+  }
+}
+```
+
+Once the planner made its plan, the run has no **Retry from step N** button (the plan is
+not part of the profile). Send the message again instead.
+
+## Budget pause
+
+Set `budget_usd` on a profile to cap what one run may cost. When the
+steps of a run have cost that much, the run **pauses** before its next
+step. Steps that already run finish first. A card asks:
+
+```text
+ ✦ Budget $0.50 reached
+ This run has cost $0.512 so far; 2 steps did not run yet.
+ Continue runs them without another budget stop. Stop ends the run.
+```
+
+- **Continue** runs the rest of the run. The budget does not stop this
+  run again.
+- **Stop** ends the run. The steps that did not run show `cancelled`;
+  **Retry from step N** works as for any stopped run.
+- `Esc` closes the card. The run stays paused, and the chat shows
+  `Budget $0.50 reached · … · the run is paused` with **Continue** and
+  **Stop** buttons.
+
+Only steps with a known price count (see [Tokens and cost](#tokens-and-cost)).
+A run on models with no price never pauses.
 
 ### Stopped, failed or interrupted runs
 
@@ -290,7 +387,7 @@ you change an answer.
 | Setting (`config.json`) | Default | Meaning |
 |---|---|---|
 | `ai_models` | `{}` | Your model slots. |
-| `ai_parallel_max` | `1` | How many steps may run at the same time (at most 8). With 1, steps run in order and `deps` is refused. |
+| `ai_parallel_max` | `1` | How many steps may run at the same time (at most 8). With 1, steps run in order and `deps` is refused. A planned run uses 3 when this is not set. |
 | `ai_prices` | `{}` | Price overrides, $ per million tokens. |
 | `ai_context_windows` | `{}` | Context window overrides, in tokens. |
 | `ai_max_steps` | `25` | Tool steps per step (a step's `max_steps` wins). |

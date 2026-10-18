@@ -44,6 +44,7 @@ const (
 	RunStateFailed      = "failed"
 	RunStateCancelled   = "cancelled"
 	RunStateInterrupted = "interrupted" // termocode stopped while it ran
+	RunStatePaused      = "paused"      // the budget is reached; Continue or Stop
 )
 
 // StoredRun is the summary of one pipeline run.
@@ -52,6 +53,10 @@ type StoredRun struct {
 	Profile   string `json:"profile,omitempty"`
 	State     string `json:"state"`
 	ElapsedMs int64  `json:"elapsed_ms,omitempty"`
+	// Budget is the run's budget in dollars and Spent what it had cost
+	// when it paused (RunStatePaused).
+	Budget float64 `json:"budget,omitempty"`
+	Spent  float64 `json:"spent,omitempty"`
 }
 
 // StoredStep is one step card of a pipeline run.
@@ -73,6 +78,12 @@ type StoredStep struct {
 	Files      int      `json:"files,omitempty"` // files the step changed
 	Error      string   `json:"error,omitempty"`
 	State      string   `json:"state,omitempty"` // an agentdag state
+	// Deps are the ids of the steps this one waits for (set for graph
+	// runs; a chain leaves it empty). Planned marks a step a planner
+	// added. Notes are short lines about the step (a plan repair).
+	Deps    []string `json:"deps,omitempty"`
+	Planned bool     `json:"planned,omitempty"`
+	Notes   []string `json:"notes,omitempty"`
 }
 
 // Conversation is one persisted chat. Port of mobocode's chat_store.dart,

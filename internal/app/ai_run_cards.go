@@ -138,6 +138,14 @@ func (m Model) aiRunLines(i int, msg ai.StoredMessage, width, inner int) []aiLin
 	if msg.Run.State == ai.RunStateRunning {
 		return out
 	}
+	if msg.Run.State == ai.RunStatePaused { // the budget pause: ask in the chat too
+		text := "Budget " + aiBudgetText(msg.Run.Budget) + " reached · " + aiDollars(msg.Run.Spent) + " so far · the run is paused"
+		for _, l := range wrapPlain(text, max(inner, 8)) {
+			out = append(out, aiLine{text: ind + l, style: theme.Fg(theme.DiagWarning)})
+		}
+		out = append(out, aiChip("Continue", "run-continue:"+strconv.Itoa(i), width), aiChip("Stop", "run-stop:"+strconv.Itoa(i), width))
+		return out
+	}
 	dash := "─"
 	if theme.CurrentIconMode == theme.IconModeASCII {
 		dash = "-"
@@ -188,7 +196,7 @@ func (m Model) aiStepCard(msg ai.StoredMessage, k int, st ai.StoredStep, width, 
 	if st.Category != "" && !state.Done() && state != agentdag.StateFailed {
 		rest += " (" + st.Category + ")"
 	}
-	if status := aiStepStatus(k, st); status != "" {
+	if status := aiStepStatus(msg.Steps, k); status != "" {
 		rest += " · " + status
 	}
 	head := aiFoldGlyph(expanded) + " " + strconv.Itoa(k+1) + " · "
@@ -200,6 +208,9 @@ func (m Model) aiStepCard(msg ai.StoredMessage, k int, st ai.StoredStep, width, 
 	}
 	ind := strings.Repeat(" ", aiIndent+2)
 	dim := theme.Fg(theme.TextDim)
+	for _, t := range st.Notes {
+		out = append(out, aiLine{text: ind + aiOneLine(aiCleanText(t)), style: dim})
+	}
 	for _, t := range st.Tools {
 		out = append(out, aiLine{text: ind + aiOneLine(aiCleanText(t)), style: dim})
 	}
@@ -227,15 +238,33 @@ func (m Model) aiStepCard(msg ai.StoredMessage, k int, st ai.StoredStep, width, 
 // aiOneLine folds whitespace runs (newlines too) into single spaces.
 func aiOneLine(s string) string { return strings.Join(strings.Fields(s), " ") }
 
-// aiStepStatus is the end of a card's first row: what the step does or
-// what it did.
-func aiStepStatus(k int, st ai.StoredStep) string {
+// aiStepStatus is the end of the first row of card k: what the step
+// does or what it did. A waiting step names the steps it waits for (its
+// Deps; without them, the step before it).
+func aiStepStatus(steps []ai.StoredStep, k int) string {
+	st := steps[k]
 	tools := ""
 	if n := len(st.Tools); n > 0 {
 		tools = fmt.Sprintf("%d tool%s", n, plural(n))
 	}
 	switch agentdag.State(st.State) {
 	case agentdag.StatePending, "":
+		if len(st.Deps) > 0 {
+			var nums []string
+			for _, d := range st.Deps {
+				for j, o := range steps {
+					if o.ID == d {
+						nums = append(nums, strconv.Itoa(j+1))
+					}
+				}
+			}
+			if len(nums) == 1 {
+				return "waiting for step " + nums[0]
+			}
+			if len(nums) > 1 {
+				return "waiting for steps " + strings.Join(nums, ", ")
+			}
+		}
 		if k > 0 {
 			return "waiting for step " + strconv.Itoa(k)
 		}
@@ -329,6 +358,9 @@ func aiRunSummaryText(run *ai.StoredRun, steps []ai.StoredStep) string {
 	}
 	return strings.Join(parts, " · ")
 }
+
+// aiBudgetText is a budget in dollars with cents: $0.50, $2.00.
+func aiBudgetText(usd float64) string { return fmt.Sprintf("$%.2f", usd) }
 
 // aiUsageTokens is every token of u (prompt, cache and output).
 func aiUsageTokens(u ai.Usage) int { return u.Input + u.Output + u.CacheRead + u.CacheWrite }
