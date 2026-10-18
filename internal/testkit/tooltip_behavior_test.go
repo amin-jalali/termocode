@@ -139,7 +139,8 @@ func TestTooltipShowsAndHides(t *testing.T) {
 	}
 }
 
-// Spec: no label over the editor text or on empty chrome.
+// Spec: no label over the welcome page body or editor text; Explorer rows
+// show their kind label and More info line.
 func TestTooltipNotOnText(t *testing.T) {
 	d := New(t, Options{W: 120, H: 40, Git: true})
 	d.Action("toasts:clear")
@@ -149,10 +150,24 @@ func TestTooltipNotOnText(t *testing.T) {
 	if tipShown(d) {
 		t.Errorf("label shows over the editor:\n%s", screen(d))
 	}
-	d.Move(10, y) // an explorer row: text, not an icon
-	d.WaitFor(func() bool { return tipShown(d) }, 800*time.Millisecond)
-	if tipShown(d) {
-		t.Errorf("label shows over an explorer row:\n%s", screen(d))
+	var row app.HitTarget
+	for _, h := range d.Model().HitTargets() {
+		if strings.HasPrefix(h.ID, "explorer:") && h.Y == y && h.X <= 10 && 10 < h.X+h.W {
+			row = h
+			break
+		}
+	}
+	if row.ID == "" {
+		t.Fatalf("no Explorer row at main.go row %d:\n%s", y, screen(d))
+	}
+	want := d.Model().TooltipFor(row.ID)
+	d.Move(10, y)
+	if !d.WaitFor(func() bool {
+		text, _, _, ok := d.Model().Tooltip()
+		_, _, _, _, help := d.Model().TooltipHelp()
+		return ok && strings.Contains(text, want) && help
+	}, 3*time.Second) {
+		t.Errorf("Explorer row %s did not show its kind label and More info:\n%s", row.ID, screen(d))
 	}
 }
 
@@ -193,8 +208,9 @@ func TestTooltipStaysOnScreen(t *testing.T) {
 				if y >= h.Y && y < h.Y+h.H && x < h.X+h.W && x+w > h.X {
 					t.Errorf("label %q at (%d,%d) covers its target %+v", text, x, y, h)
 				}
-				if gx, gy, ok := tipRow(d, strings.TrimSpace(text)); !ok || gy != y || gx < x {
-					t.Errorf("label %q not drawn at (%d,%d) (found %v at %d,%d):\n%s", text, x, y, ok, gx, gy, screen(d))
+				frameRows := strings.Split(d.Frame(), "\n")
+				if y >= len(frameRows) || strings.TrimSpace(ansi.Strip(ansi.Cut(frameRows[y], x, x+w))) != strings.TrimSpace(text) {
+					t.Errorf("label %q not drawn at (%d,%d):\n%s", text, x, y, screen(d))
 				}
 				if ht, hx, hy, _, ok := d.Model().TooltipHelp(); ok {
 					if hy >= d.H || hx+ansi.StringWidth(ht) > d.W {

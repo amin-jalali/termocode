@@ -109,7 +109,7 @@ func (m *Model) tooltipOnInput(msg tea.Msg) tea.Cmd {
 			}
 			if t.help == "" {
 				t.shown = false
-			} else if t.onLabel(msg.X, msg.Y) {
+			} else if t.onHelpLine(msg.X, msg.Y) {
 				return nil // on the label, on its way to the help line
 			}
 			// else the grace: the tick below hides it if still outside.
@@ -135,8 +135,11 @@ func (m *Model) onTooltipTick(msg tooltipTickMsg) tea.Cmd {
 	if msg.gen != t.gen || !t.pending {
 		return nil // stale: a click, key or scroll came after it
 	}
-	if t.shown && !t.onTarget(m.hoverX, m.hoverY) && !t.onLabel(m.hoverX, m.hoverY) {
-		t.shown = false
+	if t.shown && !t.onTarget(m.hoverX, m.hoverY) && !t.onHelpLine(m.hoverX, m.hoverY) {
+		target, ok := m.tooltipTargetAt(m.hoverX, m.hoverY)
+		if !ok || target.ID != t.target.ID {
+			t.shown = false
+		}
 	}
 	if left := tooltipDelay - time.Since(t.moved); left > 0 {
 		return tooltipTick(t.gen, left)

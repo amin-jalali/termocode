@@ -206,6 +206,44 @@ func TestTooltipHelpGrace(t *testing.T) {
 	}
 }
 
+// Spec: resting on a different target under a label replaces it after the
+// normal delay, while resting on the help line keeps the old label reachable.
+func TestTooltipLabelOverTargetSwitchesAfterRest(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	m := showTipOn(t, hoverModel(t), "activity:Explorer")
+	other := tipTarget(t, m, "activity:Settings")
+	x, y := other.X+other.W/2, other.Y+other.H/2
+	// Put the label over the other target, as happens on a compact welcome page.
+	m.tip.x, m.tip.y = x-3, y-2
+	cmd := m.tooltipOnInput(motionMsg(x, y))
+	if cmd == nil || !m.tip.shown || !m.tip.pending {
+		t.Fatalf("move onto covered target: cmd=%v shown=%v pending=%v", cmd != nil, m.tip.shown, m.tip.pending)
+	}
+	m.hoverX, m.hoverY = x, y
+	m.tip.moved = time.Now().Add(-time.Second)
+	m.onTooltipTick(tooltipTickMsg{m.tip.gen})
+	if !m.tip.shown || m.tip.target.ID != other.ID {
+		t.Fatalf("resting on covered target left %q shown, want %q", m.tip.target.ID, other.ID)
+	}
+}
+
+func TestTooltipRestingOnHelpLineKeepsLabel(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	m := showTipOn(t, hoverModel(t), "activity:Explorer")
+	cmd := m.tooltipOnInput(motionMsg(m.tip.x+2, m.tip.y+1))
+	if cmd != nil || !m.tip.shown || m.tip.pending {
+		t.Fatalf("rest on help line: cmd=%v shown=%v pending=%v", cmd != nil, m.tip.shown, m.tip.pending)
+	}
+	// The tick that was already in flight must not dismiss the label either.
+	m.tip.pending = true
+	m.tip.moved = time.Now().Add(-time.Second)
+	m.hoverX, m.hoverY = m.tip.x+2, m.tip.y+1
+	m.onTooltipTick(tooltipTickMsg{m.tip.gen})
+	if !m.tip.shown || m.tip.target.ID != "activity:Explorer" {
+		t.Fatalf("help line rest replaced or hid label %q", m.tip.target.ID)
+	}
+}
+
 // Spec: a click on the help line opens the guide at the label's topic,
 // and the click goes nowhere else; any other click hides the label.
 func TestTooltipHelpClick(t *testing.T) {
