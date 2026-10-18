@@ -1,0 +1,69 @@
+/* Home page (docs/index.md). Calm, dark-first, with a green accent. */
+:root {
+  --tc-green: #3fb950;
+  --tc-green-soft: rgba(63, 185, 80, 0.12);
+}
+[data-md-color-scheme="default"] {
+  --tc-green: #1a7f37;
+  --tc-green-soft: rgba(26, 127, 55, 0.08);
+}
+
+.tc-hero { text-align: center; margin: 1.5rem auto 1.2rem; max-width: 46rem; }
+.tc-hero h1 {
+  font-size: 2.6rem; font-weight: 700; line-height: 1.15;
+  margin: 0.3rem 0 0.8rem; letter-spacing: -0.02em;
+  color: var(--md-default-fg-color);
+}
+.tc-eyebrow {
+  font-family: var(--md-code-font-family); font-size: 0.72rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--tc-green); margin: 0;
+}
+.tc-lead { font-size: 1.05rem; opacity: 0.85; margin: 0 auto 1rem; }
+.tc-tagline {
+  display: inline-block; font-family: var(--md-code-font-family);
+  font-size: 0.95rem; font-weight: 600; color: var(--tc-green);
+  background: var(--tc-green-soft); border-radius: 0.3rem;
+  padding: 0.25rem 0.7rem; margin: 0.2rem 0 0.4rem;
+}
+.tc-support { font-size: 0.85rem; opacity: 0.7; margin: 0 0 1.2rem; }
+.tc-hero .md-button { margin: 0.2rem 0.3rem; }
+
+.md-typeset img.tc-shot {
+  display: block; margin: 1.2rem auto; border-radius: 0.5rem;
+  box-shadow: 0 0.6rem 2rem rgba(0, 0, 0, 0.35);
+}
+.tc-meta { text-align: center; font-size: 0.75rem; opacity: 0.65; }
+
+.md-typeset .grid.cards > ul > li { border-radius: 0.5rem; }
+.md-typeset .grid.cards .lg { color: var(--tc-green); }
+
+.tc-stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.8rem; margin: 1rem 0;
+}
+.tc-stats > div {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.5rem; padding: 0.9rem 1rem; text-align: center;
+}
+.tc-stats strong {
+  display: block; font-family: var(--md-code-font-family);
+  font-size: 1.5rem; color: var(--tc-green);
+}
+.tc-stats span { font-size: 0.75rem; opacity: 0.75; }
+
+.tc-final { text-align: center; margin: 2.5rem 0 1rem; }
+.tc-final strong { display: block; font-size: 1.3rem; margin-bottom: 0.8rem; }
+.tc-final small { display: block; margin-top: 0.8rem; opacity: 0.6; }
+
+@media screen and (max-width: 44.9375em) {
+  .tc-hero h1 { font-size: 1.9rem; }
+}
+
+.md-typeset .md-button--primary {
+  background-color: var(--tc-green); border-color: var(--tc-green); color: #fff;
+}
+.md-typeset .md-button--primary:hover { filter: brightness(1.1); color: #fff; }
+.md-typeset .md-button:not(.md-button--primary) {
+  color: var(--tc-green); border-color: var(--tc-green);
+}

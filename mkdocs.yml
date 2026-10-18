@@ -1,5 +1,5 @@
 site_name: termocode
-site_description: An open-source development environment for terminal workflows.
+site_description: "The AI-Integrated Terminal IDE. A fast, full-featured terminal IDE with integrated AI agents and persistent workspaces."
 site_url: https://amin-jalali.github.io/termocode/
 repo_url: https://github.com/amin-jalali/termocode
 repo_name: amin-jalali/termocode
@@ -21,15 +21,15 @@ theme:
         name: Switch to light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: indigo
-      accent: cyan
+      primary: black
+      accent: green
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: indigo
-      accent: cyan
+      primary: black
+      accent: green
       toggle:
         icon: material/brightness-4
         name: Switch to system preference
@@ -44,6 +44,9 @@ theme:
     - content.code.copy
     - content.action.edit
     - toc.follow
+
+extra_css:
+  - stylesheets/landing.css
 
 plugins:
   - search
