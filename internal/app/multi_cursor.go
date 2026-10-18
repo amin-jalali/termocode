@@ -68,10 +68,20 @@ if vim.fn.isdirectory(plugin_path) == 1 then
   -- Force-load the plugin file so its <Plug> mappings register now.
   pcall(vim.cmd, 'runtime! plugin/visual-multi.vim')
 
-  -- VM expects raw nvim_input style mappings; alias the Ctrl+Alt arrows so
-  -- terminals that emit <C-M-Up> get the same effect as <C-A-Up>.
-  vim.keymap.set({'n', 'i'}, '<C-M-Up>',   '<C-A-Up>',   { remap = true, silent = true })
-  vim.keymap.set({'n', 'i'}, '<C-M-Down>', '<C-A-Down>', { remap = true, silent = true })
+  -- termocode keeps buffers in Insert mode ("type to insert"), but VM's
+  -- maps are Normal-mode only: in Insert mode Ctrl+D was Vim's "remove one
+  -- indent" and the other keys did nothing (U17). Leave Insert mode
+  -- without moving the cursor, then run the same VM action.
+  local function vm_insert(lhs, plug)
+    vim.keymap.set('i', lhs, '<C-\\><C-n><Plug>(' .. plug .. ')', { remap = true, silent = true })
+  end
+  vm_insert('<C-d>',      'VM-Find-Under')
+  vm_insert('<C-A-d>',    'VM-Select-All')
+  vm_insert('<C-A-Up>',   'VM-Add-Cursor-Up')
+  vm_insert('<C-A-Down>', 'VM-Add-Cursor-Down')
+  -- No <C-M-…> aliases: in nvim M (Meta) and A (Alt) are the same key, so
+  -- an alias "<C-M-Down> -> <C-A-Down>" maps the key to itself and broke
+  -- Add Cursor in every mode.
 end
 `
 }
