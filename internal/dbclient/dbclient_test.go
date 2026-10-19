@@ -28,21 +28,27 @@ func TestParseURL(t *testing.T) {
 }
 func TestSplitAndClassify(t *testing.T) {
 	q := "-- hi\nWITH x AS (SELECT ';' a) SELECT * FROM users; INSERT INTO users VALUES ('a;b');"
-	ss := Split(q)
+	ss, err := Split(q, "postgres")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(ss) != 2 {
 		t.Fatalf("%#v", ss)
 	}
-	if k, _ := Classify(ss[0]); k != KindRead {
+	if k, _ := Classify(ss[0], "postgres"); k != KindRead {
 		t.Fatalf("%+v", k)
 	}
-	if k, _ := Classify(ss[1]); k != KindWrite {
+	if k, _ := Classify(ss[1], "postgres"); k != KindWrite {
 		t.Fatalf("%+v", k)
 	}
-	ss = Split("DELIMITER $$\nCREATE PROCEDURE p() BEGIN SELECT 1; SELECT 2; END$$\nDELIMITER ;\nSELECT 3;")
+	ss, err = Split("DELIMITER $$\nCREATE PROCEDURE p() BEGIN SELECT 1; SELECT 2; END$$\nDELIMITER ;\nSELECT 3;", "mysql")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(ss) != 2 {
 		t.Fatalf("delimiter: %#v", ss)
 	}
-	if k, _ := Classify("EXPLAIN ANALYZE SELECT 1"); k != KindWrite {
+	if k, _ := Classify("EXPLAIN ANALYZE SELECT 1", "postgres"); k != KindWrite {
 		t.Fatal("analyze must write")
 	}
 }
@@ -136,7 +142,7 @@ func TestClassifySecurityProbes(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, statements := Classify(tc.sql)
+			got, statements := Classify(tc.sql, "sqlite")
 			if got != tc.want {
 				t.Fatalf("Classify(%q) = %s, want %s; statements=%+v", tc.sql, got, tc.want, statements)
 			}
@@ -146,18 +152,21 @@ func TestClassifySecurityProbes(t *testing.T) {
 
 func TestSplitSecurityProbes(t *testing.T) {
 	cases := []struct {
-		sql  string
-		want int
+		sql, dialect string
+		want         int
 	}{
-		{"SELECT 1 -- x; y\n; SELECT 2", 2},
-		{"SELECT 1 /* a; b */; SELECT 2", 2},
-		{"SELECT a$b$c FROM t; SELECT 2", 2},
-		{"SELECT ';'; SELECT '' ; SELECT 'a\\';b'", 3},
-		{"SELECT $$a;b$$; SELECT $tag$x;y$tag$;", 2},
+		{"SELECT 1 -- x; y\n; SELECT 2", "sqlite", 2},
+		{"SELECT 1 /* a; b */; SELECT 2", "sqlite", 2},
+		{"SELECT a$b$c FROM t; SELECT 2", "sqlite", 2},
+		{"SELECT ';'; SELECT '' ; SELECT 'a\\';b'", "mysql", 3},
+		{"SELECT $$a;b$$; SELECT $tag$x;y$tag$;", "postgres", 2},
 	}
 	for _, tc := range cases {
 		t.Run(tc.sql, func(t *testing.T) {
-			got := Split(tc.sql)
+			got, err := Split(tc.sql, tc.dialect)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if len(got) != tc.want {
 				t.Fatalf("Split(%q) = %#v, want %d statements", tc.sql, got, tc.want)
 			}
@@ -264,7 +273,7 @@ func TestMySQLDSNPasswordRoundTrip(t *testing.T) {
 }
 
 func TestClassifyStatementMetadataAndDSNRedaction(t *testing.T) {
-	kind, statements := Classify(`SELECT * FROM "users" WHERE id = 1`)
+	kind, statements := Classify(`SELECT * FROM "users" WHERE id = 1`, "postgres")
 	if kind != KindRead || len(statements) != 1 || !statements[0].HasWhere || statements[0].Table != "users" {
 		t.Fatalf("classification = %s %+v", kind, statements)
 	}

@@ -1,18 +1,19 @@
 package dbclient
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 )
 
 type Kind string
 
-type Dialect string
+type SQLDialect string
 
 const (
-	DialectPostgres Dialect = "postgres"
-	DialectMySQL    Dialect = "mysql"
-	DialectSQLite   Dialect = "sqlite"
+	DialectPostgres SQLDialect = "postgres"
+	DialectMySQL    SQLDialect = "mysql"
+	DialectSQLite   SQLDialect = "sqlite"
 )
 
 const (
@@ -34,9 +35,12 @@ var simpleSelectTable = regexp.MustCompile(`(?i)\bFROM\s+([\w."` + "`" + `]+)`)
 // Classify is a conservative hint. The read-only session and a statement
 // timeout are the real guard; callers must not use this result as a security
 // boundary. Unknown dialects and syntax are treated as writes when uncertain.
-func Classify(sql string, dialects ...string) (Kind, []Statement) {
-	dialect := dialectArg(dialects)
-	sqls := Split(sql, string(dialect))
+func Classify(sql string, dialectName string) (Kind, []Statement) {
+	dialect := dialectArg([]string{dialectName})
+	sqls, splitErr := Split(sql, string(dialect))
+	if splitErr != nil {
+		return KindWrite, []Statement{{SQL: strings.TrimSpace(sql), Kind: KindWrite}}
+	}
 	statements := make([]Statement, len(sqls))
 	worst := KindRead
 	for i, text := range sqls {
@@ -71,7 +75,7 @@ func hasAmbiguousDash(sql string) bool {
 	return false
 }
 
-func dialectArg(dialects []string) Dialect {
+func dialectArg(dialects []string) SQLDialect {
 	if len(dialects) == 0 {
 		return ""
 	}
@@ -87,7 +91,7 @@ func dialectArg(dialects []string) Dialect {
 	}
 }
 
-func classifyStatement(sql string, dialect Dialect) Statement {
+func classifyStatement(sql string, dialect SQLDialect) Statement {
 	words := tokenWordsDialect(sql, dialect)
 	st := Statement{SQL: strings.TrimSpace(sql), Kind: KindUnknown}
 	if len(words) == 0 {
@@ -126,6 +130,9 @@ func classifyStatement(sql string, dialect Dialect) Statement {
 	if first == "PRAGMA" && !pragmaReadOnly(words) {
 		st.Kind = KindWrite
 	}
+	if dialect == DialectSQLite && sqliteUnsafeWords(words) {
+		st.Kind = KindWrite
+	}
 	if first == "SELECT" || first == "WITH" {
 		for i, w := range words {
 			if w == "INTO" {
@@ -135,8 +142,8 @@ func classifyStatement(sql string, dialect Dialect) Statement {
 				st.Kind = KindWrite
 			}
 		}
-		for _, w := range words {
-			if sideEffectFunction(w) || sideEffectPrefix(w) {
+		for i, w := range words {
+			if i+1 < len(words) && words[i+1] == "(" && (sideEffectFunction(w) || sideEffectPrefix(w)) {
 				st.Kind = KindWrite
 			}
 		}
@@ -150,6 +157,39 @@ func classifyStatement(sql string, dialect Dialect) Statement {
 		}
 	}
 	return st
+}
+
+func sqliteUnsafeWords(words []string) bool {
+	for i, word := range words {
+		switch word {
+		case "ATTACH", "WRITABLE_SCHEMA":
+			return true
+		case "INTO":
+			if containsSequence(words[:i], "VACUUM") {
+				return true
+			}
+		case "TEMP", "TEMPORARY":
+			if i > 0 && words[i-1] == "CREATE" {
+				return true
+			}
+		}
+		if i+1 < len(words) && words[i+1] == "(" && sqliteUnsafeFunction(word) {
+			return true
+		}
+	}
+	return false
+}
+
+func sqliteUnsafeFunction(word string) bool {
+	if sideEffectFunction(word) {
+		return true
+	}
+	for _, prefix := range []string{"SQLAR_", "SHELL_"} {
+		if strings.HasPrefix(word, prefix) {
+			return true
+		}
+	}
+	return word == "ZIPFILE" || word == "LSMODE"
 }
 
 func severity(k Kind) int {
@@ -217,6 +257,8 @@ var sideEffectFunctions = map[string]bool{
 	"PG_TERMINATE_BACKEND": true, "PG_CANCEL_BACKEND": true, "SETVAL": true,
 	"DBLINK_EXEC": true, "DBLINK_SEND_QUERY": true, "LO_IMPORT": true,
 	"LO_EXPORT": true, "PG_ADVISORY_LOCK": true, "PG_ADVISORY_XACT_LOCK": true,
+	"EDIT": true, "WRITEFILE": true, "READFILE": true, "FSDIR": true, "FTS3_TOKENIZER": true, "LOAD_EXTENSION": true,
+	"ZIPFILE": true, "LSMODE": true,
 }
 
 func sideEffectFunction(word string) bool { return sideEffectFunctions[word] }
@@ -249,7 +291,7 @@ func tokenWords(s string) []string {
 	return tokenWordsDialect(s, "")
 }
 
-func tokenWordsDialect(s string, dialect Dialect) []string {
+func tokenWordsDialect(s string, dialect SQLDialect) []string {
 	clean := stripSQLLiteralsDialect(s, dialect)
 	var words []string
 	for i := 0; i < len(clean); {
@@ -277,7 +319,7 @@ func isWordByte(c byte) bool {
 
 func stripSQLLiterals(sql string) string { return stripSQLLiteralsDialect(sql, "") }
 
-func stripSQLLiteralsDialect(sql string, dialect Dialect) string {
+func stripSQLLiteralsDialect(sql string, dialect SQLDialect) string {
 	b := []byte(sql)
 	for i := 0; i < len(b); {
 		if i+1 < len(b) && b[i] == '-' && b[i+1] == '-' && (dialect != DialectMySQL || i+2 == len(b) || b[i+2] <= ' ') {
@@ -378,7 +420,7 @@ func stripSQLLiteralsDialect(sql string, dialect Dialect) string {
 	return string(b)
 }
 
-func stripSQLForTable(sql string, dialect Dialect) string {
+func stripSQLForTable(sql string, dialect SQLDialect) string {
 	b := []byte(sql)
 	for i := 0; i < len(b); {
 		if i+1 < len(b) && b[i] == '-' && b[i+1] == '-' {
@@ -480,7 +522,7 @@ func isEStringPrefix(b []byte, i int) bool {
 	return i < 2 || !(isWordByte(b[i-2]) || b[i-2] == '$')
 }
 
-func dollarTag(b []byte, i int, dialect Dialect) (string, int) {
+func dollarTag(b []byte, i int, dialect SQLDialect) (string, int) {
 	if dialect != "" && dialect != DialectPostgres {
 		return "", i
 	}
@@ -497,8 +539,8 @@ func dollarTag(b []byte, i int, dialect Dialect) (string, int) {
 	return "", i
 }
 
-func Split(sql string, dialects ...string) []string {
-	dialect := dialectArg(dialects)
+func Split(sql string, dialectName string) ([]string, error) {
+	dialect := dialectArg([]string{dialectName})
 	var out []string
 	start := 0
 	quote := byte(0)
@@ -506,6 +548,7 @@ func Split(sql string, dialects ...string) []string {
 	dollar := ""
 	lineStart := true
 	delimiter := ";"
+	blockDepth := 0
 	for i := 0; i < len(sql); i++ {
 		if lineStart {
 			j := i
@@ -547,16 +590,27 @@ func Split(sql string, dialects ...string) []string {
 				continue
 			}
 			if i+1 < len(sql) && c == '/' && sql[i+1] == '*' {
-				i += 2
-				for i+1 < len(sql) && !(sql[i] == '*' && sql[i+1] == '/') {
+				blockDepth++
+				i++
+				continue
+			}
+			if blockDepth > 0 {
+				if i+1 < len(sql) && c == '/' && sql[i+1] == '*' {
+					blockDepth++
+					i++
+				} else if i+1 < len(sql) && c == '*' && sql[i+1] == '/' {
+					blockDepth--
 					i++
 				}
-				i++
 				continue
 			}
 		}
 		if quote == 0 && dollar == "" && strings.HasPrefix(sql[i:], delimiter) {
 			part := strings.TrimSpace(sql[start:i])
+			if dialect == DialectSQLite && incompleteSQLiteTrigger(part) {
+				i += len(delimiter) - 1
+				continue
+			}
 			if len(tokenWordsDialect(part, dialect)) > 0 && !strings.HasPrefix(strings.ToUpper(part), "DELIMITER ") {
 				out = append(out, part)
 			}
@@ -572,7 +626,11 @@ func Split(sql string, dialects ...string) []string {
 			continue
 		}
 		if quote != 0 {
-			if c == quote {
+			closeQuote := c == quote
+			if quote == '[' {
+				closeQuote = c == ']'
+			}
+			if closeQuote {
 				if i+1 < len(sql) && sql[i+1] == quote {
 					i++
 					continue
@@ -584,7 +642,7 @@ func Split(sql string, dialects ...string) []string {
 			}
 			continue
 		}
-		if c == '\'' || c == '"' || c == '`' {
+		if c == '\'' || c == '"' || c == '`' || (c == '[' && dialect == DialectSQLite) {
 			quote = c
 			quoteEscape = dialect == "" || dialect == DialectMySQL || (dialect == DialectPostgres && isEStringPrefix([]byte(sql), i))
 			continue
@@ -596,9 +654,162 @@ func Split(sql string, dialects ...string) []string {
 			}
 		}
 	}
+	if quote != 0 || dollar != "" {
+		return nil, errors.New("SQL statement is incomplete: an opening quote or identifier is not closed")
+	}
+	if blockDepth > 0 {
+		return nil, errors.New("SQL statement is incomplete: a block comment is not closed")
+	}
 	part := strings.TrimSpace(sql[start:])
 	if len(tokenWordsDialect(part, dialect)) > 0 && !strings.HasPrefix(strings.ToUpper(part), "DELIMITER ") {
+		if dialect == DialectSQLite && incompleteSQLiteTrigger(part) {
+			return nil, errors.New("SQL statement is incomplete: trigger body needs END")
+		}
 		out = append(out, part)
 	}
-	return out
+	return out, nil
+}
+
+func incompleteSQLiteTrigger(sql string) bool {
+	clean := []byte(stripSQLLiteralsDialect(sql, DialectSQLite))
+	// stripSQLLiterals does not know [bracket] identifiers.
+	for i := 0; i < len(clean); i++ {
+		if clean[i] == '[' {
+			j := i + 1
+			for j < len(clean) && clean[j] != ']' {
+				j++
+			}
+			for k := i; k <= j && k < len(clean); k++ {
+				clean[k] = ' '
+			}
+			i = j
+		}
+	}
+	var toks []string
+	for i := 0; i < len(clean); {
+		c := clean[i]
+		if isWordByte(c) {
+			j := i + 1
+			for j < len(clean) && isWordByte(clean[j]) {
+				j++
+			}
+			toks = append(toks, strings.ToUpper(string(clean[i:j])))
+			i = j
+			continue
+		}
+		if c == ';' {
+			toks = append(toks, ";")
+		}
+		i++
+	}
+	if len(toks) < 2 || toks[0] != "CREATE" || !containsSequence(toks, "TRIGGER") {
+		return false
+	}
+	begin := -1
+	for i, w := range toks {
+		if w == "BEGIN" {
+			begin = i
+			break
+		}
+	}
+	if begin < 0 {
+		return false
+	}
+	depth := 0
+	for i := begin + 1; i < len(toks); i++ {
+		switch toks[i] {
+		case "CASE":
+			depth++
+		case "END":
+			if depth > 0 {
+				depth--
+			} else if toks[i-1] == ";" || i-1 == begin {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// twinBlockedIdentifier reports the first helper name that the read-only
+// twin must not see anywhere as an identifier, bare or quoted, including as
+// a table-valued function (FROM fsdir) or schema-qualified.
+func twinBlockedIdentifier(sql string) string {
+	b := []byte(sql)
+	check := func(name string) string {
+		up := strings.ToUpper(name)
+		if twinBlockedWords[up] || strings.HasPrefix(up, "SHELL_") {
+			return up
+		}
+		return ""
+	}
+	for i := 0; i < len(b); {
+		c := b[i]
+		switch {
+		case c == '-' && i+1 < len(b) && b[i+1] == '-':
+			for i < len(b) && b[i] != '\n' {
+				i++
+			}
+		case c == '/' && i+1 < len(b) && b[i+1] == '*':
+			i += 2
+			for i < len(b) && !(b[i] == '*' && i+1 < len(b) && b[i+1] == '/') {
+				i++
+			}
+			i += 2
+		case c == '\'':
+			i++
+			for i < len(b) {
+				if b[i] == '\'' {
+					if i+1 < len(b) && b[i+1] == '\'' {
+						i += 2
+						continue
+					}
+					break
+				}
+				i++
+			}
+			i++
+		case c == '"' || c == '`' || c == '[':
+			q := c
+			if c == '[' {
+				q = ']'
+			}
+			i++
+			var name []byte
+			for i < len(b) {
+				if b[i] == q {
+					if q != ']' && i+1 < len(b) && b[i+1] == q {
+						name = append(name, q)
+						i += 2
+						continue
+					}
+					break
+				}
+				name = append(name, b[i])
+				i++
+			}
+			i++
+			if w := check(strings.TrimSpace(string(name))); w != "" {
+				return w
+			}
+		case isWordByte(c):
+			j := i + 1
+			for j < len(b) && isWordByte(b[j]) {
+				j++
+			}
+			if w := check(string(b[i:j])); w != "" {
+				return w
+			}
+			i = j
+		default:
+			i++
+		}
+	}
+	return ""
+}
+
+var twinBlockedWords = map[string]bool{
+	"FSDIR": true, "ZIPFILE": true, "SQLAR": true, "SQLAR_COMPRESS": true, "SQLAR_UNCOMPRESS": true,
+	"LSMODE": true, "READFILE": true, "WRITEFILE": true, "EDIT": true, "LOAD_EXTENSION": true,
+	"FTS3_TOKENIZER": true, "TEMP_STORE_DIRECTORY": true,
 }
