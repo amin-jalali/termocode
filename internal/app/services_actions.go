@@ -336,6 +336,8 @@ const (
 	confirmKindServicesQuit
 	confirmKindContainerRemove
 	confirmKindContainerProjectDown
+	confirmKindContainerImagePush
+	confirmKindContainerHostAction
 )
 
 // handleServicesConfirm routes the services confirm kinds.
@@ -406,6 +408,18 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 			}
 			return containerGroupDoneMsg{project: project, err: err}
 		}, true
+	case confirmKindContainerImagePush:
+		ref := m.pendingImageRef
+		m.pendingImageRef = ""
+		if id != "push" {
+			return nil, true
+		}
+		return m.imagePush(ref), true
+	case confirmKindContainerHostAction:
+		if id != "run" && id != "remove" && id != "prune" && id != "create" {
+			return m.runHostAction("cancel"), true
+		}
+		return m.runHostAction(id), true
 	case confirmKindServicesQuit:
 		return m.answerServicesQuit(id), true
 	}
@@ -584,6 +598,10 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		m.servicesClampCursor()
 		st.touch()
 	case "enter", "l":
+		if _, ref, ok := m.selectedImage(); ok && k.String() == "enter" {
+			m.askImageRun(ref)
+			return m, nil
+		}
 		switch {
 		case have && r.kind == svcRowHostItem && r.host == hostContainer:
 			if c, ok := m.selectedContainer(); ok {
@@ -642,6 +660,10 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, m.servicesNoteCmd(note, cmd)
 		}
 	case "t":
+		if _, ref, ok := m.selectedImage(); ok {
+			m.askImageTag(ref)
+			return m, nil
+		}
 		if c, ok := m.selectedContainer(); ok {
 			return m, m.openContainerTerminal(c, "attach")
 		}
@@ -683,6 +705,10 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 		return m, m.servicesOpenSource(svcSecCompose, "")
 	case "y":
+		if im, _, ok := m.selectedImage(); ok {
+			m.copyToClipboard(strings.TrimPrefix(im.ID, "sha256:"))
+			return m, m.servicesToast(toast.Info, "Copied image id", shortImageID(im.ID))
+		}
 		if c, ok := m.selectedContainer(); ok {
 			m.copyToClipboard(c.ID)
 			return m, m.servicesToast(toast.Info, "Copied container id", shortImageID(c.ID))
@@ -706,15 +732,32 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			}
 			return m, m.containerAction(verb, c)
 		}
+	case "z":
+		if have && r.kind == svcRowSection && (r.section == hostSection("images") || r.section == hostSection("networks") || r.section == hostSection("volumes")) {
+			if r.section == hostSection("images") {
+				m.askImagePrune()
+				return m, nil
+			}
+			return m, m.askStoragePrune(strings.TrimPrefix(r.section, "host/"))
+		}
 	case "S":
 		if c, ok := m.selectedContainer(); ok {
 			return m, m.openContainerTerminal(c, "stats")
 		}
 	case "i":
+		if _, ref, ok := m.selectedImage(); ok {
+			return m, m.imageInspect(ref)
+		}
 		if c, ok := m.selectedContainer(); ok {
 			return m, m.inspectContainer(c)
 		}
 	case "D":
+		if im, ref, ok := m.selectedImage(); ok {
+			return m, m.askImageRemoveRef(im, ref)
+		}
+		if have && r.kind == svcRowHostItem && (r.host == hostNetwork || r.host == hostVolume) {
+			return m, m.askStorageRemove(r)
+		}
 		if c, ok := m.selectedContainer(); ok {
 			m.askRemoveContainer(c)
 			return m, nil
@@ -722,6 +765,38 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if _, _, ok := m.selectedProjectGroup(); ok {
 			return m, m.askProjectDown()
 		}
+	case "u":
+		if _, ref, ok := m.selectedImage(); ok {
+			m.askImagePull(ref)
+			return m, nil
+		}
+		if have && r.kind == svcRowGroup && r.hostSectionID() == "images" {
+			m.askImagePull(r.name)
+			return m, nil
+		}
+		if have && r.kind == svcRowSection && r.section == hostSection("images") {
+			m.askImagePull("")
+			return m, nil
+		}
+	case "P":
+		if _, ref, ok := m.selectedImage(); ok {
+			m.askImagePush(ref)
+			return m, nil
+		}
+	case "n":
+		if have && r.kind == svcRowSection && (r.section == hostSection("networks") || r.section == hostSection("volumes")) {
+			m.storageCreatePrompt(strings.TrimPrefix(r.section, "host/"))
+			return m, nil
+		}
+	case "d":
+		if have && r.kind == svcRowSection && r.section == hostSection("volumes") {
+			return m, m.containerDiskUsage()
+		}
+	case "h":
+		if _, ref, ok := m.selectedImage(); ok {
+			return m, m.imageHistory(ref)
+		}
+
 	case "esc":
 		m.focus = FocusEditor
 	}
@@ -745,6 +820,19 @@ func (r svcRow) hostSectionID() string {
 // just opened.
 func (m *Model) servicesToggleFold(r svcRow) tea.Cmd {
 	st := m.services
+	if r.kind == svcRowHostItem && (r.host == hostNetwork || r.host == hostVolume) {
+		key := storageInspectKey(r)
+		collapsed, ok := st.collapsed[key]
+		if !ok {
+			collapsed = true
+		}
+		st.collapsed[key] = !collapsed
+		st.touch()
+		if collapsed {
+			return m.inspectStorageUsers(r)
+		}
+		return nil
+	}
 	st.collapsed[r.section] = !st.collapsed[r.section]
 	m.servicesSaveSession()
 	st.touch()
@@ -1017,6 +1105,21 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-inspect", Title: "Containers: Inspect"},
 		{ID: "containers-copy-id", Title: "Containers: Copy ID"},
 		{ID: "containers-open-port", Title: "Containers: Open Published Port"},
+		{ID: "containers-image-pull", Title: "Containers: Pull Image…"},
+		{ID: "containers-image-push", Title: "Containers: Push Selected Image…"},
+		{ID: "containers-image-tag", Title: "Containers: Tag Selected Image…"},
+		{ID: "containers-image-run", Title: "Containers: Run Selected Image…"},
+		{ID: "containers-image-history", Title: "Containers: Show Image History"},
+		{ID: "containers-image-inspect", Title: "Containers: Inspect Image"},
+		{ID: "containers-image-remove", Title: "Containers: Remove Selected Image…"},
+		{ID: "containers-image-prune", Title: "Containers: Prune Dangling Images…"},
+		{ID: "containers-network-create", Title: "Containers: Create Network…"},
+		{ID: "containers-network-remove", Title: "Containers: Remove Selected Network…"},
+		{ID: "containers-network-prune", Title: "Containers: Prune Networks…"},
+		{ID: "containers-volume-create", Title: "Containers: Create Volume…"},
+		{ID: "containers-volume-remove", Title: "Containers: Remove Selected Volume…"},
+		{ID: "containers-volume-prune", Title: "Containers: Prune Volumes…"},
+		{ID: "containers-volume-disk-usage", Title: "Containers: Read Volume Disk Usage"},
 		{ID: "containers-compose-up", Title: "Containers: Start Project"},
 		{ID: "containers-compose-stop", Title: "Containers: Stop Project"},
 		{ID: "containers-compose-restart", Title: "Containers: Restart Project"},
@@ -1039,6 +1142,9 @@ func containerAITargetRequired(id string) bool {
 	case "containers-start", "containers-stop", "containers-restart", "containers-pause",
 		"containers-remove", "containers-logs", "containers-shell", "containers-attach",
 		"containers-stats", "containers-inspect", "containers-copy-id", "containers-open-port",
+		"containers-image-pull", "containers-image-push", "containers-image-tag", "containers-image-run",
+		"containers-image-history", "containers-image-inspect", "containers-image-remove",
+		"containers-network-remove", "containers-volume-remove",
 		"containers-compose-up", "containers-compose-stop", "containers-compose-restart", "containers-compose-down":
 		return true
 	default:
@@ -1048,7 +1154,63 @@ func containerAITargetRequired(id string) bool {
 
 func (m *Model) dispatchContainerAIAction(id, target string) (tea.Cmd, error) {
 	if target == "" {
-		return nil, fmt.Errorf("%s needs a named container or compose project", id)
+		return nil, fmt.Errorf("%s needs a named container, image, network, volume, or compose project", id)
+	}
+	if strings.HasPrefix(id, "containers-image-") {
+		if id == "containers-image-pull" {
+			return m.imagePull(target), nil
+		}
+		var image containers.Image
+		ref := ""
+		for _, candidate := range m.services.imageRows {
+			if candidate.ID == target || strings.TrimPrefix(candidate.ID, "sha256:") == target {
+				image, ref = candidate, target
+				break
+			}
+			for _, tag := range candidate.RepoTags {
+				if tag == target {
+					image, ref = candidate, tag
+					break
+				}
+			}
+			if ref != "" {
+				break
+			}
+		}
+		if ref == "" {
+			return nil, fmt.Errorf("image %q was not found", target)
+		}
+		switch id {
+		case "containers-image-push":
+			m.askImagePush(ref)
+		case "containers-image-tag":
+			m.askImageTag(ref)
+		case "containers-image-run":
+			m.askImageRun(ref)
+		case "containers-image-history":
+			return m.imageHistory(ref), nil
+		case "containers-image-inspect":
+			return m.imageInspect(ref), nil
+		case "containers-image-remove":
+			return m.askImageRemoveRef(image, ref), nil
+		}
+		return nil, nil
+	}
+	if id == "containers-network-remove" || id == "containers-volume-remove" {
+		kind, host, rows := "network", hostNetwork, len(m.services.networkRows)
+		if id == "containers-volume-remove" {
+			kind, host, rows = "volume", hostVolume, len(m.services.volumeRows)
+		}
+		for i := 0; i < rows; i++ {
+			name := m.services.networkRows[i].Name
+			if host == hostVolume {
+				name = m.services.volumeRows[i].Name
+			}
+			if name == target {
+				return m.askStorageRemove(svcRow{kind: svcRowHostItem, host: host, idx: i, hostID: name, name: name}), nil
+			}
+		}
+		return nil, fmt.Errorf("%s %q was not found", kind, target)
 	}
 	if strings.HasPrefix(id, "containers-compose-") {
 		var row int = -1
@@ -1141,6 +1303,61 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 		return m.servicesAfterLoad(open, func(m *Model) tea.Cmd {
 			if id == "containers-refresh" {
 				return tea.Batch(m.servicesAction("refresh"), m.containersReloadAll())
+			}
+			switch id {
+			case "containers-image-pull":
+				if _, ref, ok := m.selectedImage(); ok {
+					m.askImagePull(ref)
+					return nil
+				}
+				m.askImagePull("")
+				return nil
+			case "containers-image-push":
+				if _, ref, ok := m.selectedImage(); ok {
+					m.askImagePush(ref)
+					return nil
+				}
+			case "containers-image-tag":
+				if _, ref, ok := m.selectedImage(); ok {
+					m.askImageTag(ref)
+					return nil
+				}
+			case "containers-image-run":
+				if _, ref, ok := m.selectedImage(); ok {
+					m.askImageRun(ref)
+					return nil
+				}
+			case "containers-image-history":
+				if _, ref, ok := m.selectedImage(); ok {
+					return m.imageHistory(ref)
+				}
+			case "containers-image-inspect":
+				if _, ref, ok := m.selectedImage(); ok {
+					return m.imageInspect(ref)
+				}
+			case "containers-image-remove":
+				if im, ref, ok := m.selectedImage(); ok {
+					return m.askImageRemoveRef(im, ref)
+				}
+			case "containers-image-prune":
+				m.askImagePrune()
+				return nil
+			case "containers-network-create":
+				m.storageCreatePrompt("networks")
+				return nil
+			case "containers-volume-create":
+				m.storageCreatePrompt("volumes")
+				return nil
+			case "containers-network-remove", "containers-volume-remove":
+				if r, ok := m.servicesCurrentRow(); ok && r.kind == svcRowHostItem && (r.host == hostNetwork || r.host == hostVolume) {
+					return m.askStorageRemove(r)
+				}
+			case "containers-network-prune":
+				return m.askStoragePrune("networks")
+			case "containers-volume-prune":
+				return m.askStoragePrune("volumes")
+			case "containers-volume-disk-usage":
+				return m.containerDiskUsage()
 			}
 			if strings.HasPrefix(id, "containers-compose-") {
 				switch strings.TrimPrefix(id, "containers-compose-") {

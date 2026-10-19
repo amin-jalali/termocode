@@ -124,3 +124,153 @@ func cursorLine(frame string) string {
 	}
 	return ""
 }
+
+func TestContainersDanglingImagePruneCard(t *testing.T) {
+	if testing.Short() {
+		t.Skip("starts nvim")
+	}
+	wd, _ := os.Getwd()
+	fixtureDir := filepath.Join(wd, "..", "containers", "testdata", "docker27")
+	f := servicestest.New(t)
+	for _, name := range []string{"version.json", "ps.json", "images.json", "network-ls.json", "volume-ls.json", "context-ls.json"} {
+		b, err := os.ReadFile(filepath.Join(fixtureDir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.Set(t, name, string(b))
+	}
+	t.Setenv("PATH", f.PathEnv())
+	d := New(t, Options{W: 120, H: 34, Nvim: true, Files: map[string]string{"compose.yaml": "services:\n  api:\n    image: sample:1\n"}})
+	d.Palette("containers-focus")
+	if !d.WaitForText("IMAGES", 5*time.Second) {
+		t.Fatalf("image section did not load:\n%s", screen(d))
+	}
+	svcGoto(d, "IMAGES")
+	d.Key("z")
+	if !d.WaitForText("Remove dangling images?", 3*time.Second) {
+		t.Fatalf("prune card omitted the exact dangling-only command:\n%s", screen(d))
+	}
+	commandText := strings.Join(strings.Fields(screen(d)), " ")
+	if !strings.Contains(commandText, "image prune -f") {
+		t.Fatalf("prune card does not name the exact command:\n%s", screen(d))
+	}
+	if strings.Contains(commandText, "image prune -a") || strings.Contains(commandText, "prune -af") {
+		t.Fatalf("image prune card includes all tagged images:\n%s", screen(d))
+	}
+	if f.Count("image prune") != 0 {
+		t.Fatalf("prune ran before confirmation: %q", f.Calls())
+	}
+}
+
+func TestContainersNetworkExpandInspectsOnDemand(t *testing.T) {
+	if testing.Short() {
+		t.Skip("starts nvim")
+	}
+	wd, _ := os.Getwd()
+	fixtureDir := filepath.Join(wd, "..", "containers", "testdata", "docker27")
+	f := servicestest.New(t)
+	for _, name := range []string{"version.json", "ps.json", "images.json", "network-ls.json", "volume-ls.json", "context-ls.json", "inspect.json"} {
+		b, err := os.ReadFile(filepath.Join(fixtureDir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.Set(t, name, string(b))
+	}
+	t.Setenv("PATH", f.PathEnv())
+	d := New(t, Options{W: 120, H: 34, Nvim: true, Files: map[string]string{"compose.yaml": "services:\n  api:\n    image: sample:1\n"}})
+	d.Palette("containers-focus")
+	if !d.WaitForText("NETWORKS", 5*time.Second) {
+		t.Fatalf("network section did not load:\n%s", screen(d))
+	}
+	svcGoto(d, "NETWORKS")
+	d.Key(" ")
+	if !d.WaitForText("NETWORKS ─", 5*time.Second) {
+		t.Fatalf("network list did not open:\n%s", screen(d))
+	}
+	d.Key("j")
+	before := f.Count("inspect termocode_default")
+	d.Key(" ")
+	if !d.WaitFor(func() bool { return f.Count("inspect termocode_default") == before+1 }, 5*time.Second) {
+		t.Fatalf("expanding network did not inspect it on demand: %q\n%s", f.Calls(), screen(d))
+	}
+}
+
+func containersRunFixture(t *testing.T) *Driver {
+	t.Helper()
+	wd, _ := os.Getwd()
+	fixtureDir := filepath.Join(wd, "..", "containers", "testdata", "docker27")
+	f := servicestest.New(t)
+	for _, name := range []string{"version.json", "ps.json", "images.json", "network-ls.json", "volume-ls.json", "context-ls.json"} {
+		b, err := os.ReadFile(filepath.Join(fixtureDir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.Set(t, name, string(b))
+	}
+	t.Setenv("PATH", f.PathEnv())
+	d := New(t, Options{W: 140, H: 36, Nvim: true, Files: map[string]string{"compose.yaml": "services:\n  api:\n    image: sample:1\n"}})
+	d.Palette("containers-focus")
+	if !d.WaitForText("IMAGES", 5*time.Second) {
+		t.Fatalf("image section did not load:\n%s", screen(d))
+	}
+	svcGoto(d, "IMAGES")
+	d.Key(" ")
+	d.Key("j", "j")
+	d.Key("enter")
+	if !d.WaitForText("Container name (optional)", 3*time.Second) {
+		t.Fatalf("Run image did not open:\n%s", screen(d))
+	}
+	return d
+}
+
+func TestContainersRunImageOptionalStepsFinishOnEmptyEnter(t *testing.T) {
+	if testing.Short() {
+		t.Skip("starts nvim")
+	}
+	d := containersRunFixture(t)
+	d.Key("enter") // no name
+	if !d.WaitForText("Port to publish", 3*time.Second) {
+		t.Fatalf("empty name did not move on:\n%s", screen(d))
+	}
+	d.Type("8080:80")
+	d.Key("enter")
+	if !d.WaitForText("Ports so far", 3*time.Second) {
+		t.Fatalf("port not added:\n%s", screen(d))
+	}
+	d.Key("enter") // finish ports
+	if !d.WaitForText("Environment variable", 3*time.Second) {
+		t.Fatalf("empty port did not finish ports:\n%s", screen(d))
+	}
+	d.Type("A=1")
+	d.Key("enter")
+	d.Type("B=2")
+	d.Key("enter")
+	if !d.WaitForText("Environment so far", 3*time.Second) {
+		t.Fatalf("env not added:\n%s", screen(d))
+	}
+	d.Key("enter") // finish env
+	if !d.WaitForText("Run image?", 3*time.Second) {
+		t.Fatalf("no run card:\n%s", screen(d))
+	}
+	text := strings.Join(strings.Fields(screen(d)), " ")
+	for _, want := range []string{"run", "-p 8080:80", "-e A=1", "-e B=2"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("run card misses %q:\n%s", want, screen(d))
+		}
+	}
+}
+
+func TestContainersRunImageEscCancels(t *testing.T) {
+	if testing.Short() {
+		t.Skip("starts nvim")
+	}
+	d := containersRunFixture(t)
+	d.Key("enter")
+	d.Key("esc")
+	if !d.WaitForText("Run cancelled", 3*time.Second) {
+		t.Fatalf("no cancel toast:\n%s", screen(d))
+	}
+	if strings.Contains(screen(d), "Port to publish") {
+		t.Fatalf("prompt still open:\n%s", screen(d))
+	}
+}

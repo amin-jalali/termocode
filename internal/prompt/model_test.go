@@ -182,3 +182,18 @@ func TestViewIncludesTitleLabelValue(t *testing.T) {
 		}
 	}
 }
+
+func TestEmptyEnterNeedsAllowEmpty(t *testing.T) {
+	m := New("t", "l", "")
+	if _, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter}); cmd != nil {
+		t.Fatal("empty Enter must be ignored by default")
+	}
+	m.SetAllowEmpty(true)
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("empty Enter must submit when allowed")
+	}
+	if got, ok := cmd().(SubmitMsg); !ok || got.Value != "" {
+		t.Fatalf("got %#v", cmd())
+	}
+}

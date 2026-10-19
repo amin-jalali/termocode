@@ -87,9 +87,9 @@ func (m *Model) containersDemo(variant string) {
 			"com.docker.compose.project.config_files": configFiles}
 	}
 	st.containerRows = []containers.Container{
-		{ID: "9f3c2e1a", Names: []string{"termocode-postgres-1"}, Image: "postgres:16", State: "running", Status: "Up 2 hours (healthy)", Project: "termocode", Labels: compose("termocode", "postgres"), PortsText: "0.0.0.0:5432->5432/tcp"},
+		{ID: "9f3c2e1a", Names: []string{"termocode-postgres-1"}, Image: "postgres:16", State: "running", Status: "Up 2 hours (healthy)", Project: "termocode", Labels: compose("termocode", "postgres"), PortsText: "0.0.0.0:5432->5432/tcp", Mounts: []string{"termocode_db"}},
 		{ID: "a1b2c3d4", Names: []string{"termocode-redis-1"}, Image: "redis:7", State: "running", Status: "Up 2 hours", Project: "termocode", Labels: compose("termocode", "redis"), PortsText: "0.0.0.0:6379->6379/tcp"},
-		{ID: "b2c3d4e5", Names: []string{"termocode-api-1"}, Image: "termocode-api", State: "exited", Status: "Exited (1) 3 minutes ago", Project: "termocode", Labels: compose("termocode", "api")},
+		{ID: "b2c3d4e5", Names: []string{"termocode-api-1"}, Image: "termocode-api", State: "exited", Status: "Exited (1) 3 minutes ago", Project: "termocode", Labels: compose("termocode", "api"), Networks: []string{"termocode_default"}},
 		{ID: "f3e4d5c6", Names: []string{"shop-web-1"}, Image: "ghcr.io/acme/shop:latest", State: "running", Status: "Up 3 hours", Project: "shop", Labels: compose("shop", "web")},
 		{ID: "e4d5c6b7", Names: []string{"shop-worker-1"}, Image: "ghcr.io/acme/shop:latest", State: "running", Status: "Up 3 hours", Project: "shop", Labels: compose("shop", "worker")},
 		{ID: "aabbccdd", Names: []string{"nginx"}, Image: "nginx:1.27", State: "running", Status: "Up 3 days", PortsText: "0.0.0.0:8081->80/tcp"},
@@ -140,8 +140,120 @@ func (m *Model) containersDemo(variant string) {
 				break
 			}
 		}
+	case "images":
+		st.collapsed[hostSection("images")] = false
+	case "networks":
+		st.collapsed[hostSection("networks")] = false
+	case "volumes":
+		st.collapsed[hostSection("volumes")] = false
 	}
 	switch variant {
+	case "images":
+		for i, r := range st.rows() {
+			if r.kind == svcRowSection && r.section == hostSection("images") {
+				st.cursor = i
+				break
+			}
+		}
+	case "networks":
+		for i, r := range st.rows() {
+			if r.kind == svcRowHostItem && r.host == hostNetwork {
+				st.cursor = i
+				break
+			}
+		}
+	case "network-users":
+		st.collapsed[hostSection("networks")] = false
+		st.collapsed["item/network/termocode_default"] = false
+		st.storageInspectState["item/network/termocode_default"] = "done"
+		st.storageUsers["item/network/termocode_default"] = []string{"termocode-api-1"}
+		for i, r := range st.rows() {
+			if r.kind == svcRowHostItem && r.host == hostNetwork && r.hostID == "termocode_default" {
+				st.cursor = i
+				break
+			}
+		}
+	case "volumes":
+		for i, r := range st.rows() {
+			if r.kind == svcRowHostItem && r.host == hostVolume {
+				st.cursor = i
+				break
+			}
+		}
+	case "image-prune":
+		for i, r := range st.rows() {
+			if r.kind == svcRowSection && r.section == hostSection("images") {
+				st.cursor = i
+				break
+			}
+		}
+		m.askImagePrune()
+	case "network-remove":
+		st.collapsed[hostSection("networks")] = false
+		st.storageInspectState["item/network/termocode_default"] = "done"
+		st.storageUsers["item/network/termocode_default"] = []string{"termocode-api-1"}
+		for i, r := range st.rows() {
+			if r.kind == svcRowHostItem && r.host == hostNetwork && r.hostID == "termocode_default" {
+				st.cursor = i
+				m.askStorageRemove(r)
+				break
+			}
+		}
+	case "volume-remove":
+		st.collapsed[hostSection("volumes")] = false
+		st.storageInspectState["item/volume/cache"] = "done"
+		for i, r := range st.rows() {
+			if r.kind == svcRowHostItem && r.host == hostVolume && r.hostID == "cache" {
+				st.cursor = i
+				m.askStorageRemove(r)
+				break
+			}
+		}
+	case "volume-prune":
+		st.collapsed[hostSection("volumes")] = false
+		for i, r := range st.rows() {
+			if r.kind == svcRowSection && r.section == hostSection("volumes") {
+				st.cursor = i
+				break
+			}
+		}
+		m.showStoragePrune("volumes", []string{"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"})
+	case "image-remove":
+		for i, r := range st.rows() {
+			if r.kind == svcRowHostItem && r.host == hostImage && strings.Contains(r.hostID, "3d4e5f6a7b8c") {
+				st.cursor = i
+				m.askImageRemove(st.imageRows[r.idx])
+				break
+			}
+		}
+	case "image-in-use":
+		for i, r := range st.rows() {
+			if r.kind == svcRowHostItem && r.host == hostImage && r.tag == "16" {
+				st.cursor = i
+				m.askImageRemove(st.imageRows[r.idx])
+				break
+			}
+		}
+	case "network-prune":
+		st.collapsed[hostSection("networks")] = false
+		for i, r := range st.rows() {
+			if r.kind == svcRowSection && r.section == hostSection("networks") {
+				st.cursor = i
+				break
+			}
+		}
+		m.askStoragePrune("networks")
+	case "volume-in-use":
+		st.collapsed[hostSection("volumes")] = false
+		st.storageInspectState["item/volume/termocode_db"] = "done"
+		st.storageUsers["item/volume/termocode_db"] = []string{"termocode-postgres-1"}
+		for i, r := range st.rows() {
+			if r.kind == svcRowHostItem && r.host == hostVolume && r.hostID == "termocode_db" {
+				st.cursor = i
+				m.askStorageRemove(r)
+				break
+			}
+		}
 	case "down":
 		st.containerEngine.Reachable = false
 		st.containerEngine.Problem = services.Problem{Kind: services.ProblemDaemonDown}

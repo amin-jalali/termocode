@@ -136,6 +136,15 @@ func tooltipSpecFor(id string) (tooltipSpec, bool) {
 // tooltipLabel is the name and key of hit target id ("" name = none).
 func (m Model) tooltipLabel(id string) (name, key string) {
 	if strings.HasPrefix(id, "cont:sec:") {
+		if strings.Contains(id, "images") {
+			return "Image actions and dangling image cleanup", "u · P · p"
+		}
+		if strings.Contains(id, "networks") {
+			return "Create or prune networks", "n · p"
+		}
+		if strings.Contains(id, "volumes") {
+			return "Create, prune, or read disk usage", "n · p · d"
+		}
 		return "Fold section", "Space"
 	}
 	if strings.HasPrefix(id, "cont:grp:") {
@@ -143,6 +152,15 @@ func (m Model) tooltipLabel(id string) (name, key string) {
 	}
 	if strings.HasPrefix(id, "cont:row:containers/") {
 		return "Container actions: start, stop, restart, pause, logs, shell, attach, stats, inspect, port, copy", "s · x · r · p · l · e · t · S · i · o · y · D"
+	}
+	if strings.HasPrefix(id, "cont:row:images/") {
+		return "Image actions: pull, push, tag, run, history, inspect, copy, remove", "u · P · t · Enter · h · i · y · D"
+	}
+	if strings.HasPrefix(id, "cont:row:networks/") {
+		return "Network users and removal", "Space · D"
+	}
+	if strings.HasPrefix(id, "cont:row:volumes/") {
+		return "Volume users and removal", "Space · D"
 	}
 	if strings.HasPrefix(id, "welcome:card:") {
 		idx, err := strconv.Atoi(strings.TrimPrefix(id, "welcome:card:"))

@@ -152,7 +152,9 @@ func (st *servicesState) hostSectionBody(sec string) []svcRow {
 		}
 		var out []svcRow
 		for i, n := range st.networkRows {
-			out = append(out, svcRow{kind: svcRowHostItem, section: key, host: hostNetwork, idx: i, hostID: n.Name, name: n.Name, depth: 1})
+			row := svcRow{kind: svcRowHostItem, section: key, host: hostNetwork, idx: i, hostID: n.Name, name: n.Name, depth: 1}
+			out = append(out, row)
+			out = append(out, st.storageUserRows(row)...)
 		}
 		return out
 	case "volumes":
@@ -161,7 +163,9 @@ func (st *servicesState) hostSectionBody(sec string) []svcRow {
 		}
 		var out []svcRow
 		for i, v := range st.volumeRows {
-			out = append(out, svcRow{kind: svcRowHostItem, section: key, host: hostVolume, idx: i, hostID: v.Name, name: v.Name, depth: 1})
+			row := svcRow{kind: svcRowHostItem, section: key, host: hostVolume, idx: i, hostID: v.Name, name: v.Name, depth: 1}
+			out = append(out, row)
+			out = append(out, st.storageUserRows(row)...)
 		}
 		return out
 	case "contexts":
@@ -246,6 +250,7 @@ const danglingRepo = "<none>"
 // imageRefs maps each repo to its (tag, image index) pairs.
 type imageRef struct {
 	tag string
+	ref string
 	idx int
 }
 
@@ -261,7 +266,7 @@ func (st *servicesState) imageRepos() (map[string][]imageRef, []string) {
 			if repo == danglingRepo || tag == danglingRepo {
 				repo, tag = danglingRepo, shortImageID(image.ID)
 			}
-			byRepo[repo] = append(byRepo[repo], imageRef{tag: tag, idx: i})
+			byRepo[repo] = append(byRepo[repo], imageRef{tag: tag, ref: ref, idx: i})
 		}
 	}
 	repos := make([]string, 0, len(byRepo))
@@ -289,17 +294,68 @@ func (st *servicesState) imageRowsOf(key string) []svcRow {
 		if repo == danglingRepo {
 			label = "<none> dangling"
 		}
-		out = append(out, svcRow{kind: svcRowGroup, section: gkey, name: label, count: strconv.Itoa(len(byRepo[repo]))})
+		count := strconv.Itoa(uniqueImages(st.imageRows, byRepo[repo]))
+		if repo != danglingRepo {
+			if used := st.imagesInUse(byRepo[repo]); used > 0 {
+				count += " · " + strconv.Itoa(used) + " in use"
+			}
+		}
+		out = append(out, svcRow{kind: svcRowGroup, section: gkey, name: label, count: count})
 		if st.collapsed[gkey] {
 			continue
 		}
 		for _, ref := range byRepo[repo] {
 			id := st.imageRows[ref.idx].ID
 			out = append(out, svcRow{kind: svcRowHostItem, section: key, host: hostImage, idx: ref.idx,
-				hostID: shortImageID(id) + ":" + ref.tag, name: ref.tag, tag: ref.tag, depth: 2})
+				hostID: shortImageID(id) + ":" + ref.tag, name: ref.tag, tag: ref.tag, imageRef: ref.ref, depth: 2})
 		}
 	}
 	return out
+}
+
+func uniqueImages(images []containers.Image, refs []imageRef) int {
+	seen := make(map[string]bool, len(refs))
+	for _, ref := range refs {
+		if ref.idx >= 0 && ref.idx < len(images) {
+			seen[images[ref.idx].ID] = true
+		}
+	}
+	return len(seen)
+}
+
+func (st *servicesState) imagesInUse(refs []imageRef) int {
+	ids, names := map[string]bool{}, map[string]bool{}
+	for _, ref := range refs {
+		im := st.imageRows[ref.idx]
+		ids[strings.TrimPrefix(im.ID, "sha256:")] = true
+		for _, tag := range im.RepoTags {
+			names[tag] = true
+		}
+	}
+	used := 0
+	for _, c := range st.containerRows {
+		id := strings.TrimPrefix(c.ImageID, "sha256:")
+		if ids[id] || names[c.Image] {
+			used++
+		}
+	}
+	return used
+}
+
+func storageRowDetail(st *servicesState, r svcRow) string {
+	if r.host == hostNetwork && r.idx >= 0 && r.idx < len(st.networkRows) {
+		n := st.networkRows[r.idx]
+		return strings.TrimSpace(n.Driver + " · " + n.Scope)
+	}
+	if r.host == hostVolume && r.idx >= 0 && r.idx < len(st.volumeRows) {
+		v := st.volumeRows[r.idx]
+		detail := v.Driver
+		if v.Size != "" {
+			detail += " · " + v.Size
+		}
+		return detail
+	}
+	return ""
 }
 
 // hostGroupKeys are the group keys the current data has (folded or not).
@@ -680,14 +736,8 @@ func (st *servicesState) renderHostItem(r svcRow, active, focused bool, w int) s
 			break
 		}
 		n := st.networkRows[r.idx]
-		var cols []hostCol
-		if w >= 22 {
-			cols = append(cols, hostCol{text: n.Driver, width: 7, col: theme.TextMuted})
-		}
-		if w >= 28 {
-			cols = append(cols, hostCol{text: n.Scope, width: 5, col: theme.TextDim})
-		}
-		return renderHostLine(active, focused, w, r.depth, "", 0, n.Name, theme.TextPrimary, cols)
+		cols := []hostCol{{text: n.Driver, width: 6, col: theme.TextSecondary}, {text: n.Scope, width: 5, col: theme.TextMuted}}
+		return renderHostLine(active, focused, w, r.depth, storageFoldGlyph(st, r), theme.TextDim, n.Name, theme.TextPrimary, cols)
 	case hostVolume:
 		if r.idx < 0 || r.idx >= len(st.volumeRows) {
 			break
@@ -701,7 +751,7 @@ func (st *servicesState) renderHostItem(r svcRow, active, focused bool, w int) s
 			}
 			cols = append(cols, hostCol{text: text, width: 7, right: true, col: col})
 		}
-		return renderHostLine(active, focused, w, r.depth, "", 0, v.Name, theme.TextPrimary, cols)
+		return renderHostLine(active, focused, w, r.depth, storageFoldGlyph(st, r), theme.TextDim, v.Name, theme.TextPrimary, cols)
 	case hostContext:
 		g, gcol, ncol := theme.GlyphSvcStopped, theme.TextDim, theme.TextSecondary
 		if r.current {
@@ -742,13 +792,13 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 			}
 			return "containers on this machine", "space fold · R refresh"
 		case "images":
-			return "images on this machine", "space fold · R refresh"
+			return "images on this machine", "u pull · z prune dangling · R refresh"
 		case "registries":
 			return "registries you signed in to", "from ~/.docker/config.json"
 		case "networks":
-			return "networks on this machine", "space fold · R refresh"
+			return "networks on this machine", "n create · D remove · z prune · R refresh"
 		case "volumes":
-			return "volumes on this machine", "space fold · R refresh"
+			return "volumes on this machine", "n create · D remove · z prune · d disk usage · R refresh"
 		case "contexts":
 			return "engine contexts", "◉ marks the active one"
 		case "help":

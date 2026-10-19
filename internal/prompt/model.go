@@ -26,7 +26,13 @@ type Model struct {
 	complete func(string) string
 	// note is extra text under the label, wrapped to the card (SetNote).
 	note string
+	// allowEmpty lets Enter submit an empty value (SetAllowEmpty).
+	allowEmpty bool
 }
+
+// SetAllowEmpty lets Enter submit an empty value, for optional steps
+// ("empty to finish"). Other prompts ignore Enter on an empty field.
+func (m *Model) SetAllowEmpty(on bool) { m.allowEmpty = on }
 
 // SetNote shows text (several lines, wrapped) between the label and the
 // input: instructions that do not fit the one-line label.
@@ -94,7 +100,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, func() tea.Msg { return CloseMsg{} }
 	case tea.KeyEnter:
 		v := strings.TrimSpace(m.value)
-		if v == "" {
+		if v == "" && !m.allowEmpty {
 			return m, nil
 		}
 		return m, func() tea.Msg { return SubmitMsg{Value: v} }

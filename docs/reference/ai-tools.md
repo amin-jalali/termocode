@@ -354,14 +354,14 @@ Find IDE commands (the command palette) for execute_action. Returns id, title, c
 
 ### execute_action
 
-Run an IDE command (command palette) by id; find ids with list_actions. Safe commands run at once, others ask the user. Container commands require target to name a container id/name or compose project.
+Run an IDE command (command palette) by id; find ids with list_actions. Safe commands run at once, others ask the user. Container actions that operate on an item require target to name that container, image, network, volume, or compose project.
 
 **Gate:** per action: see Palette actions below
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `id` | string | yes | command id |
-| `target` | string |   | container id/name or compose project for container commands |
+| `target` | string |   | container, image reference, network, volume, or compose project for item actions |
 
 ### settings_list
 
@@ -944,8 +944,19 @@ Add a request to a .http file, or with replace=true change the request with that
 | `containers-compose-up` | Containers: Start Project | confirm (always asks) |   |
 | `containers-copy-id` | Containers: Copy ID | auto |   |
 | `containers-focus` | Containers: Focus | auto |   |
+| `containers-image-history` | Containers: Show Image History | auto |   |
+| `containers-image-inspect` | Containers: Inspect Image | auto |   |
+| `containers-image-prune` | Containers: Prune Dangling Images… | confirm (always asks) |   |
+| `containers-image-pull` | Containers: Pull Image… | confirm (always asks) |   |
+| `containers-image-push` | Containers: Push Selected Image… | confirm (always asks) |   |
+| `containers-image-remove` | Containers: Remove Selected Image… | confirm (always asks) |   |
+| `containers-image-run` | Containers: Run Selected Image… | confirm (always asks) |   |
+| `containers-image-tag` | Containers: Tag Selected Image… | confirm (always asks) |   |
 | `containers-inspect` | Containers: Inspect | auto |   |
 | `containers-logs` | Containers: Follow Logs | auto |   |
+| `containers-network-create` | Containers: Create Network… | confirm (always asks) |   |
+| `containers-network-prune` | Containers: Prune Networks… | confirm (always asks) |   |
+| `containers-network-remove` | Containers: Remove Selected Network… | confirm (always asks) |   |
 | `containers-open-port` | Containers: Open Published Port | auto |   |
 | `containers-pause` | Containers: Pause or Unpause Selected | confirm (always asks) |   |
 | `containers-refresh` | Containers: Refresh | auto |   |
@@ -955,6 +966,10 @@ Add a request to a .http file, or with replace=true change the request with that
 | `containers-start` | Containers: Start Selected | confirm (always asks) |   |
 | `containers-stats` | Containers: Follow Stats | auto |   |
 | `containers-stop` | Containers: Stop Selected | confirm (always asks) |   |
+| `containers-volume-create` | Containers: Create Volume… | confirm (always asks) |   |
+| `containers-volume-disk-usage` | Containers: Read Volume Disk Usage | auto |   |
+| `containers-volume-prune` | Containers: Prune Volumes… | confirm (always asks) |   |
+| `containers-volume-remove` | Containers: Remove Selected Volume… | confirm (always asks) |   |
 | `copy-file-ref` | Copy: File:Line Reference | confirm (ide) |   |
 | `customize-keybindings` | Preferences: Customize Keybindings | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `dap-install` | DAP: Install Adapter... | never | opens a picker or prompt that only the user can answer; use a typed tool (dap_adapters) |

@@ -104,25 +104,27 @@ type servicesState struct {
 
 	render svcRenderCache
 
-	containerEngine    containers.Engine
-	containerDetected  bool
-	containerDetecting bool
-	containerCancel    context.CancelFunc
-	containerCancels   map[string]context.CancelFunc
-	containerGen       uint64
-	containerRows      []containers.Container
-	imageRows          []containers.Image
-	networkRows        []containers.Network
-	volumeRows         []containers.Volume
-	contextRows        []containers.Context
-	registryRows       []containers.Registry
-	containerErrors    map[string]string
-	hostLoaded         map[string]bool // host sections that got a first answer
-	hostWatchStop      func()
-	hostWatchCh        <-chan containers.Event
-	hostWatchCtx       context.Context
-	hostWatchCancel    context.CancelFunc
-	hostWatchGen       uint64
+	containerEngine     containers.Engine
+	containerDetected   bool
+	containerDetecting  bool
+	containerCancel     context.CancelFunc
+	containerCancels    map[string]context.CancelFunc
+	containerGen        uint64
+	containerRows       []containers.Container
+	imageRows           []containers.Image
+	networkRows         []containers.Network
+	volumeRows          []containers.Volume
+	contextRows         []containers.Context
+	registryRows        []containers.Registry
+	storageUsers        map[string][]string
+	storageInspectState map[string]string
+	containerErrors     map[string]string
+	hostLoaded          map[string]bool // host sections that got a first answer
+	hostWatchStop       func()
+	hostWatchCh         <-chan containers.Event
+	hostWatchCtx        context.Context
+	hostWatchCancel     context.CancelFunc
+	hostWatchGen        uint64
 }
 
 func newServicesState() *servicesState {
@@ -135,8 +137,9 @@ func newServicesState() *servicesState {
 		sections:         map[string]bool{},
 		containerErrors:  map[string]string{},
 		containerCancels: map[string]context.CancelFunc{},
-		hostLoaded:       map[string]bool{},
-		localOK:          map[string]bool{}, localStop: map[string]bool{}, exitSeen: map[string]string{}, prevUp: map[string]bool{},
+		storageUsers:     map[string][]string{}, storageInspectState: map[string]string{},
+		hostLoaded: map[string]bool{},
+		localOK:    map[string]bool{}, localStop: map[string]bool{}, exitSeen: map[string]string{}, prevUp: map[string]bool{},
 		cfgCache: &svcConfigCache{}, aiAllowed: &atomic.Bool{}}
 }
 
@@ -549,6 +552,16 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onContainerInspect(msg), true
 	case containerGroupDoneMsg:
 		return m.onContainerGroupDone(msg), true
+	case imagePageMsg:
+		return m.onImagePage(msg), true
+	case hostActionDoneMsg:
+		return m.onHostActionDone(msg), true
+	case diskUsageMsg:
+		return m.onDiskUsage(msg), true
+	case storageInspectMsg:
+		return m.onStorageInspect(msg), true
+	case storagePrunePreviewMsg:
+		return m.onStoragePrunePreview(msg), true
 	case containerEventMsg:
 		return m.onContainerEvent(msg), true
 	case servicesRefreshMsg:

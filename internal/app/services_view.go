@@ -63,12 +63,13 @@ type svcRow struct {
 	hostID  string // host rows: the object's id (container id, image id, name)
 
 	// host rows and groups
-	host    hostKind
-	idx     int    // index into the section's data slice
-	tag     string // image rows: the tag
-	depth   int    // indent level (2 cells each)
-	count   string // group rows: "2/2", "3"
-	current bool   // group of this workspace's project / the active context
+	host     hostKind
+	idx      int    // index into the section's data slice
+	tag      string // image rows: the tag
+	imageRef string // image rows: exact repository reference represented by this row
+	depth    int    // indent level (2 cells each)
+	count    string // group rows: "2/2", "3"
+	current  bool   // group of this workspace's project / the active context
 }
 
 func hostSection(id string) string          { return "host/" + id }
@@ -79,7 +80,9 @@ func (r svcRow) selectable() bool {
 }
 
 // foldable: Space / click folds it.
-func (r svcRow) foldable() bool { return r.kind == svcRowSection || r.kind == svcRowGroup }
+func (r svcRow) foldable() bool {
+	return r.kind == svcRowSection || r.kind == svcRowGroup || (r.kind == svcRowHostItem && (r.host == hostNetwork || r.host == hostVolume))
+}
 
 // rows flattens the view: sections, problem notes, services.
 func (st *servicesState) rows() []svcRow {

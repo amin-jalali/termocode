@@ -69,22 +69,37 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Containers: Attach | `containers-attach` |   |   |
 | Containers: Copy ID | `containers-copy-id` |   |   |
+| Containers: Create Network… | `containers-network-create` |   |   |
+| Containers: Create Volume… | `containers-volume-create` |   |   |
 | Containers: Focus | `containers-focus` |   |   |
 | Containers: Follow Logs | `containers-logs` |   |   |
 | Containers: Follow Stats | `containers-stats` |   |   |
 | Containers: Inspect | `containers-inspect` |   |   |
+| Containers: Inspect Image | `containers-image-inspect` |   |   |
 | Containers: Open Published Port | `containers-open-port` |   |   |
 | Containers: Open Shell | `containers-shell` |   |   |
 | Containers: Pause or Unpause Selected | `containers-pause` |   |   |
+| Containers: Prune Dangling Images… | `containers-image-prune` |   |   |
+| Containers: Prune Networks… | `containers-network-prune` |   |   |
+| Containers: Prune Volumes… | `containers-volume-prune` |   |   |
+| Containers: Pull Image… | `containers-image-pull` |   |   |
+| Containers: Push Selected Image… | `containers-image-push` |   |   |
+| Containers: Read Volume Disk Usage | `containers-volume-disk-usage` |   |   |
 | Containers: Refresh | `containers-refresh` |   |   |
 | Containers: Remove Project Containers… | `containers-compose-down` |   |   |
+| Containers: Remove Selected Image… | `containers-image-remove` |   |   |
+| Containers: Remove Selected Network… | `containers-network-remove` |   |   |
+| Containers: Remove Selected Volume… | `containers-volume-remove` |   |   |
 | Containers: Remove Selected… | `containers-remove` |   |   |
 | Containers: Restart Project | `containers-compose-restart` |   |   |
 | Containers: Restart Selected | `containers-restart` |   |   |
+| Containers: Run Selected Image… | `containers-image-run` |   |   |
+| Containers: Show Image History | `containers-image-history` |   |   |
 | Containers: Start Project | `containers-compose-up` |   |   |
 | Containers: Start Selected | `containers-start` |   |   |
 | Containers: Stop Project | `containers-compose-stop` |   |   |
 | Containers: Stop Selected | `containers-stop` |   |   |
+| Containers: Tag Selected Image… | `containers-image-tag` |   |   |
 
 ## Copy
 

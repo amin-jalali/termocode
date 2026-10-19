@@ -1388,8 +1388,8 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	// move the Quick Actions cursor and Enter dispatch the focused
 	// card. Falls through to normal handling otherwise. Not while the
 	// Source Control panel has the focus: its list and commit box need
-	// the arrows, Tab and Enter.
-	if m.welcomeShowing() && !(m.focus == FocusExplorer && m.activity.Active() == activity.ViewGit) {
+	// the arrows, Tab and Enter. Same for the Services panel (Enter runs an image).
+	if m.welcomeShowing() && !(m.focus == FocusExplorer && (m.activity.Active() == activity.ViewGit || m.activity.Active() == activity.ViewServices)) {
 		if newM, cmd, handled := m.handleWelcomeKey(msg); handled {
 			return newM, cmd
 		}

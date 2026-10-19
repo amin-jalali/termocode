@@ -109,6 +109,13 @@ type Model struct {
 	pendingContainerProject string
 	pendingContainerDir     string
 	pendingContainerFiles   []string
+	pendingHostArgs         []string
+	pendingHostOperation    string
+	pendingHostTarget       string
+	pendingImageRef         string
+	pendingRunName          string
+	pendingRunPorts         []string
+	pendingRunEnv           []string
 	preview                 preview.Model
 	prompt                  prompt.Model
 	recents                 recents.Model

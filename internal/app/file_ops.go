@@ -42,7 +42,13 @@ const (
 	promptKindSnippetNew
 	promptKindSnippetBody
 	// Group I — extensions (ext.go).
-	promptKindExt    // termocode.prompt() from an extension
+	promptKindExt // termocode.prompt() from an extension
+	promptKindContainerTag
+	promptKindContainerRunName
+	promptKindContainerRunPorts
+	promptKindContainerRunEnv
+	promptKindContainerStorageName
+	promptKindContainerPull
 	promptKindExtNew // Extensions: New Extension…
 	// Group D — watch / conditional breakpoint / logpoint (dap.go).
 	promptKindDebugWatch
@@ -237,6 +243,8 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		return m.extPromptSubmit(value)
 	case promptKindExtNew:
 		return m.extNewSubmit(value)
+	case promptKindContainerTag, promptKindContainerRunName, promptKindContainerRunPorts, promptKindContainerRunEnv, promptKindContainerStorageName, promptKindContainerPull:
+		return m.onContainerImagePrompt(m.promptKind, value)
 	case promptKindDebugWatch, promptKindDebugCondition, promptKindDebugLogpoint: // Group D
 		return m.handleDebugPromptSubmit(value)
 	}

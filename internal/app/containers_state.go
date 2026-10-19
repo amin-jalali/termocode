@@ -98,8 +98,10 @@ func (m *Model) onContainerEvent(msg containerEventMsg) tea.Cmd {
 	case "image":
 		cmds = append(cmds, m.containersRefresh("images"))
 	case "network":
+		st.clearStorageInspect("network")
 		cmds = append(cmds, m.containersRefresh("networks"))
 	case "volume":
+		st.clearStorageInspect("volume")
 		cmds = append(cmds, m.containersRefresh("volumes"))
 	}
 	return tea.Batch(append(cmds, waitContainerEvent(st.hostWatchCtx, st.hostWatchCh, msg.gen))...)
@@ -208,6 +210,9 @@ func (st *servicesState) cancelHostWork() {
 	}
 	for key, cancel := range st.containerCancels {
 		cancel()
+		if strings.HasPrefix(key, "item/") {
+			delete(st.storageInspectState, key)
+		}
 		delete(st.containerCancels, key)
 	}
 	st.containerGen++

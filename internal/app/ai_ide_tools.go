@@ -234,8 +234,8 @@ func aiIDETools(root string, call aiIDECaller) []ai.Tool {
 		{
 			Name: "execute_action",
 			Description: "Run an IDE command (command palette) by id; find ids with list_actions. " +
-				"Safe commands run at once, others ask the user. Container commands require target to name a container id/name or compose project.",
-			Params:   map[string]any{"id": str("command id"), "target": str("container id/name or compose project for container commands")},
+				"Safe commands run at once, others ask the user. Container actions that operate on an item require target to name that container, image, network, volume, or compose project.",
+			Params:   map[string]any{"id": str("command id"), "target": str("container, image reference, network, volume, or compose project for item actions")},
 			Required: []string{"id"},
 			Mutating: true, Class: ai.ClassIDE, // Gate decides per id
 			Describe: func(a map[string]any) string {

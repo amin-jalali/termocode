@@ -184,6 +184,26 @@ Docker runs on the server, so the ports are server ports. `y` copies
 `localhost:5432`, and the toast shows the forward command for your own
 computer: `ssh -L 5432:localhost:5432 <host>`. termocode opens no tunnels.
 
+## Images, networks, and volumes
+
+The IMAGES section groups tags by repository and keeps dangling images in a
+separate `<none> dangling` group. A repository count includes the number of
+images and, when applicable, how many containers use them. On a tag, `u`
+pulls, `P` asks before pushing, `t` asks for a new tag, `Enter` asks for a
+container name, ports, and environment entries, then shows the full run
+command before opening a terminal tab. `h` opens image history, `i` opens
+read-only image details, and `D` removes an image only when no container uses
+it. `z` on the IMAGES heading asks before pruning dangling images; it never
+removes tagged images.
+
+NETWORKS and VOLUMES show their driver and scope. `Space` expands a row and
+checks which containers use it. `n` asks for a name and creates a network or
+volume. `D` shows the exact remove command and users before removing; a volume
+in use is kept, and built-in networks cannot be removed. `z` on either heading
+asks before pruning. Volume pruning lists only anonymous dangling volumes;
+named volumes are kept. On VOLUMES, `d` reads disk usage once and fills in the
+reported sizes. Disk usage is not queried in the background.
+
 ## Termux (Android)
 
 No Docker: the compose part of PROJECT does not show, and nothing asks you to

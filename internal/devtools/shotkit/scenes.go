@@ -114,6 +114,14 @@ func ContainersComposeDownConfirm() Scene {
 	return Scene{Name: "containers-compose-down-confirm", Steps: WithEditor(Act("contdemo:compose-down"), Key("D"), Pause(400*time.Millisecond))}
 }
 
+func ContainersImages() Scene   { return ContainersVariant("containers-images", "images") }
+func ContainersNetworks() Scene { return ContainersVariant("containers-networks", "networks") }
+func ContainersVolumes() Scene  { return ContainersVariant("containers-volumes", "volumes") }
+func ContainersNetworkUsers() Scene {
+	return ContainersVariant("containers-network-users", "network-users")
+}
+func ContainersHostCard(name, variant string) Scene { return ContainersVariant(name, variant) }
+
 // AIChatAnswer is the AI chat panel with the canned demo conversation (no
 // network).
 func AIChatAnswer() Scene {

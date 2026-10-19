@@ -112,3 +112,32 @@ func (e *Engine) StatsFollow(id string) services.Command {
 func (e *Engine) PullCommand(ref string) services.Command {
 	return services.Command{Label: "pull: " + ref, Argv: []string{e.Binary, "pull", ref}}
 }
+
+// PushCommand produces a visible terminal job for pushing one image.
+func (e *Engine) PushCommand(ref string) services.Command {
+	return services.Command{Label: "push: " + ref, Argv: []string{e.Binary, "push", ref}}
+}
+
+// RunCommand produces a visible, argument-based docker run job.
+func (e *Engine) RunCommand(ref, name string, ports, env []string) services.Command {
+	args := []string{e.Binary, "run", "--rm", "-it"}
+	if name != "" {
+		args = append(args, "--name", name)
+	}
+	for _, port := range ports {
+		args = append(args, "-p", port)
+	}
+	for _, value := range env {
+		args = append(args, "-e", value)
+	}
+	args = append(args, ref)
+	return services.Command{Label: "run: " + ref, Argv: args}
+}
+
+func (e *Engine) CreateNetwork(ctx context.Context, name string) error {
+	return e.action(ctx, 60*time.Second, "network", "create", name)
+}
+
+func (e *Engine) CreateVolume(ctx context.Context, name string) error {
+	return e.action(ctx, 60*time.Second, "volume", "create", name)
+}

@@ -74,6 +74,18 @@ func goldenScenes() []Scene {
 		ContainersRemoveConfirm(),
 		ContainersStopRemoveConfirm(),
 		ContainersComposeDownConfirm(),
+		ContainersImages(),
+		ContainersNetworks(),
+		ContainersVolumes(),
+		ContainersNetworkUsers(),
+		ContainersHostCard("containers-image-prune-confirm", "image-prune"),
+		ContainersHostCard("containers-image-remove-confirm", "image-remove"),
+		ContainersHostCard("containers-image-in-use", "image-in-use"),
+		ContainersHostCard("containers-network-remove-confirm", "network-remove"),
+		ContainersHostCard("containers-network-prune-confirm", "network-prune"),
+		ContainersHostCard("containers-volume-remove-confirm", "volume-remove"),
+		ContainersHostCard("containers-volume-in-use", "volume-in-use"),
+		ContainersHostCard("containers-volume-prune-confirm", "volume-prune"),
 		HTTPFile(),
 		HTTPResponse(),
 	}
@@ -146,13 +158,16 @@ func goldenCases() []goldenCase {
 			out = append(out, goldenCase{fmt.Sprintf("%s-%dx%d", sc.Name, sz[0], sz[1]), sc, sz[0], sz[1]})
 		}
 	}
+	for _, sc := range []Scene{ContainersNetworks(), ContainersVolumes(), ContainersNetworkUsers()} {
+		out = append(out, goldenCase{fmt.Sprintf("%s-150x55", sc.Name), sc, 150, 55})
+	}
 	for _, sc := range goldenExtras() {
 		sz := goldenSizes[0]
 		out = append(out, goldenCase{fmt.Sprintf("%s-%dx%d", sc.Name, sz[0], sz[1]), sc, sz[0], sz[1]})
 	}
 	// The smallest common window (80x24) for the screens that have a
 	// compact layout: start page, editor, palette, toast.
-	for _, sc := range []Scene{Dashboard(), DashboardRecent(), setupCardScene(), Editor(), Palette(), Toast(), FindResults(), SCMCommit(), TerminalMarks(), Services(), Containers(), ContainersRemoveConfirm(), ContainersStopRemoveConfirm(), ContainersComposeDownConfirm(), HTTPFile(), HTTPResponse(), HTTPResponseTLS()} {
+	for _, sc := range []Scene{Dashboard(), DashboardRecent(), setupCardScene(), Editor(), Palette(), Toast(), FindResults(), SCMCommit(), TerminalMarks(), Services(), Containers(), ContainersRemoveConfirm(), ContainersStopRemoveConfirm(), ContainersComposeDownConfirm(), ContainersImages(), ContainersNetworks(), ContainersVolumes(), ContainersHostCard("containers-image-prune-confirm", "image-prune"), ContainersHostCard("containers-image-remove-confirm", "image-remove"), ContainersHostCard("containers-image-in-use", "image-in-use"), ContainersHostCard("containers-network-remove-confirm", "network-remove"), ContainersHostCard("containers-network-prune-confirm", "network-prune"), ContainersHostCard("containers-volume-remove-confirm", "volume-remove"), ContainersHostCard("containers-volume-in-use", "volume-in-use"), ContainersHostCard("containers-volume-prune-confirm", "volume-prune"), HTTPFile(), HTTPResponse(), HTTPResponseTLS()} {
 		out = append(out, goldenCase{fmt.Sprintf("%s-80x24", sc.Name), sc, 80, 24})
 	}
 	out = append(out, goldenCase{"setup-card-100x30", setupCardScene(), 100, 30})

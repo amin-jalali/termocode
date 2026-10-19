@@ -14,6 +14,12 @@ func (e *Engine) ListNetworks(ctx context.Context) ([]Network, error) {
 func (e *Engine) ListVolumes(ctx context.Context) ([]Volume, error) {
 	return parseList(ctx, e, []string{"volume", "ls", "--format", "{{json .}}"}, ParseVolumes)
 }
+func (e *Engine) ListDanglingVolumes(ctx context.Context) ([]Volume, error) {
+	return parseList(ctx, e, []string{"volume", "ls", "--filter", "dangling=true", "--format", "{{json .}}"}, ParseVolumes)
+}
+func (e *Engine) ContainersUsingVolume(ctx context.Context, name string) ([]Container, error) {
+	return parseList(ctx, e, []string{"ps", "--all", "--filter", "volume=" + name, "--format", "{{json .}}"}, ParseContainers)
+}
 func (e *Engine) ListContexts(ctx context.Context) ([]Context, error) {
 	return parseList(ctx, e, []string{"context", "ls", "--format", "{{json .}}"}, ParseContexts)
 }

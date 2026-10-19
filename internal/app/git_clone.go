@@ -106,6 +106,11 @@ func (m *Model) handleClonePromptClose() tea.Cmd {
 		var cmd tea.Cmd
 		m.toast, cmd = m.toast.Push(toast.Info, "Clone cancelled")
 		return cmd
+	case promptKindContainerRunName, promptKindContainerRunPorts, promptKindContainerRunEnv:
+		m.pendingRunName, m.pendingRunPorts, m.pendingRunEnv = "", nil, nil
+		var cmd tea.Cmd
+		m.toast, cmd = m.toast.Push(toast.Info, "Run cancelled")
+		return cmd
 	}
 	return nil
 }

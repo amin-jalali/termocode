@@ -81,7 +81,10 @@ func TestAIActionPolicyRules(t *testing.T) {
 		}
 	}
 	for _, id := range []string{"containers-start", "containers-stop", "containers-restart", "containers-pause",
-		"containers-compose-up", "containers-compose-stop", "containers-compose-restart"} {
+		"containers-compose-up", "containers-compose-stop", "containers-compose-restart",
+		"containers-image-pull", "containers-image-push", "containers-image-tag", "containers-image-run",
+		"containers-image-remove", "containers-image-prune", "containers-network-create", "containers-network-remove",
+		"containers-network-prune", "containers-volume-create", "containers-volume-remove", "containers-volume-prune"} {
 		if p := aiActionPolicies[id]; p.Gate != aiGateConfirm || p.Class != "" {
 			t.Errorf("%s: %+v, want confirm with no auto-approve class", id, p)
 		}
@@ -103,6 +106,11 @@ func TestAIActionPolicyRules(t *testing.T) {
 		}
 	}
 	for _, id := range []string{"fold-all", "toggle-explorer", "next-buffer", "git-refresh", "hover"} {
+		if p := aiActionPolicies[id]; p.Gate != aiGateAuto {
+			t.Errorf("%s: gate %q, want auto", id, p.Gate)
+		}
+	}
+	for _, id := range []string{"containers-image-history", "containers-image-inspect", "containers-volume-disk-usage"} {
 		if p := aiActionPolicies[id]; p.Gate != aiGateAuto {
 			t.Errorf("%s: gate %q, want auto", id, p.Gate)
 		}

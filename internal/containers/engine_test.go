@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -25,6 +26,23 @@ func TestDetectAndList(t *testing.T) {
 	cs, err := e.ListContainers(context.Background())
 	if err != nil || len(cs) != 1 || cs[0].ID != "abc" {
 		t.Fatalf("containers=%+v err=%v", cs, err)
+	}
+}
+
+func TestStorageUserQueriesUseEngineFilters(t *testing.T) {
+	f := servicestest.New(t)
+	f.Set(t, "volume-ls.json", "{\"Name\":\"named\",\"Driver\":\"local\"}\n")
+	f.Set(t, "ps.json", "{\"ID\":\"abc\",\"Names\":\"web\",\"State\":\"running\"}\n")
+	e := Engine{Binary: f.Docker(), Kind: "docker", X: services.SpawnExec{}}
+	if _, err := e.ListDanglingVolumes(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.ContainersUsingVolume(context.Background(), "data"); err != nil {
+		t.Fatal(err)
+	}
+	calls := f.Calls()
+	if len(calls) != 2 || calls[0] != "volume ls --filter dangling=true --format {{json .}}" || calls[1] != "ps --all --filter volume=data --format {{json .}}" {
+		t.Fatalf("storage queries = %#v", calls)
 	}
 }
 
@@ -68,5 +86,24 @@ func TestActionsAndVisibleComposeArgv(t *testing.T) {
 	want = []string{f.Docker(), "compose", "-p", "shop", "--project-directory", "/work/shop", "-f", "compose.yaml", "-f", "compose.prod.yaml", "down"}
 	if strings.Join(cmd.Argv, " ") != strings.Join(want, " ") || cmd.Dir != "/work/shop" {
 		t.Fatalf("compose down argv=%q dir=%q", cmd.Argv, cmd.Dir)
+	}
+}
+
+func TestImageVisibleCommandsUseArgumentLists(t *testing.T) {
+	e := Engine{Binary: "docker"}
+	cases := []struct {
+		name      string
+		got, want []string
+	}{
+		{"push", e.PushCommand("ghcr.io/acme/app:1").Argv, []string{"docker", "push", "ghcr.io/acme/app:1"}},
+		{"run", e.RunCommand("alpine:3", "demo", []string{"8080:80"}, []string{"MODE=dev"}).Argv,
+			[]string{"docker", "run", "--rm", "-it", "--name", "demo", "-p", "8080:80", "-e", "MODE=dev", "alpine:3"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if !reflect.DeepEqual(tc.got, tc.want) {
+				t.Fatalf("argv = %#v, want %#v", tc.got, tc.want)
+			}
+		})
 	}
 }

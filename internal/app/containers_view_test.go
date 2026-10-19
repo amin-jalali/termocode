@@ -189,15 +189,31 @@ func TestContainersHostRowWidthsAndColumns(t *testing.T) {
 	if len(ends) != 1 {
 		t.Errorf("image sizes do not line up: %v", ends)
 	}
+	fullNetworkName, networkDriversAligned := false, true
+	driverStarts, scopeStarts := map[int]bool{}, map[int]bool{}
 	starts := map[int]bool{}
 	for _, r := range rows {
 		if r.host == hostNetwork {
 			line := ansi.Strip(st.renderHostItem(r, false, false, 29))
 			starts[ansi.StringWidth(line[:strings.LastIndex(line, " bridge ")])] = true
+			driver, scope := strings.LastIndex(line, "bridge"), strings.Index(line, "local")
+			driverStarts[ansi.StringWidth(line[:driver])], scopeStarts[ansi.StringWidth(line[:scope])] = true, true
+			if r.name == "termocode_default" {
+				fullNetworkName = !strings.Contains(line, "termocode_default") && strings.Contains(line, "…") && strings.Contains(line, "bridge") && strings.Contains(line, "local")
+			}
 		}
 	}
 	if len(starts) != 1 {
 		t.Errorf("network drivers do not line up: %v", starts)
+	}
+	if len(driverStarts) != 1 || len(scopeStarts) != 1 {
+		networkDriversAligned = false
+	}
+	if !networkDriversAligned {
+		t.Error("network drivers line up check failed")
+	}
+	if !fullNetworkName {
+		t.Error("network row should truncate its name only as needed and show driver and scope")
 	}
 }
 
@@ -543,6 +559,50 @@ func TestContainersAIPaletteUsesNamedContainer(t *testing.T) {
 	}
 }
 
+func TestContainerAIImagePullRejectsLeadingDash(t *testing.T) {
+	m := svcTestModel(svcHostState(), 100, 40)
+	cmd, err := m.dispatchContainerAIAction("containers-image-pull", "-private/image")
+	if err != nil || cmd == nil {
+		t.Fatalf("pull validation = (%v, %v), want a plain-words toast", cmd, err)
+	}
+	toastText := strings.Join(m.toast.View(100, 40), " ")
+	if !strings.Contains(toastText, "cannot start with a dash") {
+		t.Fatalf("unsafe image pull did not use the shared validation: %q", toastText)
+	}
+}
+
+func TestRunImageCollectsEnvironmentEntriesOneAtATime(t *testing.T) {
+	m := svcTestModel(svcHostState(), 100, 40)
+	m.pendingImageRef = "alpine:3"
+	if cmd := m.onContainerImagePrompt(promptKindContainerRunName, "demo"); cmd != nil {
+		t.Fatalf("run name returned unexpected command: %v", cmd)
+	}
+	if cmd := m.onContainerImagePrompt(promptKindContainerRunPorts, "8080:80"); cmd != nil {
+		t.Fatalf("first port returned unexpected command: %v", cmd)
+	}
+	if cmd := m.onContainerImagePrompt(promptKindContainerRunPorts, "127.0.0.1:9000:90"); cmd != nil {
+		t.Fatalf("second port returned unexpected command: %v", cmd)
+	}
+	if cmd := m.onContainerImagePrompt(promptKindContainerRunPorts, ""); cmd != nil {
+		t.Fatalf("finish ports returned unexpected command: %v", cmd)
+	}
+	for _, value := range []string{"A=1", "B=two words, three", "C=3"} {
+		if cmd := m.onContainerImagePrompt(promptKindContainerRunEnv, value); cmd != nil {
+			t.Fatalf("entry %q returned unexpected command: %v", value, cmd)
+		}
+	}
+	if !strings.Contains(m.prompt.View(), "A=1") || !strings.Contains(m.prompt.View(), "B=two words, three") {
+		t.Fatal("environment prompt does not show the list collected so far")
+	}
+	m.onContainerImagePrompt(promptKindContainerRunEnv, "")
+	joined := strings.Join(m.pendingHostArgs, " ")
+	for _, want := range []string{"-p 8080:80", "-p 127.0.0.1:9000:90", "-e A=1", "-e B=two words, three", "-e C=3"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("run args %q missing %q", joined, want)
+		}
+	}
+}
+
 func TestContainersAIComposeActionFindsNamedProject(t *testing.T) {
 	st := svcHostState()
 	dir, err := os.MkdirTemp("/tmp", "s")
@@ -581,5 +641,164 @@ func TestContainersHiddenViewLoadsNothing(t *testing.T) {
 	m := svcTestModel(st, 100, 40)
 	if m.containersLoadVisible() != nil || m.containersReloadAll() != nil || m.containersOpened("networks") != nil {
 		t.Error("hidden view scheduled engine work")
+	}
+}
+
+func TestImageGroupsReportContainersUsingImage(t *testing.T) {
+	st := svcHostState()
+	st.containerRows = append(st.containerRows, containers.Container{ID: "other", ImageID: "sha256:aaa", Image: "postgres:16"})
+	rows := st.imageRowsOf(hostSection("images"))
+	group := ""
+	for _, row := range rows {
+		if row.kind == svcRowGroup && row.name == "postgres" {
+			group = row.count
+			break
+		}
+	}
+	if group != "2 · 2 in use" {
+		t.Fatalf("postgres image group count = %q, want tags and in-use count", group)
+	}
+}
+
+func TestSelectedImageUsesExactRepositoryReference(t *testing.T) {
+	st := svcHostState()
+	st.imageRows = []containers.Image{{ID: "sha256:aaa", RepoTags: []string{"myreg/postgres:16", "postgres:16"}}}
+	st.collapsed[hostSection("images")] = false
+	rows := st.rows()
+	m := svcTestModel(st, 100, 40)
+	for i, row := range rows {
+		if row.kind == svcRowHostItem && row.imageRef == "myreg/postgres:16" {
+			st.cursor = i
+			break
+		}
+	}
+	_, ref, ok := m.selectedImage()
+	if !ok || ref != "myreg/postgres:16" {
+		t.Fatalf("selected image reference = %q, ok=%v; want exact repository reference", ref, ok)
+	}
+}
+
+func TestPromptListKeepsSpacesAndSupportsLines(t *testing.T) {
+	got := promptList("APP_TITLE=hello world\nWELCOME=good morning")
+	want := []string{"APP_TITLE=hello world", "WELCOME=good morning"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("promptList = %#v, want %#v", got, want)
+	}
+	got = promptLines("TITLE=hello, world\nWELCOME=good morning")
+	want = []string{"TITLE=hello, world", "WELCOME=good morning"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("promptLines = %#v, want %#v", got, want)
+	}
+}
+
+func TestTagPromptConfirmsMovingAnExistingTag(t *testing.T) {
+	st := svcHostState()
+	m := svcTestModel(st, 100, 40)
+	m.pendingImageRef = "postgres:15-alpine"
+	m.onContainerImagePrompt(promptKindContainerTag, "postgres:16")
+	if !m.confirmOpen {
+		t.Fatal("tagging over an existing reference did not open a confirmation card")
+	}
+	card := strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	if !strings.Contains(card, "postgres:15-alpine") || !strings.Contains(card, "postgres:16") || !strings.Contains(card, "docker tag") {
+		t.Fatalf("tag replacement card did not show source, destination, and command: %s", card)
+	}
+}
+
+func TestImagePromptsRejectUnsafeValuesBeforeConfirmation(t *testing.T) {
+	st := svcHostState()
+	m := svcTestModel(st, 100, 40)
+	for _, tc := range []struct {
+		name  string
+		kind  promptKindEnum
+		value string
+	}{
+		{"pull reference", promptKindContainerPull, "-private/image"},
+		{"tag reference", promptKindContainerTag, "-private/image:latest"},
+		{"run name", promptKindContainerRunName, "-service"},
+		{"environment entry", promptKindContainerRunEnv, "invalid"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m.confirmOpen = false
+			m.pendingImageRef = "alpine:3"
+			if cmd := m.onContainerImagePrompt(tc.kind, tc.value); cmd == nil {
+				t.Fatal("rejected input did not produce a plain-words toast")
+			}
+			if m.confirmOpen {
+				t.Fatal("rejected input opened an action card")
+			}
+		})
+	}
+	if cmd := m.storageCreate("-network", "network"); cmd == nil || m.confirmOpen {
+		t.Fatal("create name starting with a dash was not refused")
+	}
+}
+
+func TestStorageInspectUsersAndAnonymousVolumes(t *testing.T) {
+	users, err := networkInspectUsers([]any{map[string]any{"Containers": map[string]any{
+		"id": map[string]any{"Name": "api-1"},
+	}}})
+	if err != nil || strings.Join(users, ",") != "api-1" {
+		t.Fatalf("network inspect users = %#v, err=%v", users, err)
+	}
+	if !isAnonymousVolume(strings.Repeat("a", 64)) || isAnonymousVolume("termocode_db") {
+		t.Fatal("anonymous volume detection did not distinguish generated and named volumes")
+	}
+	wrapped := wrapStorageName(strings.Repeat("a", 64), 32)
+	if strings.Count(wrapped, "\n") != 1 || strings.ReplaceAll(wrapped, "\n", "") != strings.Repeat("a", 64) {
+		t.Fatalf("long volume name was not wrapped intact: %q", wrapped)
+	}
+}
+
+func TestStorageRowsIncludeDriverScopeAndSize(t *testing.T) {
+	st := svcHostState()
+	st.volumeRows[0].Size = "128MB"
+	rows := st.hostSectionBody("volumes")
+	if len(rows) != 1 || rows[0].name != "termocode_db" || rows[0].host != hostVolume {
+		t.Fatalf("volume rows = %#v", rows)
+	}
+	if got := storageRowDetail(st, rows[0]); got != "local · 128MB" {
+		t.Fatalf("volume detail = %q", got)
+	}
+	networks := st.hostSectionBody("networks")
+	if got := storageRowDetail(st, networks[0]); got != "bridge · local" {
+		t.Fatalf("network detail = %q", got)
+	}
+}
+
+func TestImageAndStorageConfirmCardsNameSafeCommands(t *testing.T) {
+	st := svcHostState()
+	m := svcTestModel(st, 160, 50)
+	if cmd := m.askImageRemove(st.imageRows[0]); cmd != nil {
+		t.Fatal("image removal card returned a command")
+	}
+	card := strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	if !strings.Contains(card, "Image is in use") || !strings.Contains(card, "Close") || strings.Contains(card, "docker rmi") {
+		t.Fatalf("image-in-use card should explain and offer Close: %s", card)
+	}
+	m.askImagePrune()
+	card = strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	if !strings.Contains(card, "docker image prune -f") || strings.Contains(card, "-a") {
+		t.Fatalf("dangling prune card is not exact: %s", card)
+	}
+	r := svcRow{kind: svcRowHostItem, host: hostNetwork, idx: 1, hostID: "termocode_default", name: "termocode_default"}
+	st.storageInspectState["item/network/termocode_default"] = "done"
+	st.storageUsers["item/network/termocode_default"] = []string{"api-1"}
+	if cmd := m.askStorageRemove(r); cmd != nil {
+		t.Fatal("network removal card returned a command")
+	}
+	card = strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	if !strings.Contains(card, "docker network rm termocode_default") || strings.Contains(card, "-f") {
+		t.Fatalf("network card command is not safe and exact: %s", card)
+	}
+	volume := svcRow{kind: svcRowHostItem, host: hostVolume, idx: 0, hostID: "termocode_db", name: "termocode_db"}
+	st.storageInspectState["item/volume/termocode_db"] = "done"
+	st.storageUsers["item/volume/termocode_db"] = []string{"postgres-1"}
+	if cmd := m.askStorageRemove(volume); cmd != nil {
+		t.Fatal("volume-in-use card returned a command")
+	}
+	card = strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	if !strings.Contains(card, "Volume is in use") || !strings.Contains(card, "Close") || strings.Contains(card, "Command:") || strings.Contains(card, "docker volume rm") {
+		t.Fatalf("volume-in-use card should be plain text with Close: %s", card)
 	}
 }
