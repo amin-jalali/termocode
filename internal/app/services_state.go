@@ -26,7 +26,7 @@ import (
 // ── Services view state (services panel plan, SV-4 / SV-10) ─────────────
 //
 // Nothing runs until the view is first shown. While it is visible, one
-// `docker events` process tells us when to read `compose ps` again; when
+// host-wide `docker events` process tells us when to refresh shown sections; when
 // it hides (another activity item, sidebar closed, zen mode, quit) the
 // watcher is killed, so a hidden view has no process and no goroutine.
 
@@ -95,10 +95,12 @@ type servicesState struct {
 	everShown    bool
 
 	// events watcher (alive only while the view is visible)
-	watchStop func()
-	watchCh   <-chan services.Event
-	watchGen  uint64
-	visible   bool
+	watchStop   func()
+	watchCh     <-chan services.Event
+	watchCtx    context.Context
+	watchCancel context.CancelFunc
+	watchGen    uint64
+	visible     bool
 
 	render svcRenderCache
 
@@ -116,6 +118,11 @@ type servicesState struct {
 	registryRows       []containers.Registry
 	containerErrors    map[string]string
 	hostLoaded         map[string]bool // host sections that got a first answer
+	hostWatchStop      func()
+	hostWatchCh        <-chan containers.Event
+	hostWatchCtx       context.Context
+	hostWatchCancel    context.CancelFunc
+	hostWatchGen       uint64
 }
 
 func newServicesState() *servicesState {
@@ -231,9 +238,9 @@ func (m *Model) revealServicesView(focus bool) tea.Cmd {
 	return m.servicesSyncWatch()
 }
 
-// servicesSyncWatch follows the view's visibility: shown → refresh (and
-// the events watcher once a snapshot names the project); hidden → stop
-// the watcher. Called after every update; cheap when nothing changed.
+// servicesSyncWatch follows the view's visibility: shown → refresh and
+// start the host watcher after engine detection; hidden → stop the watcher.
+// Called after every update; cheap when nothing changed.
 func (m *Model) servicesSyncWatch() tea.Cmd {
 	st := m.services
 	if st == nil {
@@ -245,10 +252,11 @@ func (m *Model) servicesSyncWatch() tea.Cmd {
 	}
 	st.visible = vis
 	if !vis {
-		if st.watchStop != nil {
+		if st.hostWatchStop != nil || st.watchStop != nil {
 			st.stale = true
 		}
 		st.stopWatch()
+		st.stopHostWatch()
 		st.cancelHostWork()
 		st.touch()
 		return nil
@@ -259,7 +267,7 @@ func (m *Model) servicesSyncWatch() tea.Cmd {
 		m.servicesLoadSession()
 	}
 	st.everShown = true
-	return tea.Batch(m.servicesRefresh(), m.containersLoadVisible())
+	return tea.Batch(m.servicesRefresh(), m.containersLoadVisible(), m.startHostWatch())
 }
 
 // stopWatch kills the docker events process (if any) and waits for it.
@@ -267,6 +275,11 @@ func (st *servicesState) stopWatch() {
 	if st.watchStop != nil {
 		stop := st.watchStop
 		st.watchStop, st.watchCh = nil, nil
+		if st.watchCancel != nil {
+			st.watchCancel()
+			st.watchCancel = nil
+		}
+		st.watchCtx = nil
 		st.watchGen++
 		stop()
 	}
@@ -276,6 +289,7 @@ func (st *servicesState) stopWatch() {
 func (st *servicesState) shutdown() {
 	if st != nil {
 		st.stopWatch()
+		st.stopHostWatch()
 	}
 }
 
@@ -438,15 +452,8 @@ func (m *Model) onServicesSnapshot(msg servicesSnapshotMsg) tea.Cmd {
 	}
 	m.servicesClampCursor()
 	st.touch()
-	// Watch events while visible (compose only, once the project is known).
-	if st.visible && st.watchStop == nil && st.det.Compose && st.problem.Kind == services.ProblemNone {
-		if c := st.composeBackend(); c != nil {
-			if ch, stop, err := c.Watch(context.Background(), st.project); err == nil {
-				st.watchStop, st.watchCh = stop, ch
-				st.watchGen++
-				cmds = append(cmds, waitServicesEvent(ch, st.watchGen))
-			}
-		}
+	if st.visible {
+		cmds = append(cmds, m.startHostWatch())
 	}
 	waiters := st.waiters
 	st.waiters = nil
@@ -471,15 +478,20 @@ func (m *Model) servicesExitToast(name string, code int) tea.Cmd {
 
 type servicesEventMsg struct {
 	gen    uint64
+	event  services.Event
 	closed bool
 }
 
 // waitServicesEvent blocks on the watcher's channel (one goroutine, no
 // CPU) and turns the next event into a message.
-func waitServicesEvent(ch <-chan services.Event, gen uint64) tea.Cmd {
+func waitServicesEvent(ctx context.Context, ch <-chan services.Event, gen uint64) tea.Cmd {
 	return func() tea.Msg {
-		_, ok := <-ch
-		return servicesEventMsg{gen: gen, closed: !ok}
+		select {
+		case event, ok := <-ch:
+			return servicesEventMsg{gen: gen, event: event, closed: !ok}
+		case <-ctx.Done():
+			return servicesEventMsg{gen: gen, closed: true}
+		}
 	}
 }
 
@@ -490,10 +502,27 @@ func (m *Model) onServicesEvent(msg servicesEventMsg) tea.Cmd {
 	}
 	if msg.closed { // docker events ended (daemon stopped?): read once more
 		st.stopWatch()
-		return m.servicesRefresh()
+		return tea.Batch(m.servicesRefresh(), m.startHostWatch())
 	}
-	return tea.Batch(m.debounce.Do(svcRefreshKey, svcRefreshDebounce, func() tea.Msg { return servicesRefreshMsg{} }),
-		m.servicesWaitNext(msg.gen))
+	var cmds []tea.Cmd
+	if msg.event.Type == "container" || msg.event.Type == "" {
+		if st.sectionShown("project") {
+			cmds = append(cmds, m.debounce.Do(svcRefreshKey, svcRefreshDebounce, func() tea.Msg { return servicesRefreshMsg{} }))
+		}
+		if st.sectionShown("project") && st.det.Compose {
+			cmds = append(cmds, m.containersRefresh("containers"))
+		}
+	}
+	switch msg.event.Type {
+	case "image":
+		cmds = append(cmds, m.containersRefresh("images"))
+	case "network":
+		cmds = append(cmds, m.containersRefresh("networks"))
+	case "volume":
+		cmds = append(cmds, m.containersRefresh("volumes"))
+	}
+	cmds = append(cmds, m.servicesWaitNext(msg.gen))
+	return tea.Batch(cmds...)
 }
 
 // servicesWaitNext keeps reading the same watcher. The channel lives in
@@ -504,7 +533,7 @@ func (m *Model) servicesWaitNext(gen uint64) tea.Cmd {
 	if st.watchCh == nil {
 		return nil
 	}
-	return waitServicesEvent(st.watchCh, gen)
+	return waitServicesEvent(st.watchCtx, st.watchCh, gen)
 }
 
 // handleServicesMsg routes the services messages. ok=false: not ours.
@@ -514,6 +543,14 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onServicesSnapshot(msg), true
 	case containerHostMsg:
 		return m.onContainerHost(msg), true
+	case containerActionDoneMsg:
+		return m.onContainerActionDone(msg), true
+	case containerInspectMsg:
+		return m.onContainerInspect(msg), true
+	case containerGroupDoneMsg:
+		return m.onContainerGroupDone(msg), true
+	case containerEventMsg:
+		return m.onContainerEvent(msg), true
 	case servicesRefreshMsg:
 		return m.servicesRefresh(), true
 	case servicesEventMsg:
@@ -600,6 +637,23 @@ func (m *Model) onServiceJobExit(key string, code int) tea.Cmd {
 		st.localSt[name] = services.Status{Name: name, State: state, ExitCode: code,
 			Text: fmt.Sprintf("Exited (%d)", code)}
 		delete(st.localStop, name)
+	case strings.HasPrefix(key, "container:compose:"):
+		project := strings.TrimPrefix(key, "container:compose:")
+		for _, c := range st.containerRows {
+			if c.Project == project {
+				delete(st.busy, containerBusyPrefix+c.ID)
+			}
+		}
+		if code != 0 {
+			var c tea.Cmd
+			m.toast, c = m.toast.PushDetail(toast.Errr, "Project command failed", fmt.Sprintf("exit code %d · see the compose terminal tab", code))
+			cmds = append(cmds, c)
+		}
+		cmds = append(cmds, m.containersRefresh("containers"))
+	case strings.HasPrefix(key, containerTabPrefix):
+		// A logs, shell, attach, or stats tab ended. The event stream will
+		// normally refresh state; this also covers an engine without events.
+		cmds = append(cmds, m.containersRefresh("containers"))
 	default:
 		return nil
 	}

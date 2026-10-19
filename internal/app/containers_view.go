@@ -636,6 +636,9 @@ func (st *servicesState) renderHostItem(r svcRow, active, focused bool, w int) s
 		}
 		c := st.containerRows[r.idx]
 		g, gcol := containerGlyph(c)
+		if st.busy[containerBusyPrefix+c.ID].Busy() {
+			g, gcol = theme.GlyphSvcStarting, theme.TextSecondary
+		}
 		var cols []hostCol
 		if w >= 44 {
 			free := w - 1 - 2*r.depth - 2 - 7 - 7 - 18 - 1
@@ -772,6 +775,9 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 				l1 := c.Image
 				if p := strings.ReplaceAll(c.PortsText, "->", "→"); p != "" {
 					l1 += " · " + p
+				}
+				if busy := st.busy[containerBusyPrefix+c.ID]; busy.Busy() {
+					return l1, busy.String()
 				}
 				return l1, c.Status
 			}

@@ -17,6 +17,16 @@ func fixture(t *testing.T, engine, name string) []byte {
 	return b
 }
 
+func TestParseComposeProjectFiles(t *testing.T) {
+	got, err := ParseContainers([]byte(`{"ID":"c1","Names":["api-1"],"Labels":"com.docker.compose.project=shop,com.docker.compose.project.working_dir=/work/shop,com.docker.compose.project.config_files=compose.yaml,compose.prod.yaml"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].WorkingDir != "/work/shop" || strings.Join(got[0].ConfigFiles, ",") != "compose.yaml,compose.prod.yaml" {
+		t.Fatalf("compose metadata = %#v", got)
+	}
+}
+
 func TestParsersEngineFixtures(t *testing.T) {
 	for _, engine := range []string{"docker27", "docker28", "podman5"} {
 		t.Run(engine, func(t *testing.T) {

@@ -95,22 +95,27 @@ const terminalRowsMin = 5
 const terminalRowsDefault = 10
 
 type Model struct {
-	activity activity.Model
-	explorer explorer.Model
-	editor   editor.Model
-	tabs     tabbar.Model
-	status   statusbar.Model
-	picker   picker.Model
-	menu     menu.Model
-	find     findbar.Model
-	confirm  confirm.Model
-	preview  preview.Model
-	prompt   prompt.Model
-	recents  recents.Model
-	replace  replacebar.Model
-	search   search.Model
-	toast    toast.Model
-	themeID  string // active theme id (drives the nvim colourscheme)
+	activity                activity.Model
+	explorer                explorer.Model
+	editor                  editor.Model
+	tabs                    tabbar.Model
+	status                  statusbar.Model
+	picker                  picker.Model
+	menu                    menu.Model
+	find                    findbar.Model
+	confirm                 confirm.Model
+	pendingContainerID      string
+	pendingContainerStop    bool
+	pendingContainerProject string
+	pendingContainerDir     string
+	pendingContainerFiles   []string
+	preview                 preview.Model
+	prompt                  prompt.Model
+	recents                 recents.Model
+	replace                 replacebar.Model
+	search                  search.Model
+	toast                   toast.Model
+	themeID                 string // active theme id (drives the nvim colourscheme)
 	// Color Theme picker live preview: the theme to restore on Esc.
 	themePreviewFrom string
 	themePreviewing  bool

@@ -354,13 +354,14 @@ Find IDE commands (the command palette) for execute_action. Returns id, title, c
 
 ### execute_action
 
-Run an IDE command (command palette) by id; find ids with list_actions. Safe commands run at once, others ask the user. Commands act on the active file / cursor.
+Run an IDE command (command palette) by id; find ids with list_actions. Safe commands run at once, others ask the user. Container commands require target to name a container id/name or compose project.
 
 **Gate:** per action: see Palette actions below
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `id` | string | yes | command id |
+| `target` | string |   | container id/name or compose project for container commands |
 
 ### settings_list
 
@@ -936,6 +937,24 @@ Add a request to a .http file, or with replace=true change the request with that
 | `code-actions` | Edit: Quick Fix... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `config-commands` | Open Config: User Commands | confirm (ide) |   |
 | `config-theme` | Open Config: Theme | confirm (ide) |   |
+| `containers-attach` | Containers: Attach | never | opens a picker or prompt that only the user can answer; use a typed tool (container attach) |
+| `containers-compose-down` | Containers: Remove Project Containers… | never | project removal requires the user's confirm card |
+| `containers-compose-restart` | Containers: Restart Project | confirm (always asks) |   |
+| `containers-compose-stop` | Containers: Stop Project | confirm (always asks) |   |
+| `containers-compose-up` | Containers: Start Project | confirm (always asks) |   |
+| `containers-copy-id` | Containers: Copy ID | auto |   |
+| `containers-focus` | Containers: Focus | auto |   |
+| `containers-inspect` | Containers: Inspect | auto |   |
+| `containers-logs` | Containers: Follow Logs | auto |   |
+| `containers-open-port` | Containers: Open Published Port | auto |   |
+| `containers-pause` | Containers: Pause or Unpause Selected | confirm (always asks) |   |
+| `containers-refresh` | Containers: Refresh | auto |   |
+| `containers-remove` | Containers: Remove Selected… | never | container removal requires the user's confirm card |
+| `containers-restart` | Containers: Restart Selected | confirm (always asks) |   |
+| `containers-shell` | Containers: Open Shell | never | opens a picker or prompt that only the user can answer; use a typed tool (container shell) |
+| `containers-start` | Containers: Start Selected | confirm (always asks) |   |
+| `containers-stats` | Containers: Follow Stats | auto |   |
+| `containers-stop` | Containers: Stop Selected | confirm (always asks) |   |
 | `copy-file-ref` | Copy: File:Line Reference | confirm (ide) |   |
 | `customize-keybindings` | Preferences: Customize Keybindings | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `dap-install` | DAP: Install Adapter... | never | opens a picker or prompt that only the user can answer; use a typed tool (dap_adapters) |
@@ -1069,7 +1088,7 @@ Add a request to a .http file, or with replace=true change the request with that
 | `search-next-result` | Search: Go to Next Search Result | auto |   |
 | `search-prev-result` | Search: Go to Previous Search Result | auto |   |
 | `services-configure` | Services: Configure (services.json) | confirm (ide) |   |
-| `services-focus` | Containers: Focus | auto |   |
+| `services-focus` | Services: Focus (Containers) | auto |   |
 | `services-logs` | Services: Show Logs... | never | opens a picker or prompt that only the user can answer; use a typed tool (services_logs) |
 | `services-open-compose` | Services: Open Compose File | auto |   |
 | `services-refresh` | Services: Refresh | auto |   |

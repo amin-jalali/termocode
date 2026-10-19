@@ -64,4 +64,9 @@ func TestActionsAndVisibleComposeArgv(t *testing.T) {
 	if strings.Join(cmd.Argv, " ") != strings.Join(want, " ") {
 		t.Fatalf("compose argv=%q", cmd.Argv)
 	}
+	cmd = e.ComposeWithFiles("shop", "/work/shop", []string{"compose.yaml", "compose.prod.yaml"}, "down")
+	want = []string{f.Docker(), "compose", "-p", "shop", "--project-directory", "/work/shop", "-f", "compose.yaml", "-f", "compose.prod.yaml", "down"}
+	if strings.Join(cmd.Argv, " ") != strings.Join(want, " ") || cmd.Dir != "/work/shop" {
+		t.Fatalf("compose down argv=%q dir=%q", cmd.Argv, cmd.Dir)
+	}
 }

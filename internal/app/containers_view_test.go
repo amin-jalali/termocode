@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
@@ -300,7 +301,7 @@ func TestContainersEmptyProject(t *testing.T) {
 	theme.CurrentIconMode = theme.IconModeUnicode
 	st := svcHostState()
 	st.det, st.compose, st.local = services.Detection{}, nil, nil
-	m := svcTestModel(st, 100, 40)
+	m := svcTestModel(st, 160, 50)
 	plain := ansi.Strip(m.renderServicesSidebarRaw(29, 40, true, svcTestNow, -1, -1))
 	if strings.Contains(plain, "Start all") || strings.Contains(plain, "Stop all") || !strings.Contains(plain, "o adds services.json") || !strings.Contains(plain, "CONTAINERS") {
 		t.Errorf("empty project with a host:\n%s", plain)
@@ -342,7 +343,21 @@ func runHostCmd(t *testing.T, m *Model, cmd tea.Cmd) {
 		if c == nil {
 			continue
 		}
-		switch msg := c().(type) {
+		result := make(chan tea.Msg, 1)
+		go func() { result <- c() }()
+		var got tea.Msg
+		select {
+		case got = <-result:
+		case <-time.After(2 * time.Second):
+			m.services.stopHostWatch()
+			m.services.stopWatch()
+			select {
+			case got = <-result:
+			case <-time.After(time.Second):
+				t.Fatal("command did not finish")
+			}
+		}
+		switch msg := got.(type) {
 		case tea.BatchMsg:
 			queue = append(queue, msg...)
 		case containerHostMsg:
@@ -481,6 +496,80 @@ func TestContainersFoldKeysPruned(t *testing.T) {
 	got := strings.Join(st.foldKeys(), ",")
 	if got != "!images,containers,grp/containers/shop" {
 		t.Errorf("fold keys = %s", got)
+	}
+}
+
+func TestContainersRefreshPaletteNeedsNoSelectedRow(t *testing.T) {
+	st := svcHostState()
+	st.loaded = true
+	m := svcTestModel(st, 100, 40)
+	st.cursor = 0
+	cmd, ok := m.dispatchServicesPalette("containers-refresh")
+	if !ok || cmd == nil {
+		t.Fatalf("refresh action unavailable without a selected container: ok=%v cmd=%v", ok, cmd != nil)
+	}
+}
+
+func TestContainersStartPaletteUsesSelectedContainer(t *testing.T) {
+	st := svcHostState()
+	st.loaded = true
+	m := svcTestModel(st, 100, 40)
+	for i, r := range st.rows() {
+		if r.kind == svcRowHostItem && r.host == hostContainer && r.hostID == "c5" {
+			st.cursor = i
+			break
+		}
+	}
+	if cmd, ok := m.dispatchServicesPalette("containers-start"); !ok || cmd == nil {
+		t.Fatalf("start action unavailable: ok=%v cmd=%v", ok, cmd != nil)
+	}
+	if !st.busy[containerBusyPrefix+"c5"].Busy() || st.busy[containerBusyPrefix+"c1"].Busy() {
+		t.Fatalf("palette action did not use the selected row: busy=%v", st.busy)
+	}
+}
+
+func TestContainersAIPaletteUsesNamedContainer(t *testing.T) {
+	st := svcHostState()
+	m := svcTestModel(st, 100, 40)
+	st.cursor = 0 // PROJECT header, not the requested container.
+	if _, err := m.dispatchContainerAIAction("containers-stop", "nginx"); err != nil {
+		t.Fatal(err)
+	}
+	if !st.busy[containerBusyPrefix+"c5"].Busy() || st.busy[containerBusyPrefix+"c1"].Busy() {
+		t.Fatalf("action did not target nginx: busy=%v", st.busy)
+	}
+	if _, err := m.dispatchContainerAIAction("containers-stop", ""); err == nil {
+		t.Fatal("missing target was accepted")
+	}
+}
+
+func TestContainersAIComposeActionFindsNamedProject(t *testing.T) {
+	st := svcHostState()
+	dir, err := os.MkdirTemp("/tmp", "s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	for i := range st.containerRows {
+		if st.containerRows[i].Project == "shop" {
+			st.containerRows[i].WorkingDir = dir
+			st.containerRows[i].ConfigFiles = []string{"compose.yaml"}
+		}
+	}
+	m := svcTestModel(st, 160, 50)
+	st.cursor = 0
+	if _, err := m.dispatchContainerAIAction("containers-compose-down", "shop"); err != nil {
+		t.Fatal(err)
+	}
+	if !m.confirmOpen || m.pendingContainerProject != "shop" || m.pendingContainerDir != dir {
+		t.Fatalf("compose action did not open the shop confirmation card: open=%v project=%q dir=%q", m.confirmOpen, m.pendingContainerProject, m.pendingContainerDir)
+	}
+	card := strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	if !strings.Contains(card, "shop") || !strings.Contains(card, dir) {
+		t.Fatalf("confirmation card does not identify shop and its folder:\n%s", card)
+	}
+	if st.cursor != 0 {
+		t.Fatalf("compose action changed cursor from 0 to %d", st.cursor)
 	}
 }
 

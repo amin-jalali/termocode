@@ -16,6 +16,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/containers"
 	"github.com/amin-jalali/termocode/internal/menu"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/services"
@@ -333,6 +334,8 @@ const (
 	confirmKindServicesLocal confirmKindEnum = 990 + iota
 	confirmKindServicesDown
 	confirmKindServicesQuit
+	confirmKindContainerRemove
+	confirmKindContainerProjectDown
 )
 
 // handleServicesConfirm routes the services confirm kinds.
@@ -371,6 +374,37 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
 			return servicesActionDoneMsg{verb: "down", keys: keys, err: c.Down(ctx)}
+		}, true
+	case confirmKindContainerRemove:
+		if id == "remove" {
+			return m.runContainerRemove(false), true
+		}
+		if id == "stop-remove" {
+			return m.runContainerRemove(true), true
+		}
+		return nil, true
+	case confirmKindContainerProjectDown:
+		if id != "down" {
+			return nil, true
+		}
+		project, dir := m.pendingContainerProject, m.pendingContainerDir
+		files := append([]string(nil), m.pendingContainerFiles...)
+		m.pendingContainerProject, m.pendingContainerDir, m.pendingContainerFiles = "", "", nil
+		for _, c := range st.containerRows {
+			if c.Project == project {
+				st.busy[containerBusyPrefix+c.ID] = services.Stopping
+			}
+		}
+		st.touch()
+		cmd := st.containerEngine.ComposeWithFiles(project, dir, files, "down")
+		return func() tea.Msg {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			defer cancel()
+			_, stderr, code, err := servicesExec.Capture(ctx, cmd.Dir, cmd.Argv...)
+			if err == nil && code != 0 {
+				err = fmt.Errorf("%s", errLine(stderr))
+			}
+			return containerGroupDoneMsg{project: project, err: err}
 		}, true
 	case confirmKindServicesQuit:
 		return m.answerServicesQuit(id), true
@@ -551,6 +585,10 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		st.touch()
 	case "enter", "l":
 		switch {
+		case have && r.kind == svcRowHostItem && r.host == hostContainer:
+			if c, ok := m.selectedContainer(); ok {
+				return m, m.openContainerTerminal(c, "logs")
+			}
 		case isSvc:
 			return m, m.servicesLogs(r.section, r.name)
 		case have && r.kind == svcRowSection && r.section == svcSecCompose && st.det.Empty():
@@ -565,16 +603,34 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, m.servicesToggleFold(r)
 		}
 	case "s":
+		if _, _, ok := m.selectedProjectGroup(); ok {
+			return m, m.projectGroupAction("up")
+		}
+		if c, ok := m.selectedContainer(); ok {
+			return m, m.containerAction("start", c)
+		}
 		if isSvc {
 			note, cmd := m.servicesStart(r.section, r.name)
 			return m, m.servicesNoteCmd(note, cmd)
 		}
 	case "x":
+		if _, _, ok := m.selectedProjectGroup(); ok {
+			return m, m.projectGroupAction("stop")
+		}
+		if c, ok := m.selectedContainer(); ok {
+			return m, m.containerAction("stop", c)
+		}
 		if isSvc {
 			note, cmd := m.servicesStop(r.section, r.name, nil)
 			return m, m.servicesNoteCmd(note, cmd)
 		}
 	case "r":
+		if _, _, ok := m.selectedProjectGroup(); ok {
+			return m, m.projectGroupAction("restart")
+		}
+		if c, ok := m.selectedContainer(); ok {
+			return m, m.containerAction("restart", c)
+		}
 		if sec := r.hostSectionID(); have && sec != "" {
 			if st.containerDetected && st.containerEngine.Reachable {
 				return m, m.containersRefresh(sec)
@@ -584,6 +640,10 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if isSvc {
 			note, cmd := m.servicesRestart(r.section, r.name, nil)
 			return m, m.servicesNoteCmd(note, cmd)
+		}
+	case "t":
+		if c, ok := m.selectedContainer(); ok {
+			return m, m.openContainerTerminal(c, "attach")
 		}
 	case "a":
 		if !st.det.Empty() {
@@ -599,12 +659,18 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		m.openContainersSectionsMenu("")
 		return m, nil
 	case "e":
+		if c, ok := m.selectedContainer(); ok {
+			return m, m.openContainerTerminal(c, "shell")
+		}
 		if isSvc {
 			return m, m.servicesShell(r.section, r.name)
 		}
 	case "o":
+		if c, ok := m.selectedContainer(); ok {
+			return m, m.containerOpenPort(c)
+		}
 		if have && r.hostSectionID() != "" {
-			return m, nil // host rows open nothing yet (CP-3)
+			return m, nil
 		}
 		if st.det.Empty() {
 			return m, m.servicesConfigure()
@@ -617,6 +683,10 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 		return m, m.servicesOpenSource(svcSecCompose, "")
 	case "y":
+		if c, ok := m.selectedContainer(); ok {
+			m.copyToClipboard(c.ID)
+			return m, m.servicesToast(toast.Info, "Copied container id", shortImageID(c.ID))
+		}
 		if have && r.hostSectionID() != "" && st.containerEngine.Problem.Kind == services.ProblemNoPermission {
 			m.copyToClipboard(svcPermissionFix)
 			return m, m.servicesToast(toast.Info, "Copied", svcPermissionFix)
@@ -627,6 +697,30 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 		if isSvc {
 			return m, m.servicesCopyAddress(r.section, r.name)
+		}
+	case "p":
+		if c, ok := m.selectedContainer(); ok {
+			verb := "pause"
+			if strings.EqualFold(c.State, "paused") {
+				verb = "unpause"
+			}
+			return m, m.containerAction(verb, c)
+		}
+	case "S":
+		if c, ok := m.selectedContainer(); ok {
+			return m, m.openContainerTerminal(c, "stats")
+		}
+	case "i":
+		if c, ok := m.selectedContainer(); ok {
+			return m, m.inspectContainer(c)
+		}
+	case "D":
+		if c, ok := m.selectedContainer(); ok {
+			m.askRemoveContainer(c)
+			return m, nil
+		}
+		if _, _, ok := m.selectedProjectGroup(); ok {
+			return m, m.askProjectDown()
 		}
 	case "esc":
 		m.focus = FocusEditor
@@ -908,7 +1002,25 @@ func (m *Model) handleServicesMenuSelect(id string) tea.Cmd {
 // servicesPaletteItems are the "Services: …" palette rows.
 func servicesPaletteItems() []picker.Item {
 	return []picker.Item{
-		{ID: "services-focus", Title: "Containers: Focus"},
+		{ID: "services-focus", Title: "Services: Focus (Containers)"},
+		{ID: "containers-focus", Title: "Containers: Focus"},
+		{ID: "containers-refresh", Title: "Containers: Refresh"},
+		{ID: "containers-start", Title: "Containers: Start Selected"},
+		{ID: "containers-stop", Title: "Containers: Stop Selected"},
+		{ID: "containers-restart", Title: "Containers: Restart Selected"},
+		{ID: "containers-pause", Title: "Containers: Pause or Unpause Selected"},
+		{ID: "containers-remove", Title: "Containers: Remove Selected…"},
+		{ID: "containers-logs", Title: "Containers: Follow Logs"},
+		{ID: "containers-shell", Title: "Containers: Open Shell"},
+		{ID: "containers-attach", Title: "Containers: Attach"},
+		{ID: "containers-stats", Title: "Containers: Follow Stats"},
+		{ID: "containers-inspect", Title: "Containers: Inspect"},
+		{ID: "containers-copy-id", Title: "Containers: Copy ID"},
+		{ID: "containers-open-port", Title: "Containers: Open Published Port"},
+		{ID: "containers-compose-up", Title: "Containers: Start Project"},
+		{ID: "containers-compose-stop", Title: "Containers: Stop Project"},
+		{ID: "containers-compose-restart", Title: "Containers: Restart Project"},
+		{ID: "containers-compose-down", Title: "Containers: Remove Project Containers…"},
 		{ID: "services-start-all", Title: "Services: Start All"},
 		{ID: "services-stop-all", Title: "Services: Stop All"},
 		{ID: "services-start", Title: "Services: Start Service..."},
@@ -922,8 +1034,164 @@ func servicesPaletteItems() []picker.Item {
 	}
 }
 
+func containerAITargetRequired(id string) bool {
+	switch id {
+	case "containers-start", "containers-stop", "containers-restart", "containers-pause",
+		"containers-remove", "containers-logs", "containers-shell", "containers-attach",
+		"containers-stats", "containers-inspect", "containers-copy-id", "containers-open-port",
+		"containers-compose-up", "containers-compose-stop", "containers-compose-restart", "containers-compose-down":
+		return true
+	default:
+		return false
+	}
+}
+
+func (m *Model) dispatchContainerAIAction(id, target string) (tea.Cmd, error) {
+	if target == "" {
+		return nil, fmt.Errorf("%s needs a named container or compose project", id)
+	}
+	if strings.HasPrefix(id, "containers-compose-") {
+		var row int = -1
+		for i, r := range m.services.rows() {
+			if r.kind == svcRowGroup && strings.HasPrefix(r.section, "grp/containers/") && r.name == target {
+				row = i
+				break
+			}
+		}
+		if row < 0 {
+			return nil, fmt.Errorf("compose project %q was not found", target)
+		}
+		old := m.services.cursor
+		m.services.cursor = row
+		var cmd tea.Cmd
+		switch id {
+		case "containers-compose-up":
+			cmd = m.projectGroupAction("up")
+		case "containers-compose-stop":
+			cmd = m.projectGroupAction("stop")
+		case "containers-compose-restart":
+			cmd = m.projectGroupAction("restart")
+		case "containers-compose-down":
+			cmd = m.askProjectDown()
+		}
+		m.services.cursor = old
+		return cmd, nil
+	}
+	var c containers.Container
+	found := false
+	for _, item := range m.services.containerRows {
+		if item.ID == target {
+			c, found = item, true
+			break
+		}
+		for _, name := range item.Names {
+			if strings.TrimPrefix(name, "/") == target {
+				c, found = item, true
+				break
+			}
+		}
+		if found {
+			break
+		}
+	}
+	if !found {
+		return nil, fmt.Errorf("container %q was not found", target)
+	}
+	switch id {
+	case "containers-start":
+		return m.containerAction("start", c), nil
+	case "containers-stop":
+		return m.containerAction("stop", c), nil
+	case "containers-restart":
+		return m.containerAction("restart", c), nil
+	case "containers-pause":
+		verb := "pause"
+		if strings.EqualFold(c.State, "paused") {
+			verb = "unpause"
+		}
+		return m.containerAction(verb, c), nil
+	case "containers-remove":
+		m.askRemoveContainer(c)
+	case "containers-logs":
+		return m.openContainerTerminal(c, "logs"), nil
+	case "containers-shell":
+		return m.openContainerTerminal(c, "shell"), nil
+	case "containers-attach":
+		return m.openContainerTerminal(c, "attach"), nil
+	case "containers-stats":
+		return m.openContainerTerminal(c, "stats"), nil
+	case "containers-inspect":
+		return m.inspectContainer(c), nil
+	case "containers-copy-id":
+		m.copyToClipboard(c.ID)
+		return m.servicesToast(toast.Info, "Copied container id", shortImageID(c.ID)), nil
+	case "containers-open-port":
+		return m.containerOpenPort(c), nil
+	}
+	return nil, fmt.Errorf("unsupported container command %q", id)
+}
+
 // dispatchServicesPalette runs the "Services: …" palette commands.
 func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
+	if id == "containers-focus" {
+		return m.revealServicesView(true), true
+	}
+	if strings.HasPrefix(id, "containers-") {
+		open := m.revealServicesView(false)
+		return m.servicesAfterLoad(open, func(m *Model) tea.Cmd {
+			if id == "containers-refresh" {
+				return tea.Batch(m.servicesAction("refresh"), m.containersReloadAll())
+			}
+			if strings.HasPrefix(id, "containers-compose-") {
+				switch strings.TrimPrefix(id, "containers-compose-") {
+				case "up":
+					return m.projectGroupAction("up")
+				case "stop":
+					return m.projectGroupAction("stop")
+				case "restart":
+					return m.projectGroupAction("restart")
+				case "down":
+					return m.askProjectDown()
+				}
+			}
+			c, ok := m.selectedContainer()
+			if !ok {
+				return m.servicesToast(toast.Info, "Select a container row first", "")
+			}
+			switch id {
+			case "containers-start":
+				return m.containerAction("start", c)
+			case "containers-stop":
+				return m.containerAction("stop", c)
+			case "containers-restart":
+				return m.containerAction("restart", c)
+			case "containers-pause":
+				verb := "pause"
+				if strings.EqualFold(c.State, "paused") {
+					verb = "unpause"
+				}
+				return m.containerAction(verb, c)
+			case "containers-remove":
+				m.askRemoveContainer(c)
+			case "containers-logs":
+				return m.openContainerTerminal(c, "logs")
+			case "containers-shell":
+				return m.openContainerTerminal(c, "shell")
+			case "containers-attach":
+				return m.openContainerTerminal(c, "attach")
+			case "containers-stats":
+				return m.openContainerTerminal(c, "stats")
+			case "containers-inspect":
+				return m.inspectContainer(c)
+			case "containers-copy-id":
+				m.copyToClipboard(c.ID)
+				return m.servicesToast(toast.Info, "Copied container id", shortImageID(c.ID))
+			case "containers-open-port":
+				return m.containerOpenPort(c)
+			}
+			return nil
+		}), true
+	}
 	if !strings.HasPrefix(id, "services-") {
 		return nil, false
 	}

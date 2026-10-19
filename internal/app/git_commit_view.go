@@ -615,13 +615,20 @@ func (m *Model) openFileAtCommit(msg commitFileAtMsg) {
 		return
 	}
 	m.ensureEditorWindowCurrent()
-	if err := m.nvim.ExecLuaArgs(fileAtCommitLua, msg.path+" @ "+msg.short, msg.text, msg.path); err != nil {
+	if err := m.openReadOnlyPage(msg.path+" @ "+msg.short, msg.text, msg.path, ""); err != nil {
 		m.err = "file at commit: " + err.Error()
 	}
 }
 
-const fileAtCommitLua = `
-local name, text, path = ...
+func (m *Model) openReadOnlyPage(name, text, path, filetype string) error {
+	if m.nvim == nil {
+		return nil
+	}
+	return m.nvim.ExecLuaArgs(openReadOnlyPageLua, name, text, path, filetype)
+}
+
+const openReadOnlyPageLua = `
+local name, text, path, ft = ...
 vim.cmd('enew')
 local buf = vim.api.nvim_get_current_buf()
 vim.bo[buf].buftype = 'nofile'
@@ -635,7 +642,7 @@ if #lines > 1 and lines[#lines] == '' then table.remove(lines) end
 vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
 vim.bo[buf].modifiable = false
 vim.bo[buf].readonly = true
-local ft = vim.filetype.match({ filename = path })
+if ft == '' then ft = vim.filetype.match({ filename = path }) end
 if ft then vim.bo[buf].filetype = ft end
 pcall(vim.api.nvim_win_set_cursor, 0, { 1, 0 })
 vim.cmd('stopinsert')

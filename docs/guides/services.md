@@ -3,7 +3,7 @@
 The **Containers** view has your project's services on top (the
 **PROJECT** section) and, below, what runs on this machine: **CONTAINERS**,
 **IMAGES**, **REGISTRIES**, **NETWORKS**, **VOLUMES**, **CONTEXTS** and
-**HELP**. The machine part is read-only for now.
+**HELP**. Container and project actions run through the detected engine.
 
 - **Space** (or a click) folds and opens a section. A section loads when
   you open it, and only while the view is on screen.
@@ -76,13 +76,28 @@ explain the row under the cursor (image, ports, Docker's status text).
 | `s` | start (`docker compose up -d <name>` in the **services: up** tab, so pulls show) |
 | `x` | stop (`docker compose stop`, containers and volumes stay) |
 | `r` | restart |
-| `a` / `A` | start all / stop all |
+| `a` / `A` | start all / stop all in PROJECT |
+| `t` | attach to a container (CONTAINERS rows) |
+| `s` / `x` / `r` | start / stop / restart the selected container; on a project group, start / stop / restart that project |
+| `p` | pause or unpause the selected container |
+| `e` / `D` | shell / remove the selected container (removal asks first) |
 | `R` | refresh now (the project and every open host section) |
 | `m` | choose the sections (the **⋯** menu) |
 | `e` | shell in the container (`docker compose exec <name> sh`) |
 | `o` | open the file the service comes from (at its line) |
 | `y` | copy the address (`localhost:5432`) |
 | `Space` | fold / open the section or group under the cursor |
+
+On a CONTAINERS row, `s`, `x`, and `r` start, stop, and restart it; `p`
+pauses or resumes it. `l` follows logs, `e` opens a shell, `t` attaches,
+`S` follows stats, `i` opens a read-only JSON inspect page, `o` opens its
+first published port, `y` copies its full ID, and `D` asks before removal.
+Removing a running container shows one card with the exact stop and remove
+commands and a **Stop and remove** button; the engine is never forced to
+remove it. On a compose project group, `s`, `x`, and `r` run compose up,
+stop, and restart. `D` asks before compose down and names its command.
+Attach uses `--sig-proxy=false`; press `Ctrl+P Ctrl+Q` in its terminal tab
+to detach without stopping the container.
 
 Right-click a row for the same actions, plus **Recreate** and **Down
 (remove containers)**, which asks first. Double-click opens the logs.

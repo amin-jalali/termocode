@@ -234,12 +234,15 @@ func aiIDETools(root string, call aiIDECaller) []ai.Tool {
 		{
 			Name: "execute_action",
 			Description: "Run an IDE command (command palette) by id; find ids with list_actions. " +
-				"Safe commands run at once, others ask the user. Commands act on the active file / cursor.",
-			Params:   map[string]any{"id": str("command id")},
+				"Safe commands run at once, others ask the user. Container commands require target to name a container id/name or compose project.",
+			Params:   map[string]any{"id": str("command id"), "target": str("container id/name or compose project for container commands")},
 			Required: []string{"id"},
 			Mutating: true, Class: ai.ClassIDE, // Gate decides per id
 			Describe: func(a map[string]any) string {
 				id := ai.ArgString(a, "id")
+				if target := ai.ArgString(a, "target"); target != "" && strings.HasPrefix(id, "containers-") {
+					return "IDE: " + aiActionTitle(id) + " · " + target
+				}
 				if t := aiActionTitle(id); t != "" {
 					return "IDE: " + t
 				}
@@ -253,8 +256,14 @@ func aiIDETools(root string, call aiIDECaller) []ai.Tool {
 				return false, ""
 			},
 			Validate: func(a map[string]any) error {
-				_, err := aiCheckAction(ai.ArgString(a, "id"))
-				return err
+				id := ai.ArgString(a, "id")
+				if _, err := aiCheckAction(id); err != nil {
+					return err
+				}
+				if containerAITargetRequired(id) && ai.ArgString(a, "target") == "" {
+					return fmt.Errorf("command %q needs a target container id/name or compose project; it will not use the selected row", id)
+				}
+				return nil
 			},
 			Run: func(ctx context.Context, a map[string]any) (string, error) {
 				id := ai.ArgString(a, "id")
@@ -262,6 +271,13 @@ func aiIDETools(root string, call aiIDECaller) []ai.Tool {
 					return "", err
 				}
 				return call(ctx, func(m *Model) (string, tea.Cmd, error) {
+					if strings.HasPrefix(id, "containers-") && containerAITargetRequired(id) {
+						cmd, err := m.dispatchContainerAIAction(id, ai.ArgString(a, "target"))
+						if err != nil {
+							return "", nil, err
+						}
+						return "ran " + id + " for " + ai.ArgString(a, "target"), cmd, nil
+					}
 					return "ran " + id, m.dispatchPaletteAction(id), nil
 				})
 			},

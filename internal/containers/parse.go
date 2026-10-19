@@ -46,6 +46,15 @@ func ParseContainers(data []byte) ([]Container, error) {
 		if c.WorkingDir == "" {
 			c.WorkingDir = c.Labels["io.podman.compose.project.working_dir"]
 		}
+		files := c.Labels["com.docker.compose.project.config_files"]
+		if files == "" {
+			files = c.Labels["io.podman.compose.project.config_files"]
+		}
+		for _, file := range strings.Split(files, ",") {
+			if file = strings.TrimSpace(file); file != "" {
+				c.ConfigFiles = append(c.ConfigFiles, file)
+			}
+		}
 		out = append(out, c)
 		return nil
 	})
@@ -390,12 +399,22 @@ func stringMap(raw json.RawMessage) map[string]string {
 		return nil
 	}
 	m = map[string]string{}
+	key, value := "", ""
+	flush := func() {
+		if key != "" {
+			m[key] = value
+		}
+	}
 	for _, pair := range strings.Split(s, ",") {
 		k, v, ok := strings.Cut(strings.TrimSpace(pair), "=")
 		if ok {
-			m[strings.TrimSpace(k)] = strings.TrimSpace(v)
+			flush()
+			key, value = strings.TrimSpace(k), strings.TrimSpace(v)
+		} else if key != "" {
+			value += "," + strings.TrimSpace(pair)
 		}
 	}
+	flush()
 	return m
 }
 func splitList(s string) []string {

@@ -102,6 +102,18 @@ func ContainersVariant(name, variant string) Scene {
 	return Scene{Name: name, Steps: WithEditor(Act("contdemo:"+variant), Pause(400*time.Millisecond))}
 }
 
+func ContainersRemoveConfirm() Scene {
+	return Scene{Name: "containers-remove-confirm", Steps: WithEditor(Act("contdemo:remove"), Key("D"), Pause(400*time.Millisecond))}
+}
+
+func ContainersStopRemoveConfirm() Scene {
+	return Scene{Name: "containers-stop-remove-confirm", Steps: WithEditor(Act("contdemo:stop-remove"), Key("D"), Pause(400*time.Millisecond))}
+}
+
+func ContainersComposeDownConfirm() Scene {
+	return Scene{Name: "containers-compose-down-confirm", Steps: WithEditor(Act("contdemo:compose-down"), Key("D"), Pause(400*time.Millisecond))}
+}
+
 // AIChatAnswer is the AI chat panel with the canned demo conversation (no
 // network).
 func AIChatAnswer() Scene {

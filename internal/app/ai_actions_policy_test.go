@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -79,6 +80,22 @@ func TestAIActionPolicyRules(t *testing.T) {
 			t.Errorf("%s: %+v, want confirm with no class", id, p)
 		}
 	}
+	for _, id := range []string{"containers-start", "containers-stop", "containers-restart", "containers-pause",
+		"containers-compose-up", "containers-compose-stop", "containers-compose-restart"} {
+		if p := aiActionPolicies[id]; p.Gate != aiGateConfirm || p.Class != "" {
+			t.Errorf("%s: %+v, want confirm with no auto-approve class", id, p)
+		}
+	}
+	for _, id := range []string{"containers-remove", "containers-compose-down"} {
+		if p := aiActionPolicies[id]; p.Gate != aiGateNever {
+			t.Errorf("%s: gate %q, want never", id, p.Gate)
+		}
+	}
+	for _, class := range ai.ToolClasses {
+		if class == "containers" {
+			t.Fatal("container operations must not have an auto-approve class")
+		}
+	}
 	for id, want := range map[string]string{"save": ai.ClassFileWrite, "git-stage": ai.ClassGit,
 		"tasks-build": ai.ClassRun, "testing-run-all": ai.ClassRun} {
 		if p := aiActionPolicies[id]; p.Gate != aiGateConfirm || p.Class != want {
@@ -89,6 +106,32 @@ func TestAIActionPolicyRules(t *testing.T) {
 		if p := aiActionPolicies[id]; p.Gate != aiGateAuto {
 			t.Errorf("%s: gate %q, want auto", id, p.Gate)
 		}
+	}
+}
+
+func TestAIContainerActionsRequireNamedTargets(t *testing.T) {
+	tools := aiIDETools(t.TempDir(), func(context.Context, aiIDEFunc) (string, error) {
+		return "", nil
+	})
+	var execute ai.Tool
+	for _, tool := range tools {
+		if tool.Name == "execute_action" {
+			execute = tool
+			break
+		}
+	}
+	if execute.Name == "" {
+		t.Fatal("execute_action tool missing")
+	}
+	if err := execute.Validate(map[string]any{"id": "containers-start"}); err == nil || !strings.Contains(err.Error(), "target") {
+		t.Fatalf("missing target validation = %v", err)
+	}
+	args := map[string]any{"id": "containers-start", "target": "api-1"}
+	if err := execute.Validate(args); err != nil {
+		t.Fatalf("named target rejected: %v", err)
+	}
+	if got := execute.Describe(args); !strings.Contains(got, "api-1") {
+		t.Errorf("confirmation description does not name the target: %q", got)
 	}
 }
 

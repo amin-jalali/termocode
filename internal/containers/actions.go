@@ -75,12 +75,20 @@ func (e *Engine) Prune(ctx context.Context, kind string) error {
 	}
 }
 func (e *Engine) Compose(project, dir string, args ...string) services.Command {
+	return e.ComposeWithFiles(project, dir, nil, args...)
+}
+
+// ComposeWithFiles preserves the project metadata reported on its containers.
+func (e *Engine) ComposeWithFiles(project, dir string, files []string, args ...string) services.Command {
 	argv := []string{e.Binary, "compose"}
 	if project != "" {
 		argv = append(argv, "-p", project)
 	}
 	if dir != "" {
 		argv = append(argv, "--project-directory", dir)
+	}
+	for _, file := range files {
+		argv = append(argv, "-f", file)
 	}
 	argv = append(argv, args...)
 	label := "compose: " + project

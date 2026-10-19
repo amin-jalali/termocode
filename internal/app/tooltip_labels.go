@@ -139,7 +139,10 @@ func (m Model) tooltipLabel(id string) (name, key string) {
 		return "Fold section", "Space"
 	}
 	if strings.HasPrefix(id, "cont:grp:") {
-		return "Fold group", "Space"
+		return "Project actions: start, stop, restart, or remove", "s · x · r · D"
+	}
+	if strings.HasPrefix(id, "cont:row:containers/") {
+		return "Container actions: start, stop, restart, pause, logs, shell, attach, stats, inspect, port, copy", "s · x · r · p · l · e · t · S · i · o · y · D"
 	}
 	if strings.HasPrefix(id, "welcome:card:") {
 		idx, err := strconv.Atoi(strings.TrimPrefix(id, "welcome:card:"))

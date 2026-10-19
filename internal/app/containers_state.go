@@ -12,7 +12,98 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/containers"
+	"github.com/amin-jalali/termocode/internal/services"
 )
+
+type containerEventMsg struct {
+	gen    uint64
+	event  containers.Event
+	closed bool
+}
+
+func (st *servicesState) stopHostWatch() {
+	if st.hostWatchStop != nil {
+		stop := st.hostWatchStop
+		st.hostWatchStop, st.hostWatchCh = nil, nil
+		if st.hostWatchCancel != nil {
+			st.hostWatchCancel()
+			st.hostWatchCancel = nil
+		}
+		st.hostWatchCtx = nil
+		st.hostWatchGen++
+		stop()
+	}
+}
+
+func (m *Model) startHostWatch() tea.Cmd {
+	st := m.services
+	if st == nil || !st.visible || st.watchStop != nil || st.hostWatchStop != nil {
+		return nil
+	}
+	if st.containerEngine.Reachable {
+		ctx, cancel := context.WithCancel(context.Background())
+		ch, stop, err := st.containerEngine.Watch(ctx)
+		if err != nil {
+			cancel()
+			return nil
+		}
+		st.hostWatchStop, st.hostWatchCh, st.hostWatchCancel = stop, ch, cancel
+		st.hostWatchCtx = ctx
+		st.hostWatchGen++
+		return waitContainerEvent(ctx, ch, st.hostWatchGen)
+	}
+	if st.det.Compose && st.problem.Kind == services.ProblemNone {
+		if c := st.composeBackend(); c != nil {
+			ctx, cancel := context.WithCancel(context.Background())
+			ch, stop, err := c.Watch(ctx, "")
+			if err == nil {
+				st.watchStop, st.watchCh, st.watchCtx, st.watchCancel = stop, ch, ctx, cancel
+				st.watchGen++
+				return waitServicesEvent(ctx, ch, st.watchGen)
+			}
+			cancel()
+		}
+	}
+	return nil
+}
+
+func waitContainerEvent(ctx context.Context, ch <-chan containers.Event, gen uint64) tea.Cmd {
+	return func() tea.Msg {
+		select {
+		case ev, ok := <-ch:
+			return containerEventMsg{gen: gen, event: ev, closed: !ok}
+		case <-ctx.Done():
+			return containerEventMsg{gen: gen, closed: true}
+		}
+	}
+}
+
+func (m *Model) onContainerEvent(msg containerEventMsg) tea.Cmd {
+	st := m.services
+	if st == nil || !st.visible || msg.gen != st.hostWatchGen {
+		return nil
+	}
+	if msg.closed {
+		st.stopHostWatch()
+		return tea.Batch(m.containersReloadAll(), m.startHostWatch())
+	}
+	var cmds []tea.Cmd
+	if msg.event.Type == "container" || msg.event.Type == "" {
+		cmds = append(cmds, m.containersRefresh("containers"))
+		if st.sectionShown("project") {
+			cmds = append(cmds, m.servicesRefresh())
+		}
+	}
+	switch msg.event.Type {
+	case "image":
+		cmds = append(cmds, m.containersRefresh("images"))
+	case "network":
+		cmds = append(cmds, m.containersRefresh("networks"))
+	case "volume":
+		cmds = append(cmds, m.containersRefresh("volumes"))
+	}
+	return tea.Batch(append(cmds, waitContainerEvent(st.hostWatchCtx, st.hostWatchCh, msg.gen))...)
+}
 
 // ── Containers view: the host part (state and loading) ───────────────────
 //
@@ -141,6 +232,10 @@ func (st *servicesState) activeContext() string {
 // the open sections in the same goroutine. The contexts are listed too,
 // for the active context's name.
 func (m *Model) containersDetect() tea.Cmd {
+	return m.containersDetectWithWatch(false)
+}
+
+func (m *Model) containersDetectWithWatch(force bool) tea.Cmd {
 	st := m.services
 	if st == nil || !st.visible || st.containerDetected || st.containerDetecting {
 		return nil
@@ -151,7 +246,7 @@ func (m *Model) containersDetect() tea.Cmd {
 			load = append(load, s)
 		}
 	}
-	if len(load) == 0 {
+	if len(load) == 0 && !force {
 		return nil
 	}
 	st.containerDetecting = true
@@ -250,7 +345,7 @@ func (m *Model) containersRefresh(section string) tea.Cmd {
 // containersLoadVisible finds the engine (first time) and lists every
 // open section.
 func (m *Model) containersLoadVisible() tea.Cmd {
-	cmds := []tea.Cmd{m.containersDetect()}
+	cmds := []tea.Cmd{m.containersDetectWithWatch(true)}
 	for _, s := range hostSectionOrder {
 		cmds = append(cmds, m.containersRefresh(s))
 	}
@@ -312,6 +407,12 @@ func (m *Model) onContainerHost(msg containerHostMsg) tea.Cmd {
 		}
 		st.touch()
 		var cmds []tea.Cmd
+		if st.containerEngine.Reachable && st.watchStop != nil {
+			st.stopWatch()
+		}
+		if st.containerEngine.Reachable {
+			cmds = append(cmds, m.startHostWatch())
+		}
 		for _, s := range engineSections {
 			if st.hostSectionVisible(s) && !containsString(msg.loaded, s) {
 				cmds = append(cmds, m.containersRefresh(s))

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"strings"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/activity"
@@ -76,7 +77,14 @@ func (m *Model) containersDemo(variant string) {
 	st.containerEngine = containers.Engine{Binary: "docker", Kind: "docker", Reachable: true,
 		Version: containers.Version{Version: "27.3.1"}}
 	compose := func(project, service string) map[string]string {
-		return map[string]string{"com.docker.compose.project": project, "com.docker.compose.service": service, "com.docker.compose.container-number": "1"}
+		workingDir, configFiles := st.root, "compose.yaml"
+		if project == "shop" {
+			workingDir = st.root + "/docs"
+			configFiles = "compose.yaml"
+		}
+		return map[string]string{"com.docker.compose.project": project, "com.docker.compose.service": service,
+			"com.docker.compose.container-number": "1", "com.docker.compose.project.working_dir": workingDir,
+			"com.docker.compose.project.config_files": configFiles}
 	}
 	st.containerRows = []containers.Container{
 		{ID: "9f3c2e1a", Names: []string{"termocode-postgres-1"}, Image: "postgres:16", State: "running", Status: "Up 2 hours (healthy)", Project: "termocode", Labels: compose("termocode", "postgres"), PortsText: "0.0.0.0:5432->5432/tcp"},
@@ -87,6 +95,12 @@ func (m *Model) containersDemo(variant string) {
 		{ID: "aabbccdd", Names: []string{"nginx"}, Image: "nginx:1.27", State: "running", Status: "Up 3 days", PortsText: "0.0.0.0:8081->80/tcp"},
 		{ID: "55667788", Names: []string{"builder"}, Image: "golang:1.23", State: "paused", Status: "Up 1 hour (Paused)"},
 		{ID: "11223344", Names: []string{"migrate"}, Image: "termocode-migrate", State: "exited", Status: "Exited (1) 2 hours ago"},
+	}
+	for i := range st.containerRows {
+		if st.containerRows[i].Project != "" {
+			st.containerRows[i].WorkingDir = st.containerRows[i].Labels["com.docker.compose.project.working_dir"]
+			st.containerRows[i].ConfigFiles = []string{st.containerRows[i].Labels["com.docker.compose.project.config_files"]}
+		}
 	}
 	st.imageRows = []containers.Image{
 		{ID: "sha256:0a1b2c3d4e5f", RepoTags: []string{"postgres:16"}, Size: "421MB"},
@@ -104,6 +118,29 @@ func (m *Model) containersDemo(variant string) {
 	st.collapsed[hostSection("images")] = false
 	st.collapsed[hostGroup("containers", "shop")] = true
 	st.cursor = 1 // postgres
+	switch variant {
+	case "remove":
+		for i, r := range st.rows() {
+			if r.kind == svcRowHostItem && r.host == hostContainer && r.hostID == "11223344" {
+				st.cursor = i
+				break
+			}
+		}
+	case "stop-remove":
+		for i, r := range st.rows() {
+			if r.kind == svcRowHostItem && r.host == hostContainer && r.hostID == "aabbccdd" {
+				st.cursor = i
+				break
+			}
+		}
+	case "compose-down":
+		for i, r := range st.rows() {
+			if r.kind == svcRowGroup && strings.HasPrefix(r.section, "grp/containers/") && r.name == "shop" {
+				st.cursor = i
+				break
+			}
+		}
+	}
 	switch variant {
 	case "down":
 		st.containerEngine.Reachable = false

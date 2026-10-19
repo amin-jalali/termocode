@@ -67,7 +67,24 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
-| Containers: Focus | `services-focus` |   |   |
+| Containers: Attach | `containers-attach` |   |   |
+| Containers: Copy ID | `containers-copy-id` |   |   |
+| Containers: Focus | `containers-focus` |   |   |
+| Containers: Follow Logs | `containers-logs` |   |   |
+| Containers: Follow Stats | `containers-stats` |   |   |
+| Containers: Inspect | `containers-inspect` |   |   |
+| Containers: Open Published Port | `containers-open-port` |   |   |
+| Containers: Open Shell | `containers-shell` |   |   |
+| Containers: Pause or Unpause Selected | `containers-pause` |   |   |
+| Containers: Refresh | `containers-refresh` |   |   |
+| Containers: Remove Project Containers… | `containers-compose-down` |   |   |
+| Containers: Remove Selected… | `containers-remove` |   |   |
+| Containers: Restart Project | `containers-compose-restart` |   |   |
+| Containers: Restart Selected | `containers-restart` |   |   |
+| Containers: Start Project | `containers-compose-up` |   |   |
+| Containers: Start Selected | `containers-start` |   |   |
+| Containers: Stop Project | `containers-compose-stop` |   |   |
+| Containers: Stop Selected | `containers-stop` |   |   |
 
 ## Copy
 
@@ -321,6 +338,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Services: Configure (services.json) | `services-configure` |   |   |
+| Services: Focus (Containers) | `services-focus` |   |   |
 | Services: Open Compose File | `services-open-compose` |   |   |
 | Services: Refresh | `services-refresh` |   |   |
 | Services: Restart Service... | `services-restart` |   |   |

@@ -5,23 +5,24 @@ import "time"
 
 // Container is a normalized row from an engine's container listing.
 type Container struct {
-	ID         string
-	Names      []string
-	Image      string
-	ImageID    string
-	Command    string
-	Created    time.Time
-	CreatedAt  string
-	State      string
-	Status     string
-	Ports      []Port
-	PortsText  string
-	Labels     map[string]string
-	Size       string
-	Networks   []string
-	Mounts     []string
-	Project    string
-	WorkingDir string
+	ID          string
+	Names       []string
+	Image       string
+	ImageID     string
+	Command     string
+	Created     time.Time
+	CreatedAt   string
+	State       string
+	Status      string
+	Ports       []Port
+	PortsText   string
+	Labels      map[string]string
+	Size        string
+	Networks    []string
+	Mounts      []string
+	Project     string
+	WorkingDir  string
+	ConfigFiles []string
 }
 
 // Port describes one published or exposed container port.
