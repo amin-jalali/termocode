@@ -8,7 +8,7 @@ type Dialect interface {
 	Limit(limit, offset int) string
 	ReadOnlyBegin() string
 	CatalogQueries() map[string]string
-	DDL(table string) string
+	DDL(table string) (string, []any)
 	Explain(sql string, analyze bool) string
 	CountSQL(table string) string
 }

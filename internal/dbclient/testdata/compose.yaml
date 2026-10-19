@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: termocode
+      POSTGRES_PASSWORD: termocode
+      POSTGRES_DB: termocode
+    ports:
+      - "54329:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U termocode -d termocode"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: termocode
+      MYSQL_USER: termocode
+      MYSQL_PASSWORD: termocode
+      MYSQL_DATABASE: termocode
+    ports:
+      - "33069:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ptermocode"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  mariadb:
+    image: mariadb:11.8
+    environment:
+      MARIADB_ROOT_PASSWORD: termocode
+      MARIADB_USER: termocode
+      MARIADB_PASSWORD: termocode
+      MARIADB_DATABASE: termocode
+    ports:
+      - "33079:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 2s
+      timeout: 2s
+      retries: 30

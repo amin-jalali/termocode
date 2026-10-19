@@ -7,12 +7,15 @@ import (
 )
 
 var (
-	urlCredential    = regexp.MustCompile(`(?i)([a-z][a-z0-9+.-]*://[^@\s/?#]*:)(.*)(@[^/\s?#]+)`)
-	dsnCredential    = regexp.MustCompile(`(?i)([^\s:/@]+:)(.*)(@(?:tcp|unix)\()`)
-	assignmentSecret = regexp.MustCompile(`(?i)([a-z0-9_]*(?:password|passwd|passphrase|pwd|pass|secret|token))([\t ]*[=:][\t ]*)('[^\n]*'|"[^\n]*"|[^\s,;&}]*)`)
-	jsonSecret       = regexp.MustCompile(`(?i)("(?:password|passwd|passphrase|pwd|secret|token)"\s*:\s*")([^"]*)(")`)
-	sqlSecret        = regexp.MustCompile(`(?i)\b(password|identified\s+by)(\s+)('(?:''|[^'])*'|"(?:""|[^"])*"|[^\s;,]+)`)
-	redisCommand     = regexp.MustCompile(`(?i)\b(CONFIG\s+SET\s+requirepass|AUTH2\s+\S+)\s+\S+`)
+	urlCredential      = regexp.MustCompile(`(?i)([a-z][a-z0-9+.-]*://[^@\s/?#]*:)([^@\s]*)(@[^/\s?#]+)`)
+	dsnCredential      = regexp.MustCompile(`(?i)([^\s:/@]+:)([^\n]*)(@(?:tcp6?|unix)\()`)
+	userPathCredential = regexp.MustCompile(`(?i)([^\s:/@]+:)([^@\s]+)(@/)`)
+	assignmentSecret   = regexp.MustCompile(`(?i)([a-z0-9_]*(?:password|passwd|passphrase|pwd|pass|secret|token|api[_-]?key))([\t ]*[=:][\t ]*)('[^\n]*'|"(?:\\.|[^"\\])*"|[^\s,;&}]*)`)
+	jsonSecret         = regexp.MustCompile(`(?i)("[a-z0-9_]*(?:password|passwd|passphrase|pwd|secret|token|api[_-]?key)"\s*:\s*")(?:\\.|[^"\\])*(")`)
+	sqlSecret          = regexp.MustCompile(`(?i)\b(password|identified\s+by)(\s+)('(?:''|[^'])*'|"(?:""|[^"])*"|[^\s;,]+)`)
+	redisCommand       = regexp.MustCompile(`(?i)\b(CONFIG\s+SET\s+requirepass|AUTH2\s+\S+|requirepass|masterauth)\s+\S+`)
+	bearerSecret       = regexp.MustCompile(`(?i)(authorization\s*:\s*bearer\s+)\S+`)
+	shortPassword      = regexp.MustCompile(`(?i)(^|\s)-p([^\s]+)`)
 )
 
 func Redact(s string) string {
@@ -25,11 +28,19 @@ func Redact(s string) string {
 	}
 	s = urlCredential.ReplaceAllString(s, "$1[redacted]$3")
 	s = dsnCredential.ReplaceAllString(s, "$1[redacted]$3")
-	s = jsonSecret.ReplaceAllString(s, "$1[redacted]$3")
+	s = userPathCredential.ReplaceAllString(s, "$1[redacted]$3")
+	s = jsonSecret.ReplaceAllString(s, "$1[redacted]$2")
 	s = redisCommand.ReplaceAllString(s, "$1 [redacted]")
+	s = bearerSecret.ReplaceAllString(s, "$1[redacted]")
+	s = shortPassword.ReplaceAllString(s, "${1}-p[redacted]")
 	s = assignmentSecret.ReplaceAllStringFunc(s, func(match string) string {
 		loc := assignmentSecret.FindStringSubmatchIndex(match)
 		if loc == nil {
+			return match
+		}
+		name := strings.ToLower(match[loc[2]:loc[3]])
+		value := strings.Trim(strings.ToLower(match[loc[6]:loc[7]]), `\"')`)
+		if strings.Contains(name, "password") && (value == "yes" || value == "no") && strings.Contains(strings.ToLower(s), "using password:") {
 			return match
 		}
 		return match[:loc[6]] + "[redacted]"
@@ -40,6 +51,9 @@ func Redact(s string) string {
 			return match
 		}
 		name, sep, value := match[loc[2]:loc[3]], match[loc[4]:loc[5]], match[loc[6]:loc[7]]
+		if strings.EqualFold(name, "password") && strings.EqualFold(value, "authentication") {
+			return match
+		}
 		if len(value) >= 2 && (value[0] == '\'' || value[0] == '"') {
 			return name + sep + string(value[0]) + "[redacted]" + string(value[0])
 		}

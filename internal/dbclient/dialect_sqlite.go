@@ -21,9 +21,9 @@ func (SQLiteDialect) ReadOnlyBegin() string { return "BEGIN" }
 func (SQLiteDialect) CatalogQueries() map[string]string {
 	return map[string]string{"objects": `SELECT name, type FROM sqlite_master WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY name`}
 }
-func (d SQLiteDialect) DDL(table string) string {
+func (d SQLiteDialect) DDL(table string) (string, []any) {
 	name := strings.ReplaceAll(table, "'", "''")
-	return "SELECT sql FROM sqlite_master WHERE (name = '" + name + "' OR tbl_name = '" + name + "') AND sql IS NOT NULL ORDER BY CASE type WHEN 'table' THEN 0 WHEN 'view' THEN 0 ELSE 1 END, name"
+	return "SELECT sql FROM sqlite_master WHERE (name = '" + name + "' OR tbl_name = '" + name + "') AND sql IS NOT NULL ORDER BY CASE type WHEN 'table' THEN 0 WHEN 'view' THEN 0 ELSE 1 END, name", nil
 }
 func (SQLiteDialect) Explain(sql string, _ bool) string { return "EXPLAIN QUERY PLAN " + sql }
 func (d SQLiteDialect) CountSQL(table string) string {
@@ -95,7 +95,8 @@ func (s *SQLiteSession) Introspect(ctx context.Context, req IntrospectionRequest
 			out.ForeignKeys = append(out.ForeignKeys, SchemaForeignKey{Column: row[3].Text, RefTable: row[2].Text, RefColumn: row[4].Text})
 		}
 	}
-	ddl := s.Run(ctx, (SQLiteDialect{}).DDL(req.Object), RunOptions{})
+	ddlSQL, _ := (SQLiteDialect{}).DDL(req.Object)
+	ddl := s.Run(ctx, ddlSQL, RunOptions{})
 	if ddl.Err != nil {
 		return IntrospectionResult{}, ddl.Err
 	}

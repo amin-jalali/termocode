@@ -94,6 +94,22 @@ func TestClassifySideEffectDenyList(t *testing.T) {
 	}
 }
 
+func TestMySQLClassifyRefusesIntoAndExecutableComments(t *testing.T) {
+	for _, query := range []string{
+		"TABLE ro_t INTO OUTFILE '/tmp/x'",
+		"VALUES (1) INTO @x",
+		"SELECT 1 INTO DUMPFILE '/tmp/x'",
+		"SELECT 1 /*!50000 INTO OUTFILE '/tmp/x' */",
+		"SELECT 1 /*! INTO OUTFILE '/tmp/x' */",
+		"SELECT 1 /*M! INTO OUTFILE '/tmp/x' */",
+	} {
+		got, statements := Classify(query, "mysql")
+		if got != KindWrite || len(statements) != 1 || statements[0].Kind != KindWrite {
+			t.Errorf("Classify(%q, mysql) = %s, %+v; want write", query, got, statements)
+		}
+	}
+}
+
 func TestRedactDialectBypassProbes(t *testing.T) {
 	cases := []struct{ input, secret string }{
 		{"PGPASSWORD=s3cret", "s3cret"}, {"DB_PASSWORD=s3cret", "s3cret"},
@@ -440,6 +456,26 @@ func TestRedactColonForms(t *testing.T) {
 	for _, in := range []string{"Password: s3cret", "password:s3cret", "PASSWORD : s3cret", "passphrase=s3cret", "Passphrase: s3cret", "db_token : s3cret"} {
 		if got := Redact(in); strings.Contains(got, "s3cret") {
 			t.Errorf("Redact(%q) leaked: %q", in, got)
+		}
+	}
+}
+
+func TestRedactSecurityReviewCases(t *testing.T) {
+	for _, tc := range []struct{ input, secret string }{
+		{`{"db_password":"secret"}`, "secret"},
+		{`{"password":"a\"b"}`, `a\"b`},
+		{"user:secret@/database", "secret"},
+		{"user:secret@tcp6([::1]:3306)/database", "secret"},
+		{"requirepass secret", "secret"},
+		{"masterauth secret", "secret"},
+		{"Authorization: Bearer secret", "secret"},
+		{"mysql -u user -psecret", "secret"},
+		{"api_key=secret", "secret"},
+		{"postgres://u:first@one/db postgres://u:second@two/db", "first"},
+		{"postgres://u:first@one/db postgres://u:second@two/db", "second"},
+	} {
+		if got := Redact(tc.input); strings.Contains(got, tc.secret) {
+			t.Errorf("Redact(%q) leaked %q: %q", tc.input, tc.secret, got)
 		}
 	}
 }

@@ -18,6 +18,8 @@ type Session interface {
 
 type RunOptions struct {
 	MaxRows int
+	// Args are bound to the statement's placeholders ($1 or ?).
+	Args []any
 }
 
 type IntrospectionRequest struct {
@@ -37,6 +39,7 @@ type IntrospectionResult struct {
 	DDL         string
 	Keys        []string
 	Routines    []string
+	Sequences   []string
 }
 
 type SchemaObject struct {

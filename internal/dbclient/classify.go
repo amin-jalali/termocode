@@ -53,6 +53,15 @@ func Classify(sql string, dialectName string) (Kind, []Statement) {
 	if len(statements) == 0 {
 		return KindUnknown, statements
 	}
+	// MySQL and MariaDB executable comments are part of the SQL program. The
+	// tokenizer strips comments, so never let a read-only caller classify them
+	// after that stripping has hidden executable tokens.
+	if dialect == DialectMySQL && hasExecComment(sql) {
+		for i := range statements {
+			statements[i].Kind = KindWrite
+		}
+		return KindWrite, statements
+	}
 	if dialect == "" && (strings.Contains(sql, "#") || hasExecComment(sql) || strings.Contains(sql, "\\'") || hasAmbiguousDash(sql)) {
 		return KindWrite, statements
 	}
@@ -106,6 +115,10 @@ func classifyStatement(sql string, dialect SQLDialect) Statement {
 	switch first {
 	case "SELECT", "SHOW", "DESCRIBE", "DESC", "VALUES", "TABLE", "EXPLAIN", "PRAGMA":
 		st.Kind = KindRead
+	case "ANALYZE":
+		if len(words) > 1 && (words[1] == "SELECT" || words[1] == "WITH") {
+			st.Kind = KindRead
+		}
 	case "WITH":
 		st.Kind = classifyWith(words)
 	case "INSERT", "UPDATE", "DELETE", "MERGE", "REPLACE", "COPY", "CALL", "DO", "LOCK":
@@ -133,7 +146,7 @@ func classifyStatement(sql string, dialect SQLDialect) Statement {
 	if dialect == DialectSQLite && sqliteUnsafeWords(words) {
 		st.Kind = KindWrite
 	}
-	if first == "SELECT" || first == "WITH" {
+	if first == "SELECT" || first == "WITH" || first == "TABLE" || first == "VALUES" {
 		for i, w := range words {
 			if w == "INTO" {
 				st.Kind = KindWrite
@@ -142,14 +155,29 @@ func classifyStatement(sql string, dialect SQLDialect) Statement {
 				st.Kind = KindWrite
 			}
 		}
+		if dialect == DialectMySQL && containsSequence(words, "INTO") {
+			st.Kind = KindWrite
+		}
 		for i, w := range words {
 			if i+1 < len(words) && words[i+1] == "(" && (sideEffectFunction(w) || sideEffectPrefix(w)) {
 				st.Kind = KindWrite
 			}
 		}
 	}
-	if first == "COPY" && containsSequence(words, "PROGRAM") {
+	// COPY can write to server files or execute a server-side program; refusing
+	// all COPY forms in read-only sessions also prevents superuser escapes.
+	if first == "COPY" {
 		st.Kind = KindWrite
+	}
+	if first == "PREPARE" || first == "EXECUTE" || first == "DEALLOCATE" || first == "SET" || first == "RESET" || first == "DISCARD" || first == "LOCK" || first == "UNLOCK" {
+		st.Kind = KindWrite
+	}
+	if first == "SELECT" || first == "WITH" {
+		for _, w := range words {
+			if w == "GET_LOCK" || w == "RELEASE_LOCK" || w == "RELEASE_ALL_LOCKS" || w == "IS_FREE_LOCK" || w == "IS_USED_LOCK" {
+				st.Kind = KindWrite
+			}
+		}
 	}
 	if first == "SELECT" {
 		if m := simpleSelectTable.FindStringSubmatch(stripSQLForTable(sql, dialect)); len(m) > 1 {
@@ -259,18 +287,20 @@ var sideEffectFunctions = map[string]bool{
 	"LO_EXPORT": true, "PG_ADVISORY_LOCK": true, "PG_ADVISORY_XACT_LOCK": true,
 	"EDIT": true, "WRITEFILE": true, "READFILE": true, "FSDIR": true, "FTS3_TOKENIZER": true, "LOAD_EXTENSION": true,
 	"ZIPFILE": true, "LSMODE": true,
+	"TXID_CURRENT": true, "PG_CURRENT_XACT_ID": true, "PG_LOGICAL_EMIT_MESSAGE": true,
+	"BENCHMARK": true, "LOAD_FILE": true,
 }
 
 func sideEffectFunction(word string) bool { return sideEffectFunctions[word] }
 
 func sideEffectPrefix(word string) bool {
-	for _, prefix := range []string{"DBLINK", "PG_ADVISORY_LOCK", "PG_TRY_ADVISORY_LOCK", "PG_SLEEP", "LO_"} {
+	for _, prefix := range []string{"DBLINK", "PG_ADVISORY_", "PG_TRY_ADVISORY_", "PG_SLEEP", "LO_"} {
 		if strings.HasPrefix(word, prefix) {
 			return true
 		}
 	}
 	switch word {
-	case "PG_RELOAD_CONF", "PG_ROTATE_LOGFILE", "PG_SWITCH_WAL", "PG_CREATE_RESTORE_POINT", "NEXTVAL", "SETVAL", "SET_CONFIG", "PG_READ_FILE", "PG_READ_BINARY_FILE", "PG_LS_DIR":
+	case "PG_RELOAD_CONF", "PG_ROTATE_LOGFILE", "PG_SWITCH_WAL", "PG_CREATE_RESTORE_POINT", "NEXTVAL", "SETVAL", "SET_CONFIG", "PG_READ_FILE", "PG_READ_BINARY_FILE", "PG_LS_DIR", "LOAD_FILE", "TXID_CURRENT", "PG_CURRENT_XACT_ID", "PG_LOGICAL_EMIT_MESSAGE", "BENCHMARK":
 		return true
 	}
 	return false
