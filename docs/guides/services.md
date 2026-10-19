@@ -1,9 +1,26 @@
-# Dev services (Docker Compose and local commands)
+# Containers and project services
 
-The **Services** view lists the services your project needs while you
-work: the database, the cache, the mail catcher, your own dev server. Start
-one with a key, read its logs in a terminal tab, and let the AI chat check
-them.
+The **Containers** view has your project's services on top (the
+**PROJECT** section) and, below, what runs on this machine: **CONTAINERS**,
+**IMAGES**, **REGISTRIES**, **NETWORKS**, **VOLUMES**, **CONTEXTS** and
+**HELP**. The machine part is read-only for now.
+
+- **Space** (or a click) folds and opens a section. A section loads when
+  you open it, and only while the view is on screen.
+- **m**, or the **⋯** on the title row, picks which sections show. The
+  choice is the same in every workspace (`containers_sections` in
+  `config.json`); folded sections are kept per workspace. The menu also
+  has **Refresh all**.
+- **R** refreshes everything.
+- CONTAINERS groups containers by compose project (this folder's project
+  first, marked `·`, then `other` for the rest) and shows the short service
+  name, for example `postgres-1`. Its first line names the engine and the
+  active context, for example `docker 27 · default`.
+- No Docker or Podman? CONTAINERS says so; the project services still work.
+
+The PROJECT section lists services your project needs while you work: the
+database, the cache, the mail catcher, your own dev server. Start one with a
+key, read its logs in a terminal tab, and let the AI chat check them.
 
 termocode does not install anything. It drives what the project already
 declares:
@@ -14,24 +31,25 @@ declares:
 | `.termocode/services.json` | local commands (and compose file / profiles) | your shell line in a terminal tab |
 | `Procfile`, `Procfile.dev` | local commands | `name: command` in a terminal tab |
 
-Open the view with the **☷** icon in the activity bar, or **Services: Focus
-Services** in the palette. Nothing runs before you open it.
+Open the view with the **☷** icon in the activity bar, or **Containers: Focus**
+in the palette. The existing `services-*` palette commands remain available
+for the PROJECT section. Nothing runs before you open it.
 
 ## The view
 
 ```
-SERVICES · TERMOCODE
+CONTAINERS · TERMOCODE
 compose · termocode       3/4 up
 
 ▸ Start all  ▪ Stop all        ↻
 
-COMPOSE ─────────────────────── 4
+▾ PROJECT ───────────────────── 4
 ◉ postgres     :5432    2h 14m
 ◉ redis        :6379    2h 14m
 ◌ api          :8080       12s
 ◦ mailhog      :8025
 
-LOCAL ───────────────────────── 1
+▾ LOCAL ─────────────────────── 1
 ◉ web          :5173     1h 2m
 ```
 
@@ -54,16 +72,17 @@ explain the row under the cursor (image, ports, Docker's status text).
 | Key | Action |
 |---|---|
 | `j` `k` `g` `G` | move |
-| `Enter` / `l` | logs: open (or show) the `logs: <name>` terminal tab; on COMPOSE, all services |
+| `Enter` / `l` | logs: open (or show) the `logs: <name>` terminal tab; on PROJECT, all services |
 | `s` | start (`docker compose up -d <name>` in the **services: up** tab, so pulls show) |
 | `x` | stop (`docker compose stop`, containers and volumes stay) |
 | `r` | restart |
 | `a` / `A` | start all / stop all |
-| `R` | refresh now |
+| `R` | refresh now (the project and every open host section) |
+| `m` | choose the sections (the **⋯** menu) |
 | `e` | shell in the container (`docker compose exec <name> sh`) |
 | `o` | open the file the service comes from (at its line) |
 | `y` | copy the address (`localhost:5432`) |
-| `Space` | fold a section |
+| `Space` | fold / open the section or group under the cursor |
 
 Right-click a row for the same actions, plus **Recreate** and **Down
 (remove containers)**, which asks first. Double-click opens the logs.
@@ -152,6 +171,6 @@ computer: `ssh -L 5432:localhost:5432 <host>`. termocode opens no tunnels.
 
 ## Termux (Android)
 
-No Docker: the COMPOSE section does not show, and nothing asks you to
+No Docker: the compose part of PROJECT does not show, and nothing asks you to
 install it. Local commands work. Android does not let apps listen on ports
 below 1024; the exit toast says so.

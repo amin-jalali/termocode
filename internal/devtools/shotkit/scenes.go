@@ -94,6 +94,14 @@ func ServicesVariant(name, variant string) Scene {
 	return Scene{Name: name, Steps: WithEditor(Act("svcdemo:"+variant), Pause(400*time.Millisecond))}
 }
 
+func Containers() Scene {
+	return Scene{Name: "containers", Steps: WithEditor(Act("contdemo"), Pause(400*time.Millisecond))}
+}
+
+func ContainersVariant(name, variant string) Scene {
+	return Scene{Name: name, Steps: WithEditor(Act("contdemo:"+variant), Pause(400*time.Millisecond))}
+}
+
 // AIChatAnswer is the AI chat panel with the canned demo conversation (no
 // network).
 func AIChatAnswer() Scene {

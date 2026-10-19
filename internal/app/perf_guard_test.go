@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
 
+	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/explorer"
 	"github.com/amin-jalali/termocode/internal/nvim"
@@ -172,6 +174,33 @@ func TestPerfGuardExplorerViewUnchanged(t *testing.T) {
 		t.Errorf("explorer View (unchanged): %.0f allocs, limit %d", n, maxAllocsExplorerView)
 	} else {
 		t.Logf("explorer View (unchanged): %.0f allocs (limit %d)", n, maxAllocsExplorerView)
+	}
+}
+
+func TestPerfGuardHiddenContainersDoNotScheduleEngineWork(t *testing.T) {
+	st := newServicesState()
+	ctx, cancel := context.WithCancel(context.Background())
+	st.visible = true
+	st.containerCancel = cancel
+	st.containerCancels["containers"] = cancel
+	m := Model{services: st, showExp: true}
+	m.activity.SetActive(activity.ViewFiles)
+	if cmd := m.servicesSyncWatch(); cmd != nil {
+		t.Fatal("hiding Containers view scheduled work")
+	}
+	select {
+	case <-ctx.Done():
+	default:
+		t.Fatal("hiding the view did not cancel its engine work")
+	}
+	if cmd := m.containersDetect(); cmd != nil {
+		t.Fatal("hidden Containers view scheduled engine detection")
+	}
+	if cmd := m.containersRefresh("containers"); cmd != nil {
+		t.Fatal("hidden Containers view scheduled a section query")
+	}
+	if st.containerDetecting || len(st.containerCancels) != 0 {
+		t.Fatalf("hidden view retained work: detecting=%v cancels=%d", st.containerDetecting, len(st.containerCancels))
 	}
 }
 

@@ -80,7 +80,7 @@ func svcGoto(d *Driver, name string) {
 func TestServicesViewActions(t *testing.T) {
 	d, f := svcDriver(t, nil)
 	s := screen(d)
-	for _, want := range []string{"SERVICES", "COMPOSE", "postgres", ":5432", "exit 1", "2/4 up"} {
+	for _, want := range []string{"CONTAINERS", "PROJECT", "postgres", ":5432", "exit 1", "2/4 up"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("no %q on screen:\n%s", want, s)
 		}

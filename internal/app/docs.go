@@ -250,6 +250,8 @@ type SettingEntry struct {
 // fileOnlySettings are config.json keys with no row in the Settings modal.
 // They are set by other UI (named in the description) or by hand.
 var fileOnlySettings = []SettingEntry{
+	{Key: "containers_sections", Type: "string[]", Default: "all", Category: "Containers (file only)",
+		Description: "Sections shown by the Containers view, across workspaces. The Containers menu writes this list; collapse state is kept in the workspace session."},
 	{Key: "ai_inline_model", Type: "string", Default: "(provider default)", Category: "AI (file only)",
 		Description: "Model for inline ghost-text completions. Empty uses a fast model of the provider (for example Claude Haiku or gpt-4.1-mini)."},
 	{Key: "ai_auto_approve", Type: "string[]", Default: "[]", Category: "AI (file only)",

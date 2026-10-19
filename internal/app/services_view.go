@@ -48,19 +48,38 @@ type svcRowKind int
 const (
 	svcRowSection svcRowKind = iota
 	svcRowService
-	svcRowNote // a problem line (red)
-	svcRowHint // what to do about it
-	svcRowCode // a command to copy (y)
+	svcRowNote     // a problem line (red)
+	svcRowHint     // what to do about it
+	svcRowCode     // a command to copy (y)
+	svcRowGroup    // a foldable group in a host section (a compose project, an image repo)
+	svcRowHostItem // one host object: container, image tag, network, …
 )
 
 type svcRow struct {
 	kind    svcRowKind
-	section string // svcSecCompose / svcSecLocal
-	name    string // service rows
+	section string // svcSecCompose / svcSecLocal / host/<id> / grp/<id>/<name>
+	name    string // service rows; group and host rows: the display name
 	text    string // note / hint / code rows
+	hostID  string // host rows: the object's id (container id, image id, name)
+
+	// host rows and groups
+	host    hostKind
+	idx     int    // index into the section's data slice
+	tag     string // image rows: the tag
+	depth   int    // indent level (2 cells each)
+	count   string // group rows: "2/2", "3"
+	current bool   // group of this workspace's project / the active context
 }
 
-func (r svcRow) selectable() bool { return r.kind == svcRowSection || r.kind == svcRowService }
+func hostSection(id string) string          { return "host/" + id }
+func hostGroup(section, name string) string { return "grp/" + section + "/" + name }
+
+func (r svcRow) selectable() bool {
+	return r.kind == svcRowSection || r.kind == svcRowService || r.kind == svcRowGroup || r.kind == svcRowHostItem
+}
+
+// foldable: Space / click folds it.
+func (r svcRow) foldable() bool { return r.kind == svcRowSection || r.kind == svcRowGroup }
 
 // rows flattens the view: sections, problem notes, services.
 func (st *servicesState) rows() []svcRow {
@@ -68,7 +87,18 @@ func (st *servicesState) rows() []svcRow {
 		return nil
 	}
 	var out []svcRow
-	if len(st.det.ComposeFiles) > 0 {
+	projectVisible := true
+	if shown, ok := st.sections["project"]; ok {
+		projectVisible = shown
+	}
+	if projectVisible && st.det.Empty() {
+		out = append(out, svcRow{kind: svcRowSection, section: svcSecCompose})
+		if !st.collapsed[svcSecCompose] {
+			out = append(out, svcRow{kind: svcRowHint, section: svcSecCompose, text: "No services yet"},
+				svcRow{kind: svcRowHint, section: svcSecCompose, text: "o adds services.json"})
+		}
+	}
+	if projectVisible && len(st.det.ComposeFiles) > 0 {
 		out = append(out, svcRow{kind: svcRowSection, section: svcSecCompose})
 		if !st.collapsed[svcSecCompose] {
 			out = append(out, st.problemRows()...)
@@ -80,7 +110,7 @@ func (st *servicesState) rows() []svcRow {
 			}
 		}
 	}
-	if len(st.local) > 0 || st.det.ConfigErr != nil {
+	if projectVisible && (len(st.local) > 0 || st.det.ConfigErr != nil) {
 		out = append(out, svcRow{kind: svcRowSection, section: svcSecLocal})
 		if !st.collapsed[svcSecLocal] {
 			if err := st.det.ConfigErr; err != nil {
@@ -92,6 +122,7 @@ func (st *servicesState) rows() []svcRow {
 			}
 		}
 	}
+	out = append(out, st.hostRows()...)
 	return out
 }
 
@@ -332,9 +363,15 @@ func renderServiceRow(svc services.Service, s services.Status, active, focused b
 	return clampSidebarRow(sb.String(), used, w, row)
 }
 
+// showEmptyCard: the project has no services and no host section can
+// show anything, so the whole view is the "No services" card (key o).
+func (st *servicesState) showEmptyCard() bool {
+	return st.loaded && st.det.Empty() && (!st.hostPartShown() || st.engineAbsent())
+}
+
 // renderServiceSection is a section header: "COMPOSE ──── 4" (only the
 // count is bold: one bold element per region).
-func renderServiceSection(label string, n int, collapsed, active, focused bool, w int) string {
+func renderServiceSection(label, count string, collapsed, active, focused bool, w int) string {
 	bg := gitSelBg(active, focused)
 	row := lipgloss.NewStyle().Background(bg)
 	fg := func(c theme.Color256) lipgloss.Style {
@@ -347,15 +384,16 @@ func renderServiceSection(label string, n int, collapsed, active, focused bool, 
 	var sb strings.Builder
 	sb.WriteString(gitLead(active, focused, bg))
 	used := 1
+	foldGlyph := theme.GlyphExpand
 	if collapsed {
-		sb.WriteString(fg(theme.TextDim).Render(theme.GlyphExpand.String()))
-		sb.WriteString(row.Render(" "))
-		used += 2
+		foldGlyph = theme.GlyphTreeCollapsed
 	}
+	sb.WriteString(fg(theme.TextDim).Render(foldGlyph.String()))
+	sb.WriteString(row.Render(" "))
+	used += 2
 	sb.WriteString(fg(labelCol).Render(label))
 	sb.WriteString(row.Render(" "))
 	used += runewidth.StringWidth(label) + 1
-	count := strconv.Itoa(n)
 	if rule := w - used - len(count) - 2; rule > 0 {
 		sb.WriteString(fg(theme.BorderSubtle).Render(strings.Repeat("─", rule)))
 		used += rule
@@ -408,6 +446,22 @@ func svcActionLayout(w int) []svcAction {
 	return out
 }
 
+// actionLayout is the action bar of this state: an empty project has no
+// Start all / Stop all (nothing to start), only refresh.
+func (st *servicesState) actionLayout(w int) []svcAction {
+	all := svcActionLayout(w)
+	if !st.det.Empty() {
+		return all
+	}
+	var out []svcAction
+	for _, a := range all {
+		if a.id == "refresh" {
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
 // svcFooter is the two footer lines for the cursor row (plan §2.7).
 func (m Model) svcFooter() (string, string) {
 	st := m.services
@@ -415,7 +469,13 @@ func (m Model) svcFooter() (string, string) {
 	if !ok {
 		return "", ""
 	}
+	if r.kind == svcRowGroup || r.kind == svcRowHostItem || (r.kind == svcRowSection && strings.HasPrefix(r.section, "host/")) {
+		return st.hostFooter(r)
+	}
 	if r.kind == svcRowSection {
+		if r.section == svcSecCompose && st.det.Empty() {
+			return "Add compose.yaml, Procfile", "o adds services.json"
+		}
 		if r.section == svcSecCompose {
 			l1 := strings.Join(st.det.ComposeFiles, ", ")
 			if st.project != "" {
@@ -538,20 +598,34 @@ func svcStatusLine(svc services.Service, s services.Status) string {
 // bar labels and the service rows.
 func (m Model) servicesHits(w int) []hitTarget {
 	st := m.services
-	if st == nil || !st.loaded || st.det.Empty() {
+	if st == nil {
 		return nil
 	}
-	var out []hitTarget
-	for _, a := range svcActionLayout(w) {
+	out := []hitTarget{{ID: "cont:more", Label: theme.GlyphMore.String(), X: w - 1, Y: 0, W: 1, H: 1}}
+	if !st.loaded {
+		return out
+	}
+	if st.showEmptyCard() {
+		return out
+	}
+	for _, a := range st.actionLayout(w) {
 		out = append(out, hitTarget{ID: "svc:btn:" + a.id, Label: a.label, X: a.start, Y: svcActionRow, W: a.end - a.start, H: 1})
 	}
 	rows := st.rows()
 	for i, idx := range svcBodyLines(rows, st.cursor, svcBodyH(m.h)) {
-		if idx < 0 || rows[idx].kind != svcRowService {
+		if idx < 0 {
 			continue
 		}
 		r := rows[idx]
-		out = append(out, hitTarget{ID: "svc:row:" + svcKey(r.section, r.name), Label: r.name, X: 0, Y: svcListTop + i, W: w, H: 1})
+		if r.kind == svcRowService {
+			out = append(out, hitTarget{ID: "svc:row:" + svcKey(r.section, r.name), Label: r.name, X: 0, Y: svcListTop + i, W: w, H: 1})
+		} else if r.kind == svcRowHostItem {
+			out = append(out, hitTarget{ID: "cont:row:" + strings.TrimPrefix(r.section, "host/") + "/" + r.hostID, Label: r.name, X: 0, Y: svcListTop + i, W: w, H: 1})
+		} else if r.kind == svcRowGroup {
+			out = append(out, hitTarget{ID: "cont:grp:" + strings.TrimPrefix(r.section, "grp/"), Label: r.name, X: 0, Y: svcListTop + i, W: w, H: 1})
+		} else if r.kind == svcRowSection && strings.HasPrefix(r.section, "host/") {
+			out = append(out, hitTarget{ID: "cont:sec:" + strings.TrimPrefix(r.section, "host/"), Label: hostSectionTitle(strings.TrimPrefix(r.section, "host/")), X: 0, Y: svcListTop + i, W: w, H: 1})
+		}
 	}
 	return out
 }
@@ -562,12 +636,13 @@ func (m Model) servicesHits(w int) []hitTarget {
 func svcBodyH(h int) int { return max(h-svcListTop-svcFooterRows, 1) }
 
 // svcBodyLines maps the visible list lines to row indexes, scrolled so
-// the cursor shows; -1 is the blank line before a second section.
+// the cursor shows; -1 is the blank line before a section header that
+// follows an open section (folded headers stack without blanks).
 func svcBodyLines(rows []svcRow, cursor, bodyH int) []int {
 	var all []int
 	pos := 0
 	for i, r := range rows {
-		if r.kind == svcRowSection && i > 0 {
+		if r.kind == svcRowSection && i > 0 && rows[i-1].kind != svcRowSection {
 			all = append(all, -1)
 		}
 		if i == cursor {
@@ -614,7 +689,7 @@ func (m Model) renderServicesSidebarRaw(w, h int, focused bool, now time.Time, h
 	fill := func() string { return theme.Bg(theme.BgSidebar).Render(strings.Repeat(" ", max(w, 0))) }
 	muted := func(s string) string { return theme.FgBg(theme.TextMuted, theme.BgSidebar).Render(s) }
 	lines := []string{
-		sidebarTitle("SERVICES", w, focused, projectName()),
+		containersSidebarTitle(w, focused),
 		theme.PaneHairline(w, theme.BgSidebar, focused),
 	}
 	if !st.loaded {
@@ -624,9 +699,13 @@ func (m Model) renderServicesSidebarRaw(w, h int, focused bool, now time.Time, h
 		}
 		return strings.Join(lines[:h], "\n")
 	}
-	if st.det.Empty() {
-		lines = append(lines, renderEmptyState(w, h-2, theme.BgSidebar, emptyState{Glyph: theme.IconServices,
-			Title: "No services", Hint: "Add compose.yaml, a Procfile or .termocode/services.json", Key: "o"})...)
+	if st.showEmptyCard() {
+		hint := "Add compose.yaml, a Procfile or .termocode/services.json"
+		if st.engineAbsent() && st.hostPartShown() {
+			hint += ". Install Docker or Podman to see containers."
+		}
+		lines = append(lines, renderEmptyState(w, h-2, theme.BgSidebar, emptyState{Glyph: theme.IconContainers,
+			Title: "No services", Hint: hint, Key: "o"})...)
 		return strings.Join(lines[:h], "\n")
 	}
 	// Summary: backend · project, then "3/4 up" on the right.
@@ -640,6 +719,9 @@ func (m Model) renderServicesSidebarRaw(w, h int, focused bool, now time.Time, h
 		}
 		up, total, _ := st.counts()
 		right := fmt.Sprintf("%d/%d up", up, total)
+		if st.det.Empty() {
+			left, right = "No compose.yaml, Procfile", ""
+		}
 		if st.stale {
 			right = "? " + right
 		}
@@ -656,7 +738,7 @@ func (m Model) renderServicesSidebarRaw(w, h int, focused bool, now time.Time, h
 	{
 		var b strings.Builder
 		col := 0
-		for _, a := range svcActionLayout(w) {
+		for _, a := range st.actionLayout(w) {
 			b.WriteString(testsFill(a.start - col))
 			st := theme.FgBg(theme.TextSecondary, theme.BgSidebar)
 			if hy == svcActionRow && hx >= a.start && hx < a.end {
@@ -679,14 +761,25 @@ func (m Model) renderServicesSidebarRaw(w, h int, focused bool, now time.Time, h
 		var line string
 		switch r.kind {
 		case svcRowSection:
-			label, n := "COMPOSE", len(st.compose)
+			if strings.HasPrefix(r.section, "host/") {
+				sec := strings.TrimPrefix(r.section, "host/")
+				line = renderServiceSection(hostSectionTitle(sec), st.hostSectionCount(sec), st.collapsed[r.section], active, focused, w)
+				break
+			}
+			// PROJECT is the old COMPOSE header: it counts the compose
+			// services; LOCAL counts its own.
+			label, n := "PROJECT", len(st.compose)
 			if r.section == svcSecLocal {
 				label, n = "LOCAL", len(st.local)
 			}
-			line = renderServiceSection(label, n, st.collapsed[r.section], active, focused, w)
+			line = renderServiceSection(label, strconv.Itoa(n), st.collapsed[r.section], active, focused, w)
+		case svcRowGroup:
+			line = renderHostGroup(r, st.collapsed[r.section], active, focused, w)
 		case svcRowService:
 			svc, _ := st.findService(r.section, r.name)
 			line = renderServiceRow(svc, st.statusOf(r.section, r.name), active, focused, w, now)
+		case svcRowHostItem:
+			line = st.renderHostItem(r, active, focused, w)
 		default:
 			line = renderServiceNote(r, w)
 		}
@@ -712,4 +805,15 @@ func (m Model) renderServicesSidebarRaw(w, h int, focused bool, now time.Time, h
 		lines = append(lines, fill())
 	}
 	return strings.Join(lines[:h], "\n")
+}
+
+func containersSidebarTitle(w int, focused bool) string {
+	if w <= 0 {
+		return ""
+	}
+	if w == 1 {
+		return theme.Bg(theme.BgSidebar).Render("⋯")
+	}
+	title := sidebarTitle("CONTAINERS", w-2, focused, projectName())
+	return title + theme.Bg(theme.BgSidebar).Render(" ") + theme.FgBg(theme.TextMuted, theme.BgSidebar).Render(theme.GlyphMore.String())
 }

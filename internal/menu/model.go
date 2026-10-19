@@ -88,6 +88,25 @@ func (m *Model) SetSize(w, h int) { m.SetScreenSize(w, h) }
 // shifts). The next render call re-clamps the new anchor to the screen.
 func (m *Model) SetPosition(x, y int) { m.anchorX, m.anchorY = x, y }
 
+// SelectID moves the highlight onto the row with this ID (a menu rebuilt
+// after a toggle keeps its place). An unknown ID changes nothing.
+func (m *Model) SelectID(id string) {
+	for i, it := range m.items {
+		if !it.Sep && it.ID == id {
+			m.cursor = i
+			return
+		}
+	}
+}
+
+// SelectedID is the ID of the highlighted row ("" when none).
+func (m Model) SelectedID() string {
+	if m.cursor >= 0 && m.cursor < len(m.items) && !m.items[m.cursor].Sep {
+		return m.items[m.cursor].ID
+	}
+	return ""
+}
+
 // SetTitle attaches an optional header label and icon. Pass "" for either to
 // suppress that piece (or both, to skip the header row entirely). No current
 // caller sets a header; the field is preserved for API stability.

@@ -15,7 +15,7 @@ func TestActivityIconsOneCell(t *testing.T) {
 	wide.EastAsianWidth = true
 	icons := map[string]Icon{
 		"files": IconFiles, "search": IconSearch, "git": IconGit, "outline": IconOutline,
-		"run": IconRun, "tests": IconTests, "services": IconServices, "debug": IconDebug, "extensions": IconExtensions,
+		"run": IconRun, "tests": IconTests, "services": IconServices, "containers": IconContainers, "debug": IconDebug, "extensions": IconExtensions,
 		"terminal": IconTerminal, "account": IconAccount, "settings": IconSettings,
 	}
 	for name, ic := range icons {

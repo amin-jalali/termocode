@@ -195,6 +195,7 @@ func TestActivityBarBoldIconsAreTwoByTwo(t *testing.T) {
 		{"IconRun", IconRun},
 		{"IconTests", IconTests}, // Group E
 		{"IconServices", IconServices},
+		{"IconContainers", IconContainers},
 		{"IconDebug", IconDebug},
 		{"IconExtensions", IconExtensions},
 		{"IconTerminal", IconTerminal},

@@ -187,7 +187,7 @@ You can give these a key in `keymap.json` (see below), or run them from the comm
 | `ReloadBuffer` | File | Reload the active file from disk. |
 | `ReloadWindow` | Developer | Reload the window (restart the UI, keep the session). |
 | `SaveAll` | File | Save every modified file. |
-| `ServicesFocus` | View | Show the Services view (Docker Compose and local dev services). |
+| `ServicesFocus` | View | Show the Containers view, including this project's services. |
 | `ShowCheatSheet` | Help | Show the keyboard shortcuts overlay. |
 | `ShowSnippetPicker` | Editor | Browse and insert a snippet. |
 | `SplitHorizontal` | View | Split the editor down. |

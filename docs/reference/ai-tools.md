@@ -1069,7 +1069,7 @@ Add a request to a .http file, or with replace=true change the request with that
 | `search-next-result` | Search: Go to Next Search Result | auto |   |
 | `search-prev-result` | Search: Go to Previous Search Result | auto |   |
 | `services-configure` | Services: Configure (services.json) | confirm (ide) |   |
-| `services-focus` | Services: Focus Services | auto |   |
+| `services-focus` | Containers: Focus | auto |   |
 | `services-logs` | Services: Show Logs... | never | opens a picker or prompt that only the user can answer; use a typed tool (services_logs) |
 | `services-open-compose` | Services: Open Compose File | auto |   |
 | `services-refresh` | Services: Refresh | auto |   |
@@ -1157,6 +1157,7 @@ Add a request to a .http file, or with replace=true change the request with that
 | `ai_provider` | never | AI provider, credentials and approvals stay with the user |
 | `animations` | confirm (settings) |   |
 | `auto_save` | confirm (settings) |   |
+| `containers_sections` | confirm (settings) |   |
 | `dashboard_logo` | confirm (settings) |   |
 | `font_delta` | confirm (settings) |   |
 | `http_ai_max_kb` | never | AI provider, credentials and approvals stay with the user |

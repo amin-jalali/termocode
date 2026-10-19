@@ -95,13 +95,16 @@ var (
 		NerdFont: "", Unicode: "✓", ASCII: "T", // fa-flask, ✓
 		Bold: [2]string{" ▞", "▚▘"},
 	}
-	// IconServices — the Services view (dev services: compose, local
-	// commands). fa-server / ☷ (U+2637, EAW=Neutral). Bold: two stacked
-	// rack units.
-	IconServices = Icon{
+	// IconContainers — the Containers view (project services plus the
+	// container host). fa-server / ☷ (U+2637, EAW=Neutral). Bold: two
+	// stacked rack units. The glyph is the old Services one on purpose:
+	// the rename keeps the activity bar unchanged.
+	IconContainers = Icon{
 		NerdFont: "\uf233", Unicode: "☷", ASCII: "=",
 		Bold: [2]string{"▀▀", "▀▀"},
 	}
+	// IconServices is the same icon under its old name.
+	IconServices = IconContainers
 	// IconDebug — fisheye, reads as a "bug eye". U+25C9, EAW=Neutral.
 	// Bold: solid bug body (▟▙) on top, two small leg/foot dots (▘▝) below.
 	IconDebug = Icon{
@@ -430,11 +433,12 @@ var (
 	// Source Control GRAPH (scm-graph design §2.3).
 	// The Nerd Font circles (nf-fa-circle, nf-fa-dot_circle_o) are wider
 	// than a cell and draw clipped; the geometric shapes fit.
-	GlyphCommit   = Icon{NerdFont: "◦", Unicode: "◦", ASCII: "o"}
-	GlyphHead     = Icon{NerdFont: "◉", Unicode: "◉", ASCII: "@"}
-	GlyphMerge    = Icon{NerdFont: "\uf126", Unicode: "⑂", ASCII: "*"} // nf-fa-code_fork
-	GlyphUnpushed = Icon{NerdFont: "\uf0aa", Unicode: "⇡", ASCII: "^"} // nf-fa-arrow_circle_up
-	GlyphExpand   = Icon{NerdFont: "\uf107", Unicode: "▾", ASCII: "v"} // nf-fa-angle_down
+	GlyphCommit        = Icon{NerdFont: "◦", Unicode: "◦", ASCII: "o"}
+	GlyphHead          = Icon{NerdFont: "◉", Unicode: "◉", ASCII: "@"}
+	GlyphMerge         = Icon{NerdFont: "\uf126", Unicode: "⑂", ASCII: "*"} // nf-fa-code_fork
+	GlyphUnpushed      = Icon{NerdFont: "\uf0aa", Unicode: "⇡", ASCII: "^"} // nf-fa-arrow_circle_up
+	GlyphExpand        = Icon{NerdFont: "\uf107", Unicode: "▾", ASCII: "v"} // nf-fa-angle_down
+	GlyphTreeCollapsed = Icon{NerdFont: "\uf105", Unicode: "▸", ASCII: ">"}
 
 	// Services view (services panel plan §2.2). The colour carries the
 	// health (GitAdded / GitModified / DiagError); the ASCII tier spells it.
@@ -448,6 +452,9 @@ var (
 	GlyphStart         = Icon{NerdFont: "\uf04b", Unicode: "▸", ASCII: ">"} // nf-fa-play
 	GlyphStop          = Icon{NerdFont: "\uf04d", Unicode: "▪", ASCII: "#"} // nf-fa-stop
 	GlyphRefresh       = Icon{NerdFont: "\uf021", Unicode: "↻", ASCII: "R"} // nf-fa-refresh
+
+	// GlyphContPaused — a paused container (containers plan §2.5).
+	GlyphContPaused = Icon{NerdFont: "ǁ", Unicode: "ǁ", ASCII: "\""} // U+01C1: ‖ is ambiguous-width
 	// HTTP client (rest-client plan 2.7): the lens' send mark, a request
 	// in flight, a failed send and a redirect hop. Glyphs every common
 	// monospace font has (JetBrains Mono lacks ⇄, ✘ and ↳).

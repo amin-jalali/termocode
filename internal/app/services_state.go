@@ -18,6 +18,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/containers"
 	"github.com/amin-jalali/termocode/internal/services"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -75,7 +76,8 @@ type servicesState struct {
 
 	cursor    int
 	collapsed map[string]bool
-	quitAsked bool // the quit card was answered
+	sections  map[string]bool // visible host sections; missing keys use the all-visible default
+	quitAsked bool            // the quit card was answered
 
 	// refresh bookkeeping (UI goroutine only)
 	reqSeq   uint64
@@ -99,12 +101,35 @@ type servicesState struct {
 	visible   bool
 
 	render svcRenderCache
+
+	containerEngine    containers.Engine
+	containerDetected  bool
+	containerDetecting bool
+	containerCancel    context.CancelFunc
+	containerCancels   map[string]context.CancelFunc
+	containerGen       uint64
+	containerRows      []containers.Container
+	imageRows          []containers.Image
+	networkRows        []containers.Network
+	volumeRows         []containers.Volume
+	contextRows        []containers.Context
+	registryRows       []containers.Registry
+	containerErrors    map[string]string
+	hostLoaded         map[string]bool // host sections that got a first answer
 }
 
 func newServicesState() *servicesState {
+	collapsed := map[string]bool{}
+	for _, section := range hostSectionOrder {
+		collapsed[hostSection(section)] = defaultHostSectionCollapsed(section)
+	}
 	return &servicesState{status: map[string]services.Status{}, localSt: map[string]services.Status{},
-		busy: map[string]services.State{}, startedByUs: map[string]bool{}, collapsed: map[string]bool{},
-		localOK: map[string]bool{}, localStop: map[string]bool{}, exitSeen: map[string]string{}, prevUp: map[string]bool{},
+		busy: map[string]services.State{}, startedByUs: map[string]bool{}, collapsed: collapsed,
+		sections:         map[string]bool{},
+		containerErrors:  map[string]string{},
+		containerCancels: map[string]context.CancelFunc{},
+		hostLoaded:       map[string]bool{},
+		localOK:          map[string]bool{}, localStop: map[string]bool{}, exitSeen: map[string]string{}, prevUp: map[string]bool{},
 		cfgCache: &svcConfigCache{}, aiAllowed: &atomic.Bool{}}
 }
 
@@ -224,6 +249,7 @@ func (m *Model) servicesSyncWatch() tea.Cmd {
 			st.stale = true
 		}
 		st.stopWatch()
+		st.cancelHostWork()
 		st.touch()
 		return nil
 	}
@@ -233,7 +259,7 @@ func (m *Model) servicesSyncWatch() tea.Cmd {
 		m.servicesLoadSession()
 	}
 	st.everShown = true
-	return m.servicesRefresh()
+	return tea.Batch(m.servicesRefresh(), m.containersLoadVisible())
 }
 
 // stopWatch kills the docker events process (if any) and waits for it.
@@ -486,6 +512,8 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case servicesSnapshotMsg:
 		return m.onServicesSnapshot(msg), true
+	case containerHostMsg:
+		return m.onContainerHost(msg), true
 	case servicesRefreshMsg:
 		return m.servicesRefresh(), true
 	case servicesEventMsg:
@@ -508,6 +536,8 @@ func (m *Model) servicesLoadSession() {
 	}
 	st.sessLoaded = true
 	sess := loadSession()
+	st.applyFoldKeys(sess.ContainersCollapsed)
+	st.applySectionChoice(loadSettings().ContainersSections)
 	st.aiAllowed.Store(sess.ServicesAIAllowed)
 	for _, n := range sess.ServicesStarted {
 		st.startedByUs[n] = true
@@ -524,6 +554,7 @@ func (m *Model) servicesSaveSession() {
 	sess.ServicesAIAllowed = st.aiAllowed.Load()
 	sess.ServicesStarted = sortedTrue(st.startedByUs)
 	sess.ServicesLocalOK = sortedTrue(st.localOK)
+	sess.ContainersCollapsed = st.foldKeys()
 	saveSession(sess)
 }
 

@@ -199,3 +199,17 @@ func TestOverlayDrawsOnBase(t *testing.T) {
 		t.Fatalf("overlay changed line count: want %d, got %d", wantLines, gotLines)
 	}
 }
+
+// A rebuilt menu keeps its place: SelectID moves the highlight, unknown
+// IDs and separators are ignored.
+func TestSelectIDKeepsPlace(t *testing.T) {
+	m := New([]Item{{ID: "a", Title: "A"}, {Sep: true}, {ID: "b", Title: "B"}}, 0, 0)
+	m.SelectID("b")
+	if got := m.SelectedID(); got != "b" {
+		t.Fatalf("selected = %q, want b", got)
+	}
+	m.SelectID("nope")
+	if got := m.SelectedID(); got != "b" {
+		t.Fatalf("unknown id moved the highlight to %q", got)
+	}
+}

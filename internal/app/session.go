@@ -74,9 +74,10 @@ type SessionState struct {
 	// AI's start / stop / restart, the compose services termocode started
 	// (only those are offered to stop on quit), and the local command
 	// lines the user approved once (hashes).
-	ServicesAIAllowed bool     `json:"services_ai_allowed,omitempty"`
-	ServicesStarted   []string `json:"services_started,omitempty"`
-	ServicesLocalOK   []string `json:"services_local_ok,omitempty"`
+	ServicesAIAllowed   bool     `json:"services_ai_allowed,omitempty"`
+	ServicesStarted     []string `json:"services_started,omitempty"`
+	ServicesLocalOK     []string `json:"services_local_ok,omitempty"`
+	ContainersCollapsed []string `json:"containers_collapsed,omitempty"`
 }
 
 // sessionPath is the global session.json: layout preferences, plus the
@@ -152,9 +153,10 @@ func workspacePart(s SessionState) SessionState {
 		AIProfilesTrusted: s.AIProfilesTrusted,
 		AIProfilesRefused: s.AIProfilesRefused,
 
-		ServicesAIAllowed: s.ServicesAIAllowed,
-		ServicesStarted:   s.ServicesStarted,
-		ServicesLocalOK:   s.ServicesLocalOK,
+		ServicesAIAllowed:   s.ServicesAIAllowed,
+		ServicesStarted:     s.ServicesStarted,
+		ServicesLocalOK:     s.ServicesLocalOK,
+		ContainersCollapsed: s.ContainersCollapsed,
 	}
 }
 

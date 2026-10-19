@@ -72,6 +72,12 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `mcp_oauth_port` | int | `0` | Port of the sign-in listener on 127.0.0.1 for MCP servers with OAuth. 0 takes the first free one of 47391–47395 (the ports termocode's client document lists, so ssh -L 47391:127.0.0.1:47391 works); set another only for an app registered with that port. |
 | `mcp_github_client_id` | string | `(built in)` | Client ID of a GitHub OAuth App with Device Flow on, for the GitHub sign-in with a code (Connect a service). Empty uses the one built into termocode (none until it is registered). Not a secret. |
 
+## Containers (file only)
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `containers_sections` | string[] | `all` | Sections shown by the Containers view, across workspaces. The Containers menu writes this list; collapse state is kept in the workspace session. |
+
 ## AI (file only)
 
 | Key | Type | Default | Description |

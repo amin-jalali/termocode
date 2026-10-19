@@ -214,11 +214,11 @@ func stripANSI(s string) string {
 
 // The Services view is the fifth top item, after Testing; a click on its
 // row switches to it.
-func TestServicesItemAfterTesting(t *testing.T) {
+func TestContainersItemAfterTesting(t *testing.T) {
 	m := New()
 	m.SetHeight(40)
 	items := m.Items()
-	if len(items) < 5 || items[3].View != ViewTests || items[4].View != ViewServices || items[4].Label != "Services" {
+	if len(items) < 5 || items[3].View != ViewTests || items[4].View != ViewServices || items[4].Label != "Containers" {
 		t.Fatalf("items = %+v", items)
 	}
 	_, cmd := m.HandleMouse(1, items[4].Y+1, tea.MouseLeft)

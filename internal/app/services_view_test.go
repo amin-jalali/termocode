@@ -39,6 +39,11 @@ func svcTestState() *servicesState {
 	}
 	st.local = []services.Service{{Name: "web", Backend: "local", Command: "npm run dev", Ports: port(5173), Health: services.Probe{TCP: 5173}, Source: "Procfile"}}
 	st.localSt = map[string]services.Status{"web": {Name: "web", State: services.Running, StartedAt: svcTestNow.Add(-62 * time.Minute)}}
+	// The Services tests look at the PROJECT part only (the old view);
+	// containers_view_test.go turns the host sections on.
+	for _, sec := range hostSectionOrder {
+		st.sections[sec] = false
+	}
 	return st
 }
 
@@ -204,8 +209,8 @@ func TestRenderServicesSidebar(t *testing.T) {
 		}
 	}
 	plain := ansi.Strip(out)
-	for _, want := range []string{"SERVICES", "compose · termocode", "3/5 up", "▸ Start all", "▪ Stop all", "↻",
-		"COMPOSE", "LOCAL", "postgres", "exit 1", "postgres:16 · :5432→5432", "Up 2 hours (healthy)"} {
+	for _, want := range []string{"CONTAINERS", "compose · termocode", "3/5 up", "▸ Start all", "▪ Stop all", "↻",
+		"PROJECT", "LOCAL", "postgres", "exit 1", "postgres:16 · :5432→5432", "Up 2 hours (healthy)"} {
 		if !strings.Contains(plain, want) {
 			t.Errorf("no %q in\n%s", want, plain)
 		}

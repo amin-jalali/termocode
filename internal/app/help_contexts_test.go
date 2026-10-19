@@ -98,7 +98,7 @@ func TestHelpTopicForFocus(t *testing.T) {
 		{"services view", func(m *Model) {
 			m.showExp, m.focus = true, FocusExplorer
 			m.activity.SetActive(activity.ViewServices)
-		}, activityHelp["Services"]},
+		}, activityHelp["Containers"]},
 		{"problems tab", func(m *Model) { m.panelFocused, m.panelActive = true, panelKindProblems }, helpContexts["problems"]},
 		{"debug console", func(m *Model) { m.panelFocused, m.panelActive = true, panelKindDebugConsole }, helpContexts["debug-console"]},
 		{"terminal", func(m *Model) { m.inTerminal = true }, helpContexts["terminal"]},

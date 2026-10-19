@@ -389,6 +389,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	// Services view (services_quit.go).
 	"services_on_quit":    aiConfirm(ai.ClassSettings),
 	"services_max_log_kb": aiConfirm(ai.ClassSettings),
+	"containers_sections": aiConfirm(ai.ClassSettings),
 	"mcp_trusted_tools":   aiNever(aiNoAIConfig),
 	"mcp_oauth_port":      aiNever(aiNoAIConfig),
 	// HTTP client: limits the user may let the AI change; the AI never

@@ -63,6 +63,12 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Bookmarks: Show List | `bookmark-list` | `Shift+F3` | `Shift+F3` |
 | Bookmarks: Toggle on Current Line | `bookmark-toggle` | `F3` | `F3` |
 
+## Containers
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Containers: Focus | `services-focus` |   |   |
+
 ## Copy
 
 | Title | ID | Key | Hint |
@@ -315,7 +321,6 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Services: Configure (services.json) | `services-configure` |   |   |
-| Services: Focus Services | `services-focus` |   |   |
 | Services: Open Compose File | `services-open-compose` |   |   |
 | Services: Refresh | `services-refresh` |   |   |
 | Services: Restart Service... | `services-restart` |   |   |

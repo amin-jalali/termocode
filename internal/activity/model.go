@@ -95,7 +95,7 @@ var topItems = []item{
 	{view: ViewGit, icon: theme.IconGit, label: "Source Control"},
 	{view: ViewRun, icon: theme.IconRun, label: "Run"},
 	{view: ViewTests, icon: theme.IconTests, label: "Testing"}, // Group E
-	{view: ViewServices, icon: theme.IconServices, label: "Services"},
+	{view: ViewServices, icon: theme.IconContainers, label: "Containers"},
 }
 
 var bottomItems = []item{

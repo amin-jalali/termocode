@@ -5,6 +5,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/containers"
 	"github.com/amin-jalali/termocode/internal/services"
 )
 
@@ -24,6 +25,11 @@ func (m *Model) servicesDemo(variant string) {
 		m.applyLayout()
 	}
 	m.focus = FocusExplorer
+	// The Services shots show the PROJECT part only: no host section
+	// would ever leave "Loading…" without docker.
+	for _, sec := range hostSectionOrder {
+		st.sections[sec] = false
+	}
 	if variant == "empty" {
 		st.touch()
 		return
@@ -55,5 +61,61 @@ func (m *Model) servicesDemo(variant string) {
 		st.problem = services.Problem{Kind: services.ProblemDaemonDown}
 		st.cursor = 3
 	}
+	st.touch()
+}
+
+// containersDemo is the Containers view with a canned host (DevActionMsg
+// "contdemo"): the PROJECT of servicesDemo plus containers, images,
+// networks, volumes, contexts and a registry. variant "down": the engine
+// is not running; "noengine": no docker / podman; "menu": the ⋯ menu.
+func (m *Model) containersDemo(variant string) {
+	m.servicesDemo("")
+	st := m.services
+	st.sections = map[string]bool{}
+	st.containerDetected = true
+	st.containerEngine = containers.Engine{Binary: "docker", Kind: "docker", Reachable: true,
+		Version: containers.Version{Version: "27.3.1"}}
+	compose := func(project, service string) map[string]string {
+		return map[string]string{"com.docker.compose.project": project, "com.docker.compose.service": service, "com.docker.compose.container-number": "1"}
+	}
+	st.containerRows = []containers.Container{
+		{ID: "9f3c2e1a", Names: []string{"termocode-postgres-1"}, Image: "postgres:16", State: "running", Status: "Up 2 hours (healthy)", Project: "termocode", Labels: compose("termocode", "postgres"), PortsText: "0.0.0.0:5432->5432/tcp"},
+		{ID: "a1b2c3d4", Names: []string{"termocode-redis-1"}, Image: "redis:7", State: "running", Status: "Up 2 hours", Project: "termocode", Labels: compose("termocode", "redis"), PortsText: "0.0.0.0:6379->6379/tcp"},
+		{ID: "b2c3d4e5", Names: []string{"termocode-api-1"}, Image: "termocode-api", State: "exited", Status: "Exited (1) 3 minutes ago", Project: "termocode", Labels: compose("termocode", "api")},
+		{ID: "f3e4d5c6", Names: []string{"shop-web-1"}, Image: "ghcr.io/acme/shop:latest", State: "running", Status: "Up 3 hours", Project: "shop", Labels: compose("shop", "web")},
+		{ID: "e4d5c6b7", Names: []string{"shop-worker-1"}, Image: "ghcr.io/acme/shop:latest", State: "running", Status: "Up 3 hours", Project: "shop", Labels: compose("shop", "worker")},
+		{ID: "aabbccdd", Names: []string{"nginx"}, Image: "nginx:1.27", State: "running", Status: "Up 3 days", PortsText: "0.0.0.0:8081->80/tcp"},
+		{ID: "55667788", Names: []string{"builder"}, Image: "golang:1.23", State: "paused", Status: "Up 1 hour (Paused)"},
+		{ID: "11223344", Names: []string{"migrate"}, Image: "termocode-migrate", State: "exited", Status: "Exited (1) 2 hours ago"},
+	}
+	st.imageRows = []containers.Image{
+		{ID: "sha256:0a1b2c3d4e5f", RepoTags: []string{"postgres:16"}, Size: "421MB"},
+		{ID: "sha256:1b2c3d4e5f6a", RepoTags: []string{"postgres:15-alpine"}, Size: "239MB"},
+		{ID: "sha256:2c3d4e5f6a7b", RepoTags: []string{"redis:7"}, Size: "116MB"},
+		{ID: "sha256:3d4e5f6a7b8c", Size: "88MB"},
+	}
+	st.networkRows = []containers.Network{{Name: "bridge", Driver: "bridge", Scope: "local"}, {Name: "termocode_default", Driver: "bridge", Scope: "local"}, {Name: "host", Driver: "host", Scope: "local"}}
+	st.volumeRows = []containers.Volume{{Name: "termocode_db", Driver: "local"}, {Name: "cache", Driver: "local"}}
+	st.contextRows = []containers.Context{{Name: "default", Current: true, DockerEndpoint: "unix:///var/run/docker.sock"}, {Name: "prod", DockerEndpoint: "ssh://deploy@prod"}}
+	st.registryRows = []containers.Registry{{Host: "ghcr.io", CredsStore: "desktop"}}
+	for _, sec := range hostSectionOrder {
+		st.hostLoaded[sec] = true
+	}
+	st.collapsed[hostSection("images")] = false
+	st.collapsed[hostGroup("containers", "shop")] = true
+	st.cursor = 1 // postgres
+	switch variant {
+	case "down":
+		st.containerEngine.Reachable = false
+		st.containerEngine.Problem = services.Problem{Kind: services.ProblemDaemonDown}
+		st.containerRows, st.imageRows, st.networkRows, st.volumeRows, st.contextRows = nil, nil, nil, nil, nil
+		st.problem = services.Problem{Kind: services.ProblemDaemonDown}
+	case "noengine":
+		st.containerEngine = containers.Engine{}
+		st.containerRows, st.imageRows, st.networkRows, st.volumeRows, st.contextRows = nil, nil, nil, nil, nil
+	case "menu":
+		m.openContainersSectionsMenu("")
+	}
+	m.servicesClampCursor()
 	st.touch()
 }

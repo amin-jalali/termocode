@@ -56,9 +56,10 @@ type settingsConfig struct {
 	// Dismissed = hidden with "Hide"; either keeps it off the Welcome
 	// page until "Setup: Show Setup Card". Settled lists the steps the
 	// user answered on the card ("icons", "ai", "theme").
-	SetupDone      *bool    `json:"setup_done,omitempty"`
-	SetupDismissed *bool    `json:"setup_dismissed,omitempty"`
-	SetupSettled   []string `json:"setup_settled,omitempty"`
+	SetupDone          *bool    `json:"setup_done,omitempty"`
+	SetupDismissed     *bool    `json:"setup_dismissed,omitempty"`
+	SetupSettled       []string `json:"setup_settled,omitempty"`
+	ContainersSections []string `json:"containers_sections,omitempty"`
 }
 
 // settingsConfigPath returns the absolute path to config.json. We don't
@@ -156,6 +157,9 @@ func saveSettings(cfg settingsConfig) error {
 	}
 	if cfg.SetupSettled != nil {
 		merged["setup_settled"] = cfg.SetupSettled
+	}
+	if cfg.ContainersSections != nil {
+		merged["containers_sections"] = cfg.ContainersSections
 	}
 	for k, v := range map[string]string{"icons": cfg.Icons, "animations": cfg.Animations, "images": cfg.Images, "persistent_session": cfg.PersistentSession, "dashboard_logo": cfg.DashboardLogo, "rtl": cfg.RTL} {
 		if v != "" {

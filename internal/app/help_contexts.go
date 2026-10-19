@@ -182,7 +182,7 @@ func (m Model) sidebarHelpTopic() string {
 	case activity.ViewTests:
 		return activityHelp["Testing"]
 	case activity.ViewServices:
-		return activityHelp["Services"]
+		return activityHelp["Containers"]
 	case activity.ViewSearch:
 		return helpContexts["search-view"]
 	}

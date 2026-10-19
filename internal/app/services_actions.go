@@ -20,6 +20,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/services"
 	"github.com/amin-jalali/termocode/internal/tasks"
+	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -552,13 +553,16 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		switch {
 		case isSvc:
 			return m, m.servicesLogs(r.section, r.name)
+		case have && r.kind == svcRowSection && r.section == svcSecCompose && st.det.Empty():
+			return m, m.servicesConfigure()
 		case have && r.kind == svcRowSection && r.section == svcSecCompose:
 			return m, m.servicesLogs(svcSecCompose, "")
+		case have && (r.kind == svcRowGroup || (r.kind == svcRowSection && strings.HasPrefix(r.section, "host/"))):
+			return m, m.servicesToggleFold(r)
 		}
 	case " ":
-		if have && r.kind == svcRowSection {
-			st.collapsed[r.section] = !st.collapsed[r.section]
-			st.touch()
+		if have && r.foldable() {
+			return m, m.servicesToggleFold(r)
 		}
 	case "s":
 		if isSvc {
@@ -571,29 +575,52 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, m.servicesNoteCmd(note, cmd)
 		}
 	case "r":
+		if sec := r.hostSectionID(); have && sec != "" {
+			if st.containerDetected && st.containerEngine.Reachable {
+				return m, m.containersRefresh(sec)
+			}
+			return m, m.containersReloadAll()
+		}
 		if isSvc {
 			note, cmd := m.servicesRestart(r.section, r.name, nil)
 			return m, m.servicesNoteCmd(note, cmd)
 		}
 	case "a":
-		return m, m.servicesAction("start-all")
+		if !st.det.Empty() {
+			return m, m.servicesAction("start-all")
+		}
 	case "A":
-		return m, m.servicesAction("stop-all")
+		if !st.det.Empty() {
+			return m, m.servicesAction("stop-all")
+		}
 	case "R":
-		return m, m.servicesAction("refresh")
+		return m, tea.Batch(m.servicesAction("refresh"), m.containersReloadAll())
+	case "m":
+		m.openContainersSectionsMenu("")
+		return m, nil
 	case "e":
 		if isSvc {
 			return m, m.servicesShell(r.section, r.name)
 		}
 	case "o":
+		if have && r.hostSectionID() != "" {
+			return m, nil // host rows open nothing yet (CP-3)
+		}
+		if st.det.Empty() {
+			return m, m.servicesConfigure()
+		}
 		if isSvc || (have && r.kind == svcRowSection) {
 			return m, m.servicesOpenSource(r.section, r.name)
 		}
-		if st.det.ConfigErr != nil || st.det.Empty() {
+		if st.det.ConfigErr != nil {
 			return m, m.servicesConfigure()
 		}
 		return m, m.servicesOpenSource(svcSecCompose, "")
 	case "y":
+		if have && r.hostSectionID() != "" && st.containerEngine.Problem.Kind == services.ProblemNoPermission {
+			m.copyToClipboard(svcPermissionFix)
+			return m, m.servicesToast(toast.Info, "Copied", svcPermissionFix)
+		}
 		if st.problem.Kind == services.ProblemNoPermission {
 			m.copyToClipboard(svcPermissionFix)
 			return m, m.servicesToast(toast.Info, "Copied", svcPermissionFix)
@@ -605,6 +632,82 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		m.focus = FocusEditor
 	}
 	return m, nil
+}
+
+// hostSectionID is the host section a row belongs to ("" = PROJECT).
+func (r svcRow) hostSectionID() string {
+	switch {
+	case strings.HasPrefix(r.section, "host/"):
+		return strings.TrimPrefix(r.section, "host/")
+	case strings.HasPrefix(r.section, "grp/"):
+		sec, _, _ := strings.Cut(strings.TrimPrefix(r.section, "grp/"), "/")
+		return sec
+	}
+	return ""
+}
+
+// servicesToggleFold folds or unfolds a header or group (Space, Enter on
+// a host header, a click), saves the choice and loads a host section that
+// just opened.
+func (m *Model) servicesToggleFold(r svcRow) tea.Cmd {
+	st := m.services
+	st.collapsed[r.section] = !st.collapsed[r.section]
+	m.servicesSaveSession()
+	st.touch()
+	if r.kind == svcRowSection && !st.collapsed[r.section] {
+		if sec := r.hostSectionID(); sec != "" {
+			return m.containersOpened(sec)
+		}
+	}
+	return nil
+}
+
+// openContainersSectionsMenu is the ⋯ menu: a check row per section (the
+// menu stays open while toggling) and Refresh all. selected keeps the
+// highlight on a row after a toggle.
+func (m *Model) openContainersSectionsMenu(selected string) {
+	check := "✓"
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		check = "x"
+	}
+	items := make([]menu.Item, 0, len(containerSectionOrder)+2)
+	for _, section := range containerSectionOrder {
+		icon := " "
+		if m.services.sectionShown(section) {
+			icon = check
+		}
+		items = append(items, menu.Item{ID: "section:" + section, Title: strings.ToUpper(section[:1]) + section[1:], Icon: icon})
+	}
+	items = append(items, menu.Item{Sep: true},
+		menu.Item{ID: "refresh", Title: "Refresh all", Hint: "R", Icon: theme.GlyphRefresh.String()})
+	m.menu = menu.New(items, activity.Width+max(m.explorerWidth-26, 1), 2)
+	m.menu.SetScreenSize(m.w, m.h)
+	if selected != "" {
+		m.menu.SelectID(selected)
+	}
+	m.menuOpen, m.menuKind = true, menuKindContainers
+}
+
+func (m *Model) handleContainersMenuSelect(id string) tea.Cmd {
+	st := m.services
+	if id == "refresh" {
+		return tea.Batch(m.servicesAction("refresh"), m.containersReloadAll())
+	}
+	section, ok := strings.CutPrefix(id, "section:")
+	if !ok || !isContainerSection(section) {
+		return nil
+	}
+	st.sections[section] = !st.sectionShown(section)
+	cfg := loadSettings()
+	cfg.ContainersSections = st.sectionChoice()
+	_ = saveSettings(cfg)
+	st.touch()
+	m.servicesClampCursor()
+	m.openContainersSectionsMenu(id)
+	if st.sections[section] && section != "project" {
+		return m.containersOpened(section)
+	}
+	return nil
 }
 
 // servicesNoteCmd shows a "nothing to do" note as a toast.
@@ -654,6 +757,10 @@ func (m *Model) servicesAction(id string) tea.Cmd {
 // ── Mouse ────────────────────────────────────────────────────────────────
 
 func (m Model) handleServicesSidebarMouse(x, y int, t tea.MouseEventType) (Model, tea.Cmd) {
+	if t == tea.MouseLeft && y == 0 && x == m.explorerWidth-2 {
+		m.openContainersSectionsMenu("")
+		return m, nil
+	}
 	st := m.services
 	switch t {
 	case tea.MouseWheelUp:
@@ -668,14 +775,14 @@ func (m Model) handleServicesSidebarMouse(x, y int, t tea.MouseEventType) (Model
 	}
 	m.focus = FocusExplorer
 	w := m.explorerWidth - 1
-	if st.det.Empty() && st.loaded {
+	if st.showEmptyCard() {
 		if t == tea.MouseLeft && y > svcSummaryRow {
 			return m, m.servicesConfigure()
 		}
 		return m, nil
 	}
 	if y == svcActionRow && t == tea.MouseLeft {
-		for _, a := range svcActionLayout(w) {
+		for _, a := range st.actionLayout(w) {
 			if x >= a.start && x < a.end {
 				return m, m.servicesAction(a.id)
 			}
@@ -701,11 +808,10 @@ func (m Model) handleServicesSidebarMouse(x, y int, t tea.MouseEventType) (Model
 		}
 		return m, nil
 	}
-	if r.kind == svcRowSection {
-		st.collapsed[r.section] = !st.collapsed[r.section]
-		return m, nil
+	if r.foldable() {
+		return m, m.servicesToggleFold(r)
 	}
-	if double {
+	if double && r.kind == svcRowService {
 		st.lastClick = time.Time{}
 		return m, m.servicesLogs(r.section, r.name)
 	}
@@ -802,7 +908,7 @@ func (m *Model) handleServicesMenuSelect(id string) tea.Cmd {
 // servicesPaletteItems are the "Services: …" palette rows.
 func servicesPaletteItems() []picker.Item {
 	return []picker.Item{
-		{ID: "services-focus", Title: "Services: Focus Services"},
+		{ID: "services-focus", Title: "Containers: Focus"},
 		{ID: "services-start-all", Title: "Services: Start All"},
 		{ID: "services-stop-all", Title: "Services: Stop All"},
 		{ID: "services-start", Title: "Services: Start Service..."},
