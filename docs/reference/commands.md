@@ -118,11 +118,16 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Databases: Add Connection… | `db-add` |   |   |
+| Databases: Cancel Query | `db-cancel` |   |   |
 | Databases: Configure | `db-configure` |   |   |
 | Databases: Connect Selected | `db-connect` |   |   |
 | Databases: Disconnect Selected | `db-disconnect` |   |   |
 | Databases: Focus | `db-focus` |   |   |
+| Databases: History… | `db-history` |   |   |
+| Databases: New Console | `db-new-console` |   |   |
 | Databases: Refresh | `db-refresh` |   |   |
+| Databases: Run File | `db-run-file` |   |   |
+| Databases: Run Statement or Selection | `db-run` |   |   |
 | Databases: Test Connection | `db-test-connection` |   |   |
 
 ## Debug
@@ -286,7 +291,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | HTTP: Save Response Body… | `http-save-body` |   |   |
 | HTTP: Saved Requests… | `http-saved` |   |   |
 | HTTP: Select Environment… | `http-env-select` |   |   |
-| HTTP: Send Request at Cursor | `http-send` | `Ctrl+Alt+R` | `Ctrl+Alt+R` |
+| HTTP: Send Request at Cursor | `http-send` | `Ctrl+Alt+R` / `Ctrl+Enter` | `Ctrl+Alt+R / Ctrl+Enter` |
 | HTTP: Send Request… | `http-send-pick` |   |   |
 | HTTP: Show Last Response | `http-last-response` |   |   |
 

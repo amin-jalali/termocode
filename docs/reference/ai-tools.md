@@ -974,11 +974,16 @@ Add a request to a .http file, or with replace=true change the request with that
 | `customize-keybindings` | Preferences: Customize Keybindings | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `dap-install` | DAP: Install Adapter... | never | opens a picker or prompt that only the user can answer; use a typed tool (dap_adapters) |
 | `db-add` | Databases: Add Connection… | never | AI provider, credentials and approvals stay with the user |
+| `db-cancel` | Databases: Cancel Query | auto |   |
 | `db-configure` | Databases: Configure | confirm (always asks) |   |
 | `db-connect` | Databases: Connect Selected | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-disconnect` | Databases: Disconnect Selected | confirm (always asks) |   |
 | `db-focus` | Databases: Focus | auto |   |
+| `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-refresh` | Databases: Refresh | auto |   |
+| `db-run` | Databases: Run Statement or Selection | never | SQL runs require the database query tool and its guard |
+| `db-run-file` | Databases: Run File | never | SQL runs require the database query tool and its guard |
 | `db-test-connection` | Databases: Test Connection | auto |   |
 | `debug-add-watch` | Debug: Add Watch Expression... | never | opens a picker or prompt that only the user can answer; use a typed tool (debug_evaluate; debug_state shows the watches) |
 | `debug-clear-bps` | Debug: Remove All Breakpoints | confirm (ide) |   |
@@ -1200,6 +1205,10 @@ Add a request to a .http file, or with replace=true change the request with that
 | `auto_save` | confirm (settings) |   |
 | `containers_sections` | confirm (settings) |   |
 | `dashboard_logo` | confirm (settings) |   |
+| `db_history_max` | never | AI provider, credentials and approvals stay with the user |
+| `db_max_rows` | never | AI provider, credentials and approvals stay with the user |
+| `db_page_rows` | never | AI provider, credentials and approvals stay with the user |
+| `db_timeout` | never | AI provider, credentials and approvals stay with the user |
 | `font_delta` | confirm (settings) |   |
 | `http_ai_max_kb` | never | AI provider, credentials and approvals stay with the user |
 | `http_cookie_jar` | confirm (settings) |   |

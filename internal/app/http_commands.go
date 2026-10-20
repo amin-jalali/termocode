@@ -137,11 +137,29 @@ func (m *Model) httpCurrentFile() string {
 	return ""
 }
 
-// httpSendAction is Ctrl+Alt+R: the request at the cursor in an .http
-// buffer, a resend on the response page, else the last request again.
+// sendKeyBuffer reports whether the editor shows a buffer the send key
+// works in (.http, .sql, or one of their result pages). Ctrl+Enter, the
+// second send key, only acts there.
+func (m *Model) sendKeyBuffer() bool {
+	if m.focus != FocusEditor {
+		return false
+	}
+	p := m.editor.Path()
+	base := filepath.Base(p)
+	return isHTTPPath(p) || strings.EqualFold(filepath.Ext(p), ".sql") || base == "SQL Result" || base == "HTTP Response"
+}
+
+// httpSendAction is the send key (Ctrl+Alt+R, Ctrl+Enter), dispatched by
+// file type: the request at the cursor in an .http buffer, the statement
+// at the cursor (or the selection) in a .sql buffer, a rerun on the SQL
+// Result page, a resend on the response page, else the last request.
 func (m *Model) httpSendAction() tea.Cmd {
 	p := m.editor.Path()
 	switch {
+	case strings.EqualFold(filepath.Ext(p), ".sql"):
+		return m.databaseSend(false)
+	case filepath.Base(p) == "SQL Result":
+		return m.databaseRerun()
 	case isHTTPPath(p):
 		return m.httpSendBufferLine(0, 0)
 	case m.httpS().last != nil || m.httpS().shown != nil:
@@ -380,6 +398,9 @@ func (m *Model) openHTTPSaved() tea.Cmd {
 
 // handleHTTPPickerSelect routes the HTTP pickers. ok=false: not ours.
 func (m *Model) handleHTTPPickerSelect(id string) (tea.Cmd, bool) {
+	if cmd, ok := m.databaseConsolePicker(id); ok {
+		return cmd, true
+	}
 	s := m.httpS()
 	switch m.pickerKind {
 	case pickerKindDBSave:
@@ -533,6 +554,12 @@ func (m *Model) httpShowEntry(e httpclient.Entry) tea.Cmd {
 
 // handleHTTPPromptSubmit routes the HTTP prompts. ok=false: not ours.
 func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
+	if m.promptKind == promptKindDBResultFilter {
+		s := m.dbConsole()
+		s.filter = value
+		s.page = 0
+		return m.databaseShowPage(), true
+	}
 	switch m.promptKind {
 	case promptKindHTTPQuick:
 		req, err := httpclient.ParseQuick(value)

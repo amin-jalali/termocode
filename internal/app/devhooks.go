@@ -93,6 +93,9 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 	case "contdemo":
 		m.containersDemo(arg)
 	case "dbdemo":
+		if arg == "result" || arg == "messages" || arg == "error" {
+			return m.databaseResultDemo(arg)
+		}
 		m.databasesDemo(arg)
 	case "aidemo": // a sample conversation for the AI chat shot
 		s := m.aiS()

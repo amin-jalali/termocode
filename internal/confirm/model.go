@@ -31,13 +31,15 @@ type CloseMsg struct{}
 type rect struct{ x, y, w, h int }
 
 type Model struct {
-	title   string
-	message string
-	buttons []Button
-	cursor  int
-	w, h    int
-	code    string // a command shown on one line in a frame (WithCode)
-	note    string // text below the code
+	scrollText bool
+	scroll     int
+	title      string
+	message    string
+	buttons    []Button
+	cursor     int
+	w, h       int
+	code       string // a command shown on one line in a frame (WithCode)
+	note       string // text below the code
 }
 
 func New(title, message string, buttons []Button) Model {
@@ -50,6 +52,30 @@ func New(title, message string, buttons []Button) Model {
 func (m Model) WithCode(code, note string) Model {
 	m.code, m.note = code, note
 	return m
+}
+
+// WithScrollText keeps the entire message available with Up/Down.
+func (m Model) WithScrollText() Model { m.scrollText = true; return m }
+
+func (m Model) fullTextLines() []string {
+	width := max(1, min(60, m.w-8)-8)
+	var out []string
+	for _, line := range strings.Split(m.message, "\n") {
+		part := ""
+		cells := 0
+		for _, r := range line {
+			n := lipgloss.Width(string(r))
+			if cells+n > width && part != "" {
+				out = append(out, part)
+				part = ""
+				cells = 0
+			}
+			part += string(r)
+			cells += n
+		}
+		out = append(out, part)
+	}
+	return out
 }
 
 // truncMiddle cuts s to w cells, keeping its start and end around a ….
@@ -87,6 +113,22 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	k, ok := msg.(tea.KeyMsg)
 	if !ok {
 		return m, nil
+	}
+	if m.scrollText {
+		switch k.Type {
+		case tea.KeyDown:
+			m.scroll = min(m.scroll+1, max(0, len(m.fullTextLines())-max(1, min(12, m.h-14))))
+			return m, nil
+		case tea.KeyUp:
+			m.scroll = max(m.scroll-1, 0)
+			return m, nil
+		case tea.KeyPgDown:
+			m.scroll = min(m.scroll+8, max(0, len(m.fullTextLines())-max(1, min(12, m.h-14))))
+			return m, nil
+		case tea.KeyPgUp:
+			m.scroll = max(m.scroll-8, 0)
+			return m, nil
+		}
 	}
 	switch k.Type {
 	case tea.KeyEsc, tea.KeyCtrlC:
@@ -286,11 +328,21 @@ func (m Model) layoutDims() confirmDims {
 		bodyW = 1
 	}
 	bodyLines := wrap(m.message, bodyW)
+	if m.scrollText {
+		bodyLines = m.fullTextLines()
+	}
 
 	// Cap body to a sensible max so the modal doesn't fill the screen
 	// when given a huge message; tail is replaced with an ellipsis.
 	const maxBodyLines = 12
-	if len(bodyLines) > maxBodyLines {
+	if m.scrollText {
+		capacity := max(1, min(maxBodyLines, m.h-14))
+		if len(bodyLines) > capacity {
+			start := min(m.scroll, len(bodyLines)-capacity)
+			end := min(start+capacity, len(bodyLines))
+			bodyLines = append(append([]string(nil), bodyLines[start:end]...), "Up/Down scroll · "+strconv.Itoa(start+1)+"-"+strconv.Itoa(end))
+		}
+	} else if len(bodyLines) > maxBodyLines {
 		extra := len(bodyLines) - maxBodyLines + 1
 		bodyLines = bodyLines[:maxBodyLines-1]
 		bodyLines = append(bodyLines, "…and "+strconv.Itoa(extra)+" more lines")

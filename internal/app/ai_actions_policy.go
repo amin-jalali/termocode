@@ -256,6 +256,11 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"services-trust":        aiNever(aiNoAIConfig),
 
 	// ── Databases (DB-3: connection management only) ──
+	"db-new-console":               aiNever(aiNoPicker),
+	"db-run":                       aiNever("SQL runs require the database query tool and its guard"),
+	"db-run-file":                  aiNever("SQL runs require the database query tool and its guard"),
+	"db-history":                   aiNever(aiNoPicker),
+	"db-cancel":                    aiAuto(),
 	"db-focus":                     aiAuto(),
 	"db-refresh":                   aiAuto(),
 	"db-connect":                   aiNever(aiNoPicker),
@@ -436,6 +441,10 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"mcp_oauth_port":      aiNever(aiNoAIConfig),
 	// HTTP client: limits the user may let the AI change; the AI never
 	// raises its own budgets or turns TLS checks off.
+	"db_max_rows":          aiNever(aiNoAIConfig),
+	"db_page_rows":         aiNever(aiNoAIConfig),
+	"db_timeout":           aiNever(aiNoAIConfig),
+	"db_history_max":       aiNever(aiNoAIConfig),
 	"http_timeout":         aiConfirm(ai.ClassSettings),
 	"http_max_redirects":   aiConfirm(ai.ClassSettings),
 	"http_cookie_jar":      aiConfirm(ai.ClassSettings),

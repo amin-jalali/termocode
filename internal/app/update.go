@@ -157,6 +157,17 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case DevActionMsg:
 		return m, m.runDevAction(msg.ID)
+	case dbAppendMsg:
+		return m, m.databaseAppendPage(msg)
+	case dbRunMsg:
+		return m, m.databaseFinishRun(msg)
+	case dbHistoryErrMsg:
+		return m, m.dbConsoleError(msg.err)
+	case dbNextMsg:
+		if m.databases != nil && m.dbConsole().gen == msg.gen {
+			return m, m.databaseReviewRun(msg.run)
+		}
+		return m, nil
 	case dbConnectMsg:
 		return m, m.onDBConnect(msg)
 	case dbIntrospectMsg:
@@ -272,6 +283,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.handleConfirmSelect(msg.ID)
 	case confirm.CloseMsg:
 		m.confirmOpen = false
+		if m.databases != nil && m.databases.console != nil && m.confirmKind == confirmKindDBRun {
+			m.databases.console.pending = nil
+		}
 		if m.nvimDead {
 			// Esc: the editor is gone, so the question stays.
 			m.promptNvimExited()
@@ -1432,6 +1446,9 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	}
 
 	matchedAction := m.keys.Match(msg)
+	if matchedAction == keymap.ActionHTTPSend && msg.String() == "ctrl+enter" && !m.sendKeyBuffer() {
+		matchedAction = keymap.ActionNone // Ctrl+Enter stays the editor's key elsewhere
+	}
 	if m.preferredCodeAction != nil && matchedAction != keymap.ActionApplyPreferredCodeAction {
 		m.preferredCodeAction = nil
 	}

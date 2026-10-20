@@ -430,7 +430,9 @@ func queryError(ctx context.Context, err error) error {
 }
 
 func mysqlWarningsInterrupted(ctx context.Context, runner sqlRunner) error {
-	rows, err := runner.QueryContext(ctx, "SHOW WARNINGS")
+	warningCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
+	defer cancel()
+	rows, err := runner.QueryContext(warningCtx, "SHOW WARNINGS")
 	if err != nil {
 		return nil
 	}

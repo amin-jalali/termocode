@@ -217,7 +217,7 @@ func (s *dbState) rowFooter(r dbTreeRow) string {
 func dbRowFooter(kind dbNodeKind) string {
 	switch kind {
 	case dbNodeConnection:
-		return "Enter connect / expand · e edit · x disconnect"
+		return "Enter connect · n console · e edit · x disconnect"
 	case dbNodeSuggestion:
 		return "a add suggestion · x hide"
 	case dbNodeTable, dbNodeView:

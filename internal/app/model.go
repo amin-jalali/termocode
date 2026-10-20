@@ -999,6 +999,8 @@ func (m Model) attachCmd() tea.Cmd {
 		// HTTP client: .http filetype + lens, the HTTP Response page.
 		_ = m.nvim.ExecLua(httpBufferLua)
 		_ = m.nvim.ExecLua(httpPageLua)
+		_ = m.nvim.ExecLua(dbConsoleLua)
+		_ = m.nvim.ExecLua(dbPageLua)
 		// Inline git diff gutter signs: green +, blue ~, red −. Refreshes
 		// on save / buffer enter / 1-second idle. Failure is non-fatal —
 		// non-git buffers just stay sign-less.

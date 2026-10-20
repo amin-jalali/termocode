@@ -23,3 +23,37 @@ SQLite files ending in `.db`, `.sqlite`, or `.sqlite3` are suggested from the wo
 ## Disconnect
 
 Press `x` on a connection and confirm its name to close all sessions opened for that connection. Expanding another database reuses its session on later visits. Sessions also close when you leave the Databases view, so hidden views do not keep database processes or activity running.
+
+## SQL consoles
+
+Press `n` on a connection to open its console. Consoles live in your user configuration under `db/consoles/<workspace>/<connection>.sql` (mode 0600) and start with a `-- @conn <id>` line. A project `.sql` file can use the same line; without it, the first run asks which connection to use and remembers the answer until you quit.
+
+Press `Ctrl+Alt+R` (or `Ctrl+Enter` in terminals that send it) to run the statement under the cursor. In visual mode the selection runs as typed. **Databases: Run File** runs every statement in order and stops at the first error. A small note at the end of each statement shows the key, the connection and the last result. `Esc` cancels a running query.
+
+A read runs at once. Any other statement asks first, and the card shows the exact SQL (use Up/Down to read a long one). The title says what is special: `DELETE` or `UPDATE` without `WHERE`, `DROP`, `TRUNCATE`, `ALTER`, a production connection, or a read-only connection. There is no "always allow". In a file run, each write gets its own card.
+
+## SQL results
+
+The result opens as the **SQL Result** page, in a split on the right when the editor is at least 120 columns wide. The first rows show the SQL, the connection, the row count and the time. `Tab` switches between Grid, JSON and Messages. Messages shows the full error, the server's notices and the time.
+
+| Key | Action |
+| --- | --- |
+| `]` / `[` | next / previous page |
+| `o` | sort by a column (choose it again to reverse) |
+| `f` | show only rows that contain a text |
+| `v` or `Enter` | open the cell under the cursor (JSON is pretty-printed); `q` goes back |
+| `y` | copy the cell |
+| `c` / `C` | copy the loaded rows as CSV / JSON |
+| `r` | run again (writes ask again) |
+| `gd` | go to the statement |
+| `h` | SQL history |
+| `Esc` | cancel a running query |
+| `q` | close the page |
+
+A result loads at most `db_max_rows` rows (default 10,000); the page says when the limit was reached, so add a `LIMIT` or a `WHERE`. Only one page (`db_page_rows`, default 100) is written to the page at a time. A statement stops after `db_timeout` seconds (default 30). Set these in your user `config.json`.
+
+## SQL history
+
+Press `h` on the result page, `H` in the Databases view, or use **Databases: History…**. The newest run is at the top; `Enter` runs it again (writes ask again). **Clear history…** asks before it deletes. The history is `db/history.jsonl` in your user configuration (mode 0600): passwords are removed, each entry keeps at most 4 KB of SQL, and `db_history_max` (default 500) limits the count.
+
+Nothing polls while you wait: an idle console or result page uses no CPU, and hiding the Databases view cancels a running query and closes its sessions.

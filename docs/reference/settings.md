@@ -72,6 +72,15 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `mcp_oauth_port` | int | `0` | Port of the sign-in listener on 127.0.0.1 for MCP servers with OAuth. 0 takes the first free one of 47391–47395 (the ports termocode's client document lists, so ssh -L 47391:127.0.0.1:47391 works); set another only for an app registered with that port. |
 | `mcp_github_client_id` | string | `(built in)` | Client ID of a GitHub OAuth App with Device Flow on, for the GitHub sign-in with a code (Connect a service). Empty uses the one built into termocode (none until it is registered). Not a secret. |
 
+## Databases (file only)
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `db_max_rows` | int | `10000` | Maximum loaded rows per SQL result (1–100000). Larger results are cut and marked. |
+| `db_page_rows` | int | `100` | Rows per SQL result page (1–1000). |
+| `db_timeout` | int | `30` | Maximum seconds for a console statement. The session also enforces its own timeout. |
+| `db_history_max` | int | `500` | Maximum SQL history entries kept in db/history.jsonl. |
+
 ## Containers (file only)
 
 | Key | Type | Default | Description |

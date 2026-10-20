@@ -251,6 +251,10 @@ type SettingEntry struct {
 // fileOnlySettings are config.json keys with no row in the Settings modal.
 // They are set by other UI (named in the description) or by hand.
 var fileOnlySettings = []SettingEntry{
+	{Key: "db_max_rows", Type: "int", Default: "10000", Category: "Databases (file only)", Description: "Maximum loaded rows per SQL result (1–100000). Larger results are cut and marked."},
+	{Key: "db_page_rows", Type: "int", Default: "100", Category: "Databases (file only)", Description: "Rows per SQL result page (1–1000)."},
+	{Key: "db_timeout", Type: "int", Default: "30", Category: "Databases (file only)", Description: "Maximum seconds for a console statement. The session also enforces its own timeout."},
+	{Key: "db_history_max", Type: "int", Default: "500", Category: "Databases (file only)", Description: "Maximum SQL history entries kept in db/history.jsonl."},
 	{Key: "containers_sections", Type: "string[]", Default: "all", Category: "Containers (file only)",
 		Description: "Sections shown by the Containers view, across workspaces. The Containers menu writes this list; collapse state is kept in the workspace session."},
 	{Key: "ai_inline_model", Type: "string", Default: "(provider default)", Category: "AI (file only)",
@@ -435,6 +439,7 @@ func ConfigFileCatalog() []ConfigFile {
 		{"other", "~/.cache/termocode/mcp/<name>.tools.json", "Tool list of each MCP server, so a chat turn does not start the server just to list its tools. `$XDG_CACHE_HOME` moves it.",
 			"JSON, written by termocode; keyed by a hash of the server's mcp.json entry.", "Safe to delete."},
 	}
+	out = append(out, ConfigFile{"config", "db/history.jsonl", "Redacted SQL history, capped at 4 KB per entry; mode 0600.", "JSON lines; db_history_max trims the list.", "Databases: History… → Clear history…."}, ConfigFile{"config", "db/consoles/", "SQL consoles per workspace and connection, mode 0600.", "SQL with a -- @conn <id> header.", "Yes. Press n on a database connection."})
 	return append(out, httpConfigFiles()...) // HTTP client (http_settings.go)
 }
 

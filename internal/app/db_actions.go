@@ -24,6 +24,11 @@ import (
 func databasesPaletteItems() []picker.Item {
 	return []picker.Item{
 		{ID: "db-focus", Title: "Databases: Focus"},
+		{ID: "db-new-console", Title: "Databases: New Console"},
+		{ID: "db-run", Title: "Databases: Run Statement or Selection"},
+		{ID: "db-run-file", Title: "Databases: Run File"},
+		{ID: "db-history", Title: "Databases: History…"},
+		{ID: "db-cancel", Title: "Databases: Cancel Query"},
 		{ID: "db-add", Title: "Databases: Add Connection…"},
 		{ID: "db-connect", Title: "Databases: Connect Selected"},
 		{ID: "db-disconnect", Title: "Databases: Disconnect Selected"},
@@ -37,8 +42,23 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 	if !strings.HasPrefix(id, "db-") {
 		return nil, false
 	}
+	switch id {
+	case "db-run":
+		return m.databaseSend(false), true
+	case "db-run-file":
+		return m.databaseSend(true), true
+	case "db-history":
+		return m.databaseHistory(), true
+	case "db-cancel":
+		return m.databaseCancelRun(), true
+	}
 	open := m.revealDatabasesView(id == "db-focus")
 	switch id {
+	case "db-new-console":
+		if r, ok := m.databaseCurrentRow(); ok {
+			return m.databaseNewConsole(r.conn), true
+		}
+		return nil, true
 	case "db-focus":
 		return open, true
 	case "db-add":
@@ -112,6 +132,12 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			s.folded[row.path] = !s.folded[row.path]
 			s.touch()
 		}
+	case "n":
+		if have {
+			return m, m.databaseNewConsole(row.conn)
+		}
+	case "H":
+		return m, m.databaseHistory()
 	case "a":
 		if have && row.kind == dbNodeSuggestion {
 			return m, m.databaseAddSuggestion(row.path)
@@ -182,6 +208,9 @@ func (m *Model) databaseConfirmDisconnect(id string) {
 }
 
 func (m *Model) handleDBConfirm(id string) (tea.Cmd, bool) {
+	if cmd, ok := m.databaseConsoleConfirm(id); ok {
+		return cmd, true
+	}
 	if m.confirmKind == confirmKindDBMovePassword {
 		if m.databases == nil {
 			return nil, true
@@ -237,6 +266,7 @@ func (m *Model) handleDBConfirm(id string) (tea.Cmd, bool) {
 	if id != "disconnect" || m.databases == nil {
 		return nil, true
 	}
+	m.databases.console.stop(connID)
 	m.databases.connectionEpochs[connID]++
 	for key, sess := range m.databases.sessions {
 		if key == connID || strings.HasPrefix(key, connID+"/db/") {
@@ -791,7 +821,10 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 	n := s.nodes[msg.id]
 	n.loading = false
 	if msg.err != nil {
-		n.problem = sanitizeDBText(msg.err.Error())
+		if s.console != nil && s.console.waiting != nil && s.console.waiting.conn == msg.id {
+			s.console.waiting = nil
+		}
+		n.problem = dbErrorText(msg.err)
 		if c, ok := s.connection(msg.id); ok && c.Driver == "sqlite" && (strings.Contains(strings.ToLower(msg.err.Error()), "sqlite3 is not installed") || strings.Contains(strings.ToLower(msg.err.Error()), "too old")) {
 			n.problem = ""
 			n.loaded = true
@@ -803,7 +836,7 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 		}
 		s.nodes[msg.id] = n
 		s.touch()
-		return m.pushToastDetail(toast.Errr, "Database connection failed", sanitizeDBText(msg.err.Error()))
+		return m.pushToastDetail(toast.Errr, "Database connection failed", dbErrorText(msg.err))
 	}
 	if old := s.sessions[msg.id]; old != nil && old != msg.session {
 		_ = old.Close()
@@ -821,6 +854,9 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 	s.passwords[msg.id] = msg.password
 	s.activeID = msg.id
 	s.touch()
+	if s.console != nil && s.console.waiting != nil && s.console.waiting.conn == msg.id {
+		return tea.Batch(m.databaseExpand(msg.id), m.databaseStartRun(s.console.waiting))
+	}
 	return m.databaseExpand(msg.id)
 }
 
@@ -838,10 +874,10 @@ func (m *Model) onDBIntrospect(msg dbIntrospectMsg) tea.Cmd {
 	n := s.nodes[msg.path]
 	n.loading = false
 	if msg.err != nil {
-		n.problem = sanitizeDBText(msg.err.Error())
+		n.problem = dbErrorText(msg.err)
 		s.nodes[msg.path] = n
 		s.touch()
-		return m.pushToastDetail(toast.Errr, "Could not load database schema", sanitizeDBText(msg.err.Error()))
+		return m.pushToastDetail(toast.Errr, "Could not load database schema", dbErrorText(msg.err))
 	}
 	msg.result = sanitizeDBIntrospection(msg.result)
 	s.addIntrospection(msg.path, msg.result)
@@ -993,7 +1029,7 @@ func (m *Model) onDBTest(msg dbTestMsg) tea.Cmd {
 		m.picker.SetSize(m.w, m.h)
 		m.pickerOpen = true
 		m.pickerKind = pickerKindDBTestResult
-		return m.pushToastDetail(toast.Warn, "Connection test failed", sanitizeDBText(msg.err.Error()))
+		return m.pushToastDetail(toast.Warn, "Connection test failed", dbErrorText(msg.err))
 	}
 	m.databases.pendingConn = msg.conn
 	m.databases.pendingPassword = msg.password

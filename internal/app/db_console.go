@@ -1,0 +1,682 @@
+package app
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"time"
+
+	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/dbclient"
+	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/toast"
+	tea "github.com/charmbracelet/bubbletea"
+)
+
+// SQL consoles (plan F4): one console file per connection in the user
+// config, any project .sql file attached with "-- @conn <id>" or a picker
+// once per session; the send key runs the statement at the cursor, the
+// selection, or (Databases: Run File) every statement. Writes and anything
+// the classifier is not sure of ask first, with the statement shown.
+
+const (
+	pickerKindDBAttach pickerKindEnum = 1250 + iota
+	pickerKindDBHistory
+	pickerKindDBSort
+)
+const (
+	confirmKindDBRun confirmKindEnum = 1250 + iota
+	confirmKindDBClearHistory
+)
+const promptKindDBResultFilter promptKindEnum = 1250
+
+// dbRun is one statement sent from a console (or a history rerun). by is
+// "user" or "ai" (the result page says "by AI"; DB-5 sets it).
+type dbRun struct {
+	conn, file, sql, by string
+	line                int
+	statements          []string
+	index               int
+	result              dbclient.Result
+}
+
+type dbConsoleState struct {
+	lens     map[string]string // file + "\x00" + SQL → the lens status
+	attached map[string]string // project .sql file → connection (session only)
+	pending  *dbRun            // waits for the attach picker or the guard card
+	waiting  *dbRun            // waits for its connection
+	running  *dbRun
+	shown    *dbRun // the result on the page
+	cancel   context.CancelFunc
+	gen      uint64 // bumps on each run; stale results are dropped
+	pageGen  uint64 // bumps on each page write; stale batches are dropped
+	view     int
+	page     int
+	size     int // rows per page (db_page_rows, read at run time)
+	filter   string
+	sortCol  int
+	desc     bool
+	cache    *dbclient.Result
+	cacheKey dbViewKey
+	history  []dbclient.HistoryEntry
+	hist     *dbclient.History
+}
+
+func (m *Model) dbConsole() *dbConsoleState {
+	if m.databases == nil {
+		m.databases = newDBState()
+	}
+	if m.databases.console == nil {
+		m.databases.console = &dbConsoleState{attached: map[string]string{}, lens: map[string]string{}, sortCol: -1}
+	}
+	return m.databases.console
+}
+
+func dbConfigPath(parts ...string) string {
+	dir, err := configDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(append([]string{dir, "db"}, parts...)...)
+}
+
+// historyStore is the one history file handle (its mutex orders writes).
+func (s *dbConsoleState) historyStore() *dbclient.History {
+	if s.hist == nil {
+		s.hist = &dbclient.History{Path: dbConfigPath("history.jsonl")}
+	}
+	s.hist.Max = loadDBConsoleSettings().historyMax()
+	return s.hist
+}
+
+type dbConsoleSettings struct {
+	MaxRows    *int `json:"db_max_rows"`
+	PageRows   *int `json:"db_page_rows"`
+	Timeout    *int `json:"db_timeout"`
+	HistoryMax *int `json:"db_history_max"`
+}
+
+func loadDBConsoleSettings() dbConsoleSettings {
+	var s dbConsoleSettings
+	if p, e := settingsConfigPath(); e == nil {
+		if b, e := os.ReadFile(p); e == nil {
+			_ = json.Unmarshal(b, &s)
+		}
+	}
+	return s
+}
+
+func (s dbConsoleSettings) maxRows() int {
+	n := intOr(s.MaxRows, 10000)
+	if n < 1 {
+		n = 10000
+	}
+	return min(n, 100000)
+}
+
+func (s dbConsoleSettings) pageRows() int {
+	n := intOr(s.PageRows, 100)
+	if n < 1 {
+		n = 100
+	}
+	return min(n, 1000)
+}
+
+func (s dbConsoleSettings) timeout() time.Duration {
+	n := intOr(s.Timeout, 30)
+	if n < 1 {
+		n = 30
+	}
+	return time.Duration(n) * time.Second
+}
+
+func (s dbConsoleSettings) historyMax() int {
+	n := intOr(s.HistoryMax, 500)
+	if n < 1 {
+		n = 500
+	}
+	return n
+}
+
+func (s *dbConsoleState) pageSize() int {
+	if s.size < 1 {
+		return 100
+	}
+	return s.size
+}
+
+// databaseNewConsole opens (creates on first use) the console of a
+// connection: db/consoles/<workspace hash>/<connection hash>.sql, 0600.
+func (m *Model) databaseNewConsole(id string) tea.Cmd {
+	if m.nvim == nil {
+		return nil
+	}
+	m.ensureDatabasesLoaded()
+	c, ok := m.databases.connection(id)
+	if !ok {
+		return nil
+	}
+	if c.Driver == "redis" {
+		return m.pushToastDetail(toast.Info, "No SQL console", "This connection does not use SQL.")
+	}
+	rootHash := fmt.Sprintf("%x", sha256.Sum256([]byte(m.databaseWorkspaceRoot())))[:16]
+	idHash := fmt.Sprintf("%x", sha256.Sum256([]byte(id)))[:12]
+	path := dbConfigPath("consoles", rootHash, idHash+".sql")
+	if path == "" {
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return m.dbConsoleError(err)
+	}
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err == nil {
+		_, err = f.WriteString("-- @conn " + id + "\n\n")
+		_ = f.Close()
+	} else if os.IsExist(err) {
+		err = nil
+	}
+	if err != nil {
+		return m.dbConsoleError(err)
+	}
+	m.ensureDBLua()
+	m.ensureEditorWindowCurrent()
+	_ = m.nvim.ExecLuaArgs(`vim.cmd('edit '..vim.fn.fnameescape(...)); vim.bo.filetype='sql'; vim.cmd('normal! G')`, path)
+	m.focus = FocusEditor
+	return m.fetchStateCmd()
+}
+
+func (m *Model) dbConsoleError(err error) tea.Cmd {
+	return m.pushToastDetail(toast.Errr, "Database", dbErrorText(err))
+}
+
+// dbErrorText is the one line of a driver error worth showing: the
+// server's FATAL / ERROR line, or for a multi-line connect error (the
+// first line names the target and ends with ":") the reason under it.
+func dbErrorText(err error) string {
+	if err == nil {
+		return ""
+	}
+	switch {
+	case errors.Is(err, context.Canceled):
+		return "Cancelled"
+	case errors.Is(err, context.DeadlineExceeded):
+		return "Stopped: took longer than db_timeout"
+	}
+	var lines []string
+	for _, l := range strings.Split(dbRedact(err.Error()), "\n") {
+		if t := strings.TrimSpace(l); t != "" {
+			lines = append(lines, t)
+		}
+	}
+	if len(lines) == 0 {
+		return ""
+	}
+	for _, l := range lines {
+		for _, tag := range []string{"FATAL:", "ERROR:", "PANIC:"} {
+			if i := strings.Index(l, tag); i >= 0 {
+				return sanitizeDBText(l[i:])
+			}
+		}
+	}
+	if len(lines) > 1 && strings.HasSuffix(lines[0], ":") {
+		reason := dbConnectTarget.ReplaceAllString(lines[len(lines)-1], "")
+		if mt := dbDialReason.FindStringSubmatch(reason); mt != nil {
+			reason = mt[1]
+		}
+		return sanitizeDBText(reason)
+	}
+	return sanitizeDBText(lines[0])
+}
+
+var (
+	// "127.0.0.1:5432 (localhost): dial error: " before a connect reason.
+	dbConnectTarget = regexp.MustCompile(`^\S+ \([^)]*\): (?:(?:dial|server|tls) error: )?`)
+	// "dial tcp 127.0.0.1:5432: connect: connection refused".
+	dbDialReason = regexp.MustCompile(`^dial \S+ \S+: (?:connect: )?(.+)$`)
+)
+
+// dbChangeSummary is the outcome of a statement without rows: "3 rows
+// changed" for DML, "Done" for anything else (DDL, SET, …).
+func dbChangeSummary(r *dbRun) string {
+	switch strings.ToUpper(firstSQLWord(r.sql)) {
+	case "INSERT", "UPDATE", "DELETE", "MERGE", "REPLACE", "UPSERT":
+		return dbPlural(int(r.result.Affected), "row") + " changed"
+	}
+	if r.result.Affected > 0 {
+		return dbPlural(int(r.result.Affected), "row") + " changed"
+	}
+	return "Done"
+}
+
+// databaseSend is the send key in a SQL buffer: the statement under the
+// cursor, the visual selection as typed, or every statement (all).
+func (m *Model) databaseSend(all bool) tea.Cmd {
+	if m.nvim == nil {
+		return nil
+	}
+	m.ensureDBLua()
+	file, lines, ok := m.httpBufText(0)
+	if !ok || !strings.EqualFold(lastExt(file), ".sql") {
+		return m.pushToastDetail(toast.Info, "Open a SQL file", "Press n on a database connection to open its console.")
+	}
+	m.ensureDatabasesLoaded()
+	s := m.dbConsole()
+	if s.running != nil {
+		return m.pushToastDetail(toast.Warn, "A query is running", "Esc cancels it.")
+	}
+	var pos struct {
+		Line      int    `json:"line"`
+		Selection string `json:"selection"`
+	}
+	var raw string
+	_ = m.nvim.ExecLuaResult(dbSelectionLua, &raw)
+	_ = json.Unmarshal([]byte(raw), &pos)
+	r := &dbRun{file: file, sql: strings.Join(lines, "\n"), line: max(pos.Line, 1), by: "user"}
+	switch {
+	case all:
+		r.line = 0
+	case strings.TrimSpace(pos.Selection) != "":
+		r.sql = pos.Selection
+		r.line = -r.line
+	}
+	r.conn = s.consoleConn(file, lines)
+	if _, ok := m.databases.connection(r.conn); !ok {
+		r.conn = ""
+	}
+	if r.conn == "" {
+		var items []picker.Item
+		for _, c := range m.databases.conns {
+			if c.Driver != "redis" && c.Problem == "" {
+				items = append(items, picker.Item{ID: c.ID, Title: sanitizeDBText(dbConnName(c)), Hint: c.Driver})
+			}
+		}
+		if len(items) == 0 {
+			return m.pushToastDetail(toast.Info, "No SQL connection", "Add one in the Databases view first.")
+		}
+		s.pending = r
+		m.picker = picker.NewItems("Run this file on which connection?", items)
+		m.picker.SetSize(m.w, m.h)
+		m.pickerKind = pickerKindDBAttach
+		m.pickerOpen = true
+		return nil
+	}
+	return m.databasePrepareRun(r)
+}
+
+// databasePrepareRun splits r.sql with the connection's dialect and keeps
+// the statement under the cursor (line > 0), the selection (line < 0) or
+// all of them (line 0).
+func (m *Model) databasePrepareRun(r *dbRun) tea.Cmd {
+	c, ok := m.databases.connection(r.conn)
+	if !ok {
+		return m.pushToastDetail(toast.Warn, "Connection not found", sanitizeDBText(r.conn))
+	}
+	if r.line > 0 {
+		spans := dbStatementSpans(r.sql, c.Driver)
+		if len(spans) == 0 {
+			return m.pushToastDetail(toast.Info, "No SQL at the cursor", "")
+		}
+		chosen := spans[len(spans)-1]
+		offset := 0
+		for i, l := range strings.Split(r.sql, "\n") {
+			if i+1 >= r.line {
+				break
+			}
+			offset += len(l) + 1
+		}
+		for _, sp := range spans {
+			if offset <= sp.end {
+				chosen = sp
+				break
+			}
+		}
+		r.statements = []string{chosen.sql}
+		r.line = chosen.line
+	} else {
+		sqls, err := dbclient.Split(r.sql, c.Driver)
+		if err != nil {
+			return m.dbConsoleError(err)
+		}
+		r.statements = sqls
+		if r.line < 0 {
+			r.line = -r.line
+		} else if spans := dbStatementSpans(r.sql, c.Driver); len(spans) > 0 {
+			r.line = spans[0].line
+		}
+	}
+	if len(r.statements) == 0 {
+		return m.pushToastDetail(toast.Info, "No SQL to run", "")
+	}
+	r.line = max(r.line, 1)
+	r.index = 0
+	r.sql = r.statements[0]
+	return m.databaseReviewRun(r)
+}
+
+// databaseReviewRun runs a read at once; a write, DDL or an unknown
+// statement asks first with the exact SQL (no "always allow").
+func (m *Model) databaseReviewRun(r *dbRun) tea.Cmd {
+	c, ok := m.databases.connection(r.conn)
+	if !ok {
+		return nil
+	}
+	s := m.dbConsole()
+	kind, stmts := dbclient.Classify(r.sql, c.Driver)
+	if kind == dbclient.KindRead {
+		return m.databaseStartRun(r)
+	}
+	s.pending = r
+	title, note := dbGuardText(c, kind, stmts)
+	body := dbSafeMultiline(strings.TrimSpace(r.sql))
+	if note != "" {
+		body += "\n\n" + note
+	}
+	m.confirm = confirm.New(title, body, []confirm.Button{
+		{ID: "cancel", Title: "Cancel"},
+		{ID: "run", Title: "Run", Style: confirm.StyleDestructive},
+	}).WithScrollText()
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = confirmKindDBRun
+	return nil
+}
+
+// dbGuardText is the guard card's title and its note under the SQL.
+func dbGuardText(c dbclient.Conn, kind dbclient.Kind, stmts []dbclient.Statement) (string, string) {
+	name := sanitizeDBText(dbConnName(c))
+	var st dbclient.Statement
+	if len(stmts) > 0 {
+		st = stmts[0]
+	}
+	verb := strings.ToUpper(firstSQLWord(st.SQL))
+	table := st.Table
+	if table == "" {
+		if mt := dbTargetTable.FindStringSubmatch(dbStripComments(st.SQL)); mt != nil {
+			table = mt[1]
+		}
+	}
+	table = sanitizeDBText(table)
+	if table == "" {
+		table = "the table"
+	}
+	note := ""
+	switch {
+	case (verb == "DELETE" || verb == "UPDATE") && !st.HasWhere:
+		note = "Every row of " + table + " will change."
+		if verb == "DELETE" {
+			note = "Every row of " + table + " will go."
+		}
+	case verb == "DROP" || verb == "TRUNCATE":
+		note = "This cannot be undone."
+	}
+	title := "Run this statement on " + name + "?"
+	switch {
+	case c.ReadOnly:
+		title = name + " is read-only. Run anyway?"
+	case c.Environment == "production":
+		title = "Write to production (" + name + ")?"
+	case (verb == "DELETE" || verb == "UPDATE") && !st.HasWhere:
+		title = "Run " + verb + " without WHERE on " + name + "?"
+	case verb == "DROP" || verb == "TRUNCATE" || verb == "ALTER":
+		title = "Run " + verb + " on " + name + "?"
+	case kind == dbclient.KindUnknown:
+		title = "Run this statement on " + name + "? It may change data."
+	}
+	return title, note
+}
+
+// dbTargetTable finds the table a DELETE / UPDATE / TRUNCATE names.
+var dbTargetTable = regexp.MustCompile("(?is)^\\s*(?:DELETE\\s+FROM|UPDATE|TRUNCATE(?:\\s+TABLE)?)\\s+([\\w.\"`\\[\\]]+)")
+
+func firstSQLWord(sql string) string {
+	for _, l := range strings.Split(sql, "\n") {
+		t := strings.TrimSpace(l)
+		if t == "" || strings.HasPrefix(t, "--") {
+			continue
+		}
+		if f := strings.Fields(t); len(f) > 0 {
+			return strings.Trim(f[0], "(;")
+		}
+	}
+	return ""
+}
+
+// databaseStartRun connects first when needed (the run waits), then runs
+// r on the connection's session in the background with a timeout.
+func (m *Model) databaseStartRun(r *dbRun) tea.Cmd {
+	s := m.dbConsole()
+	s.pending = nil
+	_ = m.revealDatabasesView(false) // sessions live while the view shows
+	sess := m.databases.sessions[r.conn]
+	if sess == nil {
+		s.waiting = r
+		cmd := m.databaseConnect(r.conn)
+		if !m.databases.nodes[r.conn].loading {
+			s.waiting = nil // no connect started (a card or an error came instead)
+		}
+		return cmd // onDBConnect starts the run
+	}
+	s.waiting = nil
+	s.gen++
+	gen := s.gen
+	settings := loadDBConsoleSettings()
+	ctx, cancel := context.WithTimeout(context.Background(), settings.timeout())
+	s.cancel = cancel
+	s.running = r
+	s.shown = r
+	s.cache = nil
+	s.page = 0
+	s.size = settings.pageRows()
+	s.view = dbViewGrid
+	s.filter = ""
+	s.sortCol = -1
+	m.databaseRefreshLens(r.file, r.sql, "running…")
+	pageCmd := m.databaseShowPage()
+	limit := settings.maxRows()
+	return tea.Batch(pageCmd, func() tea.Msg {
+		result := sess.Run(ctx, r.sql, dbclient.RunOptions{MaxRows: limit})
+		return dbRunMsg{gen: gen, run: r, result: result}
+	})
+}
+
+type dbRunMsg struct {
+	gen    uint64
+	run    *dbRun
+	result dbclient.Result
+}
+
+func (m *Model) databaseFinishRun(msg dbRunMsg) tea.Cmd {
+	if m.databases == nil {
+		return nil
+	}
+	s := m.dbConsole()
+	if s.gen != msg.gen || s.running != msg.run {
+		return nil
+	}
+	if s.cancel != nil {
+		s.cancel()
+		s.cancel = nil
+	}
+	s.running = nil
+	msg.run.result = msg.result
+	s.shown = msg.run
+	s.cache = nil
+	res := msg.result
+	status := ""
+	switch {
+	case res.Err != nil:
+		status = dbGlyphFail() + " " + dbErrorText(res.Err)
+		s.view = dbViewMessages
+	case len(res.Columns) == 0:
+		status = fmt.Sprintf("%s · %d ms", dbChangeSummary(msg.run), res.Elapsed.Milliseconds())
+		s.view = dbViewMessages
+	default:
+		status = fmt.Sprintf("%s · %d ms", dbPlural(len(res.Rows), "row"), res.Elapsed.Milliseconds())
+	}
+	m.databaseRefreshLens(msg.run.file, msg.run.sql, status)
+	cmds := []tea.Cmd{m.databaseShowPage(), m.databaseAppendHistory(msg.run)}
+	if res.Err == nil && msg.run.index+1 < len(msg.run.statements) {
+		next := *msg.run
+		next.index++
+		next.sql = next.statements[next.index]
+		next.result = dbclient.Result{}
+		gen := msg.gen
+		cmds = append(cmds, func() tea.Msg { return dbNextMsg{gen: gen, run: &next} })
+	}
+	return tea.Sequence(cmds...)
+}
+
+// databaseAppendHistory writes the run to db/history.jsonl off the UI
+// goroutine (the SQL redacted, capped at 4 KB by the store).
+func (m *Model) databaseAppendHistory(r *dbRun) tea.Cmd {
+	store := m.dbConsole().historyStore()
+	e := dbclient.HistoryEntry{ID: fmt.Sprint(time.Now().UnixNano()), Conn: r.conn, SQL: dbRedact(r.sql), Kind: r.by, Rows: len(r.result.Rows), ElapsedMS: r.result.Elapsed.Milliseconds()}
+	if len(r.result.Columns) == 0 {
+		e.Rows = int(r.result.Affected)
+	}
+	return func() tea.Msg {
+		if err := store.Append(e); err != nil {
+			return dbHistoryErrMsg{err: err}
+		}
+		return nil
+	}
+}
+
+type dbHistoryErrMsg struct{ err error }
+
+type dbNextMsg struct {
+	gen uint64
+	run *dbRun
+}
+
+func (m *Model) databaseCancelRun() tea.Cmd {
+	if m.databases == nil || m.databases.console == nil {
+		return nil
+	}
+	if s := m.databases.console; s.cancel != nil {
+		s.cancel()
+	}
+	return nil
+}
+
+// stop drops the running and waiting runs: the view hides (conn "") or
+// the connection conn closes.
+func (s *dbConsoleState) stop(conn string) {
+	if s == nil {
+		return
+	}
+	if conn != "" && (s.running == nil || s.running.conn != conn) && (s.waiting == nil || s.waiting.conn != conn) {
+		return
+	}
+	if s.cancel != nil {
+		s.cancel()
+		s.cancel = nil
+	}
+	s.gen++
+	s.running = nil
+	s.waiting = nil
+	s.pending = nil
+}
+
+func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
+	switch m.confirmKind {
+	case confirmKindDBRun:
+		s := m.dbConsole()
+		r := s.pending
+		s.pending = nil
+		if id == "run" && r != nil {
+			return m.databaseStartRun(r), true
+		}
+		return nil, true
+	case confirmKindDBClearHistory:
+		if id == "clear" {
+			if e := m.dbConsole().historyStore().Clear(); e != nil {
+				return m.dbConsoleError(e), true
+			}
+			return m.pushToast(toast.Info, "SQL history cleared"), true
+		}
+		return nil, true
+	}
+	return nil, false
+}
+
+func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
+	switch m.pickerKind {
+	case pickerKindDBAttach, pickerKindDBHistory, pickerKindDBSort:
+	default:
+		return nil, false
+	}
+	s := m.dbConsole()
+	switch m.pickerKind {
+	case pickerKindDBAttach:
+		r := s.pending
+		s.pending = nil
+		if r == nil {
+			return nil, true
+		}
+		r.conn = id
+		s.attached[r.file] = id
+		m.databaseRefreshLens(r.file, "", "")
+		return m.databasePrepareRun(r), true
+	case pickerKindDBHistory:
+		if id == "clear" {
+			m.confirm = confirm.New("Clear SQL history?", fmt.Sprintf("Delete %d history entries?", len(s.history)), []confirm.Button{{ID: "cancel", Title: "Cancel"}, {ID: "clear", Title: "Delete", Style: confirm.StyleDestructive}})
+			m.confirm.SetSize(m.w, m.h)
+			m.confirmOpen = true
+			m.confirmKind = confirmKindDBClearHistory
+			return nil, true
+		}
+		for _, e := range s.history {
+			if e.ID == id {
+				return m.databasePrepareRun(&dbRun{conn: e.Conn, sql: e.SQL, by: "user"}), true
+			}
+		}
+		return nil, true
+	default: // pickerKindDBSort
+		var col int
+		if _, err := fmt.Sscan(id, &col); err != nil {
+			return nil, true
+		}
+		if s.sortCol == col {
+			s.desc = !s.desc
+		} else {
+			s.desc = false
+		}
+		s.sortCol = col
+		s.page = 0
+		return m.databaseShowPage(), true
+	}
+}
+
+// databaseHistory opens the history picker (newest first).
+func (m *Model) databaseHistory() tea.Cmd {
+	s := m.dbConsole()
+	entries, err := s.historyStore().List()
+	if err != nil {
+		return m.dbConsoleError(err)
+	}
+	s.history = entries
+	items := make([]picker.Item, 0, len(entries)+1)
+	for i := len(entries) - 1; i >= 0; i-- {
+		e := entries[i]
+		hint := sanitizeDBText(e.Conn) + " · " + e.Time.Format("01-02 15:04") + fmt.Sprintf(" · %d ms", e.ElapsedMS)
+		items = append(items, picker.Item{ID: e.ID, Title: dbOneLine(e.SQL), Hint: hint})
+	}
+	if len(entries) > 0 {
+		items = append(items, picker.Item{ID: "clear", Title: "Clear history…"})
+	}
+	if len(items) == 0 {
+		return m.pushToastDetail(toast.Info, "No SQL history yet", "Run a statement from a console first.")
+	}
+	m.picker = picker.NewItems("SQL history · Enter runs again", items)
+	m.picker.SetSize(m.w, m.h)
+	m.pickerKind = pickerKindDBHistory
+	m.pickerOpen = true
+	return nil
+}

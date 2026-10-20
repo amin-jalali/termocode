@@ -58,6 +58,7 @@ type dbTreeRow struct {
 }
 
 type dbState struct {
+	console             *dbConsoleState
 	loaded              bool
 	activeID            string
 	generation          uint64
@@ -162,6 +163,16 @@ func (m *Model) revealDatabasesView(focus bool) tea.Cmd {
 	if focus {
 		m.focus = FocusExplorer
 	}
+	m.ensureDatabasesLoaded()
+	m.databases.addRuntimeSuggestions(m.services)
+	m.databases.visible = true
+	return nil
+}
+
+// ensureDatabasesLoaded reads the connection files once (and the saved tree
+// state) without showing the view: SQL consoles need the connection list
+// while the sidebar shows another view.
+func (m *Model) ensureDatabasesLoaded() {
 	if m.databases == nil {
 		m.databases = newDBState()
 	}
@@ -176,9 +187,6 @@ func (m *Model) revealDatabasesView(focus bool) tea.Cmd {
 			m.databases.hidden[path] = true
 		}
 	}
-	m.databases.addRuntimeSuggestions(m.services)
-	m.databases.visible = true
-	return nil
 }
 
 func (m *Model) databasesSaveSession() {
@@ -533,6 +541,7 @@ func (m *Model) databasesClose() {
 	if m.databases == nil {
 		return
 	}
+	m.databases.console.stop("")
 	for id, s := range m.databases.sessions {
 		_ = s.Close()
 		delete(m.databases.sessions, id)

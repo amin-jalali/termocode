@@ -151,9 +151,8 @@ const (
 	ActionServicesFocus
 	// ActionDatabasesFocus shows and focuses the Databases view.
 	ActionDatabasesFocus
-	// ActionHTTPSend sends the request at the cursor of an .http file,
-	// resends on the HTTP Response page, else resends the last request
-	// (Ctrl+Alt+R, like VS Code REST Client).
+	// ActionHTTPSend sends the request or SQL statement at the cursor,
+	// or runs the selection in a SQL buffer.
 	ActionHTTPSend
 	// ActionAINextProfile switches the AI chat to the next agent profile
 	// (U20 AP-5): Alt+Shift+P (Alt+P is Pin Tab).
@@ -175,7 +174,8 @@ const (
 // this). Adding a binding that no legacy terminal can send means adding it
 // here on purpose (reachable_test.go fails otherwise).
 var KittyOnlyKeys = map[string]bool{
-	"ctrl+.": true, "ctrl+shift+.": true, "ctrl+/": true, "ctrl+`": true, "ctrl+shift+`": true,
+	"ctrl+enter": true,
+	"ctrl+.":     true, "ctrl+shift+.": true, "ctrl+/": true, "ctrl+`": true, "ctrl+shift+`": true,
 	"ctrl+tab": true, "ctrl+alt+i": true,
 	"ctrl+shift+e": true, "ctrl+shift+h": true, "ctrl+shift+m": true, "ctrl+shift+o": true,
 	"ctrl+shift+t": true, "ctrl+shift+v": true, "ctrl+shift+w": true,
@@ -472,6 +472,7 @@ func Default() KeyMap {
 			// Client's key). Legacy terminals send it as Esc + Ctrl+R,
 			// which canonicalKey matches too; the palette always works.
 			"ctrl+alt+r": ActionHTTPSend,
+			"ctrl+enter": ActionHTTPSend,
 
 			// Right-side Actions panel toggle. Alt+A is universally free
 			// (Ctrl+Shift+A is grabbed by most terminals for "select all").
