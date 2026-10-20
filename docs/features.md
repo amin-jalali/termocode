@@ -21,7 +21,7 @@ you how.
 ```
 
 The **activity bar** on the left switches the sidebar: **Explorer**,
-**Source Control**, **Run** (Run and Debug), **Testing** and **Services**, with **Settings**
+**Source Control**, **Run** (Run and Debug), **Testing**, **Services** and **Databases**, with **Settings**
 at the bottom. Extensions can add their own icons. Click the active icon again
 to hide the sidebar. Rest the mouse on an icon button for half a second to see
 its name and key.
@@ -64,6 +64,7 @@ its name and key.
 - Tasks from `tasks.json`, `package.json`, `Makefile`, Cargo, pytest and more, each in a terminal tab. → [Tasks and problems](guides/tasks-problems.md)
 - A test explorer for Go, pytest, Rust, Jest and Vitest. → [Run and explore tests](guides/tests.md)
 - A Services view for Docker Compose and local dev services: start, stop, logs in a terminal tab, and AI tools that read their state and logs (secrets masked). → [Dev services](guides/services.md)
+- A Databases view for PostgreSQL, MySQL / MariaDB, SQLite and Redis / Valkey: schema tree, SQL console, result pages, row edits with a reviewed transaction, export and import, EXPLAIN, SSH tunnels, and AI tools that read in a read-only session and ask before a write. → [Browse databases](guides/databases.md)
 - A Run and Debug view with breakpoints, watch, call stack and a Debug Console. → [Debug a program](guides/debug.md)
 - An integrated terminal with tabs (`Ctrl+T`). Click `file:line` links in its output.
 

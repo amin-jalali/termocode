@@ -1,24 +1,105 @@
 # Browse databases
 
-The **Databases** view lists configured connections and SQLite files found near the workspace root. It can connect to PostgreSQL, MySQL or MariaDB, SQLite, and Redis or Valkey. Connections are opened only when you expand them; schema details load as you move down the tree.
+The **Databases** view manages connections to PostgreSQL, MySQL or MariaDB, SQLite, and Redis or Valkey. You can browse the schema, run SQL in a console, read and edit rows, export and import data, and let the AI help with safe rules.
+
+A connection opens only when you expand it. Schema details load as you move down the tree.
 
 ## Open the view
 
-Choose **Databases** in the activity bar or run **Databases: Focus** from the command palette. Use `j` and `k` to move, `Enter` to connect or expand a row, `h` to fold a branch, and `R` to reload the list. Use `/` to filter names and `Esc` to return focus to the editor.
+Choose **Databases** in the activity bar or run **Databases: Focus** from the command palette. The action `DatabasesFocus` has no default key; you can bind one in `keymap.json`.
 
-Tables show their columns, primary keys, indexes, and foreign keys when expanded. A primary-key column has a `[PK]` marker; selecting it shows “primary key” in the footer. Views, routines, and sequences appear in their own groups when the server exposes them.
+Use `j` and `k` to move, `Enter` to connect or expand a row, `h` to fold a branch, `R` to reload the list, and `/` to filter by name. `Esc` returns focus to the editor. `?` shows a short key list.
 
-## Add and edit connections
+Tables show their columns, primary keys, indexes and foreign keys when expanded. A primary-key column has a `[PK]` marker. Views, routines and sequences appear in their own groups when the server has them.
 
-Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, or a connection URL. The server prompts start with useful defaults. Network connections ask for the host, port, user, and database, followed by a masked password prompt. The app tests the connection before offering a choice to save it to the project or to your user configuration. You can also edit a connection file directly with `e` on a row. Project configuration lives in `.termocode/databases.json`; user connections live in `~/.config/termocode/db/connections.json`.
+## Connections and the JSON files
 
-Passwords are stored through the secret store. A password pasted in a URL is removed from the saved URL and stored as a secret. Project files contain references such as `${secret:db.local}` or `${dotenv:DATABASE_URL}`, never literal passwords. Press `p` on a connection row to set its password. SQLite paths in project configuration must stay inside the workspace.
+Connections live in two JSON files. Both allow comments.
 
-SQLite uses the installed `sqlite3` command. It needs version 3.33 or newer. If it is missing, the view displays an install command for the current platform.
+| File | Use it for |
+| --- | --- |
+| `.termocode/databases.json` | Connections you share with the project. Never put a password in it. |
+| `~/.config/termocode/db/connections.json` | Your own connections. |
 
-## SSH tunnels and SSL
+If both files use the same `id`, the project entry wins. Press `e` on a connection to open its file. Press `e` on an empty spot to open the user file. A new file starts from a template with comments.
 
-A connection can go through one SSH server (a bastion). Run **Databases: Add SSH Tunnel…** on a row, or choose **Use an SSH tunnel…** after a failed test while adding a connection. The prompts ask for the SSH server, port, user and how to log in: `ssh-agent`, a key file, or a password. The tunnel runs inside termocode; it opens no local port. The database host is resolved by the SSH server, so names that only exist behind the bastion work.
+```jsonc
+{
+  "connections": [
+    {
+      "id": "local",
+      "driver": "postgres",
+      "host": "localhost",
+      "port": 5432,
+      "user": "app",
+      "database": "app",
+      "password": "${secret:db.local}",
+      "environment": "development"
+    }
+  ]
+}
+```
+
+| Key | Meaning |
+| --- | --- |
+| `id` | Required. Lower-case letters, digits, `_` and `-`. |
+| `name` | Label in the tree. |
+| `driver` | `postgres`, `mysql` (also `mariadb`), `sqlite` or `redis`. |
+| `host`, `port`, `user`, `database` | Network connections. The port defaults to 5432, 3306 or 6379. |
+| `path` | SQLite file. In a project file it must stay inside the workspace. |
+| `db` | Redis database index. |
+| `url` | A connection URL instead of the single fields. |
+| `params` | Extra driver parameters. |
+| `password` | A reference, never the text (see [Passwords](#passwords-and-the-secret-store)). |
+| `environment` | `development` (default), or `production` for the stricter cards. |
+| `readOnly` | `true` makes the AI refuse writes. Your own writes ask with a warning. |
+| `ssh`, `ssl`, `tls` | See [SSH tunnels](#ssh-tunnels) and [SSL and TLS](#ssl-and-tls). |
+
+A row with a problem shows the reason, for example `literal password in project config`, `duplicate connection id` or `sqlite path is outside the workspace`. Fix the file and press `R`.
+
+## Suggestions
+
+Termocode suggests connections it finds. A suggestion row has no password and does nothing until you add it.
+
+- SQLite files ending in `.db`, `.sqlite` or `.sqlite3`, up to two folders below the workspace root.
+- `DATABASE_URL`, `REDIS_URL` or `MYSQL_URL` in the workspace `.env`. The value is not shown. The saved connection uses a `${dotenv:NAME}` reference.
+- PostgreSQL, MySQL, MariaDB, Redis and Valkey containers or compose services that the Services view lists.
+
+Press `a` on a suggestion (or `Enter`) to add it. Press `x` to hide it.
+
+## Add a connection
+
+Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, or **From a URL**.
+
+- **A server type** asks for the host, port, user and database. Then it asks for a masked password.
+- **From a URL** asks you to paste one, for example `postgres://app@localhost:5432/app`. Schemes `postgres`, `postgresql`, `mysql`, `mariadb`, `redis`, `rediss`, `sqlite` and `file` work. A password in the URL is taken out and stored as a secret. If the URL has none, you are asked for it.
+
+Termocode tests the connection first. If the test works, choose **Save to project** (no password in the file) or **Save for me only**. If it fails, a list offers **Set password…**, **Use an SSH tunnel…**, **SSL settings…**, **Test again** or **Cancel**.
+
+Run **Databases: Test Connection** or press `T` on a row to test a saved connection again. The test goes through its tunnel and SSL settings and does not touch an open session.
+
+## Passwords and the secret store
+
+A password is never written to a project file. The file holds a reference:
+
+| Reference | Source |
+| --- | --- |
+| `${secret:db.local}` | The secret store. This is what the app writes. |
+| `${dotenv:NAME}` | A key in the workspace `.env`. |
+| `${env:NAME}` | An environment variable of termocode. |
+| `${cmd:line}` | The first output line of a command you wrote. |
+
+Press `p` on a connection to set its password. It goes to the secret store as `db.<id>`. The SSH password and key passphrase are stored as `db.<id>.ssh` and `db.<id>.sshkey`.
+
+The secret store uses your OS keyring when one is available. Otherwise it uses an encrypted file, or a plain file with mode 0600 (`ai/credentials.json`). See [Security notes](#security-notes).
+
+A project file with a literal password is refused: the row shows a problem. A user file with a literal password gives a warning, and the app offers to **Move password** to the secret store before it connects.
+
+SQLite needs no password.
+
+## SSH tunnels
+
+A connection can go through one SSH server (a bastion). Run **Databases: Add SSH Tunnel…** on a row, or choose **Use an SSH tunnel…** after a failed test while adding a connection. The prompts ask for the SSH server, port, user and how to log in: `ssh-agent`, a key file, or a password. The tunnel runs inside termocode and opens no local port. The database host is resolved by the SSH server, so names that only exist behind the bastion work.
 
 ```jsonc
 "ssh": { "host": "bastion.example.com", "user": "deploy", "auth": "agent" },
@@ -30,13 +111,13 @@ A connection can go through one SSH server (a bastion). Run **Databases: Add SSH
 - Host keys are checked against `~/.ssh/known_hosts` (or `knownHosts`). An unknown server shows a card with its `SHA256:` fingerprint: **Trust and save to known_hosts** adds it, **Cancel** stops. A server whose key changed is refused with no way around it; check with your admin.
 - The tunnel opens with the connection and closes when you disconnect, leave the view, refresh or quit. There is no keepalive: a dropped tunnel shows `SSH tunnel closed · R reconnect` on the next query.
 
-**Databases: SSL Settings…** sets `ssl.mode`: `disable`, `require` (encrypted, server not checked), `verify-ca` (the certificate must come from the CA) or `verify-full` (CA and host name, the default). A CA file is optional (the system's CAs are used without one); `cert` and `key` add a client certificate, and the key file must be readable only by you. When SSL is required there is no plain-text retry. `~` in a path is your home; a relative path is in the workspace.
+## SSL and TLS
 
-Press `T` on a row (or run **Databases: Test Connection**) to test it through its tunnel and SSL without touching an open session. Rows show `ssh` and `ssl` tags after the driver.
+**Databases: SSL Settings…** sets `ssl.mode`: `disable`, `require` (encrypted, server not checked; with a `ca` it is checked like `verify-ca`), `verify-ca` (the certificate must come from the CA) or `verify-full` (CA and host name; used when an `ssl` object has no `mode`). A CA file is optional (the system's CAs are used without one); `cert` and `key` add a client certificate, and the key file must be readable only by you. Without an `ssl` object termocode does not change the driver default. When a mode needs TLS there is no plain-text retry. `~` in a path is your home; a relative path is in the workspace.
 
-## Suggestions
+Rows show `ssh` and `ssl` tags after the driver. Test a setting with `T` (see [Add a connection](#add-a-connection)).
 
-SQLite files ending in `.db`, `.sqlite`, or `.sqlite3` are suggested from the workspace root and nearby folders. A connection URL in `.env` can also be surfaced as a suggestion; the value itself is not shown, and the saved connection uses a `${dotenv:NAME}` reference. Press `a` to add a suggestion or `x` to hide it.
+For Redis, `"tls": true` or a `rediss://` URL turns TLS on (see [Redis and Valkey](#redis-and-valkey)).
 
 ## From Containers and Services
 
@@ -46,9 +127,9 @@ When the container or service behind a saved connection is stopped, the footer s
 
 ## Disconnect
 
-Press `x` on a connection and confirm its name to close all sessions opened for that connection. Expanding another database reuses its session on later visits. Sessions also close when you leave the Databases view, so hidden views do not keep database processes or activity running. A session with an open manual transaction stays open until you commit or roll back (see [Transactions](#transactions)); `x` on its connection first asks **Commit**, **Roll back** or **Cancel**.
+Press `x` on a connection and choose **Disconnect** to close all its sessions. Sessions also close when you leave the Databases view, so a hidden view keeps no database process. A session with an open manual transaction stays open until you commit or roll back (see [Transactions](#transactions)); `x` then asks **Commit**, **Roll back** or **Cancel**.
 
-## SQL consoles
+## The SQL console
 
 Press `n` on a connection to open its console. Consoles live in your user configuration under `db/consoles/<workspace>/<connection>.sql` (mode 0600) and start with a `-- @conn <id>` line. A project `.sql` file can use the same line; without it, the first run asks which connection to use and remembers the answer until you quit.
 
@@ -56,7 +137,7 @@ Press `Ctrl+Alt+R` (or `Ctrl+Enter` in terminals that send it) to run the statem
 
 A read runs at once. Any other statement asks first, and the card shows the exact SQL (use Up/Down to read a long one). The title says what is special: `DELETE` or `UPDATE` without `WHERE`, `DROP`, `TRUNCATE`, `ALTER`, a production connection, or a read-only connection. There is no "always allow". In a file run, each write gets its own card.
 
-## SQL results
+## Results
 
 The result opens as the **SQL Result** page, in a split on the right when the editor is at least 120 columns wide. The first rows show the SQL, the connection, the row count and the time. `Tab` switches between Grid, JSON and Messages. Messages shows the full error, the server's notices and the time.
 
@@ -79,7 +160,11 @@ The result opens as the **SQL Result** page, in a split on the right when the ed
 
 A result loads at most `db_max_rows` rows (default 10,000); the page says when the limit was reached, so add a `LIMIT` or a `WHERE`. Only one page (`db_page_rows`, default 100) is written to the page at a time. A statement stops after `db_timeout` seconds (default 30). Set these in your user `config.json`.
 
-## Table data, describe and DDL
+## Result tabs
+
+Every result has a tab. A new run replaces the tabs that are not pinned; a pinned tab (`p`) and a tab with pending changes stay. When a run has several statements, each statement that returns rows (or fails) gets its own tab. Up to nine tabs are kept. The first row of the page lists them when there is more than one: `1p [2*] 3` means tab 1 is pinned, tab 2 is on the page and has pending changes. Press `1` … `9` to switch.
+
+## Table views
 
 Move to a table or view in the tree and press:
 
@@ -99,29 +184,9 @@ The data page asks the server for one page at a time (`db_page_rows`, default 10
 
 PostgreSQL has no `CREATE TABLE` text to ask for, so its DDL is rebuilt from the catalogs (columns, primary key, indexes, foreign keys) and the buffer says so; it is a reconstruction, not a dump. MySQL / MariaDB and SQLite show the server's own statement.
 
-## Result tabs
+## Completion
 
-Every result has a tab. A new run replaces the tabs that are not pinned; a pinned tab (`p`) and a tab with pending changes stay. When a run has several statements, each statement that returns rows (or fails) gets its own tab. Up to nine tabs are kept. The first row of the page lists them when there is more than one: `1p [2*] 3` means tab 1 is pinned, tab 2 is on the page and has pending changes. Press `1` … `9` to switch.
-
-## Query plan
-
-**Explain.** In a SQL console press `\x` (leader, then `x`) on a statement, or use **Databases: Explain Statement**. On a result page `x` explains the statement that made the result. The plan opens on the result page as the **Plan** view: one line per step, indented, with the cost and row estimates. The step that takes most of the cost (at least 40 % of the whole plan, without its children) is marked with `!` and `<- costly` and coloured. Details such as `Filter:` and `Hash Cond:` sit under their step. Folds follow the indent: `za` folds a step, `zR` opens all. `y` copies the plan, `Tab` shows the server's raw answer, `r` plans again.
-
-A plain plan never runs the statement. It uses `EXPLAIN (FORMAT JSON)` on PostgreSQL, `EXPLAIN FORMAT=JSON` on MySQL / MariaDB (the table form on a server without JSON), and `EXPLAIN QUERY PLAN` on SQLite, always in the read-only session.
-
-**Explain Analyze.** `\X` in a console, `X` on a result page, or **Databases: Explain Analyze Statement**. This RUNS the statement and shows the real time and rows, so a card comes first and says so. A read runs in the read-only session. Any other statement runs inside a transaction that is always rolled back, and the card says so; if the rollback fails, the page shows an error. On a production connection the card is the strong one. A read-only connection analyzes reads only. DDL (`CREATE`, `DROP` …) is not offered, because it cannot be rolled back; with a manual transaction open a write is not analyzed either. SQLite has no `ANALYZE`: it shows the plan and never runs the statement.
-
-## Export and import
-
-**Export.** `S` (Shift+s) on a result page (or **Databases: Export Result…**) opens a picker: CSV, TSV, JSON, SQL INSERTs, Markdown table. Then type a file name; the default is `<table>-<date>.<ext>` in the workspace, and a full path works too. If the file exists, a card asks before it is replaced. The rows go into a temporary file in the same folder, and the file you chose appears only when every row is written, so a cancel or an error leaves no half file and keeps the old one.
-
-When the result is only part of the rows (the 10,000-row limit, or one page of a table), a card asks: **Export the loaded rows** or **Export all**. Export all runs the query again, without the row limit, in a read-only session and writes the rows as the server sends them (a page of 1,000 at a time, never all in memory). A progress card shows the count; `Esc` cancels and removes the temporary file. Only a plain `SELECT` can run again, so a write is never repeated; Export all reads committed data, not the changes of your open transaction.
-
-CSV and TSV protect spreadsheets from formula injection: a cell that starts with `=`, `+`, `-`, `@`, a tab or a carriage return gets a leading single quote (`'=SUM(A1)`). A real number such as `-5` keeps its sign. NULL is an empty cell in CSV and TSV, `null` in JSON and `NULL` in Markdown and INSERT files. INSERT files quote names and values for the connection's database (a quote is doubled; MySQL also doubles a backslash) and write binary values in the database's own form. The **Copy** keys `c` / `C` do not add the quote.
-
-**Import.** `i` on a table (or **Databases: Import CSV into Table…**) lists the `.csv` files of the workspace (or asks for a path). A preview card shows what was detected: the encoding (UTF-8, UTF-16 or ISO-8859-1), the delimiter (comma, semicolon, tab or pipe), whether the first row is a header, the row count, the column mapping (file column to table column, matched by name, or by position without a header) and the first rows. **Map columns** changes one table column at a time, and **Header** switches the header guess. Empty cells become NULL.
-
-**Import** reads the file one row at a time and inserts it with bound values in INSERTs of up to 1,000 rows, all in one transaction: if any row fails, everything is rolled back, nothing is written, and a card names the row and line. A progress card shows `N / total rows`; `Esc` cancels and rolls back. A read-only connection never imports, a production connection gets the strong card, and in manual transaction mode the rows join your open transaction (Commit saves them). The AI cannot import.
+In a SQL buffer, `Ctrl+X Ctrl+O` (and the pop-up that opens while you type) offers keywords, tables, views, routines, sequences and schemas from the tree you have already opened. After `alias.` or `table.` it offers that table's columns; the alias comes from the statement at the cursor (`FROM users u`, `JOIN orders AS o`). The first time a table's columns are needed they are read once and the pop-up opens again. Completion reads a cached copy: it never asks the server while you type.
 
 ## Edit rows
 
@@ -149,9 +214,25 @@ Each connection starts in auto-commit mode: every statement is saved at once. Pr
 - Submitted row changes join the open transaction; data pages read inside it, so they show your own changes.
 - Quitting, disconnecting, or switching back to auto-commit with changes waiting asks **Commit**, **Roll back** or **Cancel**.
 
-## Completion
+## Export and import
 
-In a SQL buffer, `Ctrl+X Ctrl+O` (and the pop-up that opens while you type) offers keywords, tables, views, routines, sequences and schemas from the tree you have already opened. After `alias.` or `table.` it offers that table's columns; the alias comes from the statement at the cursor (`FROM users u`, `JOIN orders AS o`). The first time a table's columns are needed they are read once and the pop-up opens again. Completion reads a cached copy: it never asks the server while you type.
+**Export.** `S` (Shift+s) on a result page (or **Databases: Export Result…**) opens a picker: CSV, TSV, JSON, SQL INSERTs, Markdown table. Then type a file name; the default is `<table>-<date>.<ext>` in the workspace, and a full path works too. If the file exists, a card asks before it is replaced. The rows go into a temporary file in the same folder, and the file you chose appears only when every row is written, so a cancel or an error leaves no half file and keeps the old one.
+
+When the result is only part of the rows (the 10,000-row limit, or one page of a table), a card asks: **Export the loaded rows** or **Export all**. Export all runs the query again, without the row limit, in a read-only session and writes the rows as the server sends them (a page of 1,000 at a time, never all in memory). A progress card shows the count; `Esc` cancels and removes the temporary file. Only a plain `SELECT` can run again, so a write is never repeated; Export all reads committed data, not the changes of your open transaction.
+
+CSV and TSV protect spreadsheets from formula injection: a cell that starts with `=`, `+`, `-`, `@`, a tab or a carriage return gets a leading single quote (`'=SUM(A1)`). A real number such as `-5` keeps its sign. NULL is an empty cell in CSV and TSV, `null` in JSON and `NULL` in Markdown and INSERT files. INSERT files quote names and values for the connection's database (a quote is doubled; MySQL also doubles a backslash) and write binary values in the database's own form. The **Copy** keys `c` / `C` do not add the quote.
+
+**Import.** `i` on a table (or **Databases: Import CSV into Table…**) lists the `.csv` files of the workspace (or asks for a path). A preview card shows what was detected: the encoding (UTF-8, UTF-16 or ISO-8859-1), the delimiter (comma, semicolon, tab or pipe), whether the first row is a header, the row count, the column mapping (file column to table column, matched by name, or by position without a header) and the first rows. **Map columns** changes one table column at a time, and **Header** switches the header guess. Empty cells become NULL.
+
+**Import** reads the file one row at a time and inserts it with bound values in INSERTs of up to 1,000 rows, all in one transaction: if any row fails, everything is rolled back, nothing is written, and a card names the row and line. A progress card shows `N / total rows`; `Esc` cancels and rolls back. A read-only connection never imports, a production connection gets the strong card, and in manual transaction mode the rows join your open transaction (Commit saves them). The AI cannot import.
+
+## EXPLAIN and ANALYZE
+
+**Explain.** In a SQL console press `\x` (leader, then `x`) on a statement, or use **Databases: Explain Statement**. On a result page `x` explains the statement that made the result. The plan opens on the result page as the **Plan** view: one line per step, indented, with the cost and row estimates. The step that takes most of the cost (at least 40 % of the whole plan, without its children) is marked with `!` and `<- costly` and coloured. Details such as `Filter:` and `Hash Cond:` sit under their step. Folds follow the indent: `za` folds a step, `zR` opens all. `y` copies the plan, `Tab` shows the server's raw answer, `r` plans again.
+
+A plain plan never runs the statement. It uses `EXPLAIN (FORMAT JSON)` on PostgreSQL, `EXPLAIN FORMAT=JSON` on MySQL / MariaDB (the table form on a server without JSON), and `EXPLAIN QUERY PLAN` on SQLite, always in the read-only session.
+
+**Explain Analyze.** `\X` in a console, `X` on a result page, or **Databases: Explain Analyze Statement**. This RUNS the statement and shows the real time and rows, so a card comes first and says so. A read runs in the read-only session. Any other statement runs inside a transaction that is always rolled back, and the card says so; if the rollback fails, the page shows an error. On a production connection the card is the strong one. A read-only connection analyzes reads only. DDL (`CREATE`, `DROP` …) is not offered, because it cannot be rolled back; with a manual transaction open a write is not analyzed either. SQLite has no `ANALYZE`: it shows the plan and never runs the statement.
 
 ## SQL history
 
@@ -159,7 +240,7 @@ Press `h` on the result page, `H` in the Databases view, or use **Databases: His
 
 Nothing polls while you wait: an idle console or result page uses no CPU. Hiding the Databases view (another view, a hidden sidebar or zen mode) cancels a running query and closes its sessions, except a session with an open manual transaction. The command palette and other dialogs do not.
 
-## Redis
+## Redis and Valkey
 
 A Redis or Valkey connection (`"driver": "redis"`) takes a host, a port (6379 by default), an optional ACL `user`, a database index `db`, and a password from the secret store. Use `"tls": true` or a `rediss://` URL for TLS; `"ssl": {"ca": "…", "cert": "…", "key": "…"}` adds a CA and a client certificate. Containers and compose services built from `redis` or `valkey` images, and `REDIS_URL` in `.env`, are suggested.
 
@@ -171,7 +252,7 @@ On the value page, `e` edits the value or the field under the cursor, `+` adds a
 
 Press `n` on a Redis connection to open its console, a `.redis` file that starts with `# @conn <id>`. Write one command per line and press the send key on a line (or select several lines). Read commands run at once; other commands show a card first. Commands that can wipe data, stop the server or run code (`FLUSHALL`, `FLUSHDB`, `CONFIG SET`, `SHUTDOWN`, `DEBUG`, `MODULE`, `EVAL`, `FCALL`, `MIGRATE`, `REPLICAOF`, `ACL SETUSER`, …) show a strong warning card. `MONITOR`, `SUBSCRIBE`, `SELECT` and `MULTI` are not sent. `KEYS pattern` runs as `SCAN` with a note. An `AUTH` line is masked in the card, the page and the history. Console runs go to the same history as SQL.
 
-## AI
+## AI tools and their rules
 
 The AI chat has database tools: `db_connections`, `db_schema`, `db_ddl`, `db_query`, `db_explain` and `db_history`. The system prompt mentions them only when the workspace has connections.
 
@@ -182,3 +263,31 @@ The AI chat has database tools: `db_connections`, `db_schema`, `db_ddl`, `db_que
 - **What you see.** Each `db_query` and `db_explain` run opens the SQL Result page marked **by AI** and adds an entry to the SQL history. Every call is in the AI audit log.
 - **What the model sees.** Passwords never reach it. Server text is cleaned, cells are cut at 80 characters, and one answer is at most `db_ai_max_kb` KB (default 32); `max_rows` (default 100, max 1000) limits rows.
 - **Redis.** `redis_keys` lists keys with `SCAN` (type and TTL), `redis_get` reads one key a page at a time, and `redis_command` runs one command. Read commands run at once in a read-only session that refuses anything else; `CONFIG`, `ACL` and `CLIENT` always ask because they can show secrets. Any write asks with the exact command (`db:<conn>/write`; production always asks; read-only connections refuse). Dangerous commands (`FLUSHALL`, `CONFIG SET`, scripts, `MIGRATE`, …) and `MONITOR` / `SUBSCRIBE` are refused without a card.
+
+## Security notes
+
+- Project files never hold passwords. A literal password in a project file is refused.
+- The secret store uses the OS keyring when one is available. Without a keyring it may be a plain file with mode 0600; anyone who can read your account can read that file. Use `${env:NAME}` or `${cmd:line}` if you want the password to stay out of it.
+- Passwords are removed from the SQL history, error text and what the AI sees.
+- Host keys are checked against `known_hosts`. A changed key is refused with no way around it.
+- When you edit rows or import a file, values are sent as bound parameters. Names are quoted for the database.
+- A write always asks first. There is no "always allow" for your own writes. A production connection gets a stronger card.
+- Reads for the AI run in a read-only session that the server or the SQLite file enforces.
+- CSV and TSV exports protect spreadsheets from formula injection (see [Export and import](#export-and-import)).
+- Hiding the view closes its sessions, so an idle view keeps no database process.
+
+## Troubleshooting
+
+**`sqlite3` is not installed.** The view shows an install command for your system, for example `sudo apt install sqlite3` or `brew install sqlite`. Press `y` on that row to copy it. Then press `R`.
+
+**`sqlite3` is too old.** The message says `version 3.33 or newer is needed`. The AI tools need 3.37 or newer. Update `sqlite3` and press `R`.
+
+**Connection refused.** The server is not running, or the host or port is wrong. If the server is a container or compose service, the footer says `stopped · S start`. Press `S` on the connection. Otherwise check the host and port with `e`, then press `T`. If the server is only reachable from a bastion, add an SSH tunnel.
+
+**Unknown host key.** A card shows the server's `SHA256:` fingerprint. Compare it with the one your admin gave you. Choose **Trust and save to known_hosts** only if it matches. If the key changed, do not connect. Ask your admin.
+
+**The server asks for SSL.** The error says so and shows the `ssl` setting to add. Run **Databases: SSL Settings…**.
+
+**`SSH tunnel closed · R reconnect`.** The tunnel dropped. Press `R`.
+
+**Wrong password.** Press `p` on the connection, enter it again, then press `T`.
