@@ -219,6 +219,9 @@ func (s *dbConsoleState) consoleConn(file string, lines []string) string {
 		if id, ok := strings.CutPrefix(strings.TrimSpace(line), "-- @conn "); ok {
 			return strings.TrimSpace(id)
 		}
+		if id, ok := strings.CutPrefix(strings.TrimSpace(line), "# @conn "); ok {
+			return strings.TrimSpace(id) // a .redis console
+		}
 	}
 	return s.attached[file]
 }

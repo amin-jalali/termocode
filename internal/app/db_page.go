@@ -211,6 +211,9 @@ func (m *Model) databasePage() dbPage {
 		who += " · by AI"
 	}
 	left := " " + dbOneLine(dbStripComments(r.sql))
+	if r.redis != nil {
+		left = " Redis: " + dbOneLine(dbclient.RedisDisplay(r.redis.key))
+	}
 	if strip := s.tabStrip(); strip != "" {
 		left = " " + strip + " " + dbGlyphVBar.String() + left
 	}
@@ -240,6 +243,13 @@ func (m *Model) databasePage() dbPage {
 	case r.plan != nil:
 		short = databasePlanSummary(r)
 		summary, short = short[0], short[1:]
+	case r.redis != nil:
+		c, _ := m.databases.connection(r.conn)
+		short = dbRedisSummary(c, r.redis)
+		summary, short = short[0], short[1:]
+		if c.Environment == "production" {
+			group = "TermocodeHttpStatusErr"
+		}
 	case s.trans:
 		page := s.pageResult()
 		s.trow = max(min(s.trow, len(page.Rows)-1), 0)
@@ -335,6 +345,8 @@ func (m *Model) databasePage() dbPage {
 		if len(res.Columns) > 0 && res.Err == nil {
 			hints = " ] next  o sort  f filter  v value  c csv  Tab view  r rerun  q close"
 			switch {
+			case r.redis != nil:
+				hints = dbRedisHints(width, r.redis)
 			case plan:
 				hints = dbFitHints(width, "za fold", "x plan", "X analyze", "y copy", "Tab raw", "r rerun", "q close")
 			case s.curTab().dirty():
@@ -370,6 +382,10 @@ func (m *Model) databasePage() dbPage {
 		}
 		if s.trans && r.result.Err == nil && len(r.result.Columns) > 0 {
 			m.databaseTransposed(&p, s, width)
+			break
+		}
+		if r.redis != nil && r.redis.info.Type == "string" && r.result.Err == nil && len(r.result.Columns) > 0 {
+			databaseRedisStringView(&p, r.redis)
 			break
 		}
 		m.databaseGrid(&p, s)
@@ -562,7 +578,7 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 			p.lastNew = n
 		}
 	}
-	if s.page+1 < s.pageCount() || (s.shown.tv != nil && s.shown.tv.more) {
+	if s.page+1 < s.pageCount() || (s.shown.tv != nil && s.shown.tv.more) || (s.shown.redis != nil && s.shown.redis.next != "") {
 		n = p.add(" " + more + " ] next page")
 		p.hl(n, 0, len(p.lines[n-1]), "TermocodeHttpHint")
 	}
@@ -778,6 +794,9 @@ func (m *Model) databaseRerun() tea.Cmd {
 		return nil
 	}
 	old := s.shown
+	if old.redis != nil {
+		return m.databaseRedisOpen(old.conn, old.redis.db, old.redis.key, old.redis.from, old.redis.prev, s.curTab())
+	}
 	if old.tv != nil {
 		return m.databaseRunTable(old.tv)
 	}
@@ -810,6 +829,11 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 	}
 	if s.submitting != nil {
 		return m.pushToastDetail(toast.Info, "Saving the changes…", "One moment.")
+	}
+	if s.shown.redis != nil {
+		if cmd, ok := m.databaseRedisPageKey(key, row, col); ok {
+			return cmd
+		}
 	}
 	tv := s.shown.tv
 	canGrid := s.shown.result.Err == nil && len(s.shown.result.Columns) > 0 && s.shown.plan == nil

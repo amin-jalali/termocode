@@ -33,6 +33,9 @@ const (
 	dbNodeSuggestionsHeader
 	dbNodeCode
 	dbNodeNote
+	dbNodeRedisNS   // a key namespace ("session:")
+	dbNodeRedisKey  // a key with its type
+	dbNodeRedisMore // the scan stopped at db_redis_max_keys / no keys
 )
 
 type dbNode struct {
@@ -48,6 +51,12 @@ type dbNode struct {
 	loaded   bool
 	loading  bool
 	problem  string
+	// Redis rows: the database index, the full key (or namespace prefix),
+	// the type and the TTL in ms (-1: none) from the scan.
+	rdb   int
+	key   string
+	rtype string
+	ttl   int64
 }
 
 type dbTreeRow struct {
@@ -120,7 +129,7 @@ func (s *dbState) rows() []dbTreeRow {
 			}
 			return
 		}
-		out = append(out, dbTreeRow{kind: n.kind, path: path, name: n.name, conn: n.conn, detail: n.detail, depth: depth, selectable: n.kind != dbNodeNote})
+		out = append(out, dbTreeRow{kind: n.kind, path: path, name: n.name, conn: n.conn, detail: n.detail, depth: depth, selectable: n.kind != dbNodeNote && n.kind != dbNodeRedisMore})
 		if s.folded[path] {
 			return
 		}
@@ -411,6 +420,18 @@ func dbDriverForImage(image string) string {
 	case strings.Contains(v, "mariadb"), strings.Contains(v, "mysql"):
 		return "mysql"
 	}
+	// redis:7, valkey/valkey:8, bitnami/redis, redis/redis-stack-server
+	// (not GUI images such as redis/redisinsight).
+	name := v
+	if i := strings.LastIndex(name, "/"); i >= 0 {
+		name = name[i+1:]
+	}
+	name, _, _ = strings.Cut(name, ":")
+	name, _, _ = strings.Cut(name, "@")
+	switch name {
+	case "redis", "valkey", "redis-stack", "redis-stack-server":
+		return "redis"
+	}
 	return ""
 }
 func defaultDBPort(driver string) int {
@@ -491,6 +512,8 @@ func dbConnectCommand(c dbclient.Conn, root, password string, generation uint64)
 				c.Path = filepath.Join(root, c.Path)
 			}
 			sess, err = dbclient.NewSQLiteSession(ctx, c)
+		case "redis":
+			sess, err = dbRedisSessionFactory(ctx, c, password)
 		default:
 			err = os.ErrInvalid
 		}
@@ -543,6 +566,8 @@ func dbTestCommand(c dbclient.Conn, password, root string, generation uint64) te
 				c.Path = filepath.Join(root, c.Path)
 			}
 			sess, err = dbclient.NewSQLiteSession(ctx, c)
+		case "redis":
+			sess, err = dbRedisSessionFactory(ctx, c, password)
 		default:
 			err = fmt.Errorf("this connection type is not available yet")
 		}

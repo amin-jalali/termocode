@@ -123,6 +123,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Configure | `db-configure` |   |   |
 | Databases: Connect Selected | `db-connect` |   |   |
 | Databases: Count Rows | `db-count-rows` |   |   |
+| Databases: Delete Redis Key… | `redis-delete-key` |   |   |
 | Databases: Describe Table | `db-describe` |   |   |
 | Databases: Disconnect Selected | `db-disconnect` |   |   |
 | Databases: Explain Analyze Statement | `db-explain-analyze` |   |   |
@@ -140,6 +141,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Run File | `db-run-file` |   |   |
 | Databases: Run Statement or Selection | `db-run` |   |   |
 | Databases: Select 100 Rows in Console | `db-select` |   |   |
+| Databases: Set Redis Key TTL… | `redis-set-ttl` |   |   |
 | Databases: Show DDL | `db-ddl` |   |   |
 | Databases: Submit Pending Changes | `db-submit-changes` |   |   |
 | Databases: Test Connection | `db-test-connection` |   |   |

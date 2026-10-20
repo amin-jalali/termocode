@@ -8,6 +8,7 @@ import (
 	"github.com/mattn/go-runewidth"
 
 	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/dbclient"
 	"github.com/amin-jalali/termocode/internal/menu"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
@@ -68,6 +69,9 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 			continue
 		}
 		glyph := dbNodeGlyph(r.kind)
+		if r.kind == dbNodeRedisKey {
+			glyph = dbRedisTypeGlyph(s.nodes[r.path].rtype)
+		}
 		fold := " "
 		indent := strings.Repeat(" ", min(r.depth*2, max(w/2, 0)))
 		if n, ok := s.nodes[r.path]; ok && (len(n.children) > 0 || dbNodeExpandable(n.kind)) {
@@ -86,6 +90,8 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 			label += "  " + sanitizeDBText(n.detail)
 		} else if n, ok := s.nodes[r.path]; ok && n.kind == dbNodeColumn && n.detail != "" {
 			label += "  [" + sanitizeDBText(n.detail) + "]"
+		} else if ok && (n.kind == dbNodeRedisNS || n.kind == dbNodeDatabase) && n.detail != "" && w >= 28 {
+			label += "  (" + sanitizeDBText(n.detail) + ")"
 		}
 		width := max(w-runewidth.StringWidth(indent)-3, 1)
 		line := indent + fold + glyph + " " + runewidth.Truncate(label, width, "…")
@@ -93,6 +99,8 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 			line = theme.FgBg(theme.TextPrimary, theme.BgSelection).Render(testsPad(line, w))
 		} else if r.kind == dbNodeNote {
 			line = theme.FgBg(theme.DiagError, theme.BgSidebar).Render(testsPad(line, w))
+		} else if r.kind == dbNodeRedisMore {
+			line = theme.FgBg(theme.TextMuted, theme.BgSidebar).Render(testsPad(line, w))
 		} else if r.kind == dbNodeCode {
 			line = theme.FgBg(theme.TextSecondary, theme.BgPanel).Render(testsPad(line, w))
 		} else {
@@ -105,7 +113,11 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 	}
 	if len(rows) > 0 && s.cursor >= 0 && s.cursor < len(rows) {
 		r := rows[s.cursor]
-		lines = append(lines, testsPad(muted("  "+sanitizeDBText(r.name)), w), testsPad(muted("  "+s.rowFooter(r)), w))
+		name := r.name
+		if n := s.nodes[r.path]; n.kind == dbNodeRedisKey || n.kind == dbNodeRedisNS {
+			name = dbclient.RedisDisplay(n.key) // the whole key, not the part under its namespace
+		}
+		lines = append(lines, testsPad(muted("  "+sanitizeDBText(name)), w), testsPad(muted("  "+s.rowFooter(r)), w))
 	} else {
 		lines = append(lines, testsPad(muted("  No databases yet · a add one"), w), testsPad(muted("  .db files and .env URLs appear here"), w))
 	}
@@ -117,7 +129,7 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 
 func dbNodeExpandable(kind dbNodeKind) bool {
 	switch kind {
-	case dbNodeConnection, dbNodeDatabase, dbNodeSchema, dbNodeTable, dbNodeView:
+	case dbNodeConnection, dbNodeDatabase, dbNodeSchema, dbNodeTable, dbNodeView, dbNodeRedisNS:
 		return true
 	default:
 		return false
@@ -143,6 +155,10 @@ func dbNodeGlyph(kind dbNodeKind) string {
 			return "\uf067"
 		case dbNodeCode:
 			return "$"
+		case dbNodeRedisNS:
+			return "\uf07b"
+		case dbNodeRedisMore:
+			return " "
 		default:
 			return "!"
 		}
@@ -169,6 +185,10 @@ func dbNodeGlyph(kind dbNodeKind) string {
 			return "f"
 		case dbNodeSuggestion:
 			return "+"
+		case dbNodeRedisNS:
+			return "n"
+		case dbNodeRedisMore:
+			return " "
 		default:
 			return "!"
 		}
@@ -200,6 +220,10 @@ func dbNodeGlyph(kind dbNodeKind) string {
 		return " "
 	case dbNodeCode:
 		return "$"
+	case dbNodeRedisNS:
+		return theme.IconFolderClosed.String()
+	case dbNodeRedisMore:
+		return " "
 	default:
 		return "!"
 	}
@@ -210,6 +234,11 @@ func dbNodeGlyph(kind dbNodeKind) string {
 func (s *dbState) rowFooter(r dbTreeRow) string {
 	if n, ok := s.nodes[r.path]; ok && n.kind == dbNodeColumn && n.detail == "PK" {
 		return "primary key"
+	}
+	if n, ok := s.nodes[r.path]; ok && s.isRedis(n.conn) {
+		if f := s.dbRedisFooter(n); f != "" {
+			return f
+		}
 	}
 	return dbRowFooter(r.kind)
 }
@@ -280,6 +309,9 @@ func (m Model) handleDatabasesSidebarMouse(x, y int, t tea.MouseEventType) (Mode
 		if r.kind == dbNodeSuggestion {
 			items = []menu.Item{{ID: "add", Title: "Add connection", Hint: "a", Icon: "+"}, {ID: "hide", Title: "Hide suggestion", Hint: "x", Icon: theme.GlyphClose.String()}}
 		}
+		if r.kind == dbNodeRedisKey {
+			items = []menu.Item{{ID: "connect", Title: "Open value", Hint: "enter", Icon: "▸"}, {ID: "redis-ttl", Title: "Set TTL…", Hint: "t", Icon: "◷"}, {ID: "redis-delete", Title: "Delete key…", Hint: "D", Icon: theme.GlyphClose.String()}, {ID: "copyname", Title: "Copy key", Hint: "y", Icon: "⧉"}, {Sep: true}, {ID: "refresh", Title: "Refresh", Hint: "R", Icon: "↻"}}
+		}
 		m.menu = menu.New(items, x+activity.Width, y)
 		m.menu.SetScreenSize(m.w, m.h)
 		m.menuOpen = true
@@ -311,6 +343,11 @@ func (m *Model) handleDatabasesMenuSelect(id string) tea.Cmd {
 		return m.databaseTxModePicker(r.conn)
 	case "data", "describe", "ddl", "select", "count", "copyname":
 		key := map[string]rune{"data": 'o', "describe": 'd', "ddl": 'D', "select": 's', "count": '#', "copyname": 'y'}[id]
+		updated, cmd := m.handleDatabasesSidebarKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{key}})
+		*m = updated
+		return cmd
+	case "redis-ttl", "redis-delete":
+		key := map[string]rune{"redis-ttl": 't', "redis-delete": 'D'}[id]
 		updated, cmd := m.handleDatabasesSidebarKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{key}})
 		*m = updated
 		return cmd

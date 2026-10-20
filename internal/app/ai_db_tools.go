@@ -75,6 +75,8 @@ func dbAIConn(root, id string) (dbclient.Conn, error) {
 			switch {
 			case c.Problem != "":
 				return c, fmt.Errorf("connection %s has a problem: %s", id, dbRedact(dbFriendlyProblem(c.Problem)))
+			case c.Driver == "redis":
+				return c, fmt.Errorf("connection %s is Redis: use redis_keys, redis_get or redis_command", id)
 			case c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite":
 				return c, fmt.Errorf("connection %s (%s) does not use SQL", id, c.Driver)
 			}
@@ -209,6 +211,7 @@ func dbAIPassword(root string, c dbclient.Conn) (string, error) {
 		if pw == "" {
 			pw, _ = databaseEnvValue(filepath.Join(root, ".env"), name)
 		}
+		pw = dbPasswordFromValue(pw)
 	case strings.HasPrefix(c.Password, "${secret:"):
 		if store == nil {
 			return "", errors.New("the secret store is locked or unavailable; ask the user to unlock it")
@@ -874,7 +877,11 @@ func aiDBTools(root string, call aiIDECaller) []ai.Tool {
 		},
 	}
 
-	return []ai.Tool{conns, schema, query, explain, hist, ddl}
+	tools := []ai.Tool{conns, schema, query, explain, hist, ddl}
+	if dbHasRedis(root) { // the redis_* tools only where a Redis connection exists
+		tools = append(tools, aiRedisTools(root, call)...)
+	}
+	return tools
 }
 
 // aiDBPrompt is the system prompt line when connections exist.
@@ -882,8 +889,12 @@ const aiDBPrompt = "Database tools (db_*): read the schema and run read-only SQL
 	"Prefer db_explain to EXPLAIN ANALYZE. Never put secrets in SQL. Writes on production connections always ask."
 
 func aiDBPromptLine(root string) string {
-	if _, _, conns := dbLoadConfigs(root); len(conns) == 0 {
+	_, _, conns := dbLoadConfigs(root)
+	if len(conns) == 0 {
 		return ""
+	}
+	if dbHasRedis(root) {
+		return "\n" + aiDBPrompt + "\n" + aiRedisPrompt
 	}
 	return "\n" + aiDBPrompt
 }
@@ -897,9 +908,6 @@ func (m *Model) dbAutoApproveItems(saved []string) []picker.Item {
 	var items []picker.Item
 	seen := map[string]bool{}
 	for _, c := range conns {
-		if c.Driver == "redis" {
-			continue
-		}
 		class := "db:" + c.ID + "/write"
 		seen[class] = true
 		if c.Environment == "production" {
@@ -909,7 +917,11 @@ func (m *Model) dbAutoApproveItems(saved []string) []picker.Item {
 		if contains(saved, class) {
 			state = "AUTO"
 		}
-		items = append(items, picker.Item{ID: class, Title: class + " — SQL writes (INSERT, UPDATE, DELETE, DDL) on " + sanitizeDBText(dbConnName(c)), Hint: state})
+		title := class + " — SQL writes (INSERT, UPDATE, DELETE, DDL) on " + sanitizeDBText(dbConnName(c))
+		if c.Driver == "redis" {
+			title = class + " — Redis writes (SET, HSET, DEL, EXPIRE, …) on " + sanitizeDBText(dbConnName(c))
+		}
+		items = append(items, picker.Item{ID: class, Title: title, Hint: state})
 	}
 	for _, class := range saved {
 		if strings.HasPrefix(class, "db:") && !seen[class] {

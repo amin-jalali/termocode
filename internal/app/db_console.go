@@ -53,6 +53,7 @@ type dbRun struct {
 	batch               uint64       // the send it belongs to (one tab per statement with rows)
 	notes               []string     // lines added to Messages (what a submit did)
 	plan                *dbPlanRun   // an EXPLAIN run (db_explain.go): the page shows the Plan view
+	redis               *dbRedisView // a Redis value page (db_redis.go)
 }
 
 type dbConsoleState struct {
@@ -99,6 +100,9 @@ type dbConsoleState struct {
 	exp *dbExport
 	imp *dbImport
 	job *dbJob
+	// Redis value page writes (db_redis.go)
+	redisEdit  *dbRedisEdit
+	redisWrite *dbRedisWrite
 }
 
 func (m *Model) dbConsole() *dbConsoleState {
@@ -134,6 +138,9 @@ type dbConsoleSettings struct {
 	Timeout    *int `json:"db_timeout"`
 	HistoryMax *int `json:"db_history_max"`
 	AIMaxKB    *int `json:"db_ai_max_kb"`
+	// Redis (db_redis.go)
+	RedisSep     *string `json:"db_redis_separator"`
+	RedisMaxKeys *int    `json:"db_redis_max_keys"`
 }
 
 func loadDBConsoleSettings() dbConsoleSettings {
@@ -196,19 +203,21 @@ func (m *Model) databaseNewConsole(id string) tea.Cmd {
 	if !ok {
 		return nil
 	}
-	if c.Driver == "redis" {
-		return m.pushToastDetail(toast.Info, "No SQL console", "This connection does not use SQL.")
-	}
 	path := m.databaseConsolePath(id)
 	if path == "" {
 		return nil
+	}
+	header, filetype := "-- @conn "+id+"\n\n", "sql"
+	if c.Driver == "redis" {
+		path = strings.TrimSuffix(path, ".sql") + ".redis"
+		header, filetype = "# @conn "+id+"\n# One command per line; the send key runs the line at the cursor.\n\n", "redis"
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return m.dbConsoleError(err)
 	}
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err == nil {
-		_, err = f.WriteString("-- @conn " + id + "\n\n")
+		_, err = f.WriteString(header)
 		_ = f.Close()
 	} else if os.IsExist(err) {
 		err = nil
@@ -219,7 +228,7 @@ func (m *Model) databaseNewConsole(id string) tea.Cmd {
 	m.ensureDBLua()
 	m.ensureEditorWindowCurrent()
 	var buf int
-	_ = m.nvim.ExecLuaResult(`vim.cmd('edit '..vim.fn.fnameescape(...)); vim.bo.filetype='sql'; vim.cmd('normal! G'); return vim.api.nvim_get_current_buf()`, &buf, path)
+	_ = m.nvim.ExecLuaResult(`local p,ft=...;vim.cmd('edit '..vim.fn.fnameescape(p)); vim.bo.filetype=ft; vim.cmd('normal! G'); return vim.api.nvim_get_current_buf()`, &buf, path, filetype)
 	if buf > 0 {
 		m.databaseBufferLens(buf) // the schema is there before the first key
 	}
@@ -310,8 +319,12 @@ func (m *Model) databaseSendMode(all bool, plan *dbPlanRun) tea.Cmd {
 	}
 	m.ensureDBLua()
 	file, lines, ok := m.httpBufText(0)
-	if !ok || !strings.EqualFold(lastExt(file), ".sql") {
+	redisFile := ok && strings.EqualFold(lastExt(file), ".redis")
+	if !ok || !strings.EqualFold(lastExt(file), ".sql") && !redisFile {
 		return m.pushToastDetail(toast.Info, "Open a SQL file", "Press n on a database connection to open its console.")
+	}
+	if redisFile && plan != nil {
+		return m.pushToastDetail(toast.Info, "No plan for Redis", "Redis runs each command as it is.")
 	}
 	m.ensureDatabasesLoaded()
 	s := m.dbConsole()
@@ -340,11 +353,14 @@ func (m *Model) databaseSendMode(all bool, plan *dbPlanRun) tea.Cmd {
 	if r.conn == "" {
 		var items []picker.Item
 		for _, c := range m.databases.conns {
-			if c.Driver != "redis" && c.Problem == "" {
+			if (c.Driver == "redis") == redisFile && c.Problem == "" {
 				items = append(items, picker.Item{ID: c.ID, Title: sanitizeDBText(dbConnName(c)), Hint: c.Driver})
 			}
 		}
 		if len(items) == 0 {
+			if redisFile {
+				return m.pushToastDetail(toast.Info, "No Redis connection", "Add one in the Databases view first.")
+			}
 			return m.pushToastDetail(toast.Info, "No SQL connection", "Add one in the Databases view first.")
 		}
 		s.pending = r
@@ -364,6 +380,9 @@ func (m *Model) databasePrepareRun(r *dbRun) tea.Cmd {
 	c, ok := m.databases.connection(r.conn)
 	if !ok {
 		return m.pushToastDetail(toast.Warn, "Connection not found", sanitizeDBText(r.conn))
+	}
+	if c.Driver == "redis" {
+		return m.databaseRedisPrepare(r)
 	}
 	if r.line > 0 {
 		spans := dbStatementSpans(r.sql, c.Driver)
@@ -421,6 +440,9 @@ func (m *Model) databaseReviewRun(r *dbRun) tea.Cmd {
 		return nil
 	}
 	s := m.dbConsole()
+	if c.Driver == "redis" {
+		return m.databaseRedisReview(r, c)
+	}
 	if m.databases.manualMode(r.conn) && dbTxControl(r.sql) {
 		return m.pushToastDetail(toast.Info, "Use Commit (K) or Rollback (Z)", "Manual transaction mode: "+strings.ToUpper(firstSQLWord(r.sql))+" is not sent.")
 	}
@@ -560,10 +582,15 @@ func (m *Model) databaseStartRun(r *dbRun) tea.Cmd {
 	if c, ok := m.databases.connection(r.conn); ok {
 		driver = c.Driver
 	}
+	redisCount := settings.pageRows()
 	return tea.Batch(pageCmd, func() tea.Msg {
 		var result dbclient.Result
 		began := false
 		switch {
+		case r.redis != nil:
+			var view *dbRedisView
+			result, view = dbRedisLoad(ctx, sess, *r.redis, redisCount)
+			return dbRunMsg{gen: gen, run: r, result: result, key: key, redis: view}
 		case r.plan != nil:
 			result = dbExplainExec(ctx, sess, driver, r.plan, inTx, limit)
 		case r.readOnly && inTx:
@@ -588,9 +615,10 @@ type dbRunMsg struct {
 	gen    uint64
 	run    *dbRun
 	result dbclient.Result
-	key    string // the session it ran on
-	began  bool   // it began the manual transaction
-	manual bool   // it ran in manual transaction mode
+	key    string       // the session it ran on
+	began  bool         // it began the manual transaction
+	manual bool         // it ran in manual transaction mode
+	redis  *dbRedisView // a value page: what it loaded
 }
 
 func (m *Model) databaseFinishRun(msg dbRunMsg) tea.Cmd {
@@ -608,6 +636,9 @@ func (m *Model) databaseFinishRun(msg dbRunMsg) tea.Cmd {
 	s.running = nil
 	txCmd := m.databaseTrackTx(msg)
 	msg.run.result = msg.result
+	if msg.redis != nil {
+		msg.run.redis = msg.redis
+	}
 	if pl := msg.run.plan; pl != nil && msg.result.Err == nil {
 		driver := ""
 		if c, ok := m.databases.connection(msg.run.conn); ok {
@@ -640,7 +671,7 @@ func (m *Model) databaseFinishRun(msg dbRunMsg) tea.Cmd {
 	}
 	m.databaseRefreshLens(msg.run.file, msg.run.sql, status)
 	cmds := []tea.Cmd{m.databaseShowPage(), txCmd}
-	if msg.run.tv == nil { // a data view is not something the user typed
+	if msg.run.tv == nil && msg.run.redis == nil { // a data view or a value page is not something the user typed
 		cmds = append(cmds, m.databaseAppendHistory(msg.run))
 	}
 	if msg.run.index+1 < len(msg.run.statements) {

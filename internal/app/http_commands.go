@@ -146,7 +146,7 @@ func (m *Model) sendKeyBuffer() bool {
 	}
 	p := m.editor.Path()
 	base := filepath.Base(p)
-	return isHTTPPath(p) || strings.EqualFold(filepath.Ext(p), ".sql") || base == "SQL Result" || base == "HTTP Response"
+	return isHTTPPath(p) || strings.EqualFold(filepath.Ext(p), ".sql") || strings.EqualFold(filepath.Ext(p), ".redis") || base == "SQL Result" || base == "HTTP Response"
 }
 
 // httpSendAction is the send key (Ctrl+Alt+R, Ctrl+Enter), dispatched by
@@ -156,7 +156,7 @@ func (m *Model) sendKeyBuffer() bool {
 func (m *Model) httpSendAction() tea.Cmd {
 	p := m.editor.Path()
 	switch {
-	case strings.EqualFold(filepath.Ext(p), ".sql"):
+	case strings.EqualFold(filepath.Ext(p), ".sql"), strings.EqualFold(filepath.Ext(p), ".redis"):
 		return m.databaseSend(false)
 	case filepath.Base(p) == "SQL Result":
 		return m.databaseRerun()
@@ -555,6 +555,9 @@ func (m *Model) httpShowEntry(e httpclient.Entry) tea.Cmd {
 // handleHTTPPromptSubmit routes the HTTP prompts. ok=false: not ours.
 func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 	if cmd, ok := m.databaseTransferPrompt(m.promptKind, value); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseRedisPrompt(m.promptKind, value); ok {
 		return cmd, true
 	}
 	if m.promptKind == promptKindDBEditCell {

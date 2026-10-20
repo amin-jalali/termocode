@@ -52,7 +52,7 @@ import (
 //	svcdemo[:down|empty]   show the Services view with a canned snapshot
 //	                       (no docker; the shots and goldens)
 //	contdemo[:down|noengine|menu] show the Containers view with a canned host snapshot
-//	dbdemo[:empty|no-sqlite|result|messages|error|table|transposed|describe|ddl|edits|submit|plan|plan-card]   show a canned Databases tree or result page (no connection)
+//	dbdemo[:empty|no-sqlite|result|messages|error|table|transposed|describe|ddl|edits|submit|plan|plan-card|redis|redis-key]   show a canned Databases tree or result page (no connection)
 //	httpdemo:<variant>     docs/users.http and a canned HTTP answer:
 //	                       file, response, headers or tls (no network)
 //	helpdemo               open the in-app guide at the chat panel section
@@ -96,8 +96,13 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		switch arg {
 		case "result", "messages", "error", "table", "transposed", "describe", "ddl", "edits", "submit", "import", "export", "plan", "plan-card":
 			return m.databaseResultDemo(arg)
+		case "redis-key":
+			return m.databaseRedisKeyDemo()
+		case "redis":
+			m.databaseRedisDemo()
+		default:
+			m.databasesDemo(arg)
 		}
-		m.databasesDemo(arg)
 	case "aidemo": // a sample conversation for the AI chat shot
 		s := m.aiS()
 		s.conv.Messages = []ai.StoredMessage{

@@ -433,6 +433,9 @@ func init() {
 // edited (\N is NULL; on a new row an empty value means the default).
 func (m *Model) databaseSetCell(value string, fromBuffer bool) tea.Cmd {
 	s := m.dbConsole()
+	if fromBuffer && s.redisEdit != nil {
+		return m.databaseRedisBufferDone(value)
+	}
 	t, pos := s.editTab, s.editAt
 	s.editTab = nil
 	if fromBuffer && m.nvim != nil {

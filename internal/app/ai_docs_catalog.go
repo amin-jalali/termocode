@@ -47,6 +47,7 @@ type AIPolicyDoc struct {
 var aiGateNotes = map[string]string{
 	"db_query":       "a read (SELECT, SHOW, EXPLAIN without ANALYZE …): auto, in a read-only session; any other statement: confirm (db:<conn>/write) with the SQL shown; production connections: confirm (always asks); read-only connections: writes refused",
 	"execute_action": "per action: see Palette actions below",
+	"redis_command":  "a read command (allow-list; not CONFIG / ACL / CLIENT): auto, in a read-only session; any other command: confirm (db:<conn>/write) with the command shown; production connections: confirm (always asks); read-only connections: writes refused; the never-list (FLUSHALL, FLUSHDB, CONFIG SET, SHUTDOWN, DEBUG, MODULE, scripts, MIGRATE, REPLICAOF, ACL changes, …) and MONITOR / SUBSCRIBE: refused",
 	"http_send":      "GET / HEAD / OPTIONS to localhost: auto; other safe methods: confirm (http:<host[:port]>); other methods: confirm (http:<host[:port]>/write); private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks)",
 	"terminal_tabs":  "list, new, focus: auto; close: auto for an idle tab, confirm (always asks) while a command runs",
 }
@@ -128,6 +129,9 @@ func AIToolCatalog() []AIToolDoc {
 	m := &Model{nvim: &nvim.Client{}}
 	call := func(context.Context, aiIDEFunc) (string, error) { return "", errors.New("docs only") }
 	tools := m.aiChatTools(".", call)
+	if _, ok := ai.FindTool(tools, "redis_keys"); !ok {
+		tools = append(tools, aiRedactResults(aiRedisTools(".", call))...) // listed only where a Redis connection exists
+	}
 	out := make([]AIToolDoc, 0, len(tools))
 	for _, t := range tools {
 		d := AIToolDoc{Name: t.Name, Description: t.Description, Gate: aiToolGate(t)}

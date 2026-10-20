@@ -1,6 +1,6 @@
 # Browse databases
 
-The **Databases** view lists configured connections and SQLite files found near the workspace root. It can connect to PostgreSQL, MySQL or MariaDB, and SQLite. Connections are opened only when you expand them; schema details load as you move down the tree.
+The **Databases** view lists configured connections and SQLite files found near the workspace root. It can connect to PostgreSQL, MySQL or MariaDB, SQLite, and Redis or Valkey. Connections are opened only when you expand them; schema details load as you move down the tree.
 
 ## Open the view
 
@@ -10,7 +10,7 @@ Tables show their columns, primary keys, indexes, and foreign keys when expanded
 
 ## Add and edit connections
 
-Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, or a connection URL. The server prompts start with useful defaults. Network connections ask for the host, port, user, and database, followed by a masked password prompt. The app tests the connection before offering a choice to save it to the project or to your user configuration. You can also edit a connection file directly with `e` on a row. Project configuration lives in `.termocode/databases.json`; user connections live in `~/.config/termocode/db/connections.json`.
+Press `a` and choose PostgreSQL, MySQL / MariaDB, SQLite, Redis / Valkey, or a connection URL. The server prompts start with useful defaults. Network connections ask for the host, port, user, and database, followed by a masked password prompt. The app tests the connection before offering a choice to save it to the project or to your user configuration. You can also edit a connection file directly with `e` on a row. Project configuration lives in `.termocode/databases.json`; user connections live in `~/.config/termocode/db/connections.json`.
 
 Passwords are stored through the secret store. A password pasted in a URL is removed from the saved URL and stored as a secret. Project files contain references such as `${secret:db.local}` or `${dotenv:DATABASE_URL}`, never literal passwords. Press `p` on a connection row to set its password. SQLite paths in project configuration must stay inside the workspace.
 
@@ -135,6 +135,18 @@ Press `h` on the result page, `H` in the Databases view, or use **Databases: His
 
 Nothing polls while you wait: an idle console or result page uses no CPU. Hiding the Databases view (another view, a hidden sidebar or zen mode) cancels a running query and closes its sessions, except a session with an open manual transaction. The command palette and other dialogs do not.
 
+## Redis
+
+A Redis or Valkey connection (`"driver": "redis"`) takes a host, a port (6379 by default), an optional ACL `user`, a database index `db`, and a password from the secret store. Use `"tls": true` or a `rediss://` URL for TLS; `"ssl": {"ca": "…", "cert": "…", "key": "…"}` adds a CA and a client certificate. Containers and compose services built from `redis` or `valkey` images, and `REDIS_URL` in `.env`, are suggested.
+
+Expanding a connection lists its databases (`db0 (1234 keys)`). Expanding a database lists its keys with `SCAN`, grouped into namespaces by `db_redis_separator` (`:` by default): `session:ab12` sits under `session:`. The app never sends `KEYS`. One row loads at most `db_redis_max_keys` keys (10000); past that the row says so, and opening a namespace scans only its keys. Each key shows its type: `"` string, `{` hash, `[` list, `(` set, `⇅` sorted set, `≋` stream (ASCII: `s h l S z x`).
+
+`Enter` on a key opens its value page: the type, length, TTL and memory, then one page of the value (`]` and `[` move between pages; `db_page_rows` items per page). A whole value is never loaded: strings show their first 64 KB, other types load page by page. Values are shown safely: bytes that are not text and control characters appear as `\xHH`.
+
+On the value page, `e` edits the value or the field under the cursor, `+` adds a field, item, member or entry, `-` deletes the one under the cursor, `t` sets the TTL (seconds or `30m`, `2h`, `1d`; empty removes it) and `D` deletes the key. Every change shows a card with the exact command, such as `HSET session:ab12 plan pro`, before it runs. On a production connection the card says so; on a read-only connection it asks **Run anyway?**. In the tree, `t`, `D` and `y` (copy the key) work on a key row.
+
+Press `n` on a Redis connection to open its console, a `.redis` file that starts with `# @conn <id>`. Write one command per line and press the send key on a line (or select several lines). Read commands run at once; other commands show a card first. Commands that can wipe data, stop the server or run code (`FLUSHALL`, `FLUSHDB`, `CONFIG SET`, `SHUTDOWN`, `DEBUG`, `MODULE`, `EVAL`, `FCALL`, `MIGRATE`, `REPLICAOF`, `ACL SETUSER`, …) show a strong warning card. `MONITOR`, `SUBSCRIBE`, `SELECT` and `MULTI` are not sent. `KEYS pattern` runs as `SCAN` with a note. An `AUTH` line is masked in the card, the page and the history. Console runs go to the same history as SQL.
+
 ## AI
 
 The AI chat has database tools: `db_connections`, `db_schema`, `db_ddl`, `db_query`, `db_explain` and `db_history`. The system prompt mentions them only when the workspace has connections.
@@ -145,3 +157,4 @@ The AI chat has database tools: `db_connections`, `db_schema`, `db_ddl`, `db_que
 - **Own sessions.** Each AI call opens its own session and closes it after. The AI never runs on your session and never joins your transaction. It cannot add or change connections or set passwords.
 - **What you see.** Each `db_query` and `db_explain` run opens the SQL Result page marked **by AI** and adds an entry to the SQL history. Every call is in the AI audit log.
 - **What the model sees.** Passwords never reach it. Server text is cleaned, cells are cut at 80 characters, and one answer is at most `db_ai_max_kb` KB (default 32); `max_rows` (default 100, max 1000) limits rows.
+- **Redis.** `redis_keys` lists keys with `SCAN` (type and TTL), `redis_get` reads one key a page at a time, and `redis_command` runs one command. Read commands run at once in a read-only session that refuses anything else; `CONFIG`, `ACL` and `CLIENT` always ask because they can show secrets. Any write asks with the exact command (`db:<conn>/write`; production always asks; read-only connections refuse). Dangerous commands (`FLUSHALL`, `CONFIG SET`, scripts, `MIGRATE`, …) and `MONITOR` / `SUBSCRIBE` are refused without a card.

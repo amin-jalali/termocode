@@ -50,10 +50,15 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-result-pin", Title: "Databases: Pin Result Tab"},
 		{ID: "db-export", Title: "Databases: Export Result…"},
 		{ID: "db-import-csv", Title: "Databases: Import CSV into Table…"},
+		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
+		{ID: "redis-delete-key", Title: "Databases: Delete Redis Key…"},
 	}
 }
 
 func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
+	if id == "redis-set-ttl" || id == "redis-delete-key" {
+		return m.databaseRedisPaletteKey(id), true
+	}
 	if !strings.HasPrefix(id, "db-") {
 		return nil, false
 	}
@@ -140,6 +145,11 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	}
 	rows := s.rows()
 	row, have := m.databaseCurrentRow()
+	if have {
+		if cmd, ok := m.databaseRedisSidebarKey(k.String(), row); ok {
+			return m, cmd
+		}
+	}
 	switch k.String() {
 	case "up", "k":
 		m.databaseMove(-1)
@@ -273,6 +283,9 @@ func (m *Model) databaseConfirmDisconnect(id string) {
 }
 
 func (m *Model) handleDBConfirm(id string) (tea.Cmd, bool) {
+	if cmd, ok := m.databaseRedisConfirm(id); ok {
+		return cmd, true
+	}
 	if cmd, ok := m.databaseConsoleConfirm(id); ok {
 		return cmd, true
 	}
@@ -440,6 +453,7 @@ func (m *Model) databaseConnect(id string) tea.Cmd {
 		if password == "" {
 			password, _ = databaseEnvValue(filepath.Join(s.root, ".env"), name)
 		}
+		password = dbPasswordFromValue(password)
 		if password != "" {
 			ai.RegisterSecret(password)
 		}
@@ -490,6 +504,9 @@ func (m *Model) databaseExpand(path string) tea.Cmd {
 	n, ok := s.nodes[path]
 	if !ok || n.loading || !dbNodeExpandable(n.kind) {
 		return nil
+	}
+	if s.isRedis(n.conn) {
+		return m.databaseRedisExpand(path)
 	}
 	sess := s.sessions[path]
 	// Schema and table rows must use the session of their database, which
@@ -629,6 +646,7 @@ func (m *Model) openDatabaseTypePicker() tea.Cmd {
 		{ID: "postgres", Title: "PostgreSQL", Hint: "default port 5432"},
 		{ID: "mysql", Title: "MySQL / MariaDB", Hint: "default port 3306"},
 		{ID: "sqlite", Title: "SQLite", Hint: "a file on this computer"},
+		{ID: "redis", Title: "Redis / Valkey", Hint: "default port 6379"},
 		{ID: "url", Title: "From a URL", Hint: "paste a connection URL"},
 	}
 	m.picker = picker.NewItems(" Add a database connection ", items)
@@ -656,6 +674,9 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	case "sqlite":
 		s.pendingConn.Driver = "sqlite"
 		return m.databaseAddPrompt(promptKindDBSQLitePath, "SQLite file", "Database file:", "data.db", false)
+	case "redis":
+		s.pendingConn.Driver, s.pendingConn.Port = "redis", 6379
+		return m.databaseAddPrompt(promptKindDBHost, "Server address", "Host name or address:", "localhost", false)
 	case "url":
 		return m.databaseAddPrompt(promptKindDBAdd, "Connection URL", "Paste a database URL:", "postgres://user@localhost:5432/database", false)
 	}
@@ -858,9 +879,6 @@ func databaseEnvConnection(root, key, raw string) (dbclient.Conn, string, error)
 	if err != nil {
 		return dbclient.Conn{}, "", err
 	}
-	if c.Driver == "redis" {
-		return dbclient.Conn{}, "", os.ErrInvalid
-	}
 	if c.Driver == "sqlite" && !filepath.IsAbs(c.Path) {
 		c.Path = filepath.Clean(filepath.Join(root, c.Path))
 	}
@@ -1030,6 +1048,9 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 		c.Password = ""
 		c.Source = dbclient.SourceUser
 		c.ID = dbConnectionID(c)
+		if c.Driver == "redis" {
+			c.ID = dbRedisConnectionID(c)
+		}
 		c.Name = c.ID
 		if duplicate := s.duplicateConnectionID(c.ID); duplicate {
 			return m.pushToastDetail(toast.Warn, "Connection already exists", "Choose another database name or edit the existing connection.")
@@ -1051,11 +1072,29 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 			return m.pushToastDetail(toast.Warn, "That port is not valid", "Enter a number from 1 to 65535.")
 		}
 		s.pendingConn.Port = port
+		if s.pendingConn.Driver == "redis" {
+			cmd := m.databaseAddPrompt(promptKindDBUser, "ACL user", "User name (empty: the default user):", s.pendingConn.User, false)
+			m.prompt.SetAllowEmpty(true)
+			return cmd
+		}
 		return m.databaseAddPrompt(promptKindDBUser, "Database user", "User name:", s.pendingConn.User, false)
 	case promptKindDBUser:
 		s.pendingConn.User = strings.TrimSpace(value)
+		if s.pendingConn.Driver == "redis" {
+			return m.databaseAddPrompt(promptKindDBName, "Database index", "Database index (0-15 on most servers):", strconv.Itoa(s.pendingConn.DB), false)
+		}
 		return m.databaseAddPrompt(promptKindDBName, "Database name", "Database:", s.pendingConn.Database, false)
 	case promptKindDBName:
+		if s.pendingConn.Driver == "redis" {
+			n, err := strconv.Atoi(strings.TrimSpace(value))
+			if err != nil || n < 0 {
+				return m.pushToastDetail(toast.Warn, "That database index is not valid", "Enter a number such as 0.")
+			}
+			s.pendingConn.DB = n
+			s.pendingConn.ID = dbRedisConnectionID(s.pendingConn)
+			s.pendingConn.Name = s.pendingConn.ID
+			return m.databasePromptPasswordForPending()
+		}
 		s.pendingConn.Database = strings.TrimSpace(value)
 		if s.pendingConn.Database == "" {
 			return m.pushToastDetail(toast.Warn, "Database name is needed", "Enter the database to connect to.")
@@ -1176,4 +1215,34 @@ func (m *Model) databaseSavePending(project bool) tea.Cmd {
 	s.pendingPassword = ""
 	s.touch()
 	return nil
+}
+
+// dbRedisConnectionID names a new Redis connection: redis-<host>, with
+// the database index when it is not 0.
+func dbRedisConnectionID(c dbclient.Conn) string {
+	host := c.Host
+	if c.URL != "" {
+		if p, err := dbclient.ParseURL(c.URL); err == nil {
+			host, c.DB = p.Host, p.DB
+		}
+	}
+	base := "redis-" + host
+	if c.DB != 0 {
+		base += "-" + strconv.Itoa(c.DB)
+	}
+	return dbConnectionID(dbclient.Conn{Driver: "redis", Database: base})
+}
+
+// dbPasswordFromValue is the password in v: a whole connection URL (a
+// .env DATABASE_URL / REDIS_URL) gives its password, anything else is the
+// password itself.
+func dbPasswordFromValue(v string) string {
+	if strings.Contains(v, "://") {
+		if u, err := url.Parse(v); err == nil && u.User != nil {
+			if pw, ok := u.User.Password(); ok {
+				return pw
+			}
+		}
+	}
+	return v
 }

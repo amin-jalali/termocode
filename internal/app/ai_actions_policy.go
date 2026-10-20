@@ -283,6 +283,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-result-pin":                aiAuto(),
 	"db-export":                    aiNever(aiNoPicker + " (db_query + write_file)"),
 	"db-import-csv":                aiNever("importing rows is a write the user confirms (db_query)"),
+	"redis-set-ttl":                aiNever(aiNoPicker + " (redis_command)"),
+	"redis-delete-key":             aiNever(aiNoPicker + " (redis_command)"),
 	"containers-focus":             aiAuto(),
 	"containers-refresh":           aiAuto(),
 	"containers-start":             aiDestructive(),
@@ -461,6 +463,8 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"db_timeout":           aiNever(aiNoAIConfig),
 	"db_history_max":       aiNever(aiNoAIConfig),
 	"db_ai_max_kb":         aiNever(aiNoAIConfig), // the AI never raises its own budget
+	"db_redis_separator":   aiConfirm(ai.ClassSettings),
+	"db_redis_max_keys":    aiNever(aiNoAIConfig),
 	"http_timeout":         aiConfirm(ai.ClassSettings),
 	"http_max_redirects":   aiConfirm(ai.ClassSettings),
 	"http_cookie_jar":      aiConfirm(ai.ClassSettings),

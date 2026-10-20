@@ -81,6 +81,8 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `db_timeout` | int | `30` | Maximum seconds for a console statement. The session also enforces its own timeout. |
 | `db_history_max` | int | `500` | Maximum SQL history entries kept in db/history.jsonl. |
 | `db_ai_max_kb` | int | `32` | Maximum size in KB of one AI database tool answer (1–1024). Longer results are cut and marked. |
+| `db_redis_separator` | string | `:` | Separator that groups Redis keys into namespaces in the tree (session:ab12 is under session:). Empty: no grouping. |
+| `db_redis_max_keys` | int | `10000` | Most Redis keys one tree row loads with SCAN (100–1000000). Past it the row says so; open a namespace to see more. |
 
 ## Containers (file only)
 
