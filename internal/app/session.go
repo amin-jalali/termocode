@@ -56,7 +56,10 @@ type SessionState struct {
 	// GitViewTree is the Source-Control file list layout preference: tree
 	// (true) vs flat list (false). Pointer so an unset field (nil) falls back
 	// to the tree default while an explicit choice survives a relaunch.
-	GitViewTree *bool `json:"git_view_tree,omitempty"`
+	GitViewTree         *bool    `json:"git_view_tree,omitempty"`
+	DBExpanded          []string `json:"db_expanded,omitempty"`
+	DBHiddenSuggestions []string `json:"db_hidden_suggestions,omitempty"`
+	DBFilter            string   `json:"db_filter,omitempty"`
 
 	// Group A: the AI chat shown on reopen + its scroll offset (lines up
 	// from the bottom).
@@ -140,14 +143,17 @@ func layoutPart(s SessionState) SessionState {
 
 func workspacePart(s SessionState) SessionState {
 	return SessionState{
-		Workspace:    s.Workspace,
-		OpenFiles:    s.OpenFiles,
-		ActivePath:   s.ActivePath,
-		ExpandedDirs: s.ExpandedDirs,
-		Cursors:      s.Cursors,
-		Roots:        s.Roots,
-		AILastChat:   s.AILastChat,
-		AIChatScroll: s.AIChatScroll,
+		Workspace:           s.Workspace,
+		OpenFiles:           s.OpenFiles,
+		ActivePath:          s.ActivePath,
+		ExpandedDirs:        s.ExpandedDirs,
+		Cursors:             s.Cursors,
+		Roots:               s.Roots,
+		DBExpanded:          s.DBExpanded,
+		DBHiddenSuggestions: s.DBHiddenSuggestions,
+		DBFilter:            s.DBFilter,
+		AILastChat:          s.AILastChat,
+		AIChatScroll:        s.AIChatScroll,
 
 		AIProfile:         s.AIProfile,
 		AIProfilesTrusted: s.AIProfilesTrusted,

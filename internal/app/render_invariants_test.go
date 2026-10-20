@@ -50,6 +50,7 @@ func TestRenderInvariantsPoorTerminals(t *testing.T) {
 		"theme-picker":  func(m Model) Model { m.openThemePicker(); return m },
 		"services":      func(m Model) Model { m.runDevAction("svcdemo"); return m },
 		"services-down": func(m Model) Model { m.runDevAction("svcdemo:down"); return m },
+		"databases":     func(m Model) Model { m.runDevAction("dbdemo"); return m },
 		// HTTP client: the status chip and the "Send anyway?" card.
 		"http": func(m Model) Model {
 			m.http = newHTTPState()
@@ -60,7 +61,7 @@ func TestRenderInvariantsPoorTerminals(t *testing.T) {
 		},
 	}
 	sceneMarker := map[string]string{"palette": "Command Palette", "confirm": "Delete", "toast": "Something happened", "theme-picker": "Color Theme", "settings": "icons", "services": "PROJECT", "services-down": "Docker is not running",
-		"http": "Send anyway?"}
+		"http": "Send anyway?", "databases": "users"}
 	truecolor := regexp.MustCompile(`\x1b\[[0-9;]*[34]8;[25];`)
 	anyColor := regexp.MustCompile(`\x1b\[[0-9;]*([34][0-9]|9[0-7]|10[0-7])(;[0-9;]*)?m`)
 

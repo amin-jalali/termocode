@@ -55,11 +55,13 @@ func ParseURL(raw string) (Conn, error) {
 	}
 	if c.Driver == "sqlite" {
 		p := u.Path
-		if u.Scheme == "sqlite" && p == "" {
-			p = u.Opaque
+		if rest, ok := strings.CutPrefix(raw, "sqlite://"); ok {
+			p = strings.TrimPrefix(strings.SplitN(rest, "?", 2)[0], "//")
 		}
-		if strings.HasPrefix(raw, "sqlite:") && strings.HasPrefix(strings.TrimPrefix(raw, "sqlite:"), "//") {
-			p = u.Path
+		if u.Scheme == "sqlite" && p == "" && u.Host != "" {
+			p = u.Host
+		} else if u.Scheme == "sqlite" && p == "" {
+			p = u.Opaque
 		}
 		c.Path = filepath.Clean(p)
 		return c, nil

@@ -103,6 +103,7 @@ var (
 		NerdFont: "\uf233", Unicode: "☷", ASCII: "=",
 		Bold: [2]string{"▀▀", "▀▀"},
 	}
+	IconDatabases = Icon{NerdFont: "\uf1c0", Unicode: "⛁", ASCII: "D"}
 	// IconServices is the same icon under its old name.
 	IconServices = IconContainers
 	// IconDebug — fisheye, reads as a "bug eye". U+25C9, EAW=Neutral.
@@ -260,7 +261,7 @@ func DetectIconMode() IconMode {
 func unicodeCandidates() []string {
 	icons := []Icon{
 		IconFiles, IconSearch, IconGit, IconOutline, IconRun, IconTests, IconServices,
-		IconDebug, IconExtensions, IconTerminal, IconAccount, IconSettings,
+		IconDatabases, IconDebug, IconExtensions, IconTerminal, IconAccount, IconSettings,
 	}
 	out := make([]string, 0, len(icons))
 	for _, ic := range icons {

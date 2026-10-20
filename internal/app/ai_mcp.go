@@ -45,7 +45,8 @@ const mcpLogChannel = "MCP"
 
 var secretStoreConfig struct {
 	sync.Mutex
-	path string
+	path  string
+	store secrets.Store
 }
 
 func configurePlainSecretStore() {
@@ -62,12 +63,20 @@ func configurePlainSecretStore() {
 	if secretStoreConfig.path == path {
 		return
 	}
-	store, err := secrets.Open(secrets.Options{Dir: dir, PlainPath: path, Backend: "plain", Register: ai.RegisterSecret, Redact: ai.Redact})
+	store, err := secrets.Open(secrets.Options{Dir: dir, PlainPath: path, Backend: "plain", Workspace: aiWorkspaceRoot(), Register: ai.RegisterSecret, Redact: ai.Redact})
 	if err != nil {
 		return
 	}
 	ai.SetSecretStoreForPath(path, store)
 	secretStoreConfig.path = path
+	secretStoreConfig.store = store
+}
+
+func databaseSecretStore() secrets.Store {
+	configurePlainSecretStore()
+	secretStoreConfig.Lock()
+	defer secretStoreConfig.Unlock()
+	return secretStoreConfig.store
 }
 
 // mcpTarget is the Manager StopMCP stops.

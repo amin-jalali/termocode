@@ -595,6 +595,18 @@ func (s *SQLSession) Close() error {
 func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (IntrospectionResult, error) {
 	queries := s.dialect.CatalogQueries()
 	result := IntrospectionResult{}
+	if req.Object != "" && req.Schema == "" {
+		currentSchema := "SELECT current_schema()"
+		if normDriver(s.name) == "mysql" {
+			currentSchema = "SELECT DATABASE()"
+		}
+		if err := s.readCatalog(ctx, currentSchema, &result.Schemas); err != nil {
+			return result, err
+		}
+		if len(result.Schemas) > 0 {
+			req.Schema = result.Schemas[0]
+		}
+	}
 	if req.Database == "" && req.Schema == "" && req.Object == "" {
 		if err := s.readCatalog(ctx, queries["databases"], &result.Databases); err != nil {
 			return result, err
@@ -608,7 +620,7 @@ func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (
 		return result, nil
 	}
 	if req.Object == "" {
-		if err := s.readObjects(ctx, queries["objects"], &result.Objects); err != nil {
+		if err := s.readObjects(ctx, queries["objects"], &result.Objects, req.Schema); err != nil {
 			return result, err
 		}
 		for _, key := range []string{"routines", "sequences"} {
@@ -616,7 +628,11 @@ func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (
 			if key == "sequences" {
 				dst = &result.Sequences
 			}
-			if err := s.readCatalog(ctx, queries[key], dst); err != nil {
+			args := []any(nil)
+			if queries[key] != "" && (strings.Contains(queries[key], "$1") || strings.Contains(queries[key], "?")) {
+				args = []any{req.Schema}
+			}
+			if err := s.readCatalog(ctx, queries[key], dst, args...); err != nil {
 				return result, err
 			}
 		}
@@ -625,11 +641,11 @@ func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (
 	return s.introspectObject(ctx, req, queries, result)
 }
 
-func (s *SQLSession) readCatalog(ctx context.Context, query string, dst *[]string) error {
+func (s *SQLSession) readCatalog(ctx context.Context, query string, dst *[]string, args ...any) error {
 	if query == "" {
 		return nil
 	}
-	r := s.Run(ctx, query, RunOptions{MaxRows: 10000})
+	r := s.Run(ctx, query, RunOptions{MaxRows: 10000, Args: args})
 	if r.Err != nil {
 		return r.Err
 	}
@@ -640,8 +656,8 @@ func (s *SQLSession) readCatalog(ctx context.Context, query string, dst *[]strin
 	}
 	return nil
 }
-func (s *SQLSession) readObjects(ctx context.Context, query string, dst *[]SchemaObject) error {
-	r := s.Run(ctx, query, RunOptions{MaxRows: 10000})
+func (s *SQLSession) readObjects(ctx context.Context, query string, dst *[]SchemaObject, args ...any) error {
+	r := s.Run(ctx, query, RunOptions{MaxRows: 10000, Args: args})
 	if r.Err != nil {
 		return r.Err
 	}
@@ -658,7 +674,8 @@ func (s *SQLSession) introspectObject(ctx context.Context, req IntrospectionRequ
 		if q == "" {
 			continue
 		}
-		r := s.Run(ctx, q, RunOptions{MaxRows: 10000, Args: []any{req.Object}})
+		args := []any{req.Schema, req.Object}
+		r := s.Run(ctx, q, RunOptions{MaxRows: 10000, Args: args})
 		if r.Err != nil {
 			return out, r.Err
 		}

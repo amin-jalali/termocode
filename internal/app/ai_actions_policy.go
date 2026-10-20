@@ -243,17 +243,26 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"testing-results":      aiAuto(),
 
 	// ── Services (services_actions.go; typed tools in ai_services_tools.go) ──
-	"services-focus":               aiAuto(),
-	"services-refresh":             aiAuto(),
-	"services-start-all":           aiConfirm(ai.ClassServices),
-	"services-stop-all":            aiConfirm(ai.ClassServices),
-	"services-start":               aiNever(aiNoPicker + " (services_start)"),
-	"services-stop":                aiNever(aiNoPicker + " (services_stop)"),
-	"services-restart":             aiNever(aiNoPicker + " (services_restart)"),
-	"services-logs":                aiNever(aiNoPicker + " (services_logs)"),
-	"services-configure":           aiConfirm(ai.ClassIDE), // may create .termocode/services.json
-	"services-open-compose":        aiAuto(),
-	"services-trust":               aiNever(aiNoAIConfig),
+	"services-focus":        aiAuto(),
+	"services-refresh":      aiAuto(),
+	"services-start-all":    aiConfirm(ai.ClassServices),
+	"services-stop-all":     aiConfirm(ai.ClassServices),
+	"services-start":        aiNever(aiNoPicker + " (services_start)"),
+	"services-stop":         aiNever(aiNoPicker + " (services_stop)"),
+	"services-restart":      aiNever(aiNoPicker + " (services_restart)"),
+	"services-logs":         aiNever(aiNoPicker + " (services_logs)"),
+	"services-configure":    aiConfirm(ai.ClassIDE), // may create .termocode/services.json
+	"services-open-compose": aiAuto(),
+	"services-trust":        aiNever(aiNoAIConfig),
+
+	// ── Databases (DB-3: connection management only) ──
+	"db-focus":                     aiAuto(),
+	"db-refresh":                   aiAuto(),
+	"db-connect":                   aiNever(aiNoPicker),
+	"db-disconnect":                aiDestructive(),
+	"db-test-connection":           aiAuto(),
+	"db-add":                       aiNever(aiNoAIConfig),
+	"db-configure":                 aiDestructive(),
 	"containers-focus":             aiAuto(),
 	"containers-refresh":           aiAuto(),
 	"containers-start":             aiDestructive(),

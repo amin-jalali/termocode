@@ -266,8 +266,8 @@ func TestCatalogObjectQueriesBindTheObjectName(t *testing.T) {
 	}
 	for label, c := range cases {
 		for _, key := range []string{"columns", "keys", "indexes", "foreign_keys"} {
-			if q := c.dialect.CatalogQueries()[key]; strings.Count(q, c.marker) != 1 {
-				t.Errorf("%s %s: want exactly one %s placeholder: %s", label, key, c.marker, q)
+			if q := c.dialect.CatalogQueries()[key]; label == "postgres" && (strings.Count(q, "$1") != 1 || strings.Count(q, "$2") != 1) || label == "mysql" && strings.Count(q, "?") != 2 {
+				t.Errorf("%s %s: want schema and object placeholders: %s", label, key, q)
 			}
 		}
 		ddl, args := c.dialect.DDL("orders")
@@ -316,8 +316,13 @@ func TestIntrospectionNamesCannotChangeTheSQL(t *testing.T) {
 				if strings.Contains(st, "table_name='") || strings.Contains(st, "relname='") {
 					t.Errorf("%s: text-spliced filter: %s", label, st)
 				}
-				if label == "postgres" && strings.Contains(st, "$1") || label == "mysql" && strings.Contains(st, "table_name = ?") {
+				if label == "postgres" && strings.Contains(st, "$1") && !strings.Contains(st, "$2") {
 					if len(args[i]) != 1 || args[i][0] != object {
+						t.Errorf("%s %q: DDL argument not passed: %v", label, object, args[i])
+					}
+				}
+				if label == "postgres" && strings.Contains(st, "$2") || label == "mysql" && strings.Contains(st, "table_name = ?") {
+					if len(args[i]) != 2 || args[i][0] != "public" || args[i][1] != object {
 						t.Errorf("%s %q: argument not passed: %v", label, object, args[i])
 					}
 				}
@@ -340,8 +345,67 @@ func TestPostgresIntrospectionReadsObjectsAndDDL(t *testing.T) {
 		t.Fatalf("introspection result = %+v", result)
 	}
 	joined := strings.Join(stub.Recorded(), "\n")
-	if !strings.Contains(joined, "c.table_name = $1") || !strings.Contains(joined, "t.relname = $1") {
+	if !strings.Contains(joined, "c.table_name = $2") || !strings.Contains(joined, "t.relname = $2") {
 		t.Fatalf("catalog query filters were not bound: %s", joined)
+	}
+}
+
+func TestIntrospectObjectWithoutSchemaUsesCurrentSchema(t *testing.T) {
+	stub := &dbtest.Stub{Columns: []string{"name", "type"}, Rows: [][]driver.Value{{"public", "TEXT"}}}
+	db := dbtest.Open("current-schema", stub)
+	defer db.Close()
+	s := newSQLSession(db, PostgresDialect{}, "postgres", Conn{}, false)
+	defer s.Close()
+	if _, err := s.Introspect(context.Background(), IntrospectionRequest{Object: "orders"}); err != nil {
+		t.Fatal(err)
+	}
+	if got := stub.Recorded()[0]; got != "SELECT current_schema()" {
+		t.Fatalf("first query = %q, want current schema lookup", got)
+	}
+	for i, query := range stub.Recorded() {
+		if strings.Contains(query, "c.table_name = $2") || strings.Contains(query, "t.relname = $2") {
+			args := stub.RecordedArgs()[i]
+			if len(args) != 2 || args[0] != "public" || args[1] != "orders" {
+				t.Fatalf("catalog args = %#v, want bound current schema and object", args)
+			}
+		}
+	}
+}
+
+func TestMySQLDatabaseExpansionListsObjects(t *testing.T) {
+	stub := &dbtest.Stub{Columns: []string{"name", "type"}, Rows: [][]driver.Value{{"users", "BASE TABLE"}}}
+	db := dbtest.Open("mysql-db-expansion", stub)
+	defer db.Close()
+	s := newSQLSession(db, MySQLDialect{}, "mysql", Conn{}, false)
+	defer s.Close()
+	result, err := s.Introspect(context.Background(), IntrospectionRequest{Database: "app", Schema: "app"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Objects) != 1 || result.Objects[0].Name != "users" {
+		t.Fatalf("database expansion = %#v", result.Objects)
+	}
+	if len(stub.RecordedArgs()) == 0 || len(stub.RecordedArgs()[0]) != 1 || stub.RecordedArgs()[0][0] != "app" {
+		t.Fatalf("database name was not bound to objects query: %#v", stub.RecordedArgs())
+	}
+}
+
+func TestMySQLObjectIntrospectionUsesCurrentDatabase(t *testing.T) {
+	stub := &dbtest.Stub{Columns: []string{"name", "type"}, Rows: [][]driver.Value{{"app", "TEXT"}}}
+	db := dbtest.Open("mysql-current-database", stub)
+	defer db.Close()
+	s := newSQLSession(db, MySQLDialect{}, "mysql", Conn{}, false)
+	defer s.Close()
+	if _, err := s.Introspect(context.Background(), IntrospectionRequest{Object: "users"}); err != nil {
+		t.Fatal(err)
+	}
+	if got := stub.Recorded()[0]; got != "SELECT DATABASE()" {
+		t.Fatalf("first query = %q, want current database lookup", got)
+	}
+	for _, query := range stub.Recorded() {
+		if strings.Contains(query, "current_schema()") {
+			t.Fatalf("MySQL received unsupported current_schema query: %s", query)
+		}
 	}
 }
 

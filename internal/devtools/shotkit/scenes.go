@@ -98,6 +98,13 @@ func Containers() Scene {
 	return Scene{Name: "containers", Steps: WithEditor(Act("contdemo"), Pause(400*time.Millisecond))}
 }
 
+func Databases() Scene {
+	return Scene{Name: "db-tree", Steps: WithEditor(Act("dbdemo"), Pause(400*time.Millisecond))}
+}
+func DatabasesVariant(name, variant string) Scene {
+	return Scene{Name: name, Steps: WithEditor(Act("dbdemo:"+variant), Pause(400*time.Millisecond))}
+}
+
 func ContainersVariant(name, variant string) Scene {
 	return Scene{Name: name, Steps: WithEditor(Act("contdemo:"+variant), Pause(400*time.Millisecond))}
 }

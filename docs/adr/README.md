@@ -24,6 +24,7 @@ picked over a clear alternative. A normal feature does not need one.
 | [0010](0010-patched-bubbletea-renderer.md) | A patched copy of Bubble Tea's renderer | Accepted |
 | [0011](0011-android-spawn-trampoline.md) | Start child processes through Android's shell | Accepted |
 | [0012](0012-http-client-engine.md) | HTTP client engine in Go; `.http` grammar shared with mobocode | Accepted |
+| [0014](0014-database-access.md) | Database drivers and the user's SQLite command | Accepted |
 | [0015](0015-agent-pipelines-dag-in-ui-process.md) | Agent pipelines run as a DAG inside the UI process | Accepted |
 
 > The folder was started after the project was already running, so 0001–0005

@@ -70,6 +70,9 @@ func goldenScenes() []Scene {
 		FindResults(),
 		{Name: "search", Steps: WithEditor(append(append([]Step{Act("palette:find-files-overlay")}, TypeKeys("Toast")...), Pause(1200*time.Millisecond))...)},
 		Services(),
+		Databases(),
+		DatabasesVariant("db-empty", "empty"),
+		DatabasesVariant("db-no-sqlite", "no-sqlite"),
 		Containers(),
 		ContainersRemoveConfirm(),
 		ContainersStopRemoveConfirm(),
@@ -132,6 +135,8 @@ func goldenExtras() []Scene {
 		ServicesVariant("services-empty", "empty"),
 		{Name: "services-light", Theme: "catppuccin-latte", Steps: Services().Steps},
 		{Name: "services-ascii", Icons: "ascii", Steps: Services().Steps},
+		{Name: "db-tree-ascii", Icons: "ascii", Steps: Databases().Steps},
+		{Name: "db-tree-light", Theme: "catppuccin-latte", Steps: Databases().Steps},
 		ContainersVariant("containers-menu", "menu"),
 		ContainersVariant("containers-docker-down", "down"),
 		ContainersVariant("containers-no-engine", "noengine"),
@@ -167,7 +172,7 @@ func goldenCases() []goldenCase {
 	}
 	// The smallest common window (80x24) for the screens that have a
 	// compact layout: start page, editor, palette, toast.
-	for _, sc := range []Scene{Dashboard(), DashboardRecent(), setupCardScene(), Editor(), Palette(), Toast(), FindResults(), SCMCommit(), TerminalMarks(), Services(), Containers(), ContainersRemoveConfirm(), ContainersStopRemoveConfirm(), ContainersComposeDownConfirm(), ContainersImages(), ContainersNetworks(), ContainersVolumes(), ContainersHostCard("containers-image-prune-confirm", "image-prune"), ContainersHostCard("containers-image-remove-confirm", "image-remove"), ContainersHostCard("containers-image-in-use", "image-in-use"), ContainersHostCard("containers-network-remove-confirm", "network-remove"), ContainersHostCard("containers-network-prune-confirm", "network-prune"), ContainersHostCard("containers-volume-remove-confirm", "volume-remove"), ContainersHostCard("containers-volume-in-use", "volume-in-use"), ContainersHostCard("containers-volume-prune-confirm", "volume-prune"), HTTPFile(), HTTPResponse(), HTTPResponseTLS()} {
+	for _, sc := range []Scene{Dashboard(), DashboardRecent(), setupCardScene(), Editor(), Palette(), Toast(), FindResults(), SCMCommit(), TerminalMarks(), Services(), Databases(), DatabasesVariant("db-empty", "empty"), DatabasesVariant("db-no-sqlite", "no-sqlite"), Containers(), ContainersRemoveConfirm(), ContainersStopRemoveConfirm(), ContainersComposeDownConfirm(), ContainersImages(), ContainersNetworks(), ContainersVolumes(), ContainersHostCard("containers-image-prune-confirm", "image-prune"), ContainersHostCard("containers-image-remove-confirm", "image-remove"), ContainersHostCard("containers-image-in-use", "image-in-use"), ContainersHostCard("containers-network-remove-confirm", "network-remove"), ContainersHostCard("containers-network-prune-confirm", "network-prune"), ContainersHostCard("containers-volume-remove-confirm", "volume-remove"), ContainersHostCard("containers-volume-in-use", "volume-in-use"), ContainersHostCard("containers-volume-prune-confirm", "volume-prune"), HTTPFile(), HTTPResponse(), HTTPResponseTLS()} {
 		out = append(out, goldenCase{fmt.Sprintf("%s-80x24", sc.Name), sc, 80, 24})
 	}
 	out = append(out, goldenCase{"setup-card-100x30", setupCardScene(), 100, 30})

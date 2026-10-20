@@ -60,6 +60,11 @@ type State struct {
 	ServicesBad   int
 	ServicesStale bool
 
+	// Database chip is visible only while a connection is active in the view.
+	ShowDatabase bool
+	DatabaseName string
+	DatabaseProd bool
+
 	// Ext holds extension status items (Group I), as {{token}} markup.
 	// They render at the end of the center cluster; see ext_items.go.
 	Ext []string
@@ -451,6 +456,9 @@ func (m Model) renderCenterDiag(s State) (string, int, int) {
 	if chip := renderServicesChip(s); chip != "" {
 		parts = append(parts, chip)
 	}
+	if chip := renderDatabaseChip(s); chip != "" {
+		parts = append(parts, chip)
+	}
 	if chip := renderTestsChip(s); chip != "" { // Group E (always last)
 		parts = append(parts, chip)
 	}
@@ -469,6 +477,17 @@ func (m Model) renderCenterDiag(s State) (string, int, int) {
 	// Only the counters: the extension items and the test chip after them
 	// are click targets of their own.
 	return out, start, lipgloss.Width(strings.Join(parts[diagIdx:diagEnd], gap))
+}
+
+func renderDatabaseChip(s State) string {
+	if !s.ShowDatabase || s.DatabaseName == "" {
+		return ""
+	}
+	fg := theme.TextSecondary
+	if s.DatabaseProd {
+		fg = theme.DiagError
+	}
+	return barFg(fg).Render(theme.IconDatabases.String() + " " + s.DatabaseName)
 }
 
 // branchText is the center cluster's branch item ("⌥ main ↑1").

@@ -331,6 +331,7 @@ var actionNames = map[Action]string{
 	ActionPrevSearchResult:   "PrevSearchResult",
 	ActionDetachSession:      "DetachSession",
 	ActionServicesFocus:      "ServicesFocus",
+	ActionDatabasesFocus:     "DatabasesFocus",
 	ActionHTTPSend:           "HTTPSend",
 }
 

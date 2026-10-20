@@ -118,6 +118,7 @@ var paletteActions = map[string]keymap.Action{
 	"reload-window":               keymap.ActionReloadWindow,
 	"detach-session":              keymap.ActionDetachSession,
 	"services-focus":              keymap.ActionServicesFocus,
+	"db-focus":                    keymap.ActionDatabasesFocus,
 	"http-send":                   keymap.ActionHTTPSend,
 	"toggle-auto-save":            keymap.ActionToggleAutoSave,
 	"next-hunk":                   keymap.ActionNextHunk,

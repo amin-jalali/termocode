@@ -30,6 +30,7 @@ const (
 	menuKindAIChat     // ai_select.go
 	menuKindCommitMore // the commit view's ⋯ (git_commit_view.go)
 	menuKindServices   // a Services row (services_actions.go)
+	menuKindDatabases  // a Databases row (db_view.go)
 	menuKindContainers // the Containers section picker
 )
 
@@ -320,6 +321,9 @@ func (m *Model) handleMenuSelect(id string) tea.Cmd {
 	}
 	if m.menuKind == menuKindServices {
 		return m.handleServicesMenuSelect(id)
+	}
+	if m.menuKind == menuKindDatabases {
+		return m.handleDatabasesMenuSelect(id)
 	}
 	if m.menuKind == menuKindContainers {
 		return m.handleContainersMenuSelect(id)

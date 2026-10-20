@@ -149,6 +149,8 @@ const (
 	// key (the activity bar and the palette reach it); keymap.json may
 	// bind one.
 	ActionServicesFocus
+	// ActionDatabasesFocus shows and focuses the Databases view.
+	ActionDatabasesFocus
 	// ActionHTTPSend sends the request at the cursor of an .http file,
 	// resends on the HTTP Response page, else resends the last request
 	// (Ctrl+Alt+R, like VS Code REST Client).

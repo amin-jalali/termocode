@@ -13,6 +13,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/anim"
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/dbclient"
 	"github.com/amin-jalali/termocode/internal/explorer"
 	"github.com/amin-jalali/termocode/internal/findbar"
 	"github.com/amin-jalali/termocode/internal/git"
@@ -38,6 +39,7 @@ import (
 // copies it to the heap, so the helpers below return Model and only this
 // final return converts (once per message).
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	wasDatabasesVisible := m.databasesVisible()
 	var cmd tea.Cmd
 	// Hover labels (tooltip.go) watch every user event first.
 	if t, ok := msg.(tooltipTickMsg); ok {
@@ -53,6 +55,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if t := m.aiActivityTick(); t != nil { // the chat's 1 s clock, only during a turn
 			cmd = tea.Batch(cmd, t)
 		}
+	}
+	if wasDatabasesVisible && !m.databasesVisible() {
+		m.databasesClose()
 	}
 	return m, m.gateUpdate(msg, cmd)
 }
@@ -152,6 +157,12 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case DevActionMsg:
 		return m, m.runDevAction(msg.ID)
+	case dbConnectMsg:
+		return m, m.onDBConnect(msg)
+	case dbIntrospectMsg:
+		return m, m.onDBIntrospect(msg)
+	case dbTestMsg:
+		return m, m.onDBTest(msg)
 	case commitDetailMsg:
 		if m.commitDetails == nil {
 			m.commitDetails = map[string]git.CommitDetail{}
@@ -168,6 +179,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onToolUninstalled(msg)
 	case picker.CloseMsg:
 		m.pickerOpen = false
+		if m.pickerKind == pickerKindDBSave && m.databases != nil {
+			m.databases.pendingConn = dbclient.Conn{}
+			m.databases.pendingPassword = ""
+		}
 		m.endThemePreview(false)
 		if m.pickerKind == pickerKindTheme {
 			_ = m.onSetupThemePicked(false)
@@ -284,6 +299,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		}
 		if msg.View == activity.ViewTests { // Group E: discover on first open
 			return m, m.ensureTestsDiscovered()
+		}
+		if msg.View == activity.ViewDatabases {
+			return m, m.revealDatabasesView(false)
 		}
 		return m, nil
 	case activity.ToggleSidebarMsg:
@@ -1388,8 +1406,9 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	// move the Quick Actions cursor and Enter dispatch the focused
 	// card. Falls through to normal handling otherwise. Not while the
 	// Source Control panel has the focus: its list and commit box need
-	// the arrows, Tab and Enter. Same for the Services panel (Enter runs an image).
-	if m.welcomeShowing() && !(m.focus == FocusExplorer && (m.activity.Active() == activity.ViewGit || m.activity.Active() == activity.ViewServices)) {
+	// the arrows, Tab and Enter. The Services and Databases trees also own
+	// their navigation keys when focused.
+	if m.welcomeShowing() && !(m.focus == FocusExplorer && (m.activity.Active() == activity.ViewGit || m.activity.Active() == activity.ViewServices || m.activity.Active() == activity.ViewDatabases)) {
 		if newM, cmd, handled := m.handleWelcomeKey(msg); handled {
 			return newM, cmd
 		}
@@ -1690,6 +1709,8 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.detachSession()
 	case keymap.ActionServicesFocus: // services_state.go
 		return m, m.revealServicesView(true)
+	case keymap.ActionDatabasesFocus:
+		return m, m.revealDatabasesView(true)
 	case keymap.ActionToggleAutoSave:
 		return m, m.toggleAutoSave()
 	case keymap.ActionNextHunk:
@@ -2160,6 +2181,10 @@ func (m Model) dispatchToFocus(msg tea.Msg) (Model, tea.Cmd) {
 		case activity.ViewServices: // services_actions.go
 			if k, ok := msg.(tea.KeyMsg); ok {
 				return m.handleServicesSidebarKey(k)
+			}
+		case activity.ViewDatabases: // db_actions.go
+			if k, ok := msg.(tea.KeyMsg); ok {
+				return m.handleDatabasesSidebarKey(k)
 			}
 		default:
 			// Files pane: intercept the Delete / `d` chord here so the

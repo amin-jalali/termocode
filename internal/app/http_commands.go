@@ -14,6 +14,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/dbclient"
 	"github.com/amin-jalali/termocode/internal/httpclient"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/prompt"
@@ -30,6 +31,9 @@ const (
 	pickerKindHTTPHistory
 	pickerKindHTTPEnv
 	pickerKindHTTPSaved
+	pickerKindDBSave
+	pickerKindDBType
+	pickerKindDBTestResult
 )
 
 const (
@@ -38,6 +42,14 @@ const (
 	promptKindHTTPSaveName
 	promptKindHTTPSaveBody
 	promptKindHTTPNewFile
+	promptKindDBAdd
+	promptKindDBFilter
+	promptKindDBPassword
+	promptKindDBHost
+	promptKindDBPort
+	promptKindDBUser
+	promptKindDBName
+	promptKindDBSQLitePath
 )
 
 const (
@@ -370,6 +382,24 @@ func (m *Model) openHTTPSaved() tea.Cmd {
 func (m *Model) handleHTTPPickerSelect(id string) (tea.Cmd, bool) {
 	s := m.httpS()
 	switch m.pickerKind {
+	case pickerKindDBSave:
+		return m.databaseSavePending(id == "db-save-project"), true
+	case pickerKindDBType:
+		return m.databaseStartAdd(id), true
+	case pickerKindDBTestResult:
+		switch id {
+		case "db-test-password":
+			return m.databasePromptPasswordForPending(), true
+		case "db-test-retry":
+			return m.databaseRetestPending(), true
+		case "db-test-cancel":
+			if m.databases != nil {
+				m.databases.pendingConn = dbclient.Conn{}
+				m.databases.pendingPassword = ""
+			}
+			return nil, true
+		}
+		return nil, true
 	case pickerKindHTTPSend:
 		var i int
 		if _, err := fmt.Sscan(id, &i); err != nil || i < 0 || i >= len(s.pickReqs) {
@@ -522,6 +552,10 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.httpSaveBody(strings.TrimSpace(value)), true
 	case promptKindHTTPNewFile:
 		return m.httpNewFile(strings.TrimSpace(value)), true
+	case promptKindDBAdd, promptKindDBFilter, promptKindDBHost, promptKindDBPort, promptKindDBUser, promptKindDBName, promptKindDBSQLitePath:
+		return m.onDBPrompt(m.promptKind, value), true
+	case promptKindDBPassword:
+		return m.onDBPrompt(m.promptKind, value), true
 	}
 	return nil, false
 }

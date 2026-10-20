@@ -341,6 +341,7 @@ func paletteItems() []picker.Item {
 		{ID: "quit", Title: "File: Quit", Hint: "Ctrl+Q"},
 	}
 	items = append(items, servicesPaletteItems()...)  // services_actions.go
+	items = append(items, databasesPaletteItems()...) // DB-3
 	items = append(items, extManagePaletteItems()...) // Group I — Extensions: Reload / Open Folder / …
 	items = append(items, httpPaletteItems()...)      // HTTP client (http_commands.go)
 	// Group A — AI commands (ai_state.go).
@@ -739,6 +740,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchServicesPalette(id); ok { // services_actions.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchDatabasesPalette(id); ok { // db_actions.go
 			return cmd
 		}
 		// Group I: "Ext: …" commands + "Extensions: …" management (ext.go).

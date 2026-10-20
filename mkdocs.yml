@@ -99,6 +99,7 @@ nav:
       - Debug a program: guides/debug.md
       - Run and explore tests: guides/tests.md
       - Dev services: guides/services.md
+      - Browse databases: guides/databases.md
       - Tasks and problems: guides/tasks-problems.md
       - Install language servers and debuggers: guides/language-servers.md
       - Workspaces and sessions: guides/workspaces.md
@@ -129,4 +130,5 @@ nav:
           - "0008 Diff card for reviews": adr/0008-go-rendered-diff-viewer.md
           - "0009 Process extensions": adr/0009-process-extensions.md
           - "0012 HTTP client engine": adr/0012-http-client-engine.md
+          - "0014 Database access": adr/0014-database-access.md
           - "0015 Agent pipelines": adr/0015-agent-pipelines-dag-in-ui-process.md

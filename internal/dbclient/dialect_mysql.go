@@ -21,12 +21,12 @@ func (MySQLDialect) CatalogQueries() map[string]string {
 	return map[string]string{
 		"databases":    `SELECT schema_name FROM information_schema.schemata ORDER BY schema_name`,
 		"schemas":      `SELECT schema_name FROM information_schema.schemata ORDER BY schema_name`,
-		"objects":      `SELECT table_name, table_type FROM information_schema.tables WHERE table_schema=DATABASE() ORDER BY table_name`,
-		"columns":      `SELECT column_name, column_type FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name = ? ORDER BY ordinal_position`,
-		"keys":         `SELECT column_name FROM information_schema.key_column_usage WHERE table_schema=DATABASE() AND constraint_name='PRIMARY' AND table_name = ? ORDER BY ordinal_position`,
-		"indexes":      `SELECT index_name, GROUP_CONCAT(column_name ORDER BY seq_in_index), MIN(non_unique=0) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name = ? GROUP BY index_name ORDER BY index_name`,
-		"foreign_keys": `SELECT constraint_name, column_name, referenced_table_name, referenced_column_name FROM information_schema.key_column_usage WHERE table_schema=DATABASE() AND referenced_table_name IS NOT NULL AND table_name = ? ORDER BY constraint_name`,
-		"routines":     `SELECT routine_name FROM information_schema.routines WHERE routine_schema=DATABASE() ORDER BY routine_name`,
+		"objects":      `SELECT table_name, table_type FROM information_schema.tables WHERE table_schema=? ORDER BY table_name`,
+		"columns":      `SELECT column_name, column_type FROM information_schema.columns WHERE table_schema=? AND table_name = ? ORDER BY ordinal_position`,
+		"keys":         `SELECT column_name FROM information_schema.key_column_usage WHERE table_schema=? AND constraint_name='PRIMARY' AND table_name = ? ORDER BY ordinal_position`,
+		"indexes":      `SELECT index_name, GROUP_CONCAT(column_name ORDER BY seq_in_index), MIN(non_unique=0) FROM information_schema.statistics WHERE table_schema=? AND table_name = ? GROUP BY index_name ORDER BY index_name`,
+		"foreign_keys": `SELECT constraint_name, column_name, referenced_table_name, referenced_column_name FROM information_schema.key_column_usage WHERE table_schema=? AND referenced_table_name IS NOT NULL AND table_name = ? ORDER BY constraint_name`,
+		"routines":     `SELECT routine_name FROM information_schema.routines WHERE routine_schema=? ORDER BY routine_name`,
 		"sequences":    `SELECT CAST(NULL AS CHAR) WHERE 1=0`,
 	}
 }

@@ -495,6 +495,8 @@ type Model struct {
 	// services is the Services view state (services_state.go). Pointer,
 	// shared by copies; idle (no process, no goroutine) until shown.
 	services *servicesState
+	// databases is lazy and holds idle sessions only while the view is open.
+	databases *dbState
 	// ext is the extension host state (Group I, ext.go). Pointer so
 	// Model copies share it; nil in bare test Models.
 	ext *extState
@@ -780,6 +782,7 @@ func New() Model {
 		tasks:            newTaskRunner(),    // Group C
 		testView:         newTestsState(),    // Group E
 		services:         newServicesState(),
+		databases:        newDBState(),
 		ext:              newExtState(),    // Group I
 		ai:               newAIState(),     // Group A
 		setup:            newSetupState(),  // setup card (setup_card_ui.go)
@@ -1168,6 +1171,7 @@ func (m *Model) Close() error {
 		m.ext.proc.Close() // process extensions and their children
 	}
 	m.services.shutdown() // the docker events watcher (services_state.go)
+	m.databasesClose()    // database sessions are idle unless the view is visible
 	m.dropImageTemp()     // an HTTP image preview's temp copy (U16)
 	if m.nvim == nil {
 		return nil

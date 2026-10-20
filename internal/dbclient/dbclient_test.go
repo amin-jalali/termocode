@@ -26,6 +26,25 @@ func TestParseURL(t *testing.T) {
 		})
 	}
 }
+
+func TestParseSQLitePrefixes(t *testing.T) {
+	for _, tc := range []struct{ raw, want string }{
+		{"sqlite:data.db", "data.db"},
+		{"sqlite:./data.db", "data.db"},
+		{"sqlite://data.db", "data.db"},
+		{"sqlite:///tmp/data.db", "/tmp/data.db"},
+	} {
+		t.Run(tc.raw, func(t *testing.T) {
+			got, err := ParseURL(tc.raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.Driver != "sqlite" || got.Path != tc.want {
+				t.Fatalf("ParseURL(%q) = driver %q path %q; want sqlite %q", tc.raw, got.Driver, got.Path, tc.want)
+			}
+		})
+	}
+}
 func TestSplitAndClassify(t *testing.T) {
 	q := "-- hi\nWITH x AS (SELECT ';' a) SELECT * FROM users; INSERT INTO users VALUES ('a;b');"
 	ss, err := Split(q, "postgres")

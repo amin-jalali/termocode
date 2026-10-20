@@ -113,6 +113,18 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | DAP: Install Adapter... | `dap-install` |   |   |
 
+## Databases
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Databases: Add Connection… | `db-add` |   |   |
+| Databases: Configure | `db-configure` |   |   |
+| Databases: Connect Selected | `db-connect` |   |   |
+| Databases: Disconnect Selected | `db-disconnect` |   |   |
+| Databases: Focus | `db-focus` |   |   |
+| Databases: Refresh | `db-refresh` |   |   |
+| Databases: Test Connection | `db-test-connection` |   |   |
+
 ## Debug
 
 | Title | ID | Key | Hint |

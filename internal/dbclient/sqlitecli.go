@@ -50,6 +50,18 @@ func ParseSQLiteVersion(text string) (SQLiteVersion, error) {
 }
 
 func SQLiteInstallHint(goos, goarch string) string {
+	var release string
+	if goos == "linux" {
+		if b, err := os.ReadFile("/etc/os-release"); err == nil {
+			release = string(b)
+		}
+	}
+	return SQLiteInstallHintWithRelease(goos, goarch, release)
+}
+
+// SQLiteInstallHintWithRelease makes OS package guidance deterministic for
+// callers that already know the operating system or need a stable preview.
+func SQLiteInstallHintWithRelease(goos, goarch, release string) string {
 	_ = goarch
 	switch goos {
 	case "android":
@@ -57,14 +69,12 @@ func SQLiteInstallHint(goos, goarch string) string {
 	case "darwin":
 		return "Install sqlite3 with: brew install sqlite"
 	case "linux":
-		if b, err := os.ReadFile("/etc/os-release"); err == nil {
-			id := strings.ToLower(string(b))
-			if strings.Contains(id, "fedora") {
-				return "Install sqlite3 with: sudo dnf install sqlite"
-			}
-			if strings.Contains(id, "debian") || strings.Contains(id, "ubuntu") {
-				return "Install sqlite3 with: sudo apt install sqlite3"
-			}
+		id := strings.ToLower(release)
+		if strings.Contains(id, "fedora") {
+			return "Install sqlite3 with: sudo dnf install sqlite"
+		}
+		if strings.Contains(id, "debian") || strings.Contains(id, "ubuntu") {
+			return "Install sqlite3 with: sudo apt install sqlite3"
 		}
 		return "Install sqlite3 with your package manager"
 	default:

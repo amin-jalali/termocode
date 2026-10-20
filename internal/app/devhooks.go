@@ -52,6 +52,7 @@ import (
 //	svcdemo[:down|empty]   show the Services view with a canned snapshot
 //	                       (no docker; the shots and goldens)
 //	contdemo[:down|noengine|menu] show the Containers view with a canned host snapshot
+//	dbdemo[:empty|no-sqlite]   show a canned Databases tree (no connection)
 //	httpdemo:<variant>     docs/users.http and a canned HTTP answer:
 //	                       file, response, headers or tls (no network)
 //	helpdemo               open the in-app guide at the chat panel section
@@ -91,6 +92,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		m.servicesDemo(arg)
 	case "contdemo":
 		m.containersDemo(arg)
+	case "dbdemo":
+		m.databasesDemo(arg)
 	case "aidemo": // a sample conversation for the AI chat shot
 		s := m.aiS()
 		s.conv.Messages = []ai.StoredMessage{

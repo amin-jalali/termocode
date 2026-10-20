@@ -35,6 +35,7 @@ var actionInfo = map[Action]ActionInfo{
 	ActionReloadBuffer:   {"File", "Reload the active file from disk."},
 	ActionDetachSession:  {"File", "Detach this terminal from the persistent session; it keeps running."},
 	ActionServicesFocus:  {"View", "Show the Containers view, including this project's services."},
+	ActionDatabasesFocus: {"View", "Show the Databases view."},
 	ActionHTTPSend:       {"HTTP", "Send the request at the cursor of an .http file (on the response page: send it again)."},
 
 	ActionCopy:                     {"Editor", "Copy the selection to the clipboard."},

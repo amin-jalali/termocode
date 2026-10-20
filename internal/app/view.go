@@ -1244,6 +1244,8 @@ func (m Model) renderSidebar(h int) string {
 		content = m.renderTestsSidebar(contentW, h)
 	case activity.ViewServices: // services_view.go
 		content = m.renderServicesSidebar(contentW, h)
+	case activity.ViewDatabases: // db_view.go
+		content = m.renderDatabasesSidebar(contentW, h)
 	default:
 		if !m.isExtSidebar() { // Group I: extension panels (ext.go)
 			return ""
@@ -2281,6 +2283,13 @@ func (m Model) statusState() statusbar.State {
 	}
 	m.fillTestsStatus(&st) // Group E: ✓ n ✗ n chip (test_explorer.go)
 	m.fillServicesStatus(&st)
+	if m.databases != nil && m.databases.activeID != "" {
+		if c, ok := m.databases.connection(m.databases.activeID); ok {
+			st.ShowDatabase = true
+			st.DatabaseName = dbConnName(c)
+			st.DatabaseProd = c.Environment == "production"
+		}
+	}
 	return st
 }
 
