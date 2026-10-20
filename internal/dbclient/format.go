@@ -113,32 +113,11 @@ func ToJSON(r Result) string {
 			}
 			b.Write(k)
 			b.WriteByte(':')
-			var v any
-			if i >= len(row) || row[i].Null {
-				v = nil
-			} else {
-				switch row[i].Kind {
-				case "number":
-					n := json.Number(row[i].Text)
-					if json.Valid([]byte(n.String())) {
-						v = n
-					} else {
-						v = row[i].Text
-					}
-				case "bool":
-					v = row[i].Text == "true"
-				default:
-					v = row[i].Text
-				}
+			cell := Cell{Null: true}
+			if i < len(row) {
+				cell = row[i]
 			}
-			x, err := json.Marshal(v)
-			if err != nil {
-				x, err = json.Marshal(fmt.Sprint(v))
-				if err != nil {
-					x = []byte("null")
-				}
-			}
-			b.Write(x)
+			b.Write(jsonCell(cell))
 		}
 		b.WriteByte('}')
 	}
@@ -257,4 +236,35 @@ func Filter(r Result, text string) Result {
 		}
 	}
 	return out
+}
+
+// jsonCell is the JSON text of one cell: NULL, a valid number, a boolean or
+// a string.
+func jsonCell(c Cell) []byte {
+	var v any
+	if c.Null {
+		v = nil
+	} else {
+		switch c.Kind {
+		case "number":
+			n := json.Number(c.Text)
+			if json.Valid([]byte(n.String())) {
+				v = n
+			} else {
+				v = c.Text
+			}
+		case "bool":
+			v = c.Text == "true"
+		default:
+			v = c.Text
+		}
+	}
+	x, err := json.Marshal(v)
+	if err != nil {
+		x, err = json.Marshal(fmt.Sprint(v))
+		if err != nil {
+			x = []byte("null")
+		}
+	}
+	return x
 }

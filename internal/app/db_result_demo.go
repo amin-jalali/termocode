@@ -38,7 +38,7 @@ func (m *Model) databaseResultDemo(variant string) tea.Cmd {
 	s.view = dbViewGrid
 	s.trans, s.trow = false, 0
 	switch variant {
-	case "table", "transposed", "edits", "submit":
+	case "table", "transposed", "edits", "submit", "import", "export":
 		// The data view of public.users: the second page, more to come.
 		tv := newDBTableView(dbTable{conn: "local-pg", driver: "postgres", schema: "public", name: "users"})
 		tv.keys, tv.cols, tv.offset, tv.more, tv.size = []string{"id"}, []string{"id", "email", "plan", "created_at"}, 100, true, 100
@@ -57,6 +57,14 @@ func (m *Model) databaseResultDemo(variant string) tea.Cmd {
 	}
 	if variant == "edits" || variant == "submit" {
 		return m.databaseEditsDemo(r, variant == "submit")
+	}
+	switch variant {
+	case "export":
+		page := m.databaseShowPage()
+		return tea.Batch(page, m.databaseExportStart())
+	case "import":
+		page := m.databaseShowPage()
+		return tea.Batch(page, m.databaseImportDemo())
 	}
 	switch variant {
 	case "messages":
@@ -120,4 +128,26 @@ func (m *Model) databaseEditsDemo(r *dbRun, submit bool) tea.Cmd {
 		return tea.Batch(page, m.databaseSubmitCard())
 	}
 	return page
+}
+
+// databaseImportDemo opens the import preview card on a canned file: 1 200
+// rows of users.csv for public.users (created_at has no file column).
+func (m *Model) databaseImportDemo() tea.Cmd {
+	s := m.dbConsole()
+	t := dbTable{conn: "local-pg", driver: "postgres", schema: "public", name: "users"}
+	sn := dbclient.CSVSniff{
+		Delimiter: ',', Header: true, Encoding: "UTF-8", Fields: 3,
+		Columns: []string{"id", "email", "plan"},
+		Sample: [][]string{
+			{"48214", "nia@example.com", "free"},
+			{"48215", "tom@example.com", "pro"},
+			{"48216", "amy@example.com", "team"},
+			{"48217", "raj@example.com", "free"},
+			{"48218", "eve@example.com", "pro"},
+		},
+	}
+	imp := &dbImport{t: t, conn: dbDemoConnection(), path: "users.csv", display: "users.csv", sniff: sn, records: 1201,
+		cols: []string{"id", "email", "plan", "created_at"}, mapping: []int{0, 1, 2, -1}, sessKey: "local-pg"}
+	s.imp = imp
+	return m.databaseImportCard()
 }

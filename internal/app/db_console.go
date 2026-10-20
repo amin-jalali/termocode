@@ -94,6 +94,10 @@ type dbConsoleState struct {
 	submitStmts                     []dbclient.EditStatement
 	afterDiscard                    func() tea.Cmd
 	contRun                         *dbRun // the next statement after a failed one (Continue)
+	// export and import (db_export.go, db_import.go)
+	exp *dbExport
+	imp *dbImport
+	job *dbJob
 }
 
 func (m *Model) dbConsole() *dbConsoleState {
@@ -496,6 +500,9 @@ func firstSQLWord(sql string) string {
 // r on the connection's session in the background with a timeout.
 func (m *Model) databaseStartRun(r *dbRun) tea.Cmd {
 	s := m.dbConsole()
+	if m.dbSessionBusy() {
+		return m.pushToastDetail(toast.Warn, "An import is running", "Esc cancels it first.")
+	}
 	s.pending = nil
 	_ = m.revealDatabasesView(false) // sessions live while the view shows
 	sess := m.databases.sessions[r.conn]
@@ -699,6 +706,7 @@ func (m *Model) databaseCancelRun() tea.Cmd {
 	if s := m.databases.console; s.cancel != nil {
 		s.cancel()
 	}
+	m.databaseJobCancel()
 	return nil
 }
 
@@ -709,6 +717,9 @@ func (s *dbConsoleState) stop(conn string) {
 		return
 	}
 	s.tableGen++ // answers still on their way (describe, count, columns) are stale now
+	if s.job != nil && (conn == "" || s.job.conn == conn) {
+		s.job.cancel() // a transfer ends with the view or its connection
+	}
 	if conn != "" && (s.running == nil || s.running.conn != conn) && (s.waiting == nil || s.waiting.conn != conn) {
 		return
 	}
@@ -723,6 +734,9 @@ func (s *dbConsoleState) stop(conn string) {
 }
 
 func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
+	if cmd, ok := m.databaseTransferConfirm(id); ok {
+		return cmd, true
+	}
 	switch m.confirmKind {
 	case confirmKindDBRun:
 		s := m.dbConsole()
@@ -747,6 +761,9 @@ func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
 }
 
 func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
+	if cmd, ok := m.databaseTransferPicker(id); ok {
+		return cmd, true
+	}
 	switch m.pickerKind {
 	case pickerKindDBAttach, pickerKindDBHistory, pickerKindDBSort:
 	case pickerKindDBTxMode:

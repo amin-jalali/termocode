@@ -174,6 +174,16 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBEditKeys(msg)
 	case dbSubmitMsg:
 		return m, m.onDBSubmit(msg)
+	case dbJobTickMsg:
+		return m, m.onDBJobTick(msg)
+	case dbExportDoneMsg:
+		return m, m.onDBExportDone(msg)
+	case dbImportFilesMsg:
+		return m, m.onDBImportFiles(msg)
+	case dbImportPreviewMsg:
+		return m, m.onDBImportPreview(msg)
+	case dbImportDoneMsg:
+		return m, m.onDBImportDone(msg)
 	case dbRefreshMsg:
 		return m, m.onDBRefresh(msg)
 	case dbTxDoneMsg:
@@ -206,6 +216,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onToolUninstalled(msg)
 	case picker.CloseMsg:
 		m.pickerOpen = false
+		if cmd, ok := m.databaseTransferPickerClosed(); ok {
+			return m, cmd
+		}
 		if m.pickerKind == pickerKindDBSave && m.databases != nil {
 			m.databases.pendingConn = dbclient.Conn{}
 			m.databases.pendingPassword = ""
@@ -302,6 +315,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		if m.databases != nil && m.databases.console != nil && m.confirmKind == confirmKindDBRun {
 			m.databases.console.pending = nil
 		}
+		m.databaseTransferClosed()
 		if m.nvimDead {
 			// Esc: the editor is gone, so the question stays.
 			m.promptNvimExited()

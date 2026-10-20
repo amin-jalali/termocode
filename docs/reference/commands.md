@@ -125,8 +125,10 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Count Rows | `db-count-rows` |   |   |
 | Databases: Describe Table | `db-describe` |   |   |
 | Databases: Disconnect Selected | `db-disconnect` |   |   |
+| Databases: Export Result… | `db-export` |   |   |
 | Databases: Focus | `db-focus` |   |   |
 | Databases: History… | `db-history` |   |   |
+| Databases: Import CSV into Table… | `db-import-csv` |   |   |
 | Databases: New Console | `db-new-console` |   |   |
 | Databases: Open Table Data | `db-data` |   |   |
 | Databases: Pin Result Tab | `db-result-pin` |   |   |

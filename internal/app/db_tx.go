@@ -286,6 +286,9 @@ type dbTxDoneMsg struct {
 // databaseEndTx commits or rolls back every open transaction of conn off
 // the UI goroutine; after runs when all of them ended well.
 func (m *Model) databaseEndTx(conn string, commit bool, after func(*Model) tea.Cmd) tea.Cmd {
+	if m.dbSessionBusy() {
+		return m.pushToastDetail(toast.Warn, "An import is running", "Esc cancels it first.")
+	}
 	s := m.databases
 	keys := s.txKeys(conn)
 	if len(keys) == 0 {

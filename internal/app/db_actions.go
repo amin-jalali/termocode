@@ -46,6 +46,8 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-submit-changes", Title: "Databases: Submit Pending Changes"},
 		{ID: "db-revert-changes", Title: "Databases: Revert Pending Changes"},
 		{ID: "db-result-pin", Title: "Databases: Pin Result Tab"},
+		{ID: "db-export", Title: "Databases: Export Result…"},
+		{ID: "db-import-csv", Title: "Databases: Import CSV into Table…"},
 	}
 }
 
@@ -77,6 +79,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseRevertKey(m.dbConsole().curTab(), -1, -1), true
 	case "db-result-pin":
 		return m.databasePinTab(), true
+	case "db-export":
+		return m.databaseExportStart(), true
 	}
 	open := m.revealDatabasesView(id == "db-focus")
 	switch id {
@@ -90,6 +94,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return tea.Batch(open, m.databaseTableMeta(true)), true
 	case "db-count-rows":
 		return tea.Batch(open, m.databaseCountFromTree()), true
+	case "db-import-csv":
+		return tea.Batch(open, m.databaseImportStart()), true
 	case "db-new-console":
 		if r, ok := m.databaseCurrentRow(); ok {
 			return m.databaseNewConsole(r.conn), true
@@ -225,12 +231,14 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.databaseSelectInConsole()
 	case "#":
 		return m, m.databaseCountFromTree()
+	case "i":
+		return m, m.databaseImportStart()
 	case "/":
 		cmd := m.openHTTPPrompt(promptKindDBFilter, "Databases: Filter", "Name contains:", "")
 		m.prompt.SetAllowEmpty(true)
 		return m, cmd
 	case "?":
-		return m, m.pushToastDetail(toast.Info, "Database keys", "j/k move · Enter connect or expand · a add · e edit · t transaction mode · R refresh · x disconnect · / filter · on a table: o data · d describe · D DDL · s select · # count · y copy name")
+		return m, m.pushToastDetail(toast.Info, "Database keys", "j/k move · Enter connect or expand · a add · e edit · t transaction mode · R refresh · x disconnect · / filter · on a table: o data · d describe · D DDL · s select · i import CSV · # count · y copy name")
 	case "esc":
 		m.focus = FocusEditor
 	case "m":

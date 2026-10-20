@@ -279,6 +279,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-submit-changes":            aiNever("the user's pending edits; use the database query tool"),
 	"db-revert-changes":            aiNever("the user's pending edits"),
 	"db-result-pin":                aiAuto(),
+	"db-export":                    aiNever(aiNoPicker + " (db_query + write_file)"),
+	"db-import-csv":                aiNever("importing rows is a write the user confirms (db_query)"),
 	"containers-focus":             aiAuto(),
 	"containers-refresh":           aiAuto(),
 	"containers-start":             aiDestructive(),

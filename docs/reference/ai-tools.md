@@ -1056,8 +1056,10 @@ Show the DDL (CREATE statement) of a table, with its indexes and foreign keys.
 | `db-ddl` | Databases: Show DDL | auto |   |
 | `db-describe` | Databases: Describe Table | auto |   |
 | `db-disconnect` | Databases: Disconnect Selected | confirm (always asks) |   |
+| `db-export` | Databases: Export Result… | never | opens a picker or prompt that only the user can answer; use a typed tool (db_query + write_file) |
 | `db-focus` | Databases: Focus | auto |   |
 | `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-import-csv` | Databases: Import CSV into Table… | never | importing rows is a write the user confirms (db_query) |
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-refresh` | Databases: Refresh | auto |   |
 | `db-result-pin` | Databases: Pin Result Tab | auto |   |

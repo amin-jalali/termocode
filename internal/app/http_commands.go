@@ -554,6 +554,9 @@ func (m *Model) httpShowEntry(e httpclient.Entry) tea.Cmd {
 
 // handleHTTPPromptSubmit routes the HTTP prompts. ok=false: not ours.
 func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
+	if cmd, ok := m.databaseTransferPrompt(m.promptKind, value); ok {
+		return cmd, true
+	}
 	if m.promptKind == promptKindDBEditCell {
 		return m.databaseSetCell(value, false), true
 	}

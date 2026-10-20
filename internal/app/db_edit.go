@@ -697,7 +697,7 @@ func (m *Model) databaseSubmit(t *dbTab, stmts []dbclient.EditStatement) tea.Cmd
 	if s.tabIndex(t) < 0 || t.run == nil || !t.dirty() || t.target == nil {
 		return nil
 	}
-	if s.running != nil || s.submitting != nil {
+	if s.running != nil || s.submitting != nil || m.dbSessionBusy() {
 		return m.pushToastDetail(toast.Warn, "A query is running", "Esc cancels it.")
 	}
 	tg := t.target

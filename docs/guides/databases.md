@@ -44,6 +44,7 @@ The result opens as the **SQL Result** page, in a split on the right when the ed
 | `v` or `Enter` | open the cell under the cursor (JSON is pretty-printed); `q` goes back |
 | `y` | copy the cell |
 | `c` / `C` | copy the loaded rows as CSV / JSON |
+| `S` | export the rows to a file (CSV, TSV, JSON, SQL INSERTs or Markdown) |
 | `r` | run again (writes ask again) |
 | `1` … `9` | show result tab 1 … 9 |
 | `p` | pin the result tab (again: unpin) |
@@ -65,6 +66,7 @@ Move to a table or view in the tree and press:
 | `D` | the DDL in a read-only SQL buffer (`q` goes back) |
 | `s` | write `SELECT * FROM <table> LIMIT 100;` at the end of the connection's console and run it there |
 | `#` | count the rows |
+| `i` | import a CSV file into the table (not for views) |
 | `y` | copy the quoted table name |
 
 The data page asks the server for one page at a time (`db_page_rows`, default 100) in the table's key order, so a big table stays cheap. `]` and `[` fetch the next and previous page. `o` on the page sorts by a column on the server (again: reverse). `f` asks for a `WHERE` condition, for example `plan = 'pro' AND id > 100`; an empty text shows all rows. A condition is one plain read: a `;`, a comment (`--`, `/* */`, and `#` on MySQL), a dollar quote, unbalanced brackets or a word such as `DELETE` or `INTO` is refused, and nothing is sent. Names of tables and columns are always quoted for the connection's database. The row count is never automatic: `#` counts the rows the current `WHERE` keeps and shows `of N` in the summary.
@@ -76,6 +78,18 @@ PostgreSQL has no `CREATE TABLE` text to ask for, so its DDL is rebuilt from the
 ## Result tabs
 
 Every result has a tab. A new run replaces the tabs that are not pinned; a pinned tab (`p`) and a tab with pending changes stay. When a run has several statements, each statement that returns rows (or fails) gets its own tab. Up to nine tabs are kept. The first row of the page lists them when there is more than one: `1p [2*] 3` means tab 1 is pinned, tab 2 is on the page and has pending changes. Press `1` … `9` to switch.
+
+## Export and import
+
+**Export.** `S` (Shift+s) on a result page (or **Databases: Export Result…**) opens a picker: CSV, TSV, JSON, SQL INSERTs, Markdown table. Then type a file name; the default is `<table>-<date>.<ext>` in the workspace, and a full path works too. If the file exists, a card asks before it is replaced. The rows go into a temporary file in the same folder, and the file you chose appears only when every row is written, so a cancel or an error leaves no half file and keeps the old one.
+
+When the result is only part of the rows (the 10,000-row limit, or one page of a table), a card asks: **Export the loaded rows** or **Export all**. Export all runs the query again, without the row limit, in a read-only session and writes the rows as the server sends them (a page of 1,000 at a time, never all in memory). A progress card shows the count; `Esc` cancels and removes the temporary file. Only a plain `SELECT` can run again, so a write is never repeated; Export all reads committed data, not the changes of your open transaction.
+
+CSV and TSV protect spreadsheets from formula injection: a cell that starts with `=`, `+`, `-`, `@`, a tab or a carriage return gets a leading single quote (`'=SUM(A1)`). A real number such as `-5` keeps its sign. NULL is an empty cell in CSV and TSV, `null` in JSON and `NULL` in Markdown and INSERT files. INSERT files quote names and values for the connection's database (a quote is doubled; MySQL also doubles a backslash) and write binary values in the database's own form. The **Copy** keys `c` / `C` do not add the quote.
+
+**Import.** `i` on a table (or **Databases: Import CSV into Table…**) lists the `.csv` files of the workspace (or asks for a path). A preview card shows what was detected: the encoding (UTF-8, UTF-16 or ISO-8859-1), the delimiter (comma, semicolon, tab or pipe), whether the first row is a header, the row count, the column mapping (file column to table column, matched by name, or by position without a header) and the first rows. **Map columns** changes one table column at a time, and **Header** switches the header guess. Empty cells become NULL.
+
+**Import** reads the file one row at a time and inserts it with bound values in INSERTs of up to 1,000 rows, all in one transaction: if any row fails, everything is rolled back, nothing is written, and a card names the row and line. A progress card shows `N / total rows`; `Esc` cancels and rolls back. A read-only connection never imports, a production connection gets the strong card, and in manual transaction mode the rows join your open transaction (Commit saves them). The AI cannot import.
 
 ## Edit rows
 

@@ -94,7 +94,7 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		m.containersDemo(arg)
 	case "dbdemo":
 		switch arg {
-		case "result", "messages", "error", "table", "transposed", "describe", "ddl", "edits", "submit":
+		case "result", "messages", "error", "table", "transposed", "describe", "ddl", "edits", "submit", "import", "export":
 			return m.databaseResultDemo(arg)
 		}
 		m.databasesDemo(arg)

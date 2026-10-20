@@ -769,6 +769,10 @@ func (m *Model) databaseRerun() tea.Cmd {
 
 func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 	s := m.dbConsole()
+	if s.job != nil && key == "esc" {
+		m.databaseJobCancel()
+		return nil
+	}
 	if s.running != nil {
 		if key == "esc" {
 			return m.databaseCancelRun()
@@ -908,6 +912,8 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		m.pickerKind = pickerKindDBSort
 		m.pickerOpen = true
 		return nil
+	case "S":
+		return m.databaseExportStart()
 	case "c":
 		return m.copyWithToast(dbRedact(dbclient.ToCSV(s.displayedResult())), "Copied rows as CSV")
 	case "C":
