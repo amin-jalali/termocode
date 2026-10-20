@@ -554,10 +554,14 @@ func (m *Model) httpShowEntry(e httpclient.Entry) tea.Cmd {
 
 // handleHTTPPromptSubmit routes the HTTP prompts. ok=false: not ours.
 func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
+	if m.promptKind == promptKindDBEditCell {
+		return m.databaseSetCell(value, false), true
+	}
 	if m.promptKind == promptKindDBResultFilter {
 		s := m.dbConsole()
 		if s.shown != nil && s.shown.tv != nil {
-			return m.databaseTableWhere(s.shown.tv, value), true
+			tv := s.shown.tv
+			return m.databaseUnlessDirty(func() tea.Cmd { return m.databaseTableWhere(tv, value) }), true
 		}
 		s.filter = value
 		s.page = 0

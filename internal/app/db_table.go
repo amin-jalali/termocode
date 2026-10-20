@@ -51,10 +51,11 @@ type dbTableView struct {
 	offset   int
 	good     int // the offset of the last page that loaded (a cancelled or failed page goes back to it)
 	more     bool
-	total    int      // -1 until # counts the rows
-	keys     []string // primary key columns (stable default order)
-	cols     []string // column names (the only valid ORDER BY targets)
-	size     int      // rows on a page, set when the view runs
+	total    int        // -1 until # counts the rows
+	keys     []string   // primary key columns (stable default order)
+	unique   [][]string // unique indexes (a key for editing when there is no primary key)
+	cols     []string   // column names (the only valid ORDER BY targets)
+	size     int        // rows on a page, set when the view runs
 }
 
 func newDBTableView(t dbTable) *dbTableView { return &dbTableView{dbTable: t, total: -1} }

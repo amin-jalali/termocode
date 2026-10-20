@@ -1048,6 +1048,7 @@ Show the DDL (CREATE statement) of a table, with its indexes and foreign keys.
 | `dap-install` | DAP: Install Adapter... | never | opens a picker or prompt that only the user can answer; use a typed tool (dap_adapters) |
 | `db-add` | Databases: Add Connection… | never | AI provider, credentials and approvals stay with the user |
 | `db-cancel` | Databases: Cancel Query | auto |   |
+| `db-commit` | Databases: Commit | never | the user's transaction |
 | `db-configure` | Databases: Configure | confirm (always asks) |   |
 | `db-connect` | Databases: Connect Selected | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-count-rows` | Databases: Count Rows | never | Table rows are read with the database tools |
@@ -1059,10 +1060,15 @@ Show the DDL (CREATE statement) of a table, with its indexes and foreign keys.
 | `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-refresh` | Databases: Refresh | auto |   |
+| `db-result-pin` | Databases: Pin Result Tab | auto |   |
+| `db-revert-changes` | Databases: Revert Pending Changes | never | the user's pending edits |
+| `db-rollback` | Databases: Rollback | never | the user's transaction |
 | `db-run` | Databases: Run Statement or Selection | never | SQL runs require the database query tool and its guard |
 | `db-run-file` | Databases: Run File | never | SQL runs require the database query tool and its guard |
 | `db-select` | Databases: Select 100 Rows in Console | never | SQL runs require the database query tool and its guard |
+| `db-submit-changes` | Databases: Submit Pending Changes | never | the user's pending edits; use the database query tool |
 | `db-test-connection` | Databases: Test Connection | auto |   |
+| `db-transaction-mode` | Databases: Transaction Mode… | never | AI provider, credentials and approvals stay with the user |
 | `debug-add-watch` | Debug: Add Watch Expression... | never | opens a picker or prompt that only the user can answer; use a typed tool (debug_evaluate; debug_state shows the watches) |
 | `debug-clear-bps` | Debug: Remove All Breakpoints | confirm (ide) |   |
 | `debug-conditional-bp` | Debug: Add Conditional Breakpoint... | never | opens a picker or prompt that only the user can answer; use a typed tool (debug_breakpoint with condition) |

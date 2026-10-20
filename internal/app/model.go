@@ -1172,9 +1172,9 @@ func (m *Model) Close() error {
 	if m.ext != nil && m.ext.proc != nil {
 		m.ext.proc.Close() // process extensions and their children
 	}
-	m.services.shutdown() // the docker events watcher (services_state.go)
-	m.databasesClose()    // database sessions are idle unless the view is visible
-	m.dropImageTemp()     // an HTTP image preview's temp copy (U16)
+	m.services.shutdown()   // the docker events watcher (services_state.go)
+	m.databasesClose(false) // database sessions are idle unless the view is visible
+	m.dropImageTemp()       // an HTTP image preview's temp copy (U16)
 	if m.nvim == nil {
 		return nil
 	}

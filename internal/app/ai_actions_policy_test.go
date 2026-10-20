@@ -89,6 +89,12 @@ func TestAIActionPolicyRules(t *testing.T) {
 			t.Errorf("%s: %+v, want confirm with no auto-approve class", id, p)
 		}
 	}
+	// The user's pending edits and transaction are never the AI's (DB-7).
+	for _, id := range []string{"db-submit-changes", "db-revert-changes", "db-commit", "db-rollback", "db-transaction-mode"} {
+		if p := aiActionPolicies[id]; p.Gate != aiGateNever {
+			t.Errorf("%s: gate %q, want never", id, p.Gate)
+		}
+	}
 	for _, id := range []string{"containers-remove", "containers-compose-down"} {
 		if p := aiActionPolicies[id]; p.Gate != aiGateNever {
 			t.Errorf("%s: gate %q, want never", id, p.Gate)

@@ -57,7 +57,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 	if wasDatabasesVisible && !m.databasesVisible() {
-		m.databasesClose()
+		m.databasesClose(true)
 	}
 	return m, m.gateUpdate(msg, cmd)
 }
@@ -170,6 +170,14 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 	case dbTableMetaMsg:
 		return m, m.onDBTableMeta(msg)
+	case dbEditKeysMsg:
+		return m, m.onDBEditKeys(msg)
+	case dbSubmitMsg:
+		return m, m.onDBSubmit(msg)
+	case dbRefreshMsg:
+		return m, m.onDBRefresh(msg)
+	case dbTxDoneMsg:
+		return m, m.onDBTxDone(msg)
 	case dbMetaMsg:
 		return m, m.onDBMeta(msg)
 	case dbCountMsg:

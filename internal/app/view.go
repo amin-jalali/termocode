@@ -2287,6 +2287,9 @@ func (m Model) statusState() statusbar.State {
 		if c, ok := m.databases.connection(m.databases.activeID); ok {
 			st.ShowDatabase = true
 			st.DatabaseName = dbConnName(c)
+			if mk := m.databases.txMarker(c.ID); mk != "" {
+				st.DatabaseName += " · " + mk // the transaction state (db_tx.go)
+			}
 			st.DatabaseProd = c.Environment == "production"
 		}
 	}

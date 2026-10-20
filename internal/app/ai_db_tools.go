@@ -440,12 +440,12 @@ func (m *Model) databaseShowAIRun(r *dbRun) tea.Cmd {
 	if s.running != nil {
 		return hist
 	}
-	s.shown = r
-	s.cache = nil
+	s.placeRun(r)
 	s.page = 0
 	s.size = loadDBConsoleSettings().pageRows()
 	s.filter = ""
 	s.sortCol = -1
+	s.trans, s.trow = false, 0
 	s.view = dbViewGrid
 	if r.result.Err != nil || len(r.result.Columns) == 0 {
 		s.view = dbViewMessages

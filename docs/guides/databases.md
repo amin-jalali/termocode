@@ -22,13 +22,13 @@ SQLite files ending in `.db`, `.sqlite`, or `.sqlite3` are suggested from the wo
 
 ## Disconnect
 
-Press `x` on a connection and confirm its name to close all sessions opened for that connection. Expanding another database reuses its session on later visits. Sessions also close when you leave the Databases view, so hidden views do not keep database processes or activity running.
+Press `x` on a connection and confirm its name to close all sessions opened for that connection. Expanding another database reuses its session on later visits. Sessions also close when you leave the Databases view, so hidden views do not keep database processes or activity running. A session with an open manual transaction stays open until you commit or roll back (see [Transactions](#transactions)); `x` on its connection first asks **Commit**, **Roll back** or **Cancel**.
 
 ## SQL consoles
 
 Press `n` on a connection to open its console. Consoles live in your user configuration under `db/consoles/<workspace>/<connection>.sql` (mode 0600) and start with a `-- @conn <id>` line. A project `.sql` file can use the same line; without it, the first run asks which connection to use and remembers the answer until you quit.
 
-Press `Ctrl+Alt+R` (or `Ctrl+Enter` in terminals that send it) to run the statement under the cursor. In visual mode the selection runs as typed. **Databases: Run File** runs every statement in order and stops at the first error. A small note at the end of each statement shows the key, the connection and the last result. `Esc` cancels a running query.
+Press `Ctrl+Alt+R` (or `Ctrl+Enter` in terminals that send it) to run the statement under the cursor. In visual mode the selection runs as typed. **Databases: Run File** runs every statement in order. It stops at the first error and asks: **Continue** runs the remaining statements, **Stop** ends the run. A small note at the end of each statement shows the key, the connection and the last result. `Esc` cancels a running query.
 
 A read runs at once. Any other statement asks first, and the card shows the exact SQL (use Up/Down to read a long one). The title says what is special: `DELETE` or `UPDATE` without `WHERE`, `DROP`, `TRUNCATE`, `ALTER`, a production connection, or a read-only connection. There is no "always allow". In a file run, each write gets its own card.
 
@@ -45,6 +45,8 @@ The result opens as the **SQL Result** page, in a split on the right when the ed
 | `y` | copy the cell |
 | `c` / `C` | copy the loaded rows as CSV / JSON |
 | `r` | run again (writes ask again) |
+| `1` … `9` | show result tab 1 … 9 |
+| `p` | pin the result tab (again: unpin) |
 | `gd` | go to the statement |
 | `h` | SQL history |
 | `Esc` | cancel a running query |
@@ -71,6 +73,36 @@ The data page asks the server for one page at a time (`db_page_rows`, default 10
 
 PostgreSQL has no `CREATE TABLE` text to ask for, so its DDL is rebuilt from the catalogs (columns, primary key, indexes, foreign keys) and the buffer says so; it is a reconstruction, not a dump. MySQL / MariaDB and SQLite show the server's own statement.
 
+## Result tabs
+
+Every result has a tab. A new run replaces the tabs that are not pinned; a pinned tab (`p`) and a tab with pending changes stay. When a run has several statements, each statement that returns rows (or fails) gets its own tab. Up to nine tabs are kept. The first row of the page lists them when there is more than one: `1p [2*] 3` means tab 1 is pinned, tab 2 is on the page and has pending changes. Press `1` … `9` to switch.
+
+## Edit rows
+
+You can change the rows of a table's data page, and of a console result that is a plain `SELECT` from one table (columns named as they are in the table, no `DISTINCT`, `JOIN`, `GROUP BY` or `UNION`). The table needs a primary key or a unique key, and the result must contain its columns: each change finds its row by the full key. Otherwise the page says **read-only** and why (for example `read-only: no key`); `e` then shows the reason. Views, AI results, table descriptions and read-only connections cannot be edited.
+
+| Key | Action |
+| --- | --- |
+| `e` | edit the cell under the cursor in a one-line prompt (`\N` means NULL) |
+| `E` | edit the value in a buffer (for long or multi-line values); `:w` keeps it, `q` leaves without a change |
+| `+` | add a new row; its cells show `<default>` until you set them with `e` |
+| `-` | mark the row for deletion (again: keep it); on a new row: remove it |
+| `u` | undo the change of the cell under the cursor, else of the row; on a row without changes it asks to undo all changes |
+| `w` | submit the changes |
+
+Changes stay on the page until you submit them. The left margin marks each row: `*` changed, `+` new, `-` to be deleted, and the page says how many changes wait. Anything that loads the rows again (another data page, a sort or a filter on a data page, `r`) asks **Keep** or **Discard** first; switching tabs or closing the page keeps the changes.
+
+`w` shows a card with the exact SQL, one statement per row, with the values written out. **Copy SQL** copies it. **Submit** runs the statements as one transaction: values are sent as bound parameters (never pasted into the SQL), names are quoted for the connection's database, and an `UPDATE` also checks that the old value is still there. Each statement must change exactly one row; if one changes no row (someone else changed or deleted it) or fails, everything is rolled back, your changes stay on the page, and a card offers to reload the rows. After a submit the page shows the new values at once and then reloads them from the server; **Messages** lists the statements that ran. A production connection gets the stronger card with **Cancel** first. There is no "always allow", and the AI cannot submit your changes.
+
+## Transactions
+
+Each connection starts in auto-commit mode: every statement is saved at once. Press `t` on a connection (or use **Databases: Transaction Mode…**) and choose **Manual** to group your work: the first statement begins a transaction, the next ones join it, and nothing is saved until you commit.
+
+- `K` on the result page or **Databases: Commit** saves the changes; `Z` or **Databases: Rollback** drops them.
+- The status bar and the result page show `manual · 2 uncommitted` while changes wait. Typed `BEGIN`, `COMMIT` or `ROLLBACK` statements are not sent in manual mode; use `K` and `Z`.
+- Submitted row changes join the open transaction; data pages read inside it, so they show your own changes.
+- Quitting, disconnecting, or switching back to auto-commit with changes waiting asks **Commit**, **Roll back** or **Cancel**.
+
 ## Completion
 
 In a SQL buffer, `Ctrl+X Ctrl+O` (and the pop-up that opens while you type) offers keywords, tables, views, routines, sequences and schemas from the tree you have already opened. After `alias.` or `table.` it offers that table's columns; the alias comes from the statement at the cursor (`FROM users u`, `JOIN orders AS o`). The first time a table's columns are needed they are read once and the pop-up opens again. Completion reads a cached copy: it never asks the server while you type.
@@ -79,7 +111,7 @@ In a SQL buffer, `Ctrl+X Ctrl+O` (and the pop-up that opens while you type) offe
 
 Press `h` on the result page, `H` in the Databases view, or use **Databases: History…**. The newest run is at the top; `Enter` runs it again (writes ask again). **Clear history…** asks before it deletes. The history is `db/history.jsonl` in your user configuration (mode 0600): passwords are removed, each entry keeps at most 4 KB of SQL, and `db_history_max` (default 500) limits the count.
 
-Nothing polls while you wait: an idle console or result page uses no CPU. Hiding the Databases view (another view, a hidden sidebar or zen mode) cancels a running query and closes its sessions. The command palette and other dialogs do not.
+Nothing polls while you wait: an idle console or result page uses no CPU. Hiding the Databases view (another view, a hidden sidebar or zen mode) cancels a running query and closes its sessions, except a session with an open manual transaction. The command palette and other dialogs do not.
 
 ## AI
 

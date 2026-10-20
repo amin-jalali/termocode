@@ -91,6 +91,7 @@ type SQLiteSession struct {
 	activeCancel  context.CancelFunc
 	seq           uint64
 	transaction   bool
+	txBegun       bool // the open transaction began with BEGIN (not a savepoint)
 	restartNotice string
 }
 
@@ -415,7 +416,19 @@ func (s *SQLiteSession) Run(ctx context.Context, stmt string, opts RunOptions) R
 	s.stateMu.Lock()
 	s.activeCancel = cancel
 	s.stateMu.Unlock()
-	lines, affected, err := s.exchangeLocked(runCtx, stmt, opts.MaxRows)
+	var lines []string
+	var affected int64
+	var err error
+	if len(opts.Args) > 0 {
+		err = s.bindLocked(runCtx, opts.Args)
+	}
+	if err == nil {
+		lines, affected, err = s.exchangeLocked(runCtx, stmt, opts.MaxRows)
+	}
+	if len(opts.Args) > 0 {
+		// Unbound parameters of later statements are NULL again.
+		_, _, _ = s.exchangeLocked(context.Background(), ".parameter clear")
+	}
 	if err == nil {
 		s.trackTransaction(words)
 	}
@@ -578,18 +591,69 @@ func parseSQLiteJSON(lines []string) ([][]Cell, []Column, error) {
 	return rows, cols, nil
 }
 
+// bindLocked fills the sqlite3 shell's parameter table, which binds ?1,
+// ?2, … of the next statement: the shell has no other way to take a bound
+// value. Each value travels as a hex literal (only 0-9 A-F, never SQL
+// text) and is stored as TEXT or NULL; the statement itself only holds
+// placeholders.
+func (s *SQLiteSession) bindLocked(ctx context.Context, args []any) error {
+	if _, _, err := s.exchangeLocked(ctx, ".parameter init"); err != nil {
+		return err
+	}
+	var b strings.Builder
+	b.WriteString("REPLACE INTO temp.sqlite_parameters(key, value) VALUES ")
+	for i, a := range args {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		fmt.Fprintf(&b, "('?%d', %s)", i+1, sqliteBindLiteral(a))
+	}
+	_, _, err := s.exchangeLocked(ctx, b.String())
+	return err
+}
+
+func sqliteBindLiteral(v any) string {
+	switch x := v.(type) {
+	case nil:
+		return "NULL"
+	case []byte:
+		return fmt.Sprintf("X'%X'", x)
+	case string:
+		return fmt.Sprintf("CAST(X'%X' AS TEXT)", x)
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		return fmt.Sprintf("%d", x)
+	case bool:
+		if x {
+			return "1"
+		}
+		return "0"
+	default:
+		return fmt.Sprintf("CAST(X'%X' AS TEXT)", fmt.Sprint(x))
+	}
+}
+
 func (s *SQLiteSession) trackTransaction(words []string) {
 	if len(words) == 0 {
 		return
 	}
 	switch words[0] {
-	case "BEGIN", "SAVEPOINT":
-		s.transaction = true
-	case "COMMIT", "END", "RELEASE":
-		s.transaction = false
+	case "BEGIN":
+		s.transaction, s.txBegun = true, true
+	case "SAVEPOINT":
+		if !s.transaction {
+			s.transaction, s.txBegun = true, false
+		}
+	case "COMMIT", "END":
+		s.transaction, s.txBegun = false, false
+	case "RELEASE":
+		// Only the savepoint that began the transaction ends it; a
+		// savepoint inside BEGIN … COMMIT does not.
+		if !s.txBegun {
+			s.transaction = false
+		}
 	case "ROLLBACK":
 		if len(words) < 2 || words[1] != "TO" {
-			s.transaction = false
+			s.transaction, s.txBegun = false, false
 		}
 	}
 }

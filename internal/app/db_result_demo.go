@@ -32,11 +32,13 @@ func (m *Model) databaseResultDemo(variant string) tea.Cmd {
 	}
 	r := &dbRun{conn: "local-pg", sql: "SELECT id, email, plan, created_at\nFROM users\nORDER BY id DESC;", by: "user", line: 3, result: res}
 	s := m.dbConsole()
-	s.shown, s.cache, s.size, s.page, s.sortCol, s.filter = r, nil, 100, 0, -1, ""
+	s.tabs, s.tab = nil, 0
+	s.placeRun(r)
+	s.cache, s.size, s.page, s.sortCol, s.filter = nil, 100, 0, -1, ""
 	s.view = dbViewGrid
 	s.trans, s.trow = false, 0
 	switch variant {
-	case "table", "transposed":
+	case "table", "transposed", "edits", "submit":
 		// The data view of public.users: the second page, more to come.
 		tv := newDBTableView(dbTable{conn: "local-pg", driver: "postgres", schema: "public", name: "users"})
 		tv.keys, tv.cols, tv.offset, tv.more, tv.size = []string{"id"}, []string{"id", "email", "plan", "created_at"}, 100, true, 100
@@ -52,6 +54,9 @@ func (m *Model) databaseResultDemo(variant string) tea.Cmd {
 	case "ddl":
 		tbl := dbTable{conn: "local-pg", driver: "postgres", schema: "public", name: "users"}
 		return m.databaseShowDDL(tbl, dbBuildDDL(tbl, dbDemoMeta()))
+	}
+	if variant == "edits" || variant == "submit" {
+		return m.databaseEditsDemo(r, variant == "submit")
 	}
 	switch variant {
 	case "messages":
@@ -86,4 +91,33 @@ func dbDemoMeta() dbTableMeta {
 		},
 		triggers: [][3]string{{"users_audit", "AFTER", "INSERT OR UPDATE"}},
 	}
+}
+
+// databaseEditsDemo puts pending changes on the data view (one changed
+// cell, a deleted row, a new row), a pinned console result in tab 1 and a
+// manual transaction with uncommitted changes; submit opens the card.
+func (m *Model) databaseEditsDemo(r *dbRun, submit bool) tea.Cmd {
+	s := m.dbConsole()
+	pinned := &dbRun{conn: "local-pg", sql: "SELECT count(*) FROM orders;", by: "user", line: 1,
+		result: dbclient.Result{Columns: []dbclient.Column{{Name: "count"}}, Rows: [][]dbclient.Cell{{{Text: "1204", Kind: "number"}}}}}
+	s.tabs, s.tab = nil, 0
+	s.placeRun(pinned)
+	s.curTab().pinned = true
+	s.placeRun(r)
+	s.cache, s.size, s.page, s.sortCol, s.filter, s.view = nil, 100, 0, -1, "", dbViewGrid
+	t := s.curTab()
+	t.edits = newDBEdits()
+	t.edits.cells[dbCellRef{row: 1, col: 2}] = dbclient.Cell{Text: "team"}
+	t.edits.cells[dbCellRef{row: 2, col: 1}] = dbclient.Cell{Text: "linus@example.com"}
+	t.edits.deleted[4] = true
+	t.edits.added = append(t.edits.added, &dbNewRow{set: map[int]dbclient.Cell{1: {Text: "new@example.com"}}})
+	d := m.databases
+	d.manual = map[string]bool{"local-pg": true}
+	d.txs = map[string]*dbTxState{"local-pg": {open: true, writes: 2}}
+	d.activeID = "local-pg"
+	page := m.databaseShowPage()
+	if submit {
+		return tea.Batch(page, m.databaseSubmitCard())
+	}
+	return page
 }

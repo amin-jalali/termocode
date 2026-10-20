@@ -261,3 +261,37 @@ func TestBoxWidensForButtons(t *testing.T) {
 		}
 	}
 }
+
+// A wide card keeps a long SQL line whole when the window has room, and
+// wraps it to the window when it does not.
+func TestWideTextKeepsLongLinesWhole(t *testing.T) {
+	line := "UPDATE `app`.`users` SET `email` = 'd@example.com' WHERE `id` = 2 AND `email` = 'x';"
+	m := New("Submit", line+"\n\nnote", []Button{{ID: "ok", Title: "OK"}}).WithScrollText().WithWideText()
+	m.SetSize(150, 42)
+	if !strings.Contains(m.View(), line) {
+		t.Fatalf("line was cut:\n%s", m.View())
+	}
+	m.SetSize(80, 24)
+	for _, l := range strings.Split(m.View(), "\n") {
+		if w := lipgloss.Width(l); w > 80 {
+			t.Fatalf("line wider than the window (%d):\n%s", w, m.View())
+		}
+	}
+	plain := New("Submit", line, []Button{{ID: "ok", Title: "OK"}}).WithScrollText()
+	plain.SetSize(150, 42)
+	if strings.Contains(plain.View(), line) {
+		t.Fatal("a card without WithWideText grew")
+	}
+}
+
+func TestWideTextBreaksBetweenWords(t *testing.T) {
+	m := New("Submit", "aaaa bbbb cccc dddd eeee ffff gggg hhhh iiii jjjj kkkk llll mmmm nnnn oooo pppp qqqq rrrr", []Button{{ID: "ok", Title: "OK"}}).WithScrollText().WithWideText()
+	m.SetSize(50, 24)
+	for _, l := range m.fullTextLines() {
+		for _, w := range strings.Fields(l) {
+			if len(w) != 4 {
+				t.Fatalf("a word was cut: %q in %q", w, m.fullTextLines())
+			}
+		}
+	}
+}

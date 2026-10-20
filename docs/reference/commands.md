@@ -119,6 +119,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Databases: Add Connection… | `db-add` |   |   |
 | Databases: Cancel Query | `db-cancel` |   |   |
+| Databases: Commit | `db-commit` |   |   |
 | Databases: Configure | `db-configure` |   |   |
 | Databases: Connect Selected | `db-connect` |   |   |
 | Databases: Count Rows | `db-count-rows` |   |   |
@@ -128,12 +129,17 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: History… | `db-history` |   |   |
 | Databases: New Console | `db-new-console` |   |   |
 | Databases: Open Table Data | `db-data` |   |   |
+| Databases: Pin Result Tab | `db-result-pin` |   |   |
 | Databases: Refresh | `db-refresh` |   |   |
+| Databases: Revert Pending Changes | `db-revert-changes` |   |   |
+| Databases: Rollback | `db-rollback` |   |   |
 | Databases: Run File | `db-run-file` |   |   |
 | Databases: Run Statement or Selection | `db-run` |   |   |
 | Databases: Select 100 Rows in Console | `db-select` |   |   |
 | Databases: Show DDL | `db-ddl` |   |   |
+| Databases: Submit Pending Changes | `db-submit-changes` |   |   |
 | Databases: Test Connection | `db-test-connection` |   |   |
+| Databases: Transaction Mode… | `db-transaction-mode` |   |   |
 
 ## Debug
 

@@ -407,5 +407,8 @@ hi('TermocodeHttpSection',     { fg = c.fg_sel })
 hi('TermocodeHttpHdrName',     { fg = c.variable })
 hi('TermocodeHttpHop',         { fg = c.fg_muted })
 hi('TermocodeHttpFolded',      { fg = c.fg, bg = c.bg })
+hi('TermocodeDbChanged',       { fg = c.git_mod })
+hi('TermocodeDbAdded',         { fg = c.git_add })
+hi('TermocodeDbDeleted',       { fg = c.git_del, strikethrough = true })
 if _G.termocode_bracket_hl then _G.termocode_bracket_hl() end
 `

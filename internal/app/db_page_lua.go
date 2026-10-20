@@ -60,8 +60,9 @@ function _G._termocode_db_open(split,lines,hls,first,bounds,cursor,wrap)
  if not b then
   b=api.nvim_create_buf(true,true);vim.g.termocode_db_buf=b
   api.nvim_buf_set_name(b,'SQL Result')
+  vim.b[b].termocode_no_guides=true -- right-aligned numbers are not indentation
   vim.bo[b].bufhidden='hide';vim.bo[b].swapfile=false
-  for _,k in ipairs({']','[','r','h','f','o','c','C','v','y','q','#','t'}) do vim.keymap.set('n',k,function() notify(k) end,{buffer=b,silent=true,nowait=true}) end
+  for _,k in ipairs({']','[','r','h','f','o','c','C','v','y','q','#','t','e','E','+','-','u','w','p','K','Z','1','2','3','4','5','6','7','8','9'}) do vim.keymap.set('n',k,function() notify(k) end,{buffer=b,silent=true,nowait=true}) end
   vim.keymap.set('n','gd',function() notify('gd') end,{buffer=b,silent=true})
   vim.keymap.set('n','<Tab>',function() notify('tab') end,{buffer=b,silent=true})
   vim.keymap.set('n','<Esc>',function() notify('esc') end,{buffer=b,silent=true})
@@ -73,6 +74,12 @@ function _G._termocode_db_open(split,lines,hls,first,bounds,cursor,wrap)
   table.insert(D.hl[h.l],{s=h.s,e=h.e,g=h.g})
  end
  D.first=first;D.bounds=bounds
+ local keep
+ if cursor<0 then
+  local w=vim.fn.win_findbuf(b)[1]
+  if w then keep=api.nvim_win_get_cursor(w) end
+  cursor=first>0 and first or 1
+ end
  put(b,0,-1,lines)
  local wins=vim.fn.win_findbuf(b)
  if #wins>0 then api.nvim_set_current_win(wins[1]) else
@@ -81,8 +88,39 @@ function _G._termocode_db_open(split,lines,hls,first,bounds,cursor,wrap)
  end
  set_win(api.nvim_get_current_win())
  vim.wo.wrap=wrap and true or false
- pcall(api.nvim_win_set_cursor,0,{math.max(1,math.min(cursor,api.nvim_buf_line_count(b))),0})
+ local n=api.nvim_buf_line_count(b)
+ if keep then
+  pcall(api.nvim_win_set_cursor,0,{math.max(1,math.min(keep[1],n)),keep[2]})
+ else
+  pcall(api.nvim_win_set_cursor,0,{math.max(1,math.min(cursor,n)),0})
+ end
  vim.cmd('stopinsert')
+end
+-- The value editor of E: an acwrite buffer; :w hands the text to Go as a
+-- pending change, q leaves it without a change.
+function _G._termocode_db_edit(name,lines)
+ local b=vim.g.termocode_db_edit_buf
+ if not (b and api.nvim_buf_is_valid(b)) then
+  b=api.nvim_create_buf(false,true);vim.g.termocode_db_edit_buf=b
+  vim.bo[b].buftype='acwrite';vim.bo[b].bufhidden='hide';vim.bo[b].swapfile=false
+  api.nvim_create_autocmd('BufWriteCmd',{buffer=b,callback=function()
+   local text=table.concat(api.nvim_buf_get_lines(b,0,-1,false),'\n')
+   vim.bo[b].modified=false
+   if _G.termocode_notify then _G.termocode_notify('termocode_db_edit_done',text) end
+  end})
+  vim.keymap.set('n','q',function() vim.bo[b].modified=false;_G._termocode_db_edit_close() end,{buffer=b,silent=true,nowait=true})
+ end
+ pcall(api.nvim_buf_set_name,b,name)
+ api.nvim_buf_set_lines(b,0,-1,false,lines)
+ vim.bo[b].modified=false
+ api.nvim_set_current_buf(b)
+ pcall(api.nvim_win_set_cursor,0,{1,0})
+ vim.cmd('stopinsert')
+end
+function _G._termocode_db_edit_close()
+ local e=vim.g.termocode_db_edit_buf
+ local r=the_buf()
+ if e and api.nvim_buf_is_valid(e) and api.nvim_get_current_buf()==e and r then api.nvim_set_current_buf(r) end
 end
 function _G._termocode_db_close()
  local b=the_buf()

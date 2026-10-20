@@ -32,6 +32,7 @@ type rect struct{ x, y, w, h int }
 
 type Model struct {
 	scrollText bool
+	wideText   bool // the card grows (up to 110 cells) to fit the longest line
 	scroll     int
 	title      string
 	message    string
@@ -57,8 +58,15 @@ func (m Model) WithCode(code, note string) Model {
 // WithScrollText keeps the entire message available with Up/Down.
 func (m Model) WithScrollText() Model { m.scrollText = true; return m }
 
+// WithWideText lets the card grow, up to 110 cells and the window, so
+// lines such as SQL statements are not cut in the middle of a word.
+func (m Model) WithWideText() Model { m.wideText = true; return m }
+
 func (m Model) fullTextLines() []string {
 	width := max(1, min(60, m.w-8)-8)
+	if m.wideText {
+		width = max(1, m.boxWidth()-6)
+	}
 	var out []string
 	for _, line := range strings.Split(m.message, "\n") {
 		part := ""
@@ -66,9 +74,21 @@ func (m Model) fullTextLines() []string {
 		for _, r := range line {
 			n := lipgloss.Width(string(r))
 			if cells+n > width && part != "" {
-				out = append(out, part)
-				part = ""
-				cells = 0
+				if m.wideText && r == ' ' {
+					out = append(out, part) // the space ends the line
+					part, cells = "", 0
+					continue
+				}
+				if cut := strings.LastIndexByte(part, ' '); m.wideText && cut > 0 {
+					// A wide card breaks at the last space, not inside a word.
+					out = append(out, part[:cut])
+					part = part[cut+1:]
+					cells = lipgloss.Width(part)
+				} else {
+					out = append(out, part)
+					part = ""
+					cells = 0
+				}
 			}
 			part += string(r)
 			cells += n
@@ -305,7 +325,31 @@ type confirmDims struct {
 // Both Box() and HandleMouse() consult it so the rendered button
 // positions and the hit-test rects line up exactly.
 func (m Model) layoutDims() confirmDims {
+	boxW := m.boxWidth()
+	innerW := boxW - 2
+	bodyW := innerW - 4
+	if bodyW < 1 {
+		bodyW = 1
+	}
+	bodyLines := wrap(m.message, bodyW)
+	if m.scrollText {
+		bodyLines = m.fullTextLines()
+	}
+	return m.layoutRest(boxW, innerW, bodyW, bodyLines)
+}
+
+// boxWidth is the card's width: 60 cells, wider for a code line, the
+// buttons or (WithWideText) the longest message line, never past the
+// window.
+func (m Model) boxWidth() int {
 	boxW := 60
+	if m.wideText {
+		longest := 0
+		for _, l := range strings.Split(m.message, "\n") {
+			longest = max(longest, lipgloss.Width(l))
+		}
+		boxW = max(boxW, min(longest+6, 110))
+	}
 	if m.code != "" {
 		// Room for the command on one line: frame + padding + border.
 		boxW = max(boxW, min(lipgloss.Width(m.code)+10, 110))
@@ -322,15 +366,10 @@ func (m Model) layoutDims() confirmDims {
 	if boxW < 36 {
 		boxW = 36
 	}
-	innerW := boxW - 2
-	bodyW := innerW - 4
-	if bodyW < 1 {
-		bodyW = 1
-	}
-	bodyLines := wrap(m.message, bodyW)
-	if m.scrollText {
-		bodyLines = m.fullTextLines()
-	}
+	return boxW
+}
+
+func (m Model) layoutRest(boxW, innerW, bodyW int, bodyLines []string) confirmDims {
 
 	// Cap body to a sensible max so the modal doesn't fill the screen
 	// when given a huge message; tail is replaced with an ellipsis.

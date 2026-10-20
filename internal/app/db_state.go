@@ -86,6 +86,11 @@ type dbState struct {
 	visible             bool
 	schemaVer           uint64                         // bumps when the tree or the column cache changes
 	cols                map[string]map[string][]string // connection -> lower-case table -> columns (completion)
+	manual              map[string]bool                // connection -> manual transaction mode
+	txs                 map[string]*dbTxState          // session key -> its transaction
+	txModeConn          string                         // the connection the mode picker is for
+	txCardConn          string                         // the uncommitted-changes card
+	txCardAfter         func(*Model) tea.Cmd
 }
 
 type dbRenderCache struct {
@@ -554,24 +559,47 @@ func dbTestCommand(c dbclient.Conn, password, root string, generation uint64) te
 	}
 }
 
-func (m *Model) databasesClose() {
+// databasesClose closes the sessions (the view hid, or the app quits).
+// keepTx keeps the connections that hold an open transaction: hiding the
+// view must not roll back what the user has not committed yet.
+func (m *Model) databasesClose(keepTx bool) {
 	if m.databases == nil {
 		return
 	}
-	m.databases.console.stop("")
-	for id, s := range m.databases.sessions {
+	d := m.databases
+	d.console.stop("")
+	kept := map[string]bool{}
+	for id, s := range d.sessions {
+		if keepTx && d.txOpen(id) {
+			kept[dbTxConn(id)] = true
+			continue
+		}
 		_ = s.Close()
-		delete(m.databases.sessions, id)
+		delete(d.sessions, id)
 	}
-	for _, c := range m.databases.conns {
-		m.databases.resetConnectionTree(c.ID)
+	for _, c := range d.conns {
+		if kept[c.ID] {
+			continue
+		}
+		d.resetConnectionTree(c.ID)
+		delete(d.passwords, c.ID)
 	}
-	clear(m.databases.passwords)
-	if m.databases.visible {
-		m.databases.generation++
+	if !keepTx {
+		clear(d.passwords)
+		d.txs = nil
 	}
-	m.databases.activeID = ""
-	m.databases.visible = false
+	for key := range d.txs {
+		if d.sessions[key] == nil {
+			delete(d.txs, key)
+		}
+	}
+	if d.visible {
+		d.generation++
+	}
+	if !kept[d.activeID] {
+		d.activeID = ""
+	}
+	d.visible = false
 }
 
 func (s *dbState) resetConnectionTree(id string) {

@@ -49,6 +49,9 @@ type dbRun struct {
 	tv                  *dbTableView // a data view: the server pages it
 	describe            *dbTable     // a describe page: rerun reads the catalogs again
 	readOnly            bool         // run in a read-only session (the server refuses writes)
+	tab                 *dbTab       // the tab it replaces (a page, a sort, a rerun); nil: a new result
+	batch               uint64       // the send it belongs to (one tab per statement with rows)
+	notes               []string     // lines added to Messages (what a submit did)
 }
 
 type dbConsoleState struct {
@@ -72,9 +75,25 @@ type dbConsoleState struct {
 	trans    bool // the Transposed view (one row as column | value)
 	trow     int  // the row it shows, on the page
 	cache    *dbclient.Result
+	cacheIdx []int // the loaded row of each displayed row
 	cacheKey dbViewKey
 	history  []dbclient.HistoryEntry
 	hist     *dbclient.History
+
+	tabs         []*dbTab // result tabs (db_tabs.go)
+	tab          int      // the tab on the page
+	batchSeq     uint64
+	keepCursor   bool // the next page write keeps the cursor where it is
+	cursorNewRow bool // the next page write puts the cursor on the last new row
+	// editing (db_edit.go)
+	editTab                         *dbTab
+	editAt                          dbEditPos
+	pendingKey                      string // an edit key waiting for the key lookup
+	pendingRow, pendingCol          int
+	submitTab, submitting, staleTab *dbTab
+	submitStmts                     []dbclient.EditStatement
+	afterDiscard                    func() tea.Cmd
+	contRun                         *dbRun // the next statement after a failed one (Continue)
 }
 
 func (m *Model) dbConsole() *dbConsoleState {
@@ -376,6 +395,9 @@ func (m *Model) databasePrepareRun(r *dbRun) tea.Cmd {
 	r.line = max(r.line, 1)
 	r.index = 0
 	r.sql = r.statements[0]
+	s := m.dbConsole()
+	s.batchSeq++
+	r.batch = s.batchSeq
 	return m.databaseReviewRun(r)
 }
 
@@ -387,6 +409,9 @@ func (m *Model) databaseReviewRun(r *dbRun) tea.Cmd {
 		return nil
 	}
 	s := m.dbConsole()
+	if m.databases.manualMode(r.conn) && dbTxControl(r.sql) {
+		return m.pushToastDetail(toast.Info, "Use Commit (K) or Rollback (Z)", "Manual transaction mode: "+strings.ToUpper(firstSQLWord(r.sql))+" is not sent.")
+	}
 	kind, stmts := dbclient.Classify(r.sql, c.Driver)
 	if kind == dbclient.KindRead {
 		return m.databaseStartRun(r)
@@ -493,8 +518,7 @@ func (m *Model) databaseStartRun(r *dbRun) tea.Cmd {
 	s.cancel = cancel
 	s.running = r
 	old := s.shown
-	s.shown = r
-	s.cache = nil
+	s.placeRun(r)
 	s.page = 0
 	s.size = settings.pageRows()
 	s.view = dbViewGrid
@@ -509,14 +533,33 @@ func (m *Model) databaseStartRun(r *dbRun) tea.Cmd {
 	if r.maxRows > 0 {
 		limit = r.maxRows
 	}
+	key := r.sessKey
+	if key == "" {
+		key = r.conn
+	}
+	inTx := m.databases.txOpen(key)
+	// Manual mode: a statement the user runs begins the transaction (or
+	// joins it); the data view's reads only look inside an open one.
+	manual := m.databases.manualMode(r.conn) && !r.readOnly && r.tv == nil
 	return tea.Batch(pageCmd, func() tea.Msg {
 		var result dbclient.Result
-		if r.readOnly {
+		began := false
+		switch {
+		case r.readOnly && inTx:
+			result = dbReadInTx(ctx, sess, r.sql, dbclient.RunOptions{MaxRows: limit})
+		case r.readOnly:
 			result = dbRunReadOnly(ctx, sess, r.sql, dbclient.RunOptions{MaxRows: limit})
-		} else {
+		default:
+			if manual && !inTx {
+				// The transaction outlives this run: never a context that ends.
+				if err := sess.Begin(context.Background()); err != nil {
+					return dbRunMsg{gen: gen, run: r, result: dbclient.Result{Err: err}, key: key}
+				}
+				began = true
+			}
 			result = sess.Run(ctx, r.sql, dbclient.RunOptions{MaxRows: limit})
 		}
-		return dbRunMsg{gen: gen, run: r, result: result}
+		return dbRunMsg{gen: gen, run: r, result: result, key: key, began: began, manual: manual}
 	})
 }
 
@@ -524,6 +567,9 @@ type dbRunMsg struct {
 	gen    uint64
 	run    *dbRun
 	result dbclient.Result
+	key    string // the session it ran on
+	began  bool   // it began the manual transaction
+	manual bool   // it ran in manual transaction mode
 }
 
 func (m *Model) databaseFinishRun(msg dbRunMsg) tea.Cmd {
@@ -539,16 +585,17 @@ func (m *Model) databaseFinishRun(msg dbRunMsg) tea.Cmd {
 		s.cancel = nil
 	}
 	s.running = nil
+	txCmd := m.databaseTrackTx(msg)
 	msg.run.result = msg.result
+	if len(msg.run.notes) > 0 {
+		msg.run.result.Notices = append(append([]string(nil), msg.run.notes...), msg.run.result.Notices...)
+	}
 	if tv := msg.run.tv; tv != nil {
 		tv.finish(&msg.run.result, s.pageSize())
 	}
 	s.shown = msg.run
 	s.cache = nil
-	res := msg.result
-	if msg.run.tv != nil {
-		res = msg.run.result
-	}
+	res := msg.run.result
 	status := ""
 	switch {
 	case res.Err != nil:
@@ -560,20 +607,66 @@ func (m *Model) databaseFinishRun(msg dbRunMsg) tea.Cmd {
 	default:
 		status = fmt.Sprintf("%s · %d ms", dbPlural(len(res.Rows), "row"), res.Elapsed.Milliseconds())
 	}
+	if msg.manual {
+		status += m.dbTxStatus(msg.run.conn)
+	}
 	m.databaseRefreshLens(msg.run.file, msg.run.sql, status)
-	cmds := []tea.Cmd{m.databaseShowPage()}
+	cmds := []tea.Cmd{m.databaseShowPage(), txCmd}
 	if msg.run.tv == nil { // a data view is not something the user typed
 		cmds = append(cmds, m.databaseAppendHistory(msg.run))
 	}
-	if res.Err == nil && msg.run.index+1 < len(msg.run.statements) {
+	if msg.run.index+1 < len(msg.run.statements) {
 		next := *msg.run
 		next.index++
 		next.sql = next.statements[next.index]
 		next.result = dbclient.Result{}
+		next.tab, next.notes = nil, nil
+		if res.Err != nil {
+			// Stop at the error; the card offers to go on with the rest.
+			s.contRun = &next
+			left := len(next.statements) - next.index
+			m.confirm = confirm.New(fmt.Sprintf("Statement %d of %d failed", msg.run.index+1, len(msg.run.statements)),
+				dbErrorText(res.Err)+"\n\nContinue runs the other "+dbPlural(left, "statement")+".", []confirm.Button{
+					{ID: "stop", Title: "Stop"},
+					{ID: "continue", Title: "Continue"},
+				})
+			m.confirm.SetSize(m.w, m.h)
+			m.confirmOpen = true
+			m.confirmKind = confirmKindDBContinue
+			return tea.Sequence(cmds...)
+		}
 		gen := msg.gen
 		cmds = append(cmds, func() tea.Msg { return dbNextMsg{gen: gen, run: &next} })
 	}
 	return tea.Sequence(cmds...)
+}
+
+// databaseTrackTx keeps the transaction state of a finished run: a run
+// that began the transaction opens it, a change counts as uncommitted, a
+// session that lost its transaction (sqlite3 restarted) closes it.
+func (m *Model) databaseTrackTx(msg dbRunMsg) tea.Cmd {
+	if msg.key == "" {
+		return nil
+	}
+	var cmd tea.Cmd
+	d := m.databases
+	if msg.began {
+		d.tx(msg.key).open = true
+	}
+	for _, n := range msg.result.Notices {
+		if strings.Contains(n, "transaction was rolled back") && d.txOpen(msg.key) {
+			delete(d.txs, msg.key)
+			cmd = m.pushToastDetail(toast.Warn, "The open transaction was rolled back", sanitizeDBText(n))
+		}
+	}
+	if msg.manual && msg.result.Err == nil && d.txOpen(msg.key) {
+		c, _ := d.connection(msg.run.conn)
+		if kind, _ := dbclient.Classify(msg.run.sql, c.Driver); kind != dbclient.KindRead {
+			d.tx(msg.key).writes++
+		}
+	}
+	d.touch()
+	return cmd
 }
 
 // databaseAppendHistory writes the run to db/history.jsonl off the UI
@@ -639,6 +732,8 @@ func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
 			return m.databaseStartRun(r), true
 		}
 		return nil, true
+	case confirmKindDBSubmit, confirmKindDBDiscard, confirmKindDBRevertAll, confirmKindDBStale, confirmKindDBTxEnd, confirmKindDBContinue:
+		return m.databaseEditConfirm(id)
 	case confirmKindDBClearHistory:
 		if id == "clear" {
 			if e := m.dbConsole().historyStore().Clear(); e != nil {
@@ -654,6 +749,8 @@ func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
 func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 	switch m.pickerKind {
 	case pickerKindDBAttach, pickerKindDBHistory, pickerKindDBSort:
+	case pickerKindDBTxMode:
+		return m.databaseTxPicker(id)
 	default:
 		return nil, false
 	}
@@ -692,7 +789,8 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 			if col < 0 || col >= len(s.shown.result.Columns) {
 				return nil, true
 			}
-			return m.databaseTableSort(s.shown.tv, s.shown.result.Columns[col].Name), true
+			tv, name := s.shown.tv, s.shown.result.Columns[col].Name
+			return m.databaseUnlessDirty(func() tea.Cmd { return m.databaseTableSort(tv, name) }), true
 		}
 		if s.sortCol == col {
 			s.desc = !s.desc

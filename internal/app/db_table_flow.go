@@ -137,6 +137,7 @@ func (m *Model) onDBTableMeta(msg dbTableMetaMsg) tea.Cmd {
 			tv.keys = append(tv.keys, c.Name)
 		}
 	}
+	tv.unique = dbUniqueSets(ir)
 	return m.databaseRunTable(tv)
 }
 
@@ -155,6 +156,9 @@ func (m *Model) databaseRunTable(tv *dbTableView) tea.Cmd {
 		return m.pushToastDetail(toast.Warn, "Cannot show this table", sanitizeDBText(err.Error()))
 	}
 	r := &dbRun{conn: tv.conn, sql: sql, by: "user", statements: []string{sql}, sessKey: tv.sessKey, maxRows: size + 1, tv: tv, readOnly: true}
+	if t := s.curTab(); t != nil && t.run != nil && t.run.tv == tv {
+		r.tab = t // a page, a sort or a filter of the data view on the page
+	}
 	return m.databaseStartRun(r)
 }
 
@@ -224,10 +228,16 @@ func (m *Model) databaseCount(tv *dbTableView) tea.Cmd {
 	}
 	gen := m.nextTableGen()
 	label := tv.label()
+	inTx := m.databases.txOpen(tv.sessKey)
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), loadDBConsoleSettings().timeout())
 		defer cancel()
-		r := dbRunReadOnly(ctx, sess, sql, dbclient.RunOptions{MaxRows: 1})
+		var r dbclient.Result
+		if inTx {
+			r = dbReadInTx(ctx, sess, sql, dbclient.RunOptions{MaxRows: 1})
+		} else {
+			r = dbRunReadOnly(ctx, sess, sql, dbclient.RunOptions{MaxRows: 1})
+		}
 		msg := dbCountMsg{gen: gen, tv: tv, label: label, err: r.Err}
 		if r.Err == nil && len(r.Rows) > 0 && len(r.Rows[0]) > 0 {
 			if _, e := fmt.Sscan(r.Rows[0][0].Text, &msg.n); e != nil {
@@ -309,7 +319,11 @@ func (m *Model) onDBMeta(msg dbMetaMsg) tea.Cmd {
 	tbl := msg.tbl
 	res := dbDescribeResult(tbl, msg.meta)
 	r := &dbRun{conn: tbl.conn, sql: "Describe " + tbl.label(), by: "user", result: res, describe: &tbl}
-	s.shown, s.cache, s.page, s.size, s.view = r, nil, 0, loadDBConsoleSettings().pageRows(), dbViewGrid
+	if t := s.curTab(); t != nil && t.run != nil && t.run.describe != nil && *t.run.describe == tbl {
+		r.tab = t // r on a description reads the catalogs again in its tab
+	}
+	s.placeRun(r)
+	s.cache, s.page, s.size, s.view = nil, 0, loadDBConsoleSettings().pageRows(), dbViewGrid
 	s.filter, s.sortCol, s.desc, s.trans, s.trow = "", -1, false, false, 0
 	return m.databaseShowPage()
 }

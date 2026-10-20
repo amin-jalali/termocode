@@ -40,6 +40,12 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-describe", Title: "Databases: Describe Table"},
 		{ID: "db-ddl", Title: "Databases: Show DDL"},
 		{ID: "db-count-rows", Title: "Databases: Count Rows"},
+		{ID: "db-transaction-mode", Title: "Databases: Transaction Mode…"},
+		{ID: "db-commit", Title: "Databases: Commit"},
+		{ID: "db-rollback", Title: "Databases: Rollback"},
+		{ID: "db-submit-changes", Title: "Databases: Submit Pending Changes"},
+		{ID: "db-revert-changes", Title: "Databases: Revert Pending Changes"},
+		{ID: "db-result-pin", Title: "Databases: Pin Result Tab"},
 	}
 }
 
@@ -56,6 +62,21 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseHistory(), true
 	case "db-cancel":
 		return m.databaseCancelRun(), true
+	case "db-transaction-mode":
+		return m.databaseTxModePicker(m.databaseContextConn()), true
+	case "db-commit":
+		return m.databaseCommitKey(true), true
+	case "db-rollback":
+		return m.databaseCommitKey(false), true
+	case "db-submit-changes":
+		return m.databaseSubmitCard(), true
+	case "db-revert-changes":
+		if t := m.dbConsole().curTab(); !t.dirty() {
+			return m.pushToast(toast.Info, "No pending changes"), true
+		}
+		return m.databaseRevertKey(m.dbConsole().curTab(), -1, -1), true
+	case "db-result-pin":
+		return m.databasePinTab(), true
 	}
 	open := m.revealDatabasesView(id == "db-focus")
 	switch id {
@@ -91,7 +112,7 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 	case "db-disconnect":
 		r, ok := m.databaseCurrentRow()
 		if ok && r.kind == dbNodeConnection {
-			m.databaseConfirmDisconnect(r.conn)
+			return tea.Batch(open, m.databaseDisconnectAsk(r.conn)), true
 		}
 		return open, true
 	default:
@@ -170,7 +191,7 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, nil
 		}
 		if have && row.kind == dbNodeConnection {
-			m.databaseConfirmDisconnect(row.conn)
+			return m, m.databaseDisconnectAsk(row.conn)
 		}
 	case "p":
 		if have && row.kind == dbNodeConnection {
@@ -184,6 +205,10 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 	case "R":
 		return m, m.databaseRefresh()
+	case "t":
+		if have && row.conn != "" {
+			return m, m.databaseTxModePicker(row.conn)
+		}
 	case "y":
 		if have && row.kind == dbNodeCode {
 			m.copyToClipboard(row.name)
@@ -205,7 +230,7 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		m.prompt.SetAllowEmpty(true)
 		return m, cmd
 	case "?":
-		return m, m.pushToastDetail(toast.Info, "Database keys", "j/k move · Enter connect or expand · a add · e edit · R refresh · x disconnect · / filter · on a table: o data · d describe · D DDL · s select · # count · y copy name")
+		return m, m.pushToastDetail(toast.Info, "Database keys", "j/k move · Enter connect or expand · a add · e edit · t transaction mode · R refresh · x disconnect · / filter · on a table: o data · d describe · D DDL · s select · # count · y copy name")
 	case "esc":
 		m.focus = FocusEditor
 	case "m":
@@ -292,6 +317,20 @@ func (m *Model) handleDBConfirm(id string) (tea.Cmd, bool) {
 	if id != "disconnect" || m.databases == nil {
 		return nil, true
 	}
+	return m.databaseDisconnectNow(connID), true
+}
+
+// databaseDisconnectNow closes every session of connID (an open
+// transaction ends with it: the server rolls it back).
+func (m *Model) databaseDisconnectNow(connID string) tea.Cmd {
+	if m.databases == nil {
+		return nil
+	}
+	for key := range m.databases.txs {
+		if dbTxConn(key) == connID {
+			delete(m.databases.txs, key)
+		}
+	}
 	m.databases.console.stop(connID)
 	m.databases.connectionEpochs[connID]++
 	for key, sess := range m.databases.sessions {
@@ -305,7 +344,7 @@ func (m *Model) handleDBConfirm(id string) (tea.Cmd, bool) {
 		m.databases.activeID = ""
 	}
 	m.databases.resetConnectionTree(connID)
-	return nil, true
+	return nil
 }
 
 func databaseLiteralPassword(c dbclient.Conn) (string, bool) {

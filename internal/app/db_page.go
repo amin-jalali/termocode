@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/dbclient"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/toast"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 )
@@ -40,6 +42,10 @@ var (
 	dbGlyphHBar  = theme.Icon{NerdFont: "─", Unicode: "─", ASCII: "-"}
 	dbGlyphCross = theme.Icon{NerdFont: "┼", Unicode: "┼", ASCII: "+"}
 	dbGlyphMore  = theme.Icon{NerdFont: "…", Unicode: "…", ASCII: "..."}
+	// Pending-change marks in the grid's left margin (plain ASCII in every tier).
+	dbGlyphChanged = theme.Icon{NerdFont: "*", Unicode: "*", ASCII: "*"}
+	dbGlyphAdded   = theme.Icon{NerdFont: "+", Unicode: "+", ASCII: "+"}
+	dbGlyphDeleted = theme.Icon{NerdFont: "-", Unicode: "-", ASCII: "-"}
 )
 
 func dbGlyphRun() string { return theme.GlyphSend.String() }
@@ -85,17 +91,41 @@ func (s *dbConsoleState) displayedResult() dbclient.Result {
 	if s.shown == nil {
 		return dbclient.Result{}
 	}
-	key := dbViewKey{run: s.shown, filter: s.filter, sortCol: s.sortCol, desc: s.desc}
+	key := dbViewKey{run: s.shown, filter: s.filter, sortCol: s.sortCol, desc: s.desc, rows: len(s.shown.result.Rows)}
 	if s.cacheKey == key && s.cache != nil {
 		return *s.cache
 	}
-	r := dbclient.Filter(s.shown.result, s.filter)
+	// Each row carries its index in the loaded result (in a cell's Kind,
+	// which neither the filter nor the sort reads) so edits find it.
+	tagged := s.shown.result
+	tagged.Rows = make([][]dbclient.Cell, len(s.shown.result.Rows))
+	for i, row := range s.shown.result.Rows {
+		tagged.Rows[i] = append(row[:len(row):len(row)], dbclient.Cell{Kind: dbRowTag + strconv.Itoa(i)})
+	}
+	r := dbclient.Filter(tagged, s.filter)
 	if s.sortCol >= 0 {
 		r.Rows = append([][]dbclient.Cell(nil), r.Rows...)
 		dbclient.Sort(&r, s.sortCol, s.desc)
 	}
+	s.cacheIdx = make([]int, len(r.Rows))
+	for i, row := range r.Rows {
+		s.cacheIdx[i], _ = strconv.Atoi(strings.TrimPrefix(row[len(row)-1].Kind, dbRowTag))
+		r.Rows[i] = row[:len(row)-1]
+	}
 	s.cacheKey, s.cache = key, &r
 	return r
+}
+
+// dbRowTag marks the hidden cell that holds a row's index.
+const dbRowTag = "\x00row:"
+
+// pageIdx is the index in the loaded result of each row on the page.
+func (s *dbConsoleState) pageIdx() []int {
+	s.displayedResult()
+	n := loadDBConsoleSettings().pageRows()
+	start := min(s.page*n, len(s.cacheIdx))
+	end := min(start+n, len(s.cacheIdx))
+	return s.cacheIdx[start:end]
 }
 
 type dbViewKey struct {
@@ -103,6 +133,7 @@ type dbViewKey struct {
 	filter  string
 	sortCol int
 	desc    bool
+	rows    int
 }
 
 func (s *dbConsoleState) pageCount() int {
@@ -123,10 +154,11 @@ func (s *dbConsoleState) pageResult() dbclient.Result {
 // dbPage is the page text plus what Lua needs: the highlight spans, the
 // first grid data row and the column start cells.
 type dbPage struct {
-	lines  []string
-	hls    []map[string]any
-	first  int   // 1-based line of the first data row (0: no grid)
-	bounds []int // display cell where each grid column starts
+	lines   []string
+	hls     []map[string]any
+	first   int   // 1-based line of the first data row (0: no grid)
+	bounds  []int // display cell where each grid column starts
+	lastNew int   // 1-based line of the last new row (0: none)
 }
 
 func (p *dbPage) add(line string) int {
@@ -177,7 +209,11 @@ func (m *Model) databasePage() dbPage {
 	if r.by == "ai" {
 		who += " · by AI"
 	}
-	line, at := dbSplitLine(" "+dbOneLine(dbStripComments(r.sql)), who, width)
+	left := " " + dbOneLine(dbStripComments(r.sql))
+	if strip := s.tabStrip(); strip != "" {
+		left = " " + strip + " " + dbGlyphVBar.String() + left
+	}
+	line, at := dbSplitLine(left, who, width)
 	n := p.add(line)
 	p.hl(n, 0, max(at, 0), "TermocodeHttpReq")
 	if at >= 0 {
@@ -228,6 +264,26 @@ func (m *Model) databasePage() dbPage {
 		}
 		summary += fmt.Sprintf(" · %d ms", res.Elapsed.Milliseconds())
 	}
+	if s.running == nil {
+		if extra, brief := m.databaseEditSummary(r); extra != "" {
+			// Narrow pages keep the change count (the chip shows the
+			// transaction) before they drop the rest.
+			base := append([]string{summary}, short...)
+			summary += extra
+			short = short[:0]
+			for _, v := range base[1:] {
+				short = append(short, v+extra)
+			}
+			for _, v := range base {
+				short = append(short, v+brief)
+			}
+			last := base[len(base)-1]
+			if cut := strings.Index(last, " · "); cut > 0 {
+				short = append(short, last[:cut]+brief) // "rows 1-100 · 2 changes"
+			}
+			short = append(short, strings.TrimPrefix(brief, " · "))
+		}
+	}
 	chips := make([]string, dbViewCount)
 	copy(chips, dbViewNames[:])
 	if s.trans {
@@ -268,11 +324,19 @@ func (m *Model) databasePage() dbPage {
 		if len(res.Columns) > 0 && res.Err == nil {
 			hints = " ] next  o sort  f filter  v value  c csv  Tab view  r rerun  q close"
 			switch {
+			case s.curTab().dirty():
+				hints = dbFitHints(width, append(m.dbTxHints(r.conn), "w submit", "u revert", "e edit", "+ row", "- delete", "]/[ page", "Tab view", "q close")...)
+			case len(m.dbTxHints(r.conn)) > 0:
+				hints = dbFitHints(width, append(m.dbTxHints(r.conn), "e edit", "+ row", "- delete", "]/[ page", "o sort", "f filter", "r rerun", "q close")...)
 			case s.trans:
 				hints = dbFitHints(width, "]/[ row", "t grid", "v value", "Tab view", "r rerun", "q close")
+			case r.tv != nil && m.databaseEditable(s.curTab()):
+				hints = dbFitHints(width, "]/[ page", "e edit", "f where", "o sort", "t flip", "# count", "v value", "r rerun", "q close")
 			case r.tv != nil:
 				hints = dbFitHints(width, "]/[ page", "f where", "o sort", "t flip", "# count", "v value", "r rerun", "q close")
 			}
+		} else if len(m.dbTxHints(r.conn)) > 0 {
+			hints = dbFitHints(width, append(m.dbTxHints(r.conn), "Tab view", "r rerun", "h history", "q close")...)
 		} else if r.tv != nil && res.Err != nil {
 			hints = " f where  o sort  r rerun  Tab view  q close"
 		}
@@ -322,16 +386,69 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 		return
 	}
 	page := s.pageResult()
+	idx := s.pageIdx()
+	var edits *dbEdits
+	if t := s.curTab(); t != nil && t.run == s.shown {
+		edits = t.edits
+	}
 	more := dbGlyphMore.String()
 	cell := func(c dbclient.Cell) string {
 		return ansi.Truncate(dbOneLine(c.String()), dbMaxCellWidth, more)
 	}
+	// rows to draw: the page (pending values in place), then new rows.
+	type gridRow struct {
+		cells   []dbclient.Cell
+		mark    string
+		changed map[int]bool
+		unset   map[int]bool // new row: the default
+		deleted bool
+	}
+	grid := make([]gridRow, 0, len(page.Rows))
+	for i, row := range page.Rows {
+		g := gridRow{cells: row, mark: " "}
+		if edits != nil && i < len(idx) {
+			orig := idx[i]
+			if edits.deleted[orig] {
+				g.mark, g.deleted = dbGlyphDeleted.String(), true
+			}
+			for ref, c := range edits.cells {
+				if ref.row != orig || ref.col >= len(row) {
+					continue
+				}
+				if g.changed == nil {
+					g.cells = append([]dbclient.Cell(nil), row...)
+					g.changed = map[int]bool{}
+				}
+				g.cells[ref.col] = c
+				g.changed[ref.col] = true
+			}
+			if g.changed != nil && !g.deleted {
+				g.mark = dbGlyphChanged.String()
+			}
+		}
+		grid = append(grid, g)
+	}
+	if edits != nil {
+		for _, nr := range edits.added {
+			g := gridRow{cells: make([]dbclient.Cell, len(page.Columns)), mark: dbGlyphAdded.String(), changed: map[int]bool{}, unset: map[int]bool{}}
+			for i := range g.cells {
+				if c, ok := nr.set[i]; ok {
+					g.cells[i] = c
+					g.changed[i] = true
+				} else {
+					g.cells[i] = dbclient.Cell{Text: "<default>"}
+					g.unset[i] = true
+				}
+			}
+			grid = append(grid, g)
+		}
+	}
 	widths := make([]int, len(page.Columns))
 	for i, c := range page.Columns {
 		widths[i] = ansi.StringWidth(ansi.Truncate(dbOneLine(c.Name), dbMaxCellWidth, more))
-		for _, row := range page.Rows {
-			if i < len(row) {
-				widths[i] = max(widths[i], ansi.StringWidth(cell(row[i])))
+		for _, row := range grid {
+			if i < len(row.cells) {
+				widths[i] = max(widths[i], ansi.StringWidth(cell(row.cells[i])))
 			}
 		}
 		widths[i] = max(widths[i], 1)
@@ -369,33 +486,59 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 	}
 	n = p.add(b.String())
 	p.hl(n, 0, len(p.lines[n-1]), "TermocodeHttpSep")
-	if len(page.Rows) == 0 {
+	if len(grid) == 0 {
 		n = p.add(" (no rows)")
 		p.hl(n, 0, len(p.lines[n-1]), "TermocodeHttpSummary")
 		return
 	}
 	p.first = len(p.lines) + 1
-	for _, row := range page.Rows {
+	for _, g := range grid {
 		b.Reset()
-		b.WriteString(" ")
-		var spans [][2]int
+		b.WriteString(g.mark)
+		markEnd := b.Len()
+		var dim, changed [][2]int
 		for i := range page.Columns {
 			if i > 0 {
 				b.WriteString(bar)
 			}
 			c := dbclient.Cell{Null: true}
-			if i < len(row) {
-				c = row[i]
+			if i < len(g.cells) {
+				c = g.cells[i]
 			}
 			start := b.Len()
 			b.WriteString(pad(cell(c), widths[i], c.Kind == "number"))
-			if c.Null {
-				spans = append(spans, [2]int{start, b.Len()})
+			switch {
+			case g.unset[i] || c.Null && !g.changed[i]:
+				dim = append(dim, [2]int{start, b.Len()})
+			case g.changed[i]:
+				changed = append(changed, [2]int{start, b.Len()})
 			}
 		}
 		n = p.add(strings.TrimRight(b.String(), " "))
-		for _, sp := range spans {
-			p.hl(n, sp[0], min(sp[1], len(p.lines[n-1])), "TermocodeHttpSep")
+		end := len(p.lines[n-1])
+		switch {
+		case g.deleted:
+			p.hl(n, 0, end, "TermocodeDbDeleted")
+			continue
+		case g.mark != " ":
+			group := "TermocodeDbChanged"
+			if g.unset != nil {
+				group = "TermocodeDbAdded"
+			}
+			p.hl(n, 0, markEnd, group)
+		}
+		for _, sp := range dim {
+			p.hl(n, sp[0], min(sp[1], end), "TermocodeHttpSep")
+		}
+		for _, sp := range changed {
+			group := "TermocodeDbChanged"
+			if g.unset != nil {
+				group = "TermocodeDbAdded"
+			}
+			p.hl(n, sp[0], min(sp[1], end), group)
+		}
+		if g.unset != nil {
+			p.lastNew = n
 		}
 	}
 	if s.page+1 < s.pageCount() || (s.shown.tv != nil && s.shown.tv.more) {
@@ -452,7 +595,25 @@ func (m *Model) databaseTransposed(p *dbPage, s *dbConsoleState, width int) {
 		return
 	}
 	more := dbGlyphMore.String()
-	row := page.Rows[min(s.trow, len(page.Rows)-1)]
+	at := min(s.trow, len(page.Rows)-1)
+	row := page.Rows[at]
+	var changed map[int]bool
+	deleted := false
+	if t := s.curTab(); t != nil && t.run == s.shown && t.edits != nil {
+		if idx := s.pageIdx(); at < len(idx) {
+			orig := idx[at]
+			deleted = t.edits.deleted[orig]
+			for ref, c := range t.edits.cells {
+				if ref.row == orig && ref.col < len(row) {
+					if changed == nil {
+						row = append([]dbclient.Cell(nil), row...)
+						changed = map[int]bool{}
+					}
+					row[ref.col], changed[ref.col] = c, true
+				}
+			}
+		}
+	}
 	nameW := 1
 	names := make([]string, len(page.Columns))
 	for i, c := range page.Columns {
@@ -467,11 +628,23 @@ func (m *Model) databaseTransposed(p *dbPage, s *dbConsoleState, width int) {
 		if i < len(row) {
 			c = row[i]
 		}
-		value := ansi.Truncate(dbOneLine(c.String()), max(width-nameW-ansi.StringWidth(bar)-2, 8), more)
 		left := " " + names[i] + strings.Repeat(" ", nameW-ansi.StringWidth(names[i]))
-		n := p.add(strings.TrimRight(left+bar+value, " "))
+		mark := ""
+		switch {
+		case deleted:
+			mark = "  " + dbGlyphDeleted.String()
+		case changed[i]:
+			mark = "  " + dbGlyphChanged.String()
+		}
+		value := ansi.Truncate(dbOneLine(c.String()), max(width-nameW-ansi.StringWidth(bar)-2-len(mark), 8), more)
+		n := p.add(strings.TrimRight(left+bar+value+mark, " "))
 		p.hl(n, 0, len(left), "TermocodeHttpSection")
-		if c.Null {
+		switch {
+		case deleted:
+			p.hl(n, len(left)+len(bar), len(p.lines[n-1]), "TermocodeDbDeleted")
+		case changed[i]:
+			p.hl(n, len(left)+len(bar), len(p.lines[n-1]), "TermocodeDbChanged")
+		case c.Null:
 			p.hl(n, len(left)+len(bar), len(p.lines[n-1]), "TermocodeHttpSep")
 		}
 	}
@@ -562,6 +735,13 @@ func (m *Model) databaseShowPage() tea.Cmd {
 	if p.first > 0 {
 		cursor = p.first
 	}
+	switch {
+	case s.cursorNewRow && p.lastNew > 0:
+		cursor = p.lastNew
+	case s.keepCursor:
+		cursor = -1 // stay on the row being edited
+	}
+	s.cursorNewRow, s.keepCursor = false, false
 	_ = m.nvim.ExecLuaArgs(`_G._termocode_db_open(...)`, m.editorPaneWidth() >= 120, p.lines[:end], p.hls, p.first, p.bounds, cursor, p.first == 0 && s.view != dbViewJSON)
 	m.focus = FocusEditor
 	if end < len(p.lines) {
@@ -583,7 +763,7 @@ func (m *Model) databaseRerun() tea.Cmd {
 	if old.describe != nil {
 		return m.databaseLoadMeta(*old.describe, false)
 	}
-	r := &dbRun{conn: old.conn, file: old.file, line: old.line, sql: old.sql, by: "user", statements: []string{old.sql}, sessKey: old.sessKey}
+	r := &dbRun{conn: old.conn, file: old.file, line: old.line, sql: old.sql, by: "user", statements: []string{old.sql}, sessKey: old.sessKey, tab: s.curTab()}
 	return m.databaseReviewRun(r)
 }
 
@@ -598,26 +778,44 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 	if s.shown == nil {
 		return nil
 	}
+	if s.submitting != nil {
+		return m.pushToastDetail(toast.Info, "Saving the changes…", "One moment.")
+	}
 	tv := s.shown.tv
 	canGrid := s.shown.result.Err == nil && len(s.shown.result.Columns) > 0
 	switch key {
+	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
+		return m.databaseSwitchTab(int(key[0] - '0'))
+	case "p":
+		return m.databasePinTab()
+	case "e", "E", "+", "-", "u", "w":
+		return m.databaseEditKey(key, row, col)
+	case "K":
+		return m.databaseEndTx(s.shown.conn, true, nil)
+	case "Z":
+		return m.databaseEndTx(s.shown.conn, false, nil)
 	case "]":
 		if s.trans && canGrid {
 			if s.trow+1 < len(s.pageResult().Rows) {
 				s.trow++
 				return m.databaseShowPage()
 			}
-			if tv != nil {
-				if cmd, ok := m.databaseTablePage(tv, 1); ok {
-					s.trow = 0
-					return cmd
-				}
+			if tv != nil && tv.more {
+				return m.databaseUnlessDirty(func() tea.Cmd {
+					if cmd, ok := m.databaseTablePage(tv, 1); ok {
+						s.trow = 0
+						return cmd
+					}
+					return nil
+				})
 			}
 			return nil
 		}
 		if tv != nil {
-			cmd, _ := m.databaseTablePage(tv, 1)
-			return cmd
+			if !tv.more {
+				return nil
+			}
+			return m.databaseUnlessDirty(func() tea.Cmd { cmd, _ := m.databaseTablePage(tv, 1); return cmd })
 		}
 		if s.page+1 >= s.pageCount() {
 			return nil
@@ -630,17 +828,22 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 				s.trow--
 				return m.databaseShowPage()
 			}
-			if tv != nil {
-				if cmd, ok := m.databaseTablePage(tv, -1); ok {
-					s.trow = max(s.size-1, 0)
-					return cmd
-				}
+			if tv != nil && tv.offset > 0 {
+				return m.databaseUnlessDirty(func() tea.Cmd {
+					if cmd, ok := m.databaseTablePage(tv, -1); ok {
+						s.trow = max(s.size-1, 0)
+						return cmd
+					}
+					return nil
+				})
 			}
 			return nil
 		}
 		if tv != nil {
-			cmd, _ := m.databaseTablePage(tv, -1)
-			return cmd
+			if tv.offset <= 0 {
+				return nil
+			}
+			return m.databaseUnlessDirty(func() tea.Cmd { cmd, _ := m.databaseTablePage(tv, -1); return cmd })
 		}
 		if s.page == 0 {
 			return nil
@@ -669,7 +872,7 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		s.view = (s.view + 1) % dbViewCount
 		return m.databaseShowPage()
 	case "r":
-		return m.databaseRerun()
+		return m.databaseUnlessDirty(m.databaseRerun)
 	case "h":
 		return m.databaseHistory()
 	case "f":
