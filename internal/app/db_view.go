@@ -240,6 +240,15 @@ func (s *dbState) rowFooter(r dbTreeRow) string {
 			return f
 		}
 	}
+	if r.kind == dbNodeConnection {
+		if c, ok := s.connection(r.conn); ok && c.SSH != nil {
+			state := "via " + c.SSH.Host
+			if s.tunnel(c.ID).Alive() {
+				state = "tunnel up · " + c.SSH.Host
+			}
+			return state + " · Enter connect · T test"
+		}
+	}
 	return dbRowFooter(r.kind)
 }
 

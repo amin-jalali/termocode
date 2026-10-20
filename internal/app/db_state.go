@@ -100,6 +100,11 @@ type dbState struct {
 	txModeConn          string                         // the connection the mode picker is for
 	txCardConn          string                         // the uncommitted-changes card
 	txCardAfter         func(*Model) tea.Cmd
+	tunnels             map[string]*dbclient.Tunnel // connection -> its SSH tunnel (db_ssh.go)
+	pendingSSH          dbSSHSecrets                // the SSH secrets of the connection being added
+	hostAsk             *dbHostAsk                  // the unknown-host card
+	secretAsk           *dbSecretAsk                // the SSH password / passphrase prompt
+	sshEdit             *dbSSHEdit                  // Add SSH Tunnel / SSL Settings prompts
 }
 
 type dbRenderCache struct {
@@ -297,6 +302,14 @@ func dbConnDetail(c dbclient.Conn) string {
 	if d == "mysql" {
 		d = "mysql"
 	}
+	// The tunnel and SSL tags come right after the driver so a narrow
+	// sidebar still shows them.
+	if c.SSH != nil {
+		d += " ssh"
+	}
+	if mode, err := dbclient.EffectiveSSLMode(c.SSL); err == nil && mode != "" && mode != dbclient.SSLDisable || c.SSL == nil && c.TLS {
+		d += " ssl"
+	}
 	return d + "  " + c.Host + ":" + itoa(c.Port)
 }
 func dbFriendlyProblem(s string) string {
@@ -453,6 +466,7 @@ type dbConnectMsg struct {
 	generation uint64
 	session    dbclient.Session
 	password   string
+	tunnel     *dbclient.Tunnel // opened for this connect (nil: none or per-database)
 	err        error
 }
 type dbIntrospectMsg struct {
@@ -469,6 +483,9 @@ type dbTestMsg struct {
 	password   string
 	generation uint64
 	err        error
+	existing   bool          // a saved row's test (not the add flow)
+	via        string        // the SSH server the test went through
+	elapsed    time.Duration // connect + ping
 }
 
 // dbSQLSessionFactory is kept replaceable for command-path tests.
@@ -498,37 +515,55 @@ func (s *dbState) connectionCommand(id string, cmd tea.Cmd) tea.Cmd {
 	}
 }
 
-func dbConnectCommand(c dbclient.Conn, root, password string, generation uint64) tea.Cmd {
+func dbConnectCommand(c dbclient.Conn, root, password string, generation uint64, sec dbSSHSecrets) tea.Cmd {
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), dbTestTimeout)
 		defer cancel()
-		var sess dbclient.Session
-		var err error
-		switch c.Driver {
-		case "postgres", "mysql":
-			sess, err = dbSQLSessionFactory(ctx, c, password)
-		case "sqlite":
-			if !filepath.IsAbs(c.Path) {
-				c.Path = filepath.Join(root, c.Path)
-			}
-			sess, err = dbclient.NewSQLiteSession(ctx, c)
-		case "redis":
-			sess, err = dbRedisSessionFactory(ctx, c, password)
-		default:
-			err = os.ErrInvalid
-		}
-		if err != nil {
-			sess = nil
-		}
-		if err == nil {
-			err = sess.Ping(ctx)
-			if err != nil {
-				_ = sess.Close()
-				sess = nil
-			}
-		}
-		return dbConnectMsg{id: c.ID, generation: generation, session: sess, password: password, err: err}
+		sess, tun, err := dbOpenSession(ctx, c, root, password, sec)
+		return dbConnectMsg{id: c.ID, generation: generation, session: sess, password: password, tunnel: tun, err: err}
 	}
+}
+
+// dbOpenSession opens and pings a session of c, through a new SSH tunnel
+// when c has one (the caller owns both; on error neither is left open).
+func dbOpenSession(ctx context.Context, c dbclient.Conn, root, password string, sec dbSSHSecrets) (dbclient.Session, *dbclient.Tunnel, error) {
+	c = dbResolveConnPaths(c, root, dbSSHHome())
+	var tun *dbclient.Tunnel
+	if c.SSH != nil && c.Driver != "sqlite" {
+		var err error
+		tun, err = dbOpenTunnel(ctx, c, sec)
+		if err != nil {
+			return nil, nil, err
+		}
+		c.Dial = tun.DialContext
+	}
+	var sess dbclient.Session
+	var err error
+	switch c.Driver {
+	case "postgres", "mysql":
+		sess, err = dbSQLSessionFactory(ctx, c, password)
+	case "sqlite":
+		if !filepath.IsAbs(c.Path) {
+			c.Path = filepath.Join(root, c.Path)
+		}
+		sess, err = dbclient.NewSQLiteSession(ctx, c)
+	case "redis":
+		sess, err = dbRedisSessionFactory(ctx, c, password)
+	default:
+		err = os.ErrInvalid
+	}
+	if err == nil {
+		if err = sess.Ping(ctx); err != nil {
+			_ = sess.Close()
+		}
+	}
+	if err != nil {
+		if tun != nil {
+			_ = tun.Close()
+		}
+		return nil, nil, err
+	}
+	return sess, tun, nil
 }
 
 func dbDatabaseConnectCommand(path string, c dbclient.Conn, password string, generation uint64) tea.Cmd {
@@ -553,34 +588,36 @@ func dbIntrospectCommand(path string, sess dbclient.Session, req dbclient.Intros
 }
 
 func dbTestCommand(c dbclient.Conn, password, root string, generation uint64) tea.Cmd {
+	return dbTestCommandSSH(c, password, root, generation, dbSSHSecrets{}, false)
+}
+
+// dbTestCommandSSH opens a throwaway session (and tunnel) of c, pings it
+// and closes both.
+func dbTestCommandSSH(c dbclient.Conn, password, root string, generation uint64, sec dbSSHSecrets, existing bool) tea.Cmd {
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), dbTestTimeout)
 		defer cancel()
-		var sess dbclient.Session
+		start := time.Now()
 		var err error
-		switch c.Driver {
-		case "postgres", "mysql":
-			sess, err = dbSQLSessionFactory(ctx, c, password)
-		case "sqlite":
-			if !filepath.IsAbs(c.Path) {
-				c.Path = filepath.Join(root, c.Path)
-			}
-			sess, err = dbclient.NewSQLiteSession(ctx, c)
-		case "redis":
-			sess, err = dbRedisSessionFactory(ctx, c, password)
-		default:
+		if c.Driver != "postgres" && c.Driver != "mysql" && c.Driver != "sqlite" && c.Driver != "redis" {
 			err = fmt.Errorf("this connection type is not available yet")
 		}
-		if err != nil {
-			sess = nil
-		}
+		var sess dbclient.Session
+		var tun *dbclient.Tunnel
 		if err == nil {
-			err = sess.Ping(ctx)
+			sess, tun, err = dbOpenSession(ctx, c, root, password, sec)
+		}
+		msg := dbTestMsg{conn: c, password: password, generation: generation, err: err, existing: existing, elapsed: time.Since(start)}
+		if tun != nil {
+			msg.via = tun.Target().Host
 		}
 		if sess != nil {
 			_ = sess.Close()
 		}
-		return dbTestMsg{conn: c, password: password, generation: generation, err: err}
+		if tun != nil {
+			_ = tun.Close()
+		}
+		return msg
 	}
 }
 
@@ -609,6 +646,7 @@ func (m *Model) databasesClose(keepTx bool) {
 		d.resetConnectionTree(c.ID)
 		delete(d.passwords, c.ID)
 	}
+	d.closeTunnels(kept)
 	if !keepTx {
 		clear(d.passwords)
 		d.txs = nil

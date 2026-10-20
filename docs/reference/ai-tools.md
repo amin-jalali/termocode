@@ -1087,6 +1087,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `customize-keybindings` | Preferences: Customize Keybindings | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `dap-install` | DAP: Install Adapter... | never | opens a picker or prompt that only the user can answer; use a typed tool (dap_adapters) |
 | `db-add` | Databases: Add Connection… | never | AI provider, credentials and approvals stay with the user |
+| `db-add-tunnel` | Databases: Add SSH Tunnel… | never | AI provider, credentials and approvals stay with the user |
 | `db-cancel` | Databases: Cancel Query | auto |   |
 | `db-commit` | Databases: Commit | never | the user's transaction |
 | `db-configure` | Databases: Configure | confirm (always asks) |   |
@@ -1110,6 +1111,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `db-run` | Databases: Run Statement or Selection | never | SQL runs require the database query tool and its guard |
 | `db-run-file` | Databases: Run File | never | SQL runs require the database query tool and its guard |
 | `db-select` | Databases: Select 100 Rows in Console | never | SQL runs require the database query tool and its guard |
+| `db-ssl` | Databases: SSL Settings… | never | AI provider, credentials and approvals stay with the user |
 | `db-submit-changes` | Databases: Submit Pending Changes | never | the user's pending edits; use the database query tool |
 | `db-test-connection` | Databases: Test Connection | auto |   |
 | `db-transaction-mode` | Databases: Transaction Mode… | never | AI provider, credentials and approvals stay with the user |

@@ -118,6 +118,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Databases: Add Connection… | `db-add` |   |   |
+| Databases: Add SSH Tunnel… | `db-add-tunnel` |   |   |
 | Databases: Cancel Query | `db-cancel` |   |   |
 | Databases: Commit | `db-commit` |   |   |
 | Databases: Configure | `db-configure` |   |   |
@@ -140,6 +141,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Rollback | `db-rollback` |   |   |
 | Databases: Run File | `db-run-file` |   |   |
 | Databases: Run Statement or Selection | `db-run` |   |   |
+| Databases: SSL Settings… | `db-ssl` |   |   |
 | Databases: Select 100 Rows in Console | `db-select` |   |   |
 | Databases: Set Redis Key TTL… | `redis-set-ttl` |   |   |
 | Databases: Show DDL | `db-ddl` |   |   |

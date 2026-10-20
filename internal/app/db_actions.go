@@ -37,6 +37,8 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-refresh", Title: "Databases: Refresh"},
 		{ID: "db-configure", Title: "Databases: Configure"},
 		{ID: "db-test-connection", Title: "Databases: Test Connection"},
+		{ID: "db-add-tunnel", Title: "Databases: Add SSH Tunnel…"},
+		{ID: "db-ssl", Title: "Databases: SSL Settings…"},
 		{ID: "db-data", Title: "Databases: Open Table Data"},
 		{ID: "db-select", Title: "Databases: Select 100 Rows in Console"},
 		{ID: "db-describe", Title: "Databases: Describe Table"},
@@ -120,12 +122,24 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return tea.Batch(open, m.databaseConfigure(false)), true
 	case "db-refresh":
 		return tea.Batch(open, m.databaseRefresh()), true
-	case "db-connect", "db-test-connection":
+	case "db-connect":
 		r, ok := m.databaseCurrentRow()
 		if ok && r.kind == dbNodeConnection {
 			return tea.Batch(open, m.databaseConnect(r.conn)), true
 		}
 		return open, true
+	case "db-test-connection", "db-add-tunnel", "db-ssl":
+		r, ok := m.databaseCurrentRow()
+		if !ok || r.conn == "" {
+			return tea.Batch(open, m.pushToastDetail(toast.Info, "Select a connection", "Pick a connection row in the Databases view first.")), true
+		}
+		switch id {
+		case "db-add-tunnel":
+			return tea.Batch(open, m.databaseSSHStart(r.conn)), true
+		case "db-ssl":
+			return tea.Batch(open, m.databaseSSLStart(r.conn)), true
+		}
+		return tea.Batch(open, m.databaseTestConnection(r.conn)), true
 	case "db-disconnect":
 		r, ok := m.databaseCurrentRow()
 		if ok && r.kind == dbNodeConnection {
@@ -227,6 +241,10 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 	case "R":
 		return m, m.databaseRefresh()
+	case "T":
+		if have && row.kind == dbNodeConnection {
+			return m, m.databaseTestConnection(row.conn)
+		}
 	case "t":
 		if have && row.conn != "" {
 			return m, m.databaseTxModePicker(row.conn)
@@ -254,7 +272,7 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		m.prompt.SetAllowEmpty(true)
 		return m, cmd
 	case "?":
-		return m, m.pushToastDetail(toast.Info, "Database keys", "j/k move · Enter connect or expand · a add · e edit · t transaction mode · R refresh · x disconnect · / filter · on a table: o data · d describe · D DDL · s select · i import CSV · # count · y copy name")
+		return m, m.pushToastDetail(toast.Info, "Database keys", "j/k move · Enter connect or expand · a add · e edit · T test · t transaction mode · R refresh · x disconnect · / filter · on a table: o data · d describe · D DDL · s select · i import CSV · # count · y copy name")
 	case "esc":
 		m.focus = FocusEditor
 	case "m":
@@ -283,6 +301,9 @@ func (m *Model) databaseConfirmDisconnect(id string) {
 }
 
 func (m *Model) handleDBConfirm(id string) (tea.Cmd, bool) {
+	if cmd, ok := m.databaseSSHConfirm(id); ok {
+		return cmd, true
+	}
 	if cmd, ok := m.databaseRedisConfirm(id); ok {
 		return cmd, true
 	}
@@ -367,6 +388,7 @@ func (m *Model) databaseDisconnectNow(connID string) tea.Cmd {
 		}
 	}
 	delete(m.databases.passwords, connID)
+	m.databases.closeTunnel(connID)
 	if m.databases.activeID == connID {
 		m.databases.activeID = ""
 	}
@@ -409,7 +431,11 @@ func (m *Model) databaseMove(step int) {
 	}
 }
 
-func (m *Model) databaseConnect(id string) tea.Cmd {
+func (m *Model) databaseConnect(id string) tea.Cmd { return m.databaseOpen(id, false) }
+
+// databaseOpen connects a saved connection (test=false) or tests it
+// with a throwaway session and tunnel (test=true).
+func (m *Model) databaseOpen(id string, test bool) tea.Cmd {
 	s := m.databases
 	if s == nil || s.nodes[id].loading {
 		return nil
@@ -434,18 +460,6 @@ func (m *Model) databaseConnect(id string) tea.Cmd {
 			return nil
 		}
 	}
-	for key, old := range s.sessions {
-		if key == id || strings.HasPrefix(key, id+"/db/") {
-			_ = old.Close()
-			delete(s.sessions, key)
-		}
-	}
-	s.connectionEpochs[id]++
-	generation := s.generation
-	n := s.nodes[id]
-	n.loading = true
-	s.nodes[id] = n
-	s.touch()
 	password := ""
 	if strings.HasPrefix(c.Password, "${dotenv:") && strings.HasSuffix(c.Password, "}") {
 		name := strings.TrimSuffix(strings.TrimPrefix(c.Password, "${dotenv:"), "}")
@@ -478,6 +492,7 @@ func (m *Model) databaseConnect(id string) tea.Cmd {
 		}
 		if password == "" {
 			if value, ok, err := store.Get("db." + id); err != nil {
+				n := s.nodes[id]
 				n.problem = sanitizeDBText(err.Error())
 				s.nodes[id] = n
 				s.touch()
@@ -487,7 +502,24 @@ func (m *Model) databaseConnect(id string) tea.Cmd {
 			}
 		}
 	}
-	return s.connectionCommand(id, dbConnectCommand(c, s.root, password, generation))
+	sec := m.databaseSSHSecrets(c, false)
+	if test {
+		return dbTestCommandSSH(c, password, s.root, s.generation, sec, true)
+	}
+	for key, old := range s.sessions {
+		if key == id || strings.HasPrefix(key, id+"/db/") {
+			_ = old.Close()
+			delete(s.sessions, key)
+		}
+	}
+	s.closeTunnel(id)
+	s.connectionEpochs[id]++
+	generation := s.generation
+	n := s.nodes[id]
+	n.loading = true
+	s.nodes[id] = n
+	s.touch()
+	return s.connectionCommand(id, dbConnectCommand(c, s.root, password, generation, sec))
 }
 
 func (s *dbState) connection(id string) (dbclient.Conn, bool) {
@@ -557,6 +589,16 @@ func (m *Model) databaseExpand(path string) tea.Cmd {
 						c.URL = target.String()
 					}
 				}
+				dial, err := s.dbDialFor(c)
+				if err != nil {
+					n.loading = false
+					n.problem = dbErrorText(err)
+					s.nodes[path] = n
+					s.touch()
+					return m.pushToastDetail(toast.Errr, "Could not open the database", dbErrorText(err))
+				}
+				c = dbResolveConnPaths(c, s.root, dbSSHHome())
+				c.Dial = dial
 				n.loading = true
 				s.nodes[path] = n
 				s.touch()
@@ -618,6 +660,7 @@ func (m *Model) databaseRefresh() tea.Cmd {
 		_ = sess.Close()
 		delete(s.sessions, id)
 	}
+	s.closeTunnels(nil)
 	root := s.root
 	generation := s.generation + 1
 	filter, folded, hidden, cursor := s.filter, s.folded, s.hidden, s.cursor
@@ -702,7 +745,7 @@ func (m *Model) databaseRetestPending() tea.Cmd {
 	if m.databases == nil || m.databases.pendingConn.ID == "" {
 		return nil
 	}
-	return dbTestCommand(m.databases.pendingConn, m.databases.pendingPassword, m.databases.root, m.databases.generation)
+	return dbTestCommandSSH(m.databases.pendingConn, m.databases.pendingPassword, m.databases.root, m.databases.generation, m.databases.pendingSSH, false)
 }
 
 func dbConnectionID(c dbclient.Conn) string {
@@ -916,6 +959,9 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 		if msg.session != nil {
 			_ = msg.session.Close()
 		}
+		if msg.tunnel != nil {
+			_ = msg.tunnel.Close()
+		}
 		return nil
 	}
 	n := s.nodes[msg.id]
@@ -925,6 +971,17 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 			s.console.waiting = nil
 		}
 		n.problem = dbErrorText(msg.err)
+		if p := dbTunnelProblem(msg.err); p != "" {
+			n.problem = p
+		}
+		if _, isConn := s.connection(msg.id); isConn {
+			if cmd, ok := m.databaseTunnelError(msg.err, msg.id, dbThenConnect); ok {
+				n.problem = ""
+				s.nodes[msg.id] = n
+				s.touch()
+				return cmd
+			}
+		}
 		if c, ok := s.connection(msg.id); ok && c.Driver == "sqlite" && (strings.Contains(strings.ToLower(msg.err.Error()), "sqlite3 is not installed") || strings.Contains(strings.ToLower(msg.err.Error()), "too old")) {
 			n.problem = ""
 			n.loaded = true
@@ -952,6 +1009,9 @@ func (m *Model) onDBConnect(msg dbConnectMsg) tea.Cmd {
 		return m.databaseExpand(msg.id)
 	}
 	s.passwords[msg.id] = msg.password
+	if msg.tunnel != nil {
+		s.setTunnel(msg.id, msg.tunnel)
+	}
 	s.activeID = msg.id
 	s.touch()
 	if s.console != nil && s.console.waiting != nil && s.console.waiting.conn == msg.id {
@@ -1140,11 +1200,32 @@ func (m *Model) onDBTest(msg dbTestMsg) tea.Cmd {
 	if m.databases == nil || msg.generation != m.databases.generation || !m.databasesVisible() {
 		return nil
 	}
+	if msg.existing {
+		if msg.err != nil {
+			if cmd, ok := m.databaseTunnelError(msg.err, msg.conn.ID, dbThenTest); ok {
+				return cmd
+			}
+			return m.pushToastDetail(toast.Errr, "Connection test failed · "+sanitizeDBText(dbConnName(msg.conn)), dbErrorText(msg.err))
+		}
+		detail := sanitizeDBText(dbConnName(msg.conn))
+		if msg.via != "" {
+			detail += " · through " + sanitizeDBText(msg.via)
+		}
+		detail += " · " + strconv.FormatInt(msg.elapsed.Milliseconds(), 10) + " ms"
+		return m.pushToastDetail(toast.Info, "✓ Connection works", detail)
+	}
 	if msg.err != nil {
+		if cmd, ok := m.databaseTunnelError(msg.err, "", dbThenPending); ok {
+			m.databases.pendingConn = msg.conn
+			m.databases.pendingPassword = msg.password
+			return cmd
+		}
 		m.databases.pendingConn = msg.conn
 		m.databases.pendingPassword = msg.password
 		m.picker = picker.NewItems(" Test failed · choose what to do ", []picker.Item{
 			{ID: "db-test-password", Title: "Set password…", Hint: "p"},
+			{ID: "db-test-ssh", Title: "Use an SSH tunnel…"},
+			{ID: "db-test-ssl", Title: "SSL settings…"},
 			{ID: "db-test-retry", Title: "Test again"},
 			{ID: "db-test-cancel", Title: "Cancel"},
 		})
@@ -1198,6 +1279,20 @@ func (m *Model) databaseSavePending(project bool) tea.Cmd {
 		}
 		c.Password = "${secret:db." + c.ID + "}"
 	}
+	if c.SSH != nil && (s.pendingSSH.password != "" || s.pendingSSH.passphrase != "") {
+		store := databaseSecretStore()
+		if store == nil {
+			return m.pushToastDetail(toast.Errr, "Secret store unavailable", "Could not open the password store.")
+		}
+		for kind, v := range map[string]string{"password": s.pendingSSH.password, "passphrase": s.pendingSSH.passphrase} {
+			if v == "" {
+				continue
+			}
+			if err := store.Set(dbSSHSecretName(c.ID, kind), v); err != nil {
+				return m.pushToastDetail(toast.Errr, "Could not save the SSH secret", sanitizeDBText(err.Error()))
+			}
+		}
+	}
 	if err := writeDBConfig(path, all); err != nil {
 		return m.pushToastDetail(toast.Errr, "Cannot save connection", sanitizeDBText(err.Error()))
 	}
@@ -1213,6 +1308,7 @@ func (m *Model) databaseSavePending(project bool) tea.Cmd {
 	}
 	s.pendingConn = dbclient.Conn{}
 	s.pendingPassword = ""
+	s.pendingSSH = dbSSHSecrets{}
 	s.touch()
 	return nil
 }

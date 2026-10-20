@@ -401,6 +401,9 @@ func (m *Model) handleHTTPPickerSelect(id string) (tea.Cmd, bool) {
 	if cmd, ok := m.databaseConsolePicker(id); ok {
 		return cmd, true
 	}
+	if cmd, ok := m.databaseSSHPicker(id); ok {
+		return cmd, true
+	}
 	s := m.httpS()
 	switch m.pickerKind {
 	case pickerKindDBSave:
@@ -413,10 +416,15 @@ func (m *Model) handleHTTPPickerSelect(id string) (tea.Cmd, bool) {
 			return m.databasePromptPasswordForPending(), true
 		case "db-test-retry":
 			return m.databaseRetestPending(), true
+		case "db-test-ssh":
+			return m.databaseSSHStart(""), true
+		case "db-test-ssl":
+			return m.databaseSSLStart(""), true
 		case "db-test-cancel":
 			if m.databases != nil {
 				m.databases.pendingConn = dbclient.Conn{}
 				m.databases.pendingPassword = ""
+				m.databases.pendingSSH = dbSSHSecrets{}
 			}
 			return nil, true
 		}
@@ -558,6 +566,9 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if cmd, ok := m.databaseRedisPrompt(m.promptKind, value); ok {
+		return cmd, true
+	}
+	if cmd, ok := m.databaseSSHPrompt(m.promptKind, value); ok {
 		return cmd, true
 	}
 	if m.promptKind == promptKindDBEditCell {

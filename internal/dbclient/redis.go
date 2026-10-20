@@ -3,12 +3,10 @@ package dbclient
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"net"
 	"net/url"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -99,29 +97,27 @@ func NewRedisSession(ctx context.Context, c Conn, password string, dial RedisDia
 	return s, nil
 }
 
+// tlsConfig is the TLS config of the session (nil: plain TCP). An "ssl"
+// object decides (tls.go); otherwise "tls": true or rediss:// verify the
+// server against the system roots.
 func (s *RedisSession) tlsConfig() (*tls.Config, error) {
-	cfg := &tls.Config{ServerName: s.target.host, MinVersion: tls.VersionTLS12}
 	if ssl := s.cfg.SSL; ssl != nil {
-		if ssl.CA != "" {
-			pem, err := os.ReadFile(ssl.CA)
-			if err != nil {
-				return nil, fmt.Errorf("could not read the CA file: %w", err)
-			}
-			pool := x509.NewCertPool()
-			if !pool.AppendCertsFromPEM(pem) {
-				return nil, errors.New("the CA file holds no certificate")
-			}
-			cfg.RootCAs = pool
+		mode, err := EffectiveSSLMode(ssl)
+		if err != nil {
+			return nil, err
 		}
-		if ssl.Cert != "" || ssl.Key != "" {
-			cert, err := tls.LoadX509KeyPair(ssl.Cert, ssl.Key)
-			if err != nil {
-				return nil, fmt.Errorf("could not read the client certificate: %w", err)
+		if mode == SSLDisable {
+			if s.target.tls {
+				return nil, errors.New("the connection asks for TLS (rediss:// or \"tls\": true) but its ssl mode is disable")
 			}
-			cfg.Certificates = []tls.Certificate{cert}
+			return nil, nil
 		}
+		return TLSConfig(ssl, s.target.host)
 	}
-	return cfg, nil
+	if !s.target.tls {
+		return nil, nil
+	}
+	return &tls.Config{ServerName: s.target.host, MinVersion: tls.VersionTLS12}, nil
 }
 
 // connect dials a new connection (the caller holds mu or owns s).
@@ -131,6 +127,9 @@ func (s *RedisSession) connect(ctx context.Context) error {
 		s.conn = nil
 	}
 	dial := s.dial
+	if dial == nil && s.cfg.Dial != nil {
+		dial = RedisDialFunc(s.cfg.Dial)
+	}
 	if dial == nil {
 		d := &net.Dialer{Timeout: 10 * time.Second, KeepAlive: -1}
 		dial = d.DialContext
@@ -142,11 +141,11 @@ func (s *RedisSession) connect(ctx context.Context) error {
 			opts = append(opts, redis.DialUsername(s.target.user))
 		}
 	}
-	if s.target.tls {
-		cfg, err := s.tlsConfig()
-		if err != nil {
-			return err
-		}
+	cfg, err := s.tlsConfig()
+	if err != nil {
+		return err
+	}
+	if cfg != nil {
 		opts = append(opts, redis.DialUseTLS(true), redis.DialTLSConfig(cfg))
 	}
 	conn, err := redis.DialContext(ctx, "tcp", s.target.addr, opts...)

@@ -253,6 +253,9 @@ type dbAISnapshot struct {
 	password string
 	hasPW    bool
 	user     dbclient.Session
+	// dial is the open SSH tunnel of the connection (nil: none). The AI
+	// rides the user's tunnel; it never opens one or sees its secrets.
+	dial dbclient.DialFunc
 }
 
 func dbAITake(ctx context.Context, call aiIDECaller, id string) dbAISnapshot {
@@ -266,6 +269,9 @@ func dbAITake(ctx context.Context, call aiIDECaller, id string) dbAISnapshot {
 		}
 		snap.password, snap.hasPW = m.databases.passwords[id]
 		snap.user = m.databases.sessions[id]
+		if c, ok := m.databases.connection(id); ok && c.SSH != nil {
+			snap.dial, _ = m.databases.dbDialFor(c)
+		}
 		return "", nil, nil
 	})
 	return snap
@@ -283,6 +289,10 @@ func dbAIOpen(ctx context.Context, root string, c dbclient.Conn, snap *dbAISnaps
 			c.ReadOnly = true // a sqlite3 -readonly sidecar
 		}
 		return dbclient.NewSQLiteSession(ctx, c)
+	}
+	c, err := dbAIRoute(root, c, snap)
+	if err != nil {
+		return nil, err
 	}
 	if readOnly && snap.user != nil {
 		// A read-only clone of the user's session: its own pool, never the
@@ -311,6 +321,21 @@ func dbAIOpen(ctx context.Context, root string, c dbclient.Conn, snap *dbAISnaps
 		return nil, err
 	}
 	return ro, nil
+}
+
+// dbAIRoute resolves c's file paths and sends it through the user's open
+// SSH tunnel; with a tunnel configured but not open the AI is told to
+// ask the user to connect.
+func dbAIRoute(root string, c dbclient.Conn, snap *dbAISnapshot) (dbclient.Conn, error) {
+	c = dbResolveConnPaths(c, root, dbSSHHome())
+	if c.SSH == nil {
+		return c, nil
+	}
+	if snap.dial == nil {
+		return c, errors.New("connection " + c.ID + " goes through an SSH tunnel that is not open; ask the user to connect it in the Databases view")
+	}
+	c.Dial = snap.dial
+	return c, nil
 }
 
 // dbAITargetDatabase points c at another database (PostgreSQL); the

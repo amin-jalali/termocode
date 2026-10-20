@@ -86,7 +86,22 @@ func MergeConfig(project, user []Conn) []Conn {
 	return out
 }
 func ConfigTemplate() string {
-	return "{\n  // Database connections. Keep passwords in the secret store.\n  \"connections\": []\n}\n"
+	return `{
+  // Database connections. Keep passwords in the secret store (p on a row).
+  //
+  // An SSH tunnel and SSL go on a connection, for example:
+  //   "ssh": { "host": "bastion.example.com", "user": "deploy", "auth": "agent" },
+  //   "ssl": { "mode": "verify-full", "ca": "~/.certs/db-ca.pem" }
+  //
+  // ssh.host may be a ~/.ssh/config alias (HostName, Port, User and
+  // IdentityFile are read from it; ProxyJump is not supported yet).
+  // ssh.auth: "agent" | "key" (with "keyFile") | "password". The key
+  // passphrase and the SSH password stay in the secret store.
+  // ssl.mode: "disable" | "require" | "verify-ca" | "verify-full" (the
+  // default); "cert" and "key" add a client certificate.
+  "connections": []
+}
+`
 }
 func Validate(c Conn) error {
 	if c.ID == "" || !idPattern.MatchString(c.ID) {

@@ -32,6 +32,9 @@ type Conn struct {
 	Source      string            `json:"-"`
 	Problem     string            `json:"-"`
 	Warning     string            `json:"-"`
+	// Dial is the SSH tunnel's dialer, set by the app on connect (nil:
+	// plain TCP). Never saved.
+	Dial DialFunc `json:"-"`
 }
 
 type SSHConfig struct {

@@ -226,6 +226,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		if m.pickerKind == pickerKindDBSave && m.databases != nil {
 			m.databases.pendingConn = dbclient.Conn{}
 			m.databases.pendingPassword = ""
+			m.databases.pendingSSH = dbSSHSecrets{}
 		}
 		m.endThemePreview(false)
 		if m.pickerKind == pickerKindTheme {

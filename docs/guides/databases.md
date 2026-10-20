@@ -16,6 +16,24 @@ Passwords are stored through the secret store. A password pasted in a URL is rem
 
 SQLite uses the installed `sqlite3` command. It needs version 3.33 or newer. If it is missing, the view displays an install command for the current platform.
 
+## SSH tunnels and SSL
+
+A connection can go through one SSH server (a bastion). Run **Databases: Add SSH Tunnel…** on a row, or choose **Use an SSH tunnel…** after a failed test while adding a connection. The prompts ask for the SSH server, port, user and how to log in: `ssh-agent`, a key file, or a password. The tunnel runs inside termocode; it opens no local port. The database host is resolved by the SSH server, so names that only exist behind the bastion work.
+
+```jsonc
+"ssh": { "host": "bastion.example.com", "user": "deploy", "auth": "agent" },
+"ssl": { "mode": "verify-full", "ca": "~/.certs/staging-ca.pem" }
+```
+
+- `ssh.host` may be an alias from `~/.ssh/config`. termocode reads `HostName`, `Port`, `User` and `IdentityFile` for it; values in the connection win. `ProxyJump` and `ProxyCommand` are not supported yet: the row says so.
+- `ssh.auth` is `agent` (keys in your agent), `key` (with `keyFile`) or `password`. The key passphrase and the SSH password are kept in the secret store as `db.<id>.sshkey` and `db.<id>.ssh`, never in a file. A key file that other users can read is refused; run `chmod 600` on it.
+- Host keys are checked against `~/.ssh/known_hosts` (or `knownHosts`). An unknown server shows a card with its `SHA256:` fingerprint: **Trust and save to known_hosts** adds it, **Cancel** stops. A server whose key changed is refused with no way around it; check with your admin.
+- The tunnel opens with the connection and closes when you disconnect, leave the view, refresh or quit. There is no keepalive: a dropped tunnel shows `SSH tunnel closed · R reconnect` on the next query.
+
+**Databases: SSL Settings…** sets `ssl.mode`: `disable`, `require` (encrypted, server not checked), `verify-ca` (the certificate must come from the CA) or `verify-full` (CA and host name, the default). A CA file is optional (the system's CAs are used without one); `cert` and `key` add a client certificate, and the key file must be readable only by you. When SSL is required there is no plain-text retry. `~` in a path is your home; a relative path is in the workspace.
+
+Press `T` on a row (or run **Databases: Test Connection**) to test it through its tunnel and SSL without touching an open session. Rows show `ssh` and `ssl` tags after the driver.
+
 ## Suggestions
 
 SQLite files ending in `.db`, `.sqlite`, or `.sqlite3` are suggested from the workspace root and nearby folders. A connection URL in `.env` can also be surfaced as a suggestion; the value itself is not shown, and the saved connection uses a `${dotenv:NAME}` reference. Press `a` to add a suggestion or `x` to hide it.

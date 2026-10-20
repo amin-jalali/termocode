@@ -269,6 +269,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-disconnect":                aiDestructive(),
 	"db-test-connection":           aiAuto(),
 	"db-add":                       aiNever(aiNoAIConfig),
+	"db-add-tunnel":                aiNever(aiNoAIConfig),
+	"db-ssl":                       aiNever(aiNoAIConfig),
 	"db-configure":                 aiDestructive(),
 	"db-data":                      aiNever("Table rows are read with the database tools"),
 	"db-select":                    aiNever("SQL runs require the database query tool and its guard"),

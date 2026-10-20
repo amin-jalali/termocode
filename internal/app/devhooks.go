@@ -52,7 +52,7 @@ import (
 //	svcdemo[:down|empty]   show the Services view with a canned snapshot
 //	                       (no docker; the shots and goldens)
 //	contdemo[:down|noengine|menu] show the Containers view with a canned host snapshot
-//	dbdemo[:empty|no-sqlite|result|messages|error|table|transposed|describe|ddl|edits|submit|plan|plan-card|redis|redis-key]   show a canned Databases tree or result page (no connection)
+//	dbdemo[:empty|no-sqlite|result|messages|error|table|transposed|describe|ddl|edits|submit|plan|plan-card|redis|redis-key|ssh-host|ssh-form|ssl-form]   show a canned Databases tree or result page (no connection)
 //	httpdemo:<variant>     docs/users.http and a canned HTTP answer:
 //	                       file, response, headers or tls (no network)
 //	helpdemo               open the in-app guide at the chat panel section
@@ -98,6 +98,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 			return m.databaseResultDemo(arg)
 		case "redis-key":
 			return m.databaseRedisKeyDemo()
+		case "ssh-host", "ssh-form", "ssl-form":
+			return m.databaseSSHDemo(arg)
 		case "redis":
 			m.databaseRedisDemo()
 		default:

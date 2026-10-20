@@ -137,6 +137,10 @@ func redisAITarget(c dbclient.Conn) string {
 
 // redisAIOpen opens the AI's own session: read-only for reads.
 func redisAIOpen(ctx context.Context, root string, c dbclient.Conn, snap *dbAISnapshot, readOnly bool) (dbRedis, error) {
+	c, err := dbAIRoute(root, c, snap)
+	if err != nil {
+		return nil, err
+	}
 	if !snap.hasPW {
 		pw, err := dbAIPassword(root, c)
 		if err != nil {

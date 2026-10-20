@@ -2,13 +2,16 @@ package dbclient
 
 import (
 	"context"
+	"crypto/tls"
 	"database/sql"
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
@@ -21,6 +24,8 @@ type SQLSession struct {
 	db       *sql.DB
 	ownsDB   bool
 	newDB    func() (*sql.DB, error)
+	openDB   func() (*sql.DB, func(), error)
+	release  func() // undoes the MySQL dial registration
 	dialect  Dialect
 	name     string
 	conn     Conn
@@ -38,51 +43,29 @@ type SQLSession struct {
 func NewSQLSession(ctx context.Context, conn Conn, password string) (*SQLSession, error) {
 	driver := normDriver(conn.Driver)
 	var dialect Dialect
-	var db *sql.DB
-	var err error
 	switch driver {
 	case "postgres":
-		cfg, parseErr := pgx.ParseConfig(conn.DSN(password))
-		if parseErr != nil {
-			return nil, fmt.Errorf("invalid PostgreSQL connection settings: %s", Redact(parseErr.Error()))
-		}
-		db = stdlib.OpenDB(*cfg)
 		dialect = PostgresDialect{}
 	case "mysql":
-		cfg := mysql.NewConfig()
-		if conn.URL != "" {
-			parsed, parseErr := ParseURL(conn.URL)
-			if parseErr != nil {
-				return nil, fmt.Errorf("invalid MySQL connection settings: %s", Redact(parseErr.Error()))
-			}
-			conn.Host, conn.Port, conn.User, conn.Database = parsed.Host, parsed.Port, parsed.User, parsed.Database
-			if len(conn.Params) == 0 {
-				conn.Params = parsed.Params
-			}
-		}
-		cfg.User, cfg.Passwd, cfg.DBName = conn.User, password, conn.Database
-		cfg.Net = "tcp"
-		cfg.Addr = netJoinHostPort(conn.Host, conn.Port)
-		cfg.ParseTime = true
-		cfg.Params = conn.Params
-		db, err = sql.Open("mysql", cfg.FormatDSN())
 		dialect = MySQLDialect{}
 	default:
 		return nil, fmt.Errorf("unsupported SQL driver %q", conn.Driver)
 	}
+	db, release, err := openSQLDB(conn, password)
 	if err != nil {
-		return nil, fmt.Errorf("could not open database: %s", Redact(err.Error()))
+		return nil, err
 	}
 	db.SetMaxOpenConns(2)
 	db.SetMaxIdleConns(2)
 	db.SetConnMaxIdleTime(0)
 	db.SetConnMaxLifetime(0)
 	s := newSQLSession(db, dialect, driver, conn, false)
-	s.newDB = func() (*sql.DB, error) { return openSQLDB(conn, password) }
+	s.openDB = func() (*sql.DB, func(), error) { return openSQLDB(conn, password) }
+	s.release = release
 	s.ownsDB = true
 	s.password = password
 	if err := s.Ping(ctx); err != nil {
-		_ = db.Close()
+		_ = s.Close()
 		return nil, err
 	}
 	if driver == "mysql" {
@@ -116,21 +99,38 @@ func newSQLSession(db *sql.DB, dialect Dialect, name string, conn Conn, readonly
 	return &SQLSession{db: db, dialect: dialect, name: name, conn: conn, readonly: readonly}
 }
 
-func openSQLDB(conn Conn, password string) (*sql.DB, error) {
-	driver := normDriver(conn.Driver)
-	switch driver {
+// openSQLDB opens a pool for conn: TLS from conn.SSL (tls.go), the dial
+// hook from conn.Dial (the SSH tunnel). release undoes the MySQL dial
+// registration; call it after db.Close.
+func openSQLDB(conn Conn, password string) (*sql.DB, func(), error) {
+	noop := func() {}
+	switch normDriver(conn.Driver) {
 	case "postgres":
-		cfg, err := pgx.ParseConfig(conn.DSN(password))
+		cfg, err := pgx.ParseConfig(pgDSN(conn, password))
 		if err != nil {
-			return nil, err
+			return nil, noop, fmt.Errorf("invalid PostgreSQL connection settings: %s", Redact(err.Error()))
 		}
-		return stdlib.OpenDB(*cfg), nil
+		if conn.SSL != nil {
+			tlsCfg, err := TLSConfig(conn.SSL, cfg.Host)
+			if err != nil {
+				return nil, noop, err
+			}
+			cfg.TLSConfig = tlsCfg
+			cfg.Fallbacks = nil // no plaintext retry
+		}
+		if conn.Dial != nil {
+			dial := conn.Dial
+			cfg.DialFunc = func(ctx context.Context, network, addr string) (net.Conn, error) { return dial(ctx, network, addr) }
+			// The database host is resolved by the SSH server, not here.
+			cfg.LookupFunc = func(_ context.Context, host string) ([]string, error) { return []string{host}, nil }
+		}
+		return stdlib.OpenDB(*cfg), noop, nil
 	case "mysql":
 		cfg := mysql.NewConfig()
 		if conn.URL != "" {
 			parsed, err := ParseURL(conn.URL)
 			if err != nil {
-				return nil, err
+				return nil, noop, fmt.Errorf("invalid MySQL connection settings: %s", Redact(err.Error()))
 			}
 			conn.Host, conn.Port, conn.User, conn.Database = parsed.Host, parsed.Port, parsed.User, parsed.Database
 			if len(conn.Params) == 0 {
@@ -138,11 +138,100 @@ func openSQLDB(conn Conn, password string) (*sql.DB, error) {
 			}
 		}
 		cfg.User, cfg.Passwd, cfg.DBName = conn.User, password, conn.Database
-		cfg.Net, cfg.Addr, cfg.ParseTime, cfg.Params = "tcp", netJoinHostPort(conn.Host, conn.Port), true, conn.Params
-		return sql.Open("mysql", cfg.FormatDSN())
+		cfg.Net, cfg.Addr, cfg.ParseTime = "tcp", netJoinHostPort(conn.Host, conn.Port), true
+		params := map[string]string{}
+		tlsParam := ""
+		for k, v := range conn.Params {
+			if strings.EqualFold(k, "tls") {
+				tlsParam = v
+				continue
+			}
+			params[k] = v
+		}
+		if len(params) > 0 {
+			cfg.Params = params
+		}
+		if conn.SSL != nil {
+			tlsCfg, err := TLSConfig(conn.SSL, conn.Host)
+			if err != nil {
+				return nil, noop, err
+			}
+			cfg.TLS = tlsCfg
+		} else if tlsParam != "" {
+			switch strings.ToLower(tlsParam) {
+			case "true", "verify-full":
+				cfg.TLS = &tls.Config{ServerName: conn.Host, MinVersion: tls.VersionTLS12}
+			case "skip-verify", "require":
+				cfg.TLS = &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS12}
+			case "preferred":
+				cfg.TLS = &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS12}
+				cfg.AllowFallbackToPlaintext = true
+			case "false", "disable":
+			default:
+				return nil, noop, fmt.Errorf("unknown MySQL tls value %q", sanitizeLine(tlsParam))
+			}
+		}
+		release := noop
+		if conn.Dial != nil {
+			cfg.Net, release = registerMySQLDial(conn.Dial)
+		}
+		connector, err := mysql.NewConnector(cfg)
+		if err != nil {
+			release()
+			return nil, noop, fmt.Errorf("invalid MySQL connection settings: %s", Redact(err.Error()))
+		}
+		return sql.OpenDB(connector), release, nil
 	default:
-		return nil, fmt.Errorf("unsupported SQL driver %q", conn.Driver)
+		return nil, noop, fmt.Errorf("unsupported SQL driver %q", conn.Driver)
 	}
+}
+
+var mysqlDialSeq atomic.Uint64
+
+// registerMySQLDial gives d a network name of its own (the driver keeps
+// dial hooks in a global table).
+func registerMySQLDial(d DialFunc) (string, func()) {
+	name := "tc-tunnel-" + strconv.FormatUint(mysqlDialSeq.Add(1), 10)
+	mysql.RegisterDialContext(name, func(ctx context.Context, addr string) (net.Conn, error) { return d(ctx, "tcp", addr) })
+	var once sync.Once
+	return name, func() { once.Do(func() { mysql.DeregisterDialContext(name) }) }
+}
+
+// pgDSN is conn's PostgreSQL URL with its params; with an "ssl" object the
+// ssl* params are dropped (tls.go builds the TLS config).
+func pgDSN(conn Conn, password string) string {
+	dsn := conn.DSN(password)
+	u, err := url.Parse(dsn)
+	if err != nil {
+		return dsn
+	}
+	q := u.Query()
+	if conn.URL == "" {
+		for k, v := range conn.Params {
+			q.Set(k, v)
+		}
+	}
+	if conn.SSL != nil {
+		for _, k := range []string{"sslmode", "sslrootcert", "sslcert", "sslkey", "sslpassword", "sslnegotiation"} {
+			q.Del(k)
+		}
+		q.Set("sslmode", "disable") // replaced by the TLS config
+	}
+	u.RawQuery = q.Encode()
+	return u.String()
+}
+
+// openClone opens another pool on the same settings (the AI's read-only
+// session, the MySQL KILL connection).
+func (s *SQLSession) openClone() (*sql.DB, func(), error) {
+	if s.openDB != nil {
+		return s.openDB()
+	}
+	if s.newDB != nil {
+		db, err := s.newDB()
+		return db, func() {}, err
+	}
+	return nil, nil, errors.New("read-only database pool is unavailable")
 }
 
 func (s *SQLSession) Ping(ctx context.Context) error {
@@ -159,10 +248,7 @@ func (s *SQLSession) ReadOnlySession() (Session, error) {
 	if closed {
 		return nil, errors.New("database session is closed")
 	}
-	if s.newDB == nil {
-		return nil, errors.New("read-only database pool is unavailable")
-	}
-	db, err := s.newDB()
+	db, release, err := s.openClone()
 	if err != nil {
 		return nil, safeSQLError(err)
 	}
@@ -173,6 +259,8 @@ func (s *SQLSession) ReadOnlySession() (Session, error) {
 	clone := newSQLSession(db, s.dialect, s.name, s.conn, true)
 	clone.ownsDB = true
 	clone.newDB = s.newDB
+	clone.openDB = s.openDB
+	clone.release = release
 	clone.password = s.password
 	clone.mariadb = s.mariadb
 	return clone, nil
@@ -401,13 +489,11 @@ func isNativeMySQLDB(db *sql.DB) bool {
 }
 
 func (s *SQLSession) killMySQLQuery(connectionID uint64) {
-	if s.newDB == nil {
-		return
-	}
-	db, err := s.newDB()
+	db, release, err := s.openClone()
 	if err != nil {
 		return
 	}
+	defer release()
 	defer db.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -588,10 +674,14 @@ func (s *SQLSession) Close() error {
 	if conn != nil {
 		_ = conn.Close()
 	}
+	var err error
 	if s.ownsDB {
-		return s.db.Close()
+		err = s.db.Close()
 	}
-	return nil
+	if s.release != nil {
+		s.release()
+	}
+	return err
 }
 
 func (s *SQLSession) Introspect(ctx context.Context, req IntrospectionRequest) (IntrospectionResult, error) {
