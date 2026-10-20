@@ -141,6 +141,18 @@ func TestDBCompletionFromTheTreeWithRealKeys(t *testing.T) {
 	if !d.WaitFor(func() bool { return strings.Contains(dbBufName(t, d), "consoles") }, 2*time.Second) {
 		t.Fatalf("console did not open: %s", dbBufName(t, d))
 	}
+	// Go pushes the schema to the console buffer a moment after it opens
+	// (a 150 ms debounce plus a round trip). The auto-trigger fires only
+	// once per typed burst, so typing before the push lands gives a popup
+	// built from an empty schema that nothing re-opens. Wait for the push.
+	if !d.WaitFor(func() bool {
+		return strings.Contains(dbLua(t, d, `local s=_G._termocode_sql.schema[vim.api.nvim_get_current_buf()]
+local out={}
+for _,t in ipairs(s and s.tables or {}) do out[#out+1]=t.n end
+return table.concat(out,' ')`), "users")
+	}, 5*time.Second) {
+		t.Fatal("the schema never reached the console buffer")
+	}
 	d.Key("G", "o")
 	d.Type("SELECT * FROM us")
 	// The auto-trigger opens the popup by itself.

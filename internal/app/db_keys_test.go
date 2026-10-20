@@ -162,10 +162,17 @@ func TestPerfGuardDatabasesHiddenWithRealKeys(t *testing.T) {
 	before, _ := d.Updates()
 	goroutines := runtime.NumGoroutine()
 	d.WaitFor(func() bool { return false }, 500*time.Millisecond)
-	after, recent := d.Updates()
+	// The git status poll is unrelated to Databases and may fire under
+	// load; any other message while hidden is a regression.
+	var stray []string
+	for _, msg := range d.UpdatesSince(before) {
+		if msg != "app.gitAutoRefreshMsg" && msg != "app.GitMsg" {
+			stray = append(stray, msg)
+		}
+	}
 	_, sessions := d.Model().DatabaseStateForTest()
 	closed, introspections := sess.counts()
-	if calls != 1 || closed != 1 || introspections != 1 || sessions != 0 || after != before || runtime.NumGoroutine() > goroutines {
-		t.Fatalf("hidden idle: calls=%d sessions=%d updates=%d -> %d recent=%v", calls, sessions, before, after, recent)
+	if calls != 1 || closed != 1 || introspections != 1 || sessions != 0 || len(stray) != 0 || runtime.NumGoroutine() > goroutines {
+		t.Fatalf("hidden idle: calls=%d sessions=%d closed=%d introspections=%d stray=%v goroutines=%d -> %d", calls, sessions, closed, introspections, stray, goroutines, runtime.NumGoroutine())
 	}
 }

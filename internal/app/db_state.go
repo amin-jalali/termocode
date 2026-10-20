@@ -328,7 +328,12 @@ func (s *dbState) findSuggestions() {
 	known := map[string]bool{}
 	for _, c := range s.conns {
 		if c.Path != "" {
-			known[filepath.Clean(c.Path)] = true
+			// A relative path is relative to the workspace, as on connect.
+			if !filepath.IsAbs(c.Path) {
+				known[filepath.Clean(filepath.Join(s.root, c.Path))] = true
+			} else {
+				known[filepath.Clean(c.Path)] = true
+			}
 		}
 	}
 	_ = filepath.WalkDir(s.root, func(path string, d os.DirEntry, err error) error {
