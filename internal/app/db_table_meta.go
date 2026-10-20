@@ -22,6 +22,7 @@ type dbTableMeta struct {
 	ir       dbclient.IntrospectionResult
 	triggers [][3]string // name, timing, events
 	viewDef  string
+	checks   [][2]string // CHECK constraints: name, clause
 }
 
 func dbSQLString(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
@@ -95,6 +96,21 @@ func dbLoadTableMeta(ctx context.Context, sess dbclient.Session, t dbTable, req 
 			return meta, err
 		}
 		meta.triggers = dbInfoTriggers(r)
+		if !t.view {
+			// MySQL 8.0.16+ and MariaDB 10.2+; an older server has no such
+			// table, so any error here is skipped quietly.
+			cq := `SELECT tc.constraint_name, cc.check_clause FROM information_schema.check_constraints cc JOIN information_schema.table_constraints tc ON tc.constraint_schema = cc.constraint_schema AND tc.constraint_name = cc.constraint_name WHERE tc.table_schema = ? AND tc.table_name = ? AND tc.constraint_type = 'CHECK' ORDER BY tc.constraint_name`
+			if t.schema == "" {
+				cq = strings.Replace(cq, "tc.table_schema = ?", "tc.table_schema = DATABASE()", 1)
+			}
+			if r, err = run(cq, args...); err == nil {
+				for _, row := range r.Rows {
+					if len(row) >= 2 {
+						meta.checks = append(meta.checks, [2]string{sanitizeDBText(row[0].Text), sanitizeDBText(row[1].Text)})
+					}
+				}
+			}
+		}
 	case dbclient.SQLiteDialect:
 		d := dbclient.SQLiteDialect{}
 		pragma := "PRAGMA "
@@ -242,6 +258,9 @@ func dbDescribeResult(t dbTable, meta dbTableMeta) dbclient.Result {
 			cols, refs = append(cols, fk.Column), append(refs, fk.RefColumn)
 		}
 		add("Foreign key", group[0].Name, "", dbColumnsText(cols)+" → "+sanitizeDBText(group[0].RefTable)+" "+dbColumnsText(refs))
+	}
+	for _, ck := range meta.checks {
+		add("Check", ck[0], "", ck[1])
 	}
 	for _, tr := range meta.triggers {
 		add("Trigger", tr[0], "", strings.TrimSpace(tr[1]+" "+tr[2]))

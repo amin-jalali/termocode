@@ -218,6 +218,7 @@ func (m *Model) databaseExportStart() tea.Cmd {
 func (m *Model) dbExportTableSQL(tv *dbTableView) (string, error) {
 	c := *tv
 	c.offset = 0
+	c.rowid = "" // the hidden row key is not data
 	return c.selectSQL(0)
 }
 

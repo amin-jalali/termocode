@@ -303,3 +303,54 @@ func TestRedisValuePagePagesAndTheSendKeyReloads(t *testing.T) {
 		t.Fatalf("a reload asked a card:\n%s", ansi.Strip(d.Frame()))
 	}
 }
+
+func openDB0(t *testing.T, d *testkit.Driver) {
+	t.Helper()
+	d.Key("enter") // connect: databases
+	waitFrame(t, d, "db0", "db3")
+	d.Key("down", "enter") // db0: namespaces and keys
+	waitFrame(t, d, "session:", "user:", "counter")
+}
+
+func TestRedisDeleteNamespaceAsksWithCountAndSampleThenUnlinks(t *testing.T) {
+	f := redisSeed()
+	d := redisDriver(t, 100, 30, f, nil)
+	openDB0(t, d)
+	d.Key("down", "down") // session:, user:
+	d.Key("D")
+	waitFrame(t, d, "Delete 2 keys from cache?", "user:1", "user:2:events", "UNLINK", "cannot be undone")
+	if f.Sent("UNLINK") || f.Sent("DEL") || f.Sent("KEYS") {
+		t.Fatalf("a delete or KEYS was sent before the card was answered: %q", f.Commands())
+	}
+	d.Key("esc")
+	d.Settle(200 * time.Millisecond)
+	if !f.Exists(0, "user:1") || !f.Exists(0, "user:2:events") {
+		t.Fatal("Esc deleted keys")
+	}
+	d.Key("D")
+	waitFrame(t, d, "Delete 2 keys from cache?")
+	d.Key("right", "enter")
+	if !d.WaitFor(func() bool { return !f.Exists(0, "user:1") && !f.Exists(0, "user:2:events") }, 3*time.Second) {
+		t.Fatalf("keys were not deleted: %q", f.Commands())
+	}
+	if !f.Exists(0, "session:cd34") || !f.Exists(0, "counter") || !f.Exists(3, "other") {
+		t.Fatal("keys outside the namespace were deleted")
+	}
+	if !f.Sent("UNLINK") || f.Sent("DEL") || f.Sent("KEYS") {
+		t.Fatalf("wrong commands: %q", f.Commands())
+	}
+	waitFrame(t, d, "Deleted 2 keys")
+}
+
+func TestRedisDeleteNamespaceOnProductionSaysProduction(t *testing.T) {
+	f := redisSeed()
+	d := redisDriver(t, 100, 30, f, nil)
+	d.Key("down") // prod-cache
+	waitFrame(t, d, "prod-cache")
+	openDB0(t, d)
+	d.Key("down", "down", "D")
+	waitFrame(t, d, "Write to production (prod-cache)?", "user:1")
+	if f.Sent("UNLINK") {
+		t.Fatal("deleted before the card was answered")
+	}
+}

@@ -30,6 +30,8 @@ type FakeRedis struct {
 	conns    []net.Conn
 	closed   bool
 	hang     bool
+	// NoUnlink makes UNLINK an unknown command, like a Redis before 4.0.
+	NoUnlink bool
 	// TLS makes the server speak TLS (rediss://) with this config.
 	TLS *tls.Config
 }
@@ -344,6 +346,9 @@ func (f *FakeRedis) exec(st *fakeConn, args []string) any {
 	a := args[1:]
 	if f.Password != "" && !st.authed && cmd != "AUTH" && cmd != "HELLO" {
 		return redisErr("NOAUTH Authentication required.")
+	}
+	if cmd == "UNLINK" && f.NoUnlink {
+		return redisErr(fmt.Sprintf("ERR unknown command '%s', with args beginning with: ", args[0]))
 	}
 	arity := func(n int) bool { return len(a) >= n }
 	switch cmd {

@@ -180,3 +180,44 @@ func TestDBMetaSQLiteQuotesTheTableName(t *testing.T) {
 		t.Fatalf("queries: %v", sess.runs)
 	}
 }
+
+func TestDBDescribeListsMySQLCheckConstraints(t *testing.T) {
+	sess := &metaSession{rows: map[string][][]string{
+		"information_schema.columns":           {{"age", "int", "YES", "<null>"}},
+		"information_schema.check_constraints": {{"age_ok", "(`age` >= 0)"}},
+	}}
+	tbl := dbTable{driver: "mysql", schema: "app", name: "users"}
+	meta, err := dbLoadTableMeta(context.Background(), sess, tbl, dbclient.IntrospectionRequest{Schema: "app", Object: "users"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	res := dbDescribeResult(tbl, meta)
+	found := false
+	for _, row := range res.Rows {
+		if row[0].Text == "Check" && row[1].Text == "age_ok" && row[3].Text == "(`age` >= 0)" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("describe lacks the check constraint: %+v", res.Rows)
+	}
+}
+
+func TestDBSQLiteRowidName(t *testing.T) {
+	for _, c := range []struct {
+		cols []string
+		ddl  string
+		want string
+	}{
+		{[]string{"a"}, "CREATE TABLE t (a)", "rowid"},
+		{[]string{"a", "RowId"}, "CREATE TABLE t (a, RowId)", "_rowid_"},
+		{[]string{"rowid", "_rowid_", "oid"}, "CREATE TABLE t (rowid, _rowid_, oid)", ""},
+		{[]string{"a"}, "CREATE TABLE t (a) WITHOUT ROWID", ""},
+		{[]string{"a"}, "CREATE TABLE t (a) STRICT, WITHOUT ROWID", ""},
+		{[]string{"without_rowid"}, "CREATE TABLE t (without_rowid)", "rowid"},
+	} {
+		if got := dbSQLiteRowid(c.cols, c.ddl); got != c.want {
+			t.Errorf("dbSQLiteRowid(%v, %q) = %q, want %q", c.cols, c.ddl, got, c.want)
+		}
+	}
+}

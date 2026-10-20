@@ -505,6 +505,99 @@ type dbRedisWrite struct {
 	args    []string
 	deleted bool // DEL: the key leaves the tree and the page
 	reload  *dbRedisEdit
+	ns      *dbRedisNSDelete // delete namespace: every key under a prefix
+}
+
+// dbRedisNSDelete is a namespace delete: the keys the SCAN found under the
+// prefix (shown on the card, deleted in batches).
+type dbRedisNSDelete struct {
+	path   string // the tree row of the namespace
+	prefix string
+	keys   []string
+	more   bool // the scan stopped at db_redis_max_keys: more keys may remain
+}
+
+type dbRedisNSScanMsg struct {
+	conn   string
+	db     int
+	path   string
+	prefix string
+	keys   []string
+	more   bool
+	err    error
+}
+
+// dbRedisNSSample is how many keys the delete card lists.
+const dbRedisNSSample = 8
+
+// databaseRedisNSDelete scans the keys under a namespace (SCAN, never KEYS)
+// and then asks, with the count and a sample, before anything is deleted.
+func (m *Model) databaseRedisNSDelete(n dbNode, path string) tea.Cmd {
+	s := m.databases
+	sess, _ := s.sessions[n.conn].(dbRedis)
+	if sess == nil {
+		return m.databaseConnect(n.conn)
+	}
+	settings := loadDBConsoleSettings()
+	maxKeys, timeout := settings.redisMaxKeys(), settings.timeout()
+	conn, db, prefix := n.conn, n.rdb, n.key
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		keys, more, err := sess.ScanKeys(ctx, db, dbclient.RedisGlobEscape(prefix)+"*", maxKeys)
+		return dbRedisNSScanMsg{conn: conn, db: db, path: path, prefix: prefix, keys: keys, more: more, err: err}
+	}
+}
+
+func (m *Model) onDBRedisNSScan(msg dbRedisNSScanMsg) tea.Cmd {
+	if m.databases == nil {
+		return nil
+	}
+	if msg.err != nil {
+		return m.pushToastDetail(toast.Errr, "Could not read the keys", dbErrorText(msg.err))
+	}
+	if len(msg.keys) == 0 {
+		return m.pushToastDetail(toast.Info, "No keys to delete", "Nothing is stored under "+sanitizeDBText(dbclient.RedisDisplay(msg.prefix))+"*.")
+	}
+	c, ok := m.databases.connection(msg.conn)
+	if !ok {
+		return nil
+	}
+	w := &dbRedisWrite{conn: msg.conn, db: msg.db, key: msg.prefix, deleted: true, ns: &dbRedisNSDelete{path: msg.path, prefix: msg.prefix, keys: msg.keys, more: msg.more}}
+	m.dbConsole().redisWrite = w
+	count := dbRedisCount(int64(len(msg.keys)), msg.more)
+	var b strings.Builder
+	b.WriteString("Every key that starts with " + dbSafeMultiline(dbclient.RedisDisplay(msg.prefix)) + " (" + count + ").\n\n")
+	for i, k := range msg.keys {
+		if i == dbRedisNSSample {
+			b.WriteString("… and " + strconv.Itoa(len(msg.keys)-dbRedisNSSample) + " more\n")
+			break
+		}
+		b.WriteString(dbSafeMultiline(dbclient.RedisDisplay(k)) + "\n")
+	}
+	if msg.more {
+		b.WriteString("\nThe scan stopped at the key limit: more keys may remain. Run it again for the rest.\n")
+	}
+	b.WriteString("\nThey are removed with UNLINK in batches of " + strconv.Itoa(dbclient.RedisDeleteBatch) + ". This cannot be undone.")
+	if msg.db != redisConnDB(c) {
+		b.WriteString("\n\non database " + strconv.Itoa(msg.db))
+	}
+	name := sanitizeDBText(dbConnName(c))
+	title := "Delete " + count + " from " + name + "?"
+	switch {
+	case c.ReadOnly:
+		title = name + " is read-only. Run anyway?"
+	case c.Environment == "production":
+		title = "Write to production (" + name + ")?"
+	}
+	m.confirm = confirm.New(title, b.String(), []confirm.Button{
+		{ID: "cancel", Title: "Cancel"},
+		{ID: "run", Title: "Delete", Style: confirm.StyleDestructive},
+	}).WithScrollText()
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = confirmKindDBRedisWrite
+	return nil
 }
 
 type dbRedisWriteMsg struct {
@@ -841,6 +934,20 @@ func (m *Model) databaseRedisConfirm(id string) (tea.Cmd, bool) {
 		return m.pushToastDetail(toast.Warn, "Not connected", "Connect to "+sanitizeDBText(w.conn)+" first."), true
 	}
 	timeout := loadDBConsoleSettings().timeout()
+	if w.ns != nil {
+		keys := w.ns.keys
+		// Each batch is one command; the time limit is for one of them.
+		return func() tea.Msg {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			n, err := dbclient.RedisDeleteKeys(ctx, func(ctx context.Context, args []string) (any, error) {
+				cctx, ccancel := context.WithTimeout(ctx, timeout)
+				defer ccancel()
+				return sess.DoDB(cctx, w.db, args)
+			}, keys)
+			return dbRedisWriteMsg{w: w, reply: n, err: err}
+		}, true
+	}
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -854,6 +961,9 @@ func (m *Model) onDBRedisWrite(msg dbRedisWriteMsg) tea.Cmd {
 		return nil
 	}
 	w := msg.w
+	if w.ns != nil {
+		return m.onDBRedisNSDeleted(msg)
+	}
 	line := dbclient.FormatRedisCommand(w.args)
 	r := &dbRun{conn: w.conn, sql: line, by: "user"}
 	r.result = dbclient.RedisReplyResult(msg.reply, 10)
@@ -900,6 +1010,45 @@ func (m *Model) onDBRedisWrite(msg dbRedisWriteMsg) tea.Cmd {
 	return tea.Batch(hist, done)
 }
 
+// onDBRedisNSDeleted reports a namespace delete and drops the namespace's
+// rows from the tree (a partly failed delete says how far it got).
+func (m *Model) onDBRedisNSDeleted(msg dbRedisWriteMsg) tea.Cmd {
+	w := msg.w
+	n, _ := msg.reply.(int64)
+	line := "Delete " + dbclient.RedisDisplay(w.ns.prefix) + "* (" + strconv.FormatInt(n, 10) + " keys)"
+	r := &dbRun{conn: w.conn, sql: line, by: "user", result: dbclient.Result{Affected: n}}
+	hist := m.databaseAppendHistory(r)
+	s := m.databases
+	if n > 0 && !w.ns.more && msg.err == nil {
+		for p := range s.nodes {
+			if p == w.ns.path || strings.HasPrefix(p, w.ns.path+"/") {
+				delete(s.nodes, p)
+			}
+		}
+		if i := strings.LastIndex(w.ns.path, "/ns/"); i >= 0 {
+			if pn, ok := s.nodes[w.ns.path[:i]]; ok {
+				kept := pn.children[:0]
+				for _, ch := range pn.children {
+					if ch != w.ns.path {
+						kept = append(kept, ch)
+					}
+				}
+				pn.children = kept
+				s.nodes[w.ns.path[:i]] = pn
+			}
+		}
+		s.touch()
+	}
+	if msg.err != nil {
+		return tea.Batch(hist, m.pushToastDetail(toast.Errr, "Deleted "+strconv.FormatInt(n, 10)+" of "+strconv.Itoa(len(w.ns.keys))+" keys", dbErrorText(msg.err)))
+	}
+	detail := dbOneLine(dbclient.RedisDisplay(w.ns.prefix)) + "*"
+	if w.ns.more {
+		detail += ": more keys may remain; refresh and run it again."
+	}
+	return tea.Batch(hist, m.pushToastDetail(toast.Info, "Deleted "+strconv.FormatInt(n, 10)+" keys", detail))
+}
+
 // ── the sidebar ─────────────────────────────────────────────────────────
 
 // databaseRedisSidebarKey handles the keys on Redis rows. ok=false: the
@@ -927,6 +1076,9 @@ func (m *Model) databaseRedisSidebarKey(key string, row dbTreeRow) (tea.Cmd, boo
 			}
 			return m.databaseRedisAsk(&dbRedisWrite{conn: n.conn, db: n.rdb, key: n.key, args: dbclient.RedisDel(n.key), deleted: true}), true
 		}
+		if n.kind == dbNodeRedisNS {
+			return m.databaseRedisNSDelete(n, row.path), true
+		}
 		return nil, true
 	case "y":
 		if n.kind == dbNodeRedisKey || n.kind == dbNodeRedisNS {
@@ -937,7 +1089,7 @@ func (m *Model) databaseRedisSidebarKey(key string, row dbTreeRow) (tea.Cmd, boo
 	case "o", "d", "s", "#", "i":
 		return nil, true // table keys
 	case "?":
-		return m.pushToastDetail(toast.Info, "Redis keys", "j/k move · Enter connect, expand or open a key · n console · on a key: t TTL · D delete · y copy key · R refresh · / filter"), true
+		return m.pushToastDetail(toast.Info, "Redis keys", "j/k move · Enter connect, expand or open a key · n console · on a key: t TTL · D delete · on a namespace: D delete all its keys · y copy key · R refresh · / filter"), true
 	}
 	return nil, false
 }
@@ -952,7 +1104,7 @@ func (s *dbState) dbRedisFooter(n dbNode) string {
 		}
 		return strings.Join(parts, " · ") + " · Enter open · t ttl · D delete"
 	case dbNodeRedisNS:
-		return n.detail + " · Enter expand · y copy"
+		return n.detail + " · Enter expand · y copy · D delete all"
 	case dbNodeRedisMore:
 		return "db_redis_max_keys stops the scan"
 	case dbNodeDatabase:

@@ -420,6 +420,15 @@ LEFT JOIN information_schema.referential_constraints rc ON rc.constraint_schema 
 WHERE tc.table_schema = ? AND tc.constraint_type IN ('PRIMARY KEY', 'UNIQUE', 'FOREIGN KEY')
 ORDER BY kcu.table_name, kcu.constraint_name, kcu.ordinal_position`
 
+// myCanonChecks reads CHECK constraints (MySQL 8.0.16+, MariaDB 10.2+).
+// The columns are named so that MariaDB, whose table has a table_name column
+// of its own, and MySQL, which does not, both work through the join.
+const myCanonChecks = `SELECT tc.table_name, tc.constraint_name, cc.check_clause
+FROM information_schema.check_constraints cc
+JOIN information_schema.table_constraints tc ON tc.constraint_schema = cc.constraint_schema AND tc.constraint_name = cc.constraint_name
+WHERE tc.table_schema = ? AND tc.constraint_type = 'CHECK'
+ORDER BY tc.table_name, tc.constraint_name`
+
 const myCanonIndexes = `SELECT table_name, index_name, non_unique, column_name, index_type, sub_part
 FROM information_schema.statistics
 WHERE table_schema = ?
@@ -530,6 +539,16 @@ func (r *canonReader) readMySQL(schema string) error {
 			c.RefColumns = append(c.RefColumns, canonText(canonCell(row, 5)))
 		}
 	}
+	// Older servers have no CHECK_CONSTRAINTS table: skip quietly.
+	if rows, err = r.query(myCanonChecks, schema); err == nil {
+		for _, row := range rows {
+			t := r.known(canonText(canonCell(row, 0)))
+			if t == nil {
+				continue
+			}
+			t.Constraints = append(t.Constraints, CanonConstraint{Kind: "CHECK", Name: canonText(canonCell(row, 1)), Check: mysqlCheck(canonText(canonCell(row, 2)))})
+		}
+	}
 	if rows, err = r.query(myCanonIndexes, schema); err != nil {
 		return err
 	}
@@ -598,6 +617,44 @@ func (r *canonReader) readMySQL(schema string) error {
 		})
 	}
 	return nil
+}
+
+// mysqlCheck writes a CHECK clause as CHECK (…): MySQL reports the clause
+// with its own parentheses, MariaDB without.
+func mysqlCheck(clause string) string {
+	clause = strings.TrimSpace(clause)
+	if strings.HasPrefix(clause, "(") && strings.HasSuffix(clause, ")") && balancedOuter(clause) {
+		clause = clause[1 : len(clause)-1]
+	}
+	return "CHECK (" + clause + ")"
+}
+
+// balancedOuter reports whether the first "(" closes at the last character
+// (quotes are honoured).
+func balancedOuter(s string) bool {
+	depth := 0
+	var quote byte
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case quote != 0:
+			if c == '\\' && quote != '`' {
+				i++
+			} else if c == quote {
+				quote = 0
+			}
+		case c == '\'' || c == '"' || c == '`':
+			quote = c
+		case c == '(':
+			depth++
+		case c == ')':
+			depth--
+			if depth == 0 && i != len(s)-1 {
+				return false
+			}
+		}
+	}
+	return depth == 0
 }
 
 // mysqlRule is a foreign key rule; NO ACTION and RESTRICT are the same

@@ -204,6 +204,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onDBConnect(msg)
 	case dbRedisTreeMsg:
 		return m, m.onDBRedisTree(msg)
+	case dbRedisNSScanMsg:
+		return m, m.onDBRedisNSScan(msg)
 	case dbRedisWriteMsg:
 		return m, m.onDBRedisWrite(msg)
 	case dbIntrospectMsg:

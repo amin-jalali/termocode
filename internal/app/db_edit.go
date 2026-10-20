@@ -82,6 +82,7 @@ type dbEditTarget struct {
 	schema, table string
 	key           []int        // result columns of the key
 	editable      map[int]bool // result columns that are table columns
+	tv            *dbTableView // the data view whose hidden rowids are the row keys (key is then empty)
 }
 
 // dbEditPos is the row and column under the cursor: a loaded row (orig)
@@ -184,10 +185,13 @@ func (m *Model) databaseEditTarget(t *dbTab) (*dbEditTarget, tea.Cmd) {
 			return ro("read-only: a view", "Views are edited through their tables.")
 		}
 		key, why, detail := dbResolveKey(cols, tv.keys, tv.unique)
-		if why != "" {
+		if why != "" && tv.rowid == "" {
 			return ro(why, detail)
 		}
 		tg := &dbEditTarget{conn: tv.conn, driver: tv.driver, sessKey: tv.sessKey, schema: tv.schema, table: tv.name, key: key, editable: map[int]bool{}}
+		if tv.rowid != "" && len(key) == 0 {
+			tg.tv = tv
+		}
 		for i, col := range cols {
 			if dbColumnIndex(cols, col.Name) == i {
 				tg.editable[i] = true
@@ -570,6 +574,13 @@ func (m *Model) databaseEditStatements(t *dbTab) ([]dbclient.EditStatement, erro
 	res := t.run.result
 	keyOf := func(orig int) []dbclient.EditValue {
 		var out []dbclient.EditValue
+		if tg.tv != nil {
+			c := dbclient.Cell{Null: true}
+			if orig < len(tg.tv.rowids) && tg.tv.rowids[orig] != "" {
+				c = dbclient.Cell{Text: tg.tv.rowids[orig]}
+			}
+			return []dbclient.EditValue{{Column: tg.tv.rowid, Value: c}}
+		}
 		for _, k := range tg.key {
 			c := dbclient.Cell{Null: true}
 			if k < len(res.Rows[orig]) {

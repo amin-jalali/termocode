@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/dbclient"
@@ -56,7 +57,33 @@ type dbTableView struct {
 	unique   [][]string // unique indexes (a key for editing when there is no primary key)
 	cols     []string   // column names (the only valid ORDER BY targets)
 	size     int        // rows on a page, set when the view runs
+	rowid    string     // SQLite table without a key: the rowid name used as the hidden row key ("" none)
+	rowids   []string   // the rowid of each row of the page that loaded
 }
+
+// dbRowidAlias names the hidden rowid column of a data view's query.
+const dbRowidAlias = "_termocode_rowid"
+
+// dbSQLiteRowid is the name that reaches the rowid of a SQLite table, or ""
+// when there is none: WITHOUT ROWID tables have no rowid, and a column called
+// rowid, _rowid_ or oid hides the name of the same spelling.
+func dbSQLiteRowid(cols []string, ddl string) string {
+	if i := strings.LastIndex(ddl, ")"); i >= 0 && dbWithoutRowid.MatchString(ddl[i:]) {
+		return ""
+	}
+next:
+	for _, name := range []string{"rowid", "_rowid_", "oid"} {
+		for _, c := range cols {
+			if strings.EqualFold(c, name) {
+				continue next
+			}
+		}
+		return name
+	}
+	return ""
+}
+
+var dbWithoutRowid = regexp.MustCompile(`(?i)\bWITHOUT\s+ROWID\b`)
 
 func newDBTableView(t dbTable) *dbTableView { return &dbTableView{dbTable: t, total: -1} }
 
@@ -70,7 +97,11 @@ func (tv *dbTableView) selectSQL(limit int) (string, error) {
 		return "", err
 	}
 	var b strings.Builder
-	b.WriteString("SELECT * FROM " + tv.qualified())
+	if tv.rowid != "" {
+		b.WriteString("SELECT *, " + d.QuoteIdent(tv.rowid) + " AS " + d.QuoteIdent(dbRowidAlias) + " FROM " + tv.qualified())
+	} else {
+		b.WriteString("SELECT * FROM " + tv.qualified())
+	}
 	if w := strings.TrimSpace(tv.where); w != "" {
 		b.WriteString(" WHERE (" + w + ")")
 	}
@@ -89,6 +120,9 @@ func (tv *dbTableView) selectSQL(limit int) (string, error) {
 		if k != tv.orderCol {
 			order = append(order, d.QuoteIdent(k))
 		}
+	}
+	if tv.rowid != "" {
+		order = append(order, d.QuoteIdent(tv.rowid)) // a stable order for paging
 	}
 	if len(order) > 0 {
 		b.WriteString(" ORDER BY " + strings.Join(order, ", "))
@@ -246,6 +280,18 @@ func (tv *dbTableView) finish(res *dbclient.Result, size int) {
 		return
 	}
 	tv.good = tv.offset
+	tv.rowids = nil
+	if n := len(res.Columns); tv.rowid != "" && n > 0 && res.Columns[n-1].Name == dbRowidAlias {
+		for i, row := range res.Rows {
+			id := ""
+			if len(row) == n {
+				id = row[n-1].Text
+				res.Rows[i] = row[:n-1]
+			}
+			tv.rowids = append(tv.rowids, id)
+		}
+		res.Columns = res.Columns[:n-1]
+	}
 	if len(res.Columns) == 0 && len(res.Rows) == 0 {
 		for _, c := range tv.cols {
 			res.Columns = append(res.Columns, dbclient.Column{Name: c})

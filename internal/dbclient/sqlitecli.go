@@ -16,11 +16,22 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 var lookupSQLite = func() (string, error) { return exec.LookPath("sqlite3") }
+
+// hostOS and readOSRelease are the host facts behind install hints. Tests
+// replace them so results do not depend on the machine running the tests.
+var (
+	hostOS        = func() (string, string) { return runtime.GOOS, runtime.GOARCH }
+	readOSRelease = func() (string, error) {
+		b, err := os.ReadFile("/etc/os-release")
+		return string(b), err
+	}
+)
 
 // SQLiteVersion is the parsed sqlite3 CLI version.
 type SQLiteVersion struct{ Major, Minor, Patch int }
@@ -49,11 +60,16 @@ func ParseSQLiteVersion(text string) (SQLiteVersion, error) {
 	return v, nil
 }
 
+func sqliteHostInstallHint() string {
+	goos, goarch := hostOS()
+	return SQLiteInstallHint(goos, goarch)
+}
+
 func SQLiteInstallHint(goos, goarch string) string {
 	var release string
 	if goos == "linux" {
-		if b, err := os.ReadFile("/etc/os-release"); err == nil {
-			release = string(b)
+		if b, err := readOSRelease(); err == nil {
+			release = b
 		}
 	}
 	return SQLiteInstallHintWithRelease(goos, goarch, release)
@@ -105,7 +121,7 @@ type sqliteProcess struct {
 func NewSQLiteSession(ctx context.Context, conn Conn) (*SQLiteSession, error) {
 	path, err := lookupSQLite()
 	if err != nil {
-		return nil, fmt.Errorf("sqlite3 is not installed. %s", SQLiteInstallHint(runtime.GOOS, runtime.GOARCH))
+		return nil, fmt.Errorf("sqlite3 is not installed. %s", sqliteHostInstallHint())
 	}
 	checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
@@ -116,7 +132,7 @@ func NewSQLiteSession(ctx context.Context, conn Conn) (*SQLiteSession, error) {
 	}
 	v, err := ParseSQLiteVersion(string(b))
 	if err != nil {
-		return nil, fmt.Errorf("%s. %s", err, SQLiteInstallHint(runtime.GOOS, runtime.GOARCH))
+		return nil, fmt.Errorf("%s. %s", err, sqliteHostInstallHint())
 	}
 	if conn.ReadOnly && (v.Major < 3 || (v.Major == 3 && v.Minor < 37)) {
 		return nil, errors.New("Update sqlite3 to 3.37 or newer to let the AI read this database")
@@ -514,12 +530,13 @@ func isDML(words []string) bool {
 }
 
 func sqliteJSONBlob(text string) bool {
-	// sqlite3's JSON mode renders invalid UTF-8 bytes as u followed by eight
-	// hex digits, even when the blob begins with valid text.
-	return sqliteJSONBlobEscape.MatchString(text)
+	// sqlite3's JSON mode renders non-text bytes differently by version and
+	// platform: u plus eight hex digits (sign-extended byte), a bare control
+	// escape such as u0000, or real invalid UTF-8 / U+FFFD. All mean binary.
+	return sqliteJSONBlobEscape.MatchString(text) || !utf8.ValidString(text) || strings.ContainsRune(text, utf8.RuneError)
 }
 
-var sqliteJSONBlobEscape = regexp.MustCompile(`(?i)u[0-9a-f]{8}`)
+var sqliteJSONBlobEscape = regexp.MustCompile(`(?i)u[0-9a-f]{8}|u00[01][0-9a-f]`)
 
 func parseSQLiteJSON(lines []string) ([][]Cell, []Column, error) {
 	var data []byte

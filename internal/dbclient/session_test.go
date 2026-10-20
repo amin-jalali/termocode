@@ -74,7 +74,41 @@ func TestSQLiteFakeCancelRespawnsAndRollsBackManualTransaction(t *testing.T) {
 	}
 }
 
+func fakeHost(t *testing.T, goos, release string) {
+	t.Helper()
+	oldOS, oldRel := hostOS, readOSRelease
+	hostOS = func() (string, string) { return goos, "amd64" }
+	readOSRelease = func() (string, error) { return release, nil }
+	t.Cleanup(func() { hostOS, readOSRelease = oldOS, oldRel })
+}
+
+func TestSQLiteInstallHintIgnoresHostOSRelease(t *testing.T) {
+	fakeHost(t, "linux", "ID=fedora\n")
+	if got := SQLiteInstallHint("linux", "amd64"); !strings.Contains(got, "dnf install sqlite") {
+		t.Fatalf("hint = %q", got)
+	}
+	fakeHost(t, "linux", "ID=ubuntu\n")
+	if got := SQLiteInstallHint("linux", "amd64"); !strings.Contains(got, "apt install sqlite3") {
+		t.Fatalf("hint = %q", got)
+	}
+}
+
+func TestSQLiteJSONBlobForms(t *testing.T) {
+	// Forms seen from different sqlite3 builds for X'41FF' and X'00'.
+	for _, text := range []string{"Auffffffff", "u0000", "A\xff", "A\ufffd"} {
+		if !sqliteJSONBlob(text) {
+			t.Errorf("%q not detected as binary", text)
+		}
+	}
+	for _, text := range []string{"hello", "caf\u00e9", "u1234"} {
+		if sqliteJSONBlob(text) {
+			t.Errorf("%q wrongly detected as binary", text)
+		}
+	}
+}
+
 func TestSQLiteDetectionAndInstallHints(t *testing.T) {
+	fakeHost(t, "linux", "ID=ubuntu\nID_LIKE=debian\n")
 	for _, tc := range []struct{ goos, goarch, want string }{
 		{"linux", "amd64", "sudo apt install sqlite3"},
 		{"darwin", "arm64", "brew install sqlite"},
@@ -135,6 +169,7 @@ func TestSQLiteDialect(t *testing.T) {
 }
 
 func TestSQLiteSessionNoCLIMessage(t *testing.T) {
+	fakeHost(t, "linux", "ID=ubuntu\n")
 	old := lookupSQLite
 	lookupSQLite = func() (string, error) { return "", os.ErrNotExist }
 	t.Cleanup(func() { lookupSQLite = old })

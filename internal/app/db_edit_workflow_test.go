@@ -694,8 +694,8 @@ func TestDBEditSQLiteEndToEnd(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "shop.db")
 	script := `CREATE TABLE "order items" (id INTEGER PRIMARY KEY, name TEXT NOT NULL, qty INTEGER DEFAULT 5);
 INSERT INTO "order items"(id,name,qty) VALUES (1,'apple',1),(2,'pear',2),(3,'plum',3);
-CREATE TABLE logs (msg TEXT);
-INSERT INTO logs VALUES ('a');`
+CREATE TABLE logs (msg TEXT, rowid TEXT, _rowid_ TEXT, oid TEXT);
+INSERT INTO logs(msg) VALUES ('a');`
 	if out, err := exec.Command(bin, file, script).CombinedOutput(); err != nil {
 		t.Fatalf("sqlite3: %v\n%s", err, out)
 	}
@@ -721,7 +721,7 @@ INSERT INTO logs VALUES ('a');`
 	if !d.WaitForText("order items", 5*time.Second) {
 		t.Fatalf("no table row:\n%s", ansi.Strip(d.Frame()))
 	}
-	// logs has no key: read-only.
+	// logs has no key and hides every rowid name with a column: read-only.
 	d.Key("down", "down", "o")
 	dbWaitPage(t, d, "read-only: no key")
 	d.Key("escape", "f1")

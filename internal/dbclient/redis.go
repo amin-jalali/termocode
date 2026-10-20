@@ -387,6 +387,38 @@ func (s *RedisSession) ScanKeys(ctx context.Context, db int, pattern string, max
 	return keys, more, err
 }
 
+// RedisDeleteBatch is the number of keys one UNLINK / DEL sends.
+const RedisDeleteBatch = 500
+
+// RedisDeleteKeys deletes keys in batches of RedisDeleteBatch. It sends
+// UNLINK (the server frees the memory in the background); a server that
+// does not know UNLINK (before Redis 4) gets DEL instead. do sends one
+// command (a session's DoDB, so a read-only session refuses). It returns
+// the number of keys that were deleted, also when a later batch fails.
+func RedisDeleteKeys(ctx context.Context, do func(ctx context.Context, args []string) (any, error), keys []string) (int64, error) {
+	var deleted int64
+	cmd := "UNLINK"
+	for start := 0; start < len(keys); start += RedisDeleteBatch {
+		if err := ctx.Err(); err != nil {
+			return deleted, err
+		}
+		batch := keys[start:min(start+RedisDeleteBatch, len(keys))]
+		args := append([]string{cmd}, batch...)
+		reply, err := do(ctx, args)
+		if err != nil && cmd == "UNLINK" && strings.Contains(strings.ToLower(err.Error()), "unknown command") {
+			cmd = "DEL"
+			args[0] = cmd
+			reply, err = do(ctx, args)
+		}
+		if err != nil {
+			return deleted, err
+		}
+		n, _ := redis.Int64(reply, nil)
+		deleted += n
+	}
+	return deleted, nil
+}
+
 // RedisKeyMeta is the type and TTL of a key in a list.
 type RedisKeyMeta struct {
 	Type string // "none": the key is gone

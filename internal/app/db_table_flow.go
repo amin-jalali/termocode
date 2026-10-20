@@ -138,6 +138,10 @@ func (m *Model) onDBTableMeta(msg dbTableMetaMsg) tea.Cmd {
 		}
 	}
 	tv.unique = dbUniqueSets(ir)
+	tv.rowid = ""
+	if _, lite := dbclient.DialectFor(tv.driver).(dbclient.SQLiteDialect); lite && !tv.view && len(tv.keys) == 0 && len(tv.unique) == 0 {
+		tv.rowid = dbSQLiteRowid(tv.cols, ir.DDL) // no key: the rowid finds the row
+	}
 	return m.databaseRunTable(tv)
 }
 

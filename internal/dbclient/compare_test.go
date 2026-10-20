@@ -2,6 +2,7 @@ package dbclient
 
 import (
 	"context"
+	"errors"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -337,5 +338,41 @@ func TestCompareSchemasIgnoresColumnOrder(t *testing.T) {
 	}
 	if b.Tables[0].Columns[0].Name != "z" {
 		t.Fatalf("the caller's schema was reordered")
+	}
+}
+
+// MySQL and MariaDB CHECK constraints are read; a server without the
+// CHECK_CONSTRAINTS table is skipped without an error.
+type mysqlChecks struct {
+	mysqlRows
+	old bool
+}
+
+func (m mysqlChecks) Run(ctx context.Context, sql string, o RunOptions) Result {
+	if strings.Contains(sql, "information_schema.check_constraints") {
+		if m.old {
+			return Result{Err: errors.New("Table 'information_schema.CHECK_CONSTRAINTS' doesn't exist")}
+		}
+		return Result{Rows: [][]Cell{
+			{{Text: "users"}, {Text: "flag_ok"}, {Text: "(`flag` in (0,1))"}},
+			{{Text: "users"}, {Text: "id_pos"}, {Text: "`id` > 0"}},
+		}}
+	}
+	return m.mysqlRows.Run(ctx, sql, o)
+}
+
+func TestReadCanonSchemaMySQLChecks(t *testing.T) {
+	got, err := ReadCanonSchema(context.Background(), mysqlChecks{}, "mysql", "app")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := CanonFiles(got)[0].Text
+	for _, want := range []string{"CONSTRAINT `flag_ok` CHECK (`flag` in (0,1))", "CONSTRAINT `id_pos` CHECK (`id` > 0)"} {
+		if !strings.Contains(f, want) {
+			t.Errorf("lacks %q:\n%s", want, f)
+		}
+	}
+	if _, err := ReadCanonSchema(context.Background(), mysqlChecks{old: true}, "mysql", "app"); err != nil {
+		t.Fatalf("old server must be skipped quietly: %v", err)
 	}
 }

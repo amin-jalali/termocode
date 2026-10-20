@@ -423,3 +423,44 @@ func TestRedisWriteBuildersQuoteExactly(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestRedisDeleteKeysUsesBatchesOfUnlinkAndFallsBackToDel(t *testing.T) {
+	for _, noUnlink := range []bool{false, true} {
+		f := dbtest.NewFakeRedis()
+		f.NoUnlink = noUnlink
+		var keys []string
+		for i := 0; i < RedisDeleteBatch+10; i++ {
+			k := fmt.Sprintf("user:%04d", i)
+			f.SetString(0, k, "x")
+			keys = append(keys, k)
+		}
+		f.SetString(0, "keep", "x")
+		s := redisTestSession(t, f, Conn{}, "")
+		n, err := RedisDeleteKeys(context.Background(), func(ctx context.Context, args []string) (any, error) { return s.DoDB(ctx, 0, args) }, keys)
+		if err != nil || n != int64(len(keys)) {
+			t.Fatalf("noUnlink=%v: deleted %d, err %v", noUnlink, n, err)
+		}
+		if !f.Exists(0, "keep") || f.Exists(0, "user:0000") || f.Sent("KEYS") {
+			t.Fatalf("noUnlink=%v: wrong keys left; commands %d", noUnlink, len(f.Commands()))
+		}
+		if noUnlink && (!f.Sent("DEL") || len(f.Commands()) < 3) {
+			t.Fatalf("no DEL fallback: sent DEL=%v", f.Sent("DEL"))
+		}
+		if !noUnlink && (f.Sent("DEL") || !f.Sent("UNLINK")) {
+			t.Fatal("UNLINK was not used")
+		}
+	}
+}
+
+func TestRedisDeleteKeysRefusesOnAReadOnlySession(t *testing.T) {
+	f := dbtest.NewFakeRedis()
+	f.SetString(0, "user:1", "x")
+	s := NewRedisReadOnlySession(Conn{Driver: "redis", Host: "cache.internal", Port: 6379}, "", f.Dial)
+	t.Cleanup(func() { _ = s.Close() })
+	if _, err := RedisDeleteKeys(context.Background(), func(ctx context.Context, args []string) (any, error) { return s.DoDB(ctx, 0, args) }, []string{"user:1"}); err == nil {
+		t.Fatal("a read-only session deleted keys")
+	}
+	if !f.Exists(0, "user:1") {
+		t.Fatal("key was deleted")
+	}
+}
