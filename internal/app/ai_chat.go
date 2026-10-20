@@ -161,6 +161,7 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 		tools = m.aiReviewTools(tools, root, call)
 	}
 	tools = append(tools, m.aiHTTPTools(root, call, tools)...) // HC-9: HTTP client
+	tools = append(tools, aiDBTools(root, call)...)            // DB-5: the Databases view (ai_db_tools.go)
 	return aiRedactResults(tools)                              // known secrets (.env passwords, API keys) never reach the model
 }
 
@@ -270,7 +271,7 @@ func (s *aiState) takeAttachments() (string, []string) {
 
 // aiChatBasePrompt is the chat's system prompt before the tool protocol.
 func (m *Model) aiChatBasePrompt(root string) string {
-	base := aiChatSystemPrompt + "\nWorkspace root: " + root + m.aiServicesPromptLine(root)
+	base := aiChatSystemPrompt + "\nWorkspace root: " + root + m.aiServicesPromptLine(root) + aiDBPromptLine(root)
 	if p := m.editor.Path(); p != "" {
 		base += "\nThe open file is: " + p
 	}
@@ -390,6 +391,9 @@ func (m *Model) onAIChatConfirm(msg aiChatConfirmMsg) tea.Cmd {
 		who = aiOneLine(aiCleanText(msg.step)) // which step of the run asks
 	}
 	m.confirm = confirm.New("✦ "+who+" wants to: "+msg.tool.Label(), msg.human, buttons)
+	if strings.HasPrefix(msg.tool.Name, "db_") {
+		m.confirm = m.confirm.WithScrollText() // the whole SQL, Up/Down scroll
+	}
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindAITool

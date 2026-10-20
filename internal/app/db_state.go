@@ -150,8 +150,12 @@ func (s *dbState) rows() []dbTreeRow {
 	return out
 }
 
+// databasesVisible reports whether the Databases view is shown in the
+// sidebar. Overlays (the palette, pickers, cards) do not hide it: they must
+// never close sessions or cancel a running query. Only another view, a
+// hidden sidebar, zen mode, disconnect or quit do.
 func (m Model) databasesVisible() bool {
-	return m.showExp && !m.zenMode && m.activity.Active() == activity.ViewDatabases && !(m.pickerOpen && m.pickerKind == pickerKindPalette)
+	return m.showExp && !m.zenMode && m.activity.Active() == activity.ViewDatabases
 }
 
 func (m *Model) revealDatabasesView(focus bool) tea.Cmd {
@@ -220,24 +224,35 @@ func (m *Model) databaseWorkspaceRoot() string {
 	return "."
 }
 
-func (s *dbState) load(root string) {
-	s.root = root
+// dbLoadConfigs reads the user and the project connection files (no
+// state, no UI): the view and the AI tools see the same list.
+func dbLoadConfigs(root string) (user, project, merged []dbclient.Conn) {
 	projectPath := filepath.Join(root, ".termocode", "databases.json")
-	userDir, err := configDir()
-	var conns []dbclient.Conn
-	if err == nil {
+	if userDir, err := configDir(); err == nil {
 		if b, e := os.ReadFile(filepath.Join(userDir, "db", "connections.json")); e == nil {
 			cs, _ := dbclient.ParseConfig(b, dbclient.SourceUser, filepath.Join(userDir, "db", "connections.json"), root)
-			s.userConns = append([]dbclient.Conn(nil), cs...)
-			conns = append(conns, cs...)
+			user = append([]dbclient.Conn(nil), cs...)
+			merged = append(merged, cs...)
 		}
 	}
 	if b, e := os.ReadFile(projectPath); e == nil {
 		cs, parseErr := dbclient.ParseConfig(b, dbclient.SourceProject, projectPath, root)
 		if parseErr == nil {
-			s.projectConns = append([]dbclient.Conn(nil), cs...)
-			conns = dbclient.MergeConfig(cs, conns)
+			project = append([]dbclient.Conn(nil), cs...)
+			merged = dbclient.MergeConfig(cs, merged)
 		}
+	}
+	return user, project, merged
+}
+
+func (s *dbState) load(root string) {
+	s.root = root
+	user, project, conns := dbLoadConfigs(root)
+	if user != nil {
+		s.userConns = user
+	}
+	if project != nil {
+		s.projectConns = project
 	}
 	s.conns = conns
 	for _, c := range conns {

@@ -255,6 +255,7 @@ var fileOnlySettings = []SettingEntry{
 	{Key: "db_page_rows", Type: "int", Default: "100", Category: "Databases (file only)", Description: "Rows per SQL result page (1–1000)."},
 	{Key: "db_timeout", Type: "int", Default: "30", Category: "Databases (file only)", Description: "Maximum seconds for a console statement. The session also enforces its own timeout."},
 	{Key: "db_history_max", Type: "int", Default: "500", Category: "Databases (file only)", Description: "Maximum SQL history entries kept in db/history.jsonl."},
+	{Key: "db_ai_max_kb", Type: "int", Default: "32", Category: "Databases (file only)", Description: "Maximum size in KB of one AI database tool answer (1–1024). Longer results are cut and marked."},
 	{Key: "containers_sections", Type: "string[]", Default: "all", Category: "Containers (file only)",
 		Description: "Sections shown by the Containers view, across workspaces. The Containers menu writes this list; collapse state is kept in the workspace session."},
 	{Key: "ai_inline_model", Type: "string", Default: "(provider default)", Category: "AI (file only)",

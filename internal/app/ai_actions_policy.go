@@ -445,6 +445,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"db_page_rows":         aiNever(aiNoAIConfig),
 	"db_timeout":           aiNever(aiNoAIConfig),
 	"db_history_max":       aiNever(aiNoAIConfig),
+	"db_ai_max_kb":         aiNever(aiNoAIConfig), // the AI never raises its own budget
 	"http_timeout":         aiConfirm(ai.ClassSettings),
 	"http_max_redirects":   aiConfirm(ai.ClassSettings),
 	"http_cookie_jar":      aiConfirm(ai.ClassSettings),

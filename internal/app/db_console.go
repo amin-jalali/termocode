@@ -100,6 +100,7 @@ type dbConsoleSettings struct {
 	PageRows   *int `json:"db_page_rows"`
 	Timeout    *int `json:"db_timeout"`
 	HistoryMax *int `json:"db_history_max"`
+	AIMaxKB    *int `json:"db_ai_max_kb"`
 }
 
 func loadDBConsoleSettings() dbConsoleSettings {

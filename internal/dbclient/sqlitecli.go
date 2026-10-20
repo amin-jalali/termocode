@@ -446,6 +446,11 @@ func (s *SQLiteSession) Run(ctx context.Context, stmt string, opts RunOptions) R
 		res.Truncated = true
 		lines = lines[:len(lines)-1]
 	}
+	if rows, ok := sqliteQueryPlan(words, lines); ok {
+		res.Columns = []Column{{Name: "plan"}}
+		res.Rows = rows
+		return res
+	}
 	rows, cols, err := parseSQLiteJSON(lines)
 	if err != nil {
 		res.Err = err
@@ -463,6 +468,26 @@ func (s *SQLiteSession) Run(ctx context.Context, stmt string, opts RunOptions) R
 		}
 	}
 	return res
+}
+
+// sqliteQueryPlan reads EXPLAIN QUERY PLAN output: sqlite3 prints it as a
+// text tree ("QUERY PLAN" then "|--SCAN …") even in -json mode. Each tree
+// line becomes a row of one "plan" column.
+func sqliteQueryPlan(words, lines []string) ([][]Cell, bool) {
+	if len(words) < 3 || words[0] != "EXPLAIN" || words[1] != "QUERY" || words[2] != "PLAN" {
+		return nil, false
+	}
+	var rows [][]Cell
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" || strings.HasPrefix(strings.TrimSpace(line), "changes:") {
+			continue
+		}
+		if len(rows) == 0 && strings.HasPrefix(strings.TrimSpace(line), "[") {
+			return nil, false // JSON after all (a future sqlite3)
+		}
+		rows = append(rows, []Cell{{Text: line}})
+	}
+	return rows, true
 }
 
 func isDML(words []string) bool {

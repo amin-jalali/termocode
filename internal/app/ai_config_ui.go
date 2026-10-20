@@ -329,6 +329,7 @@ func (m *Model) openAIAutoApprovePicker() tea.Cmd {
 			items = append(items, picker.Item{ID: c, Title: c + " — HTTP requests (" + what + ") to " + strings.TrimSuffix(strings.TrimPrefix(c, "http:"), "/write"), Hint: "AUTO"})
 		}
 	}
+	items = append(items, m.dbAutoApproveItems(s.settings.AutoApprove)...)
 	m.picker = picker.NewItems(" ✦ Agent auto-approve (Enter toggles) ", items)
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true

@@ -45,6 +45,7 @@ type AIPolicyDoc struct {
 // aiGateNotes replace the computed gate of tools whose gate depends on
 // more than one argument value.
 var aiGateNotes = map[string]string{
+	"db_query":       "a read (SELECT, SHOW, EXPLAIN without ANALYZE …): auto, in a read-only session; any other statement: confirm (db:<conn>/write) with the SQL shown; production connections: confirm (always asks); read-only connections: writes refused",
 	"execute_action": "per action: see Palette actions below",
 	"http_send":      "GET / HEAD / OPTIONS to localhost: auto; other safe methods: confirm (http:<host[:port]>); other methods: confirm (http:<host[:port]>/write); private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks)",
 	"terminal_tabs":  "list, new, focus: auto; close: auto for an idle tab, confirm (always asks) while a command runs",

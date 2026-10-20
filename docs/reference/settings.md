@@ -80,6 +80,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `db_page_rows` | int | `100` | Rows per SQL result page (1–1000). |
 | `db_timeout` | int | `30` | Maximum seconds for a console statement. The session also enforces its own timeout. |
 | `db_history_max` | int | `500` | Maximum SQL history entries kept in db/history.jsonl. |
+| `db_ai_max_kb` | int | `32` | Maximum size in KB of one AI database tool answer (1–1024). Longer results are cut and marked. |
 
 ## Containers (file only)
 
