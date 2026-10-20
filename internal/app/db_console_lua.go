@@ -38,7 +38,7 @@ return vim.json.encode({line=first,selection=selection})
 const dbConsoleLua = `
 if _G._termocode_sql then return end
 local api=vim.api
-local S={rows={},running=false}
+local S={rows={},running=false,schema={},want=nil}
 _G._termocode_sql=S
 local ns=api.nvim_create_namespace('termocode_sql_lens')
 api.nvim_set_decoration_provider(ns,{
@@ -49,6 +49,112 @@ api.nvim_set_decoration_provider(ns,{
   api.nvim_buf_set_extmark(b,ns,row,0,{virt_text={{' '..t,S.running and 'TermocodeHttpLensBusy' or 'TermocodeHttpLens'}},virt_text_pos='eol',ephemeral=true})
  end,
 })
+
+-- Completion (omnifunc, <C-x><C-o> and the auto-trigger of the other
+-- omnifunc buffers): keywords, tables, views, routines, sequences and
+-- schemas; after "alias." or "table." the columns. Pure Lua over
+-- S.schema[buf], the table Go pushes from the tree (no round trip). Unknown
+-- columns are requested once (termocode_db_cols) and the popup reopens
+-- when Go has pushed them.
+local KW={'select','from','where','group by','order by','having','limit','offset','insert into','values','update','set','delete from','join','inner join','left join','right join','full join','cross join','on','using','as','and','or','not','in','is','null','like','ilike','between','exists','distinct','union','union all','intersect','except','case','when','then','else','end','create table','alter table','drop table','create index','create view','add column','primary key','foreign key','references','default','unique','asc','desc','count','sum','avg','min','max','coalesce','cast','returning','with','explain','begin','commit','rollback','truncate','true','false','all','any','by','into','if exists','if not exists','cascade','nulls first','nulls last','current_date','current_timestamp','now','lower','upper','length','substr','replace','round','extract'}
+local NOALIAS={where=1,on=1,set=1,join=1,left=1,right=1,inner=1,full=1,cross=1,group=1,order=1,limit=1,union=1,using=1,values=1,having=1,offset=1,returning=1,select=1,from=1,natural=1,window=1,fetch=1,['for']=1}
+local function unq(s) return (s:gsub('^[\34\96]',''):gsub('[\34\96]$','')) end
+local function quoted(S1,name)
+ if name:match('^[a-z_][a-z0-9_$]*$') then return name end
+ local q=S1.quote or '\34'
+ return q..name:gsub(q,q..q)..q
+end
+local function statement_text()
+ local row=api.nvim_win_get_cursor(0)[1]
+ local lines=api.nvim_buf_get_lines(0,0,-1,false)
+ local first,last=1,#lines
+ for i=row-1,1,-1 do if lines[i]:match(';%s*$') then first=i+1;break end end
+ for i=row,#lines do if lines[i]:match(';') and i>row then last=i;break end end
+ return table.concat(lines,' ',first,last)
+end
+local function aliases(text)
+ local map={}
+ text=text:lower()
+ for _,kw in ipairs({'from','join','update','into'}) do
+  for tbl,after in text:gmatch(kw..'%s+([%w_.\34\96]+)()') do
+   local name=unq(tbl:match('([^.]+)$') or tbl)
+   map[name]=name
+   local alias=text:match('^%s+as%s+([%w_]+)',after) or text:match('^%s+([%w_]+)',after)
+   if alias and not NOALIAS[alias] then map[alias]=name end
+  end
+ end
+ return map
+end
+function _G._termocode_sql_omni(findstart,base)
+ local line=api.nvim_get_current_line()
+ local col=api.nvim_win_get_cursor(0)[2]
+ local before=line:sub(1,col)
+ local word=before:match('[%w_$\34\96]*$')
+ if findstart==1 then return col-#word end
+ local buf=api.nvim_get_current_buf()
+ local S1=S.schema[buf] or {tables={},cols={},schemas={}}
+ local lb=unq(base):lower()
+ local out={}
+ local function add(w,menu,max)
+  out[#out+1]={word=w,menu=menu}
+ end
+ local qual=before:sub(1,col-#word):match('([%w_$\34\96]+)%.$')
+ if qual then
+  local q=unq(qual):lower()
+  local tbl=aliases(statement_text())[q] or q
+  local cols=S1.cols and S1.cols[tbl]
+  if cols then
+   for _,c in ipairs(cols) do
+    if c:lower():sub(1,#lb)==lb then add(quoted(S1,c),'column') end
+   end
+   return out
+  end
+  for _,t in ipairs(S1.tables or {}) do
+   if t.n:lower()==tbl and (t.k=='table' or t.k=='view') then
+    local w=api.nvim_win_get_cursor(0)
+    S.want={buf=buf,table=tbl,row=w[1],col=w[2]}
+    if _G.termocode_notify then _G.termocode_notify('termocode_db_cols',buf,tbl) end
+    return out
+   end
+  end
+  for _,sc in ipairs(S1.schemas or {}) do
+   if sc:lower()==q then
+    for _,t in ipairs(S1.tables or {}) do
+     if (t.k=='table' or t.k=='view') and t.n:lower():sub(1,#lb)==lb then add(quoted(S1,t.n),t.k) end
+     if #out>=300 then break end
+    end
+    return out
+   end
+  end
+  return out
+ end
+ local upper=base:match('%u') and not base:match('%l')
+ for _,k in ipairs(KW) do
+  if k:sub(1,#lb)==lb then add(upper and k:upper() or k,'keyword') end
+ end
+ local n=0
+ for _,t in ipairs(S1.tables or {}) do
+  if t.n:lower():sub(1,#lb)==lb then
+   add(quoted(S1,t.n),t.k=='func' and 'routine' or t.k)
+   n=n+1
+   if n>=300 then break end
+  end
+ end
+ for _,sc in ipairs(S1.schemas or {}) do
+  if n<300 and sc:lower():sub(1,#lb)==lb then add(quoted(S1,sc),'schema');n=n+1 end
+ end
+ return out
+end
+-- Go pushed new columns: open the popup again where the user waited.
+function S.retrigger(buf,table_)
+ local w=S.want
+ if not w or w.buf~=buf or w.table~=table_ then return end
+ S.want=nil
+ if api.nvim_get_current_buf()~=buf or vim.fn.mode()~='i' or vim.fn.pumvisible()==1 then return end
+ local pos=api.nvim_win_get_cursor(0)
+ if pos[1]~=w.row or pos[2]~=w.col then return end
+ api.nvim_feedkeys(api.nvim_replace_termcodes('<C-x><C-o>',true,false,true),'n',false)
+end
 local timers={}
 local function changed(buf)
  if timers[buf] then timers[buf]:stop() end
@@ -60,6 +166,7 @@ end
 local g=api.nvim_create_augroup('termocode_sql',{clear=true})
 api.nvim_create_autocmd('FileType',{group=g,pattern='sql',callback=function(args)
  local buf=args.buf
+ vim.bo[buf].omnifunc='v:lua._termocode_sql_omni'
  api.nvim_create_autocmd('BufEnter',{group=g,buffer=buf,callback=function() changed(buf) end})
  api.nvim_create_autocmd('BufWipeout',{group=g,buffer=buf,callback=function() S.rows[buf]=nil end})
  if not vim.b[buf].termocode_sql_attached then
@@ -166,6 +273,7 @@ func (m *Model) databaseBufferLens(buf int) {
 	id := s.consoleConn(file, lines)
 	rows := []map[string]any{}
 	if c, ok := m.databases.connection(id); ok {
+		m.databasePushSchema(buf, c)
 		label := dbGlyphRun() + " run"
 		if k := m.httpSendKeyLabel(); k != "" {
 			label += " " + k

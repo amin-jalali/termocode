@@ -1050,6 +1050,10 @@ Show the DDL (CREATE statement) of a table, with its indexes and foreign keys.
 | `db-cancel` | Databases: Cancel Query | auto |   |
 | `db-configure` | Databases: Configure | confirm (always asks) |   |
 | `db-connect` | Databases: Connect Selected | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `db-count-rows` | Databases: Count Rows | never | Table rows are read with the database tools |
+| `db-data` | Databases: Open Table Data | never | Table rows are read with the database tools |
+| `db-ddl` | Databases: Show DDL | auto |   |
+| `db-describe` | Databases: Describe Table | auto |   |
 | `db-disconnect` | Databases: Disconnect Selected | confirm (always asks) |   |
 | `db-focus` | Databases: Focus | auto |   |
 | `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |
@@ -1057,6 +1061,7 @@ Show the DDL (CREATE statement) of a table, with its indexes and foreign keys.
 | `db-refresh` | Databases: Refresh | auto |   |
 | `db-run` | Databases: Run Statement or Selection | never | SQL runs require the database query tool and its guard |
 | `db-run-file` | Databases: Run File | never | SQL runs require the database query tool and its guard |
+| `db-select` | Databases: Select 100 Rows in Console | never | SQL runs require the database query tool and its guard |
 | `db-test-connection` | Databases: Test Connection | auto |   |
 | `debug-add-watch` | Debug: Add Watch Expression... | never | opens a picker or prompt that only the user can answer; use a typed tool (debug_evaluate; debug_state shows the watches) |
 | `debug-clear-bps` | Debug: Remove All Breakpoints | confirm (ide) |   |

@@ -14,7 +14,7 @@ func (MySQLDialect) Limit(limit, offset int) string {
 	if limit <= 0 {
 		return ""
 	}
-	return fmt.Sprintf(" LIMIT %d OFFSET %d", offset, limit)
+	return fmt.Sprintf(" LIMIT %d OFFSET %d", limit, offset)
 }
 func (MySQLDialect) ReadOnlyBegin() string { return "START TRANSACTION READ ONLY" }
 func (MySQLDialect) CatalogQueries() map[string]string {

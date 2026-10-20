@@ -189,6 +189,7 @@ func (m *Model) databasePage() dbPage {
 	rows := s.displayedResult()
 	s.page = min(s.page, s.pageCount()-1)
 	summary := ""
+	var short []string // shorter summaries for a narrow page (data view, Transposed)
 	group := "TermocodeHttpSummary"
 	switch {
 	case s.running != nil:
@@ -199,6 +200,21 @@ func (m *Model) databasePage() dbPage {
 		group = "TermocodeHttpStatusErr"
 	case len(res.Columns) == 0:
 		summary = fmt.Sprintf("%s · %d ms", dbChangeSummary(r), res.Elapsed.Milliseconds())
+	case s.trans:
+		page := s.pageResult()
+		s.trow = max(min(s.trow, len(page.Rows)-1), 0)
+		summary = "no rows"
+		if len(page.Rows) > 0 {
+			summary = fmt.Sprintf("row %d of %d", s.trow+1, len(page.Rows))
+		}
+		short = []string{summary + fmt.Sprintf(" · %d ms", res.Elapsed.Milliseconds()), summary}
+		if tv := r.tv; tv != nil && tv.offset > 0 && len(page.Rows) > 0 {
+			summary += fmt.Sprintf(" · rows %d-%d", tv.offset+1, tv.offset+len(page.Rows))
+		}
+		summary += fmt.Sprintf(" · %d ms", res.Elapsed.Milliseconds())
+	case r.tv != nil:
+		summary = dbTableSummary(r.tv, len(res.Rows), res.Elapsed.Milliseconds())
+		short = []string{dbTableSummary(r.tv, len(res.Rows), -1)}
 	default:
 		summary = dbPlural(len(rows.Rows), "row")
 		if s.filter != "" {
@@ -214,9 +230,21 @@ func (m *Model) databasePage() dbPage {
 	}
 	chips := make([]string, dbViewCount)
 	copy(chips, dbViewNames[:])
+	if s.trans {
+		chips[dbViewGrid] = "Transposed"
+	}
 	sep := "  "
 	if ansi.StringWidth(summary)+3+ansi.StringWidth(strings.Join(chips, sep)) > width {
 		chips, sep = []string{"Grid", "JSON", "Msgs"}, " "
+		if s.trans {
+			chips[dbViewGrid] = "Trans"
+		}
+		for _, v := range short {
+			summary = v
+			if ansi.StringWidth(v)+3+ansi.StringWidth(strings.Join(chips, sep)) <= width {
+				break
+			}
+		}
 	}
 	line, at = dbSplitLine(" "+summary, strings.Join(chips, sep), width)
 	n = p.add(line)
@@ -239,6 +267,14 @@ func (m *Model) databasePage() dbPage {
 		hints = " Tab view  r rerun  gd sql  h history  q close"
 		if len(res.Columns) > 0 && res.Err == nil {
 			hints = " ] next  o sort  f filter  v value  c csv  Tab view  r rerun  q close"
+			switch {
+			case s.trans:
+				hints = dbFitHints(width, "]/[ row", "t grid", "v value", "Tab view", "r rerun", "q close")
+			case r.tv != nil:
+				hints = dbFitHints(width, "]/[ page", "f where", "o sort", "t flip", "# count", "v value", "r rerun", "q close")
+			}
+		} else if r.tv != nil && res.Err != nil {
+			hints = " f where  o sort  r rerun  Tab view  q close"
 		}
 	}
 	n = p.add(ansi.Truncate(hints, width, dbGlyphMore.String()))
@@ -251,6 +287,10 @@ func (m *Model) databasePage() dbPage {
 
 	switch s.view {
 	case dbViewGrid:
+		if s.trans && r.result.Err == nil && len(r.result.Columns) > 0 {
+			m.databaseTransposed(&p, s, width)
+			break
+		}
 		m.databaseGrid(&p, s)
 	case dbViewJSON:
 		var b bytes.Buffer
@@ -358,9 +398,82 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 			p.hl(n, sp[0], min(sp[1], len(p.lines[n-1])), "TermocodeHttpSep")
 		}
 	}
-	if s.page+1 < s.pageCount() {
+	if s.page+1 < s.pageCount() || (s.shown.tv != nil && s.shown.tv.more) {
 		n = p.add(" " + more + " ] next page")
 		p.hl(n, 0, len(p.lines[n-1]), "TermocodeHttpHint")
+	}
+}
+
+// dbFitHints joins as many key hints as fit the page, most useful first;
+// the rest are dropped whole (no half hint).
+func dbFitHints(width int, parts ...string) string {
+	out := ""
+	for _, p := range parts {
+		next := out + "  " + p
+		if out == "" {
+			next = " " + p
+		}
+		if ansi.StringWidth(next) > width {
+			break
+		}
+		out = next
+	}
+	return out
+}
+
+// dbTableSummary is row 2 of a data view: the rows on the page, the total
+// once # counted it, and whether the server has a next page.
+func dbTableSummary(tv *dbTableView, n int, ms int64) string {
+	var b strings.Builder
+	if n == 0 {
+		b.WriteString("no rows")
+	} else {
+		fmt.Fprintf(&b, "rows %d-%d", tv.offset+1, tv.offset+n)
+	}
+	if tv.total >= 0 {
+		fmt.Fprintf(&b, " of %d", tv.total)
+	}
+	if tv.more {
+		b.WriteString(" · more")
+	}
+	if ms >= 0 {
+		fmt.Fprintf(&b, " · %d ms", ms)
+	}
+	return b.String()
+}
+
+// databaseTransposed is the Transposed view: one row of the page as
+// "column | value" lines. ] and [ step through the rows.
+func (m *Model) databaseTransposed(p *dbPage, s *dbConsoleState, width int) {
+	page := s.pageResult()
+	if len(page.Rows) == 0 {
+		n := p.add(" (no rows)")
+		p.hl(n, 0, len(p.lines[n-1]), "TermocodeHttpSummary")
+		return
+	}
+	more := dbGlyphMore.String()
+	row := page.Rows[min(s.trow, len(page.Rows)-1)]
+	nameW := 1
+	names := make([]string, len(page.Columns))
+	for i, c := range page.Columns {
+		names[i] = ansi.Truncate(dbOneLine(c.Name), 24, more)
+		nameW = max(nameW, ansi.StringWidth(names[i]))
+	}
+	bar := " " + dbGlyphVBar.String() + " "
+	p.first = len(p.lines) + 1
+	p.bounds = []int{0}
+	for i := range page.Columns {
+		c := dbclient.Cell{Null: true}
+		if i < len(row) {
+			c = row[i]
+		}
+		value := ansi.Truncate(dbOneLine(c.String()), max(width-nameW-ansi.StringWidth(bar)-2, 8), more)
+		left := " " + names[i] + strings.Repeat(" ", nameW-ansi.StringWidth(names[i]))
+		n := p.add(strings.TrimRight(left+bar+value, " "))
+		p.hl(n, 0, len(left), "TermocodeHttpSection")
+		if c.Null {
+			p.hl(n, len(left)+len(bar), len(p.lines[n-1]), "TermocodeHttpSep")
+		}
 	}
 }
 
@@ -464,7 +577,13 @@ func (m *Model) databaseRerun() tea.Cmd {
 		return nil
 	}
 	old := s.shown
-	r := &dbRun{conn: old.conn, file: old.file, line: old.line, sql: old.sql, by: "user", statements: []string{old.sql}}
+	if old.tv != nil {
+		return m.databaseRunTable(old.tv)
+	}
+	if old.describe != nil {
+		return m.databaseLoadMeta(*old.describe, false)
+	}
+	r := &dbRun{conn: old.conn, file: old.file, line: old.line, sql: old.sql, by: "user", statements: []string{old.sql}, sessKey: old.sessKey}
 	return m.databaseReviewRun(r)
 }
 
@@ -479,19 +598,73 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 	if s.shown == nil {
 		return nil
 	}
+	tv := s.shown.tv
+	canGrid := s.shown.result.Err == nil && len(s.shown.result.Columns) > 0
 	switch key {
 	case "]":
+		if s.trans && canGrid {
+			if s.trow+1 < len(s.pageResult().Rows) {
+				s.trow++
+				return m.databaseShowPage()
+			}
+			if tv != nil {
+				if cmd, ok := m.databaseTablePage(tv, 1); ok {
+					s.trow = 0
+					return cmd
+				}
+			}
+			return nil
+		}
+		if tv != nil {
+			cmd, _ := m.databaseTablePage(tv, 1)
+			return cmd
+		}
 		if s.page+1 >= s.pageCount() {
 			return nil
 		}
 		s.page++
 		return m.databaseShowPage()
 	case "[":
+		if s.trans && canGrid {
+			if s.trow > 0 {
+				s.trow--
+				return m.databaseShowPage()
+			}
+			if tv != nil {
+				if cmd, ok := m.databaseTablePage(tv, -1); ok {
+					s.trow = max(s.size-1, 0)
+					return cmd
+				}
+			}
+			return nil
+		}
+		if tv != nil {
+			cmd, _ := m.databaseTablePage(tv, -1)
+			return cmd
+		}
 		if s.page == 0 {
 			return nil
 		}
 		s.page--
 		return m.databaseShowPage()
+	case "t":
+		if !canGrid {
+			return nil
+		}
+		s.trans = !s.trans
+		if s.trans {
+			s.view = dbViewGrid
+			s.trow = 0
+			if row >= 0 && row < len(s.pageResult().Rows) {
+				s.trow = row
+			}
+		}
+		return m.databaseShowPage()
+	case "#":
+		if tv == nil {
+			return nil
+		}
+		return m.databaseCount(tv)
 	case "tab":
 		s.view = (s.view + 1) % dbViewCount
 		return m.databaseShowPage()
@@ -500,6 +673,11 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 	case "h":
 		return m.databaseHistory()
 	case "f":
+		if tv != nil {
+			cmd := m.openHTTPPrompt(promptKindDBResultFilter, "Filter rows", "WHERE condition (empty: all rows):", tv.where)
+			m.prompt.SetAllowEmpty(true)
+			return cmd
+		}
 		cmd := m.openHTTPPrompt(promptKindDBResultFilter, "Filter rows", "Rows that contain (empty: all rows):", s.filter)
 		m.prompt.SetAllowEmpty(true)
 		return cmd
@@ -507,9 +685,13 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		var items []picker.Item
 		for i, c := range s.shown.result.Columns {
 			hint := ""
-			if i == s.sortCol {
+			sorted, desc := i == s.sortCol, s.desc
+			if tv != nil {
+				sorted, desc = c.Name == tv.orderCol, tv.desc
+			}
+			if sorted {
 				hint = "ascending"
-				if s.desc {
+				if desc {
 					hint = "descending"
 				}
 			}
@@ -529,6 +711,9 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		return m.copyWithToast(dbRedact(dbclient.ToJSON(s.displayedResult())), "Copied rows as JSON")
 	case "v", "y":
 		page := s.pageResult()
+		if s.trans && s.view == dbViewGrid && s.trow < len(page.Rows) {
+			row, col = s.trow, row // the cursor line is the column
+		}
 		if s.view != dbViewGrid || row < 0 || row >= len(page.Rows) || col < 0 || col >= len(page.Rows[row]) {
 			return nil
 		}

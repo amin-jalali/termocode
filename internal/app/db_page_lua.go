@@ -61,7 +61,7 @@ function _G._termocode_db_open(split,lines,hls,first,bounds,cursor,wrap)
   b=api.nvim_create_buf(true,true);vim.g.termocode_db_buf=b
   api.nvim_buf_set_name(b,'SQL Result')
   vim.bo[b].bufhidden='hide';vim.bo[b].swapfile=false
-  for _,k in ipairs({']','[','r','h','f','o','c','C','v','y','q'}) do vim.keymap.set('n',k,function() notify(k) end,{buffer=b,silent=true,nowait=true}) end
+  for _,k in ipairs({']','[','r','h','f','o','c','C','v','y','q','#','t'}) do vim.keymap.set('n',k,function() notify(k) end,{buffer=b,silent=true,nowait=true}) end
   vim.keymap.set('n','gd',function() notify('gd') end,{buffer=b,silent=true})
   vim.keymap.set('n','<Tab>',function() notify('tab') end,{buffer=b,silent=true})
   vim.keymap.set('n','<Esc>',function() notify('esc') end,{buffer=b,silent=true})
@@ -92,6 +92,23 @@ function _G._termocode_db_close()
   if #api.nvim_tabpage_list_wins(0)>1 then pcall(api.nvim_win_close,w,false)
   else api.nvim_set_current_win(w);pcall(vim.cmd,'buffer #') end
  end
+end
+-- The DDL view: a read-only sql buffer ("SQL DDL: public.users"), reused.
+function _G._termocode_db_ddl(name,lines)
+ local b=vim.g.termocode_db_ddl_buf
+ if not (b and api.nvim_buf_is_valid(b)) then
+  b=api.nvim_create_buf(true,true);vim.g.termocode_db_ddl_buf=b
+  vim.bo[b].bufhidden='hide';vim.bo[b].swapfile=false
+  vim.bo[b].filetype='sql'
+  vim.keymap.set('n','q',function() pcall(vim.cmd,'buffer #') end,{buffer=b,silent=true,nowait=true})
+ end
+ pcall(api.nvim_buf_set_name,b,name)
+ put(b,0,-1,lines)
+ vim.bo[b].readonly=true
+ vim.bo[b].modified=false
+ api.nvim_set_current_buf(b)
+ pcall(api.nvim_win_set_cursor,0,{1,0})
+ vim.cmd('stopinsert')
 end
 function _G._termocode_db_value(lines)
  local b=vim.g.termocode_db_value_buf

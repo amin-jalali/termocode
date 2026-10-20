@@ -12,3 +12,17 @@ type Dialect interface {
 	Explain(sql string, analyze bool) string
 	CountSQL(table string) string
 }
+
+// DialectFor is the SQL dialect of a driver name, or nil for a driver that
+// does not speak SQL (redis) or is unknown.
+func DialectFor(driver string) Dialect {
+	switch normDriver(driver) {
+	case "postgres", "postgresql":
+		return PostgresDialect{}
+	case "mysql":
+		return MySQLDialect{}
+	case "sqlite":
+		return SQLiteDialect{}
+	}
+	return nil
+}

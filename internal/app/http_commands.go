@@ -556,6 +556,9 @@ func (m *Model) httpShowEntry(e httpclient.Entry) tea.Cmd {
 func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 	if m.promptKind == promptKindDBResultFilter {
 		s := m.dbConsole()
+		if s.shown != nil && s.shown.tv != nil {
+			return m.databaseTableWhere(s.shown.tv, value), true
+		}
 		s.filter = value
 		s.page = 0
 		return m.databaseShowPage(), true

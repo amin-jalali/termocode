@@ -695,7 +695,7 @@ func (s *SQLSession) introspectObject(ctx context.Context, req IntrospectionRequ
 				if len(row) > 0 {
 					idx := SchemaIndex{Name: row[0].Text}
 					if len(row) > 1 {
-						idx.Columns = strings.FieldsFunc(row[1].Text, func(r rune) bool { return r == ',' || r == ' ' })
+						idx.Columns = splitIndexColumns(row[1].Text, s.dialect)
 					}
 					if len(row) > 2 {
 						idx.Unique = row[2].Text == "true" || row[2].Text == "1"
@@ -730,6 +730,16 @@ func (s *SQLSession) introspectObject(ctx context.Context, req IntrospectionRequ
 		out.DDL = cell.Text
 	}
 	return out, nil
+}
+
+// splitIndexColumns splits the column list of an index. PostgreSQL joins the
+// names with a unit separator (a name may hold spaces and commas); the
+// other servers join with commas.
+func splitIndexColumns(list string, d Dialect) []string {
+	if _, pg := d.(PostgresDialect); pg {
+		return strings.Split(list, "\x1f")
+	}
+	return strings.FieldsFunc(list, func(r rune) bool { return r == ',' || r == ' ' })
 }
 
 func sqlCell(value any, typ string) Cell {

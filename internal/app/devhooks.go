@@ -52,7 +52,7 @@ import (
 //	svcdemo[:down|empty]   show the Services view with a canned snapshot
 //	                       (no docker; the shots and goldens)
 //	contdemo[:down|noengine|menu] show the Containers view with a canned host snapshot
-//	dbdemo[:empty|no-sqlite]   show a canned Databases tree (no connection)
+//	dbdemo[:empty|no-sqlite|result|messages|error|table|transposed|describe|ddl]   show a canned Databases tree or result page (no connection)
 //	httpdemo:<variant>     docs/users.http and a canned HTTP answer:
 //	                       file, response, headers or tls (no network)
 //	helpdemo               open the in-app guide at the chat panel section
@@ -93,7 +93,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 	case "contdemo":
 		m.containersDemo(arg)
 	case "dbdemo":
-		if arg == "result" || arg == "messages" || arg == "error" {
+		switch arg {
+		case "result", "messages", "error", "table", "transposed", "describe", "ddl":
 			return m.databaseResultDemo(arg)
 		}
 		m.databasesDemo(arg)

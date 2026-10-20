@@ -168,6 +168,14 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 			return m, m.databaseReviewRun(msg.run)
 		}
 		return m, nil
+	case dbTableMetaMsg:
+		return m, m.onDBTableMeta(msg)
+	case dbMetaMsg:
+		return m, m.onDBMeta(msg)
+	case dbCountMsg:
+		return m, m.onDBCount(msg)
+	case dbColsMsg:
+		return m, m.onDBCols(msg)
 	case dbConnectMsg:
 		return m, m.onDBConnect(msg)
 	case dbIntrospectMsg:

@@ -84,6 +84,8 @@ type dbState struct {
 	seq                 uint64
 	render              dbRenderCache
 	visible             bool
+	schemaVer           uint64                         // bumps when the tree or the column cache changes
+	cols                map[string]map[string][]string // connection -> lower-case table -> columns (completion)
 }
 
 type dbRenderCache struct {
@@ -573,6 +575,8 @@ func (m *Model) databasesClose() {
 }
 
 func (s *dbState) resetConnectionTree(id string) {
+	delete(s.cols, id)
+	s.schemaVer++
 	for path, n := range s.nodes {
 		if n.conn == id && path != id {
 			delete(s.nodes, path)
@@ -585,6 +589,7 @@ func (s *dbState) resetConnectionTree(id string) {
 }
 
 func (s *dbState) addIntrospection(path string, result dbclient.IntrospectionResult) {
+	s.schemaVer++
 	n := s.nodes[path]
 	n.children = nil
 	n.problem = ""
@@ -616,6 +621,11 @@ func (s *dbState) addIntrospection(path string, result dbclient.IntrospectionRes
 		s.addObjects(path, n.conn, result)
 		n = s.nodes[path]
 	} else if n.kind == dbNodeTable || n.kind == dbNodeView {
+		names := make([]string, 0, len(result.Columns))
+		for _, col := range result.Columns {
+			names = append(names, col.Name)
+		}
+		s.setColumns(n.conn, n.name, names)
 		for _, col := range result.Columns {
 			child := path + "/col/" + col.Name
 			mark := ""

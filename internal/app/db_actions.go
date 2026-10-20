@@ -35,6 +35,11 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-refresh", Title: "Databases: Refresh"},
 		{ID: "db-configure", Title: "Databases: Configure"},
 		{ID: "db-test-connection", Title: "Databases: Test Connection"},
+		{ID: "db-data", Title: "Databases: Open Table Data"},
+		{ID: "db-select", Title: "Databases: Select 100 Rows in Console"},
+		{ID: "db-describe", Title: "Databases: Describe Table"},
+		{ID: "db-ddl", Title: "Databases: Show DDL"},
+		{ID: "db-count-rows", Title: "Databases: Count Rows"},
 	}
 }
 
@@ -54,6 +59,16 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 	}
 	open := m.revealDatabasesView(id == "db-focus")
 	switch id {
+	case "db-data":
+		return tea.Batch(open, m.databaseOpenTable()), true
+	case "db-select":
+		return tea.Batch(open, m.databaseSelectInConsole()), true
+	case "db-describe":
+		return tea.Batch(open, m.databaseTableMeta(false)), true
+	case "db-ddl":
+		return tea.Batch(open, m.databaseTableMeta(true)), true
+	case "db-count-rows":
+		return tea.Batch(open, m.databaseCountFromTree()), true
 	case "db-new-console":
 		if r, ok := m.databaseCurrentRow(); ok {
 			return m.databaseNewConsole(r.conn), true
@@ -174,12 +189,23 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			m.copyToClipboard(row.name)
 			return m, m.pushToastDetail(toast.Info, "Copied install command", row.name)
 		}
+		return m, m.databaseCopyTableName()
+	case "o":
+		return m, m.databaseOpenTable()
+	case "d":
+		return m, m.databaseTableMeta(false)
+	case "D":
+		return m, m.databaseTableMeta(true)
+	case "s":
+		return m, m.databaseSelectInConsole()
+	case "#":
+		return m, m.databaseCountFromTree()
 	case "/":
 		cmd := m.openHTTPPrompt(promptKindDBFilter, "Databases: Filter", "Name contains:", "")
 		m.prompt.SetAllowEmpty(true)
 		return m, cmd
 	case "?":
-		return m, m.pushToastDetail(toast.Info, "Database keys", "j/k move · Enter connect or expand · a add · e edit · R refresh · x disconnect · / filter")
+		return m, m.pushToastDetail(toast.Info, "Database keys", "j/k move · Enter connect or expand · a add · e edit · R refresh · x disconnect · / filter · on a table: o data · d describe · D DDL · s select · # count · y copy name")
 	case "esc":
 		m.focus = FocusEditor
 	case "m":
@@ -442,6 +468,9 @@ func (m *Model) databaseExpand(path string) tea.Cmd {
 	if n.kind == dbNodeDatabase {
 		if c, ok := s.connection(n.conn); ok && c.Driver == "mysql" {
 			req.Database, req.Schema = n.name, n.name
+		} else if ok && c.Driver == "sqlite" {
+			// One file, one session: main and attached databases share it.
+			req.Database = n.name
 		} else {
 			req.Database = n.name
 			c, exists := s.connection(n.conn)
@@ -881,6 +910,7 @@ func (m *Model) onDBIntrospect(msg dbIntrospectMsg) tea.Cmd {
 	}
 	msg.result = sanitizeDBIntrospection(msg.result)
 	s.addIntrospection(msg.path, msg.result)
+	m.databaseSchemaChanged()
 	return nil
 }
 

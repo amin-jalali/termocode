@@ -34,6 +34,25 @@ func (m *Model) databaseResultDemo(variant string) tea.Cmd {
 	s := m.dbConsole()
 	s.shown, s.cache, s.size, s.page, s.sortCol, s.filter = r, nil, 100, 0, -1, ""
 	s.view = dbViewGrid
+	s.trans, s.trow = false, 0
+	switch variant {
+	case "table", "transposed":
+		// The data view of public.users: the second page, more to come.
+		tv := newDBTableView(dbTable{conn: "local-pg", driver: "postgres", schema: "public", name: "users"})
+		tv.keys, tv.cols, tv.offset, tv.more, tv.size = []string{"id"}, []string{"id", "email", "plan", "created_at"}, 100, true, 100
+		r.sql, _ = tv.selectSQL(101)
+		r.tv, r.line = tv, 0
+		if variant == "transposed" {
+			s.trans, s.trow = true, 1
+		}
+	case "describe":
+		tbl := dbTable{conn: "local-pg", driver: "postgres", schema: "public", name: "users"}
+		r.sql, r.describe, r.line = "Describe "+tbl.label(), &tbl, 0
+		r.result = dbDescribeResult(tbl, dbDemoMeta())
+	case "ddl":
+		tbl := dbTable{conn: "local-pg", driver: "postgres", schema: "public", name: "users"}
+		return m.databaseShowDDL(tbl, dbBuildDDL(tbl, dbDemoMeta()))
+	}
 	switch variant {
 	case "messages":
 		r.sql = "UPDATE users SET plan = 'pro' WHERE id = 48212;"
@@ -45,4 +64,26 @@ func (m *Model) databaseResultDemo(variant string) tea.Cmd {
 		s.view = dbViewMessages
 	}
 	return m.databaseShowPage()
+}
+
+// dbDemoMeta is the canned catalog of public.users.
+func dbDemoMeta() dbTableMeta {
+	return dbTableMeta{
+		cols: []dbColInfo{
+			{name: "id", typ: "bigint", notNull: true, def: "nextval('users_id_seq'::regclass)", pk: true},
+			{name: "email", typ: "text", notNull: true},
+			{name: "plan", typ: "text", def: "'free'::text"},
+			{name: "created_at", typ: "timestamp with time zone", notNull: true, def: "now()"},
+		},
+		ir: dbclient.IntrospectionResult{
+			Keys: []string{"id"},
+			Indexes: []dbclient.SchemaIndex{
+				{Name: "users_pkey", Columns: []string{"id"}, Unique: true},
+				{Name: "users_email_key", Columns: []string{"email"}, Unique: true},
+				{Name: "users_plan_idx", Columns: []string{"plan", "created_at"}},
+			},
+			ForeignKeys: []dbclient.SchemaForeignKey{{Name: "users_org_fk", Column: "org_id", RefTable: "orgs", RefColumn: "id"}},
+		},
+		triggers: [][3]string{{"users_audit", "AFTER", "INSERT OR UPDATE"}},
+	}
 }

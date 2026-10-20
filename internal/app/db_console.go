@@ -44,6 +44,11 @@ type dbRun struct {
 	statements          []string
 	index               int
 	result              dbclient.Result
+	sessKey             string       // the session that runs it, when not the connection's own
+	maxRows             int          // 0: db_max_rows
+	tv                  *dbTableView // a data view: the server pages it
+	describe            *dbTable     // a describe page: rerun reads the catalogs again
+	readOnly            bool         // run in a read-only session (the server refuses writes)
 }
 
 type dbConsoleState struct {
@@ -54,14 +59,18 @@ type dbConsoleState struct {
 	running  *dbRun
 	shown    *dbRun // the result on the page
 	cancel   context.CancelFunc
-	gen      uint64 // bumps on each run; stale results are dropped
-	pageGen  uint64 // bumps on each page write; stale batches are dropped
+	gen      uint64         // bumps on each run; stale results are dropped
+	pageGen  uint64         // bumps on each page write; stale batches are dropped
+	tableGen uint64         // bumps on each table command; stale answers are dropped
+	pushed   map[int]string // SQL buffer -> the schema stamp last pushed to it
 	view     int
 	page     int
 	size     int // rows per page (db_page_rows, read at run time)
 	filter   string
 	sortCol  int
 	desc     bool
+	trans    bool // the Transposed view (one row as column | value)
+	trow     int  // the row it shows, on the page
 	cache    *dbclient.Result
 	cacheKey dbViewKey
 	history  []dbclient.HistoryEntry
@@ -166,9 +175,7 @@ func (m *Model) databaseNewConsole(id string) tea.Cmd {
 	if c.Driver == "redis" {
 		return m.pushToastDetail(toast.Info, "No SQL console", "This connection does not use SQL.")
 	}
-	rootHash := fmt.Sprintf("%x", sha256.Sum256([]byte(m.databaseWorkspaceRoot())))[:16]
-	idHash := fmt.Sprintf("%x", sha256.Sum256([]byte(id)))[:12]
-	path := dbConfigPath("consoles", rootHash, idHash+".sql")
+	path := m.databaseConsolePath(id)
 	if path == "" {
 		return nil
 	}
@@ -187,9 +194,21 @@ func (m *Model) databaseNewConsole(id string) tea.Cmd {
 	}
 	m.ensureDBLua()
 	m.ensureEditorWindowCurrent()
-	_ = m.nvim.ExecLuaArgs(`vim.cmd('edit '..vim.fn.fnameescape(...)); vim.bo.filetype='sql'; vim.cmd('normal! G')`, path)
+	var buf int
+	_ = m.nvim.ExecLuaResult(`vim.cmd('edit '..vim.fn.fnameescape(...)); vim.bo.filetype='sql'; vim.cmd('normal! G'); return vim.api.nvim_get_current_buf()`, &buf, path)
+	if buf > 0 {
+		m.databaseBufferLens(buf) // the schema is there before the first key
+	}
 	m.focus = FocusEditor
 	return m.fetchStateCmd()
+}
+
+// databaseConsolePath is db/consoles/<workspace hash>/<connection hash>.sql
+// in the user config ("" when there is no config directory).
+func (m *Model) databaseConsolePath(id string) string {
+	rootHash := fmt.Sprintf("%x", sha256.Sum256([]byte(m.databaseWorkspaceRoot())))[:16]
+	idHash := fmt.Sprintf("%x", sha256.Sum256([]byte(id)))[:12]
+	return dbConfigPath("consoles", rootHash, idHash+".sql")
 }
 
 func (m *Model) dbConsoleError(err error) tea.Cmd {
@@ -455,6 +474,9 @@ func (m *Model) databaseStartRun(r *dbRun) tea.Cmd {
 	s.pending = nil
 	_ = m.revealDatabasesView(false) // sessions live while the view shows
 	sess := m.databases.sessions[r.conn]
+	if r.sessKey != "" {
+		sess = m.databases.sessions[r.sessKey]
+	}
 	if sess == nil {
 		s.waiting = r
 		cmd := m.databaseConnect(r.conn)
@@ -470,6 +492,7 @@ func (m *Model) databaseStartRun(r *dbRun) tea.Cmd {
 	ctx, cancel := context.WithTimeout(context.Background(), settings.timeout())
 	s.cancel = cancel
 	s.running = r
+	old := s.shown
 	s.shown = r
 	s.cache = nil
 	s.page = 0
@@ -477,11 +500,22 @@ func (m *Model) databaseStartRun(r *dbRun) tea.Cmd {
 	s.view = dbViewGrid
 	s.filter = ""
 	s.sortCol = -1
+	if r.tv == nil || old == nil || old.tv != r.tv {
+		s.trans, s.trow = false, 0
+	}
 	m.databaseRefreshLens(r.file, r.sql, "running…")
 	pageCmd := m.databaseShowPage()
 	limit := settings.maxRows()
+	if r.maxRows > 0 {
+		limit = r.maxRows
+	}
 	return tea.Batch(pageCmd, func() tea.Msg {
-		result := sess.Run(ctx, r.sql, dbclient.RunOptions{MaxRows: limit})
+		var result dbclient.Result
+		if r.readOnly {
+			result = dbRunReadOnly(ctx, sess, r.sql, dbclient.RunOptions{MaxRows: limit})
+		} else {
+			result = sess.Run(ctx, r.sql, dbclient.RunOptions{MaxRows: limit})
+		}
 		return dbRunMsg{gen: gen, run: r, result: result}
 	})
 }
@@ -506,9 +540,15 @@ func (m *Model) databaseFinishRun(msg dbRunMsg) tea.Cmd {
 	}
 	s.running = nil
 	msg.run.result = msg.result
+	if tv := msg.run.tv; tv != nil {
+		tv.finish(&msg.run.result, s.pageSize())
+	}
 	s.shown = msg.run
 	s.cache = nil
 	res := msg.result
+	if msg.run.tv != nil {
+		res = msg.run.result
+	}
 	status := ""
 	switch {
 	case res.Err != nil:
@@ -521,7 +561,10 @@ func (m *Model) databaseFinishRun(msg dbRunMsg) tea.Cmd {
 		status = fmt.Sprintf("%s · %d ms", dbPlural(len(res.Rows), "row"), res.Elapsed.Milliseconds())
 	}
 	m.databaseRefreshLens(msg.run.file, msg.run.sql, status)
-	cmds := []tea.Cmd{m.databaseShowPage(), m.databaseAppendHistory(msg.run)}
+	cmds := []tea.Cmd{m.databaseShowPage()}
+	if msg.run.tv == nil { // a data view is not something the user typed
+		cmds = append(cmds, m.databaseAppendHistory(msg.run))
+	}
 	if res.Err == nil && msg.run.index+1 < len(msg.run.statements) {
 		next := *msg.run
 		next.index++
@@ -572,6 +615,7 @@ func (s *dbConsoleState) stop(conn string) {
 	if s == nil {
 		return
 	}
+	s.tableGen++ // answers still on their way (describe, count, columns) are stale now
 	if conn != "" && (s.running == nil || s.running.conn != conn) && (s.waiting == nil || s.waiting.conn != conn) {
 		return
 	}
@@ -643,6 +687,12 @@ func (m *Model) databaseConsolePicker(id string) (tea.Cmd, bool) {
 		var col int
 		if _, err := fmt.Sscan(id, &col); err != nil {
 			return nil, true
+		}
+		if s.shown != nil && s.shown.tv != nil {
+			if col < 0 || col >= len(s.shown.result.Columns) {
+				return nil, true
+			}
+			return m.databaseTableSort(s.shown.tv, s.shown.result.Columns[col].Name), true
 		}
 		if s.sortCol == col {
 			s.desc = !s.desc

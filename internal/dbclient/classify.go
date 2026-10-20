@@ -294,7 +294,7 @@ var sideEffectFunctions = map[string]bool{
 func sideEffectFunction(word string) bool { return sideEffectFunctions[word] }
 
 func sideEffectPrefix(word string) bool {
-	for _, prefix := range []string{"DBLINK", "PG_ADVISORY_", "PG_TRY_ADVISORY_", "PG_SLEEP", "LO_"} {
+	for _, prefix := range []string{"DBLINK", "PG_ADVISORY_", "PG_TRY_ADVISORY_", "PG_SLEEP", "LO_", "PG_NOTIFY", "PG_STAT_RESET", "PG_STAT_STATEMENTS_RESET"} {
 		if strings.HasPrefix(word, prefix) {
 			return true
 		}
@@ -397,8 +397,9 @@ func stripSQLLiteralsDialect(sql string, dialect SQLDialect) string {
 		}
 		if b[i] == '\'' {
 			closed := false
-			for j := i; j < len(b); j++ {
-				if b[j] == '\\' && j+1 < len(b) && (dialect == DialectMySQL || (dialect == DialectPostgres && isEStringPrefix(b, i))) {
+			escapes := dialect == DialectMySQL || (dialect == DialectPostgres && isEStringPrefix(b, i))
+			for j := i + 1; j < len(b); j++ {
+				if b[j] == '\\' && j+1 < len(b) && escapes {
 					b[j], b[j+1] = ' ', ' '
 					j++
 					continue

@@ -274,6 +274,9 @@ func (m Model) handleDatabasesSidebarMouse(x, y int, t tea.MouseEventType) (Mode
 		r := rows[index]
 		m.databases.menuRow = r
 		items := []menu.Item{{ID: "connect", Title: "Connect or expand", Hint: "enter", Icon: "▸"}, {ID: "edit", Title: "Edit connection", Hint: "e", Icon: "✎"}, {ID: "password", Title: "Set password…", Hint: "p", Icon: "●"}, {ID: "disconnect", Title: "Disconnect", Hint: "x", Icon: "○"}, {Sep: true}, {ID: "refresh", Title: "Refresh", Hint: "R", Icon: "↻"}}
+		if r.kind == dbNodeTable || r.kind == dbNodeView {
+			items = []menu.Item{{ID: "data", Title: "Open data", Hint: "o", Icon: "▦"}, {ID: "describe", Title: "Describe", Hint: "d", Icon: "ⓘ"}, {ID: "ddl", Title: "Show DDL", Hint: "D", Icon: "≡"}, {ID: "select", Title: "Select 100 rows in console", Hint: "s", Icon: "▸"}, {ID: "count", Title: "Count rows", Hint: "#", Icon: "#"}, {ID: "copyname", Title: "Copy name", Hint: "y", Icon: "⧉"}, {Sep: true}, {ID: "refresh", Title: "Refresh", Hint: "R", Icon: "↻"}}
+		}
 		if r.kind == dbNodeSuggestion {
 			items = []menu.Item{{ID: "add", Title: "Add connection", Hint: "a", Icon: "+"}, {ID: "hide", Title: "Hide suggestion", Hint: "x", Icon: theme.GlyphClose.String()}}
 		}
@@ -304,6 +307,11 @@ func (m *Model) handleDatabasesMenuSelect(id string) tea.Cmd {
 		return cmd
 	case "refresh":
 		return m.databaseRefresh()
+	case "data", "describe", "ddl", "select", "count", "copyname":
+		key := map[string]rune{"data": 'o', "describe": 'd', "ddl": 'D', "select": 's', "count": '#', "copyname": 'y'}[id]
+		updated, cmd := m.handleDatabasesSidebarKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{key}})
+		*m = updated
+		return cmd
 	case "add":
 		return m.databaseAddSuggestion(r.path)
 	case "hide":

@@ -121,13 +121,18 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Cancel Query | `db-cancel` |   |   |
 | Databases: Configure | `db-configure` |   |   |
 | Databases: Connect Selected | `db-connect` |   |   |
+| Databases: Count Rows | `db-count-rows` |   |   |
+| Databases: Describe Table | `db-describe` |   |   |
 | Databases: Disconnect Selected | `db-disconnect` |   |   |
 | Databases: Focus | `db-focus` |   |   |
 | Databases: History… | `db-history` |   |   |
 | Databases: New Console | `db-new-console` |   |   |
+| Databases: Open Table Data | `db-data` |   |   |
 | Databases: Refresh | `db-refresh` |   |   |
 | Databases: Run File | `db-run-file` |   |   |
 | Databases: Run Statement or Selection | `db-run` |   |   |
+| Databases: Select 100 Rows in Console | `db-select` |   |   |
+| Databases: Show DDL | `db-ddl` |   |   |
 | Databases: Test Connection | `db-test-connection` |   |   |
 
 ## Debug
