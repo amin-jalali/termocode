@@ -107,6 +107,28 @@ func TestSQLiteJSONBlobForms(t *testing.T) {
 	}
 }
 
+func TestSQLiteRawByteEscapesMeanBinary(t *testing.T) {
+	// macOS sqlite3 prints X'41FF' as "A\u00ff": after JSON decoding it is
+	// plain "Aÿ", so only the raw line shows it was a byte, not text.
+	lines := []string{`[{"b":"A\u00ff","t":"café"}]`}
+	rows, _, err := parseSQLiteJSON(lines)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i, j, ok := sqliteFindBlob(lines, rows); !ok || i != 0 || j != 0 {
+		t.Fatalf("escaped byte not detected: %d %d %v (%q)", i, j, ok, rows)
+	}
+	// Real UTF-8 text is printed raw, never as \u00XX escapes.
+	lines = []string{`[{"t":"café ÿ"}]`}
+	rows, _, err = parseSQLiteJSON(lines)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, ok := sqliteFindBlob(lines, rows); ok {
+		t.Fatalf("UTF-8 text wrongly detected as binary: %q", rows)
+	}
+}
+
 func TestSQLiteDetectionAndInstallHints(t *testing.T) {
 	fakeHost(t, "linux", "ID=ubuntu\nID_LIKE=debian\n")
 	for _, tc := range []struct{ goos, goarch, want string }{

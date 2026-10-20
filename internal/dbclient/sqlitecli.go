@@ -487,16 +487,28 @@ func (s *SQLiteSession) Run(ctx context.Context, stmt string, opts RunOptions) R
 	}
 	res.Rows = rows
 	res.Columns = cols
-	for i := range res.Rows {
-		for j := range res.Rows[i] {
-			if sqliteJSONBlob(res.Rows[i][j].Text) {
-				res.Rows[i][j].Kind = "binary"
-				res.Notices = append(res.Notices, "BLOB values are shown as text by sqlite3's JSON output")
-				return res
+	if i, j, ok := sqliteFindBlob(lines, res.Rows); ok {
+		res.Rows[i][j].Kind = "binary"
+		res.Notices = append(res.Notices, "BLOB values are shown as text by sqlite3's JSON output")
+	}
+	return res
+}
+
+// sqliteFindBlob returns the first cell that holds BLOB bytes. Some builds
+// (macOS) print each high byte as a \u0080-\u00ff escape, which decodes to
+// ordinary Latin-1 text; real UTF-8 text is printed raw, never escaped, so
+// such an escape in the raw output marks the cell holding that rune.
+func sqliteFindBlob(lines []string, rows [][]Cell) (int, int, bool) {
+	byteEscape := sqliteRawByteEscape.MatchString(strings.Join(lines, "\n"))
+	for i := range rows {
+		for j := range rows[i] {
+			text := rows[i][j].Text
+			if sqliteJSONBlob(text) || byteEscape && strings.IndexFunc(text, func(r rune) bool { return r >= 0x80 && r <= 0xff }) >= 0 {
+				return i, j, true
 			}
 		}
 	}
-	return res
+	return 0, 0, false
 }
 
 // sqliteQueryPlan reads EXPLAIN QUERY PLAN output: sqlite3 prints it as a
@@ -535,6 +547,8 @@ func sqliteJSONBlob(text string) bool {
 	// escape such as u0000, or real invalid UTF-8 / U+FFFD. All mean binary.
 	return sqliteJSONBlobEscape.MatchString(text) || !utf8.ValidString(text) || strings.ContainsRune(text, utf8.RuneError)
 }
+
+var sqliteRawByteEscape = regexp.MustCompile(`(?i)\\u00[89a-f][0-9a-f]`)
 
 var sqliteJSONBlobEscape = regexp.MustCompile(`(?i)u[0-9a-f]{8}|u00[01][0-9a-f]`)
 
