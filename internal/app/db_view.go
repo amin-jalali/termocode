@@ -19,7 +19,11 @@ func (m Model) renderDatabasesSidebar(w, h int) string {
 		s = newDBState()
 	}
 	focused := m.focus == FocusExplorer
-	key := fmt.Sprintf("%d|%d|%d|%d|%t|%v", s.seq, s.cursor, w, h, focused, theme.CurrentRenderKey())
+	hint := ""
+	if rows := s.rows(); s.cursor >= 0 && s.cursor < len(rows) {
+		hint, _ = m.dbStoppedHint(rows[s.cursor], max(w-2, 0))
+	}
+	key := fmt.Sprintf("%d|%d|%d|%d|%t|%v|%s", s.seq, s.cursor, w, h, focused, theme.CurrentRenderKey(), hint)
 	s.render.Lock()
 	defer s.render.Unlock()
 	if s.render.key == key && s.render.out != "" {
@@ -117,7 +121,11 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 		if n := s.nodes[r.path]; n.kind == dbNodeRedisKey || n.kind == dbNodeRedisNS {
 			name = dbclient.RedisDisplay(n.key) // the whole key, not the part under its namespace
 		}
-		lines = append(lines, testsPad(muted("  "+sanitizeDBText(name)), w), testsPad(muted("  "+s.rowFooter(r)), w))
+		footer := s.rowFooter(r)
+		if hint, ok := m.dbStoppedHint(r, max(w-2, 0)); ok {
+			footer = hint
+		}
+		lines = append(lines, testsPad(muted("  "+sanitizeDBText(name)), w), testsPad(muted("  "+footer), w))
 	} else {
 		lines = append(lines, testsPad(muted("  No databases yet · a add one"), w), testsPad(muted("  .db files and .env URLs appear here"), w))
 	}
@@ -321,6 +329,9 @@ func (m Model) handleDatabasesSidebarMouse(x, y int, t tea.MouseEventType) (Mode
 		if r.kind == dbNodeRedisKey {
 			items = []menu.Item{{ID: "connect", Title: "Open value", Hint: "enter", Icon: "▸"}, {ID: "redis-ttl", Title: "Set TTL…", Hint: "t", Icon: "◷"}, {ID: "redis-delete", Title: "Delete key…", Hint: "D", Icon: theme.GlyphClose.String()}, {ID: "copyname", Title: "Copy key", Hint: "y", Icon: "⧉"}, {Sep: true}, {ID: "refresh", Title: "Refresh", Hint: "R", Icon: "↻"}}
 		}
+		if _, stopped := m.dbStoppedHint(r, 200); stopped && r.kind == dbNodeConnection {
+			items = append(items, menu.Item{ID: "start-service", Title: "Start service", Hint: "S", Icon: "▸"})
+		}
 		m.menu = menu.New(items, x+activity.Width, y)
 		m.menu.SetScreenSize(m.w, m.h)
 		m.menuOpen = true
@@ -360,6 +371,8 @@ func (m *Model) handleDatabasesMenuSelect(id string) tea.Cmd {
 		updated, cmd := m.handleDatabasesSidebarKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{key}})
 		*m = updated
 		return cmd
+	case "start-service":
+		return m.databaseStartService(r.conn)
 	case "add":
 		return m.databaseAddSuggestion(r.path)
 	case "hide":

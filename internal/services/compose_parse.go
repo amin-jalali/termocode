@@ -253,6 +253,12 @@ func ParseConfig(data []byte) (Config, error) {
 			if v == nil {
 				continue
 			}
+			if PublicEnvKey(k) && *v != "" && len(*v) <= 128 {
+				if svc.PublicEnv == nil {
+					svc.PublicEnv = map[string]string{}
+				}
+				svc.PublicEnv[k] = *v
+			}
 			for _, sv := range SecretValue(k, *v) {
 				if !seen[sv] {
 					seen[sv] = true

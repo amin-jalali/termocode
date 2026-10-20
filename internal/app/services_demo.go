@@ -264,6 +264,16 @@ func (m *Model) containersDemo(variant string) {
 		st.containerRows, st.imageRows, st.networkRows, st.volumeRows, st.contextRows = nil, nil, nil, nil, nil
 	case "menu":
 		m.openContainersSectionsMenu("")
+	case "db-menu": // the row menu of the postgres compose service
+		m.openServicesMenu(svcRow{kind: svcRowService, section: svcSecCompose, name: "postgres"}, activity.Width+6, 6)
+	case "db-container-menu": // the row menu of the postgres container
+		for i, r := range st.rows() {
+			if r.kind == svcRowHostItem && r.host == hostContainer && r.hostID == "9f3c2e1a" {
+				st.cursor = i
+				m.openContainerMenu(r, activity.Width+6, 6)
+				break
+			}
+		}
 	}
 	m.servicesClampCursor()
 	st.touch()

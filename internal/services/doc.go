@@ -14,5 +14,7 @@
 //     app runs in a terminal tab; short work (ps, config, stop, restart,
 //     logs --tail) is captured with a timeout.
 //   - Env values never leave the package: Service.EnvKeys holds names only,
-//     and secret-looking values are handed to the AI redactor.
+//     and secret-looking values are handed to the AI redactor. The one
+//     exception is Service.PublicEnv: the user and database names of the
+//     database images (PublicEnvKey), never a password.
 package services

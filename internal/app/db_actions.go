@@ -245,6 +245,10 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if have && row.kind == dbNodeConnection {
 			return m, m.databaseTestConnection(row.conn)
 		}
+	case "S":
+		if have && row.kind == dbNodeConnection {
+			return m, m.databaseStartService(row.conn)
+		}
 	case "t":
 		if have && row.conn != "" {
 			return m, m.databaseTxModePicker(row.conn)
@@ -272,7 +276,7 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		m.prompt.SetAllowEmpty(true)
 		return m, cmd
 	case "?":
-		return m, m.pushToastDetail(toast.Info, "Database keys", "j/k move · Enter connect or expand · a add · e edit · T test · t transaction mode · R refresh · x disconnect · / filter · on a table: o data · d describe · D DDL · s select · i import CSV · # count · y copy name")
+		return m, m.pushToastDetail(toast.Info, "Database keys", "j/k move · Enter connect or expand · a add · e edit · T test · S start a stopped service · t transaction mode · R refresh · x disconnect · / filter · on a table: o data · d describe · D DDL · s select · i import CSV · # count · y copy name")
 	case "esc":
 		m.focus = FocusEditor
 	case "m":

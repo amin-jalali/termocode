@@ -78,6 +78,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Inspect Image | `containers-image-inspect` |   |   |
 | Containers: Open Published Port | `containers-open-port` |   |   |
 | Containers: Open Shell | `containers-shell` |   |   |
+| Containers: Open in Databases | `containers-open-databases` |   |   |
 | Containers: Pause or Unpause Selected | `containers-pause` |   |   |
 | Containers: Prune Dangling Images… | `containers-image-prune` |   |   |
 | Containers: Prune Networks… | `containers-network-prune` |   |   |

@@ -73,6 +73,9 @@ func goldenScenes() []Scene {
 		Databases(),
 		DatabasesVariant("db-empty", "empty"),
 		DatabasesVariant("db-no-sqlite", "no-sqlite"),
+		DatabasesVariant("db-stopped-hint", "stopped"),
+		ContainersVariant("containers-db-service-menu", "db-menu"),
+		ContainersVariant("containers-db-container-menu", "db-container-menu"),
 		DatabasesVariant("db-result", "result"),
 		DatabasesVariant("db-messages", "messages"),
 		DatabasesVariant("db-error", "error"),
@@ -164,6 +167,7 @@ func goldenExtras() []Scene {
 		{Name: "db-tree-ascii", Icons: "ascii", Steps: Databases().Steps},
 		{Name: "db-redis-tree-ascii", Icons: "ascii", Steps: DatabasesVariant("db-redis-tree", "redis").Steps},
 		{Name: "db-tree-light", Theme: "catppuccin-latte", Steps: Databases().Steps},
+		{Name: "db-stopped-hint-ascii", Icons: "ascii", Steps: DatabasesVariant("db-stopped-hint", "stopped").Steps},
 		ContainersVariant("containers-menu", "menu"),
 		ContainersVariant("containers-docker-down", "down"),
 		ContainersVariant("containers-no-engine", "noengine"),
@@ -199,7 +203,7 @@ func goldenCases() []goldenCase {
 	}
 	// The smallest common window (80x24) for the screens that have a
 	// compact layout: start page, editor, palette, toast.
-	for _, sc := range []Scene{Dashboard(), DashboardRecent(), setupCardScene(), Editor(), Palette(), Toast(), FindResults(), SCMCommit(), TerminalMarks(), Services(), Databases(), DatabasesVariant("db-empty", "empty"), DatabasesVariant("db-no-sqlite", "no-sqlite"), DatabasesVariant("db-result", "result"), DatabasesVariant("db-messages", "messages"), DatabasesVariant("db-error", "error"), DatabasesVariant("db-table", "table"), DatabasesVariant("db-transposed", "transposed"), DatabasesVariant("db-describe", "describe"), DatabasesVariant("db-ddl", "ddl"), DatabasesVariant("db-result-edits", "edits"), DatabasesVariant("db-submit-card", "submit"), DatabasesVariant("db-export-picker", "export"), DatabasesVariant("db-import-card", "import"), DatabasesVariant("db-plan", "plan"), DatabasesVariant("db-plan-card", "plan-card"), DatabasesVariant("db-redis-tree", "redis"), DatabasesVariant("db-redis-key", "redis-key"), DatabasesVariant("db-ssh-host-card", "ssh-host"), DatabasesVariant("db-ssh-form", "ssh-form"), DatabasesVariant("db-ssl-form", "ssl-form"), Containers(), ContainersRemoveConfirm(), ContainersStopRemoveConfirm(), ContainersComposeDownConfirm(), ContainersImages(), ContainersNetworks(), ContainersVolumes(), ContainersHostCard("containers-image-prune-confirm", "image-prune"), ContainersHostCard("containers-image-remove-confirm", "image-remove"), ContainersHostCard("containers-image-in-use", "image-in-use"), ContainersHostCard("containers-network-remove-confirm", "network-remove"), ContainersHostCard("containers-network-prune-confirm", "network-prune"), ContainersHostCard("containers-volume-remove-confirm", "volume-remove"), ContainersHostCard("containers-volume-in-use", "volume-in-use"), ContainersHostCard("containers-volume-prune-confirm", "volume-prune"), HTTPFile(), HTTPResponse(), HTTPResponseTLS()} {
+	for _, sc := range []Scene{Dashboard(), DashboardRecent(), setupCardScene(), Editor(), Palette(), Toast(), FindResults(), SCMCommit(), TerminalMarks(), Services(), Databases(), DatabasesVariant("db-empty", "empty"), DatabasesVariant("db-no-sqlite", "no-sqlite"), DatabasesVariant("db-stopped-hint", "stopped"), ContainersVariant("containers-db-service-menu", "db-menu"), ContainersVariant("containers-db-container-menu", "db-container-menu"), DatabasesVariant("db-result", "result"), DatabasesVariant("db-messages", "messages"), DatabasesVariant("db-error", "error"), DatabasesVariant("db-table", "table"), DatabasesVariant("db-transposed", "transposed"), DatabasesVariant("db-describe", "describe"), DatabasesVariant("db-ddl", "ddl"), DatabasesVariant("db-result-edits", "edits"), DatabasesVariant("db-submit-card", "submit"), DatabasesVariant("db-export-picker", "export"), DatabasesVariant("db-import-card", "import"), DatabasesVariant("db-plan", "plan"), DatabasesVariant("db-plan-card", "plan-card"), DatabasesVariant("db-redis-tree", "redis"), DatabasesVariant("db-redis-key", "redis-key"), DatabasesVariant("db-ssh-host-card", "ssh-host"), DatabasesVariant("db-ssh-form", "ssh-form"), DatabasesVariant("db-ssl-form", "ssl-form"), Containers(), ContainersRemoveConfirm(), ContainersStopRemoveConfirm(), ContainersComposeDownConfirm(), ContainersImages(), ContainersNetworks(), ContainersVolumes(), ContainersHostCard("containers-image-prune-confirm", "image-prune"), ContainersHostCard("containers-image-remove-confirm", "image-remove"), ContainersHostCard("containers-image-in-use", "image-in-use"), ContainersHostCard("containers-network-remove-confirm", "network-remove"), ContainersHostCard("containers-network-prune-confirm", "network-prune"), ContainersHostCard("containers-volume-remove-confirm", "volume-remove"), ContainersHostCard("containers-volume-in-use", "volume-in-use"), ContainersHostCard("containers-volume-prune-confirm", "volume-prune"), HTTPFile(), HTTPResponse(), HTTPResponseTLS()} {
 		out = append(out, goldenCase{fmt.Sprintf("%s-80x24", sc.Name), sc, 80, 24})
 	}
 	out = append(out, goldenCase{"setup-card-100x30", setupCardScene(), 100, 30})

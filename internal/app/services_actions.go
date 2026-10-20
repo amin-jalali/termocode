@@ -987,6 +987,8 @@ func (m Model) handleServicesSidebarMouse(x, y int, t tea.MouseEventType) (Model
 	if t == tea.MouseRight {
 		if r.kind == svcRowService {
 			m.openServicesMenu(r, activityWidthX(x), y)
+		} else if r.kind == svcRowHostItem && r.host == hostContainer {
+			m.openContainerMenu(r, activityWidthX(x), y)
 		}
 		return m, nil
 	}
@@ -1040,6 +1042,9 @@ func (m *Model) openServicesMenu(r svcRow, x, y int) {
 	items = append(items, menu.Item{Sep: true},
 		menu.Item{ID: "copy", Title: "Copy address", Hint: "y", Icon: "⎘"},
 		menu.Item{ID: "open", Title: src, Hint: "o", Icon: "✎"})
+	if _, ok := m.dbTargetFromRow(r); ok {
+		items = append(items, menu.Item{ID: "databases", Title: dbOpenInDatabasesTitle, Icon: theme.IconDatabases.String()})
+	}
 	if r.section == svcSecCompose {
 		items = append(items, menu.Item{Sep: true},
 			menu.Item{ID: "recreate", Title: "Recreate (up --force-recreate)", Icon: "⊘"},
@@ -1055,6 +1060,9 @@ func (m *Model) openServicesMenu(r svcRow, x, y int) {
 // opened on.
 func (m *Model) handleServicesMenuSelect(id string) tea.Cmd {
 	r := m.services.menuRow
+	if r.kind == svcRowHostItem {
+		return m.handleContainerRowMenuSelect(id, r)
+	}
 	switch id {
 	case "start":
 		note, cmd := m.servicesStart(r.section, r.name)
@@ -1073,6 +1081,8 @@ func (m *Model) handleServicesMenuSelect(id string) tea.Cmd {
 		return m.servicesCopyAddress(r.section, r.name)
 	case "open":
 		return m.servicesOpenSource(r.section, r.name)
+	case "databases":
+		return m.databaseOpenFromRow(r)
 	case "recreate":
 		if c := m.services.composeBackend(); c != nil {
 			if err := m.servicesRunCommand(c.Recreate(r.name), svcTabUp); err != nil {
@@ -1104,6 +1114,7 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-stats", Title: "Containers: Follow Stats"},
 		{ID: "containers-inspect", Title: "Containers: Inspect"},
 		{ID: "containers-copy-id", Title: "Containers: Copy ID"},
+		{ID: "containers-open-databases", Title: "Containers: Open in Databases"},
 		{ID: "containers-open-port", Title: "Containers: Open Published Port"},
 		{ID: "containers-image-pull", Title: "Containers: Pull Image…"},
 		{ID: "containers-image-push", Title: "Containers: Push Selected Image…"},
@@ -1297,6 +1308,16 @@ func (m *Model) dispatchContainerAIAction(id, target string) (tea.Cmd, error) {
 func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 	if id == "containers-focus" {
 		return m.revealServicesView(true), true
+	}
+	if id == "containers-open-databases" {
+		open := m.revealServicesView(false)
+		return m.servicesAfterLoad(open, func(m *Model) tea.Cmd {
+			r, ok := m.servicesCurrentRow()
+			if !ok {
+				return m.servicesToast(toast.Info, "Select a database container or service first", "")
+			}
+			return m.databaseOpenFromRow(r)
+		}), true
 	}
 	if strings.HasPrefix(id, "containers-") {
 		open := m.revealServicesView(false)

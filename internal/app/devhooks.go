@@ -51,8 +51,8 @@ import (
 //	                       (nothing is written)
 //	svcdemo[:down|empty]   show the Services view with a canned snapshot
 //	                       (no docker; the shots and goldens)
-//	contdemo[:down|noengine|menu] show the Containers view with a canned host snapshot
-//	dbdemo[:empty|no-sqlite|result|messages|error|table|transposed|describe|ddl|edits|submit|plan|plan-card|redis|redis-key|ssh-host|ssh-form|ssl-form]   show a canned Databases tree or result page (no connection)
+//	contdemo[:down|noengine|menu|db-menu|db-container-menu] show the Containers view with a canned host snapshot
+//	dbdemo[:empty|no-sqlite|stopped|result|messages|error|table|transposed|describe|ddl|edits|submit|plan|plan-card|redis|redis-key|ssh-host|ssh-form|ssl-form]   show a canned Databases tree or result page (no connection)
 //	httpdemo:<variant>     docs/users.http and a canned HTTP answer:
 //	                       file, response, headers or tls (no network)
 //	helpdemo               open the in-app guide at the chat panel section

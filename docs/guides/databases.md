@@ -38,6 +38,12 @@ Press `T` on a row (or run **Databases: Test Connection**) to test it through it
 
 SQLite files ending in `.db`, `.sqlite`, or `.sqlite3` are suggested from the workspace root and nearby folders. A connection URL in `.env` can also be surfaced as a suggestion; the value itself is not shown, and the saved connection uses a `${dotenv:NAME}` reference. Press `a` to add a suggestion or `x` to hide it.
 
+## From Containers and Services
+
+A PostgreSQL, MySQL, MariaDB, Redis or Valkey container or compose service has **Open in Databases** in its right-click menu (in the Containers view) and in the palette (**Containers: Open in Databases**). It opens this view and asks for the password with the host, the published port, the user and the database already filled in. The user and database names come from the compose file (`POSTGRES_USER`, `POSTGRES_DB`, `MYSQL_USER`, `MYSQL_DATABASE`, `MARIADB_USER`, `MARIADB_DATABASE`); passwords are never read from it. The password goes to the secret store, not to a file. If a saved connection already points at the same local port, it is selected instead.
+
+When the container or service behind a saved connection is stopped, the footer says so (`postgres stopped · S start`). Press `S` on the connection, or choose **Start service** in its menu, to start it the same way the Containers view does.
+
 ## Disconnect
 
 Press `x` on a connection and confirm its name to close all sessions opened for that connection. Expanding another database reuses its session on later visits. Sessions also close when you leave the Databases view, so hidden views do not keep database processes or activity running. A session with an open manual transaction stays open until you commit or roll back (see [Transactions](#transactions)); `x` on its connection first asks **Commit**, **Roll back** or **Cancel**.

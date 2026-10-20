@@ -84,9 +84,10 @@ type Service struct {
 	DependsOn            []string
 	Profiles             []string
 	HasHealthcheck       bool
-	EnvKeys              []string // names only, never values
-	Source               string   // "compose.yaml:12", ".termocode/services.json", "Procfile"
-	Command, Cwd         string   // local only
+	EnvKeys              []string          // names only, never values
+	PublicEnv            map[string]string // values of a few non-secret keys (see PublicEnvKey), compose only
+	Source               string            // "compose.yaml:12", ".termocode/services.json", "Procfile"
+	Command, Cwd         string            // local only
 	Env                  map[string]string
 	Health               Probe // local only
 }
@@ -174,4 +175,16 @@ func FormatUptime(d time.Duration) string {
 		return fmt.Sprintf("%dh %dm", h, m)
 	}
 	return fmt.Sprintf("%dd", int(d/(24*time.Hour)))
+}
+
+// PublicEnvKey reports whether the value of an environment key may be read
+// by the app: the user and database names the database images use. They
+// are not secrets, and the Databases view prefills its add flow with them.
+// Passwords and every other key stay names only.
+func PublicEnvKey(k string) bool {
+	switch k {
+	case "POSTGRES_USER", "POSTGRES_DB", "MYSQL_USER", "MYSQL_DATABASE", "MARIADB_USER", "MARIADB_DATABASE":
+		return true
+	}
+	return false
 }

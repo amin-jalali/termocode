@@ -3,10 +3,18 @@ package app
 import (
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/dbclient"
+	"github.com/amin-jalali/termocode/internal/services"
 )
 
 // databasesDemo prepares stable screenshot states without opening a driver.
 func (m *Model) databasesDemo(variant string) {
+	if variant == "stopped" {
+		// The saved local-pg connection points at the compose postgres,
+		// which is stopped: the footer says so.
+		m.servicesDemo("")
+		m.services.status["postgres"] = services.Status{Name: "postgres", State: services.Exited, Text: "Exited (0) 3 minutes ago"}
+		m.services.visible = false
+	}
 	s := newDBState()
 	s.loaded = true
 	s.root = m.databaseWorkspaceRoot()
@@ -51,6 +59,9 @@ func (m *Model) databasesDemo(variant string) {
 	s.nodes[table+"/col/email"] = dbNode{kind: dbNodeColumn, name: "email  text", path: table + "/col/email", conn: conn}
 	s.nodes[table+"/col/plan"] = dbNode{kind: dbNodeColumn, name: "plan  text", path: table + "/col/plan", conn: conn}
 	s.cursor = 4
+	if variant == "stopped" {
+		s.cursor = 0
+	}
 	s.touch()
 }
 

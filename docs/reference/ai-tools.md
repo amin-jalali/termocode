@@ -1070,6 +1070,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `containers-network-create` | Containers: Create Network… | confirm (always asks) |   |
 | `containers-network-prune` | Containers: Prune Networks… | confirm (always asks) |   |
 | `containers-network-remove` | Containers: Remove Selected Network… | confirm (always asks) |   |
+| `containers-open-databases` | Containers: Open in Databases | never | opens a picker or prompt that only the user can answer; use a typed tool (db_connections) |
 | `containers-open-port` | Containers: Open Published Port | auto |   |
 | `containers-pause` | Containers: Pause or Unpause Selected | confirm (always asks) |   |
 | `containers-refresh` | Containers: Refresh | auto |   |
