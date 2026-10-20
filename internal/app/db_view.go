@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
@@ -42,21 +43,13 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 	fill := func() string { return theme.Bg(theme.BgSidebar).Render(strings.Repeat(" ", max(w, 0))) }
 	muted := func(v string) string { return theme.FgBg(theme.TextMuted, theme.BgSidebar).Render(v) }
 	lines := []string{sidebarHeader(w, "DATABASES", ""), theme.PaneHairline(w, theme.BgSidebar, focused)}
-	if len(s.conns) == 0 && len(s.rows()) == 0 {
-		lines = append(lines, renderEmptyState(w, h-2, theme.BgSidebar, emptyState{Glyph: theme.IconDatabases, Title: "No databases yet", Hint: "Add a connection or put DATABASE_URL in .env", Key: "a"})...)
-		for len(lines) < h {
-			lines = append(lines, fill())
-		}
-		return strings.Join(lines[:h], "\n")
+	noConns := len(s.conns) == 0
+	actions, _ := dbHeaderActions(w, noConns)
+	second := fill()
+	if noConns {
+		second = testsPad(theme.FgBg(theme.TextSecondary, theme.BgSidebar).Render(dbRemoteLabel()), w)
 	}
-	actions := "  a add   R refresh   / filter"
-	if w < 31 {
-		actions = "  a add  R refresh"
-	}
-	if w < 18 {
-		actions = "  a add"
-	}
-	lines = append(lines, testsPad(theme.FgBg(theme.TextSecondary, theme.BgSidebar).Render(actions), w), fill())
+	lines = append(lines, testsPad(theme.FgBg(theme.TextSecondary, theme.BgSidebar).Render(actions), w), second)
 	rows := s.rows()
 	available := max(h-len(lines)-2, 0)
 	if s.cursor < s.scroll {
@@ -66,6 +59,18 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 	}
 	s.scroll = min(s.scroll, max(len(rows)-available, 0))
 	start := s.scroll
+	if noConns && len(rows) == 0 {
+		hint := append([]string{"No databases yet"}, wrapPlain("Put DATABASE_URL in .env or start a database container.", max(w-4, 8))...)
+		for i, l := range hint {
+			style := theme.FgBg(theme.TextDim, theme.BgSidebar)
+			if i == 0 {
+				style = theme.FgBg(theme.TextSecondary, theme.BgSidebar).Bold(true)
+			}
+			if i < available {
+				lines = append(lines, testsPad(style.Render("  "+l), w))
+			}
+		}
+	}
 	for i := start; i < len(rows) && i < start+available; i++ {
 		r := rows[i]
 		if r.kind == dbNodeSuggestionsHeader {
@@ -133,6 +138,55 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 		lines = append(lines, fill())
 	}
 	return strings.Join(lines[:h], "\n")
+}
+
+// dbRemoteLabel is the "Add remote…" line of the empty state.
+func dbRemoteLabel() string {
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		return "  Add remote... (SSH)"
+	}
+	return "  Add remote… (SSH)"
+}
+
+// dbZone is a clickable part of the header line.
+type dbZone struct {
+	x0, x1 int // columns [x0, x1)
+	id     string
+}
+
+// dbHeaderActions is the action line under the title and its click zones.
+// With no connections it spells out "add connection".
+func dbHeaderActions(w int, noConns bool) (string, []dbZone) {
+	type seg struct{ text, id string }
+	var segs []seg
+	switch {
+	case noConns && w >= 29:
+		segs = []seg{{"a add connection", "add"}, {"R refresh", "refresh"}}
+	case noConns && w >= 20:
+		segs = []seg{{"a add connection", "add"}}
+	case noConns || w < 18:
+		segs = []seg{{"a add", "add"}}
+	case w < 31:
+		segs = []seg{{"a add", "add"}, {"R refresh", "refresh"}}
+	default:
+		segs = []seg{{"a add", "add"}, {"R refresh", "refresh"}, {"/ filter", "filter"}}
+	}
+	sep := "   "
+	if w < 31 {
+		sep = "  " // the narrow header keeps its older look
+	}
+	out, x := "  ", 2
+	var zones []dbZone
+	for i, sg := range segs {
+		if i > 0 {
+			out += sep
+			x += len(sep)
+		}
+		zones = append(zones, dbZone{x0: x, x1: x + len(sg.text), id: sg.id})
+		out += sg.text
+		x += len(sg.text)
+	}
+	return out, zones
 }
 
 func dbNodeExpandable(kind dbNodeKind) bool {
@@ -305,6 +359,9 @@ func (m Model) handleDatabasesSidebarMouse(x, y int, t tea.MouseEventType) (Mode
 	if t != tea.MouseLeft && t != tea.MouseRight {
 		return m, nil
 	}
+	if t == tea.MouseLeft && (y == 2 || y == 3) {
+		return m.handleDatabasesHeaderClick(x, y)
+	}
 	localY := y - 4
 	if localY < 0 {
 		return m, nil
@@ -314,8 +371,17 @@ func (m Model) handleDatabasesSidebarMouse(x, y int, t tea.MouseEventType) (Mode
 	if index >= len(rows) {
 		return m, nil
 	}
+	double := t == tea.MouseLeft && rows[index].path == m.databases.lastClickPath && time.Since(m.databases.lastClickAt) < 400*time.Millisecond
 	m.databases.cursor = index
 	m.databases.touch()
+	if t == tea.MouseLeft {
+		m.databases.lastClickPath, m.databases.lastClickAt = rows[index].path, time.Now()
+		if double && rows[index].selectable {
+			m.databases.lastClickAt = time.Time{}
+			return m.databaseDoubleClick(rows[index])
+		}
+		return m, nil
+	}
 	if t == tea.MouseRight {
 		r := rows[index]
 		m.databases.menuRow = r
@@ -337,6 +403,45 @@ func (m Model) handleDatabasesSidebarMouse(x, y int, t tea.MouseEventType) (Mode
 		m.menuOpen = true
 		m.menuKind = menuKindDatabases
 		return m, nil
+	}
+	return m, nil
+}
+
+// databaseDoubleClick: a connection connects or expands, a folder folds or
+// unfolds, a table or view opens its data, a suggestion opens the Add card.
+// Each one does what its Enter / o key does.
+func (m Model) databaseDoubleClick(r dbTreeRow) (Model, tea.Cmd) {
+	key := tea.KeyMsg{Type: tea.KeyEnter}
+	if r.kind == dbNodeTable || r.kind == dbNodeView {
+		key = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o'}}
+	}
+	return m.handleDatabasesSidebarKey(key)
+}
+
+// handleDatabasesHeaderClick: the action line (a add, R refresh, / filter)
+// and, with no connections, the Add remote line.
+func (m Model) handleDatabasesHeaderClick(x, y int) (Model, tea.Cmd) {
+	s := m.databases
+	noConns := len(s.conns) == 0
+	if y == 3 {
+		if noConns && x >= 2 && x < 2+runewidth.StringWidth(strings.TrimSpace(dbRemoteLabel())) {
+			return m, m.databaseAddRemote()
+		}
+		return m, nil
+	}
+	_, zones := dbHeaderActions(m.explorerWidth-1, noConns)
+	for _, z := range zones {
+		if x < z.x0 || x >= z.x1 {
+			continue
+		}
+		switch z.id {
+		case "add":
+			return m, m.openDatabaseTypePicker()
+		case "refresh":
+			return m, m.databaseRefresh()
+		case "filter":
+			return m.handleDatabasesSidebarKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+		}
 	}
 	return m, nil
 }

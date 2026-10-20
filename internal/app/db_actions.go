@@ -671,6 +671,7 @@ func (m *Model) databaseRefresh() tea.Cmd {
 	root := s.root
 	generation := s.generation + 1
 	filter, folded, hidden, cursor := s.filter, s.folded, s.hidden, s.cursor
+	oldContainers, oldPorts := s.discovered, s.discoveredPorts
 	m.databases = newDBState()
 	m.databases.generation = generation
 	m.databases.load(root)
@@ -680,8 +681,10 @@ func (m *Model) databaseRefresh() tea.Cmd {
 		m.databases.folded[path] = isFolded
 	}
 	m.databases.cursor = min(cursor, max(len(m.databases.rows())-1, 0))
+	m.databases.fixCursor()
+	m.databases.discovered, m.databases.discoveredPorts = oldContainers, oldPorts
 	m.databases.addRuntimeSuggestions(m.services)
-	return nil
+	return m.databaseDiscover()
 }
 
 func (m *Model) databaseConfigure(add bool) tea.Cmd {
@@ -691,7 +694,13 @@ func (m *Model) databaseConfigure(add bool) tea.Cmd {
 	return m.databaseEdit("")
 }
 
-func (m *Model) openDatabaseTypePicker() tea.Cmd {
+func (m *Model) openDatabaseTypePicker() tea.Cmd { return m.databaseTypePicker(false) }
+
+// databaseAddRemote is "Add remote… (SSH)": the usual add steps, then the
+// SSH tunnel steps, then the test.
+func (m *Model) databaseAddRemote() tea.Cmd { return m.databaseTypePicker(true) }
+
+func (m *Model) databaseTypePicker(remote bool) tea.Cmd {
 	items := []picker.Item{
 		{ID: "postgres", Title: "PostgreSQL", Hint: "default port 5432"},
 		{ID: "mysql", Title: "MySQL / MariaDB", Hint: "default port 3306"},
@@ -699,7 +708,15 @@ func (m *Model) openDatabaseTypePicker() tea.Cmd {
 		{ID: "redis", Title: "Redis / Valkey", Hint: "default port 6379"},
 		{ID: "url", Title: "From a URL", Hint: "paste a connection URL"},
 	}
-	m.picker = picker.NewItems(" Add a database connection ", items)
+	title := " Add a database connection "
+	if remote {
+		items = []picker.Item{items[0], items[1], items[3]}
+		title = " Add a remote database (SSH) "
+	}
+	if m.databases != nil {
+		m.databases.remoteNext = remote
+	}
+	m.picker = picker.NewItems(title, items)
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
 	m.pickerKind = pickerKindDBType
@@ -714,6 +731,7 @@ func (m *Model) databaseStartAdd(kind string) tea.Cmd {
 	s.pendingConn = dbclient.Conn{Source: dbclient.SourceUser}
 	s.pendingPassword = ""
 	s.addFromURL = kind == "url"
+	s.remoteAdd, s.remoteNext = s.remoteNext && kind != "sqlite" && kind != "url", false
 	switch kind {
 	case "postgres":
 		s.pendingConn.Driver, s.pendingConn.Port, s.pendingConn.User, s.pendingConn.Database = "postgres", 5432, "postgres", "postgres"
@@ -751,6 +769,10 @@ func (m *Model) databasePromptPasswordForPending() tea.Cmd {
 func (m *Model) databaseRetestPending() tea.Cmd {
 	if m.databases == nil || m.databases.pendingConn.ID == "" {
 		return nil
+	}
+	if s := m.databases; s.remoteAdd && s.pendingConn.SSH == nil {
+		s.remoteAdd = false
+		return m.databaseSSHStart("")
 	}
 	return dbTestCommandSSH(m.databases.pendingConn, m.databases.pendingPassword, m.databases.root, m.databases.generation, m.databases.pendingSSH, false)
 }
@@ -861,8 +883,11 @@ func (m *Model) databaseAddSuggestion(path string) tea.Cmd {
 		s.pendingPassword = password
 		return dbTestCommand(c, password, s.root, s.generation)
 	}
-	if strings.HasPrefix(path, "suggest-service-") || strings.HasPrefix(path, "suggest-container-") {
+	if strings.HasPrefix(path, "suggest-service-") || strings.HasPrefix(path, "suggest-container-") || strings.HasPrefix(path, "suggest-local-") {
 		id := strings.TrimPrefix(strings.TrimPrefix(path, "suggest-service-"), "suggest-container-")
+		if strings.HasPrefix(path, "suggest-local-") {
+			id = "local-" + n.driver
+		}
 		id = strings.ToLower(strings.ReplaceAll(id, "_", "-"))
 		id = strings.ReplaceAll(id, "/", "-")
 		if id == "" {
@@ -875,6 +900,15 @@ func (m *Model) databaseAddSuggestion(path string) tea.Cmd {
 			}
 		}
 		c := dbclient.Conn{ID: id, Name: n.name, Driver: n.driver, Host: n.host, Port: n.port, Source: dbclient.SourceProject}
+		if strings.HasPrefix(path, "suggest-local-") {
+			c.Name = id
+			switch n.driver {
+			case "postgres":
+				c.User, c.Database = "postgres", "postgres"
+			case "mysql":
+				c.User = "root"
+			}
+		}
 		project := append([]dbclient.Conn(nil), s.projectConns...)
 		project = append(project, c)
 		if err := writeDBConfig(filepath.Join(s.root, ".termocode", "databases.json"), project); err != nil {

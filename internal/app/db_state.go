@@ -13,7 +13,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/containers"
 	"github.com/amin-jalali/termocode/internal/dbclient"
+	"github.com/amin-jalali/termocode/internal/services"
 )
 
 type dbNodeKind int
@@ -106,6 +108,15 @@ type dbState struct {
 	secretAsk           *dbSecretAsk                // the SSH password / passphrase prompt
 	sshEdit             *dbSSHEdit                  // Add SSH Tunnel / SSL Settings prompts
 	compare             *dbCompareState             // Compare Schemas (db_compare.go)
+	lastClickAt         time.Time                   // double-click detection (db_view.go)
+	lastClickPath       string
+	remoteNext          bool // "Add remote…" picked: the type picker is open
+	remoteAdd           bool // the connection being added goes through an SSH tunnel
+	discovering         bool // DB-16: a discovery runs (db_discover.go)
+	discoverGen         uint64
+	discoverDone        bool
+	discovered          []containers.Container // the container list it read
+	discoveredPorts     []int                  // local ports that answered
 }
 
 type dbRenderCache struct {
@@ -191,7 +202,11 @@ func (m *Model) revealDatabasesView(focus bool) tea.Cmd {
 	}
 	m.ensureDatabasesLoaded()
 	m.databases.addRuntimeSuggestions(m.services)
+	opening := !m.databases.visible
 	m.databases.visible = true
+	if opening {
+		return m.databaseDiscover()
+	}
 	return nil
 }
 
@@ -286,7 +301,23 @@ func (s *dbState) load(root string) {
 	}
 	s.findSuggestions()
 	s.loaded = true
+	s.fixCursor()
 	s.touch()
+}
+
+// fixCursor moves the cursor off a heading (SUGGESTED) to the first row
+// that can be selected.
+func (s *dbState) fixCursor() {
+	rows := s.rows()
+	if s.cursor < 0 || s.cursor >= len(rows) || rows[s.cursor].selectable {
+		return
+	}
+	for i := s.cursor; i < len(rows); i++ {
+		if rows[i].selectable {
+			s.cursor = i
+			return
+		}
+	}
 }
 
 func dbConnName(c dbclient.Conn) string {
@@ -385,11 +416,24 @@ func (s *dbState) findSuggestions() {
 	}
 }
 
-func (s *dbState) addRuntimeSuggestions(st *servicesState) {
-	if st == nil {
-		return
+// dropDiscoverySuggestions removes the container and local-port rows, so a
+// new discovery result replaces them.
+func (s *dbState) dropDiscoverySuggestions() {
+	for path := range s.nodes {
+		if strings.HasPrefix(path, "suggest-container-") || strings.HasPrefix(path, "suggest-local-") {
+			delete(s.nodes, path)
+		}
 	}
-	for _, svc := range st.compose {
+}
+
+func (s *dbState) addRuntimeSuggestions(st *servicesState) {
+	var composeRows []services.Service
+	rows := append([]containers.Container(nil), s.discovered...)
+	if st != nil {
+		composeRows = st.compose
+		rows = append(rows, st.containerRows...)
+	}
+	for _, svc := range composeRows {
 		driver := dbDriverForImage(svc.Image)
 		if driver == "" {
 			continue
@@ -407,7 +451,7 @@ func (s *dbState) addRuntimeSuggestions(st *servicesState) {
 		}
 		s.nodes[id] = dbNode{kind: dbNodeSuggestion, name: svc.Name + " (compose)", path: id, conn: id, detail: driver + "  localhost:" + itoa(port), driver: driver, host: "localhost", port: port}
 	}
-	for _, c := range st.containerRows {
+	for _, c := range rows {
 		driver := dbDriverForImage(c.Image)
 		if driver == "" {
 			continue
@@ -427,8 +471,48 @@ func (s *dbState) addRuntimeSuggestions(st *servicesState) {
 		if _, exists := s.nodes[id]; exists {
 			continue
 		}
-		s.nodes[id] = dbNode{kind: dbNodeSuggestion, name: name + " (container)", path: id, conn: id, detail: driver + "  localhost:" + itoa(port), driver: driver, host: "localhost", port: port}
+		s.nodes[id] = dbNode{kind: dbNodeSuggestion, name: sanitizeDBText(name) + " (container)", path: id, conn: id, detail: driver + "  localhost:" + itoa(port), driver: driver, host: "localhost", port: port}
 	}
+	s.addLocalSuggestions()
+}
+
+// addLocalSuggestions turns each local port that answered into a row,
+// unless a saved connection or a container row already covers it.
+func (s *dbState) addLocalSuggestions() {
+	covered := map[int]bool{}
+	for _, c := range s.conns {
+		if c.Driver != "sqlite" && dbLocalHost(c.Host) && c.Port > 0 {
+			covered[c.Port] = true
+		}
+	}
+	for _, n := range s.nodes {
+		if n.kind == dbNodeSuggestion && n.port > 0 && dbLocalHost(n.host) {
+			covered[n.port] = true
+		}
+	}
+	for _, port := range s.discoveredPorts {
+		if covered[port] {
+			continue
+		}
+		driver := ""
+		for _, t := range dbProbeTargets {
+			if t.port == port {
+				driver = t.driver
+			}
+		}
+		if driver == "" {
+			continue
+		}
+		id := "suggest-local-" + itoa(port)
+		s.nodes[id] = dbNode{kind: dbNodeSuggestion, name: dbSuggestTitle(driver) + " on localhost:" + itoa(port), path: id, conn: id, detail: driver + "  localhost:" + itoa(port), driver: driver, host: "localhost", port: port}
+	}
+}
+
+func dbSuggestTitle(driver string) string {
+	if driver == "redis" {
+		return "Redis"
+	}
+	return dbDriverTitle(driver)
 }
 
 func dbDriverForImage(image string) string {

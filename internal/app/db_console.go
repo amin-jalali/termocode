@@ -529,12 +529,16 @@ func firstSQLWord(sql string) string {
 // databaseStartRun connects first when needed (the run waits), then runs
 // r on the connection's session in the background with a timeout.
 func (m *Model) databaseStartRun(r *dbRun) tea.Cmd {
+	open := m.revealDatabasesView(false) // sessions live while the view shows
+	return tea.Batch(open, m.databaseStartRunRevealed(r))
+}
+
+func (m *Model) databaseStartRunRevealed(r *dbRun) tea.Cmd {
 	s := m.dbConsole()
 	if m.dbSessionBusy() {
 		return m.pushToastDetail(toast.Warn, "An import is running", "Esc cancels it first.")
 	}
 	s.pending = nil
-	_ = m.revealDatabasesView(false) // sessions live while the view shows
 	sess := m.databases.sessions[r.conn]
 	if r.sessKey != "" {
 		sess = m.databases.sessions[r.sessKey]

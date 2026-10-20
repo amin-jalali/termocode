@@ -281,6 +281,7 @@ func isolatedEnv(home string) []string {
 		"LC_ALL=C.UTF-8",
 		"SHELL=/bin/sh",
 		"TERMOCODE_FONT_DELTA=0",
+		"TERMOCODE_NO_DB_DISCOVERY=1",
 		"GIT_CONFIG_NOSYSTEM=1",
 	}
 	for _, k := range keep {

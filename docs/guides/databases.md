@@ -63,9 +63,19 @@ Termocode suggests connections it finds. A suggestion row has no password and do
 
 - SQLite files ending in `.db`, `.sqlite` or `.sqlite3`, up to two folders below the workspace root.
 - `DATABASE_URL`, `REDIS_URL` or `MYSQL_URL` in the workspace `.env`. The value is not shown. The saved connection uses a `${dotenv:NAME}` reference.
-- PostgreSQL, MySQL, MariaDB, Redis and Valkey containers or compose services that the Services view lists.
+- PostgreSQL, MySQL, MariaDB, Redis and Valkey containers and compose services. The Databases view reads the container list itself when it opens and when you press `R`. You do not need to open Services first.
+- A server on this computer that is not in Docker. When the view opens and on `R`, Termocode tries one quick connection to `127.0.0.1` on ports 5432, 3306 and 6379. A port that answers shows as **PostgreSQL on localhost:5432**, **MySQL on localhost:3306** or **Redis on localhost:6379**. Ports that a saved connection or a container already uses are skipped. No other computer is ever tried.
 
-Press `a` on a suggestion (or `Enter`) to add it. Press `x` to hide it.
+Press `a` on a suggestion (or `Enter`) to add it. Press `x` to hide it. A hidden suggestion stays hidden.
+
+With no connections yet, the view lists the suggestions and offers **a add connection** and **Add remote… (SSH)**. **Add remote…** asks for the server type, then the usual connection steps, then the SSH tunnel steps, then runs the test.
+
+## Mouse
+
+- Click a row to select it. Double-click a connection to connect or expand it, a folder to fold or unfold it, and a table or view to open its data.
+- On a suggestion, click to select and double-click to add it.
+- Click **a add**, **R refresh** or **/ filter** in the header. In the empty view, click **a add connection** or **Add remote…**.
+- Right-click a row for its menu.
 
 ## Add a connection
 

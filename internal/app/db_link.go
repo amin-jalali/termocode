@@ -308,7 +308,11 @@ func (m *Model) databaseOpenFromRow(r svcRow) tea.Cmd {
 }
 
 func (m *Model) databaseOpenTarget(t dbRuntimeTarget) tea.Cmd {
-	m.revealDatabasesView(true)
+	open := m.revealDatabasesView(true)
+	return tea.Batch(open, m.databaseOpenTargetRevealed(t))
+}
+
+func (m *Model) databaseOpenTargetRevealed(t dbRuntimeTarget) tea.Cmd {
 	s := m.databases
 	if saved, ok := s.databaseSavedMatch(t); ok {
 		s.databaseSelectPath(saved.ID)

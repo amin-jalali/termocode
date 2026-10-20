@@ -25,19 +25,20 @@ func TestMain(m *testing.M) {
 		_ = os.MkdirAll(filepath.Join(home, d), 0o755)
 	}
 	for k, v := range map[string]string{
-		"HOME":                  home,
-		"XDG_CONFIG_HOME":       filepath.Join(home, "config"),
-		"XDG_DATA_HOME":         filepath.Join(home, "data"),
-		"XDG_STATE_HOME":        filepath.Join(home, "state"),
-		"XDG_CACHE_HOME":        filepath.Join(home, "cache"),
-		"TERMOCODE_PLUGINS_DIR": filepath.Join(home, "plugins"),
-		"TERMOCODE_HEADLESS":    "1",
-		"DISPLAY":               "",
-		"WAYLAND_DISPLAY":       "",
-		"HTTP_PROXY":            "http://127.0.0.1:9",
-		"HTTPS_PROXY":           "http://127.0.0.1:9",
-		"http_proxy":            "http://127.0.0.1:9",
-		"https_proxy":           "http://127.0.0.1:9",
+		"HOME":                      home,
+		"XDG_CONFIG_HOME":           filepath.Join(home, "config"),
+		"XDG_DATA_HOME":             filepath.Join(home, "data"),
+		"XDG_STATE_HOME":            filepath.Join(home, "state"),
+		"XDG_CACHE_HOME":            filepath.Join(home, "cache"),
+		"TERMOCODE_PLUGINS_DIR":     filepath.Join(home, "plugins"),
+		"TERMOCODE_HEADLESS":        "1",
+		"TERMOCODE_NO_DB_DISCOVERY": "1",
+		"DISPLAY":                   "",
+		"WAYLAND_DISPLAY":           "",
+		"HTTP_PROXY":                "http://127.0.0.1:9",
+		"HTTPS_PROXY":               "http://127.0.0.1:9",
+		"http_proxy":                "http://127.0.0.1:9",
+		"https_proxy":               "http://127.0.0.1:9",
 	} {
 		_ = os.Setenv(k, v)
 	}
