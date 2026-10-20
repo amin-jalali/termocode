@@ -52,6 +52,7 @@ type dbRun struct {
 	tab                 *dbTab       // the tab it replaces (a page, a sort, a rerun); nil: a new result
 	batch               uint64       // the send it belongs to (one tab per statement with rows)
 	notes               []string     // lines added to Messages (what a submit did)
+	plan                *dbPlanRun   // an EXPLAIN run (db_explain.go): the page shows the Plan view
 }
 
 type dbConsoleState struct {
@@ -299,7 +300,11 @@ func dbChangeSummary(r *dbRun) string {
 
 // databaseSend is the send key in a SQL buffer: the statement under the
 // cursor, the visual selection as typed, or every statement (all).
-func (m *Model) databaseSend(all bool) tea.Cmd {
+func (m *Model) databaseSend(all bool) tea.Cmd { return m.databaseSendMode(all, nil) }
+
+// databaseSendMode is databaseSend; a non-nil plan makes it an explain of
+// the statement at the cursor (db_explain.go).
+func (m *Model) databaseSendMode(all bool, plan *dbPlanRun) tea.Cmd {
 	if m.nvim == nil {
 		return nil
 	}
@@ -320,7 +325,7 @@ func (m *Model) databaseSend(all bool) tea.Cmd {
 	var raw string
 	_ = m.nvim.ExecLuaResult(dbSelectionLua, &raw)
 	_ = json.Unmarshal([]byte(raw), &pos)
-	r := &dbRun{file: file, sql: strings.Join(lines, "\n"), line: max(pos.Line, 1), by: "user"}
+	r := &dbRun{file: file, sql: strings.Join(lines, "\n"), line: max(pos.Line, 1), by: "user", plan: plan}
 	switch {
 	case all:
 		r.line = 0
@@ -399,6 +404,9 @@ func (m *Model) databasePrepareRun(r *dbRun) tea.Cmd {
 	r.line = max(r.line, 1)
 	r.index = 0
 	r.sql = r.statements[0]
+	if r.plan != nil {
+		return m.databaseExplainStart(r)
+	}
 	s := m.dbConsole()
 	s.batchSeq++
 	r.batch = s.batchSeq
@@ -547,11 +555,17 @@ func (m *Model) databaseStartRun(r *dbRun) tea.Cmd {
 	inTx := m.databases.txOpen(key)
 	// Manual mode: a statement the user runs begins the transaction (or
 	// joins it); the data view's reads only look inside an open one.
-	manual := m.databases.manualMode(r.conn) && !r.readOnly && r.tv == nil
+	manual := m.databases.manualMode(r.conn) && !r.readOnly && r.tv == nil && r.plan == nil
+	driver := ""
+	if c, ok := m.databases.connection(r.conn); ok {
+		driver = c.Driver
+	}
 	return tea.Batch(pageCmd, func() tea.Msg {
 		var result dbclient.Result
 		began := false
 		switch {
+		case r.plan != nil:
+			result = dbExplainExec(ctx, sess, driver, r.plan, inTx, limit)
 		case r.readOnly && inTx:
 			result = dbReadInTx(ctx, sess, r.sql, dbclient.RunOptions{MaxRows: limit})
 		case r.readOnly:
@@ -594,6 +608,13 @@ func (m *Model) databaseFinishRun(msg dbRunMsg) tea.Cmd {
 	s.running = nil
 	txCmd := m.databaseTrackTx(msg)
 	msg.run.result = msg.result
+	if pl := msg.run.plan; pl != nil && msg.result.Err == nil {
+		driver := ""
+		if c, ok := m.databases.connection(msg.run.conn); ok {
+			driver = c.Driver
+		}
+		pl.parsed = dbclient.ParsePlan(driver, msg.result, pl.analyze)
+	}
 	if len(msg.run.notes) > 0 {
 		msg.run.result.Notices = append(append([]string(nil), msg.run.notes...), msg.run.result.Notices...)
 	}
@@ -738,6 +759,8 @@ func (m *Model) databaseConsoleConfirm(id string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	switch m.confirmKind {
+	case confirmKindDBExplain:
+		return m.databaseExplainConfirm(id), true
 	case confirmKindDBRun:
 		s := m.dbConsole()
 		r := s.pending

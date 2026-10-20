@@ -27,6 +27,8 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-new-console", Title: "Databases: New Console"},
 		{ID: "db-run", Title: "Databases: Run Statement or Selection"},
 		{ID: "db-run-file", Title: "Databases: Run File"},
+		{ID: "db-explain", Title: "Databases: Explain Statement"},
+		{ID: "db-explain-analyze", Title: "Databases: Explain Analyze Statement"},
 		{ID: "db-history", Title: "Databases: History…"},
 		{ID: "db-cancel", Title: "Databases: Cancel Query"},
 		{ID: "db-add", Title: "Databases: Add Connection…"},
@@ -60,6 +62,10 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseSend(false), true
 	case "db-run-file":
 		return m.databaseSend(true), true
+	case "db-explain":
+		return m.databaseExplainKey(false), true
+	case "db-explain-analyze":
+		return m.databaseExplainKey(true), true
 	case "db-history":
 		return m.databaseHistory(), true
 	case "db-cancel":

@@ -1056,6 +1056,8 @@ Show the DDL (CREATE statement) of a table, with its indexes and foreign keys.
 | `db-ddl` | Databases: Show DDL | auto |   |
 | `db-describe` | Databases: Describe Table | auto |   |
 | `db-disconnect` | Databases: Disconnect Selected | confirm (always asks) |   |
+| `db-explain` | Databases: Explain Statement | never | opens a picker or prompt that only the user can answer; use a typed tool (db_explain) |
+| `db-explain-analyze` | Databases: Explain Analyze Statement | never | executes the statement; use db_explain |
 | `db-export` | Databases: Export Result… | never | opens a picker or prompt that only the user can answer; use a typed tool (db_query + write_file) |
 | `db-focus` | Databases: Focus | auto |   |
 | `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |

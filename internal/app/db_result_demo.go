@@ -37,6 +37,9 @@ func (m *Model) databaseResultDemo(variant string) tea.Cmd {
 	s.cache, s.size, s.page, s.sortCol, s.filter = nil, 100, 0, -1, ""
 	s.view = dbViewGrid
 	s.trans, s.trow = false, 0
+	if variant == "plan" || variant == "plan-card" {
+		return m.databasePlanDemo(variant == "plan-card")
+	}
 	switch variant {
 	case "table", "transposed", "edits", "submit", "import", "export":
 		// The data view of public.users: the second page, more to come.
@@ -150,4 +153,35 @@ func (m *Model) databaseImportDemo() tea.Cmd {
 		cols: []string{"id", "email", "plan", "created_at"}, mapping: []int{0, 1, 2, -1}, sessKey: "local-pg"}
 	s.imp = imp
 	return m.databaseImportCard()
+}
+
+// dbDemoPlanJSON is a canned EXPLAIN (FORMAT JSON) answer: the sort and the
+// join are cheap, the scan of orders is the costly node.
+const dbDemoPlanJSON = `[{"Plan":{"Node Type":"Limit","Startup Cost":8210.4,"Total Cost":8210.5,"Plan Rows":50,"Plans":[` +
+	`{"Node Type":"Sort","Startup Cost":8210.4,"Total Cost":8226.9,"Plan Rows":6600,"Sort Key":["o.created_at DESC"],"Plans":[` +
+	`{"Node Type":"Hash Join","Join Type":"Inner","Startup Cost":38.1,"Total Cost":7987.2,"Plan Rows":6600,"Hash Cond":"(o.user_id = u.id)","Plans":[` +
+	`{"Node Type":"Seq Scan","Relation Name":"orders","Alias":"o","Startup Cost":0,"Total Cost":7390,"Plan Rows":6600,"Filter":"(total > 100)"},` +
+	`{"Node Type":"Hash","Startup Cost":22.6,"Total Cost":22.6,"Plan Rows":1240,"Plans":[` +
+	`{"Node Type":"Index Only Scan","Relation Name":"users","Alias":"u","Index Name":"users_pkey","Startup Cost":0.3,"Total Cost":22.6,"Plan Rows":1240}]}]}]}]},` +
+	`"Planning Time":0.31}]`
+
+// databasePlanDemo shows the Plan view of a canned plan, or (card) the
+// analyze card of a DELETE.
+func (m *Model) databasePlanDemo(card bool) tea.Cmd {
+	target := "SELECT o.id, u.email, o.total FROM orders o JOIN users u ON u.id = o.user_id WHERE o.total > 100 ORDER BY o.created_at DESC LIMIT 50"
+	pl := &dbPlanRun{target: target}
+	res := dbclient.Result{Columns: []dbclient.Column{{Name: "QUERY PLAN"}}, Rows: [][]dbclient.Cell{{{Text: dbDemoPlanJSON}}}, Elapsed: 6 * time.Millisecond}
+	pl.parsed = dbclient.ParsePlan("postgres", res, false)
+	r := &dbRun{conn: "local-pg", sql: pl.label() + target, by: "user", line: 3, result: res, plan: pl, readOnly: true}
+	s := m.dbConsole()
+	s.tabs, s.tab = nil, 0
+	s.placeRun(r)
+	s.cache, s.size, s.page, s.sortCol, s.filter, s.view = nil, 100, 0, -1, "", dbViewGrid
+	s.trans, s.trow = false, 0
+	page := m.databaseShowPage()
+	if !card {
+		return page
+	}
+	del := &dbRun{conn: "local-pg", by: "user", statements: []string{"DELETE FROM orders WHERE created_at < now() - interval '2 years'"}, plan: &dbPlanRun{analyze: true}}
+	return tea.Batch(page, m.databaseExplainStart(del))
 }

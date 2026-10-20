@@ -55,14 +55,31 @@ function _G._termocode_db_append(lines)
  put(b,-1,-1,lines)
  return true
 end
-function _G._termocode_db_open(split,lines,hls,first,bounds,cursor,wrap)
+-- The Plan view folds by indent, with the node line inside its own fold
+-- (foldmethod=indent would leave it out): a line that has deeper lines under
+-- it starts a fold. The chrome rows and the summary sit at depth 0.
+function _G._termocode_plan_fold(l)
+ local b=the_buf()
+ if not b then return '0' end
+ local function lv(n)
+  local t=api.nvim_buf_get_lines(b,n-1,n,false)[1]
+  if not t or t=='' then return nil end
+  return math.max(math.floor((#t:match('^[ !]*')-1)/2),0)
+ end
+ local cur=lv(l)
+ if cur==nil then return '0' end
+ local nx=lv(l+1)
+ if nx and nx>cur then return '>'..(cur+1) end
+ return tostring(cur)
+end
+function _G._termocode_db_open(split,lines,hls,first,bounds,cursor,wrap,fold)
  local b=the_buf()
  if not b then
   b=api.nvim_create_buf(true,true);vim.g.termocode_db_buf=b
   api.nvim_buf_set_name(b,'SQL Result')
   vim.b[b].termocode_no_guides=true -- right-aligned numbers are not indentation
   vim.bo[b].bufhidden='hide';vim.bo[b].swapfile=false
-  for _,k in ipairs({']','[','r','h','f','o','c','C','S','v','y','q','#','t','e','E','+','-','u','w','p','K','Z','1','2','3','4','5','6','7','8','9'}) do vim.keymap.set('n',k,function() notify(k) end,{buffer=b,silent=true,nowait=true}) end
+  for _,k in ipairs({']','[','r','h','f','o','c','C','S','v','y','q','#','t','e','E','+','-','u','w','p','K','Z','x','X','1','2','3','4','5','6','7','8','9'}) do vim.keymap.set('n',k,function() notify(k) end,{buffer=b,silent=true,nowait=true}) end
   vim.keymap.set('n','gd',function() notify('gd') end,{buffer=b,silent=true})
   vim.keymap.set('n','<Tab>',function() notify('tab') end,{buffer=b,silent=true})
   vim.keymap.set('n','<Esc>',function() notify('esc') end,{buffer=b,silent=true})
@@ -88,6 +105,12 @@ function _G._termocode_db_open(split,lines,hls,first,bounds,cursor,wrap)
  end
  set_win(api.nvim_get_current_win())
  vim.wo.wrap=wrap and true or false
+ if fold then
+  vim.wo.foldmethod='expr';vim.wo.foldexpr='v:lua._termocode_plan_fold(v:lnum)';vim.wo.foldenable=true;vim.wo.foldlevel=99;vim.wo.foldminlines=0
+  vim.wo.foldcolumn='0';vim.wo.fillchars='fold: '
+ else
+  vim.wo.foldmethod='manual'
+ end
  local n=api.nvim_buf_line_count(b)
  if keep then
   pcall(api.nvim_win_set_cursor,0,{math.max(1,math.min(keep[1],n)),keep[2]})

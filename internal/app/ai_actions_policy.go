@@ -259,6 +259,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-new-console":               aiNever(aiNoPicker),
 	"db-run":                       aiNever("SQL runs require the database query tool and its guard"),
 	"db-run-file":                  aiNever("SQL runs require the database query tool and its guard"),
+	"db-explain":                   aiNever(aiNoPicker + " (db_explain)"),
+	"db-explain-analyze":           aiNever("executes the statement; use db_explain"),
 	"db-history":                   aiNever(aiNoPicker),
 	"db-cancel":                    aiAuto(),
 	"db-focus":                     aiAuto(),

@@ -173,6 +173,8 @@ api.nvim_create_autocmd('FileType',{group=g,pattern='sql',callback=function(args
   vim.b[buf].termocode_sql_attached=true
   api.nvim_buf_attach(buf,false,{on_lines=function() changed(buf) end,on_detach=function() pcall(function() vim.b[buf].termocode_sql_attached=nil end) end})
  end
+ vim.keymap.set('n','<leader>x',function() if _G.termocode_notify then _G.termocode_notify('termocode_db_explain','plan') end end,{buffer=buf,silent=true,desc='Explain the statement'})
+ vim.keymap.set('n','<leader>X',function() if _G.termocode_notify then _G.termocode_notify('termocode_db_explain','analyze') end end,{buffer=buf,silent=true,desc='Explain Analyze the statement'})
  vim.keymap.set('n','<Esc>',function()
   if S.running and _G.termocode_notify then _G.termocode_notify('termocode_db_cancel');return '<Ignore>' end
   return '<Esc>'

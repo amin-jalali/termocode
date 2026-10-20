@@ -466,6 +466,7 @@ func EditorKeyCatalog() []EditorKey {
 		{"Ctrl+Space", "Normal", "Signature help (LSP)."},
 		{"Ctrl+Space", "Insert", "Open completion."},
 		{"<leader>f", "Normal", "Format the buffer (LSP)."},
+		{"<leader>x / <leader>X", "Normal", "In a SQL console: show the query plan of the statement at the cursor / EXPLAIN ANALYZE it (asks first, the statement runs)."},
 		{"Tab / Enter", "Insert", "Accept the completion item. Tab also accepts AI ghost text and jumps to the next snippet field."},
 		{"Shift+Tab", "Insert", "Previous completion item, or previous snippet field."},
 		{"Ctrl+Z / Ctrl+Y", "Insert", "Undo / redo."},

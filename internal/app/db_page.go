@@ -159,6 +159,7 @@ type dbPage struct {
 	first   int   // 1-based line of the first data row (0: no grid)
 	bounds  []int // display cell where each grid column starts
 	lastNew int   // 1-based line of the last new row (0: none)
+	fold    bool  // fold by indent (the Plan view)
 }
 
 func (p *dbPage) add(line string) int {
@@ -236,6 +237,9 @@ func (m *Model) databasePage() dbPage {
 		group = "TermocodeHttpStatusErr"
 	case len(res.Columns) == 0:
 		summary = fmt.Sprintf("%s · %d ms", dbChangeSummary(r), res.Elapsed.Milliseconds())
+	case r.plan != nil:
+		short = databasePlanSummary(r)
+		summary, short = short[0], short[1:]
 	case s.trans:
 		page := s.pageResult()
 		s.trow = max(min(s.trow, len(page.Rows)-1), 0)
@@ -286,13 +290,20 @@ func (m *Model) databasePage() dbPage {
 	}
 	chips := make([]string, dbViewCount)
 	copy(chips, dbViewNames[:])
-	if s.trans {
+	plan := r.plan != nil && res.Err == nil && len(res.Columns) > 0
+	if plan {
+		chips[dbViewGrid], chips[dbViewJSON] = "Plan", "Raw"
+	}
+	if s.trans && !plan {
 		chips[dbViewGrid] = "Transposed"
 	}
 	sep := "  "
 	if ansi.StringWidth(summary)+3+ansi.StringWidth(strings.Join(chips, sep)) > width {
 		chips, sep = []string{"Grid", "JSON", "Msgs"}, " "
-		if s.trans {
+		if plan {
+			chips[dbViewGrid], chips[dbViewJSON] = "Plan", "Raw"
+		}
+		if s.trans && !plan {
 			chips[dbViewGrid] = "Trans"
 		}
 		for _, v := range short {
@@ -324,6 +335,8 @@ func (m *Model) databasePage() dbPage {
 		if len(res.Columns) > 0 && res.Err == nil {
 			hints = " ] next  o sort  f filter  v value  c csv  Tab view  r rerun  q close"
 			switch {
+			case plan:
+				hints = dbFitHints(width, "za fold", "x plan", "X analyze", "y copy", "Tab raw", "r rerun", "q close")
 			case s.curTab().dirty():
 				hints = dbFitHints(width, append(m.dbTxHints(r.conn), "w submit", "u revert", "e edit", "+ row", "- delete", "]/[ page", "Tab view", "q close")...)
 			case len(m.dbTxHints(r.conn)) > 0:
@@ -351,12 +364,20 @@ func (m *Model) databasePage() dbPage {
 
 	switch s.view {
 	case dbViewGrid:
+		if plan {
+			m.databasePlanView(&p, r.plan, width)
+			break
+		}
 		if s.trans && r.result.Err == nil && len(r.result.Columns) > 0 {
 			m.databaseTransposed(&p, s, width)
 			break
 		}
 		m.databaseGrid(&p, s)
 	case dbViewJSON:
+		if plan {
+			databasePlanRaw(&p, r.plan)
+			break
+		}
 		var b bytes.Buffer
 		page := s.pageResult()
 		if json.Indent(&b, []byte(dbclient.ToJSON(page)), " ", "  ") == nil {
@@ -742,7 +763,7 @@ func (m *Model) databaseShowPage() tea.Cmd {
 		cursor = -1 // stay on the row being edited
 	}
 	s.cursorNewRow, s.keepCursor = false, false
-	_ = m.nvim.ExecLuaArgs(`_G._termocode_db_open(...)`, m.editorPaneWidth() >= 120, p.lines[:end], p.hls, p.first, p.bounds, cursor, p.first == 0 && s.view != dbViewJSON)
+	_ = m.nvim.ExecLuaArgs(`_G._termocode_db_open(...)`, m.editorPaneWidth() >= 120, p.lines[:end], p.hls, p.first, p.bounds, cursor, p.first == 0 && s.view != dbViewJSON && !p.fold, p.fold)
 	m.focus = FocusEditor
 	if end < len(p.lines) {
 		rest := p.lines[end:]
@@ -762,6 +783,11 @@ func (m *Model) databaseRerun() tea.Cmd {
 	}
 	if old.describe != nil {
 		return m.databaseLoadMeta(*old.describe, false)
+	}
+	if old.plan != nil { // plan again: an analyze asks its card again
+		r := &dbRun{conn: old.conn, file: old.file, line: old.line, by: "user", sessKey: old.sessKey, tab: s.curTab(),
+			plan: &dbPlanRun{analyze: old.plan.analyze}, statements: []string{old.plan.target}}
+		return m.databaseExplainStart(r)
 	}
 	r := &dbRun{conn: old.conn, file: old.file, line: old.line, sql: old.sql, by: "user", statements: []string{old.sql}, sessKey: old.sessKey, tab: s.curTab()}
 	return m.databaseReviewRun(r)
@@ -786,13 +812,18 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		return m.pushToastDetail(toast.Info, "Saving the changes…", "One moment.")
 	}
 	tv := s.shown.tv
-	canGrid := s.shown.result.Err == nil && len(s.shown.result.Columns) > 0
+	canGrid := s.shown.result.Err == nil && len(s.shown.result.Columns) > 0 && s.shown.plan == nil
 	switch key {
+	case "x", "X":
+		return m.databasePageExplain(key == "X")
 	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
 		return m.databaseSwitchTab(int(key[0] - '0'))
 	case "p":
 		return m.databasePinTab()
 	case "e", "E", "+", "-", "u", "w":
+		if s.shown.plan != nil {
+			return m.pushToastDetail(toast.Info, "A plan cannot be edited", "x explains again, r runs the plan again.")
+		}
 		return m.databaseEditKey(key, row, col)
 	case "K":
 		return m.databaseEndTx(s.shown.conn, true, nil)
@@ -919,6 +950,12 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 	case "C":
 		return m.copyWithToast(dbRedact(dbclient.ToJSON(s.displayedResult())), "Copied rows as JSON")
 	case "v", "y":
+		if s.shown.plan != nil {
+			if key == "y" && canPlan(s.shown) {
+				return m.databasePlanCopy(s.shown.plan)
+			}
+			return nil
+		}
 		page := s.pageResult()
 		if s.trans && s.view == dbViewGrid && s.trow < len(page.Rows) {
 			row, col = s.trow, row // the cursor line is the column
@@ -949,4 +986,9 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		return m.fetchStateCmd()
 	}
 	return nil
+}
+
+// canPlan is true when r shows a plan the page can copy.
+func canPlan(r *dbRun) bool {
+	return r.plan != nil && r.result.Err == nil && len(r.result.Columns) > 0
 }

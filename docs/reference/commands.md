@@ -125,6 +125,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Count Rows | `db-count-rows` |   |   |
 | Databases: Describe Table | `db-describe` |   |   |
 | Databases: Disconnect Selected | `db-disconnect` |   |   |
+| Databases: Explain Analyze Statement | `db-explain-analyze` |   |   |
+| Databases: Explain Statement | `db-explain` |   |   |
 | Databases: Export Result… | `db-export` |   |   |
 | Databases: Focus | `db-focus` |   |   |
 | Databases: History… | `db-history` |   |   |
