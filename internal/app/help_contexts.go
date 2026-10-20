@@ -42,6 +42,7 @@ var helpContexts = map[string]string{
 	"diff":          "guides/git.md#stage-one-hunk",
 	"http-response": "guides/http-client.md#the-response-page",
 	"http-file":     "guides/http-client.md#send-a-request",
+	"db-compare":    "guides/databases.md#compare-schemas",
 }
 
 // settingsTopic is the row of setting key in the settings reference:
@@ -90,6 +91,9 @@ func (m Model) helpTopicForFocus() string {
 	case m.confirmOpen && m.confirmKind == confirmKindAITool:
 		return helpContexts["agent-confirm"]
 	case m.reviewOpen:
+		if m.ai != nil && m.ai.review != nil && m.ai.review.onAction != nil {
+			return helpContexts["db-compare"] // the only card with its own actions
+		}
 		return helpContexts["review"]
 	case m.connectOpen:
 		return helpContexts["connect"]
@@ -166,6 +170,8 @@ func (m Model) pickerHelpTopic() string {
 		return helpContexts["keybindings"]
 	case pickerKindTheme:
 		return helpContexts["theme"]
+	case pickerKindDBCompareSource, pickerKindDBCompareTarget:
+		return helpContexts["db-compare"]
 	}
 	return ""
 }

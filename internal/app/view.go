@@ -140,6 +140,11 @@ func (m Model) viewFrame() string {
 	if m.reviewOpen {
 		base := m.renderBase()
 		base = m.overlayToastsInEditor(base)
+		if m.ai != nil && m.ai.review != nil && m.ai.review.onAction != nil {
+			// A card with its own buttons (schema compare): their toasts
+			// ("Migration script copied") show on top of it.
+			return m.overlayToastsInEditor(m.reviewLayer(base))
+		}
 		return m.reviewLayer(base)
 	}
 

@@ -52,6 +52,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-result-pin", Title: "Databases: Pin Result Tab"},
 		{ID: "db-export", Title: "Databases: Export Result…"},
 		{ID: "db-import-csv", Title: "Databases: Import CSV into Table…"},
+		{ID: "db-compare-schemas", Title: "Databases: Compare Schemas…"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
 		{ID: "redis-delete-key", Title: "Databases: Delete Redis Key…"},
 	}
@@ -94,6 +95,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databasePinTab(), true
 	case "db-export":
 		return m.databaseExportStart(), true
+	case "db-compare-schemas":
+		return m.databaseCompareStart(), true
 	}
 	open := m.revealDatabasesView(id == "db-focus")
 	switch id {

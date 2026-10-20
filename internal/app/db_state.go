@@ -105,6 +105,7 @@ type dbState struct {
 	hostAsk             *dbHostAsk                  // the unknown-host card
 	secretAsk           *dbSecretAsk                // the SSH password / passphrase prompt
 	sshEdit             *dbSSHEdit                  // Add SSH Tunnel / SSL Settings prompts
+	compare             *dbCompareState             // Compare Schemas (db_compare.go)
 }
 
 type dbRenderCache struct {

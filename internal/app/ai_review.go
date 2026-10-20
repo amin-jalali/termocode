@@ -37,12 +37,16 @@ type aiReviewItem struct {
 type aiReview struct {
 	items []*aiReviewItem
 	card  diffview.Model
+	// onAction runs the buttons of a read-only card that has its own
+	// (commit-mode) actions: schema compare's Copy / Open script.
+	onAction func(m *Model, id string) tea.Cmd
 }
 
 // addAIReview adds a file to the review and shows the card.
 func (m *Model) addAIReview(it *aiReviewItem) {
 	s := m.aiS()
-	if s.review == nil {
+	if s.review == nil || !s.review.card.Review() {
+		// A read-only card (a compare) gives way to the review.
 		s.review = &aiReview{card: diffview.New("Review AI changes", nil, true)}
 	}
 	s.review.items = append(s.review.items, it)
@@ -96,13 +100,30 @@ func (m Model) routeToReview(msg tea.Msg) (Model, tea.Cmd) {
 		}
 		var cmd tea.Cmd
 		r.card, cmd, _ = r.card.HandleMouse(msg.X, msg.Y, msg.Action, msg.Button)
-		return m, cmd
+		return m, m.reviewCardCmd(r, cmd)
 	case tea.KeyMsg:
 		var cmd tea.Cmd
 		r.card, cmd = r.card.Update(msg)
-		return m, cmd
+		return m, m.reviewCardCmd(r, cmd)
 	}
 	return m, nil
+}
+
+// reviewCardCmd runs a card action (diffview.ActionMsg) of a card that
+// has onAction; anything else goes on as it was. The card's Cmds are pure
+// (they only build a message), so running one here is cheap.
+func (m *Model) reviewCardCmd(r *aiReview, cmd tea.Cmd) tea.Cmd {
+	if cmd == nil || r.onAction == nil {
+		return cmd
+	}
+	msg := cmd()
+	if a, ok := msg.(diffview.ActionMsg); ok {
+		return r.onAction(m, a.ID)
+	}
+	if msg == nil {
+		return nil
+	}
+	return func() tea.Msg { return msg }
 }
 
 // onAIReviewFinish applies one file's decision.

@@ -122,6 +122,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Add SSH Tunnel… | `db-add-tunnel` |   |   |
 | Databases: Cancel Query | `db-cancel` |   |   |
 | Databases: Commit | `db-commit` |   |   |
+| Databases: Compare Schemas… | `db-compare-schemas` |   |   |
 | Databases: Configure | `db-configure` |   |   |
 | Databases: Connect Selected | `db-connect` |   |   |
 | Databases: Count Rows | `db-count-rows` |   |   |

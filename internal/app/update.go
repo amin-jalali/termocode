@@ -170,6 +170,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 	case dbTableMetaMsg:
 		return m, m.onDBTableMeta(msg)
+	case dbCompareSidesMsg:
+		return m, m.onDBCompareSides(msg)
+	case dbCompareReadyMsg:
+		return m, m.onDBCompareReady(msg)
 	case dbEditKeysMsg:
 		return m, m.onDBEditKeys(msg)
 	case dbSubmitMsg:

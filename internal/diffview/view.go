@@ -669,7 +669,15 @@ func (m Model) layout(draw bool) layoutOut {
 	}
 	if draw {
 		var hints string
-		if m.header != nil && m.header.Hash == "" {
+		if m.header != nil && len(m.hints) > 1 {
+			pairs := append([]string(nil), m.hints...)
+			hints = theme.HintBar(p.bg, pairs...)
+			for lipgloss.Width(hints)+1 > g.iw && len(pairs) > 4 {
+				// Keep the first pair and the last (esc close).
+				pairs = append(pairs[:len(pairs)-4], pairs[len(pairs)-2:]...)
+				hints = theme.HintBar(p.bg, pairs...)
+			}
+		} else if m.header != nil && m.header.Hash == "" {
 			// A compare: no commit, so no SHA, raw or file @ commit.
 			hints = theme.HintBar(p.bg, "n/p", "change", "tab", "file", "t", "split/unified", "o", "open", "y", "copy range", "esc", "close")
 			if lipgloss.Width(hints)+1 > g.iw {

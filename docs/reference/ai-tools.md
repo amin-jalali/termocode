@@ -1091,6 +1091,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `db-add-tunnel` | Databases: Add SSH Tunnel… | never | AI provider, credentials and approvals stay with the user |
 | `db-cancel` | Databases: Cancel Query | auto |   |
 | `db-commit` | Databases: Commit | never | the user's transaction |
+| `db-compare-schemas` | Databases: Compare Schemas… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-configure` | Databases: Configure | confirm (always asks) |   |
 | `db-connect` | Databases: Connect Selected | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-count-rows` | Databases: Count Rows | never | Table rows are read with the database tools |

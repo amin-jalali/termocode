@@ -95,6 +95,10 @@ type Model struct {
 	header   *Header
 	buttons  []Button
 	bodyOpen bool
+	// keys / hints replace the git keys and hint bar of a commit-mode
+	// card used for something else (SetCustom).
+	keys  map[string]string
+	hints []string
 	// bounds docks the card at a screen rectangle (w, h > 0); otherwise
 	// it is centred on the screen.
 	bx, by, bw, bh int
@@ -430,12 +434,21 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 	g := m.geom()
 	if m.header != nil {
-		if id, ok := commitKeys[k.String()]; ok {
+		km := commitKeys
+		if m.keys != nil {
+			km = m.keys
+		}
+		if id, ok := km[k.String()]; ok {
 			return m, m.Action(id)
 		}
 		switch k.String() {
 		case "x", "a", "A", "R", "e":
 			return m, nil
+		}
+		if m.keys != nil {
+			if _, git := commitKeys[k.String()]; git {
+				return m, nil
+			}
 		}
 	}
 	switch k.String() {

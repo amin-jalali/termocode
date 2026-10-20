@@ -234,6 +234,21 @@ A plain plan never runs the statement. It uses `EXPLAIN (FORMAT JSON)` on Postgr
 
 **Explain Analyze.** `\X` in a console, `X` on a result page, or **Databases: Explain Analyze Statement**. This RUNS the statement and shows the real time and rows, so a card comes first and says so. A read runs in the read-only session. Any other statement runs inside a transaction that is always rolled back, and the card says so; if the rollback fails, the page shows an error. On a production connection the card is the strong one. A read-only connection analyzes reads only. DDL (`CREATE`, `DROP` …) is not offered, because it cannot be rolled back; with a manual transaction open a write is not analyzed either. SQLite has no `ANALYZE`: it shows the plan and never runs the statement.
 
+## Compare schemas
+
+**Databases: Compare Schemas…** compares two schemas of connected databases. Connect both first (`Enter` on each connection). Then pick two schemas:
+
+1. The **source**: the model, the schema that is right (for example your local database).
+2. The **target**: the schema to change (for example staging).
+
+Both must be the same database type: PostgreSQL with PostgreSQL, MySQL / MariaDB with MySQL / MariaDB, SQLite with SQLite. The target list marks the other types, and picking one only shows a message. Two schemas of the same connection work too.
+
+termocode reads both schemas in read-only sessions and writes each one as clean SQL: objects sorted by name, names quoted for the database, no schema names. The diff card shows one file per kind: `tables.sql` (columns, primary keys, unique keys, foreign keys and, on PostgreSQL, checks), `views.sql`, `routines.sql` (not for SQLite) and `indexes.sql`. The left side is the target, the right side is the source, so the green lines are what the target is missing. A column order that differs is not a difference. `Tab` moves to the next file, `n` / `p` to the next change, `Esc` closes the card.
+
+**Copy migration script** (`y`) copies a script that makes the target match the source. **Open script** (`o`) opens it in a read-only SQL buffer. termocode never runs this script: you read it, change it if needed, and run it yourself. The script does the basic steps: create and drop tables, add and drop columns, drop and create indexes and views. Other differences (a changed column type, a changed key, a routine) are lines that start with `-- REVIEW:`, for you to do by hand. The top of the script says which schema it changes and lists every destructive statement (`DROP TABLE`, `DROP COLUMN`, `DROP INDEX`, `DROP VIEW`); each one also has a `-- DESTRUCTIVE` line above it, because it deletes objects or data.
+
+Very large schemas are compared up to 2,000 tables; the card and the script say so when a schema is bigger.
+
 ## SQL history
 
 Press `h` on the result page, `H` in the Databases view, or use **Databases: History…**. The newest run is at the top; `Enter` runs it again (writes ask again). **Clear history…** asks before it deletes. The history is `db/history.jsonl` in your user configuration (mode 0600): passwords are removed, each entry keeps at most 4 KB of SQL, and `db_history_max` (default 500) limits the count.

@@ -287,3 +287,69 @@ func TestDatabasesRedisBrowseKeysReadOnly(t *testing.T) {
 		}
 	}
 }
+
+// Spec (DB-15): Compare Schemas on two SQLite files in the real binary:
+// the pickers, the diff card, Open script in a buffer; neither file
+// changes.
+func TestDatabasesCompareSchemasSQLite(t *testing.T) {
+	bin := requireSQLite(t)
+	ws := dbWorkspace(t, `{"connections":[{"id":"model","name":"model","driver":"sqlite","path":"model.db"},{"id":"live","name":"live","driver":"sqlite","path":"live.db"}]}`)
+	for file, sql := range map[string]string{
+		"model.db": "CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL, plan TEXT DEFAULT 'free');",
+		"live.db":  "CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL); CREATE TABLE old_logs (line TEXT);",
+	} {
+		if out, err := exec.Command(bin, filepath.Join(ws, file), sql).CombinedOutput(); err != nil {
+			t.Fatalf("seed %s: %v\n%s", file, err, out)
+		}
+	}
+	read := func(f string) string { b, _ := os.ReadFile(filepath.Join(ws, f)); return string(b) }
+	model, live := read("model.db"), read("live.db")
+
+	tm := Start(t, StartOpts{Cols: 120, Rows: 36, Workspace: ws})
+	tm.settle()
+	openDatabases(tm)
+	tm.WaitText("model", uiTimeout)
+	// The rows are sorted: live, then model. Connect each one.
+	for _, name := range []string{"live", "model"} {
+		for i := 0; i < 4 && !cursorOn(tm, name); i++ {
+			tm.Send(KeyDown)
+			tm.settle()
+		}
+		if !cursorOn(tm, name) {
+			t.Fatalf("could not reach the %s connection:\n%s", name, tm.Screen())
+		}
+		tm.Send(KeyEnter)
+		tm.settle()
+	}
+	tm.WaitFor("two main database rows", 10*time.Second, func(ls []string) bool {
+		n := 0
+		for _, l := range ls {
+			if strings.Contains(l, "⛁ main") {
+				n++
+			}
+		}
+		return n >= 2
+	})
+	tm.Palette("Databases: Compare Schemas")
+	tm.WaitText("SOURCE (the model)", uiTimeout)
+	tm.Type("model")
+	tm.settle()
+	tm.Send(KeyEnter)
+	tm.WaitText("TARGET (to change)", uiTimeout)
+	tm.Type("live")
+	tm.settle()
+	tm.Send(KeyEnter)
+	tm.WaitText("tables.sql", 10*time.Second)
+	tm.CheckScreen("compare card", mainFrame)
+	for _, want := range []string{"Compare schemas", "target: live", "source: model", "Copy migration script"} {
+		if !tm.Has(want) {
+			t.Errorf("card lacks %q:\n%s", want, tm.Screen())
+		}
+	}
+	tm.Send("o")
+	tm.WaitText("SQL Migration", 10*time.Second)
+	tm.WaitText("review before running", uiTimeout)
+	if read("model.db") != model || read("live.db") != live {
+		t.Error("compare changed a database file")
+	}
+}

@@ -79,6 +79,14 @@ func NewCommit(h Header, files []File, buttons []Button) Model {
 	return m
 }
 
+// SetCustom makes a commit-mode card that is not about git (schema
+// compare): keys maps a key to an action id (sent as ActionMsg) instead of
+// the git keys, and hints (key, label pairs) replace the git hint bar.
+// Pairs are dropped from the middle when the bar is too wide.
+func (m *Model) SetCustom(keys map[string]string, hints []string) {
+	m.keys, m.hints = keys, hints
+}
+
 // Header returns the commit header (ok false outside commit mode).
 func (m Model) Header() (Header, bool) {
 	if m.header == nil {

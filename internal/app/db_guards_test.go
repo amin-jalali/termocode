@@ -43,6 +43,7 @@ func TestDatabasesRenderInvariantsPoorTerminals(t *testing.T) {
 		{"tree", "", "users"}, {"empty", "empty", "No databases yet"}, {"no-sqlite", "no-sqlite", "sqlite3"},
 		{"stopped", "stopped", "DATABASES"}, {"redis", "redis", "session:"},
 		{"ssh-host", "ssh-host", ""}, {"ssh-form", "ssh-form", ""}, {"ssl-form", "ssl-form", ""},
+		{"compare-pick", "compare-pick", "SOURCE"}, {"compare", "compare", "tables.sql"},
 	}
 	truecolor := regexp.MustCompile(`\x1b\[[0-9;]*[34]8;[25];`)
 	anyColor := regexp.MustCompile(`\x1b\[[0-9;]*([34][0-9]|9[0-7]|10[0-7])(;[0-9;]*)?m`)
@@ -411,5 +412,56 @@ func TestDatabasesSuggestionSkipsSavedRelativeSQLitePath(t *testing.T) {
 	}
 	if _, ok := s.nodes["suggest-other.db"]; !ok {
 		t.Error("an unsaved .db file is no longer suggested")
+	}
+}
+
+// Spec (DB-15): the compare scenes are exactly w x h at every golden size
+// in every icon mode, and an open compare card asks for no work while
+// idle (no timer, no poll).
+func TestDatabasesCompareScenesFitAndIdle(t *testing.T) {
+	withConfigDir(t)
+	oldIcons := theme.CurrentIconMode
+	defer func() { theme.CurrentIconMode = oldIcons }()
+	nerd := regexp.MustCompile("[\ue000-\uf8ff\U000F0000-\U000FFFFD]")
+	for _, size := range [][2]int{{80, 24}, {100, 30}, {150, 42}} {
+		for _, icons := range []theme.IconMode{theme.IconModeASCII, theme.IconModeNerdFont} {
+			theme.CurrentIconMode = icons
+			for _, sc := range []string{"compare-pick", "compare"} {
+				m0, _ := New().Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
+				m := m0.(Model)
+				m.runDevAction("dbdemo:" + sc)
+				out := m.View()
+				tag := fmt.Sprintf("%s %dx%d icons=%v", sc, size[0], size[1], icons)
+				rows := strings.Split(out, "\n")
+				if len(rows) != size[1] {
+					t.Fatalf("%s: %d rows", tag, len(rows))
+				}
+				for i, r := range rows {
+					if got := lipgloss.Width(r); got != size[0] {
+						t.Fatalf("%s: row %d is %d cells:\n%q", tag, i, got, r)
+					}
+				}
+				plain := ansi.Strip(out)
+				if icons == theme.IconModeASCII && nerd.MatchString(plain) {
+					t.Errorf("%s: Nerd Font glyph %q in ASCII mode", tag, nerd.FindString(plain))
+				}
+				if sc == "compare" {
+					for _, want := range []string{"Compare schemas", "target: stage-pg", "Copy migration script", "copy script"} {
+						if !strings.Contains(plain, want) {
+							t.Errorf("%s: lacks %q:\n%s", tag, want, plain)
+						}
+					}
+					for _, msg := range []tea.Msg{aiActivityTickMsg{}, struct{}{}} {
+						next, cmd := m.Update(msg)
+						m = next.(Model)
+						if cmd != nil {
+							if got := cmd(); got != nil {
+								t.Errorf("%s: idle compare card answered %T with %T", tag, msg, got)
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 }

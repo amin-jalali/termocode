@@ -307,3 +307,40 @@ func TestCompareHints(t *testing.T) {
 		}
 	}
 }
+
+// A commit-mode card used for something else than git (schema compare)
+// has its own keys and hint bar; the git keys do nothing there.
+func TestCustomKeysAndHints(t *testing.T) {
+	mk := func(w, h int) Model {
+		m := NewCommit(Header{Title: "Compare schemas", Subject: "2 differences", OldLabel: "− target", NewLabel: "+ source"},
+			[]File{{Name: "tables.sql", Status: 'M', Old: "a\n", New: "b\n"}, {Name: "views.sql", Old: "v\n", New: "v\n"}},
+			[]Button{{ID: "copy-script", Label: "Copy migration script", Kind: "primary"}, {ID: "open-script", Label: "Open script"}})
+		m.SetCustom(map[string]string{"y": "copy-script", "o": "open-script"}, []string{"n/p", "change", "tab", "file", "y", "copy script", "o", "open script", "esc", "close"})
+		m.SetSize(w, h)
+		return m
+	}
+	for k, id := range map[string]string{"y": "copy-script", "o": "open-script"} {
+		if _, msg := key(mk(150, 42), k); msg != (ActionMsg{ID: id}) {
+			t.Errorf("%s: %#v", k, msg)
+		}
+	}
+	for _, k := range []string{"r", "O", "v", "c"} {
+		if _, msg := key(mk(150, 42), k); msg != nil {
+			t.Errorf("git key %s still acts: %#v", k, msg)
+		}
+	}
+	for _, size := range [][2]int{{80, 24}, {100, 30}, {150, 42}} {
+		s := plain(mk(size[0], size[1]))
+		if !strings.Contains(s, "copy script") || strings.Contains(s, "copy range") || strings.Contains(s, "copy SHA") {
+			t.Errorf("%dx%d hints:\n%s", size[0], size[1], s)
+		}
+		if !strings.Contains(s, "Copy migration script") {
+			t.Errorf("%dx%d: no copy button:\n%s", size[0], size[1], s)
+		}
+		for i, l := range strings.Split(s, "\n") {
+			if w := ansi.StringWidth(l); w != size[0]-4 {
+				t.Errorf("%dx%d row %d is %d wide", size[0], size[1], i, w)
+			}
+		}
+	}
+}
