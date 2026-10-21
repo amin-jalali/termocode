@@ -342,6 +342,7 @@ const (
 	confirmKindContainerProjectDown
 	confirmKindContainerImagePush
 	confirmKindContainerHostAction
+	confirmKindContainerSearchResult // CP-12: pull or browse a search result
 )
 
 // handleServicesConfirm routes the services confirm kinds.
@@ -427,6 +428,8 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 		return m.runHostAction(id), true
 	case confirmKindServicesQuit:
 		return m.answerServicesQuit(id), true
+	case confirmKindContainerSearchResult:
+		return m.answerSearchResult(id), true
 	}
 	return nil, false
 }
@@ -585,7 +588,13 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	st := m.services
 	r, have := m.servicesCurrentRow()
 	isSvc := have && r.kind == svcRowService
+	if cmd, ok := m.containersFilterKey(k); ok {
+		return m, cmd
+	}
 	if have {
+		if cmd, ok := m.remoteRowKey(k.String(), r); ok {
+			return m, cmd
+		}
 		if cmd, ok := m.registryKey(k.String(), r); ok {
 			return m, cmd
 		}
@@ -849,20 +858,24 @@ func (m *Model) servicesJumpSection(dir int) {
 
 // hostKeysHelp is the "?" text: the keys of the row kind under the cursor.
 func hostKeysHelp(r svcRow) (string, string) {
-	const nav = "j/k move · Tab next section · Shift+Tab previous · space fold · m sections · R refresh"
+	const nav = "j/k move · Tab next section · Shift+Tab previous · / filter · space fold · m sections · R refresh"
 	switch {
 	case r.kind == svcRowHostItem && r.host == hostContainer:
 		return "Container keys", "s start · x stop · r restart · p pause · e shell · t attach · Enter logs · S stats · i inspect · o open port · y copy id · D remove · " + nav
 	case r.kind == svcRowGroup && r.hostSectionID() == "containers":
 		return "Project keys", "s up · x stop · r restart · D down · " + nav
 	case r.kind == svcRowHostItem && r.host == hostImage, r.kind == svcRowGroup && r.hostSectionID() == "images":
-		return "Image keys", "Enter run · u pull · P push · t tag · h history · i inspect · y copy id · D remove · " + nav
+		return "Image keys", "Enter run · u pull · b remote tags · P push · t tag · h history · i inspect · y copy id · D remove · " + nav
+	case r.kind == svcRowHostItem && r.host == hostRemoteRepo:
+		return "Remote tags keys", "space fold · r reload · u pull · y copy · x remove (REGISTRIES) · " + nav
+	case r.kind == svcRowHostItem && r.host == hostRemoteTag:
+		return "Remote tag keys", "Enter or u pull · y copy · " + nav
 	case r.kind == svcRowHostItem && (r.host == hostNetwork || r.host == hostVolume):
 		return "Network and volume keys", "space users · n create · D remove · z prune · " + nav
 	case r.kind == svcRowHostItem && r.host == hostContext:
 		return "Context keys", "Enter use here · D make default · y copy endpoint · " + nav
 	case r.kind == svcRowHostItem && (r.host == hostRegistry || r.host == hostRegistryImage || r.host == hostRegistryConnect):
-		return "Registry keys", "Enter open · n connect · D sign out · u pull · " + nav
+		return "Registry keys", "Enter open · n connect · s search Docker Hub · b browse tags · D sign out · u pull · " + nav
 	case r.kind == svcRowHostItem && isHelpHostKind(r.host):
 		return "Help keys", "Enter open · " + nav
 	case r.kind == svcRowSection && strings.HasPrefix(r.section, "host/"):
@@ -892,6 +905,9 @@ func (m *Model) servicesToggleFold(r svcRow) tea.Cmd {
 	st := m.services
 	if r.kind == svcRowHostItem && r.host == hostRegistry {
 		return m.toggleRegistry(r)
+	}
+	if r.kind == svcRowHostItem && r.host == hostRemoteRepo {
+		return m.toggleRemote(r)
 	}
 	if r.kind == svcRowHostItem && (r.host == hostNetwork || r.host == hostVolume) {
 		key := storageInspectKey(r)
@@ -1070,6 +1086,8 @@ func (m Model) handleServicesSidebarMouse(x, y int, t tea.MouseEventType) (Model
 			m.openContextMenu(r, activityWidthX(x), y)
 		} else if r.kind == svcRowHostItem && isRegistryHostKind(r.host) {
 			m.openRegistryMenu(r, activityWidthX(x), y)
+		} else if r.kind == svcRowHostItem && isRemoteHostKind(r.host) {
+			m.openRemoteMenu(r, activityWidthX(x), y)
 		} else if r.kind == svcRowSection {
 			m.openSectionMenu(r, activityWidthX(x), y)
 		}
@@ -1088,6 +1106,11 @@ func (m Model) handleServicesSidebarMouse(x, y int, t tea.MouseEventType) (Model
 	if double && r.kind == svcRowHostItem && r.host == hostContext {
 		st.lastClick = time.Time{}
 		return m, m.switchContext(r.hostID)
+	}
+	if double && r.kind == svcRowHostItem && r.host == hostRemoteTag {
+		st.lastClick = time.Time{}
+		m.askImagePull(r.imageRef)
+		return m, nil
 	}
 	if double && r.kind == svcRowService {
 		st.lastClick = time.Time{}
@@ -1163,6 +1186,9 @@ func (m *Model) handleServicesMenuSelect(id string) tea.Cmd {
 	if r.kind == svcRowHostItem && isRegistryHostKind(r.host) {
 		return m.handleRegistryMenuSelect(id, r)
 	}
+	if r.kind == svcRowHostItem && isRemoteHostKind(r.host) {
+		return m.handleRemoteMenuSelect(id, r)
+	}
 	if r.kind == svcRowHostItem {
 		return m.handleContainerRowMenuSelect(id, r)
 	}
@@ -1211,6 +1237,9 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-context-default", Title: "Containers: Make Context Default…"},
 		{ID: "containers-registry-connect", Title: "Containers: Connect Registry…"},
 		{ID: "containers-registry-signout", Title: "Containers: Sign Out of Registry…"},
+		{ID: "containers-search", Title: "Containers: Search Docker Hub…"},
+		{ID: "containers-browse-tags", Title: "Containers: Browse Remote Tags…"},
+		{ID: "containers-filter", Title: "Containers: Filter Rows…"},
 		{ID: "containers-start", Title: "Containers: Start Selected"},
 		{ID: "containers-stop", Title: "Containers: Stop Selected"},
 		{ID: "containers-restart", Title: "Containers: Restart Selected"},
@@ -1459,6 +1488,16 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 				return nil
 			case "containers-registry-signout":
 				return m.registrySignOutFromPalette()
+			case "containers-search":
+				m.askSearch()
+				return nil
+			case "containers-browse-tags":
+				return m.browseFromPalette()
+			case "containers-filter":
+				m.focus = FocusExplorer
+				m.services.filterTyping = true
+				m.services.touch()
+				return nil
 			case "containers-image-pull":
 				if _, ref, ok := m.selectedImage(); ok {
 					m.askImagePull(ref)

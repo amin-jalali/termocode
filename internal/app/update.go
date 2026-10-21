@@ -2202,6 +2202,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.extPickSelect(msg.ID)
 	case pickerKindRegistryProvider: // containers_registries.go
 		return m.onRegistryPicked(msg.ID)
+	case pickerKindContainerSearch: // containers_remote.go
+		return m.onSearchPicked(msg.ID)
 	default:
 		if cmd, ok := m.handleAIPickerSelect(msg.ID); ok { // Group A
 			return cmd

@@ -247,6 +247,8 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		return m.onContainerImagePrompt(m.promptKind, value)
 	case promptKindRegistryHost, promptKindRegistryUser, promptKindRegistryToken: // containers_registries.go
 		return m.onRegistryPrompt(m.promptKind, value)
+	case promptKindContainerSearch, promptKindContainerBrowse: // containers_remote.go
+		return m.onRemotePrompt(m.promptKind, value)
 	case promptKindDebugWatch, promptKindDebugCondition, promptKindDebugLogpoint: // Group D
 		return m.handleDebugPromptSubmit(value)
 	}

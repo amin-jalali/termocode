@@ -306,6 +306,21 @@ func (m *Model) containersDemo(variant string) {
 				break
 			}
 		}
+	case "filter": // CP-12: the "/" filter while typing
+		st.filter, st.filterTyping = "pos", true
+		m.servicesCursorTo(func(r svcRow) bool { return r.kind == svcRowHostItem && r.host == hostContainer })
+	case "tags": // CP-12: remote tags under an image repo, a private repo in REGISTRIES
+		st.collapsed[hostSection("containers")] = true
+		st.collapsed[hostSection("registries")] = false
+		pg, _ := containers.ParseRemoteRepo("postgres")
+		st.remoteTags = map[string]*remoteTags{
+			"postgres": {repo: pg, ref: "postgres", inImages: true, open: true, loaded: true,
+				tags: []string{"17", "17-alpine", "16", "16-alpine", "15", "15-alpine"}},
+		}
+		priv, _ := containers.ParseRemoteRepo("ghcr.io/acme/shop")
+		st.remoteTags["ghcr.io/acme/shop"] = &remoteTags{repo: priv, ref: "ghcr.io/acme/shop", open: true, loaded: true, err: containers.ErrNeedsSignIn.Error()}
+		st.remoteOrder = []string{"ghcr.io/acme/shop"}
+		m.servicesCursorTo(func(r svcRow) bool { return r.host == hostRemoteTag && r.tag == "16-alpine" })
 	case "menu":
 		m.openContainersSectionsMenu("")
 	case "db-menu": // the row menu of the postgres compose service

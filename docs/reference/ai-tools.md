@@ -88,7 +88,7 @@ Some tools have an `op` argument; then each op has its own gate.
 | [`images_list`](#images_list) | auto | Every image on this host: repository:tag, id, size, created; dangling images are marked. |
 | [`volumes_list`](#volumes_list) | auto | Every volume on this host: name, driver, scope, compose project. |
 | [`networks_list`](#networks_list) | auto | Every network on this host: name, id, driver, scope, compose project. |
-| [`contexts_list`](#contexts_list) | auto | The engine's contexts (docker only): which one is the default and which one this session uses. |
+| [`contexts_list`](#contexts_list) | auto | The engine's contexts (docker) or connections (podman): which one is the default and which one this session uses. |
 | [`registries_list`](#registries_list) | auto | Registry hosts from the engine's login file: signed in or not, the user (when known) and the credential helper. |
 | [`containers_control`](#containers_control) | confirm (containers): the card has Allow · Always allow containers (this session only, never saved) · Deny, and busy containers or no-op actions are refused first | Start, stop, restart, pause or unpause one host container (any project). |
 | [`images_pull`](#images_pull) | confirm (containers): the card has Allow · Always allow containers (this session only, never saved) · Deny | Pull an image (ref like nginx:1.27 or ghcr.io/acme/api:1.4) in a visible terminal tab "pull: <ref>". |
@@ -869,7 +869,7 @@ No arguments.
 
 ### contexts_list
 
-The engine's contexts (docker only): which one is the default and which one this session uses. Only the user switches contexts.
+The engine's contexts (docker) or connections (podman): which one is the default and which one this session uses. Only the user switches them.
 
 **Gate:** auto
 
@@ -1177,6 +1177,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `config-commands` | Open Config: User Commands | confirm (ide) |   |
 | `config-theme` | Open Config: Theme | confirm (ide) |   |
 | `containers-attach` | Containers: Attach | never | opens a picker or prompt that only the user can answer; use a typed tool (container attach) |
+| `containers-browse-tags` | Containers: Browse Remote Tags… | never | opens a picker or prompt that only the user can answer; use a typed tool; it asks a registry over the network on the user's behalf |
 | `containers-compose-down` | Containers: Remove Project Containers… | never | project removal requires the user's confirm card |
 | `containers-compose-restart` | Containers: Restart Project | confirm (always asks) |   |
 | `containers-compose-stop` | Containers: Stop Project | confirm (always asks) |   |
@@ -1184,6 +1185,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `containers-context-default` | Containers: Make Context Default… | never | changes the machine-wide Docker default |
 | `containers-context-use` | Containers: Switch Context… | never | a context switch is the user's choice; it moves every container action to another host |
 | `containers-copy-id` | Containers: Copy ID | auto |   |
+| `containers-filter` | Containers: Filter Rows… | never | the filter is typed by the user; the AI uses containers_list / images_list |
 | `containers-focus` | Containers: Focus | auto |   |
 | `containers-help` | Containers: Open Guide | auto |   |
 | `containers-image-history` | Containers: Show Image History | auto |   |
@@ -1208,6 +1210,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `containers-registry-signout` | Containers: Sign Out of Registry… | never | signing out of a registry is the user's |
 | `containers-remove` | Containers: Remove Selected… | never | container removal requires the user's confirm card |
 | `containers-restart` | Containers: Restart Selected | confirm (always asks) |   |
+| `containers-search` | Containers: Search Docker Hub… | never | opens a picker or prompt that only the user can answer; use a typed tool; it asks Docker Hub on the user's behalf |
 | `containers-shell` | Containers: Open Shell | never | opens a picker or prompt that only the user can answer; use a typed tool (container shell) |
 | `containers-start` | Containers: Start Selected | confirm (always asks) |   |
 | `containers-stats` | Containers: Follow Stats | auto |   |

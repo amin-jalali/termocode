@@ -81,7 +81,7 @@ func (r svcRow) selectable() bool {
 
 // foldable: Space / click folds it.
 func (r svcRow) foldable() bool {
-	return r.kind == svcRowSection || r.kind == svcRowGroup || (r.kind == svcRowHostItem && (r.host == hostNetwork || r.host == hostVolume || r.host == hostRegistry))
+	return r.kind == svcRowSection || r.kind == svcRowGroup || (r.kind == svcRowHostItem && (r.host == hostNetwork || r.host == hostVolume || r.host == hostRegistry || r.host == hostRemoteRepo))
 }
 
 // rows flattens the view: sections, problem notes, services.
@@ -126,6 +126,9 @@ func (st *servicesState) rows() []svcRow {
 		}
 	}
 	out = append(out, st.hostRows()...)
+	if st.filter != "" {
+		out = st.applyFilter(out)
+	}
 	return out
 }
 
@@ -707,7 +710,7 @@ func (m Model) renderServicesSidebarRaw(w, h int, focused bool, now time.Time, h
 	fill := func() string { return theme.Bg(theme.BgSidebar).Render(strings.Repeat(" ", max(w, 0))) }
 	muted := func(s string) string { return theme.FgBg(theme.TextMuted, theme.BgSidebar).Render(s) }
 	lines := []string{
-		containersSidebarTitle(w, focused),
+		containersSidebarTitle(w, focused, st.filterTitle()),
 		theme.PaneHairline(w, theme.BgSidebar, focused),
 	}
 	if !st.loaded {
@@ -781,7 +784,7 @@ func (m Model) renderServicesSidebarRaw(w, h int, focused bool, now time.Time, h
 		case svcRowSection:
 			if strings.HasPrefix(r.section, "host/") {
 				sec := strings.TrimPrefix(r.section, "host/")
-				line = renderServiceSection(hostSectionTitle(sec), st.hostSectionCount(sec), st.collapsed[r.section], active, focused, w)
+				line = renderServiceSection(hostSectionTitle(sec), st.filterCount(sec, st.hostSectionCount(sec)), st.collapsed[r.section], active, focused, w)
 				break
 			}
 			// PROJECT is the old COMPOSE header: it counts the compose
@@ -790,7 +793,7 @@ func (m Model) renderServicesSidebarRaw(w, h int, focused bool, now time.Time, h
 			if r.section == svcSecLocal {
 				label, n = "LOCAL", len(st.local)
 			}
-			line = renderServiceSection(label, strconv.Itoa(n), st.collapsed[r.section], active, focused, w)
+			line = renderServiceSection(label, st.projectFilterCount(r.section, n), st.collapsed[r.section], active, focused, w)
 		case svcRowGroup:
 			line = renderHostGroup(r, st.collapsed[r.section], active, focused, w)
 		case svcRowService:
@@ -825,13 +828,19 @@ func (m Model) renderServicesSidebarRaw(w, h int, focused bool, now time.Time, h
 	return strings.Join(lines[:h], "\n")
 }
 
-func containersSidebarTitle(w int, focused bool) string {
+// containersSidebarTitle is "CONTAINERS · project ⋯"; while a filter is on
+// the filter text ("/pg") takes the project's place.
+func containersSidebarTitle(w int, focused bool, filter string) string {
 	if w <= 0 {
 		return ""
 	}
 	if w == 1 {
 		return theme.Bg(theme.BgSidebar).Render("⋯")
 	}
-	title := sidebarTitle("CONTAINERS", w-2, focused, projectName())
+	suffix := projectName()
+	if filter != "" {
+		suffix = filter
+	}
+	title := sidebarTitle("CONTAINERS", w-2, focused, suffix)
 	return title + theme.Bg(theme.BgSidebar).Render(" ") + theme.FgBg(theme.TextMuted, theme.BgSidebar).Render(theme.GlyphMore.String())
 }

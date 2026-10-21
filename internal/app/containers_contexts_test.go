@@ -143,10 +143,18 @@ func TestContextsAutoHiddenWithOnlyDefaultAndForPodman(t *testing.T) {
 	if lineWith(plainLines(&m, 29, 60), "CONTEXTS") == "" {
 		t.Error("CONTEXTS hidden although a second context exists")
 	}
+	// CP-12: podman connections are CONTEXTS now. With two connections the
+	// section shows; with none (only the local socket) it hides like
+	// docker with only `default`.
 	st.containerEngine.Kind = "podman"
 	st.touch()
+	if lineWith(plainLines(&m, 29, 60), "CONTEXTS") == "" {
+		t.Error("CONTEXTS hidden for podman with two connections")
+	}
+	st.contextRows = nil
+	st.touch()
 	if lineWith(plainLines(&m, 29, 60), "CONTEXTS") != "" {
-		t.Error("CONTEXTS shown for podman")
+		t.Error("CONTEXTS shown for podman without connections")
 	}
 	// Hidden sections never run their command and never get a cursor.
 	for _, r := range st.rows() {

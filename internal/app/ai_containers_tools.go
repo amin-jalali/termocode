@@ -148,7 +148,14 @@ func aiContainersGetHost(ctx context.Context, call aiIDECaller) (aiContainersHos
 // contextLabel names the context the calls use.
 func (h aiContainersHost) contextLabel(ctx context.Context) string {
 	if h.e.Kind == "podman" {
-		return "podman (no contexts)"
+		switch {
+		case h.session != "":
+			return "connection " + h.session + " (this session)"
+		case os.Getenv("CONTAINER_CONNECTION") != "":
+			return "connection " + os.Getenv("CONTAINER_CONNECTION") + " (CONTAINER_CONNECTION)"
+		case runtime.GOOS == "linux":
+			return "local podman"
+		}
 	}
 	if h.session != "" {
 		return "context " + h.session + " (this session)"
@@ -672,15 +679,16 @@ func aiContextsList(ctx context.Context, call aiIDECaller) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if h.e.Kind == "podman" {
-		return "Engine: podman · podman has no contexts.", nil
-	}
 	list, err := h.e.ListContexts(ctx)
 	if err != nil {
 		return "", errors.New(aiContainersRedact(err.Error()))
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s\nContexts: %d (only the user switches; the tools follow the session's context)\n", h.header(ctx), len(list))
+	if h.e.Kind == "podman" {
+		fmt.Fprintf(&b, "%s\nPodman connections: %d (only the user switches; the tools follow the session's connection)\n", h.header(ctx), len(list))
+	} else {
+		fmt.Fprintf(&b, "%s\nContexts: %d (only the user switches; the tools follow the session's context)\n", h.header(ctx), len(list))
+	}
 	for _, c := range list {
 		mark := " "
 		if (h.session == "" && c.Current) || h.session == c.Name {
@@ -1103,7 +1111,7 @@ func (m *Model) aiContainersTools(call aiIDECaller) []ai.Tool {
 		},
 		{
 			Name:        "contexts_list",
-			Description: "The engine's contexts (docker only): which one is the default and which one this session uses. Only the user switches contexts.",
+			Description: "The engine's contexts (docker) or connections (podman): which one is the default and which one this session uses. Only the user switches them.",
 			Params:      map[string]any{},
 			Describe:    func(map[string]any) string { return "List contexts" },
 			Run:         read(aiContextsList),

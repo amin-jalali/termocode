@@ -126,6 +126,22 @@ func TestContainersFakeEngineBrowseStopAndIdle(t *testing.T) {
 		t.Errorf("stop used a force flag:\n%s", argv)
 	}
 
+	// CP-12: "/" filters every section from the snapshot (no engine
+	// call while typing); Esc clears it.
+	tm.settle()
+	calls := fileText(filepath.Join(data, "argv.log"))
+	tm.Send("/")
+	tm.Send("ngin")
+	tm.WaitText("/ngin", uiTimeout)
+	tm.WaitGone("api-1", uiTimeout)
+	tm.CheckScreen("filter", mainFrame)
+	if got := fileText(filepath.Join(data, "argv.log")); got != calls {
+		t.Errorf("typing the filter called the engine:\n%s", strings.TrimPrefix(got, calls))
+	}
+	tm.Send(KeyEsc)
+	tm.WaitGone("/ngin", uiTimeout)
+	tm.WaitText("api-1", uiTimeout)
+
 	// Another view hides this one: the events stream goes away.
 	tm.Palette("Git: Focus Source Control")
 	tm.settle()

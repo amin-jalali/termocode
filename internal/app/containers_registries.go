@@ -97,6 +97,7 @@ func (st *servicesState) registrySectionBody(key string) []svcRow {
 		out = append(out, row)
 		out = append(out, st.registryImageRows(row)...)
 	}
+	out = append(out, st.registryRemoteRows(key)...)
 	return append(out, connect)
 }
 
@@ -539,6 +540,8 @@ func (m *Model) openRegistryMenu(r svcRow, x, y int) {
 		items = []menu.Item{
 			{ID: "connect", Title: "Sign in again…", Hint: "n"},
 			{ID: "pull", Title: "Pull image…", Hint: "u"},
+			{ID: "browse", Title: "Browse tags…", Hint: "b"},
+			{ID: "search", Title: "Search Docker Hub…", Hint: "s"},
 		}
 		if r.current {
 			items = append(items, menu.Item{Sep: true}, menu.Item{ID: "signout", Title: "Sign out…", Hint: "D"})
@@ -546,7 +549,9 @@ func (m *Model) openRegistryMenu(r svcRow, x, y int) {
 	case hostRegistryImage:
 		items = []menu.Item{{ID: "pull", Title: "Pull again", Hint: "u"}}
 	default:
-		items = []menu.Item{{ID: "connect", Title: "Connect registry…", Hint: "n"}}
+		items = []menu.Item{{ID: "connect", Title: "Connect registry…", Hint: "n"},
+			{ID: "browse", Title: "Browse tags…", Hint: "b"},
+			{ID: "search", Title: "Search Docker Hub…", Hint: "s"}}
 	}
 	m.menu = menu.New(items, x, y)
 	m.menu.SetScreenSize(m.w, m.h)
@@ -569,6 +574,14 @@ func (m *Model) handleRegistryMenuSelect(id string, r svcRow) tea.Cmd {
 		}
 	case "signout":
 		return m.askRegistrySignOut(r)
+	case "browse":
+		prefill := ""
+		if r.host == hostRegistry {
+			prefill = registryPullPrefix(r.name)
+		}
+		m.askBrowse(prefill)
+	case "search":
+		m.askSearch()
 	}
 	return nil
 }

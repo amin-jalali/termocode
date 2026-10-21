@@ -233,13 +233,25 @@ func (st *servicesState) cancelHostWork() {
 	}
 	st.containerGen++
 	st.containerDetecting = false
+	st.stopRemoteLoading()
 }
 
-// activeContext is the engine's current context name ("" = unknown or
-// podman).
+// activeContext is the engine's current context (podman: connection)
+// name ("" = unknown, or podman on its local socket).
 func (st *servicesState) activeContext() string {
-	if st.sessionContext != "" && st.containerEngine.Kind != "podman" {
+	if st.sessionContext != "" {
 		return st.sessionContext
+	}
+	if st.isPodman() {
+		// On Linux plain podman runs locally unless CONTAINER_CONNECTION
+		// (or --remote) says otherwise; on macOS and Windows it is always
+		// a client of its default connection.
+		if env := os.Getenv("CONTAINER_CONNECTION"); env != "" {
+			return env
+		}
+		if runtime.GOOS == "linux" {
+			return ""
+		}
 	}
 	for _, c := range st.contextRows {
 		if c.Current {
@@ -250,6 +262,12 @@ func (st *servicesState) activeContext() string {
 		return os.Getenv("DOCKER_CONTEXT")
 	}
 	return ""
+}
+
+// hasContexts: the engine has contexts (docker) or connections (podman).
+func (st *servicesState) hasContexts() bool {
+	k := st.containerEngine.Kind
+	return k == "docker" || k == "podman"
 }
 
 // containersDetect finds the engine once (docker, then podman) and lists
@@ -288,7 +306,7 @@ func (m *Model) containersDetectWithWatch(force bool) tea.Cmd {
 		// Contexts are files, not daemon answers: list them even when
 		// the engine does not answer, so a broken remote context can be
 		// switched away from.
-		if e.Kind == "docker" {
+		if e.Kind == "docker" || e.Kind == "podman" {
 			var err error
 			msg.contexts, err = e.ListContexts(ctx)
 			if err != nil {
@@ -352,7 +370,7 @@ func (m *Model) containersList(section string) tea.Cmd {
 	if st == nil || !st.visible || section == "help" {
 		return nil
 	}
-	if section == "contexts" && st.containerEngine.Kind != "docker" {
+	if section == "contexts" && !st.hasContexts() {
 		return nil
 	}
 	if section != "registries" && (!st.containerDetected || (!st.containerEngine.Reachable && section != "contexts")) {
@@ -432,7 +450,7 @@ func (m *Model) containersReloadAll() tea.Cmd {
 // section at all, and `docker context ls` costs no daemon call.
 func (m *Model) containersRefreshContexts() tea.Cmd {
 	st := m.services
-	if st == nil || !st.visible || !st.sectionShown("contexts") || !st.containerDetected || st.containerEngine.Kind != "docker" {
+	if st == nil || !st.visible || !st.sectionShown("contexts") || !st.containerDetected || !st.hasContexts() {
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

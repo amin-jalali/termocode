@@ -18,9 +18,14 @@
 //	login.err            `login` reads stdin, then fails with this stderr
 //	fail-<ctx>.err       every call except `context …` fails with this stderr
 //	                     while DOCKER_CONTEXT=<ctx> (an unreachable remote)
+//	fail-conn-<name>.err every call except `system …` fails with this stderr
+//	                     while CONTAINER_CONNECTION=<name> (podman, CP-12)
+//	search.json / .err   answer of `search …` (CP-12)
+//	connection-ls.json   answer of `system connection ls` (podman, CP-12)
 //
 // Written by the script: argv.log (one call per line), ctx.log (the
-// DOCKER_CONTEXT of each call, "|", then its argv), events.pid,
+// DOCKER_CONTEXT of each call, "|", then its argv), conn.log (the same
+// with CONTAINER_CONNECTION), events.pid,
 // <sub>.pid (the script's pid while it runs), login.stdin (what `login`
 // read on stdin).
 package servicestest
@@ -45,6 +50,8 @@ const script = `#!/bin/sh
 D='@DATA@'
 printf '%s\n' "$*" >> "$D/argv.log"
 printf '%s|%s\n' "${DOCKER_CONTEXT-}" "$*" >> "$D/ctx.log"
+printf '%s|%s\n' "${CONTAINER_CONNECTION-}" "$*" >> "$D/conn.log"
+if [ -n "${CONTAINER_CONNECTION-}" ] && [ "$1" != "system" ] && [ -f "$D/fail-conn-$CONTAINER_CONNECTION.err" ]; then cat "$D/fail-conn-$CONTAINER_CONNECTION.err" >&2; exit 1; fi
 if [ -n "${DOCKER_CONTEXT-}" ] && [ "$1" != "context" ] && [ -f "$D/fail-$DOCKER_CONTEXT.err" ]; then cat "$D/fail-$DOCKER_CONTEXT.err" >&2; exit 1; fi
 if [ -f "$D/all.err" ]; then cat "$D/all.err" >&2; exit "$(cat "$D/all.code" 2>/dev/null || echo 1)"; fi
 if [ -f "$D/sleep-$1" ]; then sleep "$(cat "$D/sleep-$1")"; fi
@@ -72,6 +79,14 @@ if [ "$1" = "inspect" ]; then cat "$D/inspect.json" 2>/dev/null; exit 0; fi
 if [ "$1" = "stats" ]; then cat "$D/stats.json" 2>/dev/null; exit 0; fi
 if [ "$1" = "logs" ]; then cat "$D/logs.txt" 2>/dev/null; exit 0; fi
 if [ "$1" = "history" ]; then cat "$D/history.json" 2>/dev/null; exit 0; fi
+if [ "$1" = "search" ]; then
+  if [ -f "$D/search.err" ]; then cat "$D/search.err" >&2; exit 1; fi
+  cat "$D/search.json" 2>/dev/null; exit 0
+fi
+if [ "$1" = "system" ] && [ "$2" = "connection" ]; then
+  if [ "$3" = "ls" ] || [ "$3" = "list" ]; then cat "$D/connection-ls.json" 2>/dev/null; fi
+  exit 0
+fi
 if [ "$1" = "system" ] && [ "$2" = "df" ]; then cat "$D/df.txt" 2>/dev/null; exit 0; fi
 if [ "$1" != "compose" ]; then exit 0; fi
 shift
@@ -106,6 +121,28 @@ func New(t testing.TB) *Fake {
 		t.Fatal(err)
 	}
 	return f
+}
+
+// InstallPodman puts the same script on Bin as `podman` too (CP-12): a
+// fake podman for connection tests. Calls of both land in the same logs.
+func (f *Fake) InstallPodman(t testing.TB) string {
+	t.Helper()
+	body := strings.ReplaceAll(script, "@DATA@", f.Data)
+	path := filepath.Join(f.Bin, "podman")
+	if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// ConnCalls returns the conn.log lines: "<CONTAINER_CONNECTION>|<argv>".
+func (f *Fake) ConnCalls() []string {
+	b, _ := os.ReadFile(filepath.Join(f.Data, "conn.log"))
+	s := strings.TrimRight(string(b), "\n")
+	if s == "" {
+		return nil
+	}
+	return strings.Split(s, "\n")
 }
 
 // Docker is the script's path.

@@ -139,6 +139,18 @@ type servicesState struct {
 	hostWatchCtx        context.Context
 	hostWatchCancel     context.CancelFunc
 	hostWatchGen        uint64
+
+	// CP-12: the "/" filter over every section (this view only, never
+	// saved; it filters the snapshot, so typing runs nothing).
+	filter       string
+	filterTyping bool
+	// CP-12: remote tags (Registry HTTP API v2), by repository reference;
+	// remoteOrder are the repositories browsed in REGISTRIES.
+	remoteTags  map[string]*remoteTags
+	remoteOrder []string
+	// CP-12: the last Docker Hub search, for its picker and card.
+	searchResults []containers.SearchResult
+	searchPick    containers.SearchResult
 }
 
 func newServicesState() *servicesState {
@@ -580,6 +592,10 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onStoragePrunePreview(msg), true
 	case containerEventMsg:
 		return m.onContainerEvent(msg), true
+	case remoteTagsMsg:
+		return m.onRemoteTags(msg), true
+	case containerSearchMsg:
+		return m.onContainerSearch(msg), true
 	case servicesRefreshMsg:
 		return m.servicesRefresh(), true
 	case servicesEventMsg:

@@ -40,6 +40,7 @@ func TestContainersRenderInvariantsPoorTerminals(t *testing.T) {
 	scenes := []struct{ name, arg, marker string }{
 		{"host", "", "CONTAINERS"}, {"down", "down", "CONTAINERS"}, {"noengine", "noengine", "CONTAINERS"},
 		{"menu", "menu", "Refresh all"},
+		{"filter", "filter", "/pos"}, {"tags", "tags", "remote tags"}, // CP-12
 	}
 	truecolor := regexp.MustCompile(`\x1b\[[0-9;]*[34]8;[25];`)
 	anyColor := regexp.MustCompile(`\x1b\[[0-9;]*([34][0-9]|9[0-7]|10[0-7])(;[0-9;]*)?m`)
@@ -360,5 +361,70 @@ func TestPerfGuardContainersViewHiddenCostsNothing(t *testing.T) {
 	}
 	if len(f.Calls()) != calls {
 		t.Errorf("engine called while hidden: %q", f.Calls()[calls:])
+	}
+}
+
+// CP-12: the filtered view (a wide filter text in the title row, filtered
+// counts in the headers) and remote tag lists keep every row exactly w
+// cells, in every icon mode and at every sidebar width.
+func TestContainersFilterAndTagsRowsExactWidth(t *testing.T) {
+	oldIcons := theme.CurrentIconMode
+	defer func() { theme.CurrentIconMode = oldIcons }()
+	for _, mode := range []theme.IconMode{theme.IconModeUnicode, theme.IconModeASCII, theme.IconModeNerdFont} {
+		theme.CurrentIconMode = mode
+		for _, filter := range []string{"", "pos", "日本語のフィルター", strings.Repeat("x", maxFilterRunes)} {
+			st := svcHostState()
+			for sec := range st.collapsed {
+				st.collapsed[sec] = false
+			}
+			repo, _ := containers.ParseRemoteRepo("registry.example.com:5000/a-very-long-team-name/with-a-long-repository-name")
+			var tags []string
+			for i := 0; i < 40; i++ {
+				tags = append(tags, fmt.Sprintf("1.%d.%d-alpine-with-a-long-suffix", i, i))
+			}
+			st.remoteTags = map[string]*remoteTags{
+				"postgres":    {repo: repo, ref: "postgres", inImages: true, open: true, loaded: true, tags: tags[:5], truncated: true},
+				repo.Ref():    {repo: repo, ref: repo.Ref(), open: true, loaded: true, tags: tags},
+				"ghcr.io/x/y": {ref: "ghcr.io/x/y", open: true, loaded: true, err: containers.ErrNeedsSignIn.Error()},
+			}
+			st.remoteOrder = []string{repo.Ref(), "ghcr.io/x/y"}
+			st.filter, st.filterTyping = filter, filter != ""
+			for _, w := range []int{explorerMinWidth, 24, 31, 40, 60, 100} {
+				m := svcTestModel(st, 120, 80)
+				n := len(st.rows())
+				for cursor := 0; cursor < n; cursor += 4 {
+					st.cursor = cursor
+					st.touch()
+					out := m.renderServicesSidebarRaw(w, 80, cursor%2 == 0, svcTestNow, -1, -1)
+					for i, r := range strings.Split(out, "\n") {
+						if got := lipgloss.Width(r); got != w {
+							t.Fatalf("icons=%v filter=%q w=%d cursor=%d row %d is %d cells:\n%q", mode, filter, w, cursor, i, got, ansi.Strip(r))
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// CP-12: the filter over a big host still builds its rows inside the
+// frame budget (the filter runs on every keypress).
+func TestPerfGuardContainersFilterBigHost(t *testing.T) {
+	st := bigHost(2000)
+	st.filter = "svc3"
+	m := svcTestModel(st, 120, 50)
+	_ = m.renderServicesSidebarRaw(40, 50, true, svcTestNow, -1, -1)
+	start := time.Now()
+	const n = 10
+	for i := 0; i < n; i++ {
+		st.cursor = i * 3
+		st.touch()
+		_ = m.renderServicesSidebar(40, 50)
+	}
+	if ms := time.Since(start).Milliseconds() / n; ms > maxMillisContainersFrame*2 && !raceEnabled {
+		t.Errorf("one filtered frame of 2000 containers took %d ms (max %d)", ms, maxMillisContainersFrame*2)
+	}
+	if rows := st.rows(); len(rows) == 0 {
+		t.Fatal("no rows")
 	}
 }

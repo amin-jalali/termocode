@@ -129,16 +129,30 @@ func (e *Engine) capture(parent context.Context, args ...string) (string, string
 	return e.captureTimeout(parent, e.Timeout, args...)
 }
 
-// exec is X with DOCKER_CONTEXT set when the session uses a context.
+// exec is X with the session's context set: DOCKER_CONTEXT for docker,
+// CONTAINER_CONNECTION for podman (podman's documented override of its
+// default connection; it also makes the call remote).
 func (e *Engine) exec() services.Exec {
 	x := e.X
 	if x == nil {
 		x = services.SpawnExec{}
 	}
-	if e.Context != "" && e.Kind != "podman" {
-		x = services.WithEnv(x, "DOCKER_CONTEXT="+e.Context)
+	if env := e.ContextEnv(); env != "" {
+		x = services.WithEnv(x, env)
 	}
 	return x
+}
+
+// ContextEnv is the NAME=value that selects the session's context on a
+// call ("" = none).
+func (e *Engine) ContextEnv() string {
+	if e.Context == "" {
+		return ""
+	}
+	if e.Kind == "podman" {
+		return "CONTAINER_CONNECTION=" + e.Context
+	}
+	return "DOCKER_CONTEXT=" + e.Context
 }
 
 func (e *Engine) captureTimeout(parent context.Context, timeout time.Duration, args ...string) (string, string, int, error) {

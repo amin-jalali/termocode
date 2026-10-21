@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"regexp"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -39,6 +40,8 @@ const (
 	hostHelpGuide       // HELP: Open guide
 	hostHelpKeys        // HELP: Keys
 	hostHelpReport      // HELP: Report a problem
+	hostRemoteRepo      // CP-12: a repository's remote tags (foldable)
+	hostRemoteTag       // CP-12: one remote tag
 )
 
 // hostSectionTitle is the header label of a host section.
@@ -175,16 +178,40 @@ func (st *servicesState) hostSectionBody(sec string) []svcRow {
 }
 
 // contextsHidden: CONTEXTS is drawn only when it has something to choose
-// from: never for podman, and not while only `default` exists (or the
-// list is not known yet).
+// from: not while only one context (podman: one choice) exists, or the
+// list is not known yet.
 func (st *servicesState) contextsHidden() bool {
-	if st.containerEngine.Kind == "podman" || st.containerEngine.Binary == "" {
+	if !st.hasContexts() || st.containerEngine.Binary == "" {
 		return true
 	}
 	if st.sessionContext != "" {
 		return false
 	}
-	return !st.hostLoaded["contexts"] || len(st.contextRows) < 2
+	return !st.hostLoaded["contexts"] || len(st.contextChoices()) < 2
+}
+
+// podmanLocal is the CONTEXTS row of podman's own local socket (Linux):
+// "no connection". Parentheses never occur in a connection name we use.
+const podmanLocal = "(local)"
+
+// contextChoices are the CONTEXTS rows: docker contexts, or podman
+// connections after a "local" row on Linux (plain podman runs locally
+// there, so going back to it must be a choice).
+func (st *servicesState) contextChoices() []containers.Context {
+	if !st.isPodman() || runtime.GOOS != "linux" || !st.hostLoaded["contexts"] {
+		return st.contextRows
+	}
+	out := make([]containers.Context, 0, len(st.contextRows)+1)
+	out = append(out, containers.Context{Name: podmanLocal, DockerEndpoint: "this machine (no connection)"})
+	return append(out, st.contextRows...)
+}
+
+// contextDisplayName is how a context row reads.
+func contextDisplayName(name string) string {
+	if name == podmanLocal {
+		return "local"
+	}
+	return sanitizeOutputLine(name)
 }
 
 // contextSectionBody lists the contexts. It does not need a running
@@ -198,13 +225,17 @@ func (st *servicesState) contextSectionBody(key string) []svcRow {
 	if !st.hostLoaded["contexts"] {
 		return []svcRow{hint("Loading…")}
 	}
-	if len(st.contextRows) == 0 {
-		return []svcRow{hint("No contexts")}
+	choices := st.contextChoices()
+	if len(choices) == 0 {
+		return []svcRow{hint("No " + st.contextWord() + "s")}
 	}
 	active := st.activeContext()
+	if active == "" && st.isPodman() {
+		active = podmanLocal
+	}
 	var out []svcRow
-	for i, c := range st.contextRows {
-		out = append(out, svcRow{kind: svcRowHostItem, section: key, host: hostContext, idx: i, hostID: c.Name, name: sanitizeOutputLine(c.Name), current: c.Name == active})
+	for i, c := range choices {
+		out = append(out, svcRow{kind: svcRowHostItem, section: key, host: hostContext, idx: i, hostID: c.Name, name: contextDisplayName(c.Name), current: c.Name == active})
 	}
 	return out
 }
@@ -213,12 +244,13 @@ func (st *servicesState) contextSectionBody(key string) []svcRow {
 // does not answer, name the context in the section note (nil = not that
 // case). Only CONTAINERS carries the full note; the others point to it.
 func (st *servicesState) remoteContextRows(sec, key, detail string) []svcRow {
-	if st.sessionContext == "" || st.containerEngine.Kind != "docker" {
+	if st.sessionContext == "" || !st.hasContexts() {
 		return nil
 	}
 	name := sanitizeOutputLine(st.sessionContext)
+	word := st.contextWord()
 	if sec != "containers" {
-		return []svcRow{{kind: svcRowHint, section: key, text: "context " + name + " is not reachable"}}
+		return []svcRow{{kind: svcRowHint, section: key, text: word + " " + name + " is not reachable"}}
 	}
 	msg := shortRemoteError(sanitizeOutputLine(errLine(detail)))
 	low := strings.ToLower(msg)
@@ -228,7 +260,7 @@ func (st *servicesState) remoteContextRows(sec, key, detail string) []svcRow {
 	if msg == "" || strings.Contains(low, "deadline exceeded") || strings.HasSuffix(low, "version timed out") || low == "timed out" {
 		msg = "timed out"
 	}
-	return []svcRow{{kind: svcRowNote, section: key, text: "context " + name + ": " + msg},
+	return []svcRow{{kind: svcRowNote, section: key, text: word + " " + name + ": " + msg},
 		{kind: svcRowHint, section: key, text: "R retry · Enter on CONTEXTS to switch back"}}
 }
 
@@ -263,7 +295,7 @@ func (st *servicesState) containerRowsOf(key string) []svcRow {
 		}
 		out = append(out, svcRow{kind: svcRowGroup, section: gkey, name: g.Name,
 			count: fmt.Sprintf("%d/%d", up, len(g.Containers)), current: st.project != "" && g.Name == st.project})
-		if st.collapsed[gkey] {
+		if st.collapsed[gkey] && st.filter == "" { // a filter looks inside folded groups
 			continue
 		}
 		for _, c := range g.Containers {
@@ -362,7 +394,7 @@ func (st *servicesState) imageRowsOf(key string) []svcRow {
 			}
 		}
 		out = append(out, svcRow{kind: svcRowGroup, section: gkey, name: label, count: count})
-		if st.collapsed[gkey] {
+		if st.collapsed[gkey] && st.filter == "" { // a filter looks inside folded groups
 			continue
 		}
 		for _, ref := range byRepo[repo] {
@@ -370,6 +402,7 @@ func (st *servicesState) imageRowsOf(key string) []svcRow {
 			out = append(out, svcRow{kind: svcRowHostItem, section: key, host: hostImage, idx: ref.idx,
 				hostID: shortImageID(id) + ":" + ref.tag, name: ref.tag, tag: ref.tag, imageRef: ref.ref, depth: 2})
 		}
+		out = append(out, st.imageRemoteRows(key, repo)...)
 	}
 	return out
 }
@@ -490,7 +523,7 @@ func (st *servicesState) hostSectionCount(sec string) string {
 	case "volumes":
 		return strconv.Itoa(len(st.volumeRows))
 	case "contexts":
-		return strconv.Itoa(len(st.contextRows))
+		return strconv.Itoa(len(st.contextChoices()))
 	}
 	return ""
 }
@@ -830,6 +863,8 @@ func (st *servicesState) renderHostItem(r svcRow, active, focused bool, w int) s
 	case hostHelpGuide, hostHelpKeys, hostHelpReport:
 		g, gcol, ncol := helpRowLook(r)
 		return renderHostLine(active, focused, w, r.depth, g, gcol, r.name, ncol, nil)
+	case hostRemoteRepo, hostRemoteTag:
+		return st.renderRemoteRow(r, active, focused, w)
 	case hostRegistryImage:
 		var cols []hostCol
 		if w >= 22 && r.idx >= 0 && r.idx < len(st.imageRows) {
@@ -862,20 +897,23 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 					l1 += " " + v
 				}
 				if ctx := st.activeContext(); ctx != "" {
-					l1 += " · context " + ctx
+					l1 += " · " + st.contextWord() + " " + ctx
 				}
 				return l1, "? keys · Tab next"
 			}
 			return "containers on this machine", "? keys · Tab next"
 		case "images":
-			return "images on this machine", "u pull · z prune dangling · R refresh"
+			return "images on this machine", "u pull · z prune · b tags · R refresh"
 		case "registries":
-			return "registries you signed in to", "n connect · D sign out · u pull"
+			return "registries you signed in to", "n connect · s search · b browse tags · u pull"
 		case "networks":
 			return "networks on this machine", "n create · D remove · z prune · R refresh"
 		case "volumes":
 			return "volumes on this machine", "n create · D remove · z prune · d disk usage · R refresh"
 		case "contexts":
+			if st.isPodman() {
+				return "podman connections", "Enter use here · D make default"
+			}
 			return "engine contexts", "Enter use here · D make default"
 		case "help":
 			return "guide, keys and problem reports", "space fold · m sections"
@@ -892,7 +930,7 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 			}
 			return l1, "space fold"
 		}
-		return "image " + r.name, "space fold"
+		return "image " + r.name, "space fold · b remote tags"
 	case svcRowHostItem:
 		switch r.host {
 		case hostContainer:
@@ -931,10 +969,10 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 				return v.Name, l2
 			}
 		case hostContext:
-			if r.idx < len(st.contextRows) {
-				c := st.contextRows[r.idx]
-				l1 := sanitizeOutputLine(c.Name)
-				if c.Name == st.activeContext() {
+			if choices := st.contextChoices(); r.idx < len(choices) {
+				c := choices[r.idx]
+				l1 := contextDisplayName(c.Name)
+				if r.current {
 					l1 += " (active)"
 				}
 				l2 := sanitizeOutputLine(c.DockerEndpoint)
@@ -945,6 +983,8 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 			}
 		case hostRegistry, hostRegistryImage, hostRegistryConnect:
 			return st.registryFooter(r)
+		case hostRemoteRepo, hostRemoteTag:
+			return st.remoteFooter(r)
 		case hostHelpGuide, hostHelpKeys, hostHelpReport:
 			return helpRowFooter(r)
 		}

@@ -47,7 +47,13 @@ func (m *Model) imagePull(ref string) tea.Cmd {
 	if strings.HasPrefix(strings.TrimSpace(ref), "-") {
 		return m.servicesToast(toast.Info, "Image reference cannot start with a dash", "Enter an image name or reference.")
 	}
-	cmd := m.services.containerEngine.PullCommand(strings.TrimSpace(ref))
+	e := m.services.containerEngine
+	if e.Binary == "" { // REGISTRIES needs no daemon: the engine may not be found yet
+		if found, ok := m.services.registryEngine(); ok {
+			e = found
+		}
+	}
+	cmd := e.PullCommand(strings.TrimSpace(ref))
 	key := containerTabPrefix + "pull:" + strings.TrimSpace(ref)
 	if err := m.servicesRunCommand(cmd, key); err != nil {
 		return m.servicesToast(toast.Errr, "Cannot pull image", err.Error())

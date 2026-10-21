@@ -1,0 +1,3 @@
+{"Description":"Official build of Nginx.","IsAutomated":"false","IsOfficial":"true","Name":"nginx","StarCount":"20512"}
+{"Description":"Bitnami container image for NGINX","IsAutomated":"false","IsOfficial":"false","Name":"bitnami/nginx","StarCount":"195"}
+{"Description":"evil \u001b[31mred","IsAutomated":"false","IsOfficial":"[OK]","Name":"-rm","StarCount":"1"}

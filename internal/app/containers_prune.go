@@ -250,6 +250,10 @@ func (m *Model) openSectionMenu(r svcRow, x, y int) {
 		items = []menu.Item{{ID: "prune-networks", Title: "Prune unused networks…", Hint: "z", Icon: icon}}
 	case "volumes":
 		items = []menu.Item{{ID: "prune-volumes", Title: "Prune dangling volumes…", Hint: "z", Icon: icon}}
+	case "registries":
+		items = []menu.Item{{ID: "connect", Title: "Connect registry…", Hint: "n"},
+			{ID: "browse", Title: "Browse tags…", Hint: "b"},
+			{ID: "search", Title: "Search Docker Hub…", Hint: "s"}}
 	default:
 		return
 	}
@@ -262,6 +266,14 @@ func (m *Model) openSectionMenu(r svcRow, x, y int) {
 func (m *Model) handleSectionMenuSelect(id string) tea.Cmd {
 	if kind, ok := strings.CutPrefix(id, "prune-"); ok {
 		return m.askPrune(kind)
+	}
+	switch id {
+	case "connect":
+		m.startRegistryConnect("")
+	case "browse":
+		m.askBrowse("")
+	case "search":
+		m.askSearch()
 	}
 	return nil
 }

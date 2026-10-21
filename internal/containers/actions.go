@@ -56,12 +56,21 @@ func (e *Engine) RemoveVolume(ctx context.Context, id string) error {
 	return e.action(ctx, 60*time.Second, "volume", "rm", id)
 }
 
-// UseContext runs `docker context use <name>`: the user's machine-wide
-// default. It never carries the session's DOCKER_CONTEXT override.
+// UseContext runs `docker context use <name>` (podman: `podman system
+// connection default <name>`): the user's machine-wide default. It never
+// carries the session's override.
 func (e *Engine) UseContext(ctx context.Context, name string) error {
 	plain := *e
 	plain.Context = ""
-	return plain.action(ctx, 60*time.Second, "context", "use", name)
+	return plain.action(ctx, 60*time.Second, e.UseContextArgs(name)...)
+}
+
+// UseContextArgs is the argv (without the binary) of UseContext.
+func (e *Engine) UseContextArgs(name string) []string {
+	if e.Kind == "podman" {
+		return []string{"system", "connection", "default", name}
+	}
+	return []string{"context", "use", name}
 }
 func (e *Engine) Prune(ctx context.Context, kind string) error {
 	switch kind {

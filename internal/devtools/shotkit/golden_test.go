@@ -116,6 +116,8 @@ func goldenScenes() []Scene {
 		ContainersVariant("containers-registries", "registries"),
 		ContainersVariant("containers-registry-connect", "registry-connect"),
 		ContainersVariant("containers-help", "help"),
+		ContainersVariant("containers-filter", "filter"),    // CP-12
+		ContainersVariant("containers-remote-tags", "tags"), // CP-12
 		HTTPFile(),
 		HTTPResponse(),
 	}

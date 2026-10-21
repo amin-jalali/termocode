@@ -1,0 +1,2 @@
+{"Name":"local","URI":"unix:///run/user/1000/podman/podman.sock","Identity":"","Default":"true"}
+{"name":"lab","uri":"ssh://root@10.0.0.7/run/podman/podman.sock","identity":"/root/.ssh/lab","default":false}

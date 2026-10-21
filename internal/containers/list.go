@@ -20,7 +20,12 @@ func (e *Engine) ListDanglingVolumes(ctx context.Context) ([]Volume, error) {
 func (e *Engine) ContainersUsingVolume(ctx context.Context, name string) ([]Container, error) {
 	return parseList(ctx, e, []string{"ps", "--all", "--filter", "volume=" + name, "--format", "{{json .}}"}, ParseContainers)
 }
+
+// ListContexts lists docker contexts, or podman connections (CP-12).
 func (e *Engine) ListContexts(ctx context.Context) ([]Context, error) {
+	if e.Kind == "podman" {
+		return e.ListConnections(ctx)
+	}
 	return parseList(ctx, e, []string{"context", "ls", "--format", "{{json .}}"}, ParseContexts)
 }
 func (e *Engine) Inspect(ctx context.Context, kind, id string) (any, error) {

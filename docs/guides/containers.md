@@ -44,7 +44,8 @@ row under the cursor.
 - CONTAINERS groups containers by compose project (this folder's project
   first, marked `·`, then `other` for the rest) and shows the short service
   name, for example `postgres-1`.
-- CONTEXTS shows only when a second Docker context exists.
+- CONTEXTS shows only when there is a second Docker context (or, for
+  Podman, a connection to choose).
 - No Docker or Podman? CONTAINERS says so and HELP stays; the project's
   local commands still work.
 
@@ -59,6 +60,7 @@ when something changed. When you hide the view (another activity item,
 |---|---|
 | `j` `k` `g` `G` | move |
 | `Tab` / `Shift+Tab` | jump to the next / previous section header (wraps around) |
+| `/` | filter the rows of every section by name (see [Filter](#filter)) |
 | `?` | show the keys of the row under the cursor |
 | `Space` | fold / open the section or group under the cursor |
 | `Enter` / `l` | on a container: logs tab; on a context: use it; on an image tag: run it (asks); on a HELP row: run it |
@@ -71,6 +73,8 @@ when something changed. When you hide the view (another activity item,
 | `o` | open the first published port in the browser |
 | `y` | copy the ID, name, host or endpoint of the row |
 | `u` | pull an image |
+| `b` | on an image: show its remote tags; in REGISTRIES: browse the tags of a repository |
+| `s` | in REGISTRIES: search Docker Hub |
 | `P` / `h` | push an image (asks first) / image history |
 | `n` | create a network or volume; connect a registry |
 | `d` | read volume disk usage (on VOLUMES) |
@@ -79,7 +83,7 @@ when something changed. When you hide the view (another activity item,
 | `R` | refresh all |
 | `m` | choose the sections (the **⋯** menu) |
 | `?` | open this guide for the view |
-| `Esc` | focus the editor |
+| `Esc` | clear the filter; without a filter, focus the editor |
 
 Mouse: click moves the cursor; a click on a header or `▸` / `▾` folds it;
 a click on an action row (Connect registry…, the HELP rows) runs it;
@@ -88,6 +92,41 @@ click opens the menu of the row; the wheel scrolls.
 
 Right-click a row for the same actions as its keys; items that ask first end with `…`.
 Closing a logs tab stops only `logs -f`, never the container.
+
+## Filter
+
+Press `/` and type. Every section keeps only the rows whose name contains
+the text (upper and lower case are the same): PROJECT services,
+containers, image repositories and tags, registries, networks, volumes,
+contexts and remote tags.
+
+```
+CONTAINERS · /pos▏
+▾ PROJECT ─────────────────── 1/4
+  ◉ postgres            :5432   2h
+▾ CONTAINERS ──────────────── 1/8
+▾ termocode · ················ 2/3
+    ◉ postgres-1        :5432   2h
+▾ IMAGES ──────────────────── 2/4
+▾ postgres ······················ 2
+      16                   421MB
+      15-alpine            239MB
+▸ NETWORKS ────────────────── 0/3
+```
+
+- The text shows in the title row. Each header shows `matches/all`.
+- A match keeps its group (compose project, image repository, registry
+  host); a group that matches keeps all its rows. Folded groups are
+  searched too. A folded section stays folded, but its header still counts
+  the matches.
+- When nothing matches, one line says so: `No rows match "…" · Esc clears`.
+- `Enter` keeps the filter and gives the keys back (`j`, `k`, `s`, …).
+  `Esc` clears it. `Backspace` deletes a letter; `Ctrl+U` clears the text.
+- `Tab`, the arrows and the mouse work on the filtered rows, also while you
+  type.
+- The filter only looks at what the view already has. Typing never runs an
+  engine command. Closing termocode forgets the filter.
+- **Containers: Filter Rows…** in the palette starts it too.
 
 ## Containers
 
@@ -207,6 +246,63 @@ Registry…**) shows a card with the exact `docker logout <host>` command.
 Login, logout and pulls use the session context, like every other call
 (see below).
 
+### Remote tags
+
+`b` on an image repository (or one of its tags) in IMAGES lists the tags
+the registry has, right under the repository:
+
+```
+▾ postgres ······················ 2
+      16                   421MB
+      15-alpine            239MB
+    ▾ remote tags                84
+        17
+        17-alpine
+        …
+```
+
+`b` in REGISTRIES (or **Containers: Browse Remote Tags…**) asks for a
+repository, like `nginx`, `bitnami/redis` or `ghcr.io/acme/api`, and lists
+its tags in REGISTRIES. On a host row the prompt starts with that host.
+
+| Key | Action |
+|---|---|
+| `Space` / `Enter` on **remote tags** | fold or open the list |
+| `r` | ask the registry again |
+| `Enter` / `u` on a tag, or double-click | pull it: the pull prompt starts with the full name (`nginx:1.27`) |
+| `y` | copy the name |
+| `x` | remove a browsed repository from REGISTRIES |
+
+How termocode asks the registry:
+
+- It uses the Registry HTTP API v2 (`/v2/<name>/tags/list`) and the
+  registry's own token step, **without your login**. It never reads the
+  engine's credential store, a credential helper or the login values in
+  `config.json`. So only public repositories list their tags. A private
+  one shows `needs sign-in; pull by name still works`: `u` pulls through
+  the engine, which uses your login.
+- HTTPS only. A registry on this machine (`localhost:5000`, `127.0.0.1`,
+  `[::1]`) may answer in plain HTTP: termocode tries HTTPS first and uses
+  HTTP only when that local registry answers in plain HTTP. A redirect to
+  another scheme, or a next page on another host, is refused.
+- It lists at most 500 tags (`first 500 tags · pull by name for others`),
+  has a 5 second connect limit and a 20 second limit for the whole list,
+  and reads at most 1 MB per answer. Only names that are valid tags are
+  shown.
+- The registry's token lives only inside one request. It is never shown,
+  logged or saved.
+- Hiding the view stops a request that is still running.
+
+### Search Docker Hub
+
+`s` in REGISTRIES (or **Containers: Search Docker Hub…**) asks for a word
+and runs `docker search --format '{{json .}}' --limit 25 --no-trunc
+<word>` (Podman: `podman search`). termocode sends no request of its own.
+The results open in a picker with the stars and the description. Pick one
+for a card: **Pull…** opens the pull prompt with its name, **Browse tags**
+lists its remote tags in REGISTRIES. The word may use letters, digits and
+`. _ - / :`.
+
 termocode does not keep registry tokens itself yet. A "remember in
 termocode" option needs the locked, encrypted secret store, which is not
 built yet.
@@ -219,7 +315,8 @@ commands are closed to it.
 CONTEXTS lists your Docker contexts: `◉ default`, `◦ prod`. The endpoint
 (`ssh://deploy@prod`) is in the two lines at the bottom. The section shows
 only when a second context exists; with just `default` it stays out of the
-way. Podman has no CONTEXTS section.
+way. With Podman, CONTEXTS lists the Podman connections (see
+[Podman connections](#podman-connections)).
 
 | Key | Action |
 |---|---|
@@ -301,10 +398,41 @@ helper. See [Contexts and engine choice](#contexts-and-engine-choice).
 ## Podman
 
 Set `containers_engine` to `podman`, or leave `auto` and have only Podman
-installed. Podman is used through the same commands. It has no CONTEXTS section, and the session context
-is not set for it. Registry logins are read from `$REGISTRY_AUTH_FILE` or
-`$XDG_RUNTIME_DIR/containers/auth.json`. Compose projects are grouped by
-Podman's own labels.
+installed. Podman is used through the same commands. Registry logins are
+read from `$REGISTRY_AUTH_FILE` or `$XDG_RUNTIME_DIR/containers/auth.json`.
+Compose projects are grouped by Podman's own labels.
+
+### Podman connections
+
+With Podman, CONTEXTS lists the connections from `podman system connection
+ls --format json`:
+
+```
+▾ CONTEXTS ─────────────────── 2
+◉ local
+◦ podman-machine-default
+◦ build-box
+```
+
+- On Linux the first row is **local**: Podman on this machine, with no
+  connection. On macOS and Windows Podman always uses a connection, so
+  there is no **local** row.
+- `Enter` uses a connection **in this session only**: every Podman call
+  of this termocode session gets `CONTAINER_CONNECTION=<name>` (Podman's
+  own setting for "use this connection"), the sections list again and the
+  event watcher restarts. Tabs you open from the view get it too. `Enter`
+  on **local** goes back.
+- `D` (**Make default…**) shows a card with the exact `podman system
+  connection default <name>` command. This changes Podman's default for
+  every terminal. Cancel or `Esc` runs nothing.
+- Listing the connections and making one the default never use the
+  session's connection.
+- If a remote connection fails, CONTAINERS shows `connection build-box:
+  …`; CONTEXTS stays, so you can switch back.
+- The section shows only when there is something to choose: two or more
+  rows.
+
+The AI cannot switch connections or make one the default.
 
 ## Security
 
@@ -318,8 +446,12 @@ Podman's own labels.
   never runs `sudo`; it shows the fix for you to run yourself.
 - Inspect pages and AI inspect output keep env **names** and mask every
   value.
+- Remote tags are read without your login (anonymous registry tokens
+  only), over HTTPS (plain HTTP only for a registry on this machine), with
+  time and size limits. The registry token is never shown or saved.
+- Docker Hub search runs the engine's own `search` command.
 - The AI has no way to remove, prune, push, tag, run an image, sign in or
-  out, or change contexts.
+  out, change contexts or connections, search or browse tags.
 
 ## The AI and host containers
 
