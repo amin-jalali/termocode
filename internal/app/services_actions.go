@@ -815,10 +815,62 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, m.imageHistory(ref)
 		}
 
+	case "tab":
+		m.servicesJumpSection(1)
+	case "shift+tab":
+		m.servicesJumpSection(-1)
+	case "?":
+		if have {
+			title, keys := hostKeysHelp(r)
+			return m, m.servicesToast(toast.Info, title, keys)
+		}
 	case "esc":
 		m.focus = FocusEditor
 	}
 	return m, nil
+}
+
+// servicesJumpSection moves the cursor to the next (dir 1) or previous
+// (dir -1) section header and wraps around at the ends.
+func (m *Model) servicesJumpSection(dir int) {
+	st := m.services
+	rows := st.rows()
+	n := len(rows)
+	for i := 1; i <= n; i++ {
+		j := ((st.cursor+dir*i)%n + n) % n
+		if rows[j].kind == svcRowSection {
+			st.cursor = j
+			m.servicesClampCursor()
+			st.touch()
+			return
+		}
+	}
+}
+
+// hostKeysHelp is the "?" text: the keys of the row kind under the cursor.
+func hostKeysHelp(r svcRow) (string, string) {
+	const nav = "j/k move · Tab next section · Shift+Tab previous · space fold · m sections · R refresh"
+	switch {
+	case r.kind == svcRowHostItem && r.host == hostContainer:
+		return "Container keys", "s start · x stop · r restart · p pause · e shell · t attach · Enter logs · S stats · i inspect · o open port · y copy id · D remove · " + nav
+	case r.kind == svcRowGroup && r.hostSectionID() == "containers":
+		return "Project keys", "s up · x stop · r restart · D down · " + nav
+	case r.kind == svcRowHostItem && r.host == hostImage, r.kind == svcRowGroup && r.hostSectionID() == "images":
+		return "Image keys", "Enter run · u pull · P push · t tag · h history · i inspect · y copy id · D remove · " + nav
+	case r.kind == svcRowHostItem && (r.host == hostNetwork || r.host == hostVolume):
+		return "Network and volume keys", "space users · n create · D remove · z prune · " + nav
+	case r.kind == svcRowHostItem && r.host == hostContext:
+		return "Context keys", "Enter use here · D make default · y copy endpoint · " + nav
+	case r.kind == svcRowHostItem && (r.host == hostRegistry || r.host == hostRegistryImage || r.host == hostRegistryConnect):
+		return "Registry keys", "Enter open · n connect · D sign out · u pull · " + nav
+	case r.kind == svcRowHostItem && isHelpHostKind(r.host):
+		return "Help keys", "Enter open · " + nav
+	case r.kind == svcRowSection && strings.HasPrefix(r.section, "host/"):
+		return "Section keys", "z prune · u pull (images) · n create (networks, volumes) · d disk usage (volumes) · " + nav
+	case r.kind == svcRowService:
+		return "Service keys", "s start · x stop · r restart · Enter logs · e shell · o open source · y copy address · a start all · A stop all · " + nav
+	}
+	return "Containers keys", nav
 }
 
 // hostSectionID is the host section a row belongs to ("" = PROJECT).

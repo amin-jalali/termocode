@@ -58,6 +58,8 @@ when something changed. When you hide the view (another activity item,
 | Key | Action |
 |---|---|
 | `j` `k` `g` `G` | move |
+| `Tab` / `Shift+Tab` | jump to the next / previous section header (wraps around) |
+| `?` | show the keys of the row under the cursor |
 | `Space` | fold / open the section or group under the cursor |
 | `Enter` / `l` | on a container: logs tab; on a context: use it; on an image tag: run it (asks); on a HELP row: run it |
 | `s` / `x` / `r` | start / stop / restart the selected container; on a project group, start / stop / restart that project |

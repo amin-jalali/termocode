@@ -33,3 +33,21 @@ func TestUnicodeIconsNotAmbiguousWidth(t *testing.T) {
 		check("file glyph", g)
 	}
 }
+
+// Spec (CP-11): the Containers glyphs of the Unicode tier are not
+// East-Asian-Ambiguous either.
+func TestContainersGlyphsNotAmbiguousWidth(t *testing.T) {
+	icons := map[string]Icon{
+		"Containers": IconContainers, "SvcUp": GlyphSvcUp, "SvcBad": GlyphSvcBad, "SvcStarting": GlyphSvcStarting,
+		"SvcRestarting": GlyphSvcRestarting, "SvcStopped": GlyphSvcStopped, "SvcExited": GlyphSvcExited,
+		"SvcUnknown": GlyphSvcUnknown, "Start": GlyphStart, "Stop": GlyphStop, "Refresh": GlyphRefresh,
+		"Prune": GlyphPrune, "ContPaused": GlyphContPaused, "Expand": GlyphExpand, "TreeCollapsed": GlyphTreeCollapsed,
+	}
+	for name, ic := range icons {
+		for _, r := range ic.Unicode {
+			if width.LookupRune(r).Kind() == width.EastAsianAmbiguous {
+				t.Errorf("%s: %q (U+%04X) is East-Asian-Ambiguous", name, string(r), r)
+			}
+		}
+	}
+}

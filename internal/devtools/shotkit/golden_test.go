@@ -180,6 +180,8 @@ func goldenExtras() []Scene {
 		ContainersVariant("containers-no-engine", "noengine"),
 		{Name: "containers-light", Theme: "catppuccin-latte", Steps: Containers().Steps},
 		{Name: "containers-ascii", Icons: "ascii", Steps: Containers().Steps},
+		{Name: "containers-menu-light", Theme: "catppuccin-latte", Steps: ContainersVariant("containers-menu", "menu").Steps},
+		{Name: "containers-menu-ascii", Icons: "ascii", Steps: ContainersVariant("containers-menu", "menu").Steps},
 		// The HTTP Response page: the Headers view, and in a light theme.
 		{Name: "http-response-headers", Steps: []Step{Act("httpdemo:headers"), Pause(900 * time.Millisecond)}},
 		withTheme(withName(HTTPResponse(), "http-response-light"), "catppuccin-latte"),

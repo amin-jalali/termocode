@@ -305,11 +305,24 @@ func svcTruncMiddle(s string, w int) string {
 	if w <= 1 {
 		return runewidth.Truncate(s, w, "")
 	}
-	r := []rune(s)
-	keep := w - 1
+	keep := w - runewidth.StringWidth("…")
+	if keep < 0 {
+		return runewidth.Truncate(s, w, "")
+	}
 	head := (keep + 1) / 2
 	tail := keep - head
-	return string(r[:head]) + "…" + string(r[len(r)-tail:])
+	// Cut by cells, not runes: a wide or combining rune must not push the
+	// result past w.
+	h := runewidth.Truncate(s, head, "")
+	r := []rune(s)
+	t := ""
+	for i := len(r) - 1; i >= 0; i-- {
+		if runewidth.StringWidth(string(r[i:])) > tail {
+			break
+		}
+		t = string(r[i:])
+	}
+	return h + "…" + t
 }
 
 // svcRowColumns is the width ladder: name, port and uptime widths for w.
@@ -397,9 +410,11 @@ func renderServiceSection(label, count string, collapsed, active, focused bool, 
 	sb.WriteString(fg(labelCol).Render(label))
 	sb.WriteString(row.Render(" "))
 	used += runewidth.StringWidth(label) + 1
-	if rule := w - used - len(count) - 2; rule > 0 {
+	// Cells, not glyphs: "─" is two cells wide where ambiguous width is wide.
+	rw := max(runewidth.StringWidth("─"), 1)
+	if rule := (w - used - len(count) - 2) / rw; rule > 0 {
 		sb.WriteString(fg(theme.BorderSubtle).Render(strings.Repeat("─", rule)))
-		used += rule
+		used += rule * rw
 	}
 	sb.WriteString(row.Render(" "))
 	sb.WriteString(fg(theme.TextMuted).Bold(true).Render(count))

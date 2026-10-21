@@ -653,8 +653,10 @@ func renderHostLine(active, focused bool, w, depth int, glyph string, gcol theme
 	}
 	indent := 2 * depth
 	fixed := 1 + indent
+	gw := 0 // glyph and its space; the ASCII tier of an icon can be 3 cells ("(i)")
 	if glyph != "" {
-		fixed += 2
+		gw = runewidth.StringWidth(glyph) + 1
+		fixed += gw
 	}
 	for _, c := range cols {
 		fixed += 1 + c.width
@@ -673,15 +675,15 @@ func renderHostLine(active, focused bool, w, depth int, glyph string, gcol theme
 	if glyph != "" {
 		b.WriteString(fg(gcol).Render(glyph))
 		b.WriteString(row.Render(" "))
-		used += 2
+		used += gw
 	}
 	n := svcTruncMiddle(name, nameW)
 	b.WriteString(fg(ncol).Render(n))
-	b.WriteString(row.Render(strings.Repeat(" ", nameW-runewidth.StringWidth(n))))
+	b.WriteString(row.Render(strings.Repeat(" ", max(nameW-runewidth.StringWidth(n), 0))))
 	used += nameW
 	for _, c := range cols {
 		t := runewidth.Truncate(c.text, c.width, "")
-		pad := strings.Repeat(" ", c.width-runewidth.StringWidth(t))
+		pad := strings.Repeat(" ", max(c.width-runewidth.StringWidth(t), 0))
 		b.WriteString(row.Render(" "))
 		if c.right {
 			b.WriteString(row.Render(pad))
@@ -733,10 +735,13 @@ func renderHostGroup(r svcRow, collapsed, active, focused bool, w int) string {
 		b.WriteString(fg(theme.TextDim).Render(mark))
 		used += runewidth.StringWidth(mark)
 	}
-	if dots := w - used - cw - 2; dots > 0 {
+	// The leader counts cells, not dots: a terminal that draws "·" two
+	// cells wide (East Asian ambiguous width) gets half as many.
+	dw := max(runewidth.StringWidth(dot), 1)
+	if dots := (w - used - cw - 2) / dw; dots > 0 {
 		b.WriteString(row.Render(" "))
 		b.WriteString(fg(theme.BorderSubtle).Render(strings.Repeat(dot, dots)))
-		used += 1 + dots
+		used += 1 + dots*dw
 	}
 	b.WriteString(row.Render(" "))
 	b.WriteString(fg(theme.TextMuted).Render(r.count))
@@ -859,9 +864,9 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 				if ctx := st.activeContext(); ctx != "" {
 					l1 += " · context " + ctx
 				}
-				return l1, "space fold · R refresh"
+				return l1, "? keys · Tab next"
 			}
-			return "containers on this machine", "z prune stopped · space fold · R refresh"
+			return "containers on this machine", "? keys · Tab next"
 		case "images":
 			return "images on this machine", "u pull · z prune dangling · R refresh"
 		case "registries":
