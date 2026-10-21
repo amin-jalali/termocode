@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -96,7 +97,11 @@ func (m *Model) onContainerEvent(msg containerEventMsg) tea.Cmd {
 	}
 	switch msg.event.Type {
 	case "image":
-		cmds = append(cmds, m.containersRefresh("images"))
+		if !st.hostSectionVisible("images") && st.anyRegistryExpanded() {
+			cmds = append(cmds, m.containersList("images"))
+		} else {
+			cmds = append(cmds, m.containersRefresh("images"))
+		}
 	case "network":
 		st.clearStorageInspect("network")
 		cmds = append(cmds, m.containersRefresh("networks"))
@@ -163,7 +168,18 @@ type containerHostMsg struct {
 	errs       map[string]string
 }
 
-func registryConfigPath() string {
+// registryConfigPath is the engine's login file: $DOCKER_CONFIG or
+// ~/.docker for docker; $REGISTRY_AUTH_FILE or
+// $XDG_RUNTIME_DIR/containers/auth.json for podman. It is only read.
+func registryConfigPath(kind string) string {
+	if kind == "podman" {
+		if f := os.Getenv("REGISTRY_AUTH_FILE"); f != "" {
+			return f
+		}
+		if dir := os.Getenv("XDG_RUNTIME_DIR"); dir != "" {
+			return filepath.Join(dir, "containers", "auth.json")
+		}
+	}
 	if dir := os.Getenv("DOCKER_CONFIG"); dir != "" {
 		return filepath.Join(dir, "config.json")
 	}
@@ -322,7 +338,18 @@ func containsString(list []string, s string) bool {
 // hidden, the section folded, or the engine not found yet).
 func (m *Model) containersRefresh(section string) tea.Cmd {
 	st := m.services
-	if st == nil || !st.visible || !st.hostSectionVisible(section) || section == "help" {
+	if st == nil || !st.visible || !st.hostSectionVisible(section) {
+		return nil
+	}
+	return m.containersList(section)
+}
+
+// containersList lists one section even when it is folded (REGISTRIES
+// shows the images of an open host). nil when the view is hidden or the
+// engine is not found yet.
+func (m *Model) containersList(section string) tea.Cmd {
+	st := m.services
+	if st == nil || !st.visible || section == "help" {
 		return nil
 	}
 	if section == "contexts" && st.containerEngine.Kind != "docker" {
@@ -354,10 +381,12 @@ func (m *Model) containersRefresh(section string) tea.Cmd {
 		case "contexts":
 			msg.contexts, err = e.ListContexts(ctx)
 		case "registries":
-			cfg, readErr := containers.ReadRegistryConfig(registryConfigPath())
+			path := registryConfigPath(e.Kind)
+			cfg, readErr := containers.ReadRegistryConfig(path)
 			msg.registries = cfg.Registries
 			if readErr != nil && !os.IsNotExist(readErr) {
-				err = readErr
+				// The decoder's words name no stored value.
+				err = fmt.Errorf("cannot read %s: %v", filepath.Base(path), readErr)
 			}
 		}
 		if err != nil {
@@ -510,6 +539,13 @@ func (m *Model) onContainerHost(msg containerHostMsg) tea.Cmd {
 		for _, s := range engineSections {
 			if st.hostSectionVisible(s) && !containsString(msg.loaded, s) {
 				cmds = append(cmds, m.containersRefresh(s))
+			}
+		}
+		if st.registryWantImages {
+			// A registry host was opened before the engine was found.
+			st.registryWantImages = false
+			if st.containerEngine.Reachable && !containsString(msg.loaded, "images") && !st.hostSectionVisible("images") {
+				cmds = append(cmds, m.containersList("images"))
 			}
 		}
 		return tea.Batch(cmds...)

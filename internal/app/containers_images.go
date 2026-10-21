@@ -323,6 +323,9 @@ func (m *Model) onHostActionDone(msg hostActionDoneMsg) tea.Cmd {
 	if msg.operation == "default-context" {
 		return m.onContextDefaultDone(msg)
 	}
+	if msg.operation == "logout" {
+		return m.onRegistrySignedOut(msg)
+	}
 	if msg.err != nil {
 		title := "Could not complete container action"
 		switch msg.operation {

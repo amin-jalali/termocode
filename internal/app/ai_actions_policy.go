@@ -291,6 +291,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-focus":             aiAuto(),
 	"containers-context-use":       aiNever("a context switch is the user's choice; it moves every container action to another host"),
 	"containers-context-default":   aiNever("changes the machine-wide Docker default"),
+	"containers-registry-connect":  aiNever("signing in to a registry takes the user's token; it is the user's"),
+	"containers-registry-signout":  aiNever("signing out of a registry is the user's"),
 	"containers-refresh":           aiAuto(),
 	"containers-start":             aiDestructive(),
 	"containers-stop":              aiDestructive(),

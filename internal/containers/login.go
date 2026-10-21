@@ -5,27 +5,34 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/services"
 )
 
-// Login sends the password only through stdin; it is never part of argv.
+// DefaultLoginTimeout bounds one `login` (it talks to the registry).
+const DefaultLoginTimeout = time.Minute
+
+// Login runs `<engine> login <host> --username <user> --password-stdin`.
+// The password goes only to stdin: never into argv, the environment or a
+// file. Errors carry the engine's message with the password scrubbed.
 func (e *Engine) Login(ctx context.Context, host, username, password string) error {
-	if strings.TrimSpace(host) == "" {
-		return errors.New("registry host is required")
+	if err := ValidRegistryHost(host); err != nil {
+		return err
 	}
-	if strings.ContainsAny(host, "\r\n") || strings.ContainsAny(username, "\r\n") {
-		return errors.New("invalid registry credentials")
+	if err := ValidRegistryUser(username); err != nil {
+		return err
 	}
-	d := e.Timeout
+	d := e.LoginTimeout
 	if d <= 0 {
-		d = defaultTimeout
+		d = DefaultLoginTimeout
 	}
 	ctx, cancel := context.WithTimeout(ctx, d)
 	defer cancel()
-	x := e.exec()
-	out, stderr, code, err := x.CaptureInput(ctx, e.Dir, []byte(password+"\n"), e.Binary, "login", host, "--username", username, "--password-stdin")
-	_ = out
+	_, stderr, code, err := e.exec().CaptureInput(ctx, e.Dir, []byte(password+"\n"), e.Binary, "login", host, "--username", username, "--password-stdin")
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return fmt.Errorf("login timed out after %s", d)
+	}
 	if err != nil {
 		return errors.New(redactPassword(err.Error(), password))
 	}

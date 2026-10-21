@@ -81,7 +81,7 @@ func (r svcRow) selectable() bool {
 
 // foldable: Space / click folds it.
 func (r svcRow) foldable() bool {
-	return r.kind == svcRowSection || r.kind == svcRowGroup || (r.kind == svcRowHostItem && (r.host == hostNetwork || r.host == hostVolume))
+	return r.kind == svcRowSection || r.kind == svcRowGroup || (r.kind == svcRowHostItem && (r.host == hostNetwork || r.host == hostVolume || r.host == hostRegistry))
 }
 
 // rows flattens the view: sections, problem notes, services.

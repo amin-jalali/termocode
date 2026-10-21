@@ -121,6 +121,12 @@ type servicesState struct {
 	volumeRows          []containers.Volume
 	contextRows         []containers.Context
 	registryRows        []containers.Registry
+	// REGISTRIES (CP-7): the connect flow between prompts (never the
+	// token), the users signed in this run (config files do not keep
+	// them), and a wish to list images once the engine is found.
+	regPending          registryPending
+	registryUsers       map[string]string
+	registryWantImages  bool
 	storageUsers        map[string][]string
 	storageInspectState map[string]string
 	containerErrors     map[string]string
@@ -561,6 +567,8 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onImagePage(msg), true
 	case hostActionDoneMsg:
 		return m.onHostActionDone(msg), true
+	case registryLoginDoneMsg:
+		return m.onRegistryLoginDone(msg), true
 	case diskUsageMsg:
 		return m.onDiskUsage(msg), true
 	case storageInspectMsg:

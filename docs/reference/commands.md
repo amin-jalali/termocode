@@ -68,6 +68,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Containers: Attach | `containers-attach` |   |   |
+| Containers: Connect Registry… | `containers-registry-connect` |   |   |
 | Containers: Copy ID | `containers-copy-id` |   |   |
 | Containers: Create Network… | `containers-network-create` |   |   |
 | Containers: Create Volume… | `containers-volume-create` |   |   |
@@ -99,6 +100,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Restart Selected | `containers-restart` |   |   |
 | Containers: Run Selected Image… | `containers-image-run` |   |   |
 | Containers: Show Image History | `containers-image-history` |   |   |
+| Containers: Sign Out of Registry… | `containers-registry-signout` |   |   |
 | Containers: Start Project | `containers-compose-up` |   |   |
 | Containers: Start Selected | `containers-start` |   |   |
 | Containers: Stop Project | `containers-compose-stop` |   |   |

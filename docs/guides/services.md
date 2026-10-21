@@ -232,6 +232,67 @@ the engine's own error. Every prune has a two minute limit.
 The AI cannot prune: there is no tool, and every prune palette command is
 closed to it.
 
+## Registries
+
+REGISTRIES lists the registry hosts from your engine's own login file:
+`$DOCKER_CONFIG/config.json` (else `~/.docker/config.json`); for Podman
+`$REGISTRY_AUTH_FILE` or `$XDG_RUNTIME_DIR/containers/auth.json`. termocode
+only reads the host names and the helper names (`credsStore`,
+`credHelpers`). It never reads the stored logins and never writes this file.
+
+```
+▾ REGISTRIES ────────────── 3
+◉ docker.io
+◉ ghcr.io
+    acme/shop:latest    212MB
+◦ quay.io
++ Connect registry…
+```
+
+`◉` means signed in. `◦` means the file names a helper for this host, but
+there is no login yet. The two lines at the bottom show the host, the user
+(when you signed in from termocode in this run; the file does not keep it)
+and the helper. A broken file shows a short note; **Connect registry…**
+still works.
+
+| Key | Action |
+|---|---|
+| `Enter` / `Space` on `◉` | show or hide the local images tagged for this host |
+| `Enter` on `◦` | connect to this host |
+| `n`, or `Enter` on **Connect registry…** | connect to a registry |
+| `u` | pull: on a host, the prompt starts with `ghcr.io/`; on an image, its full name |
+| `D` | sign out (asks first) |
+
+**Connect registry…** (also **Containers: Connect Registry…** in the
+palette) asks four things: a host from a short list (`docker.io`, `ghcr.io`,
+`registry.gitlab.com`, or **Other host…**), the host (you can edit it), the
+user name, and the token or password. The token prompt shows only `•`. You
+can type a reference instead of the value: `${env:NAME}`, `${dotenv:NAME}`
+(from this workspace's `.env`) or `${cmd:<a command that prints it>}`. termocode reads it
+just before the call.
+
+Then it runs `docker login <host> --username <user> --password-stdin`. The
+token goes to the engine on stdin only. It is never in the command line,
+the environment, a log, a toast, the session file or any file of
+termocode's. The engine's own credential store keeps it. If the login
+fails, the toast shows the engine's message with the token removed. A login
+has a one minute limit. `Esc` on any step runs nothing and forgets what you
+typed.
+
+**Sign out** (`D`, the right-click menu, or **Containers: Sign Out of
+Registry…**) shows a card with the exact `docker logout <host>` command.
+`Cancel` or `Esc` runs nothing. Local images stay.
+
+Login, logout and pulls use the session context, like every other call
+(see below).
+
+termocode does not keep registry tokens itself yet. A "remember in
+termocode" option needs the locked, encrypted secret store, which is not
+built yet.
+
+The AI cannot sign in or out: there is no tool for it, and both palette
+commands are closed to it.
+
 ## Contexts and engine choice
 
 CONTEXTS lists your Docker contexts: `◉ default`, `◦ prod`. The endpoint

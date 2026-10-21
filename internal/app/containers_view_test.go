@@ -254,13 +254,23 @@ func TestContainersHelpTextsFit(t *testing.T) {
 	}
 }
 
-// Tester item 6: REGISTRIES promises nothing that does not exist.
+// Tester item 6: REGISTRIES promises nothing that does not exist. Since
+// CP-7 "Connect registry…" exists, so the empty section offers it.
 func TestContainersRegistriesEmptyText(t *testing.T) {
 	st := svcHostState()
 	st.collapsed[hostSection("registries")] = false
 	got := svcRowsText(st)
-	if !strings.Contains(got, "!Not signed in yet") || strings.Contains(got, "connect") {
+	if !strings.Contains(got, "!Not signed in yet") {
 		t.Errorf("registries rows = %s", got)
+	}
+	connect := 0
+	for _, r := range st.rows() {
+		if r.kind == svcRowHostItem && r.host == hostRegistryConnect {
+			connect++
+		}
+	}
+	if connect != 1 {
+		t.Errorf("want one Connect registry… row, got %d: %s", connect, got)
 	}
 }
 

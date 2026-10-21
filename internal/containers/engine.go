@@ -25,6 +25,8 @@ type Engine struct {
 	X         services.Exec
 	Dir       string
 	Timeout   time.Duration
+	// LoginTimeout bounds one login (0 = DefaultLoginTimeout).
+	LoginTimeout time.Duration
 	// Context is the per-session DOCKER_CONTEXT ("" = leave the
 	// environment alone). It never changes the user's global default.
 	Context string

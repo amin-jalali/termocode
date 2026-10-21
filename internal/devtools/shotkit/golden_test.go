@@ -113,6 +113,8 @@ func goldenScenes() []Scene {
 		ContainersHostCard("containers-volume-remove-confirm", "volume-remove"),
 		ContainersHostCard("containers-volume-in-use", "volume-in-use"),
 		ContainersHostCard("containers-volume-prune-confirm", "volume-prune"),
+		ContainersVariant("containers-registries", "registries"),
+		ContainersVariant("containers-registry-connect", "registry-connect"),
 		HTTPFile(),
 		HTTPResponse(),
 	}

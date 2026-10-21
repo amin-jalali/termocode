@@ -2,10 +2,13 @@ package containers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"sort"
+	"strings"
+	"unicode"
 )
 
 // RegistryConfig contains registry host names and credential helper identifiers.
@@ -91,6 +94,11 @@ func decodeHostNames(d *json.Decoder, hosts map[string]Registry, helpers bool) e
 			return fmt.Errorf("invalid registry host")
 		}
 		entry := hosts[host]
+		if !helpers {
+			// A host in `auths` has a login (its value, often `{}` when a
+			// store keeps the secret, is skipped unread).
+			entry.SignedIn = true
+		}
 		if helpers {
 			var name string
 			if err := d.Decode(&name); err != nil {
@@ -138,4 +146,83 @@ func skipJSONValue(d *json.Decoder) error {
 	default:
 		return nil
 	}
+}
+
+// dockerHubHosts are the names the Docker Hub has in configs and refs.
+var dockerHubHosts = map[string]bool{"docker.io": true, "index.docker.io": true, "registry-1.docker.io": true}
+
+// RegistryDisplayHost is the short host of a config key or a typed host:
+// "https://index.docker.io/v1/" → "docker.io", "https://ghcr.io" →
+// "ghcr.io". It is for display and matching, never for commands (those
+// use the config key as written).
+func RegistryDisplayHost(key string) string {
+	h := strings.TrimSpace(key)
+	for _, p := range []string{"https://", "http://"} {
+		h = strings.TrimPrefix(h, p)
+	}
+	if i := strings.IndexByte(h, '/'); i >= 0 {
+		h = h[:i]
+	}
+	h = strings.ToLower(h)
+	if dockerHubHosts[h] {
+		return "docker.io"
+	}
+	return h
+}
+
+// ImageRegistryHost is the registry an image reference belongs to: the
+// first path part when it looks like a host (has a dot or a port, or is
+// localhost), else Docker Hub ("docker.io").
+func ImageRegistryHost(ref string) string {
+	name := ref
+	if i := strings.IndexByte(name, '@'); i >= 0 {
+		name = name[:i]
+	}
+	first, _, ok := strings.Cut(name, "/")
+	if !ok || !(strings.ContainsAny(first, ".:") || first == "localhost") {
+		return "docker.io"
+	}
+	return RegistryDisplayHost(first)
+}
+
+// ValidRegistryHost accepts a registry host (with an optional scheme,
+// port and path); it refuses an empty value, a value that would read as
+// a flag, spaces, control and shell characters.
+func ValidRegistryHost(host string) error {
+	if host == "" {
+		return errors.New("registry host is required")
+	}
+	if strings.HasPrefix(host, "-") {
+		return errors.New("registry host cannot start with a dash")
+	}
+	if len(host) > 512 {
+		return errors.New("registry host is too long")
+	}
+	for _, r := range host {
+		ok := r < unicode.MaxASCII && (r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune(".-_:/[]", r))
+		if !ok {
+			return errors.New("registry host has a character that is not allowed")
+		}
+	}
+	return nil
+}
+
+// ValidRegistryUser accepts a user name for `--username`; it refuses an
+// empty value, a flag-like value, spaces and control characters.
+func ValidRegistryUser(user string) error {
+	if user == "" {
+		return errors.New("user name is required")
+	}
+	if strings.HasPrefix(user, "-") {
+		return errors.New("user name cannot start with a dash")
+	}
+	if len(user) > 256 {
+		return errors.New("user name is too long")
+	}
+	for _, r := range user {
+		if unicode.IsSpace(r) || unicode.IsControl(r) {
+			return errors.New("user name has a space or a control character")
+		}
+	}
+	return nil
 }

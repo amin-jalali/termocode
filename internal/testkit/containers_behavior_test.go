@@ -274,3 +274,91 @@ func TestContainersRunImageEscCancels(t *testing.T) {
 		t.Fatalf("prompt still open:\n%s", screen(d))
 	}
 }
+
+// CP-7: Connect registry from the palette. The token is only on the
+// fake's stdin: never in argv.log, on screen, in a toast, in the step
+// log or in any file under HOME.
+func TestContainersRegistryConnectSecretOnlyOnStdin(t *testing.T) {
+	if testing.Short() {
+		t.Skip("starts nvim")
+	}
+	wd, _ := os.Getwd()
+	fixtureDir := filepath.Join(wd, "..", "containers", "testdata", "docker27")
+	f := servicestest.New(t)
+	for _, name := range []string{"version.json", "ps.json", "images.json", "network-ls.json", "volume-ls.json", "context-ls.json"} {
+		b, err := os.ReadFile(filepath.Join(fixtureDir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.Set(t, name, string(b))
+	}
+	t.Setenv("PATH", f.PathEnv())
+	d := New(t, Options{W: 120, H: 34, Nvim: true})
+	dockerConfig := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dockerConfig, "config.json"), []byte(`{"auths":{"ghcr.io":{"auth":"c3RvcmVkLWJsb2I="}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("DOCKER_CONFIG", dockerConfig)
+	const secret = "ghp_testkitToken_9876543210"
+	d.Palette("containers-registry-connect")
+	if !d.WaitForText("Connect registry", 3*time.Second) {
+		t.Fatalf("no registry picker:\n%s", screen(d))
+	}
+	d.Type("ghcr")
+	d.Key("enter")
+	if !d.WaitForText("Registry host:", 3*time.Second) {
+		t.Fatalf("no host prompt:\n%s", screen(d))
+	}
+	d.Key("enter")
+	if !d.WaitForText("User name for ghcr.io", 3*time.Second) {
+		t.Fatalf("no user prompt:\n%s", screen(d))
+	}
+	d.Type("amin")
+	d.Key("enter")
+	if !d.WaitForText("Token or password:", 3*time.Second) {
+		t.Fatalf("no token prompt:\n%s", screen(d))
+	}
+	d.Type(secret)
+	if strings.Contains(screen(d), "testkitToken") || !strings.Contains(screen(d), "•••") {
+		t.Fatalf("token prompt is not masked:\n%s", screen(d))
+	}
+	if f.Count("login") != 0 {
+		t.Fatal("login ran before Enter")
+	}
+	d.Key("enter")
+	if !d.WaitFor(func() bool { return f.Count("login") == 1 }, 5*time.Second) {
+		t.Fatalf("login did not run: %q\n%s", f.Calls(), screen(d))
+	}
+	if !d.WaitForText("Signed in to ghcr.io as amin", 3*time.Second) {
+		t.Fatalf("no success toast:\n%s", screen(d))
+	}
+	stdin, err := os.ReadFile(filepath.Join(f.Data, "login.stdin"))
+	if err != nil || string(stdin) != secret+"\n" {
+		t.Fatalf("login.stdin = %q (%v)", stdin, err)
+	}
+	argv, _ := os.ReadFile(filepath.Join(f.Data, "argv.log"))
+	if strings.Contains(string(argv), secret) || !strings.Contains(string(argv), "login ghcr.io --username amin --password-stdin") {
+		t.Fatalf("argv.log = %q", argv)
+	}
+	if strings.Contains(screen(d), secret) || strings.Contains(strings.Join(d.History(), "\n"), secret) {
+		t.Fatal("the token is on screen or in the step log")
+	}
+	_, last := d.Updates()
+	if strings.Contains(strings.Join(last, "\n"), secret) {
+		t.Fatal("the token is in a message name")
+	}
+	for _, dir := range []string{os.Getenv("HOME"), os.Getenv("XDG_CONFIG_HOME"), os.Getenv("XDG_STATE_HOME"), os.Getenv("XDG_DATA_HOME"), d.Dir, dockerConfig} {
+		if dir == "" {
+			continue
+		}
+		_ = filepath.Walk(dir, func(p string, info os.FileInfo, err error) error {
+			if err != nil || info.IsDir() || info.Size() > 4<<20 {
+				return nil
+			}
+			if b, _ := os.ReadFile(p); strings.Contains(string(b), secret) {
+				t.Errorf("token written to %s", p)
+			}
+			return nil
+		})
+	}
+}

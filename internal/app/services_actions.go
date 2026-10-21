@@ -421,7 +421,7 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 		}
 		return m.imagePush(ref), true
 	case confirmKindContainerHostAction:
-		if id != "run" && id != "remove" && id != "prune" && id != "create" && id != "use" {
+		if id != "run" && id != "remove" && id != "prune" && id != "create" && id != "use" && id != "signout" {
 			return m.runHostAction("cancel"), true
 		}
 		return m.runHostAction(id), true
@@ -585,6 +585,11 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	st := m.services
 	r, have := m.servicesCurrentRow()
 	isSvc := have && r.kind == svcRowService
+	if have {
+		if cmd, ok := m.registryKey(k.String(), r); ok {
+			return m, cmd
+		}
+	}
 	switch k.String() {
 	case "up", "k":
 		m.servicesMove(-1)
@@ -830,6 +835,9 @@ func (r svcRow) hostSectionID() string {
 // just opened.
 func (m *Model) servicesToggleFold(r svcRow) tea.Cmd {
 	st := m.services
+	if r.kind == svcRowHostItem && r.host == hostRegistry {
+		return m.toggleRegistry(r)
+	}
 	if r.kind == svcRowHostItem && (r.host == hostNetwork || r.host == hostVolume) {
 		key := storageInspectKey(r)
 		collapsed, ok := st.collapsed[key]
@@ -1005,6 +1013,8 @@ func (m Model) handleServicesSidebarMouse(x, y int, t tea.MouseEventType) (Model
 			m.openContainerMenu(r, activityWidthX(x), y)
 		} else if r.kind == svcRowHostItem && r.host == hostContext {
 			m.openContextMenu(r, activityWidthX(x), y)
+		} else if r.kind == svcRowHostItem && isRegistryHostKind(r.host) {
+			m.openRegistryMenu(r, activityWidthX(x), y)
 		} else if r.kind == svcRowSection {
 			m.openSectionMenu(r, activityWidthX(x), y)
 		}
@@ -1012,6 +1022,10 @@ func (m Model) handleServicesSidebarMouse(x, y int, t tea.MouseEventType) (Model
 	}
 	if r.foldable() {
 		return m, m.servicesToggleFold(r)
+	}
+	if r.kind == svcRowHostItem && r.host == hostRegistryConnect {
+		m.startRegistryConnect("")
+		return m, nil
 	}
 	if double && r.kind == svcRowHostItem && r.host == hostContext {
 		st.lastClick = time.Time{}
@@ -1088,6 +1102,9 @@ func (m *Model) handleServicesMenuSelect(id string) tea.Cmd {
 	if r.kind == svcRowHostItem && r.host == hostContext {
 		return m.handleContextRowMenuSelect(id, r)
 	}
+	if r.kind == svcRowHostItem && isRegistryHostKind(r.host) {
+		return m.handleRegistryMenuSelect(id, r)
+	}
 	if r.kind == svcRowHostItem {
 		return m.handleContainerRowMenuSelect(id, r)
 	}
@@ -1133,6 +1150,8 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-refresh", Title: "Containers: Refresh"},
 		{ID: "containers-context-use", Title: "Containers: Switch Context…"},
 		{ID: "containers-context-default", Title: "Containers: Make Context Default…"},
+		{ID: "containers-registry-connect", Title: "Containers: Connect Registry…"},
+		{ID: "containers-registry-signout", Title: "Containers: Sign Out of Registry…"},
 		{ID: "containers-start", Title: "Containers: Start Selected"},
 		{ID: "containers-stop", Title: "Containers: Stop Selected"},
 		{ID: "containers-restart", Title: "Containers: Restart Selected"},
@@ -1196,6 +1215,9 @@ func containerAITargetRequired(id string) bool {
 }
 
 func (m *Model) dispatchContainerAIAction(id, target string) (tea.Cmd, error) {
+	if strings.HasPrefix(id, "containers-registry-") {
+		return nil, errRegistryAI(id)
+	}
 	if strings.HasSuffix(id, "-prune") {
 		return nil, fmt.Errorf("%s is not available to the model: pruning is the user's", id)
 	}
@@ -1370,6 +1392,11 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 					return m.switchContext(name)
 				}
 				return m.askContextDefault(name)
+			case "containers-registry-connect":
+				m.startRegistryConnect("")
+				return nil
+			case "containers-registry-signout":
+				return m.registrySignOutFromPalette()
 			case "containers-image-pull":
 				if _, ref, ok := m.selectedImage(); ok {
 					m.askImagePull(ref)

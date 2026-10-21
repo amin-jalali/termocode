@@ -1077,6 +1077,8 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `containers-pause` | Containers: Pause or Unpause Selected | confirm (always asks) |   |
 | `containers-prune` | Containers: Prune Stopped Containers… | never | pruning containers is the user's; nothing is offered to the model |
 | `containers-refresh` | Containers: Refresh | auto |   |
+| `containers-registry-connect` | Containers: Connect Registry… | never | signing in to a registry takes the user's token; it is the user's |
+| `containers-registry-signout` | Containers: Sign Out of Registry… | never | signing out of a registry is the user's |
 | `containers-remove` | Containers: Remove Selected… | never | container removal requires the user's confirm card |
 | `containers-restart` | Containers: Restart Selected | confirm (always asks) |   |
 | `containers-shell` | Containers: Open Shell | never | opens a picker or prompt that only the user can answer; use a typed tool (container shell) |

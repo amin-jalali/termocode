@@ -34,6 +34,8 @@ const (
 	hostVolume
 	hostContext
 	hostRegistry
+	hostRegistryImage   // a local image under an open registry host
+	hostRegistryConnect // the "Connect registry…" row
 )
 
 // hostSectionTitle is the header label of a host section.
@@ -95,20 +97,7 @@ func (st *servicesState) hostSectionBody(sec string) []svcRow {
 	case "help":
 		return []svcRow{hint("Space folds a section"), hint("m picks the sections"), hint("R refreshes everything")}
 	case "registries":
-		if err := st.containerErrors[sec]; err != "" {
-			return []svcRow{note(errLine(err)), hint("R to retry")}
-		}
-		if !st.hostLoaded[sec] {
-			return []svcRow{hint("Loading…")}
-		}
-		if len(st.registryRows) == 0 {
-			return []svcRow{hint("Not signed in yet")}
-		}
-		var out []svcRow
-		for i, r := range st.registryRows {
-			out = append(out, svcRow{kind: svcRowHostItem, section: key, host: hostRegistry, idx: i, hostID: r.Host, name: r.Host})
-		}
-		return out
+		return st.registrySectionBody(key)
 	}
 	if !st.containerDetected {
 		return []svcRow{hint("Loading…")}
@@ -827,8 +816,15 @@ func (st *servicesState) renderHostItem(r svcRow, active, focused bool, w int) s
 			g, gcol, ncol = theme.GlyphSvcUp, theme.GitAdded, theme.TextPrimary
 		}
 		return renderHostLine(active, focused, w, r.depth, g.String(), gcol, r.name, ncol, nil)
-	case hostRegistry:
-		return renderHostLine(active, focused, w, r.depth, theme.GlyphSvcUp.String(), theme.GitAdded, r.name, theme.TextPrimary, nil)
+	case hostRegistry, hostRegistryConnect:
+		g, gcol, ncol := st.registryRowLook(r)
+		return renderHostLine(active, focused, w, r.depth, g, gcol, r.name, ncol, nil)
+	case hostRegistryImage:
+		var cols []hostCol
+		if w >= 22 && r.idx >= 0 && r.idx < len(st.imageRows) {
+			cols = append(cols, hostCol{text: st.imageRows[r.idx].Size, width: 7, right: true, col: theme.TextMuted})
+		}
+		return renderHostLine(active, focused, w, r.depth, "", 0, r.name, theme.TextPrimary, cols)
 	}
 	return renderHostLine(active, focused, w, r.depth, "", 0, r.name, theme.TextPrimary, nil)
 }
@@ -863,7 +859,7 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 		case "images":
 			return "images on this machine", "u pull · z prune dangling · R refresh"
 		case "registries":
-			return "registries you signed in to", "from ~/.docker/config.json"
+			return "registries you signed in to", "n connect · D sign out · u pull"
 		case "networks":
 			return "networks on this machine", "n create · D remove · z prune · R refresh"
 		case "volumes":
@@ -936,17 +932,8 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 				}
 				return l1, l2
 			}
-		case hostRegistry:
-			if r.idx < len(st.registryRows) {
-				reg := st.registryRows[r.idx]
-				switch {
-				case reg.CredHelper != "":
-					return reg.Host, "signed in · " + reg.CredHelper
-				case reg.CredsStore != "":
-					return reg.Host, "signed in · " + reg.CredsStore
-				}
-				return reg.Host, "signed in"
-			}
+		case hostRegistry, hostRegistryImage, hostRegistryConnect:
+			return st.registryFooter(r)
 		}
 	}
 	return "", ""

@@ -83,6 +83,8 @@ type Registry struct {
 	Host       string
 	CredsStore string
 	CredHelper string
+	// SignedIn: the host is a key of `auths` (it has a login).
+	SignedIn bool
 }
 
 // ProjectGroup contains containers sharing a compose project label.

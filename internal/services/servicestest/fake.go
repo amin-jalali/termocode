@@ -14,12 +14,14 @@
 //	events.log           `docker events` follows it (PushEvent appends)
 //	sleep-<cmd>          `docker <cmd>` sleeps this many seconds first
 //	prune.out / .err     answer of `<kind> prune …` (stdout / stderr, exit 1)
+//	login.err            `login` reads stdin, then fails with this stderr
 //	fail-<ctx>.err       every call except `context …` fails with this stderr
 //	                     while DOCKER_CONTEXT=<ctx> (an unreachable remote)
 //
 // Written by the script: argv.log (one call per line), ctx.log (the
 // DOCKER_CONTEXT of each call, "|", then its argv), events.pid,
-// <sub>.pid (the script's pid while it runs).
+// <sub>.pid (the script's pid while it runs), login.stdin (what `login`
+// read on stdin).
 package servicestest
 
 import (
@@ -54,7 +56,11 @@ if [ "$1" = "events" ]; then
   touch "$D/events.log"
   exec tail -n 0 -f "$D/events.log"
 fi
-if [ "$1" = "login" ]; then cat > "$D/login.stdin"; exit 0; fi
+if [ "$1" = "login" ]; then
+  cat > "$D/login.stdin"
+  if [ -f "$D/login.err" ]; then cat "$D/login.err" >&2; exit 1; fi
+  exit 0
+fi
 if [ "$1" = "version" ]; then cat "$D/version.json" 2>/dev/null; exit 0; fi
 if [ "$1" = "ps" ]; then cat "$D/ps.json" 2>/dev/null; exit 0; fi
 if [ "$1" = "images" ]; then cat "$D/images.json" 2>/dev/null; exit 0; fi

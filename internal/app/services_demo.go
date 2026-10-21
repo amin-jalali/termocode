@@ -4,6 +4,8 @@ import (
 	"strings"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/containers"
@@ -111,7 +113,7 @@ func (m *Model) containersDemo(variant string) {
 	st.networkRows = []containers.Network{{Name: "bridge", Driver: "bridge", Scope: "local"}, {Name: "termocode_default", Driver: "bridge", Scope: "local"}, {Name: "host", Driver: "host", Scope: "local"}}
 	st.volumeRows = []containers.Volume{{Name: "termocode_db", Driver: "local"}, {Name: "cache", Driver: "local"}}
 	st.contextRows = []containers.Context{{Name: "default", Current: true, DockerEndpoint: "unix:///var/run/docker.sock"}, {Name: "prod", DockerEndpoint: "ssh://deploy@prod"}}
-	st.registryRows = []containers.Registry{{Host: "ghcr.io", CredsStore: "desktop"}}
+	st.registryRows = []containers.Registry{{Host: "ghcr.io", CredsStore: "desktop", SignedIn: true}}
 	for _, sec := range hostSectionOrder {
 		st.hostLoaded[sec] = true
 	}
@@ -265,6 +267,33 @@ func (m *Model) containersDemo(variant string) {
 	case "noengine":
 		st.containerEngine = containers.Engine{}
 		st.containerRows, st.imageRows, st.networkRows, st.volumeRows, st.contextRows = nil, nil, nil, nil, nil
+	case "registries", "registry-connect":
+		// REGISTRIES open, ghcr.io open with its local image; the other
+		// sections folded so it fits.
+		st.collapsed[hostSection("images")] = true
+		st.collapsed[hostSection("containers")] = true
+		st.collapsed[hostSection("registries")] = false
+		st.imageRows = append(st.imageRows, containers.Image{ID: "sha256:4e5f6a7b8c9d", RepoTags: []string{"ghcr.io/acme/shop:latest"}, Size: "212MB"})
+		st.registryRows = []containers.Registry{
+			{Host: "https://index.docker.io/v1/", CredsStore: "desktop", SignedIn: true},
+			{Host: "ghcr.io", CredsStore: "desktop", SignedIn: true},
+			{Host: "quay.io", CredsStore: "desktop", CredHelper: "pass"},
+		}
+		st.registryUsers = map[string]string{"ghcr.io": "amin-jalali"}
+		st.collapsed[registryFoldKey("ghcr.io")] = false
+		for i, r := range st.rows() {
+			if r.kind == svcRowHostItem && r.host == hostRegistry && r.hostID == "ghcr.io" {
+				st.cursor = i
+				break
+			}
+		}
+		if variant == "registry-connect" {
+			st.regPending = registryPending{host: "ghcr.io", user: "amin-jalali"}
+			m.askRegistryToken()
+			for _, r := range "demo-not-a-real-token" {
+				m.prompt, _ = m.prompt.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+			}
+		}
 	case "menu":
 		m.openContainersSectionsMenu("")
 	case "db-menu": // the row menu of the postgres compose service
