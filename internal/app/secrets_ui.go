@@ -179,16 +179,18 @@ func secretsPaletteItems() []picker.Item {
 	return []picker.Item{
 		{ID: "secrets-unlock", Title: "AI: Unlock Secrets"},
 		{ID: "secrets-lock", Title: "AI: Lock Secrets"},
+		{ID: "secrets-store", Title: "AI: Secret Store…"},
 	}
 }
 
 // secretsState is the unlock flow's state, shared by Model copies.
 type secretsState struct {
-	tries    int    // wrong passphrases in this round
-	asked    bool   // the prompt opened on a need once (until Lock)
-	creating bool   // no secrets.age yet: the prompt sets a new passphrase
-	first    []byte // creating: the first entry until it is typed again
-	busy     bool   // an Unlock runs off the UI goroutine
+	tries      int    // wrong passphrases in this round
+	asked      bool   // the prompt opened on a need once (until Lock)
+	creating   bool   // no secrets.age yet: the prompt sets a new passphrase
+	first      []byte // creating: the first entry until it is typed again
+	busy       bool   // an Unlock runs off the UI goroutine
+	forgetName string // the name the forget card asks about
 	// after runs once the store is unlocked (the step that needed it).
 	after func(*Model) tea.Cmd
 }
@@ -235,6 +237,8 @@ func (m *Model) dispatchSecretsPalette(id string) (tea.Cmd, bool) {
 		return m.openSecretsUnlock(nil), true
 	case "secrets-lock":
 		return m.secretsLock(), true
+	case "secrets-store":
+		return m.openSecretsStore(), true
 	}
 	return nil, false
 }
@@ -491,4 +495,19 @@ func (m *Model) secretsChanged() {
 		m.ai.reload()
 		m.syncAIInline()
 	}
+}
+
+// aiKeyHome says where a saved AI key goes, for the key prompt.
+func (m *Model) aiKeyHome() string {
+	s, err := m.secretStore()
+	if err != nil || s == nil {
+		return "not saved: the secret store is not available"
+	}
+	switch s.Backend() {
+	case "age":
+		return "kept in the encrypted file " + secrets.AgeFile
+	case "keyring":
+		return "kept in the OS keyring"
+	}
+	return "plain file ai/credentials.json, not encrypted"
 }

@@ -2205,6 +2205,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.extPickSelect(msg.ID)
 	case pickerKindRegistryProvider: // containers_registries.go
 		return m.onRegistryPicked(msg.ID)
+	case pickerKindSecretStore: // secrets_store_ui.go
+		return m.onSecretsStoreSelected(msg.ID)
 	case pickerKindContainerSearch: // containers_remote.go
 		return m.onSearchPicked(msg.ID)
 	default:

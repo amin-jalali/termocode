@@ -1385,6 +1385,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `search-next-result` | Search: Go to Next Search Result | auto |   |
 | `search-prev-result` | Search: Go to Previous Search Result | auto |   |
 | `secrets-lock` | AI: Lock Secrets | never | AI provider, credentials and approvals stay with the user |
+| `secrets-store` | AI: Secret Store… | never | AI provider, credentials and approvals stay with the user |
 | `secrets-unlock` | AI: Unlock Secrets | never | AI provider, credentials and approvals stay with the user |
 | `services-configure` | Services: Configure (services.json) | confirm (ide) |   |
 | `services-focus` | Services: Focus (Containers) | auto |   |

@@ -119,3 +119,27 @@ func TestAtomicWriteTightenDir(t *testing.T) {
 		t.Errorf("dir mode = %o, want 700", m)
 	}
 }
+
+func TestEntriesShowKindsAndRefsNotValues(t *testing.T) {
+	dir := t.TempDir()
+	if got := Entries(dir); len(got) != 0 {
+		t.Fatalf("missing index: %v", got)
+	}
+	err := updateIndex(filepath.Join(dir, IndexFile), func(i *Index) {
+		i.Entries["a.ref"] = Entry{Kind: KindRef, Ref: "${env:OPENAI_API_KEY}"}
+		i.Entries["b.val"] = Entry{Kind: KindValue}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := Entries(dir)
+	if got["a.ref"].Kind != KindRef || got["a.ref"].Ref != "${env:OPENAI_API_KEY}" || got["b.val"].Kind != KindValue {
+		t.Fatalf("entries %+v", got)
+	}
+	if err := os.WriteFile(filepath.Join(dir, IndexFile), []byte("{bad"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := Entries(dir); len(got) != 0 {
+		t.Fatalf("damaged index: %v", got)
+	}
+}

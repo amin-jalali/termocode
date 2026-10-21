@@ -386,6 +386,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// user's; the AI never reads, sets or lists secrets.
 	"secrets-unlock": aiNever(aiNoAIConfig),
 	"secrets-lock":   aiNever(aiNoAIConfig),
+	"secrets-store":  aiNever(aiNoAIConfig),
 	// Agent profiles (U20 AP-5): the model may suggest a profile (the
 	// user confirms the switch); editing and trusting stay with the user.
 	"ai-profile-switch": aiConfirm(ai.ClassSettings),

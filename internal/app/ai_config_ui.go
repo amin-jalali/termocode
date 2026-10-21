@@ -114,6 +114,10 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIProfileTrust(id), true
 	case confirmKindAIProfileSave:
 		return m.onAIProfileSaveChoice(id), true
+	case confirmKindSecretForget: // secrets_store_ui.go
+		return m.answerSecretForget(id), true
+	case confirmKindRegistryRemember: // containers_registries.go
+		return m.answerRegistryRemember(id), true
 	}
 	return nil, false
 }
@@ -129,6 +133,10 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAIProfileTrust("") // Esc: no answer, ask again next time
 	case confirmKindAIProfileSave:
 		return m.onAIProfileSaveChoice("cancel")
+	case confirmKindSecretForget:
+		return m.answerSecretForget("cancel")
+	case confirmKindRegistryRemember:
+		return m.registryPromptClosed()
 	}
 	return nil
 }
@@ -209,7 +217,7 @@ func (m *Model) openAIKeyPrompt(kind string) tea.Cmd {
 		return c
 	}
 	m.aiS().cfgKind = kind
-	m.prompt = prompt.New("✦ "+ai.KindLabel(kind)+" API key", "API key (stored 0600 in ai/credentials.json; empty = keep):", "")
+	m.prompt = prompt.New("✦ "+ai.KindLabel(kind)+" API key", "API key ("+m.aiKeyHome()+"; empty = keep):", "")
 	m.prompt.SetMasked(true)
 	m.prompt.SetSize(m.w, m.h)
 	m.promptOpen = true
@@ -369,6 +377,12 @@ func (m *Model) onAIAutoApproveToggled(class string) tea.Cmd {
 // ── Credentials file ───────────────────────────────────────────────────
 
 func (m *Model) editAICredentials() tea.Cmd {
+	// An encrypted store or the keyring has no file to edit: the store
+	// screen is where the keys are seen and forgotten.
+	if s, err := m.secretStore(); err == nil && s != nil && (s.Backend() == "age" || s.Backend() == "keyring") {
+		return tea.Batch(m.openSecretsStore(),
+			m.secretsToast(toast.Info, "Your keys are in the "+secretsBackendLabel(s), "It is not a file you can edit. This screen lists and forgets them."))
+	}
 	path, err := ai.CredentialsPath()
 	if err != nil {
 		return m.aiToastErr("Credentials error", err)

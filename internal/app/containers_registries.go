@@ -30,11 +30,13 @@ import (
 // argv, the environment, a file of ours, a log or a toast. The engine's
 // own credential store keeps it.
 //
-// "Remember in termocode" (plan §3.6) is not offered yet (SS-3b): it
-// needs an unlocked, encrypted U19 store, and a registry token must
-// never go to the plain credentials file. Offer it only when
-// m.encryptedSecretStore() (secrets_ui.go) returns ok, and save through
-// that store.
+// "Remember in termocode" (plan §3.6) is a card between the user prompt
+// and the token prompt. It is offered only when m.encryptedSecretStore()
+// (secrets_ui.go) is ok (an unlocked age file or the OS keyring, never
+// the plain credentials file). After a good sign-in the token is saved
+// in that store as registry.<host>; a later sign-in to the host offers
+// the saved token (asking to unlock first when the store is locked) and
+// still sends it with --password-stdin.
 //
 // None of this is offered to the AI (palette ids are aiNever).
 
@@ -48,11 +50,17 @@ const (
 
 // registryPending is the connect flow between its prompts: never the
 // token.
-type registryPending struct{ host, user string }
+type registryPending struct {
+	host, user string
+	remember   bool // save the token in the secret store after a good login
+}
+
+const confirmKindRegistryRemember confirmKindEnum = 1801
 
 type registryLoginDoneMsg struct {
 	host, user string
 	err        error
+	remember   string // "ok": saved in the store; else why it was not saved
 }
 
 // registryFoldKey is the fold key of a registry row (open = its images).
@@ -293,6 +301,89 @@ func (m *Model) askRegistryToken() {
 	m.promptOpen, m.promptKind = true, promptKindRegistryToken
 }
 
+// registrySecretName is the store name for a host's token:
+// registry.<host>, lower case, [a-z0-9_.-] only.
+func registrySecretName(host string) string {
+	h := strings.ToLower(containers.RegistryDisplayHost(host))
+	var b strings.Builder
+	for _, r := range h {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9', r == '_', r == '-':
+			b.WriteRune(r)
+		case r == '.':
+			if s := b.String(); s != "" && !strings.HasSuffix(s, ".") {
+				b.WriteByte('.')
+			}
+		default:
+			b.WriteByte('-')
+		}
+	}
+	return "registry." + strings.Trim(b.String(), ".-")
+}
+
+// registryAfterUser runs after the user name: a saved token is offered
+// first, else "Remember in termocode" when an encrypted store is open,
+// else the token prompt.
+func (m *Model) registryAfterUser() tea.Cmd {
+	st := m.services
+	host := sanitizeOutputLine(st.regPending.host)
+	name := registrySecretName(st.regPending.host)
+	if s, err := m.secretStore(); err == nil && s != nil {
+		for _, n := range s.Names() {
+			if n == name {
+				m.confirm = confirm.New("Use the saved token for "+host+"?",
+					"termocode saved a token for this registry. It goes to "+st.registryEngineName()+" login on stdin only.",
+					[]confirm.Button{{ID: "use", Title: "Use saved token", Style: confirm.StylePrimary}, {ID: "new", Title: "Type a new token"}})
+				m.confirm.SetSize(m.w, m.h)
+				m.confirmOpen, m.confirmKind = true, confirmKindRegistryRemember
+				return nil
+			}
+		}
+	}
+	if _, ok := m.encryptedSecretStore(); ok {
+		m.confirm = confirm.New("Remember the token in termocode?",
+			"After a good sign-in to "+host+" the token is saved in your "+m.registryStoreLabel()+" and offered next time. Not saved = you type it each time.",
+			[]confirm.Button{{ID: "remember", Title: "Remember", Style: confirm.StylePrimary}, {ID: "once", Title: "Not now"}})
+		m.confirm.SetSize(m.w, m.h)
+		m.confirmOpen, m.confirmKind = true, confirmKindRegistryRemember
+		return nil
+	}
+	m.askRegistryToken()
+	return nil
+}
+
+func (m *Model) registryStoreLabel() string {
+	if s, err := m.secretStore(); err == nil && s != nil {
+		return secretsBackendLabel(s)
+	}
+	return "secret store"
+}
+
+// answerRegistryRemember handles the remember / saved-token card.
+func (m *Model) answerRegistryRemember(id string) tea.Cmd {
+	st := m.services
+	switch id {
+	case "remember":
+		st.regPending.remember = true
+	case "use":
+		return m.withSecretsUnlocked(func(m *Model) tea.Cmd {
+			s, err := m.secretStore()
+			var v string
+			ok := false
+			if err == nil {
+				v, ok, err = s.Get(registrySecretName(m.services.regPending.host))
+			}
+			if err != nil || !ok || v == "" {
+				m.askRegistryToken()
+				return m.servicesToast(toast.Warn, "Saved token not available", "Type the token again.")
+			}
+			return m.registryLogin(v)
+		})
+	}
+	m.askRegistryToken()
+	return nil
+}
+
 // clearPrompt drops the last prompt's text (a typed token must not stay
 // in the model).
 func (m *Model) clearPrompt() { m.prompt = prompt.New("", "", "") }
@@ -318,8 +409,7 @@ func (m *Model) onRegistryPrompt(kind promptKindEnum, value string) tea.Cmd {
 			return nil
 		}
 		st.regPending.user = user
-		m.askRegistryToken()
-		return nil
+		return m.registryAfterUser()
 	case promptKindRegistryToken:
 		return m.registryLogin(value)
 	}
@@ -336,6 +426,10 @@ func (m *Model) registryLogin(secret string) tea.Cmd {
 	m.clearPrompt()
 	if pending.host == "" || pending.user == "" || secret == "" {
 		return nil
+	}
+	var remember secrets.Store
+	if pending.remember {
+		remember, _ = m.encryptedSecretStore()
 	}
 	host := sanitizeOutputLine(pending.host)
 	ref, refErr := secrets.ParseRef(secret)
@@ -364,7 +458,17 @@ func (m *Model) registryLogin(secret string) tea.Cmd {
 			password = v
 		}
 		err := e.Login(context.Background(), pending.host, pending.user, password)
-		return registryLoginDoneMsg{host: pending.host, user: pending.user, err: err}
+		done := registryLoginDoneMsg{host: pending.host, user: pending.user, err: err}
+		if err == nil && pending.remember {
+			// What was typed is saved (a reference stays a reference).
+			done.remember = "ok"
+			if remember == nil {
+				done.remember = "the store was locked"
+			} else if serr := remember.Set(registrySecretName(pending.host), secret); serr != nil {
+				done.remember = "could not save it"
+			}
+		}
+		return done
 	}
 }
 
@@ -379,7 +483,15 @@ func (m *Model) onRegistryLoginDone(msg registryLoginDoneMsg) tea.Cmd {
 	}
 	st.registryUsers[containers.RegistryDisplayHost(msg.host)] = msg.user
 	st.touch()
-	return tea.Batch(m.servicesToast(toast.Info, "Signed in to "+host+" as "+sanitizeOutputLine(msg.user), ""),
+	detail := ""
+	switch msg.remember {
+	case "":
+	case "ok":
+		detail = "Token remembered in termocode"
+	default:
+		detail = "Token not remembered: " + msg.remember
+	}
+	return tea.Batch(m.servicesToast(toast.Info, "Signed in to "+host+" as "+sanitizeOutputLine(msg.user), detail),
 		m.containersRefresh("registries"))
 }
 

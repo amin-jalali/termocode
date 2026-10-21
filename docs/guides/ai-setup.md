@@ -23,8 +23,25 @@ You can use:
 4. Pick a model, or choose **Custom model id…**.
 5. A toast says *AI ready*. The status bar shows `✦` and the model name.
 
-The key is saved in `~/.config/termocode/ai/credentials.json` with file mode
-`0600` (only you can read it). Other AI settings go in `config.json`.
+Where the key goes depends on the `secret_store` setting. The key prompt
+says it: the OS keyring, the encrypted file `secrets.age`, or the plain file
+`~/.config/termocode/ai/credentials.json` (mode `0600`, not encrypted). Other
+AI settings go in `config.json`.
+
+### See and forget saved secrets
+
+Run **AI: Secret Store…** from `F1`. The screen shows the backend, whether
+it is locked, and one row per saved name with `value` or its reference
+(such as `${env:OPENAI_API_KEY}`). It never shows a secret value.
+
+- `Enter` on a name asks to forget it (a locked encrypted file asks for its
+  passphrase first).
+- **Lock now** / **Unlock…** locks the encrypted file or asks for its
+  passphrase.
+- `Esc` closes the screen.
+
+With the keyring or the encrypted file, **Open Config: AI Credentials**
+opens this screen, because there is no file to edit. The AI can not open it.
 
 To change the model later, run **AI: Pick Model…**. To turn AI off, run
 **AI: Configure Provider…** and pick **None**.
@@ -102,7 +119,8 @@ link). You sign in, copy the code, and paste it back. Run
 |---|---|
 | **AI: Configure Provider…** | Pick a provider and enter a key |
 | **AI: Pick Model…** | Change the model |
-| **Open Config: AI Credentials** | Open `credentials.json` |
+| **AI: Secret Store…** | List and forget saved secrets, lock or unlock |
+| **Open Config: AI Credentials** | Open `credentials.json` (the secret store screen for the keyring or encrypted file) |
 | Click the `✦` badge in the status bar | Configure (when AI is off) |
 
 Next: [Use AI](ai-use.md).

@@ -239,6 +239,14 @@ fails, the toast shows the engine's message with the token removed. A login
 has a one minute limit. `Esc` on any step runs nothing and forgets what you
 typed.
 
+**Remember in termocode.** When your secret store is the OS keyring or an
+unlocked encrypted file (never the plain file), a card after the user name
+asks *Remember the token in termocode?*. After a good sign-in the token is
+saved as `registry.<host>` (for example `registry.ghcr.io`). The next time
+you connect to that host, a card offers *Use saved token* (a locked
+encrypted file asks for its passphrase first). The token still goes to the
+engine on stdin only. See **AI: Secret Store…** to list or forget it.
+
 **Sign out** (`D`, the right-click menu, or **Containers: Sign Out of
 Registry…**) shows a card with the exact `docker logout <host>` command.
 `Cancel` or `Esc` runs nothing. Local images stay.

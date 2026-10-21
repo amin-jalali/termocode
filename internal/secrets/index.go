@@ -117,3 +117,13 @@ func writeFileAtomic(path string, data []byte, tightenDir bool) (err error) {
 	}
 	return os.Chmod(path, 0o600)
 }
+
+// Entries reads the entries of secrets.json in dir: names, kinds and
+// reference texts, never a value. A missing or damaged index gives none.
+func Entries(dir string) map[string]Entry {
+	idx, err := loadIndex(filepath.Join(dir, IndexFile))
+	if err != nil {
+		return nil
+	}
+	return idx.Entries
+}
