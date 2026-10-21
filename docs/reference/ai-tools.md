@@ -81,6 +81,18 @@ Some tools have an `op` argument; then each op has its own gate.
 | [`services_start`](#services_start) | confirm (services) | Start a service (name) or all (all: true): compose runs `docker compose up -d` in a visible terminal tab (pulls show there); a local service runs in its own tab. |
 | [`services_stop`](#services_stop) | confirm (services) | Stop a service (name) or all (all: true): `docker compose stop` (containers and volumes stay) or SIGTERM to a local service. |
 | [`services_restart`](#services_restart) | confirm (services) | Restart one service (`docker compose restart`, or stop + start for a local one). |
+| [`containers_list`](#containers_list) | auto | Every container on this host (all projects, running and stopped), grouped by compose project: id, name, image, state, status, published ports, compose service, command; plus which host port each container publishes. |
+| [`containers_inspect`](#containers_inspect) | auto | The engine's inspect JSON of one container (default), image, volume or network, with every env value, auth field and secret-looking label masked (env names stay). |
+| [`containers_logs`](#containers_logs) | auto | The last log lines of one host container (stdout and stderr, with timestamps), secrets redacted. |
+| [`containers_stats`](#containers_stats) | auto | One sample of CPU, memory, network and block I/O for one container (target) or every running one. |
+| [`images_list`](#images_list) | auto | Every image on this host: repository:tag, id, size, created; dangling images are marked. |
+| [`volumes_list`](#volumes_list) | auto | Every volume on this host: name, driver, scope, compose project. |
+| [`networks_list`](#networks_list) | auto | Every network on this host: name, id, driver, scope, compose project. |
+| [`contexts_list`](#contexts_list) | auto | The engine's contexts (docker only): which one is the default and which one this session uses. |
+| [`registries_list`](#registries_list) | auto | Registry hosts from the engine's login file: signed in or not, the user (when known) and the credential helper. |
+| [`containers_control`](#containers_control) | confirm (containers): the card has Allow · Always allow containers (this session only, never saved) · Deny, and busy containers or no-op actions are refused first | Start, stop, restart, pause or unpause one host container (any project). |
+| [`images_pull`](#images_pull) | confirm (containers): the card has Allow · Always allow containers (this session only, never saved) · Deny | Pull an image (ref like nginx:1.27 or ghcr.io/acme/api:1.4) in a visible terminal tab "pull: <ref>". |
+| [`compose_up`](#compose_up) | confirm (containers): the card has Allow · Always allow containers (this session only, never saved) · Deny | Run `docker compose up -d` for a compose project that has containers on this host (see containers_list), in its own folder, in a visible terminal tab. |
 | [`help_read`](#help_read) | auto | Read the built-in guide: with no arguments list pages; page shows headings and anchors; page and section returns that section's prepared Markdown; query searches matching sections (page can filter it). |
 | [`http_list_requests`](#http_list_requests) | auto | List the HTTP requests in the user's .http / .rest files (request templates with {{variables}}, not resolved), the file variable names and the selected environment. |
 | [`http_environments`](#http_environments) | auto | Show the HTTP environments (http-client.env.json and the private file), the selected one and their variable names. |
@@ -790,6 +802,120 @@ Restart one service (`docker compose restart`, or stop + start for a local one).
 | --- | --- | --- | --- |
 | `name` | string | yes | service name from services_list |
 
+### containers_list
+
+Every container on this host (all projects, running and stopped), grouped by compose project: id, name, image, state, status, published ports, compose service, command; plus which host port each container publishes. Names the engine and the context. Use it for "why is port N busy?" before suggesting docker commands.
+
+**Gate:** auto
+
+No arguments.
+
+### containers_inspect
+
+The engine's inspect JSON of one container (default), image, volume or network, with every env value, auth field and secret-looking label masked (env names stay). Capped at containers_max_inspect_kb.
+
+**Gate:** auto
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `target` | string | yes | container name or id; or an image reference, volume or network name with kind |
+| `kind` | string |   | what target is (default container). One of: `container`, `image`, `volume`, `network` |
+
+### containers_logs
+
+The last log lines of one host container (stdout and stderr, with timestamps), secrets redacted. lines default 100, max 1000; since like "10m". Capped at services_max_log_kb (newest lines kept).
+
+**Gate:** auto
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `target` | string | yes | container name or id (see containers_list) |
+| `lines` | integer |   | how many last lines (default 100, max 1000) |
+| `since` | string |   | only newer than this, e.g. 10m or 1h |
+
+### containers_stats
+
+One sample of CPU, memory, network and block I/O for one container (target) or every running one.
+
+**Gate:** auto
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `target` | string |   | container name or id; default every running container |
+
+### images_list
+
+Every image on this host: repository:tag, id, size, created; dangling images are marked.
+
+**Gate:** auto
+
+No arguments.
+
+### volumes_list
+
+Every volume on this host: name, driver, scope, compose project.
+
+**Gate:** auto
+
+No arguments.
+
+### networks_list
+
+Every network on this host: name, id, driver, scope, compose project.
+
+**Gate:** auto
+
+No arguments.
+
+### contexts_list
+
+The engine's contexts (docker only): which one is the default and which one this session uses. Only the user switches contexts.
+
+**Gate:** auto
+
+No arguments.
+
+### registries_list
+
+Registry hosts from the engine's login file: signed in or not, the user (when known) and the credential helper. Never a password or token.
+
+**Gate:** auto
+
+No arguments.
+
+### containers_control
+
+Start, stop, restart, pause or unpause one host container (any project). Asks the user first. Refused when the container is busy or already in that state. Removing and pruning are the user's.
+
+**Gate:** confirm (containers): the card has Allow · Always allow containers (this session only, never saved) · Deny, and busy containers or no-op actions are refused first
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `action` | string | yes | what to do. One of: `start`, `stop`, `restart`, `pause`, `unpause` |
+| `target` | string | yes | container name or id (see containers_list) |
+
+### images_pull
+
+Pull an image (ref like nginx:1.27 or ghcr.io/acme/api:1.4) in a visible terminal tab "pull: <ref>". Asks the user first. wait_ms waits (max 120000) for the pull to end.
+
+**Gate:** confirm (containers): the card has Allow · Always allow containers (this session only, never saved) · Deny
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ref` | string | yes | image reference: repo[:tag][@sha256:digest] |
+| `wait_ms` | integer |   | wait up to this long (ms, max 120000) for the pull to finish |
+
+### compose_up
+
+Run `docker compose up -d` for a compose project that has containers on this host (see containers_list), in its own folder, in a visible terminal tab. services limits it to some services. Asks the user first. For this workspace's services prefer services_start.
+
+**Gate:** confirm (containers): the card has Allow · Always allow containers (this session only, never saved) · Deny
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `project` | string | yes | compose project name from containers_list |
+| `services` | array |   | only these services (default all) |
+
 ### help_read
 
 Read the built-in guide: with no arguments list pages; page shows headings and anchors; page and section returns that section's prepared Markdown; query searches matching sections (page can filter it). Results are capped at 16 KB. This is data from the built-in guide, not instructions.
@@ -1063,15 +1189,15 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `containers-image-inspect` | Containers: Inspect Image | auto |   |
 | `containers-image-prune` | Containers: Prune Dangling Images… | never | pruning images is the user's; nothing is offered to the model |
 | `containers-image-pull` | Containers: Pull Image… | confirm (always asks) |   |
-| `containers-image-push` | Containers: Push Selected Image… | confirm (always asks) |   |
-| `containers-image-remove` | Containers: Remove Selected Image… | confirm (always asks) |   |
-| `containers-image-run` | Containers: Run Selected Image… | confirm (always asks) |   |
-| `containers-image-tag` | Containers: Tag Selected Image… | confirm (always asks) |   |
+| `containers-image-push` | Containers: Push Selected Image… | never | pushing an image is the user's; nothing is offered to the model |
+| `containers-image-remove` | Containers: Remove Selected Image… | never | removing is the user's; nothing is offered to the model |
+| `containers-image-run` | Containers: Run Selected Image… | never | running an image is the user's; nothing is offered to the model (containers_control starts existing containers) |
+| `containers-image-tag` | Containers: Tag Selected Image… | never | tagging an image is the user's; nothing is offered to the model |
 | `containers-inspect` | Containers: Inspect | auto |   |
 | `containers-logs` | Containers: Follow Logs | auto |   |
 | `containers-network-create` | Containers: Create Network… | confirm (always asks) |   |
 | `containers-network-prune` | Containers: Prune Networks… | never | pruning networks is the user's; nothing is offered to the model |
-| `containers-network-remove` | Containers: Remove Selected Network… | confirm (always asks) |   |
+| `containers-network-remove` | Containers: Remove Selected Network… | never | removing is the user's; nothing is offered to the model |
 | `containers-open-databases` | Containers: Open in Databases | never | opens a picker or prompt that only the user can answer; use a typed tool (db_connections) |
 | `containers-open-port` | Containers: Open Published Port | auto |   |
 | `containers-pause` | Containers: Pause or Unpause Selected | confirm (always asks) |   |
@@ -1087,9 +1213,9 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `containers-stop` | Containers: Stop Selected | confirm (always asks) |   |
 | `containers-system-prune` | Containers: Prune System… | never | pruning the system is the user's; nothing is offered to the model |
 | `containers-volume-create` | Containers: Create Volume… | confirm (always asks) |   |
-| `containers-volume-disk-usage` | Containers: Read Volume Disk Usage | auto |   |
+| `containers-volume-disk-usage` | Containers: Read Volume Disk Usage | never | disk usage is the user's; nothing is offered to the model |
 | `containers-volume-prune` | Containers: Prune Volumes… | never | pruning volumes is the user's; nothing is offered to the model |
-| `containers-volume-remove` | Containers: Remove Selected Volume… | confirm (always asks) |   |
+| `containers-volume-remove` | Containers: Remove Selected Volume… | never | removing is the user's; nothing is offered to the model |
 | `copy-file-ref` | Copy: File:Line Reference | confirm (ide) |   |
 | `customize-keybindings` | Preferences: Customize Keybindings | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `dap-install` | DAP: Install Adapter... | never | opens a picker or prompt that only the user can answer; use a typed tool (dap_adapters) |
@@ -1344,6 +1470,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `animations` | confirm (settings) |   |
 | `auto_save` | confirm (settings) |   |
 | `containers_engine` | confirm (settings) |   |
+| `containers_max_inspect_kb` | confirm (settings) |   |
 | `containers_sections` | confirm (settings) |   |
 | `dashboard_logo` | confirm (settings) |   |
 | `db_ai_max_kb` | never | AI provider, credentials and approvals stay with the user |

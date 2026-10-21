@@ -70,9 +70,12 @@ type servicesState struct {
 	busy        map[string]services.State // svcKey → Starting / Stopping / Restarting
 	startedByUs map[string]bool           // compose names this session started
 	aiAllowed   *atomic.Bool              // "Always in this project" (read by the AI gate goroutine)
-	localOK     map[string]bool           // local command hashes the user OK'd
-	localStop   map[string]bool           // local services we are stopping (no exit toast)
-	sessLoaded  bool
+	// aiContainersAllowed is "Always allow containers" (CP-9): this
+	// session only, never saved; read by the AI gate goroutine.
+	aiContainersAllowed *atomic.Bool
+	localOK             map[string]bool // local command hashes the user OK'd
+	localStop           map[string]bool // local services we are stopping (no exit toast)
+	sessLoaded          bool
 
 	cursor    int
 	collapsed map[string]bool
@@ -151,7 +154,7 @@ func newServicesState() *servicesState {
 		storageUsers:     map[string][]string{}, storageInspectState: map[string]string{},
 		hostLoaded: map[string]bool{},
 		localOK:    map[string]bool{}, localStop: map[string]bool{}, exitSeen: map[string]string{}, prevUp: map[string]bool{},
-		cfgCache: &svcConfigCache{}, aiAllowed: &atomic.Bool{}}
+		cfgCache: &svcConfigCache{}, aiAllowed: &atomic.Bool{}, aiContainersAllowed: &atomic.Bool{}}
 }
 
 func (st *servicesState) touch() { st.seq++ }

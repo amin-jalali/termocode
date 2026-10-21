@@ -82,11 +82,17 @@ func TestAIActionPolicyRules(t *testing.T) {
 	}
 	for _, id := range []string{"containers-start", "containers-stop", "containers-restart", "containers-pause",
 		"containers-compose-up", "containers-compose-stop", "containers-compose-restart",
-		"containers-image-pull", "containers-image-push", "containers-image-tag", "containers-image-run",
-		"containers-image-remove", "containers-network-create", "containers-network-remove",
-		"containers-volume-create", "containers-volume-remove"} {
+		"containers-image-pull", "containers-network-create", "containers-volume-create"} {
 		if p := aiActionPolicies[id]; p.Gate != aiGateConfirm || p.Class != "" {
 			t.Errorf("%s: %+v, want confirm with no auto-approve class", id, p)
+		}
+	}
+	// CP-9: push, tag, run, remove and disk usage are never offered to
+	// the model (they were confirm / auto before CP-9: now stricter).
+	for _, id := range []string{"containers-image-push", "containers-image-tag", "containers-image-run",
+		"containers-image-remove", "containers-network-remove", "containers-volume-remove", "containers-volume-disk-usage"} {
+		if p := aiActionPolicies[id]; p.Gate != aiGateNever || p.Reason == "" {
+			t.Errorf("%s: %+v, want never with a reason", id, p)
 		}
 	}
 	// Pruning is the user's: never, with a reason (containers plan CP-8).
@@ -123,7 +129,7 @@ func TestAIActionPolicyRules(t *testing.T) {
 			t.Errorf("%s: gate %q, want auto", id, p.Gate)
 		}
 	}
-	for _, id := range []string{"containers-image-history", "containers-image-inspect", "containers-volume-disk-usage"} {
+	for _, id := range []string{"containers-image-history", "containers-image-inspect"} {
 		if p := aiActionPolicies[id]; p.Gate != aiGateAuto {
 			t.Errorf("%s: gate %q, want auto", id, p.Gate)
 		}

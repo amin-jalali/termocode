@@ -47,6 +47,9 @@ func New(title, message string, buttons []Button) Model {
 	return Model{title: title, message: message, buttons: buttons}
 }
 
+// Buttons returns a copy of the card's buttons, in order.
+func (m Model) Buttons() []Button { return append([]Button(nil), m.buttons...) }
+
 // WithCode shows code (a shell command) below the message on ONE line in
 // a frame, cut in the middle with … when the dialog is too narrow, and
 // note below it. The dialog grows wider (up to the window) to fit it.

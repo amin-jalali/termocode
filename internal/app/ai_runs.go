@@ -302,7 +302,9 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			msgs[len(msgs)-1] = last
 			own := map[string]bool{}
 			for _, c := range auto {
-				own[c] = true
+				if aiAutoApproveSaved(c) { // containers: session only (CP-9)
+					own[c] = true
+				}
 			}
 			return &ai.Agent{Provider: sl.p, Tools: ts, Native: native, AutoApprove: own, MaxSteps: maxSteps,
 				BeforeCalls: aiBeforeCalls(root, call), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title)}, msgs, nil

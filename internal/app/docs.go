@@ -284,6 +284,8 @@ var fileOnlySettings = []SettingEntry{
 		Description: "On quit, the Docker Compose services termocode started in this session (never the ones that were already running): ask shows a card (Keep running and quit / Stop and quit / Cancel), keep leaves them running, stop runs docker compose stop for them first. Local services always stop with the editor."},
 	{Key: "services_max_log_kb", Type: "int", Default: "16", Category: "Services (file only)",
 		Description: "Cut the log text the AI's services_logs tool returns to this many KB (the newest lines stay)."},
+	{Key: "containers_max_inspect_kb", Type: "int", Default: "64", Category: "Containers (file only)",
+		Description: "Cut the JSON the AI's containers_inspect tool returns to this many KB. Env values, auth fields and secret-looking labels are masked before the cut."},
 	{Key: "mcp_trusted_tools", Type: "object", Default: "{}", Category: "AI (file only)",
 		Description: "The tool list you trusted per MCP server: server name → hash of its tools. The first list is kept by itself; when a server's tools change, termocode asks again and, until you trust the new list, every tool of that server asks first."},
 	{Key: "mouse_hover", Type: "enum", Default: "auto", Category: "Appearance (file only)", Choices: []string{"auto", "off"},

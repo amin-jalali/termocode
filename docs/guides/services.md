@@ -160,6 +160,36 @@ It never gets `down`, `--force-recreate`, `exec` or volume commands.
 Ask it "my app can't connect to the database — why?": it reads the state
 and the logs before it answers.
 
+### The AI and host containers
+
+The AI also sees the whole host. It lists every container with its
+published ports (`containers_list`), so "why is port 8081 busy?" gets the
+answer `port 8081 → other-nginx-1` without starting or removing anything.
+It can inspect a container, image, volume or network, read a container's
+logs and stats, and list images, volumes, networks, contexts and
+registries (hosts and users only). These run at once.
+
+It can start, stop, restart, pause or unpause one container
+(`containers_control`), pull an image in a visible `pull:` tab
+(`images_pull`), and run `compose up -d` for a project on the host
+(`compose_up`). Each one asks first, with **Allow**, **Always allow
+containers** and **Deny**. "Always allow containers" lasts until you quit
+termocode and is never saved. A container that is busy, or already in
+the state asked for, is refused before the card.
+
+Every id, name and image reference is checked first (no `-` at the
+start, no spaces or shell characters) and goes to the engine as a plain
+argument. Each result says the engine and the context; the AI uses the
+context you picked for this session.
+
+The AI cannot remove, prune, push, tag, run an image, sign in or out,
+switch or change a context, or read disk usage.
+
+Inspect output keeps env **names** and masks every value, masks auth
+fields and labels that look secret, and is cut at
+`containers_max_inspect_kb` (64) KB. Container logs are cut at
+`services_max_log_kb`.
+
 ### Secrets
 
 The AI sees env **names**, not values. Passwords from `.env` and the

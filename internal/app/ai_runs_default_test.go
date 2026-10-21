@@ -52,6 +52,9 @@ func (p *recordingAIProvider) Stream(_ context.Context, req ai.Request) <-chan a
 func aiDefaultTurnDump(t *testing.T) string {
 	t.Helper()
 	t.Cleanup(clock.Set(func() time.Time { return time.Date(2026, 10, 18, 9, 5, 0, 0, time.UTC) }))
+	// No container engine on PATH: the system prompt's Containers line
+	// (CP-9) depends on the machine, the golden must not.
+	t.Setenv("PATH", t.TempDir())
 	p := &recordingAIProvider{replies: []ai.Chunk{
 		{Delta: "Let me look.", ToolCalls: []ai.ToolCall{{ID: "c1", Name: "list_dir", Args: map[string]any{"path": "."}}},
 			Usage: &ai.Usage{Model: "fake-1", Input: 1200, Output: 30, Requests: 1, PeakContext: 1200}},

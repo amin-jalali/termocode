@@ -274,6 +274,7 @@ The chat is an agent. It can call tools to answer you:
 | Layout | sidebar width, panel height, show / hide the sidebar and the bottom panel, zen mode, show the AI panel (`layout_set`) |
 | IDE state | read focus, panels, terminal tabs, layout, theme, git branch, language servers, problems, debug and running tasks / tests (`get_ide_state`) |
 | Setup | list, install and remove language servers (`lsp_servers`) and debug adapters (`dap_adapters`); list, run and reload extensions, read their log (`extensions`); add or remove explorer folders (`workspace_folders`) |
+| Containers | list every container on the host with its ports (`containers_list`), inspect one with env values masked (`containers_inspect`), read logs (`containers_logs`) and stats (`containers_stats`), list images, volumes, networks, contexts and registries; start / stop / restart / pause / unpause a container (`containers_control`), pull an image (`images_pull`), start a compose project (`compose_up`) |
 
 Read and editor tools run freely. So "open it" opens the file in a tab.
 For questions like "how do I … in termocode?", the chat can use
@@ -390,6 +391,22 @@ Setup tools change the IDE itself:
 - `workspace_folders`: list runs at once. Add and remove ask first (kind
   *ide*). The new folder shows in the explorer. The agent can not open
   another workspace: that restarts termocode and would end the chat.
+
+Container tools work on the whole host, not only this project:
+
+- The list, inspect, logs, stats and the other list tools run at once.
+  Each result says the engine and the context it used (the session's
+  context, when you picked one in the Containers view).
+- `containers_control`, `images_pull` and `compose_up` ask first. The card
+  has **Allow**, **Always allow containers** and **Deny**. "Always" lasts
+  until you quit termocode; it is never saved. There is no "Always in
+  project": a host action can touch another project's containers.
+- The agent can not remove, prune, push, tag, run an image, sign in or
+  out of a registry, switch contexts or read disk usage. There is no tool
+  for these, and their palette commands are *never*.
+- Env values never reach the model: inspect keeps the names and masks the
+  values (`POSTGRES_PASSWORD=[REDACTED]`). See
+  [Containers](services.md#the-ai-and-host-containers).
 
 The [AI tools reference](../reference/ai-tools.md) lists every tool, its
 arguments and its rule.

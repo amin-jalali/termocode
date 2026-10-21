@@ -45,3 +45,17 @@ func TestToolLabel(t *testing.T) {
 		t.Errorf("label %q", l)
 	}
 }
+
+// CP-9: class containers exists for the confirm card of host container
+// actions, and is NOT an auto-approve class: "Always allow containers"
+// lasts for the session only, never in config.json.
+func TestClassContainersIsSessionOnly(t *testing.T) {
+	if ClassContainers != "containers" {
+		t.Fatalf("ClassContainers = %q", ClassContainers)
+	}
+	for _, c := range ToolClasses {
+		if c == ClassContainers {
+			t.Fatalf("ToolClasses %v lists %q: it must not be saved in ai_auto_approve", ToolClasses, ClassContainers)
+		}
+	}
+}

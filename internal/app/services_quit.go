@@ -21,10 +21,12 @@ import (
 type servicesSettings struct {
 	OnQuit   string `json:"services_on_quit"`    // ask (default) | keep | stop
 	MaxLogKB int    `json:"services_max_log_kb"` // AI log cap (16)
+	// MaxInspectKB caps containers_inspect for the AI (64).
+	MaxInspectKB int `json:"containers_max_inspect_kb"`
 }
 
 func loadServicesSettings() servicesSettings {
-	s := servicesSettings{OnQuit: "ask", MaxLogKB: 16}
+	s := servicesSettings{OnQuit: "ask", MaxLogKB: 16, MaxInspectKB: 64}
 	dir, err := configDir()
 	if err != nil {
 		return s
@@ -41,6 +43,9 @@ func loadServicesSettings() servicesSettings {
 		}
 		if raw.MaxLogKB > 0 {
 			s.MaxLogKB = raw.MaxLogKB
+		}
+		if raw.MaxInspectKB > 0 {
+			s.MaxInspectKB = raw.MaxInspectKB
 		}
 	}
 	return s

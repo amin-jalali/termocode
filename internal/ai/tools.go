@@ -87,6 +87,11 @@ const (
 	ClassIDE       = "ide"      // IDE commands the agent runs (execute_action)
 	ClassSettings  = "settings" // settings_set: change a config.json setting
 	ClassServices  = "services" // services_start / stop / restart (the Services view)
+	// ClassContainers is the card class of host container actions
+	// (containers_control, images_pull, compose_up). Its "Always allow"
+	// lasts for the session only: it is not in ToolClasses and is never
+	// saved in ai_auto_approve (a host action can touch any project).
+	ClassContainers = "containers"
 	// ClassReview marks a file-changing tool that shows its change as a
 	// diff and waits for the user's accept / reject itself (Group R): no
 	// confirm dialog, never auto-approved. Not in ToolClasses.

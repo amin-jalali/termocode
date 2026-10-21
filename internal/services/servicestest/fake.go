@@ -7,6 +7,7 @@
 //	config.json          answer of `compose config --format json`
 //	ps.json              answer of `compose ps --all --format json`
 //	logs-<name>.txt      answer of `compose logs … <name>`
+//	logs.txt             answer of `docker logs … <id>` (host containers)
 //	all.err / all.code   every call fails with this stderr / exit code
 //	<sub>.err/<sub>.code `compose <sub>` fails (sub = ps, config, stop, …)
 //	<sub>.sleep          `compose <sub>` sleeps this many seconds first
@@ -69,6 +70,7 @@ if [ "$1" = "volume" ]; then cat "$D/volume-ls.json" 2>/dev/null; exit 0; fi
 if [ "$1" = "context" ]; then cat "$D/context-ls.json" 2>/dev/null; exit 0; fi
 if [ "$1" = "inspect" ]; then cat "$D/inspect.json" 2>/dev/null; exit 0; fi
 if [ "$1" = "stats" ]; then cat "$D/stats.json" 2>/dev/null; exit 0; fi
+if [ "$1" = "logs" ]; then cat "$D/logs.txt" 2>/dev/null; exit 0; fi
 if [ "$1" = "history" ]; then cat "$D/history.json" 2>/dev/null; exit 0; fi
 if [ "$1" = "system" ] && [ "$2" = "df" ]; then cat "$D/df.txt" 2>/dev/null; exit 0; fi
 if [ "$1" != "compose" ]; then exit 0; fi

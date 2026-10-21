@@ -150,14 +150,15 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools = append(tools, aiSettingsTools(root, call)...)
 	// K3: the visible integrated terminal.
 	tools = append(tools, aiTerminalTools(call)...)
-	tools = append(tools, m.aiLSPTools(root, call)...) // Group K5: LSP hover, symbols, rename, code actions
-	tools = append(tools, aiGitTools(root, call)...)   // Group K4
-	tools = append(tools, aiTasksTools(root, call)...) // Group K6: tasks and tests
-	tools = append(tools, aiAdminTools(root, call)...) // Group K8: installers, extensions, workspace folders
-	tools = append(tools, aiDebugTools(root, call)...) // Group K7
-	tools = append(tools, m.aiServicesTools(call)...)  // the Services view (ai_services_tools.go)
-	tools = append(tools, aiHelpTools()...)            // U21: the built-in guide (ai_help_tools.go)
-	if m.aiReviewEdits() {                             // Group R2: file changes become diffs to review
+	tools = append(tools, m.aiLSPTools(root, call)...)  // Group K5: LSP hover, symbols, rename, code actions
+	tools = append(tools, aiGitTools(root, call)...)    // Group K4
+	tools = append(tools, aiTasksTools(root, call)...)  // Group K6: tasks and tests
+	tools = append(tools, aiAdminTools(root, call)...)  // Group K8: installers, extensions, workspace folders
+	tools = append(tools, aiDebugTools(root, call)...)  // Group K7
+	tools = append(tools, m.aiServicesTools(call)...)   // the Services view (ai_services_tools.go)
+	tools = append(tools, m.aiContainersTools(call)...) // CP-9: host containers (ai_containers_tools.go)
+	tools = append(tools, aiHelpTools()...)             // U21: the built-in guide (ai_help_tools.go)
+	if m.aiReviewEdits() {                              // Group R2: file changes become diffs to review
 		tools = m.aiReviewTools(tools, root, call)
 	}
 	tools = append(tools, m.aiHTTPTools(root, call, tools)...) // HC-9: HTTP client
@@ -271,7 +272,7 @@ func (s *aiState) takeAttachments() (string, []string) {
 
 // aiChatBasePrompt is the chat's system prompt before the tool protocol.
 func (m *Model) aiChatBasePrompt(root string) string {
-	base := aiChatSystemPrompt + "\nWorkspace root: " + root + m.aiServicesPromptLine(root) + aiDBPromptLine(root)
+	base := aiChatSystemPrompt + "\nWorkspace root: " + root + m.aiServicesPromptLine(root) + m.aiContainersPromptLine() + aiDBPromptLine(root)
 	if p := m.editor.Path(); p != "" {
 		base += "\nThe open file is: " + p
 	}
@@ -283,7 +284,9 @@ func (m *Model) aiChatBasePrompt(root string) string {
 func (s *aiState) autoApproveSet() map[string]bool {
 	auto := map[string]bool{}
 	for _, c := range s.settings.AutoApprove {
-		auto[c] = true
+		if aiAutoApproveSaved(c) { // containers: session only (CP-9)
+			auto[c] = true
+		}
 	}
 	return auto
 }
@@ -412,7 +415,11 @@ func (m *Model) answerAIToolConfirm(id string) tea.Cmd {
 	if id == "project" { // services: "Always in this project" (ai_services_tools.go)
 		m.aiServicesAllowProject()
 	}
-	if id == "always" && p.tool.Class != "" {
+	if id == "always" && p.tool.Class == ai.ClassContainers {
+		// "Always allow containers": this session only, never config.json
+		// (a host action can touch another project's containers).
+		m.aiContainersAllowSession()
+	} else if id == "always" && p.tool.Class != "" {
 		if path, err := ai.ConfigPath(); err == nil {
 			cur := ai.LoadSettings(path)
 			if !contains(cur.AutoApprove, p.tool.Class) {
