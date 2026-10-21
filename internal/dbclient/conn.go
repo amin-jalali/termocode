@@ -44,6 +44,10 @@ type SSHConfig struct {
 	Auth       string `json:"auth,omitempty"`
 	KeyFile    string `json:"keyFile,omitempty"`
 	KnownHosts string `json:"knownHosts,omitempty"`
+	// Jump lists the jump hosts before Host, first one first
+	// ("user@host:port" or a ~/.ssh/config alias). It wins over the
+	// ProxyJump of ~/.ssh/config.
+	Jump []string `json:"jump,omitempty"`
 }
 
 type SSLConfig struct {

@@ -93,8 +93,9 @@ func ConfigTemplate() string {
   //   "ssh": { "host": "bastion.example.com", "user": "deploy", "auth": "agent" },
   //   "ssl": { "mode": "verify-full", "ca": "~/.certs/db-ca.pem" }
   //
-  // ssh.host may be a ~/.ssh/config alias (HostName, Port, User and
-  // IdentityFile are read from it; ProxyJump is not supported yet).
+  // ssh.host may be a ~/.ssh/config alias (HostName, Port, User,
+  // IdentityFile and ProxyJump are read from it; ProxyCommand is not
+  // supported). "jump": ["user@gw.example.com:22"] lists jump hosts.
   // ssh.auth: "agent" | "key" (with "keyFile") | "password". The key
   // passphrase and the SSH password stay in the secret store.
   // ssl.mode: "disable" | "require" | "verify-ca" | "verify-full" (the

@@ -10,15 +10,17 @@ import (
 )
 
 // sshHostConfig is the subset of ~/.ssh/config the tunnel reads for one
-// host: HostName, Port, User, IdentityFile and whether a jump host
-// (ProxyJump / ProxyCommand) is set. The first value of a keyword wins,
-// as in OpenSSH.
+// host: HostName, Port, User, IdentityFile, ProxyJump and whether a
+// ProxyCommand is set. The first value of a keyword wins, as in OpenSSH;
+// ProxyJump and ProxyCommand share one slot, so the first of the two
+// wins ("none" included).
 type sshHostConfig struct {
 	HostName      string
 	Port          int
 	User          string
 	IdentityFiles []string
-	ProxyJump     string
+	ProxyJump     string // comma-separated jump hosts ("" or none: none)
+	ProxyCommand  string
 }
 
 // parseSSHConfig reads the blocks of data that match alias. Match blocks
@@ -68,9 +70,13 @@ func parseSSHConfig(data []byte, alias string) sshHostConfig {
 			}
 		case "user":
 			out.User = args[0]
-		case "proxyjump", "proxycommand":
+		case "proxyjump":
 			if !strings.EqualFold(args[0], "none") {
-				out.ProxyJump = strings.Join(args, " ")
+				out.ProxyJump = strings.Join(args, "")
+			}
+		case "proxycommand":
+			if !strings.EqualFold(args[0], "none") {
+				out.ProxyCommand = strings.Join(args, " ")
 			}
 		}
 	}

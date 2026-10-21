@@ -238,7 +238,10 @@ func TestDBTunnelChangedHostKeyRefusesWithoutCard(t *testing.T) {
 func writeTestKey(t *testing.T, path, passphrase string) ssh.PublicKey {
 	t.Helper()
 	_, priv, _ := ed25519.GenerateKey(rand.Reader)
-	block, err := ssh.MarshalPrivateKeyWithPassphrase(priv, "t", []byte(passphrase))
+	block, err := ssh.MarshalPrivateKey(priv, "t") // "": no passphrase
+	if passphrase != "" {
+		block, err = ssh.MarshalPrivateKeyWithPassphrase(priv, "t", []byte(passphrase))
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -454,5 +457,57 @@ func TestDBPerDatabaseSessionUsesTheOpenTunnel(t *testing.T) {
 	_ = m.databaseExpand("pg/db/other")
 	if n := s.nodes["pg/db/other"]; n.loading || !strings.Contains(n.problem, "SSH tunnel closed") {
 		t.Fatalf("dead tunnel: loading=%v problem=%q", n.loading, n.problem)
+	}
+}
+
+func TestDBTunnelJumpHostCardNamesTheHopThenConnects(t *testing.T) {
+	bastion := dbtest.NewSSHServer()
+	bastion.Password = "tunnel-pw-77"
+	defer bastion.Close()
+	gw := dbtest.NewSSHServer()
+	defer gw.Close()
+	gw.Forward = func(ctx context.Context, addr string) (net.Conn, error) {
+		if addr != "bastion.internal:22" {
+			return nil, errors.New("unexpected target " + addr)
+		}
+		return bastion.Dial(ctx, "tcp", addr)
+	}
+	home := sshTestHome(t, gw) // the client dials the jump host only
+	gw.AuthorizedKeys = []ssh.PublicKey{writeTestKey(t, filepath.Join(home, ".ssh", "id_ed25519"), "")}
+	known := filepath.Join(home, ".ssh", "known_hosts")
+	if err := dbclient.TrustHostKey(known, "bastion.internal:22", bastion.HostKey.PublicKey()); err != nil {
+		t.Fatal(err)
+	}
+	m, _ := sshCacheModel(t, bastion, dbclient.SSHConfig{Host: "bastion.internal", User: "deploy", Auth: "password", Jump: []string{"ops@gw.example.net"}})
+	dbStoreSet(t, "db.cache.ssh", "tunnel-pw-77")
+
+	dbConnectAndDeliver(t, m, m.databaseConnect("cache"))
+	if !m.confirmOpen || m.confirmKind != confirmKindDBTrustHost {
+		t.Fatalf("no unknown-host card; row: %q", m.databases.nodes["cache"].problem)
+	}
+	card := ansi.Strip(m.confirm.View())
+	for _, want := range []string{"Unknown jump host gw.example.net", ssh.FingerprintSHA256(gw.HostKey.PublicKey())} {
+		if !strings.Contains(card, want) {
+			t.Fatalf("card lacks %q:\n%s", want, card)
+		}
+	}
+	if gw.AuthAttempts() != 0 || bastion.AuthAttempts() != 0 {
+		t.Fatal("a login was sent before the jump host was trusted")
+	}
+	cmd, ok := m.handleDBConfirm("trust")
+	if !ok {
+		t.Fatal("trust not handled")
+	}
+	dbConnectAndDeliver(t, m, cmd)
+	tun := m.databases.tunnel("cache")
+	if m.databases.sessions["cache"] == nil || !tun.Alive() {
+		t.Fatalf("not connected through the jump host; row: %q", m.databases.nodes["cache"].problem)
+	}
+	if j := tun.Target().Jumps; len(j) != 1 || j[0].Addr() != "gw.example.net:22" {
+		t.Fatalf("jumps = %+v", j)
+	}
+	_ = m.databaseDisconnectNow("cache")
+	if tun.Alive() || gw.WaitOpen(0) != 0 || bastion.WaitOpen(0) != 0 {
+		t.Fatal("disconnect left a hop open")
 	}
 }

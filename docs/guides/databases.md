@@ -109,17 +109,19 @@ SQLite needs no password.
 
 ## SSH tunnels
 
-A connection can go through one SSH server (a bastion). Run **Databases: Add SSH Tunnel…** on a row, or choose **Use an SSH tunnel…** after a failed test while adding a connection. The prompts ask for the SSH server, port, user and how to log in: `ssh-agent`, a key file, or a password. The tunnel runs inside termocode and opens no local port. The database host is resolved by the SSH server, so names that only exist behind the bastion work.
+A connection can go through an SSH server (a bastion), and through jump hosts before it. Run **Databases: Add SSH Tunnel…** on a row, or choose **Use an SSH tunnel…** after a failed test while adding a connection. The prompts ask for the SSH server, port, user and how to log in: `ssh-agent`, a key file, or a password. The tunnel runs inside termocode and opens no local port. The database host is resolved by the SSH server, so names that only exist behind the bastion work.
 
 ```jsonc
-"ssh": { "host": "bastion.example.com", "user": "deploy", "auth": "agent" },
+"ssh": { "host": "bastion.example.com", "user": "deploy", "auth": "agent", "jump": ["ops@gw.example.com"] },
 "ssl": { "mode": "verify-full", "ca": "~/.certs/staging-ca.pem" }
 ```
 
-- `ssh.host` may be an alias from `~/.ssh/config`. termocode reads `HostName`, `Port`, `User` and `IdentityFile` for it; values in the connection win. `ProxyJump` and `ProxyCommand` are not supported yet: the row says so.
+- `ssh.host` may be an alias from `~/.ssh/config`. termocode reads `HostName`, `Port`, `User`, `IdentityFile` and `ProxyJump` for it; values in the connection win. `ProxyCommand` is not supported (it would run a shell command): the row says so.
+- Jump hosts: `ProxyJump gw1,user@gw2:2222` in `~/.ssh/config`, or `"jump": ["user@gw1.example.com", "gw2:2222"]` in the `ssh` object (it wins over `ProxyJump`). Each jump host may be an alias too; its own `ProxyJump` comes before it. termocode connects to the first jump host, then to each next one through the one before, then to the SSH server. `ProxyJump none` means no jump host. A chain may have at most 8 jump hosts, and a chain that loops is refused.
+- Every jump host gets the same host key check as the SSH server: an unknown key shows the trust card with that jump host's name and fingerprint, and a changed key is refused. Jump hosts log in with `ssh-agent` or their key files (`IdentityFile`, else `~/.ssh/id_ed25519`, `id_ecdsa`, `id_rsa`). A jump host that asks for a password, or a key with a passphrase that is not in your agent, is refused with the jump host's name; use `ssh-add`. The jump list is edited in the connection file; the prompts set only the SSH server.
 - `ssh.auth` is `agent` (keys in your agent), `key` (with `keyFile`) or `password`. The key passphrase and the SSH password are kept in the secret store as `db.<id>.sshkey` and `db.<id>.ssh`, never in a file. A key file that other users can read is refused; run `chmod 600` on it.
 - Host keys are checked against `~/.ssh/known_hosts` (or `knownHosts`). An unknown server shows a card with its `SHA256:` fingerprint: **Trust and save to known_hosts** adds it, **Cancel** stops. A server whose key changed is refused with no way around it; check with your admin.
-- The tunnel opens with the connection and closes when you disconnect, leave the view, refresh or quit. There is no keepalive: a dropped tunnel shows `SSH tunnel closed · R reconnect` on the next query.
+- The tunnel opens with the connection and closes when you disconnect, leave the view, refresh or quit; every jump host closes with it. There is no keepalive: a dropped tunnel shows `SSH tunnel closed · R reconnect` on the next query. When a jump host goes away, the whole chain closes and the message names it.
 
 ## SSL and TLS
 

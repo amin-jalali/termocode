@@ -43,9 +43,16 @@ const (
 // ErrTunnelClosed is a dial through a tunnel that has gone away.
 var ErrTunnelClosed = errors.New("SSH tunnel closed · R reconnect")
 
-// ErrProxyJumpUnsupported is a host whose ~/.ssh/config entry sets
-// ProxyJump or ProxyCommand: one bastion only in this version.
-var ErrProxyJumpUnsupported = errors.New("ProxyJump is not supported yet: tunnel to the last bastion directly")
+// ErrProxyCommandUnsupported is a host whose ~/.ssh/config entry sets
+// ProxyCommand: it would run a shell command, so it is refused.
+var ErrProxyCommandUnsupported = errors.New("ProxyCommand is not supported (it runs a shell command); use ProxyJump")
+
+// ErrProxyJumpLoop is a ProxyJump chain that comes back to a host
+// already on it.
+var ErrProxyJumpLoop = errors.New("the ProxyJump chain loops")
+
+// ErrTooManyJumps is a ProxyJump chain longer than maxJumps hops.
+var ErrTooManyJumps = errors.New("the ProxyJump chain has too many jump hosts")
 
 // UnknownHostKeyError is a host that is not in known_hosts. The app shows
 // Host and Fingerprint and, when the user trusts it, calls TrustHostKey.
@@ -55,9 +62,13 @@ type UnknownHostKeyError struct {
 	Fingerprint string // SHA256:…
 	KnownHosts  string // the file TrustHostKey appends to
 	Key         ssh.PublicKey
+	Jump        string // the jump host's name ("": the tunnel's own server)
 }
 
 func (e *UnknownHostKeyError) Error() string {
+	if e.Jump != "" {
+		return "unknown SSH jump host " + hostForDisplay(e.Host) + " · " + e.Fingerprint
+	}
 	return "unknown SSH host " + hostForDisplay(e.Host) + " · " + e.Fingerprint
 }
 
@@ -67,13 +78,18 @@ type HostKeyChangedError struct {
 	Host        string
 	Fingerprint string
 	Revoked     bool
+	Jump        string // the jump host's name ("": the tunnel's own server)
 }
 
 func (e *HostKeyChangedError) Error() string {
-	if e.Revoked {
-		return "the host key of " + hostForDisplay(e.Host) + " is revoked; check with your admin"
+	what := "the host key of "
+	if e.Jump != "" {
+		what += "jump host "
 	}
-	return "the host key of " + hostForDisplay(e.Host) + " changed; check with your admin"
+	if e.Revoked {
+		return what + hostForDisplay(e.Host) + " is revoked; check with your admin"
+	}
+	return what + hostForDisplay(e.Host) + " changed; check with your admin"
 }
 
 // SSHSecretError asks for the SSH password or the key passphrase (Wrong:
@@ -107,7 +123,8 @@ type SSHTarget struct {
 	Auth       string
 	KeyFiles   []string // candidates in order (Auth key)
 	KnownHosts string
-	ProxyJump  string
+	// Jumps are the jump hosts before this one, first one first.
+	Jumps []SSHTarget
 }
 
 // Addr is host:port of the SSH server.
@@ -137,37 +154,21 @@ func (o TunnelOptions) home() string {
 	return h
 }
 
-// ResolveSSH fills cfg from ~/.ssh/config under home.
+// ResolveSSH fills cfg from ~/.ssh/config under home, then resolves the
+// jump hosts (cfg.Jump, else the host's ProxyJump). On a jump error the
+// returned target still has its own fields filled (the prompts use them
+// as defaults).
 func ResolveSSH(cfg SSHConfig, home string) (SSHTarget, error) {
 	alias := strings.TrimSpace(cfg.Host)
 	if alias == "" {
 		return SSHTarget{}, errors.New("the SSH tunnel has no host")
 	}
-	var hc sshHostConfig
-	if home != "" {
-		if data, err := os.ReadFile(filepath.Join(home, ".ssh", "config")); err == nil {
-			hc = parseSSHConfig(data, alias)
-		}
-	}
-	t := SSHTarget{Alias: alias, Host: alias, Port: cfg.Port, User: cfg.User, Auth: strings.ToLower(strings.TrimSpace(cfg.Auth)), ProxyJump: hc.ProxyJump}
-	if hc.HostName != "" {
-		t.Host = hc.HostName
-	}
-	if t.Port == 0 {
-		t.Port = hc.Port
-	}
-	if t.Port == 0 {
-		t.Port = 22
-	}
-	if t.Port < 1 || t.Port > 65535 {
+	hc := readSSHHostConfig(home, alias)
+	t := SSHTarget{Alias: alias, Host: alias, Port: cfg.Port, User: cfg.User, Auth: strings.ToLower(strings.TrimSpace(cfg.Auth))}
+	if t.Port < 0 || t.Port > 65535 {
 		return SSHTarget{}, errors.New("the SSH port is not valid")
 	}
-	if t.User == "" {
-		t.User = hc.User
-	}
-	if t.User == "" {
-		t.User = localUserName()
-	}
+	fillSSHTarget(&t, hc, cfg.KeyFile, cfg.KnownHosts, home)
 	if t.User == "" {
 		return SSHTarget{}, errors.New("the SSH tunnel has no user")
 	}
@@ -181,8 +182,48 @@ func ResolveSSH(cfg SSHConfig, home string) (SSHTarget, error) {
 	default:
 		return SSHTarget{}, fmt.Errorf("unknown SSH auth %q (use agent, key or password)", sanitizeLine(cfg.Auth))
 	}
-	if cfg.KeyFile != "" {
-		t.KeyFiles = []string{expandSSHPath(cfg.KeyFile, home, t.Host, t.User)}
+	jumps, err := resolveJumps(cfg, hc, alias, home)
+	if err != nil {
+		return t, err
+	}
+	t.Jumps = jumps
+	return t, nil
+}
+
+// readSSHHostConfig is the ~/.ssh/config subset for alias (empty when
+// there is no home or no file).
+func readSSHHostConfig(home, alias string) sshHostConfig {
+	if home == "" {
+		return sshHostConfig{}
+	}
+	data, err := os.ReadFile(filepath.Join(home, ".ssh", "config"))
+	if err != nil {
+		return sshHostConfig{}
+	}
+	return parseSSHConfig(data, alias)
+}
+
+// fillSSHTarget fills the blanks of t (Host is the alias, Port and User
+// may be set) from hc and the defaults: HostName, Port 22, User, the key
+// files and known_hosts.
+func fillSSHTarget(t *SSHTarget, hc sshHostConfig, keyFile, knownHosts, home string) {
+	if hc.HostName != "" {
+		t.Host = hc.HostName
+	}
+	if t.Port == 0 {
+		t.Port = hc.Port
+	}
+	if t.Port == 0 {
+		t.Port = 22
+	}
+	if t.User == "" {
+		t.User = hc.User
+	}
+	if t.User == "" {
+		t.User = localUserName()
+	}
+	if keyFile != "" {
+		t.KeyFiles = []string{expandSSHPath(keyFile, home, t.Host, t.User)}
 	} else if len(hc.IdentityFiles) > 0 {
 		for _, f := range hc.IdentityFiles {
 			t.KeyFiles = append(t.KeyFiles, expandSSHPath(f, home, t.Host, t.User))
@@ -192,13 +233,12 @@ func ResolveSSH(cfg SSHConfig, home string) (SSHTarget, error) {
 			t.KeyFiles = append(t.KeyFiles, filepath.Join(home, ".ssh", f))
 		}
 	}
-	t.KnownHosts = cfg.KnownHosts
+	t.KnownHosts = knownHosts
 	if t.KnownHosts == "" && home != "" {
 		t.KnownHosts = filepath.Join(home, ".ssh", "known_hosts")
 	} else {
 		t.KnownHosts = expandSSHPath(t.KnownHosts, home, t.Host, t.User)
 	}
-	return t, nil
 }
 
 func localUserName() string {
@@ -217,13 +257,19 @@ func localUserName() string {
 	return ""
 }
 
-// Tunnel is one SSH client; DialContext opens a channel to host:port as
-// seen from the SSH server.
+// Tunnel is the SSH client of the tunnel's server, reached directly or
+// through jump hosts (one client per hop); DialContext opens a channel
+// to host:port as seen from the last server.
 type Tunnel struct {
-	client *ssh.Client
-	target SSHTarget
-	done   chan struct{}
-	once   sync.Once
+	client  *ssh.Client   // the tunnel's own server (the last hop)
+	hops    []*ssh.Client // every client, first hop first (client is last)
+	names   []string      // what errors call each hop
+	target  SSHTarget
+	done    chan struct{}
+	once    sync.Once
+	closing atomic.Bool
+	mu      sync.Mutex
+	cause   error // why the chain broke (nil: closed, or a single hop)
 }
 
 // Target is the resolved endpoint (for the row and the footer).
@@ -242,23 +288,97 @@ func (t *Tunnel) Alive() bool {
 	}
 }
 
-// Close closes the SSH client and every channel through it.
+// Close closes every hop, the last one first, and every channel through
+// them.
 func (t *Tunnel) Close() error {
 	if t == nil {
 		return nil
 	}
+	t.closing.Store(true)
 	var err error
 	t.once.Do(func() {
-		err = t.client.Close()
 		close(t.done)
+		err = closeClients(t.hops)
 	})
 	return err
+}
+
+// closeClients closes cs in reverse order; the first error is returned
+// (an inner hop already gone with its outer one is not an error).
+func closeClients(cs []*ssh.Client) error {
+	var first error
+	for i := len(cs) - 1; i >= 0; i-- {
+		if err := cs[i].Close(); err != nil && first == nil && i == len(cs)-1 {
+			first = err
+		}
+	}
+	return first
+}
+
+// watch tears the whole chain down when hop i's connection ends on its
+// own. The hop named in the error is the first one (from the client)
+// that no longer answers: a dead outer hop takes the inner ones with it.
+func (t *Tunnel) watch(i int) {
+	_ = t.hops[i].Wait() // blocked until the connection ends; no timer
+	if t.closing.Load() {
+		return
+	}
+	t.once.Do(func() {
+		if len(t.hops) > 1 {
+			dead := i
+			for j := 0; j < i; j++ {
+				if !hopAnswers(t.hops[j]) {
+					dead = j
+					break
+				}
+			}
+			t.mu.Lock()
+			t.cause = &tunnelClosedError{hop: t.names[dead]}
+			t.mu.Unlock()
+		}
+		close(t.done)
+		_ = closeClients(t.hops)
+	})
+}
+
+// hopAnswers asks c for a reply (1 s at most; a hop that is slow to
+// answer is taken as alive).
+func hopAnswers(c *ssh.Client) bool {
+	res := make(chan error, 1)
+	go func() {
+		_, _, err := c.SendRequest("keepalive@openssh.com", true, nil)
+		res <- err
+	}()
+	select {
+	case err := <-res:
+		return err == nil
+	case <-time.After(time.Second):
+		return true
+	}
+}
+
+// tunnelClosedError is ErrTunnelClosed with the hop that went away.
+type tunnelClosedError struct{ hop string }
+
+func (e *tunnelClosedError) Error() string {
+	return "SSH tunnel closed: " + e.hop + " went away · R reconnect"
+}
+
+func (e *tunnelClosedError) Is(target error) bool { return target == ErrTunnelClosed }
+
+func (t *Tunnel) closedErr() error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.cause != nil {
+		return t.cause
+	}
+	return ErrTunnelClosed
 }
 
 // DialContext opens a TCP channel to addr through the tunnel.
 func (t *Tunnel) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
 	if !t.Alive() {
-		return nil, ErrTunnelClosed
+		return nil, t.closedErr()
 	}
 	if network != "tcp" && network != "tcp4" && network != "tcp6" {
 		return nil, fmt.Errorf("the SSH tunnel carries TCP only, not %s", network)
@@ -266,7 +386,7 @@ func (t *Tunnel) DialContext(ctx context.Context, network, addr string) (net.Con
 	c, err := t.client.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		if !t.Alive() {
-			return nil, ErrTunnelClosed
+			return nil, t.closedErr()
 		}
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -276,49 +396,107 @@ func (t *Tunnel) DialContext(ctx context.Context, network, addr string) (net.Con
 	return &tunnelConn{Conn: c}, nil
 }
 
-// OpenTunnel resolves cfg, dials the SSH server, checks its host key and
-// logs in. ctx bounds the whole handshake.
+// OpenTunnel resolves cfg, then dials each jump host through the one
+// before it and the SSH server last. Every hop's host key is checked
+// against known_hosts before anything is sent to it. ctx bounds the
+// whole handshake.
 func OpenTunnel(ctx context.Context, cfg SSHConfig, opts TunnelOptions) (*Tunnel, error) {
 	home := opts.home()
 	target, err := ResolveSSH(cfg, home)
 	if err != nil {
 		return nil, err
 	}
-	if target.ProxyJump != "" {
-		return nil, ErrProxyJumpUnsupported
-	}
-	hostCB, algos, err := hostKeyCheck(target)
-	if err != nil {
-		return nil, err
-	}
-	auth, cleanup, err := sshAuth(ctx, target, opts)
-	if err != nil {
-		return nil, err
-	}
-	defer cleanup()
-	var cbErr error
-	config := &ssh.ClientConfig{
-		User: target.User,
-		Auth: auth,
-		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-			cbErr = hostCB(hostname, remote, key)
-			return cbErr
-		},
-		HostKeyAlgorithms: algos,
-	}
+	chain := append(append([]SSHTarget(nil), target.Jumps...), target)
 	dial := opts.Dial
 	if dial == nil {
 		d := &net.Dialer{Timeout: 10 * time.Second, KeepAlive: -1}
 		dial = d.DialContext
 	}
-	addr := target.Addr()
-	conn, err := dial(ctx, "tcp", addr)
-	if err != nil {
-		if ctx.Err() != nil {
-			return nil, fmt.Errorf("SSH: %s did not answer in time", sanitizeLine(addr))
-		}
-		return nil, fmt.Errorf("SSH: could not reach %s: %s", sanitizeLine(addr), sanitizeLine(netErrText(err)))
+	var clients []*ssh.Client
+	var names []string
+	fail := func(err error) (*Tunnel, error) {
+		_ = closeClients(clients)
+		return nil, err
 	}
+	for i, hop := range chain {
+		jump := i < len(chain)-1
+		name := jumpName(hop)
+		if !jump {
+			name = "SSH server " + sanitizeLine(hop.Alias)
+		}
+		var auth []ssh.AuthMethod
+		var authErr *jumpAuthState
+		cleanup := func() {}
+		if jump {
+			auth, authErr, cleanup = jumpAuth(ctx, hop, opts)
+		} else {
+			auth, cleanup, err = sshAuth(ctx, hop, opts)
+			if err != nil {
+				return fail(err)
+			}
+		}
+		var conn net.Conn
+		addr := hop.Addr()
+		if i == 0 {
+			conn, err = dial(ctx, "tcp", addr)
+		} else {
+			conn, err = clients[i-1].DialContext(ctx, "tcp", addr)
+		}
+		if err != nil {
+			cleanup()
+			if ctx.Err() != nil {
+				return fail(fmt.Errorf("SSH: %s did not answer in time", sanitizeLine(addr)))
+			}
+			if i > 0 {
+				return fail(fmt.Errorf("SSH: %s could not reach %s: %s", names[i-1], sanitizeLine(addr), sanitizeLine(strings.TrimPrefix(netErrText(err), "ssh: "))))
+			}
+			return fail(fmt.Errorf("SSH: could not reach %s: %s", sanitizeLine(addr), sanitizeLine(netErrText(err))))
+		}
+		c, err := sshHandshake(ctx, conn, hop, auth, authErr)
+		cleanup()
+		if err != nil {
+			return fail(err)
+		}
+		clients = append(clients, c)
+		names = append(names, name)
+	}
+	t := &Tunnel{client: clients[len(clients)-1], hops: clients, names: names, target: target, done: make(chan struct{})}
+	for i := range clients {
+		go t.watch(i)
+	}
+	return t, nil
+}
+
+// sshHandshake checks hop's host key and logs in over conn. A host key
+// error wins over the login error. jump is the login state of a jump
+// host (nil: the tunnel's own server).
+func sshHandshake(ctx context.Context, conn net.Conn, hop SSHTarget, auth []ssh.AuthMethod, jump *jumpAuthState) (*ssh.Client, error) {
+	hostCB, algos, err := hostKeyCheck(hop)
+	if err != nil {
+		_ = conn.Close()
+		return nil, err
+	}
+	var cbErr error
+	config := &ssh.ClientConfig{
+		User: hop.User,
+		Auth: auth,
+		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+			cbErr = hostCB(hostname, remote, key)
+			if cbErr != nil && jump != nil {
+				var unknown *UnknownHostKeyError
+				var changed *HostKeyChangedError
+				switch {
+				case errors.As(cbErr, &unknown):
+					unknown.Jump = sanitizeLine(hop.Alias)
+				case errors.As(cbErr, &changed):
+					changed.Jump = sanitizeLine(hop.Alias)
+				}
+			}
+			return cbErr
+		},
+		HostKeyAlgorithms: algos,
+	}
+	addr := hop.Addr()
 	if dl, ok := ctx.Deadline(); ok {
 		_ = conn.SetDeadline(dl)
 	}
@@ -336,15 +514,13 @@ func OpenTunnel(ctx context.Context, cfg SSHConfig, opts TunnelOptions) (*Tunnel
 		if cbErr != nil {
 			return nil, cbErr
 		}
-		return nil, sshLoginError(err, target)
+		if jump != nil {
+			return nil, jumpLoginError(err, hop, jump)
+		}
+		return nil, sshLoginError(err, hop)
 	}
 	_ = conn.SetDeadline(time.Time{})
-	t := &Tunnel{client: ssh.NewClient(c, chans, reqs), target: target, done: make(chan struct{})}
-	go func() { // blocked until the connection ends; no timer, no polling
-		_ = t.client.Wait()
-		t.once.Do(func() { close(t.done) })
-	}()
-	return t, nil
+	return ssh.NewClient(c, chans, reqs), nil
 }
 
 func sshLoginError(err error, t SSHTarget) error {

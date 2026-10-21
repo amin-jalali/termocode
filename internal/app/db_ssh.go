@@ -216,8 +216,12 @@ func (m *Model) databaseTunnelError(err error, conn, then string) (tea.Cmd, bool
 		if h, p, e := netSplit(unknown.Host); e == nil && p == "22" {
 			host = sanitizeDBText(h)
 		}
-		m.confirm = confirm.New("Unknown host "+host,
-			"This SSH server is not in your known_hosts file yet. Trust it only if this fingerprint matches the one your admin gave you.",
+		title, body := "Unknown host "+host, "This SSH server is not in your known_hosts file yet. Trust it only if this fingerprint matches the one your admin gave you."
+		if unknown.Jump != "" {
+			title = "Unknown jump host " + host
+			body = "This jump host is on the way to the SSH server and is not in your known_hosts file yet. Trust it only if this fingerprint matches the one your admin gave you."
+		}
+		m.confirm = confirm.New(title, body,
 			[]confirm.Button{
 				{ID: "cancel", Title: "Cancel"},
 				{ID: "trust", Title: "Trust and save to known_hosts", Style: confirm.StylePrimary},

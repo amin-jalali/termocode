@@ -342,9 +342,12 @@ Host *
 		t.Fatalf("dialled %q, want the config's HostName and Port", dialled)
 	}
 
+	// ProxyJump is followed now: the jump host is dialled first and gets
+	// its own host key check (unknown here, so the trust card names it).
 	_, err = openTestTunnel(t, SSHConfig{Host: "jumpy", Auth: "key"}, TunnelOptions{Home: home, Dial: dial})
-	if !errors.Is(err, ErrProxyJumpUnsupported) {
-		t.Fatalf("ProxyJump: err = %v", err)
+	var unknown *UnknownHostKeyError
+	if !errors.As(err, &unknown) || unknown.Host != "gw.example.net:22" || unknown.Jump == "" || dialled != "gw.example.net:22" {
+		t.Fatalf("ProxyJump: err = %v dialled %q, want the jump host's trust card", err, dialled)
 	}
 }
 

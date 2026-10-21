@@ -29,6 +29,7 @@ type SSHServer struct {
 
 	logins   atomic.Int32 // successful logins
 	attempts atomic.Int32 // auth attempts of any kind
+	open     atomic.Int32 // client connections being served
 
 	mu      sync.Mutex
 	targets []string
@@ -63,6 +64,19 @@ func (s *SSHServer) WaitLogins(n int) int {
 	return s.Logins()
 }
 
+// Open is how many client connections the server still serves.
+func (s *SSHServer) Open() int { return int(s.open.Load()) }
+
+// WaitOpen waits up to 2 s until at most n client connections are open
+// and returns the count.
+func (s *SSHServer) WaitOpen(n int) int {
+	deadline := time.Now().Add(2 * time.Second)
+	for s.Open() > n && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	return s.Open()
+}
+
 // AuthAttempts is how many auth requests reached the server.
 func (s *SSHServer) AuthAttempts() int { return int(s.attempts.Load()) }
 
@@ -83,9 +97,11 @@ func (s *SSHServer) Dial(_ context.Context, _, _ string) (net.Conn, error) {
 	client, server := BufferedPipe()
 	s.conns = append(s.conns, server)
 	s.wg.Add(1)
+	s.open.Add(1)
 	s.mu.Unlock()
 	go func() {
 		defer s.wg.Done()
+		defer s.open.Add(-1)
 		s.serve(server)
 	}()
 	return client, nil
