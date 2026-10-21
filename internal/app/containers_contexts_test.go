@@ -1,6 +1,9 @@
 package app
 
 import (
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -371,7 +374,14 @@ func TestContextDoubleClickIsEnter(t *testing.T) {
 func TestContainersEngineSettingChoosesEngine(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	hostFake(t) // only docker is installed
+	// The machine may have a real podman on PATH (CI runners do).
+	sys := t.TempDir()
+	if err := os.WriteFile(filepath.Join(sys, "podman"), []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", sys+string(os.PathListSeparator)+os.Getenv("PATH"))
+	f := hostFake(t) // only docker is installed
+	t.Setenv("PATH", f.Bin+string(os.PathListSeparator)+fakeToolsDir(t))
 	cfg := loadSettings()
 	cfg.ContainersEngine = "podman"
 	if err := saveSettings(cfg); err != nil {
@@ -402,4 +412,21 @@ func TestContainersEngineSettingChoosesEngine(t *testing.T) {
 	if p, ok := aiSettingPolicies["containers_engine"]; !ok || p.Gate == aiGateAuto {
 		t.Errorf("AI setting policy = %+v ok=%v", p, ok)
 	}
+}
+
+// fakeToolsDir holds links to the few tools the fake engine script runs, so
+// a test can drop the rest of PATH (and any real docker or podman on it).
+func fakeToolsDir(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	for _, name := range []string{"cat", "sleep", "tail"} {
+		p, err := exec.LookPath(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(p, filepath.Join(dir, name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return dir
 }
