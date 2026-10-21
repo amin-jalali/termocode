@@ -109,8 +109,8 @@ func submitSecrets(t *testing.T, m *Model, v string) {
 	pumpSecrets(t, m, cmd)
 }
 
-// pumpSecrets runs a command tree and feeds secretsUnlockDoneMsg back to
-// Update. Commands that wait (toast and animation ticks) are dropped
+// pumpSecrets runs a command tree and feeds secretsUnlockDoneMsg (and
+// the migration's messages, secrets_migrate.go) back to Update. Commands that wait (toast and animation ticks) are dropped
 // after a short wait; while an unlock runs (scrypt, slow under -race) it
 // waits for that answer.
 func pumpSecrets(t *testing.T, m *Model, cmd tea.Cmd) {
@@ -137,7 +137,7 @@ func pumpSecrets(t *testing.T, m *Model, cmd tea.Cmd) {
 				for _, c := range msg {
 					start(c)
 				}
-			case secretsUnlockDoneMsg:
+			case secretsUnlockDoneMsg, secretsMigrateCheckMsg, secretsMigrateDoneMsg:
 				next, more := m.update(msg)
 				*m = next
 				start(more)

@@ -826,7 +826,8 @@ func (m Model) Init() tea.Cmd {
 	if cmd := m.aiProfileErrorsCmd(); cmd != nil { // broken ai/profiles.json
 		cmds = append(cmds, cmd)
 	}
-	cmds = append(cmds, aiRunsStartupCmd()) // prune old agent run snapshots
+	cmds = append(cmds, aiRunsStartupCmd())         // prune old agent run snapshots
+	cmds = append(cmds, m.secretsMigrateStartCmd()) // plain credentials.json → safer store (SS-4)
 	if m.nvim != nil {
 		cmds = append(cmds, m.attachCmd(), m.nvim.Next())
 	}

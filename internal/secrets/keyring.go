@@ -56,6 +56,24 @@ func ProbeKeyring(getenv func(string) string, overSSH bool) bool {
 	return probeKeyringWith(time.Second*2, keyring.Set, keyring.Get, keyring.Delete)
 }
 
+// KeyringSkipReason says why ProbeKeyring does not even try the OS
+// keyring here ("no D-Bus session", "over SSH", "not on Android"), or ""
+// when it would try.
+func KeyringSkipReason(getenv func(string) string, overSSH bool) string {
+	if getenv == nil {
+		getenv = os.Getenv
+	}
+	switch {
+	case runtime.GOOS == "android":
+		return "not on Android"
+	case runtime.GOOS == "linux" && getenv("DBUS_SESSION_BUS_ADDRESS") == "":
+		return "no D-Bus session"
+	case !overSSH && getenv("SSH_CONNECTION") != "":
+		return "over SSH"
+	}
+	return ""
+}
+
 func probeKeyringWith(timeout time.Duration, set func(string, string, string) error, get func(string, string) (string, error), del func(string, string) error) bool {
 	var nonce [8]byte
 	if _, err := rand.Read(nonce[:]); err != nil {

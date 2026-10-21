@@ -115,6 +115,15 @@ func (a *ageFile) Set(name, value string) error {
 	return a.change(func(m map[string]string) { m[name] = value })
 }
 
+// setMany writes several values with one encryption (migration).
+func (a *ageFile) setMany(values map[string]string) error {
+	return a.change(func(m map[string]string) {
+		for k, v := range values {
+			m[k] = v
+		}
+	})
+}
+
 func (a *ageFile) Delete(name string) error {
 	return a.change(func(m map[string]string) { delete(m, name) })
 }

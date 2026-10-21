@@ -28,6 +28,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Lock Secrets | `secrets-lock` |   |   |
 | AI: MCP Servers… | `ai-mcp-servers` |   |   |
 | AI: MCP: Show Log | `ai-mcp-log` |   |   |
+| AI: Move Secrets to a Safer Store… | `secrets-migrate` |   |   |
 | AI: New Chat | `ai-new-chat` |   |   |
 | AI: New Profile from Current… | `ai-profile-new` |   |   |
 | AI: Next Profile | `ai-profile-next` | `Alt+Shift+P` | `Alt+Shift+P` |

@@ -116,6 +116,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.onAIProfileSaveChoice(id), true
 	case confirmKindSecretForget: // secrets_store_ui.go
 		return m.answerSecretForget(id), true
+	case confirmKindSecretsMigrate: // secrets_migrate.go
+		return m.answerSecretsMigrate(id), true
 	case confirmKindRegistryRemember: // containers_registries.go
 		return m.answerRegistryRemember(id), true
 	}
@@ -135,6 +137,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.onAIProfileSaveChoice("cancel")
 	case confirmKindSecretForget:
 		return m.answerSecretForget("cancel")
+	case confirmKindSecretsMigrate:
+		return m.secretsMigrateClosed() // Esc: ask later
 	case confirmKindRegistryRemember:
 		return m.registryPromptClosed()
 	}

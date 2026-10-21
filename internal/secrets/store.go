@@ -244,7 +244,9 @@ func (s *store) Get(name string) (string, bool, error) {
 		return "", false, err
 	}
 	var v string
-	if e, ok := idx.Entries[name]; ok && e.Kind == KindRef {
+	if e, ok := idx.Entries[name]; ok && e.Kind == KindPublic {
+		return e.Value, true, nil // not a secret: never registered
+	} else if ok && e.Kind == KindRef {
 		r, err := ParseRef(e.Ref)
 		if err != nil {
 			return "", false, fmt.Errorf("%s: %w", name, err)
@@ -281,16 +283,100 @@ func (s *store) Set(name, value string) error {
 		return ErrLocked
 	}
 	e := Entry{Kind: KindValue, Backend: s.b.Name(), Updated: clock.Now().UTC()}
-	if isRef {
+	switch {
+	case isRef:
 		// A reference replaces a stored value: the value leaves the backend.
 		if err := s.b.Delete(name); err != nil {
 			return err
 		}
 		e = Entry{Kind: KindRef, Ref: ref.String(), Updated: e.Updated}
-	} else if err := s.b.Set(name, value); err != nil {
-		return err
+	case s.public(name):
+		if err := s.dropStoredValue(name); err != nil {
+			return err
+		}
+		e = Entry{Kind: KindPublic, Value: value, Updated: e.Updated}
+	default:
+		if err := s.b.Set(name, value); err != nil {
+			return err
+		}
 	}
 	return updateIndex(s.indexPath, func(i *Index) { i.Entries[name] = e })
+}
+
+// PublicName reports a name whose value is not secret (an MCP account
+// label, "mcp.account.<server>"). Outside the plain backend it is kept
+// in the index, not in the keyring or the encrypted file.
+func PublicName(name string) bool { return strings.HasPrefix(name, "mcp.account.") }
+
+// public: name is kept in the index by this store. The plain backend
+// keeps the old file shape, which older binaries read.
+func (s *store) public(name string) bool {
+	return PublicName(name) && s.b.Name() != "plain"
+}
+
+// dropStoredValue removes a value an earlier version kept in the
+// backend for a name that now lives in the index (one write, only when
+// the index says the backend has it).
+func (s *store) dropStoredValue(name string) error {
+	idx, err := loadIndex(s.indexPath)
+	if err != nil {
+		return err
+	}
+	if e, ok := idx.Entries[name]; ok && e.Kind == KindValue {
+		return s.b.Delete(name)
+	}
+	return nil
+}
+
+// batchSetter is a backend that writes many values at once (the age
+// file: one scrypt run instead of one per name).
+type batchSetter interface {
+	setMany(values map[string]string) error
+}
+
+// setAll writes values (no references) with one backend write where the
+// backend allows it and one index write.
+func (s *store) setAll(values map[string]string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.b.Locked() {
+		return ErrLocked
+	}
+	now := clock.Now().UTC()
+	stored := map[string]string{}
+	entries := map[string]Entry{}
+	for n, v := range values {
+		if s.public(n) {
+			if err := s.dropStoredValue(n); err != nil {
+				return err
+			}
+			entries[n] = Entry{Kind: KindPublic, Value: v, Updated: now}
+			continue
+		}
+		stored[n] = v
+		entries[n] = Entry{Kind: KindValue, Backend: s.b.Name(), Updated: now}
+	}
+	if bs, ok := s.b.(batchSetter); ok && len(stored) > 0 {
+		if err := bs.setMany(stored); err != nil {
+			return err
+		}
+	} else {
+		names := make([]string, 0, len(stored))
+		for n := range stored {
+			names = append(names, n)
+		}
+		sort.Strings(names)
+		for _, n := range names {
+			if err := s.b.Set(n, stored[n]); err != nil {
+				return err
+			}
+		}
+	}
+	return updateIndex(s.indexPath, func(i *Index) {
+		for n, e := range entries {
+			i.Entries[n] = e
+		}
+	})
 }
 
 func (s *store) Delete(name string) error {

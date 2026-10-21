@@ -415,6 +415,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, tea.Batch(m.handleClonePromptClose(), m.extOverlayClosed(), m.secretsPromptClosed())
 	case secretsUnlockDoneMsg:
 		return m, m.onSecretsUnlockDone(msg)
+	case secretsMigrateCheckMsg: // secrets_migrate.go
+		return m, m.onSecretsMigrateCheck(msg)
+	case secretsMigrateDoneMsg:
+		return m, m.onSecretsMigrateDone(msg)
 	// ── Group G: background clone (git_clone.go) ──
 	case cloneProgressMsg:
 		return m, m.handleCloneProgress(msg)

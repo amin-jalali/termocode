@@ -95,3 +95,29 @@ func TestProbeKeyringChecksReadBack(t *testing.T) {
 		t.Fatal("mismatched keyring answered")
 	}
 }
+
+func TestKeyringSkipReason(t *testing.T) {
+	env := func(m map[string]string) func(string) string { return func(k string) string { return m[k] } }
+	bus := map[string]string{"DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/1/bus"}
+	ssh := map[string]string{"DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/1/bus", "SSH_CONNECTION": "1 2 3 4"}
+	switch runtime.GOOS {
+	case "linux":
+		if got := KeyringSkipReason(env(nil), false); got != "no D-Bus session" {
+			t.Errorf("no bus: %q", got)
+		}
+	case "android":
+		if got := KeyringSkipReason(env(bus), false); got != "not on Android" {
+			t.Errorf("android: %q", got)
+		}
+		return
+	}
+	if got := KeyringSkipReason(env(bus), false); got != "" {
+		t.Errorf("desktop: %q", got)
+	}
+	if got := KeyringSkipReason(env(ssh), false); got != "over SSH" {
+		t.Errorf("ssh: %q", got)
+	}
+	if got := KeyringSkipReason(env(ssh), true); got != "" {
+		t.Errorf("ssh allowed: %q", got)
+	}
+}

@@ -180,6 +180,7 @@ func secretsPaletteItems() []picker.Item {
 		{ID: "secrets-unlock", Title: "AI: Unlock Secrets"},
 		{ID: "secrets-lock", Title: "AI: Lock Secrets"},
 		{ID: "secrets-store", Title: "AI: Secret Store…"},
+		{ID: "secrets-migrate", Title: "AI: Move Secrets to a Safer Store…"},
 	}
 }
 
@@ -191,6 +192,13 @@ type secretsState struct {
 	first      []byte // creating: the first entry until it is typed again
 	busy       bool   // an Unlock runs off the UI goroutine
 	forgetName string // the name the forget card asks about
+	// The move from the plain file (secrets_migrate.go): migrating sends
+	// the passphrase to the move instead of an unlock; migrateAsked marks
+	// the card shown at start (its Esc counts as "later");
+	// finishPending finishes a cut-off move after the next unlock.
+	migrating     bool
+	migrateAsked  bool
+	finishPending bool
 	// after runs once the store is unlocked (the step that needed it).
 	after func(*Model) tea.Cmd
 }
@@ -239,6 +247,8 @@ func (m *Model) dispatchSecretsPalette(id string) (tea.Cmd, bool) {
 		return m.secretsLock(), true
 	case "secrets-store":
 		return m.openSecretsStore(), true
+	case "secrets-migrate":
+		return m.secretsMigratePalette(), true
 	}
 	return nil, false
 }
@@ -380,7 +390,7 @@ func (m *Model) handleSecretsPromptSubmit(value string) (tea.Cmd, bool) {
 	}
 	pass := []byte(value)
 	if !st.creating {
-		return m.secretsUnlockCmd(pass), true
+		return m.secretsPassEntered(pass), true
 	}
 	if st.first == nil {
 		st.first = pass
@@ -398,7 +408,7 @@ func (m *Model) handleSecretsPromptSubmit(value string) (tea.Cmd, bool) {
 		m.openSecretsPrompt("The two passphrases differ. Choose one again.")
 		return nil, true
 	}
-	return m.secretsUnlockCmd(pass), true
+	return m.secretsPassEntered(pass), true
 }
 
 // secretsPromptClosed is Esc in the passphrase prompt: nothing is kept.
@@ -410,6 +420,7 @@ func (m *Model) secretsPromptClosed() tea.Cmd {
 	st := m.secretsS()
 	st.forgetFirst()
 	st.after = nil
+	st.migrating = false
 	return nil
 }
 
@@ -449,6 +460,9 @@ func (m *Model) onSecretsUnlockDone(msg secretsUnlockDoneMsg) tea.Cmd {
 		cmds := []tea.Cmd{m.secretsToast(toast.Info, title, "Kept while termocode runs · F1 → AI: Lock Secrets")}
 		if after != nil {
 			cmds = append(cmds, after(m))
+		}
+		if st.finishPending { // a cut-off move (secrets_migrate.go)
+			cmds = append(cmds, m.secretsFinishMove())
 		}
 		return tea.Batch(cmds...)
 	case errors.Is(msg.err, secrets.ErrWrongPassphrase):

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/keymap"
@@ -130,12 +131,13 @@ type welcomeKey struct {
 	profile     int
 	logo        string
 	setup       string // the setup card's signature ("" = not shown)
+	secretsNote bool   // the move-your-secrets line (secrets_migrate.go)
 }
 
 func newWelcomeKey(w, h, focus int, focused bool) welcomeKey {
 	return welcomeKey{w: w, h: h, focus: focus, focused: focused, theme: theme.Hex(theme.BgEditor) + theme.Hex(theme.BorderFocus),
 		cfg: os.Getenv("XDG_CONFIG_HOME"), icons: theme.CurrentIconMode, profile: int(theme.Profile()), logo: dashboardLogo,
-		setup: welcomeSetup.sig}
+		setup: welcomeSetup.sig, secretsNote: welcomeSecretsNote}
 }
 
 // welcomeHits are the click areas of one welcome render. They are
@@ -279,6 +281,9 @@ type welcomeData struct {
 	card       setupCardView
 	recents    []RecentEntry
 	workspaces []WorkspaceEntry
+	// secretsNote: the secrets are still in the plain file and the card
+	// was put off three times (secrets_migrate.go).
+	secretsNote bool
 }
 
 // welcomeColumn is the content column: width W and left pad in a pane
@@ -299,7 +304,8 @@ func renderWelcomeHits(w, h, focusIdx int, focused bool) (string, welcomeHits) {
 		welcomeLogoAt = welcomeLogoRect{}
 		return "", welcomeHits{}
 	}
-	d := welcomeData{actions: welcomeQuickActions(), card: welcomeSetup, recents: loadRecents(), workspaces: loadWorkspaces()}
+	d := welcomeData{actions: welcomeQuickActions(), card: welcomeSetup, recents: loadRecents(), workspaces: loadWorkspaces(),
+		secretsNote: welcomeSecretsNote}
 	W, _ := welcomeColumn(w)
 	pixelOK := dashboardLogo != "off" && h >= welcomePixelMinH && welcomeLogo(W) != nil
 	var lines []string
@@ -478,6 +484,12 @@ func renderWelcomePage(w, h, focusIdx int, focused bool, lay welcomeLayout, d we
 			hits.workspaces = append(hits.workspaces, welcomeWorkspaceHit{Row: len(lines), Path: path, ColStart: leftPad, ColEnd: leftPad + W})
 			add(renderWelcomeRow(r, W, row(r.id)))
 		}
+	}
+
+	// ── The secrets note (one line, only with the hint bar) ───────────
+	if lay.hint && d.secretsNote {
+		gap()
+		add(theme.FgBg(theme.TextMuted, theme.BgEditor).Render(ansi.Truncate(welcomeSecretsNoteText, W, "…")))
 	}
 
 	// ── Hint bar ──────────────────────────────────────────────────────

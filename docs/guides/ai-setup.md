@@ -43,6 +43,44 @@ it is locked, and one row per saved name with `value` or its reference
 With the keyring or the encrypted file, **Open Config: AI Credentials**
 opens this screen, because there is no file to edit. The AI can not open it.
 
+### Move secrets out of the plain file
+
+Older versions kept every secret in the plain file
+`~/.config/termocode/ai/credentials.json`. If you still have it, termocode
+asks once at start: **Move your secrets to a safer store?** The card counts
+what it found (for example `2 AI keys · Claude sign-in · 1 MCP secret`). It
+never shows a value.
+
+- **OS keyring** (offered when one answers): no passphrase.
+- **Encrypted file**: you type a new passphrase twice. The secrets go to
+  `secrets.age`.
+- **Keep plain**: sets `secret_store: plain`. The card does not come back.
+- `Esc`: ask later. After three times the card stops, and the Welcome page
+  shows one line: `F1 → AI: Move Secrets to a Safer Store…`.
+
+The card says why the keyring is not offered, for example "no D-Bus
+session" over SSH.
+
+What happens:
+
+1. termocode copies every secret to the new store.
+2. It reads each one back and compares it.
+3. Only then it overwrites `credentials.json` with zeros, deletes it and
+   writes the empty marker `ai/credentials.json.migrated`.
+
+A toast says *Secrets moved · credentials.json removed*. If a step fails,
+`credentials.json` stays as it was and termocode keeps using it. If termocode
+stops in the middle, the next start checks the new store and finishes the
+delete without asking (the encrypted file after you unlock it).
+
+While the marker exists, termocode does not ask again. Run
+**AI: Move Secrets to a Safer Store…** from `F1` any time the plain file is
+in use. The AI can not run it.
+
+!!! note "Older termocode versions"
+    An older termocode does not know the new store. After the move it finds
+    no `credentials.json` and shows AI as not configured.
+
 To change the model later, run **AI: Pick Model…**. To turn AI off, run
 **AI: Configure Provider…** and pick **None**.
 
@@ -120,6 +158,7 @@ link). You sign in, copy the code, and paste it back. Run
 | **AI: Configure Provider…** | Pick a provider and enter a key |
 | **AI: Pick Model…** | Change the model |
 | **AI: Secret Store…** | List and forget saved secrets, lock or unlock |
+| **AI: Move Secrets to a Safer Store…** | Move `credentials.json` to the OS keyring or the encrypted file |
 | **Open Config: AI Credentials** | Open `credentials.json` (the secret store screen for the keyring or encrypted file) |
 | Click the `✦` badge in the status bar | Configure (when AI is off) |
 

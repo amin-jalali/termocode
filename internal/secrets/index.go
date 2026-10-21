@@ -13,6 +13,9 @@ import (
 const (
 	KindValue = "value" // the value is in the backend
 	KindRef   = "ref"   // Ref is resolved on use; nothing in the backend
+	// KindPublic is a value that is not secret (an MCP account label):
+	// it is kept in the index itself (Value), never in the backend.
+	KindPublic = "public"
 )
 
 // Index is secrets.json: names, kinds and references. It never holds a
@@ -21,12 +24,16 @@ type Index struct {
 	Version int              `json:"version"`
 	Backend string           `json:"backend,omitempty"`
 	Entries map[string]Entry `json:"entries"`
+	// MigrateLater counts the times the user answered the migration card
+	// with "later" (Esc); after three it is not shown again.
+	MigrateLater int `json:"migrate_later,omitempty"`
 }
 
 // Entry is one secret's non-secret facts.
 type Entry struct {
 	Kind    string    `json:"kind"`
 	Ref     string    `json:"ref,omitempty"`
+	Value   string    `json:"value,omitempty"` // KindPublic only
 	Backend string    `json:"backend,omitempty"`
 	Updated time.Time `json:"updated"`
 }

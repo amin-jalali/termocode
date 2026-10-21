@@ -387,6 +387,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"secrets-unlock": aiNever(aiNoAIConfig),
 	"secrets-lock":   aiNever(aiNoAIConfig),
 	"secrets-store":  aiNever(aiNoAIConfig),
+	// Moving secrets out of the plain file is the user's (U19 SS-4).
+	"secrets-migrate": aiNever(aiNoAIConfig),
 	// Agent profiles (U20 AP-5): the model may suggest a profile (the
 	// user confirms the switch); editing and trusting stay with the user.
 	"ai-profile-switch": aiConfirm(ai.ClassSettings),

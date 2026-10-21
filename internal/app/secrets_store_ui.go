@@ -87,6 +87,8 @@ func (m *Model) openSecretsStore() tea.Cmd {
 				hint = ai.Redact(sanitizeOutputLine(e.Ref))
 			case e.Kind == secrets.KindValue:
 				hint = "value"
+			case e.Kind == secrets.KindPublic:
+				hint = "not secret"
 			}
 		}
 		items = append(items, picker.Item{ID: secretRowPrefix + n, Title: sanitizeOutputLine(n), Hint: hint})
