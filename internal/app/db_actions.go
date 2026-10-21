@@ -467,6 +467,9 @@ func (m *Model) databaseOpen(id string, test bool) tea.Cmd {
 			return nil
 		}
 	}
+	if databaseNeedsUnlock(databaseSecretStore(), c) {
+		return m.withSecretsUnlocked(func(m *Model) tea.Cmd { return m.databaseOpen(id, test) })
+	}
 	password := ""
 	if strings.HasPrefix(c.Password, "${dotenv:") && strings.HasSuffix(c.Password, "}") {
 		name := strings.TrimSuffix(strings.TrimPrefix(c.Password, "${dotenv:"), "}")
@@ -497,7 +500,7 @@ func (m *Model) databaseOpen(id string, test bool) tea.Cmd {
 				_ = store.Set("db."+id, password)
 			}
 		}
-		if password == "" {
+		if password == "" && !store.Locked() {
 			if value, ok, err := store.Get("db." + id); err != nil {
 				n := s.nodes[id]
 				n.problem = sanitizeDBText(err.Error())
@@ -527,6 +530,35 @@ func (m *Model) databaseOpen(id string, test bool) tea.Cmd {
 	s.nodes[id] = n
 	s.touch()
 	return s.connectionCommand(id, dbConnectCommand(c, s.root, password, generation, sec))
+}
+
+// databaseSecretNames are the store names a connection may read: its
+// password, its SSH password or key passphrase, and a ${secret:NAME}.
+func databaseSecretNames(c dbclient.Conn) []string {
+	names := []string{"db." + c.ID, dbSSHSecretName(c.ID, "password"), dbSSHSecretName(c.ID, "passphrase")}
+	if strings.HasPrefix(c.Password, "${secret:") {
+		names = append(names, strings.TrimSuffix(strings.TrimPrefix(c.Password, "${secret:"), "}"))
+	}
+	return names
+}
+
+// databaseNeedsUnlock reports a locked store that holds one of the
+// connection's secrets. The index answers (no passphrase needed), so a
+// connection with nothing saved, like a SQLite file, never asks.
+func databaseNeedsUnlock(store secrets.Store, c dbclient.Conn) bool {
+	if store == nil || !store.Locked() {
+		return false
+	}
+	saved := map[string]bool{}
+	for _, n := range store.Names() {
+		saved[n] = true
+	}
+	for _, n := range databaseSecretNames(c) {
+		if saved[n] {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *dbState) connection(id string) (dbclient.Conn, bool) {

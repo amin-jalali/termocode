@@ -204,6 +204,9 @@ func dbAIPassword(root string, c dbclient.Conn) (string, error) {
 	}
 	pw := ""
 	store := databaseSecretStore()
+	if databaseNeedsUnlock(store, c) {
+		return "", errors.New("the secret store is locked; ask the user to unlock it (F1 → AI: Unlock Secrets)")
+	}
 	switch {
 	case strings.HasPrefix(c.Password, "${dotenv:") && strings.HasSuffix(c.Password, "}"):
 		name := strings.TrimSuffix(strings.TrimPrefix(c.Password, "${dotenv:"), "}")
@@ -233,7 +236,7 @@ func dbAIPassword(root string, c dbclient.Conn) (string, error) {
 			return "", errors.New("could not resolve the password reference")
 		}
 	}
-	if pw == "" && store != nil && !strings.HasPrefix(c.Password, "${dotenv:") {
+	if pw == "" && store != nil && !store.Locked() && !strings.HasPrefix(c.Password, "${dotenv:") {
 		v, ok, err := store.Get("db." + c.ID)
 		if err != nil {
 			return "", errors.New("could not read the password from the secret store")
