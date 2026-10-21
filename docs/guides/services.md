@@ -204,6 +204,34 @@ asks before pruning. Volume pruning lists only anonymous dangling volumes;
 named volumes are kept. On VOLUMES, `d` reads disk usage once and fills in the
 reported sizes. Disk usage is not queried in the background.
 
+## Pruning
+
+Pruning always asks first. Every prune card names what goes (counts from the
+last list), the exact command, and has one red `Prune` button. `Esc` or
+`Cancel` runs nothing. If a session context is set, the card names it; the
+command runs there.
+
+| Where | Command |
+|---|---|
+| CONTAINERS heading (`z` or right-click): stopped containers | `docker container prune -f` |
+| IMAGES heading: dangling images | `docker image prune -f` |
+| IMAGES heading: **Prune incl. unused images…** (a separate item) | `docker image prune -a -f` |
+| NETWORKS heading: unused networks | `docker network prune -f` |
+| VOLUMES heading: the card lists the anonymous dangling volumes first | `docker volume prune -f` |
+| `⋯` menu: **Prune system…** | `docker system prune -f` |
+
+System prune never adds the flag for all unused images or for volumes. Those
+are only on the IMAGES and VOLUMES headings. The palette has the same entries
+(**Containers: Prune Stopped Containers…**, **Prune Dangling Images…**,
+**Prune Networks…**, **Prune Volumes…**, **Prune System…**).
+
+When it works, a toast shows what the engine reported: `Pruned · reclaimed
+1.2GB`, and the affected sections list again. When it fails, the toast shows
+the engine's own error. Every prune has a two minute limit.
+
+The AI cannot prune: there is no tool, and every prune palette command is
+closed to it.
+
 ## Contexts and engine choice
 
 CONTEXTS lists your Docker contexts: `◉ default`, `◦ prod`. The endpoint

@@ -83,6 +83,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Pause or Unpause Selected | `containers-pause` |   |   |
 | Containers: Prune Dangling Images… | `containers-image-prune` |   |   |
 | Containers: Prune Networks… | `containers-network-prune` |   |   |
+| Containers: Prune Stopped Containers… | `containers-prune` |   |   |
+| Containers: Prune System… | `containers-system-prune` |   |   |
 | Containers: Prune Volumes… | `containers-volume-prune` |   |   |
 | Containers: Pull Image… | `containers-image-pull` |   |   |
 | Containers: Push Selected Image… | `containers-image-push` |   |   |

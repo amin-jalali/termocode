@@ -136,6 +136,9 @@ func tooltipSpecFor(id string) (tooltipSpec, bool) {
 // tooltipLabel is the name and key of hit target id ("" name = none).
 func (m Model) tooltipLabel(id string) (name, key string) {
 	if strings.HasPrefix(id, "cont:sec:") {
+		if strings.Contains(id, "containers") {
+			return "Fold section · right-click to prune stopped containers", "Space · z"
+		}
 		if strings.Contains(id, "images") {
 			return "Image actions and dangling image cleanup", "u · P · p"
 		}

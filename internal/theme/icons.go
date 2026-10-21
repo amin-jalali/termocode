@@ -454,6 +454,9 @@ var (
 	GlyphStop          = Icon{NerdFont: "\uf04d", Unicode: "▪", ASCII: "#"} // nf-fa-stop
 	GlyphRefresh       = Icon{NerdFont: "\uf021", Unicode: "↻", ASCII: "R"} // nf-fa-refresh
 
+	// GlyphPrune — prune items of the Containers menus (plan §2.2).
+	GlyphPrune = Icon{NerdFont: "⊘", Unicode: "⊘", ASCII: "-"}
+
 	// GlyphContPaused — a paused container (containers plan §2.5).
 	GlyphContPaused = Icon{NerdFont: "ǁ", Unicode: "ǁ", ASCII: "\""} // U+01C1: ‖ is ambiguous-width
 	// HTTP client (rest-client plan 2.7): the lens' send mark, a request

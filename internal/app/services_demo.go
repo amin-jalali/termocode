@@ -180,6 +180,8 @@ func (m *Model) containersDemo(variant string) {
 				break
 			}
 		}
+	case "system-prune":
+		m.askPrune(pruneSystem)
 	case "image-prune":
 		for i, r := range st.rows() {
 			if r.kind == svcRowSection && r.section == hostSection("images") {

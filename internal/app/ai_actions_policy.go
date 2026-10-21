@@ -316,13 +316,15 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-image-history":     aiAuto(),
 	"containers-image-inspect":     aiAuto(),
 	"containers-image-remove":      aiDestructive(),
-	"containers-image-prune":       aiDestructive(),
+	"containers-prune":             aiNever("pruning containers is the user's; nothing is offered to the model"),
+	"containers-system-prune":      aiNever("pruning the system is the user's; nothing is offered to the model"),
+	"containers-image-prune":       aiNever("pruning images is the user's; nothing is offered to the model"),
 	"containers-network-create":    aiDestructive(),
 	"containers-network-remove":    aiDestructive(),
-	"containers-network-prune":     aiDestructive(),
+	"containers-network-prune":     aiNever("pruning networks is the user's; nothing is offered to the model"),
 	"containers-volume-create":     aiDestructive(),
 	"containers-volume-remove":     aiDestructive(),
-	"containers-volume-prune":      aiDestructive(),
+	"containers-volume-prune":      aiNever("pruning volumes is the user's; nothing is offered to the model"),
 	"containers-volume-disk-usage": aiAuto(),
 
 	// ── Tasks ──

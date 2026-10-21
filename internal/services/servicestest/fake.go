@@ -13,6 +13,7 @@
 //	up.code              exit code of `compose up`
 //	events.log           `docker events` follows it (PushEvent appends)
 //	sleep-<cmd>          `docker <cmd>` sleeps this many seconds first
+//	prune.out / .err     answer of `<kind> prune …` (stdout / stderr, exit 1)
 //	fail-<ctx>.err       every call except `context …` fails with this stderr
 //	                     while DOCKER_CONTEXT=<ctx> (an unreachable remote)
 //
@@ -44,6 +45,10 @@ printf '%s|%s\n' "${DOCKER_CONTEXT-}" "$*" >> "$D/ctx.log"
 if [ -n "${DOCKER_CONTEXT-}" ] && [ "$1" != "context" ] && [ -f "$D/fail-$DOCKER_CONTEXT.err" ]; then cat "$D/fail-$DOCKER_CONTEXT.err" >&2; exit 1; fi
 if [ -f "$D/all.err" ]; then cat "$D/all.err" >&2; exit "$(cat "$D/all.code" 2>/dev/null || echo 1)"; fi
 if [ -f "$D/sleep-$1" ]; then sleep "$(cat "$D/sleep-$1")"; fi
+if [ "$2" = "prune" ]; then
+  if [ -f "$D/prune.err" ]; then cat "$D/prune.err" >&2; exit 1; fi
+  cat "$D/prune.out" 2>/dev/null; exit 0
+fi
 if [ "$1" = "events" ]; then
   echo $$ > "$D/events.pid"
   touch "$D/events.log"

@@ -83,10 +83,17 @@ func TestAIActionPolicyRules(t *testing.T) {
 	for _, id := range []string{"containers-start", "containers-stop", "containers-restart", "containers-pause",
 		"containers-compose-up", "containers-compose-stop", "containers-compose-restart",
 		"containers-image-pull", "containers-image-push", "containers-image-tag", "containers-image-run",
-		"containers-image-remove", "containers-image-prune", "containers-network-create", "containers-network-remove",
-		"containers-network-prune", "containers-volume-create", "containers-volume-remove", "containers-volume-prune"} {
+		"containers-image-remove", "containers-network-create", "containers-network-remove",
+		"containers-volume-create", "containers-volume-remove"} {
 		if p := aiActionPolicies[id]; p.Gate != aiGateConfirm || p.Class != "" {
 			t.Errorf("%s: %+v, want confirm with no auto-approve class", id, p)
+		}
+	}
+	// Pruning is the user's: never, with a reason (containers plan CP-8).
+	for _, id := range []string{"containers-prune", "containers-image-prune", "containers-network-prune",
+		"containers-volume-prune", "containers-system-prune"} {
+		if p := aiActionPolicies[id]; p.Gate != aiGateNever || p.Reason == "" {
+			t.Errorf("%s: %+v, want never with a reason", id, p)
 		}
 	}
 	// The user's pending edits and transaction are never the AI's (DB-7).

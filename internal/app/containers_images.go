@@ -23,6 +23,7 @@ type imagePageMsg struct {
 
 type hostActionDoneMsg struct {
 	operation, section, target string
+	output                     string // stdout of a prune: the reclaimed text
 	err                        error
 }
 
@@ -118,22 +119,7 @@ func (m *Model) askImageRemoveRef(im containers.Image, ref string) tea.Cmd {
 	return nil
 }
 
-func (m *Model) askImagePrune() {
-	args := []string{m.services.containerEngine.Binary, "image", "prune", "-f"}
-	count := 0
-	for _, image := range m.services.imageRows {
-		if len(image.RepoTags) == 0 || (len(image.RepoTags) == 1 && image.RepoTags[0] == "<none>:<none>") {
-			count++
-		}
-	}
-	body := fmt.Sprintf("Only unused dangling images are removed. Tagged images are kept. Current list: %d dangling.", count)
-	m.confirm = confirm.New("Remove dangling images?", body+"\n\nCommand: "+svcShellLine(args), []confirm.Button{
-		{ID: "cancel", Title: "Cancel"}, {ID: "prune", Title: "Prune", Style: confirm.StyleDestructive},
-	})
-	m.confirm.SetSize(m.w, m.h)
-	m.confirmOpen, m.confirmKind = true, confirmKindContainerHostAction
-	m.pendingHostArgs, m.pendingHostOperation, m.pendingHostTarget = args, "prune-images", "images"
-}
+func (m *Model) askImagePrune() { m.showPrune(pruneImages, nil) }
 
 func (m *Model) askImageRun(ref string) {
 	m.pendingImageRef = ref
@@ -325,11 +311,11 @@ func (m *Model) runHostAction(id string) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
-		_, stderr, code, err := execFor.Capture(ctx, "", args...)
+		stdout, stderr, code, err := execFor.Capture(ctx, "", args...)
 		if err == nil && code != 0 {
 			err = fmt.Errorf("%s", errLine(stderr))
 		}
-		return hostActionDoneMsg{operation: operation, section: section, target: strings.Join(args[1:], " "), err: err}
+		return hostActionDoneMsg{operation: operation, section: section, target: strings.Join(args[1:], " "), output: string(stdout), err: err}
 	}
 }
 
@@ -344,20 +330,20 @@ func (m *Model) onHostActionDone(msg hostActionDoneMsg) tea.Cmd {
 			title = "Could not tag image"
 		case "remove-image":
 			title = "Could not remove image"
-		case "prune-images":
-			title = "Could not prune images"
 		case "remove-storage":
 			title = "Could not remove item"
-		case "prune-networks":
-			title = "Could not prune networks"
-		case "prune-volumes":
-			title = "Could not prune volumes"
 		case "create-network":
 			title = "Could not create network"
 		case "create-volume":
 			title = "Could not create volume"
 		}
+		if kind, ok := strings.CutPrefix(msg.operation, "prune-"); ok {
+			title = "Could not prune " + strings.ReplaceAll(kind, "-all", " (incl. unused)")
+		}
 		return m.servicesToast(toast.Errr, title, errLine(msg.err.Error()))
+	}
+	if strings.HasPrefix(msg.operation, "prune-") {
+		return m.onPruneDone(msg)
 	}
 	if msg.operation == "tag" {
 		return tea.Batch(m.servicesToast(toast.Info, "Image tagged", msg.target), m.containersRefresh("images"))

@@ -23,7 +23,7 @@ func TestGlyphTable(t *testing.T) {
 		// Services view (services panel plan §2.2).
 		"svc-up": GlyphSvcUp, "svc-bad": GlyphSvcBad, "svc-starting": GlyphSvcStarting,
 		"svc-restarting": GlyphSvcRestarting, "svc-stopped": GlyphSvcStopped, "svc-exited": GlyphSvcExited,
-		"svc-unknown": GlyphSvcUnknown, "cont-paused": GlyphContPaused, "start": GlyphStart, "stop": GlyphStop, "refresh": GlyphRefresh,
+		"svc-unknown": GlyphSvcUnknown, "cont-paused": GlyphContPaused, "start": GlyphStart, "stop": GlyphStop, "refresh": GlyphRefresh, "prune": GlyphPrune,
 		// Terminal tabs: the Fix chip and the CLI agent marks (U9b, U8).
 		"ai": GlyphAI, "agent-working": GlyphAgentWorking,
 		"agent-waiting": GlyphAgentWaiting, "agent-done": GlyphAgentDone,

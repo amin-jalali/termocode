@@ -859,7 +859,7 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 				}
 				return l1, "space fold · R refresh"
 			}
-			return "containers on this machine", "space fold · R refresh"
+			return "containers on this machine", "z prune stopped · space fold · R refresh"
 		case "images":
 			return "images on this machine", "u pull · z prune dangling · R refresh"
 		case "registries":

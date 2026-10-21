@@ -1061,7 +1061,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `containers-focus` | Containers: Focus | auto |   |
 | `containers-image-history` | Containers: Show Image History | auto |   |
 | `containers-image-inspect` | Containers: Inspect Image | auto |   |
-| `containers-image-prune` | Containers: Prune Dangling Images… | confirm (always asks) |   |
+| `containers-image-prune` | Containers: Prune Dangling Images… | never | pruning images is the user's; nothing is offered to the model |
 | `containers-image-pull` | Containers: Pull Image… | confirm (always asks) |   |
 | `containers-image-push` | Containers: Push Selected Image… | confirm (always asks) |   |
 | `containers-image-remove` | Containers: Remove Selected Image… | confirm (always asks) |   |
@@ -1070,11 +1070,12 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `containers-inspect` | Containers: Inspect | auto |   |
 | `containers-logs` | Containers: Follow Logs | auto |   |
 | `containers-network-create` | Containers: Create Network… | confirm (always asks) |   |
-| `containers-network-prune` | Containers: Prune Networks… | confirm (always asks) |   |
+| `containers-network-prune` | Containers: Prune Networks… | never | pruning networks is the user's; nothing is offered to the model |
 | `containers-network-remove` | Containers: Remove Selected Network… | confirm (always asks) |   |
 | `containers-open-databases` | Containers: Open in Databases | never | opens a picker or prompt that only the user can answer; use a typed tool (db_connections) |
 | `containers-open-port` | Containers: Open Published Port | auto |   |
 | `containers-pause` | Containers: Pause or Unpause Selected | confirm (always asks) |   |
+| `containers-prune` | Containers: Prune Stopped Containers… | never | pruning containers is the user's; nothing is offered to the model |
 | `containers-refresh` | Containers: Refresh | auto |   |
 | `containers-remove` | Containers: Remove Selected… | never | container removal requires the user's confirm card |
 | `containers-restart` | Containers: Restart Selected | confirm (always asks) |   |
@@ -1082,9 +1083,10 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `containers-start` | Containers: Start Selected | confirm (always asks) |   |
 | `containers-stats` | Containers: Follow Stats | auto |   |
 | `containers-stop` | Containers: Stop Selected | confirm (always asks) |   |
+| `containers-system-prune` | Containers: Prune System… | never | pruning the system is the user's; nothing is offered to the model |
 | `containers-volume-create` | Containers: Create Volume… | confirm (always asks) |   |
 | `containers-volume-disk-usage` | Containers: Read Volume Disk Usage | auto |   |
-| `containers-volume-prune` | Containers: Prune Volumes… | confirm (always asks) |   |
+| `containers-volume-prune` | Containers: Prune Volumes… | never | pruning volumes is the user's; nothing is offered to the model |
 | `containers-volume-remove` | Containers: Remove Selected Volume… | confirm (always asks) |   |
 | `copy-file-ref` | Copy: File:Line Reference | confirm (ide) |   |
 | `customize-keybindings` | Preferences: Customize Keybindings | never | opens a picker or prompt that only the user can answer; use a typed tool |

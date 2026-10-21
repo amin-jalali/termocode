@@ -113,62 +113,17 @@ type storagePrunePreviewMsg struct {
 	err     error
 }
 
-func (m *Model) askStoragePrune(section string) tea.Cmd {
-	if section == "volumes" {
-		e := m.services.containerEngine
-		return func() tea.Msg {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			rows, err := e.ListDanglingVolumes(ctx)
-			var names []string
-			if err == nil {
-				for _, volume := range rows {
-					if isAnonymousVolume(volume.Name) {
-						names = append(names, volume.Name)
-					}
-				}
-			}
-			return storagePrunePreviewMsg{section: section, volumes: names, err: err}
-		}
-	}
-	m.showStoragePrune(section, nil)
-	return nil
-}
+func (m *Model) askStoragePrune(section string) tea.Cmd { return m.askPrune(section) }
 
 func (m *Model) onStoragePrunePreview(msg storagePrunePreviewMsg) tea.Cmd {
 	if msg.err != nil {
 		return m.servicesToast(toast.Errr, "Cannot check dangling volumes", errLine(msg.err.Error()))
 	}
-	m.showStoragePrune(msg.section, msg.volumes)
+	m.showPrune(msg.section, msg.volumes)
 	return nil
 }
 
-func (m *Model) showStoragePrune(section string, volumes []string) {
-	verb := strings.TrimSuffix(section, "s")
-	args := []string{m.services.containerEngine.Binary, verb, "prune", "-f"}
-	body := "This removes unused " + section + ". The engine decides which are unused."
-	if section == "volumes" {
-		if m.services.containerEngine.Kind == "podman" {
-			body = "Podman may remove unused named volumes too. The list below shows only anonymous dangling volumes."
-		} else {
-			body = "Docker removes only anonymous dangling volumes with this command. Named volumes are kept."
-		}
-		if len(volumes) == 0 {
-			body += "\n\nNo anonymous dangling volumes were found."
-		} else {
-			wrapped := make([]string, 0, len(volumes))
-			for _, name := range volumes {
-				wrapped = append(wrapped, wrapStorageName(name, 32))
-			}
-			body += "\n\nAnonymous dangling volumes:\n" + strings.Join(wrapped, "\n")
-		}
-	}
-	body += "\n\nCommand: " + svcShellLine(args)
-	m.confirm = confirm.New("Prune "+section+"?", body, []confirm.Button{{ID: "cancel", Title: "Cancel"}, {ID: "prune", Title: "Prune", Style: confirm.StyleDestructive}})
-	m.confirm.SetSize(m.w, m.h)
-	m.confirmOpen, m.confirmKind = true, confirmKindContainerHostAction
-	m.pendingHostArgs, m.pendingHostOperation, m.pendingHostTarget = args, "prune-"+section, section
-}
+func (m *Model) showStoragePrune(section string, volumes []string) { m.showPrune(section, volumes) }
 
 func wrapStorageName(name string, width int) string {
 	if width < 1 || len(name) <= width {

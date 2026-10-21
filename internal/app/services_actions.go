@@ -744,12 +744,8 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, m.containerAction(verb, c)
 		}
 	case "z":
-		if have && r.kind == svcRowSection && (r.section == hostSection("images") || r.section == hostSection("networks") || r.section == hostSection("volumes")) {
-			if r.section == hostSection("images") {
-				m.askImagePrune()
-				return m, nil
-			}
-			return m, m.askStoragePrune(strings.TrimPrefix(r.section, "host/"))
+		if have && r.kind == svcRowSection && (r.section == hostSection("containers") || r.section == hostSection("images") || r.section == hostSection("networks") || r.section == hostSection("volumes")) {
+			return m, m.askPrune(strings.TrimPrefix(r.section, "host/"))
 		}
 	case "S":
 		if c, ok := m.selectedContainer(); ok {
@@ -875,7 +871,8 @@ func (m *Model) openContainersSectionsMenu(selected string) {
 		items = append(items, menu.Item{ID: "section:" + section, Title: strings.ToUpper(section[:1]) + section[1:], Icon: icon})
 	}
 	items = append(items, menu.Item{Sep: true},
-		menu.Item{ID: "refresh", Title: "Refresh all", Hint: "R", Icon: theme.GlyphRefresh.String()})
+		menu.Item{ID: "refresh", Title: "Refresh all", Hint: "R", Icon: theme.GlyphRefresh.String()},
+		menu.Item{ID: "prune-system", Title: "Prune system…", Icon: theme.GlyphPrune.String()})
 	m.menu = menu.New(items, activity.Width+max(m.explorerWidth-26, 1), 2)
 	m.menu.SetScreenSize(m.w, m.h)
 	if selected != "" {
@@ -888,6 +885,9 @@ func (m *Model) handleContainersMenuSelect(id string) tea.Cmd {
 	st := m.services
 	if id == "refresh" {
 		return tea.Batch(m.servicesAction("refresh"), m.containersReloadAll())
+	}
+	if id == "prune-system" {
+		return m.askPrune(pruneSystem)
 	}
 	section, ok := strings.CutPrefix(id, "section:")
 	if !ok || !isContainerSection(section) {
@@ -1005,6 +1005,8 @@ func (m Model) handleServicesSidebarMouse(x, y int, t tea.MouseEventType) (Model
 			m.openContainerMenu(r, activityWidthX(x), y)
 		} else if r.kind == svcRowHostItem && r.host == hostContext {
 			m.openContextMenu(r, activityWidthX(x), y)
+		} else if r.kind == svcRowSection {
+			m.openSectionMenu(r, activityWidthX(x), y)
 		}
 		return m, nil
 	}
@@ -1080,6 +1082,9 @@ func (m *Model) openServicesMenu(r svcRow, x, y int) {
 // opened on.
 func (m *Model) handleServicesMenuSelect(id string) tea.Cmd {
 	r := m.services.menuRow
+	if r.kind == svcRowSection {
+		return m.handleSectionMenuSelect(id)
+	}
 	if r.kind == svcRowHostItem && r.host == hostContext {
 		return m.handleContextRowMenuSelect(id, r)
 	}
@@ -1148,6 +1153,7 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-image-history", Title: "Containers: Show Image History"},
 		{ID: "containers-image-inspect", Title: "Containers: Inspect Image"},
 		{ID: "containers-image-remove", Title: "Containers: Remove Selected Image…"},
+		{ID: "containers-prune", Title: "Containers: Prune Stopped Containers…"},
 		{ID: "containers-image-prune", Title: "Containers: Prune Dangling Images…"},
 		{ID: "containers-network-create", Title: "Containers: Create Network…"},
 		{ID: "containers-network-remove", Title: "Containers: Remove Selected Network…"},
@@ -1155,6 +1161,7 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-volume-create", Title: "Containers: Create Volume…"},
 		{ID: "containers-volume-remove", Title: "Containers: Remove Selected Volume…"},
 		{ID: "containers-volume-prune", Title: "Containers: Prune Volumes…"},
+		{ID: "containers-system-prune", Title: "Containers: Prune System…"},
 		{ID: "containers-volume-disk-usage", Title: "Containers: Read Volume Disk Usage"},
 		{ID: "containers-compose-up", Title: "Containers: Start Project"},
 		{ID: "containers-compose-stop", Title: "Containers: Stop Project"},
@@ -1189,6 +1196,9 @@ func containerAITargetRequired(id string) bool {
 }
 
 func (m *Model) dispatchContainerAIAction(id, target string) (tea.Cmd, error) {
+	if strings.HasSuffix(id, "-prune") {
+		return nil, fmt.Errorf("%s is not available to the model: pruning is the user's", id)
+	}
 	if target == "" {
 		return nil, fmt.Errorf("%s needs a named container, image, network, volume, or compose project", id)
 	}
@@ -1394,6 +1404,10 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 				if im, ref, ok := m.selectedImage(); ok {
 					return m.askImageRemoveRef(im, ref)
 				}
+			case "containers-prune":
+				return m.askPrune(pruneContainers)
+			case "containers-system-prune":
+				return m.askPrune(pruneSystem)
 			case "containers-image-prune":
 				m.askImagePrune()
 				return nil
