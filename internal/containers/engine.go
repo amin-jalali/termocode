@@ -25,6 +25,9 @@ type Engine struct {
 	X         services.Exec
 	Dir       string
 	Timeout   time.Duration
+	// Context is the per-session DOCKER_CONTEXT ("" = leave the
+	// environment alone). It never changes the user's global default.
+	Context string
 }
 
 // ErrorMessage explains why the host engine is unavailable.
@@ -53,6 +56,8 @@ type DetectOptions struct {
 	LookPath  func(string) (string, error)
 	Exec      services.Exec
 	Dir       string
+	Context   string
+	Timeout   time.Duration // per call; 0 = 10 s
 }
 
 // Detect selects docker before podman, then probes its version and daemon.
@@ -68,11 +73,15 @@ func Detect(ctx context.Context, opts DetectOptions) Engine {
 	if x == nil {
 		x = services.SpawnExec{}
 	}
+	// containers_engine: auto (docker, then podman) or one named engine.
 	names := []string{"docker", "podman"}
-	if opts.Preferred == "podman" {
-		names = []string{"podman", "docker"}
+	if opts.Preferred == "docker" || opts.Preferred == "podman" {
+		names = []string{opts.Preferred}
 	}
-	e := Engine{X: x, Dir: opts.Dir, Timeout: defaultTimeout}
+	e := Engine{X: x, Dir: opts.Dir, Timeout: defaultTimeout, Context: opts.Context}
+	if opts.Timeout > 0 {
+		e.Timeout = opts.Timeout
+	}
 	for _, name := range names {
 		path, err := lp(name)
 		if err == nil {
@@ -118,6 +127,18 @@ func (e *Engine) capture(parent context.Context, args ...string) (string, string
 	return e.captureTimeout(parent, e.Timeout, args...)
 }
 
+// exec is X with DOCKER_CONTEXT set when the session uses a context.
+func (e *Engine) exec() services.Exec {
+	x := e.X
+	if x == nil {
+		x = services.SpawnExec{}
+	}
+	if e.Context != "" && e.Kind != "podman" {
+		x = services.WithEnv(x, "DOCKER_CONTEXT="+e.Context)
+	}
+	return x
+}
+
 func (e *Engine) captureTimeout(parent context.Context, timeout time.Duration, args ...string) (string, string, int, error) {
 	d := timeout
 	if d <= 0 {
@@ -125,11 +146,7 @@ func (e *Engine) captureTimeout(parent context.Context, timeout time.Duration, a
 	}
 	ctx, cancel := context.WithTimeout(parent, d)
 	defer cancel()
-	x := e.X
-	if x == nil {
-		x = services.SpawnExec{}
-	}
-	return x.Capture(ctx, e.Dir, append([]string{e.Binary}, args...)...)
+	return e.exec().Capture(ctx, e.Dir, append([]string{e.Binary}, args...)...)
 }
 
 func (e *Engine) run(ctx context.Context, args ...string) error {
@@ -174,10 +191,7 @@ func parseList[T any](ctx context.Context, e *Engine, args []string, parse func(
 // cancellation or stream termination; cancel always stops and waits for it.
 func (e *Engine) Watch(ctx context.Context) (<-chan Event, func(), error) {
 	watchCtx, cancel := context.WithCancel(ctx)
-	x := e.X
-	if x == nil {
-		x = services.SpawnExec{}
-	}
+	x := e.exec()
 	args := []string{e.Binary, "events", "--format", "{{json .}}"}
 	out, stop, err := x.Stream(watchCtx, e.Dir, args...)
 	if err != nil {

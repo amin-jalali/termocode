@@ -311,6 +311,9 @@ func (m *Model) runHostAction(id string) tea.Cmd {
 	args := append([]string(nil), m.pendingHostArgs...)
 	operation, section := m.pendingHostOperation, m.pendingHostTarget
 	m.pendingHostArgs, m.pendingHostOperation, m.pendingHostTarget = nil, "", ""
+	if operation == "default-context" {
+		return m.runContextDefault()
+	}
 	if operation == "run-image" {
 		cmd := services.Command{Label: "run: " + m.pendingImageRef, Argv: args}
 		if err := m.servicesRunCommand(cmd, containerTabPrefix+"run:"+m.pendingImageRef); err != nil {
@@ -318,10 +321,11 @@ func (m *Model) runHostAction(id string) tea.Cmd {
 		}
 		return nil
 	}
+	execFor := m.services.hostExec()
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
-		_, stderr, code, err := servicesExec.Capture(ctx, "", args...)
+		_, stderr, code, err := execFor.Capture(ctx, "", args...)
 		if err == nil && code != 0 {
 			err = fmt.Errorf("%s", errLine(stderr))
 		}
@@ -330,6 +334,9 @@ func (m *Model) runHostAction(id string) tea.Cmd {
 }
 
 func (m *Model) onHostActionDone(msg hostActionDoneMsg) tea.Cmd {
+	if msg.operation == "default-context" {
+		return m.onContextDefaultDone(msg)
+	}
 	if msg.err != nil {
 		title := "Could not complete container action"
 		switch msg.operation {

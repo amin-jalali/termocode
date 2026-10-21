@@ -64,7 +64,11 @@ func svcShellLine(argv []string) string {
 
 // servicesRunCommand starts a visible services Command in a tab with key.
 func (m *Model) servicesRunCommand(c services.Command, key string) error {
-	_, err := m.spawnTerminalJob(terminalJob{Label: c.Label, Cmdline: svcShellLine(c.Argv), Dir: c.Dir, Service: key})
+	job := terminalJob{Label: c.Label, Cmdline: svcShellLine(c.Argv), Dir: c.Dir, Service: key}
+	if strings.HasPrefix(key, containerTabPrefix) && m.services != nil {
+		job.Env = m.services.contextEnv() // the session's DOCKER_CONTEXT
+	}
+	_, err := m.spawnTerminalJob(job)
 	return err
 }
 
@@ -399,10 +403,11 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 		}
 		st.touch()
 		cmd := st.containerEngine.ComposeWithFiles(project, dir, files, "down")
+		execFor := st.hostExec()
 		return func() tea.Msg {
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 			defer cancel()
-			_, stderr, code, err := servicesExec.Capture(ctx, cmd.Dir, cmd.Argv...)
+			_, stderr, code, err := execFor.Capture(ctx, cmd.Dir, cmd.Argv...)
 			if err == nil && code != 0 {
 				err = fmt.Errorf("%s", errLine(stderr))
 			}
@@ -416,7 +421,7 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 		}
 		return m.imagePush(ref), true
 	case confirmKindContainerHostAction:
-		if id != "run" && id != "remove" && id != "prune" && id != "create" {
+		if id != "run" && id != "remove" && id != "prune" && id != "create" && id != "use" {
 			return m.runHostAction("cancel"), true
 		}
 		return m.runHostAction(id), true
@@ -598,6 +603,9 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		m.servicesClampCursor()
 		st.touch()
 	case "enter", "l":
+		if name, ok := m.selectedContext(); ok {
+			return m, m.switchContext(name)
+		}
 		if _, ref, ok := m.selectedImage(); ok && k.String() == "enter" {
 			m.askImageRun(ref)
 			return m, nil
@@ -705,6 +713,9 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 		return m, m.servicesOpenSource(svcSecCompose, "")
 	case "y":
+		if name, ok := m.selectedContext(); ok {
+			return m, m.copyContextEndpoint(name)
+		}
 		if im, _, ok := m.selectedImage(); ok {
 			m.copyToClipboard(strings.TrimPrefix(im.ID, "sha256:"))
 			return m, m.servicesToast(toast.Info, "Copied image id", shortImageID(im.ID))
@@ -752,6 +763,9 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, m.inspectContainer(c)
 		}
 	case "D":
+		if name, ok := m.selectedContext(); ok {
+			return m, m.askContextDefault(name)
+		}
 		if im, ref, ok := m.selectedImage(); ok {
 			return m, m.askImageRemoveRef(im, ref)
 		}
@@ -989,11 +1003,17 @@ func (m Model) handleServicesSidebarMouse(x, y int, t tea.MouseEventType) (Model
 			m.openServicesMenu(r, activityWidthX(x), y)
 		} else if r.kind == svcRowHostItem && r.host == hostContainer {
 			m.openContainerMenu(r, activityWidthX(x), y)
+		} else if r.kind == svcRowHostItem && r.host == hostContext {
+			m.openContextMenu(r, activityWidthX(x), y)
 		}
 		return m, nil
 	}
 	if r.foldable() {
 		return m, m.servicesToggleFold(r)
+	}
+	if double && r.kind == svcRowHostItem && r.host == hostContext {
+		st.lastClick = time.Time{}
+		return m, m.switchContext(r.hostID)
 	}
 	if double && r.kind == svcRowService {
 		st.lastClick = time.Time{}
@@ -1060,6 +1080,9 @@ func (m *Model) openServicesMenu(r svcRow, x, y int) {
 // opened on.
 func (m *Model) handleServicesMenuSelect(id string) tea.Cmd {
 	r := m.services.menuRow
+	if r.kind == svcRowHostItem && r.host == hostContext {
+		return m.handleContextRowMenuSelect(id, r)
+	}
 	if r.kind == svcRowHostItem {
 		return m.handleContainerRowMenuSelect(id, r)
 	}
@@ -1103,6 +1126,8 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "services-focus", Title: "Services: Focus (Containers)"},
 		{ID: "containers-focus", Title: "Containers: Focus"},
 		{ID: "containers-refresh", Title: "Containers: Refresh"},
+		{ID: "containers-context-use", Title: "Containers: Switch Context…"},
+		{ID: "containers-context-default", Title: "Containers: Make Context Default…"},
 		{ID: "containers-start", Title: "Containers: Start Selected"},
 		{ID: "containers-stop", Title: "Containers: Stop Selected"},
 		{ID: "containers-restart", Title: "Containers: Restart Selected"},
@@ -1326,6 +1351,15 @@ func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 				return tea.Batch(m.servicesAction("refresh"), m.containersReloadAll())
 			}
 			switch id {
+			case "containers-context-use", "containers-context-default":
+				name, note := m.contextForPalette()
+				if name == "" {
+					return note
+				}
+				if id == "containers-context-use" {
+					return m.switchContext(name)
+				}
+				return m.askContextDefault(name)
 			case "containers-image-pull":
 				if _, ref, ok := m.selectedImage(); ok {
 					m.askImagePull(ref)

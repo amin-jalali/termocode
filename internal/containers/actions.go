@@ -55,8 +55,13 @@ func (e *Engine) RemoveNetwork(ctx context.Context, id string) error {
 func (e *Engine) RemoveVolume(ctx context.Context, id string) error {
 	return e.action(ctx, 60*time.Second, "volume", "rm", id)
 }
+
+// UseContext runs `docker context use <name>`: the user's machine-wide
+// default. It never carries the session's DOCKER_CONTEXT override.
 func (e *Engine) UseContext(ctx context.Context, name string) error {
-	return e.action(ctx, 60*time.Second, "context", "use", name)
+	plain := *e
+	plain.Context = ""
+	return plain.action(ctx, 60*time.Second, "context", "use", name)
 }
 func (e *Engine) Prune(ctx context.Context, kind string) error {
 	switch kind {

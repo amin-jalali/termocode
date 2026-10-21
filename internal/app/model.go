@@ -110,6 +110,7 @@ type Model struct {
 	pendingContainerDir     string
 	pendingContainerFiles   []string
 	pendingHostArgs         []string
+	pendingContextName      string
 	pendingHostOperation    string
 	pendingHostTarget       string
 	pendingImageRef         string

@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -68,7 +69,7 @@ func (st *servicesState) hostRows() []svcRow {
 	var out []svcRow
 	absent := st.engineAbsent()
 	for _, sec := range hostSectionOrder {
-		if !st.sectionShown(sec) {
+		if !st.sectionShown(sec) || (sec == "contexts" && st.contextsHidden()) {
 			continue
 		}
 		// No engine: CONTAINERS says so once; the other engine sections
@@ -115,9 +116,15 @@ func (st *servicesState) hostSectionBody(sec string) []svcRow {
 	if st.containerEngine.Binary == "" {
 		return []svcRow{note("No container engine"), hint("Install Docker or Podman,"), hint("then press R to retry")}
 	}
+	if sec == "contexts" {
+		return st.contextSectionBody(key)
+	}
 	if !st.containerEngine.Reachable {
 		name := st.engineTitle()
 		p := st.containerEngine.Problem
+		if rows := st.remoteContextRows(sec, key, p.Detail); rows != nil {
+			return rows
+		}
 		if sec != "containers" {
 			return []svcRow{hint(name + " is not running")}
 		}
@@ -136,6 +143,9 @@ func (st *servicesState) hostSectionBody(sec string) []svcRow {
 		return []svcRow{note(msg), hint("R to retry")}
 	}
 	if err := st.containerErrors[sec]; err != "" {
+		if rows := st.remoteContextRows(sec, key, err); rows != nil {
+			return rows
+		}
 		return []svcRow{note(errLine(err)), hint("R to retry")}
 	}
 	if !st.hostLoaded[sec] {
@@ -168,17 +178,76 @@ func (st *servicesState) hostSectionBody(sec string) []svcRow {
 			out = append(out, st.storageUserRows(row)...)
 		}
 		return out
-	case "contexts":
-		if len(st.contextRows) == 0 {
-			return []svcRow{hint("No contexts")}
-		}
-		var out []svcRow
-		for i, c := range st.contextRows {
-			out = append(out, svcRow{kind: svcRowHostItem, section: key, host: hostContext, idx: i, hostID: c.Name, name: c.Name, current: c.Current})
-		}
-		return out
 	}
 	return nil
+}
+
+// contextsHidden: CONTEXTS is drawn only when it has something to choose
+// from: never for podman, and not while only `default` exists (or the
+// list is not known yet).
+func (st *servicesState) contextsHidden() bool {
+	if st.containerEngine.Kind == "podman" || st.containerEngine.Binary == "" {
+		return true
+	}
+	if st.sessionContext != "" {
+		return false
+	}
+	return !st.hostLoaded["contexts"] || len(st.contextRows) < 2
+}
+
+// contextSectionBody lists the contexts. It does not need a running
+// daemon: `docker context ls` reads files, so a failing remote context
+// can always be switched away from.
+func (st *servicesState) contextSectionBody(key string) []svcRow {
+	hint := func(t string) svcRow { return svcRow{kind: svcRowHint, section: key, text: t} }
+	if err := st.containerErrors["contexts"]; err != "" {
+		return []svcRow{{kind: svcRowNote, section: key, text: sanitizeOutputLine(errLine(err))}, hint("R to retry")}
+	}
+	if !st.hostLoaded["contexts"] {
+		return []svcRow{hint("Loading…")}
+	}
+	if len(st.contextRows) == 0 {
+		return []svcRow{hint("No contexts")}
+	}
+	active := st.activeContext()
+	var out []svcRow
+	for i, c := range st.contextRows {
+		out = append(out, svcRow{kind: svcRowHostItem, section: key, host: hostContext, idx: i, hostID: c.Name, name: sanitizeOutputLine(c.Name), current: c.Name == active})
+	}
+	return out
+}
+
+// remoteContextRows: while the session uses a context and its engine
+// does not answer, name the context in the section note (nil = not that
+// case). Only CONTAINERS carries the full note; the others point to it.
+func (st *servicesState) remoteContextRows(sec, key, detail string) []svcRow {
+	if st.sessionContext == "" || st.containerEngine.Kind != "docker" {
+		return nil
+	}
+	name := sanitizeOutputLine(st.sessionContext)
+	if sec != "containers" {
+		return []svcRow{{kind: svcRowHint, section: key, text: "context " + name + " is not reachable"}}
+	}
+	msg := shortRemoteError(sanitizeOutputLine(errLine(detail)))
+	low := strings.ToLower(msg)
+	if msg == "" {
+		msg = errLine(st.containerEngine.Problem.Message())
+	}
+	if msg == "" || strings.Contains(low, "deadline exceeded") || strings.HasSuffix(low, "version timed out") || low == "timed out" {
+		msg = "timed out"
+	}
+	return []svcRow{{kind: svcRowNote, section: key, text: "context " + name + ": " + msg},
+		{kind: svcRowHint, section: key, text: "R retry · Enter on CONTEXTS to switch back"}}
+}
+
+var sshHostPortRe = regexp.MustCompile(`^ssh: connect to host \S+ port \d+: `)
+
+// shortRemoteError drops the engine's wrapper words so the cause fits a
+// narrow sidebar: "error during connect: ssh: connect to host h port 22:
+// Connection timed out" becomes "ssh: Connection timed out".
+func shortRemoteError(s string) string {
+	s = strings.TrimPrefix(s, "error during connect: ")
+	return sshHostPortRe.ReplaceAllString(s, "ssh: ")
 }
 
 // containerRowsOf groups the host's containers by compose project (the
@@ -800,7 +869,7 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 		case "volumes":
 			return "volumes on this machine", "n create · D remove · z prune · d disk usage · R refresh"
 		case "contexts":
-			return "engine contexts", "◉ marks the active one"
+			return "engine contexts", "Enter use here · D make default"
 		case "help":
 			return "keys of this view", "space fold · m sections"
 		}
@@ -857,11 +926,15 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 		case hostContext:
 			if r.idx < len(st.contextRows) {
 				c := st.contextRows[r.idx]
-				l1 := c.Name
-				if c.Current {
+				l1 := sanitizeOutputLine(c.Name)
+				if c.Name == st.activeContext() {
 					l1 += " (active)"
 				}
-				return l1, c.DockerEndpoint
+				l2 := sanitizeOutputLine(c.DockerEndpoint)
+				if c.Error != "" {
+					l2 = sanitizeOutputLine(errLine(c.Error))
+				}
+				return l1, l2
 			}
 		case hostRegistry:
 			if r.idx < len(st.registryRows) {

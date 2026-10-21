@@ -257,7 +257,8 @@ func (m *Model) containersDemo(variant string) {
 	case "down":
 		st.containerEngine.Reachable = false
 		st.containerEngine.Problem = services.Problem{Kind: services.ProblemDaemonDown}
-		st.containerRows, st.imageRows, st.networkRows, st.volumeRows, st.contextRows = nil, nil, nil, nil, nil
+		// The contexts stay: `docker context ls` reads files, not the daemon.
+		st.containerRows, st.imageRows, st.networkRows, st.volumeRows = nil, nil, nil, nil
 		st.problem = services.Problem{Kind: services.ProblemDaemonDown}
 	case "noengine":
 		st.containerEngine = containers.Engine{}

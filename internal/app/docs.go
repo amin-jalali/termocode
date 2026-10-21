@@ -258,6 +258,8 @@ var fileOnlySettings = []SettingEntry{
 	{Key: "db_ai_max_kb", Type: "int", Default: "32", Category: "Databases (file only)", Description: "Maximum size in KB of one AI database tool answer (1–1024). Longer results are cut and marked."},
 	{Key: "db_redis_separator", Type: "string", Default: ":", Category: "Databases (file only)", Description: "Separator that groups Redis keys into namespaces in the tree (session:ab12 is under session:). Empty: no grouping."},
 	{Key: "db_redis_max_keys", Type: "int", Default: "10000", Category: "Databases (file only)", Description: "Most Redis keys one tree row loads with SCAN (100–1000000). Past it the row says so; open a namespace to see more."},
+	{Key: "containers_engine", Type: "enum", Default: "auto", Category: "Containers (file only)", Choices: []string{"auto", "docker", "podman"},
+		Description: "Container engine of the Containers view. auto tries Docker, then Podman; docker or podman uses only that engine. Press R in the view after changing it."},
 	{Key: "containers_sections", Type: "string[]", Default: "all", Category: "Containers (file only)",
 		Description: "Sections shown by the Containers view, across workspaces. The Containers menu writes this list; collapse state is kept in the workspace session."},
 	{Key: "ai_inline_model", Type: "string", Default: "(provider default)", Category: "AI (file only)",

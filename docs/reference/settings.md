@@ -88,6 +88,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
+| `containers_engine` | enum | `auto` | Container engine of the Containers view. auto tries Docker, then Podman; docker or podman uses only that engine. Press R in the view after changing it. |
 | `containers_sections` | string[] | `all` | Sections shown by the Containers view, across workspaces. The Containers menu writes this list; collapse state is kept in the workspace session. |
 
 ## AI (file only)

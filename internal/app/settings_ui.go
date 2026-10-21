@@ -60,6 +60,7 @@ type settingsConfig struct {
 	SetupDismissed     *bool    `json:"setup_dismissed,omitempty"`
 	SetupSettled       []string `json:"setup_settled,omitempty"`
 	ContainersSections []string `json:"containers_sections,omitempty"`
+	ContainersEngine   string   `json:"containers_engine,omitempty"`
 }
 
 // settingsConfigPath returns the absolute path to config.json. We don't
@@ -161,7 +162,7 @@ func saveSettings(cfg settingsConfig) error {
 	if cfg.ContainersSections != nil {
 		merged["containers_sections"] = cfg.ContainersSections
 	}
-	for k, v := range map[string]string{"icons": cfg.Icons, "animations": cfg.Animations, "images": cfg.Images, "persistent_session": cfg.PersistentSession, "dashboard_logo": cfg.DashboardLogo, "rtl": cfg.RTL} {
+	for k, v := range map[string]string{"containers_engine": cfg.ContainersEngine, "icons": cfg.Icons, "animations": cfg.Animations, "images": cfg.Images, "persistent_session": cfg.PersistentSession, "dashboard_logo": cfg.DashboardLogo, "rtl": cfg.RTL} {
 		if v != "" {
 			merged[k] = v
 		}

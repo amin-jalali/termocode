@@ -104,7 +104,12 @@ type servicesState struct {
 
 	render svcRenderCache
 
-	containerEngine     containers.Engine
+	containerEngine containers.Engine
+	// sessionContext is the DOCKER_CONTEXT of this termocode session
+	// ("" = the user's own setting). Never written to the shell or the
+	// global default.
+	sessionContext      string
+	containerPreference string
 	containerDetected   bool
 	containerDetecting  bool
 	containerCancel     context.CancelFunc

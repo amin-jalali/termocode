@@ -76,6 +76,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Follow Stats | `containers-stats` |   |   |
 | Containers: Inspect | `containers-inspect` |   |   |
 | Containers: Inspect Image | `containers-image-inspect` |   |   |
+| Containers: Make Context Default… | `containers-context-default` |   |   |
 | Containers: Open Published Port | `containers-open-port` |   |   |
 | Containers: Open Shell | `containers-shell` |   |   |
 | Containers: Open in Databases | `containers-open-databases` |   |   |
@@ -100,6 +101,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Start Selected | `containers-start` |   |   |
 | Containers: Stop Project | `containers-compose-stop` |   |   |
 | Containers: Stop Selected | `containers-stop` |   |   |
+| Containers: Switch Context… | `containers-context-use` |   |   |
 | Containers: Tag Selected Image… | `containers-image-tag` |   |   |
 
 ## Copy

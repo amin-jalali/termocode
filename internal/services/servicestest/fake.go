@@ -12,8 +12,12 @@
 //	<sub>.sleep          `compose <sub>` sleeps this many seconds first
 //	up.code              exit code of `compose up`
 //	events.log           `docker events` follows it (PushEvent appends)
+//	sleep-<cmd>          `docker <cmd>` sleeps this many seconds first
+//	fail-<ctx>.err       every call except `context …` fails with this stderr
+//	                     while DOCKER_CONTEXT=<ctx> (an unreachable remote)
 //
-// Written by the script: argv.log (one call per line), events.pid,
+// Written by the script: argv.log (one call per line), ctx.log (the
+// DOCKER_CONTEXT of each call, "|", then its argv), events.pid,
 // <sub>.pid (the script's pid while it runs).
 package servicestest
 
@@ -36,7 +40,10 @@ type Fake struct {
 const script = `#!/bin/sh
 D='@DATA@'
 printf '%s\n' "$*" >> "$D/argv.log"
+printf '%s|%s\n' "${DOCKER_CONTEXT-}" "$*" >> "$D/ctx.log"
+if [ -n "${DOCKER_CONTEXT-}" ] && [ "$1" != "context" ] && [ -f "$D/fail-$DOCKER_CONTEXT.err" ]; then cat "$D/fail-$DOCKER_CONTEXT.err" >&2; exit 1; fi
 if [ -f "$D/all.err" ]; then cat "$D/all.err" >&2; exit "$(cat "$D/all.code" 2>/dev/null || echo 1)"; fi
+if [ -f "$D/sleep-$1" ]; then sleep "$(cat "$D/sleep-$1")"; fi
 if [ "$1" = "events" ]; then
   echo $$ > "$D/events.pid"
   touch "$D/events.log"
@@ -108,6 +115,16 @@ func (f *Fake) Remove(name string) { _ = os.Remove(filepath.Join(f.Data, name)) 
 // Calls returns the logged argv lines (without "docker").
 func (f *Fake) Calls() []string {
 	b, _ := os.ReadFile(filepath.Join(f.Data, "argv.log"))
+	s := strings.TrimRight(string(b), "\n")
+	if s == "" {
+		return nil
+	}
+	return strings.Split(s, "\n")
+}
+
+// CtxCalls returns the ctx.log lines: "<DOCKER_CONTEXT>|<argv>".
+func (f *Fake) CtxCalls() []string {
+	b, _ := os.ReadFile(filepath.Join(f.Data, "ctx.log"))
 	s := strings.TrimRight(string(b), "\n")
 	if s == "" {
 		return nil

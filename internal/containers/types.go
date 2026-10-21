@@ -73,6 +73,8 @@ type Context struct {
 	DockerEndpoint string
 	Host           string
 	TLS            bool
+	Description    string
+	Error          string
 }
 
 // Registry contains only registry host and credential-helper metadata.

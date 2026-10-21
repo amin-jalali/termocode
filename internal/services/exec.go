@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -145,4 +146,32 @@ func (e SpawnExec) Stream(ctx context.Context, dir string, argv ...string) (io.R
 		})
 	}
 	return r, stop, nil
+}
+
+// WithEnv returns x with the environment variables name=value set (they
+// replace the same names). Only SpawnExec carries an environment; any
+// other Exec is returned unchanged.
+func WithEnv(x Exec, kv ...string) Exec {
+	se, ok := x.(SpawnExec)
+	if !ok {
+		return x
+	}
+	base := se.Env
+	if base == nil {
+		base = os.Environ()
+	}
+	out := make([]string, 0, len(base)+len(kv))
+	for _, e := range base {
+		drop := false
+		for _, v := range kv {
+			if name, _, _ := strings.Cut(v, "="); strings.HasPrefix(e, name+"=") {
+				drop = true
+				break
+			}
+		}
+		if !drop {
+			out = append(out, e)
+		}
+	}
+	return SpawnExec{Env: append(out, kv...)}
 }

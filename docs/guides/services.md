@@ -204,6 +204,45 @@ asks before pruning. Volume pruning lists only anonymous dangling volumes;
 named volumes are kept. On VOLUMES, `d` reads disk usage once and fills in the
 reported sizes. Disk usage is not queried in the background.
 
+## Contexts and engine choice
+
+CONTEXTS lists your Docker contexts: `◉ default`, `◦ prod`. The endpoint
+(`ssh://deploy@prod`) is in the two lines at the bottom. The section shows
+only when a second context exists; with just `default` it stays out of the
+way. Podman has no CONTEXTS section.
+
+| Key | Action |
+|---|---|
+| `Enter` / `l` / double-click | use the context **in this session only** |
+| `D` | make it the default (asks first) |
+| `y` | copy the endpoint |
+
+Using a context sets `DOCKER_CONTEXT` on every engine call of this termocode
+session, lists every section again, and restarts the event watcher. The engine
+line (`docker 27 · prod`) shows it. Nothing outside termocode changes: not
+your shell, not other terminals, not Docker's default. Tabs you open from the
+view (logs, shell, pull, compose) get the same `DOCKER_CONTEXT`. Closing
+termocode forgets the choice. The PROJECT section keeps using your own
+setting.
+
+**Make default…** (right-click menu, `D`, or **Containers: Make Context
+Default…**) shows a card with the exact `docker context use <name>` command.
+This one does change the default for every terminal and app. Cancel or `Esc`
+runs nothing. **Containers: Switch Context…** is the palette version of
+`Enter`.
+
+If a remote context fails (SSH key, TLS, timeout), CONTAINERS shows
+`context prod: ssh: Connection timed out` and `R retry · Enter on CONTEXTS to
+switch back`. CONTEXTS stays available, so `Enter` on `default` gets you
+back. Every engine call has a time limit; the view never waits forever.
+
+Set `containers_engine` in `config.json` to `auto` (the default), `docker`,
+or `podman`, then press `R`. `auto` tries Docker first, then Podman. An
+explicit choice uses only that engine.
+
+The AI cannot switch or change contexts: there is no tool for it, and both
+palette commands are closed to it.
+
 ## Termux (Android)
 
 No Docker: the compose part of PROJECT does not show, and nothing asks you to

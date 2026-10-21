@@ -289,6 +289,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"redis-set-ttl":                aiNever(aiNoPicker + " (redis_command)"),
 	"redis-delete-key":             aiNever(aiNoPicker + " (redis_command)"),
 	"containers-focus":             aiAuto(),
+	"containers-context-use":       aiNever("a context switch is the user's choice; it moves every container action to another host"),
+	"containers-context-default":   aiNever("changes the machine-wide Docker default"),
 	"containers-refresh":           aiAuto(),
 	"containers-start":             aiDestructive(),
 	"containers-stop":              aiDestructive(),
@@ -458,6 +460,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"services_on_quit":    aiConfirm(ai.ClassSettings),
 	"services_max_log_kb": aiConfirm(ai.ClassSettings),
 	"containers_sections": aiConfirm(ai.ClassSettings),
+	"containers_engine":   aiConfirm(ai.ClassSettings),
 	"mcp_trusted_tools":   aiNever(aiNoAIConfig),
 	"mcp_oauth_port":      aiNever(aiNoAIConfig),
 	// HTTP client: limits the user may let the AI change; the AI never

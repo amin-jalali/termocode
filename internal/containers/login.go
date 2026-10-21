@@ -23,10 +23,7 @@ func (e *Engine) Login(ctx context.Context, host, username, password string) err
 	}
 	ctx, cancel := context.WithTimeout(ctx, d)
 	defer cancel()
-	x := e.X
-	if x == nil {
-		x = services.SpawnExec{}
-	}
+	x := e.exec()
 	out, stderr, code, err := x.CaptureInput(ctx, e.Dir, []byte(password+"\n"), e.Binary, "login", host, "--username", username, "--password-stdin")
 	_ = out
 	if err != nil {

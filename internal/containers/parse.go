@@ -115,7 +115,7 @@ func ParseVolumes(data []byte) ([]Volume, error) {
 func ParseContexts(data []byte) ([]Context, error) {
 	var out []Context
 	err := parseLines(data, func(raw map[string]json.RawMessage) error {
-		c := Context{Name: firstString(raw, "Name", "name", "Context"), Current: truthy(firstString(raw, "Current", "CurrentContext", "current")), DockerEndpoint: firstString(raw, "DockerEndpoint", "Docker", "Endpoint", "URI"), Host: firstString(raw, "Host", "HostEndpoint")}
+		c := Context{Name: firstString(raw, "Name", "name", "Context"), Current: truthy(firstString(raw, "Current", "CurrentContext", "current")), DockerEndpoint: firstString(raw, "DockerEndpoint", "Docker", "Endpoint", "URI"), Host: firstString(raw, "Host", "HostEndpoint"), Description: firstString(raw, "Description"), Error: firstString(raw, "Error")}
 		c.TLS = truthy(firstString(raw, "TLS", "TLSData"))
 		out = append(out, c)
 		return nil
@@ -343,6 +343,10 @@ func firstString(raw map[string]json.RawMessage, keys ...string) string {
 			var s string
 			if json.Unmarshal(v, &s) == nil {
 				return strings.TrimSpace(s)
+			}
+			var b bool
+			if json.Unmarshal(v, &b) == nil {
+				return strconv.FormatBool(b)
 			}
 			var n json.Number
 			if json.Unmarshal(v, &n) == nil {

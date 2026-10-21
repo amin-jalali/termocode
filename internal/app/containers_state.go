@@ -222,6 +222,9 @@ func (st *servicesState) cancelHostWork() {
 // activeContext is the engine's current context name ("" = unknown or
 // podman).
 func (st *servicesState) activeContext() string {
+	if st.sessionContext != "" && st.containerEngine.Kind != "podman" {
+		return st.sessionContext
+	}
 	for _, c := range st.contextRows {
 		if c.Current {
 			return c.Name
@@ -260,16 +263,30 @@ func (m *Model) containersDetectWithWatch(force bool) tea.Cmd {
 	ctx, cancel := context.WithCancel(context.Background())
 	st.containerCancel = cancel
 	dir := st.root
+	preferred := preferredContainerEngine()
+	st.containerPreference = preferred
+	sessionContext := st.sessionContext
 	return func() tea.Msg {
-		e := containers.Detect(ctx, containers.DetectOptions{Exec: servicesExec, Dir: dir, Android: runtime.GOOS == "android"})
+		e := containers.Detect(ctx, containers.DetectOptions{Preferred: preferred, Context: sessionContext, Exec: servicesExec, Dir: dir, Android: runtime.GOOS == "android"})
 		msg := containerHostMsg{gen: gen, engine: e, section: "detect", errs: map[string]string{}}
+		// Contexts are files, not daemon answers: list them even when
+		// the engine does not answer, so a broken remote context can be
+		// switched away from.
+		if e.Kind == "docker" {
+			var err error
+			msg.contexts, err = e.ListContexts(ctx)
+			if err != nil {
+				msg.errs["contexts"] = err.Error()
+			}
+			msg.loaded = append(msg.loaded, "contexts")
+		}
 		if !e.Reachable {
 			return msg
 		}
-		if e.Kind == "docker" && !containsString(load, "contexts") {
-			load = append(load, "contexts")
-		}
 		for _, s := range load {
+			if s == "contexts" {
+				continue
+			}
 			var err error
 			switch s {
 			case "containers":
@@ -308,7 +325,10 @@ func (m *Model) containersRefresh(section string) tea.Cmd {
 	if st == nil || !st.visible || !st.hostSectionVisible(section) || section == "help" {
 		return nil
 	}
-	if section != "registries" && (!st.containerDetected || !st.containerEngine.Reachable) {
+	if section == "contexts" && st.containerEngine.Kind != "docker" {
+		return nil
+	}
+	if section != "registries" && (!st.containerDetected || (!st.containerEngine.Reachable && section != "contexts")) {
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -354,6 +374,7 @@ func (m *Model) containersLoadVisible() tea.Cmd {
 	for _, s := range hostSectionOrder {
 		cmds = append(cmds, m.containersRefresh(s))
 	}
+	cmds = append(cmds, m.containersRefreshContexts())
 	return tea.Batch(cmds...)
 }
 
@@ -364,11 +385,79 @@ func (m *Model) containersReloadAll() tea.Cmd {
 	if st == nil {
 		return nil
 	}
+	if st.containerDetected && st.containerPreference != preferredContainerEngine() {
+		// containers_engine changed: forget the engine and what it listed.
+		st.cancelHostWork()
+		st.stopHostWatch()
+		st.resetHostSnapshot(false)
+	}
 	if st.containerDetected && !st.containerEngine.Reachable {
 		st.containerDetected = false
 		st.touch()
 	}
 	return m.containersLoadVisible()
+}
+
+// containersRefreshContexts lists the contexts again even when the
+// section is folded: the list decides whether CONTAINERS shows the
+// section at all, and `docker context ls` costs no daemon call.
+func (m *Model) containersRefreshContexts() tea.Cmd {
+	st := m.services
+	if st == nil || !st.visible || !st.sectionShown("contexts") || !st.containerDetected || st.containerEngine.Kind != "docker" {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	if old := st.containerCancels["contexts"]; old != nil {
+		old()
+	}
+	st.containerCancels["contexts"] = cancel
+	gen := st.containerGen
+	e := st.containerEngine
+	return func() tea.Msg {
+		defer cancel()
+		msg := containerHostMsg{gen: gen, engine: e, section: "contexts"}
+		var err error
+		msg.contexts, err = e.ListContexts(ctx)
+		if err != nil {
+			msg.err = err.Error()
+		}
+		return msg
+	}
+}
+
+// preferredContainerEngine reads containers_engine: "docker", "podman"
+// or "auto" (also for a missing or unknown value).
+func preferredContainerEngine() string {
+	switch v := strings.ToLower(strings.TrimSpace(loadSettings().ContainersEngine)); v {
+	case "docker", "podman":
+		return v
+	}
+	return "auto"
+}
+
+// resetHostSnapshot forgets the engine and every host listing, so a new
+// engine or context starts from "Loading…" and never shows rows of the
+// old one. The contexts list is kept: it comes from files.
+func (st *servicesState) resetHostSnapshot(keepEngine bool) {
+	st.containerDetected, st.containerDetecting = false, false
+	st.containerRows, st.imageRows, st.networkRows, st.volumeRows = nil, nil, nil, nil
+	for _, sec := range engineSections {
+		if sec != "contexts" {
+			delete(st.hostLoaded, sec)
+		}
+		delete(st.containerErrors, sec)
+	}
+	for k := range st.busy {
+		if strings.HasPrefix(k, containerBusyPrefix) {
+			delete(st.busy, k)
+		}
+	}
+	st.storageInspectState = map[string]string{}
+	st.storageUsers = map[string][]string{}
+	if !keepEngine {
+		st.containerEngine = containers.Engine{}
+	}
+	st.touch()
 }
 
 // containersOpened loads a section that was just unfolded or shown.

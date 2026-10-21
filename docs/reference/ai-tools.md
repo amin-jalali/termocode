@@ -1055,6 +1055,8 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `containers-compose-restart` | Containers: Restart Project | confirm (always asks) |   |
 | `containers-compose-stop` | Containers: Stop Project | confirm (always asks) |   |
 | `containers-compose-up` | Containers: Start Project | confirm (always asks) |   |
+| `containers-context-default` | Containers: Make Context Default… | never | changes the machine-wide Docker default |
+| `containers-context-use` | Containers: Switch Context… | never | a context switch is the user's choice; it moves every container action to another host |
 | `containers-copy-id` | Containers: Copy ID | auto |   |
 | `containers-focus` | Containers: Focus | auto |   |
 | `containers-image-history` | Containers: Show Image History | auto |   |
@@ -1337,6 +1339,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `ai_provider` | never | AI provider, credentials and approvals stay with the user |
 | `animations` | confirm (settings) |   |
 | `auto_save` | confirm (settings) |   |
+| `containers_engine` | confirm (settings) |   |
 | `containers_sections` | confirm (settings) |   |
 | `dashboard_logo` | confirm (settings) |   |
 | `db_ai_max_kb` | never | AI provider, credentials and approvals stay with the user |
