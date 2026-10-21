@@ -1,26 +1,13 @@
-# Containers and project services
+# Project services
 
-The **Containers** view has your project's services on top (the
-**PROJECT** section) and, below, what runs on this machine: **CONTAINERS**,
-**IMAGES**, **REGISTRIES**, **NETWORKS**, **VOLUMES**, **CONTEXTS** and
-**HELP**. Container and project actions run through the detected engine.
+The **PROJECT** section of the Containers view lists the services your
+project needs while you work: the database, the cache, the mail catcher,
+your own dev server. Start one with a key, read its logs in a terminal tab,
+and let the AI chat check them.
 
-- **Space** (or a click) folds and opens a section. A section loads when
-  you open it, and only while the view is on screen.
-- **m**, or the **⋯** on the title row, picks which sections show. The
-  choice is the same in every workspace (`containers_sections` in
-  `config.json`); folded sections are kept per workspace. The menu also
-  has **Refresh all**.
-- **R** refreshes everything.
-- CONTAINERS groups containers by compose project (this folder's project
-  first, marked `·`, then `other` for the rest) and shows the short service
-  name, for example `postgres-1`. Its first line names the engine and the
-  active context, for example `docker 27 · default`.
-- No Docker or Podman? CONTAINERS says so; the project services still work.
-
-The PROJECT section lists services your project needs while you work: the
-database, the cache, the mail catcher, your own dev server. Start one with a
-key, read its logs in a terminal tab, and let the AI chat check them.
+Everything else on this machine (all containers, images, registries,
+networks, volumes and contexts) is in the [Containers guide](containers.md).
+The two share one view: PROJECT is the top section.
 
 termocode does not install anything. It drives what the project already
 declares:
@@ -31,9 +18,9 @@ declares:
 | `.termocode/services.json` | local commands (and compose file / profiles) | your shell line in a terminal tab |
 | `Procfile`, `Procfile.dev` | local commands | `name: command` in a terminal tab |
 
-Open the view with the **☷** icon in the activity bar, or **Containers: Focus**
-in the palette. The existing `services-*` palette commands remain available
-for the PROJECT section. Nothing runs before you open it.
+Open the view with the **☷** icon in the activity bar, or **Containers:
+Focus** in the palette. The `services-*` palette commands work on the
+PROJECT section. Nothing runs before you open it.
 
 ## The view
 
@@ -69,6 +56,9 @@ explain the row under the cursor (image, ports, Docker's status text).
 
 ## Keys
 
+These keys work on PROJECT and LOCAL rows. The keys of the host sections
+are in the [Containers guide](containers.md#keys).
+
 | Key | Action |
 |---|---|
 | `j` `k` `g` `G` | move |
@@ -76,28 +66,12 @@ explain the row under the cursor (image, ports, Docker's status text).
 | `s` | start (`docker compose up -d <name>` in the **services: up** tab, so pulls show) |
 | `x` | stop (`docker compose stop`, containers and volumes stay) |
 | `r` | restart |
-| `a` / `A` | start all / stop all in PROJECT |
-| `t` | attach to a container (CONTAINERS rows) |
-| `s` / `x` / `r` | start / stop / restart the selected container; on a project group, start / stop / restart that project |
-| `p` | pause or unpause the selected container |
-| `e` / `D` | shell / remove the selected container (removal asks first) |
-| `R` | refresh now (the project and every open host section) |
-| `m` | choose the sections (the **⋯** menu) |
+| `a` / `A` | start all / stop all |
 | `e` | shell in the container (`docker compose exec <name> sh`) |
 | `o` | open the file the service comes from (at its line) |
 | `y` | copy the address (`localhost:5432`) |
-| `Space` | fold / open the section or group under the cursor |
-
-On a CONTAINERS row, `s`, `x`, and `r` start, stop, and restart it; `p`
-pauses or resumes it. `l` follows logs, `e` opens a shell, `t` attaches,
-`S` follows stats, `i` opens a read-only JSON inspect page, `o` opens its
-first published port, `y` copies its full ID, and `D` asks before removal.
-Removing a running container shows one card with the exact stop and remove
-commands and a **Stop and remove** button; the engine is never forced to
-remove it. On a compose project group, `s`, `x`, and `r` run compose up,
-stop, and restart. `D` asks before compose down and names its command.
-Attach uses `--sig-proxy=false`; press `Ctrl+P Ctrl+Q` in its terminal tab
-to detach without stopping the container.
+| `R` | refresh now |
+| `Space` | fold / open the section |
 
 Right-click a row for the same actions, plus **Recreate** and **Down
 (remove containers)**, which asks first. Double-click opens the logs.
@@ -160,35 +134,8 @@ It never gets `down`, `--force-recreate`, `exec` or volume commands.
 Ask it "my app can't connect to the database — why?": it reads the state
 and the logs before it answers.
 
-### The AI and host containers
-
-The AI also sees the whole host. It lists every container with its
-published ports (`containers_list`), so "why is port 8081 busy?" gets the
-answer `port 8081 → other-nginx-1` without starting or removing anything.
-It can inspect a container, image, volume or network, read a container's
-logs and stats, and list images, volumes, networks, contexts and
-registries (hosts and users only). These run at once.
-
-It can start, stop, restart, pause or unpause one container
-(`containers_control`), pull an image in a visible `pull:` tab
-(`images_pull`), and run `compose up -d` for a project on the host
-(`compose_up`). Each one asks first, with **Allow**, **Always allow
-containers** and **Deny**. "Always allow containers" lasts until you quit
-termocode and is never saved. A container that is busy, or already in
-the state asked for, is refused before the card.
-
-Every id, name and image reference is checked first (no `-` at the
-start, no spaces or shell characters) and goes to the engine as a plain
-argument. Each result says the engine and the context; the AI uses the
-context you picked for this session.
-
-The AI cannot remove, prune, push, tag, run an image, sign in or out,
-switch or change a context, or read disk usage.
-
-Inspect output keeps env **names** and masks every value, masks auth
-fields and labels that look secret, and is cut at
-`containers_max_inspect_kb` (64) KB. Container logs are cut at
-`services_max_log_kb`.
+What the AI can do with other containers on this machine is in
+[The AI and host containers](containers.md#the-ai-and-host-containers).
 
 ### Secrets
 
@@ -213,154 +160,6 @@ compose file are masked as `[REDACTED]` in everything the AI reads (logs,
 Docker runs on the server, so the ports are server ports. `y` copies
 `localhost:5432`, and the toast shows the forward command for your own
 computer: `ssh -L 5432:localhost:5432 <host>`. termocode opens no tunnels.
-
-## Images, networks, and volumes
-
-The IMAGES section groups tags by repository and keeps dangling images in a
-separate `<none> dangling` group. A repository count includes the number of
-images and, when applicable, how many containers use them. On a tag, `u`
-pulls, `P` asks before pushing, `t` asks for a new tag, `Enter` asks for a
-container name, ports, and environment entries, then shows the full run
-command before opening a terminal tab. `h` opens image history, `i` opens
-read-only image details, and `D` removes an image only when no container uses
-it. `z` on the IMAGES heading asks before pruning dangling images; it never
-removes tagged images.
-
-NETWORKS and VOLUMES show their driver and scope. `Space` expands a row and
-checks which containers use it. `n` asks for a name and creates a network or
-volume. `D` shows the exact remove command and users before removing; a volume
-in use is kept, and built-in networks cannot be removed. `z` on either heading
-asks before pruning. Volume pruning lists only anonymous dangling volumes;
-named volumes are kept. On VOLUMES, `d` reads disk usage once and fills in the
-reported sizes. Disk usage is not queried in the background.
-
-## Pruning
-
-Pruning always asks first. Every prune card names what goes (counts from the
-last list), the exact command, and has one red `Prune` button. `Esc` or
-`Cancel` runs nothing. If a session context is set, the card names it; the
-command runs there.
-
-| Where | Command |
-|---|---|
-| CONTAINERS heading (`z` or right-click): stopped containers | `docker container prune -f` |
-| IMAGES heading: dangling images | `docker image prune -f` |
-| IMAGES heading: **Prune incl. unused images…** (a separate item) | `docker image prune -a -f` |
-| NETWORKS heading: unused networks | `docker network prune -f` |
-| VOLUMES heading: the card lists the anonymous dangling volumes first | `docker volume prune -f` |
-| `⋯` menu: **Prune system…** | `docker system prune -f` |
-
-System prune never adds the flag for all unused images or for volumes. Those
-are only on the IMAGES and VOLUMES headings. The palette has the same entries
-(**Containers: Prune Stopped Containers…**, **Prune Dangling Images…**,
-**Prune Networks…**, **Prune Volumes…**, **Prune System…**).
-
-When it works, a toast shows what the engine reported: `Pruned · reclaimed
-1.2GB`, and the affected sections list again. When it fails, the toast shows
-the engine's own error. Every prune has a two minute limit.
-
-The AI cannot prune: there is no tool, and every prune palette command is
-closed to it.
-
-## Registries
-
-REGISTRIES lists the registry hosts from your engine's own login file:
-`$DOCKER_CONFIG/config.json` (else `~/.docker/config.json`); for Podman
-`$REGISTRY_AUTH_FILE` or `$XDG_RUNTIME_DIR/containers/auth.json`. termocode
-only reads the host names and the helper names (`credsStore`,
-`credHelpers`). It never reads the stored logins and never writes this file.
-
-```
-▾ REGISTRIES ────────────── 3
-◉ docker.io
-◉ ghcr.io
-    acme/shop:latest    212MB
-◦ quay.io
-+ Connect registry…
-```
-
-`◉` means signed in. `◦` means the file names a helper for this host, but
-there is no login yet. The two lines at the bottom show the host, the user
-(when you signed in from termocode in this run; the file does not keep it)
-and the helper. A broken file shows a short note; **Connect registry…**
-still works.
-
-| Key | Action |
-|---|---|
-| `Enter` / `Space` on `◉` | show or hide the local images tagged for this host |
-| `Enter` on `◦` | connect to this host |
-| `n`, or `Enter` on **Connect registry…** | connect to a registry |
-| `u` | pull: on a host, the prompt starts with `ghcr.io/`; on an image, its full name |
-| `D` | sign out (asks first) |
-
-**Connect registry…** (also **Containers: Connect Registry…** in the
-palette) asks four things: a host from a short list (`docker.io`, `ghcr.io`,
-`registry.gitlab.com`, or **Other host…**), the host (you can edit it), the
-user name, and the token or password. The token prompt shows only `•`. You
-can type a reference instead of the value: `${env:NAME}`, `${dotenv:NAME}`
-(from this workspace's `.env`) or `${cmd:<a command that prints it>}`. termocode reads it
-just before the call.
-
-Then it runs `docker login <host> --username <user> --password-stdin`. The
-token goes to the engine on stdin only. It is never in the command line,
-the environment, a log, a toast, the session file or any file of
-termocode's. The engine's own credential store keeps it. If the login
-fails, the toast shows the engine's message with the token removed. A login
-has a one minute limit. `Esc` on any step runs nothing and forgets what you
-typed.
-
-**Sign out** (`D`, the right-click menu, or **Containers: Sign Out of
-Registry…**) shows a card with the exact `docker logout <host>` command.
-`Cancel` or `Esc` runs nothing. Local images stay.
-
-Login, logout and pulls use the session context, like every other call
-(see below).
-
-termocode does not keep registry tokens itself yet. A "remember in
-termocode" option needs the locked, encrypted secret store, which is not
-built yet.
-
-The AI cannot sign in or out: there is no tool for it, and both palette
-commands are closed to it.
-
-## Contexts and engine choice
-
-CONTEXTS lists your Docker contexts: `◉ default`, `◦ prod`. The endpoint
-(`ssh://deploy@prod`) is in the two lines at the bottom. The section shows
-only when a second context exists; with just `default` it stays out of the
-way. Podman has no CONTEXTS section.
-
-| Key | Action |
-|---|---|
-| `Enter` / `l` / double-click | use the context **in this session only** |
-| `D` | make it the default (asks first) |
-| `y` | copy the endpoint |
-
-Using a context sets `DOCKER_CONTEXT` on every engine call of this termocode
-session, lists every section again, and restarts the event watcher. The engine
-line (`docker 27 · prod`) shows it. Nothing outside termocode changes: not
-your shell, not other terminals, not Docker's default. Tabs you open from the
-view (logs, shell, pull, compose) get the same `DOCKER_CONTEXT`. Closing
-termocode forgets the choice. The PROJECT section keeps using your own
-setting.
-
-**Make default…** (right-click menu, `D`, or **Containers: Make Context
-Default…**) shows a card with the exact `docker context use <name>` command.
-This one does change the default for every terminal and app. Cancel or `Esc`
-runs nothing. **Containers: Switch Context…** is the palette version of
-`Enter`.
-
-If a remote context fails (SSH key, TLS, timeout), CONTAINERS shows
-`context prod: ssh: Connection timed out` and `R retry · Enter on CONTEXTS to
-switch back`. CONTEXTS stays available, so `Enter` on `default` gets you
-back. Every engine call has a time limit; the view never waits forever.
-
-Set `containers_engine` in `config.json` to `auto` (the default), `docker`,
-or `podman`, then press `R`. `auto` tries Docker first, then Podman. An
-explicit choice uses only that engine.
-
-The AI cannot switch or change contexts: there is no tool for it, and both
-palette commands are closed to it.
 
 ## Termux (Android)
 

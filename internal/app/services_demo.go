@@ -294,6 +294,18 @@ func (m *Model) containersDemo(variant string) {
 				m.prompt, _ = m.prompt.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
 			}
 		}
+	case "help":
+		// HELP open on its first row; the big sections folded.
+		for _, sec := range []string{"containers", "images", "networks", "volumes", "contexts"} {
+			st.collapsed[hostSection(sec)] = true
+		}
+		st.collapsed[hostSection("help")] = false
+		for i, r := range st.rows() {
+			if r.kind == svcRowHostItem && r.host == hostHelpGuide {
+				st.cursor = i
+				break
+			}
+		}
 	case "menu":
 		m.openContainersSectionsMenu("")
 	case "db-menu": // the row menu of the postgres compose service

@@ -294,6 +294,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"containers-registry-connect":  aiNever("signing in to a registry takes the user's token; it is the user's"),
 	"containers-registry-signout":  aiNever("signing out of a registry is the user's"),
 	"containers-refresh":           aiAuto(),
+	"containers-help":              aiAuto(),
 	"containers-start":             aiDestructive(),
 	"containers-stop":              aiDestructive(),
 	"containers-restart":           aiDestructive(),

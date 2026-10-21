@@ -65,6 +65,7 @@ Inside the folder you open.
 | --- | --- | --- | --- |
 | `~/termocode-settings.json` | Default target of Preferences: Export Settings…. | Settings bundle: `{"termocode_settings": 1, "files": {...}}`. State files and secrets are left out. | Yes, but re-export is easier. |
 | `~/.local/share/fonts/JetBrainsMonoNF/` | Nerd Font installed by `termocode setup` (Linux). | Font files. | Safe to delete. |
+| `~/.docker/config.json` | Registry hosts and credential helper names for the Containers view's REGISTRIES section (`$DOCKER_CONFIG/config.json`; Podman: `$REGISTRY_AUTH_FILE` or `$XDG_RUNTIME_DIR/containers/auth.json`). termocode reads host and helper names only, never the stored logins, and never writes it. | The engine's own JSON (`auths`, `credsStore`, `credHelpers`). | Yes, with `docker login` / `docker logout`; read only for termocode. |
 | `~/.cache/termocode/mcp/<name>.tools.json` | Tool list of each MCP server, so a chat turn does not start the server just to list its tools. `$XDG_CACHE_HOME` moves it. | JSON, written by termocode; keyed by a hash of the server's mcp.json entry. | Safe to delete. |
 
 **Preferences: Export Settings…** writes all config-folder JSON files into one bundle, except state files (`session.json`, `recents.json`, `workspaces.json`, `palette_recents.json`) and anything that looks like a secret.

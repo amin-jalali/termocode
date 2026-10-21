@@ -78,6 +78,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Inspect | `containers-inspect` |   |   |
 | Containers: Inspect Image | `containers-image-inspect` |   |   |
 | Containers: Make Context Default… | `containers-context-default` |   |   |
+| Containers: Open Guide | `containers-help` |   |   |
 | Containers: Open Published Port | `containers-open-port` |   |   |
 | Containers: Open Shell | `containers-shell` |   |   |
 | Containers: Open in Databases | `containers-open-databases` |   |   |

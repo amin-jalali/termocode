@@ -26,6 +26,7 @@ picked over a clear alternative. A normal feature does not need one.
 | [0012](0012-http-client-engine.md) | HTTP client engine in Go; `.http` grammar shared with mobocode | Accepted |
 | [0014](0014-database-access.md) | Database drivers and the user's SQLite command | Accepted |
 | [0015](0015-agent-pipelines-dag-in-ui-process.md) | Agent pipelines run as a DAG inside the UI process | Accepted |
+| [0016](0016-container-engine-cli.md) | Container engines are driven through their CLI, not the Engine API | Accepted |
 
 > The folder was started after the project was already running, so 0001–0005
 > backfill decisions that were made earlier. Dates are the best guess from git

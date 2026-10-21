@@ -43,7 +43,7 @@ var activityHelp = map[string]string{
 	"Source Control": "guides/git.md#open-the-source-control-panel",
 	"Run":            "guides/debug.md#debug-in-five-steps",
 	"Testing":        "guides/tests.md#open-the-testing-view",
-	"Containers":     "guides/services.md#the-view",
+	"Containers":     "guides/containers.md#the-view",
 }
 
 // tooltipLabels maps a hit target id (see hit_targets.go) to its label.
@@ -96,7 +96,7 @@ var tooltipLabels = map[string]tooltipSpec{
 	"svc:btn:start-all": {name: "Start all services", local: "a", help: helpServices},
 	"svc:btn:stop-all":  {name: "Stop all services", local: "A", help: helpServices},
 	"svc:btn:refresh":   {name: "Refresh", local: "R", help: helpServices},
-	"cont:more":         {name: "Sections and actions", local: "m", help: helpServices},
+	"cont:more":         {name: "Sections and actions", local: "m", help: "guides/containers.md#keys"},
 
 	// Source Control header.
 	"scm:toggle-view": {name: "Tree or list view", help: "guides/git.md#open-the-source-control-panel"},

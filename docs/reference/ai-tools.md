@@ -1185,6 +1185,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `containers-context-use` | Containers: Switch Context… | never | a context switch is the user's choice; it moves every container action to another host |
 | `containers-copy-id` | Containers: Copy ID | auto |   |
 | `containers-focus` | Containers: Focus | auto |   |
+| `containers-help` | Containers: Open Guide | auto |   |
 | `containers-image-history` | Containers: Show Image History | auto |   |
 | `containers-image-inspect` | Containers: Inspect Image | auto |   |
 | `containers-image-prune` | Containers: Prune Dangling Images… | never | pruning images is the user's; nothing is offered to the model |

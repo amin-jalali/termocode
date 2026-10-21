@@ -36,6 +36,9 @@ const (
 	hostRegistry
 	hostRegistryImage   // a local image under an open registry host
 	hostRegistryConnect // the "Connect registry…" row
+	hostHelpGuide       // HELP: Open guide
+	hostHelpKeys        // HELP: Keys
+	hostHelpReport      // HELP: Report a problem
 )
 
 // hostSectionTitle is the header label of a host section.
@@ -95,7 +98,7 @@ func (st *servicesState) hostSectionBody(sec string) []svcRow {
 	note := func(t string) svcRow { return svcRow{kind: svcRowNote, section: key, text: t} }
 	switch sec {
 	case "help":
-		return []svcRow{hint("Space folds a section"), hint("m picks the sections"), hint("R refreshes everything")}
+		return st.helpSectionBody(key)
 	case "registries":
 		return st.registrySectionBody(key)
 	}
@@ -819,6 +822,9 @@ func (st *servicesState) renderHostItem(r svcRow, active, focused bool, w int) s
 	case hostRegistry, hostRegistryConnect:
 		g, gcol, ncol := st.registryRowLook(r)
 		return renderHostLine(active, focused, w, r.depth, g, gcol, r.name, ncol, nil)
+	case hostHelpGuide, hostHelpKeys, hostHelpReport:
+		g, gcol, ncol := helpRowLook(r)
+		return renderHostLine(active, focused, w, r.depth, g, gcol, r.name, ncol, nil)
 	case hostRegistryImage:
 		var cols []hostCol
 		if w >= 22 && r.idx >= 0 && r.idx < len(st.imageRows) {
@@ -867,7 +873,7 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 		case "contexts":
 			return "engine contexts", "Enter use here · D make default"
 		case "help":
-			return "keys of this view", "space fold · m sections"
+			return "guide, keys and problem reports", "space fold · m sections"
 		}
 	case svcRowGroup:
 		sec, _, _ := strings.Cut(strings.TrimPrefix(r.section, "grp/"), "/")
@@ -934,6 +940,8 @@ func (st *servicesState) hostFooter(r svcRow) (string, string) {
 			}
 		case hostRegistry, hostRegistryImage, hostRegistryConnect:
 			return st.registryFooter(r)
+		case hostHelpGuide, hostHelpKeys, hostHelpReport:
+			return helpRowFooter(r)
 		}
 	}
 	return "", ""

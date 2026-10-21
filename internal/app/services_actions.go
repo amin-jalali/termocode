@@ -615,6 +615,9 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			m.askImageRun(ref)
 			return m, nil
 		}
+		if cmd, ok := m.runHelpRow(r); have && ok {
+			return m, cmd
+		}
 		switch {
 		case have && r.kind == svcRowHostItem && r.host == hostContainer:
 			if c, ok := m.selectedContainer(); ok {
@@ -1027,6 +1030,9 @@ func (m Model) handleServicesSidebarMouse(x, y int, t tea.MouseEventType) (Model
 		m.startRegistryConnect("")
 		return m, nil
 	}
+	if cmd, ok := m.runHelpRow(r); ok {
+		return m, cmd
+	}
 	if double && r.kind == svcRowHostItem && r.host == hostContext {
 		st.lastClick = time.Time{}
 		return m, m.switchContext(r.hostID)
@@ -1148,6 +1154,7 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "services-focus", Title: "Services: Focus (Containers)"},
 		{ID: "containers-focus", Title: "Containers: Focus"},
 		{ID: "containers-refresh", Title: "Containers: Refresh"},
+		{ID: "containers-help", Title: "Containers: Open Guide"},
 		{ID: "containers-context-use", Title: "Containers: Switch Context…"},
 		{ID: "containers-context-default", Title: "Containers: Make Context Default…"},
 		{ID: "containers-registry-connect", Title: "Containers: Connect Registry…"},
@@ -1365,6 +1372,9 @@ func (m *Model) dispatchContainerAIAction(id, target string) (tea.Cmd, error) {
 func (m *Model) dispatchServicesPalette(id string) (tea.Cmd, bool) {
 	if id == "containers-focus" {
 		return m.revealServicesView(true), true
+	}
+	if id == "containers-help" {
+		return m.openContainersGuide(""), true
 	}
 	if id == "containers-open-databases" {
 		open := m.revealServicesView(false)

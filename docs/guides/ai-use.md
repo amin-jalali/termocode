@@ -406,7 +406,7 @@ Container tools work on the whole host, not only this project:
   for these, and their palette commands are *never*.
 - Env values never reach the model: inspect keeps the names and masks the
   values (`POSTGRES_PASSWORD=[REDACTED]`). See
-  [Containers](services.md#the-ai-and-host-containers).
+  [Containers](containers.md#the-ai-and-host-containers).
 
 The [AI tools reference](../reference/ai-tools.md) lists every tool, its
 arguments and its rule.
