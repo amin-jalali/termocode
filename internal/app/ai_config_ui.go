@@ -203,6 +203,11 @@ func (m *Model) onAIProviderPicked(kind string) tea.Cmd {
 }
 
 func (m *Model) openAIKeyPrompt(kind string) tea.Cmd {
+	// The key is saved in the secret store: open it first (a new
+	// encrypted store asks for its passphrase twice).
+	if c, wait := m.secretsOpenFirst(func(m *Model) tea.Cmd { return m.openAIKeyPrompt(kind) }); wait {
+		return c
+	}
 	m.aiS().cfgKind = kind
 	m.prompt = prompt.New("✦ "+ai.KindLabel(kind)+" API key", "API key (stored 0600 in ai/credentials.json; empty = keep):", "")
 	m.prompt.SetMasked(true)

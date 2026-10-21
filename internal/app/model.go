@@ -662,6 +662,9 @@ type Model struct {
 	ai *aiState
 	// HTTP client for .http files (http_state.go); made on first use.
 	http *httpState
+	// secrets is the secret store's unlock flow (secrets_ui.go); the store
+	// itself is m.secretStore().
+	secrets *secretsState
 	// setup is the first-run setup card on the Welcome page
 	// (setup_card*.go); shared by Model copies.
 	setup *setupState
@@ -786,6 +789,7 @@ func New() Model {
 		databases:        newDBState(),
 		ext:              newExtState(),    // Group I
 		ai:               newAIState(),     // Group A
+		secrets:          &secretsState{},  // U19 SS-3
 		setup:            newSetupState(),  // setup card (setup_card_ui.go)
 		debug:            loadDebugState(), // Group D (shared by Model copies)
 	}

@@ -18,9 +18,10 @@ import (
 //	ai.claude_oauth   → claude_oauth            (JSON object)
 //	mcp.secret.<NAME> → mcp_secrets.<NAME>      (string)
 //	mcp.oauth.<srv>   → mcp_oauth.<srv>         (JSON object)
+//	mcp.account.<srv> → mcp_accounts.<srv>      (string, not secret)
 //	anything else     → secrets.<name>          (string)
 //
-// Fields it does not own (mcp_accounts) are kept as they are.
+// Fields it does not own are kept as they are.
 type plainFile struct {
 	mu   sync.Mutex
 	path string
@@ -51,6 +52,8 @@ func plainSlot(name string) slot {
 		return slot{"mcp_secrets", strings.TrimPrefix(name, "mcp.secret."), false}
 	case strings.HasPrefix(name, "mcp.oauth."):
 		return slot{"mcp_oauth", strings.TrimPrefix(name, "mcp.oauth."), true}
+	case strings.HasPrefix(name, "mcp.account."):
+		return slot{"mcp_accounts", strings.TrimPrefix(name, "mcp.account."), false}
 	}
 	return slot{"secrets", name, false}
 }

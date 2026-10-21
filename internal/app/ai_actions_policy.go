@@ -382,6 +382,10 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-mcp-connect":      aiNever(aiNoAIConfig + " (signing in to services is the user's)"),
 	"ai-mcp-log":          aiAuto(),
 	"ai-mcp-config":       aiNever(aiNoAIConfig),
+	// The secret store (secrets_ui.go): unlocking and locking are the
+	// user's; the AI never reads, sets or lists secrets.
+	"secrets-unlock": aiNever(aiNoAIConfig),
+	"secrets-lock":   aiNever(aiNoAIConfig),
 	// Agent profiles (U20 AP-5): the model may suggest a profile (the
 	// user confirms the switch); editing and trusting stay with the user.
 	"ai-profile-switch": aiConfirm(ai.ClassSettings),
@@ -464,6 +468,9 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"mcp_max_result_kb":     aiNever(aiNoAIConfig),
 	"mcp_trust_annotations": aiNever(aiNoAIConfig),
 	"mcp_trusted":           aiNever(aiNoAIConfig),
+	// The secret store's backend and auto-lock (secrets_ui.go).
+	"secret_store":        aiNever(aiNoAIConfig),
+	"secret_lock_minutes": aiNever(aiNoAIConfig),
 	// Services view (services_quit.go).
 	"services_on_quit":          aiConfirm(ai.ClassSettings),
 	"services_max_log_kb":       aiConfirm(ai.ClassSettings),

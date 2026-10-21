@@ -344,6 +344,7 @@ func paletteItems() []picker.Item {
 	items = append(items, databasesPaletteItems()...) // DB-3
 	items = append(items, extManagePaletteItems()...) // Group I — Extensions: Reload / Open Folder / …
 	items = append(items, httpPaletteItems()...)      // HTTP client (http_commands.go)
+	items = append(items, secretsPaletteItems()...)   // secret store (secrets_ui.go)
 	// Group A — AI commands (ai_state.go).
 	for _, e := range aiPaletteItems() {
 		items = append(items, picker.Item{ID: e.id, Title: e.title, Hint: e.hint})
@@ -725,6 +726,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchHTTPPalette(id); ok { // HTTP client
+			return cmd
+		}
+		if cmd, ok := m.dispatchSecretsPalette(id); ok { // secrets_ui.go
 			return cmd
 		}
 		// Group G: merge conflicts + clone (git_conflicts.go, git_clone.go).

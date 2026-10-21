@@ -30,10 +30,11 @@ import (
 // argv, the environment, a file of ours, a log or a toast. The engine's
 // own credential store keeps it.
 //
-// "Remember in termocode" (plan §3.6) is not offered: it needs an
-// unlocked, encrypted U19 store (SS-3). The only store the app opens
-// today is the plain credentials file, and a registry token must not go
-// there.
+// "Remember in termocode" (plan §3.6) is not offered yet (SS-3b): it
+// needs an unlocked, encrypted U19 store, and a registry token must
+// never go to the plain credentials file. Offer it only when
+// m.encryptedSecretStore() (secrets_ui.go) returns ok, and save through
+// that store.
 //
 // None of this is offered to the AI (palette ids are aiNever).
 

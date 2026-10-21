@@ -1384,6 +1384,8 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `save-all` | File: Save All Files | confirm (fileWrite) |   |
 | `search-next-result` | Search: Go to Next Search Result | auto |   |
 | `search-prev-result` | Search: Go to Previous Search Result | auto |   |
+| `secrets-lock` | AI: Lock Secrets | never | AI provider, credentials and approvals stay with the user |
+| `secrets-unlock` | AI: Unlock Secrets | never | AI provider, credentials and approvals stay with the user |
 | `services-configure` | Services: Configure (services.json) | confirm (ide) |   |
 | `services-focus` | Services: Focus (Containers) | auto |   |
 | `services-logs` | Services: Show Logs... | never | opens a picker or prompt that only the user can answer; use a typed tool (services_logs) |
@@ -1507,6 +1509,8 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `persistent_session` | confirm (settings) |   |
 | `rtl` | never | a file-only display setting read at start; the user edits it in config.json |
 | `search_max_results` | confirm (settings) |   |
+| `secret_lock_minutes` | never | AI provider, credentials and approvals stay with the user |
+| `secret_store` | never | AI provider, credentials and approvals stay with the user |
 | `services_max_log_kb` | confirm (settings) |   |
 | `services_on_quit` | confirm (settings) |   |
 | `show_hidden` | confirm (settings) |   |

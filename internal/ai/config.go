@@ -103,7 +103,15 @@ type Credentials struct {
 	// MCPAccounts are the account labels of servers that have no OAuth
 	// sign-in (the gh and token ways), by server name.
 	MCPAccounts map[string]string `json:"mcp_accounts,omitempty"`
+
+	// locked marks a view loaded while the secret store was locked: it is
+	// empty and SaveCredentials refuses it.
+	locked bool
 }
+
+// Locked reports a view loaded while the secret store was locked (SS-3):
+// its values are missing, not deleted.
+func (c Credentials) Locked() bool { return c.locked }
 
 // MCPOAuth is one MCP server's OAuth sign-in. Issuer and Resource bind
 // the tokens: they are only sent to Resource (the server URL) and only
@@ -326,37 +334,104 @@ func SaveCredentials(path string, c Credentials) error {
 }
 
 func loadCredentialsFromStore(path string, store secretstore.Store) (Credentials, error) {
-	// The plain backend is the existing file. Decode it to discover its keys,
-	// then make the store the source of each secret value.
+	if store.Locked() {
+		// The values are behind the passphrase: an empty view, marked so
+		// SaveCredentials refuses it (it must not delete what it never saw).
+		return Credentials{locked: true}, nil
+	}
+	// The plain backend is the existing file and may hold names the index
+	// does not know yet; other backends are listed by the index alone.
+	old, err := loadCredentialsFromFile(path)
+	if err != nil {
+		return Credentials{}, err
+	}
+	oldValues := credentialEntries(old, true)
+	names := map[string]bool{}
+	for n := range oldValues {
+		names[n] = true
+	}
+	for _, n := range store.Names() {
+		if credentialName(n) {
+			names[n] = true
+		}
+	}
 	var c Credentials
-	b, err := os.ReadFile(path)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return c, err
-	}
-	if err == nil {
-		if err := json.Unmarshal(b, &c); err != nil {
-			return Credentials{}, errors.New("ai/credentials.json is not valid JSON")
+	for n := range names {
+		v := storeCredentialValue(store, n, oldValues[n])
+		if v == "" {
+			continue
 		}
-	}
-	for k, v := range c.Keys {
-		c.Keys[k] = storeCredentialValue(store, "ai.key."+k, v)
-	}
-	if c.ClaudeOAuth != nil {
-		if v := storeCredentialValue(store, "ai.claude_oauth", marshalCredential(c.ClaudeOAuth)); v != "" {
-			_ = json.Unmarshal([]byte(v), c.ClaudeOAuth)
-		}
-	}
-	for k, v := range c.MCPSecrets {
-		c.MCPSecrets[k] = storeCredentialValue(store, "mcp.secret."+k, v)
-	}
-	for k, v := range c.MCPOAuth {
-		if raw := storeCredentialValue(store, "mcp.oauth."+k, marshalCredential(v)); raw != "" {
-			_ = json.Unmarshal([]byte(raw), &v)
-			c.MCPOAuth[k] = v
+		switch {
+		case n == "ai.claude_oauth":
+			var t OAuthTokens
+			if json.Unmarshal([]byte(v), &t) == nil {
+				c.ClaudeOAuth = &t
+			}
+		case strings.HasPrefix(n, "ai.key."):
+			c.Keys = setEntry(c.Keys, strings.TrimPrefix(n, "ai.key."), v)
+		case strings.HasPrefix(n, "mcp.secret."):
+			c.MCPSecrets = setEntry(c.MCPSecrets, strings.TrimPrefix(n, "mcp.secret."), v)
+		case strings.HasPrefix(n, "mcp.oauth."):
+			var o MCPOAuth
+			if json.Unmarshal([]byte(v), &o) == nil {
+				if c.MCPOAuth == nil {
+					c.MCPOAuth = map[string]MCPOAuth{}
+				}
+				c.MCPOAuth[strings.TrimPrefix(n, "mcp.oauth.")] = o
+			}
+		case strings.HasPrefix(n, "mcp.account."):
+			c.MCPAccounts = setEntry(c.MCPAccounts, strings.TrimPrefix(n, "mcp.account."), v)
 		}
 	}
 	c.register()
 	return c, nil
+}
+
+func setEntry(m map[string]string, k, v string) map[string]string {
+	if m == nil {
+		m = map[string]string{}
+	}
+	m[k] = v
+	return m
+}
+
+// credentialName reports a store name the Credentials view owns. Other
+// names (db.*, http.secret.*) belong to other features and are never
+// touched by SaveCredentials.
+func credentialName(n string) bool {
+	if n == "ai.claude_oauth" {
+		return true
+	}
+	for _, p := range []string{"ai.key.", "mcp.secret.", "mcp.oauth.", "mcp.account."} {
+		if strings.HasPrefix(n, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// credentialEntries flattens a view into store names and values. With
+// accounts false a nil MCPAccounts map is left out (see SaveCredentials).
+func credentialEntries(c Credentials, accounts bool) map[string]string {
+	out := map[string]string{}
+	for k, v := range c.Keys {
+		out["ai.key."+k] = v
+	}
+	if c.ClaudeOAuth != nil {
+		out["ai.claude_oauth"] = marshalCredential(c.ClaudeOAuth)
+	}
+	for k, v := range c.MCPSecrets {
+		out["mcp.secret."+k] = v
+	}
+	for k, v := range c.MCPOAuth {
+		out["mcp.oauth."+k] = marshalCredential(v)
+	}
+	if accounts || c.MCPAccounts != nil {
+		for k, v := range c.MCPAccounts {
+			out["mcp.account."+k] = v
+		}
+	}
+	return out
 }
 
 func storeCredentialValue(store secretstore.Store, name, old string) string {
@@ -372,53 +447,50 @@ func storeCredentialValue(store secretstore.Store, name, old string) string {
 	return old
 }
 
+// saveCredentialsToStore makes the store hold exactly the view: names
+// the view dropped are deleted, changed values are set. An unchanged
+// value is not written again (an age write costs a scrypt run, and a
+// ${cmd:} / ${env:} reference must not be replaced by what it resolved
+// to). A nil MCPAccounts map means "not loaded": the stored account
+// labels stay as they are.
 func saveCredentialsToStore(path string, c Credentials, store secretstore.Store) error {
-	// Seed the index from an existing old-format file before writing so keys
-	// removed from the in-memory view can be deleted through the store.
+	if c.locked {
+		return secretstore.ErrLocked
+	}
+	want := credentialEntries(c, false)
+	// Seed the old names from an existing old-format file too, so keys
+	// removed from the in-memory view are deleted through the store.
 	old, _ := loadCredentialsFromFile(path)
-	for k := range old.Keys {
-		if _, ok := c.Keys[k]; !ok {
-			if err := store.Delete("ai.key." + k); err != nil {
-				return err
-			}
+	have := map[string]bool{}
+	for n := range credentialEntries(old, true) {
+		have[n] = true
+	}
+	for _, n := range store.Names() {
+		if credentialName(n) {
+			have[n] = true
 		}
 	}
-	for k, v := range c.Keys {
-		if err := store.Set("ai.key."+k, v); err != nil {
+	for n := range have {
+		if _, keep := want[n]; keep {
+			continue
+		}
+		if strings.HasPrefix(n, "mcp.account.") && c.MCPAccounts == nil {
+			continue
+		}
+		if err := store.Delete(n); err != nil {
 			return err
 		}
 	}
-	if old.ClaudeOAuth != nil && c.ClaudeOAuth == nil {
-		if err := store.Delete("ai.claude_oauth"); err != nil {
-			return err
-		}
+	names := make([]string, 0, len(want))
+	for n := range want {
+		names = append(names, n)
 	}
-	if c.ClaudeOAuth != nil {
-		if err := store.Set("ai.claude_oauth", marshalCredential(c.ClaudeOAuth)); err != nil {
-			return err
+	sort.Strings(names)
+	for _, n := range names {
+		if v, ok, err := store.Get(n); err == nil && ok && v == want[n] {
+			continue
 		}
-	}
-	for k := range old.MCPSecrets {
-		if _, ok := c.MCPSecrets[k]; !ok {
-			if err := store.Delete("mcp.secret." + k); err != nil {
-				return err
-			}
-		}
-	}
-	for k, v := range c.MCPSecrets {
-		if err := store.Set("mcp.secret."+k, v); err != nil {
-			return err
-		}
-	}
-	for k := range old.MCPOAuth {
-		if _, ok := c.MCPOAuth[k]; !ok {
-			if err := store.Delete("mcp.oauth." + k); err != nil {
-				return err
-			}
-		}
-	}
-	for k, v := range c.MCPOAuth {
-		if err := store.Set("mcp.oauth."+k, marshalCredential(v)); err != nil {
+		if err := store.Set(n, want[n]); err != nil {
 			return err
 		}
 	}
@@ -436,7 +508,7 @@ func loadCredentialsFromFile(path string) (Credentials, error) {
 		return c, err
 	}
 	if err := json.Unmarshal(b, &c); err != nil {
-		return Credentials{}, err
+		return Credentials{}, errors.New("ai/credentials.json is not valid JSON")
 	}
 	return c, nil
 }

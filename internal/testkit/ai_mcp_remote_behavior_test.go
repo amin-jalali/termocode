@@ -27,10 +27,13 @@ func remoteDriver(t *testing.T, aiURL, mcpJSON, creds string, ssh bool) *Driver 
 	if testing.Short() {
 		t.Skip("starts nvim")
 	}
-	cfg := map[string]string{"mcp.json": mcpJSON}
-	if creds != "" {
-		cfg["ai/credentials.json"] = creds
+	// These tests read the plain credentials file: an empty one keeps
+	// the plain store (an encrypted store would ask for a passphrase
+	// first; secrets_ui.go).
+	if creds == "" {
+		creds = "{}"
 	}
+	cfg := map[string]string{"mcp.json": mcpJSON, "ai/credentials.json": creds}
 	return New(t, Options{W: 160, H: 40, Nvim: true, Files: textFiles(), Config: cfg,
 		Setup: func(t testing.TB, _ string) {
 			t.Setenv("TERMOCODE_AI_PROVIDER", "ollama")

@@ -254,3 +254,56 @@ func TestCheckPassphrase(t *testing.T) {
 		}
 	}
 }
+
+// SS-3 compatibility: with KeepPlainFile, auto keeps an existing plain
+// credentials file as the backend until SS-4 migrates it, unless a
+// non-plain backend is already recorded. The keyring is not probed then.
+func TestOpenKeepsExistingPlainFile(t *testing.T) {
+	cases := []struct {
+		setting, recorded string
+		file, keep        bool
+		want              string
+	}{
+		{"auto", "", true, true, "plain"},
+		{"", "", true, true, "plain"},
+		{"auto", "plain", true, true, "plain"}, // SS-2 always recorded plain
+		{"auto", "age", true, true, "age"},
+		{"auto", "plain", false, true, "age"}, // nothing to keep: auto picks
+		{"auto", "", false, true, "age"},
+		{"auto", "", true, false, "age"}, // the rule is opt-in
+		{"age", "", true, true, "age"},   // a forced setting wins
+	}
+	for _, c := range cases {
+		dir := t.TempDir()
+		plain := filepath.Join(dir, "ai", "credentials.json")
+		if c.file {
+			if err := os.MkdirAll(filepath.Dir(plain), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(plain, []byte(fixture), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if c.recorded != "" {
+			if err := updateIndex(filepath.Join(dir, "secrets.json"), func(i *Index) { i.Backend = c.recorded }); err != nil {
+				t.Fatal(err)
+			}
+		}
+		probed := false
+		s, err := Open(Options{Dir: dir, Backend: c.setting, PlainPath: plain, KeepPlainFile: c.keep,
+			KeyringProbe: func() bool { probed = true; return false }})
+		if err != nil {
+			t.Errorf("%+v: %v", c, err)
+			continue
+		}
+		if s.Backend() != c.want {
+			t.Errorf("%+v: backend = %q, want %q", c, s.Backend(), c.want)
+		}
+		if c.want == "plain" && probed {
+			t.Errorf("%+v: probed the keyring for a kept plain file", c)
+		}
+		if idx, _ := loadIndex(filepath.Join(dir, "secrets.json")); idx.Backend != c.want {
+			t.Errorf("%+v: recorded %q", c, idx.Backend)
+		}
+	}
+}

@@ -50,7 +50,8 @@ type setupFacts struct {
 
 	aiConfigured        bool
 	aiProvider, aiModel string
-	services            int // MCP servers in the user mcp.json
+	secretsLocked       bool // the encrypted secret store holds secrets and is locked
+	services            int  // MCP servers in the user mcp.json
 
 	themeID, themeName string
 	settled            map[string]bool // steps answered on the card
@@ -275,6 +276,11 @@ func setupAIStep(f setupFacts) setupStep {
 			s.status += " · " + f.aiModel
 		}
 		s.detail = s.status
+	case f.secretsLocked:
+		s.status = "Secrets locked · F1 → AI: Unlock Secrets"
+		s.detail = "Your AI keys are in the encrypted secret store, which is locked. Unlock it with your passphrase (F1 → AI: Unlock Secrets)."
+		s.action = "Unlock…"
+		s.buttons = []setupButton{{id: "secrets-unlock", label: "Unlock secrets…"}, {id: "ai-skip", label: "Skip for now"}}
 	case f.settled["ai"]:
 		s.done = true
 		s.status = "Skipped · F1 → AI: Configure Provider…"

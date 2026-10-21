@@ -125,7 +125,13 @@ func (m *Model) wiz() *mcpWizard { return m.aiS().mcpWiz }
 
 // openMCPConnect is the palette entry: it asks gh for its accounts (on a
 // Cmd goroutine, 5 s at most) and opens the services picker.
-func (m *Model) openMCPConnect() tea.Cmd { return m.mcpConnectEnv("", "") }
+// A sign-in is saved in the secret store, so a locked store asks first.
+func (m *Model) openMCPConnect() tea.Cmd {
+	if c, wait := m.secretsOpenFirst((*Model).openMCPConnect); wait {
+		return c
+	}
+	return m.mcpConnectEnv("", "")
+}
 
 func (m *Model) mcpConnectEnv(then, name string) tea.Cmd {
 	return func() tea.Msg {
@@ -140,6 +146,9 @@ func (m *Model) mcpConnectEnv(then, name string) tea.Cmd {
 // action): a preset's ways when the entry is one ("github",
 // "github-perkino"), else the browser / paste sign-in of its URL.
 func (m *Model) mcpConnectServer(name string) tea.Cmd {
+	if c, wait := m.secretsOpenFirst(func(m *Model) tea.Cmd { return m.mcpConnectServer(name) }); wait {
+		return c
+	}
 	if p, ok := mcpPresetFor(name); ok {
 		return m.mcpConnectEnv(p.Name, name)
 	}

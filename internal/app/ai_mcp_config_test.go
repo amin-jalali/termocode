@@ -10,7 +10,7 @@ import (
 func TestPlainSecretStoreTracksConfigDirectory(t *testing.T) {
 	first := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", first)
-	configurePlainSecretStore()
+	_, _ = configureSecretStore()
 	firstPath := filepath.Join(first, "termocode", "ai", "credentials.json")
 	if err := ai.SaveCredentials(firstPath, ai.Credentials{MCPOAuth: map[string]ai.MCPOAuth{
 		"github": {Resource: "https://api.githubcopilot.com/mcp/", AccessToken: "stored-token"},
@@ -20,7 +20,7 @@ func TestPlainSecretStoreTracksConfigDirectory(t *testing.T) {
 
 	second := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", second)
-	configurePlainSecretStore()
+	_, _ = configureSecretStore()
 	secondPath := filepath.Join(second, "termocode", "ai", "credentials.json")
 	got, err := ai.LoadCredentials(secondPath)
 	if err != nil {

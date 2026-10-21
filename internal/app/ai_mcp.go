@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -21,7 +20,6 @@ import (
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/picker"
-	"github.com/amin-jalali/termocode/internal/secrets"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -42,42 +40,6 @@ import (
 
 // mcpLogChannel is the Output channel of the MCP lifecycle log.
 const mcpLogChannel = "MCP"
-
-var secretStoreConfig struct {
-	sync.Mutex
-	path  string
-	store secrets.Store
-}
-
-func configurePlainSecretStore() {
-	dir, err := ai.ConfigDir()
-	if err != nil {
-		return
-	}
-	path, err := ai.CredentialsPath()
-	if err != nil {
-		return
-	}
-	secretStoreConfig.Lock()
-	defer secretStoreConfig.Unlock()
-	if secretStoreConfig.path == path {
-		return
-	}
-	store, err := secrets.Open(secrets.Options{Dir: dir, PlainPath: path, Backend: "plain", Workspace: aiWorkspaceRoot(), Register: ai.RegisterSecret, Redact: ai.Redact})
-	if err != nil {
-		return
-	}
-	ai.SetSecretStoreForPath(path, store)
-	secretStoreConfig.path = path
-	secretStoreConfig.store = store
-}
-
-func databaseSecretStore() secrets.Store {
-	configurePlainSecretStore()
-	secretStoreConfig.Lock()
-	defer secretStoreConfig.Unlock()
-	return secretStoreConfig.store
-}
 
 // mcpTarget is the Manager StopMCP stops.
 var mcpTarget atomic.Pointer[mcp.Manager]
@@ -119,7 +81,7 @@ func mcpUserPath() string {
 // aiMCP returns the Manager, made on first use (it starts nothing).
 // Timeouts are read then; a restart applies new ones.
 func (m *Model) aiMCP() *mcp.Manager {
-	configurePlainSecretStore()
+	_, _ = configureSecretStore()
 	s := m.aiS()
 	if s.mcp != nil {
 		return s.mcp

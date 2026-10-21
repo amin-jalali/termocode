@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/zalando/go-keyring"
+
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
@@ -92,6 +94,8 @@ func sandbox(t testing.TB, nvim bool) {
 		"TERMOCODE_FONT_DELTA":  "0",
 		"TERMOCODE_NO_NVIM":     "1",
 		"TERMOCODE_HEADLESS":    "1", // no re-exec, xdg-open, OSC 52 …
+		// No D-Bus session: the secret store never probes the OS keyring.
+		"DBUS_SESSION_BUS_ADDRESS": "",
 	}
 	if nvim {
 		env["TERMOCODE_NO_NVIM"] = ""
@@ -99,6 +103,7 @@ func sandbox(t testing.TB, nvim bool) {
 	for k, v := range env {
 		t.Setenv(k, v)
 	}
+	keyring.MockInit() // and on macOS too: an in-memory keyring
 }
 
 // makeWorkspace writes files into a new temp dir and, with git, commits

@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/zalando/go-keyring"
 )
 
 // TestMain points HOME and every XDG dir at a temp folder, so no test in
@@ -39,10 +41,18 @@ func TestMain(m *testing.M) {
 		"HTTPS_PROXY":               "http://127.0.0.1:9",
 		"http_proxy":                "http://127.0.0.1:9",
 		"https_proxy":               "http://127.0.0.1:9",
+		// No D-Bus session: the OS keyring is never probed (secrets_ui.go).
+		"DBUS_SESSION_BUS_ADDRESS": "",
 	} {
 		_ = os.Setenv(k, v)
 	}
 	setupCardOff = true // see setup_card_ui.go
+	// The secret store: an in-memory keyring, never the real one, and the
+	// plain backend these tests were written for (they share one config
+	// dir; secrets_ui_test.go opts in to auto / age / keyring).
+	keyring.MockInit()
+	secretStoreSettingOverride = "plain"
+	secretKeyringProbe = func() bool { return false }
 	code := m.Run()
 	_ = os.RemoveAll(dir)
 	os.Exit(code)

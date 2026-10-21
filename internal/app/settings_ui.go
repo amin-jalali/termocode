@@ -61,6 +61,12 @@ type settingsConfig struct {
 	SetupSettled       []string `json:"setup_settled,omitempty"`
 	ContainersSections []string `json:"containers_sections,omitempty"`
 	ContainersEngine   string   `json:"containers_engine,omitempty"`
+	// SecretStore is the secret store backend: "auto" (OS keyring, else
+	// the encrypted file), "keyring", "age" or "plain" ("" = auto;
+	// secrets_ui.go). SecretLockMinutes is the idle auto-lock (0 = never;
+	// stored only, the timer is SS-8).
+	SecretStore       string `json:"secret_store,omitempty"`
+	SecretLockMinutes *int   `json:"secret_lock_minutes,omitempty"`
 }
 
 // settingsConfigPath returns the absolute path to config.json. We don't

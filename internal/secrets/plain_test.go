@@ -144,3 +144,29 @@ func TestPlainCorrupt(t *testing.T) {
 		t.Fatal("a corrupt file must not be overwritten")
 	}
 }
+
+// mcp.account.<server> is the old mcp_accounts.<server> (SS-3: the
+// Credentials view saves account labels through the store).
+func TestPlainMCPAccountSlot(t *testing.T) {
+	path := writeFixture(t)
+	p := newPlain(path)
+	if v, ok, err := p.Get("mcp.account.github"); !ok || err != nil || v != "amin" {
+		t.Fatalf("Get = %q %v %v", v, ok, err)
+	}
+	if err := p.Set("mcp.account.linear", "amin-jalali"); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Delete("mcp.account.github"); err != nil {
+		t.Fatal(err)
+	}
+	var raw struct {
+		Accounts map[string]string `json:"mcp_accounts"`
+		Secrets  map[string]string `json:"secrets"`
+	}
+	if err := json.Unmarshal([]byte(readFile(t, path)), &raw); err != nil {
+		t.Fatal(err)
+	}
+	if raw.Accounts["linear"] != "amin-jalali" || raw.Accounts["github"] != "" || len(raw.Secrets) != 0 {
+		t.Fatalf("file = %+v", raw)
+	}
+}

@@ -19,6 +19,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
+	"github.com/zalando/go-keyring"
 
 	"github.com/amin-jalali/termocode/internal/app"
 	"github.com/amin-jalali/termocode/internal/clock"
@@ -204,6 +205,9 @@ func Run(sc Scene, w, h int, opt Options) (string, error) {
 	writeOpened(filepath.Join(cfg, "termocode", "recents.json"), sc.Recents)
 	writeOpened(filepath.Join(cfg, "termocode", "workspaces.json"), sc.Workspaces)
 	os.Setenv("XDG_CONFIG_HOME", cfg)
+	// The secret store must not touch the real OS keyring for a demo.
+	os.Setenv("DBUS_SESSION_BUS_ADDRESS", "")
+	keyring.MockInit()
 	if home, err := os.UserHomeDir(); err == nil && os.Getenv("TERMOCODE_PLUGINS_DIR") == "" {
 		if p := filepath.Join(home, ".local", "share", "termocode", "plugins"); dirExists(p) {
 			os.Setenv("TERMOCODE_PLUGINS_DIR", p)

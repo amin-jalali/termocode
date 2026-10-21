@@ -231,6 +231,9 @@ func (m *Model) setupFacts() setupFacts {
 		showSteps: s.showSteps, profileMade: s.profileMade,
 		settled: s.settled,
 	}
+	if !m.aiConfigured() {
+		f.secretsLocked = m.aiS().secretsLocked
+	}
 	if m.aiConfigured() {
 		cfg := m.aiS().cfg
 		f.aiConfigured = true
@@ -364,6 +367,8 @@ func (m *Model) pressSetupButton(id string) tea.Cmd {
 		return m.planSetupProfile()
 	case id == "ai-setup":
 		return m.openAIConfigure()
+	case id == "secrets-unlock":
+		return m.openSecretsUnlock(nil)
 	case id == "ai-skip":
 		return m.settleSetup("ai")
 	case id == "services-connect":

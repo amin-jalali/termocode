@@ -72,6 +72,12 @@ func wrapWords(s string, w int) []string {
 // itself is unchanged and still returned in SubmitMsg.
 func (m *Model) SetMasked(on bool) { m.masked = on }
 
+// Masked, Note and Value report the prompt's state (tests check that a
+// secret prompt is masked and that a submitted one was cleared).
+func (m Model) Masked() bool  { return m.masked }
+func (m Model) Note() string  { return m.note }
+func (m Model) Value() string { return m.value }
+
 // New returns a prompt with the given title, input label, and initial value.
 func New(title, label, initial string) Model {
 	return Model{title: title, label: label, value: initial}

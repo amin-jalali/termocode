@@ -139,6 +139,11 @@ type aiState struct {
 	mcpGHAccounts []mcp.GHAccount
 	mcpNotNow     map[string]bool // "Not now" on a server's sign-in row
 
+	// secretsLocked: the last reload found the encrypted secret store
+	// locked (secrets_ui.go); the setup card and the "not configured"
+	// toast say so.
+	secretsLocked bool
+
 	// configure / sign-in flow
 	cfgKind string
 	pkce    *ai.PKCE
@@ -180,6 +185,7 @@ func newAIState() *aiState {
 // provider. Safe to call any time (e.g. after Configure).
 func (s *aiState) reload() {
 	s.loadErr = ""
+	_, _ = configureSecretStore() // credentials go through the app's one store
 	cfgPath, err := ai.ConfigPath()
 	if err == nil {
 		s.settings = ai.LoadSettings(cfgPath)
@@ -192,6 +198,7 @@ func (s *aiState) reload() {
 			s.loadErr = err.Error()
 		}
 	}
+	s.secretsLocked = creds.Locked() && secretsAgeFileExists()
 	s.cfg = ai.Resolve(s.settings, creds, os.Getenv)
 	if s.cfg.Kind == ai.KindClaudeOAuth && creds.ClaudeOAuth != nil && credPath != "" {
 		src := &ai.TokenSource{Path: credPath}
@@ -223,7 +230,14 @@ func (m *Model) aiReady() (tea.Cmd, bool) {
 	if m.aiConfigured() {
 		return nil, true
 	}
+	// A locked secret store asks for its passphrase on the first need.
+	if c, asked := m.secretsAskOnNeed(); asked {
+		return c, false
+	}
 	detail := "Run \"AI: Configure Provider…\" or set ANTHROPIC_API_KEY / OPENAI_API_KEY (or TERMOCODE_AI_PROVIDER=ollama)."
+	if m.aiS().secretsLocked {
+		detail = "Your secrets are locked: F1 → AI: Unlock Secrets.\n" + detail
+	}
 	if s := m.aiS(); s.loadErr != "" {
 		detail = ai.Redact(s.loadErr) + "\n" + detail
 	}

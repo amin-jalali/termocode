@@ -411,7 +411,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.handlePromptSubmit(msg.Value)
 	case prompt.CloseMsg:
 		m.promptOpen = false
-		return m, tea.Batch(m.handleClonePromptClose(), m.extOverlayClosed()) // Group G / Group I: no-op unless theirs
+		// Group G / Group I / secret store: no-op unless theirs
+		return m, tea.Batch(m.handleClonePromptClose(), m.extOverlayClosed(), m.secretsPromptClosed())
+	case secretsUnlockDoneMsg:
+		return m, m.onSecretsUnlockDone(msg)
 	// ── Group G: background clone (git_clone.go) ──
 	case cloneProgressMsg:
 		return m, m.handleCloneProgress(msg)

@@ -3,6 +3,7 @@ package secrets
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -92,6 +93,11 @@ type Options struct {
 	KeyringOverSSH bool
 	// KeyringProbe overrides the system probe, primarily for tests.
 	KeyringProbe func() bool
+	// KeepPlainFile keeps an existing plain file (PlainPath) as the
+	// backend under auto while no other backend is recorded. Users from
+	// before SS-3 keep working with no prompt and no data loss; moving
+	// their secrets to a safer store is the migration card's job (SS-4).
+	KeepPlainFile bool
 }
 
 // IndexFile and AgeFile are the file names inside Options.Dir.
@@ -115,7 +121,19 @@ func Open(o Options) (Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	if (o.Backend == "" || o.Backend == "auto") && idx.Backend == "" {
+	auto := o.Backend == "" || o.Backend == "auto"
+	if o.PlainPath == "" {
+		o.PlainPath = filepath.Join(o.Dir, "ai", "credentials.json")
+	}
+	keepPlain := false
+	if auto && o.KeepPlainFile && (idx.Backend == "" || idx.Backend == "plain") {
+		// SS-2 recorded "plain" on every start, so a recorded plain is
+		// not a choice yet: only the file decides.
+		if _, err := os.Stat(o.PlainPath); err == nil {
+			name, keepPlain = "plain", true
+		}
+	}
+	if auto && !keepPlain && (idx.Backend == "" || idx.Backend == "plain") {
 		probe := o.KeyringProbe
 		if probe == nil {
 			probe = func() bool { return ProbeKeyring(o.Getenv, o.KeyringOverSSH) }
@@ -134,11 +152,7 @@ func Open(o Options) (Store, error) {
 	case "age":
 		b = newAgeFile(filepath.Join(o.Dir, AgeFile), o.ScryptWorkFactor)
 	case "plain":
-		p := o.PlainPath
-		if p == "" {
-			p = filepath.Join(o.Dir, "ai", "credentials.json")
-		}
-		b = newPlain(p)
+		b = newPlain(o.PlainPath)
 	}
 	if idx.Backend != name {
 		if err := updateIndex(idxPath, func(i *Index) { i.Backend = name }); err != nil {

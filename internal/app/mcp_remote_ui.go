@@ -95,6 +95,9 @@ func mcpMissingSecrets(s mcp.Server) []string {
 
 // mcpAskSecret asks for the value of ${secret:NAME} (masked).
 func (m *Model) mcpAskSecret(name string) tea.Cmd {
+	if c, wait := m.secretsOpenFirst(func(m *Model) tea.Cmd { return m.mcpAskSecret(name) }); wait {
+		return c
+	}
 	m.aiS().mcpSecret = name
 	m.prompt = prompt.New("MCP secret "+name, "Value of ${secret:"+name+"}:", "")
 	m.prompt.SetMasked(true)
