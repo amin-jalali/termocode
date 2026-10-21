@@ -1,6 +1,7 @@
 package testkit
 
 import (
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -22,7 +23,11 @@ func TestSecretsMigrateCardKeepPlainBehavior(t *testing.T) {
 		t.Fatalf("no migration card:\n%s", screen(d))
 	}
 	sc := screen(d)
-	for _, want := range []string{"1 AI key · 1 MCP secret", "no D-Bus session", "Encrypted file", "Keep plain"} {
+	want := []string{"1 AI key · 1 MCP secret", "Encrypted file", "Keep plain"}
+	if runtime.GOOS == "linux" {
+		want = append(want, "no D-Bus session") // elsewhere the mocked keyring answers
+	}
+	for _, want := range want {
 		if !strings.Contains(sc, want) {
 			t.Errorf("card misses %q:\n%s", want, sc)
 		}
@@ -33,6 +38,9 @@ func TestSecretsMigrateCardKeepPlainBehavior(t *testing.T) {
 		}
 	}
 	d.Key("right")
+	if strings.Contains(sc, "OS keyring") {
+		d.Key("right") // keyring, encrypted file, keep plain
+	}
 	d.Key("enter")
 	if !d.WaitForText("Secrets stay in the plain file", 2*time.Second) {
 		t.Fatalf("no toast:\n%s", screen(d))

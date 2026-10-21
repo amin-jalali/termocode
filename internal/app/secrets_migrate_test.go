@@ -128,9 +128,15 @@ func TestSecretsMigrateCardShowsCountsNeverValues(t *testing.T) {
 		t.Fatal("no migration card")
 	}
 	text := migrateCardText(m)
+	// The reason depends on the OS: no D-Bus on Linux, else the fake
+	// probe's "did not answer".
+	why := secrets.KeyringSkipReason(nil, false)
+	if why == "" {
+		why = "it did not answer"
+	}
 	for _, want := range []string{"Move your secrets to a safer store?", "ai/credentials.json",
 		"2 AI keys · Claude sign-in · 1 MCP secret · 1 sign-in · 1 other secret",
-		"encrypted file", "no D-Bus session", "Encrypted file", "Keep plain"} {
+		"encrypted file", why, "Encrypted file", "Keep plain"} {
 		if !strings.Contains(strings.Join(strings.Fields(text), " "), want) {
 			t.Errorf("card misses %q:\n%s", want, text)
 		}
