@@ -32,7 +32,8 @@ func Dir() (string, error) {
 		}
 		dir = filepath.Join(cache, "termocode", "sessions")
 	}
-	if len(dir)+len("/0123456789abcdef.sock") > maxSocketPath {
+	if len(dir)+len("/0123456789abcdef.mcp.sock") > maxSocketPath { // the longest socket name
+
 		dir = filepath.Join(os.TempDir(), fmt.Sprintf("termocode-%d", os.Getuid()))
 	}
 	if err := ensurePrivateDir(dir); err != nil {
@@ -83,6 +84,9 @@ type Paths struct {
 	Info      string // JSON with the workspace, pid and start time
 	Log       string // server stderr
 	Caps      string // caps of the last client that attached (ClientCaps)
+	// MCPSocket is where the UI serves MCP to outside agents (M1); the
+	// `termocode mcp` relay connects to it.
+	MCPSocket string
 }
 
 // PathsFor returns the session files for a workspace folder.
@@ -105,5 +109,6 @@ func PathsFor(workspace string) (Paths, error) {
 		Info:      base + ".json",
 		Log:       base + ".log",
 		Caps:      base + ".caps.json",
+		MCPSocket: base + ".mcp.sock",
 	}, nil
 }
