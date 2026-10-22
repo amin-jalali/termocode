@@ -497,6 +497,10 @@ func (m *Model) onSecretsUnlockDone(msg secretsUnlockDoneMsg) tea.Cmd {
 	}
 	st.after = nil
 	st.creating = false
+	if errors.Is(msg.err, secrets.ErrCorrupt) && secretsAgeFileExists() {
+		m.openSecretsBrokenCard(msg.err) // secrets_failures.go
+		return nil
+	}
 	return m.secretsToast(toast.Errr, "Could not unlock secrets", secretsRedact(msg.err))
 }
 

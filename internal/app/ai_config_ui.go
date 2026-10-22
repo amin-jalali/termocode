@@ -122,6 +122,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerSecretsSwitch(id), true
 	case confirmKindSecretsSwitchPlain:
 		return m.answerSecretsSwitchPlain(id), true
+	case confirmKindSecretsBroken: // secrets_failures.go
+		return m.answerSecretsBroken(id), true
 	case confirmKindRegistryRemember: // containers_registries.go
 		return m.answerRegistryRemember(id), true
 	}

@@ -58,6 +58,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if n := m.drainCmdNotices(); n != nil { // ${cmd:} first use (secret_refs.go)
 			cmd = tea.Batch(cmd, n)
 		}
+		if n := m.drainKeyringNotice(); n != nil { // keyring gone (secrets_failures.go)
+			cmd = tea.Batch(cmd, n)
+		}
 	}
 	if wasDatabasesVisible && !m.databasesVisible() {
 		m.databasesClose(true)

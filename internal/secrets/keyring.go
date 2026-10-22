@@ -32,6 +32,9 @@ func (k *keyringBackend) Get(name string) (string, bool, error) {
 	if errors.Is(err, keyring.ErrNotFound) {
 		return "", false, nil
 	}
+	if err != nil {
+		notifyKeyringFail() // failures.go: reachable at setup, not here
+	}
 	return v, err == nil, err
 }
 func (k *keyringBackend) Set(name, value string) error { return k.set(keyringService, name, value) }
