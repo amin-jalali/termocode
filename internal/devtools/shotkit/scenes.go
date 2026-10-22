@@ -111,6 +111,8 @@ func dbCardScenes() []Scene {
 	return []Scene{
 		DatabasesVariant("db-console", "console"),
 		DatabasesVariant("db-add-picker", "add-picker"),
+		// Enter on PostgreSQL opens the first step of the form.
+		{Name: "db-add-form", Steps: WithEditor(Act("dbdemo:add-picker"), Key("enter"), Pause(400*time.Millisecond))},
 	}
 }
 
