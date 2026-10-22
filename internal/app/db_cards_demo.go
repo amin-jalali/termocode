@@ -23,6 +23,10 @@ func (m *Model) databaseCardsDemo(variant string) (tea.Cmd, bool) {
 		d.manual = map[string]bool{"local-pg": true}
 		d.txs = map[string]*dbTxState{"local-pg": {open: true, writes: 2}}
 		return m.databaseDisconnectAsk("local-pg"), true
+	case "disconnect-card":
+		// x on a connection with nothing waiting: the plain question.
+		m.databasesDemo("")
+		return m.databaseDisconnectAsk("local-pg"), true
 	}
 	return nil, false
 }
