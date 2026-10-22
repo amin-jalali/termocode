@@ -243,7 +243,7 @@ func (m *Model) dbImportCardText(imp *dbImport) string {
 	}
 	fmt.Fprintf(&b, "%s · %s · delimiter %s · %s · %s\n", sanitizeDBText(imp.display), imp.sniff.Encoding, dbCSVDelimiter(imp.sniff.Delimiter), header, dbPlural(imp.rows(), "row"))
 	fmt.Fprintf(&b, "Into %s on %s\n", imp.t.label(), sanitizeDBText(dbConnName(imp.conn)))
-	b.WriteString("Rows go in as batched INSERTs inside one transaction;\nnothing is written if any row fails. Empty cells become NULL.\n")
+	b.WriteString("Rows are inserted in groups, in one transaction;\nnothing is written if any row fails. Empty cells become NULL.\n")
 	if m.databases.manualMode(imp.t.conn) {
 		b.WriteString("The rows join your open transaction: Commit (K) saves them.\n")
 	}

@@ -105,7 +105,7 @@ func TestDBImportPreviewCardSniffsAndImportsInOneTransaction(t *testing.T) {
 	for _, want := range []string{
 		"Import 3 rows into app.users", "data.csv", "UTF-8", `delimiter ";"`, "header row", "3 rows",
 		"id", "email", "plan", "First 3 rows", "1 | a@x.io | free",
-		"batched INSERTs inside one transaction", "nothing is written if any row fails",
+		"inserted in groups, in one transaction", "nothing is written if any row fails",
 		"Import", "Map columns", "Header: on", "Cancel",
 	} {
 		if !strings.Contains(card, want) {

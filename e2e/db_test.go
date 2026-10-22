@@ -331,7 +331,7 @@ func TestDatabasesCompareSchemasSQLite(t *testing.T) {
 		return n >= 2
 	})
 	tm.Palette("Databases: Compare Schemas")
-	tm.WaitText("SOURCE (the model)", uiTimeout)
+	tm.WaitText("SOURCE (the one to copy)", uiTimeout)
 	tm.Type("model")
 	tm.settle()
 	tm.Send(KeyEnter)

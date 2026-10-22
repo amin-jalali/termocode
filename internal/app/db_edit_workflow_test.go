@@ -776,7 +776,7 @@ INSERT INTO logs(msg) VALUES ('a');`
 		t.Fatalf("no card:\n%s", ansi.Strip(d.Frame()))
 	}
 	d.Key("enter")
-	dbWaitPage(t, d, "manual · 1 uncommitted")
+	dbWaitPage(t, d, "manual commit · 1 not committed")
 	dbWaitPage(t, d, "banana")
 	d.Key("Z")
 	dbWaitPage(t, d, "apple")

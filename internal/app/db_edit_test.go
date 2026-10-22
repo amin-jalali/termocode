@@ -61,7 +61,7 @@ func TestDBPlaceRunKeepsPinnedAndEditedTabs(t *testing.T) {
 	s.curTab().edits = &dbEdits{cells: map[dbCellRef]dbclient.Cell{{0, 0}: {Text: "x"}}, deleted: map[int]bool{}}
 	c := &dbRun{sql: "c"}
 	s.placeRun(c)
-	if len(s.tabs) != 3 || s.tabStrip() != "1p 2* [3]" {
+	if len(s.tabs) != 3 || s.tabStrip() != "1 pinned 2 edited [3]" {
 		t.Fatalf("tabs = %q", s.tabStrip())
 	}
 	d := &dbRun{sql: "d"}

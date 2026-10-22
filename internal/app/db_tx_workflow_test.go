@@ -61,13 +61,13 @@ func TestDBTxManualModeCommitsWithK(t *testing.T) {
 	d := editDriver(t, 120, 30, s, "")
 	manualMode(t, d)
 	consoleRun(t, d, "UPDATE users SET plan = 'pro' WHERE id = 2;", true)
-	if !d.WaitFor(func() bool { return strings.Contains(chip(d), "manual · 1 uncommitted") }, 2*time.Second) {
+	if !d.WaitFor(func() bool { return strings.Contains(chip(d), "manual commit · 1 not committed") }, 2*time.Second) {
 		t.Fatalf("chip lacks the transaction:\n%s", chip(d))
 	}
 	if got := s.log(); len(got) < 2 || got[0] != "BEGIN" || s.has("COMMIT") {
 		t.Fatalf("server saw %q", got)
 	}
-	dbWaitPage(t, d, "manual · 1 uncommitted")
+	dbWaitPage(t, d, "manual commit · 1 not committed")
 	if !strings.Contains(dbText(t, d), "K commit") {
 		t.Fatalf("hints lack K:\n%s", dbText(t, d))
 	}
@@ -81,7 +81,7 @@ func TestDBTxManualModeCommitsWithK(t *testing.T) {
 	}
 	// A second write joins the same transaction.
 	consoleRun(t, d, "DELETE FROM users WHERE id = 3;", true)
-	if !d.WaitFor(func() bool { return strings.Contains(chip(d), "manual · 2 uncommitted") }, 2*time.Second) {
+	if !d.WaitFor(func() bool { return strings.Contains(chip(d), "manual commit · 2 not committed") }, 2*time.Second) {
 		t.Fatalf("chip:\n%s", chip(d))
 	}
 	begins := 0
@@ -97,7 +97,10 @@ func TestDBTxManualModeCommitsWithK(t *testing.T) {
 	if !d.WaitFor(func() bool { return s.has("COMMIT") }, 2*time.Second) {
 		t.Fatalf("K did not commit: %q", s.log())
 	}
-	if !d.WaitFor(func() bool { c := chip(d); return strings.Contains(c, "manual") && !strings.Contains(c, "uncommitted") }, 2*time.Second) {
+	if !d.WaitFor(func() bool {
+		c := chip(d)
+		return strings.Contains(c, "manual") && !strings.Contains(c, "not committed")
+	}, 2*time.Second) {
 		t.Fatalf("chip after commit:\n%s", chip(d))
 	}
 }
@@ -126,7 +129,7 @@ func TestDBTxDataViewEditsJoinTheTransactionAndRollBack(t *testing.T) {
 	}
 	// The reload reads inside the transaction (it sees the change).
 	dbWaitPage(t, d, "tx@example.com")
-	if !d.WaitFor(func() bool { return strings.Contains(chip(d), "manual · 1 uncommitted") }, 2*time.Second) {
+	if !d.WaitFor(func() bool { return strings.Contains(chip(d), "manual commit · 1 not committed") }, 2*time.Second) {
 		t.Fatalf("chip:\n%s", chip(d))
 	}
 	d.Key("Z")
@@ -141,7 +144,7 @@ func TestDBTxQuitAsksAboutUncommittedChanges(t *testing.T) {
 	d := editDriver(t, 120, 30, s, "")
 	manualMode(t, d)
 	consoleRun(t, d, "UPDATE users SET plan = 'pro' WHERE id = 2;", true)
-	if !d.WaitFor(func() bool { return strings.Contains(chip(d), "1 uncommitted") }, 2*time.Second) {
+	if !d.WaitFor(func() bool { return strings.Contains(chip(d), "1 not committed") }, 2*time.Second) {
 		t.Fatalf("chip:\n%s", chip(d))
 	}
 	d.Key("ctrl+q")
@@ -169,7 +172,7 @@ func TestDBTxDisconnectAndModeSwitchAsk(t *testing.T) {
 	d := editDriver(t, 120, 30, s, "")
 	manualMode(t, d)
 	consoleRun(t, d, "UPDATE users SET plan = 'pro' WHERE id = 2;", true)
-	d.WaitFor(func() bool { return strings.Contains(chip(d), "1 uncommitted") }, 2*time.Second)
+	d.WaitFor(func() bool { return strings.Contains(chip(d), "1 not committed") }, 2*time.Second)
 	// Back to auto-commit: the card first; Commit ends the transaction.
 	d.Key("f1")
 	d.Type("Databases: Transaction Mode")
@@ -187,7 +190,7 @@ func TestDBTxDisconnectAndModeSwitchAsk(t *testing.T) {
 	// Manual again, a write, then x: the card names the changes.
 	manualMode(t, d)
 	consoleRun(t, d, "DELETE FROM users WHERE id = 4;", true)
-	d.WaitFor(func() bool { return strings.Contains(chip(d), "1 uncommitted") }, 2*time.Second)
+	d.WaitFor(func() bool { return strings.Contains(chip(d), "1 not committed") }, 2*time.Second)
 	d.Key("f1")
 	d.Type("Databases: Focus")
 	d.Key("enter")
@@ -209,7 +212,7 @@ func TestDBTxHidingTheViewKeepsTheTransaction(t *testing.T) {
 	d := editDriver(t, 120, 30, s, "")
 	manualMode(t, d)
 	consoleRun(t, d, "UPDATE users SET plan = 'pro' WHERE id = 2;", true)
-	d.WaitFor(func() bool { return strings.Contains(chip(d), "1 uncommitted") }, 2*time.Second)
+	d.WaitFor(func() bool { return strings.Contains(chip(d), "1 not committed") }, 2*time.Second)
 	d.Key("ctrl+b") // the sidebar hides: the view closes its sessions
 	d.Settle(300 * time.Millisecond)
 	if strings.Contains(ansi.Strip(d.Frame()), "DATABASES") {
@@ -221,7 +224,7 @@ func TestDBTxHidingTheViewKeepsTheTransaction(t *testing.T) {
 	if closed != 0 || s.has("ROLLBACK") {
 		t.Fatalf("hiding the view ended the transaction (closed %d): %q", closed, s.log())
 	}
-	if !strings.Contains(chip(d), "1 uncommitted") {
+	if !strings.Contains(chip(d), "1 not committed") {
 		t.Fatalf("chip lost the transaction:\n%s", chip(d))
 	}
 	d.Key("f1")

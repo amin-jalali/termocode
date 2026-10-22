@@ -51,14 +51,14 @@ func TestDBResultTabsPinSwitchAndReplace(t *testing.T) {
 	}
 	d.Key("p")
 	runFile(t, d, "SELECT * FROM users WHERE id = 4;")
-	if !d.WaitFor(func() bool { return strings.Contains(pageRow1(t, d), "1p [2]") }, 2*time.Second) {
+	if !d.WaitFor(func() bool { return strings.Contains(pageRow1(t, d), "1 pinned [2]") }, 2*time.Second) {
 		t.Fatalf("tabs: %s", pageRow1(t, d))
 	}
 	if !strings.Contains(pageRow1(t, d), "WHERE id = 4") {
 		t.Fatalf("row 1: %s", pageRow1(t, d))
 	}
 	d.Key("1")
-	if r1 := pageRow1(t, d); !strings.Contains(r1, "[1p] 2") || !strings.Contains(r1, "LIMIT 100") {
+	if r1 := pageRow1(t, d); !strings.Contains(r1, "[1 pinned] 2") || !strings.Contains(r1, "LIMIT 100") {
 		t.Fatalf("1 did not switch: %s", r1)
 	}
 	d.Key("2")
@@ -69,7 +69,7 @@ func TestDBResultTabsPinSwitchAndReplace(t *testing.T) {
 	runFile(t, d, "SELECT * FROM users WHERE id = 5;")
 	if !d.WaitFor(func() bool {
 		r := pageRow1(t, d)
-		return strings.Contains(r, "1p [2]") && strings.Contains(r, "id = 5")
+		return strings.Contains(r, "1 pinned [2]") && strings.Contains(r, "id = 5")
 	}, 2*time.Second) {
 		t.Fatalf("tabs: %s", pageRow1(t, d))
 	}
@@ -128,7 +128,7 @@ func TestDBResultTabWithEditsIsKeptByANewRun(t *testing.T) {
 	setCell(t, d, "kept@example.com")
 	dbWaitPage(t, d, "1 change")
 	runFile(t, d, "SELECT * FROM users WHERE id = 4;")
-	if !d.WaitFor(func() bool { return strings.Contains(pageRow1(t, d), "1* [2]") }, 2*time.Second) {
+	if !d.WaitFor(func() bool { return strings.Contains(pageRow1(t, d), "1 edited [2]") }, 2*time.Second) {
 		t.Fatalf("tabs: %s", pageRow1(t, d))
 	}
 	d.Key("1")

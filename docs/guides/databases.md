@@ -176,7 +176,7 @@ A result loads at most `db_max_rows` rows (default 10,000); the page says when t
 
 ## Result tabs
 
-Every result has a tab. A new run replaces the tabs that are not pinned; a pinned tab (`p`) and a tab with pending changes stay. When a run has several statements, each statement that returns rows (or fails) gets its own tab. Up to nine tabs are kept. The first row of the page lists them when there is more than one: `1p [2*] 3` means tab 1 is pinned, tab 2 is on the page and has pending changes. Press `1` … `9` to switch.
+Every result has a tab. A new run replaces the tabs that are not pinned; a pinned tab and a tab with pending changes stay. When a run has several statements, each statement that returns rows (or fails) gets its own tab. Up to nine tabs are kept. The first row of the page lists them when there is more than one: `1 pinned [2 edited] 3` means tab 1 is pinned, tab 2 is on the page and has pending changes. Press `1` … `9` to switch.
 
 ## Table views
 
@@ -224,7 +224,7 @@ Changes stay on the page until you submit them. The left margin marks each row: 
 Each connection starts in auto-commit mode: every statement is saved at once. Press `t` on a connection (or use **Databases: Transaction Mode…**) and choose **Manual** to group your work: the first statement begins a transaction, the next ones join it, and nothing is saved until you commit.
 
 - `K` on the result page or **Databases: Commit** saves the changes; `Z` or **Databases: Rollback** drops them.
-- The status bar and the result page show `manual · 2 uncommitted` while changes wait. Typed `BEGIN`, `COMMIT` or `ROLLBACK` statements are not sent in manual mode; use `K` and `Z`.
+- The status bar and the result page show `manual commit · 2 not committed` while changes wait. Typed `BEGIN`, `COMMIT` or `ROLLBACK` statements are not sent in manual mode; use `K` and `Z`.
 - Submitted row changes join the open transaction; data pages read inside it, so they show your own changes.
 - Quitting, disconnecting, or switching back to auto-commit with changes waiting asks **Commit**, **Roll back** or **Cancel**.
 
@@ -252,7 +252,7 @@ A plain plan never runs the statement. It uses `EXPLAIN (FORMAT JSON)` on Postgr
 
 **Databases: Compare Schemas…** compares two schemas of connected databases. Connect both first (`Enter` on each connection). Then pick two schemas:
 
-1. The **source**: the model, the schema that is right (for example your local database).
+1. The **source**: the one to copy, the schema that is right (for example your local database).
 2. The **target**: the schema to change (for example staging).
 
 Both must be the same database type: PostgreSQL with PostgreSQL, MySQL / MariaDB with MySQL / MariaDB, SQLite with SQLite. The target list marks the other types, and picking one only shows a message. Two schemas of the same connection work too.

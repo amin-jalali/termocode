@@ -18,7 +18,7 @@ import (
 // Transactions (plan F7): auto-commit by default; in manual mode a
 // connection's first statement begins a transaction on its session and
 // every later one joins it until Commit (K) or Rollback (Z). The status
-// chip and row 2 of the result page say "manual · N uncommitted". Quit,
+// chip and row 2 of the result page say "manual commit · N not committed". Quit,
 // disconnect and the switch back to auto-commit ask first when changes
 // are waiting. Hiding the view keeps a session with an open transaction.
 
@@ -95,18 +95,19 @@ func (s *dbState) txWrites(conn string) int {
 }
 
 // txMarker is the state for row 2 and the chip: "" in auto-commit,
-// "manual", "manual · in transaction" or "manual · 2 uncommitted".
+// "manual commit", "manual commit · in transaction" or
+// "manual commit · 2 not committed".
 func (s *dbState) txMarker(conn string) string {
 	if !s.manualMode(conn) {
 		return ""
 	}
 	if n := s.txWrites(conn); n > 0 {
-		return fmt.Sprintf("manual · %d uncommitted", n)
+		return fmt.Sprintf("manual commit · %d not committed", n)
 	}
 	if len(s.txKeys(conn)) > 0 {
-		return "manual · in transaction"
+		return "manual commit · in transaction"
 	}
-	return "manual"
+	return "manual commit"
 }
 
 // dbTxControl reports a statement that starts or ends a transaction: in
@@ -420,7 +421,7 @@ func (m *Model) databaseDisconnectAsk(id string) tea.Cmd {
 	return nil
 }
 
-// dbTxStatus is " · manual · 2 uncommitted changes" for a run's lens.
+// dbTxStatus is " · manual commit · 2 not committed" for a run's lens.
 func (m *Model) dbTxStatus(conn string) string {
 	if mk := m.databases.txMarker(conn); mk != "" {
 		return " · " + mk

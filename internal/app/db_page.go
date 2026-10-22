@@ -341,9 +341,9 @@ func (m *Model) databasePage() dbPage {
 	// Row 3: the keys that matter now; row 4: the rule.
 	hints := " Esc cancel"
 	if s.running == nil {
-		hints = dbFitHints(width, "Tab view", "r rerun", "gd sql", "h history", "q close")
+		hints = dbFitHints(width, "Tab view", "r rerun", "gd show SQL", "h history", "q close")
 		if len(res.Columns) > 0 && res.Err == nil {
-			hints = dbFitHints(width, "] next", "o sort", "f filter", "v value", "c csv", "Tab view", "r rerun", "q close")
+			hints = dbFitHints(width, "] next page", "o sort", "f filter", "v value", "c csv", "Tab view", "r rerun", "q close")
 			switch {
 			case r.redis != nil:
 				hints = dbRedisHints(width, r.redis)
@@ -356,9 +356,9 @@ func (m *Model) databasePage() dbPage {
 			case s.trans:
 				hints = dbFitHints(width, "]/[ row", "t grid", "v value", "Tab view", "r rerun", "q close")
 			case r.tv != nil && m.databaseEditable(s.curTab()):
-				hints = dbFitHints(width, "]/[ page", "e edit", "f where", "o sort", "t flip", "# count", "v value", "r rerun", "q close")
+				hints = dbFitHints(width, "]/[ page", "e edit", "f where", "o sort", "t switch view", "# count", "v value", "r rerun", "q close")
 			case r.tv != nil:
-				hints = dbFitHints(width, "]/[ page", "f where", "o sort", "t flip", "# count", "v value", "r rerun", "q close")
+				hints = dbFitHints(width, "]/[ page", "f where", "o sort", "t switch view", "# count", "v value", "r rerun", "q close")
 			}
 		} else if len(m.dbTxHints(r.conn)) > 0 {
 			hints = dbFitHints(width, append(m.dbTxHints(r.conn), "Tab view", "r rerun", "h history", "q close")...)

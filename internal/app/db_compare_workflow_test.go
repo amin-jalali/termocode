@@ -148,7 +148,7 @@ func TestDBCompareSchemasCatalogReadsAreReadOnly(t *testing.T) {
 	d.Settle(300 * time.Millisecond)
 	before := len(*rw)
 	cmpOpen(t, d)
-	cmpPick(t, d, "SOURCE (the model)", "dev")
+	cmpPick(t, d, "SOURCE (the one to copy)", "dev")
 	cmpPick(t, d, "TARGET (to change)", "stage")
 	if !d.WaitForText("tables.sql", 5*time.Second) {
 		t.Fatalf("no compare card:\n%s", ansi.Strip(d.Frame()))
@@ -193,7 +193,7 @@ func TestDBCompareSchemasRefusesTwoDatabaseTypes(t *testing.T) {
 	d.Key("down", "down", "enter")
 	d.Settle(300 * time.Millisecond)
 	cmpOpen(t, d)
-	cmpPick(t, d, "SOURCE (the model)", "dev")
+	cmpPick(t, d, "SOURCE (the one to copy)", "dev")
 	if !d.WaitForText("other type", 2*time.Second) {
 		t.Fatalf("target picker does not mark the other type:\n%s", ansi.Strip(d.Frame()))
 	}
@@ -266,7 +266,7 @@ INSERT INTO old_logs VALUES ('keep me');`,
 		t.Fatalf("live did not connect:\n%s", ansi.Strip(d.Frame()))
 	}
 	cmpOpen(t, d)
-	cmpPick(t, d, "SOURCE (the model)", "model")
+	cmpPick(t, d, "SOURCE (the one to copy)", "model")
 	cmpPick(t, d, "TARGET (to change)", "live")
 	if !d.WaitForText("tables.sql", 5*time.Second) {
 		t.Fatalf("no compare card:\n%s", ansi.Strip(d.Frame()))

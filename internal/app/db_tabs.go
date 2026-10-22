@@ -139,8 +139,9 @@ func (s *dbConsoleState) placeRun(r *dbRun) {
 	s.cache = nil
 }
 
-// dbTabStrip is the tab list for row 1 ("1 [2] 3p"): the current tab in
-// brackets, a pinned one with p, an edited one with *. Empty with one tab.
+// dbTabStrip is the tab list for row 1 ("1 pinned [2] 3 edited"): the
+// current tab in brackets, then "pinned" and "edited" where they apply.
+// Empty with one tab.
 func (s *dbConsoleState) tabStrip() string {
 	if len(s.tabs) < 2 {
 		return ""
@@ -148,11 +149,13 @@ func (s *dbConsoleState) tabStrip() string {
 	parts := make([]string, len(s.tabs))
 	for i, t := range s.tabs {
 		label := fmt.Sprint(i + 1)
-		if t.pinned {
-			label += "p"
-		}
-		if t.dirty() {
-			label += "*"
+		switch {
+		case t.pinned && t.dirty():
+			label += " pinned, edited"
+		case t.pinned:
+			label += " pinned"
+		case t.dirty():
+			label += " edited"
 		}
 		if i == s.tab {
 			label = "[" + label + "]"

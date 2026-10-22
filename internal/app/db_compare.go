@@ -208,7 +208,7 @@ func (m *Model) onDBCompareSides(msg dbCompareSidesMsg) tea.Cmd {
 		}
 		items = append(items, it)
 	}
-	m.picker = picker.NewItems(" Compare schemas 1/2 · SOURCE (the model) ", items)
+	m.picker = picker.NewItems(" Compare schemas 1/2 · SOURCE (the one to copy) ", items)
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
 	m.pickerKind = pickerKindDBCompareSource
@@ -364,7 +364,7 @@ func (m *Model) databaseShowCompare(srcLabel, tgtLabel string, cmp dbclient.Sche
 		}
 		subject = fmt.Sprintf("%d %s · the script makes the target match the source", cmp.Changes, word)
 		if cmp.Destructive > 0 {
-			subject += fmt.Sprintf(" · %d DROP", cmp.Destructive)
+			subject += " · " + dbPlural(cmp.Destructive, "object") + " dropped"
 		}
 	}
 	if cmp.Truncated {
