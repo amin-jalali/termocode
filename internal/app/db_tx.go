@@ -186,6 +186,7 @@ func (m *Model) databaseTxModePicker(conn string) tea.Cmd {
 		{ID: "auto", Title: "Auto-commit", Hint: dbJoinHint(auto, "each statement is saved at once")},
 		{ID: "manual", Title: "Manual", Hint: dbJoinHint(manual, "Commit (K) or Rollback (Z) ends it")},
 	})
+	m.picker.HideCountWhenEmpty()
 	m.picker.SetSize(m.w, m.h)
 	m.pickerKind = pickerKindDBTxMode
 	m.pickerOpen = true

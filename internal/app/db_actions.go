@@ -756,6 +756,7 @@ func (m *Model) databaseTypePicker(remote bool) tea.Cmd {
 		m.databases.remoteNext = remote
 	}
 	m.picker = picker.NewItems(title, items)
+	m.picker.HideCountWhenEmpty()
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
 	m.pickerKind = pickerKindDBType

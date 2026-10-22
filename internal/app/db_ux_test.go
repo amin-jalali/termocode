@@ -160,3 +160,24 @@ func TestDatabasePageNameByContent(t *testing.T) {
 		t.Error("a normal file is taken for a result page")
 	}
 }
+
+// DB-10: the SSL picker shows no match count over an empty search, and
+// every choice hint fits in the box without a cut.
+func TestDatabaseSSLPickerHasNoCountAndNoCutHints(t *testing.T) {
+	s := newDBState()
+	s.conns = []dbclient.Conn{{ID: "staging", Name: "staging", Driver: "postgres"}}
+	m := &Model{databases: s, w: 80, h: 24}
+	_ = m.databaseSSLStart("staging")
+	box := ansi.Strip(m.picker.Box())
+	if strings.Contains(box, "matches") {
+		t.Fatalf("match count over an empty search:\n%s", box)
+	}
+	if strings.Contains(box, "…") {
+		t.Fatalf("a hint is cut:\n%s", box)
+	}
+	for _, want := range []string{"no encryption", "server not checked", "checks the CA", "safest"} {
+		if !strings.Contains(box, want) {
+			t.Fatalf("hint %q missing:\n%s", want, box)
+		}
+	}
+}

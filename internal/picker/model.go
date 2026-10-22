@@ -62,11 +62,17 @@ type Model struct {
 	note []string
 	// width is the box width asked for (SetWidth); 0 = the default 56.
 	width int
+	// hideEmptyCount drops the "N matches" subtitle while the search is empty.
+	hideEmptyCount bool
 }
 
 // SetWidth asks for a wider box (rows with a hint column, like the
 // Connect-a-service list); it still fits the window.
 func (m *Model) SetWidth(w int) { m.width = w }
+
+// HideCountWhenEmpty drops the "N matches" subtitle while nothing is typed,
+// for short lists of choices where the count only repeats what is on screen.
+func (m *Model) HideCountWhenEmpty() { m.hideEmptyCount = true }
 
 // SetNote shows lines of plain text above the search field, e.g. why a
 // choice is needed. Each line should fit the box (about 50 cells).
@@ -689,7 +695,7 @@ func (m Model) renderBox() string {
 		titleText = "Picker"
 	}
 	headerTitle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmTextPri).Bold(true).Render(" " + titleText)
-	subtitle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmSubtitleFg).Render(pickerSubtitle(len(m.matches), m.loading))
+	subtitle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmSubtitleFg).Render(m.subtitleText())
 
 	padBg := func(s string, w int) string {
 		used := lipgloss.Width(s)
@@ -831,6 +837,14 @@ func searchGlyph() string {
 		return "⌕"
 	}
 	return "/"
+}
+
+// subtitleText is the subtitle for the current state of the picker.
+func (m Model) subtitleText() string {
+	if m.hideEmptyCount && m.input == "" && !m.loading {
+		return ""
+	}
+	return pickerSubtitle(len(m.matches), m.loading)
 }
 
 // pickerSubtitle returns the right-aligned faint text that appears beside

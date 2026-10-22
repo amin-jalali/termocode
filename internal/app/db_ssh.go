@@ -431,11 +431,12 @@ func (m *Model) databaseSSLStart(id string) tea.Cmd {
 	cur, _ := dbclient.EffectiveSSLMode(c.SSL)
 	items := []picker.Item{
 		{ID: dbclient.SSLDisable, Title: "Off", Hint: "no encryption"},
-		{ID: dbclient.SSLRequire, Title: "Require", Hint: "encrypted, server not checked"},
-		{ID: dbclient.SSLVerifyCA, Title: "Verify CA", Hint: "the certificate must come from the CA"},
+		{ID: dbclient.SSLRequire, Title: "Require", Hint: "server not checked"},
+		{ID: dbclient.SSLVerifyCA, Title: "Verify CA", Hint: "checks the CA"},
 		{ID: dbclient.SSLVerifyFull, Title: "Verify CA and host name", Hint: "safest"},
 	}
 	m.picker = picker.NewItems(" SSL · "+sanitizeDBText(dbConnName(c))+" ", items)
+	m.picker.HideCountWhenEmpty()
 	if cur != "" {
 		m.picker.SetCursorID(cur)
 	}
@@ -554,6 +555,7 @@ func (m *Model) databaseSSHPrompt(kind promptKindEnum, value string) (tea.Cmd, b
 			{ID: dbclient.SSHAuthPassword, Title: "Password", Hint: "kept in the secret store"},
 		}
 		m.picker = picker.NewItems(" SSH tunnel · 4/4 · log in with ", items)
+		m.picker.HideCountWhenEmpty()
 		if e.ssh.Auth != "" {
 			m.picker.SetCursorID(e.ssh.Auth)
 		}

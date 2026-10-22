@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 )
@@ -47,5 +48,27 @@ func TestNoteAboveTheList(t *testing.T) {
 		if lipgloss.Width(l) != w1 {
 			t.Fatalf("row %q is %d cells, want %d", ansi.Strip(l), lipgloss.Width(l), w1)
 		}
+	}
+}
+
+// A short fixed list can hide its match count while the search is empty:
+// "4 matches" over a list of four choices says nothing. It comes back once
+// the user types.
+func TestHideCountWhenSearchIsEmpty(t *testing.T) {
+	items := []Item{{ID: "a", Title: "Off"}, {ID: "b", Title: "Require"}, {ID: "c", Title: "Verify CA"}}
+	plain := NewItems(" SSL ", items)
+	plain.SetSize(100, 30)
+	if !strings.Contains(ansi.Strip(plain.Box()), "3 matches") {
+		t.Fatal("the default picker lost its match count")
+	}
+	m := NewItems(" SSL ", items)
+	m.HideCountWhenEmpty()
+	m.SetSize(100, 30)
+	if box := ansi.Strip(m.Box()); strings.Contains(box, "matches") {
+		t.Fatalf("count shown with an empty search:\n%s", box)
+	}
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("v")})
+	if box := ansi.Strip(m.Box()); !strings.Contains(box, "1 match") {
+		t.Fatalf("count missing after typing:\n%s", box)
 	}
 }
