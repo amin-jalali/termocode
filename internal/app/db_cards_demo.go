@@ -15,6 +15,14 @@ func (m *Model) databaseCardsDemo(variant string) (tea.Cmd, bool) {
 	case "add-picker":
 		m.databasesDemo("")
 		return m.openDatabaseTypePicker(), true
+	case "tx-card":
+		// Manual commit with two changes waiting: x on the connection asks
+		// what to do with them.
+		m.databasesDemo("")
+		d := m.databases
+		d.manual = map[string]bool{"local-pg": true}
+		d.txs = map[string]*dbTxState{"local-pg": {open: true, writes: 2}}
+		return m.databaseDisconnectAsk("local-pg"), true
 	}
 	return nil, false
 }
