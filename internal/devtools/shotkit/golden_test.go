@@ -286,6 +286,16 @@ func goldenCases() []goldenCase {
 		ascii.Icons = "ascii"
 		out = append(out, goldenCase{light.Name + "-160x40", light, 160, 40}, goldenCase{ascii.Name + "-160x40", ascii, 160, 40})
 	}
+	// termocode as an MCP server (M1 MS-3): the status screen and an
+	// outside agent's card, at both sizes, in a light theme and in ASCII
+	// icons.
+	for _, v := range []string{"status", "card"} {
+		sc := MCPServeScene("mcp-serve-"+v, v)
+		light, ascii := withTheme(withName(sc, sc.Name+"-light"), "catppuccin-latte"), withName(sc, sc.Name+"-ascii")
+		ascii.Icons = "ascii"
+		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24},
+			goldenCase{light.Name + "-150x42", light, 150, 42}, goldenCase{ascii.Name + "-150x42", ascii, 150, 42})
+	}
 	return out
 }
 

@@ -58,6 +58,9 @@ import (
 //	                       a small secrets.age: sandbox only)
 //	httpdemo:<variant>     docs/users.http and a canned HTTP answer:
 //	                       file, response, headers or tls (no network)
+//	mcpservedemo:status|card the MCP server status screen or an outside
+//	                       agent's confirm card, over made-up state
+//	                       (no listener, nothing written)
 //	helpdemo               open the in-app guide at the chat panel section
 //	importdemo:picker|panel|empty|file sample editor folders (sandbox config dir only),
 //	                       then the Import from Another Editor picker or
@@ -102,6 +105,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		m.containersDemo(arg)
 	case "secretsdemo":
 		return m.secretsDemo(arg)
+	case "mcpservedemo": // the MCP server's status screen or an outside agent's card (mcp_serve_demo.go)
+		return m.mcpServeDemo(arg)
 	case "dbdemo":
 		switch arg {
 		case "result", "messages", "error", "table", "transposed", "describe", "ddl", "edits", "submit", "import", "export", "plan", "plan-card":
