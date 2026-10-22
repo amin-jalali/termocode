@@ -35,6 +35,8 @@ type mcpServeState struct {
 	queue   []*mcpServeAsk // waiting for the card, oldest first
 	active  *mcpServeAsk   // the call whose card is open
 	ticking bool
+	srv     *mcp.SocketServer // the listener (mcp_serve_run.go)
+	path    string            // its socket file
 }
 
 // mcpServeAsk is one call waiting for the user.

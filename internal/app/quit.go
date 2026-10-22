@@ -30,6 +30,7 @@ func (m *Model) quitNow() tea.Cmd {
 	if c, wait := m.servicesBeforeQuit(); wait { // services_quit.go
 		return c
 	}
+	m.stopMCPServe() // outside agents get EOF; waiting cards are a no
 	if m.nvim != nil {
 		_ = m.nvim.Close()
 	}

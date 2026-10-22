@@ -1,0 +1,71 @@
+package app
+
+import (
+	"sync/atomic"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/amin-jalali/termocode/internal/mcp"
+	"github.com/amin-jalali/termocode/internal/toast"
+)
+
+// Starting and stopping the MCP server's listener (MS-1). It runs in the
+// UI process only while asked for; stopping closes the socket, every
+// client connection, and says no to every waiting card.
+
+// mcpServeTarget is the running listener, for StopMCPServer.
+var mcpServeTarget atomic.Pointer[mcp.SocketServer]
+
+// StopMCPServer closes the MCP server's socket and its connections.
+// cmd/termocode calls it when Bubble Tea returns, next to StopMCP.
+func StopMCPServer() {
+	if s := mcpServeTarget.Swap(nil); s != nil {
+		_ = s.Close()
+	}
+}
+
+// startMCPServe starts the listener for the workspace (nothing when it
+// runs already). An error is one toast and errors.log, never a crash.
+func (m *Model) startMCPServe() tea.Cmd {
+	if m.mcpServe != nil {
+		return nil
+	}
+	root := aiWorkspaceRoot()
+	path, err := mcpServeSocketPath(root)
+	if err == nil {
+		var srv *mcp.SocketServer
+		if ln, lerr := mcpServeListen(path); lerr != nil {
+			err = lerr
+		} else {
+			hub := newMCPServeHub()
+			srv = mcp.Serve(ln, newMCPServeSource(hub, root), mcpServePeer, func(err error) {
+				recordError("[mcp-serve] " + err.Error())
+			})
+			m.mcpServe = &mcpServeState{hub: hub, srv: srv, path: path}
+			mcpServeTarget.Store(srv)
+			return waitMCPServe(hub)
+		}
+	}
+	recordError("[mcp-serve] not started: " + err.Error())
+	var c tea.Cmd
+	m.toast, c = m.toast.PushDetail(toast.Warn, "MCP server not started", err.Error())
+	return c
+}
+
+// stopMCPServe stops the listener (nothing when it does not run).
+func (m *Model) stopMCPServe() {
+	st := m.mcpServe
+	if st == nil {
+		return
+	}
+	m.mcpServe = nil
+	if m.confirmOpen && m.confirmKind == confirmKindMCPServe {
+		m.confirmOpen = false
+	}
+	st.declineAll()
+	st.hub.stop()
+	if st.srv != nil {
+		mcpServeTarget.CompareAndSwap(st.srv, nil)
+		_ = st.srv.Close()
+	}
+}
