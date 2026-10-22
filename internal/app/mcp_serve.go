@@ -32,6 +32,8 @@ type mcpServeHub struct {
 	ch   chan tea.Msg
 	done chan struct{}
 	once sync.Once
+	// allow is the "Always allow" list (mcp_serve_allow.go).
+	allow mcpServeAllowSet
 }
 
 func newMCPServeHub() *mcpServeHub {
@@ -170,6 +172,7 @@ type mcpServeSource struct {
 	specs   []mcp.Tool
 	confirm mcpServeConfirmFunc
 	audit   mcpServeAuditFunc
+	allow   *mcpServeAllowSet // nil: nothing is remembered
 }
 
 func (s *mcpServeSource) List() []mcp.Tool { return s.specs }
@@ -212,12 +215,20 @@ func (s *mcpServeSource) Call(ctx context.Context, name string, args map[string]
 	gate := ai.GateAuto
 	if t, ask := mcpServeGate(tool, args); ask {
 		gate = ai.GateConfirm
-		cardCtx := withMCPServeCard(ctx, mcpServeCardInfo{args: argText})
-		if err := s.ask(cardCtx, client, t, t.Human(args)); err != nil {
-			audit(gate, "declined: "+err.Error())
-			return mcp.CallResult{}, err
+		key := ""
+		if client != mcpServeGenericClient { // an unnamed client is never remembered
+			key = mcpServeAlwaysKey(t, args)
 		}
-		gate = ai.GateConfirm + ":allowed"
+		if s.allow.has(client, key) {
+			gate = ai.GateConfirm + ":always" // the user said so before; no card
+		} else {
+			cardCtx := withMCPServeCard(ctx, mcpServeCardInfo{args: argText, always: key})
+			if err := s.ask(cardCtx, client, t, t.Human(args)); err != nil {
+				audit(gate, "declined: "+err.Error())
+				return mcp.CallResult{}, err
+			}
+			gate = ai.GateConfirm + ":allowed"
+		}
 	}
 	out, err := mcpServeRunTool(ctx, tool, args)
 	if err != nil {

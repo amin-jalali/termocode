@@ -46,6 +46,7 @@ type mcpServeAsk struct {
 	tool   ai.Tool
 	human  string
 	args   string    // the call's arguments, redacted (mcpServeCardInfo)
+	always string    // the "Always allow" key, "" = not offered (mcp_serve_allow.go)
 	reply  chan bool // buffered (1)
 }
 
@@ -53,7 +54,8 @@ type mcpServeAsk struct {
 // human text; it travels in the call's context so the confirm func keeps
 // its shape.
 type mcpServeCardInfo struct {
-	args string
+	args   string
+	always string
 }
 
 type mcpServeCardKey struct{}
@@ -98,7 +100,7 @@ func (h *mcpServeHub) confirmFunc() mcpServeConfirmFunc {
 		wait, cancel := context.WithTimeout(ctx, mcpServeConfirmTimeout)
 		defer cancel()
 		info := mcpServeCardOf(ctx)
-		ask := &mcpServeAsk{ctx: wait, client: client, tool: t, human: human, args: info.args, reply: make(chan bool, 1)}
+		ask := &mcpServeAsk{ctx: wait, client: client, tool: t, human: human, args: info.args, always: info.always, reply: make(chan bool, 1)}
 		declined := &mcp.CallError{Code: mcp.CodeDeclined, Message: "declined by the user"}
 		if h.send(wait, mcpServeAskMsg{hub: h, ask: ask}) != nil {
 			return mcpServeWaitErr(ctx, declined)
@@ -149,7 +151,8 @@ func (h *mcpServeHub) auditFunc() mcpServeAuditFunc {
 
 // newMCPServeSource is the ToolSource of a running hub.
 func newMCPServeSource(h *mcpServeHub, root string) *mcpServeSource {
-	return &mcpServeSource{call: h.caller(), root: root, specs: MCPServeToolSpecs(), confirm: h.confirmFunc(), audit: h.auditFunc()}
+	h.allow.replace(mcpServeAllowLoad())
+	return &mcpServeSource{call: h.caller(), root: root, specs: MCPServeToolSpecs(), confirm: h.confirmFunc(), audit: h.auditFunc(), allow: &h.allow}
 }
 
 // mcpServeLive is the state when msg's hub is the running one.
@@ -218,8 +221,13 @@ func (m *Model) mcpServePump() tea.Cmd {
 			body += "\n\nArguments: " + ai.Redact(aiCleanText(a.args))
 		}
 		body += "\n\nAsked by an outside agent over MCP. The name is the agent's own claim."
-		buttons := []confirm.Button{{ID: "allow", Title: "Allow", Style: confirm.StylePrimary},
-			{ID: "deny", Title: "Deny", Style: confirm.StyleDestructive}}
+		buttons := []confirm.Button{{ID: "allow", Title: "Allow", Style: confirm.StylePrimary}}
+		if a.always != "" {
+			buttons = append(buttons, confirm.Button{ID: "always", Title: "Always allow"})
+			body += "\nAlways allow: " + a.client + " may run " + mcpServeAlwaysWhat(a.always) +
+				" without asking. Revoke it in AI: Agent Auto-Approve…."
+		}
+		buttons = append(buttons, confirm.Button{ID: "deny", Title: "Deny", Style: confirm.StyleDestructive})
 		m.confirm = confirm.New(mcpServeCardTitle(a.client, a.tool.Name), body, buttons)
 		m.confirm.SetSize(m.w, m.h)
 		m.confirmOpen = true
@@ -247,9 +255,20 @@ func (m *Model) answerMCPServeConfirm(id string) tea.Cmd {
 	if st == nil || st.active == nil {
 		return nil
 	}
-	st.active.reply <- id == "allow"
+	ask := st.active
+	var toast tea.Cmd
+	if id == "always" && ask.always != "" {
+		// Remember first, so the next call (even one already waiting)
+		// finds it; the answer for this call is yes even if the save fails.
+		if err := m.mcpServeAllowAdd(ask.client, ask.always); err != nil {
+			toast = m.aiToastErr("Could not save Always allow", err)
+		} else {
+			toast = m.aiInfo(ask.client + ": " + ask.always + " runs without asking now (revoke: AI: Agent Auto-Approve…)")
+		}
+	}
+	ask.reply <- id == "allow" || id == "always"
 	st.active = nil
-	return m.mcpServePump()
+	return tea.Batch(toast, m.mcpServePump())
 }
 
 // mcpServeDeclineAll answers no to every waiting call (stop, quit).

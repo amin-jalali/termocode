@@ -70,6 +70,10 @@ type settingsConfig struct {
 	// MCPServer: termocode as an MCP server for outside agents: "auto",
 	// "on" or "off" ("" = auto; mcp_serve_run.go). File only.
 	MCPServer string `json:"mcp_server,omitempty"`
+	// MCPServerAutoApprove: the "Always allow" answers on an outside
+	// agent's card, client name → tool names (mcp_serve_allow.go). File
+	// only; separate from ai_auto_approve.
+	MCPServerAutoApprove map[string][]string `json:"mcp_server_auto_approve,omitempty"`
 }
 
 // settingsConfigPath returns the absolute path to config.json. We don't

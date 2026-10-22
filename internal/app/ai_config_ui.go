@@ -360,6 +360,7 @@ func (m *Model) openAIAutoApprovePicker() tea.Cmd {
 		}
 	}
 	items = append(items, m.dbAutoApproveItems(s.settings.AutoApprove)...)
+	items = append(items, mcpServeAllowItems()...) // outside agents: their own list
 	m.picker = picker.NewItems(" ✦ Agent auto-approve (Enter toggles) ", items)
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
@@ -368,6 +369,9 @@ func (m *Model) openAIAutoApprovePicker() tea.Cmd {
 }
 
 func (m *Model) onAIAutoApproveToggled(class string) tea.Cmd {
+	if cmd, ok := m.onMCPServeAllowRow(class); ok { // an outside agent's Always allow
+		return cmd
+	}
 	on := false
 	err := m.saveAISettings(func(st *ai.Settings) {
 		var next []string

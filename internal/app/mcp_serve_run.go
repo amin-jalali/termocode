@@ -115,5 +115,6 @@ func (m *Model) onMCPServeConfigSaved(path string) tea.Cmd {
 	if err != nil || filepath.Clean(path) != filepath.Clean(want) {
 		return nil
 	}
+	m.mcpServeAllowSync() // Always allow edited by hand
 	return m.syncMCPServe()
 }

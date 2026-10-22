@@ -292,6 +292,8 @@ var fileOnlySettings = []SettingEntry{
 		Description: "Cut the JSON the AI's containers_inspect tool returns to this many KB. Env values, auth fields and secret-looking labels are masked before the cut."},
 	{Key: "mcp_server", Type: "enum", Default: "auto", Category: "AI (file only)", Choices: []string{"auto", "on", "off"},
 		Description: "termocode as an MCP server: outside agents (Claude Code, Codex, …) reach a short list of IDE tools (open files, diagnostics, tests, debugger, terminal and git reads) over a private socket in the session folder, open only to your own user. Tools that change something ask on a card first; files, settings, git writes and your own MCP servers are never offered. auto: serve once you start an agent tab (F1 → Agent: Start …). on: serve from start. off: never. Applied when you save config.json."},
+	{Key: "mcp_server_auto_approve", Type: "object", Default: "{}", Category: "AI (file only)",
+		Description: "The \"Always allow\" answers you gave on an outside agent's card (see mcp_server): agent name → tool names that run without asking for that agent. Separate from ai_auto_approve, which never applies to outside agents. The name is the agent's own claim. See and revoke them in AI: Agent Auto-Approve…."},
 	{Key: "mcp_trusted_tools", Type: "object", Default: "{}", Category: "AI (file only)",
 		Description: "The tool list you trusted per MCP server: server name → hash of its tools. The first list is kept by itself; when a server's tools change, termocode asks again and, until you trust the new list, every tool of that server asks first."},
 	{Key: "mouse_hover", Type: "enum", Default: "auto", Category: "Appearance (file only)", Choices: []string{"auto", "off"},
