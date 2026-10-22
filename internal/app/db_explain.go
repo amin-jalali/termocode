@@ -153,7 +153,7 @@ func (m *Model) databaseExplainStart(r *dbRun) tea.Cmd {
 	m.confirm = confirm.New(title, body+"\n\n"+strings.Join(notes, "\n"), []confirm.Button{
 		{ID: "cancel", Title: "Cancel"},
 		{ID: "run", Title: "Run", Style: style},
-	}).WithScrollText()
+	}).WithScrollText().WithWideText()
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindDBExplain

@@ -401,3 +401,18 @@ func TestExplainAnalyzeOfAWriteIsRefusedWhileATransactionIsOpen(t *testing.T) {
 		t.Fatalf("the analyze went on: %q", s.events()[before:])
 	}
 }
+
+// DB-6: the analyze card breaks lines at spaces, never inside a word.
+func TestExplainAnalyzeCardWrapsAtWords(t *testing.T) {
+	d, _ := planDriver(t, "-- @conn pg\nDELETE FROM orders WHERE created_at < now() - interval '2 years';\n", 80, 24)
+	explainKey(d, "X")
+	if !d.WaitForText("EXPLAIN ANALYZE runs the statement", 2*time.Second) {
+		t.Fatalf("no card:\n%s", planFrame(d))
+	}
+	f := planFrame(d)
+	for _, word := range []string{"transaction", "interval", "Sequences", "triggers"} {
+		if !strings.Contains(f, word) {
+			t.Fatalf("the card cut %q in the middle:\n%s", word, f)
+		}
+	}
+}
