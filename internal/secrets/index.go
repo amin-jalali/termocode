@@ -84,7 +84,14 @@ var renameFn = os.Rename
 // dir and a rename, with mode 0600. A missing dir is made 0700;
 // tightenDir also sets an existing dir to 0700 (the ai/ dir, as
 // SaveCredentials does).
-func writeFileAtomic(path string, data []byte, tightenDir bool) (err error) {
+func writeFileAtomic(path string, data []byte, tightenDir bool) error {
+	return writeFileAtomicChecked(path, data, tightenDir, nil)
+}
+
+// writeFileAtomicChecked is writeFileAtomic with a check of the written
+// temp file before the rename: a failed check removes the temp file and
+// leaves path as it was.
+func writeFileAtomicChecked(path string, data []byte, tightenDir bool, check func(tmp string) error) (err error) {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
@@ -118,6 +125,11 @@ func writeFileAtomic(path string, data []byte, tightenDir bool) (err error) {
 	}
 	if err := tmp.Close(); err != nil {
 		return err
+	}
+	if check != nil {
+		if err := check(name); err != nil {
+			return err
+		}
 	}
 	if err := renameFn(name, path); err != nil {
 		return err

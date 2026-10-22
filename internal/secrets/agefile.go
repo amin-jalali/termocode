@@ -205,35 +205,49 @@ func (a *ageFile) read(pass []byte) (map[string]string, fileStamp, error) {
 
 // write encrypts data with pass and replaces the file atomically.
 func (a *ageFile) write(pass []byte, data map[string]string) error {
-	rcp, err := age.NewScryptRecipient(string(pass))
+	enc, err := a.encrypt(pass, data)
 	if err != nil {
 		return err
+	}
+	if err := writeFileAtomic(a.path, enc, false); err != nil {
+		return err
+	}
+	a.data = data
+	a.restamp()
+	return nil
+}
+
+// restamp records the file's stamp after our own write.
+func (a *ageFile) restamp() {
+	if fi, err := os.Stat(a.path); err == nil {
+		a.stamp = fileStamp{fi.ModTime(), fi.Size()}
+	}
+}
+
+// encrypt is data as JSON, encrypted to pass.
+func (a *ageFile) encrypt(pass []byte, data map[string]string) ([]byte, error) {
+	rcp, err := age.NewScryptRecipient(string(pass))
+	if err != nil {
+		return nil, err
 	}
 	rcp.SetWorkFactor(a.work)
 	plain, err := json.Marshal(data)
 	defer zero(plain)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var buf bytes.Buffer
 	w, err := age.Encrypt(&buf, rcp)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if _, err := w.Write(plain); err != nil {
-		return err
+		return nil, err
 	}
 	if err := w.Close(); err != nil {
-		return err
+		return nil, err
 	}
-	if err := writeFileAtomic(a.path, buf.Bytes(), false); err != nil {
-		return err
-	}
-	a.data = data
-	if fi, err := os.Stat(a.path); err == nil {
-		a.stamp = fileStamp{fi.ModTime(), fi.Size()}
-	}
-	return nil
+	return buf.Bytes(), nil
 }
 
 // corrupt wraps a decrypt failure: the path and age's reason, no content.

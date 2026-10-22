@@ -23,3 +23,11 @@ func setVerify(f func(Store, map[string]string) error) (restore func()) {
 	verifyFn = f
 	return func() { verifyFn = old }
 }
+
+// setReencryptCheck swaps the check of a re-encrypted file before it
+// replaces the old one; it returns the undo.
+func setReencryptCheck(f func(tmp string, pass []byte, want map[string]string) error) (restore func()) {
+	old := reencryptCheckFn
+	reencryptCheckFn = f
+	return func() { reencryptCheckFn = old }
+}

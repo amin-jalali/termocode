@@ -424,6 +424,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onSecretsMigrateDone(msg)
 	case secretsLockTickMsg: // secrets_lock_timer.go
 		return m, m.onSecretsLockTick(msg)
+	case secretsChangeCheckMsg: // secrets_passphrase.go
+		return m, m.onSecretsChangeCheck(msg)
+	case secretsChangeDoneMsg:
+		return m, m.onSecretsChangeDone(msg)
 	// ── Group G: background clone (git_clone.go) ──
 	case cloneProgressMsg:
 		return m, m.handleCloneProgress(msg)

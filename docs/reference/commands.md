@@ -12,6 +12,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Agent Auto-Approve… | `ai-auto-approve` |   |   |
 | AI: Apply Last Code Block to File | `ai-apply-code` |   |   |
 | AI: Apply Proposed Edit | `ai-apply-proposal` |   |   |
+| AI: Change Secrets Passphrase… | `secrets-passphrase` |   |   |
 | AI: Chat History… | `ai-history` |   |   |
 | AI: Clear Chat History | `ai-history-clear` |   |   |
 | AI: Configure Provider… | `ai-configure` |   |   |

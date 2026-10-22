@@ -32,7 +32,9 @@ const (
 	secretRowPrefix  = "name:"
 	secretActionLock = "act:lock"
 	secretActionOpen = "act:unlock"
-	secretStoreWidth = 80
+	// secretActionPassphrase is Change passphrase… (secrets_passphrase.go).
+	secretActionPassphrase = "act:passphrase"
+	secretStoreWidth       = 80
 )
 
 // secretsStoreHeader is the lines above the list: where the secrets are
@@ -114,6 +116,9 @@ func (m *Model) openSecretsStore() tea.Cmd {
 		} else {
 			items = append(items, picker.Item{ID: secretActionLock, Title: "Lock now", Hint: "forget the passphrase"})
 		}
+		if secretsAgeFileExists() {
+			items = append(items, picker.Item{ID: secretActionPassphrase, Title: "Change passphrase…", Hint: "re-encrypt the file"})
+		}
 	}
 	for i, l := range note {
 		note[i] = ansi.Truncate(l, inner, "…")
@@ -133,6 +138,8 @@ func (m *Model) onSecretsStoreSelected(id string) tea.Cmd {
 		return tea.Batch(m.secretsLock(), m.openSecretsStore())
 	case id == secretActionOpen:
 		return m.openSecretsUnlock(func(m *Model) tea.Cmd { return m.openSecretsStore() })
+	case id == secretActionPassphrase:
+		return m.openSecretsChangePassphrase()
 	case strings.HasPrefix(id, secretRowPrefix):
 		name := strings.TrimPrefix(id, secretRowPrefix)
 		return m.withSecretsUnlocked(func(m *Model) tea.Cmd { return m.askSecretForget(name) })

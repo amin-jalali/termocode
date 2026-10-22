@@ -182,6 +182,7 @@ func secretsPaletteItems() []picker.Item {
 		{ID: "secrets-lock", Title: "AI: Lock Secrets"},
 		{ID: "secrets-store", Title: "AI: Secret Store…"},
 		{ID: "secrets-migrate", Title: "AI: Move Secrets to a Safer Store…"},
+		{ID: "secrets-passphrase", Title: "AI: Change Secrets Passphrase…"},
 	}
 }
 
@@ -202,6 +203,9 @@ type secretsState struct {
 	finishPending bool
 	// after runs once the store is unlocked (the step that needed it).
 	after func(*Model) tea.Cmd
+	// chg is AI: Change Secrets Passphrase… while it asks
+	// (secrets_passphrase.go); the passphrase prompt is routed there.
+	chg *secretsChange
 	// The idle lock (secrets_lock_timer.go): lockGen is the generation
 	// of the one timer, lockArmed reports it runs.
 	lockGen   int
@@ -254,6 +258,8 @@ func (m *Model) dispatchSecretsPalette(id string) (tea.Cmd, bool) {
 		return m.openSecretsStore(), true
 	case "secrets-migrate":
 		return m.secretsMigratePalette(), true
+	case "secrets-passphrase":
+		return m.openSecretsChangePassphrase(), true
 	}
 	return nil, false
 }
@@ -347,6 +353,7 @@ func (m *Model) openSecretsUnlock(after func(*Model) tea.Cmd) tea.Cmd {
 	}
 	st.asked = true
 	st.after = after
+	st.endSecretsChange()
 	st.forgetFirst()
 	st.creating = !secretsAgeFileExists()
 	m.openSecretsPrompt("")
@@ -389,6 +396,9 @@ func (m *Model) handleSecretsPromptSubmit(value string) (tea.Cmd, bool) {
 	if st.busy {
 		return nil, true
 	}
+	if st.chg != nil { // AI: Change Secrets Passphrase… (secrets_passphrase.go)
+		return m.handleSecretsChangeSubmit(value), true
+	}
 	if utf8.RuneCountInString(value) < secrets.MinPassphrase {
 		m.openSecretsPrompt("Too short: at least " + strconv.Itoa(secrets.MinPassphrase) + " characters.")
 		return nil, true
@@ -424,6 +434,7 @@ func (m *Model) secretsPromptClosed() tea.Cmd {
 	m.clearPrompt()
 	st := m.secretsS()
 	st.forgetFirst()
+	st.endSecretsChange()
 	st.after = nil
 	st.migrating = false
 	return nil
