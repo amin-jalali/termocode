@@ -384,6 +384,10 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-mcp-connect":      aiNever(aiNoAIConfig + " (signing in to services is the user's)"),
 	"ai-mcp-log":          aiAuto(),
 	"ai-mcp-config":       aiNever(aiNoAIConfig),
+	// termocode as an MCP server (mcp_serve_status.go): the user's own
+	// screens; the config snippet is for the user's agents, not the chat.
+	"mcp-serve-status":      aiNever(aiNoPicker),
+	"mcp-serve-copy-config": aiNever(aiNoAIConfig + " (the config is for the user to paste into an agent)"),
 	// The secret store (secrets_ui.go): unlocking and locking are the
 	// user's; the AI never reads, sets or lists secrets.
 	"secrets-unlock": aiNever(aiNoAIConfig),

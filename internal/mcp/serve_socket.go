@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/extproc"
@@ -59,6 +60,8 @@ type SocketServer struct {
 	source ToolSource
 	peer   func(net.Conn) error
 	onErr  func(error)
+
+	nextID atomic.Uint64
 
 	mu     sync.Mutex
 	conns  map[net.Conn]struct{}
@@ -126,7 +129,14 @@ func (s *SocketServer) serve(c net.Conn) {
 		s.report(fmt.Errorf("connection refused: %w", err))
 		return
 	}
-	conn := extproc.NewConnWith(c, c, NewServer(s.source).Handle, extproc.ConnOptions{Framing: extproc.FramingNewline})
+	srv := NewServer(s.source)
+	srv.connID = s.nextID.Add(1)
+	if obs, ok := s.source.(ClientObserver); ok {
+		srv.obs = obs
+		obs.ClientConnected(srv.connID)
+		defer obs.ClientGone(srv.connID)
+	}
+	conn := extproc.NewConnWith(c, c, srv.Handle, extproc.ConnOptions{Framing: extproc.FramingNewline})
 	<-conn.Done()
 	conn.Close()
 }

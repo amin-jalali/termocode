@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -18,9 +19,16 @@ import (
 // mcpServeTarget is the running listener, for StopMCPServer.
 var mcpServeTarget atomic.Pointer[mcp.SocketServer]
 
+// mcpServeTargetHub is its hub: StopMCPServer stops it first, so a
+// connection that tells the UI it is gone does not wait for a UI that quit.
+var mcpServeTargetHub atomic.Pointer[mcpServeHub]
+
 // StopMCPServer closes the MCP server's socket and its connections.
 // cmd/termocode calls it when Bubble Tea returns, next to StopMCP.
 func StopMCPServer() {
+	if h := mcpServeTargetHub.Swap(nil); h != nil {
+		h.stop()
+	}
 	if s := mcpServeTarget.Swap(nil); s != nil {
 		_ = s.Close()
 	}
@@ -44,11 +52,14 @@ func (m *Model) startMCPServe() tea.Cmd {
 				recordError("[mcp-serve] " + err.Error())
 			})
 			m.mcpServe = &mcpServeState{hub: hub, srv: srv, path: path}
+			m.mcpServeErr = ""
 			mcpServeTarget.Store(srv)
+			mcpServeTargetHub.Store(hub)
 			return waitMCPServe(hub)
 		}
 	}
 	recordError("[mcp-serve] not started: " + err.Error())
+	m.mcpServeErr = ai.Redact(err.Error())
 	var c tea.Cmd
 	m.toast, c = m.toast.PushDetail(toast.Warn, "MCP server not started", err.Error())
 	return c
@@ -68,6 +79,7 @@ func (m *Model) stopMCPServe() {
 	st.hub.stop()
 	if st.srv != nil {
 		mcpServeTarget.CompareAndSwap(st.srv, nil)
+		mcpServeTargetHub.CompareAndSwap(st.hub, nil)
 		_ = st.srv.Close()
 	}
 }

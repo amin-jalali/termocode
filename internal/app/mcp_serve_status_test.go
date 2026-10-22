@@ -1,0 +1,193 @@
+package app
+
+import (
+	"errors"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/charmbracelet/x/ansi"
+
+	"github.com/amin-jalali/termocode/internal/picker"
+)
+
+// mcpServeItemsText is the status screen's rows as plain text.
+func mcpServeItemsText(items []picker.Item) string {
+	var lines []string
+	for _, it := range items {
+		lines = append(lines, it.Title+"  "+it.Hint)
+	}
+	return strings.Join(lines, "\n")
+}
+
+// mcpServeStatusModel is a listening model with one connected agent and a
+// few audit lines (some from the chat, which must not show).
+func mcpServeStatusModel(t *testing.T) *Model {
+	t.Helper()
+	m, _, _ := mcpServeTestModel(t)
+	m.mcpServe.path = "/tmp/tc123/k.mcp.sock"
+	m.mcpServe.clients = []*mcpServeAgent{{id: 1, name: "claude-code", since: time.Date(2026, 10, 22, 12, 3, 9, 0, time.Local), calls: 14, asked: 2}}
+	ch := "12:03:40  read_file  path=main.go  gate=auto  by=mcp:claude-code  → package main"
+	m.output.Append(aiAuditChannel, ch)
+	m.output.Append(aiAuditChannel, "12:03:41  git_status  gate=auto  by=chat  → clean")
+	m.output.Append(aiAuditChannel, "12:03:42  tasks_run  label=\"say hi\"  gate=confirm:allowed  by=mcp:claude-code  → started")
+	return m
+}
+
+// Spec (MS-3): the status screen says it listens, where, who is connected
+// (name, since, calls) and shows the last audit lines of outside agents
+// only.
+func TestMCPServeStatusListening(t *testing.T) {
+	m := mcpServeStatusModel(t)
+	text := mcpServeItemsText(m.mcpServeStatusItems())
+	for _, want := range []string{"Listening", "/tmp/tc123/k.mcp.sock", "1 agent connected",
+		"claude-code", "12:03", "14 calls", "2 asked",
+		"read_file  path=main.go", "tasks_run  label=\"say hi\""} {
+		if !strings.Contains(text, want) {
+			t.Errorf("status has no %q:\n%s", want, text)
+		}
+	}
+	if strings.Contains(text, "by=chat") || strings.Contains(text, "git_status") {
+		t.Errorf("status shows the chat's audit lines:\n%s", text)
+	}
+}
+
+// Spec (MS-3): the audit lines on the screen are cut to the last few.
+func TestMCPServeStatusLastLines(t *testing.T) {
+	m := mcpServeStatusModel(t)
+	for i := 0; i < 20; i++ {
+		m.output.Append(aiAuditChannel, "12:04:00  notify  title="+string(rune('a'+i))+"  gate=auto  by=mcp:codex  → shown")
+	}
+	text := mcpServeItemsText(m.mcpServeStatusItems())
+	if strings.Count(text, "by=mcp:codex") != mcpServeStatusLines {
+		t.Errorf("audit lines shown = %d, want %d:\n%s", strings.Count(text, "by=mcp:codex"), mcpServeStatusLines, text)
+	}
+	if strings.Contains(text, "title=a ") || !strings.Contains(text, "title=t ") {
+		t.Errorf("not the newest lines:\n%s", text)
+	}
+}
+
+// Spec (MS-3): not listening says why: setting off, auto still waiting
+// for an agent tab, or the start error.
+func TestMCPServeStatusNotListening(t *testing.T) {
+	m, _, _ := mcpServeTestModel(t)
+	m.mcpServe = nil
+	cases := []struct {
+		setting, err, want string
+	}{
+		{"off", "", "mcp_server is off"},
+		{"auto", "", "starts when you start an agent tab"},
+		{"on", "address in use", "address in use"},
+	}
+	for _, c := range cases {
+		cfg, _ := settingsConfigPath()
+		_ = os.MkdirAll(filepath.Dir(cfg), 0o755)
+		if err := os.WriteFile(cfg, []byte(`{"mcp_server":"`+c.setting+`"}`), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		m.mcpServeErr = c.err
+		text := mcpServeItemsText(m.mcpServeStatusItems())
+		if !strings.Contains(text, "Not listening") || !strings.Contains(text, c.want) {
+			t.Errorf("%s: status has no %q:\n%s", c.setting, c.want, text)
+		}
+		if strings.Contains(text, "Socket") {
+			t.Errorf("%s: a socket path while not listening:\n%s", c.setting, text)
+		}
+	}
+}
+
+// Spec (MS-3): the screen opens from the palette id and fits narrow
+// windows (no line wider than the window).
+func TestMCPServeStatusScreenNarrow(t *testing.T) {
+	for _, w := range []int{80, 50} {
+		m := mcpServeStatusModel(t)
+		m.w, m.h = w, 24
+		m.dispatchPaletteAction("mcp-serve-status")
+		if !m.pickerOpen {
+			t.Fatal("the status screen did not open")
+		}
+		view := ansi.Strip(m.picker.View())
+		if !strings.Contains(view, "Listening") {
+			t.Errorf("w=%d: no status in\n%s", w, view)
+		}
+		for _, line := range strings.Split(view, "\n") {
+			if ansi.StringWidth(line) > w {
+				t.Errorf("w=%d: line is %d cells: %q", w, ansi.StringWidth(line), line)
+			}
+		}
+	}
+}
+
+// Spec (MS-3): the config snippet for agent CLIs, exactly.
+func TestMCPServeConfigJSONGolden(t *testing.T) {
+	got := mcpServeConfigJSON("/usr/local/bin/termocode", "/home/me/proj")
+	want := `{
+  "mcpServers": {
+    "termocode": {
+      "command": "/usr/local/bin/termocode",
+      "args": ["mcp", "--dir", "/home/me/proj"]
+    }
+  }
+}
+`
+	if got != want {
+		t.Errorf("config:\n%s\nwant:\n%s", got, want)
+	}
+	// A path with a quote or a backslash stays valid JSON.
+	if odd := mcpServeConfigJSON(`/a "b"/termocode`, `C:\proj`); !strings.Contains(odd, `"/a \"b\"/termocode"`) || !strings.Contains(odd, `"C:\\proj"`) {
+		t.Errorf("odd paths:\n%s", odd)
+	}
+}
+
+// Spec (MS-3): the copy goes through the app's clipboard path (the test
+// sink, never the real clipboard), with the real executable and the
+// workspace, and a toast.
+func TestMCPServeCopyConfig(t *testing.T) {
+	var copied []string
+	defer SetClipboardSink(func(s string) { copied = append(copied, s) })()
+	old := mcpServeExecutable
+	mcpServeExecutable = func() (string, error) { return "/opt/tc/termocode", nil }
+	defer func() { mcpServeExecutable = old }()
+	m := aiTestModel(t)
+	cmd := m.dispatchPaletteAction("mcp-serve-copy-config")
+	if len(copied) != 1 {
+		t.Fatalf("copies = %d", len(copied))
+	}
+	if want := mcpServeConfigJSON("/opt/tc/termocode", aiWorkspaceRoot()); copied[0] != want {
+		t.Errorf("copied:\n%s\nwant:\n%s", copied[0], want)
+	}
+	if m.toast.Empty() || cmd == nil {
+		t.Error("no toast after the copy")
+	}
+	if toast := strings.Join(m.toast.View(160, 40), " "); !strings.Contains(toast, "termocode server config") {
+		t.Errorf("toast = %q", toast)
+	}
+	// Without a path of its own the command falls back to the name.
+	mcpServeExecutable = func() (string, error) { return "", errors.New("no") }
+	copied = nil
+	m.dispatchPaletteAction("mcp-serve-copy-config")
+	if len(copied) != 1 || !strings.Contains(copied[0], `"command": "termocode"`) {
+		t.Errorf("fallback: %v", copied)
+	}
+}
+
+// Spec (MS-3): both palette entries exist and are never for the AI.
+func TestMCPServePaletteIDs(t *testing.T) {
+	titles := map[string]string{}
+	for _, it := range paletteItems() {
+		titles[it.ID] = it.Title
+	}
+	for id, title := range map[string]string{
+		"mcp-serve-status":      "MCP: Server Status",
+		"mcp-serve-copy-config": "MCP: Copy termocode Server Config",
+	} {
+		if titles[id] != title {
+			t.Errorf("palette %s = %q, want %q", id, titles[id], title)
+		}
+		if p, ok := aiActionPolicies[id]; !ok || p.Gate != aiGateNever || p.Reason == "" {
+			t.Errorf("%s policy = %+v (ok %v), want never with a reason", id, p, ok)
+		}
+	}
+}

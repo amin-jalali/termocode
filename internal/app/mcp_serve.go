@@ -131,6 +131,8 @@ func (m *Model) handleMCPServeMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onMCPServeAskGone(msg), true
 	case mcpServeTickMsg:
 		return m.onMCPServeTick(), true
+	case mcpServeClientMsg:
+		return m.onMCPServeClient(msg), true
 	}
 	return nil, false
 }
@@ -172,7 +174,8 @@ type mcpServeSource struct {
 	specs   []mcp.Tool
 	confirm mcpServeConfirmFunc
 	audit   mcpServeAuditFunc
-	allow   *mcpServeAllowSet // nil: nothing is remembered
+	allow   *mcpServeAllowSet       // nil: nothing is remembered
+	events  func(mcpServeClientMsg) // connection events (mcp_serve_status.go), nil: none
 }
 
 func (s *mcpServeSource) List() []mcp.Tool { return s.specs }
@@ -182,6 +185,8 @@ func (s *mcpServeSource) List() []mcp.Tool { return s.specs }
 func (s *mcpServeSource) Call(ctx context.Context, name string, args map[string]any) (mcp.CallResult, error) {
 	client := mcpServeClient(mcp.ClientName(ctx))
 	at := clock.Now()
+	asked := false // a card was shown (the status screen counts them)
+	defer func() { s.noteCall(ctx, asked) }()
 	argText := aiAuditArgs(args)
 	audit := func(gate, result string) {
 		if s.audit != nil {
@@ -222,6 +227,7 @@ func (s *mcpServeSource) Call(ctx context.Context, name string, args map[string]
 		if s.allow.has(client, key) {
 			gate = ai.GateConfirm + ":always" // the user said so before; no card
 		} else {
+			asked = true
 			cardCtx := withMCPServeCard(ctx, mcpServeCardInfo{args: argText, always: key})
 			if err := s.ask(cardCtx, client, t, t.Human(args)); err != nil {
 				audit(gate, "declined: "+err.Error())

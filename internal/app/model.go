@@ -671,6 +671,9 @@ type Model struct {
 	// mcpServeForAgent: an agent tab asked for the MCP server (mcp_server
 	// auto keeps it running then).
 	mcpServeForAgent bool
+	// mcpServeErr: why the listener did not start ("" when it did or was
+	// not asked to); the status screen shows it (mcp_serve_status.go).
+	mcpServeErr string
 	// HTTP client for .http files (http_state.go); made on first use.
 	http *httpState
 	// secrets is the secret store's unlock flow (secrets_ui.go); the store

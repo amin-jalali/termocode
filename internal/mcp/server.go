@@ -17,9 +17,36 @@ type ToolSource interface {
 	Call(context.Context, string, map[string]any) (CallResult, error)
 }
 
+// ClientObserver is an optional interface of a ToolSource served by a
+// SocketServer: it hears each connection's life (M1 MS-3, the status
+// screen). The id is the connection's, also seen by Call (ConnID). The
+// methods run on connection goroutines and may block; a source should
+// keep them short.
+type ClientObserver interface {
+	ClientConnected(id uint64)
+	ClientNamed(id uint64, name string) // clientInfo.name from initialize
+	ClientGone(id uint64)
+}
+
+type connIDKey struct{}
+
+// WithConnID returns ctx carrying a connection id for ConnID.
+func WithConnID(ctx context.Context, id uint64) context.Context {
+	return context.WithValue(ctx, connIDKey{}, id)
+}
+
+// ConnID is the id of the connection a ToolSource.Call comes from (0 when
+// the server does not number connections).
+func ConnID(ctx context.Context) uint64 {
+	id, _ := ctx.Value(connIDKey{}).(uint64)
+	return id
+}
+
 // MCPServer handles requests on an extproc.Conn configured for newline framing.
 type MCPServer struct {
 	source ToolSource
+	obs    ClientObserver // nil: nobody listens
+	connID uint64
 	mu     sync.Mutex
 	calls  map[string]context.CancelFunc
 	client string // clientInfo.name from initialize
@@ -81,6 +108,9 @@ func (s *MCPServer) Handle(conn *extproc.Conn, m extproc.Message) {
 			s.mu.Lock()
 			s.client = params.ClientInfo.Name
 			s.mu.Unlock()
+			if s.obs != nil {
+				s.obs.ClientNamed(s.connID, params.ClientInfo.Name)
+			}
 		}
 	}
 	go func() {
@@ -131,6 +161,9 @@ func (s *MCPServer) handle(conn *extproc.Conn, m extproc.Message) (any, *extproc
 		client := s.client
 		s.mu.Unlock()
 		ctx, cancel := context.WithCancel(WithClientName(context.Background(), client))
+		if s.connID != 0 {
+			ctx = WithConnID(ctx, s.connID)
+		}
 		go func() {
 			select {
 			case <-conn.Done():

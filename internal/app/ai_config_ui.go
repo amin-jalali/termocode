@@ -55,6 +55,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAIHistoryRenamePicked(id), true
 	case pickerKindAIAutoApprove:
 		return m.onAIAutoApproveToggled(id), true
+	case pickerKindMCPServeStatus: // mcp_serve_status.go
+		return m.onMCPServeStatusPicked(id), true
 	case pickerKindAIAttach:
 		return m.onAIAttachPicked(id), true
 	}

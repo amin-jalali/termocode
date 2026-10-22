@@ -353,6 +353,13 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | LSP: Show Hover Documentation | `hover` |   |   |
 | LSP: Toggle Inlay Hints | `toggle-inlay-hints` | `Alt+L` | `Alt+L` |
 
+## MCP
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| MCP: Copy termocode Server Config | `mcp-serve-copy-config` |   |   |
+| MCP: Server Status | `mcp-serve-status` |   |   |
+
 ## Markdown
 
 | Title | ID | Key | Hint |
