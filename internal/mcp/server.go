@@ -46,6 +46,11 @@ func ClientName(ctx context.Context) string {
 	return name
 }
 
+// WithClientName returns ctx carrying a client name for ClientName.
+func WithClientName(ctx context.Context, name string) context.Context {
+	return context.WithValue(ctx, clientNameKey{}, name)
+}
+
 type callParams struct {
 	Name      string         `json:"name"`
 	Arguments map[string]any `json:"arguments"`
@@ -125,7 +130,7 @@ func (s *MCPServer) handle(conn *extproc.Conn, m extproc.Message) (any, *extproc
 		s.mu.Lock()
 		client := s.client
 		s.mu.Unlock()
-		ctx, cancel := context.WithCancel(context.WithValue(context.Background(), clientNameKey{}, client))
+		ctx, cancel := context.WithCancel(WithClientName(context.Background(), client))
 		go func() {
 			select {
 			case <-conn.Done():
