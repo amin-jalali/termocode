@@ -8,6 +8,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/dbclient"
 	"github.com/amin-jalali/termocode/internal/help"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 )
 
 func dbNoSQLiteModel(w, h int) (Model, *dbState) {
@@ -108,5 +109,24 @@ func TestDatabasesHelpTopics(t *testing.T) {
 	}
 	if errs := help.CheckAll([]string{helpContexts["databases"], helpContexts["db-result"]}); len(errs) > 0 {
 		t.Fatal(errs)
+	}
+}
+
+// DB-7: the import card shows at least 3 preview rows at small and large
+// sizes, and its label counts them.
+func TestDatabaseImportCardShowsPreviewRows(t *testing.T) {
+	withConfigDir(t)
+	for _, size := range [][2]int{{80, 24}, {100, 30}, {150, 42}} {
+		m := &Model{databases: newDBState(), w: size[0], h: size[1]}
+		_ = m.databaseImportDemo()
+		box := ansi.Strip(m.confirm.Box())
+		if !strings.Contains(box, "First 3 rows") {
+			t.Fatalf("%dx%d: no \"First 3 rows\" label:\n%s", size[0], size[1], box)
+		}
+		for _, row := range []string{"48214", "48215", "48216"} {
+			if !strings.Contains(box, row) {
+				t.Fatalf("%dx%d: preview row %s is not on the card:\n%s", size[0], size[1], row, box)
+			}
+		}
 	}
 }

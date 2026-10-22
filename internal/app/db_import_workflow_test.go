@@ -104,7 +104,7 @@ func TestDBImportPreviewCardSniffsAndImportsInOneTransaction(t *testing.T) {
 	card := importCard(t, d)
 	for _, want := range []string{
 		"Import 3 rows into app.users", "data.csv", "UTF-8", `delimiter ";"`, "header row", "3 rows",
-		"id", "email", "plan", "First rows", "1 | a@x.io | free",
+		"id", "email", "plan", "First 3 rows", "1 | a@x.io | free",
 		"batched INSERTs inside one transaction", "nothing is written if any row fails",
 		"Import", "Map columns", "Header: on", "Cancel",
 	} {

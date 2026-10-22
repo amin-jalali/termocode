@@ -250,6 +250,19 @@ func (m *Model) dbImportCardText(imp *dbImport) string {
 	if imp.mapped() == 0 {
 		b.WriteString("Map at least one column to import.\n")
 	}
+	// The first rows come before the mapping: the card shows only a few
+	// lines (it scrolls), and the rows are what people check first.
+	if sample := imp.sniff.Sample; len(sample) > 0 {
+		sample = sample[:min(len(sample), 3)]
+		b.WriteString("First " + dbPlural(len(sample), "row") + "\n")
+		for _, row := range sample {
+			cells := make([]string, len(row))
+			for j, c := range row {
+				cells[j] = ansi.Truncate(dbOneLine(c), 16, "…")
+			}
+			b.WriteString("  " + strings.Join(cells, " | ") + "\n")
+		}
+	}
 	b.WriteString("Mapping (file column " + dbGlyphInto.String() + " table column)\n")
 	width := 0
 	for _, c := range imp.cols {
@@ -263,16 +276,6 @@ func (m *Model) dbImportCardText(imp *dbImport) string {
 		}
 		name := ansi.Truncate(dbOneLine(c), width, "…")
 		fmt.Fprintf(&b, "  %s%s %s %s\n", name, strings.Repeat(" ", width-ansi.StringWidth(name)), dbGlyphFrom.String(), from)
-	}
-	if len(imp.sniff.Sample) > 0 {
-		b.WriteString("First rows\n")
-		for _, row := range imp.sniff.Sample {
-			cells := make([]string, len(row))
-			for j, c := range row {
-				cells[j] = ansi.Truncate(dbOneLine(c), 16, "…")
-			}
-			b.WriteString("  " + strings.Join(cells, " | ") + "\n")
-		}
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
