@@ -1,8 +1,10 @@
 package theme
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -63,18 +65,36 @@ func SaveThemeID(id string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	// Read-modify-write so we don't clobber other config keys a future
-	// version may have added.
-	cfg := configFile{}
+	// Read-modify-write: only "theme" changes, every other key stays as
+	// it was. A file that is not valid JSON is left alone (an error, not
+	// an empty config that would drop the user's settings).
+	cfg := map[string]json.RawMessage{}
 	if b, err := os.ReadFile(path); err == nil {
-		_ = json.Unmarshal(b, &cfg)
+		if len(bytes.TrimSpace(b)) > 0 {
+			if err := json.Unmarshal(b, &cfg); err != nil {
+				return fmt.Errorf("%s is not valid JSON; theme not saved: %w", path, err)
+			}
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
 	}
-	cfg.Theme = id
+	if cfg == nil {
+		cfg = map[string]json.RawMessage{}
+	}
+	idJSON, err := json.Marshal(id)
+	if err != nil {
+		return err
+	}
+	cfg["theme"] = idJSON
 	out, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, out, 0o644)
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, append(out, '\n'), 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
 }
 
 // LoadAndApply reads the persisted theme ID and applies it. Returns the

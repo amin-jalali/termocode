@@ -1,6 +1,7 @@
 package theme
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -79,5 +80,43 @@ func TestApplyThemeMutatesPalette(t *testing.T) {
 	ApplyTheme("one-dark")
 	if BgEditor == beforeBg {
 		t.Errorf("expected BgEditor to change after ApplyTheme(one-dark); both = %d", BgEditor)
+	}
+}
+
+// Bug: SaveThemeID rewrote config.json with only "theme", so picking a
+// theme dropped every other setting. Other keys must survive as they
+// were, and a file that is not valid JSON is never overwritten.
+func TestSaveThemeIDKeepsOtherKeys(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	path := filepath.Join(dir, "termocode", "config.json")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	in := `{"ai_provider": "openai", "tab_size": 2, "nested": {"a": [1, 2]}, "theme": "old"}`
+	if err := os.WriteFile(path, []byte(in), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveThemeID("one-dark"); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(path)
+	var got map[string]any
+	if err := json.Unmarshal(b, &got); err != nil {
+		t.Fatalf("not JSON: %s", b)
+	}
+	if got["theme"] != "one-dark" || got["ai_provider"] != "openai" || got["tab_size"] != float64(2) || got["nested"] == nil {
+		t.Fatalf("config after save: %s", b)
+	}
+
+	bad := "{ not json"
+	if err := os.WriteFile(path, []byte(bad), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveThemeID("one-dark"); err == nil {
+		t.Error("a broken config.json was overwritten without an error")
+	}
+	if b, _ := os.ReadFile(path); string(b) != bad {
+		t.Fatalf("broken file changed: %s", b)
 	}
 }
