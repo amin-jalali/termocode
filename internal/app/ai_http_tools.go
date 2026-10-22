@@ -222,6 +222,14 @@ var httpAICache sync.Map // args map pointer → *httpAIReq
 
 func httpAIKey(a map[string]any) uintptr { return reflect.ValueOf(a).Pointer() }
 
+// httpAIForget drops the request cached for the args map (the agent's
+// Release hook: declined and refused calls leave no entry behind).
+func httpAIForget(a map[string]any) {
+	if a != nil {
+		httpAICache.Delete(httpAIKey(a))
+	}
+}
+
 func httpAIGet(root string, a map[string]any) *httpAIReq {
 	k := httpAIKey(a)
 	if v, ok := httpAICache.Load(k); ok {
@@ -541,6 +549,7 @@ func (m *Model) aiHTTPTools(root string, call aiIDECaller, base []ai.Tool) []ai.
 			"env": str("environment for this call (optional; \"none\" for none)"),
 		},
 		Describe: func(a map[string]any) string { return httpAIGet(root, a).describe() },
+		Release:  httpAIForget,
 		Validate: func(a map[string]any) error {
 			r := httpAIGet(root, a)
 			err := r.validate()

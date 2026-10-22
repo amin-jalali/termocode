@@ -324,6 +324,10 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 	if args == nil {
 		args = map[string]any{}
 	}
+	if t.Release != nil {
+		t.Release(args) // an entry left for an earlier map at this address
+		defer t.Release(args)
+	}
 	human := t.Human(args)
 	emit(Event{Kind: EventToolStart, Tool: t.Name, Label: t.Label(), Detail: human, Args: args})
 	if t.Validate != nil {

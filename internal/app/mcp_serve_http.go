@@ -146,8 +146,4 @@ func mcpServeHTTPAlwaysKey(class string) string {
 // mcpServeForgetHTTP drops the request http_send built for args
 // (httpAICache is keyed by the map's address: a later map at the same
 // address must never get this call's request).
-func mcpServeForgetHTTP(args map[string]any) {
-	if args != nil {
-		httpAICache.Delete(httpAIKey(args))
-	}
-}
+func mcpServeForgetHTTP(args map[string]any) { httpAIForget(args) }

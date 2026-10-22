@@ -22,3 +22,21 @@ func TestAgentToolEventsCarryLabel(t *testing.T) {
 		}
 	}
 }
+
+// Spec (fix 6): the agent calls a tool's Release before the call and after
+// it, also when the user declines.
+func TestRunToolReleasesArgs(t *testing.T) {
+	var log []string
+	a := &Agent{
+		Tools: []Tool{{
+			Name: "x", Mutating: true, Class: "x",
+			Release: func(map[string]any) { log = append(log, "release") },
+			Run:     func(context.Context, map[string]any) (string, error) { log = append(log, "run"); return "", nil },
+		}},
+		Confirm: func(context.Context, Tool, string) bool { return false },
+	}
+	a.runTool(context.Background(), ToolCall{ID: "1", Name: "x"}, func(Event) {})
+	if len(log) != 2 || log[0] != "release" || log[1] != "release" {
+		t.Fatalf("log = %v", log)
+	}
+}

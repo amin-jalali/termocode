@@ -43,7 +43,13 @@ type Tool struct {
 	// command at once and asks for a risky one. Class "" with mutating
 	// true always asks, with no "Always allow" button.
 	Gate func(args map[string]any) (mutating bool, class string)
-	Run  func(ctx context.Context, args map[string]any) (string, error)
+	// Release (optional) drops whatever the tool cached for this args map
+	// (Describe, Validate, Gate and Run share one parsed request, keyed
+	// by the map). The agent calls it before a call and when the call is
+	// over, whether it was run, refused, declined or panicked, so a later
+	// map can never meet an old entry.
+	Release func(args map[string]any)
+	Run     func(ctx context.Context, args map[string]any) (string, error)
 }
 
 // Spec is the native tool-calling description of t.
