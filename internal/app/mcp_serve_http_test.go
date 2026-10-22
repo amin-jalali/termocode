@@ -68,6 +68,15 @@ func (e *mcpServeHTTPEnv) call(t *testing.T, client string, args map[string]any)
 	return r, err
 }
 
+// saveRequest saves a request for rawURL in the workspace (a .http
+// file), so its host counts as one the user already uses.
+func (e *mcpServeHTTPEnv) saveRequest(t *testing.T, rawURL string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(e.root, "saved.http"), []byte("### saved\nGET "+rawURL+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func (e *mcpServeHTTPEnv) seen() ([]string, []mcpServeDBCardSeen) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -137,6 +146,7 @@ func copyArgs(a map[string]any) map[string]any {
 // A loopback GET runs at once, like in the chat.
 func TestMCPServeHTTPSendSecretResolvedAndRedacted(t *testing.T) {
 	e := newMCPServeHTTPEnv(t)
+	e.saveRequest(t, e.srv.URL+"/saved")
 	r, err := e.call(t, "codex", map[string]any{"url": e.srv.URL + "/me", "env": "dev",
 		"headers": map[string]any{"Authorization": "Bearer {{token}}"}})
 	if err != nil || r.IsError {
@@ -158,6 +168,7 @@ func TestMCPServeHTTPSendSecretResolvedAndRedacted(t *testing.T) {
 // showing it; Deny is -32000 and nothing is sent.
 func TestMCPServeHTTPSendDenySendsNothing(t *testing.T) {
 	e := newMCPServeHTTPEnv(t)
+	e.saveRequest(t, e.srv.URL+"/saved")
 	e.answer = &mcp.CallError{Code: mcp.CodeDeclined, Message: "declined by the user"}
 	r, err := e.call(t, "codex", map[string]any{"method": "POST", "url": e.srv.URL + "/users", "env": "dev", "body": "{}",
 		"headers": map[string]any{"Authorization": "Bearer {{token}}"}})
@@ -232,5 +243,95 @@ func TestMCPServeHTTPSendNoStaleRequest(t *testing.T) {
 	}
 	if _, ok := httpAICache.Load(httpAIKey(args)); ok {
 		t.Fatal("the call left its request in the cache")
+	}
+}
+
+// Spec (fix 1): a request that sends a saved secret to a host none of the
+// user's saved requests uses is refused in Validate (-32602): no card,
+// nothing sent. The same request to a saved host works as before.
+func TestMCPServeHTTPSendSecretToUnknownHostRefused(t *testing.T) {
+	secret := map[string]any{"Authorization": "Bearer {{token}}"}
+	t.Run("unknown host", func(t *testing.T) {
+		e := newMCPServeHTTPEnv(t)
+		r, err := e.call(t, "codex", map[string]any{"method": "POST", "url": e.srv.URL + "/x", "env": "dev", "body": "{}", "headers": secret})
+		var ce *mcp.CallError
+		if !errors.As(err, &ce) || ce.Code != mcp.CodeInvalidParams || len(r.Content) != 0 {
+			t.Fatalf("want -32602, got %+v %v", r, err)
+		}
+		for _, want := range []string{"sends a saved secret to " + strings.ToLower(strings.TrimSuffix(e.srv.URL, "/")), "not used by any of your saved requests"} {
+			if !strings.Contains(ce.Message, want) {
+				t.Errorf("message %q lacks %q", ce.Message, want)
+			}
+		}
+		if strings.Contains(ce.Message, mcpServeHTTPToken) {
+			t.Fatal("the message leaks the secret")
+		}
+		if hits, cards := e.seen(); len(hits) != 0 || len(cards) != 0 {
+			t.Fatalf("hits %v cards %+v", hits, cards)
+		}
+	})
+	t.Run("saved host, GET runs at once", func(t *testing.T) {
+		e := newMCPServeHTTPEnv(t)
+		e.saveRequest(t, e.srv.URL+"/other")
+		if r, err := e.call(t, "codex", map[string]any{"url": e.srv.URL + "/x", "env": "dev", "headers": secret}); err != nil || r.IsError {
+			t.Fatalf("send: %+v %v", r, err)
+		}
+		if hits, cards := e.seen(); len(hits) != 1 || len(cards) != 0 {
+			t.Fatalf("hits %v cards %+v", hits, cards)
+		}
+	})
+	t.Run("saved host, POST asks", func(t *testing.T) {
+		e := newMCPServeHTTPEnv(t)
+		e.saveRequest(t, e.srv.URL+"/other")
+		if r, err := e.call(t, "codex", map[string]any{"method": "POST", "url": e.srv.URL + "/x", "env": "dev", "body": "{}", "headers": secret}); err != nil || r.IsError {
+			t.Fatalf("send: %+v %v", r, err)
+		}
+		if hits, cards := e.seen(); len(hits) != 1 || len(cards) != 1 {
+			t.Fatalf("hits %v cards %+v", hits, cards)
+		}
+	})
+	t.Run("a host from an environment value counts", func(t *testing.T) {
+		e := newMCPServeHTTPEnv(t)
+		if err := os.WriteFile(filepath.Join(e.root, "http-client.env.json"), []byte(`{"dev":{"base":"`+e.srv.URL+`/api"}}`), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if r, err := e.call(t, "codex", map[string]any{"url": e.srv.URL + "/x", "env": "dev", "headers": secret}); err != nil || r.IsError {
+			t.Fatalf("send: %+v %v", r, err)
+		}
+	})
+	t.Run("no secret, other host: the old gate", func(t *testing.T) {
+		e := newMCPServeHTTPEnv(t)
+		if r, err := e.call(t, "codex", map[string]any{"url": e.srv.URL + "/plain"}); err != nil || r.IsError {
+			t.Fatalf("send: %+v %v", r, err)
+		}
+		if hits, cards := e.seen(); len(hits) != 1 || len(cards) != 0 {
+			t.Fatalf("hits %v cards %+v", hits, cards)
+		}
+	})
+}
+
+// Spec (fix 1): host matching ignores path and query, letter case and the
+// default port; scheme and other ports differ.
+func TestMCPServeHTTPOriginMatching(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "a.http"), []byte("### a\nGET HTTPS://API.Example.COM:443/v1/x?y=1\n\n### b\nGET http://Web.Example.com:80/\n\n### c\nGET http://localhost:8080/z\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	saved := mcpServeSavedHTTPOrigins(root)
+	for raw, want := range map[string]bool{
+		"https://api.example.com/other/path?q=2": true,
+		"https://API.EXAMPLE.COM:443/":           true,
+		"http://web.example.com/":                true,
+		"http://web.example.com:80/q":            true,
+		"http://localhost:8080/":                 true,
+		"http://api.example.com/":                false, // other scheme
+		"https://api.example.com:8443/":          false, // other port
+		"http://localhost:9090/":                 false,
+		"https://evil.example.net/":              false,
+		"not a url":                              false,
+	} {
+		if got := saved[mcpServeHTTPOrigin(raw)]; got != want {
+			t.Errorf("%s: saved = %v, want %v (origin %q)", raw, got, want, mcpServeHTTPOrigin(raw))
+		}
 	}
 }
