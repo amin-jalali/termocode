@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -114,7 +115,10 @@ func TestLoopbackPortSet(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer fl3.Close()
-	if fl3.RedirectURI() != "http://localhost:47391/callback" {
+	// Another package's test may hold 47391 for a moment (go test runs
+	// packages at once), so any port of the set is fine here; the host is
+	// what this checks.
+	if fl3.RedirectURI() != "http://localhost:"+strconv.Itoa(fl3.Port())+"/callback" || !slices.Contains(LoopbackPorts, fl3.Port()) {
 		t.Errorf("localhost redirect %s", fl3.RedirectURI())
 	}
 	if page := browse(t, fl3.AuthURL()); !strings.Contains(page, "close this tab") {
