@@ -23,6 +23,14 @@ import (
 // stops the watcher.
 func pumpHost(t *testing.T, m *Model, cmd tea.Cmd) {
 	t.Helper()
+	pumpHostUntil(t, m, cmd, nil)
+}
+
+// pumpHostUntil is pumpHost that waits up to 30 s for a message until
+// done reports one, and then 500 ms like pumpHost. A slow step (an
+// encrypted-file save under -race) is then not dropped as a tick.
+func pumpHostUntil(t *testing.T, m *Model, cmd tea.Cmd, done func(tea.Msg) bool) {
+	t.Helper()
 	t.Cleanup(func() { m.services.stopHostWatch(); m.services.stopWatch() })
 	queue := []tea.Cmd{cmd}
 	for n := 0; len(queue) > 0; n++ {
@@ -42,11 +50,24 @@ func pumpHost(t *testing.T, m *Model, cmd tea.Cmd) {
 				queue = append(queue, b...)
 				continue
 			}
+			if done != nil && done(got) {
+				done = nil
+			}
 			next, _ := m.handleServicesMsg(got)
 			queue = append(queue, next)
-		case <-time.After(500 * time.Millisecond):
+		case <-time.After(wait(done)):
+			if done != nil {
+				t.Fatal("the awaited message never came")
+			}
 		}
 	}
+}
+
+func wait(done func(tea.Msg) bool) time.Duration {
+	if done != nil {
+		return 30 * time.Second
+	}
+	return 500 * time.Millisecond
 }
 
 // ctxSession is a Containers view with every section open, detected and

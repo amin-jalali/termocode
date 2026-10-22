@@ -1,6 +1,8 @@
 package app
 
 import (
+	tea "github.com/charmbracelet/bubbletea"
+
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,6 +36,13 @@ func regAgeSession(t *testing.T, unlock bool) (*Model, string, func() string, fu
 	}
 	reset := func() { _ = os.WriteFile(filepath.Join(f.Data, "login.stdin"), nil, 0o600) }
 	return m, home, stdin, reset
+}
+
+// pumpLogin pumps until the login answer arrives, however slow the
+// store save after it is.
+func pumpLogin(t *testing.T, m *Model, cmd tea.Cmd) {
+	t.Helper()
+	pumpHostUntil(t, m, cmd, func(msg tea.Msg) bool { _, ok := msg.(registryLoginDoneMsg); return ok })
 }
 
 func startConnect(t *testing.T, m *Model, host string) {
@@ -71,7 +80,7 @@ func TestRegistryRememberSavesAndReuses(t *testing.T) {
 	if !m.promptOpen || m.promptKind != promptKindRegistryToken {
 		t.Fatal("no token prompt after Remember")
 	}
-	pumpHost(t, m, submitPrompt(t, m, regRememberSecret))
+	pumpLogin(t, m, submitPrompt(t, m, regRememberSecret))
 	if stdin() != regRememberSecret+"\n" {
 		t.Fatalf("login stdin %q", stdin())
 	}
@@ -93,7 +102,7 @@ func TestRegistryRememberSavesAndReuses(t *testing.T) {
 	if got := ansi.Strip(m.confirm.View()); !strings.Contains(got, "saved") || strings.Contains(got, regRememberSecret) {
 		t.Fatalf("card:\n%s", got)
 	}
-	pumpHost(t, m, answerStoreConfirm(t, m, "use"))
+	pumpLogin(t, m, answerStoreConfirm(t, m, "use"))
 	if stdin() != regRememberSecret+"\n" {
 		t.Fatalf("second login stdin %q", stdin())
 	}
@@ -103,7 +112,7 @@ func TestRegistryNotNowDoesNotSave(t *testing.T) {
 	m, _, _, _ := regAgeSession(t, true)
 	startConnect(t, m, "ghcr.io")
 	answerStoreConfirm(t, m, "once")
-	pumpHost(t, m, submitPrompt(t, m, regRememberSecret))
+	pumpLogin(t, m, submitPrompt(t, m, regRememberSecret))
 	s, _ := configureSecretStore()
 	if len(s.Names()) != 0 {
 		t.Fatalf("saved without asking: %v", s.Names())
