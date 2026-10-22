@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/migrate"
+	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -134,4 +135,141 @@ func setupStepIDs(v setupCardView) []string {
 		ids = append(ids, s.id)
 	}
 	return ids
+}
+
+// ─── The row ───────────────────────────────────────────────────────────
+
+func importFacts(found ...setupEditor) setupFacts {
+	f := baseFacts(kittyInfo)
+	f.importFound = found
+	return f
+}
+
+var vsCode = setupEditor{title: "VS Code", parts: "settings, 23 keys, theme"}
+
+func TestSetupImportRowHiddenWithoutEditor(t *testing.T) {
+	steps := buildSetupSteps(importFacts())
+	for _, s := range steps {
+		if s.id == "import" {
+			t.Fatalf("import row with no editor: %+v", s)
+		}
+	}
+	for _, line := range setupText(t, importFacts(), 68) {
+		if strings.Contains(line, "Import") {
+			t.Errorf("card mentions Import with no editor: %q", line)
+		}
+	}
+}
+
+func TestSetupImportRowShown(t *testing.T) {
+	steps := buildSetupSteps(importFacts(vsCode))
+	if steps[0].id != "icons" || steps[1].id != "import" {
+		t.Fatalf("order: %v", setupStepIDs(setupCardFromFacts(importFacts(vsCode))))
+	}
+	s := steps[1]
+	if !s.optional || s.done || s.action != "Import…" {
+		t.Fatalf("row %+v", s)
+	}
+	if s.status != "Settings found in VS Code · settings, 23 keys, theme" {
+		t.Errorf("status %q", s.status)
+	}
+	if len(s.buttons) != 1 || s.buttons[0].id != "import-open" {
+		t.Errorf("buttons %+v", s.buttons)
+	}
+	got := setupText(t, importFacts(vsCode), 68)
+	row := importRowAt(got)
+	if row < 0 || !strings.Contains(got[row], "VS Code") || !strings.HasSuffix(got[row], "Import…") {
+		t.Errorf("drawn row:\n%s", strings.Join(got, "\n"))
+	}
+	// The statuses of all rows stay in one column.
+	if i, j := strings.Index(got[row], "Settings"), strings.Index(got[row+1], "Not set up"); i != j {
+		t.Errorf("status columns differ (%d, %d):\n%s", i, j, strings.Join(got, "\n"))
+	}
+	// Optional: it never blocks "SET UP · done".
+	f := importFacts(vsCode)
+	f.settled["ai"], f.iconMode = true, theme.IconModeNerdFont
+	if !setupCardFromFacts(f).allDone {
+		t.Error("the Import row holds back done")
+	}
+}
+
+// importRowAt is the line of the Import row, -1 if none.
+func importRowAt(lines []string) int {
+	for i, l := range lines {
+		if strings.HasPrefix(l, "   ○ Import") {
+			return i
+		}
+	}
+	return -1
+}
+
+func TestSetupImportRowSeveralEditors(t *testing.T) {
+	s := stepByID(t, buildSetupSteps(importFacts(vsCode, setupEditor{title: "Zed", parts: "keys"}, setupEditor{title: "Helix", parts: "keys"})), "import")
+	if s.status != "Settings found in VS Code and 2 more" {
+		t.Errorf("status %q", s.status)
+	}
+}
+
+func TestSetupImportRowNarrow(t *testing.T) {
+	for _, w := range []int{30, 40, 50, 60, 68, 100} {
+		got := setupText(t, importFacts(vsCode), w) // fails if a line is not w cells wide
+		joined := strings.Join(got, "\n")
+		if !strings.Contains(joined, "Import…") || (w >= 40 && !strings.Contains(joined, "VS Code")) {
+			t.Errorf("w=%d: row lost its text:\n%s", w, joined)
+		}
+	}
+	got := setupText(t, importFacts(vsCode), 40)
+	row := importRowAt(got)
+	if row < 0 || !strings.HasSuffix(got[row], "Import…") || !strings.HasPrefix(got[row+1], "     Settings found in VS Code") {
+		t.Errorf("narrow row:\n%s", strings.Join(got, "\n"))
+	}
+}
+
+func TestSetupImportRowNamesNoOtherProduct(t *testing.T) {
+	// Only the detected editor's own name is data; the card text adds none.
+	f := importFacts(setupEditor{title: "Zed", parts: "keys"})
+	all := strings.Join(setupText(t, f, 100), "\n")
+	for _, p := range []string{"VS Code", "Vim", "JetBrains", "Sublime", "Helix", "Cursor"} {
+		if strings.Contains(all, p) {
+			t.Errorf("card names %q for a Zed source", p)
+		}
+	}
+}
+
+func TestSetupImportButtonOpensThePicker(t *testing.T) {
+	importSandbox(t, "vscode", "jetbrains")
+	m := setupImportModel(t)
+	m = feedAll(m, setupRunCmd(m.setupInitCmd()))
+	var ids []string
+	for _, b := range m.SetupCardButtons() {
+		ids = append(ids, b.ID)
+	}
+	if !strings.Contains(strings.Join(ids, ","), "import-open") {
+		t.Fatalf("no import button: %v", ids)
+	}
+	// The row itself (one button) runs it.
+	m.pressSetupRow("import")
+	if !m.pickerOpen || m.pickerKind != pickerKindImportSource {
+		t.Fatalf("picker open=%v kind=%v", m.pickerOpen, m.pickerKind)
+	}
+	var titles []string
+	for _, it := range pickerItems(t, &m) {
+		titles = append(titles, it.Title)
+	}
+	if got := strings.Join(titles, ","); !strings.Contains(got, "VS Code") || !strings.Contains(got, "GoLand 2025.1") {
+		t.Errorf("picker rows %v", titles)
+	}
+}
+
+func TestSetupImportRowHideSetup(t *testing.T) {
+	importSandbox(t, "vscode")
+	m := setupImportModel(t)
+	m = feedAll(m, setupRunCmd(m.setupInitCmd()))
+	if !m.setupCardView().show || len(m.setupCardView().steps) < 3 {
+		t.Fatal("card/row not shown")
+	}
+	m.pressSetupRow("hide")
+	if m.setupCardView().show {
+		t.Fatal("Hide setup left the card (and the row) visible")
+	}
 }

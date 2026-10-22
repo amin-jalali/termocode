@@ -56,23 +56,34 @@ func (l setupLine) text(W int) string {
 	return renderWelcomeNote(l.note, l.indent, W)
 }
 
-// setupStatusCol is where a step's status (and its notes) start.
-const setupStatusCol = 12
+// setupStatusCol is where a step's status (and its notes) start; the
+// title column is setupTitleW wide (a 6-letter title such as "Import"
+// widens both by one for every row, so the statuses stay aligned).
+const (
+	setupStatusCol = 12
+	setupTitleW    = 7
+)
 
 // setupCardLines lays the checklist out at width W.
 func setupCardLines(v setupCardView, W int) []setupLine {
 	narrow := W < welcomeNarrowMin
-	noteIndent := setupStatusCol
+	titleW, statusCol := setupTitleW, setupStatusCol
+	for _, s := range v.steps {
+		if runewidth.StringWidth(s.title) > setupTitleW-2 {
+			titleW, statusCol = setupTitleW+1, setupStatusCol+1
+		}
+	}
+	noteIndent := statusCol
 	if narrow {
 		noteIndent = 5
 	}
 	out := []setupLine{{header: true, done: v.allDone}}
 	for _, s := range v.steps {
 		mark, tok := setupMark(s)
-		r := &welcomeRow{id: "setup:" + s.id, glyph: mark, glyphTok: tok, title: s.title, titleW: 7,
+		r := &welcomeRow{id: "setup:" + s.id, glyph: mark, glyphTok: tok, title: s.title, titleW: titleW,
 			status: s.status, right: s.action, interactive: s.action != "", muted: s.done}
 		var under []string
-		fits := setupStatusCol+runewidth.StringWidth(s.status)+2+runewidth.StringWidth(s.action)+1 <= W
+		fits := statusCol+runewidth.StringWidth(s.status)+2+runewidth.StringWidth(s.action)+1 <= W
 		if narrow && s.action != "" && !fits {
 			r.status = ""
 			under = append(under, s.status)

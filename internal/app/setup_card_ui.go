@@ -291,7 +291,7 @@ func (m *Model) setupFacts() setupFacts {
 		iconMode: theme.CurrentIconMode, iconEnv: iconEnvOverride(), goos: setupGOOS,
 		installing: s.installing, installLine: s.installLine,
 		showSteps: s.showSteps, profileMade: s.profileMade,
-		settled: s.settled,
+		settled: s.settled, importFound: s.importFound,
 	}
 	if !m.aiConfigured() {
 		f.secretsLocked = m.aiS().secretsLocked
@@ -442,6 +442,8 @@ func (m *Model) pressSetupButton(id string) tea.Cmd {
 		// A pick there answers the step (onSetupThemePicked); Esc not.
 		s.themeAsked = true
 		return m.openThemePicker()
+	case id == "import-open":
+		return m.openImportPicker()
 	case id == "hide":
 		return m.closeSetupCard()
 	}

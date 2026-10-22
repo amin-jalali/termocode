@@ -53,6 +53,8 @@ type setupFacts struct {
 	secretsLocked       bool // the encrypted secret store holds secrets and is locked
 	services            int  // MCP servers in the user mcp.json
 
+	importFound []setupEditor // other editors with settings to import (probe result)
+
 	themeID, themeName string
 	settled            map[string]bool // steps answered on the card
 }
@@ -94,7 +96,11 @@ func nerdFamilyFor(p SetupProbe) string {
 
 // buildSetupSteps computes the three steps.
 func buildSetupSteps(f setupFacts) []setupStep {
-	steps := []setupStep{setupIconsStep(f), setupAIStep(f)}
+	steps := []setupStep{setupIconsStep(f)}
+	if len(f.importFound) > 0 {
+		steps = append(steps, setupImportStep(f))
+	}
+	steps = append(steps, setupAIStep(f))
 	if f.aiConfigured {
 		steps = append(steps, setupServicesStep(f))
 	}
@@ -118,6 +124,23 @@ func setupServicesStep(f setupFacts) setupStep {
 		s.buttons = []setupButton{{id: "services-connect", label: "Connect a service…"}, {id: "services-skip", label: "Skip for now"}}
 	}
 	s.detail = s.status
+	return s
+}
+
+// setupImportStep is the optional "Import" row, offered only when the
+// probe found another editor's settings. The editor's own name is data;
+// the card names no product itself.
+func setupImportStep(f setupFacts) setupStep {
+	s := setupStep{id: "import", title: "Import", optional: true}
+	first := f.importFound[0]
+	if n := len(f.importFound) - 1; n > 0 {
+		s.status = "Settings found in " + first.title + " and " + strconv.Itoa(n) + " more"
+	} else {
+		s.status = "Settings found in " + first.title + " · " + first.parts
+	}
+	s.detail = s.status + ". You see every change before anything is written."
+	s.action = "Import…"
+	s.buttons = []setupButton{{id: "import-open", label: "Import settings…"}}
 	return s
 }
 
