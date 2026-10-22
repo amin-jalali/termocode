@@ -1,0 +1,1 @@
+[{ "keys": ["super+shift+p"], "command": "show_command_palette" }, { "keys": ["super+p"], "command": "show_overlay", "args": {"overlay": "goto", "show_files": true} }]

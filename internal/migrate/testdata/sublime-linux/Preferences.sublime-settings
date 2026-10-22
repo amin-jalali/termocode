@@ -1,0 +1,12 @@
+// Sublime Text user preferences
+{
+	/* editor */
+	"tab_size": 4,
+	"word_wrap": "auto",
+	"save_on_focus_lost": true,
+	"font_size": 13,
+	"line_numbers": true,
+	"theme": "Adaptive.sublime-theme",
+	"color_scheme": "Packages/Color Scheme - Default/Monokai.sublime-color-scheme",
+	"ignored_packages": ["Vintage",],
+}

@@ -170,30 +170,6 @@ func ReadHelix(dir string) (Document, error) {
 	}
 	return d, nil
 }
-func ReadSublime(dir string) (Document, error) {
-	d := Document{}
-	m, err := stringMap(filepath.Join(dir, "Preferences.sublime-settings"))
-	if err != nil {
-		return d, err
-	}
-	addSettings(&d, m, "color_scheme")
-	if v, ok := m["color_scheme"].(string); ok {
-		d.Theme = v
-	}
-	files, _ := filepath.Glob(filepath.Join(dir, "Default (*).sublime-keymap"))
-	for _, f := range files {
-		var rows []struct {
-			Keys    []string `json:"keys"`
-			Command string   `json:"command"`
-		}
-		if jsonFile(f, &rows) == nil {
-			for _, r := range rows {
-				d.Keys = append(d.Keys, KeyBinding{strings.Join(r.Keys, " "), r.Command})
-			}
-		}
-	}
-	return d, nil
-}
 func ReadVim(path string) (Document, error) {
 	d := Document{}
 	b, err := os.ReadFile(path)
@@ -258,13 +234,7 @@ func Detect(home, goos, xdg string) []Source {
 		out = append(out, Source{"helix", "Helix", h, []string{"config.toml", "languages.toml"}})
 	}
 	out = append(out, detectJetBrains(home, goos, config)...)
-	sublime := filepath.Join(config, "sublime-text", "Packages", "User")
-	if goos == "darwin" {
-		sublime = filepath.Join(home, "Library", "Application Support", "Sublime Text", "Packages", "User")
-	}
-	if existsAny(sublime, "Preferences.sublime-settings", "Default (Linux).sublime-keymap", "Default (OSX).sublime-keymap", "Default (Windows).sublime-keymap") {
-		out = append(out, Source{"sublime", "Sublime", sublime, []string{"Preferences.sublime-settings", "Default (<OS>).sublime-keymap"}})
-	}
+	out = append(out, detectSublime(home, goos, config)...)
 	vim := filepath.Join(home, ".vimrc")
 	if _, e := os.Stat(vim); e == nil {
 		out = append(out, Source{"vim", "Vim", home, []string{".vimrc"}})

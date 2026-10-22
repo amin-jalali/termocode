@@ -1,0 +1,14 @@
+[
+	// quick open and symbols
+	{ "keys": ["ctrl+shift+p"], "command": "show_overlay", "args": {"overlay": "command_palette"} },
+	{ "keys": ["ctrl+alt+s"], "command": "show_overlay", "args": {"overlay": "goto", "text": "@"} },
+	{ "keys": ["ctrl+alt+l"], "command": "show_overlay", "args": {"overlay": "goto", "text": ":"} },
+	{ "keys": ["ctrl+alt+p"], "command": "show_overlay", "args": {"overlay": "goto"} },
+	{ "keys": ["ctrl+alt+f"], "command": "show_panel", "args": {"panel": "find_in_files"} },
+	{ "keys": ["ctrl+k", "ctrl+b"], "command": "toggle_side_bar" },
+	{ "keys": ["ctrl+alt+d"], "command": "duplicate_line" },
+	{ "keys": ["ctrl+alt+r"], "command": "rename_something_odd" },
+	{ "keys": ["ctrl+alt+j"], "command": "save", "context": [{"key": "selector", "operator": "equal", "operand": "source.go"}] },
+	{ "keys": ["alt+shift+m"], "command": "toggle_comment", "args": {"block": true} },
+	{ "command": "no_keys_here" },
+]

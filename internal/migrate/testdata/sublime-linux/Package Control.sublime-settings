@@ -1,0 +1,4 @@
+{
+	"bootstrapped": true,
+	"installed_packages": ["Package Control", "LSP", "LSP-gopls", "GitGutter", "Dracula Color Scheme", "SideBarEnhancements",],
+}
