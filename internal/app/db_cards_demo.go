@@ -51,6 +51,16 @@ func (m *Model) databaseCardsDemo(variant string) (tea.Cmd, bool) {
 		tool := ai.Tool{Name: "db_query", Display: "run a database statement"}
 		m.onAIChatConfirm(aiChatConfirmMsg{gen: m.aiS().chatGen, tool: tool, human: human, reply: make(chan bool, 1), ch: make(chan tea.Msg)})
 		return nil, true
+	case "connecting":
+		// Enter was pressed on local-pg: the row waits for the server.
+		m.databasesDemo("")
+		d := m.databases
+		n := d.nodes["local-pg"]
+		n.children, n.loaded, n.loading = nil, false, true
+		d.nodes["local-pg"] = n
+		d.cursor = 0
+		d.touch()
+		return nil, true
 	}
 	return nil, false
 }
