@@ -11,6 +11,9 @@ var ThemeNames = map[string]string{
 	"dark+ (default dark)": "vscode-dark-plus", "default dark modern": "vscode-dark-plus", "vscode dark+": "vscode-dark-plus",
 	"github dark": "github-dark", "one dark pro": "one-dark", "atom one dark": "one-dark",
 	"solarized dark": "solarized-dark",
+	// JetBrains: the dark UI themes and editor schemes look like Dark+, the light ones like Latte.
+	"darcula": "vscode-dark-plus", "experimentaldark": "vscode-dark-plus", "jetbrainsdarktheme": "vscode-dark-plus", "intellij dark": "vscode-dark-plus",
+	"experimentallight": "catppuccin-latte", "jetbrainslighttheme": "catppuccin-latte", "intellij light": "catppuccin-latte", "intellij": "catppuccin-latte",
 }
 
 func mapTheme(name string) (string, string) {

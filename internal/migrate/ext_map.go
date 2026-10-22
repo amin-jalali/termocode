@@ -26,4 +26,18 @@ var ExtensionMap = map[string]ExtensionResult{
 	"Codeium.codeium":                       {Note: "AI inline completion; set a provider"},
 	"vscodevim.vim":                         {Note: "load your vimrc"},
 	"EditorConfig.EditorConfig":             {Note: "built in"},
+
+	// JetBrains plugin ids
+	"org.jetbrains.plugins.go": {Tools: []string{"gopls", "dlv"}},
+	"PythonCore":               {Tools: []string{"pyright", "debugpy"}},
+	"Pythonid":                 {Tools: []string{"pyright", "debugpy"}},
+	"org.rust.lang":            {Tools: []string{"rust_analyzer"}},
+	"org.toml.lang":            {Tools: []string{"taplo"}},
+	"com.jetbrains.sh":         {Tools: []string{"bashls"}},
+	"com.tang":                 {Tools: []string{"lua_ls"}},
+	"com.jetbrains.restClient": {Note: "built-in HTTP client"},
+	"Docker":                   {Note: "Services view"},
+	"com.github.copilot":       {Note: "AI inline completion; set a provider"},
+	"com.intellij.ml.llm":      {Note: "AI inline completion; set a provider"},
+	"IdeaVIM":                  {Note: "load your vimrc"},
 }

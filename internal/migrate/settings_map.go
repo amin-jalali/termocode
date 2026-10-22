@@ -14,7 +14,7 @@ var SettingMaps = map[string]map[string]string{
 	"windsurf":  {"editor.tabSize": "tab_size", "editor.wordWrap": "word_wrap", "files.autoSave": "auto_save", "files.exclude": "show_hidden", "search.maxResults": "search_max_results"},
 	"zed":       {"tab_size": "tab_size", "soft_wrap": "word_wrap", "autosave": "auto_save"},
 	"helix":     {"editor.soft-wrap.enable": "word_wrap", "editor.auto-save": "auto_save"},
-	"jetbrains": {"tabSize": "tab_size", "SAVE_FILES_ON_FRAME_DEACTIVATION": "auto_save"},
+	"jetbrains": {"tabSize": "tab_size", "TAB_SIZE": "tab_size", "USE_SOFT_WRAPS": "word_wrap", "SAVE_FILES_ON_FRAME_DEACTIVATION": "auto_save", "saveOnFrameDeactivation": "auto_save", "autoSaveIfInactive": "auto_save"},
 	"sublime":   {"tab_size": "tab_size", "word_wrap": "word_wrap", "save_on_focus_lost": "auto_save"},
 }
 

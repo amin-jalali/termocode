@@ -14,7 +14,7 @@ var ActionMaps = map[string]map[string]string{
 	"windsurf":  {"workbench.action.quickOpen": "QuickOpen", "workbench.action.showCommands": "CommandPalette", "workbench.action.terminal.toggleTerminal": "ToggleTerminal", "workbench.view.explorer": "FocusExplorer", "workbench.action.files.save": "Save", "editor.action.commentLine": "ToggleComment"},
 	"zed":       {"workspace::ActivateFile": "QuickOpen", "command_palette::Toggle": "CommandPalette", "terminal::Toggle": "ToggleTerminal", "workspace::Save": "Save", "pane::CloseActiveItem": "CloseBuffer"},
 	"helix":     {"file_picker": "QuickOpen", "command_palette": "CommandPalette", "save": "Save", "search_next": "NextSearchResult"},
-	"jetbrains": {"GotoFile": "QuickOpen", "GotoAction": "CommandPalette", "SaveAll": "SaveAll", "FindInPath": "WorkspaceSearch"},
+	"jetbrains": jetBrainsActions,
 	"sublime":   {"show_overlay": "QuickOpen", "show_command_palette": "CommandPalette", "save": "Save", "toggle_side_bar": "ToggleExplorer", "find_in_files": "WorkspaceSearch"},
 	"vim":       {},
 }
@@ -82,6 +82,9 @@ func normalizeSourceKey(source, input string) (string, bool) {
 				mods = append(mods, "cmd")
 			default:
 				name = f
+				if k, ok := jetBrainsKeyNames[f]; ok {
+					name = k
+				}
 			}
 		}
 		if name == "" {
