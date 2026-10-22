@@ -139,6 +139,24 @@ The export holds your config files (settings, theme, keys, snippets,
 commands…). It leaves out session state and **secrets**: API keys, tokens
 and passwords are removed.
 
+## Bring your settings from another editor
+
+1. Run **Preferences: Import from Another Editor...**. The list shows the
+   editors found on this computer and what each one has.
+2. Pick one. A review panel shows, row by row, what the other editor has
+   and what termocode will set. Your current value is shown as
+   `old → new`. Rows that cannot be imported are dim and say why.
+3. Press `Space` to turn a row on or off (on a section title: the whole
+   section), `a` for all, `n` for none. Press `Enter`, check the summary
+   and pick **Import**.
+
+Nothing is written before that last step. termocode saves a backup of
+`config.json` and `keymap.json` first, then applies the new keys, theme
+and settings at once. Extensions only become suggestions: nothing is
+installed. Run **Preferences: Undo Last Import** to put both files back
+exactly as they were (this works after a restart too). The other editor's
+files are only read, never changed.
+
 ## Look and feel: icons, animations, images
 
 Three settings (Settings → **Appearance**) control how rich the screen is.
@@ -236,6 +254,7 @@ are in the command palette (`F1` or `Alt+X`).
 | **Preferences: Customize Keybindings** | Change keys |
 | **Snippets: Manage...** | Your snippets |
 | **Preferences: Export Settings...** / **Import Settings...** | Move settings |
+| **Preferences: Import from Another Editor...** / **Undo Last Import** | Bring settings, keys and theme from another editor |
 | **Open Config: Theme** / **User Commands** / **AI Credentials** | Edit files by hand |
 
 ## Troubleshooting
