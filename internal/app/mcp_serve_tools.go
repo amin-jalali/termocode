@@ -80,11 +80,14 @@ var mcpServeAllowList = []mcpServeToolRow{
 	{name: "http_list_requests"},
 	{name: "http_environments"},
 	{name: "http_history"},
-	// Databases (read: connections, schema, DDL, Redis key names)
+	// Databases (read only: lists run at once, reading data asks)
 	{name: "db_connections"},
 	{name: "db_schema"},
 	{name: "db_ddl"},
+	{name: "db_query"}, // reads only, each asks (mcpServeDBQuery)
 	{name: "redis_keys"},
+	{name: "redis_get"},     // asks: it reads a value
+	{name: "redis_command"}, // read commands only, each asks
 }
 
 // mcpServeRow returns the allow-list row of name. Names of the user's
@@ -102,8 +105,9 @@ func mcpServeRow(name string) (mcpServeToolRow, bool) {
 }
 
 // mcpServeTools picks the exposed tools out of all (the chat's tool
-// list, built with an MCP caller), in table order, narrowed per row.
-func mcpServeTools(all []ai.Tool, call aiIDECaller) []ai.Tool {
+// list for workspace root, built with an MCP caller), in table order,
+// narrowed per row.
+func mcpServeTools(all []ai.Tool, root string, call aiIDECaller) []ai.Tool {
 	out := make([]ai.Tool, 0, len(mcpServeAllowList))
 	for _, r := range mcpServeAllowList {
 		t, ok := ai.FindTool(all, r.name)
@@ -118,6 +122,12 @@ func mcpServeTools(all []ai.Tool, call aiIDECaller) []ai.Tool {
 			t = mcpServeExecuteAction(t)
 		case "list_actions":
 			t = mcpServeListActions(t, call)
+		case "db_query":
+			t = mcpServeDBQuery(t, root)
+		case "redis_command":
+			t = mcpServeRedisCommand(t, root)
+		case "redis_get":
+			t = mcpServeRedisGet(t, root)
 		}
 		out = append(out, t)
 	}
@@ -135,7 +145,7 @@ func mcpServeCatalog() []ai.Tool {
 	if _, ok := ai.FindTool(all, "redis_keys"); !ok {
 		all = append(all, aiRedactResults(aiRedisTools(".", call))...) // listed only where a Redis connection exists
 	}
-	return mcpServeTools(all, call)
+	return mcpServeTools(all, ".", call)
 }
 
 // MCPServeToolSpecs are the tools/list entries of the MCP server (the

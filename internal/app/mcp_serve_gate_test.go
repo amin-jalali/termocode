@@ -75,7 +75,11 @@ var mcpServeGateCases = []mcpServeGateCase{
 	{"db_schema", map[string]any{"conn": "local"}, false},
 	{"db_schema", map[string]any{"conn": "local", "schema": "public", "table": "users"}, false},
 	{"db_ddl", map[string]any{"conn": "local", "table": "users"}, false},
+	{"db_query", map[string]any{"conn": "local", "sql": "SELECT * FROM users"}, true},
+	{"db_query", map[string]any{"conn": "prod", "sql": "SELECT count(*) FROM orders"}, true},
 	{"redis_keys", map[string]any{"conn": "cache", "pattern": "session:*"}, false},
+	{"redis_get", map[string]any{"conn": "cache", "key": "session:ab12"}, true},
+	{"redis_command", map[string]any{"conn": "cache", "command": "HGET session:ab12 plan"}, true},
 }
 
 // mcpServeGateDBs are the connections of mcpServeGateWorkspace: a local

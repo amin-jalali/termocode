@@ -200,7 +200,7 @@ func (s *mcpServeSource) Call(ctx context.Context, name string, args map[string]
 	var tool ai.Tool
 	found := false
 	if _, err := s.call(ctx, func(m *Model) (string, tea.Cmd, error) {
-		tool, found = ai.FindTool(mcpServeTools(m.aiChatTools(s.root, s.call), s.call), name)
+		tool, found = ai.FindTool(mcpServeTools(m.aiChatTools(s.root, s.call), s.root, s.call), name)
 		return "", nil, nil
 	}); err != nil {
 		audit("-", "error: "+err.Error())
