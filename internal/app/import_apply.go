@@ -1,8 +1,8 @@
 package app
 
 // Import from Another Editor: the final confirm, the backup, the write
-// and the live reload. Only config.json and keymap.json in the termocode
-// config dir are ever written; the other editor's files are only read.
+// and the live reload. Only config.json, keymap.json and snippets.json in
+// the termocode config dir are ever written; the other editor's files are only read.
 // Order: back up the files that will change → write each one atomically
 // (temp file + rename) → write the undo marker. Any error restores every
 // file from the backup, so the files are as they were before.
@@ -34,7 +34,7 @@ const (
 )
 
 // importFiles are the only files an import may write (in this order).
-var importFiles = []string{"config.json", "keymap.json"}
+var importFiles = []string{"config.json", "keymap.json", "snippets.json"}
 
 // importManifest describes one backup folder.
 type importManifest struct {
@@ -129,6 +129,12 @@ func importNewFiles(plan migrate.Plan, c importview.Counts) (map[string][]byte, 
 		}
 		files["keymap.json"] = append(out.Keymap, '\n')
 	}
+	if c.Snippets > 0 {
+		if len(out.Snippets) == 0 {
+			return nil, errors.New("no snippets to write")
+		}
+		files["snippets.json"] = out.Snippets
+	}
 	return files, nil
 }
 
@@ -143,7 +149,7 @@ func importWrite(dir string, files map[string][]byte, source string, now time.Ti
 		}
 	}
 	if len(names) != len(files) {
-		return "", errors.New("refusing to write a file outside config.json and keymap.json")
+		return "", errors.New("refusing to write a file outside config.json, keymap.json and snippets.json")
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
@@ -272,6 +278,9 @@ func (m *Model) confirmImport() tea.Cmd {
 	if c.Theme != "" {
 		lines = append(lines, "  theme "+c.Theme+" → config.json")
 	}
+	if c.Snippets > 0 {
+		lines = append(lines, fmt.Sprintf("  %s → snippets.json", importCount(c.Snippets, "snippet")))
+	}
 	lines = append(lines, "")
 	if len(c.Tools) > 0 {
 		lines = append(lines, "Suggested tools (nothing is installed): "+strings.Join(c.Tools, ", "), "")
@@ -327,6 +336,9 @@ func (m *Model) applyImport() tea.Cmd {
 		return m.toastErr("Import failed", err)
 	}
 	cmd := m.reloadAfterImport(prev, loadSettings())
+	if _, ok := files["snippets.json"]; ok {
+		m.reloadUserSnippets()
+	}
 	m.closeImport()
 	if m.setup != nil {
 		m.setup.importedFrom = p.Title() // the setup card's Import row shows it done

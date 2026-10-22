@@ -1,6 +1,6 @@
 package app
 
-// Preferences: Undo Last Import: puts config.json and keymap.json back
+// Preferences: Undo Last Import: puts config.json, keymap.json and snippets.json back
 // exactly as they were before the last import (byte for byte; a file the
 // import created is removed) and reloads them. backup/last-import.json
 // names the backup, so it works after a restart too; it is removed after
@@ -55,6 +55,9 @@ func importFileNames(man importManifest) string {
 	for _, f := range man.Files {
 		names = append(names, f.Name)
 	}
+	if n := len(names); n > 2 {
+		return strings.Join(names[:n-1], ", ") + " and " + names[n-1]
+	}
 	return strings.Join(names, " and ")
 }
 
@@ -105,6 +108,11 @@ func (m *Model) runUndoImport() tea.Cmd {
 		recordError("undo import: " + err.Error())
 	}
 	cmd := m.reloadAfterImport(prev, loadSettings())
+	for _, f := range man.Files {
+		if f.Name == "snippets.json" {
+			m.reloadUserSnippets()
+		}
+	}
 	if m.setup != nil {
 		m.setup.importedFrom = "" // the setup card's Import row offers it again
 	}

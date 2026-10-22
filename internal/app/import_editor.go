@@ -105,6 +105,9 @@ func importSourceParts(src migrate.Source) (string, error) {
 	if n := len(doc.Extensions); n > 0 {
 		parts = append(parts, importCount(n, "extension"))
 	}
+	if n := len(doc.Snippets); n > 0 {
+		parts = append(parts, importCount(n, "snippet"))
+	}
 	return strings.Join(parts, ", "), nil
 }
 
@@ -223,8 +226,8 @@ func (m *Model) onImportSourcePicked(id string) tea.Cmd {
 	}
 }
 
-// importCurrent reads what the user has now: config.json, keymap.json
-// and the theme. A keymap.json that cannot be read is an error, so an
+// importCurrent reads what the user has now: config.json, keymap.json,
+// snippets.json and the theme. A keymap.json that cannot be read is an error, so an
 // import can never drop the user's own bindings.
 func importCurrent(themeID string) (migrate.Current, error) {
 	cur := migrate.Current{Config: map[string]any{}, ThemeID: themeID}
@@ -262,6 +265,16 @@ func importCurrent(themeID string) (migrate.Current, error) {
 		}
 		cur.KeymapRaw, cur.KeymapExists = b, true
 		cur.Overrides = keymap.LoadOverrides(path)
+	} else if !os.IsNotExist(err) {
+		return cur, err
+	}
+	// A snippets.json that is not valid is not an error here: only an import
+	// of snippets needs it, and that one stops without writing (migrate.Apply).
+	if b, err := os.ReadFile(filepath.Join(dir, "snippets.json")); err == nil {
+		if len(bytes.TrimSpace(b)) == 0 {
+			b = []byte("{}")
+		}
+		cur.SnippetsRaw, cur.SnippetsExist = b, true
 	} else if !os.IsNotExist(err) {
 		return cur, err
 	}
