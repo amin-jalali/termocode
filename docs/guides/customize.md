@@ -157,6 +157,9 @@ installed. Run **Preferences: Undo Last Import** to put both files back
 exactly as they were (this works after a restart too). The other editor's
 files are only read, never changed.
 
+On the first run, the setup card shows an **Import** row when it finds
+another editor; its *Import…* button starts the same steps.
+
 ## Look and feel: icons, animations, images
 
 Three settings (Settings → **Appearance**) control how rich the screen is.

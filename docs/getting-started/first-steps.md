@@ -27,7 +27,8 @@ when there are some); *All N recent files…* opens the full list
 ### First run: the setup card
 
 The first time, a **SET UP** checklist shows under START. It has three
-rows; each row says what termocode found and has one action on the right.
+rows (a fourth, **Import**, shows only when another editor's settings are
+found; see below); each row says what termocode found and has one action on the right.
 `Enter` (or a click) on a row runs it. When a step has more than one
 choice, a small chooser opens: it says why, and lists the choices with the
 recommended one first.
@@ -52,6 +53,10 @@ recommended one first.
    without AI.
 3. **Theme** (optional) — *Change…* opens the theme list with a live
    preview.
+4. **Import** (optional, only when settings of another editor are found on
+   this computer) — *Import…* opens the same list as **Preferences: Import
+   from Another Editor...**, so you see every change before anything is
+   written. After an import the row reads "Imported from …" with *Undo…*.
 
 When Icons and AI are answered, the header reads **SET UP · done** and the
 card does not come back on the next start. **Hide setup** removes it
