@@ -205,7 +205,9 @@ func TestAIPlanDiamondSurvivesDisconnect(t *testing.T) {
 	for _, title := range []string{"Planner", "Map", "Left side", "Right side", "Verify"} {
 		tm2.WaitText(title, uiTimeout)
 	}
-	if tm2.Has("running") || tm2.Has("interrupted") {
+	// The panel header may say "0 running"; only a running or
+	// interrupted node counts.
+	if sc := strings.ReplaceAll(tm2.Screen(), "0 running", ""); strings.Contains(sc, "running") || strings.Contains(sc, "interrupted") {
 		t.Errorf("run not finished after reattach:\n%s", tm2.Screen())
 	}
 
