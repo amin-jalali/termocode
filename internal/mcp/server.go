@@ -22,6 +22,7 @@ type MCPServer struct {
 	source ToolSource
 	mu     sync.Mutex
 	calls  map[string]context.CancelFunc
+	client string // clientInfo.name from initialize
 }
 
 func NewServer(source ToolSource) *MCPServer {
@@ -30,7 +31,21 @@ func NewServer(source ToolSource) *MCPServer {
 
 type initializeParams struct {
 	ProtocolVersion string `json:"protocolVersion"`
+	ClientInfo      struct {
+		Name string `json:"name"`
+	} `json:"clientInfo"`
 }
+
+type clientNameKey struct{}
+
+// ClientName is the clientInfo.name the client sent in initialize ("" when
+// none), as seen by ToolSource.Call. It is the client's own claim: use it
+// to label, never to trust.
+func ClientName(ctx context.Context) string {
+	name, _ := ctx.Value(clientNameKey{}).(string)
+	return name
+}
+
 type callParams struct {
 	Name      string         `json:"name"`
 	Arguments map[string]any `json:"arguments"`
@@ -54,6 +69,14 @@ func (s *MCPServer) Handle(conn *extproc.Conn, m extproc.Message) {
 	}
 	if !m.IsRequest() {
 		return
+	}
+	if m.Method == "initialize" { // before any later call reads it
+		var params initializeParams
+		if json.Unmarshal(m.Params, &params) == nil {
+			s.mu.Lock()
+			s.client = params.ClientInfo.Name
+			s.mu.Unlock()
+		}
 	}
 	go func() {
 		result, rpcErr := s.handle(conn, m)
@@ -99,7 +122,10 @@ func (s *MCPServer) handle(conn *extproc.Conn, m extproc.Message) (any, *extproc
 		if s.source == nil {
 			return nil, unavailableError()
 		}
-		ctx, cancel := context.WithCancel(context.Background())
+		s.mu.Lock()
+		client := s.client
+		s.mu.Unlock()
+		ctx, cancel := context.WithCancel(context.WithValue(context.Background(), clientNameKey{}, client))
 		go func() {
 			select {
 			case <-conn.Done():
@@ -119,6 +145,10 @@ func (s *MCPServer) handle(conn *extproc.Conn, m extproc.Message) (any, *extproc
 		if err != nil {
 			if errors.Is(err, ErrToolSourceUnavailable) {
 				return nil, unavailableError()
+			}
+			var coded *CallError
+			if errors.As(err, &coded) {
+				return nil, &extproc.Error{Code: coded.Code, Message: coded.Message}
 			}
 			var unavailable toolSourceUnavailable
 			if errors.As(err, &unavailable) && unavailable.Unavailable() {
