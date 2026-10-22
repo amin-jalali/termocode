@@ -125,6 +125,10 @@ func NvimColors(themeID string) map[string]string {
 			c[k] = v
 		}
 	}
+	// The key-hint rows of the Databases page: the faint "inlay" grey is
+	// meant for decoration and fails as text, so hints use a tone moved
+	// toward the foreground until it reads (4.5:1 on the editor).
+	c["hint_text"] = readableOn(c["inlay"], c["bg"], c["fg"], 4.5)
 	return c
 }
 

@@ -471,7 +471,7 @@ func databaseRedisStringView(p *dbPage, v *dbRedisView) {
 	}
 	if v.trunc {
 		n := p.add(" " + dbGlyphMore.String() + " the value is longer than 64 KB; only its start is shown (GETRANGE)")
-		p.hl(n, 0, len(p.lines[n-1]), "TermocodeHttpHint")
+		p.hl(n, 0, len(p.lines[n-1]), "TermocodeDbHint")
 	}
 }
 

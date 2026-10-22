@@ -367,7 +367,7 @@ func (m *Model) databasePage() dbPage {
 		}
 	}
 	n = p.add(ansi.Truncate(hints, width, dbGlyphMore.String()))
-	p.hl(n, 0, len(p.lines[n-1]), "TermocodeHttpHint")
+	p.hl(n, 0, len(p.lines[n-1]), "TermocodeDbHint")
 	n = p.add(" " + strings.Repeat(dbGlyphHBar.String(), width-1))
 	p.hl(n, 0, len(p.lines[n-1]), "TermocodeHttpSep")
 	if s.running != nil {
@@ -580,7 +580,7 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 	}
 	if s.page+1 < s.pageCount() || (s.shown.tv != nil && s.shown.tv.more) || (s.shown.redis != nil && s.shown.redis.next != "") {
 		n = p.add(" " + more + " ] next page")
-		p.hl(n, 0, len(p.lines[n-1]), "TermocodeHttpHint")
+		p.hl(n, 0, len(p.lines[n-1]), "TermocodeDbHint")
 	}
 }
 

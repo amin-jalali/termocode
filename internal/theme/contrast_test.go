@@ -124,3 +124,22 @@ func TestServicesStateContrast(t *testing.T) {
 		}
 	}
 }
+
+// The key-hint rows of the Databases page read on the editor background in
+// every theme (the faint "inlay" grey does not: 1.5 to 2.8).
+func TestDatabaseHintContrast(t *testing.T) {
+	defer ApplyTheme("vscode-dark-plus")
+	for _, nt := range AvailableThemes() {
+		ApplyTheme(nt.ID)
+		c := NvimColors(nt.ID)
+		fg, ok1 := ParseHex(c["hint_text"])
+		bg, ok2 := ParseHex(c["bg"])
+		if !ok1 || !ok2 {
+			t.Errorf("%s: hint_text %q, bg %q", nt.ID, c["hint_text"], c["bg"])
+			continue
+		}
+		if r := contrastRatio(fg, bg); r < 4.5 {
+			t.Errorf("%s: hint text contrast %.2f < 4.5", nt.ID, r)
+		}
+	}
+}
