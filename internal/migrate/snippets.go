@@ -23,7 +23,7 @@ type Snippet struct {
 	Trigger     string
 	Name        string
 	Description string
-	Body        string // the lines joined with "\n"; termocode snippet syntax
+	Body        string // the lines joined with "\n", in termocode's snippet syntax
 	File        string // the source file, relative to the editor folder
 }
 
@@ -152,6 +152,7 @@ func readVSCodeSnippets(dir string, d *Document) {
 				skip(label, "body is larger than 64 KB; skipped")
 				continue
 			}
+			converted, why := ConvertSnippetBody(body)
 			var scopes []string
 			if global {
 				for _, s := range strings.Split(e.Scope, ",") {
@@ -173,6 +174,10 @@ func readVSCodeSnippets(dir string, d *Document) {
 						skip(src, fmt.Sprintf("the prefix %q has characters termocode cannot expand (letters, digits and _ only)", trigger))
 						continue
 					}
+					if why != "" {
+						skip(src, why)
+						continue
+					}
 					if prev, dup := seen[[2]string{scope, trigger}]; dup {
 						skip(src, fmt.Sprintf("same trigger as %q in %s; the first one is imported", prev.name, prev.file))
 						continue
@@ -183,7 +188,7 @@ func readVSCodeSnippets(dir string, d *Document) {
 					}
 					seen[[2]string{scope, trigger}] = seenAt{rel, name}
 					d.Snippets = append(d.Snippets, Snippet{Scope: scope, Trigger: trigger, Name: name,
-						Description: strings.Join(desc, " "), Body: body, File: rel})
+						Description: strings.Join(desc, " "), Body: converted, File: rel})
 				}
 			}
 		}
