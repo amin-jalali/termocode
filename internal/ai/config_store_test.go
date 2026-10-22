@@ -140,3 +140,36 @@ func TestCredentialsMCPAccountsThroughPlainStore(t *testing.T) {
 		t.Fatalf("account not removed: %s", b)
 	}
 }
+
+// SS-5: a reference that does not resolve right now (a failing command,
+// an empty variable) is missing from the loaded view; saving another key
+// must not delete it.
+func TestSaveCredentialsKeepsUnresolvedReference(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ai", "credentials.json")
+	store := secretstest.New(t, nil)
+	useStore(t, store)
+	if err := store.Set("ai.key.openai", "${env:SS5_NOT_SET}"); err != nil {
+		t.Fatal(err)
+	}
+	c, err := LoadCredentials(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Keys["openai"] != "" {
+		t.Fatalf("reference resolved unexpectedly: %v", c.Keys)
+	}
+	if c.Keys == nil {
+		c.Keys = map[string]string{}
+	}
+	c.Keys["anthropic"] = "sk-ant-ss5-keep-1234567"
+	if err := SaveCredentials(path, c); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, n := range store.Names() {
+		found = found || n == "ai.key.openai"
+	}
+	if !found {
+		t.Fatalf("the unresolved reference was deleted: %v", store.Names())
+	}
+}

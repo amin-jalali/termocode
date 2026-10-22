@@ -477,6 +477,12 @@ func saveCredentialsToStore(path string, c Credentials, store secretstore.Store)
 		if strings.HasPrefix(n, "mcp.account.") && c.MCPAccounts == nil {
 			continue
 		}
+		if _, _, err := store.Get(n); err != nil {
+			// A reference that does not resolve now (a failing command, an
+			// empty variable) is missing from the view, not removed by the
+			// user: keep it.
+			continue
+		}
 		if err := store.Delete(n); err != nil {
 			return err
 		}
