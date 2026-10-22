@@ -713,6 +713,7 @@ func (m *Model) databaseRefresh() tea.Cmd {
 	m.databases.fixCursor()
 	m.databases.discovered, m.databases.discoveredPorts = oldContainers, oldPorts
 	m.databases.addRuntimeSuggestions(m.services)
+	m.mcpServeToolsCheck() // outside agents see the db tools come and go (MS-7)
 	return m.databaseDiscover()
 }
 

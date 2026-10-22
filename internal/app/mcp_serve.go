@@ -176,9 +176,10 @@ type mcpServeSource struct {
 	audit   mcpServeAuditFunc
 	allow   *mcpServeAllowSet       // nil: nothing is remembered
 	events  func(mcpServeClientMsg) // connection events (mcp_serve_status.go), nil: none
-}
 
-func (s *mcpServeSource) List() []mcp.Tool { return s.specs }
+	dbMu  sync.Mutex
+	dbSet mcpServeDBSet // the connection kinds last told to clients (mcp_serve_list.go)
+}
 
 // Call runs one tools/call through the allow-list, Validate, the gate
 // and the confirm card.

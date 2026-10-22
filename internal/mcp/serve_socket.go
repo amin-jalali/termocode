@@ -64,16 +64,23 @@ type SocketServer struct {
 	nextID atomic.Uint64
 
 	mu     sync.Mutex
-	conns  map[net.Conn]struct{}
+	conns  map[net.Conn]*socketConn
 	closed bool
 	wg     sync.WaitGroup
+}
+
+// socketConn is one served connection: its server and JSON-RPC conn,
+// set once the peer check passed (nil before).
+type socketConn struct {
+	srv  *MCPServer
+	conn *extproc.Conn
 }
 
 // Serve accepts connections on ln in the background. peer must accept a
 // connection before anything is read from it (nil refuses all). onErr
 // (optional) hears refused connections; it runs on a server goroutine.
 func Serve(ln net.Listener, source ToolSource, peer func(net.Conn) error, onErr func(error)) *SocketServer {
-	s := &SocketServer{ln: ln, source: source, peer: peer, onErr: onErr, conns: map[net.Conn]struct{}{}}
+	s := &SocketServer{ln: ln, source: source, peer: peer, onErr: onErr, conns: map[net.Conn]*socketConn{}}
 	s.wg.Add(1)
 	go s.accept()
 	return s
@@ -106,7 +113,7 @@ func (s *SocketServer) accept() {
 			_ = c.Close()
 			continue
 		}
-		s.conns[c] = struct{}{}
+		s.conns[c] = &socketConn{}
 		s.wg.Add(1)
 		s.mu.Unlock()
 		go s.serve(c)
@@ -137,8 +144,31 @@ func (s *SocketServer) serve(c net.Conn) {
 		defer obs.ClientGone(srv.connID)
 	}
 	conn := extproc.NewConnWith(c, c, srv.Handle, extproc.ConnOptions{Framing: extproc.FramingNewline})
+	s.mu.Lock()
+	if sc := s.conns[c]; sc != nil {
+		sc.srv, sc.conn = srv, conn
+	}
+	s.mu.Unlock()
 	<-conn.Done()
 	conn.Close()
+}
+
+// NotifyToolsChanged tells every connected client that the tool list
+// changed (notifications/tools/list_changed), when the source says its
+// tools can change (ToolListChanger). Clients that did not initialize yet
+// get nothing; they read the list when they do.
+func (s *SocketServer) NotifyToolsChanged() {
+	s.mu.Lock()
+	var list []*socketConn
+	for _, sc := range s.conns {
+		if sc.srv != nil {
+			list = append(list, &socketConn{srv: sc.srv, conn: sc.conn})
+		}
+	}
+	s.mu.Unlock()
+	for _, sc := range list {
+		sc.srv.notifyToolsChanged(sc.conn)
+	}
 }
 
 // Conns is how many connections are served now.

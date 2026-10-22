@@ -36,6 +36,7 @@ type mcpServeState struct {
 	active  *mcpServeAsk   // the call whose card is open
 	ticking bool
 	srv     *mcp.SocketServer // the listener (mcp_serve_run.go)
+	src     *mcpServeSource   // its tool source (mcp_serve_list.go)
 	path    string            // its socket file
 	clients []*mcpServeAgent  // connected agents (mcp_serve_status.go)
 }
@@ -153,7 +154,8 @@ func (h *mcpServeHub) auditFunc() mcpServeAuditFunc {
 // newMCPServeSource is the ToolSource of a running hub.
 func newMCPServeSource(h *mcpServeHub, root string) *mcpServeSource {
 	h.allow.replace(mcpServeAllowLoad())
-	return &mcpServeSource{call: h.caller(), root: root, specs: MCPServeToolSpecs(), confirm: h.confirmFunc(), audit: h.auditFunc(), allow: &h.allow, events: h.clientEventFunc()}
+	return &mcpServeSource{call: h.caller(), root: root, specs: MCPServeToolSpecs(), confirm: h.confirmFunc(), audit: h.auditFunc(), allow: &h.allow, events: h.clientEventFunc(),
+		dbSet: mcpServeDBSetOf(root)}
 }
 
 // mcpServeLive is the state when msg's hub is the running one.

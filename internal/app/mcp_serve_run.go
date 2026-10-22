@@ -49,10 +49,11 @@ func (m *Model) startMCPServe() tea.Cmd {
 			err = lerr
 		} else {
 			hub := newMCPServeHub()
-			srv = mcp.Serve(ln, newMCPServeSource(hub, root), mcpServePeer, func(err error) {
+			src := newMCPServeSource(hub, root)
+			srv = mcp.Serve(ln, src, mcpServePeer, func(err error) {
 				recordError("[mcp-serve] " + err.Error())
 			})
-			m.mcpServe = &mcpServeState{hub: hub, srv: srv, path: path}
+			m.mcpServe = &mcpServeState{hub: hub, srv: srv, src: src, path: path}
 			m.mcpServeErr = ""
 			mcpServeTarget.Store(srv)
 			mcpServeTargetHub.Store(hub)
@@ -122,8 +123,10 @@ func (m *Model) ensureMCPServeForAgent() tea.Cmd {
 	return m.startMCPServe()
 }
 
-// onMCPServeConfigSaved applies mcp_server when config.json is saved.
+// onMCPServeConfigSaved applies mcp_server when config.json is saved
+// (it runs for every saved file: the tool list follows connection files).
 func (m *Model) onMCPServeConfigSaved(path string) tea.Cmd {
+	m.mcpServeToolsCheck() // a connection file may have been saved
 	want, err := settingsConfigPath()
 	if err != nil || filepath.Clean(path) != filepath.Clean(want) {
 		return nil

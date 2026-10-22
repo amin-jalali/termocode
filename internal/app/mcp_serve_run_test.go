@@ -106,8 +106,14 @@ func TestMCPServeSocketEndToEnd(t *testing.T) {
 	}
 	list := mcpServeClientLine(t, m, c, r, `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
 	tools := list["result"].(map[string]any)["tools"].([]any)
-	if len(tools) != len(mcpServeAllowList) {
-		t.Fatalf("%d tools listed, want %d", len(tools), len(mcpServeAllowList))
+	want := 0 // the workspace has no database connection: no db_* / redis_* tools (MS-7)
+	for _, row := range mcpServeAllowList {
+		if (mcpServeDBSet{}).lists(row.name) {
+			want++
+		}
+	}
+	if len(tools) != want {
+		t.Fatalf("%d tools listed, want %d", len(tools), want)
 	}
 	call := mcpServeClientLine(t, m, c, r, `{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"notify","arguments":{"title":"from outside"}}}`)
 	if !strings.Contains(mustJSON(t, call), `"text":"shown"`) {
