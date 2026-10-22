@@ -340,6 +340,8 @@ func TestDatabasesCompareSchemasSQLite(t *testing.T) {
 	tm.settle()
 	tm.Send(KeyEnter)
 	tm.WaitText("tables.sql", 10*time.Second)
+	// The footer may come a frame after the file list.
+	tm.WaitText("Copy migration script", 10*time.Second)
 	tm.CheckScreen("compare card", mainFrame)
 	for _, want := range []string{"Compare schemas", "target: live", "source: model", "Copy migration script"} {
 		if !tm.Has(want) {
