@@ -800,7 +800,7 @@ func TestDBEditMultiLineValueInABuffer(t *testing.T) {
 		t.Fatalf("buffer = %q", got)
 	}
 	d.Key("q")
-	if !d.WaitFor(func() bool { return strings.HasSuffix(dbBufName(t, d), "SQL Result") }, time.Second) {
+	if !d.WaitFor(func() bool { return strings.Contains(dbBufName(t, d), "Table · ") }, time.Second) {
 		t.Fatalf("q did not go back: %s", dbBufName(t, d))
 	}
 	if strings.Contains(dbText(t, d), "change") {
@@ -812,7 +812,7 @@ func TestDBEditMultiLineValueInABuffer(t *testing.T) {
 	d.Key(":")
 	d.Type("w")
 	d.Key("enter")
-	if !d.WaitFor(func() bool { return strings.HasSuffix(dbBufName(t, d), "SQL Result") }, 2*time.Second) {
+	if !d.WaitFor(func() bool { return strings.Contains(dbBufName(t, d), "Table · ") }, 2*time.Second) {
 		t.Fatalf(":w did not go back: %s", dbBufName(t, d))
 	}
 	dbWaitPage(t, d, "1 change")
@@ -857,5 +857,19 @@ func TestDBEditSubmitCardCancelFirstForAutoCommitAndDelete(t *testing.T) {
 	d.Settle(200 * time.Millisecond)
 	if s.has("DELETE") {
 		t.Fatalf("Enter on the DELETE card wrote: %q", s.writes())
+	}
+}
+
+// DB-9: a table view is named by its table, and the name shows once.
+func TestDBPageTabIsNamedByItsTableAndShownOnce(t *testing.T) {
+	s := newEditSession(5)
+	d := editDriver(t, 100, 30, s, "")
+	openUsers(t, d)
+	if !d.WaitFor(func() bool { return strings.Contains(dbBufName(t, d), "Table · app.users") }, 2*time.Second) {
+		t.Fatalf("the page is not named by its table: %s", dbBufName(t, d))
+	}
+	d.Settle(200 * time.Millisecond)
+	if n := strings.Count(ansi.Strip(d.Frame()), "Table · app.users"); n != 1 {
+		t.Fatalf("the title shows %d times:\n%s", n, ansi.Strip(d.Frame()))
 	}
 }

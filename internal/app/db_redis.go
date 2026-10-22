@@ -1218,7 +1218,7 @@ func (m *Model) databaseRedisPaletteKey(id string) tea.Cmd {
 		key = "D"
 	}
 	if m.databases != nil && m.databases.console != nil {
-		if s := m.databases.console; s.shown != nil && s.shown.redis != nil && s.running == nil && lastPathPart(m.editor.Path()) == "SQL Result" {
+		if s := m.databases.console; s.shown != nil && s.shown.redis != nil && s.running == nil && isDBResultPath(m.editor.Path()) {
 			cmd, _ := m.databaseRedisPageKey(key, -1, -1)
 			return cmd
 		}

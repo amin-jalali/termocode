@@ -754,6 +754,41 @@ func (m *Model) databaseAppendPage(msg dbAppendMsg) tea.Cmd {
 	return nil
 }
 
+// dbPageTitles are the buffer names of the result page: "SQL Result" for a
+// query, else a prefix and what the page shows ("Redis · session:ab12").
+var dbPageTitles = []string{"Redis · ", "Describe · ", "Table · "}
+
+// dbPageName is the name of the page tab for run r.
+func dbPageName(r *dbRun) string {
+	name := func(prefix, what string) string {
+		return prefix + ansi.Truncate(dbOneLine(what), 40, dbGlyphMore.String())
+	}
+	switch {
+	case r == nil:
+	case r.redis != nil:
+		return name("Redis · ", dbclient.RedisDisplay(r.redis.key))
+	case r.describe != nil:
+		return name("Describe · ", r.describe.label())
+	case r.tv != nil:
+		return name("Table · ", r.tv.label())
+	}
+	return "SQL Result"
+}
+
+// isDBResultPath reports whether path is the buffer of the result page.
+func isDBResultPath(path string) bool {
+	base := lastPathPart(path)
+	if base == "SQL Result" {
+		return true
+	}
+	for _, p := range dbPageTitles {
+		if strings.HasPrefix(base, p) {
+			return true
+		}
+	}
+	return false
+}
+
 func (m *Model) databaseShowPage() tea.Cmd {
 	if m.nvim == nil {
 		return nil
@@ -784,7 +819,7 @@ func (m *Model) databaseShowPage() tea.Cmd {
 		cursor = -1 // stay on the row being edited
 	}
 	s.cursorNewRow, s.keepCursor = false, false
-	_ = m.nvim.ExecLuaArgs(`_G._termocode_db_open(...)`, m.editorPaneWidth() >= 120, p.lines[:end], p.hls, p.first, p.bounds, cursor, p.first == 0 && s.view != dbViewJSON && !p.fold, p.fold)
+	_ = m.nvim.ExecLuaArgs(`_G._termocode_db_open(...)`, m.editorPaneWidth() >= 120, p.lines[:end], p.hls, p.first, p.bounds, cursor, p.first == 0 && s.view != dbViewJSON && !p.fold, p.fold, dbPageName(s.shown))
 	m.focus = FocusEditor
 	if end < len(p.lines) {
 		rest := p.lines[end:]

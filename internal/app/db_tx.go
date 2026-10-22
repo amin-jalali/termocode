@@ -143,7 +143,7 @@ func (m *Model) databaseContextConn() string {
 	}
 	s := m.dbConsole()
 	if m.focus == FocusEditor {
-		if base := lastPathPart(m.editor.Path()); base == "SQL Result" && s.shown != nil {
+		if isDBResultPath(m.editor.Path()) && s.shown != nil {
 			return s.shown.conn
 		}
 		if file, lines, ok := m.httpBufText(0); ok && strings.EqualFold(lastExt(file), ".sql") {

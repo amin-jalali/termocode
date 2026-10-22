@@ -60,7 +60,7 @@ func (m *Model) databaseExplainKey(analyze bool) tea.Cmd {
 	switch {
 	case strings.EqualFold(lastExt(p), ".sql"):
 		return m.databaseSendMode(false, &dbPlanRun{analyze: analyze})
-	case lastPathPart(p) == "SQL Result" && m.databases != nil:
+	case isDBResultPath(p) && m.databases != nil:
 		return m.databasePageExplain(analyze)
 	}
 	return m.pushToastDetail(toast.Info, "Open a SQL file", "Press n on a database connection to open its console.")

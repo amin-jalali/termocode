@@ -2460,7 +2460,7 @@ func (m *Model) refreshBreadcrumbs(path string) {
 	}
 	// The Find Results page has its own header rows; a breadcrumb would
 	// only show the temp folder its buffer is named after.
-	if path == "" || isFindResultsPath(path) || isHTTPPagePath(path) {
+	if path == "" || isFindResultsPath(path) || isHTTPPagePath(path) || isDBResultPath(path) {
 		if len(prev) > 0 {
 			m.applyLayout()
 		}

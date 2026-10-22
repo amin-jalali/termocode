@@ -136,7 +136,7 @@ func (m Model) helpTopicForFocus() string {
 		return helpContexts["terminal"]
 	case m.gitDiffActive:
 		return helpContexts["diff"]
-	case lastPathPart(m.editor.Path()) == "SQL Result":
+	case isDBResultPath(m.editor.Path()):
 		return helpContexts["db-result"]
 	case m.editor.Lang() == "httpresponse":
 		return helpContexts["http-response"]

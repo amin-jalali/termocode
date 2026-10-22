@@ -130,3 +130,33 @@ func TestDatabaseImportCardShowsPreviewRows(t *testing.T) {
 		}
 	}
 }
+
+// DB-9: the page tab is named by what it shows, and the name is not shown a
+// second time in the breadcrumbs row.
+func TestDatabasePageNameByContent(t *testing.T) {
+	cases := []struct {
+		run  *dbRun
+		want string
+	}{
+		{&dbRun{}, "SQL Result"},
+		{&dbRun{redis: &dbRedisView{key: "session:ab12"}}, "Redis · session:ab12"},
+		{&dbRun{describe: &dbTable{schema: "public", name: "users"}}, "Describe · public.users"},
+		{&dbRun{tv: &dbTableView{dbTable: dbTable{schema: "public", name: "users"}}}, "Table · public.users"},
+	}
+	for _, c := range cases {
+		if got := dbPageName(c.run); got != c.want {
+			t.Errorf("dbPageName = %q, want %q", got, c.want)
+		}
+		if !isDBResultPath("/tmp/x/" + c.want) {
+			t.Errorf("%q is not known as a result page", c.want)
+		}
+		m := &Model{}
+		m.refreshBreadcrumbs("/tmp/x/" + c.want)
+		if len(m.breadcrumbs) != 0 {
+			t.Errorf("%q: breadcrumbs %v repeat the tab name", c.want, m.breadcrumbs)
+		}
+	}
+	if isDBResultPath("/tmp/x/users") || isDBResultPath("/tmp/x/query.sql") {
+		t.Error("a normal file is taken for a result page")
+	}
+}

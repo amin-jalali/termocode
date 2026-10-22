@@ -72,7 +72,7 @@ function _G._termocode_plan_fold(l)
  if nx and nx>cur then return '>'..(cur+1) end
  return tostring(cur)
 end
-function _G._termocode_db_open(split,lines,hls,first,bounds,cursor,wrap,fold)
+function _G._termocode_db_open(split,lines,hls,first,bounds,cursor,wrap,fold,name)
  local b=the_buf()
  if not b then
   b=api.nvim_create_buf(true,true);vim.g.termocode_db_buf=b
@@ -85,6 +85,7 @@ function _G._termocode_db_open(split,lines,hls,first,bounds,cursor,wrap,fold)
   vim.keymap.set('n','<Esc>',function() notify('esc') end,{buffer=b,silent=true})
   vim.keymap.set('n','<CR>',function() notify('v') end,{buffer=b,silent=true})
  end
+ if name and vim.fn.fnamemodify(api.nvim_buf_get_name(b),':t')~=name then pcall(api.nvim_buf_set_name,b,name) end
  D.hl={}
  for _,h in ipairs(hls) do
   D.hl[h.l]=D.hl[h.l] or {}
