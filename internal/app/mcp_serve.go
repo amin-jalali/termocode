@@ -151,7 +151,7 @@ func mcpServeClient(raw string) string {
 	}
 	name := strings.Trim(b.String(), "-.")
 	if name == "" {
-		return "client"
+		return mcpServeGenericClient
 	}
 	return name
 }
@@ -212,7 +212,8 @@ func (s *mcpServeSource) Call(ctx context.Context, name string, args map[string]
 	gate := ai.GateAuto
 	if t, ask := mcpServeGate(tool, args); ask {
 		gate = ai.GateConfirm
-		if err := s.ask(ctx, client, t, t.Human(args)); err != nil {
+		cardCtx := withMCPServeCard(ctx, mcpServeCardInfo{args: argText})
+		if err := s.ask(cardCtx, client, t, t.Human(args)); err != nil {
 			audit(gate, "declined: "+err.Error())
 			return mcp.CallResult{}, err
 		}

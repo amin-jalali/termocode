@@ -45,7 +45,38 @@ type mcpServeAsk struct {
 	client string
 	tool   ai.Tool
 	human  string
+	args   string    // the call's arguments, redacted (mcpServeCardInfo)
 	reply  chan bool // buffered (1)
+}
+
+// mcpServeCardInfo is what Call tells the card besides the tool and the
+// human text; it travels in the call's context so the confirm func keeps
+// its shape.
+type mcpServeCardInfo struct {
+	args string
+}
+
+type mcpServeCardKey struct{}
+
+func withMCPServeCard(ctx context.Context, info mcpServeCardInfo) context.Context {
+	return context.WithValue(ctx, mcpServeCardKey{}, info)
+}
+
+func mcpServeCardOf(ctx context.Context) mcpServeCardInfo {
+	info, _ := ctx.Value(mcpServeCardKey{}).(mcpServeCardInfo)
+	return info
+}
+
+// mcpServeGenericClient is the name Call gets for a client that sent none.
+const mcpServeGenericClient = "client"
+
+// mcpServeCardTitle names who asks and what for.
+func mcpServeCardTitle(client, tool string) string {
+	who := client
+	if client == mcpServeGenericClient {
+		who = "An outside agent"
+	}
+	return "✦ " + who + " wants to run " + tool
 }
 
 type mcpServeAskMsg struct {
@@ -66,7 +97,8 @@ func (h *mcpServeHub) confirmFunc() mcpServeConfirmFunc {
 	return func(ctx context.Context, client string, t ai.Tool, human string) error {
 		wait, cancel := context.WithTimeout(ctx, mcpServeConfirmTimeout)
 		defer cancel()
-		ask := &mcpServeAsk{ctx: wait, client: client, tool: t, human: human, reply: make(chan bool, 1)}
+		info := mcpServeCardOf(ctx)
+		ask := &mcpServeAsk{ctx: wait, client: client, tool: t, human: human, args: info.args, reply: make(chan bool, 1)}
 		declined := &mcp.CallError{Code: mcp.CodeDeclined, Message: "declined by the user"}
 		if h.send(wait, mcpServeAskMsg{hub: h, ask: ask}) != nil {
 			return mcpServeWaitErr(ctx, declined)
@@ -181,10 +213,14 @@ func (m *Model) mcpServePump() tea.Cmd {
 			continue
 		}
 		st.active = a
-		m.confirm = confirm.New("✦ MCP "+a.client+" wants to: "+a.tool.Label(),
-			aiCleanText(a.human)+"\n\nAsked by an outside agent over MCP ("+a.client+").",
-			[]confirm.Button{{ID: "allow", Title: "Allow", Style: confirm.StylePrimary},
-				{ID: "deny", Title: "Deny", Style: confirm.StyleDestructive}})
+		body := ai.Redact(aiCleanText(a.human))
+		if a.args != "" {
+			body += "\n\nArguments: " + ai.Redact(aiCleanText(a.args))
+		}
+		body += "\n\nAsked by an outside agent over MCP. The name is the agent's own claim."
+		buttons := []confirm.Button{{ID: "allow", Title: "Allow", Style: confirm.StylePrimary},
+			{ID: "deny", Title: "Deny", Style: confirm.StyleDestructive}}
+		m.confirm = confirm.New(mcpServeCardTitle(a.client, a.tool.Name), body, buttons)
 		m.confirm.SetSize(m.w, m.h)
 		m.confirmOpen = true
 		m.confirmKind = confirmKindMCPServe
