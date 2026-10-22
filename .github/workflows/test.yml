@@ -64,7 +64,9 @@ jobs:
           fi
 
       - name: Test
-        run: go test ./... -race -count=1
+        # internal/app takes 5–10 min under -race on a macOS runner; the
+        # default 10 min limit failed a slow run.
+        run: go test ./... -race -count=1 -timeout 25m
 
       # The patched Bubble Tea renderer (third_party/bubbletea/PATCHES.md).
       - name: Test the renderer patch
