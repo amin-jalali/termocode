@@ -28,7 +28,16 @@ type Model struct {
 	note string
 	// allowEmpty lets Enter submit an empty value (SetAllowEmpty).
 	allowEmpty bool
+	// errText is a refusal shown under the input (SetError); typing clears it.
+	errText string
 }
+
+// SetError shows a refusal in red under the input and keeps the prompt
+// open. Any edit of the value clears it. "" clears it now.
+func (m *Model) SetError(text string) { m.errText = text }
+
+// Error is the refusal SetError set (empty: none).
+func (m Model) Error() string { return m.errText }
 
 // SetAllowEmpty lets Enter submit an empty value, for optional steps
 // ("empty to finish"). Other prompts ignore Enter on an empty field.
@@ -104,6 +113,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch k.Type {
 	case tea.KeyEsc, tea.KeyCtrlC:
 		return m, func() tea.Msg { return CloseMsg{} }
+	case tea.KeyBackspace, tea.KeySpace, tea.KeyRunes:
+		m.errText = ""
+	}
+	switch k.Type {
 	case tea.KeyEnter:
 		v := strings.TrimSpace(m.value)
 		if v == "" && !m.allowEmpty {
@@ -362,6 +375,12 @@ func (m Model) Box() string {
 		field += inputBgFill.Render(strings.Repeat(" ", innerW-1-w))
 	}
 	rows = append(rows, field+bgFill.Render(" "))
+	if strings.TrimSpace(m.errText) != "" {
+		errStyle := lipgloss.NewStyle().Background(f.Bg).Foreground(f.Danger)
+		for _, l := range wrapWords(m.errText, innerW-4) {
+			rows = append(rows, padBg(bgFill.Render("  ")+errStyle.Render(l), innerW))
+		}
+	}
 	rows = append(rows, blank)
 	rows = append(rows, padBg(bgFill.Render("  ")+theme.HintBar(f.Bg, promptHints...), innerW))
 
