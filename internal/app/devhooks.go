@@ -53,6 +53,9 @@ import (
 //	                       (no docker; the shots and goldens)
 //	contdemo[:down|noengine|menu|filter|tags|db-menu|db-container-menu] show the Containers view with a canned host snapshot
 //	dbdemo[:empty|no-sqlite|stopped|result|messages|error|table|transposed|describe|ddl|edits|submit|plan|plan-card|redis|redis-key|ssh-host|ssh-form|ssl-form|compare-pick|compare]   show a canned Databases tree or result page (no connection)
+//	secretsdemo:<card|locked|open> the secret store: migration card with
+//	                       sample counts, store screen locked or open (writes
+//	                       a small secrets.age: sandbox only)
 //	httpdemo:<variant>     docs/users.http and a canned HTTP answer:
 //	                       file, response, headers or tls (no network)
 //	helpdemo               open the in-app guide at the chat panel section
@@ -92,6 +95,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		m.servicesDemo(arg)
 	case "contdemo":
 		m.containersDemo(arg)
+	case "secretsdemo":
+		return m.secretsDemo(arg)
 	case "dbdemo":
 		switch arg {
 		case "result", "messages", "error", "table", "transposed", "describe", "ddl", "edits", "submit", "import", "export", "plan", "plan-card":
