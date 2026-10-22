@@ -38,6 +38,8 @@ type MCPRecipe struct {
 	// ProjectFile is the file MCPProjectFile merges into, relative to
 	// the workspace.
 	ProjectFile string
+	// Note tells the user, once, what to do by hand (MCPNone).
+	Note string
 }
 
 // tomlString quotes s as a TOML basic string (what Codex's -c reads).

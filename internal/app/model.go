@@ -674,6 +674,12 @@ type Model struct {
 	// agentMCPFiles are the temp MCP config files of running agents,
 	// by agent id (agent_mcp.go).
 	agentMCPFiles map[string]string
+	// agentMCPPending waits for the OpenCode project-file card;
+	// agentMCPDeclined remembers "Not now"; agentMCPTipped the hand-tip
+	// toasts already shown (agent_mcp_card.go).
+	agentMCPPending  *agentMCPCard
+	agentMCPDeclined map[string]bool
+	agentMCPTipped   map[string]bool
 	// mcpServeErr: why the listener did not start ("" when it did or was
 	// not asked to); the status screen shows it (mcp_serve_status.go).
 	mcpServeErr string

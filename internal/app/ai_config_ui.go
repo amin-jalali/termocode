@@ -130,6 +130,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerSecretsBroken(id), true
 	case confirmKindRegistryRemember: // containers_registries.go
 		return m.answerRegistryRemember(id), true
+	case confirmKindAgentMCP: // agent_mcp_card.go
+		return m.answerAgentMCPCard(id), true
 	}
 	return nil, false
 }
@@ -155,6 +157,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.openSecretsStore() // Esc: back to the store screen
 	case confirmKindRegistryRemember:
 		return m.registryPromptClosed()
+	case confirmKindAgentMCP:
+		return m.answerAgentMCPCard("skip")
 	}
 	return nil
 }

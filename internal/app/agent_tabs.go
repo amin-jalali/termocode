@@ -223,6 +223,20 @@ func (m *Model) startAgent(a agents.Agent) tea.Cmd {
 			return nil
 		}
 	}
+	if card, c := m.agentMCPCardFor(a); card != nil {
+		m.openAgentMCPCard(card) // OpenCode: a project file, ask first
+		return nil
+	} else if c != nil {
+		return tea.Batch(c, m.launchAgent(a))
+	}
+	return m.launchAgent(a)
+}
+
+// launchAgent opens the agent's tab and types its command line.
+func (m *Model) launchAgent(a agents.Agent) tea.Cmd {
+	if m.nvim == nil {
+		return nil
+	}
 	m.newTerminalTab()
 	t := m.activeTerminalTab()
 	if t == nil {
@@ -242,7 +256,7 @@ func (m *Model) startAgent(a agents.Agent) tea.Cmd {
 	m.agentWatch(t.BufID, true)
 	m.applyLayout()
 	m.resizeTerminalSplit()
-	return tea.Batch(serveCmd, launchCmd)
+	return tea.Batch(serveCmd, launchCmd, m.agentMCPHandTip(a))
 }
 
 func init() {
