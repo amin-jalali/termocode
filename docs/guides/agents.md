@@ -77,10 +77,42 @@ user can open. termocode checks the user of every connection. See
   state, read files, list folders and search, diagnostics, hover, symbols
   and definitions, tasks and test results, debug state, the visible
   terminal (read only), git status, diff, log, blame and branches,
-  services and HTTP request lists.
+  services and HTTP request lists, the database connections, schemas,
+  table DDL and Redis key names, and `GET` requests to your own machine
+  (`localhost`).
 - **Ask first (card):** run a task or tests, start and steer the debugger,
   evaluate an expression in the debugger, run some palette commands
-  (`execute_action`) such as stop, clear or close things.
+  (`execute_action`) such as stop, clear or close things, read data from a
+  database (`db_query`, `redis_get`, `redis_command`), and send any other
+  HTTP request (`http_send`).
+
+### Databases and HTTP
+
+| Tool | Gate | What is allowed |
+|---|---|---|
+| `db_connections`, `db_schema`, `db_ddl`, `redis_keys` | runs at once | Lists only. |
+| `db_query` | asks | One read statement (`SELECT`, `SHOW`, `EXPLAIN` without `ANALYZE` …). It runs in a read-only session. |
+| `redis_get`, `redis_command` | asks | Read commands only, in a read-only session. |
+| `http_send` | as in the chat | `GET`, `HEAD`, `OPTIONS` to `localhost` run at once. Other hosts and methods ask. Private hosts (`10.x`, `192.168.x`, …) always ask. |
+
+- Writes are refused, with no card: `INSERT`, `UPDATE`, `DELETE`, DDL,
+  more than one statement, `BEGIN` and other transaction statements,
+  `COPY`, `LOAD`, `ATTACH`, a `PRAGMA` that writes, and Redis write or
+  dangerous commands. The agent gets an error and nothing is sent. Run
+  writes yourself in the Databases view.
+- The card shows the connection and the SQL. Secrets are hidden.
+- Passwords never leave termocode. If the password is in a locked secret
+  store, the agent gets an error that says to unlock it. Unlock it with
+  **AI: Unlock Secrets**, then let the agent try again. The agent is never
+  asked for your passphrase.
+- Results are cut and cleaned like in the chat (`db_ai_max_kb`, long cells
+  cut, passwords and known secrets hidden).
+- `{{$secret NAME}}` and values from `http-client.private.env.json` are
+  filled in by termocode. The card says that a secret is sent, but does not
+  show it. The answer hides it too.
+- The database tools are in the tool list only when you have a connection
+  of that kind. When you add or remove one, termocode tells the agent that
+  the list changed (`notifications/tools/list_changed`).
 
 ## Protocol and resource
 
@@ -98,7 +130,8 @@ confirmation and is empty when termocode is not open.
 - Run a shell command, or type into your terminal.
 - Stage, commit, push, pull or change branches.
 - Change settings, read secrets or credentials.
-- Start or stop services, containers or databases, or send HTTP requests.
+- Start or stop services, containers or databases.
+- Write to a database, or save requests to `.http` files.
 - Use the tools of your own MCP servers (`mcp__…`). They are never passed on.
 
 Some palette commands are closed too: AI, database and container commands,
@@ -132,6 +165,12 @@ login.
 or another tool of the same agent, still asks. For `execute_action` it is
 for that one command. It is not offered for `debug_evaluate`, because that
 can run any code in your program.
+
+For the database reads it is for one connection, for example
+`db_query:local`. A connection with `"environment": "production"` always
+asks. For `http_send` it is for one host, for example
+`http_send:api.example.com` (`GET`, `HEAD`, `OPTIONS`) or
+`http_send:api.example.com/write` (any method). Private hosts always ask.
 
 It is saved as `mcp_server_auto_approve` in `config.json`, for example
 `{"claude-code": ["tasks_run"]}`. It is separate from the chat's

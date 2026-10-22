@@ -292,6 +292,7 @@ The AI chat has database tools: `db_connections`, `db_schema`, `db_ddl`, `db_que
 - **What you see.** Each `db_query` and `db_explain` run opens the SQL Result page marked **by AI** and adds an entry to the SQL history. Every call is in the AI audit log.
 - **What the model sees.** Passwords never reach it. Server text is cleaned, cells are cut at 80 characters, and one answer is at most `db_ai_max_kb` KB (default 32); `max_rows` (default 100, max 1000) limits rows.
 - **Redis.** `redis_keys` lists keys with `SCAN` (type and TTL), `redis_get` reads one key a page at a time, and `redis_command` runs one command. Read commands run at once in a read-only session that refuses anything else; `CONFIG`, `ACL` and `CLIENT` always ask because they can show secrets. Any write asks with the exact command (`db:<conn>/write`; production always asks; read-only connections refuse). Dangerous commands (`FLUSHALL`, `CONFIG SET`, scripts, `MIGRATE`, …) and `MONITOR` / `SUBSCRIBE` are refused without a card.
+- **Outside agents** (Claude Code, Codex, … through termocode's MCP server) get less: the lists and schema at once, reads only with a card each time, and no writes at all. See [Give your agent the IDE's tools](agents.md#databases-and-http).
 
 ## Security notes
 

@@ -20,9 +20,9 @@ import (
 // TestMCPServeAllowListGolden pins it. What is left out on purpose:
 // file writes, run_command, terminal_send, git writes, settings,
 // credentials, LSP rename / code actions, service starts, .http file
-// writes, database writes, containers and every tool of the user's own MCP servers
-// (mcp__*: never re-exported, MC-11). The agent has its own shell and
-// editor; we add the IDE, not a second agent.
+// writes, database writes, containers and every tool of the user's own
+// MCP servers (mcp__*: never re-exported, MC-11). The agent has its own
+// shell and editor; we add the IDE, not a second agent.
 
 // mcpServeToolRow is one exposed tool. only (optional) narrows a tool
 // with an op argument to these ops.

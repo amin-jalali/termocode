@@ -46,7 +46,7 @@ Alternatives on the table:
   reads run at once; tools that run or change something ask on a card;
   everything else is not offered. Left out on purpose: file writes,
   `run_command`, typing into a terminal, git writes, settings, credentials,
-  databases, containers, service starts and HTTP sends. The agent has its
+  database writes, containers and service starts. The agent has its
   own shell and editor; termocode adds the IDE, not a second agent.
   `execute_action` is filtered too: only commands that read, or that stop
   and clear things in the IDE.
@@ -103,5 +103,17 @@ Alternatives on the table:
   `opencode.json` keys) belong to other projects and can change. They are
   data in one file, and a manual checklist row per agent CLI keeps them
   honest.
+- **+** Databases and HTTP (MS-7): the schema tools run at once;
+  `db_query`, `redis_get` and `redis_command` take reads only (the chat's
+  own classifier refuses anything else before a card, and the read-only
+  session refuses what it might miss) and ask on every call, with Always
+  allow per agent and connection, never on production. `http_send` has the
+  chat's per host and method gate; Always allow is per host. The database
+  tools are listed only where a connection of their kind exists, and
+  clients get `notifications/tools/list_changed` when that changes.
+- **−** A "read" can still cost: a slow `SELECT`, or a read function the
+  server allows in a read-only session (for example `pg_read_file` for a
+  superuser). The card and the statement timeout are the guard, as in the
+  chat.
 - **−** The allow-list is short on purpose. Adding a tool is a code change
   with a golden test, not a setting.
