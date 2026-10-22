@@ -120,6 +120,9 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		case "redis":
 			m.databaseRedisDemo()
 		default:
+			if cmd, ok := m.databaseCardsDemo(arg); ok {
+				return cmd
+			}
 			m.databasesDemo(arg)
 		}
 	case "aidemo": // a sample conversation for the AI chat shot

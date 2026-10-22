@@ -2466,6 +2466,13 @@ func (m *Model) refreshBreadcrumbs(path string) {
 		}
 		return
 	}
+	if segs, ok := m.databaseConsoleCrumbs(path); ok {
+		m.breadcrumbs = append(m.breadcrumbs, segs...)
+		if len(prev) == 0 {
+			m.applyLayout()
+		}
+		return
+	}
 	// Terminal buffers are named term://{cwd}//{pid}:{cmd}; show
 	// "Terminal › sh" instead of the URI split on slashes (which showed
 	// "term: › ~ › … › 12345: › bin › sh").

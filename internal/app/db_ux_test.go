@@ -293,3 +293,24 @@ func TestDatabasesPaletteHasFilterAndGuide(t *testing.T) {
 		t.Errorf("db-filter did not open the filter input (ok=%v open=%v)", ok, m.promptOpen)
 	}
 }
+
+// DB-16a: a console file shows "SQL console › name" in the breadcrumbs, not
+// the two hashes of its path.
+func TestDatabaseConsoleBreadcrumbsNameTheConnection(t *testing.T) {
+	withConfigDir(t)
+	s := newDBState()
+	s.conns = []dbclient.Conn{{ID: "local-pg", Name: "local-pg", Driver: "postgres"}, {ID: "cache", Name: "cache", Driver: "redis"}}
+	m := &Model{databases: s}
+	m.refreshBreadcrumbs(m.databaseConsolePath("local-pg"))
+	if got := strings.Join(m.breadcrumbs, " › "); got != "SQL console › local-pg" {
+		t.Errorf("sql console crumbs = %q", got)
+	}
+	m.refreshBreadcrumbs(strings.TrimSuffix(m.databaseConsolePath("cache"), ".sql") + ".redis")
+	if got := strings.Join(m.breadcrumbs, " › "); got != "Redis console › cache" {
+		t.Errorf("redis console crumbs = %q", got)
+	}
+	m.refreshBreadcrumbs("/work/app/query.sql")
+	if got := strings.Join(m.breadcrumbs, " › "); strings.Contains(got, "console") {
+		t.Errorf("a normal file shows %q", got)
+	}
+}

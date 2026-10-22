@@ -244,6 +244,28 @@ func (m *Model) databaseConsolePath(id string) string {
 	return dbConfigPath("consoles", rootHash, idHash+".sql")
 }
 
+// databaseConsoleCrumbs names a console file in the breadcrumbs: "SQL console ›
+// local-pg" instead of the two hashes its path is made of.
+func (m *Model) databaseConsoleCrumbs(path string) ([]string, bool) {
+	dir := dbConfigPath("consoles")
+	if dir == "" || !strings.HasPrefix(path, dir+string(filepath.Separator)) {
+		return nil, false
+	}
+	kind := "SQL console"
+	if strings.HasSuffix(path, ".redis") {
+		kind = "Redis console"
+	}
+	base := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	if m.databases != nil {
+		for _, c := range m.databases.conns {
+			if fmt.Sprintf("%x", sha256.Sum256([]byte(c.ID)))[:12] == base {
+				return []string{kind, sanitizeDBText(dbConnName(c))}, true
+			}
+		}
+	}
+	return []string{kind}, true
+}
+
 func (m *Model) dbConsoleError(err error) tea.Cmd {
 	return m.pushToastDetail(toast.Errr, "Database", dbErrorText(err))
 }

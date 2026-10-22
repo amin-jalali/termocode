@@ -105,6 +105,14 @@ func DatabasesVariant(name, variant string) Scene {
 	return Scene{Name: name, Steps: WithEditor(Act("dbdemo:"+variant), Pause(400*time.Millisecond))}
 }
 
+// dbCardScenes are the Databases overlays and states of the DB-16 set
+// (app databaseCardsDemo): each runs at every golden size.
+func dbCardScenes() []Scene {
+	return []Scene{
+		DatabasesVariant("db-console", "console"),
+	}
+}
+
 func ContainersVariant(name, variant string) Scene {
 	return Scene{Name: name, Steps: WithEditor(Act("contdemo:"+variant), Pause(400*time.Millisecond))}
 }
