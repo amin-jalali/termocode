@@ -341,9 +341,9 @@ func (m *Model) databasePage() dbPage {
 	// Row 3: the keys that matter now; row 4: the rule.
 	hints := " Esc cancel"
 	if s.running == nil {
-		hints = " Tab view  r rerun  gd sql  h history  q close"
+		hints = dbFitHints(width, "Tab view", "r rerun", "gd sql", "h history", "q close")
 		if len(res.Columns) > 0 && res.Err == nil {
-			hints = " ] next  o sort  f filter  v value  c csv  Tab view  r rerun  q close"
+			hints = dbFitHints(width, "] next", "o sort", "f filter", "v value", "c csv", "Tab view", "r rerun", "q close")
 			switch {
 			case r.redis != nil:
 				hints = dbRedisHints(width, r.redis)
@@ -363,7 +363,7 @@ func (m *Model) databasePage() dbPage {
 		} else if len(m.dbTxHints(r.conn)) > 0 {
 			hints = dbFitHints(width, append(m.dbTxHints(r.conn), "Tab view", "r rerun", "h history", "q close")...)
 		} else if r.tv != nil && res.Err != nil {
-			hints = " f where  o sort  r rerun  Tab view  q close"
+			hints = dbFitHints(width, "f where", "o sort", "r rerun", "Tab view", "q close")
 		}
 	}
 	n = p.add(ansi.Truncate(hints, width, dbGlyphMore.String()))
@@ -585,20 +585,25 @@ func (m *Model) databaseGrid(p *dbPage, s *dbConsoleState) {
 }
 
 // dbFitHints joins as many key hints as fit the page, most useful first;
-// the rest are dropped whole (no half hint).
+// the rest are dropped whole (no half hint). The row always ends with
+// "? keys", so the full list is one key away at any width.
 func dbFitHints(width int, parts ...string) string {
+	tail := "  ? keys"
 	out := ""
 	for _, p := range parts {
 		next := out + "  " + p
 		if out == "" {
 			next = " " + p
 		}
-		if ansi.StringWidth(next) > width {
+		if ansi.StringWidth(next)+len(tail) > width {
 			break
 		}
 		out = next
 	}
-	return out
+	if out == "" {
+		return " ? keys"
+	}
+	return out + tail
 }
 
 // dbTableSummary is row 2 of a data view: the rows on the page, the total
@@ -849,6 +854,8 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 			return m.pushToastDetail(toast.Info, "A plan cannot be edited", "x explains again, r runs the plan again.")
 		}
 		return m.databaseEditKey(key, row, col)
+	case "?":
+		return m.databaseKeysHelp()
 	case "K":
 		return m.databaseEndTx(s.shown.conn, true, nil)
 	case "Z":

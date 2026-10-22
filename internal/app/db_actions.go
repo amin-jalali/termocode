@@ -282,7 +282,7 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		m.prompt.SetAllowEmpty(true)
 		return m, cmd
 	case "?":
-		return m, m.pushToastDetail(toast.Info, "Database keys", "j/k move · Enter connect or expand · a add · e edit · T test · S start a stopped service · t transaction mode · R refresh · x disconnect · / filter · on a table: o data · d describe · D DDL · s select · i import CSV · # count · y copy name")
+		return m, m.databaseKeysHelp()
 	case "esc":
 		m.focus = FocusEditor
 	case "m":
@@ -846,6 +846,12 @@ func (s *dbState) duplicateConnectionID(id string) bool {
 		}
 	}
 	return false
+}
+
+// databaseKeysHelp is the toast the ? key shows in the Databases view and on
+// the result page.
+func (m *Model) databaseKeysHelp() tea.Cmd {
+	return m.pushToastDetail(toast.Info, "Database keys", "j/k move · Enter connect or expand · a add · e edit · T test · S start a stopped service · t transaction mode · R refresh · x disconnect · / filter · on a table: o data · d describe · D DDL · s select · i import CSV · # count · y copy name")
 }
 
 func sanitizeDBText(s string) string {

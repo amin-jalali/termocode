@@ -63,3 +63,25 @@ func TestDatabaseWrappedRowMouseHit(t *testing.T) {
 		t.Fatalf("click on the command picked row %d, want 2", s.cursor)
 	}
 }
+
+// DB-2: the result page has a ? key, and its key row always ends with "? keys".
+func TestDatabasePageKeyRowEndsWithKeysHint(t *testing.T) {
+	withConfigDir(t)
+	for _, w := range []int{40, 60, 80, 120, 150} {
+		m := dbGridModel(dbWideResult(8))
+		m.w = w
+		p := m.databasePage()
+		found := p.lines[2] // row 3 of the page holds the key hints
+		if !strings.HasSuffix(strings.TrimRight(found, " "), "? keys") {
+			t.Fatalf("w=%d: key row %q does not end with \"? keys\"", w, found)
+		}
+	}
+	m := dbGridModel(dbWideResult(8))
+	m.w = 80
+	if cmd := m.databasePageKey("?", 1, 1); cmd == nil && !strings.Contains(strings.Join(m.toast.View(120, 30), "\n"), "Database keys") {
+		t.Fatal("? did nothing on the result page")
+	}
+	if !strings.Contains(strings.Join(m.toast.View(120, 30), "\n"), "Database keys") {
+		t.Fatal("? on the result page shows no key help")
+	}
+}
