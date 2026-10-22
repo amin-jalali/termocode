@@ -159,6 +159,24 @@ A download runs in the background, with a progress toast. Stop it with
 - A persistent session passes the transfer to the attached terminal. A
   download is lost when the terminal disconnects in the middle.
 
+## Secrets on a server
+
+AI keys and other secrets need a safe place on the server too.
+
+- Over SSH, and on a machine without a D-Bus session, termocode does not try
+  the OS keyring. It uses the encrypted file `secrets.age`.
+- termocode asks for the passphrase once, the first time something needs a
+  secret. It keeps it while the UI process runs.
+- With a persistent session, the UI process keeps running after a drop. When
+  you reconnect with `termocode attach`, it does not ask again.
+- **AI: Lock Secrets** forgets the passphrase at once. `termocode kill` or
+  a quit also forgets it. The next use asks again.
+- `${env:NAME}` reads the environment of the UI process on the server, not
+  the shell of your laptop. An attach brings the terminal settings, not
+  your shell variables. Set the variable where the session started.
+
+See [Set up AI](ai-setup.md#which-store-is-used) for the details.
+
 ## Security
 
 Sessions listen on a unix socket only, never on the network. The socket
