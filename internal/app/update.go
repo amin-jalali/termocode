@@ -281,6 +281,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	case importview.CloseMsg:
 		m.closeImport()
 		return m, nil
+	case importview.ApplyMsg:
+		return m, m.confirmImport()
 	case menu.SelectMsg:
 		m.menuOpen = false
 		return m, m.handleMenuSelect(msg.ID)

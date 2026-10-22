@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/amin-jalali/termocode/internal/editor"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -55,7 +56,7 @@ func copyTree(t *testing.T, src, dst string) {
 }
 
 func importModel(w, h int) Model {
-	return Model{w: w, h: h, toast: toast.New(), themeID: "vscode-dark-plus"}
+	return Model{w: w, h: h, toast: toast.New(), themeID: "vscode-dark-plus", editor: editor.New(nil)}
 }
 
 // importToast is every visible toast as plain text.

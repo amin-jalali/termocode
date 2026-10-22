@@ -775,14 +775,21 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 // from the package-level palette vars (statusbar, explorer, tabbar, …) pick
 // up the new colors on their next render automatically.
 func (m *Model) applyTheme(id string) {
+	t := m.applyThemeLive(id)
+	if err := theme.SaveThemeID(t.ID); err != nil {
+		m.err = "theme: " + err.Error()
+	}
+}
+
+// applyThemeLive switches the colours without saving the choice (an
+// import has already written config.json; import_apply.go).
+func (m *Model) applyThemeLive(id string) theme.NamedTheme {
 	t, _ := theme.ApplyTheme(id)
 	m.themeID = t.ID
 	m.applyNvimTheme()            // editor colours follow the chrome
 	m.refreshConflictHighlights() // Group G: conflict tints follow the theme
 	m.refreshAIHighlights()       // Group A: ghost text recolors live
-	if err := theme.SaveThemeID(t.ID); err != nil {
-		m.err = "theme: " + err.Error()
-	}
+	return t
 }
 
 // openClipboardPicker pops a sub-picker listing entries in the in-memory

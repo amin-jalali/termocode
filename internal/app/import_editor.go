@@ -6,6 +6,7 @@ package app
 // after the final confirm (import_apply.go).
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -174,6 +175,9 @@ func importCurrent(themeID string) (migrate.Current, error) {
 		return cur, err
 	}
 	if b, err := os.ReadFile(filepath.Join(dir, "config.json")); err == nil {
+		if len(bytes.TrimSpace(b)) == 0 {
+			b = []byte("{}") // an empty file is an empty config
+		}
 		if err := json.Unmarshal(b, &cur.Config); err != nil {
 			return cur, fmt.Errorf("config.json: %w", err)
 		}
@@ -191,6 +195,9 @@ func importCurrent(themeID string) (migrate.Current, error) {
 	}
 	path := filepath.Join(dir, "keymap.json")
 	if b, err := os.ReadFile(path); err == nil {
+		if len(bytes.TrimSpace(b)) == 0 {
+			b = []byte("{}")
+		}
 		var probe map[string]any
 		if err := json.Unmarshal(b, &probe); err != nil {
 			return cur, fmt.Errorf("keymap.json: %w", err)
