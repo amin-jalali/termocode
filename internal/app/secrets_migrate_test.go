@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/charmbracelet/x/ansi"
 	"github.com/zalando/go-keyring"
@@ -379,7 +380,20 @@ func TestSecretsMigrateFinishesAfterUnlock(t *testing.T) {
 	}
 	pumpSecrets(t, m, m.dispatchPaletteAction("secrets-unlock"))
 	submitSecrets(t, m, secretsTestPass)
+	// The finish runs after the unlock on its own goroutine (the pump
+	// may stop waiting first on a slow runner); give it time.
+	waitGone(t, cred)
 	checkMigrated(t, dir, cred, "age")
+}
+
+// waitGone waits up to 30 s for path to disappear.
+func waitGone(t *testing.T, path string) {
+	t.Helper()
+	for end := time.Now().Add(30 * time.Second); time.Now().Before(end); time.Sleep(20 * time.Millisecond) {
+		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+			return
+		}
+	}
 }
 
 func TestSecretsMigrateNeverAsksWhenDoneOrEmpty(t *testing.T) {
