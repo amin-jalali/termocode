@@ -28,6 +28,30 @@ says it: the OS keyring, the encrypted file `secrets.age`, or the plain file
 `~/.config/termocode/ai/credentials.json` (mode `0600`, not encrypted). Other
 AI settings go in `config.json`.
 
+### Which store is used
+
+termocode keeps secrets in one of three places. The `secret_store` setting
+(`config.json`) picks it. The default is `auto`.
+
+| Store | When | What you do |
+| --- | --- | --- |
+| OS keyring | `auto` uses it when one answers: a desktop with gnome-keyring or the macOS Keychain | Nothing. No prompt from termocode. |
+| Encrypted file `secrets.age` | `auto` uses it when there is no keyring: over SSH, without D-Bus, on Termux | A passphrase, once while termocode runs. |
+| Plain file `ai/credentials.json` | Only if you set `secret_store` to `plain`, or an old plain file is still there | Nothing. The file is not encrypted. |
+
+`auto` never switches you to the plain file. Set `keyring` or `age` to force
+one store; if you force `keyring` and none answers, you get an error, not a
+fallback. termocode remembers its choice in `secrets.json`, so it does not
+test the keyring on every start. The encrypted-file passphrase has at least 8
+characters. Under 12 it still works, with a warning. You can not read it back
+if you forget it: set your keys again.
+
+`secret_lock_minutes` is saved in `config.json`, but the idle timer is not
+active yet. Use **AI: Lock Secrets** to lock by hand. Both settings are for
+you only; the AI can not change them.
+
+Over SSH, see [Secrets on a server](remote-ssh.md#secrets-on-a-server).
+
 ### Type a reference instead of a secret
 
 Every secret prompt (the AI key, an MCP secret or token, a database
@@ -189,6 +213,28 @@ link). You sign in, copy the code, and paste it back. Run
 Next: [Use AI](ai-use.md).
 
 ## Troubleshooting
+
+**"Wrong passphrase" three times**
+:   termocode stays locked and the AI shows as not configured. Run
+    **AI: Unlock Secrets** from `F1` to try again. If you forgot the
+    passphrase, there is no way to read `secrets.age`. Delete it, then set
+    your keys again.
+
+**"Secret file is damaged"**
+:   `secrets.age` can not be read (cut off or changed). Restore it from a
+    backup. Without one, rename it and set your keys again; termocode
+    starts a new file.
+
+**"OS keyring is not available"**
+:   Only with `secret_store: keyring`: no keyring answers here, for example
+    over SSH or with the desktop locked. Log in on the desktop, or set
+    `secret_store` to `auto` or `age`. Keys that lived in the keyring stay
+    there; set them again for the new store.
+
+**A reference does not work**
+:   The AI shows the reference text, never a value. Check the variable
+    (`${env:NAME}`), the `.env` of the workspace (`${dotenv:NAME}`), or run
+    the command in your own shell (`${cmd:…}`).
 
 **Every AI command says "configure"**
 :   No provider is set, or the key is empty. Run **AI: Configure Provider…**.
