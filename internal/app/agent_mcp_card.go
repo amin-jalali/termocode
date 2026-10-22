@@ -123,6 +123,8 @@ func (m *Model) openAgentMCPCard(c *agentMCPCard) {
 	b.WriteString("The entry (other settings stay as they are):\n")
 	b.WriteString(`  "termocode": local server, runs `)
 	b.WriteString("`termocode mcp`\n\n")
+	b.WriteString("The file will hold absolute paths of this machine: the termocode program and this folder.\n")
+	b.WriteString("Check them before you commit it; they are not right on another computer.\n\n")
 	b.WriteString("Not now: " + c.agent.Title + " starts without them. Esc is the same.")
 	m.confirm = confirm.New("✦ Add termocode to "+c.agent.MCP.ProjectFile+"?", b.String(), []confirm.Button{
 		{ID: "add", Title: "Add", Style: confirm.StylePrimary},

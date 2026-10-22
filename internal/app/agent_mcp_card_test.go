@@ -88,6 +88,14 @@ func TestAgentMCPCardFlow(t *testing.T) {
 	if b, _ := os.ReadFile(file); string(b) != mine {
 		t.Fatal("written before the answer")
 	}
+	// The user learns before committing the file that it holds paths of
+	// this machine.
+	view := strings.Join(strings.Fields(m.confirm.View()), " ")
+	for _, want := range []string{"absolute paths of this machine", "the termocode program", "this folder", "before you commit"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("card misses %q:\n%s", want, view)
+		}
+	}
 
 	// Deny: nothing written, no second card.
 	m.confirmOpen = false
