@@ -21,15 +21,30 @@ type Agent struct {
 	Palette bool
 	// Packages are npm package names that run it through npx / bunx.
 	Packages []string
+	// MCP is how to give this agent termocode's MCP server for one
+	// launch, without editing its own config files.
+	MCP MCPRecipe
 }
 
 // Registry is every known agent, in palette order.
 var Registry = []Agent{
-	{ID: "claude", Title: "Claude Code", Bin: "claude", Palette: true, Packages: []string{"@anthropic-ai/claude-code"}},
-	{ID: "codex", Title: "Codex", Bin: "codex", Palette: true, Packages: []string{"@openai/codex"}},
-	{ID: "gemini", Title: "Gemini CLI", Bin: "gemini", Palette: true, Packages: []string{"@google/gemini-cli"}},
-	{ID: "opencode", Title: "OpenCode", Bin: "opencode", Palette: true, Packages: []string{"opencode-ai"}},
-	{ID: "aider", Title: "Aider", Bin: "aider", Packages: []string{"aider-chat"}},
+	{ID: "claude", Title: "Claude Code", Bin: "claude", Palette: true, Packages: []string{"@anthropic-ai/claude-code"},
+		MCP: MCPRecipe{Kind: MCPFlag, TempFile: "claude.json", Args: func(_, _, file string) []string {
+			return []string{"--mcp-config", file}
+		}}},
+	{ID: "codex", Title: "Codex", Bin: "codex", Palette: true, Packages: []string{"@openai/codex"},
+		MCP: MCPRecipe{Kind: MCPFlag, Args: func(exe, root, _ string) []string {
+			return []string{
+				"-c", "mcp_servers.termocode.command=" + tomlString(exe),
+				"-c", "mcp_servers.termocode.args=[\"mcp\", \"--dir\", " + tomlString(root) + "]",
+			}
+		}}},
+	{ID: "gemini", Title: "Gemini CLI", Bin: "gemini", Palette: true, Packages: []string{"@google/gemini-cli"},
+		MCP: MCPRecipe{Kind: MCPNone}}, // no per-launch override known: the user adds it by hand
+	{ID: "opencode", Title: "OpenCode", Bin: "opencode", Palette: true, Packages: []string{"opencode-ai"},
+		MCP: MCPRecipe{Kind: MCPProjectFile, ProjectFile: "opencode.json"}},
+	{ID: "aider", Title: "Aider", Bin: "aider", Packages: []string{"aider-chat"},
+		MCP: MCPRecipe{Kind: MCPNone}}, // Aider has no MCP client
 }
 
 // ByID returns the agent with id.

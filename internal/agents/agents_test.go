@@ -131,3 +131,53 @@ func TestRegistry(t *testing.T) {
 		t.Error("aider is not a palette entry")
 	}
 }
+
+// Spec (MS-4): the launch line of each agent, golden. The temp file's
+// path goes to Claude Code; Codex takes -c overrides; the others have no
+// per-launch flag.
+func TestMCPLineGolden(t *testing.T) {
+	const exe, root, file = "/opt/tc/termocode", "/home/u/proj", "/run/tc/k.mcp-claude.json"
+	want := map[string]string{
+		"claude": `claude --mcp-config /run/tc/k.mcp-claude.json`,
+		"codex":  `codex -c 'mcp_servers.termocode.command="/opt/tc/termocode"' -c 'mcp_servers.termocode.args=["mcp", "--dir", "/home/u/proj"]'`,
+	}
+	for _, a := range Registry {
+		line, ok := a.MCPLine(exe, root, file)
+		w, has := want[a.ID]
+		if ok != has || line != w {
+			t.Errorf("%s: ok=%v line=%q, want %v %q", a.ID, ok, line, has, w)
+		}
+	}
+	if a, _ := ByID("claude"); a.MCP.TempFile == "" {
+		t.Error("claude takes a file")
+	}
+	if a, _ := ByID("opencode"); a.MCP.Kind != MCPProjectFile || a.MCP.ProjectFile != "opencode.json" {
+		t.Errorf("opencode: %+v", a.MCP)
+	}
+	for _, id := range []string{"gemini", "aider"} {
+		if a, _ := ByID(id); a.MCP.Kind != MCPNone {
+			t.Errorf("%s: %+v", id, a.MCP)
+		}
+	}
+}
+
+// Spec (MS-4): a path with a quote or a control character is refused, not
+// guessed at; spaces and TOML specials are quoted.
+func TestMCPLineQuoting(t *testing.T) {
+	a, _ := ByID("codex")
+	if _, ok := a.MCPLine("/x/it's", "/r", ""); ok {
+		t.Error("single quote accepted")
+	}
+	if c, _ := ByID("claude"); true {
+		if _, ok := c.MCPLine("/x", "/r", "/f\n"); ok {
+			t.Error("newline accepted")
+		}
+	}
+	line, ok := a.MCPLine("/x/a b", `/r"\q`, "")
+	if !ok || !strings.Contains(line, `command="/x/a b"'`) || !strings.Contains(line, `"/r\"\\q"]'`) {
+		t.Errorf("quoting: %v %s", ok, line)
+	}
+	if w, _ := ShellWord("/plain/path-1.2"); w != "/plain/path-1.2" {
+		t.Errorf("plain word quoted: %s", w)
+	}
+}
