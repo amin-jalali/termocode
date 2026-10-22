@@ -225,3 +225,15 @@ func TestRedactSecretsOnlyRegistered(t *testing.T) {
 		t.Errorf("RedactSecrets = %q", got)
 	}
 }
+
+// A reference (${env:NAME}, ${cmd:…}) is not a secret: the credentials
+// view holds it as text, and registering it would hide it on the secret
+// store screen. Only what it resolves to is registered.
+func TestRegisterSecretSkipsReferences(t *testing.T) {
+	for _, ref := range []string{"${env:E2E_REF_TEST_KEY}", "${cmd:pass show termocode/anthropic}", "${dotenv:POSTGRES_PASSWORD}"} {
+		RegisterSecret(ref)
+		if got := Redact("shows " + ref); got != "shows "+ref {
+			t.Errorf("Redact hid the reference %q: %q", ref, got)
+		}
+	}
+}

@@ -648,6 +648,9 @@ func RegisterSecret(s string) {
 	if len(s) < 8 {
 		return
 	}
+	if _, err := secretstore.ParseRef(s); err == nil {
+		return // a reference is not a secret; what it resolves to is registered
+	}
 	secretsMu.Lock()
 	secrets[s] = true
 	secretsMu.Unlock()
