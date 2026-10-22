@@ -60,13 +60,17 @@ func (m *Model) dispatchImportPalette(id string) (tea.Cmd, bool) {
 	return nil, false
 }
 
+// importGOOS is the system whose editor folders importDetect looks in
+// (tests set it to check the macOS and Linux places on any machine).
+var importGOOS = runtime.GOOS
+
 // importDetect finds the other editors' config folders of this user.
 func importDetect() []migrate.Source {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil
 	}
-	return migrate.Detect(home, runtime.GOOS, os.Getenv("XDG_CONFIG_HOME"))
+	return migrate.Detect(home, importGOOS, os.Getenv("XDG_CONFIG_HOME"))
 }
 
 // importShowPath shows an editor folder briefly: "~/…" under the home

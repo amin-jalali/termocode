@@ -23,13 +23,19 @@ func importSandbox(t *testing.T, editors ...string) (home, xdg string) {
 	home, xdg = t.TempDir(), t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", xdg)
+	// macOS keeps these folders under ~/Library/Application Support,
+	// not the XDG config folder.
+	base, sublime := xdg, "sublime-text/Packages/User"
+	if importGOOS == "darwin" {
+		base, sublime = filepath.Join(home, "Library", "Application Support"), "Sublime Text/Packages/User"
+	}
 	for _, e := range editors {
 		fx := map[string][2]string{
 			"vscode":    {"vscode-review", "Code/User"},
 			"jetbrains": {"jetbrains-linux", "JetBrains/GoLand2025.1"},
-			"sublime":   {"sublime-linux", "sublime-text/Packages/User"},
+			"sublime":   {"sublime-linux", sublime},
 		}[e]
-		copyTree(t, filepath.Join("..", "migrate", "testdata", fx[0]), filepath.Join(xdg, fx[1]))
+		copyTree(t, filepath.Join("..", "migrate", "testdata", fx[0]), filepath.Join(base, fx[1]))
 	}
 	return home, xdg
 }
