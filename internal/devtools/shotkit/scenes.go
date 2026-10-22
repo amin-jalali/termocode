@@ -302,3 +302,15 @@ func DemoScene() Scene {
 	)
 	return Scene{Name: "demo", Env: aiEnv, Steps: steps}
 }
+
+// ImportPicker is Preferences: Import from Another Editor… with three
+// sample editors in the sandbox config dir.
+func ImportPicker() Scene {
+	return Scene{Name: "import-picker", Steps: WithEditor(Act("importdemo:picker"), Pause(900*time.Millisecond))}
+}
+
+// ImportPanel is the review panel of the VS Code sample: settings, keys,
+// theme and extensions, the user's current values shown as old → new.
+func ImportPanel() Scene {
+	return Scene{Name: "import-panel", Steps: WithEditor(Act("importdemo:panel"), Pause(600*time.Millisecond))}
+}

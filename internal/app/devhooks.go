@@ -59,6 +59,9 @@ import (
 //	httpdemo:<variant>     docs/users.http and a canned HTTP answer:
 //	                       file, response, headers or tls (no network)
 //	helpdemo               open the in-app guide at the chat panel section
+//	importdemo:picker|panel sample editor folders (sandbox config dir only),
+//	                       then the Import from Another Editor picker or
+//	                       the review panel of the VS Code sample
 //	plugin:nvim-dap=<dir>  set nvim-dap up from a checkout (tests: the
 //	                       sandbox has none; Group K7)
 type DevActionMsg struct{ ID string }
@@ -135,6 +138,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		}
 	case "connectdemo": // a Connect-a-service step for the shots
 		return m.connectDemo(arg)
+	case "importdemo": // Import from Another Editor with sample editors (import_demo.go)
+		return m.importDemo(arg)
 	case "termdemo": // terminal tab marks for the shots (term_fix.go, agent_tabs.go)
 		m.termDemo()
 	case "aipipedemo": // a two-step agent pipeline run (ai_run_demo.go): arg running or done
