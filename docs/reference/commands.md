@@ -155,7 +155,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Pin Result Tab | `db-result-pin` |   |   |
 | Databases: Refresh | `db-refresh` |   |   |
 | Databases: Revert Pending Changes | `db-revert-changes` |   |   |
-| Databases: Rollback | `db-rollback` |   |   |
+| Databases: Roll Back | `db-rollback` |   |   |
 | Databases: Run File | `db-run-file` |   |   |
 | Databases: Run Statement or Selection | `db-run` |   |   |
 | Databases: SSL Settings… | `db-ssl` |   |   |

@@ -796,7 +796,7 @@ func (m *Model) onDBSubmit(msg dbSubmitMsg) tea.Cmd {
 		notes = append(notes, dbOneLine(st.Preview)+" · "+dbPlural(int(n), "row"))
 	}
 	if manual {
-		notes = append(notes, "In the open transaction: Commit (K) saves, Rollback (Z) undoes.")
+		notes = append(notes, "In the open transaction: Commit (K) saves, Roll back (Z) undoes.")
 	}
 	toastTitle := "Saved " + dbPlural(len(msg.stmts), "change")
 	toastDetail := ""

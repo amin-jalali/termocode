@@ -444,7 +444,7 @@ func (m *Model) databaseReviewRun(r *dbRun) tea.Cmd {
 		return m.databaseRedisReview(r, c)
 	}
 	if m.databases.manualMode(r.conn) && dbTxControl(r.sql) {
-		return m.pushToastDetail(toast.Info, "Use Commit (K) or Rollback (Z)", "Manual transaction mode: "+strings.ToUpper(firstSQLWord(r.sql))+" is not sent.")
+		return m.pushToastDetail(toast.Info, "Use Commit (K) or Roll back (Z)", "Manual transaction mode: "+strings.ToUpper(firstSQLWord(r.sql))+" is not sent.")
 	}
 	kind, stmts := dbclient.Classify(r.sql, c.Driver)
 	if kind == dbclient.KindRead {

@@ -1433,7 +1433,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `db-refresh` | Databases: Refresh | auto |   |
 | `db-result-pin` | Databases: Pin Result Tab | auto |   |
 | `db-revert-changes` | Databases: Revert Pending Changes | never | the user's pending edits |
-| `db-rollback` | Databases: Rollback | never | the user's transaction |
+| `db-rollback` | Databases: Roll Back | never | the user's transaction |
 | `db-run` | Databases: Run Statement or Selection | never | SQL runs require the database query tool and its guard |
 | `db-run-file` | Databases: Run File | never | SQL runs require the database query tool and its guard |
 | `db-select` | Databases: Select 100 Rows in Console | never | SQL runs require the database query tool and its guard |

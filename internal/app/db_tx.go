@@ -184,7 +184,7 @@ func (m *Model) databaseTxModePicker(conn string) tea.Cmd {
 	m.databases.txModeConn = conn
 	m.picker = picker.NewItems("Transaction mode for "+sanitizeDBText(dbConnName(c)), []picker.Item{
 		{ID: "auto", Title: "Auto-commit", Hint: dbJoinHint(auto, "each statement is saved at once")},
-		{ID: "manual", Title: "Manual", Hint: dbJoinHint(manual, "Commit (K) or Rollback (Z) ends it")},
+		{ID: "manual", Title: "Manual", Hint: dbJoinHint(manual, "Commit (K) or Roll back (Z) ends it")},
 	})
 	m.picker.HideCountWhenEmpty()
 	m.picker.SetSize(m.w, m.h)
@@ -226,7 +226,7 @@ func (m *Model) databaseSetTxMode(conn string, manual bool) tea.Cmd {
 	if manual {
 		s.manual[conn] = true
 		s.touch()
-		return tea.Batch(m.databaseShowPageIf(conn), m.pushToastDetail(toast.Info, "Manual transactions on "+name, "Changes wait for Commit (K) or Rollback (Z)."))
+		return tea.Batch(m.databaseShowPageIf(conn), m.pushToastDetail(toast.Info, "Manual transactions on "+name, "Changes wait for Commit (K) or Roll back (Z)."))
 	}
 	switchAuto := func(m *Model) tea.Cmd {
 		delete(m.databases.manual, conn)
@@ -341,7 +341,7 @@ func (m *Model) onDBTxDone(msg dbTxDoneMsg) tea.Cmd {
 	s.touch()
 	verb, done := "Commit", "Committed"
 	if !msg.commit {
-		verb, done = "Rollback", "Rolled back"
+		verb, done = "Roll back", "Rolled back"
 	}
 	refresh := m.databaseRefreshAfterTx(msg.conn)
 	if failed != nil {
@@ -435,5 +435,5 @@ func (m *Model) dbTxHints(conn string) []string {
 	if len(m.databases.txKeys(conn)) == 0 {
 		return nil
 	}
-	return []string{"K commit", "Z rollback"}
+	return []string{"K commit", "Z roll back"}
 }

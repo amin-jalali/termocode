@@ -68,13 +68,13 @@ Termocode suggests connections it finds. A suggestion row has no password and do
 
 Press `a` on a suggestion (or `Enter`) to add it. Press `x` to hide it. A hidden suggestion stays hidden.
 
-With no connections yet, the view lists the suggestions and offers **a add connection** and **Add remote… (SSH)**. **Add remote…** asks for the server type, then the usual connection steps, then the SSH tunnel steps, then runs the test.
+With no connections yet, the view lists the suggestions and offers **a add** and **Add remote… (SSH)**. **Add remote…** asks for the server type, then the usual connection steps, then the SSH tunnel steps, then runs the test.
 
 ## Mouse
 
 - Click a row to select it. Double-click a connection to connect or expand it, a folder to fold or unfold it, and a table or view to open its data.
 - On a suggestion, click to select and double-click to add it.
-- Click **a add**, **R refresh** or **/ filter** in the header. In the empty view, click **a add connection** or **Add remote…**.
+- Click **a add**, **R refresh** or **/ filter** in the header. In the empty view, click **a add** or **Add remote…**.
 - Right-click a row for its menu.
 
 ## Add a connection
@@ -223,7 +223,7 @@ Changes stay on the page until you submit them. The left margin marks each row: 
 
 Each connection starts in auto-commit mode: every statement is saved at once. Press `t` on a connection (or use **Databases: Transaction Mode…**) and choose **Manual** to group your work: the first statement begins a transaction, the next ones join it, and nothing is saved until you commit.
 
-- `K` on the result page or **Databases: Commit** saves the changes; `Z` or **Databases: Rollback** drops them.
+- `K` on the result page or **Databases: Commit** saves the changes; `Z` or **Databases: Roll Back** drops them.
 - The status bar and the result page show `manual commit · 2 not committed` while changes wait. Typed `BEGIN`, `COMMIT` or `ROLLBACK` statements are not sent in manual mode; use `K` and `Z`.
 - Submitted row changes join the open transaction; data pages read inside it, so they show your own changes.
 - Quitting, disconnecting, or switching back to auto-commit with changes waiting asks **Commit**, **Roll back** or **Cancel**.

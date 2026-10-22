@@ -227,3 +227,30 @@ func TestDatabaseRedisTreeHasATypeLegend(t *testing.T) {
 		t.Fatalf("legend without key rows:\n%s", got)
 	}
 }
+
+// DB-13: one name for each action on screen: "Roll back" and "a add".
+func TestDatabaseActionNamesAreTheSameEverywhere(t *testing.T) {
+	found := false
+	for _, it := range paletteItems() {
+		if it.ID == "db-rollback" {
+			found = it.Title == "Databases: Roll Back"
+		}
+	}
+	if !found {
+		t.Error("the palette entry is not \"Databases: Roll Back\"")
+	}
+	s := newDBState()
+	s.manual = map[string]bool{"c": true}
+	s.txs = map[string]*dbTxState{"c": {open: true, writes: 1}}
+	m := &Model{databases: s}
+	if got := strings.Join(m.dbTxHints("c"), " "); got != "K commit Z roll back" {
+		t.Errorf("tx hints = %q", got)
+	}
+	for _, noConns := range []bool{true, false} {
+		for _, w := range []int{20, 29, 40} {
+			if got, _ := dbHeaderActions(w, noConns); strings.Contains(got, "add connection") {
+				t.Errorf("w=%d noConns=%v: header %q spells out add connection", w, noConns, got)
+			}
+		}
+	}
+}

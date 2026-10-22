@@ -273,18 +273,14 @@ type dbZone struct {
 }
 
 // dbHeaderActions is the action line under the title and its click zones.
-// With no connections it spells out "add connection".
+// With no connections there is no "/ filter".
 func dbHeaderActions(w int, noConns bool) (string, []dbZone) {
 	type seg struct{ text, id string }
 	var segs []seg
 	switch {
-	case noConns && w >= 29:
-		segs = []seg{{"a add connection", "add"}, {"R refresh", "refresh"}}
-	case noConns && w >= 20:
-		segs = []seg{{"a add connection", "add"}}
-	case noConns || w < 18:
+	case w < 18:
 		segs = []seg{{"a add", "add"}}
-	case w < 31:
+	case noConns || w < 31:
 		segs = []seg{{"a add", "add"}, {"R refresh", "refresh"}}
 	default:
 		segs = []seg{{"a add", "add"}, {"R refresh", "refresh"}, {"/ filter", "filter"}}

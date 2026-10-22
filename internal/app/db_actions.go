@@ -46,7 +46,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-count-rows", Title: "Databases: Count Rows"},
 		{ID: "db-transaction-mode", Title: "Databases: Transaction Mode…"},
 		{ID: "db-commit", Title: "Databases: Commit"},
-		{ID: "db-rollback", Title: "Databases: Rollback"},
+		{ID: "db-rollback", Title: "Databases: Roll Back"},
 		{ID: "db-submit-changes", Title: "Databases: Submit Pending Changes"},
 		{ID: "db-revert-changes", Title: "Databases: Revert Pending Changes"},
 		{ID: "db-result-pin", Title: "Databases: Pin Result Tab"},

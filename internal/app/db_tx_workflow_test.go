@@ -73,7 +73,7 @@ func TestDBTxManualModeCommitsWithK(t *testing.T) {
 	}
 	// BEGIN / COMMIT typed in manual mode go through K / Z instead.
 	consoleRun(t, d, "COMMIT;", false)
-	if !d.WaitForText("Use Commit (K) or Rollback (Z)", time.Second) {
+	if !d.WaitForText("Use Commit (K) or Roll back (Z)", time.Second) {
 		t.Fatalf("COMMIT was not redirected:\n%s", ansi.Strip(d.Frame()))
 	}
 	if s.has("COMMIT") {

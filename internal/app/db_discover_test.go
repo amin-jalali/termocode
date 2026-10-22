@@ -201,7 +201,7 @@ func TestEmptyStateOffersAddAndRemote(t *testing.T) {
 	m := discoverModel(t, t.TempDir())
 	m.showExp = true
 	out := m.renderDatabasesSidebarRaw(32, 20, true)
-	for _, want := range []string{"a add connection", "R refresh", strings.TrimSpace(dbRemoteLabel()), "No databases yet"} {
+	for _, want := range []string{"a add", "R refresh", strings.TrimSpace(dbRemoteLabel()), "No databases yet"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("empty state lacks %q:\n%s", want, out)
 		}
