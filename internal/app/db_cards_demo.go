@@ -27,6 +27,10 @@ func (m *Model) databaseCardsDemo(variant string) (tea.Cmd, bool) {
 		// x on a connection with nothing waiting: the plain question.
 		m.databasesDemo("")
 		return m.databaseDisconnectAsk("local-pg"), true
+	case "redis-delete":
+		// D on the selected key: the card with the exact DEL command.
+		m.databaseRedisDemo()
+		return m.databaseRedisAsk(&dbRedisWrite{conn: "prod-cache", db: 0, key: "session:ab12", args: []string{"DEL", "session:ab12"}, deleted: true}), true
 	}
 	return nil, false
 }
