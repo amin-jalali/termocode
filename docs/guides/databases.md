@@ -99,6 +99,8 @@ A password is never written to a project file. The file holds a reference:
 | `${env:NAME}` | An environment variable of termocode. |
 | `${cmd:line}` | The first output line of a command you wrote. |
 
+The password prompts (here, for an SSH password and for a key passphrase) accept a reference instead of a value: `${env:NAME}`, `${dotenv:NAME}` or `${cmd:…}`. The text you type is saved, not the value, and a bad reference is refused in the prompt. A project file may use `${secret:…}` and `${dotenv:…}` but not `${cmd:…}`: the row shows a problem and the command is not run. See [References](ai-setup.md#type-a-reference-instead-of-a-secret).
+
 Press `p` on a connection to set its password. It goes to the secret store as `db.<id>`. The SSH password and key passphrase are stored as `db.<id>.ssh` and `db.<id>.sshkey`.
 
 The secret store uses your OS keyring when one is available. Otherwise it uses an encrypted file, or a plain file with mode 0600 (`ai/credentials.json`). See [Security notes](#security-notes).

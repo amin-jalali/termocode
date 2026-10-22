@@ -28,6 +28,30 @@ says it: the OS keyring, the encrypted file `secrets.age`, or the plain file
 `~/.config/termocode/ai/credentials.json` (mode `0600`, not encrypted). Other
 AI settings go in `config.json`.
 
+### Type a reference instead of a secret
+
+Every secret prompt (the AI key, an MCP secret or token, a database
+password, an SSH password or key passphrase, a registry token) accepts a
+reference instead of the value. The hint under the prompt says so:
+`value, or ${env:NAME} / ${cmd:…} / ${dotenv:NAME}`.
+
+| Type | termocode reads |
+| --- | --- |
+| `${env:NAME}` | the environment variable of termocode |
+| `${dotenv:NAME}` | `NAME` in the `.env` of this workspace (never a parent folder) |
+| `${cmd:pass show termocode/anthropic}` | the first output line of the command |
+
+termocode saves the text you typed, never the value it points at, and reads
+it each time it is needed. A reference that is not valid (`${env:}`,
+`${foo:x}`, a missing `}`) is refused in the prompt with a message, and
+nothing is saved. The first time a command runs in a session, a toast shows
+`Running: <the command>` (never its output), so a changed command in your
+own files is noticed. A command runs only from your own configuration, never
+from a file in a project: `.termocode/databases.json` may name
+`${secret:NAME}` and `${dotenv:NAME}`, `.termocode/mcp.json` may name
+`${secret:NAME}`, but a `${cmd:…}` in either is refused with a warning and
+is not run.
+
 ### See and forget saved secrets
 
 Run **AI: Secret Store…** from `F1`. The screen shows the backend, whether

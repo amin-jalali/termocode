@@ -97,6 +97,12 @@ in `mcp.json`. The entry gets a header like
 `Sentry-Bearer`, Atlassian an e-mail plus API token). ClickUp has no
 token way.
 
+You can paste a reference instead of the token: `${env:NAME}`,
+`${dotenv:NAME}` or `${cmd:…}` (not for Atlassian, which joins your e-mail
+to the token). It is saved as text and read when the server starts. The
+same works for **Set secret NAME…**. See
+[References](ai-setup.md#type-a-reference-instead-of-a-secret).
+
 ### Slack
 
 Slack lets only registered apps use its MCP server, so you create one
@@ -234,7 +240,9 @@ edit that file:
 ```
 
 termocode warns in the MCP log when a value in `mcp.json` looks like a
-token. When a variable or secret is missing, the server shows
+token. A `${cmd:…}` in a project's `.termocode/mcp.json` is refused: the
+server shows `invalid: ${cmd:} is not allowed in project files…` and
+nothing is run. When a variable or secret is missing, the server shows
 `needs ${VAR}` or `needs secret NAME` and does not start.
 
 ### Project servers

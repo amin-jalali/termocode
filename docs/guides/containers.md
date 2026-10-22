@@ -229,7 +229,10 @@ palette) asks four things: a host from a short list (`docker.io`, `ghcr.io`,
 user name, and the token or password. The token prompt shows only `•`. You
 can type a reference instead of the value: `${env:NAME}`, `${dotenv:NAME}`
 (from this workspace's `.env`) or `${cmd:<a command that prints it>}`. termocode reads it
-just before the call.
+just before the call. A reference that is not valid is refused in the
+prompt and nothing runs; the first run of a `${cmd:…}` shows a
+`Running: …` toast. See
+[References](ai-setup.md#type-a-reference-instead-of-a-secret).
 
 Then it runs `docker login <host> --username <user> --password-stdin`. The
 token goes to the engine on stdin only. It is never in the command line,
