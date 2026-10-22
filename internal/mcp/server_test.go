@@ -177,3 +177,47 @@ func TestServerStatelessGolden(t *testing.T) {
 		})
 	}
 }
+
+type resourceTestSource struct {
+	serverTestSource
+	read func(ctx context.Context, uri string) (string, error)
+}
+
+func (resourceTestSource) Resources() []Resource {
+	return []Resource{{URI: "termocode://editor/state", Name: "editor-state", Description: "The editor now", MimeType: "application/json"}}
+}
+
+func (s resourceTestSource) ReadResource(ctx context.Context, uri string) (string, error) {
+	return s.read(ctx, uri)
+}
+
+// Spec (MS-6): resources/list and resources/read, goldens; a source with
+// resources advertises the capability, one without answers an empty list.
+func TestServerResourcesGolden(t *testing.T) {
+	rs := resourceTestSource{read: func(ctx context.Context, uri string) (string, error) {
+		if uri != "termocode://editor/state" {
+			return "", &CallError{Code: CodeResourceNotFound, Message: "resource not found: " + uri}
+		}
+		return `{"client":"` + ClientName(ctx) + `"}`, nil
+	}}
+	plain := serverTestSource{}
+	meta := `"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientInfo":{"name":"codex"}}`
+	for _, tc := range []struct {
+		name   string
+		source ToolSource
+		input  string
+	}{
+		{"resources_list", rs, `{"jsonrpc":"2.0","id":1,"method":"resources/list"}`},
+		{"resources_read", rs, `{"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"termocode://editor/state",` + meta + `}}`},
+		{"resources_read_unknown", rs, `{"jsonrpc":"2.0","id":3,"method":"resources/read","params":{"uri":"termocode://nope"}}`},
+		{"resources_read_no_uri", rs, `{"jsonrpc":"2.0","id":4,"method":"resources/read","params":{}}`},
+		{"resources_list_empty", plain, `{"jsonrpc":"2.0","id":5,"method":"resources/list"}`},
+		{"resources_read_empty_source", plain, `{"jsonrpc":"2.0","id":6,"method":"resources/read","params":{"uri":"termocode://editor/state"}}`},
+		{"resources_discover", rs, `{"jsonrpc":"2.0","id":7,"method":"server/discover"}`},
+		{"resources_initialize", rs, `{"jsonrpc":"2.0","id":8,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			goldenExchange(t, tc.name, runServerMessages(t, tc.source, tc.input))
+		})
+	}
+}

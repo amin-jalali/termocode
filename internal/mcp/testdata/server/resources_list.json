@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":1,"result":{"resources":[{"uri":"termocode://editor/state","name":"editor-state","description":"The editor now","mimeType":"application/json"}]}}

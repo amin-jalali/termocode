@@ -39,6 +39,28 @@ const (
 	metaClientKey  = "io.modelcontextprotocol/clientInfo"
 )
 
+// Resource is one entry of resources/list.
+type Resource struct {
+	URI         string `json:"uri"`
+	Name        string `json:"name"`
+	Title       string `json:"title,omitempty"`
+	Description string `json:"description,omitempty"`
+	MimeType    string `json:"mimeType,omitempty"`
+}
+
+// CodeResourceNotFound is the MCP error for a resources/read of a URI the
+// server does not have.
+const CodeResourceNotFound = -32002
+
+// ResourceSource is an optional interface of a ToolSource: it serves
+// read-only resources. A source without it has no resources and does not
+// advertise the capability. ReadResource returns the text of uri, or a
+// *CallError (CodeResourceNotFound for an unknown uri).
+type ResourceSource interface {
+	Resources() []Resource
+	ReadResource(ctx context.Context, uri string) (string, error)
+}
+
 type connIDKey struct{}
 
 // WithConnID returns ctx carrying a connection id for ConnID.
@@ -117,9 +139,13 @@ func supportedRevisions() []string {
 	return append([]string{StatelessVersion}, SupportedVersions...)
 }
 
-// capabilities is what the server offers.
+// capabilities is what the server offers; resources only when the source
+// has any (a ResourceSource).
 func (s *MCPServer) capabilities() map[string]any {
 	caps := map[string]any{"tools": map[string]any{"listChanged": false}}
+	if _, ok := s.source.(ResourceSource); ok {
+		caps["resources"] = map[string]any{"subscribe": false, "listChanged": false}
+	}
 	return caps
 }
 
@@ -212,6 +238,56 @@ func (s *MCPServer) handle(conn *extproc.Conn, m extproc.Message) (any, *extproc
 			return nil, unavailableError()
 		}
 		return map[string]any{"tools": s.source.List()}, nil
+	case "resources/list":
+		if s.source == nil {
+			return nil, unavailableError()
+		}
+		list := []Resource{}
+		if rs, ok := s.source.(ResourceSource); ok {
+			list = append(list, rs.Resources()...)
+		}
+		return map[string]any{"resources": list}, nil
+	case "resources/read":
+		var params struct {
+			URI string `json:"uri"`
+		}
+		if err := decodeParams(m.Params, &params); err != nil || strings.TrimSpace(params.URI) == "" {
+			if err == nil {
+				err = errors.New("uri is required")
+			}
+			return nil, invalidParams(err)
+		}
+		if s.source == nil {
+			return nil, unavailableError()
+		}
+		rs, ok := s.source.(ResourceSource)
+		if !ok {
+			return nil, &extproc.Error{Code: CodeResourceNotFound, Message: "resource not found: " + params.URI}
+		}
+		ctx, cancel := context.WithCancel(WithClientName(context.Background(), s.requestClient(m)))
+		defer cancel()
+		if s.connID != 0 {
+			ctx = WithConnID(ctx, s.connID)
+		}
+		go func() {
+			select {
+			case <-conn.Done():
+				cancel()
+			case <-ctx.Done():
+			}
+		}()
+		text, err := rs.ReadResource(ctx, params.URI)
+		if err != nil {
+			var coded *CallError
+			switch {
+			case errors.Is(err, ErrToolSourceUnavailable):
+				return nil, unavailableError()
+			case errors.As(err, &coded):
+				return nil, &extproc.Error{Code: coded.Code, Message: coded.Message}
+			}
+			return nil, &extproc.Error{Code: serverCodeToolFailed, Message: err.Error()}
+		}
+		return map[string]any{"contents": []map[string]any{{"uri": params.URI, "mimeType": "application/json", "text": text}}}, nil
 	case "tools/call":
 		var params callParams
 		if err := decodeParams(m.Params, &params); err != nil || strings.TrimSpace(params.Name) == "" {
@@ -226,13 +302,7 @@ func (s *MCPServer) handle(conn *extproc.Conn, m extproc.Message) (any, *extproc
 		if s.source == nil {
 			return nil, unavailableError()
 		}
-		s.mu.Lock()
-		client := s.client
-		s.mu.Unlock()
-		if meta := parseMeta(m.Params); meta.version == StatelessVersion {
-			client = meta.client // this request's own claim, not a shared one
-		}
-		ctx, cancel := context.WithCancel(WithClientName(context.Background(), client))
+		ctx, cancel := context.WithCancel(WithClientName(context.Background(), s.requestClient(m)))
 		if s.connID != 0 {
 			ctx = WithConnID(ctx, s.connID)
 		}
@@ -270,6 +340,17 @@ func (s *MCPServer) handle(conn *extproc.Conn, m extproc.Message) (any, *extproc
 	default:
 		return nil, &extproc.Error{Code: serverCodeMethodNotFound, Message: "method not found: " + m.Method}
 	}
+}
+
+// requestClient is the client name for one request: its own _meta when it
+// is stateless, else the one from initialize.
+func (s *MCPServer) requestClient(m extproc.Message) string {
+	if meta := parseMeta(m.Params); meta.version == StatelessVersion {
+		return meta.client
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.client
 }
 
 func decodeParams(raw json.RawMessage, dst any) error {
