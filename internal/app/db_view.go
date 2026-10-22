@@ -52,12 +52,15 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 	lines = append(lines, testsPad(theme.FgBg(theme.TextSecondary, theme.BgSidebar).Render(actions), w), second)
 	rows := s.rows()
 	available := max(h-len(lines)-2, 0)
+	s.scroll = min(s.scroll, max(len(rows)-available, 0))
 	if s.cursor < s.scroll {
 		s.scroll = s.cursor
-	} else if available > 0 && s.cursor >= s.scroll+available {
-		s.scroll = s.cursor - available + 1
+	} else if available > 0 {
+		// Wrapped rows take several lines: scroll until the cursor row fits.
+		for s.scroll < s.cursor && dbRowsHeight(rows, s.scroll, s.cursor+1, w) > available {
+			s.scroll++
+		}
 	}
-	s.scroll = min(s.scroll, max(len(rows)-available, 0))
 	start := s.scroll
 	if noConns && len(rows) == 0 {
 		hint := append([]string{"No databases yet"}, wrapPlain("Put DATABASE_URL in .env or start a database container.", max(w-4, 8))...)
@@ -71,7 +74,7 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 			}
 		}
 	}
-	for i := start; i < len(rows) && i < start+available; i++ {
+	for i := start; i < len(rows) && len(lines) < 4+available; i++ {
 		r := rows[i]
 		if r.kind == dbNodeSuggestionsHeader {
 			lines = append(lines, testsPad(theme.FgBg(theme.TextSecondary, theme.BgSidebar).Bold(true).Render("  SUGGESTED"), w))
@@ -104,6 +107,13 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 		}
 		width := max(w-runewidth.StringWidth(indent)-3, 1)
 		line := indent + fold + glyph + " " + runewidth.Truncate(label, width, "…")
+		var more []string
+		if wrapped := dbRowWrap(r, w); wrapped != nil {
+			line = indent + fold + glyph + " " + wrapped[0]
+			for _, l := range wrapped[1:] {
+				more = append(more, indent+"   "+l)
+			}
+		}
 		if i == s.cursor && focused {
 			line = theme.FgBg(theme.TextPrimary, theme.BgSelection).Render(testsPad(line, w))
 		} else if r.kind == dbNodeNote {
@@ -116,6 +126,19 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 			line = theme.FgBg(theme.TextPrimary, theme.BgSidebar).Render(testsPad(line, w))
 		}
 		lines = append(lines, line)
+		for _, l := range more {
+			if len(lines) >= 4+available {
+				break
+			}
+			if i == s.cursor && focused {
+				l = theme.FgBg(theme.TextPrimary, theme.BgSelection).Render(testsPad(l, w))
+			} else if r.kind == dbNodeNote {
+				l = theme.FgBg(theme.DiagError, theme.BgSidebar).Render(testsPad(l, w))
+			} else {
+				l = theme.FgBg(theme.TextSecondary, theme.BgPanel).Render(testsPad(l, w))
+			}
+			lines = append(lines, l)
+		}
 	}
 	for len(lines) < h-2 {
 		lines = append(lines, fill())
@@ -138,6 +161,41 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 		lines = append(lines, fill())
 	}
 	return strings.Join(lines[:h], "\n")
+}
+
+// dbRowWrap is the label of a note or command row cut into lines that fit
+// the sidebar; nil for rows that keep to one line (and are cut with "…").
+func dbRowWrap(r dbTreeRow, w int) []string {
+	if r.kind != dbNodeNote && r.kind != dbNodeCode {
+		return nil
+	}
+	indent := min(r.depth*2, max(w/2, 0))
+	return wrapPlain(sanitizeDBText(r.name), max(w-indent-3, 1))
+}
+
+// dbRowHeight is how many lines row r takes in a sidebar w columns wide.
+func dbRowHeight(r dbTreeRow, w int) int {
+	if w <= 0 {
+		return 1
+	}
+	return max(len(dbRowWrap(r, w)), 1)
+}
+
+// dbRowsHeight is the line count of rows[from:to].
+func dbRowsHeight(rows []dbTreeRow, from, to, w int) int {
+	n := 0
+	for i := from; i < to && i < len(rows); i++ {
+		n += dbRowHeight(rows[i], w)
+	}
+	return n
+}
+
+// dbInstallCommand is the shell command inside an install hint such as
+// "Install sqlite3 with: sudo apt install sqlite3". The generic hint has none.
+func dbInstallCommand(hint string) (string, bool) {
+	_, cmd, ok := strings.Cut(hint, " with: ")
+	cmd = strings.TrimSpace(cmd)
+	return cmd, ok && cmd != ""
 }
 
 // dbRemoteLabel is the "Add remote…" line of the empty state.
@@ -303,6 +361,9 @@ func (s *dbState) rowFooter(r dbTreeRow) string {
 		}
 	}
 	if r.kind == dbNodeConnection {
+		if _, ok := s.installRow(r); ok {
+			return "Enter retry · y copy command"
+		}
 		if c, ok := s.connection(r.conn); ok && c.SSH != nil {
 			state := "via " + c.SSH.Host
 			if s.tunnel(c.ID).Alive() {
@@ -312,6 +373,16 @@ func (s *dbState) rowFooter(r dbTreeRow) string {
 		}
 	}
 	return dbRowFooter(r.kind)
+}
+
+// installRow is the install-command row under a connection, if it has one.
+func (s *dbState) installRow(r dbTreeRow) (dbTreeRow, bool) {
+	for _, c := range s.nodes[r.path].children {
+		if n := s.nodes[c]; n.kind == dbNodeCode {
+			return dbTreeRow{kind: n.kind, path: c, name: n.name, conn: n.conn}, true
+		}
+	}
+	return dbTreeRow{}, false
 }
 
 func dbRowFooter(kind dbNodeKind) string {
@@ -325,7 +396,7 @@ func dbRowFooter(kind dbNodeKind) string {
 	case dbNodeDatabase, dbNodeSchema, dbNodeGroup:
 		return "Enter expand · h fold"
 	case dbNodeCode:
-		return "y copy install command"
+		return "y copy command"
 	default:
 		return "Enter expand · ? help"
 	}
@@ -367,7 +438,13 @@ func (m Model) handleDatabasesSidebarMouse(x, y int, t tea.MouseEventType) (Mode
 		return m, nil
 	}
 	rows := m.databases.rows()
-	index := m.databases.scroll + localY
+	index := m.databases.scroll
+	for line := 0; index < len(rows); index++ {
+		line += dbRowHeight(rows[index], m.explorerWidth-1)
+		if localY < line {
+			break
+		}
+	}
 	if index >= len(rows) {
 		return m, nil
 	}

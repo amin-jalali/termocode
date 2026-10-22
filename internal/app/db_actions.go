@@ -251,9 +251,18 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, m.databaseTxModePicker(row.conn)
 		}
 	case "y":
+		if have && row.kind == dbNodeConnection {
+			if code, ok := m.databases.installRow(row); ok {
+				row = code
+			}
+		}
 		if have && row.kind == dbNodeCode {
-			m.copyToClipboard(row.name)
-			return m, m.pushToastDetail(toast.Info, "Copied install command", row.name)
+			cmd, ok := dbInstallCommand(row.name)
+			if !ok {
+				return m, m.pushToastDetail(toast.Info, "No install command", row.name)
+			}
+			m.copyToClipboard(cmd)
+			return m, m.pushToastDetail(toast.Info, "Copied install command", cmd)
 		}
 		return m, m.databaseCopyTableName()
 	case "o":
