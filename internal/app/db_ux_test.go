@@ -209,3 +209,21 @@ func TestDatabaseSidebarFooterFitsOrEndsWithKeysHint(t *testing.T) {
 		}
 	}
 }
+
+// DB-12: key types are marks in the rows; the sidebar says what they mean.
+func TestDatabaseRedisTreeHasATypeLegend(t *testing.T) {
+	withConfigDir(t)
+	m := &Model{w: 80, h: 24, activity: activity.New(), showExp: true}
+	m.databaseRedisDemo()
+	got := stripSGRForTest(m.renderDatabasesSidebarRaw(31, 22, true))
+	for _, typ := range []string{"string", "hash", "list", "set", "zset", "stream"} {
+		if want := dbRedisTypeGlyph(typ) + " " + typ; !strings.Contains(got, want) {
+			t.Fatalf("legend lacks %q:\n%s", want, got)
+		}
+	}
+	// No key rows, no legend.
+	m.databases.folded["prod-cache/db/0"] = true
+	if got := stripSGRForTest(m.renderDatabasesSidebarRaw(31, 22, true)); strings.Contains(got, "stream") {
+		t.Fatalf("legend without key rows:\n%s", got)
+	}
+}

@@ -62,6 +62,7 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 		}
 	}
 	start := s.scroll
+	redisTypes := map[string]bool{} // the key types on screen, for the legend
 	if noConns && len(rows) == 0 {
 		hint := append([]string{"No databases yet"}, wrapPlain("Put DATABASE_URL in .env or start a database container.", max(w-4, 8))...)
 		for i, l := range hint {
@@ -83,6 +84,7 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 		glyph := dbNodeGlyph(r.kind)
 		if r.kind == dbNodeRedisKey {
 			glyph = dbRedisTypeGlyph(s.nodes[r.path].rtype)
+			redisTypes[s.nodes[r.path].rtype] = true
 		}
 		fold := " "
 		indent := strings.Repeat(" ", min(r.depth*2, max(w/2, 0)))
@@ -138,6 +140,15 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 				l = theme.FgBg(theme.TextSecondary, theme.BgPanel).Render(testsPad(l, w))
 			}
 			lines = append(lines, l)
+		}
+	}
+	// A key type is a mark in the row: say once what the marks mean.
+	if legend := dbRedisLegend(redisTypes, w-2); len(legend) > 0 && len(lines)+len(legend) <= h-2 {
+		for len(lines) < h-2-len(legend) {
+			lines = append(lines, fill())
+		}
+		for _, l := range legend {
+			lines = append(lines, testsPad(muted("  "+l), w))
 		}
 	}
 	for len(lines) < h-2 {
@@ -199,6 +210,32 @@ func dbInstallCommand(hint string) (string, bool) {
 	_, cmd, ok := strings.Cut(hint, " with: ")
 	cmd = strings.TrimSpace(cmd)
 	return cmd, ok && cmd != ""
+}
+
+// dbRedisLegend lists the key types in view as `{ hash  " string`, packed
+// into lines of at most width cells.
+func dbRedisLegend(types map[string]bool, width int) []string {
+	var lines []string
+	cur := ""
+	for _, t := range []string{"string", "hash", "list", "set", "zset", "stream"} {
+		if !types[t] {
+			continue
+		}
+		item := dbRedisTypeGlyph(t) + " " + t
+		switch {
+		case cur == "":
+			cur = item
+		case runewidth.StringWidth(cur)+2+runewidth.StringWidth(item) <= width:
+			cur += "  " + item
+		default:
+			lines = append(lines, cur)
+			cur = item
+		}
+	}
+	if cur != "" {
+		lines = append(lines, cur)
+	}
+	return lines
 }
 
 // dbFitFooter cuts a footer made of " · " parts to width cells: whole parts
