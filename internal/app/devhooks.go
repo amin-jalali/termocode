@@ -59,9 +59,11 @@ import (
 //	httpdemo:<variant>     docs/users.http and a canned HTTP answer:
 //	                       file, response, headers or tls (no network)
 //	helpdemo               open the in-app guide at the chat panel section
-//	importdemo:picker|panel sample editor folders (sandbox config dir only),
+//	importdemo:picker|panel|empty|file sample editor folders (sandbox config dir only),
 //	                       then the Import from Another Editor picker or
-//	                       the review panel of the VS Code sample
+//	                       the review panel of the VS Code sample; empty
+//	                       and file write nothing (picker with no editor,
+//	                       the From a file path prompt)
 //	plugin:nvim-dap=<dir>  set nvim-dap up from a checkout (tests: the
 //	                       sandbox has none; Group K7)
 type DevActionMsg struct{ ID string }

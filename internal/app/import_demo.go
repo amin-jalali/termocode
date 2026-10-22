@@ -40,11 +40,18 @@ var importDemoFiles = map[string]string{
 }
 
 // importDemo writes the sample editors and opens the picker ("picker")
-// or the review panel of the VS Code sample ("panel").
+// or the review panel of the VS Code sample ("panel"). "empty" writes
+// nothing (picker without editors); "file" opens the path prompt.
 func (m *Model) importDemo(variant string) tea.Cmd {
 	root := os.Getenv("XDG_CONFIG_HOME")
 	if root == "" {
 		return nil // never outside a sandbox
+	}
+	switch variant {
+	case "empty": // no editors at all: the picker offers only From a file...
+		return m.openImportPicker()
+	case "file": // the path prompt behind From a file...
+		return m.openImportFilePrompt()
 	}
 	for rel, body := range importDemoFiles {
 		p := filepath.Join(root, rel)

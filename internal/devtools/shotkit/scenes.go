@@ -314,3 +314,14 @@ func ImportPicker() Scene {
 func ImportPanel() Scene {
 	return Scene{Name: "import-panel", Steps: WithEditor(Act("importdemo:panel"), Pause(600*time.Millisecond))}
 }
+
+// ImportPickerEmpty is the picker when no other editor is found: only
+// "From a file..." and a note.
+func ImportPickerEmpty() Scene {
+	return Scene{Name: "import-picker-empty", Steps: WithEditor(Act("importdemo:empty"), Pause(900*time.Millisecond))}
+}
+
+// ImportFilePrompt is the path prompt behind "From a file...".
+func ImportFilePrompt() Scene {
+	return Scene{Name: "import-file-prompt", Steps: WithEditor(Act("importdemo:file"), Pause(600*time.Millisecond))}
+}
