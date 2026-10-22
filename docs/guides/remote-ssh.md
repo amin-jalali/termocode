@@ -46,6 +46,7 @@ terminal panel): the session would show inside itself.
 | `termocode sessions` | List the running sessions |
 | `termocode attach [dir]` | Attach to the session of `dir`; error if none runs |
 | `termocode kill [dir]` | End the session of `dir` |
+| `termocode mcp [--dir dir]` | Run as a stdio MCP server for an agent CLI; it relays to the termocode open in `dir` (default: the current folder or the nearest parent). Without a running termocode the tool list answers and calls fail with a clear message |
 | `termocode --no-session` | Run without a session (the old way) |
 
 ## Two terminals, one session
