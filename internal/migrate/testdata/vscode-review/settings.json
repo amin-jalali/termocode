@@ -1,0 +1,8 @@
+// A real-shaped VS Code user settings file (comments, trailing commas).
+{
+  "editor.tabSize": 2,
+  "editor.wordWrap": "on",
+  "editor.fontSize": 14,
+  "files.autoSave": "afterDelay",
+  "workbench.colorTheme": "One Dark Pro",
+}

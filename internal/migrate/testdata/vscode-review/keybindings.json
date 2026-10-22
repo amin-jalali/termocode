@@ -1,0 +1,7 @@
+// Place your key bindings in this file to override the defaults
+[
+  { "key": "ctrl+alt+o", "command": "workbench.action.quickOpen" },
+  { "key": "cmd+shift+k", "command": "workbench.action.showCommands" },
+  { "key": "ctrl+k ctrl+s", "command": "workbench.action.openGlobalKeybindings" },
+  { "key": "ctrl+alt+d", "command": "editor.action.deleteLines" },
+]
