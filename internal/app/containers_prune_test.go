@@ -10,8 +10,10 @@ import (
 	"github.com/amin-jalali/termocode/internal/containers"
 )
 
+// cardText is the card's words on one line. The side borders go, so a
+// command wrapped onto the next row (a long temp path) still reads whole.
 func cardText(m *Model) string {
-	return strings.Join(strings.Fields(ansi.Strip(m.confirm.View())), " ")
+	return strings.Join(strings.Fields(strings.ReplaceAll(ansi.Strip(m.confirm.View()), "│", " ")), " ")
 }
 
 func pruneToast(m *Model) string { return strings.Join(m.toast.View(120, 40), " ") }
