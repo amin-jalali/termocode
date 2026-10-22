@@ -32,6 +32,13 @@ Use the guides to learn a task. Use the reference to look something up.
 
     Every file termocode reads or writes, where it lives, and what it holds.
 
+-   :material-import: **[Import mappings](import-mappings.md)**
+
+    ---
+
+    What **Import from Another Editor** maps: settings, keys, themes and
+    extensions, for each editor it can read.
+
 -   :material-robot-outline: **[AI tools](ai-tools.md)**
 
     ---

@@ -39,6 +39,7 @@ var nav = []PageInfo{
 	{"Reference", "Commands", "reference/commands.md"},
 	{"Reference", "Settings", "reference/settings.md"},
 	{"Reference", "Config files", "reference/config-files.md"},
+	{"Reference", "Import mappings", "reference/import-mappings.md"},
 	{"Reference", "AI tools", "reference/ai-tools.md"},
 }
 

@@ -73,11 +73,12 @@ func run(root string, check bool) ([]string, error) {
 // render returns file name → content for every page.
 func render() map[string]string {
 	return map[string]string{
-		"keys.md":         renderKeys(),
-		"commands.md":     renderCommands(),
-		"settings.md":     renderSettings(),
-		"config-files.md": renderConfigFiles(),
-		"ai-tools.md":     renderAITools(),
+		"keys.md":            renderKeys(),
+		"commands.md":        renderCommands(),
+		"settings.md":        renderSettings(),
+		"config-files.md":    renderConfigFiles(),
+		"ai-tools.md":        renderAITools(),
+		"import-mappings.md": renderImportMappings(),
 	}
 }
 
