@@ -110,6 +110,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.onAIHistoryClearConfirm(id), true
 	case confirmKindMCPTrust:
 		return m.answerMCPTrust(id), true
+	case confirmKindMCPServe: // an outside agent's call (mcp_serve_confirm.go)
+		return m.answerMCPServeConfirm(id), true
 	case confirmKindAIProfileTrust:
 		return m.answerAIProfileTrust(id), true
 	case confirmKindAIProfileSave:
@@ -137,6 +139,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAIToolConfirm("deny")
 	case confirmKindMCPTrust:
 		return m.answerMCPTrust("deny")
+	case confirmKindMCPServe:
+		return m.answerMCPServeConfirm("deny")
 	case confirmKindAIProfileTrust:
 		return m.answerAIProfileTrust("") // Esc: no answer, ask again next time
 	case confirmKindAIProfileSave:

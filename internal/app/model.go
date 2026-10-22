@@ -665,6 +665,9 @@ type Model struct {
 	// ai is the Group A AI assistant state (ai_state.go). Pointer so value
 	// copies and the streaming goroutines share one instance.
 	ai *aiState
+	// mcpServe is termocode as an MCP server: the socket listener and the
+	// confirm queue of outside agents (mcp_serve*.go); nil when not serving.
+	mcpServe *mcpServeState
 	// HTTP client for .http files (http_state.go); made on first use.
 	http *httpState
 	// secrets is the secret store's unlock flow (secrets_ui.go); the store

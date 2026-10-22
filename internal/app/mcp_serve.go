@@ -123,6 +123,12 @@ func (m *Model) handleMCPServeMsg(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case mcpServeCallMsg:
 		return m.onMCPServeCall(msg), true
+	case mcpServeAskMsg:
+		return m.onMCPServeAsk(msg), true
+	case mcpServeAskGoneMsg:
+		return m.onMCPServeAskGone(msg), true
+	case mcpServeTickMsg:
+		return m.onMCPServeTick(), true
 	}
 	return nil, false
 }
