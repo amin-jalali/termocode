@@ -15,6 +15,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/dbclient"
+	"github.com/amin-jalali/termocode/internal/help"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/secrets"
@@ -35,6 +36,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-connect", Title: "Databases: Connect Selected"},
 		{ID: "db-disconnect", Title: "Databases: Disconnect Selected"},
 		{ID: "db-refresh", Title: "Databases: Refresh"},
+		{ID: "db-filter", Title: "Databases: Filter…"},
 		{ID: "db-configure", Title: "Databases: Configure"},
 		{ID: "db-test-connection", Title: "Databases: Test Connection"},
 		{ID: "db-add-tunnel", Title: "Databases: Add SSH Tunnel…"},
@@ -53,6 +55,7 @@ func databasesPaletteItems() []picker.Item {
 		{ID: "db-export", Title: "Databases: Export Result…"},
 		{ID: "db-import-csv", Title: "Databases: Import CSV into Table…"},
 		{ID: "db-compare-schemas", Title: "Databases: Compare Schemas…"},
+		{ID: "db-guide", Title: "Databases: Open Guide"},
 		{ID: "redis-set-ttl", Title: "Databases: Set Redis Key TTL…"},
 		{ID: "redis-delete-key", Title: "Databases: Delete Redis Key…"},
 	}
@@ -97,6 +100,8 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return m.databaseExportStart(), true
 	case "db-compare-schemas":
 		return m.databaseCompareStart(), true
+	case "db-guide":
+		return m.openHelp(help.Loc{Page: databasesGuidePage}), true
 	}
 	open := m.revealDatabasesView(id == "db-focus")
 	switch id {
@@ -125,6 +130,10 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 		return tea.Batch(open, m.databaseConfigure(false)), true
 	case "db-refresh":
 		return tea.Batch(open, m.databaseRefresh()), true
+	case "db-filter":
+		updated, cmd := m.handleDatabasesSidebarKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+		*m = updated
+		return tea.Batch(open, cmd), true
 	case "db-connect":
 		r, ok := m.databaseCurrentRow()
 		if ok && r.kind == dbNodeConnection {

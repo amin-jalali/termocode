@@ -254,3 +254,42 @@ func TestDatabaseActionNamesAreTheSameEverywhere(t *testing.T) {
 		}
 	}
 }
+
+// DB-14: "Databases: Filter…" (it opens an input) and "Databases: Open
+// Guide" are in the palette, like the Containers entries.
+func TestDatabasesPaletteHasFilterAndGuide(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	titles := map[string]string{}
+	for _, e := range PaletteCatalog() {
+		titles[e.ID] = e.Title
+	}
+	if titles["db-filter"] != "Databases: Filter…" || titles["db-guide"] != "Databases: Open Guide" {
+		t.Fatalf("palette titles: %q / %q", titles["db-filter"], titles["db-guide"])
+	}
+	if p, ok := aiActionPolicies["db-guide"]; !ok || p.Gate != aiGateAuto {
+		t.Errorf("db-guide AI policy = %+v ok=%v", p, ok)
+	}
+	if p, ok := aiActionPolicies["db-filter"]; !ok || p.Gate == aiGateAuto {
+		t.Errorf("db-filter AI policy = %+v ok=%v", p, ok)
+	}
+	m := hoverModel(t)
+	m.databases = newDBState()
+	cmd, ok := m.dispatchDatabasesPalette("db-guide")
+	if !ok || cmd == nil {
+		t.Fatalf("db-guide not handled: ok=%v", ok)
+	}
+	msg := findPreviewMsg(cmd)
+	if msg == nil {
+		t.Fatal("db-guide did not load the guide page")
+	}
+	nm, _ := m.Update(*msg)
+	m = nm.(Model)
+	if !m.helpActive() || m.help.cur.Page != databasesGuidePage {
+		t.Errorf("guide at %+v", m.help.cur)
+	}
+	m = hoverModel(t)
+	m.databases = newDBState()
+	if _, ok := m.dispatchDatabasesPalette("db-filter"); !ok || !m.promptOpen || m.promptKind != promptKindDBFilter {
+		t.Errorf("db-filter did not open the filter input (ok=%v open=%v)", ok, m.promptOpen)
+	}
+}

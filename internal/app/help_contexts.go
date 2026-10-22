@@ -15,6 +15,9 @@ import (
 // the sidebar; the editor is the default. TestHelpContextTopicsResolve
 // checks every topic against the embedded pages.
 
+// databasesGuidePage is the Databases page of the built-in guide.
+const databasesGuidePage = "guides/databases.md"
+
 // helpContexts are the guide sections of the focus states, by name.
 var helpContexts = map[string]string{
 	"editor":        "guides/editing.md#edit-text",
@@ -43,8 +46,8 @@ var helpContexts = map[string]string{
 	"http-response": "guides/http-client.md#the-response-page",
 	"http-file":     "guides/http-client.md#send-a-request",
 	"db-compare":    "guides/databases.md#compare-schemas",
-	"databases":     "guides/databases.md#open-the-view",
-	"db-result":     "guides/databases.md#results",
+	"databases":     databasesGuidePage + "#open-the-view",
+	"db-result":     databasesGuidePage + "#results",
 }
 
 // settingsTopic is the row of setting key in the settings reference:

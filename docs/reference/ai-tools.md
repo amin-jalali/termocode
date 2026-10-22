@@ -1426,7 +1426,9 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `db-explain` | Databases: Explain Statement | never | opens a picker or prompt that only the user can answer; use a typed tool (db_explain) |
 | `db-explain-analyze` | Databases: Explain Analyze Statement | never | executes the statement; use db_explain |
 | `db-export` | Databases: Export Result… | never | opens a picker or prompt that only the user can answer; use a typed tool (db_query + write_file) |
+| `db-filter` | Databases: Filter… | never | the filter is typed by the user; the AI uses db_schema |
 | `db-focus` | Databases: Focus | auto |   |
+| `db-guide` | Databases: Open Guide | auto |   |
 | `db-history` | Databases: History… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-import-csv` | Databases: Import CSV into Table… | never | importing rows is a write the user confirms (db_query) |
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |

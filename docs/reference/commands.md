@@ -147,10 +147,12 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Explain Analyze Statement | `db-explain-analyze` |   |   |
 | Databases: Explain Statement | `db-explain` |   |   |
 | Databases: Export Result… | `db-export` |   |   |
+| Databases: Filter… | `db-filter` |   |   |
 | Databases: Focus | `db-focus` |   |   |
 | Databases: History… | `db-history` |   |   |
 | Databases: Import CSV into Table… | `db-import-csv` |   |   |
 | Databases: New Console | `db-new-console` |   |   |
+| Databases: Open Guide | `db-guide` |   |   |
 | Databases: Open Table Data | `db-data` |   |   |
 | Databases: Pin Result Tab | `db-result-pin` |   |   |
 | Databases: Refresh | `db-refresh` |   |   |

@@ -267,6 +267,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"db-cancel":                    aiAuto(),
 	"db-focus":                     aiAuto(),
 	"db-refresh":                   aiAuto(),
+	"db-filter":                    aiNever("the filter is typed by the user; the AI uses db_schema"),
+	"db-guide":                     aiAuto(),
 	"db-connect":                   aiNever(aiNoPicker),
 	"db-disconnect":                aiDestructive(),
 	"db-test-connection":           aiAuto(),
