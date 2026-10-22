@@ -52,7 +52,7 @@ Alternatives on the table:
   and clear things in the IDE.
 - **Cards are first in, first out**, one at a time, over all connections.
   A call whose agent went away, or that waited two minutes, leaves the
-  queue and gets an error; nothing runs. A declined call gets `-32000`.
+  queue and gets an error; nothing runs. A declined call gets `-32000` with `data: {"reason":"declined"}`; a tool error outside the tool result also uses `-32000` with `{"reason":"tool_error"}` (the MCP spec reserves no code for either).
 - **The client name is a claim.** The card shows the name the agent sent in
   `initialize`, cleaned of control characters. Any process of the same user
   can send any name, so the name is never an identity check.

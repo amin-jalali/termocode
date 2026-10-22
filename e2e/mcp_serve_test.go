@@ -124,6 +124,9 @@ func TestMCPServeCardDenyAndAlwaysAllow(t *testing.T) {
 	if e == nil || e["code"] != float64(-32000) {
 		t.Fatalf("denied call: want error -32000, got %s", s)
 	}
+	if d, _ := e["data"].(map[string]any); d["reason"] != "declined" {
+		t.Fatalf("denied call: want data.reason declined, got %s", s)
+	}
 	tm.WaitGone("wants to run", uiTimeout)
 	time.Sleep(time.Second)
 	if exists(marker) {

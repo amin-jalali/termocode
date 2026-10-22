@@ -57,6 +57,8 @@ var (
 type Error struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
+	// Data is optional machine-readable detail (JSON), e.g. {"reason":"declined"}.
+	Data json.RawMessage `json:"data,omitempty"`
 }
 
 func (e *Error) Error() string { return fmt.Sprintf("%s (code %d)", e.Message, e.Code) }

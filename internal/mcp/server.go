@@ -323,9 +323,9 @@ func (s *MCPServer) handle(conn *extproc.Conn, m extproc.Message) (any, *extproc
 			case errors.Is(err, ErrToolSourceUnavailable):
 				return nil, unavailableError()
 			case errors.As(err, &coded):
-				return nil, &extproc.Error{Code: coded.Code, Message: coded.Message}
+				return nil, codedError(coded)
 			}
-			return nil, &extproc.Error{Code: serverCodeToolFailed, Message: err.Error()}
+			return nil, toolFailedError(err)
 		}
 		return map[string]any{"contents": []map[string]any{{"uri": params.URI, "mimeType": "application/json", "text": text}}}, nil
 	case "tools/call":
@@ -368,13 +368,13 @@ func (s *MCPServer) handle(conn *extproc.Conn, m extproc.Message) (any, *extproc
 			}
 			var coded *CallError
 			if errors.As(err, &coded) {
-				return nil, &extproc.Error{Code: coded.Code, Message: coded.Message}
+				return nil, codedError(coded)
 			}
 			var unavailable toolSourceUnavailable
 			if errors.As(err, &unavailable) && unavailable.Unavailable() {
 				return nil, unavailableError()
 			}
-			return nil, &extproc.Error{Code: serverCodeToolFailed, Message: err.Error()}
+			return nil, toolFailedError(err)
 		}
 		return capServerResult(result), nil
 	default:
