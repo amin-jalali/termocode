@@ -12,6 +12,9 @@ func (m *Model) databaseCardsDemo(variant string) (tea.Cmd, bool) {
 	case "console":
 		m.databasesDemo("")
 		return m.databaseNewConsole("local-pg"), true
+	case "add-picker":
+		m.databasesDemo("")
+		return m.openDatabaseTypePicker(), true
 	}
 	return nil, false
 }

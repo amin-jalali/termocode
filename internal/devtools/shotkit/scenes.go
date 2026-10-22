@@ -110,6 +110,7 @@ func DatabasesVariant(name, variant string) Scene {
 func dbCardScenes() []Scene {
 	return []Scene{
 		DatabasesVariant("db-console", "console"),
+		DatabasesVariant("db-add-picker", "add-picker"),
 	}
 }
 
