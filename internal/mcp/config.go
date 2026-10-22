@@ -32,6 +32,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/secrets"
 )
 
 // Transport types (mcp.json "type").
@@ -148,6 +150,12 @@ func ParseFile(b []byte, source, path string) ([]Server, []string, error) {
 		s.Source, s.SourcePath = source, path
 		if s.Auth != nil && s.Auth.GH != "" && source != SourceUser && s.Problem == "" {
 			s.Problem = "invalid: auth.gh is only allowed in your own mcp.json"
+		}
+		if source != SourceUser && secrets.HasCmdRef(string(raw)) {
+			// A command from a file that travels with the repository
+			// would run on the reader's machine: refuse it, never run it.
+			s.Problem = "invalid: " + secrets.ProjectCmdWarning
+			warns = append(warns, fmt.Sprintf("%s: server %s uses ${cmd:}; %s", path, name, secrets.ProjectCmdWarning))
 		}
 		if w := secretLiteral(s); w != "" {
 			warns = append(warns, fmt.Sprintf("%s: server %s has a literal secret in %s; use ${secret:NAME} or ${VAR}", path, name, w))
