@@ -139,6 +139,10 @@ type Options struct {
 	// OnFrame, when set, gets the settled frame after start-up and after
 	// every step, with how long a recording should show it (Step.Hold).
 	OnFrame func(frame string, hold time.Duration)
+	// ConfigDir is the private config root (XDG_CONFIG_HOME) instead of a
+	// random temp dir, for scenes that show its path (the secret store
+	// screen). The caller owns the name; Run empties and removes it.
+	ConfigDir string
 }
 
 // quietMsgs are message types dropped in Quiet mode (by %T).
@@ -184,8 +188,17 @@ func (r recorder) View() string {
 // process-wide state (environment, theme globals), so scenes must not run
 // concurrently in one process.
 func Run(sc Scene, w, h int, opt Options) (string, error) {
-	cfg, err := os.MkdirTemp("", "termocode-shots-")
-	if err != nil {
+	var (
+		cfg string
+		err error
+	)
+	if opt.ConfigDir != "" {
+		cfg = opt.ConfigDir
+		_ = os.RemoveAll(cfg)
+		if err := os.MkdirAll(cfg, 0o755); err != nil {
+			return "", err
+		}
+	} else if cfg, err = os.MkdirTemp("", "termocode-shots-"); err != nil {
 		return "", err
 	}
 	defer os.RemoveAll(cfg)

@@ -120,6 +120,9 @@ func goldenScenes() []Scene {
 		ContainersVariant("containers-remote-tags", "tags"), // CP-12
 		HTTPFile(),
 		HTTPResponse(),
+		SecretsScene("secrets-migrate-card", "card"),
+		SecretsScene("secrets-store-locked", "locked"),
+		SecretsScene("secrets-store", "open"),
 	}
 }
 
@@ -308,7 +311,9 @@ func runChild(name string) int {
 		if c.name != name {
 			continue
 		}
-		frame, err := Run(c.scene, c.w, c.h, Options{Settle: true, Quiet: true, FinalQuiet: 2 * time.Second})
+		frame, err := Run(c.scene, c.w, c.h, Options{Settle: true, Quiet: true, FinalQuiet: 2 * time.Second,
+			// A fixed name: the secret store screen shows its path.
+			ConfigDir: filepath.Join(os.TempDir(), "shots-cfg")})
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "render:", err)
 			return 1

@@ -121,6 +121,12 @@ func ContainersComposeDownConfirm() Scene {
 	return Scene{Name: "containers-compose-down-confirm", Steps: WithEditor(Act("contdemo:compose-down"), Key("D"), Pause(400*time.Millisecond))}
 }
 
+// SecretsScene shows the secret store: variant "card" (migration card),
+// "locked" or "open" (the store screen, see app secretsdemo).
+func SecretsScene(name, variant string) Scene {
+	return Scene{Name: name, Steps: WithEditor(Act("secretsdemo:"+variant), Pause(600*time.Millisecond))}
+}
+
 func ContainersImages() Scene   { return ContainersVariant("containers-images", "images") }
 func ContainersNetworks() Scene { return ContainersVariant("containers-networks", "networks") }
 func ContainersVolumes() Scene  { return ContainersVariant("containers-volumes", "volumes") }
