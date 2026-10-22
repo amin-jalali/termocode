@@ -296,6 +296,11 @@ func (m *Model) handleImportConfirm(id string) (tea.Cmd, bool) {
 			return m.applyImport(), true
 		}
 		return nil, true // Back: the panel stays open
+	case confirmKindImportUndo:
+		if id == "undo" {
+			return m.runUndoImport(), true
+		}
+		return nil, true
 	}
 	return nil, false
 }

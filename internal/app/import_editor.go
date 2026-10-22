@@ -274,10 +274,3 @@ func (m Model) importLayer(base string) string {
 	o.X, o.Y = p.Origin()
 	return modalOverlay(base, box, m.w, m.h, &o)
 }
-
-// undoLastImport restores the files of the last import (import_undo.go).
-func (m *Model) undoLastImport() tea.Cmd {
-	var c tea.Cmd
-	m.toast, c = m.toast.PushDetail(toast.Info, "Nothing to undo", "No import from another editor to undo.")
-	return c
-}
