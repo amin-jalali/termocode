@@ -21,7 +21,7 @@ agent's command. What it adds depends on the agent:
 |---|---|---|
 | Claude Code | Adds `--mcp-config <file>` to the command. The file is private (mode `0600`) in the session folder. It is removed when the tab is gone. | Not touched. |
 | Codex | Adds two `-c mcp_servers.termocode…` options to the command. | Not touched. |
-| OpenCode | Can only read MCP servers from `opencode.json` in your project. A card shows the file and the entry. **Add** writes it, **Not now** (or `Esc`) starts OpenCode without it. | Written only after you say yes. |
+| OpenCode | Can only read MCP servers from `opencode.json` in your project. A card shows the file and the entry. **Add** writes it, **Not now** (or `Esc`) starts OpenCode without it. | Written only after you say yes. The file holds absolute paths of this machine (the `termocode` program and your folder): check them before you commit it. |
 | Gemini CLI | Shows a tip. Add termocode by hand (next section). | Not touched. |
 | Aider | Shows a tip: Aider has no MCP support. | Not touched. |
 
@@ -81,6 +81,15 @@ user can open. termocode checks the user of every connection. See
 - **Ask first (card):** run a task or tests, start and steer the debugger,
   evaluate an expression in the debugger, run some palette commands
   (`execute_action`) such as stop, clear or close things.
+
+## Protocol and resource
+
+termocode answers the MCP revisions `2025-03-26`, `2025-06-18` and
+`2025-11-25`, and the stateless revision `2026-07-28` (no `initialize`;
+`server/discover` tells what is supported). Besides tools it offers one
+read-only resource, `termocode://editor/state`: the active file, cursor,
+open buffers, git branch and the number of diagnostics. It needs no
+confirmation and is empty when termocode is not open.
 
 ## What the agent can not do
 

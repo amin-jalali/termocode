@@ -83,6 +83,12 @@ Alternatives on the table:
 ## Consequences
 - **+** Agents get the IDE's eyes (diagnostics, tests, debugger) without a
   new port, a new login or a second copy of the policy.
+- **+** The server speaks the handshake revisions (`2025-03-26` to
+  `2025-11-25`) and the stateless revision `2026-07-28`: no `initialize`,
+  the revision and the client name sit in each request's `_meta`, and
+  `server/discover` lists what is supported. One read-only resource,
+  `termocode://editor/state` (file, cursor, buffers, branch, diagnostics
+  counts), needs no card. Static mode lists no resources.
 - **+** One table drives the list, the gate and the generated docs, so they
   cannot drift apart.
 - **+** A same-user check plus a private folder is the same trust line as
