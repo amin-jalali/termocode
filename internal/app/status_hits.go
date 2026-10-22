@@ -33,6 +33,8 @@ func (m Model) statusSpans() []statusSpan {
 	add("status:diag", x0, x1, ok)
 	x0, x1, ok = sb.TestsChipSpan(st)
 	add("status:tests", x0, x1, ok)
+	x0, x1, ok = sb.AgentsChipSpan(st)
+	add("status:agents", x0, x1, ok)
 	x0, x1, ok = sb.ServicesChipSpan(st)
 	add("status:services", x0, x1, ok)
 	if m.ext != nil && len(st.Ext) > 0 {

@@ -123,6 +123,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 			m.revealTestsView(true)
 			return m, m.ensureTestsDiscovered()
 		}
+		if msg.Type == tea.MouseLeft && m.statusHitAt(msg.X, msg.Y) == "status:agents" {
+			return m, m.openMCPServeStatus() // outside agents on the MCP server
+		}
 		if msg.Type == tea.MouseLeft && m.statusHitAt(msg.X, msg.Y) == "status:services" {
 			return m, m.revealServicesView(true)
 		}

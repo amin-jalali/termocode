@@ -83,6 +83,7 @@ var tooltipLabels = map[string]tooltipSpec{
 	"status:lsp":      {name: "Language servers", help: "guides/language-servers.md#install-a-language-server"},
 	"status:diag":     {name: "Problems", palette: "problems-panel", help: "guides/tasks-problems.md#the-problems-panel"},
 	"status:tests":    {name: "Test results", help: "guides/tests.md#read-a-failure"},
+	"status:agents":   {name: "Outside agents (MCP server)", help: "guides/mcp.md#let-an-outside-agent-use-termocode"},
 	"status:services": {name: "Services", help: "guides/services.md#the-view"},
 	"status:debug":    {name: "Call stack", help: "guides/debug.md#step-through-code"},
 	"status:branch":   {name: "Git branch", help: helpBranches},

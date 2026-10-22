@@ -473,4 +473,7 @@ var (
 	GlyphOK       = Icon{NerdFont: "✓", Unicode: "✓", ASCII: "v"}
 	GlyphMCP      = Icon{NerdFont: "\uf1e6", Unicode: "⌁", ASCII: "~"} // nf-fa-plug
 	GlyphWait     = Icon{NerdFont: "\uf017", Unicode: "◷", ASCII: "~"} // nf-fa-clock_o
+	// GlyphAgents marks outside agents connected to termocode's MCP
+	// server (status-bar chip).
+	GlyphAgents = Icon{NerdFont: "\uf0ec", Unicode: "⇄", ASCII: "="} // nf-fa-exchange
 )

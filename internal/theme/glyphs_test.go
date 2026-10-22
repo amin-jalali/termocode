@@ -33,7 +33,7 @@ func TestGlyphTable(t *testing.T) {
 		// HTTP client.
 		"send": GlyphSend, "sending": GlyphSending, "fail": GlyphFail, "redirect": GlyphRedirect,
 		// Connect a service (MCP wizard).
-		"radio-on": GlyphRadioOn, "radio-off": GlyphRadioOff, "ok": GlyphOK, "mcp": GlyphMCP, "wait": GlyphWait}
+		"radio-on": GlyphRadioOn, "radio-off": GlyphRadioOff, "ok": GlyphOK, "mcp": GlyphMCP, "wait": GlyphWait, "agents": GlyphAgents}
 	for name, g := range glyphs {
 		for _, m := range []IconMode{IconModeNerdFont, IconModeUnicode, IconModeASCII} {
 			CurrentIconMode = m
