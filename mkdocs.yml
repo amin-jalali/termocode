@@ -137,3 +137,4 @@ nav:
           - "0014 Database access": adr/0014-database-access.md
           - "0015 Agent pipelines": adr/0015-agent-pipelines-dag-in-ui-process.md
           - "0016 Container engines use the CLI": adr/0016-container-engine-cli.md
+          - "0017 MCP server": adr/0017-mcp-server.md
