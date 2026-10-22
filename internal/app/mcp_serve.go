@@ -209,15 +209,9 @@ func (s *mcpServeSource) Call(ctx context.Context, name string, args map[string]
 			return mcp.CallResult{}, &mcp.CallError{Code: mcp.CodeInvalidParams, Message: msg}
 		}
 	}
-	mutating, class := tool.Mutating, tool.Class
-	if tool.Gate != nil {
-		mutating, class = tool.Gate(args)
-	}
 	gate := ai.GateAuto
-	if mutating {
+	if t, ask := mcpServeGate(tool, args); ask {
 		gate = ai.GateConfirm
-		t := tool
-		t.Mutating, t.Class = mutating, class
 		if err := s.ask(ctx, client, t, t.Human(args)); err != nil {
 			audit(gate, "declined: "+err.Error())
 			return mcp.CallResult{}, err
@@ -233,6 +227,16 @@ func (s *mcpServeSource) Call(ctx context.Context, name string, args map[string]
 	out = ai.RedactSecrets(out) // the tools redact already; once more for safety
 	audit(gate, out)
 	return mcp.CallResult{Content: []mcp.Content{{Type: "text", Text: out}}}, nil
+}
+
+// mcpServeGate decides whether a call asks the user first: the tool's
+// per-call Gate, else its Mutating flag, as in the chat (no auto-approve
+// for outside agents). The returned tool carries the call's class.
+func mcpServeGate(t ai.Tool, args map[string]any) (ai.Tool, bool) {
+	if t.Gate != nil {
+		t.Mutating, t.Class = t.Gate(args)
+	}
+	return t, t.Mutating
 }
 
 // ask runs the confirm func; without one every mutating call is declined.
