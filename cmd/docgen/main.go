@@ -376,6 +376,10 @@ func renderAITools() string {
 		"These calls can lose data.\n")
 	b.WriteString("- **never**: the AI can not do it. The model gets the reason.\n\n")
 	b.WriteString("Some tools have an `op` argument; then each op has its own gate.\n\n")
+	b.WriteString("The column **MCP server** says what an outside agent (Claude Code, Codex, …) gets when it uses termocode as an MCP server " +
+		"(see [Give your agent the IDE's tools](../guides/agents.md)): **yes** runs at once, **asks** shows a card every time, " +
+		"**some ask** means reads run at once and the rest ask, **no** means the tool is not offered. " +
+		"For a tool with an `op` argument, only the ops the MCP server offers count. It never offers the tools of your own MCP servers.\n\n")
 	b.WriteString("**MCP tools** are not listed here: they come from the MCP servers in your `mcp.json` " +
 		"(see the MCP guide). They are named `mcp__<server>__<tool>`. A tool the server marks read-only runs at once; " +
 		"the others ask, with **Always allow mcp:<server>**; a tool whose name says delete, remove, archive, destroy, " +
@@ -383,15 +387,23 @@ func renderAITools() string {
 
 	tools := app.AIToolCatalog()
 	b.WriteString("## Overview\n\n")
-	t := newTable(&b, "Tool", "Gate", "What it does")
+	mcpGate := app.MCPServeGateDocs()
+	mcpWord := func(name string) string {
+		if w, ok := mcpGate[name]; ok {
+			return w
+		}
+		return app.MCPServeNo
+	}
+	t := newTable(&b, "Tool", "Gate", "MCP server", "What it does")
 	for _, d := range tools {
-		t.row("["+code(d.Name)+"](#"+d.Name+")", gateCell(d.Gate), cell(firstSentence(d.Description)))
+		t.row("["+code(d.Name)+"](#"+d.Name+")", gateCell(d.Gate), mcpWord(d.Name), cell(firstSentence(d.Description)))
 	}
 	b.WriteString("\n## Tools\n\n")
 	for _, d := range tools {
 		fmt.Fprintf(&b, "### %s\n\n", d.Name)
 		b.WriteString(d.Description + "\n\n")
 		fmt.Fprintf(&b, "**Gate:** %s\n\n", strings.ReplaceAll(d.Gate, "; ", " · "))
+		fmt.Fprintf(&b, "**MCP server:** %s\n\n", mcpWord(d.Name))
 		if len(d.Args) == 0 {
 			b.WriteString("No arguments.\n\n")
 			continue
