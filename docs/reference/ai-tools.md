@@ -1359,6 +1359,8 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `output-clear` | Output: Clear Channel | confirm (ide) |   |
 | `pick-theme` | Preferences: Color Theme… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `pin-tab` | Tab: Toggle Pinned | auto |   |
+| `prefs-import-editor` | Preferences: Import from Another Editor... | never | importing another editor's settings stays with the user |
+| `prefs-import-undo` | Preferences: Undo Last Import | never | undoing a settings import stays with the user |
 | `prev-buffer` | View: Previous Editor | auto |   |
 | `prev-diagnostic` | Go to Previous Problem | auto |   |
 | `prev-hunk` | Git: Go to Previous Change | auto |   |

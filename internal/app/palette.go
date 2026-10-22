@@ -48,6 +48,7 @@ const (
 	pickerKindDebugConfig    // Group D — debug configuration pickers (dap.go)
 	pickerKindSetupStep      // the setup card's step chooser (setup_card_ui.go)
 	pickerKindHelpGuide      // Help: Open Guide… (help.go)
+	pickerKindImportSource   // Import from Another Editor: the source (import_editor.go)
 )
 
 // loadFiles walks the cwd and returns one picker.Item per file (relative path).
@@ -325,6 +326,7 @@ func paletteItems() []picker.Item {
 		// Group H — settings sync + user snippets.
 		{ID: "settings-export", Title: "Preferences: Export Settings..."},
 		{ID: "settings-import", Title: "Preferences: Import Settings..."},
+		importPaletteItems()[0], importPaletteItems()[1], // import_editor.go
 		{ID: "snippets-manage", Title: "Snippets: Manage..."},
 		// ── Group E: Testing (test_explorer.go / test_runner.go) ──
 		{ID: "testing-focus", Title: "Testing: Focus Test Explorer"},
@@ -722,6 +724,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 	case "snippets-manage":
 		return m.openSnippetManager()
 	default:
+		if cmd, ok := m.dispatchImportPalette(id); ok { // import_editor.go
+			return cmd
+		}
 		if cmd, ok := m.dispatchAIPalette(id); ok { // Group A
 			return cmd
 		}

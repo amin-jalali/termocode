@@ -624,6 +624,11 @@ type Model struct {
 	settingsModal     settingsModal
 	settingsModalOpen bool
 
+	// importOpen shows the review panel of Preferences: Import from
+	// Another Editor… (import_editor.go); imp holds its state.
+	importOpen bool
+	imp        *importState
+
 	// themePromptKey is the palette field the user is editing in the
 	// custom-theme editor (BgEditor, SyntaxKeyword, etc.). Mirrors
 	// settingPromptID's usage.

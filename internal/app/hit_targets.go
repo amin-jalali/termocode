@@ -85,7 +85,7 @@ func (m Model) screenTargets() []hitTarget {
 		return nil
 	}
 	switch {
-	case m.promptOpen, m.settingsModalOpen, m.recentsOpen, m.menuOpen, m.reviewOpen && !m.confirmOpen:
+	case m.promptOpen, m.settingsModalOpen, m.recentsOpen, m.menuOpen, m.reviewOpen && !m.confirmOpen, m.importOpen && !m.confirmOpen:
 		return nil // not mapped yet
 	case m.confirmOpen:
 		return m.confirmTargets()

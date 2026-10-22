@@ -203,6 +203,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"customize-keybindings":   aiNever(aiNoPicker),
 	"settings-export":         aiNever("settings import / export stays with the user"),
 	"settings-import":         aiNever("settings import / export stays with the user"),
+	"prefs-import-editor":     aiNever("importing another editor's settings stays with the user"),
+	"prefs-import-undo":       aiNever("undoing a settings import stays with the user"),
 	"config-commands":         aiConfirm(ai.ClassIDE),
 	"config-theme":            aiConfirm(ai.ClassIDE),
 

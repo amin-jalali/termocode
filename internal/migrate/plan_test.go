@@ -6,26 +6,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/amin-jalali/termocode/internal/app"
 	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/lspinstall"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
+// The setting targets are checked against the app's SettingsCatalog in
+// catalog_test.go (package migrate_test: the app imports this package).
 func TestCatalogCoverage(t *testing.T) {
-	settings := map[string]bool{}
-	for _, entry := range app.SettingsCatalog() {
-		if entry.Key != "" {
-			settings[entry.Key] = true
-		}
-	}
-	for source, table := range SettingMaps {
-		for _, target := range table {
-			if !settings[target] {
-				t.Errorf("%s setting target %q is absent from SettingsCatalog", source, target)
-			}
-		}
-	}
 	actions := map[string]bool{}
 	for _, action := range keymap.AllActions() {
 		actions[keymap.ActionName(action)] = true

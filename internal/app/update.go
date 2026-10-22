@@ -17,6 +17,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/explorer"
 	"github.com/amin-jalali/termocode/internal/findbar"
 	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/importview"
 	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/menu"
 	"github.com/amin-jalali/termocode/internal/nvim"
@@ -274,6 +275,11 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onSettingsRowSelected(msg.ID)
 	case SettingsCloseMsg:
 		m.settingsModalOpen = false
+		return m, nil
+	case importPlanMsg:
+		return m, m.onImportPlan(msg)
+	case importview.CloseMsg:
+		m.closeImport()
 		return m, nil
 	case menu.SelectMsg:
 		m.menuOpen = false
@@ -538,6 +544,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	}
 	if m.connectOpen {
 		return m.routeToConnect(msg)
+	}
+	if m.importOpen {
+		return m.routeToImport(msg)
 	}
 	if m.reviewOpen {
 		return m.routeToReview(msg)
@@ -2152,6 +2161,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 	case pickerKindSettingChoice:
 		m.settingPromptID = m.settingChoiceRow
 		return m.applySettingValue(msg.ID)
+	case pickerKindImportSource:
+		return m.onImportSourcePicked(msg.ID)
 	case pickerKindClipboard:
 		// msg.ID looks like "clip-N" where N is the index into the ring.
 		var idx int
