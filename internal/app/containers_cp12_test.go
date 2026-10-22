@@ -595,7 +595,7 @@ func podSession(t *testing.T) (*Model, *servicestest.Fake) {
 		st.collapsed[hostSection(s)] = false
 	}
 	m := svcTestModel(st, 100, 80)
-	pumpHost(t, &m, m.containersDetect())
+	pumpHostUntil(t, &m, m.containersDetect(), contextsLoaded(&m)) // detect is slow on a busy runner
 	if st.containerEngine.Kind != "podman" || !st.containerEngine.Reachable || len(st.contextRows) != 2 {
 		t.Fatalf("setup: engine=%+v contexts=%v", st.containerEngine, st.contextRows)
 	}

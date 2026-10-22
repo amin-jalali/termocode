@@ -26,12 +26,61 @@ func pumpHost(t *testing.T, m *Model, cmd tea.Cmd) {
 	pumpHostUntil(t, m, cmd, nil)
 }
 
-// pumpHostUntil is pumpHost that waits up to 30 s for a message until
-// done reports one, and then 500 ms like pumpHost. A slow step (an
-// encrypted-file save under -race) is then not dropped as a tick.
+// pumpHostUntil is pumpHost for a slow step (a detect or an
+// encrypted-file save under -race on a busy runner): every command runs
+// on its own goroutine at once, so a watcher that never returns blocks
+// nothing, and the pump waits up to 30 s until done (asked after each
+// message is handled) reports true, then 500 ms for what follows. With done nil it is pumpHost.
 func pumpHostUntil(t *testing.T, m *Model, cmd tea.Cmd, done func(tea.Msg) bool) {
 	t.Helper()
 	t.Cleanup(func() { m.services.stopHostWatch(); m.services.stopWatch() })
+	if done == nil {
+		pumpHostSerial(t, m, cmd)
+		return
+	}
+	results := make(chan tea.Msg, 64)
+	n := 0
+	start := func(c tea.Cmd) {
+		if c == nil {
+			return
+		}
+		if n++; n > 200 {
+			t.Fatal("command loop")
+		}
+		go func() { results <- c() }()
+	}
+	start(cmd)
+	deadline := time.After(30 * time.Second)
+	for {
+		quiet := time.After(500 * time.Millisecond)
+		if done != nil {
+			quiet = nil
+		}
+		select {
+		case got := <-results:
+			if b, ok := got.(tea.BatchMsg); ok {
+				for _, c := range b {
+					start(c)
+				}
+				continue
+			}
+			next, _ := m.handleServicesMsg(got)
+			if done != nil && done(got) {
+				done = nil
+			}
+			start(next)
+		case <-deadline:
+			if done != nil {
+				t.Fatal("the awaited message never came")
+			}
+		case <-quiet:
+			return
+		}
+	}
+}
+
+func pumpHostSerial(t *testing.T, m *Model, cmd tea.Cmd) {
+	t.Helper()
 	queue := []tea.Cmd{cmd}
 	for n := 0; len(queue) > 0; n++ {
 		if n > 200 {
@@ -50,24 +99,16 @@ func pumpHostUntil(t *testing.T, m *Model, cmd tea.Cmd, done func(tea.Msg) bool)
 				queue = append(queue, b...)
 				continue
 			}
-			if done != nil && done(got) {
-				done = nil
-			}
 			next, _ := m.handleServicesMsg(got)
 			queue = append(queue, next)
-		case <-time.After(wait(done)):
-			if done != nil {
-				t.Fatal("the awaited message never came")
-			}
+		case <-time.After(500 * time.Millisecond):
 		}
 	}
 }
 
-func wait(done func(tea.Msg) bool) time.Duration {
-	if done != nil {
-		return 30 * time.Second
-	}
-	return 500 * time.Millisecond
+// contextsLoaded reports the detect has filled CONTEXTS.
+func contextsLoaded(m *Model) func(tea.Msg) bool {
+	return func(tea.Msg) bool { return len(m.services.contextRows) > 0 }
 }
 
 // ctxSession is a Containers view with every section open, detected and
@@ -86,7 +127,7 @@ func ctxSession(t *testing.T) (*Model, *servicestest.Fake) {
 		st.collapsed[hostSection(s)] = false
 	}
 	m := svcTestModel(st, 100, 80)
-	pumpHost(t, &m, m.containersDetect())
+	pumpHostUntil(t, &m, m.containersDetect(), contextsLoaded(&m)) // detect is slow on a busy runner
 	if !st.containerEngine.Reachable || len(st.contextRows) != 2 {
 		t.Fatalf("setup: engine=%+v contexts=%v", st.containerEngine, st.contextRows)
 	}
