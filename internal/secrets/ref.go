@@ -72,6 +72,75 @@ func IsRef(s string) bool {
 	return err == nil
 }
 
+// PromptHint is the hint every secret prompt shows: a value, or a
+// reference that is stored as text and resolved on use.
+const PromptHint = "value, or ${env:NAME} / ${cmd:…} / ${dotenv:NAME}"
+
+// BadRefText is the message a prompt shows for a malformed reference. It
+// is fixed words: the typed text may be half a secret.
+const BadRefText = "Not a valid reference. Use ${env:NAME}, ${dotenv:NAME} or ${cmd:…} (one line), or type the value itself."
+
+// TypedProblem checks what a user typed into a secret prompt. "" means
+// accept it (a plain value or a valid reference); anything else is the
+// message to show, and nothing may be saved.
+func TypedProblem(s string) string {
+	if _, err := ParseRef(s); err != nil && !errors.Is(err, ErrNotRef) {
+		return BadRefText
+	}
+	return ""
+}
+
+// HasCmdRef reports whether s contains a ${cmd:...} reference anywhere.
+// Project files (.termocode/*.json) must not: a command from a file that
+// travels with the repository would run on the reader's machine.
+func HasCmdRef(s string) bool {
+	return cmdRefRe.MatchString(s)
+}
+
+var cmdRefRe = regexp.MustCompile(`\$\{\s*cmd\s*:`)
+
+// ProjectCmdWarning is the loaders' text for a ${cmd:} in a project file.
+const ProjectCmdWarning = "${cmd:} is not allowed in project files; keep it in your own configuration"
+
+// First use of a ${cmd:} text: the app shows it once in a toast so a
+// tampered index is noticed. The set lives for the whole process (Lock
+// forgets cached outputs, not what the user has already been shown).
+var cmdNotice struct {
+	sync.Mutex
+	seen   map[string]bool
+	notify func(string)
+}
+
+// SetCmdNotifier sets the func called with a command text the first time
+// it runs in this process (nil: none). It may run on any goroutine and
+// must not block. It never gets the command's output.
+func SetCmdNotifier(fn func(string)) {
+	cmdNotice.Lock()
+	defer cmdNotice.Unlock()
+	cmdNotice.notify = fn
+}
+
+// ResetCmdNotices forgets which commands were shown (tests).
+func ResetCmdNotices() {
+	cmdNotice.Lock()
+	defer cmdNotice.Unlock()
+	cmdNotice.seen = nil
+}
+
+func noteCmd(text string) {
+	cmdNotice.Lock()
+	if cmdNotice.seen == nil {
+		cmdNotice.seen = map[string]bool{}
+	}
+	first := !cmdNotice.seen[text]
+	cmdNotice.seen[text] = true
+	fn := cmdNotice.notify
+	cmdNotice.Unlock()
+	if first && fn != nil {
+		fn(text)
+	}
+}
+
 // DefaultCmdTimeout bounds one ${cmd:} run.
 const DefaultCmdTimeout = 10 * time.Second
 
@@ -171,6 +240,7 @@ func (r *Resolver) resolveCmd(ref Ref) (string, error) {
 	}
 	r.mu.Unlock()
 
+	noteCmd(ref.Arg)
 	timeout := r.Timeout
 	if timeout <= 0 {
 		timeout = DefaultCmdTimeout

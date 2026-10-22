@@ -200,3 +200,101 @@ func TestResolveCmdCache(t *testing.T) {
 		t.Fatalf("after ForgetCache ran %d times, want 2", n)
 	}
 }
+
+func TestTypedProblem(t *testing.T) {
+	ok := []string{"plain-value-123", "${env:HOME}", "${dotenv:API_KEY}", "${cmd:pass show a/b}", "  ${cmd: op read x}  "}
+	for _, s := range ok {
+		if p := TypedProblem(s); p != "" {
+			t.Errorf("TypedProblem(%q) = %q, want accepted", s, p)
+		}
+	}
+	bad := []string{"${env:}", "${foo:x}", "${cmd:echo hi", "${cmd:}", "${dotenv:1BAD}", "${nocolon}"}
+	for _, s := range bad {
+		p := TypedProblem(s)
+		if p == "" {
+			t.Errorf("TypedProblem(%q) accepted a bad reference", s)
+		}
+		if strings.Contains(p, "foo") || strings.Contains(p, "echo hi") {
+			t.Errorf("message quotes the typed text: %q", p)
+		}
+	}
+}
+
+func TestHasCmdRef(t *testing.T) {
+	for s, want := range map[string]bool{
+		"${cmd:pass show x}":          true,
+		"Bearer ${cmd:gh auth token}": true,
+		"${secret:NAME}":              false,
+		"${dotenv:KEY}":               false,
+		"${env:KEY}":                  false,
+		"cmd: not a ref":              false,
+	} {
+		if got := HasCmdRef(s); got != want {
+			t.Errorf("HasCmdRef(%q) = %v, want %v", s, got, want)
+		}
+	}
+}
+
+func TestCmdNoticeOncePerText(t *testing.T) {
+	ResetCmdNotices()
+	var seen []string
+	SetCmdNotifier(func(s string) { seen = append(seen, s) })
+	t.Cleanup(func() { SetCmdNotifier(nil); ResetCmdNotices() })
+
+	r := &Resolver{}
+	line := "echo notice-OUTPUT-123"
+	for i := 0; i < 3; i++ {
+		if _, err := r.Resolve(Ref{RefCmd, line}); err != nil {
+			t.Fatal(err)
+		}
+		r.ForgetCache() // the output is run again, the notice is not
+	}
+	// Another resolver in the same process: still shown once.
+	if _, err := (&Resolver{}).Resolve(Ref{RefCmd, line}); err != nil {
+		t.Fatal(err)
+	}
+	if len(seen) != 1 || seen[0] != line {
+		t.Fatalf("notices = %q, want the command text once", seen)
+	}
+	if strings.Contains(seen[0], "OUTPUT") && !strings.Contains(line, "OUTPUT") {
+		t.Fatal("notice carries output")
+	}
+	if _, err := r.Resolve(Ref{RefCmd, "echo other-VALUE"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(seen) != 2 {
+		t.Fatalf("a new command text must notify: %q", seen)
+	}
+}
+
+func TestCmdNoticeNeverCarriesOutput(t *testing.T) {
+	ResetCmdNotices()
+	var seen []string
+	SetCmdNotifier(func(s string) { seen = append(seen, s) })
+	t.Cleanup(func() { SetCmdNotifier(nil); ResetCmdNotices() })
+	// The output word is built at run time; the command text lacks it.
+	line := "printf '%s-%s\\n' secret VALUE9"
+	v, err := (&Resolver{}).Resolve(Ref{RefCmd, line})
+	if err != nil || v != "secret-VALUE9" {
+		t.Fatalf("Resolve = %q %v", v, err)
+	}
+	for _, s := range seen {
+		if strings.Contains(s, "secret-VALUE9") {
+			t.Fatalf("notice carries the output: %q", s)
+		}
+	}
+}
+
+// ref.go starts commands only through internal/spawn.
+func TestRefDoesNotImportOSExec(t *testing.T) {
+	b, err := os.ReadFile("ref.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), `"os/exec"`) {
+		t.Fatal(`ref.go imports "os/exec"; use internal/spawn`)
+	}
+	if !strings.Contains(string(b), "internal/spawn") {
+		t.Fatal("ref.go does not use internal/spawn")
+	}
+}
