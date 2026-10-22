@@ -35,7 +35,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 )
@@ -221,7 +220,7 @@ func Alive(pid int) bool {
 	if pid <= 0 {
 		return false
 	}
-	if syscall.Kill(pid, 0) != nil {
+	if signalZero(pid) != nil {
 		return false
 	}
 	b, err := os.ReadFile("/proc/" + strconv.Itoa(pid) + "/stat")
