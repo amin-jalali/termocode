@@ -13,6 +13,8 @@ var ThemeNames = map[string]string{
 	"solarized dark": "solarized-dark",
 	// JetBrains: the dark UI themes and editor schemes look like Dark+, the light ones like Latte.
 	"darcula": "vscode-dark-plus", "experimentaldark": "vscode-dark-plus", "jetbrainsdarktheme": "vscode-dark-plus", "intellij dark": "vscode-dark-plus",
+	// Sublime schemes (file name without extension).
+	"monokai": "one-dark", "mariana": "one-dark", "solarized (dark)": "solarized-dark", "breakers": "catppuccin-latte", "solarized (light)": "catppuccin-latte",
 	"experimentallight": "catppuccin-latte", "jetbrainslighttheme": "catppuccin-latte", "intellij light": "catppuccin-latte", "intellij": "catppuccin-latte",
 }
 

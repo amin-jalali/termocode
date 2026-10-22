@@ -15,7 +15,7 @@ var ActionMaps = map[string]map[string]string{
 	"zed":       {"workspace::ActivateFile": "QuickOpen", "command_palette::Toggle": "CommandPalette", "terminal::Toggle": "ToggleTerminal", "workspace::Save": "Save", "pane::CloseActiveItem": "CloseBuffer"},
 	"helix":     {"file_picker": "QuickOpen", "command_palette": "CommandPalette", "save": "Save", "search_next": "NextSearchResult"},
 	"jetbrains": jetBrainsActions,
-	"sublime":   {"show_overlay": "QuickOpen", "show_command_palette": "CommandPalette", "save": "Save", "toggle_side_bar": "ToggleExplorer", "find_in_files": "WorkspaceSearch"},
+	"sublime":   sublimeActions,
 	"vim":       {},
 }
 
@@ -113,6 +113,13 @@ func normalizeSourceKey(source, input string) (string, bool) {
 				}
 			}
 			s = strings.Join(append(mods, strings.ToLower(parts[len(parts)-1])), "+")
+		}
+	} else if source == "sublime" {
+		s = strings.ToLower(s)
+		if i := strings.LastIndex(s, "+"); i > 0 && i < len(s)-1 {
+			if k, ok := sublimeKeyNames[s[i+1:]]; ok {
+				s = s[:i+1] + k
+			}
 		}
 	} else {
 		s = strings.ToLower(s)

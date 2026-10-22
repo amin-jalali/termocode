@@ -41,7 +41,9 @@ func detectSublime(home, goos, config string) []Source {
 // never leaves dir.
 func ReadSublime(dir string) (Document, error) {
 	d := Document{}
-	skip := func(kind RowKind, source, reason string) { d.Skipped = append(d.Skipped, Skipped{kind, source, reason}) }
+	skip := func(kind RowKind, source, reason string) {
+		d.Skipped = append(d.Skipped, Skipped{kind, source, reason})
+	}
 	// jsonRead reads one JSONC file (comments and trailing commas allowed).
 	jsonRead := func(kind RowKind, rel string, dst any) bool {
 		b, found, reason := readInside(dir, rel)
