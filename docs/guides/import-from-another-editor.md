@@ -44,13 +44,37 @@ An editor is listed when it has at least one of these files:
 - **Vim:** `.vimrc`. Vim gives no settings or keys: the row only reminds you
   that you can load your own vimrc.
 
+## From a file
+
+No editor on this computer, for example over SSH or in Termux? Copy the
+file from your other machine first. In the Explorer you can use
+**Upload Here...**. Then pick **From a file...**, the last row of the
+picker. It is there when no editor was found, too.
+
+termocode asks for the path. `Tab` completes it, and `~` is your home
+folder. Then you get the same review panel, final check and Undo as above.
+
+These files work:
+
+| File | Editor |
+| --- | --- |
+| `settings.json`, `keybindings.json` | VS Code family (Zed's `settings.json` is told apart by its content) |
+| `keymap.json` | Zed |
+| `config.toml` | Helix |
+| `*.sublime-settings`, `*.sublime-keymap` | Sublime Text |
+| a keymap `*.xml` | JetBrains |
+
+termocode reads only the one file you name, not the other files next to it. It
+never writes next to it. A folder, a file over 1 MB, a file it does not know
+or a file that is not valid gives a message, and nothing is changed.
+
 ## Step by step
 
 1. Open the palette (`F1`) and run **Preferences: Import from Another Editor...**.
    You can also use the **Import** row on the first-run setup card. See
    [First 5 minutes](../getting-started/first-steps.md#first-run-the-setup-card).
 2. **Pick an editor.** Each row says what termocode found, for example
-   "settings, 3 keys, theme", and where.
+   "settings, 3 keys, theme", and where. Or pick **From a file...**.
 3. **Look at the review panel.** The left side is what the other editor has.
    The right side is what termocode will set. If you already have a value, you
    see `old → new`.
@@ -108,7 +132,11 @@ If a write fails half way, termocode puts your files back at once and tells you.
 :   termocode did not find a settings folder in the places above. Check that the
     editor has been opened at least once, and that the folder exists. If your
     editor keeps its settings elsewhere (a portable install, a custom
-    profile), this import cannot see it yet.
+    profile), pick **From a file...** and point to the file.
+
+**"not a supported editor file"**
+:   The file name or content is not one termocode knows. See the list under
+    [From a file](#from-a-file).
 
 **A row is dim and cannot be turned on**
 :   The row says why. The common reasons:
