@@ -2,6 +2,8 @@ package app
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/amin-jalali/termocode/internal/dbclient"
 )
 
 // databaseCardsDemo shows one of the Databases overlays and states on the
@@ -31,6 +33,14 @@ func (m *Model) databaseCardsDemo(variant string) (tea.Cmd, bool) {
 		// D on the selected key: the card with the exact DEL command.
 		m.databaseRedisDemo()
 		return m.databaseRedisAsk(&dbRedisWrite{conn: "prod-cache", db: 0, key: "session:ab12", args: []string{"DEL", "session:ab12"}, deleted: true}), true
+	case "password-move":
+		// Enter on a personal connection whose file holds a password.
+		m.databasesDemo("")
+		d := m.databases
+		c := dbDemoConnection()
+		c.Source, c.Password = dbclient.SourceUser, "not-a-real-password"
+		d.conns = []dbclient.Conn{c}
+		return m.databaseOpen(c.ID, false), true
 	}
 	return nil, false
 }
