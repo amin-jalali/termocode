@@ -85,6 +85,7 @@ its name and key.
 - A settings UI, key rebinding, your own snippets and commands.
 - First run: a **Set up termocode** card on the welcome screen sets icons (Nerd Font), AI and theme in a few clicks. → [First 5 minutes](getting-started/first-steps.md#first-run-the-setup-card)
 - Export / import your settings (secrets are left out).
+- Import settings, keys and theme from another editor you use, with a review, a backup and **Undo Last Import**. → [Import settings from another editor](guides/import-from-another-editor.md)
 - Lua extensions: commands, sidebar panels, status items. → [Write an extension](extensions.md)
 
 ![Catppuccin Latte light theme](assets/screenshots/theme-catppuccin-latte.png)

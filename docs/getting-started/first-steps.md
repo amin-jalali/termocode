@@ -57,6 +57,7 @@ recommended one first.
    this computer) — *Import…* opens the same list as **Preferences: Import
    from Another Editor...**, so you see every change before anything is
    written. After an import the row reads "Imported from …" with *Undo…*.
+   More in [Import settings from another editor](../guides/import-from-another-editor.md).
 
 When Icons and AI are answered, the header reads **SET UP · done** and the
 card does not come back on the next start. **Hide setup** removes it

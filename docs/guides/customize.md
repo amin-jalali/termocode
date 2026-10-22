@@ -160,6 +160,9 @@ files are only read, never changed.
 On the first run, the setup card shows an **Import** row when it finds
 another editor; its *Import…* button starts the same steps.
 
+Where each editor is looked for, what is mapped, and what to do when
+something is missing: [Import settings from another editor](import-from-another-editor.md).
+
 ## Look and feel: icons, animations, images
 
 Three settings (Settings → **Appearance**) control how rich the screen is.
