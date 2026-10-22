@@ -3,7 +3,6 @@ package migrate
 
 import (
 	"encoding/json"
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"os"
@@ -25,6 +24,16 @@ type Document struct {
 	Keys       []KeyBinding
 	Theme      string
 	Extensions []string
+	// Skipped lists things a reader could not use (bad file, link out of the
+	// folder, built-in base keymap...). Each one becomes a "not imported" row.
+	Skipped []Skipped
+}
+
+// Skipped is one thing the reader left out, and why.
+type Skipped struct {
+	Kind   RowKind
+	Source string
+	Reason string
 }
 type Source struct {
 	ID, Title, Dir string
@@ -161,53 +170,6 @@ func ReadHelix(dir string) (Document, error) {
 	}
 	return d, nil
 }
-func ReadJetBrains(dir string) (Document, error) {
-	d := Document{}
-	b, err := os.ReadFile(filepath.Join(dir, "options", "editor.xml"))
-	if err == nil {
-		var x struct {
-			Options []struct {
-				Name  string `xml:"name,attr"`
-				Value string `xml:"value,attr"`
-			} `xml:"component>option"`
-		}
-		if xml.Unmarshal(b, &x) == nil {
-			for _, o := range x.Options {
-				d.Settings = append(d.Settings, Setting{o.Name, o.Value})
-			}
-		}
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return d, err
-	}
-	files, _ := filepath.Glob(filepath.Join(dir, "keymaps", "*.xml"))
-	for _, f := range files {
-		bb, e := os.ReadFile(f)
-		if e != nil {
-			continue
-		}
-		var x struct {
-			Actions []struct {
-				ID        string `xml:"id,attr"`
-				Shortcuts []struct {
-					First  string `xml:"first-keystroke,attr"`
-					Second string `xml:"second-keystroke,attr"`
-				} `xml:"keyboard-shortcut"`
-			} `xml:"action"`
-		}
-		if xml.Unmarshal(bb, &x) == nil {
-			for _, a := range x.Actions {
-				for _, k := range a.Shortcuts {
-					key := k.First
-					if k.Second != "" {
-						key += ", " + k.Second
-					}
-					d.Keys = append(d.Keys, KeyBinding{key, a.ID})
-				}
-			}
-		}
-	}
-	return d, nil
-}
 func ReadSublime(dir string) (Document, error) {
 	d := Document{}
 	m, err := stringMap(filepath.Join(dir, "Preferences.sublime-settings"))
@@ -295,25 +257,7 @@ func Detect(home, goos, xdg string) []Source {
 	if existsAny(h, "config.toml", "languages.toml") {
 		out = append(out, Source{"helix", "Helix", h, []string{"config.toml", "languages.toml"}})
 	}
-	jbroot := filepath.Join(config, "JetBrains")
-	if goos == "darwin" {
-		jbroot = filepath.Join(home, "Library", "Application Support", "JetBrains")
-	}
-	if goos == "windows" {
-		jbroot = filepath.Join(home, "AppData", "Roaming", "JetBrains")
-	}
-	if ents, e := os.ReadDir(jbroot); e == nil {
-		var dirs []string
-		for _, x := range ents {
-			if x.IsDir() {
-				dirs = append(dirs, filepath.Join(jbroot, x.Name()))
-			}
-		}
-		sort.Slice(dirs, func(i, j int) bool { return dirs[i] > dirs[j] })
-		if len(dirs) > 0 {
-			out = append(out, Source{"jetbrains", "JetBrains", dirs[0], []string{"keymaps/*.xml", "options/editor.xml"}})
-		}
-	}
+	out = append(out, detectJetBrains(home, goos, config)...)
 	sublime := filepath.Join(config, "sublime-text", "Packages", "User")
 	if goos == "darwin" {
 		sublime = filepath.Join(home, "Library", "Application Support", "Sublime Text", "Packages", "User")

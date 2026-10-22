@@ -1,0 +1,1 @@
+<keymap version="1" name="Team" parent="$default"><action id="GotoFile"><keyboard-shortcut first-keystroke="control shift N"/></action><action id="GotoAction"><keyboard-shortcut first-keystroke="control shift A"/></action><action id="SaveAll"><keyboard-shortcut first-keystroke="control S"/></action></keymap>

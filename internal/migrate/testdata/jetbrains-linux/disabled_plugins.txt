@@ -1,0 +1,2 @@
+# disabled plugins
+com.github.copilot

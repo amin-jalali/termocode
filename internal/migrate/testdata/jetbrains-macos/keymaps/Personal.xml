@@ -1,0 +1,1 @@
+<keymap version="1" name="Personal Mac" parent="Mac OS X 10.5+"><action id="GotoAction"><keyboard-shortcut first-keystroke="meta shift A"/></action><action id="GotoFile"><keyboard-shortcut first-keystroke="meta shift O"/></action><action id="ShowIntentionActions"><keyboard-shortcut first-keystroke="alt ENTER"/></action></keymap>
