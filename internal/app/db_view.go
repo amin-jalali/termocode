@@ -153,9 +153,12 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 		if hint, ok := m.dbStoppedHint(r, max(w-2, 0)); ok {
 			footer = hint
 		}
+		if _, stopped := m.dbStoppedHint(r, max(w-2, 0)); !stopped {
+			footer = dbFitFooter(footer, max(w-2, 1))
+		}
 		lines = append(lines, testsPad(muted("  "+sanitizeDBText(name)), w), testsPad(muted("  "+footer), w))
 	} else {
-		lines = append(lines, testsPad(muted("  No databases yet · a add one"), w), testsPad(muted("  .db files and .env URLs appear here"), w))
+		lines = append(lines, testsPad(muted("  "+dbFitFooter("No databases yet · a add", max(w-2, 1))), w), testsPad(muted("  "+dbFitFooter(".db and .env URLs show here", max(w-2, 1))), w))
 	}
 	for len(lines) < h {
 		lines = append(lines, fill())
@@ -196,6 +199,26 @@ func dbInstallCommand(hint string) (string, bool) {
 	_, cmd, ok := strings.Cut(hint, " with: ")
 	cmd = strings.TrimSpace(cmd)
 	return cmd, ok && cmd != ""
+}
+
+// dbFitFooter cuts a footer made of " · " parts to width cells: whole parts
+// are dropped from the end and "? keys" takes their place, so the full key
+// list stays one key away. A footer that fits is left alone.
+func dbFitFooter(text string, width int) string {
+	if runewidth.StringWidth(text) <= width {
+		return text
+	}
+	const tail = "? keys"
+	parts := strings.Split(text, " · ")
+	for n := len(parts) - 1; n >= 1; n-- {
+		if s := strings.Join(parts[:n], " · ") + " · " + tail; runewidth.StringWidth(s) <= width {
+			return s
+		}
+	}
+	if runewidth.StringWidth(parts[0]) <= width {
+		return parts[0]
+	}
+	return runewidth.Truncate(text, width, "…")
 }
 
 // dbRemoteLabel is the "Add remote…" line of the empty state.

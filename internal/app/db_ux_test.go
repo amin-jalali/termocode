@@ -181,3 +181,31 @@ func TestDatabaseSSLPickerHasNoCountAndNoCutHints(t *testing.T) {
 		}
 	}
 }
+
+// DB-11: the sidebar footer is never cut mid-word: it fits, or its last
+// keys give way to "? keys".
+func TestDatabaseSidebarFooterFitsOrEndsWithKeysHint(t *testing.T) {
+	m, s := dbNoSQLiteModel(80, 24)
+	s.cursor = 0
+	for _, w := range []int{24, 29, 31, 40, 60} {
+		out := strings.Split(stripSGRForTest(m.renderDatabasesSidebarRaw(w, 20, true)), "\n")
+		line := strings.TrimRight(out[len(out)-1], " ")
+		if full := "  " + s.rowFooter(dbTreeRow{kind: dbNodeConnection, path: "app-db", conn: "app-db"}); line != full && !strings.HasSuffix(line, "? keys") {
+			t.Errorf("w=%d: footer %q is cut (full: %q)", w, line, full)
+		}
+	}
+	empty := newDBState()
+	empty.loaded = true
+	em := Model{databases: empty, w: 80, h: 24, activity: activity.New()}
+	for _, w := range []int{29, 31, 40} {
+		out := strings.Split(stripSGRForTest(em.renderDatabasesSidebarRaw(w, 20, true)), "\n")
+		for _, line := range out[len(out)-2:] {
+			if strings.HasSuffix(strings.TrimRight(line, " "), "…") || strings.Contains(line, "appear he") && !strings.Contains(line, "appear here") {
+				t.Errorf("w=%d: empty-state footer cut: %q", w, line)
+			}
+		}
+		if got := strings.Join(out[len(out)-2:], "\n"); !strings.Contains(got, "No databases yet") && w >= 29 {
+			t.Errorf("w=%d: empty-state footer lost its text: %q", w, got)
+		}
+	}
+}
