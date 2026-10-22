@@ -206,7 +206,7 @@ func (m *Model) startAgent(a agents.Agent) tea.Cmd {
 	m.agentWatch(t.BufID, true)
 	m.applyLayout()
 	m.resizeTerminalSplit()
-	return nil
+	return m.ensureMCPServeForAgent() // mcp_server auto: the agent may use the IDE's tools
 }
 
 func init() {

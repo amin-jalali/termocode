@@ -67,6 +67,9 @@ type settingsConfig struct {
 	// stored only, the timer is SS-8).
 	SecretStore       string `json:"secret_store,omitempty"`
 	SecretLockMinutes *int   `json:"secret_lock_minutes,omitempty"`
+	// MCPServer: termocode as an MCP server for outside agents: "auto",
+	// "on" or "off" ("" = auto; mcp_serve_run.go). File only.
+	MCPServer string `json:"mcp_server,omitempty"`
 }
 
 // settingsConfigPath returns the absolute path to config.json. We don't

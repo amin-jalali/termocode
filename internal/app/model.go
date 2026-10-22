@@ -668,6 +668,9 @@ type Model struct {
 	// mcpServe is termocode as an MCP server: the socket listener and the
 	// confirm queue of outside agents (mcp_serve*.go); nil when not serving.
 	mcpServe *mcpServeState
+	// mcpServeForAgent: an agent tab asked for the MCP server (mcp_server
+	// auto keeps it running then).
+	mcpServeForAgent bool
 	// HTTP client for .http files (http_state.go); made on first use.
 	http *httpState
 	// secrets is the secret store's unlock flow (secrets_ui.go); the store
@@ -1189,6 +1192,7 @@ func (m *Model) Close() error {
 	m.services.shutdown()   // the docker events watcher (services_state.go)
 	m.databasesClose(false) // database sessions are idle unless the view is visible
 	m.dropImageTemp()       // an HTTP image preview's temp copy (U16)
+	m.stopMCPServe()        // the MCP socket and its clients (mcp_serve_run.go)
 	if m.nvim == nil {
 		return nil
 	}

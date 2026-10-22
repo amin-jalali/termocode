@@ -503,6 +503,8 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"http_max_body_mb":     aiNever(aiNoAIConfig),
 	"http_ai_max_kb":       aiNever(aiNoAIConfig),
 	"mcp_github_client_id": aiNever(aiNoAIConfig),
+	// The door outside agents use to drive the IDE (mcp_serve*.go).
+	"mcp_server": aiNever("lets outside agents use the IDE's tools; the user turns it on or off in config.json"),
 }
 
 // aiListActionsMax caps list_actions results.

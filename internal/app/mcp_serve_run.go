@@ -1,6 +1,8 @@
 package app
 
 import (
+	"path/filepath"
+	"strings"
 	"sync/atomic"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -68,4 +70,50 @@ func (m *Model) stopMCPServe() {
 		mcpServeTarget.CompareAndSwap(st.srv, nil)
 		_ = st.srv.Close()
 	}
+}
+
+// mcpServeMode is the mcp_server setting: "auto" (the default: serve
+// while an agent tab asks for it), "on" (serve from start) or "off"
+// (never). Anything else is auto.
+func mcpServeMode() string {
+	switch v := strings.ToLower(strings.TrimSpace(loadSettings().MCPServer)); v {
+	case "on", "off":
+		return v
+	}
+	return "auto"
+}
+
+// syncMCPServe starts or stops the listener to match mcp_server.
+func (m *Model) syncMCPServe() tea.Cmd {
+	want := false
+	switch mcpServeMode() {
+	case "on":
+		want = true
+	case "auto":
+		want = m.mcpServeForAgent
+	}
+	if !want {
+		m.stopMCPServe()
+		return nil
+	}
+	return m.startMCPServe()
+}
+
+// ensureMCPServeForAgent starts the listener for an agent tab unless
+// mcp_server is off (MS-4 calls it before it launches the agent).
+func (m *Model) ensureMCPServeForAgent() tea.Cmd {
+	if mcpServeMode() == "off" {
+		return nil
+	}
+	m.mcpServeForAgent = true
+	return m.startMCPServe()
+}
+
+// onMCPServeConfigSaved applies mcp_server when config.json is saved.
+func (m *Model) onMCPServeConfigSaved(path string) tea.Cmd {
+	want, err := settingsConfigPath()
+	if err != nil || filepath.Clean(path) != filepath.Clean(want) {
+		return nil
+	}
+	return m.syncMCPServe()
 }

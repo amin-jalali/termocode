@@ -290,6 +290,8 @@ var fileOnlySettings = []SettingEntry{
 		Description: "Cut the log text the AI's services_logs tool returns to this many KB (the newest lines stay)."},
 	{Key: "containers_max_inspect_kb", Type: "int", Default: "64", Category: "Containers (file only)",
 		Description: "Cut the JSON the AI's containers_inspect tool returns to this many KB. Env values, auth fields and secret-looking labels are masked before the cut."},
+	{Key: "mcp_server", Type: "enum", Default: "auto", Category: "AI (file only)", Choices: []string{"auto", "on", "off"},
+		Description: "termocode as an MCP server: outside agents (Claude Code, Codex, …) reach a short list of IDE tools (open files, diagnostics, tests, debugger, terminal and git reads) over a private socket in the session folder, open only to your own user. Tools that change something ask on a card first; files, settings, git writes and your own MCP servers are never offered. auto: serve once you start an agent tab (F1 → Agent: Start …). on: serve from start. off: never. Applied when you save config.json."},
 	{Key: "mcp_trusted_tools", Type: "object", Default: "{}", Category: "AI (file only)",
 		Description: "The tool list you trusted per MCP server: server name → hash of its tools. The first list is kept by itself; when a server's tools change, termocode asks again and, until you trust the new list, every tool of that server asks first."},
 	{Key: "mouse_hover", Type: "enum", Default: "auto", Category: "Appearance (file only)", Choices: []string{"auto", "off"},

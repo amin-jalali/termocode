@@ -42,8 +42,16 @@ func sandbox(t testing.TB, nvim bool) {
 	// first-run setup card is done (setup tests pass their own config).
 	_ = os.WriteFile(filepath.Join(home, "config/termocode/config.json"),
 		[]byte(`{"animations": "off", "images": "blocks", "setup_done": true}`), 0o644)
+	// A short private runtime dir: the session and MCP sockets of a test
+	// never land in the user's real one (and fit macOS's sun_path).
+	rtDir, err := os.MkdirTemp("", "tcr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(rtDir) })
 	env := map[string]string{
 		"HOME":            home,
+		"XDG_RUNTIME_DIR": rtDir,
 		"XDG_CONFIG_HOME": filepath.Join(home, "config"),
 		"XDG_DATA_HOME":   filepath.Join(home, "data"),
 		"XDG_STATE_HOME":  filepath.Join(home, "state"),

@@ -156,7 +156,8 @@ func notifyArgMap(args []any, i int) map[string]any {
 // Text may contain newlines; each becomes one line.
 func init() {
 	registerNotifyHandler("termocode_profiles_saved", func(m *Model, args []any) tea.Cmd {
-		return m.onAIProfilesSaved(notifyArgString(args, 0))
+		p := notifyArgString(args, 0)
+		return tea.Batch(m.onAIProfilesSaved(p), m.onMCPServeConfigSaved(p)) // config.json: mcp_server
 	})
 	registerNotifyHandler("termocode_output", func(m *Model, args []any) tea.Cmd {
 		ch := notifyArgString(args, 0)
