@@ -136,3 +136,44 @@ func readPipeLine(r *io.PipeReader) (string, error) {
 	n, err := r.Read(b)
 	return string(b[:n]), err
 }
+
+// goldenExchange compares got with testdata/server/<name>.json
+// (UPDATE_GOLDEN=1 writes it).
+func goldenExchange(t *testing.T, name, got string) {
+	t.Helper()
+	path := filepath.Join("testdata", "server", name+".json")
+	if os.Getenv("UPDATE_GOLDEN") == "1" {
+		if err := os.WriteFile(path, []byte(got), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != string(want) {
+		t.Fatalf("exchange mismatch\n got: %s\nwant: %s", got, want)
+	}
+}
+
+// Spec (MS-6): the stateless revision needs no initialize; the revision
+// and the client sit in the request's _meta.
+func TestServerStatelessGolden(t *testing.T) {
+	source := serverTestSource{
+		list: []Tool{{Name: "read_file", Description: "Read a file", InputSchema: map[string]any{"type": "object"}}},
+		call: func(ctx context.Context, name string, args map[string]any) (CallResult, error) {
+			return CallResult{Content: []Content{{Type: "text", Text: "hi " + ClientName(ctx)}}}, nil
+		},
+	}
+	meta := `"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientInfo":{"name":"codex","version":"9"}}`
+	for name, input := range map[string]string{
+		"stateless_tools_list":  `{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{` + meta + `}}`,
+		"stateless_tools_call":  `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"read_file","arguments":{},` + meta + `}}`,
+		"server_discover":       `{"jsonrpc":"2.0","id":3,"method":"server/discover"}`,
+		"stateless_bad_version": `{"jsonrpc":"2.0","id":4,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2031-01-01"}}}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			goldenExchange(t, name, runServerMessages(t, source, input))
+		})
+	}
+}
