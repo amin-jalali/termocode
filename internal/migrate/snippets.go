@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -207,3 +208,165 @@ func scopeLabel(scope string) string {
 }
 
 func trimBOM(b []byte) []byte { return []byte(strings.TrimPrefix(string(b), "\xef\xbb\xbf")) }
+
+// normalizeScope folds a snippets.json scope the way termocode reads it:
+// lower case, and "", "global" and "all" mean "*".
+func normalizeScope(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	switch s {
+	case "", "global", "all":
+		return globalScope
+	}
+	return s
+}
+
+// existingSnippets reads the user's snippets.json into scope -> trigger ->
+// body. Entries termocode would skip (bad body) are left out.
+func existingSnippets(raw []byte) map[string]map[string]string {
+	out := map[string]map[string]string{}
+	var top map[string]map[string]json.RawMessage
+	if json.Unmarshal(raw, &top) != nil {
+		return out
+	}
+	for scope, items := range top {
+		sc := normalizeScope(scope)
+		for trig, rb := range items {
+			lines, ok := stringOrLines(rb)
+			if !ok {
+				continue
+			}
+			if out[sc] == nil {
+				out[sc] = map[string]string{}
+			}
+			out[sc][trig] = strings.Join(lines, "\n")
+		}
+	}
+	return out
+}
+
+// oneLine shortens a body to its first line for a review row.
+func oneLine(s string) string {
+	first, rest, more := strings.Cut(s, "\n")
+	first = strings.TrimSpace(first)
+	if more && rest != "" {
+		first += " …"
+	}
+	return first
+}
+
+// addSnippetRows adds one review row per snippet. A snippet whose trigger
+// the user already has in the same scope is a conflict (off) when the body
+// differs, and "already there" (off) when it is the same.
+func (p *Plan) addSnippetRows(snippets []Snippet) {
+	have := existingSnippets(p.Current.SnippetsRaw)
+	for _, s := range snippets {
+		row := ReviewRow{Kind: RowSnippet, Scope: s.Scope, Trigger: s.Trigger, Body: s.Body, Apply: true,
+			SourceText: scopeLabel(s.Scope) + " · " + s.Trigger + " · " + s.Name}
+		label := s.Scope + ":" + s.Trigger
+		if s.Scope == globalScope {
+			label = s.Trigger
+		}
+		row.Equivalent = label + "  " + oneLine(s.Body)
+		if cur, ok := have[s.Scope][s.Trigger]; ok {
+			row.Apply = false
+			if cur != s.Body {
+				row.Conflict = true
+				row.Current = cur
+				row.Equivalent = label + "  " + oneLine(cur) + " → " + oneLine(s.Body)
+			} else {
+				row.Equivalent += " (already there)"
+			}
+		}
+		p.Rows = append(p.Rows, row)
+	}
+}
+
+// applySnippets renders the selected snippet rows into the complete
+// snippets.json, keeping everything else in the user's file as it is.
+// nil when no snippet row is selected.
+func applySnippets(plan Plan) ([]byte, error) {
+	var picked []ReviewRow
+	for _, r := range plan.Rows {
+		if r.Kind == RowSnippet && r.Apply && r.Trigger != "" {
+			picked = append(picked, r)
+		}
+	}
+	if len(picked) == 0 {
+		return nil, nil
+	}
+	top := map[string]json.RawMessage{}
+	if plan.Current.SnippetsExist && len(strings.TrimSpace(string(plan.Current.SnippetsRaw))) == 0 {
+		return nil, fmt.Errorf("raw snippets.json is required when the file exists")
+	}
+	if len(plan.Current.SnippetsRaw) > 0 {
+		if err := json.Unmarshal(plan.Current.SnippetsRaw, &top); err != nil || top == nil {
+			return nil, fmt.Errorf("snippets.json is not a JSON object; it was left alone")
+		}
+	}
+	scopes := map[string]map[string]json.RawMessage{} // the scopes that changed, by their key
+	scopeOf := func(key string) (map[string]json.RawMessage, error) {
+		if m, ok := scopes[key]; ok {
+			return m, nil
+		}
+		m := map[string]json.RawMessage{}
+		if raw, ok := top[key]; ok {
+			if err := json.Unmarshal(raw, &m); err != nil || m == nil {
+				return nil, fmt.Errorf("snippets.json: %q is not an object; it was left alone", key)
+			}
+		}
+		scopes[key] = m
+		return m, nil
+	}
+	for _, r := range picked {
+		key := r.Scope
+		var keys []string
+		for k := range top {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			if normalizeScope(k) != r.Scope {
+				continue
+			}
+			var m map[string]json.RawMessage
+			if json.Unmarshal(top[k], &m) == nil {
+				if _, has := m[r.Trigger]; has {
+					key = k // replace the snippet where the user keeps it
+					break
+				}
+			}
+			if _, exact := top[r.Scope]; !exact && key == r.Scope {
+				key = k // keep to an existing alias such as "global"
+			}
+		}
+		m, err := scopeOf(key)
+		if err != nil {
+			return nil, err
+		}
+		var v any = r.Body
+		if strings.Contains(r.Body, "\n") {
+			v = strings.Split(r.Body, "\n")
+		}
+		m[r.Trigger] = marshalNoEscape(v)
+	}
+	for key, m := range scopes {
+		top[key] = marshalNoEscape(m)
+	}
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(top); err != nil {
+		return nil, fmt.Errorf("encode snippets: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
+// marshalNoEscape encodes v compactly, leaving "<", ">" and "&" readable.
+func marshalNoEscape(v any) json.RawMessage {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	_ = enc.Encode(v)
+	return json.RawMessage(bytes.TrimSpace(buf.Bytes()))
+}

@@ -1,6 +1,6 @@
 // Package importview is the review panel of "Import from another editor":
 // two columns (what the other editor has → what termocode will set),
-// grouped into Settings / Keys / Theme / Extensions, with a toggle per row.
+// grouped into Settings / Keys / Theme / Snippets / Extensions, with a toggle per row.
 // It only shows and selects; the app writes the files after a final
 // confirm (internal/app/import_editor.go).
 package importview
@@ -82,6 +82,7 @@ func New(plan migrate.Plan, dir string) Model {
 		{"Settings", []migrate.RowKind{migrate.RowSetting}},
 		{"Keys", []migrate.RowKind{migrate.RowKey}},
 		{"Theme", []migrate.RowKind{migrate.RowTheme}},
+		{"Snippets", []migrate.RowKind{migrate.RowSnippet}},
 		{"Extensions", []migrate.RowKind{migrate.RowExtension}},
 		{"Other", []migrate.RowKind{migrate.RowVimrc}},
 	}
@@ -176,6 +177,15 @@ func (m Model) makeRow(i int) row {
 		if cur.ThemeID != "" {
 			r.conflict = true
 			r.right = cur.ThemeID + " → " + clean(pr.Equivalent)
+		}
+	case migrate.RowSnippet:
+		if pr.Trigger == "" {
+			break
+		}
+		r.right = clean(pr.Equivalent)
+		if pr.Apply || pr.Conflict {
+			r.state = stateToggle
+			r.conflict = pr.Conflict
 		}
 	case migrate.RowExtension, migrate.RowVimrc:
 		switch {
@@ -275,13 +285,14 @@ func (m Model) Plan() migrate.Plan {
 // Counts is what the selected rows will change.
 type Counts struct {
 	Settings, Keys int
+	Snippets       int
 	Theme          string   // the new theme id, "" when unchanged
 	Tools          []string // suggested tools (never installed)
 }
 
 // Total is the number of changes.
 func (c Counts) Total() int {
-	n := c.Settings + c.Keys
+	n := c.Settings + c.Keys + c.Snippets
 	if c.Theme != "" {
 		n++
 	}
@@ -299,6 +310,9 @@ func (c Counts) Summary() string {
 	}
 	if c.Theme != "" {
 		parts = append(parts, "theme")
+	}
+	if c.Snippets > 0 {
+		parts = append(parts, plural(c.Snippets, "snippet"))
 	}
 	if len(parts) == 0 {
 		return "nothing selected"
@@ -335,6 +349,8 @@ func (m Model) Counts() Counts {
 			c.Keys++
 		case migrate.RowTheme:
 			c.Theme = pr.Target
+		case migrate.RowSnippet:
+			c.Snippets++
 		}
 	}
 	sort.Strings(c.Tools)

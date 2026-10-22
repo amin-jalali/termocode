@@ -12,8 +12,10 @@ import (
 type FileContents struct {
 	Config []byte
 	Keymap []byte
-	Tools  []string
-	Theme  string
+	// Snippets is the complete snippets.json; nil when no snippet is selected.
+	Snippets []byte
+	Tools    []string
+	Theme    string
 }
 
 // Apply renders selected rows as complete config and keymap JSON contents.
@@ -73,6 +75,9 @@ func Apply(plan Plan) (FileContents, error) {
 		sort.Strings(out.Tools)
 	}
 	var err error
+	if out.Snippets, err = applySnippets(plan); err != nil {
+		return FileContents{}, err
+	}
 	if len(config) > 0 {
 		out.Config, err = json.MarshalIndent(config, "", "  ")
 		if err != nil {

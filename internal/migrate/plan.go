@@ -32,6 +32,10 @@ type ReviewRow struct {
 	Key        string
 	Action     string
 	Tools      []string
+	// Snippet rows: the scope (a filetype or "*"), the trigger and the body.
+	Scope, Trigger, Body string
+	// Current is the body the user has now for a conflicting snippet.
+	Current string
 	// Reason says why a row is not applied (not imported, already set, conflict).
 	Reason string
 }
@@ -43,6 +47,9 @@ type Current struct {
 	// KeymapRaw must contain the complete keymap.json when KeymapExists is true.
 	KeymapRaw    []byte
 	KeymapExists bool
+	// SnippetsRaw must contain the complete snippets.json when SnippetsExist is true.
+	SnippetsRaw   []byte
+	SnippetsExist bool
 }
 
 type Plan struct {
@@ -104,6 +111,7 @@ func Build(source Source, doc Document, current Current) Plan {
 		}
 		p.Rows = append(p.Rows, ReviewRow{Kind: RowTheme, SourceText: doc.Theme, Equivalent: equiv, Target: id, Apply: known && id != "" && id != current.ThemeID})
 	}
+	p.addSnippetRows(doc.Snippets)
 	for _, extension := range doc.Extensions {
 		result, known := extensionMapping(extension)
 		equivalent := "no equivalent"
@@ -153,6 +161,13 @@ func reasonNotApplied(r ReviewRow) string {
 			return strings.TrimSuffix(strings.TrimPrefix(r.Equivalent, "no equivalent ("), ")")
 		}
 		return "termocode has no command for this action"
+	case RowSnippet:
+		if r.Conflict {
+			return "you already have a snippet with this trigger; turn it on to replace it"
+		}
+		if r.Trigger != "" {
+			return "already in your snippets.json"
+		}
 	case RowTheme:
 		if r.Target != "" && r.Target == r.Equivalent {
 			return "already your theme"
