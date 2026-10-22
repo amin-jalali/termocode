@@ -81,30 +81,30 @@ func TestMCPRelayToRunningUI(t *testing.T) {
 	tm := Start(t, StartOpts{Home: home, Workspace: ws})
 	tm.WaitText("main.go", 30*time.Second)
 
-	// Wait for the listener: the relay answers from the UI once it is up.
+	// Wait for the listener: try the relay until it reaches this UI. A
+	// socket glob is not enough, another termocode on the machine may
+	// have one, so a relay that fell back to static mode tries again.
+	var r *relayProc
+	var s string
 	deadline := time.Now().Add(20 * time.Second)
 	for {
-		matches, _ := filepath.Glob(filepath.Join(home, ".cache", "termocode", "sessions", "*.mcp.sock"))
-		tmp, _ := filepath.Glob(filepath.Join(os.TempDir(), "termocode-*", "*.mcp.sock"))
-		if len(matches)+len(tmp) > 0 {
+		r = startRelay(t, home, "--dir", ws)
+		_, m := r.call(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","clientInfo":{"name":"e2e"}}}`)
+		if m["result"] == nil {
+			t.Fatalf("initialize: %v", m)
+		}
+		s, _ = r.call(`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
+		if !strings.Contains(r.stderr.String(), "not open") && !strings.Contains(r.stderr.String(), "cannot be reached") {
 			break
 		}
+		_ = r.in.Close()
 		if time.Now().After(deadline) {
-			t.Fatal("the MCP socket never appeared")
+			t.Fatalf("relay never reached the UI: %q", r.stderr.String())
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(200 * time.Millisecond)
 	}
-	r := startRelay(t, home, "--dir", ws)
-	_, m := r.call(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","clientInfo":{"name":"e2e"}}}`)
-	if m["result"] == nil {
-		t.Fatalf("initialize: %v", m)
-	}
-	s, _ := r.call(`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
 	if !strings.Contains(s, `"read_file"`) {
 		t.Fatalf("tools/list: %.300s", s)
-	}
-	if strings.Contains(r.stderr.String(), "not open") {
-		t.Fatalf("relay fell back to static mode: %q", r.stderr.String())
 	}
 	_ = r.in.Close()
 	done := make(chan error, 1)
