@@ -237,3 +237,36 @@ func TestMCPServeClosedOnQuit(t *testing.T) {
 	}
 	StopMCPServer() // idempotent
 }
+
+// Spec (MS-6): over the real socket a stateless client (no initialize)
+// discovers the server, lists the resource and reads the editor state;
+// the audit line names the client from the request's _meta.
+func TestMCPServeSocketStatelessResource(t *testing.T) {
+	m, _, _ := mcpServeTestModel(t)
+	m.mcpServe = nil
+	path := mcpServeShortRuntime(t)
+	m.startMCPServe()
+	defer m.stopMCPServe()
+	c, err := net.Dial("unix", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	r := bufio.NewReader(c)
+	disc := mcpServeClientLine(t, m, c, r, `{"jsonrpc":"2.0","id":1,"method":"server/discover"}`)
+	if !strings.Contains(mustJSON(t, disc), `"resources"`) {
+		t.Fatalf("discover: %v", disc)
+	}
+	list := mcpServeClientLine(t, m, c, r, `{"jsonrpc":"2.0","id":2,"method":"resources/list"}`)
+	if !strings.Contains(mustJSON(t, list), "termocode://editor/state") {
+		t.Fatalf("list: %v", list)
+	}
+	meta := `"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientInfo":{"name":"stateless one"}}`
+	read := mcpServeClientLine(t, m, c, r, `{"jsonrpc":"2.0","id":3,"method":"resources/read","params":{"uri":"termocode://editor/state",`+meta+`}}`)
+	if !strings.Contains(mustJSON(t, read), `branch`) {
+		t.Fatalf("read: %v", read)
+	}
+	if lines := strings.Join(m.output.Lines(aiAuditChannel), "\n"); !strings.Contains(lines, "resources/read") || !strings.Contains(lines, "by=mcp:stateless-one") {
+		t.Fatalf("audit: %s", lines)
+	}
+}
