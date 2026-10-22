@@ -1,13 +1,13 @@
 package theme
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+
+	"github.com/amin-jalali/termocode/internal/cfgfile"
 )
 
 // configFile is the JSON document persisted to ~/.config/termocode/config.json.
@@ -62,39 +62,17 @@ func SaveThemeID(id string) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
 	// Read-modify-write: only "theme" changes, every other key stays as
 	// it was. A file that is not valid JSON is left alone (an error, not
 	// an empty config that would drop the user's settings).
-	cfg := map[string]json.RawMessage{}
-	if b, err := os.ReadFile(path); err == nil {
-		if len(bytes.TrimSpace(b)) > 0 {
-			if err := json.Unmarshal(b, &cfg); err != nil {
-				return fmt.Errorf("%s is not valid JSON; theme not saved: %w", path, err)
-			}
-		}
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return err
-	}
-	if cfg == nil {
-		cfg = map[string]json.RawMessage{}
-	}
 	idJSON, err := json.Marshal(id)
 	if err != nil {
 		return err
 	}
-	cfg["theme"] = idJSON
-	out, err := json.MarshalIndent(cfg, "", "  ")
-	if err != nil {
-		return err
-	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, append(out, '\n'), 0o644); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
+	return cfgfile.UpdateRaw(path, func(cfg map[string]json.RawMessage) error {
+		cfg["theme"] = idJSON
+		return nil
+	})
 }
 
 // LoadAndApply reads the persisted theme ID and applies it. Returns the

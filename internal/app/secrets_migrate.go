@@ -1,15 +1,14 @@
 package app
 
 import (
-	"encoding/json"
 	"errors"
 	"os"
-	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/cfgfile"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/secrets"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -310,25 +309,14 @@ func saveSecretStoreSetting(v string) error {
 	if err != nil {
 		return err
 	}
-	merged := map[string]any{}
-	if b, err := os.ReadFile(path); err == nil {
-		if err := json.Unmarshal(b, &merged); err != nil {
-			return errors.New("config.json is not valid JSON")
+	return cfgfile.Update(path, func(merged map[string]any) error {
+		if v == "" {
+			delete(merged, "secret_store")
+		} else {
+			merged["secret_store"] = v
 		}
-	}
-	if v == "" {
-		delete(merged, "secret_store")
-	} else {
-		merged["secret_store"] = v
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	out, err := json.MarshalIndent(merged, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, out, 0o644)
+		return nil
+	})
 }
 
 // secretsFinishMove finishes a cut-off move once the store is open; a

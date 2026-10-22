@@ -237,3 +237,19 @@ func TestRegisterSecretSkipsReferences(t *testing.T) {
 		}
 	}
 }
+
+// Spec (fix 2): SaveSettings never replaces a config.json that is not valid
+// JSON.
+func TestSaveSettingsInvalidJSONUntouched(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "config.json")
+	const bad = "{\"theme\": \"x\", // comment\n"
+	if err := os.WriteFile(p, []byte(bad), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveSettings(p, Settings{Model: "m"}); err == nil {
+		t.Error("no error for a file that is not valid JSON")
+	}
+	if b, _ := os.ReadFile(p); string(b) != bad {
+		t.Errorf("file changed: %q", b)
+	}
+}

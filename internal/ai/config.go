@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/cfgfile"
 	secretstore "github.com/amin-jalali/termocode/internal/secrets"
 )
 
@@ -232,43 +233,34 @@ func LoadSettings(path string) Settings {
 // SaveSettings merges s into config.json at path, keeping every other key.
 // Empty strings remove their key.
 func SaveSettings(path string, s Settings) error {
-	merged := map[string]any{}
-	if b, err := os.ReadFile(path); err == nil {
-		_ = json.Unmarshal(b, &merged)
-	}
-	set := func(k, v string) {
-		if v == "" {
-			delete(merged, k)
-		} else {
-			merged[k] = v
+	return cfgfile.Update(path, func(merged map[string]any) error {
+		set := func(k, v string) {
+			if v == "" {
+				delete(merged, k)
+			} else {
+				merged[k] = v
+			}
 		}
-	}
-	set("ai_provider", s.Provider)
-	set("ai_model", s.Model)
-	set("ai_base_url", s.BaseURL)
-	set("ai_inline_model", s.InlineModel)
-	set("ai_edit_review", s.EditReview)
-	if s.Inline != nil {
-		merged["ai_inline"] = *s.Inline
-	}
-	if len(s.AutoApprove) > 0 {
-		merged["ai_auto_approve"] = s.AutoApprove
-	} else {
-		delete(merged, "ai_auto_approve")
-	}
-	if s.MaxSteps > 0 {
-		merged["ai_max_steps"] = s.MaxSteps
-	} else {
-		delete(merged, "ai_max_steps")
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	out, err := json.MarshalIndent(merged, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, out, 0o644)
+		set("ai_provider", s.Provider)
+		set("ai_model", s.Model)
+		set("ai_base_url", s.BaseURL)
+		set("ai_inline_model", s.InlineModel)
+		set("ai_edit_review", s.EditReview)
+		if s.Inline != nil {
+			merged["ai_inline"] = *s.Inline
+		}
+		if len(s.AutoApprove) > 0 {
+			merged["ai_auto_approve"] = s.AutoApprove
+		} else {
+			delete(merged, "ai_auto_approve")
+		}
+		if s.MaxSteps > 0 {
+			merged["ai_max_steps"] = s.MaxSteps
+		} else {
+			delete(merged, "ai_max_steps")
+		}
+		return nil
+	})
 }
 
 // LoadCredentials reads credentials.json. Missing → empty; corrupt →

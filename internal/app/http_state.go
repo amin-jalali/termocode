@@ -23,6 +23,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/cfgfile"
 	"github.com/amin-jalali/termocode/internal/httpclient"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -120,19 +121,10 @@ func saveHTTPSetting(key string, value any) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	merged := map[string]any{}
-	if b, err := os.ReadFile(path); err == nil {
-		_ = json.Unmarshal(b, &merged)
-	}
-	merged[key] = value
-	out, err := json.MarshalIndent(merged, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, out, 0o644)
+	return cfgfile.Update(path, func(merged map[string]any) error {
+		merged[key] = value
+		return nil
+	})
 }
 
 // ── files under ~/.config/termocode/http/ ───────────────────────────────

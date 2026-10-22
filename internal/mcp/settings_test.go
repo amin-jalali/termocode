@@ -89,3 +89,49 @@ func TestSaveSetting(t *testing.T) {
 		t.Error("SaveSetting wrote a key that is not mcp_*")
 	}
 }
+
+// Spec (fix 2): every writer of config.json keeps the other keys, keeps the
+// file's mode, leaves a file that is not valid JSON untouched (with an
+// error), and leaves no temp file behind.
+func TestConfigWritersAreSafe(t *testing.T) {
+	writers := map[string]func(p string) error{
+		"SaveSetting":      func(p string) error { return SaveSetting(p, "mcp_oauth_port", 8765) },
+		"SaveTrusted":      func(p string) error { return SaveTrusted(p, "srv", "hash") },
+		"SaveTrustedTools": func(p string) error { return SaveTrustedTools(p, "srv", "hash") },
+	}
+	for name, write := range writers {
+		t.Run(name+" keeps other keys and mode", func(t *testing.T) {
+			p := filepath.Join(t.TempDir(), "config.json")
+			if err := os.WriteFile(p, []byte(`{"theme":"x","tab_size":4}`), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if err := write(p); err != nil {
+				t.Fatal(err)
+			}
+			var m map[string]any
+			b, _ := os.ReadFile(p)
+			if err := json.Unmarshal(b, &m); err != nil || m["theme"] != "x" || m["tab_size"] != float64(4) {
+				t.Fatalf("keys lost: %s (%v)", b, err)
+			}
+			if st, _ := os.Stat(p); st.Mode().Perm() != 0o600 {
+				t.Errorf("mode %v", st.Mode().Perm())
+			}
+			if es, _ := os.ReadDir(filepath.Dir(p)); len(es) != 1 {
+				t.Errorf("leftover files: %v", es)
+			}
+		})
+		t.Run(name+" leaves invalid JSON untouched", func(t *testing.T) {
+			p := filepath.Join(t.TempDir(), "config.json")
+			const bad = "{\"theme\": \"x\", // a comment\n"
+			if err := os.WriteFile(p, []byte(bad), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := write(p); err == nil {
+				t.Error("no error for a file that is not valid JSON")
+			}
+			if b, _ := os.ReadFile(p); string(b) != bad {
+				t.Errorf("file changed: %q", b)
+			}
+		})
+	}
+}

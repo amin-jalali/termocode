@@ -11,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/cfgfile"
 	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/search"
@@ -135,56 +136,47 @@ func saveSettings(cfg settingsConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	merged := map[string]any{}
-	if b, err := os.ReadFile(path); err == nil {
-		_ = json.Unmarshal(b, &merged)
-	}
-	if cfg.Theme != "" {
-		merged["theme"] = cfg.Theme
-	}
-	if cfg.FontDelta != nil {
-		merged["font_delta"] = *cfg.FontDelta
-	}
-	if cfg.AutoSave != nil {
-		merged["auto_save"] = *cfg.AutoSave
-	}
-	if cfg.WordWrap != nil {
-		merged["word_wrap"] = *cfg.WordWrap
-	}
-	if cfg.ShowHidden != nil {
-		merged["show_hidden"] = *cfg.ShowHidden
-	}
-	if cfg.TabSize != nil {
-		merged["tab_size"] = *cfg.TabSize
-	}
-	if cfg.SearchMaxResults != nil {
-		merged["search_max_results"] = *cfg.SearchMaxResults
-	}
-	if cfg.SetupDone != nil {
-		merged["setup_done"] = *cfg.SetupDone
-	}
-	if cfg.SetupDismissed != nil {
-		merged["setup_dismissed"] = *cfg.SetupDismissed
-	}
-	if cfg.SetupSettled != nil {
-		merged["setup_settled"] = cfg.SetupSettled
-	}
-	if cfg.ContainersSections != nil {
-		merged["containers_sections"] = cfg.ContainersSections
-	}
-	for k, v := range map[string]string{"containers_engine": cfg.ContainersEngine, "icons": cfg.Icons, "animations": cfg.Animations, "images": cfg.Images, "persistent_session": cfg.PersistentSession, "dashboard_logo": cfg.DashboardLogo, "rtl": cfg.RTL} {
-		if v != "" {
-			merged[k] = v
+	return cfgfile.Update(path, func(merged map[string]any) error {
+		if cfg.Theme != "" {
+			merged["theme"] = cfg.Theme
 		}
-	}
-	out, err := json.MarshalIndent(merged, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, out, 0o644)
+		if cfg.FontDelta != nil {
+			merged["font_delta"] = *cfg.FontDelta
+		}
+		if cfg.AutoSave != nil {
+			merged["auto_save"] = *cfg.AutoSave
+		}
+		if cfg.WordWrap != nil {
+			merged["word_wrap"] = *cfg.WordWrap
+		}
+		if cfg.ShowHidden != nil {
+			merged["show_hidden"] = *cfg.ShowHidden
+		}
+		if cfg.TabSize != nil {
+			merged["tab_size"] = *cfg.TabSize
+		}
+		if cfg.SearchMaxResults != nil {
+			merged["search_max_results"] = *cfg.SearchMaxResults
+		}
+		if cfg.SetupDone != nil {
+			merged["setup_done"] = *cfg.SetupDone
+		}
+		if cfg.SetupDismissed != nil {
+			merged["setup_dismissed"] = *cfg.SetupDismissed
+		}
+		if cfg.SetupSettled != nil {
+			merged["setup_settled"] = cfg.SetupSettled
+		}
+		if cfg.ContainersSections != nil {
+			merged["containers_sections"] = cfg.ContainersSections
+		}
+		for k, v := range map[string]string{"containers_engine": cfg.ContainersEngine, "icons": cfg.Icons, "animations": cfg.Animations, "images": cfg.Images, "persistent_session": cfg.PersistentSession, "dashboard_logo": cfg.DashboardLogo, "rtl": cfg.RTL} {
+			if v != "" {
+				merged[k] = v
+			}
+		}
+		return nil
+	})
 }
 
 // settingsRow describes one editable setting for the settings UI.

@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/cfgfile"
 )
 
 // Settings are the mcp_* keys of config.json (documented in
@@ -124,19 +125,10 @@ var configMu sync.Mutex
 func updateConfig(configPath string, fn func(map[string]any)) error {
 	configMu.Lock()
 	defer configMu.Unlock()
-	merged := map[string]any{}
-	if b, err := os.ReadFile(configPath); err == nil {
-		_ = json.Unmarshal(b, &merged)
-	}
-	fn(merged)
-	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
-		return err
-	}
-	out, err := json.MarshalIndent(merged, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(configPath, out, 0o644)
+	return cfgfile.Update(configPath, func(merged map[string]any) error {
+		fn(merged)
+		return nil
+	})
 }
 
 func saveMapEntry(configPath, key, name, value string) error {
