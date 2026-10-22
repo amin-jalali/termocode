@@ -428,6 +428,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onSecretsChangeCheck(msg)
 	case secretsChangeDoneMsg:
 		return m, m.onSecretsChangeDone(msg)
+	case secretsSwitchCheckMsg: // secrets_switch.go
+		return m, m.onSecretsSwitchCheck(msg)
+	case secretsSwitchDoneMsg:
+		return m, m.onSecretsSwitchDone(msg)
 	// ── Group G: background clone (git_clone.go) ──
 	case cloneProgressMsg:
 		return m, m.handleCloneProgress(msg)

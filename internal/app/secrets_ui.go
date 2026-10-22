@@ -201,6 +201,9 @@ type secretsState struct {
 	migrating     bool
 	migrateAsked  bool
 	finishPending bool
+	// switching sends the passphrase to Switch backend… → Encrypted
+	// file (secrets_switch.go) instead of an unlock.
+	switching bool
 	// after runs once the store is unlocked (the step that needed it).
 	after func(*Model) tea.Cmd
 	// chg is AI: Change Secrets Passphrase… while it asks
@@ -436,7 +439,7 @@ func (m *Model) secretsPromptClosed() tea.Cmd {
 	st.forgetFirst()
 	st.endSecretsChange()
 	st.after = nil
-	st.migrating = false
+	st.migrating, st.switching = false, false
 	return nil
 }
 

@@ -241,6 +241,15 @@ func sortedNames(m map[string]string) []string {
 // Remove overwrites the plain file with zeros of the same length, syncs
 // it to disk, deletes it and writes the empty marker (0600).
 func Remove(path string) error {
+	if err := wipe(path); err != nil {
+		return err
+	}
+	return writeFileAtomic(MarkerPath(path), nil, false)
+}
+
+// wipe overwrites a file with zeros of the same length, syncs it to
+// disk and deletes it.
+func wipe(path string) error {
 	f, err := os.OpenFile(path, os.O_WRONLY, 0)
 	if err != nil {
 		return err
@@ -268,7 +277,7 @@ func Remove(path string) error {
 		_ = d.Sync() // the delete reaches the disk (best effort)
 		d.Close()
 	}
-	return writeFileAtomic(MarkerPath(path), nil, false)
+	return nil
 }
 
 // MigrateOptions configure Migrate. Options are those of Open (Dir,

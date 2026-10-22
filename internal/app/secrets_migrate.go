@@ -257,6 +257,9 @@ func (m *Model) secretsPassEntered(pass []byte) tea.Cmd {
 	if m.secretsS().migrating {
 		return m.secretsMigrateCmd("age", pass)
 	}
+	if m.secretsS().switching { // secrets_switch.go
+		return m.secretsSwitchCmd("age", pass)
+	}
 	return m.secretsUnlockCmd(pass)
 }
 

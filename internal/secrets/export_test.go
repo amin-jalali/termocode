@@ -31,3 +31,10 @@ func setReencryptCheck(f func(tmp string, pass []byte, want map[string]string) e
 	reencryptCheckFn = f
 	return func() { reencryptCheckFn = old }
 }
+
+// setSwitchVerify swaps the read-back check of Switch; it returns the undo.
+func setSwitchVerify(f func(Backend, map[string]string) error) (restore func()) {
+	old := switchVerifyFn
+	switchVerifyFn = f
+	return func() { switchVerifyFn = old }
+}

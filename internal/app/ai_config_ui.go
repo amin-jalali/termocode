@@ -118,6 +118,10 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerSecretForget(id), true
 	case confirmKindSecretsMigrate: // secrets_migrate.go
 		return m.answerSecretsMigrate(id), true
+	case confirmKindSecretsSwitch: // secrets_switch.go
+		return m.answerSecretsSwitch(id), true
+	case confirmKindSecretsSwitchPlain:
+		return m.answerSecretsSwitchPlain(id), true
 	case confirmKindRegistryRemember: // containers_registries.go
 		return m.answerRegistryRemember(id), true
 	}
@@ -139,6 +143,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerSecretForget("cancel")
 	case confirmKindSecretsMigrate:
 		return m.secretsMigrateClosed() // Esc: ask later
+	case confirmKindSecretsSwitch, confirmKindSecretsSwitchPlain:
+		return m.openSecretsStore() // Esc: back to the store screen
 	case confirmKindRegistryRemember:
 		return m.registryPromptClosed()
 	}

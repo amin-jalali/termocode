@@ -138,7 +138,7 @@ func pumpSecrets(t *testing.T, m *Model, cmd tea.Cmd) {
 					start(c)
 				}
 			case secretsUnlockDoneMsg, secretsMigrateCheckMsg, secretsMigrateDoneMsg,
-				secretsChangeCheckMsg, secretsChangeDoneMsg:
+				secretsChangeCheckMsg, secretsChangeDoneMsg, secretsSwitchCheckMsg, secretsSwitchDoneMsg:
 				next, more := m.update(msg)
 				*m = next
 				start(more)

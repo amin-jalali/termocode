@@ -18,10 +18,11 @@ import (
 //
 // One picker card: a header (backend, where it lives, locked or open),
 // one row per saved name with "value" or its reference text, and the
-// buttons "Lock now" / "Unlock…". Enter on a name asks to forget it.
-// The screen reads the index (names, kinds, reference texts) and never
-// calls Get, so no secret value can reach the screen. Changing the
-// passphrase and switching the backend come with SS-8.
+// buttons "Lock now" / "Unlock…", "Change passphrase…"
+// (secrets_passphrase.go) and "Switch backend…" (secrets_switch.go).
+// Enter on a name asks to forget it. The screen reads the index (names,
+// kinds, reference texts) and never calls Get, so no secret value can
+// reach the screen.
 
 const (
 	pickerKindSecretStore   pickerKindEnum  = 1800
@@ -120,6 +121,10 @@ func (m *Model) openSecretsStore() tea.Cmd {
 			items = append(items, picker.Item{ID: secretActionPassphrase, Title: "Change passphrase…", Hint: "re-encrypt the file"})
 		}
 	}
+	switch s.Backend() {
+	case "age", "keyring", "plain": // secrets_switch.go
+		items = append(items, picker.Item{ID: secretActionSwitch, Title: "Switch backend…", Hint: "copy to another store"})
+	}
 	for i, l := range note {
 		note[i] = ansi.Truncate(l, inner, "…")
 	}
@@ -140,6 +145,8 @@ func (m *Model) onSecretsStoreSelected(id string) tea.Cmd {
 		return m.openSecretsUnlock(func(m *Model) tea.Cmd { return m.openSecretsStore() })
 	case id == secretActionPassphrase:
 		return m.openSecretsChangePassphrase()
+	case id == secretActionSwitch:
+		return m.withSecretsUnlocked(func(m *Model) tea.Cmd { return m.secretsSwitchStart() })
 	case strings.HasPrefix(id, secretRowPrefix):
 		name := strings.TrimPrefix(id, secretRowPrefix)
 		return m.withSecretsUnlocked(func(m *Model) tea.Cmd { return m.askSecretForget(name) })
