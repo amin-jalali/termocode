@@ -85,13 +85,12 @@ func importShowPath(p string) string {
 	return p
 }
 
-// importSourceHint is the picker hint: where the files are and what the
-// importer found there.
-func importSourceHint(src migrate.Source) string {
+// importSourceParts says what the importer found in src ("settings, 3
+// keys, theme"); "" = nothing to import.
+func importSourceParts(src migrate.Source) (string, error) {
 	doc, err := migrate.Read(src)
-	where := importShowPath(src.Dir)
 	if err != nil {
-		return "cannot be read · " + where
+		return "", err
 	}
 	var parts []string
 	if len(doc.Settings) > 0 {
@@ -106,10 +105,21 @@ func importSourceHint(src migrate.Source) string {
 	if n := len(doc.Extensions); n > 0 {
 		parts = append(parts, importCount(n, "extension"))
 	}
-	if len(parts) == 0 {
+	return strings.Join(parts, ", "), nil
+}
+
+// importSourceHint is the picker hint: where the files are and what the
+// importer found there.
+func importSourceHint(src migrate.Source) string {
+	parts, err := importSourceParts(src)
+	where := importShowPath(src.Dir)
+	if err != nil {
+		return "cannot be read · " + where
+	}
+	if parts == "" {
 		return "nothing to import · " + where
 	}
-	return strings.Join(parts, ", ") + " · " + where
+	return parts + " · " + where
 }
 
 // importCount is "1 key" / "3 keys".

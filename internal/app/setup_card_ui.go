@@ -12,6 +12,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/migrate"
 	"github.com/amin-jalali/termocode/internal/nerdterm"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/setup"
@@ -35,6 +36,10 @@ type setupState struct {
 	doneSaved   bool                    // setup_done written this session
 	themeAsked  bool                    // the theme picker was opened from the card
 	services    int                     // MCP servers in mcp.json (-1: count again)
+
+	importProbing bool          // the editor probe is running (once)
+	importProbed  bool          // it finished
+	importFound   []setupEditor // other editors with something to import
 }
 
 // setupCardOff hides the card whatever config.json says. This package's
@@ -63,6 +68,7 @@ func (m *Model) setupS() *setupState {
 var setupSeams struct {
 	sync.Mutex
 	probe     func(fresh bool) SetupProbe
+	detect    func() []migrate.Source // other editors (EM-5); nil = importDetect
 	install   func(ctx context.Context, progress func(string)) (string, error)
 	gsettings setup.Gsettings
 }
@@ -176,12 +182,65 @@ func setupProbeCmd(fresh bool) tea.Cmd {
 	return func() tea.Msg { return setupProbeMsg{probe: probe(fresh), fresh: fresh} }
 }
 
-// setupInitCmd starts the first detection when the card shows.
+// setupInitCmd starts the first detections when the card shows.
 func (m *Model) setupInitCmd() tea.Cmd {
 	if !m.setupS().visible {
 		return nil
 	}
-	return setupProbeCmd(false)
+	return tea.Batch(setupProbeCmd(false), m.setupImportProbeCmd())
+}
+
+// setupEditor is another editor the card offers to import from.
+type setupEditor struct {
+	title string // "VS Code"
+	parts string // what the importer found: "settings, 23 keys, theme"
+}
+
+// setupImportMsg is the editor probe's answer.
+type setupImportMsg struct{ found []setupEditor }
+
+// setupImportTimeout caps the editor probe; a slower answer counts as
+// "no editor found".
+var setupImportTimeout = time.Second
+
+func setupDetectFn() func() []migrate.Source {
+	setupSeams.Lock()
+	defer setupSeams.Unlock()
+	if setupSeams.detect != nil {
+		return setupSeams.detect
+	}
+	return importDetect
+}
+
+// setupImportProbeCmd finds other editors once per session, off the UI
+// goroutine: Detect only stats a few known folders, and what the importer
+// would find is read here too, so drawing never reads a file. nil when the
+// probe ran or is running.
+func (m *Model) setupImportProbeCmd() tea.Cmd {
+	s := m.setupS()
+	if s.importProbed || s.importProbing {
+		return nil
+	}
+	s.importProbing = true
+	detect := setupDetectFn()
+	return func() tea.Msg {
+		ch := make(chan []setupEditor, 1) // buffered: a late answer is dropped, not leaked
+		go func() {
+			var found []setupEditor
+			for _, src := range detect() {
+				if parts, err := importSourceParts(src); err == nil && parts != "" {
+					found = append(found, setupEditor{title: src.Title, parts: parts})
+				}
+			}
+			ch <- found
+		}()
+		select {
+		case found := <-ch:
+			return setupImportMsg{found: found}
+		case <-time.After(setupImportTimeout):
+			return setupImportMsg{}
+		}
+	}
 }
 
 // handleSetupMsg handles the card's background results. ok=false: not
@@ -201,6 +260,9 @@ func (m *Model) handleSetupMsg(msg tea.Msg) (tea.Cmd, bool) {
 		var cmd tea.Cmd
 		m.toast, cmd = m.toast.PushDetail(toast.Info, "Terminal font checked", msg.probe.Terminal.Describe())
 		return cmd, true
+	case setupImportMsg:
+		s.importProbing, s.importProbed, s.importFound = false, true, msg.found
+		return nil, true
 	case setupInstallMsg:
 		return m.onSetupInstall(msg), true
 	case setupPlanMsg:
@@ -433,7 +495,7 @@ func (m *Model) showSetupCard() tea.Cmd {
 	}
 	s := m.setupS()
 	s.visible = true
-	cmds := []tea.Cmd{setupProbeCmd(false)}
+	cmds := []tea.Cmd{setupProbeCmd(false), m.setupImportProbeCmd()}
 	if !m.welcomeShowing() {
 		var cmd tea.Cmd
 		m.toast, cmd = m.toast.PushDetail(toast.Info, "Setup card is on the Welcome page", "It shows when no file is open.")
