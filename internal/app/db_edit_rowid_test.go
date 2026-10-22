@@ -57,7 +57,7 @@ INSERT INTO notes VALUES ('alpha','one'),('beta','two'),('gamma','three');`
 	if !d.WaitForText("Submit 2 changes", 2*time.Second) {
 		t.Fatalf("no submit card:\n%s", ansi.Strip(d.Frame()))
 	}
-	d.Key("enter")
+	d.Key("right", "right", "enter") // Submit is the last button
 	query := func() string {
 		out, _ := exec.Command(bin, file, `SELECT title||'='||body FROM notes ORDER BY rowid`).CombinedOutput()
 		return strings.TrimSpace(string(out))

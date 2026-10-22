@@ -678,8 +678,13 @@ func (m *Model) databaseSubmitCard() tea.Cmd {
 		{ID: "copy", Title: "Copy SQL"},
 		{ID: "cancel", Title: "Cancel"},
 	}
+	// Cancel comes first (and has the focus) when the write cannot be
+	// taken back by a Roll back: production, a DELETE, or auto-commit.
+	safeFirst := c.Environment == "production" || !manual || len(t.edits.deleted) > 0
 	if c.Environment == "production" {
 		title = "Write to production (" + name + ")? " + dbPlural(n, "change")
+	}
+	if safeFirst {
 		buttons = []confirm.Button{
 			{ID: "cancel", Title: "Cancel"},
 			{ID: "copy", Title: "Copy SQL"},

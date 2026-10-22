@@ -363,7 +363,7 @@ func TestDBEditCellSubmitsOneBoundUpdate(t *testing.T) {
 	if !strings.Contains(ansi.Strip(d.Frame()), "Submit 1 change") {
 		t.Fatalf("Copy SQL closed the card:\n%s", ansi.Strip(d.Frame()))
 	}
-	d.Key("left", "enter")
+	d.Key("right", "enter") // from Copy SQL to Submit
 	if !d.WaitFor(func() bool { return s.has("COMMIT") }, 2*time.Second) {
 		t.Fatalf("no commit: %q", s.writes())
 	}
@@ -426,7 +426,7 @@ func TestDBEditDeleteAndNewRowInOneSubmit(t *testing.T) {
 			t.Fatalf("card lacks %q:\n%s", want, frame)
 		}
 	}
-	d.Key("enter")
+	d.Key("right", "right", "enter") // a DELETE: Submit is the last button
 	if !d.WaitFor(func() bool { return s.has("COMMIT") }, 2*time.Second) {
 		t.Fatalf("no commit: %q", s.writes())
 	}
@@ -486,7 +486,7 @@ func TestDBEditWrongCountRollsBackAndKeepsTheMarks(t *testing.T) {
 	if !d.WaitForText("Submit 1 change", time.Second) {
 		t.Fatalf("no card:\n%s", ansi.Strip(d.Frame()))
 	}
-	d.Key("enter")
+	d.Key("right", "right", "enter") // Submit is the last button
 	if !d.WaitForText("The row changed on the server", 2*time.Second) {
 		t.Fatalf("no stale card:\n%s", ansi.Strip(d.Frame()))
 	}
@@ -501,7 +501,7 @@ func TestDBEditWrongCountRollsBackAndKeepsTheMarks(t *testing.T) {
 	// Reload drops them.
 	d.Key("w")
 	d.WaitForText("Submit 1 change", time.Second)
-	d.Key("enter")
+	d.Key("right", "right", "enter") // Submit is the last button
 	if !d.WaitForText("The row changed on the server", 2*time.Second) {
 		t.Fatalf("no stale card:\n%s", ansi.Strip(d.Frame()))
 	}
@@ -524,7 +524,7 @@ func TestDBEditServerErrorNamesTheStatement(t *testing.T) {
 	dbWaitPage(t, d, "1 change")
 	d.Key("w")
 	d.WaitForText("Submit 1 change", time.Second)
-	d.Key("enter")
+	d.Key("right", "right", "enter") // Submit is the last button
 	if !d.WaitForText("statement 1 of 1 failed", 2*time.Second) {
 		t.Fatalf("no failure toast:\n%s", ansi.Strip(d.Frame()))
 	}
@@ -655,7 +655,7 @@ func TestDBEditConsoleResultLooksUpItsKey(t *testing.T) {
 	if !d.WaitForText("WHERE `id` = 2", time.Second) {
 		t.Fatalf("no card:\n%s", ansi.Strip(d.Frame()))
 	}
-	d.Key("enter")
+	d.Key("right", "right", "enter") // Submit is the last button
 	if !d.WaitFor(func() bool { r, _ := s.row("2"); return r[1] == "d@example.com" }, 2*time.Second) {
 		t.Fatalf("not saved: %q", s.writes())
 	}
@@ -742,7 +742,7 @@ INSERT INTO logs(msg) VALUES ('a');`
 	if !d.WaitForText("Submit 3 changes to shop", 2*time.Second) {
 		t.Fatalf("no card:\n%s", ansi.Strip(d.Frame()))
 	}
-	d.Key("enter")
+	d.Key("right", "right", "enter") // Submit is the last button
 	if !d.WaitFor(func() bool {
 		return query(`SELECT count(*) FROM "order items"`) == "3" && strings.Contains(query(`SELECT name FROM "order items" WHERE name = 'fig'`), "fig")
 	}, 3*time.Second) {
@@ -820,8 +820,42 @@ func TestDBEditMultiLineValueInABuffer(t *testing.T) {
 	if !d.WaitForText("SET `email` = 'line one", time.Second) {
 		t.Fatalf("card:\n%s", ansi.Strip(d.Frame()))
 	}
-	d.Key("enter")
+	d.Key("right", "right", "enter") // Submit is the last button
 	if !d.WaitFor(func() bool { r, _ := s.row("2"); return r[1] == "line one\nline two" }, 2*time.Second) {
 		t.Fatalf("saved %q", s.writes())
+	}
+}
+
+// DB-3: with auto-commit or a DELETE the card opens on Cancel and Submit is
+// the danger button; a manual transaction without a DELETE keeps Submit first.
+func TestDBEditSubmitCardCancelFirstForAutoCommitAndDelete(t *testing.T) {
+	s := newEditSession(5)
+	d := editDriver(t, 100, 30, s, "")
+	openUsers(t, d)
+	cursorTo(t, d, "user-002@example.com")
+	setCell(t, d, "c@example.com")
+	dbWaitPage(t, d, "1 change")
+	d.Key("w")
+	if !d.WaitForText("Submit 1 change to local (one transaction)", time.Second) {
+		t.Fatalf("no submit card:\n%s", ansi.Strip(d.Frame()))
+	}
+	for _, l := range strings.Split(ansi.Strip(d.Frame()), "\n") {
+		if strings.Contains(l, "Copy SQL") && strings.Index(l, "Cancel") > strings.Index(l, "Submit") {
+			t.Fatalf("Cancel is not before Submit: %q", l)
+		}
+	}
+	d.Key("enter") // the focused button is Cancel
+	d.Settle(200 * time.Millisecond)
+	if s.has("UPDATE") || s.has("COMMIT") {
+		t.Fatalf("Enter on the auto-commit card wrote: %q", s.writes())
+	}
+	// A DELETE gets the same card.
+	d.Key("-")
+	d.Key("w")
+	d.WaitForText("Submit 2 changes", time.Second)
+	d.Key("enter")
+	d.Settle(200 * time.Millisecond)
+	if s.has("DELETE") {
+		t.Fatalf("Enter on the DELETE card wrote: %q", s.writes())
 	}
 }

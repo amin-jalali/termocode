@@ -81,7 +81,7 @@ func TestDBEditLivePostgres(t *testing.T) {
 	if !d.WaitForText("Submit 3 changes to live", 2*time.Second) {
 		t.Fatalf("card:\n%s", ansi.Strip(d.Frame()))
 	}
-	d.Key("enter")
+	d.Key("right", "right", "enter") // Submit is the last button
 	if !d.WaitFor(func() bool { return value(`SELECT name FROM public."Edit Live" WHERE id = 2`) == "it's a pear" }, 5*time.Second) {
 		t.Fatalf("not saved:\n%s", ansi.Strip(d.Frame()))
 	}
