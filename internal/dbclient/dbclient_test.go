@@ -498,3 +498,35 @@ func TestRedactSecurityReviewCases(t *testing.T) {
 		}
 	}
 }
+
+// A project connection may use ${secret:} / ${dotenv:} / ${env:}, never
+// ${cmd:}; the user's own file may.
+func TestConfigProjectRejectsCmdReference(t *testing.T) {
+	root := t.TempDir()
+	body := []byte(`{"connections":[
+	 {"id":"cmd","driver":"postgres","host":"h","port":5432,"password":"${cmd:touch marker}"},
+	 {"id":"url","driver":"postgres","host":"h","port":5432,"url":"postgres://u:${cmd:pass show x}@h/db"},
+	 {"id":"sec","driver":"postgres","host":"h","port":5432,"password":"${secret:db.sec}"},
+	 {"id":"env","driver":"postgres","host":"h","port":5432,"password":"${dotenv:PGPASSWORD}"}]}`)
+	cs, err := ParseConfig(body, SourceProject, filepath.Join(root, ".termocode", "databases.json"), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range cs[:2] {
+		if !strings.Contains(c.Problem, "${cmd:}") {
+			t.Errorf("%s: Problem = %q, want the ${cmd:} refusal", c.ID, c.Problem)
+		}
+	}
+	for _, c := range cs[2:] {
+		if c.Problem != "" {
+			t.Errorf("%s: Problem = %q, want none", c.ID, c.Problem)
+		}
+	}
+	user, err := ParseConfig(body, SourceUser, "user", root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if user[0].Problem != "" {
+		t.Errorf("user file must allow ${cmd:}: %q", user[0].Problem)
+	}
+}

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/jsonc"
+	"github.com/amin-jalali/termocode/internal/secrets"
 )
 
 const (
@@ -48,6 +49,9 @@ func ParseConfig(data []byte, source, file, root string) ([]Conn, error) {
 		}
 		if source == SourceProject && urlHasPassword(c.URL) {
 			c.Problem = "literal password in project config"
+		}
+		if source == SourceProject && (secrets.HasCmdRef(c.Password) || secrets.HasCmdRef(c.URL)) {
+			c.Problem = "invalid: " + secrets.ProjectCmdWarning
 		}
 		if source == SourceUser && (literalPassword(c.Password) || urlHasPassword(c.URL)) {
 			c.Warning = "literal password in user config; use the secret store"
