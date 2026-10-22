@@ -42,9 +42,7 @@ func TestIndentPrefixStopsEarly(t *testing.T) {
 	}
 	sb.WriteString("]")
 	data := []byte(sb.String())
-	start := time.Now()
 	out, complete, ok := IndentPrefix(data, 32<<10)
-	took := time.Since(start)
 	if !ok || complete || len(out) != 32<<10 {
 		t.Fatalf("len %d complete %v ok %v", len(out), complete, ok)
 	}
@@ -52,7 +50,27 @@ func TestIndentPrefixStopsEarly(t *testing.T) {
 	if !bytes.HasPrefix(full, out) {
 		t.Fatal("the prefix must equal the start of the full indent")
 	}
-	if took > 5*time.Millisecond {
-		t.Errorf("32 KB of a 5 MB body took %v (budget 5 ms)", took)
+	// Speed: not a fixed number of milliseconds (a loaded CI runner or the
+	// race detector made 5 ms fail at 6.7 ms) but a ratio against the work
+	// it must avoid, measured in the same test on the same machine: the
+	// prefix of 32 KB has to be at least 10 times faster than indenting
+	// all 5 MB (it is about 150 times faster). Both are the best of a few
+	// runs, so one scheduler hiccup does not decide. A prefix that stopped
+	// stopping early would be as slow as the full indent and fail.
+	best := func(n int, f func()) time.Duration {
+		d := time.Duration(1<<63 - 1)
+		for i := 0; i < n; i++ {
+			start := time.Now()
+			f()
+			if took := time.Since(start); took < d {
+				d = took
+			}
+		}
+		return d
+	}
+	prefix := best(7, func() { IndentPrefix(data, 32<<10) })
+	whole := best(3, func() { PrettyJSON(data) })
+	if prefix*10 > whole {
+		t.Errorf("32 KB of a 5 MB body took %v, the full indent %v (the prefix must be 10x faster)", prefix, whole)
 	}
 }

@@ -51,17 +51,34 @@ func TestHTTPBuildPage5MBBudget(t *testing.T) {
 	body := big5MB()
 	run := &httpRun{rr: httpclient.Resolved{Request: httpclient.Request{Method: "GET", URL: "http://x/"}},
 		resp: &httpclient.Response{Status: 200, StatusText: "OK", Body: body, Size: int64(len(body)), IsJSON: true, ContentType: "application/json"}}
-	start := time.Now()
-	p := buildHTTPPage(run, httpViewBody, false, false)
-	d := time.Since(start)
+	// Best of 5 builds (one scheduler hiccup must not decide), judged
+	// against 150 ms or, on a slow or busy machine, 4 times the cost of the
+	// unavoidable part (the JSON indent alone, best of 3, measured here
+	// now; the build costs about 2 times that). A real slowdown of the
+	// build still fails on a fast and on a slow machine.
+	best := func(n int, f func()) time.Duration {
+		d := time.Duration(1<<63 - 1)
+		for i := 0; i < n; i++ {
+			start := time.Now()
+			f()
+			if took := time.Since(start); took < d {
+				d = took
+			}
+		}
+		return d
+	}
+	var p httpPage
+	d := best(5, func() { p = buildHTTPPage(run, httpViewBody, false, false) })
+	base := best(3, func() { httpclient.PrettyJSON(body) })
+	budget := max(150*time.Millisecond, 4*base)
 	if len(p.lines) < 100000 {
 		t.Fatalf("lines %d", len(p.lines))
 	}
 	if p.head["syntax"] != "" {
 		t.Error("no json syntax above 1 MB")
 	}
-	if d > 150*time.Millisecond && !raceEnabled {
-		t.Errorf("building the 5 MB page took %v (budget 150 ms)", d)
+	if d > budget && !raceEnabled {
+		t.Errorf("building the 5 MB page took %v (budget %v: 150 ms or 4 x the %v indent)", d, budget, base)
 	}
 }
 
