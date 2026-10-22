@@ -1,6 +1,7 @@
 # ADR 0013 — Secret store: OS keyring, else an age-encrypted file; plain only by opt-in
 
-Status: **Accepted** (2026-10-22)
+Status: **Accepted** (2026-10-22). Idle lock, Change passphrase and Switch
+backend built 2026-10-22 (U19 SS-8).
 
 ## Context
 Every secret (AI API keys, Claude sign-in tokens, MCP secrets and sign-ins)
@@ -57,6 +58,23 @@ Alternatives on the table:
   `credentials.json.migrated`. A failure before the delete leaves the plain
   file as it was. A move cut off in the middle is finished on the next
   start.
+- **Switch backend** (store screen) follows the same rule between any two
+  backends: copy every name (references stay references), read back and
+  compare, record the backend in `secrets.json` and `secret_store`, and
+  only then remove the old copies (zeros and delete for a file, delete for
+  keyring items). A failure keeps the old store in use.
+- **Change passphrase** re-encrypts to a temp file, decrypts it with the
+  new passphrase and compares, then renames it over `secrets.age`. The
+  current passphrase is always asked.
+- **`secret_lock_minutes`** (0 = never) locks the unlocked encrypted file
+  after that many idle minutes. It is one one-shot timer, not a ticker: a
+  use only stores the time, and the timer, when it fires, either locks or
+  waits for the rest. No timer runs with 0, while locked, or for the
+  keyring and the plain file.
+- A damaged `secrets.age` is never deleted: "Start a new encrypted file"
+  keeps it as `secrets.age.broken-<YYYYMMDD-HHMMSS>`. A keyring that
+  stops answering (an SSH login to the same machine) shows one toast per
+  process.
 
 ## Consequences
 - **+** On a desktop, no prompt and no secret in a text file. On a server,
@@ -76,5 +94,8 @@ Alternatives on the table:
 - **−** There is no plain export. A plain copy is what this removes. An
   older termocode finds no `credentials.json` after a move and shows AI as
   not configured; the user sets the keys again.
-- **−** The idle timer (`secret_lock_minutes`), Change passphrase and
-  Switch backend are not built yet.
+- **−** A passphrase change while a second termocode has the file open:
+  that one reads "wrong passphrase" on its next write until it is
+  unlocked again with the new passphrase.
+- **−** A switch reads the old store once; a secret saved by another
+  window during those seconds may stay in the old store only.

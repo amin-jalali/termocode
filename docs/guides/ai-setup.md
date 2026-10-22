@@ -46,9 +46,20 @@ test the keyring on every start. The encrypted-file passphrase has at least 8
 characters. Under 12 it still works, with a warning. You can not read it back
 if you forget it: set your keys again.
 
-`secret_lock_minutes` is saved in `config.json`, but the idle timer is not
-active yet. Use **AI: Lock Secrets** to lock by hand. Both settings are for
-you only; the AI can not change them.
+`secret_lock_minutes` (in `config.json`, default `0` = never) locks the
+encrypted file after that many minutes without a secret use; a toast says
+*Secrets locked after N min idle*, and the next need asks the passphrase
+again. Each use starts the count again. It is read when you unlock. The
+keyring and the plain file have no passphrase, so it does nothing there.
+**AI: Lock Secrets** locks by hand any time. Both settings are for you
+only; the AI can not change them.
+
+**AI: Change Secrets Passphrase…** (also on the store screen) asks the
+current passphrase, then the new one twice. termocode writes the new file
+next to the old one, checks that the new passphrase opens it, and only then
+replaces `secrets.age`. If anything fails, the old file and the old
+passphrase stay. Another termocode window that has the file open asks for
+the new passphrase on its next save.
 
 Over SSH, see [Secrets on a server](remote-ssh.md#secrets-on-a-server).
 
@@ -86,6 +97,16 @@ it is locked, and one row per saved name with `value` or its reference
   passphrase first).
 - **Lock now** / **Unlock…** locks the encrypted file or asks for its
   passphrase.
+- **Change passphrase…** (encrypted file only) is **AI: Change Secrets
+  Passphrase…**.
+- **Switch backend…** moves every secret to another store: the OS keyring
+  (offered only when one answers; the card says why not), the encrypted
+  file (a new passphrase twice, or the passphrase of an existing
+  `secrets.age`) or the plain file (after a second card that says it is
+  not encrypted). termocode copies every name (references stay
+  references), reads each one back, saves the new store in `secrets.json`
+  and in `secret_store`, and only then removes the old copies. If a step
+  fails, the old store stays in use and nothing is removed.
 - `Esc` closes the screen.
 
 With the keyring or the encrypted file, **Open Config: AI Credentials**
@@ -205,7 +226,8 @@ link). You sign in, copy the code, and paste it back. Run
 |---|---|
 | **AI: Configure Provider…** | Pick a provider and enter a key |
 | **AI: Pick Model…** | Change the model |
-| **AI: Secret Store…** | List and forget saved secrets, lock or unlock |
+| **AI: Secret Store…** | List and forget saved secrets, lock or unlock, change the passphrase, switch backend |
+| **AI: Change Secrets Passphrase…** | Re-encrypt `secrets.age` with a new passphrase |
 | **AI: Move Secrets to a Safer Store…** | Move `credentials.json` to the OS keyring or the encrypted file |
 | **Open Config: AI Credentials** | Open `credentials.json` (the secret store screen for the keyring or encrypted file) |
 | Click the `✦` badge in the status bar | Configure (when AI is off) |
@@ -220,16 +242,24 @@ Next: [Use AI](ai-use.md).
     passphrase, there is no way to read `secrets.age`. Delete it, then set
     your keys again.
 
-**"Secret file is damaged"**
-:   `secrets.age` can not be read (cut off or changed). Restore it from a
-    backup. Without one, rename it and set your keys again; termocode
-    starts a new file.
+**"Secret file damaged"**
+:   `secrets.age` can not be read (cut off or changed). The card names the
+    file. Restore it from a backup, or press **Start a new encrypted file**:
+    termocode keeps the old file as `secrets.age.broken-<date>` (it never
+    deletes it), asks a new passphrase and starts an empty file. Set your
+    keys again; references stay.
 
 **"OS keyring is not available"**
 :   Only with `secret_store: keyring`: no keyring answers here, for example
     over SSH or with the desktop locked. Log in on the desktop, or set
     `secret_store` to `auto` or `age`. Keys that lived in the keyring stay
     there; set them again for the new store.
+
+**"Keyring not reachable here"**
+:   The keyring worked when termocode chose it, but does not answer now,
+    for example over SSH to the same machine. The toast comes once per
+    run. On the desktop, open **AI: Secret Store…** → **Switch backend…**
+    → **Encrypted file** to copy the keys there.
 
 **A reference does not work**
 :   The AI shows the reference text, never a value. Check the variable
