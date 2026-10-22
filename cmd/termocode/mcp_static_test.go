@@ -102,3 +102,26 @@ func TestStaticDefaultToolsNotEmpty(t *testing.T) {
 		t.Fatal("no static tools")
 	}
 }
+
+// Spec (MS-6): with no UI, resources/list is empty, a read finds nothing,
+// and a stateless server/discover works.
+func TestStaticResourcesEmptyAndDiscover(t *testing.T) {
+	r := newStaticRig(t, testTools, "")
+	m := r.ask(t, `{"jsonrpc":"2.0","id":1,"method":"resources/list"}`)
+	list, ok := m["result"].(map[string]any)["resources"].([]any)
+	if !ok || len(list) != 0 {
+		t.Fatalf("resources/list: %v", m)
+	}
+	m = r.ask(t, `{"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"termocode://editor/state"}}`)
+	if e, _ := m["error"].(map[string]any); e == nil || e["code"] != float64(-32002) {
+		t.Fatalf("resources/read: %v", m)
+	}
+	m = r.ask(t, `{"jsonrpc":"2.0","id":3,"method":"server/discover"}`)
+	res, _ := m["result"].(map[string]any)
+	if res == nil || res["supportedVersions"] == nil {
+		t.Fatalf("server/discover: %v", m)
+	}
+	if _, has := res["capabilities"].(map[string]any)["resources"]; has {
+		t.Fatalf("static mode advertises resources: %v", m)
+	}
+}
