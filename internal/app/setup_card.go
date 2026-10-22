@@ -53,7 +53,8 @@ type setupFacts struct {
 	secretsLocked       bool // the encrypted secret store holds secrets and is locked
 	services            int  // MCP servers in the user mcp.json
 
-	importFound []setupEditor // other editors with settings to import (probe result)
+	importFound  []setupEditor // other editors with settings to import (probe result)
+	importedFrom string        // "" = not imported; else the editor imported from (this session)
 
 	themeID, themeName string
 	settled            map[string]bool // steps answered on the card
@@ -97,7 +98,7 @@ func nerdFamilyFor(p SetupProbe) string {
 // buildSetupSteps computes the three steps.
 func buildSetupSteps(f setupFacts) []setupStep {
 	steps := []setupStep{setupIconsStep(f)}
-	if len(f.importFound) > 0 {
+	if len(f.importFound) > 0 || f.importedFrom != "" {
 		steps = append(steps, setupImportStep(f))
 	}
 	steps = append(steps, setupAIStep(f))
@@ -132,6 +133,14 @@ func setupServicesStep(f setupFacts) setupStep {
 // the card names no product itself.
 func setupImportStep(f setupFacts) setupStep {
 	s := setupStep{id: "import", title: "Import", optional: true}
+	if f.importedFrom != "" {
+		s.done = true
+		s.status = "Imported from " + f.importedFrom
+		s.detail = s.status + ". Undo puts your files back as they were."
+		s.action = "Undo…"
+		s.buttons = []setupButton{{id: "import-undo", label: "Undo import…"}}
+		return s
+	}
 	first := f.importFound[0]
 	if n := len(f.importFound) - 1; n > 0 {
 		s.status = "Settings found in " + first.title + " and " + strconv.Itoa(n) + " more"

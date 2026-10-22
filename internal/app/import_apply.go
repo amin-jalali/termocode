@@ -328,6 +328,9 @@ func (m *Model) applyImport() tea.Cmd {
 	}
 	cmd := m.reloadAfterImport(prev, loadSettings())
 	m.closeImport()
+	if m.setup != nil {
+		m.setup.importedFrom = p.Title() // the setup card's Import row shows it done
+	}
 	var tc tea.Cmd
 	m.toast, tc = m.toast.PushDetail(toast.Info, "Imported from "+p.Title(),
 		c.Summary()+" · Undo: Preferences: Undo Last Import")

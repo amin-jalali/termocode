@@ -40,6 +40,7 @@ type setupState struct {
 	importProbing bool          // the editor probe is running (once)
 	importProbed  bool          // it finished
 	importFound   []setupEditor // other editors with something to import
+	importedFrom  string        // the editor imported from this session, "" = none
 }
 
 // setupCardOff hides the card whatever config.json says. This package's
@@ -291,7 +292,7 @@ func (m *Model) setupFacts() setupFacts {
 		iconMode: theme.CurrentIconMode, iconEnv: iconEnvOverride(), goos: setupGOOS,
 		installing: s.installing, installLine: s.installLine,
 		showSteps: s.showSteps, profileMade: s.profileMade,
-		settled: s.settled, importFound: s.importFound,
+		settled: s.settled, importFound: s.importFound, importedFrom: s.importedFrom,
 	}
 	if !m.aiConfigured() {
 		f.secretsLocked = m.aiS().secretsLocked
@@ -444,6 +445,8 @@ func (m *Model) pressSetupButton(id string) tea.Cmd {
 		return m.openThemePicker()
 	case id == "import-open":
 		return m.openImportPicker()
+	case id == "import-undo":
+		return m.undoLastImport()
 	case id == "hide":
 		return m.closeSetupCard()
 	}

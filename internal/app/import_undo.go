@@ -105,6 +105,9 @@ func (m *Model) runUndoImport() tea.Cmd {
 		recordError("undo import: " + err.Error())
 	}
 	cmd := m.reloadAfterImport(prev, loadSettings())
+	if m.setup != nil {
+		m.setup.importedFrom = "" // the setup card's Import row offers it again
+	}
 	var tc tea.Cmd
 	m.toast, tc = m.toast.PushDetail(toast.Info, "Import undone", importFileNames(man)+" restored")
 	return tea.Batch(cmd, tc)

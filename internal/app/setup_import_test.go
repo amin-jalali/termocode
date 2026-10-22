@@ -273,3 +273,78 @@ func TestSetupImportRowHideSetup(t *testing.T) {
 		t.Fatal("Hide setup left the card (and the row) visible")
 	}
 }
+
+// ─── Done and undo ─────────────────────────────────────────────────────
+
+func TestSetupImportRowDoneAndUndoOffer(t *testing.T) {
+	f := importFacts(vsCode)
+	f.importedFrom = "VS Code"
+	s := stepByID(t, buildSetupSteps(f), "import")
+	if !s.done || s.status != "Imported from VS Code" || s.action != "Undo…" {
+		t.Fatalf("done row %+v", s)
+	}
+	if len(s.buttons) != 1 || s.buttons[0].id != "import-undo" {
+		t.Errorf("buttons %+v", s.buttons)
+	}
+	got := setupText(t, f, 68)
+	if row := strings.Index(strings.Join(got, "\n"), "✓ Import  Imported from VS Code"); row < 0 || !strings.HasSuffix(got[2], "Undo…") {
+		t.Errorf("drawn:\n%s", strings.Join(got, "\n"))
+	}
+	for _, w := range []int{30, 40, 50} {
+		setupText(t, f, w) // every line exactly w cells
+	}
+}
+
+func TestSetupImportRowFollowsImportAndUndo(t *testing.T) {
+	importSandbox(t, "vscode")
+	t.Cleanup(func() { theme.ApplyTheme("vscode-dark-plus") })
+	old := setupCardOff
+	setupCardOff = false
+	t.Cleanup(func() { setupCardOff = old })
+	t.Cleanup(SetSetupProbe(func(bool) SetupProbe { return SetupProbe{} }))
+
+	m := importReviewAndConfirm(t)
+	m.setup = newSetupState()
+	m = feedAll(m, setupRunCmd(m.setupInitCmd()))
+	if s := stepByID(t, m.setupCardView().steps, "import"); s.done || s.action != "Import…" {
+		t.Fatalf("before the import: %+v", s)
+	}
+
+	m = importConfirm(t, m, "import")
+	s := stepByID(t, m.setupCardView().steps, "import")
+	if !s.done || s.status != "Imported from VS Code" || s.action != "Undo…" {
+		t.Fatalf("after the import: %+v\n%s", s, importToast(m))
+	}
+
+	// Cancel keeps it done; Undo asks first.
+	m.pressSetupRow("import")
+	if !m.confirmOpen || m.confirmKind != confirmKindImportUndo {
+		t.Fatal("the row's Undo… did not ask")
+	}
+	m = importConfirm(t, m, "cancel")
+	if s := stepByID(t, m.setupCardView().steps, "import"); !s.done {
+		t.Fatal("cancelled undo changed the row")
+	}
+	m.pressSetupRow("import")
+	m = importConfirm(t, m, "undo")
+	s = stepByID(t, m.setupCardView().steps, "import")
+	if s.done || s.action != "Import…" || !strings.HasPrefix(s.status, "Settings found in VS Code") {
+		t.Fatalf("after the undo: %+v", s)
+	}
+}
+
+func TestSetupImportFailedImportKeepsTheOffer(t *testing.T) {
+	importSandbox(t, "vscode")
+	old := setupCardOff
+	setupCardOff = false
+	t.Cleanup(func() { setupCardOff = old })
+	t.Cleanup(SetSetupProbe(func(bool) SetupProbe { return SetupProbe{} }))
+	m := importModel(150, 42)
+	m.setup = newSetupState()
+	m.setup.importProbed, m.setup.importFound = true, []setupEditor{vsCode}
+	m.importOpen = false
+	m.applyImport() // no panel: nothing happens
+	if s := stepByID(t, m.setupCardView().steps, "import"); s.done {
+		t.Fatal("row done without an import")
+	}
+}
