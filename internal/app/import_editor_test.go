@@ -157,14 +157,16 @@ func TestImportPickerListsDetectedEditors(t *testing.T) {
 }
 
 func TestImportPickerWithoutEditorsSaysSo(t *testing.T) {
+	// EM-7: no toast any more; the picker opens with only "From a file..."
+	// and a note that says no editor was found.
 	importSandbox(t)
 	m := importModel(150, 42)
 	m.dispatchPaletteAction("prefs-import-editor")
-	if m.pickerOpen || m.importOpen {
-		t.Fatal("a picker opened with nothing to import")
+	if !m.pickerOpen || m.importOpen {
+		t.Fatal("no picker with nothing detected")
 	}
-	if txt := importToast(m); !strings.Contains(txt, "No other editor found") {
-		t.Errorf("toast %q", txt)
+	if frame := ansi.Strip(m.View()); !strings.Contains(frame, "No other editor found") {
+		t.Errorf("picker note missing:\n%s", frame)
 	}
 }
 

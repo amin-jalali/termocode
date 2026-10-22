@@ -21,7 +21,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/migrate"
 	"github.com/amin-jalali/termocode/internal/picker"
-	"github.com/amin-jalali/termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/prompt"
 )
 
 // importState is the import flow's state; nil until first used.
@@ -130,35 +130,79 @@ func importCount(n int, word string) string {
 	return strconv.Itoa(n) + " " + word + "s"
 }
 
-// openImportPicker lists the editors found on this computer.
+// The picker's last row and the path prompt behind it (EM-7).
+const (
+	importFileID    = "import-file"
+	importFileTitle = "From a file..."
+
+	promptKindImportFile promptKindEnum = 1950
+)
+
+// openImportPicker lists the editors found on this computer, then
+// "From a file…" (always there, also when nothing was found).
 func (m *Model) openImportPicker() tea.Cmd {
 	srcs := importDetect()
-	if len(srcs) == 0 {
-		var c tea.Cmd
-		m.toast, c = m.toast.PushDetail(toast.Info, "No other editor found",
-			"No settings from another editor were found on this computer. Nothing was changed.")
-		return c
-	}
 	s := m.importS()
 	s.sources = srcs
 	m.picker = picker.NewWith(" Import from Another Editor ", func() []picker.Item {
-		items := make([]picker.Item, 0, len(srcs))
+		items := make([]picker.Item, 0, len(srcs)+1)
 		for i, src := range srcs {
 			items = append(items, picker.Item{ID: "import-src-" + strconv.Itoa(i), Title: src.Title, Hint: importSourceHint(src)})
 		}
-		return items
+		return append(items, picker.Item{ID: importFileID, Title: importFileTitle,
+			Hint: "a settings or keymap file you point to"})
 	})
 	m.picker.SetWidth(96)
-	m.picker.SetNote([]string{"Pick an editor. You see every change before anything is written."})
+	if len(srcs) == 0 {
+		m.picker.SetNote([]string{"No other editor found on this computer. You can pick a file instead."})
+	} else {
+		m.picker.SetNote([]string{"Pick an editor. You see every change before anything is written."})
+	}
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
 	m.pickerKind = pickerKindImportSource
 	return m.picker.Init()
 }
 
+// openImportFilePrompt asks for the file (Tab completes the path).
+func (m *Model) openImportFilePrompt() tea.Cmd {
+	m.prompt = prompt.New("Import from a file", "Path of a settings or keymap file (Tab completes):", "~/")
+	m.prompt.SetCompleter(prompt.CompletePath)
+	m.prompt.SetSize(m.w, m.h)
+	m.promptOpen = true
+	m.promptKind = promptKindImportFile
+	return nil
+}
+
+// onImportFilePath reads the typed file (off the UI goroutine) and builds
+// the review plan. The file is only read; a bad file is a toast and
+// nothing changes.
+func (m *Model) onImportFilePath(value string) tea.Cmd {
+	path := strings.TrimSpace(value)
+	if len(path) >= 2 && (path[0] == '\'' || path[0] == '"') && path[len(path)-1] == path[0] {
+		path = strings.TrimSpace(path[1 : len(path)-1])
+	}
+	path = expandHome(path)
+	themeID := m.themeID
+	return func() tea.Msg {
+		src, doc, err := migrate.ReadFile(path)
+		if err != nil {
+			return importPlanMsg{plan: migrate.Plan{Source: migrate.Source{Title: "the file"}}, err: err}
+		}
+		cur, err := importCurrent(themeID)
+		if err != nil {
+			return importPlanMsg{plan: migrate.Plan{Source: src}, err: err}
+		}
+		return importPlanMsg{plan: migrate.Build(src, doc, cur)}
+	}
+}
+
 // onImportSourcePicked reads the chosen editor (off the UI goroutine)
 // and builds the review plan against the user's current files.
 func (m *Model) onImportSourcePicked(id string) tea.Cmd {
+	if id == importFileID {
+		return m.openImportFilePrompt()
+	}
 	n, err := strconv.Atoi(strings.TrimPrefix(id, "import-src-"))
 	s := m.importS()
 	if err != nil || n < 0 || n >= len(s.sources) {

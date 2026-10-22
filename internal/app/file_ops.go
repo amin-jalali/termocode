@@ -207,6 +207,8 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		return m.refreshSearchResults() // an empty file; kept in step (N2)
 	case promptKindUploadSource:
 		return m.onUploadSource(value)
+	case promptKindImportFile:
+		return m.onImportFilePath(value)
 	case promptKindNewFolder:
 		newPath := filepath.Join(m.promptPath, value)
 		if err := os.MkdirAll(newPath, 0o755); err != nil {
