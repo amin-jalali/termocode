@@ -24,6 +24,8 @@ type Document struct {
 	Keys       []KeyBinding
 	Theme      string
 	Extensions []string
+	// Snippets are the editor's snippets, one per scope and trigger.
+	Snippets []Snippet
 	// Skipped lists things a reader could not use (bad file, link out of the
 	// folder, built-in base keymap...). Each one becomes a "not imported" row.
 	Skipped []Skipped
@@ -95,6 +97,7 @@ func ReadVSCode(dir string) (Document, error) {
 			}
 		}
 	}
+	readVSCodeSnippets(dir, &d)
 	entries, _ := os.ReadDir(extDir)
 	for _, x := range entries {
 		if !x.IsDir() {
@@ -218,8 +221,8 @@ func Detect(home, goos, xdg string) []Source {
 	var out []Source
 	for _, p := range []struct{ id, title, folder string }{{"vscode", "VS Code", "Code"}, {"vscodium", "VSCodium", "VSCodium"}, {"cursor", "Cursor", "Cursor"}, {"windsurf", "Windsurf", "Windsurf"}} {
 		d := user(p.folder)
-		if existsAny(d, "settings.json", "keybindings.json") {
-			out = append(out, Source{p.id, p.title, d, []string{"settings.json", "keybindings.json"}})
+		if existsAny(d, "settings.json", "keybindings.json", "snippets") {
+			out = append(out, Source{p.id, p.title, d, []string{"settings.json", "keybindings.json", "snippets"}})
 		}
 	}
 	z := filepath.Join(config, "zed")

@@ -17,6 +17,7 @@ const (
 	RowTheme     RowKind = "theme"
 	RowExtension RowKind = "extension"
 	RowVimrc     RowKind = "vimrc"
+	RowSnippet   RowKind = "snippet"
 )
 
 // ReviewRow keeps the source text and proposed destination for the review panel.
