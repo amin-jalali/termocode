@@ -3,6 +3,7 @@ package app
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/dbclient"
 )
 
@@ -41,6 +42,15 @@ func (m *Model) databaseCardsDemo(variant string) (tea.Cmd, bool) {
 		c.Source, c.Password = dbclient.SourceUser, "not-a-real-password"
 		d.conns = []dbclient.Conn{c}
 		return m.databaseOpen(c.ID, false), true
+	case "ai-card":
+		// The AI asks to run a write: the card shows the target and the
+		// exact statement. The wait command is dropped: nobody answers.
+		m.databasesDemo("")
+		c := dbDemoConnection()
+		human := dbAIDescribe(&dbAICall{conn: c, sql: "UPDATE users SET plan = 'pro' WHERE id = 42", kind: dbclient.KindWrite}, "db_query")
+		tool := ai.Tool{Name: "db_query", Display: "run a database statement"}
+		m.onAIChatConfirm(aiChatConfirmMsg{gen: m.aiS().chatGen, tool: tool, human: human, reply: make(chan bool, 1), ch: make(chan tea.Msg)})
+		return nil, true
 	}
 	return nil, false
 }

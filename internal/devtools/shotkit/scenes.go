@@ -116,6 +116,7 @@ func dbCardScenes() []Scene {
 		DatabasesVariant("db-disconnect-card", "disconnect-card"),
 		DatabasesVariant("db-redis-delete-card", "redis-delete"),
 		DatabasesVariant("db-password-move-card", "password-move"),
+		DatabasesVariant("db-ai-card", "ai-card"),
 		{Name: "db-add-form", Steps: WithEditor(Act("dbdemo:add-picker"), Key("enter"), Pause(400*time.Millisecond))},
 	}
 }
