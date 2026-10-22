@@ -168,6 +168,39 @@ func (m *Model) dispatchAgentPalette(id string) (tea.Cmd, bool) {
 	return m.startAgent(a), true
 }
 
+// agentLaunchLine is the command line typed into the agent's tab: the
+// program, plus the flags that give it termocode's MCP server for this
+// launch when its recipe has them (MS-4). mcp_server off, a recipe
+// without flags, or a failure to prepare the temp file: just the program,
+// and a failure says so in a toast. The user's own config files are never
+// touched.
+func (m *Model) agentLaunchLine(a agents.Agent) (string, tea.Cmd) {
+	if mcpServeMode() == "off" || a.MCP.Kind != agents.MCPFlag {
+		return a.Bin, nil
+	}
+	exe, err := mcpServeExecutable()
+	if err != nil || exe == "" {
+		return a.Bin, nil
+	}
+	root := aiWorkspaceRoot()
+	file := ""
+	if a.MCP.TempFile != "" {
+		if file, err = m.writeAgentMCPFile(a, exe, root); err != nil {
+			recordError("[mcp-serve] temp config for " + a.ID + ": " + err.Error())
+			var c tea.Cmd
+			m.toast, c = m.toast.PushDetail(toast.Warn, a.Title+" starts without termocode's tools", err.Error())
+			return a.Bin, c
+		}
+	}
+	line, ok := a.MCPLine(exe, root, file)
+	if !ok {
+		var c tea.Cmd
+		m.toast, c = m.toast.PushDetail(toast.Warn, a.Title+" starts without termocode's tools", "the path of termocode or of the folder has a character the shell line cannot quote")
+		return a.Bin, c
+	}
+	return line, nil
+}
+
 // startAgent opens a terminal tab in the workspace and runs the agent in
 // its shell, so the shell is back when the agent quits. A tab already
 // running that agent is shown instead (no second copy by accident).
@@ -198,15 +231,18 @@ func (m *Model) startAgent(a agents.Agent) tea.Cmd {
 	// Without shell integration the mark stays until the tab closes;
 	// with it, the shell's command-end clears it (term_integration.go).
 	t.Agent, t.AgentState = a.ID, agents.Working
+	// The listener first, then the line: the agent may call at once.
+	serveCmd := m.ensureMCPServeForAgent() // mcp_server auto: the agent may use the IDE's tools
+	line, launchCmd := m.agentLaunchLine(a)
 	_ = m.nvim.ExecLua(fmt.Sprintf(`
 		local buf = %d
 		local ok, chan = pcall(function() return vim.bo[buf].channel end)
 		if ok and chan and chan > 0 then pcall(vim.fn.chansend, chan, %q) end
-	`, t.BufID, a.Bin+"\n"))
+	`, t.BufID, line+"\n"))
 	m.agentWatch(t.BufID, true)
 	m.applyLayout()
 	m.resizeTerminalSplit()
-	return m.ensureMCPServeForAgent() // mcp_server auto: the agent may use the IDE's tools
+	return tea.Batch(serveCmd, launchCmd)
 }
 
 func init() {
