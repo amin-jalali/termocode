@@ -39,7 +39,10 @@ func TestSecretsCorruptFileOffersNewFile(t *testing.T) {
 		t.Fatalf("no card for the damaged file (toast %q)", toastText(*m))
 	}
 	text := migrateCardText(m)
-	if !strings.Contains(strings.Join(strings.Fields(text), ""), strings.Join(strings.Fields(path), "")) ||
+	// A long temp path (macOS) wraps inside the card, so the side
+	// borders go before the path is matched.
+	flat := strings.Join(strings.Fields(strings.ReplaceAll(text, "│", " ")), "")
+	if !strings.Contains(flat, strings.Join(strings.Fields(path), "")) ||
 		!strings.Contains(text, "Start a new encrypted file") {
 		t.Fatalf("card:\n%s", text)
 	}
