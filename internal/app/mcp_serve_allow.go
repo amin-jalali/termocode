@@ -58,10 +58,14 @@ func (a *mcpServeAllowSet) replace(list map[string][]string) {
 // mcpServeAlwaysKey is what "Always allow" remembers for a call, "" when
 // the card must always ask: a tool without a class, and debug_evaluate
 // (it runs any code in the debuggee). execute_action is per action id;
-// the database reads are per connection (mcp_serve_db.go).
+// the database reads are per connection (mcp_serve_db.go), http_send per
+// host (mcp_serve_http.go).
 func mcpServeAlwaysKey(t ai.Tool, args map[string]any) string {
 	if t.Class == "" || t.Name == "debug_evaluate" {
 		return ""
+	}
+	if t.Name == "http_send" {
+		return mcpServeHTTPAlwaysKey(t.Class)
 	}
 	if mcpServeDBAlwaysTools[t.Name] {
 		conn, _ := args["conn"].(string)
@@ -84,6 +88,12 @@ func mcpServeAlwaysKey(t ai.Tool, args map[string]any) string {
 func mcpServeAlwaysWhat(key string) string {
 	if id, ok := strings.CutPrefix(key, "execute_action:"); ok {
 		return "the action " + id
+	}
+	if host, ok := strings.CutPrefix(key, "http_send:"); ok {
+		if h, write := strings.CutSuffix(host, "/write"); write {
+			return "http_send with any method to " + h
+		}
+		return "http_send GET / HEAD / OPTIONS to " + host
 	}
 	if tool, conn, ok := strings.Cut(key, ":"); ok && mcpServeDBAlwaysTools[tool] {
 		return tool + " (reads) on " + conn

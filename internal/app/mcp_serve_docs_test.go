@@ -17,13 +17,14 @@ func TestMCPServeGateDocs(t *testing.T) {
 		"db_schema":        MCPServeYes,
 		"db_query":         MCPServeAsks, // reads only (mcp_serve_db.go)
 		"redis_command":    MCPServeAsks,
+		"http_send":        MCPServeSome, // GET to loopback runs at once
 	}
 	for name, w := range want {
 		if got[name] != w {
 			t.Errorf("%s = %q, want %q", name, got[name], w)
 		}
 	}
-	for _, name := range []string{"write_file", "run_command", "terminal_send", "git_commit", "settings_set", "http_send", "http_save_request", "db_explain", "db_history"} {
+	for _, name := range []string{"write_file", "run_command", "terminal_send", "git_commit", "settings_set", "http_save_request", "db_explain", "db_history"} {
 		if g, ok := got[name]; ok {
 			t.Errorf("%s is documented as offered (%q) but is not in the allow-list", name, g)
 		}

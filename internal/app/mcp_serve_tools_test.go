@@ -26,7 +26,7 @@ func TestMCPServeAllowListGolden(t *testing.T) {
 		"debug_state", "debug_breakpoint", "debug_start", "debug_control", "debug_evaluate",
 		"terminal_tabs", "terminal_read",
 		"git_status", "git_diff", "git_log", "git_blame", "git_branch",
-		"services_list", "services_status", "services_logs", "http_list_requests", "http_environments", "http_history",
+		"services_list", "services_status", "services_logs", "http_list_requests", "http_environments", "http_history", "http_send",
 		"db_connections", "db_schema", "db_ddl", "db_query", "redis_keys", "redis_get", "redis_command",
 	}
 	aiTestModel(t)
@@ -68,7 +68,7 @@ func TestMCPServeDenySet(t *testing.T) {
 	deny := []string{"write_file", "create_file", "create_dir", "delete", "rename", "format", "run_command",
 		"terminal_send", "settings_set", "settings_list", "layout_set", "git_stage", "git_unstage", "git_commit",
 		"git_push", "git_pull", "git_fetch", "git_checkout", "git_stash", "git_hunk", "lsp_rename", "lsp_code_actions",
-		"services_start", "services_stop", "services_restart", "http_send", "http_set_environment", "http_save_request",
+		"services_start", "services_stop", "services_restart", "http_set_environment", "http_save_request",
 		"extensions", "help_read", "db_explain", "db_history", "containers_control", "compose_up", "images_pull"}
 	for _, tool := range got {
 		if contains(deny, tool.Name) || strings.HasPrefix(tool.Name, "mcp__") {

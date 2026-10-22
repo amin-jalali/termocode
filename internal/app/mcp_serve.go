@@ -188,6 +188,8 @@ func (s *mcpServeSource) Call(ctx context.Context, name string, args map[string]
 	asked := false // a card was shown (the status screen counts them)
 	defer func() { s.noteCall(ctx, asked) }()
 	argText := aiAuditArgs(args)
+	mcpServeForgetHTTP(args) // a request cached for an earlier map at this address
+	defer mcpServeForgetHTTP(args)
 	audit := func(gate, result string) {
 		if s.audit != nil {
 			s.audit(at, client, name, argText, gate, result)

@@ -98,7 +98,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`help_read`](#help_read) | auto | no | Read the built-in guide: with no arguments list pages; page shows headings and anchors; page and section returns that section's prepared Markdown; query searches matching sections (page can filter it). |
 | [`http_list_requests`](#http_list_requests) | auto | yes | List the HTTP requests in the user's .http / .rest files (request templates with {{variables}}, not resolved), the file variable names and the selected environment. |
 | [`http_environments`](#http_environments) | auto | yes | Show the HTTP environments (http-client.env.json and the private file), the selected one and their variable names. |
-| [`http_send`](#http_send) | GET / HEAD / OPTIONS to localhost: auto<br>other safe methods: confirm (http:<host[:port]>)<br>other methods: confirm (http:<host[:port]>/write)<br>private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks) | no | Send an HTTP request and read the answer (status, headers, body). |
+| [`http_send`](#http_send) | GET / HEAD / OPTIONS to localhost: auto<br>other safe methods: confirm (http:<host[:port]>)<br>other methods: confirm (http:<host[:port]>/write)<br>private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks) | some ask | Send an HTTP request and read the answer (status, headers, body). |
 | [`http_get_last_response`](#http_get_last_response) | auto | no | Read an HTTP answer again from memory (the last 20): part summary, body or headers; offset pages through a long body. |
 | [`http_history`](#http_history) | auto | yes | List recent HTTP requests (the user's and yours), newest first. |
 | [`http_set_environment`](#http_set_environment) | confirm (ide) | no | Select the HTTP environment (from http_environments) for the user's .http files; "none" clears it. |
@@ -1112,7 +1112,7 @@ Send an HTTP request and read the answer (status, headers, body). Either path + 
 
 **Gate:** GET / HEAD / OPTIONS to localhost: auto · other safe methods: confirm (http:<host[:port]>) · other methods: confirm (http:<host[:port]>/write) · private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks)
 
-**MCP server:** no
+**MCP server:** some ask
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |

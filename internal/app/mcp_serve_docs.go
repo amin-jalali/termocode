@@ -28,8 +28,11 @@ func MCPServeGateDocs() map[string]string {
 // mcpServeGateWord classifies one exposed tool by asking its gate with
 // each value of its enum arguments (the table may have narrowed them).
 func mcpServeGateWord(t ai.Tool) string {
-	if t.Name == "execute_action" {
+	switch t.Name {
+	case "execute_action":
 		return MCPServeSome // each palette command has its own gate (mcpServeActionAllowed, then the policy map)
+	case "http_send":
+		return MCPServeSome // GET / HEAD / OPTIONS to loopback run at once; the rest asks (httpAIGate)
 	}
 	if t.Gate == nil {
 		if t.Mutating {

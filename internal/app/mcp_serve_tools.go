@@ -19,8 +19,8 @@ import (
 // table; tools/list and tools/call both read it, and
 // TestMCPServeAllowListGolden pins it. What is left out on purpose:
 // file writes, run_command, terminal_send, git writes, settings,
-// credentials, LSP rename / code actions, service starts, HTTP sends,
-// database writes, containers and every tool of the user's own MCP servers
+// credentials, LSP rename / code actions, service starts, .http file
+// writes, database writes, containers and every tool of the user's own MCP servers
 // (mcp__*: never re-exported, MC-11). The agent has its own shell and
 // editor; we add the IDE, not a second agent.
 
@@ -80,6 +80,7 @@ var mcpServeAllowList = []mcpServeToolRow{
 	{name: "http_list_requests"},
 	{name: "http_environments"},
 	{name: "http_history"},
+	{name: "http_send"}, // the chat's per host and method gate (mcp_serve_http.go)
 	// Databases (read only: lists run at once, reading data asks)
 	{name: "db_connections"},
 	{name: "db_schema"},
@@ -128,6 +129,8 @@ func mcpServeTools(all []ai.Tool, root string, call aiIDECaller) []ai.Tool {
 			t = mcpServeRedisCommand(t, root)
 		case "redis_get":
 			t = mcpServeRedisGet(t, root)
+		case "http_send":
+			t = mcpServeHTTPSend(t, root)
 		}
 		out = append(out, t)
 	}
