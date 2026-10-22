@@ -95,7 +95,7 @@ func TestHelpTopicsResolve(t *testing.T) {
 			t.Errorf("%s: help = %q, want a topic: %v", id, s.help, !none[id])
 		}
 	}
-	for _, name := range []string{"Explorer", "Source Control", "Run", "Testing", "Containers"} {
+	for _, name := range []string{"Explorer", "Source Control", "Run", "Testing", "Containers", "Databases"} {
 		if activityHelp[name] == "" {
 			t.Errorf("activity %s has no help topic", name)
 		}

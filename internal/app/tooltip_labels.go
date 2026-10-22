@@ -44,6 +44,7 @@ var activityHelp = map[string]string{
 	"Run":            "guides/debug.md#debug-in-five-steps",
 	"Testing":        "guides/tests.md#open-the-testing-view",
 	"Containers":     "guides/containers.md#the-view",
+	"Databases":      "guides/databases.md#open-the-view",
 }
 
 // tooltipLabels maps a hit target id (see hit_targets.go) to its label.

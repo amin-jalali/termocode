@@ -43,6 +43,8 @@ var helpContexts = map[string]string{
 	"http-response": "guides/http-client.md#the-response-page",
 	"http-file":     "guides/http-client.md#send-a-request",
 	"db-compare":    "guides/databases.md#compare-schemas",
+	"databases":     "guides/databases.md#open-the-view",
+	"db-result":     "guides/databases.md#results",
 }
 
 // settingsTopic is the row of setting key in the settings reference:
@@ -134,6 +136,8 @@ func (m Model) helpTopicForFocus() string {
 		return helpContexts["terminal"]
 	case m.gitDiffActive:
 		return helpContexts["diff"]
+	case lastPathPart(m.editor.Path()) == "SQL Result":
+		return helpContexts["db-result"]
 	case m.editor.Lang() == "httpresponse":
 		return helpContexts["http-response"]
 	case isHTTPPath(m.editor.Path()):
@@ -191,6 +195,8 @@ func (m Model) sidebarHelpTopic() string {
 		return activityHelp["Containers"]
 	case activity.ViewSearch:
 		return helpContexts["search-view"]
+	case activity.ViewDatabases:
+		return helpContexts["databases"]
 	}
 	return ""
 }

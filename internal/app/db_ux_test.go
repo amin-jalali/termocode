@@ -6,6 +6,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/dbclient"
+	"github.com/amin-jalali/termocode/internal/help"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -83,5 +84,29 @@ func TestDatabasePageKeyRowEndsWithKeysHint(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(m.toast.View(120, 30), "\n"), "Database keys") {
 		t.Fatal("? on the result page shows no key help")
+	}
+}
+
+// DB-5: Shift+F1 and the tooltip "More info" know the Databases view and the
+// result page; both point at sections that exist in the guide.
+func TestDatabasesHelpTopics(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	m := hoverModel(t)
+	m.focus, m.showExp = FocusExplorer, true
+	m.activity.SetActive(activity.ViewDatabases)
+	if got := m.helpTopicForFocus(); got != helpContexts["databases"] || got == "" {
+		t.Fatalf("Databases view topic = %q", got)
+	}
+	m = hoverModel(t)
+	m.focus = FocusEditor
+	m.editor.SetMeta("/tmp/x/SQL Result", false, "")
+	if got := m.helpTopicForFocus(); got != helpContexts["db-result"] || got == "" {
+		t.Fatalf("result page topic = %q", got)
+	}
+	if got := tooltipHelp("activity:Databases"); got != helpContexts["databases"] {
+		t.Fatalf("activity tooltip help = %q", got)
+	}
+	if errs := help.CheckAll([]string{helpContexts["databases"], helpContexts["db-result"]}); len(errs) > 0 {
+		t.Fatal(errs)
 	}
 }
