@@ -212,6 +212,26 @@ A theme name that is in this table, or that is the name of a built-in theme, is 
 | `solarized dark` | `solarized-dark` |
 | `vscode dark+` | `vscode-dark-plus` |
 
+## Snippets
+
+Only the VS Code family has snippets to import: the files in the `snippets` folder next to `settings.json`. A per-language file such as `go.json` gives its snippets to that language. A `*.code-snippets` file is global, or limited to the languages in its `scope`. Each snippet becomes one entry in `snippets.json` for every prefix it has. The trigger must be letters, digits and `_`, because termocode expands the word before the cursor. Any other prefix, a snippet without a prefix or body, and a second snippet with the same trigger and language are shown as *not imported*, with the reason.
+
+| In the snippet body | What termocode does |
+| --- | --- |
+| `$1` | Kept: a tab stop. So are `${1}`, `$0` and the same number used twice. |
+| `${1:name}` | Kept: a placeholder with a default. A placeholder that holds only another placeholder or variable is kept too. |
+| <code>${1&#124;one,two&#124;}</code> | Kept: a list of choices. |
+| `${1:text ${2:more}}` | Not imported: text mixed with another placeholder cannot be expanded. |
+| `${TM_FILENAME}` | Kept when termocode can fill the variable (listed below). `$NAME` and `${NAME}` mean the same. |
+| `${CURRENT_YEAR:2025}` | Any other variable with a default becomes its default text, here `2025`. |
+| `$CURRENT_YEAR` | Not imported: a variable termocode cannot fill, without a default. |
+| `${1/regex/format/}` | Not imported: regex transforms are not supported. |
+| <code>&#92;$</code>, `$` alone | Kept as the text `$`. |
+
+These variables are filled in by termocode: `TM_CURRENT_LINE`, `TM_CURRENT_WORD`, `TM_DIRECTORY`, `TM_FILENAME`, `TM_FILENAME_BASE`, `TM_FILEPATH`, `TM_LINE_INDEX`, `TM_LINE_NUMBER`, `TM_SELECTED_TEXT`.
+
+A snippet whose trigger and language you already have in `snippets.json` shows as a conflict, `old → new`, and starts off.
+
 ## Extensions and plug-ins
 
 Extensions are never installed. A known one becomes a *suggestion*: the language servers or debuggers to add yourself with **LSP: Manage Language Servers...**, or a note about the built-in feature that does the same job.

@@ -15,6 +15,16 @@ var snippetVariables = map[string]bool{
 	"TM_FILENAME_BASE": true, "TM_DIRECTORY": true, "TM_FILEPATH": true,
 }
 
+// SnippetVariables lists the VS Code snippet variables termocode can fill.
+func SnippetVariables() []string {
+	out := make([]string, 0, len(snippetVariables))
+	for k := range snippetVariables {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+
 type snipNode struct {
 	kind    byte // 't' text, 'n' tab stop, 'p' placeholder, 'c' choice, 'v' variable
 	text    string

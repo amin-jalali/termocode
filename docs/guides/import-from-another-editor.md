@@ -9,6 +9,8 @@ editor you already use. It shows you every change. It writes only after you say 
 - **Settings** that termocode has: tab size, word wrap, auto save, and a few more.
 - **Key bindings** for actions termocode has. They go into `keymap.json`.
 - **Theme**: the same theme if termocode has it, else the closest one as a suggestion.
+- **Snippets** from VS Code, VSCodium, Cursor and Windsurf. They go into
+  `snippets.json`. See [Snippets](#snippets) below.
 - **Extensions and plug-ins** as *suggestions* only: which language servers
   or debuggers you may want, and which built-in feature does the same job.
 
@@ -34,7 +36,8 @@ If `XDG_CONFIG_HOME` is set on Linux, it is used instead of `~/.config`.
 
 An editor is listed when it has at least one of these files:
 
-- **VS Code family:** `settings.json` or `keybindings.json`. Installed extensions are read too.
+- **VS Code family:** `settings.json`, `keybindings.json` or a `snippets` folder.
+  Installed extensions are read too.
 - **Zed:** `settings.json` or `keymap.json`.
 - **Helix:** `config.toml` or `languages.toml`.
 - **JetBrains:** an `options` or `keymaps` folder. If several versions of one
@@ -68,6 +71,40 @@ termocode reads only the one file you name, not the other files next to it. It
 never writes next to it. A folder, a file over 1 MB, a file it does not know
 or a file that is not valid gives a message, and nothing is changed.
 
+## Snippets
+
+The VS Code family keeps snippets in the `snippets` folder next to
+`settings.json`. termocode reads two kinds of file there:
+
+- A file named for a language, such as `go.json` or `python.json`. Its
+  snippets are for that language.
+- A `*.code-snippets` file. Its snippets are for every language, or only for
+  the languages in its `"scope"`, for example `"scope": "javascript,typescript"`.
+
+Comments and trailing commas in these files are fine. The review panel has a
+**Snippets** section with one row per language and trigger, like
+`go · errw · Error wrap`. Rows start on. A snippet with several prefixes
+becomes several rows.
+
+termocode expands a snippet by the word before the cursor, so a trigger can
+only have letters, digits and `_`. These are shown as *not imported*, with the reason:
+
+- a prefix such as `console.log` or `for-each`;
+- a snippet with no prefix, or with no body;
+- a second snippet with the same language and trigger (the first one is kept);
+- a body that uses a regex transform or a variable termocode cannot fill
+  (such as `$CURRENT_YEAR`), or that mixes text and a second placeholder in one
+  placeholder.
+
+Tab stops (`$1`, `$0`), placeholders (`${1:name}`), choices (`${1|a,b|}`) and
+the `TM_...` variables work as in VS Code. The full list is in
+[Import mappings](../reference/import-mappings.md#snippets).
+
+If you already have a snippet with the same language and trigger, the row shows
+`old → new` and starts **off**. Turn it on to replace yours. The rest of your
+`snippets.json` is kept. New snippets work at once, without a restart, and
+**Undo Last Import** takes them away again.
+
 ## Step by step
 
 1. Open the palette (`F1`) and run **Preferences: Import from Another Editor...**.
@@ -97,11 +134,12 @@ or a file that is not valid gives a message, and nothing is changed.
 ## Undo
 
 Run **Preferences: Undo Last Import**. termocode asks first, then puts
-`config.json` and `keymap.json` back exactly as they were before the import. A
-file the import created is removed. Undo works after a restart too.
+the files it changed back exactly as they were before the import
+(`config.json`, `keymap.json`, `snippets.json`). A file the import created is
+removed. Undo works after a restart too.
 
 !!! note "Undo goes back to the moment before the import"
-    Changes you made to these two files after the import are undone as well.
+    Changes you made to these files after the import are undone as well.
 
 The setup card shows **Imported from ...** after an import. Its *Undo...*
 button does the same as the palette command.
@@ -112,7 +150,7 @@ button does the same as the palette command.
   tools yourself with **LSP: Manage Language Servers...**.
 - It **never changes the other editor's files**. They are only read.
 - It **never writes before the final confirm**.
-- It writes **only** `config.json` and `keymap.json` in the termocode config folder.
+- It writes **only** `config.json`, `keymap.json` and `snippets.json` in the termocode config folder.
 - It never replaces your own work: a key you already use is not taken over
   unless you turn that row on, and the rest of your `keymap.json` is kept.
 
@@ -120,7 +158,7 @@ button does the same as the palette command.
 
 Before each import, termocode copies the files it will change to
 `~/.config/termocode/backup/import-<date>-<time>/` (or under `$XDG_CONFIG_HOME/termocode/`).
-The folder holds the old `config.json` and `keymap.json` and a small
+The folder holds the old copy of each file the import changes and a small
 `manifest.json`. The file `backup/last-import.json` tells Undo which backup to use.
 Old backups stay until you delete them.
 
@@ -152,6 +190,13 @@ If a write fails half way, termocode puts your files back at once and tells you.
 :   Another action already uses that key, in the defaults or in your
     `keymap.json`, or two imported keys want the same key. The row starts off.
     Turn it on if you want the imported key to win.
+
+**A snippet row is on "conflict"**
+:   You already have a snippet with that trigger for that language, and the text
+    differs. The row starts off. Turn it on to replace yours.
+
+**A snippet is "not imported"**
+:   The row says why. See [Snippets](#snippets) for the usual reasons.
 
 **Cmd keys on macOS**
 :   Terminals do not send the Cmd key. A `Cmd+` binding is turned into `Ctrl+`,

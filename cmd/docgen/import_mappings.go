@@ -93,6 +93,31 @@ func renderImportMappings() string {
 	}
 	b.WriteString("\n")
 
+	b.WriteString("## Snippets\n\n")
+	b.WriteString("Only the VS Code family has snippets to import: the files in the `snippets` folder next to `settings.json`. " +
+		"A per-language file such as `go.json` gives its snippets to that language. A `*.code-snippets` file is global, " +
+		"or limited to the languages in its `scope`. Each snippet becomes one entry in `snippets.json` for every prefix it has. " +
+		"The trigger must be letters, digits and `_`, because termocode expands the word before the cursor. " +
+		"Any other prefix, a snippet without a prefix or body, and a second snippet with the same trigger and language are shown as *not imported*, with the reason.\n\n")
+	t = newTable(&b, "In the snippet body", "What termocode does")
+	t.row(code("$1"), "Kept: a tab stop. So are `${1}`, `$0` and the same number used twice.")
+	t.row(code("${1:name}"), "Kept: a placeholder with a default. A placeholder that holds only another placeholder or variable is kept too.")
+	t.row(code("${1|one,two|}"), "Kept: a list of choices.")
+	t.row(code("${1:text ${2:more}}"), "Not imported: text mixed with another placeholder cannot be expanded.")
+	t.row(code("${TM_FILENAME}"), "Kept when termocode can fill the variable (listed below). `$NAME` and `${NAME}` mean the same.")
+	t.row(code("${CURRENT_YEAR:2025}"), "Any other variable with a default becomes its default text, here `2025`.")
+	t.row(code("$CURRENT_YEAR"), "Not imported: a variable termocode cannot fill, without a default.")
+	t.row(code("${1/regex/format/}"), "Not imported: regex transforms are not supported.")
+	t.row(code(`\$`)+", "+code("$")+" alone", "Kept as the text `$`.")
+	b.WriteString("\n")
+	b.WriteString("These variables are filled in by termocode: ")
+	var vars []string
+	for _, v := range migrate.SnippetVariables() {
+		vars = append(vars, code(v))
+	}
+	b.WriteString(strings.Join(vars, ", ") + ".\n\n")
+	b.WriteString("A snippet whose trigger and language you already have in `snippets.json` shows as a conflict, `old → new`, and starts off.\n\n")
+
 	b.WriteString("## Extensions and plug-ins\n\n")
 	b.WriteString("Extensions are never installed. A known one becomes a *suggestion*: the language servers or debuggers to add yourself " +
 		"with **LSP: Manage Language Servers...**, or a note about the built-in feature that does the same job.\n\n")

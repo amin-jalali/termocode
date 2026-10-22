@@ -111,6 +111,9 @@ In the manager you can also edit or delete a snippet, filter by scope, or pick
 
 Your snippets win over the built-in ones when the trigger is the same.
 
+Coming from VS Code? Its snippets can be imported:
+[Import settings from another editor](import-from-another-editor.md#snippets).
+
 ## Your own commands
 
 Put shell commands in `commands.json`. Run **Open Config: User Commands** to
@@ -151,9 +154,9 @@ and passwords are removed.
    and pick **Import**.
 
 Nothing is written before that last step. termocode saves a backup of
-`config.json` and `keymap.json` first, then applies the new keys, theme
-and settings at once. Extensions only become suggestions: nothing is
-installed. Run **Preferences: Undo Last Import** to put both files back
+the files it will change (`config.json`, `keymap.json`, `snippets.json`)
+first, then applies the new keys, theme, settings and snippets at once. Extensions only become suggestions: nothing is
+installed. Run **Preferences: Undo Last Import** to put those files back
 exactly as they were (this works after a restart too). The other editor's
 files are only read, never changed.
 
