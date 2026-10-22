@@ -119,3 +119,41 @@ func TestPerfGuardSecretsStoreScreenRendersWithoutIO(t *testing.T) {
 		t.Error("drawing unlocked the store")
 	}
 }
+
+// Spec (U19 SS-8 perf guard): the idle lock is one timer at most. With
+// secret_lock_minutes 0 an unlock and many uses arm none; with N > 0
+// they arm exactly one, and idle messages and the store screen add none.
+func TestPerfGuardSecretsLockTimerAtMostOne(t *testing.T) {
+	for _, minutes := range []int{0, 30} {
+		ticks := fakeLockTicks(t)
+		dir, _ := withSecretSetting(t, "age", false)
+		writeAgeStore(t, dir)
+		setLockMinutes(t, dir, minutes)
+		m := secretsTestModel(t)
+		unlockThroughUI(t, m)
+		s, _ := configureSecretStore()
+		for i := 0; i < 200; i++ {
+			if _, _, err := s.Get("ai.key.openai"); err != nil {
+				t.Fatal(err)
+			}
+		}
+		for _, msg := range []tea.Msg{tea.WindowSizeMsg{Width: m.w, Height: m.h}, struct{}{}} {
+			next, cmd := m.update(msg)
+			*m = next
+			m.toast = toast.New()
+			if cmdWaits(cmd, 150*time.Millisecond) {
+				t.Errorf("%d min: idle %T started a timer", minutes, msg)
+			}
+		}
+		if cmd := m.openSecretsStore(); cmdWaits(cmd, 150*time.Millisecond) {
+			t.Errorf("%d min: the store screen started a timer", minutes)
+		}
+		want := 0
+		if minutes > 0 {
+			want = 1
+		}
+		if ticks.n != want {
+			t.Errorf("%d min: %d lock timers, want %d", minutes, ticks.n, want)
+		}
+	}
+}

@@ -272,7 +272,8 @@ func (m *Model) secretsMigrateCmd(to string, pass []byte) tea.Cmd {
 	m.secretsS().busy = true
 	o := secrets.MigrateOptions{
 		Options: secrets.Options{Dir: dir, PlainPath: path, ScryptWorkFactor: secretScryptWork,
-			Workspace: aiWorkspaceRoot(), Register: ai.RegisterSecret, Redact: ai.Redact, KeyringProbe: secretKeyringProbe},
+			Workspace: aiWorkspaceRoot(), Register: ai.RegisterSecret, Redact: ai.Redact, KeyringProbe: secretKeyringProbe,
+			OnUse: secretsTouch},
 		To: to, Pass: pass,
 		Commit: func(s secrets.Store) { adoptSecretStore(path, s) },
 	}
@@ -378,11 +379,11 @@ func (m *Model) onSecretsMigrateDone(msg secretsMigrateDoneMsg) tea.Cmd {
 			invalidateWelcome()
 		}
 		m.secretsChanged()
-		return m.secretsToast(toast.Info, "Secrets moved · credentials.json removed", where)
+		return tea.Batch(m.secretsToast(toast.Info, "Secrets moved · credentials.json removed", where), m.secretsArmLock())
 	case msg.moved:
 		st.migrating, st.tries, st.creating = false, 0, false
 		m.secretsChanged()
-		return m.secretsToast(toast.Warn, "Secrets moved · credentials.json not removed", where+" "+secretsRedact(msg.err))
+		return tea.Batch(m.secretsToast(toast.Warn, "Secrets moved · credentials.json not removed", where+" "+secretsRedact(msg.err)), m.secretsArmLock())
 	case errors.Is(msg.err, secrets.ErrWrongPassphrase) && msg.to == "age":
 		st.tries++
 		if st.tries < secretsMaxTries {

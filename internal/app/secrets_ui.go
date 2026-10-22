@@ -115,6 +115,7 @@ func configureSecretStore() (secrets.Store, error) {
 		Register:         ai.RegisterSecret,
 		Redact:           ai.Redact,
 		KeyringProbe:     secretKeyringProbe,
+		OnUse:            secretsTouch, // the idle lock (secrets_lock_timer.go)
 	})
 	if err != nil {
 		store = brokenSecretStore{err: err}
@@ -201,6 +202,10 @@ type secretsState struct {
 	finishPending bool
 	// after runs once the store is unlocked (the step that needed it).
 	after func(*Model) tea.Cmd
+	// The idle lock (secrets_lock_timer.go): lockGen is the generation
+	// of the one timer, lockArmed reports it runs.
+	lockGen   int
+	lockArmed bool
 }
 
 func (m *Model) secretsS() *secretsState {
@@ -457,7 +462,7 @@ func (m *Model) onSecretsUnlockDone(msg secretsUnlockDoneMsg) tea.Cmd {
 		if created {
 			title = "Secret store created"
 		}
-		cmds := []tea.Cmd{m.secretsToast(toast.Info, title, "Kept while termocode runs · F1 → AI: Lock Secrets")}
+		cmds := []tea.Cmd{m.secretsToast(toast.Info, title, "Kept while termocode runs · F1 → AI: Lock Secrets"), m.secretsArmLock()}
 		if after != nil {
 			cmds = append(cmds, after(m))
 		}
@@ -496,6 +501,7 @@ func (m *Model) secretsLock() tea.Cmd {
 		return m.secretsToast(toast.Info, "Nothing to lock", "Only the encrypted file has a passphrase; "+label+" has none.")
 	}
 	s.Lock()
+	m.secretsDisarmLock()
 	st := m.secretsS()
 	st.asked, st.tries = false, 0
 	m.secretsChanged()

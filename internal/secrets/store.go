@@ -89,6 +89,10 @@ type Options struct {
 	Register func(string)
 	// Redact cleans ${cmd:} stderr before it goes into an error. nil: none.
 	Redact func(string) string
+	// OnUse runs on every use of the open store (an unlock, a Get, a
+	// Set, a Delete), on the caller's goroutine. The app's idle lock
+	// (secret_lock_minutes) restarts its count there. nil: none.
+	OnUse func()
 	// KeyringOverSSH permits probing the OS keyring in an SSH session.
 	KeyringOverSSH bool
 	// KeyringProbe overrides the system probe, primarily for tests.
@@ -193,6 +197,7 @@ func NewStore(b Backend, o Options) Store {
 		b:         b,
 		indexPath: filepath.Join(o.Dir, IndexFile),
 		register:  o.Register,
+		onUse:     o.OnUse,
 		res: &Resolver{
 			Getenv:    o.Getenv,
 			Workspace: o.Workspace,
@@ -207,6 +212,14 @@ type store struct {
 	indexPath string
 	res       *Resolver
 	register  func(string)
+	onUse     func()
+}
+
+// used reports a use of the open store (Options.OnUse).
+func (s *store) used() {
+	if s.onUse != nil {
+		s.onUse()
+	}
 }
 
 func (s *store) Backend() string { return s.b.Name() }
@@ -220,7 +233,11 @@ func (s *store) Locked() bool {
 func (s *store) Unlock(pass string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.b.Unlock(pass)
+	if err := s.b.Unlock(pass); err != nil {
+		return err
+	}
+	s.used()
+	return nil
 }
 
 func (s *store) Lock() {
@@ -239,6 +256,7 @@ func (s *store) Get(name string) (string, bool, error) {
 	if s.b.Locked() {
 		return "", false, ErrLocked
 	}
+	s.used()
 	idx, err := loadIndex(s.indexPath)
 	if err != nil {
 		return "", false, err
@@ -282,6 +300,7 @@ func (s *store) Set(name, value string) error {
 	if s.b.Locked() {
 		return ErrLocked
 	}
+	s.used()
 	e := Entry{Kind: KindValue, Backend: s.b.Name(), Updated: clock.Now().UTC()}
 	switch {
 	case isRef:
@@ -388,6 +407,7 @@ func (s *store) Delete(name string) error {
 	if s.b.Locked() {
 		return ErrLocked
 	}
+	s.used()
 	if err := s.b.Delete(name); err != nil {
 		return err
 	}
