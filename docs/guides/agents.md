@@ -1,0 +1,156 @@
+# Give your agent the IDE's tools
+
+An agent CLI such as Claude Code or Codex runs in a terminal tab. In a plain
+terminal it sees your files and a shell. termocode can give it more: the
+editor state, diagnostics, hover and symbols, test results, the debugger,
+the visible terminal and git reads. termocode acts as an
+[MCP](mcp.md) server for the agent, and stays in charge of what is allowed.
+
+The tools are the same ones the built-in AI chat has, with the same
+gates. The full list, with a column **MCP server**, is in
+[AI tools](../reference/ai-tools.md). The design is in
+[ADR 0017](../adr/0017-mcp-server.md).
+
+## What happens when you start an agent
+
+Run **Agent: Start Claude Code** (or Codex, Gemini CLI, OpenCode) from the
+command palette (`F1`). termocode opens a terminal tab and types the
+agent's command. What it adds depends on the agent:
+
+| Agent | What termocode does | Your own files |
+|---|---|---|
+| Claude Code | Adds `--mcp-config <file>` to the command. The file is private (mode `0600`) in the session folder. It is removed when the tab is gone. | Not touched. |
+| Codex | Adds two `-c mcp_servers.termocode…` options to the command. | Not touched. |
+| OpenCode | Can only read MCP servers from `opencode.json` in your project. A card shows the file and the entry. **Add** writes it, **Not now** (or `Esc`) starts OpenCode without it. | Written only after you say yes. |
+| Gemini CLI | Shows a tip. Add termocode by hand (next section). | Not touched. |
+| Aider | Shows a tip: Aider has no MCP support. | Not touched. |
+
+If a tab for that agent is already open, termocode shows it. The flags
+count only when the agent starts, so close the tab and start it again to
+get them.
+
+The OpenCode entry has the full path of the termocode program and of your
+folder. If you commit `opencode.json`, other people get your paths. Add
+the entry by hand to your own OpenCode config instead if that is a problem.
+
+The flags and key names come from each agent's own documentation. If an
+agent changes them, use the hand setup below.
+
+## Add it by hand
+
+Use this for Gemini CLI, for your own settings, or for any agent that
+speaks MCP over stdio.
+
+1. Run **MCP: Copy termocode Server Config** (`F1`). It copies a JSON block
+   with the `mcpServers` entry.
+2. Paste it into the agent's MCP settings.
+
+The entry starts `termocode mcp --dir <your folder>`. The agent starts that
+program; it passes the agent's messages to the termocode that runs in that
+folder.
+
+- `--dir` names the workspace. Without it, `termocode mcp` looks at the
+  current folder and then up to seven parent folders for one with a
+  running termocode.
+- If no termocode runs there, the server still answers the tool list, but
+  every call fails with a message: open termocode in that folder, then
+  restart the agent.
+
+## When termocode listens
+
+The setting `mcp_server` in `config.json` decides:
+
+| Value | Meaning |
+|---|---|
+| `auto` (default) | Listen once you start an agent tab. |
+| `on` | Listen from the start of termocode. |
+| `off` | Never listen. The flags and the OpenCode card are skipped too. |
+
+The change applies when you save `config.json`. Nothing listens on the
+network: only a private socket in the session folder, which only your own
+user can open. termocode checks the user of every connection. See
+[Settings](../reference/settings.md).
+
+## What the agent can do
+
+- **Read at once:** open a file in your editor, read the editor and IDE
+  state, read files, list folders and search, diagnostics, hover, symbols
+  and definitions, tasks and test results, debug state, the visible
+  terminal (read only), git status, diff, log, blame and branches,
+  services and HTTP request lists.
+- **Ask first (card):** run a task or tests, start and steer the debugger,
+  evaluate an expression in the debugger, run some palette commands
+  (`execute_action`) such as stop, clear or close things.
+
+## What the agent can not do
+
+- Write, create, delete or rename files. The agent has its own editor for
+  that.
+- Run a shell command, or type into your terminal.
+- Stage, commit, push, pull or change branches.
+- Change settings, read secrets or credentials.
+- Start or stop services, containers or databases, or send HTTP requests.
+- Use the tools of your own MCP servers (`mcp__…`). They are never passed on.
+
+Some palette commands are closed too: AI, database and container commands,
+extension commands and your own commands.
+
+## The confirm card
+
+When the agent calls a tool that runs or changes something, a card opens:
+
+```text
+✦ claude-code wants to run tasks_run
+  Arguments: {"label": "build"}
+  Asked by an outside agent over MCP. The name is the agent's own claim.
+  [ Allow ] [ Always allow ] [ Deny ]
+```
+
+- **Allow** runs this one call.
+- **Deny** (or `Esc`) refuses it. The agent gets an error with code
+  `-32000`, and nothing runs.
+- Several calls wait in line: one card at a time, the oldest first. A call
+  that waits longer than two minutes, or whose agent went away, is dropped.
+- Secrets in the arguments are hidden.
+
+The name on the card is what the agent says about itself. Any program that
+runs as you can send any name, so treat the name as a label, not as a
+login.
+
+### Always allow
+
+**Always allow** is for that agent name and that tool only. Another agent,
+or another tool of the same agent, still asks. For `execute_action` it is
+for that one command. It is not offered for `debug_evaluate`, because that
+can run any code in your program.
+
+It is saved as `mcp_server_auto_approve` in `config.json`, for example
+`{"claude-code": ["tasks_run"]}`. It is separate from the chat's
+auto-approve: neither one applies to the other. The AI chat can not change
+it.
+
+### Revoke it
+
+Run **AI: Agent Auto-Approve…**. The section "External agents (MCP server)"
+lists each entry. Press `Enter` on one to make that tool ask again. You can
+also edit `config.json`.
+
+## See what is connected
+
+- The status bar shows **⇄ 1 agent** while an agent is connected. Click it.
+- **MCP: Server Status** shows if termocode listens (and why not), the
+  socket, each agent with its calls, and the last calls. From there you can
+  copy the config or open the auto-approve list.
+- Every call, allowed or not, is in the AI audit log (**Output: AI**) as
+  `mcp:<agent name>`.
+
+The chat AI can not run the status and config commands. They are for you.
+
+## If something does not work
+
+| What you see | Try this |
+|---|---|
+| The agent lists the tools but calls fail with "termocode is not open" | Open termocode in the same folder, then restart the agent. |
+| Status says "Not listening: mcp_server is off" | Set `mcp_server` to `auto` or `on` in `config.json`. |
+| The agent shows no termocode tools | Start it again from the palette, or add the config by hand. |
+| A card never appears | Another dialog may be open. The card waits until it closes. |

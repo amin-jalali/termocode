@@ -316,28 +316,11 @@ message, so the AI does not keep trying.
 This is the other direction: an agent CLI such as Claude Code or Codex,
 running in a terminal, calls termocode's IDE tools (open a file, read
 diagnostics, run a task or a test, steer the debugger, read git state).
+termocode asks you on a card before a tool runs or changes something.
 
-1. Run **MCP: Copy termocode Server Config** and paste it into the
-   agent's MCP settings. It starts `termocode mcp --dir <your folder>`.
-2. termocode listens on a private socket only your own user can reach.
-   `mcp_server` in `config.json` decides when: `auto` (once you start an
-   agent tab), `on` (from start) or `off`.
-3. Reading tools run at once. A tool that runs or changes something asks
-   on a card: **claude-code wants to run tasks_run**, with its arguments
-   (secrets hidden). Choose **Allow**, **Always allow** or **Deny**.
-
-**Always allow** is for that agent name and that tool only. Another agent,
-or another tool of the same agent, still asks. The list is
-`mcp_server_auto_approve` in `config.json`; see it and remove an entry in
-**AI: Agent Auto-Approve…** (section "External agents"). It is separate
-from the chat's auto-approve: neither one applies to the other. The agent
-name is what the agent says about itself, so treat Always allow as a
-shortcut for your own processes, not as a login.
-
-**MCP: Server Status** shows whether termocode listens (and why not), the
-socket, each connected agent with its calls, and the last calls. While an
-agent is connected the status bar shows **⇄ 1 agent**; click it to open
-the same screen. Both entries are for you: the chat AI can not run them.
+How it starts, how to add it by hand, what the agent can and can not do,
+**Always allow** and the status screen are in
+[Give your agent the IDE's tools](agents.md).
 
 ## Resources and privacy
 
