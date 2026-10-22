@@ -103,13 +103,13 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`http_history`](#http_history) | auto | yes | List recent HTTP requests (the user's and yours), newest first. |
 | [`http_set_environment`](#http_set_environment) | confirm (ide) | no | Select the HTTP environment (from http_environments) for the user's .http files; "none" clears it. |
 | [`http_save_request`](#http_save_request) | confirm (review) | no | Add a request to a .http file, or with replace=true change the request with that name. |
-| [`db_connections`](#db_connections) | auto | no | List the database connections of the Databases view (id, type, target, environment, read-only, state) and the suggested ones that are not added yet. |
-| [`db_schema`](#db_schema) | auto | no | Read a database schema. |
+| [`db_connections`](#db_connections) | auto | yes | List the database connections of the Databases view (id, type, target, environment, read-only, state) and the suggested ones that are not added yet. |
+| [`db_schema`](#db_schema) | auto | yes | Read a database schema. |
 | [`db_query`](#db_query) | a read (SELECT, SHOW, EXPLAIN without ANALYZE …): auto, in a read-only session<br>any other statement: confirm (db:<conn>/write) with the SQL shown<br>production connections: confirm (always asks)<br>read-only connections: writes refused | no | Run ONE SQL statement on a connection. |
 | [`db_explain`](#db_explain) | auto | no | Show the query plan of ONE SQL statement (EXPLAIN without ANALYZE: the statement does not run), in a read-only session. |
 | [`db_history`](#db_history) | auto | no | List recent SQL runs (the user's and yours), newest first. |
-| [`db_ddl`](#db_ddl) | auto | no | Show the DDL (CREATE statement) of a table, with its indexes and foreign keys. |
-| [`redis_keys`](#redis_keys) | auto | no | List the keys of a Redis connection that match a glob pattern (SCAN; never KEYS), with type and TTL. |
+| [`db_ddl`](#db_ddl) | auto | yes | Show the DDL (CREATE statement) of a table, with its indexes and foreign keys. |
+| [`redis_keys`](#redis_keys) | auto | yes | List the keys of a Redis connection that match a glob pattern (SCAN; never KEYS), with type and TTL. |
 | [`redis_get`](#redis_get) | auto | no | Read one Redis key: its type, TTL, size and one page of its value (string: up to 64 KB; hash, list, set, sorted set, stream: up to max items). |
 | [`redis_command`](#redis_command) | a read command (allow-list<br>not CONFIG / ACL / CLIENT): auto, in a read-only session<br>any other command: confirm (db:<conn>/write) with the command shown<br>production connections: confirm (always asks)<br>read-only connections: writes refused<br>the never-list (FLUSHALL, FLUSHDB, CONFIG SET, SHUTDOWN, DEBUG, MODULE, scripts, MIGRATE, REPLICAOF, ACL changes, …) and MONITOR / SUBSCRIBE: refused | no | Run ONE Redis command (one line, as typed in a console). |
 
@@ -1187,7 +1187,7 @@ List the database connections of the Databases view (id, type, target, environme
 
 **Gate:** auto
 
-**MCP server:** no
+**MCP server:** yes
 
 No arguments.
 
@@ -1197,7 +1197,7 @@ Read a database schema. No database / schema / table: the databases (and the sch
 
 **Gate:** auto
 
-**MCP server:** no
+**MCP server:** yes
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -1252,7 +1252,7 @@ Show the DDL (CREATE statement) of a table, with its indexes and foreign keys.
 
 **Gate:** auto
 
-**MCP server:** no
+**MCP server:** yes
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -1266,7 +1266,7 @@ List the keys of a Redis connection that match a glob pattern (SCAN; never KEYS)
 
 **Gate:** auto
 
-**MCP server:** no
+**MCP server:** yes
 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |

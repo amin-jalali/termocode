@@ -20,7 +20,7 @@ import (
 // TestMCPServeAllowListGolden pins it. What is left out on purpose:
 // file writes, run_command, terminal_send, git writes, settings,
 // credentials, LSP rename / code actions, service starts, HTTP sends,
-// databases, containers and every tool of the user's own MCP servers
+// database writes, containers and every tool of the user's own MCP servers
 // (mcp__*: never re-exported, MC-11). The agent has its own shell and
 // editor; we add the IDE, not a second agent.
 
@@ -80,6 +80,11 @@ var mcpServeAllowList = []mcpServeToolRow{
 	{name: "http_list_requests"},
 	{name: "http_environments"},
 	{name: "http_history"},
+	// Databases (read: connections, schema, DDL, Redis key names)
+	{name: "db_connections"},
+	{name: "db_schema"},
+	{name: "db_ddl"},
+	{name: "redis_keys"},
 }
 
 // mcpServeRow returns the allow-list row of name. Names of the user's
@@ -126,7 +131,11 @@ func mcpServeTools(all []ai.Tool, call aiIDECaller) []ai.Tool {
 func mcpServeCatalog() []ai.Tool {
 	m := &Model{nvim: &nvim.Client{}}
 	call := func(context.Context, aiIDEFunc) (string, error) { return "", errors.New("list only") }
-	return mcpServeTools(m.aiChatTools(".", call), call)
+	all := m.aiChatTools(".", call)
+	if _, ok := ai.FindTool(all, "redis_keys"); !ok {
+		all = append(all, aiRedactResults(aiRedisTools(".", call))...) // listed only where a Redis connection exists
+	}
+	return mcpServeTools(all, call)
 }
 
 // MCPServeToolSpecs are the tools/list entries of the MCP server (the

@@ -71,7 +71,19 @@ var mcpServeGateCases = []mcpServeGateCase{
 	{"http_list_requests", nil, false},
 	{"http_environments", nil, false},
 	{"http_history", nil, false},
+	{"db_connections", nil, false},
+	{"db_schema", map[string]any{"conn": "local"}, false},
+	{"db_schema", map[string]any{"conn": "local", "schema": "public", "table": "users"}, false},
+	{"db_ddl", map[string]any{"conn": "local", "table": "users"}, false},
+	{"redis_keys", map[string]any{"conn": "cache", "pattern": "session:*"}, false},
 }
+
+// mcpServeGateDBs are the connections of mcpServeGateWorkspace: a local
+// Postgres, a production one and a Redis (none is ever dialled).
+const mcpServeGateDBs = `{"connections":[` +
+	`{"id":"local","driver":"postgres","host":"localhost","port":5432,"user":"app","database":"app"},` +
+	`{"id":"prod","driver":"postgres","host":"db.example","port":5432,"database":"app","environment":"production"},` +
+	`{"id":"cache","driver":"redis","host":"localhost","port":6379}]}`
 
 // mcpServeGateWorkspace is a workspace with a real task and a launch
 // configuration, so the calls are valid and only the gate decides.
@@ -79,9 +91,10 @@ func mcpServeGateWorkspace(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	for name, body := range map[string]string{
-		"main.go":                "package main\n\nfunc main() {}\n",
-		".termocode/tasks.json":  `{"version":"2.0.0","tasks":[{"label":"say hi","type":"shell","command":"echo hi > ran.txt","group":"build"}]}`,
-		".termocode/launch.json": `{"version":"0.2.0","configurations":[{"name":"Launch","type":"go","request":"launch","program":"."}]}`,
+		"main.go":                   "package main\n\nfunc main() {}\n",
+		".termocode/tasks.json":     `{"version":"2.0.0","tasks":[{"label":"say hi","type":"shell","command":"echo hi > ran.txt","group":"build"}]}`,
+		".termocode/launch.json":    `{"version":"0.2.0","configurations":[{"name":"Launch","type":"go","request":"launch","program":"."}]}`,
+		".termocode/databases.json": mcpServeGateDBs,
 	} {
 		p := filepath.Join(root, name)
 		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
