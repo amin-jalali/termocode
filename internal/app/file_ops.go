@@ -152,6 +152,9 @@ func (m *Model) openBulkDeleteConfirm(paths []string) {
 
 // handlePromptSubmit performs the file op for the active prompt kind.
 func (m *Model) handlePromptSubmit(value string) tea.Cmd {
+	if m.refusePromptSecret(value) { // secret_refs.go: a malformed reference stays in the prompt
+		return nil
+	}
 	if cmd, ok := m.handleSecretsPromptSubmit(value); ok { // secrets_ui.go
 		return cmd
 	}

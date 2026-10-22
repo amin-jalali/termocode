@@ -79,6 +79,7 @@ type dbState struct {
 	projectConns        []dbclient.Conn
 	pendingConn         dbclient.Conn
 	pendingPassword     string
+	pendingPasswordRef  dbTypedRef // what was typed when pendingPassword came from a reference
 	addFromURL          bool
 	menuRow             dbTreeRow
 	pendingDisconnectID string

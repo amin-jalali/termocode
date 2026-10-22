@@ -101,7 +101,7 @@ func (m *Model) mcpAskSecret(name string) tea.Cmd {
 	m.aiS().mcpSecret = name
 	m.prompt = prompt.New("MCP secret "+name, "Value of ${secret:"+name+"}:", "")
 	m.prompt.SetMasked(true)
-	m.prompt.SetNote("Saved in ~/.config/termocode/ai/credentials.json (only you can read it), never in mcp.json.")
+	m.prompt.SetNote(secretPromptNote("Saved in the secret store (only you can read it), never in mcp.json."))
 	m.prompt.SetSize(m.w, m.h)
 	m.promptOpen = true
 	m.promptKind = promptKindMCPSecret

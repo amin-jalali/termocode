@@ -234,13 +234,7 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 	case "p":
 		if have && row.kind == dbNodeConnection {
-			s.pendingSecretID = row.conn
-			m.prompt = prompt.New("Databases: Set Password", "Password:", "")
-			m.prompt.SetMasked(true)
-			m.prompt.SetSize(m.w, m.h)
-			m.promptOpen = true
-			m.promptKind = promptKindDBPassword
-			return m, nil
+			return m, m.databaseSetPasswordPrompt(row.conn)
 		}
 	case "R":
 		return m, m.databaseRefresh()
@@ -451,6 +445,9 @@ func (m *Model) databaseOpen(id string, test bool) tea.Cmd {
 	if !ok {
 		return nil
 	}
+	if dbProjectCmdRef(c) {
+		return m.pushToastDetail(toast.Errr, "Not run: ${cmd:} in a project file", secrets.ProjectCmdWarning)
+	}
 	if strings.HasPrefix(c.Password, "${secret:") && databaseSecretStore() == nil {
 		return m.pushToastDetail(toast.Errr, "Secret store unavailable", "Unlock or configure the secret store before connecting.")
 	}
@@ -471,16 +468,16 @@ func (m *Model) databaseOpen(id string, test bool) tea.Cmd {
 		return m.withSecretsUnlocked(func(m *Model) tea.Cmd { return m.databaseOpen(id, test) })
 	}
 	password := ""
-	if strings.HasPrefix(c.Password, "${dotenv:") && strings.HasSuffix(c.Password, "}") {
-		name := strings.TrimSuffix(strings.TrimPrefix(c.Password, "${dotenv:"), "}")
-		password = os.Getenv(name)
-		if password == "" {
-			password, _ = databaseEnvValue(filepath.Join(s.root, ".env"), name)
+	if ref, err := secrets.ParseRef(c.Password); err == nil && ref.Kind == secrets.RefDotenv {
+		// The same resolver as every other reference: the workspace .env
+		// only, never the process environment or a parent folder.
+		raw, err := newRefResolver(s.root).Resolve(ref)
+		if err != nil {
+			return m.pushToastDetail(toast.Errr, "Could not resolve database password", sanitizeDBText(err.Error()))
 		}
-		password = dbPasswordFromValue(password)
-		if password != "" {
-			ai.RegisterSecret(password)
-		}
+		ai.RegisterSecret(raw)
+		password = dbPasswordFromValue(raw)
+		ai.RegisterSecret(password)
 	}
 	if store := databaseSecretStore(); store != nil && !strings.HasPrefix(c.Password, "${dotenv:") {
 		if c.Password != "" {
@@ -490,7 +487,7 @@ func (m *Model) databaseOpen(id string, test bool) tea.Cmd {
 					password, _, _ = store.Get(name)
 				}
 			} else if ref, err := secrets.ParseRef(c.Password); err == nil {
-				password, err = (&secrets.Resolver{Workspace: s.root, Getenv: func(key string) string { return os.Getenv(key) }}).Resolve(ref)
+				password, err = newRefResolver(s.root).Resolve(ref)
 				if err != nil {
 					return m.pushToastDetail(toast.Errr, "Could not resolve database password", sanitizeDBText(err.Error()))
 				}
@@ -787,6 +784,7 @@ func (m *Model) databaseAddPrompt(kind promptKindEnum, title, label, value strin
 	m.prompt = prompt.New(title, label, value)
 	if masked {
 		m.prompt.SetMasked(true)
+		m.prompt.SetNote(secretPromptNote("")) // every masked database prompt is a secret
 	}
 	m.prompt.SetSize(m.w, m.h)
 	m.promptOpen = true
@@ -904,7 +902,7 @@ func (m *Model) databaseAddSuggestion(path string) tea.Cmd {
 		if c.Password != "" {
 			ref, parseErr := secrets.ParseRef(c.Password)
 			if parseErr == nil {
-				password, err = (&secrets.Resolver{Workspace: s.root}).Resolve(ref)
+				password, err = newRefResolver(s.root).Resolve(ref)
 				if err != nil {
 					return m.pushToastDetail(toast.Errr, "Could not read the suggested password", sanitizeDBText(err.Error()))
 				}
@@ -1009,6 +1007,19 @@ func databaseEnvConnection(root, key, raw string) (dbclient.Conn, string, error)
 		return dbclient.Conn{}, "", err
 	}
 	return c, password, nil
+}
+
+// databaseSetPasswordPrompt asks for the password (or a reference) of a
+// saved connection.
+func (m *Model) databaseSetPasswordPrompt(id string) tea.Cmd {
+	m.databases.pendingSecretID = id
+	return m.databaseAddPrompt(promptKindDBPassword, "Databases: Set Password", "Password:", "", true)
+}
+
+// dbProjectCmdRef reports a project connection that names a ${cmd:}: it is
+// never run (the loader marks it too; this is the second lock).
+func dbProjectCmdRef(c dbclient.Conn) bool {
+	return c.Source == dbclient.SourceProject && (secrets.HasCmdRef(c.Password) || secrets.HasCmdRef(c.URL))
 }
 
 func databaseEnvValue(path, key string) (string, bool) {
@@ -1249,7 +1260,15 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 		return m.databaseRetestPending()
 	case promptKindDBPassword:
 		if s.pendingConn.ID != "" {
-			s.pendingPassword = value
+			// A typed reference is resolved for the test and saved as text.
+			resolved, err := resolveTypedSecret(s.root, value)
+			if err != nil {
+				cmd := m.databasePromptPasswordForPending()
+				m.prompt.SetError(sanitizeDBText(ai.Redact(err.Error())))
+				return cmd
+			}
+			s.pendingPassword = resolved
+			s.pendingPasswordRef = dbTypedRefOf(value, resolved)
 			return m.databaseRetestPending()
 		}
 		id := s.pendingSecretID
@@ -1347,7 +1366,7 @@ func (m *Model) databaseSavePending(project bool) tea.Cmd {
 		if store == nil {
 			return m.pushToastDetail(toast.Errr, "Secret store unavailable", "Could not open the password store.")
 		}
-		if err := store.Set("db."+c.ID, s.pendingPassword); err != nil {
+		if err := store.Set("db."+c.ID, s.pendingPasswordRef.textFor(s.pendingPassword)); err != nil {
 			return m.pushToastDetail(toast.Errr, "Could not save password", sanitizeDBText(err.Error()))
 		}
 		c.Password = "${secret:db." + c.ID + "}"
@@ -1357,7 +1376,10 @@ func (m *Model) databaseSavePending(project bool) tea.Cmd {
 		if store == nil {
 			return m.pushToastDetail(toast.Errr, "Secret store unavailable", "Could not open the password store.")
 		}
-		for kind, v := range map[string]string{"password": s.pendingSSH.password, "passphrase": s.pendingSSH.passphrase} {
+		for kind, v := range map[string]string{
+			"password":   s.pendingSSH.passwordRef.textFor(s.pendingSSH.password),
+			"passphrase": s.pendingSSH.passphraseRef.textFor(s.pendingSSH.passphrase),
+		} {
 			if v == "" {
 				continue
 			}
@@ -1381,6 +1403,7 @@ func (m *Model) databaseSavePending(project bool) tea.Cmd {
 	}
 	s.pendingConn = dbclient.Conn{}
 	s.pendingPassword = ""
+	s.pendingPasswordRef = dbTypedRef{}
 	s.pendingSSH = dbSSHSecrets{}
 	s.touch()
 	return nil

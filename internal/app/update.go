@@ -55,6 +55,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if t := m.aiActivityTick(); t != nil { // the chat's 1 s clock, only during a turn
 			cmd = tea.Batch(cmd, t)
 		}
+		if n := m.drainCmdNotices(); n != nil { // ${cmd:} first use (secret_refs.go)
+			cmd = tea.Batch(cmd, n)
+		}
 	}
 	if wasDatabasesVisible && !m.databasesVisible() {
 		m.databasesClose(true)

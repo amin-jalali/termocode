@@ -15,6 +15,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/dbclient"
 	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/secrets"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -45,7 +46,32 @@ const (
 const confirmKindDBTrustHost confirmKindEnum = 1500
 
 // dbSSHSecrets are the tunnel's secrets for one connect.
-type dbSSHSecrets struct{ password, passphrase string }
+type dbSSHSecrets struct {
+	password, passphrase       string
+	passwordRef, passphraseRef dbTypedRef // the typed reference behind a resolved value
+}
+
+// dbTypedRef remembers that a resolved secret came from a typed reference:
+// the reference text is what the store keeps, the value only runs the test.
+type dbTypedRef struct{ text, value string }
+
+// dbTypedRefOf is the memo for typed, which resolved to value (empty when
+// typed was a plain value).
+func dbTypedRefOf(typed, value string) dbTypedRef {
+	if secrets.IsRef(typed) {
+		return dbTypedRef{text: strings.TrimSpace(typed), value: value}
+	}
+	return dbTypedRef{}
+}
+
+// textFor is what to store for value: the reference text while value is
+// still what it resolved to, else value itself.
+func (r dbTypedRef) textFor(value string) string {
+	if r.text != "" && r.value == value {
+		return r.text
+	}
+	return value
+}
 
 // dbSSHHome is the home the tunnel reads ~/.ssh from (tests: a temp dir).
 var dbSSHHome = func() string { h, _ := os.UserHomeDir(); return h }
@@ -326,10 +352,14 @@ func (m *Model) databaseSSHSecretTyped(value string) tea.Cmd {
 	}
 	ai.RegisterSecret(value)
 	if ask.then == dbThenPending {
+		resolved, err := resolveTypedSecret(s.root, value)
+		if err != nil {
+			return m.pushToastDetail(toast.Errr, "Could not resolve the SSH secret", sanitizeDBText(ai.Redact(err.Error())))
+		}
 		if ask.kind == "password" {
-			s.pendingSSH.password = value
+			s.pendingSSH.password, s.pendingSSH.passwordRef = resolved, dbTypedRefOf(value, resolved)
 		} else {
-			s.pendingSSH.passphrase = value
+			s.pendingSSH.passphrase, s.pendingSSH.passphraseRef = resolved, dbTypedRefOf(value, resolved)
 		}
 		return m.databaseRetestPending()
 	}
@@ -587,10 +617,14 @@ func (m *Model) databaseSSHFinish() tea.Cmd {
 		apply(&s.pendingConn)
 		if isSSH {
 			s.pendingSSH = dbSSHSecrets{}
+			resolved, err := resolveTypedSecret(s.root, e.secret)
+			if err != nil {
+				return m.pushToastDetail(toast.Errr, "Could not resolve the SSH secret", sanitizeDBText(ai.Redact(err.Error())))
+			}
 			if e.ssh.Auth == dbclient.SSHAuthPassword {
-				s.pendingSSH.password = e.secret
+				s.pendingSSH.password, s.pendingSSH.passwordRef = resolved, dbTypedRefOf(e.secret, resolved)
 			} else if e.ssh.Auth == dbclient.SSHAuthKey {
-				s.pendingSSH.passphrase = e.secret
+				s.pendingSSH.passphrase, s.pendingSSH.passphraseRef = resolved, dbTypedRefOf(e.secret, resolved)
 			}
 		}
 		return m.databaseRetestPending()

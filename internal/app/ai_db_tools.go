@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -199,6 +198,9 @@ func dbAIPassword(root string, c dbclient.Conn) (string, error) {
 	if c.Driver == "sqlite" {
 		return "", nil
 	}
+	if dbProjectCmdRef(c) {
+		return "", fmt.Errorf("the password of %s uses ${cmd:} in a project file; that is never run", c.ID)
+	}
 	if _, literal := databaseLiteralPassword(c); literal {
 		return "", fmt.Errorf("the password of %s is in a connection file; ask the user to connect once in the Databases view (it moves the password to the secret store)", c.ID)
 	}
@@ -209,12 +211,16 @@ func dbAIPassword(root string, c dbclient.Conn) (string, error) {
 	}
 	switch {
 	case strings.HasPrefix(c.Password, "${dotenv:") && strings.HasSuffix(c.Password, "}"):
-		name := strings.TrimSuffix(strings.TrimPrefix(c.Password, "${dotenv:"), "}")
-		pw = os.Getenv(name)
-		if pw == "" {
-			pw, _ = databaseEnvValue(filepath.Join(root, ".env"), name)
+		ref, err := secrets.ParseRef(c.Password)
+		if err != nil {
+			return "", errors.New("the password reference is not valid")
 		}
-		pw = dbPasswordFromValue(pw)
+		raw, err := newRefResolver(root).Resolve(ref)
+		if err != nil {
+			return "", errors.New("could not resolve the password reference")
+		}
+		ai.RegisterSecret(raw)
+		pw = dbPasswordFromValue(raw)
 	case strings.HasPrefix(c.Password, "${secret:"):
 		if store == nil {
 			return "", errors.New("the secret store is locked or unavailable; ask the user to unlock it")
@@ -231,7 +237,7 @@ func dbAIPassword(root string, c dbclient.Conn) (string, error) {
 		if err != nil {
 			return "", errors.New("the password reference is not valid")
 		}
-		pw, err = (&secrets.Resolver{Workspace: root, Getenv: os.Getenv}).Resolve(ref)
+		pw, err = newRefResolver(root).Resolve(ref)
 		if err != nil {
 			return "", errors.New("could not resolve the password reference")
 		}

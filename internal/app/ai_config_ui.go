@@ -223,6 +223,7 @@ func (m *Model) openAIKeyPrompt(kind string) tea.Cmd {
 	m.aiS().cfgKind = kind
 	m.prompt = prompt.New("✦ "+ai.KindLabel(kind)+" API key", "API key ("+m.aiKeyHome()+"; empty = keep):", "")
 	m.prompt.SetMasked(true)
+	m.prompt.SetNote(secretPromptNote(""))
 	m.prompt.SetSize(m.w, m.h)
 	m.promptOpen = true
 	m.promptKind = promptKindAIKey

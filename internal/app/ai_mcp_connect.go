@@ -18,6 +18,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/mcp/auth"
 	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/secrets"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -795,9 +796,15 @@ func (m *Model) wizCard() connectcard.Card {
 		if scopes != "" {
 			rows = append(rows, connectcard.Row{Kind: connectcard.Text, Text: "2. Create a token with: " + scopes})
 		}
-		rows = append(rows, connectcard.Row{Kind: connectcard.Input, ID: "token", Text: "3. Paste it here:", Masked: true},
-			connectcard.Row{Kind: connectcard.Blank},
-			connectcard.Row{Kind: connectcard.Dim, Text: "Kept in credentials.json (only you can read it), never in mcp.json."})
+		rows = append(rows, connectcard.Row{Kind: connectcard.Input, ID: "token", Text: "3. Paste it here:", Masked: true})
+		if w.pasteErr != "" {
+			rows = append(rows, connectcard.Row{Kind: connectcard.Fail, Text: w.pasteErr})
+		}
+		rows = append(rows, connectcard.Row{Kind: connectcard.Blank})
+		if p.Token == nil || !p.Token.Email {
+			rows = append(rows, connectcard.Row{Kind: connectcard.Dim, Text: "Accepts: " + secrets.PromptHint + "."})
+		}
+		rows = append(rows, connectcard.Row{Kind: connectcard.Dim, Text: "Kept in credentials.json (only you can read it), never in mcp.json."})
 		return connectcard.Card{Title: title + " with a token", Rows: note(rows),
 			Buttons: []connectcard.Button{{ID: "submit", Title: "Connect", Primary: true}, cancel}, Keys: []string{"o", "open page"}}
 	case wizApp:
@@ -983,9 +990,23 @@ func (m *Model) onMCPWizSubmit(id, v string) tea.Cmd {
 		w.step = wizToken
 		return m.showWizard()
 	case "token":
+		emailToken := w.preset.Token != nil && w.preset.Token.Email
+		msg := secrets.TypedProblem(v)
+		if msg == "" && emailToken && secrets.IsRef(v) {
+			// The e-mail is joined to the token before it is stored, so the
+			// reference would be encoded instead of resolved.
+			msg = "This service needs the token itself here, not a reference."
+		}
+		if msg != "" {
+			w.pasteErr = msg
+			m.connect = connectcard.New(m.wizCard())
+			m.connect.SetSize(m.w, m.h)
+			return nil
+		}
+		w.pasteErr = ""
 		ai.RegisterSecret(v)
 		val := v
-		if w.preset.Token != nil && w.preset.Token.Email {
+		if emailToken {
 			val = base64.StdEncoding.EncodeToString([]byte(w.email + ":" + v))
 			ai.RegisterSecret(val)
 		}

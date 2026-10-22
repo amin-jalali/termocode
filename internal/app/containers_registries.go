@@ -295,8 +295,7 @@ func (m *Model) askRegistryUser() {
 func (m *Model) askRegistryToken() {
 	m.prompt = prompt.New("Connect registry · token", "Token or password:", "")
 	m.prompt.SetMasked(true)
-	m.prompt.SetNote("Hidden while you type. A reference works too: ${env:NAME}, ${dotenv:NAME} or ${cmd:…}. " +
-		"It goes to " + m.services.registryEngineName() + " login on stdin only.")
+	m.prompt.SetNote(secretPromptNote("Hidden while you type. It goes to " + m.services.registryEngineName() + " login on stdin only."))
 	m.prompt.SetSize(m.w, m.h)
 	m.promptOpen, m.promptKind = true, promptKindRegistryToken
 }
@@ -450,7 +449,7 @@ func (m *Model) registryLogin(secret string) tea.Cmd {
 	return func() tea.Msg {
 		password := secret
 		if isRef {
-			v, err := (&secrets.Resolver{Workspace: root, Redact: ai.Redact}).Resolve(ref)
+			v, err := newRefResolver(root).Resolve(ref)
 			if err != nil {
 				return registryLoginDoneMsg{host: pending.host, user: pending.user, err: err}
 			}

@@ -13,6 +13,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/containers"
 	"github.com/amin-jalali/termocode/internal/services/servicestest"
 	"github.com/amin-jalali/termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // A Docker config with stored auth blobs: the view may show the hosts,
@@ -273,15 +274,25 @@ func TestRegistryConnectBadReferenceRunsNothing(t *testing.T) {
 		pumpHost(t, m, m.onRegistryPicked("ghcr.io"))
 		pumpHost(t, m, submitPrompt(t, m, "ghcr.io"))
 		pumpHost(t, m, submitPrompt(t, m, "amin"))
+		m.toast = toast.Model{}
 		pumpHost(t, m, submitPrompt(t, m, ref))
 		if n := len(callsWithPrefix(f.Calls(), "login")); n != 0 {
 			t.Fatalf("%s: login ran %d times", ref, n)
 		}
-		if !strings.Contains(regToast(m), "Could not sign in") {
-			t.Errorf("%s: toast = %q", ref, regToast(m))
+		if strings.HasPrefix(ref, "${env:") {
+			// A valid reference that points at nothing: the login fails.
+			if !strings.Contains(regToast(m), "Could not sign in") {
+				t.Errorf("%s: toast = %q", ref, regToast(m))
+			}
+			continue
 		}
-		if strings.Contains(regToast(m), "p4ssw0rd") {
-			t.Errorf("%s: toast quotes what was typed: %q", ref, regToast(m))
+		// SS-5: a malformed reference is refused in the prompt itself; it
+		// stays open with a fixed message that never quotes what was typed.
+		if !m.promptOpen || m.promptKind != promptKindRegistryToken || m.prompt.Error() == "" {
+			t.Errorf("%s: prompt open=%v kind=%v error=%q", ref, m.promptOpen, m.promptKind, m.prompt.Error())
+		}
+		if strings.Contains(m.prompt.Error(), "p4ssw0rd") || strings.Contains(regToast(m), "p4ssw0rd") {
+			t.Errorf("%s: message quotes what was typed", ref)
 		}
 	}
 }
