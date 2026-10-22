@@ -31,6 +31,8 @@ type ReviewRow struct {
 	Key        string
 	Action     string
 	Tools      []string
+	// Reason says why a row is not applied (not imported, already set, conflict).
+	Reason string
 }
 
 type Current struct {
@@ -118,7 +120,52 @@ func Build(source Source, doc Document, current Current) Plan {
 	if source.ID == "vim" {
 		p.Rows = append(p.Rows, ReviewRow{Kind: RowVimrc, SourceText: "~/.vimrc", Equivalent: "load your vimrc", Apply: false})
 	}
+	for _, s := range doc.Skipped {
+		p.Rows = append(p.Rows, ReviewRow{Kind: s.Kind, SourceText: s.Source, Equivalent: "not imported", Reason: s.Reason})
+	}
+	for i := range p.Rows {
+		if p.Rows[i].Reason == "" {
+			p.Rows[i].Reason = reasonNotApplied(p.Rows[i])
+		}
+	}
 	return p
+}
+
+// reasonNotApplied explains in a few words why a row is off by default.
+func reasonNotApplied(r ReviewRow) string {
+	if r.Apply {
+		return ""
+	}
+	switch r.Kind {
+	case RowSetting:
+		if r.Target == "" {
+			return "termocode has no matching setting"
+		}
+		return "already set to this value"
+	case RowKey:
+		switch {
+		case r.Conflict:
+			return "the key is already used; turn it on to replace the other binding"
+		case r.Action != "":
+			return "already bound to this action"
+		case strings.HasPrefix(r.Equivalent, "no equivalent ("):
+			return strings.TrimSuffix(strings.TrimPrefix(r.Equivalent, "no equivalent ("), ")")
+		}
+		return "termocode has no command for this action"
+	case RowTheme:
+		if r.Target != "" && r.Target == r.Equivalent {
+			return "already your theme"
+		}
+		return "no built-in theme has this name; the closest one is only a suggestion"
+	case RowExtension:
+		if len(r.Tools) == 0 {
+			if r.Equivalent == "no equivalent" {
+				return "no matching tool or feature in termocode"
+			}
+			return "nothing to install; see the note"
+		}
+	}
+	return ""
 }
 
 // effectiveBindings returns default and override keys, all in canonical form.
