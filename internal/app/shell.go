@@ -387,6 +387,7 @@ func (m *Model) resetTerminalState() {
 	m.terminalWinID = 0
 	m.terminalMinimized = false
 	m.invalidateTerminalProbeCache()
+	m.pruneAgentMCPFiles()
 }
 
 // newTerminalTab spawns a brand-new terminal buffer and adds it as the
@@ -587,6 +588,7 @@ func (m *Model) closeTerminalTab(idx int) {
 		m.terminalCwd = m.terminalTabs[newActive].Cwd
 		m.terminalCwdAt = time.Now()
 	}
+	m.pruneAgentMCPFiles()
 }
 
 // closeLastTerminalKeepPanel closes the only terminal tab while non-terminal
@@ -618,6 +620,7 @@ func (m *Model) closeLastTerminalKeepPanel() {
 	m.inTerminal = false
 	m.ensureEditorWindowCurrent()
 	m.invalidateTerminalProbeCache()
+	m.pruneAgentMCPFiles()
 }
 
 // switchTerminalTab sets the active tab to idx and swaps the visible buffer
@@ -1541,6 +1544,7 @@ func (m *Model) refreshTerminalCwd() {
 		}
 	}
 	m.terminalTabs = alive
+	m.pruneAgentMCPFiles()
 	if m.terminalActiveTab >= len(m.terminalTabs) {
 		m.terminalActiveTab = len(m.terminalTabs) - 1
 	}

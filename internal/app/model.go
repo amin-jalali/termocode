@@ -671,6 +671,9 @@ type Model struct {
 	// mcpServeForAgent: an agent tab asked for the MCP server (mcp_server
 	// auto keeps it running then).
 	mcpServeForAgent bool
+	// agentMCPFiles are the temp MCP config files of running agents,
+	// by agent id (agent_mcp.go).
+	agentMCPFiles map[string]string
 	// mcpServeErr: why the listener did not start ("" when it did or was
 	// not asked to); the status screen shows it (mcp_serve_status.go).
 	mcpServeErr string
