@@ -309,3 +309,25 @@ func TestSettingsImportTitlesAreClear(t *testing.T) {
 		t.Errorf("missing palette entries: %v", want)
 	}
 }
+
+// The screenshot scenes (import_demo.go) open the real cards, in the
+// sandbox config dir only.
+func TestImportDemoConfirmOpensTheFinalCard(t *testing.T) {
+	_, xdg := importSandbox(t)
+	m := importModel(150, 42)
+	if cmd := m.importDemo("confirm"); cmd != nil {
+		cmd() // nothing to wait for; a batch of no-ops
+	}
+	if !m.importOpen || !m.confirmOpen || m.confirmKind != confirmKindImportApply {
+		t.Fatalf("panel %v, confirm %v kind %v", m.importOpen, m.confirmOpen, m.confirmKind)
+	}
+	if _, err := os.Stat(filepath.Join(xdg, "termocode", "config.json")); !os.IsNotExist(err) {
+		t.Errorf("the demo wrote config.json before any confirm: %v", err)
+	}
+	// Outside a sandbox the demo does nothing.
+	t.Setenv("XDG_CONFIG_HOME", "")
+	m2 := importModel(150, 42)
+	if cmd := m2.importDemo("confirm"); cmd != nil || m2.importOpen {
+		t.Error("the demo ran without XDG_CONFIG_HOME")
+	}
+}

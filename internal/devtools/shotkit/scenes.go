@@ -349,3 +349,9 @@ func ImportPickerEmpty() Scene {
 func ImportFilePrompt() Scene {
 	return Scene{Name: "import-file-prompt", Steps: WithEditor(Act("importdemo:file"), Pause(600*time.Millisecond))}
 }
+
+// ImportConfirm is the final card of the VS Code sample: what will change
+// in plain words, the files in the last line, Import and Cancel.
+func ImportConfirm() Scene {
+	return Scene{Name: "import-confirm", Steps: WithEditor(Act("importdemo:confirm"), Pause(600*time.Millisecond))}
+}

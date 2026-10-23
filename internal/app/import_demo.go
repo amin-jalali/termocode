@@ -40,17 +40,18 @@ var importDemoFiles = map[string]string{
 }
 
 // importDemo writes the sample editors and opens the picker ("picker")
-// or the review panel of the VS Code sample ("panel"). "empty" writes
-// nothing (picker without editors); "file" opens the path prompt.
+// or the review panel of the VS Code sample ("panel"); "confirm" goes on
+// to the final card, "undo" imports and opens the Undo card. "empty"
+// writes nothing (picker without editors); "file" opens the path prompt.
 func (m *Model) importDemo(variant string) tea.Cmd {
 	root := os.Getenv("XDG_CONFIG_HOME")
 	if root == "" {
 		return nil // never outside a sandbox
 	}
 	switch variant {
-	case "empty": // no editors at all: the picker offers only From a file...
+	case "empty": // no editors at all: the picker offers only From a file…
 		return m.openImportPicker()
-	case "file": // the path prompt behind From a file...
+	case "file": // the path prompt behind From a file…
 		return m.openImportFilePrompt()
 	}
 	for rel, body := range importDemoFiles {
@@ -59,9 +60,21 @@ func (m *Model) importDemo(variant string) tea.Cmd {
 			return nil
 		}
 	}
-	if variant != "panel" {
-		return m.openImportPicker()
+	switch variant {
+	case "panel":
+		return m.importDemoPanel()
+	case "confirm":
+		cmd := m.importDemoPanel()
+		return tea.Batch(cmd, m.confirmImport())
+	case "undo":
+		cmd := m.importDemoPanel()
+		return tea.Batch(cmd, m.applyImport(), m.undoLastImport())
 	}
+	return m.openImportPicker()
+}
+
+// importDemoPanel opens the review panel of the VS Code sample.
+func (m *Model) importDemoPanel() tea.Cmd {
 	for _, src := range importDetect() {
 		if src.ID != "vscode" {
 			continue
