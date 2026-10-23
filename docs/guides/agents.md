@@ -207,5 +207,6 @@ The chat AI can not run the status and config commands. They are for you.
 |---|---|
 | The agent lists the tools but calls fail with "termocode is not open" | Open termocode in the same folder, then restart the agent. |
 | Status says "Not listening. The MCP server is turned off." | Choose **Turn on** on that screen. It sets `mcp_server` to `on` in `config.json`. |
+| A message says the agent is not installed | Install the agent so its program is on your `PATH`, then start it again. |
 | The agent shows no termocode tools | Start it again from the palette, or add the config by hand. |
 | A card never appears | Another dialog may be open. The card waits until it closes. |

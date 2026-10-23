@@ -210,7 +210,7 @@ func (m *Model) startAgent(a agents.Agent) tea.Cmd {
 	}
 	if _, err := agentLookPath(a.Bin); err != nil {
 		var c tea.Cmd
-		m.toast, c = m.toast.PushDetail(toast.Info, a.Title+" is not installed", "`"+a.Bin+"` is not on PATH.")
+		m.toast, c = m.toast.PushDetail(toast.Info, a.Title+" is not installed", "`"+a.Bin+"` is not on PATH. Install "+a.Title+", then start it again. Guide: guides/agents.md")
 		return c
 	}
 	if !m.termOpen && len(m.hiddenTerminalTabs) > 0 {
