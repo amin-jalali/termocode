@@ -19,6 +19,9 @@ import (
 // ApplyMsg asks the app to confirm and write the selected rows.
 type ApplyMsg struct{}
 
+// KeysMsg asks the app for the key card ("?").
+type KeysMsg struct{}
+
 // CloseMsg closes the panel without writing anything.
 type CloseMsg struct{}
 
@@ -483,6 +486,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, func() tea.Msg { return CloseMsg{} }
 	case "enter":
 		return m, func() tea.Msg { return ApplyMsg{} }
+	case "?":
+		return m, func() tea.Msg { return KeysMsg{} }
 	case " ", "x":
 		m.Toggle()
 	case "a":

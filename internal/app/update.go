@@ -285,6 +285,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 	case importview.ApplyMsg:
 		return m, m.confirmImport()
+	case importview.KeysMsg:
+		return m, m.importKeysHelp()
 	case menu.SelectMsg:
 		m.menuOpen = false
 		return m, m.handleMenuSelect(msg.ID)
@@ -341,6 +343,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.handleConfirmSelect(msg.ID)
 	case confirm.CloseMsg:
 		m.confirmOpen = false
+		if m.confirmKind == confirmKindKeyCard {
+			return m, m.closeKeyCard()
+		}
 		if m.databases != nil && m.databases.console != nil && m.confirmKind == confirmKindDBRun {
 			m.databases.console.pending = nil
 		}
@@ -962,6 +967,9 @@ func (m Model) routeToPicker(msg tea.Msg) (Model, tea.Cmd) {
 	}
 	if k, ok := msg.(tea.KeyMsg); ok {
 		if c, ok := m.httpPickerKey(k); ok { // HTTP history / saved keys
+			return m, c
+		}
+		if c, ok := m.mcpServeStatusKey(k); ok { // "?" on the MCP server status screen
 			return m, c
 		}
 	}

@@ -333,3 +333,63 @@ func TestFooterHintsOfOneButtonCardClick(t *testing.T) {
 		t.Errorf("got %#v", cmd())
 	}
 }
+
+// X-1: a key card shows the keys in one column and what they do in
+// another, wraps long text under itself, scrolls, and Esc closes it.
+func TestKeyCardTable(t *testing.T) {
+	rows := []KeyRow{
+		{What: "Move"},
+		{Key: "j / k", What: "move"},
+		{Key: "Enter", What: "connect, expand or fold the row under the cursor and then go on with a very long text that must wrap"},
+		{What: "Tables"},
+		{Key: "D", What: "show the DDL"},
+	}
+	m := New("Keys", "", []Button{{ID: "guide", Title: "Open guide", Style: StylePrimary}, {ID: "close", Title: "Close"}}).WithKeys(rows)
+	m.SetSize(70, 30)
+	lines := strings.Split(ansi.Strip(m.Box()), "\n")
+	keyCol, whatCol, moveCol := -1, -1, -1
+	for _, l := range lines {
+		if strings.Contains(l, "Enter  connect") {
+			keyCol = strings.Index(l, "Enter")
+			whatCol = strings.Index(l, "connect")
+		}
+		if i := strings.Index(l, "j / k"); i >= 0 {
+			moveCol = i + len("j / k") + strings.Index(l[i+len("j / k"):], "move")
+		}
+	}
+	if keyCol < 0 || whatCol <= keyCol {
+		t.Fatalf("no two columns:\n%s", strings.Join(lines, "\n"))
+	}
+	if moveCol != whatCol {
+		t.Errorf("the text column is not aligned: %d vs %d\n%s", moveCol, whatCol, strings.Join(lines, "\n"))
+	}
+	text := strings.Join(lines, "\n")
+	for _, want := range []string{"Move", "Tables", "j / k", "show the DDL", "Open guide", "Close", "very long text"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("card lacks %q:\n%s", want, text)
+		}
+	}
+	for _, l := range lines {
+		if strings.ContainsAny(l, "\x01\x02\x03") {
+			t.Errorf("a mark leaked into the screen: %q", l)
+		}
+		if lipgloss.Width(l) > 70 {
+			t.Errorf("line wider than the window: %d %q", lipgloss.Width(l), l)
+		}
+	}
+	// A short window scrolls the table with Down instead of cutting it.
+	m.SetSize(70, 16)
+	if got := ansi.Strip(m.Box()); strings.Contains(got, "show the DDL") || !strings.Contains(got, "scroll") {
+		t.Errorf("a short window must scroll:\n%s", got)
+	}
+	for i := 0; i < 6; i++ {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	}
+	if got := ansi.Strip(m.Box()); !strings.Contains(got, "show the DDL") {
+		t.Errorf("Down did not scroll to the end:\n%s", got)
+	}
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if _, ok := cmd().(CloseMsg); !ok {
+		t.Error("Esc does not close the key card")
+	}
+}

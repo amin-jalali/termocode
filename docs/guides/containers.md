@@ -61,7 +61,7 @@ when something changed. When you hide the view (another activity item,
 | `j` `k` `g` `G` | move |
 | `Tab` / `Shift+Tab` | jump to the next / previous section header (wraps around) |
 | `/` | filter the rows of every section by name (see [Filter](#filter)) |
-| `?` | show the keys of the row under the cursor (a short message; the guide opens from the HELP rows) |
+| `?` | open a card with the keys of the row under the cursor; it stays open until `Esc`, and **Open guide** brings you to this table |
 | `Space` | fold / open the section or group under the cursor |
 | `Enter` / `l` | on a container: logs tab; on a context: use it; on an image tag: run it (asks); on a HELP row: run it |
 | `s` / `x` / `r` | start / stop / restart the selected container; on a project group, start / stop / restart that project |

@@ -890,7 +890,7 @@ func (m *Model) databasePageKey(key string, row, col int) tea.Cmd {
 		}
 		return m.databaseEditKey(key, row, col)
 	case "?":
-		return m.databaseKeysHelp()
+		return m.databasePageKeysHelp()
 	case "K":
 		return m.databaseEndTx(s.shown.conn, true, nil)
 	case "Z":

@@ -14,6 +14,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/dbclient"
+	"github.com/amin-jalali/termocode/internal/help"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -1089,9 +1090,27 @@ func (m *Model) databaseRedisSidebarKey(key string, row dbTreeRow) (tea.Cmd, boo
 	case "o", "d", "s", "#", "i":
 		return nil, true // table keys
 	case "?":
-		return m.pushToastDetail(toast.Info, "Redis keys", "j/k move · Enter connect, expand or open a key · n console · on a key: t TTL · D delete · on a namespace: D delete all its keys · y copy key · R refresh · / filter"), true
+		return m.openKeyCard("Redis keys", dbRedisKeyRows(), help.Loc{Page: databasesGuidePage, Anchor: "redis-and-valkey"}, nil), true
 	}
 	return nil, false
+}
+
+// dbRedisKeyRows are the keys of the Redis tree.
+func dbRedisKeyRows() []confirm.KeyRow {
+	return keyRows(
+		[]string{"j / k", "move"},
+		[]string{"Enter", "connect, expand or open a key"},
+		[]string{"/", "filter by name (Esc clears)"},
+		[]string{"R", "refresh"},
+		[]string{"n", "new console"},
+		[]string{"On a key"},
+		[]string{"t", "set the TTL"},
+		[]string{"D", "delete the key"},
+		[]string{"y", "copy the key"},
+		[]string{"On a namespace"},
+		[]string{"D", "delete all its keys"},
+		[]string{"y", "copy the prefix"},
+	)
 }
 
 // dbRedisFooter is the hint row of a Redis tree row.

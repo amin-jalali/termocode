@@ -114,6 +114,8 @@ func dbCardScenes() []Scene {
 		// Enter on PostgreSQL opens the first step of the form.
 		DatabasesVariant("db-tx-card", "tx-card"),
 		DatabasesVariant("db-disconnect-card", "disconnect-card"),
+		// ? on the tree: the key card (X-1).
+		DatabasesVariant("db-keys-card", "keys"),
 		DatabasesVariant("db-redis-delete-card", "redis-delete"),
 		DatabasesVariant("db-password-move-card", "password-move"),
 		DatabasesVariant("db-ai-card", "ai-card"),

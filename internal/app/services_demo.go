@@ -10,6 +10,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/containers"
+	"github.com/amin-jalali/termocode/internal/help"
 	"github.com/amin-jalali/termocode/internal/services"
 )
 
@@ -324,6 +325,12 @@ func (m *Model) containersDemo(variant string) {
 		m.servicesCursorTo(func(r svcRow) bool { return r.host == hostRemoteTag && r.tag == "16-alpine" })
 	case "menu":
 		m.openContainersSectionsMenu("")
+	case "keys": // ? on a container row: the key card
+		m.servicesCursorTo(func(r svcRow) bool { return r.kind == svcRowHostItem && r.host == hostContainer })
+		if r, ok := m.servicesCurrentRow(); ok {
+			title, rows := hostKeysHelp(r)
+			m.openKeyCard(title, rows, help.Loc{Page: containersGuidePage, Anchor: containersKeysAnchor}, nil)
+		}
 	case "ai-card": // the AI asks to stop postgres: name and short id, no 64-char id
 		c := st.containerRows[0]
 		c.ID = strings.Repeat("9f3c2e1a", 8)

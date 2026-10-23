@@ -125,6 +125,7 @@ If you already have a snippet with the same language and trigger, the row shows
     | `[` / `]` | Jump to the previous / next section. |
     | `Enter` | Go on to the final check. |
     | `Esc` or `q` | Close the panel. Nothing is written. |
+    | `?` | Show these keys on a card. **Open guide** brings you here. |
 
 5. **Confirm.** A last card says in plain words what will change (settings,
    key bindings, theme, snippets) and names the files in its last line. Pick

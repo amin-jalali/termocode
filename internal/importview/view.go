@@ -412,12 +412,12 @@ func (m Model) layout(draw bool) layoutOut {
 		}
 	}
 	if draw {
-		pairs := []string{"space", "toggle", "a", "all", "n", "none", "↑↓", "move", "enter", "apply", "esc", "cancel"}
+		pairs := []string{"space", "toggle", "a", "all", "n", "none", "↑↓", "move", "enter", "apply", "esc", "cancel", "?", "keys"}
 		if theme.CurrentIconMode == theme.IconModeASCII {
 			pairs[6] = "up/dn"
 		}
 		hints := theme.HintBar(p.bg, pairs...)
-		for _, drop := range []int{6, 4, 2} { // move, none, all
+		for _, drop := range []int{12, 6, 4, 2} { // keys, move, none, all
 			if lipgloss.Width(hints)+1 <= g.iw {
 				break
 			}

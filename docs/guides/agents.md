@@ -197,7 +197,7 @@ also edit `config.json`.
   `09:41 claude-code · tasks_run · asked, you allowed`. From there you can
   copy the config, open the auto-approve list, stop listening for this
   session (your settings stay as they are), or press `Enter` on an agent to
-  disconnect it. Both ask first.
+  disconnect it. Both ask first. Press `?` on the screen for its keys.
 - Every call, allowed or not, is in the AI audit log (**Output: AI**) as
   `mcp:<agent name>`.
 

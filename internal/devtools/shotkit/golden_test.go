@@ -137,6 +137,8 @@ func ctCardScenes() []Scene {
 		{Name: "containers-inspect", Steps: WithEditor(Act("contdemo:inspect"), Pause(1000*time.Millisecond))},
 		// Docker Hub search results (the picker).
 		ContainersVariant("containers-search", "search"),
+		// ? on a container: the key card (X-1).
+		ContainersVariant("containers-keys-card", "keys"),
 		{Name: "containers-logs", Steps: WithEditor(Act("contdemo:logs"), Pause(1500*time.Millisecond))},
 	}
 }

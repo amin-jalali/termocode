@@ -860,8 +860,76 @@ func (s *dbState) duplicateConnectionID(id string) bool {
 
 // databaseKeysHelp is the toast the ? key shows in the Databases view and on
 // the result page.
+// databaseKeysHelp is "?" on the tree: a key card of the Databases view.
 func (m *Model) databaseKeysHelp() tea.Cmd {
-	return m.pushToastDetail(toast.Info, "Database keys", "j/k move · Enter connect or expand · a add · e edit · T test · S start a stopped service · t transaction mode · R refresh · x disconnect · / filter · on a table: o data · d describe · D DDL · s select · i import CSV · # count · y copy name")
+	return m.openKeyCard("Database keys", dbTreeKeyRows(), help.Loc{Page: databasesGuidePage, Anchor: "open-the-view"}, nil)
+}
+
+// databasePageKeysHelp is "?" on a result page: a key card of the page.
+func (m *Model) databasePageKeysHelp() tea.Cmd {
+	return m.openKeyCard("Result keys", dbPageKeyRows(), help.Loc{Page: databasesGuidePage, Anchor: "results"}, nil)
+}
+
+// dbTreeKeyRows are the keys of the Databases tree.
+func dbTreeKeyRows() []confirm.KeyRow {
+	return keyRows(
+		[]string{"Move"},
+		[]string{"j / k", "move"},
+		[]string{"Enter", "connect, expand or fold"},
+		[]string{"/", "filter by name (Esc clears)"},
+		[]string{"R", "refresh"},
+		[]string{"Esc", "back to the editor"},
+		[]string{"Connections"},
+		[]string{"a", "add a connection"},
+		[]string{"e", "edit the connection files"},
+		[]string{"T", "test the connection"},
+		[]string{"S", "start a stopped service"},
+		[]string{"t", "transaction mode"},
+		[]string{"p", "set the password"},
+		[]string{"n", "new SQL console"},
+		[]string{"H", "SQL history"},
+		[]string{"x", "disconnect"},
+		[]string{"On a table or view"},
+		[]string{"o", "open the data"},
+		[]string{"d / D", "describe / show the DDL"},
+		[]string{"s", "select 100 rows in the console"},
+		[]string{"#", "count the rows"},
+		[]string{"i", "import a CSV file"},
+		[]string{"y", "copy the name"},
+	)
+}
+
+// dbPageKeyRows are the keys of a result page.
+func dbPageKeyRows() []confirm.KeyRow {
+	return keyRows(
+		[]string{"Read"},
+		[]string{"Tab", "switch Grid, JSON and Messages"},
+		[]string{"] / [", "next / previous page"},
+		[]string{"o", "sort by a column"},
+		[]string{"f", "show only some rows"},
+		[]string{"t", "flip rows and columns (table data)"},
+		[]string{"v", "open the cell"},
+		[]string{"y", "copy the cell"},
+		[]string{"c / C", "copy the rows as CSV / JSON"},
+		[]string{"S", "export the rows to a file"},
+		[]string{"Run"},
+		[]string{"r", "run again"},
+		[]string{"x / X", "explain / explain analyze"},
+		[]string{"h", "SQL history"},
+		[]string{"gd", "go to the statement"},
+		[]string{"Esc", "cancel a running query"},
+		[]string{"Tabs"},
+		[]string{"1 … 9", "show result tab 1 … 9"},
+		[]string{"p", "pin the tab"},
+		[]string{"q", "close the page"},
+		[]string{"Edit rows"},
+		[]string{"e / E", "edit the cell / in a buffer"},
+		[]string{"+ / -", "add a row / mark it for deletion"},
+		[]string{"u", "undo a change"},
+		[]string{"w", "submit the changes"},
+		[]string{"Transactions"},
+		[]string{"K / Z", "commit / roll back"},
+	)
 }
 
 func sanitizeDBText(s string) string {

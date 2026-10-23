@@ -17,6 +17,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/containers"
+	"github.com/amin-jalali/termocode/internal/help"
 	"github.com/amin-jalali/termocode/internal/menu"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/services"
@@ -864,8 +865,8 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		m.servicesJumpSection(-1)
 	case "?":
 		if have {
-			title, keys := hostKeysHelp(r)
-			return m, m.servicesToast(toast.Info, title, keys)
+			title, rows := hostKeysHelp(r)
+			return m, m.openKeyCard(title, rows, help.Loc{Page: containersGuidePage, Anchor: containersKeysAnchor}, nil)
 		}
 	case "esc":
 		m.focus = FocusEditor
@@ -890,34 +891,95 @@ func (m *Model) servicesJumpSection(dir int) {
 	}
 }
 
-// hostKeysHelp is the "?" text: the keys of the row kind under the cursor.
-func hostKeysHelp(r svcRow) (string, string) {
-	const nav = "j/k move · Tab next section · Shift+Tab previous · / filter · space fold · m sections · R refresh"
+// hostKeysHelp is the "?" card: the keys of the row kind under the cursor.
+func hostKeysHelp(r svcRow) (string, []confirm.KeyRow) {
+	nav := [][]string{
+		{"j / k", "move"},
+		{"Tab / Shift+Tab", "next / previous section"},
+		{"/", "filter the rows (Esc clears)"},
+		{"Space", "fold or open"},
+		{"m", "choose the sections"},
+		{"R", "refresh"},
+	}
+	with := func(title string, own ...[]string) (string, []confirm.KeyRow) {
+		return title, keyRows(append(own, nav...)...)
+	}
 	switch {
 	case r.kind == svcRowHostItem && r.host == hostContainer:
-		return "Container keys", "s start · x stop · r restart · p pause · e shell · t attach · Enter logs · S stats · i inspect · o open port · y copy id · D remove · " + nav
+		return with("Container keys",
+			[]string{"s / x / r", "start / stop / restart"},
+			[]string{"p", "pause or unpause"},
+			[]string{"e", "shell in the container"},
+			[]string{"t", "attach"},
+			[]string{"Enter", "logs"},
+			[]string{"S", "live stats"},
+			[]string{"i", "inspect"},
+			[]string{"o", "open a port in the browser"},
+			[]string{"y", "copy the id"},
+			[]string{"D", "remove (asks first)"})
 	case r.kind == svcRowGroup && r.hostSectionID() == "containers":
-		return "Project keys", "s up · x stop · r restart · D down · " + nav
+		return with("Project keys",
+			[]string{"s / x / r", "up / stop / restart the project"},
+			[]string{"D", "down (asks first)"})
 	case r.kind == svcRowHostItem && r.host == hostImage, r.kind == svcRowGroup && r.hostSectionID() == "images":
-		return "Image keys", "Enter run · u pull · b remote tags · P push · t tag · h history · i inspect · y copy id · D remove · " + nav
+		return with("Image keys",
+			[]string{"Enter", "run (asks first)"},
+			[]string{"u", "pull"},
+			[]string{"b", "remote tags"},
+			[]string{"P", "push (asks first)"},
+			[]string{"t", "tag"},
+			[]string{"h", "history"},
+			[]string{"i", "inspect"},
+			[]string{"y", "copy the id"},
+			[]string{"D", "remove (asks first)"})
 	case r.kind == svcRowHostItem && r.host == hostRemoteRepo:
-		return "Remote tags keys", "space fold · r reload · u pull · y copy · x remove (REGISTRIES) · " + nav
+		return with("Remote tags keys",
+			[]string{"Space", "fold the tags"},
+			[]string{"r", "reload"},
+			[]string{"u", "pull"},
+			[]string{"y", "copy"},
+			[]string{"x", "remove (REGISTRIES)"})
 	case r.kind == svcRowHostItem && r.host == hostRemoteTag:
-		return "Remote tag keys", "Enter or u pull · y copy · " + nav
+		return with("Remote tag keys",
+			[]string{"Enter / u", "pull"},
+			[]string{"y", "copy"})
 	case r.kind == svcRowHostItem && (r.host == hostNetwork || r.host == hostVolume):
-		return "Network and volume keys", "space users · n create · D remove · z prune · " + nav
+		return with("Network and volume keys",
+			[]string{"Space", "show who uses it"},
+			[]string{"n", "create"},
+			[]string{"D", "remove (asks first)"},
+			[]string{"z", "prune (asks first)"})
 	case r.kind == svcRowHostItem && r.host == hostContext:
-		return "Context keys", "Enter use here · D make default · y copy endpoint · " + nav
+		return with("Context keys",
+			[]string{"Enter", "use it here"},
+			[]string{"D", "make it the default"},
+			[]string{"y", "copy the endpoint"})
 	case r.kind == svcRowHostItem && (r.host == hostRegistry || r.host == hostRegistryImage || r.host == hostRegistryConnect):
-		return "Registry keys", "Enter open · n connect · s search Docker Hub · b browse tags · D sign out · u pull · " + nav
+		return with("Registry keys",
+			[]string{"Enter", "open"},
+			[]string{"n", "connect a registry"},
+			[]string{"s", "search Docker Hub"},
+			[]string{"b", "browse the tags"},
+			[]string{"D", "sign out (asks first)"},
+			[]string{"u", "pull"})
 	case r.kind == svcRowHostItem && isHelpHostKind(r.host):
-		return "Help keys", "Enter open · " + nav
+		return with("Help keys", []string{"Enter", "open"})
 	case r.kind == svcRowSection && strings.HasPrefix(r.section, "host/"):
-		return "Section keys", "z prune · u pull (images) · n create (networks, volumes) · d disk usage (volumes) · " + nav
+		return with("Section keys",
+			[]string{"z", "prune (asks first)"},
+			[]string{"u", "pull (images)"},
+			[]string{"n", "create (networks, volumes)"},
+			[]string{"d", "disk usage (volumes)"})
 	case r.kind == svcRowService:
-		return "Service keys", "s start · x stop · r restart · Enter logs · e shell · o open source · y copy address · a start all · A stop all · " + nav
+		return with("Service keys",
+			[]string{"s / x / r", "start / stop / restart"},
+			[]string{"Enter", "logs"},
+			[]string{"e", "shell"},
+			[]string{"o", "open the source"},
+			[]string{"y", "copy the address"},
+			[]string{"a / A", "start all / stop all"})
 	}
-	return "Containers keys", nav
+	return with("Containers keys")
 }
 
 // hostSectionID is the host section a row belongs to ("" = PROJECT).

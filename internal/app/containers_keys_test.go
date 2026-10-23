@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 )
 
 func contKey(m Model, s string) (Model, tea.Cmd) {
@@ -92,9 +93,11 @@ func TestContainersQuestionMarkShowsKeysOfRowKind(t *testing.T) {
 			t.Fatalf("%s: no row", c.name)
 		}
 		m, _ = contKey(m, "?")
-		got := strings.Join(m.toast.View(140, 40), " ")
-		if !strings.Contains(got, "keys") || !strings.Contains(strings.ToLower(got), c.want) {
-			t.Errorf("%s: toast %q lacks keys / %q", c.name, got, c.want)
+		// X-1: the keys are a card that stays open, not a toast.
+		m.confirm.SetSize(140, 50)
+		got := ansi.Strip(m.confirm.View())
+		if !m.confirmOpen || m.confirmKind != confirmKindKeyCard || !strings.Contains(got, "keys") || !strings.Contains(strings.ToLower(got), c.want) {
+			t.Errorf("%s: card %q lacks keys / %q", c.name, got, c.want)
 		}
 	}
 }

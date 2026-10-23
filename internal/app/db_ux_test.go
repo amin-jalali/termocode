@@ -80,11 +80,10 @@ func TestDatabasePageKeyRowEndsWithKeysHint(t *testing.T) {
 	}
 	m := dbGridModel(dbWideResult(8))
 	m.w = 80
-	if cmd := m.databasePageKey("?", 1, 1); cmd == nil && !strings.Contains(strings.Join(m.toast.View(120, 30), "\n"), "Database keys") {
-		t.Fatal("? did nothing on the result page")
-	}
-	if !strings.Contains(strings.Join(m.toast.View(120, 30), "\n"), "Database keys") {
-		t.Fatal("? on the result page shows no key help")
+	// X-1: the key help is a card that stays open, not a toast.
+	m.databasePageKey("?", 1, 1)
+	if !m.confirmOpen || m.confirmKind != confirmKindKeyCard || !strings.Contains(m.confirm.View(), "Result keys") {
+		t.Fatal("? on the result page shows no key card")
 	}
 }
 

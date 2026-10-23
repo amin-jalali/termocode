@@ -17,6 +17,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/explorer"
 	"github.com/amin-jalali/termocode/internal/findbar"
 	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/help"
 	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/menu"
 	"github.com/amin-jalali/termocode/internal/nvim"
@@ -532,6 +533,8 @@ type Model struct {
 	hotExitPending    []hotBackup
 	hotExitWaiting    []hotBackup
 	confirmTargetID   int
+	keyCardGuide      help.Loc             // the key card's guide page (keycard.go)
+	keyCardBack       func(*Model) tea.Cmd // runs after the key card closes
 	confirmTargetPath string
 	// confirmTargetPaths is the absolute-path list for a bulk-delete
 	// confirm flow (confirmKindDeletePath with len > 1). When the user

@@ -39,8 +39,9 @@ type Model struct {
 	buttons    []Button
 	cursor     int
 	w, h       int
-	code       string // a command shown on one line in a frame (WithCode)
-	note       string // text below the code
+	code       string   // a command shown on one line in a frame (WithCode)
+	note       string   // text below the code
+	keyRows    []KeyRow // a key card's table (WithKeys)
 }
 
 func New(title, message string, buttons []Button) Model {
@@ -65,7 +66,18 @@ func (m Model) WithScrollText() Model { m.scrollText = true; return m }
 // lines such as SQL statements are not cut in the middle of a word.
 func (m Model) WithWideText() Model { m.wideText = true; return m }
 
+// bodyCapacity is how many body lines a scrolling card shows at once.
+func (m Model) bodyCapacity() int {
+	if len(m.keyRows) > 0 {
+		return max(1, min(30, m.h-13))
+	}
+	return max(1, min(12, m.h-14))
+}
+
 func (m Model) fullTextLines() []string {
+	if len(m.keyRows) > 0 {
+		return m.keyTableLines(max(1, m.boxWidth()-6))
+	}
 	width := max(1, min(60, m.w-8)-8)
 	if m.wideText {
 		width = max(1, m.boxWidth()-6)
@@ -152,13 +164,13 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	if m.scrollText {
 		switch k.Type {
 		case tea.KeyDown:
-			m.scroll = min(m.scroll+1, max(0, len(m.fullTextLines())-max(1, min(12, m.h-14))))
+			m.scroll = min(m.scroll+1, max(0, len(m.fullTextLines())-m.bodyCapacity()))
 			return m, nil
 		case tea.KeyUp:
 			m.scroll = max(m.scroll-1, 0)
 			return m, nil
 		case tea.KeyPgDown:
-			m.scroll = min(m.scroll+8, max(0, len(m.fullTextLines())-max(1, min(12, m.h-14))))
+			m.scroll = min(m.scroll+8, max(0, len(m.fullTextLines())-m.bodyCapacity()))
 			return m, nil
 		case tea.KeyPgUp:
 			m.scroll = max(m.scroll-8, 0)
@@ -377,6 +389,9 @@ func (m Model) boxWidth() int {
 		}
 		boxW = max(boxW, min(longest+6, 110))
 	}
+	if len(m.keyRows) > 0 {
+		boxW = max(boxW, min(m.keyTableWidth()+6, 110))
+	}
 	if m.code != "" {
 		// Room for the command on one line: frame + padding + border.
 		boxW = max(boxW, min(lipgloss.Width(m.code)+10, 110))
@@ -402,7 +417,7 @@ func (m Model) layoutRest(boxW, innerW, bodyW int, bodyLines []string) confirmDi
 	// when given a huge message; tail is replaced with an ellipsis.
 	const maxBodyLines = 12
 	if m.scrollText {
-		capacity := max(1, min(maxBodyLines, m.h-14))
+		capacity := m.bodyCapacity()
 		if len(bodyLines) > capacity {
 			start := min(m.scroll, len(bodyLines)-capacity)
 			end := min(start+capacity, len(bodyLines))
@@ -567,6 +582,16 @@ func (m Model) Box() string {
 		case dims.codeAt >= 0 && i == dims.codeAt+1:
 			inner := strings.TrimSuffix(strings.TrimPrefix(line, "│ "), " │")
 			row := bgFill.Render("  ") + separatorStyle.Render("│ ") + codeStyle.Render(inner) + separatorStyle.Render(" │")
+			rows = append(rows, padBg(row, innerW))
+			continue
+		}
+		switch {
+		case strings.HasPrefix(line, keyHeadMark):
+			line = strings.TrimPrefix(line, keyHeadMark)
+			style = quietStyle.Bold(true)
+		case strings.HasPrefix(line, keyKeyMark):
+			key, rest, _ := strings.Cut(strings.TrimPrefix(line, keyKeyMark), keyEndMark)
+			row := bgFill.Render("  ") + codeStyle.Render(key) + bodyStyle.Render(rest)
 			rows = append(rows, padBg(row, innerW))
 			continue
 		}

@@ -8,7 +8,7 @@ A connection opens only when you expand it. Schema details load as you move down
 
 Choose **Databases** in the activity bar or run **Databases: Focus** from the command palette. The action `DatabasesFocus` has no default key; you can bind one in `keymap.json`.
 
-Use `j` and `k` to move, `Enter` to connect or expand a row, `h` to fold a branch, `R` to reload the list, and `/` to filter by name. `Esc` returns focus to the editor. `?` shows a short key list.
+Use `j` and `k` to move, `Enter` to connect or expand a row, `h` to fold a branch, `R` to reload the list, and `/` to filter by name. `Esc` returns focus to the editor. `?` opens a card with all the keys of the view; **Open guide** on the card brings you here.
 
 Tables show their columns, primary keys, indexes and foreign keys when expanded. A primary-key column has a `[PK]` marker. Views, routines and sequences appear in their own groups when the server has them.
 

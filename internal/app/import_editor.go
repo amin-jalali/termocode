@@ -17,12 +17,16 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/help"
 	"github.com/amin-jalali/termocode/internal/importview"
 	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/migrate"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/prompt"
 )
+
+// importGuidePage is the built-in guide page of the import.
+const importGuidePage = "guides/import-from-another-editor.md"
 
 // importState is the import flow's state; nil until first used.
 type importState struct {
@@ -367,4 +371,16 @@ func (m Model) importLayer(base string) string {
 	o.At = true
 	o.X, o.Y = p.Origin()
 	return modalOverlay(base, box, m.w, m.h, &o)
+}
+
+// importKeysHelp is "?" in the review panel: the key card.
+func (m *Model) importKeysHelp() tea.Cmd {
+	return m.openKeyCard("Import keys", keyRows(
+		[]string{"Space / x", "turn a row on or off (a section title: the whole section)"},
+		[]string{"a / n", "turn all rows on / off"},
+		[]string{"j / k", "move (PgUp, PgDn, Home and End too)"},
+		[]string{"[ / ]", "previous / next section"},
+		[]string{"Enter", "go on to the final check"},
+		[]string{"Esc / q", "close the panel; nothing is written"},
+	), help.Loc{Page: importGuidePage, Anchor: "step-by-step"}, nil)
 }

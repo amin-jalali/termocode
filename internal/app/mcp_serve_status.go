@@ -12,6 +12,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/help"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/picker"
 )
@@ -310,6 +311,21 @@ func (m *Model) openMCPServeStatus() tea.Cmd {
 	m.pickerOpen = true
 	m.pickerKind = pickerKindMCPServeStatus
 	return nil
+}
+
+// mcpServeStatusKey handles "?" on the status screen: the key card. The
+// screen comes back when the card closes.
+func (m *Model) mcpServeStatusKey(k tea.KeyMsg) (tea.Cmd, bool) {
+	if m.pickerKind != pickerKindMCPServeStatus || k.String() != "?" {
+		return nil, false
+	}
+	m.pickerOpen = false
+	return m.openKeyCard("MCP server status keys", keyRows(
+		[]string{"Up / Down", "move to a row"},
+		[]string{"Enter", "run the row: disconnect an agent, start or stop listening, copy the config"},
+		[]string{"Type", "search the rows"},
+		[]string{"Esc", "close the screen"},
+	), help.Loc{Page: "guides/agents.md", Anchor: "see-what-is-connected"}, func(m *Model) tea.Cmd { return m.openMCPServeStatus() }), true
 }
 
 // onMCPServeStatusPicked runs an action row; Enter on a plain row looks

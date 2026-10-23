@@ -115,6 +115,9 @@ func (m *Model) promptCloseBufferIfDirty(id int) bool {
 }
 
 func (m *Model) handleConfirmSelect(id string) tea.Cmd {
+	if m.confirmKind == confirmKindKeyCard {
+		return m.answerKeyCard(id)
+	}
 	if cmd, ok := m.handleDBConfirm(id); ok {
 		return cmd
 	}

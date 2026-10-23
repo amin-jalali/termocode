@@ -53,7 +53,7 @@ import (
 //	                       (nothing is written)
 //	svcdemo[:down|empty]   show the Services view with a canned snapshot
 //	                       (no docker; the shots and goldens)
-//	contdemo[:down|noengine|menu|filter|tags|ai-card|logs|inspect|search|db-menu|db-container-menu] show the Containers view with a canned host snapshot
+//	contdemo[:down|noengine|menu|filter|keys|tags|ai-card|logs|inspect|search|db-menu|db-container-menu] show the Containers view with a canned host snapshot
 //	dbdemo[:empty|no-sqlite|stopped|result|messages|error|table|transposed|describe|ddl|edits|submit|plan|plan-card|redis|redis-key|ssh-host|ssh-form|ssl-form|compare-pick|compare]   show a canned Databases tree or result page (no connection)
 //	secretsdemo:<card|locked|open> the secret store: migration card with
 //	                       sample counts, store screen locked or open (writes

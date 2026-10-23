@@ -107,7 +107,10 @@ func TestContainersFakeEngineBrowseStopAndIdle(t *testing.T) {
 	tm.WaitText("? keys", uiTimeout)
 	tm.Send("?")
 	tm.WaitText("Section keys", uiTimeout)
+	tm.WaitText("Open guide", uiTimeout) // X-1: a card that stays open, with the guide button
 	tm.CheckScreen("keys help", mainFrame)
+	tm.Send(KeyEsc)
+	tm.WaitGone("Section keys", uiTimeout)
 
 	// Down to the nginx row and stop it: a plain `stop <id>`, no -f.
 	for i := 0; i < 30 && !strings.Contains(fileText(filepath.Join(data, "argv.log")), "stop aabbccdd"); i++ {
