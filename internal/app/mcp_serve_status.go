@@ -199,21 +199,33 @@ func mcpServeCallRow(line string) (string, bool) {
 	return at[:5] + " " + by + " · " + tool + " · " + what, true
 }
 
-// mcpServeNotListeningWhy says why nothing listens.
+// mcpServeNotListeningWhy says why nothing listens, in plain words.
 func (m *Model) mcpServeNotListeningWhy() string {
 	switch mcpServeMode() {
 	case "off":
-		return "Not listening: mcp_server is off in config.json"
+		return "Not listening. The MCP server is turned off."
 	case "on":
 		if m.mcpServeErr != "" {
-			return "Not listening: " + aiCleanText(m.mcpServeErr)
+			return "Not listening. It could not start: " + aiCleanText(m.mcpServeErr)
 		}
-		return "Not listening: mcp_server is on, but the server did not start (see errors.log)"
+		return "Not listening. It did not start."
 	}
 	if m.mcpServeErr != "" {
-		return "Not listening: " + aiCleanText(m.mcpServeErr)
+		return "Not listening. It could not start: " + aiCleanText(m.mcpServeErr)
 	}
-	return "Not listening yet: mcp_server is auto, it starts when you start an agent tab (F1 → Agent: Start …)"
+	return "Not listening yet. It starts when you start an agent tab."
+}
+
+// mcpServeNotListeningAction is the row that fixes it: turn it on when it
+// is off, else start it now (or try again after an error).
+func (m *Model) mcpServeNotListeningAction() picker.Item {
+	switch {
+	case mcpServeMode() == "off":
+		return picker.Item{ID: "serve-on", Title: "Turn on", Hint: "let outside agents connect"}
+	case m.mcpServeErr != "" || mcpServeMode() == "on":
+		return picker.Item{ID: "serve-start", Title: "Try again", Hint: "start listening"}
+	}
+	return picker.Item{ID: "serve-start", Title: "Start listening now", Hint: "for this session"}
 }
 
 func mcpServePlural(n int, one, many string) string {
@@ -259,6 +271,9 @@ func (m *Model) mcpServeStatusItems() []picker.Item {
 		}
 	}
 	head("Actions")
+	if st == nil {
+		items = append(items, m.mcpServeNotListeningAction())
+	}
 	items = append(items,
 		picker.Item{ID: "copy", Title: "Copy termocode server config", Hint: "JSON for agent CLIs"},
 		picker.Item{ID: "allow", Title: "AI: Agent Auto-Approve…", Hint: "see and revoke Always allow"})
@@ -290,6 +305,17 @@ func (m *Model) onMCPServeStatusPicked(id string) tea.Cmd {
 		return m.copyMCPServeConfig()
 	case "allow":
 		return m.openAIAutoApprovePicker()
+	case "serve-on":
+		path, err := settingsConfigPath()
+		if err == nil {
+			err = mcp.SaveSetting(path, "mcp_server", "on")
+		}
+		if err != nil {
+			return m.aiToastErr("Could not turn the MCP server on", err)
+		}
+		return tea.Batch(m.syncMCPServe(), m.openMCPServeStatus())
+	case "serve-start":
+		return tea.Batch(m.ensureMCPServeForAgent(), m.openMCPServeStatus())
 	}
 	return m.openMCPServeStatus()
 }

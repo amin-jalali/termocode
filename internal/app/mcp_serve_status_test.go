@@ -76,17 +76,19 @@ func TestMCPServeStatusLastLines(t *testing.T) {
 	}
 }
 
-// Spec (MS-3): not listening says why: setting off, auto still waiting
-// for an agent tab, or the start error.
+// Spec (MS-3, MCP-6): not listening says why in plain words (no config
+// key, no file name): turned off, auto still waiting for an agent tab, or
+// the start error; and there is an action row to fix it.
 func TestMCPServeStatusNotListening(t *testing.T) {
 	m, _, _ := mcpServeTestModel(t)
 	m.mcpServe = nil
 	cases := []struct {
 		setting, err, want string
 	}{
-		{"off", "", "mcp_server is off"},
+		{"off", "", "The MCP server is turned off"},
 		{"auto", "", "starts when you start an agent tab"},
 		{"on", "address in use", "address in use"},
+		{"on", "", "It did not start"},
 	}
 	for _, c := range cases {
 		cfg, _ := settingsConfigPath()
@@ -101,6 +103,14 @@ func TestMCPServeStatusNotListening(t *testing.T) {
 		}
 		if strings.Contains(text, "Socket") {
 			t.Errorf("%s: a socket path while not listening:\n%s", c.setting, text)
+		}
+		for _, tech := range []string{"mcp_server", "config.json", "errors.log"} {
+			if strings.Contains(text, tech) {
+				t.Errorf("%s: the status names %q:\n%s", c.setting, tech, text)
+			}
+		}
+		if id := mcpServeActionID(m.mcpServeStatusItems(), "serve-"); id == "" {
+			t.Errorf("%s: no action row to fix it:\n%s", c.setting, text)
 		}
 	}
 }
@@ -260,4 +270,14 @@ func TestMCPServeStatusAutoApproveWording(t *testing.T) {
 	if !strings.Contains(text, palette) {
 		t.Errorf("status has no %q:\n%s", palette, text)
 	}
+}
+
+// mcpServeActionID is the first row ID with the prefix ("" when none).
+func mcpServeActionID(items []picker.Item, prefix string) string {
+	for _, it := range items {
+		if strings.HasPrefix(it.ID, prefix) {
+			return it.ID
+		}
+	}
+	return ""
 }

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -113,5 +114,47 @@ func TestMCPServeSettingDocumented(t *testing.T) {
 	}
 	if p, ok := aiSettingPolicies["mcp_server"]; !ok || p.Gate != aiGateNever {
 		t.Fatalf("policy: %+v %v", p, ok)
+	}
+}
+
+// Spec (MCP-6): "Turn on" in the not-listening status saves mcp_server=on
+// and starts listening; "Start listening now" (auto) starts for this
+// session and leaves the setting alone; a listening status has neither.
+func TestMCPServeStatusNotListeningActions(t *testing.T) {
+	m, _, _ := mcpServeTestModel(t)
+	m.mcpServe = nil
+	path := mcpServeShortRuntime(t)
+	defer m.stopMCPServe()
+
+	cfg := mcpServeSetMode(t, "off")
+	if id := mcpServeActionID(m.mcpServeStatusItems(), "serve-"); id != "serve-on" {
+		t.Fatalf("off: action %q, want serve-on", id)
+	}
+	m.onMCPServeStatusPicked("serve-on")
+	if m.mcpServe == nil || !mcpServeSocketExists(path) {
+		t.Fatal("Turn on did not start listening")
+	}
+	if b, _ := os.ReadFile(cfg); !strings.Contains(string(b), `"mcp_server": "on"`) {
+		t.Errorf("config.json: %s", b)
+	}
+	if id := mcpServeActionID(m.mcpServeStatusItems(), "serve-"); id != "" {
+		t.Errorf("a listening status has the action %q", id)
+	}
+	if !m.pickerOpen || m.pickerKind != pickerKindMCPServeStatus {
+		t.Error("the status screen did not refresh")
+	}
+
+	m.stopMCPServe()
+	m.mcpServeForAgent = false
+	cfg = mcpServeSetMode(t, "auto")
+	if id := mcpServeActionID(m.mcpServeStatusItems(), "serve-"); id != "serve-start" {
+		t.Fatalf("auto: action %q, want serve-start", id)
+	}
+	m.onMCPServeStatusPicked("serve-start")
+	if m.mcpServe == nil {
+		t.Fatal("Start listening now did not start")
+	}
+	if b, _ := os.ReadFile(cfg); strings.Contains(string(b), `"on"`) {
+		t.Errorf("the session start changed the setting: %s", b)
 	}
 }
