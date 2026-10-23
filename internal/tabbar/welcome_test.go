@@ -31,3 +31,17 @@ func TestWelcomeTabAndDuplicateNames(t *testing.T) {
 		t.Errorf("unique names must not get a suffix: %q", got)
 	}
 }
+
+// A buffer may carry a Title: the tab shows it instead of the file name.
+func TestTabShowsTitleInsteadOfFileName(t *testing.T) {
+	m := New()
+	m.SetWidth(120)
+	m.SetBuffers([]nvim.BufferInfo{
+		{ID: 1, Path: "/cfg/db/consoles/aaaa/175674a2dbc4.sql", Title: "SQL console · local-pg"},
+		{ID: 2, Path: "/p/README.md"},
+	}, 1)
+	got := ansi.Strip(m.View())
+	if !strings.Contains(got, "SQL console · local-pg") || strings.Contains(got, "175674a2dbc4") || !strings.Contains(got, "README.md") {
+		t.Errorf("tabs = %q", got)
+	}
+}

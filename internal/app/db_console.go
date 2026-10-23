@@ -14,6 +14,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/dbclient"
+	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/toast"
 	tea "github.com/charmbracelet/bubbletea"
@@ -264,6 +265,34 @@ func (m *Model) databaseConsoleCrumbs(path string) ([]string, bool) {
 		}
 	}
 	return []string{kind}, true
+}
+
+// databaseConsoleTitle is the tab name of a console file: "SQL console ·
+// local-pg" instead of the hash its file name is made of ("" = not a console).
+func (m *Model) databaseConsoleTitle(path string) string {
+	segs, ok := m.databaseConsoleCrumbs(path)
+	if !ok {
+		return ""
+	}
+	return strings.Join(segs, " · ")
+}
+
+// titledBufs gives the buffers whose file name is a hash a readable tab name.
+// The list is a copy: m.bufs keeps the plain paths.
+func (m *Model) titledBufs(bufs []nvim.BufferInfo) []nvim.BufferInfo {
+	var out []nvim.BufferInfo
+	for i, b := range bufs {
+		if t := m.databaseConsoleTitle(b.Path); t != "" {
+			if out == nil {
+				out = append([]nvim.BufferInfo(nil), bufs...)
+			}
+			out[i].Title = t
+		}
+	}
+	if out == nil {
+		return bufs
+	}
+	return out
 }
 
 func (m *Model) dbConsoleError(err error) tea.Cmd {

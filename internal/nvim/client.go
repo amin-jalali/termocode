@@ -249,6 +249,9 @@ type BufferInfo struct {
 	Path     string
 	Modified bool
 	Filetype string
+	// Title is the name the tab shows instead of the file name. The app sets
+	// it for files whose name is a hash (a SQL console); "" = the file name.
+	Title string
 }
 
 // Buffers returns the list of currently loaded, listed buffers and the id

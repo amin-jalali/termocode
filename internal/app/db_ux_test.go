@@ -1,12 +1,15 @@
 package app
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/dbclient"
 	"github.com/amin-jalali/termocode/internal/help"
+	"github.com/amin-jalali/termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/tabbar"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 )
@@ -314,5 +317,35 @@ func TestDatabaseConsoleBreadcrumbsNameTheConnection(t *testing.T) {
 	m.refreshBreadcrumbs("/work/app/query.sql")
 	if got := strings.Join(m.breadcrumbs, " › "); strings.Contains(got, "console") {
 		t.Errorf("a normal file shows %q", got)
+	}
+}
+
+// DB-18: the tab of a console shows "SQL console · name", not the hash of
+// its file name; the "Save changes?" card names it the same way; a normal
+// file keeps its name.
+func TestDatabaseConsoleTabTitleNamesTheConnection(t *testing.T) {
+	withConfigDir(t)
+	s := newDBState()
+	s.conns = []dbclient.Conn{{ID: "local-pg", Name: "local-pg", Driver: "postgres"}, {ID: "cache", Name: "cache", Driver: "redis"}}
+	m := &Model{databases: s}
+	sql := m.databaseConsolePath("local-pg")
+	redis := strings.TrimSuffix(m.databaseConsolePath("cache"), ".sql") + ".redis"
+	bufs := []nvim.BufferInfo{{ID: 1, Path: sql}, {ID: 2, Path: redis}, {ID: 3, Path: "/work/app/query.sql"}}
+	titled := m.titledBufs(bufs)
+	if titled[0].Title != "SQL console · local-pg" || titled[1].Title != "Redis console · cache" || titled[2].Title != "" {
+		t.Errorf("titles = %q, %q, %q", titled[0].Title, titled[1].Title, titled[2].Title)
+	}
+	if bufs[0].Title != "" {
+		t.Error("titledBufs changed the list it was given")
+	}
+	tabs := tabbar.New()
+	tabs.SetWidth(150)
+	tabs.SetBuffers(titled, 1)
+	view := ansi.Strip(tabs.View())
+	if !strings.Contains(view, "SQL console · local-pg") || strings.Contains(view, filepath.Base(sql)) {
+		t.Errorf("tab bar = %q", view)
+	}
+	if plain := m.titledBufs(bufs[2:]); len(plain) != 1 || plain[0].Title != "" {
+		t.Error("a normal file got a title")
 	}
 }

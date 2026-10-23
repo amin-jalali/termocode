@@ -832,7 +832,7 @@ end })`)
 		m.activeBuf = msg.Active
 		// Move pinned buffers to the front before handing the list to the
 		// tab bar so the rendering order matches the pinned-set state.
-		m.tabs.SetBuffers(m.reorderPinned(m.bufs), msg.Active)
+		m.tabs.SetBuffers(m.reorderPinned(m.titledBufs(m.bufs)), msg.Active)
 		// Track the side-by-side diff view straight from nvim's window state
 		// so it self-corrects when the user opens/closes the diff.
 		m.gitDiffActive = msg.Diff

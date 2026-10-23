@@ -497,6 +497,9 @@ func isWelcomeBuf(b nvim.BufferInfo) bool {
 // at its end.
 func renderTabCellsSfx(b nvim.BufferInfo, active bool, suffix string, welcome bool, maxW int) []string {
 	name := filepath.Base(b.Path)
+	if b.Title != "" {
+		name = b.Title
+	}
 	if welcome {
 		name = "Welcome"
 	}

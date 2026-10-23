@@ -95,6 +95,9 @@ func (m *Model) promptCloseBufferIfDirty(id int) bool {
 		return false
 	}
 	name := filepath.Base(buf.Path)
+	if t := m.databaseConsoleTitle(buf.Path); t != "" {
+		name = t // "SQL console · local-pg", not the hash of its file name
+	}
 	if name == "" {
 		name = "[unnamed]"
 	}
