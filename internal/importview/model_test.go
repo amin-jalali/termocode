@@ -408,3 +408,46 @@ func TestPanelShowsTitlesNotIds(t *testing.T) {
 		}
 	}
 }
+
+// IM-2: at 80 columns the columns cut long text; the lines under the body
+// shows the focused row in full, so a reason is never lost.
+func TestPanelDetailLineShowsTheFullReason(t *testing.T) {
+	m := New(fixturePlan(t, vscodeSrc, current()), "", WithActionTitle(func(name string) string {
+		return map[string]string{"RevealFile": "Reveal File in Explorer"}[name]
+	}))
+	m.SetSize(80, 24)
+	for _, tc := range []struct {
+		left string
+		want []string
+	}{
+		{"ctrl+alt+d", []string{"termocode has no command for this action", "editor.action.deleteLines"}},
+		{"cmd+shift+k", []string{"workbench.action.showCommands"}},
+		{"ctrl+shift+e  (VS Code default)", []string{"turning this on replaces Reveal File in Explorer on this key", "ctrl+shift+e  (VS Code default)"}},
+		{"editor.fontSize", []string{"termocode has no matching setting", "editor.fontSize = 14"}},
+	} {
+		k, _ := findRow(t, m, tc.left)
+		m.cursor = k
+		m.follow()
+		rows := plain(m)
+		// The two detail lines sit above the footer's hairline, summary and hints.
+		detail := rows[len(rows)-6] + "\n" + rows[len(rows)-5]
+		for _, w := range tc.want {
+			if !strings.Contains(detail, w) {
+				t.Errorf("%q: detail line %q lacks %q", tc.left, detail, w)
+			}
+		}
+	}
+	// On a section header the line says what Space does there.
+	m.cursor = 0
+	if rows := plain(m); !strings.Contains(rows[len(rows)-6], "every row in this section") {
+		t.Errorf("header detail %q", rows[len(rows)-6])
+	}
+	// A card too short for the line keeps the reason in the footer.
+	m.SetSize(80, 15)
+	k, _ := findRow(t, m, "editor.fontSize")
+	m.cursor = k
+	m.follow()
+	if got := strings.Join(plain(m), "\n"); !strings.Contains(got, "termocode has no matching setting") {
+		t.Errorf("short card lost the reason:\n%s", got)
+	}
+}

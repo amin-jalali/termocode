@@ -46,6 +46,7 @@ type row struct {
 	left     string // the other editor's text
 	right    string // termocode's side
 	reason   string // why it is off or not imported
+	with     string // key rows: the title of the command the key has now
 	key      string // key rows: only one selected row per key
 	target   string // setting rows: only one selected row per target
 }
@@ -167,6 +168,9 @@ func (m Model) makeRow(i int) row {
 		}
 		r.key = pr.Key
 		r.right = m.keyText(pr)
+		if pr.ConflictWith != "" {
+			r.with = m.actionTitle(pr.ConflictWith)
+		}
 		if pr.Apply || pr.Conflict {
 			r.state = stateToggle
 			r.conflict = pr.Conflict

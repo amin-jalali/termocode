@@ -18,8 +18,9 @@ import (
 //	1        labels: ▍In <editor>                 ▍In termocode
 //	2        hairline
 //	3..      body: section headers and rows ([x] left → right)
+//	h-5..h-4 detail: the focused row in full, two lines (when the card is tall enough)
 //	h-3      hairline
-//	h-2      footer: status                      [All] [None] [Apply…] [Cancel]
+//	h-2      footer: summary                     [All] [None] [Apply…] [Cancel]
 //	h-1      key hints
 
 type geom struct {
@@ -29,11 +30,16 @@ type geom struct {
 	leftW      int // the other editor's column
 	rightW     int // termocode's column
 	tiny       bool
+	detail     bool // two lines under the body for the focused row
 }
 
 const (
 	checkW = 5 // " [x] "
 	arrowW = 3 // " → "
+
+	// detailMinH is the inner height from which the card keeps two lines
+	// for the focused row: a short card needs the room for the rows.
+	detailMinH = 14
 )
 
 func (m Model) geom() geom {
@@ -54,6 +60,10 @@ func (m Model) geom() geom {
 		return g
 	}
 	g.bodyH = g.ih - 6
+	if g.ih >= detailMinH {
+		g.detail = true
+		g.bodyH -= 2
+	}
 	avail := g.iw - checkW - arrowW - 1
 	g.leftW = avail * 2 / 5
 	g.rightW = avail - g.leftW
@@ -203,27 +213,66 @@ func (m Model) Origin() (int, int) {
 	return g.x, g.y
 }
 
-// status is the footer's left text: why the focused row is off, or what
-// the selection will change.
-func (m Model) status() string {
+// focused is the row under the cursor; ok is false on a section header.
+func (m Model) focused() (row, bool) {
 	if m.cursor >= 0 && m.cursor < len(m.lines) {
 		if ln := m.lines[m.cursor]; ln.row >= 0 {
-			r := m.rows[ln.row]
-			switch {
-			case r.state == stateSkip && r.reason != "":
-				return r.reason
-			case r.state == stateInfo:
-				return "a suggestion only: nothing is installed"
-			case r.state == stateToggle && r.conflict:
-				return "replaces what you have now"
-			}
+			return m.rows[ln.row], true
 		}
 	}
+	return row{}, false
+}
+
+// note says in full why the focused row is off or what turning it on
+// does; "" when there is nothing to add.
+func (m Model) note() string {
+	r, ok := m.focused()
+	if !ok {
+		return ""
+	}
+	switch {
+	case r.state == stateSkip && r.reason != "":
+		return r.reason
+	case r.state == stateInfo:
+		return "a suggestion only: nothing is installed"
+	case r.state == stateToggle && r.conflict && r.with != "":
+		return "turning this on replaces " + r.with + " on this key"
+	case r.state == stateToggle && r.conflict:
+		return "replaces what you have now"
+	}
+	return ""
+}
+
+// detail is the two lines under the body: what to know about the focused
+// row, then its source text in full (the columns cut long text).
+func (m Model) detail() (why, src string) {
+	r, ok := m.focused()
+	if !ok {
+		return "Space turns every row in this section on or off", ""
+	}
+	why = m.note()
+	if why == "" && r.state == stateToggle {
+		why = "Space turns this on or off"
+	}
+	return why, m.title + ": " + r.left
+}
+
+// summary is what the selection will change.
+func (m Model) summary() string {
 	c := m.Counts()
 	if c.Total() == 0 {
 		return "Nothing selected"
 	}
 	return "Will change: " + c.Summary()
+}
+
+// status is the footer's left text on a card too short for the detail
+// line: why the focused row is off, or what the selection will change.
+func (m Model) status() string {
+	if n := m.note(); n != "" {
+		return n
+	}
+	return m.summary()
 }
 
 func (m Model) layout(draw bool) layoutOut {
@@ -305,6 +354,13 @@ func (m Model) layout(draw bool) layoutOut {
 		}
 	}
 
+	// Detail: the focused row in full, so a cut reason is never lost.
+	if g.detail && draw {
+		why, src := m.detail()
+		inner = append(inner, paint([]seg{{" " + why, bg.Foreground(p.text)}}, g.iw, bg),
+			paint([]seg{{" " + src, bg.Foreground(p.dim)}}, g.iw, bg))
+	}
+
 	// Footer.
 	if draw {
 		inner = append(inner, theme.Hairline(g.iw, theme.BgFloat))
@@ -328,9 +384,13 @@ func (m Model) layout(draw bool) layoutOut {
 			btns = btns[2:]
 			right, rw = build(btns)
 		}
-		left := []seg{{" " + m.status(), bg.Foreground(p.muted)}}
+		text := m.summary()
+		if !g.detail {
+			text = m.status() // no detail line: the footer says why a row is off
+		}
+		left := []seg{{" " + text, bg.Foreground(p.muted)}}
 		if segsWidth(left)+rw+1 > g.iw {
-			left = []seg{{" " + runewidth.Truncate(m.status(), max(g.iw-rw-2, 0), "…"), bg.Foreground(p.muted)}}
+			left = []seg{{" " + runewidth.Truncate(text, max(g.iw-rw-2, 0), "…"), bg.Foreground(p.muted)}}
 		}
 		x := max(g.iw-rw, 0)
 		for _, b := range btns {
