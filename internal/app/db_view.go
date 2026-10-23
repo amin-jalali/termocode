@@ -116,7 +116,7 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 			line = theme.FgBg(theme.TextPrimary, theme.BgSelection).Render(testsPad(line, w))
 		} else if r.kind == dbNodeNote {
 			line = theme.FgBg(theme.DiagError, theme.BgSidebar).Render(testsPad(line, w))
-		} else if r.kind == dbNodeRedisMore {
+		} else if r.kind == dbNodeRedisMore || r.kind == dbNodeLoading {
 			line = theme.FgBg(theme.TextMuted, theme.BgSidebar).Render(testsPad(line, w))
 		} else if r.kind == dbNodeCode {
 			line = theme.FgBg(theme.TextSecondary, theme.BgPanel).Render(testsPad(line, w))
@@ -350,6 +350,8 @@ func dbNodeGlyph(kind dbNodeKind) string {
 			return "\uf07b"
 		case dbNodeRedisMore:
 			return " "
+		case dbNodeLoading:
+			return "\uf110" // a spinner
 		default:
 			return "!"
 		}
@@ -380,6 +382,8 @@ func dbNodeGlyph(kind dbNodeKind) string {
 			return "n"
 		case dbNodeRedisMore:
 			return " "
+		case dbNodeLoading:
+			return "~"
 		default:
 			return "!"
 		}
@@ -415,6 +419,8 @@ func dbNodeGlyph(kind dbNodeKind) string {
 		return theme.IconFolderClosed.String()
 	case dbNodeRedisMore:
 		return " "
+	case dbNodeLoading:
+		return "◌"
 	default:
 		return "!"
 	}

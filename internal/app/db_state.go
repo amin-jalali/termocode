@@ -38,6 +38,7 @@ const (
 	dbNodeRedisNS   // a key namespace ("session:")
 	dbNodeRedisKey  // a key with its type
 	dbNodeRedisMore // the scan stopped at db_redis_max_keys / no keys
+	dbNodeLoading   // "Loading…": the node's children are on their way (quiet, not a problem)
 )
 
 type dbNode struct {
@@ -160,7 +161,7 @@ func (s *dbState) rows() []dbTreeRow {
 			walk(child, depth+1)
 		}
 		if n.loading {
-			out = append(out, dbTreeRow{kind: dbNodeNote, path: path + "/loading", name: "Loading…", depth: depth + 1})
+			out = append(out, dbTreeRow{kind: dbNodeLoading, path: path + "/loading", name: "Loading…", depth: depth + 1})
 		}
 	}
 	for _, c := range s.conns {
@@ -180,7 +181,7 @@ func (s *dbState) rows() []dbTreeRow {
 		walk(path, 0)
 	}
 	if len(out) == 0 && !s.loaded {
-		out = append(out, dbTreeRow{kind: dbNodeNote, name: "Loading database connections…"})
+		out = append(out, dbTreeRow{kind: dbNodeLoading, name: "Loading database connections…"})
 	}
 	return out
 }
