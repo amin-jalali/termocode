@@ -770,7 +770,7 @@ func aiControlDescribe(call aiIDECaller, a map[string]any) string {
 	if err != nil {
 		return aiTitle(verb) + " container " + target + " (refused: " + aiOneLineClip(err.Error(), 120) + ")"
 	}
-	return fmt.Sprintf("%s container %s (%s %s %s) · %s", aiTitle(action), aiContainerName(c), h.bin(), action, c.ID, h.contextLabel(ctx))
+	return fmt.Sprintf("%s container %s (%s %s %s) · %s", aiTitle(action), containerShownName(c), h.bin(), action, c.ID, h.contextLabel(ctx))
 }
 
 func aiControlRun(ctx context.Context, call aiIDECaller, a map[string]any) (string, error) {

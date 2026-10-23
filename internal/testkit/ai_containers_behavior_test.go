@@ -63,7 +63,7 @@ func TestAIContainersPortBusyFlow(t *testing.T) {
 		t.Fatalf("no confirm card for containers_control:\n%s", screen(d))
 	}
 	sc := screen(d)
-	for _, want := range []string{"containers_control", "Stop container termocode-api-1", "stop 9f3c2e1a1234", "context default",
+	for _, want := range []string{"containers_control", "Stop container api-1", "stop 9f3c2e1a1234", "context default",
 		"Allow", "Always allow containers", "Deny"} {
 		if !strings.Contains(sc, want) {
 			t.Errorf("confirm card has no %q:\n%s", want, sc)

@@ -338,6 +338,12 @@ func containerDisplayName(c containers.Container, group string) string {
 	return name
 }
 
+// containerShownName is the name the list shows for c; every card, toast
+// and AI card for the user uses it, so one container has one name.
+func containerShownName(c containers.Container) string {
+	return containerDisplayName(c, c.Project)
+}
+
 const danglingRepo = "<none>"
 
 // imageRefs maps each repo to its (tag, image index) pairs.

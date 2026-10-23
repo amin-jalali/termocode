@@ -247,7 +247,7 @@ func (m *Model) inspectStorageUsersWithIntent(r svcRow, remove bool) tea.Cmd {
 			rows, err := e.ContainersUsingVolume(ctx, id)
 			if err == nil {
 				for _, row := range rows {
-					users = append(users, containerDisplayName(row, row.Project))
+					users = append(users, containerShownName(row))
 				}
 				sort.Strings(users)
 			}
@@ -295,7 +295,7 @@ func storageSnapshotUsers(rows []containers.Container, r svcRow) []string {
 			used = containsString(c.Mounts, r.hostID)
 		}
 		if used {
-			users = append(users, containerDisplayName(c, c.Project))
+			users = append(users, containerShownName(c))
 		}
 	}
 	return users

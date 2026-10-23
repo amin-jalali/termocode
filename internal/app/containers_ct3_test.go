@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/amin-jalali/termocode/internal/containers"
+	"github.com/amin-jalali/termocode/internal/services"
 )
 
 // CT-3: the clean-up and remove cards use plain words, the title and the
@@ -71,5 +72,30 @@ func TestCT3RemoveCardsShortIDsAndShortPaths(t *testing.T) {
 	got := displayCommand([]string{"docker", "compose", "--project-directory", home + "/proj/docs", "-f", "compose.yaml", "down"}, "")
 	if got != "docker compose --project-directory ~/proj/docs -f compose.yaml down" {
 		t.Errorf("displayCommand = %q", got)
+	}
+}
+
+// CT-7: one container, one name: the one the list shows. A compose
+// container "termocode-api-1" is "api-1" in the list, so it is "api-1" in
+// the busy message and in the AI control card too.
+func TestCT7OneNameEverywhere(t *testing.T) {
+	st := svcHostState()
+	mm := svcTestModel(st, 120, 50)
+	m := &mm
+	c := st.containerRows[0] // termocode-postgres-1, project termocode
+	want := containerDisplayName(c, c.Project)
+	if want != "postgres-1" {
+		t.Fatalf("the list name is %q", want)
+	}
+	st.containerEngine.Reachable = true
+	st.busy[containerBusyPrefix+c.ID] = services.Stopping
+	m.containerAction("stop", c)
+	toasts := strings.Join(m.toast.View(120, 40), " ")
+	if !strings.Contains(toasts, "postgres-1") || strings.Contains(toasts, "termocode-postgres-1") {
+		t.Errorf("busy toast: %q", toasts)
+	}
+	m.askRemoveContainer(c)
+	if card := cardText(m); !strings.Contains(card, "postgres-1") || strings.Contains(card, "termocode-postgres-1") {
+		t.Errorf("remove card: %s", card)
 	}
 }

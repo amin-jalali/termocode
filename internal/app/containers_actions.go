@@ -63,11 +63,7 @@ func (m *Model) containerAction(verb string, c containers.Container) tea.Cmd {
 	}
 	key := containerBusyPrefix + c.ID
 	if st.busy[key].Busy() {
-		name := c.ID
-		if len(c.Names) > 0 {
-			name = c.Names[0]
-		}
-		return m.servicesToast(toast.Info, "Container is busy", name)
+		return m.servicesToast(toast.Info, "Container is busy", containerShownName(c))
 	}
 	e := st.containerEngine
 	var run func(context.Context) error
@@ -254,10 +250,10 @@ func (m *Model) askRemoveContainer(c containers.Container) {
 	}
 	command := fmt.Sprintf("%s rm %s", m.services.containerEngine.Binary, sid)
 	buttons := []confirm.Button{{ID: "cancel", Title: "Cancel"}, {ID: "remove", Title: "Remove", Style: confirm.StyleDestructive}}
-	body := "This removes " + containerDisplayName(c, c.Project) + ".\n\nCommand: " + command
+	body := "This removes " + containerShownName(c) + ".\n\nCommand: " + command
 	if running {
 		command = fmt.Sprintf("%s stop %s && %s rm %s", m.services.containerEngine.Binary, sid, m.services.containerEngine.Binary, sid)
-		body = "This stops and removes " + containerDisplayName(c, c.Project) + ".\n\nCommand: " + command
+		body = "This stops and removes " + containerShownName(c) + ".\n\nCommand: " + command
 		buttons[1] = confirm.Button{ID: "stop-remove", Title: "Stop and remove", Style: confirm.StyleDestructive}
 	}
 	m.confirm = confirm.New("Remove container?", body, buttons)
@@ -307,12 +303,12 @@ func (m *Model) openContainerTerminal(c containers.Container, kind string) tea.C
 	if m.servicesFocusTab(key) {
 		return nil
 	}
-	cmd.Label = kind + ": " + containerDisplayName(c, c.Project)
+	cmd.Label = kind + ": " + containerShownName(c)
 	if err := m.servicesRunCommand(cmd, key); err != nil {
 		return m.servicesToast(toast.Errr, "Cannot open "+kind, err.Error())
 	}
 	if kind == "attach" {
-		return m.servicesToast(toast.Info, "Attached to "+containerDisplayName(c, c.Project), "Ctrl+P Ctrl+Q detaches")
+		return m.servicesToast(toast.Info, "Attached to "+containerShownName(c), "Ctrl+P Ctrl+Q detaches")
 	}
 	return nil
 }
@@ -343,7 +339,7 @@ func (m *Model) onContainerInspect(msg containerInspectMsg) tea.Cmd {
 	}
 	name := "container " + msg.id
 	if c, ok := m.containerByID(msg.id); ok {
-		name = containerDisplayName(c, c.Project)
+		name = containerShownName(c)
 	}
 	if err := m.openReadOnlyPage("inspect: "+name, msg.text, "", "json"); err != nil {
 		return m.servicesToast(toast.Errr, "Cannot open inspect page", err.Error())
@@ -386,5 +382,5 @@ func (m *Model) containerOpenPort(c containers.Container) tea.Cmd {
 		}
 		return nil
 	}
-	return m.servicesToast(toast.Info, "No published port", containerDisplayName(c, c.Project)+" has no published port")
+	return m.servicesToast(toast.Info, "No published port", containerShownName(c)+" has no published port")
 }

@@ -105,7 +105,7 @@ func (m *Model) askImageRemoveRef(im containers.Image, ref string) tea.Cmd {
 	}
 	for _, c := range m.services.containerRows {
 		if strings.TrimPrefix(c.ImageID, "sha256:") == id || tags[c.Image] {
-			users = append(users, containerDisplayName(c, c.Project))
+			users = append(users, containerShownName(c))
 		}
 	}
 	if len(users) > 0 {

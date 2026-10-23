@@ -317,7 +317,7 @@ func TestAIContainersControlRunsExactArgv(t *testing.T) {
 		t.Fatal(err)
 	}
 	human := ctl.Describe(a)
-	if !strings.Contains(human, "Stop container termocode-api-1") || !strings.Contains(human, "docker stop 9f3c2e1a1234") {
+	if !strings.Contains(human, "Stop container api-1") || !strings.Contains(human, "docker stop 9f3c2e1a1234") {
 		t.Errorf("card text %q", human)
 	}
 	out, err := ctl.Run(context.Background(), a)
