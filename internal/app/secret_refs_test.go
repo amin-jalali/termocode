@@ -91,8 +91,20 @@ func TestSecretPromptsShowTheReferenceHint(t *testing.T) {
 func TestRegistryTokenPromptShowsTheReferenceHint(t *testing.T) {
 	m, _, _ := regSession(t, regConfig)
 	m.askRegistryToken()
-	if !strings.Contains(m.prompt.Note(), secrets.PromptHint) {
-		t.Fatalf("note %q lacks the hint", m.prompt.Note())
+	// CT-8: plain words, but references are still offered. The long hint
+	// with ${cmd:…} / ${dotenv:NAME} and "stdin" is gone from this prompt.
+	note := m.prompt.Note()
+	if !strings.Contains(note, "Paste a token, or a reference like ${env:NAME}") || !strings.Contains(note, "never saves it in plain text") {
+		t.Fatalf("note %q is not the plain text", note)
+	}
+	for _, jargon := range []string{"stdin", "${cmd:", "${dotenv:"} {
+		if strings.Contains(note, jargon) {
+			t.Errorf("note still has %q: %q", jargon, note)
+		}
+	}
+	// A reference typed here is still accepted (the check is shared).
+	if !secrets.IsRef("${env:NAME}") {
+		t.Error("references are no longer recognised")
 	}
 }
 

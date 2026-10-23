@@ -172,7 +172,7 @@ func (st *servicesState) registryRowLook(r svcRow) (string, theme.Color256, them
 func (st *servicesState) registryFooter(r svcRow) (string, string) {
 	switch r.host {
 	case hostRegistryConnect:
-		return "sign in to a registry", "the token goes to " + st.registryEngineName() + " login on stdin only"
+		return "sign in to a registry", "the token stays hidden"
 	case hostRegistryImage:
 		size := ""
 		if r.idx >= 0 && r.idx < len(st.imageRows) {
@@ -295,7 +295,7 @@ func (m *Model) askRegistryUser() {
 func (m *Model) askRegistryToken() {
 	m.prompt = prompt.New("Connect registry · token", "Token or password:", "")
 	m.prompt.SetMasked(true)
-	m.prompt.SetNote(secretPromptNote("Hidden while you type. It goes to " + m.services.registryEngineName() + " login on stdin only."))
+	m.prompt.SetNote("Paste a token, or a reference like ${env:NAME}. It stays hidden. termocode never saves it in plain text.")
 	m.prompt.SetSize(m.w, m.h)
 	m.promptOpen, m.promptKind = true, promptKindRegistryToken
 }
@@ -331,7 +331,7 @@ func (m *Model) registryAfterUser() tea.Cmd {
 		for _, n := range s.Names() {
 			if n == name {
 				m.confirm = confirm.New("Use the saved token for "+host+"?",
-					"termocode saved a token for this registry. It goes to "+st.registryEngineName()+" login on stdin only.",
+					"termocode saved a token for this registry. It is sent to "+st.registryEngineName()+" login only.",
 					[]confirm.Button{{ID: "use", Title: "Use saved token", Style: confirm.StylePrimary}, {ID: "new", Title: "Type a new token"}})
 				m.confirm.SetSize(m.w, m.h)
 				m.confirmOpen, m.confirmKind = true, confirmKindRegistryRemember
