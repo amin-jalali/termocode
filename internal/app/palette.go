@@ -324,8 +324,8 @@ func paletteItems() []picker.Item {
 		{ID: "edit-custom-theme", Title: "Preferences: Edit Custom Theme"},
 		{ID: "customize-keybindings", Title: "Preferences: Customize Keybindings"},
 		// Group H — settings sync + user snippets.
-		{ID: "settings-export", Title: "Preferences: Export Settings..."},
-		{ID: "settings-import", Title: "Preferences: Import Settings..."},
+		{ID: "settings-export", Title: "Preferences: Export termocode Settings File…"},
+		{ID: "settings-import", Title: "Preferences: Import termocode Settings File…"},
 		importPaletteItems()[0], importPaletteItems()[1], // import_editor.go
 		{ID: "snippets-manage", Title: "Snippets: Manage..."},
 		// ── Group E: Testing (test_explorer.go / test_runner.go) ──

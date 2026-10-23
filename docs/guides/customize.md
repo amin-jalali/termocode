@@ -132,9 +132,9 @@ use [tasks](tasks-problems.md).
 
 ## Move your settings to another machine
 
-1. Run **Preferences: Export Settings...** and choose a file path.
+1. Run **Preferences: Export termocode Settings File…** and choose a file path.
 2. Copy the file to the other machine.
-3. Run **Preferences: Import Settings...** there and choose the file.
+3. Run **Preferences: Import termocode Settings File…** there and choose the file.
 4. Pick **Import & Reload** to apply everything. The other choice applies
    keys, theme and snippets now, and the rest after **Developer: Reload Window**.
 
@@ -144,7 +144,7 @@ and passwords are removed.
 
 ## Bring your settings from another editor
 
-1. Run **Preferences: Import from Another Editor...**. The list shows the
+1. Run **Preferences: Import from Another Editor…**. The list shows the
    editors found on this computer and what each one has.
 2. Pick one. A review panel shows, row by row, what the other editor has
    and what termocode will set. Your current value is shown as
@@ -262,8 +262,8 @@ are in the command palette (`F1` or `Alt+X`).
 | **Preferences: Open Settings (UI)** | Settings |
 | **Preferences: Customize Keybindings** | Change keys |
 | **Snippets: Manage...** | Your snippets |
-| **Preferences: Export Settings...** / **Import Settings...** | Move settings |
-| **Preferences: Import from Another Editor...** / **Undo Last Import** | Bring settings, keys and theme from another editor |
+| **Preferences: Export termocode Settings File…** / **Import termocode Settings File…** | Move settings |
+| **Preferences: Import from Another Editor…** / **Undo Last Import** | Bring settings, keys and theme from another editor |
 | **Open Config: Theme** / **User Commands** / **AI Credentials** | Edit files by hand |
 
 ## Troubleshooting

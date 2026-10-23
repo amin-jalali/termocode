@@ -1551,7 +1551,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `output-clear` | Output: Clear Channel | confirm (ide) |   |
 | `pick-theme` | Preferences: Color Theme… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `pin-tab` | Tab: Toggle Pinned | auto |   |
-| `prefs-import-editor` | Preferences: Import from Another Editor... | never | importing another editor's settings stays with the user |
+| `prefs-import-editor` | Preferences: Import from Another Editor… | never | importing another editor's settings stays with the user |
 | `prefs-import-undo` | Preferences: Undo Last Import | never | undoing a settings import stays with the user |
 | `prev-buffer` | View: Previous Editor | auto |   |
 | `prev-diagnostic` | Go to Previous Problem | auto |   |
@@ -1594,8 +1594,8 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `services-stop` | Services: Stop Service... | never | opens a picker or prompt that only the user can answer; use a typed tool (services_stop) |
 | `services-stop-all` | Services: Stop All | confirm (services) |   |
 | `services-trust` | AI: Services Trust... | never | AI provider, credentials and approvals stay with the user |
-| `settings-export` | Preferences: Export Settings... | never | settings import / export stays with the user |
-| `settings-import` | Preferences: Import Settings... | never | settings import / export stays with the user |
+| `settings-export` | Preferences: Export termocode Settings File… | never | settings import / export stays with the user |
+| `settings-import` | Preferences: Import termocode Settings File… | never | settings import / export stays with the user |
 | `setup-show-card` | Setup: Show Setup Card | auto |   |
 | `snippet-picker` | Snippets: Browse... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `snippets-manage` | Snippets: Manage... | never | opens a picker or prompt that only the user can answer; use a typed tool |

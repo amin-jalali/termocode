@@ -1,7 +1,7 @@
 # Import settings from another editor
 
 Moving to termocode? You do not have to set everything up again.
-**Preferences: Import from Another Editor...** reads the settings of an
+**Preferences: Import from Another Editor…** reads the settings of an
 editor you already use. It shows you every change. It writes only after you say yes.
 
 ## What it brings over
@@ -107,7 +107,7 @@ If you already have a snippet with the same language and trigger, the row shows
 
 ## Step by step
 
-1. Open the palette (`F1`) and run **Preferences: Import from Another Editor...**.
+1. Open the palette (`F1`) and run **Preferences: Import from Another Editor…**.
    You can also use the **Import** row on the first-run setup card. See
    [First 5 minutes](../getting-started/first-steps.md#first-run-the-setup-card).
 2. **Pick an editor.** Each row says what termocode found, for example

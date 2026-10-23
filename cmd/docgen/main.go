@@ -340,7 +340,7 @@ func renderConfigFiles() string {
 		}
 		b.WriteString("\n")
 	}
-	b.WriteString("**Preferences: Export Settings…** writes all config-folder JSON files into one bundle, " +
+	b.WriteString("**Preferences: Export termocode Settings File…** writes all config-folder JSON files into one bundle, " +
 		"except state files (`session.json`, `recents.json`, `workspaces.json`, `palette_recents.json`) " +
 		"and anything that looks like a secret.\n")
 	return b.String()

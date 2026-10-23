@@ -390,9 +390,9 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Preferences: Color Theme… | `pick-theme` |   |   |
 | Preferences: Customize Keybindings | `customize-keybindings` |   |   |
 | Preferences: Edit Custom Theme | `edit-custom-theme` |   |   |
-| Preferences: Export Settings... | `settings-export` |   |   |
-| Preferences: Import Settings... | `settings-import` |   |   |
-| Preferences: Import from Another Editor... | `prefs-import-editor` |   |   |
+| Preferences: Export termocode Settings File… | `settings-export` |   |   |
+| Preferences: Import from Another Editor… | `prefs-import-editor` |   |   |
+| Preferences: Import termocode Settings File… | `settings-import` |   |   |
 | Preferences: Open Settings (UI) | `open-settings-ui` |   |   |
 | Preferences: Undo Last Import | `prefs-import-undo` |   |   |
 

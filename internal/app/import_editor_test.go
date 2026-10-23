@@ -107,7 +107,7 @@ func pickerItems(t *testing.T, m *Model) []picker.Item {
 
 func TestImportPaletteEntriesNeverForTheAI(t *testing.T) {
 	want := map[string]string{
-		"prefs-import-editor": "Preferences: Import from Another Editor...",
+		"prefs-import-editor": "Preferences: Import from Another Editor…",
 		"prefs-import-undo":   "Preferences: Undo Last Import",
 	}
 	for _, it := range paletteItems() {
@@ -283,5 +283,29 @@ func TestImportPanelShowsCommandTitles(t *testing.T) {
 		if strings.Contains(frame, id) {
 			t.Errorf("frame still shows the id %q", id)
 		}
+	}
+}
+
+// IM-4: the two "import" commands say what they read, and every title
+// uses the single … character (not three dots).
+func TestSettingsImportTitlesAreClear(t *testing.T) {
+	want := map[string]string{
+		"prefs-import-editor": "Preferences: Import from Another Editor…",
+		"settings-import":     "Preferences: Import termocode Settings File…",
+		"settings-export":     "Preferences: Export termocode Settings File…",
+	}
+	for _, it := range paletteItems() {
+		if title, ok := want[it.ID]; ok {
+			if it.Title != title {
+				t.Errorf("%s: title %q, want %q", it.ID, it.Title, title)
+			}
+			if strings.Contains(it.Title, "...") {
+				t.Errorf("%s: %q uses ASCII dots", it.ID, it.Title)
+			}
+			delete(want, it.ID)
+		}
+	}
+	if len(want) > 0 {
+		t.Errorf("missing palette entries: %v", want)
 	}
 }

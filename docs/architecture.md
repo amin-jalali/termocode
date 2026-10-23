@@ -163,7 +163,7 @@ What a contributor should know about the layout:
 
 - **Settings vs. state.** `config.json`, `keymap.json`, `commands.json`,
   `snippets.json`, `user_theme.json` are user settings (exported by
-  *Preferences: Export Settings…*). Session, recents, palette recents and
+  *Preferences: Export termocode Settings File…*). Session, recents, palette recents and
   workspaces files are state and never exported.
 - **Sessions are per workspace.** `sessions/<hash>.json` holds open files,
   cursors, explorer state and extra multi-root roots; the hash is of the
