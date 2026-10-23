@@ -99,3 +99,31 @@ func TestCT7OneNameEverywhere(t *testing.T) {
 		t.Errorf("remove card: %s", card)
 	}
 }
+
+// CT-11: no Docker or Podman is said the same way in PROJECT (compose
+// problem) and in CONTAINERS: one note, one two-line hint.
+func TestCT11NoEngineOneText(t *testing.T) {
+	st := svcHostState()
+	st.problem = services.Problem{Kind: services.ProblemNoDocker}
+	got := st.problemRows()
+	want := []string{"No container engine", "Install Docker or Podman,", "then press R to retry"}
+	if len(got) != len(want) {
+		t.Fatalf("PROJECT rows: %+v", got)
+	}
+	for i, r := range got {
+		if r.text != want[i] {
+			t.Errorf("PROJECT row %d = %q, want %q", i, r.text, want[i])
+		}
+	}
+	st.containerEngine = containers.Engine{}
+	var host []string
+	for _, r := range st.hostSectionBody("containers") {
+		host = append(host, r.text)
+	}
+	if strings.Join(host, "|") != strings.Join(want, "|") {
+		t.Errorf("CONTAINERS rows: %q", host)
+	}
+	if strings.Contains(services.Problem{Kind: services.ProblemNoDocker}.Message(), "not found") {
+		t.Error("the AI still hears the old text")
+	}
+}

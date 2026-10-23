@@ -128,7 +128,7 @@ type Problem struct {
 func (p Problem) Message() string {
 	switch p.Kind {
 	case ProblemNoDocker:
-		return "Docker not found"
+		return "No container engine"
 	case ProblemNoCompose:
 		return "Docker Compose v2 is needed"
 	case ProblemDaemonDown:

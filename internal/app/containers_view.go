@@ -48,6 +48,13 @@ const (
 func hostSectionTitle(section string) string { return strings.ToUpper(section) }
 
 // engineTitle is "Docker" / "Podman" for messages.
+// The one text for "no Docker or Podman on this machine", in every section.
+const (
+	engineMissingNote  = "No container engine"
+	engineMissingHint1 = "Install Docker or Podman,"
+	engineMissingHint2 = "then press R to retry"
+)
+
 func (st *servicesState) engineTitle() string {
 	k := st.containerEngine.Kind
 	if k == "" {
@@ -109,7 +116,7 @@ func (st *servicesState) hostSectionBody(sec string) []svcRow {
 		return []svcRow{hint("Loading…")}
 	}
 	if st.containerEngine.Binary == "" {
-		return []svcRow{note("No container engine"), hint("Install Docker or Podman,"), hint("then press R to retry")}
+		return []svcRow{note(engineMissingNote), hint(engineMissingHint1), hint(engineMissingHint2)}
 	}
 	if sec == "contexts" {
 		return st.contextSectionBody(key)

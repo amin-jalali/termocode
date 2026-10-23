@@ -140,7 +140,7 @@ func (st *servicesState) problemRows() []svcRow {
 	p := st.problem
 	switch p.Kind {
 	case services.ProblemNoDocker:
-		return []svcRow{note("Docker not found"), hint("Install Docker · R retry")}
+		return []svcRow{note(engineMissingNote), hint(engineMissingHint1), hint(engineMissingHint2)}
 	case services.ProblemNoCompose:
 		return []svcRow{note("Docker Compose v2 is needed"), hint("Update Docker · R retry")}
 	case services.ProblemDaemonDown:

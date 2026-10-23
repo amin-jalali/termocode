@@ -149,7 +149,7 @@ compose file are masked as `[REDACTED]` in everything the AI reads (logs,
 
 | The view says | Do |
 |---|---|
-| Docker not found | Install Docker, then `R`. |
+| No container engine | Install Docker or Podman, then `R`. |
 | Docker Compose v2 is needed | Update Docker (the `docker compose` plugin). |
 | Docker is not running | Start Docker, then `R`. The rows stay, with `?`. |
 | No access to the Docker socket | The view shows `sudo usermod -aG docker $USER` (`y` copies it). Members of the `docker` group are root-equal on that machine: think first, or use [rootless Docker](https://docs.docker.com/engine/security/rootless/). termocode never runs `sudo`. |
