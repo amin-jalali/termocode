@@ -361,3 +361,10 @@ func ImportConfirm() Scene {
 func ImportUndo() Scene {
 	return Scene{Name: "import-undo", Steps: WithEditor(Act("importdemo:undo"), Pause(600*time.Millisecond))}
 }
+
+// ImportSetupRow is the first-run setup card after it found the sample
+// editors: the optional Import row with its button.
+func ImportSetupRow() Scene {
+	return Scene{Name: "setup-card-import", SetupCard: true, Env: map[string]string{"TERM": "xterm-kitty"},
+		Steps: []Step{Pause(1500 * time.Millisecond), Act("importdemo:setup"), Pause(1200 * time.Millisecond)}}
+}

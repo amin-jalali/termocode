@@ -41,7 +41,8 @@ var importDemoFiles = map[string]string{
 
 // importDemo writes the sample editors and opens the picker ("picker")
 // or the review panel of the VS Code sample ("panel"); "confirm" goes on
-// to the final card, "undo" imports and opens the Undo card. "empty"
+// to the final card, "undo" imports and opens the Undo card, "setup" lets
+// the setup card's Import row find the samples. "empty"
 // writes nothing (picker without editors); "file" opens the path prompt.
 func (m *Model) importDemo(variant string) tea.Cmd {
 	root := os.Getenv("XDG_CONFIG_HOME")
@@ -61,6 +62,13 @@ func (m *Model) importDemo(variant string) tea.Cmd {
 		}
 	}
 	switch variant {
+	case "setup": // the setup card finds the sample editors (its probe ran before they existed)
+		if m.setup == nil {
+			return nil
+		}
+		s := m.setupS()
+		s.importProbed, s.importProbing = false, false
+		return m.setupImportProbeCmd()
 	case "panel":
 		return m.importDemoPanel()
 	case "confirm":

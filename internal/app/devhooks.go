@@ -62,12 +62,13 @@ import (
 //	                       agent's confirm card, over made-up state
 //	                       (no listener, nothing written)
 //	helpdemo               open the in-app guide at the chat panel section
-//	importdemo:picker|panel|confirm|undo|empty|file
+//	importdemo:picker|panel|confirm|undo|setup|empty|file
 //	                       sample editor folders (sandbox config dir only),
 //	                       then the Import from Another Editor picker or
 //	                       the review panel of the VS Code sample; confirm
 //	                       goes on to the final card, undo imports and
-//	                       opens the Undo card; empty and file write
+//	                       opens the Undo card; setup makes the setup
+//	                       card look again for editors; empty and file write
 //	                       nothing (picker with no editor, the From a file
 //	                       path prompt)
 //	plugin:nvim-dap=<dir>  set nvim-dap up from a checkout (tests: the

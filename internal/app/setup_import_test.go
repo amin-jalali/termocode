@@ -348,3 +348,23 @@ func TestSetupImportFailedImportKeepsTheOffer(t *testing.T) {
 		t.Fatal("row done without an import")
 	}
 }
+
+// The screenshot hook (import_demo.go) writes the sample editors and makes
+// the card look again, so its Import row shows.
+func TestImportDemoSetupShowsTheImportRow(t *testing.T) {
+	importSandbox(t)
+	m := setupImportModel(t)
+	m.setupS().importProbed = true // the first probe found nothing
+	cmd := m.importDemo("setup")
+	m = feedAll(m, setupRunCmd(cmd))
+	var row *setupStep
+	for _, s := range buildSetupSteps(m.setupFacts()) {
+		if s.id == "import" {
+			s := s
+			row = &s
+		}
+	}
+	if row == nil || !strings.Contains(row.status, "Settings found in VS Code") {
+		t.Fatalf("no Import row after the demo hook: %+v", row)
+	}
+}
