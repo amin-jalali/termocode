@@ -135,6 +135,8 @@ func ctCardScenes() []Scene {
 		// Follow logs: a terminal tab with canned lines.
 		// Inspect: the read-only JSON page in the editor.
 		{Name: "containers-inspect", Steps: WithEditor(Act("contdemo:inspect"), Pause(1000*time.Millisecond))},
+		// Docker Hub search results (the picker).
+		ContainersVariant("containers-search", "search"),
 		{Name: "containers-logs", Steps: WithEditor(Act("contdemo:logs"), Pause(1500*time.Millisecond))},
 	}
 }

@@ -361,6 +361,12 @@ func (m *Model) containersDemo(variant string) {
     "Ports": { "5432/tcp": [{ "HostIp": "0.0.0.0", "HostPort": "5432" }] }
   }
 }`})
+	case "search": // Docker Hub results for "postgres": the picker, no network
+		m.onContainerSearch(containerSearchMsg{term: "postgres", results: []containers.SearchResult{
+			{Name: "postgres", Description: "The PostgreSQL object-relational database system", Stars: 14000, Official: true},
+			{Name: "bitnami/postgresql", Description: "Bitnami container image for PostgreSQL", Stars: 800},
+			{Name: "postgis/postgis", Description: "PostGIS extension for PostgreSQL", Stars: 350},
+		}})
 	case "db-menu": // the row menu of the postgres compose service
 		m.openServicesMenu(svcRow{kind: svcRowService, section: svcSecCompose, name: "postgres"}, activity.Width+6, 6)
 	case "db-container-menu": // the row menu of the postgres container
