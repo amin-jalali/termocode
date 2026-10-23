@@ -13,6 +13,7 @@ on:
       - "requirements-docs.txt"
       - "cmd/docgen/**"
       - "assets/screenshots/**"
+      - "assets/gifs/**"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 
@@ -48,6 +49,8 @@ jobs:
         run: |
           mkdir -p docs/assets/screenshots
           cp -f assets/screenshots/*.gif assets/screenshots/*.png docs/assets/screenshots/ 2>/dev/null || true
+          mkdir -p docs/assets/gifs
+          cp -f assets/gifs/*.gif docs/assets/gifs/ 2>/dev/null || true
 
       - name: Set up Python
         uses: actions/setup-python@v5

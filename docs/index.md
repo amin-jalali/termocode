@@ -23,7 +23,7 @@ hide:
 
 </div>
 
-![termocode in a terminal: Quick Open, the command palette, an AI answer, the AI change review and the integrated terminal](assets/screenshots/demo.gif){ .tc-shot }
+![termocode: open a project, edit, run a query, let the AI work, lose the connection, reconnect, and everything is still there](assets/gifs/hero.gif){ .tc-shot }
 
 <p class="tc-meta">Open source (MIT) · Linux and macOS · Android via Termux · over SSH</p>
 

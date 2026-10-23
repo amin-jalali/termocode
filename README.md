@@ -15,7 +15,7 @@ A fast, full-featured IDE that runs entirely in your terminal. Code, debug, test
 
 **Documentation: <https://amin-jalali.github.io/termocode/>**
 
-![termocode demo: code editing, project navigation, AI assistance, change review and the integrated terminal](assets/screenshots/demo.gif)
+![termocode: open a project, edit, run a query, let the AI work, lose the connection, reconnect, and everything is still there](assets/gifs/hero.gif)
 
 <table>
   <tr>
