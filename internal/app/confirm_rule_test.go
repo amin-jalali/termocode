@@ -60,14 +60,20 @@ func checkCardRule(t *testing.T, name string, m Model, wantRisky bool) {
 	}
 }
 
-// C-1 / C-2: the AI's card for containers, services and MCP tools puts Deny
-// first, plain and focused. The card of any other tool keeps its order but
-// its Deny is not red either.
+// C-1 / C-2 (DB-19): the AI's card for a database write (and the other
+// cards of the four features) puts Deny first, plain and focused; the write
+// is the red action. The card of any other tool keeps its order but its
+// Deny is not red either.
 func TestAIToolCardsFollowTheRule(t *testing.T) {
 	open := func(tool ai.Tool) Model {
 		m := Model{w: 120, h: 40}
 		m.onAIChatConfirm(aiChatConfirmMsg{tool: tool, human: "do it", reply: make(chan bool, 1), ch: make(chan tea.Msg)})
 		return m
+	}
+	m := open(ai.Tool{Name: "db_query", Mutating: true})
+	checkCardRule(t, "db_query", m, true)
+	if got := m.confirm.Buttons()[0].ID; got != "deny" {
+		t.Errorf("db_query: first button %q, want deny", got)
 	}
 	checkCardRule(t, "containers_control", open(ai.Tool{Name: "containers_control", Class: ai.ClassContainers, Mutating: true}), false)
 	checkCardRule(t, "services_start", open(ai.Tool{Name: "services_start", Class: ai.ClassServices, Mutating: true}), false)

@@ -399,10 +399,11 @@ func (m *Model) onAIChatConfirm(msg aiChatConfirmMsg) tea.Cmd {
 }
 
 // aiToolCardButtons are the buttons of an agent tool's card. Deny is the
-// safe answer: it is never red. For the tools that work on containers and
-// services, and for tools of connected MCP servers, Deny comes first and has
-// the focus (Enter alone must not allow). The card of any other tool keeps
-// its order.
+// safe answer: it is never red. For the tools that work on a user's
+// databases, containers and services, and for tools of connected MCP
+// servers, Deny comes first and has the focus (Enter alone must not allow),
+// and a database write is styled as the danger. The card of any other tool
+// keeps its order.
 func aiToolCardButtons(t ai.Tool) []confirm.Button {
 	allow := confirm.Button{ID: "allow", Title: "Allow", Style: confirm.StylePrimary}
 	deny := confirm.Button{ID: "deny", Title: "Deny"}
@@ -414,12 +415,15 @@ func aiToolCardButtons(t ai.Tool) []confirm.Button {
 	if !aiToolCardSafeFirst(t) {
 		return append(append([]confirm.Button{allow}, more...), deny)
 	}
+	if strings.HasPrefix(t.Name, "db_") {
+		allow.Style = confirm.StyleDestructive // the card only opens for a write or an analyze
+	}
 	return append([]confirm.Button{deny, allow}, more...)
 }
 
 // aiToolCardSafeFirst reports whether the card of t puts Deny first.
 func aiToolCardSafeFirst(t ai.Tool) bool {
-	return strings.HasPrefix(t.Name, mcp.WirePrefix) ||
+	return strings.HasPrefix(t.Name, "db_") || strings.HasPrefix(t.Name, mcp.WirePrefix) ||
 		t.Class == ai.ClassContainers || t.Class == ai.ClassServices
 }
 
