@@ -46,6 +46,31 @@ func (m *Model) servicesToast(sev toast.Severity, title, detail string) tea.Cmd 
 	return c
 }
 
+// displayCommand is argv as a card shows it: long absolute paths become
+// "." / "./sub" under root and "~/…" under home. Display only: the argv
+// that runs is unchanged.
+func displayCommand(argv []string, root string) string {
+	q := make([]string, len(argv))
+	for i, a := range argv {
+		short := a
+		if filepath.IsAbs(a) {
+			if root != "" && a == root {
+				short = "."
+			} else if root != "" && strings.HasPrefix(a, root+string(filepath.Separator)) {
+				short = "." + a[len(root):]
+			} else {
+				short = tildePath(a)
+			}
+		}
+		if short != a && !strings.ContainsAny(short, " '\"$`\\") {
+			q[i] = short
+			continue
+		}
+		q[i] = svcShellLine([]string{a})
+	}
+	return strings.Join(q, " ")
+}
+
 // svcShellLine quotes argv for the terminal tab's `shell -c`.
 func svcShellLine(argv []string) string {
 	q := make([]string, len(argv))
@@ -437,9 +462,9 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 // servicesAskDown asks before `compose down` (removes containers).
 func (m *Model) servicesAskDown() {
 	m.confirm = confirm.New("Remove the containers?",
-		"docker compose down stops and removes this project's containers and networks. Volumes stay.",
+		"This stops and removes this project's containers and networks. Volumes stay.",
 		[]confirm.Button{{ID: "cancel", Title: "Cancel", Style: confirm.StylePrimary},
-			{ID: "down", Title: "Down", Style: confirm.StyleDestructive}})
+			{ID: "down", Title: "Remove", Style: confirm.StyleDestructive}})
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindServicesDown

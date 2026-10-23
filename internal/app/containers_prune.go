@@ -162,9 +162,9 @@ func (m *Model) showPrune(kind string, volumes []string) {
 		what = "  " + countOf(st.stoppedContainerCount(), "stopped container", "stopped containers") + "."
 		keep = "Running and paused containers stay."
 	case pruneImages:
-		title = "Remove dangling images?"
-		what = "  " + countOf(st.danglingImageCount(), "dangling image", "dangling images") + "."
-		keep = "Only unused dangling images go. Tagged images stay."
+		title = "Remove untagged images?"
+		what = "  " + countOf(st.danglingImageCount(), "untagged image", "untagged images") + "."
+		keep = "Only unused images without a tag go. Tagged images stay."
 	case pruneImagesAll:
 		title = "Remove all unused images?"
 		what = "  every image no container uses (" + countOf(st.unusedImageCount(), "image", "images") + " now), tagged ones too."
@@ -174,31 +174,38 @@ func (m *Model) showPrune(kind string, volumes []string) {
 		what = "  unused networks (" + countOf(st.customNetworkCount(), "custom network", "custom networks") + " listed now)."
 		keep = "The engine decides which are unused. Built-in networks stay."
 	case pruneVolumes:
-		title = "Remove dangling volumes?"
-		what = "  anonymous dangling volumes."
+		title = "Remove unused volumes?"
+		what = "  unnamed volumes no container uses. Their data is deleted."
 		if st.containerEngine.Kind == "podman" {
-			keep = "Podman may remove unused named volumes too. The list below shows only anonymous dangling volumes."
+			keep = "Podman may remove unused named volumes too. The list below shows only unnamed volumes."
 		} else {
-			keep = "Docker removes only anonymous dangling volumes with this command. Named volumes stay."
+			keep = "Volumes with a name stay."
 		}
 		if len(volumes) == 0 {
-			keep += "\n\nNo anonymous dangling volumes were found."
+			keep += "\n\nNo unnamed volumes were found."
 		} else {
-			wrapped := make([]string, 0, len(volumes))
+			short := make([]string, 0, len(volumes))
 			for _, name := range volumes {
-				wrapped = append(wrapped, wrapStorageName(name, 32))
+				if len(name) > 12 {
+					name = name[:12]
+				}
+				short = append(short, name)
 			}
-			keep += "\n\nAnonymous dangling volumes:\n" + strings.Join(wrapped, "\n")
+			keep += "\n\nUnnamed volumes (their data is deleted):\n" + strings.Join(short, "\n")
 		}
 	default:
 		kind = pruneSystem
-		title = "Prune the system?"
+		title = "Clean up unused items?"
 		what = "  " + countOf(st.stoppedContainerCount(), "stopped container", "stopped containers") + " · " +
-			countOf(st.danglingImageCount(), "dangling image", "dangling images") + " · unused networks · the build cache."
+			countOf(st.danglingImageCount(), "untagged image", "untagged images") + " · unused networks · old build files."
 		keep = "Volumes and tagged images stay."
 	}
+	verb := "Remove"
+	if kind == pruneSystem {
+		verb = "Clean up"
+	}
 	m.confirm = confirm.New(title, head+what+"\n"+keep+"\n\nCommand: "+svcShellLine(args), []confirm.Button{
-		{ID: "cancel", Title: "Cancel"}, {ID: "prune", Title: "Prune", Style: confirm.StyleDestructive},
+		{ID: "cancel", Title: "Cancel"}, {ID: "prune", Title: verb, Style: confirm.StyleDestructive},
 	})
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen, m.confirmKind = true, confirmKindContainerHostAction

@@ -160,15 +160,16 @@ NETWORKS and VOLUMES show their driver and scope. `Space` expands a row and
 checks which containers use it. `n` asks for a name and creates a network or
 volume. `D` shows the exact remove command and users before removing; a volume
 in use is kept, and built-in networks cannot be removed. `z` on either heading
-asks before pruning. Volume pruning lists only anonymous dangling volumes;
-named volumes are kept. On VOLUMES, `d` reads disk usage once and fills in the
+asks before pruning. Volume pruning lists only unnamed volumes (their data
+is deleted); volumes with a name are kept. On VOLUMES, `d` reads disk usage once and fills in the
 reported sizes. Disk usage is not queried in the background.
 
 ## Pruning
 
 Pruning always asks first. Every prune card names what goes (counts from the
-last list), the exact command, and has one red `Prune` button. `Esc` or
-`Cancel` runs nothing. If a session context is set, the card names it; the
+last list), the exact command (last, in a quiet colour), and has one red
+button named like the title: `Remove`, or `Clean up` for the whole system.
+`Esc` or `Cancel` runs nothing. If a session context is set, the card names it; the
 command runs there.
 
 | Where | Command |
@@ -177,8 +178,8 @@ command runs there.
 | IMAGES heading: dangling images | `docker image prune -f` |
 | IMAGES heading: **Prune incl. unused images…** (a separate item) | `docker image prune -a -f` |
 | NETWORKS heading: unused networks | `docker network prune -f` |
-| VOLUMES heading: the card lists the anonymous dangling volumes first | `docker volume prune -f` |
-| `⋯` menu: **Prune system…** | `docker system prune -f` |
+| VOLUMES heading: the card lists the unnamed volumes first | `docker volume prune -f` |
+| `⋯` menu: **Prune system…** (the card says **Clean up unused items?**) | `docker system prune -f` |
 
 System prune never adds the flag for all unused images or for volumes. Those
 are only on the IMAGES and VOLUMES headings. The palette has the same entries

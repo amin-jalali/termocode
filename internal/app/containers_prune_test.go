@@ -30,10 +30,10 @@ func TestPruneCardsShowCountsAndExactCommand(t *testing.T) {
 		absent []string
 	}{
 		{"containers", "1 stopped container", "docker container prune -f", []string{" -a ", "--volumes"}},
-		{"images", "1 dangling image", "docker image prune -f", []string{" -a ", "--volumes"}},
+		{"images", "1 untagged image", "docker image prune -f", []string{" -a ", "--volumes"}},
 		{"images-all", "unused", "docker image prune -a -f", nil},
 		{"networks", "unused networks", "docker network prune -f", []string{" -a "}},
-		{"volumes", "dangling", "docker volume prune -f", []string{" -a "}},
+		{"volumes", "unnamed volumes", "docker volume prune -f", []string{" -a "}},
 		{"system", "1 stopped container", "docker system prune -f", []string{" -a ", "--volumes"}},
 	}
 	for _, c := range cases {

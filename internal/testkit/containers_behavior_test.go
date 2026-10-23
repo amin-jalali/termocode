@@ -147,7 +147,7 @@ func TestContainersDanglingImagePruneCard(t *testing.T) {
 	}
 	svcGoto(d, "IMAGES")
 	d.Key("z")
-	if !d.WaitForText("Remove dangling images?", 3*time.Second) {
+	if !d.WaitForText("Remove untagged images?", 3*time.Second) {
 		t.Fatalf("prune card omitted the exact dangling-only command:\n%s", screen(d))
 	}
 	commandText := strings.Join(strings.Fields(screen(d)), " ")

@@ -56,3 +56,18 @@ func TestTruncMiddle(t *testing.T) {
 		t.Errorf("cut: %q", got)
 	}
 }
+
+// CT-3: the exact command is the last part of a message and is found by
+// its "Command: " prefix (it is drawn in a quiet colour).
+func TestCommandLineAt(t *testing.T) {
+	m := New("Remove?", "This removes it.\n\nCommand: docker rm abc", []Button{{ID: "ok", Title: "Remove"}})
+	m.SetSize(80, 24)
+	lines := m.layoutDims().bodyLines
+	at := commandLineAt(lines)
+	if at < 0 || !strings.HasPrefix(lines[at], "Command: docker rm") {
+		t.Errorf("command line not found: %d in %q", at, lines)
+	}
+	if got := commandLineAt([]string{"a", "b"}); got != -1 {
+		t.Errorf("no command: %d", got)
+	}
+}

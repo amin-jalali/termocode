@@ -101,6 +101,18 @@ func (m Model) fullTextLines() []string {
 	return out
 }
 
+// commandLineAt is the index of the first body line that starts the exact
+// command ("Command: ..."), or -1. By convention the command is the last
+// part of a message; it is drawn in a quiet colour.
+func commandLineAt(lines []string) int {
+	for i, l := range lines {
+		if strings.HasPrefix(l, "Command: ") {
+			return i
+		}
+	}
+	return -1
+}
+
 // truncMiddle cuts s to w cells, keeping its start and end around a ….
 func truncMiddle(s string, w int) string {
 	if lipgloss.Width(s) <= w {
@@ -528,9 +540,16 @@ func (m Model) Box() string {
 	// One blank row above the body for breathing.
 	rows = append(rows, blank)
 	codeStyle := lipgloss.NewStyle().Background(cmBoxBg).Foreground(cmTextPri).Bold(true)
+	quietStyle := lipgloss.NewStyle().Background(cmBoxBg).Foreground(cmTextDim)
+	cmdAt := -1
+	if dims.codeAt < 0 {
+		cmdAt = commandLineAt(dims.bodyLines)
+	}
 	for i, line := range dims.bodyLines {
 		style := bodyStyle
 		switch {
+		case cmdAt >= 0 && i >= cmdAt:
+			style = quietStyle // the exact command comes last, in a quiet colour
 		case dims.codeAt >= 0 && (i == dims.codeAt || i == dims.codeAt+2):
 			style = separatorStyle
 		case dims.codeAt >= 0 && i == dims.codeAt+1:

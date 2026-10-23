@@ -97,7 +97,7 @@ func (m *Model) askStorageRemove(r svcRow) tea.Cmd {
 		}
 		target = "volumes"
 		command = []string{m.services.containerEngine.Binary, "volume", "rm", v.Name}
-		title, body = "Remove volume?", "This permanently removes volume "+v.Name+"."
+		title, body = "Remove volume?", "This permanently removes volume "+v.Name+" and its data."
 	}
 	body += "\n\nCommand: " + svcShellLine(command)
 	m.confirm = confirm.New(title, body, []confirm.Button{{ID: "cancel", Title: "Cancel"}, {ID: "remove", Title: "Remove", Style: confirm.StyleDestructive}})

@@ -225,8 +225,8 @@ func (m *Model) askProjectDown() tea.Cmd {
 	}
 	files := m.projectConfigFiles(project)
 	cmd := m.services.containerEngine.ComposeWithFiles(project, dir, files, "down")
-	m.confirm = confirm.New("Remove project containers?", "This stops and removes the containers and networks for "+project+". Volumes stay.\n\nCommand: "+svcShellLine(cmd.Argv), []confirm.Button{
-		{ID: "cancel", Title: "Cancel"}, {ID: "down", Title: "Down", Style: confirm.StyleDestructive},
+	m.confirm = confirm.New("Remove project containers?", "This stops and removes the containers and networks for "+project+". Volumes stay.\n\nCommand: "+displayCommand(cmd.Argv, m.services.root), []confirm.Button{
+		{ID: "cancel", Title: "Cancel"}, {ID: "down", Title: "Remove", Style: confirm.StyleDestructive},
 	})
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen, m.confirmKind = true, confirmKindContainerProjectDown
@@ -248,11 +248,15 @@ func (m *Model) onContainerActionDone(msg containerActionDoneMsg) tea.Cmd {
 
 func (m *Model) askRemoveContainer(c containers.Container) {
 	running := strings.EqualFold(c.State, "running")
-	command := fmt.Sprintf("%s rm %s", m.services.containerEngine.Binary, c.ID)
+	sid := c.ID
+	if len(sid) > 12 {
+		sid = sid[:12]
+	}
+	command := fmt.Sprintf("%s rm %s", m.services.containerEngine.Binary, sid)
 	buttons := []confirm.Button{{ID: "cancel", Title: "Cancel"}, {ID: "remove", Title: "Remove", Style: confirm.StyleDestructive}}
 	body := "This removes " + containerDisplayName(c, c.Project) + ".\n\nCommand: " + command
 	if running {
-		command = fmt.Sprintf("%s stop %s && %s rm %s", m.services.containerEngine.Binary, c.ID, m.services.containerEngine.Binary, c.ID)
+		command = fmt.Sprintf("%s stop %s && %s rm %s", m.services.containerEngine.Binary, sid, m.services.containerEngine.Binary, sid)
 		body = "This stops and removes " + containerDisplayName(c, c.Project) + ".\n\nCommand: " + command
 		buttons[1] = confirm.Button{ID: "stop-remove", Title: "Stop and remove", Style: confirm.StyleDestructive}
 	}
