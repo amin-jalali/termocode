@@ -15,7 +15,7 @@ import (
 
 // Spec (MCP-10): in ASCII icon mode the MCP screens show no ✦ and no ⇄:
 // the card of an outside agent, the status screen and the OpenCode card
-// use the theme's glyphs (ASCII there), and the Unicode mode keeps them.
+// use the theme's glyphs (ASCII there), and the Unicode mode keeps ✦.
 func TestMCPServeScreensFollowIconMode(t *testing.T) {
 	defer func(m theme.IconMode) { theme.CurrentIconMode = m }(theme.CurrentIconMode)
 
@@ -47,7 +47,7 @@ func TestMCPServeScreensFollowIconMode(t *testing.T) {
 	}
 	theme.CurrentIconMode = theme.IconModeUnicode
 	got := screens(t)
-	if !strings.Contains(got["card title"], "✦") || !strings.Contains(got["status"], "⇄") || !strings.Contains(got["opencode card"], "✦") {
+	if !strings.Contains(got["card title"], "✦") || !strings.Contains(got["opencode card"], "✦") {
 		t.Errorf("Unicode mode lost its glyphs: %q", got)
 	}
 }

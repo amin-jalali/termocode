@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // mcpServeItemsText is the status screen's rows as plain text.
@@ -348,5 +349,32 @@ func TestMCPServeStatusCardEscBack(t *testing.T) {
 	m.onAIConfirmClosed()
 	if m.mcpServe == nil || !m.pickerOpen {
 		t.Error("Esc stopped it, or lost the screen")
+	}
+}
+
+// Spec (MCP-11): the status title is a plain name with one icon (the
+// box's own), and the "(Enter on an action)" hint is not in it: the
+// footer already says what Enter does.
+func TestMCPServeStatusTitleIsPlain(t *testing.T) {
+	defer func(m theme.IconMode) { theme.CurrentIconMode = m }(theme.CurrentIconMode)
+	theme.CurrentIconMode = theme.IconModeUnicode
+	m := mcpServeStatusModel(t)
+	m.w, m.h = 150, 42
+	m.openMCPServeStatus()
+	view := ansi.Strip(m.picker.View())
+	var title string
+	for _, line := range strings.Split(view, "\n") {
+		if strings.Contains(line, "MCP server status") {
+			title = line
+		}
+	}
+	if title == "" {
+		t.Fatalf("no title in\n%s", view)
+	}
+	if strings.Contains(title, "(Enter") || strings.Contains(title, "⇄") || strings.Contains(title, "") {
+		t.Errorf("title: %q", title)
+	}
+	if !strings.Contains(view, "Enter  select") {
+		t.Errorf("the footer has no Enter hint:\n%s", view)
 	}
 }
