@@ -108,3 +108,88 @@ func TestAIProfilePickerShowsPipeline(t *testing.T) {
 		}
 	}
 }
+
+func showProfileText(t *testing.T, m *Model, name string) string {
+	t.Helper()
+	m.ai.profile = name
+	m.w, m.h = 150, 42
+	m.dispatchAIPalette("ai-profile-show")
+	if !m.confirmOpen || m.confirmKind != confirmKindAIProfileShow {
+		t.Fatalf("no Show Profile card for %q", name)
+	}
+	return ansi.Strip(m.confirm.View())
+}
+
+// Spec (AU-2): AI: Show Profile lists numbered steps with the agent,
+// slot → model, the tools when limited, and the first prompt line; and
+// where the profile comes from.
+func TestAIShowProfileBuiltin(t *testing.T) {
+	m := pipeTestModel(t)
+	view := showProfileText(t, m, "review")
+	for _, want := range []string{
+		"Profile review", "Review then fix", "From: built in",
+		"2 steps, one after the other",
+		"1 · Reviewer · main → claude-sonnet-4-5", "tools: read-only",
+		"“You review code. List concrete problems with file:line. Do not edit fil",
+		"2 · Fixer · quick → gpt-5-mini", "“Fix the problems the reviewer listed. Keep the changes small.”",
+	} {
+		if !strings.Contains(view, want) {
+			t.Errorf("card lacks %q:\n%s", want, view)
+		}
+	}
+	// The Fixer may use every tool: no tools line after it.
+	if i := strings.Index(view, "2 · Fixer"); strings.Contains(view[i:], "tools:") {
+		t.Errorf("a step without limits shows a tools line:\n%s", view)
+	}
+}
+
+func TestAIShowProfileProjectAndPlan(t *testing.T) {
+	m := pipeTestModel(t)
+	view := showProfileText(t, m, "house")
+	for _, want := range []string{"From: this project's .termocode/ai-profiles.json (asks before it is used)",
+		"1 · Reviewer · main → claude-sonnet-4-5", "“Follow the house style.”"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("project card lacks %q:\n%s", want, view)
+		}
+	}
+	if strings.Contains(view, "Second line") {
+		t.Errorf("only the first prompt line belongs on the card:\n%s", view)
+	}
+	view = showProfileText(t, m, "plan")
+	for _, want := range []string{"The planner decides the other steps: up to 12 agents in up to 6 waves",
+		"1 · Planner · main → claude-sonnet-4-5 · plans the steps",
+		"quick steps: quick → gpt-5-mini", "deep steps: main → claude-sonnet-4-5"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("plan card lacks %q:\n%s", want, view)
+		}
+	}
+}
+
+// A slot with no model says "not set"; the card is read-only (Close).
+func TestAIShowProfileNotSetAndClose(t *testing.T) {
+	m := pipeTestModel(t)
+	m.ai.slotFake, m.ai.slots, m.ai.cfg = map[string]aiSlot{ai.SlotMain: m.ai.slotFake[ai.SlotMain]}, nil, ai.Config{}
+	view := showProfileText(t, m, "review")
+	if !strings.Contains(view, "2 · Fixer · quick → not set") {
+		t.Errorf("no 'not set':\n%s", view)
+	}
+	if c, ok := m.handleAIConfirm("close"); !ok || c != nil {
+		t.Errorf("Close: cmd %v ok %v", c, ok)
+	}
+}
+
+// AI: Show Profile is a screen for the user: never for the AI.
+func TestAIShowProfilePaletteAndPolicy(t *testing.T) {
+	found := false
+	for _, e := range aiPaletteItems() {
+		if e.id == "ai-profile-show" {
+			found = e.title == "AI: Show Profile"
+		}
+	}
+	if !found {
+		t.Fatal("no AI: Show Profile palette entry")
+	}
+	if pol, ok := aiActionPolicyFor("ai-profile-show"); !ok || pol.Gate != aiGateNever || pol.Reason == "" {
+		t.Fatalf("policy %+v ok=%v, want never with a reason", pol, ok)
+	}
+}

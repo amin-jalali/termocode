@@ -403,6 +403,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// user confirms the switch); editing and trusting stay with the user.
 	"ai-profile-switch": aiConfirm(ai.ClassSettings),
 	"ai-profile-next":   aiNever(aiNoAIConfig + " (ai-profile-switch asks the user)"),
+	"ai-profile-show":   aiNever("a read-only screen for the user; the AI already knows its own profile"),
 	"ai-profile-edit":   aiNever(aiNoAIConfig),
 	"ai-profile-new":    aiNever(aiNoAIConfig),
 	"ai-profile-trust":  aiNever("trusting a project's prompts is the user's decision"),

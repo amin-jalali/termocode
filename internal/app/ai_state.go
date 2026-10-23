@@ -360,6 +360,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-auto-approve", "AI: Agent Auto-Approve…", ""},
 		{"ai-profile-switch", "AI: Switch Profile…", ""},
 		{"ai-profile-next", "AI: Next Profile", "Alt+Shift+P"},
+		{"ai-profile-show", "AI: Show Profile", ""},
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
 		{"ai-profile-edit", "AI: Edit Profiles", ""},
 		{"ai-profile-new", "AI: New Profile from Current…", ""},
@@ -464,6 +465,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIProfilePicker(), true
 	case "ai-profile-next":
 		return m.cycleAIProfile(), true
+	case "ai-profile-show":
+		return m.showAIProfile(), true
 	case "ai-agents":
 		return m.toggleAgentsView(), true
 	case "ai-profile-edit":

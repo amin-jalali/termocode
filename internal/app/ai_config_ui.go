@@ -120,6 +120,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIProfileTrust(id), true
 	case confirmKindAIProfileSave:
 		return m.onAIProfileSaveChoice(id), true
+	case confirmKindAIProfileShow: // read-only: Close
+		return nil, true
 	case confirmKindSecretForget: // secrets_store_ui.go
 		return m.answerSecretForget(id), true
 	case confirmKindSecretsMigrate: // secrets_migrate.go

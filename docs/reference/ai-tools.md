@@ -1343,6 +1343,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `ai-profile-edit` | AI: Edit Profiles | never | AI provider, credentials and approvals stay with the user |
 | `ai-profile-new` | AI: New Profile from Current… | never | AI provider, credentials and approvals stay with the user |
 | `ai-profile-next` | AI: Next Profile | never | AI provider, credentials and approvals stay with the user (ai-profile-switch asks the user) |
+| `ai-profile-show` | AI: Show Profile | never | a read-only screen for the user; the AI already knows its own profile |
 | `ai-profile-switch` | AI: Switch Profile… | confirm (settings) |   |
 | `ai-profile-trust` | AI: Project Profiles Trust… | never | trusting a project's prompts is the user's decision |
 | `ai-review` | AI: Review Pending Changes | never | the user reviews proposed edits |
