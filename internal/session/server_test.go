@@ -159,6 +159,12 @@ func hello(t *testing.T, c *net.UnixConn) {
 // type stop arrives. It returns the type of the last frame.
 func readUntil(t *testing.T, c *net.UnixConn, want string, stop byte) byte {
 	t.Helper()
+	return readUntilMatch(t, c, want, stop, func(out []byte) bool { return bytes.Contains(out, []byte(want)) })
+}
+
+// readUntilMatch is readUntil with its own test of the output so far.
+func readUntilMatch(t *testing.T, c *net.UnixConn, want string, stop byte, match func([]byte) bool) byte {
+	t.Helper()
 	_ = c.SetReadDeadline(time.Now().Add(10 * time.Second))
 	defer func() { _ = c.SetReadDeadline(time.Time{}) }()
 	var out []byte
@@ -172,7 +178,7 @@ func readUntil(t *testing.T, c *net.UnixConn, want string, stop byte) byte {
 		}
 		if typ == frameOutput {
 			out = append(out, p...)
-			if want != "" && bytes.Contains(out, []byte(want)) {
+			if want != "" && match(out) {
 				return typ
 			}
 		}
@@ -185,7 +191,15 @@ func echo(t *testing.T, c *net.UnixConn, s string) {
 	if err := writeFrame(c, frameInput, []byte(s+"\r")); err != nil {
 		t.Fatal(err)
 	}
-	readUntil(t, c, s+"\r\n"+s, 0)
+	// A second client's attach can put an empty line between the echo
+	// and cat's answer, so empty lines are skipped before matching.
+	want := []byte(s + "\r\n" + s)
+	readUntilMatch(t, c, s+"\r\n"+s, 0, func(out []byte) bool {
+		for bytes.Contains(out, []byte("\r\n\r\n")) {
+			out = bytes.ReplaceAll(out, []byte("\r\n\r\n"), []byte("\r\n"))
+		}
+		return bytes.Contains(out, want)
+	})
 }
 
 // serverPID returns the pid of the running server.
