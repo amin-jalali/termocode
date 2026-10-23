@@ -38,8 +38,12 @@ type MCPRecipe struct {
 	// ProjectFile is the file MCPProjectFile merges into, relative to
 	// the workspace.
 	ProjectFile string
-	// Note tells the user, once, what to do by hand (MCPNone).
-	Note string
+	// NoteTitle and Note are the one-time toast of an agent that cannot be
+	// given the server by flag (MCPNone): "<Agent>: <NoteTitle>" over Note,
+	// what to do by hand. The toast has one detail line of about 44 cells:
+	// the action comes first and the whole text fits.
+	NoteTitle string
+	Note      string
 }
 
 // tomlString quotes s as a TOML basic string (what Codex's -c reads).

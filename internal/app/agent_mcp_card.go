@@ -204,6 +204,10 @@ func (m *Model) agentMCPHandTip(a agents.Agent) tea.Cmd {
 	}
 	m.agentMCPTipped[a.ID] = true
 	var c tea.Cmd
-	m.toast, c = m.toast.PushDetail(toast.Info, a.Title+": no termocode tools yet", a.MCP.Note)
+	title := a.MCP.NoteTitle
+	if title == "" {
+		title = "no termocode tools yet"
+	}
+	m.toast, c = m.toast.PushDetail(toast.Info, a.Title+": "+title, a.MCP.Note)
 	return c
 }

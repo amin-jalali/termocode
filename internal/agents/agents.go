@@ -41,12 +41,14 @@ var Registry = []Agent{
 		}}},
 	{ID: "gemini", Title: "Gemini CLI", Bin: "gemini", Palette: true, Packages: []string{"@google/gemini-cli"},
 		MCP: MCPRecipe{Kind: MCPNone, // no per-launch override known: the user adds it by hand
-			Note: "Add termocode in its MCP settings (mcpServers). Paste the config: F1 → MCP: Copy termocode Server Config"}},
+			NoteTitle: "add termocode by hand",
+			Note:      "F1, then MCP: Copy termocode Server Config"}}, // the action first; it must fit one toast line
 	{ID: "opencode", Title: "OpenCode", Bin: "opencode", Palette: true, Packages: []string{"opencode-ai"},
 		MCP: MCPRecipe{Kind: MCPProjectFile, ProjectFile: "opencode.json"}},
 	{ID: "aider", Title: "Aider", Bin: "aider", Packages: []string{"aider-chat"},
 		MCP: MCPRecipe{Kind: MCPNone, // Aider has no MCP client
-			Note: "Aider has no MCP support, so it cannot use termocode's tools"}},
+			NoteTitle: "no termocode tools",
+			Note:      "Aider has no MCP support"}},
 }
 
 // ByID returns the agent with id.

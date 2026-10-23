@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/x/ansi"
+
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // agentCardWorkspace makes a temp workspace the cwd (aiWorkspaceRoot).
@@ -237,6 +239,40 @@ func TestAgentMCPCardFitsEightyByTwentyFour(t *testing.T) {
 		}
 		if rows := strings.Count(strings.TrimRight(view, "\n"), "\n") + 1; rows > 24 {
 			t.Errorf("long=%v: the card is %d rows high", long, rows)
+		}
+	}
+}
+
+// MCP-15: the hand tips (Gemini CLI, Aider) fit the toast: the title and the
+// detail are not cut with "…", and the action (F1, MCP: Copy termocode
+// Server Config) comes first in the detail.
+func TestAgentMCPHandTipsFitTheToast(t *testing.T) {
+	for _, c := range []struct{ id, detail string }{
+		{"gemini", "F1, then MCP: Copy termocode Server Config"},
+		{"aider", "Aider has no MCP support"},
+	} {
+		m := agentMCPTestModel(t)
+		a := agentByID(t, c.id)
+		if a.MCP.Note != c.detail {
+			t.Errorf("%s: note = %q, want %q", c.id, a.MCP.Note, c.detail)
+		}
+		for _, w := range []int{150, 80} {
+			m.toast = toast.New()
+			if cmd := m.agentMCPHandTip(a); cmd == nil {
+				t.Fatalf("%s: no tip", c.id)
+			}
+			var rows []string
+			for _, row := range m.toast.View(w, 42) {
+				rows = append(rows, ansi.Strip(row))
+			}
+			all := strings.Join(rows, "\n")
+			if !strings.Contains(all, a.Title+": ") || (w == 150 && (!strings.Contains(all, c.detail) || strings.Contains(all, "…"))) {
+				t.Errorf("%s at %d columns: the toast is cut:\n%s", c.id, w, all)
+			}
+			m.agentMCPTipped = nil
+		}
+		if n := ansi.StringWidth(a.MCP.Note); n > 44 {
+			t.Errorf("%s: note is %d cells, the toast line holds about 44", c.id, n)
 		}
 	}
 }
