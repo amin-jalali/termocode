@@ -221,3 +221,15 @@ func TestServerResourcesGolden(t *testing.T) {
 		})
 	}
 }
+
+// MCP-9: when the source is unavailable the error says what to do next.
+func TestServerUnavailableMessageSaysWhatNext(t *testing.T) {
+	s := serverTestSource{call: func(context.Context, string, map[string]any) (CallResult, error) {
+		return CallResult{}, ErrToolSourceUnavailable
+	}}
+	got := runServerMessages(t, s, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"x","arguments":{}}}`)
+	want := "termocode is not open in this folder. Open termocode in that folder, then try again."
+	if !strings.Contains(got, want) {
+		t.Fatalf("message: want %q in %s", want, got)
+	}
+}

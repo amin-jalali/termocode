@@ -405,7 +405,7 @@ func invalidParams(err error) *extproc.Error {
 }
 
 func unavailableError() *extproc.Error {
-	return &extproc.Error{Code: serverCodeSourceUnavailable, Message: "termocode is not running"}
+	return &extproc.Error{Code: serverCodeSourceUnavailable, Message: "termocode is not open in this folder. Open termocode in that folder, then try again."}
 }
 
 func capServerResult(result CallResult) CallResult {

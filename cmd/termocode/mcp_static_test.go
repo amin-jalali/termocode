@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"io"
 	"strings"
 	"testing"
@@ -69,7 +70,7 @@ func TestStaticRefusesToolsCall(t *testing.T) {
 		t.Fatalf("got %v", m)
 	}
 	msg, _ := e["message"].(string)
-	if !strings.Contains(msg, "termocode is not open in /work/x") || !strings.Contains(msg, "open termocode") {
+	if !strings.Contains(msg, "termocode is not open in /work/x") || !strings.Contains(msg, "Open termocode") {
 		t.Fatalf("message %q", msg)
 	}
 }
@@ -123,5 +124,26 @@ func TestStaticResourcesEmptyAndDiscover(t *testing.T) {
 	}
 	if _, has := res["capabilities"].(map[string]any)["resources"]; has {
 		t.Fatalf("static mode advertises resources: %v", m)
+	}
+}
+
+// MCP-9: the "not open" message names the folder and the next step, in
+// plain sentences; the relay's "lost" messages say what to do too.
+func TestMCPMessagesSayWhatToDoNext(t *testing.T) {
+	if got, want := staticMCPMessage("/work/x", ""), "termocode is not open in /work/x. Open termocode in that folder, then restart this agent."; got != want {
+		t.Errorf("static = %q, want %q", got, want)
+	}
+	if got, want := staticMCPMessage("/work/x", "permission denied"), "termocode cannot be reached in /work/x (permission denied). Open termocode in that folder, then restart this agent."; got != want {
+		t.Errorf("static with a reason = %q, want %q", got, want)
+	}
+	closed := relayLostMessage("/work/x", false, io.EOF)
+	if want := "termocode closed the connection in /work/x. Open termocode in that folder, then restart this agent."; closed != want {
+		t.Errorf("closed = %q, want %q", closed, want)
+	}
+	refused := relayLostMessage("/work/x", true, errors.New("read: reset"))
+	for _, want := range []string{"termocode refused the connection in /work/x", "(read: reset)", "same user", "restart this agent."} {
+		if !strings.Contains(refused, want) {
+			t.Errorf("refused = %q, want %q in it", refused, want)
+		}
 	}
 }

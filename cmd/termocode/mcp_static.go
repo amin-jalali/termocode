@@ -29,9 +29,9 @@ func (s staticSource) Call(context.Context, string, map[string]any) (mcp.CallRes
 // staticMCPMessage is the error every tools/call gets in static mode.
 func staticMCPMessage(workspace, reason string) string {
 	if reason != "" {
-		return fmt.Sprintf("termocode cannot be reached in %s (%s); open termocode in that folder, then restart this agent", workspace, reason)
+		return fmt.Sprintf("termocode cannot be reached in %s (%s). Open termocode in that folder, then restart this agent.", workspace, reason)
 	}
-	return fmt.Sprintf("termocode is not open in %s; open termocode in that folder, then restart this agent", workspace)
+	return fmt.Sprintf("termocode is not open in %s. Open termocode in that folder, then restart this agent.", workspace)
 }
 
 // serveStaticMCP is the stdio MCP server used when no UI serves the

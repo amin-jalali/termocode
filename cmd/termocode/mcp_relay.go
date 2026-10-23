@@ -29,10 +29,20 @@ const (
 // finish and close its side.
 const mcpDrain = 2 * time.Second
 
-const (
-	mcpMsgClosed  = "termocode closed the connection"
-	mcpMsgRefused = "termocode refused the connection (permission denied: the socket belongs to another user?), or closed it before answering"
-)
+// relayLostMessage is what the agent and stderr hear when the UI goes
+// away: what happened, in which folder, and what to do next.
+func relayLostMessage(workspace string, refused bool, err error) string {
+	msg := "termocode closed the connection in " + workspace
+	next := "Open termocode in that folder, then restart this agent."
+	if refused {
+		msg = "termocode refused the connection in " + workspace + " (permission denied: the socket belongs to another user?), or closed it before answering"
+		next = "Run termocode and the agent as the same user, then restart this agent."
+	}
+	if err != io.EOF {
+		msg += " (" + err.Error() + ")"
+	}
+	return msg + ". " + next
+}
 
 // relayMCP copies lines between the agent (in, out) and the UI (conn)
 // until one side ends. It closes conn. Requests still unanswered when the
@@ -130,14 +140,8 @@ func relayMCP(in io.Reader, out io.Writer, conn net.Conn, errw io.Writer, worksp
 			}
 		}
 		mu.Unlock()
-		msg := mcpMsgClosed
-		if refused {
-			msg = mcpMsgRefused
-		}
-		if err != io.EOF {
-			msg += ": " + err.Error()
-		}
-		fmt.Fprintf(errw, "termocode mcp: %s (%s)\n", msg, workspace)
+		msg := relayLostMessage(workspace, refused, err)
+		fmt.Fprintf(errw, "termocode mcp: %s\n", msg)
 		for _, id := range ids {
 			_ = writeRPCError(out, id, -32001, msg)
 		}
