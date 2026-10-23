@@ -398,7 +398,7 @@ Container tools work on the whole host, not only this project:
   Each result says the engine and the context it used (the session's
   context, when you picked one in the Containers view).
 - `containers_control`, `images_pull` and `compose_up` ask first. The card
-  has **Allow**, **Always allow containers** and **Deny**. "Always" lasts
+  has **Deny** (first, with the focus), **Allow** and **Always allow containers**. "Always" lasts
   until you quit termocode; it is never saved. There is no "Always in
   project": a host action can touch another project's containers.
 - The agent can not remove, prune, push, tag, run an image, sign in or

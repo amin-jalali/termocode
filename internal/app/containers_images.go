@@ -78,7 +78,7 @@ func (m *Model) imagePush(ref string) tea.Cmd {
 func (m *Model) askImagePush(ref string) {
 	cmd := m.services.containerEngine.PushCommand(ref)
 	m.confirm = confirm.New("Push image?", "This sends the image to its registry.\n\nCommand: "+svcShellLine(cmd.Argv), []confirm.Button{
-		{ID: "cancel", Title: "Cancel"}, {ID: "push", Title: "Push", Style: confirm.StylePrimary},
+		{ID: "cancel", Title: "Cancel"}, {ID: "push", Title: "Push", Style: confirm.StyleDestructive}, // it sends the image outside
 	})
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen, m.confirmKind = true, confirmKindContainerImagePush

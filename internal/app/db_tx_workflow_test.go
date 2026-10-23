@@ -158,7 +158,7 @@ func TestDBTxQuitAsksAboutUncommittedChanges(t *testing.T) {
 	}
 	d.Key("ctrl+q")
 	d.WaitForText("local has 1 uncommitted change", time.Second)
-	d.Key("right", "enter") // Roll back
+	d.Key("right", "right", "enter") // Roll back (C-1: Cancel is first, then Commit)
 	if !d.WaitFor(func() bool { return d.Quit() }, 3*time.Second) {
 		t.Fatalf("did not quit after Roll back:\n%s", ansi.Strip(d.Frame()))
 	}
@@ -183,7 +183,7 @@ func TestDBTxDisconnectAndModeSwitchAsk(t *testing.T) {
 	if !d.WaitForText("local has 1 uncommitted change", time.Second) {
 		t.Fatalf("no card on the mode switch:\n%s", ansi.Strip(d.Frame()))
 	}
-	d.Key("enter") // Commit
+	d.Key("right", "enter") // Commit (C-1: Cancel is first and has the focus)
 	if !d.WaitForText("Auto-commit on local", 2*time.Second) || !s.has("COMMIT") {
 		t.Fatalf("mode switch: %q\n%s", s.log(), ansi.Strip(d.Frame()))
 	}
@@ -198,7 +198,7 @@ func TestDBTxDisconnectAndModeSwitchAsk(t *testing.T) {
 	if !d.WaitForText("local has 1 uncommitted change", time.Second) {
 		t.Fatalf("no card on disconnect:\n%s", ansi.Strip(d.Frame()))
 	}
-	d.Key("right", "enter") // Roll back, then disconnect
+	d.Key("right", "right", "enter") // Roll back, then disconnect
 	if !d.WaitFor(func() bool { s.mu.Lock(); defer s.mu.Unlock(); return s.closed > 0 }, 2*time.Second) {
 		t.Fatalf("not disconnected: %q", s.log())
 	}

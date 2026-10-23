@@ -59,6 +59,16 @@ func (m Model) WithCode(code, note string) Model {
 	return m
 }
 
+// WithFocus puts the focus on button n (0 = the first). Enter picks the
+// focused button, so a card whose safe answer is not the first button uses
+// this to make Enter safe. n outside the buttons is ignored.
+func (m Model) WithFocus(n int) Model {
+	if n >= 0 && n < len(m.buttons) {
+		m.cursor = n
+	}
+	return m
+}
+
 // WithScrollText keeps the entire message available with Up/Down.
 func (m Model) WithScrollText() Model { m.scrollText = true; return m }
 

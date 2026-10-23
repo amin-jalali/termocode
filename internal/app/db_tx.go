@@ -266,9 +266,9 @@ func (m *Model) databaseTxCard(conn, why string, after func(*Model) tea.Cmd) tea
 	s.txCardConn, s.txCardAfter = conn, after
 	m.confirm = confirm.New(m.dbConnLabel(conn)+" has "+dbPlural(n, "uncommitted change"),
 		why+"\n\nCommit saves them. Roll back drops them.", []confirm.Button{
+			{ID: "cancel", Title: "Cancel"},
 			{ID: "commit", Title: "Commit", Style: confirm.StylePrimary},
 			{ID: "rollback", Title: "Roll back", Style: confirm.StyleDestructive},
-			{ID: "cancel", Title: "Cancel"},
 		})
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true

@@ -370,7 +370,7 @@ runs a row.
 | Row | What it does |
 |---|---|
 | **Open guide** | opens this page in the built-in guide (also **Containers: Open Guide** in the palette) |
-| **Keys** | opens this page at [Keys](#keys); `?` in the view does the same kind of thing for what has focus |
+| **Keys** | opens this page at [Keys](#keys); `?` in the view opens a card with the keys of what has focus |
 | **Report a problem** | opens the project's issue page in your browser |
 | `docker 27.3.1`, `context prod` | the engine with its full version, and the active context (lines you cannot run) |
 
@@ -478,7 +478,7 @@ It can start, stop, restart, pause or unpause one container
 (`containers_control`), pull an image in a visible `pull:` tab
 (`images_pull`), and run `compose up -d` for a project on the host
 (`compose_up`). Each one asks first, with **Allow**, **Always allow
-containers** and **Deny**. "Always allow containers" lasts until you quit
+containers** and **Deny**. **Deny** comes first and has the focus, so a stray `Enter` allows nothing. "Always allow containers" lasts until you quit
 termocode and is never saved. A container that is busy, or already in
 the state asked for, is refused before the card.
 

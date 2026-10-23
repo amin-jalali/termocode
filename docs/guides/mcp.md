@@ -253,7 +253,8 @@ that project.
 
 A cloned repository could put any command or URL in that file, so
 termocode asks before it starts (or signs in to) a project server:
-**Allow once**, **Always allow** or **Deny**. The dialog shows the command
+**Deny**, **Allow once** or **Always allow**. **Deny** comes first and has the
+focus, so a stray `Enter` starts nothing. The dialog shows the command
 or URL and the names (not the values) of its environment variables.
 **Always allow** is stored per entry; when the entry changes, termocode
 asks again. Servers in your own `mcp.json` do not ask.
@@ -302,7 +303,8 @@ as outside data for the model.
 **When a server's tools change.** termocode remembers the tool list of
 each server the first time it sees it. If the list changes later (a
 server can change what its tools do), the next chat message asks again:
-**Trust once**, **Trust the new tools** or **Not now**. With **Not now**
+**Not now**, **Trust once** or **Trust the new tools**. **Not now** comes first and
+has the focus. With **Not now**
 every tool of that server asks before it runs, even a read-only one,
 and the servers list says `tools changed`. Review them with **Show
 tools**, then use **Trust the new tools** in the server's actions.

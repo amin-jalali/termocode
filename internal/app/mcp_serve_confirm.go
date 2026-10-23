@@ -261,11 +261,9 @@ func (m *Model) mcpServePump() tea.Cmd {
 		// Deny is the safe answer, so it is plain (not red) and it is the
 		// button Enter picks: a card can open while the user types, and an
 		// Enter meant for something else must not allow an outside agent.
+		// The buttons keep their order (Allow, Always allow, Deny).
 		buttons = append(buttons, confirm.Button{ID: "deny", Title: "Deny"})
-		m.confirm = confirm.New(mcpServeCardTitle(a.client, a.tool.Name, a.human), body, buttons)
-		for range buttons[1:] { // the cursor starts on the first button: move it to Deny
-			m.confirm, _ = m.confirm.Update(tea.KeyMsg{Type: tea.KeyRight})
-		}
+		m.confirm = confirm.New(mcpServeCardTitle(a.client, a.tool.Name, a.human), body, buttons).WithFocus(len(buttons) - 1)
 		m.confirm.SetSize(m.w, m.h)
 		m.confirmOpen = true
 		m.confirmKind = confirmKindMCPServe

@@ -141,7 +141,7 @@ When the container or service behind a saved connection is stopped, the footer s
 
 ## Disconnect
 
-Press `x` on a connection and choose **Disconnect** to close all its sessions. Sessions also close when you leave the Databases view, so a hidden view keeps no database process. A session with an open manual transaction stays open until you commit or roll back (see [Transactions](#transactions)); `x` then asks **Commit**, **Roll back** or **Cancel**.
+Press `x` on a connection and choose **Disconnect** to close all its sessions. Sessions also close when you leave the Databases view, so a hidden view keeps no database process. A session with an open manual transaction stays open until you commit or roll back (see [Transactions](#transactions)); `x` then asks **Cancel**, **Commit** or **Roll back** (**Cancel** has the focus).
 
 ## The SQL console
 
@@ -226,7 +226,7 @@ Each connection starts in auto-commit mode: every statement is saved at once. Pr
 - `K` on the result page or **Databases: Commit** saves the changes; `Z` or **Databases: Roll Back** drops them.
 - The status bar and the result page show `manual commit · 2 not committed` while changes wait. Typed `BEGIN`, `COMMIT` or `ROLLBACK` statements are not sent in manual mode; use `K` and `Z`.
 - Submitted row changes join the open transaction; data pages read inside it, so they show your own changes.
-- Quitting, disconnecting, or switching back to auto-commit with changes waiting asks **Commit**, **Roll back** or **Cancel**.
+- Quitting, disconnecting, or switching back to auto-commit with changes waiting asks **Cancel**, **Commit** or **Roll back**.
 
 ## Export and import
 

@@ -206,9 +206,9 @@ func (m *Model) mcpTrustDialog(s mcp.Server) {
 			"The tools of "+s.Name+" are not the ones you trusted before: a server can change what its tools do. "+
 				"Review them in AI: MCP Servers… → "+s.Name+" → Show tools.\nUntil you trust them, each of its tools asks before it runs.",
 			[]confirm.Button{
+				{ID: "deny", Title: "Not now"},
 				{ID: "once", Title: "Trust once", Style: confirm.StylePrimary},
 				{ID: "always", Title: "Trust the new tools"},
-				{ID: "deny", Title: "Not now", Style: confirm.StyleDestructive},
 			})
 		m.confirm.SetSize(m.w, m.h)
 		m.confirmOpen = true
@@ -233,9 +233,9 @@ func (m *Model) mcpTrustDialog(s mcp.Server) {
 		code = s.URL
 	}
 	m.confirm = confirm.New("Start MCP server "+s.Name+"?", msg, []confirm.Button{
+		{ID: "deny", Title: "Deny"},
 		{ID: "once", Title: "Allow once", Style: confirm.StylePrimary},
 		{ID: "always", Title: "Always allow"},
-		{ID: "deny", Title: "Deny", Style: confirm.StyleDestructive},
 	}).WithCode(code, "")
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true

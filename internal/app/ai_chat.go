@@ -383,12 +383,7 @@ func (m *Model) onAIChatConfirm(msg aiChatConfirmMsg) tea.Cmd {
 		return waitAIChat(msg.ch)
 	}
 	s.confirm = &aiPendingConfirm{tool: msg.tool, human: msg.human, reply: msg.reply}
-	buttons := []confirm.Button{{ID: "allow", Title: "Allow", Style: confirm.StylePrimary}}
-	if msg.tool.Class != "" {
-		buttons = append(buttons, confirm.Button{ID: "always", Title: "Always allow " + msg.tool.Class})
-	}
-	buttons = append(buttons, aiServicesConfirmButton(msg.tool.Class)...) // "Always in this project"
-	buttons = append(buttons, confirm.Button{ID: "deny", Title: "Deny", Style: confirm.StyleDestructive})
+	buttons := aiToolCardButtons(msg.tool)
 	who := "AI"
 	if msg.step != "" {
 		who = aiOneLine(aiCleanText(msg.step)) // which step of the run asks
@@ -401,6 +396,31 @@ func (m *Model) onAIChatConfirm(msg aiChatConfirmMsg) tea.Cmd {
 	m.confirmOpen = true
 	m.confirmKind = confirmKindAITool
 	return waitAIChat(msg.ch)
+}
+
+// aiToolCardButtons are the buttons of an agent tool's card. Deny is the
+// safe answer: it is never red. For the tools that work on containers and
+// services, and for tools of connected MCP servers, Deny comes first and has
+// the focus (Enter alone must not allow). The card of any other tool keeps
+// its order.
+func aiToolCardButtons(t ai.Tool) []confirm.Button {
+	allow := confirm.Button{ID: "allow", Title: "Allow", Style: confirm.StylePrimary}
+	deny := confirm.Button{ID: "deny", Title: "Deny"}
+	var more []confirm.Button
+	if t.Class != "" {
+		more = append(more, confirm.Button{ID: "always", Title: "Always allow " + t.Class})
+	}
+	more = append(more, aiServicesConfirmButton(t.Class)...) // "Always in this project"
+	if !aiToolCardSafeFirst(t) {
+		return append(append([]confirm.Button{allow}, more...), deny)
+	}
+	return append([]confirm.Button{deny, allow}, more...)
+}
+
+// aiToolCardSafeFirst reports whether the card of t puts Deny first.
+func aiToolCardSafeFirst(t ai.Tool) bool {
+	return strings.HasPrefix(t.Name, mcp.WirePrefix) ||
+		t.Class == ai.ClassContainers || t.Class == ai.ClassServices
 }
 
 // answerAIToolConfirm replies to the waiting agent.

@@ -288,7 +288,7 @@ func (m *Model) servicesStartLocal(name string, restart bool) (string, tea.Cmd) 
 	if !st.localOK[svcCommandHash(svc)] {
 		m.confirm = confirm.New("Run "+name+"?",
 			"This project runs a command from "+svc.Source+":\n\n"+svc.Command+"\n\nRun it in a terminal tab?",
-			[]confirm.Button{{ID: "run", Title: "Run", Style: confirm.StylePrimary}, {ID: "cancel", Title: "Cancel"}})
+			[]confirm.Button{{ID: "cancel", Title: "Cancel"}, {ID: "run", Title: "Run", Style: confirm.StylePrimary}})
 		m.confirm.SetSize(m.w, m.h)
 		m.confirmOpen = true
 		m.confirmKind = confirmKindServicesLocal
@@ -464,7 +464,7 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 func (m *Model) servicesAskDown() {
 	m.confirm = confirm.New("Remove the containers?",
 		"This stops and removes this project's containers and networks. Volumes stay.",
-		[]confirm.Button{{ID: "cancel", Title: "Cancel", Style: confirm.StylePrimary},
+		[]confirm.Button{{ID: "cancel", Title: "Cancel"},
 			{ID: "down", Title: "Remove", Style: confirm.StyleDestructive}})
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true

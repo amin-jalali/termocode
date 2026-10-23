@@ -21,7 +21,7 @@ agent's command. What it adds depends on the agent:
 |---|---|---|
 | Claude Code | Adds `--mcp-config <file>` to the command. The file is private (mode `0600`) in the session folder. It is removed when the tab is gone. | Not touched. |
 | Codex | Adds two `-c mcp_servers.termocode…` options to the command. | Not touched. |
-| OpenCode | Can only read MCP servers from `opencode.json` in your project. A card shows the file and the entry. **Add** writes it, **Not now** (or `Esc`) starts OpenCode without it. | Written only after you say yes. The file holds absolute paths of this machine (the `termocode` program and your folder): check them before you commit it. |
+| OpenCode | Can only read MCP servers from `opencode.json` in your project. A card shows the file and the entry. **Add** writes it, **Not now** (or `Esc`) starts OpenCode without it; **Not now** has the focus, so a stray `Enter` writes nothing. | Written only after you say yes. The file holds absolute paths of this machine (the `termocode` program and your folder): check them before you commit it. |
 | Gemini CLI | Shows a tip. Add termocode by hand (next section). | Not touched. |
 | Aider | Shows a tip: Aider has no MCP support. | Not touched. |
 

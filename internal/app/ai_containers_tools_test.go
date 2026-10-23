@@ -180,8 +180,9 @@ func TestAIContainersAlwaysIsSessionOnly(t *testing.T) {
 	}
 }
 
-// The card of class containers: Allow · Always allow containers · Deny,
-// with no "Always in this project".
+// The card of class containers: Deny · Allow · Always allow containers
+// (C-1: Deny is the safe answer, first and plain), with no "Always in this
+// project".
 func TestAIContainersConfirmCardButtons(t *testing.T) {
 	m := &Model{services: newServicesState(), w: 120, h: 40}
 	reply := make(chan bool, 1)
@@ -191,7 +192,7 @@ func TestAIContainersConfirmCardButtons(t *testing.T) {
 	for _, b := range m.confirm.Buttons() {
 		titles = append(titles, b.Title)
 	}
-	if got := strings.Join(titles, " · "); got != "Allow · Always allow containers · Deny" {
+	if got := strings.Join(titles, " · "); got != "Deny · Allow · Always allow containers" {
 		t.Errorf("buttons = %q", got)
 	}
 	m.answerAIToolConfirm("deny")

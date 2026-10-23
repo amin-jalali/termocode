@@ -88,6 +88,12 @@ func TestAgentMCPCardFlow(t *testing.T) {
 	if b, _ := os.ReadFile(file); string(b) != mine {
 		t.Fatal("written before the answer")
 	}
+	// C-1: it writes into the user's project folder: Not now comes first
+	// and Enter alone writes nothing.
+	checkCardRule(t, "add to the project file", *m, false)
+	if got := m.confirm.Buttons()[0].ID; got != "skip" {
+		t.Errorf("first button %q, want skip", got)
+	}
 	// The user learns before committing the file that it holds paths of
 	// this machine.
 	view := strings.Join(strings.Fields(m.confirm.View()), " ")
