@@ -126,8 +126,9 @@ If you already have a snippet with the same language and trigger, the row shows
     | `Enter` | Go on to the final check. |
     | `Esc` or `q` | Close the panel. Nothing is written. |
 
-5. **Confirm.** A last card lists what will be written and to which file. Pick
-   **Import**, or **Back** to return to the panel.
+5. **Confirm.** A last card says in plain words what will change (settings,
+   key bindings, theme, snippets) and names the files in its last line. Pick
+   **Import**, or **Cancel** to return to the panel.
 6. **Done.** termocode saves a backup, writes the files, and applies the new
    keys, theme and settings at once. You do not need to restart.
 

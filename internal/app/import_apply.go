@@ -268,33 +268,65 @@ func (m *Model) confirmImport() tea.Cmd {
 			"Turn rows on with Space, or press a to select all.")
 		return cmd
 	}
-	lines := []string{"These changes will be written:", ""}
+	// Plain words first; the file names only in the last, quiet line.
+	var what, files, items []string
 	if c.Settings > 0 {
-		lines = append(lines, fmt.Sprintf("  %s → config.json", importCount(c.Settings, "setting")))
+		what = append(what, "settings")
+		files = append(files, "config.json")
+		items = append(items, "  "+importCount(c.Settings, "setting"))
 	}
 	if c.Keys > 0 {
-		lines = append(lines, fmt.Sprintf("  %s → keymap.json", importCount(c.Keys, "key")))
+		what = append(what, "key bindings")
+		files = append(files, "keymap.json")
+		items = append(items, "  "+importCount(c.Keys, "key"))
 	}
 	if c.Theme != "" {
-		lines = append(lines, "  theme "+c.Theme+" → config.json")
+		what = append(what, "theme")
+		files = appendNew(files, "config.json")
+		name := c.Theme
+		if t, ok := theme.LookupTheme(c.Theme); ok && t.Name != "" {
+			name = t.Name
+		}
+		items = append(items, "  Theme: "+name)
 	}
 	if c.Snippets > 0 {
-		lines = append(lines, fmt.Sprintf("  %s → snippets.json", importCount(c.Snippets, "snippet")))
+		what = append(what, "snippets")
+		files = append(files, "snippets.json")
+		items = append(items, "  "+importCount(c.Snippets, "snippet"))
 	}
+	lines := append([]string{"This changes your " + importList(what) + ".", ""}, items...)
 	lines = append(lines, "")
 	if len(c.Tools) > 0 {
 		lines = append(lines, "Suggested tools (nothing is installed): "+strings.Join(c.Tools, ", "), "")
 	}
-	lines = append(lines, "A backup of these files is saved first.",
-		"To go back: Preferences: Undo Last Import.")
+	lines = append(lines, "A backup is saved first.", "To go back: Preferences: Undo Last Import.", "",
+		"Files: "+strings.Join(files, ", "))
 	m.confirm = confirm.New("Import from "+m.imp.panel.Title()+"?", strings.Join(lines, "\n"), []confirm.Button{
 		{ID: "import", Title: fmt.Sprintf("Import %d %s", c.Total(), map[bool]string{true: "change", false: "changes"}[c.Total() == 1]), Style: confirm.StylePrimary},
-		{ID: "back", Title: "Back"},
+		{ID: "cancel", Title: "Cancel"},
 	})
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindImportApply
 	return nil
+}
+
+// importList is "a, b and c".
+func importList(items []string) string {
+	if n := len(items); n > 1 {
+		return strings.Join(items[:n-1], ", ") + " and " + items[n-1]
+	}
+	return strings.Join(items, "")
+}
+
+// appendNew appends s unless it is already in list.
+func appendNew(list []string, s string) []string {
+	for _, x := range list {
+		if x == s {
+			return list
+		}
+	}
+	return append(list, s)
 }
 
 // handleImportConfirm runs the import confirm buttons.
@@ -304,7 +336,7 @@ func (m *Model) handleImportConfirm(id string) (tea.Cmd, bool) {
 		if id == "import" {
 			return m.applyImport(), true
 		}
-		return nil, true // Back: the panel stays open
+		return nil, true // Cancel: the panel stays open
 	case confirmKindImportUndo:
 		if id == "undo" {
 			return m.runUndoImport(), true

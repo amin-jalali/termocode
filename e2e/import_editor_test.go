@@ -95,7 +95,7 @@ func importVSCode(tm *Term) {
 	tm.WaitText("editor.tabSize = 2", uiTimeout)
 	tm.settle()
 	tm.Send(KeyEnter) // Apply...
-	tm.WaitText("A backup of these files is saved first", uiTimeout)
+	tm.WaitText("A backup is saved first", uiTimeout)
 	tm.settle()
 	tm.Send(KeyEnter) // the primary button: Import N changes
 	tm.WaitText("Imported", uiTimeout)

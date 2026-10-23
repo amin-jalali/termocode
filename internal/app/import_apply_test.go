@@ -103,7 +103,7 @@ func TestImportApplyWritesExactlyTheSelectedRows(t *testing.T) {
 	darkPlusBg := theme.CurrentPaletteHex("BgEditor")
 	m := importReviewAndConfirm(t)
 	body := ansi.Strip(m.confirm.Box())
-	for _, s := range []string{"2 settings", "4 keys", "one-dark", "config.json", "keymap.json", "backup", "Undo Last Import", "gopls"} {
+	for _, s := range []string{"2 settings", "4 keys", "One Dark", "config.json", "keymap.json", "backup", "Undo Last Import", "gopls"} {
 		if !strings.Contains(body, s) {
 			t.Errorf("confirm does not say %q:\n%s", s, body)
 		}
@@ -261,7 +261,7 @@ func TestImportNeverWritesOutsideTheConfigDir(t *testing.T) {
 	}
 }
 
-func TestImportNothingSelectedOrBackWritesNothing(t *testing.T) {
+func TestImportNothingSelectedOrCancelWritesNothing(t *testing.T) {
 	_, xdg := importSandbox(t, "vscode")
 	dir := importUserFiles(t, xdg)
 	m := openImportPanel(t, importModel(150, 42), "VS Code")
@@ -271,13 +271,13 @@ func TestImportNothingSelectedOrBackWritesNothing(t *testing.T) {
 	if m.confirmOpen || !strings.Contains(importToast(m), "Nothing selected") {
 		t.Fatalf("enter with nothing selected: confirm %v, toast %q", m.confirmOpen, importToast(m))
 	}
-	// Back on the confirm returns to the panel and writes nothing.
+	// Cancel on the confirm returns to the panel and writes nothing.
 	m, _ = importKey(m, "a")
 	m, cmd = importKey(m, "enter")
 	m, _ = importFeed(t, m, cmd)
-	m = importConfirm(t, m, "back")
+	m = importConfirm(t, m, "cancel")
 	if !m.importOpen {
-		t.Error("Back closed the panel")
+		t.Error("Cancel closed the panel")
 	}
 	for name, body := range map[string]string{"config.json": importOrigConfig, "keymap.json": importOrigKeymap} {
 		if b, _ := os.ReadFile(filepath.Join(dir, name)); string(b) != body {
@@ -380,5 +380,36 @@ func TestImportPanelFollowsAResizeUnderTheConfirm(t *testing.T) {
 	m, _ = importFeed(t, m, cmd)
 	if body := ansi.Strip(m.confirm.Box()); !strings.Contains(body, "2 settings") {
 		t.Errorf("the click did not turn word wrap off:\n%s", body)
+	}
+}
+
+// IM-8: the final card says "Cancel" like the other cards, tells what
+// changes in plain words, and names the files only in its last line.
+func TestImportConfirmCardUsesPlainWords(t *testing.T) {
+	_, xdg := importSandbox(t, "vscode")
+	importUserFiles(t, xdg)
+	m := importReviewAndConfirm(t)
+	if got := m.confirm.Buttons(); len(got) != 2 || got[0].ID != "import" || got[1].ID != "cancel" || got[1].Title != "Cancel" {
+		t.Fatalf("buttons %+v", got)
+	}
+	body := ansi.Strip(m.confirm.Box())
+	for _, s := range []string{"This changes your settings, key bindings and theme.", "2 settings", "4 keys", "Theme: One Dark", "Files: config.json, keymap.json"} {
+		if !strings.Contains(body, s) {
+			t.Errorf("card does not say %q:\n%s", s, body)
+		}
+	}
+	if strings.Contains(body, "Back") || strings.Contains(body, "→ config") || strings.Contains(body, "→ keymap") {
+		t.Errorf("card still has Back or file arrows:\n%s", body)
+	}
+	// The file names are only in the last line.
+	var head []string
+	for _, l := range strings.Split(body, "\n") {
+		if strings.Contains(l, "Files:") {
+			break
+		}
+		head = append(head, l)
+	}
+	if h := strings.Join(head, "\n"); strings.Contains(h, "config.json") || strings.Contains(h, "keymap.json") {
+		t.Errorf("a file name is above the Files line:\n%s", h)
 	}
 }
