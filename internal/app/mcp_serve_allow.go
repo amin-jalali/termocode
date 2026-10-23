@@ -171,10 +171,25 @@ func (m *Model) mcpServeAllowSync() {
 
 const mcpAgentRowPrefix = "mcpagent:"
 
+// mcpServeAllowRowName is a remembered key as a short phrase for its row:
+// "execute_action:format-document" is "action format-document".
+func mcpServeAllowRowName(key string) string {
+	if id, ok := strings.CutPrefix(key, "execute_action:"); ok {
+		return "action " + id
+	}
+	if host, ok := strings.CutPrefix(key, "http_send:"); ok {
+		return "http_send " + strings.TrimSuffix(host, "/write")
+	}
+	if tool, conn, ok := strings.Cut(key, ":"); ok && mcpServeDBAlwaysTools[tool] {
+		return tool + " on " + conn
+	}
+	return key
+}
+
 // mcpServeAllowItems are the "External agents (MCP server)" rows of AI:
 // Agent Auto-Approve….
 func mcpServeAllowItems() []picker.Item {
-	items := []picker.Item{{Header: true, Title: "External agents (MCP server): Always allow, per agent and tool", Group: "mcpagents"}}
+	items := []picker.Item{{Header: true, Title: "External agents (MCP server): always allow", Group: "mcpagents"}}
 	list := mcpServeAllowLoad()
 	clients := make([]string, 0, len(list))
 	for c := range list {
@@ -188,7 +203,7 @@ func mcpServeAllowItems() []picker.Item {
 		for _, k := range keys {
 			n++
 			items = append(items, picker.Item{ID: mcpAgentRowPrefix + c + ":" + k, Group: "mcpagents",
-				Title: c + " — " + k + " runs without asking", Hint: "AUTO · Enter revokes"})
+				Title: c + " — " + mcpServeAllowRowName(k), Hint: "AUTO"})
 		}
 	}
 	if n == 0 {

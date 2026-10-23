@@ -13,6 +13,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -346,6 +347,7 @@ func (m *Model) openAIAutoApprovePicker() tea.Cmd {
 		ai.ClassRun:       "run shell commands",
 		ai.ClassIDE:       "IDE commands (execute_action)",
 		ai.ClassSettings:  "change settings (settings_set)",
+		ai.ClassServices:  "start / stop / restart project services",
 	}
 	var items []picker.Item
 	for _, c := range ai.ToolClasses {
@@ -373,7 +375,11 @@ func (m *Model) openAIAutoApprovePicker() tea.Cmd {
 	}
 	items = append(items, m.dbAutoApproveItems(s.settings.AutoApprove)...)
 	items = append(items, mcpServeAllowItems()...) // outside agents: their own list
-	m.picker = picker.NewItems(" ✦ Agent auto-approve (Enter toggles) ", items)
+	// The title is the palette title (with the theme's AI glyph, "*" in ASCII);
+	// the box follows the window so the rows are not cut at 80 columns.
+	m.picker = picker.NewItems(" "+theme.GlyphAI.String()+" AI: Agent Auto-Approve… ", items)
+	m.picker.SetWidth(mcpServeStatusWidth(m.w))
+	m.picker.SetNote([]string{"Enter switches ask and AUTO; on an agent it revokes."})
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
 	m.pickerKind = pickerKindAIAutoApprove

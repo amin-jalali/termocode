@@ -6,9 +6,11 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // mcpServeCard is the open MCP card's text.
@@ -286,4 +288,43 @@ func TestMCPServeCardDenyIsDefault(t *testing.T) {
 	}
 	mcpServeAnswer(m, "deny")
 	mcpServeAwait(t, m, hub, call)
+}
+
+// MCP-16: the Agent Auto-Approve list uses the palette title and the theme's
+// AI glyph (a "*" in ASCII, never ✦), and its rows are not cut at 80
+// columns, also for a long action id.
+func TestAutoApprovePickerFitsEightyColumns(t *testing.T) {
+	defer func(m theme.IconMode) { theme.CurrentIconMode = m }(theme.CurrentIconMode)
+	m, _, _ := mcpServeTestModel(t)
+	if err := mcpServeAllowSave(map[string][]string{
+		"claude-code": {"execute_action:format-document-selection", "tasks_run"},
+		"codex":       {"db_query:local-postgres"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, mode := range []theme.IconMode{theme.IconModeUnicode, theme.IconModeASCII} {
+		theme.CurrentIconMode = mode
+		m.w, m.h = 80, 24
+		m.openAIAutoApprovePicker()
+		view := ansi.Strip(m.picker.View())
+		if !strings.Contains(view, "AI: Agent Auto-Approve…") || strings.Contains(view, "Enter toggles") {
+			t.Errorf("mode %v: the title is not the palette title:\n%s", mode, view)
+		}
+		if mode == theme.IconModeASCII && strings.Contains(view, "✦") {
+			t.Errorf("the AI glyph leaks into ASCII mode:\n%s", view)
+		}
+		for _, want := range []string{"claude-code — action format-document-selection", "claude-code — tasks_run", "codex — db_query on local-postgres", "services — start / stop / restart project services", "fileWrite — write / create / delete / rename files"} {
+			if !strings.Contains(view, want) {
+				t.Errorf("mode %v: the row %q is cut or missing:\n%s", mode, want, view)
+			}
+		}
+		for _, line := range strings.Split(view, "\n") {
+			if strings.Contains(line, "…") && !strings.Contains(line, "AI: Agent Auto-Approve…") {
+				t.Errorf("mode %v: a row is cut: %q", mode, line)
+			}
+			if ansi.StringWidth(line) > 80 {
+				t.Errorf("mode %v: a line is wider than the window: %q", mode, line)
+			}
+		}
+	}
 }
