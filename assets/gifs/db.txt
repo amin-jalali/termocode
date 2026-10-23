@@ -1,0 +1,2 @@
+# db.gif - 8.8 s, loops. Captions are not burned into the frames.
+ 0.0- 8.8 s  Your database, in your terminal.
