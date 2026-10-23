@@ -421,6 +421,9 @@ func (m Model) layout(draw bool) layoutOut {
 	return out
 }
 
+// alert reports whether the row is drawn in the conflict colour.
+func (r row) alert() bool { return r.clash }
+
 // padStyled pads a styled string to width cells (clipping it).
 func padStyled(s string, width int, bg lipgloss.Style) string {
 	w := lipgloss.Width(s)
@@ -443,6 +446,12 @@ func (m Model) renderLine(k int, g geom, p pal, ic glyphs) string {
 		sec := m.sections[ln.sec]
 		sel, n, skipped := m.tally(sec.rows)
 		notes := len(sec.rows) - n - skipped
+		clashes := 0
+		for _, i := range sec.rows {
+			if m.rows[i].clash {
+				clashes++
+			}
+		}
 		segs := []seg{{" " + sec.name, bg.Foreground(p.title).Bold(true)}}
 		var parts []string
 		if n > 0 {
@@ -457,6 +466,14 @@ func (m Model) renderLine(k int, g geom, p pal, ic glyphs) string {
 		info := strings.Join(parts, "  "+ic.dot+"  ")
 		if info != "" {
 			segs = append(segs, seg{"  " + info, bg.Foreground(p.dim)})
+		}
+		if clashes > 0 {
+			// The orange rows below; the count names the colour.
+			sep := "  " + ic.dot + "  "
+			if info == "" {
+				sep = "  "
+			}
+			segs = append(segs, seg{sep, bg.Foreground(p.dim)}, seg{plural(clashes, "conflict"), bg.Foreground(p.warn)})
 		}
 		return paint(segs, g.iw, bg)
 	}
@@ -476,7 +493,9 @@ func (m Model) renderLine(k int, g geom, p pal, ic glyphs) string {
 			left = bg.Foreground(p.muted)
 			right = bg.Foreground(p.muted)
 		}
-		if r.conflict {
+		// Orange means one thing: this key or snippet is already taken.
+		// A setting or theme that changes keeps the normal colour.
+		if r.alert() {
 			right = bg.Foreground(p.warn)
 		}
 	case stateInfo:

@@ -451,3 +451,28 @@ func TestPanelDetailLineShowsTheFullReason(t *testing.T) {
 		t.Errorf("short card lost the reason:\n%s", got)
 	}
 }
+
+// IM-6: orange (the conflict colour) is only for a key or snippet that is
+// already taken. A setting or theme that changes is a normal change, and
+// the section header counts the conflicts so the colour has a name.
+func TestPanelConflictColourIsOnlyForTakenKeys(t *testing.T) {
+	m := newPanel(t, vscodeSrc, 150, 42)
+	for left, want := range map[string]bool{
+		"editor.tabSize":                  false, // 4 → 2: a change
+		"One Dark Pro":                    false, // theme change
+		"ctrl+alt+o":                      false,
+		"ctrl+shift+e  (VS Code default)": true,
+		"f5  (VS Code default)":           true,
+	} {
+		if _, r := findRow(t, m, left); r.alert() != want {
+			t.Errorf("%q: alert = %v, want %v (%+v)", left, r.alert(), want, r)
+		}
+	}
+	text := strings.Join(plain(m), "\n")
+	if !strings.Contains(text, "2 conflicts") {
+		t.Errorf("the Keys header does not count the conflicts:\n%s", text)
+	}
+	if n := strings.Count(text, "conflicts") - strings.Count(text, "(conflicts with"); n != 1 {
+		t.Errorf("%d section headers count conflicts, want 1", n)
+	}
+}

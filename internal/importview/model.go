@@ -43,6 +43,7 @@ type row struct {
 	state    rowState
 	on       bool
 	conflict bool   // replaces a value or key the user has now
+	clash    bool   // a key or snippet that is already taken: the one row kind shown as a conflict
 	left     string // the other editor's text
 	right    string // termocode's side
 	reason   string // why it is off or not imported
@@ -174,6 +175,7 @@ func (m Model) makeRow(i int) row {
 		if pr.Apply || pr.Conflict {
 			r.state = stateToggle
 			r.conflict = pr.Conflict
+			r.clash = pr.Conflict
 		}
 	case migrate.RowTheme:
 		if pr.Target == "" {
@@ -196,6 +198,7 @@ func (m Model) makeRow(i int) row {
 		if pr.Apply || pr.Conflict {
 			r.state = stateToggle
 			r.conflict = pr.Conflict
+			r.clash = pr.Conflict
 		}
 	case migrate.RowExtension, migrate.RowVimrc:
 		switch {
