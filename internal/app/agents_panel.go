@@ -491,20 +491,52 @@ func (s *aiState) agentsActivity(d agentsRun, n agentsNode, room int, g agentsGl
 			return g.fail + " " + aiOneLine(aiCleanText(st.Error))
 		}
 	}
-	if st != nil && st.Model != "" {
-		return st.Model
+	return agentsModelLine(st, room)
+}
+
+// agentsModelLine is "claude-sonnet-4-5 · 4.1k tok · $0.013": the model,
+// the tokens and the cost of a finished node, in at most room cells. The
+// least important part goes first: the version of the model name, then
+// the tokens, then the cost. A price that is not known leaves the cost
+// out. "" when the node has no model.
+func agentsModelLine(st *ai.StoredStep, room int) string {
+	if st == nil || st.Model == "" {
+		return ""
 	}
-	return ""
+	var tok, cost string
+	if st.Usage != nil {
+		tok = aiTokText(aiUsageTokens(*st.Usage))
+	}
+	if st.Cost != nil {
+		cost = aiDollars(*st.Cost)
+	}
+	short := aiShortModel(st.Model)
+	for _, parts := range [][]string{
+		{st.Model, tok, cost}, {short, tok, cost}, {short, cost}, {short}, {cost},
+	} {
+		if line := strings.Join(nonEmpty(parts...), " · "); runewidth.StringWidth(line) <= room {
+			return line
+		}
+	}
+	return short
 }
 
 // agentsStats is "21 s · 1 turn · 3 tools" (a pending node: its model).
 func (s *aiState) agentsStats(d agentsRun, n agentsNode, now time.Time) string {
+	dur, turns, tools := s.agentsStatParts(d, n, now)
+	return strings.Join(nonEmpty(dur, turns, tools), " · ")
+}
+
+// agentsStatParts are the three parts of agentsStats: the time, the
+// turns and the tools ("" for a part that is not known). A pending node
+// has its model in the first.
+func (s *aiState) agentsStatParts(d agentsRun, n agentsNode, now time.Time) (dur, turns, tools string) {
 	st := n.st
 	if n.state == agentdag.StatePending || n.state == "" {
 		if st != nil {
-			return st.Model
+			return st.Model, "", ""
 		}
-		return ""
+		return "", "", ""
 	}
 	var parts []string
 	switch {
@@ -513,13 +545,35 @@ func (s *aiState) agentsStats(d agentsRun, n agentsNode, now time.Time) string {
 	case st != nil && (st.ElapsedMs > 0 || n.state.Done() || n.state == agentdag.StateFailed):
 		parts = append(parts, aiDurText(st.ElapsedMs))
 	}
+	dur = strings.Join(parts, "")
 	if t := s.agentsTurns(d, n); t > 0 {
-		parts = append(parts, strconv.Itoa(t)+" turn"+plural(t))
+		turns = strconv.Itoa(t) + " turn" + plural(t)
 	}
 	if st != nil && len(st.Tools) > 0 {
-		parts = append(parts, strconv.Itoa(len(st.Tools))+" tool"+plural(len(st.Tools)))
+		tools = strconv.Itoa(len(st.Tools)) + " tool" + plural(len(st.Tools))
 	}
-	return strings.Join(parts, " · ")
+	return dur, turns, tools
+}
+
+// aiShortModelFit is model, or its short name when room is too small.
+func aiShortModelFit(model string, room int) string {
+	if runewidth.StringWidth(model) <= room {
+		return model
+	}
+	return aiShortModel(model)
+}
+
+// agFitParts joins parts with " · " in at most room cells, leaving out
+// the parts listed in drop, in that order, until it fits.
+func agFitParts(parts []string, drop []int, room int) string {
+	parts = append([]string(nil), parts...)
+	for k := 0; ; k++ {
+		line := strings.Join(nonEmpty(parts...), " · ")
+		if runewidth.StringWidth(line) <= room || k >= len(drop) {
+			return line
+		}
+		parts[drop[k]] = ""
+	}
 }
 
 // agentsCard draws one node card, exactly w cells wide.
@@ -545,14 +599,24 @@ func (s *aiState) agentsCard(d agentsRun, n agentsNode, w int, selected bool, no
 	}
 	out := []string{top}
 	if expanded {
+		stats := s.agentsStats(d, n, now)
+		if n.st != nil && n.st.Model != "" && !n.state.Done() && n.state != agentdag.StatePending && n.state != "" {
+			// A node at work shows its model next to the live time; on a
+			// narrow card the tools go first, then the turns, then the model.
+			dur, turns, tools := s.agentsStatParts(d, n, now)
+			stats = agFitParts([]string{aiShortModelFit(n.st.Model, inner-2-len(dur)-3), dur, turns, tools}, []int{3, 2, 0}, inner-2)
+		}
 		out = append(out, row(tok, first),
 			row(theme.TextSecondary, s.agentsActivity(d, n, inner-2, g)),
-			row(theme.TextDim, s.agentsStats(d, n, now)))
+			row(theme.TextDim, stats))
 	} else {
 		if stats := s.agentsStats(d, n, now); stats != "" && n.state.Done() {
 			first = glyph + " " + label + " · " + stats
 		}
 		out = append(out, row(tok, first))
+		if line := agentsModelLine(n.st, inner-2); line != "" && n.state.Done() {
+			out = append(out, row(theme.TextDim, line)) // model · tokens · cost
+		}
 	}
 	return append(out, agSeg(border, g.bl+strings.Repeat(g.h, inner)+g.br))
 }

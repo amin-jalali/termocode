@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
@@ -407,4 +408,69 @@ func TestAgentsPanelMouse(t *testing.T) {
 		}
 	}
 	t.Fatal("no chat chip in the header")
+}
+
+// agentsCardRows draws node id of the shown run as plain rows, w wide.
+func agentsCardRows(t *testing.T, m *Model, id string, w int, now time.Time) []string {
+	t.Helper()
+	d, ok := m.ai.agentsData()
+	if !ok {
+		t.Fatal("no run")
+	}
+	for _, n := range d.nodes {
+		if n.id == id {
+			rows := m.ai.agentsCard(d, n, w, false, now, agentsGlyphs())
+			for i := range rows {
+				rows[i] = ansi.Strip(rows[i])
+				if got := ansi.StringWidth(rows[i]); got != w {
+					t.Errorf("card %s at %d: row %d is %d cells: %q", id, w, i, got, rows[i])
+				}
+			}
+			return rows
+		}
+	}
+	t.Fatalf("no node %q", id)
+	return nil
+}
+
+// Spec (AU-3): a finished card shows its model, tokens and cost under the
+// status row; the least important part goes first when the card is
+// narrow.
+func TestAgentsCardShowsModelTokensCost(t *testing.T) {
+	agentsUnicode(t)
+	m := agentsModel(t, agentsRunMsgs("r1", "running", agentsDiamondSteps())...)
+	now := time.Date(2026, 10, 23, 9, 0, 0, 0, time.UTC)
+	// Folded (done): status row, then the model line.
+	rows := strings.Join(agentsCardRows(t, m, "map", 36, now), "\n")
+	wantAll(t, rows, "✓ done · 21 s · 2 turns · 1 tool", "gpt-5-mini · 3.4k tok · $0.004")
+	// Narrow: the tokens go, model and cost stay.
+	rows = strings.Join(agentsCardRows(t, m, "map", 23, now), "\n")
+	wantAll(t, rows, "gpt-5-mini · $0.004", "!tok")
+	// Very narrow: only what fits.
+	rows = strings.Join(agentsCardRows(t, m, "map", 14, now), "\n")
+	wantAll(t, rows, "!tok")
+	// Unknown price: no cost, the rest stays.
+	rows = strings.Join(agentsCardRows(t, m, "planner", 36, now), "\n")
+	wantAll(t, rows, "claude-sonnet-4-5 · 1.2k tok", "!$")
+	// Unfolded: the same line is the second row, the stats the third.
+	m.ai.conv.Folded = map[string]bool{aiCardID("r1", "map"): false}
+	got := agentsCardRows(t, m, "map", 36, now)
+	if len(got) != 5 || !strings.Contains(got[2], "gpt-5-mini · 3.4k tok · $0.004") || !strings.Contains(got[3], "21 s · 2 turns · 1 tool") {
+		t.Errorf("unfolded card:\n%s", strings.Join(got, "\n"))
+	}
+}
+
+// Spec (AU-3): a running card shows its model and the live time.
+func TestAgentsCardRunningShowsModelAndTime(t *testing.T) {
+	agentsUnicode(t)
+	m := agentsModel(t, agentsRunMsgs("r1", "running", agentsDiamondSteps())...)
+	start := time.Date(2026, 10, 23, 9, 0, 0, 0, time.UTC)
+	m.ai.agentsNodeStart("r1", "left", start)
+	rows := strings.Join(agentsCardRows(t, m, "left", 36, start.Add(12*time.Second)), "\n")
+	wantAll(t, rows, "gpt-5-mini · 12 s", "1 tool")
+	// Narrow: the model is kept before the tools, the time stays.
+	rows = strings.Join(agentsCardRows(t, m, "left", 22, start.Add(12*time.Second)), "\n")
+	wantAll(t, rows, "gpt-5-mini · 12 s")
+	rows = strings.Join(agentsCardRows(t, m, "left", 16, start.Add(12*time.Second)), "\n")
+	wantAll(t, rows, "12 s")
 }
