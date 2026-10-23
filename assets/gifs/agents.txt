@@ -1,0 +1,3 @@
+# agents.gif - 11.6 s, loops. Captions are not burned into the frames.
+# Recorded with demo models.
+ 0.0-11.6 s  Agents plan the work, run in parallel, and show what each one cost.
