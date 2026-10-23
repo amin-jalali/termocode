@@ -68,3 +68,31 @@ func TestAgentsChipNarrow(t *testing.T) {
 		}
 	}
 }
+
+// MCP-5: while the server listens and no agent is connected, a quiet chip
+// "⇄ ready" shows (ASCII: "= ready"); a connected agent replaces it with
+// the count; a server that does not listen shows nothing.
+func TestAgentsChipReady(t *testing.T) {
+	defer func(m theme.IconMode) { theme.CurrentIconMode = m }(theme.CurrentIconMode)
+	theme.CurrentIconMode = theme.IconModeUnicode
+	if got := stripCSI(renderAgentsChip(State{AgentsReady: true})); got != "⇄ ready" {
+		t.Errorf("ready chip = %q", got)
+	}
+	if got := stripCSI(renderAgentsChip(State{AgentsReady: true, Agents: 2})); got != "⇄ 2 agents" {
+		t.Errorf("with agents the chip = %q", got)
+	}
+	theme.CurrentIconMode = theme.IconModeASCII
+	if got := stripCSI(renderAgentsChip(State{AgentsReady: true})); got != "= ready" {
+		t.Errorf("ASCII ready chip = %q", got)
+	}
+	m := Model{}
+	m.SetWidth(160)
+	s := State{Line: 1, Col: 1, Branch: "main", AgentsReady: true}
+	x0, x1, ok := m.AgentsChipSpan(s)
+	if !ok {
+		t.Fatal("no span for the ready chip")
+	}
+	if got := string([]rune(stripCSI(m.View(s)))[x0:x1]); got != "= ready" {
+		t.Errorf("span covers %q", got)
+	}
+}

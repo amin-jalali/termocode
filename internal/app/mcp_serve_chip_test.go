@@ -88,3 +88,28 @@ func TestMCPServeChipClickOpensStatus(t *testing.T) {
 		t.Errorf("the click did not open the status screen (picker %v kind %v)", got.pickerOpen, got.pickerKind)
 	}
 }
+
+// Spec (MCP-5): while the server listens with no agent the bar shows the
+// quiet "ready" chip; an agent replaces it with the count; a stopped
+// server shows nothing. Still event-driven: no ticker.
+func TestMCPServeChipReadyWhileListening(t *testing.T) {
+	m, hub := mcpServeChipModel(t)
+	if got := mcpServeChipText(m); !strings.Contains(got, "ready") {
+		t.Fatalf("no ready chip while listening: %q", got)
+	}
+	m.onMCPServeClient(mcpServeClientMsg{hub: hub, kind: mcpClientConnected, id: 1})
+	if got := mcpServeChipText(m); strings.Contains(got, "ready") || !strings.Contains(got, " 1 agent") {
+		t.Errorf("a connected agent: %q", got)
+	}
+	m.onMCPServeClient(mcpServeClientMsg{hub: hub, kind: mcpClientGone, id: 1})
+	if got := mcpServeChipText(m); !strings.Contains(got, "ready") {
+		t.Errorf("no ready chip after the agent left: %q", got)
+	}
+	if m.mcpServe.ticking {
+		t.Error("the chip started a ticker")
+	}
+	m.stopMCPServe()
+	if got := mcpServeChipText(m); strings.Contains(got, "ready") {
+		t.Errorf("a ready chip for a stopped server: %q", got)
+	}
+}

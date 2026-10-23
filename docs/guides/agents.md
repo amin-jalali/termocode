@@ -188,7 +188,8 @@ also edit `config.json`.
 
 ## See what is connected
 
-- The status bar shows **⇄ 1 agent** while an agent is connected. Click it.
+- The status bar shows a dim **⇄ ready** while termocode listens and no
+  agent is connected, and **⇄ 1 agent** while one is. Click it.
 - **MCP: Server Status** shows if termocode listens (and why not), each
   agent with its calls, and the last calls in plain words, for example
   `09:41 claude-code · tasks_run · asked, you allowed`. From there you can

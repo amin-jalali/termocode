@@ -62,7 +62,10 @@ type State struct {
 	// Agents is how many outside agents (Claude Code, Codex …) are
 	// connected to termocode's MCP server; the chip "⇄ 1 agent" shows
 	// while it is above 0 (AgentsChipSpan for the click).
-	Agents int
+	// AgentsReady: the server listens; with no agent connected the quiet
+	// chip "⇄ ready" shows instead.
+	Agents      int
+	AgentsReady bool
 
 	// Database chip is visible only while a connection is active in the view.
 	ShowDatabase bool
@@ -688,10 +691,14 @@ func (m Model) TestsChipSpan(s State) (x0, x1 int, ok bool) {
 	return end - cw, end, true
 }
 
-// renderAgentsChip is "⇄ 1 agent" (nothing with no agent connected).
+// renderAgentsChip is "⇄ 1 agent"; with no agent connected it is the dim
+// "⇄ ready" while the server listens, else nothing.
 func renderAgentsChip(s State) string {
 	if s.Agents <= 0 {
-		return ""
+		if !s.AgentsReady {
+			return ""
+		}
+		return barFg(theme.TextDim).Render(theme.GlyphAgents.String() + " ready")
 	}
 	noun := "agents"
 	if s.Agents == 1 {
