@@ -14,6 +14,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // What the user sees of termocode as an MCP server (M1 MS-3): the agents
@@ -304,7 +305,7 @@ func mcpServeStatusWidth(w int) int {
 
 // openMCPServeStatus shows the status screen.
 func (m *Model) openMCPServeStatus() tea.Cmd {
-	m.picker = picker.NewItems(" ⇄ MCP server status (Enter on an action) ", m.mcpServeStatusItems())
+	m.picker = picker.NewItems(" "+theme.GlyphAgents.String()+" MCP server status (Enter on an action) ", m.mcpServeStatusItems())
 	m.picker.SetWidth(mcpServeStatusWidth(m.w))
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true

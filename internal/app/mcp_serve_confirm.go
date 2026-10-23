@@ -83,7 +83,7 @@ func mcpServeCardTitle(client, tool, human string) string {
 	if client == mcpServeGenericClient {
 		who = "An outside agent"
 	}
-	return "✦ " + who + " wants to " + mcpServeActionPhrase(tool, human)
+	return aiSpark() + " " + who + " wants to " + mcpServeActionPhrase(tool, human)
 }
 
 // mcpServeActionPhrase is what the agent wants, in words: the tool's own
