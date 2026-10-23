@@ -159,8 +159,10 @@ func TestMCPServeConfirmTimeout(t *testing.T) {
 	mcpServePumpUntil(t, m, hub, "card closed", func() bool { return !m.confirmOpen && m.mcpServe.active == nil })
 }
 
-// Spec (MS-1): a card waits while another dialog is open, and a card
-// replaced by another dialog counts as a no.
+// Spec (MS-1, MCP-12): a card waits while another dialog is open, and a
+// card replaced by another dialog is not a no: the call keeps waiting and
+// the card comes back when that dialog closes (the 2-minute timeout still
+// runs).
 func TestMCPServeConfirmWaitsForOtherDialog(t *testing.T) {
 	m, src, hub := mcpServeTestModel(t)
 	m.confirmOpen, m.confirmKind = true, confirmKindAITool // the chat asks
@@ -172,8 +174,36 @@ func TestMCPServeConfirmWaitsForOtherDialog(t *testing.T) {
 	m.confirmOpen = false // the chat's card closes
 	mcpServePumpUntil(t, m, hub, "card", func() bool { return mcpServeCardOpen(m, "c") })
 	m.confirmKind = confirmKindAITool // another dialog replaces it
+	m.mcpServePump()
+	if m.confirmKind != confirmKindAITool || m.mcpServe.active != nil || len(m.mcpServe.queue) != 1 {
+		t.Fatalf("the replaced card is not waiting again (kind %d, active %v, queue %d)", m.confirmKind, m.mcpServe.active, len(m.mcpServe.queue))
+	}
+	select {
+	case got := <-call:
+		t.Fatalf("the call ended when its card was replaced: %+v", got)
+	default:
+	}
+	m.confirmOpen = false // the other dialog closes: the card is back
+	mcpServePumpUntil(t, m, hub, "card again", func() bool { return mcpServeCardOpen(m, "c") })
+	mcpServeAnswer(m, "allow")
+	if got := mcpServeAwait(t, m, hub, call); got.err != nil {
+		t.Fatalf("allowed after the return: %+v", got)
+	}
+}
+
+// Spec (MCP-12): a card replaced by another dialog that never closes
+// still ends with the timeout (-32002), not a silent no and not forever;
+// calls behind it keep their order.
+func TestMCPServeReplacedCardStillTimesOut(t *testing.T) {
+	old := mcpServeConfirmTimeout
+	mcpServeConfirmTimeout = 200 * time.Millisecond
+	t.Cleanup(func() { mcpServeConfirmTimeout = old })
+	m, src, hub := mcpServeTestModel(t)
+	call := mcpServeStartCall(src, "c", "debug_breakpoint", map[string]any{"op": "clear"})
+	mcpServePumpUntil(t, m, hub, "card", func() bool { return mcpServeCardOpen(m, "c") })
+	m.confirmKind = confirmKindAITool // another dialog replaces it and stays
 	var ce *mcp.CallError
-	if got := mcpServeAwait(t, m, hub, call); !errors.As(got.err, &ce) || ce.Code != mcp.CodeDeclined {
+	if got := mcpServeAwait(t, m, hub, call); !errors.As(got.err, &ce) || ce.Code != mcp.CodeTimeout {
 		t.Fatalf("replaced card: %+v", got)
 	}
 }

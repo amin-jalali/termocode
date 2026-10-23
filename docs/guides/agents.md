@@ -156,6 +156,8 @@ When the agent calls a tool that runs or changes something, a card opens:
   `{"reason":"tool_error"}`.)
 - Several calls wait in line: one card at a time, the oldest first. A call
   that waits longer than two minutes, or whose agent went away, is dropped.
+- If another dialog opens over the card, the call keeps waiting and the
+  card comes back when that dialog closes. The two minutes keep running.
 - Secrets in the arguments are hidden.
 
 The name on the card is what the agent says about itself. Any program that

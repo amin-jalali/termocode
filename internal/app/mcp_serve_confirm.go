@@ -14,7 +14,8 @@ import (
 
 // The confirm card of outside agents (MS-1): one card at a time, first
 // asked first shown (FIFO), over all connections. A card waits while
-// another dialog is open. A call whose client went away or that waited
+// another dialog is open, and comes back when a dialog replaced it. A call
+// whose client went away or that waited
 // longer than mcpServeConfirmTimeout leaves the queue (its card closes);
 // the client gets an MCP error and nothing runs.
 
@@ -232,7 +233,10 @@ func (m *Model) mcpServePump() tea.Cmd {
 		return nil
 	}
 	if st.active != nil && !(m.confirmOpen && m.confirmKind == confirmKindMCPServe) {
-		st.active.reply <- false // the card was replaced or closed elsewhere: no
+		// Another dialog replaced the card. That is not a no: the call
+		// goes back to the front of the line and its card returns when
+		// the dialog closes. Its timeout keeps running.
+		st.queue = append([]*mcpServeAsk{st.active}, st.queue...)
 		st.active = nil
 	}
 	for st.active == nil && len(st.queue) > 0 && !m.confirmOpen {
