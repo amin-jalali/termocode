@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 // agentCardWorkspace makes a temp workspace the cwd (aiWorkspaceRoot).
@@ -200,5 +202,41 @@ func TestAgentMCPHandTipOnce(t *testing.T) {
 	m.agentMCPTipped = nil
 	if c := m.agentMCPHandTip(agentByID(t, "gemini")); c != nil {
 		t.Error("tip with mcp_server off")
+	}
+}
+
+// MCP-14: at 80x24 the whole card shows: no "…and N more lines", the warning
+// about absolute paths and what Not now does stay visible, also with a long
+// folder path.
+func TestAgentMCPCardFitsEightyByTwentyFour(t *testing.T) {
+	for _, long := range []bool{false, true} {
+		m := agentMCPTestModel(t)
+		dir := agentCardWorkspace(t)
+		if long {
+			dir = filepath.Join(dir, strings.Repeat("a-long-folder-name-", 4), "project")
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			t.Chdir(dir)
+		}
+		m.w, m.h = 80, 24
+		card, _ := m.agentMCPCardFor(agentByID(t, "opencode"))
+		if card == nil {
+			t.Fatal("no card")
+		}
+		m.openAgentMCPCard(card)
+		view := ansi.Strip(m.confirm.View())
+		flat := strings.Join(strings.Fields(view), " ")
+		if strings.Contains(view, "more line") {
+			t.Errorf("long=%v: the card is cut:\n%s", long, view)
+		}
+		for _, want := range []string{"absolute paths of this machine", "before you commit it", "Not now: OpenCode starts without them. Esc is the same.", "opencode.json"} {
+			if !strings.Contains(flat, want) {
+				t.Errorf("long=%v: the card lacks %q:\n%s", long, want, view)
+			}
+		}
+		if rows := strings.Count(strings.TrimRight(view, "\n"), "\n") + 1; rows > 24 {
+			t.Errorf("long=%v: the card is %d rows high", long, rows)
+		}
 	}
 }

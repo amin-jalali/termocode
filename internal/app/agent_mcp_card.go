@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/confirm"
@@ -117,13 +118,18 @@ func (m *Model) agentMCPToast(title, detail string) tea.Cmd {
 // why.
 func (m *Model) openAgentMCPCard(c *agentMCPCard) {
 	m.agentMCPPending = c
+	// The text is short on purpose: at 80x24 the whole card must show, with
+	// the warning about absolute paths and what "Not now" does (MCP-14).
+	path := c.path
+	if w := ansi.StringWidth(path); w > 60 {
+		path = ansi.TruncateLeft(path, w-59, "…") // keep the end: the folder and the file name
+	}
 	var b strings.Builder
-	b.WriteString("To give " + c.agent.Title + " the editor's tools, termocode adds itself to this file in your project:\n\n")
-	b.WriteString("  " + c.path + "\n\n")
-	b.WriteString("The entry (other settings stay as they are):\n")
-	b.WriteString(`  "termocode": local server, runs `)
-	b.WriteString("`termocode mcp`\n\n")
-	b.WriteString("The file will hold absolute paths of this machine: the termocode program and this folder.\n")
+	b.WriteString("termocode adds itself to this file in your project:\n")
+	b.WriteString("  " + path + "\n\n")
+	b.WriteString(`It adds one entry, "termocode", that runs `)
+	b.WriteString("`termocode mcp`. Your other settings stay as they are.\n\n")
+	b.WriteString("The file will hold absolute paths of this machine: the termocode program and this folder. ")
 	b.WriteString("Check them before you commit it; they are not right on another computer.\n\n")
 	b.WriteString("Not now: " + c.agent.Title + " starts without them. Esc is the same.")
 	m.confirm = confirm.New(aiSpark()+" Add termocode to "+c.agent.MCP.ProjectFile+"?", b.String(), []confirm.Button{
