@@ -58,13 +58,14 @@ import (
 //	                       a small secrets.age: sandbox only)
 //	httpdemo:<variant>     docs/users.http and a canned HTTP answer:
 //	                       file, response, headers or tls (no network)
-//	mcpservedemo:status|card|chip|opencode|tip-gemini|tip-aider|allow the MCP
+//	mcpservedemo:status|card|chip|opencode|tip-gemini|tip-aider|allow|idle|off the MCP
 //	                       server status screen, an outside agent's confirm
 //	                       card, the status bar chip with no agent, OpenCode's
 //	                       "add termocode" card, the hand tip of Gemini CLI /
 //	                       Aider, or the Agent Auto-Approve list with sample
-//	                       "Always allow" entries (made-up state, no
-//	                       listener; allow writes config.json: shots only)
+//	                       "Always allow" entries, or the status screen with
+//	                       nothing listening (made-up state, no listener;
+//	                       allow and off write config.json: shots only)
 //	helpdemo               open the in-app guide at the chat panel section
 //	importdemo:picker|panel|confirm|undo|setup|snippets|empty|file
 //	                       sample editor folders (sandbox config dir only),

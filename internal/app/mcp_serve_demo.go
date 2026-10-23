@@ -9,6 +9,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/mcp"
 )
 
 // mcpServeDemo is the dev action "mcpservedemo:<variant>" (shots and
@@ -18,8 +19,9 @@ import (
 // to a project's opencode.json, and "tip-gemini" / "tip-aider" the one-time
 // hint for agents termocode cannot hand its tools to, and "allow" the
 // Agent Auto-Approve picker with a few remembered "Always allow" answers
-// (written to config.json: the shots run in a private config dir), over
-// made-up state (a fake socket path, one
+// (written to config.json: the shots run in a private config dir), and
+// "idle" / "off" the status screen while nothing listens (mcp_server auto,
+// or turned off in the private config), over made-up state (a fake socket path, one
 // agent, a few audit lines). It starts no listener and writes nothing.
 func (m *Model) mcpServeDemo(variant string) tea.Cmd {
 	hub := newMCPServeHub()
@@ -33,6 +35,14 @@ func (m *Model) mcpServeDemo(variant string) tea.Cmd {
 			"codex":       {"db_query:local"},
 		})
 		return m.openAIAutoApprovePicker()
+	case "idle", "off": // the status screen while not listening
+		m.mcpServe = nil
+		if variant == "off" {
+			if path, err := settingsConfigPath(); err == nil {
+				_ = mcp.SaveSetting(path, "mcp_server", "off")
+			}
+		}
+		return m.openMCPServeStatus()
 	case "tip-gemini", "tip-aider": // the one-time hand tip toast
 		if a, ok := agents.ByID(strings.TrimPrefix(variant, "tip-")); ok {
 			return m.agentMCPHandTip(a)
