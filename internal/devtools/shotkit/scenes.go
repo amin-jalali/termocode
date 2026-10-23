@@ -148,7 +148,7 @@ func SecretsScene(name, variant string) Scene {
 // status screen), "card" (an outside agent's confirm card) or "chip" (the
 // status bar with the server listening and no agent) or "opencode"
 // (OpenCode's "add termocode" card) or "tip-gemini" / "tip-aider" (the hand
-// tip toast), see app mcpservedemo.
+// tip toast) or "allow" (the Agent Auto-Approve list), see app mcpservedemo.
 func MCPServeScene(name, variant string) Scene {
 	return Scene{Name: name, Steps: WithEditor(Act("mcpservedemo:"+variant), Pause(600*time.Millisecond))}
 }

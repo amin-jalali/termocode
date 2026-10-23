@@ -311,9 +311,10 @@ func goldenCases() []goldenCase {
 			goldenCase{light.Name + "-150x42", light, 150, 42}, goldenCase{ascii.Name + "-150x42", ascii, 150, 42})
 	}
 	// The MCP server's other screens (MCP-13): the quiet status bar chip,
-	// OpenCode's "add termocode" card, the hand tip of Gemini CLI and Aider.
+	// OpenCode's "add termocode" card, the hand tip of Gemini CLI and Aider, the Agent Auto-Approve list.
 	for _, sc := range []Scene{MCPServeScene("mcp-serve-chip", "chip"), MCPServeScene("mcp-serve-opencode-card", "opencode"),
-		MCPServeScene("mcp-serve-tip-gemini", "tip-gemini"), MCPServeScene("mcp-serve-tip-aider", "tip-aider")} {
+		MCPServeScene("mcp-serve-tip-gemini", "tip-gemini"), MCPServeScene("mcp-serve-tip-aider", "tip-aider"),
+		MCPServeScene("mcp-serve-allow-picker", "allow")} {
 		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
 	return out

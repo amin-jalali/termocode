@@ -16,7 +16,10 @@ import (
 // outside agent's confirm card, "chip" the status bar while the server
 // listens with no agent and "opencode" the card that asks to add termocode
 // to a project's opencode.json, and "tip-gemini" / "tip-aider" the one-time
-// hint for agents termocode cannot hand its tools to, over made-up state (a fake socket path, one
+// hint for agents termocode cannot hand its tools to, and "allow" the
+// Agent Auto-Approve picker with a few remembered "Always allow" answers
+// (written to config.json: the shots run in a private config dir), over
+// made-up state (a fake socket path, one
 // agent, a few audit lines). It starts no listener and writes nothing.
 func (m *Model) mcpServeDemo(variant string) tea.Cmd {
 	hub := newMCPServeHub()
@@ -24,6 +27,12 @@ func (m *Model) mcpServeDemo(variant string) tea.Cmd {
 	case "chip": // listening, nobody connected: the quiet "ready" chip
 		m.mcpServe = &mcpServeState{hub: hub, path: "/run/user/1000/termocode/3f9a1c2b.mcp.sock"}
 		return nil
+	case "allow": // the revoke list; the shots' private config dir takes the sample entries
+		_ = mcpServeAllowSave(map[string][]string{
+			"claude-code": {"tasks_run", "execute_action:format-document"},
+			"codex":       {"db_query:local"},
+		})
+		return m.openAIAutoApprovePicker()
 	case "tip-gemini", "tip-aider": // the one-time hand tip toast
 		if a, ok := agents.ByID(strings.TrimPrefix(variant, "tip-")); ok {
 			return m.agentMCPHandTip(a)
