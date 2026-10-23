@@ -149,9 +149,11 @@ When the agent calls a tool that runs or changes something, a card opens:
 ```
 
 - **Allow** runs this one call.
-- **Deny** (or `Esc`) refuses it. The agent gets an error with code
-  `-32000` with `data: {"reason":"declined"}`, and nothing runs. (A tool
-  that ran and failed uses `-32000` too, with `{"reason":"tool_error"}`.)
+- **Deny** (or `Esc`) refuses it. It is the button that has the focus when
+  the card opens, so a stray `Enter` never allows a call. The agent gets an
+  error with code `-32000` with `data: {"reason":"declined"}`, and nothing
+  runs. (A tool that ran and failed uses `-32000` too, with
+  `{"reason":"tool_error"}`.)
 - Several calls wait in line: one card at a time, the oldest first. A call
   that waits longer than two minutes, or whose agent went away, is dropped.
 - Secrets in the arguments are hidden.

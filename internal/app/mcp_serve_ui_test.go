@@ -5,7 +5,10 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/confirm"
 )
 
 // mcpServeCard is the open MCP card's text.
@@ -255,6 +258,31 @@ func TestMCPServeCardNoDoubleDot(t *testing.T) {
 	mcpServePumpUntil(t, m, hub, "card", func() bool { return mcpServeCardOpen(m, "claude-code") })
 	if view := mcpServeCard(m); strings.Contains(view, "….") {
 		t.Errorf("card has a double dot:\n%s", view)
+	}
+	mcpServeAnswer(m, "deny")
+	mcpServeAwait(t, m, hub, call)
+}
+
+// Spec (MCP-2): Deny is the safe choice, so it is not red and it is the
+// button Enter picks. A card can open while the user types, and an Enter
+// they meant for something else must not allow an outside agent. The
+// buttons keep their order (Allow, Always allow, Deny).
+func TestMCPServeCardDenyIsDefault(t *testing.T) {
+	m, src, hub := mcpServeTestModel(t)
+	call := mcpServeStartCall(src, "claude-code", "tasks_run", map[string]any{"label": "say hi"})
+	mcpServePumpUntil(t, m, hub, "card", func() bool { return mcpServeCardOpen(m, "claude-code") })
+	if got := mcpServeButtonIDs(m); got != "allow,always,deny" {
+		t.Fatalf("buttons = %s", got)
+	}
+	for _, b := range m.confirm.Buttons() {
+		if b.ID == "deny" && b.Style == confirm.StyleDestructive {
+			t.Error("Deny is styled as destructive (red)")
+		}
+	}
+	_, cmd := m.confirm.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	sel, ok := cmd().(confirm.SelectMsg)
+	if !ok || sel.ID != "deny" {
+		t.Fatalf("Enter on the fresh card = %+v, want deny", cmd())
 	}
 	mcpServeAnswer(m, "deny")
 	mcpServeAwait(t, m, hub, call)

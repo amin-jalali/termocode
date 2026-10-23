@@ -252,8 +252,14 @@ func (m *Model) mcpServePump() tea.Cmd {
 			body += "\nAlways allow: " + a.client + " may run " + mcpServeAlwaysWhat(a.always) +
 				" without asking. Revoke it in AI: Agent Auto-Approve…"
 		}
-		buttons = append(buttons, confirm.Button{ID: "deny", Title: "Deny", Style: confirm.StyleDestructive})
+		// Deny is the safe answer, so it is plain (not red) and it is the
+		// button Enter picks: a card can open while the user types, and an
+		// Enter meant for something else must not allow an outside agent.
+		buttons = append(buttons, confirm.Button{ID: "deny", Title: "Deny"})
 		m.confirm = confirm.New(mcpServeCardTitle(a.client, a.tool.Name, a.human), body, buttons)
+		for range buttons[1:] { // the cursor starts on the first button: move it to Deny
+			m.confirm, _ = m.confirm.Update(tea.KeyMsg{Type: tea.KeyRight})
+		}
 		m.confirm.SetSize(m.w, m.h)
 		m.confirmOpen = true
 		m.confirmKind = confirmKindMCPServe
