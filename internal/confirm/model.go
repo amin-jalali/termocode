@@ -255,7 +255,7 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 	// button, Esc cancels.
 	if inside && y == boxRect.y+boxRect.h-2 {
 		rel := x - (boxRect.x + 1 + 2)
-		for _, sp := range theme.HintSpans(confirmHints...) {
+		for _, sp := range theme.HintSpans(m.hints()...) {
 			if rel < sp.X0 || rel >= sp.X1 {
 				continue
 			}
@@ -286,6 +286,18 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 }
 
 var confirmHints = []string{"←→", "move", "enter", "select", "esc", "cancel"}
+
+// infoHints are the footer hints of a card with one button (an info card:
+// there is nothing to move to and nothing to cancel).
+var infoHints = []string{"enter", "OK", "esc", "close"}
+
+// hints is the footer of this card.
+func (m Model) hints() []string {
+	if len(m.buttons) == 1 {
+		return infoHints
+	}
+	return confirmHints
+}
 
 // Palette mirrors the Settings modal so confirm shares the same visual
 // idiom — same panel bg, dim rim, hairline separators, soft selection
@@ -578,7 +590,7 @@ func (m Model) Box() string {
 	// Bottom hairline separator + footer key-hints.
 	rows = append(rows, separatorStyle.Render(strings.Repeat("─", innerW)))
 	_ = footerStyle
-	footer := theme.HintBar(cmBoxBg, confirmHints...)
+	footer := theme.HintBar(cmBoxBg, m.hints()...)
 	rows = append(rows, padBg(bgFill.Render("  ")+footer, innerW))
 
 	content := lipgloss.JoinVertical(lipgloss.Left, rows...)

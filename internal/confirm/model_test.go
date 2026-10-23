@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 func sampleButtons() []Button {
@@ -293,5 +294,42 @@ func TestWideTextBreaksBetweenWords(t *testing.T) {
 				t.Fatalf("a word was cut: %q in %q", w, m.fullTextLines())
 			}
 		}
+	}
+}
+
+// CT-6: a card with one button is an info card: its footer says
+// "Enter OK · Esc close", not "move / select / cancel". Cards with
+// several buttons keep the full footer.
+func TestFooterOfOneButtonCard(t *testing.T) {
+	footer := func(m Model) string {
+		m.SetSize(100, 30)
+		lines := strings.Split(ansi.Strip(m.Box()), "\n")
+		return lines[len(lines)-2]
+	}
+	one := footer(New("Image is in use", "It stays.", []Button{{ID: "cancel", Title: "Close"}}))
+	if !strings.Contains(one, "Enter") || !strings.Contains(one, "OK") || !strings.Contains(one, "close") ||
+		strings.Contains(one, "move") || strings.Contains(one, "select") || strings.Contains(one, "cancel") {
+		t.Errorf("one-button footer: %q", one)
+	}
+	two := footer(New("Remove?", "Sure?", []Button{{ID: "cancel", Title: "Cancel"}, {ID: "ok", Title: "Remove"}}))
+	if !strings.Contains(two, "move") || !strings.Contains(two, "select") || !strings.Contains(two, "cancel") {
+		t.Errorf("two-button footer: %q", two)
+	}
+}
+
+// The footer hints of a one-button card are clickable too.
+func TestFooterHintsOfOneButtonCardClick(t *testing.T) {
+	m := New("In use", "It stays.", []Button{{ID: "cancel", Title: "Close"}})
+	m.SetSize(100, 30)
+	bx, by, bw, bh := m.Bounds()
+	_ = bw
+	y := by + bh - 2
+	x := bx + 1 + 2 + 1 // inside the Enter key
+	_, cmd, _ := m.HandleMouse(x, y, tea.MouseActionPress, tea.MouseButtonLeft)
+	if cmd == nil {
+		t.Fatal("no command from clicking Enter")
+	}
+	if got, ok := cmd().(SelectMsg); !ok || got.ID != "cancel" {
+		t.Errorf("got %#v", cmd())
 	}
 }
