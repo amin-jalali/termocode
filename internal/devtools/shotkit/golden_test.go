@@ -253,6 +253,15 @@ func goldenCases() []goldenCase {
 		sc := AIProfile(v)
 		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
+	// AI: Show Profile and AI: Usage (AU-5), at both sizes, and the four
+	// screens of the "see your agents and what they cost" story at full
+	// size (200x50) for the presentation.
+	for _, sc := range []Scene{AIProfile("show"), AIUsage()} {
+		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
+	}
+	for _, sc := range []Scene{AIProfile("picker"), AIProfile("show"), AgentsPanel("done"), AIUsage()} {
+		out = append(out, goldenCase{sc.Name + "-200x50", sc, 200, 50})
+	}
 	// The finished run and the trust card in a light theme and in ASCII
 	// icons (U20 AP-7).
 	for _, sc := range []Scene{AIPipeline("done"), AIProfile("trust")} {

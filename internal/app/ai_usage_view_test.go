@@ -212,7 +212,7 @@ func TestAIUsageFitsWidths(t *testing.T) {
 	agentsUnicode(t)
 	m := usageModel(t)
 	m.dispatchAIPalette("ai-usage")
-	for _, w := range []int{44, 60, 80} {
+	for _, w := range []int{32, 44, 60, 80} {
 		text := agentsText(m, w, 40)
 		for _, l := range strings.Split(text, "\n") {
 			if got := len([]rune(l)); got > w {
@@ -221,6 +221,9 @@ func TestAIUsageFitsWidths(t *testing.T) {
 		}
 		if w >= 80 && !strings.Contains(text, "out") {
 			t.Errorf("width %d lacks the in/out columns:\n%s", w, text)
+		}
+		if w == 32 && (strings.Contains(text, "calls") || !strings.Contains(text, "total") || !strings.Contains(text, "cost")) {
+			t.Errorf("width 32 should keep total and cost only:\n%s", text)
 		}
 		if w == 44 && (strings.Contains(text, " out ") || !strings.Contains(text, "total")) {
 			t.Errorf("width 44 should keep calls, total and cost only:\n%s", text)

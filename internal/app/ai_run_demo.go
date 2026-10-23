@@ -115,10 +115,35 @@ func (m *Model) aiProfileDemo(arg string) tea.Cmd {
 		return m.openAIProfilePicker()
 	case "trust":
 		return m.askAIProfileTrust(house, aiTrustAfterSwitch, "")
+	case "show":
+		return m.showAIProfile()
 	case "save":
 		return m.askAIProfileSave(ai.Profile{Name: "my-review", Title: "Review then fix", Steps: ai.BuiltinProfiles()[1].Steps}, false)
 	}
 	return nil
+}
+
+// aiUsageDemo shows AI: Usage after the planned diamond run of the
+// AGENTS shots (dev action "usagedemo:done"). The session already holds
+// an earlier review run and a local turn, so the session tables differ
+// from the run's; the numbers are the same two demo models.
+func (m *Model) aiUsageDemo(arg string) tea.Cmd {
+	s := m.aiS()
+	prices := ai.NewPricing(nil)
+	rec := func(agent, model, kind string, in, out, requests int) {
+		u := ai.Usage{Model: model, Input: in, Output: out, Requests: requests, PeakContext: in}
+		e := aiUsageEntry{Agent: agent, Model: model, U: u}
+		if usd, ok := prices.Cost(kind, u); ok {
+			e.Cost = &usd
+		}
+		s.recordUsage(e)
+	}
+	rec("Reviewer", "claude-sonnet-4-5", ai.KindAnthropic, 3900, 200, 2)
+	rec("Fixer", "gpt-5-mini", ai.KindOpenAI, 9000, 800, 1)
+	rec("Assistant", "qwen2.5-coder:7b", ai.KindOllama, 2400, 310, 1)
+	cmd := m.aiAgentsDemo(arg)
+	s.agents.usage = true
+	return cmd
 }
 
 // aiDemoFuncProvider answers each request with reply(request); with

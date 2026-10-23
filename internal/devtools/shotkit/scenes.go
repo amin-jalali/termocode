@@ -184,10 +184,19 @@ func AgentsPanel(variant string) Scene {
 		Steps: WithEditor(Act("palette:ai-open-chat"), Act("agentsdemo:"+variant), Pause(1200*time.Millisecond))}
 }
 
+// AIUsage is the AI: Usage screen (AU-4) after the planned diamond run
+// of AgentsPanel("done"): this run and this session, by model and by
+// agent (scripted models, an earlier run is in the session).
+func AIUsage() Scene {
+	return Scene{Name: "ai-usage", Env: aiEnv,
+		Steps: WithEditor(Act("palette:ai-open-chat"), Act("usagedemo:done"), Pause(1200*time.Millisecond))}
+}
+
 // AIProfile is the agent profile UI (U20 AP-5) with sample data:
 // "chip" the chat header chip "✦ review ▾" (and the status badge),
 // "picker" the profile picker with an untrusted project profile,
-// "trust" that project profile's trust card, "save" the save preview.
+// "trust" that project profile's trust card, "save" the save preview,
+// "show" the read-only AI: Show Profile card.
 func AIProfile(variant string) Scene {
 	return Scene{Name: "ai-profile-" + variant, Env: aiEnv,
 		Steps: WithEditor(Act("palette:ai-open-chat"), Act("profiledemo:"+variant), Pause(600*time.Millisecond))}

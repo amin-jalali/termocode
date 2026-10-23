@@ -20,6 +20,23 @@ The chat header shows the active profile as a chip: `✦ default ▾`.
 | **AI: Switch Profile…** | Opens the profile picker |
 | **AI: Next Profile** | Same as `Alt+Shift+P` |
 
+Each row of the picker shows the steps of the profile in order, with the
+model of each step (taken from its [model slot](#model-slots)):
+
+```text
+default        one step (main model: claude-sonnet-4-5)
+review         Reviewer (claude-sonnet-4-5) → Fixer (gpt-5-mini)
+fast           Answer (gpt-5-mini)
+plan           planner decides the steps (up to 12 agents, 6 waves)
+```
+
+A slot with no model says so, for example `Fixer (quick: not set)`. On a
+narrow window the row gets shorter: first the model names (`sonnet-4-5`),
+then the agent names, then only `2 steps`. A project profile keeps its
+trust state (`project, asks first`) at the start of the row. For the full
+picture of one profile use **AI: Show Profile** (see
+[See your agents and what they cost](#see-your-agents-and-what-they-cost)).
+
 The choice is kept per workspace. When it is not `default`, the `✦`
 badge in the status bar shows its name too, for example
 `review · claude-sonnet-4-5`. The chip turns to the AI accent colour
@@ -337,7 +354,10 @@ chat back.
   the step's state (`● running`, `○ pending`, `✓ done`, `✘ failed`,
   `⊘ blocked`, `◌ cancelled`), its category, what it does now (the tool
   it runs, or the end of what it writes), or which steps it waits for,
-  and its time, turns (model requests) and tools. Lines with `│ ├ ┐ ▼`
+  and its time, turns (model requests) and tools. A running card shows
+  its model next to the live time. A finished card shows its model,
+  tokens and cost (`gpt-5-mini · 3.4k tok · $0.004`) in a second row;
+  on a narrow card the tokens go first, then the model version. Lines with `│ ├ ┐ ▼`
   join one wave to the next; the **Dependencies** list says exactly
   which step feeds which.
 - **Header.** The run id, the profile, `wave i/n` (the first wave that
@@ -357,6 +377,7 @@ chat back.
 | `Shift+Tab` / `↑` / `k` | Select the previous step |
 | `Space` / `Enter` | Fold or unfold the selected card (the same choice as its card in the chat) |
 | `d` | Show or hide the node details |
+| `u` | Switch to [AI: Usage](#see-your-agents-and-what-they-cost) (and back) |
 | `f` | Follow the running step again |
 | `←` / `→` (or `h` / `l`) | Show the previous / next run of this chat |
 | `PgUp` / `PgDn` | Scroll the panel |
@@ -454,6 +475,80 @@ Each finished step also writes a usage line to the **AI** audit channel
 ```text
 12:03:41  usage  step reviewer · claude-sonnet-4-5 · 3 291 in · 812 out · $0.022 · context 2%
 ```
+
+## See your agents and what they cost
+
+Three places answer "which agents and models work here, in what order,
+and what did they use?"
+
+**1. The profile, before you run it.** Open the profile picker (click the
+chip) to see every profile as a line of steps and models. For one profile
+in detail, run **AI: Show Profile** from the palette. It is a read-only
+card for the active profile:
+
+```text
+✦ Profile review · Review then fix
+From: built in
+2 steps, one after the other.
+
+1 · Reviewer · main → claude-sonnet-4-5
+    tools: read-only
+    “You review code. List concrete problems with file:line. Do not edit fil…”
+2 · Fixer · quick → gpt-5-mini
+    “Fix the problems the reviewer listed. Keep the changes small.”
+```
+
+Each step shows its number, its agent, its `slot → model`, the tools it
+may use (only when the profile limits them) and the first line of its
+prompt. The line `From:` says where the profile comes from: built in,
+your `profiles.json`, or this project's `.termocode/ai-profiles.json`
+(with its trust state). A planner profile also lists the models of the
+steps it adds. Use ↑/↓ to scroll a long card, `Esc` to close it. The
+card changes nothing.
+
+**2. The AGENTS panel, while it runs.** Every card shows its model. A
+finished card adds the tokens and the cost. See
+[The AGENTS panel](#the-agents-panel).
+
+**3. AI: Usage, after it ran.** Run **AI: Usage** (or press `u` in the
+AGENTS panel, or click the tokens and cost in a run's summary row in the
+chat). It has two sets of tables:
+
+- **This run.** The run you select with `←` / `→`, like in the AGENTS
+  panel.
+- **This session.** Every run and chat turn since this termocode started,
+  also from other chats.
+
+Each set has a table **by model** and one **by agent** (the step name),
+with the calls, the tokens in and out, the total and the cost. The rows
+are sorted by cost, then by tokens, and the last row is the total.
+
+```text
+THIS RUN · by model
+model                  calls     in    out  total     cost
+claude-sonnet-4-5          2   7.6k    380   8.0k   $0.028
+gpt-5-mini                 5  11.5k    420  11.9k   $0.004
+total                      7  19.1k    800  19.9k   $0.032
+```
+
+- *In* is the whole prompt, cached tokens included, so *in* + *out* =
+  *total*.
+- A local model (Ollama, LM Studio) costs `$0`.
+- A model with no known price shows `—` as cost, and a note names it:
+  `price unknown for my-model (set ai_prices)`. In a total, `$0.020+`
+  means "at least this much": some prices are not known.
+- A model used through a Claude sign-in is a subscription: `—`, with a
+  note, and nothing to set.
+- A narrow panel shows fewer columns (calls, then in and out go first).
+
+The numbers come from what the runs record already; nothing is looked up
+online. The session tables are kept in memory only: nothing is written to
+disk for them, and they are gone when you close termocode. A step that
+you retry counts again in the session (it did cost again), but the run
+table shows the last attempt of each step.
+
+!!! note
+    Neither screen can be used by the AI: it can not read its own bill.
 
 ## Project profiles and trust
 

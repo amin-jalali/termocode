@@ -197,42 +197,61 @@ func aiTokShort(n int) string {
 	return fmt.Sprintf("%.1fM", float64(n)/1_000_000)
 }
 
-// usageCols decides the columns for a text width: all of them when the
-// name keeps 14 cells, else only calls, total and cost.
-func usageCols(width int) (wide bool, nameW int) {
-	const full = 5 + 1 + 6 + 1 + 6 + 1 + 6 + 1 + 8 // calls in out total cost
-	const slim = 5 + 1 + 6 + 1 + 8
-	if width-full-1 >= 14 {
-		return true, width - full - 1
+// The column sets of a usage table: total and cost; plus the calls;
+// plus the tokens in and out.
+const (
+	usageColsMin = iota
+	usageColsSlim
+	usageColsWide
+)
+
+// usageCols decides the columns for a text width: the most columns that
+// leave the name 14 cells (or what is left in the smallest set).
+func usageCols(width int) (cols, nameW int) {
+	const minimal = 6 + 1 + 8
+	const slim = 5 + 1 + minimal
+	const full = slim + 1 + 6 + 1 + 6
+	switch {
+	case width-full-1 >= 14:
+		return usageColsWide, width - full - 1
+	case width-slim-1 >= 14:
+		return usageColsSlim, width - slim - 1
 	}
-	return false, max(width-slim-1, 6)
+	return usageColsMin, max(width-minimal-1, 6)
 }
 
-func usageRowText(name string, r aiUsageRow, wide bool, nameW int) string {
+func usageCell(s string, w int) string {
+	return strings.Repeat(" ", max(w-runewidth.StringWidth(s), 0)) + s
+}
+
+func usageRowText(name string, r aiUsageRow, cols, nameW int) string {
 	name = runewidth.Truncate(name, nameW, "…")
-	name += strings.Repeat(" ", nameW-runewidth.StringWidth(name))
-	cell := func(s string, w int) string { return strings.Repeat(" ", max(w-runewidth.StringWidth(s), 0)) + s }
-	line := name + " " + cell(strconv.Itoa(r.Calls), 5)
-	if wide {
-		line += " " + cell(aiTokShort(r.In), 6) + " " + cell(aiTokShort(r.Out), 6)
+	line := name + strings.Repeat(" ", nameW-runewidth.StringWidth(name))
+	if cols >= usageColsSlim {
+		line += " " + usageCell(strconv.Itoa(r.Calls), 5)
 	}
-	return line + " " + cell(aiTokShort(r.Total), 6) + " " + cell(r.costText(), 8)
+	if cols == usageColsWide {
+		line += " " + usageCell(aiTokShort(r.In), 6) + " " + usageCell(aiTokShort(r.Out), 6)
+	}
+	return line + " " + usageCell(aiTokShort(r.Total), 6) + " " + usageCell(r.costText(), 8)
 }
 
 // usageTable draws one table into out.
 func usageTable(out *[]string, width int, title, nameHead string, sum aiUsageSum) {
-	wide, nameW := usageCols(width - 2)
-	cell := func(s string, w int) string { return strings.Repeat(" ", max(w-runewidth.StringWidth(s), 0)) + s }
-	hdr := nameHead + strings.Repeat(" ", max(nameW-runewidth.StringWidth(nameHead), 0)) + " " + cell("calls", 5)
-	if wide {
-		hdr += " " + cell("in", 6) + " " + cell("out", 6)
+	cols, nameW := usageCols(width - 2)
+	hdr := nameHead + strings.Repeat(" ", max(nameW-runewidth.StringWidth(nameHead), 0))
+	if cols >= usageColsSlim {
+		hdr += " " + usageCell("calls", 5)
 	}
-	hdr += " " + cell("total", 6) + " " + cell("cost", 8)
+	if cols == usageColsWide {
+		hdr += " " + usageCell("in", 6) + " " + usageCell("out", 6)
+	}
+	hdr += " " + usageCell("total", 6) + " " + usageCell("cost", 8)
 	*out = append(*out, agText(theme.TextSecondary, title, width), agText(theme.TextDim, hdr, width))
 	for _, r := range sum.Rows {
-		*out = append(*out, agText(theme.TextPrimary, usageRowText(r.Name, r, wide, nameW), width))
+		*out = append(*out, agText(theme.TextPrimary, usageRowText(r.Name, r, cols, nameW), width))
 	}
-	*out = append(*out, agText(theme.TextSecondary, usageRowText("total", sum.Total, wide, nameW), width))
+	*out = append(*out, agText(theme.TextSecondary, usageRowText("total", sum.Total, cols, nameW), width))
 }
 
 // usageNotes are the lines under the tables for prices that are not known.
