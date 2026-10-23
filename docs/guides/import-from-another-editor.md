@@ -103,7 +103,7 @@ the `TM_...` variables work as in VS Code. The full list is in
 If you already have a snippet with the same language and trigger, the row shows
 `old → new` and starts **off**. Turn it on to replace yours. The rest of your
 `snippets.json` is kept. New snippets work at once, without a restart, and
-**Undo Last Import** takes them away again.
+**Undo Last Import…** takes them away again.
 
 ## Step by step
 
@@ -135,8 +135,8 @@ If you already have a snippet with the same language and trigger, the row shows
 
 ## Undo
 
-Click the **Imported from ...** message that appears after an import, or run
-**Preferences: Undo Last Import**. termocode asks first (**Cancel** has the
+Click the **Imported from …** message that appears after an import, or run
+**Preferences: Undo Last Import…**. termocode asks first (**Cancel** has the
 focus, so pressing `Enter` by mistake changes nothing), then puts
 the files it changed back exactly as they were before the import
 (`config.json`, `keymap.json`, `snippets.json`). A file the import created is
@@ -145,13 +145,13 @@ removed. Undo works after a restart too.
 !!! note "Undo goes back to the moment before the import"
     Changes you made to these files after the import are undone as well.
 
-The setup card shows **Imported from ...** after an import. Its *Undo...*
+The setup card shows **Imported from …** after an import. Its **Undo import…**
 button does the same as the palette command.
 
 ## What it never does
 
 - It **never installs** anything. Extensions only become suggestions. Add the
-  tools yourself with **LSP: Manage Language Servers...**.
+  tools yourself with **LSP: Manage Language Servers…**.
 - It **never changes the other editor's files**. They are only read.
 - It **never writes before the final confirm**.
 - It writes **only** `config.json`, `keymap.json` and `snippets.json` in the termocode config folder.
@@ -206,7 +206,7 @@ If a write fails half way, termocode puts your files back at once and tells you.
 :   Terminals do not send the Cmd key. A `Cmd+` binding is turned into `Ctrl+`,
     and the row says so.
 
-**"Could not read ..."**
+**"Could not read …"**
 :   The other editor's file is damaged, or not valid JSON, XML or TOML. Fix it in the
     other editor, or skip that editor. Nothing was changed.
 

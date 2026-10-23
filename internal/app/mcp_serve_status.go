@@ -292,7 +292,7 @@ func (m *Model) mcpServeStatusItems() []picker.Item {
 	}
 	head("Actions")
 	if st != nil {
-		items = append(items, picker.Item{ID: "serve-stop", Title: "Stop listening", Hint: "for this session"})
+		items = append(items, picker.Item{ID: "serve-stop", Title: "Stop listening…", Hint: "for this session"})
 	}
 	items = append(items,
 		picker.Item{ID: "copy", Title: "Copy termocode server config", Hint: "JSON for agent CLIs"},
@@ -456,7 +456,7 @@ func (m *Model) copyMCPServeConfig() tea.Cmd {
 
 func mcpServePaletteItems() []picker.Item {
 	return []picker.Item{
-		{ID: "mcp-serve-status", Title: "MCP: Server Status"},
+		{ID: "mcp-serve-status", Title: "MCP: Server Status…"},
 		{ID: "mcp-serve-copy-config", Title: "MCP: Copy termocode Server Config"},
 	}
 }

@@ -246,7 +246,7 @@ CSV and TSV protect spreadsheets from formula injection: a cell that starts with
 
 A plain plan never runs the statement. It uses `EXPLAIN (FORMAT JSON)` on PostgreSQL, `EXPLAIN FORMAT=JSON` on MySQL / MariaDB (the table form on a server without JSON), and `EXPLAIN QUERY PLAN` on SQLite, always in the read-only session.
 
-**Explain Analyze.** `\X` in a console, `X` on a result page, or **Databases: Explain Analyze Statement**. This RUNS the statement and shows the real time and rows, so a card comes first and says so. A read runs in the read-only session. Any other statement runs inside a transaction that is always rolled back, and the card says so; if the rollback fails, the page shows an error. On a production connection the card is the strong one. A read-only connection analyzes reads only. DDL (`CREATE`, `DROP` …) is not offered, because it cannot be rolled back; with a manual transaction open a write is not analyzed either. SQLite has no `ANALYZE`: it shows the plan and never runs the statement.
+**Explain Analyze.** `\X` in a console, `X` on a result page, or **Databases: Explain Analyze Statement…**. This RUNS the statement and shows the real time and rows, so a card comes first and says so. A read runs in the read-only session. Any other statement runs inside a transaction that is always rolled back, and the card says so; if the rollback fails, the page shows an error. On a production connection the card is the strong one. A read-only connection analyzes reads only. DDL (`CREATE`, `DROP` …) is not offered, because it cannot be rolled back; with a manual transaction open a write is not analyzed either. SQLite has no `ANALYZE`: it shows the plan and never runs the statement.
 
 ## Compare schemas
 

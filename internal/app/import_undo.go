@@ -84,7 +84,7 @@ func (m *Model) undoLastImport() tea.Cmd {
 	// edits made after the import. Undo is marked as the risky choice.
 	m.confirm = confirm.New("Undo Last Import?", body, []confirm.Button{
 		{ID: "cancel", Title: "Cancel"},
-		{ID: "undo", Title: "Undo Import", Style: confirm.StyleDestructive},
+		{ID: "undo", Title: "Undo import", Style: confirm.StyleDestructive},
 	})
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true

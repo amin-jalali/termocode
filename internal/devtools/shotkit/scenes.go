@@ -373,7 +373,7 @@ func ImportConfirm() Scene {
 }
 
 // ImportUndo is the Undo card after the VS Code sample was imported:
-// Cancel first and focused, Undo Import marked as the risky button.
+// Cancel first and focused, Undo import marked as the risky button.
 func ImportUndo() Scene {
 	return Scene{Name: "import-undo", Steps: WithEditor(Act("importdemo:undo"), Pause(600*time.Millisecond))}
 }

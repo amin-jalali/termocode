@@ -110,7 +110,7 @@ func pickerItems(t *testing.T, m *Model) []picker.Item {
 func TestImportPaletteEntriesNeverForTheAI(t *testing.T) {
 	want := map[string]string{
 		"prefs-import-editor": "Preferences: Import from Another Editor…",
-		"prefs-import-undo":   "Preferences: Undo Last Import",
+		"prefs-import-undo":   "Preferences: Undo Last Import…",
 	}
 	for _, it := range paletteItems() {
 		if title, ok := want[it.ID]; ok {

@@ -332,7 +332,7 @@ func (m *Model) registryAfterUser() tea.Cmd {
 			if n == name {
 				m.confirm = confirm.New("Use the saved token for "+host+"?",
 					"termocode saved a token for this registry. It is sent to "+st.registryEngineName()+" login only.",
-					[]confirm.Button{{ID: "use", Title: "Use saved token", Style: confirm.StylePrimary}, {ID: "new", Title: "Type a new token"}})
+					[]confirm.Button{{ID: "use", Title: "Use saved token", Style: confirm.StylePrimary}, {ID: "new", Title: "Type a new token…"}})
 				m.confirm.SetSize(m.w, m.h)
 				m.confirmOpen, m.confirmKind = true, confirmKindRegistryRemember
 				return nil

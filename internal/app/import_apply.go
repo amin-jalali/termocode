@@ -299,7 +299,7 @@ func (m *Model) confirmImport() tea.Cmd {
 	if len(c.Tools) > 0 {
 		lines = append(lines, "Suggested tools (nothing is installed): "+strings.Join(c.Tools, ", "), "")
 	}
-	lines = append(lines, "A backup is saved first.", "To go back: Preferences: Undo Last Import.", "",
+	lines = append(lines, "A backup is saved first.", "To go back: Preferences: Undo Last Import…", "",
 		"Files: "+strings.Join(files, ", "))
 	m.confirm = confirm.New("Import from "+m.imp.panel.Title()+"?", strings.Join(lines, "\n"), []confirm.Button{
 		{ID: "import", Title: fmt.Sprintf("Import %d %s", c.Total(), map[bool]string{true: "change", false: "changes"}[c.Total() == 1]), Style: confirm.StylePrimary},
@@ -384,7 +384,7 @@ func (m *Model) applyImport() tea.Cmd {
 	if len(c.Tools) > 0 {
 		var t2 tea.Cmd
 		m.toast, t2 = m.toast.PushDetail(toast.Info, "Suggested tools: "+strings.Join(c.Tools, ", "),
-			"Nothing was installed. Add them with LSP: Manage Language Servers...")
+			"Nothing was installed. Add them with LSP: Manage Language Servers…")
 		cmds = append(cmds, t2)
 	}
 	return tea.Batch(cmds...)

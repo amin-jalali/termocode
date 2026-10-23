@@ -155,8 +155,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Count Rows | `db-count-rows` |   |   |
 | Databases: Delete Redis Key… | `redis-delete-key` |   |   |
 | Databases: Describe Table | `db-describe` |   |   |
-| Databases: Disconnect Selected | `db-disconnect` |   |   |
-| Databases: Explain Analyze Statement | `db-explain-analyze` |   |   |
+| Databases: Disconnect Selected… | `db-disconnect` |   |   |
+| Databases: Explain Analyze Statement… | `db-explain-analyze` |   |   |
 | Databases: Explain Statement | `db-explain` |   |   |
 | Databases: Export Result… | `db-export` |   |   |
 | Databases: Filter… | `db-filter` |   |   |
@@ -168,7 +168,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Open Table Data | `db-data` |   |   |
 | Databases: Pin Result Tab | `db-result-pin` |   |   |
 | Databases: Refresh | `db-refresh` |   |   |
-| Databases: Revert Pending Changes | `db-revert-changes` |   |   |
+| Databases: Revert Pending Changes… | `db-revert-changes` |   |   |
 | Databases: Roll Back | `db-rollback` |   |   |
 | Databases: Run File | `db-run-file` |   |   |
 | Databases: Run Statement or Selection | `db-run` |   |   |
@@ -176,7 +176,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Databases: Select 100 Rows in Console | `db-select` |   |   |
 | Databases: Set Redis Key TTL… | `redis-set-ttl` |   |   |
 | Databases: Show DDL | `db-ddl` |   |   |
-| Databases: Submit Pending Changes | `db-submit-changes` |   |   |
+| Databases: Submit Pending Changes… | `db-submit-changes` |   |   |
 | Databases: Test Connection | `db-test-connection` |   |   |
 | Databases: Transaction Mode… | `db-transaction-mode` |   |   |
 
@@ -372,7 +372,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | MCP: Copy termocode Server Config | `mcp-serve-copy-config` |   |   |
-| MCP: Server Status | `mcp-serve-status` |   |   |
+| MCP: Server Status… | `mcp-serve-status` |   |   |
 
 ## Markdown
 
@@ -406,7 +406,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Preferences: Import from Another Editor… | `prefs-import-editor` |   |   |
 | Preferences: Import termocode Settings File… | `settings-import` |   |   |
 | Preferences: Open Settings (UI) | `open-settings-ui` |   |   |
-| Preferences: Undo Last Import | `prefs-import-undo` |   |   |
+| Preferences: Undo Last Import… | `prefs-import-undo` |   |   |
 
 ## Run
 

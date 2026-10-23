@@ -50,7 +50,7 @@ type importPlanMsg struct {
 func importPaletteItems() []picker.Item {
 	return []picker.Item{
 		{ID: "prefs-import-editor", Title: "Preferences: Import from Another Editor…"},
-		{ID: "prefs-import-undo", Title: "Preferences: Undo Last Import"},
+		{ID: "prefs-import-undo", Title: "Preferences: Undo Last Import…"},
 	}
 }
 

@@ -198,7 +198,7 @@ func TestMCPServePaletteIDs(t *testing.T) {
 		titles[it.ID] = it.Title
 	}
 	for id, title := range map[string]string{
-		"mcp-serve-status":      "MCP: Server Status",
+		"mcp-serve-status":      "MCP: Server Status…",
 		"mcp-serve-copy-config": "MCP: Copy termocode Server Config",
 	} {
 		if titles[id] != title {
@@ -290,7 +290,7 @@ func TestMCPServeStatusHasStopAndDisconnectRows(t *testing.T) {
 	items := m.mcpServeStatusItems()
 	var stop, agent bool
 	for _, it := range items {
-		stop = stop || (it.ID == "serve-stop" && it.Title == "Stop listening")
+		stop = stop || (it.ID == "serve-stop" && it.Title == "Stop listening…")
 		agent = agent || (it.ID == "agent:1" && strings.Contains(it.Title, "claude-code"))
 	}
 	if !stop || !agent {

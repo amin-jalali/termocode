@@ -294,14 +294,14 @@ func (m *Model) databaseImportCard() tea.Cmd {
 		hdr = "Header: on"
 	}
 	importBtn := confirm.Button{ID: "import", Title: "Import", Style: confirm.StylePrimary}
-	buttons := []confirm.Button{importBtn, {ID: "map", Title: "Map columns"}, {ID: "header", Title: hdr}, {ID: "cancel", Title: "Cancel"}}
+	buttons := []confirm.Button{importBtn, {ID: "map", Title: "Map columns…"}, {ID: "header", Title: hdr}, {ID: "cancel", Title: "Cancel"}}
 	if imp.mapped() == 0 {
 		buttons = buttons[1:]
 	}
 	if imp.conn.Environment == "production" {
 		title = "Write to production (" + name + ")? " + title
 		importBtn.Style = confirm.StyleDestructive
-		buttons = []confirm.Button{{ID: "cancel", Title: "Cancel"}, {ID: "map", Title: "Map columns"}, {ID: "header", Title: hdr}}
+		buttons = []confirm.Button{{ID: "cancel", Title: "Cancel"}, {ID: "map", Title: "Map columns…"}, {ID: "header", Title: hdr}}
 		if imp.mapped() > 0 {
 			buttons = append(buttons, importBtn)
 		}

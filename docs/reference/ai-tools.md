@@ -1424,9 +1424,9 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `db-data` | Databases: Open Table Data | never | Table rows are read with the database tools |
 | `db-ddl` | Databases: Show DDL | auto |   |
 | `db-describe` | Databases: Describe Table | auto |   |
-| `db-disconnect` | Databases: Disconnect Selected | confirm (always asks) |   |
+| `db-disconnect` | Databases: Disconnect Selected… | confirm (always asks) |   |
 | `db-explain` | Databases: Explain Statement | never | opens a picker or prompt that only the user can answer; use a typed tool (db_explain) |
-| `db-explain-analyze` | Databases: Explain Analyze Statement | never | executes the statement; use db_explain |
+| `db-explain-analyze` | Databases: Explain Analyze Statement… | never | executes the statement; use db_explain |
 | `db-export` | Databases: Export Result… | never | opens a picker or prompt that only the user can answer; use a typed tool (db_query + write_file) |
 | `db-filter` | Databases: Filter… | never | the filter is typed by the user; the AI uses db_schema |
 | `db-focus` | Databases: Focus | auto |   |
@@ -1436,13 +1436,13 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `db-new-console` | Databases: New Console | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `db-refresh` | Databases: Refresh | auto |   |
 | `db-result-pin` | Databases: Pin Result Tab | auto |   |
-| `db-revert-changes` | Databases: Revert Pending Changes | never | the user's pending edits |
+| `db-revert-changes` | Databases: Revert Pending Changes… | never | the user's pending edits |
 | `db-rollback` | Databases: Roll Back | never | the user's transaction |
 | `db-run` | Databases: Run Statement or Selection | never | SQL runs require the database query tool and its guard |
 | `db-run-file` | Databases: Run File | never | SQL runs require the database query tool and its guard |
 | `db-select` | Databases: Select 100 Rows in Console | never | SQL runs require the database query tool and its guard |
 | `db-ssl` | Databases: SSL Settings… | never | AI provider, credentials and approvals stay with the user |
-| `db-submit-changes` | Databases: Submit Pending Changes | never | the user's pending edits; use the database query tool |
+| `db-submit-changes` | Databases: Submit Pending Changes… | never | the user's pending edits; use the database query tool |
 | `db-test-connection` | Databases: Test Connection | auto |   |
 | `db-transaction-mode` | Databases: Transaction Mode… | never | AI provider, credentials and approvals stay with the user |
 | `debug-add-watch` | Debug: Add Watch Expression... | never | opens a picker or prompt that only the user can answer; use a typed tool (debug_evaluate; debug_state shows the watches) |
@@ -1540,7 +1540,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `lowercase` | Edit: Convert to lowercase | confirm (fileWrite) |   |
 | `lsp-manage` | LSP: Manage Language Servers... | never | opens a picker or prompt that only the user can answer; use a typed tool (lsp_servers) |
 | `mcp-serve-copy-config` | MCP: Copy termocode Server Config | never | AI provider, credentials and approvals stay with the user (the config is for the user to paste into an agent) |
-| `mcp-serve-status` | MCP: Server Status | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `mcp-serve-status` | MCP: Server Status… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `next-buffer` | View: Next Editor | auto |   |
 | `next-diagnostic` | Go to Next Problem | auto |   |
 | `next-hunk` | Git: Go to Next Change | auto |   |
@@ -1554,7 +1554,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `pick-theme` | Preferences: Color Theme… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `pin-tab` | Tab: Toggle Pinned | auto |   |
 | `prefs-import-editor` | Preferences: Import from Another Editor… | never | importing another editor's settings stays with the user |
-| `prefs-import-undo` | Preferences: Undo Last Import | never | undoing a settings import stays with the user |
+| `prefs-import-undo` | Preferences: Undo Last Import… | never | undoing a settings import stays with the user |
 | `prev-buffer` | View: Previous Editor | auto |   |
 | `prev-diagnostic` | Go to Previous Problem | auto |   |
 | `prev-hunk` | Git: Go to Previous Change | auto |   |

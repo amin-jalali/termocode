@@ -156,7 +156,7 @@ and passwords are removed.
 Nothing is written before that last step. termocode saves a backup of
 the files it will change (`config.json`, `keymap.json`, `snippets.json`)
 first, then applies the new keys, theme, settings and snippets at once. Extensions only become suggestions: nothing is
-installed. Run **Preferences: Undo Last Import** to put those files back
+installed. Run **Preferences: Undo Last Import…** to put those files back
 exactly as they were (this works after a restart too). The other editor's
 files are only read, never changed.
 
@@ -263,7 +263,7 @@ are in the command palette (`F1` or `Alt+X`).
 | **Preferences: Customize Keybindings** | Change keys |
 | **Snippets: Manage...** | Your snippets |
 | **Preferences: Export termocode Settings File…** / **Import termocode Settings File…** | Move settings |
-| **Preferences: Import from Another Editor…** / **Undo Last Import** | Bring settings, keys and theme from another editor |
+| **Preferences: Import from Another Editor…** / **Undo Last Import…** | Bring settings, keys and theme from another editor |
 | **Open Config: Theme** / **User Commands** / **AI Credentials** | Edit files by hand |
 
 ## Troubleshooting
