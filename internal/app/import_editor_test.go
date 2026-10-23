@@ -192,7 +192,7 @@ func TestImportSourceOpensTheReviewPanel(t *testing.T) {
 	_, xdg := importSandbox(t, "vscode", "jetbrains")
 	m := openImportPanel(t, importModel(150, 42), "VS Code")
 	frame := ansi.Strip(m.View())
-	for _, s := range []string{"Import from VS Code", "In termocode", "editor.tabSize = 2", "tab_size = 2", "Apply…"} {
+	for _, s := range []string{"Import from VS Code", "In termocode", "editor.tabSize = 2", "Tab size = 2", "Apply…"} {
 		if !strings.Contains(frame, s) {
 			t.Errorf("frame does not show %q", s)
 		}
@@ -251,6 +251,37 @@ func TestImportShowPath(t *testing.T) {
 	} {
 		if got := importShowPath(in); got != want {
 			t.Errorf("importShowPath(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// IM-1: a key row shows the command's palette title, not the action name.
+func TestImportActionTitleUsesPaletteTitles(t *testing.T) {
+	for name, want := range map[string]string{
+		"QuickOpen":          "Go to File",
+		"FocusExplorer":      "View: Focus Explorer",
+		"DebugStartContinue": "Debug: Start / Continue",
+		"CommandPalette":     "", // the palette cannot list itself: the panel spells the name out
+		"NoSuchAction":       "",
+	} {
+		if got := importActionTitle(name); got != want {
+			t.Errorf("importActionTitle(%q) = %q, want %q", name, got, want)
+		}
+	}
+}
+
+func TestImportPanelShowsCommandTitles(t *testing.T) {
+	importSandbox(t, "vscode")
+	m := openImportPanel(t, importModel(150, 42), "VS Code")
+	frame := ansi.Strip(m.View())
+	for _, s := range []string{"ctrl+alt+o → Go to File", "Command palette"} {
+		if !strings.Contains(frame, s) {
+			t.Errorf("frame does not show %q:\n%s", s, frame)
+		}
+	}
+	for _, id := range []string{"QuickOpen", "CommandPalette", "FocusExplorer", "DebugStartContinue", "vscode-dark-plus"} {
+		if strings.Contains(frame, id) {
+			t.Errorf("frame still shows the id %q", id)
 		}
 	}
 }

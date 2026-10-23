@@ -85,6 +85,28 @@ func importShowPath(p string) string {
 	return p
 }
 
+// importActionTitle is the title a user knows for a keymap action name
+// ("QuickOpen" → "Go to File"): the command palette's title for the
+// action. "" when the palette has none; the panel then spells the name out.
+func importActionTitle(name string) string {
+	act := keymap.ActionNone
+	for _, a := range keymap.AllActions() {
+		if keymap.ActionName(a) == name {
+			act = a
+			break
+		}
+	}
+	if act == keymap.ActionNone {
+		return ""
+	}
+	for _, it := range paletteItems() {
+		if a, ok := paletteActions[it.ID]; ok && a == act {
+			return strings.TrimRight(strings.TrimSuffix(strings.TrimSuffix(it.Title, "..."), "…"), " ")
+		}
+	}
+	return ""
+}
+
 // importSourceParts says what the importer found in src ("settings, 3
 // keys, theme"); "" = nothing to import.
 func importSourceParts(src migrate.Source) (string, error) {
@@ -286,7 +308,7 @@ func (m *Model) onImportPlan(msg importPlanMsg) tea.Cmd {
 		return m.toastErr("Could not read "+msg.plan.Source.Title, msg.err)
 	}
 	s := m.importS()
-	s.panel = importview.New(msg.plan, importShowPath(msg.plan.Source.Dir))
+	s.panel = importview.New(msg.plan, importShowPath(msg.plan.Source.Dir), importview.WithActionTitle(importActionTitle))
 	s.panel.SetSize(m.w, m.h)
 	m.importOpen = true
 	return nil

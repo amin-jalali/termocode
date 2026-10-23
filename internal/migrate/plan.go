@@ -38,6 +38,9 @@ type ReviewRow struct {
 	Current string
 	// Reason says why a row is not applied (not imported, already set, conflict).
 	Reason string
+	// ConflictWith is the action name (keymap.ActionName) of the binding the
+	// key has now, when a key row conflicts with it; the panel shows its title.
+	ConflictWith string
 }
 
 type Current struct {
@@ -81,6 +84,7 @@ func Build(source Source, doc Document, current Current) Plan {
 				row.Conflict = keymap.ActionName(existing) != action
 				if row.Conflict {
 					row.Apply = false
+					row.ConflictWith = keymap.ActionName(existing)
 					row.Equivalent += " (conflicts with " + keymap.ActionName(existing) + ")"
 				}
 			}
@@ -233,6 +237,7 @@ func addFamiliarRows(p *Plan, current Current) {
 			row.Apply = false
 			if keymap.ActionName(existing) != action {
 				row.Conflict = true
+				row.ConflictWith = keymap.ActionName(existing)
 				row.Equivalent += " (conflicts with " + keymap.ActionName(existing) + ")"
 			} else {
 				row.Equivalent += " (already bound)"

@@ -128,7 +128,7 @@ func TestImportFromFileOpensPanelThenCancelWritesNothing(t *testing.T) {
 		t.Fatalf("panel did not open: %s", importToast(m))
 	}
 	frame := ansi.Strip(m.View())
-	for _, s := range []string{"Import from Preferences.sublime-settings", "tab_size = 4"} {
+	for _, s := range []string{"Import from Preferences.sublime-settings", "Tab size = 4"} {
 		if !strings.Contains(frame, s) {
 			t.Errorf("frame lacks %q:\n%s", s, frame)
 		}

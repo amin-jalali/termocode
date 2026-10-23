@@ -68,7 +68,7 @@ func TestPanelRowsFromFixturePlans(t *testing.T) {
 		shown    []string
 	}{
 		{vscodeSrc, []string{"Settings", "Keys", "Theme", "Extensions"},
-			[]string{"Import from VS Code", "In VS Code", "In termocode", "editor.tabSize = 2", "tab_size  4 → 2", "ctrl+alt+o", "One Dark Pro", "golang.go"}},
+			[]string{"Import from VS Code", "In VS Code", "In termocode", "editor.tabSize = 2", "Tab size  4 → 2", "ctrl+alt+o", "One Dark Pro", "golang.go"}},
 		{jetbrainsSrc, []string{"Settings", "Keys", "Theme", "Extensions"},
 			[]string{"Import from GoLand 2025.1", "USE_SOFT_WRAPS = true", "control alt P  GotoFile", "Darcula"}},
 		{sublimeSrc, []string{"Settings", "Keys", "Theme", "Extensions"},
@@ -172,10 +172,10 @@ func TestPanelNotImportedRowsCannotBeToggled(t *testing.T) {
 
 func TestPanelShowsConflictsWithCurrentValues(t *testing.T) {
 	m := newPanel(t, vscodeSrc, 150, 42)
-	if _, r := findRow(t, m, "editor.tabSize"); !r.conflict || r.right != "tab_size  4 → 2" || !r.on {
+	if _, r := findRow(t, m, "editor.tabSize"); !r.conflict || r.right != "Tab size  4 → 2" || !r.on {
 		t.Errorf("tab size: %+v", r)
 	}
-	if _, r := findRow(t, m, "One Dark Pro"); !r.conflict || r.right != "vscode-dark-plus → one-dark" {
+	if _, r := findRow(t, m, "One Dark Pro"); !r.conflict || r.right != "VSCode Dark+ → One Dark" {
 		t.Errorf("theme: %+v", r)
 	}
 	// A familiar key that is taken by another command: shown, off, and
@@ -378,5 +378,33 @@ func TestPanelTitleShortensALongFolder(t *testing.T) {
 	title := plain(m)[1]
 	if !strings.Contains(title, "…") || !strings.Contains(title, "Code/User") || !strings.Contains(title, "selected") {
 		t.Errorf("title row %q: want the folder's end, an ellipsis and the count", title)
+	}
+}
+
+// IM-1: the card shows titles, not the ids the files use.
+func TestPanelShowsTitlesNotIds(t *testing.T) {
+	plan := fixturePlan(t, vscodeSrc, current())
+	// A key the user has bound to another command: both names are shown as titles.
+	plan.Current.Overrides = nil
+	m := New(plan, "", WithActionTitle(func(name string) string {
+		return map[string]string{"QuickOpen": "Go to File", "RevealFile": "Reveal File in Explorer"}[name]
+	}))
+	m.SetSize(200, 60)
+	text := strings.Join(plain(m), "\n")
+	for _, want := range []string{"Tab size  4 → 2", "Auto save = on", "Go to File", "VSCode Dark+ → One Dark", "Reveal File in Explorer", "Command palette", "Focus explorer"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("card does not show %q:\n%s", want, text)
+		}
+	}
+	for _, id := range []string{"tab_size", "auto_save", "QuickOpen", "CommandPalette", "FocusExplorer", "RevealFile", "DebugStartContinue", "one-dark", "vscode-dark-plus"} {
+		if strings.Contains(text, id) {
+			t.Errorf("card still shows the id %q:\n%s", id, text)
+		}
+	}
+	// What is written stays the ids.
+	for _, pr := range m.Plan().Rows {
+		if pr.Kind == migrate.RowTheme && pr.Apply && pr.Target != "one-dark" {
+			t.Errorf("theme target %q", pr.Target)
+		}
 	}
 }

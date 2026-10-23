@@ -67,11 +67,16 @@ type Model struct {
 	cursor   int // index into lines
 	scroll   int // first body line shown
 	w, h     int
+
+	actionTitleOf func(name string) string // see WithActionTitle
 }
 
 // New builds the panel from a plan. Rows the plan marks Apply start on.
-func New(plan migrate.Plan, dir string) Model {
+func New(plan migrate.Plan, dir string, opts ...Option) Model {
 	m := Model{plan: plan, title: clean(plan.Source.Title), dir: clean(dir)}
+	for _, o := range opts {
+		o(&m)
+	}
 	if m.title == "" {
 		m.title = clean(plan.Source.ID)
 	}
@@ -145,22 +150,23 @@ func (m Model) makeRow(i int) row {
 		}
 		r.target = pr.Target
 		old, had := cur.Config[pr.Target]
+		label := settingLabel(pr.Target)
 		if had && reflect.DeepEqual(old, pr.Value) {
-			r.right = fmt.Sprintf("%s = %v", pr.Target, pr.Value)
+			r.right = fmt.Sprintf("%s = %s", label, settingValue(pr.Value))
 			break
 		}
 		r.state = stateToggle
-		r.right = fmt.Sprintf("%s = %v", pr.Target, pr.Value)
+		r.right = fmt.Sprintf("%s = %s", label, settingValue(pr.Value))
 		if had {
 			r.conflict = true
-			r.right = fmt.Sprintf("%s  %v → %v", pr.Target, old, pr.Value)
+			r.right = fmt.Sprintf("%s  %s → %s", label, settingValue(old), settingValue(pr.Value))
 		}
 	case migrate.RowKey:
 		if pr.Action == "" || pr.Key == "" {
 			break
 		}
 		r.key = pr.Key
-		r.right = clean(pr.Equivalent)
+		r.right = m.keyText(pr)
 		if pr.Apply || pr.Conflict {
 			r.state = stateToggle
 			r.conflict = pr.Conflict
@@ -169,14 +175,14 @@ func (m Model) makeRow(i int) row {
 		if pr.Target == "" {
 			break
 		}
-		r.right = clean(pr.Equivalent)
+		r.right = themeText(pr)
 		if pr.Target == cur.ThemeID {
 			break
 		}
 		r.state = stateToggle
 		if cur.ThemeID != "" {
 			r.conflict = true
-			r.right = cur.ThemeID + " → " + clean(pr.Equivalent)
+			r.right = themeName(cur.ThemeID) + " → " + themeText(pr)
 		}
 	case migrate.RowSnippet:
 		if pr.Trigger == "" {
@@ -212,6 +218,29 @@ func (m Model) makeRow(i int) row {
 		}
 	}
 	return r
+}
+
+// keyText is the key row's termocode side, with command titles in place
+// of the action names: "ctrl+alt+o → Go to File (conflicts with …)".
+func (m Model) keyText(pr migrate.ReviewRow) string {
+	s := clean(pr.Equivalent)
+	if pr.Action != "" {
+		s = strings.Replace(s, "→ "+pr.Action, "→ "+m.actionTitle(pr.Action), 1)
+	}
+	if pr.ConflictWith != "" {
+		s = strings.Replace(s, "conflicts with "+pr.ConflictWith, "conflicts with "+m.actionTitle(pr.ConflictWith), 1)
+	}
+	return s
+}
+
+// themeText is the theme row's termocode side with the theme's name in
+// place of its id; a closest-name suggestion keeps its note.
+func themeText(pr migrate.ReviewRow) string {
+	s := clean(pr.Equivalent)
+	if pr.Target != "" && strings.HasPrefix(s, pr.Target) {
+		return themeName(pr.Target) + s[len(pr.Target):]
+	}
+	return s
 }
 
 // clean drops control characters (escape sequences in a hostile file
