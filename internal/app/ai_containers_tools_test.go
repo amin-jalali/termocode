@@ -308,7 +308,7 @@ func TestAIContainersInvalidArgsRefused(t *testing.T) {
 	}
 }
 
-// Allow runs exactly the argv the card names, with the full id.
+// Allow runs the action on the full id; the card shows name and the short (12 char) id.
 func TestAIContainersControlRunsExactArgv(t *testing.T) {
 	m, f, call := aiContainersTestModel(t)
 	ctl := aiContainersTool(t, m.aiContainersTools(call), "containers_control")
@@ -369,5 +369,25 @@ func TestAIContainersPromptLineOnlyWithEngine(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
 	if line := m.aiContainersPromptLine(); line != "" {
 		t.Errorf("without an engine: %q", line)
+	}
+}
+
+// CT-9: the control card shows the name and a 12-char id, never the full
+// 64-char id; the call still runs on the full id.
+func TestAIContainersControlCardShowsShortID(t *testing.T) {
+	m, f, call := aiContainersTestModel(t)
+	full := strings.Repeat("9f3c2e1a", 8)
+	f.Set(t, "ps.json", `{"ID":"`+full+`","Names":"termocode-api-1","Image":"api","State":"running","Status":"Up","Labels":"com.docker.compose.project=termocode"}`+"\n")
+	ctl := aiContainersTool(t, m.aiContainersTools(call), "containers_control")
+	a := map[string]any{"action": "stop", "target": "termocode-api-1"}
+	human := ctl.Describe(a)
+	if strings.Contains(human, full) || !strings.Contains(human, "api-1") || !strings.Contains(human, "docker stop "+full[:12]+")") {
+		t.Errorf("card text %q", human)
+	}
+	if _, err := ctl.Run(context.Background(), a); err != nil {
+		t.Fatal(err)
+	}
+	if f.Count("stop "+full) != 1 {
+		t.Errorf("stop did not run on the full id: %q", f.Calls())
 	}
 }
