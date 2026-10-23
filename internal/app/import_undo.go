@@ -75,9 +75,11 @@ func (m *Model) undoLastImport() tea.Cmd {
 	when := man.Time.Local().Format("2006-01-02 15:04")
 	body := fmt.Sprintf("Puts back %s as they were before the import from %s on %s.\n\n"+
 		"Changes you made to these files after the import are undone too.", importFileNames(man), man.Source, when)
+	// Cancel comes first and has the focus: Enter alone must not undo
+	// edits made after the import. Undo is marked as the risky choice.
 	m.confirm = confirm.New("Undo Last Import?", body, []confirm.Button{
-		{ID: "undo", Title: "Undo Import", Style: confirm.StylePrimary},
 		{ID: "cancel", Title: "Cancel"},
+		{ID: "undo", Title: "Undo Import", Style: confirm.StyleDestructive},
 	})
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true

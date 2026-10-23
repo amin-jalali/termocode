@@ -107,6 +107,8 @@ func undoImport(tm *Term) {
 	tm.Palette("Preferences: Undo Last Import")
 	tm.WaitText("Undo Last Import?", uiTimeout)
 	tm.settle()
+	tm.Send("\t") // Cancel has the focus; Tab moves to Undo Import
+	tm.settle()
 	tm.Send(KeyEnter)
 	tm.WaitText("Import undone", uiTimeout)
 	tm.settle()

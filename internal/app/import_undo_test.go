@@ -6,8 +6,10 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/keymap"
 )
 
@@ -99,5 +101,34 @@ func TestUndoLastImportCancelKeepsTheImport(t *testing.T) {
 	m.dispatchPaletteAction("prefs-import-undo")
 	if !m.confirmOpen {
 		t.Error("after Cancel the import can no longer be undone")
+	}
+}
+
+// IM-3: the undo card also undoes edits made after the import, so Cancel
+// is first and focused (Enter alone keeps everything) and Undo is the
+// danger button.
+func TestUndoCardFocusesCancelAndMarksUndoAsDanger(t *testing.T) {
+	dir := importOnce(t, true)
+	after, _ := os.ReadFile(filepath.Join(dir, "config.json"))
+	m := importModel(150, 42)
+	m.dispatchPaletteAction("prefs-import-undo")
+	if !m.confirmOpen {
+		t.Fatalf("no undo card: %s", importToast(m))
+	}
+	btns := m.confirm.Buttons()
+	if len(btns) != 2 || btns[0].ID != "cancel" || btns[1].ID != "undo" || btns[1].Style != confirm.StyleDestructive || btns[0].Style == confirm.StylePrimary {
+		t.Fatalf("buttons %+v", btns)
+	}
+	// Enter picks the focused button: Cancel.
+	_, cmd := m.confirm.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("Enter did nothing")
+	}
+	if sel, ok := cmd().(confirm.SelectMsg); !ok || sel.ID != "cancel" {
+		t.Fatalf("Enter picked %#v, want cancel", cmd())
+	}
+	m = importConfirm(t, m, "cancel")
+	if b, _ := os.ReadFile(filepath.Join(dir, "config.json")); string(b) != string(after) {
+		t.Error("Cancel changed config.json")
 	}
 }
