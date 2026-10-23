@@ -599,6 +599,31 @@ func svcFooterFit(l1 string, w int) string {
 	return svcHostRe.ReplaceAllString(l1, ":$1→")
 }
 
+// svcFooterKeys ends the footer with "? keys" (like the Databases footer),
+// so the key list is one key away. It goes after the last part of line 2;
+// whole " · " parts are dropped from the end of line 2 to make room (a
+// footer that already says "? keys" is left alone). When line 2 cannot
+// carry it even alone, line 1 gets it if that fits; else nothing is added.
+func svcFooterKeys(l1, l2 string, width int) (string, string) {
+	if l1 == "" && l2 == "" {
+		return l1, l2
+	}
+	const tail = "? keys"
+	if strings.Contains(l1, tail) || strings.Contains(l2, tail) {
+		return l1, l2
+	}
+	if l2 == "" {
+		return l1, tail
+	}
+	if got := dbFitFooter(l2+" · "+tail, width); strings.HasSuffix(got, tail) {
+		return l1, got
+	}
+	if runewidth.StringWidth(l1+" · "+tail) <= width {
+		return l1 + " · " + tail, l2
+	}
+	return l1, l2
+}
+
 var svcHostRe = regexp.MustCompile(`(?:\d{1,3}(?:\.\d{1,3}){3}|\[?[0-9a-fA-F:]*::[0-9a-fA-F:]*\]?):(\d+)→`)
 
 // svcStatusLine is footer line 2.
@@ -873,6 +898,7 @@ func (m Model) renderServicesSidebarRaw(w, h int, focused bool, now time.Time, h
 	if theme.CurrentIconMode == theme.IconModeASCII {
 		f1 = strings.ReplaceAll(f1, "→", "->")
 	}
+	f1, f2 = svcFooterKeys(f1, f2, w-2)
 	for _, f := range []string{f1, f2} {
 		f = runewidth.Truncate(f, max(w-2, 1), "…")
 		lines = append(lines, testsPad(theme.Bg(theme.BgSidebar).Render(" ")+muted(f), w))

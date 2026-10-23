@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/mattn/go-runewidth"
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/services"
@@ -372,5 +373,41 @@ func TestServicesDockerDownOneBanner(t *testing.T) {
 		if a.disabled {
 			t.Errorf("%s greyed out with a working engine", a.id)
 		}
+	}
+}
+
+// CT-14: the footer ends with "? keys" (as in Databases), fitted to the
+// width: whole " · " parts of line 2 give way to it.
+func TestServicesFooterKeysHint(t *testing.T) {
+	cases := []struct {
+		l1, l2 string
+		w      int
+		w1, w2 string
+		descr  string
+	}{
+		{"docker 27", "", 27, "docker 27", "? keys", "empty line 2"},
+		{"web", "stopped", 27, "web", "stopped · ? keys", "short status"},
+		{"postgres:16 · :5432→5432", "exited (1) · l logs · r restart", 27, "postgres:16 · :5432→5432", "exited (1) · ? keys", "parts dropped"},
+		{"postgres", "Up 2 hours (healthy)", 27, "postgres · ? keys", "Up 2 hours (healthy)", "line 2 full: the hint goes to line 1"},
+		{"postgres:16 · :5432→5432", "Up 2 hours (healthy)", 27, "postgres:16 · :5432→5432", "Up 2 hours (healthy)", "no room anywhere: unchanged"},
+		{"docker 27", "? keys · Tab next", 27, "docker 27", "? keys · Tab next", "already there"},
+		{"", "", 27, "", "", "no row"},
+	}
+	for _, c := range cases {
+		g1, g2 := svcFooterKeys(c.l1, c.l2, c.w)
+		if g1 != c.w1 || g2 != c.w2 {
+			t.Errorf("%s: got %q / %q, want %q / %q", c.descr, g1, g2, c.w1, c.w2)
+		}
+		if runewidth.StringWidth(g1) > c.w || runewidth.StringWidth(g2) > c.w {
+			t.Errorf("%s: too wide: %q / %q", c.descr, g1, g2)
+		}
+	}
+	// In the view: at the 80-column layout (sidebar 30) a short row shows it.
+	st := svcTestState()
+	st.cursor = 4 // mailhog: "not created · s start"
+	m := svcTestModel(st, 80, 24)
+	out := ansi.Strip(m.renderServicesSidebarRaw(29, 24, true, svcTestNow, -1, -1))
+	if !strings.Contains(out, "not created · ? keys") {
+		t.Errorf("no footer hint:\n%s", out)
 	}
 }
