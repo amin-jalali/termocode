@@ -745,3 +745,20 @@ func TestContainersRowOpenInDatabases(t *testing.T) {
 	_ = context.Background
 	_ = theme.CurrentIconMode
 }
+
+// CT-15: the "ai-card" demo opens the AI container-control card with the
+// name and the short id (the demo is what the golden shows).
+func TestContainersDemoAICard(t *testing.T) {
+	withConfigDir(t)
+	m0 := New()
+	m0.w, m0.h = 120, 40
+	m := &m0
+	m.containersDemo("ai-card")
+	if !m.confirmOpen {
+		t.Fatal("no card")
+	}
+	card := cardText(m)
+	if !strings.Contains(card, "Stop container postgres-1 (docker stop 9f3c2e1a9f3c)") || strings.Contains(card, strings.Repeat("9f3c2e1a", 8)) {
+		t.Errorf("card: %s", card)
+	}
+}

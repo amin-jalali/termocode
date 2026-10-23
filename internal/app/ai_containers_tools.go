@@ -770,7 +770,13 @@ func aiControlDescribe(call aiIDECaller, a map[string]any) string {
 	if err != nil {
 		return aiTitle(verb) + " container " + target + " (refused: " + aiOneLineClip(err.Error(), 120) + ")"
 	}
-	return fmt.Sprintf("%s container %s (%s %s %s) · %s", aiTitle(action), containerShownName(c), h.bin(), action, aiShortID(c.ID), h.contextLabel(ctx))
+	return aiControlCardText(action, c, h.bin(), h.contextLabel(ctx))
+}
+
+// aiControlCardText is the text of the control card: the name the list
+// shows, the command with the short id, and the context.
+func aiControlCardText(action string, c containers.Container, bin, contextLabel string) string {
+	return fmt.Sprintf("%s container %s (%s %s %s) · %s", aiTitle(action), containerShownName(c), bin, action, aiShortID(c.ID), contextLabel)
 }
 
 func aiControlRun(ctx context.Context, call aiIDECaller, a map[string]any) (string, error) {

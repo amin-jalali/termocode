@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/containers"
 	"github.com/amin-jalali/termocode/internal/services"
@@ -323,6 +324,12 @@ func (m *Model) containersDemo(variant string) {
 		m.servicesCursorTo(func(r svcRow) bool { return r.host == hostRemoteTag && r.tag == "16-alpine" })
 	case "menu":
 		m.openContainersSectionsMenu("")
+	case "ai-card": // the AI asks to stop postgres: name and short id, no 64-char id
+		c := st.containerRows[0]
+		c.ID = strings.Repeat("9f3c2e1a", 8)
+		human := aiControlCardText("stop", c, "docker", "context default")
+		tool := ai.Tool{Name: "containers_control", Display: "control a container", Mutating: true, Class: ai.ClassContainers}
+		m.onAIChatConfirm(aiChatConfirmMsg{gen: m.aiS().chatGen, tool: tool, human: human, reply: make(chan bool, 1), ch: make(chan tea.Msg)})
 	case "db-menu": // the row menu of the postgres compose service
 		m.openServicesMenu(svcRow{kind: svcRowService, section: svcSecCompose, name: "postgres"}, activity.Width+6, 6)
 	case "db-container-menu": // the row menu of the postgres container
