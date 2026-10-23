@@ -206,7 +206,7 @@ func (st *servicesState) filterBody(body []svcRow, q string) (out []svcRow, any 
 			p := parent[i]
 			keep[i] = keep[p] && (match[p] || up[p])
 		default:
-			keep[i] = r.kind == svcRowNote // a section's problem stays
+			keep[i] = r.kind == svcRowNote || r.kind == svcRowRetry // a section's problem stays
 		}
 	}
 	for i, r := range body {

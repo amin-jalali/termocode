@@ -53,6 +53,7 @@ const (
 	svcRowCode     // a command to copy (y)
 	svcRowGroup    // a foldable group in a host section (a compose project, an image repo)
 	svcRowHostItem // one host object: container, image tag, network, …
+	svcRowRetry    // "Retry": a button row under an engine problem (Enter / click)
 )
 
 type svcRow struct {
@@ -76,7 +77,7 @@ func hostSection(id string) string          { return "host/" + id }
 func hostGroup(section, name string) string { return "grp/" + section + "/" + name }
 
 func (r svcRow) selectable() bool {
-	return r.kind == svcRowSection || r.kind == svcRowService || r.kind == svcRowGroup || r.kind == svcRowHostItem
+	return r.kind == svcRowSection || r.kind == svcRowService || r.kind == svcRowGroup || r.kind == svcRowHostItem || r.kind == svcRowRetry
 }
 
 // foldable: Space / click folds it.
@@ -143,7 +144,7 @@ func (st *servicesState) problemRows() []svcRow {
 	case services.ProblemNoCompose:
 		return []svcRow{note("Docker Compose v2 is needed"), hint("Update Docker · R retry")}
 	case services.ProblemDaemonDown:
-		return []svcRow{note("Docker is not running"), hint("Start Docker · R retry")}
+		return []svcRow{note("Docker is not running"), retryRow(svcSecCompose)}
 	case services.ProblemNoPermission:
 		return []svcRow{note("No access to the Docker socket"),
 			{kind: svcRowCode, section: svcSecCompose, text: svcPermissionFix},
@@ -154,6 +155,34 @@ func (st *servicesState) problemRows() []svcRow {
 		return []svcRow{note(p.Detail), hint("R retry")}
 	}
 	return nil
+}
+
+// retryRow is the one Retry button under an engine problem.
+func retryRow(section string) svcRow {
+	return svcRow{kind: svcRowRetry, section: section, text: "Retry"}
+}
+
+// composeBlocked: the project has compose services but the engine cannot
+// run them, so the actions that need it are off.
+func (st *servicesState) composeBlocked() bool {
+	if len(st.det.ComposeFiles) == 0 {
+		return false
+	}
+	switch st.problem.Kind {
+	case services.ProblemNoDocker, services.ProblemNoCompose, services.ProblemDaemonDown, services.ProblemNoPermission:
+		return true
+	}
+	return false
+}
+
+// projectBannerShown: PROJECT already says "Docker is not running", so
+// the host sections stay quiet about it.
+func (st *servicesState) projectBannerShown() bool {
+	visible := true
+	if shown, ok := st.sections["project"]; ok {
+		visible = shown
+	}
+	return visible && len(st.det.ComposeFiles) > 0 && !st.collapsed[svcSecCompose] && st.problem.Kind == services.ProblemDaemonDown
 }
 
 // svcPermissionFix is shown (never run) when the socket is not ours.
@@ -440,10 +469,21 @@ func renderServiceNote(r svcRow, w int) string {
 	return clampSidebarRow(s, runewidth.StringWidth(lead)+runewidth.StringWidth(text), w, row)
 }
 
+// renderServiceRetry draws the Retry button row: "↻ Retry (R)".
+func renderServiceRetry(r svcRow, active, focused bool, w int) string {
+	bg := gitSelBg(active, focused)
+	row := lipgloss.NewStyle().Background(bg)
+	text := theme.GlyphRefresh.String() + " " + r.text + " (R)"
+	text = runewidth.Truncate(text, max(w-4, 1), "…")
+	s := row.Render("   ") + lipgloss.NewStyle().Background(bg).Foreground(theme.LG(theme.TextPrimary)).Render(text)
+	return clampSidebarRow(s, 3+runewidth.StringWidth(text), w, row)
+}
+
 // svcAction is one clickable label on the action bar.
 type svcAction struct {
 	id, label  string
 	start, end int
+	disabled   bool // greyed out: needs an engine that is not there
 }
 
 // svcActionLayout lays out the action bar for width w (labels that do
@@ -472,6 +512,11 @@ func svcActionLayout(w int) []svcAction {
 func (st *servicesState) actionLayout(w int) []svcAction {
 	all := svcActionLayout(w)
 	if !st.det.Empty() {
+		if st.composeBlocked() {
+			for i := range all {
+				all[i].disabled = all[i].id == "start-all" || all[i].id == "stop-all"
+			}
+		}
 		return all
 	}
 	var out []svcAction
@@ -492,6 +537,9 @@ func (m Model) svcFooter() (string, string) {
 	}
 	if r.kind == svcRowGroup || r.kind == svcRowHostItem || (r.kind == svcRowSection && strings.HasPrefix(r.section, "host/")) {
 		return st.hostFooter(r)
+	}
+	if r.kind == svcRowRetry {
+		return "Enter or R checks again", ""
 	}
 	if r.kind == svcRowSection {
 		if r.section == svcSecCompose && st.det.Empty() {
@@ -610,7 +658,7 @@ func svcStatusLine(svc services.Service, s services.Status) string {
 			return text + " · l logs · r restart"
 		}
 	case services.Unknown:
-		return "Docker is not answering · R retry"
+		return "Docker is off · R retry"
 	}
 	return text
 }
@@ -630,6 +678,9 @@ func (m Model) servicesHits(w int) []hitTarget {
 		return out
 	}
 	for _, a := range st.actionLayout(w) {
+		if a.disabled {
+			continue
+		}
 		out = append(out, hitTarget{ID: "svc:btn:" + a.id, Label: a.label, X: a.start, Y: svcActionRow, W: a.end - a.start, H: 1})
 	}
 	rows := st.rows()
@@ -762,7 +813,9 @@ func (m Model) renderServicesSidebarRaw(w, h int, focused bool, now time.Time, h
 		for _, a := range st.actionLayout(w) {
 			b.WriteString(testsFill(a.start - col))
 			st := theme.FgBg(theme.TextSecondary, theme.BgSidebar)
-			if hy == svcActionRow && hx >= a.start && hx < a.end {
+			if a.disabled {
+				st = theme.FgBg(theme.TextDim, theme.BgSidebar)
+			} else if hy == svcActionRow && hx >= a.start && hx < a.end {
 				st = lipgloss.NewStyle().Background(theme.Wash(theme.BgSidebar, theme.WashHover)).Foreground(theme.LG(theme.TextPrimary))
 			}
 			b.WriteString(st.Render(a.label))
@@ -801,6 +854,8 @@ func (m Model) renderServicesSidebarRaw(w, h int, focused bool, now time.Time, h
 			line = renderServiceRow(svc, st.statusOf(r.section, r.name), active, focused, w, now)
 		case svcRowHostItem:
 			line = st.renderHostItem(r, active, focused, w)
+		case svcRowRetry:
+			line = renderServiceRetry(r, active, focused, w)
 		default:
 			line = renderServiceNote(r, w)
 		}

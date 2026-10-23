@@ -617,6 +617,9 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		m.servicesClampCursor()
 		st.touch()
 	case "enter", "l":
+		if have && r.kind == svcRowRetry {
+			return m, tea.Batch(m.servicesAction("refresh"), m.containersReloadAll())
+		}
 		if name, ok := m.selectedContext(); ok {
 			return m, m.switchContext(name)
 		}
@@ -693,10 +696,16 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 			return m, m.openContainerTerminal(c, "attach")
 		}
 	case "a":
+		if st.composeBlocked() {
+			return m, m.servicesToast(toast.Info, "Docker is off", "Start it, then press R to retry")
+		}
 		if !st.det.Empty() {
 			return m, m.servicesAction("start-all")
 		}
 	case "A":
+		if st.composeBlocked() {
+			return m, m.servicesToast(toast.Info, "Docker is off", "Start it, then press R to retry")
+		}
 		if !st.det.Empty() {
 			return m, m.servicesAction("stop-all")
 		}
@@ -1059,6 +1068,9 @@ func (m Model) handleServicesSidebarMouse(x, y int, t tea.MouseEventType) (Model
 	if y == svcActionRow && t == tea.MouseLeft {
 		for _, a := range st.actionLayout(w) {
 			if x >= a.start && x < a.end {
+				if a.disabled {
+					return m, m.servicesToast(toast.Info, "Docker is off", "Start it, then press R to retry")
+				}
 				return m, m.servicesAction(a.id)
 			}
 		}
@@ -1092,6 +1104,9 @@ func (m Model) handleServicesSidebarMouse(x, y int, t tea.MouseEventType) (Model
 			m.openSectionMenu(r, activityWidthX(x), y)
 		}
 		return m, nil
+	}
+	if r.kind == svcRowRetry {
+		return m, tea.Batch(m.servicesAction("refresh"), m.containersReloadAll())
 	}
 	if r.foldable() {
 		return m, m.servicesToggleFold(r)

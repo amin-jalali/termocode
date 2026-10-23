@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/activity"
@@ -73,7 +74,7 @@ func TestServicesRows(t *testing.T) {
 	}
 	st.collapsed[svcSecCompose] = false
 	st.problem = services.Problem{Kind: services.ProblemDaemonDown}
-	if got := svcRowsText(st); !strings.HasPrefix(got, "#compose,!Docker is not running,!Start Docker · R retry,postgres") {
+	if got := svcRowsText(st); !strings.HasPrefix(got, "#compose,!Docker is not running,!Retry,postgres") {
 		t.Errorf("daemon down rows = %s", got)
 	}
 	if s := st.statusOf(svcSecCompose, "postgres"); s.State != services.Unknown {
@@ -93,7 +94,7 @@ func TestServicesRows(t *testing.T) {
 
 func TestServicesCursorSkipsNotes(t *testing.T) {
 	st := svcTestState()
-	st.problem = services.Problem{Kind: services.ProblemDaemonDown}
+	st.problem = services.Problem{Kind: services.ProblemOther, Detail: "boom"} // note + hint (the Retry row is selectable)
 	m := Model{services: st, h: 40}
 	st.cursor = 0
 	m.servicesMove(1)
@@ -172,7 +173,7 @@ func TestServiceStateLook(t *testing.T) {
 		{"exited 0", svc, services.Status{State: services.Stopped, Text: "Exited (0) 5 minutes ago"}, "o", theme.TextDim, "done", "Exited (0) 5 minutes ago"},
 		{"exited 1", svc, services.Status{State: services.Exited, ExitCode: 1, Text: "Exited (1) 5 minutes ago"}, "x", theme.DiagError, "exit 1", "Exited (1) 5 minutes ago · l logs · r restart"},
 		{"stopping", svc, services.Status{State: services.Stopping}, "~", theme.GitModified, "stop", "stopping…"},
-		{"daemon down", svc, services.Status{State: services.Unknown}, "?", theme.TextDim, "", "Docker is not answering · R retry"},
+		{"daemon down", svc, services.Status{State: services.Unknown}, "?", theme.TextDim, "", "Docker is off · R retry"},
 	}
 	for _, c := range cases {
 		g, col := svcGlyph(c.st)
@@ -319,5 +320,57 @@ func TestServicesConfirmKindsUnique(t *testing.T) {
 			t.Errorf("services %s uses %d, taken by %s", name, k, other)
 		}
 		seen[k] = name
+	}
+}
+
+// CT-2: with the engine down there is one banner (in PROJECT) with a
+// Retry button; the other sections stay quiet and Start all / Stop all
+// are greyed out and do nothing.
+func TestServicesDockerDownOneBanner(t *testing.T) {
+	st := svcHostState()
+	st.problem = services.Problem{Kind: services.ProblemDaemonDown}
+	st.containerEngine.Reachable = false
+	st.containerEngine.Problem = st.problem
+	for _, sec := range hostSectionOrder {
+		st.collapsed[hostSection(sec)] = false
+	}
+	all := svcRowsText(st)
+	if n := strings.Count(all, "Docker is not running"); n != 1 {
+		t.Errorf("banner appears %d times: %s", n, all)
+	}
+	if n := strings.Count(all, "Retry"); n != 1 {
+		t.Errorf("Retry appears %d times: %s", n, all)
+	}
+	for _, a := range st.actionLayout(29) {
+		if (a.id == "start-all" || a.id == "stop-all") != a.disabled {
+			t.Errorf("%s disabled = %v", a.id, a.disabled)
+		}
+	}
+	m := svcTestModel(st, 100, 30)
+	for _, h := range m.servicesHits(29) {
+		if h.ID == "svc:btn:start-all" || h.ID == "svc:btn:stop-all" {
+			t.Errorf("disabled button %s is clickable", h.ID)
+		}
+	}
+	// Enter on the Retry row runs the refresh.
+	for i, r := range st.rows() {
+		if r.kind == svcRowRetry {
+			st.cursor = i
+			break
+		}
+	}
+	if r, _ := m.servicesCurrentRow(); r.kind != svcRowRetry {
+		t.Fatalf("cursor is not on the Retry row: %+v", r)
+	}
+	_, cmd := m.handleServicesSidebarKey(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Error("Enter on Retry did nothing")
+	}
+	// Up again: Start all works.
+	st.problem = services.Problem{}
+	for _, a := range st.actionLayout(29) {
+		if a.disabled {
+			t.Errorf("%s greyed out with a working engine", a.id)
+		}
 	}
 }

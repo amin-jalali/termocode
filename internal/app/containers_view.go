@@ -120,8 +120,8 @@ func (st *servicesState) hostSectionBody(sec string) []svcRow {
 		if rows := st.remoteContextRows(sec, key, p.Detail); rows != nil {
 			return rows
 		}
-		if sec != "containers" {
-			return []svcRow{hint(name + " is not running")}
+		if sec != "containers" || (p.Kind == services.ProblemDaemonDown && st.projectBannerShown()) {
+			return []svcRow{hint(name + " is off")}
 		}
 		switch p.Kind {
 		case services.ProblemNoPermission:
@@ -129,7 +129,7 @@ func (st *servicesState) hostSectionBody(sec string) []svcRow {
 				{kind: svcRowCode, section: key, text: svcPermissionFix},
 				hint("y copies it · R to retry")}
 		case services.ProblemDaemonDown:
-			return []svcRow{note(name + " is not running"), hint("Start " + name + " · R retry")}
+			return []svcRow{note(name + " is not running"), retryRow(key)}
 		}
 		msg := errLine(p.Detail)
 		if msg == "" {
