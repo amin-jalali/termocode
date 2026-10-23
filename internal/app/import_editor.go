@@ -158,7 +158,8 @@ func importCount(n int, word string) string {
 // The picker's last row and the path prompt behind it (EM-7).
 const (
 	importFileID    = "import-file"
-	importFileTitle = "From a file..."
+	importFileTitle = "From a file…"
+	importFileHint  = "a settings or keymap file" // short: the picker is only 76 cells wide at 80 columns
 
 	promptKindImportFile promptKindEnum = 1950
 )
@@ -175,7 +176,7 @@ func (m *Model) openImportPicker() tea.Cmd {
 			items = append(items, picker.Item{ID: "import-src-" + strconv.Itoa(i), Title: src.Title, Hint: importSourceHint(src)})
 		}
 		return append(items, picker.Item{ID: importFileID, Title: importFileTitle,
-			Hint: "a settings or keymap file you point to"})
+			Hint: importFileHint})
 	})
 	m.picker.SetWidth(96)
 	if len(srcs) == 0 {

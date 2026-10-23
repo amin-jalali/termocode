@@ -51,7 +51,7 @@ An editor is listed when it has at least one of these files:
 
 No editor on this computer, for example over SSH or in Termux? Copy the
 file from your other machine first. In the Explorer you can use
-**Upload Here...**. Then pick **From a file...**, the last row of the
+**Upload Here...**. Then pick **From a file…**, the last row of the
 picker. It is there when no editor was found, too.
 
 termocode asks for the path. `Tab` completes it, and `~` is your home
@@ -111,7 +111,7 @@ If you already have a snippet with the same language and trigger, the row shows
    You can also use the **Import** row on the first-run setup card. See
    [First 5 minutes](../getting-started/first-steps.md#first-run-the-setup-card).
 2. **Pick an editor.** Each row says what termocode found, for example
-   "settings, 3 keys, theme", and where. Or pick **From a file...**.
+   "settings, 3 keys, theme", and where. Or pick **From a file…**.
 3. **Look at the review panel.** The left side is what the other editor has.
    The right side is what termocode will set. If you already have a value, you
    see `old → new`.
@@ -173,7 +173,7 @@ If a write fails half way, termocode puts your files back at once and tells you.
 :   termocode did not find a settings folder in the places above. Check that the
     editor has been opened at least once, and that the folder exists. If your
     editor keeps its settings elsewhere (a portable install, a custom
-    profile), pick **From a file...** and point to the file.
+    profile), pick **From a file…** and point to the file.
 
 **"not a supported editor file"**
 :   The file name or content is not one termocode knows. See the list under

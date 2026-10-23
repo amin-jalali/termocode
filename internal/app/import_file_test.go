@@ -252,3 +252,22 @@ func TestImportFromFilePromptCompletesPaths(t *testing.T) {
 		t.Errorf("prompt does not mention Tab completion:\n%s", got)
 	}
 }
+
+// IM-9: "From a file…" uses the … character and its hint fits the picker
+// at 80 columns.
+func TestImportPickerFileRowFitsAt80Columns(t *testing.T) {
+	importSandbox(t)
+	m := importModel(80, 24)
+	m.dispatchPaletteAction("prefs-import-editor")
+	items := pickerItems(t, &m)
+	last := items[len(items)-1]
+	if last.Title != "From a file…" || strings.Contains(last.Title+last.Hint, "...") {
+		t.Errorf("row %q / %q", last.Title, last.Hint)
+	}
+	frame := ansi.Strip(m.View())
+	for _, s := range []string{"From a file…", last.Hint} {
+		if !strings.Contains(frame, s) {
+			t.Errorf("80-column frame does not show %q in full:\n%s", s, frame)
+		}
+	}
+}
