@@ -543,6 +543,15 @@ func (p *SlotPool) Has(name string) bool {
 	return ok
 }
 
+// Config returns the resolved config of slot name (no provider is
+// built); ok=false for a name that is not a slot.
+func (p *SlotPool) Config(name string) (Config, bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	cfg, ok := p.cfgs[name]
+	return cfg, ok
+}
+
 // Provider returns the provider of slot name, building it the first
 // time. A slot that is not configured (no key) is an error that says
 // what is missing.

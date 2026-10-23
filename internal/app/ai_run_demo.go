@@ -77,6 +77,16 @@ func (m *Model) aiPipelineDemo(arg string) tea.Cmd {
 	return m.sendAIChat("review my last commit and fix what you find")
 }
 
+// aiDemoSlots are the two demo models: main is claude-sonnet-4-5 and
+// quick is gpt-5-mini (every demo screen uses the same two, so the
+// numbers agree between screens).
+func aiDemoSlots(main, quick ai.Provider) map[string]aiSlot {
+	return map[string]aiSlot{
+		ai.SlotMain:  {p: main, cfg: ai.Config{Kind: ai.KindAnthropic, Model: "claude-sonnet-4-5"}},
+		ai.SlotQuick: {p: quick, cfg: ai.Config{Kind: ai.KindOpenAI, Model: "gpt-5-mini"}},
+	}
+}
+
 // aiProfileDemo sets up the profile UI shots (dev action
 // "profiledemo:chip|picker|trust"): a sample chat with the "review"
 // profile active, the profile picker with an untrusted project profile,
@@ -97,6 +107,7 @@ func (m *Model) aiProfileDemo(arg string) tea.Cmd {
 				Tools: agentdag.ToolRule{Preset: agentdag.PresetAll}},
 		}}
 	s.profFake = []ai.Profile{house}
+	s.slotFake = aiDemoSlots(nil, nil) // the models the picker shows for each step
 	s.reloadProfiles()
 	s.profile = ai.ProfileReview
 	switch arg {

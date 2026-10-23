@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/mattn/go-runewidth"
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
@@ -138,33 +139,43 @@ func (m *Model) cycleAIProfile() tea.Cmd {
 	return nil
 }
 
-// aiProfileHint is a picker row's hint: where it comes from (a project
-// profile's trust first, so a narrow picker still shows it), title,
-// steps.
-func (m *Model) aiProfileHint(p ai.Profile) string {
-	var parts []string
+// aiProfileHint is a picker row's hint in at most cap cells: where it
+// comes from (a project profile's trust first, so a narrow picker still
+// shows it), then the pipeline: its steps in order with their models
+// (AU-1).
+func (m *Model) aiProfileHint(p ai.Profile, cap int) string {
+	var src string
 	switch p.Source {
 	case ai.ProfileSourceUser:
-		parts = append(parts, "yours")
+		src = "yours"
 	case ai.ProfileSourceProject:
 		switch m.aiProfileTrust(p) {
 		case aiTrustUse:
-			parts = append(parts, "project")
+			src = "project"
 		case aiTrustRefused:
-			parts = append(parts, "project, not used here")
+			src = "project, not used here"
 		default:
-			parts = append(parts, "project, asks first")
+			src = "project, asks first"
 		}
 	}
-	if p.Title != "" {
-		parts = append(parts, p.Title)
+	join := func(parts ...string) string { return strings.Join(nonEmpty(parts...), " · ") }
+	s := m.aiS()
+	room := func(prefix string) int {
+		if prefix == "" {
+			return cap
+		}
+		return cap - runewidth.StringWidth(prefix) - 3
 	}
-	if n := len(p.Steps); n == 1 {
-		parts = append(parts, "1 step")
-	} else {
-		parts = append(parts, fmt.Sprintf("%d steps", n))
-	}
-	return strings.Join(parts, " · ")
+	pipe := s.aiPipelineText(p, room(src))
+	return join(src, pipe)
+}
+
+// aiProfilePickerWidth is the width asked for the profile picker (the
+// hint column needs room for the pipeline) and the hint width that
+// leaves, as the picker computes it.
+func (m Model) aiProfilePickerWidth() (box, hint int) {
+	box = max(56, min(110, m.w-4))
+	return 110, (box - 2 - 4) / 2
 }
 
 // openAIProfilePicker is AI: Switch Profile… and a click on the chip.
@@ -172,11 +183,13 @@ func (m *Model) openAIProfilePicker() tea.Cmd {
 	s := m.aiS()
 	s.reloadProfiles()
 	var items []picker.Item
+	box, hint := m.aiProfilePickerWidth()
 	for _, n := range s.profiles.Names() {
 		p, _ := s.profiles.Get(n)
-		items = append(items, picker.Item{ID: n, Title: n, Hint: m.aiProfileHint(p)})
+		items = append(items, picker.Item{ID: n, Title: n, Hint: m.aiProfileHint(p, hint)})
 	}
 	m.picker = picker.NewItems(" "+aiSpark()+" AI Profile ", items)
+	m.picker.SetWidth(box)
 	m.picker.SetCursorID(s.activeProfile().Name)
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
