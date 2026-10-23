@@ -82,7 +82,7 @@ click it to come back. `· ✘ 1` means one service is unhealthy or exited.
 
 ## Local commands: `.termocode/services.json`
 
-**Services: Configure** (or `o` in an empty view) writes a commented
+**Containers: Configure Services** (or `o` in an empty view) writes a commented
 template:
 
 ```jsonc

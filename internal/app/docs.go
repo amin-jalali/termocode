@@ -445,7 +445,7 @@ func ConfigFileCatalog() []ConfigFile {
 			"Yes. Tasks: Configure Tasks creates it."},
 		{"workspace", ".termocode/services.json", "Local dev services for the Services view (and the compose file / profiles to use).",
 			"JSONC: `compose` {`file`, `profiles`, `project`}, `services` [{`name`, `command`, `cwd`, `env`, `port`, `health` {`tcp` | `http`}}].",
-			"Yes. Services: Configure creates it. A local command asks once before its first start."},
+			"Yes. Containers: Configure Services creates it. A local command asks once before its first start."},
 		{"workspace", launchJSONRel, "Debug and run configurations.",
 			"VS Code `launch.json` shape; comments allowed.", "Yes. Debug: Open launch.json creates it."},
 		{"workspace", ".termocode/mcp.json", "Project MCP servers. An entry with the same name as one in your mcp.json replaces it; `\"disabled\": true` hides it in this project.",

@@ -95,7 +95,7 @@ func (fc FileConfig) LocalServices() []Service {
 	return out
 }
 
-// Template is what "Services: Configure" writes.
+// Template is what "Containers: Configure Services" writes.
 const Template = `{
   // termocode services: local commands shown in the Services view.
   // Each one runs in its own terminal tab; x stops it (SIGTERM).

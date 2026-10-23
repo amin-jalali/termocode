@@ -39,7 +39,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Rename Chat… | `ai-history-rename` |   |   |
 | AI: Review Pending Changes | `ai-review` |   |   |
 | AI: Secret Store… | `secrets-store` |   |   |
-| AI: Services Trust... | `services-trust` |   |   |
+| AI: Services Trust… | `services-trust` |   |   |
 | AI: Sign in with Claude (OAuth, opt-in)… | `ai-sign-in-claude` |   |   |
 | AI: Sign out of Claude | `ai-sign-out-claude` |   |   |
 | AI: Stop Generating | `ai-cancel` |   |   |
@@ -74,17 +74,20 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Containers: Attach | `containers-attach` |   |   |
 | Containers: Browse Remote Tags… | `containers-browse-tags` |   |   |
+| Containers: Configure Services (services.json) | `services-configure` |   |   |
 | Containers: Connect Registry… | `containers-registry-connect` |   |   |
 | Containers: Copy ID | `containers-copy-id` |   |   |
 | Containers: Create Network… | `containers-network-create` |   |   |
 | Containers: Create Volume… | `containers-volume-create` |   |   |
 | Containers: Filter Rows… | `containers-filter` |   |   |
 | Containers: Focus | `containers-focus` |   |   |
+| Containers: Focus Project Services | `services-focus` |   |   |
 | Containers: Follow Logs | `containers-logs` |   |   |
 | Containers: Follow Stats | `containers-stats` |   |   |
 | Containers: Inspect | `containers-inspect` |   |   |
 | Containers: Inspect Image | `containers-image-inspect` |   |   |
 | Containers: Make Context Default… | `containers-context-default` |   |   |
+| Containers: Open Compose File | `services-open-compose` |   |   |
 | Containers: Open Guide | `containers-help` |   |   |
 | Containers: Open Published Port | `containers-open-port` |   |   |
 | Containers: Open Shell | `containers-shell` |   |   |
@@ -99,6 +102,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Push Selected Image… | `containers-image-push` |   |   |
 | Containers: Read Volume Disk Usage | `containers-volume-disk-usage` |   |   |
 | Containers: Refresh | `containers-refresh` |   |   |
+| Containers: Refresh Project Services | `services-refresh` |   |   |
 | Containers: Remove Project Containers… | `containers-compose-down` |   |   |
 | Containers: Remove Selected Image… | `containers-image-remove` |   |   |
 | Containers: Remove Selected Network… | `containers-network-remove` |   |   |
@@ -106,14 +110,20 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Containers: Remove Selected… | `containers-remove` |   |   |
 | Containers: Restart Project | `containers-compose-restart` |   |   |
 | Containers: Restart Selected | `containers-restart` |   |   |
+| Containers: Restart Service… | `services-restart` |   |   |
 | Containers: Run Selected Image… | `containers-image-run` |   |   |
 | Containers: Search Docker Hub… | `containers-search` |   |   |
 | Containers: Show Image History | `containers-image-history` |   |   |
+| Containers: Show Service Logs… | `services-logs` |   |   |
 | Containers: Sign Out of Registry… | `containers-registry-signout` |   |   |
+| Containers: Start All Services | `services-start-all` |   |   |
 | Containers: Start Project | `containers-compose-up` |   |   |
 | Containers: Start Selected | `containers-start` |   |   |
+| Containers: Start Service… | `services-start` |   |   |
+| Containers: Stop All Services | `services-stop-all` |   |   |
 | Containers: Stop Project | `containers-compose-stop` |   |   |
 | Containers: Stop Selected | `containers-stop` |   |   |
+| Containers: Stop Service… | `services-stop` |   |   |
 | Containers: Switch Context… | `containers-context-use` |   |   |
 | Containers: Tag Selected Image… | `containers-image-tag` |   |   |
 
@@ -411,21 +421,6 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Search: Go to Next Search Result | `search-next-result` | `F4` | `F4` |
 | Search: Go to Previous Search Result | `search-prev-result` | `Shift+F4` | `Shift+F4` |
 | Search: Replace in Workspace... | `replace-workspace` | `Ctrl+Shift+H` | `Ctrl+Shift+H` |
-
-## Services
-
-| Title | ID | Key | Hint |
-| --- | --- | --- | --- |
-| Services: Configure (services.json) | `services-configure` |   |   |
-| Services: Focus (Containers) | `services-focus` |   |   |
-| Services: Open Compose File | `services-open-compose` |   |   |
-| Services: Refresh | `services-refresh` |   |   |
-| Services: Restart Service... | `services-restart` |   |   |
-| Services: Show Logs... | `services-logs` |   |   |
-| Services: Start All | `services-start-all` |   |   |
-| Services: Start Service... | `services-start` |   |   |
-| Services: Stop All | `services-stop-all` |   |   |
-| Services: Stop Service... | `services-stop` |   |   |
 
 ## Session
 

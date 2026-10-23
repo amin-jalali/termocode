@@ -1266,10 +1266,10 @@ func (m *Model) handleServicesMenuSelect(id string) tea.Cmd {
 
 // ── Palette ──────────────────────────────────────────────────────────────
 
-// servicesPaletteItems are the "Services: …" palette rows.
+// servicesPaletteItems are the "Containers: …" palette rows (the panel's title).
 func servicesPaletteItems() []picker.Item {
 	return []picker.Item{
-		{ID: "services-focus", Title: "Services: Focus (Containers)"},
+		{ID: "services-focus", Title: "Containers: Focus Project Services"},
 		{ID: "containers-focus", Title: "Containers: Focus"},
 		{ID: "containers-refresh", Title: "Containers: Refresh"},
 		{ID: "containers-help", Title: "Containers: Open Guide"},
@@ -1314,16 +1314,16 @@ func servicesPaletteItems() []picker.Item {
 		{ID: "containers-compose-stop", Title: "Containers: Stop Project"},
 		{ID: "containers-compose-restart", Title: "Containers: Restart Project"},
 		{ID: "containers-compose-down", Title: "Containers: Remove Project Containers…"},
-		{ID: "services-start-all", Title: "Services: Start All"},
-		{ID: "services-stop-all", Title: "Services: Stop All"},
-		{ID: "services-start", Title: "Services: Start Service..."},
-		{ID: "services-stop", Title: "Services: Stop Service..."},
-		{ID: "services-restart", Title: "Services: Restart Service..."},
-		{ID: "services-logs", Title: "Services: Show Logs..."},
-		{ID: "services-refresh", Title: "Services: Refresh"},
-		{ID: "services-configure", Title: "Services: Configure (services.json)"},
-		{ID: "services-open-compose", Title: "Services: Open Compose File"},
-		{ID: "services-trust", Title: "AI: Services Trust..."},
+		{ID: "services-start-all", Title: "Containers: Start All Services"},
+		{ID: "services-stop-all", Title: "Containers: Stop All Services"},
+		{ID: "services-start", Title: "Containers: Start Service…"},
+		{ID: "services-stop", Title: "Containers: Stop Service…"},
+		{ID: "services-restart", Title: "Containers: Restart Service…"},
+		{ID: "services-logs", Title: "Containers: Show Service Logs…"},
+		{ID: "services-refresh", Title: "Containers: Refresh Project Services"},
+		{ID: "services-configure", Title: "Containers: Configure Services (services.json)"},
+		{ID: "services-open-compose", Title: "Containers: Open Compose File"},
+		{ID: "services-trust", Title: "AI: Services Trust…"},
 	}
 }
 

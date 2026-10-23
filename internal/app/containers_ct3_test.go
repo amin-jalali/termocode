@@ -127,3 +127,30 @@ func TestCT11NoEngineOneText(t *testing.T) {
 		t.Error("the AI still hears the old text")
 	}
 }
+
+// CT-12: one panel, one palette prefix: "Containers:" (the panel's title),
+// and "…" instead of three dots. The IDs do not change.
+func TestCT12PaletteTitlesOnePrefix(t *testing.T) {
+	seen := map[string]string{}
+	for _, it := range servicesPaletteItems() {
+		if strings.HasPrefix(it.Title, "Services:") {
+			t.Errorf("%s: title %q keeps the old prefix", it.ID, it.Title)
+		}
+		if strings.Contains(it.Title, "...") {
+			t.Errorf("%s: title %q has ASCII dots", it.ID, it.Title)
+		}
+		if other, dup := seen[it.Title]; dup {
+			t.Errorf("%s and %s share the title %q", it.ID, other, it.Title)
+		}
+		seen[it.Title] = it.ID
+	}
+	ids := map[string]bool{}
+	for _, it := range servicesPaletteItems() {
+		ids[it.ID] = true
+	}
+	for _, id := range []string{"services-focus", "services-start-all", "services-start", "services-trust", "services-configure"} {
+		if !ids[id] {
+			t.Errorf("palette ID %s is gone", id)
+		}
+	}
+}

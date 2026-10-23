@@ -1583,17 +1583,17 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `secrets-passphrase` | AI: Change Secrets Passphrase… | never | AI provider, credentials and approvals stay with the user |
 | `secrets-store` | AI: Secret Store… | never | AI provider, credentials and approvals stay with the user |
 | `secrets-unlock` | AI: Unlock Secrets | never | AI provider, credentials and approvals stay with the user |
-| `services-configure` | Services: Configure (services.json) | confirm (ide) |   |
-| `services-focus` | Services: Focus (Containers) | auto |   |
-| `services-logs` | Services: Show Logs... | never | opens a picker or prompt that only the user can answer; use a typed tool (services_logs) |
-| `services-open-compose` | Services: Open Compose File | auto |   |
-| `services-refresh` | Services: Refresh | auto |   |
-| `services-restart` | Services: Restart Service... | never | opens a picker or prompt that only the user can answer; use a typed tool (services_restart) |
-| `services-start` | Services: Start Service... | never | opens a picker or prompt that only the user can answer; use a typed tool (services_start) |
-| `services-start-all` | Services: Start All | confirm (services) |   |
-| `services-stop` | Services: Stop Service... | never | opens a picker or prompt that only the user can answer; use a typed tool (services_stop) |
-| `services-stop-all` | Services: Stop All | confirm (services) |   |
-| `services-trust` | AI: Services Trust... | never | AI provider, credentials and approvals stay with the user |
+| `services-configure` | Containers: Configure Services (services.json) | confirm (ide) |   |
+| `services-focus` | Containers: Focus Project Services | auto |   |
+| `services-logs` | Containers: Show Service Logs… | never | opens a picker or prompt that only the user can answer; use a typed tool (services_logs) |
+| `services-open-compose` | Containers: Open Compose File | auto |   |
+| `services-refresh` | Containers: Refresh Project Services | auto |   |
+| `services-restart` | Containers: Restart Service… | never | opens a picker or prompt that only the user can answer; use a typed tool (services_restart) |
+| `services-start` | Containers: Start Service… | never | opens a picker or prompt that only the user can answer; use a typed tool (services_start) |
+| `services-start-all` | Containers: Start All Services | confirm (services) |   |
+| `services-stop` | Containers: Stop Service… | never | opens a picker or prompt that only the user can answer; use a typed tool (services_stop) |
+| `services-stop-all` | Containers: Stop All Services | confirm (services) |   |
+| `services-trust` | AI: Services Trust… | never | AI provider, credentials and approvals stay with the user |
 | `settings-export` | Preferences: Export termocode Settings File… | never | settings import / export stays with the user |
 | `settings-import` | Preferences: Import termocode Settings File… | never | settings import / export stays with the user |
 | `setup-show-card` | Setup: Show Setup Card | auto |   |
