@@ -344,6 +344,23 @@ func (m *Model) containersDemo(variant string) {
 		script += "; read _wait" // sh is the only tool the golden PATH has: wait on the terminal
 		cmd := services.Command{Argv: []string{"sh", "-c", script}, Label: "logs: " + containerShownName(st.containerRows[0])}
 		_ = m.servicesRunCommand(cmd, containerTabPrefix+"logs:"+st.containerRows[0].ID)
+	case "inspect": // the read-only inspect page of postgres: canned JSON
+		m.onContainerInspect(containerInspectMsg{id: st.containerRows[0].ID, text: `{
+  "Id": "9f3c2e1a",
+  "Name": "/termocode-postgres-1",
+  "State": {
+    "Status": "running",
+    "Running": true,
+    "Health": { "Status": "healthy" }
+  },
+  "Config": {
+    "Image": "postgres:16",
+    "Env": ["POSTGRES_DB=app", "POSTGRES_PASSWORD=[REDACTED]"]
+  },
+  "NetworkSettings": {
+    "Ports": { "5432/tcp": [{ "HostIp": "0.0.0.0", "HostPort": "5432" }] }
+  }
+}`})
 	case "db-menu": // the row menu of the postgres compose service
 		m.openServicesMenu(svcRow{kind: svcRowService, section: svcSecCompose, name: "postgres"}, activity.Width+6, 6)
 	case "db-container-menu": // the row menu of the postgres container

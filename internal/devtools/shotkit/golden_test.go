@@ -133,6 +133,8 @@ func ctCardScenes() []Scene {
 		// The AI asks to stop a container: name and 12-char id.
 		ContainersVariant("containers-ai-card", "ai-card"),
 		// Follow logs: a terminal tab with canned lines.
+		// Inspect: the read-only JSON page in the editor.
+		{Name: "containers-inspect", Steps: WithEditor(Act("contdemo:inspect"), Pause(1000*time.Millisecond))},
 		{Name: "containers-logs", Steps: WithEditor(Act("contdemo:logs"), Pause(1500*time.Millisecond))},
 	}
 }
