@@ -203,8 +203,10 @@ func TestDatabaseSidebarFooterFitsOrEndsWithKeysHint(t *testing.T) {
 				t.Errorf("w=%d: empty-state footer cut: %q", w, line)
 			}
 		}
-		if got := strings.Join(out[len(out)-2:], "\n"); !strings.Contains(got, "No databases yet") && w >= 29 {
-			t.Errorf("w=%d: empty-state footer lost its text: %q", w, got)
+		// C-5: the empty state is in the body (title, sentence, button); the
+		// footer repeats none of it.
+		if got := strings.Join(out, "\n"); !strings.Contains(got, "No databases yet") && w >= 29 {
+			t.Errorf("w=%d: the empty state lost its title: %q", w, got)
 		}
 	}
 }

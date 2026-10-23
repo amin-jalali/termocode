@@ -4,8 +4,11 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/amin-jalali/termocode/internal/containers"
+	"github.com/amin-jalali/termocode/internal/services"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -43,5 +46,78 @@ func TestEmptyPanelsUseEmptyState(t *testing.T) {
 	out := ansi.Strip(strings.Join(scmNotRepoEmpty(30, 20), "\n"))
 	if !strings.Contains(out, "Not a git repository") || !strings.Contains(out, theme.IconGit.String()) {
 		t.Errorf("SCM empty state:\n%s", out)
+	}
+}
+
+// C-5: an empty or error state is a title, one plain sentence and the
+// action as a labelled button with its key.
+func TestEmptyStateIsTitleSentenceButton(t *testing.T) {
+	es := emptyState{Title: "No databases yet", Hint: "Add a connection, or put DATABASE_URL in .env.", Key: "a", Label: "Add connection"}
+	rows := renderEmptyState(60, 12, theme.BgSidebar, es)
+	var lines []string
+	for _, r := range rows {
+		if l := strings.TrimSpace(ansi.Strip(r)); l != "" {
+			lines = append(lines, l)
+		}
+	}
+	want := []string{"No databases yet", "Add a connection, or put DATABASE_URL in .env.", "[Add connection (a)]"}
+	if strings.Join(lines, "|") != strings.Join(want, "|") {
+		t.Errorf("empty state = %q, want %q", lines, want)
+	}
+}
+
+// C-5: Databases without connections uses the pattern; a click on it opens
+// the add picker; the footer does not say the same again.
+func TestDatabasesEmptyStatePattern(t *testing.T) {
+	withConfigDir(t)
+	s := newDBState()
+	s.loaded = true
+	m := dbTestModel(s)
+	m.w, m.h, m.explorerWidth = 100, 30, 40
+	out := stripSGRForTest(m.renderDatabasesSidebarRaw(39, 20, true))
+	flat := strings.Join(strings.Fields(out), " ") // the sentence wraps in a narrow sidebar
+	for _, want := range []string{"No databases yet", "Add a connection, or put DATABASE_URL in .env.", "[Add connection (a)]"} {
+		if !strings.Contains(flat, want) {
+			t.Errorf("empty Databases lacks %q:\n%s", want, out)
+		}
+	}
+	if strings.Count(out, "No databases yet") != 1 {
+		t.Errorf("the title is there more than once:\n%s", out)
+	}
+	clicked, _ := m.handleDatabasesSidebarMouse(10, 12, tea.MouseLeft)
+	if !clicked.pickerOpen {
+		t.Error("a click on the empty state did not open the add picker")
+	}
+}
+
+// C-5: no Docker is a title, a sentence and the Retry button with its key,
+// in the PROJECT part and in every host section.
+func TestContainersErrorStatesAreTitleSentenceButton(t *testing.T) {
+	st := svcHostState()
+	st.containerEngine = containers.Engine{}
+	rows := st.hostSectionBody("containers")
+	if len(rows) != 3 || rows[0].kind != svcRowNote || rows[1].kind != svcRowHint || rows[2].kind != svcRowRetry {
+		t.Fatalf("engine missing rows: %+v", rows)
+	}
+	st = svcHostState()
+	st.problem = services.Problem{Kind: services.ProblemDaemonDown}
+	rows = st.problemRows()
+	if len(rows) != 3 || rows[0].text != "Docker is not running" || rows[1].kind != svcRowHint || rows[2].kind != svcRowRetry {
+		t.Fatalf("daemon down rows: %+v", rows)
+	}
+	if got := ansi.Strip(renderServiceRetry(rows[2], false, true, 29)); !strings.Contains(got, "Retry (R)]") || strings.Contains(got, "[ ") {
+		t.Errorf("the Retry button is not a labelled button with its key: %q", got)
+	}
+}
+
+// C-5: the "No services" card is the same pattern.
+func TestServicesEmptyCardButton(t *testing.T) {
+	st := newServicesState()
+	st.loaded = true
+	st.containerDetected = true
+	m := svcTestModel(st, 100, 30)
+	got := ansi.Strip(m.renderServicesSidebarRaw(35, 30, false, svcTestNow, -1, -1))
+	if !strings.Contains(got, "[Create services.json (o)]") {
+		t.Errorf("button:\n%s", got)
 	}
 }

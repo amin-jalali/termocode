@@ -10,13 +10,19 @@ import (
 )
 
 // emptyState is what a panel shows when it has nothing to list (UI review
-// #10): one look everywhere instead of a different sentence per panel.
+// #10): one look everywhere instead of a different sentence per panel. An
+// empty or error state is always: a title, one plain sentence, then the
+// action as a labelled button with its key, for example
+//
+//	No databases yet
+//	Add a connection, or put DATABASE_URL in .env.
+//	[Add connection (a)]
 type emptyState struct {
 	Glyph theme.Icon // drawn dim above the title; zero = none
 	Title string     // short, e.g. "No problems"
 	Hint  string     // one sentence: what to do
 	Key   string     // optional key to press, shown as a keycap ("f8")
-	Label string     // optional name of the action, shown before the keycap
+	Label string     // optional name of the action: with Key it is drawn as a button, [Label (key)]
 }
 
 // renderEmptyState draws es centred in w×h cells on bgTok: exactly h rows,
@@ -45,7 +51,7 @@ func renderEmptyState(w, h int, bgTok theme.Color256, es emptyState) []string {
 	if es.Key != "" {
 		cap := theme.Keycap(es.Key, theme.LG(bgTok))
 		if es.Label != "" {
-			cap = theme.FgBg(theme.TextSecondary, bgTok).Render(es.Label+" ") + cap
+			cap = theme.FgBg(theme.TextPrimary, bgTok).Bold(true).Render("[" + es.Label + " (" + es.Key + ")]")
 		}
 		key = []string{center(""), center(cap)}
 	}

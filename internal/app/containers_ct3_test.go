@@ -101,12 +101,13 @@ func TestCT7OneNameEverywhere(t *testing.T) {
 }
 
 // CT-11: no Docker or Podman is said the same way in PROJECT (compose
-// problem) and in CONTAINERS: one note, one two-line hint.
+// problem) and in CONTAINERS: one note, one plain sentence and the Retry
+// button (C-5: title, sentence, button with its key).
 func TestCT11NoEngineOneText(t *testing.T) {
 	st := svcHostState()
 	st.problem = services.Problem{Kind: services.ProblemNoDocker}
 	got := st.problemRows()
-	want := []string{"No container engine", "Install Docker or Podman,", "then press R to retry"}
+	want := []string{"No container engine", "Install Docker or Podman.", "Retry"}
 	if len(got) != len(want) {
 		t.Fatalf("PROJECT rows: %+v", got)
 	}

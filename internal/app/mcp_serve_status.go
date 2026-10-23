@@ -207,26 +207,27 @@ func mcpServeCallRow(line string) (string, bool) {
 	return at[:5] + " " + by + " · " + tool + " · " + what, true
 }
 
-// mcpServeNotListeningWhy says why nothing listens, in plain words.
-func (m *Model) mcpServeNotListeningWhy() string {
+// mcpServeNotListeningWhy says why nothing listens, in plain words: a
+// title and one sentence (the error state of the screen, C-5).
+func (m *Model) mcpServeNotListeningWhy() (title, sentence string) {
 	switch mcpServeMode() {
 	case "off":
-		return "Not listening. The MCP server is turned off."
+		return "Not listening", "The MCP server is turned off."
 	}
 	if m.mcpServeStopped {
-		return "Not listening. You stopped it for this session."
+		return "Not listening", "You stopped it for this session."
 	}
 	switch mcpServeMode() {
 	case "on":
 		if m.mcpServeErr != "" {
-			return "Not listening. It could not start: " + aiCleanText(m.mcpServeErr)
+			return "Not listening", "It could not start: " + aiCleanText(m.mcpServeErr)
 		}
-		return "Not listening. It did not start."
+		return "Not listening", "It did not start."
 	}
 	if m.mcpServeErr != "" {
-		return "Not listening. It could not start: " + aiCleanText(m.mcpServeErr)
+		return "Not listening", "It could not start: " + aiCleanText(m.mcpServeErr)
 	}
-	return "Not listening yet. It starts when you start an agent tab."
+	return "Not listening yet", "It starts when you start an agent tab."
 }
 
 // mcpServeNotListeningAction is the row that fixes it: turn it on when it
@@ -234,11 +235,11 @@ func (m *Model) mcpServeNotListeningWhy() string {
 func (m *Model) mcpServeNotListeningAction() picker.Item {
 	switch {
 	case mcpServeMode() == "off":
-		return picker.Item{ID: "serve-on", Title: "Turn on", Hint: "let outside agents connect"}
+		return picker.Item{ID: "serve-on", Title: "Turn on", Hint: "Enter · let outside agents connect"}
 	case m.mcpServeErr != "":
-		return picker.Item{ID: "serve-start", Title: "Try again", Hint: "start listening"}
+		return picker.Item{ID: "serve-start", Title: "Try again", Hint: "Enter · start listening"}
 	}
-	return picker.Item{ID: "serve-start", Title: "Start listening now", Hint: "for this session"}
+	return picker.Item{ID: "serve-start", Title: "Start listening now", Hint: "Enter · for this session"}
 }
 
 func mcpServePlural(n int, one, many string) string {
@@ -255,7 +256,12 @@ func (m *Model) mcpServeStatusItems() []picker.Item {
 	head := func(title string) { items = append(items, picker.Item{Header: true, Title: title}) }
 	st := m.mcpServe
 	if st == nil {
-		info(m.mcpServeNotListeningWhy())
+		// The error state: a title, one sentence, then the button with its
+		// key (the screen opens on it, so Enter runs it).
+		title, sentence := m.mcpServeNotListeningWhy()
+		head(title)
+		info(sentence)
+		items = append(items, m.mcpServeNotListeningAction())
 	} else {
 		n := len(st.clients)
 		who := "no agent connected"
@@ -285,9 +291,7 @@ func (m *Model) mcpServeStatusItems() []picker.Item {
 		}
 	}
 	head("Actions")
-	if st == nil {
-		items = append(items, m.mcpServeNotListeningAction())
-	} else {
+	if st != nil {
 		items = append(items, picker.Item{ID: "serve-stop", Title: "Stop listening", Hint: "for this session"})
 	}
 	items = append(items,
@@ -308,6 +312,9 @@ func (m *Model) openMCPServeStatus() tea.Cmd {
 	m.picker = picker.NewItems(" MCP server status ", m.mcpServeStatusItems())
 	m.picker.SetWidth(mcpServeStatusWidth(m.w))
 	m.picker.SetSize(m.w, m.h)
+	if m.mcpServe == nil { // not listening: the cursor is on the button that fixes it
+		m.picker.SetCursorID(m.mcpServeNotListeningAction().ID)
+	}
 	m.pickerOpen = true
 	m.pickerKind = pickerKindMCPServeStatus
 	return nil

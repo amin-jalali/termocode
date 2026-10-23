@@ -80,12 +80,12 @@ func TestDatabasesFindContainersWithoutServicesView(t *testing.T) {
 func TestDatabasesEmptyStateButtonsAreClickable(t *testing.T) {
 	d := dbDriver(t, nil, nil)
 	d.Palette("db-focus")
-	if !d.WaitForText("a add connection", 3*time.Second) || !strings.Contains(screen(d), "Add remote") {
+	if !d.WaitForText("Add connection (a)", 3*time.Second) || !strings.Contains(screen(d), "Add remote") {
 		t.Fatalf("empty state lacks its actions:\n%s", screen(d))
 	}
-	dbSingle(t, d, "a add connection")
+	dbSingle(t, d, "Add connection (a)")
 	if !d.WaitForText("PostgreSQL", 3*time.Second) {
-		t.Fatalf("a click on 'a add connection' did not open the type picker:\n%s", screen(d))
+		t.Fatalf("a click on 'Add connection (a)' did not open the type picker:\n%s", screen(d))
 	}
 	d.Key("esc")
 	dbSingle(t, d, "Add remote")

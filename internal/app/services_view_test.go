@@ -75,7 +75,7 @@ func TestServicesRows(t *testing.T) {
 	}
 	st.collapsed[svcSecCompose] = false
 	st.problem = services.Problem{Kind: services.ProblemDaemonDown}
-	if got := svcRowsText(st); !strings.HasPrefix(got, "#compose,!Docker is not running,!Retry,postgres") {
+	if got := svcRowsText(st); !strings.HasPrefix(got, "#compose,!Docker is not running,!Start it, then try again.,!Retry,postgres") {
 		t.Errorf("daemon down rows = %s", got)
 	}
 	if s := st.statusOf(svcSecCompose, "postgres"); s.State != services.Unknown {

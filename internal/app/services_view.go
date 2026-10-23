@@ -140,11 +140,11 @@ func (st *servicesState) problemRows() []svcRow {
 	p := st.problem
 	switch p.Kind {
 	case services.ProblemNoDocker:
-		return []svcRow{note(engineMissingNote), hint(engineMissingHint1), hint(engineMissingHint2)}
+		return engineMissingRows(svcSecCompose)
 	case services.ProblemNoCompose:
 		return []svcRow{note("Docker Compose v2 is needed"), hint("Update Docker · R retry")}
 	case services.ProblemDaemonDown:
-		return []svcRow{note("Docker is not running"), retryRow(svcSecCompose)}
+		return []svcRow{note("Docker is not running"), hint("Start it, then try again."), retryRow(svcSecCompose)}
 	case services.ProblemNoPermission:
 		return []svcRow{note("No access to the Docker socket"),
 			{kind: svcRowCode, section: svcSecCompose, text: svcPermissionFix},
@@ -469,11 +469,15 @@ func renderServiceNote(r svcRow, w int) string {
 	return clampSidebarRow(s, runewidth.StringWidth(lead)+runewidth.StringWidth(text), w, row)
 }
 
-// renderServiceRetry draws the Retry button row: "↻ Retry (R)".
+// renderServiceRetry draws the Retry button row: "[↻ Retry (R)]".
 func renderServiceRetry(r svcRow, active, focused bool, w int) string {
 	bg := gitSelBg(active, focused)
 	row := lipgloss.NewStyle().Background(bg)
-	text := theme.GlyphRefresh.String() + " " + r.text + " (R)"
+	glyph := theme.GlyphRefresh.String()
+	if glyph != "" {
+		glyph += " "
+	}
+	text := "[" + glyph + r.text + " (R)]"
 	text = runewidth.Truncate(text, max(w-4, 1), "…")
 	s := row.Render("   ") + lipgloss.NewStyle().Background(bg).Foreground(theme.LG(theme.TextPrimary)).Render(text)
 	return clampSidebarRow(s, 3+runewidth.StringWidth(text), w, row)

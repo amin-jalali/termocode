@@ -64,16 +64,8 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 	start := s.scroll
 	redisTypes := map[string]bool{} // the key types on screen, for the legend
 	if noConns && len(rows) == 0 {
-		hint := append([]string{"No databases yet"}, wrapPlain("Put DATABASE_URL in .env or start a database container.", max(w-4, 8))...)
-		for i, l := range hint {
-			style := theme.FgBg(theme.TextDim, theme.BgSidebar)
-			if i == 0 {
-				style = theme.FgBg(theme.TextSecondary, theme.BgSidebar).Bold(true)
-			}
-			if i < available {
-				lines = append(lines, testsPad(style.Render("  "+l), w))
-			}
-		}
+		// The one pattern of an empty state: title, a plain sentence, the button.
+		lines = append(lines, renderEmptyState(w, available, theme.BgSidebar, dbEmptyState())...)
 	}
 	if s.filter != "" && !noConns && !dbHasSelectable(rows) && available > 0 {
 		// Nothing matches: say so, and how to get the rows back.
@@ -158,7 +150,9 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 	for len(lines) < h-2 {
 		lines = append(lines, fill())
 	}
-	if len(rows) > 0 && s.cursor >= 0 && s.cursor < len(rows) {
+	if noConns && len(rows) == 0 {
+		lines = append(lines, fill(), fill()) // the empty state above says it all
+	} else if len(rows) > 0 && s.cursor >= 0 && s.cursor < len(rows) {
 		r := rows[s.cursor]
 		name := r.name
 		if n := s.nodes[r.path]; n.kind == dbNodeRedisKey || n.kind == dbNodeRedisNS {
@@ -172,6 +166,8 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 			footer = dbFitFooter(footer, max(w-2, 1))
 		}
 		lines = append(lines, testsPad(muted("  "+sanitizeDBText(name)), w), testsPad(muted("  "+footer), w))
+	} else if s.filter != "" {
+		lines = append(lines, testsPad(muted("  "+dbFitFooter("Esc clears the filter", max(w-2, 1))), w), fill())
 	} else {
 		lines = append(lines, testsPad(muted("  "+dbFitFooter("No databases yet · a add", max(w-2, 1))), w), testsPad(muted("  "+dbFitFooter(".db and .env URLs show here", max(w-2, 1))), w))
 	}
@@ -179,6 +175,11 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 		lines = append(lines, fill())
 	}
 	return strings.Join(lines[:h], "\n")
+}
+
+// dbEmptyState is the Databases view without connections.
+func dbEmptyState() emptyState {
+	return emptyState{Title: "No databases yet", Hint: "Add a connection, or put DATABASE_URL in .env.", Key: "a", Label: "Add connection"}
 }
 
 // dbHasSelectable reports whether rows has a row to move to.
@@ -508,6 +509,9 @@ func (m Model) handleDatabasesSidebarMouse(x, y int, t tea.MouseEventType) (Mode
 		return m, nil
 	}
 	rows := m.databases.rows()
+	if len(m.databases.conns) == 0 && len(rows) == 0 && t == tea.MouseLeft {
+		return m, m.openDatabaseTypePicker() // the empty state's [Add connection (a)]
+	}
 	index := m.databases.scroll
 	for line := 0; index < len(rows); index++ {
 		line += dbRowHeight(rows[index], m.explorerWidth-1)

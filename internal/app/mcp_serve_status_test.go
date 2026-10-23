@@ -378,3 +378,31 @@ func TestMCPServeStatusTitleIsPlain(t *testing.T) {
 		t.Errorf("the footer has no Enter hint:\n%s", view)
 	}
 }
+
+// C-5: not listening is a title, one plain sentence and then the button with
+// its key; the screen opens on that button, so Enter runs it.
+func TestMCPServeStatusNotListeningIsTitleSentenceButton(t *testing.T) {
+	m, _, _ := mcpServeTestModel(t)
+	m.mcpServe = nil
+	cfg, _ := settingsConfigPath()
+	_ = os.MkdirAll(filepath.Dir(cfg), 0o755)
+	if err := os.WriteFile(cfg, []byte(`{"mcp_server":"off"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	items := m.mcpServeStatusItems()
+	if len(items) < 3 || !items[0].Header || items[0].Title != "Not listening" ||
+		items[1].ID != "" || items[1].Title != "The MCP server is turned off." ||
+		items[2].ID != "serve-on" || !strings.Contains(items[2].Hint, "Enter") {
+		t.Fatalf("rows: %+v", items[:min(3, len(items))])
+	}
+	for _, it := range items[3:] {
+		if it.ID == "serve-on" || it.ID == "serve-start" {
+			t.Errorf("the button is there twice: %+v", it)
+		}
+	}
+	m.w, m.h = 100, 30
+	m.openMCPServeStatus()
+	if it, ok := m.picker.Current(); !ok || it.ID != "serve-on" {
+		t.Errorf("the screen does not open on the button: %+v", it)
+	}
+}

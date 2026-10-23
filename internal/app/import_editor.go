@@ -179,12 +179,17 @@ func (m *Model) openImportPicker() tea.Cmd {
 		for i, src := range srcs {
 			items = append(items, picker.Item{ID: "import-src-" + strconv.Itoa(i), Title: src.Title, Hint: importSourceHint(src)})
 		}
-		return append(items, picker.Item{ID: importFileID, Title: importFileTitle,
-			Hint: importFileHint})
+		hint := importFileHint
+		if len(srcs) == 0 {
+			hint = "Enter · " + importFileHint // the only row is the button of the empty state
+		}
+		return append(items, picker.Item{ID: importFileID, Title: importFileTitle, Hint: hint})
 	})
 	m.picker.SetWidth(96)
 	if len(srcs) == 0 {
-		m.picker.SetNote([]string{"No other editor found on this computer. You can pick a file instead."})
+		// The empty state: a title, one plain sentence, and the row below is
+		// its button.
+		m.picker.SetNote([]string{"No other editor found", "Pick a settings or keymap file instead."})
 	} else {
 		m.picker.SetNote([]string{"Pick an editor. You see every change before anything is written."})
 	}

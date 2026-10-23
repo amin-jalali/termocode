@@ -50,10 +50,19 @@ func hostSectionTitle(section string) string { return strings.ToUpper(section) }
 // engineTitle is "Docker" / "Podman" for messages.
 // The one text for "no Docker or Podman on this machine", in every section.
 const (
-	engineMissingNote  = "No container engine"
-	engineMissingHint1 = "Install Docker or Podman,"
-	engineMissingHint2 = "then press R to retry"
+	engineMissingNote = "No container engine"
+	engineMissingHint = "Install Docker or Podman."
 )
+
+// engineMissingRows is the one error state of "no Docker or Podman": a
+// title, one plain sentence and the Retry button with its key (C-5).
+func engineMissingRows(section string) []svcRow {
+	return []svcRow{
+		{kind: svcRowNote, section: section, text: engineMissingNote},
+		{kind: svcRowHint, section: section, text: engineMissingHint},
+		retryRow(section),
+	}
+}
 
 func (st *servicesState) engineTitle() string {
 	k := st.containerEngine.Kind
@@ -116,7 +125,7 @@ func (st *servicesState) hostSectionBody(sec string) []svcRow {
 		return []svcRow{hint("Loading…")}
 	}
 	if st.containerEngine.Binary == "" {
-		return []svcRow{note(engineMissingNote), hint(engineMissingHint1), hint(engineMissingHint2)}
+		return engineMissingRows(key)
 	}
 	if sec == "contexts" {
 		return st.contextSectionBody(key)

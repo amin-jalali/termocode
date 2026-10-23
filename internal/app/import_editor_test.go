@@ -167,8 +167,16 @@ func TestImportPickerWithoutEditorsSaysSo(t *testing.T) {
 	if !m.pickerOpen || m.importOpen {
 		t.Fatal("no picker with nothing detected")
 	}
-	if frame := ansi.Strip(m.View()); !strings.Contains(frame, "No other editor found") {
+	frame := ansi.Strip(m.View())
+	if !strings.Contains(frame, "No other editor found") {
 		t.Errorf("picker note missing:\n%s", frame)
+	}
+	// C-5: a title, one plain sentence, and the only row is the button with its key.
+	pickerItems(t, &m) // the rows load
+	frame = ansi.Strip(m.View())
+	i, j, k := strings.Index(frame, "No other editor found"), strings.Index(frame, "Pick a settings or keymap file instead."), strings.Index(frame, "From a file…")
+	if !(i >= 0 && j > i && k > j) || !strings.Contains(frame, "Enter · a settings or keymap file") {
+		t.Errorf("not title, sentence, button:\n%s", frame)
 	}
 }
 
