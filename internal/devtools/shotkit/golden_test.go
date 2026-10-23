@@ -278,6 +278,10 @@ func goldenCases() []goldenCase {
 	for _, sc := range []Scene{ImportPicker(), ImportPanel(), ImportPickerEmpty(), ImportFilePrompt(), ImportConfirm(), ImportUndo(), ImportSetupRow(), ImportSnippets()} {
 		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
+	// The common middle window (100x30) for the import screens.
+	for _, sc := range []Scene{ImportPicker(), ImportPanel(), ImportConfirm(), ImportSetupRow()} {
+		out = append(out, goldenCase{sc.Name + "-100x30", sc, 100, 30})
+	}
 	// The review panel in a light theme and in ASCII icons.
 	{
 		sc := ImportPanel()
