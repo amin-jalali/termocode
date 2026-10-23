@@ -88,9 +88,14 @@ func (m *Model) importDemo(variant string) tea.Cmd {
 		if m.setup == nil {
 			return nil
 		}
+		// The sample folder is named, not detected (see importDemoPanel).
 		s := m.setupS()
-		s.importProbed, s.importProbing = false, false
-		return m.setupImportProbeCmd()
+		s.importProbing, s.importProbed, s.importFound = false, true, nil
+		src := importDemoSource(root)
+		if parts, err := importSourceParts(src); err == nil && parts != "" {
+			s.importFound = []setupEditor{{title: src.Title, parts: parts}}
+		}
+		return nil
 	case "panel":
 		return m.importDemoPanel()
 	case "confirm":
@@ -111,7 +116,7 @@ func (m *Model) importDemoPanel() tea.Cmd {
 	if root == "" {
 		return nil
 	}
-	src := migrate.Source{ID: "vscode", Title: "VS Code", Dir: filepath.Join(root, "Code", "User"), Files: []string{"settings.json", "keybindings.json"}}
+	src := importDemoSource(root)
 	doc, err := migrate.Read(src)
 	if err != nil {
 		return nil
@@ -121,4 +126,9 @@ func (m *Model) importDemoPanel() tea.Cmd {
 		return nil
 	}
 	return m.onImportPlan(importPlanMsg{plan: migrate.Build(src, doc, cur)})
+}
+
+// importDemoSource is the VS Code sample the demo writes under root.
+func importDemoSource(root string) migrate.Source {
+	return migrate.Source{ID: "vscode", Title: "VS Code", Dir: filepath.Join(root, "Code", "User"), Files: []string{"settings.json", "keybindings.json"}}
 }
