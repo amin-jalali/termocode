@@ -71,3 +71,14 @@ func TestCommandLineAt(t *testing.T) {
 		t.Errorf("no command: %d", got)
 	}
 }
+
+// IM-13: a "Files: …" line is the technical last line of a card, drawn quiet
+// like a command line.
+func TestFilesLineIsQuiet(t *testing.T) {
+	if at := commandLineAt([]string{"Puts your settings back.", "", "Files: config.json"}); at != 2 {
+		t.Errorf("Files line at %d, want 2", at)
+	}
+	if at := commandLineAt([]string{"Files:", "Filesystem"}); at != -1 {
+		t.Errorf("a line that only starts like it: %d", at)
+	}
+}

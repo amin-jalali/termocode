@@ -124,11 +124,12 @@ func (m Model) fullTextLines() []string {
 }
 
 // commandLineAt is the index of the first body line that starts the exact
-// command ("Command: ..."), or -1. By convention the command is the last
-// part of a message; it is drawn in a quiet colour.
+// command ("Command: ...") or the file names ("Files: ..."), or -1. By
+// convention these are the last part of a message: the plain words come
+// first and the technical line is drawn in a quiet colour.
 func commandLineAt(lines []string) int {
 	for i, l := range lines {
-		if strings.HasPrefix(l, "Command: ") {
+		if strings.HasPrefix(l, "Command: ") || strings.HasPrefix(l, "Files: ") {
 			return i
 		}
 	}

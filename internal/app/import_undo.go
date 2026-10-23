@@ -61,6 +61,32 @@ func importFileNames(man importManifest) string {
 	return strings.Join(names, " and ")
 }
 
+// importFileWords says what a backup's files hold in plain words
+// ("settings, key bindings and theme"), in the order of the import card.
+func importFileWords(man importManifest) string {
+	has := map[string]bool{}
+	for _, f := range man.Files {
+		has[f.Name] = true
+	}
+	var words []string
+	if has["config.json"] {
+		words = append(words, "settings")
+	}
+	if has["keymap.json"] {
+		words = append(words, "key bindings")
+	}
+	if has["config.json"] {
+		words = append(words, "theme")
+	}
+	if has["snippets.json"] {
+		words = append(words, "snippets")
+	}
+	if len(words) == 0 {
+		return "files"
+	}
+	return importList(words)
+}
+
 // importUndoClickMsg is what a click on the "Imported from …" toast sends:
 // it opens the same Undo card as the palette command, so nothing is undone
 // without the confirm.
@@ -78,8 +104,11 @@ func (m *Model) undoLastImport() tea.Cmd {
 		return c
 	}
 	when := man.Time.Local().Format("2006-01-02 15:04")
-	body := fmt.Sprintf("Puts back %s as they were before the import from %s on %s.\n\n"+
-		"Changes you made to these files after the import are undone too.", importFileNames(man), man.Source, when)
+	// Plain words first, like the import card; the file names only in the
+	// last, quiet line.
+	body := fmt.Sprintf("Puts your %s back as they were before the import from %s on %s.\n\n"+
+		"Changes you made to them after the import are undone too.\n\n"+
+		"Files: %s", importFileWords(man), man.Source, when, importFileNames(man))
 	// Cancel comes first and has the focus: Enter alone must not undo
 	// edits made after the import. Undo is marked as the risky choice.
 	m.confirm = confirm.New("Undo Last Import?", body, []confirm.Button{

@@ -169,3 +169,43 @@ func TestImportToastIsClickableAndOpensTheUndoCard(t *testing.T) {
 		t.Errorf("the backup is gone after the click: ok=%v err=%v", ok, err)
 	}
 }
+
+// IM-13: the undo card says in plain words what it puts back ("your
+// settings, key bindings and theme"), like the import card; the file names
+// are only in the last line, which is drawn quiet.
+func TestUndoCardUsesPlainWordsAndNamesFilesLast(t *testing.T) {
+	importOnce(t, true)
+	m := importModel(150, 42)
+	m.dispatchPaletteAction("prefs-import-undo")
+	if !m.confirmOpen {
+		t.Fatalf("no undo card: %s", importToast(m))
+	}
+	lines := strings.Split(ansi.Strip(m.confirm.Box()), "\n")
+	var body []string
+	for _, l := range lines {
+		body = append(body, strings.TrimSpace(strings.Trim(l, "│")))
+	}
+	text := strings.Join(body, "\n")
+	if !strings.Contains(strings.Join(strings.Fields(text), " "), "Puts your settings, key bindings and theme back as they were before the import") {
+		t.Errorf("not in plain words:\n%s", text)
+	}
+	filesAt := -1
+	for i, l := range body {
+		if strings.HasPrefix(l, "Files: ") {
+			filesAt = i
+		}
+		if i < filesAt || filesAt < 0 {
+			if strings.Contains(l, ".json") && !strings.HasPrefix(l, "Files: ") {
+				t.Errorf("a file name before the last line: %q", l)
+			}
+		}
+	}
+	if filesAt < 0 || !strings.Contains(body[filesAt], "config.json") || !strings.Contains(body[filesAt], "keymap.json") {
+		t.Errorf("no Files line with the names:\n%s", text)
+	}
+	for _, l := range body[filesAt+1:] {
+		if strings.Contains(l, ".json") {
+			t.Errorf("a file name after the Files line: %q", l)
+		}
+	}
+}
