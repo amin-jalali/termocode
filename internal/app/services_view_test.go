@@ -237,6 +237,18 @@ func TestRenderServicesEmptyAndLoading(t *testing.T) {
 	}
 }
 
+// CT-1: the empty-state button says what it does, not only the key.
+func TestServicesEmptyButtonIsLabelled(t *testing.T) {
+	st := newServicesState()
+	st.loaded = true
+	st.containerDetected = true // no engine: the whole view is the card
+	m := svcTestModel(st, 100, 30)
+	got := ansi.Strip(m.renderServicesSidebarRaw(29, 30, false, svcTestNow, -1, -1))
+	if !strings.Contains(got, "Create services.json") {
+		t.Errorf("button has no label:\n%s", got)
+	}
+}
+
 // The render cache: same seq, cursor, hover and size → the same string.
 func TestServicesRenderCache(t *testing.T) {
 	st := svcTestState()

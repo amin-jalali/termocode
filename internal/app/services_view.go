@@ -726,7 +726,7 @@ func (m Model) renderServicesSidebarRaw(w, h int, focused bool, now time.Time, h
 			hint += ". Install Docker or Podman to see containers."
 		}
 		lines = append(lines, renderEmptyState(w, h-2, theme.BgSidebar, emptyState{Glyph: theme.IconContainers,
-			Title: "No services", Hint: hint, Key: "o"})...)
+			Title: "No services", Hint: hint, Key: "o", Label: "Create services.json"})...)
 		return strings.Join(lines[:h], "\n")
 	}
 	// Summary: backend · project, then "3/4 up" on the right.

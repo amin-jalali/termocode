@@ -16,6 +16,7 @@ type emptyState struct {
 	Title string     // short, e.g. "No problems"
 	Hint  string     // one sentence: what to do
 	Key   string     // optional key to press, shown as a keycap ("f8")
+	Label string     // optional name of the action, shown before the keycap
 }
 
 // renderEmptyState draws es centred in w×h cells on bgTok: exactly h rows,
@@ -42,7 +43,11 @@ func renderEmptyState(w, h int, bgTok theme.Color256, es emptyState) []string {
 		}
 	}
 	if es.Key != "" {
-		key = []string{center(""), center(theme.Keycap(es.Key, theme.LG(bgTok)))}
+		cap := theme.Keycap(es.Key, theme.LG(bgTok))
+		if es.Label != "" {
+			cap = theme.FgBg(theme.TextSecondary, bgTok).Render(es.Label+" ") + cap
+		}
+		key = []string{center(""), center(cap)}
 	}
 	block := append(append(append(append([]string{}, glyph...), title...), hint...), key...)
 	if len(block) > h && len(glyph) > 0 { // the glyph is decoration: it goes first
