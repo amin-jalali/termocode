@@ -146,7 +146,7 @@ func TestImportApplyWritesExactlyTheSelectedRows(t *testing.T) {
 		t.Errorf("theme %q (editor bg %s), want one-dark live", m.themeID, theme.CurrentPaletteHex("BgEditor"))
 	}
 	txt := importToast(m)
-	for _, s := range []string{"Imported from VS Code", "2 settings", "4 keys", "Undo Last Import"} {
+	for _, s := range []string{"Imported from VS Code", "2 settings", "4 keys", "Click to undo"} {
 		if !strings.Contains(txt, s) {
 			t.Errorf("toast does not say %q:\n%s", s, txt)
 		}

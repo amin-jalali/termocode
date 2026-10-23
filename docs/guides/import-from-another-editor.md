@@ -133,7 +133,8 @@ If you already have a snippet with the same language and trigger, the row shows
 
 ## Undo
 
-Run **Preferences: Undo Last Import**. termocode asks first (**Cancel** has the
+Click the **Imported from ...** message that appears after an import, or run
+**Preferences: Undo Last Import**. termocode asks first (**Cancel** has the
 focus, so pressing `Enter` by mistake changes nothing), then puts
 the files it changed back exactly as they were before the import
 (`config.json`, `keymap.json`, `snippets.json`). A file the import created is

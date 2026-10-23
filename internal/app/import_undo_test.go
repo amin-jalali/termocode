@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/confirm"
@@ -130,5 +131,40 @@ func TestUndoCardFocusesCancelAndMarksUndoAsDanger(t *testing.T) {
 	m = importConfirm(t, m, "cancel")
 	if b, _ := os.ReadFile(filepath.Join(dir, "config.json")); string(b) != string(after) {
 		t.Error("Cancel changed config.json")
+	}
+}
+
+// IM-7: the toast after an import is the way back. A click opens the Undo
+// card (never undoes at once), and the hint fits a 52-column toast.
+func TestImportToastIsClickableAndOpensTheUndoCard(t *testing.T) {
+	_, xdg := importSandbox(t, "vscode")
+	importUserFiles(t, xdg)
+	m := importConfirm(t, importReviewAndConfirm(t), "import")
+	var click tea.Msg
+	var text string
+	for _, c := range m.toast.Cards(52) {
+		if s := ansi.Strip(strings.Join(c.Lines, "\n")); strings.Contains(s, "Imported from VS Code") {
+			click, text = c.Click, s
+			for _, l := range c.Lines {
+				if w := lipgloss.Width(l); w > 52 {
+					t.Errorf("toast row is %d wide: %q", w, l)
+				}
+			}
+		}
+	}
+	if click == nil {
+		t.Fatalf("the import toast is not clickable: %s", importToast(m))
+	}
+	if !strings.Contains(text, "Click to undo ·") {
+		t.Errorf("the undo hint is cut at 52 columns:\n%s", text)
+	}
+	next, _ := m.Update(click)
+	m = next.(Model)
+	if !m.confirmOpen || m.confirmKind != confirmKindImportUndo {
+		t.Fatalf("the click did not open the undo card: confirm %v kind %v", m.confirmOpen, m.confirmKind)
+	}
+	// The click alone undid nothing: the backup is still there.
+	if _, _, ok, err := lastImport(); err != nil || !ok {
+		t.Errorf("the backup is gone after the click: ok=%v err=%v", ok, err)
 	}
 }

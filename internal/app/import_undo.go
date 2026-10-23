@@ -61,6 +61,11 @@ func importFileNames(man importManifest) string {
 	return strings.Join(names, " and ")
 }
 
+// importUndoClickMsg is what a click on the "Imported from …" toast sends:
+// it opens the same Undo card as the palette command, so nothing is undone
+// without the confirm.
+type importUndoClickMsg struct{}
+
 // undoLastImport asks before it puts the files back.
 func (m *Model) undoLastImport() tea.Cmd {
 	_, man, ok, err := lastImport()

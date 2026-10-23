@@ -344,8 +344,10 @@ func (m *Model) applyImport() tea.Cmd {
 		m.setup.importedFrom = p.Title() // the setup card's Import row shows it done
 	}
 	var tc tea.Cmd
-	m.toast, tc = m.toast.PushDetail(toast.Info, "Imported from "+p.Title(),
-		c.Summary()+" · Undo: Preferences: Undo Last Import")
+	// A click on the toast opens the Undo card; the hint comes first so a
+	// narrow toast never cuts it (the summary may end in "…").
+	m.toast, tc = m.toast.PushClick(toast.Info, "Imported from "+p.Title(),
+		"Click to undo · "+c.Summary(), importUndoClickMsg{})
 	cmds := []tea.Cmd{cmd, tc}
 	if len(c.Tools) > 0 {
 		var t2 tea.Cmd

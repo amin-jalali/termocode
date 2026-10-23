@@ -278,6 +278,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 	case importPlanMsg:
 		return m, m.onImportPlan(msg)
+	case importUndoClickMsg:
+		return m, m.undoLastImport()
 	case importview.CloseMsg:
 		m.closeImport()
 		return m, nil
