@@ -242,3 +242,22 @@ func TestMCPServeStatusWidthFollowsWindow(t *testing.T) {
 		t.Errorf("width at 300 = %d, want the cap (%d, at most 100)", huge, wide)
 	}
 }
+
+// Spec (MCP-4): the status action has the same words as the palette
+// command it opens.
+func TestMCPServeStatusAutoApproveWording(t *testing.T) {
+	m := mcpServeStatusModel(t)
+	var palette string
+	for _, it := range paletteItems() {
+		if it.ID == "ai-auto-approve" {
+			palette = it.Title
+		}
+	}
+	if palette == "" {
+		t.Fatal("no palette command for the auto-approve list")
+	}
+	text := mcpServeItemsText(m.mcpServeStatusItems())
+	if !strings.Contains(text, palette) {
+		t.Errorf("status has no %q:\n%s", palette, text)
+	}
+}

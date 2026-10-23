@@ -261,7 +261,7 @@ func (m *Model) mcpServeStatusItems() []picker.Item {
 	head("Actions")
 	items = append(items,
 		picker.Item{ID: "copy", Title: "Copy termocode server config", Hint: "JSON for agent CLIs"},
-		picker.Item{ID: "allow", Title: "Agent auto-approve…", Hint: "see and revoke Always allow"})
+		picker.Item{ID: "allow", Title: "AI: Agent Auto-Approve…", Hint: "see and revoke Always allow"})
 	return items
 }
 
