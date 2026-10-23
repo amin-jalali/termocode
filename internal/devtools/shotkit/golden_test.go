@@ -202,6 +202,9 @@ func goldenExtras() []Scene {
 		{Name: "containers-ascii", Icons: "ascii", Steps: Containers().Steps},
 		{Name: "containers-menu-light", Theme: "catppuccin-latte", Steps: ContainersVariant("containers-menu", "menu").Steps},
 		{Name: "containers-menu-ascii", Icons: "ascii", Steps: ContainersVariant("containers-menu", "menu").Steps},
+		// A clean-up card in a light theme and with ASCII icons.
+		{Name: "containers-prune-light", Theme: "catppuccin-latte", Steps: ContainersHostCard("containers-prune", "system-prune").Steps},
+		{Name: "containers-prune-ascii", Icons: "ascii", Steps: ContainersHostCard("containers-prune", "system-prune").Steps},
 		// The HTTP Response page: the Headers view, and in a light theme.
 		{Name: "http-response-headers", Steps: []Step{Act("httpdemo:headers"), Pause(900 * time.Millisecond)}},
 		withTheme(withName(HTTPResponse(), "http-response-light"), "catppuccin-latte"),
