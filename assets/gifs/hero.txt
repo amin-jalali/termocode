@@ -1,0 +1,8 @@
+# hero.gif - 25.8 s, loops. Captions are not burned into the frames.
+# Recorded with demo models.
+ 0.0- 4.0 s  One terminal. Your whole project.
+ 4.0- 9.3 s  Edit, query, ship — on the server.
+ 9.3-14.3 s  AI works with your IDE.
+14.3-17.3 s  Connection lost.
+17.3-23.3 s  Your work lives on.
+23.3-25.8 s  termocode — The AI-Integrated Terminal IDE.
