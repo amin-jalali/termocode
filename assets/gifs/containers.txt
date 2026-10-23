@@ -1,0 +1,2 @@
+# containers.gif - 8.0 s, loops. Captions are not burned into the frames.
+ 0.0- 8.0 s  Containers without leaving the editor.
