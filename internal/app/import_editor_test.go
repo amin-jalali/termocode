@@ -12,6 +12,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/editor"
 	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -329,5 +330,21 @@ func TestImportDemoConfirmOpensTheFinalCard(t *testing.T) {
 	m2 := importModel(150, 42)
 	if cmd := m2.importDemo("confirm"); cmd != nil || m2.importOpen {
 		t.Error("the demo ran without XDG_CONFIG_HOME")
+	}
+}
+
+func TestImportDemoUndoImportsThenOpensTheUndoCard(t *testing.T) {
+	_, xdg := importSandbox(t)
+	t.Cleanup(func() { theme.ApplyTheme("vscode-dark-plus") })
+	m := importModel(150, 42)
+	m.importDemo("undo")
+	if m.importOpen || !m.confirmOpen || m.confirmKind != confirmKindImportUndo {
+		t.Fatalf("panel %v, confirm %v kind %v", m.importOpen, m.confirmOpen, m.confirmKind)
+	}
+	if _, err := os.Stat(filepath.Join(xdg, "termocode", "config.json")); err != nil {
+		t.Errorf("the demo import wrote no config.json: %v", err)
+	}
+	if got := ansi.Strip(m.confirm.Box()); !strings.Contains(got, "Undo Last Import?") {
+		t.Errorf("card:\n%s", got)
 	}
 }

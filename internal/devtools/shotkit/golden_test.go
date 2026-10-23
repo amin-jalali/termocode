@@ -275,7 +275,7 @@ func goldenCases() []goldenCase {
 	}
 	// Import from Another Editor (EM-4b): the source picker and the
 	// review panel, with sample editors in the sandbox config dir.
-	for _, sc := range []Scene{ImportPicker(), ImportPanel(), ImportPickerEmpty(), ImportFilePrompt(), ImportConfirm()} {
+	for _, sc := range []Scene{ImportPicker(), ImportPanel(), ImportPickerEmpty(), ImportFilePrompt(), ImportConfirm(), ImportUndo()} {
 		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
 	// Connect a service (CX-5): every wizard step at 160x40 and 80x24;
