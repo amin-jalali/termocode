@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/editor"
+	"github.com/amin-jalali/termocode/internal/migrate"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -346,5 +347,30 @@ func TestImportDemoUndoImportsThenOpensTheUndoCard(t *testing.T) {
 	}
 	if got := ansi.Strip(m.confirm.Box()); !strings.Contains(got, "Undo Last Import?") {
 		t.Errorf("card:\n%s", got)
+	}
+}
+
+func TestImportDemoSnippetsHasOneClash(t *testing.T) {
+	_, xdg := importSandbox(t)
+	m := importModel(150, 42)
+	m.importDemo("snippets")
+	if !m.importOpen {
+		t.Fatal("no panel")
+	}
+	var snippets, clashes int
+	for _, r := range m.imp.panel.Plan().Rows {
+		if r.Kind == migrate.RowSnippet {
+			snippets++
+			if r.Conflict {
+				clashes++
+			}
+		}
+	}
+	if snippets != 3 || clashes != 1 {
+		t.Errorf("%d snippets, %d clashes; want 3 and 1", snippets, clashes)
+	}
+	// Only the sandbox was written, and only samples.
+	if _, err := os.Stat(filepath.Join(xdg, "termocode", "snippets.json")); err != nil {
+		t.Errorf("sample user snippets: %v", err)
 	}
 }

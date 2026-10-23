@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/mattn/go-runewidth"
 
+	"github.com/amin-jalali/termocode/internal/migrate"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -238,6 +239,14 @@ func (m Model) note() string {
 	case r.state == stateToggle && r.conflict && r.with != "":
 		return "turning this on replaces " + r.with + " on this key"
 	case r.state == stateToggle && r.conflict:
+		switch m.plan.Rows[r.plan].Kind {
+		case migrate.RowSnippet:
+			return "replaces your snippet with the same trigger"
+		case migrate.RowSetting:
+			return "replaces your current value"
+		case migrate.RowTheme:
+			return "replaces your current theme"
+		}
 		return "replaces what you have now"
 	}
 	return ""

@@ -368,3 +368,10 @@ func ImportSetupRow() Scene {
 	return Scene{Name: "setup-card-import", SetupCard: true, Env: map[string]string{"TERM": "xterm-kitty"},
 		Steps: []Step{Pause(1500 * time.Millisecond), Act("importdemo:setup"), Pause(1200 * time.Millisecond)}}
 }
+
+// ImportSnippets is the review panel with sample snippets, scrolled to the
+// Snippets section with the clashing snippet focused.
+func ImportSnippets() Scene {
+	return Scene{Name: "import-snippets", Steps: WithEditor(Act("importdemo:snippets"),
+		Key("]"), Key("]"), Key("]"), Key("down"), Pause(600*time.Millisecond))}
+}

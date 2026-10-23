@@ -87,6 +87,10 @@ func TestPanelSnippetConflictsAreOffAndShowCurrentToNew(t *testing.T) {
 	if got := m.status(); !strings.Contains(got, "replaces") {
 		t.Errorf("status = %q", got)
 	}
+	// The note names what is replaced.
+	if got := m.status(); got != "replaces your snippet with the same trigger" {
+		t.Errorf("status = %q", got)
+	}
 	m.SelectNone()
 	m.SelectAll()
 	if c := m.Counts(); c.Snippets != 2 {

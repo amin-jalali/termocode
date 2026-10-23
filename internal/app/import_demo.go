@@ -39,10 +39,23 @@ var importDemoFiles = map[string]string{
 	"sublime-text/Packages/User/Package Control.sublime-settings": `{"installed_packages": ["LSP", "LSP-gopls"]}`,
 }
 
+// importDemoSnippets are the sample VS Code snippets of the "snippets"
+// variant, relative to XDG_CONFIG_HOME.
+var importDemoSnippets = map[string]string{
+	"Code/User/snippets/go.json": `{
+  "if err": {"prefix": "iferr", "body": ["if err != nil {", "\treturn err", "}"], "description": "return the error"},
+  "table test": {"prefix": "tt", "body": ["tests := []struct{", "\tname string", "}{", "\t{name: \"${1:case}\"},", "}"]},
+  "log line": {"prefix": "logf", "body": "log.Printf(\"${1:msg}: %v\", ${2:err})$0"},
+}`,
+	// The user already has a Go snippet with the trigger iferr.
+	"termocode/snippets.json": `{"go": {"iferr": "if err != nil { panic(err) }"}}` + "\n",
+}
+
 // importDemo writes the sample editors and opens the picker ("picker")
 // or the review panel of the VS Code sample ("panel"); "confirm" goes on
 // to the final card, "undo" imports and opens the Undo card, "setup" lets
-// the setup card's Import row find the samples. "empty"
+// the setup card's Import row find the samples, "snippets" adds sample
+// snippets (one of them clashes with the user's own). "empty"
 // writes nothing (picker without editors); "file" opens the path prompt.
 func (m *Model) importDemo(variant string) tea.Cmd {
 	root := os.Getenv("XDG_CONFIG_HOME")
@@ -60,6 +73,15 @@ func (m *Model) importDemo(variant string) tea.Cmd {
 		if os.MkdirAll(filepath.Dir(p), 0o755) != nil || os.WriteFile(p, []byte(body), 0o644) != nil {
 			return nil
 		}
+	}
+	if variant == "snippets" {
+		for rel, body := range importDemoSnippets {
+			p := filepath.Join(root, rel)
+			if os.MkdirAll(filepath.Dir(p), 0o755) != nil || os.WriteFile(p, []byte(body), 0o644) != nil {
+				return nil
+			}
+		}
+		return m.importDemoPanel()
 	}
 	switch variant {
 	case "setup": // the setup card finds the sample editors (its probe ran before they existed)
