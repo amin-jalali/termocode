@@ -235,3 +235,21 @@ func TestContainersGuideQuestionMarkHasOneMeaning(t *testing.T) {
 		t.Errorf("the key table has %d rows for `?`, want 1", rows)
 	}
 }
+
+// CT-13: the key table lists `a` / `A` (start all / stop all), which the
+// view handles.
+func TestContainersGuideListsStartAllKeys(t *testing.T) {
+	b, err := docs.FS.ReadFile("guides/containers.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, l := range strings.Split(string(b), "\n") {
+		if strings.HasPrefix(l, "| `a` / `A` |") && strings.Contains(l, "start all") && strings.Contains(l, "stop all") {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("the key table has no `a` / `A` row for start all / stop all")
+	}
+}

@@ -65,6 +65,7 @@ when something changed. When you hide the view (another activity item,
 | `Space` | fold / open the section or group under the cursor |
 | `Enter` / `l` | on a container: logs tab; on a context: use it; on an image tag: run it (asks); on a HELP row: run it |
 | `s` / `x` / `r` | start / stop / restart the selected container; on a project group, start / stop / restart that project |
+| `a` / `A` | start all / stop all of the project's services (the **Start all** and **Stop all** buttons); off while the engine is down |
 | `p` | pause or unpause the selected container |
 | `e` | shell in the selected container (terminal tab) |
 | `t` | attach to a container; on an image, tag it |
