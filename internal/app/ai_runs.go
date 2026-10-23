@@ -535,6 +535,13 @@ func (m *Model) aiStepFinished(st *ai.StoredStep, ev agentrun.Event) {
 		if model == "" {
 			model = st.Model
 		}
+		if rm := s.aiRunMessage(); rm != nil && rm.Run != nil {
+			agent := st.Title
+			if agent == "" {
+				agent = st.ID
+			}
+			s.recordUsage(aiUsageEntry{Run: rm.Run.ID, Agent: aiCleanText(agent), Model: model, U: c, Cost: st.Cost, Sub: kind == ai.KindClaudeOAuth})
+		}
 		if w, ok := ai.NewContextWindows(s.settings.ContextWindows).Lookup(model); ok && c.PeakContext > 0 {
 			if pct, ok := ai.ContextPercent(c, w); ok {
 				st.ContextPct = &pct

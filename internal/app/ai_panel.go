@@ -1345,6 +1345,8 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 	case strings.HasPrefix(id, "step:"):
 		m.aiToggleCard(id)
 		return nil
+	case strings.HasPrefix(id, "usage:"): // a run row's tokens and cost
+		return m.showAIUsage(strings.TrimPrefix(id, "usage:"))
 	case strings.HasPrefix(id, "agents:"): // a planned run's row: show it in AGENTS
 		return m.showAgents(strings.TrimPrefix(id, "agents:"))
 	case strings.HasPrefix(id, "run-retry:"):

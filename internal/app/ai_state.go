@@ -79,6 +79,11 @@ type aiState struct {
 	reviewGate agentrun.Gate
 	// agents is the AGENTS view of the chat's runs (agents_panel.go).
 	agents aiAgentsState
+	// usageLog is every step and plain chat turn that used a model in
+	// this UI process, for AI: Usage (memory only, ai_usage_view.go);
+	// usageGen changes with it.
+	usageLog []aiUsageEntry
+	usageGen int
 
 	// inline ghost text
 	inlineCancel context.CancelFunc
@@ -362,6 +367,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-profile-next", "AI: Next Profile", "Alt+Shift+P"},
 		{"ai-profile-show", "AI: Show Profile", ""},
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
+		{"ai-usage", "AI: Usage", ""},
 		{"ai-profile-edit", "AI: Edit Profiles", ""},
 		{"ai-profile-new", "AI: New Profile from Current…", ""},
 		{"ai-profile-trust", "AI: Project Profiles Trust…", ""},
@@ -469,6 +475,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.showAIProfile(), true
 	case "ai-agents":
 		return m.toggleAgentsView(), true
+	case "ai-usage":
+		return m.showAIUsage(""), true
 	case "ai-profile-edit":
 		return m.editAIProfiles(), true
 	case "ai-profile-new":

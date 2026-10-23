@@ -59,6 +59,7 @@ var tooltipLabels = map[string]tooltipSpec{
 	"ai:profile":         {name: "Agent profile", palette: "ai-profile-next", help: "guides/ai-profiles.md#pick-a-profile"},
 	"ai:chat":            {name: "Back to the chat", palette: "ai-agents", help: helpAgents},
 	"ai:btn:agents:":     {name: "Show in AGENTS", palette: "ai-agents", help: helpAgents},
+	"ai:btn:usage:":      {name: "Tokens and cost by model and agent (AI: Usage)", help: helpAgents},
 	"ai:btn:attach-file": {name: "Attach file", help: "guides/ai-use.md#files-in-and-out-of-the-chat"},
 	"ai:btn:copymsg:":    {name: "Copy message", help: helpChat},
 	"ai:btn:copy:":       {name: "Copy code block", help: helpChat},

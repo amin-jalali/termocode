@@ -410,6 +410,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-models-edit":    aiNever(aiNoAIConfig),
 	// The AGENTS view (U20 AP-9) only shows the chat's runs.
 	"ai-agents": aiAuto(),
+	// AI: Usage (AU-4) is the user's own view of tokens and money.
+	"ai-usage": aiNever("a read-only screen for the user; the AI cannot read its own bill"),
 
 	// ── HTTP client ──
 	"http-send":             aiNever("sends a network request; use http_send (gated by host and method)"),

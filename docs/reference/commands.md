@@ -51,6 +51,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Trigger Inline Completion | `ai-trigger-inline` | <code>Alt+&#92;</code> | <code>Alt+&#92;</code> |
 | AI: Undo Last Turn | `ai-undo-turn` |   |   |
 | AI: Unlock Secrets | `secrets-unlock` |   |   |
+| AI: Usage | `ai-usage` |   |   |
 
 ## Agent
 

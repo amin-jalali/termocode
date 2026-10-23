@@ -25,24 +25,31 @@ type aiPipeStep struct {
 	step  ai.ProfileStep
 }
 
-// aiSlotModel is the model slot name runs on ("" and "main" are the
-// chat's own model). ok=false when the slot has no model set.
-func (s *aiState) aiSlotModel(name string) (string, bool) {
+// aiSlotConfig is the config of model slot name ("" and "main" are the
+// chat's own). ok=false when there is no such slot. Nothing is built.
+func (s *aiState) aiSlotConfig(name string) (ai.Config, bool) {
 	if name == "" {
 		name = ai.SlotMain
 	}
 	if f, ok := s.slotFake[name]; ok {
-		return f.cfg.Model, f.cfg.Model != ""
+		return f.cfg, true
 	}
 	if s.slots != nil {
-		if cfg, ok := s.slots.Config(name); ok && cfg.Model != "" {
-			return cfg.Model, true
+		if cfg, ok := s.slots.Config(name); ok {
+			return cfg, true
 		}
 	}
-	if name == ai.SlotMain && s.cfg.Kind != ai.KindNone && s.cfg.Model != "" {
-		return s.cfg.Model, true
+	if name == ai.SlotMain && s.cfg.Kind != ai.KindNone {
+		return s.cfg, true
 	}
-	return "", false
+	return ai.Config{}, false
+}
+
+// aiSlotModel is the model slot name runs on. ok=false when the slot has
+// no model set.
+func (s *aiState) aiSlotModel(name string) (string, bool) {
+	cfg, ok := s.aiSlotConfig(name)
+	return cfg.Model, ok && cfg.Model != ""
 }
 
 // aiProfileSteps lists p's steps in order with their models.

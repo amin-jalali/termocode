@@ -187,6 +187,7 @@ var actionsHeaderMemo struct {
 	profile string
 	running bool // a pipeline run is active (the profile chip's colour)
 	agents  bool // the slot shows the AGENTS view
+	usage   bool // ... as the usage tables
 	out     string
 }
 
@@ -198,16 +199,17 @@ func (m Model) actionsHeaderEdged(width int, edge func(string) string) string {
 	mcpState := m.mcpChipState()
 	profile, running := m.aiProfileChipLabel(), m.aiRunActive()
 	agents := m.agentsShowing()
+	usage := agents && m.ai.agents.usage
 	c := &actionsHeaderMemo
 	c.Lock()
 	defer c.Unlock()
 	if c.ok && c.width == width && c.pinned == m.actionsPinned && c.focused == focused && c.hover == hover && c.rk == rk && c.mcp == mcpState &&
-		c.profile == profile && c.running == running && c.agents == agents {
+		c.profile == profile && c.running == running && c.agents == agents && c.usage == usage {
 		return c.out
 	}
 	out := edge(m.renderActionsHeader(width))
 	c.ok, c.width, c.pinned, c.focused, c.hover, c.rk, c.mcp, c.out = true, width, m.actionsPinned, focused, hover, rk, mcpState, out
-	c.profile, c.running, c.agents = profile, running, agents
+	c.profile, c.running, c.agents, c.usage = profile, running, agents, usage
 	return out
 }
 
@@ -366,6 +368,9 @@ func (m Model) agentsShowing() bool { return m.ai != nil && m.ai.agents.on }
 // actionsHeaderLabel is the slot's title: "✦ AI CHAT" or "✦ AGENTS".
 func (m Model) actionsHeaderLabel() string {
 	if m.agentsShowing() {
+		if m.ai.agents.usage {
+			return aiSpark() + " USAGE"
+		}
 		return aiSpark() + " AGENTS"
 	}
 	return aiSpark() + " AI CHAT"

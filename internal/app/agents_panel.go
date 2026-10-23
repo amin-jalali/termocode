@@ -45,6 +45,7 @@ import (
 // aiAgentsState is the AGENTS view's state (in aiState).
 type aiAgentsState struct {
 	on        bool   // the chat slot shows AGENTS instead of the chat
+	usage     bool   // ... as the usage tables (AI: Usage, ai_usage_view.go)
 	runID     string // the run shown ("" = the running or the newest one)
 	sel       string // the node the user selected (manual)
 	manual    bool   // the user moved the selection: follow mode is off
@@ -68,6 +69,8 @@ type aiAgentsKey struct {
 	runGen, msgs, snapGen int
 	conv, runID, sel      string
 	manual, noDetails     bool
+	usage                 bool
+	usageGen              int
 	width                 int
 	secs                  int64 // the clock second while a node runs (0 when none)
 	rk                    theme.RenderKey
@@ -689,6 +692,9 @@ func agentsConnector(up, down []int, width int, g agentsGlyphSet) []string {
 
 // agentsBuild draws the head, body and foot rows of the shown run.
 func (m Model) agentsBuild(width int, now time.Time) aiAgentsCache {
+	if m.ai.agents.usage {
+		return m.usageBuild(width)
+	}
 	s := m.ai
 	g := agentsGlyphs()
 	out := aiAgentsCache{ok: true, selTop: -1, selBot: -1}
@@ -698,7 +704,7 @@ func (m Model) agentsBuild(width int, now time.Time) aiAgentsCache {
 	if ascii {
 		runs = "<- ->"
 	}
-	out.foot = agText(theme.TextDim, "Tab next · Space fold · d details · f follow · "+runs+" runs · Esc chat", width)
+	out.foot = agText(theme.TextDim, "Tab next · Space fold · d details · u usage · "+runs+" runs · Esc chat", width)
 	divider := agSeg(theme.BorderSubtle, strings.Repeat(g.h, width))
 	if !ok {
 		out.head = []string{agText(theme.TextSecondary, "No agent runs in this chat yet.", width), agText(theme.TextDim, "", width), divider}
@@ -913,6 +919,7 @@ func (m Model) agentsCached(width int) *aiAgentsCache {
 	now := clock.Now()
 	k := aiAgentsKey{runGen: s.runGen, msgs: len(s.conv.Messages), snapGen: s.agents.snapGen, conv: s.conv.ID,
 		runID: s.agents.runID, sel: s.agents.sel, manual: s.agents.manual, noDetails: s.agents.noDetails,
+		usage: s.agents.usage, usageGen: s.usageGen,
 		width: width, rk: theme.CurrentRenderKey()}
 	if s.streaming && s.run != nil {
 		k.secs = now.Unix() // running times move once a second
@@ -1062,7 +1069,7 @@ func (m *Model) toggleAgentsView() tea.Cmd {
 func (m *Model) showAgents(id string) tea.Cmd {
 	s := m.aiS()
 	m.openAIPanel(true)
-	s.agents.on = true
+	s.agents.on, s.agents.usage = true, false
 	s.agents.runID = id
 	s.agents.manual, s.agents.free, s.agents.sel = false, false, ""
 	return m.agentsSnapCmd()
@@ -1138,6 +1145,9 @@ func (m *Model) routeAgentsKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		m.agentsFold()
 	case "d":
 		s.agents.noDetails = !s.agents.noDetails
+	case "u":
+		s.agents.usage = !s.agents.usage // AGENTS <-> AI: Usage
+		s.agents.scroll, s.agents.free = 0, true
 	case "f":
 		s.agents.manual, s.agents.free, s.agents.sel = false, false, ""
 	case "left", "h":

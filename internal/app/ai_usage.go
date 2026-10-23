@@ -21,6 +21,7 @@ func (m *Model) aiAuditUsage(ev ai.Event) {
 	}
 	s := m.aiS()
 	text := aiUsageText(s.cfg.Kind, *ev.Usage, ai.NewPricing(s.settings.Prices), ai.NewContextWindows(s.settings.ContextWindows))
+	m.aiRecordTurnUsage(*ev.Usage)
 	m.output.Append(aiAuditChannel, clock.Now().Format("15:04:05")+"  usage  "+text)
 }
 
@@ -80,4 +81,30 @@ func aiDollars(usd float64) string {
 		return fmt.Sprintf("$%.3f", usd)
 	}
 	return fmt.Sprintf("$%.2f", usd)
+}
+
+// aiRecordTurnUsage adds a plain chat turn (a one-step profile, no run)
+// to the session log that AI: Usage shows.
+func (m *Model) aiRecordTurnUsage(u ai.Usage) {
+	s := m.aiS()
+	prof := s.activeProfile()
+	agent, slot := "Assistant", ai.SlotMain
+	if len(prof.Steps) > 0 {
+		if prof.Steps[0].Title != "" {
+			agent = prof.Steps[0].Title
+		}
+		slot = prof.SlotFor(prof.Steps[0])
+	}
+	kind := s.cfg.Kind
+	if cfg, ok := s.aiSlotConfig(slot); ok {
+		kind = cfg.Kind
+	}
+	e := aiUsageEntry{Agent: aiCleanText(agent), Model: u.Model, U: u, Sub: kind == ai.KindClaudeOAuth}
+	if e.Model == "" {
+		e.Model, _ = s.aiSlotModel(slot)
+	}
+	if usd, ok := ai.NewPricing(s.settings.Prices).Cost(kind, u); ok {
+		e.Cost = &usd
+	}
+	s.recordUsage(e)
 }

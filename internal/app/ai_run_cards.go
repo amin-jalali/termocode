@@ -163,11 +163,18 @@ func (m Model) aiRunLines(i int, msg ai.StoredMessage, width, inner int) []aiLin
 		out = append(out, aiChip("Continue", "run-continue:"+strconv.Itoa(i), width), aiChip("Stop", "run-stop:"+strconv.Itoa(i), width))
 		return out
 	}
-	row := dash + " " + aiRunSummaryText(msg.Run, msg.Steps) + " "
+	summary := aiRunSummaryText(msg.Run, msg.Steps)
+	row := dash + " " + summary + " "
 	if pad := inner - runewidth.StringWidth(row); pad > 0 {
 		row += strings.Repeat(dash, pad)
 	}
-	out = append(out, aiLine{text: ind + row, style: theme.Fg(theme.TextDim), buttons: agentsBtn})
+	// The tokens and the cost open AI: Usage (before the whole-row link).
+	buttons := agentsBtn
+	if x0, x1, ok := aiRunUsageSpan(summary); ok {
+		off := aiIndent + runewidth.StringWidth(dash+" ")
+		buttons = append([]aiLineButton{{off + x0, off + x1, "usage:" + msg.Run.ID}}, agentsBtn...)
+	}
+	out = append(out, aiLine{text: ind + row, style: theme.Fg(theme.TextDim), buttons: buttons})
 	if msg.Run.State == ai.RunStateInterrupted {
 		out = append(out, aiLine{text: ind + "✘ run interrupted (termocode restarted)", style: theme.Fg(theme.DiagError)})
 	}
@@ -370,6 +377,26 @@ func aiRunSummaryText(run *ai.StoredRun, steps []ai.StoredStep) string {
 		parts = append(parts, fmt.Sprintf("context %.0f %%", pct))
 	}
 	return strings.Join(parts, " · ")
+}
+
+// aiRunUsageSpan is the cells of the tokens and the cost in a run row
+// summary ("run · 36 s · 2 steps · 13.9k tok · $0.017 · context 31 %").
+func aiRunUsageSpan(summary string) (x0, x1 int, ok bool) {
+	i := strings.Index(summary, " tok")
+	if i < 0 {
+		return 0, 0, false
+	}
+	start := strings.LastIndex(summary[:i], " · ") + len(" · ")
+	end := i + len(" tok")
+	if rest := summary[end:]; strings.HasPrefix(rest, " · $") || strings.HasPrefix(rest, " · <$") {
+		end += len(" · ")
+		if j := strings.Index(summary[end:], " · "); j >= 0 {
+			end += j
+		} else {
+			end = len(summary)
+		}
+	}
+	return runewidth.StringWidth(summary[:start]), runewidth.StringWidth(summary[:end]), true
 }
 
 // aiBudgetText is a budget in dollars with cents: $0.50, $2.00.
