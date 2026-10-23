@@ -754,7 +754,8 @@ func renderHostGroup(r svcRow, collapsed, active, focused bool, w int) string {
 	indent := 2 * r.depth
 	mark := ""
 	if r.current {
-		mark = " " + dot
+		// The same containers are in PROJECT above: say so, quietly.
+		mark = " (project)"
 	}
 	cw := runewidth.StringWidth(r.count)
 	room := w - 1 - indent - 2 - runewidth.StringWidth(mark) - 2 - cw

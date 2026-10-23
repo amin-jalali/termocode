@@ -149,7 +149,9 @@ func TestContainersGroupRowsTyped(t *testing.T) {
 		t.Errorf("group \"web 2\" lost its name: %+v", groups)
 	}
 	line := ansi.Strip(renderHostGroup(groups[0], false, false, false, 29))
-	if !strings.Contains(line, "▾ termocode · ·") || !strings.HasSuffix(line, "2/3") {
+	// CT-10: the group of this folder's project says so, because PROJECT
+	// above lists the same containers as services.
+	if !strings.Contains(line, "▾ termocode (project) ·") || !strings.HasSuffix(line, "2/3") {
 		t.Errorf("group row = %q", line)
 	}
 }
