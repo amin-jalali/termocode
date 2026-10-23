@@ -117,7 +117,7 @@ func TestMCPServeCardDenyAndAlwaysAllow(t *testing.T) {
 
 	// Deny: the card names the agent, Esc refuses, the task does not run.
 	ch := r.sendAsync(req("3"))
-	tm.WaitText("e2e-agent wants to run tasks_run", uiTimeout)
+	tm.WaitText("e2e-agent wants to run task \"mark\"", uiTimeout)
 	tm.Send(KeyEsc)
 	s, m = r.reply(ch, "denied call")
 	e, _ := m["error"].(map[string]any)
@@ -135,7 +135,7 @@ func TestMCPServeCardDenyAndAlwaysAllow(t *testing.T) {
 
 	// Always allow: Allow, Always allow, Deny are the buttons; move once right.
 	ch = r.sendAsync(req("4"))
-	tm.WaitText("e2e-agent wants to run tasks_run", uiTimeout)
+	tm.WaitText("e2e-agent wants to run task \"mark\"", uiTimeout)
 	tm.WaitText("Always allow", uiTimeout)
 	tm.Send("\x1b[C")
 	tm.settle()

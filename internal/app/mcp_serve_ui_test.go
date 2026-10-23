@@ -18,7 +18,7 @@ func TestMCPServeCardTitleNamesClient(t *testing.T) {
 	call := mcpServeStartCall(src, "claude-code", "debug_breakpoint", map[string]any{"op": "clear"})
 	mcpServePumpUntil(t, m, hub, "card", func() bool { return mcpServeCardOpen(m, "claude-code") })
 	view := mcpServeCard(m)
-	for _, want := range []string{"claude-code wants to run debug_breakpoint", "op=clear"} {
+	for _, want := range []string{"claude-code wants to remove all breakpoints", "debug_breakpoint). The name", "op=clear"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("card has no %q:\n%s", want, view)
 		}
@@ -32,7 +32,7 @@ func TestMCPServeCardTitleFallback(t *testing.T) {
 	m, src, hub := mcpServeTestModel(t)
 	call := mcpServeStartCall(src, "", "debug_breakpoint", map[string]any{"op": "clear"})
 	mcpServePumpUntil(t, m, hub, "card", func() bool { return mcpServeCardOpen(m, "An outside agent") })
-	if view := mcpServeCard(m); !strings.Contains(view, "An outside agent wants to run debug_breakpoint") {
+	if view := mcpServeCard(m); !strings.Contains(view, "An outside agent wants to remove all breakpoints") {
 		t.Errorf("card:\n%s", view)
 	}
 	mcpServeAnswer(m, "deny")
@@ -227,4 +227,35 @@ func TestMCPServeAllowKeyIsNeverForTheAI(t *testing.T) {
 	if p, ok := aiSettingPolicies["mcp_server_auto_approve"]; !ok || p.Gate != aiGateNever {
 		t.Fatalf("policy = %+v ok=%v", p, ok)
 	}
+}
+
+// Spec (MCP-1): the card title says what the agent wants to do in plain
+// words, not the tool id; a tool with no description still reads as words.
+func TestMCPServeCardTitleHumanAction(t *testing.T) {
+	cases := []struct{ client, tool, human, want string }{
+		{"claude-code", "tasks_run", "Run task: say hi", `claude-code wants to run task "say hi"`},
+		{mcpServeGenericClient, "debug_breakpoint", "debug_breakpoint", "An outside agent wants to use debug breakpoint"},
+		{"codex", "tasks_run", "Run task: " + strings.Repeat("x", 90), `codex wants to run task "` + strings.Repeat("x", 39) + `…"`},
+	}
+	for _, c := range cases {
+		got := mcpServeCardTitle(c.client, c.tool, c.human)
+		if !strings.Contains(got, c.want) {
+			t.Errorf("title(%q, %q) = %q, want it to contain %q", c.tool, c.human, got, c.want)
+		}
+		if strings.Contains(got, "_") {
+			t.Errorf("title shows a raw tool id: %q", got)
+		}
+	}
+}
+
+// Spec (MCP-1): the Always-allow note ends with one "…" and no extra dot.
+func TestMCPServeCardNoDoubleDot(t *testing.T) {
+	m, src, hub := mcpServeTestModel(t)
+	call := mcpServeStartCall(src, "claude-code", "tasks_run", map[string]any{"label": "say hi"})
+	mcpServePumpUntil(t, m, hub, "card", func() bool { return mcpServeCardOpen(m, "claude-code") })
+	if view := mcpServeCard(m); strings.Contains(view, "….") {
+		t.Errorf("card has a double dot:\n%s", view)
+	}
+	mcpServeAnswer(m, "deny")
+	mcpServeAwait(t, m, hub, call)
 }

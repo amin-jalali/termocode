@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -75,12 +76,33 @@ func mcpServeCardOf(ctx context.Context) mcpServeCardInfo {
 const mcpServeGenericClient = "client"
 
 // mcpServeCardTitle names who asks and what for.
-func mcpServeCardTitle(client, tool string) string {
+func mcpServeCardTitle(client, tool, human string) string {
 	who := client
 	if client == mcpServeGenericClient {
 		who = "An outside agent"
 	}
-	return "✦ " + who + " wants to run " + tool
+	return "✦ " + who + " wants to " + mcpServeActionPhrase(tool, human)
+}
+
+// mcpServeActionPhrase is what the agent wants, in words: the tool's own
+// one-line description ("Run task: build" → run task "build"), or the
+// tool id as words when it has none. Redacted like the card body.
+func mcpServeActionPhrase(tool, human string) string {
+	h := strings.TrimSpace(ai.Redact(aiCleanText(human)))
+	if h == "" || h == tool {
+		return "use " + strings.ReplaceAll(tool, "_", " ")
+	}
+	head, arg, ok := strings.Cut(h, ": ")
+	if r := []rune(head); len(r) > 0 {
+		head = strings.ToLower(string(r[:1])) + string(r[1:])
+	}
+	if !ok || strings.TrimSpace(arg) == "" {
+		return head
+	}
+	if r := []rune(arg); len(r) > 40 {
+		arg = string(r[:39]) + "…"
+	}
+	return head + ` "` + strings.TrimSpace(arg) + `"`
 }
 
 type mcpServeAskMsg struct {
@@ -223,15 +245,15 @@ func (m *Model) mcpServePump() tea.Cmd {
 		if a.args != "" {
 			body += "\n\nArguments: " + ai.Redact(aiCleanText(a.args))
 		}
-		body += "\n\nAsked by an outside agent over MCP. The name is the agent's own claim."
+		body += "\n\nAsked by an outside agent over MCP (tool " + a.tool.Name + "). The name is the agent's own claim."
 		buttons := []confirm.Button{{ID: "allow", Title: "Allow", Style: confirm.StylePrimary}}
 		if a.always != "" {
 			buttons = append(buttons, confirm.Button{ID: "always", Title: "Always allow"})
 			body += "\nAlways allow: " + a.client + " may run " + mcpServeAlwaysWhat(a.always) +
-				" without asking. Revoke it in AI: Agent Auto-Approve…."
+				" without asking. Revoke it in AI: Agent Auto-Approve…"
 		}
 		buttons = append(buttons, confirm.Button{ID: "deny", Title: "Deny", Style: confirm.StyleDestructive})
-		m.confirm = confirm.New(mcpServeCardTitle(a.client, a.tool.Name), body, buttons)
+		m.confirm = confirm.New(mcpServeCardTitle(a.client, a.tool.Name, a.human), body, buttons)
 		m.confirm.SetSize(m.w, m.h)
 		m.confirmOpen = true
 		m.confirmKind = confirmKindMCPServe

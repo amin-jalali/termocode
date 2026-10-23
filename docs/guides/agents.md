@@ -142,9 +142,9 @@ extension commands and your own commands.
 When the agent calls a tool that runs or changes something, a card opens:
 
 ```text
-✦ claude-code wants to run tasks_run
+✦ claude-code wants to run task "build"
   Arguments: {"label": "build"}
-  Asked by an outside agent over MCP. The name is the agent's own claim.
+  Asked by an outside agent over MCP (tool tasks_run). The name is the agent's own claim.
   [ Allow ] [ Always allow ] [ Deny ]
 ```
 
