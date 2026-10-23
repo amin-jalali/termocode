@@ -310,6 +310,10 @@ func goldenCases() []goldenCase {
 		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24},
 			goldenCase{light.Name + "-150x42", light, 150, 42}, goldenCase{ascii.Name + "-150x42", ascii, 150, 42})
 	}
+	// The MCP server's other screens (MCP-13): the quiet status bar chip.
+	for _, sc := range []Scene{MCPServeScene("mcp-serve-chip", "chip")} {
+		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
+	}
 	return out
 }
 

@@ -10,11 +10,16 @@ import (
 )
 
 // mcpServeDemo is the dev action "mcpservedemo:<variant>" (shots and
-// goldens): "status" shows the MCP server status screen and "card" an
-// outside agent's confirm card, over made-up state (a fake socket path,
-// one agent, a few audit lines). It starts no listener and writes nothing.
+// goldens): "status" shows the MCP server status screen, "card" an
+// outside agent's confirm card and "chip" the status bar while the server
+// listens with no agent, over made-up state (a fake socket path, one
+// agent, a few audit lines). It starts no listener and writes nothing.
 func (m *Model) mcpServeDemo(variant string) tea.Cmd {
 	hub := newMCPServeHub()
+	if variant == "chip" { // listening, nobody connected: the quiet "ready" chip
+		m.mcpServe = &mcpServeState{hub: hub, path: "/run/user/1000/termocode/3f9a1c2b.mcp.sock"}
+		return nil
+	}
 	m.mcpServe = &mcpServeState{hub: hub, path: "/run/user/1000/termocode/3f9a1c2b.mcp.sock",
 		clients: []*mcpServeAgent{{id: 1, name: "claude-code", since: time.Date(2026, 10, 14, 9, 41, 0, 0, time.UTC), calls: 14, asked: 2}}}
 	switch variant {

@@ -145,7 +145,8 @@ func SecretsScene(name, variant string) Scene {
 }
 
 // MCPServeScene shows termocode's MCP server: variant "status" (the
-// status screen) or "card" (an outside agent's confirm card), see app
+// status screen), "card" (an outside agent's confirm card) or "chip" (the
+// status bar with the server listening and no agent), see app
 // mcpservedemo.
 func MCPServeScene(name, variant string) Scene {
 	return Scene{Name: name, Steps: WithEditor(Act("mcpservedemo:"+variant), Pause(600*time.Millisecond))}
