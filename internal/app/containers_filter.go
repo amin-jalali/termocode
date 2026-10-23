@@ -3,7 +3,6 @@ package app
 import (
 	"strconv"
 	"strings"
-	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -24,8 +23,6 @@ import (
 // The filter works on the snapshot the view already has: typing never
 // starts an engine call.
 
-const maxFilterRunes = 64
-
 // filterQuery is the lower-case filter ("" = none).
 func (st *servicesState) filterQuery() string { return strings.ToLower(st.filter) }
 
@@ -35,60 +32,13 @@ func (m *Model) containersFilterKey(k tea.KeyMsg) (tea.Cmd, bool) {
 	if st == nil {
 		return nil, false
 	}
-	if !st.filterTyping {
-		// "/" starts typing. A fast typist (or a paste) can deliver "/"
-		// and the next letters in one key message: the rest is text.
-		if k.Type == tea.KeyRunes && len(k.Runes) > 1 && k.Runes[0] == '/' && !k.Alt {
-			st.filterTyping = true
-			return m.containersFilterKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: k.Runes[1:]})
-		}
-		switch k.String() {
-		case "/":
-			st.filterTyping = true
-			st.touch()
-			return nil, true
-		case "esc":
-			if st.filter != "" {
-				m.setContainersFilter("")
-				return nil, true
-			}
-		}
+	text, typing, handled := inlineFilterStep(st.filter, st.filterTyping, k)
+	st.filterTyping = typing
+	if !handled {
 		return nil, false
 	}
-	switch k.String() {
-	case "esc":
-		st.filterTyping = false
-		m.setContainersFilter("")
-		return nil, true
-	case "enter":
-		st.filterTyping = false
-		st.touch()
-		return nil, true
-	case "backspace", "ctrl+h":
-		if r := []rune(st.filter); len(r) > 0 {
-			m.setContainersFilter(string(r[:len(r)-1]))
-		}
-		return nil, true
-	case "ctrl+u":
-		m.setContainersFilter("")
-		return nil, true
-	case "up", "down", "pgup", "pgdown", "tab", "shift+tab", "home", "end":
-		return nil, false // move while typing
-	}
-	if k.Type == tea.KeyRunes || k.Type == tea.KeySpace {
-		text := st.filter
-		for _, r := range k.Runes {
-			if unicode.IsPrint(r) && len([]rune(text)) < maxFilterRunes {
-				text += string(r)
-			}
-		}
-		if k.Type == tea.KeySpace && len(k.Runes) == 0 && len([]rune(text)) < maxFilterRunes {
-			text += " "
-		}
-		m.setContainersFilter(text)
-		return nil, true
-	}
-	return nil, true // other keys do nothing while typing
+	m.setContainersFilter(text)
+	return nil, true
 }
 
 // setContainersFilter changes the filter and keeps the cursor on the row
@@ -302,13 +252,5 @@ func (st *servicesState) filterTitle() string {
 	if st == nil || (st.filter == "" && !st.filterTyping) {
 		return ""
 	}
-	t := "/" + sanitizeOutputLine(st.filter)
-	if st.filterTyping {
-		if theme.CurrentIconMode == theme.IconModeASCII {
-			t += "_"
-		} else {
-			t += "▏"
-		}
-	}
-	return t
+	return inlineFilterTitle(st.filter, st.filterTyping, theme.CurrentIconMode == theme.IconModeASCII)
 }

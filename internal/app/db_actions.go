@@ -131,6 +131,7 @@ func (m *Model) dispatchDatabasesPalette(id string) (tea.Cmd, bool) {
 	case "db-refresh":
 		return tea.Batch(open, m.databaseRefresh()), true
 	case "db-filter":
+		open = m.revealDatabasesView(true) // the filter takes the keys: the view needs the focus
 		updated, cmd := m.handleDatabasesSidebarKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
 		*m = updated
 		return tea.Batch(open, cmd), true
@@ -168,6 +169,9 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	if s == nil {
 		s = newDBState()
 		m.databases = s
+	}
+	if m.databaseFilterKey(k) { // "/" starts the inline filter; it takes the keys while typing
+		return m, nil
 	}
 	rows := s.rows()
 	row, have := m.databaseCurrentRow()
@@ -286,10 +290,6 @@ func (m Model) handleDatabasesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.databaseCountFromTree()
 	case "i":
 		return m, m.databaseImportStart()
-	case "/":
-		cmd := m.openHTTPPrompt(promptKindDBFilter, "Databases: Filter", "Name contains:", "")
-		m.prompt.SetAllowEmpty(true)
-		return m, cmd
 	case "?":
 		return m, m.databaseKeysHelp()
 	case "esc":
@@ -1268,11 +1268,6 @@ func (m *Model) onDBPrompt(kind promptKindEnum, value string) tea.Cmd {
 		return nil
 	}
 	switch kind {
-	case promptKindDBFilter:
-		s.filter = strings.TrimSpace(value)
-		s.cursor = 0
-		s.touch()
-		m.databasesSaveSession()
 	case promptKindDBAdd:
 		value = strings.TrimSpace(value)
 		c, err := dbclient.ParseURL(value)

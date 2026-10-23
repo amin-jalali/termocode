@@ -43,7 +43,6 @@ const (
 	promptKindHTTPSaveBody
 	promptKindHTTPNewFile
 	promptKindDBAdd
-	promptKindDBFilter
 	promptKindDBPassword
 	promptKindDBHost
 	promptKindDBPort
@@ -603,7 +602,7 @@ func (m *Model) handleHTTPPromptSubmit(value string) (tea.Cmd, bool) {
 		return m.httpSaveBody(strings.TrimSpace(value)), true
 	case promptKindHTTPNewFile:
 		return m.httpNewFile(strings.TrimSpace(value)), true
-	case promptKindDBAdd, promptKindDBFilter, promptKindDBHost, promptKindDBPort, promptKindDBUser, promptKindDBName, promptKindDBSQLitePath:
+	case promptKindDBAdd, promptKindDBHost, promptKindDBPort, promptKindDBUser, promptKindDBName, promptKindDBSQLitePath:
 		return m.onDBPrompt(m.promptKind, value), true
 	case promptKindDBPassword:
 		return m.onDBPrompt(m.promptKind, value), true

@@ -42,7 +42,7 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 	}
 	fill := func() string { return theme.Bg(theme.BgSidebar).Render(strings.Repeat(" ", max(w, 0))) }
 	muted := func(v string) string { return theme.FgBg(theme.TextMuted, theme.BgSidebar).Render(v) }
-	lines := []string{sidebarHeader(w, "DATABASES", ""), theme.PaneHairline(w, theme.BgSidebar, focused)}
+	lines := []string{dbSidebarHeader(w, s.filter, s.filterTyping), theme.PaneHairline(w, theme.BgSidebar, focused)}
 	noConns := len(s.conns) == 0
 	actions, _ := dbHeaderActions(w, noConns)
 	second := fill()
@@ -74,6 +74,10 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 				lines = append(lines, testsPad(style.Render("  "+l), w))
 			}
 		}
+	}
+	if s.filter != "" && !noConns && !dbHasSelectable(rows) && available > 0 {
+		// Nothing matches: say so, and how to get the rows back.
+		lines = append(lines, testsPad(muted("  "+runewidth.Truncate("No names match \""+sanitizeDBText(s.filter)+"\" · Esc clears", max(w-2, 1), "…")), w))
 	}
 	for i := start; i < len(rows) && len(lines) < 4+available; i++ {
 		r := rows[i]
@@ -175,6 +179,16 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 		lines = append(lines, fill())
 	}
 	return strings.Join(lines[:h], "\n")
+}
+
+// dbHasSelectable reports whether rows has a row to move to.
+func dbHasSelectable(rows []dbTreeRow) bool {
+	for _, r := range rows {
+		if r.selectable {
+			return true
+		}
+	}
+	return false
 }
 
 // dbRowWrap is the label of a note or command row cut into lines that fit

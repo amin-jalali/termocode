@@ -103,7 +103,7 @@ func TestDatabasesKeysIntrospectionAndSessionLifetime(t *testing.T) {
 			if !d.WaitForText("primary key", time.Second) {
 				t.Fatalf("primary key detail missing at 80x24:\n%s", ansi.Strip(d.Frame()))
 			}
-			// Open a second database through the filter prompt, then revisit it.
+			// Open a second database through the inline filter, then revisit it.
 			d.Key("/")
 			d.Type("third")
 			d.Key("enter", "enter")
@@ -117,7 +117,7 @@ func TestDatabasesKeysIntrospectionAndSessionLifetime(t *testing.T) {
 			if count() != want {
 				t.Fatal("re-expanding second database opened a session")
 			}
-			d.Key("/", "enter") // clear filter
+			d.Key("esc") // X-2: Esc clears the inline filter (before, "/" and an empty answer did)
 			// The real disconnect card closes the root and every child session.
 			d.Key("g", "x")
 			if !d.WaitForText("Disconnect database?", time.Second) {

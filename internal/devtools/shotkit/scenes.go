@@ -116,6 +116,8 @@ func dbCardScenes() []Scene {
 		DatabasesVariant("db-disconnect-card", "disconnect-card"),
 		// ? on the tree: the key card (X-1).
 		DatabasesVariant("db-keys-card", "keys"),
+		// "/" and "us": the inline filter (X-2).
+		DatabasesVariant("db-filter", "filter"),
 		DatabasesVariant("db-redis-delete-card", "redis-delete"),
 		DatabasesVariant("db-password-move-card", "password-move"),
 		DatabasesVariant("db-ai-card", "ai-card"),

@@ -93,6 +93,7 @@ type dbState struct {
 	scroll              int
 	pendingSecretID     string
 	filter              string
+	filterTyping        bool // the inline "/" filter takes the keys (db_filter.go)
 	seq                 uint64
 	render              dbRenderCache
 	visible             bool

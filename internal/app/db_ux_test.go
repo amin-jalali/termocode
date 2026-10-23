@@ -254,7 +254,7 @@ func TestDatabaseActionNamesAreTheSameEverywhere(t *testing.T) {
 	}
 }
 
-// DB-14: "Databases: Filter…" (it opens an input) and "Databases: Open
+// DB-14: "Databases: Filter…" (it starts the inline filter) and "Databases: Open
 // Guide" are in the palette, like the Containers entries.
 func TestDatabasesPaletteHasFilterAndGuide(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
@@ -288,8 +288,9 @@ func TestDatabasesPaletteHasFilterAndGuide(t *testing.T) {
 	}
 	m = hoverModel(t)
 	m.databases = newDBState()
-	if _, ok := m.dispatchDatabasesPalette("db-filter"); !ok || !m.promptOpen || m.promptKind != promptKindDBFilter {
-		t.Errorf("db-filter did not open the filter input (ok=%v open=%v)", ok, m.promptOpen)
+	// X-2: the filter is inline (as in Containers), not an input box.
+	if _, ok := m.dispatchDatabasesPalette("db-filter"); !ok || m.promptOpen || !m.databases.filterTyping {
+		t.Errorf("db-filter did not start the inline filter (ok=%v prompt=%v typing=%v)", ok, m.promptOpen, m.databases.filterTyping)
 	}
 }
 

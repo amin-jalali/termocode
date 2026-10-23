@@ -26,6 +26,14 @@ func (m *Model) databaseCardsDemo(variant string) (tea.Cmd, bool) {
 		d.manual = map[string]bool{"local-pg": true}
 		d.txs = map[string]*dbTxState{"local-pg": {open: true, writes: 2}}
 		return m.databaseDisconnectAsk("local-pg"), true
+	case "filter":
+		// "/" and "us": the tree narrows while the text is typed.
+		m.databasesDemo("")
+		d := m.databases
+		d.filter, d.filterTyping = "us", true
+		d.cursor = 0
+		d.touch()
+		return nil, true
 	case "keys":
 		// ? on the tree: the key card.
 		m.databasesDemo("")
