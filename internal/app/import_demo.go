@@ -103,21 +103,22 @@ func (m *Model) importDemo(variant string) tea.Cmd {
 	return m.openImportPicker()
 }
 
-// importDemoPanel opens the review panel of the VS Code sample.
+// importDemoPanel opens the review panel of the VS Code sample. It names
+// the sample folder itself rather than detecting it: on macOS detection
+// looks under ~/Library, and the demo never writes outside the sandbox.
 func (m *Model) importDemoPanel() tea.Cmd {
-	for _, src := range importDetect() {
-		if src.ID != "vscode" {
-			continue
-		}
-		doc, err := migrate.Read(src)
-		if err != nil {
-			return nil
-		}
-		cur, err := importCurrent(m.themeID)
-		if err != nil {
-			return nil
-		}
-		return m.onImportPlan(importPlanMsg{plan: migrate.Build(src, doc, cur)})
+	root := os.Getenv("XDG_CONFIG_HOME")
+	if root == "" {
+		return nil
 	}
-	return nil
+	src := migrate.Source{ID: "vscode", Title: "VS Code", Dir: filepath.Join(root, "Code", "User"), Files: []string{"settings.json", "keybindings.json"}}
+	doc, err := migrate.Read(src)
+	if err != nil {
+		return nil
+	}
+	cur, err := importCurrent(m.themeID)
+	if err != nil {
+		return nil
+	}
+	return m.onImportPlan(importPlanMsg{plan: migrate.Build(src, doc, cur)})
 }
