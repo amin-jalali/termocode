@@ -132,6 +132,8 @@ func ctCardScenes() []Scene {
 	return []Scene{
 		// The AI asks to stop a container: name and 12-char id.
 		ContainersVariant("containers-ai-card", "ai-card"),
+		// Follow logs: a terminal tab with canned lines.
+		{Name: "containers-logs", Steps: WithEditor(Act("contdemo:logs"), Pause(1500*time.Millisecond))},
 	}
 }
 

@@ -330,6 +330,20 @@ func (m *Model) containersDemo(variant string) {
 		human := aiControlCardText("stop", c, "docker", "context default")
 		tool := ai.Tool{Name: "containers_control", Display: "control a container", Mutating: true, Class: ai.ClassContainers}
 		m.onAIChatConfirm(aiChatConfirmMsg{gen: m.aiS().chatGen, tool: tool, human: human, reply: make(chan bool, 1), ch: make(chan tea.Msg)})
+	case "logs": // a logs tab of postgres: fixed lines from sh, no engine
+		lines := []string{
+			"LOG:  database system is ready to accept connections",
+			"LOG:  checkpoint starting: time",
+			"LOG:  checkpoint complete: wrote 3 buffers (0.0%)",
+			"ERROR:  relation \"users_old\" does not exist at character 15",
+		}
+		script := "printf '%s\\n'"
+		for _, l := range lines {
+			script += " " + shellQuote(l)
+		}
+		script += "; read _wait" // sh is the only tool the golden PATH has: wait on the terminal
+		cmd := services.Command{Argv: []string{"sh", "-c", script}, Label: "logs: " + containerShownName(st.containerRows[0])}
+		_ = m.servicesRunCommand(cmd, containerTabPrefix+"logs:"+st.containerRows[0].ID)
 	case "db-menu": // the row menu of the postgres compose service
 		m.openServicesMenu(svcRow{kind: svcRowService, section: svcSecCompose, name: "postgres"}, activity.Width+6, 6)
 	case "db-container-menu": // the row menu of the postgres container
