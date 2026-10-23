@@ -58,10 +58,10 @@ import (
 //	                       a small secrets.age: sandbox only)
 //	httpdemo:<variant>     docs/users.http and a canned HTTP answer:
 //	                       file, response, headers or tls (no network)
-//	mcpservedemo:status|card|chip the MCP server status screen, an outside
-//	                       agent's confirm card, or the status bar chip with
-//	                       no agent, over made-up state (no listener,
-//	                       nothing written)
+//	mcpservedemo:status|card|chip|opencode the MCP server status screen, an
+//	                       outside agent's confirm card, the status bar chip
+//	                       with no agent, or OpenCode's "add termocode" card,
+//	                       over made-up state (no listener, nothing written)
 //	helpdemo               open the in-app guide at the chat panel section
 //	importdemo:picker|panel|confirm|undo|setup|snippets|empty|file
 //	                       sample editor folders (sandbox config dir only),

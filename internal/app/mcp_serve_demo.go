@@ -6,18 +6,26 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/ai"
 )
 
 // mcpServeDemo is the dev action "mcpservedemo:<variant>" (shots and
 // goldens): "status" shows the MCP server status screen, "card" an
-// outside agent's confirm card and "chip" the status bar while the server
-// listens with no agent, over made-up state (a fake socket path, one
+// outside agent's confirm card, "chip" the status bar while the server
+// listens with no agent and "opencode" the card that asks to add termocode
+// to a project's opencode.json, over made-up state (a fake socket path, one
 // agent, a few audit lines). It starts no listener and writes nothing.
 func (m *Model) mcpServeDemo(variant string) tea.Cmd {
 	hub := newMCPServeHub()
-	if variant == "chip" { // listening, nobody connected: the quiet "ready" chip
+	switch variant {
+	case "chip": // listening, nobody connected: the quiet "ready" chip
 		m.mcpServe = &mcpServeState{hub: hub, path: "/run/user/1000/termocode/3f9a1c2b.mcp.sock"}
+		return nil
+	case "opencode": // the project-file card of OpenCode (nothing is written)
+		if a, ok := agents.ByID("opencode"); ok {
+			m.openAgentMCPCard(&agentMCPCard{agent: a, path: "/home/me/project/opencode.json"})
+		}
 		return nil
 	}
 	m.mcpServe = &mcpServeState{hub: hub, path: "/run/user/1000/termocode/3f9a1c2b.mcp.sock",
