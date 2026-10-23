@@ -137,6 +137,7 @@ func TestUndoCardFocusesCancelAndMarksUndoAsDanger(t *testing.T) {
 // IM-7: the toast after an import is the way back. A click opens the Undo
 // card (never undoes at once), and the hint fits a 52-column toast.
 func TestImportToastIsClickableAndOpensTheUndoCard(t *testing.T) {
+	importUnicodeIcons(t)
 	_, xdg := importSandbox(t, "vscode")
 	importUserFiles(t, xdg)
 	m := importConfirm(t, importReviewAndConfirm(t), "import")

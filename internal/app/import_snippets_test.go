@@ -161,6 +161,7 @@ func TestImportSnippetsUndoRemovesAFileTheImportCreated(t *testing.T) {
 }
 
 func TestImportSnippetClashIsOffUntilTurnedOn(t *testing.T) {
+	importUnicodeIcons(t)
 	home, xdg := importSandbox(t, "vscode")
 	importWriteSnippets(t, home, xdg, map[string]string{"go.json": importSnippetGo})
 	dir := importUserFiles(t, xdg)

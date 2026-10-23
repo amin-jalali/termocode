@@ -11,7 +11,16 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/migrate"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
+
+// unicodeIcons puts the Unicode icon mode on for one test.
+func unicodeIcons(t *testing.T) {
+	t.Helper()
+	old := theme.CurrentIconMode
+	theme.CurrentIconMode = theme.IconModeUnicode
+	t.Cleanup(func() { theme.CurrentIconMode = old })
+}
 
 // fixturePlan builds the plan of one editor fixture in internal/migrate.
 func fixturePlan(t *testing.T, src migrate.Source, cur migrate.Current) migrate.Plan {
@@ -62,6 +71,7 @@ func findRow(t *testing.T, m Model, left string) (int, row) {
 }
 
 func TestPanelRowsFromFixturePlans(t *testing.T) {
+	unicodeIcons(t) // the Unicode form of the texts is pinned here; ASCII has its own test
 	for _, tc := range []struct {
 		src      migrate.Source
 		sections []string
@@ -171,6 +181,7 @@ func TestPanelNotImportedRowsCannotBeToggled(t *testing.T) {
 }
 
 func TestPanelShowsConflictsWithCurrentValues(t *testing.T) {
+	unicodeIcons(t) // the Unicode form of the texts is pinned here; ASCII has its own test
 	m := newPanel(t, vscodeSrc, 150, 42)
 	if _, r := findRow(t, m, "editor.tabSize"); !r.conflict || r.right != "Tab size  4 → 2" || !r.on {
 		t.Errorf("tab size: %+v", r)
@@ -243,6 +254,7 @@ func TestPanelOneSelectedRowPerKey(t *testing.T) {
 }
 
 func TestPanelKeysAndCounts(t *testing.T) {
+	unicodeIcons(t) // the Unicode form of the texts is pinned here; ASCII has its own test
 	m := newPanel(t, vscodeSrc, 150, 42)
 	c := m.Counts()
 	if c.Settings != 3 || c.Keys != 4 || c.Theme != "one-dark" || c.Total() != 8 {
@@ -383,6 +395,7 @@ func TestPanelTitleShortensALongFolder(t *testing.T) {
 
 // IM-1: the card shows titles, not the ids the files use.
 func TestPanelShowsTitlesNotIds(t *testing.T) {
+	unicodeIcons(t) // the Unicode form of the texts is pinned here; ASCII has its own test
 	plan := fixturePlan(t, vscodeSrc, current())
 	// A key the user has bound to another command: both names are shown as titles.
 	plan.Current.Overrides = nil
@@ -474,5 +487,45 @@ func TestPanelConflictColourIsOnlyForTakenKeys(t *testing.T) {
 	}
 	if n := strings.Count(text, "conflicts") - strings.Count(text, "(conflicts with"); n != 1 {
 		t.Errorf("%d section headers count conflicts, want 1", n)
+	}
+}
+
+// IM-12: in ASCII icon mode the texts of the panel use ASCII too: "->" for
+// the arrow and "-" for the middle dot, in the rows, the summary and the
+// detail line. The Unicode modes keep "→" and "·".
+func TestPanelTextIsASCIIInASCIIMode(t *testing.T) {
+	for _, tc := range []struct {
+		mode        theme.IconMode
+		arrow, dot  string
+		noArrow, no string
+	}{
+		{theme.IconModeASCII, "Tab size  4 -> 2", "3 settings - 4 keys", "→", "·"},
+		{theme.IconModeUnicode, "Tab size  4 → 2", "3 settings · 4 keys", "", ""},
+	} {
+		old := theme.CurrentIconMode
+		theme.CurrentIconMode = tc.mode
+		m := newPanel(t, vscodeSrc, 150, 42)
+		card := ansi.Strip(m.Box())
+		theme.CurrentIconMode = old
+		if !strings.Contains(card, tc.arrow) {
+			t.Errorf("mode %v: the card does not show %q:\n%s", tc.mode, tc.arrow, card)
+		}
+		if tc.noArrow != "" && (strings.Contains(card, tc.noArrow) || strings.Contains(card, tc.no)) {
+			t.Errorf("mode %v: a non-ASCII %q or %q is left in the card:\n%s", tc.mode, tc.noArrow, tc.no, card)
+		}
+		if tc.mode == theme.IconModeASCII {
+			for _, line := range strings.Split(card, "\n") {
+				for _, r := range line {
+					if r > 0x7e && !strings.ContainsRune("│─╭╮╰╯┌┐└┘├┤▏▍▎▌█ ", r) && r != '…' {
+						t.Errorf("a non-ASCII %q in the ASCII card: %q", r, line)
+						break
+					}
+				}
+			}
+		}
+	}
+	theme.CurrentIconMode = theme.IconModeASCII
+	if got := (Counts{Settings: 2, Keys: 1, Theme: "x"}).Summary(); got != "2 settings - 1 key - theme" {
+		t.Errorf("ASCII summary = %q", got)
 	}
 }

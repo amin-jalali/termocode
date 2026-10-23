@@ -63,6 +63,16 @@ func copyTree(t *testing.T, src, dst string) {
 	}
 }
 
+// importUnicodeIcons puts the Unicode icon mode on for one test: the tests
+// that pin the Unicode form of the texts (→ and ·) say so (IM-12). The
+// default of the test binary is ASCII, where they read "->" and "-".
+func importUnicodeIcons(t *testing.T) {
+	t.Helper()
+	old := theme.CurrentIconMode
+	theme.CurrentIconMode = theme.IconModeUnicode
+	t.Cleanup(func() { theme.CurrentIconMode = old })
+}
+
 func importModel(w, h int) Model {
 	return Model{w: w, h: h, toast: toast.New(), themeID: "vscode-dark-plus", editor: editor.New(nil)}
 }
@@ -159,6 +169,7 @@ func TestImportPickerListsDetectedEditors(t *testing.T) {
 }
 
 func TestImportPickerWithoutEditorsSaysSo(t *testing.T) {
+	importUnicodeIcons(t)
 	// EM-7: no toast any more; the picker opens with only "From a file..."
 	// and a note that says no editor was found.
 	importSandbox(t)
@@ -281,6 +292,7 @@ func TestImportActionTitleUsesPaletteTitles(t *testing.T) {
 }
 
 func TestImportPanelShowsCommandTitles(t *testing.T) {
+	importUnicodeIcons(t)
 	importSandbox(t, "vscode")
 	m := openImportPanel(t, importModel(150, 42), "VS Code")
 	frame := ansi.Strip(m.View())
@@ -380,5 +392,35 @@ func TestImportDemoSnippetsHasOneClash(t *testing.T) {
 	// Only the sandbox was written, and only samples.
 	if _, err := os.Stat(filepath.Join(xdg, "termocode", "snippets.json")); err != nil {
 		t.Errorf("sample user snippets: %v", err)
+	}
+}
+
+// IM-12: in ASCII icon mode the import texts are ASCII: "->" for the arrow,
+// "-" for the middle dot, in the review panel, the picker hints and the
+// toast. The Unicode modes keep "→" and "·" (pinned by the tests above).
+func TestImportTextsAreASCIIInASCIIMode(t *testing.T) {
+	old := theme.CurrentIconMode
+	theme.CurrentIconMode = theme.IconModeASCII
+	t.Cleanup(func() { theme.CurrentIconMode = old })
+	importSandbox(t, "vscode")
+	m := openImportPanel(t, importModel(150, 42), "VS Code")
+	frame := ansi.Strip(m.View())
+	for _, s := range []string{"ctrl+alt+o -> Go to File"} {
+		if !strings.Contains(frame, s) {
+			t.Errorf("the panel does not show %q:\n%s", s, frame)
+		}
+	}
+	if strings.ContainsAny(frame, "→·") {
+		t.Errorf("a non-ASCII arrow or dot is left in the panel:\n%s", frame)
+	}
+	m2 := importModel(150, 42)
+	m2.dispatchPaletteAction("prefs-import-editor")
+	for _, it := range pickerItems(t, &m2) {
+		if strings.ContainsAny(it.Hint+it.Title, "→·") {
+			t.Errorf("a non-ASCII arrow or dot in the picker row %+v", it)
+		}
+	}
+	if got := importSourceHint(m.imp.sources[0]); !strings.Contains(got, " - ") || strings.Contains(got, "·") {
+		t.Errorf("source hint = %q", got)
 	}
 }

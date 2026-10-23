@@ -27,6 +27,7 @@ func snippetPanel(t *testing.T, raw string) Model {
 }
 
 func TestPanelSnippetsSection(t *testing.T) {
+	unicodeIcons(t) // the Unicode form of the texts is pinned here; ASCII has its own test
 	m := snippetPanel(t, "")
 	var names []string
 	for _, s := range m.sections {
@@ -67,6 +68,7 @@ func TestPanelSnippetsSection(t *testing.T) {
 }
 
 func TestPanelSnippetConflictsAreOffAndShowCurrentToNew(t *testing.T) {
+	unicodeIcons(t) // the Unicode form of the texts is pinned here; ASCII has its own test
 	m := snippetPanel(t, `{"go": {"errw": "old body"}, "*": {"todo": "// TODO"}}`)
 	k, r := findRow(t, m, "go · errw")
 	if r.on || !r.conflict || r.state != stateToggle || !strings.Contains(r.right, "old body → if err != nil {") {

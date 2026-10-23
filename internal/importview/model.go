@@ -14,6 +14,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/migrate"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // ApplyMsg asks the app to confirm and write the selected rows.
@@ -139,7 +140,15 @@ func New(plan migrate.Plan, dir string, opts ...Option) Model {
 	return m
 }
 
+// makeRow is the panel's row for plan row i. In ASCII icon mode the arrow and
+// the middle dot of its texts are ASCII ("Tab size  4 -> 2").
 func (m Model) makeRow(i int) row {
+	r := m.makeRowText(i)
+	r.left, r.right, r.reason = theme.ASCIIText(r.left), theme.ASCIIText(r.right), theme.ASCIIText(r.reason)
+	return r
+}
+
+func (m Model) makeRowText(i int) row {
 	pr := m.plan.Rows[i]
 	r := row{plan: i, left: clean(pr.SourceText), reason: clean(pr.Reason), state: stateSkip}
 	// "VS Code default: ctrl+p" → "ctrl+p  (VS Code default)": the key
@@ -356,7 +365,7 @@ func (c Counts) Summary() string {
 	if len(parts) == 0 {
 		return "nothing selected"
 	}
-	return strings.Join(parts, " · ")
+	return theme.ASCIIText(strings.Join(parts, " · "))
 }
 
 func plural(n int, word string) string {

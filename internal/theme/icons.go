@@ -190,6 +190,20 @@ const (
 // non-UTF-8 locale, else Unicode. A settings change re-resolves it.
 var CurrentIconMode IconMode = IconModeASCII
 
+// asciiTextRepl is what ASCII icon mode writes for the punctuation of
+// running text: an arrow "→" is "->", a middle dot "·" and a dash "—" are "-".
+var asciiTextRepl = strings.NewReplacer("→", "->", "·", "-", "—", "-")
+
+// ASCIIText returns s ready for the current icon mode: in ASCII mode the
+// arrow, middle dot and dash of a text become ASCII ("Tab size  4 -> 2");
+// other modes return s as it is.
+func ASCIIText(s string) string {
+	if CurrentIconMode != IconModeASCII {
+		return s
+	}
+	return asciiTextRepl.Replace(s)
+}
+
 func (i Icon) String() string {
 	switch CurrentIconMode {
 	case IconModeNerdFont:

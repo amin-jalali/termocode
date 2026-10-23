@@ -23,6 +23,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/migrate"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/prompt"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // importGuidePage is the built-in guide page of the import.
@@ -143,12 +144,12 @@ func importSourceHint(src migrate.Source) string {
 	parts, err := importSourceParts(src)
 	where := importShowPath(src.Dir)
 	if err != nil {
-		return "cannot be read · " + where
+		return theme.ASCIIText("cannot be read · " + where)
 	}
 	if parts == "" {
-		return "nothing to import · " + where
+		return theme.ASCIIText("nothing to import · " + where)
 	}
-	return parts + " · " + where
+	return theme.ASCIIText(parts + " · " + where)
 }
 
 // importCount is "1 key" / "3 keys".
@@ -181,7 +182,7 @@ func (m *Model) openImportPicker() tea.Cmd {
 		}
 		hint := importFileHint
 		if len(srcs) == 0 {
-			hint = "Enter · " + importFileHint // the only row is the button of the empty state
+			hint = theme.ASCIIText("Enter · " + importFileHint) // the only row is the button of the empty state
 		}
 		return append(items, picker.Item{ID: importFileID, Title: importFileTitle, Hint: hint})
 	})
