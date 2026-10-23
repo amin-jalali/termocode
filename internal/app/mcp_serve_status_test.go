@@ -36,17 +36,24 @@ func mcpServeStatusModel(t *testing.T) *Model {
 	return m
 }
 
-// Spec (MS-3): the status screen says it listens, where, who is connected
-// (name, since, calls) and shows the last audit lines of outside agents
-// only.
+// Spec (MS-3, MCP-3): the status screen says it listens, who is connected
+// (name, since, calls) and shows the last calls of outside agents only, as
+// readable rows (time, agent, tool, what happened), never the raw audit
+// text or the socket path.
 func TestMCPServeStatusListening(t *testing.T) {
 	m := mcpServeStatusModel(t)
 	text := mcpServeItemsText(m.mcpServeStatusItems())
-	for _, want := range []string{"Listening", "/tmp/tc123/k.mcp.sock", "1 agent connected",
+	for _, want := range []string{"Listening", "1 agent connected",
 		"claude-code", "12:03", "14 calls", "2 asked",
-		"read_file  path=main.go", "tasks_run  label=\"say hi\""} {
+		"12:03 claude-code · read_file · ran without asking",
+		"12:03 claude-code · tasks_run · asked, you allowed"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("status has no %q:\n%s", want, text)
+		}
+	}
+	for _, raw := range []string{"gate=", "by=mcp:", "/tmp/tc123/k.mcp.sock", "Socket", "path=main.go"} {
+		if strings.Contains(text, raw) {
+			t.Errorf("status shows raw %q:\n%s", raw, text)
 		}
 	}
 	if strings.Contains(text, "by=chat") || strings.Contains(text, "git_status") {
@@ -58,13 +65,13 @@ func TestMCPServeStatusListening(t *testing.T) {
 func TestMCPServeStatusLastLines(t *testing.T) {
 	m := mcpServeStatusModel(t)
 	for i := 0; i < 20; i++ {
-		m.output.Append(aiAuditChannel, "12:04:00  notify  title="+string(rune('a'+i))+"  gate=auto  by=mcp:codex  → shown")
+		m.output.Append(aiAuditChannel, "12:04:00  tool_"+string(rune('a'+i))+"  gate=auto  by=mcp:codex  → shown")
 	}
 	text := mcpServeItemsText(m.mcpServeStatusItems())
-	if strings.Count(text, "by=mcp:codex") != mcpServeStatusLines {
-		t.Errorf("audit lines shown = %d, want %d:\n%s", strings.Count(text, "by=mcp:codex"), mcpServeStatusLines, text)
+	if strings.Count(text, "codex · tool_") != mcpServeStatusLines {
+		t.Errorf("call rows shown = %d, want %d:\n%s", strings.Count(text, "codex · tool_"), mcpServeStatusLines, text)
 	}
-	if strings.Contains(text, "title=a ") || !strings.Contains(text, "title=t ") {
+	if strings.Contains(text, "tool_a ") || !strings.Contains(text, "tool_t ") {
 		t.Errorf("not the newest lines:\n%s", text)
 	}
 }
@@ -189,5 +196,49 @@ func TestMCPServePaletteIDs(t *testing.T) {
 		if p, ok := aiActionPolicies[id]; !ok || p.Gate != aiGateNever || p.Reason == "" {
 			t.Errorf("%s policy = %+v (ok %v), want never with a reason", id, p, ok)
 		}
+	}
+}
+
+// Spec (MCP-3): each way a call can end has its own plain words.
+func TestMCPServeCallRowWords(t *testing.T) {
+	cases := []struct{ line, want string }{
+		{"09:41:12  get_ide_state  gate=auto  by=mcp:claude-code  → 2 tabs", "09:41 claude-code · get_ide_state · ran without asking"},
+		{"09:42:05  tasks_run  label=\"x\"  gate=confirm:allowed  by=mcp:codex  → started", "09:42 codex · tasks_run · asked, you allowed"},
+		{"09:42:06  tasks_run  gate=confirm:always  by=mcp:codex  → started", "09:42 codex · tasks_run · ran (always allowed)"},
+		{"09:42:40  debug_start  gate=confirm  by=mcp:codex  → declined: declined by the user", "09:42 codex · debug_start · asked, you denied"},
+		{"09:43:00  debug_start  gate=confirm  by=mcp:codex  → declined: timed out waiting for the user", "09:43 codex · debug_start · asked, no answer in time"},
+		{"09:44:00  mcp__x  gate=refused  by=mcp:codex  → not an exposed tool", "09:44 codex · mcp__x · not run"},
+	}
+	for _, c := range cases {
+		got, ok := mcpServeCallRow(c.line)
+		if !ok || got != c.want {
+			t.Errorf("row(%q) = %q (%v), want %q", c.line, got, ok, c.want)
+		}
+	}
+	if _, ok := mcpServeCallRow("09:41:12  read_file  gate=auto  by=chat  → ok"); ok {
+		t.Error("a chat line became a row")
+	}
+}
+
+// Spec (MCP-3): the status box grows with the window, up to a cap.
+func TestMCPServeStatusWidthFollowsWindow(t *testing.T) {
+	boxWidth := func(w int) int {
+		m := mcpServeStatusModel(t)
+		m.w, m.h = w, 42
+		m.dispatchPaletteAction("mcp-serve-status")
+		for _, line := range strings.Split(ansi.Strip(m.picker.View()), "\n") {
+			if a, b := strings.Index(line, "╭"), strings.Index(line, "╮"); a >= 0 && b > a {
+				return ansi.StringWidth(line[a : b+len("╮")])
+			}
+		}
+		t.Fatalf("w=%d: no box", w)
+		return 0
+	}
+	narrow, mid, wide, huge := boxWidth(60), boxWidth(80), boxWidth(150), boxWidth(300)
+	if !(narrow < mid && mid < wide) {
+		t.Errorf("widths 60/80/150 = %d/%d/%d, want them to grow", narrow, mid, wide)
+	}
+	if huge != wide || huge > 100 {
+		t.Errorf("width at 300 = %d, want the cap (%d, at most 100)", huge, wide)
 	}
 }

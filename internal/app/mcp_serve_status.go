@@ -161,6 +161,44 @@ func (m *Model) mcpServeAuditLines(n int) []string {
 	return out
 }
 
+// mcpServeCallRow turns one audit line of an outside agent
+// ("09:41:12  tasks_run  label=x  gate=confirm:allowed  by=mcp:claude-code
+// → started") into a row a person reads: "09:41 claude-code · tasks_run ·
+// asked, you allowed". The arguments and the result text stay in the
+// audit log (Output: AI). ok is false for a line of another shape.
+func mcpServeCallRow(line string) (string, bool) {
+	at, rest, found := strings.Cut(line, "  ")
+	if !found || len(at) < 5 {
+		return "", false
+	}
+	tool, _, _ := strings.Cut(rest, "  ")
+	_, afterGate, found := strings.Cut(rest, "gate=")
+	if !found {
+		return "", false
+	}
+	gate, afterGate, _ := strings.Cut(afterGate, "  ")
+	by, result, _ := strings.Cut(strings.TrimPrefix(afterGate, "by=mcp:"), "  → ")
+	if !strings.HasPrefix(afterGate, "by=mcp:") || tool == "" || by == "" {
+		return "", false
+	}
+	var what string
+	switch {
+	case strings.HasPrefix(result, "declined") && strings.Contains(result, "timed out"):
+		what = "asked, no answer in time"
+	case strings.HasPrefix(result, "declined"):
+		what = "asked, you denied"
+	case gate == "confirm:allowed":
+		what = "asked, you allowed"
+	case gate == "confirm:always":
+		what = "ran (always allowed)"
+	case gate == "auto":
+		what = "ran without asking"
+	default:
+		what = "not run"
+	}
+	return at[:5] + " " + by + " · " + tool + " · " + what, true
+}
+
 // mcpServeNotListeningWhy says why nothing listens.
 func (m *Model) mcpServeNotListeningWhy() string {
 	switch mcpServeMode() {
@@ -200,9 +238,6 @@ func (m *Model) mcpServeStatusItems() []picker.Item {
 			who = mcpServePlural(n, "agent", "agents") + " connected"
 		}
 		info("Listening · " + who)
-		if st.path != "" {
-			info("Socket: " + st.path)
-		}
 		if n > 0 {
 			head("Connected agents")
 			for _, a := range st.clients {
@@ -218,7 +253,9 @@ func (m *Model) mcpServeStatusItems() []picker.Item {
 	if lines := m.mcpServeAuditLines(mcpServeStatusLines); len(lines) > 0 {
 		head("Last calls of outside agents")
 		for _, l := range lines {
-			info(l)
+			if row, ok := mcpServeCallRow(l); ok {
+				info(row)
+			}
 		}
 	}
 	head("Actions")
@@ -228,9 +265,17 @@ func (m *Model) mcpServeStatusItems() []picker.Item {
 	return items
 }
 
+// mcpServeStatusWidth is the status box width: it follows the window
+// (8 cells less) between the picker's default and a cap, so call rows and
+// action hints are not cut in a wide terminal.
+func mcpServeStatusWidth(w int) int {
+	return max(56, min(96, w-8))
+}
+
 // openMCPServeStatus shows the status screen.
 func (m *Model) openMCPServeStatus() tea.Cmd {
 	m.picker = picker.NewItems(" ⇄ MCP server status (Enter on an action) ", m.mcpServeStatusItems())
+	m.picker.SetWidth(mcpServeStatusWidth(m.w))
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
 	m.pickerKind = pickerKindMCPServeStatus

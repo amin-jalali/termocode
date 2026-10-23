@@ -189,8 +189,9 @@ also edit `config.json`.
 ## See what is connected
 
 - The status bar shows **⇄ 1 agent** while an agent is connected. Click it.
-- **MCP: Server Status** shows if termocode listens (and why not), the
-  socket, each agent with its calls, and the last calls. From there you can
+- **MCP: Server Status** shows if termocode listens (and why not), each
+  agent with its calls, and the last calls in plain words, for example
+  `09:41 claude-code · tasks_run · asked, you allowed`. From there you can
   copy the config or open the auto-approve list.
 - Every call, allowed or not, is in the AI audit log (**Output: AI**) as
   `mcp:<agent name>`.
