@@ -40,6 +40,8 @@ type mcpServeState struct {
 	src     *mcpServeSource   // its tool source (mcp_serve_list.go)
 	path    string            // its socket file
 	clients []*mcpServeAgent  // connected agents (mcp_serve_status.go)
+	// disconnectID is the agent the Disconnect card is about.
+	disconnectID uint64
 }
 
 // mcpServeAsk is one call waiting for the user.

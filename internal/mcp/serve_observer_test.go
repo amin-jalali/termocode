@@ -84,3 +84,50 @@ func TestSocketServerObservesClients(t *testing.T) {
 		t.Errorf("ids: call %d, events %v", callID, src.ids)
 	}
 }
+
+// Spec (MCP-7): Disconnect closes one connection by its id (the client
+// sees EOF, the observer hears it is gone) and leaves the others; an
+// unknown id is false.
+func TestSocketServerDisconnectOne(t *testing.T) {
+	src := &observedSource{ToolSource: echoSource(), ids: map[string]uint64{}, calls: make(chan uint64, 4)}
+	path := filepath.Join(shortSocketDir(t), "k.mcp.sock")
+	ln, err := ListenUnix(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := Serve(ln, src, func(net.Conn) error { return nil }, nil)
+	defer srv.Close()
+	dial := func() net.Conn {
+		c, err := net.Dial("unix", path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := socketCall(t, c, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","clientInfo":{"name":"x"}}}`); err != nil {
+			t.Fatal(err)
+		}
+		return c
+	}
+	first, second := dial(), dial()
+	defer first.Close()
+	defer second.Close()
+	if srv.Conns() != 2 {
+		t.Fatalf("conns = %d", srv.Conns())
+	}
+	if srv.Disconnect(9999) {
+		t.Error("an unknown id was disconnected")
+	}
+	id := src.ids["connected"] // the last connection that connected
+	if !srv.Disconnect(id) {
+		t.Fatalf("Disconnect(%d) = false", id)
+	}
+	deadline := time.Now().Add(3 * time.Second)
+	for srv.Conns() != 1 && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if srv.Conns() != 1 {
+		t.Fatalf("conns after Disconnect = %d, want 1", srv.Conns())
+	}
+	if got := src.seen(); got[len(got)-1] != "gone" {
+		t.Errorf("events = %v, want a gone event last", got)
+	}
+}

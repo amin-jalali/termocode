@@ -171,6 +171,20 @@ func (s *SocketServer) NotifyToolsChanged() {
 	}
 }
 
+// Disconnect closes the one connection with this id (ClientObserver ids);
+// the client sees EOF. It reports whether there was such a connection.
+func (s *SocketServer) Disconnect(id uint64) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for c, sc := range s.conns {
+		if sc.srv != nil && sc.srv.connID == id {
+			_ = c.Close()
+			return true
+		}
+	}
+	return false
+}
+
 // Conns is how many connections are served now.
 func (s *SocketServer) Conns() int {
 	s.mu.Lock()

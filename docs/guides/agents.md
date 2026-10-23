@@ -193,7 +193,9 @@ also edit `config.json`.
 - **MCP: Server Status** shows if termocode listens (and why not), each
   agent with its calls, and the last calls in plain words, for example
   `09:41 claude-code · tasks_run · asked, you allowed`. From there you can
-  copy the config or open the auto-approve list.
+  copy the config, open the auto-approve list, stop listening for this
+  session (your settings stay as they are), or press `Enter` on an agent to
+  disconnect it. Both ask first.
 - Every call, allowed or not, is in the AI audit log (**Output: AI**) as
   `mcp:<agent name>`.
 

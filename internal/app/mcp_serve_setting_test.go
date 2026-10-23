@@ -3,11 +3,14 @@
 package app
 
 import (
+	"bufio"
 	"errors"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // mcpServeSetMode writes mcp_server into the test config.json.
@@ -137,8 +140,10 @@ func TestMCPServeStatusNotListeningActions(t *testing.T) {
 	if b, _ := os.ReadFile(cfg); !strings.Contains(string(b), `"mcp_server": "on"`) {
 		t.Errorf("config.json: %s", b)
 	}
-	if id := mcpServeActionID(m.mcpServeStatusItems(), "serve-"); id != "" {
-		t.Errorf("a listening status has the action %q", id)
+	for _, id := range []string{"serve-on", "serve-start"} {
+		if mcpServeActionID(m.mcpServeStatusItems(), id) != "" {
+			t.Errorf("a listening status has the action %q", id)
+		}
 	}
 	if !m.pickerOpen || m.pickerKind != pickerKindMCPServeStatus {
 		t.Error("the status screen did not refresh")
@@ -156,5 +161,53 @@ func TestMCPServeStatusNotListeningActions(t *testing.T) {
 	}
 	if b, _ := os.ReadFile(cfg); strings.Contains(string(b), `"on"`) {
 		t.Errorf("the session start changed the setting: %s", b)
+	}
+}
+
+// Spec (MCP-7): Enter on a connected agent asks, then closes that one
+// connection (the agent sees EOF) and the row goes; Cancel keeps it.
+func TestMCPServeStatusDisconnectAgent(t *testing.T) {
+	m, _, _ := mcpServeTestModel(t)
+	m.mcpServe = nil
+	mcpServeShortRuntime(t)
+	mcpServeSetMode(t, "on")
+	defer m.stopMCPServe()
+	m.startMCPServe()
+	path := m.mcpServe.path
+	c, err := net.Dial("unix", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	r := bufio.NewReader(c)
+	mcpServeClientLine(t, m, c, r, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","clientInfo":{"name":"claude-code"}}}`)
+	mcpServePumpUntil(t, m, m.mcpServe.hub, "the agent in the list", func() bool {
+		return len(m.mcpServe.clients) == 1 && m.mcpServe.clients[0].name == "claude-code"
+	})
+	row := "agent:" + strings.TrimPrefix(m.mcpServeStatusItems()[2].ID, "agent:")
+	if m.mcpServeStatusItems()[2].ID == "" {
+		t.Fatalf("the agent row is not selectable:\n%s", mcpServeItemsText(m.mcpServeStatusItems()))
+	}
+	m.onMCPServeStatusPicked(row)
+	if !m.confirmOpen || m.confirmKind != confirmKindMCPServeDisconnect || !strings.Contains(m.confirm.View(), "Disconnect claude-code?") {
+		t.Fatalf("no disconnect card:\n%s", m.confirm.View())
+	}
+	m.confirmOpen = false
+	m.handleConfirmSelect("cancel")
+	if len(m.mcpServe.clients) != 1 {
+		t.Fatal("Cancel disconnected the agent")
+	}
+	m.onMCPServeStatusPicked(row)
+	m.confirmOpen = false
+	m.handleConfirmSelect("ok")
+	if len(m.mcpServe.clients) != 0 {
+		t.Error("the row stayed after Disconnect")
+	}
+	_ = c.SetReadDeadline(time.Now().Add(5 * time.Second))
+	if _, err := r.ReadString('\n'); err == nil {
+		t.Error("the agent's connection is still open")
+	}
+	if m.mcpServe == nil {
+		t.Error("Disconnect stopped the whole server")
 	}
 }

@@ -683,6 +683,9 @@ type Model struct {
 	// mcpServeErr: why the listener did not start ("" when it did or was
 	// not asked to); the status screen shows it (mcp_serve_status.go).
 	mcpServeErr string
+	// mcpServeStopped: the user chose "Stop listening" on the status
+	// screen (this session only; the setting is untouched).
+	mcpServeStopped bool
 	// HTTP client for .http files (http_state.go); made on first use.
 	http *httpState
 	// secrets is the secret store's unlock flow (secrets_ui.go); the store

@@ -55,6 +55,7 @@ func (m *Model) startMCPServe() tea.Cmd {
 			})
 			m.mcpServe = &mcpServeState{hub: hub, srv: srv, src: src, path: path}
 			m.mcpServeErr = ""
+			m.mcpServeStopped = false
 			mcpServeTarget.Store(srv)
 			mcpServeTargetHub.Store(hub)
 			return waitMCPServe(hub)

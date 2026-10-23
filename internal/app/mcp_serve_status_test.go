@@ -281,3 +281,72 @@ func mcpServeActionID(items []picker.Item, prefix string) string {
 	}
 	return ""
 }
+
+// Spec (MCP-7): a listening status has "Stop listening", and a connected
+// agent's row is selectable (Enter opens a Disconnect card).
+func TestMCPServeStatusHasStopAndDisconnectRows(t *testing.T) {
+	m := mcpServeStatusModel(t)
+	items := m.mcpServeStatusItems()
+	var stop, agent bool
+	for _, it := range items {
+		stop = stop || (it.ID == "serve-stop" && it.Title == "Stop listening")
+		agent = agent || (it.ID == "agent:1" && strings.Contains(it.Title, "claude-code"))
+	}
+	if !stop || !agent {
+		t.Errorf("stop row %v, agent row %v in:\n%s", stop, agent, mcpServeItemsText(items))
+	}
+	m.mcpServe = nil
+	if id := mcpServeActionID(m.mcpServeStatusItems(), "serve-stop"); id != "" {
+		t.Error("Stop listening while not listening")
+	}
+}
+
+// Spec (MCP-7): Stop listening asks first (Cancel has the focus); Cancel
+// keeps everything; OK stops the listener for this session, leaves the
+// setting alone, and the screen says so.
+func TestMCPServeStatusStopListening(t *testing.T) {
+	m := mcpServeStatusModel(t)
+	cfg, _ := settingsConfigPath()
+	mcpServeSetMode(t, "on")
+	before, _ := os.ReadFile(cfg)
+	m.onMCPServeStatusPicked("serve-stop")
+	if !m.confirmOpen || m.confirmKind != confirmKindMCPServeStop || m.pickerOpen {
+		t.Fatalf("no stop card (confirm %v kind %d picker %v)", m.confirmOpen, m.confirmKind, m.pickerOpen)
+	}
+	if got := mcpServeButtonIDs(m); got != "cancel,ok" {
+		t.Errorf("buttons = %s", got)
+	}
+	m.confirmOpen = false
+	m.handleConfirmSelect("cancel")
+	if m.mcpServe == nil || !m.pickerOpen {
+		t.Fatal("Cancel stopped it, or lost the screen")
+	}
+	m.onMCPServeStatusPicked("serve-stop")
+	m.confirmOpen = false
+	m.handleConfirmSelect("ok")
+	if m.mcpServe != nil {
+		t.Fatal("OK did not stop it")
+	}
+	if after, _ := os.ReadFile(cfg); string(after) != string(before) {
+		t.Errorf("the setting changed: %s -> %s", before, after)
+	}
+	text := mcpServeItemsText(m.mcpServeStatusItems())
+	if !strings.Contains(text, "You stopped it for this session") || mcpServeActionID(m.mcpServeStatusItems(), "serve-start") == "" {
+		t.Errorf("status after the stop:\n%s", text)
+	}
+	if !m.pickerOpen || m.pickerKind != pickerKindMCPServeStatus {
+		t.Error("the status screen is not back")
+	}
+}
+
+// Spec (MCP-7): Esc on one of these cards goes back to the status screen
+// and changes nothing.
+func TestMCPServeStatusCardEscBack(t *testing.T) {
+	m := mcpServeStatusModel(t)
+	m.onMCPServeStatusPicked("serve-stop")
+	m.confirmOpen = false
+	m.onAIConfirmClosed()
+	if m.mcpServe == nil || !m.pickerOpen {
+		t.Error("Esc stopped it, or lost the screen")
+	}
+}

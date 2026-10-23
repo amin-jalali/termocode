@@ -11,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/picker"
 )
@@ -23,6 +24,12 @@ import (
 
 // pickerKindMCPServeStatus is the status screen.
 const pickerKindMCPServeStatus pickerKindEnum = 2000
+
+// The two small cards of the status screen (stop, disconnect).
+const (
+	confirmKindMCPServeStop       confirmKindEnum = 2001
+	confirmKindMCPServeDisconnect confirmKindEnum = 2002
+)
 
 // mcpServeStatusLines is how many audit lines the screen shows.
 const mcpServeStatusLines = 5
@@ -204,6 +211,11 @@ func (m *Model) mcpServeNotListeningWhy() string {
 	switch mcpServeMode() {
 	case "off":
 		return "Not listening. The MCP server is turned off."
+	}
+	if m.mcpServeStopped {
+		return "Not listening. You stopped it for this session."
+	}
+	switch mcpServeMode() {
 	case "on":
 		if m.mcpServeErr != "" {
 			return "Not listening. It could not start: " + aiCleanText(m.mcpServeErr)
@@ -222,7 +234,7 @@ func (m *Model) mcpServeNotListeningAction() picker.Item {
 	switch {
 	case mcpServeMode() == "off":
 		return picker.Item{ID: "serve-on", Title: "Turn on", Hint: "let outside agents connect"}
-	case m.mcpServeErr != "" || mcpServeMode() == "on":
+	case m.mcpServeErr != "":
 		return picker.Item{ID: "serve-start", Title: "Try again", Hint: "start listening"}
 	}
 	return picker.Item{ID: "serve-start", Title: "Start listening now", Hint: "for this session"}
@@ -257,8 +269,9 @@ func (m *Model) mcpServeStatusItems() []picker.Item {
 				if name == "" {
 					name = "(no name yet)"
 				}
-				info(name + " · since " + a.since.Format("15:04") + " · " +
-					mcpServePlural(a.calls, "call", "calls") + ", " + strconv.Itoa(a.asked) + " asked")
+				items = append(items, picker.Item{ID: "agent:" + strconv.FormatUint(a.id, 10), Hint: "Enter to disconnect",
+					Title: name + " · since " + a.since.Format("15:04") + " · " +
+						mcpServePlural(a.calls, "call", "calls") + ", " + strconv.Itoa(a.asked) + " asked"})
 			}
 		}
 	}
@@ -273,6 +286,8 @@ func (m *Model) mcpServeStatusItems() []picker.Item {
 	head("Actions")
 	if st == nil {
 		items = append(items, m.mcpServeNotListeningAction())
+	} else {
+		items = append(items, picker.Item{ID: "serve-stop", Title: "Stop listening", Hint: "for this session"})
 	}
 	items = append(items,
 		picker.Item{ID: "copy", Title: "Copy termocode server config", Hint: "JSON for agent CLIs"},
@@ -316,6 +331,69 @@ func (m *Model) onMCPServeStatusPicked(id string) tea.Cmd {
 		return tea.Batch(m.syncMCPServe(), m.openMCPServeStatus())
 	case "serve-start":
 		return tea.Batch(m.ensureMCPServeForAgent(), m.openMCPServeStatus())
+	case "serve-stop":
+		m.openMCPServeConfirm(confirmKindMCPServeStop, "Stop listening?",
+			"Connected agents lose their connection and waiting cards are denied.\n\n"+
+				"This is for this session only. Your settings do not change. "+
+				"It starts again when you start an agent tab or choose Start listening now.",
+			"Stop listening")
+		return nil
+	}
+	if rest, ok := strings.CutPrefix(id, "agent:"); ok {
+		if n, err := strconv.ParseUint(rest, 10, 64); err == nil && m.mcpServe != nil {
+			for _, a := range m.mcpServe.clients {
+				if a.id == n {
+					m.mcpServe.disconnectID = n
+					name := a.name
+					if name == "" {
+						name = "this agent"
+					}
+					m.openMCPServeConfirm(confirmKindMCPServeDisconnect, "Disconnect "+name+"?",
+						"It loses its connection to termocode. It can connect again by itself.",
+						"Disconnect")
+					return nil
+				}
+			}
+		}
+	}
+	return m.openMCPServeStatus()
+}
+
+// openMCPServeConfirm shows a small card of the status screen: Cancel
+// first (the focus), then the action.
+func (m *Model) openMCPServeConfirm(kind confirmKindEnum, title, body, action string) {
+	m.pickerOpen = false
+	m.confirm = confirm.New(title, body, []confirm.Button{
+		{ID: "cancel", Title: "Cancel"},
+		{ID: "ok", Title: action, Style: confirm.StylePrimary},
+	})
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = kind
+}
+
+// answerMCPServeStatusConfirm runs "Stop listening" or "Disconnect"; both
+// come back to the status screen.
+func (m *Model) answerMCPServeStatusConfirm(kind confirmKindEnum, id string) tea.Cmd {
+	if id == "ok" {
+		switch kind {
+		case confirmKindMCPServeStop:
+			m.mcpServeForAgent = false
+			m.stopMCPServe()
+			m.mcpServeStopped = true
+		case confirmKindMCPServeDisconnect:
+			if st := m.mcpServe; st != nil {
+				if st.srv != nil {
+					st.srv.Disconnect(st.disconnectID)
+				}
+				for i, a := range st.clients { // at once; the end event finds nothing left
+					if a.id == st.disconnectID {
+						st.clients = append(st.clients[:i], st.clients[i+1:]...)
+						break
+					}
+				}
+			}
+		}
 	}
 	return m.openMCPServeStatus()
 }
