@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/amin-jalali/termocode/docs"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -210,5 +211,27 @@ func TestHelpSectionInSectionsMenu(t *testing.T) {
 	m.handleContainersMenuSelect("section:help")
 	if !st.sectionShown("help") {
 		t.Error("HELP not shown after the second toggle")
+	}
+}
+
+// CT-4: `?` has one meaning, as in the code: it shows the keys of the row
+// under the cursor (a toast). The guide's key table must say so once; the
+// guide itself opens from the HELP rows.
+func TestContainersGuideQuestionMarkHasOneMeaning(t *testing.T) {
+	b, err := docs.FS.ReadFile("guides/containers.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := 0
+	for _, l := range strings.Split(string(b), "\n") {
+		if strings.HasPrefix(l, "| `?` |") {
+			rows++
+			if !strings.Contains(l, "keys") {
+				t.Errorf("the `?` row does not describe the keys: %s", l)
+			}
+		}
+	}
+	if rows != 1 {
+		t.Errorf("the key table has %d rows for `?`, want 1", rows)
 	}
 }
