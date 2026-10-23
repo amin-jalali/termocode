@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -14,13 +15,19 @@ import (
 // goldens): "status" shows the MCP server status screen, "card" an
 // outside agent's confirm card, "chip" the status bar while the server
 // listens with no agent and "opencode" the card that asks to add termocode
-// to a project's opencode.json, over made-up state (a fake socket path, one
+// to a project's opencode.json, and "tip-gemini" / "tip-aider" the one-time
+// hint for agents termocode cannot hand its tools to, over made-up state (a fake socket path, one
 // agent, a few audit lines). It starts no listener and writes nothing.
 func (m *Model) mcpServeDemo(variant string) tea.Cmd {
 	hub := newMCPServeHub()
 	switch variant {
 	case "chip": // listening, nobody connected: the quiet "ready" chip
 		m.mcpServe = &mcpServeState{hub: hub, path: "/run/user/1000/termocode/3f9a1c2b.mcp.sock"}
+		return nil
+	case "tip-gemini", "tip-aider": // the one-time hand tip toast
+		if a, ok := agents.ByID(strings.TrimPrefix(variant, "tip-")); ok {
+			return m.agentMCPHandTip(a)
+		}
 		return nil
 	case "opencode": // the project-file card of OpenCode (nothing is written)
 		if a, ok := agents.ByID("opencode"); ok {
