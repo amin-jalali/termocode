@@ -78,12 +78,13 @@ func imCursorTo(t *testing.T, m *Model, kind imRowKind, name string) {
 }
 
 // Spec: the view lists the profiles with the active one marked, and a
-// project profile that was never asked shows its state and a Trust button.
+// project profile that was never asked shows "project" at the right. No row
+// carries a [Label (key)] button.
 func TestItermocProfilesRows(t *testing.T) {
 	imIcons(t, theme.IconModeUnicode)
 	m := itermocTestModel(t, 70, 40)
 	f := imFrame(m)
-	for _, want := range []string{"ITERMOC", "PROFILES", "active: default", "default", "review", "fast", "local-only", "house", "not asked yet", "[Trust… (t)]", "[New profile (n)]", "[Edit JSON (J)]"} {
+	for _, want := range []string{"ITERMOC", "PROFILES", "active", "default", "review", "fast", "local-only", "house", "project", "+ new profile…"} {
 		if !strings.Contains(f, want) {
 			t.Errorf("no %q in\n%s", want, f)
 		}

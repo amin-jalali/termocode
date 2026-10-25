@@ -36,13 +36,13 @@ func TestItermocModelsShowKeyStateNeverKeyValue(t *testing.T) {
 	}
 	m.itermocRefreshNow()
 	f := imFrame(m)
-	for _, want := range []string{"MODELS", "main", "anthropic · claude-sonnet-4-5", "key ✓", "no key needed", "gpt", "openai · gpt-5-mini", "key ✗", "[Set key (k)]", "[Add slot (a)]", "[Edit JSON (E)]"} {
+	for _, want := range []string{"MODELS", "main", "sonnet-4-5", "local", "qwen 7b", "gpt", "no key", "+ add slot…"} {
 		if !strings.Contains(f, want) {
 			t.Errorf("no %q in\n%s", want, f)
 		}
 	}
-	if !strings.Contains(m.itermocS().sectionNote(imSecModels), "1") {
-		t.Errorf("the MODELS note does not say how many keys are missing: %q", m.itermocS().sectionNote(imSecModels))
+	if badge, needs := m.itermocS().sectionBadge(imSecModels); badge != "1 !" || !needs {
+		t.Errorf("the MODELS badge does not say that one key is missing: %q", badge)
 	}
 	for name, text := range map[string]string{
 		"frame":    f,
@@ -72,21 +72,21 @@ func TestItermocModelsMainOff(t *testing.T) {
 	m.ai.slots = ai.NewSlotPool(map[string]ai.Config{}, nil)
 	m.itermocRefreshNow()
 	f := imFrame(m)
-	if !strings.Contains(f, "main") || !strings.Contains(f, "not set") || !strings.Contains(f, "key ✗") {
+	if !strings.Contains(f, "main") || !strings.Contains(f, "not set") {
 		t.Errorf("no off main slot:\n%s", f)
 	}
 }
 
 // Spec: SERVICES lists the services of mcp.json with their state, a
-// disabled one says "off", and a service that needs a sign-in has an
-// inline [Sign in (i)] button.
+// disabled one says "off", and a service that needs a sign-in says
+// "sign in" (the page has the button).
 func TestItermocServicesRows(t *testing.T) {
 	imIcons(t, theme.IconModeUnicode)
 	m := itermocTestModel(t, 70, 40)
 	writeUserMCP(t, `{"mcpServers":{"notes":{"command":"notes-mcp"},"quiet":{"command":"quiet-mcp","disabled":true}}}`)
 	m.itermoc.refresh(*m, true)
 	f := imFrame(m)
-	for _, want := range []string{"SERVICES", "notes", "quiet", "off", "[Connect a service (c)]"} {
+	for _, want := range []string{"SERVICES", "notes", "quiet", "off", "+ connect…"} {
 		if !strings.Contains(f, want) {
 			t.Errorf("no %q in\n%s", want, f)
 		}
@@ -98,22 +98,23 @@ func TestItermocServicesRows(t *testing.T) {
 		sn.services = append(sn.services, mcp.Status{Name: "linear", Type: mcp.TypeHTTP, State: mcp.StateSignIn, Trusted: true})
 	})
 	f = imFrame(m)
-	if !strings.Contains(f, "[Sign in (i)]") {
-		t.Errorf("no inline Sign in:\n%s", f)
+	if !strings.Contains(f, "sign in") || strings.Contains(f, "[") {
+		t.Errorf("no sign-in word, or a button is left:\n%s", f)
 	}
-	if note := m.itermoc.sectionNote(imSecServices); !strings.Contains(note, "needs you") {
-		t.Errorf("services note %q", note)
+	if badge, needs := m.itermoc.sectionBadge(imSecServices); badge != "1 !" || !needs {
+		t.Errorf("services badge %q", badge)
 	}
 }
 
-// Spec: with no service the section has an empty state with the
-// [Connect a service (c)] button.
+// Spec: with no service the section has an empty state and the dim
+// "+ connect…" row.
 func TestItermocServicesEmptyState(t *testing.T) {
+	imIcons(t, theme.IconModeUnicode)
 	m := itermocTestModel(t, 70, 40)
 	writeUserMCP(t, `{"mcpServers":{}}`)
 	m.itermoc.refresh(*m, true)
 	f := imFrame(m)
-	for _, want := range []string{"No services yet", "[Connect a service (c)]"} {
+	for _, want := range []string{"No services yet", "+ connect…"} {
 		if !strings.Contains(f, want) {
 			t.Errorf("no %q in\n%s", want, f)
 		}
@@ -126,7 +127,7 @@ func TestItermocOutsideAgents(t *testing.T) {
 	imIcons(t, theme.IconModeUnicode)
 	m := itermocTestModel(t, 80, 40)
 	f := imFrame(m)
-	for _, want := range []string{"OUTSIDE AGENTS", "not listening", "[Start Claude Code (s)]", "[Copy config (y)]"} {
+	for _, want := range []string{"OUTSIDE AGENTS", "listening", "+ start one…"} {
 		if !strings.Contains(f, want) {
 			t.Errorf("no %q in\n%s", want, f)
 		}
@@ -135,7 +136,7 @@ func TestItermocOutsideAgents(t *testing.T) {
 	m.itermocRefreshNow()
 	imInject(m, func(sn *itermocSnap) { sn.calls = []imCall{"09:42 claude-code · tasks_run · asked, you allowed"} })
 	f = imFrame(m)
-	for _, want := range []string{"listening", "claude-code", "since 09:41", "14 calls, 2 asked", "tasks_run · asked, you allowed", "1 agent"} {
+	for _, want := range []string{"listening", "claude-code", "14 calls"} {
 		if !strings.Contains(f, want) {
 			t.Errorf("no %q in\n%s", want, f)
 		}

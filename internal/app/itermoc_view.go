@@ -12,16 +12,19 @@ import (
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
-// ── Itermoc: layout and drawing ──────────────────────────────────────────
+// ── Itermoc: the list ────────────────────────────────────────────────────
 //
 //	0  ITERMOC                          ? keys  / filter
 //	1  hairline
-//	2… rows (one line each; sections fold)
+//	2… rows (one line each; groups fold)
 //	h-1 footer: Enter actions · Space fold · ? keys
 //
-// Row anatomy: lead, glyph, name, what it is, state words, and at most one
-// inline fix button when something is wrong. At a narrow width the detail
-// goes first, then the state words; the glyph and the name always stay.
+// The list is calm: a group header (icon, name, a count or "N !"), then one
+// row per object: a state glyph, the name and ONE word at the right
+// (active, project, sign in, off, a model name, N calls). The last row of
+// a group is the dim "+ new profile…". No buttons: the detail page in the
+// editor area (itermoc_page.go) has the verbs. At a narrow width the word
+// is cut first; the glyph and the name always stay.
 
 const (
 	itermocTopRows    = 2 // header + hairline
@@ -31,15 +34,8 @@ const (
 // itermocBodyH is the number of row lines for a sidebar of height h.
 func itermocBodyH(h int) int { return max(h-itermocTopRows-itermocFooterRows, 1) }
 
-// imBtn is one clickable [Label (key)] of a buttons row or an inline fix.
-type imBtn struct {
-	id, label, key string
-	start, end     int // sidebar-local cells, end exclusive
-}
-
-func (b imBtn) text() string {
-	return "[" + imText(b.label) + " (" + b.key + ")]"
-}
+// imBtn is one verb of a group (its key works from any row of the view).
+type imBtn struct{ id, label, key string }
 
 // imText is a label ready for the icon mode ("Trust…" is "Trust..." in ASCII).
 func imText(s string) string {
@@ -57,12 +53,10 @@ func imTrunc(s string, w int) string {
 	return runewidth.Truncate(s, w, "…")
 }
 
-// imLine is one drawn line: the styled text and its click targets.
+// imLine is one drawn line of the list.
 type imLine struct {
 	row  int // index into rows()
 	text string
-	fix  *imBtn
-	btns []imBtn
 }
 
 type imSeg struct {
@@ -91,6 +85,41 @@ func (b *imBuilder) add(t string, tok theme.Color256, bold bool) int {
 	return at
 }
 
+// addRight puts word at the right edge (one cell of margin); the word is
+// cut when the row is too narrow, and dropped below 3 cells.
+func (b *imBuilder) addRight(word string, tok theme.Color256, bold bool) {
+	if word == "" {
+		return
+	}
+	room := b.room() - 1
+	if room < 3 {
+		return
+	}
+	word = imTrunc(word, room)
+	ww := runewidth.StringWidth(word)
+	b.add(strings.Repeat(" ", room-ww), theme.TextMuted, false)
+	b.add(word, tok, bold)
+}
+
+// addNameWord writes a name and, at the right edge, a word. The word is
+// cut first so the name stays whole (to eight cells at least).
+func (b *imBuilder) addNameWord(name string, nameTok theme.Color256, bold bool, word string, wordTok theme.Color256) {
+	total := b.room() - 1
+	nw := runewidth.StringWidth(name)
+	if word != "" {
+		if maxWord := total - min(nw, 8) - 2; maxWord >= 3 {
+			word = imTrunc(word, maxWord)
+		} else {
+			word = ""
+		}
+	}
+	if ww := runewidth.StringWidth(word); ww > 0 {
+		name = imTrunc(name, max(total-ww-2, 1))
+	}
+	b.add(name, nameTok, bold)
+	b.addRight(word, wordTok, false)
+}
+
 func (b *imBuilder) render(bg lipgloss.Color) string {
 	var sb strings.Builder
 	for _, s := range b.segs {
@@ -103,7 +132,7 @@ func (b *imBuilder) render(bg lipgloss.Color) string {
 	return clampSidebarRow(sb.String(), b.used, b.w, lipgloss.NewStyle().Background(bg))
 }
 
-// imGlyphs: the state marks and their ASCII twins.
+// imGlyph: the state marks and their ASCII twins.
 func imGlyph(name string) (string, theme.Color256) {
 	ascii := theme.CurrentIconMode == theme.IconModeASCII
 	pick := func(u, a string) string {
@@ -148,7 +177,28 @@ func imKeyText(k imKeyState) string {
 	return "no key set"
 }
 
-// itermocButtonDefs are the buttons of a section, in order.
+// The group icons (the activity bar's own icon is the Itermoc one).
+var (
+	imIconProfiles = theme.GlyphAI
+	imIconModels   = theme.Icon{NerdFont: "", Unicode: "ϟ", ASCII: "~"} // nf-fa-bolt
+	imIconServices = theme.Icon{NerdFont: "", Unicode: "⌁", ASCII: "o"} // nf-fa-plug
+	imIconAgents   = theme.Icon{NerdFont: "⇄", Unicode: "⇄", ASCII: ">"}
+)
+
+func imSecIcon(sec string) string {
+	switch sec {
+	case imSecModels:
+		return imIconModels.String()
+	case imSecServices:
+		return imIconServices.String()
+	case imSecAgents:
+		return imIconAgents.String()
+	}
+	return imIconProfiles.String()
+}
+
+// itermocButtonDefs are the verbs of a group, in order. Their keys work
+// from any row; the detail page and the key card show them.
 func itermocButtonDefs(sec string) []imBtn {
 	switch sec {
 	case imSecProfiles:
@@ -164,98 +214,54 @@ func itermocButtonDefs(sec string) []imBtn {
 	return nil
 }
 
-// itermocButtonLines packs a section's buttons into lines of width w: two
-// spaces in front, two between, a button that does not fit starts a new
-// line. start / end are filled in.
-func itermocButtonLines(sec string, w int) [][]imBtn {
-	var lines [][]imBtn
-	var cur []imBtn
-	col := 3
-	for _, b := range itermocButtonDefs(sec) {
-		bw := runewidth.StringWidth(b.text())
-		if len(cur) > 0 && col+bw > w {
-			lines, cur, col = append(lines, cur), nil, 3
-		}
-		b.start, b.end = col, col+bw
-		cur = append(cur, b)
-		col += bw + 2
-	}
-	if len(cur) > 0 {
-		lines = append(lines, cur)
-	}
-	return lines
-}
-
-// itermocNameW is the width of the name column of a section's rows.
-func (st *itermocState) nameW(sec string, w int) int {
-	longest := 4
-	cap := max(min(14, w/3), 4)
-	for _, r := range st.sectionItems(sec) {
-		n := 0
-		switch r.kind {
-		case imRowProfile, imRowSlot, imRowService:
-			n = runewidth.StringWidth(r.name)
-		case imRowAgentStatus:
-			n = len("not listening")
-		case imRowAgent:
-			if a, ok := st.snap.agent(r.name); ok {
-				n = runewidth.StringWidth(a.name)
-			}
-		}
-		longest = max(longest, n)
-	}
-	return min(longest, cap)
-}
-
-// sectionNote is the quiet text at the right of a section header: the one
-// number that matters, also when the section is folded.
-func (st *itermocState) sectionNote(sec string) string {
-	sn := st.snap
+// imAddText is the dim row at the end of a group.
+func imAddText(sec string) string {
 	switch sec {
 	case imSecProfiles:
+		return "+ new profile…"
+	case imSecModels:
+		return "+ add slot…"
+	case imSecServices:
+		return "+ connect…"
+	}
+	return "+ start one…"
+}
+
+// sectionBadge is the quiet text at the right of a group header: the
+// number of rows, or "N !" when N of them need the user. Also shown when
+// the group is folded.
+func (st *itermocState) sectionBadge(sec string) (text string, needs bool) {
+	sn := st.snap
+	count, need := 0, 0
+	switch sec {
+	case imSecProfiles:
+		count = len(sn.profiles)
 		for _, p := range sn.profiles {
-			if p.active {
-				return "active: " + p.p.Name
+			if p.trust == aiTrustAsk {
+				need++
 			}
 		}
 	case imSecModels:
-		miss := 0
+		count = len(sn.slots)
 		for _, s := range sn.slots {
-			if s.key == imKeyMissing {
-				miss++
+			if s.key == imKeyMissing || s.key == imKeyUnset {
+				need++
 			}
 		}
-		if miss > 0 {
-			return strconv.Itoa(miss) + " " + imKeyText(imKeyMissing)
-		}
-		return "how steps answer"
 	case imSecServices:
-		if len(sn.services) == 0 {
-			return "none yet"
-		}
-		needs := 0
+		count = len(sn.services)
 		for _, s := range sn.services {
 			if itermocServiceNeeds(s) {
-				needs++
+				need++
 			}
 		}
-		if needs > 0 {
-			return strconv.Itoa(needs) + " needs you"
-		}
-		return "the chat can reach"
 	case imSecAgents:
-		mark, _ := imGlyph("agent")
-		switch {
-		case !sn.listening:
-			return sn.mode + " · not listening"
-		case len(sn.agents) == 0:
-			return sn.mode + " · no agent"
-		case len(sn.agents) == 1:
-			return sn.mode + " · 1 agent " + mark
-		}
-		return sn.mode + " · " + strconv.Itoa(len(sn.agents)) + " agents " + mark
+		count = len(sn.agents)
 	}
-	return ""
+	if need > 0 {
+		return strconv.Itoa(need) + " !", true
+	}
+	return strconv.Itoa(count), false
 }
 
 // itermocServiceNeeds: the service waits for the user (sign-in, a failure).
@@ -280,95 +286,50 @@ func itermocServiceGlyph(s mcp.Status) string {
 	return "idle"
 }
 
-// itermocLines lays out every row for width w. Each row is one line.
-func (m Model) itermocLines(st *itermocState, w int, focused bool) []imLine {
-	rows := st.rows()
-	out := make([]imLine, 0, len(rows))
-	nameW := map[string]int{}
-	for _, sec := range itermocSectionOrder {
-		nameW[sec] = st.nameW(sec, w)
+// itermocServiceWord is the one word of a service row.
+func itermocServiceWord(s mcp.Status) (string, theme.Color256) {
+	switch {
+	case s.Expired || s.State == mcp.StateSignIn:
+		return "sign in", theme.DiagWarning
+	case s.State == mcp.StateFailed || s.State == mcp.StateInvalid:
+		return "failed", theme.DiagError
+	case s.State == mcp.StateDisabled:
+		return "off", theme.TextMuted
+	case !s.Trusted:
+		return "not trusted", theme.DiagWarning
+	case s.State == mcp.StateRunning && s.Tools > 0:
+		return strconv.Itoa(s.Tools) + " tools", theme.TextMuted
+	case s.State == mcp.StateRunning:
+		return "on", theme.TextMuted
 	}
-	sn := st.snap
-	for i, r := range rows {
-		active := i == st.cursor && r.selectable()
-		bg := gitSelBg(active, focused)
-		b := &imBuilder{w: w}
-		l := imLine{row: i}
-		lead := gitLead(active, focused, bg)
-		b.used = 1
-		switch r.kind {
-		case imRowSection:
-			fold := theme.GlyphExpand.String()
-			if st.collapse[r.sec] && strings.TrimSpace(st.filter) == "" {
-				fold = theme.GlyphTreeCollapsed.String()
-			}
-			b.add(fold+" ", theme.TextDim, false)
-			col := theme.TextSecondary
-			if active && focused {
-				col = theme.BorderFocus
-			}
-			b.add(itermocSectionTitle(r.sec), col, true)
-			if note := theme.ASCIIText(st.sectionNote(r.sec)); note != "" && b.room() > 4 {
-				note = imTrunc(note, b.room()-2)
-				gap := b.room() - runewidth.StringWidth(note) - 1
-				b.add(strings.Repeat(" ", max(gap, 2)), theme.TextMuted, false)
-				b.add(note, theme.TextMuted, false)
-			}
-		case imRowProfile:
-			p, _ := sn.profile(r.name)
-			m.itermocProfileLine(b, &l, p, nameW[r.sec])
-		case imRowSlot:
-			s, _ := sn.slot(r.name)
-			itermocSlotLine(b, &l, s, nameW[r.sec])
-		case imRowService:
-			s, _ := sn.service(r.name)
-			itermocServiceLine(b, &l, s, nameW[r.sec])
-		case imRowAgentStatus:
-			itermocStatusLine(b, sn, nameW[r.sec])
-		case imRowAgent:
-			a, _ := sn.agent(r.name)
-			g, tok := imGlyph("agent")
-			b.add(" ", theme.TextMuted, false)
-			b.add(g+" ", tok, false)
-			b.add(imPad(a.name, nameW[r.sec]), theme.TextPrimary, false)
-			b.add("  "+theme.ASCIIText("since "+a.since+" · "+callsText(a.calls)+", "+strconv.Itoa(a.asked)+" asked"), theme.TextMuted, false)
-		case imRowCall:
-			b.add("    "+theme.ASCIIText(r.text), theme.TextMuted, false)
-		case imRowNote:
-			if r.strong {
-				b.add("   "+r.text, theme.TextSecondary, true)
-			} else {
-				b.add("   "+r.text, theme.TextDim, false)
-			}
-		case imRowButtons:
-			line, _ := strconv.Atoi(r.name)
-			defs := itermocButtonLines(r.sec, w)
-			if line < len(defs) {
-				b.used = 0
-				b.add("  ", theme.TextMuted, false)
-				for k, btn := range defs[line] {
-					if k > 0 {
-						b.add("  ", theme.TextMuted, false)
-					}
-					btn.start = b.add(btn.text(), theme.TextPrimary, true)
-					btn.end = b.used
-					l.btns = append(l.btns, btn)
-				}
-				lead = ""
-			}
-		}
-		l.text = lead + b.render(bg)
-		out = append(out, l)
-	}
-	return out
+	return s.State, theme.TextMuted
 }
 
-func imPad(s string, w int) string {
-	s = imTrunc(s, w)
-	if pad := w - runewidth.StringWidth(s); pad > 0 {
-		s += strings.Repeat(" ", pad)
+// itermocSlotWord is the one word of a model row: the short model name,
+// or what is missing.
+func itermocSlotWord(s imSlot) (string, theme.Color256) {
+	switch {
+	case s.provider == "":
+		return "not set", theme.DiagWarning
+	case s.key == imKeyMissing || s.key == imKeyUnset:
+		return "no key", theme.DiagWarning
+	case s.model != "":
+		return itermocShortModel(s.model), theme.TextMuted
 	}
-	return s
+	return s.provider, theme.TextMuted
+}
+
+// itermocShortModel is the model id as the list shows it: "sonnet-4-5",
+// "qwen 7b" (an Ollama tag "qwen2.5-coder:7b").
+func itermocShortModel(model string) string {
+	short := aiShortModel(model)
+	if name, tag, ok := strings.Cut(short, ":"); ok && tag != "" {
+		if i := strings.IndexAny(name, "0123456789.-"); i > 0 {
+			name = name[:i]
+		}
+		return name + " " + tag
+	}
+	return short
 }
 
 func callsText(n int) string {
@@ -378,150 +339,130 @@ func callsText(n int) string {
 	return strconv.Itoa(n) + " calls"
 }
 
-// itermocFix appends an inline fix button when it fits, and records it.
-func itermocFix(b *imBuilder, l *imLine, id, label, key string) {
-	btn := imBtn{id: id, label: label, key: key}
-	t := " " + btn.text()
-	if b.room() < runewidth.StringWidth(t) {
-		return
+// itermocLines lays out every row for width w. Each row is one line.
+func (m Model) itermocLines(st *itermocState, w int, focused bool) []imLine {
+	rows := st.rows()
+	out := make([]imLine, 0, len(rows))
+	sn := st.snap
+	for i, r := range rows {
+		active := i == st.cursor && r.selectable()
+		bg := gitSelBg(active, focused)
+		b := &imBuilder{w: w}
+		lead := gitLead(active, focused, bg)
+		b.used = 1
+		switch r.kind {
+		case imRowGap:
+			lead = ""
+			b.used = 0
+		case imRowSection:
+			col, icon := theme.TextSecondary, theme.AIAccent
+			if active && focused {
+				col = theme.BorderFocus
+			}
+			folded := st.collapse[r.sec] && strings.TrimSpace(st.filter) == ""
+			if folded {
+				icon = theme.TextDim
+			}
+			b.add(imSecIcon(r.sec)+" ", icon, false)
+			b.add(itermocSectionTitle(r.sec), col, true)
+			if folded {
+				b.add(" "+theme.GlyphTreeCollapsed.String(), theme.TextDim, false)
+			}
+			if text, needs := st.sectionBadge(r.sec); text != "" {
+				tok := theme.TextDim
+				if needs {
+					tok = theme.DiagWarning
+				}
+				b.addRight(text, tok, needs)
+			}
+		case imRowProfile:
+			p, _ := sn.profile(r.name)
+			m.itermocProfileLine(b, p)
+		case imRowSlot:
+			s, _ := sn.slot(r.name)
+			itermocSlotLine(b, s)
+		case imRowService:
+			s, _ := sn.service(r.name)
+			itermocServiceLine(b, s)
+		case imRowAgentStatus:
+			itermocStatusLine(b, sn)
+		case imRowAgent:
+			a, _ := sn.agent(r.name)
+			b.add("  ", theme.TextMuted, false)
+			g, tok := imGlyph("ready")
+			b.add(g+" ", tok, false)
+			b.addNameWord(a.name, theme.TextPrimary, active, callsText(a.calls), theme.TextMuted)
+		case imRowCall:
+			b.add("     "+theme.ASCIIText(r.text), theme.TextMuted, false)
+		case imRowNote:
+			b.add("     "+r.text, theme.TextDim, false)
+		case imRowAdd:
+			b.add("  ", theme.TextMuted, false)
+			col := theme.TextDim
+			if active && focused {
+				col = theme.TextSecondary
+			}
+			b.add(imText(imAddText(r.sec)), col, false)
+		}
+		out = append(out, imLine{row: i, text: lead + b.render(bg)})
 	}
-	b.add(" ", theme.TextMuted, false)
-	btn.start = b.add(btn.text(), theme.TextPrimary, true)
-	btn.end = b.used
-	l.fix = &btn
+	return out
 }
 
-func (m Model) itermocProfileLine(b *imBuilder, l *imLine, p imProfile, nameW int) {
-	glyph, tok := " ", theme.TextMuted
+func (m Model) itermocProfileLine(b *imBuilder, p imProfile) {
+	glyph, tok := imGlyph("idle")
 	switch {
 	case p.trust == aiTrustAsk:
 		glyph, tok = imGlyph("untrusted")
-	case p.trust == aiTrustRefused:
-		glyph, tok = imGlyph("idle")
-	case p.active:
+	case p.active && p.trust != aiTrustRefused:
 		glyph, tok = imGlyph("ready")
 	}
-	b.add(" ", theme.TextMuted, false)
+	word, wtok := "", theme.TextMuted
+	switch {
+	case p.active:
+		word, wtok = "active", theme.AccentGreen
+	case p.p.Source == ai.ProfileSourceProject:
+		word = "project"
+		if p.trust == aiTrustAsk {
+			wtok = theme.DiagWarning
+		}
+	}
+	b.add("  ", theme.TextMuted, false)
 	b.add(glyph+" ", tok, false)
-	nameTok := theme.TextPrimary
-	b.add(imPad(p.p.Name, nameW), nameTok, p.active)
-	room := b.room() - 2
-	// A fix button first: it only appears when there is space left for it.
-	fixW := 0
-	if p.trust == aiTrustAsk {
-		fixW = runewidth.StringWidth(" [Trust… (t)]") + 1
-	}
-	detailRoom := room - fixW
-	if detailRoom >= 6 && m.ai != nil {
-		state := ""
-		switch {
-		case p.p.Source == ai.ProfileSourceProject && p.trust == aiTrustAsk:
-			state = "project · not asked yet"
-		case p.p.Source == ai.ProfileSourceProject && p.trust == aiTrustRefused:
-			state = "project · not used here"
-		case p.p.Source == ai.ProfileSourceProject:
-			state = "project"
-		}
-		state = theme.ASCIIText(state)
-		text := ""
-		if state != "" && detailRoom >= runewidth.StringWidth(state)+3+8 {
-			text = state + theme.ASCIIText(" · ") + theme.ASCIIText(m.ai.aiPipelineText(p.p, detailRoom-runewidth.StringWidth(state)-3))
-		} else {
-			text = theme.ASCIIText(m.ai.aiPipelineText(p.p, detailRoom))
-		}
-		b.add("  "+text, theme.TextMuted, false)
-	}
-	if p.trust == aiTrustAsk {
-		itermocFix(b, l, "trust", "Trust…", "t")
-	}
+	b.addNameWord(p.p.Name, theme.TextPrimary, p.active, word, wtok)
 }
 
-func itermocSlotLine(b *imBuilder, l *imLine, s imSlot, nameW int) {
+func itermocSlotLine(b *imBuilder, s imSlot) {
 	glyph, tok := imGlyph("ready")
 	switch s.key {
 	case imKeyMissing, imKeyUnset:
 		glyph, tok = imGlyph("needs")
-	case imKeyNone:
-		glyph, tok = imGlyph("idle")
 	}
-	b.add(" ", theme.TextMuted, false)
+	if s.provider == "" {
+		glyph, tok = imGlyph("needs")
+	}
+	word, wtok := itermocSlotWord(s)
+	b.add("  ", theme.TextMuted, false)
 	b.add(glyph+" ", tok, false)
-	b.add(imPad(s.name, nameW), theme.TextPrimary, false)
-	detail := "not set"
-	if s.provider != "" {
-		detail = s.provider
-		if s.model != "" {
-			detail += theme.ASCIIText(" · ") + s.model
-		}
-	}
-	state := imKeyText(s.key)
-	fixW := 0
-	if s.key == imKeyMissing {
-		fixW = runewidth.StringWidth(" [Set key (k)]") + 1
-	}
-	room := b.room() - 2
-	showState := room-fixW >= runewidth.StringWidth(state)+10
-	stateW := 0
-	if showState {
-		stateW = runewidth.StringWidth(state) + 2
-	}
-	if d := room - fixW - stateW; d >= 6 {
-		b.add("  "+imTrunc(detail, d), theme.TextMuted, false)
-	}
-	if showState {
-		stok := theme.TextMuted
-		switch s.key {
-		case imKeyOK:
-			stok = theme.AccentGreen
-		case imKeyMissing:
-			stok = theme.DiagWarning
-		}
-		b.add("  "+state, stok, false)
-	}
-	if s.key == imKeyMissing {
-		itermocFix(b, l, "setkey", "Set key", "k")
-	}
+	b.addNameWord(s.name, theme.TextPrimary, false, word, wtok)
 }
 
-func itermocServiceLine(b *imBuilder, l *imLine, s mcp.Status, nameW int) {
+func itermocServiceLine(b *imBuilder, s mcp.Status) {
 	g, tok := imGlyph(itermocServiceGlyph(s))
-	b.add(" ", theme.TextMuted, false)
+	word, wtok := itermocServiceWord(s)
+	b.add("  ", theme.TextMuted, false)
 	b.add(g+" ", tok, false)
-	b.add(imPad(s.Name, nameW), theme.TextPrimary, false)
-	fixW := 0
-	if s.Expired || s.State == mcp.StateSignIn {
-		fixW = runewidth.StringWidth(" [Sign in (i)]") + 1
-	}
-	if d := b.room() - 2 - fixW; d >= 6 {
-		b.add("  "+imTrunc(theme.ASCIIText(mcpStatusHint(s)), d), theme.TextMuted, false)
-	}
-	if s.Expired || s.State == mcp.StateSignIn {
-		itermocFix(b, l, "signin", "Sign in", "i")
-	}
+	b.addNameWord(s.Name, theme.TextPrimary, false, word, wtok)
 }
 
-func itermocStatusLine(b *imBuilder, sn itermocSnap, nameW int) {
+func itermocStatusLine(b *imBuilder, sn itermocSnap) {
 	g, tok := imGlyph("idle")
-	name, detail := "not listening", sn.whySentence
 	if sn.listening {
 		g, tok = imGlyph("ready")
-		name = "listening"
-		detail = "mode " + sn.mode
-		switch len(sn.agents) {
-		case 0:
-			detail += " · no agent connected"
-		case 1:
-			detail += " · 1 agent connected"
-		default:
-			detail += " · " + strconv.Itoa(len(sn.agents)) + " agents connected"
-		}
 	}
-	b.add(" ", theme.TextMuted, false)
+	b.add("  ", theme.TextMuted, false)
 	b.add(g+" ", tok, false)
-	b.add(imPad(name, max(nameW, len(name))), theme.TextPrimary, false)
-	if d := b.room() - 2; d >= 6 {
-		b.add("  "+imTrunc(theme.ASCIIText(detail), d), theme.TextMuted, false)
-	}
+	b.addNameWord("listening", theme.TextPrimary, false, sn.mode, theme.TextMuted)
 }
 
 // ── The whole view ───────────────────────────────────────────────────────
@@ -534,7 +475,18 @@ func (st *itermocState) fitScroll(nRows, bodyH int) {
 	} else if st.cursor >= st.scroll+bodyH {
 		st.scroll = st.cursor - bodyH + 1
 	}
-	// Show a section header above its first row when the cursor is there.
+	// A header is the row above its first item: show it when the cursor is there.
+	rows := st.rows()
+	if st.scroll > 0 && st.scroll == st.cursor && st.cursor < len(rows) {
+		for back := 1; back <= 2 && st.cursor-back >= 0; back++ {
+			if k := rows[st.cursor-back].kind; k == imRowSection {
+				st.scroll = st.cursor - back
+				break
+			} else if k != imRowGap {
+				break
+			}
+		}
+	}
 }
 
 // itermocHeader is "ITERMOC" with the filter or the hint at the right.
@@ -594,13 +546,16 @@ func (m Model) renderItermocSidebar(w, h int) string {
 		lines = append(lines, fill())
 	}
 	foot := theme.ASCIIText("Enter actions · Space fold · ? keys")
+	if runewidth.StringWidth(foot) > w-2 {
+		foot = theme.ASCIIText("Enter actions · ? keys")
+	}
 	foot = imTrunc(foot, max(w-2, 1))
 	lines = append(lines, testsPad(theme.Bg(theme.BgSidebar).Render(" ")+theme.FgBg(theme.TextMuted, theme.BgSidebar).Render(foot), w))
 	return strings.Join(lines[:h], "\n")
 }
 
-// itermocHits are the view's click targets, sidebar-local x: section
-// headers, rows, inline fixes and buttons.
+// itermocHits are the list's click targets, sidebar-local x: the group
+// headers and the rows.
 func (m Model) itermocHits(w int) []hitTarget {
 	st := m.itermoc
 	if st == nil || !st.loaded {
@@ -616,16 +571,9 @@ func (m Model) itermocHits(w int) []hitTarget {
 		switch r.kind {
 		case imRowSection:
 			out = append(out, hitTarget{ID: "im:sec:" + r.sec, Label: itermocSectionTitle(r.sec), X: 0, Y: y, W: w, H: 1})
-		case imRowButtons:
-			for _, b := range all[i].btns {
-				out = append(out, hitTarget{ID: "im:btn:" + r.sec + ":" + b.id, Label: b.text(), X: b.start, Y: y, W: b.end - b.start, H: 1})
-			}
 		default:
 			if !r.selectable() {
 				continue
-			}
-			if f := all[i].fix; f != nil {
-				out = append(out, hitTarget{ID: "im:fix:" + r.sec + "/" + r.name + ":" + f.id, Label: f.text(), X: f.start, Y: y, W: f.end - f.start, H: 1})
 			}
 			out = append(out, hitTarget{ID: "im:row:" + r.sec + "/" + r.name, X: 0, Y: y, W: w, H: 1})
 		}

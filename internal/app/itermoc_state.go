@@ -316,8 +316,9 @@ const (
 	imRowAgentStatus // "listening · 1 agent" / "not listening" (the outside agents' summary)
 	imRowAgent
 	imRowCall
-	imRowNote    // an empty or error state line
-	imRowButtons // the section's buttons: [Label (key)] …
+	imRowNote // an empty or error state line
+	imRowGap  // a blank line between two sections
+	imRowAdd  // the dim "+ new profile…" row at the end of a section
 )
 
 // imRow is one line of the view.
@@ -332,7 +333,7 @@ type imRow struct {
 
 func (r imRow) selectable() bool {
 	switch r.kind {
-	case imRowNote, imRowCall, imRowButtons:
+	case imRowNote, imRowCall, imRowGap:
 		return false
 	}
 	return true
@@ -362,15 +363,16 @@ func (st *itermocState) rows() []imRow {
 		if filtering && len(items) == 0 {
 			continue
 		}
+		if len(out) > 0 {
+			out = append(out, imRow{kind: imRowGap, sec: sec})
+		}
 		out = append(out, imRow{kind: imRowSection, sec: sec})
 		if st.collapse[sec] && !filtering {
 			continue
 		}
 		out = append(out, items...)
 		if !filtering {
-			for i := range itermocButtonLines(sec, st.width()) {
-				out = append(out, imRow{kind: imRowButtons, sec: sec, name: strconv.Itoa(i)})
-			}
+			out = append(out, imRow{kind: imRowAdd, sec: sec, name: "+add"})
 		}
 	}
 	return out
@@ -387,8 +389,7 @@ func (st *itermocState) sectionItems(sec string) []imRow {
 			}
 		}
 		if len(sn.profiles) == 0 && st.filter == "" {
-			out = append(out, imRow{kind: imRowNote, sec: sec, text: "No profiles", strong: true},
-				imRow{kind: imRowNote, sec: sec, text: "Save one from the current profile."})
+			out = append(out, imRow{kind: imRowNote, sec: sec, text: "No profiles yet"})
 		}
 	case imSecModels:
 		for _, s := range sn.slots {
@@ -403,8 +404,7 @@ func (st *itermocState) sectionItems(sec string) []imRow {
 			}
 		}
 		if len(sn.services) == 0 && st.filter == "" {
-			out = append(out, imRow{kind: imRowNote, sec: sec, text: "No services yet", strong: true},
-				imRow{kind: imRowNote, sec: sec, text: "Connect GitHub, Linear or Slack for the chat."})
+			out = append(out, imRow{kind: imRowNote, sec: sec, text: "No services yet"})
 		}
 	case imSecAgents:
 		if st.matches("listening", "not listening", "mcp server", "outside agents", sn.mode) || len(sn.agents) > 0 && st.filter == "" {
@@ -413,11 +413,6 @@ func (st *itermocState) sectionItems(sec string) []imRow {
 		for _, a := range sn.agents {
 			if st.matches(a.name) {
 				out = append(out, imRow{kind: imRowAgent, sec: sec, name: agentKey(a.id)})
-			}
-		}
-		if st.filter == "" || st.matches("calls") {
-			for _, c := range sn.calls {
-				out = append(out, imRow{kind: imRowCall, sec: sec, text: string(c)})
 			}
 		}
 	}

@@ -114,7 +114,7 @@ func TestItermocFoldAndTab(t *testing.T) {
 		t.Fatal("Space did not fold PROFILES")
 	}
 	f := imFrame(m)
-	if strings.Contains(f, "local-only") || !strings.Contains(f, "▸ PROFILES") || !strings.Contains(f, "active: default") {
+	if strings.Contains(f, "local-only") || !strings.Contains(f, "PROFILES ▸") || !strings.Contains(f, "1 !") {
 		t.Errorf("folded header:\n%s", f)
 	}
 	imPress(m, "enter")
@@ -131,16 +131,21 @@ func TestItermocFoldAndTab(t *testing.T) {
 	}
 }
 
-// Spec: the cursor skips buttons and notes; j / k and the arrows move
-// between the rows you can act on.
+// Spec: the cursor skips the blank lines and notes; j / k and the arrows move
+// between the rows you can act on (the "+ new profile…" row is one).
 func TestItermocCursorSkipsButtons(t *testing.T) {
 	m := itermocTestModel(t, 70, 40)
-	imCursorTo(t, m, imRowProfile, "house") // the last profile; a buttons row follows
+	imCursorTo(t, m, imRowProfile, "house") // the last profile; the "+ new profile…" row follows
+	imPress(m, "j")
+	if r, _ := m.itermoc.current(); r.kind != imRowAdd || r.sec != imSecProfiles {
+		t.Fatalf("after the last profile the cursor is on %+v", r)
+	}
 	imPress(m, "j")
 	r, _ := m.itermoc.current()
 	if !r.selectable() || r.kind != imRowSection || r.sec != imSecModels {
 		t.Errorf("after the last profile the cursor is on %+v", r)
 	}
+	imPress(m, "k")
 	imPress(m, "k")
 	if r, _ := m.itermoc.current(); r.name != "house" {
 		t.Errorf("k went to %+v", r)
@@ -148,8 +153,8 @@ func TestItermocCursorSkipsButtons(t *testing.T) {
 }
 
 // Spec: a click on a section header folds it; a click on a row selects it
-// and opens its actions; a click on a button runs it; a click on an inline
-// fix runs the fix. The wheel moves the cursor.
+// and opens its actions; a click on the dim "+ new profile…" row runs it.
+// The wheel moves the cursor.
 func TestItermocMouse(t *testing.T) {
 	imIcons(t, theme.IconModeUnicode)
 	m := itermocTestModel(t, 70, 40)
@@ -183,14 +188,9 @@ func TestItermocMouse(t *testing.T) {
 		t.Errorf("the click selected %+v", r)
 	}
 	m.pickerOpen = false
-	click(find("im:fix:profiles/house:trust"))
-	if !m.confirmOpen || m.confirmKind != confirmKindAIProfileTrust {
-		t.Error("the inline [Trust…] did not open the trust card")
-	}
-	m.confirmOpen = false
-	click(find("im:btn:profiles:new"))
+	click(find("im:row:profiles/+add"))
 	if !m.promptOpen || m.promptKind != promptKindAIProfileNew {
-		t.Error("the [New profile] button did not open the name prompt")
+		t.Error("the + new profile… row did not open the name prompt")
 	}
 	m.promptOpen = false
 	click(find("im:sec:models"))
@@ -230,11 +230,11 @@ func TestItermocHitTargetsAndProbe(t *testing.T) {
 	if got := m.tooltipText(row.ID); !strings.Contains(got, "Profile actions") {
 		t.Errorf("tooltip %q", got)
 	}
-	if tooltipHelp(row.ID) == "" || tooltipHelp("im:btn:profiles:new") == "" {
+	if tooltipHelp(row.ID) == "" || tooltipHelp("im:row:profiles/+add") == "" {
 		t.Error("no guide topic for the view's targets")
 	}
-	if name, key := m.tooltipLabel("im:btn:services:connect"); name != "Connect a service" || key != "c" {
-		t.Errorf("button tooltip %q %q", name, key)
+	if name, key := m.tooltipLabel("im:row:services/+add"); name != imText("connect…") || key != "Enter" {
+		t.Errorf("add-row tooltip %q %q", name, key)
 	}
 }
 
@@ -274,7 +274,7 @@ func TestItermocShortWindowFoldsMostSections(t *testing.T) {
 	imIcons(t, theme.IconModeUnicode)
 	m := itermocTestModel(t, 29, 24)
 	f := imFrame(m)
-	if !strings.Contains(f, "▾ PROFILES") || !strings.Contains(f, "▸ MODELS") || !strings.Contains(f, "▸ OUTSIDE AGENTS") {
+	if !strings.Contains(f, "PROFILES") || strings.Contains(f, "PROFILES ▸") || !strings.Contains(f, "MODELS ▸") || !strings.Contains(f, "OUTSIDE AGENTS ▸") {
 		t.Errorf("folds at 24 rows:\n%s", f)
 	}
 }

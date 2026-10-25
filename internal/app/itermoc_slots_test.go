@@ -201,7 +201,7 @@ func mustCredPath(t *testing.T) string {
 func TestItermocSlotAddInvalid(t *testing.T) {
 	cases := []struct {
 		name, url, want string
-		right            int // provider index
+		right           int // provider index
 	}{
 		{name: "bad name", want: "slot name"},
 		{name: "main", want: "built in"},
@@ -377,19 +377,19 @@ func TestItermocSlotForm80x24(t *testing.T) {
 	}
 }
 
-// Spec: a click on [Add slot (a)] opens the form; the palette has AI: Add
+// Spec: a click on the "+ add slot…" row opens the form; the palette has AI: Add
 // Model Slot…; the key card lists a, e, k, D, E.
 func TestItermocSlotMouseAndPalette(t *testing.T) {
 	m, _ := slotTestModel(t, 200, 50)
 	var hit *hitTarget
 	for _, h := range m.itermocHits(m.explorerWidth - 1) {
-		if h.ID == "im:btn:"+imSecModels+":add" {
+		if h.ID == "im:row:"+imSecModels+"/+add" {
 			h := h
 			hit = &h
 		}
 	}
 	if hit == nil {
-		t.Fatal("no hit target for [Add slot (a)]")
+		t.Fatal("no hit target for the add-slot row")
 	}
 	nm, _ := m.handleItermocSidebarMouse(hit.X, hit.Y, tea.MouseLeft)
 	*m = nm
@@ -400,7 +400,7 @@ func TestItermocSlotMouseAndPalette(t *testing.T) {
 	if _, ok := m.dispatchItermocPalette("ai-model-slot-add"); !ok || !m.connectOpen {
 		t.Error("the palette command did not open the form")
 	}
-	if name, key, _, ok := itermocTooltip("im:btn:" + imSecModels + ":add"); !ok || name != "Add slot" || key != "a" {
+	if name, key, _, ok := itermocTooltip("im:row:" + imSecModels + "/+add"); !ok || name != imText("add slot…") || key != "Enter" {
 		t.Errorf("tooltip %q %q", name, key)
 	}
 	var keys []string

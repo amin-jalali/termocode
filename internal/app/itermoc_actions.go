@@ -339,8 +339,23 @@ func (m *Model) itermocEnter(row imRow) tea.Cmd {
 		return nil
 	case imRowService:
 		return m.openMCPServerActions(row.name)
+	case imRowAdd:
+		return m.itermocAdd(row.sec)
 	}
 	return m.openItermocActions(row)
+}
+
+// itermocAdd is Enter (or a click) on the dim "+ new profile…" row of a group.
+func (m *Model) itermocAdd(sec string) tea.Cmd {
+	switch sec {
+	case imSecProfiles:
+		return m.itermocButton(sec, "new")
+	case imSecModels:
+		return m.itermocButton(sec, "add")
+	case imSecServices:
+		return m.itermocButton(sec, "connect")
+	}
+	return m.openItermocActions(imRow{kind: imRowAgentStatus, sec: sec, name: "status"})
 }
 
 // itermocAction is one verb of the menu.
@@ -541,28 +556,11 @@ func itermocTooltip(id string) (name, key, help string, ok bool) {
 	switch kind {
 	case "sec":
 		return "Fold section", "Space", help, true
-	case "btn":
-		sec, bid, _ := strings.Cut(rest, ":")
-		for _, b := range itermocButtonDefs(sec) {
-			if b.id == bid {
-				return b.label, b.key, help, true
-			}
-		}
-	case "fix":
-		at := strings.LastIndex(rest, ":")
-		if at < 0 {
-			return "", "", "", false
-		}
-		switch rest[at+1:] {
-		case "trust":
-			return "Trust this project's profile…", "t", help, true
-		case "setkey":
-			return "Set the key of this model's provider", "k", help, true
-		case "signin":
-			return "Sign in to this service", "i", help, true
-		}
 	case "row":
-		sec, _, _ := strings.Cut(rest, "/")
+		sec, name, _ := strings.Cut(rest, "/")
+		if strings.HasPrefix(name, "+") {
+			return strings.TrimPrefix(imText(imAddText(sec)), "+ "), "Enter", help, true
+		}
 		switch sec {
 		case imSecProfiles:
 			return "Profile actions: use, details, duplicate, runs, trust, edit JSON", "Enter · u · d · D", help, true
@@ -603,10 +601,7 @@ func (m Model) handleItermocSidebarMouse(x, y int, t tea.MouseEventType) (Model,
 	for _, h := range m.itermocHits(w) {
 		if x >= h.X && x < h.X+h.W && y >= h.Y && y < h.Y+h.H {
 			h := h
-			// A button inside a row wins over the row.
-			if hit == nil || strings.HasPrefix(h.ID, "im:btn:") || strings.HasPrefix(h.ID, "im:fix:") {
-				hit = &h
-			}
+			hit = &h
 		}
 	}
 	if hit == nil {
@@ -620,25 +615,6 @@ func (m Model) handleItermocSidebarMouse(x, y int, t tea.MouseEventType) (Model,
 	case strings.HasPrefix(id, "im:sec:"):
 		st.toggleSection(strings.TrimPrefix(id, "im:sec:"))
 		return m, nil
-	case strings.HasPrefix(id, "im:btn:"):
-		parts := strings.SplitN(strings.TrimPrefix(id, "im:btn:"), ":", 2)
-		cmd := m.itermocButton(parts[0], parts[1])
-		m.itermocRefreshNow()
-		return m, cmd
-	case strings.HasPrefix(id, "im:fix:"):
-		rest := strings.TrimPrefix(id, "im:fix:")
-		at := strings.LastIndex(rest, ":")
-		key, verb := rest[:at], rest[at+1:]
-		sec, name, _ := strings.Cut(key, "/")
-		row := imRow{sec: sec, name: name}
-		for i, r := range st.rows() {
-			if r.sec == sec && r.name == name && r.selectable() {
-				st.cursor, row = i, r
-			}
-		}
-		cmd := m.itermocRun(verb, row)
-		m.itermocRefreshNow()
-		return m, cmd
 	case strings.HasPrefix(id, "im:row:"):
 		key := strings.TrimPrefix(id, "im:row:")
 		sec, name, _ := strings.Cut(key, "/")
