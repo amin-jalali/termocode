@@ -96,6 +96,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`images_pull`](#images_pull) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved) | no | Pull an image (ref like nginx:1.27 or ghcr.io/acme/api:1.4) in a visible terminal tab "pull: <ref>". |
 | [`compose_up`](#compose_up) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved) | no | Run `docker compose up -d` for a compose project that has containers on this host (see containers_list), in its own folder, in a visible terminal tab. |
 | [`help_read`](#help_read) | auto | no | Read the built-in guide: with no arguments list pages; page shows headings and anchors; page and section returns that section's prepared Markdown; query searches matching sections (page can filter it). |
+| [`profiles_list`](#profiles_list) | auto | no | List the AI agent profiles: name, title, source (built-in, user, project with its trust state), which is active, budget, and each step's title, model slot, resolved model, tools preset and the first line of its prompt. |
 | [`http_list_requests`](#http_list_requests) | auto | yes | List the HTTP requests in the user's .http / .rest files (request templates with {{variables}}, not resolved), the file variable names and the selected environment. |
 | [`http_environments`](#http_environments) | auto | yes | Show the HTTP environments (http-client.env.json and the private file), the selected one and their variable names. |
 | [`http_send`](#http_send) | GET / HEAD / OPTIONS to localhost: auto<br>other safe methods: confirm (http:<host[:port]>)<br>other methods: confirm (http:<host[:port]>/write)<br>private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks) | some ask | Send an HTTP request and read the answer (status, headers, body). |
@@ -1084,6 +1085,16 @@ Read the built-in guide: with no arguments list pages; page shows headings and a
 | `page` | string |   | guide page path, such as guides/git.md (optional) |
 | `query` | string |   | words to find in guide headings and text (optional; searches all pages unless page is supplied) |
 | `section` | string |   | heading anchor on page (optional; requires page, and cannot be combined with query) |
+
+### profiles_list
+
+List the AI agent profiles: name, title, source (built-in, user, project with its trust state), which is active, budget, and each step's title, model slot, resolved model, tools preset and the first line of its prompt. Use it to answer what a profile does; switching stays with the user.
+
+**Gate:** auto
+
+**MCP server:** no
+
+No arguments.
 
 ### http_list_requests
 
