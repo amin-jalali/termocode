@@ -358,7 +358,7 @@ func (c *aiTranscriptCache) matches(s *aiState, width int, rk theme.RenderKey, r
 	}
 	for i := range c.msgs {
 		a, b := &c.msgs[i], &s.conv.Messages[i]
-		if a.Role != b.Role || a.Text != b.Text || a.Context != b.Context || a.Model != b.Model {
+		if a.Role != b.Role || a.Text != b.Text || a.Context != b.Context || a.Model != b.Model || a.Lessons != b.Lessons {
 			return false
 		}
 	}
@@ -510,8 +510,8 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 			if msg.Context != "" {
 				out = append(out, aiRightChip(aiAttachGlyph()+" "+aiContextLabel(msg.Context), width))
 			}
-			if msg.Rules != "" { // OM-1: "rules: AGENTS.md (4 KB)", click opens the file
-				out = append(out, aiRulesLine(msg.Rules, width))
+			if msg.Rules != "" || msg.Lessons > 0 { // OM-1/OM-2: "rules: AGENTS.md (4 KB) · memory: 3 lessons"
+				out = append(out, aiRulesLine(msg.Rules, msg.Lessons, width))
 			}
 		case ai.StoredAssistant:
 			if msg.Run != nil { // a pipeline run: step cards (ai_run_cards.go)

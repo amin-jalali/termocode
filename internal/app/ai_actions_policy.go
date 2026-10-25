@@ -411,6 +411,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// Project rules (OM-1): the AI only gets the text in its prompt.
 	"ai-rules":       aiNever("trusting a project's rules is the user's decision"),
 	"ai-models-edit": aiNever(aiNoAIConfig),
+	// Memory (OM-2): the AI gets no memory tool; turning it on or off and
+	// forgetting lessons is the user's.
+	"ai-memory-toggle": aiNever(aiNoAIConfig),
 	// The AGENTS view (U20 AP-9) only shows the chat's runs.
 	"ai-agents": aiAuto(),
 	// AI: Usage (AU-4) is the user's own view of tokens and money.

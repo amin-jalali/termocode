@@ -9,6 +9,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/aimemory"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/statusbar"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -57,6 +58,8 @@ type aiState struct {
 	profileSave *aiProfileSavePending
 	// rulesTrust is the open project-rules card (ai_rules.go).
 	rulesTrust *aiRulesTrustPending
+	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
+	memFake *[]aimemory.Lesson
 	// profile is the active profile's name ("" = default); profErrShown
 	// is the profile errors already shown as a toast.
 	profile      string
@@ -393,6 +396,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-profile-form", "AI: Edit Profile…", ""},
 		{"ai-profile-trust", "AI: Project Profiles Trust…", ""},
 		{"ai-rules", "AI: Project Rules…", ""},
+		{"ai-memory-toggle", "AI: Memory: Turn On/Off", ""},
 		{"ai-models-edit", "AI: Edit Model Slots", ""},
 		{"ai-sign-in-claude", "AI: Sign in with Claude (OAuth, opt-in)…", ""},
 		{"ai-sign-out-claude", "AI: Sign out of Claude", ""},
@@ -509,6 +513,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIProfileTrustPicker(), true
 	case "ai-rules":
 		return m.openAIRules(), true
+	case "ai-memory-toggle":
+		return m.toggleAIMemory(), true
 	case "ai-models-edit":
 		return m.editAIModelSlots(), true
 	}

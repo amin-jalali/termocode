@@ -194,6 +194,8 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	if err != nil {
 		return m.aiProfileProblem(prof.Name, err)
 	}
+	root := aiWorkspaceRoot()
+	memBlock, lessons := m.aiMemoryTurn(root, text) // OM-2: before the attachments are taken
 	ctxText, images := s.takeAttachments()
 	s.turnMsg = len(s.conv.Messages) // restore points key on the turn's user message
 	model := slot.cfg.Model
@@ -201,7 +203,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		model = "" // the chat's own model: stored chats stay as they were
 	}
 	s.conv.Messages = append(s.conv.Messages,
-		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Images: images, Rules: aiRulesLabel(rules)},
+		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Images: images, Rules: aiRulesLabel(rules), Lessons: lessons},
 		ai.StoredMessage{Role: ai.StoredAssistant, Model: model},
 	)
 	s.scroll = 0
@@ -210,11 +212,10 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	gen := s.chatGen
 	ch := make(chan tea.Msg, 64)
 
-	root := aiWorkspaceRoot()
 	call := newAIIDECaller(gen, ch)
 	tools := aiFilterTools(m.aiChatTools(root, call), step.Tools)
 	native := slot.p.SupportsTools()
-	base := m.aiChatBasePrompt(root, rules) + aiStepSystem(step.System)
+	base := m.aiChatBasePrompt(root, rules, memBlock) + aiStepSystem(step.System)
 	history := m.aiChatHistory(ai.SystemPrompt(base, tools, native))
 	mcpTools := m.aiMCPTurn(gen, ch) // MCP servers' tools, built on the goroutine
 	mcpLines := ""
@@ -280,13 +281,14 @@ func (s *aiState) takeAttachments() (string, []string) {
 
 // aiChatBasePrompt is the chat's system prompt before the tool protocol.
 // rules are the project rules read at the turn's start (added only when
-// the user trusts them).
-func (m *Model) aiChatBasePrompt(root string, rules ai.Rules) string {
+// the user trusts them); memory is the turn's lessons block (OM-2), after
+// the rules.
+func (m *Model) aiChatBasePrompt(root string, rules ai.Rules, memory string) string {
 	base := aiChatSystemPrompt + "\nWorkspace root: " + root + m.aiServicesPromptLine(root) + m.aiContainersPromptLine() + aiDBPromptLine(root)
 	if p := m.editor.Path(); p != "" {
 		base += "\nThe open file is: " + p
 	}
-	return base + aiRulesPrompt(rules)
+	return base + aiRulesPrompt(rules) + memory
 }
 
 // autoApproveSet is ai_auto_approve as a set (one per agent: "Always

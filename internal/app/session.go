@@ -78,6 +78,9 @@ type SessionState struct {
 	// project to. A changed file has a new hash and asks again.
 	AIRulesTrusted string `json:"ai_rules_trusted,omitempty"`
 	AIRulesRefused string `json:"ai_rules_refused,omitempty"`
+	// AIMemory is the memory switch of this workspace (OM-2): "" never
+	// decided (off; the first lesson asks once), "on" or "off".
+	AIMemory string `json:"ai_memory,omitempty"`
 
 	// Services view (services_state.go): "Always in this project" for the
 	// AI's start / stop / restart, the compose services termocode started
@@ -166,6 +169,7 @@ func workspacePart(s SessionState) SessionState {
 		AIProfilesRefused: s.AIProfilesRefused,
 		AIRulesTrusted:    s.AIRulesTrusted,
 		AIRulesRefused:    s.AIRulesRefused,
+		AIMemory:          s.AIMemory,
 
 		ServicesAIAllowed:   s.ServicesAIAllowed,
 		ServicesStarted:     s.ServicesStarted,

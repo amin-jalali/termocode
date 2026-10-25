@@ -242,7 +242,9 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	root := aiWorkspaceRoot()
 	call := newAIIDECaller(gen, ch)
 	tools := m.aiChatTools(root, call)
-	base := m.aiChatBasePrompt(root, rules)
+	memBlock, lessons := m.aiMemoryTurn(root, s.conv.Messages[msgIdx-1].Text) // OM-2
+	s.conv.Messages[msgIdx-1].Lessons = lessons
+	base := m.aiChatBasePrompt(root, rules, memBlock)
 	hist := m.aiChatHistoryN("", msgIdx)
 	user := hist[len(hist)-1].Content
 	mcpTools := m.aiMCPTurn(gen, ch)

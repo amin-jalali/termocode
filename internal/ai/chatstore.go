@@ -34,6 +34,9 @@ type StoredMessage struct {
 	// "AGENTS.md (4 KB)" or "AGENTS.md (not used)"; "" when the workspace
 	// had no rules file. Only shown, never sent to the model.
 	Rules string `json:"rules,omitempty"`
+	// Lessons is how many memory lessons (OM-2) went into the prompt of
+	// this user message's turn. Only shown.
+	Lessons int `json:"lessons,omitempty"`
 	// Run and Steps are set on the assistant message of an agent
 	// pipeline run (U20): the run's summary and one card per step. A
 	// plain chat turn has neither.

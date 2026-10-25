@@ -143,17 +143,37 @@ func aiRulesLabel(r ai.Rules) string {
 	return files + " (" + size + ")"
 }
 
-// aiRulesLine is the dim "rules: …" line under a user message, aligned
-// right like the attachment chip; a click opens the first file.
-func aiRulesLine(label string, width int) aiLine {
-	file, _, _ := strings.Cut(label, " ")
-	text := "rules: " + label
+// aiRulesLine is the dim "rules: … · memory: N lessons" line under a
+// user message, aligned right like the attachment chip. A click on the
+// rules part opens the first rules file, on the memory part AI: Memory….
+func aiRulesLine(label string, lessons int, width int) aiLine {
+	var parts []string
+	if label != "" {
+		parts = append(parts, "rules: "+label)
+	}
+	if mem := aiMemoryLabel(lessons); mem != "" {
+		parts = append(parts, mem)
+	}
+	text := strings.Join(parts, " · ")
 	l := aiRightChip(text, width)
+	cut := false
 	if lim := width - aiIndent - 3; runewidth.StringWidth(text) > lim && lim > 3 {
 		text = runewidth.Truncate(text, lim, "…") // as aiRightChip cuts it
+		cut = true
 	}
 	x := max(width-1-runewidth.StringWidth(text)-2, 0)
-	l.buttons = []aiLineButton{{x, x + runewidth.StringWidth(text) + 2, "rules-open:" + file}}
+	end := x + runewidth.StringWidth(text) + 2
+	switch {
+	case label == "":
+		l.buttons = []aiLineButton{{x, end, "memory-view"}}
+	case lessons <= 0 || cut:
+		file, _, _ := strings.Cut(label, " ")
+		l.buttons = []aiLineButton{{x, end, "rules-open:" + file}}
+	default:
+		file, _, _ := strings.Cut(label, " ")
+		mid := x + 1 + runewidth.StringWidth(parts[0])
+		l.buttons = []aiLineButton{{x, mid, "rules-open:" + file}, {mid, end, "memory-view"}}
+	}
 	return l
 }
 
