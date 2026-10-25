@@ -284,10 +284,12 @@ func (m *Model) askAIProfileTrust(p ai.Profile, after int, text string) tea.Cmd 
 			fmt.Fprintf(&b, "\n    “%s”", head)
 		}
 	}
-	m.confirm = confirm.New("Use project profile "+p.Name+"?", b.String(), []confirm.Button{
-		{ID: "use", Title: "Use", Style: confirm.StylePrimary},
-		{ID: "deny", Title: "Not in this project", Style: confirm.StyleDestructive},
-	})
+	// A trust card (confirm.Risky): Not in this project is first and has
+	// the focus, so a stray Enter never lets a repo's prompts steer the AI.
+	// The yes is remembered (until the profile changes), hence "Always".
+	m.confirm = confirm.Risky("Use project profile "+p.Name+"?", b.String(),
+		confirm.Button{ID: "deny", Title: "Not in this project"},
+		confirm.Button{ID: "use", Title: "Always in this project", Style: confirm.StylePrimary})
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindAIProfileTrust

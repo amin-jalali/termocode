@@ -562,10 +562,12 @@ that. So the first time you pick or use a project profile, a **trust
 card** shows its steps, their slots and tools, and the first line of each
 prompt:
 
-- **Use** — the profile runs in this project.
 - **Not in this project** — it does not run here, and `Alt+Shift+P`
-  skips it.
-- `Esc` — no answer; your message goes back to the input.
+  skips it. This button comes first and has the focus, so `Enter` alone
+  never trusts a project.
+- **Always in this project** — the profile runs in this project.
+- `Esc` — no answer; nothing is trusted, and your message goes back to
+  the input.
 
 The answer is stored in your workspace session file, outside the repo.
 When the project changes the profile, the card asks again.
