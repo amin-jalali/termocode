@@ -118,6 +118,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerMCPServeStatusConfirm(m.confirmKind, id), true
 	case confirmKindAIProfileTrust:
 		return m.answerAIProfileTrust(id), true
+	case confirmKindAIRulesTrust: // ai_rules.go
+		return m.answerAIRulesTrust(id), true
 	case confirmKindAIProfileSave:
 		return m.onAIProfileSaveChoice(id), true
 	case confirmKindAIProfileShow: // read-only: Close
@@ -157,6 +159,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.openMCPServeStatus() // Esc: back to the status screen
 	case confirmKindAIProfileTrust:
 		return m.answerAIProfileTrust("") // Esc: no answer, ask again next time
+	case confirmKindAIRulesTrust:
+		return m.answerAIRulesTrust("") // Esc: no answer, the message goes back
 	case confirmKindAIProfileSave:
 		return m.onAIProfileSaveChoice("cancel")
 	case confirmKindSecretForget:

@@ -37,6 +37,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Open Chat | `ai-open-chat` | `Alt+A` | `Alt+A` |
 | AI: Pick Model… | `ai-pick-model` |   |   |
 | AI: Project Profiles Trust… | `ai-profile-trust` |   |   |
+| AI: Project Rules… | `ai-rules` |   |   |
 | AI: Rename Chat… | `ai-history-rename` |   |   |
 | AI: Review Pending Changes | `ai-review` |   |   |
 | AI: Secret Store… | `secrets-store` |   |   |

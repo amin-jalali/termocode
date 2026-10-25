@@ -182,6 +182,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	if prof.Source == ai.ProfileSourceProject && m.aiProfileTrust(prof) != aiTrustUse {
 		return m.askAIProfileTrust(prof, aiTrustAfterSend, text) // F4: a repo's prompts are shown first
 	}
+	if r := ai.LoadProjectRules(aiWorkspaceRoot()); r.Text != "" && aiRulesTrust(r) == aiTrustAsk {
+		return m.askAIRulesTrust(r, true, text) // OM-1: a repo's rules file is shown first
+	}
 	if len(prof.Steps) > 1 || prof.Planned() {
 		return m.startAIRun(text, prof)
 	}
