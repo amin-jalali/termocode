@@ -250,7 +250,8 @@ func (m Model) renderActionsHeader(width int) string {
 	}
 	// Chips after the label (actionsHeaderChips): the agent profile
 	// "✦ <profile> ▾" (ai_profiles_ui.go, a click opens the picker) and
-	// MCP "⌁ N MCP" (ai_mcp.go, a click opens AI: MCP Servers…).
+	// MCP "⌁ N MCP" (ai_mcp.go, a click opens AI: MCP Servers…) and
+	// "usage" (a click opens the session's AI: Usage tables).
 	for _, c := range m.actionsHeaderChips(width) {
 		tok := theme.TextSecondary
 		if c.id == "profile" {
@@ -392,8 +393,8 @@ type actionsHeaderChip struct {
 }
 
 // actionsHeaderChips lays out the header chips after " ✦ AI CHAT": the
-// profile chip, then the MCP chip (only from actionsChipMinWidth on); a
-// chip that does not fit before the buttons (with a 1-cell gap) is left
+// profile chip, then the MCP and usage chips (only from
+// actionsChipMinWidth on, usage drops first); a chip that does not fit before the buttons (with a 1-cell gap) is left
 // out.
 func (m Model) actionsHeaderChips(width int) []actionsHeaderChip {
 	x := runewidth.StringWidth(" " + m.actionsHeaderLabel())
@@ -417,6 +418,7 @@ func (m Model) actionsHeaderChips(width int) []actionsHeaderChip {
 	add("profile", m.aiProfileChipLabel())
 	if width >= actionsChipMinWidth {
 		add("mcp", m.mcpChipLabel())
+		add("usage", "usage") // last: the first chip to drop
 	}
 	return out
 }

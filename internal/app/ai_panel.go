@@ -1193,7 +1193,7 @@ func (m Model) aiPanelTargetAt(x, y int) string {
 	switch y {
 	case 0:
 		switch id := m.hitActionsButton(x, y); id {
-		case "new", "history", "mcp", "profile", "chat":
+		case "new", "history", "mcp", "profile", "usage", "chat":
 			return "ai:" + id
 		}
 		return ""
@@ -1314,6 +1314,8 @@ func (m *Model) handleAIPanelMouse(msg tea.MouseMsg) (tea.Cmd, bool) {
 		return m.onMCPChip(), true
 	case id == "ai:profile":
 		return m.openAIProfilePicker(), true
+	case id == "ai:usage":
+		return m.showAIUsage(""), true
 	case strings.HasPrefix(id, "ai:btn:"):
 		return m.onAIButton(strings.TrimPrefix(id, "ai:btn:")), true
 	case id == "ai:transcript":
