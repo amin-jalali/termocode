@@ -104,6 +104,9 @@ var (
 		Bold: [2]string{"▀▀", "▀▀"},
 	}
 	IconDatabases = Icon{NerdFont: "\uf1c0", Unicode: "⛁", ASCII: "D"}
+	// IconItermoc — the Itermoc view (AI profiles, models, services, outside
+	// agents): the magic wand, ✦ (U+2726, EAW=Neutral) like the AI spark.
+	IconItermoc = Icon{NerdFont: "\uf0d0", Unicode: "✦", ASCII: "I"}
 	// IconServices is the same icon under its old name.
 	IconServices = IconContainers
 	// IconDebug — fisheye, reads as a "bug eye". U+25C9, EAW=Neutral.
