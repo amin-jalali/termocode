@@ -311,8 +311,21 @@ after it in the list run after the plan:
 }
 ```
 
-Once the planner made its plan, the run has no **Retry from step N** button (the plan is
-not part of the profile). Send the message again instead.
+**Resume a planned run.** When a planned run fails, is stopped, or
+termocode restarted in the middle, the chat shows a
+**↻ Resume (2 of 5 left)** button: 2 steps did not finish, of 5 in the
+run. Resume reuses the saved plan: the planner is not asked again, the
+finished steps keep their saved answers, and only the unfinished steps
+run (with the steps that wait for them). The chat file keeps each planned
+step's task for this; run snapshots never hold it.
+
+- The steps of the saved plan run on the model slots of the profile's
+  categories **as they are now**. If you changed `categories` since the
+  run, the resume uses the new slots.
+- Chats saved by an older termocode did not keep the planned steps'
+  tasks. Their planned runs show no button: send the message again.
+- If the profile's own steps changed since the run, resume says so; send
+  the message again.
 
 While a planned run goes, the chat shows where it is under its cards:
 `─ run · wave 3/4 · done 2/5 · 2 running ──`. A click on that row opens
@@ -382,6 +395,7 @@ chat back.
 | `d` | Show or hide the node details |
 | `u` | Switch to [AI: Usage](#see-your-agents-and-what-they-cost) (and back) |
 | `f` | Follow the running step again |
+| `r` | Resume the shown run when termocode's restart interrupted it |
 | `←` / `→` (or `h` / `l`) | Show the previous / next run of this chat |
 | `PgUp` / `PgDn` | Scroll the panel |
 | `Home` | Scroll to the top |
@@ -394,7 +408,9 @@ A click on a card selects it; the mouse wheel scrolls.
 states of its last snapshot (written at each step's end), marked
 `✘ run interrupted · last snapshot 12:04`. A step that was running then
 shows `◌ was running`. Snapshots hold step ids, titles and states only,
-never prompts or answers.
+never prompts or answers. When the run can go on, the status row adds
+`· r resumes`: `r` runs its unfinished steps, the same as the
+**↻ Resume** (or **↻ Retry from step N**) button in the chat.
 
 **No cost when idle.** The panel draws from the run's saved cards. It
 redraws once a second only while a run goes and the panel (or the chat)
@@ -429,7 +445,8 @@ When a run fails, is stopped, or termocode restarted in the middle (the
 chat then says `✘ run interrupted (termocode restarted)`), the chat shows
 a **↻ Retry from step N** button on the last turn. It runs the run again
 from the first step that did not finish, with the saved answers of the
-steps before it.
+steps before it. A planned run shows **↻ Resume (N of M left)** instead
+(see [Planned runs and waves](#planned-runs-and-waves)).
 
 ### Over SSH and after a disconnect
 
