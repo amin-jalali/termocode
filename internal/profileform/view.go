@@ -376,6 +376,9 @@ func (m Model) build() built {
 	}
 
 	// Footer.
+	if _, msg := m.firstProblem(); msg != "" { // why Save… is inactive
+		b.foot = append(b.foot, line{s: padTo(bg.Render("  ")+danger.Render(theme.GlyphFail.String()+" ")+text.Render(runewidth.Truncate(msg, innerW-6, "…")), innerW, bg)})
+	}
 	b.foot = append(b.foot, line{s: lipgloss.NewStyle().Background(f.Bg).Foreground(f.Hairline).Render(strings.Repeat("─", innerW))})
 	b.foot = append(b.foot, m.buttonRow(innerW, bg, f, []item{{kind: iAdd}, {kind: iUp}, {kind: iDown}, {kind: iRemove}}, false))
 	last := []item{{kind: iSave}, {kind: iCancel}}

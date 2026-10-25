@@ -388,3 +388,19 @@ func TestFormMouse(t *testing.T) {
 		t.Errorf("click on the none radio: %d", m.steps[2].tools)
 	}
 }
+
+// Spec: a form that opens with a problem starts on it (its step open) and
+// says in the footer why Save… is inactive, even when the field is
+// scrolled out of view.
+func TestFormOpensOnProblem(t *testing.T) {
+	p := ai.Profile{Steps: []ai.ProfileStep{{ID: "a", Title: "A"}, {ID: "a", Title: "B"}}}
+	m := New("p", p, cfg(1))
+	m.SetSize(80, 24)
+	if m.foc != (item{iSID, 1}) || m.sel != 1 {
+		t.Fatalf("focus %v sel %d", m.foc, m.sel)
+	}
+	out := plain(m)
+	if strings.Count(out, `duplicate step id "a"`) < 2 { // under the field and in the footer
+		t.Errorf("problem not shown twice:\n%s", out)
+	}
+}

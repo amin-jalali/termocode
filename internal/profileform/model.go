@@ -195,6 +195,9 @@ func New(name string, p ai.Profile, cfg Config) Model {
 	}
 	m.foc = item{kind: iName}
 	m.initial, m.initName, m.hasInit = m.Profile(), m.name, true
+	if len(m.steps) > 0 {
+		m.focusFirstError() // a form that opens with a problem starts on it
+	}
 	return m
 }
 
@@ -692,21 +695,37 @@ func (m Model) press(b kind) (Model, tea.Cmd) {
 	return m, nil
 }
 
-// focusFirstError moves the focus to the first item with an error.
-func (m *Model) focusFirstError() {
+// firstProblem is the first item with an error and its text ("" when the
+// form is valid); a problem of the whole step list belongs to the first
+// step.
+func (m Model) firstProblem() (item, string) {
 	errs := m.Errors()
+	if len(errs) == 0 {
+		return item{}, ""
+	}
 	for _, it := range m.allItems() {
-		if _, ok := errs[errKey(it)]; ok && errKey(it) != "" {
-			m.setFocus(it)
-			return
+		if msg, ok := errs[errKey(it)]; ok && errKey(it) != "" {
+			return it, msg
 		}
 	}
-	for k := range errs { // an error without a field of its own: the first step
-		_ = k
-		if len(m.steps) > 0 {
-			m.setFocus(item{iStepHead, 0})
+	for _, k := range []string{"steps", "plan"} {
+		if msg, ok := errs[k]; ok {
+			return item{iStepHead, 0}, msg
 		}
-		return
+	}
+	for _, msg := range errs {
+		return item{iStepHead, 0}, msg
+	}
+	return item{}, ""
+}
+
+// focusFirstError moves the focus to the first item with an error.
+func (m *Model) focusFirstError() {
+	if it, msg := m.firstProblem(); msg != "" {
+		if it.kind >= iStepHead && it.step >= len(m.steps) {
+			return
+		}
+		m.setFocus(it)
 	}
 }
 
