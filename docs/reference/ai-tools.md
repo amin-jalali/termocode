@@ -1341,6 +1341,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `ai-open-chat` | AI: Open Chat | auto |   |
 | `ai-pick-model` | AI: Pick Model… | never | AI provider, credentials and approvals stay with the user |
 | `ai-profile-edit` | AI: Edit Profiles | never | AI provider, credentials and approvals stay with the user |
+| `ai-profile-form` | AI: Edit Profile… | never | AI provider, credentials and approvals stay with the user (the step form is for the user; a typed tool comes later) |
 | `ai-profile-new` | AI: New Profile from Current… | never | AI provider, credentials and approvals stay with the user |
 | `ai-profile-next` | AI: Next Profile | never | AI provider, credentials and approvals stay with the user (ai-profile-switch asks the user) |
 | `ai-profile-show` | AI: Show Profile | never | a read-only screen for the user; the AI already knows its own profile |

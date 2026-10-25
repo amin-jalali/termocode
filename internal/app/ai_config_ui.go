@@ -85,9 +85,6 @@ func (m *Model) handleAIPromptSubmit(value string) (tea.Cmd, bool) {
 	case promptKindAISaveAs:
 		return m.onAISaveAsPath(value), true
 	}
-	if cmd, ok := m.handleAIProfilePrompt(value); ok {
-		return cmd, true
-	}
 	return m.handleMCPPromptSubmit(value)
 }
 
@@ -125,6 +122,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.onAIProfileSaveChoice(id), true
 	case confirmKindAIProfileShow: // read-only: Close
 		return nil, true
+	case confirmKindAIProfileFormStep, confirmKindAIProfileFormDelete, confirmKindAIProfileFormDiscard:
+		return m.answerAIProfileFormConfirm(id)
 	case confirmKindSecretForget: // secrets_store_ui.go
 		return m.answerSecretForget(id), true
 	case confirmKindSecretsMigrate: // secrets_migrate.go

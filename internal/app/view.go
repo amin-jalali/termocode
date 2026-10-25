@@ -126,8 +126,9 @@ func (m Model) viewFrame() string {
 	if m.confirmOpen {
 		base := m.renderBase()
 		base = m.overlayToastsInEditor(base)
-		base = m.reviewLayer(base) // a confirm can sit on the review card
-		base = m.importLayer(base) // or on the import review panel
+		base = m.reviewLayer(base)      // a confirm can sit on the review card
+		base = m.importLayer(base)      // or on the import review panel
+		base = m.profileFormLayer(base) // or on the profile form
 		return modalOverlay(base, m.confirm.Box(), m.w, m.h, m.modalOpts())
 	}
 	if m.connectOpen {
@@ -137,6 +138,14 @@ func (m Model) viewFrame() string {
 		o.At = true
 		o.X, o.Y = m.connect.Origin()
 		return modalOverlay(base, m.connect.Box(), m.w, m.h, &o)
+	}
+	if m.profileFormOpen {
+		base := m.renderBase()
+		base = m.overlayToastsInEditor(base)
+		o := m.overlayOpts()
+		o.At = true
+		o.X, o.Y = m.profileForm.Origin()
+		return modalOverlay(base, m.profileForm.Box(), m.w, m.h, &o)
 	}
 	if m.importOpen {
 		base := m.renderBase()

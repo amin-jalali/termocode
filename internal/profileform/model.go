@@ -249,6 +249,10 @@ func (m Model) freeID() string {
 // Name is the profile name typed so far.
 func (m Model) Name() string { return strings.TrimSpace(m.name) }
 
+// OrigName is the name the form opened with (the profile Delete removes
+// when editing in place).
+func (m Model) OrigName() string { return m.origName }
+
 // Replace reports that Save updates the user's profile in place (the
 // name was not changed).
 func (m Model) Replace() bool { return m.cfg.Editing && m.Name() == m.origName }

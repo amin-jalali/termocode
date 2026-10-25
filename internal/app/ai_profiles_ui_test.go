@@ -12,6 +12,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/keymap"
+	"github.com/amin-jalali/termocode/internal/profileform"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -313,30 +314,23 @@ func TestAIProfileEditAndNew(t *testing.T) {
 
 	m.ai.profile = ai.ProfileReview
 	m.dispatchAIPalette("ai-profile-new")
-	if !m.promptOpen || m.promptKind != promptKindAIProfileNew {
-		t.Fatal("no name prompt")
+	if !m.profileFormOpen || m.profileForm.Name() != "my-review" {
+		t.Fatal("no step form for the new profile")
 	}
-	m.promptOpen = false
-	m.handleAIPromptSubmit("my-review")
+	m.handleAIProfileFormMsg(profileform.SaveMsg{})
 	if !m.confirmOpen || m.confirmKind != confirmKindAIProfileSave {
 		t.Fatal("new profile did not show its preview")
 	}
-	if _, err := os.Stat(path); err != nil {
-		t.Fatalf("profile file missing before confirmation: %v", err)
+	if b, _ := os.ReadFile(path); string(b) != `{"profiles": {}}` {
+		t.Fatalf("profile file changed before confirmation: %q", b)
 	}
+	m.confirmOpen = false
 	m.handleAIConfirm("save")
-	if m.ai.activeProfile().Name != "my-review" {
-		t.Fatalf("active %q after New Profile", m.ai.activeProfile().Name)
+	if m.ai.activeProfile().Name != "my-review" || m.profileFormOpen {
+		t.Fatalf("active %q after New Profile (form open %v)", m.ai.activeProfile().Name, m.profileFormOpen)
 	}
 	if p := m.ai.activeProfile(); len(p.Steps) != 2 || p.Source != ai.ProfileSourceUser {
 		t.Errorf("saved profile %+v", p)
-	}
-	m.dispatchAIPalette("ai-profile-new")
-	m.promptOpen = false
-	m.handleAIPromptSubmit("review")
-	m.handleAIConfirm("save")
-	if txt := aiToastText(m); !strings.Contains(txt, "built-in") {
-		t.Errorf("a built-in name gave no error toast: %q", txt)
 	}
 
 	// AI: Edit Model Slots opens the AI config.json.
@@ -352,8 +346,9 @@ func TestAIProfileSaveCancelAndEsc(t *testing.T) {
 		m, _ := aiProfileTestModel(t)
 		path, _ := ai.ProfilesPath()
 		_ = os.Remove(path)
-		m.promptKind = promptKindAIProfileNew
-		m.handleAIProfilePrompt("copy")
+		m.openAIProfileNewForm()
+		m.handleAIProfileFormMsg(profileform.SaveMsg{})
+		m.confirmOpen = false
 		if esc {
 			m.onAIConfirmClosed()
 		} else {
@@ -362,8 +357,8 @@ func TestAIProfileSaveCancelAndEsc(t *testing.T) {
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
 			t.Fatalf("cancel wrote profile: %v", err)
 		}
-		if txt := aiToastText(m); !strings.Contains(txt, "not saved") {
-			t.Errorf("cancel toast: %q", txt)
+		if !m.profileFormOpen {
+			t.Error("cancelling the preview must bring the form back")
 		}
 	}
 }

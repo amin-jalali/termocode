@@ -28,6 +28,8 @@ func (m Model) overlayKind() string {
 		return "confirm"
 	case m.connectOpen:
 		return "connect"
+	case m.profileFormOpen:
+		return "profileform"
 	case m.importOpen:
 		return "import"
 	case m.reviewOpen:

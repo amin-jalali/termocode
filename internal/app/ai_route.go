@@ -51,6 +51,9 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 	case aiOAuthDoneMsg:
 		return m.onAIOAuthDone(msg), true
 	}
+	if cmd, ok := m.handleAIProfileFormMsg(msg); ok { // ai_profile_form.go
+		return cmd, true
+	}
 	return m.handleMCPMsg(msg)
 }
 

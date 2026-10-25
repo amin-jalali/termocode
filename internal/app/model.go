@@ -23,6 +23,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/preview"
+	"github.com/amin-jalali/termocode/internal/profileform"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/recents"
 	"github.com/amin-jalali/termocode/internal/replacebar"
@@ -522,6 +523,10 @@ type Model struct {
 	// connectOpen shows the Connect-a-service card (ai_mcp_connect.go).
 	connectOpen bool
 	connect     connectcard.Model
+	// profileFormOpen shows the profile step form (ai_profile_form.go).
+	profileFormOpen bool
+	profileForm     profileform.Model
+	profileFormStep int // the step the Remove question is about
 	// commitView is the Source Control commit view (git_commit_view.go;
 	// nil until a commit is opened).
 	commitView *commitViewState
