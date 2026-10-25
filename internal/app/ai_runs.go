@@ -251,12 +251,18 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	}
 	auto := s.settings.AutoApprove
 	maxSteps := s.settings.MaxSteps
-	index := map[string]int{} // step numbers of the profile's steps (read-only below)
+	// Step numbers of the profile's steps (read-only below). A planned
+	// node (it has a Prompt) has none: in a resumed run the planned nodes
+	// are in the run from the start, and they keep their own wording.
+	index := map[string]int{}
 	planned := false
-	for i, n := range run.Nodes {
-		index[n.ID] = i + 1
+	for _, n := range run.Nodes {
+		if n.Prompt == "" {
+			index[n.ID] = len(index) + 1
+		}
 		planned = planned || n.Plan
 	}
+	total := len(index)
 	parallel := s.settings.Parallel()
 	if planned {
 		parallel = s.settings.PlannedParallel()
@@ -296,7 +302,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			ts := aiFilterTools(append(tools[:len(tools):len(tools)], extra...), n.Tools)
 			native := sl.p.SupportsTools()
 			msgs := append([]ai.Message(nil), hist...)
-			msgs[0] = ai.Message{Role: ai.RoleSystem, Content: ai.SystemPrompt(base+aiStepPrompt(n, index[n.ID], len(run.Nodes)), ts, native)}
+			msgs[0] = ai.Message{Role: ai.RoleSystem, Content: ai.SystemPrompt(base+aiStepPrompt(n, index[n.ID], total), ts, native)}
 			last := msgs[len(msgs)-1]
 			last.Content = input
 			msgs[len(msgs)-1] = last
@@ -650,7 +656,7 @@ func (s *aiState) aiRetryStep(i int) int {
 		}
 	}
 	for _, st := range rm.Steps {
-		if st.Planned { // the plan is not part of the profile: send the message again
+		if st.Planned && strings.TrimSpace(st.Prompt) == "" { // an old chat file: the plan's tasks were not saved
 			return 0
 		}
 	}
@@ -681,21 +687,9 @@ func (m *Model) aiRetryRun(i int) tea.Cmd {
 	if !ok {
 		return m.aiInfo("Profile " + rm.Run.Profile + " no longer exists; send the message again")
 	}
-	run := prof.Run(rm.Run.ID)
-	run.CreatedAt = clock.Now()
-	if len(run.Nodes) != len(rm.Steps) {
-		return m.aiInfo("Profile " + prof.Name + " changed since this run; send the message again")
-	}
-	outputs := map[string]string{}
-	for k := range run.Nodes {
-		st := rm.Steps[k]
-		if run.Nodes[k].ID != st.ID {
-			return m.aiInfo("Profile " + prof.Name + " changed since this run; send the message again")
-		}
-		if agentdag.State(st.State).Done() {
-			run.Nodes[k].State = agentdag.StateCompleted
-			outputs[st.ID] = st.Text
-		}
+	run, outputs, err := aiRebuildRun(rm, prof)
+	if err != nil {
+		return m.aiInfo(err.Error())
 	}
 	slots, err := s.aiRunPreflight(run, prof.CategorySlots())
 	if err != nil {
@@ -705,16 +699,90 @@ func (m *Model) aiRetryRun(i int) tea.Cmd {
 	p := &s.conv.Messages[i]
 	p.Text = ""
 	p.Run.State = ai.RunStateRunning
+	slotOf := map[string]string{}
+	for _, n := range run.Nodes {
+		slotOf[n.ID] = n.Slot
+	}
 	for k := range p.Steps {
 		st := &p.Steps[k]
 		if !agentdag.State(st.State).Done() {
-			*st = ai.StoredStep{ID: st.ID, Title: st.Title, Slot: run.Nodes[k].Slot, Model: slots[run.Nodes[k].Slot].cfg.Model,
-				Category: st.Category, Deps: st.Deps, State: string(agentdag.StatePending)}
+			sl := slotOf[st.ID]
+			*st = ai.StoredStep{ID: st.ID, Title: st.Title, Slot: sl, Model: slots[sl].cfg.Model,
+				Category: st.Category, Deps: st.Deps, Planned: st.Planned, Prompt: st.Prompt, State: string(agentdag.StatePending)}
 		}
 	}
 	s.turnMsg = i - 1
 	s.scroll = 0
 	return m.launchAIRun(i, run, slots, outputs)
+}
+
+// aiRebuildRun rebuilds the run of the run message rm for a retry or a
+// resume: the profile's steps from prof, the steps a planner added from
+// their saved task text and deps (the model slot of each comes from
+// prof's categories). Finished steps are completed with their saved
+// outputs, so they do not run again and a completed planner does not
+// plan again.
+func aiRebuildRun(rm ai.StoredMessage, prof ai.Profile) (agentdag.Run, map[string]string, error) {
+	changed := fmt.Errorf("Profile %s changed since this run; send the message again", prof.Name)
+	run := prof.Run(rm.Run.ID)
+	run.CreatedAt = clock.Now()
+	var own, planned []ai.StoredStep
+	for _, st := range rm.Steps {
+		if st.Planned {
+			planned = append(planned, st)
+		} else {
+			own = append(own, st)
+		}
+	}
+	if len(run.Nodes) != len(own) {
+		return agentdag.Run{}, nil, changed
+	}
+	for k := range run.Nodes {
+		if run.Nodes[k].ID != own[k].ID {
+			return agentdag.Run{}, nil, changed
+		}
+	}
+	if len(planned) > 0 {
+		isPlanned := map[string]bool{}
+		for _, st := range planned {
+			if strings.TrimSpace(st.Prompt) == "" {
+				return agentdag.Run{}, nil, fmt.Errorf("the plan of this run was not saved; send the message again")
+			}
+			isPlanned[st.ID] = true
+		}
+		cats := prof.CategorySlots()
+		for _, st := range planned {
+			deps := []string{} // not nil: only the plan's own deps pass their output
+			for _, d := range st.Deps {
+				if isPlanned[d] {
+					deps = append(deps, d)
+				}
+			}
+			run.Nodes = append(run.Nodes, agentdag.Node{ID: st.ID, Title: st.Title, Category: st.Category, Slot: cats[st.Category],
+				Prompt: st.Prompt, Input: agentdag.InputRule{Deps: deps}, State: agentdag.StatePending})
+		}
+		run.Edges = nil
+		for _, st := range rm.Steps {
+			for _, d := range st.Deps {
+				run.Edges = append(run.Edges, agentdag.Edge{From: d, To: st.ID})
+			}
+		}
+		if err := agentdag.Validate(run); err != nil {
+			return agentdag.Run{}, nil, fmt.Errorf("cannot resume this run (%v); send the message again", err)
+		}
+	}
+	outputs := map[string]string{}
+	byID := map[string]ai.StoredStep{}
+	for _, st := range rm.Steps {
+		byID[st.ID] = st
+	}
+	for k := range run.Nodes {
+		if st := byID[run.Nodes[k].ID]; agentdag.State(st.State).Done() {
+			run.Nodes[k].State = agentdag.StateCompleted
+			outputs[st.ID] = st.Text
+		}
+	}
+	return run, outputs, nil
 }
 
 // ── Run snapshots ────────────────────────────────────────────────────────
