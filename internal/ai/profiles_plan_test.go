@@ -25,7 +25,7 @@ func TestBuiltinPlanProfile(t *testing.T) {
 		t.Errorf("plan run %+v", r)
 	}
 	for _, p := range BuiltinProfiles() {
-		if p.Name != ProfilePlan && p.Planned() {
+		if p.Name != ProfilePlan && p.Name != ProfileUntilDone && p.Planned() {
 			t.Errorf("%s must not be planned", p.Name)
 		}
 	}

@@ -39,6 +39,7 @@ func TestAIProfileHintShowsPipeline(t *testing.T) {
 		{"review", "Reviewer (claude-sonnet-4-5) → Fixer (gpt-5-mini)"},
 		{"fast", "Answer (gpt-5-mini)"},
 		{"plan", "planner decides the steps (up to 12 agents, 6 waves)"},
+		{"until-done", "plan → verify, fix until done (up to 3 rounds)"},
 		{"house", "project, asks first · Reviewer (claude-sonnet-4-5)"},
 	}
 	for _, c := range cases {

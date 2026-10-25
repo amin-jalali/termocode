@@ -101,6 +101,23 @@ func (st aiPipeStep) modelText(short bool) string {
 func (s *aiState) aiPipelineText(p ai.Profile, budget int) string {
 	steps := s.aiProfileSteps(p)
 	fits := func(t string) bool { return runewidth.StringWidth(t) <= budget }
+	if p.Loop != nil {
+		rounds := p.Run("hint").Loop.MaxRounds
+		first := ""
+		if p.Planned() {
+			first = "plan → "
+		}
+		for _, t := range []string{
+			fmt.Sprintf("%sverify, fix until done (up to %d rounds)", first, rounds),
+			fmt.Sprintf("verify, fix until done · %d rounds", rounds),
+			"until done",
+		} {
+			if fits(t) {
+				return t
+			}
+		}
+		return "until done"
+	}
 	if p.Planned() {
 		full := fmt.Sprintf("planner decides the steps (up to %d agents, %d waves)", agentdag.MaxNodes, agentdag.MaxLayers)
 		if fits(full) {

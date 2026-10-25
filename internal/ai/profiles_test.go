@@ -15,7 +15,7 @@ import (
 var testSlots = map[string]bool{SlotMain: true, SlotQuick: true, SlotLocal: true, "gpt": true}
 
 func TestBuiltinProfiles(t *testing.T) {
-	want := []string{ProfileDefault, ProfileReview, ProfileFast, ProfileLocalOnly, ProfilePlan}
+	want := []string{ProfileDefault, ProfileReview, ProfileFast, ProfileLocalOnly, ProfilePlan, ProfileUntilDone}
 	got := BuiltinProfiles()
 	if len(got) != len(want) {
 		t.Fatalf("builtins: %d", len(got))
@@ -156,7 +156,7 @@ func TestLoadProfilesMerge(t *testing.T) {
 	if len(set.Errors) != 0 {
 		t.Fatalf("errors: %v", set.Errors)
 	}
-	want := []string{"default", "review", "fast", "local-only", "plan", "alpha", "zeta"}
+	want := []string{"default", "review", "fast", "local-only", "plan", "until-done", "alpha", "zeta"}
 	if got := set.Names(); strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("names = %v, want %v", got, want)
 	}

@@ -38,6 +38,14 @@ const (
 	ProfileFast      = "fast"
 	ProfileLocalOnly = "local-only"
 	ProfilePlan      = "plan"
+	ProfileUntilDone = "until-done"
+)
+
+// "Work until done" defaults (ai_until_done_rounds,
+// ai_until_done_budget_usd).
+const (
+	DefaultUntilDoneRounds    = 3
+	DefaultUntilDoneBudgetUSD = 2.0
 )
 
 // Where a profile comes from (Profile.Source).
@@ -88,7 +96,41 @@ type Profile struct {
 	// BudgetUSD (0: none) pauses a run of this profile before its next
 	// step once the steps with a known price have cost this much.
 	BudgetUSD float64 `json:"budget_usd,omitempty"`
-	Source    string  `json:"-"`
+	// BudgetSet: the profile file names budget_usd (0 then means no
+	// budget); a loop profile without it takes ai_until_done_budget_usd.
+	BudgetSet bool `json:"-"`
+	// Loop makes the profile work until done (verify, then fix and
+	// verify again while verify fails).
+	Loop   *ProfileLoop `json:"loop,omitempty"`
+	Source string       `json:"-"`
+}
+
+// ProfileLoop is a profile's verify/fix loop: Verify is a step id, Fix
+// the step that runs (after Verify failed) before Verify runs again.
+// MaxRounds 0 takes ai_until_done_rounds.
+type ProfileLoop struct {
+	Verify    string      `json:"verify"`
+	Fix       ProfileStep `json:"fix"`
+	MaxRounds int         `json:"max_rounds,omitempty"`
+}
+
+// SetLoopDefaults fills the loop profiles that leave them out with the
+// settings: max_rounds (rounds) and budget_usd (budget; 0 = none).
+func (s *ProfileSet) SetLoopDefaults(rounds int, budget float64) {
+	for name, p := range s.byName {
+		if p.Loop == nil {
+			continue
+		}
+		if p.Loop.MaxRounds == 0 {
+			l := *p.Loop
+			l.MaxRounds = rounds
+			p.Loop = &l
+		}
+		if !p.BudgetSet {
+			p.BudgetUSD = budget
+		}
+		s.byName[name] = p
+	}
 }
 
 // Planned reports whether p has a planner step.
@@ -129,23 +171,23 @@ func (p Profile) SlotFor(st ProfileStep) string {
 
 // Run builds the agent run of p: one node per step (with its slot
 // resolved), edges from the steps' deps or, without any, a chain in step
-// order.
+// order. A loop profile's run gets its Loop (max rounds 0 =
+// DefaultUntilDoneRounds).
 func (p Profile) Run(id string) agentdag.Run {
 	r := agentdag.Run{ID: id, Profile: p.Name}
 	ids := make([]string, 0, len(p.Steps))
 	graph := false
 	for _, st := range p.Steps {
-		title := st.Title
-		if title == "" {
-			title = st.ID
-		}
-		r.Nodes = append(r.Nodes, agentdag.Node{
-			ID: st.ID, Title: title, Slot: p.SlotFor(st), Category: st.Category,
-			System: st.System, Tools: st.Tools, Output: st.Output, Plan: st.Plan,
-			Input: agentdag.InputRule{MaxSteps: st.MaxSteps},
-		})
+		r.Nodes = append(r.Nodes, p.node(st))
 		ids = append(ids, st.ID)
 		graph = graph || len(st.Deps) > 0
+	}
+	if l := p.Loop; l != nil {
+		rounds := l.MaxRounds
+		if rounds == 0 {
+			rounds = DefaultUntilDoneRounds
+		}
+		r.Loop = &agentdag.Loop{Verify: l.Verify, Fix: p.node(l.Fix), MaxRounds: rounds}
 	}
 	if !graph {
 		r.Edges = agentdag.Chain(ids...)
@@ -158,6 +200,24 @@ func (p Profile) Run(id string) agentdag.Run {
 	}
 	return r
 }
+
+// node is the run node of step st.
+func (p Profile) node(st ProfileStep) agentdag.Node {
+	title := st.Title
+	if title == "" {
+		title = st.ID
+	}
+	return agentdag.Node{
+		ID: st.ID, Title: title, Slot: p.SlotFor(st), Category: st.Category,
+		System: st.System, Tools: st.Tools, Output: st.Output, Plan: st.Plan,
+		Input: agentdag.InputRule{MaxSteps: st.MaxSteps},
+	}
+}
+
+// UntilDoneVerifyTools are the tools of the until-done profile's verify
+// step: it reads, checks and runs tests, and edits nothing.
+var UntilDoneVerifyTools = []string{"read_file", "list_dir", "search", "git_status", "git_diff",
+	"diagnostics", "run_command", "tests_run", "tests_results", "tasks_list", "tasks_run", "tasks_status"}
 
 // BuiltinProfiles are the profiles that always exist, in picker order.
 // default is one step on the main slot: exactly today's chat.
@@ -182,6 +242,19 @@ func BuiltinProfiles() []Profile {
 		{Name: ProfilePlan, Title: "Plan, then run in waves", Source: ProfileSourceBuiltin,
 			Steps: []ProfileStep{{ID: "planner", Title: "Planner", Category: agentdag.CategoryDeep, Plan: true,
 				Tools: agentdag.ToolRule{Preset: agentdag.PresetReadOnly}}}},
+		{Name: ProfileUntilDone, Title: "Work until done", Source: ProfileSourceBuiltin, BudgetUSD: DefaultUntilDoneBudgetUSD,
+			Steps: []ProfileStep{
+				{ID: "planner", Title: "Planner", Category: agentdag.CategoryDeep, Plan: true,
+					Tools: agentdag.ToolRule{Preset: agentdag.PresetReadOnly},
+					System: `After your plan a verify step (id "verify") checks the work, and a fix step (id "fix") repairs what it finds. ` +
+						`Do not plan a final check of your own and do not use the ids verify or fix.`},
+				{ID: "verify", Title: "Verify", Category: agentdag.CategoryDeep,
+					Tools:  agentdag.ToolRule{Allow: UntilDoneVerifyTools},
+					System: "Run the project's tests and checks (tests_run, tasks_run or run_command) and read the changes. Do not edit files."},
+			},
+			Loop: &ProfileLoop{Verify: "verify", Fix: ProfileStep{ID: "fix", Title: "Fix", Category: agentdag.CategoryQuick,
+				Tools:  agentdag.ToolRule{Preset: agentdag.PresetAll},
+				System: "Fix exactly the problems in the verify report. Keep the changes small."}}},
 	}
 }
 
@@ -265,7 +338,14 @@ func ParseProfiles(data []byte, file, source string, slots map[string]bool, para
 	var doc struct {
 		Profiles map[string]Profile `json:"profiles"`
 	}
-	if err := json.Unmarshal(data, &doc); err != nil {
+	var keys struct { // which keys each profile names (budget_usd: 0 is a choice)
+		Profiles map[string]map[string]json.RawMessage `json:"profiles"`
+	}
+	err := json.Unmarshal(data, &doc)
+	if err == nil {
+		_ = json.Unmarshal(data, &keys)
+	}
+	if err != nil {
 		off := int64(len(data))
 		var se *json.SyntaxError
 		var te *json.UnmarshalTypeError
@@ -286,6 +366,7 @@ func ParseProfiles(data []byte, file, source string, slots map[string]bool, para
 	for _, name := range names {
 		p := doc.Profiles[name]
 		p.Name, p.Source = name, source
+		_, p.BudgetSet = keys.Profiles[name]["budget_usd"]
 		if err := validateProfile(&p, slots, parallelMax); err != nil {
 			return nil, fmt.Errorf("%s line %d: profile %q: %s", file, keyLine(data, name), name, err)
 		}
@@ -310,6 +391,73 @@ func (e *ProfileError) Error() string { return e.Msg }
 // step ids are not filled in p.
 func ValidateProfile(p Profile, slots map[string]bool, parallelMax int) error {
 	return validateProfile(&p, slots, parallelMax)
+}
+
+// checkStep checks the fields of one step (what names it in errors:
+// "step" or "loop.fix").
+func checkStep(st ProfileStep, what string, slots map[string]bool) error {
+	bad := func(field, format string, a ...any) error {
+		return &ProfileError{Step: st.ID, Field: field, Msg: fmt.Sprintf("%s %q: %s", what, st.ID, fmt.Sprintf(format, a...))}
+	}
+	if st.Slot != "" && !slots[st.Slot] {
+		return bad("slot", "unknown slot %q", st.Slot)
+	}
+	switch st.Category {
+	case "", agentdag.CategoryQuick, agentdag.CategoryDeep:
+	default:
+		return bad("category", "unknown category %q (quick or deep)", st.Category)
+	}
+	switch st.Tools.Preset {
+	case "", agentdag.PresetNone, agentdag.PresetReadOnly, agentdag.PresetAll:
+	default:
+		return bad("tools", "unknown tool preset %q (none, read-only or all)", st.Tools.Preset)
+	}
+	switch st.Output {
+	case "", agentdag.OutputShown, agentdag.OutputFolded, agentdag.OutputHidden:
+	default:
+		return bad("output", "unknown output %q (shown, folded or hidden)", st.Output)
+	}
+	if len(st.System) > MaxPromptBytes {
+		return bad("system", "system prompt is longer than 8 KB")
+	}
+	if st.MaxSteps < 0 {
+		return bad("max_steps", "max_steps is negative")
+	}
+	return nil
+}
+
+// checkLoop checks p's loop (steps are the profile's step ids) and fills
+// an empty fix id ("fix").
+func checkLoop(p *Profile, steps map[string]bool, slots map[string]bool) error {
+	l := p.Loop
+	if l == nil {
+		return nil
+	}
+	c := *l
+	if c.Fix.ID == "" {
+		c.Fix.ID = "fix"
+	}
+	p.Loop = &c
+	switch {
+	case !steps[c.Verify]:
+		return fmt.Errorf("loop.verify: unknown step %q", c.Verify)
+	case !profileIDRe.MatchString(c.Fix.ID):
+		return fmt.Errorf("loop.fix id %q: use letters, digits, '-', '_' and '.'", c.Fix.ID)
+	case steps[c.Fix.ID]:
+		return fmt.Errorf("loop.fix id %q is a step id already; pick another", c.Fix.ID)
+	case c.Fix.Plan:
+		return errors.New("loop.fix may not be a planner (plan: true)")
+	case len(c.Fix.Deps) > 0:
+		return errors.New("loop.fix may not have deps (it runs before verify)")
+	case c.MaxRounds != 0 && (c.MaxRounds < 1 || c.MaxRounds > agentdag.MaxRounds):
+		return fmt.Errorf("loop.max_rounds is %d (1 to %d, or leave it out for ai_until_done_rounds)", c.MaxRounds, agentdag.MaxRounds)
+	}
+	for _, st := range p.Steps {
+		if st.ID == c.Verify && st.Plan {
+			return fmt.Errorf("loop.verify: step %q is a planner", c.Verify)
+		}
+	}
+	return checkStep(c.Fix, "loop.fix", slots)
 }
 
 // validateProfile checks p and fills empty step ids (step-1, step-2 …).
@@ -360,35 +508,11 @@ func validateProfile(p *Profile, slots map[string]bool, parallelMax int) error {
 			return &ProfileError{Step: st.ID, Field: "id", Msg: fmt.Sprintf("duplicate step id %q", st.ID)}
 		}
 		seen[st.ID] = true
-		bad := func(field, format string, a ...any) error {
-			return &ProfileError{Step: st.ID, Field: field, Msg: fmt.Sprintf("step %q: %s", st.ID, fmt.Sprintf(format, a...))}
-		}
-		if st.Slot != "" && !slots[st.Slot] {
-			return bad("slot", "unknown slot %q", st.Slot)
-		}
-		switch st.Category {
-		case "", agentdag.CategoryQuick, agentdag.CategoryDeep:
-		default:
-			return bad("category", "unknown category %q (quick or deep)", st.Category)
-		}
-		switch st.Tools.Preset {
-		case "", agentdag.PresetNone, agentdag.PresetReadOnly, agentdag.PresetAll:
-		default:
-			return bad("tools", "unknown tool preset %q (none, read-only or all)", st.Tools.Preset)
-		}
-		switch st.Output {
-		case "", agentdag.OutputShown, agentdag.OutputFolded, agentdag.OutputHidden:
-		default:
-			return bad("output", "unknown output %q (shown, folded or hidden)", st.Output)
-		}
-		if len(st.System) > MaxPromptBytes {
-			return bad("system", "system prompt is longer than 8 KB")
-		}
-		if st.MaxSteps < 0 {
-			return bad("max_steps", "max_steps is negative")
+		if err := checkStep(*st, "step", slots); err != nil {
+			return err
 		}
 		if len(st.Deps) > 0 && parallelMax <= 1 {
-			return bad("deps", "deps need ai_parallel_max 2 or more (steps run one after the other)")
+			return &ProfileError{Step: st.ID, Field: "deps", Msg: fmt.Sprintf("step %q: deps need ai_parallel_max 2 or more (steps run one after the other)", st.ID)}
 		}
 	}
 	for _, st := range p.Steps {
@@ -397,6 +521,13 @@ func validateProfile(p *Profile, slots map[string]bool, parallelMax int) error {
 				return &ProfileError{Step: st.ID, Field: "deps", Msg: fmt.Sprintf("step %q: unknown dep %q", st.ID, d)}
 			}
 		}
+	}
+	if err := checkLoop(p, seen, slots); err != nil {
+		var pe *ProfileError
+		if errors.As(err, &pe) {
+			return err
+		}
+		return &ProfileError{Field: "loop", Msg: err.Error()}
 	}
 	if err := agentdag.Validate(p.Run("check")); err != nil {
 		return &ProfileError{Field: "steps", Msg: strings.TrimPrefix(err.Error(), "agentdag: ")}
