@@ -141,6 +141,7 @@ Use it for fields the form does not show (`output`, `max_steps`,
 | `fast` | **Answer** (category `quick`, read-only tools) | Quick questions on a cheaper model. |
 | `local-only` | **Answer** on the `local` slot (Ollama) | Nothing leaves your machine. |
 | `plan` | **Planner** (category `deep`, read-only tools), then the steps of its plan | Bigger tasks: the planner splits them into steps that run in waves. See [Planned runs](#planned-runs-and-waves). |
+| `until-done` | **Planner**, the steps of its plan, **Verify** (runs tests, edits nothing), and **Fix** while verify fails | Tasks that must end with green tests. See [Work until done](#work-until-done). |
 
 Your own profiles with the same name replace a built-in one, except
 `default`, which you can not replace.
@@ -532,6 +533,120 @@ cards. This is the same for a planned run: its steps go on in waves with
 no client attached, and the AGENTS panel shows the graph again when you
 come back. See [Remote and SSH](remote-ssh.md).
 
+## Work until done
+
+A **work until done** run does not stop at the first answer. It plans,
+does the work, and then a **Verify** step checks it: it runs the
+project's tests and checks and reads the changes. When verify finds
+problems, a **Fix** step repairs exactly those problems, and verify runs
+again. This repeats until verify passes, or until the run has used all
+its rounds.
+
+### Turn it on
+
+- **AI: Work Until Done (toggle)** in the palette switches the chat to
+  the built-in `until-done` profile. The chat header chip then reads
+  `✦ until-done ▾`, and a toast says the limits, for example
+  `Work until done: on · up to 3 rounds · budget $2.00`. Run the command
+  again to go back to the profile you had before.
+- Start one message with `/done `, for example `/done fix the failing
+  tests`. Only this message runs until done. Your profile does not
+  change, and the chat keeps the message without `/done `.
+- **AI: Switch Profile…** and `Alt+Shift+P` also pick `until-done`.
+
+The AI can ask to switch to `until-done` too, but only with a confirm
+card that you answer.
+
+### What the chat shows
+
+The run has the cards of a planned run: **Planner**, the steps of its
+plan, and **Verify**. When verify fails, a **Fix** card appears. The
+cards of the second round and later say which round they ran in:
+
+```text
+ ▸ 2 · Verify · claude-sonnet-4-5 · round 2/3 · 41 s · 12.0k tok · $0.044
+ ▸ 4 · Fix · gpt-5-mini · round 2/3 · 18 s · 5.5k tok · $0.003
+ ─ run · 1 m 20 s · 4 steps · 2 rounds · verify ✓ · 30.4k tok · $0.071 ─
+```
+
+- An open Verify card has one line per round, for example
+  `✘ round 1/3: verify failed` and `✓ round 2/3: verify passed`.
+- The answer of the run is the last verify report.
+- When verify still fails after the last round, the run row says
+  `verify ✘ (3 rounds)` and a red line says
+  `✘ Not done after 3 rounds: verify still fails.` Read the last verify
+  report above it, then send a new message or fix the rest yourself.
+- The AGENTS panel header says the round, for example
+  `run r1 · until-done · round 2/3`, and the Fix and Verify cards say
+  their round.
+
+Verify must end its answer with the line `VERDICT: PASS` or
+`VERDICT: FAIL`. When the line is missing, verify is asked once more
+(`↻ no VERDICT line, asked once more` on its card). When it is still
+missing, the round counts as a fail, and the card says
+`no VERDICT line, even after asking again: counted as FAIL`.
+
+### Limits and where to change them
+
+| Limit | Default | Change it |
+|---|---|---|
+| Rounds (how many times verify runs at most) | 3 | Settings → AI → `ai_until_done_rounds` (1 to 10), or `loop.max_rounds` in a profile |
+| Budget | $2.00 | Settings → AI → `ai_until_done_budget_usd` (0 = no budget), or `budget_usd` in a profile |
+
+- A profile's own `loop.max_rounds` and `budget_usd` win over the
+  settings. A profile that leaves them out uses the settings.
+- A value out of range is refused in Settings with an error. A bad value
+  written by hand in `config.json` is not used: the default applies and
+  a toast names the problem.
+- The budget works like the [budget pause](#budget-pause): the cost of
+  every round adds up, and the pause can come between two rounds.
+  **Continue** runs the remaining rounds.
+
+### Safety
+
+- The Fix step may use all tools, so its file changes open the review
+  card (or the confirm dialog) as in any chat turn. Nothing is written
+  without your answer, unless you auto-approved it.
+- Verify may run commands and tests (`run_command`, `tests_run`,
+  `tasks_run`). They ask first as usual. To let verify run tests without
+  asking, auto-approve `run` in **AI: Agent Auto-Approve…**.
+- **AI: Undo Last Turn** undoes the file changes of every round.
+- `Ctrl+C` stops the whole run.
+- A run that termocode restarted in the middle shows
+  **↻ Resume (N of M left)** and goes on in the round where it stopped.
+
+### Your own loop profile
+
+Add `loop` to a profile: `verify` is the id of one of its steps, `fix` is
+a step that runs (after verify failed) before verify runs again.
+
+```json
+{
+  "profiles": {
+    "tdd": {
+      "title": "Do, test, fix",
+      "steps": [
+        {"id": "do", "category": "quick", "tools": {"preset": "all"}},
+        {"id": "check", "title": "Check", "category": "deep",
+         "system": "Run go test ./... and report every failure."}
+      ],
+      "loop": {
+        "verify": "check",
+        "fix": {"title": "Fix", "category": "quick", "tools": {"preset": "all"}},
+        "max_rounds": 4
+      },
+      "budget_usd": 1
+    }
+  }
+}
+```
+
+- `fix` takes the fields of a step, except `deps` and `plan`. Its `id`
+  is `fix` when you leave it out; it may not be a step id.
+- `verify` may not be the planner step.
+- termocode adds the verdict rule to the verify step's prompt, and the
+  fix step gets the verify report under `### Verify report (round N)`.
+
 ## Tokens and cost
 
 termocode reads the token counts that the provider sends at the end of
@@ -678,6 +793,8 @@ you change an answer.
 | `ai_prices` | `{}` | Price overrides, $ per million tokens. |
 | `ai_context_windows` | `{}` | Context window overrides, in tokens. |
 | `ai_max_steps` | `25` | Tool steps per step (a step's `max_steps` wins). |
+| `ai_until_done_rounds` | `3` | [Work until done](#work-until-done): how many times verify runs at most (1 to 10). A profile's `loop.max_rounds` wins. |
+| `ai_until_done_budget_usd` | `2` | Work until done: the budget of a run (0 = no budget). A profile's `budget_usd` wins. |
 
 The AI can not change these settings. It may ask to switch the profile
 (**AI: Switch Profile…**); you confirm it.
