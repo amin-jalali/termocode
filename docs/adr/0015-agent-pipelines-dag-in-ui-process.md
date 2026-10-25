@@ -85,7 +85,10 @@ Alternatives on the table:
     node, no unknown keys), with one repair request. The run grows by the
     plan's nodes while it goes, so the graph is no longer fixed at start.
     A planned run therefore has no "Retry from step N" once the plan
-    exists: the plan is not part of the profile.
+    exists: the plan is not part of the profile. (Later: the chat file
+    keeps each planned step's task, so a planned run resumes from its
+    unfinished nodes with the saved plan; snapshots still hold no
+    prompts.)
   - **Waves.** A planned run runs up to 3 nodes at once when
     `ai_parallel_max` is not set; other profiles keep the default 1.
     Confirm dialogs and review cards of parallel nodes take turns through
