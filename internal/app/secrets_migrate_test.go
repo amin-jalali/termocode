@@ -351,6 +351,7 @@ func TestSecretsMigrateFinishesInterruptedMove(t *testing.T) {
 	if migrateCardOpen(m) || m.secretsPromptOpen() {
 		t.Fatal("asked during the finish")
 	}
+	waitGone(t, cred)
 	checkMigrated(t, dir, cred, "keyring")
 }
 
@@ -386,11 +387,12 @@ func TestSecretsMigrateFinishesAfterUnlock(t *testing.T) {
 	checkMigrated(t, dir, cred, "age")
 }
 
-// waitGone waits up to 30 s for path to disappear.
+// waitGone waits up to 30 s for path to disappear and for the move's
+// marker after it (the finish deletes the file, then writes the marker).
 func waitGone(t *testing.T, path string) {
 	t.Helper()
 	for end := time.Now().Add(30 * time.Second); time.Now().Before(end); time.Sleep(20 * time.Millisecond) {
-		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) && secrets.Migrated(path) {
 			return
 		}
 	}
