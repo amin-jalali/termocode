@@ -459,6 +459,57 @@ Limits:
   answer a confirm card for you. Pipeline runs ([AI profiles](ai-profiles.md))
   get them in every step.
 
+## Memory
+
+The AI can keep short lessons from your chats in a project, for example
+"run go test with -race; CI does". Later chats in the same project get the
+lessons that fit. Memory is off until you turn it on, per workspace.
+
+**Turn it on.** The first time a chat turn could give lessons, a card asks
+**Save lessons for later chats?**. **Not now** is the first button (Enter
+and Esc pick it); termocode keeps that answer for the workspace and does not
+ask again. **Turn on memory** turns it on and saves the lessons of that
+turn. You can switch any time with **AI: Memory: Turn On/Off**. The card
+only comes when a quick model slot is set (see below).
+
+**Where lessons go.** Into `.termocode/memory/lessons.md` in the workspace,
+one section per lesson. When you turn memory on, termocode adds
+`.termocode/memory/` to the workspace's `.gitignore` (it makes the file
+when there is none, adds one line at the end, and changes no other line).
+The toast says what it did. The lessons stay on your machine unless you
+remove that line.
+
+**When lessons are written.** After a turn that used a tool or ended with
+an error, the **quick** model slot (AI: Edit Model Slots) reads the turn
+and writes at most 3 lessons. Plain question-and-answer turns are skipped.
+This runs beside the chat: you can send the next message at once. It stops
+after 30 seconds. When lessons are saved, a dim line
+`memory: 2 lessons saved · view` shows under the answer. Each run costs a
+small request; **AI: Usage** lists it as the agent `memory`. Without a
+quick slot, one toast says lessons are not saved.
+
+**When lessons are used.** With memory on, each message sends up to 10
+lessons (about 2 KB) in the system prompt, after the project rules:
+lessons about the open or attached file first, then lessons that share
+words with your message, then the newest ones. The line under your message
+says `memory: 3 lessons`; click it to see them.
+
+**View, edit, forget.** **AI: Memory…** lists the lessons, newest first.
+Pick one to see it, then **Open in editor** (the file opens at that
+lesson) or **Forget…**. **Forget this lesson?** has **Keep** first; only
+**Forget** removes it. The last row, **Forget all…**, asks the same way.
+You can also edit `lessons.md` by hand.
+
+**Secrets.** The turn is passed through the secret filter before it goes
+to the quick model, and the lessons again before they are saved and before
+they go into a prompt. A lesson that still holds a secret is dropped.
+Lesson text never goes to the logs or the AI audit channel; the audit line
+only says `memory · 2 lessons saved`.
+
+The AI has no memory tool: it can not turn memory on or off or forget a
+lesson. It can change `lessons.md` only like any file, through the review
+card.
+
 ## Keys at a glance
 
 | Key | Action |
