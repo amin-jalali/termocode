@@ -52,6 +52,19 @@ The status bar shows the attached server, for example `{} gopls`.
 
 Run **DAP: Install Adapter...** and pick one. It works the same way.
 
+## Tools your dev container needs
+
+If your project has a `.devcontainer/devcontainer.json`, termocode reads it
+once when you open the project. It looks at the `image`, the `features` and
+the editor extensions listed there. If they point to tools you do not have
+(for example `gopls` and `dlv` for a Go container), a quiet toast says:
+"This project's dev container uses tools you don't have".
+
+Click the toast to see just those tools. Pick one to install it, as above.
+termocode never installs anything until you confirm. It asks once per
+project; if you ignore the toast it does not come back. It only reads the
+file: no network, no Docker.
+
 ## Where the tools go
 
 termocode puts its tools in its own folder, not in your system:
