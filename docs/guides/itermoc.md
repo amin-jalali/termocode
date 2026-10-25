@@ -82,10 +82,12 @@ window it is one line of chips. Under it:
 
 - **STEPS**: number, name, the model badge, what the step may use, what it
   waits for, and the first line of its prompt.
-- **SETTINGS**: the categories (`quick` and `deep` slots), the budget, where
-  the profile comes from and the last run.
-- **RECENT RUNS**: the last runs of this profile in the chat, with time
-  taken and cost; a run that stopped says why, in red.
+- **SETTINGS**: the categories (`quick` and `deep` slots), the budget and
+  where the profile comes from.
+
+The last line says `Last run 12 min ago · See runs →` (or `Not run yet`).
+A click on `See runs →` opens the AGENTS view, like **Runs** (`r`). Runs and
+what they cost are not shown here: this page is setup only.
 
 Three pills at the bottom run the common verbs: **Use** (`u`), **Edit**
 (`e`) and **Runs** (`r`). `Enter` opens the actions menu (the list after

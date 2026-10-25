@@ -1,14 +1,15 @@
 package app
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/mattn/go-runewidth"
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
@@ -18,7 +19,7 @@ import (
 //	row 0   ✦ review  Review then fix                  ● active in the chat
 //	row 1   ─────────────────────────────────────────────────────────────
 //	        the pipeline: boxes with arrows (chips when the pane is narrow)
-//	        STEPS · SETTINGS · RECENT RUNS (a profile) or the facts (others)
+//	        STEPS · SETTINGS · last-run line (a profile) or the facts (others)
 //	h-4     ─────────────────────────────────────────────────────────────
 //	h-3     Use (u)  Edit (e)  Runs (r)   ⋯ more (Enter): Duplicate · …
 //	h-1     the key hints
@@ -572,16 +573,8 @@ type imProfileView struct {
 	cats    string
 	budget  string
 	source  string
-	lastRun string
-	runs    []imRun
-}
-
-// imRun is one finished (or stopped) run of the profile, from the chat.
-type imRun struct {
-	id, title, dur, cost string
-	ok                   bool
-	running              bool
-	stopped              string
+	lastRun string // "Last run 12 min ago" or "Not run yet"
+	hasRun  bool
 }
 
 func (m Model) profilePageContent(sn itermocSnap, row imRow) imContent {
@@ -641,7 +634,7 @@ func (m Model) profilePageContent(sn itermocSnap, row imRow) imContent {
 	default:
 		pv.source = "built in"
 	}
-	pv.runs, pv.lastRun = m.profileRuns(p.p.Name)
+	pv.lastRun, pv.hasRun = m.profileLastRun(p.p.Name)
 	c.profile = pv
 
 	if p.trust == aiTrustAsk {
@@ -700,70 +693,38 @@ func (m Model) profileNote(sn itermocSnap, p ai.Profile, pv *imProfileView, grap
 	return strings.Join(parts, " · ")
 }
 
-// profileRuns are the last runs of the profile in the chat (newest first).
-func (m Model) profileRuns(name string) (runs []imRun, last string) {
+// profileLastRun is the one quiet line about the newest run of the profile
+// in the chat: "Last run 12 min ago", or "Not run yet". Runs and their cost
+// belong to AGENTS and AI: Usage, not to this setup page.
+func (m Model) profileLastRun(name string) (line string, ok bool) {
 	if m.ai == nil {
-		return nil, ""
+		return "Not run yet", false
 	}
 	msgs := m.ai.conv.Messages
-	for i := len(msgs) - 1; i >= 0 && len(runs) < 3; i-- {
+	for i := len(msgs) - 1; i >= 0; i-- {
 		r := msgs[i].Run
 		if r == nil || r.Profile != name || msgs[i].Role != ai.StoredAssistant {
 			continue
 		}
-		title := ""
-		for j := i - 1; j >= 0; j-- {
-			if msgs[j].Role == ai.StoredUser {
-				title = strings.Join(strings.Fields(msgs[j].Text), " ")
-				break
-			}
+		if r.StartedAtMs <= 0 {
+			return "Last run earlier", true
 		}
-		var cost float64
-		files := 0
-		failed := ""
-		for _, st := range msgs[i].Steps {
-			if st.Cost != nil {
-				cost += *st.Cost
-			}
-			files += st.Files
-			if st.Error != "" && failed == "" {
-				failed = st.Error
-			}
-		}
-		run := imRun{id: r.ID, title: title, dur: imDuration(r.ElapsedMs), cost: "$" + fmt.Sprintf("%.3f", cost), ok: r.State == ai.RunStateDone}
-		switch r.State {
-		case ai.RunStateRunning:
-			run.running = true
-		case ai.RunStatePaused:
-			run.stopped = "budget reached"
-		case ai.RunStateCancelled:
-			run.stopped = "cancelled"
-		case ai.RunStateInterrupted:
-			run.stopped = "termocode closed"
-		case ai.RunStateFailed:
-			run.stopped = ai.Redact(strings.Join(strings.Fields(failed), " "))
-			if run.stopped == "" {
-				run.stopped = "failed"
-			}
-		}
-		if len(runs) == 0 {
-			last = r.ID + " · " + run.dur + " · " + strconv.Itoa(len(msgs[i].Steps)) + " step" + plural(len(msgs[i].Steps)) + " · " + run.cost
-			if files > 0 {
-				last += " · " + strconv.Itoa(files) + " files changed"
-			}
-		}
-		runs = append(runs, run)
+		return "Last run " + imAgo(clock.Now().Sub(time.UnixMilli(r.StartedAtMs))), true
 	}
-	return runs, last
+	return "Not run yet", false
 }
 
-// imDuration is 36 s, 2 m 10 s.
-func imDuration(ms int64) string {
-	s := int(ms / 1000)
-	if s < 60 {
-		return strconv.Itoa(s) + " s"
+// imAgo is "just now", "12 min ago", "3 h ago", "2 days ago".
+func imAgo(d time.Duration) string {
+	switch {
+	case d < time.Minute:
+		return "just now"
+	case d < time.Hour:
+		return strconv.Itoa(int(d.Minutes())) + " min ago"
+	case d < 48*time.Hour:
+		return strconv.Itoa(int(d.Hours())) + " h ago"
 	}
-	return strconv.Itoa(s/60) + " m " + strconv.Itoa(s%60) + " s"
+	return strconv.Itoa(int(d.Hours()/24)) + " days ago"
 }
 
 // pipeItem is one box of the pipeline.
@@ -797,7 +758,7 @@ func stepChip(st aiPipeStep) string {
 	return theme.ASCIIText(" " + st.slot + " · " + model + " ")
 }
 
-// drawProfileBody draws the pipeline, STEPS, SETTINGS and RECENT RUNS from
+// drawProfileBody draws the pipeline, STEPS, SETTINGS and the last-run line from
 // row y; it returns the row after the last one. h is the pane height
 // (small windows get the chips).
 func (m Model) drawProfileBody(d *imDraw, y int, pv *imProfileView, h int) int {
@@ -878,51 +839,23 @@ func (m Model) drawProfileBody(d *imDraw, y int, pv *imProfileView, h int) int {
 	y += d.gap() - boolInt(d.roomy)
 	y = d.head(y, "SETTINGS", "")
 	kvs := [][2]string{{"categories", pv.cats}, {"budget", pv.budget}, {"source", pv.source}}
-	if pv.lastRun != "" {
-		kvs = append(kvs, [2]string{"last run", pv.lastRun})
-	}
 	for _, kv := range kvs {
 		d.kv(y, kv[0], kv[1], imTokSecondary())
 		y++
 	}
 
-	// RECENT RUNS.
+	// One quiet line: when it last ran, and the way to the runs.
 	y += d.gap()
-	y = d.head(y, "RECENT RUNS", imText("r opens AGENTS"))
-	if len(pv.runs) == 0 {
-		cv.text(mx, y, "No runs of this profile in this chat yet.", imTokDim())
-		return y + 1
+	if pv.hasRun {
+		link := "See runs →"
+		cv.text(mx, y, pv.lastRun+" · ", imTokMuted())
+		lx := mx + runewidth.StringWidth(pv.lastRun+" · ")
+		cv.text(lx, y, imTrunc(theme.ASCIIText(link), max(d.w-mx-lx, 4)), imTokAccent())
+		d.hit("runs", mx, y, min(lx-mx+runewidth.StringWidth(link), d.w-2*mx), 1)
+	} else {
+		cv.text(mx, y, pv.lastRun, imTokDim())
 	}
-	titleW := max(min(contentW-6-6-10-9, 30), 10)
-	for _, r := range pv.runs {
-		g, tok := imGlyph("ready")
-		switch {
-		case r.running:
-			g, tok = imGlyph("ready")
-			tok = theme.AccentAmber
-		case !r.ok:
-			g, tok = imGlyph("broken")
-		}
-		cv.text(mx, y, g, imFg(tok))
-		cv.text(mx+2, y, r.id, imTokDim())
-		cv.text(mx+9, y, imTrunc(r.title, titleW), imTokSecondary())
-		x := mx + 9 + titleW + 2
-		if x+8 <= d.w-mx {
-			cv.text(x, y, r.dur, imTokMuted())
-			x += 10
-		}
-		if x+6 <= d.w-mx {
-			cv.text(x, y, r.cost, imTokMuted())
-			x += 9
-		}
-		if r.stopped != "" && x+10 <= d.w-mx {
-			cv.text(x, y, imTrunc("stopped: "+r.stopped, d.w-mx-x), imTokErr())
-		} else if r.running && x+8 <= d.w-mx {
-			cv.text(x, y, "running", imTokWarn())
-		}
-		y++
-	}
-	return y
+	return y + 1
 }
 
 func boolInt(b bool) int {

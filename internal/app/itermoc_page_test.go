@@ -4,11 +4,13 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/theme"
@@ -48,7 +50,7 @@ func imHasHit(ids []string, id string) bool {
 }
 
 // Spec: the profile page shows the header, the pipeline as boxes with
-// arrows, the one-line note, STEPS, SETTINGS, RECENT RUNS and the pill bar
+// arrows, the one-line note, STEPS, SETTINGS, the last-run line and the pill bar
 // with the three primary actions and what the menu holds.
 func TestItermocPageProfile(t *testing.T) {
 	m := imPage(t, imSecProfiles, "review")
@@ -57,7 +59,7 @@ func TestItermocPageProfile(t *testing.T) {
 	})
 	f := imPageText(m, 160, 46)
 	for _, want := range []string{"review", "you", "chat", "answer", "in the chat", "1 Reviewer", "2 Fixer", "read-only",
-		"step 2 waits for step 1", "the chat can reach github", "STEPS", "SETTINGS", "categories", "budget", "source", "RECENT RUNS",
+		"step 2 waits for step 1", "the chat can reach github", "STEPS", "SETTINGS", "categories", "budget", "source",
 		"Use (u)", "Edit (e)", "Runs (r)", "more (Enter): Details", "▶"} {
 		if !strings.Contains(f, want) {
 			t.Errorf("no %q in\n%s", want, f)
@@ -154,29 +156,41 @@ func TestItermocPageNarrowChips(t *testing.T) {
 	}
 }
 
-// Spec: a run that stopped is red with the reason; the other runs show
-// duration and cost.
-func TestItermocPageRecentRuns(t *testing.T) {
+// Spec: the page is setup only: no run rows, no cost. One quiet line says
+// when the profile last ran; without a run it says "Not run yet".
+func TestItermocPageLastRunLine(t *testing.T) {
 	m := imPage(t, imSecProfiles, "review")
+	if f := imPageText(m, 160, 46); !strings.Contains(f, "Not run yet") || strings.Contains(f, "RECENT RUNS") {
+		t.Errorf("want Not run yet and no RECENT RUNS in\n%s", f)
+	}
 	cost := func(c float64) *float64 { return &c }
+	at := func(ago time.Duration) int64 { return clock.Now().Add(-ago).UnixMilli() }
 	m.ai.conv.Messages = []ai.StoredMessage{
-		{Role: ai.StoredUser, Text: "add a key card"},
-		{Role: ai.StoredAssistant, Text: "stop", Run: &ai.StoredRun{ID: "r2", Profile: "review", State: ai.RunStatePaused, ElapsedMs: 130000},
-			Steps: []ai.StoredStep{{ID: "a", Cost: cost(0.064)}}},
+		{Role: ai.StoredUser, Text: "old"},
+		{Role: ai.StoredAssistant, Text: "ok", Run: &ai.StoredRun{ID: "r1", Profile: "review", State: ai.RunStateDone, StartedAtMs: at(3 * time.Hour)}},
 		{Role: ai.StoredUser, Text: "review my last commit"},
-		{Role: ai.StoredAssistant, Text: "ok", Run: &ai.StoredRun{ID: "r1", Profile: "review", State: ai.RunStateDone, ElapsedMs: 36000},
-			Steps: []ai.StoredStep{{ID: "a", Cost: cost(0.006)}, {ID: "b", Cost: cost(0.011), Files: 2}}},
-		{Role: ai.StoredUser, Text: "other"},
-		{Role: ai.StoredAssistant, Text: "x", Run: &ai.StoredRun{ID: "r3", Profile: "fast", State: ai.RunStateDone}},
+		{Role: ai.StoredAssistant, Text: "ok", Run: &ai.StoredRun{ID: "r2", Profile: "review", State: ai.RunStateDone, ElapsedMs: 36000, StartedAtMs: at(12 * time.Minute)},
+			Steps: []ai.StoredStep{{ID: "a", Cost: cost(0.006)}}},
+		{Role: ai.StoredAssistant, Text: "x", Run: &ai.StoredRun{ID: "r3", Profile: "fast", State: ai.RunStateDone, StartedAtMs: at(time.Minute)}},
 	}
 	f := imPageText(m, 160, 46)
-	for _, want := range []string{"review my last commit", "36 s", "$0.017", "2 m 10 s", "$0.064", "stopped: budget reached", "2 files changed"} {
-		if !strings.Contains(f, want) {
-			t.Errorf("no %q in\n%s", want, f)
+	if !strings.Contains(f, "Last run 12 min ago") || !strings.Contains(f, "See runs") {
+		t.Errorf("no last-run line in\n%s", f)
+	}
+	for _, bad := range []string{"review my last commit", "$0.006", "36 s", "r2", "3 h ago"} {
+		if strings.Contains(f, bad) {
+			t.Errorf("per-run detail %q on the setup page", bad)
 		}
 	}
-	if strings.Contains(f, "r3") {
-		t.Error("a run of another profile is listed")
+	// A click on "See runs" does what the Runs pill does.
+	n := 0
+	for _, h := range m.itermocPageTargets(m.editorPaneLayout()) {
+		if h.ID == "im:pg:runs" {
+			n++
+		}
+	}
+	if n < 2 {
+		t.Errorf("want the pill and the line as targets of runs, got %d", n)
 	}
 }
 

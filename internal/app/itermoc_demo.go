@@ -1,10 +1,13 @@
 package app
 
 import (
+	"time"
+
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/connectcard"
 	"github.com/amin-jalali/termocode/internal/mcp"
 )
@@ -79,19 +82,19 @@ func (m *Model) itermocDemo(arg string) tea.Cmd {
 // and the profile page of review open in the editor area.
 func (m *Model) itermocProfileDemo() tea.Cmd {
 	cost := func(c float64) *float64 { return &c }
-	run := func(id, prompt, state string, ms int64, steps []ai.StoredStep) []ai.StoredMessage {
+	run := func(id, prompt, state string, ms int64, ago time.Duration, steps []ai.StoredStep) []ai.StoredMessage {
 		return []ai.StoredMessage{
 			{Role: ai.StoredUser, Text: prompt},
-			{Role: ai.StoredAssistant, Text: "done", Run: &ai.StoredRun{ID: id, Profile: ai.ProfileReview, State: state, ElapsedMs: ms}, Steps: steps},
+			{Role: ai.StoredAssistant, Text: "done", Run: &ai.StoredRun{ID: id, Profile: ai.ProfileReview, State: state, ElapsedMs: ms, StartedAtMs: clock.Now().Add(-ago).UnixMilli()}, Steps: steps},
 		}
 	}
 	s := m.aiS()
 	s.conv.Messages = nil
-	s.conv.Messages = append(s.conv.Messages, run("r1", "add a key card to AGENTS", ai.RunStatePaused, 130000,
+	s.conv.Messages = append(s.conv.Messages, run("r1", "add a key card to AGENTS", ai.RunStatePaused, 130000, 3*time.Hour,
 		[]ai.StoredStep{{ID: "review", Cost: cost(0.021), Files: 0}, {ID: "fix", Cost: cost(0.043), Files: 1}})...)
-	s.conv.Messages = append(s.conv.Messages, run("r2", "why does the toast flicker", ai.RunStateDone, 58000,
+	s.conv.Messages = append(s.conv.Messages, run("r2", "why does the toast flicker", ai.RunStateDone, 58000, 40*time.Minute,
 		[]ai.StoredStep{{ID: "review", Cost: cost(0.012)}, {ID: "fix", Cost: cost(0.019), Files: 1}})...)
-	s.conv.Messages = append(s.conv.Messages, run("r3", "review my last commit", ai.RunStateDone, 36000,
+	s.conv.Messages = append(s.conv.Messages, run("r3", "review my last commit", ai.RunStateDone, 36000, 12*time.Minute,
 		[]ai.StoredStep{{ID: "review", Cost: cost(0.006)}, {ID: "fix", Cost: cost(0.011), Files: 2}})...)
 	row := imRow{kind: imRowProfile, sec: imSecProfiles, name: ai.ProfileReview}
 	m.itermoc.cursorTo(row)
