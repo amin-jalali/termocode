@@ -1,8 +1,10 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -61,6 +63,27 @@ func riskyCards() []riskyCard {
 				got := mcpServeAwait(t, m, hub, call)
 				var ce *mcp.CallError
 				return !errors.As(got.err, &ce) || ce.Code != mcp.CodeDeclined
+			}
+		}},
+		{name: "AI code action without a diff", safe: "deny", helper: true, open: func(t *testing.T) (*Model, func() bool) {
+			m := aiTestModel(t)
+			fns := make(chan aiIDEFunc, 1)
+			call := func(_ context.Context, fn aiIDEFunc) (string, error) { fns <- fn; return "", nil }
+			res := make(chan bool, 1)
+			go func() {
+				res <- aiAskConfirm(context.Background(), call, ai.Tool{Name: "lsp_rename", Mutating: true}, "rename x to y")
+			}()
+			if _, _, err := (<-fns)(&m); err != nil {
+				t.Fatal(err)
+			}
+			return &m, func() bool {
+				select {
+				case ok := <-res:
+					return ok
+				case <-time.After(5 * time.Second):
+					t.Fatal("the tool run got no answer")
+					return true
+				}
 			}
 		}},
 		{name: "add termocode to the project file", safe: "skip", helper: true, open: func(t *testing.T) (*Model, func() bool) {
