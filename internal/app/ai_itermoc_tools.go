@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"net/url"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -141,6 +142,58 @@ func aiProfilesInfo(m *Model, sn itermocSnap) (any, error) {
 	return out, nil
 }
 
+// ── models_list ──────────────────────────────────────────────────────────
+
+type aiModelSlotInfo struct {
+	Name     string `json:"name"`
+	Provider string `json:"provider"`
+	Model    string `json:"model"`
+	// Credential says whether a key is set: set, missing, not needed, or
+	// none (optional). Never the key.
+	Credential string `json:"credential"`
+	Base       string `json:"base_host,omitempty"`
+}
+
+// aiCredentialText says what a slot has for its key, never the key.
+func aiCredentialText(k imKeyState) string {
+	switch k {
+	case imKeyOK:
+		return "set"
+	case imKeyNone:
+		return "not needed"
+	case imKeyUnset:
+		return "none (optional)"
+	}
+	return "missing"
+}
+
+// aiSafeHost is scheme://host[:port] of a URL: no user, password, path,
+// query or fragment (a proxy may carry a key in any of them). "" when it
+// does not parse.
+func aiSafeHost(raw string) string {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || u.Host == "" || u.Scheme == "" {
+		return ""
+	}
+	return u.Scheme + "://" + u.Host
+}
+
+func aiModelsInfo(m *Model, sn itermocSnap) (any, error) {
+	out := struct {
+		Slots []aiModelSlotInfo `json:"slots"`
+	}{Slots: []aiModelSlotInfo{}}
+	for _, s := range sn.slots {
+		info := aiModelSlotInfo{Name: s.name, Provider: s.provider, Model: s.model, Credential: aiCredentialText(s.key)}
+		if m.ai != nil {
+			if c, ok := m.ai.aiSlotConfig(s.name); ok {
+				info.Base = aiSafeHost(c.BaseURL)
+			}
+		}
+		out.Slots = append(out.Slots, info)
+	}
+	return out, nil
+}
+
 // ── The tools ────────────────────────────────────────────────────────────
 
 // aiItermocTools are the read tools of the Itermoc view.
@@ -155,6 +208,16 @@ func aiItermocTools(call aiIDECaller) []ai.Tool {
 			Describe: func(map[string]any) string { return "List AI profiles" },
 			Run: func(ctx context.Context, _ map[string]any) (string, error) {
 				return aiItermocSnapshot(ctx, call, aiProfilesInfo)
+			},
+		},
+		{
+			Name: "models_list",
+			Description: "List the AI model slots (main, quick, local and the user's own): provider, model, whether a key " +
+				"is set (set / missing / not needed; never the key) and the base URL's scheme and host. Keys stay with the user.",
+			Params:   map[string]any{},
+			Describe: func(map[string]any) string { return "List model slots" },
+			Run: func(ctx context.Context, _ map[string]any) (string, error) {
+				return aiItermocSnapshot(ctx, call, aiModelsInfo)
 			},
 		},
 	}
