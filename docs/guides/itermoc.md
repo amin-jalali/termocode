@@ -2,9 +2,12 @@
 
 Itermoc is one sidebar view for everything that shapes the AI chat. It
 lists your agent profiles, the model slots they run on, the services the
-chat can reach and the outside agents that use termocode's tools. Each row
-opens the same screens you already know. Model slots are the one thing you
-add, edit and remove right here, with a small form (see [Models](#models)).
+chat can reach and the outside agents that use termocode's tools. The list
+is calm: one row per thing, one word at the right. Pick a row and its
+**page** opens in the editor area, drawn as a picture (see [The page](#the-page)).
+Every verb opens the same screens you already know. Model slots are the one
+thing you add, edit and remove right here, with a small form (see
+[Models](#models)).
 
 Set up a provider first: [Set up AI](ai-setup.md).
 
@@ -26,42 +29,80 @@ profile picker. That stays the fast way to switch.
 
 ```text
  ITERMOC                                       ? keys  / filter
- ───────────────────────────────────────────────────────────────
- ▾ PROFILES                                      active: review
-   ● review      Reviewer (sonnet-4-5) → Fixer (gpt-5-mini)
-     default     one step (main model: sonnet-4-5)
-   ⚠ house       project · not asked yet · 2 steps [Trust… (t)]
-   [New profile (n)]  [Edit JSON (J)]
- ▾ MODELS                                            1 key ✗
-   ● main        anthropic · claude-sonnet-4-5       key ✓
-   ! gpt         openai · gpt-5-mini                 key ✗ [Set key (k)]
-   [Add slot (a)]  [Edit JSON (E)]
- ▾ SERVICES                                      1 needs you
-   ● GitHub      amin-jalali · read only · 28 tools
-   ! Linear      sign-in expired                  [Sign in (i)]
-   [Connect a service (c)]  [Log (l)]
- ▾ OUTSIDE AGENTS                          auto · 1 agent ⇄
-   ● listening   mode auto · 1 agent connected
-   ⇄ claude-code since 09:41 · 14 calls, 2 asked
-     09:42 claude-code · tasks_run · asked, you allowed
-   [Start Claude Code (s)]  [Start Codex (S)]  [Copy config (y)]
- Enter actions · Space fold · ? keys
+ ──────────────────────────────────────────────────────────────
+ ✦ PROFILES                                                1 !
+   ● review                                              active
+   ○ default
+   ⚠ house-review                                       project
+   + new profile…
+
+ ϟ MODELS                                                  1 !
+   ● main                                            sonnet-4-5
+   ! gpt                                                 no key
+   + add slot…
+
+ ⌁ SERVICES                                                1 !
+   ● github                                             28 tools
+   ! linear                                              sign in
+   + connect…
+
+ ⇄ OUTSIDE AGENTS                                            1
+   ● listening                                              auto
+   ● claude-code                                        14 calls
+   + start one…
+ Enter actions · o page · ? keys
 ```
 
-| Section | What it lists |
-|---|---|
-| PROFILES | the agent profiles; `●` marks the active one, `⚠` a project profile you were not asked about yet |
-| MODELS | the model slots the steps run on, with `key ✓` or `key ✗`. A key is never shown |
-| SERVICES | the services in `mcp.json`: ready, off, needs a sign-in, failed |
-| OUTSIDE AGENTS | whether termocode listens for agents like Claude Code, who is connected, and their last calls |
+Each group has an icon, its name and a number at the right. The number is
+how many rows it has, or `1 !` (amber) when one of them needs you. A folded
+group keeps its number.
 
-A row that needs you has one button at its end: **Trust…**, **Set key**
-or **Sign in**. Click it, or press its key on the row.
+| Group | What it lists |
+|---|---|
+| PROFILES | the agent profiles; `●` marks the active one (`active`), `⚠` a project profile you were not asked about yet (`project`) |
+| MODELS | the model slots the steps run on, with the short model name, or `no key` in amber. A key is never shown |
+| SERVICES | the services in `mcp.json`: `28 tools`, `off`, `sign in`, `failed` |
+| OUTSIDE AGENTS | whether termocode listens for agents like Claude Code (`listening` and its mode), who is connected and their calls |
+
+There are no buttons in the list. A row that needs you turns amber and
+says why (`sign in`, `no key`, `project`); open its page for the button.
+The dim row at the end of a group (`+ new profile…`, `+ add slot…`,
+`+ connect…`, `+ start one…`) adds a new one. Press `Enter` or click it.
+## The page
+
+Click a row (or press `o` on it) and its page opens in the editor area, in
+one tab named after it (`✦ review`). Pick another row and the same tab
+shows that one: it never piles up tabs. With the page open, `↑` `↓` in the
+list change it at once, like a file tree. Close the tab like any tab.
+
+A **profile** page draws the pipeline as boxes with arrows (`you` →
+`1 Reviewer` → `2 Fixer` → `answer`); every box has its model. When the
+steps do not fit the width the pipeline wraps onto more rows. In a narrow
+window it is one line of chips. Under it:
+
+- **STEPS**: number, name, the model badge, what the step may use, what it
+  waits for, and the first line of its prompt.
+- **SETTINGS**: the categories (`quick` and `deep` slots), the budget, where
+  the profile comes from and the last run.
+- **RECENT RUNS**: the last runs of this profile in the chat, with time
+  taken and cost; a run that stopped says why, in red.
+
+Three pills at the bottom run the common verbs: **Use** (`u`), **Edit**
+(`e`) and **Runs** (`r`). `Enter` opens the actions menu (the list after
+`⋯ more` says what is in it). A project profile that asks for your trust
+has **Trust…** (`t`) first. A click on a box in the pipeline edits that
+step. **Edit** opens `profiles.json` for now.
+
+The pages of a model slot, a service, the outside agents and the group
+headers (a summary with what needs you) show their key facts and their
+main pills. A key is never on a page. `Esc` on a page goes back to the
+list; `j`, `↓`, `↑` and the wheel scroll a page that is taller than the
+window.
 
 ## Actions of a row
 
-Press `Enter` (or click) on a row. A small menu lists what you can do with
-it. Safe actions come first; the ones that ask for confirmation end in `…`.
+Press `Enter` on a row in the list (or `Enter` on its page). A small menu
+lists what you can do with it. Safe actions come first; the ones that ask for confirmation end in `…`.
 
 | Row | Actions |
 |---|---|
@@ -90,7 +131,7 @@ Every action opens a screen that exists without Itermoc:
 
 ## Models
 
-**Add slot** (`a`, the button, or **AI: Add Model Slot…** in the palette)
+**Add slot** (`a`, the `+ add slot…` row, or **AI: Add Model Slot…** in the palette)
 opens a small form:
 
 ```text
@@ -122,7 +163,7 @@ opens a small form:
   and slot stays as it was. **Cancel** or `Esc` writes nothing.
 - When the provider has no key yet, the next card offers **Set key**. The
   key goes to the secret store, never into `config.json`. **Later** closes
-  the card; the row keeps its `[Set key (k)]` button.
+  the card; the slot's page keeps its **Set key** pill.
 
 **Edit…** (`e` on the row) opens the same form with the slot's values. The
 name is fixed; other fields you wrote by hand in the slot stay. `main` is
@@ -134,7 +175,8 @@ the built-in one back.
 When a profile uses the slot, the card names it: that profile will not run
 until you change it. The provider's key stays in the secret store.
 
-The key state is all Itermoc shows: `key ✓`, `key ✗` or `no key needed`.
+The key state is all Itermoc shows: `key ✓`, `key ✗` or `no key needed` on
+the page, `no key` in the list.
 Key values, environment values and passwords in a base URL never appear.
 **Edit JSON** (`E`) still opens `config.json` at `ai_models` for the
 expert path.
@@ -146,29 +188,33 @@ Press `?` in the view for the key card.
 | Key | What it does |
 |---|---|
 | `j` / `k`, arrows | move between rows |
-| `Enter` | the actions of the row (on a section header: fold it) |
+| `Enter` | the actions of the row (on a group header: fold it; on a `+ …` row: add) |
+| `o` | open the page of the row and move the keys to it |
 | `Space` | fold or open the section |
 | `Tab` / `Shift+Tab` | next / previous section |
 | `/` | filter by name; `Enter` keeps it, `Esc` clears it |
 | `R` | read everything again |
 | `Esc` | back to the editor |
-| `u` `d` `D` `t` | on a profile: use, details, duplicate, trust |
+| `u` `e` `r` `d` `D` `t` | on a profile: use, edit, runs, details, duplicate, trust |
 | `n` / `J` | new profile from the active one / edit `profiles.json` |
 | `a` / `E` | add a model slot / edit `ai_models` in `config.json` |
 | `e` / `k` / `D` | on a model slot: edit it, set the key, remove it (asks first) |
 | `i` / `c` / `l` | on a service: sign in; connect a service; show the log |
 | `s` / `S` / `y` / `T` | start Claude Code, start Codex, copy the termocode server config, show the status screen |
 
-The mouse works too: click a row for its actions, a header to fold it, a
-button to run it; the wheel scrolls.
+On a page the same keys work (`u` `e` `r` `t`, `k` `i` `l` `s` `y`, `Enter` for
+the menu, `Esc` back to the list).
+
+The mouse works too: click a row for its page, a header to fold it, a
+`+ …` row to add, a pill or a box on a page to run it; the wheel scrolls.
 
 ## Narrow windows
 
-In a short window only PROFILES is open; the other sections are folded
-and keep one number on their header (`1 missing key`, `1 needs you`,
-`auto · 1 agent`). Open one with `Space` or a click. On a narrow sidebar a
-row first drops its description, then its state words. Its mark and name
-always stay. You can drag the sidebar wider.
+In a short window only PROFILES is open; the other groups are folded
+and keep their number (`1 !`). Open one with `Space` or a click. On a
+narrow sidebar a row first cuts its word at the right. Its mark and name
+always stay. You can drag the sidebar wider. A page in a narrow pane
+draws the pipeline as chips and scrolls.
 
 ## Ask the AI
 
