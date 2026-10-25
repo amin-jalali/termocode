@@ -132,10 +132,9 @@ func (m *Model) openAgentMCPCard(c *agentMCPCard) {
 	b.WriteString("The file will hold absolute paths of this machine: the termocode program and this folder. ")
 	b.WriteString("Check them before you commit it; they are not right on another computer.\n\n")
 	b.WriteString("Not now: " + c.agent.Title + " starts without them. Esc is the same.")
-	m.confirm = confirm.New(aiSpark()+" Add termocode to "+c.agent.MCP.ProjectFile+"?", b.String(), []confirm.Button{
-		{ID: "skip", Title: "Not now"},
-		{ID: "add", Title: "Add", Style: confirm.StylePrimary},
-	}).WithWideText()
+	m.confirm = confirm.Risky(aiSpark()+" Add termocode to "+c.agent.MCP.ProjectFile+"?", b.String(),
+		confirm.Button{ID: "skip", Title: "Not now"},
+		confirm.Button{ID: "add", Title: "Add", Style: confirm.StylePrimary}).WithWideText()
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen, m.confirmKind = true, confirmKindAgentMCP
 }

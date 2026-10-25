@@ -386,10 +386,9 @@ func (m *Model) onMCPServeStatusPicked(id string) tea.Cmd {
 // first (the focus), then the action.
 func (m *Model) openMCPServeConfirm(kind confirmKindEnum, title, body, action string) {
 	m.pickerOpen = false
-	m.confirm = confirm.New(title, body, []confirm.Button{
-		{ID: "cancel", Title: "Cancel"},
-		{ID: "ok", Title: action, Style: confirm.StylePrimary},
-	})
+	m.confirm = confirm.Risky(title, body,
+		confirm.Button{ID: "cancel", Title: "Cancel"},
+		confirm.Button{ID: "ok", Title: action, Style: confirm.StylePrimary})
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = kind

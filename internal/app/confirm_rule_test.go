@@ -100,14 +100,14 @@ func TestMCPTrustCardsFollowTheRule(t *testing.T) {
 	checkCardRule(t, "tools changed", m, false)
 }
 
-// C-1: the outside agent's card keeps its order (Allow, Always allow, Deny)
-// and focuses Deny with the card's own option, not with Right keys.
+// C-1 / AH-1: the outside agent's card puts Deny first (Deny, Allow,
+// Always allow) and focuses it without Right keys.
 func TestMCPServeCardFocusesDenyWithoutRightKeys(t *testing.T) {
 	m, src, hub := mcpServeTestModel(t)
 	call := mcpServeStartCall(src, "claude-code", "tasks_run", map[string]any{"label": "say hi"})
 	mcpServePumpUntil(t, m, hub, "card", func() bool { return mcpServeCardOpen(m, "claude-code") })
 	checkCardRule(t, "mcp serve", *m, false)
-	if got := mcpServeButtonIDs(m); got != "allow,always,deny" {
+	if got := mcpServeButtonIDs(m); got != "deny,allow,always" {
 		t.Errorf("buttons = %s", got)
 	}
 	mcpServeAnswer(m, "deny")

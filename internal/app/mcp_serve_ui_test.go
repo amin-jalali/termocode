@@ -146,14 +146,14 @@ func TestMCPServeAlwaysOffered(t *testing.T) {
 	m, src, hub := mcpServeTestModel(t)
 	ch := mcpServeStartCall(src, "", "debug_breakpoint", mcpServeClear)
 	mcpServePumpUntil(t, m, hub, "card", func() bool { return mcpServeCardOpen(m, "An outside agent") })
-	if ids := mcpServeButtonIDs(m); ids != "allow,deny" {
+	if ids := mcpServeButtonIDs(m); ids != "deny,allow" {
 		t.Errorf("unnamed client buttons = %s", ids)
 	}
 	mcpServeAnswer(m, "deny")
 	mcpServeAwait(t, m, hub, ch)
 	ch = mcpServeStartCall(src, "claude-code", "debug_evaluate", map[string]any{"expr": "1+1"})
 	mcpServePumpUntil(t, m, hub, "card", func() bool { return mcpServeCardOpen(m, "claude-code") })
-	if ids := mcpServeButtonIDs(m); ids != "allow,deny" {
+	if ids := mcpServeButtonIDs(m); ids != "deny,allow" {
 		t.Errorf("debug_evaluate buttons = %s", ids)
 	}
 	mcpServeAnswer(m, "deny")
@@ -267,13 +267,13 @@ func TestMCPServeCardNoDoubleDot(t *testing.T) {
 
 // Spec (MCP-2): Deny is the safe choice, so it is not red and it is the
 // button Enter picks. A card can open while the user types, and an Enter
-// they meant for something else must not allow an outside agent. The
-// buttons keep their order (Allow, Always allow, Deny).
+// they meant for something else must not allow an outside agent. AH-1:
+// Deny comes first (Deny, Allow, Always allow), as on every risky card.
 func TestMCPServeCardDenyIsDefault(t *testing.T) {
 	m, src, hub := mcpServeTestModel(t)
 	call := mcpServeStartCall(src, "claude-code", "tasks_run", map[string]any{"label": "say hi"})
 	mcpServePumpUntil(t, m, hub, "card", func() bool { return mcpServeCardOpen(m, "claude-code") })
-	if got := mcpServeButtonIDs(m); got != "allow,always,deny" {
+	if got := mcpServeButtonIDs(m); got != "deny,allow,always" {
 		t.Fatalf("buttons = %s", got)
 	}
 	for _, b := range m.confirm.Buttons() {

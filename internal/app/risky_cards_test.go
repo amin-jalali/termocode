@@ -1,10 +1,12 @@
 package app
 
 import (
+	"errors"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/mcp"
@@ -50,6 +52,35 @@ func riskyCards() []riskyCard {
 			return m, func() bool {
 				return loadSession().AIProfilesTrusted["house"] != "" || len(m.ai.conv.Messages) != 0
 			}
+		}},
+		{name: "outside agent call", safe: "deny", helper: true, open: func(t *testing.T) (*Model, func() bool) {
+			m, src, hub := mcpServeTestModel(t)
+			call := mcpServeStartCall(src, "claude-code", "tasks_run", map[string]any{"label": "say hi"})
+			mcpServePumpUntil(t, m, hub, "card", func() bool { return mcpServeCardOpen(m, "claude-code") })
+			return m, func() bool {
+				got := mcpServeAwait(t, m, hub, call)
+				var ce *mcp.CallError
+				return !errors.As(got.err, &ce) || ce.Code != mcp.CodeDeclined
+			}
+		}},
+		{name: "add termocode to the project file", safe: "skip", helper: true, open: func(t *testing.T) (*Model, func() bool) {
+			m := aiTestModel(t)
+			a, ok := agents.ByID("opencode")
+			if !ok {
+				t.Fatal("no opencode agent")
+			}
+			m.openAgentMCPCard(&agentMCPCard{agent: a, path: "/w/opencode.json"})
+			return &m, nil
+		}},
+		{name: "stop listening", safe: "cancel", helper: true, open: func(t *testing.T) (*Model, func() bool) {
+			m := mcpServeStatusModel(t)
+			m.onMCPServeStatusPicked("serve-stop")
+			return m, nil
+		}},
+		{name: "disconnect an outside agent", safe: "cancel", helper: true, open: func(t *testing.T) (*Model, func() bool) {
+			m := mcpServeStatusModel(t)
+			m.onMCPServeStatusPicked("agent:1")
+			return m, nil
 		}},
 		// The chat's own cards (ai_chat.go, ai_mcp.go) already follow the
 		// rule with their own buttons; they are in the table so a change
