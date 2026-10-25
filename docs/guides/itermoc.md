@@ -115,6 +115,20 @@ and keep one number on their header (`1 missing key`, `1 needs you`,
 row first drops its description, then its state words. Its mark and name
 always stay. You can drag the sidebar wider.
 
+## Ask the AI
+
+The chat reads the same state as Itermoc. Ask "what does the review
+profile do?", "which models do I have?", "what is connected?" or "who is
+using termocode?". The AI answers with `profiles_list`, `models_list`,
+`mcp_services_list` and `outside_agents_status`. These tools run at once
+and change nothing. They never contain a key, token, header, env value
+or a URL with a password; a model slot only says `set` or `missing`.
+
+When the next step is yours (set a key, sign in, trust, revoke), the AI
+opens this view at the row with `ai_view_open`. It does not move your
+keyboard focus. Outside agents do not get these tools. See
+[AI tools](../reference/ai-tools.md).
+
 ## Where the old commands went
 
 Nothing was removed. **AI: Switch Profile…**, **AI: Show Profile**,
