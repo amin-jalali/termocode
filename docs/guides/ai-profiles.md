@@ -12,6 +12,8 @@ explained in [Use AI](ai-use.md).
 ## Pick a profile
 
 The chat header shows the active profile as a chip: `✦ default ▾`.
+[Itermoc](itermoc.md) lists all profiles, their model slots and their trust
+state in a sidebar view; the chip and its picker stay the fast way to switch.
 
 | How | What it does |
 |---|---|

@@ -11,6 +11,11 @@ gates. The full list, with a column **MCP server**, is in
 [AI tools](../reference/ai-tools.md). The design is in
 [ADR 0017](../adr/0017-mcp-server.md).
 
+[Itermoc](itermoc.md) shows this in one place: its OUTSIDE AGENTS section says
+whether termocode listens, who is connected, their last calls, and has
+buttons to start an agent and copy the config. Click the `⇄` in the status
+bar to open it.
+
 ## What happens when you start an agent
 
 Run **Agent: Start Claude Code** (or Codex, Gemini CLI, OpenCode) from the

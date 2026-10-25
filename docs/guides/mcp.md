@@ -10,6 +10,9 @@ You never have to look for a token. termocode also reads the same
 `mcpServers` block as Claude Desktop and Claude Code, so you can
 paste the config you already have.
 
+[Itermoc](itermoc.md) lists your services with their state (ready, off,
+needs a sign-in) in one sidebar view; its rows open the actions below.
+
 ## Connect a service
 
 Press `F1` and run **AI: Connect a Service…** (or click `Connect…` in the
