@@ -392,12 +392,15 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 			Deps: st.Deps, Planned: st.Planned, State: string(agentdag.StateRunning)}
 		s.act.begin(now)
 		s.agentsNodeStart(ev.RunID, st.ID, now)
+		s.agentsNodeEvent(ev.RunID, st.ID, ev.AI, now, true)
 		s.runFiles[st.ID] = m.aiRestoreFiles(s.turnMsg)
 	case agentrun.NodeText:
 		st.Text = ev.Tail
 		s.act.onEvent(ev.AI, now)
+		s.agentsNodeEvent(ev.RunID, st.ID, ev.AI, now, false)
 	case agentrun.NodeTool:
 		s.act.onEvent(ev.AI, now)
+		s.agentsNodeEvent(ev.RunID, st.ID, ev.AI, now, false)
 		if ev.AI.Kind == ai.EventToolStart {
 			st.Tools = append(st.Tools, "⚙ "+ev.AI.Detail)
 			s.aiAuditStart(ev.AI)
@@ -409,17 +412,21 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 		}
 	case agentrun.NodeAI:
 		s.act.onEvent(ev.AI, now)
+		s.agentsNodeEvent(ev.RunID, st.ID, ev.AI, now, false)
 		if ev.AI.Kind == ai.EventTurnStart {
 			s.agentsNodeTurn(ev.RunID, st.ID) // the AGENTS card's turns
 		}
 	case agentrun.NodeDone:
+		s.agentsNodeEnd(ev.RunID, st.ID)
 		st.State, st.Text = string(agentdag.StateCompleted), ev.Output
 		m.aiStepFinished(st, ev)
 	case agentrun.NodeFailed:
+		s.agentsNodeEnd(ev.RunID, st.ID)
 		st.State, st.Error = string(agentdag.StateFailed), ai.Redact(ev.Err)
 		recordError("[ai] step " + st.ID + ": " + st.Error)
 		m.aiStepFinished(st, ev)
 	case agentrun.NodeCancelled:
+		s.agentsNodeEnd(ev.RunID, st.ID)
 		st.State = string(agentdag.StateCancelled)
 	case agentrun.NodeBlocked:
 		st.State = string(agentdag.StateBlocked)

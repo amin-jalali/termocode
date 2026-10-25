@@ -339,6 +339,7 @@ type aiTranscriptCache struct {
 	restoreGen  int
 	runGen      int
 	act         aiActivityView
+	stall       string // stalled run nodes (agentsStallSig)
 	msgs        []ai.StoredMessage
 	lines       []aiLine
 	rows        []string // edged rows by line index; "" = not drawn yet
@@ -346,8 +347,8 @@ type aiTranscriptCache struct {
 }
 
 // matches reports whether the cache is valid for this state.
-func (c *aiTranscriptCache) matches(s *aiState, width int, rk theme.RenderKey, resizing bool, act aiActivityView) bool {
-	if !c.ok || c.width != width || c.rk != rk || c.rtl != rtlMode || c.resizing != resizing || c.streaming != s.streaming || c.act != act ||
+func (c *aiTranscriptCache) matches(s *aiState, width int, rk theme.RenderKey, resizing bool, act aiActivityView, stall string) bool {
+	if !c.ok || c.width != width || c.rk != rk || c.rtl != rtlMode || c.resizing != resizing || c.streaming != s.streaming || c.act != act || c.stall != stall ||
 		c.hasProvider != (s.provider != nil) || len(c.msgs) != len(s.conv.Messages) || c.restoreGen != s.restoreGen ||
 		c.runGen != s.runGen {
 		return false
@@ -404,15 +405,16 @@ func (m Model) aiTranscriptCached(width int) *aiTranscriptCache {
 	rk := theme.CurrentRenderKey()
 	resizing := m.dragKind == dragActionsLeft
 	c := &s.transcript
-	act := s.activityView(clock.Now())
-	if c.matches(s, width, rk, resizing, act) {
+	now := clock.Now()
+	act, stall := s.activityView(now), s.agentsStallSig(now)
+	if c.matches(s, width, rk, resizing, act, stall) {
 		return c
 	}
 	lines := m.buildAITranscriptAt(width, act)
 	if c.ok {
 		s.aiKeepSelection(c.msgs, c.width, width)
 	}
-	*c = aiTranscriptCache{ok: true, width: width, rk: rk, rtl: rtlMode, resizing: resizing, streaming: s.streaming, act: act,
+	*c = aiTranscriptCache{ok: true, width: width, rk: rk, rtl: rtlMode, resizing: resizing, streaming: s.streaming, act: act, stall: stall,
 		hasProvider: s.provider != nil, restoreGen: s.restoreGen, runGen: s.runGen, msgs: append([]ai.StoredMessage(nil), s.conv.Messages...),
 		lines: lines, rows: make([]string, len(lines))}
 	if s.provider != nil {

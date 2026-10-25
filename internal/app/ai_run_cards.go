@@ -10,6 +10,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -200,6 +201,10 @@ func (m Model) aiStepCard(msg ai.StoredMessage, k int, st ai.StoredStep, width, 
 	case agentdag.StatePending, agentdag.StateCancelled, agentdag.StateBlocked, agentdag.StateSkipped:
 		tok = theme.TextDim
 	}
+	stallSecs, stalled := m.ai.agentsStalled(msg.Run.ID, state, st.ID, clock.Now())
+	if stalled {
+		tok = theme.DiagWarning
+	}
 	base := theme.FgBg(tok, theme.BgPanel)
 	title := base.Bold(true)
 	if s.cardSel == id {
@@ -218,6 +223,9 @@ func (m Model) aiStepCard(msg ai.StoredMessage, k int, st ai.StoredStep, width, 
 	}
 	if status := aiStepStatus(msg.Steps, k); status != "" {
 		rest += " · " + status
+	}
+	if stalled {
+		rest += " · " + theme.GlyphAIStall.String() + " possibly stalled · " + agSecs(stallSecs)
 	}
 	head := aiFoldGlyph(expanded) + " " + strconv.Itoa(k+1) + " · "
 	row := theme.Bg(theme.BgPanel).Render(strings.Repeat(" ", aiIndent)) +

@@ -98,8 +98,16 @@ func (m *Model) aiActivityView(now time.Time) aiActivityView {
 }
 
 func (s *aiState) activityView(now time.Time) aiActivityView {
-	a := &s.act
-	if !s.streaming || a.phase == aiPhaseNone {
+	if !s.streaming {
+		return aiActivityView{}
+	}
+	return s.act.view(now)
+}
+
+// view is the activity's state at now. The AGENTS cards keep one
+// aiActivity per node and use the same thresholds through it.
+func (a *aiActivity) view(now time.Time) aiActivityView {
+	if a.phase == aiPhaseNone {
 		return aiActivityView{}
 	}
 	v := aiActivityView{phase: a.phase}

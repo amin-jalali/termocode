@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -57,6 +58,9 @@ type aiAgentsState struct {
 	runOf string
 	start map[string]time.Time
 	turns map[string]int
+	// act is each running node's activity (the chat's aiActivity, with
+	// its stall thresholds), by node id; a finished node has none.
+	act map[string]*aiActivity
 	// snaps are the loaded snapshots of interrupted runs by run id (nil:
 	// none on disk); snapGen changes when one loads.
 	snaps   map[string]*aiRunSnapshot
@@ -366,9 +370,80 @@ func (s *aiState) agentsTurns(d agentsRun, n agentsNode) int {
 func (s *aiState) agentsNodeStart(runID, node string, now time.Time) {
 	if s.agents.runOf != runID {
 		s.agents.runOf, s.agents.start, s.agents.turns = runID, map[string]time.Time{}, map[string]int{}
+		s.agents.act = map[string]*aiActivity{}
 	}
 	s.agents.start[node] = now
 	s.agents.turns[node] = 0
+}
+
+// agentsNodeEvent moves a node's activity with an agent event (start
+// begins it); agentsNodeEnd drops it when the node ends.
+func (s *aiState) agentsNodeEvent(runID, node string, ev ai.Event, now time.Time, start bool) {
+	if s.agents.runOf != runID || s.agents.act == nil {
+		return
+	}
+	a := s.agents.act[node]
+	if a == nil || start {
+		a = &aiActivity{}
+		a.begin(now)
+		s.agents.act[node] = a
+	}
+	if !start {
+		a.onEvent(ev, now)
+	}
+}
+
+func (s *aiState) agentsNodeEnd(runID, node string) {
+	if s.agents.runOf == runID {
+		delete(s.agents.act, node)
+	}
+}
+
+// agentsNodeView is a running node's activity at now (ok=false: none).
+func (s *aiState) agentsNodeView(runID, node string, now time.Time) (aiActivityView, bool) {
+	if s.agents.runOf != runID || !s.streaming {
+		return aiActivityView{}, false
+	}
+	a := s.agents.act[node]
+	if a == nil {
+		return aiActivityView{}, false
+	}
+	v := a.view(now)
+	return v, v.phase != aiPhaseNone
+}
+
+// agentsStalled is the silent seconds of a stalled running node (ok
+// false: not stalled).
+func (s *aiState) agentsStalled(runID string, st agentdag.State, node string, now time.Time) (int, bool) {
+	if st != agentdag.StateRunning {
+		return 0, false
+	}
+	v, ok := s.agentsNodeView(runID, node, now)
+	return v.secs, ok && v.stalled
+}
+
+// agentsStallSig names the stalled nodes (the transcript cache key: the
+// step cards warn too). "" when none.
+func (s *aiState) agentsStallSig(now time.Time) string {
+	if !s.streaming || len(s.agents.act) == 0 {
+		return ""
+	}
+	var ids []string
+	for id, a := range s.agents.act {
+		if a.view(now).stalled {
+			ids = append(ids, id)
+		}
+	}
+	sort.Strings(ids)
+	return strings.Join(ids, ",")
+}
+
+// agSecs is "35s" or "1m 5s".
+func agSecs(n int) string {
+	if n < 60 {
+		return strconv.Itoa(max(n, 0)) + "s"
+	}
+	return strconv.Itoa(n/60) + "m " + strconv.Itoa(n%60) + "s"
 }
 
 func (s *aiState) agentsNodeTurn(runID, node string) {
@@ -587,6 +662,13 @@ func (s *aiState) agentsCard(d agentsRun, n agentsNode, w int, selected bool, no
 	if selected {
 		border, titleTok = theme.AIAccent, theme.AIAccent
 	}
+	stallSecs, stalled := 0, false
+	if d.live {
+		stallSecs, stalled = s.agentsStalled(d.msg.Run.ID, n.state, n.id, now)
+	}
+	if stalled {
+		border = theme.DiagWarning // colour by state: no token for too long
+	}
 	expanded := s.agentsExpanded(d.msg.Run.ID, n)
 	head := runewidth.Truncate(aiFoldGlyph(expanded)+" "+n.title, max(inner-3, 1), "…")
 	fill := max(inner-2-runewidth.StringWidth(head), 0)
@@ -596,6 +678,10 @@ func (s *aiState) agentsCard(d agentsRun, n agentsNode, w int, selected bool, no
 		return agSeg(border, g.v) + agSeg(tok, " "+agFit(text, inner-2)+" ") + agSeg(border, g.v)
 	}
 	glyph, label, tok := agentsLook(n.state, d.live)
+	stallRow := theme.GlyphAIStall.String() + " possibly stalled · " + agSecs(stallSecs)
+	if stalled {
+		tok = theme.DiagWarning
+	}
 	first := glyph + " " + label
 	if n.st != nil && n.st.Category != "" {
 		first += " · " + n.st.Category
@@ -609,9 +695,11 @@ func (s *aiState) agentsCard(d agentsRun, n agentsNode, w int, selected bool, no
 			dur, turns, tools := s.agentsStatParts(d, n, now)
 			stats = agFitParts([]string{aiShortModelFit(n.st.Model, inner-2-len(dur)-3), dur, turns, tools}, []int{3, 2, 0}, inner-2)
 		}
-		out = append(out, row(tok, first),
-			row(theme.TextSecondary, s.agentsActivity(d, n, inner-2, g)),
-			row(theme.TextDim, stats))
+		act := row(theme.TextSecondary, s.agentsActivity(d, n, inner-2, g))
+		if stalled {
+			act = row(theme.DiagWarning, stallRow)
+		}
+		out = append(out, row(tok, first), act, row(theme.TextDim, stats))
 	} else {
 		if stats := s.agentsStats(d, n, now); stats != "" && n.state.Done() {
 			first = glyph + " " + label + " · " + stats
@@ -619,6 +707,9 @@ func (s *aiState) agentsCard(d agentsRun, n agentsNode, w int, selected bool, no
 		out = append(out, row(tok, first))
 		if line := agentsModelLine(n.st, inner-2); line != "" && n.state.Done() {
 			out = append(out, row(theme.TextDim, line)) // model · tokens · cost
+		}
+		if stalled {
+			out = append(out, row(theme.DiagWarning, stallRow))
 		}
 	}
 	return append(out, agSeg(border, g.bl+strings.Repeat(g.h, inner)+g.br))
