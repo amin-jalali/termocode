@@ -241,3 +241,46 @@ func TestClean(t *testing.T) {
 		}
 	}
 }
+
+// Spec (OM-3): a run may declare a verify/fix loop; Validate checks its
+// shape and the round limits.
+func TestValidateLoop(t *testing.T) {
+	base := func(l Loop) Run {
+		return Run{ID: "r", Nodes: []Node{{ID: "planner", Plan: true}, {ID: "verify"}},
+			Edges: Chain("planner", "verify"), Loop: &l}
+	}
+	fix := Node{ID: "fix", Category: CategoryQuick}
+	for _, tc := range []struct {
+		name string
+		l    Loop
+		want string
+	}{
+		{"unknown verify", Loop{Verify: "nope", Fix: fix, MaxRounds: 3}, "unknown node"},
+		{"verify is planner", Loop{Verify: "planner", Fix: fix, MaxRounds: 3}, "planner"},
+		{"empty fix id", Loop{Verify: "verify", Fix: Node{}, MaxRounds: 3}, "empty id"},
+		{"fix is verify", Loop{Verify: "verify", Fix: Node{ID: "verify"}, MaxRounds: 3}, "may not be the verify"},
+		{"fix plans", Loop{Verify: "verify", Fix: Node{ID: "fix", Plan: true}, MaxRounds: 3}, "planner"},
+		{"zero rounds", Loop{Verify: "verify", Fix: fix, MaxRounds: 0}, "max rounds 0"},
+		{"too many rounds", Loop{Verify: "verify", Fix: fix, MaxRounds: MaxRounds + 1}, "max rounds 11"},
+		{"round past max", Loop{Verify: "verify", Fix: fix, MaxRounds: 2, Round: 3}, "past max"},
+	} {
+		if err := Validate(base(tc.l)); err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: err %v, want %q", tc.name, err, tc.want)
+		}
+	}
+	if err := Validate(base(Loop{Verify: "verify", Fix: fix, MaxRounds: 3})); err != nil {
+		t.Errorf("valid loop: %v", err)
+	}
+	// A resumed run already holds the fix node (edge fix → verify).
+	r := base(Loop{Verify: "verify", Fix: fix, MaxRounds: 3, Round: 2})
+	r.Nodes = append(r.Nodes, fix)
+	r.Edges = append(r.Edges, Edge{From: "fix", To: "verify"})
+	if err := Validate(r); err != nil {
+		t.Errorf("run with the fix node: %v", err)
+	}
+	c := r.Clone()
+	c.Loop.Round, c.Nodes[0].ID = 3, "x"
+	if r.Loop.Round != 2 || r.Nodes[0].ID != "planner" {
+		t.Error("Clone shares the loop or the nodes")
+	}
+}

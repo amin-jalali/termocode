@@ -79,6 +79,8 @@ const (
 	MaxNodes    = 12
 	MaxLayers   = 6
 	MaxErrorLen = 512
+	// MaxRounds caps Loop.MaxRounds (verify runs at most this often).
+	MaxRounds = 10
 )
 
 // ToolRule narrows the tools a node may use. It can only remove tools.
@@ -124,13 +126,41 @@ type Edge struct {
 	To   string `json:"to"`
 }
 
+// Loop makes a run "work until done": when node Verify ends with a
+// failing verdict and rounds remain, node Fix joins the run (once) with
+// an edge Fix → Verify, both run again and Round grows by one. The
+// scheduler (agentrun) does it; agentdag only checks the shape.
+type Loop struct {
+	Verify    string `json:"verify"`
+	Fix       Node   `json:"fix"`
+	MaxRounds int    `json:"max_rounds"`
+	// Round is the round the run is in (0 or 1: the first). It is state:
+	// a resumed run starts in the round it stopped in.
+	Round int `json:"round,omitempty"`
+	// Report is the last failing verify report (the Fix node's input).
+	Report string `json:"report,omitempty"`
+}
+
 // Run is one graph of nodes.
 type Run struct {
 	ID        string    `json:"id"`
 	Profile   string    `json:"profile,omitempty"`
 	Nodes     []Node    `json:"nodes"`
 	Edges     []Edge    `json:"edges,omitempty"`
+	Loop      *Loop     `json:"loop,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+// Clone is a copy of r that shares no slices or loop with it.
+func (r Run) Clone() Run {
+	out := r
+	out.Nodes = append([]Node(nil), r.Nodes...)
+	out.Edges = append([]Edge(nil), r.Edges...)
+	if r.Loop != nil {
+		l := *r.Loop
+		out.Loop = &l
+	}
+	return out
 }
 
 // Chain returns the edges of a linear path through ids.
@@ -218,10 +248,15 @@ func Normalize(r Run) (Run, error) {
 }
 
 // Validate normalizes r and also checks the run limits (MaxNodes,
-// MaxLayers).
+// MaxLayers) and the loop: Verify names a node that is not a planner,
+// Fix has an id of its own (it may already be in the run: a resumed
+// run) and is not a planner, and 1 ≤ MaxRounds ≤ MaxRounds.
 func Validate(r Run) error {
 	n, err := Normalize(r)
 	if err != nil {
+		return err
+	}
+	if err := validateLoop(n); err != nil {
 		return err
 	}
 	if len(n.Nodes) > MaxNodes {
@@ -230,6 +265,37 @@ func Validate(r Run) error {
 	ls, _ := layers(n)
 	if len(ls) > MaxLayers {
 		return fmt.Errorf("agentdag: too many layers (%d, at most %d)", len(ls), MaxLayers)
+	}
+	return nil
+}
+
+func validateLoop(r Run) error {
+	l := r.Loop
+	if l == nil {
+		return nil
+	}
+	var verify *Node
+	for i := range r.Nodes {
+		if r.Nodes[i].ID == strings.TrimSpace(l.Verify) {
+			verify = &r.Nodes[i]
+		}
+	}
+	fix := strings.TrimSpace(l.Fix.ID)
+	switch {
+	case verify == nil:
+		return fmt.Errorf("agentdag: loop: verify names unknown node %q", l.Verify)
+	case verify.Plan:
+		return fmt.Errorf("agentdag: loop: verify node %q is a planner", l.Verify)
+	case fix == "":
+		return fmt.Errorf("agentdag: loop: the fix node has an empty id")
+	case fix == verify.ID:
+		return fmt.Errorf("agentdag: loop: the fix node may not be the verify node %q", fix)
+	case l.Fix.Plan:
+		return fmt.Errorf("agentdag: loop: the fix node may not be a planner")
+	case l.MaxRounds < 1 || l.MaxRounds > MaxRounds:
+		return fmt.Errorf("agentdag: loop: max rounds %d (1 to %d)", l.MaxRounds, MaxRounds)
+	case l.Round > l.MaxRounds:
+		return fmt.Errorf("agentdag: loop: round %d is past max rounds %d", l.Round, l.MaxRounds)
 	}
 	return nil
 }
