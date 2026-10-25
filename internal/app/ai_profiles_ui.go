@@ -92,15 +92,61 @@ func (m Model) aiRunActive() bool { return m.ai != nil && m.ai.run != nil }
 // setAIProfile makes name the active profile, stores it for this
 // workspace and says so in a toast.
 func (m *Model) setAIProfile(name string) tea.Cmd {
-	s := m.aiS()
-	s.profile = name
+	m.storeAIProfile(name)
+	return m.aiInfo("Profile: " + name)
+}
+
+// storeAIProfile makes name the active profile and stores it for this
+// workspace.
+func (m *Model) storeAIProfile(name string) {
+	m.aiS().profile = name
 	sess := loadSession()
 	sess.AIProfile = name
 	if name == ai.ProfileDefault {
 		sess.AIProfile = ""
 	}
 	saveSession(sess)
-	return m.aiInfo("Profile: " + name)
+}
+
+// aiDonePrefix runs one message with the until-done profile.
+const aiDonePrefix = "/done "
+
+// toggleAIUntilDone is AI: Work Until Done (toggle): it switches to the
+// until-done profile, and back to the profile before it.
+func (m *Model) toggleAIUntilDone() tea.Cmd {
+	s := m.aiS()
+	if s.activeProfile().Name == ai.ProfileUntilDone {
+		prev := s.prevProfile
+		if _, ok := s.profiles.Get(prev); !ok || prev == ai.ProfileUntilDone {
+			prev = ai.ProfileDefault
+		}
+		s.prevProfile = ""
+		m.storeAIProfile(prev)
+		return m.aiInfo("Work until done: off · profile " + prev)
+	}
+	p, ok := s.profiles.Get(ai.ProfileUntilDone)
+	if !ok {
+		return m.aiInfo("No profile " + ai.ProfileUntilDone)
+	}
+	if m.aiProfileTrust(p) != aiTrustUse { // a project file replaced the built-in
+		return m.askAIProfileTrust(p, aiTrustAfterSwitch, "")
+	}
+	s.prevProfile = s.activeProfile().Name
+	m.storeAIProfile(ai.ProfileUntilDone)
+	return m.aiInfo(aiUntilDoneSummary(p) + " · toggle again to go back to " + s.prevProfile)
+}
+
+// aiUntilDoneSummary says what a run of p does at most: "Work until
+// done: on · up to 3 rounds · budget $2.00".
+func aiUntilDoneSummary(p ai.Profile) string {
+	out := "Work until done: on"
+	if r := p.Run("summary"); r.Loop != nil {
+		out += fmt.Sprintf(" · up to %d rounds", r.Loop.MaxRounds)
+	}
+	if p.BudgetUSD > 0 {
+		return out + " · budget " + aiBudgetText(p.BudgetUSD)
+	}
+	return out + " · no budget"
 }
 
 // selectAIProfile switches to name; an untrusted project profile shows

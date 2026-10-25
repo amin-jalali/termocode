@@ -1356,6 +1356,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `ai-toggle-inline` | AI: Toggle Inline Completions | confirm (ide) |   |
 | `ai-trigger-inline` | AI: Trigger Inline Completion | never | inline completion is for the user's typing |
 | `ai-undo-turn` | AI: Undo Last Turn | never | the user undoes the AI's changes |
+| `ai-until-done` | AI: Work Until Done (toggle) | confirm (settings) |   |
 | `ai-usage` | AI: Usage | never | a read-only screen for the user; the AI cannot read its own bill |
 | `alternate-file` | View: Switch to Last File | auto |   |
 | `bookmark-clear` | Bookmarks: Clear All | confirm (ide) |   |

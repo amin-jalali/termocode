@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/x/ansi"
+
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clock"
@@ -262,5 +264,72 @@ func TestAIUntilDoneFixWritesNeedReview(t *testing.T) {
 	}
 	if rm := aiRunMsg(t, m); rm.Run.Verdict != "pass" || rm.Run.Rounds != 2 {
 		t.Errorf("run %+v", rm.Run)
+	}
+}
+
+// Spec: "/done <message>" runs that one message with until-done; the
+// stored message has no prefix and the active profile does not change;
+// the next message uses the active profile again.
+func TestAIDoneKeywordRunsUntilDone(t *testing.T) {
+	p := &funcAIProvider{reply: func(r ai.Request) ai.Chunk {
+		if isPlanner(r) || isVerify(r) || isFix(r) || strings.Contains(lastUserContent(r), "TASK-do") {
+			return untilDoneReply("VERDICT: PASS")(r)
+		}
+		return ai.Chunk{Delta: "plain answer"}
+	}}
+	m, _ := aiRunModel(t, p, p)
+	m.ai.profile = ai.ProfileDefault
+	driveAIChat(t, m, m.sendAIChat("/done fix the tests"), nil)
+	rm := aiRunMsg(t, m)
+	if rm.Run.Profile != ai.ProfileUntilDone || rm.Run.Verdict != "pass" {
+		t.Fatalf("run %+v", rm.Run)
+	}
+	if u := m.ai.conv.Messages[0]; u.Role != ai.StoredUser || u.Text != "fix the tests" {
+		t.Errorf("stored user message %+v", u)
+	}
+	if got := m.ai.activeProfile().Name; got != ai.ProfileDefault {
+		t.Errorf("active profile %q", got)
+	}
+	n := len(m.ai.conv.Messages)
+	driveAIChat(t, m, m.sendAIChat("and now?"), nil)
+	if last := m.ai.conv.Messages[len(m.ai.conv.Messages)-1]; len(m.ai.conv.Messages) != n+2 || last.Run != nil || last.Text != "plain answer" {
+		t.Errorf("the next message must use the default profile: %+v", last)
+	}
+	// "/done" alone is a plain message.
+	driveAIChat(t, m, m.sendAIChat("/done"), nil)
+	if last := m.ai.conv.Messages[len(m.ai.conv.Messages)-1]; last.Run != nil {
+		t.Errorf("a bare /done started a run: %+v", last.Run)
+	}
+}
+
+// Spec: AI: Work Until Done (toggle) switches to until-done (the chip
+// says so, a toast names the limits) and back to the profile before.
+func TestAIUntilDoneToggle(t *testing.T) {
+	m, _ := aiRunModel(t, &recordingAIProvider{}, &recordingAIProvider{})
+	m.ai.profile = ai.ProfileReview
+	cmd, ok := m.dispatchAIPalette("ai-until-done")
+	if !ok {
+		t.Fatal("ai-until-done not dispatched")
+	}
+	_ = cmd
+	if got := m.ai.activeProfile().Name; got != ai.ProfileUntilDone {
+		t.Fatalf("profile %q", got)
+	}
+	if chip := m.aiProfileChipLabel(); !strings.Contains(chip, "until-done") {
+		t.Errorf("chip %q", chip)
+	}
+	if top := ansi.Strip(strings.Join(m.toast.View(160, 40), "\n")); !strings.Contains(top, "Work until done: on") ||
+		!strings.Contains(top, "up to 3 rounds") || !strings.Contains(top, "$2.00") {
+		t.Errorf("toast %q", top)
+	}
+	if loadSession().AIProfile != ai.ProfileUntilDone {
+		t.Error("the choice is not stored for the workspace")
+	}
+	m.dispatchAIPalette("ai-until-done")
+	if got := m.ai.activeProfile().Name; got != ai.ProfileReview {
+		t.Errorf("toggle off: profile %q, want review", got)
+	}
+	if p, ok := aiActionPolicyFor("ai-until-done"); !ok || p != aiConfirm(ai.ClassSettings) {
+		t.Errorf("policy %+v", p)
 	}
 }

@@ -179,8 +179,16 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		return m.aiInfo("AI is still answering — Ctrl+C to stop")
 	}
 	prof := s.activeProfile()
+	asked := text
+	// "/done <message>" runs this one message with the until-done
+	// profile; the active profile stays and the prefix is not stored.
+	if rest, ok := strings.CutPrefix(text, aiDonePrefix); ok && strings.TrimSpace(rest) != "" {
+		if p, ok := s.profiles.Get(ai.ProfileUntilDone); ok {
+			prof, text = p, strings.TrimLeft(rest, " ")
+		}
+	}
 	if prof.Source == ai.ProfileSourceProject && m.aiProfileTrust(prof) != aiTrustUse {
-		return m.askAIProfileTrust(prof, aiTrustAfterSend, text) // F4: a repo's prompts are shown first
+		return m.askAIProfileTrust(prof, aiTrustAfterSend, asked) // F4: a repo's prompts are shown first
 	}
 	rules := ai.LoadProjectRules(aiWorkspaceRoot()) // OM-1: read once per turn
 	if rules.Text != "" && aiRulesTrust(rules) == aiTrustAsk {

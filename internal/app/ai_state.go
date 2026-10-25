@@ -70,6 +70,9 @@ type aiState struct {
 	// is the profile errors already shown as a toast.
 	profile      string
 	profErrShown string
+	// prevProfile is the profile AI: Work Until Done (toggle) switches
+	// back to.
+	prevProfile string
 	// profFake are profiles added after every profile load (the demo
 	// shots' project profile, which has no file).
 	profFake []ai.Profile
@@ -395,6 +398,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-profile-switch", "AI: Switch Profile…", ""},
 		{"ai-profile-next", "AI: Next Profile", "Alt+Shift+P"},
 		{"ai-profile-show", "AI: Show Profile", ""},
+		{"ai-until-done", "AI: Work Until Done (toggle)", ""},
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
 		{"ai-usage", "AI: Usage", ""},
 		{"ai-profile-edit", "AI: Edit Profiles", ""},
@@ -506,6 +510,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.cycleAIProfile(), true
 	case "ai-profile-show":
 		return m.showAIProfile(), true
+	case "ai-until-done":
+		return m.toggleAIUntilDone(), true
 	case "ai-agents":
 		return m.toggleAgentsView(), true
 	case "ai-usage":

@@ -56,6 +56,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Undo Last Turn | `ai-undo-turn` |   |   |
 | AI: Unlock Secrets | `secrets-unlock` |   |   |
 | AI: Usage | `ai-usage` |   |   |
+| AI: Work Until Done (toggle) | `ai-until-done` |   |   |
 
 ## Agent
 

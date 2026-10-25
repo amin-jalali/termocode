@@ -404,10 +404,12 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-profile-switch": aiConfirm(ai.ClassSettings),
 	"ai-profile-next":   aiNever(aiNoAIConfig + " (ai-profile-switch asks the user)"),
 	"ai-profile-show":   aiNever("a read-only screen for the user; the AI already knows its own profile"),
-	"ai-profile-edit":   aiNever(aiNoAIConfig),
-	"ai-profile-new":    aiNever(aiNoAIConfig),
-	"ai-profile-form":   aiNever(aiNoAIConfig + " (the step form is for the user; a typed tool comes later)"),
-	"ai-profile-trust":  aiNever("trusting a project's prompts is the user's decision"),
+	// Work until done (OM-3) is a profile switch: the user confirms it.
+	"ai-until-done":    aiConfirm(ai.ClassSettings),
+	"ai-profile-edit":  aiNever(aiNoAIConfig),
+	"ai-profile-new":   aiNever(aiNoAIConfig),
+	"ai-profile-form":  aiNever(aiNoAIConfig + " (the step form is for the user; a typed tool comes later)"),
+	"ai-profile-trust": aiNever("trusting a project's prompts is the user's decision"),
 	// Project rules (OM-1): the AI only gets the text in its prompt.
 	"ai-rules":       aiNever("trusting a project's rules is the user's decision"),
 	"ai-models-edit": aiNever(aiNoAIConfig),
