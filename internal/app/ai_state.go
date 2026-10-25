@@ -62,6 +62,8 @@ type aiState struct {
 	memFake *[]aimemory.Lesson
 	// memSlotWarned: the "no quick model" toast was shown this session.
 	memSlotWarned bool
+	// memAsk is the turn the open ask-once memory card is for.
+	memAsk *aiMemoryAskPending
 	// profile is the active profile's name ("" = default); profErrShown
 	// is the profile errors already shown as a toast.
 	profile      string

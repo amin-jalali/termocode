@@ -57,6 +57,7 @@ func (p *aiDemoProvider) Stream(ctx context.Context, _ ai.Request) <-chan ai.Chu
 // aiPipelineDemo starts the demo run; "running" leaves the second step
 // writing, "done" lets it finish.
 func (m *Model) aiPipelineDemo(arg string) tea.Cmd {
+	aiDemoMemoryOff() // OM-2: no ask-once card in the shots
 	s := m.aiS()
 	rev := &aiDemoProvider{name: "anthropic", replies: []ai.Chunk{
 		{ToolCalls: []ai.ToolCall{{ID: "d1", Name: "read_file", Args: map[string]any{"path": "README.md"}}},
@@ -227,6 +228,7 @@ func aiDemoTask(r ai.Request) string {
 // "running" leaves the two middle steps working, "done" lets the run
 // finish, "live" lets every step take a moment and then finish (the GIF).
 func (m *Model) aiAgentsDemo(arg string) tea.Cmd {
+	aiDemoMemoryOff() // OM-2: no ask-once card in the shots
 	s := m.aiS()
 	running := arg == "running"
 	live := arg == "live"

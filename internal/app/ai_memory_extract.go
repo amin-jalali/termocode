@@ -141,14 +141,20 @@ func (s *aiState) aiMemoryTranscript(from int) string {
 
 // aiMemoryAfterTurn starts the extractor for the turn that just ended,
 // or returns nil (the turn does not qualify, memory is off, no quick
-// model slot).
+// model slot). In a workspace that never decided it asks once instead.
 func (m *Model) aiMemoryAfterTurn() tea.Cmd {
 	s := m.aiS()
 	from := s.aiMemoryTurnFrom()
-	if from < 0 || aiMemoryState() != aiMemoryOn {
+	if from < 0 {
 		return nil
 	}
-	return m.startAIMemory(from)
+	switch aiMemoryState() {
+	case aiMemoryOn:
+		return m.startAIMemory(from)
+	case aiMemoryUndecided:
+		return m.askAIMemory(from) // ask once (ai_memory_ask.go)
+	}
+	return nil
 }
 
 // startAIMemory runs the extractor for the turn at from.
