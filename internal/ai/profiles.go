@@ -445,18 +445,11 @@ func ResolveSlots(s Settings, main Config, c Credentials, getenv func(string) st
 		sl := s.Models[name]
 		sl.Provider = strings.ToLower(strings.TrimSpace(sl.Provider))
 		fail := func(msg string) { errs = append(errs, fmt.Sprintf("ai_models: slot %q: %s", name, msg)) }
-		switch {
-		case name == SlotMain:
-			fail(`"main" is built in (it is ai_provider / ai_model)`)
-		case !profileIDRe.MatchString(name):
-			fail("a slot name may use letters, digits, '-', '_' and '.'")
-		case !knownKind(sl.Provider):
-			fail(fmt.Sprintf("unknown provider %q (%s)", sl.Provider, strings.Join(Kinds, ", ")))
-		case sl.Provider == KindCompatible && sl.BaseURL == "":
-			fail("openai-compatible needs base_url")
-		default:
-			out[name] = slotConfig(sl, main, c, getenv)
+		if err := CheckModelSlot(name, sl); err != nil {
+			fail(err.Error())
+			continue
 		}
+		out[name] = slotConfig(sl, main, c, getenv)
 	}
 	return out, errs
 }
