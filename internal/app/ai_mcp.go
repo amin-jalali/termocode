@@ -729,7 +729,7 @@ func (m Model) mcpChipState() int {
 }
 
 // onMCPChip runs a click on the chip: the wizard without services or for
-// the server that needs a sign-in, else AI: MCP Servers….
+// the server that needs a sign-in, else Itermoc at SERVICES.
 func (m *Model) onMCPChip() tea.Cmd {
 	switch n := m.mcpChipState(); {
 	case n == mcpChipConnect:
@@ -737,7 +737,7 @@ func (m *Model) onMCPChip() tea.Cmd {
 	case n <= mcpChipSignIn:
 		return m.mcpConnectServer(m.aiMCP().NeedSignIn()[0])
 	}
-	return m.openMCPServers()
+	return m.revealItermocView(true, imSecServices) // Itermoc at SERVICES; AI: MCP Servers… stays in the palette
 }
 
 // mcpSignInBar is the row above the chat input while a server waits

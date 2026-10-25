@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/statusbar"
 )
 
@@ -65,7 +66,7 @@ func TestMCPServeChipFollowsEvents(t *testing.T) {
 	}
 }
 
-// Spec (MS-3): a click on the chip opens the status screen.
+// Spec (MS-3, AH-4): a click on the chip opens Itermoc at OUTSIDE AGENTS.
 func TestMCPServeChipClickOpensStatus(t *testing.T) {
 	m, hub := mcpServeChipModel(t)
 	m.onMCPServeClient(mcpServeClientMsg{hub: hub, kind: mcpClientConnected, id: 1})
@@ -84,8 +85,13 @@ func TestMCPServeChipClickOpensStatus(t *testing.T) {
 		t.Fatalf("hit = %q", got)
 	}
 	got, _ := m.handleMouse(tea.MouseMsg{X: x, Y: m.h - 1, Type: tea.MouseLeft, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft})
-	if !got.pickerOpen || got.pickerKind != pickerKindMCPServeStatus {
-		t.Errorf("the click did not open the status screen (picker %v kind %v)", got.pickerOpen, got.pickerKind)
+	// The glyph opens Itermoc at OUTSIDE AGENTS; the old status screen is its
+	// "Status…" verb.
+	if got.activity.Active() != activity.ViewItermoc || got.itermoc == nil {
+		t.Fatalf("the click did not open Itermoc (view %v)", got.activity.Active())
+	}
+	if r, _ := got.itermoc.current(); r.kind != imRowSection || r.sec != imSecAgents {
+		t.Errorf("Itermoc is not at OUTSIDE AGENTS: cursor on %+v", r)
 	}
 }
 

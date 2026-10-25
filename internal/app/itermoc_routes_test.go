@@ -256,4 +256,3 @@ func TestItermocStatusVerbs(t *testing.T) {
 		t.Error("Stop listening… did not ask")
 	}
 }
-
