@@ -252,18 +252,17 @@ func (m *Model) mcpServePump() tea.Cmd {
 			body += "\n\nArguments: " + ai.Redact(aiCleanText(a.args))
 		}
 		body += "\n\nAsked by an outside agent over MCP (tool " + a.tool.Name + "). The name is the agent's own claim."
-		buttons := []confirm.Button{{ID: "allow", Title: "Allow", Style: confirm.StylePrimary}}
+		actions := []confirm.Button{{ID: "allow", Title: "Allow", Style: confirm.StylePrimary}}
 		if a.always != "" {
-			buttons = append(buttons, confirm.Button{ID: "always", Title: "Always allow"})
+			actions = append(actions, confirm.Button{ID: "always", Title: "Always allow"})
 			body += "\nAlways allow: " + a.client + " may run " + mcpServeAlwaysWhat(a.always) +
 				" without asking. Revoke it in AI: Agent Auto-Approve…"
 		}
-		// Deny is the safe answer, so it is plain (not red) and it is the
-		// button Enter picks: a card can open while the user types, and an
+		// Deny is the safe answer (confirm.Risky): first, plain and the
+		// button Enter picks. A card can open while the user types, and an
 		// Enter meant for something else must not allow an outside agent.
-		// The buttons keep their order (Allow, Always allow, Deny).
-		buttons = append(buttons, confirm.Button{ID: "deny", Title: "Deny"})
-		m.confirm = confirm.New(mcpServeCardTitle(a.client, a.tool.Name, a.human), body, buttons).WithFocus(len(buttons) - 1)
+		m.confirm = confirm.Risky(mcpServeCardTitle(a.client, a.tool.Name, a.human), body,
+			confirm.Button{ID: "deny", Title: "Deny"}, actions...)
 		m.confirm.SetSize(m.w, m.h)
 		m.confirmOpen = true
 		m.confirmKind = confirmKindMCPServe

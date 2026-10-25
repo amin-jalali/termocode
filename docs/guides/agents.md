@@ -145,15 +145,15 @@ When the agent calls a tool that runs or changes something, a card opens:
 ✦ claude-code wants to run task "build"
   Arguments: {"label": "build"}
   Asked by an outside agent over MCP (tool tasks_run). The name is the agent's own claim.
-  [ Allow ] [ Always allow ] [ Deny ]
+  [ Deny ] [ Allow ] [ Always allow ]
 ```
 
-- **Allow** runs this one call.
-- **Deny** (or `Esc`) refuses it. It is the button that has the focus when
+- **Deny** (or `Esc`) refuses it. It comes first and has the focus when
   the card opens, so a stray `Enter` never allows a call. The agent gets an
   error with code `-32000` with `data: {"reason":"declined"}`, and nothing
   runs. (A tool that ran and failed uses `-32000` too, with
   `{"reason":"tool_error"}`.)
+- **Allow** runs this one call. Move to it with `→` (or `Tab`), or click it.
 - Several calls wait in line: one card at a time, the oldest first. A call
   that waits longer than two minutes, or whose agent went away, is dropped.
 - If another dialog opens over the card, the call keeps waiting and the
