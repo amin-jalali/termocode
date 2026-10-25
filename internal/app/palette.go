@@ -348,6 +348,7 @@ func paletteItems() []picker.Item {
 	items = append(items, httpPaletteItems()...)      // HTTP client (http_commands.go)
 	items = append(items, secretsPaletteItems()...)   // secret store (secrets_ui.go)
 	items = append(items, mcpServePaletteItems()...)  // termocode as an MCP server (mcp_serve_status.go)
+	items = append(items, itermocPaletteItems()...)   // the Itermoc view (itermoc_actions.go)
 	// Group A — AI commands (ai_state.go).
 	for _, e := range aiPaletteItems() {
 		items = append(items, picker.Item{ID: e.id, Title: e.title, Hint: e.hint})
@@ -738,6 +739,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchMCPServePalette(id); ok { // mcp_serve_status.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchItermocPalette(id); ok { // itermoc_actions.go
 			return cmd
 		}
 		// Group G: merge conflicts + clone (git_conflicts.go, git_clone.go).

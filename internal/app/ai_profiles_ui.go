@@ -488,8 +488,17 @@ func (m *Model) editAIProfiles() tea.Cmd {
 
 // openAIProfileNewPrompt is AI: New Profile from Current…: asks for the
 // new name.
-func (m *Model) openAIProfileNewPrompt() tea.Cmd {
-	cur := m.aiS().activeProfile().Name
+func (m *Model) openAIProfileNewPrompt() tea.Cmd { return m.openAIProfileCopyPrompt("") }
+
+// openAIProfileCopyPrompt asks for the name of a copy of profile from
+// ("" = the active one).
+func (m *Model) openAIProfileCopyPrompt(from string) tea.Cmd {
+	s := m.aiS()
+	s.profNewFrom = ""
+	cur := s.activeProfile().Name
+	if _, ok := s.profiles.Get(from); ok && from != "" {
+		cur, s.profNewFrom = from, from
+	}
 	m.prompt = prompt.New(aiSpark()+" New Profile", "Save profile "+cur+" as (letters, digits, - _ .):", "my-"+cur)
 	m.prompt.SetSize(m.w, m.h)
 	m.promptOpen = true
@@ -504,7 +513,12 @@ func (m *Model) onAIProfileNewName(name string) tea.Cmd {
 	if name == "" {
 		return nil
 	}
-	p := m.aiS().activeProfile()
+	s := m.aiS()
+	p := s.activeProfile()
+	if q, ok := s.profiles.Get(s.profNewFrom); ok && s.profNewFrom != "" {
+		p = q
+	}
+	s.profNewFrom = ""
 	p.Name = name
 	return m.askAIProfileSave(p, false)
 }

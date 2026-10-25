@@ -499,6 +499,9 @@ type Model struct {
 	services *servicesState
 	// databases is lazy and holds idle sessions only while the view is open.
 	databases *dbState
+	// itermoc is the Itermoc view (profiles, models, services, outside
+	// agents): lazy, a pointer so a render can refresh its snapshot.
+	itermoc *itermocState
 	// ext is the extension host state (Group I, ext.go). Pointer so
 	// Model copies share it; nil in bare test Models.
 	ext *extState

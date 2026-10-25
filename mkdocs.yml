@@ -94,6 +94,7 @@ nav:
       - Set up AI: guides/ai-setup.md
       - Use AI: guides/ai-use.md
       - AI profiles and pipelines: guides/ai-profiles.md
+      - Itermoc, the AI home: guides/itermoc.md
       - Connect MCP servers: guides/mcp.md
       - Give your agent the IDE's tools: guides/agents.md
       - Test an HTTP API (.http files): guides/http-client.md

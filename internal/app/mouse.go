@@ -468,6 +468,8 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 			return m.handleServicesSidebarMouse(x, msg.Y, msg.Type)
 		case activity.ViewDatabases:
 			return m.handleDatabasesSidebarMouse(x, msg.Y, msg.Type)
+		case activity.ViewItermoc: // itermoc_actions.go
+			return m.handleItermocSidebarMouse(x, msg.Y, msg.Type)
 		}
 		if m.isExtSidebar() { // Group I: extension panels (ext.go)
 			return m, m.handleExtSidebarMouse(msg.Y, msg.Type)

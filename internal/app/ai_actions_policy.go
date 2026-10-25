@@ -390,6 +390,15 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// screens; the config snippet is for the user's agents, not the chat.
 	"mcp-serve-status":      aiNever(aiNoPicker),
 	"mcp-serve-copy-config": aiNever(aiNoAIConfig + " (the config is for the user to paste into an agent)"),
+	// Itermoc (itermoc_actions.go): the user's screen for profiles, models,
+	// services and outside agents. The AI opens it with a typed tool later
+	// (ai_view_open); as palette commands they are the user's.
+	"itermoc-open":     aiNever(itermocNoOpen),
+	"itermoc-open-ai":  aiNever(itermocNoOpen),
+	"itermoc-profiles": aiNever(itermocNoOpen),
+	"itermoc-models":   aiNever(itermocNoOpen),
+	"itermoc-services": aiNever(itermocNoOpen),
+	"itermoc-agents":   aiNever(itermocNoOpen),
 	// The secret store (secrets_ui.go): unlocking and locking are the
 	// user's; the AI never reads, sets or lists secrets.
 	"secrets-unlock": aiNever(aiNoAIConfig),

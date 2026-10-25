@@ -61,6 +61,9 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 	case pickerKindAIAttach:
 		return m.onAIAttachPicked(id), true
 	}
+	if cmd, ok := m.handleItermocPickerSelect(id); ok { // itermoc_actions.go
+		return cmd, true
+	}
 	if cmd, ok := m.handleAIProfilePickerSelect(id); ok {
 		return cmd, true
 	}
@@ -212,6 +215,7 @@ func (m *Model) saveAISettings(mut func(*ai.Settings)) error {
 
 func (m *Model) onAIProviderPicked(kind string) tea.Cmd {
 	s := m.aiS()
+	s.keyOnly = false
 	if kind == "none" {
 		if err := m.saveAISettings(func(st *ai.Settings) { st.Provider = "none" }); err != nil {
 			return m.aiToastErr("Settings error", err)
@@ -286,6 +290,11 @@ func (m *Model) onAIKeyEntered(v string) tea.Cmd {
 		}
 		s.reload()
 		m.syncAIInline()
+	}
+	if s.keyOnly { // from Itermoc: the key is all that was asked
+		s.keyOnly = false
+		m.itermocRefreshNow()
+		return m.aiInfo("Key saved for " + ai.KindLabel(kind))
 	}
 	return m.openAIModelPicker()
 }

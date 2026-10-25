@@ -10,6 +10,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | AI: Add File / Selection to Chat | `ai-attach` |   |   |
 | AI: Agent Auto-Approve… | `ai-auto-approve` |   |   |
+| AI: Agents & Connections | `itermoc-open-ai` |   |   |
 | AI: Apply Last Code Block to File | `ai-apply-code` |   |   |
 | AI: Apply Proposed Edit | `ai-apply-proposal` |   |   |
 | AI: Change Secrets Passphrase… | `secrets-passphrase` |   |   |
@@ -355,6 +356,16 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Help: Run Doctor | `run-doctor` |   |   |
 | Help: Show Error Log | `error-log` |   |   |
 | Help: Show Shortcuts | `cheat-sheet` |   |   |
+
+## Itermoc
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Itermoc: Models | `itermoc-models` |   |   |
+| Itermoc: Open | `itermoc-open` |   |   |
+| Itermoc: Outside Agents | `itermoc-agents` |   |   |
+| Itermoc: Profiles | `itermoc-profiles` |   |   |
+| Itermoc: Services | `itermoc-services` |   |   |
 
 ## LSP
 
