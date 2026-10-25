@@ -98,6 +98,8 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`help_read`](#help_read) | auto | no | Read the built-in guide: with no arguments list pages; page shows headings and anchors; page and section returns that section's prepared Markdown; query searches matching sections (page can filter it). |
 | [`profiles_list`](#profiles_list) | auto | no | List the AI agent profiles: name, title, source (built-in, user, project with its trust state), which is active, budget, and each step's title, model slot, resolved model, tools preset and the first line of its prompt. |
 | [`models_list`](#models_list) | auto | no | List the AI model slots (main, quick, local and the user's own): provider, model, whether a key is set (set / missing / not needed; never the key) and the base URL's scheme and host. |
+| [`mcp_services_list`](#mcp_services_list) | auto | no | List the MCP services the chat can use (GitHub, Linear, the user's own servers in mcp.json): state (running, stopped, off, failed, sign-in …), transport, source and trust, access (read only or read and write), tool count and whether a sign-in is stored. |
+| [`outside_agents_status`](#outside_agents_status) | auto | no | Whether termocode's MCP server listens for outside agents (Claude Code, Codex …), and why not; the connected agents with since, calls and how many asked; the last 10 calls; and the tools each agent may run without asking. |
 | [`http_list_requests`](#http_list_requests) | auto | yes | List the HTTP requests in the user's .http / .rest files (request templates with {{variables}}, not resolved), the file variable names and the selected environment. |
 | [`http_environments`](#http_environments) | auto | yes | Show the HTTP environments (http-client.env.json and the private file), the selected one and their variable names. |
 | [`http_send`](#http_send) | GET / HEAD / OPTIONS to localhost: auto<br>other safe methods: confirm (http:<host[:port]>)<br>other methods: confirm (http:<host[:port]>/write)<br>private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks) | some ask | Send an HTTP request and read the answer (status, headers, body). |
@@ -1099,6 +1101,26 @@ No arguments.
 ### models_list
 
 List the AI model slots (main, quick, local and the user's own): provider, model, whether a key is set (set / missing / not needed; never the key) and the base URL's scheme and host. Keys stay with the user.
+
+**Gate:** auto
+
+**MCP server:** no
+
+No arguments.
+
+### mcp_services_list
+
+List the MCP services the chat can use (GitHub, Linear, the user's own servers in mcp.json): state (running, stopped, off, failed, sign-in …), transport, source and trust, access (read only or read and write), tool count and whether a sign-in is stored. Never tokens, headers, env or secret values. Connecting and signing in stay with the user. (services_list is the project's dev services.)
+
+**Gate:** auto
+
+**MCP server:** no
+
+No arguments.
+
+### outside_agents_status
+
+Whether termocode's MCP server listens for outside agents (Claude Code, Codex …), and why not; the connected agents with since, calls and how many asked; the last 10 calls; and the tools each agent may run without asking. Revoking access stays with the user.
 
 **Gate:** auto
 

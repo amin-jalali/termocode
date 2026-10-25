@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"net/url"
+	"regexp"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/mcp"
 )
 
 // ── AI read tools for the Itermoc view (AH-7) ─────────────────────────────
@@ -194,6 +196,107 @@ func aiModelsInfo(m *Model, sn itermocSnap) (any, error) {
 	return out, nil
 }
 
+// ── mcp_services_list ────────────────────────────────────────────────────
+
+type aiMCPServiceInfo struct {
+	Name         string `json:"name"`
+	State        string `json:"state"`
+	Problem      string `json:"problem,omitempty"`
+	Transport    string `json:"transport"`
+	Source       string `json:"source"`
+	Trusted      bool   `json:"trusted"`
+	Access       string `json:"access"`
+	Tools        int    `json:"tools"`
+	ToolsChanged bool   `json:"tools_changed,omitempty"`
+	SignedIn     bool   `json:"signed_in"`
+	Expired      bool   `json:"sign_in_expired,omitempty"`
+	AutoApproved int    `json:"auto_approved_tools,omitempty"`
+}
+
+var aiURLInText = regexp.MustCompile(`[A-Za-z][A-Za-z0-9+.\-]*://[^\s"'<>]+`)
+
+// aiCleanURLs cuts every URL in s to scheme://host (a problem text may
+// quote the server URL with its user, password or token).
+func aiCleanURLs(s string) string {
+	return aiURLInText.ReplaceAllStringFunc(s, func(u string) string {
+		trimmed := strings.TrimRight(u, ".,;:)]}")
+		tail := u[len(trimmed):]
+		if h := aiSafeHost(trimmed); h != "" {
+			return h + tail
+		}
+		return "[url]" + tail
+	})
+}
+
+// aiMCPAccess says whether a service's tools may write: its readOnly
+// flag, or for a known service (GitHub, Linear …) its read-only endpoint
+// or scopes.
+func aiMCPAccess(cfg mcp.Server) string {
+	if cfg.ReadOnly {
+		return "read only"
+	}
+	if p, ok := mcpPresetFor(cfg.Name); ok && mcpEntryReadOnly(cfg, p) {
+		return "read only"
+	}
+	return "read and write"
+}
+
+func aiMCPServicesInfo(m *Model, sn itermocSnap) (any, error) {
+	out := struct {
+		Services []aiMCPServiceInfo `json:"services"`
+	}{Services: []aiMCPServiceInfo{}}
+	var mgr *mcp.Manager
+	if m.ai != nil {
+		mgr = m.ai.mcp
+	}
+	for _, s := range sn.services {
+		info := aiMCPServiceInfo{Name: s.Name, State: s.State, Problem: aiCleanURLs(s.Problem), Transport: s.Type,
+			Source: s.Source, Trusted: s.Trusted, Tools: s.Tools, ToolsChanged: s.ToolsChanged,
+			SignedIn: s.SignedIn, Expired: s.Expired, Access: "read and write"}
+		if mgr != nil {
+			if cfg, _, _ := mgr.KnownTools(s.Name); cfg.Name != "" { // the bool is "tools known", not "found"
+				info.Access = aiMCPAccess(cfg)
+				info.AutoApproved = len(cfg.AutoApprove)
+			}
+		}
+		out.Services = append(out.Services, info)
+	}
+	return out, nil
+}
+
+// ── outside_agents_status ────────────────────────────────────────────────
+
+type aiOutsideAgentInfo struct {
+	Name  string `json:"name"`
+	Since string `json:"since"`
+	Calls int    `json:"calls"`
+	Asked int    `json:"asked"`
+}
+
+func aiOutsideAgentsInfo(m *Model, sn itermocSnap) (any, error) {
+	out := struct {
+		Mode      string               `json:"mode"`
+		Listening bool                 `json:"listening"`
+		Why       string               `json:"not_listening_why,omitempty"`
+		Agents    []aiOutsideAgentInfo `json:"agents"`
+		Calls     []string             `json:"recent_calls"`
+		Always    map[string][]string  `json:"always_allowed"`
+	}{Mode: sn.mode, Listening: sn.listening, Why: sn.whySentence, Agents: []aiOutsideAgentInfo{},
+		Calls: []string{}, Always: map[string][]string{}}
+	for _, a := range sn.agents {
+		out.Agents = append(out.Agents, aiOutsideAgentInfo{Name: a.name, Since: a.since, Calls: a.calls, Asked: a.asked})
+	}
+	for _, l := range m.mcpServeAuditLines(10) {
+		if row, ok := mcpServeCallRow(l); ok {
+			out.Calls = append(out.Calls, aiCleanURLs(row))
+		}
+	}
+	for client, keys := range mcpServeAllowLoad() {
+		out.Always[client] = append([]string(nil), keys...)
+	}
+	return out, nil
+}
+
 // ── The tools ────────────────────────────────────────────────────────────
 
 // aiItermocTools are the read tools of the Itermoc view.
@@ -218,6 +321,29 @@ func aiItermocTools(call aiIDECaller) []ai.Tool {
 			Describe: func(map[string]any) string { return "List model slots" },
 			Run: func(ctx context.Context, _ map[string]any) (string, error) {
 				return aiItermocSnapshot(ctx, call, aiModelsInfo)
+			},
+		},
+		{
+			Name: "mcp_services_list",
+			Description: "List the MCP services the chat can use (GitHub, Linear, the user's own servers in mcp.json): " +
+				"state (running, stopped, off, failed, sign-in …), transport, source and trust, access (read only or read and " +
+				"write), tool count and whether a sign-in is stored. Never tokens, headers, env or secret values. " +
+				"Connecting and signing in stay with the user. (services_list is the project's dev services.)",
+			Params:   map[string]any{},
+			Describe: func(map[string]any) string { return "List MCP services" },
+			Run: func(ctx context.Context, _ map[string]any) (string, error) {
+				return aiItermocSnapshot(ctx, call, aiMCPServicesInfo)
+			},
+		},
+		{
+			Name: "outside_agents_status",
+			Description: "Whether termocode's MCP server listens for outside agents (Claude Code, Codex …), and why not; " +
+				"the connected agents with since, calls and how many asked; the last 10 calls; and the tools each agent " +
+				"may run without asking. Revoking access stays with the user.",
+			Params:   map[string]any{},
+			Describe: func(map[string]any) string { return "Outside agents status" },
+			Run: func(ctx context.Context, _ map[string]any) (string, error) {
+				return aiItermocSnapshot(ctx, call, aiOutsideAgentsInfo)
 			},
 		},
 	}

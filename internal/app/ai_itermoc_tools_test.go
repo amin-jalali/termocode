@@ -7,12 +7,13 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/ai"
 )
 
 // aiItermocToolNames are the AI read tools of the Itermoc view (AH-7).
-var aiItermocToolNames = []string{"profiles_list", "models_list"}
+var aiItermocToolNames = []string{"profiles_list", "models_list", "mcp_services_list", "outside_agents_status"}
 
 // aiItermocTestModel is the profile test model (built-in profiles, an
 // untrusted project profile "house", one fake main slot) with a
@@ -150,6 +151,96 @@ func TestAIModelsListShape(t *testing.T) {
 	}
 }
 
+// Spec: mcp_services_list answers "what is connected?": every MCP service
+// with state (off included), transport, access, tool count and sign-in.
+// (services_list is the project's dev services: another tool.)
+func TestAIMCPServicesListShape(t *testing.T) {
+	m, call := aiItermocTestModel(t)
+	aiPlantSecrets(t, m)
+	writeUserMCP(t, `{"mcpServers":{
+		"notes":{"command":"notes-mcp"},
+		"remote":{"type":"http","url":"https://mcp.example.com/mcp","readOnly":true},
+		"quiet":{"command":"quiet-mcp","disabled":true}}}`)
+	m.ai.mcp = nil
+	out := aiItermocRun(t, m, call, "mcp_services_list", nil)
+	var got struct {
+		Services []struct {
+			Name      string `json:"name"`
+			State     string `json:"state"`
+			Transport string `json:"transport"`
+			Source    string `json:"source"`
+			Access    string `json:"access"`
+			Tools     int    `json:"tools"`
+			SignedIn  bool   `json:"signed_in"`
+		} `json:"services"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("not JSON: %v\n%s", err, out)
+	}
+	by := map[string]int{}
+	for i, s := range got.Services {
+		by[s.Name] = i
+	}
+	if len(got.Services) != 3 {
+		t.Fatalf("services %+v", got.Services)
+	}
+	if s := got.Services[by["quiet"]]; s.State != "off" || s.Transport != "stdio" || s.Source != "user" {
+		t.Errorf("quiet %+v", s)
+	}
+	if s := got.Services[by["remote"]]; s.Transport != "http" || s.Access != "read only" || !s.SignedIn {
+		t.Errorf("remote %+v", s)
+	}
+	if s := got.Services[by["notes"]]; s.Access != "read and write" || s.SignedIn {
+		t.Errorf("notes %+v", s)
+	}
+}
+
+// Spec: a service's problem text keeps no URL user, password or query.
+func TestAIMCPServicesProblemCleaned(t *testing.T) {
+	got := aiCleanURLs("connect https://" + aiPlantUserPass + "@mcp.example.com/mcp?token=" + aiPlantQuery + ": refused")
+	if got != "connect https://mcp.example.com: refused" {
+		t.Errorf("got %q", got)
+	}
+}
+
+// Spec: outside_agents_status answers "who is connected?": listening
+// state, the agents with their calls, the recent calls and what each
+// agent may run without asking.
+func TestAIOutsideAgentsStatusShape(t *testing.T) {
+	m, call := aiItermocTestModel(t)
+	out := aiItermocRun(t, m, call, "outside_agents_status", nil)
+	if !strings.Contains(out, `"listening": false`) || !strings.Contains(out, `"not_listening_why"`) {
+		t.Errorf("not listening:\n%s", out)
+	}
+	if err := mcpServeAllowSave(map[string][]string{"claude-code": {"tasks_run"}}); err != nil {
+		t.Fatal(err)
+	}
+	m.mcpServe = &mcpServeState{clients: []*mcpServeAgent{{id: 7, name: "claude-code",
+		since: time.Date(2026, 1, 1, 9, 41, 0, 0, time.UTC), calls: 14, asked: 2}}}
+	out = aiItermocRun(t, m, call, "outside_agents_status", nil)
+	var got struct {
+		Mode      string `json:"mode"`
+		Listening bool   `json:"listening"`
+		Agents    []struct {
+			Name  string `json:"name"`
+			Since string `json:"since"`
+			Calls int    `json:"calls"`
+			Asked int    `json:"asked"`
+		} `json:"agents"`
+		Auto map[string][]string `json:"always_allowed"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("not JSON: %v\n%s", err, out)
+	}
+	if !got.Listening || got.Mode != "auto" || len(got.Agents) != 1 || got.Agents[0].Name != "claude-code" ||
+		got.Agents[0].Calls != 14 || got.Agents[0].Asked != 2 || got.Agents[0].Since != "09:41" {
+		t.Errorf("status %+v", got)
+	}
+	if strings.Join(got.Auto["claude-code"], ",") != "tasks_run" {
+		t.Errorf("always allowed %+v", got.Auto)
+	}
+}
+
 // ── Secrets: planted everywhere, found nowhere ───────────────────────────
 
 const (
@@ -215,6 +306,7 @@ func aiPlantSecrets(t *testing.T, m *Model) {
 	}
 	m.ai.reloadProfiles()
 	m.ai.mcp = nil // read mcp.json again
+	m.mcpServe = &mcpServeState{clients: []*mcpServeAgent{{id: 1, name: "claude-code", since: time.Now(), calls: 3}}}
 }
 
 // Spec (security): no Itermoc tool shows a planted secret, in any form.
