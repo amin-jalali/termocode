@@ -103,6 +103,7 @@ var topItems = []item{
 	{view: ViewTests, icon: theme.IconTests, label: "Testing"}, // Group E
 	{view: ViewServices, icon: theme.IconContainers, label: "Containers"},
 	{view: ViewDatabases, icon: theme.IconDatabases, label: "Databases"},
+	{view: ViewItermoc, icon: theme.IconItermoc, label: "Itermoc"},
 	{view: ViewRuns, icon: theme.IconRuns, label: "Runs", tint: theme.AccentGreen},
 }
 

@@ -124,8 +124,8 @@ type itermocState struct {
 	filter      string
 	menuRow     imRow // the row the open actions menu is about
 	// fixed: the snapshot was set by hand (the demo shots); it is not read again.
-	fixed bool
-	typing      bool
+	fixed  bool
+	typing bool
 	// w is the width the last render used (the buttons rows wrap to it).
 	w int
 	// seq grows with every change a render must notice.

@@ -104,6 +104,9 @@ var (
 		Bold: [2]string{"▀▀", "▀▀"},
 	}
 	IconDatabases = Icon{NerdFont: "\uf1c0", Unicode: "⛁", ASCII: "D"}
+	// IconItermoc — the Itermoc view (AI profiles, models, services, outside
+	// agents): the magic wand, ✦ (U+2726, EAW=Neutral) like the AI spark.
+	IconItermoc = Icon{NerdFont: "\uf0d0", Unicode: "✦", ASCII: "I"}
 	// IconRuns — the Runs view (what the AI is doing now): nf-fa-heartbeat,
 	// a pulse; ∿ (U+223F, EAW=Neutral) without the Nerd Font.
 	IconRuns = Icon{NerdFont: "\uf21e", Unicode: "∿", ASCII: "~"}
