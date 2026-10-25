@@ -185,6 +185,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		return m.aiSkillsDemo(arg)
 	case "runsdemo": // the Runs view and page with sample runs (runs_demo.go)
 		return m.runsDemo(arg)
+	case "itermocdemo": // the Itermoc view with sample data (itermoc_demo.go): full or empty
+		return m.itermocDemo(arg)
 	case "aidemo-fa": // a Persian (right-to-left) conversation for the shots
 		s := m.aiS()
 		s.conv.Messages = []ai.StoredMessage{

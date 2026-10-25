@@ -226,7 +226,7 @@ func (st *itermocState) sectionNote(sec string) string {
 			}
 		}
 		if miss > 0 {
-			return strconv.Itoa(miss) + " " + strings.TrimPrefix(imKeyText(imKeyMissing), "key ") + " key"
+			return strconv.Itoa(miss) + " " + imKeyText(imKeyMissing)
 		}
 		return "how steps answer"
 	case imSecServices:

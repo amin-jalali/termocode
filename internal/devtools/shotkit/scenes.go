@@ -238,6 +238,26 @@ func AISkills(variant string) Scene {
 		Steps: WithEditor(Act("palette:ai-open-chat"), Act("skillsdemo:"+variant), Pause(600*time.Millisecond))}
 }
 
+// Itermoc is the Itermoc sidebar view (AI profiles, models, services and
+// outside agents) with sample data: "full" a working setup with one row
+// that needs the user in each section, "empty" a fresh install, "menu" the
+// actions menu of the first profile row.
+func Itermoc(variant string) Scene {
+	name := "itermoc"
+	if variant != "full" {
+		name += "-" + variant
+	}
+	demo := variant
+	if variant == "menu" {
+		demo = "full"
+	}
+	steps := WithEditor(Act("itermocdemo:"+demo), Pause(600*time.Millisecond))
+	if variant == "menu" {
+		steps = WithEditor(Act("itermocdemo:full"), Pause(300*time.Millisecond), Key("j"), Key("enter"), Pause(400*time.Millisecond))
+	}
+	return Scene{Name: name, Env: aiEnv, Steps: steps}
+}
+
 // MarkdownPreview opens docs/preview.md (a sample with every common block)
 // in the full-screen Markdown preview.
 // FindResults is the Find Results page for "Toast" (Find in Files).

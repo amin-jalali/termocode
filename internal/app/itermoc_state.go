@@ -123,6 +123,8 @@ type itermocState struct {
 	collapseSet bool
 	filter      string
 	menuRow     imRow // the row the open actions menu is about
+	// fixed: the snapshot was set by hand (the demo shots); it is not read again.
+	fixed bool
 	typing      bool
 	// w is the width the last render used (the buttons rows wrap to it).
 	w int
@@ -273,6 +275,9 @@ func itermocBuild(m Model, reload bool) itermocSnap {
 
 // refresh rebuilds the snapshot and keeps the cursor on the same row.
 func (st *itermocState) refresh(m Model, reload bool) {
+	if st.fixed {
+		return
+	}
 	key := st.cursorKey()
 	st.snap = itermocBuild(m, reload)
 	st.snapAt = clock.Now()
@@ -290,7 +295,7 @@ func (st *itermocState) refresh(m Model, reload bool) {
 
 // stale reports whether the snapshot is old enough to read again.
 func (st *itermocState) stale() bool {
-	return !st.loaded || clock.Now().Sub(st.snapAt) > time.Second
+	return !st.fixed && (!st.loaded || clock.Now().Sub(st.snapAt) > time.Second)
 }
 
 // ── Rows ─────────────────────────────────────────────────────────────────
