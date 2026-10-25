@@ -172,6 +172,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		return m.aiUsageDemo("done")
 	case "profiledemo": // the profile chip / picker / trust card (ai_run_demo.go)
 		return m.aiProfileDemo(arg)
+	case "itermocdemo": // the Itermoc view with sample data (itermoc_demo.go): full or empty
+		return m.itermocDemo(arg)
 	case "aidemo-fa": // a Persian (right-to-left) conversation for the shots
 		s := m.aiS()
 		s.conv.Messages = []ai.StoredMessage{
