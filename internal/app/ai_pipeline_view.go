@@ -243,10 +243,21 @@ func aiProfileIsGraph(p ai.Profile) bool {
 
 // showAIProfile is AI: Show Profile: a read-only card for the active
 // profile.
-func (m *Model) showAIProfile() tea.Cmd {
+func (m *Model) showAIProfile() tea.Cmd { return m.showAIProfileNamed("") }
+
+// showAIProfileNamed is the details card of the profile name ("" = the
+// active one); it never switches the profile.
+func (m *Model) showAIProfileNamed(name string) tea.Cmd {
 	s := m.aiS()
 	s.reloadProfiles()
 	p := s.activeProfile()
+	if name != "" {
+		q, ok := s.profiles.Get(name)
+		if !ok {
+			return m.aiInfo("No profile " + name)
+		}
+		p = q
+	}
 	title := aiSpark() + " Profile " + p.Name
 	if p.Title != "" {
 		title += " · " + p.Title

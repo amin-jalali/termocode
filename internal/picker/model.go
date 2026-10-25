@@ -36,6 +36,13 @@ type SelectMsg struct {
 	Title string
 }
 
+// ActionMsg is emitted when the user presses the picker's row action key
+// (SetRowAction) on a row: Key is the key as set, ID and Title name the
+// highlighted row.
+type ActionMsg struct {
+	Key, ID, Title string
+}
+
 // CloseMsg is emitted when the user dismisses the picker.
 type CloseMsg struct{}
 
@@ -64,6 +71,27 @@ type Model struct {
 	width int
 	// hideEmptyCount drops the "N matches" subtitle while the search is empty.
 	hideEmptyCount bool
+	// actionKey/actionLabel: one extra row key shown in the footer
+	// ("→", "details"); only "→" (Right) is supported.
+	actionKey, actionLabel string
+}
+
+// SetRowAction adds a footer hint and a key that acts on the highlighted
+// row without selecting it: key "→" (the Right arrow) emits ActionMsg.
+// The footer hint is a button too.
+func (m *Model) SetRowAction(key, label string) { m.actionKey, m.actionLabel = key, label }
+
+// rowAction reports the highlighted row as an ActionMsg command.
+func (m Model) rowAction() tea.Cmd {
+	if m.cursor < 0 || m.cursor >= len(m.matches) {
+		return nil
+	}
+	idx := m.matches[m.cursor].Index
+	if idx < 0 || idx >= len(m.items) || m.items[idx].Header {
+		return nil
+	}
+	it, key := m.items[idx], m.actionKey
+	return func() tea.Msg { return ActionMsg{Key: key, ID: it.ID, Title: it.Title} }
 }
 
 // SetWidth asks for a wider box (rows with a hint column, like the
@@ -142,6 +170,11 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 					}
 					return m, func() tea.Msg { return SelectMsg{ID: it.ID, Title: it.Title} }
 				}
+			}
+			return m, nil
+		case tea.KeyRight:
+			if m.actionKey == "→" {
+				return m, m.rowAction()
 			}
 			return m, nil
 		case tea.KeyUp, tea.KeyCtrlP:
@@ -449,6 +482,8 @@ func (m Model) handleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 	}
 	// The footer hints are buttons: Enter selects, Esc closes.
 	switch m.footerKeyAt(x, y) {
+	case "→":
+		return m, m.rowAction()
 	case "esc":
 		return m, func() tea.Msg { return CloseMsg{} }
 	case "enter":
@@ -786,16 +821,28 @@ func (m Model) renderBox() string {
 
 	// ── Footer: keycap hints ──────────────────────────────────────────
 	rows = append(rows, lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmGuide).Render(strings.Repeat("─", innerW)))
-	footer := theme.HintBar(pmBoxBg, footerPairs(innerW)...)
+	footer := theme.HintBar(pmBoxBg, m.footerPairs(innerW)...)
 	rows = append(rows, padBg(bgFill.Render("  ")+footer, innerW))
 
 	return theme.FloatBox(lipgloss.JoinVertical(lipgloss.Left, rows...), boxW)
 }
 
 // footerPairs are the footer hints that fit innerW cells.
-func footerPairs(innerW int) []string {
+func (m Model) footerPairs(innerW int) []string {
+	fits := func(p []string) bool {
+		sp := theme.HintSpans(p...)
+		return sp[len(sp)-1].X1+2 <= innerW
+	}
 	full := []string{"↑↓", "navigate", "enter", "select", "esc", "close"}
-	if sp := theme.HintSpans(full...); sp[len(sp)-1].X1+2 > innerW {
+	if m.actionKey != "" {
+		with := []string{"↑↓", "navigate", m.actionKey, m.actionLabel, "enter", "select", "esc", "close"}
+		for _, p := range [][]string{with, with[2:], {"enter", "select", "esc", "close"}} {
+			if fits(p) {
+				return p
+			}
+		}
+	}
+	if !fits(full) {
 		return full[2:]
 	}
 	return full
@@ -809,7 +856,7 @@ func (m Model) footerKeyAt(x, y int) string {
 		return ""
 	}
 	rel := x - (bx + 1 + 2)
-	for _, sp := range theme.HintSpans(footerPairs(bw - 2)...) {
+	for _, sp := range theme.HintSpans(m.footerPairs(bw - 2)...) {
 		if rel >= sp.X0 && rel < sp.X1 {
 			return sp.Key
 		}

@@ -233,6 +233,12 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onToolInstallEvent(msg)
 	case lspUninstallDoneMsg:
 		return m, m.onToolUninstalled(msg)
+	case picker.ActionMsg:
+		cmd, ok := m.handleAIProfilePickerAction(msg.ID)
+		if ok && m.confirmOpen {
+			m.pickerOpen = false
+		}
+		return m, cmd
 	case picker.CloseMsg:
 		m.pickerOpen = false
 		if cmd, ok := m.databaseTransferPickerClosed(); ok {

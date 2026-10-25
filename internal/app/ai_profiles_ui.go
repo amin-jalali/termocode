@@ -182,6 +182,13 @@ func (m Model) aiProfilePickerWidth() (box, hint int) {
 // opens AI: Show Profile (the agents and models of the active profile).
 const aiProfileDetailsID = "·details"
 
+// The picker's rows after the profiles: details, a new profile and the
+// JSON file. None of them switches the profile.
+const (
+	aiProfileNewID  = "·new"
+	aiProfileEditID = "·edit"
+)
+
 // openAIProfilePicker is AI: Switch Profile… and a click on the chip.
 func (m *Model) openAIProfilePicker() tea.Cmd {
 	s := m.aiS()
@@ -194,8 +201,12 @@ func (m *Model) openAIProfilePicker() tea.Cmd {
 	}
 	items = append(items, picker.Item{ID: aiProfileDetailsID, Title: "Show details of " + s.activeProfile().Name + "…",
 		Hint: "agents and models, in order"})
+	items = append(items,
+		picker.Item{ID: aiProfileNewID, Title: "New profile from " + s.activeProfile().Name + "…", Hint: "saves a copy under a name you pick"},
+		picker.Item{ID: aiProfileEditID, Title: "Edit profiles (JSON)…", Hint: "opens profiles.json"})
 	m.picker = picker.NewItems(" "+aiSpark()+" AI Profile ", items)
 	m.picker.SetWidth(box)
+	m.picker.SetRowAction("→", "details")
 	m.picker.SetCursorID(s.activeProfile().Name)
 	m.picker.SetSize(m.w, m.h)
 	m.pickerOpen = true
@@ -238,8 +249,13 @@ func (m *Model) openAIProfileTrustPicker() tea.Cmd {
 func (m *Model) handleAIProfilePickerSelect(id string) (tea.Cmd, bool) {
 	switch m.pickerKind {
 	case pickerKindAIProfile:
-		if id == aiProfileDetailsID {
+		switch id {
+		case aiProfileDetailsID:
 			return m.showAIProfile(), true
+		case aiProfileNewID:
+			return m.openAIProfileNewPrompt(), true
+		case aiProfileEditID:
+			return m.editAIProfiles(), true
 		}
 		return m.selectAIProfile(id), true
 	case pickerKindAIProfileTrust:
@@ -250,6 +266,21 @@ func (m *Model) handleAIProfilePickerSelect(id string) (tea.Cmd, bool) {
 		return m.askAIProfileTrust(p, aiTrustAfterNone, ""), true
 	}
 	return nil, false
+}
+
+// handleAIProfilePickerAction is the picker's → key: the details of the
+// highlighted profile (never a switch). ok=false: not ours.
+func (m *Model) handleAIProfilePickerAction(id string) (tea.Cmd, bool) {
+	if m.pickerKind != pickerKindAIProfile {
+		return nil, false
+	}
+	switch id {
+	case aiProfileNewID, aiProfileEditID:
+		return nil, true // not a profile: nothing to show
+	case aiProfileDetailsID:
+		return m.showAIProfile(), true
+	}
+	return m.showAIProfileNamed(id), true
 }
 
 // aiProfilePromptHead is the first line of a step prompt for the trust
