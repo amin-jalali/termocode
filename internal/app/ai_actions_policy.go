@@ -485,6 +485,9 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_context_windows":  aiNever(aiNoAIConfig),
 	"ai_models":           aiNever(aiNoAIConfig),
 	"ai_parallel_max":     aiNever(aiNoAIConfig),
+	// Work until done: the AI never raises its own rounds or budget.
+	"ai_until_done_rounds":     aiNever(aiNoAIConfig),
+	"ai_until_done_budget_usd": aiNever(aiNoAIConfig),
 	// MCP servers run programs and reach outside services: their
 	// settings stay with the user.
 	"mcp_enabled":           aiNever(aiNoAIConfig),

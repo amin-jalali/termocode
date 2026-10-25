@@ -311,6 +311,8 @@ func (m *Model) onSettingsRowSelected(id string) tea.Cmd {
 		hint += " (true / false)"
 	case "int":
 		hint += " (integer)"
+	case "number":
+		hint += " (number)"
 	}
 	m.prompt = prompt.New("Setting", hint+":", current)
 	m.prompt.SetSize(m.w, m.h)

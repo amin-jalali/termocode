@@ -1677,6 +1677,8 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `ai_parallel_max` | never | AI provider, credentials and approvals stay with the user |
 | `ai_prices` | never | AI provider, credentials and approvals stay with the user |
 | `ai_provider` | never | AI provider, credentials and approvals stay with the user |
+| `ai_until_done_budget_usd` | never | AI provider, credentials and approvals stay with the user |
+| `ai_until_done_rounds` | never | AI provider, credentials and approvals stay with the user |
 | `animations` | confirm (settings) |   |
 | `auto_save` | confirm (settings) |   |
 | `containers_engine` | confirm (settings) |   |

@@ -600,7 +600,7 @@ func (m settingsModal) Box() string {
 		// unselected rows get the normal modal bg.
 		selected := i == m.cursor
 
-		labelText := r.Row.Label
+		labelText := settingsFitLabel(r.Row.Label, labelW)
 		valueText := truncateMiddle(r.Value, innerW-labelW-8)
 
 		if selected {
@@ -651,6 +651,18 @@ func (m settingsModal) Box() string {
 		Background(smBoxBg).
 		Width(boxW)
 	return border.Render(content)
+}
+
+// settingsFitLabel cuts a long key in the middle, so keys that start the
+// same stay apart: ai_unt…_rounds, ai_unt…get_usd.
+func settingsFitLabel(s string, w int) string {
+	r := []rune(s)
+	if len(r) <= w || w < 5 {
+		return s
+	}
+	head := (w - 1) / 2
+	tail := w - 1 - head
+	return string(r[:head]) + "…" + string(r[len(r)-tail:])
 }
 
 // padRight pads s with trailing spaces so its visible width is exactly w.

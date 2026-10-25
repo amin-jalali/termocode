@@ -3,14 +3,18 @@ package ai
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/cfgfile"
 	secretstore "github.com/amin-jalali/termocode/internal/secrets"
 )
@@ -40,6 +44,51 @@ type Settings struct {
 	// Both are edited by hand; SaveSettings leaves them as they are.
 	Models      map[string]ModelSlot `json:"ai_models,omitempty"`
 	ParallelMax int                  `json:"ai_parallel_max,omitempty"`
+	// UntilDoneRounds (0: DefaultUntilDoneRounds) and UntilDoneBudgetUSD
+	// (nil: DefaultUntilDoneBudgetUSD; 0 set on purpose: no budget) are
+	// the limits of a "work until done" run whose profile does not set
+	// loop.max_rounds / budget_usd.
+	UntilDoneRounds    int      `json:"ai_until_done_rounds,omitempty"`
+	UntilDoneBudgetUSD *float64 `json:"ai_until_done_budget_usd,omitempty"`
+}
+
+// CheckUntilDoneRounds checks an ai_until_done_rounds value.
+func CheckUntilDoneRounds(n int) error {
+	if n < 1 || n > agentdag.MaxRounds {
+		return fmt.Errorf("ai_until_done_rounds must be 1 to %d (it is %d)", agentdag.MaxRounds, n)
+	}
+	return nil
+}
+
+// CheckUntilDoneBudget checks an ai_until_done_budget_usd value (0 = no
+// budget).
+func CheckUntilDoneBudget(usd float64) error {
+	if math.IsNaN(usd) || math.IsInf(usd, 0) || usd < 0 {
+		return fmt.Errorf("ai_until_done_budget_usd must be a dollar amount above 0, or 0 for no budget (it is %v)", usd)
+	}
+	return nil
+}
+
+// UntilDone is the effective rounds and budget of "work until done"
+// runs; a value that is out of range falls back to its default and is
+// named in problems.
+func (s Settings) UntilDone() (rounds int, budget float64, problems []string) {
+	rounds, budget = DefaultUntilDoneRounds, DefaultUntilDoneBudgetUSD
+	if s.UntilDoneRounds != 0 {
+		if err := CheckUntilDoneRounds(s.UntilDoneRounds); err != nil {
+			problems = append(problems, "config.json: "+err.Error()+"; using "+strconv.Itoa(rounds))
+		} else {
+			rounds = s.UntilDoneRounds
+		}
+	}
+	if s.UntilDoneBudgetUSD != nil {
+		if err := CheckUntilDoneBudget(*s.UntilDoneBudgetUSD); err != nil {
+			problems = append(problems, fmt.Sprintf("config.json: %s; using $%.2f", err, budget))
+		} else {
+			budget = *s.UntilDoneBudgetUSD
+		}
+	}
+	return rounds, budget, problems
 }
 
 // MaxParallel caps ai_parallel_max.
@@ -258,6 +307,16 @@ func SaveSettings(path string, s Settings) error {
 			merged["ai_max_steps"] = s.MaxSteps
 		} else {
 			delete(merged, "ai_max_steps")
+		}
+		if s.UntilDoneRounds > 0 {
+			merged["ai_until_done_rounds"] = s.UntilDoneRounds
+		} else {
+			delete(merged, "ai_until_done_rounds")
+		}
+		if s.UntilDoneBudgetUSD != nil {
+			merged["ai_until_done_budget_usd"] = *s.UntilDoneBudgetUSD
+		} else {
+			delete(merged, "ai_until_done_budget_usd")
 		}
 		return nil
 	})

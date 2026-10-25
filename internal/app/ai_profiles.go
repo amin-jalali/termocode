@@ -36,6 +36,11 @@ func (s *aiState) reloadProfiles() {
 	for _, p := range s.profFake {
 		s.profiles.Add(p)
 	}
+	// Work until done: the settings' rounds and budget for the loop
+	// profiles that leave them out (a bad value falls back and is named).
+	rounds, budget, problems := s.settings.UntilDone()
+	s.profiles.SetLoopDefaults(rounds, budget)
+	s.profiles.Errors = append(s.profiles.Errors, problems...)
 }
 
 // slotProvider returns the provider of a model slot. "main" (or "") is

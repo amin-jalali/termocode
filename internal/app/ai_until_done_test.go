@@ -12,6 +12,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // OM-3: "work until done" in the chat — the until-done profile plans,
@@ -331,5 +332,105 @@ func TestAIUntilDoneToggle(t *testing.T) {
 	}
 	if p, ok := aiActionPolicyFor("ai-until-done"); !ok || p != aiConfirm(ai.ClassSettings) {
 		t.Errorf("policy %+v", p)
+	}
+}
+
+// Spec (owner 2026-10-25): the Settings rows ai_until_done_rounds and
+// ai_until_done_budget_usd change the defaults (saved in config.json);
+// a run then stops after that many rounds.
+func TestAIUntilDoneSettingsChangeDefaults(t *testing.T) {
+	p := &funcAIProvider{reply: untilDoneReply("VERDICT: FAIL\nstill broken")}
+	m := aiUntilDoneModel(t, p)
+	if v, _ := aiSettingValue("setting-ai-until-done-rounds"); v != "3" {
+		t.Errorf("default rounds row %q", v)
+	}
+	if v, _ := aiSettingValue("setting-ai-until-done-budget"); v != "2.00" {
+		t.Errorf("default budget row %q", v)
+	}
+	m.applySetting("setting-ai-until-done-rounds", "2")
+	m.applySetting("setting-ai-until-done-budget", "0.5")
+	path, _ := ai.ConfigPath()
+	s := ai.LoadSettings(path)
+	if s.UntilDoneRounds != 2 || s.UntilDoneBudgetUSD == nil || *s.UntilDoneBudgetUSD != 0.5 {
+		t.Fatalf("saved %+v", s)
+	}
+	if v, _ := aiSettingValue("setting-ai-until-done-budget"); v != "0.50" {
+		t.Errorf("budget row %q", v)
+	}
+	// applySetting reloads the provider; the test's fake comes back.
+	m.ai.provider, m.ai.cfg = p, ai.Config{Kind: ai.KindOllama, Model: "fake-1"}
+	m.ai.slotFake = aiDemoSlots(p, p)
+	prof, _ := m.ai.profiles.Get(ai.ProfileUntilDone)
+	if prof.BudgetUSD != 0.5 || prof.Loop.MaxRounds != 2 {
+		t.Fatalf("profile %+v loop %+v", prof, prof.Loop)
+	}
+	driveAIChat(t, m, m.sendAIChat("fix the tests"), nil)
+	if rm := aiRunMsg(t, m); rm.Run.Verdict != "fail" || rm.Run.Rounds != 2 || rm.Run.MaxRounds != 2 {
+		t.Errorf("run %+v", rm.Run)
+	}
+	m.applySetting("setting-ai-until-done-budget", "0")
+	if prof, _ := m.ai.profiles.Get(ai.ProfileUntilDone); prof.BudgetUSD != 0 {
+		t.Errorf("0 must mean no budget: %v", prof.BudgetUSD)
+	}
+	if v, _ := aiSettingValue("setting-ai-until-done-budget"); v != "0 (no budget)" {
+		t.Errorf("no-budget row %q", v)
+	}
+}
+
+// Spec: invalid values are refused with a clear error and nothing is
+// saved; a bad value written by hand falls back to the default and is
+// named in the profile problems toast.
+func TestAIUntilDoneSettingsRejected(t *testing.T) {
+	m := aiUntilDoneModel(t, &recordingAIProvider{})
+	path, _ := ai.ConfigPath()
+	for _, c := range []struct{ id, value, want string }{
+		{"setting-ai-until-done-rounds", "0", "ai_until_done_rounds must be 1 to 10"},
+		{"setting-ai-until-done-rounds", "11", "ai_until_done_rounds must be 1 to 10"},
+		{"setting-ai-until-done-rounds", "lots", "whole number from 1 to 10"},
+		{"setting-ai-until-done-budget", "-1", "ai_until_done_budget_usd must be a dollar amount above 0, or 0 for no budget"},
+		{"setting-ai-until-done-budget", "cheap", "ai_until_done_budget_usd must be a dollar amount"},
+	} {
+		m.toast = toast.New()
+		m.applySetting(c.id, c.value)
+		if top := ansi.Strip(strings.Join(m.toast.View(200, 40), "\n")); !strings.Contains(top, c.want) {
+			t.Errorf("%s=%s: toast %q, want %q", c.id, c.value, top, c.want)
+		}
+		if s := ai.LoadSettings(path); s.UntilDoneRounds != 0 || s.UntilDoneBudgetUSD != nil {
+			t.Errorf("%s=%s was saved: %+v", c.id, c.value, s)
+		}
+	}
+	m.ai.settings = ai.Settings{UntilDoneRounds: 42}
+	m.ai.reloadProfiles()
+	if prof, _ := m.ai.profiles.Get(ai.ProfileUntilDone); prof.Loop.MaxRounds != 3 {
+		t.Errorf("a bad setting must fall back to 3: %d", prof.Loop.MaxRounds)
+	}
+	if got := strings.Join(m.ai.profiles.Errors, "\n"); !strings.Contains(got, "ai_until_done_rounds must be 1 to 10 (it is 42); using 3") {
+		t.Errorf("profile errors %q", got)
+	}
+}
+
+// Spec: a profile's own loop.max_rounds and budget_usd win over the
+// settings.
+func TestAIUntilDoneProfileOverrideWins(t *testing.T) {
+	p := &funcAIProvider{reply: untilDoneReply("VERDICT: FAIL\nstill broken")}
+	m := aiUntilDoneModel(t, p)
+	writeProfiles(t, `{"profiles": {"strict": {
+  "steps": [{"id": "planner", "plan": true, "category": "deep", "tools": {"preset": "read-only"}}, {"id": "verify", "category": "deep"}],
+  "loop": {"verify": "verify", "fix": {"category": "quick", "tools": {"preset": "all"}}, "max_rounds": 4},
+  "budget_usd": 7
+}}}`)
+	m.ai.settings = ai.Settings{UntilDoneRounds: 2, UntilDoneBudgetUSD: func() *float64 { v := 0.25; return &v }()}
+	m.ai.reloadProfiles()
+	strict, ok := m.ai.profiles.Get("strict")
+	if !ok || strict.Loop.MaxRounds != 4 || strict.BudgetUSD != 7 {
+		t.Fatalf("strict %+v", strict)
+	}
+	if ud, _ := m.ai.profiles.Get(ai.ProfileUntilDone); ud.Loop.MaxRounds != 2 || ud.BudgetUSD != 0.25 {
+		t.Errorf("until-done %+v", ud)
+	}
+	m.ai.profile = "strict"
+	driveAIChat(t, m, m.sendAIChat("fix the tests"), nil)
+	if rm := aiRunMsg(t, m); rm.Run.Rounds != 4 || rm.Run.MaxRounds != 4 || rm.Run.Verdict != "fail" {
+		t.Errorf("run %+v", rm.Run)
 	}
 }

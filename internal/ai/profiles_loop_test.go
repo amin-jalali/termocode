@@ -99,6 +99,53 @@ func TestParseProfileLoopErrors(t *testing.T) {
 	}
 }
 
+// Spec (owner 2026-10-25): ai_until_done_rounds and
+// ai_until_done_budget_usd default to 3 and $2; 0 dollars set on purpose
+// is no budget; values out of range fall back and are named; both keys
+// survive a save.
+func TestSettingsUntilDone(t *testing.T) {
+	f := func(v float64) *float64 { return &v }
+	for _, c := range []struct {
+		name    string
+		s       Settings
+		rounds  int
+		budget  float64
+		problem string
+	}{
+		{"defaults", Settings{}, 3, 2, ""},
+		{"set", Settings{UntilDoneRounds: 5, UntilDoneBudgetUSD: f(0.5)}, 5, 0.5, ""},
+		{"no budget", Settings{UntilDoneBudgetUSD: f(0)}, 3, 0, ""},
+		{"rounds too high", Settings{UntilDoneRounds: 11}, 3, 2, "ai_until_done_rounds must be 1 to 10 (it is 11); using 3"},
+		{"rounds negative", Settings{UntilDoneRounds: -1}, 3, 2, "must be 1 to 10"},
+		{"budget negative", Settings{UntilDoneBudgetUSD: f(-1)}, 3, 2, "ai_until_done_budget_usd must be a dollar amount above 0, or 0 for no budget"},
+	} {
+		r, b, problems := c.s.UntilDone()
+		if r != c.rounds || b != c.budget {
+			t.Errorf("%s: %d %v, want %d %v", c.name, r, b, c.rounds, c.budget)
+		}
+		if got := strings.Join(problems, "\n"); (c.problem == "") != (got == "") || !strings.Contains(got, c.problem) {
+			t.Errorf("%s: problems %q, want %q", c.name, got, c.problem)
+		}
+	}
+	if CheckUntilDoneRounds(0) == nil || CheckUntilDoneRounds(10) != nil || CheckUntilDoneBudget(-0.01) == nil || CheckUntilDoneBudget(0) != nil {
+		t.Error("range checks")
+	}
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(path, []byte(`{"theme": "x"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveSettings(path, Settings{UntilDoneRounds: 4, UntilDoneBudgetUSD: f(0)}); err != nil {
+		t.Fatal(err)
+	}
+	s := LoadSettings(path)
+	if s.UntilDoneRounds != 4 || s.UntilDoneBudgetUSD == nil || *s.UntilDoneBudgetUSD != 0 {
+		t.Errorf("after save %+v", s)
+	}
+	if b, _ := os.ReadFile(path); !strings.Contains(string(b), `"theme"`) {
+		t.Errorf("other keys lost: %s", b)
+	}
+}
+
 // Spec (owner 2026-10-25): the settings give the defaults; a profile's
 // own loop.max_rounds and budget_usd win.
 func TestSetLoopDefaults(t *testing.T) {

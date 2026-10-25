@@ -47,6 +47,8 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `ai_provider` | string | `(auto)` | AI provider: anthropic, openai, openrouter, ollama, lmstudio, openai-compatible, claude-oauth or none. Empty picks anthropic or openai from the API keys it finds. TERMOCODE_AI_PROVIDER overrides it. |
 | `ai_model` | string | `(default)` | Chat model ID. Empty uses the provider's default model. |
 | `ai_base_url` | string | `(default)` | API base URL, for local or OpenAI-compatible servers. Empty uses the provider's default. |
+| `ai_until_done_rounds` | int | `3` | Work until done (the until-done profile, /done, AI: Work Until Done): how many times verify runs at most (1 to 10). A profile's loop.max_rounds wins over it. |
+| `ai_until_done_budget_usd` | number | `2.00` | Work until done: the run pauses and asks once its steps have cost this many US dollars. 0 means no budget. A profile's budget_usd wins over it. |
 
 ## HTTP
 

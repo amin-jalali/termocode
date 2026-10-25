@@ -2,11 +2,15 @@ package app
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/aimemory"
@@ -570,13 +574,18 @@ func init() {
 			Desc: "Chat model ID. Empty uses the provider's default model."},
 		settingsRow{ID: "setting-ai-base-url", Label: "ai_base_url", Kind: "string", Default: "(default)",
 			Desc: "API base URL, for local or OpenAI-compatible servers. Empty uses the provider's default."},
+		settingsRow{ID: "setting-ai-until-done-rounds", Label: "ai_until_done_rounds", Kind: "int", Default: strconv.Itoa(ai.DefaultUntilDoneRounds),
+			Desc: fmt.Sprintf("Work until done (the until-done profile, /done, AI: Work Until Done): how many times verify runs at most (1 to %d). A profile's loop.max_rounds wins over it.", agentdag.MaxRounds)},
+		settingsRow{ID: "setting-ai-until-done-budget", Label: "ai_until_done_budget_usd", Kind: "number", Default: fmt.Sprintf("%.2f", ai.DefaultUntilDoneBudgetUSD),
+			Desc: "Work until done: the run pauses and asks once its steps have cost this many US dollars. 0 means no budget. A profile's budget_usd wins over it."},
 	)
 }
 
 // aiSettingsCategories puts the AI rows in their own Settings group.
 func aiSettingsCategories(cats map[string]string) map[string]string {
 	httpSettingsCategories(cats) // the HTTP client's group (http_settings.go)
-	for _, id := range []string{"setting-ai-inline", "setting-ai-provider", "setting-ai-model", "setting-ai-base-url"} {
+	for _, id := range []string{"setting-ai-inline", "setting-ai-provider", "setting-ai-model", "setting-ai-base-url",
+		"setting-ai-until-done-rounds", "setting-ai-until-done-budget"} {
 		cats[id] = "AI"
 	}
 	return mcpSettingsCategories(cats)
@@ -613,6 +622,14 @@ func aiSettingValue(id string) (string, bool) {
 			return "(default)", true
 		}
 		return s.BaseURL, true
+	case "setting-ai-until-done-rounds":
+		r, _, _ := s.UntilDone()
+		return strconv.Itoa(r), true
+	case "setting-ai-until-done-budget":
+		if _, b, _ := s.UntilDone(); b > 0 {
+			return fmt.Sprintf("%.2f", b), true
+		}
+		return "0 (no budget)", true
 	}
 	return "", false
 }
@@ -661,6 +678,37 @@ func (m *Model) applyAISetting(id, value string) (tea.Cmd, bool) {
 	case "setting-ai-base-url":
 		s.BaseURL = value
 		label = "ai_base_url = " + orAuto(value)
+	case "setting-ai-until-done-rounds":
+		n, err := strconv.Atoi(value)
+		if err == nil {
+			err = ai.CheckUntilDoneRounds(n)
+		} else {
+			err = fmt.Errorf("ai_until_done_rounds must be a whole number from 1 to %d", agentdag.MaxRounds)
+		}
+		if err != nil {
+			var c tea.Cmd
+			m.toast, c = m.toast.Push(toast.Errr, err.Error())
+			return c, true
+		}
+		s.UntilDoneRounds = n
+		label = "ai_until_done_rounds = " + value
+	case "setting-ai-until-done-budget":
+		usd, err := strconv.ParseFloat(strings.TrimPrefix(strings.TrimSuffix(value, " (no budget)"), "$"), 64)
+		if err == nil {
+			err = ai.CheckUntilDoneBudget(usd)
+		} else {
+			err = errors.New("ai_until_done_budget_usd must be a dollar amount like 2 or 0.50, or 0 for no budget")
+		}
+		if err != nil {
+			var c tea.Cmd
+			m.toast, c = m.toast.Push(toast.Errr, err.Error())
+			return c, true
+		}
+		s.UntilDoneBudgetUSD = &usd
+		label = fmt.Sprintf("ai_until_done_budget_usd = %.2f", usd)
+		if usd == 0 {
+			label = "ai_until_done_budget_usd = 0 (no budget)"
+		}
 	default:
 		return nil, false
 	}
