@@ -389,7 +389,7 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 	switch ev.Kind {
 	case agentrun.NodeStart:
 		*st = ai.StoredStep{ID: st.ID, Title: st.Title, Slot: st.Slot, Model: st.Model, Category: st.Category,
-			Deps: st.Deps, Planned: st.Planned, State: string(agentdag.StateRunning)}
+			Deps: st.Deps, Planned: st.Planned, Prompt: st.Prompt, State: string(agentdag.StateRunning)}
 		s.act.begin(now)
 		s.agentsNodeStart(ev.RunID, st.ID, now)
 		s.agentsNodeEvent(ev.RunID, st.ID, ev.AI, now, true)
@@ -472,7 +472,8 @@ func (m *Model) aiAddPlannedSteps(rm *ai.StoredMessage, ev agentrun.Event) {
 	}
 	for _, n := range ev.Nodes {
 		rm.Steps = append(rm.Steps, ai.StoredStep{ID: n.ID, Title: n.Title, Slot: n.Slot, Model: s.runSlots[n.Slot].cfg.Model,
-			Category: n.Category, State: string(agentdag.StatePending), Planned: true, Deps: agentdag.Deps(snap, n.ID)})
+			Category: n.Category, State: string(agentdag.StatePending), Planned: true, Deps: agentdag.Deps(snap, n.ID),
+			Prompt: n.Prompt})
 	}
 	if err := s.store.Save(&s.conv); err != nil {
 		recordError("[ai] save chat: " + err.Error())

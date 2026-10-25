@@ -87,6 +87,10 @@ type StoredStep struct {
 	Deps    []string `json:"deps,omitempty"`
 	Planned bool     `json:"planned,omitempty"`
 	Notes   []string `json:"notes,omitempty"`
+	// Prompt is a planned step's task text (from the plan), so the run
+	// can resume after a restart. It lives in the chat file only; run
+	// snapshots never hold prompts.
+	Prompt string `json:"prompt,omitempty"`
 }
 
 // Conversation is one persisted chat. Port of mobocode's chat_store.dart,

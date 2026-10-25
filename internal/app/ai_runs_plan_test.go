@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -285,5 +287,38 @@ func TestAIRunBudgetPauseStop(t *testing.T) {
 	rm := aiRunMsg(t, m)
 	if rm.Run.State != ai.RunStateCancelled || len(p.reqs) != 1 || rm.Steps[1].State != "cancelled" {
 		t.Errorf("after stop %+v steps %+v (%d requests)", rm.Run, rm.Steps, len(p.reqs))
+	}
+}
+
+// Spec (OM-6): a planned step card keeps its task text in the chat file
+// (so the run can resume after a restart); the run snapshot never holds
+// it.
+func TestAIPlannedStepStoresPrompt(t *testing.T) {
+	p := &funcAIProvider{reply: planReply(appDiamondPlan)}
+	m := aiPlanModel(t, p)
+	driveAIChat(t, m, m.sendAIChat("make the parser faster"), nil)
+	saved, err := m.ai.store.Load(m.ai.conv.ID)
+	if err != nil || len(saved.Messages) != 2 || len(saved.Messages[1].Steps) != 5 {
+		t.Fatalf("chat file %+v %v", saved, err)
+	}
+	steps := saved.Messages[1].Steps
+	if steps[0].Prompt != "" {
+		t.Errorf("the planner card has a prompt %q", steps[0].Prompt)
+	}
+	for i, id := range []string{"map", "left", "right", "verify"} {
+		if got := steps[i+1].Prompt; got != "TASK-"+id {
+			t.Errorf("step %s prompt %q", id, got)
+		}
+	}
+	dir, err := aiRunsDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	files, _ := filepath.Glob(filepath.Join(dir, "*.json"))
+	if len(files) != 1 {
+		t.Fatalf("snapshots %v", files)
+	}
+	if b, _ := os.ReadFile(files[0]); strings.Contains(string(b), "TASK-") || !strings.Contains(string(b), `"verify"`) {
+		t.Errorf("snapshot must hold the ids but no prompts:\n%s", b)
 	}
 }
