@@ -45,6 +45,11 @@ type Row struct {
 	ID       string   // Choice / Input: the id in Choice() and SubmitMsg
 	Masked   bool     // Input
 	Vertical bool     // Choice: one option per line (accounts)
+	// Input: Inline puts the label at the left of the field (a form row);
+	// Placeholder is shown, quiet, while the field is empty.
+	Inline      bool
+	Placeholder string
+	Value       string // Input: the first value when the card opens
 }
 
 // Button is one button of the row at the bottom.
@@ -62,6 +67,9 @@ type Card struct {
 	// Keys are extra footer hints and letter keys ("c", "copy link");
 	// the letter keys work when the input does not have the focus.
 	Keys []string
+	// Form: Enter in any input presses the primary button (a card with
+	// several inputs, saved at once), also when the input is empty.
+	Form bool
 }
 
 // ButtonMsg: a button was pressed (Enter or a click).
@@ -86,13 +94,13 @@ type Model struct {
 	focus  int            // index into focusables()
 	button int            // the highlighted button
 	sel    map[string]int // Choice id → option
-	value  string         // the input
+	vals   map[string]string // Input id → its text
 }
 
 // New opens a card; the focus starts on the first choice or input, else
 // on the primary button.
 func New(c Card) Model {
-	m := Model{sel: map[string]int{}}
+	m := Model{sel: map[string]int{}, vals: map[string]string{}}
 	m.SetCard(c)
 	return m
 }
@@ -100,8 +108,14 @@ func New(c Card) Model {
 // SetCard replaces the card (the next step, or a countdown tick). The
 // choices and the input keep their values when the ids stay.
 func (m *Model) SetCard(c Card) {
-	same := m.card.Title == c.Title && len(m.card.Buttons) == len(c.Buttons) && len(m.focusablesOf(m.card)) == len(m.focusablesOf(c))
-	keepInput := false
+	sameTitle := m.card.Title == c.Title
+	same := sameTitle && len(m.card.Buttons) == len(c.Buttons) && len(m.focusablesOf(m.card)) == len(m.focusablesOf(c))
+	// The focused row by id: a form that grows a row keeps its focus.
+	focusID, focusButtons := "", m.focused() == -1
+	if f := m.focused(); f >= 0 {
+		focusID = m.card.Rows[f].ID
+	}
+	vals := map[string]string{}
 	for _, r := range c.Rows {
 		if r.Kind == Choice {
 			if _, ok := m.sel[r.ID]; !ok {
@@ -109,19 +123,26 @@ func (m *Model) SetCard(c Card) {
 			}
 		}
 		if r.Kind == Input {
+			vals[r.ID] = r.Value
 			for _, o := range m.card.Rows {
 				if o.Kind == Input && o.ID == r.ID {
-					keepInput = true
+					vals[r.ID] = m.vals[r.ID] // the input stays: keep its text
 				}
 			}
 		}
 	}
 	m.card = c
-	if !keepInput {
-		m.value = ""
-	}
+	m.vals = vals
 	if same {
 		return
+	}
+	if sameTitle && len(m.card.Buttons) == len(c.Buttons) {
+		for i, f := range m.focusables() {
+			if (f >= 0 && focusID != "" && c.Rows[f].ID == focusID) || (f == -1 && focusButtons) {
+				m.focus = i
+				return
+			}
+		}
 	}
 	m.button = -1 // no primary button: none is lit until the user moves
 	for i, b := range c.Buttons {
@@ -154,11 +175,39 @@ func (m *Model) SetSize(w, h int) { m.w, m.h = w, h }
 // Choice is the selected option of a Choice row.
 func (m Model) Choice(id string) int { return m.sel[id] }
 
-// Value is the input's text.
-func (m Model) Value() string { return m.value }
+// Value is the input's text: the focused input, else the first one.
+func (m Model) Value() string { return m.vals[m.valueID()] }
 
-// SetValue sets the input's text (tests, a paste).
-func (m *Model) SetValue(v string) { m.value = v }
+// SetValue sets the input's text (tests, a paste): the focused input,
+// else the first one.
+func (m *Model) SetValue(v string) { m.vals[m.valueID()] = v }
+
+// InputValue is the text of the input with id.
+func (m Model) InputValue(id string) string { return m.vals[id] }
+
+// SetInputValue sets the text of the input with id.
+func (m *Model) SetInputValue(id, v string) { m.vals[id] = v }
+
+// valueID is the id of the focused input, else of the first input.
+func (m Model) valueID() string {
+	if f := m.focused(); f >= 0 && m.card.Rows[f].Kind == Input {
+		return m.card.Rows[f].ID
+	}
+	for _, r := range m.card.Rows {
+		if r.Kind == Input {
+			return r.ID
+		}
+	}
+	return ""
+}
+
+// FocusedID is the id of the focused choice or input ("" = the buttons).
+func (m Model) FocusedID() string {
+	if f := m.focused(); f >= 0 {
+		return m.card.Rows[f].ID
+	}
+	return ""
+}
 
 // focusablesOf lists the rows that take the focus (row index), then -1
 // for the button row.
@@ -237,8 +286,13 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 	case tea.KeyEnter:
 		switch {
+		case f >= 0 && m.card.Rows[f].Kind == Input && m.card.Form:
+			if b := m.primary(); b >= 0 {
+				return m, emit(ButtonMsg{ID: m.card.Buttons[b].ID})
+			}
+			return m, nil
 		case f >= 0 && m.card.Rows[f].Kind == Input:
-			v := strings.TrimSpace(m.value)
+			v := strings.TrimSpace(m.vals[m.card.Rows[f].ID])
 			if v == "" {
 				return m, nil
 			}
@@ -255,19 +309,19 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		}
 		return m, nil
 	case tea.KeyBackspace:
-		if m.inInput() && m.value != "" {
-			r := []rune(m.value)
-			m.value = string(r[:len(r)-1])
+		if id := m.valueID(); m.inInput() && m.vals[id] != "" {
+			r := []rune(m.vals[id])
+			m.vals[id] = string(r[:len(r)-1])
 		}
 		return m, nil
 	case tea.KeySpace:
 		if m.inInput() {
-			m.value += " "
+			m.vals[m.valueID()] += " "
 		}
 		return m, nil
 	case tea.KeyRunes:
 		if m.inInput() {
-			m.value += clean(string(k.Runes))
+			m.vals[m.valueID()] += clean(string(k.Runes))
 			return m, nil
 		}
 		key := string(k.Runes)
@@ -323,7 +377,7 @@ type target struct {
 	x, y, w int
 	button  string // a button id
 	row     int    // a Choice row …
-	option  int    // … and its option
+	option  int    // … and its option (-1: an Input row, the click focuses it)
 }
 
 // width is the card's outer width.
@@ -461,16 +515,19 @@ func (m Model) lines() ([]string, []target) {
 			}
 			add(line)
 		case Input:
-			if r.Text != "" {
+			lw := 0
+			if r.Inline {
+				lw = 10
+			} else if r.Text != "" {
 				for _, l := range wrap(r.Text, bodyW) {
 					add(text.Render(l))
 				}
 			}
-			v := m.value
+			v := m.vals[r.ID]
 			if r.Masked {
 				v = strings.Repeat("•", len([]rune(v)))
 			}
-			fw := bodyW - 2
+			fw := bodyW - 2 - lw
 			if runewidth.StringWidth(v) > fw-1 {
 				rr := []rune(v)
 				for runewidth.StringWidth(string(rr)) > fw-2 && len(rr) > 0 {
@@ -484,10 +541,19 @@ func (m Model) lines() ([]string, []target) {
 				caret = "▏"
 			}
 			field := in.Render(" "+v) + lipgloss.NewStyle().Background(f.InputBg).Foreground(f.Icon).Render(caret)
+			if v == "" && r.Placeholder != "" {
+				ph := runewidth.Truncate(r.Placeholder, max(fw-3, 1), "…")
+				field += lipgloss.NewStyle().Background(f.InputBg).Foreground(f.Sub).Render(ph)
+			}
 			if w := lipgloss.Width(field); w < fw {
 				field += in.Render(strings.Repeat(" ", fw-w))
 			}
-			add(field)
+			head := ""
+			if r.Inline {
+				head = sub.Render(runewidth.FillRight(runewidth.Truncate(r.Text, lw-1, "…"), lw))
+			}
+			tg = append(tg, target{x: 2 + lw, y: len(rows), w: fw, row: i, option: -1})
+			add(head + field)
 		}
 	}
 	rows = append(rows, blank)
@@ -581,7 +647,9 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 			return m, emit(ButtonMsg{ID: t.button})
 		}
 		r := m.card.Rows[t.row]
-		m.sel[r.ID] = t.option
+		if t.option >= 0 {
+			m.sel[r.ID] = t.option
+		}
 		for i, f := range m.focusables() {
 			if f == t.row {
 				m.focus = i
