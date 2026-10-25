@@ -280,6 +280,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onImportPlan(msg)
 	case importUndoClickMsg:
 		return m, m.undoLastImport()
+	case devContainerClickMsg:
+		return m, m.openDevContainerTools(msg.tools)
 	case importview.CloseMsg:
 		m.closeImport()
 		return m, nil
@@ -826,7 +828,7 @@ end })`)
 		m.editor.SetMeta(msg.Path, msg.Dirty, msg.Lang)
 		// LSP installer: status-bar chip + one-time missing-server toast.
 		m.setLSPClients(msg.LSPClients)
-		lspSuggestCmd := m.maybeSuggestLanguageServer(msg.Lang)
+		lspSuggestCmd := tea.Batch(m.maybeSuggestLanguageServer(msg.Lang), m.maybeSuggestDevContainerTools(workspaceRoot()))
 		m.editor.SetDiagnostics(msg.Errors, msg.Warnings)
 		m.bufs = toNvimBufs(msg.Bufs)
 		m.activeBuf = msg.Active

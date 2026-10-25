@@ -22,6 +22,7 @@ type lspInstallState struct {
 	installing map[string]bool // tool name → background install running
 	asked      map[string]bool // filetypes already suggested (persisted)
 	lastLang   string          // last filetype seen by the suggest check
+	devChecked bool            // the dev container check ran this session
 	clients    []string        // LSP clients attached to the active buffer
 	pending    string          // tool the open confirm dialog is about
 	category   lspinstall.Category
