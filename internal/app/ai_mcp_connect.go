@@ -878,12 +878,19 @@ func (m *Model) wizDoneCard() connectcard.Card {
 	}
 	if w.readOnly() {
 		rows = append(rows, connectcard.Row{Kind: connectcard.Blank},
-			connectcard.Row{Kind: connectcard.Dim, Text: "Writes (create, comment, change) are off. Turn them on any time: AI: MCP Servers… → " + w.name + " → Allow writes."})
+			connectcard.Row{Kind: connectcard.Dim, Text: "Writes (create, comment, change) are off. Allow writes turns them on; each write still asks first."})
 	}
+	// Next steps as buttons (MC-9): Show tools, and Allow writes while the
+	// service is read only.
 	btns := []connectcard.Button{{ID: "done", Title: "Done", Primary: true}}
 	if p.Try != "" {
 		btns = []connectcard.Button{{ID: "ask", Title: "Ask the AI", Primary: true}, {ID: "done", Title: "Done"}}
 	}
+	next := []connectcard.Button{{ID: "tools", Title: "Show tools"}}
+	if w.readOnly() {
+		next = append(next, connectcard.Button{ID: "writes", Title: "Allow writes"})
+	}
+	btns = append(btns[:len(btns)-1], append(next, btns[len(btns)-1])...)
 	return connectcard.Card{Title: "Connected", Rows: rows, Buttons: btns}
 }
 
@@ -934,6 +941,13 @@ func (m *Model) onMCPWizButton(id string) tea.Cmd {
 	case "servers":
 		m.closeWizard()
 		return m.openMCPServers()
+	case "tools", "writes":
+		name := w.name
+		m.closeWizard()
+		if id == "tools" {
+			return m.openMCPTools(name)
+		}
+		return m.mcpSetWrites(name, true)
 	case "retry":
 		if w.method == "" {
 			return m.wizStart()

@@ -40,11 +40,14 @@ Then termocode shows one screen at a time:
 2. **Test call.** termocode connects, lists the tools and asks the
    service who you are.
 3. **Done.** `✓ GitHub — connected as amin-jalali · 28 tools · read only`
-   and a first thing to ask. **Ask the AI** puts it into the chat input.
+   and a first thing to ask. **Ask the AI** puts it into the chat input;
+   **Show tools** lists what the service gives the AI; **Allow writes**
+   (read-only services) turns writes on.
 
 Every service starts **read only** where the service has a read-only
 mode (GitHub, Linear) or read scopes (Linear, ClickUp). Turn writes on
-later with **AI: MCP Servers…** → the service → **Allow writes**; every
+later with **Allow writes** on the Done screen or **AI: MCP Servers…** →
+the service → **Allow writes**; every
 write still asks you first.
 
 ### GitHub
