@@ -53,10 +53,20 @@ func TestEngineContextSetsDockerContextOnEveryCall(t *testing.T) {
 	}
 	_ = stream
 	defer stop()
-	if !servicestest.WaitFor(2e9, func() bool { return f.Count("events") > 0 }) {
-		t.Fatal("watcher did not start")
+	// Wait on ctx.log itself: the fake writes argv.log first, so a call
+	// can be counted before its ctx.log line exists.
+	var calls []string
+	if !servicestest.WaitFor(2e9, func() bool {
+		calls = f.CtxCalls()
+		for _, c := range calls {
+			if strings.Contains(c, "events") {
+				return true
+			}
+		}
+		return false
+	}) {
+		t.Fatalf("watcher did not start: calls = %q", calls)
 	}
-	calls := f.CtxCalls()
 	if len(calls) < 4 {
 		t.Fatalf("calls = %q", calls)
 	}
