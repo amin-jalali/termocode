@@ -101,6 +101,11 @@ func TestMCPClientLazyStart(t *testing.T) {
 	tm.Send(KeyEnter)
 	tm.WaitText("fake-done", 20*time.Second)
 	tm.WaitText("mcp.fake.echo", uiTimeout)
+	// The turn used a tool in a workspace that never decided on memory,
+	// so the ask-once memory card opens (OM-2); Esc is Not now.
+	tm.WaitText("Save lessons for later chats?", uiTimeout)
+	tm.Send(KeyEsc)
+	tm.WaitGone("Save lessons for later chats?", uiTimeout)
 	b, _ := os.ReadFile(log)
 	if !strings.Contains(string(b), "tools/call") {
 		t.Fatalf("the server got no call: %q", b)
