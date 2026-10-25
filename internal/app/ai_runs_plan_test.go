@@ -8,11 +8,13 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clock"
 )
 
 // U20 AP-8: planned runs, waves, the confirm queue and the budget pause
@@ -320,5 +322,187 @@ func TestAIPlannedStepStoresPrompt(t *testing.T) {
 	}
 	if b, _ := os.ReadFile(files[0]); strings.Contains(string(b), "TASK-") || !strings.Contains(string(b), `"verify"`) {
 		t.Errorf("snapshot must hold the ids but no prompts:\n%s", b)
+	}
+}
+
+// savedPlannedSteps is the step cards of an interrupted diamond plan run
+// as the chat file holds them: the planner, map and left finished with
+// their texts; right was running; verify waited.
+func savedPlannedSteps() []ai.StoredStep {
+	return []ai.StoredStep{
+		{ID: "planner", Title: "Planner", Category: "deep", State: "completed", Text: appDiamondPlan},
+		{ID: "map", Title: "Map", Category: "quick", State: "completed", Text: "answer of map", Planned: true, Prompt: "TASK-map", Deps: []string{"planner"}},
+		{ID: "left", Title: "Left", Category: "quick", State: "completed", Text: "answer of left", Planned: true, Prompt: "TASK-left", Deps: []string{"map"}},
+		{ID: "right", Title: "Right", Category: "quick", State: "running", Planned: true, Prompt: "TASK-right", Deps: []string{"map"}},
+		{ID: "verify", Title: "Verify", Category: "deep", State: "pending", Planned: true, Prompt: "TASK-verify", Deps: []string{"left", "right"}},
+	}
+}
+
+// savePlannedChat saves a chat whose planned run was going when
+// termocode stopped and opens it (the run loads as interrupted).
+func savePlannedChat(t *testing.T, m *Model) {
+	t.Helper()
+	c := ai.NewConversation()
+	c.Messages = []ai.StoredMessage{
+		{Role: ai.StoredUser, Text: "make the parser faster"},
+		{Role: ai.StoredAssistant, Run: &ai.StoredRun{ID: "r9", Profile: ai.ProfilePlan, State: ai.RunStateRunning}, Steps: savedPlannedSteps()},
+	}
+	if err := m.ai.store.Save(&c); err != nil {
+		t.Fatal(err)
+	}
+	m.onAIHistoryPicked(c.ID)
+	if rm := aiRunMsg(t, m); rm.Run.State != ai.RunStateInterrupted {
+		t.Fatalf("run %+v", rm.Run)
+	}
+}
+
+// Spec (OM-6): a planned run interrupted by a restart resumes from its
+// unfinished nodes: the saved plan is reused (no planner request), the
+// finished nodes keep their saved answers, only right and verify run.
+func TestAIPlannedRunResumeAfterRestart(t *testing.T) {
+	p := &funcAIProvider{reply: planReply(appDiamondPlan)}
+	m := aiPlanModel(t, p)
+	savePlannedChat(t, m)
+	if m.ai.aiRetryStep(1) == 0 {
+		t.Fatal("an interrupted planned run with its saved plan must be resumable")
+	}
+	driveAIChat(t, m, m.onAIButton("run-retry:1"), nil)
+
+	var tasks []string
+	for _, r := range p.reqs {
+		if isPlanner(r) {
+			t.Error("the planner was asked again")
+			continue
+		}
+		in := lastUserContent(r)
+		for _, id := range []string{"map", "left", "right", "verify"} {
+			if strings.Contains(in, "### Task\nTASK-"+id) {
+				tasks = append(tasks, id)
+			}
+		}
+	}
+	if strings.Join(tasks, ",") != "right,verify" {
+		t.Errorf("requests for %v (want right, verify)", tasks)
+	}
+	verify, _ := p.find(func(r ai.Request) bool { return strings.Contains(lastUserContent(r), "TASK-verify") })
+	if in := lastUserContent(verify); !strings.Contains(in, "### Output of step \"Left\"\nanswer of left") ||
+		!strings.Contains(in, "### Output of step \"Right\"\nanswer of right") || !strings.Contains(in, "make the parser faster") {
+		t.Errorf("verify input:\n%s", in)
+	}
+	if len(verify.Messages) > 0 {
+		if sys := verify.Messages[0].Content; !strings.Contains(sys, "step \"Verify\" of a planned agent run") || strings.Contains(sys, "of 5") {
+			t.Errorf("a resumed planned step keeps the planned wording:\n%s", sys)
+		}
+	}
+	rm := aiRunMsg(t, m)
+	if rm.Run.State != ai.RunStateDone || rm.Text != "answer of verify" {
+		t.Errorf("run %+v text %q", rm.Run, rm.Text)
+	}
+	if n := len(m.ai.conv.Messages); n != 2 {
+		t.Errorf("messages %d", n)
+	}
+	for _, st := range rm.Steps {
+		if st.State != string(agentdag.StateCompleted) {
+			t.Errorf("step %s %s", st.ID, st.State)
+		}
+	}
+	if rm.Steps[2].Text != "answer of left" || rm.Steps[4].Prompt != "TASK-verify" || !rm.Steps[4].Planned {
+		t.Errorf("steps %+v", rm.Steps)
+	}
+}
+
+// Spec (OM-6): an interrupted planned run from an old chat file (no
+// saved task text) cannot resume; it keeps today's behaviour.
+func TestAIPlannedRunOldChatNotResumable(t *testing.T) {
+	m := aiPlanModel(t, &funcAIProvider{reply: planReply(appDiamondPlan)})
+	steps := savedPlannedSteps()
+	for i := range steps {
+		steps[i].Prompt = ""
+	}
+	m.ai.conv.Messages = []ai.StoredMessage{
+		{Role: ai.StoredUser, Text: "go"},
+		{Role: ai.StoredAssistant, Run: &ai.StoredRun{ID: "r9", Profile: ai.ProfilePlan, State: ai.RunStateInterrupted}, Steps: steps},
+	}
+	if m.ai.aiRetryStep(1) != 0 {
+		t.Error("an old planned run without saved tasks offers a resume")
+	}
+}
+
+func builtinProfile(t *testing.T, name string) ai.Profile {
+	t.Helper()
+	for _, p := range ai.BuiltinProfiles() {
+		if p.Name == name {
+			return p
+		}
+	}
+	t.Fatalf("no built-in profile %q", name)
+	return ai.Profile{}
+}
+
+func runStates(r agentdag.Run) string {
+	var b []string
+	for _, n := range r.Nodes {
+		b = append(b, n.ID+"="+string(n.State))
+	}
+	return strings.Join(b, " ")
+}
+
+// Spec (OM-6): aiRebuildRun rebuilds the profile's steps from the
+// profile and the planned ones from their saved task text and deps;
+// finished steps are completed with their saved texts.
+func TestAIRebuildRunEdges(t *testing.T) {
+	t.Cleanup(clock.Set(func() time.Time { return time.Date(2026, 10, 18, 9, 5, 0, 0, time.UTC) }))
+	prof := builtinProfile(t, ai.ProfilePlan)
+	rm := ai.StoredMessage{Role: ai.StoredAssistant, Run: &ai.StoredRun{ID: "r9", Profile: ai.ProfilePlan}, Steps: savedPlannedSteps()}
+	run, outputs, err := aiRebuildRun(rm, prof)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := runStates(run); got != "planner=completed map=completed left=completed right=pending verify=pending" {
+		t.Errorf("states %s", got)
+	}
+	if !run.CreatedAt.Equal(clock.Now()) || run.ID != "r9" {
+		t.Errorf("run %s created %v", run.ID, run.CreatedAt)
+	}
+	var edges []string
+	for _, e := range run.Edges {
+		edges = append(edges, e.From+">"+e.To)
+	}
+	if got := strings.Join(edges, " "); got != "planner>map map>left map>right left>verify right>verify" {
+		t.Errorf("edges %s", got)
+	}
+	deps := map[string]string{}
+	for _, n := range run.Nodes[1:] {
+		if n.Input.Deps == nil {
+			t.Errorf("%s: nil Input.Deps would pass the plan JSON", n.ID)
+		}
+		deps[n.ID] = strings.Join(n.Input.Deps, ",")
+		if n.Prompt != "TASK-"+n.ID {
+			t.Errorf("%s prompt %q", n.ID, n.Prompt)
+		}
+	}
+	if deps["map"] != "" || deps["left"] != "map" || deps["verify"] != "left,right" {
+		t.Errorf("input deps %v", deps)
+	}
+	if run.Nodes[1].Slot != ai.SlotQuick || run.Nodes[4].Slot != ai.SlotMain {
+		t.Errorf("slots %s %s", run.Nodes[1].Slot, run.Nodes[4].Slot)
+	}
+	if outputs["left"] != "answer of left" || outputs["planner"] != appDiamondPlan || len(outputs) != 3 {
+		t.Errorf("outputs %v", outputs)
+	}
+
+	rm.Steps[3].Prompt = ""
+	if _, _, err := aiRebuildRun(rm, prof); err == nil || !strings.Contains(err.Error(), "send the message again") {
+		t.Errorf("a planned step without its task: %v", err)
+	}
+	rm = ai.StoredMessage{Run: &ai.StoredRun{ID: "r9"}, Steps: savedPlannedSteps()}
+	rm.Steps[0].ID = "boss"
+	if _, _, err := aiRebuildRun(rm, prof); err == nil || !strings.Contains(err.Error(), "changed since this run") {
+		t.Errorf("a changed profile: %v", err)
+	}
+	rm = ai.StoredMessage{Run: &ai.StoredRun{ID: "r9"}, Steps: savedPlannedSteps()}
+	rm.Steps[4].Deps = []string{"verify"}
+	if _, _, err := aiRebuildRun(rm, prof); err == nil || !strings.Contains(err.Error(), "cannot resume") {
+		t.Errorf("a broken saved graph: %v", err)
 	}
 }
