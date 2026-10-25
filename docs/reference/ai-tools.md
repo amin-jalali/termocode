@@ -92,9 +92,9 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`networks_list`](#networks_list) | auto | no | Every network on this host: name, id, driver, scope, compose project. |
 | [`contexts_list`](#contexts_list) | auto | no | The engine's contexts (docker) or connections (podman): which one is the default and which one this session uses. |
 | [`registries_list`](#registries_list) | auto | no | Registry hosts from the engine's login file: signed in or not, the user (when known) and the credential helper. |
-| [`containers_control`](#containers_control) | confirm (containers): the card has Allow · Always allow containers (this session only, never saved) · Deny, and busy containers or no-op actions are refused first | no | Start, stop, restart, pause or unpause one host container (any project). |
-| [`images_pull`](#images_pull) | confirm (containers): the card has Allow · Always allow containers (this session only, never saved) · Deny | no | Pull an image (ref like nginx:1.27 or ghcr.io/acme/api:1.4) in a visible terminal tab "pull: <ref>". |
-| [`compose_up`](#compose_up) | confirm (containers): the card has Allow · Always allow containers (this session only, never saved) · Deny | no | Run `docker compose up -d` for a compose project that has containers on this host (see containers_list), in its own folder, in a visible terminal tab. |
+| [`containers_control`](#containers_control) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved), and busy containers or no-op actions are refused first | no | Start, stop, restart, pause or unpause one host container (any project). |
+| [`images_pull`](#images_pull) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved) | no | Pull an image (ref like nginx:1.27 or ghcr.io/acme/api:1.4) in a visible terminal tab "pull: <ref>". |
+| [`compose_up`](#compose_up) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved) | no | Run `docker compose up -d` for a compose project that has containers on this host (see containers_list), in its own folder, in a visible terminal tab. |
 | [`help_read`](#help_read) | auto | no | Read the built-in guide: with no arguments list pages; page shows headings and anchors; page and section returns that section's prepared Markdown; query searches matching sections (page can filter it). |
 | [`http_list_requests`](#http_list_requests) | auto | yes | List the HTTP requests in the user's .http / .rest files (request templates with {{variables}}, not resolved), the file variable names and the selected environment. |
 | [`http_environments`](#http_environments) | auto | yes | Show the HTTP environments (http-client.env.json and the private file), the selected one and their variable names. |
@@ -1035,7 +1035,7 @@ No arguments.
 
 Start, stop, restart, pause or unpause one host container (any project). Asks the user first. Refused when the container is busy or already in that state. Removing and pruning are the user's.
 
-**Gate:** confirm (containers): the card has Allow · Always allow containers (this session only, never saved) · Deny, and busy containers or no-op actions are refused first
+**Gate:** confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved), and busy containers or no-op actions are refused first
 
 **MCP server:** no
 
@@ -1048,7 +1048,7 @@ Start, stop, restart, pause or unpause one host container (any project). Asks th
 
 Pull an image (ref like nginx:1.27 or ghcr.io/acme/api:1.4) in a visible terminal tab "pull: <ref>". Asks the user first. wait_ms waits (max 120000) for the pull to end.
 
-**Gate:** confirm (containers): the card has Allow · Always allow containers (this session only, never saved) · Deny
+**Gate:** confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved)
 
 **MCP server:** no
 
@@ -1061,7 +1061,7 @@ Pull an image (ref like nginx:1.27 or ghcr.io/acme/api:1.4) in a visible termina
 
 Run `docker compose up -d` for a compose project that has containers on this host (see containers_list), in its own folder, in a visible terminal tab. services limits it to some services. Asks the user first. For this workspace's services prefer services_start.
 
-**Gate:** confirm (containers): the card has Allow · Always allow containers (this session only, never saved) · Deny
+**Gate:** confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved)
 
 **MCP server:** no
 
