@@ -388,6 +388,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-usage", "AI: Usage", ""},
 		{"ai-profile-edit", "AI: Edit Profiles", ""},
 		{"ai-profile-new", "AI: New Profile from Current…", ""},
+		{"ai-profile-form", "AI: Edit Profile…", ""},
 		{"ai-profile-trust", "AI: Project Profiles Trust…", ""},
 		{"ai-models-edit", "AI: Edit Model Slots", ""},
 		{"ai-sign-in-claude", "AI: Sign in with Claude (OAuth, opt-in)…", ""},
@@ -498,7 +499,9 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	case "ai-profile-edit":
 		return m.editAIProfiles(), true
 	case "ai-profile-new":
-		return m.openAIProfileNewPrompt(), true
+		return m.openAIProfileNewForm(), true
+	case "ai-profile-form":
+		return m.openAIProfileEditPicker(), true
 	case "ai-profile-trust":
 		return m.openAIProfileTrustPicker(), true
 	case "ai-models-edit":

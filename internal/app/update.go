@@ -560,6 +560,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	if m.connectOpen {
 		return m.routeToConnect(msg)
 	}
+	if m.profileFormOpen {
+		return m.routeToProfileForm(msg)
+	}
 	if m.importOpen {
 		return m.routeToImport(msg)
 	}

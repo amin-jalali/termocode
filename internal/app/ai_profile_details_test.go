@@ -74,13 +74,13 @@ func TestAIProfilePickerNewAndEditRows(t *testing.T) {
 	m.openAIProfilePicker()
 	before := m.ai.activeProfile().Name
 	pressInAIProfilePicker(t, m, aiProfileNewID, tea.KeyMsg{Type: tea.KeyEnter})
-	if !m.promptOpen || m.promptKind != promptKindAIProfileNew {
-		t.Fatal("New row did not open the name prompt")
+	if !m.profileFormOpen {
+		t.Fatal("New row did not open the step form")
 	}
 	if m.ai.activeProfile().Name != before {
 		t.Error("New row switched")
 	}
-	m.promptOpen = false
+	m.profileFormOpen = false
 	m.openAIProfilePicker()
 	pressInAIProfilePicker(t, m, aiProfileEditID, tea.KeyMsg{Type: tea.KeyEnter})
 	path, _ := ai.ProfilesPath()

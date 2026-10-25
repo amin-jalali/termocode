@@ -14,7 +14,6 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/picker"
-	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -29,8 +28,6 @@ const (
 	pickerKindAIProfile pickerKindEnum = 1000 + iota
 	pickerKindAIProfileTrust
 )
-
-const promptKindAIProfileNew promptKindEnum = 1000
 
 const confirmKindAIProfileTrust confirmKindEnum = 1000
 const confirmKindAIProfileSave confirmKindEnum = 1001
@@ -59,6 +56,9 @@ type aiProfileTrustPending struct {
 type aiProfileSavePending struct {
 	name    string
 	profile ai.Profile
+	// fromForm: the preview came from the step form; replace: Save updates
+	// the user's profile of that name (ai_profile_form.go).
+	fromForm, replace bool
 }
 
 // aiProfileTrust is the user's answer for a project profile ("use" for
@@ -186,6 +186,7 @@ const aiProfileDetailsID = "·details"
 // JSON file. None of them switches the profile.
 const (
 	aiProfileNewID  = "·new"
+	aiProfileFormID = "·editform"
 	aiProfileEditID = "·edit"
 )
 
@@ -202,7 +203,8 @@ func (m *Model) openAIProfilePicker() tea.Cmd {
 	items = append(items, picker.Item{ID: aiProfileDetailsID, Title: "Show details of " + s.activeProfile().Name + "…",
 		Hint: "agents and models, in order"})
 	items = append(items,
-		picker.Item{ID: aiProfileNewID, Title: "New profile from " + s.activeProfile().Name + "…", Hint: "saves a copy under a name you pick"},
+		picker.Item{ID: aiProfileNewID, Title: "New profile from " + s.activeProfile().Name + "…", Hint: "the step form, starting from a copy"},
+		picker.Item{ID: aiProfileFormID, Title: "Edit a profile…", Hint: "the step form; a built-in makes a copy"},
 		picker.Item{ID: aiProfileEditID, Title: "Edit profiles (JSON)…", Hint: "opens profiles.json"})
 	m.picker = picker.NewItems(" "+aiSpark()+" AI Profile ", items)
 	m.picker.SetWidth(box)
@@ -253,11 +255,15 @@ func (m *Model) handleAIProfilePickerSelect(id string) (tea.Cmd, bool) {
 		case aiProfileDetailsID:
 			return m.showAIProfile(), true
 		case aiProfileNewID:
-			return m.openAIProfileNewPrompt(), true
+			return m.openAIProfileNewForm(), true
+		case aiProfileFormID:
+			return m.openAIProfileEditPicker(), true
 		case aiProfileEditID:
 			return m.editAIProfiles(), true
 		}
 		return m.selectAIProfile(id), true
+	case pickerKindAIProfileEdit:
+		return m.openAIProfileEditForm(id), true
 	case pickerKindAIProfileTrust:
 		p, ok := m.aiS().profiles.Get(id)
 		if !ok {
@@ -275,7 +281,7 @@ func (m *Model) handleAIProfilePickerAction(id string) (tea.Cmd, bool) {
 		return nil, false
 	}
 	switch id {
-	case aiProfileNewID, aiProfileEditID:
+	case aiProfileNewID, aiProfileFormID, aiProfileEditID:
 		return nil, true // not a profile: nothing to show
 	case aiProfileDetailsID:
 		return m.showAIProfile(), true
@@ -486,33 +492,16 @@ func (m *Model) editAIProfiles() tea.Cmd {
 	return m.aiInfo("Edit and save; the profile picker and Alt+Shift+P read the file again")
 }
 
-// openAIProfileNewPrompt is AI: New Profile from Current…: asks for the
-// new name.
-func (m *Model) openAIProfileNewPrompt() tea.Cmd {
-	cur := m.aiS().activeProfile().Name
-	m.prompt = prompt.New(aiSpark()+" New Profile", "Save profile "+cur+" as (letters, digits, - _ .):", "my-"+cur)
-	m.prompt.SetSize(m.w, m.h)
-	m.promptOpen = true
-	m.promptKind = promptKindAIProfileNew
-	return nil
-}
-
-// onAIProfileNewName writes the active profile under name in
-// profiles.json and switches to it.
-func (m *Model) onAIProfileNewName(name string) tea.Cmd {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return nil
-	}
-	p := m.aiS().activeProfile()
-	p.Name = name
-	return m.askAIProfileSave(p, false)
-}
-
 func (m *Model) onAIProfileSaveChoice(id string) tea.Cmd {
 	s := m.aiS()
 	pending := s.profileSave
 	s.profileSave = nil
+	if pending != nil && pending.fromForm {
+		if id != "save" {
+			return nil // back to the form, nothing written
+		}
+		return m.profileFormSaved(pending)
+	}
 	if pending == nil || id != "save" {
 		return m.aiInfo("Profile not saved")
 	}
@@ -530,14 +519,6 @@ func (m *Model) onAIProfileSaveChoice(id string) tea.Cmd {
 		return m.aiProfileErrorsCmd()
 	}
 	return m.setAIProfile(pending.name)
-}
-
-// handleAIProfilePrompt routes the profile prompt. ok=false: not ours.
-func (m *Model) handleAIProfilePrompt(value string) (tea.Cmd, bool) {
-	if m.promptKind == promptKindAIProfileNew {
-		return m.onAIProfileNewName(value), true
-	}
-	return nil, false
 }
 
 // editAIModelSlots is AI: Edit Model Slots: the AI config.json at its

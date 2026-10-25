@@ -21,6 +21,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Discard Proposed Edit | `ai-discard-proposal` |   |   |
 | AI: Edit Model Slots | `ai-models-edit` |   |   |
 | AI: Edit Profiles | `ai-profile-edit` |   |   |
+| AI: Edit Profile… | `ai-profile-form` |   |   |
 | AI: Edit Selection… | `ai-edit` | `Alt+I` | `Alt+I` |
 | AI: Explain Selection / Line | `ai-explain` |   |   |
 | AI: Export Chat as Markdown | `ai-export-chat` |   |   |
