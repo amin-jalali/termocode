@@ -30,6 +30,7 @@ var helpContexts = map[string]string{
 	"review":        "guides/ai-use.md#review-ai-changes",
 	"agent-confirm": "guides/ai-use.md#agent-let-the-chat-use-tools",
 	"connect":       "guides/mcp.md#connect-a-service",
+	"profile-form":  "guides/ai-profiles.md#create-and-edit-profiles",
 	"chat":          "guides/ai-use.md#chat-panel",
 	"agents":        "guides/ai-profiles.md#the-agents-panel",
 	"find":          "guides/search.md#find-in-this-file",
@@ -102,6 +103,8 @@ func (m Model) helpTopicForFocus() string {
 		return helpContexts["review"]
 	case m.connectOpen:
 		return helpContexts["connect"]
+	case m.profileFormOpen:
+		return helpContexts["profile-form"]
 	case m.searchOpen:
 		return helpContexts["search"]
 	case m.replaceOpen:
