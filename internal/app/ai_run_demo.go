@@ -10,6 +10,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/profileform"
 )
 
 // The agent pipeline shots (dev action "aipipedemo:running|done"): the
@@ -120,6 +121,17 @@ func (m *Model) aiProfileDemo(arg string) tea.Cmd {
 		return m.showAIProfile()
 	case "save":
 		return m.askAIProfileSave(ai.Profile{Name: "my-review", Title: "Review then fix", Steps: ai.BuiltinProfiles()[1].Steps}, false)
+	case "form": // the step form on a copy of a built-in
+		return m.openAIProfileEditForm(ai.ProfileReview)
+	case "form-error": // a copy with two steps of the same id: the problem shows inline, Save is inactive
+		dup := house
+		dup.Steps = append([]ai.ProfileStep(nil), house.Steps...)
+		dup.Steps[1].ID = dup.Steps[0].ID
+		return m.openAIProfileForm("house-copy", dup, false)
+	case "form-remove": // Remove step asks, with Keep step first
+		cmd := m.openAIProfileEditForm(ai.ProfileReview)
+		m.handleAIProfileFormMsg(profileform.RemoveStepMsg{Index: 1, Title: "Fixer"})
+		return cmd
 	}
 	return nil
 }

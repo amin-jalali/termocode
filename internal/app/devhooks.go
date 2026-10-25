@@ -42,7 +42,7 @@ import (
 //	                       (scripted models; live: steps take a moment)
 //	usagedemo:done         AI: Usage after the planned diamond run (scripted
 //	                       models; an earlier run is in the session)
-//	profiledemo:chip|picker|trust|save|show the agent profile UI (sample data)
+//	profiledemo:chip|picker|trust|save|show|form|form-error|form-remove the agent profile UI (sample data)
 //	connectdemo:<step>     a Connect-a-service step with sample data: pick,
 //	                       gh, device, browser, ssh, done, error, token,
 //	                       slack (nothing connects)

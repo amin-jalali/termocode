@@ -255,6 +255,13 @@ func goldenCases() []goldenCase {
 		sc := AIProfile(v)
 		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
+	// The profile step form (AH-5): a copy of a built-in, a copy with a
+	// problem shown inline, and the Remove step question over it, at
+	// 200x50 and 80x24.
+	for _, v := range []string{"form", "form-error", "form-remove"} {
+		sc := AIProfile(v)
+		out = append(out, goldenCase{sc.Name + "-200x50", sc, 200, 50}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
+	}
 	// AI: Show Profile and AI: Usage (AU-5), at both sizes, and the four
 	// screens of the "see your agents and what they cost" story at full
 	// size (200x50) for the presentation.
