@@ -9,6 +9,8 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/amin-jalali/termocode/internal/activity"
 )
 
 // Spec (plan §5): with MCP servers configured, the chat panel header
@@ -40,7 +42,12 @@ func TestMCPHeaderChip(t *testing.T) {
 		t.Fatalf("target at chip = %q", id)
 	}
 	m.handleAIPanelMouse(tea.MouseMsg{X: x, Y: 0, Type: tea.MouseLeft, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft})
-	if !m.pickerOpen || m.pickerKind != pickerKindMCPServers {
-		t.Errorf("click on the chip did not open the MCP servers picker")
+	// A click on the chip (with services) opens Itermoc at SERVICES; the old
+	// servers picker is still AI: MCP Servers… in the palette.
+	if m.activity.Active() != activity.ViewItermoc || m.itermoc == nil {
+		t.Fatalf("click on the chip did not open Itermoc")
+	}
+	if r, _ := m.itermoc.current(); r.kind != imRowSection || r.sec != imSecServices {
+		t.Errorf("Itermoc is not at SERVICES: cursor on %+v", r)
 	}
 }

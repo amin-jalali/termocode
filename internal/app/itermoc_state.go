@@ -102,12 +102,12 @@ type itermocSnap struct {
 	slots    []imSlot
 	services []mcp.Status
 
-	mode       string // mcp_server: auto | on | off
-	listening  bool
-	whyTitle   string
+	mode        string // mcp_server: auto | on | off
+	listening   bool
+	whyTitle    string
 	whySentence string
-	agents     []imAgent
-	calls      []imCall
+	agents      []imAgent
+	calls       []imCall
 }
 
 // itermocState is the view's state. It lives behind a pointer on the Model,

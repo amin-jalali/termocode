@@ -124,7 +124,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 			return m, m.ensureTestsDiscovered()
 		}
 		if msg.Type == tea.MouseLeft && m.statusHitAt(msg.X, msg.Y) == "status:agents" {
-			return m, m.openMCPServeStatus() // outside agents on the MCP server
+			return m, m.revealItermocView(true, imSecAgents) // outside agents (Itermoc); its Status… row is the old screen
 		}
 		if msg.Type == tea.MouseLeft && m.statusHitAt(msg.X, msg.Y) == "status:services" {
 			return m, m.revealServicesView(true)
