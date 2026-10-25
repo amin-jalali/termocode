@@ -80,6 +80,32 @@ func (m *Model) aiPipelineDemo(arg string) tea.Cmd {
 	return m.sendAIChat("review my last commit and fix what you find")
 }
 
+// aiUntilDoneDemo runs the built-in until-done profile on scripted
+// models (dev action "untildonedemo:done|fail"): the planner plans one
+// step, verify fails once, the fix step runs and verify passes in round
+// 2 ("done"), or verify fails in every round ("fail").
+func (m *Model) aiUntilDoneDemo(arg string) tea.Cmd {
+	s := m.aiS()
+	use := func(model string, in, out int) *ai.Usage {
+		return &ai.Usage{Model: model, Input: in, Output: out, Requests: 1, PeakContext: in}
+	}
+	plan := "```json\n" + `{"nodes": [{"id": "fix-quit", "title": "Fix the double confirm", "prompt": "Show the quit card once when the terminal tab is busy.", "category": "quick"}]}` + "\n```"
+	fail := ai.Chunk{Delta: "Ran go test ./internal/app/.\nVERDICT: FAIL\ninternal/app/quit_test.go:88 TestQuitBusyTab: the card shows twice",
+		Usage: use("claude-sonnet-4-5", 6200, 90)}
+	pass := ai.Chunk{Delta: "Ran go test ./internal/app/: all tests pass.\nVERDICT: PASS", Usage: use("claude-sonnet-4-5", 7400, 40)}
+	main := &aiDemoProvider{name: "anthropic", replies: []ai.Chunk{{Delta: plan, Usage: use("claude-sonnet-4-5", 2400, 120)}, fail, pass}}
+	if arg == "fail" {
+		main.replies = main.replies[:2]
+	}
+	quick := &aiDemoProvider{name: "openai", replies: []ai.Chunk{
+		{Delta: "`quit.go` now shows the confirm card once.", Usage: use("gpt-5-mini", 8000, 600)},
+		{Delta: "The test waited for the old card; it now waits for one card.", Usage: use("gpt-5-mini", 5200, 300)},
+	}}
+	s.slotFake = aiDemoSlots(main, quick)
+	s.profile = ai.ProfileUntilDone
+	return m.sendAIChat("fix the double quit confirm and make the tests pass")
+}
+
 // aiDemoSlots are the two demo models: main is claude-sonnet-4-5 and
 // quick is gpt-5-mini (every demo screen uses the same two, so the
 // numbers agree between screens).

@@ -70,6 +70,14 @@ type StoredRun struct {
 	// when it paused (RunStatePaused).
 	Budget float64 `json:"budget,omitempty"`
 	Spent  float64 `json:"spent,omitempty"`
+	// Work until done (a profile with a loop): Rounds is the round the
+	// run is in (or ended in) and MaxRounds its limit; Verdict is "pass"
+	// or "fail" once it ended; Report is the last failing verify report
+	// (the fix step's input; a resume needs it).
+	Rounds    int    `json:"rounds,omitempty"`
+	MaxRounds int    `json:"max_rounds,omitempty"`
+	Verdict   string `json:"verdict,omitempty"`
+	Report    string `json:"report,omitempty"`
 }
 
 // StoredStep is one step card of a pipeline run.
@@ -101,6 +109,8 @@ type StoredStep struct {
 	// can resume after a restart. It lives in the chat file only; run
 	// snapshots never hold prompts.
 	Prompt string `json:"prompt,omitempty"`
+	// Round is the loop round the step last ran in (0: no loop).
+	Round int `json:"round,omitempty"`
 }
 
 // Conversation is one persisted chat. Port of mobocode's chat_store.dart,

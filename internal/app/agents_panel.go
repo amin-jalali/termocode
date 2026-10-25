@@ -686,6 +686,11 @@ func (s *aiState) agentsCard(d agentsRun, n agentsNode, w int, selected bool, no
 	if n.st != nil && n.st.Category != "" {
 		first += " · " + n.st.Category
 	}
+	roundTag := ""
+	if n.st != nil && n.st.Round > 1 {
+		roundTag = " · " + aiRoundText(n.st.Round, d.msg.Run.MaxRounds)
+	}
+	first += roundTag
 	out := []string{top}
 	if expanded {
 		stats := s.agentsStats(d, n, now)
@@ -702,7 +707,7 @@ func (s *aiState) agentsCard(d agentsRun, n agentsNode, w int, selected bool, no
 		out = append(out, row(tok, first), act, row(theme.TextDim, stats))
 	} else {
 		if stats := s.agentsStats(d, n, now); stats != "" && n.state.Done() {
-			first = glyph + " " + label + " · " + stats
+			first = glyph + " " + label + roundTag + " · " + stats
 		}
 		out = append(out, row(tok, first))
 		if line := agentsModelLine(n.st, inner-2); line != "" && n.state.Done() {
@@ -813,6 +818,9 @@ func (m Model) agentsBuild(width int, now time.Time) aiAgentsCache {
 	}
 	if d.of > 1 {
 		left += " (" + strconv.Itoa(d.nth) + "/" + strconv.Itoa(d.of) + ")"
+	}
+	if r := d.msg.Run; r.MaxRounds > 0 && r.Rounds > 0 {
+		left += " · " + aiRoundText(r.Rounds, r.MaxRounds)
 	}
 	right := "wave " + strconv.Itoa(wave) + "/" + strconv.Itoa(waves) + " · done " + strconv.Itoa(done) + "/" + strconv.Itoa(len(d.nodes))
 	lw := max(width-2-runewidth.StringWidth(right)-2, 4)

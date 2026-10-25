@@ -249,6 +249,12 @@ func goldenCases() []goldenCase {
 		sc := AIPipeline(v)
 		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
+	// Work until done (OM-3): verify passes in round 2, or the run gives
+	// up after the last round.
+	for _, v := range []string{"done", "fail"} {
+		sc := AIUntilDone(v)
+		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
+	}
 	// The agent profile chip, its picker and the project profile trust
 	// card (U20 AP-5).
 	for _, v := range []string{"chip", "picker", "trust", "save"} {

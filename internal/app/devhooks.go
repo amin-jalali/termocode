@@ -38,6 +38,7 @@ import (
 //	aidemo                 load a sample AI conversation
 //	aidemo-busy:tool|stall a running AI turn with its activity line
 //	aipipedemo:running|done a two-step agent pipeline run (scripted models)
+//	untildonedemo:done|fail a work-until-done run (scripted models)
 //	agentsdemo:running|done|live a planned diamond run in the AGENTS view
 //	                       (scripted models; live: steps take a moment)
 //	usagedemo:done         AI: Usage after the planned diamond run (scripted
@@ -167,6 +168,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		m.termDemo()
 	case "aipipedemo": // a two-step agent pipeline run (ai_run_demo.go): arg running or done
 		return m.aiPipelineDemo(arg)
+	case "untildonedemo": // a work-until-done run (ai_run_demo.go): arg done or fail
+		return m.aiUntilDoneDemo(arg)
 	case "agentsdemo": // a planned diamond run in the AGENTS view (ai_run_demo.go)
 		return m.aiAgentsDemo(arg)
 	case "usagedemo": // AI: Usage after a planned run (ai_run_demo.go)

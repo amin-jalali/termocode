@@ -180,6 +180,14 @@ func AIPipeline(variant string) Scene {
 		Steps: WithEditor(Act("palette:ai-open-chat"), Act("aipipedemo:"+variant), Pause(900*time.Millisecond))}
 }
 
+// AIUntilDone is a work-until-done run (OM-3) of the built-in
+// until-done profile on scripted models: "done" passes in round 2 after
+// one fix, "fail" still fails after the last round.
+func AIUntilDone(variant string) Scene {
+	return Scene{Name: "ai-until-done-" + variant, Env: aiEnv,
+		Steps: WithEditor(Act("palette:ai-open-chat"), Act("untildonedemo:"+variant), Pause(1200*time.Millisecond))}
+}
+
 // AgentsPanel is the AGENTS view (U20 AP-9) of a planned diamond run on
 // scripted models: "running" with its two middle steps working,
 // "done" when the run finished.

@@ -132,6 +132,12 @@ func (m Model) aiRunLines(i int, msg ai.StoredMessage, width, inner int) []aiLin
 		model := "" // the model of the step that answered
 		if n := len(msg.Steps); n > 0 {
 			model = msg.Steps[n-1].Model
+			for k := n - 1; k >= 0; k-- { // a loop's answer is verify's, not the last card's
+				if msg.Steps[k].Text == msg.Text {
+					model = msg.Steps[k].Model
+					break
+				}
+			}
 		}
 		out = append(out, m.aiAnswerHeaderModel(width, i, true, model))
 		out = append(out, s.renderAnswer(i, text, width, false, m.dragKind == dragActionsLeft)...)
@@ -148,6 +154,9 @@ func (m Model) aiRunLines(i int, msg ai.StoredMessage, width, inner int) []aiLin
 	}
 	if msg.Run.State == ai.RunStateRunning {
 		if waves != "" { // where the run is: "wave 2/4 · done 1/5 · 2 running"
+			if msg.Run.Rounds > 1 {
+				waves = aiRoundText(msg.Run.Rounds, msg.Run.MaxRounds) + " · " + waves
+			}
 			row := dash + " run · " + waves + " "
 			if pad := inner - runewidth.StringWidth(row); pad > 0 {
 				row += strings.Repeat(dash, pad)
@@ -178,6 +187,12 @@ func (m Model) aiRunLines(i int, msg ai.StoredMessage, width, inner int) []aiLin
 	out = append(out, aiLine{text: ind + row, style: theme.Fg(theme.TextDim), buttons: buttons})
 	if msg.Run.State == ai.RunStateInterrupted {
 		out = append(out, aiLine{text: ind + "✘ run interrupted (termocode restarted)", style: theme.Fg(theme.DiagError)})
+	}
+	if msg.Run.Verdict == "fail" {
+		text := fmt.Sprintf("✘ Not done after %d round%s: verify still fails. The last verify report is above.", msg.Run.Rounds, plural(msg.Run.Rounds))
+		for _, l := range wrapPlain(text, max(inner, 8)) {
+			out = append(out, aiLine{text: ind + l, style: theme.Fg(theme.DiagError)})
+		}
 	}
 	if n := s.aiRetryStep(i); n > 0 {
 		label := "↻ Retry from step " + strconv.Itoa(n)
@@ -225,6 +240,9 @@ func (m Model) aiStepCard(msg ai.StoredMessage, k int, st ai.StoredStep, width, 
 	if st.Category != "" && !state.Done() && state != agentdag.StateFailed {
 		rest += " (" + st.Category + ")"
 	}
+	if st.Round > 1 {
+		rest += " · " + aiRoundText(st.Round, msg.Run.MaxRounds)
+	}
 	if status := aiStepStatus(msg.Steps, k); status != "" {
 		rest += " · " + status
 	}
@@ -247,7 +265,7 @@ func (m Model) aiStepCard(msg ai.StoredMessage, k int, st ai.StoredStep, width, 
 		out = append(out, aiLine{text: ind + aiOneLine(aiCleanText(t)), style: dim})
 	}
 	switch {
-	case state == agentdag.StateRunning || state == agentdag.StatePending:
+	case state == agentdag.StateRunning || (state == agentdag.StatePending && st.Round == 0):
 		if t := aiOneLine(aiCleanText(st.Text)); t != "" {
 			room := max(inner-2-len("✎ now · \"…\""), 8)
 			if r := []rune(t); len(r) > room {
@@ -379,6 +397,16 @@ func aiRunSummaryText(run *ai.StoredRun, steps []ai.StoredStep) string {
 		stepsText = strconv.Itoa(done) + "/" + n + " steps"
 	}
 	parts := []string{label, aiDurText(run.ElapsedMs), stepsText}
+	switch {
+	case run.Verdict == "pass" && run.Rounds > 1:
+		parts = append(parts, fmt.Sprintf("%d rounds", run.Rounds), "verify ✓")
+	case run.Verdict == "pass":
+		parts = append(parts, "verify ✓")
+	case run.Verdict == "fail":
+		parts = append(parts, fmt.Sprintf("verify ✘ (%d round%s)", run.Rounds, plural(run.Rounds)))
+	case run.Rounds > 1: // stopped in a later round
+		parts = append(parts, aiRoundText(run.Rounds, run.MaxRounds))
+	}
 	if anyUsage {
 		parts = append(parts, aiTokText(tokens))
 	}
@@ -409,6 +437,14 @@ func aiRunUsageSpan(summary string) (x0, x1 int, ok bool) {
 		}
 	}
 	return runewidth.StringWidth(summary[:start]), runewidth.StringWidth(summary[:end]), true
+}
+
+// aiRoundText is a loop round: "round 2/3" ("round 2" without a limit).
+func aiRoundText(round, maxRounds int) string {
+	if maxRounds > 0 {
+		return fmt.Sprintf("round %d/%d", round, maxRounds)
+	}
+	return fmt.Sprintf("round %d", round)
 }
 
 // aiBudgetText is a budget in dollars with cents: $0.50, $2.00.
