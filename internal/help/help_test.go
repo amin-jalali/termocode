@@ -59,7 +59,7 @@ func TestRelLink(t *testing.T) {
 		{"guides/git.md", "mailto:a@b.c", Loc{}, false},
 		{"guides/git.md", "javascript:alert(1)", Loc{}, false},
 		{"guides/git.md", "file:///etc/passwd", Loc{}, false},
-		{"guides/git.md", "../assets/screenshots/demo.gif", Loc{}, false},
+		{"guides/git.md", "../assets/gifs/hero.gif", Loc{}, false},
 		{"guides/git.md", "/guides/ai-use.md", Loc{}, false},
 		{"guides/git.md", "", Loc{}, false},
 		{"guides/git.md", "../concepts/", Loc{}, false},

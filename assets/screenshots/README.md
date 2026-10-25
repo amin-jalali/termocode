@@ -33,26 +33,16 @@ go run ./internal/devtools/shots -font … -only dashboard,palette   # some scen
 | `theme-*.png` | each new theme (`-dashboard` = start page in Catppuccin Latte) |
 | `icons-unicode.png` | the Unicode icon set (no Nerd Font) |
 
-## Animated: `demo.gif`
+## Animated GIFs
 
-`demo.gif` is the README demo. The shots tool records it from
-`shotkit.DemoScene` (no vhs, ttyd or ffmpeg needed):
-
-```sh
-go run ./internal/devtools/shots -font ~/fonts/JetBrainsMonoNerdFont-Regular.ttf \
-  -w 120 -h 34 -out assets/screenshots -gif demo.gif
-```
-
-Each step's `Hold` sets how long its frame shows. Frames after the first
-store only the part of the screen that changed.
-[`demo.tape`](demo.tape) is an older vhs script for a recording of the real
-binary.
+The animated demos live in [`../gifs/`](../gifs/), starting with
+`hero.gif` (the README demo).
 
 ## Rules
 
-- PNG for stills, GIF for `demo.gif`. Render stills at `-w 160 -h 44` so they
+- PNG for stills. Render stills at `-w 160 -h 44` so they
   match; each PNG should stay under ~300 KB (the tool writes with best
-  compression), `demo.gif` under ~2 MB.
+  compression).
 - The README gallery uses `editor`, `ai-chat-answer`, `diff-review`,
   `dashboard`, `palette`, `scm`, `terminal`, `md-preview` and
   `theme-catppuccin-latte`. Regenerate them together:
