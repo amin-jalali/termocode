@@ -72,6 +72,12 @@ type SessionState struct {
 	AIProfile         string            `json:"ai_profile,omitempty"`
 	AIProfilesTrusted map[string]string `json:"ai_profiles_trusted,omitempty"`
 	AIProfilesRefused map[string]string `json:"ai_profiles_refused,omitempty"`
+	// AIRulesTrusted / AIRulesRefused are the answers of the project
+	// rules card (OM-1): the ai.Rules hash of the AGENTS.md /
+	// .termocode/rules.md text the user said Always / Not in this
+	// project to. A changed file has a new hash and asks again.
+	AIRulesTrusted string `json:"ai_rules_trusted,omitempty"`
+	AIRulesRefused string `json:"ai_rules_refused,omitempty"`
 
 	// Services view (services_state.go): "Always in this project" for the
 	// AI's start / stop / restart, the compose services termocode started
@@ -158,6 +164,8 @@ func workspacePart(s SessionState) SessionState {
 		AIProfile:         s.AIProfile,
 		AIProfilesTrusted: s.AIProfilesTrusted,
 		AIProfilesRefused: s.AIProfilesRefused,
+		AIRulesTrusted:    s.AIRulesTrusted,
+		AIRulesRefused:    s.AIRulesRefused,
 
 		ServicesAIAllowed:   s.ServicesAIAllowed,
 		ServicesStarted:     s.ServicesStarted,

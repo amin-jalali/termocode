@@ -1347,6 +1347,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `ai-profile-switch` | AI: Switch Profile… | confirm (settings) |   |
 | `ai-profile-trust` | AI: Project Profiles Trust… | never | trusting a project's prompts is the user's decision |
 | `ai-review` | AI: Review Pending Changes | never | the user reviews proposed edits |
+| `ai-rules` | AI: Project Rules… | never | trusting a project's rules is the user's decision |
 | `ai-sign-in-claude` | AI: Sign in with Claude (OAuth, opt-in)… | never | AI provider, credentials and approvals stay with the user |
 | `ai-sign-out-claude` | AI: Sign out of Claude | never | AI provider, credentials and approvals stay with the user |
 | `ai-toggle-inline` | AI: Toggle Inline Completions | confirm (ide) |   |

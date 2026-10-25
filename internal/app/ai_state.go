@@ -55,6 +55,8 @@ type aiState struct {
 	// profTrust is the open project-profile trust card (ai_profiles_ui.go).
 	profTrust   *aiProfileTrustPending
 	profileSave *aiProfileSavePending
+	// rulesTrust is the open project-rules card (ai_rules.go).
+	rulesTrust *aiRulesTrustPending
 	// profile is the active profile's name ("" = default); profErrShown
 	// is the profile errors already shown as a toast.
 	profile      string
@@ -389,6 +391,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-profile-edit", "AI: Edit Profiles", ""},
 		{"ai-profile-new", "AI: New Profile from Current…", ""},
 		{"ai-profile-trust", "AI: Project Profiles Trust…", ""},
+		{"ai-rules", "AI: Project Rules…", ""},
 		{"ai-models-edit", "AI: Edit Model Slots", ""},
 		{"ai-sign-in-claude", "AI: Sign in with Claude (OAuth, opt-in)…", ""},
 		{"ai-sign-out-claude", "AI: Sign out of Claude", ""},
@@ -501,6 +504,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIProfileNewPrompt(), true
 	case "ai-profile-trust":
 		return m.openAIProfileTrustPicker(), true
+	case "ai-rules":
+		return m.openAIRules(), true
 	case "ai-models-edit":
 		return m.editAIModelSlots(), true
 	}
