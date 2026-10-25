@@ -1376,6 +1376,8 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 			return m.aiUndoTurn(i)
 		}
 		return nil
+	case id == "memory-view": // OM-2: the memory line opens AI: Memory…
+		return m.openAIMemory()
 	case strings.HasPrefix(id, "rules-open:"):
 		return m.openAIRulesFile(strings.TrimPrefix(id, "rules-open:"))
 	case id == "attach-file":

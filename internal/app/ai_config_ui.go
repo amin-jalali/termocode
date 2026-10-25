@@ -60,6 +60,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onMCPServeStatusPicked(id), true
 	case pickerKindAIAttach:
 		return m.onAIAttachPicked(id), true
+	case pickerKindAIMemory: // ai_memory_picker.go
+		return m.onAIMemoryPicked(id), true
 	}
 	if cmd, ok := m.handleAIProfilePickerSelect(id); ok {
 		return cmd, true
@@ -122,6 +124,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIRulesTrust(id), true
 	case confirmKindAIMemoryAsk: // ai_memory_ask.go
 		return m.answerAIMemoryAsk(id), true
+	case confirmKindAIMemoryLesson, confirmKindAIMemoryForget, confirmKindAIMemoryForgetAll: // ai_memory_picker.go
+		return m.answerAIMemoryCard(m.confirmKind, id), true
 	case confirmKindAIProfileSave:
 		return m.onAIProfileSaveChoice(id), true
 	case confirmKindAIProfileShow: // read-only: Close
@@ -165,6 +169,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAIRulesTrust("") // Esc: no answer, the message goes back
 	case confirmKindAIMemoryAsk:
 		return m.answerAIMemoryAsk("") // Esc: Not now
+	case confirmKindAIMemoryLesson, confirmKindAIMemoryForget, confirmKindAIMemoryForgetAll:
+		return m.answerAIMemoryCard(m.confirmKind, "") // Esc: Keep
 	case confirmKindAIProfileSave:
 		return m.onAIProfileSaveChoice("cancel")
 	case confirmKindSecretForget:

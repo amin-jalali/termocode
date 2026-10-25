@@ -206,6 +206,14 @@ func AIProfile(variant string) Scene {
 		Steps: WithEditor(Act("palette:ai-open-chat"), Act("profiledemo:"+variant), Pause(600*time.Millisecond))}
 }
 
+// AIMemory is the AI memory UI (OM-2) with sample lessons: "chat" a turn
+// that saved lessons, "ask" the ask-once card, "picker" AI: Memory…,
+// "forget" a lesson's Forget card.
+func AIMemory(variant string) Scene {
+	return Scene{Name: "ai-memory-" + variant, Env: aiEnv,
+		Steps: WithEditor(Act("palette:ai-open-chat"), Act("memorydemo:"+variant), Pause(600*time.Millisecond))}
+}
+
 // MarkdownPreview opens docs/preview.md (a sample with every common block)
 // in the full-screen Markdown preview.
 // FindResults is the Find Results page for "Toast" (Find in Files).

@@ -64,6 +64,8 @@ type aiState struct {
 	memSlotWarned bool
 	// memAsk is the turn the open ask-once memory card is for.
 	memAsk *aiMemoryAskPending
+	// memLesson is the lesson id of the open memory card (ai_memory_picker.go).
+	memLesson string
 	// profile is the active profile's name ("" = default); profErrShown
 	// is the profile errors already shown as a toast.
 	profile      string
@@ -400,6 +402,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-profile-form", "AI: Edit Profile…", ""},
 		{"ai-profile-trust", "AI: Project Profiles Trust…", ""},
 		{"ai-rules", "AI: Project Rules…", ""},
+		{"ai-memory", "AI: Memory…", ""},
 		{"ai-memory-toggle", "AI: Memory: Turn On/Off", ""},
 		{"ai-models-edit", "AI: Edit Model Slots", ""},
 		{"ai-sign-in-claude", "AI: Sign in with Claude (OAuth, opt-in)…", ""},
@@ -517,6 +520,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIProfileTrustPicker(), true
 	case "ai-rules":
 		return m.openAIRules(), true
+	case "ai-memory":
+		return m.openAIMemory(), true
 	case "ai-memory-toggle":
 		return m.toggleAIMemory(), true
 	case "ai-models-edit":

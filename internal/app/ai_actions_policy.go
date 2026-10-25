@@ -413,6 +413,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-models-edit": aiNever(aiNoAIConfig),
 	// Memory (OM-2): the AI gets no memory tool; turning it on or off and
 	// forgetting lessons is the user's.
+	"ai-memory":        aiNever(aiNoPicker),
 	"ai-memory-toggle": aiNever(aiNoAIConfig),
 	// The AGENTS view (U20 AP-9) only shows the chat's runs.
 	"ai-agents": aiAuto(),

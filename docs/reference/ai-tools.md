@@ -1336,6 +1336,7 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `ai-mcp-connect` | AI: Connect a Service… (GitHub, Linear, Slack, Notion, Sentry) | never | AI provider, credentials and approvals stay with the user (signing in to services is the user's) |
 | `ai-mcp-log` | AI: MCP: Show Log | auto |   |
 | `ai-mcp-servers` | AI: MCP Servers… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `ai-memory` | AI: Memory… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-memory-toggle` | AI: Memory: Turn On/Off | never | AI provider, credentials and approvals stay with the user |
 | `ai-models-edit` | AI: Edit Model Slots | never | AI provider, credentials and approvals stay with the user |
 | `ai-new-chat` | AI: New Chat | never | starts or changes an AI chat or edit; answer in this chat instead |
