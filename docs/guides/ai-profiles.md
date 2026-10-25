@@ -357,7 +357,10 @@ chat back.
   and its time, turns (model requests) and tools. A running card shows
   its model next to the live time. A finished card shows its model,
   tokens and cost (`gpt-5-mini · 3.4k tok · $0.004`) in a second row;
-  on a narrow card the tokens go first, then the model version. Lines with `│ ├ ┐ ▼`
+  on a narrow card the tokens go first, then the model version. When a
+  running step gets no token for 30 s (90 s before its first token), its
+  card shows `⚠ possibly stalled · 35s` and turns yellow; the step in the
+  chat says the same. A tool that runs long never warns. Lines with `│ ├ ┐ ▼`
   join one wave to the next; the **Dependencies** list says exactly
   which step feeds which.
 - **Header.** The run id, the profile, `wave i/n` (the first wave that
