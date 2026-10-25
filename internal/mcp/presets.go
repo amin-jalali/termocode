@@ -304,6 +304,15 @@ func SetServerKey(path, name, key string, value any) error {
 	})
 }
 
+// SetDisabled turns one entry off ("disabled": true) or on (the key goes).
+// Every other key stays.
+func SetDisabled(path, name string, off bool) error {
+	if off {
+		return SetServerKey(path, name, "disabled", true)
+	}
+	return SetServerKey(path, name, "disabled", nil)
+}
+
 // RemoveServer deletes one entry (no error when it is not there).
 func RemoveServer(path, name string) error {
 	return editServers(path, func(servers map[string]any) error {

@@ -29,11 +29,12 @@ import (
 
 // Server states (Status.State).
 const (
-	StateStopped = "stopped"
-	StateRunning = "running"
-	StateFailed  = "failed"  // the last start failed (Problem says why); the next call tries again
-	StateInvalid = "invalid" // the entry can not run (Problem says why)
-	StateSignIn  = "sign-in needed"
+	StateStopped  = "stopped"
+	StateRunning  = "running"
+	StateFailed   = "failed"  // the last start failed (Problem says why); the next call tries again
+	StateInvalid  = "invalid" // the entry can not run (Problem says why)
+	StateSignIn   = "sign-in needed"
+	StateDisabled = "off" // "disabled": true in the entry: kept, never started, no tools
 )
 
 // TrustAnswer is the user's answer to "start this server?".
@@ -170,7 +171,7 @@ func (m *Manager) log(server, format string, args ...any) {
 // Reload re-reads mcp.json. A server whose entry changed or was removed
 // is stopped and forgets its tools; the others keep running.
 func (m *Manager) Reload() []string {
-	list, warns := Load(m.opts.UserPath, m.opts.ProjectPath)
+	list, warns := LoadAll(m.opts.UserPath, m.opts.ProjectPath)
 	var stop []*Process
 	m.mu.Lock()
 	next := map[string]*serverState{}
@@ -187,6 +188,9 @@ func (m *Manager) Reload() []string {
 		st := &serverState{cfg: s, state: StateStopped}
 		if s.Problem != "" {
 			st.state, st.problem = StateInvalid, s.Problem
+		}
+		if s.Disabled {
+			st.state, st.problem = StateDisabled, ""
 		}
 		next[s.Name] = st
 	}
@@ -309,6 +313,10 @@ func (m *Manager) ensure(ctx context.Context, st *serverState, ask AskTrust) (*P
 		p := st.problem
 		m.mu.Unlock()
 		return nil, errors.New(p)
+	}
+	if st.state == StateDisabled {
+		m.mu.Unlock()
+		return nil, fmt.Errorf("MCP server %q is off (Enable it in AI: MCP Servers…)", st.cfg.Name)
 	}
 	if st.proc != nil {
 		p := st.proc
@@ -637,7 +645,7 @@ func (m *Manager) Tools(ctx context.Context, ask AskTrust) []ServerTools {
 	m.mu.Lock()
 	var names []string
 	for name, st := range m.servers {
-		if st.state != StateInvalid && st.state != StateSignIn { // no 401 round trip per turn
+		if st.state != StateInvalid && st.state != StateSignIn && st.state != StateDisabled { // no 401 round trip per turn
 			names = append(names, name)
 		}
 	}
@@ -770,7 +778,7 @@ func (m *Manager) Stop(name string) {
 	m.mu.Lock()
 	p := st.proc
 	st.proc = nil
-	if st.state != StateInvalid {
+	if st.state != StateInvalid && st.state != StateDisabled {
 		st.state, st.problem = StateStopped, ""
 	}
 	if st.idle != nil {

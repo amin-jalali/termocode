@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/amin-jalali/termocode/internal/mcp/mcptest"
 	"github.com/zalando/go-keyring"
 )
 
@@ -15,6 +16,7 @@ import (
 // (errors.log, recents, session …) or clones plugins into ~/.local/share.
 // It also cuts the system clipboard and the network off.
 func TestMain(m *testing.M) {
+	mcptest.RunIfHelper() // the fake MCP server re-runs this binary
 	dir, err := os.MkdirTemp("", "termocode-app-test-")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

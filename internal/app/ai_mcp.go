@@ -313,6 +313,9 @@ func (m *Model) mcpToolsChangedToast(name string) tea.Cmd {
 // tools"; a known service reads "amin-jalali · read only · connected ·
 // 28 tools".
 func mcpStatusHint(st mcp.Status) string {
+	if st.State == mcp.StateDisabled {
+		return "off · kept in mcp.json, not started, no tools" + mcpSourceSuffix(st)
+	}
 	if h := mcpServiceHint(st); h != "" {
 		return h
 	}
@@ -356,6 +359,13 @@ func mcpStatusHint(st mcp.Status) string {
 	return ai.Redact(strings.Join(parts, " · "))
 }
 
+func mcpSourceSuffix(st mcp.Status) string {
+	if st.Source == mcp.SourceProject {
+		return " · project"
+	}
+	return ""
+}
+
 func mcpStatusIcon(st mcp.Status) string {
 	if st.Expired {
 		return "!"
@@ -363,6 +373,8 @@ func mcpStatusIcon(st mcp.Status) string {
 	switch st.State {
 	case mcp.StateRunning:
 		return "●"
+	case mcp.StateDisabled:
+		return "○"
 	case mcp.StateFailed, mcp.StateInvalid:
 		return "✗"
 	case mcp.StateSignIn:
@@ -414,6 +426,12 @@ func mcpServerActionItems(m *Model, name string) []picker.Item {
 	for _, x := range m.aiMCP().Servers() {
 		if x.Name == name {
 			st = x
+		}
+	}
+	if st.State == mcp.StateDisabled {
+		return []picker.Item{
+			{ID: "enable", Title: "Enable", Hint: "start it again; the AI gets its tools"},
+			{ID: "edit", Title: "Edit in mcp.json", Hint: st.Source},
 		}
 	}
 	items := []picker.Item{
@@ -469,6 +487,7 @@ func mcpServerActionItems(m *Model, name string) []picker.Item {
 	items = append(items,
 		picker.Item{ID: "edit", Title: "Edit in mcp.json", Hint: st.Source},
 		picker.Item{ID: "log", Title: "Show log", Hint: "Output: MCP"},
+		picker.Item{ID: "disable", Title: "Disable", Hint: "keep the entry, stop it, no tools for the AI"},
 	)
 	return items
 }
@@ -565,6 +584,8 @@ func (m *Model) onMCPServerAction(id string) tea.Cmd {
 		return m.mcpSetWrites(name, id == "writes")
 	case "add-account":
 		return m.mcpAddAccount(name)
+	case "disable", "enable":
+		return m.mcpSetDisabled(name, id == "disable")
 	}
 	if secret, ok := strings.CutPrefix(id, "secret:"); ok {
 		return m.mcpAskSecret(secret)
@@ -574,7 +595,7 @@ func (m *Model) onMCPServerAction(id string) tea.Cmd {
 
 // mcpServerEntries is the current mcp.json entry of name (0 or 1).
 func mcpServerEntries(name string) []mcp.Server {
-	list, _ := mcp.Load(mcpUserPath(), mcp.ProjectPath(aiWorkspaceRoot()))
+	list, _ := mcp.LoadAll(mcpUserPath(), mcp.ProjectPath(aiWorkspaceRoot()))
 	for _, s := range list {
 		if s.Name == name {
 			return []mcp.Server{s}

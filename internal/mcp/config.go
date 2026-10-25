@@ -224,6 +224,19 @@ func parseEntry(name string, raw json.RawMessage) Server {
 // entry replaces the user entry of the same name, and a disabled project
 // entry hides it. Missing files are fine; a broken one is a warning.
 func Load(userPath, projectPath string) ([]Server, []string) {
+	all, warns := LoadAll(userPath, projectPath)
+	out := all[:0:0]
+	for _, s := range all {
+		if !s.Disabled {
+			out = append(out, s)
+		}
+	}
+	return out, warns
+}
+
+// LoadAll is Load with the disabled entries kept (the services list shows
+// them as off).
+func LoadAll(userPath, projectPath string) ([]Server, []string) {
 	by := map[string]Server{}
 	var warns []string
 	for _, f := range []struct{ path, source string }{{userPath, SourceUser}, {projectPath, SourceProject}} {
@@ -249,9 +262,7 @@ func Load(userPath, projectPath string) ([]Server, []string) {
 	}
 	out := make([]Server, 0, len(by))
 	for _, s := range by {
-		if !s.Disabled {
-			out = append(out, s)
-		}
+		out = append(out, s)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out, warns
