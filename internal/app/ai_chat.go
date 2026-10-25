@@ -182,11 +182,12 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	if prof.Source == ai.ProfileSourceProject && m.aiProfileTrust(prof) != aiTrustUse {
 		return m.askAIProfileTrust(prof, aiTrustAfterSend, text) // F4: a repo's prompts are shown first
 	}
-	if r := ai.LoadProjectRules(aiWorkspaceRoot()); r.Text != "" && aiRulesTrust(r) == aiTrustAsk {
-		return m.askAIRulesTrust(r, true, text) // OM-1: a repo's rules file is shown first
+	rules := ai.LoadProjectRules(aiWorkspaceRoot()) // OM-1: read once per turn
+	if rules.Text != "" && aiRulesTrust(rules) == aiTrustAsk {
+		return m.askAIRulesTrust(rules, true, text) // a repo's rules file is shown first
 	}
 	if len(prof.Steps) > 1 || prof.Planned() {
-		return m.startAIRun(text, prof)
+		return m.startAIRun(text, prof, rules)
 	}
 	step := prof.Run("").Nodes[0]
 	slot, err := s.resolveSlot(step.Slot)
@@ -200,7 +201,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		model = "" // the chat's own model: stored chats stay as they were
 	}
 	s.conv.Messages = append(s.conv.Messages,
-		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Images: images},
+		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Images: images, Rules: aiRulesLabel(rules)},
 		ai.StoredMessage{Role: ai.StoredAssistant, Model: model},
 	)
 	s.scroll = 0
@@ -213,7 +214,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	call := newAIIDECaller(gen, ch)
 	tools := aiFilterTools(m.aiChatTools(root, call), step.Tools)
 	native := slot.p.SupportsTools()
-	base := m.aiChatBasePrompt(root) + aiStepSystem(step.System)
+	base := m.aiChatBasePrompt(root, rules) + aiStepSystem(step.System)
 	history := m.aiChatHistory(ai.SystemPrompt(base, tools, native))
 	mcpTools := m.aiMCPTurn(gen, ch) // MCP servers' tools, built on the goroutine
 	mcpLines := ""
@@ -278,12 +279,14 @@ func (s *aiState) takeAttachments() (string, []string) {
 }
 
 // aiChatBasePrompt is the chat's system prompt before the tool protocol.
-func (m *Model) aiChatBasePrompt(root string) string {
+// rules are the project rules read at the turn's start (added only when
+// the user trusts them).
+func (m *Model) aiChatBasePrompt(root string, rules ai.Rules) string {
 	base := aiChatSystemPrompt + "\nWorkspace root: " + root + m.aiServicesPromptLine(root) + m.aiContainersPromptLine() + aiDBPromptLine(root)
 	if p := m.editor.Path(); p != "" {
 		base += "\nThe open file is: " + p
 	}
-	return base
+	return base + aiRulesPrompt(rules)
 }
 
 // autoApproveSet is ai_auto_approve as a set (one per agent: "Always

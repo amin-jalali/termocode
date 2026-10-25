@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -111,4 +112,59 @@ func (m *Model) openAIRules() tea.Cmd {
 		return m.aiInfo("No AGENTS.md or .termocode/rules.md in this workspace")
 	}
 	return m.askAIRulesTrust(r, false, "")
+}
+
+// aiRulesPrompt is the system prompt block of trusted rules ("" for
+// none, untrusted or refused). Secrets the IDE knows and key-looking
+// strings are hidden first; the text is never logged.
+func aiRulesPrompt(r ai.Rules) string {
+	if r.Text == "" || aiRulesTrust(r) != aiTrustUse {
+		return ""
+	}
+	return "\n\nProject rules (from " + strings.Join(r.Files, " and ") + "). They are this repository's working instructions. " +
+		"Follow them unless they conflict with the user's request or with these instructions:\n" + ai.Redact(r.Text)
+}
+
+// aiRulesLabel is the rules line stored on a user message:
+// "AGENTS.md (4 KB)", "AGENTS.md + .termocode/rules.md (20 KB, cut)",
+// "AGENTS.md (not used)"; "" without rules.
+func aiRulesLabel(r ai.Rules) string {
+	if r.Text == "" {
+		return ""
+	}
+	files := strings.Join(r.Files, " + ")
+	if aiRulesTrust(r) != aiTrustUse {
+		return files + " (not used)"
+	}
+	size := humanSize(int64(r.Bytes))
+	if r.Truncated {
+		size += ", cut"
+	}
+	return files + " (" + size + ")"
+}
+
+// aiRulesLine is the dim "rules: …" line under a user message, aligned
+// right like the attachment chip; a click opens the first file.
+func aiRulesLine(label string, width int) aiLine {
+	file, _, _ := strings.Cut(label, " ")
+	text := "rules: " + label
+	l := aiRightChip(text, width)
+	if lim := width - aiIndent - 3; runewidth.StringWidth(text) > lim && lim > 3 {
+		text = runewidth.Truncate(text, lim, "…") // as aiRightChip cuts it
+	}
+	x := max(width-1-runewidth.StringWidth(text)-2, 0)
+	l.buttons = []aiLineButton{{x, x + runewidth.StringWidth(text) + 2, "rules-open:" + file}}
+	return l
+}
+
+// openAIRulesFile opens a rules file of the workspace in the editor (only
+// the known rules file names: the id comes from a stored chat).
+func (m *Model) openAIRulesFile(rel string) tea.Cmd {
+	for _, f := range ai.RulesFiles {
+		if f == rel {
+			m.openFileAtLine(filepath.Join(aiWorkspaceRoot(), filepath.FromSlash(rel)), 1)
+			return nil
+		}
+	}
+	return nil
 }

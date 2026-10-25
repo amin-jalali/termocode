@@ -201,7 +201,7 @@ func (s *aiState) aiRunPreflight(run agentdag.Run, cats map[string]string) (map[
 }
 
 // startAIRun starts a pipeline run of prof for a new user message.
-func (m *Model) startAIRun(text string, prof ai.Profile) tea.Cmd {
+func (m *Model) startAIRun(text string, prof ai.Profile, rules ai.Rules) tea.Cmd {
 	s := m.aiS()
 	run := prof.Run(aiNewRunID())
 	run.CreatedAt = clock.Now()
@@ -221,17 +221,18 @@ func (m *Model) startAIRun(text string, prof ai.Profile) tea.Cmd {
 		}
 	}
 	s.conv.Messages = append(s.conv.Messages,
-		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Images: images},
+		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Images: images, Rules: aiRulesLabel(rules)},
 		ai.StoredMessage{Role: ai.StoredAssistant, Run: &ai.StoredRun{ID: run.ID, Profile: prof.Name, State: ai.RunStateRunning}, Steps: steps},
 	)
 	s.scroll = 0
-	return m.launchAIRun(len(s.conv.Messages)-1, run, slots, nil)
+	return m.launchAIRun(len(s.conv.Messages)-1, run, slots, nil, rules)
 }
 
 // launchAIRun runs run for the assistant message at msgIdx (the user
 // message is just before it). outputs are the saved outputs of nodes
-// that are completed already (retry).
-func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlot, outputs map[string]string) tea.Cmd {
+// that are completed already (retry). rules are the project rules read
+// for this launch (OM-1).
+func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlot, outputs map[string]string, rules ai.Rules) tea.Cmd {
 	s := m.aiS()
 	s.runMsg, s.runSlots, s.runFiles = msgIdx, slots, map[string]int{}
 	s.chatGen++
@@ -241,7 +242,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	root := aiWorkspaceRoot()
 	call := newAIIDECaller(gen, ch)
 	tools := m.aiChatTools(root, call)
-	base := m.aiChatBasePrompt(root)
+	base := m.aiChatBasePrompt(root, rules)
 	hist := m.aiChatHistoryN("", msgIdx)
 	user := hist[len(hist)-1].Content
 	mcpTools := m.aiMCPTurn(gen, ch)
@@ -713,7 +714,7 @@ func (m *Model) aiRetryRun(i int) tea.Cmd {
 	}
 	s.turnMsg = i - 1
 	s.scroll = 0
-	return m.launchAIRun(i, run, slots, outputs)
+	return m.launchAIRun(i, run, slots, outputs, ai.LoadProjectRules(aiWorkspaceRoot())) // OM-1: current rules
 }
 
 // ── Run snapshots ────────────────────────────────────────────────────────

@@ -510,6 +510,9 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 			if msg.Context != "" {
 				out = append(out, aiRightChip(aiAttachGlyph()+" "+aiContextLabel(msg.Context), width))
 			}
+			if msg.Rules != "" { // OM-1: "rules: AGENTS.md (4 KB)", click opens the file
+				out = append(out, aiRulesLine(msg.Rules, width))
+			}
 		case ai.StoredAssistant:
 			if msg.Run != nil { // a pipeline run: step cards (ai_run_cards.go)
 				out = append(out, m.aiRunLines(i, msg, width, inner)...)
@@ -1370,6 +1373,8 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 			return m.aiUndoTurn(i)
 		}
 		return nil
+	case strings.HasPrefix(id, "rules-open:"):
+		return m.openAIRulesFile(strings.TrimPrefix(id, "rules-open:"))
 	case id == "attach-file":
 		return m.openAIAttachPicker()
 	case strings.HasPrefix(id, "rm-attach:"):
