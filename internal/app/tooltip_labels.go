@@ -155,6 +155,9 @@ func (m Model) tooltipLabel(id string) (name, key string) {
 		}
 		return "Fold section", "Space"
 	}
+	if name, key, _, ok := itermocTooltip(id); ok {
+		return name, key
+	}
 	if strings.HasPrefix(id, "cont:grp:") {
 		return "Project actions: start, stop, restart, or remove", "s · x · r · D"
 	}
@@ -264,6 +267,9 @@ func (m Model) tooltipText(id string) string {
 
 // tooltipHelp is the guide topic of hit target id ("" = none).
 func tooltipHelp(id string) string {
+	if _, _, help, ok := itermocTooltip(id); ok {
+		return help
+	}
 	if strings.HasPrefix(id, "welcome:card:") {
 		return "getting-started/first-steps.md#1-open-a-project"
 	}

@@ -37,7 +37,25 @@ type imBtn struct {
 	start, end     int // sidebar-local cells, end exclusive
 }
 
-func (b imBtn) text() string { return "[" + b.label + " (" + b.key + ")]" }
+func (b imBtn) text() string {
+	return "[" + imText(b.label) + " (" + b.key + ")]"
+}
+
+// imText is a label ready for the icon mode ("Trust…" is "Trust..." in ASCII).
+func imText(s string) string {
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		return strings.ReplaceAll(s, "…", "...")
+	}
+	return s
+}
+
+// imTrunc cuts s to w cells with the icon mode's ellipsis.
+func imTrunc(s string, w int) string {
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		return runewidth.Truncate(s, w, "...")
+	}
+	return runewidth.Truncate(s, w, "…")
+}
 
 // imLine is one drawn line: the styled text and its click targets.
 type imLine struct {
@@ -66,7 +84,7 @@ func (b *imBuilder) room() int { return max(b.w-b.used, 0) }
 func (b *imBuilder) add(t string, tok theme.Color256, bold bool) int {
 	at := b.used
 	if r := b.room(); r > 0 && t != "" {
-		t = runewidth.Truncate(t, r, "…")
+		t = imTrunc(t, r)
 		b.segs = append(b.segs, imSeg{t, tok, bold})
 		b.used += runewidth.StringWidth(t)
 	}
@@ -291,7 +309,7 @@ func (m Model) itermocLines(st *itermocState, w int, focused bool) []imLine {
 			}
 			b.add(itermocSectionTitle(r.sec), col, true)
 			if note := theme.ASCIIText(st.sectionNote(r.sec)); note != "" && b.room() > 4 {
-				note = runewidth.Truncate(note, b.room()-2, "…")
+				note = imTrunc(note, b.room()-2)
 				gap := b.room() - runewidth.StringWidth(note) - 1
 				b.add(strings.Repeat(" ", max(gap, 2)), theme.TextMuted, false)
 				b.add(note, theme.TextMuted, false)
@@ -346,7 +364,7 @@ func (m Model) itermocLines(st *itermocState, w int, focused bool) []imLine {
 }
 
 func imPad(s string, w int) string {
-	s = runewidth.Truncate(s, w, "…")
+	s = imTrunc(s, w)
 	if pad := w - runewidth.StringWidth(s); pad > 0 {
 		s += strings.Repeat(" ", pad)
 	}
@@ -448,7 +466,7 @@ func itermocSlotLine(b *imBuilder, l *imLine, s imSlot, nameW int) {
 		stateW = runewidth.StringWidth(state) + 2
 	}
 	if d := room - fixW - stateW; d >= 6 {
-		b.add("  "+runewidth.Truncate(detail, d, "…"), theme.TextMuted, false)
+		b.add("  "+imTrunc(detail, d), theme.TextMuted, false)
 	}
 	if showState {
 		stok := theme.TextMuted
@@ -475,7 +493,7 @@ func itermocServiceLine(b *imBuilder, l *imLine, s mcp.Status, nameW int) {
 		fixW = runewidth.StringWidth(" [Sign in (i)]") + 1
 	}
 	if d := b.room() - 2 - fixW; d >= 6 {
-		b.add("  "+runewidth.Truncate(theme.ASCIIText(mcpStatusHint(s)), d, "…"), theme.TextMuted, false)
+		b.add("  "+imTrunc(theme.ASCIIText(mcpStatusHint(s)), d), theme.TextMuted, false)
 	}
 	if s.Expired || s.State == mcp.StateSignIn {
 		itermocFix(b, l, "signin", "Sign in", "i")
@@ -502,7 +520,7 @@ func itermocStatusLine(b *imBuilder, sn itermocSnap, nameW int) {
 	b.add(g+" ", tok, false)
 	b.add(imPad(name, max(nameW, len(name))), theme.TextPrimary, false)
 	if d := b.room() - 2; d >= 6 {
-		b.add("  "+runewidth.Truncate(theme.ASCIIText(detail), d, "…"), theme.TextMuted, false)
+		b.add("  "+imTrunc(theme.ASCIIText(detail), d), theme.TextMuted, false)
 	}
 }
 
@@ -528,7 +546,7 @@ func itermocHeader(w int, filter string, typing bool) string {
 	leftW := 2 + len("ITERMOC")
 	right := ""
 	if text := inlineFilterTitle(filter, typing, theme.CurrentIconMode == theme.IconModeASCII); text != "" {
-		right = runewidth.Truncate(text, max(w-leftW-3, 1), "…")
+		right = imTrunc(text, max(w-leftW-3, 1))
 	} else if w >= leftW+len("? keys  / filter")+2 {
 		right = "? keys  / filter"
 	} else if w >= leftW+6 {
@@ -566,7 +584,7 @@ func (m Model) renderItermocSidebar(w, h int) string {
 		if strings.TrimSpace(st.filter) != "" {
 			msg = "No rows match \"" + sanitizeOutputLine(st.filter) + "\" · Esc clears"
 		}
-		lines = append(lines, testsPad(theme.FgBg(theme.TextMuted, theme.BgSidebar).Render("  "+runewidth.Truncate(theme.ASCIIText(msg), max(w-2, 1), "…")), w))
+		lines = append(lines, testsPad(theme.FgBg(theme.TextMuted, theme.BgSidebar).Render("  "+imTrunc(theme.ASCIIText(msg), max(w-2, 1))), w))
 	}
 	all := m.itermocLines(st, w, focused)
 	for i := st.scroll; i < len(all) && len(lines) < itermocTopRows+bodyH; i++ {
@@ -576,7 +594,7 @@ func (m Model) renderItermocSidebar(w, h int) string {
 		lines = append(lines, fill())
 	}
 	foot := theme.ASCIIText("Enter actions · Space fold · ? keys")
-	foot = runewidth.Truncate(foot, max(w-2, 1), "…")
+	foot = imTrunc(foot, max(w-2, 1))
 	lines = append(lines, testsPad(theme.Bg(theme.BgSidebar).Render(" ")+theme.FgBg(theme.TextMuted, theme.BgSidebar).Render(foot), w))
 	return strings.Join(lines[:h], "\n")
 }

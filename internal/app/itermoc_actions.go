@@ -497,6 +497,54 @@ func (m *Model) itermocSetKey(slot string) tea.Cmd {
 	return cmd
 }
 
+// itermocTooltip is the hover label of a hit target of the view (ids start
+// with "im:"): the name, the keys and the guide section. ok=false: not ours.
+func itermocTooltip(id string) (name, key, help string, ok bool) {
+	rest, isIM := strings.CutPrefix(id, "im:")
+	if !isIM {
+		return "", "", "", false
+	}
+	help = itermocGuidePage + "#the-view"
+	kind, rest, _ := strings.Cut(rest, ":")
+	switch kind {
+	case "sec":
+		return "Fold section", "Space", help, true
+	case "btn":
+		sec, bid, _ := strings.Cut(rest, ":")
+		for _, b := range itermocButtonDefs(sec) {
+			if b.id == bid {
+				return b.label, b.key, help, true
+			}
+		}
+	case "fix":
+		at := strings.LastIndex(rest, ":")
+		if at < 0 {
+			return "", "", "", false
+		}
+		switch rest[at+1:] {
+		case "trust":
+			return "Trust this project's profile…", "t", help, true
+		case "setkey":
+			return "Set the key of this model's provider", "k", help, true
+		case "signin":
+			return "Sign in to this service", "i", help, true
+		}
+	case "row":
+		sec, _, _ := strings.Cut(rest, "/")
+		switch sec {
+		case imSecProfiles:
+			return "Profile actions: use, details, duplicate, runs, trust, edit JSON", "Enter · u · d · D", help, true
+		case imSecModels:
+			return "Model slot: set a key, pick the model, edit slots", "Enter · k · e", help, true
+		case imSecServices:
+			return "Service actions: sign in, tools, writes, disable, remove", "Enter · i", help, true
+		case imSecAgents:
+			return "Outside agents: status, allowed tools, disconnect", "Enter", help, true
+		}
+	}
+	return "", "", "", false
+}
+
 // ── Mouse ────────────────────────────────────────────────────────────────
 
 func (m Model) handleItermocSidebarMouse(x, y int, t tea.MouseEventType) (Model, tea.Cmd) {
