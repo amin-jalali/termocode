@@ -38,8 +38,8 @@ import (
 //	aidemo                 load a sample AI conversation
 //	aidemo-busy:tool|stall a running AI turn with its activity line
 //	aipipedemo:running|done a two-step agent pipeline run (scripted models)
-//	agentsdemo:running|done a planned diamond run in the AGENTS view
-//	                       (scripted models)
+//	agentsdemo:running|done|live a planned diamond run in the AGENTS view
+//	                       (scripted models; live: steps take a moment)
 //	usagedemo:done         AI: Usage after the planned diamond run (scripted
 //	                       models; an earlier run is in the session)
 //	profiledemo:chip|picker|trust|save|show the agent profile UI (sample data)

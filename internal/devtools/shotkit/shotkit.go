@@ -33,8 +33,18 @@ type Step struct {
 	Build func(frame string) (tea.Msg, error)
 	Wait  time.Duration
 	// Hold is how long a recording (Options.OnFrame) shows the frame after
-	// this step; 0 = defaultHold.
+	// this step; 0 = defaultHold, negative = a setup step a recording
+	// leaves out (OnFrame still gets the negative value).
 	Hold time.Duration
+	// Until, when set, makes the driver wait (up to 20 s) for the text to
+	// be on screen after the step, so a scene does not depend on timing.
+	Until string
+	// Live records the frame after Wait without waiting for the screen to
+	// settle (a GIF of something in motion, such as a streaming answer).
+	Live bool
+	// Caption, when set, is the caption of the scene a GIF recording starts
+	// at this step's frame (internal/devtools/gifkit). Run ignores it.
+	Caption string
 }
 
 // defaultHold is the recording time of a step without Hold.
@@ -299,7 +309,7 @@ func Run(sc Scene, w, h int, opt Options) (string, error) {
 		if opt.OnFrame == nil {
 			return
 		}
-		if hold <= 0 {
+		if hold == 0 {
 			hold = defaultHold
 		}
 		f, _ := frame()
@@ -321,8 +331,26 @@ func Run(sc Scene, w, h int, opt Options) (string, error) {
 		if msg != nil {
 			p.Send(msg)
 		}
-		if err := settle(st.Wait, stepQuiet); err != nil {
+		if st.Live {
+			time.Sleep(st.Wait)
+		} else if err := settle(st.Wait, stepQuiet); err != nil {
 			return "", fmt.Errorf("step %d: %w", i+1, err)
+		}
+		if st.Until != "" {
+			deadline := time.Now().Add(20 * time.Second)
+			for {
+				f, _ := frame()
+				if strings.Contains(StripANSI(f), st.Until) {
+					break
+				}
+				if time.Now().After(deadline) {
+					return "", fmt.Errorf("step %d: %q never appeared", i+1, st.Until)
+				}
+				time.Sleep(50 * time.Millisecond)
+			}
+			if err := settle(0, stepQuiet); err != nil {
+				return "", fmt.Errorf("step %d: %w", i+1, err)
+			}
 		}
 		record(st.Hold)
 	}

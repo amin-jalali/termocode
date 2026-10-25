@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"sync"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -152,6 +153,9 @@ func (m *Model) aiUsageDemo(arg string) tea.Cmd {
 type aiDemoFuncProvider struct {
 	name  string
 	reply func(ai.Request) (ai.Chunk, bool)
+	// delay, when set, is how long an answer takes (the "live" variant
+	// of the GIF: steps take a moment, so the run builds up on screen).
+	delay func(ai.Request) time.Duration
 }
 
 func (p *aiDemoFuncProvider) Name() string        { return p.name }
@@ -162,6 +166,14 @@ func (p *aiDemoFuncProvider) Stream(ctx context.Context, req ai.Request) <-chan 
 	ch := make(chan ai.Chunk, 2)
 	go func() {
 		defer close(ch)
+		if p.delay != nil {
+			select {
+			case <-time.After(p.delay(req)):
+			case <-ctx.Done():
+				ch <- ai.Chunk{Done: true, Err: ctx.Err()}
+				return
+			}
+		}
 		if r.Delta != "" {
 			ch <- ai.Chunk{Delta: r.Delta}
 		}
@@ -201,10 +213,11 @@ func aiDemoTask(r ai.Request) string {
 // aiAgentsDemo starts a planned diamond run on scripted models (dev
 // action "agentsdemo:running|done") and shows it in the AGENTS view:
 // "running" leaves the two middle steps working, "done" lets the run
-// finish.
+// finish, "live" lets every step take a moment and then finish (the GIF).
 func (m *Model) aiAgentsDemo(arg string) tea.Cmd {
 	s := m.aiS()
 	running := arg == "running"
+	live := arg == "live"
 	use := func(model string, in, out int) *ai.Usage {
 		return &ai.Usage{Model: model, Input: in, Output: out, Requests: 1, PeakContext: in}
 	}
@@ -241,6 +254,22 @@ func (m *Model) aiAgentsDemo(arg string) tea.Cmd {
 		}
 		return ai.Chunk{Delta: "?"}, false
 	}}
+	if live {
+		deep.delay = func(ai.Request) time.Duration { return 1200 * time.Millisecond }
+		quick.delay = func(r ai.Request) time.Duration {
+			switch task := aiDemoTask(r); {
+			case task == "map" && !toolDone(r):
+				return 600 * time.Millisecond
+			case task == "map":
+				return 800 * time.Millisecond
+			case task == "cache" && !toolDone(r):
+				return 600 * time.Millisecond
+			case task == "cache":
+				return 1500 * time.Millisecond
+			}
+			return 2200 * time.Millisecond // the lexer
+		}
+	}
 	s.slotFake = map[string]aiSlot{
 		ai.SlotMain:  {p: deep, cfg: ai.Config{Kind: ai.KindAnthropic, Model: "claude-sonnet-4-5"}},
 		ai.SlotQuick: {p: quick, cfg: ai.Config{Kind: ai.KindOpenAI, Model: "gpt-5-mini"}},
