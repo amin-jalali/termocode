@@ -1270,6 +1270,8 @@ func (m Model) renderSidebar(h int) string {
 		content = m.renderServicesSidebar(contentW, h)
 	case activity.ViewDatabases: // db_view.go
 		content = m.renderDatabasesSidebar(contentW, h)
+	case activity.ViewItermoc: // itermoc_view.go
+		content = m.renderItermocSidebar(contentW, h)
 	case activity.ViewRuns: // runs_view.go
 		content = m.renderRunsSidebar(contentW, h)
 	default:

@@ -1556,6 +1556,12 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `http-saved` | HTTP: Saved Requests… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_list_requests on http/saved.http) |
 | `http-send` | HTTP: Send Request at Cursor | never | sends a network request; use http_send (gated by host and method) |
 | `http-send-pick` | HTTP: Send Request… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_list_requests, http_send) |
+| `itermoc-agents` | Itermoc: Outside Agents | never | a screen for the user (secrets and access live there); the AI will get a typed ai_view_open tool instead |
+| `itermoc-models` | Itermoc: Models | never | a screen for the user (secrets and access live there); the AI will get a typed ai_view_open tool instead |
+| `itermoc-open` | Itermoc: Open | never | a screen for the user (secrets and access live there); the AI will get a typed ai_view_open tool instead |
+| `itermoc-open-ai` | AI: Agents & Connections | never | a screen for the user (secrets and access live there); the AI will get a typed ai_view_open tool instead |
+| `itermoc-profiles` | Itermoc: Profiles | never | a screen for the user (secrets and access live there); the AI will get a typed ai_view_open tool instead |
+| `itermoc-services` | Itermoc: Services | never | a screen for the user (secrets and access live there); the AI will get a typed ai_view_open tool instead |
 | `join-lines` | Edit: Join Lines | confirm (fileWrite) |   |
 | `lowercase` | Edit: Convert to lowercase | confirm (fileWrite) |   |
 | `lsp-manage` | LSP: Manage Language Servers... | never | opens a picker or prompt that only the user can answer; use a typed tool (lsp_servers) |

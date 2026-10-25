@@ -86,6 +86,8 @@ type aiState struct {
 	// profFake are profiles added after every profile load (the demo
 	// shots' project profile, which has no file).
 	profFake []ai.Profile
+	// keyOnly: the open key prompt came from Itermoc and only stores the key.
+	keyOnly bool
 	// slotFake replaces model slots by name (tests and the demo shots).
 	slotFake map[string]aiSlot
 

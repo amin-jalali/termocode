@@ -25,6 +25,7 @@ const (
 	ViewTests     // Group E: Testing view (test explorer)
 	ViewServices  // dev services: Docker Compose and local commands
 	ViewDatabases // database connections and schema browser
+	ViewItermoc   // Itermoc: AI profiles, models, services and outside agents
 	ViewRuns      // Runs: what the AI is doing now (runs_*.go in app)
 )
 

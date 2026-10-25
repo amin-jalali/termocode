@@ -245,6 +245,11 @@ func (m Model) sidebarTargets() []hitTarget {
 			h.X += x0
 			out = append(out, h)
 		}
+	case activity.ViewItermoc: // itermoc_view.go
+		for _, h := range m.itermocHits(w) {
+			h.X += x0
+			out = append(out, h)
+		}
 	case activity.ViewRuns: // runs_page.go
 		out = append(out, m.runsSidebarTargets(x0, w)...)
 	}
@@ -504,6 +509,16 @@ func (m Model) sidebarTargetAt(x, y int) string {
 			if x >= h.X && x < h.X+h.W && y == h.Y {
 				return h.ID
 			}
+		}
+	case activity.ViewItermoc:
+		best := ""
+		for _, h := range m.itermocHits(m.explorerWidth - 1) {
+			if x >= h.X && x < h.X+h.W && y == h.Y && (best == "" || strings.HasPrefix(h.ID, "im:btn:") || strings.HasPrefix(h.ID, "im:fix:")) {
+				best = h.ID
+			}
+		}
+		if best != "" {
+			return best
 		}
 	}
 	return "sidebar"

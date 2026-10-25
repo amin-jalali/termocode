@@ -45,6 +45,7 @@ var activityHelp = map[string]string{
 	"Testing":        "guides/tests.md#open-the-testing-view",
 	"Containers":     "guides/containers.md#the-view",
 	"Databases":      "guides/databases.md#open-the-view",
+	"Itermoc":        "guides/itermoc.md#the-view",
 	"Runs":           runsGuidePage + "#open-runs",
 }
 

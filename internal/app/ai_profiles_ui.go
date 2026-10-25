@@ -538,6 +538,18 @@ func (m *Model) editAIProfiles() tea.Cmd {
 	return m.aiInfo("Edit and save; the profile picker and Alt+Shift+P read the file again")
 }
 
+// openAIProfileCopyForm is Itermoc's Duplicate…: the step form on a copy
+// of profile from under a free name (nothing is written until Save).
+func (m *Model) openAIProfileCopyForm(from string) tea.Cmd {
+	s := m.aiS()
+	s.reloadProfiles()
+	p, ok := s.profiles.Get(from)
+	if !ok {
+		return m.aiInfo("No profile " + from)
+	}
+	return m.openAIProfileForm(m.freeProfileName("my-"+from), p, false)
+}
+
 func (m *Model) onAIProfileSaveChoice(id string) tea.Cmd {
 	s := m.aiS()
 	pending := s.profileSave

@@ -203,6 +203,8 @@ func (m Model) sidebarHelpTopic() string {
 		return helpContexts["search-view"]
 	case activity.ViewDatabases:
 		return helpContexts["databases"]
+	case activity.ViewItermoc:
+		return activityHelp["Itermoc"]
 	case activity.ViewRuns:
 		return activityHelp["Runs"]
 	}

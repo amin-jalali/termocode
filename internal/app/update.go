@@ -389,6 +389,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		if msg.View == activity.ViewDatabases {
 			return m, m.revealDatabasesView(false)
 		}
+		if msg.View == activity.ViewItermoc {
+			return m, m.revealItermocView(false, "")
+		}
 		if msg.View == activity.ViewRuns {
 			return m, m.revealRuns(false)
 		}
@@ -1528,7 +1531,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	// Source Control panel has the focus: its list and commit box need
 	// the arrows, Tab and Enter. The Services and Databases trees also own
 	// their navigation keys when focused.
-	if m.welcomeShowing() && !(m.focus == FocusExplorer && (m.activity.Active() == activity.ViewGit || m.activity.Active() == activity.ViewServices || m.activity.Active() == activity.ViewDatabases || m.activity.Active() == activity.ViewRuns)) {
+	if m.welcomeShowing() && !(m.focus == FocusExplorer && (m.activity.Active() == activity.ViewGit || m.activity.Active() == activity.ViewServices || m.activity.Active() == activity.ViewDatabases || m.activity.Active() == activity.ViewItermoc || m.activity.Active() == activity.ViewRuns)) {
 		if newM, cmd, handled := m.handleWelcomeKey(msg); handled {
 			return newM, cmd
 		}
@@ -2317,6 +2320,10 @@ func (m Model) dispatchToFocus(msg tea.Msg) (Model, tea.Cmd) {
 		case activity.ViewDatabases: // db_actions.go
 			if k, ok := msg.(tea.KeyMsg); ok {
 				return m.handleDatabasesSidebarKey(k)
+			}
+		case activity.ViewItermoc: // itermoc_actions.go
+			if k, ok := msg.(tea.KeyMsg); ok {
+				return m.handleItermocSidebarKey(k)
 			}
 		case activity.ViewRuns: // runs_state.go
 			if k, ok := msg.(tea.KeyMsg); ok {
