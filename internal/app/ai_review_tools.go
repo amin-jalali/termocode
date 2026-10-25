@@ -597,8 +597,10 @@ func aiAskConfirm(ctx context.Context, call aiIDECaller, t ai.Tool, human string
 		s := m.aiS()
 		t.Class = "" // no "Always allow" here
 		s.confirm = &aiPendingConfirm{tool: t, human: human, reply: reply}
-		m.confirm = confirm.New("✦ AI wants to: "+t.Name, human+"\n(This change runs a language-server command, so it can not be shown as a diff first.)",
-			[]confirm.Button{{ID: "allow", Title: "Allow", Style: confirm.StylePrimary}, {ID: "deny", Title: "Deny", Style: confirm.StyleDestructive}})
+		// No diff to look at first: Deny comes first and has the focus
+		// (confirm.Risky), so a stray Enter does not run it.
+		m.confirm = confirm.Risky("✦ AI wants to: "+t.Name, human+"\n(This change runs a language-server command, so it can not be shown as a diff first.)",
+			confirm.Button{ID: "deny", Title: "Deny"}, confirm.Button{ID: "allow", Title: "Allow", Style: confirm.StylePrimary})
 		m.confirm.SetSize(m.w, m.h)
 		m.confirmOpen = true
 		m.confirmKind = confirmKindAITool
