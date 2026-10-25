@@ -177,7 +177,7 @@ func (m *Model) handleAIProfileFormMsg(msg tea.Msg) (tea.Cmd, bool) {
 			[]string{"K / J", "move the step up / down"},
 			[]string{"x", "remove the step (asks first)"},
 			[]string{"?", "this card"},
-		), help.Loc{Page: "guides/ai-profiles.md"}, nil), true
+		), help.Loc{Page: "guides/ai-profiles.md", Anchor: "create-and-edit-profiles"}, nil), true
 	}
 	return nil, false
 }

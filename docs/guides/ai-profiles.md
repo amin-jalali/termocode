@@ -39,12 +39,15 @@ its row: it opens the details of the highlighted profile and does not
 switch to it. The same card is **AI: Show Profile** for the active profile
 (see [See your agents and what they cost](#see-your-agents-and-what-they-cost)).
 
-After the profiles the picker has three more rows. None of them switches
+After the profiles the picker has four more rows. None of them switches
 the profile:
 
 - **Show details of <active>…** opens the details of the active profile.
-- **New profile from <active>…** asks for a name and saves a copy (same as
-  **AI: New Profile from Current…**).
+- **New profile from <active>…** opens the step form on a copy (same as
+  **AI: New Profile from Current…**). See
+  [Create and edit profiles](#create-and-edit-profiles).
+- **Edit a profile…** lists the profiles and opens the step form on the one
+  you pick (same as **AI: Edit Profile…**).
 - **Edit profiles (JSON)…** opens `profiles.json` (same as **AI: Edit
   Profiles**).
 
@@ -59,17 +62,75 @@ while a pipeline runs.
 
 ## Create and edit profiles
 
-**AI: New Profile from Current…** copies the active profile. After you
-name it, a preview card lists each step, its model slot and category,
-tools, and the first line of its prompt. **Save** writes the profile to
-`~/.config/termocode/ai/profiles.json` and switches to it. **Cancel** or
-`Esc` leaves the file unchanged and shows that the profile was not saved.
+You do not need to write JSON. A step form makes a profile or changes
+one.
+
+Open it from the profile picker (**New profile from <active>…** starts
+from a copy of the active profile; **Edit a profile…** lets you pick one)
+or from the palette: **AI: New Profile from Current…** and **AI: Edit
+Profile…**. Editing one of your own profiles changes it in place. A
+built-in or project profile cannot be changed, so the form opens on a
+copy with a new name (`my-review`).
+
+The form has these fields:
+
+| Field | What it is |
+| --- | --- |
+| Name | Letters, digits, `-`, `_` and `.`. `default` and the other built-in names are taken. |
+| Title | One line about the profile (optional). |
+| Budget | Dollars per run; empty means no limit. |
+| Quick → / Deep → | Which model slot the `quick` and `deep` categories use in this profile. `default` keeps the standard mapping. |
+
+Below them is the list of steps. Only the step you are on is open; the
+others show one line (model and tools). Each step has:
+
+- **Title** and **Id** (the id is how other steps refer to it).
+- **Model**: a model slot or a category (`category quick`, `category deep`).
+  A slot shows `✓ key` or `✗ no key`, so you see before you save that a
+  step cannot answer. Keys are never shown.
+- **Tools**: `none`, `read-only` or `all`. A tool list written in JSON
+  (`allow`, `deny`) stays as it is.
+- **Prompt**: what the model is told, over several lines.
+- **Waits for**: step numbers (`1, 2`), shown when `ai_parallel_max` is 2
+  or more. See [Planned runs and waves](#planned-runs-and-waves).
+- **Planner**: at most one step plans the run.
+
+**Add step**, **Move up**, **Move down** and **Remove step** change the list.
+**Remove step** asks first, with **Keep step** as the default button.
+
+Keys: `Tab` and `Shift+Tab` (or `↓` and `↑`) move between fields, `Enter`
+edits a text field or changes a choice, `←` and `→` change a choice, `Esc`
+stops editing (a second `Esc` cancels), `a` adds a step, `K` and `J` move
+it, `x` removes it, and `?` shows the key card. Everything also works with
+the mouse: click a field to edit it, a choice to change it, a button to
+press it. The form scrolls, so it fits 80 columns by 24 rows.
+
+The form checks your input with the same rules as `profiles.json`: a
+duplicate step id, more than 12 steps, two planners, `waits for` without
+`ai_parallel_max`, an unknown slot, a prompt over 8 KB. The problem
+shows under the field. **Save…** stays inactive until the form is valid;
+pressing it then jumps to the first problem.
+
+**Save…** opens the preview card: each step, its model slot, tools, and the
+first line of its prompt. Its **Save** writes the profile to
+`~/.config/termocode/ai/profiles.json` and switches to it. The file is
+read, changed and written back through a temporary file, so other
+profiles, other keys and the keys of your profile that the form does not
+know stay as they were. **Cancel** on the preview brings the form back.
+**Cancel** or `Esc` on the form writes nothing; after changes it asks
+**Keep editing** or **Discard**. When you edit one of your own profiles,
+**Delete profile…** removes it from the file after a question (**Keep
+profile** is the default button).
+
+### Edit the JSON yourself
 
 **AI: Edit Profiles** opens that JSON file in the editor (with an example
 when the file is missing). Saving it reloads the profile list and shows
 `Profiles updated: <names>`. If a profile's tools or prompts changed, a
 preview card shows the steps and asks **Use now** or **Later**. A broken
 file shows the problem and line; built-in profiles remain available.
+Use it for fields the form does not show (`output`, `max_steps`,
+`allow` and `deny` lists).
 
 ## Built-in profiles
 
@@ -144,9 +205,11 @@ adds use the same mapping.
 
 ## Write your own profile
 
-Run **AI: Edit Profiles**. It opens `~/.config/termocode/ai/profiles.json`
-and creates it with a working example the first time. Save the file:
-the picker and `Alt+Shift+P` read it again.
+The step form (see [Create and edit profiles](#create-and-edit-profiles))
+covers most profiles. For the rest, run **AI: Edit Profiles**. It opens
+`~/.config/termocode/ai/profiles.json` and creates it with a working
+example the first time. Save the file: the picker and `Alt+Shift+P` read
+it again.
 
 ```json
 {
@@ -174,8 +237,9 @@ the picker and `Alt+Shift+P` read it again.
 }
 ```
 
-**AI: New Profile from Current…** saves the active profile under a new
-name in the same file and switches to it.
+**AI: New Profile from Current…** opens the step form on a copy of the
+active profile; its Save writes the copy into the same file and switches
+to it.
 
 ### Step fields
 
