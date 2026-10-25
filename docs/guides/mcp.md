@@ -147,6 +147,13 @@ A workspace admin may have to approve the app.
 - **Sign out**: forgets the tokens; services that offer it (Atlassian,
   Sentry) are also told to revoke them. For a gh entry gh keeps its own
   login.
+- **Disable** / **Enable**: Disable keeps the entry (it writes
+  `"disabled": true`), stops the server and gives the AI none of its
+  tools. The row stays in the list, marked `○ ... off`. **Enable** turns
+  it back on.
+- **Remove…**: asks first. **Keep** is the first button; **Remove**
+  deletes the entry from `mcp.json`, forgets its sign-in and the secrets
+  only it uses, and stops the server. Only you can do this; the AI cannot.
 
 The AI's instructions name each connected service and its access
 ("GitHub is connected as amin-jalali (read only)"), never a token.
@@ -194,7 +201,7 @@ The next chat message uses the new file; no restart is needed. Run
 `○ notes   local · stopped · 11 tools`. Press `Enter` on a server for its
 actions: **Connect / Refresh tools**, **Show tools**, **Stop**,
 **Sign in**, **Sign out**, **Set secret NAME…**, **Trust**,
-**Edit in mcp.json** and **Show log**.
+**Edit in mcp.json**, **Show log**, **Disable** and **Remove…**.
 
 ## The file
 
@@ -207,7 +214,7 @@ actions: **Connect / Refresh tools**, **Show tools**, **Stop**,
 | `headers` | Remote server: HTTP headers sent with every request, for example a token. |
 | `oauth` | Remote server: a pre-registered app: `client_id`, `client_secret`, `scopes`. The wizard writes it for Slack (your app's client id) and for the read / write scopes. |
 | `auth` | Remote server: `{"gh": "<login>"}` takes the token from the GitHub CLI (`gh auth token`) at each connect. Only allowed in your own `mcp.json`, never in a project's. |
-| `disabled` | `true` hides the server. |
+| `disabled` | `true` turns the server off: it stays in the list as `off`, does not start and gives the AI no tools. **Disable** / **Enable** in the list set it. |
 | `readOnly` | `true` offers only the tools the server marks read-only. |
 | `autoApprove` | Tool names that run without asking (`["list_issues"]`). |
 | `deny` | Tool names (or patterns like `"delete_*"`) never offered to the AI. |
