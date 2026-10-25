@@ -42,6 +42,7 @@ type Model struct {
 	code       string   // a command shown on one line in a frame (WithCode)
 	note       string   // text below the code
 	keyRows    []KeyRow // a key card's table (WithKeys)
+	safeID     string   // the safe answer of a Risky card
 }
 
 func New(title, message string, buttons []Button) Model {
@@ -61,9 +62,10 @@ func (m Model) WithCode(code, note string) Model {
 
 // WithFocus puts the focus on button n (0 = the first). Enter picks the
 // focused button, so a card whose safe answer is not the first button uses
-// this to make Enter safe. n outside the buttons is ignored.
+// this to make Enter safe. n outside the buttons is ignored, and so is any
+// n on a Risky card: its focus stays on the safe answer.
 func (m Model) WithFocus(n int) Model {
-	if n >= 0 && n < len(m.buttons) {
+	if m.safeID == "" && n >= 0 && n < len(m.buttons) {
 		m.cursor = n
 	}
 	return m
