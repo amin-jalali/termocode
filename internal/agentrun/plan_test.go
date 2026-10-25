@@ -424,6 +424,73 @@ func TestNoBudgetNoPause(t *testing.T) {
 	}
 }
 
+// Spec (OM-6 resume): a run that starts with its planner completed and
+// the planned nodes already in it (a resume after a restart) does not
+// plan again: completed nodes keep their saved outputs, only the
+// unfinished nodes run.
+func TestStartWithCompletedPlannerSkipsIt(t *testing.T) {
+	h := newHarness(map[string]*fakeProv{
+		"planner": {replies: []ai.Chunk{{Delta: diamondPlan}}},
+		"map":     {replies: []ai.Chunk{{Delta: "new map"}}},
+		"left":    {replies: []ai.Chunk{{Delta: "new left"}}},
+		"right":   {replies: []ai.Chunk{{Delta: "right fixed"}}},
+		"verify":  {replies: []ai.Chunk{{Delta: "all good"}}},
+	})
+	r := planRun()
+	r.Nodes[0].State = agentdag.StateCompleted
+	planned := []struct {
+		id, prompt string
+		deps       []string
+		state      agentdag.State
+	}{
+		{"map", "List the files.", []string{}, agentdag.StateCompleted},
+		{"left", "Fix the left part.", []string{"map"}, agentdag.StateCompleted},
+		{"right", "Fix the right part.", []string{"map"}, agentdag.StatePending},
+		{"verify", "Check both fixes.", []string{"left", "right"}, agentdag.StatePending},
+	}
+	for _, p := range planned {
+		r.Nodes = append(r.Nodes, agentdag.Node{ID: p.id, Title: strings.ToUpper(p.id[:1]) + p.id[1:], Category: agentdag.CategoryQuick,
+			Slot: "cheap", Prompt: p.prompt, Input: agentdag.InputRule{Deps: p.deps}, State: p.state})
+		if len(p.deps) == 0 {
+			r.Edges = append(r.Edges, agentdag.Edge{From: "planner", To: p.id})
+		}
+		for _, d := range p.deps {
+			r.Edges = append(r.Edges, agentdag.Edge{From: d, To: p.id})
+		}
+	}
+	o := planOptions(h, 3)
+	o.Outputs = map[string]string{"planner": diamondPlan, "map": "files: a.go b.go", "left": "saved left"}
+	run, err := Start(context.Background(), r, o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	end := wait(t, run)
+	if end.Kind != RunDone || end.Output != "all good" {
+		t.Fatalf("end %+v", end)
+	}
+	for _, id := range []string{"planner", "map", "left"} {
+		if n := h.provs[id].callCount(); n != 0 {
+			t.Errorf("%s ran again (%d calls)", id, n)
+		}
+	}
+	if h.provs["right"].callCount() != 1 || h.provs["verify"].callCount() != 1 {
+		t.Errorf("right %d verify %d calls", h.provs["right"].callCount(), h.provs["verify"].callCount())
+	}
+	if _, ok := h.find(RunPlanned, "planner"); ok {
+		t.Error("the completed planner planned again")
+	}
+	in := h.input("verify")
+	if !strings.Contains(in, "### Output of step \"Left\"\nsaved left") || !strings.Contains(in, "### Output of step \"Right\"\nright fixed") {
+		t.Errorf("verify input:\n%s", in)
+	}
+	if strings.Contains(h.input("right"), "\"nodes\"") {
+		t.Errorf("right got the plan JSON:\n%s", h.input("right"))
+	}
+	if got := states(run.Snapshot()); got != "planner=completed map=completed left=completed right=completed verify=completed" {
+		t.Errorf("states %s", got)
+	}
+}
+
 // recProv records the requests of a provider.
 type recProv struct {
 	inner ai.Provider
