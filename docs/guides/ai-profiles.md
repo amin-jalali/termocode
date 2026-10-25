@@ -159,8 +159,14 @@ name for a provider and a model. Three slots always exist:
 | `quick` | The main provider with `ai_inline_model` (the ghost-text model). |
 | `local` | Ollama on `http://localhost:11434/v1` (or `OLLAMA_HOST`). |
 
-Add your own slots in `~/.config/termocode/config.json` under
-`ai_models`. Run **AI: Edit Model Slots** to open the file at that key:
+Add your own slot with **AI: Add Model Slot…**, or with **Add slot** in
+the MODELS section of [Itermoc](itermoc.md#models). The form asks for a
+name, a provider, a model and, when the provider needs one, a base URL.
+**Edit…** and **Remove…** on a slot's row work the same way. After Save
+the form offers **Set key** when the provider has no key yet.
+
+The slots live in `~/.config/termocode/config.json` under `ai_models`.
+To edit the file by hand (the expert path), run **AI: Edit Model Slots**:
 
 ```json
 {

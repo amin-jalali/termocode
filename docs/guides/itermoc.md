@@ -3,7 +3,8 @@
 Itermoc is one sidebar view for everything that shapes the AI chat. It
 lists your agent profiles, the model slots they run on, the services the
 chat can reach and the outside agents that use termocode's tools. Each row
-opens the same screens you already know. Itermoc itself changes nothing.
+opens the same screens you already know. Model slots are the one thing you
+add, edit and remove right here, with a small form (see [Models](#models)).
 
 Set up a provider first: [Set up AI](ai-setup.md).
 
@@ -34,7 +35,7 @@ profile picker. That stays the fast way to switch.
  ▾ MODELS                                            1 key ✗
    ● main        anthropic · claude-sonnet-4-5       key ✓
    ! gpt         openai · gpt-5-mini                 key ✗ [Set key (k)]
-   [Edit slots (e)]
+   [Add slot (a)]  [Edit JSON (E)]
  ▾ SERVICES                                      1 needs you
    ● GitHub      amin-jalali · read only · 28 tools
    ! Linear      sign-in expired                  [Sign in (i)]
@@ -65,7 +66,7 @@ it. Safe actions come first; the ones that ask for confirmation end in `…`.
 | Row | Actions |
 |---|---|
 | Profile | Use · Details · Duplicate… · Runs · Trust… (project profiles) · Edit JSON |
-| Model slot | Set key (when the key is missing) · Pick model… (the main slot) · Edit slots |
+| Model slot | Set key (when the key is missing) · Edit… · Pick model… (the main slot) · Edit JSON · Remove… (your own slots) |
 | Service | the service's own actions: Connect, Show tools, Sign in, Allow writes / Read only, Trust, Disable / Enable, Remove… and more (see [Connect MCP servers](mcp.md)) |
 | Listening row | Show status… · Turn on / Start listening now · Start Claude Code · Start Codex · Copy config · Stop listening… |
 | Outside agent | Show status… · Allowed tools… · Disconnect… |
@@ -82,8 +83,61 @@ Every action opens a screen that exists without Itermoc:
 - **Runs** opens the AGENTS view.
 - **Set key** opens the key prompt of the slot's provider. The key goes to
   the secret store; Itermoc never shows it.
+- **Edit…** on a model slot opens the slot form (see [Models](#models)).
+  On `main` it opens **AI: Configure Provider…**.
 - **Remove…**, **Disconnect…** and **Stop listening…** ask on a card where
   the safe button comes first and has the focus.
+
+## Models
+
+**Add slot** (`a`, the button, or **AI: Add Model Slot…** in the palette)
+opens a small form:
+
+```text
+ Add model slot
+ ──────────────────────────────────────────────
+ Name       work
+ Provider  ◦ anthropic
+           ◉ openai
+           ◦ openrouter
+           ◦ ollama
+           ◦ lmstudio
+           ◦ openai-compatible
+           ◦ claude-oauth
+ Model      gpt-4.1-mini
+ suggested: gpt-4.1 · gpt-4.1-mini · gpt-4o-mini
+ No key here: Set key stores it in the secret store.
+
+                 Cancel      Save
+```
+
+- `Tab` moves between the fields; `←` / `→` pick the provider; `Enter`
+  saves. A click works on every field.
+- An empty model means the provider's default (the field shows it).
+- **Base URL** appears for `openai-compatible` (needed), `ollama` and
+  `lmstudio` (empty = the usual local address). It must start with
+  `http://` or `https://` and can not hold a user or password.
+- A wrong field shows a red line in the form, and nothing is saved.
+- **Save** writes `ai_models.<name>` in `config.json`. Every other setting
+  and slot stays as it was. **Cancel** or `Esc` writes nothing.
+- When the provider has no key yet, the next card offers **Set key**. The
+  key goes to the secret store, never into `config.json`. **Later** closes
+  the card; the row keeps its `[Set key (k)]` button.
+
+**Edit…** (`e` on the row) opens the same form with the slot's values. The
+name is fixed; other fields you wrote by hand in the slot stay. `main` is
+your provider: **Edit…** opens **AI: Configure Provider…**. On `quick` or
+`local` the form saves your own slot under that name; **Remove…** brings
+the built-in one back.
+
+**Remove…** (`D` on the row) asks first, with **Keep** first and focused.
+When a profile uses the slot, the card names it: that profile will not run
+until you change it. The provider's key stays in the secret store.
+
+The key state is all Itermoc shows: `key ✓`, `key ✗` or `no key needed`.
+Key values, environment values and passwords in a base URL never appear.
+**Edit JSON** (`E`) still opens `config.json` at `ai_models` for the
+expert path.
 
 ## Keys
 
@@ -100,7 +154,8 @@ Press `?` in the view for the key card.
 | `Esc` | back to the editor |
 | `u` `d` `D` `t` | on a profile: use, details, duplicate, trust |
 | `n` / `J` | new profile from the active one / edit `profiles.json` |
-| `k` / `e` | on a model slot: set the key / edit the slots |
+| `a` / `E` | add a model slot / edit `ai_models` in `config.json` |
+| `e` / `k` / `D` | on a model slot: edit it, set the key, remove it (asks first) |
 | `i` / `c` / `l` | on a service: sign in; connect a service; show the log |
 | `s` / `S` / `y` / `T` | start Claude Code, start Codex, copy the termocode server config, show the status screen |
 
