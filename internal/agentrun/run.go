@@ -6,7 +6,9 @@
 // stops every node. A planner node grows the run by the nodes of its
 // plan (plan.go); a budget pauses the run before the next node until
 // Continue or Cancel; the nodes' confirm and review cards take turns
-// through one Gate (gate.go).
+// through one Gate (gate.go). A run with a Loop works until done: a
+// failing verify node adds the fix node and runs another round
+// (verify.go).
 //
 // The package does no I/O and knows nothing about the UI: the app builds
 // each node's agent (provider for its slot, tools, system prompt) in
@@ -47,6 +49,14 @@ const (
 	RunPlanned                     // a planner's plan grew the run (NodeID = the planner, Nodes = the new nodes)
 	RunPaused                      // the budget is reached (Cost, Budget): nothing new starts until Continue
 	RunResumed                     // Continue after a pause
+	RunRound                       // verify failed and a new round starts (Round = the new round, Err = the verify report)
+)
+
+// Verdicts of a loop's verify node (Event.Verdict).
+const (
+	VerdictPass    = "pass"
+	VerdictFail    = "fail"
+	VerdictMissing = "missing" // no verdict line (NodeRepair, or NodeDone after the repair: counted as a fail)
 )
 
 // Final reports whether k ends the run (exactly one such event is sent).
@@ -68,6 +78,12 @@ type Event struct {
 	// Cost is what the run has cost so far in dollars, Budget its budget
 	// (RunPaused).
 	Cost, Budget float64
+	// Round is the loop round of a run with a Loop (NodeStart, RunRound,
+	// the final event; 0 without a loop).
+	Round int
+	// Verdict is the verify node's verdict (its NodeDone and NodeRepair)
+	// and the run's (RunDone of a run with a Loop).
+	Verdict string
 }
 
 // TailLen is the length (in runes) of Event.Tail.
@@ -133,6 +149,9 @@ type Handle struct {
 	order   map[string]int
 	outputs map[string]string
 	final   Event
+	// verify and fix are the loop's node ids ("" without a loop; they
+	// never change).
+	verify, fix string
 }
 
 type result struct {
@@ -145,6 +164,9 @@ type result struct {
 	// the checked plan of a planner node
 	plan      []agentdag.Node
 	planEdges []agentdag.Edge
+	// the verdict of a loop's verify node (VerdictPass / Fail / Missing)
+	// and its report
+	verdict, report string
 }
 
 // Start checks r and starts it. It returns at once; the run goes on in
@@ -164,8 +186,14 @@ func Start(ctx context.Context, r agentdag.Run, o Options) (*Handle, error) {
 	if o.InputMaxBytes <= 0 {
 		o.InputMaxBytes = DefaultInputMaxBytes
 	}
+	n = n.Clone()
 	h := &Handle{o: o, id: n.ID, done: make(chan struct{}), resume: make(chan struct{}, 1), run: n,
 		outputs: map[string]string{}}
+	if l := n.Loop; l != nil {
+		h.verify, h.fix = strings.TrimSpace(l.Verify), strings.TrimSpace(l.Fix.ID)
+		l.Verify, l.Fix.ID = h.verify, h.fix
+		l.Round = max(l.Round, 1)
+	}
 	h.index(ls)
 	for _, nd := range n.Nodes {
 		if nd.State == agentdag.StateCompleted {
@@ -220,10 +248,15 @@ func (h *Handle) Wait() Event {
 func (h *Handle) Snapshot() agentdag.Run {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	out := h.run
-	out.Nodes = append([]agentdag.Node(nil), h.run.Nodes...)
-	out.Edges = append([]agentdag.Edge(nil), h.run.Edges...)
-	return out
+	return h.run.Clone()
+}
+
+// round is the loop round (0 without a loop). Loop goroutine only.
+func (h *Handle) round() int {
+	if h.run.Loop == nil {
+		return 0
+	}
+	return h.run.Loop.Round
 }
 
 // Output is the final text of a completed node ("" otherwise).
@@ -264,6 +297,7 @@ func (h *Handle) loop(runCtx context.Context) {
 	running := 0
 	var total *ai.Usage
 	failErr := ""
+	verdict := "" // the loop's verdict once verify passed or the rounds ran out
 	spent, budget := 0.0, h.o.Budget
 	fail := func(id, msg string, usage *ai.Usage, elapsed time.Duration) {
 		h.setState(id, func(n *agentdag.Node) {
@@ -305,7 +339,7 @@ func (h *Handle) loop(runCtx context.Context) {
 					}
 					input := h.input(id)
 					h.setState(id, func(n *agentdag.Node) { n.State = agentdag.StateRunning; n.Attempt++; n.Error = "" })
-					h.emit(Event{NodeID: id, Kind: NodeStart})
+					h.emit(Event{NodeID: id, Kind: NodeStart, Round: h.round()})
 					running++
 					go h.runNode(nodeCtx, *h.node(id), input, results)
 				}
@@ -342,7 +376,14 @@ func (h *Handle) loop(runCtx context.Context) {
 			h.node(res.id).State = agentdag.StateCompleted
 			h.outputs[res.id] = res.output
 			h.mu.Unlock()
-			h.emit(Event{NodeID: res.id, Kind: NodeDone, Output: res.output, Usage: res.usage, Elapsed: res.elapsed})
+			h.emit(Event{NodeID: res.id, Kind: NodeDone, Output: res.output, Usage: res.usage, Elapsed: res.elapsed, Verdict: res.verdict})
+			if res.id == h.verify && h.verify != "" {
+				if verdict = h.afterVerify(res); verdict == "" {
+					if err := h.nextRound(res); err != nil {
+						fail(res.id, "the fix step does not fit the run: "+err.Error(), nil, 0)
+					}
+				}
+			}
 			if len(res.plan) > 0 {
 				grown.Nodes[h.order[res.id]].State = agentdag.StateCompleted
 				h.mu.Lock()
@@ -361,14 +402,14 @@ func (h *Handle) loop(runCtx context.Context) {
 			h.emit(Event{NodeID: n.ID, Kind: NodeCancelled})
 		}
 	}
-	final := Event{Usage: total, Elapsed: clock.Since(start)}
+	final := Event{Usage: total, Elapsed: clock.Since(start), Round: h.round()}
 	switch {
 	case failErr != "":
 		final.Kind, final.Err = RunFailed, failErr
 	case runCtx.Err() != nil:
 		final.Kind = RunCancelled
 	default:
-		final.Kind, final.Output = RunDone, h.lastOutput()
+		final.Kind, final.Output, final.Verdict = RunDone, h.lastOutput(), verdict
 	}
 	h.emit(final)
 	h.mu.Lock()
@@ -391,6 +432,69 @@ func (h *Handle) grown(res result) (agentdag.Run, [][]string, error) {
 		return agentdag.Run{}, nil, err
 	}
 	return n, ls, nil
+}
+
+// afterVerify is the run's verdict after the verify node finished:
+// VerdictPass, VerdictFail when it failed in the last round, or "" when
+// it failed and another round runs.
+func (h *Handle) afterVerify(res result) string {
+	switch {
+	case res.verdict == VerdictPass:
+		return VerdictPass
+	case h.run.Loop.Round >= h.run.Loop.MaxRounds:
+		return VerdictFail
+	}
+	return ""
+}
+
+// nextRound starts the next loop round after a failing verify: the fix
+// node joins the run the first time (edge fix → verify; a RunPlanned
+// event tells the UI), fix and verify go back to pending, the report
+// becomes the fix node's input and RunRound is sent.
+func (h *Handle) nextRound(res result) error {
+	g := h.run.Clone()
+	if _, ok := h.order[h.fix]; !ok {
+		f := g.Loop.Fix
+		f.State, f.Attempt, f.Error = agentdag.StatePending, 0, ""
+		if f.Title == "" {
+			f.Title = f.ID
+		}
+		if f.Slot == "" {
+			f.Slot = h.o.Categories[f.Category]
+		}
+		g.Nodes = append(g.Nodes, f)
+		g.Edges = append(g.Edges, agentdag.Edge{From: f.ID, To: h.verify})
+		for i := range g.Nodes {
+			if n := &g.Nodes[i]; n.ID == h.verify && n.Input.Deps != nil {
+				n.Input.Deps = append(append([]string(nil), n.Input.Deps...), f.ID)
+			}
+		}
+	}
+	n, err := agentdag.Normalize(g)
+	if err != nil {
+		return errors.New(strings.TrimPrefix(err.Error(), "agentdag: "))
+	}
+	ls, err := agentdag.Layers(n)
+	if err != nil {
+		return err
+	}
+	added := len(n.Nodes) > len(h.run.Nodes)
+	for i := range n.Nodes {
+		if id := n.Nodes[i].ID; id == h.fix || id == h.verify {
+			n.Nodes[i].State, n.Nodes[i].Error = agentdag.StatePending, ""
+		}
+	}
+	n.Loop.Round++
+	n.Loop.Report = cutRunes(res.report, PlanPromptMaxBytes)
+	h.mu.Lock()
+	h.run = n
+	h.index(ls)
+	h.mu.Unlock()
+	if added {
+		h.emit(Event{NodeID: h.verify, Kind: RunPlanned, Nodes: []agentdag.Node{*h.node(h.fix)}})
+	}
+	h.emit(Event{Kind: RunRound, Round: n.Loop.Round, Err: n.Loop.Report, Verdict: res.verdict})
+	return nil
 }
 
 // runNode builds and runs one node's agent and sends its result.
@@ -459,6 +563,9 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 		for _, x := range h.Snapshot().Nodes {
 			taken[x.ID] = true
 		}
+		if h.fix != "" {
+			taken[h.fix] = true // the loop adds it later
+		}
 		res.plan, res.planEdges, err = ParsePlan(finalText(added), taken)
 		if err != nil { // one repair request with the error
 			h.emit(Event{NodeID: n.ID, Kind: NodeRepair, Err: err.Error()})
@@ -472,6 +579,25 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 					fail = "the plan is not valid after one repair: " + err.Error()
 				}
 			}
+		}
+	}
+	if ctx.Err() == nil && fail == "" && n.ID == h.verify && h.verify != "" {
+		pass, report, ok := ParseVerdict(finalText(added))
+		if !ok { // one repair request: the verdict line is missing
+			h.emit(Event{NodeID: n.ID, Kind: NodeRepair, Err: "no VERDICT line", Verdict: VerdictMissing})
+			hist := append(append(history[:len(history):len(history)], added...),
+				ai.Message{Role: ai.RoleUser, Content: VerifyRepairPrompt})
+			raw = nil
+			added = agent.Run(ctx, hist, emit)
+			pass, report, ok = ParseVerdict(finalText(added))
+		}
+		switch {
+		case !ok:
+			res.verdict, res.report = VerdictMissing, NoVerdictReport+"\n\n"+report
+		case pass:
+			res.verdict, res.report = VerdictPass, report
+		default:
+			res.verdict, res.report = VerdictFail, report
 		}
 	}
 	switch {
@@ -495,6 +621,9 @@ func (h *Handle) input(id string) string {
 	}
 	if n.Prompt != "" {
 		parts = append(parts, "### Task\n"+n.Prompt)
+	}
+	if l := h.run.Loop; l != nil && id == h.fix && strings.TrimSpace(l.Report) != "" {
+		parts = append(parts, fmt.Sprintf("### Verify report (round %d)\n%s", max(l.Round-1, 1), l.Report))
 	}
 	deps := agentdag.Deps(h.run, id)
 	sort.SliceStable(deps, func(i, j int) bool {
