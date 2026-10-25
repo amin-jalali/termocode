@@ -192,9 +192,13 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	}
 	ctxText, images := s.takeAttachments()
 	s.turnMsg = len(s.conv.Messages) // restore points key on the turn's user message
+	model := slot.cfg.Model
+	if model == s.cfg.Model {
+		model = "" // the chat's own model: stored chats stay as they were
+	}
 	s.conv.Messages = append(s.conv.Messages,
 		ai.StoredMessage{Role: ai.StoredUser, Text: text, Context: ctxText, Images: images},
-		ai.StoredMessage{Role: ai.StoredAssistant},
+		ai.StoredMessage{Role: ai.StoredAssistant, Model: model},
 	)
 	s.scroll = 0
 
