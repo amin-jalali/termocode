@@ -34,8 +34,19 @@ A slot with no model says so, for example `Fixer (quick: not set)`. On a
 narrow window the row gets shorter: first the model names (`sonnet-4-5`),
 then the agent names, then only `2 steps`. A project profile keeps its
 trust state (`project, asks first`) at the start of the row. For the full
-picture of one profile use **AI: Show Profile** (see
-[See your agents and what they cost](#see-your-agents-and-what-they-cost)).
+picture of one profile press `→` (or click **→ details** in the footer) on
+its row: it opens the details of the highlighted profile and does not
+switch to it. The same card is **AI: Show Profile** for the active profile
+(see [See your agents and what they cost](#see-your-agents-and-what-they-cost)).
+
+After the profiles the picker has three more rows. None of them switches
+the profile:
+
+- **Show details of <active>…** opens the details of the active profile.
+- **New profile from <active>…** asks for a name and saves a copy (same as
+  **AI: New Profile from Current…**).
+- **Edit profiles (JSON)…** opens `profiles.json` (same as **AI: Edit
+  Profiles**).
 
 The choice is kept per workspace. When it is not `default`, the `✦`
 badge in the status bar shows its name too, for example
