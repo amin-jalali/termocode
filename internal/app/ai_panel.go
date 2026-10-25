@@ -358,7 +358,7 @@ func (c *aiTranscriptCache) matches(s *aiState, width int, rk theme.RenderKey, r
 	}
 	for i := range c.msgs {
 		a, b := &c.msgs[i], &s.conv.Messages[i]
-		if a.Role != b.Role || a.Text != b.Text || a.Context != b.Context || a.Model != b.Model || a.Lessons != b.Lessons {
+		if a.Role != b.Role || a.Text != b.Text || a.Context != b.Context || a.Model != b.Model || a.Lessons != b.Lessons || a.Memory != b.Memory {
 			return false
 		}
 	}
@@ -530,6 +530,9 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 			out = append(out, selPlain(aiCleanText(msg.Text), theme.TextDim, i)...)
 		case ai.StoredError:
 			out = append(out, selPlain("⚠ "+aiCleanText(msg.Text), theme.DiagError, i)...)
+		}
+		if msg.Memory > 0 { // OM-2: "memory: 2 lessons saved · view"
+			out = append(out, aiMemorySavedLine(msg.Memory, width))
 		}
 	}
 	undo()

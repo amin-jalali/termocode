@@ -60,6 +60,8 @@ type aiState struct {
 	rulesTrust *aiRulesTrustPending
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
 	memFake *[]aimemory.Lesson
+	// memSlotWarned: the "no quick model" toast was shown this session.
+	memSlotWarned bool
 	// profile is the active profile's name ("" = default); profErrShown
 	// is the profile errors already shown as a toast.
 	profile      string

@@ -32,6 +32,8 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onMCPConnectDone(msg), true
 	case aiChatDoneMsg:
 		return m.onAIChatDone(msg), true
+	case aiMemoryDoneMsg: // ai_memory_extract.go
+		return m.onAIMemoryDone(msg), true
 	case aiActivityTickMsg:
 		return m.onAIActivityTick(), true
 	case aiAgentsSnapMsg:

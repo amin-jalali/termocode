@@ -37,6 +37,9 @@ type StoredMessage struct {
 	// Lessons is how many memory lessons (OM-2) went into the prompt of
 	// this user message's turn. Only shown.
 	Lessons int `json:"lessons,omitempty"`
+	// Memory is how many lessons the memory extractor saved after the
+	// turn that ends with this message (OM-2). Only shown.
+	Memory int `json:"memory,omitempty"`
 	// Run and Steps are set on the assistant message of an agent
 	// pipeline run (U20): the run's summary and one card per step. A
 	// plain chat turn has neither.
