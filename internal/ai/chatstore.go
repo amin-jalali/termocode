@@ -30,6 +30,10 @@ type StoredMessage struct {
 	// Images are paths of image files sent with a user message. Only the
 	// path is stored; the file is read again for every request.
 	Images []string `json:"images,omitempty"`
+	// Rules is the project rules line of a user message (OM-1), e.g.
+	// "AGENTS.md (4 KB)" or "AGENTS.md (not used)"; "" when the workspace
+	// had no rules file. Only shown, never sent to the model.
+	Rules string `json:"rules,omitempty"`
 	// Run and Steps are set on the assistant message of an agent
 	// pipeline run (U20): the run's summary and one card per step. A
 	// plain chat turn has neither.
