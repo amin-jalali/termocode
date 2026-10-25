@@ -158,6 +158,7 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools = append(tools, m.aiServicesTools(call)...)   // the Services view (ai_services_tools.go)
 	tools = append(tools, m.aiContainersTools(call)...) // CP-9: host containers (ai_containers_tools.go)
 	tools = append(tools, aiHelpTools()...)             // U21: the built-in guide (ai_help_tools.go)
+	tools = append(tools, aiItermocTools(call)...)      // AH-7: profiles, models, MCP services, outside agents (ai_itermoc_tools.go)
 	if m.aiReviewEdits() {                              // Group R2: file changes become diffs to review
 		tools = m.aiReviewTools(tools, root, call)
 	}
