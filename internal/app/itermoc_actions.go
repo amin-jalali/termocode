@@ -24,7 +24,7 @@ import (
 const itermocGuidePage = "guides/itermoc.md"
 
 // itermocNoOpen is the AI policy reason of the open commands.
-const itermocNoOpen = "a screen for the user (secrets and access live there); the AI will get a typed ai_view_open tool instead"
+const itermocNoOpen = "a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool"
 
 // pickerKindItermocActions is the small actions menu of one row.
 const pickerKindItermocActions pickerKindEnum = 2300

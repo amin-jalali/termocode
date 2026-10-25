@@ -391,8 +391,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"mcp-serve-status":      aiNever(aiNoPicker),
 	"mcp-serve-copy-config": aiNever(aiNoAIConfig + " (the config is for the user to paste into an agent)"),
 	// Itermoc (itermoc_actions.go): the user's screen for profiles, models,
-	// services and outside agents. The AI opens it with a typed tool later
-	// (ai_view_open); as palette commands they are the user's.
+	// services and outside agents. The AI opens it with the typed tool
+	// ai_view_open (ai_itermoc_tools.go); as palette commands they are the user's.
 	"itermoc-open":     aiNever(itermocNoOpen),
 	"itermoc-open-ai":  aiNever(itermocNoOpen),
 	"itermoc-profiles": aiNever(itermocNoOpen),
