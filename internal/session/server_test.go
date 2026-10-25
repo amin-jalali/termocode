@@ -137,6 +137,28 @@ func (r *rig) spawn() (*exec.Cmd, error) {
 	return cmd, nil
 }
 
+// waitExit waits until the server process pid (started by spawn) has
+// exited and been reaped.
+func (r *rig) waitExit(pid int) {
+	r.t.Helper()
+	r.mu.Lock()
+	var done chan struct{}
+	for _, c := range r.procs {
+		if c.Process.Pid == pid {
+			done = r.exits[c]
+		}
+	}
+	r.mu.Unlock()
+	if done == nil {
+		r.t.Fatalf("server pid %d was not started by this rig", pid)
+	}
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		r.t.Fatalf("server pid %d did not exit", pid)
+	}
+}
+
 // ensure connects, starting a server when none runs.
 func (r *rig) ensure() *net.UnixConn {
 	r.t.Helper()
@@ -267,6 +289,12 @@ func TestServerKilledStaleSocket(t *testing.T) {
 	}
 	_ = c.Close()
 	waitFor(t, "the UI to get the hangup", func() bool { return !alive(in.UIPID) })
+	// The client's EOF and the UI's hangup do not mean the server is
+	// gone: the kernel releases a dead process's files one by one, and
+	// its listener may still take a connection for a moment, which it
+	// then resets (seen in CI). Wait until the server is reaped; by then
+	// all its files are closed and only the stale socket file is left.
+	r.waitExit(in.PID)
 	if _, err := os.Stat(r.p.Socket); err != nil {
 		t.Fatalf("SIGKILL should leave the socket: %v", err)
 	}
