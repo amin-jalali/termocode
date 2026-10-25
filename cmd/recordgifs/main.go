@@ -13,9 +13,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/amin-jalali/termocode/internal/spawn"
 	"image/png"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -129,7 +129,7 @@ func recordHero(repo string, emit func(gifkit.Clip) error) error {
 		return err
 	}
 	defer os.RemoveAll(dir)
-	cmd := exec.Command("go", "-C", filepath.Join(repo, "e2e"), "test", "-tags", "e2e,record",
+	cmd := spawn.Command("go", "-C", filepath.Join(repo, "e2e"), "test", "-tags", "e2e,record",
 		"-run", "^TestRecordHero$", "-count=1", "-timeout", "5m", ".")
 	cmd.Env = append(os.Environ(), "GIF_FRAMES_DIR="+dir)
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
