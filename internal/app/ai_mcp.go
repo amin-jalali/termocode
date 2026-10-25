@@ -432,6 +432,7 @@ func mcpServerActionItems(m *Model, name string) []picker.Item {
 		return []picker.Item{
 			{ID: "enable", Title: "Enable", Hint: "start it again; the AI gets its tools"},
 			{ID: "edit", Title: "Edit in mcp.json", Hint: st.Source},
+			{ID: "remove", Title: "Remove…", Hint: "delete the entry and forget its sign-in"},
 		}
 	}
 	items := []picker.Item{
@@ -488,6 +489,7 @@ func mcpServerActionItems(m *Model, name string) []picker.Item {
 		picker.Item{ID: "edit", Title: "Edit in mcp.json", Hint: st.Source},
 		picker.Item{ID: "log", Title: "Show log", Hint: "Output: MCP"},
 		picker.Item{ID: "disable", Title: "Disable", Hint: "keep the entry, stop it, no tools for the AI"},
+		picker.Item{ID: "remove", Title: "Remove…", Hint: "delete the entry and forget its sign-in"},
 	)
 	return items
 }
@@ -586,6 +588,8 @@ func (m *Model) onMCPServerAction(id string) tea.Cmd {
 		return m.mcpAddAccount(name)
 	case "disable", "enable":
 		return m.mcpSetDisabled(name, id == "disable")
+	case "remove":
+		return m.openMCPRemove(name)
 	}
 	if secret, ok := strings.CutPrefix(id, "secret:"); ok {
 		return m.mcpAskSecret(secret)

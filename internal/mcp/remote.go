@@ -71,6 +71,18 @@ func (c CredStore) Delete(name string) error {
 	return c.update(func(cr *ai.Credentials) { delete(cr.MCPOAuth, name) })
 }
 
+// Forget deletes a service's stored sign-in and account label and the
+// named ${secret:NAME} values, in one write (Remove…).
+func (c CredStore) Forget(name string, secretNames []string) error {
+	return c.update(func(cr *ai.Credentials) {
+		delete(cr.MCPOAuth, name)
+		delete(cr.MCPAccounts, name)
+		for _, n := range secretNames {
+			delete(cr.MCPSecrets, n)
+		}
+	})
+}
+
 // SetSecret stores mcp_secrets.NAME (the value of ${secret:NAME}).
 func (c CredStore) SetSecret(name, value string) error {
 	return c.update(func(cr *ai.Credentials) {

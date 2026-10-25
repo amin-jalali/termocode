@@ -52,6 +52,12 @@ func (m *Model) handleMCPMsg(msg tea.Msg) (tea.Cmd, bool) {
 	if msg, ok := msg.(mcpSignedOutMsg); ok {
 		return m.aiInfo("MCP " + msg.name + ": signed out"), true
 	}
+	if msg, ok := msg.(mcpRemovedMsg); ok {
+		if msg.err != nil {
+			return m.aiToastErr("MCP "+msg.name, msg.err), true
+		}
+		return m.aiInfo("MCP " + msg.name + ": removed"), true
+	}
 	if cmd, ok := m.handleMCPServeMsg(msg); ok { // termocode as an MCP server (mcp_serve.go)
 		return cmd, true
 	}
