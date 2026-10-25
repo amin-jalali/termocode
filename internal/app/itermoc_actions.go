@@ -82,6 +82,7 @@ func itermocPaletteItems() []picker.Item {
 		{ID: "itermoc-services", Title: "Itermoc: Services"},
 		{ID: "itermoc-agents", Title: "Itermoc: Outside Agents"},
 		{ID: "itermoc-open-ai", Title: "AI: Agents & Connections"}, // the same screen under the name the AI menu uses
+		{ID: "ai-model-slot-add", Title: "AI: Add Model Slot…"},    // the slot form (itermoc_slots.go)
 	}
 }
 
@@ -97,6 +98,8 @@ func (m *Model) dispatchItermocPalette(id string) (tea.Cmd, bool) {
 		return m.revealItermocView(true, imSecServices), true
 	case "itermoc-agents":
 		return m.revealItermocView(true, imSecAgents), true
+	case "ai-model-slot-add":
+		return m.openItermocSlotAdd(), true
 	}
 	return nil, false
 }
@@ -121,8 +124,11 @@ func itermocKeyRows() []confirm.KeyRow {
 		[]string{"n", "new profile from the active one…"},
 		[]string{"J", "edit profiles.json"},
 		[]string{"Models"},
+		[]string{"a", "add a model slot…"},
+		[]string{"e", "edit the slot…"},
 		[]string{"k", "set the key of the slot's provider"},
-		[]string{"e", "edit the model slots"},
+		[]string{"D", "remove the slot… (asks first)"},
+		[]string{"E", "edit ai_models in config.json"},
 		[]string{"Services"},
 		[]string{"i", "sign in"},
 		[]string{"c", "connect a service"},
@@ -259,8 +265,13 @@ func (m *Model) itermocRowKey(key string, row imRow) (tea.Cmd, bool) {
 			return m.itermocRun("trust", row), true
 		}
 	case imRowSlot:
-		if key == "k" {
+		switch key {
+		case "k":
 			return m.itermocRun("setkey", row), true
+		case "e":
+			return m.itermocRun("edit", row), true
+		case "D":
+			return m.itermocRun("remove", row), true
 		}
 	case imRowService:
 		if key == "i" {
@@ -289,6 +300,8 @@ func (m *Model) itermocButton(sec, id string) tea.Cmd {
 		return m.openAIProfileNewPrompt()
 	case imSecProfiles + "/json":
 		return m.editAIProfiles()
+	case imSecModels + "/add":
+		return m.openItermocSlotAdd()
 	case imSecModels + "/slots":
 		return m.editAIModelSlots()
 	case imSecServices + "/connect":
@@ -366,10 +379,19 @@ func (m *Model) itermocActionsFor(row imRow) (title string, acts []itermocAction
 		if s.key == imKeyMissing || s.key == imKeyUnset {
 			acts = append(acts, itermocAction{"setkey", "Set key", "stored in the secret store"})
 		}
-		if s.name == ai.SlotMain {
-			acts = append(acts, itermocAction{"pickmodel", "Pick model…", "the main model"})
+		switch {
+		case s.name == ai.SlotMain:
+			acts = append(acts, itermocAction{"edit", "Edit…", "AI: Configure Provider…"},
+				itermocAction{"pickmodel", "Pick model…", "the main model"})
+		case s.user:
+			acts = append(acts, itermocAction{"edit", "Edit…", "provider, model, base URL"})
+		case s.name == ai.SlotQuick || s.name == ai.SlotLocal:
+			acts = append(acts, itermocAction{"edit", "Edit…", "save your own " + s.name + " slot"})
 		}
-		acts = append(acts, itermocAction{"slots", "Edit slots", "config.json ai_models"})
+		acts = append(acts, itermocAction{"slots", "Edit JSON", "config.json ai_models"})
+		if s.user {
+			acts = append(acts, itermocAction{"remove", "Remove…", "asks first"})
+		}
 	case imRowAgentStatus:
 		title = "Outside agents"
 		if m.mcpServe != nil {
@@ -452,6 +474,16 @@ func (m *Model) itermocRun(verb string, row imRow) tea.Cmd {
 		return m.editAIModelSlots()
 	case "pickmodel":
 		return m.openAIModelPicker()
+	case "edit":
+		if row.kind == imRowSlot {
+			return m.openItermocSlotEdit(row.name)
+		}
+		return nil
+	case "remove":
+		if row.kind == imRowSlot {
+			return m.openItermocSlotRemove(row.name)
+		}
+		return nil
 	case "setkey":
 		return m.itermocSetKey(row.name)
 	case "signin":
@@ -535,7 +567,7 @@ func itermocTooltip(id string) (name, key, help string, ok bool) {
 		case imSecProfiles:
 			return "Profile actions: use, details, duplicate, runs, trust, edit JSON", "Enter · u · d · D", help, true
 		case imSecModels:
-			return "Model slot: set a key, pick the model, edit slots", "Enter · k · e", help, true
+			return "Model slot: edit, set a key, remove", "Enter · e · k · D", help, true
 		case imSecServices:
 			return "Service actions: sign in, tools, writes, disable, remove", "Enter · i", help, true
 		case imSecAgents:

@@ -84,6 +84,7 @@ type imProfile struct {
 type imSlot struct {
 	name, provider, model string
 	key                   imKeyState
+	user                  bool // an entry in config.json ai_models (Edit…, Remove…)
 }
 
 // imAgent is one connected outside agent.
@@ -130,6 +131,10 @@ type itermocState struct {
 	w int
 	// seq grows with every change a render must notice.
 	seq int
+	// form is the open slot form (itermoc_slots.go); removeName the slot
+	// the Remove card asks about.
+	form       *imSlotForm
+	removeName string
 }
 
 func newItermocState() *itermocState {
@@ -238,7 +243,8 @@ func itermocBuild(m Model, reload bool) itermocSnap {
 			sn.slots = append(sn.slots, imSlot{name: n, key: imKeyMissing})
 			continue
 		}
-		sn.slots = append(sn.slots, imSlot{name: n, provider: c.Kind, model: c.Model, key: itermocKeyOf(c)})
+		_, user := s.settings.Models[n]
+		sn.slots = append(sn.slots, imSlot{name: n, provider: c.Kind, model: c.Model, key: itermocKeyOf(c), user: user})
 	}
 
 	if s.mcp != nil || reload {

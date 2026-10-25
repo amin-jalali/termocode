@@ -100,6 +100,8 @@ func (m Model) helpTopicForFocus() string {
 			return helpContexts["db-compare"] // the only card with its own actions
 		}
 		return helpContexts["review"]
+	case m.connectOpen && m.itermoc != nil && m.itermoc.form != nil:
+		return itermocGuidePage + "#models" // the slot form (itermoc_slots.go)
 	case m.connectOpen:
 		return helpContexts["connect"]
 	case m.searchOpen:

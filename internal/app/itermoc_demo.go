@@ -5,6 +5,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/connectcard"
 	"github.com/amin-jalali/termocode/internal/mcp"
 )
 
@@ -15,6 +16,9 @@ import (
 //	full   the active profile review, an untrusted project profile, one
 //	       model without a key, a service that needs a sign-in, one agent
 //	empty  a fresh install: no AI provider, no service, nothing listening
+//	slotadd     full, with the Add slot form filled in (nothing is saved)
+//	slotkey     full, with the "set the key?" card after a new slot
+//	slotremove  full, with the Remove card of a slot a profile uses
 func (m *Model) itermocDemo(arg string) tea.Cmd {
 	s := m.aiS()
 	m.itermoc = newItermocState()
@@ -38,6 +42,10 @@ func (m *Model) itermocDemo(arg string) tea.Cmd {
 			{ID: "fix", Title: "Fixer", System: "Fix the problems the style check listed.", Tools: agentdag.ToolRule{Preset: agentdag.PresetAll}},
 		}}
 	s.profFake = []ai.Profile{house}
+	if arg == "slotremove" {
+		s.profFake = append(s.profFake, ai.Profile{Name: "second-opinion", Title: "GPT checks", Source: ai.ProfileSourceUser,
+			Steps: []ai.ProfileStep{{ID: "answer", Title: "Answer"}, {ID: "check", Title: "Check", Slot: "gpt"}}})
+	}
 	s.slotFake = map[string]aiSlot{
 		ai.SlotMain:  {cfg: ai.Config{Kind: ai.KindAnthropic, Model: "claude-sonnet-4-5", APIKey: "demo"}},
 		ai.SlotQuick: {cfg: ai.Config{Kind: ai.KindAnthropic, Model: "claude-haiku-4-5", APIKey: "demo"}},
@@ -60,5 +68,25 @@ func (m *Model) itermocDemo(arg string) tea.Cmd {
 		"09:42 claude-code · debug_start · asked, you denied",
 	}
 	st.fixed = true
+	return m.itermocSlotDemo(arg)
+}
+
+// itermocSlotDemo opens a slot card over the full demo. Nothing is
+// written: the Remove card's slot is only in memory.
+func (m *Model) itermocSlotDemo(arg string) tea.Cmd {
+	st := m.itermoc
+	switch arg {
+	case "slotadd":
+		st.form = &imSlotForm{}
+		return m.showItermocSlotForm(ai.KindOpenAI, "gpt-4.1-mini", "", "work")
+	case "slotkey":
+		st.form = &imSlotForm{saved: true, name: "work"}
+		m.connect = connectcard.New(itermocSlotKeyCard("work", ai.ModelSlot{Provider: ai.KindOpenAI, Model: "gpt-4.1-mini"}, "added", imKeyMissing))
+		m.connect.SetSize(m.w, m.h)
+		m.connectOpen = true
+	case "slotremove":
+		m.aiS().settings.Models = map[string]ai.ModelSlot{"gpt": {Provider: ai.KindOpenAI, Model: "gpt-5-mini"}}
+		return m.openItermocSlotRemove("gpt")
+	}
 	return nil
 }
