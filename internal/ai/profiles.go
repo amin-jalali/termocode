@@ -294,19 +294,40 @@ func ParseProfiles(data []byte, file, source string, slots map[string]bool, para
 	return out, nil
 }
 
+// ProfileError is a profile check that failed: Msg is the whole text
+// (what ParseProfiles shows), Step (a step id, "" for the profile) and
+// Field (name, title, budget, steps, plan, categories, id, slot,
+// category, tools, output, system, max_steps, deps) say where, so a form
+// can show it next to the field.
+type ProfileError struct {
+	Step, Field, Msg string
+}
+
+func (e *ProfileError) Error() string { return e.Msg }
+
+// ValidateProfile checks p with the rules of profiles.json (the same
+// ones ParseProfiles uses) and returns a *ProfileError or nil. Empty
+// step ids are not filled in p.
+func ValidateProfile(p Profile, slots map[string]bool, parallelMax int) error {
+	return validateProfile(&p, slots, parallelMax)
+}
+
 // validateProfile checks p and fills empty step ids (step-1, step-2 …).
 func validateProfile(p *Profile, slots map[string]bool, parallelMax int) error {
+	pe := func(field, format string, a ...any) error {
+		return &ProfileError{Field: field, Msg: fmt.Sprintf(format, a...)}
+	}
 	switch {
 	case p.Name == ProfileDefault:
-		return errors.New(`"default" is built in (one step on ai_provider / ai_model); pick another name`)
+		return pe("name", `"default" is built in (one step on ai_provider / ai_model); pick another name`)
 	case !profileIDRe.MatchString(p.Name):
-		return errors.New("a profile name may use letters, digits, '-', '_' and '.'")
+		return pe("name", "a profile name may use letters, digits, '-', '_' and '.'")
 	case len(p.Steps) == 0:
-		return errors.New("has no steps")
+		return pe("steps", "has no steps")
 	case len(p.Steps) > MaxProfileSteps:
-		return fmt.Errorf("too many steps (%d, at most %d)", len(p.Steps), MaxProfileSteps)
+		return pe("steps", "too many steps (%d, at most %d)", len(p.Steps), MaxProfileSteps)
 	case p.BudgetUSD < 0:
-		return errors.New("budget_usd is negative")
+		return pe("budget", "budget_usd is negative")
 	}
 	planners := 0
 	for _, st := range p.Steps {
@@ -315,14 +336,14 @@ func validateProfile(p *Profile, slots map[string]bool, parallelMax int) error {
 		}
 	}
 	if planners > 1 {
-		return errors.New("at most one planner step (plan: true)")
+		return pe("plan", "at most one planner step (plan: true)")
 	}
 	for cat, slot := range p.Categories {
 		if cat != agentdag.CategoryQuick && cat != agentdag.CategoryDeep {
-			return fmt.Errorf("unknown category %q in categories (quick or deep)", cat)
+			return pe("categories", "unknown category %q in categories (quick or deep)", cat)
 		}
 		if !slots[slot] {
-			return fmt.Errorf("categories: unknown slot %q", slot)
+			return &ProfileError{Field: "categories:" + cat, Msg: fmt.Sprintf("categories: unknown slot %q", slot)}
 		}
 	}
 	p.Steps = append([]ProfileStep(nil), p.Steps...)
@@ -333,52 +354,52 @@ func validateProfile(p *Profile, slots map[string]bool, parallelMax int) error {
 			st.ID = fmt.Sprintf("step-%d", i+1)
 		}
 		if !profileIDRe.MatchString(st.ID) {
-			return fmt.Errorf("step id %q: use letters, digits, '-', '_' and '.'", st.ID)
+			return &ProfileError{Step: st.ID, Field: "id", Msg: fmt.Sprintf("step id %q: use letters, digits, '-', '_' and '.'", st.ID)}
 		}
 		if seen[st.ID] {
-			return fmt.Errorf("duplicate step id %q", st.ID)
+			return &ProfileError{Step: st.ID, Field: "id", Msg: fmt.Sprintf("duplicate step id %q", st.ID)}
 		}
 		seen[st.ID] = true
-		bad := func(format string, a ...any) error {
-			return fmt.Errorf("step %q: %s", st.ID, fmt.Sprintf(format, a...))
+		bad := func(field, format string, a ...any) error {
+			return &ProfileError{Step: st.ID, Field: field, Msg: fmt.Sprintf("step %q: %s", st.ID, fmt.Sprintf(format, a...))}
 		}
 		if st.Slot != "" && !slots[st.Slot] {
-			return bad("unknown slot %q", st.Slot)
+			return bad("slot", "unknown slot %q", st.Slot)
 		}
 		switch st.Category {
 		case "", agentdag.CategoryQuick, agentdag.CategoryDeep:
 		default:
-			return bad("unknown category %q (quick or deep)", st.Category)
+			return bad("category", "unknown category %q (quick or deep)", st.Category)
 		}
 		switch st.Tools.Preset {
 		case "", agentdag.PresetNone, agentdag.PresetReadOnly, agentdag.PresetAll:
 		default:
-			return bad("unknown tool preset %q (none, read-only or all)", st.Tools.Preset)
+			return bad("tools", "unknown tool preset %q (none, read-only or all)", st.Tools.Preset)
 		}
 		switch st.Output {
 		case "", agentdag.OutputShown, agentdag.OutputFolded, agentdag.OutputHidden:
 		default:
-			return bad("unknown output %q (shown, folded or hidden)", st.Output)
+			return bad("output", "unknown output %q (shown, folded or hidden)", st.Output)
 		}
 		if len(st.System) > MaxPromptBytes {
-			return bad("system prompt is longer than 8 KB")
+			return bad("system", "system prompt is longer than 8 KB")
 		}
 		if st.MaxSteps < 0 {
-			return bad("max_steps is negative")
+			return bad("max_steps", "max_steps is negative")
 		}
 		if len(st.Deps) > 0 && parallelMax <= 1 {
-			return bad("deps need ai_parallel_max 2 or more (steps run one after the other)")
+			return bad("deps", "deps need ai_parallel_max 2 or more (steps run one after the other)")
 		}
 	}
 	for _, st := range p.Steps {
 		for _, d := range st.Deps {
 			if !seen[d] {
-				return fmt.Errorf("step %q: unknown dep %q", st.ID, d)
+				return &ProfileError{Step: st.ID, Field: "deps", Msg: fmt.Sprintf("step %q: unknown dep %q", st.ID, d)}
 			}
 		}
 	}
 	if err := agentdag.Validate(p.Run("check")); err != nil {
-		return errors.New(strings.TrimPrefix(err.Error(), "agentdag: "))
+		return &ProfileError{Field: "steps", Msg: strings.TrimPrefix(err.Error(), "agentdag: ")}
 	}
 	return nil
 }

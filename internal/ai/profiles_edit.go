@@ -7,8 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
+
+	"github.com/amin-jalali/termocode/internal/cfgfile"
 )
 
 // Editing the user's profiles.json (U20 AP-5): the example file that
@@ -60,49 +61,93 @@ func ValidProfileName(name string) error {
 // when missing). Other profiles and other keys stay. A taken name or a
 // broken file is an error and nothing is written.
 func SaveProfileAs(path, name string, p Profile) error {
+	return SaveProfile(path, name, p, false)
+}
+
+// profileKnownKeys are the keys of Profile in the file; SaveProfile
+// replaces these and keeps every other key of an edited profile.
+var profileKnownKeys = []string{"title", "categories", "steps", "budget_usd"}
+
+// SaveProfile writes p under name into the profiles file at path: a
+// safe read-modify-write (cfgfile: a broken file is never overwritten,
+// the write is atomic). Other profiles and other top-level keys stay as
+// written. replace=false refuses a taken name; replace=true updates that
+// profile and keeps the keys of it that Profile does not know.
+func SaveProfile(path, name string, p Profile, replace bool) error {
 	if err := ValidProfileName(name); err != nil {
 		return err
-	}
-	doc := map[string]json.RawMessage{}
-	b, err := os.ReadFile(path)
-	switch {
-	case err == nil:
-		if err := json.Unmarshal(b, &doc); err != nil {
-			return fmt.Errorf("%s is broken (%s); fix it first", path, err)
-		}
-	case !errors.Is(err, os.ErrNotExist):
-		return err
-	}
-	profiles := map[string]json.RawMessage{}
-	if raw := doc["profiles"]; len(raw) > 0 && !bytes.Equal(raw, []byte("null")) {
-		if err := json.Unmarshal(raw, &profiles); err != nil {
-			return fmt.Errorf("%s: \"profiles\" is not an object", path)
-		}
-	}
-	if _, ok := profiles[name]; ok {
-		return fmt.Errorf("profile %q exists already", name)
 	}
 	p.Name, p.Source = name, ""
 	one, err := json.Marshal(p)
 	if err != nil {
 		return err
 	}
-	profiles[name] = one
-	if doc["profiles"], err = json.Marshal(profiles); err != nil {
+	return cfgfile.UpdateRaw(path, func(doc map[string]json.RawMessage) error {
+		profiles, err := rawProfiles(path, doc)
+		if err != nil {
+			return err
+		}
+		old, taken := profiles[name]
+		if taken && !replace {
+			return fmt.Errorf("profile %q exists already", name)
+		}
+		if taken {
+			one, err = mergeProfileJSON(old, one)
+			if err != nil {
+				return err
+			}
+		}
+		profiles[name] = one
+		doc["profiles"], err = json.Marshal(profiles)
 		return err
-	}
-	out, err := json.MarshalIndent(doc, "", "  ")
-	if err != nil {
+	})
+}
+
+// DeleteProfile removes the profile name from the profiles file at path
+// (other profiles and keys stay). A name that is not in the file is an
+// error and nothing is written.
+func DeleteProfile(path, name string) error {
+	return cfgfile.UpdateRaw(path, func(doc map[string]json.RawMessage) error {
+		profiles, err := rawProfiles(path, doc)
+		if err != nil {
+			return err
+		}
+		if _, ok := profiles[name]; !ok {
+			return fmt.Errorf("no profile %q in %s", name, filepath.Base(path))
+		}
+		delete(profiles, name)
+		doc["profiles"], err = json.Marshal(profiles)
 		return err
+	})
+}
+
+func rawProfiles(path string, doc map[string]json.RawMessage) (map[string]json.RawMessage, error) {
+	profiles := map[string]json.RawMessage{}
+	if raw := doc["profiles"]; len(raw) > 0 && !bytes.Equal(raw, []byte("null")) {
+		if err := json.Unmarshal(raw, &profiles); err != nil {
+			return nil, fmt.Errorf("%s: \"profiles\" is not an object", path)
+		}
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
+	return profiles, nil
+}
+
+// mergeProfileJSON is the new profile object with the keys of the old
+// one that Profile does not know (the new object wins on the known ones).
+func mergeProfileJSON(old, fresh json.RawMessage) (json.RawMessage, error) {
+	var o, n map[string]json.RawMessage
+	if err := json.Unmarshal(old, &o); err != nil {
+		return fresh, nil // an old value that is not an object is replaced
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, append(out, '\n'), 0o644); err != nil {
-		return err
+	if err := json.Unmarshal(fresh, &n); err != nil {
+		return nil, err
 	}
-	return os.Rename(tmp, path)
+	for _, k := range profileKnownKeys {
+		delete(o, k)
+	}
+	for k, v := range n {
+		o[k] = v
+	}
+	return json.Marshal(o)
 }
 
 // ProfileHash identifies a profile's content (title, categories, steps
