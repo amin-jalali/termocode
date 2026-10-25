@@ -840,6 +840,9 @@ func (m Model) agentsBuild(width int, now time.Time) aiAgentsCache {
 	default:
 		status, statusTok = g.fail+" "+aiRunSummaryText(d.msg.Run, d.msg.Steps), theme.DiagError
 	}
+	if d.msg.Run.State == ai.RunStateInterrupted && s.aiRetryStep(d.idx) > 0 {
+		status += " · r resumes"
+	}
 	out.head = []string{agRow(runLine, width), agText(statusTok, status, width), divider}
 
 	// Body: the cards, wave by wave.
@@ -1251,6 +1254,10 @@ func (m *Model) routeAgentsKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		m.agentsScroll(page)
 	case "home":
 		s.agents.scroll, s.agents.free = 0, true
+	case "r": // resume the shown run when termocode stopped it
+		if idx, _, _, ok := s.agentsShown(); ok && s.conv.Messages[idx].Run.State == ai.RunStateInterrupted && s.aiRetryStep(idx) > 0 {
+			return m.aiRetryRun(idx), true
+		}
 	case "esc", "q":
 		s.agents.on = false
 	case "ctrl+c":

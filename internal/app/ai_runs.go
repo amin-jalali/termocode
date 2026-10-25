@@ -668,6 +668,19 @@ func (s *aiState) aiRetryStep(i int) int {
 	return 0
 }
 
+// aiResumeLeft counts the steps of run message rm that a resume runs
+// (left) and all its steps (total); planned reports whether a planner
+// added steps (its chip says Resume instead of Retry).
+func aiResumeLeft(rm ai.StoredMessage) (left, total int, planned bool) {
+	for _, st := range rm.Steps {
+		if !agentdag.State(st.State).Done() {
+			left++
+		}
+		planned = planned || st.Planned
+	}
+	return left, len(rm.Steps), planned
+}
+
 // aiRetryRun runs the run at message i again from its first unfinished
 // step, with the saved outputs of the steps before it, in the same
 // message and the same restore point.

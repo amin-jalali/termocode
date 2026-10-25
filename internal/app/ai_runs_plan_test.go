@@ -411,6 +411,22 @@ func TestAIPlannedRunResumeAfterRestart(t *testing.T) {
 	}
 }
 
+// Spec (OM-6): the chip of an interrupted planned run says how many of
+// its steps a resume runs; a plain pipeline keeps "Retry from step N".
+func TestAIResumeChipText(t *testing.T) {
+	m := aiPlanModel(t, &funcAIProvider{reply: planReply(appDiamondPlan)})
+	savePlannedChat(t, m)
+	got := aiTranscriptText(m, 100)
+	wantAll(t, got, "✘ run interrupted (termocode restarted)", "↻ Resume (2 of 5 left)", "!Retry from step")
+
+	// When left did not finish either, three steps are left.
+	steps := savedPlannedSteps()
+	steps[2].State = "cancelled"
+	m.ai.conv.Messages[1].Steps = steps
+	m.ai.runGen++
+	wantAll(t, aiTranscriptText(m, 100), "↻ Resume (3 of 5 left)")
+}
+
 // Spec (OM-6): an interrupted planned run from an old chat file (no
 // saved task text) cannot resume; it keeps today's behaviour.
 func TestAIPlannedRunOldChatNotResumable(t *testing.T) {

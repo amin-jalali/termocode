@@ -180,7 +180,11 @@ func (m Model) aiRunLines(i int, msg ai.StoredMessage, width, inner int) []aiLin
 		out = append(out, aiLine{text: ind + "✘ run interrupted (termocode restarted)", style: theme.Fg(theme.DiagError)})
 	}
 	if n := s.aiRetryStep(i); n > 0 {
-		out = append(out, aiChip("↻ Retry from step "+strconv.Itoa(n), "run-retry:"+strconv.Itoa(i), width))
+		label := "↻ Retry from step " + strconv.Itoa(n)
+		if left, total, planned := aiResumeLeft(msg); planned {
+			label = "↻ Resume (" + strconv.Itoa(left) + " of " + strconv.Itoa(total) + " left)"
+		}
+		out = append(out, aiChip(label, "run-retry:"+strconv.Itoa(i), width))
 	}
 	return out
 }
