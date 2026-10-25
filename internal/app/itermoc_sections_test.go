@@ -36,7 +36,7 @@ func TestItermocModelsShowKeyStateNeverKeyValue(t *testing.T) {
 	}
 	m.itermocRefreshNow()
 	f := imFrame(m)
-	for _, want := range []string{"MODELS", "main", "anthropic · claude-sonnet-4-5", "key ✓", "no key needed", "gpt", "openai · gpt-5-mini", "key ✗", "[Set key (k)]", "[Edit slots (e)]"} {
+	for _, want := range []string{"MODELS", "main", "anthropic · claude-sonnet-4-5", "key ✓", "no key needed", "gpt", "openai · gpt-5-mini", "key ✗", "[Set key (k)]", "[Add slot (a)]", "[Edit JSON (E)]"} {
 		if !strings.Contains(f, want) {
 			t.Errorf("no %q in\n%s", want, f)
 		}

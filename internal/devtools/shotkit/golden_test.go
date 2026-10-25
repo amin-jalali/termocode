@@ -296,7 +296,9 @@ func goldenCases() []goldenCase {
 	// Itermoc (AH-4): a working setup, a fresh install and the actions menu at
 	// the presentation size and at 80x24; the full view also in a light theme
 	// and in ASCII icons.
-	for _, v := range []string{"full", "empty", "menu"} {
+	// The MODELS cards (AH-6): the Add slot form, the Set key offer and
+	// the Remove card.
+	for _, v := range []string{"full", "empty", "menu", "slotadd", "slotkey", "slotremove"} {
 		sc := Itermoc(v)
 		out = append(out, goldenCase{sc.Name + "-200x50", sc, 200, 50}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}

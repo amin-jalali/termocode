@@ -1143,10 +1143,12 @@ func (m Model) routeToConnect(msg tea.Msg) (Model, tea.Cmd) {
 		}
 		var cmd tea.Cmd
 		m.connect, cmd = m.connect.HandleMouse(msg.X, msg.Y, msg.Action, msg.Button)
+		m.refreshItermocSlotCard()
 		return m, cmd
 	}
 	var cmd tea.Cmd
 	m.connect, cmd = m.connect.Update(msg)
+	m.refreshItermocSlotCard()
 	return m, cmd
 }
 
@@ -1161,6 +1163,9 @@ func (m Model) connectTargets() []hitTarget {
 
 // handleMCPConnectMsg routes the wizard's messages. ok=false: not ours.
 func (m *Model) handleMCPConnectMsg(msg tea.Msg) (tea.Cmd, bool) {
+	if cmd, ok := m.handleItermocSlotMsg(msg); ok { // the slot form shares the card (itermoc_slots.go)
+		return cmd, true
+	}
 	switch msg := msg.(type) {
 	case mcpWizEnvMsg:
 		return m.onMCPWizEnv(msg), true

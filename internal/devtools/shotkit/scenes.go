@@ -241,7 +241,9 @@ func AISkills(variant string) Scene {
 // Itermoc is the Itermoc sidebar view (AI profiles, models, services and
 // outside agents) with sample data: "full" a working setup with one row
 // that needs the user in each section, "empty" a fresh install, "menu" the
-// actions menu of the first profile row.
+// actions menu of the first profile row, "slotadd" the Add slot form,
+// "slotkey" the Set key offer after a new slot, "slotremove" the Remove
+// card of a slot a profile uses.
 func Itermoc(variant string) Scene {
 	name := "itermoc"
 	if variant != "full" {

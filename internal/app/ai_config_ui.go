@@ -129,6 +129,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerMCPTrust(id), true
 	case confirmKindMCPRemove: // mcp_service_manage.go
 		return m.answerMCPRemove(id), true
+	case confirmKindAISlotRemove: // itermoc_slots.go
+		return m.answerItermocSlotRemove(id), true
 	case confirmKindMCPServe: // an outside agent's call (mcp_serve_confirm.go)
 		return m.answerMCPServeConfirm(id), true
 	case confirmKindMCPServeStop, confirmKindMCPServeDisconnect: // mcp_serve_status.go
@@ -174,6 +176,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerMCPTrust("deny")
 	case confirmKindMCPRemove:
 		return m.answerMCPRemove("keep")
+	case confirmKindAISlotRemove:
+		return m.answerItermocSlotRemove("keep")
 	case confirmKindMCPServe:
 		return m.answerMCPServeConfirm("deny")
 	case confirmKindMCPServeStop, confirmKindMCPServeDisconnect:

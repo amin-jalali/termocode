@@ -393,12 +393,13 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// Itermoc (itermoc_actions.go): the user's screen for profiles, models,
 	// services and outside agents. The AI opens it with the typed tool
 	// ai_view_open (ai_itermoc_tools.go); as palette commands they are the user's.
-	"itermoc-open":     aiNever(itermocNoOpen),
-	"itermoc-open-ai":  aiNever(itermocNoOpen),
-	"itermoc-profiles": aiNever(itermocNoOpen),
-	"itermoc-models":   aiNever(itermocNoOpen),
-	"itermoc-services": aiNever(itermocNoOpen),
-	"itermoc-agents":   aiNever(itermocNoOpen),
+	"itermoc-open":      aiNever(itermocNoOpen),
+	"itermoc-open-ai":   aiNever(itermocNoOpen),
+	"itermoc-profiles":  aiNever(itermocNoOpen),
+	"itermoc-models":    aiNever(itermocNoOpen),
+	"itermoc-services":  aiNever(itermocNoOpen),
+	"itermoc-agents":    aiNever(itermocNoOpen),
+	"ai-model-slot-add": aiNever(itermocNoSlotEdit),
 	// The secret store (secrets_ui.go): unlocking and locking are the
 	// user's; the AI never reads, sets or lists secrets.
 	"secrets-unlock": aiNever(aiNoAIConfig),

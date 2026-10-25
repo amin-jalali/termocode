@@ -154,7 +154,7 @@ func itermocButtonDefs(sec string) []imBtn {
 	case imSecProfiles:
 		return []imBtn{{id: "new", label: "New profile", key: "n"}, {id: "json", label: "Edit JSON", key: "J"}}
 	case imSecModels:
-		return []imBtn{{id: "slots", label: "Edit slots", key: "e"}}
+		return []imBtn{{id: "add", label: "Add slot", key: "a"}, {id: "slots", label: "Edit JSON", key: "E"}}
 	case imSecServices:
 		return []imBtn{{id: "connect", label: "Connect a service", key: "c"}, {id: "log", label: "Log", key: "l"}}
 	case imSecAgents:

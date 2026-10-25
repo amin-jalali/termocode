@@ -1409,6 +1409,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `ai-mcp-servers` | AI: MCP Servers… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-memory` | AI: Memory… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-memory-toggle` | AI: Memory: Turn On/Off | never | AI provider, credentials and approvals stay with the user |
+| `ai-model-slot-add` | AI: Add Model Slot… | never | a form for the user; keys and config.json stay with the user (the AI shows the MODELS section with ai_view_open) |
 | `ai-models-edit` | AI: Edit Model Slots | never | AI provider, credentials and approvals stay with the user |
 | `ai-new-chat` | AI: New Chat | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-open-chat` | AI: Open Chat | auto |   |
