@@ -357,7 +357,7 @@ func (c *aiTranscriptCache) matches(s *aiState, width int, rk theme.RenderKey, r
 	}
 	for i := range c.msgs {
 		a, b := &c.msgs[i], &s.conv.Messages[i]
-		if a.Role != b.Role || a.Text != b.Text || a.Context != b.Context {
+		if a.Role != b.Role || a.Text != b.Text || a.Context != b.Context || a.Model != b.Model {
 			return false
 		}
 	}
@@ -656,6 +656,9 @@ func (m Model) aiAnswerHeader(width, msgIdx int, done bool) aiLine {
 	label := ""
 	if s := m.ai; s != nil && s.provider != nil {
 		label = s.modelLabel()
+		if msgIdx >= 0 && msgIdx < len(s.conv.Messages) && s.conv.Messages[msgIdx].Model != "" {
+			label = s.conv.Messages[msgIdx].Model // the step's slot model, not the main one
+		}
 	}
 	return m.aiAnswerHeaderModel(width, msgIdx, done, label)
 }

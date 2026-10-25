@@ -270,6 +270,21 @@ func (s *aiState) modelLabel() string {
 	return ai.KindLabel(s.cfg.Kind)
 }
 
+// profileModelLabel is the model a profile answers with: the slot model
+// of its last step (the step whose answer is the reply; a planned
+// profile starts with its planner). "" when the slot has none.
+func (s *aiState) profileModelLabel(p ai.Profile) string {
+	if len(p.Steps) == 0 {
+		return ""
+	}
+	st := p.Steps[len(p.Steps)-1]
+	if p.Planned() {
+		st = p.Steps[0]
+	}
+	m, _ := s.aiSlotModel(p.SlotFor(st))
+	return m
+}
+
 // aiStatus fills the status-bar badge fields.
 func (m Model) aiStatus() (string, statusbar.AIState) {
 	s := m.ai
@@ -280,8 +295,11 @@ func (m Model) aiStatus() (string, statusbar.AIState) {
 		return "AI", statusbar.AIUnconfigured
 	}
 	label := s.modelLabel()
-	if p := s.activeProfile().Name; p != ai.ProfileDefault {
-		label = p + " · " + label // U20 AP-5: a non-default profile shows in the badge
+	if prof := s.activeProfile(); prof.Name != ai.ProfileDefault {
+		if mod := s.profileModelLabel(prof); mod != "" {
+			label = mod
+		}
+		label = prof.Name + " · " + label // U20 AP-5: a non-default profile shows in the badge
 	}
 	if s.streaming || s.inlineBusy || s.actionBusy != "" {
 		return label, statusbar.AIStreaming

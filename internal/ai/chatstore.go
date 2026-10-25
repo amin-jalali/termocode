@@ -35,6 +35,9 @@ type StoredMessage struct {
 	// plain chat turn has neither.
 	Run   *StoredRun   `json:"run,omitempty"`
 	Steps []StoredStep `json:"steps,omitempty"`
+	// Model is the model that answered a plain chat turn (the profile
+	// step's slot model); "" for older chats and pipeline runs.
+	Model string `json:"model,omitempty"`
 }
 
 // Run states (StoredRun.State).
