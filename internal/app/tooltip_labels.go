@@ -56,7 +56,7 @@ var tooltipLabels = map[string]tooltipSpec{
 	// AI chat panel header (+ ≡ ⚐ ×) and the launcher chip.
 	"ai:new":             {name: "New chat", local: "Ctrl+N", help: helpChat}, // aiPanelKey
 	"ai:history":         {name: "Chat history", help: helpChat},
-	"ai:profile":         {name: "Agent profile", palette: "ai-profile-next", help: "guides/ai-profiles.md#pick-a-profile"},
+	"ai:profile":         {name: "Agent profile (and its details)", palette: "ai-profile-next", help: "guides/ai-profiles.md#pick-a-profile"},
 	"ai:usage":           {name: "Session usage: tokens and cost by model and agent (AI: Usage)", help: helpAgents},
 	"ai:chat":            {name: "Back to the chat", palette: "ai-agents", help: helpAgents},
 	"ai:btn:agents:":     {name: "Show in AGENTS", palette: "ai-agents", help: helpAgents},

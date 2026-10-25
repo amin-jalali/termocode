@@ -178,6 +178,10 @@ func (m Model) aiProfilePickerWidth() (box, hint int) {
 	return 110, (box - 2 - 4) / 2
 }
 
+// aiProfileDetailsID is the picker's last row, no profile name: it
+// opens AI: Show Profile (the agents and models of the active profile).
+const aiProfileDetailsID = "·details"
+
 // openAIProfilePicker is AI: Switch Profile… and a click on the chip.
 func (m *Model) openAIProfilePicker() tea.Cmd {
 	s := m.aiS()
@@ -188,6 +192,8 @@ func (m *Model) openAIProfilePicker() tea.Cmd {
 		p, _ := s.profiles.Get(n)
 		items = append(items, picker.Item{ID: n, Title: n, Hint: m.aiProfileHint(p, hint)})
 	}
+	items = append(items, picker.Item{ID: aiProfileDetailsID, Title: "Show details of " + s.activeProfile().Name + "…",
+		Hint: "agents and models, in order"})
 	m.picker = picker.NewItems(" "+aiSpark()+" AI Profile ", items)
 	m.picker.SetWidth(box)
 	m.picker.SetCursorID(s.activeProfile().Name)
@@ -232,6 +238,9 @@ func (m *Model) openAIProfileTrustPicker() tea.Cmd {
 func (m *Model) handleAIProfilePickerSelect(id string) (tea.Cmd, bool) {
 	switch m.pickerKind {
 	case pickerKindAIProfile:
+		if id == aiProfileDetailsID {
+			return m.showAIProfile(), true
+		}
 		return m.selectAIProfile(id), true
 	case pickerKindAIProfileTrust:
 		p, ok := m.aiS().profiles.Get(id)
