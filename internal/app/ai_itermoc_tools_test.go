@@ -12,7 +12,7 @@ import (
 )
 
 // aiItermocToolNames are the AI read tools of the Itermoc view (AH-7).
-var aiItermocToolNames = []string{"profiles_list"}
+var aiItermocToolNames = []string{"profiles_list", "models_list"}
 
 // aiItermocTestModel is the profile test model (built-in profiles, an
 // untrusted project profile "house", one fake main slot) with a
@@ -98,6 +98,55 @@ func TestAIProfilesListShape(t *testing.T) {
 	}
 	if strings.Contains(out, "Second line.") {
 		t.Error("profiles_list shows more than the first prompt line")
+	}
+}
+
+// Spec: models_list shows each slot's provider, model and whether a key
+// is set (never the key), and a base URL without user, password, path or
+// query.
+func TestAIModelsListShape(t *testing.T) {
+	m, call := aiItermocTestModel(t)
+	m.ai.slotFake = map[string]aiSlot{
+		ai.SlotMain:  {cfg: ai.Config{Kind: ai.KindAnthropic, Model: "claude-sonnet-4-5", APIKey: aiPlantAPIKey}},
+		ai.SlotLocal: {cfg: ai.Config{Kind: ai.KindOllama, Model: "qwen2.5-coder:7b", BaseURL: "http://127.0.0.1:11434"}},
+		"gpt":        {cfg: ai.Config{Kind: ai.KindOpenAI, Model: "gpt-5-mini"}},
+		"proxy":      {cfg: ai.Config{Kind: ai.KindCompatible, Model: "gpt-x", BaseURL: "https://u:p@llm.example.com:8443/v1?token=abc"}},
+	}
+	out := aiItermocRun(t, m, call, "models_list", nil)
+	var got struct {
+		Slots []struct {
+			Name       string `json:"name"`
+			Provider   string `json:"provider"`
+			Model      string `json:"model"`
+			Credential string `json:"credential"`
+			Base       string `json:"base_host"`
+		} `json:"slots"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("not JSON: %v\n%s", err, out)
+	}
+	want := map[string][4]string{
+		ai.SlotMain:  {ai.KindAnthropic, "claude-sonnet-4-5", "set", ""},
+		ai.SlotLocal: {ai.KindOllama, "qwen2.5-coder:7b", "not needed", "http://127.0.0.1:11434"},
+		"gpt":        {ai.KindOpenAI, "gpt-5-mini", "missing", ""},
+		"proxy":      {ai.KindCompatible, "gpt-x", "none (optional)", "https://llm.example.com:8443"},
+	}
+	if len(got.Slots) == 0 || got.Slots[0].Name != ai.SlotMain {
+		t.Fatalf("slots %+v", got.Slots)
+	}
+	seen := 0
+	for _, s := range got.Slots {
+		w, ok := want[s.Name]
+		if !ok {
+			continue // the pool's own slots (quick)
+		}
+		seen++
+		if s.Provider != w[0] || s.Model != w[1] || s.Credential != w[2] || s.Base != w[3] {
+			t.Errorf("slot %+v, want %v", s, w)
+		}
+	}
+	if seen != len(want) {
+		t.Errorf("slots %+v", got.Slots)
 	}
 }
 

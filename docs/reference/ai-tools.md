@@ -97,6 +97,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`compose_up`](#compose_up) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved) | no | Run `docker compose up -d` for a compose project that has containers on this host (see containers_list), in its own folder, in a visible terminal tab. |
 | [`help_read`](#help_read) | auto | no | Read the built-in guide: with no arguments list pages; page shows headings and anchors; page and section returns that section's prepared Markdown; query searches matching sections (page can filter it). |
 | [`profiles_list`](#profiles_list) | auto | no | List the AI agent profiles: name, title, source (built-in, user, project with its trust state), which is active, budget, and each step's title, model slot, resolved model, tools preset and the first line of its prompt. |
+| [`models_list`](#models_list) | auto | no | List the AI model slots (main, quick, local and the user's own): provider, model, whether a key is set (set / missing / not needed; never the key) and the base URL's scheme and host. |
 | [`http_list_requests`](#http_list_requests) | auto | yes | List the HTTP requests in the user's .http / .rest files (request templates with {{variables}}, not resolved), the file variable names and the selected environment. |
 | [`http_environments`](#http_environments) | auto | yes | Show the HTTP environments (http-client.env.json and the private file), the selected one and their variable names. |
 | [`http_send`](#http_send) | GET / HEAD / OPTIONS to localhost: auto<br>other safe methods: confirm (http:<host[:port]>)<br>other methods: confirm (http:<host[:port]>/write)<br>private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks) | some ask | Send an HTTP request and read the answer (status, headers, body). |
@@ -1089,6 +1090,16 @@ Read the built-in guide: with no arguments list pages; page shows headings and a
 ### profiles_list
 
 List the AI agent profiles: name, title, source (built-in, user, project with its trust state), which is active, budget, and each step's title, model slot, resolved model, tools preset and the first line of its prompt. Use it to answer what a profile does; switching stays with the user.
+
+**Gate:** auto
+
+**MCP server:** no
+
+No arguments.
+
+### models_list
+
+List the AI model slots (main, quick, local and the user's own): provider, model, whether a key is set (set / missing / not needed; never the key) and the base URL's scheme and host. Keys stay with the user.
 
 **Gate:** auto
 
