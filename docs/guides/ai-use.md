@@ -423,6 +423,42 @@ deletes or saves a file whose tab has unsaved edits; it asks you to save first.
 The agent stops after 25 tool steps per message and says so. Send "continue"
 to go on. Change the limit with `ai_max_steps` in `config.json`.
 
+## Project rules file
+
+A project can tell the AI how to work in it: put the rules in `AGENTS.md`
+or `.termocode/rules.md` in the workspace root. termocode reads them at the
+start of every chat turn and puts them in the AI's system prompt. When both
+files exist, both are used (AGENTS.md first).
+
+The text steers the AI, so it is used only when you say so:
+
+- The first message in a workspace with a rules file opens a card **Use this
+  project's rules file?**. It shows the file, its size and the first 8 lines.
+- **Not in this project** (the first button, and the one Enter picks) sends
+  your message without the rules.
+- **Always in this project** sends it with the rules.
+- **Esc** sends nothing and puts your message back in the input.
+
+The answer is kept per workspace for that exact text. When the file
+changes (you edit it, a pull brings a new version, or the AI writes it),
+the next message asks again.
+
+Under your message, the chat shows a dim line such as
+`rules: AGENTS.md (4 KB)` or `rules: AGENTS.md (not used)`. Click it to open
+the file. Run **AI: Project Rules…** to change your answer.
+
+Limits:
+
+- At most 16 KB go into the prompt. A longer text is cut at a line end and
+  ends with `(cut at 16 KB)`.
+- Terminal escape codes, control characters and bidi marks are removed.
+- Known secrets and key-looking strings are replaced by `[REDACTED]`.
+- A rules file that is a symlink to a place outside the workspace is
+  ignored.
+- The rules are only prompt text. They give the AI no tools and never
+  answer a confirm card for you. Pipeline runs ([AI profiles](ai-profiles.md))
+  get them in every step.
+
 ## Keys at a glance
 
 | Key | Action |
