@@ -474,3 +474,32 @@ func TestAgentsCardRunningShowsModelAndTime(t *testing.T) {
 	rows = strings.Join(agentsCardRows(t, m, "left", 16, start.Add(12*time.Second)), "\n")
 	wantAll(t, rows, "12 s")
 }
+
+// Spec (OM-6): the AGENTS view of a planned run that a restart stopped
+// says "r resumes"; r resumes it (only its unfinished nodes run).
+func TestAgentsPanelResumeKey(t *testing.T) {
+	agentsUnicode(t)
+	p := &funcAIProvider{reply: planReply(appDiamondPlan)}
+	m := aiPlanModel(t, p)
+	savePlannedChat(t, m)
+	m.actionsOpen, m.actionsPinned = true, true
+	if cmd := m.toggleAgentsView(); cmd != nil {
+		m.handleAIMsg(cmd())
+	}
+	if !m.ai.agents.on {
+		t.Fatal("AGENTS view not shown")
+	}
+	wantAll(t, agentsText(m, 64, 60), "run interrupted", "r resumes")
+	cmd := m.agentsKey(t, "r")
+	if cmd == nil || !m.ai.streaming {
+		t.Fatal("r did not resume the run")
+	}
+	driveAIChat(t, m, cmd, nil)
+	if rm := aiRunMsg(t, m); rm.Run.State != ai.RunStateDone || len(p.reqs) != 2 {
+		t.Errorf("run %+v after %d requests", rm.Run, len(p.reqs))
+	}
+	wantAll(t, agentsText(m, 64, 60), "!r resumes")
+	if m.agentsKey(t, "r") != nil || m.ai.streaming {
+		t.Error("r on a finished run must do nothing")
+	}
+}
