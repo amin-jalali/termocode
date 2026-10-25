@@ -13,6 +13,7 @@ import (
 // "itermocdemo:full|empty"). The data is fixed: nothing reads the machine's
 // own profiles, keys or services, and no key is in it.
 //
+//	profile  full, with the page of the profile review open in the editor
 //	full   the active profile review, an untrusted project profile, one
 //	       model without a key, a service that needs a sign-in, one agent
 //	empty  a fresh install: no AI provider, no service, nothing listening
@@ -68,7 +69,33 @@ func (m *Model) itermocDemo(arg string) tea.Cmd {
 		"09:42 claude-code · debug_start · asked, you denied",
 	}
 	st.fixed = true
+	if arg == "profile" {
+		return m.itermocProfileDemo()
+	}
 	return m.itermocSlotDemo(arg)
+}
+
+// itermocProfileDemo is the full demo with three runs of review in the chat
+// and the profile page of review open in the editor area.
+func (m *Model) itermocProfileDemo() tea.Cmd {
+	cost := func(c float64) *float64 { return &c }
+	run := func(id, prompt, state string, ms int64, steps []ai.StoredStep) []ai.StoredMessage {
+		return []ai.StoredMessage{
+			{Role: ai.StoredUser, Text: prompt},
+			{Role: ai.StoredAssistant, Text: "done", Run: &ai.StoredRun{ID: id, Profile: ai.ProfileReview, State: state, ElapsedMs: ms}, Steps: steps},
+		}
+	}
+	s := m.aiS()
+	s.conv.Messages = nil
+	s.conv.Messages = append(s.conv.Messages, run("r1", "add a key card to AGENTS", ai.RunStatePaused, 130000,
+		[]ai.StoredStep{{ID: "review", Cost: cost(0.021), Files: 0}, {ID: "fix", Cost: cost(0.043), Files: 1}})...)
+	s.conv.Messages = append(s.conv.Messages, run("r2", "why does the toast flicker", ai.RunStateDone, 58000,
+		[]ai.StoredStep{{ID: "review", Cost: cost(0.012)}, {ID: "fix", Cost: cost(0.019), Files: 1}})...)
+	s.conv.Messages = append(s.conv.Messages, run("r3", "review my last commit", ai.RunStateDone, 36000,
+		[]ai.StoredStep{{ID: "review", Cost: cost(0.006)}, {ID: "fix", Cost: cost(0.011), Files: 2}})...)
+	row := imRow{kind: imRowProfile, sec: imSecProfiles, name: ai.ProfileReview}
+	m.itermoc.cursorTo(row)
+	return m.itermocShowPage(row, false)
 }
 
 // itermocSlotDemo opens a slot card over the full demo. Nothing is

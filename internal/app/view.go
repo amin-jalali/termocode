@@ -497,6 +497,9 @@ func (m Model) renderBaseLines() []string {
 	} else if m.runsPageShown() {
 		// The Runs page: drawn here, not by nvim (runs_page.go).
 		editorContent = m.renderRunsPage(edPaneW, editorH)
+	} else if m.itermocPageShown() {
+		// The Itermoc detail page: drawn here, not by nvim (itermoc_page.go).
+		editorContent = m.renderItermocPage(edPaneW, editorH)
 	} else {
 		editorContent = m.editor.View(m.focus == FocusEditor)
 		// When the integrated terminal panel is open, applyLayout shrinks

@@ -490,6 +490,17 @@ func (st *itermocState) move(d int) {
 	}
 }
 
+// cursorTo puts the cursor on row (same kind, group and name) when it is listed.
+func (st *itermocState) cursorTo(row imRow) {
+	for i, r := range st.rows() {
+		if r.selectable() && imRowKey(r) == imRowKey(row) {
+			st.cursor = i
+			st.touch()
+			return
+		}
+	}
+}
+
 // current is the row under the cursor.
 func (st *itermocState) current() (imRow, bool) {
 	rows := st.rows()

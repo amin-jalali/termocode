@@ -125,6 +125,9 @@ func (m Model) screenTargets() []hitTarget {
 	if m.runsPageShown() {
 		out = append(out, m.runsPageTargets(pane)...)
 	}
+	if m.itermocPageShown() {
+		out = append(out, m.itermocPageTargets(pane)...)
+	}
 	if m.termOpen && !m.editorEmpty() {
 		out = append(out, m.panelBarTargets(pane)...)
 	}

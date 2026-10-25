@@ -505,6 +505,9 @@ type Model struct {
 	itermoc *itermocState
 	// runs is the Runs view and its page (runs_state.go); nil until it opens.
 	runs *runsState
+	// itermocPage is the detail page of the object picked in the list: one
+	// editor tab, reused (itermoc_page.go). nil until the first one opens.
+	itermocPage *itermocPageState
 	// ext is the extension host state (Group I, ext.go). Pointer so
 	// Model copies share it; nil in bare test Models.
 	ext *extState

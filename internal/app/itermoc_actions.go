@@ -111,6 +111,7 @@ func itermocKeyRows() []confirm.KeyRow {
 		[]string{"Move"},
 		[]string{"j / k", "move"},
 		[]string{"Enter", "actions of the row (a section: fold it)"},
+		[]string{"o", "open the page of the row (the click does it too)"},
 		[]string{"Space", "fold or open the section"},
 		[]string{"Tab", "next section"},
 		[]string{"/", "filter by name (Esc clears)"},
@@ -118,6 +119,8 @@ func itermocKeyRows() []confirm.KeyRow {
 		[]string{"Esc", "back to the editor"},
 		[]string{"Profiles"},
 		[]string{"u", "use the profile"},
+		[]string{"e", "edit the profile"},
+		[]string{"r", "runs of the profile (AGENTS)"},
 		[]string{"d", "details of the profile"},
 		[]string{"D", "duplicate the profile…"},
 		[]string{"t", "trust a project profile…"},
@@ -166,7 +169,18 @@ func (m *Model) itermocFilterKey(k tea.KeyMsg) bool {
 	return true
 }
 
+// handleItermocSidebarKey runs a key in the list; when the cursor moved onto
+// another object the page (when shown) follows it.
 func (m Model) handleItermocSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
+	before := m.itermocS().cursorKey()
+	nm, cmd := m.itermocSidebarKey(k)
+	if st := nm.itermoc; st != nil && st.cursorKey() != before {
+		cmd = tea.Batch(cmd, nm.itermocSyncPage())
+	}
+	return nm, cmd
+}
+
+func (m Model) itermocSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	st := m.itermocS()
 	st.w = m.explorerWidth - 1
 	if m.itermocFilterKey(k) {
@@ -211,6 +225,10 @@ func (m Model) handleItermocSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	case "enter":
 		if have {
 			return m, m.itermocEnter(row)
+		}
+	case "o":
+		if have {
+			return m, m.itermocShowPage(row, true)
 		}
 	case "R":
 		st.refresh(m, true)
@@ -263,6 +281,10 @@ func (m *Model) itermocRowKey(key string, row imRow) (tea.Cmd, bool) {
 			return m.itermocRun("duplicate", row), true
 		case "t":
 			return m.itermocRun("trust", row), true
+		case "e":
+			return m.itermocRun("edit", row), true
+		case "r":
+			return m.itermocRun("runs", row), true
 		}
 	case imRowSlot:
 		switch key {
@@ -493,6 +515,11 @@ func (m *Model) itermocRun(verb string, row imRow) tea.Cmd {
 		if row.kind == imRowSlot {
 			return m.openItermocSlotEdit(row.name)
 		}
+		if row.kind == imRowProfile {
+			// TODO(#12, feat/profile-form): open the profile step form here.
+			// Until it is merged a profile is edited in profiles.json.
+			return m.editAIProfiles()
+		}
 		return nil
 	case "remove":
 		if row.kind == imRowSlot {
@@ -556,6 +583,10 @@ func itermocTooltip(id string) (name, key, help string, ok bool) {
 	switch kind {
 	case "sec":
 		return "Fold section", "Space", help, true
+	case "pg":
+		if name, key, ok := itermocPageTip(rest); ok {
+			return name, key, help, true
+		}
 	case "row":
 		sec, name, _ := strings.Cut(rest, "/")
 		if strings.HasPrefix(name, "+") {
@@ -563,13 +594,13 @@ func itermocTooltip(id string) (name, key, help string, ok bool) {
 		}
 		switch sec {
 		case imSecProfiles:
-			return "Profile actions: use, details, duplicate, runs, trust, edit JSON", "Enter · u · d · D", help, true
+			return "Open the profile page · Enter for all actions", "o · Enter", help, true
 		case imSecModels:
-			return "Model slot: edit, set a key, remove", "Enter · e · k · D", help, true
+			return "Open the model page · Enter for all actions", "o · Enter", help, true
 		case imSecServices:
-			return "Service actions: sign in, tools, writes, disable, remove", "Enter · i", help, true
+			return "Open the service page · Enter for all actions", "o · Enter", help, true
 		case imSecAgents:
-			return "Outside agents: status, allowed tools, disconnect", "Enter", help, true
+			return "Open the outside agents page · Enter for all actions", "o · Enter", help, true
 		}
 	}
 	return "", "", "", false
@@ -622,8 +653,12 @@ func (m Model) handleItermocSidebarMouse(x, y int, t tea.MouseEventType) (Model,
 			if r.sec == sec && r.name == name && r.selectable() {
 				st.cursor = i
 				st.touch()
-				// A click selects the row and opens its actions.
-				return m, m.itermocEnter(r)
+				// A click selects the row and shows its page in the page tab
+				// (the dim "+ new …" rows run their verb).
+				if r.kind == imRowAdd {
+					return m, m.itermocAdd(r.sec)
+				}
+				return m, m.itermocShowPage(r, false)
 			}
 		}
 	}

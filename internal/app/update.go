@@ -599,6 +599,11 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 			return newM, cmd
 		}
 	}
+	if m.itermocPageShown() {
+		if newM, cmd, ok := m.routeToItermocPage(msg); ok {
+			return newM, cmd
+		}
+	}
 	if m.findOpen {
 		return m.routeToFind(msg)
 	}
@@ -2500,7 +2505,7 @@ func (m *Model) refreshBreadcrumbs(path string) {
 	}
 	// The Find Results page has its own header rows; a breadcrumb would
 	// only show the temp folder its buffer is named after.
-	if path == "" || isFindResultsPath(path) || isHTTPPagePath(path) || isDBResultPath(path) || isRunsPagePath(path) {
+	if path == "" || isFindResultsPath(path) || isHTTPPagePath(path) || isDBResultPath(path) || isRunsPagePath(path) || isItermocPagePath(path) {
 		if len(prev) > 0 {
 			m.applyLayout()
 		}

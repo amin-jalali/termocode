@@ -17,7 +17,7 @@ import (
 //	0  ITERMOC                          ? keys  / filter
 //	1  hairline
 //	2… rows (one line each; groups fold)
-//	h-1 footer: Enter actions · Space fold · ? keys
+//	h-1 footer: Enter actions · o page · ? keys
 //
 // The list is calm: a group header (icon, name, a count or "N !"), then one
 // row per object: a state glyph, the name and ONE word at the right
@@ -545,9 +545,11 @@ func (m Model) renderItermocSidebar(w, h int) string {
 	for len(lines) < h-itermocFooterRows {
 		lines = append(lines, fill())
 	}
-	foot := theme.ASCIIText("Enter actions · Space fold · ? keys")
-	if runewidth.StringWidth(foot) > w-2 {
-		foot = theme.ASCIIText("Enter actions · ? keys")
+	foot := ""
+	for _, f := range []string{"Enter actions · o page · ? keys", "Enter menu · o page · ? keys", "Enter menu · o page · ?", "o page · ? keys"} {
+		if foot = theme.ASCIIText(f); runewidth.StringWidth(foot) <= w-2 {
+			break
+		}
 	}
 	foot = imTrunc(foot, max(w-2, 1))
 	lines = append(lines, testsPad(theme.Bg(theme.BgSidebar).Render(" ")+theme.FgBg(theme.TextMuted, theme.BgSidebar).Render(foot), w))

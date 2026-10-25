@@ -240,19 +240,28 @@ func AISkills(variant string) Scene {
 
 // Itermoc is the Itermoc sidebar view (AI profiles, models, services and
 // outside agents) with sample data: "list" a working setup with one row
-// that needs the user in each section (the list only, no detail page), "empty" a fresh install, "menu" the
+// that needs the user in each section (the list only, no detail page),
+// "follow" the keys o, Esc and j: the page tab follows the list, "profile" the same with the detail page of the profile review open in
+// the editor area, "empty" a fresh install, "menu" the
 // actions menu of the first profile row, "slotadd" the Add slot form,
 // "slotkey" the Set key offer after a new slot, "slotremove" the Remove
 // card of a slot a profile uses.
 func Itermoc(variant string) Scene {
 	name := "itermoc-" + variant
 	demo := variant
-	if variant == "menu" || variant == "list" {
+	if variant == "menu" || variant == "list" || variant == "follow" {
 		demo = "full"
 	}
 	steps := WithEditor(Act("itermocdemo:"+demo), Pause(600*time.Millisecond))
 	if variant == "menu" {
 		steps = WithEditor(Act("itermocdemo:full"), Pause(300*time.Millisecond), Key("j"), Key("enter"), Pause(400*time.Millisecond))
+	}
+	if variant == "follow" {
+		// o opens the page of the second profile (and moves the keys to it);
+		// Esc gives them back to the list, where j moves to the next profile
+		// and the same tab follows.
+		steps = WithEditor(Act("itermocdemo:full"), Pause(300*time.Millisecond), Key("j"), Key("j"), Key("o"), Pause(500*time.Millisecond),
+			Key("esc"), Key("j"), Pause(500*time.Millisecond))
 	}
 	return Scene{Name: name, Env: aiEnv, Steps: steps}
 }

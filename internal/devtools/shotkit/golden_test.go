@@ -298,12 +298,16 @@ func goldenCases() []goldenCase {
 	// and in ASCII icons.
 	// The MODELS cards (AH-6): the Add slot form, the Set key offer and
 	// the Remove card.
-	for _, v := range []string{"list", "empty", "menu", "slotadd", "slotkey", "slotremove"} {
+	for _, v := range []string{"list", "profile", "follow", "empty", "menu", "slotadd", "slotkey", "slotremove"} {
 		sc := Itermoc(v)
 		out = append(out, goldenCase{sc.Name + "-200x50", sc, 200, 50}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
 	{
 		sc := Itermoc("list")
+		p := Itermoc("profile")
+		pl, pa := withTheme(withName(p, p.Name+"-light"), "catppuccin-latte"), withName(p, p.Name+"-ascii")
+		pa.Icons = "ascii"
+		out = append(out, goldenCase{pl.Name + "-200x50", pl, 200, 50}, goldenCase{pa.Name + "-200x50", pa, 200, 50})
 		light, ascii := withTheme(withName(sc, sc.Name+"-light"), "catppuccin-latte"), withName(sc, sc.Name+"-ascii")
 		ascii.Icons = "ascii"
 		out = append(out, goldenCase{light.Name + "-200x50", light, 200, 50}, goldenCase{ascii.Name + "-200x50", ascii, 200, 50})

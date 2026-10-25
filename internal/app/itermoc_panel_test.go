@@ -153,7 +153,7 @@ func TestItermocCursorSkipsButtons(t *testing.T) {
 }
 
 // Spec: a click on a section header folds it; a click on a row selects it
-// and opens its actions; a click on the dim "+ new profile…" row runs it.
+// and shows its page; a click on the dim "+ new profile…" row runs it.
 // The wheel moves the cursor.
 func TestItermocMouse(t *testing.T) {
 	imIcons(t, theme.IconModeUnicode)
@@ -181,8 +181,8 @@ func TestItermocMouse(t *testing.T) {
 		}
 	}
 	click(find("im:row:profiles/review"))
-	if !m.pickerOpen || m.pickerKind != pickerKindItermocActions {
-		t.Fatal("a click on a profile row did not open its actions")
+	if m.pickerOpen || m.itermocPage == nil || m.itermocPage.name != "review" {
+		t.Fatal("a click on a profile row did not show its page")
 	}
 	if r, _ := m.itermoc.current(); r.name != "review" {
 		t.Errorf("the click selected %+v", r)
@@ -227,7 +227,7 @@ func TestItermocHitTargetsAndProbe(t *testing.T) {
 	if got := m.probeClick(row.X+2, row.Y); got != row.ID {
 		t.Errorf("probeClick = %q, want %q", got, row.ID)
 	}
-	if got := m.tooltipText(row.ID); !strings.Contains(got, "Profile actions") {
+	if got := m.tooltipText(row.ID); !strings.Contains(got, "profile page") {
 		t.Errorf("tooltip %q", got)
 	}
 	if tooltipHelp(row.ID) == "" || tooltipHelp("im:row:profiles/+add") == "" {
