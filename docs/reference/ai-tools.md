@@ -100,6 +100,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`models_list`](#models_list) | auto | no | List the AI model slots (main, quick, local and the user's own): provider, model, whether a key is set (set / missing / not needed; never the key) and the base URL's scheme and host. |
 | [`mcp_services_list`](#mcp_services_list) | auto | no | List the MCP services the chat can use (GitHub, Linear, the user's own servers in mcp.json): state (running, stopped, off, failed, sign-in …), transport, source and trust, access (read only or read and write), tool count and whether a sign-in is stored. |
 | [`outside_agents_status`](#outside_agents_status) | auto | no | Whether termocode's MCP server listens for outside agents (Claude Code, Codex …), and why not; the connected agents with since, calls and how many asked; the last 10 calls; and the tools each agent may run without asking. |
+| [`ai_view_open`](#ai_view_open) | auto | no | Show the Itermoc view (the user's screen for AI profiles, models, MCP services and outside agents) at a section, with the cursor on a row when given. |
 | [`http_list_requests`](#http_list_requests) | auto | yes | List the HTTP requests in the user's .http / .rest files (request templates with {{variables}}, not resolved), the file variable names and the selected environment. |
 | [`http_environments`](#http_environments) | auto | yes | Show the HTTP environments (http-client.env.json and the private file), the selected one and their variable names. |
 | [`http_send`](#http_send) | GET / HEAD / OPTIONS to localhost: auto<br>other safe methods: confirm (http:<host[:port]>)<br>other methods: confirm (http:<host[:port]>/write)<br>private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks) | some ask | Send an HTTP request and read the answer (status, headers, body). |
@@ -1128,6 +1129,19 @@ Whether termocode's MCP server listens for outside agents (Claude Code, Codex �
 
 No arguments.
 
+### ai_view_open
+
+Show the Itermoc view (the user's screen for AI profiles, models, MCP services and outside agents) at a section, with the cursor on a row when given. It only shows the screen: use it when the next step is the user's (set a key, sign in, trust, revoke access).
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `section` | string | yes | the section to show. One of: `profiles`, `models`, `services`, `outside-agents` |
+| `row` | string |   | profile, slot, service or agent name (optional) |
+
 ### http_list_requests
 
 List the HTTP requests in the user's .http / .rest files (request templates with {{variables}}, not resolved), the file variable names and the selected environment.
@@ -1580,12 +1594,12 @@ Run ONE Redis command (one line, as typed in a console). A read command runs at 
 | `http-saved` | HTTP: Saved Requests… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_list_requests on http/saved.http) |
 | `http-send` | HTTP: Send Request at Cursor | never | sends a network request; use http_send (gated by host and method) |
 | `http-send-pick` | HTTP: Send Request… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_list_requests, http_send) |
-| `itermoc-agents` | Itermoc: Outside Agents | never | a screen for the user (secrets and access live there); the AI will get a typed ai_view_open tool instead |
-| `itermoc-models` | Itermoc: Models | never | a screen for the user (secrets and access live there); the AI will get a typed ai_view_open tool instead |
-| `itermoc-open` | Itermoc: Open | never | a screen for the user (secrets and access live there); the AI will get a typed ai_view_open tool instead |
-| `itermoc-open-ai` | AI: Agents & Connections | never | a screen for the user (secrets and access live there); the AI will get a typed ai_view_open tool instead |
-| `itermoc-profiles` | Itermoc: Profiles | never | a screen for the user (secrets and access live there); the AI will get a typed ai_view_open tool instead |
-| `itermoc-services` | Itermoc: Services | never | a screen for the user (secrets and access live there); the AI will get a typed ai_view_open tool instead |
+| `itermoc-agents` | Itermoc: Outside Agents | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
+| `itermoc-models` | Itermoc: Models | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
+| `itermoc-open` | Itermoc: Open | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
+| `itermoc-open-ai` | AI: Agents & Connections | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
+| `itermoc-profiles` | Itermoc: Profiles | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
+| `itermoc-services` | Itermoc: Services | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `join-lines` | Edit: Join Lines | confirm (fileWrite) |   |
 | `lowercase` | Edit: Convert to lowercase | confirm (fileWrite) |   |
 | `lsp-manage` | LSP: Manage Language Servers... | never | opens a picker or prompt that only the user can answer; use a typed tool (lsp_servers) |

@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
@@ -297,6 +298,40 @@ func aiOutsideAgentsInfo(m *Model, sn itermocSnap) (any, error) {
 	return out, nil
 }
 
+// ── ai_view_open ─────────────────────────────────────────────────────────
+
+// aiViewSections are the section names ai_view_open takes.
+var aiViewSections = []string{"profiles", "models", "services", "outside-agents"}
+
+// aiViewOpen shows the view at sec; row (optional) is a profile, slot,
+// service or outside agent name. The keyboard focus stays where it is:
+// the user may be typing in the chat.
+func aiViewOpen(m *Model, sec, row string) string {
+	m.revealItermocView(false, sec)
+	st := m.itermoc
+	title := itermocSectionTitle(sec)
+	if row == "" {
+		return "Opened Itermoc at " + title + "."
+	}
+	for i, r := range st.rows() {
+		if r.sec != sec || !r.selectable() || r.kind == imRowSection {
+			continue
+		}
+		name := r.name
+		if r.kind == imRowAgent {
+			if a, ok := st.snap.agent(r.name); ok {
+				name = a.name
+			}
+		}
+		if name == row {
+			st.cursor = i
+			st.touch()
+			return "Opened Itermoc at " + title + ", row " + row + "."
+		}
+	}
+	return "Opened Itermoc at " + title + "; no row " + row + " there, so the section header has the cursor."
+}
+
 // ── The tools ────────────────────────────────────────────────────────────
 
 // aiItermocTools are the read tools of the Itermoc view.
@@ -344,6 +379,32 @@ func aiItermocTools(call aiIDECaller) []ai.Tool {
 			Describe: func(map[string]any) string { return "Outside agents status" },
 			Run: func(ctx context.Context, _ map[string]any) (string, error) {
 				return aiItermocSnapshot(ctx, call, aiOutsideAgentsInfo)
+			},
+		},
+		{
+			Name: "ai_view_open",
+			Description: "Show the Itermoc view (the user's screen for AI profiles, models, MCP services and outside " +
+				"agents) at a section, with the cursor on a row when given. It only shows the screen: use it when the " +
+				"next step is the user's (set a key, sign in, trust, revoke access).",
+			Params: map[string]any{
+				"section": map[string]any{"type": "string", "enum": aiViewSections, "description": "the section to show"},
+				"row":     map[string]any{"type": "string", "description": "profile, slot, service or agent name (optional)"},
+			},
+			Required: []string{"section"},
+			Validate: func(a map[string]any) error {
+				if itermocSectionByName(ai.ArgString(a, "section")) == "" {
+					return fmt.Errorf("section must be one of %s", strings.Join(aiViewSections, ", "))
+				}
+				return nil
+			},
+			Describe: func(a map[string]any) string { return "Show Itermoc " + ai.ArgString(a, "section") },
+			Run: func(ctx context.Context, a map[string]any) (string, error) {
+				sec := itermocSectionByName(ai.ArgString(a, "section"))
+				if sec == "" {
+					return "", fmt.Errorf("section must be one of %s", strings.Join(aiViewSections, ", "))
+				}
+				row := strings.TrimSpace(ai.ArgString(a, "row"))
+				return call(ctx, func(m *Model) (string, tea.Cmd, error) { return aiViewOpen(m, sec, row), nil, nil })
 			},
 		},
 	}

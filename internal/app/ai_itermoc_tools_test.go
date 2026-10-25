@@ -9,11 +9,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/ai"
 )
 
 // aiItermocToolNames are the AI read tools of the Itermoc view (AH-7).
-var aiItermocToolNames = []string{"profiles_list", "models_list", "mcp_services_list", "outside_agents_status"}
+var aiItermocToolNames = []string{"profiles_list", "models_list", "mcp_services_list", "outside_agents_status", "ai_view_open"}
 
 // aiItermocTestModel is the profile test model (built-in profiles, an
 // untrusted project profile "house", one fake main slot) with a
@@ -238,6 +239,51 @@ func TestAIOutsideAgentsStatusShape(t *testing.T) {
 	}
 	if strings.Join(got.Auto["claude-code"], ",") != "tasks_run" {
 		t.Errorf("always allowed %+v", got.Auto)
+	}
+}
+
+// Spec: ai_view_open shows the Itermoc view at a section and, given a
+// row, puts the cursor on it. It changes nothing else: the keyboard stays
+// where the user is typing.
+func TestAIViewOpen(t *testing.T) {
+	m, call := aiItermocTestModel(t)
+	m.focus = FocusEditor
+	out := aiItermocRun(t, m, call, "ai_view_open", map[string]any{"section": "profiles", "row": "house"})
+	if m.activity.Active() != activity.ViewItermoc || !m.showExp {
+		t.Fatalf("view not shown: %v", m.activity.Active())
+	}
+	if m.focus != FocusEditor {
+		t.Errorf("focus moved to %v", m.focus)
+	}
+	if r, ok := m.itermoc.current(); !ok || r.kind != imRowProfile || r.name != "house" {
+		t.Errorf("cursor on %+v", r)
+	}
+	if !strings.Contains(out, "PROFILES") || !strings.Contains(out, "house") {
+		t.Errorf("answer %q", out)
+	}
+	m.mcpServe = &mcpServeState{clients: []*mcpServeAgent{{id: 7, name: "claude-code", since: time.Now()}}}
+	aiItermocRun(t, m, call, "ai_view_open", map[string]any{"section": "outside-agents", "row": "claude-code"})
+	if r, ok := m.itermoc.current(); !ok || r.kind != imRowAgent || r.name != agentKey(7) {
+		t.Errorf("cursor on %+v", r)
+	}
+	out = aiItermocRun(t, m, call, "ai_view_open", map[string]any{"section": "models", "row": "nope"})
+	if r, _ := m.itermoc.current(); r.kind != imRowSection || r.sec != imSecModels || !strings.Contains(out, "no row") {
+		t.Errorf("unknown row: cursor %+v, answer %q", r, out)
+	}
+	tl, _ := ai.FindTool(m.aiChatTools(".", call), "ai_view_open")
+	if err := tl.Validate(map[string]any{"section": "secrets"}); err == nil {
+		t.Error("an unknown section passed")
+	}
+}
+
+// Spec: the Itermoc palette commands stay the user's; their reason sends
+// the model to ai_view_open.
+func TestAIItermocPolicyPointsToViewOpen(t *testing.T) {
+	for _, it := range itermocPaletteItems() {
+		p, ok := aiActionPolicyFor(it.ID)
+		if !ok || p.Gate != aiGateNever || !strings.Contains(p.Reason, "ai_view_open") || strings.Contains(p.Reason, "will get") {
+			t.Errorf("%s: %+v", it.ID, p)
+		}
 	}
 }
 
