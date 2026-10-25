@@ -665,7 +665,7 @@ func (m *Model) editMCPConfig() tea.Cmd {
 		}
 	}
 	m.openFileAtLine(p, 1)
-	return m.aiInfo("Add servers (Claude / Cursor format), save; the next chat message uses them")
+	return m.aiInfo("Add servers (an mcpServers block, as other tools write it), save; the next chat message uses them")
 }
 
 // handleMCPPickerSelect routes the MCP picker kinds. ok=false: not ours.

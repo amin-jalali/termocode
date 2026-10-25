@@ -56,7 +56,7 @@ const (
 	wizToken                     // paste a token
 	wizApp                       // Slack: create your app
 	wizURL                       // Custom URL: type it
-	wizPaste                     // Paste a config: a Claude / Cursor block
+	wizPaste                     // Paste a config: an mcpServers block
 	wizDone
 	wizError
 )
@@ -199,7 +199,7 @@ func (m *Model) mcpConnectItems() []picker.Item {
 	}
 	items = append(items,
 		picker.Item{ID: mcpConnectURLID, Title: fmt.Sprintf("%-15s %s", "Custom URL…", "any MCP server"), Hint: "type its address"},
-		picker.Item{ID: mcpConnectJSONID, Title: fmt.Sprintf("%-15s %s", "Paste a config…", "a Claude or Cursor block"), Hint: "tokens move to credentials"})
+		picker.Item{ID: mcpConnectJSONID, Title: fmt.Sprintf("%-15s %s", "Paste a config…", "an mcpServers block"), Hint: "tokens move to credentials"})
 	return items
 }
 
@@ -827,7 +827,7 @@ func (m *Model) wizCard() connectcard.Card {
 			Buttons: []connectcard.Button{{ID: "submit", Title: "Connect", Primary: true}, cancel}}
 	case wizPaste:
 		rows := []connectcard.Row{
-			{Kind: connectcard.Text, Text: "Paste an mcpServers block from Claude Desktop, Claude Code or Cursor (the whole file or some servers)."},
+			{Kind: connectcard.Text, Text: "Paste an mcpServers block from another tool, such as Claude Desktop or Claude Code (the whole file or some servers)."},
 			{Kind: connectcard.Blank},
 			{Kind: connectcard.Input, ID: "config", Text: "The block:", Masked: true},
 			{Kind: connectcard.Blank},

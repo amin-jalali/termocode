@@ -7,7 +7,7 @@ errors, Slack messages, a database, your notes folder and many more.
 The easy way is **Connect a service**: pick the service, press one
 button, allow termocode in the browser (or type a short code), done.
 You never have to look for a token. termocode also reads the same
-`mcpServers` block as Claude Desktop, Claude Code and Cursor, so you can
+`mcpServers` block as Claude Desktop and Claude Code, so you can
 paste the config you already have.
 
 ## Connect a service
@@ -169,8 +169,8 @@ The AI's instructions name each connected service and its access
 
 ## Add a server by hand
 
-**Paste a config…** in the Connect wizard takes a block from Claude
-Desktop, Claude Code or Cursor as it is: tokens in it move to
+**Paste a config…** in the Connect wizard takes an `mcpServers` block from
+another tool as it is: tokens in it move to
 `credentials.json` and the entries get `${secret:…}` instead. Names that
 already exist are skipped.
 

@@ -555,7 +555,7 @@ func TestSignOutRevokesBehavior(t *testing.T) {
 	}
 }
 
-// Spec (plan CX-12): Paste a config… takes a Claude / Cursor block; the
+// Spec (plan CX-12): Paste a config… takes an mcpServers block; the
 // token in it goes to credentials.json and mcp.json gets ${secret:…}.
 func TestConnectPasteConfig(t *testing.T) {
 	noGH(t)
