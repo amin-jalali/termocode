@@ -342,8 +342,25 @@ or a URL with a password; a model slot only says `set` or `missing`.
 
 When the next step is yours (set a key, sign in, trust, revoke), the AI
 opens this view at the row with `ai_view_open`. It does not move your
-keyboard focus. Outside agents do not get these tools. See
-[AI tools](../reference/ai-tools.md).
+keyboard focus.
+
+The AI can also propose a change. You always see a card first, with
+**Deny** first and focused. Deny changes nothing.
+
+| You say | Tool | After you allow |
+| --- | --- | --- |
+| "use the fast profile" | `profile_switch` | The profile switches for your next message. A project profile you have not trusted asks for trust first. |
+| "make me a profile: Claude reviews, GPT fixes" | `profile_draft` | The profile form opens with the draft. Nothing is saved until you press **Save** there. The card shows the draft; for one of your own profiles it shows `-` and `+` lines. |
+| "add a slot gpt on openai gpt-5-mini" | `model_slot_draft` | The slot form opens with these values. Nothing is saved until you press **Save**. You set the key yourself after that. |
+| "connect GitHub" | `service_connect` | The Connect wizard opens. You sign in; the AI gets no token. |
+| "turn on writes for GitHub" | `service_set_access` | Writes are on (each write still asks), or the service is read only again. |
+| "start Codex with my IDE tools" | `outside_agent_start` | The agent starts in a new terminal tab, as **Agent: Start …** does. |
+
+No tool takes a key, token or password. If the AI puts one in a call,
+termocode refuses the call before any card. **Remove**, **Sign out**,
+**Revoke** and **Trust** have no AI tool: they stay your decision. A
+profile step with read-only tools does not get these tools, and outside
+agents never do. See [AI tools](../reference/ai-tools.md).
 
 ## Where the old commands went
 
