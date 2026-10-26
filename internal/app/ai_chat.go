@@ -150,16 +150,17 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools = append(tools, aiSettingsTools(root, call)...)
 	// K3: the visible integrated terminal.
 	tools = append(tools, aiTerminalTools(call)...)
-	tools = append(tools, m.aiLSPTools(root, call)...)  // Group K5: LSP hover, symbols, rename, code actions
-	tools = append(tools, aiGitTools(root, call)...)    // Group K4
-	tools = append(tools, aiTasksTools(root, call)...)  // Group K6: tasks and tests
-	tools = append(tools, aiAdminTools(root, call)...)  // Group K8: installers, extensions, workspace folders
-	tools = append(tools, aiDebugTools(root, call)...)  // Group K7
-	tools = append(tools, m.aiServicesTools(call)...)   // the Services view (ai_services_tools.go)
-	tools = append(tools, m.aiContainersTools(call)...) // CP-9: host containers (ai_containers_tools.go)
-	tools = append(tools, aiHelpTools()...)             // U21: the built-in guide (ai_help_tools.go)
-	tools = append(tools, aiItermocTools(call)...)      // AH-7: profiles, models, MCP services, outside agents (ai_itermoc_tools.go)
-	if m.aiReviewEdits() {                              // Group R2: file changes become diffs to review
+	tools = append(tools, m.aiLSPTools(root, call)...)    // Group K5: LSP hover, symbols, rename, code actions
+	tools = append(tools, aiGitTools(root, call)...)      // Group K4
+	tools = append(tools, aiTasksTools(root, call)...)    // Group K6: tasks and tests
+	tools = append(tools, aiAdminTools(root, call)...)    // Group K8: installers, extensions, workspace folders
+	tools = append(tools, aiDebugTools(root, call)...)    // Group K7
+	tools = append(tools, m.aiServicesTools(call)...)     // the Services view (ai_services_tools.go)
+	tools = append(tools, m.aiContainersTools(call)...)   // CP-9: host containers (ai_containers_tools.go)
+	tools = append(tools, aiHelpTools()...)               // U21: the built-in guide (ai_help_tools.go)
+	tools = append(tools, aiItermocTools(call)...)        // AH-7: profiles, models, MCP services, outside agents (ai_itermoc_tools.go)
+	tools = append(tools, m.aiItermocWriteTools(call)...) // AH-8: switch, drafts, connect, access, start (ai_itermoc_write_tools.go)
+	if m.aiReviewEdits() {                                // Group R2: file changes become diffs to review
 		tools = m.aiReviewTools(tools, root, call)
 	}
 	tools = append(tools, m.aiHTTPTools(root, call, tools)...) // HC-9: HTTP client
@@ -423,6 +424,9 @@ func (m *Model) onAIChatConfirm(msg aiChatConfirmMsg) tea.Cmd {
 	if strings.HasPrefix(msg.tool.Name, "db_") {
 		m.confirm = m.confirm.WithScrollText() // the whole SQL, Up/Down scroll
 	}
+	if msg.tool.Name == "profile_draft" || msg.tool.Name == "model_slot_draft" {
+		m.confirm = m.confirm.WithScrollText().WithWideText() // AH-8: the whole draft, indents kept, Up/Down scroll
+	}
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindAITool
@@ -437,6 +441,9 @@ func (m *Model) onAIChatConfirm(msg aiChatConfirmMsg) tea.Cmd {
 // keeps its order.
 func aiToolCardButtons(t ai.Tool) []confirm.Button {
 	allow := confirm.Button{ID: "allow", Title: "Allow", Style: confirm.StylePrimary}
+	if title, ok := aiItermocWriteAllow[t.Name]; ok { // AH-8: the button names the action
+		allow.Title = title
+	}
 	deny := confirm.Button{ID: "deny", Title: "Deny"}
 	var more []confirm.Button
 	if t.Class != "" {
@@ -455,7 +462,7 @@ func aiToolCardButtons(t ai.Tool) []confirm.Button {
 // aiToolCardSafeFirst reports whether the card of t puts Deny first.
 func aiToolCardSafeFirst(t ai.Tool) bool {
 	return strings.HasPrefix(t.Name, "db_") || strings.HasPrefix(t.Name, mcp.WirePrefix) ||
-		t.Class == ai.ClassContainers || t.Class == ai.ClassServices
+		t.Class == ai.ClassContainers || t.Class == ai.ClassServices || aiItermocWriteTool(t.Name)
 }
 
 // answerAIToolConfirm replies to the waiting agent.

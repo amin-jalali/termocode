@@ -53,6 +53,13 @@ var aiGateNotes = map[string]string{
 	"redis_command":      "a read command (allow-list; not CONFIG / ACL / CLIENT): auto, in a read-only session; any other command: confirm (db:<conn>/write) with the command shown; production connections: confirm (always asks); read-only connections: writes refused; the never-list (FLUSHALL, FLUSHDB, CONFIG SET, SHUTDOWN, DEBUG, MODULE, scripts, MIGRATE, REPLICAOF, ACL changes, …) and MONITOR / SUBSCRIBE: refused",
 	"http_send":          "GET / HEAD / OPTIONS to localhost: auto; other safe methods: confirm (http:<host[:port]>); other methods: confirm (http:<host[:port]>/write); private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks)",
 	"terminal_tabs":      "list, new, focus: auto; close: auto for an idle tab, confirm (always asks) while a command runs",
+	// AH-8: the Itermoc write tools; every card has Deny first, with the focus.
+	"profile_switch":      "confirm (settings): Deny (first) · Switch · Always allow settings",
+	"profile_draft":       "confirm (always asks): Deny (first) · Open in form (only the form's own Save writes profiles.json)",
+	"model_slot_draft":    "confirm (always asks): Deny (first) · Open in form (only the form's own Save writes config.json)",
+	"service_connect":     "confirm (always asks): Deny (first) · Open wizard (you sign in yourself)",
+	"service_set_access":  "confirm (always asks): Deny (first) · Change",
+	"outside_agent_start": "confirm (run): Deny (first) · Start · Always allow run",
 }
 
 // aiGateRefused are ops a tool always refuses (Validate), with no dialog.

@@ -101,6 +101,12 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`mcp_services_list`](#mcp_services_list) | auto | no | List the MCP services the chat can use (GitHub, Linear, the user's own servers in mcp.json): state (running, stopped, off, failed, sign-in …), transport, source and trust, access (read only or read and write), tool count and whether a sign-in is stored. |
 | [`outside_agents_status`](#outside_agents_status) | auto | no | Whether termocode's MCP server listens for outside agents (Claude Code, Codex …), and why not; the connected agents with since, calls and how many asked; the last 10 calls; and the tools each agent may run without asking. |
 | [`ai_view_open`](#ai_view_open) | auto | no | Show the Itermoc view (the user's screen for AI profiles, models, MCP services and outside agents) at a section, with the cursor on a row when given. |
+| [`profile_switch`](#profile_switch) | confirm (settings): Deny (first) · Switch · Always allow settings | no | Switch the chat's AI profile (see profiles_list); it applies from the user's next message. |
+| [`profile_draft`](#profile_draft) | confirm (always asks): Deny (first) · Open in form (only the form's own Save writes profiles.json) | no | Draft an AI profile (a pipeline of steps) for the user. |
+| [`model_slot_draft`](#model_slot_draft) | confirm (always asks): Deny (first) · Open in form (only the form's own Save writes config.json) | no | Draft a model slot (a named provider and model that profile steps can use) for the user. |
+| [`service_connect`](#service_connect) | confirm (always asks): Deny (first) · Open wizard (you sign in yourself) | no | Open the Connect wizard for an MCP service (github, gitlab, linear, notion, sentry, clickup, atlassian, slack, or one in mcp.json) so the user can sign in. |
+| [`service_set_access`](#service_set_access) | confirm (always asks): Deny (first) · Change | no | Allow writes for a connected MCP service, or make it read only (known services with a read-only endpoint or scopes, such as GitHub and Linear). |
+| [`outside_agent_start`](#outside_agent_start) | confirm (run): Deny (first) · Start · Always allow run | no | Start an outside coding agent (claude, codex, gemini, opencode, aider) in a new terminal tab, with termocode's tools when the agent supports it. |
 | [`http_list_requests`](#http_list_requests) | auto | yes | List the HTTP requests in the user's .http / .rest files (request templates with {{variables}}, not resolved), the file variable names and the selected environment. |
 | [`http_environments`](#http_environments) | auto | yes | Show the HTTP environments (http-client.env.json and the private file), the selected one and their variable names. |
 | [`http_send`](#http_send) | GET / HEAD / OPTIONS to localhost: auto<br>other safe methods: confirm (http:<host[:port]>)<br>other methods: confirm (http:<host[:port]>/write)<br>private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks) | some ask | Send an HTTP request and read the answer (status, headers, body). |
@@ -1142,6 +1148,86 @@ Show the Itermoc view (the user's screen for AI profiles, models, MCP services a
 | --- | --- | --- | --- |
 | `section` | string | yes | the section to show. One of: `profiles`, `models`, `services`, `outside-agents` |
 | `row` | string |   | profile, slot, service or agent name (optional) |
+
+### profile_switch
+
+Switch the chat's AI profile (see profiles_list); it applies from the user's next message. The user confirms on a card. A project profile the user has not trusted yet asks the user first.
+
+**Gate:** confirm (settings): Deny (first) · Switch · Always allow settings
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | profile name from profiles_list |
+
+### profile_draft
+
+Draft an AI profile (a pipeline of steps) for the user. The card shows the draft (a diff when it changes one of the user's own profiles); Allow opens the profile form with it, and nothing is saved until the user presses Save there. Use slots from models_list. Never put keys in it.
+
+**Gate:** confirm (always asks): Deny (first) · Open in form (only the form's own Save writes profiles.json)
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | profile name (letters, digits, - _ .); a built-in or project name is refused |
+| `steps` | array | yes | the steps in order |
+| `budget_usd` | number |   | pause the run once it cost this much (optional) |
+| `categories` | object |   | slots for quick and deep steps (optional) |
+| `title` | string |   | a short title (optional) |
+
+### model_slot_draft
+
+Draft a model slot (a named provider and model that profile steps can use) for the user. The card shows it; Allow opens the slot form with it, and nothing is saved until the user presses Save there. Never a key: the user sets it after Save.
+
+**Gate:** confirm (always asks): Deny (first) · Open in form (only the form's own Save writes config.json)
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | slot name, e.g. gpt (not main) |
+| `provider` | string | yes | the provider. One of: `anthropic`, `openai`, `openrouter`, `ollama`, `lmstudio`, `openai-compatible`, `claude-oauth` |
+| `base_url` | string |   | server address for openai-compatible, ollama or lmstudio (optional; no user, password or query) |
+| `model` | string |   | model id (optional; the provider's default) |
+
+### service_connect
+
+Open the Connect wizard for an MCP service (github, gitlab, linear, notion, sentry, clickup, atlassian, slack, or one in mcp.json) so the user can sign in. The user confirms first and signs in themselves; you never get a token.
+
+**Gate:** confirm (always asks): Deny (first) · Open wizard (you sign in yourself)
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `service` | string | yes | service name, e.g. github |
+
+### service_set_access
+
+Allow writes for a connected MCP service, or make it read only (known services with a read-only endpoint or scopes, such as GitHub and Linear). The user confirms first; more access may need a new sign-in.
+
+**Gate:** confirm (always asks): Deny (first) · Change
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | service name from mcp_services_list |
+| `writes` | boolean | yes | true allows writes; false makes it read only |
+
+### outside_agent_start
+
+Start an outside coding agent (claude, codex, gemini, opencode, aider) in a new terminal tab, with termocode's tools when the agent supports it. The user confirms first.
+
+**Gate:** confirm (run): Deny (first) · Start · Always allow run
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `agent` | string | yes | which agent. One of: `claude`, `codex`, `gemini`, `opencode`, `aider` |
 
 ### http_list_requests
 
