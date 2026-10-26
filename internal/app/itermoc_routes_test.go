@@ -29,25 +29,22 @@ func imSecOf(kind imRowKind) string {
 	return imSecAgents
 }
 
-// Spec: Duplicate… asks for a name and copies THAT profile (not the active
-// one) after the preview card.
+// Spec: Duplicate… opens the profile step form on a copy of THAT profile
+// (not the active one) under a free name; nothing is written yet.
 func TestItermocDuplicateCopiesTheRowsProfile(t *testing.T) {
 	m := itermocTestModel(t, 70, 40)
 	imVerb(m, imRowProfile, "review", "duplicate")
-	if !m.promptOpen || m.promptKind != promptKindAIProfileNew {
-		t.Fatal("no name prompt")
+	if !m.profileFormOpen {
+		t.Fatal("no profile form")
 	}
-	m.promptOpen = false
-	m.onAIProfileNewName("review-copy")
-	if !m.confirmOpen || m.confirmKind != confirmKindAIProfileSave {
-		t.Fatal("no save preview card")
+	if got := m.profileForm.Name(); got != "my-review" {
+		t.Errorf("the copy is named %q, want my-review", got)
 	}
-	pending := m.ai.profileSave
-	if pending == nil || pending.name != "review-copy" || len(pending.profile.Steps) != 2 {
-		t.Fatalf("the copy is not of review: %+v", pending)
+	if p := m.profileForm.Profile(); len(p.Steps) != 2 {
+		t.Fatalf("the copy is not of review: %+v", p)
 	}
-	if m.ai.profNewFrom != "" {
-		t.Error("the copy source stays set")
+	if m.profileForm.Replace() {
+		t.Error("a copy must not replace the original")
 	}
 }
 
@@ -177,14 +174,14 @@ func TestItermocServiceEnterOpensServiceActions(t *testing.T) {
 }
 
 // Spec: the buttons route: Connect a service opens the wizard, Log the
-// output panel, Edit JSON the profiles file, New profile the name prompt.
+// output panel, Edit JSON the profiles file, New profile the step form.
 func TestItermocButtonsRoute(t *testing.T) {
 	m := itermocTestModel(t, 70, 40)
 	m.itermocButton(imSecProfiles, "new")
-	if !m.promptOpen || m.promptKind != promptKindAIProfileNew {
-		t.Error("New profile: no name prompt")
+	if !m.profileFormOpen {
+		t.Error("New profile: no profile form")
 	}
-	m.promptOpen = false
+	m.profileFormOpen = false
 	// The wizard's first step asks gh for accounts on a Cmd; the test does not
 	// run it (no gh), it sends the answer.
 	if cmd := m.itermocButton(imSecServices, "connect"); cmd == nil {

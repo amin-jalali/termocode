@@ -91,9 +91,9 @@ const MaxWidth = 76
 type Model struct {
 	card   Card
 	w, h   int
-	focus  int            // index into focusables()
-	button int            // the highlighted button
-	sel    map[string]int // Choice id → option
+	focus  int               // index into focusables()
+	button int               // the highlighted button
+	sel    map[string]int    // Choice id → option
 	vals   map[string]string // Input id → its text
 }
 

@@ -189,10 +189,10 @@ func TestItermocMouse(t *testing.T) {
 	}
 	m.pickerOpen = false
 	click(find("im:row:profiles/+add"))
-	if !m.promptOpen || m.promptKind != promptKindAIProfileNew {
-		t.Error("the + new profile… row did not open the name prompt")
+	if !m.profileFormOpen {
+		t.Error("the + new profile… row did not open the profile form")
 	}
-	m.promptOpen = false
+	m.profileFormOpen = false
 	click(find("im:sec:models"))
 	if !m.itermoc.collapse[imSecModels] {
 		t.Error("a click on a header did not fold it")
