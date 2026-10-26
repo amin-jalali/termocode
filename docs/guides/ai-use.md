@@ -465,12 +465,15 @@ The AI can keep short lessons from your chats in a project, for example
 "run go test with -race; CI does". Later chats in the same project get the
 lessons that fit. Memory is off until you turn it on, per workspace.
 
-**Turn it on.** The first time a chat turn could give lessons, a card asks
-**Save lessons for later chats?**. **Not now** is the first button (Enter
-and Esc pick it); termocode keeps that answer for the workspace and does not
-ask again. **Turn on memory** turns it on and saves the lessons of that
-turn. You can switch any time with **AI: Memory: Turn On/Off**. The card
-only comes when a quick model slot is set (see below).
+**Turn it on.** The first time a chat turn could give lessons, a quiet card
+shows in the chat under the answer: **Save lessons for later chats?** with
+**Turn on** and **Not now** (click one). It is not a dialog: it takes no
+focus and you can keep typing or open the palette. Nothing is saved while
+you have not decided. **Not now** is kept for the workspace and the card does
+not come back. **Turn on** turns memory on and saves the lessons of that
+turn. You can also decide in the palette with **AI: Memory: Turn On/Off**,
+and the card goes. The card only comes when a quick model slot is set (see
+below).
 
 **Where lessons go.** Into `.termocode/memory/lessons.md` in the workspace,
 one section per lesson. When you turn memory on, termocode adds
