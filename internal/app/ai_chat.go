@@ -163,6 +163,7 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	}
 	tools = append(tools, m.aiHTTPTools(root, call, tools)...) // HC-9: HTTP client
 	tools = append(tools, aiDBTools(root, call)...)            // DB-5: the Databases view (ai_db_tools.go)
+	tools = append(tools, aiSkillTools(root)...)               // OM-4: only when a skill is offered
 	return aiRedactResults(tools)                              // known secrets (.env passwords, API keys) never reach the model
 }
 
@@ -193,6 +194,9 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	rules := ai.LoadProjectRules(aiWorkspaceRoot()) // OM-1: read once per turn
 	if rules.Text != "" && aiRulesTrust(rules) == aiTrustAsk {
 		return m.askAIRulesTrust(rules, true, text) // a repo's rules file is shown first
+	}
+	if sk := aiLoadSkills(aiWorkspaceRoot()); sk.ProjectHash != "" && aiSkillsTrust(sk) == aiTrustAsk {
+		return m.askAISkillsTrust(sk, true, text) // OM-4: a repo's skills are shown first
 	}
 	if len(prof.Steps) > 1 || prof.Planned() {
 		return m.startAIRun(text, prof, rules)
@@ -296,7 +300,7 @@ func (m *Model) aiChatBasePrompt(root string, rules ai.Rules, memory string) str
 	if p := m.editor.Path(); p != "" {
 		base += "\nThe open file is: " + p
 	}
-	return base + aiRulesPrompt(rules) + memory
+	return base + aiRulesPrompt(rules) + memory + aiSkillsPrompt(aiOfferedSkills(aiLoadSkills(root)))
 }
 
 // autoApproveSet is ai_auto_approve as a set (one per agent: "Always
@@ -364,12 +368,18 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 		if l := last(); l != nil && l.Role == ai.StoredAssistant && strings.TrimSpace(l.Text) == "" {
 			s.conv.Messages = s.conv.Messages[:len(s.conv.Messages)-1]
 		}
-		s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredTool, Text: "⚙ " + msg.ev.Detail})
+		line := "⚙ " + msg.ev.Detail
+		if msg.ev.Tool == "skill_load" { // OM-4: a small chip, not a tool line
+			line = aiSkillChip + aiSkillArgName(msg.ev.Args)
+		}
+		s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredTool, Text: line})
 		s.aiAuditStart(msg.ev)
 	case ai.EventToolResult:
 		m.aiAuditResult(msg.ev)
 		if l := last(); l != nil && l.Role == ai.StoredTool {
-			l.Text += " → " + aiShortResult(msg.ev.Detail)
+			if !strings.HasPrefix(l.Text, aiSkillChip) || strings.HasPrefix(msg.ev.Detail, "error:") {
+				l.Text += " → " + aiShortResult(msg.ev.Detail)
+			}
 		}
 	case ai.EventError:
 		s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredError, Text: ai.Redact(msg.ev.Detail)})

@@ -417,6 +417,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// forgetting lessons is the user's.
 	"ai-memory":        aiNever(aiNoPicker),
 	"ai-memory-toggle": aiNever(aiNoAIConfig),
+	// Skills (OM-4): the AI loads them with skill_load; the picker, new
+	// files and trusting a project's skills are the user's.
+	"ai-skills": aiNever(aiNoPicker),
 	// The AGENTS view (U20 AP-9) only shows the chat's runs.
 	"ai-agents": aiAuto(),
 	// AI: Usage (AU-4) is the user's own view of tokens and money.

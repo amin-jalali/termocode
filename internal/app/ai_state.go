@@ -62,6 +62,8 @@ type aiState struct {
 	profileSave *aiProfileSavePending
 	// rulesTrust is the open project-rules card (ai_rules.go).
 	rulesTrust *aiRulesTrustPending
+	// skillsTrust is the open project-skills card (ai_skills.go).
+	skillsTrust *aiSkillsTrustPending
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
 	memFake *[]aimemory.Lesson
 	// memSlotWarned: the "no quick model" toast was shown this session.
@@ -411,6 +413,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-profile-trust", "AI: Project Profiles Trust…", ""},
 		{"ai-rules", "AI: Project Rules…", ""},
 		{"ai-memory", "AI: Memory…", ""},
+		{"ai-skills", "AI: Skills…", ""},
 		{"ai-memory-toggle", "AI: Memory: Turn On/Off", ""},
 		{"ai-models-edit", "AI: Edit Model Slots", ""},
 		{"ai-sign-in-claude", "AI: Sign in with Claude (OAuth, opt-in)…", ""},
@@ -532,6 +535,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIRules(), true
 	case "ai-memory":
 		return m.openAIMemory(), true
+	case "ai-skills":
+		return m.openAISkills(), true
 	case "ai-memory-toggle":
 		return m.toggleAIMemory(), true
 	case "ai-models-edit":

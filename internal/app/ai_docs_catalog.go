@@ -135,6 +135,9 @@ func AIToolCatalog() []AIToolDoc {
 	if _, ok := ai.FindTool(tools, "redis_keys"); !ok {
 		tools = append(tools, aiRedactResults(aiRedisTools(".", call))...) // listed only where a Redis connection exists
 	}
+	if _, ok := ai.FindTool(tools, "skill_load"); !ok {
+		tools = append(tools, aiSkillLoadTool(".")) // listed only where a skill is offered
+	}
 	out := make([]AIToolDoc, 0, len(tools))
 	for _, t := range tools {
 		d := AIToolDoc{Name: t.Name, Description: t.Description, Gate: aiToolGate(t)}

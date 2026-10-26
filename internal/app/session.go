@@ -78,6 +78,11 @@ type SessionState struct {
 	// project to. A changed file has a new hash and asks again.
 	AIRulesTrusted string `json:"ai_rules_trusted,omitempty"`
 	AIRulesRefused string `json:"ai_rules_refused,omitempty"`
+	// AISkillsTrusted / AISkillsRefused are the answers of the project
+	// skills card (OM-4): the ai.Skills project hash of the
+	// .termocode/skills files. A changed skill asks again.
+	AISkillsTrusted string `json:"ai_skills_trusted,omitempty"`
+	AISkillsRefused string `json:"ai_skills_refused,omitempty"`
 	// AIMemory is the memory switch of this workspace (OM-2): "" never
 	// decided (off; the first lesson asks once), "on" or "off".
 	AIMemory string `json:"ai_memory,omitempty"`
@@ -169,6 +174,8 @@ func workspacePart(s SessionState) SessionState {
 		AIProfilesRefused: s.AIProfilesRefused,
 		AIRulesTrusted:    s.AIRulesTrusted,
 		AIRulesRefused:    s.AIRulesRefused,
+		AISkillsTrusted:   s.AISkillsTrusted,
+		AISkillsRefused:   s.AISkillsRefused,
 		AIMemory:          s.AIMemory,
 
 		ServicesAIAllowed:   s.ServicesAIAllowed,
