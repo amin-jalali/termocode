@@ -409,6 +409,9 @@ the run in the AGENTS panel.
 
 ## The AGENTS panel
 
+To watch every run in one place (all chats, live numbers, Stop, Pause and
+Resume), use [Runs](runs.md): the green pulse icon in the activity bar.
+
 The AGENTS panel shows the runs of the current chat as a graph. It uses
 the same place on the right as the chat. **Alt+Shift+A** (palette
 **AI: Toggle Agents Panel**) shows it, and pressed again goes back to the
