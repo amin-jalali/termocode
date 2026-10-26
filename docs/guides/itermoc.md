@@ -92,8 +92,11 @@ what they cost are not shown here: this page is setup only.
 Three pills at the bottom run the common verbs: **Use** (`u`), **Edit**
 (`e`) and **Runs** (`r`). `Enter` opens the actions menu (the list after
 `⋯ more` says what is in it). A project profile that asks for your trust
-has **Trust…** (`t`) first. A click on a box in the pipeline edits that
-step. **Edit** opens `profiles.json` for now.
+has **Trust…** (`t`) first. **Edit** opens the profile step form (the
+same form as **AI: Edit Profile…**): your own profile is changed in place,
+a built-in or project profile becomes a copy under a new name. A click on a
+box in the pipeline opens the form at that step. **Edit JSON** in the
+actions menu still opens `profiles.json`.
 
 The pages of a model slot, a service, the outside agents and the group
 headers (a summary with what needs you) show their key facts and their
@@ -108,7 +111,7 @@ lists what you can do with it. Safe actions come first; the ones that ask for co
 
 | Row | Actions |
 |---|---|
-| Profile | Use · Details · Duplicate… · Runs · Trust… (project profiles) · Edit JSON |
+| Profile | Use · Details · Edit… · Duplicate… · Runs · Trust… (project profiles) · Edit JSON |
 | Model slot | Set key (when the key is missing) · Edit… · Pick model… (the main slot) · Edit JSON · Remove… (your own slots) |
 | Service | the service's own actions: Connect, Show tools, Sign in, Allow writes / Read only, Trust, Disable / Enable, Remove… and more (see [Connect MCP servers](mcp.md)) |
 | Listening row | Show status… · Turn on / Start listening now · Start Claude Code · Start Codex · Copy config · Stop listening… |
@@ -121,8 +124,10 @@ Every action opens a screen that exists without Itermoc:
   project*.
 - **Details** is [AI: Show Profile](ai-profiles.md) for that profile. It
   does not switch to it.
-- **Duplicate…** asks for a name and shows the same preview card as **AI:
-  New Profile from Current…**, for the profile you picked.
+- **Edit…** on a profile opens the profile step form. A built-in or
+  project profile becomes a copy; **Save…** shows the preview card first.
+- **Duplicate…** opens the same form on a copy of the profile you picked,
+  under a free name (`my-review`). Nothing is written until **Save…**.
 - **Runs** opens the AGENTS view.
 - **Set key** opens the key prompt of the slot's provider. The key goes to
   the secret store; Itermoc never shows it.
