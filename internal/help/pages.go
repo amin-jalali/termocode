@@ -21,6 +21,7 @@ var nav = []PageInfo{
 	{"Guides", "Set up AI", "guides/ai-setup.md"},
 	{"Guides", "Use AI", "guides/ai-use.md"},
 	{"Guides", "AI profiles and pipelines", "guides/ai-profiles.md"},
+	{"Guides", "AI skills", "guides/ai-skills.md"},
 	{"Guides", "Connect MCP servers", "guides/mcp.md"},
 	{"Guides", "Give your agent the IDE's tools", "guides/agents.md"},
 	{"Guides", "Test an HTTP API (.http files)", "guides/http-client.md"},

@@ -47,6 +47,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Show Profile | `ai-profile-show` |   |   |
 | AI: Sign in with Claude (OAuth, opt-in)… | `ai-sign-in-claude` |   |   |
 | AI: Sign out of Claude | `ai-sign-out-claude` |   |   |
+| AI: Skills… | `ai-skills` |   |   |
 | AI: Stop Generating | `ai-cancel` |   |   |
 | AI: Switch Profile… | `ai-profile-switch` |   |   |
 | AI: Toggle Agents Panel | `ai-agents` | `Alt+Shift+A` | `Alt+Shift+A` |

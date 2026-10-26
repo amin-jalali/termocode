@@ -513,6 +513,11 @@ The AI has no memory tool: it can not turn memory on or off or forget a
 lesson. It can change `lessons.md` only like any file, through the review
 card.
 
+## Skills
+
+Knowledge files the AI loads only when a task needs them: see
+[AI skills](ai-skills.md).
+
 ## Keys at a glance
 
 | Key | Action |
