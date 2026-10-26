@@ -30,6 +30,9 @@ type itermocPageState struct {
 	scroll    int    // body rows scrolled from the top
 	maxScroll int    // set by the last draw
 	sel       int    // the overview: the picked "needs you" line (Tab)
+	// list: the page shows the full-width list (a narrow window, where
+	// the list and the page toggle; itermoc_narrow.go).
+	list bool
 }
 
 // itermocPageTmp is the buffer name of the page (a temp path, so sessions
@@ -109,6 +112,8 @@ func (m Model) itermocPageTitle() string {
 	name := "AI"
 	switch {
 	case p == nil:
+	case p.list:
+		name = "Itermoc"
 	case p.sec == imSecOverview:
 	case p.name == "status":
 		name = "Outside agents"
@@ -139,9 +144,16 @@ func (m *Model) itermocShowPage(row imRow, focus bool) tea.Cmd {
 		p.scroll = 0
 	}
 	p.sec, p.name = sec, name
+	p.list = false
 	if focus {
 		m.focus = FocusEditor
 	}
+	return m.itermocOpenPageTab()
+}
+
+// itermocOpenPageTab makes the page buffer the shown one (nil in a test
+// without nvim).
+func (m *Model) itermocOpenPageTab() tea.Cmd {
 	if m.nvim == nil {
 		return nil
 	}
@@ -168,7 +180,7 @@ vim.cmd('stopinsert')`, itermocPageTmp())
 // (↑↓ in the list change the page at once). A page that is not shown, or
 // a cursor on a row without a page, changes nothing.
 func (m *Model) itermocSyncPage() tea.Cmd {
-	if !m.itermocPageShown() || m.itermoc == nil {
+	if !m.itermocPageShown() || m.itermoc == nil || m.itermocPage.list {
 		return nil
 	}
 	row, ok := m.itermoc.current()
@@ -203,6 +215,9 @@ func (m Model) routeToItermocPage(msg tea.Msg) (Model, tea.Cmd, bool) {
 // itermocPageKey runs a key pressed on the page. Plain letters never reach
 // the (empty) buffer behind it.
 func (m *Model) itermocPageKey(k tea.KeyMsg) (tea.Cmd, bool) {
+	if m.itermocPage != nil && m.itermocPage.list {
+		return m.itermocListPageKey(k)
+	}
 	key := k.String()
 	row, have := m.itermocPageRow()
 	if have && row.kind == imRowOverview {
@@ -229,7 +244,12 @@ func (m *Model) itermocPageKey(k tea.KeyMsg) (tea.Cmd, bool) {
 		}
 		return nil, true
 	case "esc":
-		if m.showExp && m.activity.Active() == activity.ViewItermoc {
+		if !m.showExp {
+			// No sidebar list (a narrow window): back to the list in the page.
+			p.list, p.scroll = true, 0
+			return nil, true
+		}
+		if m.activity.Active() == activity.ViewItermoc {
 			m.focus = FocusExplorer
 		}
 		return nil, true
@@ -288,6 +308,9 @@ func (m Model) itermocPageMouse(msg tea.MouseMsg) (Model, tea.Cmd, bool) {
 	if msg.X < pane.X || msg.X >= pane.X+pane.W || msg.Y < pane.Top || msg.Y >= pane.Top+pane.H {
 		return m, nil, false
 	}
+	if m.itermocPage.list {
+		return m.itermocListMouse(msg, pane)
+	}
 	switch {
 	case msg.Button == tea.MouseButtonWheelDown && msg.Action == tea.MouseActionPress:
 		p := m.itermocPage
@@ -329,8 +352,12 @@ func itermocPageTip(verb string) (name, key string, ok bool) {
 		return "Open this group", strings.TrimPrefix(verb, "tile:"), true
 	case strings.HasPrefix(verb, "jump:"):
 		return "Open its page", "Enter", true
-	case strings.HasPrefix(verb, "fix:"):
+	case strings.HasPrefix(verb, "fix:"), strings.HasPrefix(verb, "rowfix:"):
 		return "Fix it now", "", true
+	case strings.HasPrefix(verb, "row:"):
+		return "Open its page", "Enter", true
+	case strings.HasPrefix(verb, "sec:"):
+		return "Fold section", "Space", true
 	}
 	switch verb {
 	case "use":

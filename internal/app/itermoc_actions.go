@@ -47,11 +47,14 @@ func (m *Model) itermocS() *itermocState {
 // section header and opens it.
 func (m *Model) revealItermocView(focus bool, sec string) tea.Cmd {
 	m.activity.SetActive(activity.ViewItermoc)
-	if !m.showExp {
-		m.showExp = true
+	narrow := m.itermocNarrow()
+	if m.showExp == narrow {
+		// A narrow window has no room for the list beside a page: the
+		// list is the page (itermoc_narrow.go), like Runs.
+		m.showExp = !narrow
 		m.applyLayout()
 	}
-	if focus {
+	if focus && !narrow {
 		m.focus = FocusExplorer
 	}
 	m.aiS()
@@ -61,6 +64,9 @@ func (m *Model) revealItermocView(focus bool, sec string) tea.Cmd {
 	m.itermoc.refresh(*m, true)
 	if sec != "" {
 		m.itermoc.focusSection(sec)
+	}
+	if narrow {
+		return m.itermocShowList()
 	}
 	return nil
 }

@@ -257,6 +257,9 @@ func (m Model) itermocPageLayout(w, h int) imPageLayout {
 	if w < 8 || h < 6 {
 		return imPageLayout{rows: newImCanvas(max(w, 1), max(h, 1), theme.BgEditor).rows(0, max(h, 1))}
 	}
+	if m.itermocPage != nil && m.itermocPage.list {
+		return m.itermocListLayout(w, h)
+	}
 	ct := m.itermocPageContent()
 	pg := m.itermocPage
 	mx := 4
@@ -369,7 +372,7 @@ func (m Model) itermocPageLayout(w, h int) imPageLayout {
 			hits = append(hits, imPageHit{id: "im:pg:more", x: px + 2, y: by, w: runewidth.StringWidth(mt), h: 1})
 		}
 		hint := ct.hint
-		if w < 70 {
+		if w < 70 || !m.showExp { // no list beside the page: Esc goes back to it
 			hint = ct.hintNarrow
 			if hint == "" {
 				hint = "Esc back to list · ? keys"
