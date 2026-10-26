@@ -244,7 +244,8 @@ func AISkills(variant string) Scene {
 // "follow" the keys o, Esc and j: the page tab follows the list, "profile" the same with the detail page of the profile review open in
 // the editor area, "service" the page of a service whose sign-in ended,
 // "agent" the page of a connected outside agent, "agents" the page of the
-// listening row,
+// listening row, "overview" the overview page (tiles, what needs you, the
+// active flow),
 // "empty" a fresh install, "menu" the
 // actions menu of the first profile row, "slotadd" the Add slot form,
 // "slotkey" the Set key offer after a new slot, "slotremove" the Remove
@@ -252,13 +253,10 @@ func AISkills(variant string) Scene {
 func Itermoc(variant string) Scene {
 	name := "itermoc-" + variant
 	demo := variant
-	if variant == "menu" || variant == "list" || variant == "follow" {
+	if variant == "list" || variant == "follow" {
 		demo = "full"
 	}
 	steps := WithEditor(Act("itermocdemo:"+demo), Pause(600*time.Millisecond))
-	if variant == "menu" {
-		steps = WithEditor(Act("itermocdemo:full"), Pause(300*time.Millisecond), Key("j"), Key("enter"), Pause(400*time.Millisecond))
-	}
 	if variant == "follow" {
 		// o opens the page of the second profile (and moves the keys to it);
 		// Esc gives them back to the list, where j moves to the next profile

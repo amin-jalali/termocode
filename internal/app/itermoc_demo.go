@@ -23,6 +23,8 @@ import (
 //	service  full, with the page of the service linear (sign-in ended)
 //	agent    full, with the page of the outside agent claude-code
 //	agents   full, with the page of the listening row
+//	overview full, with the overview page (tiles, what needs you, the flow)
+//	menu     full, with the actions menu of the first profile
 //	slotadd     full, with the Add slot form filled in (nothing is saved)
 //	slotkey     full, with the "set the key?" card after a new slot
 //	slotremove  full, with the Remove card of a slot a profile uses
@@ -95,6 +97,19 @@ func (m *Model) itermocDemo(arg string) tea.Cmd {
 		}
 		m.itermoc.cursorTo(row)
 		return m.itermocShowPage(row, false)
+	}
+	if arg == "overview" {
+		// The overview: linear's sign-in ended, house-review waits for trust.
+		st.snap.services[1].Tools = 7
+		row := imRow{kind: imRowOverview, sec: imSecOverview, name: imSecOverview}
+		m.itermoc.cursorTo(row)
+		return m.itermocShowPage(row, false)
+	}
+	if arg == "menu" {
+		// The actions menu of the first profile.
+		row := imRow{kind: imRowProfile, sec: imSecProfiles, name: st.snap.profiles[0].p.Name}
+		m.itermoc.cursorTo(row)
+		return m.openItermocActions(row)
 	}
 	if arg == "service" {
 		// linear's page: the sign-in ended and the chat lost its tools.

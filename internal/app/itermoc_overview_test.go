@@ -214,3 +214,29 @@ func TestItermocOverviewFixPill(t *testing.T) {
 		t.Errorf("the fix left the overview: %+v", m.itermocPage)
 	}
 }
+
+// Spec (the shots): itermocdemo:overview shows the overview page with the
+// demo's needs, at both sizes; itermocdemo:menu opens the first profile's
+// actions menu, also in a narrow window where Enter opens the page.
+func TestItermocDemoOverviewAndMenu(t *testing.T) {
+	for _, w := range []int{200, 80} {
+		m := itermocTestModel(t, 29, 50)
+		m.w = w
+		m.itermocDemo("overview")
+		if p := m.itermocPage; p == nil || p.list || p.sec != imSecOverview {
+			t.Fatalf("%d: page %+v, want the overview", w, m.itermocPage)
+		}
+		f := imPageText(m, 150, 40)
+		for _, want := range []string{"NEEDS YOU", "linear", "the chat lost 7 tools", "house-review", "ACTIVE FLOW"} {
+			if !strings.Contains(f, want) {
+				t.Errorf("%d: no %q in\n%s", w, want, f)
+			}
+		}
+		m = itermocTestModel(t, 29, 50)
+		m.w = w
+		m.itermocDemo("menu")
+		if !m.pickerOpen || m.pickerKind != pickerKindItermocActions {
+			t.Errorf("%d: no actions menu", w)
+		}
+	}
+}
