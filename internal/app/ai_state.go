@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -93,13 +94,17 @@ type aiState struct {
 	// each step started, a counter that changes with any card
 	// (transcript cache), the card the keyboard selected and the gate
 	// its steps share for confirm and review cards (one at a time).
-	run        *agentrun.Handle
-	runMsg     int
-	runSlots   map[string]aiSlot
-	runFiles   map[string]int
-	runGen     int
-	cardSel    string
-	reviewGate agentrun.Gate
+	run      *agentrun.Handle
+	runMsg   int
+	runSlots map[string]aiSlot
+	runFiles map[string]int
+	runGen   int
+	// runLaunched is when the running run was (re)started; runPausing:
+	// Pause was asked and the run has not paused yet (runs_actions.go).
+	runLaunched time.Time
+	runPausing  bool
+	cardSel     string
+	reviewGate  agentrun.Gate
 	// agents is the AGENTS view of the chat's runs (agents_panel.go).
 	agents aiAgentsState
 	// usageLog is every step and plain chat turn that used a model in
@@ -410,6 +415,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-until-done", "AI: Work Until Done (toggle)", ""},
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
 		{"ai-usage", "AI: Usage", ""},
+		{"ai-runs", "AI: Runs", ""},
 		{"ai-profile-edit", "AI: Edit Profiles", ""},
 		{"ai-profile-new", "AI: New Profile from Current…", ""},
 		{"ai-profile-form", "AI: Edit Profile…", ""},
@@ -526,6 +532,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.toggleAgentsView(), true
 	case "ai-usage":
 		return m.showAIUsage(""), true
+	case "ai-runs": // runs_state.go
+		return m.revealRuns(true), true
 	case "ai-profile-edit":
 		return m.editAIProfiles(), true
 	case "ai-profile-new":

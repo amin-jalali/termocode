@@ -165,8 +165,11 @@ func (m Model) aiRunLines(i int, msg ai.StoredMessage, width, inner int) []aiLin
 		}
 		return out
 	}
-	if msg.Run.State == ai.RunStatePaused { // the budget pause: ask in the chat too
+	if msg.Run.State == ai.RunStatePaused { // the budget pause (or Pause on the Runs page): ask in the chat too
 		text := "Budget " + aiBudgetText(msg.Run.Budget) + " reached · " + aiDollars(msg.Run.Spent) + " so far · the run is paused"
+		if msg.Run.Budget == 0 {
+			text = "Paused by you · " + aiDollars(msg.Run.Spent) + " so far · Continue runs the next step"
+		}
 		for _, l := range wrapPlain(text, max(inner, 8)) {
 			out = append(out, aiLine{text: ind + l, style: theme.Fg(theme.DiagWarning)})
 		}

@@ -66,6 +66,9 @@ type StoredRun struct {
 	Profile   string `json:"profile,omitempty"`
 	State     string `json:"state"`
 	ElapsedMs int64  `json:"elapsed_ms,omitempty"`
+	// StartedAtMs is when the run started (Unix ms; 0 in older chats:
+	// RunStarted reads the time from the run id then).
+	StartedAtMs int64 `json:"started_at_ms,omitempty"`
 	// Budget is the run's budget in dollars and Spent what it had cost
 	// when it paused (RunStatePaused).
 	Budget float64 `json:"budget,omitempty"`
@@ -92,7 +95,10 @@ type StoredStep struct {
 	Text      string   `json:"text,omitempty"`
 	Tools     []string `json:"tools,omitempty"` // tool rows ("⚙ Read a.go → 10 lines")
 	ElapsedMs int64    `json:"elapsed_ms,omitempty"`
-	Usage     *Usage   `json:"usage,omitempty"`
+	// StartedAtMs is when the step first started (Unix ms; 0: it did not
+	// run yet, or an older chat).
+	StartedAtMs int64  `json:"started_at_ms,omitempty"`
+	Usage       *Usage `json:"usage,omitempty"`
 	// Cost in dollars and context use in percent; nil when unknown.
 	Cost       *float64 `json:"cost,omitempty"`
 	ContextPct *float64 `json:"context_pct,omitempty"`

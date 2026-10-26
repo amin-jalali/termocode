@@ -228,7 +228,7 @@ func (m *Model) startAIRun(text string, prof ai.Profile, rules ai.Rules) tea.Cmd
 			steps[i].Deps = agentdag.Deps(run, n.ID)
 		}
 	}
-	sr := &ai.StoredRun{ID: run.ID, Profile: prof.Name, State: ai.RunStateRunning}
+	sr := &ai.StoredRun{ID: run.ID, Profile: prof.Name, State: ai.RunStateRunning, StartedAtMs: run.CreatedAt.UnixMilli()}
 	if run.Loop != nil {
 		sr.Rounds, sr.MaxRounds = 1, run.Loop.MaxRounds
 	}
@@ -352,6 +352,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		return nil
 	}
 	s.run = h
+	s.runLaunched, s.runPausing = clock.Now(), false
 	s.chatCancel = cancel
 	s.streaming = true
 	s.act.begin(clock.Now())
@@ -404,13 +405,17 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 			return waitAIChat(msg.ch)
 		case agentrun.RunPaused:
 			rm.Run.State, rm.Run.Budget, rm.Run.Spent = ai.RunStatePaused, ev.Budget, ev.Cost
+			s.runPausing = false
 			if err := s.store.Save(&s.conv); err != nil {
 				recordError("[ai] save chat: " + err.Error())
 			}
-			m.aiOpenBudgetCard()
+			if ev.Budget > 0 { // Budget 0: the user paused it (Runs page); no budget card
+				m.aiOpenBudgetCard()
+			}
 			return waitAIChat(msg.ch)
 		case agentrun.RunResumed:
 			rm.Run.State = ai.RunStateRunning
+			s.runPausing = false
 			return waitAIChat(msg.ch)
 		case agentrun.RunRound:
 			m.aiStartRound(rm, ev)
@@ -425,9 +430,11 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 	case agentrun.NodeStart:
 		prev := *st
 		*st = ai.StoredStep{ID: st.ID, Title: st.Title, Slot: st.Slot, Model: st.Model, Category: st.Category,
-			Deps: st.Deps, Planned: st.Planned, Prompt: st.Prompt, State: string(agentdag.StateRunning), Round: ev.Round}
+			Deps: st.Deps, Planned: st.Planned, Prompt: st.Prompt, State: string(agentdag.StateRunning), Round: ev.Round,
+			StartedAtMs: now.UnixMilli()}
 		if ev.Round > 1 && prev.Round > 0 { // a loop step runs again: its time, tokens, cost and notes add up
 			st.ElapsedMs, st.Usage, st.Cost, st.Notes = prev.ElapsedMs, prev.Usage, prev.Cost, prev.Notes
+			st.StartedAtMs = prev.StartedAtMs
 		}
 		if rm != nil && ev.Round > rm.Run.Rounds {
 			rm.Run.Rounds = ev.Round
@@ -726,11 +733,20 @@ func aiMarkInterrupted(c *ai.Conversation) {
 // (1-based; 0 when the run cannot be retried: it is not the chat's last
 // turn, it is going or it finished).
 func (s *aiState) aiRetryStep(i int) int {
-	if i < 1 || i >= len(s.conv.Messages) || s.streaming {
+	if s.streaming {
 		return 0
 	}
-	rm := s.conv.Messages[i]
-	if rm.Run == nil || s.conv.Messages[i-1].Role != ai.StoredUser {
+	return aiRetryStepIn(s.conv.Messages, i, s.profiles)
+}
+
+// aiRetryStepIn is aiRetryStep for the run message i of msgs (any
+// chat, the open one or a stored one; the Runs page asks for both).
+func aiRetryStepIn(msgs []ai.StoredMessage, i int, profiles ai.ProfileSet) int {
+	if i < 1 || i >= len(msgs) {
+		return 0
+	}
+	rm := msgs[i]
+	if rm.Run == nil || msgs[i-1].Role != ai.StoredUser {
 		return 0
 	}
 	switch rm.Run.State {
@@ -738,13 +754,13 @@ func (s *aiState) aiRetryStep(i int) int {
 	default:
 		return 0
 	}
-	for j := i + 1; j < len(s.conv.Messages); j++ {
-		if s.conv.Messages[j].Role != ai.StoredError {
+	for j := i + 1; j < len(msgs); j++ {
+		if msgs[j].Role != ai.StoredError {
 			return 0
 		}
 	}
 	fix := ""
-	if p, ok := s.profiles.Get(rm.Run.Profile); ok {
+	if p, ok := profiles.Get(rm.Run.Profile); ok {
 		fix = aiLoopFixID(p)
 	}
 	for _, st := range rm.Steps {

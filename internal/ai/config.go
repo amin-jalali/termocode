@@ -50,6 +50,9 @@ type Settings struct {
 	// loop.max_rounds / budget_usd.
 	UntilDoneRounds    int      `json:"ai_until_done_rounds,omitempty"`
 	UntilDoneBudgetUSD *float64 `json:"ai_until_done_budget_usd,omitempty"`
+	// DayBudgetUSD (nil or 0: none) is a daily spend line the Runs page
+	// draws today's spend against. It stops nothing; edited by hand.
+	DayBudgetUSD *float64 `json:"ai_day_budget_usd,omitempty"`
 }
 
 // CheckUntilDoneRounds checks an ai_until_done_rounds value.
