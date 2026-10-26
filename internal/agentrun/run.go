@@ -22,6 +22,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -47,7 +48,7 @@ const (
 	RunCancelled                   // Cancel or the parent context stopped the run
 	NodeRepair                     // a planner's plan is not valid (Err); the planner is asked once more
 	RunPlanned                     // a planner's plan grew the run (NodeID = the planner, Nodes = the new nodes)
-	RunPaused                      // the budget is reached (Cost, Budget): nothing new starts until Continue
+	RunPaused                      // the budget is reached (Cost, Budget) or Pause was asked (Budget 0): nothing new starts until Continue
 	RunResumed                     // Continue after a pause
 	RunRound                       // verify failed and a new round starts (Round = the new round, Err = the verify report)
 )
@@ -138,6 +139,8 @@ type Handle struct {
 	cancel context.CancelFunc
 	done   chan struct{}
 	resume chan struct{}
+	// pause is set by Pause: the run pauses before its next node.
+	pause atomic.Bool
 
 	emitMu sync.Mutex
 
@@ -232,6 +235,11 @@ func (h *Handle) Continue() {
 	}
 }
 
+// Pause asks the run to pause before its next node: the running nodes
+// finish, then the run sends RunPaused (Budget 0) and waits for Continue
+// or Cancel. A no-op after the end.
+func (h *Handle) Pause() { h.pause.Store(true) }
+
 // Done is closed when the run has ended (after its final event).
 func (h *Handle) Done() <-chan struct{} { return h.done }
 
@@ -319,14 +327,22 @@ func (h *Handle) loop(runCtx context.Context) {
 	}
 	for {
 		if ready := agentdag.Ready(h.run); nodeCtx.Err() == nil && len(ready) > 0 {
-			if budget > 0 && spent >= budget {
+			overBudget := budget > 0 && spent >= budget
+			if overBudget || h.pause.Load() {
 				// Pause before the next node: the running nodes end
 				// first, then the run waits for Continue or Cancel.
 				if running == 0 {
-					h.emit(Event{Kind: RunPaused, Cost: spent, Budget: budget, Usage: total})
+					shown := budget // a Pause the user asked for says Budget 0
+					if !overBudget {
+						shown = 0
+					}
+					h.emit(Event{Kind: RunPaused, Cost: spent, Budget: shown, Usage: total})
 					select {
 					case <-h.resume:
-						budget = 0
+						if overBudget {
+							budget = 0
+						}
+						h.pause.Store(false)
 						h.emit(Event{Kind: RunResumed})
 						continue
 					case <-nodeCtx.Done():
