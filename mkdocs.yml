@@ -95,6 +95,7 @@ nav:
       - Use AI: guides/ai-use.md
       - AI profiles and pipelines: guides/ai-profiles.md
       - AI skills: guides/ai-skills.md
+      - Watch AI runs (Runs): guides/runs.md
       - Connect MCP servers: guides/mcp.md
       - Give your agent the IDE's tools: guides/agents.md
       - Test an HTTP API (.http files): guides/http-client.md

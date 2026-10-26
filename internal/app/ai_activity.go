@@ -178,7 +178,7 @@ func (v aiActivityView) lines(ind string, inner int) []aiLine {
 // itself one tick after the turn or after the slot hides.
 func (m *Model) aiActivityTick() tea.Cmd {
 	s := m.ai
-	if s == nil || !s.streaming || s.act.ticking || !m.actionsPanelVisible() {
+	if s == nil || !s.streaming || s.act.ticking || !(m.actionsPanelVisible() || m.runsVisible()) {
 		return nil
 	}
 	s.act.ticking = true

@@ -122,6 +122,9 @@ func (m Model) screenTargets() []hitTarget {
 	if m.editorEmpty() {
 		out = append(out, m.welcomeTargets(pane)...)
 	}
+	if m.runsPageShown() {
+		out = append(out, m.runsPageTargets(pane)...)
+	}
 	if m.termOpen && !m.editorEmpty() {
 		out = append(out, m.panelBarTargets(pane)...)
 	}
@@ -242,6 +245,8 @@ func (m Model) sidebarTargets() []hitTarget {
 			h.X += x0
 			out = append(out, h)
 		}
+	case activity.ViewRuns: // runs_page.go
+		out = append(out, m.runsSidebarTargets(x0, w)...)
 	}
 	return out
 }

@@ -25,6 +25,7 @@ const (
 	ViewTests     // Group E: Testing view (test explorer)
 	ViewServices  // dev services: Docker Compose and local commands
 	ViewDatabases // database connections and schema browser
+	ViewRuns      // Runs: what the AI is doing now (runs_*.go in app)
 )
 
 // Width is the column count taken by the activity bar.
@@ -83,6 +84,9 @@ type item struct {
 	view  View
 	icon  theme.Icon
 	label string
+	// tint (0: none) colours the icon while it is not active: Runs is
+	// green (alive), so it never reads as the AI's lavender.
+	tint theme.Color256
 }
 
 // Search and Outline were both removed from the activity bar:
@@ -98,6 +102,7 @@ var topItems = []item{
 	{view: ViewTests, icon: theme.IconTests, label: "Testing"}, // Group E
 	{view: ViewServices, icon: theme.IconContainers, label: "Containers"},
 	{view: ViewDatabases, icon: theme.IconDatabases, label: "Databases"},
+	{view: ViewRuns, icon: theme.IconRuns, label: "Runs", tint: theme.AccentGreen},
 }
 
 var bottomItems = []item{
@@ -303,7 +308,7 @@ type viewKey struct {
 	h       int
 	icons   theme.IconMode
 	profile termenv.Profile
-	colors  [5]string
+	colors  [6]string
 }
 
 var viewCache struct {
@@ -317,8 +322,8 @@ func (m Model) View() string {
 		return ""
 	}
 	key := viewKey{active: m.active, h: m.h, icons: theme.CurrentIconMode, profile: lipgloss.ColorProfile(),
-		colors: [5]string{theme.Hex(theme.BgActivityBar), theme.Hex(theme.BorderFocus), theme.Hex(theme.TextMuted),
-			theme.Hex(theme.TextWhite), theme.Hex(theme.BorderDefault)}}
+		colors: [6]string{theme.Hex(theme.BgActivityBar), theme.Hex(theme.BorderFocus), theme.Hex(theme.TextMuted),
+			theme.Hex(theme.TextWhite), theme.Hex(theme.BorderDefault), theme.Hex(theme.AccentGreen)}}
 	viewCache.Lock()
 	defer viewCache.Unlock()
 	if viewCache.out != "" && viewCache.key == key {
@@ -349,7 +354,7 @@ func (m Model) renderRow(row int, st styleSet) string {
 		return renderMarkRow(row, st)
 	case rowItemTop, rowItemBottom:
 		if theme.CurrentIconMode != theme.IconModeASCII {
-			return renderActivityGlyphRow(it.icon, kind == rowItemTop, it.view == m.active, st)
+			return renderActivityGlyphRow(it.icon, kind == rowItemTop, it.view == m.active, st, it.tint)
 		}
 		if kind == rowItemTop {
 			return renderActivityBoldRow(it.icon, 0, it.view == m.active, st)
@@ -429,7 +434,7 @@ func renderActivityBoldRow(ic theme.Icon, boldRow int, isActive bool, st styleSe
 // (Nerd Font or Unicode set): the icon sits on the first row, the second
 // row is breathing room. The active item gets the accent edge and a soft
 // accent wash across both rows.
-func renderActivityGlyphRow(ic theme.Icon, iconRow, isActive bool, st styleSet) string {
+func renderActivityGlyphRow(ic theme.Icon, iconRow, isActive bool, st styleSet, tint theme.Color256) string {
 	bg := theme.LG(theme.BgActivityBar)
 	if isActive {
 		bg = theme.Wash(theme.BgActivityBar, theme.WashSelected)
@@ -450,6 +455,9 @@ func renderActivityGlyphRow(ic theme.Icon, iconRow, isActive bool, st styleSet) 
 		}
 	}
 	fg := theme.LG(theme.TextMuted)
+	if tint != 0 {
+		fg = theme.LG(tint)
+	}
 	if isActive {
 		fg = theme.LG(theme.BorderFocus)
 	}

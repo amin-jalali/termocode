@@ -214,6 +214,14 @@ func AIProfile(variant string) Scene {
 		Steps: WithEditor(Act("palette:ai-open-chat"), Act("profiledemo:"+variant), Pause(600*time.Millisecond))}
 }
 
+// Runs is the Runs view and page (sample runs, no model, nothing
+// written): "list" the list and the overview, "detail" the live run's
+// page, "stall" its page while it is stalled, "empty" no run at all.
+func Runs(variant string) Scene {
+	return Scene{Name: "runs-" + variant, Env: aiEnv,
+		Steps: WithEditor(Act("runsdemo:"+variant), Pause(900*time.Millisecond))}
+}
+
 // AIMemory is the AI memory UI (OM-2) with sample lessons: "chat" a turn
 // that saved lessons, "ask" the ask-once card, "picker" AI: Memory…,
 // "forget" a lesson's Forget card.

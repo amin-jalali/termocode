@@ -494,6 +494,9 @@ func (m Model) renderBaseLines() []string {
 	if m.editorEmpty() {
 		m.publishSetupCard()
 		editorContent = renderWelcome(edPaneW, editorH, m.welcomeFocus, m.editorHasKeys())
+	} else if m.runsPageShown() {
+		// The Runs page: drawn here, not by nvim (runs_page.go).
+		editorContent = m.renderRunsPage(edPaneW, editorH)
 	} else {
 		editorContent = m.editor.View(m.focus == FocusEditor)
 		// When the integrated terminal panel is open, applyLayout shrinks
@@ -1267,6 +1270,8 @@ func (m Model) renderSidebar(h int) string {
 		content = m.renderServicesSidebar(contentW, h)
 	case activity.ViewDatabases: // db_view.go
 		content = m.renderDatabasesSidebar(contentW, h)
+	case activity.ViewRuns: // runs_view.go
+		content = m.renderRunsSidebar(contentW, h)
 	default:
 		if !m.isExtSidebar() { // Group I: extension panels (ext.go)
 			return ""

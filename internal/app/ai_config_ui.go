@@ -41,6 +41,12 @@ const (
 	confirmKindAIBudget
 )
 
+// The Runs view's card and list (runs_state.go).
+const (
+	confirmKindRunsStop confirmKindEnum = 2400
+	pickerKindRunsMore  pickerKindEnum  = 2400
+)
+
 // handleAIPickerSelect routes the AI picker kinds. ok=false: not ours.
 func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 	switch m.pickerKind {
@@ -64,6 +70,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAIMemoryPicked(id), true
 	case pickerKindAISkills: // ai_skills.go
 		return m.onAISkillsPicked(id), true
+	case pickerKindRunsMore: // runs_state.go
+		return m.onRunsMorePicked(id), true
 	}
 	if cmd, ok := m.handleAIProfilePickerSelect(id); ok {
 		return cmd, true
@@ -101,6 +109,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.onAIUndoTurnConfirm(id), true
 	case confirmKindAIBudget:
 		return m.answerAIBudget(id), true
+	case confirmKindRunsStop: // runs_state.go
+		return m.answerRunsStop(id), true
 	case confirmKindAIOAuth:
 		if id == "continue" {
 			return m.beginClaudeOAuth(), true

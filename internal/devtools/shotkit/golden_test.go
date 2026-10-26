@@ -279,6 +279,20 @@ func goldenCases() []goldenCase {
 		sc := AISkills(v)
 		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
+	// Runs: the list and overview, a run's page, a stalled run and the
+	// empty page at 200x50 and 80x24 (the compact forms); the list in a
+	// light theme and in ASCII icons.
+	for _, v := range []string{"list", "detail", "stall", "empty"} {
+		sc := Runs(v)
+		out = append(out, goldenCase{sc.Name + "-200x50", sc, 200, 50}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
+	}
+	{
+		sc := Runs("list")
+		light, ascii := withTheme(withName(sc, sc.Name+"-light"), "catppuccin-latte"), withName(sc, sc.Name+"-ascii")
+		ascii.Icons = "ascii"
+		out = append(out, goldenCase{light.Name + "-200x50", light, 200, 50}, goldenCase{ascii.Name + "-200x50", ascii, 200, 50},
+			goldenCase{sc.Name + "-150x42", sc, 150, 42})
+	}
 	// AI: Show Profile and AI: Usage (AU-5), at both sizes, and the four
 	// screens of the "see your agents and what they cost" story at full
 	// size (200x50) for the presentation.

@@ -1364,6 +1364,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `ai-profile-trust` | AI: Project Profiles Trust… | never | trusting a project's prompts is the user's decision |
 | `ai-review` | AI: Review Pending Changes | never | the user reviews proposed edits |
 | `ai-rules` | AI: Project Rules… | never | trusting a project's rules is the user's decision |
+| `ai-runs` | AI: Runs | never | the user's monitoring page; it holds Stop, Pause and Resume |
 | `ai-sign-in-claude` | AI: Sign in with Claude (OAuth, opt-in)… | never | AI provider, credentials and approvals stay with the user |
 | `ai-sign-out-claude` | AI: Sign out of Claude | never | AI provider, credentials and approvals stay with the user |
 | `ai-skills` | AI: Skills… | never | opens a picker or prompt that only the user can answer; use a typed tool |

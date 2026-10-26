@@ -46,6 +46,8 @@ import (
 //	profiledemo:chip|picker|trust|save|show|form|form-error|form-remove the agent profile UI (sample data)
 //	memorydemo:chat|ask|picker|forget the AI memory UI (sample lessons)
 //	skillsdemo:chat|picker|trust the AI skills UI (sample skills, no files)
+//	runsdemo:list|detail|stall|empty the Runs view and page with sample runs
+//	                       (a live run, stored chats in memory; nothing written)
 //	connectdemo:<step>     a Connect-a-service step with sample data: pick,
 //	                       gh, device, browser, ssh, done, error, token,
 //	                       slack (nothing connects)
@@ -181,6 +183,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		return m.aiMemoryDemo(arg)
 	case "skillsdemo": // the skill chip / AI: Skills… / the trust card (ai_skills_demo.go)
 		return m.aiSkillsDemo(arg)
+	case "runsdemo": // the Runs view and page with sample runs (runs_demo.go)
+		return m.runsDemo(arg)
 	case "aidemo-fa": // a Persian (right-to-left) conversation for the shots
 		s := m.aiS()
 		s.conv.Messages = []ai.StoredMessage{
