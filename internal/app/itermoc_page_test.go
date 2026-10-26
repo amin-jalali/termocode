@@ -385,7 +385,7 @@ func TestItermocOtherPages(t *testing.T) {
 	}{
 		{imSecModels, "gpt", []string{"gpt", "model slot", "openai", "gpt-5-mini", "no key", "Set key (k)", "Edit… (e)"}},
 		{imSecModels, "main", []string{"anthropic", "claude-sonnet-4-5", "key ✓", "default, review", "Edit… (e)"}},
-		{imSecServices, "linear", []string{"linear", "Sign-in needed", "12 tools", "Sign in (i)", "Log (l)"}},
+		{imSecServices, "linear", []string{"linear", "Sign-in ended", "12 tools", "Sign in (i)", "Disable… (d)"}},
 		{imSecAgents, "status", []string{"Outside agents", "listening", "claude-code", "Start Claude Code (s)", "tasks_run"}},
 		{imSecAgents, agentKey(1), []string{"claude-code", "14", "09:41"}},
 		{"overview", "", []string{"SUMMARY", "profiles", "NEEDS YOU", "linear"}},

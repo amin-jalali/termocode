@@ -11,8 +11,12 @@ import (
 	"github.com/amin-jalali/termocode/internal/mcp"
 )
 
-// confirmKindMCPRemove is the "Remove service?" card.
-const confirmKindMCPRemove confirmKindEnum = 2210
+// confirmKindMCPRemove is the "Remove service?" card; confirmKindMCPDisable
+// the "Disable service?" card of the Itermoc service page.
+const (
+	confirmKindMCPRemove  confirmKindEnum = 2210
+	confirmKindMCPDisable confirmKindEnum = 2211
+)
 
 // mcpSetDisabled turns a service off or on: "disabled": true in the file
 // the entry lives in (other keys stay). An off service stays listed, is
@@ -62,6 +66,45 @@ func (m *Model) openMCPRemove(name string) tea.Cmd {
 	m.confirmOpen = true
 	m.confirmKind = confirmKindMCPRemove
 	return nil
+}
+
+// openMCPDisable asks before a service is turned off: what the chat
+// loses, and that the entry and its sign-in stay. Keep on is first and
+// focused; Enable brings it back without asking.
+func (m *Model) openMCPDisable(name string) tea.Cmd {
+	entries := mcpServerEntries(name)
+	if len(entries) == 0 {
+		return nil
+	}
+	tools := 0
+	for _, st := range m.aiMCP().Servers() {
+		if st.Name == name && st.State != mcp.StateDisabled {
+			tools = st.Tools
+		}
+	}
+	msg := "It stays in " + entries[0].SourcePath + " with its sign-in, but it does not start and the AI gets none of its tools."
+	if tools > 0 {
+		msg += fmt.Sprintf(" The chat loses %d tools.", tools)
+	}
+	msg += "\nEnable brings it back."
+	m.aiS().mcpSel = name
+	m.confirm = confirm.New("Disable service "+name+"?", msg, []confirm.Button{
+		{ID: "keep", Title: "Keep on"},
+		{ID: "disable", Title: "Disable"},
+	})
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = confirmKindMCPDisable
+	return nil
+}
+
+// answerMCPDisable runs the card's button (Esc is Keep on).
+func (m *Model) answerMCPDisable(id string) tea.Cmd {
+	name := m.aiS().mcpSel
+	if id != "disable" || name == "" {
+		return nil
+	}
+	return m.mcpSetDisabled(name, true)
 }
 
 // mcpRemovedMsg ends a Remove.

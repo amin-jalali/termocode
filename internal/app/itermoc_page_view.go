@@ -41,18 +41,24 @@ type imPageHit struct {
 	x, y, w, h int
 }
 
-// imCard is the amber "needs you" box at the top of a page.
+// imCard is the amber "needs you" box at the top of a page: what is
+// wrong, what it costs, and (pills) the verb that fixes it.
 type imCard struct {
 	title string
 	lines []string
+	pills []imPill
+	note  string // dim text after the pills
 }
 
-// imFactSec is a titled block of label / value rows (or plain lines).
+// imFactSec is a titled block of label / value rows (or plain lines, or
+// chips: names drawn as small pills that wrap).
 type imFactSec struct {
 	title string
+	right string // dim text after the title
 	rows  [][2]string
 	toks  []theme.Color256 // value colours (nil = secondary)
 	lines []string
+	chips []string
 }
 
 // imContent is everything one page shows.
@@ -145,7 +151,7 @@ func (d *imDraw) facts(y int, secs []imFactSec) int {
 		if i > 0 {
 			y += d.gap()
 		}
-		y = d.head(y, s.title, "")
+		y = d.headAfter(y, s.title, s.right)
 		for j, r := range s.rows {
 			tok := imTokSecondary()
 			if j < len(s.toks) && s.toks[j] != 0 {
@@ -158,18 +164,87 @@ func (d *imDraw) facts(y int, secs []imFactSec) int {
 			d.cv.text(d.mx, y, imTrunc(theme.ASCIIText(l), max(d.w-2*d.mx, 4)), imTokSecondary())
 			y++
 		}
+		if len(s.chips) > 0 {
+			y = d.chips(y, s.chips)
+		}
 	}
 	return y
+}
+
+// headAfter draws a section title with a dim note right after it.
+func (d *imDraw) headAfter(y int, title, note string) int {
+	x := d.cv.text(d.mx, y, title, imTokMuted().B())
+	if note != "" {
+		d.cv.text(x+2, y, imTrunc(theme.ASCIIText(note), max(d.w-x-2-d.mx, 4)), imTokDim())
+	}
+	if d.roomy {
+		return y + 2
+	}
+	return y + 1
+}
+
+// chips draws names as small pills that wrap (at most three lines; the
+// rest is counted). Returns the next row.
+func (d *imDraw) chips(y int, names []string) int {
+	x, lines := d.mx, 1
+	for i, n := range names {
+		label := " " + theme.ASCIIText(n) + " "
+		w := imPillW(label)
+		if x+w > d.w-d.mx && x > d.mx {
+			if lines == 3 {
+				d.cv.text(x, y, "+"+strconv.Itoa(len(names)-i)+" more", imTokDim())
+				return y + 1
+			}
+			y, x, lines = y+1, d.mx, lines+1
+		}
+		if x+w > d.w-d.mx {
+			label = imTrunc(label, max(d.w-d.mx-x-2, 1))
+			w = imPillW(label)
+		}
+		d.cv.pill(x, y, label, theme.BgSectionHdr, theme.TextSecondary, false)
+		x += w + 1
+	}
+	return y + 1
 }
 
 // card draws the amber box; returns the next row.
 func (d *imDraw) card(y int, c *imCard) int {
 	cw := min(d.w-2*d.mx, 76)
 	h := len(c.lines) + 3
+	gapAbovePills := 1
+	if !d.roomy {
+		gapAbovePills = 0
+	}
+	if len(c.pills) > 0 {
+		h += 1 + gapAbovePills
+	}
 	d.cv.box(d.mx, y, cw, h, imTokWarn())
 	d.cv.text(d.mx+2, y, " "+imText(c.title)+" ", imTokWarn().B())
 	for i, l := range c.lines {
-		d.cv.text(d.mx+3, y+1+i, imTrunc(theme.ASCIIText(l), cw-6), imTokPrimary())
+		tok := imTokPrimary()
+		if i > 0 {
+			tok = imTokMuted()
+		}
+		d.cv.text(d.mx+3, y+1+i, imTrunc(theme.ASCIIText(l), cw-6), tok)
+	}
+	if len(c.pills) > 0 {
+		py, px := y+len(c.lines)+1+gapAbovePills, d.mx+3
+		for _, p := range c.pills {
+			pw := imPillW(p.text())
+			if px+pw > d.mx+cw-2 {
+				break
+			}
+			chip, fg := theme.BgSectionHdr, theme.TextPrimary
+			if p.warn {
+				chip, fg = theme.AccentAmber, theme.BgEditor
+			}
+			d.cv.pill(px, py, p.text(), chip, fg, p.warn)
+			d.hit(p.verb, px, py, pw, 1)
+			px += pw + 1
+		}
+		if c.note != "" && d.mx+cw-3-px > 8 {
+			d.cv.text(px+1, py, imTrunc(theme.ASCIIText(c.note), d.mx+cw-4-px), imTokDim())
+		}
 	}
 	return y + h + d.gap() - 1
 }
@@ -464,60 +539,6 @@ func imKeyNeed(s imSlot) string {
 func imGlyphWord(s string) string { return strings.Replace(s, "●", imGlyphReady(), 1) }
 
 func imGlyphReady() string { g, _ := imGlyph("ready"); return g }
-
-// servicePageContent is the service page: what state it is in and what
-// that costs; the sign-in card when it waits for the user.
-func servicePageContent(sn itermocSnap, row imRow) imContent {
-	s, _ := sn.service(row.name)
-	c := imContent{icon: imIconServices.String(), name: s.Name, hint: imHintList}
-	if s.Type == mcp.TypeStdio {
-		c.sub = "local service · MCP"
-	} else {
-		c.sub = "remote service · MCP"
-	}
-	word, tok := itermocServiceWord(s)
-	g, _ := imGlyph(itermocServiceGlyph(s))
-	c.right = g + " " + word
-	c.rightTok = tok
-	if itermocServiceNeeds(s) {
-		c.rightTok = theme.AccentAmber
-	} else if s.State == mcp.StateRunning {
-		c.rightTok = theme.AccentGreen
-	} else {
-		c.rightTok = theme.TextMuted
-	}
-	if s.Expired || s.State == mcp.StateSignIn {
-		lines := []string{s.Name + " waits for you to sign in."}
-		if s.Tools > 0 {
-			lines = append(lines, "The chat lost "+strconv.Itoa(s.Tools)+" tools. Sign in again to get them back.")
-		} else {
-			lines = append(lines, "Until then the chat cannot use it.")
-		}
-		c.card = &imCard{title: "! Sign-in needed", lines: lines}
-	}
-	trusted := "yes"
-	if !s.Trusted {
-		trusted = "not yet"
-	}
-	kind := "remote"
-	if s.Type == mcp.TypeStdio {
-		kind = "local"
-	}
-	rows := [][2]string{{"state", s.State}, {"where", kind}, {"tools", strconv.Itoa(s.Tools)}, {"trusted", trusted}}
-	if s.SignedIn {
-		rows = append(rows, [2]string{"sign-in", "stored"})
-	}
-	if s.Problem != "" {
-		rows = append(rows, [2]string{"problem", s.Problem})
-	}
-	c.facts = []imFactSec{{title: "STATUS", rows: rows}}
-	if s.Expired || s.State == mcp.StateSignIn {
-		c.pills = append(c.pills, imPill{verb: "signin", label: "Sign in", key: "i", warn: true})
-	}
-	c.pills = append(c.pills, imPill{verb: "log", label: "Log", key: "l", primary: !(s.Expired || s.State == mcp.StateSignIn)})
-	c.more = "tools · writes · disable · remove"
-	return c
-}
 
 // agentPageContent is the outside-agents page (the listening status, or one
 // connected agent).

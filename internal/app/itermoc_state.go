@@ -102,6 +102,7 @@ type itermocSnap struct {
 	profiles []imProfile
 	slots    []imSlot
 	services []mcp.Status
+	svc      map[string]imSvc // the service page's facts, by name
 
 	mode        string // mcp_server: auto | on | off
 	listening   bool
@@ -256,6 +257,10 @@ func itermocBuild(m Model, reload bool) itermocSnap {
 			mgr.Reload()
 		}
 		sn.services = mgr.Servers()
+		sn.svc = map[string]imSvc{}
+		for _, st := range sn.services {
+			sn.svc[st.Name] = itermocServiceInfo(st, mgr)
+		}
 	}
 
 	sn.mode = mcpServeMode()

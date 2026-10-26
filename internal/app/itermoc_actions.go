@@ -134,6 +134,9 @@ func itermocKeyRows() []confirm.KeyRow {
 		[]string{"E", "edit ai_models in config.json"},
 		[]string{"Services"},
 		[]string{"i", "sign in"},
+		[]string{"t", "show the tools of the service"},
+		[]string{"d", "disable the service… / enable it"},
+		[]string{"D", "remove the service… (asks first)"},
 		[]string{"c", "connect a service"},
 		[]string{"l", "show the log"},
 		[]string{"Outside agents"},
@@ -296,8 +299,18 @@ func (m *Model) itermocRowKey(key string, row imRow) (tea.Cmd, bool) {
 			return m.itermocRun("remove", row), true
 		}
 	case imRowService:
-		if key == "i" {
+		switch key {
+		case "i":
 			return m.itermocRun("signin", row), true
+		case "t":
+			return m.itermocRun("tools", row), true
+		case "d":
+			if st, ok := m.itermocS().snap.service(row.name); ok && st.State == mcp.StateDisabled {
+				return m.itermocRun("enable", row), true
+			}
+			return m.itermocRun("disable", row), true
+		case "D":
+			return m.itermocRun("remove", row), true
 		}
 	}
 	return nil, false
@@ -527,8 +540,27 @@ func (m *Model) itermocRun(verb string, row imRow) tea.Cmd {
 		}
 		return nil
 	case "remove":
-		if row.kind == imRowSlot {
+		switch row.kind {
+		case imRowSlot:
 			return m.openItermocSlotRemove(row.name)
+		case imRowService:
+			return m.openMCPRemove(row.name) // asks on its card, Keep first
+		}
+		return nil
+	case "tools":
+		if row.kind == imRowService {
+			m.aiS().mcpSel = row.name
+			return m.onMCPServerAction("tools")
+		}
+		return nil
+	case "disable":
+		if row.kind == imRowService {
+			return m.openMCPDisable(row.name) // asks on its card, Keep on first
+		}
+		return nil
+	case "enable":
+		if row.kind == imRowService {
+			return m.mcpSetDisabled(row.name, false)
 		}
 		return nil
 	case "setkey":

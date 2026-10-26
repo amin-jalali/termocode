@@ -20,6 +20,7 @@ import (
 //	full   the active profile review, an untrusted project profile, one
 //	       model without a key, a service that needs a sign-in, one agent
 //	empty  a fresh install: no AI provider, no service, nothing listening
+//	service  full, with the page of the service linear (sign-in ended)
 //	slotadd     full, with the Add slot form filled in (nothing is saved)
 //	slotkey     full, with the "set the key?" card after a new slot
 //	slotremove  full, with the Remove card of a slot a profile uses
@@ -65,6 +66,14 @@ func (m *Model) itermocDemo(arg string) tea.Cmd {
 		{Name: "linear", Type: mcp.TypeHTTP, State: mcp.StateSignIn, Expired: true, Trusted: true},
 		{Name: "notes", Type: mcp.TypeStdio, State: mcp.StateStopped, Tools: 11, Trusted: true},
 	}
+	st.snap.svc = map[string]imSvc{
+		"github": {where: "remote · api.githubcopilot.com", access: "read only", browser: true, file: "~/.config/termocode/mcp.json",
+			tools: []string{"issues_list", "issue_read", "pulls_list", "pull_read", "search_code", "repos_get"}},
+		"linear": {where: "remote · mcp.linear.app", access: "read only", browser: true, file: "~/.config/termocode/mcp.json",
+			tools: []string{"list_issues", "get_issue", "search_issues", "list_projects", "list_cycles", "list_teams", "list_comments"}},
+		"notes": {where: "local · notes-mcp", file: "~/.config/termocode/mcp.json",
+			tools: []string{"notes_search", "notes_read", "notes_list"}},
+	}
 	st.snap.mode, st.snap.listening = "auto", true
 	st.snap.agents = []imAgent{{id: 1, name: "claude-code", since: "09:41", calls: 14, asked: 2}}
 	st.snap.calls = []imCall{
@@ -74,6 +83,13 @@ func (m *Model) itermocDemo(arg string) tea.Cmd {
 	st.fixed = true
 	if arg == "profile" {
 		return m.itermocProfileDemo()
+	}
+	if arg == "service" {
+		// linear's page: the sign-in ended and the chat lost its tools.
+		st.snap.services[1].Tools = 7
+		row := imRow{kind: imRowService, sec: imSecServices, name: "linear"}
+		m.itermoc.cursorTo(row)
+		return m.itermocShowPage(row, false)
 	}
 	return m.itermocSlotDemo(arg)
 }

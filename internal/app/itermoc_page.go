@@ -331,6 +331,14 @@ func itermocPageTip(verb string) (name, key string, ok bool) {
 		return "Set the key of this model's provider", "k", true
 	case "signin":
 		return "Sign in to this service", "i", true
+	case "tools":
+		return "Show the tools of this service", "t", true
+	case "disable":
+		return "Turn this service off (asks first)", "d", true
+	case "enable":
+		return "Turn this service on again", "d", true
+	case "remove":
+		return "Remove (asks first)", "D", true
 	case "log":
 		return "Show the log", "l", true
 	case "new":
