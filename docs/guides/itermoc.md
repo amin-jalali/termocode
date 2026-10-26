@@ -30,6 +30,8 @@ profile picker. That stays the fast way to switch.
 ```text
  ITERMOC                                       ? keys  / filter
  ──────────────────────────────────────────────────────────────
+ ✦ Overview                                                3 !
+
  ✦ PROFILES                                                1 !
    ● review                                              active
    ○ default
@@ -52,6 +54,10 @@ profile picker. That stays the fast way to switch.
    + start one…
  Enter actions · o page · ? keys
 ```
+
+The first row, **Overview**, opens one page with all four groups and
+everything that needs you (see [The overview](#the-overview)). Its number
+(`3 !`, amber) counts those things.
 
 Each group has an icon, its name and a number at the right. The number is
 how many rows it has, or `1 !` (amber) when one of them needs you. A folded
@@ -129,11 +135,48 @@ pills start an agent in a terminal tab: **Start Claude Code** (`s`),
 **Start Codex** (`S`), and **Copy config** (`y`) copies the config other
 agent tools need.
 
-The pages of a model slot and the group
-headers (a summary with what needs you) show their key facts and their
-main pills. A key is never on a page. `Esc` on a page goes back to the
-list; `j`, `↓`, `↑` and the wheel scroll a page that is taller than the
-window.
+The page of a model slot shows its key facts and its main pills. A key is
+never on a page. `Esc` on a page goes back to the list; `j`, `↓`, `↑` and
+the wheel scroll a page that is taller than the window.
+
+## The overview
+
+The **Overview** row (and a group header) opens the overview page, in the
+same tab (`✦ AI`):
+
+```text
+ ✦ AI  agents & connections                          listening auto
+ ───────────────────────────────────────────────────────────────────
+ ╭ ✦ PROFILES ── 1 ╮ ╭ ϟ MODELS ─── 2 ╮ ╭ ⌁ SERVICES ── 3 ╮ ╭ ⇄ OUTSIDE AGENTS ─ 4 ╮
+ │ review          │ │ 4 slots        │ │ 1 of 3 ready    │ │ 1 connected          │
+ │ ! house-review… │ │ ! gpt has no … │ │ ! linear needs… │ │ ● claude-code · 14 … │
+ ╰─────────────────╯ ╰────────────────╯ ╰─────────────────╯ ╰──────────────────────╯
+
+ NEEDS YOU  3 things
+ ▸ ! linear        sign-in expired · the chat lost 7 tools    ▐ Sign in (i) ▌
+   ! gpt           no key · this model cannot answer yet      ▐ Set key (k) ▌
+   ⚠ house-review  a profile from this project · not trusted  ▐ Trust… (t) ▌
+
+ ACTIVE FLOW  ✦ review · Review then fix
+ you ──▶ 1 Reviewer ──▶ 2 Fixer ──▶ answer
+ ───────────────────────────────────────────────────────────────────
+ New profile (n)  Connect a service (c)  Start Claude Code (s)
+```
+
+- The four **tiles** say each group in a few words. A tile with something
+  that needs you has an amber frame and line. Click a tile, or press `1`
+  to `4`, to open that group: the active profile, the first model or
+  service that needs you (else the first one), the first outside agent.
+- **NEEDS YOU** lists every row that waits for you, the most urgent first:
+  services that lost their sign-in or do not start, models without a key,
+  project profiles you did not trust yet. A click on a line, or `Tab` to
+  it and `Enter`, opens its page. Its pill fixes it right here (**Sign
+  in**, **Set key**, **Trust…**, **Log**). When nothing needs you the page
+  says `nothing right now`.
+- **ACTIVE FLOW** draws the active profile's pipeline. A click on a step
+  opens the step form of that profile.
+
+In a short or narrow window the tiles become one line each.
 
 ## Actions of a row
 
@@ -243,7 +286,9 @@ Press `?` in the view for the key card.
 | `s` / `S` / `y` / `T` | start Claude Code, start Codex, copy the termocode server config, show the status screen |
 
 On a page the same keys work (`u` `e` `r` `t`, `k` `i` `l` `s` `y`, `Enter` for
-the menu, `Esc` back to the list).
+the menu, `Esc` back to the list). On the overview, `1` to `4` open a
+group, `Tab` / `Shift+Tab` pick a line of NEEDS YOU and `Enter` opens its
+page.
 
 The mouse works too: click a row for its page, a header to fold it, a
 `+ …` row to add, a pill or a box on a page to run it; the wheel scrolls.
@@ -255,6 +300,29 @@ and keep their number (`1 !`). Open one with `Space` or a click. On a
 narrow sidebar a row first cuts its word at the right. Its mark and name
 always stay. You can drag the sidebar wider. A page in a narrow pane
 draws the pipeline as chips and scrolls.
+
+A window under 120 columns (80×24, say) has no room for the list next to
+a page, so the list and the page take turns, like [Runs](runs.md). Itermoc
+opens as one full-width tab (`✦ Itermoc`) that shows the list. Each row
+gets a middle column (the steps of a profile, the provider and model of a
+slot, what a service waits for) and, when it needs you, its fix pill at
+the right:
+
+```text
+ ITERMOC                                          ? keys  / filter
+ ──────────────────────────────────────────────────────────────────
+ ✦ Overview                                                    3 !
+
+ ✦ PROFILES                                                    1 !
+  ● review        Reviewer ▶ Fixer                          active
+  ⚠ house-review  2 steps · not trusted yet          ▐ Trust… (t) ▌
+ Enter open · u use · Space fold · / filter · ? keys
+```
+
+`Enter` (or a click) opens the row's page full-width; `Esc` goes back to
+the list on the same row. The row keys (`u`, `i`, `k`, …) work in the list
+too. Under 60 columns the right column goes first, then (under 44) the
+middle one; the mark and the name always stay.
 
 ## Ask the AI
 
