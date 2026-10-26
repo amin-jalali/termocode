@@ -243,6 +243,8 @@ func AISkills(variant string) Scene {
 // that needs the user in each section (the list only, no detail page),
 // "follow" the keys o, Esc and j: the page tab follows the list, "profile" the same with the detail page of the profile review open in
 // the editor area, "service" the page of a service whose sign-in ended,
+// "agent" the page of a connected outside agent, "agents" the page of the
+// listening row,
 // "empty" a fresh install, "menu" the
 // actions menu of the first profile row, "slotadd" the Add slot form,
 // "slotkey" the Set key offer after a new slot, "slotremove" the Remove

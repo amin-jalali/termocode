@@ -298,8 +298,8 @@ func goldenCases() []goldenCase {
 	// and in ASCII icons.
 	// The MODELS cards (AH-6): the Add slot form, the Set key offer and
 	// the Remove card.
-	// The service page (B3).
-	for _, v := range []string{"list", "profile", "follow", "empty", "menu", "slotadd", "slotkey", "slotremove", "service"} {
+	// The service page (B3) and the outside-agent pages (B4).
+	for _, v := range []string{"list", "profile", "follow", "empty", "menu", "slotadd", "slotkey", "slotremove", "service", "agent", "agents"} {
 		sc := Itermoc(v)
 		out = append(out, goldenCase{sc.Name + "-200x50", sc, 200, 50}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
