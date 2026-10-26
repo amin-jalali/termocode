@@ -648,8 +648,12 @@ func (m *Model) drawTimeline(cv *rcCanvas, y, w int, it runsItem, now time.Time,
 	}
 	end := it.started.Add(it.elapsed)
 	if it.kind.live() {
-		cv.text(tx+pos, y, runsArrow(1), rcSt{fg: c.ok})
-		cv.text(tx+pos+2, y, "now "+runsClockSecs(now), rcSt{fg: c.ok})
+		endCol := c.ok
+		if it.kind != runsRunning {
+			endCol = c.warn // stalled or paused: the line waits
+		}
+		cv.text(tx+pos, y, runsArrow(1), rcSt{fg: endCol})
+		cv.text(tx+pos+2, y, "now "+runsClockSecs(now), rcSt{fg: endCol})
 	} else {
 		cv.text(tx+pos+1, y, "ended "+runsClockSecs(end), rcSt{fg: c.dim})
 	}
@@ -835,6 +839,8 @@ func (l runsLogLine) col(c runsColours) lipgloss.Color {
 		return c.secondary
 	case 2:
 		return c.ok
+	case 4:
+		return c.warn
 	case 3:
 		return c.err
 	}
@@ -878,7 +884,11 @@ func (m *Model) runsLog(it runsItem, now time.Time) []runsLogLine {
 			add(start.Add(time.Duration(st.ElapsedMs)*time.Millisecond), n+" failed · "+aiOneLine(aiCleanText(st.Error)), 3)
 		case agentdag.StateRunning:
 			if live := m.ai.runsStepLive(it, k, now); live.live && live.now != "" {
-				add(now, n+" "+live.now, 2)
+				kind := 2
+				if live.stalled > 0 {
+					kind = 4
+				}
+				add(now, n+" "+live.now, kind)
 			}
 		}
 		for _, note := range st.Notes {
