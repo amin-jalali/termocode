@@ -445,6 +445,16 @@ func (m *Model) setFocus(it item) {
 	m.foc = it
 }
 
+// FocusStep expands step i (0-based) and puts the focus on its title, so
+// the form opens at that step. Out of range: nothing changes.
+func (m *Model) FocusStep(i int) {
+	if i < 0 || i >= len(m.steps) {
+		return
+	}
+	m.setFocus(item{iSTitle, i})
+	m.ensureVisible()
+}
+
 func (m *Model) move(d int) {
 	m.editing = false
 	items := m.items()

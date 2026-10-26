@@ -88,6 +88,23 @@ func TestFormRoundTrip(t *testing.T) {
 	}
 }
 
+// Spec: FocusStep opens the form at one step: that step is the expanded
+// one and its title field has the focus (a click on a step box in the
+// Itermoc page lands there). A step out of range changes nothing.
+func TestFormFocusStep(t *testing.T) {
+	m := New("my-review", review(), cfg(1))
+	m.SetSize(120, 40)
+	m.FocusStep(1)
+	if m.sel != 1 || m.foc != (item{iSTitle, 1}) {
+		t.Fatalf("FocusStep(1): sel=%d foc=%+v", m.sel, m.foc)
+	}
+	before := m.foc
+	m.FocusStep(9)
+	if m.foc != before {
+		t.Errorf("FocusStep(9) moved the focus to %+v", m.foc)
+	}
+}
+
 // Spec: typing in the name field changes the profile; Esc ends editing,
 // a second Esc cancels and says the form was changed.
 func TestFormTypeAndCancel(t *testing.T) {
