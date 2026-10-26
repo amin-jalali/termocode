@@ -3,6 +3,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -260,9 +261,12 @@ func (m *Model) itermocPageVerb(verb string, row imRow) tea.Cmd {
 	case verb == "more":
 		return m.itermocPageMore(row)
 	case strings.HasPrefix(verb, "step:"):
-		// TODO(#12, feat/profile-form): open the step form of this step. Until
-		// that branch is merged the step box opens the profile file.
-		return m.itermocRun("edit", row)
+		// The profile step form, open at this step.
+		cmd := m.itermocRun("edit", row)
+		if n, err := strconv.Atoi(strings.TrimPrefix(verb, "step:")); err == nil && m.profileFormOpen {
+			m.profileForm.FocusStep(n - 1)
+		}
+		return cmd
 	case verb == "jump":
 		// The overview's "needs you" lines: go to the object.
 		return nil

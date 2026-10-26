@@ -397,9 +397,14 @@ func (m *Model) itermocActionsFor(row imRow) (title string, acts []itermocAction
 		if p.p.Title != "" {
 			title += " · " + p.p.Title
 		}
+		editHint := "the step form"
+		if p.p.Source != ai.ProfileSourceUser {
+			editHint = "the step form, on a copy"
+		}
 		acts = []itermocAction{
 			{"use", "Use", "switch the chat to it"},
 			{"details", "Details", "steps, models, prompts"},
+			{"edit", "Edit…", editHint},
 			{"duplicate", "Duplicate…", "save a copy under a name"},
 			{"runs", "Runs", "open AGENTS"},
 		}
@@ -516,9 +521,9 @@ func (m *Model) itermocRun(verb string, row imRow) tea.Cmd {
 			return m.openItermocSlotEdit(row.name)
 		}
 		if row.kind == imRowProfile {
-			// TODO(#12, feat/profile-form): open the profile step form here.
-			// Until it is merged a profile is edited in profiles.json.
-			return m.editAIProfiles()
+			// The step form (#12); a built-in or project profile becomes a
+			// copy. Edit JSON stays in the menu for the expert path.
+			return m.openAIProfileEditForm(row.name)
 		}
 		return nil
 	case "remove":

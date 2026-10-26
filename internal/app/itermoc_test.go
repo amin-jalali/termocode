@@ -126,7 +126,7 @@ func TestItermocProfileActionsRoute(t *testing.T) {
 	for _, a := range func() []itermocAction { _, a := m.itermocActionsFor(m.itermoc.menuRow); return a }() {
 		ids = append(ids, a.id)
 	}
-	if got := strings.Join(ids, ","); got != "use,details,duplicate,runs,json" {
+	if got := strings.Join(ids, ","); got != "use,details,edit,duplicate,runs,json" {
 		t.Errorf("verbs %s", got)
 	}
 	m.pickerOpen = false

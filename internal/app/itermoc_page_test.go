@@ -1,7 +1,6 @@
 package app
 
 import (
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -263,10 +262,11 @@ func TestItermocPageKeys(t *testing.T) {
 	if _, ok := key("e"); !ok {
 		t.Error("e was not handled")
 	}
-	path, _ := ai.ProfilesPath()
-	if _, err := os.Stat(path); err != nil {
-		t.Errorf("e did not open the profile file: %v", err)
+	// review is built in: Edit opens the step form on a copy, never JSON.
+	if !m.profileFormOpen || m.profileForm.Name() != "my-review" || m.profileForm.Replace() {
+		t.Errorf("e did not open the step form on a copy (open %v, name %q)", m.profileFormOpen, m.profileForm.Name())
 	}
+	m.profileFormOpen = false
 	if _, ok := key("z"); !ok {
 		t.Error("a plain letter fell through to the editor")
 	}
@@ -286,8 +286,8 @@ func TestItermocPageKeys(t *testing.T) {
 	}
 }
 
-// Spec: a click on a pill runs its verb; a click on a pipeline box edits
-// that step (the profile form of #12 is not merged: the profile file opens).
+// Spec: a click on a pill runs its verb; a click on a pipeline box opens
+// the profile step form at that step.
 func TestItermocPagePillsByClick(t *testing.T) {
 	m := imPage(t, imSecProfiles, "review")
 	m.w, m.h = 200, 50
@@ -321,10 +321,18 @@ func TestItermocPagePillsByClick(t *testing.T) {
 	}
 	m.pickerOpen = false
 	click("im:pg:step:2")
-	path, _ := ai.ProfilesPath()
-	if _, err := os.Stat(path); err != nil {
-		t.Errorf("a step box did not open the profile file: %v", err)
+	if !m.profileFormOpen {
+		t.Fatal("a step box did not open the profile form")
 	}
+	if p := m.profileForm.Profile(); len(p.Steps) < 2 || !strings.Contains(ansi.Strip(m.profileForm.Box()), p.Steps[1].Title) {
+		t.Errorf("the form is not open at step 2:\n%s", ansi.Strip(m.profileForm.Box()))
+	}
+	m.profileFormOpen = false
+	click("im:pg:edit")
+	if !m.profileFormOpen {
+		t.Error("the Edit pill did not open the profile form")
+	}
+	m.profileFormOpen = false
 	// The click belongs to the list's hit map only inside the pane.
 	if _, _, ok := m.routeToItermocPage(tea.MouseMsg{X: 3, Y: 3, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft, Type: tea.MouseLeft}); ok {
 		t.Error("a click on the activity bar was taken by the page")

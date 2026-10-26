@@ -648,7 +648,7 @@ func (m Model) profilePageContent(sn itermocSnap, row imRow) imContent {
 	_, acts := m.itermocActionsForPage(row)
 	for _, a := range acts {
 		switch a.id {
-		case "use", "runs", "trust":
+		case "use", "edit", "runs", "trust":
 			continue
 		}
 		more = append(more, imText(a.title))
