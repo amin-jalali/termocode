@@ -70,6 +70,7 @@ type imContent struct {
 	facts           []imFactSec
 	profile         *imProfileView // set for a profile page
 	agent           *imAgentView   // set for an outside-agent page
+	overview        *imOverview    // set for the overview page
 	pills           []imPill
 	more            string // "Duplicate · Edit JSON…": what the menu holds
 	hint            string
@@ -286,6 +287,8 @@ func (m Model) itermocPageLayout(w, h int) imPageLayout {
 			y = m.drawProfileBody(d, y, ct.profile, h)
 		} else if ct.agent != nil {
 			y = d.drawAgentBody(y, ct.agent, ct.facts)
+		} else if ct.overview != nil {
+			y = d.drawOverviewBody(y, ct.overview, h)
 		} else {
 			y = d.facts(y, ct.facts)
 		}
@@ -433,54 +436,10 @@ func (m Model) itermocPageContent() imContent {
 	case imRowAgent, imRowAgentStatus:
 		return agentPageContent(sn, row)
 	}
-	return overviewPageContent(sn)
+	return m.overviewPageContent(sn)
 }
 
 const imHintList = "↑↓ pick in the list · Enter more actions · ? keys"
-
-func overviewPageContent(sn itermocSnap) imContent {
-	c := imContent{icon: aiSpark(), name: "AI", sub: "profiles, models, services and outside agents",
-		more: "-", hint: "↑↓ pick in the list · Space fold · ? keys"}
-	prof := imFactSec{title: "SUMMARY"}
-	active := ""
-	for _, p := range sn.profiles {
-		if p.active {
-			active = p.p.Name
-		}
-	}
-	prof.rows = [][2]string{
-		{"profiles", strconv.Itoa(len(sn.profiles)) + " · active: " + active},
-		{"models", strconv.Itoa(len(sn.slots)) + " slots"},
-		{"services", strconv.Itoa(len(sn.services))},
-		{"outside agents", strconv.Itoa(len(sn.agents)) + " connected"},
-	}
-	c.facts = []imFactSec{prof}
-	var needs []string
-	for _, p := range sn.profiles {
-		if p.trust == aiTrustAsk {
-			needs = append(needs, p.p.Name+" asks for your trust (t)")
-		}
-	}
-	for _, s := range sn.slots {
-		if s.key == imKeyMissing || s.key == imKeyUnset {
-			needs = append(needs, "model "+s.name+" has no key (k)")
-		}
-	}
-	for _, s := range sn.services {
-		if itermocServiceNeeds(s) {
-			needs = append(needs, s.Name+": "+itermocServiceWordText(s)+" (i)")
-		}
-	}
-	if len(needs) > 0 {
-		c.facts = append(c.facts, imFactSec{title: "NEEDS YOU", lines: needs})
-	}
-	return c
-}
-
-func itermocServiceWordText(s mcp.Status) string {
-	w, _ := itermocServiceWord(s)
-	return w
-}
 
 // slotPageContent is the model slot page: provider, model, key state (never
 // the key), and the profiles that use it.
@@ -746,32 +705,8 @@ func stepChip(st aiPipeStep) string {
 // (small windows get the chips).
 func (m Model) drawProfileBody(d *imDraw, y int, pv *imProfileView, h int) int {
 	cv, mx := d.cv, d.mx
-	items := []pipeItem{{kind: 0}}
-	for i, st := range pv.steps {
-		items = append(items, pipeItem{kind: 1, n: i + 1, step: st, chip: stepChip(st), tools: stepTools(st)})
-	}
-	items = append(items, pipeItem{kind: 2})
 	contentW := d.w - 2*mx
-
-	// Boxes when they fit, wrapped boxes when there is room, else chips.
-	chips := contentW < 60 || h < 26
-	capW := 0
-	if !chips {
-		for _, c := range []int{36, 30, 26, 22} {
-			if pipeWidth(items, c) <= contentW {
-				capW = c
-				break
-			}
-		}
-		if capW == 0 {
-			capW = 26
-		}
-	}
-	if chips {
-		y = d.pipeChips(y, items) + 1
-	} else {
-		y = d.pipeBoxes(y, items, capW, contentW) + 1
-	}
+	y = d.pipeline(y, pv.steps, h)
 	if pv.note != "" {
 		cv.text(mx, y, imTrunc(theme.ASCIIText(pv.note), contentW), imTokDim())
 		y++
@@ -839,6 +774,35 @@ func (m Model) drawProfileBody(d *imDraw, y int, pv *imProfileView, h int) int {
 		cv.text(mx, y, pv.lastRun, imTokDim())
 	}
 	return y + 1
+}
+
+// pipeline draws you → the steps → answer from row y: boxes when they fit,
+// wrapped boxes when there is room, else one line of chips (a narrow or
+// short pane). Returns the row after it and one blank row.
+func (d *imDraw) pipeline(y int, steps []aiPipeStep, h int) int {
+	items := []pipeItem{{kind: 0}}
+	for i, st := range steps {
+		items = append(items, pipeItem{kind: 1, n: i + 1, step: st, chip: stepChip(st), tools: stepTools(st)})
+	}
+	items = append(items, pipeItem{kind: 2})
+	contentW := d.w - 2*d.mx
+	chips := contentW < 60 || h < 26
+	capW := 0
+	if !chips {
+		for _, c := range []int{36, 30, 26, 22} {
+			if pipeWidth(items, c) <= contentW {
+				capW = c
+				break
+			}
+		}
+		if capW == 0 {
+			capW = 26
+		}
+	}
+	if chips {
+		return d.pipeChips(y, items) + 1
+	}
+	return d.pipeBoxes(y, items, capW, contentW) + 1
 }
 
 func boolInt(b bool) int {

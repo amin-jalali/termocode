@@ -29,6 +29,7 @@ type itermocPageState struct {
 	sec, name string // sec "overview": the groups' summary
 	scroll    int    // body rows scrolled from the top
 	maxScroll int    // set by the last draw
+	sel       int    // the overview: the picked "needs you" line (Tab)
 }
 
 // itermocPageTmp is the buffer name of the page (a temp path, so sessions
@@ -204,6 +205,12 @@ func (m Model) routeToItermocPage(msg tea.Msg) (Model, tea.Cmd, bool) {
 func (m *Model) itermocPageKey(k tea.KeyMsg) (tea.Cmd, bool) {
 	key := k.String()
 	row, have := m.itermocPageRow()
+	if have && row.kind == imRowOverview {
+		if cmd, ok := m.itermocOverviewKey(key); ok {
+			m.itermocRefreshNow()
+			return cmd, true
+		}
+	}
 	if have && row.kind != imRowSection {
 		if cmd, ok := m.itermocRowKey(key, row); ok {
 			m.itermocRefreshNow()
@@ -255,6 +262,11 @@ func (m *Model) itermocPageMore(row imRow) tea.Cmd {
 // itermocPageVerb runs a pill or a step box.
 func (m *Model) itermocPageVerb(verb string, row imRow) tea.Cmd {
 	defer m.itermocRefreshNow()
+	if row.kind == imRowOverview {
+		if cmd, ok := m.itermocOverviewVerb(verb); ok {
+			return cmd
+		}
+	}
 	switch {
 	case verb == "new":
 		return m.itermocButton(imSecProfiles, "new")
@@ -267,9 +279,6 @@ func (m *Model) itermocPageVerb(verb string, row imRow) tea.Cmd {
 			m.profileForm.FocusStep(n - 1)
 		}
 		return cmd
-	case verb == "jump":
-		// The overview's "needs you" lines: go to the object.
-		return nil
 	}
 	return m.itermocRun(verb, row)
 }
@@ -313,8 +322,15 @@ func (m Model) itermocPageMouse(msg tea.MouseMsg) (Model, tea.Cmd, bool) {
 
 // itermocPageTip is the hover label of a pill or box of the page.
 func itermocPageTip(verb string) (name, key string, ok bool) {
-	if strings.HasPrefix(verb, "step:") {
+	switch {
+	case strings.HasPrefix(verb, "step:"):
 		return "Edit this step", "e", true
+	case strings.HasPrefix(verb, "tile:"):
+		return "Open this group", strings.TrimPrefix(verb, "tile:"), true
+	case strings.HasPrefix(verb, "jump:"):
+		return "Open its page", "Enter", true
+	case strings.HasPrefix(verb, "fix:"):
+		return "Fix it now", "", true
 	}
 	switch verb {
 	case "use":
@@ -343,6 +359,8 @@ func itermocPageTip(verb string) (name, key string, ok bool) {
 		return "Show the log", "l", true
 	case "new":
 		return "New profile", "n", true
+	case "connect":
+		return "Connect a service", "c", true
 	case "start-claude":
 		return "Start Claude Code in a terminal tab", "s", true
 	case "copy":

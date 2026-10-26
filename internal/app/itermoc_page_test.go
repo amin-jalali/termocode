@@ -393,7 +393,7 @@ func TestItermocOtherPages(t *testing.T) {
 		{imSecServices, "linear", []string{"linear", "Sign-in ended", "12 tools", "Sign in (i)", "Disable… (d)"}},
 		{imSecAgents, "status", []string{"Outside agents", "listening", "claude-code", "Start Claude Code (s)", "tasks_run"}},
 		{imSecAgents, agentKey(1), []string{"claude-code", "14", "09:41"}},
-		{"overview", "", []string{"SUMMARY", "profiles", "NEEDS YOU", "linear"}},
+		{"overview", "", []string{"PROFILES", "OUTSIDE AGENTS", "NEEDS YOU", "linear", "Sign in (i)"}},
 	}
 	for _, c := range cases {
 		m.itermocPage.sec, m.itermocPage.name = c.sec, c.name
