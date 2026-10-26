@@ -712,7 +712,8 @@ func (m *Model) aiItermocWriteTools(call aiIDECaller) []ai.Tool {
 				"The user confirms on a card. A project profile the user has not trusted yet asks the user first.",
 			Params:   map[string]any{"name": str("profile name from profiles_list")},
 			Required: []string{"name"},
-			Mutating: true, Class: ai.ClassSettings,
+			// No Always allow class: every call asks (owner 2026-10-26).
+			Mutating: true,
 			Validate: sn.checkSwitch,
 			Describe: sn.describeSwitch,
 			Run: func(ctx context.Context, a map[string]any) (string, error) {
@@ -827,7 +828,8 @@ func (m *Model) aiItermocWriteTools(call aiIDECaller) []ai.Tool {
 				"agent": map[string]any{"type": "string", "enum": aiAgentIDs(), "description": "which agent"},
 			},
 			Required: []string{"agent"},
-			Mutating: true, Class: ai.ClassRun,
+			// No Always allow class: every call asks (owner 2026-10-26).
+			Mutating: true,
 			Validate: checkAgentStart,
 			Describe: describeAgentStart,
 			Run: func(ctx context.Context, a map[string]any) (string, error) {

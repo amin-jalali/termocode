@@ -345,7 +345,9 @@ opens this view at the row with `ai_view_open`. It does not move your
 keyboard focus.
 
 The AI can also propose a change. You always see a card first, with
-**Deny** first and focused. Deny changes nothing.
+**Deny** first and focused. Deny changes nothing. These cards have no
+**Always allow**: every call asks, even if you allowed other tools
+always.
 
 | You say | Tool | After you allow |
 | --- | --- | --- |

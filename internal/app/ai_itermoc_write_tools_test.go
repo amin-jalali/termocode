@@ -30,12 +30,18 @@ type aiWriteCard struct {
 // saw and the card.
 func aiWriteTurn(t *testing.T, m *Model, tool string, args map[string]any, answer string) (string, aiWriteCard) {
 	t.Helper()
+	return aiWriteTurnAuto(t, m, tool, args, answer, nil)
+}
+
+// aiWriteTurnAuto is aiWriteTurn with the user's saved Always allow classes.
+func aiWriteTurnAuto(t *testing.T, m *Model, tool string, args map[string]any, answer string, auto []string) (string, aiWriteCard) {
+	t.Helper()
 	p := &scriptedAIProvider{replies: []ai.Chunk{toolCall(tool, args), {Delta: "ok"}}}
 	m.ai.provider = p
 	for _, sl := range []string{ai.SlotMain, ai.SlotQuick, ai.SlotLocal} { // the fast profile runs on quick
 		m.ai.slotFake[sl] = aiSlot{p: p, cfg: ai.Config{Kind: ai.KindOllama, Model: "fake-1"}}
 	}
-	m.ai.settings.AutoApprove = nil
+	m.ai.settings.AutoApprove = auto
 	var card aiWriteCard
 	driveAIChat(t, m, m.sendAIChat("please"), func(c aiChatConfirmMsg) string {
 		card.opened, card.body = true, c.human
@@ -60,21 +66,20 @@ func aiWriteModel(t *testing.T) *Model {
 	return m
 }
 
-// Spec (design §5): the gates. Every tool is mutating (a read-only step
-// and outside agents never get it); profile_switch is class settings,
-// outside_agent_start class run, the drafts and service tools always ask.
+// Spec (design §5, owner 2026-10-26): the gates. Every tool is mutating
+// (a read-only step and outside agents never get it) and has no Always
+// allow class: each call asks, whatever the user allowed for other tools.
 // Remove, Sign out, Revoke, Trust and Set key have no tool.
 func TestAIItermocWriteToolsGates(t *testing.T) {
 	m := aiWriteModel(t)
 	tools := m.aiChatTools(".", nil)
-	class := map[string]string{"profile_switch": ai.ClassSettings, "outside_agent_start": ai.ClassRun}
 	for _, name := range aiItermocWriteToolNames {
 		tl, ok := ai.FindTool(tools, name)
 		if !ok {
 			t.Errorf("no tool %s", name)
 			continue
 		}
-		if !tl.Mutating || tl.Class != class[name] || tl.Gate != nil {
+		if !tl.Mutating || tl.Class != "" || tl.Gate != nil {
 			t.Errorf("%s: mutating %v class %q", name, tl.Mutating, tl.Class)
 		}
 		if _, ok := mcpServeRow(name); ok {
@@ -98,17 +103,17 @@ func TestAIItermocWriteToolsGates(t *testing.T) {
 }
 
 // Spec: every card puts Deny first (with the focus) and names the action
-// on Allow; only the settings and run classes offer Always allow.
+// on Allow; no card offers Always allow.
 func TestAIItermocWriteCardButtons(t *testing.T) {
 	m := aiWriteModel(t)
 	tools := m.aiChatTools(".", nil)
 	want := map[string]string{
-		"profile_switch":      "Deny · Switch · Always allow settings",
+		"profile_switch":      "Deny · Switch",
 		"profile_draft":       "Deny · Open in form",
 		"model_slot_draft":    "Deny · Open in form",
 		"service_connect":     "Deny · Open wizard",
 		"service_set_access":  "Deny · Change",
-		"outside_agent_start": "Deny · Start · Always allow run",
+		"outside_agent_start": "Deny · Start",
 	}
 	for _, name := range aiItermocWriteToolNames {
 		tl, _ := ai.FindTool(tools, name)
@@ -488,6 +493,31 @@ func TestAIOutsideAgentStartTool(t *testing.T) {
 	res, card = aiWriteTurn(t, m, "outside_agent_start", map[string]any{"agent": "claude"}, "allow")
 	if card.opened || !strings.Contains(res, "not installed") || len(started) != 1 {
 		t.Errorf("not installed: card %v result %q", card.opened, res)
+	}
+}
+
+// Spec (owner 2026-10-26): Always allow for settings or run, given for
+// other tools, does not skip the card of profile_switch or
+// outside_agent_start.
+func TestAIItermocWriteToolsAskDespiteAlwaysAllow(t *testing.T) {
+	m := aiWriteModel(t)
+	defer func(f func(string) (string, error)) { agentLookPath = f }(agentLookPath)
+	agentLookPath = func(string) (string, error) { return "/usr/bin/codex", nil }
+	defer func() { aiStartOutsideAgentHook = nil }()
+	var started []string
+	aiStartOutsideAgentHook = func(_ *Model, a agents.Agent) (tea.Cmd, error) {
+		started = append(started, a.ID)
+		return nil, nil
+	}
+	auto := []string{ai.ClassSettings, ai.ClassRun}
+	res, card := aiWriteTurnAuto(t, m, "outside_agent_start", map[string]any{"agent": "codex"}, "deny", auto)
+	if !card.opened || len(started) != 0 || !strings.Contains(res, "declined") {
+		t.Errorf("outside_agent_start with Always allow run: card %v started %v result %q", card.opened, started, res)
+	}
+	before := m.ai.profile
+	res, card = aiWriteTurnAuto(t, m, "profile_switch", map[string]any{"name": "fast"}, "deny", auto)
+	if !card.opened || m.ai.profile != before || !strings.Contains(res, "declined") {
+		t.Errorf("profile_switch with Always allow settings: card %v profile %q result %q", card.opened, m.ai.profile, res)
 	}
 }
 
