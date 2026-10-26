@@ -210,7 +210,7 @@ func TestItermocAgentVerbs(t *testing.T) {
 	for _, a := range acts {
 		ids = append(ids, a.id)
 	}
-	if got := strings.Join(ids, ","); got != "status,allowed,disconnect" {
+	if got := strings.Join(ids, ","); got != "status,allowed,revoke,disconnect" {
 		t.Fatalf("agent verbs %s", got)
 	}
 	imVerb(m, imRowAgent, "agent:7", "disconnect")

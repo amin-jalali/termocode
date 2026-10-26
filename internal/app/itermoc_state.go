@@ -110,6 +110,7 @@ type itermocSnap struct {
 	whySentence string
 	agents      []imAgent
 	calls       []imCall
+	allow       map[string][]string // an agent's "Always allow" keys, by its name
 }
 
 // itermocState is the view's state. It lives behind a pointer on the Model,
@@ -136,6 +137,8 @@ type itermocState struct {
 	// the Remove card asks about.
 	form       *imSlotForm
 	removeName string
+	// revokeClient is the agent the Revoke… card asks about.
+	revokeClient string
 }
 
 func newItermocState() *itermocState {
@@ -276,6 +279,7 @@ func itermocBuild(m Model, reload bool) itermocSnap {
 			sn.agents = append(sn.agents, imAgent{id: a.id, name: name, since: a.since.Format("15:04"), calls: a.calls, asked: a.asked})
 		}
 	}
+	sn.allow = mcpServeAllowLoad()
 	for _, l := range m.mcpServeAuditLines(3) {
 		if row, ok := mcpServeCallRow(l); ok {
 			sn.calls = append(sn.calls, imCall(row))

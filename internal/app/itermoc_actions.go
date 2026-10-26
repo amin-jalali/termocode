@@ -141,6 +141,7 @@ func itermocKeyRows() []confirm.KeyRow {
 		[]string{"l", "show the log"},
 		[]string{"Outside agents"},
 		[]string{"s / S", "start Claude Code / Codex"},
+		[]string{"x", "on an agent: revoke its always allow… (asks first)"},
 		[]string{"y", "copy the termocode server config"},
 		[]string{"T", "show the status screen"},
 	)
@@ -312,6 +313,10 @@ func (m *Model) itermocRowKey(key string, row imRow) (tea.Cmd, bool) {
 		case "D":
 			return m.itermocRun("remove", row), true
 		}
+	case imRowAgent:
+		if key == "x" {
+			return m.itermocRun("revoke", row), true
+		}
 	}
 	return nil, false
 }
@@ -472,6 +477,7 @@ func (m *Model) itermocActionsFor(row imRow) (title string, acts []itermocAction
 		acts = []itermocAction{
 			{"status", "Show status…", "agents and their last calls"},
 			{"allowed", "Allowed tools…", "see and revoke Always allow"},
+			{"revoke", "Revoke always allow…", "all of this agent's, asks first"},
 			{"disconnect", "Disconnect…", "it can connect again by itself"},
 		}
 	}
@@ -579,6 +585,11 @@ func (m *Model) itermocRun(verb string, row imRow) tea.Cmd {
 		return m.onMCPServeStatusPicked(verb)
 	case "allowed":
 		return m.openAIAutoApprovePicker()
+	case "revoke":
+		if a, ok := m.itermocS().snap.agent(row.name); ok {
+			return m.openItermocAgentRevoke(a.name)
+		}
+		return nil
 	case "disconnect":
 		return m.onMCPServeStatusPicked(row.name)
 	case "copy":

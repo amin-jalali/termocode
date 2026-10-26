@@ -69,6 +69,7 @@ type imContent struct {
 	card            *imCard
 	facts           []imFactSec
 	profile         *imProfileView // set for a profile page
+	agent           *imAgentView   // set for an outside-agent page
 	pills           []imPill
 	more            string // "Duplicate · Edit JSON…": what the menu holds
 	hint            string
@@ -283,6 +284,8 @@ func (m Model) itermocPageLayout(w, h int) imPageLayout {
 		}
 		if ct.profile != nil {
 			y = m.drawProfileBody(d, y, ct.profile, h)
+		} else if ct.agent != nil {
+			y = d.drawAgentBody(y, ct.agent, ct.facts)
 		} else {
 			y = d.facts(y, ct.facts)
 		}
@@ -322,8 +325,10 @@ func (m Model) itermocPageLayout(w, h int) imPageLayout {
 
 	// Header.
 	x := out.text(mx-1, 0, ct.icon+" "+ct.name, imTokAccent().B())
-	if ct.sub != "" {
-		out.text(x+2, 0, imTrunc(theme.ASCIIText(ct.sub), max(w-x-2-mx-lenR(ct.right)-3, 6)), imTokSecondary())
+	// The sub text only where it fits next to the state (a cut "outsi…"
+	// that runs into it says nothing).
+	if room := w - x - 2 - mx - lenR(ct.right) - 3; ct.sub != "" && room >= 12 {
+		out.text(x+2, 0, imTrunc(theme.ASCIIText(ct.sub), room), imTokSecondary())
 	}
 	if ct.right != "" {
 		out.textR(w-mx+1, 0, theme.ASCIIText(ct.right), imFg(ct.rightTok))
@@ -539,49 +544,6 @@ func imKeyNeed(s imSlot) string {
 func imGlyphWord(s string) string { return strings.Replace(s, "●", imGlyphReady(), 1) }
 
 func imGlyphReady() string { g, _ := imGlyph("ready"); return g }
-
-// agentPageContent is the outside-agents page (the listening status, or one
-// connected agent).
-func agentPageContent(sn itermocSnap, row imRow) imContent {
-	c := imContent{icon: imIconAgents.String(), name: "Outside agents", sub: "agents that use termocode over MCP", hint: imHintList}
-	mark, _ := imGlyph("ready")
-	if sn.listening {
-		c.right, c.rightTok = mark+" listening · "+sn.mode, theme.AccentGreen
-	} else {
-		g, _ := imGlyph("idle")
-		c.right, c.rightTok = g+" not listening", theme.TextMuted
-	}
-	if row.kind == imRowAgent {
-		if a, ok := sn.agent(row.name); ok {
-			c.name = a.name
-			c.sub = "outside agent"
-			c.facts = []imFactSec{{title: "CONNECTION",
-				rows: [][2]string{{"since", a.since}, {"calls", strconv.Itoa(a.calls)}, {"asked you", strconv.Itoa(a.asked)}}}}
-		}
-	} else {
-		rows := [][2]string{{"mode", sn.mode}}
-		if sn.listening {
-			rows = append(rows, [2]string{"agents", strconv.Itoa(len(sn.agents)) + " connected"})
-		} else {
-			rows = append(rows, [2]string{"why", sn.whySentence})
-		}
-		c.facts = []imFactSec{{title: "STATUS", rows: rows}}
-	}
-	if len(sn.calls) > 0 {
-		var lines []string
-		for _, l := range sn.calls {
-			lines = append(lines, string(l))
-		}
-		c.facts = append(c.facts, imFactSec{title: "LAST CALLS", lines: lines})
-	}
-	c.pills = []imPill{
-		{verb: "start-claude", label: "Start Claude Code", key: "s", primary: true},
-		{verb: "copy", label: "Copy config", key: "y"},
-		{verb: "status", label: "Status", key: "T"},
-	}
-	c.more = "Start Codex · Allowed tools · Disconnect…"
-	return c
-}
 
 // ── The profile page ─────────────────────────────────────────────────────
 

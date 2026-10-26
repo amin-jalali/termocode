@@ -347,6 +347,10 @@ func itermocPageTip(verb string) (name, key string, ok bool) {
 		return "Start Claude Code in a terminal tab", "s", true
 	case "copy":
 		return "Copy the termocode server config", "y", true
+	case "start-codex":
+		return "Start Codex in a terminal tab", "S", true
+	case "revoke":
+		return "Forget this agent's always allow (asks first)", "x", true
 	case "status":
 		return "Show the status screen", "T", true
 	}

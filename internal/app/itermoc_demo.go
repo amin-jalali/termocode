@@ -21,6 +21,8 @@ import (
 //	       model without a key, a service that needs a sign-in, one agent
 //	empty  a fresh install: no AI provider, no service, nothing listening
 //	service  full, with the page of the service linear (sign-in ended)
+//	agent    full, with the page of the outside agent claude-code
+//	agents   full, with the page of the listening row
 //	slotadd     full, with the Add slot form filled in (nothing is saved)
 //	slotkey     full, with the "set the key?" card after a new slot
 //	slotremove  full, with the Remove card of a slot a profile uses
@@ -80,9 +82,19 @@ func (m *Model) itermocDemo(arg string) tea.Cmd {
 		"09:42 claude-code · tasks_run · asked, you allowed",
 		"09:42 claude-code · debug_start · asked, you denied",
 	}
+	st.snap.allow = map[string][]string{"claude-code": {"file_read", "tasks_run"}}
 	st.fixed = true
 	if arg == "profile" {
 		return m.itermocProfileDemo()
+	}
+	if arg == "agent" || arg == "agents" {
+		// claude-code's page, or the listening row's page.
+		row := imRow{kind: imRowAgent, sec: imSecAgents, name: agentKey(1)}
+		if arg == "agents" {
+			row = imRow{kind: imRowAgentStatus, sec: imSecAgents, name: "status"}
+		}
+		m.itermoc.cursorTo(row)
+		return m.itermocShowPage(row, false)
 	}
 	if arg == "service" {
 		// linear's page: the sign-in ended and the chat lost its tools.
