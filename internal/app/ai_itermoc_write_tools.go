@@ -100,16 +100,13 @@ func (m *Model) aiItermocWriteSnapshot() aiItermocWriteSnap {
 
 var aiSecretArgNameRe = regexp.MustCompile(`(?i)key|token|secret|passw|bearer|cookie|credential|auth`)
 
-// aiTokenPrefixes start well-known tokens that ai.Redact has no pattern
-// for.
-var aiTokenPrefixes = []string{"ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat_", "glpat-", "xoxb-", "xoxp-",
-	"xoxa-", "xapp-", "AIza", "sk-", "sk_live_", "rk_live_", "lin_api_"}
-
 // aiNoSecretsText is the refusal; it never repeats the value.
 const aiNoSecretsText = "an argument looks like a key, token or password. Keys and sign-ins never pass through the AI: " +
 	"leave the value out. The user sets a key with Set key (Itermoc, MODELS) and signs in in the Connect wizard"
 
-// aiLooksSecret reports text that holds a key or token.
+// aiLooksSecret reports text that holds a key or token: what ai.Redact
+// hides, or a word that starts with a token prefix (ai.TokenPrefixes)
+// however it is glued to the text around it.
 func aiLooksSecret(s string) bool {
 	if ai.Redact(s) != s {
 		return true
@@ -118,8 +115,8 @@ func aiLooksSecret(s string) bool {
 		return unicode.IsSpace(r) || strings.ContainsRune("\"'`=:,;()[]{}<>", r)
 	})
 	for _, w := range words {
-		for _, p := range aiTokenPrefixes {
-			if strings.HasPrefix(w, p) && len(w) >= len(p)+12 {
+		for _, p := range ai.TokenPrefixes {
+			if strings.HasPrefix(w, p) && len(w) >= len(p)+ai.TokenMinTail {
 				return true
 			}
 		}

@@ -719,6 +719,34 @@ var redactPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)([?&](?:code|key|token)=)[^&\s"]{8,}`),
 }
 
+// TokenPrefixes start well-known service tokens (GitHub, GitLab, Slack,
+// Google, Stripe, Linear, OpenAI). Redact hides a word that starts with
+// one and goes on for at least TokenMinTail more token characters.
+var TokenPrefixes = []string{"ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat_", "glpat-", "xoxb-", "xoxp-",
+	"xoxa-", "xapp-", "AIza", "sk-", "sk_live_", "rk_live_", "lin_api_"}
+
+// TokenMinTail is how many characters a token has after its prefix.
+const TokenMinTail = 12
+
+// tokenPrefixRe matches a prefixed token at the start of a word.
+var tokenPrefixRe = func() *regexp.Regexp {
+	alts := make([]string, len(TokenPrefixes))
+	for i, p := range TokenPrefixes {
+		alts[i] = regexp.QuoteMeta(p)
+	}
+	return regexp.MustCompile(`(^|[^A-Za-z0-9_])(?:` + strings.Join(alts, "|") + `)[A-Za-z0-9_\-]{` + strconv.Itoa(TokenMinTail) + `,}`)
+}()
+
+// redactTokenPrefixes hides the prefixed tokens in s.
+func redactTokenPrefixes(s string) string {
+	for _, p := range TokenPrefixes {
+		if strings.Contains(s, p) {
+			return tokenPrefixRe.ReplaceAllString(s, "${1}[REDACTED]")
+		}
+	}
+	return s
+}
+
 // RedactSecrets hides only the registered literal secrets (no
 // patterns): the app passes every agent tool result through it, so a
 // secret the IDE knows (an API key, a password from the project's .env)
@@ -787,5 +815,5 @@ func Redact(s string) string {
 		}
 		s = re.ReplaceAllString(s, "${1}[REDACTED]")
 	}
-	return s
+	return redactTokenPrefixes(s)
 }

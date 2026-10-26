@@ -215,6 +215,33 @@ func TestRedact(t *testing.T) {
 	}
 }
 
+// Redact hides the well-known prefixed tokens (TokenPrefixes) and leaves
+// ordinary words with the same letters alone.
+func TestRedactPrefixedTokens(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"ghp_0123456789abcdefABCDEF0123456789", "[REDACTED]"},
+		{"token gho_0123456789abcdef ok", "token [REDACTED] ok"},
+		{"github_pat_11ABCDEFG0123456789abcdef", "[REDACTED]"},
+		{"x=glpat" + "-0123456789abcdefABCD", "x=[REDACTED]"},
+		{"slack xoxb-1234567890-abcdefghijkl", "slack [REDACTED]"},
+		{"xoxp-1234567890-abcdefghijkl", "[REDACTED]"},
+		{`"AIzaSyA0123456789abcdefghij"`, `"[REDACTED]"`},
+		{"lin_api_0123456789abcdefABCDEF", "[REDACTED]"},
+		{"sk_live_0123456789abcdef", "[REDACTED]"},
+		{"sk-0123456789abcd", "[REDACTED]"},
+		// Not tokens: too short, or the prefix inside a word.
+		{"ghp_short", "ghp_short"},
+		{"desk-lamp-0123456789", "desk-lamp-0123456789"},
+		{"myghp_0123456789abcdefABCDEF", "myghp_0123456789abcdefABCDEF"},
+		{"plain text", "plain text"},
+	}
+	for _, c := range cases {
+		if got := Redact(c.in); got != c.want {
+			t.Errorf("Redact(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
 // RedactSecrets masks only registered literals: API-key-looking text the
 // user wrote in a file stays (tool results pass through it).
 func TestRedactSecretsOnlyRegistered(t *testing.T) {

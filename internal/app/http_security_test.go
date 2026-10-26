@@ -24,6 +24,21 @@ func TestAIAuditArgsRedactSecrets(t *testing.T) {
 	}
 }
 
+// Prefixed tokens (GitHub, GitLab, Slack, Google, Linear) are hidden in
+// the audit line too.
+func TestAIAuditArgsRedactPrefixedTokens(t *testing.T) {
+	for _, tok := range []string{
+		"ghp_0123456789abcdefABCDEF0123456789", "github_pat_11ABCDEFG0123456789abcdef",
+		"glpat" + "-0123456789abcdefABCD", "xoxb-1234567890-abcdefghijkl", "AIzaSyA0123456789abcdefghij",
+		"lin_api_0123456789abcdefABCDEF",
+	} {
+		got := aiAuditArgs(map[string]any{"note": tok, "text": "use " + tok + " here"})
+		if strings.Contains(got, tok[:len(tok)-4]) {
+			t.Errorf("audit args leak %s: %s", tok, got)
+		}
+	}
+}
+
 // The per-call gate (plan §4.3), first match wins.
 func TestHTTPAIGateTable(t *testing.T) {
 	cases := []struct {
