@@ -322,7 +322,7 @@ func itermocPageTip(verb string) (name, key string, ok bool) {
 	case "edit":
 		return "Edit", "e", true
 	case "runs":
-		return "Show the runs in AGENTS", "r", true
+		return "Show this profile's runs", "r", true
 	case "trust":
 		return "Trust this project's profile…", "t", true
 	case "more":

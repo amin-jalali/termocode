@@ -441,7 +441,7 @@ func (m *Model) runsUsage(it runsItem, ok bool) tea.Cmd {
 // runsMore is the "⋯ more" list of a run.
 func (m *Model) runsMore(it runsItem) tea.Cmd {
 	items := []picker.Item{
-		{ID: "profile", Title: "Show profile " + it.run.Profile, Hint: "i"},
+		{ID: "profile", Title: "Profile in Itermoc: " + it.run.Profile, Hint: "i"},
 		{ID: "copy", Title: "Copy run id", Hint: "y"},
 		{ID: "agents", Title: "Show in AGENTS", Hint: "a"},
 		{ID: "usage", Title: "Usage by model", Hint: "u"},
@@ -485,7 +485,7 @@ func (m *Model) runsVerb(verb string, it runsItem) tea.Cmd {
 	case "usage":
 		return m.runsUsage(it, true)
 	case "profile":
-		return m.showAIProfileNamed(it.run.Profile)
+		return m.openItermocProfile(it.run.Profile)
 	case "copy":
 		return m.copyWithToast(it.run.ID, "Copied the run id")
 	case "more":
@@ -506,7 +506,7 @@ func (m *Model) runsKeyCard() tea.Cmd {
 		[]string{"c", "open the run's chat"},
 		[]string{"a", "show the run in AGENTS"},
 		[]string{"u", "usage by model"},
-		[]string{"i", "show the run's profile"},
+		[]string{"i", "the run's profile in Itermoc (no run: the profiles)"},
 		[]string{"y", "copy the run id"},
 		[]string{"/", "filter the runs"},
 		[]string{"Esc", "back: the page to the list, the filter off"},
@@ -519,6 +519,12 @@ func (m *Model) runsCommonKey(key string, it runsItem, have bool) (tea.Cmd, bool
 		"i": "profile", "y": "copy"}
 	if v, ok := verbs[key]; ok {
 		if !have {
+			switch key {
+			case "c": // the empty page's "Open the chat (c)"
+				return m.openAIPanel(true), true
+			case "i": // the empty page's "Profiles in Itermoc (i)"
+				return m.revealItermocView(true, imSecProfiles), true
+			}
 			return m.runsInfo("No run is picked"), true
 		}
 		return m.runsVerb(v, it), true

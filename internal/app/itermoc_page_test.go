@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/mcp"
@@ -256,9 +257,11 @@ func TestItermocPageKeys(t *testing.T) {
 	if _, ok := key("u"); !ok || m.ai.activeProfile().Name != "review" {
 		t.Errorf("u did not use the profile: %q", m.ai.activeProfile().Name)
 	}
-	if _, ok := key("r"); !ok || !m.ai.agents.on {
-		t.Error("r did not open AGENTS")
+	if _, ok := key("r"); !ok || m.activity.Active() != activity.ViewRuns || m.runs.profile != "review" {
+		t.Errorf("r did not open Runs filtered to review: view %v", m.activity.Active())
 	}
+	m.activity.SetActive(activity.ViewItermoc)
+	m.focus = FocusEditor // back on the page (Runs took the focus)
 	if _, ok := key("e"); !ok {
 		t.Error("e was not handled")
 	}
@@ -312,9 +315,11 @@ func TestItermocPagePillsByClick(t *testing.T) {
 		t.Errorf("Use left %q", m.ai.activeProfile().Name)
 	}
 	click("im:pg:runs")
-	if !m.ai.agents.on {
-		t.Error("Runs did not open AGENTS")
+	if m.activity.Active() != activity.ViewRuns || m.runs.profile != "review" {
+		t.Errorf("Runs did not open Runs filtered to review: view %v", m.activity.Active())
 	}
+	m.activity.SetActive(activity.ViewItermoc)
+	m.focus = FocusEditor // back on the page (Runs took the focus)
 	click("im:pg:more")
 	if !m.pickerOpen || m.pickerKind != pickerKindItermocActions {
 		t.Error("more did not open the actions menu")

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
@@ -67,12 +68,13 @@ func TestItermocTrustVerb(t *testing.T) {
 	}
 }
 
-// Spec: Runs opens AGENTS, Edit JSON opens profiles.json.
+// Spec: Runs opens the Runs view filtered to the profile, Edit JSON opens
+// profiles.json.
 func TestItermocRunsAndJSON(t *testing.T) {
 	m := itermocTestModel(t, 70, 40)
 	imVerb(m, imRowProfile, "review", "runs")
-	if !m.ai.agents.on {
-		t.Error("Runs did not open AGENTS")
+	if m.activity.Active() != activity.ViewRuns || m.runs == nil || m.runs.profile != "review" {
+		t.Errorf("Runs did not open Runs filtered to review: view %v", m.activity.Active())
 	}
 	imVerb(m, imRowProfile, "review", "json")
 	path, _ := ai.ProfilesPath()

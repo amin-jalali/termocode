@@ -79,10 +79,10 @@ func (m Model) drawRunsPage(w, h int, now time.Time) ([]string, []runsHit) {
 	case have:
 		used, hits = mp.drawRunDetail(tall, w, it, now, c)
 		foot = func(cv *rcCanvas, y int) []runsHit { return mp.drawRunPills(cv, y, it, false, c) }
-		hint = "Esc back to the list · x stop · p pause · r resume · c open in chat · i profile · ? keys"
+		hint = "Esc back to the list · x stop · p pause · r resume · c open in chat · i profile in Itermoc · ? keys"
 	case len(mp.runsCollect(now)) == 0:
 		used, hits = mp.drawRunsEmpty(tall, w, bodyH, now, c)
-		hint = "c open the chat · ? keys"
+		hint = "c open the chat · i Itermoc · ? keys"
 	default:
 		used, hits = mp.drawRunsOverview(tall, w, items, now, c)
 		foot = func(cv *rcCanvas, y int) []runsHit {
@@ -378,7 +378,7 @@ func (m *Model) drawOverviewPills(cv *rcCanvas, y int, it runsItem, have bool, c
 	if it.kind == runsPaused || it.kind == runsPausing || it.resume > 0 {
 		add("Resume (r)", "resume", c.bgChip, c.primary, false)
 	}
-	more := runsMoreGlyph() + " more: Pause · Open in chat · Show profile · Copy run id · AGENTS · Usage by model"
+	more := runsMoreGlyph() + " more: Pause · Open in chat · Profile in Itermoc · Copy run id · AGENTS · Usage by model"
 	cv.textMax(x+2, y, more, cv.w-x-4, rcSt{fg: c.muted})
 	return hits
 }
@@ -942,7 +942,7 @@ func (m *Model) drawRunPills(cv *rcCanvas, y int, it runsItem, compact bool, c r
 		}
 	}
 	add("Open in chat (c)", "chat", c.primary, false)
-	more := runsMoreGlyph() + " more (Enter): Show profile · Copy run id · AGENTS · Usage by model"
+	more := runsMoreGlyph() + " more (Enter): Profile in Itermoc · Copy run id · AGENTS · Usage by model"
 	if compact {
 		more = runsMoreGlyph() + " more"
 	}
@@ -989,10 +989,13 @@ func (m *Model) drawRunsEmpty(cv *rcCanvas, w, h int, now time.Time, c runsColou
 	}
 	pipe := "you " + runsArrow(3) + " " + strings.Join(chips, " "+runsArrow(3)+" ") + " " + runsArrow(3) + " answer"
 	cv.textC(cx, y+7, cw, rcCut(pipe, cw-2), rcSt{fg: c.dimmer})
-	lbl := " Open the chat (c) "
-	px := cx + (cw-rcPillW(lbl))/2
+	lbl, lbl2 := " Open the chat (c) ", " Profiles in Itermoc (i) "
+	px := cx + (cw-rcPillW(lbl)-1-rcPillW(lbl2))/2
+	px2 := px + rcPillW(lbl) + 1
 	cv.pill(px, y+10, lbl, c.accent, c.onAccent, true)
-	hits = append(hits, runsHit{x0: px, x1: px + rcPillW(lbl), y: y + 10, id: "verb:openchat:", label: "Open the chat (c)"})
+	cv.pill(px2, y+10, lbl2, c.accent, c.onAccent, false)
+	hits = append(hits, runsHit{x0: px, x1: px + rcPillW(lbl), y: y + 10, id: "verb:openchat:", label: "Open the chat (c)"},
+		runsHit{x0: px2, x1: px2 + rcPillW(lbl2), y: y + 10, id: "verb:itermoc:", label: "Profiles in Itermoc (i)"})
 	cv.textC(0, y+16, w, "finished runs stay in the list for 7 days", rcSt{fg: c.dim})
 	return y + 17, hits
 }
@@ -1049,8 +1052,11 @@ func (m *Model) runsClick(id string, page bool) tea.Cmd {
 		return nil
 	case strings.HasPrefix(id, "verb:"):
 		verb, key, _ := strings.Cut(strings.TrimPrefix(id, "verb:"), ":")
-		if verb == "openchat" {
+		switch verb {
+		case "openchat":
 			return m.openAIPanel(true)
+		case "itermoc":
+			return m.revealItermocView(true, imSecProfiles)
 		}
 		it, ok := m.runsFind(key)
 		if !ok {

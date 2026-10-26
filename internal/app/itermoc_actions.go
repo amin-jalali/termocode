@@ -120,7 +120,7 @@ func itermocKeyRows() []confirm.KeyRow {
 		[]string{"Profiles"},
 		[]string{"u", "use the profile"},
 		[]string{"e", "edit the profile"},
-		[]string{"r", "runs of the profile (AGENTS)"},
+		[]string{"r", "runs of the profile"},
 		[]string{"d", "details of the profile"},
 		[]string{"D", "duplicate the profile…"},
 		[]string{"t", "trust a project profile…"},
@@ -424,7 +424,7 @@ func (m *Model) itermocActionsFor(row imRow) (title string, acts []itermocAction
 			{"details", "Details", "steps, models, prompts"},
 			{"edit", "Edit…", editHint},
 			{"duplicate", "Duplicate…", "save a copy under a name"},
-			{"runs", "Runs", "open AGENTS"},
+			{"runs", "Runs", "this profile's runs"},
 		}
 		if p.p.Source == ai.ProfileSourceProject {
 			acts = append(acts, itermocAction{"trust", "Trust…", "this project's prompts steer the AI"})
@@ -512,6 +512,15 @@ func (m *Model) handleItermocPickerSelect(id string) (tea.Cmd, bool) {
 	return cmd, true
 }
 
+// openItermocProfile opens Itermoc with the cursor on profile name and
+// shows its page with the keys. Runs' "Profile in Itermoc" calls it.
+func (m *Model) openItermocProfile(name string) tea.Cmd {
+	cmd := m.revealItermocView(false, imSecProfiles)
+	row := imRow{kind: imRowProfile, sec: imSecProfiles, name: name}
+	m.itermoc.restoreCursor(imRowKey(row))
+	return tea.Batch(cmd, m.itermocShowPage(row, true))
+}
+
 // itermocRun runs one verb on a row. Every verb is a call into a flow
 // that exists without this view.
 func (m *Model) itermocRun(verb string, row imRow) tea.Cmd {
@@ -523,7 +532,7 @@ func (m *Model) itermocRun(verb string, row imRow) tea.Cmd {
 	case "duplicate":
 		return m.openAIProfileCopyForm(row.name)
 	case "runs":
-		return m.showAgents("")
+		return m.openRuns(row.name)
 	case "trust":
 		if p, ok := m.aiS().profiles.Get(row.name); ok && p.Source == ai.ProfileSourceProject {
 			return m.askAIProfileTrust(p, aiTrustAfterNone, "")

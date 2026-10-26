@@ -86,7 +86,8 @@ window it is one line of chips. Under it:
   where the profile comes from.
 
 The last line says `Last run 12 min ago · See runs →` (or `Not run yet`).
-A click on `See runs →` opens the AGENTS view, like **Runs** (`r`). Runs and
+A click on `See runs →` opens [Runs](runs.md) filtered to this profile,
+like **Runs** (`r`). Runs and
 what they cost are not shown here: this page is setup only.
 
 Three pills at the bottom run the common verbs: **Use** (`u`), **Edit**
@@ -158,7 +159,7 @@ Every action opens a screen that exists without Itermoc:
   project profile becomes a copy; **Save…** shows the preview card first.
 - **Duplicate…** opens the same form on a copy of the profile you picked,
   under a free name (`my-review`). Nothing is written until **Save…**.
-- **Runs** opens the AGENTS view.
+- **Runs** opens [Runs](runs.md) filtered to this profile's runs.
 - **Set key** opens the key prompt of the slot's provider. The key goes to
   the secret store; Itermoc never shows it.
 - **Edit…** on a model slot opens the slot form (see [Models](#models)).

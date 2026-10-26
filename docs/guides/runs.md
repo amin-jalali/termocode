@@ -4,15 +4,18 @@
 on which task, where is it now, and how much does it use. It is the
 monitoring home of pipeline runs (a profile with more than one step, see
 [AI profiles and pipelines](ai-profiles.md)). It only watches and acts on
-runs; profiles and models are set up elsewhere.
+runs; profiles and models are set up in [Itermoc](itermoc.md).
 
 ## Open Runs
 
 - Click the green pulse icon in the activity bar.
 - Run **AI: Runs** from the command palette (`F1`).
+- On a profile in [Itermoc](itermoc.md), press **Runs** (`r`) or click
+  `See runs →`. Runs opens filtered to that profile; `/` clears it.
 
 The sidebar shows the list. The editor area shows one tab, **◉ Runs**: the
-overview, or one run's page.
+overview, or one run's page. With no runs yet, the page has two pills:
+**Open the chat** (`c`) and **Profiles in Itermoc** (`i`).
 
 In a window narrower than 120 columns, Runs hides the sidebar and shows
 the list on the page instead, one line per run.
@@ -87,7 +90,8 @@ Nothing ticks when no run goes.
 | **Resume** (`r`) | Goes on with a paused run. For a run that stopped with steps left (you stopped it, or termocode closed while it ran), it runs the steps that are left, with the saved answers of the finished steps. A run in another chat opens that chat first. This is the chat card's **↻ Resume** button. |
 | **Open in chat** (`c`) | Shows the run's chat. Another chat opens only when the AI is not busy. |
 
-`Enter` on a run's page opens **⋯ more**: Show profile (`i`), Copy run id
+`Enter` on a run's page opens **⋯ more**: Profile in Itermoc (`i`, the profile's
+page in [Itermoc](itermoc.md)), Copy run id
 (`y`), Show in AGENTS (`a`), Usage by model (`u`). Mouse clicks work on
 rows and pills.
 
@@ -102,7 +106,7 @@ profile still has the same steps. Otherwise send the message again.
 | `Enter` | Open the run (on its page: more) |
 | `Esc` | Back: the page to the overview, the filter off, then the list |
 | `x` `p` `r` `c` | Stop, Pause, Resume, Open in chat |
-| `a` `u` `i` `y` | AGENTS, usage by model, show the profile, copy the run id |
+| `a` `u` `i` `y` | AGENTS, usage by model, the profile in Itermoc, copy the run id |
 | `/` | Filter by task, profile or chat title |
 | `?` | The keys card |
 
