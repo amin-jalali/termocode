@@ -535,6 +535,7 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 			out = append(out, aiMemorySavedLine(msg.Memory, width))
 		}
 	}
+	out = append(out, m.aiMemoryAskLines(width, inner)...) // OM-2 ask-once card
 	undo()
 	out = append(out, act.lines(ind, inner)...)
 	out = append(out, aiLine{sel: aiSel{ok: true, join: "\n"}})
@@ -1376,6 +1377,10 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 			return m.aiUndoTurn(i)
 		}
 		return nil
+	case id == "memask-on":
+		return m.answerAIMemoryAsk("on")
+	case id == "memask-notnow":
+		return m.answerAIMemoryAsk("notnow")
 	case id == "memory-view": // OM-2: the memory line opens AI: Memory…
 		return m.openAIMemory()
 	case strings.HasPrefix(id, "rules-open:"):

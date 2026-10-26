@@ -98,6 +98,7 @@ func aiMemoryLabel(n int) string {
 
 // toggleAIMemory is AI: Memory: Turn On/Off.
 func (m *Model) toggleAIMemory() tea.Cmd {
+	m.dropAIMemoryAsk()
 	if aiMemoryState() == aiMemoryOn {
 		sess := loadSession()
 		sess.AIMemory = aiMemoryOff
@@ -111,6 +112,7 @@ func (m *Model) toggleAIMemory() tea.Cmd {
 // the memory folder; the toast says where lessons go and what changed in
 // .gitignore.
 func (m *Model) turnOnAIMemory() tea.Cmd {
+	m.dropAIMemoryAsk()
 	sess := loadSession()
 	sess.AIMemory = aiMemoryOn
 	saveSession(sess)
@@ -129,4 +131,13 @@ func (m *Model) turnOnAIMemory() tea.Cmd {
 	var c tea.Cmd
 	m.toast, c = m.toast.PushDetail(toast.Info, "Memory is on · lessons go to "+aiMemoryRel, detail)
 	return c
+}
+
+// dropAIMemoryAsk removes the ask-once card from the chat (the workspace
+// decided another way).
+func (m *Model) dropAIMemoryAsk() {
+	if s := m.aiS(); s.memAsk != nil {
+		s.memAsk = nil
+		s.runGen++
+	}
 }

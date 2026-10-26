@@ -8,10 +8,10 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/aimemory"
+	"github.com/amin-jalali/termocode/internal/keymap"
 )
 
 // OM-2, owner decision: memory is off by default and asks once. The
@@ -20,9 +20,10 @@ import (
 // workspace.
 
 func (m *Model) answerAIMemoryAskForTest(id string) tea.Cmd {
-	m.confirmOpen = false
-	cmd, _ := m.handleAIConfirm(id)
-	return cmd
+	if id == "on" {
+		return m.onAIButton("memask-on")
+	}
+	return m.onAIButton("memask-notnow")
 }
 
 // Spec: a tool turn in an undecided workspace opens the card once;
@@ -35,17 +36,20 @@ func TestAIMemoryAskOnceNotNow(t *testing.T) {
 	if msg := aiMemoryMsgFrom(driveAIChatMemory(t, m, m.sendAIChat("first")), 300*time.Millisecond); msg != nil {
 		t.Fatal("extracted before the answer")
 	}
-	if !m.confirmOpen || m.confirmKind != confirmKindAIMemoryAsk {
-		t.Fatal("no ask-once card after the first tool turn")
+	if m.confirmOpen {
+		t.Fatal("the ask is a modal card; it must be quiet, inside the chat")
 	}
-	if got := m.confirm.SafeID(); got != "notnow" {
-		t.Errorf("safe answer %q, want notnow", got)
-	}
-	box := ansi.Strip(m.confirm.Box())
-	for _, want := range []string{"Save lessons for later chats?", ".termocode/memory/lessons.md", ".gitignore", "Not now", "Turn on memory", "AI: Memory: Turn On/Off"} {
+	box := aiTranscriptText(m, 100)
+	for _, want := range []string{"Save lessons for later chats?", "Turn on", "Not now", "AI: Memory"} {
 		if !strings.Contains(box, want) {
-			t.Errorf("card lacks %q:\n%s", want, box)
+			t.Errorf("chat card lacks %q:\n%s", want, box)
 		}
+	}
+	// It takes no focus: the palette still opens.
+	m.keys = keymap.Default()
+	pm, _ := m.dispatchWelcomeAction(keymap.ActionCommandPalette)
+	if !pm.pickerOpen || pm.pickerKind != pickerKindPalette {
+		t.Fatal("the palette did not open with the memory card in the chat")
 	}
 	if aiMemoryMsgFrom(m.answerAIMemoryAskForTest("notnow"), 300*time.Millisecond) != nil {
 		t.Fatal("Not now extracted")
@@ -53,8 +57,9 @@ func TestAIMemoryAskOnceNotNow(t *testing.T) {
 	if got := loadSession().AIMemory; got != aiMemoryOff {
 		t.Errorf("session %q after Not now", got)
 	}
-	if msg := aiMemoryMsgFrom(driveAIChatMemory(t, m, m.sendAIChat("second")), 300*time.Millisecond); msg != nil || m.confirmOpen {
-		t.Fatalf("asked or extracted again after Not now (card %v)", m.confirmOpen)
+	if msg := aiMemoryMsgFrom(driveAIChatMemory(t, m, m.sendAIChat("second")), 300*time.Millisecond); msg != nil || m.ai.memAsk != nil ||
+		strings.Contains(aiTranscriptText(m, 100), "Save lessons for later chats?") {
+		t.Fatalf("asked or extracted again after Not now")
 	}
 	if len(quick.reqs) != 0 {
 		t.Errorf("quick requests %d", len(quick.reqs))
@@ -64,18 +69,18 @@ func TestAIMemoryAskOnceNotNow(t *testing.T) {
 	}
 }
 
-// Spec: Esc is the safe answer (as Not now).
-func TestAIMemoryAskOnceEsc(t *testing.T) {
+// Spec: deciding in the palette (AI: Memory: Turn On/Off) removes the
+// card from the chat.
+func TestAIMemoryAskCardGoneAfterPaletteDecision(t *testing.T) {
 	main := &recordingAIProvider{replies: []ai.Chunk{aiListDirCall("c1"), {Delta: "one"}}}
 	m, _ := aiMemoryModel(t, main, &recordingAIProvider{}, aiMemoryUndecided)
 	driveAIChatMemory(t, m, m.sendAIChat("first"))
-	if !m.confirmOpen || m.confirmKind != confirmKindAIMemoryAsk {
+	if !strings.Contains(aiTranscriptText(m, 100), "Save lessons for later chats?") {
 		t.Fatal("no card")
 	}
-	m.confirmOpen = false
-	m.onAIConfirmClosed()
-	if got := loadSession().AIMemory; got != aiMemoryOff {
-		t.Errorf("session %q after Esc", got)
+	m.toggleAIMemory()
+	if strings.Contains(aiTranscriptText(m, 100), "Save lessons for later chats?") || m.ai.memAsk != nil {
+		t.Error("card still in the chat after the palette decision")
 	}
 }
 
@@ -116,13 +121,13 @@ func TestAIMemoryAskOnceTurnOn(t *testing.T) {
 func TestAIMemoryAskOncePlainTurnNoCard(t *testing.T) {
 	m, _ := aiMemoryModel(t, &recordingAIProvider{}, &recordingAIProvider{}, aiMemoryUndecided)
 	driveAIChatMemory(t, m, m.sendAIChat("hello"))
-	if m.confirmOpen {
+	if m.ai.memAsk != nil {
 		t.Fatal("card after a plain turn")
 	}
 	main := &recordingAIProvider{replies: []ai.Chunk{aiListDirCall("c1"), {Delta: "one"}}}
 	m2, _ := aiMemoryModel(t, main, nil, aiMemoryUndecided)
 	driveAIChatMemory(t, m2, m2.sendAIChat("list"))
-	if m2.confirmOpen || loadSession().AIMemory != aiMemoryUndecided {
+	if m2.ai.memAsk != nil || loadSession().AIMemory != aiMemoryUndecided {
 		t.Fatal("asked without a quick slot")
 	}
 }
