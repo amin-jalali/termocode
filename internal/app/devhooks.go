@@ -45,6 +45,7 @@ import (
 //	                       models; an earlier run is in the session)
 //	profiledemo:chip|picker|trust|save|show|form|form-error|form-remove the agent profile UI (sample data)
 //	memorydemo:chat|ask|picker|forget the AI memory UI (sample lessons)
+//	skillsdemo:chat|picker|trust the AI skills UI (sample skills, no files)
 //	connectdemo:<step>     a Connect-a-service step with sample data: pick,
 //	                       gh, device, browser, ssh, done, error, token,
 //	                       slack (nothing connects)
@@ -178,6 +179,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		return m.aiProfileDemo(arg)
 	case "memorydemo": // the AI memory line / ask-once card / picker (ai_memory_demo.go)
 		return m.aiMemoryDemo(arg)
+	case "skillsdemo": // the skill chip / AI: Skills… / the trust card (ai_skills_demo.go)
+		return m.aiSkillsDemo(arg)
 	case "aidemo-fa": // a Persian (right-to-left) conversation for the shots
 		s := m.aiS()
 		s.conv.Messages = []ai.StoredMessage{

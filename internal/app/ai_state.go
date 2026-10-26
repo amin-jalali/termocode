@@ -66,6 +66,9 @@ type aiState struct {
 	skillsTrust *aiSkillsTrustPending
 	// memFake replaces lessons.md for the screenshot demo (ai_memory.go).
 	memFake *[]aimemory.Lesson
+	// skillsFake replaces the skill files in AI: Skills… for the
+	// screenshot demo (ai_skills_demo.go).
+	skillsFake *ai.Skills
 	// memSlotWarned: the "no quick model" toast was shown this session.
 	memSlotWarned bool
 	// memAsk is the turn the open ask-once memory card is for.

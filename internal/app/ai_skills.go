@@ -225,6 +225,9 @@ const (
 // the note.
 func (m *Model) openAISkills() tea.Cmd {
 	s := aiLoadSkills(aiWorkspaceRoot())
+	if f := m.aiS().skillsFake; f != nil {
+		s = *f
+	}
 	trust := aiSkillsTrust(s)
 	var items []picker.Item
 	group := func(source, title string) {
@@ -237,14 +240,14 @@ func (m *Model) openAISkills() tea.Cmd {
 				items = append(items, picker.Item{Header: true, Title: title, Group: source})
 				first = false
 			}
-			hint := agentdag.Clean(sk.Description)
-			if source == ai.SkillSourceProject && trust != aiTrustUse {
-				hint += " · not offered"
-			}
-			items = append(items, picker.Item{ID: aiSkillsOpenPrefix + sk.Path, Title: sk.Name, Hint: hint, Group: source})
+			items = append(items, picker.Item{ID: aiSkillsOpenPrefix + sk.Path, Title: sk.Name, Hint: agentdag.Clean(sk.Description), Group: source})
 		}
 	}
-	group(ai.SkillSourceProject, "Project skills ("+ai.SkillsDir+")")
+	project := "Project skills"
+	if trust != aiTrustUse {
+		project += " · not offered until trusted"
+	}
+	group(ai.SkillSourceProject, project)
 	group(ai.SkillSourceUser, "User skills")
 	items = append(items, picker.Item{Header: true, Title: "Actions", Group: "actions"},
 		picker.Item{ID: aiSkillsNewProjectID, Title: "New project skill…", Hint: ai.SkillsDir, Group: "actions"},

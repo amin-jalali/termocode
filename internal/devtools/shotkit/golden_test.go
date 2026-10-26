@@ -274,6 +274,11 @@ func goldenCases() []goldenCase {
 		sc := AIMemory(v)
 		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
+	// The skill chip, AI: Skills… and the project skills trust card (OM-4).
+	for _, v := range []string{"chat", "picker", "trust"} {
+		sc := AISkills(v)
+		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
+	}
 	// AI: Show Profile and AI: Usage (AU-5), at both sizes, and the four
 	// screens of the "see your agents and what they cost" story at full
 	// size (200x50) for the presentation.

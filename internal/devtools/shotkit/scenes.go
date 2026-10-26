@@ -222,6 +222,14 @@ func AIMemory(variant string) Scene {
 		Steps: WithEditor(Act("palette:ai-open-chat"), Act("memorydemo:"+variant), Pause(600*time.Millisecond))}
 }
 
+// AISkills is the AI skills UI (OM-4) with sample skills: "chat" a turn
+// that loaded a skill, "picker" AI: Skills…, "trust" the project skills
+// trust card.
+func AISkills(variant string) Scene {
+	return Scene{Name: "ai-skills-" + variant, Env: aiEnv,
+		Steps: WithEditor(Act("palette:ai-open-chat"), Act("skillsdemo:"+variant), Pause(600*time.Millisecond))}
+}
+
 // MarkdownPreview opens docs/preview.md (a sample with every common block)
 // in the full-screen Markdown preview.
 // FindResults is the Find Results page for "Toast" (Find in Files).
