@@ -1,6 +1,9 @@
 package app
 
 import (
+	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -136,6 +139,7 @@ func itermocKeyRows() []confirm.KeyRow {
 		[]string{"t", "trust a project profile…"},
 		[]string{"n", "new profile from the active one…"},
 		[]string{"J", "edit profiles.json"},
+		[]string{"f", "on a profile file that cannot be read: open it at the line"},
 		[]string{"Models"},
 		[]string{"a", "add a model slot…"},
 		[]string{"e", "edit the slot…"},
@@ -291,6 +295,10 @@ func (st *itermocState) focusHeader(sec string) {
 // itermocRowKey runs a key that acts on the row under the cursor.
 func (m *Model) itermocRowKey(key string, row imRow) (tea.Cmd, bool) {
 	switch row.kind {
+	case imRowProblem:
+		if key == "f" {
+			return m.itermocRun("fixfile", row), true
+		}
 	case imRowProfile:
 		switch key {
 		case "u":
@@ -399,6 +407,8 @@ func (m *Model) itermocEnter(row imRow) tea.Cmd {
 		return m.openMCPServerActions(row.name)
 	case imRowAdd:
 		return m.itermocAdd(row.sec)
+	case imRowProblem:
+		return m.itermocRun("fixfile", row)
 	}
 	return m.openItermocActions(row)
 }
@@ -604,6 +614,8 @@ func (m *Model) itermocRun(verb string, row imRow) tea.Cmd {
 			return m.onMCPServerAction("signin")
 		}
 		return nil
+	case "fixfile":
+		return m.itermocFixFile(row)
 	case "log":
 		return m.showMCPLog()
 	case "status":
@@ -740,4 +752,61 @@ func (m Model) handleItermocSidebarMouse(x, y int, t tea.MouseEventType) (Model,
 		}
 	}
 	return m, nil
+}
+
+// ── Fix for a profile file that could not be read ───────────────────────
+
+var imLineRe = regexp.MustCompile(`^(.+?\.json)(?: line (\d+))?:? `)
+
+// itermocProblemTarget reads the file and the line out of a profile load
+// error ("<file> line 7: ..." or "<file>: ..."); no line means line 1.
+func itermocProblemTarget(msg string) (path string, line int) {
+	m := imLineRe.FindStringSubmatch(msg + " ")
+	if m == nil {
+		return "", 1
+	}
+	line = 1
+	if n, err := strconv.Atoi(m[2]); err == nil && n > 0 {
+		line = n
+	}
+	return m[1], line
+}
+
+// imProblemTitle is the row name: the file without ".json" ("profiles").
+func imProblemTitle(msg string) string {
+	path, _ := itermocProblemTarget(msg)
+	if path == "" {
+		return "profiles file"
+	}
+	return strings.TrimSuffix(filepath.Base(path), ".json")
+}
+
+// imProblemWhy is what is wrong, without the file and the line.
+func imProblemWhy(msg string) string {
+	path, _ := itermocProblemTarget(msg)
+	rest := strings.TrimPrefix(msg, path)
+	if i := strings.Index(rest, ": "); i >= 0 {
+		rest = rest[i+2:]
+	}
+	rest = strings.TrimSpace(rest)
+	if _, line := itermocProblemTarget(msg); line > 1 || strings.Contains(msg, " line 1:") {
+		rest = "line " + strconv.Itoa(line) + " · " + strings.TrimPrefix(rest, "line "+strconv.Itoa(line)+": ")
+	}
+	return rest
+}
+
+// itermocFixFile opens the broken profile file at the broken line.
+func (m *Model) itermocFixFile(row imRow) tea.Cmd {
+	st := m.itermocS()
+	i, err := strconv.Atoi(row.name)
+	if err != nil || i < 0 || i >= len(st.snap.problems) {
+		return nil
+	}
+	path, line := itermocProblemTarget(st.snap.problems[i])
+	if path == "" {
+		return nil
+	}
+	st.opened = path + ":" + strconv.Itoa(line)
+	m.openFileAtLine(path, line)
+	return nil
 }

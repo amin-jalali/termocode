@@ -241,6 +241,7 @@ func (st *itermocState) sectionBadge(sec string) (text string, needs bool) {
 				need++
 			}
 		}
+		need += len(sn.problems)
 	case imSecModels:
 		count = len(sn.slots)
 		for _, s := range sn.slots {
@@ -386,6 +387,15 @@ func (m Model) itermocLines(st *itermocState, w int, focused bool) []imLine {
 		case imRowService:
 			s, _ := sn.service(r.name)
 			itermocServiceLine(b, s)
+		case imRowProblem:
+			b.add("  ", theme.TextMuted, false)
+			g, tok := imGlyph("needs")
+			b.add(g+" ", tok, false)
+			title := ""
+			if i, err := strconv.Atoi(r.name); err == nil && i >= 0 && i < len(sn.problems) {
+				title = imProblemTitle(sn.problems[i])
+			}
+			b.addNameWord(title, theme.TextPrimary, active, "Fix", theme.DiagWarning)
 		case imRowAgentStatus:
 			itermocStatusLine(b, sn)
 		case imRowAgent:

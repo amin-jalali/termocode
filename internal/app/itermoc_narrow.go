@@ -97,6 +97,10 @@ func (sn itermocSnap) listMiddle(r imRow) string {
 			}
 		}
 		return strings.Join(parts, " · ")
+	case imRowProblem:
+		if i, err := strconv.Atoi(r.name); err == nil && i >= 0 && i < len(sn.problems) {
+			return imProblemWhy(sn.problems[i])
+		}
 	case imRowAgentStatus:
 		if sn.listening {
 			return strconv.Itoa(len(sn.agents)) + " connected"
@@ -293,6 +297,10 @@ func (m Model) itermocRowName(sn itermocSnap, r imRow) string {
 		return a.name
 	case imRowAgentStatus:
 		return "listening"
+	case imRowProblem:
+		if i, err := strconv.Atoi(r.name); err == nil && i >= 0 && i < len(sn.problems) {
+			return imProblemTitle(sn.problems[i])
+		}
 	}
 	return r.name
 }
@@ -325,6 +333,8 @@ func (m Model) itermocRowGlyph(sn itermocSnap, r imRow) (string, theme.Color256)
 		return imGlyph("idle")
 	case imRowAgent:
 		return imGlyph("ready")
+	case imRowProblem:
+		return imGlyph("needs")
 	}
 	return " ", theme.TextMuted
 }
@@ -353,6 +363,8 @@ func (m *Model) itermocListPageKey(k tea.KeyMsg) (tea.Cmd, bool) {
 			}
 		case imRowAdd:
 			return m.itermocAdd(row.sec), true
+		case imRowProblem:
+			return m.itermocRun("fixfile", row), true
 		}
 		return m.itermocShowPage(row, true), true
 	case "esc":
@@ -434,6 +446,8 @@ func (m *Model) itermocListClick(id string) tea.Cmd {
 			return nil
 		case r.kind == imRowAdd:
 			return m.itermocAdd(r.sec)
+		case r.kind == imRowProblem:
+			return m.itermocRun("fixfile", r)
 		}
 		return m.itermocShowPage(r, true)
 	}

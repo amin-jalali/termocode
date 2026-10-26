@@ -262,6 +262,12 @@ Key values, environment values and passwords in a base URL never appear.
 **Edit JSON** (`E`) still opens `config.json` at `ai_models` for the
 expert path.
 
+A profile file that cannot be read (a broken `profiles.json`, a bad line in
+the project's `ai-profiles.json`) is a row in PROFILES, with the file name,
+the line and a **Fix** pill. `Enter`, `f` or a click on the pill opens the
+file at that line; the row is gone once the file loads again. The toast
+stays as before.
+
 ## Keys
 
 Press `?` in the view for the key card.
@@ -278,6 +284,7 @@ Press `?` in the view for the key card.
 | `Esc` | back to the editor |
 | `u` `e` `r` `d` `D` `t` | on a profile: use, edit, runs, details, duplicate, trust |
 | `n` / `J` | new profile from the active one / edit `profiles.json` |
+| `f` | on a `profiles` row that says it cannot be read: open the file at the broken line |
 | `a` / `E` | add a model slot / edit `ai_models` in `config.json` |
 | `e` / `k` / `D` | on a model slot: edit it, set the key, remove it (asks first) |
 | `i` / `c` / `l` | on a service: sign in; connect a service; show the log |

@@ -111,6 +111,8 @@ type itermocSnap struct {
 	agents      []imAgent
 	calls       []imCall
 	allow       map[string][]string // an agent's "Always allow" keys, by its name
+	// problems are the profile files that could not be read (their load errors).
+	problems []string
 }
 
 // itermocState is the view's state. It lives behind a pointer on the Model,
@@ -126,6 +128,8 @@ type itermocState struct {
 	collapseSet bool
 	filter      string
 	menuRow     imRow // the row the open actions menu is about
+	// opened is the last file a fix opened ("path:line"); tests read it.
+	opened string
 	// fixed: the snapshot was set by hand (the demo shots); it is not read again.
 	fixed  bool
 	typing bool
@@ -266,6 +270,7 @@ func itermocBuild(m Model, reload bool) itermocSnap {
 		}
 	}
 
+	sn.problems = append([]string(nil), s.profiles.Errors...)
 	sn.mode = mcpServeMode()
 	sn.listening = m.mcpServe != nil
 	if !sn.listening {
@@ -331,6 +336,9 @@ const (
 	// imRowOverview is the list's top row: the overview page (tiles, what
 	// needs you, the active flow).
 	imRowOverview
+	// imRowProblem is a profile file that could not be read; name is its
+	// index in the snapshot's problems. Enter (or its pill) opens the file.
+	imRowProblem
 )
 
 // imSecOverview is the overview row's group (and the page's sec).
@@ -404,6 +412,11 @@ func (st *itermocState) sectionItems(sec string) []imRow {
 		for _, p := range sn.profiles {
 			if st.matches(p.p.Name, p.p.Title, p.p.Source) {
 				out = append(out, imRow{kind: imRowProfile, sec: sec, name: p.p.Name})
+			}
+		}
+		for i, p := range sn.problems {
+			if st.matches(p, "profiles.json", "error") {
+				out = append(out, imRow{kind: imRowProblem, sec: sec, name: strconv.Itoa(i)})
 			}
 		}
 		if len(sn.profiles) == 0 && st.filter == "" {

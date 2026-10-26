@@ -85,6 +85,12 @@ func (sn itermocSnap) needs() []imNeed {
 			name: p.p.Name, what: "a profile from this project · not trusted yet",
 			fix: imPill{verb: "trust", label: "Trust…", key: "t", warn: true}})
 	}
+	for i, p := range sn.problems {
+		g, tok := imGlyph("needs")
+		out = append(out, imNeed{row: imRow{kind: imRowProblem, sec: imSecProfiles, name: strconv.Itoa(i)}, glyph: g, tok: tok,
+			name: imProblemTitle(p), what: imProblemWhy(p),
+			fix: imPill{verb: "fixfile", label: "Fix", key: "f", warn: true}})
+	}
 	return out
 }
 
@@ -280,6 +286,9 @@ func (m *Model) itermocJumpTo(row imRow) tea.Cmd {
 	st.filter, st.typing = "", false
 	st.collapse[row.sec] = false
 	st.cursorTo(row)
+	if row.kind == imRowProblem {
+		return m.itermocRun("fixfile", row) // no page: the fix is the file
+	}
 	return m.itermocShowPage(row, true)
 }
 
