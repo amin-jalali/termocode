@@ -98,7 +98,21 @@ a built-in or project profile becomes a copy under a new name. A click on a
 box in the pipeline opens the form at that step. **Edit JSON** in the
 actions menu still opens `profiles.json`.
 
-The pages of a model slot, a service, the outside agents and the group
+A **service** page says what the chat gets from it: its state, where it
+runs (the host of a remote service, the command of a local one), how many
+tools it has and their names, its access (read only or writes allowed),
+its sign-in and whether you trust it. When it needs you, an amber card at
+the top says what is wrong and what it costs ("The chat lost 7 tools"),
+with the button that fixes it: **Sign in** (`i`) for a sign-in that ended,
+**Log** (`l`) for a service that does not start. The pills are **Show
+tools** (`t`), **Disable…** (`d`) and **Log** (`l`). **Disable…** asks
+first (*Keep on* is the first button): the entry and its sign-in stay, the
+chat gets none of its tools. On an off service `d` is **Enable**, which
+runs at once. **Remove…** (`D`) asks on its own card, *Keep* first. The
+rest (Connect / Refresh, Trust, Allow writes, Sign out, Edit in mcp.json)
+is in the actions menu (`Enter`). A token is never on the page.
+
+The pages of a model slot, the outside agents and the group
 headers (a summary with what needs you) show their key facts and their
 main pills. A key is never on a page. `Esc` on a page goes back to the
 list; `j`, `↓`, `↑` and the wheel scroll a page that is taller than the
@@ -207,6 +221,7 @@ Press `?` in the view for the key card.
 | `a` / `E` | add a model slot / edit `ai_models` in `config.json` |
 | `e` / `k` / `D` | on a model slot: edit it, set the key, remove it (asks first) |
 | `i` / `c` / `l` | on a service: sign in; connect a service; show the log |
+| `t` / `d` / `D` | on a service: show its tools; disable it (asks first) or enable it; remove it (asks first) |
 | `s` / `S` / `y` / `T` | start Claude Code, start Codex, copy the termocode server config, show the status screen |
 
 On a page the same keys work (`u` `e` `r` `t`, `k` `i` `l` `s` `y`, `Enter` for
