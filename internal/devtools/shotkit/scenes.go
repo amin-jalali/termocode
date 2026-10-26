@@ -249,7 +249,9 @@ func AISkills(variant string) Scene {
 // "empty" a fresh install, "menu" the
 // actions menu of the first profile row, "slotadd" the Add slot form,
 // "slotkey" the Set key offer after a new slot, "slotremove" the Remove
-// card of a slot a profile uses.
+// card of a slot a profile uses; "ai-switch", "ai-draft", "ai-slot",
+// "ai-connect", "ai-access" and "ai-start" the confirm card of each AI
+// write tool (AH-8).
 func Itermoc(variant string) Scene {
 	name := "itermoc-" + variant
 	demo := variant

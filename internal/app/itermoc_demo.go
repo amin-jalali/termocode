@@ -1,6 +1,7 @@
 package app
 
 import (
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -28,6 +29,7 @@ import (
 //	slotadd     full, with the Add slot form filled in (nothing is saved)
 //	slotkey     full, with the "set the key?" card after a new slot
 //	slotremove  full, with the Remove card of a slot a profile uses
+//	ai-<card>   full, with the card of an AI write tool (itermocAICardDemo)
 func (m *Model) itermocDemo(arg string) tea.Cmd {
 	s := m.aiS()
 	m.itermoc = newItermocState()
@@ -118,7 +120,48 @@ func (m *Model) itermocDemo(arg string) tea.Cmd {
 		m.itermoc.cursorTo(row)
 		return m.itermocShowPage(row, false)
 	}
+	if card, ok := strings.CutPrefix(arg, "ai-"); ok {
+		return m.itermocAICardDemo(card)
+	}
 	return m.itermocSlotDemo(arg)
+}
+
+// itermocAICardDemo opens the card of one AI write tool (AH-8) over the
+// full demo, built from the tool's own Describe. Nothing runs: the card
+// is never answered.
+//
+//	switch  profile_switch to fast
+//	draft   profile_draft that changes the user's profile second-opinion (a diff)
+//	slot    model_slot_draft for a new slot work on openai
+//	connect service_connect for GitHub
+//	access  service_set_access: writes on for github
+//	start   outside_agent_start for Codex
+func (m *Model) itermocAICardDemo(which string) tea.Cmd {
+	s := m.aiS()
+	s.profFake = append(s.profFake, ai.Profile{Name: "second-opinion", Title: "GPT checks", Source: ai.ProfileSourceUser,
+		Steps: []ai.ProfileStep{{ID: "answer", Title: "Answer", System: "Answer the question."},
+			{ID: "check", Title: "Check", Slot: "gpt", System: "Check the answer for mistakes."}}})
+	s.slotKnown = map[string]bool{ai.SlotMain: true, ai.SlotQuick: true, ai.SlotLocal: true, "gpt": true}
+	s.reloadProfiles()
+	names := map[string]string{"switch": "profile_switch", "draft": "profile_draft", "slot": "model_slot_draft",
+		"connect": "service_connect", "access": "service_set_access", "start": "outside_agent_start"}
+	args := map[string]map[string]any{
+		"switch": {"name": ai.ProfileFast},
+		"draft": {"name": "second-opinion", "title": "GPT checks, then fixes", "steps": []any{
+			map[string]any{"id": "answer", "title": "Answer", "prompt": "Answer the question."},
+			map[string]any{"id": "check", "title": "Check", "slot": "gpt", "tools": "read-only", "prompt": "Check the answer for mistakes."},
+			map[string]any{"id": "fix", "title": "Fix", "prompt": "Fix what the check found."}}},
+		"slot":    {"name": "work", "provider": ai.KindOpenAI, "model": "gpt-4.1-mini"},
+		"connect": {"service": "github"},
+		"access":  {"name": "github", "writes": true},
+		"start":   {"agent": "codex"},
+	}
+	tl, ok := ai.FindTool(m.aiItermocWriteTools(nil), names[which])
+	if !ok {
+		return nil
+	}
+	m.onAIChatConfirm(aiChatConfirmMsg{gen: s.chatGen, tool: tl, human: tl.Human(args[which]), reply: make(chan bool, 1), ch: make(chan tea.Msg)})
+	return nil
 }
 
 // itermocProfileDemo is the full demo with three runs of review in the chat
