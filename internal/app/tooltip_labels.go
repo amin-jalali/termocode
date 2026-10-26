@@ -59,6 +59,8 @@ var tooltipLabels = map[string]tooltipSpec{
 	"ai:new":             {name: "New chat", local: "Ctrl+N", help: helpChat}, // aiPanelKey
 	"ai:history":         {name: "Chat history", help: helpChat},
 	"ai:profile":         {name: "Agent profile (and its details)", palette: "ai-profile-next", help: "guides/ai-profiles.md#pick-a-profile"},
+	"ai:mcp":             {name: "Services the chat can use · click: list", help: "guides/itermoc.md#the-view"},
+	"ai:more":            {name: "More: profile, services, usage, agents", help: helpChat},
 	"ai:usage":           {name: "Session usage: tokens and cost by model and agent (AI: Usage)", help: helpAgents},
 	"ai:chat":            {name: "Back to the chat", palette: "ai-agents", help: helpAgents},
 	"ai:btn:agents:":     {name: "Show in AGENTS", palette: "ai-agents", help: helpAgents},
@@ -218,6 +220,13 @@ func (m Model) tooltipLabel(id string) (name, key string) {
 			key = m.paletteKey("toggle-explorer")
 		}
 		return label, key
+	}
+	if id == "ai:profile" { // the click picks; the key goes to the next one
+		who := ""
+		if m.ai != nil {
+			who = ": " + m.ai.activeProfile().Name
+		}
+		return "Profile" + who + " · click: pick · next:", m.paletteKey("ai-profile-next")
 	}
 	s, ok := tooltipSpecFor(id)
 	if !ok {

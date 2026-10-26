@@ -18,7 +18,7 @@ state in a sidebar view; the chip and its picker stay the fast way to switch.
 | How | What it does |
 |---|---|
 | Click the chip | Opens the profile picker |
-| `Alt+Shift+P` | Switches to the next profile (a toast says which) |
+| `Alt+Shift+P` or `Alt+N` | Switches to the next profile (a toast says which) |
 | **AI: Switch Profile…** | Opens the profile picker |
 | **AI: Next Profile** | Same as `Alt+Shift+P` |
 
@@ -59,8 +59,9 @@ badge in the status bar shows its name too, for example
 while a pipeline runs.
 
 !!! tip
-    Your terminal may not send `Alt+Shift+P`. Use the palette, or bind
-    another key to `AINextProfile` in `keymap.json`.
+    Your terminal may not send `Alt+Shift+P`. Press `Alt+N` (the same
+    command, no Shift), use the palette, or bind another key to
+    `AINextProfile` in `keymap.json`.
 
 ## Create and edit profiles
 
@@ -421,10 +422,12 @@ To watch every run in one place (all chats, live numbers, Stop, Pause and
 Resume), use [Runs](runs.md): the green pulse icon in the activity bar.
 
 The AGENTS panel shows the runs of the current chat as a graph. It uses
-the same place on the right as the chat. **Alt+Shift+A** (palette
+the same place on the right as the chat. **Alt+Shift+A** or **Alt+G** (palette
 **AI: Toggle Agents Panel**) shows it, and pressed again goes back to the
 chat. **Alt+A**, the `‹ chat` chip in the header, or `Esc` also bring the
-chat back.
+chat back. Press `?` in AGENTS or in the usage tables (`u`) for the key
+card; the footer says `? keys` first, so it stays visible in a narrow
+panel.
 
 ```text
  ✦ AGENTS ‹ chat
@@ -827,10 +830,12 @@ All files: [Config files](../reference/config-files.md). All settings:
 :   One step used a model with no known price. Add it to `ai_prices`.
 
 **`Alt+Shift+P` does nothing**
-:   Your terminal does not send the key. Use **AI: Next Profile**.
+:   Your terminal does not send the key. Press `Alt+N` instead, or use
+    **AI: Next Profile**.
 
 **`Alt+Shift+A` does nothing**
-:   Your terminal does not send the key. Use **AI: Toggle Agents Panel**,
+:   Your terminal does not send the key. Press `Alt+G` instead, use
+    **AI: Toggle Agents Panel**,
     a click on the run row of a planned run, or bind another key to
     `AIToggleAgents` in `keymap.json`.
 

@@ -123,8 +123,10 @@ These are the default keys. The **Key** column is the key you press. The **Key s
 | --- | --- | --- | --- |
 | `Alt+I` | `alt+i` | `AIEditSelection` | Edit the selection (or line) with an AI instruction. |
 | `Alt+Shift+P` | `alt+P` | `AINextProfile` | Switch the AI chat to the next agent profile. |
+| `Alt+N` | `alt+n` | `AINextProfile` | Switch the AI chat to the next agent profile. |
 | `Alt+Shift+P` | `alt+shift+p` | `AINextProfile` | Switch the AI chat to the next agent profile. |
 | `Alt+Shift+A` | `alt+A` | `AIToggleAgents` | Show the AGENTS view of the chat's agent runs, or go back to the chat. |
+| `Alt+G` | `alt+g` | `AIToggleAgents` | Show the AGENTS view of the chat's agent runs, or go back to the chat. |
 | `Alt+Shift+A` | `alt+shift+a` | `AIToggleAgents` | Show the AGENTS view of the chat's agent runs, or go back to the chat. |
 | <code>Alt+&#124;</code> | <code>alt+&#124;</code> | `AIToggleInline` | Turn automatic AI ghost text on or off. |
 | <code>Alt+&#92;</code> | <code>alt+&#92;</code> | `AITriggerInline` | Ask the AI for an inline completion now. |

@@ -399,9 +399,14 @@ type actionsHeaderChip struct {
 func (m Model) actionsHeaderChips(width int) []actionsHeaderChip {
 	x := runewidth.StringWidth(" " + m.actionsHeaderLabel())
 	var out []actionsHeaderChip
+	dropped := false
 	add := func(id, label string) {
 		w := runewidth.StringWidth(label)
-		if label == "" || x+1+w+1+actionsHeaderButtonsW > width {
+		if label == "" {
+			return
+		}
+		if x+1+w+1+actionsHeaderButtonsW > width {
+			dropped = true
 			return
 		}
 		out = append(out, actionsHeaderChip{id: id, label: label, x0: x + 1})
@@ -419,6 +424,32 @@ func (m Model) actionsHeaderChips(width int) []actionsHeaderChip {
 	if width >= actionsChipMinWidth {
 		add("mcp", m.mcpChipLabel())
 		add("usage", "usage") // last: the first chip to drop
+	} else if m.mcpChipLabel() != "" || m.aiProfileChipLabel() != "" {
+		dropped = true
+	}
+	if dropped { // a chip that does not fit leaves a trace: ⋯ opens a menu with them
+		more := aiMoreLabel()
+		mw := runewidth.StringWidth(more)
+		// Make room for it: the profile name gets shorter ("✦ rev… ▾",
+		// it stays visible), then the last chip steps into the menu.
+		for len(out) > 0 && x+1+mw+1+actionsHeaderButtonsW > width {
+			last := out[len(out)-1]
+			out = out[:len(out)-1]
+			x = last.x0 - 1
+			if last.id != "profile" {
+				continue
+			}
+			name := []rune(m.aiProfileChipName())
+			for k := len(name) - 1; k >= 3; k-- {
+				label := aiSpark() + " " + string(name[:k]) + "…" + " " + aiFoldGlyph(true)
+				if x+1+runewidth.StringWidth(label)+1+mw+1+actionsHeaderButtonsW <= width {
+					out = append(out, actionsHeaderChip{id: "profile", label: label, x0: last.x0})
+					x = last.x0 + runewidth.StringWidth(label)
+					break
+				}
+			}
+		}
+		add("more", more)
 	}
 	return out
 }

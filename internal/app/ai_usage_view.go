@@ -287,9 +287,9 @@ func usageNotes(sums ...aiUsageSum) []string {
 func (m Model) usageBuild(width int) aiAgentsCache {
 	s := m.ai
 	out := aiAgentsCache{ok: true, selTop: -1, selBot: -1}
-	out.foot = agText(theme.TextDim, "←→ runs · u agents · Esc chat", width)
+	out.foot = agText(theme.TextDim, "? keys · ←→ runs · u agents · Esc chat", width)
 	if theme.CurrentIconMode == theme.IconModeASCII {
-		out.foot = agText(theme.TextDim, "<- -> runs · u agents · Esc chat", width)
+		out.foot = agText(theme.TextDim, "? keys · <- -> runs · u agents · Esc chat", width)
 	}
 	divider := agSeg(theme.BorderSubtle, strings.Repeat(agentsGlyphs().h, width))
 	idx, nth, of, haveRun := s.agentsShown()

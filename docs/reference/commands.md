@@ -37,7 +37,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Move Secrets to a Safer Store… | `secrets-migrate` |   |   |
 | AI: New Chat | `ai-new-chat` |   |   |
 | AI: New Profile from Current… | `ai-profile-new` |   |   |
-| AI: Next Profile | `ai-profile-next` | `Alt+Shift+P` | `Alt+Shift+P` |
+| AI: Next Profile | `ai-profile-next` | `Alt+Shift+P` / `Alt+N` | `Alt+Shift+P / Alt+N` |
 | AI: Open Chat | `ai-open-chat` | `Alt+A` | `Alt+A` |
 | AI: Pick Model… | `ai-pick-model` |   |   |
 | AI: Project Profiles Trust… | `ai-profile-trust` |   |   |
@@ -53,7 +53,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | AI: Skills… | `ai-skills` |   |   |
 | AI: Stop Generating | `ai-cancel` |   |   |
 | AI: Switch Profile… | `ai-profile-switch` |   |   |
-| AI: Toggle Agents Panel | `ai-agents` | `Alt+Shift+A` | `Alt+Shift+A` |
+| AI: Toggle Agents Panel | `ai-agents` | `Alt+Shift+A` / `Alt+G` | `Alt+Shift+A / Alt+G` |
 | AI: Toggle Edit Review (diff / auto) | `ai-edit-review` |   |   |
 | AI: Toggle Inline Completions | `ai-toggle-inline` | <code>Alt+&#124;</code> | <code>Alt+&#124;</code> |
 | AI: Trigger Inline Completion | `ai-trigger-inline` | <code>Alt+&#92;</code> | <code>Alt+&#92;</code> |

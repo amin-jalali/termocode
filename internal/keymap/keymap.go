@@ -490,6 +490,11 @@ func Default() KeyMap {
 			// "alt+A" on legacy terminals and "alt+shift+a" on CSI-u ones.
 			"alt+A":       ActionAIToggleAgents,
 			"alt+shift+a": ActionAIToggleAgents,
+			// A second route for both keys above: some terminals and
+			// window managers swallow Alt+Shift+letter. Alt+G (aGents) and
+			// Alt+N (Next profile) carry no Shift.
+			"alt+g": ActionAIToggleAgents,
+			"alt+n": ActionAINextProfile,
 
 			// Help for the focused item (or the hover label on screen).
 			// F1 is the palette; Shift+F1 is free in every terminal we

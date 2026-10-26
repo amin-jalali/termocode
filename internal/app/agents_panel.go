@@ -795,12 +795,7 @@ func (m Model) agentsBuild(width int, now time.Time) aiAgentsCache {
 	g := agentsGlyphs()
 	out := aiAgentsCache{ok: true, selTop: -1, selBot: -1}
 	d, ok := s.agentsData()
-	ascii := theme.CurrentIconMode == theme.IconModeASCII
-	runs := "←→"
-	if ascii {
-		runs = "<- ->"
-	}
-	out.foot = agText(theme.TextDim, "Tab next · Space fold · d details · u usage · "+runs+" runs · Esc chat", width)
+	out.foot = agText(theme.TextDim, "? keys · Tab next · d details · u usage · Esc chat", width)
 	divider := agSeg(theme.BorderSubtle, strings.Repeat(g.h, width))
 	if !ok {
 		out.head = []string{agText(theme.TextSecondary, "No agent runs in this chat yet.", width), agText(theme.TextDim, "", width), divider}
@@ -1266,6 +1261,8 @@ func (m *Model) routeAgentsKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		if idx, _, _, ok := s.agentsShown(); ok && s.conv.Messages[idx].Run.State == ai.RunStateInterrupted && s.aiRetryStep(idx) > 0 {
 			return m.aiRetryRun(idx), true
 		}
+	case "?":
+		return m.openAgentsKeyCard(), true
 	case "esc", "q":
 		s.agents.on = false
 	case "ctrl+c":

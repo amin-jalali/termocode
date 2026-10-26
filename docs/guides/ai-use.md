@@ -39,6 +39,12 @@ snippet, accept a completion, jump to the next placeholder, or insert a tab.
    to stop`. A running tool never shows this warning.
 4. Press `Esc` to go back to the editor. `F6` also moves focus.
 
+The header shows the profile chip, then `⌁ N MCP` (the services the chat
+can use) and `usage` when there is room. In a narrow window a chip that
+does not fit becomes `⋯`: a click opens a small menu with Profile…,
+Services, Usage and Agents, so nothing is only in the palette. Hover a chip
+for its label and key.
+
 To give the AI context, open a file or select code, then run
 **AI: Add File / Selection to Chat**.
 
@@ -527,7 +533,7 @@ Knowledge files the AI loads only when a task needs them: see
 | `Alt+\` | Suggest now |
 | `Alt+|` | Toggle automatic ghost text |
 | `Alt+I` | Edit selection with AI |
-| `Alt+Shift+P` | Next AI profile ([AI profiles](ai-profiles.md)) |
+| `Alt+Shift+P` or `Alt+N` | Next AI profile ([AI profiles](ai-profiles.md)) |
 | `Ctrl+.` | AI code actions (Explain / Fix / Edit / Doc) |
 
 ## Troubleshooting

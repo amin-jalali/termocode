@@ -79,11 +79,15 @@ func (m *Model) aiProfileTrust(p ai.Profile) string {
 
 // aiProfileChipLabel is the chat header chip: "✦ <profile> ▾".
 func (m Model) aiProfileChipLabel() string {
-	name := ai.ProfileDefault
+	return aiSpark() + " " + m.aiProfileChipName() + " " + aiFoldGlyph(true)
+}
+
+// aiProfileChipName is the profile name the chip shows.
+func (m Model) aiProfileChipName() string {
 	if m.ai != nil {
-		name = m.ai.activeProfile().Name
+		return m.ai.activeProfile().Name
 	}
-	return aiSpark() + " " + name + " " + aiFoldGlyph(true)
+	return ai.ProfileDefault
 }
 
 // aiRunActive: a pipeline run is going (the chip turns Accent).
@@ -308,6 +312,8 @@ func (m *Model) handleAIProfilePickerSelect(id string) (tea.Cmd, bool) {
 			return m.editAIProfiles(), true
 		}
 		return m.selectAIProfile(id), true
+	case pickerKindAIMore:
+		return m.onAIMorePicked(id), true
 	case pickerKindAIProfileEdit:
 		return m.openAIProfileEditForm(id), true
 	case pickerKindAIProfileTrust:
