@@ -242,7 +242,8 @@ func AISkills(variant string) Scene {
 // outside agents) with sample data: "list" a working setup with one row
 // that needs the user in each section (the list only, no detail page),
 // "follow" the keys o, Esc and j: the page tab follows the list, "profile" the same with the detail page of the profile review open in
-// the editor area, "empty" a fresh install, "menu" the
+// the editor area, "service" the page of a service whose sign-in ended,
+// "empty" a fresh install, "menu" the
 // actions menu of the first profile row, "slotadd" the Add slot form,
 // "slotkey" the Set key offer after a new slot, "slotremove" the Remove
 // card of a slot a profile uses.
