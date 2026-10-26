@@ -112,7 +112,23 @@ runs at once. **Remove…** (`D`) asks on its own card, *Keep* first. The
 rest (Connect / Refresh, Trust, Allow writes, Sign out, Edit in mcp.json)
 is in the actions menu (`Enter`). A token is never on the page.
 
-The pages of a model slot, the outside agents and the group
+An **outside agent** page draws the connection: `termocode ↔ claude-code`,
+with how many calls it made and how often it asked you. **ALWAYS ALLOWED**
+lists the tools it may run without asking (you said *Always allow* on its
+card); **RECENT CALLS** are its own last calls. The pills are
+**Revoke…** (`x`), **Copy config** (`y`) and **Status** (`T`).
+**Revoke…** asks first (*Keep* is the first button), then forgets this
+agent's whole *Always allow* list: each call that changes something asks
+you again. The agent stays connected; **Disconnect…** and **Allowed
+tools…** (revoke one tool) are in the actions menu.
+
+The **listening** row's page draws termocode and the first connected
+agent, lists the agents that are not running yet, and says the mode. Its
+pills start an agent in a terminal tab: **Start Claude Code** (`s`),
+**Start Codex** (`S`), and **Copy config** (`y`) copies the config other
+agent tools need.
+
+The pages of a model slot and the group
 headers (a summary with what needs you) show their key facts and their
 main pills. A key is never on a page. `Esc` on a page goes back to the
 list; `j`, `↓`, `↑` and the wheel scroll a page that is taller than the
@@ -129,7 +145,7 @@ lists what you can do with it. Safe actions come first; the ones that ask for co
 | Model slot | Set key (when the key is missing) · Edit… · Pick model… (the main slot) · Edit JSON · Remove… (your own slots) |
 | Service | the service's own actions: Connect, Show tools, Sign in, Allow writes / Read only, Trust, Disable / Enable, Remove… and more (see [Connect MCP servers](mcp.md)) |
 | Listening row | Show status… · Turn on / Start listening now · Start Claude Code · Start Codex · Copy config · Stop listening… |
-| Outside agent | Show status… · Allowed tools… · Disconnect… |
+| Outside agent | Show status… · Allowed tools… · Revoke always allow… · Disconnect… |
 
 Every action opens a screen that exists without Itermoc:
 
@@ -221,6 +237,7 @@ Press `?` in the view for the key card.
 | `a` / `E` | add a model slot / edit `ai_models` in `config.json` |
 | `e` / `k` / `D` | on a model slot: edit it, set the key, remove it (asks first) |
 | `i` / `c` / `l` | on a service: sign in; connect a service; show the log |
+| `x` | on an outside agent: revoke its always allow (asks first) |
 | `t` / `d` / `D` | on a service: show its tools; disable it (asks first) or enable it; remove it (asks first) |
 | `s` / `S` / `y` / `T` | start Claude Code, start Codex, copy the termocode server config, show the status screen |
 
