@@ -9,6 +9,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // Spec: on a profile's page in Itermoc, the "See runs →" line, the Runs
@@ -99,5 +100,34 @@ func TestRunsEmptyProfilesInItermoc(t *testing.T) {
 		if len(m.runsCollect(clock.Now())) != 0 {
 			t.Error("the empty rig has runs")
 		}
+	}
+}
+
+// Spec: on the empty Runs page "Open the chat (c)" is the one primary
+// (lavender) pill; "Profiles in Itermoc (i)" is a quiet, secondary chip.
+func TestRunsEmptyItermocPillIsQuiet(t *testing.T) {
+	m := runsRig(t, "empty", 200, 50)
+	m.runs.cache.pageKy = ""
+	page := m.renderRunsPage(165, 48)
+	sgrBefore := func(label string) string {
+		i := strings.Index(page, label)
+		if i < 0 {
+			t.Fatalf("no %q on the page", label)
+		}
+		j := strings.LastIndex(page[:i], "\x1b[")
+		k := strings.Index(page[j:], "m")
+		return page[j : j+k]
+	}
+	accent := lgSGR("48", theme.LG(theme.AccentLavender))
+	chip := lgSGR("48", theme.LG(theme.BgSectionHdr))
+	if s := sgrBefore("Open the chat (c)"); !strings.Contains(s, accent) {
+		t.Errorf("Open the chat: %q, want the accent background %q", s, accent)
+	}
+	s := sgrBefore("Profiles in Itermoc (i)")
+	if strings.Contains(s, accent) || !strings.Contains(s, chip) {
+		t.Errorf("Profiles in Itermoc: %q, want the chip background %q, not the accent", s, chip)
+	}
+	if !strings.Contains(s, lgSGR("38", theme.LG(theme.TextSecondary))) {
+		t.Errorf("Profiles in Itermoc: %q, want the secondary text colour", s)
 	}
 }

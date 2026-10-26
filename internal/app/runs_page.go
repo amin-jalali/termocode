@@ -993,7 +993,7 @@ func (m *Model) drawRunsEmpty(cv *rcCanvas, w, h int, now time.Time, c runsColou
 	px := cx + (cw-rcPillW(lbl)-1-rcPillW(lbl2))/2
 	px2 := px + rcPillW(lbl) + 1
 	cv.pill(px, y+10, lbl, c.accent, c.onAccent, true)
-	cv.pill(px2, y+10, lbl2, c.accent, c.onAccent, false)
+	cv.pill(px2, y+10, lbl2, c.bgChip, c.secondary, false) // the quiet second way
 	hits = append(hits, runsHit{x0: px, x1: px + rcPillW(lbl), y: y + 10, id: "verb:openchat:", label: "Open the chat (c)"},
 		runsHit{x0: px2, x1: px2 + rcPillW(lbl2), y: y + 10, id: "verb:itermoc:", label: "Profiles in Itermoc (i)"})
 	cv.textC(0, y+16, w, "finished runs stay in the list for 7 days", rcSt{fg: c.dim})
