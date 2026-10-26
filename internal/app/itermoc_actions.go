@@ -192,6 +192,12 @@ func (m Model) itermocSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	}
 	st.clamp()
 	row, have := st.current()
+	if have && row.kind == imRowOverview {
+		switch k.String() {
+		case " ", "left", "h", "right":
+			return m, nil // nothing to fold
+		}
+	}
 	switch k.String() {
 	case "up", "k":
 		st.move(-1)
@@ -377,6 +383,8 @@ func (m *Model) itermocEnter(row imRow) tea.Cmd {
 	case imRowSection:
 		st.toggleSection(row.sec)
 		return nil
+	case imRowOverview:
+		return m.itermocShowPage(row, true)
 	case imRowService:
 		return m.openMCPServerActions(row.name)
 	case imRowAdd:
@@ -650,6 +658,8 @@ func itermocTooltip(id string) (name, key, help string, ok bool) {
 			return strings.TrimPrefix(imText(imAddText(sec)), "+ "), "Enter", help, true
 		}
 		switch sec {
+		case imSecOverview:
+			return "Open the overview: the groups and what needs you", "o · Enter", help, true
 		case imSecProfiles:
 			return "Open the profile page · Enter for all actions", "o · Enter", help, true
 		case imSecModels:

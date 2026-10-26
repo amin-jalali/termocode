@@ -48,8 +48,8 @@ func (m Model) itermocPageShown() bool {
 // itermocPageObjectOf says which page a list row stands for.
 func itermocPageObjectOf(row imRow) (sec, name string, ok bool) {
 	switch row.kind {
-	case imRowSection:
-		return "overview", "", true
+	case imRowSection, imRowOverview:
+		return imSecOverview, "", true
 	case imRowProfile, imRowSlot, imRowService:
 		return row.sec, row.name, true
 	case imRowAgentStatus, imRowAgent:
@@ -65,8 +65,8 @@ func (m Model) itermocPageRow() (imRow, bool) {
 		return imRow{}, false
 	}
 	switch p.sec {
-	case "overview":
-		return imRow{kind: imRowSection, sec: imSecProfiles}, true
+	case imSecOverview:
+		return imRow{kind: imRowOverview, sec: imSecOverview, name: imSecOverview}, true
 	case imSecProfiles:
 		if _, ok := m.itermocSnapOf().profile(p.name); ok {
 			return imRow{kind: imRowProfile, sec: p.sec, name: p.name}, true
@@ -108,7 +108,7 @@ func (m Model) itermocPageTitle() string {
 	name := "AI"
 	switch {
 	case p == nil:
-	case p.sec == "overview":
+	case p.sec == imSecOverview:
 	case p.name == "status":
 		name = "Outside agents"
 	case strings.HasPrefix(p.name, "agent:"):
@@ -246,7 +246,7 @@ func (m *Model) itermocPageKey(k tea.KeyMsg) (tea.Cmd, bool) {
 
 // itermocPageMore is Enter on the page: today's actions menu of the object.
 func (m *Model) itermocPageMore(row imRow) tea.Cmd {
-	if row.kind == imRowSection {
+	if row.kind == imRowSection || row.kind == imRowOverview {
 		return nil
 	}
 	return m.itermocEnter(row)

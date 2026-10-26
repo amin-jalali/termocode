@@ -375,6 +375,8 @@ func (m Model) itermocLines(st *itermocState, w int, focused bool) []imLine {
 				}
 				b.addRight(text, tok, needs)
 			}
+		case imRowOverview:
+			itermocOverviewLine(b, sn, active && focused)
 		case imRowProfile:
 			p, _ := sn.profile(r.name)
 			m.itermocProfileLine(b, p)
@@ -407,6 +409,21 @@ func (m Model) itermocLines(st *itermocState, w int, focused bool) []imLine {
 		out = append(out, imLine{row: i, text: lead + b.render(bg)})
 	}
 	return out
+}
+
+// itermocOverviewLine is the top row: "✦ Overview" and, at the right, how
+// many things need the user ("3 !"), or nothing.
+func itermocOverviewLine(b *imBuilder, sn itermocSnap, lit bool) {
+	col := theme.TextSecondary
+	if lit {
+		col = theme.BorderFocus
+	}
+	b.add(aiSpark()+" ", theme.AIAccent, false)
+	word := ""
+	if n := len(sn.needs()); n > 0 {
+		word = strconv.Itoa(n) + " !"
+	}
+	b.addNameWord("Overview", col, true, word, theme.DiagWarning)
 }
 
 func (m Model) itermocProfileLine(b *imBuilder, p imProfile) {

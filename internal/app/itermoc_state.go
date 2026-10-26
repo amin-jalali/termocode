@@ -328,7 +328,13 @@ const (
 	imRowNote // an empty or error state line
 	imRowGap  // a blank line between two sections
 	imRowAdd  // the dim "+ new profile…" row at the end of a section
+	// imRowOverview is the list's top row: the overview page (tiles, what
+	// needs you, the active flow).
+	imRowOverview
 )
+
+// imSecOverview is the overview row's group (and the page's sec).
+const imSecOverview = "overview"
 
 // imRow is one line of the view.
 type imRow struct {
@@ -367,6 +373,9 @@ func (st *itermocState) matches(words ...string) bool {
 func (st *itermocState) rows() []imRow {
 	var out []imRow
 	filtering := strings.TrimSpace(st.filter) != ""
+	if !filtering {
+		out = append(out, imRow{kind: imRowOverview, sec: imSecOverview, name: imSecOverview})
+	}
 	for _, sec := range itermocSectionOrder {
 		items := st.sectionItems(sec)
 		if filtering && len(items) == 0 {
