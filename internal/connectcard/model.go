@@ -115,6 +115,21 @@ func (m *Model) SetCard(c Card) {
 	if f := m.focused(); f >= 0 {
 		focusID = m.card.Rows[f].ID
 	}
+	sameButtons := len(m.card.Buttons) == len(c.Buttons)
+	// A new input (another step: the error card's Try again back to the
+	// paste screen) takes the focus; the buttons keep it only on the same
+	// form.
+	oldInputs := map[string]bool{}
+	for _, r := range m.card.Rows {
+		if r.Kind == Input {
+			oldInputs[r.ID] = true
+		}
+	}
+	for _, r := range c.Rows {
+		if r.Kind == Input && !oldInputs[r.ID] {
+			focusButtons = false
+		}
+	}
 	vals := map[string]string{}
 	for _, r := range c.Rows {
 		if r.Kind == Choice {
@@ -136,7 +151,7 @@ func (m *Model) SetCard(c Card) {
 	if same {
 		return
 	}
-	if sameTitle && len(m.card.Buttons) == len(c.Buttons) {
+	if sameTitle && sameButtons {
 		for i, f := range m.focusables() {
 			if (f >= 0 && focusID != "" && c.Rows[f].ID == focusID) || (f == -1 && focusButtons) {
 				m.focus = i

@@ -98,3 +98,22 @@ func TestFormClickFocusesInput(t *testing.T) {
 		t.Errorf("focus %q", m.FocusedID())
 	}
 }
+
+// Spec: a step that brings an input back (the error card's Try again to
+// the paste screen, same title) puts the focus in the input, not on the
+// buttons, so the user can paste at once.
+func TestSetCardNewInputTakesFocus(t *testing.T) {
+	paste := Card{Title: "Connect Linear", Rows: []Row{{Kind: Input, ID: "url", Text: "Paste it here"}},
+		Buttons: []Button{{ID: "connect", Title: "Connect", Primary: true}, {ID: "cancel", Title: "Cancel"}}}
+	errCard := Card{Title: "Connect Linear", Rows: []Row{{Kind: Text, Text: "That address belongs to another sign-in."}},
+		Buttons: []Button{{ID: "retry", Title: "Try again", Primary: true}, {ID: "cancel", Title: "Cancel"}}}
+	m := New(paste)
+	m.SetCard(errCard)
+	if m.FocusedID() != "" {
+		t.Fatalf("error card: focus on %q, want the buttons", m.FocusedID())
+	}
+	m.SetCard(paste)
+	if m.FocusedID() != "url" {
+		t.Errorf("back on the paste screen: focus on %q, want the input", m.FocusedID())
+	}
+}
