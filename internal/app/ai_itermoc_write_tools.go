@@ -182,7 +182,14 @@ func (sn aiItermocWriteSnap) checkSwitch(a map[string]any) error {
 	return nil
 }
 
+// aiSecretCardText is the card text of a call with a secret in its
+// args: it never names the value (Validate refuses the call).
+const aiSecretCardText = "Refused: an argument looks like a key, token or password."
+
 func (sn aiItermocWriteSnap) describeSwitch(a map[string]any) string {
+	if aiArgsSecretError(a) != nil {
+		return aiSecretCardText
+	}
 	name := aiCardText(ai.ArgString(a, "name"), 40)
 	out := "Switch the AI profile from " + sn.active + " to " + name + ". It applies from your next message."
 	if sn.profiles[name] == ai.ProfileSourceProject {
@@ -547,6 +554,9 @@ func checkServiceConnect(a map[string]any) error {
 }
 
 func describeServiceConnect(a map[string]any) string {
+	if aiArgsSecretError(a) != nil {
+		return aiSecretCardText
+	}
 	name := strings.TrimSpace(ai.ArgString(a, "service"))
 	title := aiCardText(name, 40)
 	if p, ok := mcp.PresetByName(name); ok {
@@ -614,6 +624,9 @@ func checkServiceAccess(a map[string]any) error {
 }
 
 func describeServiceAccess(a map[string]any) string {
+	if aiArgsSecretError(a) != nil {
+		return aiSecretCardText
+	}
 	name := aiCardText(ai.ArgString(a, "name"), 40)
 	if ai.ArgBool(a, "writes") {
 		return "Allow writes for " + name + "? Its tools may then create, comment and change; each write still asks you first. " +

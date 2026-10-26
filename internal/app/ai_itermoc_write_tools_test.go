@@ -56,6 +56,7 @@ func aiWriteTurn(t *testing.T, m *Model, tool string, args map[string]any, answe
 func aiWriteModel(t *testing.T) *Model {
 	t.Helper()
 	m, _ := aiItermocTestModel(t)
+	m.output = newOutputStore() // the audit log (AI channel)
 	return m
 }
 
@@ -325,6 +326,69 @@ func TestAIItermocWriteToolsRefuseSecrets(t *testing.T) {
 			if strings.Contains(res, s) {
 				t.Errorf("%s: the refusal repeats the secret: %q", name, res)
 			}
+		}
+		aiWriteNoLeak(t, m, name, res, aiPlantAPIKey, "ghp_0123456789")
+	}
+}
+
+// aiWriteNoLeak fails when a secret is in the tool result, the chat
+// transcript, a toast or the AI Output channel (the audit log).
+func aiWriteNoLeak(t *testing.T, m *Model, tool, res string, secrets ...string) {
+	t.Helper()
+	places := map[string]string{"result": res}
+	var conv []string
+	for _, msg := range m.ai.conv.Messages {
+		conv = append(conv, msg.Text)
+	}
+	places["transcript"] = strings.Join(conv, "\n")
+	places["toast"] = strings.Join(m.toast.View(400, 40), "\n")
+	audit := m.output.Lines(aiAuditChannel)
+	if len(audit) == 0 {
+		t.Errorf("%s: no audit line", tool)
+	}
+	places["audit"] = strings.Join(audit, "\n")
+	for where, text := range places {
+		for _, s := range secrets {
+			if strings.Contains(text, s) {
+				t.Errorf("%s: the secret %q is in the %s:\n%s", tool, s, where, text)
+			}
+		}
+	}
+}
+
+// A secret in the argument the card names (profile_switch name,
+// service_connect service, service_set_access name) is refused and is
+// nowhere: not in the "⚙" transcript line, the result, a toast or the
+// audit log.
+func TestAIItermocWriteToolsSecretInNamedArg(t *testing.T) {
+	const tok = "ghp_0123456789abcdefABCDEF0123456789"
+	cases := map[string]map[string]any{
+		"profile_switch":     {"name": tok},
+		"service_connect":    {"service": tok},
+		"service_set_access": {"name": tok, "writes": true},
+	}
+	for tool, args := range cases {
+		m := aiWriteModel(t)
+		res, card := aiWriteTurn(t, m, tool, args, "allow")
+		if card.opened || !strings.Contains(res, "looks like a key") {
+			t.Errorf("%s: card %v result %q", tool, card.opened, res)
+		}
+		aiWriteNoLeak(t, m, tool, res, tok, "ghp_0123456789")
+	}
+}
+
+// The three describers never echo a secret, even when called on their
+// own (before Validate).
+func TestAIItermocDescribersHideSecrets(t *testing.T) {
+	const tok = "ghp_0123456789abcdefABCDEF0123456789"
+	sn := aiItermocWriteSnap{active: "default"}
+	for name, text := range map[string]string{
+		"describeSwitch":         sn.describeSwitch(map[string]any{"name": tok}),
+		"describeServiceConnect": describeServiceConnect(map[string]any{"service": tok}),
+		"describeServiceAccess":  describeServiceAccess(map[string]any{"name": tok, "writes": true}),
+	} {
+		if strings.Contains(text, "ghp_0123456789") {
+			t.Errorf("%s shows the token: %q", name, text)
 		}
 	}
 }

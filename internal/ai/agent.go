@@ -328,14 +328,22 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 		t.Release(args) // an entry left for an earlier map at this address
 		defer t.Release(args)
 	}
-	human := t.Human(args)
-	emit(Event{Kind: EventToolStart, Tool: t.Name, Label: t.Label(), Detail: human, Args: args})
+	// Validate runs before the text of the call is made: a refused call
+	// (an argument that looks like a key …) shows its text redacted, so
+	// the transcript line never repeats the raw value.
+	var invalid error
 	if t.Validate != nil {
-		if err := t.Validate(args); err != nil {
-			result = "error: " + Redact(err.Error())
-			emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: result, Gate: GateInvalid, Decision: "refused"})
-			return result
-		}
+		invalid = t.Validate(args)
+	}
+	human := t.Human(args)
+	if invalid != nil {
+		human = Redact(human)
+	}
+	emit(Event{Kind: EventToolStart, Tool: t.Name, Label: t.Label(), Detail: human, Args: args})
+	if invalid != nil {
+		result = "error: " + Redact(invalid.Error())
+		emit(Event{Kind: EventToolResult, Tool: t.Name, Label: t.Label(), Detail: result, Gate: GateInvalid, Decision: "refused"})
+		return result
 	}
 	if t.Gate != nil { // per-call rule; the confirm dialog sees it too
 		t.Mutating, t.Class = t.Gate(args)

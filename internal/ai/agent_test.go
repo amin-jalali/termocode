@@ -300,6 +300,35 @@ func TestAgentValidateRunsBeforeConfirm(t *testing.T) {
 	}
 }
 
+// A refused call never puts a raw secret from its args in the start
+// event: the chat stores Detail as the "⚙" transcript line. Validate runs
+// first, and the text of a refused call is redacted.
+func TestAgentRefusedCallDetailHidesSecret(t *testing.T) {
+	const tok = "ghp_0123456789abcdefABCDEF0123456789"
+	tool := Tool{Name: "act", Mutating: true,
+		Describe: func(a map[string]any) string { return "Act on " + ArgString(a, "name") },
+		Validate: func(map[string]any) error { return fmt.Errorf("looks like a key") },
+		Run:      func(context.Context, map[string]any) (string, error) { return "ran", nil }}
+	p := &scripted{tools: true, replies: []Chunk{
+		{ToolCalls: []ToolCall{{ID: "1", Name: "act", Args: map[string]any{"name": tok}}}},
+	}}
+	a := &Agent{Provider: p, Tools: []Tool{tool}, Native: true}
+	evs, _ := collectEvents(a, []Message{{Role: RoleUser, Content: "go"}})
+	saw := false
+	for _, e := range evs {
+		if e.Kind != EventToolStart {
+			continue
+		}
+		saw = true
+		if strings.Contains(e.Detail, "ghp_0123456789") {
+			t.Errorf("start detail shows the token: %q", e.Detail)
+		}
+	}
+	if !saw {
+		t.Fatal("no tool start event")
+	}
+}
+
 // The prompt tells the model it can open files when open_file is there
 // (both protocols); without it, nothing changes.
 func TestSystemPromptMentionsIDETools(t *testing.T) {
