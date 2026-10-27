@@ -81,6 +81,9 @@ func (m *Model) runsDemo(arg string) tea.Cmd {
 		live.Messages[1].Steps[0].ElapsedMs = 40000
 	}
 	s.agents.act = map[string]*aiActivity{"fixer": act}
+	if arg == "cli" || arg == "cli-limit" {
+		m.runsDemoCLI(arg, now)
+	}
 	// Stored chats: a plan run stopped when termocode closed, a done
 	// review, a work-until-done run whose verify still fails, older runs.
 	notes := ai.Conversation{ID: "demo-notes", Title: "write release notes for 0.9", UpdatedAtMs: at(40 * time.Minute)}
@@ -162,6 +165,55 @@ func (m *Model) runsDemo(arg string) tea.Cmd {
 	switch arg {
 	case "detail", "stall":
 		return tea.Batch(cmd, m.runsShowPage("demo-live/runlive", true))
+	case "cli", "cli-limit":
+		return tea.Batch(cmd, m.runsShowPage("demo-live/runcli", true))
 	}
 	return tea.Batch(cmd, m.runsShowPage("", false))
+}
+
+// runsDemoCLI makes the open chat's live run a subscription run (CS-3 /
+// CS-4): Claude Code did the work, Codex reviews it now ("cli"), or the
+// work step hit Claude Code's usage limit and the run waits until 16:00
+// ("cli-limit").
+func (m *Model) runsDemoCLI(arg string, now time.Time) {
+	s := m.aiS()
+	at := func(d time.Duration) int64 { return now.Add(-d).UnixMilli() }
+	run := &ai.StoredRun{ID: "runcli", Profile: "claude-codex", State: ai.RunStateRunning, StartedAtMs: at(3 * time.Minute),
+		Rounds: 1, MaxRounds: 3}
+	work := ai.StoredStep{ID: "work", Title: "Work", CLI: ai.CLIClaude, Model: "Claude Code", State: string(agentdag.StateCompleted),
+		StartedAtMs: at(3 * time.Minute), ElapsedMs: 118000, Usage: runsDemoUse("claude-sonnet-4-5", 48200, 2100),
+		Text:  "Made the toast queue drop duplicates; added toast_queue_test.go.",
+		Tools: []string{"⚙ Read internal/toast/queue.go → 96 lines", "⚙ Edit internal/toast/queue.go → done", "⚙ Write internal/toast/queue_test.go → done"}}
+	review := ai.StoredStep{ID: "review", Title: "Review", CLI: ai.CLICodex, Model: "Codex", State: string(agentdag.StateRunning),
+		StartedAtMs: at(62 * time.Second), Deps: []string{"work"},
+		Tools: []string{"⚙ git diff --stat → exit 0 · 2 lines", "⚙ go test ./internal/toast/ → exit 0 · 1 line"}}
+	steps := []ai.StoredStep{work, review}
+	act := &aiActivity{phase: aiPhaseTool, tool: "shell: go vet ./internal/toast/", since: now.Add(-3 * time.Second), lastAt: now.Add(-3 * time.Second)}
+	s.agents.start = map[string]time.Time{"review": now.Add(-62 * time.Second)}
+	s.agents.act = map[string]*aiActivity{"review": act}
+	if arg == "cli-limit" {
+		reset := time.Date(now.Year(), now.Month(), now.Day(), 16, 0, 0, 0, now.Location())
+		if !reset.After(now) {
+			reset = now.Add(2 * time.Hour)
+		}
+		run.State, run.Limit, run.ResumeAtMs = ai.RunStatePaused, "You've hit your limit · resets 4pm", reset.UnixMilli()
+		steps[0] = ai.StoredStep{ID: "work", Title: "Work", CLI: ai.CLIClaude, Model: "Claude Code", State: string(agentdag.StatePending),
+			StartedAtMs: at(3 * time.Minute), ElapsedMs: 4000, Notes: []string{"⏸ usage limit · resumes at " + reset.Format("15:04") + " · You've hit your limit · resets 4pm"}}
+		steps[1] = ai.StoredStep{ID: "review", Title: "Review", CLI: ai.CLICodex, Model: "Codex", State: string(agentdag.StatePending), Deps: []string{"work"}}
+		s.agents.start, s.agents.act = map[string]time.Time{}, map[string]*aiActivity{}
+	}
+	s.conv = ai.Conversation{ID: "demo-live", Title: "drop duplicate toasts", UpdatedAtMs: at(5 * time.Second),
+		Messages: []ai.StoredMessage{
+			{Role: ai.StoredUser, Text: "drop duplicate toasts from the queue"},
+			{Role: ai.StoredAssistant, Run: run, Steps: steps},
+		}}
+	s.profFake = []ai.Profile{{Name: "claude-codex", Title: "Claude Code works, Codex reviews", Source: ai.ProfileSourceUser,
+		Steps: []ai.ProfileStep{
+			{ID: "work", Title: "Work", CLI: ai.CLIClaude, Tools: agentdag.ToolRule{Preset: agentdag.PresetAll}},
+			{ID: "review", Title: "Review", CLI: ai.CLICodex},
+		}}}
+	s.reloadProfiles()
+	s.runLaunched = now.Add(-3 * time.Minute)
+	s.agents.runOf = "runcli"
+	s.agents.turns = map[string]int{"review": 1}
 }

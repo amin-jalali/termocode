@@ -159,6 +159,26 @@ func (m *Model) aiProfileDemo(arg string) tea.Cmd {
 		cmd := m.openAIProfileEditForm(ai.ProfileReview)
 		m.handleAIProfileFormMsg(profileform.RemoveStepMsg{Index: 1, Title: "Fixer"})
 		return cmd
+	case "form-cli", "form-cli-missing": // CS-5: subscription CLI steps; ready, or missing / not logged in
+		states := map[string]profileform.CLIState{ai.CLIClaude: profileform.CLIReady, ai.CLICodex: profileform.CLIReady}
+		if arg == "form-cli-missing" {
+			states = map[string]profileform.CLIState{ai.CLIClaude: profileform.CLIMissing, ai.CLICodex: profileform.CLILoggedOut}
+		}
+		sub := ai.Profile{Name: "claude-codex", Title: "Claude Code works, Codex reviews", Steps: []ai.ProfileStep{
+			{ID: "work", Title: "Work", CLI: ai.CLIClaude, Tools: agentdag.ToolRule{Preset: agentdag.PresetAll},
+				System: "Do the task. Keep the change small and add a test."},
+			{ID: "review", Title: "Review", CLI: ai.CLICodex, System: "Review the change. Run nothing that edits files."},
+		}}
+		_ = m.openAIProfileForm("claude-codex", sub, false) // the demo's states, not a real check
+		s.cliStates = states
+		m.profileForm.SetCLIs(states)
+		m.profileForm.FocusStep(0)
+		if arg == "form-cli-missing" {
+			m.profileForm.FocusCLI(0)
+		} else {
+			m.profileForm.FocusModel(0)
+		}
+		return nil
 	}
 	return nil
 }

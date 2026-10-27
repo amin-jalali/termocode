@@ -262,9 +262,10 @@ func goldenCases() []goldenCase {
 		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
 	// The profile step form (AH-5): a copy of a built-in, a copy with a
-	// problem shown inline, and the Remove step question over it, at
+	// problem shown inline, the Remove step question over it, and the
+	// subscription CLI steps (CS-5: ready; missing / not logged in), at
 	// 200x50 and 80x24.
-	for _, v := range []string{"form", "form-error", "form-remove"} {
+	for _, v := range []string{"form", "form-error", "form-remove", "form-cli", "form-cli-missing"} {
 		sc := AIProfile(v)
 		out = append(out, goldenCase{sc.Name + "-200x50", sc, 200, 50}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
@@ -280,9 +281,10 @@ func goldenCases() []goldenCase {
 		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
 	// Runs: the list and overview, a run's page, a stalled run and the
-	// empty page at 200x50 and 80x24 (the compact forms); the list in a
+	// empty page, a live subscription CLI run and one paused by its usage
+	// limit (CS-3/4) at 200x50 and 80x24 (the compact forms); the list in a
 	// light theme and in ASCII icons.
-	for _, v := range []string{"list", "detail", "stall", "empty"} {
+	for _, v := range []string{"list", "detail", "stall", "empty", "cli", "cli-limit"} {
 		sc := Runs(v)
 		out = append(out, goldenCase{sc.Name + "-200x50", sc, 200, 50}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
