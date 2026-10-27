@@ -130,6 +130,9 @@ These are the default keys. The **Key** column is the key you press. The **Key s
 | `Alt+Shift+A` | `alt+shift+a` | `AIToggleAgents` | Show the AGENTS view of the chat's agent runs, or go back to the chat. |
 | <code>Alt+&#124;</code> | <code>alt+&#124;</code> | `AIToggleInline` | Turn automatic AI ghost text on or off. |
 | <code>Alt+&#92;</code> | <code>alt+&#92;</code> | `AITriggerInline` | Ask the AI for an inline completion now. |
+| `Alt+Shift+I` | `alt+I` | `ItermocToggle` | Open the Itermoc view (profiles, models, services, outside agents), or go back. |
+| `Alt+O` | `alt+o` | `ItermocToggle` | Open the Itermoc view (profiles, models, services, outside agents), or go back. |
+| `Alt+Shift+I` | `alt+shift+i` | `ItermocToggle` | Open the Itermoc view (profiles, models, services, outside agents), or go back. |
 
 ## Terminal
 

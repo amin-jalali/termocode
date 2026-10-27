@@ -161,6 +161,9 @@ const (
 	// in the chat slot, or switches the slot back to the chat (U20 AP-9):
 	// Alt+Shift+A.
 	ActionAIToggleAgents
+	// ActionItermocToggle opens the Itermoc view, or goes back when it
+	// is already shown: Alt+Shift+I (Alt+I is Edit with AI) or Alt+O.
+	ActionItermocToggle
 	// ActionContextHelp opens the built-in guide at the section for the
 	// hover label on screen, else the focused item (app/help_contexts.go).
 	// Shift+F1; xterm sends it as f13, which canonicalKey matches.
@@ -495,6 +498,12 @@ func Default() KeyMap {
 			// Alt+N (Next profile) carry no Shift.
 			"alt+g": ActionAIToggleAgents,
 			"alt+n": ActionAINextProfile,
+			// The Itermoc view. Alt+Shift+I arrives as "alt+I" on legacy
+			// terminals and "alt+shift+i" on CSI-u ones (Alt+I is Edit
+			// with AI); Alt+O carries no Shift.
+			"alt+I":       ActionItermocToggle,
+			"alt+shift+i": ActionItermocToggle,
+			"alt+o":       ActionItermocToggle,
 
 			// Help for the focused item (or the hover label on screen).
 			// F1 is the palette; Shift+F1 is free in every terminal we

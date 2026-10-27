@@ -108,6 +108,7 @@ var actionInfo = map[Action]ActionInfo{
 	ActionAIToggleInline:  {"AI", "Turn automatic AI ghost text on or off."},
 	ActionAINextProfile:   {"AI", "Switch the AI chat to the next agent profile."},
 	ActionAIToggleAgents:  {"AI", "Show the AGENTS view of the chat's agent runs, or go back to the chat."},
+	ActionItermocToggle:   {"AI", "Open the Itermoc view (profiles, models, services, outside agents), or go back."},
 
 	ActionToggleTerminal:   {"Terminal", "Show or hide the integrated terminal panel."},
 	ActionOpenShell:        {"Terminal", "Open an external shell in the workspace folder."},

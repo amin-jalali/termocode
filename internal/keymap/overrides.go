@@ -318,6 +318,7 @@ var actionNames = map[Action]string{
 	ActionAIToggleInline:  "AIToggleInline",
 	ActionAINextProfile:   "AINextProfile",
 	ActionAIToggleAgents:  "AIToggleAgents",
+	ActionItermocToggle:   "ItermocToggle",
 	ActionContextHelp:     "ContextHelp",
 	// Docs: these had default keys but no name, so keymap.json could not
 	// rebind them.

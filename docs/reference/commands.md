@@ -370,7 +370,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
 | Itermoc: Models | `itermoc-models` |   |   |
-| Itermoc: Open | `itermoc-open` |   |   |
+| Itermoc: Open | `itermoc-open` | `Alt+Shift+I` / `Alt+O` | `Alt+O / Alt+Shift+I` |
 | Itermoc: Outside Agents | `itermoc-agents` |   |   |
 | Itermoc: Profiles | `itermoc-profiles` |   |   |
 | Itermoc: Services | `itermoc-services` |   |   |

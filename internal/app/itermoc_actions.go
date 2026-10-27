@@ -74,6 +74,26 @@ func (m *Model) revealItermocView(focus bool, sec string) tea.Cmd {
 	return nil
 }
 
+// toggleItermoc is Alt+Shift+I / Alt+O: it opens the view; pressed again
+// while the view is shown it goes back to the view the sidebar had.
+func (m *Model) toggleItermoc() tea.Cmd {
+	if m.activity.Active() == activity.ViewItermoc && (m.itermocVisible() || m.itermocNarrow()) {
+		back := m.itermocBack
+		if back == activity.ViewItermoc {
+			back = activity.ViewFiles
+		}
+		m.activity.SetActive(back)
+		m.showExp = m.itermocBackShow || m.itermocNarrow()
+		m.focus = FocusEditor
+		m.applyLayout()
+		return nil
+	}
+	if m.activity.Active() != activity.ViewItermoc {
+		m.itermocBack, m.itermocBackShow = m.activity.Active(), m.showExp
+	}
+	return m.revealItermocView(true, "")
+}
+
 // itermocRefreshNow reads the state again if the view has been opened.
 func (m *Model) itermocRefreshNow() {
 	if m.itermoc != nil {
@@ -126,6 +146,7 @@ func itermocKeyRows() []confirm.KeyRow {
 		[]string{"/", "filter by name (Esc clears)"},
 		[]string{"R", "read everything again"},
 		[]string{"Esc", "back to the editor"},
+		[]string{"Alt+Shift+I / Alt+O", "open Itermoc, or go back to the view you had"},
 		[]string{"Overview"},
 		[]string{"1 – 4", "open that group"},
 		[]string{"Tab", "pick a needs-you line"},

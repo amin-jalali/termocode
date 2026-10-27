@@ -503,6 +503,10 @@ type Model struct {
 	// itermoc is the Itermoc view (profiles, models, services, outside
 	// agents): lazy, a pointer so a render can refresh its snapshot.
 	itermoc *itermocState
+	// itermocBack is the sidebar view (and whether the sidebar was shown)
+	// before Alt+Shift+I / Alt+O opened Itermoc; the same key goes back.
+	itermocBack     activity.View
+	itermocBackShow bool
 	// runs is the Runs view and its page (runs_state.go); nil until it opens.
 	runs *runsState
 	// itermocPage is the detail page of the object picked in the list: one

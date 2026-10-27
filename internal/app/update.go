@@ -1909,6 +1909,8 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		m.toggleActionsPanel()
 		m.applyLayout()
 		return m, nil
+	case keymap.ActionItermocToggle:
+		return m, m.toggleItermoc()
 	// Group A — AI keys.
 	case keymap.ActionAITriggerInline, keymap.ActionAIEditSelection, keymap.ActionAIToggleInline, keymap.ActionAINextProfile,
 		keymap.ActionAIToggleAgents:

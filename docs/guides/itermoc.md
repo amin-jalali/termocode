@@ -13,7 +13,9 @@ Set up a provider first: [Set up AI](ai-setup.md).
 
 ## The view
 
-Open it from the command palette: **Itermoc: Open**. The palette also has
+Open it with **Alt+Shift+I** (or **Alt+O**, if your terminal swallows the
+first key), or from the command palette: **Itermoc: Open**. Press the key
+again to go back to the view you had before. The palette also has
 one command per section: **Itermoc: Profiles**, **Itermoc: Models**,
 **Itermoc: Services** and **Itermoc: Outside Agents**. **AI: Agents &
 Connections** opens the same view.
@@ -282,6 +284,7 @@ Press `?` in the view for the key card.
 | `/` | filter by name; `Enter` keeps it, `Esc` clears it |
 | `R` | read everything again |
 | `Esc` | back to the editor |
+| `Alt+Shift+I` / `Alt+O` | leave Itermoc and go back to the view you had (the same keys open it) |
 | `u` `e` `r` `d` `D` `t` | on a profile: use, edit, runs, details, duplicate, trust |
 | `n` / `J` | new profile from the active one / edit `profiles.json` |
 | `f` | on a `profiles` row that says it cannot be read: open the file at the broken line |
