@@ -1,0 +1,4 @@
+{"type":"system","subtype":"init","cwd":"/work","session_id":"9a2e","tools":["Read","Grep","Glob"],"model":"claude-sonnet-4-5","permissionMode":"default","apiKeySource":"none"}
+{"type":"rate_limit_event","rate_limit_info":{"status":"rejected","resetsAt":1761580800,"rateLimitType":"five_hour"},"session_id":"9a2e"}
+{"type":"assistant","message":{"id":"msg_01","type":"message","role":"assistant","model":"<synthetic>","content":[{"type":"text","text":"You've hit your limit · resets 4pm (UTC)"}],"stop_reason":"stop_sequence","usage":{"input_tokens":0,"output_tokens":0}},"parent_tool_use_id":null,"session_id":"9a2e"}
+{"type":"result","subtype":"success","is_error":true,"duration_ms":310,"num_turns":1,"result":"You've hit your limit · resets 4pm (UTC)","session_id":"9a2e","total_cost_usd":0,"usage":{"input_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":0}}
