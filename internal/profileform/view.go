@@ -230,7 +230,7 @@ func (m Model) build() built {
 		if i != m.sel {
 			o := m.opts[s.model]
 			name := o.label
-			if o.slot == "" && o.category == "" {
+			if o.slot == "" && o.category == "" && o.cli == "" {
 				name = "main"
 			}
 			summary = " · " + name + " · " + toolPresets[s.tools]
@@ -258,6 +258,8 @@ func (m Model) build() built {
 		o := m.opts[s.model]
 		val, kok := o.label, ""
 		switch {
+		case o.cli != "":
+			kok = ""
 		case o.slot != "":
 			val, kok = slotText(o.slot)
 		case o.category != "":
@@ -268,6 +270,9 @@ func (m Model) build() built {
 			_, kok = slotText("main")
 		}
 		choiceRow(item{iSModel, i}, "Model", ind, val, kok)
+		if o.cli != "" {
+			m.cliRow(&b, i, o.cli, ind+lw, innerW, bg, text, dim, danger, accent, f)
+		}
 
 		// Tools: three radios.
 		ty0 := cur()

@@ -34,6 +34,28 @@ type Config struct {
 	ParallelMax int             // ai_parallel_max: "waits for" shows at 2 or more
 	Taken       map[string]bool // other profiles of the user's file (a name that is free to save over is not in here)
 	Editing     bool            // changing the user's profile Name in place (Save replaces it)
+	// CLIs is the state of each subscription CLI (ai.CLIClaude,
+	// ai.CLICodex) the app checked; a missing one is CLIUnknown.
+	CLIs map[string]CLIState
+}
+
+// CLIState is whether a subscription CLI can run a step (CS-5). The app
+// checks it with the CLI's own status command; the form never touches a
+// login.
+type CLIState int
+
+const (
+	CLIUnknown   CLIState = iota // not checked (yet)
+	CLIReady                     // installed and logged in
+	CLIMissing                   // not on PATH: the row offers Install
+	CLILoggedOut                 // no login: the row offers Log in
+)
+
+// CLIActionMsg: Install (Login false) or Log in (Login true) was pressed
+// on a CLI step's row; the app opens a terminal tab for it.
+type CLIActionMsg struct {
+	CLI   string
+	Login bool
 }
 
 // SaveMsg: Save… was pressed and the form is valid.
@@ -68,6 +90,7 @@ const (
 	iSTitle
 	iSID
 	iSModel
+	iSCLI // the Install / Log in pill of a CLI step that cannot run
 	iSTools
 	iSPrompt
 	iSDeps
@@ -111,6 +134,7 @@ type modelOpt struct {
 	label    string
 	slot     string
 	category string
+	cli      string // a subscription CLI (CS-5)
 }
 
 var toolPresets = []string{agentdag.PresetNone, agentdag.PresetReadOnly, agentdag.PresetAll}
@@ -159,6 +183,9 @@ func New(name string, p ai.Profile, cfg Config) Model {
 	for _, s := range cfg.Slots {
 		m.opts = append(m.opts, modelOpt{label: s.Name, slot: s.Name})
 	}
+	for _, c := range ai.CLIs {
+		m.opts = append(m.opts, modelOpt{label: ai.CLILabel(c), cli: c})
+	}
 	m.opts = append(m.opts, modelOpt{label: "category quick", category: agentdag.CategoryQuick},
 		modelOpt{label: "category deep", category: agentdag.CategoryDeep})
 	m.catQ = m.slotIndex(p.Categories[agentdag.CategoryQuick])
@@ -172,11 +199,14 @@ func New(name string, p ai.Profile, cfg Config) Model {
 	for _, st := range p.Steps {
 		ss := stepState{orig: st, id: st.ID, title: st.Title, system: st.System, plan: st.Plan, tools: len(toolPresets) - 1}
 		for i, t := range toolPresets {
-			if st.Tools.Preset == t {
+			if ai.StepTools(st) == t { // a CLI step without a preset reads only
 				ss.tools = i
 			}
 		}
 		ss.model = m.modelIndex(st.Slot, st.Category)
+		if st.CLI != "" {
+			ss.model = m.cliIndex(st.CLI)
+		}
 		var nums []string
 		for _, d := range st.Deps {
 			if n, ok := ids[d]; ok {
@@ -225,6 +255,48 @@ func (m *Model) modelIndex(slot, cat string) int {
 		return at
 	}
 	return 0
+}
+
+// cliIndex is the option of a CLI; one the form does not know is added
+// (its error shows).
+func (m *Model) cliIndex(cli string) int {
+	for i, o := range m.opts {
+		if o.cli == cli {
+			return i
+		}
+	}
+	at := len(m.opts) - 2
+	m.opts = append(m.opts[:at], append([]modelOpt{{label: cli, cli: cli}}, m.opts[at:]...)...)
+	return at
+}
+
+// SetCLIs updates the CLIs' states (the app's check came back).
+func (m *Model) SetCLIs(c map[string]CLIState) {
+	m.cfg.CLIs = c
+	if m.foc.kind == iSCLI && m.cliAction(m.foc.step) == "" {
+		m.setFocus(item{iSModel, m.foc.step})
+	}
+	m.ensureVisible()
+}
+
+// stepCLI is the CLI step i runs on ("" for a model).
+func (m Model) stepCLI(i int) string {
+	if i < 0 || i >= len(m.steps) {
+		return ""
+	}
+	return m.opts[m.steps[i].model].cli
+}
+
+// cliAction is what step i's CLI needs: "install", "login" or "" (ready,
+// unknown, or no CLI).
+func (m Model) cliAction(i int) string {
+	switch m.cfg.CLIs[m.stepCLI(i)] {
+	case CLIMissing:
+		return "install"
+	case CLILoggedOut:
+		return "login"
+	}
+	return ""
 }
 
 // SetSize sets the window size.
@@ -287,7 +359,7 @@ func (m Model) Profile() ai.Profile {
 		st := s.orig
 		st.ID, st.Title, st.System, st.Plan = strings.TrimSpace(s.id), strings.TrimSpace(s.title), s.system, s.plan
 		o := m.opts[s.model]
-		st.Slot, st.Category = o.slot, o.category
+		st.Slot, st.Category, st.CLI = o.slot, o.category, o.cli
 		if preset := toolPresets[s.tools]; !(preset == agentdag.PresetAll && s.orig.Tools.Preset == "") {
 			st.Tools.Preset = preset
 		}
@@ -359,7 +431,7 @@ func (m Model) Errors() map[string]string {
 	case pe.Step != "" && at >= 0:
 		f := pe.Field
 		switch f {
-		case "slot", "category":
+		case "slot", "category", "cli":
 			f = "model"
 		case "system":
 			f = "prompt"
@@ -424,7 +496,11 @@ func (m Model) items() []item {
 		if i != m.sel {
 			continue
 		}
-		out = append(out, item{iSTitle, i}, item{iSID, i}, item{iSModel, i}, item{iSTools, i}, item{iSPrompt, i})
+		out = append(out, item{iSTitle, i}, item{iSID, i}, item{iSModel, i})
+		if m.cliAction(i) != "" {
+			out = append(out, item{iSCLI, i})
+		}
+		out = append(out, item{iSTools, i}, item{iSPrompt, i})
 		if m.showDeps(i) {
 			out = append(out, item{iSDeps, i})
 		}
@@ -452,6 +528,26 @@ func (m *Model) FocusStep(i int) {
 		return
 	}
 	m.setFocus(item{iSTitle, i})
+	m.ensureVisible()
+}
+
+// FocusModel expands step i and puts the focus on its Model choice.
+func (m *Model) FocusModel(i int) {
+	if i < 0 || i >= len(m.steps) {
+		return
+	}
+	m.setFocus(item{iSModel, i})
+	m.ensureVisible()
+}
+
+// FocusCLI puts the focus on step i's Install / Log in pill (when its
+// CLI needs one; else on its Model choice).
+func (m *Model) FocusCLI(i int) {
+	if m.cliAction(i) == "" {
+		m.FocusModel(i)
+		return
+	}
+	m.setFocus(item{iSCLI, i})
 	m.ensureVisible()
 }
 
@@ -675,10 +771,23 @@ func (m Model) activate(it item) (Model, tea.Cmd) {
 		m.cycle(it, 1)
 	case it.kind == iStepHead:
 		m.setFocus(it)
+	case it.kind == iSCLI:
+		return m, m.cliCmd(it.step)
 	default:
 		return m.press(it.kind)
 	}
 	return m, nil
+}
+
+// cliCmd asks the app to install or log in step i's CLI.
+func (m Model) cliCmd(i int) tea.Cmd {
+	switch m.cliAction(i) {
+	case "install":
+		return emit(CLIActionMsg{CLI: m.stepCLI(i)})
+	case "login":
+		return emit(CLIActionMsg{CLI: m.stepCLI(i), Login: true})
+	}
+	return nil
 }
 
 // press runs a button.
@@ -696,6 +805,8 @@ func (m Model) press(b kind) (Model, tea.Cmd) {
 		return m, emit(CancelMsg{Dirty: m.Dirty()})
 	case iDelete:
 		return m, emit(DeleteMsg{})
+	case iSCLI:
+		return m, m.cliCmd(m.foc.step)
 	case iSave:
 		if m.Valid() {
 			return m, emit(SaveMsg{})

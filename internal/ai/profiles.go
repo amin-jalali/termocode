@@ -129,6 +129,19 @@ func (p Profile) HasCLI() bool {
 	return p.Loop != nil && p.Loop.Fix.CLI != ""
 }
 
+// StepTools is the tool preset step st really gets: its own, else "all"
+// for a model step and "read-only" for a CLI step (a CLI step changes
+// files only with preset "all").
+func StepTools(st ProfileStep) string {
+	switch {
+	case st.Tools.Preset != "":
+		return st.Tools.Preset
+	case st.CLI != "":
+		return agentdag.PresetReadOnly
+	}
+	return agentdag.PresetAll
+}
+
 // StepLabel is what step st runs on, for people: its CLI's label, else
 // its model slot.
 func (p Profile) StepLabel(st ProfileStep) string {

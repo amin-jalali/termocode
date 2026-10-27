@@ -35,6 +35,9 @@ func TestParseProfilesCLISteps(t *testing.T) {
 	if got := p.StepLabel(ProfileStep{Category: agentdag.CategoryQuick}); got != SlotQuick {
 		t.Errorf("label of a slot step %q", got)
 	}
+	if StepTools(p.Steps[1]) != agentdag.PresetReadOnly || StepTools(p.Steps[0]) != agentdag.PresetAll || StepTools(ProfileStep{}) != agentdag.PresetAll {
+		t.Error("a CLI step without a preset reads only; a model step gets all")
+	}
 	if BuiltinProfiles()[0].HasCLI() {
 		t.Error("default has no CLI step")
 	}
