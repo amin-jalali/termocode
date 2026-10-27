@@ -886,6 +886,7 @@ func (m *Model) aiRetryRun(i int) tea.Cmd {
 	p := &s.conv.Messages[i]
 	p.Text = ""
 	p.Run.State, p.Run.Verdict = ai.RunStateRunning, ""
+	p.Run.Limit, p.Run.ResumeAtMs = "", 0
 	slotOf := map[string]string{}
 	for _, n := range run.Nodes {
 		slotOf[n.ID] = n.Slot

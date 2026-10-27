@@ -229,11 +229,12 @@ func TestAICLIStepLimitPausesAndResumes(t *testing.T) {
 		t.Errorf("auto resume in %v", d)
 	}
 	// A stale tick (another run) does nothing; the right one resumes.
-	m.handleAIMsg(aiLimitResumeMsg{gen: m.ai.chatGen + 7, run: rm.Run.ID})
+	m.handleAIMsg(aiLimitResumeMsg{gen: m.ai.chatGen + 7, run: rm.Run.ID, at: rm.Run.ResumeAtMs})
+	m.handleAIMsg(aiLimitResumeMsg{gen: m.ai.chatGen, run: rm.Run.ID, at: rm.Run.ResumeAtMs - 1}) // an earlier pause's tick
 	if rm.Run.State != ai.RunStatePaused {
 		t.Fatal("a stale resume tick went on")
 	}
-	m.handleAIMsg(aiLimitResumeMsg{gen: m.ai.chatGen, run: rm.Run.ID})
+	m.handleAIMsg(aiLimitResumeMsg{gen: m.ai.chatGen, run: rm.Run.ID, at: rm.Run.ResumeAtMs})
 	driveAIChat(t, m, waitAIChat(m.ai.chatCh), nil)
 	if rm := aiRunMsg(t, m); rm.Run.State != ai.RunStateDone || rm.Run.Limit != "" || rm.Run.ResumeAtMs != 0 {
 		t.Fatalf("after resume %+v", rm.Run)

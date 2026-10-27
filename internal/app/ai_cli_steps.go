@@ -56,6 +56,7 @@ const aiLimitResumeMargin = time.Minute
 type aiLimitResumeMsg struct {
 	gen uint64
 	run string
+	at  int64 // the pause's ResumeAtMs: a tick of an earlier pause does nothing
 }
 
 // aiLimitResumeDelay is how long to wait from now for a limit that
@@ -74,9 +75,9 @@ func (m *Model) aiLimitPaused(rm *ai.StoredMessage, ev agentrun.Event) tea.Cmd {
 		return nil
 	}
 	rm.Run.ResumeAtMs = ev.ResetAt.UnixMilli()
-	gen, id := s.chatGen, rm.Run.ID
+	gen, id, at := s.chatGen, rm.Run.ID, rm.Run.ResumeAtMs
 	return tea.Tick(aiLimitResumeDelay(ev.ResetAt, clock.Now()), func(time.Time) tea.Msg {
-		return aiLimitResumeMsg{gen: gen, run: id}
+		return aiLimitResumeMsg{gen: gen, run: id, at: at}
 	})
 }
 
@@ -86,7 +87,7 @@ func (m *Model) onAILimitResume(msg aiLimitResumeMsg) tea.Cmd {
 	s := m.aiS()
 	rm := s.aiRunMessage()
 	if msg.gen != s.chatGen || s.run == nil || rm == nil || rm.Run.ID != msg.run ||
-		rm.Run.State != ai.RunStatePaused || rm.Run.Limit == "" {
+		rm.Run.State != ai.RunStatePaused || rm.Run.Limit == "" || rm.Run.ResumeAtMs != msg.at {
 		return nil
 	}
 	rm.Run.State = ai.RunStateRunning
