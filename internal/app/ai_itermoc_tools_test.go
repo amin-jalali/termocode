@@ -14,7 +14,7 @@ import (
 )
 
 // aiItermocToolNames are the AI read tools of the Itermoc view (AH-7).
-var aiItermocToolNames = []string{"profiles_list", "models_list", "mcp_services_list", "outside_agents_status", "ai_view_open"}
+var aiItermocToolNames = []string{"profiles_list", "models_list", "mcp_services_list", "outside_agents_status", "usage_summary", "ai_view_open"}
 
 // aiItermocTestModel is the profile test model (built-in profiles, an
 // untrusted project profile "house", one fake main slot) with a

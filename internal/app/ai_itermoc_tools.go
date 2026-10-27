@@ -333,6 +333,87 @@ func aiViewOpen(m *Model, sec, row string) string {
 	return "Opened Itermoc at " + title + "; no row " + row + " there, so the section header has the cursor."
 }
 
+// ── usage_summary ────────────────────────────────────────────────────────
+
+type aiUsageLine struct {
+	Name      string   `json:"name"`
+	Calls     int      `json:"calls"`
+	TokensIn  int      `json:"input"`
+	TokensOut int      `json:"output"`
+	CostUSD   *float64 `json:"cost_usd,omitempty"` // the known prices only
+	Billing   string   `json:"billing,omitempty"`  // per token | subscription | mixed | price unknown
+}
+
+// aiUsageLines turns the USAGE view's rows into tool lines. A step run by
+// a subscription (a Claude sign-in or a CLI step) has no price: it says
+// "subscription", never a dollar sum.
+func aiUsageLines(entries []aiUsageEntry, by int) []aiUsageLine {
+	sum := aiUsageSummarize(entries, by)
+	subs, all := map[string]int{}, map[string]int{}
+	for _, e := range entries {
+		name := e.Model
+		if by == aiUsageByAgent {
+			name = e.Agent
+		}
+		if name == "" {
+			name = "?"
+		}
+		all[name]++
+		if e.Sub {
+			subs[name]++
+		}
+	}
+	out := []aiUsageLine{}
+	for _, r := range sum.Rows {
+		l := aiUsageLine{Name: aiCardText(r.Name, 60), Calls: r.Calls, TokensIn: r.In, TokensOut: r.Out}
+		if r.Priced > 0 {
+			c := r.Cost
+			l.CostUSD = &c
+		}
+		switch n := subs[r.Name]; {
+		case n == 0 && r.Unpriced > 0:
+			l.Billing = "price unknown"
+		case n == 0:
+			l.Billing = "per token"
+		case n == all[r.Name]:
+			l.Billing = "subscription"
+		default:
+			l.Billing = "mixed"
+		}
+		out = append(out, l)
+	}
+	return out
+}
+
+// aiUsageInfo is this session's totals, from the same log the USAGE view
+// draws (in memory only). Numbers and names; nothing else.
+func aiUsageInfo(m *Model, _ itermocSnap) (any, error) {
+	var log []aiUsageEntry
+	if m.ai != nil {
+		log = m.ai.usageLog
+	}
+	sum := aiUsageSummarize(log, aiUsageByModel)
+	total := aiUsageLine{Name: "total", Calls: sum.Total.Calls, TokensIn: sum.Total.In, TokensOut: sum.Total.Out}
+	if sum.Total.Priced > 0 {
+		c := sum.Total.Cost
+		total.CostUSD = &c
+	}
+	out := struct {
+		Scope   string        `json:"scope"`
+		ByModel []aiUsageLine `json:"by_model"`
+		ByAgent []aiUsageLine `json:"by_agent"`
+		Total   aiUsageLine   `json:"total"`
+		Subs    []string      `json:"subscription_models,omitempty"`
+		NoPrice []string      `json:"models_without_price,omitempty"`
+		Note    string        `json:"note"`
+	}{
+		Scope: "this session (kept in memory; gone when termocode closes)", ByModel: aiUsageLines(log, aiUsageByModel),
+		ByAgent: aiUsageLines(log, aiUsageByAgent), Total: total, Subs: sum.Sub, NoPrice: sum.Unknown,
+		Note: "cost_usd counts only models with a known price; a subscription (Claude sign-in or a CLI step) has no price per token",
+	}
+	return out, nil
+}
+
 // ── The tools ────────────────────────────────────────────────────────────
 
 // aiItermocTools are the read tools of the Itermoc view.
@@ -380,6 +461,17 @@ func aiItermocTools(call aiIDECaller) []ai.Tool {
 			Describe: func(map[string]any) string { return "Outside agents status" },
 			Run: func(ctx context.Context, _ map[string]any) (string, error) {
 				return aiItermocSnapshot(ctx, call, aiOutsideAgentsInfo)
+			},
+		},
+		{
+			Name: "usage_summary",
+			Description: "This session's AI usage, as the USAGE view shows it: per model and per agent step, the calls, " +
+				"input and output token counts (fields input, output) and the cost in USD (only where the price is known). Subscription steps (a Claude " +
+				"sign-in, Claude Code, Codex) say \"subscription\" and have no dollar cost. Numbers and names only.",
+			Params:   map[string]any{},
+			Describe: func(map[string]any) string { return "Show AI usage" },
+			Run: func(ctx context.Context, _ map[string]any) (string, error) {
+				return aiItermocSnapshot(ctx, call, aiUsageInfo)
 			},
 		},
 		{

@@ -100,6 +100,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`models_list`](#models_list) | auto | no | List the AI model slots (main, quick, local and the user's own): provider, model, whether a key is set (set / missing / not needed; never the key) and the base URL's scheme and host. |
 | [`mcp_services_list`](#mcp_services_list) | auto | no | List the MCP services the chat can use (GitHub, Linear, the user's own servers in mcp.json): state (running, stopped, off, failed, sign-in …), transport, source and trust, access (read only or read and write), tool count and whether a sign-in is stored. |
 | [`outside_agents_status`](#outside_agents_status) | auto | no | Whether termocode's MCP server listens for outside agents (Claude Code, Codex …), and why not; the connected agents with since, calls and how many asked; the last 10 calls; and the tools each agent may run without asking. |
+| [`usage_summary`](#usage_summary) | auto | no | This session's AI usage, as the USAGE view shows it: per model and per agent step, the calls, input and output token counts (fields input, output) and the cost in USD (only where the price is known). |
 | [`ai_view_open`](#ai_view_open) | auto | no | Show the Itermoc view (the user's screen for AI profiles, models, MCP services and outside agents) at a section, with the cursor on a row when given. |
 | [`profile_switch`](#profile_switch) | confirm (always asks): Deny (first) · Switch | no | Switch the chat's AI profile (see profiles_list); it applies from the user's next message. |
 | [`profile_draft`](#profile_draft) | confirm (always asks): Deny (first) · Open in form (only the form's own Save writes profiles.json) | no | Draft an AI profile (a pipeline of steps) for the user. |
@@ -1129,6 +1130,16 @@ No arguments.
 ### outside_agents_status
 
 Whether termocode's MCP server listens for outside agents (Claude Code, Codex …), and why not; the connected agents with since, calls and how many asked; the last 10 calls; and the tools each agent may run without asking. Revoking access stays with the user.
+
+**Gate:** auto
+
+**MCP server:** no
+
+No arguments.
+
+### usage_summary
+
+This session's AI usage, as the USAGE view shows it: per model and per agent step, the calls, input and output token counts (fields input, output) and the cost in USD (only where the price is known). Subscription steps (a Claude sign-in, Claude Code, Codex) say "subscription" and have no dollar cost. Numbers and names only.
 
 **Gate:** auto
 

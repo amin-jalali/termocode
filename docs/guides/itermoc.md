@@ -339,7 +339,8 @@ middle one; the mark and the name always stay.
 The chat reads the same state as Itermoc. Ask "what does the review
 profile do?", "which models do I have?", "what is connected?" or "who is
 using termocode?". The AI answers with `profiles_list`, `models_list`,
-`mcp_services_list` and `outside_agents_status`. These tools run at once
+`mcp_services_list`, `outside_agents_status` and `usage_summary` (this
+session's tokens and cost per model; a subscription step has no price). These tools run at once
 and change nothing. They never contain a key, token, header, env value
 or a URL with a password; a model slot only says `set` or `missing`.
 
