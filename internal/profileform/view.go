@@ -234,6 +234,12 @@ func (m Model) build() built {
 				name = "main"
 			}
 			summary = " · " + name + " · " + toolPresets[s.tools]
+			switch m.cliAction(i) { // CS-5: say it before the step is opened
+			case "install":
+				summary += " · " + theme.GlyphFail.String() + " not installed"
+			case "login":
+				summary += " · " + theme.GlyphFail.String() + " not logged in"
+			}
 		}
 		hs := text
 		if focusedOn(it) {

@@ -34,9 +34,9 @@ func (m Model) cliRow(b *built, i int, cli string, indent, innerW int, bg, text,
 		msg, pill = title+" is not logged in", "Log in"
 	}
 	if pill == "" {
-		s := theme.GlyphOK.String() + " uses your " + title + " login (subscription) · no API key"
+		s := theme.GlyphOK.String() + " uses your " + title + " login · no API key"
 		if m.cfg.CLIs[cli] == CLIUnknown {
-			s = "uses your " + title + " login (subscription) · no API key"
+			s = "uses your " + title + " login · no API key"
 		}
 		room := max(innerW-x-2, 8)
 		b.body = append(b.body, line{s: padTo(lead+dim.Render(runewidth.Truncate(s, room, "…")), innerW, bg)})

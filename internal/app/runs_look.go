@@ -115,6 +115,9 @@ func (c runsColours) model(i int) lipgloss.Color {
 // look is a run's glyph, colour and the one word on its right.
 func (it runsItem) look(c runsColours) (glyph string, col lipgloss.Color, word string) {
 	cost := runsCostText(it)
+	if it.sub && it.cost == 0 {
+		cost = "" // subscription only: the narrow list gives the task the room
+	}
 	switch it.kind {
 	case runsRunning:
 		return runsIconLive.String(), c.ok, cost
@@ -303,7 +306,7 @@ func runsStepOn(st ai.StoredStep) string {
 // runsStepModelShort is the model column of the narrow step table.
 func runsStepModelShort(st ai.StoredStep) string {
 	if st.CLI != "" {
-		return runsStepOn(st)
+		return ai.CLITitle(st.CLI) // the run's title line says "subscription"
 	}
 	return strings.TrimPrefix(st.Model, "claude-")
 }

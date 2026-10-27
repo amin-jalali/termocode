@@ -83,6 +83,9 @@ func TestFormCLIMissingRow(t *testing.T) {
 	if !strings.Contains(out, "Claude Code is not installed") || !strings.Contains(out, "Install") {
 		t.Fatalf("missing row:\n%s", out)
 	}
+	if !strings.Contains(out, "2  Review · Codex (subscription) · read-only · ") || !strings.Contains(out, "not logged in") {
+		t.Fatalf("a collapsed step says its CLI cannot run:\n%s", out)
+	}
 	m.FocusModel(0)
 	m, _ = keys(m, "tab")
 	if m.foc != (item{iSCLI, 0}) {

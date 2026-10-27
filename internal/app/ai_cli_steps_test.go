@@ -277,6 +277,15 @@ func TestAICLIStepLabels(t *testing.T) {
 	if aiStepCost(ai.StoredStep{Cost: &usd}) != aiDollars(usd) || runsStepOn(ai.StoredStep{Model: "gpt-5"}) != "main · gpt-5" {
 		t.Error("a model step keeps its dollars and slot")
 	}
+	if got := runsToolText(cliProfile(), "review"); got != "read-only" {
+		t.Errorf("a CLI step without a preset reads only, Runs says %q", got)
+	}
+	if got := runsToolText(cliProfile(), "work"); got != "edit files" {
+		t.Errorf("work: %q", got)
+	}
+	if _, _, word := (runsItem{kind: runsRunning, anyTok: true, costOK: true, sub: true}).look(runsColours{}); word != "" {
+		t.Errorf("the narrow list leaves the task the room, word %q", word)
+	}
 	it := runsItem{anyTok: true, costOK: true, sub: true, cost: 0.5}
 	if got := runsCostText(it); got != aiDollars(0.5)+" + subscription" {
 		t.Errorf("mixed cost %q", got)

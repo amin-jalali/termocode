@@ -771,8 +771,11 @@ func runsToolText(p ai.Profile, id string) string {
 		if st.ID != id {
 			continue
 		}
-		switch st.Tools.Preset {
+		switch ai.StepTools(st) {
 		case agentdag.PresetNone:
+			if st.CLI != "" { // a CLI always reads (clistep.Args)
+				return "read-only"
+			}
 			return "no tools"
 		case agentdag.PresetReadOnly:
 			return "read-only"
