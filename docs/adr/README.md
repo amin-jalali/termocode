@@ -29,6 +29,7 @@ picked over a clear alternative. A normal feature does not need one.
 | [0015](0015-agent-pipelines-dag-in-ui-process.md) | Agent pipelines run as a DAG inside the UI process | Accepted |
 | [0016](0016-container-engine-cli.md) | Container engines are driven through their CLI, not the Engine API | Accepted |
 | [0017](0017-mcp-server.md) | termocode is an MCP server for outside agents | Accepted |
+| [0018](0018-workspace-host-abstraction.md) | A workspace is reached through a Host; termocode stays local | Accepted |
 
 > The folder was started after the project was already running, so 0001–0005
 > backfill decisions that were made earlier. Dates are the best guess from git
