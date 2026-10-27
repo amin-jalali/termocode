@@ -112,6 +112,10 @@ type Node struct {
 	// Plan marks a planner node: its answer is a plan whose nodes the
 	// run grows by (agentrun.ParsePlan).
 	Plan bool `json:"plan,omitempty"`
+	// CLI runs the node with an official CLI ("claude", "codex") and the
+	// user's subscription login instead of a model slot; the scheduler
+	// hands it to its Exec function.
+	CLI string `json:"cli,omitempty"`
 	// Prompt is the task of a node a planner added (it goes into the
 	// node's input after the user's message).
 	Prompt  string `json:"prompt,omitempty"`

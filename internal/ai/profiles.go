@@ -84,6 +84,58 @@ type ProfileStep struct {
 	// Plan makes the step a planner: it answers with a plan and the run
 	// grows by the plan's nodes (at most one per profile).
 	Plan bool `json:"plan,omitempty"`
+	// CLI runs the step with an official CLI and the user's own
+	// subscription login (CLIClaude, CLICodex) instead of a model slot
+	// (CS-1). Such a step has no slot or category; it reads only unless
+	// tools.preset is "all".
+	CLI string `json:"cli,omitempty"`
+}
+
+// The CLIs a step can run (ProfileStep.CLI).
+const (
+	CLIClaude = "claude"
+	CLICodex  = "codex"
+)
+
+// CLIs lists the step CLIs in picker order.
+var CLIs = []string{CLIClaude, CLICodex}
+
+// CLITitle is the product name of a step CLI ("" for an unknown one).
+func CLITitle(cli string) string {
+	switch cli {
+	case CLIClaude:
+		return "Claude Code"
+	case CLICodex:
+		return "Codex"
+	}
+	return ""
+}
+
+// CLILabel is how the form and the cards name a CLI step's runner.
+func CLILabel(cli string) string {
+	if t := CLITitle(cli); t != "" {
+		return t + " (subscription)"
+	}
+	return cli
+}
+
+// HasCLI reports whether a step of p (or its loop's fix step) runs a CLI.
+func (p Profile) HasCLI() bool {
+	for _, st := range p.Steps {
+		if st.CLI != "" {
+			return true
+		}
+	}
+	return p.Loop != nil && p.Loop.Fix.CLI != ""
+}
+
+// StepLabel is what step st runs on, for people: its CLI's label, else
+// its model slot.
+func (p Profile) StepLabel(st ProfileStep) string {
+	if st.CLI != "" {
+		return CLILabel(st.CLI)
+	}
+	return p.SlotFor(st)
 }
 
 // Profile is a named pipeline.
@@ -207,8 +259,12 @@ func (p Profile) node(st ProfileStep) agentdag.Node {
 	if title == "" {
 		title = st.ID
 	}
+	slot := p.SlotFor(st)
+	if st.CLI != "" {
+		slot = "" // the CLI's own login, no model slot
+	}
 	return agentdag.Node{
-		ID: st.ID, Title: title, Slot: p.SlotFor(st), Category: st.Category,
+		ID: st.ID, Title: title, Slot: slot, Category: st.Category, CLI: st.CLI,
 		System: st.System, Tools: st.Tools, Output: st.Output, Plan: st.Plan,
 		Input: agentdag.InputRule{MaxSteps: st.MaxSteps},
 	}
@@ -398,6 +454,14 @@ func ValidateProfile(p Profile, slots map[string]bool, parallelMax int) error {
 func checkStep(st ProfileStep, what string, slots map[string]bool) error {
 	bad := func(field, format string, a ...any) error {
 		return &ProfileError{Step: st.ID, Field: field, Msg: fmt.Sprintf("%s %q: %s", what, st.ID, fmt.Sprintf(format, a...))}
+	}
+	switch {
+	case st.CLI != "" && CLITitle(st.CLI) == "":
+		return bad("cli", "unknown cli %q (claude or codex)", st.CLI)
+	case st.CLI != "" && (st.Slot != "" || st.Category != ""):
+		return bad("cli", "runs on its CLI; leave out slot and category")
+	case st.CLI != "" && st.Plan:
+		return bad("cli", "a CLI step cannot be the planner")
 	}
 	if st.Slot != "" && !slots[st.Slot] {
 		return bad("slot", "unknown slot %q", st.Slot)
