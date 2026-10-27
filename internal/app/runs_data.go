@@ -72,7 +72,8 @@ type runsItem struct {
 	tokens    int
 	anyTok    bool
 	cost      float64 // the known step costs
-	costOK    bool    // every step that used tokens has a price
+	costOK    bool    // every step that used tokens has a price (or is a subscription CLI)
+	sub       bool    // a step ran on a subscription CLI (CS-3): its cost is the subscription
 	kind      runsKind
 	group     runsGroup
 	resume    int // first step a resume runs (0: none)
@@ -185,10 +186,13 @@ func (s *aiState) runsItemOf(c *ai.Conversation, i int, open bool, now time.Time
 	it.started = aiRunStarted(r, time.UnixMilli(c.UpdatedAtMs))
 	live := open && s.streaming && s.runMsg == i
 	for _, st := range msg.Steps {
+		if st.CLI != "" {
+			it.sub = true
+		}
 		if st.Usage != nil {
 			it.anyTok = true
 			it.tokens += aiUsageTokens(*st.Usage)
-			if st.Cost == nil {
+			if st.Cost == nil && st.CLI == "" {
 				it.costOK = false
 			}
 		}
@@ -205,9 +209,14 @@ func (s *aiState) runsItemOf(c *ai.Conversation, i int, open bool, now time.Time
 	switch {
 	case live && r.State == ai.RunStatePaused:
 		it.kind = runsPaused
-		if r.Budget > 0 {
+		switch {
+		case r.Limit != "" && r.ResumeAtMs > 0: // a CLI's usage limit (CS-4)
+			it.why = "usage limit · resumes at " + time.UnixMilli(r.ResumeAtMs).In(now.Location()).Format("15:04")
+		case r.Limit != "":
+			it.why = "usage limit reached · Resume when it resets"
+		case r.Budget > 0:
 			it.why = "budget " + aiBudgetText(r.Budget) + " reached"
-		} else {
+		default:
 			it.why = "paused by you"
 		}
 	case live && s.runPausing:

@@ -1,12 +1,16 @@
 package app
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clistep"
 	"github.com/amin-jalali/termocode/internal/mcp/mcptest"
 	"github.com/zalando/go-keyring"
 )
@@ -55,6 +59,12 @@ func TestMain(m *testing.M) {
 	keyring.MockInit()
 	secretStoreSettingOverride = "plain"
 	secretKeyringProbe = func() bool { return false }
+	// Never the real claude / codex (no subscription use): a CLI check
+	// says nothing and a CLI step fails unless a test fakes it.
+	aiCLICheck = func(context.Context, string, []string) clistep.Status { return clistep.StatusUnknown }
+	aiCLIRun = func(context.Context, clistep.Spec, string, func(ai.Event)) (clistep.Result, error) {
+		return clistep.Result{}, errors.New("a test ran a CLI step without faking aiCLIRun")
+	}
 	code := m.Run()
 	_ = os.RemoveAll(dir)
 	os.Exit(code)

@@ -585,9 +585,7 @@ func agentsModelLine(st *ai.StoredStep, room int) string {
 	if st.Usage != nil {
 		tok = aiTokText(aiUsageTokens(*st.Usage))
 	}
-	if st.Cost != nil {
-		cost = aiDollars(*st.Cost)
-	}
+	cost = aiStepCost(*st)
 	short := aiShortModel(st.Model)
 	for _, parts := range [][]string{
 		{st.Model, tok, cost}, {short, tok, cost}, {short, cost}, {short}, {cost},
@@ -943,9 +941,7 @@ func (s *aiState) agentsDetails(d agentsRun, n agentsNode, now time.Time, w int,
 		if st.Usage != nil {
 			facts = append(facts, aiTokText(aiUsageTokens(*st.Usage)))
 		}
-		if st.Cost != nil {
-			facts = append(facts, aiDollars(*st.Cost))
-		}
+		facts = append(facts, aiStepCost(*st))
 		if st.ContextPct != nil {
 			facts = append(facts, "context "+strconv.FormatFloat(*st.ContextPct, 'f', 0, 64)+" %")
 		}

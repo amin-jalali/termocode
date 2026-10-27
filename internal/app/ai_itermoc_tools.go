@@ -54,6 +54,7 @@ type aiProfileStepInfo struct {
 	ID       string   `json:"id"`
 	Title    string   `json:"title,omitempty"`
 	Slot     string   `json:"slot"`
+	CLI      string   `json:"cli,omitempty"` // a subscription CLI step: claude | codex (no slot)
 	Category string   `json:"category,omitempty"`
 	Model    string   `json:"model"`
 	Tools    string   `json:"tools"`
@@ -132,11 +133,11 @@ func aiProfilesInfo(m *Model, sn itermocSnap) (any, error) {
 			if m.ai != nil {
 				model, _ = m.ai.aiSlotModel(slot)
 			}
-			preset := st.Tools.Preset
-			if preset == "" {
-				preset = "all"
+			if st.CLI != "" {
+				slot, model = "", ai.CLILabel(st.CLI)
 			}
-			info.Steps = append(info.Steps, aiProfileStepInfo{ID: st.ID, Title: st.Title, Slot: slot, Category: st.Category,
+			preset := ai.StepTools(st)
+			info.Steps = append(info.Steps, aiProfileStepInfo{ID: st.ID, Title: st.Title, Slot: slot, CLI: st.CLI, Category: st.Category,
 				Model: model, Tools: preset, Allow: st.Tools.Allow, Deny: st.Tools.Deny, Plan: st.Plan, Deps: st.Deps,
 				Prompt: aiFirstLine(st.System)})
 		}

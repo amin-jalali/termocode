@@ -16,6 +16,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/aimemory"
 	"github.com/amin-jalali/termocode/internal/mcp"
+	"github.com/amin-jalali/termocode/internal/profileform"
 	"github.com/amin-jalali/termocode/internal/statusbar"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -58,6 +59,9 @@ type aiState struct {
 	// loadProfiles (reloadProfiles reuses them).
 	slotKnown map[string]bool
 	slotErrs  []string
+	// cliStates is the last check of the subscription CLIs (CS-5; nil:
+	// not checked yet). The profile form shows it.
+	cliStates map[string]profileform.CLIState
 	// profTrust is the open project-profile trust card (ai_profiles_ui.go).
 	profTrust   *aiProfileTrustPending
 	profileSave *aiProfileSavePending
@@ -310,6 +314,9 @@ func (s *aiState) profileModelLabel(p ai.Profile) string {
 	st := p.Steps[len(p.Steps)-1]
 	if p.Planned() {
 		st = p.Steps[0]
+	}
+	if st.CLI != "" {
+		return ai.CLITitle(st.CLI)
 	}
 	m, _ := s.aiSlotModel(p.SlotFor(st))
 	return m

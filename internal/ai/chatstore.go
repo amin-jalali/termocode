@@ -81,6 +81,11 @@ type StoredRun struct {
 	MaxRounds int    `json:"max_rounds,omitempty"`
 	Verdict   string `json:"verdict,omitempty"`
 	Report    string `json:"report,omitempty"`
+	// Limit is the usage-limit message of a CLI step that paused the run
+	// (CS-4) and ResumeAtMs when it resumes by itself (Unix ms; 0: the
+	// CLI did not say, Resume goes on by hand).
+	Limit      string `json:"limit,omitempty"`
+	ResumeAtMs int64  `json:"resume_at_ms,omitempty"`
 }
 
 // StoredStep is one step card of a pipeline run.
@@ -117,6 +122,10 @@ type StoredStep struct {
 	Prompt string `json:"prompt,omitempty"`
 	// Round is the loop round the step last ran in (0: no loop).
 	Round int `json:"round,omitempty"`
+	// CLI is the official CLI the step ran with on the user's
+	// subscription (CLIClaude, CLICodex; "": a model slot). Its tokens
+	// have no price: the cost is the subscription.
+	CLI string `json:"cli,omitempty"`
 }
 
 // Conversation is one persisted chat. Port of mobocode's chat_store.dart,

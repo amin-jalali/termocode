@@ -328,11 +328,8 @@ func aiDraftLines(p ai.Profile) []string {
 		if title == "" {
 			title = st.ID
 		}
-		tools := st.Tools.Preset
-		if tools == "" {
-			tools = agentdag.PresetAll
-		}
-		line := fmt.Sprintf("%d · %s · %s · tools %s", i+1, aiCardText(title, 40), aiCardText(p.SlotFor(st), 30), tools)
+		tools := ai.StepTools(st)
+		line := fmt.Sprintf("%d · %s · %s · tools %s", i+1, aiCardText(title, 40), aiCardText(p.StepLabel(st), 30), tools)
 		if st.Plan {
 			line += " · planner"
 		}

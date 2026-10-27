@@ -192,19 +192,16 @@ func (m *Model) drawRunsOverview(cv *rcCanvas, w int, items []runsItem, now time
 		if it.anyTok {
 			tok = runsTok(it.tokens) + " tok"
 		}
-		cost := ""
-		if it.anyTok && it.costOK {
-			cost = aiDollars(it.cost)
-		}
+		cost := runsCostText(it)
 		cv.text(x, y, padRight(runsDur(it.elapsed), 10), rcSt{fg: c.muted})
 		cv.textR(x+20, y, tok, rcSt{fg: c.muted})
-		cv.text(x+23, y, cost, rcSt{fg: c.muted})
+		wx := max(cv.text(x+23, y, cost, rcSt{fg: c.muted})+1, x+34)
 		if it.kind == runsFailed || it.kind == runsCancelled || it.kind == runsResumable {
 			wc := c.err
 			if it.kind != runsFailed {
 				wc = col
 			}
-			cv.textMax(x+34, y, it.why, w-4-(x+34), rcSt{fg: wc})
+			cv.textMax(wx, y, it.why, w-4-wx, rcSt{fg: wc})
 		}
 		hits = append(hits, runsHit{x0: 2, x1: w - 2, y: y, id: "run:" + it.key, label: it.task})
 		y++
@@ -406,8 +403,8 @@ func (m *Model) runsDetailHead(cv *rcCanvas, w int, it runsItem, compact bool, c
 	if it.anyTok && !compact {
 		status += " · " + runsTok(it.tokens) + " tok"
 	}
-	if it.anyTok && it.costOK {
-		status += " · " + aiDollars(it.cost)
+	if c := runsCostText(it); c != "" {
+		status += " · " + c
 	}
 	sx := cv.textR(w-2, 0, status, rcSt{fg: col})
 	cv.textMax(x+1, 0, sub, sx-x-3, rcSt{fg: c.secondary})
@@ -538,17 +535,15 @@ func (m *Model) drawPipeBoxes(cv *rcCanvas, y, w int, it runsItem, now time.Time
 		}
 		sx := cv.textR(x+bw-2, y+1, state, rcSt{fg: col})
 		cv.textMax(x+4, y+1, runsStepTitle(st), sx-x-5, rcSt{fg: c.primary}.B())
-		slot := st.Slot
-		if slot == "" {
-			slot = ai.SlotMain
-		}
-		cv.pill(x+2, y+2, rcCut(" "+slot+" · "+st.Model+" ", bw-6), c.bgChip, c.secondary, false)
+		cv.pill(x+2, y+2, rcCut(" "+runsStepOn(st)+" ", bw-6), c.bgChip, c.secondary, false)
 		var parts []string
 		if st.Usage != nil {
 			parts = append(parts, runsTok(aiUsageTokens(*st.Usage))+" tok")
 		}
 		if st.Cost != nil {
 			parts = append(parts, aiDollars(*st.Cost))
+		} else if st.CLI != "" && st.Usage != nil {
+			parts = append(parts, "subscription")
 		}
 		if len(parts) == 0 {
 			parts = append(parts, "no tokens yet")
@@ -690,6 +685,8 @@ func (m *Model) drawStepRows(cv *rcCanvas, y, w int, it runsItem, now time.Time,
 		}
 		if st.Cost != nil {
 			cost = aiDollars(*st.Cost)
+		} else if st.CLI != "" && st.Usage != nil && !compact {
+			cost = "included" // in the subscription (the pill says which)
 		}
 		dur := ""
 		if live.elapsed > 0 {
@@ -704,7 +701,7 @@ func (m *Model) drawStepRows(cv *rcCanvas, y, w int, it runsItem, now time.Time,
 			cv.text(43, y, cost, rcSt{fg: c.muted})
 			if w >= 70 {
 				runsBar(cv, 50, y, 10, []runsPart{{share, modelCol(st.Model)}}, c.dimmer)
-				cv.textMax(61, y, strings.TrimPrefix(st.Model, "claude-"), w-63, rcSt{fg: c.dim})
+				cv.textMax(61, y, runsStepModelShort(st), w-63, rcSt{fg: c.dim})
 			}
 			y++
 		} else {
@@ -718,13 +715,9 @@ func (m *Model) drawStepRows(cv *rcCanvas, y, w int, it runsItem, now time.Time,
 			if st.Cost != nil && it.cost > 0 {
 				cv.textR(78, y, runsPct(*st.Cost, it.cost), rcSt{fg: c.muted})
 			}
-			slot := st.Slot
-			if slot == "" {
-				slot = ai.SlotMain
-			}
 			px := 80
 			if px+20 < w {
-				x := cv.pill(px, y, rcCut(" "+slot+" · "+st.Model+" ", min(32, w-px-4)), c.bgChip, c.secondary, false)
+				x := cv.pill(px, y, rcCut(" "+runsStepOn(st)+" ", min(32, w-px-4)), c.bgChip, c.secondary, false)
 				rule := runsToolText(prof, st.ID)
 				var deps []string
 				for _, d := range st.Deps {
@@ -795,7 +788,11 @@ func (m *Model) drawBudget(cv *rcCanvas, y, w int, it runsItem, now time.Time, c
 	sp := m.ai.runsSpendOf(m.runsCollect(now))
 	db := m.ai.runsDayBudget()
 	if compact {
-		x := cv.text(2, y, "this run "+aiDollars(it.cost), rcSt{fg: c.secondary})
+		spent := aiDollars(it.cost)
+		if it.sub {
+			spent += " + subscription"
+		}
+		x := cv.text(2, y, "this run "+spent, rcSt{fg: c.secondary})
 		if rb > 0 {
 			runsBar(cv, x+2, y, 20, []runsPart{{it.cost / rb, c.ok}}, c.dimmer)
 			x = cv.text(x+23, y, "of "+aiBudgetText(rb), rcSt{fg: c.muted})
@@ -812,6 +809,8 @@ func (m *Model) drawBudget(cv *rcCanvas, y, w int, it runsItem, now time.Time, c
 	if rb > 0 {
 		runsBar(cv, 26, y, 30, []runsPart{{it.cost / rb, c.ok}}, c.dimmer)
 		cv.textMax(58, y, "of "+aiBudgetText(rb)+" per run · the run pauses at the limit", w-62, rcSt{fg: c.muted})
+	} else if it.sub {
+		cv.textMax(26, y, "+ subscription steps (Claude Code / Codex): no dollars, in no budget", w-30, rcSt{fg: c.dimmer})
 	} else {
 		cv.textMax(26, y, "no run budget (set budget_usd in the profile)", w-30, rcSt{fg: c.dimmer})
 	}

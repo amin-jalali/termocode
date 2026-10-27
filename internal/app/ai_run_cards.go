@@ -337,8 +337,8 @@ func aiStepStatus(steps []ai.StoredStep, k int) string {
 	if st.Usage != nil {
 		parts = append(parts, aiTokText(aiUsageTokens(*st.Usage)))
 	}
-	if st.Cost != nil {
-		parts = append(parts, aiDollars(*st.Cost))
+	if c := aiStepCost(st); c != "" {
+		parts = append(parts, c)
 	}
 	if st.Files > 0 {
 		parts = append(parts, fmt.Sprintf("%d file%s", st.Files, plural(st.Files)))

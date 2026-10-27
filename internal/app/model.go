@@ -535,6 +535,10 @@ type Model struct {
 	profileFormOpen bool
 	profileForm     profileform.Model
 	profileFormStep int // the step the Remove question is about
+	// profileFormParked: the form is hidden (not closed) while the user
+	// logs in or installs a CLI in a terminal tab (CS-5); its toast
+	// brings it back.
+	profileFormParked bool
 	// commitView is the Source Control commit view (git_commit_view.go;
 	// nil until a commit is opened).
 	commitView *commitViewState

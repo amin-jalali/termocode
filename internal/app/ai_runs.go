@@ -17,6 +17,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clistep"
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/session"
@@ -196,6 +197,14 @@ func (s *aiState) aiRunPreflight(run agentdag.Run, cats map[string]string) (map[
 		nodes = append(nodes[:len(nodes):len(nodes)], run.Loop.Fix)
 	}
 	for _, n := range nodes {
+		if n.CLI != "" { // a subscription CLI: no slot, but it must be there (CS-5)
+			if n.State != agentdag.StateCompleted {
+				if _, err := agentLookPath(clistep.Bin(n.CLI)); err != nil {
+					return nil, fmt.Errorf("step %q: %w", n.Title, clistep.NotInstalled(n.CLI))
+				}
+			}
+			continue
+		}
 		if _, ok := slots[n.Slot]; ok || n.State == agentdag.StateCompleted {
 			continue
 		}
@@ -224,6 +233,9 @@ func (m *Model) startAIRun(text string, prof ai.Profile, rules ai.Rules) tea.Cmd
 	for i, n := range run.Nodes {
 		steps[i] = ai.StoredStep{ID: n.ID, Title: n.Title, Slot: n.Slot, Model: slots[n.Slot].cfg.Model,
 			Category: n.Category, State: string(agentdag.StatePending)}
+		if n.CLI != "" {
+			steps[i].CLI, steps[i].Model = n.CLI, ai.CLITitle(n.CLI)
+		}
 		if !chain {
 			steps[i].Deps = agentdag.Deps(run, n.ID)
 		}
@@ -306,9 +318,27 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		Categories: prof.CategorySlots(),
 		Budget:     prof.BudgetUSD,
 		Cost: func(n agentdag.Node, u ai.Usage) (float64, bool) {
+			if n.CLI != "" {
+				return 0, false // the subscription: no price, not in the budget
+			}
 			return pricing.Cost(slots[n.Slot].cfg.Kind, u)
 		},
 		Emit: func(e agentrun.Event) { send(aiRunEventMsg{gen: gen, ev: e, ch: ch}) },
+		Exec: func(ctx context.Context, n agentdag.Node, input string, emit func(ai.Event)) (string, *ai.Usage, error) {
+			sys := ""
+			switch {
+			case n.ID == verifyID:
+				sys = aiStepPrompt(n, index[n.ID], total) + "\n\n" + agentrun.VerifyPrompt
+			case n.ID == fixID:
+				sys = aiFixStepPrompt + aiStepSystem(n.System)
+			default:
+				sys = aiStepPrompt(n, index[n.ID], total)
+			}
+			handoff := n.ID == verifyID || n.ID == fixID || len(agentdag.Deps(run, n.ID)) > 0
+			prompt := aiCLIPrompt(ctx, root, sys, input, handoff)
+			res, err := aiCLIRun(ctx, clistep.Spec{CLI: n.CLI, Write: n.Tools.Preset == agentdag.PresetAll, Dir: root}, prompt, emit)
+			return res.Text, res.Usage, err
+		},
 		Build: func(ctx context.Context, n agentdag.Node, input string) (*ai.Agent, []ai.Message, error) {
 			mcpOnce.Do(func() {
 				if mcpTools != nil {
@@ -406,15 +436,20 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 		case agentrun.RunPaused:
 			rm.Run.State, rm.Run.Budget, rm.Run.Spent = ai.RunStatePaused, ev.Budget, ev.Cost
 			s.runPausing = false
+			var tick tea.Cmd
+			if ev.Limit != "" { // a CLI's usage limit (CS-4): it resumes at the reset time
+				tick = m.aiLimitPaused(rm, ev)
+			}
 			if err := s.store.Save(&s.conv); err != nil {
 				recordError("[ai] save chat: " + err.Error())
 			}
 			if ev.Budget > 0 { // Budget 0: the user paused it (Runs page); no budget card
 				m.aiOpenBudgetCard()
 			}
-			return waitAIChat(msg.ch)
+			return tea.Batch(waitAIChat(msg.ch), tick)
 		case agentrun.RunResumed:
 			rm.Run.State = ai.RunStateRunning
+			rm.Run.Limit, rm.Run.ResumeAtMs = "", 0
 			s.runPausing = false
 			return waitAIChat(msg.ch)
 		case agentrun.RunRound:
@@ -431,7 +466,7 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 		prev := *st
 		*st = ai.StoredStep{ID: st.ID, Title: st.Title, Slot: st.Slot, Model: st.Model, Category: st.Category,
 			Deps: st.Deps, Planned: st.Planned, Prompt: st.Prompt, State: string(agentdag.StateRunning), Round: ev.Round,
-			StartedAtMs: now.UnixMilli()}
+			StartedAtMs: now.UnixMilli(), CLI: st.CLI}
 		if ev.Round > 1 && prev.Round > 0 { // a loop step runs again: its time, tokens, cost and notes add up
 			st.ElapsedMs, st.Usage, st.Cost, st.Notes = prev.ElapsedMs, prev.Usage, prev.Cost, prev.Notes
 			st.StartedAtMs = prev.StartedAtMs
@@ -491,6 +526,14 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 		st.State = string(agentdag.StateCancelled)
 	case agentrun.NodeBlocked:
 		st.State = string(agentdag.StateBlocked)
+	case agentrun.NodeLimited: // the CLI's usage limit: the step waits and runs again
+		s.agentsNodeEnd(ev.RunID, st.ID)
+		st.State = string(agentdag.StatePending)
+		st.Notes = append(st.Notes, aiLimitNote(ev))
+		st.ElapsedMs += ev.Elapsed.Milliseconds()
+		if err := s.store.Save(&s.conv); err != nil {
+			recordError("[ai] save chat: " + err.Error())
+		}
 	case agentrun.NodeRepair:
 		if ev.Verdict == agentrun.VerdictMissing {
 			st.Notes = append(st.Notes, "↻ no VERDICT line, asked once more")
@@ -562,9 +605,13 @@ func (m *Model) aiAddPlannedSteps(rm *ai.StoredMessage, ev agentrun.Event) {
 		rm.Steps[i].Deps = agentdag.Deps(snap, rm.Steps[i].ID)
 	}
 	for _, n := range ev.Nodes {
-		rm.Steps = append(rm.Steps, ai.StoredStep{ID: n.ID, Title: n.Title, Slot: n.Slot, Model: s.runSlots[n.Slot].cfg.Model,
+		st := ai.StoredStep{ID: n.ID, Title: n.Title, Slot: n.Slot, Model: s.runSlots[n.Slot].cfg.Model,
 			Category: n.Category, State: string(agentdag.StatePending), Planned: true, Deps: agentdag.Deps(snap, n.ID),
-			Prompt: n.Prompt})
+			Prompt: n.Prompt}
+		if n.CLI != "" {
+			st.CLI, st.Model = n.CLI, ai.CLITitle(n.CLI)
+		}
+		rm.Steps = append(rm.Steps, st)
 	}
 	if err := s.store.Save(&s.conv); err != nil {
 		recordError("[ai] save chat: " + err.Error())
@@ -626,7 +673,24 @@ func (m *Model) aiStepFinished(st *ai.StoredStep, ev agentrun.Event) {
 	prevUsage, prevCost := st.Usage, st.Cost
 	st.ElapsedMs += ev.Elapsed.Milliseconds()
 	st.Files = m.aiRestoreFiles(s.turnMsg) - s.runFiles[st.ID]
-	if u := ev.Usage; u != nil {
+	if u := ev.Usage; u != nil && st.CLI != "" {
+		// A subscription CLI (CS-3): its tokens, never a price.
+		c := *u
+		st.Usage = prevUsage.Add(&c)
+		if rm := s.aiRunMessage(); rm != nil && rm.Run != nil {
+			agent := st.Title
+			if agent == "" {
+				agent = st.ID
+			}
+			model := c.Model
+			if model == "" {
+				model = st.Model
+			}
+			s.recordUsage(aiUsageEntry{Run: rm.Run.ID, Agent: aiCleanText(agent), Model: model, U: c, Sub: true})
+		}
+		m.output.Append(aiAuditChannel, clock.Now().Format("15:04:05")+"  usage  step "+st.ID+" · "+
+			ai.CLITitle(st.CLI)+" · "+aiTokShort(aiUsageTokens(c))+" tokens · subscription")
+	} else if u != nil {
 		c := *u
 		st.Usage = prevUsage.Add(&c)
 		kind := s.runSlots[st.Slot].cfg.Kind
@@ -830,8 +894,12 @@ func (m *Model) aiRetryRun(i int) tea.Cmd {
 		st := &p.Steps[k]
 		if !agentdag.State(st.State).Done() {
 			sl := slotOf[st.ID]
-			*st = ai.StoredStep{ID: st.ID, Title: st.Title, Slot: sl, Model: slots[sl].cfg.Model,
-				Category: st.Category, Deps: st.Deps, Planned: st.Planned, Prompt: st.Prompt, State: string(agentdag.StatePending)}
+			model := slots[sl].cfg.Model
+			if st.CLI != "" {
+				model = ai.CLITitle(st.CLI)
+			}
+			*st = ai.StoredStep{ID: st.ID, Title: st.Title, Slot: sl, Model: model,
+				Category: st.Category, Deps: st.Deps, Planned: st.Planned, Prompt: st.Prompt, State: string(agentdag.StatePending), CLI: st.CLI}
 		}
 	}
 	s.turnMsg = i - 1

@@ -114,10 +114,7 @@ func (c runsColours) model(i int) lipgloss.Color {
 
 // look is a run's glyph, colour and the one word on its right.
 func (it runsItem) look(c runsColours) (glyph string, col lipgloss.Color, word string) {
-	cost := ""
-	if it.anyTok && it.costOK {
-		cost = aiDollars(it.cost)
-	}
+	cost := runsCostText(it)
 	switch it.kind {
 	case runsRunning:
 		return runsIconLive.String(), c.ok, cost
@@ -284,10 +281,46 @@ func runsSummary(it runsItem) string {
 	if it.anyTok {
 		parts = append(parts, runsTok(it.tokens)+" tok")
 	}
-	if it.anyTok && it.costOK {
-		parts = append(parts, aiDollars(it.cost))
+	if c := runsCostText(it); c != "" {
+		parts = append(parts, c)
 	}
 	return strings.Join(parts, " · ")
+}
+
+// runsStepOn is what step st runs on: "main · claude-sonnet-4-5", or
+// "Claude Code · subscription" for a CLI step (CS-3).
+func runsStepOn(st ai.StoredStep) string {
+	if st.CLI != "" {
+		return ai.CLITitle(st.CLI) + " · subscription"
+	}
+	slot := st.Slot
+	if slot == "" {
+		slot = ai.SlotMain
+	}
+	return slot + " · " + st.Model
+}
+
+// runsStepModelShort is the model column of the narrow step table.
+func runsStepModelShort(st ai.StoredStep) string {
+	if st.CLI != "" {
+		return runsStepOn(st)
+	}
+	return strings.TrimPrefix(st.Model, "claude-")
+}
+
+// runsCostText is a run's cost: dollars, "subscription" when only
+// subscription CLIs ran (CS-3), "$0.031 + subscription" when both did;
+// "" when it is not known.
+func runsCostText(it runsItem) string {
+	switch {
+	case !it.anyTok || !it.costOK:
+		return ""
+	case it.sub && it.cost == 0:
+		return "subscription"
+	case it.sub:
+		return aiDollars(it.cost) + " + subscription"
+	}
+	return aiDollars(it.cost)
 }
 
 // runsTail is the second line's end in the list: where the run is.

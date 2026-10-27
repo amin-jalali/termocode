@@ -70,10 +70,11 @@ func (m *Model) openAIProfileForm(name string, p ai.Profile, editing bool) tea.C
 	}
 	m.profileForm = profileform.New(name, p, profileform.Config{
 		Title: title, Slots: m.aiFormSlots(), ParallelMax: s.settings.Parallel(), Taken: taken, Editing: editing,
+		CLIs: s.cliStates,
 	})
 	m.profileForm.SetSize(m.w, m.h)
-	m.profileFormOpen = true
-	return nil
+	m.profileFormOpen, m.profileFormParked = true, false
+	return aiCLICheckCmd() // Claude Code / Codex: installed, logged in? (CS-5)
 }
 
 // openAIProfileNewForm is New profile from <active>…: a copy to change.
@@ -139,6 +140,8 @@ func (m *Model) handleAIProfileFormMsg(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case profileform.SaveMsg:
 		return m.aiProfileFormSave(), true
+	case profileform.CLIActionMsg:
+		return m.onProfileFormCLIAction(msg), true
 	case profileform.CancelMsg:
 		if !msg.Dirty {
 			m.closeAIProfileForm()

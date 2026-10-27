@@ -22,6 +22,12 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onAIChatEvent(msg), true
 	case aiRunEventMsg:
 		return m.onAIRunEvent(msg), true
+	case aiLimitResumeMsg: // ai_cli_steps.go
+		return m.onAILimitResume(msg), true
+	case aiCLIStatusMsg: // ai_cli_form.go
+		return m.onAICLIStatus(msg), true
+	case aiProfileFormBackMsg:
+		return m.onAIProfileFormBack(), true
 	case aiChatConfirmMsg:
 		return m.onAIChatConfirm(msg), true
 	case aiIDECallMsg:

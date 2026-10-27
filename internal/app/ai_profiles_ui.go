@@ -10,7 +10,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mattn/go-runewidth"
 
-	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/picker"
@@ -364,11 +363,8 @@ func (m *Model) askAIProfileTrust(p ai.Profile, after int, text string) tea.Cmd 
 		if title == "" {
 			title = st.ID
 		}
-		tools := st.Tools.Preset
-		if tools == "" {
-			tools = agentdag.PresetAll
-		}
-		fmt.Fprintf(&b, "\n%d · %s · %s · tools %s", i+1, title, p.SlotFor(st), tools)
+		tools := ai.StepTools(st)
+		fmt.Fprintf(&b, "\n%d · %s · %s · tools %s", i+1, title, p.StepLabel(st), tools)
 		if head := aiProfilePromptHead(st.System); head != "" {
 			fmt.Fprintf(&b, "\n    “%s”", head)
 		}
@@ -392,11 +388,8 @@ func (m *Model) askAIProfileSave(p ai.Profile, updated bool) tea.Cmd {
 		if title == "" {
 			title = st.ID
 		}
-		tools := st.Tools.Preset
-		if tools == "" {
-			tools = agentdag.PresetAll
-		}
-		fmt.Fprintf(&b, "%d · %s · %s · tools %s", i+1, title, p.SlotFor(st), tools)
+		tools := ai.StepTools(st)
+		fmt.Fprintf(&b, "%d · %s · %s · tools %s", i+1, title, p.StepLabel(st), tools)
 		if head := aiProfilePromptHead(st.System); head != "" {
 			fmt.Fprintf(&b, "\n    %s", head)
 		}

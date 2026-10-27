@@ -200,7 +200,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 	if sk := aiLoadSkills(aiWorkspaceRoot()); sk.ProjectHash != "" && aiSkillsTrust(sk) == aiTrustAsk {
 		return m.askAISkillsTrust(sk, true, text) // OM-4: a repo's skills are shown first
 	}
-	if len(prof.Steps) > 1 || prof.Planned() {
+	if len(prof.Steps) > 1 || prof.Planned() || prof.HasCLI() { // a CLI step always runs as a run (CS-1)
 		return m.startAIRun(text, prof, rules)
 	}
 	step := prof.Run("").Nodes[0]
