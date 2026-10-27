@@ -8,7 +8,9 @@
 // Continue or Cancel; the nodes' confirm and review cards take turns
 // through one Gate (gate.go). A run with a Loop works until done: a
 // failing verify node adds the fix node and runs another round
-// (verify.go).
+// (verify.go). A node with a CLI runs through Options.Exec (an official
+// CLI on the user's subscription); its usage limit pauses the run at
+// that node.
 //
 // The package does no I/O and knows nothing about the UI: the app builds
 // each node's agent (provider for its slot, tools, system prompt) in
@@ -51,6 +53,7 @@ const (
 	RunPaused                      // the budget is reached (Cost, Budget) or Pause was asked (Budget 0): nothing new starts until Continue
 	RunResumed                     // Continue after a pause
 	RunRound                       // verify failed and a new round starts (Round = the new round, Err = the verify report)
+	NodeLimited                    // a CLI node hit its usage limit (Err = the CLI's words, ResetAt): it waits as pending and the run pauses
 )
 
 // Verdicts of a loop's verify node (Event.Verdict).
@@ -85,6 +88,11 @@ type Event struct {
 	// Verdict is the verify node's verdict (its NodeDone and NodeRepair)
 	// and the run's (RunDone of a run with a Loop).
 	Verdict string
+	// Limit is the usage-limit message of a run a CLI's limit paused
+	// (RunPaused) and ResetAt when that limit resets (zero: unknown;
+	// RunPaused and NodeLimited).
+	Limit   string
+	ResetAt time.Time
 }
 
 // TailLen is the length (in runes) of Event.Tail.
@@ -130,6 +138,13 @@ type Options struct {
 	// unknown, counts as nothing).
 	Budget float64
 	Cost   func(n agentdag.Node, u ai.Usage) (float64, bool)
+	// Exec runs a node with a CLI (agentdag.Node.CLI) instead of an
+	// agent: it sends the CLI's events to emit and returns its final
+	// text and usage. An *ai.LimitError puts the node back to pending
+	// and pauses the run (NodeLimited, RunPaused with Limit) until
+	// Continue runs it again. It runs in the node's goroutine; ctx ends
+	// when the run stops.
+	Exec func(ctx context.Context, n agentdag.Node, input string, emit func(ai.Event)) (string, *ai.Usage, error)
 }
 
 // Handle is a started run.
@@ -170,6 +185,8 @@ type result struct {
 	// the verdict of a loop's verify node (VerdictPass / Fail / Missing)
 	// and its report
 	verdict, report string
+	// limit: a CLI node hit its usage limit (it runs again on Continue)
+	limit *ai.LimitError
 }
 
 // Start checks r and starts it. It returns at once; the run goes on in
@@ -307,6 +324,7 @@ func (h *Handle) loop(runCtx context.Context) {
 	failErr := ""
 	verdict := "" // the loop's verdict once verify passed or the rounds ran out
 	spent, budget := 0.0, h.o.Budget
+	var limited *ai.LimitError // a CLI's usage limit paused the run
 	fail := func(id, msg string, usage *ai.Usage, elapsed time.Duration) {
 		h.setState(id, func(n *agentdag.Node) {
 			n.State = agentdag.StateFailed
@@ -333,15 +351,23 @@ func (h *Handle) loop(runCtx context.Context) {
 				// first, then the run waits for Continue or Cancel.
 				if running == 0 {
 					shown := budget // a Pause the user asked for says Budget 0
-					if !overBudget {
+					if !overBudget || limited != nil {
 						shown = 0
 					}
-					h.emit(Event{Kind: RunPaused, Cost: spent, Budget: shown, Usage: total})
+					pe := Event{Kind: RunPaused, Cost: spent, Budget: shown, Usage: total}
+					if limited != nil {
+						pe.Limit, pe.ResetAt = limited.Msg, limited.ResetAt
+						if pe.Limit == "" {
+							pe.Limit = limited.Error()
+						}
+					}
+					h.emit(pe)
 					select {
 					case <-h.resume:
-						if overBudget {
+						if overBudget && limited == nil {
 							budget = 0
 						}
+						limited = nil
 						h.pause.Store(false)
 						h.emit(Event{Kind: RunResumed})
 						continue
@@ -373,6 +399,17 @@ func (h *Handle) loop(runCtx context.Context) {
 			}
 		}
 		switch {
+		case res.limit != nil && !res.cancelled:
+			// The CLI's usage limit: the node waits (pending) and the run
+			// pauses before anything else starts; Continue runs it again.
+			h.setState(res.id, func(n *agentdag.Node) { n.State = agentdag.StatePending })
+			msg := res.limit.Msg
+			if msg == "" {
+				msg = res.limit.Error()
+			}
+			h.emit(Event{NodeID: res.id, Kind: NodeLimited, Err: msg, ResetAt: res.limit.ResetAt, Usage: res.usage, Elapsed: res.elapsed})
+			limited = res.limit
+			h.pause.Store(true)
 		case res.cancelled:
 			h.setState(res.id, func(n *agentdag.Node) { n.State = agentdag.StateCancelled })
 			h.emit(Event{NodeID: res.id, Kind: NodeCancelled, Usage: res.usage, Elapsed: res.elapsed})
@@ -530,6 +567,10 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 	if h.o.Parallel > 1 {
 		ctx = context.WithValue(ctx, parallelKey{}, true)
 	}
+	if n.CLI != "" {
+		h.runCLI(ctx, n, input, &res)
+		return
+	}
 	agent, history, err := h.o.Build(ctx, n, input)
 	switch {
 	case ctx.Err() != nil:
@@ -624,6 +665,70 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 	default:
 		res.output = finalText(added)
 	}
+}
+
+// runCLI runs a CLI node through Options.Exec (CS-1). A verify node's
+// answer needs a verdict line; without one the CLI is asked once more
+// with its answer and VerifyRepairPrompt (CS-2).
+func (h *Handle) runCLI(ctx context.Context, n agentdag.Node, input string, res *result) {
+	if h.o.Exec == nil {
+		res.err = fmt.Errorf("no CLI runner for %s", ai.CLITitle(n.CLI))
+		return
+	}
+	var raw []byte
+	emit := func(e ai.Event) {
+		switch e.Kind {
+		case ai.EventText:
+			raw = appendTail(raw, e.Text)
+			h.emit(Event{NodeID: n.ID, Kind: NodeText, AI: e, Tail: tail(raw)})
+		case ai.EventToolStart, ai.EventToolResult:
+			h.emit(Event{NodeID: n.ID, Kind: NodeTool, AI: e})
+		case ai.EventDone, ai.EventError:
+		default:
+			h.emit(Event{NodeID: n.ID, Kind: NodeAI, AI: e})
+		}
+	}
+	exec := func(in string) (string, bool) {
+		text, u, err := h.o.Exec(ctx, n, in, emit)
+		res.usage = res.usage.Add(u)
+		var le *ai.LimitError
+		switch {
+		case ctx.Err() != nil:
+			res.cancelled = true
+		case errors.As(err, &le):
+			res.limit = le
+		case err != nil:
+			res.err = err
+		default:
+			return strings.TrimSpace(text), true
+		}
+		return "", false
+	}
+	text, ok := exec(input)
+	if !ok {
+		return
+	}
+	if n.ID == h.verify && h.verify != "" {
+		pass, report, found := ParseVerdict(text)
+		if !found {
+			h.emit(Event{NodeID: n.ID, Kind: NodeRepair, Err: "no VERDICT line", Verdict: VerdictMissing})
+			raw = nil
+			again := input + "\n\n### Your answer\n" + text + "\n\n" + VerifyRepairPrompt
+			if text, ok = exec(again); !ok {
+				return
+			}
+			pass, report, found = ParseVerdict(text)
+		}
+		switch {
+		case !found:
+			res.verdict, res.report = VerdictMissing, NoVerdictReport+"\n\n"+report
+		case pass:
+			res.verdict, res.report = VerdictPass, report
+		default:
+			res.verdict, res.report = VerdictFail, report
+		}
+	}
+	res.output = text
 }
 
 // input is node id's input: the user message (unless NoUser), the task
