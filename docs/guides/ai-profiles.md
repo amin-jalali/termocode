@@ -264,6 +264,7 @@ to it.
 | `max_steps` | Tool steps for this step. Default: `ai_max_steps`. |
 | `deps` | Step ids this step waits for. Needs `ai_parallel_max` 2 or more. |
 | `plan` | `true` makes the step a planner (see [Planned runs](#planned-runs-and-waves)). At most one per profile. |
+| `cli` | `claude` or `codex`: the step runs Claude Code or Codex with your own subscription login, not a model slot (see [Subscription steps](#subscription-steps-claude-code-and-codex)). Leave out `slot` and `category`. |
 
 A profile can also set `budget_usd` next to `steps` (see
 [Budget pause](#budget-pause)).
@@ -660,6 +661,98 @@ a step that runs (after verify failed) before verify runs again.
 - `verify` may not be the planner step.
 - termocode adds the verdict rule to the verify step's prompt, and the
   fix step gets the verify report under `### Verify report (round N)`.
+
+## Subscription steps: Claude Code and Codex
+
+A step can run **Claude Code** or **Codex** on your own subscription
+login instead of an API key. For example: Claude Code does the work,
+Codex reviews it, and no API tokens are billed.
+
+**Before you start.** Install the CLI and log in once, in a terminal:
+
+| CLI | Install | Log in |
+|---|---|---|
+| Claude Code | `npm install -g @anthropic-ai/claude-code` | `claude auth login` |
+| Codex | `npm install -g @openai/codex` | `codex login` |
+
+The profile form does this for you (below). termocode never sees your
+login: each CLI keeps its own.
+
+**In the form.** In **Edit profile…** (or a step in Itermoc), set a
+step's **Model** to **Claude Code (subscription)** or **Codex
+(subscription)**. The line under it says if the CLI is ready:
+
+- `✓ uses your Claude Code login · no API key` — ready.
+- `✗ Claude Code is not installed` with an **Install** pill: a terminal
+  tab opens with the install line typed. Press `Enter` there to run it.
+- `✗ Codex is not logged in` with a **Log in** pill: a terminal tab
+  opens and runs the CLI's own login.
+
+While you install or log in, the form waits. Click its toast to go
+back; the form checks the CLIs again.
+
+**In profiles.json.** Give the step `"cli": "claude"` or
+`"cli": "codex"`. This profile lets Claude Code work and Codex review,
+until the review passes:
+
+```json
+{
+  "profiles": {
+    "claude-codex": {
+      "title": "Claude Code works, Codex reviews",
+      "steps": [
+        {"id": "work", "title": "Work", "cli": "claude", "tools": {"preset": "all"}},
+        {"id": "review", "title": "Review", "cli": "codex",
+         "system": "Review the change. Run nothing that edits files."}
+      ],
+      "loop": {
+        "verify": "review",
+        "fix": {"title": "Fix", "cli": "claude", "tools": {"preset": "all"}},
+        "max_rounds": 3
+      }
+    }
+  }
+}
+```
+
+**What a subscription step may do.**
+
+- Without `"tools": {"preset": "all"}` the step only **reads**: Claude
+  Code gets the `Read`, `Grep` and `Glob` tools; Codex runs in its
+  `read-only` sandbox. A reviewer should stay like this.
+- With `"preset": "all"` the step may **edit files** in the project:
+  Claude Code gets `Edit` and `Write` (edits are accepted, but it has no
+  shell, so it runs no commands); Codex runs in its `workspace-write`
+  sandbox.
+- The CLI runs in the project folder. Your prompt goes in on standard
+  input, never on the command line.
+- The CLI gets your environment, minus termocode's own secrets and the
+  vendors' API keys (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
+  `CODEX_API_KEY` …). So it always uses your subscription login, never a
+  billed key.
+- A step that runs longer than 30 minutes is stopped. **Stop** (or
+  `Ctrl+C`) ends the CLI and everything it started.
+
+**The hand-off.** The next step gets your task, the earlier step's
+answer and the work so far as a git diff (`git status --short` and
+`git diff HEAD`, at most 24 KB) under `### Changes so far (git diff)`.
+A verify step ends with `VERDICT: PASS` or `VERDICT: FAIL`, as in
+[Work until done](#work-until-done).
+
+**Cost.** A subscription step shows its time and the tokens the CLI
+reports. Its cost says **subscription**, not dollars. It does not count
+in `budget_usd` or the day budget.
+
+**Usage limit.** When the CLI says its usage limit is reached, the run
+**pauses** at that step. If the CLI says when the limit resets, the run
+shows `usage limit · resumes at 16:00` and goes on by itself at that
+time. Otherwise it shows `usage limit reached · Resume when it resets`.
+**Resume** (in the chat or on the Runs page) runs the same step again;
+the steps before it keep their work.
+
+**Not logged in.** A step whose CLI has no login fails with
+`… is not logged in: run claude auth login …`. Log in, then use
+**Retry from step N**.
 
 ## Tokens and cost
 

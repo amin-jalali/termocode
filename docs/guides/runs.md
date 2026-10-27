@@ -123,6 +123,13 @@ It only draws the line. It stops nothing. A run's own limit is its
 profile's `budget_usd`: the run pauses there and asks (see
 [Budget pause](ai-profiles.md#budget-pause)).
 
+Steps that run Claude Code or Codex on your subscription
+([Subscription steps](ai-profiles.md#subscription-steps-claude-code-and-codex))
+show their tokens, and **subscription** where the cost goes. They count
+in no budget. When such a CLI reaches its usage limit, the run shows
+**paused** with `usage limit · resumes at 16:00` and goes on by itself
+then; **Resume** (`r`) goes on at once.
+
 ## What Runs does not show
 
 - A plain chat turn (a one-step profile such as `default`) is not a run.
