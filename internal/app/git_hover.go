@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -46,9 +45,9 @@ func (m Model) gitCommitAtScreenY(x, y int) (string, bool) {
 
 // fetchCommitDetailCmd loads a commit's metadata off the main loop.
 func (m Model) fetchCommitDetailCmd(hash string) tea.Cmd {
+	cwd, cwdErr := m.rootDir()
 	return func() tea.Msg {
-		cwd, err := os.Getwd()
-		if err != nil {
+		if cwdErr != nil {
 			return nil
 		}
 		d, err := git.ShowCommitDetail(cwd, hash)

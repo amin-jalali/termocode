@@ -229,7 +229,7 @@ func (m *Model) applySynthCodeAction(idx int) tea.Cmd {
 // same plumbing, but it always uses the synth action's payload (so the line
 // number and rel path are pinned to the moment the picker opened).
 func (m *Model) synthGitBlame(rel string, line int) tea.Cmd {
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -248,7 +248,7 @@ func (m *Model) synthGitBlame(rel string, line int) tea.Cmd {
 // synthGitDiff opens the existing preview overlay with a colourised diff
 // of the active file. Mirrors gitDiffActiveFile's plumbing.
 func (m *Model) synthGitDiff(rel string) tea.Cmd {
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -268,7 +268,7 @@ func (m *Model) synthGitDiff(rel string) tea.Cmd {
 // synthGitCopyHash blames the line, then writes just the SHA to the
 // clipboard. Useful for "I want to share this commit in chat".
 func (m *Model) synthGitCopyHash(rel string, line int) tea.Cmd {
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -461,7 +461,7 @@ func readPackageName(path string) string {
 // to the current working directory and prefixed with `./` so it's a valid
 // `go test` target. Falls back to `./...` if the path is outside cwd.
 func (m Model) goPackageRel(path string) string {
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return "./..."
 	}

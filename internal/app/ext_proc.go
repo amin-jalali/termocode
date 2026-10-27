@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"slices"
 	"sort"
 	"strconv"
@@ -95,7 +94,7 @@ type extProcDoneMsg struct {
 }
 
 func newExtHost() *extproc.Host {
-	root, _ := os.Getwd()
+	root, _ := procRootDir()
 	h := extproc.NewHost(extproc.Config{Root: root, Version: termocodeVersion})
 	extHostTarget.Store(h)
 	return h

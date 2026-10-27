@@ -2,12 +2,12 @@ package app
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/workspace"
 )
 
 // SessionState persists the editor's open-buffer list across launches so
@@ -112,7 +112,16 @@ func sessionPath() (string, error) {
 // Open Recent Workspace re-execs into the new folder). Symlinks are
 // resolved so two spellings of one folder share a session.
 func sessionWorkspace() (string, error) {
-	cwd, err := os.Getwd()
+	return sessionWorkspaceOf(procWorkspace())
+}
+
+// sessionWorkspaceOf is what a session of ws records as its workspace:
+// the resolved folder of a local workspace, the ID of any other.
+func sessionWorkspaceOf(ws workspace.Workspace) (string, error) {
+	if !isLocal(ws) {
+		return ws.ID, nil
+	}
+	cwd, err := rootOf(ws)
 	if err != nil {
 		return "", err
 	}
@@ -122,24 +131,45 @@ func sessionWorkspace() (string, error) {
 	return filepath.Abs(cwd)
 }
 
-// workspaceSessionFile is the per-workspace session file name for root:
-// a short hash, so any path makes a safe file name.
-func workspaceSessionFile(root string) string {
-	sum := sha256.Sum256([]byte(filepath.Clean(root)))
-	return hex.EncodeToString(sum[:8]) + ".json"
+// isLocal reports whether ws is a folder on this machine (a zero Kind is
+// the process folder of a Model built before workspaces).
+func isLocal(ws workspace.Workspace) bool {
+	return ws.Kind == workspace.KindLocal || ws.Kind == ""
 }
 
-// workspaceSessionPath is sessions/<hash>.json for the current workspace.
+// sessionKeyFor is the session key of ws: workspace.Key of its ID. A
+// local workspace uses the ID of its resolved folder, which gives the
+// same key as the path hash older versions stored sessions under.
+func sessionKeyFor(ws workspace.Workspace) string {
+	if !isLocal(ws) {
+		return workspace.Key(ws.ID)
+	}
+	root, err := sessionWorkspaceOf(ws)
+	if err != nil {
+		root = ws.Root
+	}
+	return workspace.Key(workspace.LocalID(root))
+}
+
+// workspaceSessionFile is the per-workspace session file name for the
+// local folder root: a short hash, so any path makes a safe file name.
+func workspaceSessionFile(root string) string {
+	return workspace.Key(workspace.LocalID(root)) + ".json"
+}
+
+// workspaceSessionPath is sessions/<key>.json for the current workspace.
 func workspaceSessionPath() (string, error) {
 	dir, err := configDir()
 	if err != nil {
 		return "", err
 	}
-	root, err := sessionWorkspace()
-	if err != nil {
-		return "", err
+	ws := procWorkspace()
+	if isLocal(ws) {
+		if _, err := rootOf(ws); err != nil {
+			return "", err
+		}
 	}
-	return filepath.Join(dir, "sessions", workspaceSessionFile(root)), nil
+	return filepath.Join(dir, "sessions", sessionKeyFor(ws)+".json"), nil
 }
 
 // layoutPart / workspacePart split a SessionState into the global layout
@@ -270,7 +300,7 @@ func loadSession() SessionState {
 	}
 	ws, ok := readSessionFile(wpath)
 	if !ok && hasWorkspaceState(global) {
-		if root, err := sessionWorkspace(); err == nil && legacyBelongsTo(global, root) {
+		if root, err := sessionWorkspace(); err == nil && isLocal(procWorkspace()) && legacyBelongsTo(global, root) {
 			ws = workspacePart(global)
 			ws.Workspace = root
 			writeSessionFile(wpath, ws)

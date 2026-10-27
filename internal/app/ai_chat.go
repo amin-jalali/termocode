@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/amin-jalali/termocode/internal/mcp"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -72,7 +71,7 @@ const aiChatSystemPrompt = "You are termocode's coding assistant, running inside
 
 // aiWorkspaceRoot is the root the agent tools operate on.
 func aiWorkspaceRoot() string {
-	if cwd, err := os.Getwd(); err == nil {
+	if cwd, err := procRootDir(); err == nil {
 		return cwd
 	}
 	return "."

@@ -68,7 +68,7 @@ func (m *Model) ensureTasks() *taskRunner {
 
 // taskVars returns the ${…} values for the current workspace / file.
 func (m Model) taskVars() tasks.Vars {
-	root, _ := os.Getwd()
+	root, _ := m.rootDir()
 	file := m.editor.Path()
 	if file != "" && !filepath.IsAbs(file) {
 		file = filepath.Join(root, file)

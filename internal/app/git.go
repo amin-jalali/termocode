@@ -1,7 +1,6 @@
 package app
 
 import (
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -78,7 +77,7 @@ const gitGraphLimit = 200
 // GitMsg.
 func fetchGitCmd() tea.Cmd {
 	return func() tea.Msg {
-		cwd, err := os.Getwd()
+		cwd, err := procRootDir()
 		if err != nil {
 			return GitMsg{}
 		}
@@ -102,9 +101,9 @@ func (m *Model) pollGitCmd() tea.Cmd {
 	limit := max(gitGraphLimit, len(m.gitCommits))
 	branch := m.gitBranch
 	stale := clock.Now().Sub(m.gitGraphAt) > gitGraphMaxAge
+	cwd, cwdErr := m.rootDir()
 	return func() tea.Msg {
-		cwd, err := os.Getwd()
-		if err != nil {
+		if cwdErr != nil {
 			return GitMsg{}
 		}
 		st, err := git.StatusBranch(cwd)
@@ -179,7 +178,7 @@ func gitGraphHead(g []git.GraphCommit) string {
 
 // gitFileAbsPath returns the absolute path of a git status entry.
 func gitFileAbsPath(rel string) string {
-	cwd, err := os.Getwd()
+	cwd, err := procRootDir()
 	if err != nil {
 		return rel
 	}
@@ -203,7 +202,7 @@ func (m Model) gitStatusMap() map[string]string {
 	if !m.gitIsRepo || len(m.gitFiles) == 0 {
 		return nil
 	}
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}

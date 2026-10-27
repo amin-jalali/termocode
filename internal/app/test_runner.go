@@ -108,7 +108,7 @@ type testDoneMsg struct {
 // discoverTestsCmd walks the workspace off the UI goroutine.
 func discoverTestsCmd() tea.Cmd {
 	return func() tea.Msg {
-		root, err := os.Getwd()
+		root, err := procRootDir()
 		if err != nil {
 			return testsDiscoveredMsg{err: err}
 		}

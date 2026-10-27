@@ -134,7 +134,7 @@ func loadFilesIn(roots []string) []picker.Item {
 // instead we read the saved-roots list from the session file (kept in sync
 // by the explorer's add/remove handlers). cwd is always first.
 func workspaceRoots() []string {
-	cwd, err := os.Getwd()
+	cwd, err := procRootDir()
 	if err != nil {
 		return nil
 	}

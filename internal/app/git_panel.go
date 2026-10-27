@@ -1,7 +1,6 @@
 package app
 
 import (
-	"os"
 	"slices"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -238,7 +237,7 @@ type gitOlderMsg struct {
 // gitLoadOlderCmd reads gitGraphLimit commits after the first skip.
 func gitLoadOlderCmd(skip int) tea.Cmd {
 	return func() tea.Msg {
-		cwd, err := os.Getwd()
+		cwd, err := procRootDir()
 		if err != nil {
 			return nil
 		}
@@ -398,7 +397,7 @@ func (m *Model) gitCopyCommit(ci int, message bool) tea.Cmd {
 	c := m.gitCommits[ci]
 	text, what := c.FullHash, c.Hash
 	if message {
-		cwd, _ := os.Getwd()
+		cwd, _ := m.rootDir()
 		msg, err := git.CommitMessage(cwd, c.FullHash)
 		if err != nil {
 			var cmd tea.Cmd

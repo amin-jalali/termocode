@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -111,7 +110,7 @@ const runToolbarRow = 2
 
 // workspaceRoot is the cwd (termocode runs from the workspace root).
 func workspaceRoot() string {
-	wd, err := os.Getwd()
+	wd, err := procRootDir()
 	if err != nil {
 		return "."
 	}

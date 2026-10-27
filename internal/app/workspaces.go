@@ -118,7 +118,7 @@ func (m *Model) openWorkspacePicker() tea.Cmd {
 		m.toast, toastCmd = m.toast.Push(toast.Info, "No recent workspaces yet")
 		return toastCmd
 	}
-	cwd, _ := os.Getwd()
+	cwd, _ := m.rootDir()
 	items := make([]picker.Item, 0, len(entries))
 	for _, e := range entries {
 		hint := formatRecentTime(e.OpenedAt, clock.Now())

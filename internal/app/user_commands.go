@@ -118,7 +118,7 @@ func (m *Model) runUserCommandPreview(id string) tea.Cmd {
 	}
 	cwd := cmd.CWD
 	if cwd == "" {
-		cwd, _ = os.Getwd()
+		cwd, _ = m.rootDir()
 	}
 	return func() tea.Msg {
 		// We use sh -c so users can pipe / chain commands without us having

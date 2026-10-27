@@ -3,7 +3,6 @@ package app
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -523,7 +522,7 @@ func renderProblemsHeader(p *problemsPanel, width int) string {
 
 // problemRelPath shows path relative to the cwd when it is inside it.
 func problemRelPath(path string) string {
-	if cwd, err := os.Getwd(); err == nil {
+	if cwd, err := procRootDir(); err == nil {
 		if r, err := filepath.Rel(cwd, path); err == nil && !strings.HasPrefix(r, "..") {
 			return r
 		}

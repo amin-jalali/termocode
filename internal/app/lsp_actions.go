@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -57,7 +56,7 @@ func (m Model) fetchReferencesCmd() tea.Cmd {
 		return nil
 	}
 	c := m.nvim
-	cwd, _ := os.Getwd()
+	cwd, _ := m.rootDir()
 	return func() tea.Msg {
 		locs, err := c.References()
 		if err != nil {

@@ -1326,7 +1326,7 @@ func totalVisibleFiles(ex *explorer.Model) int {
 }
 
 func projectName() string {
-	cwd, err := os.Getwd()
+	cwd, err := procRootDir()
 	if err != nil {
 		return ""
 	}

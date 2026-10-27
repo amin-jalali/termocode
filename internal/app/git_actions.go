@@ -193,7 +193,7 @@ func (m *Model) gitHunkOp(kind gitHunkKind) tea.Cmd {
 	if path == "" || m.cursorLine <= 0 {
 		return nil
 	}
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -232,7 +232,7 @@ func (m *Model) gitStageToggle() tea.Cmd {
 		return nil
 	}
 	f := m.gitFiles[fi]
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -346,10 +346,10 @@ func (m Model) gitDiffCmd() tea.Cmd {
 	rel := m.gitFiles[fi].Path
 	abs := gitFileAbsPath(rel)
 	name := filepath.Base(rel) + " (HEAD)"
+	cwd, cwdErr := m.rootDir()
 	return func() tea.Msg {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return ErrMsg{Err: err}
+		if cwdErr != nil {
+			return ErrMsg{Err: cwdErr}
 		}
 		head, _ := git.ShowFileAtRevision(cwd, "HEAD", rel)
 		diff, _ := git.Diff(cwd, rel)
@@ -628,7 +628,7 @@ func colorizeDiff(s string) string {
 // gitDiscardConfirmed runs the actual discard once the user confirms. Called
 // from handleConfirmSelect (confirm.go) for the confirmKindGitDiscard branch.
 func (m *Model) gitDiscardConfirmed() tea.Cmd {
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -651,7 +651,7 @@ func (m *Model) gitDiscardConfirmed() tea.Cmd {
 // submission. Called from handlePromptSubmit (file_ops.go) for the
 // promptKindCommit branch.
 func (m *Model) gitCommitFromPrompt(message string) tea.Cmd {
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -681,7 +681,7 @@ func (m *Model) gitStageActiveFile() tea.Cmd {
 	if !ok {
 		return nil
 	}
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -699,7 +699,7 @@ func (m *Model) gitStageAll() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -721,10 +721,10 @@ func (m *Model) gitDiffActiveFile() tea.Cmd {
 	if !ok {
 		return nil
 	}
+	cwd, cwdErr := m.rootDir()
 	return func() tea.Msg {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return ErrMsg{Err: err}
+		if cwdErr != nil {
+			return ErrMsg{Err: cwdErr}
 		}
 		raw, err := git.Diff(cwd, rel)
 		if err != nil {
@@ -775,7 +775,7 @@ func (m *Model) gitRemoteOp(running string, op func(cwd string) gitRemoteDoneMsg
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -872,7 +872,7 @@ func (m *Model) gitInlineCommit(amend, signoff bool) tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -907,7 +907,7 @@ func (m *Model) gitInlineCommit(amend, signoff bool) tea.Cmd {
 // gitStageAllAndCommit is the confirmed branch of the "nothing staged" prompt:
 // stage every change, then commit the stored message.
 func (m *Model) gitStageAllAndCommit() tea.Cmd {
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -974,7 +974,7 @@ func (m *Model) openBranchPicker() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -1013,7 +1013,7 @@ func (m *Model) gitCheckoutSelected(id string) tea.Cmd {
 		return nil
 	}
 	branch := id[len("co-"):]
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -1035,7 +1035,7 @@ func (m *Model) gitCreateBranchFromPrompt(name string) tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -1057,7 +1057,7 @@ func (m *Model) gitStash() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -1078,7 +1078,7 @@ func (m *Model) gitStashPop() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -1101,7 +1101,7 @@ func (m *Model) openStashPicker() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -1133,7 +1133,7 @@ func (m *Model) openStashPicker() tea.Cmd {
 
 // applyStashSelected runs `git stash apply <ref>` for the picked stash.
 func (m *Model) applyStashSelected(ref string) tea.Cmd {
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -1162,7 +1162,7 @@ func (m *Model) gitBlameCurrentLine() tea.Cmd {
 		m.toast, toastCmd = m.toast.Push(toast.Warn, "No file to blame")
 		return toastCmd
 	}
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -1195,7 +1195,7 @@ func (m *Model) gitFileHistoryPicker() tea.Cmd {
 		m.toast, toastCmd = m.toast.Push(toast.Warn, "No file selected")
 		return toastCmd
 	}
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -1237,7 +1237,7 @@ func (m *Model) gitTagPicker() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -1266,7 +1266,7 @@ func (m *Model) gitTagPicker() tea.Cmd {
 // checkoutTagSelected does `git checkout <tag>` (detached HEAD).
 func (m *Model) checkoutTagSelected(id string) tea.Cmd {
 	tag := strings.TrimPrefix(id, "tag-")
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -1288,7 +1288,7 @@ func (m *Model) gitLogPicker() tea.Cmd {
 	if !m.gitEnsureLoaded() {
 		return nil
 	}
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -1345,7 +1345,7 @@ func (m *Model) gitShowCommitCmd(hash string) tea.Cmd {
 	if hash == "" {
 		return nil
 	}
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -1431,7 +1431,7 @@ func (m *Model) runCompareWithRevision(ref string) tea.Cmd {
 	if ref == "" {
 		return nil
 	}
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -1455,7 +1455,7 @@ func (m Model) activeGitRel() (string, bool) {
 	if abs == "" {
 		return "", false
 	}
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return "", false
 	}

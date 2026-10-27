@@ -248,7 +248,7 @@ func (m *Model) xferUploadTarget() string {
 			return p
 		}
 	}
-	cwd, _ := os.Getwd()
+	cwd, _ := m.rootDir()
 	return cwd
 }
 

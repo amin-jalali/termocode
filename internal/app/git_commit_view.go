@@ -91,7 +91,7 @@ func (m *Model) gitOpenCommitViewCmd(hash string) tea.Cmd {
 		return nil
 	}
 	cv.want = hash
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -115,7 +115,7 @@ func (m *Model) gitOpenCompareCmd(r commitRange) tea.Cmd {
 	cv := m.commitViewS()
 	cv.want = r.a + ".." + r.b
 	want := cv.want
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -425,7 +425,7 @@ func (m *Model) commitLoadFile(i int) tea.Cmd {
 		cf = cv.info.Files[i]
 	}
 	oldRev, newRev := cv.oldRev, cv.newRev
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
@@ -588,7 +588,7 @@ func (m *Model) commitAction(id string, i int) tea.Cmd {
 			m.toast, cmd = m.toast.Push(toast.Warn, f.Path+" was deleted in this commit")
 			return cmd
 		}
-		cwd, err := os.Getwd()
+		cwd, err := m.rootDir()
 		if err != nil {
 			return nil
 		}
@@ -718,7 +718,7 @@ func (m *Model) runCommitPick(id string) tea.Cmd {
 	}
 	sha, short := cv.pick, cv.info.Hash
 	cv.pick = ""
-	cwd, err := os.Getwd()
+	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}

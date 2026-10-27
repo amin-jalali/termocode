@@ -17,6 +17,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/amin-jalali/termocode/internal/app"
+	"github.com/amin-jalali/termocode/internal/workspace/localhost"
 	// Must init before bubbletea: no 5 s OSC 11 wait (see package doc).
 	_ "github.com/amin-jalali/termocode/internal/darkbg"
 	"github.com/amin-jalali/termocode/internal/setup"
@@ -284,10 +285,14 @@ func main() {
 			}
 		}
 	}
+	// The workspace is the folder we are in now (ADR 0018); the app reads
+	// its root from here, not from the process folder.
+	ws := localhost.Cwd()
+	app.SetWorkspace(ws)
 	// Record this workspace in the recents-list so "Open Recent Workspace..."
 	// remembers where we were. Best-effort.
-	if cwd, err := os.Getwd(); err == nil {
-		app.PushWorkspace(cwd)
+	if ws.Root != "" {
+		app.PushWorkspace(ws.Root)
 	}
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
@@ -300,8 +305,8 @@ func main() {
 	}
 	tty := term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd()))
 	if sessionsSupported && wantSession(app.ConfigPersistentSession(), noSession, os.Getenv, tty) {
-		if cwd, err := os.Getwd(); err == nil {
-			os.Exit(runClient(cwd, true))
+		if ws.Root != "" {
+			os.Exit(runClient(ws.Root, true))
 		}
 	}
 	runTUI()

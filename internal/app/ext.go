@@ -507,7 +507,7 @@ func (m *Model) extOpenFile(path string, line, col int) tea.Cmd {
 		return nil
 	}
 	if !filepath.IsAbs(path) {
-		if wd, err := os.Getwd(); err == nil {
+		if wd, err := m.rootDir(); err == nil {
 			path = filepath.Join(wd, path)
 		}
 	}

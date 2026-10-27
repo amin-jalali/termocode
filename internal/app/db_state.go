@@ -258,7 +258,7 @@ func (m *Model) databaseWorkspaceRoot() string {
 	if root := aiWorkspaceRoot(); root != "" {
 		return root
 	}
-	if cwd, err := os.Getwd(); err == nil {
+	if cwd, err := m.rootDir(); err == nil {
 		return cwd
 	}
 	return "."

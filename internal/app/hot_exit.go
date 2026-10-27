@@ -18,6 +18,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/session"
 	"github.com/amin-jalali/termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/workspace"
 )
 
 // Hot exit: like VSCode, unsaved buffers survive a crash, a kill or a
@@ -46,8 +47,17 @@ const (
 // hotExitNvim is the nvim the signal handler flushes (set on ReadyMsg).
 var hotExitNvim atomic.Pointer[nvim.Client]
 
-// hotExitRoot returns the backup dir of the workspace folder ws.
+// hotExitRoot returns the backup dir of the local workspace folder ws.
 func hotExitRoot(ws string) (string, error) {
+	abs, err := filepath.Abs(ws)
+	if err != nil {
+		abs = ws
+	}
+	return hotExitRootFor(workspace.LocalID(abs))
+}
+
+// hotExitRootFor returns the backup dir of the workspace with this ID.
+func hotExitRootFor(id string) (string, error) {
 	state := os.Getenv("XDG_STATE_HOME")
 	if state == "" {
 		home, err := os.UserHomeDir()
@@ -56,7 +66,7 @@ func hotExitRoot(ws string) (string, error) {
 		}
 		state = filepath.Join(home, ".local", "state")
 	}
-	return filepath.Join(state, "termocode", "backup", session.Key(ws)), nil
+	return filepath.Join(state, "termocode", "backup", session.KeyForID(id)), nil
 }
 
 // hotBackup is one restorable buffer.
@@ -186,11 +196,11 @@ func (m *Model) startHotExit() tea.Cmd {
 	if m.nvim == nil {
 		return nil
 	}
-	ws, err := os.Getwd()
-	if err != nil {
+	ws := m.workspace()
+	if _, err := rootOf(ws); err != nil {
 		return nil
 	}
-	root, err := hotExitRoot(ws)
+	root, err := hotExitRootFor(ws.ID)
 	if err != nil {
 		return nil
 	}

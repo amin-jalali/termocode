@@ -324,7 +324,7 @@ func (m *Model) openTerminalPanel() {
 		return
 	}
 	m.terminalWinID = winID
-	cwd, _ := os.Getwd()
+	cwd, _ := m.rootDir()
 	tab := terminalTab{
 		BufID:    bufID,
 		Cwd:      cwd,
@@ -463,7 +463,7 @@ func (m *Model) newTerminalTab() {
 		m.err = "terminal: failed to spawn shell"
 		return
 	}
-	cwd, _ := os.Getwd()
+	cwd, _ := m.rootDir()
 	tab := terminalTab{
 		BufID:    bufID,
 		Cwd:      cwd,

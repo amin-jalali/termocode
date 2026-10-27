@@ -475,7 +475,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		if m.nvim != nil {
 			abs := msg.Path
 			if !filepath.IsAbs(abs) {
-				if cwd, err := os.Getwd(); err == nil {
+				if cwd, err := m.rootDir(); err == nil {
 					abs = filepath.Join(cwd, abs)
 				}
 			}
@@ -2531,7 +2531,7 @@ func (m *Model) refreshBreadcrumbs(path string) {
 		return
 	}
 	// Make the path repository-relative when the file lives under cwd.
-	if cwd, err := os.Getwd(); err == nil {
+	if cwd, err := m.rootDir(); err == nil {
 		if rel, err := filepath.Rel(cwd, path); err == nil && !strings.HasPrefix(rel, "..") {
 			path = rel
 		}

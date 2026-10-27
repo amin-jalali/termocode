@@ -3,7 +3,6 @@ package app
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -71,7 +70,7 @@ func (m *Model) handleClonePromptSubmit(value string) tea.Cmd {
 			return cmd
 		}
 		m.clone.url = value
-		cwd, _ := os.Getwd()
+		cwd, _ := m.rootDir()
 		def := git.DefaultCloneDest(cwd, m.gitIsRepo, name)
 		m.prompt = prompt.New("Clone Repository", "Clone into folder:", def)
 		m.prompt.SetSize(m.w, m.h)
@@ -81,7 +80,7 @@ func (m *Model) handleClonePromptSubmit(value string) tea.Cmd {
 	case promptKindCloneDest:
 		dest := git.ExpandHome(value)
 		if !filepath.IsAbs(dest) {
-			if cwd, err := os.Getwd(); err == nil {
+			if cwd, err := m.rootDir(); err == nil {
 				dest = filepath.Join(cwd, dest)
 			}
 		}

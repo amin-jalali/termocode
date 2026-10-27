@@ -34,6 +34,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/tabbar"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
+	"github.com/amin-jalali/termocode/internal/workspace"
 )
 
 type Focus int
@@ -97,6 +98,9 @@ const terminalRowsMin = 5
 const terminalRowsDefault = 10
 
 type Model struct {
+	// ws is the open workspace (ADR 0018), set by New from the process
+	// workspace. Read it through m.workspace() / m.rootDir().
+	ws                      workspace.Workspace
 	activity                activity.Model
 	explorer                explorer.Model
 	editor                  editor.Model
@@ -802,6 +806,7 @@ func New() Model {
 	}
 
 	m := Model{
+		ws:               procWorkspace(),
 		sess:             newSessionWriter(),
 		activity:         activity.New(),
 		explorer:         explorer.New(),

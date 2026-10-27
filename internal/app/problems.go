@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -33,7 +32,7 @@ func (m Model) fetchProblemsCmd() tea.Cmd {
 		return nil
 	}
 	c := m.nvim
-	cwd, _ := os.Getwd()
+	cwd, _ := m.rootDir()
 	return func() tea.Msg {
 		diags, err := c.AllDiagnostics()
 		if err != nil {
@@ -119,7 +118,7 @@ func formatProblemTitle(d nvim.Diagnostic, _ string) string {
 // formatProblemHint shows file location + source on the right of the row.
 func formatProblemHint(d nvim.Diagnostic) string {
 	rel := d.Path
-	if cwd, err := os.Getwd(); err == nil {
+	if cwd, err := procRootDir(); err == nil {
 		if r, err2 := filepath.Rel(cwd, d.Path); err2 == nil && !strings.HasPrefix(r, "..") {
 			rel = r
 		}
