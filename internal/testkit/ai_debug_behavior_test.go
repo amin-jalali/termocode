@@ -390,7 +390,9 @@ func goDebugAI(t *testing.T, main string, calls ...toolCall) (*aiScript, *Driver
 		t.Setenv("GOPATH", realGoPath)
 		t.Setenv("GOMODCACHE", realGoModCache)
 	}
-	t.Setenv("GOFLAGS", "")
+	// The workspace sits in the system temp dir: a stray .git above it
+	// (e.g. an empty /tmp/.git) makes go build fail on VCS stamping.
+	t.Setenv("GOFLAGS", "-buildvcs=false")
 	s, srv := fakeToolModel(t, calls...)
 	files := map[string]string{"go.mod": "module k7\n\ngo 1.21\n", "main.go": main, "a.txt": "alpha\n"}
 	d := aiDriver(t, srv.URL, files, false, "run", "ide")
