@@ -88,9 +88,13 @@ Below them is the list of steps. Only the step you are on is open; the
 others show one line (model and tools). Each step has:
 
 - **Title** and **Id** (the id is how other steps refer to it).
-- **Model**: a model slot or a category (`category quick`, `category deep`).
-  A slot shows `✓ key` or `✗ no key`, so you see before you save that a
-  step cannot answer. Keys are never shown.
+- **Model**: the model the step runs on. Press `Enter` (or click it) to
+  open the model list; see [Choose a model](#choose-a-model). `←` and `→`
+  step through the list without opening it.
+- **Fix** (only when the step's AI is not ready): the line under
+  **Model** says why, for example `✗ needs OpenRouter` or
+  `✗ Claude Code is not signed in`. **Fix** opens the **Add AI** card at
+  that AI. When the card ends, you are back on the same step.
 - **Tools**: `none`, `read-only` or `all`. A tool list written in JSON
   (`allow`, `deny`) stays as it is.
 - **Prompt**: what the model is told, over several lines.
@@ -99,10 +103,49 @@ others show one line (model and tools). Each step has:
 - **Planner**: at most one step plans the run.
 
 **Add step**, **Move up**, **Move down** and **Remove step** change the list.
-**Remove step** asks first, with **Keep step** as the default button.
+**Add step** opens the model list of the new step at once (`Esc` keeps the
+chat's model). **Remove step** asks first, with **Keep step** as the
+default button.
+
+### Choose a model
+
+The model list shows every model of every AI you connected, in one
+list you can search. Type to search: it matches a model id (`mini`) or
+an AI's name (`ollama`). `↑` and `↓` move, `Enter` or a click chooses,
+`Esc` closes the list and changes nothing.
+
+The list has these parts, top to bottom:
+
+- **Same model as the chat**, **Automatic: quick** (a fast, low-cost
+  model) and **Automatic: deep** (the strongest model). The automatic
+  ones follow **Quick →** and **Deep →** above.
+- One group per connected AI, with a tag that says how you pay for it:
+
+  | Tag | Meaning |
+  | --- | --- |
+  | `your plan` | A sign-in AI (Claude Code, Codex). It uses your plan; no cost per request. |
+  | `API · pay per use` | An API key. Each request costs money. |
+  | `local · free` | A model on your machine (Ollama, LM Studio, a local server). |
+
+  A sign-in AI also has **Other model id…**: type the id in the search,
+  then choose the row (`Use "…"`). A search that finds no model offers
+  the same row.
+- **From config.json**: your named models from `ai_models`, when you have
+  some (or the step already uses one).
+- **+ Add another AI (OpenAI, Llama…)** at the bottom: it opens the
+  **Add AI** card (see [Set up AI](ai-setup.md#option-a-add-an-ai-in-the-app)).
+  Its last button says **Back to the profile**: you come back to the same
+  step with the model list open, and the new AI's models are in it. The
+  form keeps what you changed.
+
+The models of an AI come from the list termocode saved when you
+connected it (refresh it in [Itermoc](itermoc.md)). A step you choose
+saves the AI and the model (`"provider"` + `"model"`; a sign-in AI:
+`"cli"` + `"model"`). An older step that names a model slot keeps it
+until you choose another model.
 
 Keys: `Tab` and `Shift+Tab` (or `↓` and `↑`) move between fields, `Enter`
-edits a text field or changes a choice, `←` and `→` change a choice, `Esc`
+edits a text field, opens the model list or changes a choice, `←` and `→` change a choice, `Esc`
 stops editing (a second `Esc` cancels), `a` adds a step, `K` and `J` move
 it, `x` removes it, and `?` shows the key card. Everything also works with
 the mouse: click a field to edit it, a choice to change it, a button to
@@ -680,28 +723,22 @@ A step can run **Claude Code** or **Codex** on your own subscription
 login instead of an API key. For example: Claude Code does the work,
 Codex reviews it, and no API tokens are billed.
 
-**Before you start.** Install the CLI and log in once, in a terminal:
+**Before you start.** Connect the AI once with **AI: Add AI…** and
+**Sign in with Claude Pro / Max** or **Sign in with ChatGPT Plus / Pro**
+(see [Sign in with your plan](ai-setup.md#sign-in-with-your-plan)).
+termocode installs the CLI into its own tools folder when it is missing
+and runs the CLI's own sign-in. termocode never sees your login: each CLI
+keeps its own.
 
-| CLI | Install | Log in |
-|---|---|---|
-| Claude Code | `npm install -g @anthropic-ai/claude-code` | `claude auth login` |
-| Codex | `npm install -g @openai/codex` | `codex login` |
+**In the form.** In **Edit profile…** (or a step in Itermoc), open a
+step's **Model** list and choose a model from the group tagged
+`your plan` (for example `opus` under Anthropic, or a model under
+OpenAI). The line under **Model** says if the CLI is ready:
 
-The profile form does this for you (below). termocode never sees your
-login: each CLI keeps its own.
-
-**In the form.** In **Edit profile…** (or a step in Itermoc), set a
-step's **Model** to **Claude Code (subscription)** or **Codex
-(subscription)**. The line under it says if the CLI is ready:
-
-- `✓ uses your Claude Code login · no API key` — ready.
-- `✗ Claude Code is not installed` with an **Install** pill: a terminal
-  tab opens with the install line typed. Press `Enter` there to run it.
-- `✗ Codex is not logged in` with a **Log in** pill: a terminal tab
-  opens and runs the CLI's own login.
-
-While you install or log in, the form waits. Click its toast to go
-back; the form checks the CLIs again.
+- `✓ uses your Claude Code sign-in · no API key` — ready.
+- `✗ Claude Code is not installed` or `✗ Codex is not signed in`, with
+  **Fix**: the **Add AI** card opens at that AI's sign-in. When it ends,
+  you are back on the step.
 
 **In profiles.json.** Give the step `"cli": "claude"` or
 `"cli": "codex"`. This profile lets Claude Code work and Codex review,
