@@ -332,7 +332,7 @@ func (m *Model) itermocRowKey(key string, row imRow) (tea.Cmd, bool) {
 			return m.itermocRun("disconnect", row), true
 		case "i":
 			if p, ok := m.itermocS().snap.provider(itermocProvKind(row.name)); ok && p.signedOut {
-				return m.itermocRun("addai:"+p.kind, row), true
+				return m.itermocRun("addai:"+p.kind+":"+ai.MethodCLI, row), true
 			}
 		}
 	case imRowProblem:

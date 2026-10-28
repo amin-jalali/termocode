@@ -249,7 +249,7 @@ func (sn itermocSnap) providerNeeds() []imNeed {
 		}
 		out = append(out, imNeed{row: imRow{kind: imRowProvider, sec: imSecModels, name: itermocProvName(p.kind)}, glyph: g, tok: tok,
 			name: p.name, what: ai.CLITitle(p.cli) + " is signed out · your plan cannot answer",
-			fix: imPill{verb: "addai:" + p.kind, label: "Sign in", key: "i", warn: true}})
+			fix: imPill{verb: "addai:" + p.kind + ":" + ai.MethodCLI, label: "Sign in", key: "i", warn: true}})
 	}
 	kinds, users := sn.missingProviders()
 	for _, kind := range kinds {
@@ -388,8 +388,9 @@ func (st *itermocState) toggleProvider(kind string) {
 // itermocProvVerb runs a verb of a provider row or of one of its rows.
 // ok=false: not a provider verb.
 func (m *Model) itermocProvVerb(verb string, row imRow) (tea.Cmd, bool) {
-	if kind, ok := strings.CutPrefix(verb, "addai:"); ok {
-		return m.openAddAIOn(kind), true
+	if rest, ok := strings.CutPrefix(verb, "addai:"); ok {
+		kind, method, _ := strings.Cut(rest, ":")
+		return m.openAddAIOn(kind, method), true
 	}
 	if verb == "addai" {
 		return m.openAddAI(), true
@@ -425,28 +426,17 @@ func (m *Model) itermocProvEnter(row imRow) tea.Cmd {
 	return nil
 }
 
-// openAddAIOn opens the Add AI card with kind picked: the method step for
-// an AI with two ways in, the next step otherwise.
-func (m *Model) openAddAIOn(kind string) tea.Cmd {
+// openAddAIOn opens the Add AI card on kind: at method when given (a
+// signed-out AI's Sign in lands on its sign-in step), else at the AI's
+// way choice (or its only way). An unknown kind shows the list.
+func (m *Model) openAddAIOn(kind, method string) tea.Cmd {
 	cmd := m.openAddAI()
 	if !m.addAIOpen {
 		return cmd // the secret store asks for its passphrase first
 	}
-	cmds := []tea.Cmd{cmd}
-	send := func(k tea.KeyMsg) {
-		var c tea.Cmd
-		m.addAI, c = m.addAI.Update(k)
-		cmds = append(cmds, c)
-	}
-	for _, e := range addai.Catalog() {
-		if e.Kind == kind {
-			send(tea.KeyMsg{Type: tea.KeyEnter})
-			return tea.Batch(cmds...)
-		}
-		send(tea.KeyMsg{Type: tea.KeyDown})
-	}
-	m.closeAddAI()
-	return m.openAddAI() // not in the card's list: the list itself
+	var c tea.Cmd
+	m.addAI, c = m.addAI.StartAt(kind, method)
+	return tea.Batch(cmd, c)
 }
 
 // itermocProvEntry is kind's entry (an environment key is an API key
@@ -677,7 +667,7 @@ func providerPageContent(sn itermocSnap, row imRow) imContent {
 		c.card = &imCard{title: "! " + ai.CLITitle(p.cli) + " is signed out", lines: []string{
 			"Steps on your plan cannot answer.",
 			"Sign in again; the sign-in happens in your browser.",
-		}, pills: []imPill{{verb: "addai:" + p.kind, label: "Sign in", key: "i", warn: true}}}
+		}, pills: []imPill{{verb: "addai:" + p.kind + ":" + ai.MethodCLI, label: "Sign in", key: "i", warn: true}}}
 	case p.err != "":
 		c.right, c.rightTok = "! not refreshed", theme.AccentAmber
 		c.card = &imCard{title: "! The models were not refreshed", lines: []string{

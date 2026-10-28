@@ -376,7 +376,7 @@ func TestItermocAddAIRow(t *testing.T) {
 // Spec: what needs you: a profile step on an AI that is not connected is
 // "OpenAI · not connected" with an Add pill that opens the card on
 // OpenAI; a sign-in AI whose CLI is signed out is "Sign in" that opens
-// the card on that AI.
+// the card straight on that AI's sign-in step.
 func TestItermocProviderNeeds(t *testing.T) {
 	m := provTestModel(t)
 	m.ai.profFake = []ai.Profile{{Name: "gpt-check", Source: ai.ProfileSourceUser,
@@ -419,8 +419,8 @@ func TestItermocProviderNeeds(t *testing.T) {
 		t.Errorf("badge %q", badge)
 	}
 	m.itermocRun(sign.fix.verb, sign.row)
-	if !m.addAIOpen || m.addAI.Kind() != ai.KindOpenAI || m.addAI.Step() != addai.StepMethod {
-		t.Fatalf("Sign in opened the card at %v on %q", m.addAI.Step(), m.addAI.Kind())
+	if !m.addAIOpen || m.addAI.Kind() != ai.KindOpenAI || m.addAI.Step() != addai.StepSignIn || m.addAI.Method() != ai.MethodCLI {
+		t.Fatalf("Sign in opened the card at %v (%q) on %q, want the sign-in step", m.addAI.Step(), m.addAI.Method(), m.addAI.Kind())
 	}
 }
 
