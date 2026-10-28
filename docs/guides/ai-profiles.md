@@ -203,8 +203,9 @@ name for a provider and a model. Three slots always exist:
 | `quick` | The main provider with `ai_inline_model` (the ghost-text model). |
 | `local` | Ollama on `http://localhost:11434/v1` (or `OLLAMA_HOST`). |
 
-Add your own slot with **AI: Add Model Slot…**, or with **Add slot** in
-the MODELS section of [Itermoc](itermoc.md#models). The form asks for a
+Add your own slot with **AI: Add Model Slot…**. Your slots are rows in
+the AI PROVIDERS section of [Itermoc](itermoc.md#named-models-from-configjson),
+under `from config.json`. The form asks for a
 name, a provider, a model and, when the provider needs one, a base URL.
 **Edit…** and **Remove…** on a slot's row work the same way. After Save
 the form offers **Set key** when the provider has no key yet.

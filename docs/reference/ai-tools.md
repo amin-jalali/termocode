@@ -97,7 +97,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`compose_up`](#compose_up) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved) | no | Run `docker compose up -d` for a compose project that has containers on this host (see containers_list), in its own folder, in a visible terminal tab. |
 | [`help_read`](#help_read) | auto | no | Read the built-in guide: with no arguments list pages; page shows headings and anchors; page and section returns that section's prepared Markdown; query searches matching sections (page can filter it). |
 | [`profiles_list`](#profiles_list) | auto | no | List the AI agent profiles: name, title, source (built-in, user, project with its trust state), which is active, budget, and each step's title, model slot, resolved model, tools preset and the first line of its prompt. |
-| [`models_list`](#models_list) | auto | no | List the AI model slots (main, quick, local and the user's own): provider, model, whether a key is set (set / missing / not needed; never the key) and the base URL's scheme and host. |
+| [`models_list`](#models_list) | auto | no | List the connected AIs (providers: how each is connected — API key, a CLI's sign-in, a server on this machine or a server URL —, what it costs, its model ids and when they were loaded; a key from the environment says from_environment) and the model slots (main, quick, local and the user's own): provider, model, whether a key is set (set / missing / not needed; never the key) and the base URL's scheme and host. |
 | [`mcp_services_list`](#mcp_services_list) | auto | no | List the MCP services the chat can use (GitHub, Linear, the user's own servers in mcp.json): state (running, stopped, off, failed, sign-in …), transport, source and trust, access (read only or read and write), tool count and whether a sign-in is stored. |
 | [`outside_agents_status`](#outside_agents_status) | auto | no | Whether termocode's MCP server listens for outside agents (Claude Code, Codex …), and why not; the connected agents with since, calls and how many asked; the last 10 calls; and the tools each agent may run without asking. |
 | [`usage_summary`](#usage_summary) | auto | no | This session's AI usage, as the USAGE view shows it: per model and per agent step, the calls, input and output token counts (fields input, output) and the cost in USD (only where the price is known). |
@@ -1109,7 +1109,7 @@ No arguments.
 
 ### models_list
 
-List the AI model slots (main, quick, local and the user's own): provider, model, whether a key is set (set / missing / not needed; never the key) and the base URL's scheme and host. Keys stay with the user.
+List the connected AIs (providers: how each is connected — API key, a CLI's sign-in, a server on this machine or a server URL —, what it costs, its model ids and when they were loaded; a key from the environment says from_environment) and the model slots (main, quick, local and the user's own): provider, model, whether a key is set (set / missing / not needed; never the key) and the base URL's scheme and host. Keys stay with the user; connecting an AI is the user's (Add AI card).
 
 **Gate:** auto
 
@@ -1158,7 +1158,7 @@ Show the Itermoc view (the user's screen for AI profiles, models, MCP services a
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `section` | string | yes | the section to show. One of: `profiles`, `models`, `services`, `outside-agents` |
-| `row` | string |   | profile, slot, service or agent name (optional) |
+| `row` | string |   | profile, connected AI (anthropic or Anthropic), slot, service or agent name (optional) |
 
 ### profile_switch
 
@@ -1507,7 +1507,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `ai-mcp-servers` | AI: MCP Servers… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-memory` | AI: Memory… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-memory-toggle` | AI: Memory: Turn On/Off | never | AI provider, credentials and approvals stay with the user |
-| `ai-model-slot-add` | AI: Add Model Slot… | never | a form for the user; keys and config.json stay with the user (the AI shows the MODELS section with ai_view_open) |
+| `ai-model-slot-add` | AI: Add Model Slot… | never | a form for the user; keys and config.json stay with the user (the AI shows the AI PROVIDERS section with ai_view_open) |
 | `ai-models-edit` | AI: Edit Model Slots | never | AI provider, credentials and approvals stay with the user |
 | `ai-new-chat` | AI: New Chat | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-open-chat` | AI: Open Chat | auto |   |
@@ -1714,7 +1714,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `http-send` | HTTP: Send Request at Cursor | never | sends a network request; use http_send (gated by host and method) |
 | `http-send-pick` | HTTP: Send Request… | never | opens a picker or prompt that only the user can answer; use a typed tool (http_list_requests, http_send) |
 | `itermoc-agents` | Itermoc: Outside Agents | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
-| `itermoc-models` | Itermoc: Models | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
+| `itermoc-models` | Itermoc: AI Providers | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `itermoc-open` | Itermoc: Open | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `itermoc-open-ai` | AI: Agents & Connections | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `itermoc-profiles` | Itermoc: Profiles | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |

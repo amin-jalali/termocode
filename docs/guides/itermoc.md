@@ -1,13 +1,13 @@
-# Itermoc: profiles, models, services and outside agents
+# Itermoc: profiles, AI providers, services and outside agents
 
 Itermoc is one sidebar view for everything that shapes the AI chat. It
-lists your agent profiles, the model slots they run on, the services the
-chat can reach and the outside agents that use termocode's tools. The list
-is calm: one row per thing, one word at the right. Pick a row and its
-**page** opens in the editor area, drawn as a picture (see [The page](#the-page)).
-Every verb opens the same screens you already know. Model slots are the one
-thing you add, edit and remove right here, with a small form (see
-[Models](#models)).
+lists your agent profiles, the AIs you connected (and their models), the
+services the chat can reach and the outside agents that use termocode's
+tools. The list is calm: one row per thing, one word at the right. Pick a
+row and its **page** opens in the editor area, drawn as a picture (see
+[The page](#the-page)). Every verb opens the same screens you already
+know. AIs are the one thing you connect and disconnect right here (see
+[AI providers](#ai-providers)).
 
 Set up a provider first: [Set up AI](ai-setup.md).
 
@@ -16,7 +16,7 @@ Set up a provider first: [Set up AI](ai-setup.md).
 Open it with **Alt+Shift+I** (or **Alt+O**, if your terminal swallows the
 first key), or from the command palette: **Itermoc: Open**. Press the key
 again to go back to the view you had before. The palette also has
-one command per section: **Itermoc: Profiles**, **Itermoc: Models**,
+one command per section: **Itermoc: Profiles**, **Itermoc: AI Providers**,
 **Itermoc: Services** and **Itermoc: Outside Agents**. **AI: Agents &
 Connections** opens the same view.
 
@@ -40,10 +40,12 @@ profile picker. That stays the fast way to switch.
    ⚠ house-review                                       project
    + new profile…
 
- ϟ MODELS                                                  1 !
-   ● main                                            sonnet-4-5
+ ϟ AI PROVIDERS                                            1 !
+   ✓ Anthropic                                         4 models
+   ✓ Ollama                                            3 models
+      from config.json
    ! gpt                                                 no key
-   + add slot…
+   + Add AI…
 
  ⌁ SERVICES                                                1 !
    ● github                                             28 tools
@@ -68,13 +70,13 @@ group keeps its number.
 | Group | What it lists |
 |---|---|
 | PROFILES | the agent profiles; `●` marks the active one (`active`), `⚠` a project profile you were not asked about yet (`project`) |
-| MODELS | the model slots the steps run on, with the short model name, or `no key` in amber. A key is never shown |
+| AI PROVIDERS | the AIs you connected, with how many models each has; then your own model slots from `config.json`, with the short model name, or `no key` in amber. A key is never shown |
 | SERVICES | the services in `mcp.json`: `28 tools`, `off`, `sign in`, `failed` |
 | OUTSIDE AGENTS | whether termocode listens for agents like Claude Code (`listening` and its mode), who is connected and their calls |
 
 There are no buttons in the list. A row that needs you turns amber and
 says why (`sign in`, `no key`, `project`); open its page for the button.
-The dim row at the end of a group (`+ new profile…`, `+ add slot…`,
+The dim row at the end of a group (`+ new profile…`, `+ Add AI…`,
 `+ connect…`, `+ start one…`) adds a new one. Press `Enter` or click it.
 ## The page
 
@@ -137,6 +139,11 @@ pills start an agent in a terminal tab: **Start Claude Code** (`s`),
 **Start Codex** (`S`), and **Copy config** (`y`) copies the config other
 agent tools need.
 
+The page of an AI shows its models as chips, when they were loaded, how
+it is connected and what it costs (`your plan`, `API · pay per use`,
+`local · free`), and the profiles that use it. Its pills are **Refresh**
+(`r`) and **Disconnect…** (`D`); see [AI providers](#ai-providers).
+
 The page of a model slot shows its key facts and its main pills. A key is
 never on a page. `Esc` on a page goes back to the list; `j`, `↓`, `↑` and
 the wheel scroll a page that is taller than the window.
@@ -149,8 +156,8 @@ same tab (`✦ AI`):
 ```text
  ✦ AI  agents & connections                          listening auto
  ───────────────────────────────────────────────────────────────────
- ╭ ✦ PROFILES ── 1 ╮ ╭ ϟ MODELS ─── 2 ╮ ╭ ⌁ SERVICES ── 3 ╮ ╭ ⇄ OUTSIDE AGENTS ─ 4 ╮
- │ review          │ │ 4 slots        │ │ 1 of 3 ready    │ │ 1 connected          │
+ ╭ ✦ PROFILES ── 1 ╮ ╭ ϟ AI PROVIDE… 2 ╮ ╭ ⌁ SERVICES ── 3 ╮ ╭ ⇄ OUTSIDE AGENTS ─ 4 ╮
+ │ review          │ │ 2 AIs          │ │ 1 of 3 ready    │ │ 1 connected          │
  │ ! house-review… │ │ ! gpt has no … │ │ ! linear needs… │ │ ● claude-code · 14 … │
  ╰─────────────────╯ ╰────────────────╯ ╰─────────────────╯ ╰──────────────────────╯
 
@@ -167,14 +174,17 @@ same tab (`✦ AI`):
 
 - The four **tiles** say each group in a few words. A tile with something
   that needs you has an amber frame and line. Click a tile, or press `1`
-  to `4`, to open that group: the active profile, the first model or
-  service that needs you (else the first one), the first outside agent.
+  to `4`, to open that group: the active profile, the first AI or service
+  that needs you (else the first one), the first outside agent.
 - **NEEDS YOU** lists every row that waits for you, the most urgent first:
-  services that lost their sign-in or do not start, models without a key,
-  project profiles you did not trust yet. A click on a line, or `Tab` to
-  it and `Enter`, opens its page. Its pill fixes it right here (**Sign
-  in**, **Set key**, **Trust…**, **Log**). When nothing needs you the page
-  says `nothing right now`.
+  services that lost their sign-in or do not start; an AI whose CLI is
+  signed out (**Sign in**); an AI a profile step uses that is not
+  connected (`OpenAI · not connected · used by gpt-check`, **Add**); your
+  own model slots without a key; project profiles you did not trust yet.
+  A click on a line, or `Tab` to it and `Enter`, opens its page. Its pill
+  fixes it right here (**Sign in**, **Add**, **Set key**, **Trust…**,
+  **Log**). **Add** and **Sign in** open the Add AI card on that AI. When
+  nothing needs you the page says `nothing right now`.
 - **ACTIVE FLOW** draws the active profile's pipeline. A click on a step
   opens the step form of that profile.
 
@@ -188,7 +198,8 @@ lists what you can do with it. Safe actions come first; the ones that ask for co
 | Row | Actions |
 |---|---|
 | Profile | Use · Details · Edit… · Duplicate… · Runs · Trust… (project profiles) · Edit JSON |
-| Model slot | Set key (when the key is missing) · Edit… · Pick model… (the main slot) · Edit JSON · Remove… (your own slots) |
+| AI | no menu: `Enter` opens the row (its models, **Refresh**, **Disconnect…**) |
+| Model slot | Set key (when the key is missing) · Edit… · Edit JSON · Remove… |
 | Service | the service's own actions: Connect, Show tools, Sign in, Allow writes / Read only, Trust, Disable / Enable, Remove… and more (see [Connect MCP servers](mcp.md)) |
 | Listening row | Show status… · Turn on / Start listening now · Start Claude Code · Start Codex · Copy config · Stop listening… |
 | Outside agent | Show status… · Allowed tools… · Revoke always allow… · Disconnect… |
@@ -207,14 +218,57 @@ Every action opens a screen that exists without Itermoc:
 - **Runs** opens [Runs](runs.md) filtered to this profile's runs.
 - **Set key** opens the key prompt of the slot's provider. The key goes to
   the secret store; Itermoc never shows it.
-- **Edit…** on a model slot opens the slot form (see [Models](#models)).
-  On `main` it opens **AI: Configure Provider…**.
+- **Edit…** on a model slot opens the slot form (see
+  [Named models from config.json](#named-models-from-configjson)).
 - **Remove…**, **Disconnect…** and **Stop listening…** ask on a card where
   the safe button comes first and has the focus.
 
-## Add an AI
+## AI providers
 
-**AI: Add AI…** in the palette opens one card that connects an AI:
+The **AI PROVIDERS** group lists every AI you connected, one row each:
+`✓ Anthropic` and, at the right, `4 models`. Press `Enter` (or click) on
+a row to open it:
+
+```text
+ ϟ AI PROVIDERS                         2
+   ✓ Anthropic                   4 models
+      · claude-fable-5-1
+      · claude-haiku-5-5
+      · claude-opus-5-5
+      · claude-sonnet-5-5
+      Updated 2 min ago
+        Refresh (r)
+        Disconnect… (D)
+   ✓ Ollama                      3 models
+   + Add AI…
+```
+
+- **Refresh** (`r`) loads the AI's model list again. Itermoc also does it
+  by itself when you open it and a list is older than one hour. A sign-in
+  AI (Claude Code, Codex) has no list command: its list is the CLI's own
+  model names. When a refresh fails the row says
+  `! Models not refreshed · the key was not accepted` and keeps the last
+  list.
+- **Disconnect…** (`D`) asks first, with **Keep** first and focused. The
+  card names the profiles that use the AI. For an API key, the key leaves
+  the secret store. Then the AI leaves `ai/providers.json` and its model
+  list leaves the cache. termocode never signs a CLI out: Claude Code or
+  Codex stays signed in on this machine. A local server keeps running.
+- A key that only an environment variable gives (`OPENROUTER_API_KEY`,
+  say) is a row `via environment`. It has **Refresh** but no
+  **Disconnect…**: unset the variable to stop using it.
+- `o` opens the AI's page: all its models as chips, how it is connected,
+  what it costs and the profiles that use it.
+
+Your own named models from `config.json` (`ai_models`) are rows after the
+AIs, under `from config.json` (see below). The built-in `main`, `quick`
+and `local` slots are not rows; the `models_list` AI tool still lists
+them.
+
+### Add an AI
+
+`a`, the `+ Add AI…` row, or **AI: Add AI…** in the palette opens one
+card that connects an AI:
 Anthropic, OpenAI, Ollama, OpenRouter, LM Studio or any OpenAI-style
 server. Pick the AI, paste a key (or nothing, for a server on this
 machine), and the card loads its models:
@@ -235,15 +289,14 @@ machine), and the card loads its models:
 An AI you added already shows `✓ added` and how it connects. The key goes
 to the secret store only after the AI accepted it; the AI goes to
 `ai/providers.json`. `Esc` closes the card at any step and keeps nothing.
+When you press **Done**, the new AI is a row at once.
 [Set up AI](ai-setup.md#option-a-add-an-ai-in-the-app) has every step and
 message.
 
-## Models
-
 ### Named models from config.json
 
-**Add slot** (`a`, the `+ add slot…` row, or **AI: Add Model Slot…** in the palette)
-opens a small form:
+**AI: Add Model Slot…** in the palette (the expert path) opens a small
+form:
 
 ```text
  Add model slot
@@ -277,10 +330,9 @@ opens a small form:
   the card; the slot's page keeps its **Set key** pill.
 
 **Edit…** (`e` on the row) opens the same form with the slot's values. The
-name is fixed; other fields you wrote by hand in the slot stay. `main` is
-your provider: **Edit…** opens **AI: Configure Provider…**. On `quick` or
-`local` the form saves your own slot under that name; **Remove…** brings
-the built-in one back.
+name is fixed; other fields you wrote by hand in the slot stay. A slot
+named `quick` or `local` is your own slot under that name; **Remove…**
+brings the built-in one back.
 
 **Remove…** (`D` on the row) asks first, with **Keep** first and focused.
 When a profile uses the slot, the card names it: that profile will not run
@@ -316,14 +368,15 @@ Press `?` in the view for the key card.
 | `u` `e` `r` `d` `D` `t` | on a profile: use, edit, runs, details, duplicate, trust |
 | `n` / `J` | new profile from the active one / edit `profiles.json` |
 | `f` | on a `profiles` row that says it cannot be read: open the file at the broken line |
-| `a` / `E` | add a model slot / edit `ai_models` in `config.json` |
-| `e` / `k` / `D` | on a model slot: edit it, set the key, remove it (asks first) |
+| `Enter` / `r` / `D` | on an AI: open it (its models), refresh its models, disconnect it (asks first) |
+| `a` / `E` | add an AI (the Add AI card) / edit `ai_models` in `config.json` |
+| `e` / `k` / `D` | on a slot from `config.json`: edit it, set the key, remove it (asks first) |
 | `i` / `c` / `l` | on a service: sign in; connect a service; show the log |
 | `x` | on an outside agent: revoke its always allow (asks first) |
 | `t` / `d` / `D` | on a service: show its tools; disable it (asks first) or enable it; remove it (asks first) |
 | `s` / `S` / `y` / `T` | start Claude Code, start Codex, copy the termocode server config, show the status screen |
 
-On a page the same keys work (`u` `e` `r` `t`, `k` `i` `l` `s` `y`, `Enter` for
+On a page the same keys work (`u` `e` `r` `t` `D`, `k` `i` `l` `s` `y`, `Enter` for
 the menu, `Esc` back to the list). On the overview, `1` to `4` open a
 group, `Tab` / `Shift+Tab` pick a line of NEEDS YOU and `Enter` opens its
 page.
@@ -342,8 +395,9 @@ draws the pipeline as chips and scrolls.
 A window under 120 columns (80×24, say) has no room for the list next to
 a page, so the list and the page take turns, like [Runs](runs.md). Itermoc
 opens as one full-width tab (`✦ Itermoc`) that shows the list. Each row
-gets a middle column (the steps of a profile, the provider and model of a
-slot, what a service waits for) and, when it needs you, its fix pill at
+gets a middle column (the steps of a profile, how an AI is connected and
+what it costs, the provider and model of a slot, what a service waits
+for) and, when it needs you, its fix pill at
 the right:
 
 ```text
@@ -357,8 +411,8 @@ the right:
  Enter open · u use · Space fold · / filter · ? keys
 ```
 
-`Enter` (or a click) opens the row's page full-width; `Esc` goes back to
-the list on the same row. The row keys (`u`, `i`, `k`, …) work in the list
+`Enter` (or a click) opens the row's page full-width (on an AI it opens
+the row; `o` opens its page); `Esc` goes back to the list on the same row. The row keys (`u`, `i`, `k`, …) work in the list
 too. Under 60 columns the right column goes first, then (under 44) the
 middle one; the mark and the name always stay.
 
@@ -371,6 +425,9 @@ using termocode?". The AI answers with `profiles_list`, `models_list`,
 session's tokens and cost per model; a subscription step has no price). These tools run at once
 and change nothing. They never contain a key, token, header, env value
 or a URL with a password; a model slot only says `set` or `missing`.
+`models_list` lists the connected AIs (how each is connected, what it
+costs, its model ids and when they were loaded; a key from the
+environment says `from_environment`) and the model slots.
 
 When the next step is yours (set a key, sign in, trust, revoke), the AI
 opens this view at the row with `ai_view_open`. It does not move your
@@ -398,7 +455,12 @@ agents never do. See [AI tools](../reference/ai-tools.md).
 
 ## Where the old commands went
 
-Nothing was removed. **AI: Switch Profile…**, **AI: Show Profile**,
+**Itermoc: Models** is now **Itermoc: AI Providers** (the same section).
+**Add slot** moved from `a` and the `+ …` row to the palette: **AI: Add
+Model Slot…** (the expert path); `a` and `+ Add AI…` open the Add AI
+card. **AI: Configure Provider…** stays for the chat's own model.
+
+Nothing else was removed. **AI: Switch Profile…**, **AI: Show Profile**,
 **AI: Edit Profiles**, **AI: New Profile from Current…**, **AI: Edit Model
 Slots**, **AI: Connect a Service…**, **AI: MCP Servers…**,
 **MCP: Server Status…**, **MCP: Copy termocode Server Config** and the
