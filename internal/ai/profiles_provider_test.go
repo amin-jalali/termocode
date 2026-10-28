@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -123,5 +124,79 @@ func TestSyntheticSlotName(t *testing.T) {
 		if kind != c.kind || model != c.model || ok != c.ok {
 			t.Errorf("%q: %q %q %v", c.name, kind, model, ok)
 		}
+	}
+}
+
+// A synthetic slot resolves on first use: the kind's key (env, then the
+// store, then main's) and the connected provider's base URL.
+func TestSlotPoolSyntheticSlots(t *testing.T) {
+	antKey := "sk-" + "ant-test-6666666666666666"
+	orKey := "sk-" + "or-test-7777777777777777"
+	creds := Credentials{Keys: map[string]string{KindAnthropic: antKey}}
+	provs := map[string]ProviderEntry{
+		KindAnthropic:  {Kind: KindAnthropic, Method: MethodKey},
+		KindCompatible: {Kind: KindCompatible, Method: MethodURL, BaseURL: "http://localhost:8000/v1"},
+		KindOllama:     {Kind: KindOllama, Method: MethodLocal, BaseURL: "http://box:11434/v1"},
+	}
+	env := map[string]string{"OPENROUTER_API_KEY": orKey}
+	getenv := func(k string) string { return env[k] }
+	var built atomic.Int32
+	pool := NewSlotPool(map[string]Config{"gpt": {Kind: KindOpenAI, APIKey: "k", Model: "m"}},
+		func(c Config) Provider { built.Add(1); return countProvider{cfg: c} }).
+		WithSynthetic(SyntheticResolver(provs, Config{}, creds, getenv))
+
+	cases := []struct {
+		name               string
+		kind, model, base  string
+		key                string
+		configured, exists bool
+	}{
+		{"anthropic/claude-sonnet-5-5", KindAnthropic, "claude-sonnet-5-5", DefaultBaseURL(KindAnthropic), antKey, true, true},
+		{"openai-compatible/qwen3", KindCompatible, "qwen3", "http://localhost:8000/v1", "", true, true},
+		{"ollama/llama3.2:3b", KindOllama, "llama3.2:3b", "http://box:11434/v1", "", true, true},
+		// Not connected here: still runs on a key from the environment.
+		{"openrouter/meta/llama-4:free", KindOpenRouter, "meta/llama-4:free", DefaultBaseURL(KindOpenRouter), orKey, true, true},
+		{"openai/gpt-5-mini", KindOpenAI, "gpt-5-mini", DefaultBaseURL(KindOpenAI), "", false, true},
+		{"gemini/x", "", "", "", "", false, false},
+	}
+	for _, c := range cases {
+		cfg, ok := pool.Config(c.name)
+		if ok != c.exists || pool.Has(c.name) != c.exists {
+			t.Errorf("%s: exists %v, want %v", c.name, ok, c.exists)
+			continue
+		}
+		if !ok {
+			if _, _, err := pool.Provider(c.name); err == nil || !strings.Contains(err.Error(), "unknown model slot") {
+				t.Errorf("%s: %v", c.name, err)
+			}
+			continue
+		}
+		if cfg.Kind != c.kind || cfg.Model != c.model || cfg.BaseURL != c.base || cfg.APIKey != c.key {
+			t.Errorf("%s: cfg %+v", c.name, cfg)
+		}
+		_, _, err := pool.Provider(c.name)
+		if (err == nil) != c.configured {
+			t.Errorf("%s: Provider err %v, want configured %v", c.name, err, c.configured)
+		}
+		if err != nil && strings.Contains(err.Error(), antKey) {
+			t.Errorf("%s: the error names a key", c.name)
+		}
+	}
+	before := built.Load()
+	_, _, _ = pool.Provider("anthropic/claude-sonnet-5-5")
+	if built.Load() != before {
+		t.Error("a synthetic slot's provider is built once")
+	}
+	if got := strings.Join(pool.Names(), ","); got != "gpt" {
+		t.Errorf("names list config slots only: %q", got)
+	}
+}
+
+// main's key serves a synthetic slot of main's kind (no stored key).
+func TestSyntheticResolverUsesMainKey(t *testing.T) {
+	main := Config{Kind: KindOpenAI, APIKey: "sk-" + "test-main-1"}
+	cfg, ok := SyntheticResolver(nil, main, Credentials{}, func(string) string { return "" })("openai/o3")
+	if !ok || cfg.APIKey != main.APIKey || cfg.Model != "o3" {
+		t.Fatalf("%+v %v", cfg, ok)
 	}
 }

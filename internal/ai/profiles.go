@@ -793,6 +793,25 @@ func slotConfig(sl ModelSlot, main Config, c Credentials, getenv func(string) st
 	return cfg
 }
 
+// SyntheticResolver resolves a synthetic slot name ("<kind>/<model>",
+// the slot of a provider step) the way ResolveSlots resolves a config
+// slot: the kind's key from the environment, the store or main, and the
+// base URL of the connected provider in provs (none: the kind's
+// default). A provider that is not in provs still resolves: profiles
+// travel between machines, and a key may come from the environment.
+func SyntheticResolver(provs map[string]ProviderEntry, main Config, c Credentials, getenv func(string) string) func(string) (Config, bool) {
+	if getenv == nil {
+		getenv = os.Getenv
+	}
+	return func(name string) (Config, bool) {
+		kind, model, ok := SplitSyntheticSlot(name)
+		if !ok {
+			return Config{}, false
+		}
+		return slotConfig(ModelSlot{Provider: kind, Model: model, BaseURL: provs[kind].BaseURL}, main, c, getenv), true
+	}
+}
+
 // SlotPool holds one provider per slot, built on first use. It is safe
 // for concurrent use (pipeline steps ask for their provider from their
 // own goroutines).
@@ -801,6 +820,41 @@ type SlotPool struct {
 	cfgs  map[string]Config
 	provs map[string]Provider
 	build func(Config) Provider
+	// synth resolves a name that is not in cfgs (provider steps); nil:
+	// none. synCfgs keeps what it resolved (Names leaves them out).
+	synth   func(string) (Config, bool)
+	synCfgs map[string]Config
+}
+
+// WithSynthetic makes the pool resolve names it does not hold with
+// resolve (SyntheticResolver), on first use. It returns p.
+func (p *SlotPool) WithSynthetic(resolve func(string) (Config, bool)) *SlotPool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.synth = resolve
+	return p
+}
+
+// lookup is the config of name, resolving a synthetic name once. The
+// caller holds p.mu.
+func (p *SlotPool) lookup(name string) (Config, bool) {
+	if cfg, ok := p.cfgs[name]; ok {
+		return cfg, true
+	}
+	if p.synth == nil {
+		return Config{}, false
+	}
+	if cfg, ok := p.synCfgs[name]; ok {
+		return cfg, true
+	}
+	cfg, ok := p.synth(name)
+	if ok {
+		if p.synCfgs == nil {
+			p.synCfgs = map[string]Config{}
+		}
+		p.synCfgs[name] = cfg
+	}
+	return cfg, ok
 }
 
 // NewSlotPool makes a pool over cfgs. build makes a provider (nil:
@@ -828,7 +882,7 @@ func (p *SlotPool) Names() []string {
 func (p *SlotPool) Has(name string) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	_, ok := p.cfgs[name]
+	_, ok := p.lookup(name)
 	return ok
 }
 
@@ -837,8 +891,7 @@ func (p *SlotPool) Has(name string) bool {
 func (p *SlotPool) Config(name string) (Config, bool) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	cfg, ok := p.cfgs[name]
-	return cfg, ok
+	return p.lookup(name)
 }
 
 // Provider returns the provider of slot name, building it the first
@@ -847,7 +900,7 @@ func (p *SlotPool) Config(name string) (Config, bool) {
 func (p *SlotPool) Provider(name string) (Provider, Config, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	cfg, ok := p.cfgs[name]
+	cfg, ok := p.lookup(name)
 	if !ok {
 		return nil, Config{}, fmt.Errorf("unknown model slot %q", name)
 	}
