@@ -164,6 +164,30 @@ func RemoveProvider(path, kind string) error {
 	})
 }
 
+// EnvKeyVar names the vendor environment variable of kind's API key
+// ("" = the kind takes none).
+func EnvKeyVar(kind string) string { return envKeyFor(kind) }
+
+// EnvOnlyKinds lists, sorted, the kinds whose key comes from their vendor
+// environment variable and that provs does not hold: they work without
+// being connected, and only the environment can take them away.
+func EnvOnlyKinds(provs map[string]ProviderEntry, getenv func(string) string) []string {
+	if getenv == nil {
+		getenv = os.Getenv
+	}
+	var out []string
+	for _, kind := range Kinds {
+		if _, ok := provs[kind]; ok {
+			continue
+		}
+		if e := envKeyFor(kind); e != "" && strings.TrimSpace(getenv(e)) != "" {
+			out = append(out, kind)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
 // CLIKind is the provider kind whose subscription a step CLI signs in to.
 func CLIKind(cli string) string {
 	switch cli {

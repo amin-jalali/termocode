@@ -11,6 +11,24 @@ import (
 	"testing"
 )
 
+// Spec (AIP-4): a key that comes only from an environment variable is a
+// provider "via environment": EnvOnlyKinds lists the kinds whose vendor
+// variable is set and that are not connected otherwise.
+func TestEnvOnlyKinds(t *testing.T) {
+	env := map[string]string{"ANTHROPIC_API_KEY": "sk-" + "test-env", "OPENROUTER_API_KEY": "sk-" + "or-test", "OPENAI_API_KEY": ""}
+	getenv := func(k string) string { return env[k] }
+	got := EnvOnlyKinds(map[string]ProviderEntry{KindOpenRouter: {Kind: KindOpenRouter, Method: MethodKey}}, getenv)
+	if len(got) != 1 || got[0] != KindAnthropic {
+		t.Fatalf("EnvOnlyKinds = %v, want [anthropic]", got)
+	}
+	if v := EnvKeyVar(KindOpenAI); v != "OPENAI_API_KEY" {
+		t.Fatalf("EnvKeyVar(openai) = %q", v)
+	}
+	if v := EnvKeyVar(KindOllama); v != "" {
+		t.Fatalf("EnvKeyVar(ollama) = %q", v)
+	}
+}
+
 func TestProvidersPath(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
