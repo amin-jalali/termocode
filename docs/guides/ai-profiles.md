@@ -12,8 +12,8 @@ explained in [Use AI](ai-use.md).
 ## Pick a profile
 
 The chat header shows the active profile as a chip: `✦ default ▾`.
-[Itermoc](itermoc.md) lists all profiles, their model slots and their trust
-state in a sidebar view; the chip and its picker stay the fast way to switch.
+[Itermoc](itermoc.md) lists all profiles, the AIs you connected and the
+trust state of each profile in a sidebar view; the chip and its picker stay the fast way to switch.
 
 | How | What it does |
 |---|---|
@@ -23,7 +23,7 @@ state in a sidebar view; the chip and its picker stay the fast way to switch.
 | **AI: Next Profile** | Same as `Alt+Shift+P` |
 
 Each row of the picker shows the steps of the profile in order, with the
-model of each step (taken from its [model slot](#model-slots)):
+model of each step (the one you chose in [the model list](#choose-a-model)):
 
 ```text
 default        one step (main model: claude-sonnet-4-5)
@@ -32,7 +32,7 @@ fast           Answer (gpt-5-mini)
 plan           planner decides the steps (up to 12 agents, 6 waves)
 ```
 
-A slot with no model says so, for example `Fixer (quick: not set)`. On a
+A step whose model is not set says so, for example `Fixer (quick: not set)`. On a
 narrow window the row gets shorter: first the model names (`sonnet-4-5`),
 then the agent names, then only `2 steps`. A project profile keeps its
 trust state (`project, asks first`) at the start of the row. For the full
@@ -82,7 +82,7 @@ The form has these fields:
 | Name | Letters, digits, `-`, `_` and `.`. `default` and the other built-in names are taken. |
 | Title | One line about the profile (optional). |
 | Budget | Dollars per run; empty means no limit. |
-| Quick → / Deep → | Which model slot the `quick` and `deep` categories use in this profile. `default` keeps the standard mapping. |
+| Quick → / Deep → | Which model **Automatic: quick** and **Automatic: deep** use in this profile. `default` keeps the standard mapping. |
 
 Below them is the list of steps. Only the step you are on is open; the
 others show one line (model and tools). Each step has:
@@ -153,11 +153,11 @@ press it. The form scrolls, so it fits 80 columns by 24 rows.
 
 The form checks your input with the same rules as `profiles.json`: a
 duplicate step id, more than 12 steps, two planners, `waits for` without
-`ai_parallel_max`, an unknown slot, a prompt over 8 KB. The problem
+`ai_parallel_max`, an unknown model name, a prompt over 8 KB. The problem
 shows under the field. **Save…** stays inactive until the form is valid;
 pressing it then jumps to the first problem.
 
-**Save…** opens the preview card: each step, its model slot, tools, and the
+**Save…** opens the preview card: each step, its model, tools, and the
 first line of its prompt. Its **Save** writes the profile to
 `~/.config/termocode/ai/profiles.json` and switches to it. The file is
 read, changed and written back through a temporary file, so other
@@ -194,8 +194,11 @@ Your own profiles with the same name replace a built-in one, except
 
 ## Model slots
 
-A step does not name a provider directly. It names a **slot**: a short
-name for a provider and a model. Three slots always exist:
+Most steps name an AI and a model: you pick them in
+[the model list](#choose-a-model) and nothing else is needed. This
+section is the expert path: a **slot** is a short name in `config.json`
+for a provider and a model. A step can name a slot instead of a model,
+and the built-in profiles use these three, which always exist:
 
 | Slot | What it is |
 |---|---|
@@ -231,12 +234,13 @@ To edit the file by hand (the expert path), run **AI: Edit Model Slots**:
 
 ### Keys
 
-No file in this guide holds a key. A slot uses the key of its provider
-kind, in this order:
+No file in this guide holds a key. A step (or slot) uses the key of its
+AI, in this order:
 
 1. the environment variable (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
    `OPENROUTER_API_KEY`),
-2. the key you stored with **AI: Configure Provider…**,
+2. the key you stored with the **Add AI** card or **AI: Configure
+   Provider…**,
 3. the main provider's key, when the slot has the same kind.
 
 Ollama and LM Studio need no key. A `claude-oauth` slot uses your Claude
@@ -801,8 +805,10 @@ time. Otherwise it shows `usage limit reached · Resume when it resets`.
 the steps before it keep their work.
 
 **Not logged in.** A step whose CLI has no login fails with
-`… is not logged in: run claude auth login …`. Log in, then use
-**Retry from step N**.
+`… is not logged in: sign in with AI: Add AI… (or run claude auth login
+in a terminal) …`. Sign in, then use **Retry from step N**. A step whose
+CLI is missing fails with `… is not installed …`; the **Add AI** card
+installs it and signs in.
 
 ## Tokens and cost
 
@@ -961,9 +967,10 @@ All files: [Config files](../reference/config-files.md). All settings:
 ## Troubleshooting
 
 **"Profile review cannot run"**
-:   A slot of the profile has no key or no provider. The toast names the
-    slot. Set the key with **AI: Configure Provider…** or the environment
-    variable, or change the slot in `ai_models`.
+:   A step of the profile has no key or its AI is not connected. The
+    toast names it. Connect the AI with **AI: Add AI…** (or press **Fix**
+    on the step in the profile form), set the key with the environment
+    variable, or, for a slot, change it in `ai_models`.
 
 **My profile is not in the picker**
 :   Its file has an error. Look for the toast "AI profiles: some were

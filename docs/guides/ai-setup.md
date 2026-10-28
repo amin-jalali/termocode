@@ -7,8 +7,8 @@ You can use:
 
 | Provider | Needs |
 |---|---|
-| Anthropic | an API key |
-| OpenAI | an API key |
+| Anthropic | an API key, or your Claude Pro / Max plan (through Claude Code) |
+| OpenAI | an API key, or your ChatGPT Plus / Pro plan (through Codex) |
 | OpenRouter | an API key |
 | Ollama (local) | Ollama running on your machine |
 | LM Studio (local) | LM Studio's server running |
@@ -317,7 +317,7 @@ link). You sign in, copy the code, and paste it back. Run
 
 | Key / command | Action |
 |---|---|
-| **AI: Add AI…** | Connect an AI: a key, a local server or a server URL |
+| **AI: Add AI…** | Connect an AI: a sign-in with your plan, a key, a local server or a server URL |
 | **AI: Configure Provider…** | Pick the chat's provider and enter a key |
 | **AI: Pick Model…** | Change the model |
 | **AI: Secret Store…** | List and forget saved secrets, lock or unlock, change the passphrase, switch backend |
@@ -362,6 +362,17 @@ Next: [Use AI](ai-use.md).
 
 **Every AI command says "configure"**
 :   No provider is set, or the key is empty. Run **AI: Configure Provider…**.
+
+**I added an AI, but the chat does not use it**
+:   **AI: Add AI…** connects an AI for profile steps; the chat keeps its own
+    provider and model. Pick them with **AI: Configure Provider…** (see
+    [The chat's provider and model](#the-chats-provider-and-model)).
+
+**A step says "Claude Code is not installed" or "is not logged in"**
+:   Run **AI: Add AI…**, pick the AI and its sign-in (or press **Fix** on
+    the step in the profile form). The card installs the CLI and signs you
+    in. In Itermoc, a signed-out AI has a **Sign in** pill that opens the
+    same card at the sign-in.
 
 **`401` or "invalid API key"**
 :   Check the key. An environment variable wins over the saved key — run

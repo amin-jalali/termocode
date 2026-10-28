@@ -70,7 +70,7 @@ group keeps its number.
 | Group | What it lists |
 |---|---|
 | PROFILES | the agent profiles; `●` marks the active one (`active`), `⚠` a project profile you were not asked about yet (`project`) |
-| AI PROVIDERS | the AIs you connected, with how many models each has; then your own model slots from `config.json`, with the short model name, or `no key` in amber. A key is never shown |
+| AI PROVIDERS | the AIs you connected, with how many models each has; then your named models from `config.json` (the expert path), with the short model name, or `no key` in amber. A key is never shown |
 | SERVICES | the services in `mcp.json`: `28 tools`, `off`, `sign in`, `failed` |
 | OUTSIDE AGENTS | whether termocode listens for agents like Claude Code (`listening` and its mode), who is connected and their calls |
 
@@ -144,7 +144,8 @@ it is connected and what it costs (`your plan`, `API · pay per use`,
 `local · free`), and the profiles that use it. Its pills are **Refresh**
 (`r`) and **Disconnect…** (`D`); see [AI providers](#ai-providers).
 
-The page of a model slot shows its key facts and its main pills. A key is
+The page of a named model from `config.json` shows its key facts and its
+main pills. A key is
 never on a page. `Esc` on a page goes back to the list; `j`, `↓`, `↑` and
 the wheel scroll a page that is taller than the window.
 
@@ -180,11 +181,13 @@ same tab (`✦ AI`):
   services that lost their sign-in or do not start; an AI whose CLI is
   signed out (**Sign in**); an AI a profile step uses that is not
   connected (`OpenAI · not connected · used by gpt-check`, **Add**); your
-  own model slots without a key; project profiles you did not trust yet.
+  named models from `config.json` without a key; project profiles you did
+not trust yet.
   A click on a line, or `Tab` to it and `Enter`, opens its page. Its pill
   fixes it right here (**Sign in**, **Add**, **Set key**, **Trust…**,
-  **Log**). **Add** and **Sign in** open the Add AI card on that AI. When
-  nothing needs you the page says `nothing right now`.
+  **Log**). **Add** opens the Add AI card on that AI; **Sign in** opens it
+  right at that AI's sign-in. When nothing needs you the page says
+  `nothing right now`.
 - **ACTIVE FLOW** draws the active profile's pipeline. A click on a step
   opens the step form of that profile.
 
@@ -270,8 +273,9 @@ them.
 `a`, the `+ Add AI…` row, or **AI: Add AI…** in the palette opens one
 card that connects an AI:
 Anthropic, OpenAI, Ollama, OpenRouter, LM Studio or any OpenAI-style
-server. Pick the AI, paste a key (or nothing, for a server on this
-machine), and the card loads its models:
+server. Pick the AI, sign in with your plan (Anthropic, OpenAI) or paste
+a key (or nothing, for a server on this machine), and the card loads its
+models:
 
 ```text
  Add an AI
@@ -459,6 +463,11 @@ agents never do. See [AI tools](../reference/ai-tools.md).
 **Add slot** moved from `a` and the `+ …` row to the palette: **AI: Add
 Model Slot…** (the expert path); `a` and `+ Add AI…` open the Add AI
 card. **AI: Configure Provider…** stays for the chat's own model.
+
+The **Install** and **Log in** pills of the profile form are gone, and so
+is the terminal tab they opened. A step whose AI is not ready has **Fix**,
+and a signed-out AI in Itermoc has **Sign in**: both open the Add AI card,
+which installs the CLI into termocode's tools folder and runs its sign-in.
 
 Nothing else was removed. **AI: Switch Profile…**, **AI: Show Profile**,
 **AI: Edit Profiles**, **AI: New Profile from Current…**, **AI: Edit Model
