@@ -382,7 +382,7 @@ func TestAddAISignIn(t *testing.T) {
 	}
 	status = clistep.StatusReady
 	addAIKeyT(t, m, tea.KeyEnter) // Try again
-	if m.addAI.Step() != addai.StepDone || !strings.Contains(addAICardText(m), "gpt-5-codex") {
+	if m.addAI.Step() != addai.StepDone || !strings.Contains(addAICardText(m), ai.CLIModels(ai.CLICodex)[0].ID) {
 		t.Fatalf("card:\n%s", addAICardText(m))
 	}
 	if p := addAIProviders(t)[ai.KindOpenAI]; p.Method != ai.MethodCLI || p.CLI != ai.CLICodex {
@@ -423,6 +423,39 @@ func TestAddAIHitTargets(t *testing.T) {
 	addAIKeyT(t, m, tea.KeyDown)
 	addAIKeyT(t, m, tea.KeyEnter)
 	check("key", "addai:back", "addai:cancel", "addai:connect")
+}
+
+// Spec: the shot variants (itermocdemo:addai-<v>) open the card at their
+// step with fixed data; nothing is checked, run or written.
+func TestAddAIDemoVariants(t *testing.T) {
+	old := aiListModels
+	t.Cleanup(func() { aiListModels = old })
+	aiListModels = func(context.Context, ai.Config) ([]ai.ModelInfo, error) {
+		t.Error("a demo listed models")
+		return nil, nil
+	}
+	for v, want := range map[string]struct {
+		step addai.Step
+		text string
+	}{
+		"pick":     {addai.StepPick, "Add an AI"},
+		"method":   {addai.StepMethod, "Sign in with Claude Pro / Max"},
+		"key":      {addai.StepKey, "Anthropic API key"},
+		"key-busy": {addai.StepKey, "Checking the key and loading models"},
+		"key-bad":  {addai.StepKey, "That key was not accepted."},
+		"local":    {addai.StepLocal, "Looking for Ollama on this machine"},
+		"url":      {addai.StepURL, "Server URL"},
+		"done":     {addai.StepDone, "Anthropic is ready"},
+	} {
+		m := addAITestModel(t)
+		m.addAIDemo(v)
+		if !m.addAIOpen || m.addAI.Step() != want.step || !strings.Contains(addAICardText(m), want.text) {
+			t.Errorf("%s: open %v step %v\n%s", v, m.addAIOpen, m.addAI.Step(), addAICardText(m))
+		}
+		if addAIProviders(t) != nil {
+			t.Errorf("%s wrote providers.json", v)
+		}
+	}
 }
 
 // Spec: the palette has AI: Add AI… next to AI: Add Model Slot…, and the

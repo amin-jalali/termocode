@@ -251,7 +251,9 @@ func AISkills(variant string) Scene {
 // "slotkey" the Set key offer after a new slot, "slotremove" the Remove
 // card of a slot a profile uses; "ai-switch", "ai-draft", "ai-slot",
 // "ai-connect", "ai-access" and "ai-start" the confirm card of each AI
-// write tool (AH-8).
+// write tool (AH-8); "addai-pick", "addai-method", "addai-key",
+// "addai-key-busy", "addai-key-bad", "addai-local", "addai-url" and
+// "addai-done" the Add AI card at that step (AIP-3).
 func Itermoc(variant string) Scene {
 	name := "itermoc-" + variant
 	demo := variant

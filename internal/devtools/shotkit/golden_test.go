@@ -303,8 +303,10 @@ func goldenCases() []goldenCase {
 	// The service page (B3), the outside-agent pages (B4) and the overview
 	// (B5); at 80x24 every one is the list / page toggle (B6).
 	// The cards of the AI write tools (AH-8): Deny first, the draft as a diff.
+	// The Add AI card (AIP-3) at each step of the key, local and URL paths.
 	for _, v := range []string{"list", "profile", "follow", "empty", "menu", "slotadd", "slotkey", "slotremove", "service", "agent", "agents", "overview",
-		"ai-switch", "ai-draft", "ai-slot", "ai-connect", "ai-access", "ai-start"} {
+		"ai-switch", "ai-draft", "ai-slot", "ai-connect", "ai-access", "ai-start",
+		"addai-pick", "addai-method", "addai-key", "addai-key-busy", "addai-key-bad", "addai-local", "addai-url", "addai-done"} {
 		sc := Itermoc(v)
 		out = append(out, goldenCase{sc.Name + "-200x50", sc, 200, 50}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}

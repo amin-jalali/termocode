@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/addai"
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clock"
@@ -30,6 +31,7 @@ import (
 //	slotkey     full, with the "set the key?" card after a new slot
 //	slotremove  full, with the Remove card of a slot a profile uses
 //	ai-<card>   full, with the card of an AI write tool (itermocAICardDemo)
+//	addai-<step> full, with the Add AI card at one step (addAIDemo)
 func (m *Model) itermocDemo(arg string) tea.Cmd {
 	s := m.aiS()
 	m.itermoc = newItermocState()
@@ -123,7 +125,64 @@ func (m *Model) itermocDemo(arg string) tea.Cmd {
 	if card, ok := strings.CutPrefix(arg, "ai-"); ok {
 		return m.itermocAICardDemo(card)
 	}
+	if step, ok := strings.CutPrefix(arg, "addai-"); ok {
+		return m.addAIDemo(step)
+	}
 	return m.itermocSlotDemo(arg)
+}
+
+// addAIDemo opens the Add AI card at one step over the full demo
+// (addai-pick, -method, -key, -key-busy, -key-bad, -local, -url, -done).
+// The card's requests are dropped: nothing is checked, run or saved.
+// OpenRouter shows as added.
+func (m *Model) addAIDemo(step string) tea.Cmd {
+	m.addAI = addai.New(addai.Options{
+		Connected: map[string]ai.ProviderEntry{ai.KindOpenRouter: {Kind: ai.KindOpenRouter, Method: ai.MethodKey}},
+		KeyNote:   secretPromptNote(""),
+	})
+	m.addAI.SetSize(m.w, m.h)
+	m.addAIOpen = true
+	send := func(msgs ...tea.Msg) {
+		for _, k := range msgs {
+			m.addAI, _ = m.addAI.Update(k) // the request it sends is not run
+		}
+	}
+	enter, down := tea.KeyMsg{Type: tea.KeyEnter}, tea.KeyMsg{Type: tea.KeyDown}
+	pick := func(kind string) {
+		for _, e := range addai.Catalog() {
+			if e.Kind == kind {
+				break
+			}
+			send(down)
+		}
+		send(enter)
+	}
+	demoKey := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("demo-key-not-real-0000")}
+	switch step {
+	case "pick":
+	case "method":
+		pick(ai.KindAnthropic)
+	case "key", "key-busy", "key-bad", "done":
+		pick(ai.KindAnthropic)
+		send(down, enter)
+		if step == "key" {
+			break
+		}
+		send(demoKey, enter)
+		switch step {
+		case "key-bad":
+			m.addAI.Fail(m.addAI.Gen(), "That key was not accepted.")
+		case "done":
+			m.addAI.Finish(m.addAI.Gen(), []string{"claude-fable-5-1", "claude-haiku-5-5", "claude-opus-5-5", "claude-sonnet-5-5"})
+		}
+	case "local":
+		pick(ai.KindOllama)
+	case "url":
+		pick(ai.KindCompatible)
+	default:
+		m.addAIOpen = false
+	}
+	return nil
 }
 
 // itermocAICardDemo opens the card of one AI write tool (AH-8) over the
