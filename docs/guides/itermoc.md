@@ -212,7 +212,35 @@ Every action opens a screen that exists without Itermoc:
 - **Remove…**, **Disconnect…** and **Stop listening…** ask on a card where
   the safe button comes first and has the focus.
 
+## Add an AI
+
+**AI: Add AI…** in the palette opens one card that connects an AI:
+Anthropic, OpenAI, Ollama, OpenRouter, LM Studio or any OpenAI-style
+server. Pick the AI, paste a key (or nothing, for a server on this
+machine), and the card loads its models:
+
+```text
+ Add an AI
+ ──────────────────────────────────────────────
+ ◉ Anthropic     Claude models
+ ◦ OpenAI        GPT models
+ ◦ Ollama        Llama, Qwen… on your machine
+ ◦ OpenRouter    Many models, one key
+ ◦ LM Studio     Local models
+ ◦ Other server  Any OpenAI-style URL
+
+                    Cancel
+```
+
+An AI you added already shows `✓ added` and how it connects. The key goes
+to the secret store only after the AI accepted it; the AI goes to
+`ai/providers.json`. `Esc` closes the card at any step and keeps nothing.
+[Set up AI](ai-setup.md#option-a-add-an-ai-in-the-app) has every step and
+message.
+
 ## Models
+
+### Named models from config.json
 
 **Add slot** (`a`, the `+ add slot…` row, or **AI: Add Model Slot…** in the palette)
 opens a small form:
