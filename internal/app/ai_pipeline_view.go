@@ -64,6 +64,9 @@ func (s *aiState) aiProfileSteps(p ai.Profile) []aiPipeStep {
 		model, _ := s.aiSlotModel(slot)
 		if st.CLI != "" { // a subscription CLI (CS-1)
 			slot, model = ai.CLITitle(st.CLI), "subscription"
+			if st.Model != "" {
+				model = st.Model + " · subscription"
+			}
 		}
 		out = append(out, aiPipeStep{name: aiCleanText(name), slot: slot, model: model, step: st})
 	}

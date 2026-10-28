@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clistep"
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/lspinstall"
 )
 
 // Subscription CLI steps (Group CS). A profile step with "cli" runs
@@ -29,6 +32,21 @@ var aiCLIRun = clistep.Run
 
 // aiCLIDiff is the hand-off's git diff (a var for tests).
 var aiCLIDiff = clistep.GitDiff
+
+// aiCLIFound reports whether a CLI's program is on PATH or in
+// termocode's own tools/bin (where it installs one; clistep looks there
+// too).
+func aiCLIFound(bin string) bool {
+	if _, err := agentLookPath(bin); err == nil {
+		return true
+	}
+	dir, err := lspinstall.BinDir()
+	if err != nil {
+		return false
+	}
+	fi, err := os.Stat(filepath.Join(dir, bin))
+	return err == nil && !fi.IsDir() && fi.Mode()&0o111 != 0
+}
 
 // aiCLIPrompt is the stdin text of a CLI step: what the step is, its
 // input and, for a hand-off, the git diff of the work so far.

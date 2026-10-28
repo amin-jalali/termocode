@@ -12,14 +12,29 @@ import (
 // fails: bad slots and broken profile files land in profiles.Errors and
 // the built-in profiles stay.
 func (s *aiState) loadProfiles(creds ai.Credentials) {
+	s.providers = loadAIProviders(s.settings, creds)
 	cfgs, errs := ai.ResolveSlots(s.settings, s.cfg, creds, os.Getenv)
-	s.slots = ai.NewSlotPool(cfgs, nil)
+	s.slots = ai.NewSlotPool(cfgs, nil).WithSynthetic(ai.SyntheticResolver(s.providers, s.cfg, creds, os.Getenv))
 	known := map[string]bool{ai.SlotMain: true, ai.SlotQuick: true, ai.SlotLocal: true}
 	for n := range cfgs {
 		known[n] = true
 	}
 	s.slotKnown, s.slotErrs = known, errs
 	s.reloadProfiles()
+}
+
+// loadAIProviders reads ai/providers.json. Without the file the list is
+// derived from the setup (stored keys, a local ai_provider) and kept in
+// memory only: whether a CLI is signed in takes a process to find out,
+// so a list with the CLIs in it is written later, off the UI path.
+func loadAIProviders(st ai.Settings, creds ai.Credentials) map[string]ai.ProviderEntry {
+	path, err := ai.ProvidersPath()
+	if err == nil {
+		if ps, err := ai.LoadProviders(path); err == nil {
+			return ps
+		}
+	}
+	return ai.DeriveProviders(st, creds, nil)
 }
 
 // reloadProfiles reads profiles.json and the project's ai-profiles.json

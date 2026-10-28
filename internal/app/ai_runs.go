@@ -199,7 +199,7 @@ func (s *aiState) aiRunPreflight(run agentdag.Run, cats map[string]string) (map[
 	for _, n := range nodes {
 		if n.CLI != "" { // a subscription CLI: no slot, but it must be there (CS-5)
 			if n.State != agentdag.StateCompleted {
-				if _, err := agentLookPath(clistep.Bin(n.CLI)); err != nil {
+				if !aiCLIFound(clistep.Bin(n.CLI)) {
 					return nil, fmt.Errorf("step %q: %w", n.Title, clistep.NotInstalled(n.CLI))
 				}
 			}
@@ -235,6 +235,9 @@ func (m *Model) startAIRun(text string, prof ai.Profile, rules ai.Rules) tea.Cmd
 			Category: n.Category, State: string(agentdag.StatePending)}
 		if n.CLI != "" {
 			steps[i].CLI, steps[i].Model = n.CLI, ai.CLITitle(n.CLI)
+			if n.Model != "" {
+				steps[i].Model += " · " + n.Model
+			}
 		}
 		if !chain {
 			steps[i].Deps = agentdag.Deps(run, n.ID)
@@ -336,7 +339,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			}
 			handoff := n.ID == verifyID || n.ID == fixID || len(agentdag.Deps(run, n.ID)) > 0
 			prompt := aiCLIPrompt(ctx, root, sys, input, handoff)
-			res, err := aiCLIRun(ctx, clistep.Spec{CLI: n.CLI, Write: n.Tools.Preset == agentdag.PresetAll, Dir: root}, prompt, emit)
+			res, err := aiCLIRun(ctx, clistep.Spec{CLI: n.CLI, Model: n.Model, Write: n.Tools.Preset == agentdag.PresetAll, Dir: root}, prompt, emit)
 			return res.Text, res.Usage, err
 		},
 		Build: func(ctx context.Context, n agentdag.Node, input string) (*ai.Agent, []ai.Message, error) {

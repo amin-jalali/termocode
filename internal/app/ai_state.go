@@ -59,6 +59,9 @@ type aiState struct {
 	// loadProfiles (reloadProfiles reuses them).
 	slotKnown map[string]bool
 	slotErrs  []string
+	// providers are the connected AIs by kind (ai/providers.json, else
+	// derived from the setup); provider steps take their base URL.
+	providers map[string]ai.ProviderEntry
 	// cliStates is the last check of the subscription CLIs (CS-5; nil:
 	// not checked yet). The profile form shows it.
 	cliStates map[string]profileform.CLIState
@@ -314,6 +317,9 @@ func (s *aiState) profileModelLabel(p ai.Profile) string {
 	st := p.Steps[len(p.Steps)-1]
 	if p.Planned() {
 		st = p.Steps[0]
+	}
+	if st.CLI != "" && st.Model != "" {
+		return ai.CLITitle(st.CLI) + " · " + st.Model
 	}
 	if st.CLI != "" {
 		return ai.CLITitle(st.CLI)
