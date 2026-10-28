@@ -30,6 +30,7 @@ var helpContexts = map[string]string{
 	"review":        "guides/ai-use.md#review-ai-changes",
 	"agent-confirm": "guides/ai-use.md#agent-let-the-chat-use-tools",
 	"connect":       "guides/mcp.md#connect-a-service",
+	"add-ai":        "guides/ai-setup.md#option-a-add-an-ai-in-the-app",
 	"profile-form":  "guides/ai-profiles.md#create-and-edit-profiles",
 	"chat":          "guides/ai-use.md#chat-panel",
 	"agents":        "guides/ai-profiles.md#the-agents-panel",
@@ -105,6 +106,8 @@ func (m Model) helpTopicForFocus() string {
 		return itermocGuidePage + "#models" // the slot form (itermoc_slots.go)
 	case m.connectOpen:
 		return helpContexts["connect"]
+	case m.addAIOpen:
+		return helpContexts["add-ai"]
 	case m.profileFormOpen:
 		return helpContexts["profile-form"]
 	case m.searchOpen:

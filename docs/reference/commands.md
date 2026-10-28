@@ -8,6 +8,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 
 | Title | ID | Key | Hint |
 | --- | --- | --- | --- |
+| AI: Add AI… | `ai-add` |   |   |
 | AI: Add File / Selection to Chat | `ai-attach` |   |   |
 | AI: Add Model Slot… | `ai-model-slot-add` |   |   |
 | AI: Agent Auto-Approve… | `ai-auto-approve` |   |   |

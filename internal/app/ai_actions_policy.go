@@ -400,6 +400,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"itermoc-services":  aiNever(itermocNoOpen),
 	"itermoc-agents":    aiNever(itermocNoOpen),
 	"ai-model-slot-add": aiNever(itermocNoSlotEdit),
+	"ai-add":            aiNever(addAINoAI),
 	// The secret store (secrets_ui.go): unlocking and locking are the
 	// user's; the AI never reads, sets or lists secrets.
 	"secrets-unlock": aiNever(aiNoAIConfig),

@@ -111,6 +111,7 @@ func itermocPaletteItems() []picker.Item {
 		{ID: "itermoc-services", Title: "Itermoc: Services"},
 		{ID: "itermoc-agents", Title: "Itermoc: Outside Agents"},
 		{ID: "itermoc-open-ai", Title: "AI: Agents & Connections"}, // the same screen under the name the AI menu uses
+		{ID: "ai-add", Title: "AI: Add AI…"},                       // the Add AI card (ai_add.go)
 		{ID: "ai-model-slot-add", Title: "AI: Add Model Slot…"},    // the slot form (itermoc_slots.go)
 	}
 }
@@ -127,6 +128,8 @@ func (m *Model) dispatchItermocPalette(id string) (tea.Cmd, bool) {
 		return m.revealItermocView(true, imSecServices), true
 	case "itermoc-agents":
 		return m.revealItermocView(true, imSecAgents), true
+	case "ai-add":
+		return m.openAddAI(), true
 	case "ai-model-slot-add":
 		return m.openItermocSlotAdd(), true
 	}

@@ -506,7 +506,7 @@ func (sn aiItermocWriteSnap) describeSlot(a map[string]any) string {
 // aiToolSlotDraft opens the slot form with the draft (Add, or Edit of the
 // user's slot of that name). It never writes.
 func (m *Model) aiToolSlotDraft(name string, sl ai.ModelSlot) (string, tea.Cmd, error) {
-	if m.connectOpen {
+	if m.connectOpen || m.addAIOpen {
 		return "", nil, errors.New("the user has a card open; ask them to finish it first")
 	}
 	m.aiS()

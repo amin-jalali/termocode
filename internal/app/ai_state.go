@@ -180,6 +180,8 @@ type aiState struct {
 	mcpWizGen     int
 	mcpGHAccounts []mcp.GHAccount
 	mcpNotNow     map[string]bool // "Not now" on a server's sign-in row
+	// addAICancel stops the Add AI card's request in flight (ai_add.go).
+	addAICancel context.CancelFunc
 
 	// secretsLocked: the last reload found the encrypted secret store
 	// locked (secrets_ui.go); the setup card and the "not configured"

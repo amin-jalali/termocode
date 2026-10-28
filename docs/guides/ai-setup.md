@@ -15,7 +15,63 @@ You can use:
 | OpenAI-compatible | a base URL (ending in `/v1`) and maybe a key |
 | Claude (OAuth sign-in) | a Claude account — opt-in, see the warning below |
 
-## Option A: set it up in the app
+## Option A: add an AI in the app
+
+1. Press `F1` and run **AI: Add AI…**. A card opens.
+2. Pick an AI: **Anthropic**, **OpenAI**, **Ollama**, **OpenRouter**,
+   **LM Studio** or **Other server**. Use `↑` / `↓` and `Enter`, or click it.
+3. Connect it. The card asks only what this AI needs:
+
+    | AI | What you do |
+    |---|---|
+    | Anthropic, OpenAI | Choose **Use an API key**, paste the key, press **Connect** |
+    | OpenRouter | Paste the key, press **Connect** |
+    | Ollama, LM Studio | Nothing. termocode looks for the server on this machine at once |
+    | Other server | Type the server URL (OpenAI-style, ending in `/v1`) and a key if the server needs one, press **Connect** |
+
+4. termocode checks the AI by loading its model list. The card then says
+   *Anthropic is ready* and shows the models. Press **Done**.
+
+The key is hidden while you type. termocode keeps it in memory, checks it,
+and saves it only when the AI accepts it. When something goes wrong, the
+card says it in one sentence and you stay on the same step:
+
+| The card says | What to do |
+|---|---|
+| *That key was not accepted.* | The key stays in the field. Fix it and press **Connect** again |
+| *Could not reach Anthropic. Check your connection.* | Check the network, then **Connect** again |
+| *Ollama is not running on this machine.* | Install it (ollama.com, lmstudio.ai), start it, then press **Try again** |
+| *Take the user or password out of the URL.* | A server URL never holds a password. Put the key in the key field |
+
+The details of an error go to `errors.log` (keys removed), never to the card.
+
+`Esc` or **Cancel** closes the card at any step. Nothing is saved before the
+AI answers, and an answer that comes after you closed the card is dropped.
+
+**Sign in with Claude Pro / Max** (Anthropic) and **Sign in with ChatGPT
+Plus / Pro** (OpenAI) use your plan through Claude Code or Codex. In this
+version the card uses that CLI when it is already signed in on this machine.
+If it is not, the card says so: sign in to the CLI in a terminal, then press
+**Try again**, or press **Use an API key**.
+
+An AI connects one way. When Anthropic already uses an API key and you pick
+the sign-in (or the other way round), the card asks first. **Keep** comes
+first and has the focus; **Replace** switches.
+
+What is saved where:
+
+| What | Where |
+|---|---|
+| The key | Your secret store (see below), as you typed it: a `${env:…}` reference stays a reference |
+| The list of connected AIs (no keys) | `~/.config/termocode/ai/providers.json` |
+| The model list | `~/.cache/termocode/ai/models.json` (only a cache) |
+
+The card never writes `config.json`. Profile steps use a connected AI with
+`provider` and `model` (see [Step fields](ai-profiles.md#step-fields)).
+
+### The chat's provider and model
+
+The chat uses one provider and model of its own. To set them:
 
 1. Press `F1` and run **AI: Configure Provider…**.
 2. Pick a provider.
@@ -224,7 +280,8 @@ link). You sign in, copy the code, and paste it back. Run
 
 | Key / command | Action |
 |---|---|
-| **AI: Configure Provider…** | Pick a provider and enter a key |
+| **AI: Add AI…** | Connect an AI: a key, a local server or a server URL |
+| **AI: Configure Provider…** | Pick the chat's provider and enter a key |
 | **AI: Pick Model…** | Change the model |
 | **AI: Secret Store…** | List and forget saved secrets, lock or unlock, change the passphrase, switch backend |
 | **AI: Change Secrets Passphrase…** | Re-encrypt `secrets.age` with a new passphrase |

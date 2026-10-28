@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/addai"
 	"github.com/amin-jalali/termocode/internal/anim"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/connectcard"
@@ -539,6 +540,9 @@ type Model struct {
 	// connectOpen shows the Connect-a-service card (ai_mcp_connect.go).
 	connectOpen bool
 	connect     connectcard.Model
+	// addAIOpen shows the Add AI card (ai_add.go).
+	addAIOpen bool
+	addAI     addai.Model
 	// profileFormOpen shows the profile step form (ai_profile_form.go).
 	profileFormOpen bool
 	profileForm     profileform.Model

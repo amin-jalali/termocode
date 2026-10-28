@@ -1481,6 +1481,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `agent-start-codex` | Agent: Start Codex | confirm (run) |   |
 | `agent-start-gemini` | Agent: Start Gemini CLI | confirm (run) |   |
 | `agent-start-opencode` | Agent: Start OpenCode | confirm (run) |   |
+| `ai-add` | AI: Add AI… | never | a card for the user; keys and connected AIs stay with the user (the AI shows them with ai_view_open) |
 | `ai-agents` | AI: Toggle Agents Panel | auto |   |
 | `ai-apply-code` | AI: Apply Last Code Block to File | never | use write_file to change files |
 | `ai-apply-proposal` | AI: Apply Proposed Edit | never | the user reviews proposed edits |

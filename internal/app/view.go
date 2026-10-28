@@ -139,6 +139,15 @@ func (m Model) viewFrame() string {
 		o.X, o.Y = m.connect.Origin()
 		return modalOverlay(base, m.connect.Box(), m.w, m.h, &o)
 	}
+	if m.addAIOpen {
+		base := m.renderBase()
+		base = m.overlayToastsInEditor(base)
+		base = m.profileFormLayer(base) // the card can sit on the profile form
+		o := m.overlayOpts()
+		o.At = true
+		o.X, o.Y = m.addAI.Origin()
+		return modalOverlay(base, m.addAI.Box(), m.w, m.h, &o)
+	}
 	if m.profileFormOpen {
 		base := m.renderBase()
 		base = m.overlayToastsInEditor(base)

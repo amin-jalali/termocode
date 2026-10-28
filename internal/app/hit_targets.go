@@ -91,6 +91,8 @@ func (m Model) screenTargets() []hitTarget {
 		return m.confirmTargets()
 	case m.connectOpen:
 		return m.connectTargets()
+	case m.addAIOpen:
+		return m.addAITargets()
 	case m.profileFormOpen:
 		return m.profileFormTargets()
 	case m.pickerOpen:
