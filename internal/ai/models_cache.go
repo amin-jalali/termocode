@@ -9,13 +9,10 @@ import (
 	"github.com/amin-jalali/termocode/internal/cfgfile"
 )
 
-// Model list ages: an entry older than ModelsStaleAfter is not trusted;
-// Itermoc refreshes one older than ModelsRefreshAfter in the background
-// when it opens. Refresh always fetches.
-const (
-	ModelsStaleAfter   = 24 * time.Hour
-	ModelsRefreshAfter = time.Hour
-)
+// ModelsRefreshAfter is the model list age: Itermoc refreshes an entry
+// older than this in the background when it opens. Refresh always
+// fetches.
+const ModelsRefreshAfter = time.Hour
 
 // ModelsCache is models.json: the last fetched model list of each
 // provider kind. It holds model ids only, never a key or a base URL.
@@ -80,11 +77,6 @@ func (c ModelsCache) Put(kind string, ms []ModelInfo, now time.Time) {
 
 // Drop forgets kind (Disconnect).
 func (c ModelsCache) Drop(kind string) { delete(c, kind) }
-
-// Stale reports whether kind has no list or one ModelsStaleAfter old.
-func (c ModelsCache) Stale(kind string, now time.Time) bool {
-	return c.older(kind, now, ModelsStaleAfter)
-}
 
 // DueRefresh reports whether kind's list is old enough (ModelsRefreshAfter)
 // to fetch again in the background.

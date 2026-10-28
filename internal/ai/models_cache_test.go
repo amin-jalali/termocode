@@ -78,29 +78,25 @@ func TestModelsCacheCorruptIsEmpty(t *testing.T) {
 	c.Put(KindOpenAI, nil, time.Now())
 }
 
-func TestModelsCacheStale(t *testing.T) {
+func TestModelsCacheDueRefresh(t *testing.T) {
 	now := time.Unix(1_800_000_000, 0)
 	c := ModelsCache{}
-	if !c.Stale(KindOpenAI, now) || !c.DueRefresh(KindOpenAI, now) {
-		t.Fatal("a missing entry is stale and due")
+	if !c.DueRefresh(KindOpenAI, now) {
+		t.Fatal("a missing entry is due")
 	}
 	c.Put(KindOpenAI, []ModelInfo{{ID: "gpt-5"}}, now)
 	cases := []struct {
-		age        time.Duration
-		stale, due bool
+		age time.Duration
+		due bool
 	}{
-		{0, false, false},
-		{59 * time.Minute, false, false},
-		{time.Hour, false, true},
-		{23 * time.Hour, false, true},
-		{24 * time.Hour, true, true},
-		{-2 * time.Hour, true, true}, // written in the future: clock moved back
+		{0, false},
+		{59 * time.Minute, false},
+		{time.Hour, true},
+		{24 * time.Hour, true},
+		{-2 * time.Hour, true}, // written in the future: clock moved back
 	}
 	for _, tc := range cases {
 		at := now.Add(tc.age)
-		if got := c.Stale(KindOpenAI, at); got != tc.stale {
-			t.Errorf("age %v: Stale = %v, want %v", tc.age, got, tc.stale)
-		}
 		if got := c.DueRefresh(KindOpenAI, at); got != tc.due {
 			t.Errorf("age %v: DueRefresh = %v, want %v", tc.age, got, tc.due)
 		}

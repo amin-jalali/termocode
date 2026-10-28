@@ -103,7 +103,6 @@ func imTokDim() imSt       { return imFg(theme.TextDim) }
 func imTokAccent() imSt    { return imFg(theme.AccentLavender) }
 func imTokOK() imSt        { return imFg(theme.AccentGreen) }
 func imTokWarn() imSt      { return imFg(theme.AccentAmber) }
-func imTokErr() imSt       { return imFg(theme.AccentRedCoral) }
 
 func imQuote(s string) string {
 	if theme.CurrentIconMode == theme.IconModeASCII {

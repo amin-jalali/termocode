@@ -156,14 +156,6 @@ func newItermocState() *itermocState {
 	return &itermocState{collapse: map[string]bool{}, open: map[string]bool{}}
 }
 
-// width is the width the buttons rows are laid out for.
-func (st *itermocState) width() int {
-	if st.w <= 0 {
-		return 40
-	}
-	return st.w
-}
-
 // touch marks a change.
 func (st *itermocState) touch() { st.seq++ }
 
@@ -361,8 +353,6 @@ type imRow struct {
 	sec  string
 	name string // the profile, slot, service or agent id this row stands for
 	text string // note and call rows
-	// note rows: title is drawn strong
-	strong bool
 }
 
 func (r imRow) selectable() bool {
