@@ -108,8 +108,12 @@ func (m Model) build() connectcard.Card {
 			rows = append(rows, connectcard.Row{Kind: connectcard.Blank},
 				connectcard.Row{Kind: connectcard.Text, Text: strings.Join(shown, theme.ASCIIText("  ·  ")) + more})
 		}
+		done := "Done"
+		if m.opts.Back != "" {
+			done = m.opts.Back
+		}
 		return connectcard.Card{Title: e.Name + " is ready", Rows: rows,
-			Buttons: []connectcard.Button{{ID: "done", Title: "Done", Primary: true}}}
+			Buttons: []connectcard.Button{{ID: "done", Title: done, Primary: true}}}
 	}
 
 	// StepPick

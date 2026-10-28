@@ -93,6 +93,32 @@ type Options struct {
 	// ai.CLICodex): an installed one starts at once, a missing one asks
 	// first (Install and sign in).
 	Installed map[string]bool
+	// Back is the title of the last button ("" → "Done"), like "Back to
+	// the profile" when the card was opened from a profile step.
+	Back string
+}
+
+// StartAt goes straight to kind (a profile step's Fix): its way choice,
+// or method when given (a sign-in that is on this machine starts at
+// once; a local AI is looked for at once). An unknown kind stays on the
+// list.
+func (m Model) StartAt(kind, method string) (Model, tea.Cmd) {
+	e, ok := EntryOf(kind)
+	if !ok {
+		return m, nil
+	}
+	m.entry = e
+	for _, w := range e.Methods {
+		if w == method {
+			return m.want(method)
+		}
+	}
+	if len(e.Methods) > 1 {
+		m.step = StepMethod
+		m.refresh()
+		return m, nil
+	}
+	return m.want(e.Methods[0])
 }
 
 // Requests to the app. Gen is the card's generation at the request.
