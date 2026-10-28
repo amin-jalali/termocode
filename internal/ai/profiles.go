@@ -89,6 +89,12 @@ type ProfileStep struct {
 	// (CS-1). Such a step has no slot or category; it reads only unless
 	// tools.preset is "all".
 	CLI string `json:"cli,omitempty"`
+	// Provider + Model run the step on a connected provider's model
+	// instead of a named slot (the synthetic slot "<provider>/<model>").
+	// With CLI, Model is the model the CLI is asked for ("" = its
+	// default). Model is ignored on a slot or category step.
+	Provider string `json:"provider,omitempty"`
+	Model    string `json:"model,omitempty"`
 }
 
 // The CLIs a step can run (ProfileStep.CLI).
@@ -142,13 +148,60 @@ func StepTools(st ProfileStep) string {
 	return agentdag.PresetAll
 }
 
-// StepLabel is what step st runs on, for people: its CLI's label, else
-// its model slot.
+// StepLabel is what step st runs on, for people: its CLI's label (and
+// model), its model and provider, else its model slot.
 func (p Profile) StepLabel(st ProfileStep) string {
-	if st.CLI != "" {
+	switch {
+	case st.CLI != "" && st.Model != "":
+		return CLILabel(st.CLI) + " · " + st.Model
+	case st.CLI != "":
 		return CLILabel(st.CLI)
+	case st.Provider != "":
+		return st.Model + " · " + ProviderName(st.Provider)
 	}
 	return p.SlotFor(st)
+}
+
+// ProviderName is the short name of a provider kind ("Anthropic").
+func ProviderName(kind string) string {
+	switch kind {
+	case KindAnthropic:
+		return "Anthropic"
+	case KindClaudeOAuth:
+		return "Claude"
+	case KindOpenAI:
+		return "OpenAI"
+	case KindOpenRouter:
+		return "OpenRouter"
+	case KindOllama:
+		return "Ollama"
+	case KindLMStudio:
+		return "LM Studio"
+	case KindCompatible:
+		return "OpenAI-compatible"
+	}
+	return kind
+}
+
+// modelIDRe is a model id a step may name: it goes into a CLI's argv,
+// so it never starts with '-' and has no space.
+var modelIDRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.:/@+-]{0,127}$`)
+
+// ValidModelID reports whether id is a model id a step may name.
+func ValidModelID(id string) bool { return modelIDRe.MatchString(id) }
+
+// SyntheticSlot is the slot name of a provider step: "<kind>/<model>".
+// It never collides with a config.json slot (a slot name has no '/').
+func SyntheticSlot(kind, model string) string { return kind + "/" + model }
+
+// SplitSyntheticSlot splits a synthetic slot name into its provider kind
+// and model; ok=false for any other name.
+func SplitSyntheticSlot(name string) (kind, model string, ok bool) {
+	kind, model, found := strings.Cut(name, "/")
+	if !found || !knownKind(kind) || model == "" {
+		return "", "", false
+	}
+	return kind, model, true
 }
 
 // Profile is a named pipeline.
@@ -218,10 +271,13 @@ func (p Profile) CategorySlots() map[string]string {
 	}
 }
 
-// SlotFor is the slot a step runs on: its own slot, else its category's
-// slot in this profile, else quick → "quick" and everything else →
-// "main".
+// SlotFor is the slot a step runs on: its provider's synthetic slot,
+// else its own slot, else its category's slot in this profile, else
+// quick → "quick" and everything else → "main".
 func (p Profile) SlotFor(st ProfileStep) string {
+	if st.Provider != "" && st.CLI == "" {
+		return SyntheticSlot(st.Provider, st.Model)
+	}
 	if st.Slot != "" {
 		return st.Slot
 	}
@@ -272,12 +328,12 @@ func (p Profile) node(st ProfileStep) agentdag.Node {
 	if title == "" {
 		title = st.ID
 	}
-	slot := p.SlotFor(st)
+	slot, model := p.SlotFor(st), ""
 	if st.CLI != "" {
-		slot = "" // the CLI's own login, no model slot
+		slot, model = "", st.Model // the CLI's own login, no model slot
 	}
 	return agentdag.Node{
-		ID: st.ID, Title: title, Slot: slot, Category: st.Category, CLI: st.CLI,
+		ID: st.ID, Title: title, Slot: slot, Category: st.Category, CLI: st.CLI, Model: model,
 		System: st.System, Tools: st.Tools, Output: st.Output, Plan: st.Plan,
 		Input: agentdag.InputRule{MaxSteps: st.MaxSteps},
 	}
@@ -447,7 +503,8 @@ func ParseProfiles(data []byte, file, source string, slots map[string]bool, para
 // ProfileError is a profile check that failed: Msg is the whole text
 // (what ParseProfiles shows), Step (a step id, "" for the profile) and
 // Field (name, title, budget, steps, plan, categories, id, slot,
-// category, tools, output, system, max_steps, deps) say where, so a form
+// category, cli, provider, model, tools, output, system, max_steps,
+// deps) say where, so a form
 // can show it next to the field.
 type ProfileError struct {
 	Step, Field, Msg string
@@ -475,6 +532,16 @@ func checkStep(st ProfileStep, what string, slots map[string]bool) error {
 		return bad("cli", "runs on its CLI; leave out slot and category")
 	case st.CLI != "" && st.Plan:
 		return bad("cli", "a CLI step cannot be the planner")
+	case st.Provider != "" && st.CLI != "":
+		return bad("provider", "names a provider and a cli; set one, not both")
+	case st.Provider != "" && !knownKind(st.Provider):
+		return bad("provider", "unknown provider %q (%s)", st.Provider, strings.Join(Kinds, ", "))
+	case st.Provider != "" && (st.Slot != "" || st.Category != ""):
+		return bad("provider", "runs on its provider's model; leave out slot and category")
+	case st.Provider != "" && st.Model == "":
+		return bad("model", "provider %q needs a model", st.Provider)
+	case (st.Provider != "" || st.CLI != "") && st.Model != "" && !ValidModelID(st.Model):
+		return bad("model", "model id %q: letters, digits and . _ : / @ + -, not starting with '-'", st.Model)
 	}
 	if st.Slot != "" && !slots[st.Slot] {
 		return bad("slot", "unknown slot %q", st.Slot)

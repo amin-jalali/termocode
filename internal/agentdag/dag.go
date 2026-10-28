@@ -116,6 +116,9 @@ type Node struct {
 	// user's subscription login instead of a model slot; the scheduler
 	// hands it to its Exec function.
 	CLI string `json:"cli,omitempty"`
+	// Model is the model a CLI node asks its CLI for ("" = the CLI's
+	// default). A model-slot node carries its model in Slot.
+	Model string `json:"model,omitempty"`
 	// Prompt is the task of a node a planner added (it goes into the
 	// node's input after the user's message).
 	Prompt  string `json:"prompt,omitempty"`
