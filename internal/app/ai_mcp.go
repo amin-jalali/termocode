@@ -323,7 +323,16 @@ func mcpStatusHint(st mcp.Status) string {
 	if st.Type != mcp.TypeStdio {
 		kind = "remote"
 	}
-	parts := []string{kind}
+	// Warnings first: the picker cuts a long hint, and "local · running ·
+	// pid 4242 · …" left no room for them.
+	var parts []string
+	if st.ToolsChanged {
+		parts = append(parts, "tools changed")
+	}
+	if !st.Trusted {
+		parts = append(parts, "not trusted")
+	}
+	parts = append(parts, kind)
 	switch {
 	case st.State == mcp.StateInvalid:
 		parts = append(parts, st.Problem)
@@ -346,12 +355,6 @@ func mcpStatusHint(st mcp.Status) string {
 			t += " (cached)"
 		}
 		parts = append(parts, t)
-	}
-	if !st.Trusted {
-		parts = append(parts, "not trusted")
-	}
-	if st.ToolsChanged {
-		parts = append(parts, "tools changed")
 	}
 	if st.Source == mcp.SourceProject {
 		parts = append(parts, "project")

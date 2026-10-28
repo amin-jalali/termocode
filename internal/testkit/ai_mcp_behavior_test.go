@@ -240,7 +240,9 @@ func TestAIMCPToolsChangedBehavior(t *testing.T) {
 		t.Errorf("tool results %q", r)
 	}
 	runPalette(d, "AI: MCP Servers")
-	if !d.WaitForText("tools changed", 5*time.Second) {
+	// The fake's own row says it, not the "its tools changed" toast (that
+	// goes away after a few seconds; a slow run saw only the row).
+	if !d.WaitFor(func() bool { d.render(); return strings.Contains(lineWith(screen(d), "● fake"), "tools changed") }, 5*time.Second) {
 		t.Errorf("servers list does not say tools changed:\n%s", screen(d))
 	}
 }
