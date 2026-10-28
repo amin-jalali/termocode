@@ -265,6 +265,18 @@ to it.
 | `deps` | Step ids this step waits for. Needs `ai_parallel_max` 2 or more. |
 | `plan` | `true` makes the step a planner (see [Planned runs](#planned-runs-and-waves)). At most one per profile. |
 | `cli` | `claude` or `codex`: the step runs Claude Code or Codex with your own subscription login, not a model slot (see [Subscription steps](#subscription-steps-claude-code-and-codex)). Leave out `slot` and `category`. |
+| `provider` | A provider kind (`anthropic`, `openai`, `openrouter`, `ollama`, `lmstudio`, `openai-compatible`): the step runs on that provider's `model`, with no slot in `config.json`. It uses the provider's key (environment variable, then the stored key) and the server URL from `ai/providers.json`. Leave out `slot` and `category`. |
+| `model` | The model id. Needed with `provider` (for example `claude-sonnet-5-5`, `llama3.2:3b`). With `cli` it picks the CLI's model (for example `opus` or `gpt-5-codex`); without it the CLI's default runs. Letters, digits and `. _ : / @ + -`; it may not start with `-`. |
+
+A step with `provider` and `model`:
+
+```json
+{"id": "plan", "provider": "anthropic", "model": "claude-sonnet-5-5"}
+```
+
+A provider you have not set up on this machine is not an error in the
+file: profiles travel between machines. The step fails when it runs and
+says which key it needs.
 
 A profile can also set `budget_usd` next to `steps` (see
 [Budget pause](#budget-pause)).
