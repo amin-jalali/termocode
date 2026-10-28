@@ -304,7 +304,9 @@ func goldenCases() []goldenCase {
 	// (B5); at 80x24 every one is the list / page toggle (B6).
 	// The cards of the AI write tools (AH-8): Deny first, the draft as a diff.
 	// The Add AI card (AIP-3) at each step of the key, local and URL paths.
+	// AI PROVIDERS (AIP-4): an open provider row with its page, and no AI yet.
 	for _, v := range []string{"list", "profile", "follow", "empty", "menu", "slotadd", "slotkey", "slotremove", "service", "agent", "agents", "overview",
+		"providers-open", "providers-empty",
 		"ai-switch", "ai-draft", "ai-slot", "ai-connect", "ai-access", "ai-start",
 		"addai-pick", "addai-method", "addai-key", "addai-key-busy", "addai-key-bad", "addai-local", "addai-url", "addai-done"} {
 		sc := Itermoc(v)

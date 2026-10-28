@@ -19,8 +19,11 @@ import (
 // own profiles, keys or services, and no key is in it.
 //
 //	profile  full, with the page of the profile review open in the editor
-//	full   the active profile review, an untrusted project profile, one
-//	       model without a key, a service that needs a sign-in, one agent
+//	full   the active profile review, an untrusted project profile, two
+//	       connected AIs (Anthropic by key, Ollama), one config.json
+//	       slot without a key, a service that needs a sign-in, one agent
+//	providers-open   full, with Anthropic's row open and its page shown
+//	providers-empty  full, but no AI connected and no slot of the user's
 //	empty  a fresh install: no AI provider, no service, nothing listening
 //	service  full, with the page of the service linear (sign-in ended)
 //	agent    full, with the page of the outside agent claude-code
@@ -65,10 +68,19 @@ func (m *Model) itermocDemo(arg string) tea.Cmd {
 		ai.SlotLocal: {cfg: ai.Config{Kind: ai.KindOllama, Model: "qwen2.5-coder:7b"}},
 		"gpt":        {cfg: ai.Config{Kind: ai.KindOpenAI, Model: "gpt-5-mini"}},
 	}
+	s.settings.Models = map[string]ai.ModelSlot{"gpt": {Provider: ai.KindOpenAI, Model: "gpt-5-mini"}}
 	s.reloadProfiles()
 	s.profile = ai.ProfileReview
 	m.revealItermocView(true, "")
 	st := m.itermoc
+	st.snap.providers = []imProvider{
+		{kind: ai.KindAnthropic, name: "Anthropic", method: ai.MethodKey, label: "API key", cost: "API · pay per use",
+			models: []string{"claude-fable-5-1", "claude-haiku-5-5", "claude-opus-5-5", "claude-sonnet-5-5"},
+			at:     clock.Now().Add(-2 * time.Minute).Unix()},
+		{kind: ai.KindOllama, name: "Ollama", method: ai.MethodLocal, label: "on this machine", cost: "local · free",
+			host: "http://localhost:11434", models: []string{"llama3.2:3b", "llama3.3:70b", "qwen3:14b"},
+			at: clock.Now().Add(-3 * time.Hour).Unix()},
+	}
 	st.snap.services = []mcp.Status{
 		{Name: "github", Type: mcp.TypeHTTP, State: mcp.StateRunning, Tools: 28, Trusted: true, SignedIn: true},
 		{Name: "linear", Type: mcp.TypeHTTP, State: mcp.StateSignIn, Expired: true, Trusted: true},
@@ -92,6 +104,24 @@ func (m *Model) itermocDemo(arg string) tea.Cmd {
 	st.fixed = true
 	if arg == "profile" {
 		return m.itermocProfileDemo()
+	}
+	if arg == "providers-empty" {
+		// No AI connected and no slot of the user's: the empty state.
+		st.snap.providers, st.snap.slots = nil, nil
+		st.focusSection(imSecModels)
+		return nil
+	}
+	if arg == "providers-open" {
+		// Anthropic's row open (its models, Updated, Refresh, Disconnect…)
+		// and its page.
+		st.collapse[imSecModels] = false
+		st.open[ai.KindAnthropic] = true
+		row := imRow{kind: imRowProvider, sec: imSecModels, name: itermocProvName(ai.KindAnthropic)}
+		m.itermoc.cursorTo(row)
+		if m.itermocNarrow() {
+			return nil // the list is the page: the open row shows there
+		}
+		return m.itermocShowPage(row, false)
 	}
 	if arg == "agent" || arg == "agents" {
 		// claude-code's page, or the listening row's page.

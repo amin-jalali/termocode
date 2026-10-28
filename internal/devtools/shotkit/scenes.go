@@ -245,7 +245,9 @@ func AISkills(variant string) Scene {
 // the editor area, "service" the page of a service whose sign-in ended,
 // "agent" the page of a connected outside agent, "agents" the page of the
 // listening row, "overview" the overview page (tiles, what needs you, the
-// active flow),
+// active flow), "providers-open" AI PROVIDERS with Anthropic's row open
+// (its models, Refresh, Disconnect…) and its page, "providers-empty" no
+// AI connected yet,
 // "empty" a fresh install, "menu" the
 // actions menu of the first profile row, "slotadd" the Add slot form,
 // "slotkey" the Set key offer after a new slot, "slotremove" the Remove
