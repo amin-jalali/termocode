@@ -548,7 +548,12 @@ func TestSignOutRevokesBehavior(t *testing.T) {
 	}
 	resp.Body.Close()
 	waitConnected(t, d, "Linear — connected")
-	d.Key("tab", "right", "enter") // Done
+	// Done is the last button (after Ask the AI, Show tools, Allow
+	// writes); right stops at the last one.
+	d.Key("tab", "right", "right", "right", "right", "right", "enter")
+	if !d.WaitFor(func() bool { return !strings.Contains(screen(d), "Linear — connected") }, 5*time.Second) {
+		t.Fatalf("Done did not close the card:\n%s", screen(d))
+	}
 	openServerAction(d, "linear", "Sign out")
 	if !d.WaitFor(func() bool { return !signedIn(t, "linear") && len(as.Revoked()) == 2 }, 10*time.Second) {
 		t.Errorf("signed in %v, revoked %v", signedIn(t, "linear"), as.Revoked())
