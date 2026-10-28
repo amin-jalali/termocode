@@ -195,7 +195,9 @@ func TestExplorerToggleHiddenFiles(t *testing.T) {
 // then the explorer lists it as a second root with its files;
 // and when the user runs Remove Folder and picks it, then it is gone.
 func TestExplorerMultiRootAddRemove(t *testing.T) {
-	d := New(t, Options{Files: textFiles()})
+	// The prompt's and the picker's Enter come back as async messages; a
+	// tiny settle window makes the test wait for them, not race them.
+	d := New(t, Options{Files: textFiles(), Quiet: time.Nanosecond})
 	other := filepath.Join(filepath.Dir(d.Dir), "otherproj")
 	if err := os.MkdirAll(other, 0o755); err != nil {
 		t.Fatal(err)
@@ -209,7 +211,7 @@ func TestExplorerMultiRootAddRemove(t *testing.T) {
 	}
 	d.Type(other)
 	d.Key("enter")
-	if !explorerShows(d, "otherproj") {
+	if !waitExplorer(d, "otherproj", true) {
 		t.Fatalf("second root not listed:\n%s", screen(d))
 	}
 	clickExplorer(d, "otherproj")
@@ -224,7 +226,14 @@ func TestExplorerMultiRootAddRemove(t *testing.T) {
 	d.Palette("workspace-remove-folder")
 	d.Type("otherproj")
 	d.Key("enter")
-	if explorerShows(d, "otherproj") {
+	if !waitExplorer(d, "otherproj", false) {
 		t.Fatalf("second root still listed after remove:\n%s", screen(d))
 	}
+}
+
+// waitExplorer waits until the explorer lists name (want) or no longer
+// lists it (!want), re-drawing the frame on each try.
+func waitExplorer(d *Driver, name string, want bool) bool {
+	d.T.Helper()
+	return d.WaitFor(func() bool { d.render(); return explorerShows(d, name) == want }, 5*time.Second)
 }
