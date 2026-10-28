@@ -105,6 +105,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, c
 	}
 	nm, cmd := m.updateInner(msg)
+	if ws, ok := msg.(tea.WindowSizeMsg); ok {
+		nm.resizeOverlays(ws.Width, ws.Height)
+	}
 	if animCmd := nm.afterUpdateAnim(prevKind); animCmd != nil {
 		cmd = tea.Batch(cmd, animCmd)
 	}
@@ -124,6 +127,37 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 		return nm, tea.Batch(cmd, mode)
 	}
 	return nm, cmd
+}
+
+// resizeOverlays gives every open overlay the new window size. Only the
+// top overlay gets the resize from its router, so one lying under it (Find
+// in Files under a preview) kept the old size and was drawn at it once the
+// top one closed (monkey seed 1793227386945818000).
+func (m *Model) resizeOverlays(w, h int) {
+	if m.previewOpen {
+		m.preview.SetSize(w, h)
+	}
+	if m.settingsModalOpen {
+		m.settingsModal.SetSize(w, h)
+	}
+	if m.pickerOpen {
+		m.picker.SetSize(w, h)
+	}
+	if m.recentsOpen {
+		m.recents.SetSize(w, h)
+	}
+	if m.searchOpen {
+		m.search.SetSize(w, h)
+	}
+	if m.promptOpen {
+		m.prompt.SetSize(w, h)
+	}
+	if m.confirmOpen {
+		m.confirm.SetSize(w, h)
+	}
+	if m.menuOpen {
+		m.menu.SetScreenSize(w, h)
+	}
 }
 
 // anyTextInputOpen reports whether to downgrade mouse tracking from all-motion
