@@ -43,26 +43,15 @@ func statusArgs(cli string) []string {
 	return nil
 }
 
-// LoginLine is the shell line of the CLI's own login (termocode runs it
-// in a terminal tab and never sees the credentials).
+// LoginLine is the shell line of the CLI's own login, named in the
+// "not logged in" error for a user who signs in from a terminal (the Add
+// AI card runs the same login under a pty; internal/clilogin).
 func LoginLine(cli string) string {
 	switch cli {
 	case ai.CLIClaude:
 		return "claude auth login"
 	case ai.CLICodex:
 		return "codex login"
-	}
-	return ""
-}
-
-// InstallLine is the shell line that installs the CLI (shown to the user
-// in a terminal tab, who runs it).
-func InstallLine(cli string) string {
-	switch cli {
-	case ai.CLIClaude:
-		return "npm install -g @anthropic-ai/claude-code"
-	case ai.CLICodex:
-		return "npm install -g @openai/codex"
 	}
 	return ""
 }

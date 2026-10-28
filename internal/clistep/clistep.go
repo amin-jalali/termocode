@@ -123,12 +123,12 @@ func lookPath(bin string, env []string) (string, error) {
 
 // NotInstalled is the error of a CLI that is not on PATH.
 func NotInstalled(cli string) error {
-	return fmt.Errorf("%s is not installed (%s is not on PATH); install it, then run the step again", ai.CLITitle(cli), Bin(cli))
+	return fmt.Errorf("%s is not installed (%s is not on PATH); install it and sign in with AI: Add AI…, then run the step again", ai.CLITitle(cli), Bin(cli))
 }
 
 // NotLoggedIn is the error of a CLI that has no login.
 func NotLoggedIn(cli string) error {
-	return fmt.Errorf("%s is not logged in: run `%s` in a terminal (or Log in in the profile step form), then run the step again", ai.CLITitle(cli), LoginLine(cli))
+	return fmt.Errorf("%s is not logged in: sign in with AI: Add AI… (or run `%s` in a terminal), then run the step again", ai.CLITitle(cli), LoginLine(cli))
 }
 
 // Run runs one step: it starts the CLI in s.Dir, writes prompt to its

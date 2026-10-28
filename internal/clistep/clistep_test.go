@@ -353,6 +353,10 @@ func TestRunNotLoggedIn(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "Claude Code is not logged in") || !strings.Contains(err.Error(), "claude auth login") {
 		t.Fatalf("err %v", err)
 	}
+	// AIP-7: the way out is the Add AI card; the profile form has no Log in pill any more.
+	if !strings.Contains(err.Error(), "AI: Add AI…") || strings.Contains(err.Error(), "profile step form") {
+		t.Errorf("err does not name the Add AI card: %v", err)
+	}
 }
 
 func TestRunFailShowsStderr(t *testing.T) {
@@ -368,6 +372,9 @@ func TestRunMissingCLI(t *testing.T) {
 	_, err := Run(context.Background(), Spec{CLI: ai.CLIClaude, Dir: t.TempDir(), Env: env}, "x", nil)
 	if err == nil || !strings.Contains(err.Error(), "Claude Code is not installed") {
 		t.Fatalf("err %v", err)
+	}
+	if !strings.Contains(err.Error(), "AI: Add AI…") {
+		t.Errorf("err does not name the Add AI card: %v", err)
 	}
 }
 
@@ -407,9 +414,6 @@ func TestCheck(t *testing.T) {
 	}
 	if LoginLine(ai.CLIClaude) != "claude auth login" || LoginLine(ai.CLICodex) != "codex login" {
 		t.Error("login lines")
-	}
-	if InstallLine(ai.CLIClaude) != "npm install -g @anthropic-ai/claude-code" || InstallLine(ai.CLICodex) != "npm install -g @openai/codex" {
-		t.Error("install lines")
 	}
 }
 
