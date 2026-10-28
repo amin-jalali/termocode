@@ -150,6 +150,9 @@ func TestChipTooltips(t *testing.T) {
 		t.Error("ai:mcp has no guide topic")
 	}
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	// Only the keymap is needed. A real nvim would outlive the test and
+	// write into XDG_CONFIG_HOME while t.TempDir removes it.
+	t.Setenv("TERMOCODE_NO_NVIM", "1")
 	k := New() // the live keymap gives the key
 	k.ai = m.ai
 	got := k.tooltipText("ai:profile")
