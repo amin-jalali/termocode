@@ -149,3 +149,36 @@ func TestCardCodeAndLink(t *testing.T) {
 		t.Errorf("box:\n%s", s)
 	}
 }
+
+// Spec (AIP-3): OptionAt names the choice option under a cell, so a card
+// that acts on a click (the Add AI list) can tell an option from the
+// rest of the card.
+func TestOptionAt(t *testing.T) {
+	m := New(ghCard())
+	m.SetSize(100, 30)
+	ox, oy := m.Origin()
+	_, tg := m.lines()
+	found := 0
+	for _, g := range tg {
+		if g.button != "" || g.option < 0 {
+			continue
+		}
+		id, opt, ok := m.OptionAt(ox+1+g.x, oy+1+g.y)
+		want := m.card.Rows[g.row].ID
+		if !ok || id != want || opt != g.option {
+			t.Errorf("OptionAt on %s/%d = %q %d %v", want, g.option, id, opt, ok)
+		}
+		found++
+	}
+	if found != 5 {
+		t.Fatalf("%d options checked, want 5", found)
+	}
+	if _, _, ok := m.OptionAt(ox, oy); ok {
+		t.Error("the frame is an option")
+	}
+	for _, b := range m.ButtonRects() {
+		if _, _, ok := m.OptionAt(b.X, b.Y); ok {
+			t.Errorf("button %s is an option", b.ID)
+		}
+	}
+}

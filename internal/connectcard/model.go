@@ -675,6 +675,21 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 	return m, nil
 }
 
+// OptionAt names the choice option drawn at the screen cell x, y (the
+// row's id and the option's index); ok=false: no option is there.
+func (m Model) OptionAt(x, y int) (id string, option int, ok bool) {
+	ox, oy := m.Origin()
+	_, tg := m.lines()
+	rx, ry := x-ox-1, y-oy-1
+	for _, t := range tg {
+		if t.button != "" || t.option < 0 || ry != t.y || rx < t.x || rx >= t.x+t.w {
+			continue
+		}
+		return m.card.Rows[t.row].ID, t.option, true
+	}
+	return "", 0, false
+}
+
 // ButtonRect is a button on screen (for tests and the hit map).
 type ButtonRect struct {
 	ID, Title string
