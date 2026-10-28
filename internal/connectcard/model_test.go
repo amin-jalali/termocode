@@ -173,6 +173,15 @@ func TestOptionAt(t *testing.T) {
 	if found != 5 {
 		t.Fatalf("%d options checked, want 5", found)
 	}
+	rects := m.OptionRects()
+	if len(rects) != 5 {
+		t.Fatalf("%d option rects, want 5", len(rects))
+	}
+	for _, r := range rects {
+		if id, opt, ok := m.OptionAt(r.X+r.W-1, r.Y); !ok || id != r.ID || opt != r.Option {
+			t.Errorf("rect %+v: OptionAt %q %d %v", r, id, opt, ok)
+		}
+	}
 	if _, _, ok := m.OptionAt(ox, oy); ok {
 		t.Error("the frame is an option")
 	}

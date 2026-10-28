@@ -690,6 +690,26 @@ func (m Model) OptionAt(x, y int) (id string, option int, ok bool) {
 	return "", 0, false
 }
 
+// OptionRect is a choice option on screen (for the hit map).
+type OptionRect struct {
+	ID      string // the Choice row's id
+	Option  int
+	X, Y, W int
+}
+
+// OptionRects lists the choice options with their screen cells.
+func (m Model) OptionRects() []OptionRect {
+	ox, oy := m.Origin()
+	_, tg := m.lines()
+	var out []OptionRect
+	for _, t := range tg {
+		if t.button == "" && t.option >= 0 {
+			out = append(out, OptionRect{ID: m.card.Rows[t.row].ID, Option: t.option, X: ox + 1 + t.x, Y: oy + 1 + t.y, W: t.w})
+		}
+	}
+	return out
+}
+
 // ButtonRect is a button on screen (for tests and the hit map).
 type ButtonRect struct {
 	ID, Title string
