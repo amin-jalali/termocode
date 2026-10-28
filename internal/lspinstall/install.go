@@ -148,7 +148,7 @@ func Install(ctx context.Context, t Tool, progress Progress) (string, error) {
 func runStep(ctx context.Context, step Step, dir string, out *tailBuffer) error {
 	c := spawn.CommandContext(ctx, step.Argv[0], step.Argv[1:]...)
 	c.Dir = dir
-	c.Env = append(os.Environ(), step.Env...)
+	c.Env = append(DropSecretEnv(os.Environ()), step.Env...)
 	c.Stdout = out
 	c.Stderr = out
 	return c.Run()

@@ -26,6 +26,9 @@ type Category int
 const (
 	CategoryLSP Category = iota
 	CategoryDAP
+	// CategoryAgentCLI: the subscription agent CLIs (Claude Code, Codex)
+	// the Add AI card installs; never listed with the language tools.
+	CategoryAgentCLI
 )
 
 // InstallKind says how a tool is installed.
@@ -239,6 +242,22 @@ var tools = []Tool{
 		Asset: "js-debug-dap-v{version}.tar.gz",
 		// Pure JS: any OS / arch with node works.
 		Exec:  []string{"node", "{dir}/js-debug/src/dapDebugServer.js"},
+		Needs: []string{"node"},
+	},
+
+	// ── Agent CLIs ──────────────────────────────────────────────────────
+	// Installed into tools/<name> (npm --prefix, never -g, never sudo)
+	// with a shim in tools/bin, where clistep looks first.
+	{
+		Name: "claude-code", Label: "Claude Code", Category: CategoryAgentCLI,
+		Bin:         "claude",
+		InstallKind: KindNpm, Spec: "@anthropic-ai/claude-code", Version: "latest",
+		Needs: []string{"node"},
+	},
+	{
+		Name: "codex", Label: "Codex", Category: CategoryAgentCLI,
+		Bin:         "codex",
+		InstallKind: KindNpm, Spec: "@openai/codex", Version: "latest",
 		Needs: []string{"node"},
 	},
 }

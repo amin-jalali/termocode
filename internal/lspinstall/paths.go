@@ -74,6 +74,34 @@ func PrependPath(env []string, dir string) []string {
 	return out
 }
 
+// secretEnv are the vendors' API keys: an installer (and an agent CLI
+// run on its subscription login) never gets them.
+var secretEnv = map[string]bool{
+	"ANTHROPIC_API_KEY": true, "ANTHROPIC_AUTH_TOKEN": true, "OPENAI_API_KEY": true,
+	"CODEX_API_KEY": true, "OPENROUTER_API_KEY": true,
+}
+
+// DropSecretEnv returns env without the vendors' API keys and
+// termocode's own secrets (TERMOCODE_* names with KEY, TOKEN, SECRET or
+// PASSWORD).
+func DropSecretEnv(env []string) []string {
+	out := make([]string, 0, len(env))
+	for _, kv := range env {
+		k, _, _ := strings.Cut(kv, "=")
+		if secretEnv[k] {
+			continue
+		}
+		if strings.HasPrefix(k, "TERMOCODE_") {
+			u := strings.ToUpper(k)
+			if strings.Contains(u, "KEY") || strings.Contains(u, "TOKEN") || strings.Contains(u, "SECRET") || strings.Contains(u, "PASSWORD") {
+				continue
+			}
+		}
+		out = append(out, kv)
+	}
+	return out
+}
+
 // EnvWithToolsBin is os.Environ() with tools/bin prepended to PATH. Falls
 // back to the plain environment when the tools dir can't be resolved.
 func EnvWithToolsBin() []string {
