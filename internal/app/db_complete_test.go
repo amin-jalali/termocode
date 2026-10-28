@@ -182,3 +182,28 @@ return table.concat(out,' ')`)
 }
 
 func jsonUnmarshal(s string, v any) error { return json.Unmarshal([]byte(s), v) }
+
+// Spec: a trigger key typed right after another one (inside the 80 ms
+// throttle) still opens completion once the window ends. Before, "u."
+// typed fast asked the omnifunc for "u" only, so the columns after the
+// dot never came.
+func TestAutoTriggerKeepsTheLastKeyOfABurst(t *testing.T) {
+	d := testkit.New(t, testkit.Options{W: 80, H: 24, Nvim: true, Files: map[string]string{"a.txt": "\n"}})
+	d.Action("open:a.txt")
+	d.Key("esc")
+	dbLua(t, d, `_G._trig_seen={}
+function _G._trig_omni(findstart,base)
+ local col=vim.api.nvim_win_get_cursor(0)[2]
+ if findstart==1 then return col end
+ _G._trig_seen[#_G._trig_seen+1]=vim.api.nvim_get_current_line():sub(1,col)
+ return {}
+end
+vim.bo.omnifunc='v:lua._trig_omni'
+return ''`)
+	seen := func() string { return dbLua(t, d, `return table.concat(_G._trig_seen,'|')`) }
+	d.Key("i")
+	d.Type("u.")
+	if !d.WaitFor(func() bool { return strings.Contains(seen(), "u.") }, 3*time.Second) {
+		t.Fatalf("omnifunc never ran after the dot; ran at %q", seen())
+	}
+}

@@ -204,30 +204,45 @@ vim.opt.completeopt = { 'menu', 'menuone', 'noselect' }
 vim.opt.shortmess:append('c')
 
 local _termocode_last_complete = 0
+local _termocode_complete_pending = false
+local function _termocode_now() return vim.uv and vim.uv.now() or vim.loop.now() end
+local function _termocode_auto_complete()
+  if vim.fn.pumvisible() == 1 then return end
+  -- Only auto-trigger when an LSP-backed omnifunc is active for this buffer.
+  if vim.bo.omnifunc == '' then return end
+  -- 80 ms throttle so fast typing doesn't queue many requests. A key that
+  -- lands inside the window is not dropped: one trailing check runs when
+  -- the window ends, so the last key of a burst ("u." typed fast) still
+  -- opens completion.
+  local wait = 80 - (_termocode_now() - _termocode_last_complete)
+  if wait > 0 then
+    if not _termocode_complete_pending then
+      _termocode_complete_pending = true
+      vim.defer_fn(function()
+        _termocode_complete_pending = false
+        if vim.fn.mode() == 'i' then _termocode_auto_complete() end
+      end, wait)
+    end
+    return
+  end
+
+  local line = vim.api.nvim_get_current_line()
+  local col = vim.api.nvim_win_get_cursor(0)[2]
+  if col == 0 then return end
+  local prev = line:sub(col, col)
+  if prev:match('[%w_]') or prev == '.' or prev == ':' then
+    _termocode_last_complete = _termocode_now()
+    vim.schedule(function()
+      if vim.fn.mode() == 'i' and vim.fn.pumvisible() == 0 and vim.bo.omnifunc ~= '' then
+        local keys = vim.api.nvim_replace_termcodes('<C-x><C-o>', true, false, true)
+        vim.api.nvim_feedkeys(keys, 'n', false)
+      end
+    end)
+  end
+end
 vim.api.nvim_create_autocmd('TextChangedI', {
   group = 'TermocodeLSP',
-  callback = function()
-    if vim.fn.pumvisible() == 1 then return end
-    -- Only auto-trigger when an LSP-backed omnifunc is active for this buffer.
-    if vim.bo.omnifunc == '' then return end
-    -- 80 ms debounce so fast typing doesn't queue many requests.
-    local now = vim.uv and vim.uv.now() or vim.loop.now()
-    if now - _termocode_last_complete < 80 then return end
-    _termocode_last_complete = now
-
-    local line = vim.api.nvim_get_current_line()
-    local col = vim.api.nvim_win_get_cursor(0)[2]
-    if col == 0 then return end
-    local prev = line:sub(col, col)
-    if prev:match('[%w_]') or prev == '.' or prev == ':' then
-      vim.schedule(function()
-        if vim.fn.mode() == 'i' and vim.fn.pumvisible() == 0 and vim.bo.omnifunc ~= '' then
-          local keys = vim.api.nvim_replace_termcodes('<C-x><C-o>', true, false, true)
-          vim.api.nvim_feedkeys(keys, 'n', false)
-        end
-      end)
-    end
-  end,
+  callback = _termocode_auto_complete,
 })
 
 -- Ctrl+Space: manual completion. Uses LSP omnifunc when available, falls back
