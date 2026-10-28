@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/addai"
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/profileform"
@@ -159,26 +160,60 @@ func (m *Model) aiProfileDemo(arg string) tea.Cmd {
 		cmd := m.openAIProfileEditForm(ai.ProfileReview)
 		m.handleAIProfileFormMsg(profileform.RemoveStepMsg{Index: 1, Title: "Fixer"})
 		return cmd
-	case "form-cli", "form-cli-missing": // CS-5: subscription CLI steps; ready, or missing / not logged in
-		states := map[string]profileform.CLIState{ai.CLIClaude: profileform.CLIReady, ai.CLICodex: profileform.CLIReady}
-		if arg == "form-cli-missing" {
-			states = map[string]profileform.CLIState{ai.CLIClaude: profileform.CLIMissing, ai.CLICodex: profileform.CLILoggedOut}
-		}
-		sub := ai.Profile{Name: "claude-codex", Title: "Claude Code works, Codex reviews", Steps: []ai.ProfileStep{
-			{ID: "work", Title: "Work", CLI: ai.CLIClaude, Tools: agentdag.ToolRule{Preset: agentdag.PresetAll},
-				System: "Do the task. Keep the change small and add a test."},
-			{ID: "review", Title: "Review", CLI: ai.CLICodex, System: "Review the change. Run nothing that edits files."},
-		}}
-		_ = m.openAIProfileForm("claude-codex", sub, false) // the demo's states, not a real check
-		s.cliStates = states
-		m.profileForm.SetCLIs(states)
-		m.profileForm.FocusStep(0)
-		if arg == "form-cli-missing" {
-			m.profileForm.FocusCLI(0)
-		} else {
-			m.profileForm.FocusModel(0)
-		}
+	case "form-picker", "form-picker-search", "form-picker-empty", "form-picker-add", "form-needs":
+		return m.aiProfileFormPickerDemo(arg)
+	}
+	return nil
+}
+
+// aiProfileFormPickerDemo is the step form's model picker over three
+// connected AIs (an API key, a sign-in, a local server; sample models,
+// no check runs): "form-picker" open on a step, "-search" while typing,
+// "-empty" nothing matches, "-add" the Add AI card opened from it (done,
+// with Back to the profile), and "form-needs" steps whose AI is not
+// ready (Fix).
+func (m *Model) aiProfileFormPickerDemo(arg string) tea.Cmd {
+	s := m.aiS()
+	s.providers = map[string]ai.ProviderEntry{
+		ai.KindAnthropic: {Kind: ai.KindAnthropic, Method: ai.MethodKey},
+		ai.KindOpenAI:    {Kind: ai.KindOpenAI, Method: ai.MethodCLI, CLI: ai.CLICodex},
+		ai.KindOllama:    {Kind: ai.KindOllama, Method: ai.MethodLocal},
+	}
+	s.modelsFake = ai.ModelsCache{
+		ai.KindAnthropic: {Models: []ai.ModelInfo{{ID: ai.ModelClaudeHaiku}, {ID: ai.ModelClaudeOpus}, {ID: ai.ModelClaudeSonnet}}},
+		ai.KindOllama:    {Models: []ai.ModelInfo{{ID: "llama3.2:3b"}, {ID: "qwen2.5-coder:7b"}}},
+	}
+	s.cliStates = map[string]profileform.CLIState{ai.CLIClaude: profileform.CLIMissing, ai.CLICodex: profileform.CLIReady}
+	p := ai.Profile{Name: "my-review", Title: "Review then fix", Steps: []ai.ProfileStep{
+		{ID: "review", Title: "Review", Provider: ai.KindAnthropic, Model: ai.ModelClaudeSonnet,
+			System: "Review the change. List each problem with file:line.", Tools: agentdag.ToolRule{Preset: agentdag.PresetReadOnly}},
+		{ID: "fix", Title: "Fix", CLI: ai.CLICodex, Model: "gpt-6-astra", System: "Fix the problems the review listed.",
+			Tools: agentdag.ToolRule{Preset: agentdag.PresetAll}},
+	}}
+	if arg == "form-needs" {
+		p.Steps[0].Provider, p.Steps[0].Model = ai.KindOpenRouter, "gpt-5-mini"
+		p.Steps[1].CLI, p.Steps[1].Model = ai.CLIClaude, "sonnet"
+	}
+	_ = m.openAIProfileForm("my-review", p, false) // the demo's states, not a real check
+	switch arg {
+	case "form-needs":
+		m.profileForm.FocusFix(0)
 		return nil
+	case "form-picker-search":
+		m.profileForm.OpenPicker(0)
+		m.profileForm.SetPickerQuery("sonnet")
+	case "form-picker-empty":
+		m.profileForm.OpenPicker(0)
+		m.profileForm.SetPickerQuery("mixtral")
+	case "form-picker-add":
+		m.profileFormBack = &profileform.AddAIMsg{Step: 0, Picker: true}
+		m.addAI = addai.New(addai.Options{Connected: s.providers, KeyNote: secretPromptNote(""), Back: addAIBackTitle})
+		m.addAI.SetSize(m.w, m.h)
+		m.addAIOpen = true
+		m.addAI, _ = m.addAI.StartAt(ai.KindLMStudio, "") // the request it sends is not run
+		m.addAI.Finish(m.addAI.Gen(), []string{"qwen2.5-coder-14b", "llama-3.3-8b"})
+	default:
+		m.profileForm.OpenPicker(0)
 	}
 	return nil
 }

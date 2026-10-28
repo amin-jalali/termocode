@@ -16,7 +16,6 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clistep"
 	"github.com/amin-jalali/termocode/internal/clock"
-	"github.com/amin-jalali/termocode/internal/profileform"
 )
 
 // Group CS: profile steps that run Claude Code / Codex on the user's
@@ -290,63 +289,5 @@ func TestAICLIStepLabels(t *testing.T) {
 	it := runsItem{anyTok: true, costOK: true, sub: true, cost: 0.5}
 	if got := runsCostText(it); got != aiDollars(0.5)+" + subscription" {
 		t.Errorf("mixed cost %q", got)
-	}
-}
-
-// CS-5: the form shows a missing or logged-out CLI from the background
-// check; Log in opens a terminal tab with the CLI's own login (run at
-// once), Install types the install line (the user presses Enter); the
-// form is parked meanwhile and its toast brings it back with a new check.
-func TestAICLIFormInstallAndLogin(t *testing.T) {
-	m, _ := cliRunModel(t)
-	m.w, m.h = 120, 40
-	oldCheck, oldTerm := aiCLICheck, aiCLIOpenTerminal
-	t.Cleanup(func() { aiCLICheck, aiCLIOpenTerminal = oldCheck, oldTerm })
-	aiCLICheck = func(_ context.Context, cli string, _ []string) clistep.Status {
-		if cli == ai.CLIClaude {
-			return clistep.StatusMissing
-		}
-		return clistep.StatusLoggedOut
-	}
-	type typed struct {
-		line string
-		run  bool
-	}
-	var got []typed
-	aiCLIOpenTerminal = func(_ *Model, line string, run bool) error {
-		got = append(got, typed{line, run})
-		return nil
-	}
-	cmd := m.openAIProfileForm("sub", cliProfile(), true)
-	if cmd == nil {
-		t.Fatal("opening the form checks the CLIs")
-	}
-	m.handleAIMsg(cmd())
-	m.profileForm.FocusStep(0)
-	if out := ansi.Strip(m.profileForm.Box()); !strings.Contains(out, "Claude Code is not installed") {
-		t.Fatalf("form:\n%s", out)
-	}
-	m.handleAIProfileFormMsg(profileform.CLIActionMsg{CLI: ai.CLICodex, Login: true})
-	if len(got) != 1 || got[0] != (typed{"codex login", true}) {
-		t.Fatalf("terminal %+v", got)
-	}
-	if m.profileFormOpen || !m.profileFormParked {
-		t.Error("the form is parked while the user logs in")
-	}
-	if top := ansi.Strip(strings.Join(m.toast.View(140, 40), "\n")); !strings.Contains(top, "Log in to Codex") {
-		t.Errorf("toast %q", top)
-	}
-	aiCLICheck = func(context.Context, string, []string) clistep.Status { return clistep.StatusReady }
-	back := m.onAIProfileFormBack()
-	if !m.profileFormOpen || m.profileFormParked || back == nil {
-		t.Fatal("the toast brings the form back and checks again")
-	}
-	m.handleAIMsg(back())
-	if out := ansi.Strip(m.profileForm.Box()); strings.Contains(out, "not installed") || !strings.Contains(out, "uses your Claude Code login") {
-		t.Errorf("after the login:\n%s", out)
-	}
-	m.handleAIProfileFormMsg(profileform.CLIActionMsg{CLI: ai.CLIClaude})
-	if len(got) != 2 || got[1] != (typed{"npm install -g @anthropic-ai/claude-code", false}) {
-		t.Errorf("install %+v", got)
 	}
 }

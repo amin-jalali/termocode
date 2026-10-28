@@ -219,8 +219,15 @@ func TestFormStepOps(t *testing.T) {
 	m := New("p", review(), cfg(3))
 	m.SetSize(120, 40)
 	m, _ = keys(m, "a")
-	if len(m.steps) != 3 || m.sel != 2 || m.foc != (item{iSTitle, 2}) {
+	if len(m.steps) != 3 || m.sel != 2 || m.foc != (item{iSModel, 2}) {
 		t.Fatalf("add: %d steps sel %d foc %v", len(m.steps), m.sel, m.foc)
+	}
+	if step, open := m.PickerOpen(); !open || step != 2 {
+		t.Fatalf("add opens the new step's model picker: %d %v", step, open)
+	}
+	m, _ = keys(m, "esc") // back to the form; the step keeps the chat's model
+	if _, open := m.PickerOpen(); open || m.Profile().Steps[2].Slot != "" {
+		t.Fatalf("esc: open %v step %+v", open, m.Profile().Steps[2])
 	}
 	if m.steps[2].id != "step-1" {
 		t.Errorf("new id %q", m.steps[2].id)
@@ -258,23 +265,31 @@ func TestFormStepOps(t *testing.T) {
 	}
 }
 
-// Spec: the model choice offers every slot and both categories; a slot
-// shows its key state (a mark, never a key); the tools choice cycles.
+// Spec: ← → on the Model button go through the chat's model, both
+// automatic choices and the named models of config.json (never the
+// built-in quick / local names); a named model shows its key state (a
+// mark, never a key); the tools choice cycles.
 func TestFormChoices(t *testing.T) {
 	m := New("p", review(), cfg(1))
 	m.SetSize(120, 40)
 	m = focusOn(m, item{iSModel, 0})
 	seen := map[string]bool{}
-	for i := 0; i < len(m.opts); i++ {
+	for i := 0; i < 8; i++ {
 		m, _ = keys(m, "right")
-		seen[m.opts[m.steps[0].model].label] = true
+		v, _ := m.choiceLabel(m.steps[0].ch)
+		seen[v] = true
 	}
-	for _, want := range []string{"main", "quick", "local", "gpt", "category quick", "category deep", "default (main)"} {
+	for _, want := range []string{"gpt", "Automatic: quick", "Automatic: deep", "Same model as the chat"} {
 		if !seen[want] {
 			t.Errorf("no option %q (%v)", want, seen)
 		}
 	}
-	m.steps[0].model = m.modelIndex("gpt", "")
+	for _, not := range []string{"quick", "local", "main"} {
+		if seen[not] {
+			t.Errorf("built-in name %q offered (%v)", not, seen)
+		}
+	}
+	m.steps[0].ch = choice{slot: "gpt"}
 	if out := plain(m); !strings.Contains(out, "gpt") && strings.Contains(out, "no key") {
 		t.Errorf("key state missing:\n%s", out)
 	}
@@ -383,6 +398,7 @@ func TestFormMouse(t *testing.T) {
 	if len(m.steps) != 3 {
 		t.Fatalf("click on Add step: %d steps", len(m.steps))
 	}
+	m, _ = keys(m, "esc") // Add step opened the model picker; back to the form
 	_, tg := m.frame()
 	ox, oy := m.Origin()
 	for _, t0 := range tg {

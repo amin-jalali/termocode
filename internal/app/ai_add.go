@@ -41,9 +41,22 @@ func (m *Model) openAddAI() tea.Cmd {
 	if c, wait := m.secretsOpenFirst((*Model).openAddAI); wait {
 		return c
 	}
-	m.addAI = addai.New(addai.Options{Connected: m.aiS().providers, KeyNote: secretPromptNote(""), Installed: addAIInstalled()})
+	o := addai.Options{Connected: m.aiS().providers, KeyNote: secretPromptNote(""), Installed: addAIInstalled()}
+	back := m.profileFormBack
+	if back != nil && !m.profileFormOpen {
+		back, m.profileFormBack = nil, nil
+	}
+	if back != nil {
+		o.Back = addAIBackTitle
+	}
+	m.addAI = addai.New(o)
 	m.addAI.SetSize(m.w, m.h)
 	m.addAIOpen = true
+	if back != nil && back.Kind != "" { // a step's Fix: straight to its AI
+		var cmd tea.Cmd
+		m.addAI, cmd = m.addAI.StartAt(back.Kind, back.Method)
+		return cmd
+	}
 	return nil
 }
 
@@ -116,11 +129,11 @@ func (m *Model) handleAddAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case addai.CancelMsg:
 		m.closeAddAI()
-		return nil, true
+		return m.addAIBackToForm(false), true
 	case addai.DoneMsg:
 		m.closeAddAI()
 		m.itermocRefreshNow()
-		return nil, true
+		return m.addAIBackToForm(true), true
 	case addai.ConnectKeyMsg:
 		if !m.addAIOpen {
 			return nil, true

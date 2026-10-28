@@ -34,28 +34,34 @@ type Config struct {
 	ParallelMax int             // ai_parallel_max: "waits for" shows at 2 or more
 	Taken       map[string]bool // other profiles of the user's file (a name that is free to save over is not in here)
 	Editing     bool            // changing the user's profile Name in place (Save replaces it)
+	// Groups are the connected AIs with their models: the model picker
+	// lists them in this order.
+	Groups []Group
 	// CLIs is the state of each subscription CLI (ai.CLIClaude,
 	// ai.CLICodex) the app checked; a missing one is CLIUnknown.
 	CLIs map[string]CLIState
 }
 
-// CLIState is whether a subscription CLI can run a step (CS-5). The app
-// checks it with the CLI's own status command; the form never touches a
-// login.
+// CLIState is whether a subscription CLI can run a step. The app checks
+// it with the CLI's own status command; the form never touches a login.
 type CLIState int
 
 const (
 	CLIUnknown   CLIState = iota // not checked (yet)
-	CLIReady                     // installed and logged in
-	CLIMissing                   // not on PATH: the row offers Install
-	CLILoggedOut                 // no login: the row offers Log in
+	CLIReady                     // installed and signed in
+	CLIMissing                   // not on PATH: the step shows Fix
+	CLILoggedOut                 // not signed in: the step shows Fix
 )
 
-// CLIActionMsg: Install (Login false) or Log in (Login true) was pressed
-// on a CLI step's row; the app opens a terminal tab for it.
-type CLIActionMsg struct {
-	CLI   string
-	Login bool
+// AddAIMsg: the user wants an AI connected for step Step: "+ Add another
+// AI" in the model picker (Picker: the picker opens again on the way
+// back), or Fix on a step whose AI is not ready (Kind, and Method when
+// the step needs one way, like a CLI's sign-in). The app opens the Add AI
+// card and, when it ends, comes back to the step.
+type AddAIMsg struct {
+	Step         int
+	Kind, Method string
+	Picker       bool
 }
 
 // SaveMsg: Save… was pressed and the form is valid.
@@ -90,7 +96,7 @@ const (
 	iSTitle
 	iSID
 	iSModel
-	iSCLI // the Install / Log in pill of a CLI step that cannot run
+	iSFix // the Fix pill of a step whose AI is not ready
 	iSTools
 	iSPrompt
 	iSDeps
@@ -129,22 +135,14 @@ func (k kind) choice() bool {
 
 func (k kind) button() bool { return k >= iAdd }
 
-// modelOpt is one entry of a step's model choice.
-type modelOpt struct {
-	label    string
-	slot     string
-	category string
-	cli      string // a subscription CLI (CS-5)
-}
-
 var toolPresets = []string{agentdag.PresetNone, agentdag.PresetReadOnly, agentdag.PresetAll}
 
 type stepState struct {
 	orig   ai.ProfileStep // keeps what the form does not show (allow / deny, output, max_steps)
 	id     string
 	title  string
-	model  int // index into Model.opts
-	tools  int // index into toolPresets
+	ch     choice // what the step runs on
+	tools  int    // index into toolPresets
 	system string
 	deps   string // step numbers, "1, 2"
 	plan   bool
@@ -160,9 +158,9 @@ type Model struct {
 	budget   string
 	catQ     int // 0: not set, then 1+slot index
 	catD     int
-	opts     []modelOpt // the step model choices
 	steps    []stepState
-	sel      int // the expanded step
+	pick     pickState // the model picker
+	sel      int       // the expanded step
 	foc      item
 	editing  bool
 	caret    int
@@ -179,15 +177,6 @@ func New(name string, p ai.Profile, cfg Config) Model {
 	if p.BudgetUSD > 0 {
 		m.budget = strconv.FormatFloat(p.BudgetUSD, 'f', -1, 64)
 	}
-	m.opts = []modelOpt{{label: "default (main)"}}
-	for _, s := range cfg.Slots {
-		m.opts = append(m.opts, modelOpt{label: s.Name, slot: s.Name})
-	}
-	for _, c := range ai.CLIs {
-		m.opts = append(m.opts, modelOpt{label: ai.CLILabel(c), cli: c})
-	}
-	m.opts = append(m.opts, modelOpt{label: "category quick", category: agentdag.CategoryQuick},
-		modelOpt{label: "category deep", category: agentdag.CategoryDeep})
 	m.catQ = m.slotIndex(p.Categories[agentdag.CategoryQuick])
 	m.catD = m.slotIndex(p.Categories[agentdag.CategoryDeep])
 	ids := make(map[string]int, len(p.Steps))
@@ -203,10 +192,7 @@ func New(name string, p ai.Profile, cfg Config) Model {
 				ss.tools = i
 			}
 		}
-		ss.model = m.modelIndex(st.Slot, st.Category)
-		if st.CLI != "" {
-			ss.model = m.cliIndex(st.CLI)
-		}
+		ss.ch = choice{slot: st.Slot, category: st.Category, cli: st.CLI, provider: st.Provider, model: st.Model}
 		var nums []string
 		for _, d := range st.Deps {
 			if n, ok := ids[d]; ok {
@@ -241,62 +227,14 @@ func (m Model) slotIndex(name string) int {
 	return 0
 }
 
-// modelIndex is the option for a step's slot or category; a slot the
-// form does not know is added so the user sees (and can fix) it.
-func (m *Model) modelIndex(slot, cat string) int {
-	for i, o := range m.opts {
-		if o.slot == slot && o.category == cat && (slot != "" || cat != "" || i == 0) {
-			return i
-		}
-	}
-	if slot != "" {
-		at := len(m.opts) - 2 // before the two categories
-		m.opts = append(m.opts[:at], append([]modelOpt{{label: slot, slot: slot}}, m.opts[at:]...)...)
-		return at
-	}
-	return 0
-}
-
-// cliIndex is the option of a CLI; one the form does not know is added
-// (its error shows).
-func (m *Model) cliIndex(cli string) int {
-	for i, o := range m.opts {
-		if o.cli == cli {
-			return i
-		}
-	}
-	at := len(m.opts) - 2
-	m.opts = append(m.opts[:at], append([]modelOpt{{label: cli, cli: cli}}, m.opts[at:]...)...)
-	return at
-}
-
-// SetCLIs updates the CLIs' states (the app's check came back).
-func (m *Model) SetCLIs(c map[string]CLIState) {
-	m.cfg.CLIs = c
-	if m.foc.kind == iSCLI && m.cliAction(m.foc.step) == "" {
+// SetAIs updates the connected AIs and the CLIs' states (the app's
+// check came back, or an AI was added).
+func (m *Model) SetAIs(groups []Group, clis map[string]CLIState) {
+	m.cfg.Groups, m.cfg.CLIs = groups, clis
+	if m.foc.kind == iSFix && m.needs(m.foc.step) == "" {
 		m.setFocus(item{iSModel, m.foc.step})
 	}
 	m.ensureVisible()
-}
-
-// stepCLI is the CLI step i runs on ("" for a model).
-func (m Model) stepCLI(i int) string {
-	if i < 0 || i >= len(m.steps) {
-		return ""
-	}
-	return m.opts[m.steps[i].model].cli
-}
-
-// cliAction is what step i's CLI needs: "install", "login" or "" (ready,
-// unknown, or no CLI).
-func (m Model) cliAction(i int) string {
-	switch m.cfg.CLIs[m.stepCLI(i)] {
-	case CLIMissing:
-		return "install"
-	case CLILoggedOut:
-		return "login"
-	}
-	return ""
 }
 
 // SetSize sets the window size.
@@ -358,8 +296,7 @@ func (m Model) Profile() ai.Profile {
 		s := m.steps[i]
 		st := s.orig
 		st.ID, st.Title, st.System, st.Plan = strings.TrimSpace(s.id), strings.TrimSpace(s.title), s.system, s.plan
-		o := m.opts[s.model]
-		st.Slot, st.Category, st.CLI = o.slot, o.category, o.cli
+		st.Slot, st.Category, st.CLI, st.Provider, st.Model = s.ch.slot, s.ch.category, s.ch.cli, s.ch.provider, s.ch.model
 		if preset := toolPresets[s.tools]; !(preset == agentdag.PresetAll && s.orig.Tools.Preset == "") {
 			st.Tools.Preset = preset
 		}
@@ -431,7 +368,7 @@ func (m Model) Errors() map[string]string {
 	case pe.Step != "" && at >= 0:
 		f := pe.Field
 		switch f {
-		case "slot", "category", "cli":
+		case "slot", "category", "cli", "provider", "model":
 			f = "model"
 		case "system":
 			f = "prompt"
@@ -497,8 +434,8 @@ func (m Model) items() []item {
 			continue
 		}
 		out = append(out, item{iSTitle, i}, item{iSID, i}, item{iSModel, i})
-		if m.cliAction(i) != "" {
-			out = append(out, item{iSCLI, i})
+		if m.needs(i) != "" {
+			out = append(out, item{iSFix, i})
 		}
 		out = append(out, item{iSTools, i}, item{iSPrompt, i})
 		if m.showDeps(i) {
@@ -540,14 +477,14 @@ func (m *Model) FocusModel(i int) {
 	m.ensureVisible()
 }
 
-// FocusCLI puts the focus on step i's Install / Log in pill (when its
-// CLI needs one; else on its Model choice).
-func (m *Model) FocusCLI(i int) {
-	if m.cliAction(i) == "" {
+// FocusFix puts the focus on step i's Fix pill (when its AI is not
+// ready; else on its Model choice).
+func (m *Model) FocusFix(i int) {
+	if i < 0 || i >= len(m.steps) || m.needs(i) == "" {
 		m.FocusModel(i)
 		return
 	}
-	m.setFocus(item{iSCLI, i})
+	m.setFocus(item{iSFix, i})
 	m.ensureVisible()
 }
 
@@ -599,7 +536,7 @@ func (m *Model) cycle(it item, d int) {
 	case iCatD:
 		m.catD = wrap(m.catD, len(m.cfg.Slots)+1)
 	case iSModel:
-		m.steps[it.step].model = wrap(m.steps[it.step].model, len(m.opts))
+		m.cycleModel(it.step, d)
 	case iSTools:
 		m.steps[it.step].tools = wrap(m.steps[it.step].tools, len(toolPresets))
 	case iSPlan:
@@ -695,9 +632,13 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 	}
 	var cmd tea.Cmd
-	if m.editing {
+	switch {
+	case m.pick.open:
+		m, cmd = m.pickerKey(k)
+		return m, cmd
+	case m.editing:
 		m = m.editKey(k)
-	} else {
+	default:
 		m, cmd = m.navKey(k)
 	}
 	m.ensureVisible()
@@ -731,7 +672,7 @@ func (m Model) navKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 		switch string(k.Runes) {
 		case "a":
-			m.AddStep()
+			m.addStepAndPick()
 		case "x":
 			return m, m.removeCmd()
 		case "K":
@@ -764,6 +705,8 @@ func (m Model) removeCmd() tea.Cmd {
 // activate is Enter (or a click) on an item.
 func (m Model) activate(it item) (Model, tea.Cmd) {
 	switch {
+	case it.kind == iSModel:
+		m.OpenPicker(it.step)
 	case it.kind.text():
 		m.editing = true
 		m.caret = len([]rune(*m.text(it)))
@@ -771,30 +714,33 @@ func (m Model) activate(it item) (Model, tea.Cmd) {
 		m.cycle(it, 1)
 	case it.kind == iStepHead:
 		m.setFocus(it)
-	case it.kind == iSCLI:
-		return m, m.cliCmd(it.step)
+	case it.kind == iSFix:
+		return m, m.fixCmd(it.step)
 	default:
 		return m.press(it.kind)
 	}
 	return m, nil
 }
 
-// cliCmd asks the app to install or log in step i's CLI.
-func (m Model) cliCmd(i int) tea.Cmd {
-	switch m.cliAction(i) {
-	case "install":
-		return emit(CLIActionMsg{CLI: m.stepCLI(i)})
-	case "login":
-		return emit(CLIActionMsg{CLI: m.stepCLI(i), Login: true})
+// fixCmd asks the app to connect step i's AI (the Add AI card).
+func (m Model) fixCmd(i int) tea.Cmd {
+	if m.needs(i) == "" {
+		return nil
 	}
-	return nil
+	return emit(m.fixMsg(i))
+}
+
+// addStepAndPick is Add step: the new step's model picker opens at once.
+func (m *Model) addStepAndPick() {
+	m.AddStep()
+	m.OpenPicker(m.sel)
 }
 
 // press runs a button.
 func (m Model) press(b kind) (Model, tea.Cmd) {
 	switch b {
 	case iAdd:
-		m.AddStep()
+		m.addStepAndPick()
 	case iUp:
 		m.MoveStep(-1)
 	case iDown:
@@ -805,8 +751,8 @@ func (m Model) press(b kind) (Model, tea.Cmd) {
 		return m, emit(CancelMsg{Dirty: m.Dirty()})
 	case iDelete:
 		return m, emit(DeleteMsg{})
-	case iSCLI:
-		return m, m.cliCmd(m.foc.step)
+	case iSFix:
+		return m, m.fixCmd(m.foc.step)
 	case iSave:
 		if m.Valid() {
 			return m, emit(SaveMsg{})

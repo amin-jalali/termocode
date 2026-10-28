@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/addai"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/help"
@@ -28,6 +29,10 @@ const (
 )
 
 const pickerKindAIProfileEdit pickerKindEnum = 1010
+
+// addAIBackTitle is the Add AI card's last button when the card was
+// opened from the step form.
+const addAIBackTitle = "Back to the profile"
 
 // aiFormSlots are the model slots the form offers, main / quick / local
 // first. KeyOK is a bare yes / no (the key itself stays in the store).
@@ -70,11 +75,76 @@ func (m *Model) openAIProfileForm(name string, p ai.Profile, editing bool) tea.C
 	}
 	m.profileForm = profileform.New(name, p, profileform.Config{
 		Title: title, Slots: m.aiFormSlots(), ParallelMax: s.settings.Parallel(), Taken: taken, Editing: editing,
-		CLIs: s.cliStates,
+		Groups: m.aiFormGroups(), CLIs: s.cliStates,
 	})
 	m.profileForm.SetSize(m.w, m.h)
-	m.profileFormOpen, m.profileFormParked = true, false
-	return aiCLICheckCmd() // Claude Code / Codex: installed, logged in? (CS-5)
+	m.profileFormOpen, m.profileFormBack = true, nil
+	return aiCLICheckCmd() // Claude Code / Codex: installed, signed in?
+}
+
+// aiFormGroups are the connected AIs with their models for the form's
+// model picker, in the Add AI card's order: a sign-in AI lists its CLI's
+// built-in models, the others the models cache (read here, once per
+// form, never per frame). A CLI that is signed in while its AI is
+// connected another way still shows, as its own group.
+func (m *Model) aiFormGroups() []profileform.Group {
+	s := m.aiS()
+	cache := s.modelsFake
+	if cache == nil {
+		cache, _ = ai.LoadModelsCache() // only a cache: none is no error
+	}
+	var kinds []string
+	seen := map[string]bool{}
+	for _, e := range addai.Catalog() {
+		if _, ok := s.providers[e.Kind]; ok {
+			kinds, seen[e.Kind] = append(kinds, e.Kind), true
+		}
+	}
+	var rest []string
+	for k := range s.providers {
+		if !seen[k] {
+			rest = append(rest, k)
+		}
+	}
+	sort.Strings(rest)
+	var out []profileform.Group
+	clis := map[string]bool{}
+	cliGroup := func(kind, name, cli string) profileform.Group {
+		g := profileform.Group{Kind: kind, Name: name, Tag: ai.CostTag(ai.ProviderEntry{Method: ai.MethodCLI}), CLI: cli}
+		for _, mi := range ai.CLIModels(cli) {
+			g.Models = append(g.Models, mi.ID)
+		}
+		switch s.cliStates[cli] {
+		case profileform.CLIMissing:
+			g.Needs = ai.CLITitle(cli) + " is not installed"
+		case profileform.CLILoggedOut:
+			g.Needs = "needs sign-in"
+		}
+		clis[cli] = true
+		return g
+	}
+	for _, k := range append(kinds, rest...) {
+		p := s.providers[k]
+		name := ai.ProviderName(k)
+		if p.Title != "" {
+			name = p.Title
+		}
+		if p.Method == ai.MethodCLI && p.CLI != "" {
+			out = append(out, cliGroup(k, name, p.CLI))
+			continue
+		}
+		g := profileform.Group{Kind: k, Name: name, Tag: ai.CostTag(p)}
+		for _, mi := range cache[k].Models {
+			g.Models = append(g.Models, mi.ID)
+		}
+		out = append(out, g)
+	}
+	for _, cli := range ai.CLIs {
+		if !clis[cli] && s.cliStates[cli] == profileform.CLIReady {
+			out = append(out, cliGroup(ai.CLIKind(cli), ai.CLITitle(cli), cli))
+		}
+	}
+	return out
 }
 
 // openAIProfileNewForm is New profile from <active>…: a copy to change.
@@ -133,15 +203,53 @@ func (m *Model) openAIProfileEditPicker() tea.Cmd {
 }
 
 // closeAIProfileForm closes the form (nothing was written).
-func (m *Model) closeAIProfileForm() { m.profileFormOpen = false }
+func (m *Model) closeAIProfileForm() { m.profileFormOpen, m.profileFormBack = false, nil }
+
+// addAIBackToForm is the end of an Add AI card the form opened: the form
+// (which stayed open, with its changes) gets the connected AIs again and
+// shows the same step, with the picker open when the card came from it.
+// done: an AI was added; a sign-in AI counts as ready now, and the CLIs
+// are checked again.
+func (m *Model) addAIBackToForm(done bool) tea.Cmd {
+	back := m.profileFormBack
+	m.profileFormBack = nil
+	if back == nil || !m.profileFormOpen {
+		return nil
+	}
+	s := m.aiS()
+	var cmd tea.Cmd
+	if done {
+		states := map[string]profileform.CLIState{}
+		for k, v := range s.cliStates {
+			states[k] = v
+		}
+		for _, p := range s.providers {
+			if p.Method == ai.MethodCLI && p.CLI != "" {
+				states[p.CLI] = profileform.CLIReady
+			}
+		}
+		s.cliStates = states
+		cmd = aiCLICheckCmd()
+	}
+	m.profileForm.SetAIs(m.aiFormGroups(), s.cliStates)
+	m.profileForm.SetSize(m.w, m.h)
+	if back.Picker {
+		m.profileForm.OpenPicker(back.Step)
+	} else {
+		m.profileForm.FocusModel(back.Step)
+	}
+	return cmd
+}
 
 // handleAIProfileFormMsg routes what the form says. ok=false: not ours.
 func (m *Model) handleAIProfileFormMsg(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case profileform.SaveMsg:
 		return m.aiProfileFormSave(), true
-	case profileform.CLIActionMsg:
-		return m.onProfileFormCLIAction(msg), true
+	case profileform.AddAIMsg:
+		back := msg
+		m.profileFormBack = &back // the form stays open under the card
+		return m.openAddAI(), true
 	case profileform.CancelMsg:
 		if !msg.Dirty {
 			m.closeAIProfileForm()
@@ -175,6 +283,12 @@ func (m *Model) handleAIProfileFormMsg(msg tea.Msg) (tea.Cmd, bool) {
 			[]string{"Enter", "edit a text field; cycle a choice"},
 			[]string{"← →", "change a choice or the planner box"},
 			[]string{"Esc", "stop editing (Esc again: cancel)"},
+			[]string{"Model"},
+			[]string{"Enter", "open the model list; type to search"},
+			[]string{"↑ ↓ / Enter", "move / choose a model"},
+			[]string{"Esc", "close the list"},
+			[]string{"+ Add another AI", "connect an AI, then come back"},
+			[]string{"Fix", "connect the AI a step needs"},
 			[]string{"Steps"},
 			[]string{"a", "add a step"},
 			[]string{"K / J", "move the step up / down"},

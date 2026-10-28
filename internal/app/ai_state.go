@@ -95,6 +95,9 @@ type aiState struct {
 	profFake []ai.Profile
 	// keyOnly: the open key prompt came from Itermoc and only stores the key.
 	keyOnly bool
+	// modelsFake replaces the models cache in the profile form's model
+	// picker (the demo shots).
+	modelsFake ai.ModelsCache
 	// slotFake replaces model slots by name (tests and the demo shots).
 	slotFake map[string]aiSlot
 

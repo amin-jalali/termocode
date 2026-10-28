@@ -43,7 +43,7 @@ import (
 //	                       (scripted models; live: steps take a moment)
 //	usagedemo:done         AI: Usage after the planned diamond run (scripted
 //	                       models; an earlier run is in the session)
-//	profiledemo:chip|picker|trust|save|show|form|form-error|form-remove|form-cli|form-cli-missing the agent profile UI (sample data)
+//	profiledemo:chip|picker|trust|save|show|form|form-error|form-remove|form-picker|form-picker-search|form-picker-empty|form-picker-add|form-needs the agent profile UI (sample data)
 //	memorydemo:chat|ask|picker|forget the AI memory UI (sample lessons)
 //	skillsdemo:chat|picker|trust the AI skills UI (sample skills, no files)
 //	runsdemo:list|detail|stall|empty|cli|cli-limit the Runs view and page with sample runs

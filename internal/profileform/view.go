@@ -228,17 +228,10 @@ func (m Model) build() built {
 		}
 		summary := ""
 		if i != m.sel {
-			o := m.opts[s.model]
-			name := o.label
-			if o.slot == "" && o.category == "" && o.cli == "" {
-				name = "main"
-			}
+			name, _ := m.choiceLabel(s.ch)
 			summary = " · " + name + " · " + toolPresets[s.tools]
-			switch m.cliAction(i) { // CS-5: say it before the step is opened
-			case "install":
-				summary += " · " + theme.GlyphFail.String() + " not installed"
-			case "login":
-				summary += " · " + theme.GlyphFail.String() + " not logged in"
+			if need := m.needs(i); need != "" { // say it before the step is opened
+				summary += " · " + theme.GlyphFail.String() + " " + need
 			}
 		}
 		hs := text
@@ -261,24 +254,24 @@ func (m Model) build() built {
 		const ind = 3
 		textRow(item{iSTitle, i}, "Title", ind, "what the step is called", "")
 		textRow(item{iSID, i}, "Id", ind, "step-1", "")
-		o := m.opts[s.model]
-		val, kok := o.label, ""
+		c := s.ch
+		val, kok := m.choiceLabel(c)
 		switch {
-		case o.cli != "":
-			kok = ""
-		case o.slot != "":
-			val, kok = slotText(o.slot)
-		case o.category != "":
+		case c.cli != "" || c.provider != "":
+			if kok != "" {
+				kok = "· " + kok
+			}
+		case c.slot != "":
+			val, kok = slotText(c.slot)
+		case c.category != "":
 			slot := p.SlotFor(p.Steps[i])
 			_, kok = slotText(slot)
-			val = o.label + " → " + slot
+			val += " → " + slot
 		default:
 			_, kok = slotText("main")
 		}
 		choiceRow(item{iSModel, i}, "Model", ind, val, kok)
-		if o.cli != "" {
-			m.cliRow(&b, i, o.cli, ind+lw, innerW, bg, text, dim, danger, accent, f)
-		}
+		m.stepAIRow(&b, i, ind+lw, innerW, bg, text, dim, danger, accent, f)
 
 		// Tools: three radios.
 		ty0 := cur()
@@ -458,6 +451,9 @@ func (m Model) hints(innerW int) []string {
 		}
 	} else {
 		h = []string{"tab", "next", "enter", "edit", "?", "keys", "esc", "cancel", "a", "add step"}
+		if m.foc.kind == iSModel {
+			h[3] = "choose a model"
+		}
 	}
 	for len(h) > 4 && runewidth.StringWidth(strings.Join(h, "    "))+len(h)*2 > innerW-6 {
 		h = h[:len(h)-2]
@@ -587,6 +583,10 @@ func (m *Model) ensureVisible() {
 	if m.w <= 0 || m.h <= 0 {
 		return
 	}
+	if m.pick.open {
+		m.pickVisible()
+		return
+	}
 	b := m.build()
 	view := m.viewRows(b)
 	for _, r := range b.ranges {
@@ -606,10 +606,15 @@ func (m *Model) ensureVisible() {
 	m.scroll = min(max(m.scroll, 0), max(len(b.body)-view, 0))
 }
 
-// Box renders the card (not placed).
+// Box renders the card (not placed); with the model picker open, the
+// picker's card.
 func (m Model) Box() string {
 	if m.w <= 0 || m.h <= 0 {
 		return ""
+	}
+	if m.pick.open {
+		rows, _ := m.pickFrame()
+		return theme.FloatBox(strings.Join(rows, "\n"), m.width())
 	}
 	rows, _ := m.frame()
 	return theme.FloatBox(strings.Join(rows, "\n"), m.width())
@@ -618,6 +623,9 @@ func (m Model) Box() string {
 // Origin is the card's top-left cell when centred.
 func (m Model) Origin() (x, y int) {
 	rows, _ := m.frame()
+	if m.pick.open {
+		rows, _ = m.pickFrame()
+	}
 	return max((m.w-m.width())/2, 0), max((m.h-(len(rows)+2))/2, 0)
 }
 
@@ -630,6 +638,9 @@ type ButtonRect struct {
 // ButtonRects lists the buttons with their screen cells.
 func (m Model) ButtonRects() []ButtonRect {
 	ox, oy := m.Origin()
+	if m.pick.open {
+		return m.pickRects(ox, oy)
+	}
 	_, tg := m.frame()
 	var out []ButtonRect
 	for _, t := range tg {
@@ -646,6 +657,9 @@ func (m Model) ButtonRects() []ButtonRect {
 func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseButton) (Model, tea.Cmd) {
 	if action != tea.MouseActionPress {
 		return m, nil
+	}
+	if m.pick.open {
+		return m.pickMouse(x, y, button)
 	}
 	switch button {
 	case tea.MouseButtonWheelUp:
@@ -673,6 +687,8 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 			m.setFocus(it)
 			m.editing = true
 			m.caret = len([]rune(*m.text(it)))
+		case it.kind == iSModel && t.opt == 0:
+			m.OpenPicker(it.step)
 		case it.kind.choice():
 			m.setFocus(it)
 			switch {
