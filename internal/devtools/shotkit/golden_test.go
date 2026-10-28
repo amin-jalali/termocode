@@ -310,6 +310,12 @@ func goldenCases() []goldenCase {
 		sc := Itermoc(v)
 		out = append(out, goldenCase{sc.Name + "-200x50", sc, 200, 50}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
+	// The Add AI card's sign-in path (AIP-5): ask, install, browser, the
+	// paste-code field, the device code over SSH, no Node.js, ready.
+	for _, v := range []string{"ask", "install", "browser", "code", "device", "nonode", "ready"} {
+		sc := AddAISignIn(v)
+		out = append(out, goldenCase{sc.Name + "-200x50", sc, 200, 50}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
+	}
 	{
 		sc := Itermoc("list")
 		p := Itermoc("profile")

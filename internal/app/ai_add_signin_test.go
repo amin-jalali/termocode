@@ -254,3 +254,30 @@ func TestAddAISignInNoNode(t *testing.T) {
 		t.Errorf("Try again: %d flows, want 2", n)
 	}
 }
+
+// Spec: the shot variants (dev action addaidemo:signin-<v>) open the card
+// at their sign-in step with fixed states; nothing runs or is saved.
+func TestAddAISignInDemoVariants(t *testing.T) {
+	fk := installFakeSignIn(t, false)
+	for v, want := range map[string]string{
+		"signin-ask":     "Install and sign in",
+		"signin-install": "Installing Codex",
+		"signin-browser": "Copy the link",
+		"signin-code":    "Paste the code",
+		"signin-device":  "DEMO-1234",
+		"signin-nonode":  "Codex needs Node.js",
+		"signin-ready":   "OpenAI is ready",
+	} {
+		m := addAITestModel(t)
+		m.runDevAction("addaidemo:" + v)
+		if !m.addAIOpen || !strings.Contains(addAICardText(m), want) {
+			t.Errorf("%s: open %v\n%s", v, m.addAIOpen, addAICardText(m))
+		}
+		if addAIProviders(t) != nil {
+			t.Errorf("%s wrote providers.json", v)
+		}
+	}
+	if len(fk.flows) != 0 {
+		t.Errorf("a demo started %d sign-ins", len(fk.flows))
+	}
+}

@@ -271,6 +271,16 @@ func Itermoc(variant string) Scene {
 	return Scene{Name: name, Env: aiEnv, Steps: steps}
 }
 
+// AddAISignIn is the Add AI card on OpenAI's sign-in at one step over
+// the Itermoc view (AIP-5): "ask" (Install and sign in), "install",
+// "browser" (Copy the link), "code" (the paste-code field), "device"
+// (the link and code over SSH), "nonode" (Codex needs Node.js), "ready".
+// Fixed states: nothing installs, runs or signs in.
+func AddAISignIn(variant string) Scene {
+	return Scene{Name: "addai-signin-" + variant, Env: aiEnv,
+		Steps: WithEditor(Act("itermocdemo:full"), Act("addaidemo:signin-"+variant), Pause(600*time.Millisecond))}
+}
+
 // MarkdownPreview opens docs/preview.md (a sample with every common block)
 // in the full-screen Markdown preview.
 // FindResults is the Find Results page for "Toast" (Find in Files).
