@@ -2,8 +2,10 @@ package ai
 
 // The subscription CLIs have no command that lists their models, so
 // their lists are built in. Claude Code's aliases (opus, sonnet, haiku)
-// always point at the current models; the concrete ids follow them. The
-// picker also offers a free model id, so a newer model never blocks.
+// always point at the current models; the concrete ids follow them.
+// Codex's list is the one the Codex CLI itself offers (its listed
+// models, best first, as of 2026-10). The picker also offers a free
+// model id, so a newer model never blocks.
 var cliModels = map[string][]ModelInfo{
 	CLIClaude: {
 		{ID: "opus", Title: "Opus (latest)"},
@@ -14,10 +16,13 @@ var cliModels = map[string][]ModelInfo{
 		{ID: ModelClaudeHaiku},
 	},
 	CLICodex: {
-		{ID: "gpt-5-codex"},
-		{ID: "gpt-5"},
-		{ID: "gpt-5-mini"},
-		{ID: "o3"},
+		{ID: "gpt-6.1-sol"},
+		{ID: "gpt-6-astra"},
+		{ID: "gpt-6-sol"},
+		{ID: "gpt-6-luna"},
+		{ID: "gpt-5.6-sol"},
+		{ID: "gpt-5.6-terra"},
+		{ID: "gpt-5.6-luna"},
 	},
 }
 

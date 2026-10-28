@@ -10,7 +10,7 @@ func TestCLIModels(t *testing.T) {
 	if got := modelIDs(CLIModels(CLIClaude)); !reflect.DeepEqual(got, claude) {
 		t.Fatalf("claude = %v, want %v", got, claude)
 	}
-	codex := []string{"gpt-5-codex", "gpt-5", "gpt-5-mini", "o3"}
+	codex := []string{"gpt-6.1-sol", "gpt-6-astra", "gpt-6-sol", "gpt-6-luna", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"}
 	if got := modelIDs(CLIModels(CLICodex)); !reflect.DeepEqual(got, codex) {
 		t.Fatalf("codex = %v, want %v", got, codex)
 	}
