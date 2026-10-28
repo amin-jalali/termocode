@@ -48,11 +48,48 @@ The details of an error go to `errors.log` (keys removed), never to the card.
 `Esc` or **Cancel** closes the card at any step. Nothing is saved before the
 AI answers, and an answer that comes after you closed the card is dropped.
 
+### Sign in with your plan
+
 **Sign in with Claude Pro / Max** (Anthropic) and **Sign in with ChatGPT
-Plus / Pro** (OpenAI) use your plan through Claude Code or Codex. In this
-version the card uses that CLI when it is already signed in on this machine.
-If it is not, the card says so: sign in to the CLI in a terminal, then press
-**Try again**, or press **Use an API key**.
+Plus / Pro** (OpenAI) use your plan through the vendor's own CLI: Claude
+Code or Codex. termocode never sees your password. The CLI signs you in in
+your browser and keeps the login; termocode only reads the link it prints
+and asks the CLI whether you are signed in.
+
+1. Pick **Anthropic** or **OpenAI**, then the sign-in.
+2. When the CLI is not on this machine yet, the card says so and lists the
+   three steps. Press **Install and sign in** (one click).
+3. The card shows each step, with a ✓ when it is done:
+    - **Installing Codex** with a timer. termocode installs the CLI with
+      `npm` into its own tools folder (`~/.local/share/termocode/tools`),
+      not into your system.
+    - **Sign in with your browser**. Your browser opens. Finish there; the
+      card waits. When the browser did not open, press **Copy the link**
+      and open it yourself. When the CLI asks for a code, a field appears:
+      paste the code from the browser and press `Enter`.
+    - **Loading your models**.
+4. The card says *OpenAI is ready* and shows the models. Press **Done**.
+
+When the CLI is already installed, the install step is skipped. When it is
+already signed in, the card goes straight to the models.
+
+Over SSH (no display on the machine), Codex uses a device sign-in: the card
+shows a link and a short code. Open the link in a browser on any device
+and type the code.
+
+`Esc` or **Cancel** stops the work at any step: the install and the CLI's
+sign-in end, and nothing is saved.
+
+| The card says | What to do |
+|---|---|
+| *Codex needs Node.js* | Install Node.js (nodejs.org or your package manager), then press **Try again**. Or press **Use an API key** |
+| *No connection.* | Press **Try again** when you are online |
+| *Sign-in took too long.* | The sign-in waits 5 minutes. Press **Try again** |
+| *Sign-in did not finish.* | The CLI ended without a login. Press **Try again** or **Use an API key** |
+
+A connected sign-in is saved in `providers.json` with the method `cli` and
+the CLI's own model list. Removing it from termocode does not sign you out
+of the CLI.
 
 An AI connects one way. When Anthropic already uses an API key and you pick
 the sign-in (or the other way round), the card asks first. **Keep** comes
