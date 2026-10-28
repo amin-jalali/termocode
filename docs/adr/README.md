@@ -30,6 +30,7 @@ picked over a clear alternative. A normal feature does not need one.
 | [0016](0016-container-engine-cli.md) | Container engines are driven through their CLI, not the Engine API | Accepted |
 | [0017](0017-mcp-server.md) | termocode is an MCP server for outside agents | Accepted |
 | [0018](0018-workspace-host-abstraction.md) | A workspace is reached through a Host; termocode stays local | Accepted |
+| [0019](0019-ai-providers.md) | Connected AIs are providers; a step picks a provider and a model | Accepted |
 
 > The folder was started after the project was already running, so 0001–0005
 > backfill decisions that were made earlier. Dates are the best guess from git
