@@ -15,7 +15,6 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/addai"
 	"github.com/amin-jalali/termocode/internal/ai"
-	"github.com/amin-jalali/termocode/internal/clistep"
 )
 
 // addAIKey is a fake key, split so no scanner takes it for a real one.
@@ -360,33 +359,6 @@ func TestAddAIKeepsDerivedProviders(t *testing.T) {
 	ps := addAIProviders(t)
 	if ps[ai.KindOllama].Method != ai.MethodLocal || ps[ai.KindOpenAI].Method != ai.MethodKey {
 		t.Errorf("providers.json %+v", ps)
-	}
-}
-
-// Spec: Sign in uses the CLI's own sign-in when it is there (its built-in
-// models); when it is not, one sentence with Use an API key / Try again.
-func TestAddAISignIn(t *testing.T) {
-	m := addAITestModel(t)
-	old := aiCLICheck
-	t.Cleanup(func() { aiCLICheck = old })
-	status := clistep.StatusLoggedOut
-	aiCLICheck = func(_ context.Context, cli string, _ []string) clistep.Status { return status }
-	addAIPick(t, m, ai.KindOpenAI)
-	addAIKeyT(t, m, tea.KeyEnter) // Sign in with ChatGPT Plus / Pro
-	s := addAICardText(m)
-	if !strings.Contains(s, "Codex is not signed in on this machine.") || !strings.Contains(s, "Use an API key") {
-		t.Fatalf("card:\n%s", s)
-	}
-	if addAIProviders(t) != nil {
-		t.Fatal("a failed sign-in check wrote providers.json")
-	}
-	status = clistep.StatusReady
-	addAIKeyT(t, m, tea.KeyEnter) // Try again
-	if m.addAI.Step() != addai.StepDone || !strings.Contains(addAICardText(m), ai.CLIModels(ai.CLICodex)[0].ID) {
-		t.Fatalf("card:\n%s", addAICardText(m))
-	}
-	if p := addAIProviders(t)[ai.KindOpenAI]; p.Method != ai.MethodCLI || p.CLI != ai.CLICodex {
-		t.Errorf("providers.json entry %+v", p)
 	}
 }
 

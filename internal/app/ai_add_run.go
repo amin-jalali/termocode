@@ -3,21 +3,25 @@ package app
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/amin-jalali/termocode/internal/addai"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clilogin"
 	"github.com/amin-jalali/termocode/internal/clistep"
+	"github.com/amin-jalali/termocode/internal/lspinstall"
 	"github.com/amin-jalali/termocode/internal/secrets"
 )
 
 // The Add AI card's background work (ai_add.go): list a provider's
-// models with a typed key, a server URL or a local server, or check a
-// CLI's sign-in. Nothing here saves anything; the answer goes back to
-// the Update goroutine, which saves only when the card still waits for
-// it.
+// models with a typed key, a server URL or a local server, or run a
+// CLI's sign-in path (clilogin). Nothing here saves anything; the
+// answer goes back to the Update goroutine, which saves only when the
+// card still waits for it.
 
 // aiListModels lists a provider's models (a var for tests: they never
 // reach the network).
@@ -69,26 +73,66 @@ func addAIListCmd(ctx context.Context, gen int, entry ai.ProviderEntry, typed st
 	}
 }
 
-// addAISignInCmd checks a CLI's own sign-in; a signed-in CLI connects
-// its kind with the CLI's built-in model list.
-func addAISignInCmd(ctx context.Context, msg addai.CheckSignInMsg) tea.Cmd {
-	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(ctx, addAICheckTimeout)
-		defer cancel()
-		title := ai.CLITitle(msg.CLI)
-		switch aiCLICheck(ctx, msg.CLI, nil) {
-		case clistep.StatusReady:
-			return addAIResultMsg{gen: msg.Gen, entry: ai.ProviderEntry{Kind: msg.Kind, Method: ai.MethodCLI, CLI: msg.CLI},
-				models: ai.CLIModels(msg.CLI)}
-		case clistep.StatusMissing:
-			return addAIResultMsg{gen: msg.Gen, fail: title + " is not on this machine."}
-		case clistep.StatusLoggedOut:
-			return addAIResultMsg{gen: msg.Gen, fail: title + " is not signed in on this machine."}
+// addAISignInFlow is one running sign-in path (a *clilogin.Flow; tests
+// use a fake).
+type addAISignInFlow interface {
+	Updates() <-chan clilogin.State
+	Write(code string) error
+	Cancel()
+}
+
+// aiCLISignIn starts a CLI's sign-in path: install when missing, the
+// CLI's own sign-in when signed out, then its models (a var for tests:
+// they never run a real CLI, npm or the network).
+var aiCLISignIn = func(ctx context.Context, cfg clilogin.Config) addAISignInFlow { return clilogin.Run(ctx, cfg) }
+
+// aiCLIInstalled reports a sign-in CLI on the PATH or in termocode's
+// tools folder (a var for tests). Only a file check: nothing runs.
+var aiCLIInstalled = func(cli string) bool {
+	env := lspinstall.EnvWithToolsBin()
+	path := ""
+	for _, kv := range env {
+		if v, ok := strings.CutPrefix(kv, "PATH="); ok {
+			path = v
 		}
-		if ctx.Err() != nil && errors.Is(ctx.Err(), context.Canceled) {
+	}
+	for _, d := range filepath.SplitList(path) {
+		if d == "" {
+			continue
+		}
+		if fi, err := os.Stat(filepath.Join(d, clistep.Bin(cli))); err == nil && !fi.IsDir() && fi.Mode()&0o111 != 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// addAIInstalled are the sign-in CLIs on this machine, for the card.
+func addAIInstalled() map[string]bool {
+	out := map[string]bool{}
+	for _, cli := range []string{ai.CLIClaude, ai.CLICodex} {
+		out[cli] = aiCLIInstalled(cli)
+	}
+	return out
+}
+
+// addAISignInStateMsg is one state of the card's sign-in flow.
+type addAISignInStateMsg struct {
+	gen       int
+	kind, cli string
+	flow      addAISignInFlow
+	st        clilogin.State
+}
+
+// addAISignInNext waits for the flow's next state (nil once it closed:
+// it was canceled).
+func addAISignInNext(gen int, kind, cli string, f addAISignInFlow) tea.Cmd {
+	return func() tea.Msg {
+		st, ok := <-f.Updates()
+		if !ok {
 			return nil
 		}
-		return addAIResultMsg{gen: msg.Gen, fail: "Could not check " + title + " on this machine."}
+		return addAISignInStateMsg{gen: gen, kind: kind, cli: cli, flow: f, st: st}
 	}
 }
 

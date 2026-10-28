@@ -7,7 +7,8 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-var allSteps = []string{"pick", "method", "key", "key-busy", "url", "local", "local-bad", "signin-bad", "done"}
+var allSteps = []string{"pick", "method", "key", "key-busy", "url", "local", "local-bad", "signin-bad",
+	"signin-ask", "signin-install", "signin-browser", "signin-code", "signin-device", "signin-models", "signin-nonode", "done"}
 
 // Spec: every step fits 80x24 and 200x50 (every line the same width, no
 // wider than the screen) and draws every button it has.

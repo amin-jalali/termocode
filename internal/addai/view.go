@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/mattn/go-runewidth"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clilogin"
 	"github.com/amin-jalali/termocode/internal/connectcard"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
@@ -90,15 +92,7 @@ func (m Model) build() connectcard.Card {
 		), Buttons: actions(btnRetry)}
 
 	case StepSignIn:
-		title := "Sign in with " + e.Plan
-		cli := ai.CLITitle(e.CLI)
-		if m.busy || m.fail == "" {
-			return connectcard.Card{Title: title, Rows: []connectcard.Row{busy("Checking " + cli + " on this machine…")},
-				Buttons: []connectcard.Button{btnCancel}}
-		}
-		return connectcard.Card{Title: title, Rows: append(fail(nil),
-			connectcard.Row{Kind: connectcard.Dim, Text: "Sign in to " + cli + " in a terminal, then press Try again. Or use an API key instead."},
-		), Buttons: []connectcard.Button{btnCancel, {ID: "apikey", Title: "Use an API key"}, btnRetry}}
+		return m.signInCard()
 
 	case StepDone:
 		n := len(m.models)
@@ -130,6 +124,107 @@ func (m Model) build() connectcard.Card {
 	return connectcard.Card{Title: "Add an AI", Rows: []connectcard.Row{
 		{Kind: connectcard.Choice, ID: "provider", Vertical: true, Options: opts},
 	}, Buttons: []connectcard.Button{btnCancel}}
+}
+
+// signInCard is the sign-in step: the ask card (the CLI is missing),
+// the running path (install, browser, models: one line each, ✓ when
+// past), or a failure.
+func (m Model) signInCard() connectcard.Card {
+	e := m.entry
+	title := "Sign in with " + e.Plan
+	cli := ai.CLITitle(e.CLI)
+	btnAPIKey := connectcard.Button{ID: "apikey", Title: "Use an API key"}
+	if !m.busy && m.fail != "" {
+		if m.noNode {
+			return connectcard.Card{Title: cli + " needs Node.js", Rows: []connectcard.Row{
+				{Kind: connectcard.Text, Text: "Node.js is not on this machine, so termocode cannot install " + cli + "."},
+				{Kind: connectcard.Dim, Text: "Install Node.js (nodejs.org or your package manager), then press Try again. Or use an API key instead."},
+			}, Buttons: []connectcard.Button{btnCancel, btnAPIKey, btnRetry}}
+		}
+		return connectcard.Card{Title: title, Rows: []connectcard.Row{{Kind: connectcard.Fail, Text: m.fail}},
+			Buttons: []connectcard.Button{btnCancel, btnAPIKey, btnRetry}}
+	}
+	if !m.busy {
+		return connectcard.Card{Title: title, Rows: []connectcard.Row{
+			{Kind: connectcard.Dim, Text: "termocode uses " + cli + " for this. It is not on this machine yet."},
+			{Kind: connectcard.Blank},
+			{Kind: connectcard.Text, Text: "1  Install " + cli},
+			{Kind: connectcard.Text, Text: "2  Sign in with your browser"},
+			{Kind: connectcard.Text, Text: "3  Load your models"},
+			{Kind: connectcard.Blank},
+			{Kind: connectcard.Dim, Text: "termocode never sees your password: " + cli + " signs in and keeps the login."},
+		}, Buttons: []connectcard.Button{btnBack, btnCancel, {ID: "signin", Title: "Install and sign in", Primary: true}}}
+	}
+
+	st := m.sign
+	if st.Phase < 0 {
+		return connectcard.Card{Title: title, Rows: []connectcard.Row{
+			{Kind: connectcard.Status, Text: theme.ASCIIText("◐ ") + "Checking " + cli + " on this machine…"},
+		}, Buttons: []connectcard.Button{btnCancel}}
+	}
+	done := func(text string) connectcard.Row { return connectcard.Row{Kind: connectcard.OK, Text: text} }
+	now := func(text string) connectcard.Row {
+		return connectcard.Row{Kind: connectcard.Status, Text: theme.ASCIIText("◐ ") + text}
+	}
+	later := func(text string) connectcard.Row {
+		return connectcard.Row{Kind: connectcard.Dim, Text: theme.ASCIIText("·") + " " + text}
+	}
+	var rows []connectcard.Row
+	switch {
+	case st.Phase == clilogin.PhaseInstalling:
+		line := "Installing " + cli + "  " + clock(st.Elapsed)
+		rows = append(rows, now(line))
+		if st.Line != "" {
+			rows = append(rows, connectcard.Row{Kind: connectcard.Dim, Text: st.Line})
+		}
+	case m.installed:
+		rows = append(rows, done("Installed "+cli))
+	default:
+		rows = append(rows, done(cli+" is on this machine"))
+	}
+	buttons := []connectcard.Button{btnCancel}
+	switch {
+	case st.Phase == clilogin.PhaseInstalling:
+		rows = append(rows, later("Sign in with your browser"))
+	case st.Phase == clilogin.PhaseWaitingForBrowser:
+		rows = append(rows, now("Sign in with your browser"))
+		if st.Code != "" {
+			rows = append(rows,
+				connectcard.Row{Kind: connectcard.Dim, Text: "Open this link in a browser on any device and type the code:"},
+				connectcard.Row{Kind: connectcard.Link, Text: st.URL},
+				connectcard.Row{Kind: connectcard.Code, Text: st.Code})
+		} else {
+			rows = append(rows, connectcard.Row{Kind: connectcard.Dim, Text: "Your browser opened. Finish there; this window waits."})
+			if st.URL != "" {
+				rows = append(rows, connectcard.Row{Kind: connectcard.Dim, Text: "Browser did not open? Copy the link and open it yourself."})
+			}
+		}
+		if st.URL != "" {
+			buttons = append(buttons, connectcard.Button{ID: "copy", Title: "Copy the link"})
+		}
+		if st.NeedsCode {
+			label := "Paste the code the browser shows, then press Enter."
+			if m.codeSent {
+				label = "Code sent. If " + cli + " asks again, paste the new code."
+			}
+			rows = append(rows, connectcard.Row{Kind: connectcard.Input, ID: "code", Text: label})
+			buttons = append(buttons, connectcard.Button{ID: "sendcode", Title: "Send code", Primary: true})
+		}
+	default:
+		rows = append(rows, done("Signed in"))
+	}
+	if st.Phase == clilogin.PhaseLoadingModels {
+		rows = append(rows, now("Loading your models"))
+	} else {
+		rows = append(rows, later("Load your models"))
+	}
+	return connectcard.Card{Title: title, Rows: rows, Buttons: buttons}
+}
+
+// clock is a timer as m:ss.
+func clock(d time.Duration) string {
+	s := int(d / time.Second)
+	return fmt.Sprintf("%d:%02d", s/60, s%60)
 }
 
 // wayNow names how a connected AI connects, in a sentence.

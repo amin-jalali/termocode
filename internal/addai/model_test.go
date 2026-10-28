@@ -4,11 +4,13 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clilogin"
 	"github.com/amin-jalali/termocode/internal/connectcard"
 )
 
@@ -118,7 +120,28 @@ func at(t *testing.T, step string) Model {
 	case "signin-bad":
 		pick(t, &m, ai.KindAnthropic)
 		do(t, &m, key(tea.KeyEnter))
-		m.Fail(m.Gen(), "Claude Code is not signed in on this machine.")
+		press(t, &m, "signin")
+		m.Fail(m.Gen(), "Could not start the Claude Code sign-in. Try again, or use an API key.")
+	case "signin-ask":
+		pick(t, &m, ai.KindOpenAI)
+		do(t, &m, key(tea.KeyEnter))
+	case "signin-install", "signin-browser", "signin-code", "signin-device", "signin-models", "signin-nonode":
+		pick(t, &m, ai.KindOpenAI)
+		do(t, &m, key(tea.KeyEnter))
+		press(t, &m, "signin")
+		m.Progress(m.Gen(), clilogin.State{Phase: clilogin.PhaseInstalling, Elapsed: 72 * time.Second, Line: "added 12 packages"})
+		switch step {
+		case "signin-browser":
+			m.Progress(m.Gen(), clilogin.State{Phase: clilogin.PhaseWaitingForBrowser, URL: testLink})
+		case "signin-code":
+			m.Progress(m.Gen(), clilogin.State{Phase: clilogin.PhaseWaitingForBrowser, URL: testLink, NeedsCode: true})
+		case "signin-device":
+			m.Progress(m.Gen(), clilogin.State{Phase: clilogin.PhaseWaitingForBrowser, URL: testLink, Code: "ABCD-1234"})
+		case "signin-models":
+			m.Progress(m.Gen(), clilogin.State{Phase: clilogin.PhaseLoadingModels})
+		case "signin-nonode":
+			m.Progress(m.Gen(), clilogin.State{Phase: clilogin.PhaseFailed, Err: &clilogin.Error{Kind: clilogin.FailNoNode, Msg: "Codex needs Node.js."}})
+		}
 	case "done":
 		pick(t, &m, ai.KindOllama)
 		m.Finish(m.Gen(), []string{"llama3.2:3b"})
@@ -145,7 +168,7 @@ func TestStepTable(t *testing.T) {
 		{"method", "back", res{StepPick, ""}},
 		{"method", "cancel", res{StepMethod, "CancelMsg"}},
 		{"method", "esc", res{StepMethod, "CancelMsg"}},
-		{"method", "enter", res{StepSignIn, "CheckSignInMsg"}},
+		{"method", "enter", res{StepSignIn, ""}}, // the ask card: nothing runs before Install and sign in
 		{"key", "back", res{StepPick, ""}},
 		{"key", "cancel", res{StepKey, "CancelMsg"}},
 		{"key", "esc", res{StepKey, "CancelMsg"}},
@@ -161,7 +184,7 @@ func TestStepTable(t *testing.T) {
 		{"local-bad", "retry", res{StepLocal, "DetectLocalMsg"}},
 		{"local-bad", "back", res{StepPick, ""}},
 		{"local-bad", "cancel", res{StepLocal, "CancelMsg"}},
-		{"signin-bad", "retry", res{StepSignIn, "CheckSignInMsg"}},
+		{"signin-bad", "retry", res{StepSignIn, "SignInMsg"}},
 		{"signin-bad", "apikey", res{StepKey, ""}},
 		{"signin-bad", "cancel", res{StepSignIn, "CancelMsg"}},
 		{"signin-bad", "esc", res{StepSignIn, "CancelMsg"}},
@@ -280,10 +303,8 @@ func TestReplaceAsksKeepFirst(t *testing.T) {
 		t.Fatalf("Enter on the question: step %v sent %T, want Keep", m.Step(), out)
 	}
 	do(t, &m, key(tea.KeyEnter))
-	if out := press(t, &m, "replace"); m.Step() != StepSignIn {
-		t.Fatalf("Replace: step %v sent %T", m.Step(), out)
-	} else if _, ok := out.(CheckSignInMsg); !ok {
-		t.Fatalf("Replace sent %T", out)
+	if out := press(t, &m, "replace"); m.Step() != StepSignIn || out != nil {
+		t.Fatalf("Replace: step %v sent %T, want the ask card", m.Step(), out)
 	}
 	// Esc on the question cancels everything.
 	m = newCard(conn)

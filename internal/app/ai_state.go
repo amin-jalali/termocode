@@ -182,6 +182,8 @@ type aiState struct {
 	mcpNotNow     map[string]bool // "Not now" on a server's sign-in row
 	// addAICancel stops the Add AI card's request in flight (ai_add.go).
 	addAICancel context.CancelFunc
+	// addAIFlow is the card's running sign-in path (ai_add_run.go).
+	addAIFlow addAISignInFlow
 
 	// secretsLocked: the last reload found the encrypted secret store
 	// locked (secrets_ui.go); the setup card and the "not configured"

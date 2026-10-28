@@ -11,16 +11,19 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/addai"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clilogin"
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/secrets"
 )
 
-// ── Add AI (AIP-3) ──────────────────────────────────────────────────────
+// ── Add AI (AIP-3, AIP-5) ───────────────────────────────────────────────
 //
 // AI: Add AI… opens one card (internal/addai) that connects an AI: an
-// API key, a local server, a server URL, or a CLI's sign-in that is
-// already there. The card only asks; this file runs its requests off the
-// Update goroutine (ai_add_run.go) and saves only on success:
+// API key, a local server, a server URL, or a subscription through the
+// vendor CLI's own sign-in (clilogin: install into the tools folder,
+// the browser sign-in, the models). The card only asks; this file runs
+// its requests off the Update goroutine (ai_add_run.go) and saves only
+// on success:
 //
 //	the key        → the secret store (ai.SaveCredentials), as typed
 //	the provider   → ai/providers.json (one entry per kind)
@@ -38,7 +41,7 @@ func (m *Model) openAddAI() tea.Cmd {
 	if c, wait := m.secretsOpenFirst((*Model).openAddAI); wait {
 		return c
 	}
-	m.addAI = addai.New(addai.Options{Connected: m.aiS().providers, KeyNote: secretPromptNote("")})
+	m.addAI = addai.New(addai.Options{Connected: m.aiS().providers, KeyNote: secretPromptNote(""), Installed: addAIInstalled()})
 	m.addAI.SetSize(m.w, m.h)
 	m.addAIOpen = true
 	return nil
@@ -51,10 +54,12 @@ func (m *Model) closeAddAI() {
 }
 
 func (m *Model) addAIStop() {
-	if s := m.aiS(); s.addAICancel != nil {
-		s.addAICancel()
+	s := m.aiS()
+	if s.addAICancel != nil {
+		s.addAICancel() // ends a sign-in flow too: its installer and CLI are killed
 		s.addAICancel = nil
 	}
+	s.addAIFlow = nil
 }
 
 // addAIContext is a fresh context for one request (the last one stops).
@@ -154,15 +159,58 @@ func (m *Model) handleAddAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return addAIListCmd(m.addAIContext(), msg.Gen, entry, "", func(error) string {
 			return e.Name + " is not running on this machine."
 		}), true
-	case addai.CheckSignInMsg:
+	case addai.SignInMsg:
 		if !m.addAIOpen {
 			return nil, true
 		}
-		return addAISignInCmd(m.addAIContext(), msg), true
+		ctx := m.addAIContext()
+		f := aiCLISignIn(ctx, clilogin.Config{CLI: msg.CLI})
+		m.aiS().addAIFlow = f
+		return addAISignInNext(msg.Gen, msg.Kind, msg.CLI, f), true
+	case addai.CopyLinkMsg:
+		if !m.addAIOpen || msg.Gen != m.addAI.Gen() {
+			return nil, true
+		}
+		return m.copyWithToast(m.addAI.SignInURL(), "Link copied"), true
+	case addai.SendCodeMsg:
+		if f := m.aiS().addAIFlow; m.addAIOpen && msg.Gen == m.addAI.Gen() && f != nil {
+			_ = f.Write(msg.Code) // only to the CLI's pty; a closed sign-in ends with its own state
+		}
+		return nil, true
+	case addAISignInStateMsg:
+		return m.onAddAISignIn(msg), true
 	case addAIResultMsg:
 		return m.onAddAIResult(msg), true
 	}
 	return nil, false
+}
+
+// onAddAISignIn shows one state of the sign-in flow. Ready saves the
+// provider (method cli) with the CLI's built-in models, and leaves the
+// CLI its time to exit (the flow stops it itself); Failed logs the
+// installer's redacted tail (never the link). A state of a flow the card
+// no longer waits for is dropped.
+func (m *Model) onAddAISignIn(msg addAISignInStateMsg) tea.Cmd {
+	s := m.aiS()
+	if !m.addAIOpen || msg.flow != s.addAIFlow || msg.gen != m.addAI.Gen() {
+		return nil
+	}
+	switch msg.st.Phase {
+	case clilogin.PhaseReady:
+		s.addAIFlow = nil
+		return m.onAddAIResult(addAIResultMsg{gen: msg.gen,
+			entry:  ai.ProviderEntry{Kind: msg.kind, Method: ai.MethodCLI, CLI: msg.cli},
+			models: msg.st.Models})
+	case clilogin.PhaseFailed:
+		if e := msg.st.Err; e != nil && e.Detail != "" {
+			recordError("Add AI sign-in " + msg.cli + ": " + e.Detail)
+		}
+		m.addAI.Progress(msg.gen, msg.st)
+		m.addAIStop()
+		return nil
+	}
+	m.addAI.Progress(msg.gen, msg.st)
+	return addAISignInNext(msg.gen, msg.kind, msg.cli, msg.flow)
 }
 
 // onAddAIResult saves a connected AI, or shows why not. An answer the

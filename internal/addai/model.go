@@ -1,7 +1,7 @@
 // Package addai is the Add AI card (AIP-3): one floating card that
 // connects an AI without a terminal, JSON or config words.
 //
-//	pick → method (Anthropic, OpenAI) → key | sign-in check
+//	pick → method (Anthropic, OpenAI) → key | sign-in
 //	     → key (OpenRouter)                    ↘
 //	     → local (Ollama, LM Studio): looked for at once → done
 //	     → url (Other server): URL + optional key        ↗
@@ -10,9 +10,17 @@
 // first (Keep first and lit). The card is a pure state machine on
 // connectcard rows: it never touches disk, network or a process. It
 // sends the app a request (ConnectKeyMsg, ConnectURLMsg, DetectLocalMsg,
-// CheckSignInMsg) and the app answers with Fail or Finish; CancelMsg and
+// SignInMsg) and the app answers with Fail or Finish; CancelMsg and
 // DoneMsg close it. Each request carries a generation, so the answer to
 // an older one (after Back, Esc or Try again) is dropped.
+//
+// The sign-in (AIP-5) runs the vendor CLI's own sign-in through
+// clilogin: a CLI that is not on this machine first gets one card with
+// Install and sign in; then the app feeds the flow's states to Progress
+// (Installing with its timer, the browser step with Copy the link and a
+// paste-code field, Loading your models, or a failure) and calls Finish
+// once the provider is saved. Copy the link (CopyLinkMsg) and a pasted
+// code (SendCodeMsg) go to the app; the card never logs the link.
 package addai
 
 import (
@@ -21,6 +29,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clilogin"
 	"github.com/amin-jalali/termocode/internal/connectcard"
 )
 
@@ -34,7 +43,7 @@ const (
 	StepKey                 // the masked key field
 	StepURL                 // Other server: URL + optional key
 	StepLocal               // looking for a local server
-	StepSignIn              // checking the vendor CLI's sign-in
+	StepSignIn              // the vendor CLI's sign-in: ask, install, browser, models
 	StepDone                // ✓ ready + the models
 )
 
@@ -80,6 +89,10 @@ type Options struct {
 	Connected map[string]ai.ProviderEntry
 	// KeyNote is a quiet line under the key field (what it accepts).
 	KeyNote string
+	// Installed are the sign-in CLIs on this machine (by ai.CLIClaude,
+	// ai.CLICodex): an installed one starts at once, a missing one asks
+	// first (Install and sign in).
+	Installed map[string]bool
 }
 
 // Requests to the app. Gen is the card's generation at the request.
@@ -100,10 +113,19 @@ type (
 		Gen  int
 		Kind string
 	}
-	// CheckSignInMsg: is CLI signed in (Kind's plan)?
-	CheckSignInMsg struct {
+	// SignInMsg: run CLI's sign-in path for Kind (install when missing,
+	// sign in when signed out, then the models); feed its states to
+	// Progress.
+	SignInMsg struct {
 		Gen       int
 		Kind, CLI string
+	}
+	// CopyLinkMsg: copy the sign-in link (SignInURL) to the clipboard.
+	CopyLinkMsg struct{ Gen int }
+	// SendCodeMsg: paste Code into the running sign-in.
+	SendCodeMsg struct {
+		Gen  int
+		Code string
 	}
 	// CancelMsg: the card closed before an AI was connected.
 	CancelMsg struct{}
@@ -124,6 +146,14 @@ type Model struct {
 	fail    string // one sentence under the fields
 	gen     int
 	models  []string
+
+	// The sign-in (StepSignIn): the flow's last state (Phase -1 before
+	// the first one), whether this flow installed the CLI, whether the
+	// failure is a missing Node.js, and whether a pasted code was sent.
+	sign      clilogin.State
+	installed bool
+	noNode    bool
+	codeSent  bool
 }
 
 // New opens the card on the list.
@@ -167,9 +197,45 @@ func (m *Model) Fail(gen int, text string) bool {
 	if gen != m.gen || !m.busy {
 		return false
 	}
-	m.busy, m.fail = false, text
+	m.busy, m.fail, m.noNode = false, text, false
 	m.refresh()
 	return true
+}
+
+// Progress shows a state of the sign-in gen; Failed ends it with the
+// error's sentence (a missing Node.js has its own card). Ready is the
+// app's: it saves the provider, then calls Finish. A stale gen is
+// dropped (false).
+func (m *Model) Progress(gen int, st clilogin.State) bool {
+	if gen != m.gen || !m.busy || m.step != StepSignIn {
+		return false
+	}
+	switch st.Phase {
+	case clilogin.PhaseReady:
+		return true
+	case clilogin.PhaseFailed:
+		text := "Sign-in did not finish. Try again, or use an API key."
+		if st.Err != nil && st.Err.Msg != "" {
+			text = st.Err.Msg
+		}
+		m.busy, m.fail = false, text
+		m.noNode = st.Err != nil && st.Err.Kind == clilogin.FailNoNode
+	case clilogin.PhaseInstalling:
+		m.installed = true
+		m.sign = st
+	default:
+		m.sign = st
+	}
+	m.refresh()
+	return true
+}
+
+// SignInURL is the link of the running sign-in ("" none). Never log it.
+func (m Model) SignInURL() string {
+	if m.step != StepSignIn || !m.busy {
+		return ""
+	}
+	return m.sign.URL
 }
 
 // Finish ends the request gen with the AI connected and its models.
@@ -243,6 +309,9 @@ func (m Model) inner(cmd tea.Cmd) (Model, tea.Cmd) {
 	case connectcard.ButtonMsg:
 		return m.press(v.ID)
 	case connectcard.SubmitMsg:
+		if m.step == StepSignIn {
+			return m.press("sendcode")
+		}
 		return m.press("connect")
 	case connectcard.CloseMsg:
 		return m.close()
@@ -273,8 +342,25 @@ func (m Model) press(id string) (Model, tea.Cmd) {
 		return m.back(), nil
 	case "connect":
 		return m.connect()
-	case "retry":
+	case "retry", "signin":
+		if m.method == ai.MethodCLI {
+			return m.signIn()
+		}
 		return m.start(m.method)
+	case "copy":
+		if m.SignInURL() == "" {
+			return m, nil
+		}
+		return m, emit(CopyLinkMsg{Gen: m.gen})
+	case "sendcode":
+		code := strings.TrimSpace(m.card.InputValue("code"))
+		if m.step != StepSignIn || !m.busy || code == "" {
+			return m, nil
+		}
+		m.card.SetInputValue("code", "")
+		m.codeSent = true
+		m.refresh()
+		return m, emit(SendCodeMsg{Gen: m.gen, Code: code})
 	case "apikey":
 		return m.want(ai.MethodKey)
 	case "keep":
@@ -328,13 +414,25 @@ func (m Model) start(method string) (Model, tea.Cmd) {
 		m.refresh()
 		return m, emit(DetectLocalMsg{Gen: m.gen, Kind: m.entry.Kind})
 	case ai.MethodCLI:
-		m.step, m.busy = StepSignIn, true
-		m.gen++
-		m.refresh()
-		return m, emit(CheckSignInMsg{Gen: m.gen, Kind: m.entry.Kind, CLI: m.entry.CLI})
+		m.step = StepSignIn
+		if m.opts.Installed[m.entry.CLI] {
+			return m.signIn()
+		}
+		m.gen++ // the ask card: nothing runs before Install and sign in
 	}
 	m.refresh()
 	return m, nil
+}
+
+// signIn starts the sign-in path (a new flow).
+func (m Model) signIn() (Model, tea.Cmd) {
+	m.step, m.method = StepSignIn, ai.MethodCLI
+	m.busy, m.fail, m.noNode, m.codeSent, m.installed = true, "", false, false, false
+	m.sign = clilogin.State{Phase: -1}
+	m.card.SetInputValue("code", "")
+	m.gen++
+	m.refresh()
+	return m, emit(SignInMsg{Gen: m.gen, Kind: m.entry.Kind, CLI: m.entry.CLI})
 }
 
 // back goes one card back; a request in flight is dropped.
