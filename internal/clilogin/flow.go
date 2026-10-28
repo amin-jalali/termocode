@@ -141,8 +141,15 @@ func (f *Flow) Write(code string) error {
 // Cancel stops the flow: the installer and the CLI are killed.
 func (f *Flow) Cancel() { f.cancel() }
 
-// send delivers a phase change (dropped only when the flow is canceled).
+// send delivers a phase change (dropped only when the flow is canceled
+// and the card has no room left). Room first: the exit grace of a
+// signed-in CLI may end ctx just before Ready.
 func (f *Flow) send(ctx context.Context, st State) {
+	select {
+	case f.ch <- st:
+		return
+	default:
+	}
 	select {
 	case f.ch <- st:
 	case <-ctx.Done():

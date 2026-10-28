@@ -281,3 +281,23 @@ func TestFlowCancelMidInstall(t *testing.T) {
 		}
 	}
 }
+
+// A phase change is never lost to a context that ended meanwhile (the
+// signed-in CLI's exit grace) while the card still has room for it:
+// Ready must reach the card.
+func TestSendDeliversAfterContextEnds(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	for i := 0; i < 200; i++ {
+		f := &Flow{ch: make(chan State, 1)}
+		f.send(ctx, State{Phase: PhaseReady})
+		select {
+		case st := <-f.ch:
+			if st.Phase != PhaseReady {
+				t.Fatalf("got %v", st.Phase)
+			}
+		default:
+			t.Fatalf("run %d: Ready was dropped", i)
+		}
+	}
+}
