@@ -200,7 +200,8 @@ func (m Model) signInCard() connectcard.Card {
 			}
 		}
 		if st.URL != "" {
-			buttons = append(buttons, connectcard.Button{ID: "copy", Title: "Copy the link"})
+			// Lit unless a code is asked for: Enter copies, never cancels.
+			buttons = append(buttons, connectcard.Button{ID: "copy", Title: "Copy the link", Primary: !st.NeedsCode})
 		}
 		if st.NeedsCode {
 			label := "Paste the code the browser shows, then press Enter."

@@ -117,6 +117,10 @@ func TestSignInProgress(t *testing.T) {
 	if out, ok := press(t, &m, "copy").(CopyLinkMsg); !ok || out.Gen != msg.Gen {
 		t.Errorf("Copy the link sent %#v", out)
 	}
+	// Enter copies the link; it never cancels the sign-in by accident.
+	if out, ok := do(t, &m, key(tea.KeyEnter)).(CopyLinkMsg); !ok {
+		t.Errorf("Enter on the browser step sent %#v", out)
+	}
 	if m.SignInURL() != testLink {
 		t.Errorf("SignInURL %q", m.SignInURL())
 	}
