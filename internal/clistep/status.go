@@ -2,11 +2,11 @@ package clistep
 
 import (
 	"context"
-	"os"
 	"regexp"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/lspinstall"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
@@ -70,11 +70,12 @@ func InstallLine(cli string) string {
 var loggedOutJSON = regexp.MustCompile(`"loggedIn"\s*:\s*false`)
 
 // Check says whether cli is installed and logged in, by the CLI's own
-// status command (env nil: os.Environ()). termocode never reads the
-// CLI's credential files.
+// status command (env nil: os.Environ() with termocode's tools/bin
+// first, where it installs a CLI). termocode never reads the CLI's
+// credential files.
 func Check(ctx context.Context, cli string, env []string) Status {
 	if env == nil {
-		env = os.Environ()
+		env = lspinstall.EnvWithToolsBin()
 	}
 	env = CleanEnv(env)
 	bin, err := lookPath(Bin(cli), env)

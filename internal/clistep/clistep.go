@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/lspinstall"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
@@ -41,8 +42,11 @@ type Spec struct {
 	// with acceptEdits; Codex: the workspace-write sandbox). Off, it
 	// only reads.
 	Write bool
+	// Model is the model the CLI is asked for (--model / -m); "" runs
+	// the CLI's default. An id that could pass for a flag is left out.
+	Model string
 	Dir   string   // the project root (the CLI's working dir)
-	Env   []string // the environment (nil: os.Environ()); CleanEnv is applied
+	Env   []string // the environment (nil: os.Environ() with termocode's tools/bin first); CleanEnv is applied
 	// Timeout ends the run (0: DefaultTimeout).
 	Timeout time.Duration
 	// Now is the clock for reset times ("try again in 2 hours"); nil:
@@ -62,9 +66,13 @@ func Bin(cli string) string { return cli }
 
 // Args are the CLI's arguments (no prompt: it goes on stdin).
 func Args(s Spec) []string {
+	model := s.Model != "" && ai.ValidModelID(s.Model)
 	switch s.CLI {
 	case ai.CLIClaude:
 		out := []string{"-p", "--output-format", "stream-json", "--verbose"}
+		if model {
+			out = append(out, "--model", s.Model)
+		}
 		if s.Write {
 			// Edits, but no shell: it cannot run commands.
 			return append(out, "--tools", "Read,Grep,Glob,Edit,Write", "--permission-mode", "acceptEdits")
@@ -75,7 +83,11 @@ func Args(s Spec) []string {
 		if s.Write {
 			sandbox = "workspace-write"
 		}
-		return []string{"exec", "--json", "--color", "never", "--sandbox", sandbox, "-C", s.Dir, "-"}
+		out := []string{"exec", "--json", "--color", "never"}
+		if model {
+			out = append(out, "-m", s.Model)
+		}
+		return append(out, "--sandbox", sandbox, "-C", s.Dir, "-")
 	}
 	return nil
 }
@@ -154,7 +166,7 @@ func Run(ctx context.Context, s Spec, prompt string, emit func(ai.Event)) (Resul
 	}
 	env := s.Env
 	if env == nil {
-		env = os.Environ()
+		env = lspinstall.EnvWithToolsBin()
 	}
 	env = CleanEnv(env)
 	title := ai.CLITitle(s.CLI)

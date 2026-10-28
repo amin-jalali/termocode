@@ -133,6 +133,12 @@ func TestArgs(t *testing.T) {
 		{Spec{CLI: ai.CLIClaude, Write: true}, []string{"-p", "--output-format", "stream-json", "--verbose", "--tools", "Read,Grep,Glob,Edit,Write", "--permission-mode", "acceptEdits"}},
 		{Spec{CLI: ai.CLICodex, Dir: "/w"}, []string{"exec", "--json", "--color", "never", "--sandbox", "read-only", "-C", "/w", "-"}},
 		{Spec{CLI: ai.CLICodex, Dir: "/w", Write: true}, []string{"exec", "--json", "--color", "never", "--sandbox", "workspace-write", "-C", "/w", "-"}},
+		// AIP-2: a step's model goes in as --model / -m.
+		{Spec{CLI: ai.CLIClaude, Model: "opus"}, []string{"-p", "--output-format", "stream-json", "--verbose", "--model", "opus", "--tools", "Read,Grep,Glob"}},
+		{Spec{CLI: ai.CLICodex, Dir: "/w", Model: "gpt-5-codex"}, []string{"exec", "--json", "--color", "never", "-m", "gpt-5-codex", "--sandbox", "read-only", "-C", "/w", "-"}},
+		// A model that could pass for a flag never reaches argv.
+		{Spec{CLI: ai.CLIClaude, Model: "--dangerously-skip-permissions"}, []string{"-p", "--output-format", "stream-json", "--verbose", "--tools", "Read,Grep,Glob"}},
+		{Spec{CLI: ai.CLICodex, Dir: "/w", Model: "-c x"}, []string{"exec", "--json", "--color", "never", "--sandbox", "read-only", "-C", "/w", "-"}},
 	}
 	for _, c := range cases {
 		if got := Args(c.spec); !reflect.DeepEqual(got, c.want) {
@@ -404,6 +410,47 @@ func TestCheck(t *testing.T) {
 	}
 	if InstallLine(ai.CLIClaude) != "npm install -g @anthropic-ai/claude-code" || InstallLine(ai.CLICodex) != "npm install -g @openai/codex" {
 		t.Error("install lines")
+	}
+}
+
+// AIP-2: a CLI step with a model passes it in argv, never the prompt.
+func TestRunPassesModel(t *testing.T) {
+	root := t.TempDir()
+	f := newFake(t, fixtureIn(t, "claude_ok.jsonl", root))
+	prompt := "plan the change"
+	if _, err := Run(context.Background(), Spec{CLI: ai.CLIClaude, Dir: root, Env: f.env, Model: "sonnet"}, prompt, nil); err != nil {
+		t.Fatal(err)
+	}
+	argv := f.read(t, "argv")
+	if !strings.Contains(argv, "--model\nsonnet\n") || strings.Contains(argv, prompt) {
+		t.Fatalf("argv %q", argv)
+	}
+}
+
+// AIP-2: with no env given, Check and Run find a CLI termocode installed
+// into its own tools/bin (not on the user's PATH).
+func TestToolsBinOnPath(t *testing.T) {
+	tools := t.TempDir()
+	bin := filepath.Join(tools, "bin")
+	if err := os.MkdirAll(bin, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(bin, "codex"), []byte(fakeScript), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	out := t.TempDir()
+	t.Setenv("TERMOCODE_TOOLS_DIR", tools)
+	t.Setenv("PATH", t.TempDir()+":/usr/bin:/bin")
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("FAKE_OUT", out)
+	t.Setenv("FAKE_STATUS_TEXT", "Logged in using ChatGPT")
+	if got := Check(context.Background(), ai.CLICodex, nil); got != StatusReady {
+		t.Fatalf("Check = %v, want ready from tools/bin", got)
+	}
+	root := t.TempDir()
+	t.Setenv("FAKE_FIXTURE", strings.TrimPrefix(fixtureIn(t, "codex_ok.jsonl", root), "FAKE_FIXTURE="))
+	if _, err := Run(context.Background(), Spec{CLI: ai.CLICodex, Dir: root}, "x", nil); err != nil {
+		t.Fatalf("Run from tools/bin: %v", err)
 	}
 }
 
