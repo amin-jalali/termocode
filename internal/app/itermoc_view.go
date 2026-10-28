@@ -144,6 +144,8 @@ func imGlyph(name string) (string, theme.Color256) {
 	switch name {
 	case "ready":
 		return pick("●", "*"), theme.AccentGreen
+	case "ok":
+		return pick("✓", "v"), theme.AccentGreen
 	case "idle":
 		return pick("○", "o"), theme.TextMuted
 	case "needs":
@@ -204,7 +206,7 @@ func itermocButtonDefs(sec string) []imBtn {
 	case imSecProfiles:
 		return []imBtn{{id: "new", label: "New profile", key: "n"}, {id: "json", label: "Edit JSON", key: "J"}}
 	case imSecModels:
-		return []imBtn{{id: "add", label: "Add slot", key: "a"}, {id: "slots", label: "Edit JSON", key: "E"}}
+		return []imBtn{{id: "addai", label: "Add AI", key: "a"}, {id: "slots", label: "Edit JSON", key: "E"}}
 	case imSecServices:
 		return []imBtn{{id: "connect", label: "Connect a service", key: "c"}, {id: "log", label: "Log", key: "l"}}
 	case imSecAgents:
@@ -220,7 +222,7 @@ func imAddText(sec string) string {
 	case imSecProfiles:
 		return "+ new profile…"
 	case imSecModels:
-		return "+ add slot…"
+		return "+ Add AI…"
 	case imSecServices:
 		return "+ connect…"
 	}
@@ -243,12 +245,14 @@ func (st *itermocState) sectionBadge(sec string) (text string, needs bool) {
 		}
 		need += len(sn.problems)
 	case imSecModels:
-		count = len(sn.slots)
-		for _, s := range sn.slots {
+		user := sn.userSlots()
+		count = len(sn.providers) + len(user)
+		for _, s := range user {
 			if s.key == imKeyMissing || s.key == imKeyUnset {
 				need++
 			}
 		}
+		need += len(sn.providerNeeds())
 	case imSecServices:
 		count = len(sn.services)
 		for _, s := range sn.services {
@@ -384,6 +388,16 @@ func (m Model) itermocLines(st *itermocState, w int, focused bool) []imLine {
 		case imRowSlot:
 			s, _ := sn.slot(r.name)
 			itermocSlotLine(b, s)
+		case imRowProvider:
+			kind := itermocProvKind(r.name)
+			p, _ := sn.provider(kind)
+			itermocProviderLine(b, p, st.open[kind])
+		case imRowProvAct:
+			col := theme.TextSecondary
+			if active && focused {
+				col = theme.TextPrimary
+			}
+			b.add("      "+providerActText(r.name), col, false)
 		case imRowService:
 			s, _ := sn.service(r.name)
 			itermocServiceLine(b, s)
@@ -407,7 +421,7 @@ func (m Model) itermocLines(st *itermocState, w int, focused bool) []imLine {
 		case imRowCall:
 			b.add("     "+theme.ASCIIText(r.text), theme.TextMuted, false)
 		case imRowNote:
-			b.add("     "+r.text, theme.TextDim, false)
+			b.add("     "+theme.ASCIIText(r.text), theme.TextDim, false)
 		case imRowAdd:
 			b.add("  ", theme.TextMuted, false)
 			col := theme.TextDim

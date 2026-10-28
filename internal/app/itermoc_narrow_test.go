@@ -67,7 +67,8 @@ func TestItermocNarrowListRows(t *testing.T) {
 	m := imNarrowModel(t)
 	f := imPageText(m, 74, 40)
 	for _, want := range []string{"ITERMOC", "Overview", "3 !", "PROFILES", "review", "Reviewer ▶ Fixer", "active",
-		"MODELS", "anthropic · claude-sonnet-4-5", "Set key (k)", "SERVICES", "sign-in expired", "Sign in (i)",
+		"AI PROVIDERS", "Anthropic", "API key · API · pay per use", "2 models", "from config.json", "openai · gpt-5-mini",
+		"Set key (k)", "SERVICES", "sign-in expired", "Sign in (i)",
 		"Enter open"} {
 		if !strings.Contains(f, want) {
 			t.Errorf("no %q in\n%s", want, f)

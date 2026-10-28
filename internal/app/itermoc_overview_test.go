@@ -17,8 +17,8 @@ import (
 // page, and carries its fix) and the active flow.
 
 // imOverviewModel is a test model with one need in each of three groups:
-// the project profile house is not trusted, the slot gpt has no key, the
-// service linear lost its sign-in.
+// the project profile house is not trusted, the config.json slot gpt has
+// no key, the service linear lost its sign-in. Anthropic is connected.
 func imOverviewModel(t *testing.T) *Model {
 	t.Helper()
 	imIcons(t, theme.IconModeUnicode)
@@ -27,10 +27,13 @@ func imOverviewModel(t *testing.T) *Model {
 		ai.SlotMain: {cfg: ai.Config{Kind: ai.KindAnthropic, Model: "claude-sonnet-4-5", APIKey: "demo"}},
 		"gpt":       {cfg: ai.Config{Kind: ai.KindOpenAI, Model: "gpt-5-mini"}},
 	}
+	m.ai.settings.Models = map[string]ai.ModelSlot{"gpt": {Provider: ai.KindOpenAI, Model: "gpt-5-mini"}}
 	m.ai.profile = ai.ProfileReview
 	m.itermocRefreshNow()
 	m.itermoc.fixed = true // the injected services stay (no MCP manager here)
 	imInject(m, func(sn *itermocSnap) {
+		sn.providers = []imProvider{{kind: ai.KindAnthropic, name: "Anthropic", method: ai.MethodKey, label: "API key",
+			cost: "API · pay per use", models: []string{"claude-opus-5-5", "claude-sonnet-5-5"}}}
 		sn.services = []mcp.Status{
 			{Name: "github", Type: mcp.TypeHTTP, State: mcp.StateRunning, Tools: 28, Trusted: true},
 			{Name: "linear", Type: mcp.TypeHTTP, State: mcp.StateSignIn, Expired: true, Trusted: true, Tools: 12},
@@ -109,7 +112,7 @@ func imOverviewPage(t *testing.T) *Model {
 func TestItermocOverviewPage(t *testing.T) {
 	m := imOverviewPage(t)
 	f := imPageText(m, 160, 46)
-	for _, want := range []string{"agents & connections", "PROFILES", "MODELS", "SERVICES", "OUTSIDE AGENTS",
+	for _, want := range []string{"agents & connections", "PROFILES", "AI PROVIDERS", "1 AI", "SERVICES", "OUTSIDE AGENTS",
 		"review", "1 of 2 ready", "claude-code · 14 calls",
 		"NEEDS YOU", "3 things", "linear", "sign-in expired · the chat lost 12 tools", "Sign in (i)",
 		"gpt", "no key", "Set key (k)", "house", "not trusted yet", "Trust… (t)",

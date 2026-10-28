@@ -58,6 +58,8 @@ func itermocPageObjectOf(row imRow) (sec, name string, ok bool) {
 		return row.sec, row.name, true
 	case imRowAgentStatus, imRowAgent:
 		return row.sec, row.name, true
+	case imRowProvider, imRowProvAct:
+		return row.sec, itermocProvName(itermocProvKind(row.name)), true
 	}
 	return "", "", false
 }
@@ -76,6 +78,12 @@ func (m Model) itermocPageRow() (imRow, bool) {
 			return imRow{kind: imRowProfile, sec: p.sec, name: p.name}, true
 		}
 	case imSecModels:
+		if kind := itermocProvKind(p.name); kind != "" {
+			if _, ok := m.itermocSnapOf().provider(kind); ok {
+				return imRow{kind: imRowProvider, sec: p.sec, name: p.name}, true
+			}
+			return imRow{}, false
+		}
 		if _, ok := m.itermocSnapOf().slot(p.name); ok {
 			return imRow{kind: imRowSlot, sec: p.sec, name: p.name}, true
 		}
@@ -120,6 +128,10 @@ func (m Model) itermocPageTitle() string {
 	case strings.HasPrefix(p.name, "agent:"):
 		if a, ok := m.itermocSnapOf().agent(p.name); ok {
 			name = a.name
+		}
+	case itermocProvKind(p.name) != "":
+		if pr, ok := m.itermocSnapOf().provider(itermocProvKind(p.name)); ok {
+			name = pr.name
 		}
 	case p.name != "":
 		name = p.name
@@ -273,8 +285,8 @@ func (m *Model) itermocPageKey(k tea.KeyMsg) (tea.Cmd, bool) {
 
 // itermocPageMore is Enter on the page: today's actions menu of the object.
 func (m *Model) itermocPageMore(row imRow) tea.Cmd {
-	if row.kind == imRowSection || row.kind == imRowOverview {
-		return nil
+	if row.kind == imRowSection || row.kind == imRowOverview || row.kind == imRowProvider {
+		return nil // a provider's verbs are all on its page
 	}
 	return m.itermocEnter(row)
 }
@@ -356,6 +368,8 @@ func itermocPageTip(verb string) (name, key string, ok bool) {
 		return "Fix it now", "", true
 	case strings.HasPrefix(verb, "row:"):
 		return "Open its page", "Enter", true
+	case strings.HasPrefix(verb, "addai:"):
+		return "Open the Add AI card on this AI", "", true
 	case strings.HasPrefix(verb, "sec:"):
 		return "Fold section", "Space", true
 	}
@@ -372,6 +386,10 @@ func itermocPageTip(verb string) (name, key string, ok bool) {
 		return "More actions", "Enter", true
 	case "setkey":
 		return "Set the key of this model's provider", "k", true
+	case "refresh":
+		return "Load the models again", "r", true
+	case "disconnect":
+		return "Disconnect this AI (asks first)", "D", true
 	case "signin":
 		return "Sign in to this service", "i", true
 	case "tools":

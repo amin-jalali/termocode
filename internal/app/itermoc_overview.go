@@ -35,7 +35,8 @@ type imNeed struct {
 }
 
 // needs lists what waits for the user, the most urgent first: services
-// (the chat lost their tools), then models without a key, then project
+// (the chat lost their tools), then AIs (signed out, or named by a step
+// and not connected), then config.json slots without a key, then project
 // profiles not trusted yet. The same rules as the group badges.
 func (sn itermocSnap) needs() []imNeed {
 	var out []imNeed
@@ -61,7 +62,8 @@ func (sn itermocSnap) needs() []imNeed {
 		}
 		out = append(out, n)
 	}
-	for _, s := range sn.slots {
+	out = append(out, sn.providerNeeds()...)
+	for _, s := range sn.userSlots() {
 		if s.key != imKeyMissing && s.key != imKeyUnset {
 			continue
 		}
@@ -179,23 +181,33 @@ func overviewTiles(sn itermocSnap) []imTile {
 		prof.line, prof.tok, prof.warn = need(strconv.Itoa(len(untrusted))+" not trusted yet"), theme.AccentAmber, true
 	}
 
-	models := imTile{n: 2, icon: imSecIcon(imSecModels), title: "MODELS", value: strconv.Itoa(len(sn.slots)) + " slots",
-		line: ok("every key is set"), tok: theme.AccentGreen}
-	if len(sn.slots) == 1 {
-		models.value = "1 slot"
+	models := imTile{n: 2, icon: imSecIcon(imSecModels), title: "AI PROVIDERS", value: strconv.Itoa(len(sn.providers)) + " AIs",
+		line: ok("all ready"), tok: theme.AccentGreen}
+	switch len(sn.providers) {
+	case 0:
+		models.value, models.line, models.tok = "none yet", "+ add one (a)", theme.TextDim
+	case 1:
+		models.value = "1 AI"
 	}
-	var keyless []string
-	for _, s := range sn.slots {
+	var waits []string
+	for _, n := range sn.providerNeeds() {
+		w := n.name + " not connected"
+		if n.row.kind == imRowProvider {
+			w = n.name + " signed out"
+		}
+		waits = append(waits, w)
+	}
+	for _, s := range sn.userSlots() {
 		if s.key == imKeyMissing || s.key == imKeyUnset {
-			keyless = append(keyless, s.name)
+			waits = append(waits, s.name+" has no key")
 		}
 	}
-	switch len(keyless) {
+	switch len(waits) {
 	case 0:
 	case 1:
-		models.line, models.tok, models.warn = need(keyless[0]+" has no key"), theme.AccentAmber, true
+		models.line, models.tok, models.warn = need(waits[0]), theme.AccentAmber, true
 	default:
-		models.line, models.tok, models.warn = need(strconv.Itoa(len(keyless))+" have no key"), theme.AccentAmber, true
+		models.line, models.tok, models.warn = need(strconv.Itoa(len(waits))+" need you"), theme.AccentAmber, true
 	}
 
 	svc := imTile{n: 3, icon: imSecIcon(imSecServices), title: "SERVICES", value: "none yet",
@@ -253,13 +265,22 @@ func (sn itermocSnap) tileRow(n int) (imRow, bool) {
 			return imRow{kind: imRowProfile, sec: imSecProfiles, name: sn.profiles[0].p.Name}, true
 		}
 	case 2:
-		for _, s := range sn.slots {
+		for _, n := range sn.providerNeeds() {
+			if n.row.kind == imRowProvider {
+				return n.row, true
+			}
+		}
+		user := sn.userSlots()
+		for _, s := range user {
 			if s.key == imKeyMissing || s.key == imKeyUnset {
 				return imRow{kind: imRowSlot, sec: imSecModels, name: s.name}, true
 			}
 		}
-		if len(sn.slots) > 0 {
-			return imRow{kind: imRowSlot, sec: imSecModels, name: sn.slots[0].name}, true
+		if len(sn.providers) > 0 {
+			return imRow{kind: imRowProvider, sec: imSecModels, name: itermocProvName(sn.providers[0].kind)}, true
+		}
+		if len(user) > 0 {
+			return imRow{kind: imRowSlot, sec: imSecModels, name: user[0].name}, true
 		}
 	case 3:
 		for _, s := range sn.services {
@@ -301,7 +322,10 @@ func (m *Model) itermocOverviewVerb(verb string) (tea.Cmd, bool) {
 		if row, ok := sn.tileRow(n); ok {
 			return m.itermocJumpTo(row), true
 		}
-		if n == 3 {
+		switch n {
+		case 2:
+			m.itermocS().focusSection(imSecModels)
+		case 3:
 			m.itermocS().focusSection(imSecServices)
 		}
 		return nil, true

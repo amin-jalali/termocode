@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -182,10 +183,37 @@ func aiSafeHost(raw string) string {
 	return u.Scheme + "://" + u.Host
 }
 
+// aiProviderInfo is one connected AI: how it is connected and its model
+// ids. Never a key; a server only as scheme://host.
+type aiProviderInfo struct {
+	Kind    string   `json:"kind"`
+	Name    string   `json:"name"`
+	Method  string   `json:"method"` // key, cli, local or url
+	CLI     string   `json:"cli,omitempty"`
+	Cost    string   `json:"cost"`
+	Base    string   `json:"base_host,omitempty"`
+	EnvOnly bool     `json:"from_environment,omitempty"`
+	Models  []string `json:"models"`
+	Updated string   `json:"models_updated,omitempty"` // RFC 3339; "" never loaded
+	Problem string   `json:"problem,omitempty"`
+}
+
 func aiModelsInfo(m *Model, sn itermocSnap) (any, error) {
 	out := struct {
-		Slots []aiModelSlotInfo `json:"slots"`
-	}{Slots: []aiModelSlotInfo{}}
+		Providers []aiProviderInfo  `json:"providers"`
+		Slots     []aiModelSlotInfo `json:"slots"`
+	}{Providers: []aiProviderInfo{}, Slots: []aiModelSlotInfo{}}
+	for _, p := range sn.providers {
+		info := aiProviderInfo{Kind: p.kind, Name: p.name, Method: p.method, CLI: p.cli, Cost: p.cost, Base: p.host,
+			EnvOnly: p.envOnly, Models: append([]string{}, p.models...), Problem: p.err}
+		if p.at > 0 {
+			info.Updated = time.Unix(p.at, 0).UTC().Format(time.RFC3339)
+		}
+		if p.signedOut {
+			info.Problem = ai.CLITitle(p.cli) + " is signed out"
+		}
+		out.Providers = append(out.Providers, info)
+	}
 	for _, s := range sn.slots {
 		info := aiModelSlotInfo{Name: s.name, Provider: s.provider, Model: s.model, Credential: aiCredentialText(s.key)}
 		if m.ai != nil {
@@ -324,6 +352,13 @@ func aiViewOpen(m *Model, sec, row string) string {
 				name = a.name
 			}
 		}
+		if r.kind == imRowProvider { // a connected AI: its kind or its name
+			if p, ok := st.snap.provider(itermocProvKind(r.name)); ok && strings.EqualFold(row, p.name) {
+				name = row
+			} else {
+				name = itermocProvKind(r.name)
+			}
+		}
 		if name == row {
 			st.cursor = i
 			st.touch()
@@ -432,10 +467,13 @@ func aiItermocTools(call aiIDECaller) []ai.Tool {
 		},
 		{
 			Name: "models_list",
-			Description: "List the AI model slots (main, quick, local and the user's own): provider, model, whether a key " +
-				"is set (set / missing / not needed; never the key) and the base URL's scheme and host. Keys stay with the user.",
+			Description: "List the connected AIs (providers: how each is connected — API key, a CLI's sign-in, a server on this " +
+				"machine or a server URL —, what it costs, its model ids and when they were loaded; a key from the environment " +
+				"says from_environment) and the model slots (main, quick, local and the user's own): provider, model, whether a key " +
+				"is set (set / missing / not needed; never the key) and the base URL's scheme and host. Keys stay with the user; " +
+				"connecting an AI is the user's (Add AI card).",
 			Params:   map[string]any{},
-			Describe: func(map[string]any) string { return "List model slots" },
+			Describe: func(map[string]any) string { return "List connected AIs and model slots" },
 			Run: func(ctx context.Context, _ map[string]any) (string, error) {
 				return aiItermocSnapshot(ctx, call, aiModelsInfo)
 			},
@@ -481,7 +519,7 @@ func aiItermocTools(call aiIDECaller) []ai.Tool {
 				"next step is the user's (set a key, sign in, trust, revoke access).",
 			Params: map[string]any{
 				"section": map[string]any{"type": "string", "enum": aiViewSections, "description": "the section to show"},
-				"row":     map[string]any{"type": "string", "description": "profile, slot, service or agent name (optional)"},
+				"row":     map[string]any{"type": "string", "description": "profile, connected AI (anthropic or Anthropic), slot, service or agent name (optional)"},
 			},
 			Required: []string{"section"},
 			Validate: func(a map[string]any) error {

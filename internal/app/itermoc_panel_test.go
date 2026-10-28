@@ -274,7 +274,7 @@ func TestItermocShortWindowFoldsMostSections(t *testing.T) {
 	imIcons(t, theme.IconModeUnicode)
 	m := itermocTestModel(t, 29, 24)
 	f := imFrame(m)
-	if !strings.Contains(f, "PROFILES") || strings.Contains(f, "PROFILES ▸") || !strings.Contains(f, "MODELS ▸") || !strings.Contains(f, "OUTSIDE AGENTS ▸") {
+	if !strings.Contains(f, "PROFILES") || strings.Contains(f, "PROFILES ▸") || !strings.Contains(f, "AI PROVIDERS ▸") || !strings.Contains(f, "OUTSIDE AGENTS ▸") {
 		t.Errorf("folds at 24 rows:\n%s", f)
 	}
 }

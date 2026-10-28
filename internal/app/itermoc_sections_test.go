@@ -23,8 +23,10 @@ func imInject(m *Model, mut func(*itermocSnap)) {
 
 const imPlantedKey = "sk-PLANTED-0123456789abcdef"
 
-// Spec: MODELS lists every slot with provider, model and whether a key
-// exists. The key text itself is never in the frame, the rows or the snapshot.
+// Spec: AI PROVIDERS lists the user's own config.json slots after the
+// AIs, with the model or what is missing; the built-in slots are not
+// rows. The key text itself is never in the frame, the rows or the
+// snapshot.
 func TestItermocModelsShowKeyStateNeverKeyValue(t *testing.T) {
 	imIcons(t, theme.IconModeUnicode)
 	m := itermocTestModel(t, 70, 40)
@@ -33,12 +35,20 @@ func TestItermocModelsShowKeyStateNeverKeyValue(t *testing.T) {
 		ai.SlotQuick: {cfg: ai.Config{Kind: ai.KindAnthropic, Model: "claude-haiku-4-5", APIKey: imPlantedKey}},
 		ai.SlotLocal: {cfg: ai.Config{Kind: ai.KindOllama, Model: "qwen2.5-coder:7b"}},
 		"gpt":        {cfg: ai.Config{Kind: ai.KindOpenAI, Model: "gpt-5-mini"}},
+		"work":       {cfg: ai.Config{Kind: ai.KindAnthropic, Model: "claude-sonnet-4-5", APIKey: imPlantedKey}},
 	}
+	m.ai.settings.Models = map[string]ai.ModelSlot{"gpt": {Provider: ai.KindOpenAI, Model: "gpt-5-mini"},
+		"work": {Provider: ai.KindAnthropic, Model: "claude-sonnet-4-5"}}
 	m.itermocRefreshNow()
 	f := imFrame(m)
-	for _, want := range []string{"MODELS", "main", "sonnet-4-5", "local", "qwen 7b", "gpt", "no key", "+ add slot…"} {
+	for _, want := range []string{"AI PROVIDERS", "from config.json", "work", "sonnet-4-5", "gpt", "no key", "+ Add AI…"} {
 		if !strings.Contains(f, want) {
 			t.Errorf("no %q in\n%s", want, f)
+		}
+	}
+	for _, r := range m.itermoc.rows() {
+		if r.kind == imRowSlot && r.name != "gpt" && r.name != "work" {
+			t.Errorf("a built-in slot is a row: %+v", r)
 		}
 	}
 	if badge, needs := m.itermocS().sectionBadge(imSecModels); badge != "1 !" || !needs {
@@ -63,8 +73,8 @@ func TestItermocModelsShowKeyStateNeverKeyValue(t *testing.T) {
 	}
 }
 
-// Spec: with AI off the built-in main slot is still listed, with a way to
-// fix it (a key ✗ row).
+// Spec: with no AI connected and no slot of the user's the section says
+// so, and its last row is the way in (+ Add AI…).
 func TestItermocModelsMainOff(t *testing.T) {
 	imIcons(t, theme.IconModeUnicode)
 	m := itermocTestModel(t, 70, 40)
@@ -72,8 +82,8 @@ func TestItermocModelsMainOff(t *testing.T) {
 	m.ai.slots = ai.NewSlotPool(map[string]ai.Config{}, nil)
 	m.itermocRefreshNow()
 	f := imFrame(m)
-	if !strings.Contains(f, "main") || !strings.Contains(f, "not set") {
-		t.Errorf("no off main slot:\n%s", f)
+	if !strings.Contains(f, "No AI connected yet") || !strings.Contains(f, "+ Add AI…") {
+		t.Errorf("no empty state:\n%s", f)
 	}
 }
 

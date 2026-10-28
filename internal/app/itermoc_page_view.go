@@ -434,6 +434,8 @@ func (m Model) itermocPageContent() imContent {
 		return m.profilePageContent(sn, row)
 	case imRowSlot:
 		return slotPageContent(sn, row)
+	case imRowProvider:
+		return providerPageContent(sn, row)
 	case imRowService:
 		return servicePageContent(sn, row)
 	case imRowAgent, imRowAgentStatus:

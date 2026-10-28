@@ -25,7 +25,7 @@ import (
 const confirmKindAISlotRemove confirmKindEnum = 2310
 
 // itermocNoSlotEdit is the AI policy reason of the slot form commands.
-const itermocNoSlotEdit = "a form for the user; keys and config.json stay with the user (the AI shows the MODELS section with ai_view_open)"
+const itermocNoSlotEdit = "a form for the user; keys and config.json stay with the user (the AI shows the AI PROVIDERS section with ai_view_open)"
 
 // imSlotForm is the open slot form (or the "saved, set the key?" card).
 type imSlotForm struct {

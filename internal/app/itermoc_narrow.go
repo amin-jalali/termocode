@@ -70,6 +70,9 @@ func (sn itermocSnap) listMiddle(r imRow) string {
 			names = []string{names[0], "steps"}
 		}
 		return strings.Join(names, " "+imArrow(1)+" ")
+	case imRowProvider:
+		p, _ := sn.provider(itermocProvKind(r.name))
+		return p.label + " · " + p.cost
 	case imRowSlot:
 		s, _ := sn.slot(r.name)
 		if s.provider == "" {
@@ -135,6 +138,10 @@ func (m Model) listRight(sn itermocSnap, r imRow) (word string, tok theme.Color2
 		s, _ := sn.slot(r.name)
 		w, t := itermocSlotWord(s)
 		return w, t, nil
+	case imRowProvider:
+		p, _ := sn.provider(itermocProvKind(r.name))
+		w, t := providerWord(p)
+		return w, t, nil
 	case imRowService:
 		s, _ := sn.service(r.name)
 		w, t := itermocServiceWord(s)
@@ -191,7 +198,7 @@ func (m Model) itermocListLayout(w, h int) imPageLayout {
 	showRight, showMid := w >= 60, w >= 44
 	nameW := 8
 	for _, r := range rows {
-		if r.kind == imRowProfile || r.kind == imRowSlot || r.kind == imRowService || r.kind == imRowAgent {
+		if r.kind == imRowProfile || r.kind == imRowSlot || r.kind == imRowService || r.kind == imRowAgent || r.kind == imRowProvider {
 			nameW = max(nameW, lenR(m.itermocRowName(sn, r)))
 		}
 	}
@@ -297,6 +304,12 @@ func (m Model) itermocRowName(sn itermocSnap, r imRow) string {
 		return a.name
 	case imRowAgentStatus:
 		return "listening"
+	case imRowProvider:
+		if p, ok := sn.provider(itermocProvKind(r.name)); ok {
+			return p.name
+		}
+	case imRowProvAct:
+		return providerActText(r.name)
 	case imRowProblem:
 		if i, err := strconv.Atoi(r.name); err == nil && i >= 0 && i < len(sn.problems) {
 			return imProblemTitle(sn.problems[i])
@@ -323,6 +336,9 @@ func (m Model) itermocRowGlyph(sn itermocSnap, r imRow) (string, theme.Color256)
 			return imGlyph("needs")
 		}
 		return imGlyph("ready")
+	case imRowProvider:
+		p, _ := sn.provider(itermocProvKind(r.name))
+		return providerGlyph(p)
 	case imRowService:
 		s, _ := sn.service(r.name)
 		return imGlyph(itermocServiceGlyph(s))
@@ -365,6 +381,12 @@ func (m *Model) itermocListPageKey(k tea.KeyMsg) (tea.Cmd, bool) {
 			return m.itermocAdd(row.sec), true
 		case imRowProblem:
 			return m.itermocRun("fixfile", row), true
+		case imRowProvider:
+			if k.String() == "enter" {
+				return m.itermocProvEnter(row), true
+			}
+		case imRowProvAct:
+			return m.itermocProvEnter(row), true
 		}
 		return m.itermocShowPage(row, true), true
 	case "esc":
@@ -448,6 +470,8 @@ func (m *Model) itermocListClick(id string) tea.Cmd {
 			return m.itermocAdd(r.sec)
 		case r.kind == imRowProblem:
 			return m.itermocRun("fixfile", r)
+		case r.kind == imRowProvider || r.kind == imRowProvAct:
+			return m.itermocProvEnter(r)
 		}
 		return m.itermocShowPage(r, true)
 	}

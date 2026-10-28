@@ -60,6 +60,9 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 	if cmd, ok := m.handleAddAIMsg(msg); ok { // ai_add.go
 		return cmd, true
 	}
+	if cmd, ok := m.handleItermocProvMsg(msg); ok { // itermoc_providers.go
+		return cmd, true
+	}
 	if cmd, ok := m.handleAIProfileFormMsg(msg); ok { // ai_profile_form.go
 		return cmd, true
 	}

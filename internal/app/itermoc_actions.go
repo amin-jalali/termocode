@@ -68,10 +68,12 @@ func (m *Model) revealItermocView(focus bool, sec string) tea.Cmd {
 	if sec != "" {
 		m.itermoc.focusSection(sec)
 	}
+	// Model lists older than an hour load again in the background.
+	refresh := m.itermocAutoRefresh()
 	if narrow {
-		return m.itermocShowList()
+		return tea.Batch(m.itermocShowList(), refresh)
 	}
-	return nil
+	return refresh
 }
 
 // toggleItermoc is Alt+Shift+I / Alt+O: it opens the view; pressed again
@@ -107,7 +109,7 @@ func itermocPaletteItems() []picker.Item {
 	return []picker.Item{
 		{ID: "itermoc-open", Title: "Itermoc: Open"},
 		{ID: "itermoc-profiles", Title: "Itermoc: Profiles"},
-		{ID: "itermoc-models", Title: "Itermoc: Models"},
+		{ID: "itermoc-models", Title: "Itermoc: AI Providers"},
 		{ID: "itermoc-services", Title: "Itermoc: Services"},
 		{ID: "itermoc-agents", Title: "Itermoc: Outside Agents"},
 		{ID: "itermoc-open-ai", Title: "AI: Agents & Connections"}, // the same screen under the name the AI menu uses
@@ -164,11 +166,14 @@ func itermocKeyRows() []confirm.KeyRow {
 		[]string{"n", "new profile from the active one…"},
 		[]string{"J", "edit profiles.json"},
 		[]string{"f", "on a profile file that cannot be read: open it at the line"},
-		[]string{"Models"},
-		[]string{"a", "add a model slot…"},
-		[]string{"e", "edit the slot…"},
-		[]string{"k", "set the key of the slot's provider"},
-		[]string{"D", "remove the slot… (asks first)"},
+		[]string{"AI providers"},
+		[]string{"Enter", "on an AI: show its models, Refresh and Disconnect…"},
+		[]string{"r", "on an AI: load its models again"},
+		[]string{"D", "on an AI: disconnect it… (asks first)"},
+		[]string{"a", "add an AI (the Add AI card)"},
+		[]string{"e", "on a config.json slot: edit it…"},
+		[]string{"k", "on a config.json slot: set its provider's key"},
+		[]string{"D", "on a config.json slot: remove it… (asks first)"},
 		[]string{"E", "edit ai_models in config.json"},
 		[]string{"Services"},
 		[]string{"i", "sign in"},
@@ -319,6 +324,17 @@ func (st *itermocState) focusHeader(sec string) {
 // itermocRowKey runs a key that acts on the row under the cursor.
 func (m *Model) itermocRowKey(key string, row imRow) (tea.Cmd, bool) {
 	switch row.kind {
+	case imRowProvider, imRowProvAct:
+		switch key {
+		case "r":
+			return m.itermocRun("refresh", row), true
+		case "D":
+			return m.itermocRun("disconnect", row), true
+		case "i":
+			if p, ok := m.itermocS().snap.provider(itermocProvKind(row.name)); ok && p.signedOut {
+				return m.itermocRun("addai:"+p.kind, row), true
+			}
+		}
 	case imRowProblem:
 		if key == "f" {
 			return m.itermocRun("fixfile", row), true
@@ -388,6 +404,8 @@ func (m *Model) itermocButton(sec, id string) tea.Cmd {
 		return m.openAIProfileNewForm()
 	case imSecProfiles + "/json":
 		return m.editAIProfiles()
+	case imSecModels + "/addai":
+		return m.openAddAI()
 	case imSecModels + "/add":
 		return m.openItermocSlotAdd()
 	case imSecModels + "/slots":
@@ -433,6 +451,8 @@ func (m *Model) itermocEnter(row imRow) tea.Cmd {
 		return m.itermocAdd(row.sec)
 	case imRowProblem:
 		return m.itermocRun("fixfile", row)
+	case imRowProvider, imRowProvAct:
+		return m.itermocProvEnter(row)
 	}
 	return m.openItermocActions(row)
 }
@@ -443,7 +463,7 @@ func (m *Model) itermocAdd(sec string) tea.Cmd {
 	case imSecProfiles:
 		return m.itermocButton(sec, "new")
 	case imSecModels:
-		return m.itermocButton(sec, "add")
+		return m.itermocButton(sec, "addai")
 	case imSecServices:
 		return m.itermocButton(sec, "connect")
 	}
@@ -576,6 +596,9 @@ func (m *Model) openItermocProfile(name string) tea.Cmd {
 // itermocRun runs one verb on a row. Every verb is a call into a flow
 // that exists without this view.
 func (m *Model) itermocRun(verb string, row imRow) tea.Cmd {
+	if cmd, ok := m.itermocProvVerb(verb, row); ok { // itermoc_providers.go
+		return cmd
+	}
 	switch verb {
 	case "use":
 		return m.selectAIProfile(row.name)
@@ -709,6 +732,15 @@ func itermocTooltip(id string) (name, key, help string, ok bool) {
 		case imSecProfiles:
 			return "Open the profile page · Enter for all actions", "o · Enter", help, true
 		case imSecModels:
+			if itermocProvKind(name) != "" {
+				if strings.HasSuffix(name, ":refresh") {
+					return "Load the models again", "r", help, true
+				}
+				if strings.HasSuffix(name, ":disconnect") {
+					return "Disconnect this AI (asks first)", "D", help, true
+				}
+				return "Show its models · o opens its page", "Enter · o", help, true
+			}
 			return "Open the model page · Enter for all actions", "o · Enter", help, true
 		case imSecServices:
 			return "Open the service page · Enter for all actions", "o · Enter", help, true
@@ -767,9 +799,13 @@ func (m Model) handleItermocSidebarMouse(x, y int, t tea.MouseEventType) (Model,
 				st.cursor = i
 				st.touch()
 				// A click selects the row and shows its page in the page tab
-				// (the dim "+ new …" rows run their verb).
+				// (the dim "+ new …" rows run their verb; a provider row
+				// opens or closes, its Refresh / Disconnect… rows run).
 				if r.kind == imRowAdd {
 					return m, m.itermocAdd(r.sec)
+				}
+				if r.kind == imRowProvider || r.kind == imRowProvAct {
+					return m, m.itermocProvEnter(r)
 				}
 				return m, m.itermocShowPage(r, false)
 			}

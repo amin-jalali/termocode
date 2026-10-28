@@ -38,7 +38,7 @@ func itermocSectionTitle(sec string) string {
 	case imSecProfiles:
 		return "PROFILES"
 	case imSecModels:
-		return "MODELS"
+		return "AI PROVIDERS"
 	case imSecServices:
 		return "SERVICES"
 	case imSecAgents:
@@ -53,7 +53,7 @@ func itermocSectionByName(name string) string {
 	switch strings.ToLower(strings.TrimSpace(name)) {
 	case "profiles", "profile":
 		return imSecProfiles
-	case "models", "model", "slots":
+	case "models", "model", "slots", "providers", "ai providers", "ai-providers":
 		return imSecModels
 	case "services", "service":
 		return imSecServices
@@ -100,9 +100,12 @@ type imCall string
 // itermocSnap is everything the view draws.
 type itermocSnap struct {
 	profiles []imProfile
-	slots    []imSlot
-	services []mcp.Status
-	svc      map[string]imSvc // the service page's facts, by name
+	// slots are every model slot (the AI tool lists them); the list shows
+	// only the user's own (config.json) after the providers.
+	slots     []imSlot
+	providers []imProvider
+	services  []mcp.Status
+	svc       map[string]imSvc // the service page's facts, by name
 
 	mode        string // mcp_server: auto | on | off
 	listening   bool
@@ -143,10 +146,14 @@ type itermocState struct {
 	removeName string
 	// revokeClient is the agent the Revoke… card asks about.
 	revokeClient string
+	// open are the provider rows shown open (by kind); provDisconnect is
+	// the AI the Disconnect… card asks about (itermoc_providers.go).
+	open           map[string]bool
+	provDisconnect string
 }
 
 func newItermocState() *itermocState {
-	return &itermocState{collapse: map[string]bool{}}
+	return &itermocState{collapse: map[string]bool{}, open: map[string]bool{}}
 }
 
 // width is the width the buttons rows are laid out for.
@@ -254,6 +261,10 @@ func itermocBuild(m Model, reload bool) itermocSnap {
 		_, user := s.settings.Models[n]
 		sn.slots = append(sn.slots, imSlot{name: n, provider: c.Kind, model: c.Model, key: itermocKeyOf(c), user: user})
 	}
+	if reload {
+		s.modelsCache = nil // R and opening read the model cache again
+	}
+	sn.providers = itermocProviders(s)
 
 	if s.mcp != nil || reload {
 		mgr := s.mcp
@@ -423,11 +434,7 @@ func (st *itermocState) sectionItems(sec string) []imRow {
 			out = append(out, imRow{kind: imRowNote, sec: sec, text: "No profiles yet"})
 		}
 	case imSecModels:
-		for _, s := range sn.slots {
-			if st.matches(s.name, s.provider, s.model) {
-				out = append(out, imRow{kind: imRowSlot, sec: sec, name: s.name})
-			}
-		}
+		out = st.providerItems()
 	case imSecServices:
 		for _, s := range sn.services {
 			if st.matches(s.Name, s.State, s.Source) {

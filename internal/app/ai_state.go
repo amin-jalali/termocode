@@ -62,6 +62,12 @@ type aiState struct {
 	// providers are the connected AIs by kind (ai/providers.json, else
 	// derived from the setup); provider steps take their base URL.
 	providers map[string]ai.ProviderEntry
+	// modelsCache is the model cache in memory (nil: read it on next use;
+	// a reload drops it); provBusy / provErr are Itermoc's refreshes that
+	// run and the last one that failed, by kind (itermoc_providers.go).
+	modelsCache ai.ModelsCache
+	provBusy    map[string]bool
+	provErr     map[string]string
 	// cliStates is the last check of the subscription CLIs (CS-5; nil:
 	// not checked yet). The profile form shows it.
 	cliStates map[string]profileform.CLIState

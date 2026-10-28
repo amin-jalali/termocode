@@ -199,6 +199,9 @@ func TestItermocPageLastRunLine(t *testing.T) {
 // menu stays on Enter.
 func TestItermocClickShowsAndReusesPage(t *testing.T) {
 	m := itermocTestModel(t, 70, 40)
+	m.ai.settings.Models = map[string]ai.ModelSlot{"gpt": {Provider: ai.KindOpenAI, Model: "gpt-5-mini"}}
+	m.ai.slotFake["gpt"] = aiSlot{cfg: ai.Config{Kind: ai.KindOpenAI, Model: "gpt-5-mini"}}
+	m.itermocRefreshNow()
 	w := m.explorerWidth - 1
 	click := func(id string) {
 		t.Helper()
@@ -223,11 +226,11 @@ func TestItermocClickShowsAndReusesPage(t *testing.T) {
 	if m.itermocPage != first || first.name != "fast" {
 		t.Errorf("the page was not reused: %+v", m.itermocPage)
 	}
-	click("im:row:models/main")
-	if m.itermocPage != first || first.sec != imSecModels || first.name != "main" {
+	click("im:row:models/gpt")
+	if m.itermocPage != first || first.sec != imSecModels || first.name != "gpt" {
 		t.Errorf("a model row did not change the page: %+v", first)
 	}
-	if got := m.itermocPageTitle(); got != aiSpark()+" main" {
+	if got := m.itermocPageTitle(); got != aiSpark()+" gpt" {
 		t.Errorf("tab title %q", got)
 	}
 	imPress(m, "enter") // Enter is still the actions menu
@@ -466,9 +469,12 @@ func TestItermocPageFollowsCursor(t *testing.T) {
 	if m.itermocPage.name != "review" {
 		t.Errorf("k did not move the page back: %+v", m.itermocPage)
 	}
+	imInject(m, func(sn *itermocSnap) {
+		sn.providers = []imProvider{{kind: ai.KindOllama, name: "Ollama", method: ai.MethodLocal}}
+	})
 	m.itermoc.cursorTo(imRow{kind: imRowSection, sec: imSecModels})
 	imPress(m, "j")
-	if m.itermocPage.sec != imSecModels {
+	if m.itermocPage.sec != imSecModels || m.itermocPage.name != itermocProvName(ai.KindOllama) {
 		t.Errorf("the models page: %+v", m.itermocPage)
 	}
 }

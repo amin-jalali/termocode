@@ -111,16 +111,17 @@ func sameExceptModels(t *testing.T, before, after map[string]string) {
 	}
 }
 
-// Spec: [Add slot (a)] opens the form; Save writes ai_models.<name> and
+// Spec: AI: Add Model Slot… (the expert path; a is Add AI now) opens the
+// form; Save writes ai_models.<name> and
 // nothing else; the new row shows key ✗; the card then offers Set key,
 // which stores the key through the secret store. The key is never in the
 // frame, config.json or models_list.
 func TestItermocSlotAddThenSetKey(t *testing.T) {
 	m, path := slotTestModel(t, 200, 50)
 	before := rawKeys(t, path)
-	imPress(m, "a")
+	m.dispatchItermocPalette("ai-model-slot-add")
 	if !m.connectOpen || m.itermoc.form == nil {
-		t.Fatal("a did not open the slot form")
+		t.Fatal("the palette did not open the slot form")
 	}
 	f := slotCard(m)
 	for _, want := range []string{"Add model slot", "Name", "Provider", "anthropic", "openai-compatible", "claude-oauth", "Model", "Save", "Cancel"} {
@@ -377,8 +378,9 @@ func TestItermocSlotForm80x24(t *testing.T) {
 	}
 }
 
-// Spec: a click on the "+ add slot…" row opens the form; the palette has AI: Add
-// Model Slot…; the key card lists a, e, k, D, E.
+// Spec: a click on the "+ Add AI…" row opens the Add AI card; the slot
+// form stays in the palette (AI: Add Model Slot…); the key card lists a,
+// e, k, D, E.
 func TestItermocSlotMouseAndPalette(t *testing.T) {
 	m, _ := slotTestModel(t, 200, 50)
 	var hit *hitTarget
@@ -389,18 +391,18 @@ func TestItermocSlotMouseAndPalette(t *testing.T) {
 		}
 	}
 	if hit == nil {
-		t.Fatal("no hit target for the add-slot row")
+		t.Fatal("no hit target for the add row")
 	}
 	nm, _ := m.handleItermocSidebarMouse(hit.X, hit.Y, tea.MouseLeft)
 	*m = nm
-	if !m.connectOpen || m.itermoc.form == nil {
-		t.Fatal("the click did not open the form")
+	if !m.addAIOpen {
+		t.Fatal("the click did not open the Add AI card")
 	}
-	m.closeItermocSlotForm()
-	if _, ok := m.dispatchItermocPalette("ai-model-slot-add"); !ok || !m.connectOpen {
+	m.closeAddAI()
+	if _, ok := m.dispatchItermocPalette("ai-model-slot-add"); !ok || !m.connectOpen || m.itermoc.form == nil {
 		t.Error("the palette command did not open the form")
 	}
-	if name, key, _, ok := itermocTooltip("im:row:" + imSecModels + "/+add"); !ok || name != imText("add slot…") || key != "Enter" {
+	if name, key, _, ok := itermocTooltip("im:row:" + imSecModels + "/+add"); !ok || name != imText("Add AI…") || key != "Enter" {
 		t.Errorf("tooltip %q %q", name, key)
 	}
 	var keys []string
