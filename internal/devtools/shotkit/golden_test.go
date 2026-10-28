@@ -262,10 +262,10 @@ func goldenCases() []goldenCase {
 		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
 	// The profile step form (AH-5): a copy of a built-in, a copy with a
-	// problem shown inline, the Remove step question over it, and the
-	// subscription CLI steps (CS-5: ready; missing / not logged in), at
-	// 200x50 and 80x24.
-	for _, v := range []string{"form", "form-error", "form-remove", "form-cli", "form-cli-missing"} {
+	// problem shown inline, the Remove step question over it, the model
+	// picker (AIP-6: open, searching, nothing found, the Add AI card it
+	// opens) and steps whose AI is not ready (Fix), at 200x50 and 80x24.
+	for _, v := range []string{"form", "form-error", "form-remove", "form-picker", "form-picker-search", "form-picker-empty", "form-picker-add", "form-needs"} {
 		sc := AIProfile(v)
 		out = append(out, goldenCase{sc.Name + "-200x50", sc, 200, 50}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
 	}
