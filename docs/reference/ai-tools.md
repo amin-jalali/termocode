@@ -95,6 +95,9 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`containers_control`](#containers_control) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved), and busy containers or no-op actions are refused first | no | Start, stop, restart, pause or unpause one host container (any project). |
 | [`images_pull`](#images_pull) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved) | no | Pull an image (ref like nginx:1.27 or ghcr.io/acme/api:1.4) in a visible terminal tab "pull: <ref>". |
 | [`compose_up`](#compose_up) | confirm (containers): the card has Deny (first, with the focus) · Allow · Always allow containers (this session only, never saved) | no | Run `docker compose up -d` for a compose project that has containers on this host (see containers_list), in its own folder, in a visible terminal tab. |
+| [`kube_list`](#kube_list) | auto | no | Read only: the pods, deployments, services and jobs of one Kubernetes namespace, through the user's kubectl, in the context the Kubernetes view uses. |
+| [`kube_describe`](#kube_describe) | auto | no | Read only: `kubectl describe` of one pod, deployment, service or job (events included), secrets redacted. |
+| [`kube_logs`](#kube_logs) | auto | no | Read only: the last log lines of one pod (lines default 100, max 1000), secrets redacted. |
 | [`help_read`](#help_read) | auto | no | Read the built-in guide: with no arguments list pages; page shows headings and anchors; page and section returns that section's prepared Markdown; query searches matching sections (page can filter it). |
 | [`profiles_list`](#profiles_list) | auto | no | List the AI agent profiles: name, title, source (built-in, user, project with its trust state), which is active, budget, and each step's title, model slot, resolved model, tools preset and the first line of its prompt. |
 | [`models_list`](#models_list) | auto | no | List the connected AIs (providers: how each is connected — API key, a CLI's sign-in, a server on this machine or a server URL —, what it costs, its model ids and when they were loaded; a key from the environment says from_environment) and the model slots (main, quick, local and the user's own): provider, model, whether a key is set (set / missing / not needed; never the key) and the base URL's scheme and host. |
@@ -1086,6 +1089,47 @@ Run `docker compose up -d` for a compose project that has containers on this hos
 | --- | --- | --- | --- |
 | `project` | string | yes | compose project name from containers_list |
 | `services` | array |   | only these services (default all) |
+
+### kube_list
+
+Read only: the pods, deployments, services and jobs of one Kubernetes namespace, through the user's kubectl, in the context the Kubernetes view uses. Pods: ready, status, restarts, age, containers. You cannot change the cluster.
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `namespace` | string |   | namespace (default: the one the Kubernetes view shows) |
+
+### kube_describe
+
+Read only: `kubectl describe` of one pod, deployment, service or job (events included), secrets redacted.
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `kind` | string | yes | what name is. One of: `pod`, `deployment`, `service`, `job` |
+| `name` | string | yes | the object's name (see kube_list) |
+| `namespace` | string |   | namespace (default: the one the Kubernetes view shows) |
+
+### kube_logs
+
+Read only: the last log lines of one pod (lines default 100, max 1000), secrets redacted. Name the container for a pod with more than one. Capped at services_max_log_kb (newest lines kept).
+
+**Gate:** auto
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `pod` | string | yes | the pod's name (see kube_list) |
+| `container` | string |   | the container (needed when the pod has more than one) |
+| `lines` | integer |   | how many last lines (default 100, max 1000) |
+| `namespace` | string |   | namespace (default: the one the Kubernetes view shows) |
 
 ### help_read
 
