@@ -411,3 +411,15 @@ func TestServicesFooterKeysHint(t *testing.T) {
 		t.Errorf("no footer hint:\n%s", out)
 	}
 }
+
+func TestServicesProblemRowsNamePodman(t *testing.T) {
+	st := svcTestState()
+	st.problem = services.Problem{Kind: services.ProblemDaemonDown, Engine: "podman"}
+	if got := svcRowsText(st); !strings.HasPrefix(got, "#compose,!Podman is not running,") {
+		t.Errorf("podman down rows = %s", got)
+	}
+	st.problem = services.Problem{Kind: services.ProblemNoPermission, Engine: "podman"}
+	if got := svcRowsText(st); !strings.HasPrefix(got, "#compose,!No access to the Podman socket,") {
+		t.Errorf("podman permission rows = %s", got)
+	}
+}

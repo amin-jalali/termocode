@@ -145,9 +145,9 @@ func (st *servicesState) problemRows() []svcRow {
 	case services.ProblemNoCompose:
 		return []svcRow{note("Docker Compose v2 is needed"), hint("Update Docker · R retry")}
 	case services.ProblemDaemonDown:
-		return []svcRow{note("Docker is not running"), hint("Start it, then try again."), retryRow(svcSecCompose)}
+		return []svcRow{note(p.Message()), hint("Start it, then try again."), retryRow(svcSecCompose)}
 	case services.ProblemNoPermission:
-		return []svcRow{note("No access to the Docker socket"),
+		return []svcRow{note(p.Message()),
 			{kind: svcRowCode, section: svcSecCompose, text: svcPermissionFix},
 			hint("y copies it · the docker group is root-equal")}
 	case services.ProblemBadConfig:
