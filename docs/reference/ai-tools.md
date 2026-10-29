@@ -111,6 +111,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`agent_run_start`](#agent_run_start) | confirm (always asks): Deny (first) · Start run | no | Start another agent run on a task: a profile (profiles_list), or steps you write (each with a title and a prompt, as in profile_draft). |
 | [`agent_run_status`](#agent_run_status) | auto | no | The state of an agent run of this chat: queued, running, paused, done, failed, cancelled, interrupted or not_started; each step's state and model, the cost so far, and what waits for the user (plan approval, budget, a card). |
 | [`agent_run_result`](#agent_run_result) | auto | no | The result of an agent run of this chat: the final answer, each finished step's answer (long text is cut) and the files it changed (in agent worktrees: path, status and branch; they wait for the user's merge). |
+| [`agent_run_stop`](#agent_run_stop) | confirm (always asks): Deny (first) · Stop run | no | Stop an agent run of this chat: one that waits to start is dropped, a running one stops its steps. |
 | [`http_list_requests`](#http_list_requests) | auto | yes | List the HTTP requests in the user's .http / .rest files (request templates with {{variables}}, not resolved), the file variable names and the selected environment. |
 | [`http_environments`](#http_environments) | auto | yes | Show the HTTP environments (http-client.env.json and the private file), the selected one and their variable names. |
 | [`http_send`](#http_send) | GET / HEAD / OPTIONS to localhost: auto<br>other safe methods: confirm (http:<host[:port]>)<br>other methods: confirm (http:<host[:port]>/write)<br>private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks) | some ask | Send an HTTP request and read the answer (status, headers, body). |
@@ -1282,6 +1283,18 @@ The result of an agent run of this chat: the final answer, each finished step's 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `run_id` | string | yes | the id agent_run_start returned (or a run id of this chat) |
+
+### agent_run_stop
+
+Stop an agent run of this chat: one that waits to start is dropped, a running one stops its steps. The user confirms on a card. A step cannot stop its own run.
+
+**Gate:** confirm (always asks): Deny (first) · Stop run
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `run_id` | string | yes | the id agent_run_start returned |
 
 ### http_list_requests
 

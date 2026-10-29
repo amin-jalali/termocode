@@ -76,6 +76,7 @@ type aiRunSnap struct {
 	aiCost    float64 // what the AI-started runs of this chat cost so far
 	aiCostOK  bool
 	worktrees bool
+	runs      map[string]string // run id → what the stop card says about it
 }
 
 func (m *Model) aiRunSnapshot(c aiRunCaller) aiRunSnap {
@@ -122,6 +123,16 @@ func (m *Model) aiRunSnapshot(c aiRunCaller) aiRunSnap {
 	sn.chatTitle = s.conv.Title
 	sn.active = s.aiRunsActive()
 	sn.aiCost, sn.aiCostOK = s.aiStartedCost()
+	sn.runs = map[string]string{}
+	for _, q := range s.runQueue {
+		if q.chat == s.conv.ID {
+			sn.runs[q.id] = "It waits to start (profile " + q.prof.Name + ") on: " + aiCardText(q.task, 80) + "\nStop drops it: it never starts."
+		}
+	}
+	if rm := s.aiRunMessage(); rm != nil && s.run != nil {
+		sn.runs[rm.Run.ID] = "It runs now (profile " + rm.Run.Profile + ") on: " + aiCardText(runsTask(s.conv.Messages, s.runMsg), 80) +
+			"\nStop stops its steps, as Stop in the Runs view does."
+	}
 	return sn
 }
 
@@ -465,7 +476,7 @@ func (m *Model) aiAgentRunTools(call aiIDECaller, c aiRunCaller) []ai.Tool {
 				return call(ctx, func(m *Model) (string, tea.Cmd, error) { return m.aiToolRunStart(ctx, c, r) })
 			},
 		},
-	}, aiRunReadTools(call)...)
+	}, append(aiRunReadTools(call), aiRunStopTool(call, sn))...)
 }
 
 // aiAgentRunTool reports a tool of this file.
@@ -752,6 +763,84 @@ func aiRunReadTools(call aiIDECaller) []ai.Tool {
 				}
 				return aiItermocJSON(res)
 			},
+		},
+	}
+}
+
+// ── agent_run_stop ───────────────────────────────────────────────────────
+
+func (sn aiRunSnap) checkStop(a map[string]any) error {
+	id := strings.TrimSpace(ai.ArgString(a, "run_id"))
+	if id == "" {
+		return errors.New("run_id is required (agent_run_start returns it)")
+	}
+	if id == sn.caller.parentRun {
+		return errors.New("a step cannot stop its own run; finish your step, or tell the user to press Stop")
+	}
+	if _, ok := sn.runs[id]; !ok {
+		return fmt.Errorf("run %q does not wait or run in this chat (agent_run_status says where it is)", aiCardText(id, 30))
+	}
+	return nil
+}
+
+func (sn aiRunSnap) describeStop(a map[string]any) string {
+	id := strings.TrimSpace(ai.ArgString(a, "run_id"))
+	what, ok := sn.runs[id]
+	if !ok {
+		return "Stop an agent run (refused: no such run waits or runs)"
+	}
+	return "Stop the agent run " + aiCardText(id, 30) + "?\n" + what
+}
+
+// aiToolRunStop stops run id: a queued one is dropped, the live one
+// stops (never the run whose step asks: it ends by itself).
+func (m *Model) aiToolRunStop(ctx context.Context, id string) (string, tea.Cmd, error) {
+	s := m.aiS()
+	f, err := m.aiRunFind(id)
+	if err != nil {
+		return "", nil, err
+	}
+	switch {
+	case f.queued != nil:
+		for i := range s.runQueue {
+			if s.runQueue[i].id == id {
+				s.runQueue = append(s.runQueue[:i:i], s.runQueue[i+1:]...)
+				break
+			}
+		}
+		s.aiRunNotStarted(id, "the AI stopped it before it started, with the user's OK")
+		return "Run " + id + " is dropped; it will not start.", nil, nil
+	case f.live:
+		if _, run := agentrun.NodeOf(ctx); run == id {
+			return "", nil, errors.New("a step cannot stop its own run; finish your step, or tell the user to press Stop")
+		}
+		if s.chatCancel != nil {
+			s.chatCancel()
+		}
+		return "Run " + id + " is stopping; its steps end now.", nil, nil
+	}
+	return "", nil, fmt.Errorf("run %s does not run any more (agent_run_status says how it ended)", id)
+}
+
+// aiRunStopTool is agent_run_stop.
+func aiRunStopTool(call aiIDECaller, sn aiRunSnap) ai.Tool {
+	return ai.Tool{
+		Name:    "agent_run_stop",
+		Display: "stop an agent run",
+		Description: "Stop an agent run of this chat: one that waits to start is dropped, a running one stops its steps. " +
+			"The user confirms on a card. A step cannot stop its own run.",
+		Params:   map[string]any{"run_id": map[string]any{"type": "string", "description": "the id agent_run_start returned"}},
+		Required: []string{"run_id"},
+		// No Always allow class: every call asks (G-API).
+		Mutating: true,
+		Validate: sn.checkStop,
+		Describe: sn.describeStop,
+		Run: func(ctx context.Context, a map[string]any) (string, error) {
+			if err := sn.checkStop(a); err != nil {
+				return "", err
+			}
+			id := strings.TrimSpace(ai.ArgString(a, "run_id"))
+			return call(ctx, func(m *Model) (string, tea.Cmd, error) { return m.aiToolRunStop(ctx, id) })
 		},
 	}
 }

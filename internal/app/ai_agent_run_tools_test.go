@@ -75,7 +75,8 @@ func aiToolJSON(t *testing.T, res string) map[string]any {
 func TestAIAgentRunToolsGates(t *testing.T) {
 	m := aiWriteModel(t)
 	tools := m.aiChatTools(".", nil)
-	for _, name := range []string{"agent_run_start"} {
+	want := map[string]string{"agent_run_start": "Deny · Start run", "agent_run_stop": "Deny · Stop run"}
+	for _, name := range []string{"agent_run_start", "agent_run_stop"} {
 		tl, ok := ai.FindTool(tools, name)
 		if !ok {
 			t.Fatalf("no tool %s", name)
@@ -96,7 +97,7 @@ func TestAIAgentRunToolsGates(t *testing.T) {
 		for _, b := range m.confirm.Buttons() {
 			titles = append(titles, b.Title)
 		}
-		if got := strings.Join(titles, " · "); got != "Deny · Start run" {
+		if got := strings.Join(titles, " · "); got != want[name] {
 			t.Errorf("%s buttons %q", name, got)
 		}
 		m.answerAIToolConfirm("deny")
@@ -550,5 +551,63 @@ func TestAIAgentRunReadToolsGates(t *testing.T) {
 		if _, ok := mcpServeRow(name); ok {
 			t.Errorf("%s is offered to outside agents", name)
 		}
+	}
+}
+
+// Spec: the AI stops a run it queued: the card says what stops, Allow
+// drops it (it never starts), Deny keeps it; a run that does not wait or
+// run is refused before any card.
+func TestAIAgentRunStopQueued(t *testing.T) {
+	for _, answer := range []string{"allow", "deny"} {
+		t.Run(answer, func(t *testing.T) {
+			m, _ := aiAgentRunModel(t, nil, nil)
+			fast, _ := m.ai.profiles.Get("fast")
+			m.ai.runQueue = []aiQueuedRun{{id: "q1", chat: m.ai.conv.ID, prof: fast, task: "count lines", by: ai.RunBy{Chat: m.ai.conv.ID, Depth: 1}}}
+			main := &recordingAIProvider{replies: []ai.Chunk{toolCall("agent_run_stop", map[string]any{"run_id": "q1"}), {Delta: "ok"}, {Delta: "counted"}}}
+			m.ai.provider = main
+			m.ai.slotFake[ai.SlotMain] = aiSlot{p: main, cfg: ai.Config{Kind: ai.KindOllama, Model: "fake-1"}}
+			var card aiWriteCard
+			driveAIChat(t, m, m.sendAIChat("stop it"), aiAgentRunCard(&card, answer))
+			if !strings.Contains(card.body, "Stop the agent run q1") || !strings.Contains(card.body, "count lines") {
+				t.Fatalf("card:\n%s", card.body)
+			}
+			if answer == "allow" {
+				if m.ai.streaming || len(m.ai.runQueue) != 0 || !strings.Contains(m.ai.runNotStarted["q1"], "stopped") {
+					t.Fatalf("streaming %v queue %+v", m.ai.streaming, m.ai.runQueue)
+				}
+				return
+			}
+			aiDriveQueued(t, m, nil) // Deny: it starts after the turn
+			if rm := aiRunMsg(t, m); rm.Run.ID != "q1" {
+				t.Fatalf("run %+v", rm.Run)
+			}
+		})
+	}
+	m := aiWriteModel(t)
+	if err := m.aiRunSnapshot(aiRunCaller{}).checkStop(map[string]any{"run_id": "nope"}); err == nil {
+		t.Fatal("unknown run accepted")
+	}
+}
+
+// Spec: a step cannot stop its own run (refused before any card).
+func TestAIAgentRunStopNotSelf(t *testing.T) {
+	main := &recordingAIProvider{replies: []ai.Chunk{toolCall("agent_run_stop", map[string]any{"run_id": "self1"}), {Delta: "went on"}}}
+	m, _ := aiRunModel(t, main, main)
+	one := ai.Profile{Name: "one", Source: ai.ProfileSourceUser, Steps: []ai.ProfileStep{{ID: "s1", Title: "Worker", Slot: ai.SlotMain}}}
+	m.ai.runQueue = []aiQueuedRun{{id: "self1", chat: m.ai.conv.ID, prof: one, task: "x", by: ai.RunBy{Chat: m.ai.conv.ID, Depth: 1}}}
+	if m.aiStartQueuedRun() == nil {
+		t.Fatal("not started")
+	}
+	var card aiWriteCard
+	aiDriveQueued(t, m, aiAgentRunCard(&card, "allow"))
+	if card.opened {
+		t.Fatal("a card asked to stop the run itself")
+	}
+	rm := aiRunMsg(t, m)
+	if rm.Run.State != ai.RunStateDone {
+		t.Fatalf("run %+v", rm.Run)
+	}
+	if res := aiLastMsg(main, 1); !strings.Contains(res, "cannot stop its own run") {
+		t.Fatalf("result %q", res)
 	}
 }
