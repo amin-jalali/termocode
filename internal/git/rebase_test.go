@@ -302,3 +302,28 @@ func TestRunRebaseDirtyTree(t *testing.T) {
 		t.Errorf("stashed edit not back: %q", b)
 	}
 }
+
+// G-RBS: RebasePushed counts the commits of the range that are on the
+// branch's upstream already (a rebase rewrites them: force-push needed).
+func TestRebasePushed(t *testing.T) {
+	r, h := rebaseRepo(t, 3)
+	if up, n := RebasePushed(r.dir, h[0]); up != "" || n != 0 {
+		t.Fatalf("no upstream: %q %d", up, n)
+	}
+	remote := t.TempDir()
+	r.git(t, "init", "-q", "--bare", remote)
+	r.git(t, "remote", "add", "origin", remote)
+	r.git(t, "push", "-q", "-u", "origin", "main")
+	r.write(t, "f4.txt", "4\n")
+	r.git(t, "add", "-A")
+	r.git(t, "commit", "-q", "-m", "c4")
+	if up, n := RebasePushed(r.dir, h[0]); up != "origin/main" || n != 2 {
+		t.Errorf("c2 c3 pushed: %q %d", up, n)
+	}
+	if up, n := RebasePushed(r.dir, h[2]); up != "origin/main" || n != 0 {
+		t.Errorf("only c4, not pushed: %q %d", up, n)
+	}
+	if _, n := RebasePushed(r.dir, ""); n != 3 {
+		t.Errorf("from the root: %d", n)
+	}
+}

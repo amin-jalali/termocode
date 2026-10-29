@@ -2,6 +2,7 @@ package git
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/spawn"
@@ -110,4 +111,28 @@ func unmergedPaths(dir string) []string {
 		}
 	}
 	return paths
+}
+
+// RebasePushed is the branch's upstream ("origin/main"; "" without one)
+// and how many commits of base..HEAD (base "" = from the root) are on it
+// already: rewriting those means a force-push.
+func RebasePushed(dir, base string) (upstream string, n int) {
+	out, err := runOut(dir, "git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
+	if err != nil {
+		return "", 0
+	}
+	upstream = strings.TrimSpace(out)
+	rng := []string{"HEAD"}
+	if base != "" {
+		rng = append(rng, "^"+base)
+	}
+	count := func(extra ...string) int {
+		out, err := runOut(dir, "git", append(append([]string{"rev-list", "--count"}, rng...), extra...)...)
+		if err != nil {
+			return 0
+		}
+		c, _ := strconv.Atoi(strings.TrimSpace(out))
+		return c
+	}
+	return upstream, count() - count("^@{upstream}")
 }
