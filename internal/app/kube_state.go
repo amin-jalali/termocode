@@ -64,7 +64,7 @@ type kubeState struct {
 	filter       string
 	filterTyping bool
 
-	forwards map[string]*kube.Forward // by pod name
+	forwards map[string]*kube.Forward // by context/namespace/pod (kube_forward.go)
 
 	seq    uint64 // bumped on every change (render cache)
 	render struct {
@@ -337,6 +337,8 @@ func (m *Model) handleKubeMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onKubePick(msg), true
 	case kubeDescribeMsg:
 		return m.onKubeDescribe(msg), true
+	case kubeForwardMsg:
+		return m.onKubeForward(msg), true
 	}
 	return nil, false
 }

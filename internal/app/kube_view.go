@@ -221,7 +221,7 @@ func (st *kubeState) itemParts(r kubeRow, w int, now time.Time) (theme.Icon, the
 		if p.Restarts > 0 {
 			right += " " + theme.GlyphSvcRestarting.String() + strconv.Itoa(p.Restarts)
 		}
-		if fw := st.forwards[p.Name]; fw != nil {
+		if fw := st.forward(p.Name); fw != nil {
 			right = kubeArrow() + ":" + strconv.Itoa(fw.Local) + " " + right
 		}
 		if wide {
@@ -303,7 +303,7 @@ func (st *kubeState) footer(now time.Time) []string {
 	case "pods":
 		p := st.pods[r.idx]
 		line := fmt.Sprintf("%s · ready %s · %d restarts", p.Status, p.Ready(), p.Restarts)
-		if fw := st.forwards[p.Name]; fw != nil {
+		if fw := st.forward(p.Name); fw != nil {
 			line = fmt.Sprintf("127.0.0.1:%d %s %d · %s", fw.Local, kubeArrow(), fw.Remote, line)
 		}
 		return []string{line, "l logs · e shell · f forward · ? keys"}

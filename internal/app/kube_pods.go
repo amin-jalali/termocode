@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -110,6 +111,12 @@ func (m *Model) handleKubePodPick(kind, value string) tea.Cmd {
 	switch kind {
 	case "logs", "shell":
 		return m.kubePodTerminal(kind, p, container)
+	case "pf":
+		port, err := strconv.Atoi(container)
+		if err != nil || port <= 0 {
+			return nil
+		}
+		return m.kubeToggleForward(p, port)
 	}
 	return nil
 }

@@ -58,6 +58,10 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		if p, ok := st.selectedPod(); ok {
 			return m, m.kubePodTerminal("shell", p, "")
 		}
+	case "f":
+		if p, ok := st.selectedPod(); ok {
+			return m, m.kubeToggleForward(p, 0)
+		}
 	case "y":
 		if have && r.kind == kubeRowItem {
 			return m, m.kubeCopyName(r.name)
