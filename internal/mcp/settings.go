@@ -22,6 +22,7 @@ type Settings struct {
 	TrustAnnotations bool              // mcp_trust_annotations (true)
 	OAuthPort        int               // mcp_oauth_port (0: the first free of 47391–47395)
 	GitHubClientID   string            // mcp_github_client_id ("" = the build-time GitHubClientID)
+	Share            bool              // mcp_share (true): one local server process for every session
 	Trusted          map[string]string // mcp_trusted: server name → entry hash ("Always allow")
 	TrustedTools     map[string]string // mcp_trusted_tools: server name → accepted ToolsHash
 }
@@ -37,7 +38,7 @@ const (
 // defaults.
 func LoadSettings(configPath string) Settings {
 	s := Settings{Enabled: true, IdleTimeout: DefaultIdleTimeout, CallTimeout: DefaultCallTimeout,
-		MaxResultKB: DefaultMaxResultKB, TrustAnnotations: true, Trusted: map[string]string{},
+		MaxResultKB: DefaultMaxResultKB, TrustAnnotations: true, Share: true, Trusted: map[string]string{},
 		TrustedTools: map[string]string{}}
 	b, err := os.ReadFile(configPath)
 	if err != nil {
@@ -51,6 +52,7 @@ func LoadSettings(configPath string) Settings {
 		TrustAnnotations *bool             `json:"mcp_trust_annotations"`
 		OAuthPort        int               `json:"mcp_oauth_port"`
 		GitHubClientID   string            `json:"mcp_github_client_id"`
+		Share            *bool             `json:"mcp_share"`
 		Trusted          map[string]string `json:"mcp_trusted"`
 		TrustedTools     map[string]string `json:"mcp_trusted_tools"`
 	}
@@ -59,6 +61,9 @@ func LoadSettings(configPath string) Settings {
 	}
 	if raw.Enabled != nil {
 		s.Enabled = *raw.Enabled
+	}
+	if raw.Share != nil {
+		s.Share = *raw.Share
 	}
 	if raw.TrustAnnotations != nil {
 		s.TrustAnnotations = *raw.TrustAnnotations

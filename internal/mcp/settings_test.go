@@ -15,14 +15,14 @@ func TestLoadSettings(t *testing.T) {
 	p := filepath.Join(dir, "config.json")
 	d := LoadSettings(p)
 	if !d.Enabled || d.IdleTimeout != 10*time.Minute || d.CallTimeout != 60*time.Second ||
-		d.MaxResultKB != 32 || !d.TrustAnnotations {
+		d.MaxResultKB != 32 || !d.TrustAnnotations || !d.Share {
 		t.Errorf("defaults %+v", d)
 	}
 	writeFile(t, p, `{"theme":"x","mcp_enabled":false,"mcp_idle_timeout":"0","mcp_call_timeout":"2m",
-		"mcp_max_result_kb":8,"mcp_trust_annotations":false,"mcp_trusted":{"a":"h1"}}`)
+		"mcp_max_result_kb":8,"mcp_trust_annotations":false,"mcp_share":false,"mcp_trusted":{"a":"h1"}}`)
 	s := LoadSettings(p)
 	if s.Enabled || s.IdleTimeout != 0 || s.CallTimeout != 2*time.Minute || s.MaxResultKB != 8 ||
-		s.TrustAnnotations || s.Trusted["a"] != "h1" {
+		s.TrustAnnotations || s.Share || s.Trusted["a"] != "h1" {
 		t.Errorf("loaded %+v", s)
 	}
 	writeFile(t, p, `{"mcp_idle_timeout":"soon","mcp_max_result_kb":-1}`)

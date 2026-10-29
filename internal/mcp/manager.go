@@ -466,6 +466,14 @@ func (m *Manager) SetTimeouts(idle, call time.Duration) {
 	}
 }
 
+// SetShare turns shared servers on (o) or off (nil) for the next starts;
+// running servers keep how they run.
+func (m *Manager) SetShare(o *ShareOptions) {
+	m.mu.Lock()
+	m.opts.Share = o
+	m.mu.Unlock()
+}
+
 // Timeouts returns the idle and call timeouts in use.
 func (m *Manager) Timeouts() (idle, call time.Duration) {
 	m.mu.Lock()

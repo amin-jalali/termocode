@@ -122,6 +122,7 @@ func (m *Model) aiMCP() *mcp.Manager {
 		Tokens:           mcp.CredStore{Path: mcpCredPath()},
 		OAuthPort:        func() int { return mcp.LoadSettings(mcpConfigPath()).OAuthPort },
 		CIMDURL:          mcpCIMDURL,
+		Share:            mcpShareOptions(set),
 	})
 	mcpTarget.Store(s.mcp)
 	return s.mcp
@@ -346,6 +347,9 @@ func mcpStatusHint(st mcp.Status) string {
 	if st.SignedIn {
 		parts = append(parts, "signed in")
 	}
+	if st.Shared {
+		parts = append(parts, "shared · "+mcpSessionsText(st.Sessions))
+	}
 	if st.Pid > 0 {
 		parts = append(parts, fmt.Sprintf("pid %d", st.Pid))
 	}
@@ -443,7 +447,11 @@ func mcpServerActionItems(m *Model, name string) []picker.Item {
 		{ID: "tools", Title: "Show tools", Hint: fmt.Sprintf("%d tools", st.Tools)},
 	}
 	if st.Pid > 0 {
-		items = append(items, picker.Item{ID: "stop", Title: "Stop", Hint: fmt.Sprintf("pid %d", st.Pid)})
+		hint := fmt.Sprintf("pid %d", st.Pid)
+		if st.Shared && st.Sessions > 1 {
+			hint += " · stops it for " + mcpSessionsText(st.Sessions)
+		}
+		items = append(items, picker.Item{ID: "stop", Title: "Stop", Hint: hint})
 	}
 	if !st.Trusted {
 		items = append(items, picker.Item{ID: "trust", Title: "Trust (always allow this entry)", Hint: "asks again when the entry changes"})
@@ -553,6 +561,9 @@ func (m *Model) onMCPServerAction(id string) tea.Cmd {
 		}
 		return m.mcpConnect(name, mcp.TrustDeny)
 	case "stop":
+		if st.Shared && st.Sessions > 1 {
+			return m.openMCPShareStop(name, st.Sessions)
+		}
 		mgr.Stop(name)
 		return m.aiInfo("MCP " + name + ": stopped")
 	case "tools":

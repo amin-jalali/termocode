@@ -17,6 +17,8 @@ import (
 	"golang.org/x/term"
 
 	"github.com/amin-jalali/termocode/internal/app"
+	"github.com/amin-jalali/termocode/internal/mcp"
+	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/workspace/localhost"
 	// Must init before bubbletea: no 5 s OSC 11 wait (see package doc).
 	_ "github.com/amin-jalali/termocode/internal/darkbg"
@@ -238,10 +240,14 @@ func kittyKeyboardOption(on bool) tea.ProgramOption {
 }
 
 func main() {
+	mcp.RunShareIfHelper() // a shared MCP server's broker (internal/mcp/share.go)
 	tuneGC()
 	args, noSession := extractFlag(os.Args[1:], "--no-session")
 	if noSession {
 		_ = os.Setenv(envNoSession, "1")
+	}
+	if exe, err := spawn.Executable(); err == nil {
+		app.SetMCPShareExe(exe)
 	}
 	if len(args) == 2 && args[0] == serverArg {
 		os.Exit(runServer(args[1]))

@@ -135,6 +135,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerMCPRemove(id), true
 	case confirmKindMCPDisable:
 		return m.answerMCPDisable(id), true
+	case confirmKindMCPShareStop: // mcp_share.go
+		return m.answerMCPShareStop(id), true
 	case confirmKindItermocAgentRevoke: // itermoc_agent_page.go
 		return m.answerItermocAgentRevoke(id), true
 	case confirmKindAISlotRemove: // itermoc_slots.go
@@ -196,6 +198,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerMCPRemove("keep")
 	case confirmKindMCPDisable:
 		return m.answerMCPDisable("keep")
+	case confirmKindMCPShareStop:
+		return m.answerMCPShareStop("cancel")
 	case confirmKindItermocAgentRevoke:
 		return m.answerItermocAgentRevoke("keep")
 	case confirmKindAISlotRemove:

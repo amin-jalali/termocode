@@ -1896,6 +1896,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `mcp_oauth_port` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_server` | never | lets outside agents use the IDE's tools; the user turns it on or off in config.json |
 | `mcp_server_auto_approve` | never | what outside agents may do without asking; only the user's "Always allow" on their card sets it |
+| `mcp_share` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_trust_annotations` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_trusted` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_trusted_tools` | never | AI provider, credentials and approvals stay with the user |

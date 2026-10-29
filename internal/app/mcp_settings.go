@@ -27,6 +27,7 @@ var mcpSettingKeys = map[string]string{
 	"setting-mcp-trust-annotations": "mcp_trust_annotations",
 	"setting-mcp-oauth-port":        "mcp_oauth_port",
 	"setting-mcp-github-client-id":  "mcp_github_client_id",
+	"setting-mcp-share":             "mcp_share",
 }
 
 func init() {
@@ -45,6 +46,8 @@ func init() {
 			Desc: "Port of the sign-in listener on 127.0.0.1 for MCP servers with OAuth. 0 takes the first free one of 47391–47395 (the ports termocode's client document lists, so ssh -L 47391:127.0.0.1:47391 works); set another only for an app registered with that port."},
 		settingsRow{ID: "setting-mcp-github-client-id", Label: "mcp_github_client_id", Kind: "string", Default: "(built in)",
 			Desc: "Client ID of a GitHub OAuth App with Device Flow on, for the GitHub sign-in with a code (Connect a service). Empty uses the one built into termocode (none until it is registered). Not a secret."},
+		settingsRow{ID: "setting-mcp-share", Label: "mcp_share", Kind: "bool", Default: "true",
+			Desc: "Run each local MCP server once for all your termocode windows with the same server entry and folder, not once per window. It stops 30 s after the last window stops using it. false: every window runs its own. Remote servers are not affected."},
 	)
 }
 
@@ -94,6 +97,8 @@ func mcpSettingValue(id string) (string, bool) {
 		return strconv.Itoa(s.OAuthPort), true
 	case "setting-mcp-github-client-id":
 		return s.GitHubClientID, true
+	case "setting-mcp-share":
+		return strconv.FormatBool(s.Share), true
 	}
 	return "", false
 }
@@ -113,7 +118,7 @@ func (m *Model) applyMCPSetting(id, value string) (tea.Cmd, bool) {
 	}
 	var v any
 	switch id {
-	case "setting-mcp-enabled", "setting-mcp-trust-annotations":
+	case "setting-mcp-enabled", "setting-mcp-trust-annotations", "setting-mcp-share":
 		b, err := parseBoolLoose(value)
 		if err != nil {
 			return bad("true/false")
@@ -155,6 +160,7 @@ func (m *Model) applyMCPSetting(id, value string) (tea.Cmd, bool) {
 	mcp.SetGitHubClientID(set.GitHubClientID)
 	if s := m.aiS(); s.mcp != nil {
 		s.mcp.SetTimeouts(set.IdleTimeout, set.CallTimeout)
+		s.mcp.SetShare(mcpShareOptions(set))
 	}
 	var c tea.Cmd
 	m.toast, c = m.toast.Push(toast.Info, fmt.Sprintf("%s = %v", key, v))

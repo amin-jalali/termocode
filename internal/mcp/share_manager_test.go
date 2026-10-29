@@ -182,3 +182,14 @@ func TestManagerShareKeepsSecretsOffDiskAndArgv(t *testing.T) {
 		t.Fatal("secret in the broker's argv or env")
 	}
 }
+
+func TestManagerSetShareOffRunsOwnProcess(t *testing.T) {
+	e := newManagerEnv(t)
+	e.write(t, e.user, map[string]any{"fake": map[string]string{}})
+	m := sharedManager(t, e, shareTestOptions(t), Expander{Env: os.LookupEnv})
+	m.SetShare(nil)
+	callEcho(t, m, "x")
+	if st := shareStatus(m, "fake"); st.Shared || st.Pid == 0 {
+		t.Fatalf("status %+v, want its own process", st)
+	}
+}
