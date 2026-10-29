@@ -65,6 +65,75 @@ choice are the same in every project. They stay in
 Over SSH the whole editor also survives a dropped connection: see
 [Remote and SSH](remote-ssh.md).
 
+## Layouts
+
+The automatic restore above brings back what you had. A **layout** is a named
+arrangement you choose on purpose: which panels are open and how big they are,
+the editor splits, the terminal tabs and, if you like, the open files. Use it to
+switch between ways of working, for example "debug" or "review", and to share a
+setup with your team.
+
+| Command | What it does |
+|---|---|
+| **Layout: Open...** (`Alt+Y`) | Pick a layout and open it. `Right` shows what it changes first. |
+| **Layout: Save As...** | Save what is on screen under a name. |
+| **Layout: Delete...** | Remove a saved layout. It asks first; Cancel is the default. |
+| **Layout: Reset to Default** | Back to the first-start look and sizes. Open files stay. |
+
+The status bar shows the layout name for 2 seconds after it opens.
+
+**Built-in layouts** (they cannot be deleted; copy one with **Layout: Save As...**):
+
+| Name | What it opens |
+|---|---|
+| `default` | Explorer and editor; chat and bottom panel closed |
+| `focus` | The editor only |
+| `debug` | Run and Debug view, a terminal, Debug Console and Problems |
+| `review` | Source Control view and the AI chat |
+
+**Where layouts live**
+
+- For you, in every project: `~/.config/termocode/layouts/<name>.jsonc`
+- For one project, to share: `.termocode/layouts/<name>.jsonc`. Commit it and
+  your team gets it. When both have the same name, the project one wins.
+
+**Save As** asks for a name, then "Only me" or "This project". Names may have
+letters, digits, space, `-`, `_` and `.`. A layout file holds only the shape of
+your window: no environment values, no secrets and no terminal output. File and
+folder paths are relative to the project.
+
+A layout file is plain JSON with comments. All parts are optional; a part you
+leave out stays as it is when the layout opens:
+
+```jsonc
+{
+  "description": "Editor, terminal and logs",
+  "sidebar": { "open": true, "view": "git", "width": 40 },
+  "panel": {
+    "open": true, "rows": 14, "active": "terminal",
+    "tabs": ["problems"],
+    "terminals": [{ "name": "api", "cwd": "cmd/api" }, { "name": "web", "cwd": "web" }]
+  },
+  "chat": { "open": false },
+  "editor": { "split": "vertical", "panes": ["main.go", "main_test.go"], "files": ["README.md"] },
+  "focus": "editor"
+}
+```
+
+Sidebar views: `files`, `search`, `git`, `run`, `tests`, `containers`,
+`databases`, `itermoc`, `runs`. Panel tabs: `terminal`, `problems`, `output`,
+`tests`, `debug-console`.
+
+When a layout opens:
+
+- Files that do not exist are skipped. One message says how many ("2 files not
+  found").
+- A panel that needs something you do not have (a database connection, a
+  running debug session) opens with its normal empty state.
+- Terminal tabs you already have stay; a layout only adds missing ones, each in
+  its folder.
+- Zen mode ends, so the layout shows.
+
 ## Start fresh
 
 - **Developer: Reset Session** clears the saved tabs and cursor history of
@@ -78,9 +147,11 @@ Over SSH the whole editor also survives a dropped connection: see
 | Key / command | Action |
 |---|---|
 | `Ctrl+R` | Recent files |
+| `Alt+Y` | Open a saved layout |
 | **File: Open Recent Workspace...** | Switch project |
 | **Workspace: Add Folder...** | Add a root folder |
 | **Workspace: Remove Folder...** | Remove a root folder |
+| **Layout: Save As...** | Save the window layout under a name |
 | **Developer: Reload Window** | Restart, keep session |
 | **Developer: Reset Session** | Clear the session |
 
