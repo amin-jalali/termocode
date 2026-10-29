@@ -205,3 +205,25 @@ func TestDiscardLinesUntrackedFile(t *testing.T) {
 		t.Errorf("the file must not change: %q", got)
 	}
 }
+
+func TestLinesBinaryFile(t *testing.T) {
+	r := lineRepo(t)
+	r.write(t, "b.bin", "a\x00b\x00c")
+	r.git(t, "add", "b.bin")
+	r.git(t, "commit", "-q", "-m", "bin")
+	r.write(t, "b.bin", "a\x00B\x00c\x00d")
+	if err := StageLines(r.dir, "b.bin", 1, 1); err != ErrLineBinary {
+		t.Errorf("err = %v, want ErrLineBinary", err)
+	}
+}
+
+func TestLinesRename(t *testing.T) {
+	r := lineRepo(t)
+	r.git(t, "mv", "a.txt", "b.txt")
+	r.write(t, "b.txt", "l1\nX2\nl3\nl4\nl5\nl6\n")
+	// Unstage looks at the index: it holds a rename of a.txt to b.txt.
+	err := UnstageLines(r.dir, "b.txt", 2, 2)
+	if err != ErrLineRename {
+		t.Errorf("err = %v, want ErrLineRename", err)
+	}
+}

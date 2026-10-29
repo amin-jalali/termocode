@@ -55,6 +55,12 @@ func applyLines(dir, file string, from, to int, diffCached, applyCached, applyRe
 	if err != nil {
 		return err
 	}
+	if strings.Contains(diff, "\nBinary files ") || strings.HasPrefix(diff, "Binary files ") || strings.Contains(diff, "GIT binary patch") {
+		return ErrLineBinary
+	}
+	if diffCached && stagedRename(dir, file) {
+		return ErrLineRename
+	}
 	patch, err := BuildLinePatch(diff, from, to, applyReverse)
 	if err != nil {
 		return err
@@ -70,4 +76,19 @@ func applyLines(dir, file string, from, to int, diffCached, applyCached, applyRe
 		return fmt.Errorf("could not apply the lines: %s", strings.TrimPrefix(err.Error(), "exit status 1: "))
 	}
 	return nil
+}
+
+// stagedRename tells if the index holds file as the new name of a rename.
+func stagedRename(dir, file string) bool {
+	out, err := runOut(dir, "git", "diff", "--cached", "--no-color", "--name-status", "-M")
+	if err != nil {
+		return false
+	}
+	for _, l := range strings.Split(out, "\n") {
+		f := strings.Split(l, "\t")
+		if len(f) == 3 && strings.HasPrefix(f[0], "R") && f[2] == file {
+			return true
+		}
+	}
+	return false
 }
