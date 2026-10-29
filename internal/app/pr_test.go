@@ -765,3 +765,27 @@ func TestPRCreateNoGH(t *testing.T) {
 		t.Error("no quiet hint")
 	}
 }
+
+// The AI may open the read-only list; it can never create a pull request,
+// and no palette id merges, reviews or approves (those are card buttons
+// only the user presses).
+func TestPRAIPolicy(t *testing.T) {
+	if p := aiActionPolicies["git-pr-list"]; p.Gate != aiGateAuto {
+		t.Errorf("git-pr-list: %+v", p)
+	}
+	if p := aiActionPolicies["git-pr-create"]; p.Gate != aiGateNever || p.Reason == "" {
+		t.Errorf("git-pr-create: %+v", p)
+	}
+	for id := range aiActionPolicies {
+		if strings.HasPrefix(id, "git-pr-") && id != "git-pr-list" && id != "git-pr-create" {
+			t.Errorf("unexpected PR command %q: classify it on purpose", id)
+		}
+	}
+	for _, it := range prPaletteItems() {
+		for _, bad := range []string{"merge", "approve", "review"} {
+			if strings.Contains(it.ID, bad) {
+				t.Errorf("palette id %q acts on a pull request", it.ID)
+			}
+		}
+	}
+}
