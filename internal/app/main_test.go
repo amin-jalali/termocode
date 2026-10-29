@@ -7,14 +7,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clistep"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/mcp/mcptest"
 	"github.com/amin-jalali/termocode/internal/services/servicestest"
+	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/zalando/go-keyring"
 )
 
@@ -79,9 +82,11 @@ func TestMain(m *testing.M) {
 	aiCLIRun = func(context.Context, clistep.Spec, string, func(ai.Event)) (clistep.Result, error) {
 		return clistep.Result{}, errors.New("a test ran a CLI step without faking aiCLIRun")
 	}
+	nvim.TrackClients()
 	code := m.Run()
 	if msg := guard.Report(""); msg != "" {
 		fmt.Fprintln(os.Stderr, "FAIL:", msg)
+	if code == 0 && nvimLeaked() {
 		code = 1
 	}
 	_ = os.RemoveAll(dir)
@@ -103,6 +108,22 @@ func TestRealContainerCLIsAreBlocked(t *testing.T) {
 			t.Errorf("a test would run the real %s at %s", name, p)
 		}
 	}
+// nvimLeaked reports (on stderr) the tests whose nvim still runs after
+// all tests ended: every test must close its nvim and wait for it.
+func nvimLeaked() bool {
+	left := nvim.LeakedClients(15 * time.Second)
+	if len(left) == 0 {
+		return false
+	}
+	count := map[string]int{}
+	for _, who := range left {
+		count[who]++
+	}
+	fmt.Fprintf(os.Stderr, "FAIL: %d nvim process(es) still running after the tests (%d nvim children):\n", len(left), nvim.ChildProcesses())
+	for _, who := range slices.Compact(left) {
+		fmt.Fprintf(os.Stderr, "  %s: %d\n", who, count[who])
+	}
+	return true
 }
 
 // Guard for TestMain: recordError must land in the temp config dir.
