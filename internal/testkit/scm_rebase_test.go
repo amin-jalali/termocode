@@ -167,3 +167,28 @@ func TestSCMRebasePushedWarning(t *testing.T) {
 	}
 	_ = r
 }
+
+// Spec: with uncommitted changes the confirm offers Stash and Continue
+// (not Start); the rebase runs and the changes come back.
+func TestSCMRebaseStashAndContinue(t *testing.T) {
+	d, r := scmDriver(t, func(r *repo) {
+		rebaseRepo(r)
+		r.write("f1.txt", "edited\n")
+	})
+	openRebaseCard(t, d, "c2")
+	d.Key("j", "d")
+	startRebase(t, d)
+	if s := text(d); !strings.Contains(s, "uncommitted changes") || strings.Contains(s, "Start Rebase") {
+		t.Fatalf("confirm does not offer the stash:%s", dump(d))
+	}
+	clickTarget(d, "confirm:rebase-stash")
+	if !until(d, func() bool { return strings.Contains(text(d), "Rebase done") }) {
+		t.Fatalf("no done toast:%s", dump(d))
+	}
+	if got := r.git("log", "--format=%s"); got != "c4\nc2\nc1\ninit" {
+		t.Errorf("history:\n%s", got)
+	}
+	if got := r.read("f1.txt"); got != "edited\n" {
+		t.Errorf("the change did not come back: %q", got)
+	}
+}

@@ -33,6 +33,7 @@ type rebaseCheckMsg struct {
 	todo     git.RebaseTodo
 	upstream string // the branch's upstream ("origin/main")
 	pushed   int    // commits of the range on it already
+	dirty    bool   // uncommitted changes: the run must stash them
 }
 
 // rebaseDoneMsg is the end of a run (or of its first stretch, when git
@@ -193,6 +194,7 @@ func (m *Model) rebaseCheckCmd(todo git.RebaseTodo) tea.Cmd {
 	return func() tea.Msg {
 		msg := rebaseCheckMsg{todo: todo}
 		msg.upstream, msg.pushed = git.RebasePushed(cwd, todo.Base)
+		msg.dirty = git.WorkTreeDirty(cwd)
 		return msg
 	}
 }
@@ -205,9 +207,11 @@ func (m *Model) openRebaseConfirm(msg rebaseCheckMsg) {
 	}
 	m.rebase.start = &msg
 	body := rebaseConfirmText(msg)
-	m.confirm = confirm.Risky("Start the rebase?", body,
-		confirm.Button{ID: "cancel", Title: "Cancel"},
-		confirm.Button{ID: "rebase-start", Title: "Start Rebase", Style: confirm.StyleDestructive})
+	start := confirm.Button{ID: "rebase-start", Title: "Start Rebase", Style: confirm.StyleDestructive}
+	if msg.dirty {
+		start = confirm.Button{ID: "rebase-stash", Title: "Stash and Continue", Style: confirm.StyleDestructive}
+	}
+	m.confirm = confirm.Risky("Start the rebase?", body, confirm.Button{ID: "cancel", Title: "Cancel"}, start)
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindRebaseStart
@@ -245,6 +249,10 @@ func rebaseConfirmText(msg rebaseCheckMsg) string {
 		lines = append(lines, "", fmt.Sprintf("⚠ %s on %s already; you will need to force-push.", these, msg.upstream),
 			"termocode never force-pushes for you.")
 	}
+	if msg.dirty {
+		lines = append(lines, "", "You have uncommitted changes. Stash and Continue puts them aside",
+			"and back after the rebase.")
+	}
 	lines = append(lines, "", "Undo afterwards: git reset --hard ORIG_HEAD")
 	return strings.Join(lines, "\n")
 }
@@ -263,16 +271,17 @@ func (m *Model) onRebaseConfirm(id string) tea.Cmd {
 	}
 	check := *m.rebase.start
 	m.rebase.start = nil
-	if id != "rebase-start" {
+	if id != "rebase-start" && id != "rebase-stash" {
 		return nil // Cancel: the card is still open
 	}
+	opt := git.RebaseOptions{Autostash: id == "rebase-stash"}
 	m.closeRebaseCard()
 	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
 	return func() tea.Msg {
-		out, err := git.RunRebase(cwd, check.todo, git.RebaseOptions{})
+		out, err := git.RunRebase(cwd, check.todo, opt)
 		return rebaseDoneMsg{summary: check.todo.Summary(), out: out, err: err}
 	}
 }
