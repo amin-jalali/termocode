@@ -839,11 +839,12 @@ func New() Model {
 		gitViewTree = *sess.GitViewTree
 	}
 
+	ws := procWorkspace()
 	m := Model{
-		ws:               procWorkspace(),
+		ws:               ws,
 		sess:             newSessionWriter(),
 		activity:         activity.New(),
-		explorer:         explorer.New(),
+		explorer:         newExplorerFor(ws),
 		tabs:             tabbar.New(),
 		toast:            toast.New(),
 		status:           statusbar.New(),
