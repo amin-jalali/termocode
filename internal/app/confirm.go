@@ -39,6 +39,8 @@ const (
 	// Commit view (git_commit_view.go).
 	confirmKindCommitRevert
 	confirmKindCommitCherryPick
+	// Discard lines (git_lines.go).
+	confirmKindGitDiscardLines
 )
 
 // findBuffer returns the buffer info for the given id, if known.
@@ -194,6 +196,10 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 	case confirmKindGitDiscard:
 		if id == "discard" {
 			return m.gitDiscardConfirmed()
+		}
+	case confirmKindGitDiscardLines:
+		if id == "discard" {
+			return m.gitDiscardLinesConfirmed()
 		}
 	case confirmKindGitStageCommit:
 		if id == "stage" {

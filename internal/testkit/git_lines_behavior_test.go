@@ -83,3 +83,51 @@ func TestUnstageLineTakesOnlyTheCursorLineOut(t *testing.T) {
 		t.Errorf("the file on disk must not change: %q", got)
 	}
 }
+
+func TestDiscardLineAsksAndCancelIsFirst(t *testing.T) {
+	d := linesDriver(t)
+	gotoLine(d, "4")
+	d.Palette("git-discard-lines")
+	if !d.WaitForText("Discard line 4?", 3*time.Second) {
+		t.Fatalf("no card:\n%s", screen(d))
+	}
+	for _, l := range strings.Split(screen(d), "\n") {
+		if c := strings.Index(l, "Cancel"); c >= 0 {
+			if dsc := strings.Index(l, "Discard"); dsc < c {
+				t.Errorf("Cancel is not first on the card row: %q", l)
+			}
+		}
+	}
+	// Enter alone keeps everything.
+	d.Key("enter")
+	d.Settle(0)
+	if got := diskFile(d, "f.txt"); got != "l1\nX2\nl3\nX4\nl5\nl6\n" {
+		t.Fatalf("Enter on a fresh card changed the file: %q", got)
+	}
+	// Esc keeps everything too.
+	d.Palette("git-discard-lines")
+	d.Key("esc")
+	d.Settle(0)
+	if got := diskFile(d, "f.txt"); got != "l1\nX2\nl3\nX4\nl5\nl6\n" {
+		t.Fatalf("Esc changed the file: %q", got)
+	}
+}
+
+func TestDiscardLineRevertsOnlyThatLine(t *testing.T) {
+	d := linesDriver(t)
+	gotoLine(d, "4")
+	d.Palette("git-discard-lines")
+	if !d.WaitForText("Discard line 4?", 3*time.Second) {
+		t.Fatalf("no card:\n%s", screen(d))
+	}
+	clickButton(d, "Discard")
+	if !eventually(d, func() bool { return diskFile(d, "f.txt") == "l1\nX2\nl3\nl4\nl5\nl6\n" }) {
+		t.Fatalf("file on disk: %q", diskFile(d, "f.txt"))
+	}
+	if !eventually(d, func() bool { return !strings.Contains(bufLines(d), "X4") }) {
+		t.Errorf("the open buffer still shows X4: %q", bufLines(d))
+	}
+	if got := gitOut(d, "diff", "--cached", "--name-only"); got != "" {
+		t.Errorf("the index must not change: %q", got)
+	}
+}

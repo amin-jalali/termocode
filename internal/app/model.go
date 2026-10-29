@@ -570,6 +570,7 @@ type Model struct {
 	// buffer is :bdelete!'d. Empty means single-path delete via
 	// confirmTargetPath; populated means bulk delete.
 	confirmTargetPaths []string
+	confirmLines       [2]int // line range of the "discard lines" card (git_lines.go)
 	previewOpen        bool
 	help               helpState // the guide viewer's place and history (help.go)
 	promptOpen         bool

@@ -1737,6 +1737,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `git-diff` | Git: Show Diff for Current File | auto |   |
 | `git-discard` | Git: Discard Changes in Current File | confirm (always asks) |   |
 | `git-discard-hunk` | Git: Discard Hunk (at cursor) | confirm (always asks) |   |
+| `git-discard-lines` | Git: Discard Line (or Selected Lines) | confirm (always asks) |   |
 | `git-fetch` | Git: Fetch | confirm (git) |   |
 | `git-focus` | Git: Focus Source Control | auto |   |
 | `git-history` | Git: Show File History... | never | opens a picker or prompt that only the user can answer; use a typed tool |

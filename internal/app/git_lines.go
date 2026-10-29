@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -26,6 +27,11 @@ func (m *Model) gitStageLines() tea.Cmd { return m.gitLinesOp(gitLineStage) }
 // gitUnstageLines takes the line under the cursor, or the selected lines,
 // out of the index again.
 func (m *Model) gitUnstageLines() tea.Cmd { return m.gitLinesOp(gitLineUnstage) }
+
+// gitDiscardLines asks, then reverts the line under the cursor, or the
+// selected lines, to what the index holds. It loses work, so the card has
+// Cancel first and focused.
+func (m *Model) gitDiscardLines() tea.Cmd { return m.gitLinesOp(gitLineDiscard) }
 
 // gitLineRange is the lines the next line operation works on: the visual
 // selection of the editor, or just the cursor line. nvim is asked directly:
@@ -86,6 +92,10 @@ func (m *Model) gitLinesOp(kind gitLineKind) tea.Cmd {
 		return toastCmd
 	}
 	from, to := m.gitLineRange()
+	if kind == gitLineDiscard {
+		m.openGitDiscardLinesConfirm(rel, from, to)
+		return nil
+	}
 	var opErr error
 	var verb string
 	switch kind {
@@ -124,4 +134,39 @@ func (m *Model) gotoLineAfter(n int) {
 		return
 	}
 	_ = m.nvim.Command(fmt.Sprintf("silent! %d", n+1))
+}
+
+// openGitDiscardLinesConfirm opens the card for the destructive Discard Line.
+func (m *Model) openGitDiscardLinesConfirm(rel string, from, to int) {
+	m.confirm = confirm.Risky(
+		"Discard "+gitLineLabel(from, to)+"?",
+		fmt.Sprintf("This reverts the unstaged changes on %s of \"%s\". This cannot be undone.", gitLineLabel(from, to), rel),
+		confirm.Button{ID: "cancel", Title: "Cancel"},
+		confirm.Button{ID: "discard", Title: "Discard", Style: confirm.StyleDestructive},
+	)
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = confirmKindGitDiscardLines
+	m.confirmTargetPath = rel
+	m.confirmLines = [2]int{from, to}
+}
+
+// gitDiscardLinesConfirmed runs the discard once the user said yes.
+func (m *Model) gitDiscardLinesConfirmed() tea.Cmd {
+	cwd, err := m.rootDir()
+	if err != nil {
+		return nil
+	}
+	rel, from, to := m.confirmTargetPath, m.confirmLines[0], m.confirmLines[1]
+	var toastCmd tea.Cmd
+	if err := git.DiscardLines(cwd, rel, from, to); err != nil {
+		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Discard failed", err.Error())
+		return toastCmd
+	}
+	// The file on disk changed: let the editor reload it.
+	if m.nvim != nil {
+		_ = m.nvim.Command("silent! checktime")
+	}
+	m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Discarded "+gitLineLabel(from, to), filepath.Base(rel))
+	return tea.Batch(fetchGitCmd(), toastCmd)
 }
