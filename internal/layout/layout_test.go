@@ -75,3 +75,50 @@ func TestMarshalRoundTripsAndDropsUnknownKeys(t *testing.T) {
 		t.Fatalf("round trip: %v\n%+v\n%+v", err, again, l)
 	}
 }
+
+func TestTerminalPanesParseAndRoundTrip(t *testing.T) {
+	src := `{"panel":{"open":true,"terminals":[
+		{"name":"api","cwd":"cmd/api","panes":[
+			{"split":"right","cwd":"web"},
+			{"split":"down","parent":1}]},
+		{"name":"plain"}]}}`
+	l, err := Parse([]byte(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Terminal{
+		{Name: "api", Cwd: "cmd/api", Panes: []Pane{{Split: "right", Cwd: "web"}, {Split: "down", Parent: 1}}},
+		{Name: "plain"},
+	}
+	if !reflect.DeepEqual(l.Panel.Terminals, want) {
+		t.Fatalf("got %+v\nwant %+v", l.Panel.Terminals, want)
+	}
+	out, err := l.Marshal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again, err := Parse(out); err != nil || !reflect.DeepEqual(again, l) {
+		t.Fatalf("round trip: %v\n%s", err, out)
+	}
+	// A tab without panes writes no "panes" key: old files stay the same.
+	if strings.Count(string(out), `"panes"`) != 1 {
+		t.Errorf("only the tab with panes should have the key:\n%s", out)
+	}
+}
+
+func TestTerminalPanesRejectBadShapes(t *testing.T) {
+	cases := map[string]string{
+		"unknown split":  `[{"split":"left"}]`,
+		"no split":       `[{"cwd":"x"}]`,
+		"parent ahead":   `[{"split":"down","parent":1}]`,
+		"negative":       `[{"split":"down","parent":-1}]`,
+		"cwd leaves":     `[{"split":"right","cwd":"../x"}]`,
+		"too many panes": `[{"split":"right"},{"split":"right"},{"split":"right"},{"split":"right"}]`,
+	}
+	for name, panes := range cases {
+		src := `{"panel":{"open":true,"terminals":[{"panes":` + panes + `}]}}`
+		if _, err := Parse([]byte(src)); err == nil {
+			t.Errorf("%s: no error", name)
+		}
+	}
+}

@@ -55,7 +55,29 @@ type Terminal struct {
 	Name string `json:"name,omitempty"`
 	// Cwd is relative to the project folder.
 	Cwd string `json:"cwd,omitempty"`
+	// Panes are the tab's extra shells, in the order they were split off.
+	// The tab's own shell is pane 0; Panes[0] is pane 1, and so on.
+	// Older layout files have none.
+	Panes []Pane `json:"panes,omitempty"`
 }
+
+// Pane is one extra shell of a terminal tab.
+type Pane struct {
+	// Split is how it was made: "right" (beside its parent) or "down"
+	// (below it).
+	Split string `json:"split"`
+	// Parent is the pane it was split from: 0 is the tab's own shell, 1 the
+	// first entry of Panes. It must come before this pane.
+	Parent int `json:"parent,omitempty"`
+	// Cwd is relative to the project folder.
+	Cwd string `json:"cwd,omitempty"`
+}
+
+// MaxPanes is the most extra panes a tab can list (a tab holds 4 shells).
+const MaxPanes = 3
+
+// PaneSplits are the names of the two ways to split a pane.
+var PaneSplits = []string{"right", "down"}
 
 // Chat is the right panel (AI chat and actions).
 type Chat struct {
@@ -142,6 +164,9 @@ func (l Layout) Validate() error {
 			if err := relPath("terminal cwd", t.Cwd); err != nil {
 				return err
 			}
+			if err := validPanes(t.Panes); err != nil {
+				return err
+			}
 		}
 	}
 	if c := l.Chat; c != nil && c.Width < 0 {
@@ -161,6 +186,26 @@ func (l Layout) Validate() error {
 	}
 	if l.Focus != "" && !has(focusNames, l.Focus) {
 		return fmt.Errorf("focus %q is not one of %s", l.Focus, strings.Join(focusNames, ", "))
+	}
+	return nil
+}
+
+// validPanes checks the split shape of one terminal tab.
+func validPanes(panes []Pane) error {
+	if len(panes) > MaxPanes {
+		return fmt.Errorf("a terminal tab has at most %d extra panes", MaxPanes)
+	}
+	for k, p := range panes {
+		if !has(PaneSplits, p.Split) {
+			return fmt.Errorf("pane split %q is not one of %s", p.Split, strings.Join(PaneSplits, ", "))
+		}
+		// Pane k+1 can only be split off a pane made before it.
+		if p.Parent < 0 || p.Parent > k {
+			return fmt.Errorf("pane %d: parent %d must be an earlier pane (0 to %d)", k+1, p.Parent, k)
+		}
+		if err := relPath("pane cwd", p.Cwd); err != nil {
+			return err
+		}
 	}
 	return nil
 }
