@@ -1953,6 +1953,8 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, nil
 	case keymap.ActionItermocToggle:
 		return m, m.toggleItermoc()
+	case keymap.ActionLayoutOpen: // layout_palette.go
+		return m, m.openLayoutPicker()
 	case keymap.ActionGitCIFix: // G-CI (ci_card.go)
 		return m, m.ciFixWithAI()
 	// Group A — AI keys.

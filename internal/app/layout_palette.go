@@ -27,7 +27,7 @@ const layoutNoAI = "the AI changes the layout with the layout_set tool"
 // layoutPaletteItems are the palette's layout commands.
 func layoutPaletteItems() []picker.Item {
 	return []picker.Item{
-		{ID: "layout-open", Title: "Layout: Open…"},
+		{ID: "layout-open", Title: "Layout: Open…", Hint: "Alt+Y"},
 		{ID: "layout-save", Title: "Layout: Save As…"},
 		{ID: "layout-delete", Title: "Layout: Delete…"},
 		{ID: "layout-reset", Title: "Layout: Reset to Default"},

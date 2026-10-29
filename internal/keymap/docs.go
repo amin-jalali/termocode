@@ -130,6 +130,7 @@ var actionInfo = map[Action]ActionInfo{
 	ActionCloseSplit:      {"View", "Close the active split."},
 	ActionToggleWordWrap:  {"View", "Turn soft word wrap on or off."},
 	ActionToggleZenMode:   {"View", "Turn Zen mode on or off."},
+	ActionLayoutOpen:      {"View", "Open a saved layout: panels, sizes, splits and terminals (Layout: Open…)."},
 	ActionMarkdownPreview: {"View", "Open the Markdown preview for the active file."},
 	ActionShowBufferInfo:  {"View", "Show path, size, encoding and LSP info for the active file."},
 

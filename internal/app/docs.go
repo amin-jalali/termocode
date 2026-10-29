@@ -147,6 +147,7 @@ var paletteActions = map[string]keymap.Action{
 	"ai-agents":                   keymap.ActionAIToggleAgents,
 	"itermoc-open":                keymap.ActionItermocToggle,
 	"git-ci-fix":                  keymap.ActionGitCIFix,
+	"layout-open":                 keymap.ActionLayoutOpen,
 	"quit":                        keymap.ActionQuit,
 }
 

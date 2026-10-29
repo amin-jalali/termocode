@@ -173,6 +173,8 @@ const (
 	// hover label on screen, else the focused item (app/help_contexts.go).
 	// Shift+F1; xterm sends it as f13, which canonicalKey matches.
 	ActionContextHelp
+	// ActionLayoutOpen opens the Layout: Open… list (G-LAY): Alt+Y.
+	ActionLayoutOpen
 )
 
 // KittyOnlyKeys are default bindings a legacy terminal cannot send (or
@@ -519,6 +521,9 @@ func Default() KeyMap {
 			// F1 is the palette; Shift+F1 is free in every terminal we
 			// test (xterm sends f13).
 			"shift+f1": ActionContextHelp,
+
+			// Layouts: the list of saved layouts (Alt+Y, no Shift needed).
+			"alt+y": ActionLayoutOpen,
 
 			// Markdown preview: F7 (the canonical one-shot overlay) is the
 			// only binding now. We had a tab-based "live preview" attempt

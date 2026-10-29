@@ -1,6 +1,7 @@
 package app
 
 import (
+	tea "github.com/charmbracelet/bubbletea"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/layout"
 	"github.com/amin-jalali/termocode/internal/picker"
 )
@@ -133,5 +135,19 @@ func TestLayoutOpenReportsABrokenFileAndStillListsTheRest(t *testing.T) {
 	}
 	if got := toastText(m); !strings.Contains(got, "bad.jsonc is not a valid layout") {
 		t.Errorf("toast = %q", got)
+	}
+}
+
+func TestAltYOpensTheLayoutList(t *testing.T) {
+	m, _ := layoutWorld(t)
+	m.keys = keymap.Default()
+	m, _ = m.update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("y"), Alt: true})
+	if !m.pickerOpen || m.pickerKind != pickerKindLayoutOpen {
+		t.Fatalf("Alt+Y: picker open=%v kind=%v", m.pickerOpen, m.pickerKind)
+	}
+	for _, e := range PaletteCatalog() {
+		if e.ID == "layout-open" && (len(e.Keys) == 0 || e.Keys[0] != "alt+y") {
+			t.Errorf("palette keys = %v", e.Keys)
+		}
 	}
 }
