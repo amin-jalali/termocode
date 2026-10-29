@@ -68,6 +68,9 @@ type Driver struct {
 	ready   bool     // nvim.ReadyMsg seen
 	quit    bool     // the app returned tea.Quit
 	updates []string // every message Update got, in order (see Updates)
+	// work runs the model's calls on one goroutine, as Bubble Tea runs
+	// Update and View on its event loop (see call).
+	work chan func()
 }
 
 // New builds a sandboxed app model at opt.W × opt.H and settles it.
@@ -373,7 +376,17 @@ func (d *Driver) call(what string, f func()) (ok bool) {
 		stack    []byte
 	}
 	ch := make(chan result, 1)
-	go func() {
+	if d.work == nil {
+		w := make(chan func())
+		d.work = w
+		go func() {
+			for job := range w {
+				job()
+			}
+		}()
+		d.T.Cleanup(func() { close(w) })
+	}
+	d.work <- func() {
 		defer func() {
 			if r := recover(); r != nil {
 				ch <- result{r, debug.Stack()}
@@ -381,7 +394,7 @@ func (d *Driver) call(what string, f func()) (ok bool) {
 		}()
 		f()
 		ch <- result{}
-	}()
+	}
 	select {
 	case r := <-ch:
 		if r.panicked != nil {
@@ -390,6 +403,7 @@ func (d *Driver) call(what string, f func()) (ok bool) {
 		}
 		return true
 	case <-time.After(d.opt.StepTimeout):
+		d.work = nil // the worker hangs in f; a later call gets a new one
 		buf := make([]byte, 1<<20)
 		buf = buf[:runtime.Stack(buf, true)]
 		d.T.Fatalf("%s did not return within %v (hang)%s\nlast steps:\n  %s\ngoroutines:\n%s",
