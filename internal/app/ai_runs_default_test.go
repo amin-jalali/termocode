@@ -41,7 +41,7 @@ func (p *recordingAIProvider) Stream(_ context.Context, req ai.Request) <-chan a
 	if r.Delta != "" {
 		ch <- ai.Chunk{Delta: r.Delta}
 	}
-	ch <- ai.Chunk{Done: true, ToolCalls: r.ToolCalls, Usage: r.Usage}
+	ch <- ai.Chunk{Done: true, ToolCalls: r.ToolCalls, Usage: r.Usage, Err: r.Err}
 	close(ch)
 	return ch
 }
