@@ -25,6 +25,16 @@ type Stub struct {
 	Begins      int
 	Commits     int
 	Rollbacks   int
+
+	// Failure knobs for the error paths a user can hit.
+	PingError     error         // the server is down or refuses the login
+	BeginError    error         // BEGIN fails
+	CommitError   error         // COMMIT fails
+	RollbackError error         // ROLLBACK fails
+	RowsError     error         // the connection drops after RowsBefore rows
+	RowsBefore    int           // rows sent before RowsError
+	Block         chan struct{} // when set, queries wait until it closes or the context ends
+	Started       chan string   // when set, gets each query as it starts (buffered by the test)
 }
 
 func (s *Stub) Recorded() []string {
@@ -90,14 +100,21 @@ func (c *stubConn) Prepare(string) (driver.Stmt, error) {
 func (c *stubConn) Close() error { return nil }
 func (c *stubConn) Begin() (driver.Tx, error) {
 	c.stub.mu.Lock()
+	defer c.stub.mu.Unlock()
+	if c.stub.BeginError != nil {
+		return nil, c.stub.BeginError
+	}
 	c.stub.Begins++
-	c.stub.mu.Unlock()
 	return &stubTx{stub: c.stub}, nil
 }
 func (c *stubConn) BeginTx(context.Context, driver.TxOptions) (driver.Tx, error) {
 	return c.Begin()
 }
-func (c *stubConn) Ping(context.Context) error { return nil }
+func (c *stubConn) Ping(context.Context) error {
+	c.stub.mu.Lock()
+	defer c.stub.mu.Unlock()
+	return c.stub.PingError
+}
 func (c *stubConn) ExecContext(_ context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
 	c.stub.mu.Lock()
 	defer c.stub.mu.Unlock()
@@ -116,14 +133,27 @@ func (s *Stub) record(query string, args []driver.NamedValue) {
 	s.Args = append(s.Args, vals)
 }
 
-func (c *stubConn) QueryContext(_ context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+func (c *stubConn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+	c.stub.mu.Lock()
+	block, started := c.stub.Block, c.stub.Started
+	c.stub.mu.Unlock()
+	if started != nil {
+		started <- query
+	}
+	if block != nil {
+		select {
+		case <-block:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
 	c.stub.mu.Lock()
 	defer c.stub.mu.Unlock()
 	c.stub.record(query, args)
 	if c.stub.QueryError != nil {
 		return nil, c.stub.QueryError
 	}
-	return &stubRows{stub: c.stub, columns: append([]string(nil), c.stub.Columns...), types: append([]string(nil), c.stub.ColumnTypes...), rows: append([][]driver.Value(nil), c.stub.Rows...), repeatRows: c.stub.RepeatRows}, nil
+	return &stubRows{stub: c.stub, failErr: c.stub.RowsError, failAt: c.stub.RowsBefore, columns: append([]string(nil), c.stub.Columns...), types: append([]string(nil), c.stub.ColumnTypes...), rows: append([][]driver.Value(nil), c.stub.Rows...), repeatRows: c.stub.RepeatRows}, nil
 }
 
 var _ driver.Conn = (*stubConn)(nil)
@@ -136,14 +166,20 @@ type stubTx struct{ stub *Stub }
 
 func (tx stubTx) Commit() error {
 	tx.stub.mu.Lock()
+	defer tx.stub.mu.Unlock()
+	if tx.stub.CommitError != nil {
+		return tx.stub.CommitError
+	}
 	tx.stub.Commits++
-	tx.stub.mu.Unlock()
 	return nil
 }
 func (tx stubTx) Rollback() error {
 	tx.stub.mu.Lock()
+	defer tx.stub.mu.Unlock()
+	if tx.stub.RollbackError != nil {
+		return tx.stub.RollbackError
+	}
 	tx.stub.Rollbacks++
-	tx.stub.mu.Unlock()
 	return nil
 }
 
@@ -154,6 +190,8 @@ type stubRows struct {
 	rows       [][]driver.Value
 	i          int
 	repeatRows int
+	failErr    error
+	failAt     int
 }
 
 func (r *stubRows) Columns() []string { return r.columns }
@@ -165,6 +203,9 @@ func (r *stubRows) ColumnTypeDatabaseTypeName(index int) string {
 }
 func (r *stubRows) Close() error { return nil }
 func (r *stubRows) Next(dst []driver.Value) error {
+	if r.failErr != nil && r.i >= r.failAt {
+		return r.failErr
+	}
 	if r.repeatRows > 0 {
 		if r.i >= r.repeatRows || len(r.rows) == 0 {
 			return io.EOF
