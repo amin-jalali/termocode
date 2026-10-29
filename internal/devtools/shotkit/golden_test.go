@@ -250,6 +250,10 @@ func goldenCases() []goldenCase {
 		out = append(out, goldenCase{fmt.Sprintf("%s-80x24", sc.Name), sc, 80, 24})
 	}
 	out = append(out, goldenCase{"setup-card-100x30", setupCardScene(), 100, 30})
+	// Wide glyphs in names, text, commit subjects and a toast (SCN-11).
+	for _, sc := range WideScenes() {
+		out = append(out, goldenCase{sc.Name + "-80x24", sc, 80, 24})
+	}
 	out = append(out, keyHintCases()...)
 	out = append(out, kubeCases()...) // golden_kube_test.go
 	// A terminal tab split into three panes (G-SPL).
