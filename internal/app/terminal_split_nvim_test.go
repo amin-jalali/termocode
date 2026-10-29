@@ -92,3 +92,28 @@ func TestSplitRefusedWhenTooNarrow(t *testing.T) {
 		t.Fatalf("a refused split changed something: panes=%d wins=%d/%d", m.terminalTabs[0].paneCount(), nvimWinCount(t, m), before)
 	}
 }
+
+func TestFocusFollowsPanes(t *testing.T) {
+	m := splitTestModel(t, 120, 30)
+	m.splitTerminalPane(paneRight)
+	tab := &m.terminalTabs[0]
+	curWin := func() int {
+		out, _ := m.nvim.EvalLuaString(`return tostring(vim.api.nvim_get_current_win())`)
+		return parseInt(out)
+	}
+	m.focusNextTerminalPane(1) // from pane 1 wraps to pane 0
+	if tab.PaneFocus != 0 || curWin() != m.terminalWinID {
+		t.Fatalf("after next: focus=%d win=%d want pane 0 / %d", tab.PaneFocus, curWin(), m.terminalWinID)
+	}
+	m.focusNextTerminalPane(-1) // back wraps to the last pane
+	if tab.PaneFocus != 1 || curWin() != tab.Splits[0].WinID {
+		t.Fatalf("after prev: focus=%d win=%d", tab.PaneFocus, curWin())
+	}
+	// A click makes nvim focus a window; the state message reports it.
+	if !m.syncPaneFocus(m.terminalWinID) || tab.PaneFocus != 0 {
+		t.Errorf("clicking pane 0: focus=%d", tab.PaneFocus)
+	}
+	if m.syncPaneFocus(999999) {
+		t.Error("a window that is not a pane must not count as the terminal")
+	}
+}

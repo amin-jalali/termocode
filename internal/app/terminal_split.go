@@ -127,3 +127,51 @@ func intList(ids []int) string {
 	}
 	return s
 }
+
+// syncPaneFocus reports whether nvim's current window win is a shell window
+// of the active terminal tab, and if so records which pane it is. A click on
+// a pane makes nvim focus its window; this is how termocode learns of it.
+func (m *Model) syncPaneFocus(win int) bool {
+	tab := m.activeTerminalTab()
+	if tab == nil || win <= 0 {
+		return false
+	}
+	for i := 0; i < tab.paneCount(); i++ {
+		if m.paneWin(*tab, i) == win {
+			tab.PaneFocus = i
+			return true
+		}
+	}
+	return false
+}
+
+// focusTerminalPane moves the keyboard to pane i of the active tab.
+func (m *Model) focusTerminalPane(i int) {
+	tab := m.activeTerminalTab()
+	if m.nvim == nil || tab == nil || i < 0 || i >= tab.paneCount() {
+		return
+	}
+	win := m.paneWin(*tab, i)
+	if win <= 0 {
+		return
+	}
+	tab.PaneFocus = i
+	_ = m.nvim.ExecLua(fmt.Sprintf(`
+		local w = %d
+		if vim.api.nvim_win_is_valid(w) then
+			pcall(vim.api.nvim_set_current_win, w)
+			vim.schedule(function() pcall(vim.cmd, 'startinsert') end)
+		end`, win))
+	m.focus = FocusEditor
+}
+
+// focusNextTerminalPane moves the keyboard to the next pane, wrapping
+// around (step -1 goes back).
+func (m *Model) focusNextTerminalPane(step int) {
+	tab := m.activeTerminalTab()
+	if tab == nil || tab.paneCount() < 2 {
+		return
+	}
+	n := tab.paneCount()
+	m.focusTerminalPane(((tab.focusedPane()+step)%n + n) % n)
+}

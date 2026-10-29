@@ -952,7 +952,7 @@ end })`)
 		// or the user moves focus to an editor window.
 		m.inTerminal = m.termOpen && m.terminalWinID > 0 &&
 			m.panelActive == panelKindTerminal &&
-			msg.CurrentWin == m.terminalWinID && msg.Mode == "t"
+			m.syncPaneFocus(msg.CurrentWin) && msg.Mode == "t"
 		return m, tea.Batch(m.maybeRefreshStickyContext(), m.maybeRefreshScrollbarMarkers(), reloadToastCmd, lspSuggestCmd, sessCmd), true
 	case sessionIdleMsg:
 		m.sess.flushIdle(msg.gen)
