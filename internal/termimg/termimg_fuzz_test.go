@@ -1,6 +1,16 @@
 package termimg
 
-import "testing"
+import (
+	"bytes"
+	"image"
+	"image/color"
+	"image/gif"
+	"image/jpeg"
+	"image/png"
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 // FuzzProbeReply reads any terminal answer. A cell size is either both
 // numbers above zero or none, and the mode names never panic.
@@ -41,6 +51,36 @@ func FuzzFit(f *testing.F) {
 		}
 		if cols < 1 || rows < 1 || cols > mc || rows > mr {
 			t.Fatalf("Fit(%d,%d,%d,%d,%d,%d) = %dx%d", iw, ih, mc, mr, cw, ch, cols, rows)
+		}
+	})
+}
+
+// FuzzDecode reads any bytes as an image file. It never panics, and an
+// image it returns is not empty and keeps to MaxPixels.
+func FuzzDecode(f *testing.F) {
+	var buf bytes.Buffer
+	_ = png.Encode(&buf, image.NewGray(image.Rect(0, 0, 3, 2)))
+	f.Add(buf.Bytes())
+	buf.Reset()
+	_ = gif.Encode(&buf, image.NewPaletted(image.Rect(0, 0, 2, 2), []color.Color{color.Black, color.White}), nil)
+	f.Add(buf.Bytes())
+	buf.Reset()
+	_ = jpeg.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 4, 4)), nil)
+	f.Add(buf.Bytes())
+	f.Add([]byte("RIFF\x00\x00\x00\x00WEBPVP8 "))
+	f.Add([]byte("not an image"))
+	f.Fuzz(func(t *testing.T, b []byte) {
+		p := filepath.Join(t.TempDir(), "x.img")
+		if err := os.WriteFile(p, b, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		img, err := Decode(p, 1<<20)
+		if err != nil {
+			return
+		}
+		r := img.Bounds()
+		if r.Dx() <= 0 || r.Dy() <= 0 || int64(r.Dx())*int64(r.Dy()) > MaxPixels {
+			t.Fatalf("decoded bounds %v", r)
 		}
 	})
 }
