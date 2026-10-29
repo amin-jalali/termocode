@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -101,7 +102,7 @@ func (im *Imported) moveSecrets() {
 			if !ok || !secretLiteralRe.MatchString(refRe.ReplaceAllString(s, "")) {
 				continue
 			}
-			name := secretName(im.Name, k)
+			name := im.freeName(secretName(im.Name, k))
 			if scheme, tok, ok := strings.Cut(s, " "); ok && field == "headers" && !strings.Contains(tok, " ") &&
 				(strings.EqualFold(scheme, "Bearer") || strings.EqualFold(scheme, "Sentry-Bearer") || strings.EqualFold(scheme, "Basic") || strings.EqualFold(scheme, "token")) {
 				im.Secrets[name] = tok
@@ -122,10 +123,22 @@ func (im *Imported) moveSecrets() {
 			if !ok || !strings.EqualFold(k, "client_secret") || s == "" || strings.Contains(s, "${") {
 				continue
 			}
-			name := secretName(im.Name, "client_secret")
+			name := im.freeName(secretName(im.Name, "client_secret"))
 			im.Secrets[name] = s
 			o[k] = "${secret:" + name + "}"
 		}
+	}
+}
+
+// freeName is base, or base_2, base_3, … when another field of this
+// server already took base ("Token" and "TOKEN" both give x_token).
+func (im *Imported) freeName(base string) string {
+	name := base
+	for i := 2; ; i++ {
+		if _, taken := im.Secrets[name]; !taken {
+			return name
+		}
+		name = base + "_" + strconv.Itoa(i)
 	}
 }
 
