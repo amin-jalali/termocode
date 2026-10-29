@@ -11,6 +11,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/services"
+	"github.com/amin-jalali/termocode/internal/services/servicestest"
 )
 
 // Registry tags and registry config: what the user sees when a registry
@@ -50,7 +53,9 @@ func TestRegistryTokenServerFailures(t *testing.T) {
 	}{
 		{"no realm", func(string) string { return `Bearer service="reg"` }, nil, "", true},
 		{"relative realm", func(string) string { return `Bearer realm="/token"` }, nil, "not a plain https URL", false},
-		{"realm with user", func(b string) string { return `Bearer realm="` + strings.Replace(b, "https://", "https://u:p@", 1) + `/token"` }, nil, "not a plain https URL", false},
+		{"realm with user", func(b string) string {
+			return `Bearer realm="` + strings.Replace(b, "https://", "https://u:p@", 1) + `/token"`
+		}, nil, "not a plain https URL", false},
 		{"token server error", realm, func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusInternalServerError) }, "the token server answered 500", false},
 		{"token not json", realm, func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, "<html>") }, "no usable token", false},
 		{"empty token", realm, func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, `{"token":""}`) }, "no usable token", false},
@@ -255,3 +260,21 @@ func TestValidRegistryHostAndUserLength(t *testing.T) {
 	}
 }
 
+// A login that fails with nothing on stderr names the exit code; an
+// engine that cannot start names the start error, never the password.
+func TestLoginSilentFailureAndMissingEngine(t *testing.T) {
+	f := servicestest.New(t)
+	f.Set(t, "login.err", "")
+	e := Engine{Binary: f.Docker(), Kind: "docker", X: services.SpawnExec{}}
+	if err := e.Login(context.Background(), "ghcr.io", "amin", "pw-1"); err == nil || err.Error() != "login exited 1" {
+		t.Fatalf("silent login: %v", err)
+	}
+	if err := e.Login(context.Background(), "ghcr.io", "amin", ""); err == nil || err.Error() != "login exited 1" {
+		t.Fatalf("empty password login: %v", err)
+	}
+	gone := Engine{Binary: filepath.Join(t.TempDir(), "pw-1"), Kind: "docker", X: services.SpawnExec{}}
+	err := gone.Login(context.Background(), "ghcr.io", "amin", "pw-1")
+	if err == nil || strings.Contains(err.Error(), "pw-1") || !strings.Contains(err.Error(), "[REDACTED]") {
+		t.Fatalf("missing engine login: %v", err)
+	}
+}
