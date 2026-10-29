@@ -73,8 +73,24 @@ func (r gitPanelRow) selectable() bool {
 // gitPanelRows flattens the accordion into one indexable row list: an optional
 // STAGED section, the CHANGES section, then the GRAPH section — each a header
 // plus its contents (unless collapsed), separated by spacer rows.
+//
+// With tens of thousands of changed files this list is big and it is
+// asked for many times per key and frame, so the file part is kept
+// (gitFileRowsMemo) and the whole list is reused while the GRAPH part
+// is unchanged (git_rows_memo.go).
 func (m Model) gitPanelRows() []gitPanelRow {
-	rows := make([]gitPanelRow, 0, len(m.gitFiles)+len(m.gitCommits)+16)
+	prefix := m.gitFileRowsCached()
+	graph := []gitPanelRow{{kind: gitRowSpacer}, {kind: gitRowSection, section: gitSecGraph}}
+	if !m.gitGraphCollapsed {
+		graph = m.appendGraphRows(graph)
+	}
+	return gitJoinRows(prefix, graph)
+}
+
+// gitFileRows is the part of gitPanelRows above GRAPH: the rebase
+// banner and the CONFLICTS, STAGED and CHANGES sections.
+func (m Model) gitFileRows() []gitPanelRow {
+	rows := make([]gitPanelRow, 0, len(m.gitFiles)+16)
 
 	// Partition files: a file with index-side changes is "staged"; one with
 	// worktree changes (or untracked) is "changed". A file edited after staging
@@ -136,13 +152,6 @@ func (m Model) gitPanelRows() []gitPanelRow {
 			rows = append(rows, gitPanelRow{kind: gitRowNote, note: "No changes"})
 		}
 		appendFiles(vis, gitSecChanges)
-	}
-
-	// GRAPH.
-	rows = append(rows, gitPanelRow{kind: gitRowSpacer})
-	rows = append(rows, gitPanelRow{kind: gitRowSection, section: gitSecGraph})
-	if !m.gitGraphCollapsed {
-		rows = m.appendGraphRows(rows)
 	}
 	return rows
 }
