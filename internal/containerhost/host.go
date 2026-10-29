@@ -39,6 +39,9 @@ type Config struct {
 	X services.Exec
 	// Timeout bounds one file operation (0 = DefaultTimeout).
 	Timeout time.Duration
+	// LocalEngine says the engine runs on this machine, so a bind-mounted
+	// workspace can be read and written on the local disk (mountfs).
+	LocalEngine bool
 	// MaxFileSize is the largest file ReadFile reads (0 =
 	// DefaultMaxFileSize).
 	MaxFileSize int64
@@ -64,6 +67,7 @@ type Host struct {
 	cuser  string // Config.User of the container
 	mounts []mount
 
+	fs      workspace.FS
 	caps    workspace.Caps
 	uid     int
 	gid     int
@@ -117,6 +121,15 @@ func New(ctx context.Context, cfg Config) (*Host, error) {
 	if err := h.probe(ctx); err != nil {
 		return nil, err
 	}
+	h.fs = containerFS{h}
+	if local := h.mountOf(); local != "" {
+		if m, err := newMountFS(h, local); err == nil {
+			h.fs = m
+			h.mu.Lock()
+			h.caps.MountOf = local
+			h.mu.Unlock()
+		}
+	}
 	return h, nil
 }
 
@@ -127,8 +140,9 @@ func (h *Host) Workspace() workspace.Workspace {
 	return workspace.Workspace{ID: h.ID(), Kind: workspace.KindContainer, Root: h.cfg.Root, Host: h}
 }
 
-// FS is the container's file system for the workspace.
-func (h *Host) FS() workspace.FS { return containerFS{h} }
+// FS is the container's file system for the workspace: the local disk
+// for a bind mount on a local engine, else the engine CLI.
+func (h *Host) FS() workspace.FS { return h.fs }
 
 // ID is the workspace ID: "container:<context>/<name>:<root>"; the
 // context is "default" when none is set.
