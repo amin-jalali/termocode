@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -62,6 +63,11 @@ func TestSSHSessionPrivateAndRSS(t *testing.T) {
 	}
 	if err := json.Unmarshal(b, &info); err != nil || info.PID == 0 {
 		t.Fatalf("session info %q: %v", b, err)
+	}
+	if runtime.GOOS != "linux" {
+		t.Log("idle memory not logged: it reads /proc (Linux only)")
+		tm.Quit()
+		return
 	}
 	time.Sleep(2 * time.Second) // idle
 	var parts []string

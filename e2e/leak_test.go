@@ -33,6 +33,10 @@ func watchLeaks(t *testing.T, home string, dirs ...string) {
 	if _, loaded := leakWatched.LoadOrStore(home, true); loaded {
 		return
 	}
+	if runtime.GOOS != "linux" {
+		t.Log("leak check skipped: it reads /proc (Linux only; the Linux e2e job runs it)")
+		return
+	}
 	dirs = append([]string{home}, dirs...)
 	t.Cleanup(func() {
 		left := waitNoProcs(home, dirs, leakWait)
@@ -58,6 +62,14 @@ func waitNoProcs(home string, dirs []string, timeout time.Duration) []string {
 			return left
 		}
 		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+// needProcFS skips a test that finds processes through /proc.
+func needProcFS(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS != "linux" {
+		t.Skip("reads /proc to find processes: Linux only (the Linux e2e job runs it)")
 	}
 }
 
