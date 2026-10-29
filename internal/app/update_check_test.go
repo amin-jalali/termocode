@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -19,21 +20,22 @@ import (
 // updFake is a GitHub stand-in (https, random port) with one release.
 type updFake struct {
 	srv  *httptest.Server
-	tag  string
+	tag  atomic.Value // string
 	fail atomic.Bool
 	hits atomic.Int32
 }
 
 func newUpdFake(t *testing.T, tag string) *updFake {
 	t.Helper()
-	f := &updFake{tag: tag}
+	f := &updFake{}
+	f.tag.Store(tag)
 	f.srv = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		f.hits.Add(1)
 		if f.fail.Load() {
 			http.Error(w, "down", http.StatusBadGateway)
 			return
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"tag_name": f.tag, "html_url": f.srv.URL + "/notes"})
+		_ = json.NewEncoder(w).Encode(map[string]any{"tag_name": f.tag.Load(), "html_url": f.srv.URL + "/notes"})
 	}))
 	t.Cleanup(f.srv.Close)
 	return f
@@ -146,5 +148,39 @@ func TestUpdateBackgroundCheckOff(t *testing.T) {
 	}
 	if f.hits.Load() != 0 {
 		t.Fatal("GitHub was asked")
+	}
+}
+
+// One toast per new version; its click opens the card.
+func TestUpdateToastOncePerVersion(t *testing.T) {
+	f := newUpdFake(t, "v0.2.0")
+	useUpdFake(t, f, "v0.1.0", updNow)
+	updInstalled(t, "")
+	m := &Model{w: 160, h: 40}
+	updRun(t, m, m.updateInitCmd())
+	if m.toast.Empty() {
+		t.Fatal("no toast for a new version")
+	}
+	cards := m.toast.Cards(80)
+	if len(cards) != 1 || cards[0].Click == nil || !strings.Contains(strings.Join(cards[0].Lines, "\n"), "termocode v0.2.0 is out") {
+		t.Fatalf("toast %+v", cards)
+	}
+	if _, ok := m.handleUpdateMsg(cards[0].Click); !ok || !m.confirmOpen || m.confirmKind != confirmKindUpdateNotice {
+		t.Fatal("the toast click does not open the card")
+	}
+	// The next start (a day later, same release): chip, no toast.
+	clock.Set(func() time.Time { return updNow.Add(25 * time.Hour) })
+	m2 := &Model{w: 160, h: 40}
+	updRun(t, m2, m2.updateInitCmd())
+	if !m2.toast.Empty() || m2.statusState().Update != "v0.2.0" {
+		t.Fatal("second start: want the chip and no toast")
+	}
+	// A newer release toasts again.
+	f.tag.Store("v0.3.0")
+	clock.Set(func() time.Time { return updNow.Add(50 * time.Hour) })
+	m3 := &Model{w: 160, h: 40}
+	updRun(t, m3, m3.updateInitCmd())
+	if m3.toast.Empty() {
+		t.Fatal("v0.3.0: no toast")
 	}
 }

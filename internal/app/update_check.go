@@ -11,6 +11,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/statusbar"
+	"github.com/amin-jalali/termocode/internal/toast"
 	"github.com/amin-jalali/termocode/internal/update"
 )
 
@@ -100,9 +101,29 @@ func (m *Model) handleUpdateMsg(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case updateCheckedMsg:
 		m.updW().state = msg.state
-		return nil, true
+		return m.updateToast(), true
+	case updateCardClickMsg:
+		return m.openUpdateCard(), true
 	}
 	return nil, false
+}
+
+// updateCardClickMsg is a click on the "is out" toast.
+type updateCardClickMsg struct{}
+
+// updateToast says once per version that a newer release is out (the
+// chip stays until it is installed or skipped).
+func (m *Model) updateToast() tea.Cmd {
+	w := m.updW()
+	if !w.state.ShouldToast(termocodeVersion) {
+		return nil
+	}
+	tag := w.state.Available(termocodeVersion)
+	w.state.Notified = tag
+	_ = update.SaveState(update.StatePath(updateDepsFor().getenv), w.state)
+	var c tea.Cmd
+	m.toast, c = m.toast.PushClick(toast.Info, "termocode "+tag+" is out", "Click: Update · Release notes · Skip this version", updateCardClickMsg{})
+	return c
 }
 
 // fillUpdateStatus sets the status-bar update chip.

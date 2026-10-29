@@ -211,7 +211,8 @@ nothing. Builds from source (`termocode --version` says `dev`) never look.
 Turn it off with the setting `update_check`.
 
 When a newer release is out, the status bar shows a quiet chip such as
-`⬆ v0.2.0`. Click it to see the card:
+`⬆ v0.2.0`, and one toast says so (once per version). Click the chip or
+the toast to see the card:
 
 - **Release notes** opens the release page.
 - **Skip this version** hides the chip until an even newer release comes.
