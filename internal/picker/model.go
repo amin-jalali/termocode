@@ -1,8 +1,6 @@
 package picker
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -124,12 +122,6 @@ func NewItems(title string, items []Item) Model {
 	m := Model{title: title, items: items}
 	m.refilter()
 	return m
-}
-
-// New is kept for backward compatibility — it builds a file picker that
-// walks cwd.
-func New() Model {
-	return NewWith(" Go to file ", filesLoader)
 }
 
 func (m Model) Init() tea.Cmd {
@@ -1028,44 +1020,6 @@ func (m Model) renderResultRow(match fuzzy.Match, it Item, active bool, w int) s
 		rendered += fill.Render(strings.Repeat(" ", pad))
 	}
 	return rendered
-}
-
-// filesLoader walks cwd and returns one Item per file.
-func filesLoader() []Item {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil
-	}
-	var items []Item
-	skipDirs := map[string]bool{
-		".git":         true,
-		"node_modules": true,
-		"vendor":       true,
-		"dist":         true,
-		"build":        true,
-		"target":       true,
-		"__pycache__":  true,
-		".idea":        true,
-		".vscode":      true,
-		".cache":       true,
-	}
-	_ = filepath.Walk(cwd, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-		if info.IsDir() {
-			name := info.Name()
-			if path != cwd && (skipDirs[name] || (strings.HasPrefix(name, ".") && name != ".")) {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if rel, err := filepath.Rel(cwd, path); err == nil {
-			items = append(items, Item{ID: rel, Title: rel, File: true})
-		}
-		return nil
-	})
-	return items
 }
 
 // isMouseCodeRunes reports whether `runes` consists ENTIRELY of bytes
