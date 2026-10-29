@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"runtime"
 	"slices"
 	"sort"
@@ -301,29 +300,28 @@ func (st *servicesState) containerRowsOf(key string) []svcRow {
 	if len(st.containerRows) == 0 {
 		return append(out, svcRow{kind: svcRowHint, section: key, text: "No containers"})
 	}
-	index := make(map[string]int, len(st.containerRows))
-	for i, c := range st.containerRows {
-		index[c.ID] = i
-	}
-	for _, g := range containers.GroupByProject(st.containerRows, st.project) {
+	groups := containers.GroupIndexes(st.containerRows, st.project)
+	out = slices.Grow(out, len(groups)+len(st.containerRows)+4)
+	for _, g := range groups {
 		gkey := hostGroup("containers", g.Name)
 		up := 0
-		for _, c := range g.Containers {
-			if strings.EqualFold(c.State, "running") {
+		for _, i := range g.Idx {
+			if strings.EqualFold(st.containerRows[i].State, "running") {
 				up++
 			}
 		}
 		out = append(out, svcRow{kind: svcRowGroup, section: gkey, name: g.Name,
-			count: fmt.Sprintf("%d/%d", up, len(g.Containers)), current: st.project != "" && g.Name == st.project})
+			count: strconv.Itoa(up) + "/" + strconv.Itoa(len(g.Idx)), current: st.project != "" && g.Name == st.project})
 		if st.collapsed[gkey] && st.filter == "" { // a filter looks inside folded groups
 			continue
 		}
-		for _, c := range g.Containers {
-			group := g.Name
-			if g.IsOther {
-				group = ""
-			}
-			out = append(out, svcRow{kind: svcRowHostItem, section: key, host: hostContainer, idx: index[c.ID],
+		group := g.Name
+		if g.IsOther {
+			group = ""
+		}
+		for _, i := range g.Idx {
+			c := st.containerRows[i]
+			out = append(out, svcRow{kind: svcRowHostItem, section: key, host: hostContainer, idx: i,
 				hostID: c.ID, name: containerDisplayName(c, group), depth: 1})
 			out = append(out, st.statsDetailRows(c, 2)...)
 		}
@@ -508,7 +506,7 @@ func storageRowDetail(st *servicesState, r svcRow) string {
 // hostGroupKeys are the group keys the current data has (folded or not).
 func (st *servicesState) hostGroupKeys() map[string]bool {
 	out := map[string]bool{}
-	for _, g := range containers.GroupByProject(st.containerRows, st.project) {
+	for _, g := range containers.GroupIndexes(st.containerRows, st.project) {
 		out[hostGroup("containers", g.Name)] = true
 	}
 	_, repos := st.imageRepos()
