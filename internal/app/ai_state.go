@@ -170,6 +170,9 @@ type aiState struct {
 	act         aiActivity // the activity line (ai_activity.go)
 	attachments []aiAttachment
 	restored    bool
+	// claim holds the shown chat against other termocode windows on the
+	// same store (ai_chat_claim.go).
+	claim *ai.ChatClaim
 
 	// pending tool confirmation (agent goroutine waits on reply)
 	confirm *aiPendingConfirm
