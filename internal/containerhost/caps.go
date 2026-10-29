@@ -2,6 +2,8 @@ package containerhost
 
 import (
 	"context"
+	"encoding/json"
+	"io/fs"
 	"strconv"
 	"strings"
 
@@ -66,6 +68,13 @@ func (h *Host) probe(ctx context.Context) error {
 		return err
 	}
 	if code != 0 {
+		low := strings.ToLower(stderr)
+		switch {
+		case strings.Contains(low, "chdir"):
+			return &fs.PathError{Op: "open", Path: h.cfg.Root, Err: fs.ErrNotExist}
+		case (code == 126 || code == 127) && (strings.Contains(low, "not found") || strings.Contains(low, "no such file")):
+			return h.probeNoShell(ctx)
+		}
 		return h.engineErr("probe", h.cfg.Root, stderr, code)
 	}
 	c := workspace.Caps{HasShell: true}
@@ -104,6 +113,56 @@ func (h *Host) probe(ctx context.Context) error {
 	}
 	h.mu.Unlock()
 	return nil
+}
+
+// probeNoShell fills Caps for an image without sh (distroless): the
+// user from the container's config, the arch from its image.
+func (h *Host) probeNoShell(ctx context.Context) error {
+	h.mu.Lock()
+	user, image := h.cuser, h.image
+	h.mu.Unlock()
+	if h.cfg.User != "" {
+		user = h.cfg.User
+	}
+	c := workspace.Caps{User: user}
+	if c.User == "" {
+		c.User = "0"
+	}
+	if image != "" {
+		out, _, code, err := h.call(ctx, nil, "image", "inspect", image)
+		if err == nil && code == 0 {
+			var items []struct{ Architecture string }
+			if json.Unmarshal([]byte(out), &items) == nil && len(items) > 0 {
+				c.Arch = normArch(items[0].Architecture)
+			}
+		}
+	}
+	uid, gid, ok := numericUser(c.User)
+	h.mu.Lock()
+	h.caps = c
+	h.uid, h.gid, h.idKnown = uid, gid, ok
+	h.mu.Unlock()
+	return nil
+}
+
+// numericUser reads "uid" or "uid:gid" ("" = root). A name has no
+// numeric id without a shell to ask.
+func numericUser(u string) (uid, gid int, ok bool) {
+	if u == "" {
+		return 0, 0, true
+	}
+	us, gs, hasG := strings.Cut(u, ":")
+	uid, err := strconv.Atoi(us)
+	if err != nil {
+		return 0, 0, false
+	}
+	gid = uid
+	if hasG {
+		if gid, err = strconv.Atoi(gs); err != nil {
+			return 0, 0, false
+		}
+	}
+	return uid, gid, true
 }
 
 // normArch spells uname -m like Go and the engine do.
