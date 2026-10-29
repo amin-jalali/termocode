@@ -272,3 +272,58 @@ func TestSCMRebaseContinueAndSkip(t *testing.T) {
 		t.Errorf("history:\n%s", got)
 	}
 }
+
+// Spec: F on a GRAPH commit folds the staged changes into it after a
+// confirm (Cancel first and focused); the history keeps its subjects.
+// With unstaged changes too, the button is Stash and Fixup and they come
+// back after.
+func TestSCMFixupInto(t *testing.T) {
+	d, r := scmDriver(t, func(r *repo) {
+		rebaseRepo(r)
+		r.write("f2.txt", "fixed 2\n")
+		r.git("add", "f2.txt")
+		r.write("f4.txt", "unstaged\n")
+	})
+	scmClickText(d, "c2")
+	d.Key("F")
+	if !until(d, func() bool { return strings.Contains(text(d), "Fixup into") }) {
+		t.Fatalf("no fixup confirm:%s", dump(d))
+	}
+	if s := text(d); !strings.Contains(s, "Fold the staged changes (1 file)") || !strings.Contains(s, "Stash and Fixup") {
+		t.Errorf("confirm text:%s", dump(d))
+	}
+	head := r.git("rev-parse", "HEAD")
+	d.Key("enter") // Cancel
+	d.Settle(0)
+	if r.git("rev-parse", "HEAD") != head {
+		t.Fatal("Enter ran the fixup")
+	}
+	scmClickText(d, "c2")
+	d.Key("F")
+	if !until(d, func() bool { return strings.Contains(text(d), "Fixup into") }) {
+		t.Fatalf("no fixup confirm:%s", dump(d))
+	}
+	clickTarget(d, "confirm:fixup-stash")
+	if !until(d, func() bool { return strings.Contains(text(d), "staged changes folded into") }) {
+		t.Fatalf("no done toast:%s", dump(d))
+	}
+	if got := r.git("log", "--format=%s"); got != "c4\nc3\nc2\nc1\ninit" {
+		t.Errorf("history:\n%s", got)
+	}
+	if got := r.git("show", "HEAD~2:f2.txt"); got != "fixed 2" {
+		t.Errorf("c2's f2.txt %q", got)
+	}
+	if got := r.read("f4.txt"); got != "unstaged\n" {
+		t.Errorf("unstaged change lost: %q", got)
+	}
+}
+
+// Spec: with nothing staged, F says so and runs nothing.
+func TestSCMFixupNothingStaged(t *testing.T) {
+	d, _ := scmDriver(t, rebaseRepo)
+	scmClickText(d, "c2")
+	d.Key("F")
+	if !until(d, func() bool { return strings.Contains(text(d), "Nothing is staged") }) {
+		t.Fatalf("no toast:%s", dump(d))
+	}
+}

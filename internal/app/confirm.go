@@ -44,6 +44,7 @@ const (
 	confirmKindBulkRename
 	confirmKindRebaseStart   // git_rebase.go
 	confirmKindRebaseControl // Continue / Skip / Abort a stopped rebase
+	confirmKindRebaseFixup   // fixup staged changes into a commit (git_fixup.go)
 )
 
 // findBuffer returns the buffer info for the given id, if known.
@@ -168,6 +169,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		return m.onRebaseConfirm(id)
 	case confirmKindRebaseControl:
 		return m.onRebaseControl(id)
+	case confirmKindRebaseFixup:
+		return m.onFixupConfirm(id)
 	case confirmKindCloseBuffer:
 		switch id {
 		case "cancel":

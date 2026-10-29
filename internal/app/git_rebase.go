@@ -175,6 +175,8 @@ func (m *Model) onRebaseMsg(msg tea.Msg) tea.Cmd {
 		m.openRebaseConfirm(msg)
 	case rebaseDoneMsg:
 		return m.onRebaseDone(msg)
+	case fixupCheckMsg:
+		return m.openFixupConfirm(msg)
 	}
 	return nil
 }
