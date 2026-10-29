@@ -48,7 +48,21 @@ func errorReason(out string) string {
 		return ""
 	}
 	if l := find(func(l string) bool { return strings.HasPrefix(l, "fatal:") }); l != "" {
-		return strings.TrimSpace(strings.TrimPrefix(l, "fatal:"))
+		reason := strings.TrimSpace(strings.TrimPrefix(l, "fatal:"))
+		// Over ssh git always ends with this line; ssh's own line before
+		// it says why (refused, no network, no key).
+		if reason == "Could not read from remote repository." {
+			for _, p := range lines {
+				p = strings.TrimSpace(p)
+				if p == l {
+					break
+				}
+				if p != "" && !strings.HasPrefix(p, "hint:") && !strings.HasPrefix(p, "warning:") {
+					return p
+				}
+			}
+		}
+		return reason
 	}
 	if l := find(func(l string) bool { return strings.HasPrefix(l, "! [") }); l != "" {
 		return strings.Join(strings.Fields(strings.TrimPrefix(l, "! ")), " ")
