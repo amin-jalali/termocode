@@ -8,6 +8,8 @@ import (
 	"path"
 	"sort"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/workspace"
 )
 
 // shfs: `sh -c` one-liners for the file operations that need more than
@@ -138,5 +140,33 @@ func (f containerFS) mkdir(ctx context.Context, abs string, perm fs.FileMode) er
 		return f.mkdirTar(ctx, abs, perm)
 	}
 	_, err := f.h.sh(ctx, "mkdir", abs, mkdirScript, abs, fmt.Sprintf("%o", perm.Perm()))
+	return err
+}
+
+// renameScript moves $1 to $2, making $2's folder $3 first. An existing
+// folder at $2 is refused (mv would move into it).
+const renameScript = `if [ -d "$2" ] && [ ! -L "$2" ]; then echo "target exists and is a folder" >&2; exit 17; fi
+mkdir -p -- "$3" && mv -f -- "$1" "$2"`
+
+// Rename moves a file or folder (needs sh).
+func (f containerFS) Rename(ctx context.Context, from, to string) error {
+	h := f.h
+	src, err := resolve(h.cfg.Root, from)
+	if err != nil {
+		return err
+	}
+	dst, err := resolve(h.cfg.Root, to)
+	if err != nil {
+		return err
+	}
+	if src == h.cfg.Root || dst == h.cfg.Root {
+		return workspace.ErrIsRoot
+	}
+	if !h.Caps().HasShell {
+		return &fs.PathError{Op: "rename", Path: src, Err: ErrNoShell}
+	}
+	ctx, cancel := h.opCtx(ctx)
+	defer cancel()
+	_, err = h.sh(ctx, "rename", src, renameScript, src, dst, path.Dir(dst))
 	return err
 }
