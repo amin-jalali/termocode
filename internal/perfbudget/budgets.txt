@@ -70,3 +70,5 @@ db_tree_filter_key         25   ms   # tree filter key + sidebar frame; local 0.
 # that answers at once). Go tests: internal/git, internal/app.
 agent_worktree_create_5k  280   ms   # worktree of a 5 000-file repo, median of 5; local 139 ms
 agent_worktree_merge_20   650   ms   # merge 20 changed files back, median of 5; local 324 ms
+chat_save_2k_messages      90   ms   # end of a turn: save a 2 000-message chat, 50 chats stored; local 44 ms
+chat_load_2k_messages      13   ms   # open that chat; local 6.2 ms
