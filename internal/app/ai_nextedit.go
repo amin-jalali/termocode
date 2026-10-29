@@ -21,7 +21,8 @@ import (
 //	aiNESResultMsg ─ai.ParseNextEdit→ _termocode_ai.nes_show(...)
 //
 // BufEnter sends termocode_ai_edit 'seed': Go keeps a copy of the buffer
-// so the first change already has something to diff against. A new edit
+// so the first change already has something to diff against. A reload
+// from disk sends 'reload': the new text becomes the copy, not an edit. A new edit
 // cancels the request in flight; stale replies (older generation, other
 // changedtick, target text changed) are dropped in Go and again in Lua.
 // Files the policy blocks (secret-looking names, big buffers) are never
@@ -69,9 +70,15 @@ func init() {
 		if len(args) > 1 {
 			kind, _ = args[1].(string)
 		}
-		if kind == "seed" {
+		switch kind {
+		case "seed":
 			if len(args) > 0 {
 				m.aiNESSeed(notifyInt(args[0]))
+			}
+			return nil
+		case "reload":
+			if len(args) > 0 {
+				m.aiNESReload(notifyInt(args[0]))
 			}
 			return nil
 		}
@@ -163,6 +170,20 @@ func (m *Model) aiNESSeed(buf int) {
 	}
 	b, ok := m.aiNESReadBuf(buf)
 	if !ok {
+		return
+	}
+	m.aiNESKeep(buf, b.Lines)
+}
+
+// aiNESReload takes buffer buf's text after a reload from disk as its new
+// copy and forgets its edits: the reload is not the user's edit.
+func (m *Model) aiNESReload(buf int) {
+	s := m.aiS()
+	m.cancelAINES()
+	delete(s.nes.hist, buf)
+	b, ok := m.aiNESReadBuf(buf)
+	if !ok {
+		delete(s.nes.shadow, buf)
 		return
 	}
 	m.aiNESKeep(buf, b.Lines)

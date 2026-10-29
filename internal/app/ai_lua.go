@@ -23,7 +23,8 @@ import (
 // Next edit suggestion (ai_nextedit.go) lives here too:
 //
 //   - any change / InsertLeave → termocode_ai_edit, BufEnter →
-//     termocode_ai_edit 'seed' (Go keeps a copy of the buffer to diff);
+//     termocode_ai_edit 'seed' (Go keeps a copy of the buffer to diff),
+//     a reload from disk → 'reload' (Go takes the new text as its copy);
 //   - nes_show(...): an eol marker "⇥ next edit" on the target line, only
 //     if buffer, tick and the target's old text still match;
 //   - nes_tab(): the first Tab jumps to the target and shows the change as
@@ -280,6 +281,15 @@ vim.api.nvim_create_autocmd('BufEnter', {
   callback = function(ev)
     if not A.nes_enabled or vim.bo[ev.buf].buftype ~= '' then return end
     notify('termocode_ai_edit', ev.buf, 'seed')
+  end,
+})
+-- A reload from disk (checktime, :edit!) is not the user's edit: Go takes
+-- the new text as its copy instead of sending it as a recent edit.
+vim.api.nvim_create_autocmd({ 'BufReadPost', 'FileChangedShellPost' }, {
+  group = nes_grp,
+  callback = function(ev)
+    if not A.nes_enabled or vim.bo[ev.buf].buftype ~= '' then return end
+    notify('termocode_ai_edit', ev.buf, 'reload')
   end,
 })
 vim.api.nvim_create_autocmd('BufLeave', {

@@ -4,9 +4,11 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -192,5 +194,56 @@ func TestNextEditNotifyDebounces(t *testing.T) {
 	notifyHandlers["termocode_ai_nes"](m, []any{"gone"})
 	if s.nes.shown != "" {
 		t.Fatalf("state %q", s.nes.shown)
+	}
+}
+
+// TestNextEditDiskReloadIsNotAnEdit: when the file changes on disk (git
+// stash, an AI write, another tool) and nvim reloads the buffer, that is
+// not the user's edit: no next edit request is sent for it. It used to
+// send one with the reload as a "recent edit" (and on a fake AI server
+// it took a reply meant for the chat).
+func TestNextEditDiskReloadIsNotAnEdit(t *testing.T) {
+	c, m, prov := nesModel(t, "a.txt", "alpha\nbravo\ncharlie\n")
+	var mu sync.Mutex
+	var notes [][]any
+	_ = c.RegisterNotify("termocode_ai_edit", func(a []any) bool {
+		mu.Lock()
+		notes = append(notes, a)
+		mu.Unlock()
+		return false
+	})
+	path, _ := c.EvalLuaString(`return vim.api.nvim_buf_get_name(0)`)
+	if err := os.WriteFile(path, []byte("alpha\nBRAVO\ncharlie\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_ = c.Command("silent! checktime")
+	waitLua(t, c, `vim.api.nvim_buf_get_lines(0, 1, 2, false)[1]`, "BRAVO")
+	// Wait (a bounded time) for the reload's notify; without one the
+	// request below shows the bug.
+	var got [][]any
+	for deadline := time.Now().Add(2 * time.Second); time.Now().Before(deadline); time.Sleep(10 * time.Millisecond) {
+		mu.Lock()
+		got = append([][]any(nil), notes...)
+		mu.Unlock()
+		if slices.ContainsFunc(got, func(a []any) bool { return len(a) > 1 && a[1] == "reload" }) {
+			break
+		}
+	}
+	for _, a := range got {
+		notifyHandlers["termocode_ai_edit"](m, a)
+	}
+	if cmd := m.startAINES(); cmd != nil {
+		cmd()
+	}
+	if prov.calls() != 0 {
+		t.Fatalf("a disk reload sent %d next edit request(s); notifies %v", prov.calls(), got)
+	}
+	// A real edit after the reload still asks, and diffs against the
+	// reloaded text.
+	_ = c.Command("call setline(3, 'CHARLIE')")
+	runNES(t, m.startAINES())
+	u := prov.reqs[0].Messages[len(prov.reqs[0].Messages)-1].Content
+	if strings.Contains(u, "-bravo") || !strings.Contains(u, "+CHARLIE") {
+		t.Fatalf("prompt edits:\n%s", u)
 	}
 }
