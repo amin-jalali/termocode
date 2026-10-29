@@ -25,11 +25,3 @@ func killGroup(pid int) {
 	}
 	_ = syscall.Kill(-pid, syscall.SIGKILL)
 }
-
-// termGroup asks the process group to stop.
-func termGroup(pid int) {
-	if pid <= 0 {
-		return
-	}
-	_ = syscall.Kill(-pid, syscall.SIGTERM)
-}
