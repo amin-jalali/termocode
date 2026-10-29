@@ -67,6 +67,15 @@ func TestTerminalChangeWithoutProbe(t *testing.T) {
 	if msg.Graphics.Protocol != termimg.Sixel || msg.Gen != 6 {
 		t.Errorf("probed: %v gen %d", msg.Graphics.Protocol, msg.Gen)
 	}
+	// A client that came back by itself: its note reaches the UI.
+	for _, c := range []*session.ClientCaps{
+		{Note: "Reconnected after 3 s"},
+		{Graphics: &session.GraphicsCaps{Protocol: "kitty"}, Note: "Reconnected after 3 s"},
+	} {
+		if msg := terminalChange(c); msg.Note != "Reconnected after 3 s" {
+			t.Errorf("note %q", msg.Note)
+		}
+	}
 }
 
 // TestApplyClientEnvSSH: a local client attaching to a session that an

@@ -161,7 +161,7 @@ func applyClientEnv(c *session.ClientCaps) {
 // terminal. Without a probe from the client its environment decides.
 func terminalChange(c *session.ClientCaps) app.TerminalChangedMsg {
 	if c.Graphics != nil {
-		return app.TerminalChangedMsg{Graphics: graphicsFromSession(c.Graphics), Gen: c.Gen}
+		return app.TerminalChangedMsg{Graphics: graphicsFromSession(c.Graphics), Gen: c.Gen, Note: c.Note}
 	}
 	g := termimg.Caps{Protocol: termimg.Blocks, Reason: "no probe from the attaching terminal"}
 	switch termimg.ParseMode(app.ConfigDisplay().Images) {
@@ -169,7 +169,7 @@ func terminalChange(c *session.ClientCaps) app.TerminalChangedMsg {
 	default:
 		g.Protocol, _ = termimg.DetectEnv(func(k string) string { return c.Env[k] })
 	}
-	return app.TerminalChangedMsg{Graphics: g, Gen: c.Gen}
+	return app.TerminalChangedMsg{Graphics: g, Gen: c.Gen, Note: c.Note}
 }
 
 // cmdSessions prints the running sessions (`termocode sessions`).

@@ -70,3 +70,20 @@ func TestTerminalChangeReappliesCaps(t *testing.T) {
 		t.Errorf("cell size %dx%d, want the new terminal's 9x18", w, h)
 	}
 }
+
+// TestTerminalChangeNoteToast: a client that came back by itself says so
+// in the attach; the UI shows it as a toast. A plain attach shows none.
+func TestTerminalChangeNoteToast(t *testing.T) {
+	withConfigDir(t)
+	oldCaps := termCaps
+	t.Cleanup(func() { termCaps = oldCaps })
+	m0, _ := New().Update(tea.WindowSizeMsg{Width: 120, Height: 36})
+	m1, _ := m0.Update(TerminalChangedMsg{Graphics: termimg.Caps{Protocol: termimg.Blocks}, Gen: 2})
+	if strings.Contains(toastText(m1.(Model)), "Reconnected") {
+		t.Fatalf("a plain attach shows a reconnect toast")
+	}
+	m2, _ := m1.Update(TerminalChangedMsg{Graphics: termimg.Caps{Protocol: termimg.Blocks}, Gen: 3, Note: "Reconnected after 12 s"})
+	if got := toastText(m2.(Model)); !strings.Contains(got, "Reconnected after 12 s") {
+		t.Errorf("no reconnect toast: %q", got)
+	}
+}

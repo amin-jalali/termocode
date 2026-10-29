@@ -92,8 +92,7 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.afterUpdateAnim(prevKind)
 	}
 	if tc, ok := msg.(TerminalChangedMsg); ok {
-		m.applyTerminalChange(tc)
-		return m, nil
+		return m, m.applyTerminalChange(tc)
 	}
 	if c, ok := m.handleXferMsg(msg); ok {
 		return m, c
