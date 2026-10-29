@@ -9,6 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/workspace/localhost"
 )
 
@@ -101,5 +102,30 @@ func TestGitUndoLastCommit(t *testing.T) {
 	}
 	if s := toastText(*m); !strings.Contains(s, "Undone: commit 'c3'") {
 		t.Errorf("toast:\n%s", s)
+	}
+}
+
+// G-UND: the card warns when commits leaving the branch are pushed
+// already, and says what happens to local changes.
+func TestUndoConfirmTextWarnings(t *testing.T) {
+	p := git.UndoPlan{Entry: git.ReflogEntry{Kind: git.ReflogCommit, Message: "commit: c3", Subject: "c3"},
+		Target: "abcdef0123", TargetSubject: "c2", Branch: "main", Upstream: "origin/main", Pushed: 2}
+	body := undoConfirmText(p, false)
+	for _, want := range []string{"2 commits leaving main are on origin/main already", "force-push", "termocode never force-pushes"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("lacks %q:\n%s", want, body)
+		}
+	}
+	p.Pushed = 0
+	if body := undoConfirmText(p, false); strings.Contains(body, "force-push") {
+		t.Errorf("warns without pushed commits:\n%s", body)
+	}
+	p.Staged = true
+	if body := undoConfirmText(p, false); !strings.Contains(body, "Staged changes stay, but become unstaged.") {
+		t.Errorf("no staged note:\n%s", body)
+	}
+	p.Blocked = []string{"a.txt", "b.txt"}
+	if body := undoConfirmText(p, false); !strings.Contains(body, "Your local changes in a.txt, b.txt are in the way.") {
+		t.Errorf("no blocked note:\n%s", body)
 	}
 }

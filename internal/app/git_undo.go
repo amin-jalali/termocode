@@ -110,8 +110,31 @@ func undoConfirmText(p git.UndoPlan, move bool) string {
 		}
 		lines = append(lines, "", head+" goes back to "+target+".",
 			"What it leaves stays in the reflog for 90 days (Git: Reflog…).")
+		if p.Pushed > 0 {
+			are := "are"
+			if p.Pushed == 1 {
+				are = "is"
+			}
+			lines = append(lines, "", fmt.Sprintf("⚠ %s leaving %s %s on %s already:", rebaseCount(p.Pushed), p.Branch, are, p.Upstream),
+				"you would need to force-push. termocode never force-pushes.")
+		}
+	}
+	switch {
+	case len(p.Blocked) > 0:
+		lines = append(lines, "", "Your local changes in "+fileList(p.Blocked)+" are in the way.",
+			"The undo will stop; commit or stash them first.")
+	case p.Staged && p.Switch == "":
+		lines = append(lines, "", "Staged changes stay, but become unstaged.")
 	}
 	return strings.Join(lines, "\n")
+}
+
+// fileList names up to three files: "a.txt, b.txt and 4 more".
+func fileList(files []string) string {
+	if len(files) <= 3 {
+		return strings.Join(files, ", ")
+	}
+	return fmt.Sprintf("%s and %d more", strings.Join(files[:3], ", "), len(files)-3)
 }
 
 // onUndoConfirm runs the undo the card asked about (Cancel and Esc: none).
