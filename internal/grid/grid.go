@@ -213,7 +213,9 @@ func (g *Grid) applyLine(row, colStart int, cellsArr []any) {
 			if col >= g.Width {
 				break
 			}
-			g.Cells[row][col] = Cell{Rune: r, HlID: hl, Cont: cont, Tail: tail}
+			if col >= 0 {
+				g.Cells[row][col] = Cell{Rune: r, HlID: hl, Cont: cont, Tail: tail}
+			}
 			col++
 		}
 	}
