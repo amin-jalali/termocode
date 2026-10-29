@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/amin-jalali/termocode/internal/anim"
 	"github.com/amin-jalali/termocode/internal/session"
 	"github.com/amin-jalali/termocode/internal/termimg"
 	"github.com/amin-jalali/termocode/internal/theme"
@@ -75,8 +76,13 @@ func TestTerminalChangeReappliesCaps(t *testing.T) {
 // in the attach; the UI shows it as a toast. A plain attach shows none.
 func TestTerminalChangeNoteToast(t *testing.T) {
 	withConfigDir(t)
-	oldCaps := termCaps
-	t.Cleanup(func() { termCaps = oldCaps })
+	oldProfile, oldCaps, oldIcons, oldAnim := lipgloss.ColorProfile(), termCaps, theme.CurrentIconMode, anim.Enabled
+	t.Cleanup(func() {
+		lipgloss.SetColorProfile(oldProfile)
+		termCaps = oldCaps
+		theme.CurrentIconMode = oldIcons
+		anim.Enabled = oldAnim
+	})
 	m0, _ := New().Update(tea.WindowSizeMsg{Width: 120, Height: 36})
 	m1, _ := m0.Update(TerminalChangedMsg{Graphics: termimg.Caps{Protocol: termimg.Blocks}, Gen: 2})
 	if strings.Contains(toastText(m1.(Model)), "Reconnected") {
