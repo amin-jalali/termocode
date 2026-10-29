@@ -1,7 +1,6 @@
 package migrate
 
 import (
-	"bytes"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
@@ -95,7 +94,7 @@ func classifyFile(base string, b []byte) (id, product string, l fileLayout, err 
 	switch {
 	case strings.HasSuffix(lower, ".sublime-settings"):
 		var v map[string]any
-		if json.Unmarshal(jsonc.Strip(b), &v) != nil {
+		if json.Unmarshal(jsonc.Strip(trimBOM(b)), &v) != nil {
 			return "", "", l, notValid("JSON")
 		}
 		name := "Preferences.sublime-settings"
@@ -105,7 +104,7 @@ func classifyFile(base string, b []byte) (id, product string, l fileLayout, err 
 		return "sublime", "Sublime Text", fileLayout{".config/sublime-text/Packages/User", name}, nil
 	case strings.HasSuffix(lower, ".sublime-keymap"):
 		var v []any
-		if json.Unmarshal(jsonc.Strip(b), &v) != nil {
+		if json.Unmarshal(jsonc.Strip(trimBOM(b)), &v) != nil {
 			return "", "", l, notValid("JSON (a list of key bindings)")
 		}
 		return "sublime", "Sublime Text", fileLayout{".config/sublime-text/Packages/User", sublimeKeymapFiles[0]}, nil
@@ -134,7 +133,7 @@ func classifyFile(base string, b []byte) (id, product string, l fileLayout, err 
 
 func classifyJSON(lower string, b []byte) (id, product string, l fileLayout, err error) {
 	var v any
-	if json.Unmarshal(jsonc.Strip(bytes.TrimPrefix(b, []byte("\xef\xbb\xbf"))), &v) != nil {
+	if json.Unmarshal(jsonc.Strip(trimBOM(b)), &v) != nil {
 		return "", "", l, errors.New("not valid JSON")
 	}
 	vs := fileLayout{".config/Code/User", "settings.json"}
