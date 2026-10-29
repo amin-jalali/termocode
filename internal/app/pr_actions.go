@@ -152,6 +152,9 @@ func (m *Model) prAskReview(kind ghci.ReviewKind) tea.Cmd {
 
 // handlePRPromptSubmit sends the review. ok=false: not ours.
 func (m *Model) handlePRPromptSubmit(value string) (tea.Cmd, bool) {
+	if cmd, ok := m.handlePRCreatePromptSubmit(value); ok { // pr_create.go
+		return cmd, true
+	}
 	if m.promptKind != promptKindPRReview {
 		return nil, false
 	}

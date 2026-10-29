@@ -162,6 +162,9 @@ func prReviewState(s string) string {
 
 // handlePRConfirm answers the view's buttons. ok=false: not ours.
 func (m *Model) handlePRConfirm(id string) (tea.Cmd, bool) {
+	if cmd, ok := m.handlePRCreateConfirm(id); ok { // pr_create.go
+		return cmd, true
+	}
 	if m.confirmKind == confirmKindPRMerge { // pr_merge.go
 		return m.answerPRMerge(id), true
 	}

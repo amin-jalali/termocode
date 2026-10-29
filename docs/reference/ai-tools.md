@@ -1742,6 +1742,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `git-focus` | Git: Focus Source Control | auto |   |
 | `git-history` | Git: Show File History... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-log` | Git: Show Log... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_log) |
+| `git-pr-create` | Git: Create Pull Request… | never | publishes a pull request in the user's name; only the user creates one |
 | `git-pr-list` | Git: Pull Requests… | auto |   |
 | `git-pull` | Git: Pull | confirm (git) |   |
 | `git-push` | Git: Push | confirm (always asks) |   |

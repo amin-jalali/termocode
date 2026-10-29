@@ -197,6 +197,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"update-check":        aiNever(aiNoUpdate),
 	"update-rollback":     aiNever(aiNoUpdate),
 	"git-pr-list":         aiAuto(), // read only: a list of open pull requests
+	"git-pr-create":       aiNever("publishes a pull request in the user's name; only the user creates one"),
 
 	// ── Workspace, session, settings ──
 	"workspace-add-folder":    aiNever(aiNoPicker + " (workspace_folders)"),

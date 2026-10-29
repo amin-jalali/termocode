@@ -14,9 +14,9 @@ import (
 const pickerKindPRList pickerKindEnum = 3200
 
 func prPaletteItems() []picker.Item {
-	return []picker.Item{
+	return append([]picker.Item{
 		{ID: "git-pr-list", Title: "Git: Pull Requests…"},
-	}
+	}, prCreatePaletteItems()...)
 }
 
 // dispatchPRPalette runs the PR palette ids.
@@ -24,6 +24,8 @@ func (m *Model) dispatchPRPalette(id string) (tea.Cmd, bool) {
 	switch id {
 	case "git-pr-list":
 		return m.openPRList(), true
+	case "git-pr-create":
+		return m.prCreateCmd(), true
 	}
 	return nil, false
 }

@@ -100,6 +100,14 @@ func riskyCards() []riskyCard {
 			m.onPRActionPicked("merge")
 			return m, func() bool { return f.called("pr merge") }
 		}},
+		{name: "create a pull request", safe: "cancel", helper: true, open: func(t *testing.T) (*Model, func() bool) {
+			f := &prFakeGH{answers: map[string]string{"pr view": prViewText14, "repo view": prRepoViewJSON, "pr create": "https://x/pull/1\n"}}
+			m, _ := prCreateModel(t, f, true)
+			prDo(t, m, m.prCreateCmd())
+			m.promptOpen = false
+			m.handlePromptSubmit("a title")
+			return m, func() bool { return f.called("pr create") }
+		}},
 		{name: "stop listening", safe: "cancel", helper: true, open: func(t *testing.T) (*Model, func() bool) {
 			m := mcpServeStatusModel(t)
 			m.onMCPServeStatusPicked("serve-stop")

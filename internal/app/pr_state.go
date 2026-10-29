@@ -22,6 +22,7 @@ type prState struct {
 	diff   []ghci.FileDiff // its diff, once read
 	busy   bool            // an action runs: a second click waits
 	review ghci.ReviewKind // the review the open prompt sends
+	create *ghci.NewPR     // the pull request being created
 }
 
 // prS returns the state, creating it on first use.
@@ -71,6 +72,8 @@ func prRef(n int) string { return "#" + strconv.Itoa(n) }
 // handlePRMsg handles the PR messages (any overlay may be open).
 func (m *Model) handlePRMsg(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg := msg.(type) {
+	case prCreatePrepMsg: // pr_create.go
+		return m.onPRCreatePrep(msg), true
 	case prListMsg: // pr_list.go
 		return m.onPRList(msg), true
 	case prViewMsg: // pr_view.go
@@ -91,6 +94,7 @@ type prDoneMsg struct {
 	err     error
 	refresh bool // the branch or files changed: read git again
 	reopen  bool // read the pull request again and show the card
+	ci      bool // ask CI again (a new pull request)
 	detail  string
 }
 
@@ -108,6 +112,11 @@ func (m *Model) onPRDone(msg prDoneMsg) tea.Cmd {
 			_ = m.nvim.Command("silent! checktime")
 		}
 		cmds = append(cmds, fetchGitCmd())
+	}
+	if msg.ci {
+		if c := m.ciTrigger(); c != nil {
+			cmds = append(cmds, c)
+		}
 	}
 	if msg.reopen && msg.number > 0 {
 		cmds = append(cmds, m.prViewCmd(msg.number))

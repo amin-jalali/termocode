@@ -627,3 +627,141 @@ func TestPRSetDraft(t *testing.T) {
 		t.Error("converted a draft to a draft")
 	}
 }
+
+// prGit runs git in dir for a test setup.
+func prGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	c := exec.Command("git", args...)
+	c.Dir = dir
+	if out, err := c.CombinedOutput(); err != nil {
+		t.Fatalf("git %v: %v %s", args, err, out)
+	}
+}
+
+// prCreateModel is on branch feat/x with two commits on top of main; main
+// and feat/x are pushed to a temp bare remote when pushed is true.
+func prCreateModel(t *testing.T, f *prFakeGH, pushed bool) (*Model, string) {
+	t.Helper()
+	m, dir := prRepoModel(t, f)
+	remote := t.TempDir()
+	prGit(t, remote, "init", "-q", "--bare")
+	prGit(t, dir, "remote", "add", "origin", remote)
+	prGit(t, dir, "push", "-q", "origin", "main")
+	prGit(t, dir, "checkout", "-q", "-b", "feat/x")
+	for _, s := range []string{"feat: first", "fix: second"} {
+		if err := os.WriteFile(filepath.Join(dir, strings.ReplaceAll(s, ": ", "-")+".txt"), []byte(s), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		prGit(t, dir, "add", "-A")
+		prGit(t, dir, "commit", "-q", "-m", s)
+	}
+	if pushed {
+		prGit(t, dir, "push", "-q", "-u", "origin", "feat/x")
+	}
+	m.gitBranch = git.Branch{Name: "feat/x"}
+	return m, dir
+}
+
+const prRepoViewJSON = `{"defaultBranchRef":{"name":"main"}}`
+
+// A pushed branch gets a title prompt prefilled with the first commit,
+// then a card with the base, the body (all subjects) and Cancel first.
+func TestPRCreateFlow(t *testing.T) {
+	f := &prFakeGH{answers: map[string]string{"pr view": prViewText14, "repo view": prRepoViewJSON,
+		"pr create": "https://github.com/o/r/pull/15\n"}}
+	m, _ := prCreateModel(t, f, true)
+	prDo(t, m, m.prCreateCmd())
+	if !m.promptOpen || m.promptKind != promptKindPRCreateTitle || m.prompt.Value() != "feat: first" {
+		t.Fatalf("prompt open %v value %q", m.promptOpen, m.prompt.Value())
+	}
+	m.promptOpen = false
+	m.handlePromptSubmit("feat: first, edited")
+	if !m.confirmOpen || m.confirmKind != confirmKindPRCreate {
+		t.Fatal("create card not open")
+	}
+	b := m.confirm.Buttons()
+	if len(b) != 3 || b[0].ID != "cancel" || b[1].ID != "create" || b[2].ID != "draft" {
+		t.Fatalf("buttons %+v", b)
+	}
+	box := ansi.Strip(m.confirm.Box())
+	for _, want := range []string{"Title: feat: first, edited", "feat/x → main", "- feat: first", "- fix: second"} {
+		if !strings.Contains(box, want) {
+			t.Errorf("card misses %q:\n%s", want, box)
+		}
+	}
+	if f.called("pr create") {
+		t.Fatal("created before the user chose")
+	}
+	cmd, ok := m.handlePRCreateConfirm("draft")
+	if !ok || cmd == nil {
+		t.Fatal("no command")
+	}
+	done := cmd().(prDoneMsg)
+	if done.err != nil || done.detail != "https://github.com/o/r/pull/15" || !done.ci {
+		t.Fatalf("done %+v", done)
+	}
+	want := "pr create --title feat: first, edited --body - feat: first\n- fix: second --head feat/x --base main --draft"
+	if !f.called(want) {
+		t.Errorf("calls %q", f.calls)
+	}
+}
+
+// Cancel creates nothing.
+func TestPRCreateCancel(t *testing.T) {
+	f := &prFakeGH{answers: map[string]string{"repo view": prRepoViewJSON, "pr create": "x"}}
+	m, _ := prCreateModel(t, f, true)
+	prDo(t, m, m.prCreateCmd())
+	m.promptOpen = false
+	m.handlePromptSubmit("t")
+	if cmd, ok := m.handlePRCreateConfirm("cancel"); !ok || cmd != nil || f.called("pr create") {
+		t.Error("Cancel created a pull request")
+	}
+}
+
+// A branch that was never pushed, or has unpushed commits, offers a plain
+// push and does not ask for a title.
+func TestPRCreateNeedsPush(t *testing.T) {
+	f := &prFakeGH{answers: map[string]string{"repo view": prRepoViewJSON}}
+	m, dir := prCreateModel(t, f, false)
+	prDo(t, m, m.prCreateCmd())
+	if m.promptOpen || !m.confirmOpen || m.confirmKind != confirmKindPRPush {
+		t.Fatal("no push card")
+	}
+	if !strings.Contains(ansi.Strip(m.confirm.Box()), "is not on GitHub yet") {
+		t.Errorf("card:\n%s", ansi.Strip(m.confirm.Box()))
+	}
+	if b := m.confirm.Buttons(); b[0].ID != "cancel" || b[1].ID != "push" {
+		t.Errorf("buttons %+v", b)
+	}
+	if cmd, _ := m.handlePRCreateConfirm("cancel"); cmd != nil {
+		t.Error("Not now pushed")
+	}
+	// Pushed, then one more local commit.
+	prGit(t, dir, "push", "-q", "-u", "origin", "feat/x")
+	prGit(t, dir, "commit", "-q", "--allow-empty", "-m", "more")
+	m.confirmOpen = false
+	prDo(t, m, m.prCreateCmd())
+	if !strings.Contains(ansi.Strip(m.confirm.Box()), "has 1 commit that GitHub does not have") {
+		t.Errorf("card:\n%s", ansi.Strip(m.confirm.Box()))
+	}
+}
+
+// On the default branch there is nothing to propose.
+func TestPRCreateOnDefaultBranch(t *testing.T) {
+	f := &prFakeGH{answers: map[string]string{"repo view": prRepoViewJSON}}
+	m, _ := prCreateModel(t, f, true)
+	m.gitBranch.Name = "main"
+	prDo(t, m, m.prCreateCmd())
+	if m.promptOpen || m.confirmOpen || !toastHas(m, "You are on main, the default branch") {
+		t.Error("no refusal")
+	}
+}
+
+func TestPRCreateNoGH(t *testing.T) {
+	f := &prFakeGH{errs: map[string]error{"repo view": errors.New("exit 4")}, stderr: map[string]string{"repo view": "gh auth login"}}
+	m, _ := prCreateModel(t, f, true)
+	prDo(t, m, m.prCreateCmd())
+	if m.promptOpen || !toastHas(m, ciGHHint) {
+		t.Error("no quiet hint")
+	}
+}
