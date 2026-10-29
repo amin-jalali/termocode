@@ -15,6 +15,12 @@ import (
 func remoteNvim(t *testing.T, mod ...func(*fakedocker.Container)) (*nvim.Client, *fakedocker.Container) {
 	t.Helper()
 	ws, _, _, c := fakeContainerWS(t, mod...)
+	return remoteNvimOn(t, ws), c
+}
+
+// remoteNvimOn is a real nvim with remote buffers on for ws.
+func remoteNvimOn(t *testing.T, ws workspace.Workspace) *nvim.Client {
+	t.Helper()
 	n, err := nvim.New()
 	if err != nil {
 		t.Skipf("nvim not available: %v", err)
@@ -27,7 +33,7 @@ func remoteNvim(t *testing.T, mod ...func(*fakedocker.Container)) (*nvim.Client,
 	if err := startRemoteBuffers(n, ws); err != nil {
 		t.Fatal(err)
 	}
-	return n, c
+	return n
 }
 
 func remoteBufText(t *testing.T, n *nvim.Client) string {
