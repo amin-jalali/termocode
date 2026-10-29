@@ -1,10 +1,15 @@
 package app
 
 import (
+	"strings"
 	"testing"
+	"time"
+
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/layout"
+	"github.com/amin-jalali/termocode/internal/statusbar"
 )
 
 func TestOpenLayoutSetsSidebarChatAndSavesThem(t *testing.T) {
@@ -69,5 +74,49 @@ func TestOpenLayoutLeavesZenAndClampsWidth(t *testing.T) {
 	}
 	if m.explorerWidth > explorerMaxWidth || m.explorerWidth < explorerMinWidth {
 		t.Errorf("width %d outside %d..%d", m.explorerWidth, explorerMinWidth, explorerMaxWidth)
+	}
+}
+
+// statusLine is the status bar text of m.
+func statusLine(m Model) string {
+	bar := statusbar.New()
+	bar.SetWidth(200)
+	return ansi.Strip(bar.View(m.statusState()))
+}
+
+func TestOpenLayoutShowsItsNameInTheStatusBarForTwoSeconds(t *testing.T) {
+	withConfigDir(t)
+	layoutProject(t)
+	m := panelTestModel()
+	if layoutHintFor != 2*time.Second {
+		t.Fatalf("hint time = %v", layoutHintFor)
+	}
+	if strings.Contains(statusLine(m), "Layout:") {
+		t.Fatal("hint before any layout")
+	}
+	cmd := m.openLayout(layout.Layout{Name: "debug", Sidebar: &layout.Sidebar{Open: true}})
+	if cmd == nil || !strings.Contains(statusLine(m), "Layout: debug") {
+		t.Fatalf("no hint: %q", statusLine(m))
+	}
+	// A second layout replaces the hint; the older timer must not clear it.
+	oldGen := m.layoutHintGen
+	m.openLayout(layout.Layout{Name: "review", Sidebar: &layout.Sidebar{Open: true}})
+	m, _ = m.update(layoutHintClearMsg{gen: oldGen})
+	if !strings.Contains(statusLine(m), "Layout: review") {
+		t.Fatalf("old timer cleared the new hint: %q", statusLine(m))
+	}
+	m, _ = m.update(layoutHintClearMsg{gen: m.layoutHintGen})
+	if strings.Contains(statusLine(m), "Layout:") {
+		t.Fatalf("hint stays: %q", statusLine(m))
+	}
+}
+
+func TestOpenLayoutWithoutANameShowsNoHint(t *testing.T) {
+	withConfigDir(t)
+	layoutProject(t)
+	m := panelTestModel()
+	m.openLayout(layout.Layout{Sidebar: &layout.Sidebar{Open: true}})
+	if m.layoutHint != "" {
+		t.Errorf("hint %q", m.layoutHint)
 	}
 }

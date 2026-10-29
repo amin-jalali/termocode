@@ -920,6 +920,11 @@ end })`)
 	case sessionIdleMsg:
 		m.sess.flushIdle(msg.gen)
 		return m, nil, true
+	case layoutHintClearMsg:
+		if msg.gen == m.layoutHintGen {
+			m.layoutHint = ""
+		}
+		return m, nil, true
 	case gitAutoRefreshMsg:
 		// Background poll: refresh git state and reschedule the next tick. The
 		// GitMsg handler only re-clamps the cursor, so this never disturbs the

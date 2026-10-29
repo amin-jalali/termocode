@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -11,6 +12,21 @@ import (
 	"github.com/amin-jalali/termocode/internal/layout"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
+
+// layoutHintFor is how long the status bar shows the name of a layout after
+// it was opened.
+const layoutHintFor = 2 * time.Second
+
+// layoutHintClearMsg ends the hint of generation gen.
+type layoutHintClearMsg struct{ gen int }
+
+// showLayoutHint shows name in the status bar for layoutHintFor.
+func (m *Model) showLayoutHint(name string) tea.Cmd {
+	m.layoutHintGen++
+	m.layoutHint = name
+	gen := m.layoutHintGen
+	return tea.Tick(layoutHintFor, func(time.Time) tea.Msg { return layoutHintClearMsg{gen: gen} })
+}
 
 // openLayout makes the IDE look like l. Parts the layout does not mention
 // stay as they are. Files that do not exist are skipped, and one toast says
@@ -72,6 +88,9 @@ func (m *Model) openLayout(l layout.Layout) tea.Cmd {
 		var t tea.Cmd
 		m.toast, t = m.toast.Push(toast.Warn, fmt.Sprintf("%d file%s not found", missing, plural(missing)))
 		cmds = append(cmds, t)
+	}
+	if l.Name != "" {
+		cmds = append(cmds, m.showLayoutHint(l.Name))
 	}
 	return tea.Batch(cmds...)
 }

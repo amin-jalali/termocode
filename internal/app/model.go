@@ -521,6 +521,12 @@ type Model struct {
 	// Model copies share it; nil in bare test Models.
 	ext *extState
 
+	// layoutHint is the name of the layout opened a moment ago; the status
+	// bar shows it for layoutHintFor (layout_apply.go). layoutHintGen tells
+	// the clear message of an older hint from the current one.
+	layoutHint    string
+	layoutHintGen int
+
 	focus       Focus
 	gate        *frameGate // draw at most once per frame (frame_gate.go)
 	showExp     bool
