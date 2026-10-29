@@ -174,6 +174,42 @@ Each accept is one edit, so one `u` brings the markers back.
 For a private HTTPS repository, termocode asks for a token. The token is only
 passed to that one `git clone`. It is not saved.
 
+## CI and pull requests
+
+termocode shows the GitHub CI of your current branch. It uses the `gh`
+command. Install it and run `gh auth login` once. Without `gh`, the CI card
+only says "Install and sign in to gh to see CI".
+
+After you push, a chip shows next to the branch in the status bar:
+
+| Chip | Meaning |
+|---|---|
+| `CI …` | A run is still going |
+| `CI ✓` | All runs passed |
+| `CI ✗ 2` | Two runs failed |
+
+Click the chip, or run **Git: CI and Pull Request…**. The card shows:
+
+- the pull request of the branch: number, title, state and review state
+- each check with ✓, ✗ or …
+
+The buttons:
+
+- **Fix with AI** (only when CI is red): reads the log of the failed job and
+  puts it in the AI chat input. It has the job, the step and up to 200 log
+  lines around the error. Secrets are hidden. Nothing is sent yet: read the
+  message, then press `Enter`.
+- **Open Log**: shows the failed job's log in a read-only tab.
+- **Open in Browser**: opens the pull request (or the run). Over SSH it
+  copies the link instead.
+
+When CI turns red, a toast says so once. Press `Alt+C` (or click the
+toast) to start **Fix with AI**. `Alt+C` on a green branch opens the card.
+
+termocode asks GitHub right after a push, every 20 seconds while a run is
+going, and every 5 minutes otherwise. It does not ask while the terminal
+window is in the background.
+
 ## Keys at a glance
 
 In the Source Control panel:
@@ -201,6 +237,7 @@ In the editor:
 | `Alt+]` / `Alt+[` | Next / previous change |
 | `Alt+S` / `Alt+U` | Stage / unstage hunk |
 | `Alt+B` | Blame line |
+| `Alt+C` | Fix red CI with AI |
 | `]x` / `[x` | Next / previous merge conflict |
 
 ## Troubleshooting
@@ -211,6 +248,10 @@ In the editor:
 **Push fails with an auth error**
 :   termocode uses your normal git setup. Fix it in a shell first
     (`git push`), for example with an SSH key or a credential helper.
+
+**No CI chip**
+:   Run `gh auth status` in a shell. The branch must be pushed to GitHub
+    and have workflow runs.
 
 **`Alt+S` types a letter instead of staging**
 :   Some terminals (macOS Terminal by default) do not send `Alt`. Turn on
