@@ -569,3 +569,46 @@ func (m *Model) resizeTerminalPanes(rows int) bool {
 		end`, rows, intList(wins)))
 	return true
 }
+
+// resizeTerminalPane grows (delta > 0) or shrinks the focused pane by delta
+// cells: wider when another pane sits beside it, taller when it is stacked.
+// A pane never gets smaller than termPaneMinCols x termPaneMinRows. It
+// reports whether a pane was resized.
+func (m *Model) resizeTerminalPane(delta int) bool {
+	tab := m.activeTerminalTab()
+	if m.nvim == nil || tab == nil || tab.paneCount() < 2 {
+		return false
+	}
+	wins := []int{}
+	for i := 0; i < tab.paneCount(); i++ {
+		if w := m.paneWin(*tab, i); w > 0 {
+			wins = append(wins, w)
+		}
+	}
+	win := m.paneWin(*tab, tab.focusedPane())
+	if win <= 0 {
+		return false
+	}
+	out, err := m.nvim.EvalLuaString(fmt.Sprintf(`
+		local win, delta, wins = %d, %d, {%s}
+		if not vim.api.nvim_win_is_valid(win) then return '' end
+		local row = vim.api.nvim_win_get_position(win)[1]
+		local beside = false
+		for _, w in ipairs(wins) do
+			if w ~= win and vim.api.nvim_win_is_valid(w) and vim.api.nvim_win_get_position(w)[1] == row then beside = true end
+		end
+		if beside then
+			pcall(vim.api.nvim_win_set_width, win, math.max(vim.api.nvim_win_get_width(win) + delta, %d))
+		else
+			local bar = vim.wo[win].winbar ~= '' and 1 or 0
+			pcall(vim.api.nvim_win_set_height, win, math.max(vim.api.nvim_win_get_height(win) + delta, %d + bar))
+		end
+		return 'ok'`, win, delta, intList(wins), termPaneMinCols, termPaneMinRows))
+	if err != nil || out != "ok" {
+		return false
+	}
+	// Growing a stacked pane can take rows from the editor: put the panel back.
+	m.terminalRowsLastSent = 0
+	m.resizeTerminalSplit()
+	return true
+}

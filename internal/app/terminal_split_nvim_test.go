@@ -383,3 +383,41 @@ func TestSplitKeepsTheEditorHeight(t *testing.T) {
 		t.Errorf("editor height %d -> %d: splitting the terminal must not resize it", before, got)
 	}
 }
+
+func TestGrowAndShrinkThePaneBesideAnother(t *testing.T) {
+	m := splitTestModel(t, 120, 30)
+	m.splitTerminalPane(paneRight)
+	win := m.terminalTabs[0].Splits[0].WinID
+	width := func() int {
+		out, _ := m.nvim.EvalLuaString(`return tostring(vim.api.nvim_win_get_width(` + itoa(win) + `))`)
+		return parseInt(out)
+	}
+	w0 := width()
+	if !m.resizeTerminalPane(4) || width() != w0+4 {
+		t.Fatalf("grow: width %d -> %d, want +4", w0, width())
+	}
+	m.resizeTerminalPane(-4)
+	if width() != w0 {
+		t.Errorf("shrink: width %d, want %d", width(), w0)
+	}
+	m.resizeTerminalPane(-500) // never below the smallest usable pane
+	if width() < termPaneMinCols {
+		t.Errorf("pane shrank to %d columns, minimum is %d", width(), termPaneMinCols)
+	}
+}
+
+func TestGrowAStackedPaneKeepsThePanelHeight(t *testing.T) {
+	m := splitTestModel(t, 120, 40)
+	m.splitTerminalPane(paneDown)
+	m.resizeTerminalPane(3)
+	if got := panelRegion(t, m); got != 13 {
+		t.Errorf("panel is %d rows after growing a pane, want 13", got)
+	}
+	if m.resizeTerminalPane(1) == false {
+		t.Error("resize must report success")
+	}
+	single := splitTestModel(t, 120, 30)
+	if single.resizeTerminalPane(2) {
+		t.Error("a tab with one pane has nothing to resize")
+	}
+}
