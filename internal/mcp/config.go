@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/amin-jalali/termocode/internal/ai"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -343,12 +344,16 @@ func (x Expander) expand(s string) (string, error) {
 			return x.Home
 		case strings.HasPrefix(ref, "secret:"):
 			name := strings.TrimPrefix(ref, "secret:")
+			// A value handed to a server is redacted from then on: a
+			// server may repeat it in a tool result or its log.
 			if x.SecretLookup != nil {
 				if v, ok := x.SecretLookup(name); ok && v != "" {
+					ai.RegisterSecret(v)
 					return v
 				}
 			}
 			if v, ok := x.Secrets[name]; ok && v != "" {
+				ai.RegisterSecret(v)
 				return v
 			}
 			if ferr == nil {

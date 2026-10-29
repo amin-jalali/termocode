@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"errors"
+	"github.com/amin-jalali/termocode/internal/ai"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -142,6 +143,20 @@ func TestExpandSecretLookup(t *testing.T) {
 	var needs *NeedsError
 	if !errors.As(err, &needs) || needs.What != "secret token" {
 		t.Fatalf("missing secret error = %v", err)
+	}
+}
+
+// Spec (SCN-1): a ${secret:NAME} value handed to a server is registered
+// for redaction, so a server that repeats it in a tool result or its log
+// does not put it in front of the model, the screen or the chat file.
+func TestExpandRegistersSecretsForRedaction(t *testing.T) {
+	value := "scn" + "canary" + "mcp-secret-91"
+	s := Server{Name: "x", Command: "run", Env: map[string]string{"TOKEN": "${secret:token}"}}
+	if _, err := s.Expand(Expander{SecretLookup: func(string) (string, bool) { return value, true }}); err != nil {
+		t.Fatal(err)
+	}
+	if got := ai.Redact("signed in with token " + value); strings.Contains(got, value) {
+		t.Errorf("not redacted: %q", got)
 	}
 }
 
