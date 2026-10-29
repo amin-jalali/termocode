@@ -2,6 +2,8 @@ package git
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -109,4 +111,61 @@ func TestPlanMoveTo(t *testing.T) {
 	if p.Target != h[0] || p.TargetSubject != "c1" || p.Switch != "" || p.From != h[2] {
 		t.Errorf("plan %+v", p)
 	}
+}
+
+// G-UND: RunUndo moves HEAD back with reset --keep: the undone commit's
+// file goes, other local changes stay, the commit is still in the reflog.
+func TestRunUndoCommit(t *testing.T) {
+	r, h := rebaseRepo(t, 3)
+	r.write(t, "f1.txt", "my edit\n")
+	p, err := PlanUndo(r.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RunUndo(r.dir, p, UndoOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if headOf(t, r) != h[1] {
+		t.Errorf("HEAD not back at c2")
+	}
+	if fileExists(r, "f3.txt") || r.read(t, "f1.txt") != "my edit\n" {
+		t.Errorf("work tree wrong: f3 %v f1 %q", fileExists(r, "f3.txt"), r.read(t, "f1.txt"))
+	}
+	if got := strings.TrimSpace(r.git(t, "rev-parse", "HEAD@{1}")); got != h[2] {
+		t.Errorf("c3 not in the reflog: %s", got)
+	}
+}
+
+// G-UND: a local change in the way stops the undo with
+// ErrUndoLocalChanges; nothing moves and the change stays.
+func TestRunUndoRefusesLocalChanges(t *testing.T) {
+	r, h := rebaseRepo(t, 3)
+	r.write(t, "f3.txt", "my edit\n")
+	p, _ := PlanUndo(r.dir)
+	if _, err := RunUndo(r.dir, p, UndoOptions{}); !errors.Is(err, ErrUndoLocalChanges) {
+		t.Fatalf("err %v", err)
+	}
+	if headOf(t, r) != h[2] || r.read(t, "f3.txt") != "my edit\n" {
+		t.Errorf("something moved")
+	}
+}
+
+// G-UND: when HEAD moved after the plan was made, the undo refuses.
+func TestRunUndoStale(t *testing.T) {
+	r, h := rebaseRepo(t, 3)
+	p, _ := PlanUndo(r.dir)
+	r.write(t, "f4.txt", "4\n")
+	r.git(t, "add", "-A")
+	r.git(t, "commit", "-q", "-m", "c4")
+	if _, err := RunUndo(r.dir, p, UndoOptions{}); !errors.Is(err, ErrUndoStale) {
+		t.Fatalf("err %v", err)
+	}
+	if headOf(t, r) == h[1] {
+		t.Error("HEAD moved")
+	}
+}
+
+func fileExists(r *gitTestRepo, name string) bool {
+	_, err := os.Stat(filepath.Join(r.dir, name))
+	return err == nil
 }

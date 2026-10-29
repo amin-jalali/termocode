@@ -2,7 +2,10 @@ package git
 
 import (
 	"errors"
+	"fmt"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // UndoPlan is what an undo (or a move back to a reflog line) will do.
@@ -132,4 +135,45 @@ func blockedBy(dir, target string) []string {
 // isBranch reports whether name is a local branch.
 func isBranch(dir, name string) bool {
 	return name != "" && spawnQuiet(dir, "show-ref", "--verify", "--quiet", "refs/heads/"+name) == nil
+}
+
+var (
+	// ErrUndoLocalChanges: local changes are in the files the undo
+	// changes; reset --keep (or switch) refused and nothing moved.
+	ErrUndoLocalChanges = errors.New("your local changes are in the way")
+	// ErrUndoStale: HEAD moved after the plan was made.
+	ErrUndoStale = errors.New("HEAD moved since; look again")
+)
+
+// UndoOptions tune RunUndo.
+type UndoOptions struct{}
+
+// UndoResult is how an undo went.
+type UndoResult struct{}
+
+// RunUndo carries out p: `git reset --keep <target>` (or a switch back
+// for a checkout). It refuses when HEAD moved since the plan, or when a
+// git action is stopped half-way.
+func RunUndo(dir string, p UndoPlan, opt UndoOptions) (UndoResult, error) {
+	if op := OperationInProgress(dir); op != "" {
+		return UndoResult{}, &BusyError{Op: op}
+	}
+	if head, err := runOut(dir, "git", "rev-parse", "--verify", "-q", "HEAD"); err != nil || strings.TrimSpace(head) != p.From {
+		return UndoResult{}, ErrUndoStale
+	}
+	return UndoResult{}, moveHead(dir, p)
+}
+
+// moveHead runs the reset --keep (or switch) of p.
+func moveHead(dir string, p UndoPlan) error {
+	args := []string{"reset", "--keep", p.Target}
+	cmd := spawn.Command("git", args...)
+	cmd.Dir = dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		if WorkTreeDirty(dir) {
+			return fmt.Errorf("%w: %w", ErrUndoLocalChanges, cmdError(err, out))
+		}
+		return cmdError(err, out)
+	}
+	return nil
 }
