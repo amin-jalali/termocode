@@ -1,6 +1,11 @@
 package main
 
-import "github.com/amin-jalali/termocode/internal/session"
+import (
+	"strings"
+	"time"
+
+	"github.com/amin-jalali/termocode/internal/session"
+)
 
 // serverArg is the hidden first argument of the background session server
 // (`termocode __session-server <folder>`), started by the client.
@@ -70,4 +75,35 @@ func attachRefusal(getenv func(string) string, key string) string {
 type clientOpts struct {
 	// create starts the session when none runs.
 	create bool
+	// link: the client runs at the far end of `termocode ssh` (always in
+	// a session; it answers the heartbeat).
+	link bool
+	// note is shown by the UI after the attach ("Reconnected after 12 s").
+	note string
+}
+
+// linkArgs removes the flags `termocode ssh` gives the termocode it starts
+// on the far side: --link, and on a reconnect --reconnected=<time away>
+// with ",dropped" when keys typed offline were dropped. It returns the
+// note the UI shows.
+func linkArgs(args []string) (rest []string, link bool, note string) {
+	rest, link = extractFlag(args, "--link")
+	out := rest[:0:0]
+	for _, a := range rest {
+		v, ok := strings.CutPrefix(a, "--reconnected=")
+		if !ok {
+			out = append(out, a)
+			continue
+		}
+		d, dropped := v, false
+		if s, ok := strings.CutSuffix(v, ",dropped"); ok {
+			d, dropped = s, true
+		}
+		away, err := time.ParseDuration(d)
+		if err != nil {
+			away = 0
+		}
+		note = session.ReconnectNote(away, dropped)
+	}
+	return out, link, note
 }

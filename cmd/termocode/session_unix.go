@@ -102,7 +102,12 @@ func runClient(dir string, o clientOpts) int {
 	rtlEnter, rtlLeave = rtlEscapes(rtlEnter, rtlLeave, os.Getenv)
 	_, _ = os.Stdout.WriteString(rtlEnter)
 	defer func() { _, _ = os.Stdout.WriteString(rtlLeave) }()
-	return session.Attach(conn, p, session.AttachOpts{In: os.Stdin, Out: os.Stdout, Caps: clientCaps(running), Reconnect: app.ConfigAutoReconnect()})
+	caps := clientCaps(running)
+	if running {
+		caps.Note = o.note
+	}
+	return session.Attach(conn, p, session.AttachOpts{In: os.Stdin, Out: os.Stdout, Caps: caps,
+		Reconnect: app.ConfigAutoReconnect(), Link: o.link})
 }
 
 // clientCaps describes this terminal for the session. A running UI keeps

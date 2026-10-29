@@ -249,6 +249,18 @@ func main() {
 	if exe, err := spawn.Executable(); err == nil {
 		app.SetMCPShareExe(exe)
 	}
+	args, link, note := linkArgs(args)
+	if link { // the far end of `termocode ssh`
+		dir := "."
+		if len(args) > 0 {
+			dir = args[0]
+		}
+		if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+			fmt.Fprintf(os.Stderr, "termocode: %s is not a folder\n", dir)
+			os.Exit(1)
+		}
+		os.Exit(runClient(dir, clientOpts{create: true, link: true, note: note}))
+	}
 	if len(args) == 2 && args[0] == serverArg {
 		os.Exit(runServer(args[1]))
 	}

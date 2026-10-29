@@ -63,3 +63,22 @@ func TestAttachRefusal(t *testing.T) {
 		t.Errorf("other session: %q", msg)
 	}
 }
+
+// TestLinkArgs: the flags termocode ssh adds on the far side are taken
+// out; the folder stays.
+func TestLinkArgs(t *testing.T) {
+	rest, link, note := linkArgs([]string{"--link", "/srv/app"})
+	if !link || note != "" || len(rest) != 1 || rest[0] != "/srv/app" {
+		t.Errorf("first connect: %v %v %q", rest, link, note)
+	}
+	rest, link, note = linkArgs([]string{"--link", "--reconnected=12s,dropped", "/srv/app"})
+	if !link || note != "Reconnected after 12 s · keys typed while offline were dropped" || len(rest) != 1 {
+		t.Errorf("reconnect: %v %v %q", rest, link, note)
+	}
+	if _, _, note := linkArgs([]string{"--link", "--reconnected=3s"}); note != "Reconnected after 3 s" {
+		t.Errorf("note %q", note)
+	}
+	if rest, link, _ := linkArgs([]string{"/srv/app"}); link || len(rest) != 1 {
+		t.Errorf("no link: %v %v", rest, link)
+	}
+}
