@@ -2,7 +2,9 @@ package app
 
 import (
 	"os/exec"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/nvim"
 )
@@ -236,5 +238,44 @@ func TestPanesGetTitleBars(t *testing.T) {
 	m.closeTerminalPane(1)
 	if bar := paneWinbar(t, m, m.terminalWinID); bar != "" {
 		t.Errorf("back to one pane the title bar goes away, got %q", bar)
+	}
+}
+
+// waitNvim polls an nvim Lua expression until it returns "1" or the deadline.
+func waitNvim(t *testing.T, m *Model, expr string) bool {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		if out, _ := m.nvim.EvalLuaString(`return (` + expr + `) and '1' or ''`); out == "1" {
+			return true
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	return false
+}
+
+func TestExitedPaneStaysWithHint(t *testing.T) {
+	m := splitTestModel(t, 120, 30)
+	m.splitTerminalPane(paneRight)
+	tab := m.terminalTabs[0]
+	buf, win := tab.Splits[0].BufID, tab.Splits[0].WinID
+	_ = m.nvim.ExecLua(`vim.fn.chansend(vim.bo[` + itoa(buf) + `].channel, "exit\n")`)
+	if !waitNvim(t, m, `vim.api.nvim_buf_is_valid(`+itoa(buf)+`) and vim.b[`+itoa(buf)+`].termocode_exited`) {
+		t.Fatal("the shell did not end, or its pane vanished")
+	}
+	if bar := paneWinbar(t, m, win); !strings.Contains(bar, "Enter to restart") || !strings.Contains(bar, "x to close") {
+		t.Errorf("hint missing: winbar %q", bar)
+	}
+	m.refreshPaneExits()
+	if !m.terminalTabs[0].paneExited(1) || m.terminalTabs[0].paneExited(0) {
+		t.Errorf("exited flags: pane0=%v pane1=%v", m.terminalTabs[0].paneExited(0), m.terminalTabs[0].paneExited(1))
+	}
+	if nvimWinCount(t, m) != 3 {
+		t.Errorf("the pane must stay on screen, wins=%d", nvimWinCount(t, m))
+	}
+	// The hint survives a repaint of the titles.
+	m.paintPaneTitles()
+	if bar := paneWinbar(t, m, win); !strings.Contains(bar, "Enter to restart") {
+		t.Errorf("repaint lost the hint: %q", bar)
 	}
 }

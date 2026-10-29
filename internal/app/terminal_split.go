@@ -407,3 +407,49 @@ func (m *Model) paintPaneTitles() {
 
 // paneExitedHint replaces a pane's title when its shell has ended.
 const paneExitedHint = "[exited · Enter to restart · x to close]"
+
+// refreshPaneExits notes which panes' shells have ended (the Lua exit handler
+// marks the buffer). Cheap: it asks nvim only when a tab has extra panes.
+func (m *Model) refreshPaneExits() {
+	if m.nvim == nil {
+		return
+	}
+	bufs := []int{}
+	for _, t := range m.terminalTabs {
+		if len(t.Splits) > 0 {
+			bufs = append(bufs, t.paneBufs()...)
+		}
+	}
+	if len(bufs) == 0 {
+		return
+	}
+	out, err := m.nvim.EvalLuaString(fmt.Sprintf(`local out = {}
+		for _, b in ipairs({%s}) do
+			if vim.api.nvim_buf_is_valid(b) and vim.b[b].termocode_exited then out[#out + 1] = tostring(b) end
+		end
+		return table.concat(out, ',')`, intList(bufs)))
+	if err != nil {
+		return
+	}
+	exited := map[int]bool{}
+	for _, f := range strings.Split(out, ",") {
+		exited[parseInt(f)] = true
+	}
+	for i := range m.terminalTabs {
+		for k := range m.terminalTabs[i].Splits {
+			m.terminalTabs[i].Splits[k].Exited = exited[m.terminalTabs[i].Splits[k].BufID]
+		}
+		m.terminalTabs[i].Exited0 = exited[m.terminalTabs[i].BufID]
+	}
+}
+
+// paneExited reports whether pane i of tab t has a finished shell.
+func (t terminalTab) paneExited(i int) bool {
+	if i == 0 {
+		return t.Exited0
+	}
+	if i > 0 && i <= len(t.Splits) {
+		return t.Splits[i-1].Exited
+	}
+	return false
+}

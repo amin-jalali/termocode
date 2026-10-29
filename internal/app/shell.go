@@ -100,6 +100,8 @@ type terminalTab struct {
 	// pane 0. PaneFocus is the focused pane (0 = BufID).
 	Splits    []termPane
 	PaneFocus int
+	// Exited0 is set while pane 0's shell has ended (splits only).
+	Exited0 bool
 }
 
 // isJob reports a tab started by the task runner or the Services view.
@@ -1330,6 +1332,18 @@ func (m Model) terminalTabBarHitTest(absX, absY int) (terminalTabBarHit, int) {
 const termExitedLua = `
 	_G.termocode_term_exited = _G.termocode_term_exited or function(buf)
 		if not vim.api.nvim_buf_is_valid(buf) then return end
+		-- A pane of a split tab stays on screen with a hint; the user
+		-- restarts or closes it (terminal_split.go).
+		if vim.b[buf].termocode_pane then
+			vim.b[buf].termocode_exited = true
+			for _, w in ipairs(vim.fn.win_findbuf(buf)) do
+				pcall(function() vim.wo[w].winbar = ' [exited · Enter to restart · x to close]' end)
+			end
+			vim.schedule(function()
+				if vim.api.nvim_get_current_buf() == buf then pcall(vim.cmd, 'stopinsert') end
+			end)
+			return
+		end
 		for _, w in ipairs(vim.fn.win_findbuf(buf)) do
 			local next
 			for _, o in ipairs(vim.api.nvim_list_bufs()) do
@@ -1498,6 +1512,7 @@ func (m *Model) refreshTerminalCwd() {
 		return
 	}
 	m.terminalCwdAt = time.Now()
+	m.refreshPaneExits()
 	// Filter out tabs whose buffers got nuked (user ran `exit` inside the
 	// tab, on_exit callback fired nvim_buf_delete). Keeps the tab bar in
 	// sync with reality without forcing the user to click the close-x.
