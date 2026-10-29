@@ -88,10 +88,22 @@ const termPaneSpawnLua = termExitedLua + termShellIntLua + termPaneChromeLua + `
 // folder. It returns a toast command when the split is refused.
 func (m *Model) splitTerminalPane(dir paneDir) tea.Cmd {
 	tab := m.activeTerminalTab()
-	if m.nvim == nil || !m.termOpen || tab == nil || m.panelActive != panelKindTerminal {
+	if tab == nil {
 		return nil
 	}
 	from := tab.focusedPane()
+	return m.splitTerminalPaneAt(from, dir, tab.paneCwd(from))
+}
+
+// splitTerminalPaneAt splits pane from of the active terminal tab in
+// direction dir; the new shell starts in cwd. The new pane gets the focus.
+// It returns a toast command when the split is refused.
+func (m *Model) splitTerminalPaneAt(from int, dir paneDir, cwd string) tea.Cmd {
+	tab := m.activeTerminalTab()
+	if m.nvim == nil || !m.termOpen || tab == nil || m.panelActive != panelKindTerminal ||
+		from < 0 || from >= tab.paneCount() {
+		return nil
+	}
 	fromWin := m.paneWin(*tab, from)
 	size, err := m.nvim.EvalLuaString(fmt.Sprintf(`
 		local w = %d
@@ -113,7 +125,6 @@ func (m *Model) splitTerminalPane(dir paneDir) tea.Cmd {
 	if shell == "" {
 		shell = "/bin/bash"
 	}
-	cwd := tab.paneCwd(from)
 	out, err := m.nvim.EvalLuaString(fmt.Sprintf(termPaneSpawnLua+`
 		local fromWin, down, cwd, bufs = %d, %t, %q, {%s}
 		if not vim.api.nvim_win_is_valid(fromWin) then return '0:0' end
