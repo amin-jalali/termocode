@@ -59,3 +59,54 @@ func TestRecentWorkspaceGoneOffersRemove(t *testing.T) {
 		t.Errorf("workspaces.json still has it: %s", b)
 	}
 }
+
+// addRoot runs Add Folder to Workspace with dir.
+func addRoot(t *testing.T, d *Driver, dir string) {
+	t.Helper()
+	d.Palette("workspace-add-folder")
+	for range len(os.Getenv("HOME")) + 1 { // the prompt starts with HOME
+		d.Key("backspace")
+	}
+	d.Type(dir)
+	d.Key("enter")
+	if !waitExplorer(d, filepath.Base(dir), true) {
+		t.Fatalf("root %s not listed:\n%s", filepath.Base(dir), screen(d))
+	}
+}
+
+// Spec: Given a workspace with two added folders keep-root and gone-root,
+// and gone-root deleted while termocode was closed,
+// when termocode starts again, then a message names gone-root as moved
+// or deleted, keep-root and the main folder are still listed and work,
+// and nothing crashes.
+func TestMultiRootWithOneRootGone(t *testing.T) {
+	if testing.Short() {
+		t.Skip("starts nvim")
+	}
+	d := New(t, Options{W: 120, H: 34, Nvim: true, Files: textFiles(), Quiet: time.Nanosecond})
+	base := filepath.Dir(d.Dir)
+	keep, gone := filepath.Join(base, "keep-root"), filepath.Join(base, "gone-root")
+	for _, p := range []string{keep, gone} {
+		if err := os.MkdirAll(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		_ = os.WriteFile(filepath.Join(p, filepath.Base(p)+".txt"), []byte("x\n"), 0o644)
+	}
+	addRoot(t, d, keep)
+	addRoot(t, d, gone)
+	d.Settle(300 * time.Millisecond)
+	if err := os.RemoveAll(gone); err != nil {
+		t.Fatal(err)
+	}
+	d.Restart()
+	if !d.WaitForText("gone-root", 5*time.Second) || !strings.Contains(screen(d), "moved or deleted") {
+		t.Errorf("not told that gone-root is gone:\n%s", screen(d))
+	}
+	if !waitExplorer(d, "keep-root", true) {
+		t.Errorf("keep-root not listed after the restart:\n%s", screen(d))
+	}
+	open(d, "a.txt")
+	if got := bufLines(d); got != "alpha\nbravo\ncharlie" {
+		t.Errorf("a.txt holds %q", got)
+	}
+}

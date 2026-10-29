@@ -803,7 +803,7 @@ func (m Model) handleNvimMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 		// Multi-root: load any persisted extra roots BEFORE applying the
 		// expanded-dirs set, so an expansion path that lives under an extra
 		// root is found and reopened too.
-		m.loadAndApplyWorkspaceRoots()
+		rootsCmd := m.loadAndApplyWorkspaceRoots()
 		sess := loadSession()
 		if len(sess.ExpandedDirs) > 0 {
 			m.explorer.ExpandPaths(sess.ExpandedDirs)
@@ -830,7 +830,7 @@ func (m Model) handleNvimMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 		termCmd := m.restoreTerminalsAtStart(sess) // terminal_restore.go
 		// Group I: load extensions after the built-in Lua. Plugins not
 		// downloaded yet are cloned in the background (plugins.go).
-		cmds := append([]tea.Cmd{m.extLoadCmd(false), m.keymapProblemsToast(), m.startHotExit(), m.syncMCPServe(), termCmd}, pluginBootstrapCmds()...)
+		cmds := append([]tea.Cmd{m.extLoadCmd(false), m.keymapProblemsToast(), m.startHotExit(), m.syncMCPServe(), termCmd, rootsCmd}, pluginBootstrapCmds()...)
 		_ = m.nvim.ExecLua(`vim.api.nvim_create_autocmd('BufWritePost', { callback = function(ev)
   if _G.termocode_notify then _G.termocode_notify('termocode_profiles_saved', ev.file) end
 end })`)
