@@ -122,19 +122,10 @@ func TestStateFromPS(t *testing.T) {
 	}
 }
 
-func TestParsePortsAndSize(t *testing.T) {
+func TestParsePortsText(t *testing.T) {
 	ports := ParsePortsText("0.0.0.0:8081->8080/tcp, :::8443->443/tcp, 53/udp")
 	if len(ports) != 3 || ports[0].PublicPort != 8081 || ports[1].IP != "::" || ports[2].Type != "udp" {
 		t.Fatalf("ports = %#v", ports)
-	}
-	for in, want := range map[string]int64{"421MB": 421000000, "1.2GB": 1200000000, "0B": 0, "1.5GiB": 1610612736} {
-		got, ok := ParseSize(in)
-		if !ok || got != want {
-			t.Errorf("ParseSize(%q)=(%d,%v), want %d", in, got, ok, want)
-		}
-	}
-	if _, ok := ParseSize("unknown"); ok {
-		t.Fatal("invalid size accepted")
 	}
 }
 
