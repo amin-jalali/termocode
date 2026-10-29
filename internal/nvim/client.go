@@ -356,8 +356,9 @@ type State struct {
 	Errors     int
 	Warnings   int
 	CursorLine int // 1-based; 0 when unknown
-	// CursorCol is the 1-based screen column of the cursor in its line
-	// (virtcol: a tab counts its width); 0 when unknown.
+	// CursorCol is the 1-based column of the cursor in its line: glyphs
+	// before it + 1, a tab counting its width (a wide glyph is one
+	// column); 0 when unknown.
 	CursorCol int
 	// Cursors maps each listed buffer's absolute path to its last-known
 	// (line, col), 1-based. The active buffer's entry reflects the live
@@ -501,11 +502,19 @@ func (c *Client) fetchStateOnce() (State, error) {
 			vim.bo.expandtab
 				and ('Spaces: ' .. (vim.bo.shiftwidth > 0 and vim.bo.shiftwidth or vim.bo.tabstop))
 				or ('Tabs: ' .. vim.bo.tabstop),
-			-- The display column (a tab counts its width). virtcol walks the
-			-- whole line, and with breakindent / linebreak that costs ~0.2 s
-			-- on a 10 MB line (minified JSON) after every key; past 4096
-			-- bytes the byte column is shown instead.
-			(vim.fn.col('$') > 4096 and ok_live and live_pos) and (live_pos[2] + 1) or vim.fn.virtcol('.'),
+			-- The column: glyphs before the cursor + 1, a tab counting its
+			-- width (a wide CJK glyph or an emoji is one column, not
+			-- two). Past 4096 bytes (a 10 MB minified JSON line) the
+			-- byte column is shown instead: walking the line after every
+			-- key costs too much.
+			(vim.fn.col('$') > 4096 and ok_live and live_pos) and (live_pos[2] + 1) or (function()
+				local before = vim.api.nvim_get_current_line():sub(1, vim.fn.col('.') - 1)
+				local ts, n = vim.bo.tabstop > 0 and vim.bo.tabstop or 8, 0
+				for _, ch in ipairs(vim.fn.split(before, [[\zs]])) do
+					if ch == '\t' then n = n + ts - n % ts else n = n + 1 end
+				end
+				return n + 1
+			end)(),
 		}
 	`, &raw)
 	if err != nil {
