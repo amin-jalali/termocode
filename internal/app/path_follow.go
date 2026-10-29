@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/git"
 )
 
 // After a file or folder is renamed or deleted (by the agent or in the
@@ -58,6 +60,15 @@ func (m *Model) followRename(from, to string) {
 		return p, true
 	})
 	m.debugFollowRename(from, to) // breakpoints (K7)
+}
+
+// moveGitIndex lets git's index follow renames done on disk, so a staged
+// file shows as renamed (its staged text kept) instead of deleted plus
+// untracked.
+func moveGitIndex(moves ...git.Move) {
+	if err := git.MoveIndexAll(moves); err != nil {
+		recordError("rename: git index: " + err.Error())
+	}
 }
 
 // forgetPaths drops what remembers the deleted paths (or files under
