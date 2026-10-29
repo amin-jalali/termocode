@@ -75,3 +75,15 @@ func TestExecNoCommand(t *testing.T) {
 		t.Fatal("empty argv accepted")
 	}
 }
+
+func TestTermArgv(t *testing.T) {
+	h, _, _ := newHost(t, func(c *Config) { c.Context = "prod"; c.User = "node" })
+	got := strings.Join(h.TermArgv("web", []string{"npm", "test"}), " ")
+	if want := "docker --context prod exec -it -w /app/web -u node api-1 npm test"; got != want {
+		t.Fatalf("TermArgv = %q, want %q", got, want)
+	}
+	got = strings.Join(h.TermArgv("", nil), " ")
+	if !strings.HasPrefix(got, "docker --context prod exec -it -w /app -u node api-1 sh -c ") {
+		t.Fatalf("shell TermArgv = %q", got)
+	}
+}

@@ -84,3 +84,12 @@ func (x containerExec) Stream(ctx context.Context, dir string, argv ...string) (
 	}
 	return x.h.cfg.X.Stream(ctx, "", a...)
 }
+
+// TermArgv is the local command line of a terminal tab that runs argv in
+// dir inside the container (`exec -it`). No argv opens bash, else sh.
+func (h *Host) TermArgv(dir string, argv []string) []string {
+	if len(argv) == 0 {
+		argv = []string{"sh", "-c", "command -v bash >/dev/null && exec bash || exec sh"}
+	}
+	return h.argv(h.execArgs("-it", dir, argv)...)
+}
