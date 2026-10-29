@@ -590,6 +590,7 @@ type Model struct {
 	commitView *commitViewState
 	rebase     *gitRebaseState // the interactive rebase card (git_rebase.go)
 	gitUndo    *gitUndoState   // undo with the reflog (git_undo.go)
+	merge      *mergeViewState // the three-way merge view (git_merge_view.go)
 	// fixupTarget is the commit the fixup confirm is about (git_fixup.go).
 	fixupTarget string
 	// Hot exit (hot_exit.go): this workspace's backup dir, this run's
