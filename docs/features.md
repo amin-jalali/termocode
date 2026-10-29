@@ -51,7 +51,7 @@ its name and key.
 
 ## AI assistant
 
-- Ghost-text completion, a chat panel and an agent with tools. → [Use AI](guides/ai-use.md)
+- Ghost-text completion, next edit suggestions, a chat panel and an agent with tools. → [Use AI](guides/ai-use.md)
 - Explain / Fix / Edit / Doc actions that open as a diff before they apply.
 - Anthropic, OpenAI, OpenRouter, Ollama, LM Studio or any OpenAI-compatible server. → [Set up AI](guides/ai-setup.md)
 

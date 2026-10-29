@@ -26,6 +26,31 @@ another fixes), pick a profile: see [AI profiles and pipelines](ai-profiles.md).
 `Tab` still does its normal jobs when there is no suggestion: expand a
 snippet, accept a completion, jump to the next placeholder, or insert a tab.
 
+## Next edit suggestions
+
+After you change code, the AI looks for the next place that must change
+too. For example: you rename a parameter, and its uses below still have the
+old name.
+
+1. Make an edit and pause. A marker `⇥ next edit` appears at the end of the
+   line that should change. The status bar says **Tab: go to next edit**.
+2. Press `Tab`. The cursor goes to that line. Below it you see the change:
+   the old text struck through, the new text in grey.
+3. Press `Tab` again to apply it. One `u` (undo) takes it back.
+4. Press `Esc` to dismiss it, or just keep typing.
+
+If ghost text shows at the cursor, `Tab` accepts the ghost text first.
+
+- It is on when ghost text is on. Turn it on or off with the palette:
+  **AI: Toggle Next Edit Suggestions**, or the `ai_next_edit` setting.
+- It uses the ghost-text model (`ai_inline_model`).
+- It sends only the last few edits and about 60 lines around the cursor,
+  never the whole file.
+- It never sends files that may hold secrets (`.env`, keys, certificates,
+  names with *secret*, *token*, *password* …) or very big files.
+- It only suggests a change in the same file, near the cursor, and never on
+  the line you just edited.
+
 ## Chat panel
 
 1. Press `Alt+A` (or run **AI: Open Chat**). The chat opens on the right.
@@ -555,7 +580,7 @@ Knowledge files the AI loads only when a task needs them: see
 | Key | Action |
 |---|---|
 | `Alt+A` | Open / close the chat panel |
-| `Tab` | Accept ghost text |
+| `Tab` | Accept ghost text, or go to / apply the next edit |
 | `Alt+\` | Suggest now |
 | `Alt+|` | Toggle automatic ghost text |
 | `Alt+I` | Edit selection with AI |
@@ -568,6 +593,10 @@ Knowledge files the AI loads only when a task needs them: see
 :   Check that automatic suggestions are on (`Alt+|`). Check the `✦` badge in
     the status bar — if it says *AI off*, set up a provider. Local models can
     take a few seconds.
+
+**No next edit marker appears**
+:   Check that it is on (**AI: Toggle Next Edit Suggestions**). It waits for
+    a short pause after an edit and shows nothing when the AI is not sure.
 
 **`Alt+\` or `Alt+|` does nothing**
 :   Your terminal may not send `Alt` keys. Use the palette:
