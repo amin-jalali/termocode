@@ -1,12 +1,22 @@
 package grid
 
+import (
+	"unicode/utf8"
+
+	"github.com/charmbracelet/x/ansi"
+)
+
 // Cell is one cell on the nvim grid: a rune plus a highlight attribute id.
 // Cont marks the right half of a double-width glyph: nvim sends it as an
 // empty string and it draws nothing (the glyph to its left covers it).
+// Tail holds the rest of a glyph made of several runes (a letter with a
+// combining accent, an emoji ZWJ sequence, a flag); it is "" for most
+// cells.
 type Cell struct {
 	Rune rune
 	HlID int
 	Cont bool
+	Tail string
 }
 
 // Attrs is the resolved set of attributes nvim defines for one hl id.
@@ -186,8 +196,16 @@ func (g *Grid) applyLine(row, colStart int, cellsArr []any) {
 		lastHl = hl
 
 		var r rune = ' '
+		tail := ""
 		for _, x := range text {
 			r = x
+			// Keep the rest only when the text is one glyph (nvim
+			// sends one per cell).
+			if n := utf8.RuneLen(x); n > 0 && len(text) > n {
+				if c, _ := ansi.FirstGraphemeCluster(text, ansi.GraphemeWidth); c == text {
+					tail = text[n:]
+				}
+			}
 			break
 		}
 		cont := text == ""
@@ -195,7 +213,7 @@ func (g *Grid) applyLine(row, colStart int, cellsArr []any) {
 			if col >= g.Width {
 				break
 			}
-			g.Cells[row][col] = Cell{Rune: r, HlID: hl, Cont: cont}
+			g.Cells[row][col] = Cell{Rune: r, HlID: hl, Cont: cont, Tail: tail}
 			col++
 		}
 	}
