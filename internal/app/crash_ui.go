@@ -99,19 +99,22 @@ func (m *Model) crashCardCmd() tea.Cmd {
 
 // restoreAfterCrash brings the unsaved work of a crashed run back at once
 // (no Restore question: the card tells about it). It reports whether it
-// did; otherwise the usual question follows.
-func (m *Model) restoreAfterCrash(prev string, b []hotBackup) bool {
+// did; otherwise the usual question follows. Like Restore, it first
+// checks the disk (hot_exit_disk.go) and the returned command tells the
+// user which files changed there.
+func (m *Model) restoreAfterCrash(prev string, b []hotBackup) (tea.Cmd, bool) {
 	c := m.crash
 	if c == nil || c.report == "" || len(b) == 0 || m.nvim == nil {
-		return false
+		return nil, false
 	}
+	b, disk := hotExitDiskCheck(b)
 	if err := m.restoreHotBackups(b, false); err != nil {
 		recordError("crash restore: " + err.Error())
-		return false
+		return nil, false
 	}
 	_ = os.RemoveAll(prev) // the live backup holds them again
 	c.restored += len(b)
-	return true
+	return m.tellHotDisk(disk), true
 }
 
 // showWaitingCrashCard opens the card once no other dialog is open.
