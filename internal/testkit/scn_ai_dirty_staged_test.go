@@ -148,3 +148,61 @@ func TestSCN22AIWriteDirtyStagedAuto(t *testing.T) {
 	}
 	scn22Unchanged(t, d, "Q")
 }
+
+// acceptAIWrite runs the turn and accepts the whole file on the card.
+func acceptAIWrite(t *testing.T, d *Driver) {
+	t.Helper()
+	open(d, "r.txt")
+	askAI(d, "change it")
+	if !d.WaitForText("Accept file", 5*time.Second) {
+		t.Fatalf("no review card:\n%s", screen(d))
+	}
+	clickNth(d, "Accept file", 0)
+	if !d.WaitForText("fake-done", 5*time.Second) {
+		t.Fatalf("the turn did not finish:\n%s", screen(d))
+	}
+	if got := diskFile(d, "r.txt"); got != reviewNewA {
+		t.Fatalf("accepted text not written: %q", got)
+	}
+	if got := gitStatusOf(d, "r.txt"); got != "MM r.txt" {
+		t.Errorf("git status after the AI write %q", got)
+	}
+}
+
+// Spec: Given the AI's accepted write to staged r.txt, when the user
+// changes and saves r.txt and runs AI: Undo Last Turn,
+// then Enter on the dialog is Cancel (the saved work stays); Restore puts
+// back the staged text and git status shows the staged change only.
+func TestSCN22UndoTurnAfterSaveAsksSafeFirst(t *testing.T) {
+	d, _ := scn22Driver(t)
+	acceptAIWrite(t, d)
+	typeInEditor(d, "Q")
+	d.Key("ctrl+s")
+	if !eventually(d, func() bool { return strings.Contains(diskFile(d, "r.txt"), "Q") }) {
+		t.Fatalf("save did not write: %q", diskFile(d, "r.txt"))
+	}
+	saved := diskFile(d, "r.txt")
+	d.Palette("ai-undo-turn")
+	if !d.WaitForText("Undo AI changes?", 2*time.Second) {
+		t.Fatalf("no undo dialog:\n%s", screen(d))
+	}
+	d.Key("enter")
+	d.Settle(100 * time.Millisecond)
+	if got := diskFile(d, "r.txt"); got != saved {
+		t.Fatalf("Enter restored over the user's saved work: %q", got)
+	}
+	d.Palette("ai-undo-turn")
+	if !d.WaitForText("Undo AI changes?", 2*time.Second) {
+		t.Fatalf("no undo dialog:\n%s", screen(d))
+	}
+	clickButton(d, "Restore")
+	if !eventually(d, func() bool { return diskFile(d, "r.txt") == scn22Staged }) {
+		t.Fatalf("Restore did not put the staged text back: %q", diskFile(d, "r.txt"))
+	}
+	if got := gitStatusOf(d, "r.txt"); got != "M  r.txt" {
+		t.Errorf("git status after undo %q, want the staged change only", got)
+	}
+	if !eventually(d, func() bool { return bufLines(d)+"\n" == scn22Staged }) {
+		t.Errorf("tab %q", bufLines(d))
+	}
+}
