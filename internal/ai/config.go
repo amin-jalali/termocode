@@ -22,11 +22,14 @@ import (
 // Settings is the NON-secret AI configuration, stored in config.json next
 // to the theme and editor settings (read-modify-write, unknown keys kept).
 type Settings struct {
-	Provider    string   `json:"ai_provider,omitempty"`
-	Model       string   `json:"ai_model,omitempty"`
-	BaseURL     string   `json:"ai_base_url,omitempty"`
-	Inline      *bool    `json:"ai_inline,omitempty"`
-	InlineModel string   `json:"ai_inline_model,omitempty"`
+	Provider    string `json:"ai_provider,omitempty"`
+	Model       string `json:"ai_model,omitempty"`
+	BaseURL     string `json:"ai_base_url,omitempty"`
+	Inline      *bool  `json:"ai_inline,omitempty"`
+	InlineModel string `json:"ai_inline_model,omitempty"`
+	// NextEdit is ai_next_edit: next edit suggestions (nil: same as
+	// ai_inline).
+	NextEdit    *bool    `json:"ai_next_edit,omitempty"`
 	AutoApprove []string `json:"ai_auto_approve,omitempty"`
 	MaxSteps    int      `json:"ai_max_steps,omitempty"` // 0: DefaultMaxSteps
 	// EditReview is "review" (default: the agent's file changes open as a
@@ -130,6 +133,15 @@ const (
 
 // InlineEnabled reports the ai_inline setting (default on).
 func (s Settings) InlineEnabled() bool { return s.Inline == nil || *s.Inline }
+
+// NextEditEnabled reports the ai_next_edit setting: on when ai_inline is
+// on, unless it is set on purpose.
+func (s Settings) NextEditEnabled() bool {
+	if s.NextEdit != nil {
+		return *s.NextEdit
+	}
+	return s.InlineEnabled()
+}
 
 // ReviewEdits reports whether the agent's file changes are reviewed as a
 // diff (ai_edit_review, default review).
@@ -300,6 +312,9 @@ func SaveSettings(path string, s Settings) error {
 		set("ai_edit_review", s.EditReview)
 		if s.Inline != nil {
 			merged["ai_inline"] = *s.Inline
+		}
+		if s.NextEdit != nil {
+			merged["ai_next_edit"] = *s.NextEdit
 		}
 		if len(s.AutoApprove) > 0 {
 			merged["ai_auto_approve"] = s.AutoApprove
