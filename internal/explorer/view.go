@@ -351,7 +351,8 @@ func (m Model) renderTreeRow(
 		}
 		rowBgC = theme.Wash(theme.BgSidebar, lvl)
 	}
-	bgStyle := lipgloss.NewStyle().Background(rowBgC)
+	// Every piece is drawn with paint (paint.go), a cheap Render.
+	bgPaint := func(t string) string { return paint("", rowBgC, false, t) }
 
 	// ── 1. Left pad / accent bar ────────────────────────────────────────
 	var prefix strings.Builder
@@ -362,28 +363,24 @@ func (m Model) renderTreeRow(
 		// highlight); this keeps the welcome-screen icon's bright magenta
 		// untouched while the explorer's selection bar reads as a deeper,
 		// more grounded purple.
-		accentStyle := lipgloss.NewStyle().
-			Foreground(theme.LG(theme.BorderFocus)).
-			Background(rowBgC).
-			Bold(focused && isCursor)
-		prefix.WriteString(accentStyle.Render("▌"))
+		prefix.WriteString(paint(theme.LG(theme.BorderFocus), rowBgC, focused && isCursor, "▌"))
 		// remaining left pad cells (leftPad - 1)
 		if leftPad > 1 {
-			prefix.WriteString(bgStyle.Render(strings.Repeat(" ", leftPad-1)))
+			prefix.WriteString(bgPaint(strings.Repeat(" ", leftPad-1)))
 		}
 	} else {
-		prefix.WriteString(bgStyle.Render(strings.Repeat(" ", leftPad)))
+		prefix.WriteString(bgPaint(strings.Repeat(" ", leftPad)))
 	}
 
 	// ── 2. Indent guides (one per nesting level beyond root) ────────────
-	guideStyle := lipgloss.NewStyle().
-		Foreground(theme.Mix(theme.BgSidebar, theme.TextDimmer, 0.6)).
-		Background(rowBgC)
-	for d := 0; d < e.Depth; d++ {
-		// `│` U+2502 + space — indentStep cols.
-		prefix.WriteString(guideStyle.Render("│"))
-		if indentStep > 1 {
-			prefix.WriteString(bgStyle.Render(strings.Repeat(" ", indentStep-1)))
+	if e.Depth > 0 {
+		guideFg := theme.Mix(theme.BgSidebar, theme.TextDimmer, 0.6)
+		for d := 0; d < e.Depth; d++ {
+			// `│` U+2502 + space — indentStep cols.
+			prefix.WriteString(paint(guideFg, rowBgC, false, "│"))
+			if indentStep > 1 {
+				prefix.WriteString(bgPaint(strings.Repeat(" ", indentStep-1)))
+			}
 		}
 	}
 	prefixW := leftPad + e.Depth*indentStep
@@ -400,7 +397,7 @@ func (m Model) renderTreeRow(
 	// up under their folder's icon (VSCode's twistie column).
 	mW := markerColW()
 	var marker string
-	var markerStyle lipgloss.Style
+	var markerFg lipgloss.Color // the non-icon marker's colour
 	iconMode := mW == markerWIcons
 	if iconMode {
 		g, c := theme.FileIconFor(e.Node.Name, e.Node.IsDir, e.Node.Expanded)
@@ -415,28 +412,23 @@ func (m Model) renderTreeRow(
 				chev = " " // nf-fa-angle_down
 			}
 		}
-		iconStyle := lipgloss.NewStyle().Foreground(theme.LG(c)).Background(rowBgC)
+		iconFg := theme.LG(c)
 		if !e.Node.IsDir {
 			if code, ok := gitStatus[e.Node.Path]; ok && code == "U" && !isIgnored {
-				iconStyle = iconStyle.Foreground(theme.LG(theme.AccentGreen))
+				iconFg = theme.LG(theme.AccentGreen)
 			}
 		}
-		marker = lipgloss.NewStyle().Foreground(theme.LG(chevFg)).Background(rowBgC).Render(chev) +
-			iconStyle.Render(g) + bgStyle.Render(" ")
-		markerStyle = lipgloss.NewStyle()
+		marker = paint(theme.LG(chevFg), rowBgC, false, chev) +
+			paint(iconFg, rowBgC, false, g) + bgPaint(" ")
 	} else if e.Node.IsDir {
 		var ch string
 		if e.Node.Expanded {
 			ch = "▾"
 			// Open: chevron amber, name primary bold (handled later).
-			markerStyle = lipgloss.NewStyle().
-				Foreground(theme.LG(theme.AccentAmber)).
-				Background(rowBgC)
+			markerFg = theme.LG(theme.AccentAmber)
 		} else {
 			ch = "▸"
-			markerStyle = lipgloss.NewStyle().
-				Foreground(theme.LG(theme.TextMuted)).
-				Background(rowBgC)
+			markerFg = theme.LG(theme.TextMuted)
 		}
 		// marker column is markerW=2 wide; chevron + 1 space.
 		marker = ch + " "
@@ -446,9 +438,7 @@ func (m Model) renderTreeRow(
 		if isIgnored {
 			tagFG = theme.TextMuted
 		}
-		markerStyle = lipgloss.NewStyle().
-			Foreground(theme.LG(tagFG)).
-			Background(rowBgC)
+		markerFg = theme.LG(tagFG)
 		// Pad/truncate tag to exactly 2 cells.
 		if runewidth.StringWidth(tag) > 2 {
 			tag = runewidth.Truncate(tag, 2, "")
@@ -478,13 +468,9 @@ func (m Model) renderTreeRow(
 	if !e.Node.IsDir && !isIgnored && !isCursor {
 		if code, ok := gitStatus[e.Node.Path]; ok && code == "U" {
 			nameFG = theme.AccentGreen
-			markerStyle = markerStyle.Foreground(theme.LG(theme.AccentGreen))
+			markerFg = theme.LG(theme.AccentGreen)
 		}
 	}
-	nameStyle := lipgloss.NewStyle().
-		Foreground(theme.LG(nameFG)).
-		Background(rowBgC).
-		Bold(bold)
 
 	// ── 6. Right-side git status badge ──────────────────────────────────
 	rightBadge := ""
@@ -493,20 +479,13 @@ func (m Model) renderTreeRow(
 		if e.Node.IsDir {
 			// Folder: count of changed descendants in muted amber.
 			if c := folderCounts[e.Node.Path]; c > 0 {
-				st := lipgloss.NewStyle().
-					Foreground(theme.LG(theme.AccentAmber)).
-					Background(rowBgC)
-				rightBadge = st.Render(itoa(c))
+				rightBadge = paint(theme.LG(theme.AccentAmber), rowBgC, false, itoa(c))
 				rightBadgeW = lipgloss.Width(rightBadge)
 			}
 		} else if !isIgnored && gitStatus != nil {
 			if code, ok := gitStatus[e.Node.Path]; ok && code != "" && code != "I" {
 				badgeFG, badgeBold := gitBadgeStyle(code)
-				st := lipgloss.NewStyle().
-					Foreground(theme.LG(badgeFG)).
-					Background(rowBgC).
-					Bold(badgeBold)
-				rightBadge = st.Render(code)
+				rightBadge = paint(theme.LG(badgeFG), rowBgC, badgeBold, code)
 				rightBadgeW = lipgloss.Width(rightBadge)
 			}
 		}
@@ -534,15 +513,14 @@ func (m Model) renderTreeRow(
 		name = runewidth.Truncate(name, availForName, "…")
 	}
 
-	gapAfterMarker := bgStyle.Render(strings.Repeat(" ", markerGap))
 	var rendered string
 	if iconMode {
-		rendered = prefix.String() + marker + nameStyle.Render(name)
+		rendered = prefix.String() + marker + paint(theme.LG(nameFG), rowBgC, bold, name)
 	} else {
 		rendered = prefix.String() +
-			markerStyle.Render(marker) +
-			gapAfterMarker +
-			nameStyle.Render(name)
+			paint(markerFg, rowBgC, false, marker) +
+			bgPaint(strings.Repeat(" ", markerGap)) +
+			paint(theme.LG(nameFG), rowBgC, bold, name)
 	}
 
 	// Compute the actual visual width so far so we know how much spacer to add.
@@ -557,11 +535,11 @@ func (m Model) renderTreeRow(
 	if tail < 0 {
 		tail = 0
 	}
-	rendered += bgStyle.Render(strings.Repeat(" ", tail))
+	rendered += bgPaint(strings.Repeat(" ", tail))
 	if rightBadgeW > 0 {
 		rendered += rightBadge
 	}
-	rendered += bgStyle.Render(strings.Repeat(" ", rightPad))
+	rendered += bgPaint(strings.Repeat(" ", rightPad))
 
 	return padOrTruncRow(rendered, m.w)
 }
