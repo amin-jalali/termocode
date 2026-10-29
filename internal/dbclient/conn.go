@@ -81,21 +81,24 @@ func (c Conn) DSN(password string) string {
 	}
 	if c.URL != "" {
 		u, e := url.Parse(c.URL)
-		if e == nil {
-			user := c.User
-			if u.User != nil && user == "" {
-				user = u.User.Username()
-			}
-			if user != "" {
-				u.User = url.User(user)
-			} else {
-				u.User = nil
-			}
-			if password != "" {
-				u.User = url.UserPassword(user, password)
-			}
-			return u.String()
+		if e != nil {
+			// Never fall back to the fields (the local default server):
+			// the driver refuses the URL with its own reason.
+			return c.URL
 		}
+		user := c.User
+		if u.User != nil && user == "" {
+			user = u.User.Username()
+		}
+		if user != "" {
+			u.User = url.User(user)
+		} else {
+			u.User = nil
+		}
+		if password != "" {
+			u.User = url.UserPassword(user, password)
+		}
+		return u.String()
 	}
 	u := url.URL{Scheme: "postgres", Host: netHost(c.Host, c.Port), Path: "/" + c.Database}
 	if c.User != "" {
