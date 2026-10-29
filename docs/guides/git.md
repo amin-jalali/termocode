@@ -212,7 +212,9 @@ of the Source Control panel, for example `⇅ Rebasing 1/3 · 1 conflict`.
    For an `edit` row, change the commit with **Commit (Amend)**.
 2. Press `Enter` on the banner (or run **Git: Rebase in Progress (Continue
    / Skip / Abort)…**). A card opens:
-    - **Abort** (first, with the focus) puts the branch back as it was.
+    - **Close** (first, with the focus) changes nothing. `Enter` and `Esc`
+      never throw your conflict fixes away.
+    - **Abort** puts the branch back as it was.
     - **Skip** drops the commit the rebase stopped on and goes on.
     - **Continue** goes on. It stages the files you fixed. It refuses
       while a file still has conflict markers.
