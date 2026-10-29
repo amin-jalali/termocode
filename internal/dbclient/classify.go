@@ -486,7 +486,7 @@ func stripSQLForTable(sql string, dialect SQLDialect) string {
 		}
 		if b[i] == '\'' {
 			closed := false
-			for j := i; j < len(b); j++ {
+			for j := i + 1; j < len(b); j++ {
 				if b[j] == '\\' && j+1 < len(b) {
 					b[j], b[j+1] = ' ', ' '
 					j++
