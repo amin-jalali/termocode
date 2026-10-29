@@ -171,3 +171,118 @@ func TestWriteFileFullDisk(t *testing.T) {
 		t.Error("a failed write left config.json")
 	}
 }
+
+func TestUpdateNullFileIsEmptyObject(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(path, []byte("null\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := Update(path, func(m map[string]any) error {
+		if m == nil {
+			t.Fatal("fn got a nil map")
+		}
+		m["a"] = "b"
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if m := readJSON(t, path); m["a"] != "b" || len(m) != 1 {
+		t.Fatalf("got %v", m)
+	}
+}
+
+func TestUpdateUnreadablePathFails(t *testing.T) {
+	// The path is a folder: reading fails with an error that is not
+	// "missing", so nothing is written.
+	path := t.TempDir()
+	called := false
+	err := Update(path, func(map[string]any) error { called = true; return nil })
+	if err == nil || called {
+		t.Fatalf("err = %v, called = %v", err, called)
+	}
+}
+
+func TestUpdateFnErrorCancelsWrite(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+	const old = `{"a":1}`
+	if err := os.WriteFile(path, []byte(old), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	stop := errors.New("user said no")
+	err := Update(path, func(m map[string]any) error { m["a"] = 2; return stop })
+	if !errors.Is(err, stop) {
+		t.Fatalf("err = %v", err)
+	}
+	if b, _ := os.ReadFile(path); string(b) != old {
+		t.Fatalf("file changed: %s", b)
+	}
+	noTemps(t, dir)
+}
+
+func TestUpdateValueThatCannotBeJSONIsNotWritten(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+	const old = `{"a":1}`
+	if err := os.WriteFile(path, []byte(old), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	err := Update(path, func(m map[string]any) error { m["f"] = func() {}; return nil })
+	if err == nil {
+		t.Fatal("want a marshal error")
+	}
+	if b, _ := os.ReadFile(path); string(b) != old {
+		t.Fatalf("file changed: %s", b)
+	}
+	noTemps(t, dir)
+}
+
+func TestWriteFileFolderIsAFile(t *testing.T) {
+	dir := t.TempDir()
+	block := filepath.Join(dir, "notadir")
+	if err := os.WriteFile(block, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteFile(filepath.Join(block, "config.json"), []byte("{}")); err == nil {
+		t.Fatal("want an error when the folder is a file")
+	}
+}
+
+func TestWriteFileUnwritableFolderKeepsOldFile(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root can write to any folder")
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+	if err := os.WriteFile(path, []byte(`{"a":1}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(dir, 0o755) })
+	if err := WriteFile(path, []byte(`{"a":2}`)); err == nil {
+		t.Fatal("want an error when the folder is read-only")
+	}
+	if b, _ := os.ReadFile(path); string(b) != `{"a":1}` {
+		t.Fatalf("file changed: %s", b)
+	}
+	noTemps(t, dir)
+}
+
+func TestWriteFileKeepsMode(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(path, []byte(`{}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteFile(path, []byte(`{"a":1}`)); err != nil {
+		t.Fatal(err)
+	}
+	st, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Mode().Perm() != 0o600 {
+		t.Fatalf("mode = %v, want 0600", st.Mode().Perm())
+	}
+}
