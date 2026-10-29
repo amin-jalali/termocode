@@ -436,3 +436,43 @@ func TestStatsEmptyAnswerIsNotAnError(t *testing.T) {
 		t.Errorf("empty answer: note %q delay %v", st.stats.lastFail, st.stats.delay)
 	}
 }
+
+func TestStatsDemoNeverCallsTheEngine(t *testing.T) {
+	f := statsFake(t)
+	m, st := statsModel(t)
+	st.stats.off = true
+	if cmd := m.statsSync(); cmd != nil {
+		t.Error("a demo started the poller")
+	}
+	if f.Count("stats") != 0 {
+		t.Error("a demo called the engine")
+	}
+}
+
+func TestStatsDemoVariantShowsChartsWithoutEngine(t *testing.T) {
+	statsIcons(t, theme.IconModeUnicode)
+	f := statsFake(t)
+	m := svcTestModel(newServicesState(), 150, 42)
+	m.containersDemo("stats-wide")
+	st := m.services
+	if len(st.stats.series) != 5 || st.stats.detailID != "9f3c2e1a" {
+		t.Fatalf("series %d, detail %q", len(st.stats.series), st.stats.detailID)
+	}
+	if cmd := m.statsSync(); cmd != nil || f.Count("stats") != 0 {
+		t.Error("the demo called the engine")
+	}
+	out := strings.Split(ansi.Strip(m.renderServicesSidebarRaw(m.explorerWidth-1, 40, true, svcTestNow, -1, -1)), "\n")
+	for _, want := range []string{"CPU ", "MEM ", "NET ", "BLK "} {
+		if lineWith(out, want) == "" {
+			t.Errorf("no %q line", want)
+		}
+	}
+	if l := lineWith(out, "nginx"); !strings.Contains(l, "MEM") {
+		t.Errorf("wide row without values: %q", l)
+	}
+	var narrow Model = svcTestModel(newServicesState(), 100, 30)
+	narrow.containersDemo("stats")
+	if narrow.explorerWidth != 30 {
+		t.Errorf("plain stats variant changed the width: %d", narrow.explorerWidth)
+	}
+}

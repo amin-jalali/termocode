@@ -77,6 +77,7 @@ func (m *Model) containersDemo(variant string) {
 	m.servicesDemo("")
 	st := m.services
 	st.sections = map[string]bool{}
+	st.stats.off = true // a demo never calls the engine
 	st.containerDetected = true
 	st.containerEngine = containers.Engine{Binary: "docker", Kind: "docker", Reachable: true,
 		Version: containers.Version{Version: "27.3.1"}}
@@ -123,6 +124,14 @@ func (m *Model) containersDemo(variant string) {
 	st.collapsed[hostGroup("containers", "shop")] = true
 	st.cursor = 1 // postgres
 	switch variant {
+	case "stats", "stats-wide":
+		// Live CPU / memory: a minute of canned samples; "stats-wide"
+		// widens the sidebar so the rows show their values too.
+		m.statsDemo()
+		if variant == "stats-wide" {
+			m.explorerWidth = 66
+			m.applyLayout()
+		}
 	case "remove":
 		for i, r := range st.rows() {
 			if r.kind == svcRowHostItem && r.host == hostContainer && r.hostID == "11223344" {

@@ -45,6 +45,7 @@ type containerStats struct {
 	cancel   context.CancelFunc
 	lastFail string        // why the last call failed ("" = it worked)
 	delay    time.Duration // the wait before the next call
+	off      bool          // a demo: never call the engine
 }
 
 // runningContainerIDs lists the containers that are running now.
@@ -61,7 +62,7 @@ func (st *servicesState) runningContainerIDs() []string {
 // statsWanted: should the poller run right now?
 func (m *Model) statsWanted() bool {
 	st := m.services
-	if st == nil || !st.visible || m.termBlurred {
+	if st == nil || !st.visible || m.termBlurred || st.stats.off {
 		return false
 	}
 	if !st.containerEngine.Reachable || st.containerDetecting || !st.hostSectionVisible("containers") {
@@ -454,4 +455,43 @@ func statsFailText(err error) string {
 		l = "no answer"
 	}
 	return "stats unavailable: " + l
+}
+
+// statsDemo fills the demo's running containers with a minute of canned
+// samples and puts the cursor on the first, so its charts show.
+func (m *Model) statsDemo() {
+	st := m.services
+	st.stats.series = map[string]*containers.Series{}
+	// id → CPU base, memory base (MB), memory limit (GB)
+	for _, d := range []struct {
+		id        string
+		cpu, mem  float64
+		limitGB   float64
+		wave, amp int
+	}{
+		{"9f3c2e1a", 18, 210, 2, 9, 14},
+		{"a1b2c3d4", 3, 24, 1, 5, 2},
+		{"f3e4d5c6", 41, 380, 2, 7, 25},
+		{"e4d5c6b7", 9, 150, 2, 11, 6},
+		{"aabbccdd", 1, 12, 1, 3, 1},
+	} {
+		se := &containers.Series{}
+		for i := 0; i < containers.StatWindow; i++ {
+			w := float64((i*d.wave)%(2*d.amp+1) - d.amp) // a zig-zag, no randomness
+			se.Push(containers.Sample{
+				CPU: max(d.cpu+w, 0.1), HasCPU: true,
+				MemUsed: (d.mem + float64(i)/3) * 1048576, MemLimit: d.limitGB * (1 << 30), HasMem: true,
+				NetRx: float64(1200 + 90*i), NetTx: float64(3400 + 40*i), HasNet: true,
+				BlkRead: 0, BlkWrite: float64(8190 + 512*i), HasBlk: true,
+			})
+		}
+		st.stats.series[d.id] = se
+	}
+	for i, r := range st.rows() {
+		if r.kind == svcRowHostItem && r.host == hostContainer && r.hostID == "9f3c2e1a" {
+			st.cursor = i
+			break
+		}
+	}
+	m.statsRetarget()
 }
