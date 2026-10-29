@@ -124,8 +124,9 @@ func onlyPlaceholders(v string) bool {
 // text (URLs inside error messages too).
 var secretQueryRe = regexp.MustCompile(`(?i)([?&;](?:[\w.-]*(?:token|secret|password|passwd|pwd|api[_-]?key|apikey|signature|sig|auth|session|code|key)[\w.-]*)=)([^&#\s"']+)`)
 
-// userinfoRe finds "scheme://user:password@" in a text.
-var userinfoRe = regexp.MustCompile(`(?i)\b([a-z][a-z0-9+.-]*://[^/\s:@]+:)([^/\s@]+)(@)`)
+// userinfoRe finds "scheme://user:password@" in a text; the user may
+// be empty ("redis://:password@host").
+var userinfoRe = regexp.MustCompile(`(?i)\b([a-z][a-z0-9+.-]*://[^/\s:@]*:)([^/\s@]+)(@)`)
 
 // RedactURL hides secret query values (token, key, password, sig, …)
 // and the password part of user:password@ in s. It works on any text,
