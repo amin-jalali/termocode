@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -164,9 +165,7 @@ func buildHTTPPage(run *httpRun, view int, reveal, sending bool) httpPage {
 			add("note", httpBinaryNote(resp))
 			break
 		}
-		for _, l := range httpTextLines(resp.Text()) {
-			plain(l)
-		}
+		lines = appendTextLines(lines, resp.TextBytes())
 	default:
 		if resp.Err == "" {
 			for _, h := range resp.Hops {
@@ -179,27 +178,40 @@ func buildHTTPPage(run *httpRun, view int, reveal, sending bool) httpPage {
 		case len(resp.Body) == 0:
 			add("note", "(empty body)")
 		default:
-			text := resp.Text()
-			if pretty, ok := httpclient.PrettyJSON([]byte(text)); ok {
-				text = string(pretty)
+			text := resp.TextBytes()
+			if pretty, ok := httpclient.PrettyJSON(text); ok {
+				text = pretty
 				if len(resp.Body) <= 1<<20 {
 					head["syntax"] = "json"
 				}
 			}
-			for _, l := range httpTextLines(text) {
-				plain(l)
-			}
+			lines = appendTextLines(lines, text)
 		}
 	}
 	return httpPage{head: head, lines: lines, rows: rows}
 }
 
-// httpTextLines splits a body into buffer lines (no CR, no NUL).
-func httpTextLines(s string) []string {
-	s = strings.ReplaceAll(s, "\r\n", "\n")
-	s = strings.ReplaceAll(s, "\x00", " ")
+// appendTextLines splits a body into buffer lines (CR LF as LF, NUL as
+// a space, no last empty line) and appends them to lines: one copy of
+// the text, the line list grown once.
+func appendTextLines(lines []string, b []byte) []string {
+	s := string(b)
+	if strings.Contains(s, "\r\n") {
+		s = strings.ReplaceAll(s, "\r\n", "\n")
+	}
+	if strings.IndexByte(s, 0) >= 0 {
+		s = strings.ReplaceAll(s, "\x00", " ")
+	}
 	s = strings.TrimSuffix(s, "\n")
-	return strings.Split(s, "\n")
+	lines = slices.Grow(lines, strings.Count(s, "\n")+1)
+	for {
+		i := strings.IndexByte(s, '\n')
+		if i < 0 {
+			return append(lines, s)
+		}
+		lines = append(lines, s[:i])
+		s = s[i+1:]
+	}
 }
 
 func httpIsImage(r *httpclient.Response) bool {

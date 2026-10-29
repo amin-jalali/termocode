@@ -82,6 +82,23 @@ func (r *Response) Header(name string) string {
 // honoured).
 func (r *Response) Text() string { return DecodeText(r.Body, r.Charset) }
 
+// TextBytes is Text as bytes: the body itself (not a copy) when it is
+// UTF-8 already. Callers must not change it.
+func (r *Response) TextBytes() []byte {
+	if !isLatin1(r.Charset) {
+		return r.Body
+	}
+	return []byte(r.Text())
+}
+
+func isLatin1(charset string) bool {
+	switch strings.ToLower(charset) {
+	case "iso-8859-1", "latin1", "latin-1", "iso8859-1", "windows-1252", "cp1252":
+		return true
+	}
+	return false
+}
+
 // StatusLine is "200 OK", or "ERR" for a failed send.
 func (r *Response) StatusLine() string {
 	if r.Err != "" {
@@ -170,8 +187,7 @@ func PrettyJSON(b []byte) ([]byte, bool) {
 // windows-1252 as latin-1) maps bytes to runes; everything else is
 // read as UTF-8.
 func DecodeText(b []byte, charset string) string {
-	switch strings.ToLower(charset) {
-	case "iso-8859-1", "latin1", "latin-1", "iso8859-1", "windows-1252", "cp1252":
+	if isLatin1(charset) {
 		rs := make([]rune, len(b))
 		for i, c := range b {
 			rs[i] = rune(c)
