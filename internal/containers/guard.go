@@ -215,6 +215,7 @@ func (e *Engine) Logs(ctx context.Context, id string, tail int, since string) (s
 		if p.Kind == services.ProblemNone {
 			return "", fmt.Errorf("engine command exited %d: %s", code, strings.TrimSpace(firstLine(stderr)))
 		}
+		p.Engine = e.Kind
 		return "", errors.New(p.Message())
 	}
 	text := strings.TrimRight(out, "\n")

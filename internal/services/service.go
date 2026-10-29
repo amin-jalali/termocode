@@ -122,6 +122,16 @@ const (
 type Problem struct {
 	Kind   ProblemKind
 	Detail string
+	// Engine is the engine kind ("docker" or "podman"); "" means docker.
+	Engine string
+}
+
+// engineTitle is "Docker" or "Podman" for messages.
+func (p Problem) engineTitle() string {
+	if p.Engine == "podman" {
+		return "Podman"
+	}
+	return "Docker"
 }
 
 // Message is the one-line text for the note row and the AI.
@@ -132,9 +142,9 @@ func (p Problem) Message() string {
 	case ProblemNoCompose:
 		return "Docker Compose v2 is needed"
 	case ProblemDaemonDown:
-		return "Docker is not running"
+		return p.engineTitle() + " is not running"
 	case ProblemNoPermission:
-		return "No access to the Docker socket"
+		return "No access to the " + p.engineTitle() + " socket"
 	case ProblemBadConfig:
 		if p.Detail != "" {
 			return p.Detail

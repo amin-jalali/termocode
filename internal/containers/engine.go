@@ -79,6 +79,7 @@ func Detect(ctx context.Context, opts DetectOptions) Engine {
 	out, stderr, code, err := e.capture(ctx, "version", "--format", "{{json .}}")
 	if err != nil || code != 0 {
 		e.Problem = classifyEngineError(stderr, err)
+		e.Problem.Engine = e.Kind
 		return e
 	}
 	e.Version, err = ParseVersion([]byte(out))
@@ -156,6 +157,7 @@ func (e *Engine) list(ctx context.Context, args ...string) (string, error) {
 		if p.Kind == services.ProblemNone {
 			return "", fmt.Errorf("engine command exited %d", code)
 		}
+		p.Engine = e.Kind
 		return "", errors.New(p.Message())
 	}
 	return out, nil

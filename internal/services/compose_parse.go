@@ -309,7 +309,16 @@ func ComposeServiceLines(src string) map[string]int {
 }
 
 // ProblemFromStderr classifies a failed docker call by its error text.
+// A text that names podman marks the problem as a Podman one.
 func ProblemFromStderr(stderr string) Problem {
+	p := problemFromStderr(stderr)
+	if p.Kind != ProblemNone && strings.Contains(strings.ToLower(stderr), "podman") {
+		p.Engine = "podman"
+	}
+	return p
+}
+
+func problemFromStderr(stderr string) Problem {
 	s := strings.TrimSpace(stderr)
 	if s == "" {
 		return Problem{}

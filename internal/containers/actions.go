@@ -18,6 +18,7 @@ func (e *Engine) action(ctx context.Context, timeout time.Duration, args ...stri
 	}
 	p := services.ProblemFromStderr(stderr)
 	if p.Kind != services.ProblemNone {
+		p.Engine = e.Kind
 		return fmt.Errorf("%s", p.Message())
 	}
 	return fmt.Errorf("engine command exited %d", code)
