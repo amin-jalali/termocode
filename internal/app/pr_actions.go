@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -9,6 +10,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/ghci"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/picker"
+	"github.com/amin-jalali/termocode/internal/prompt"
 )
 
 // Actions… in the PR view: a short list of what the user can do with the
@@ -68,6 +70,12 @@ func (m *Model) onPRActionPicked(id string) tea.Cmd {
 		return m.prReadDescription()
 	case "checkout":
 		return m.prCheckout()
+	case "approve":
+		return m.prAskReview(ghci.ReviewApprove)
+	case "request-changes":
+		return m.prAskReview(ghci.ReviewRequestChanges)
+	case "comment":
+		return m.prAskReview(ghci.ReviewComment)
 	}
 	return nil
 }
@@ -108,4 +116,51 @@ func (m *Model) prCheckout() tea.Cmd {
 		err := ghci.Checkout(ctx, run, dir, n)
 		return prDoneMsg{number: n, ok: "Checked out " + prRef(n), detail: branch, failed: "Could not check out " + prRef(n), err: err, refresh: true}
 	})
+}
+
+const promptKindPRReview promptKindEnum = 3200
+
+// prAskReview opens the small text input of a review. Approve may stay
+// empty; Request Changes and Comment need a message.
+func (m *Model) prAskReview(kind ghci.ReviewKind) tea.Cmd {
+	s := m.prS()
+	d := s.detail
+	if d == nil {
+		return nil
+	}
+	s.review = kind
+	title, label := "Approve "+prRef(d.Number), "Message (optional, Enter approves):"
+	switch kind {
+	case ghci.ReviewRequestChanges:
+		title, label = "Request changes on "+prRef(d.Number), "What should change?"
+	case ghci.ReviewComment:
+		title, label = "Comment on "+prRef(d.Number), "Your comment:"
+	}
+	m.prompt = prompt.New(title, label, "")
+	m.prompt.SetAllowEmpty(kind == ghci.ReviewApprove)
+	m.prompt.SetSize(m.w, m.h)
+	m.promptOpen = true
+	m.promptKind = promptKindPRReview
+	return nil
+}
+
+// handlePRPromptSubmit sends the review. ok=false: not ours.
+func (m *Model) handlePRPromptSubmit(value string) (tea.Cmd, bool) {
+	if m.promptKind != promptKindPRReview {
+		return nil, false
+	}
+	s := m.prS()
+	d := s.detail
+	if d == nil {
+		return nil, true
+	}
+	n, kind := d.Number, s.review
+	said := map[ghci.ReviewKind]string{ghci.ReviewApprove: "Approved ", ghci.ReviewRequestChanges: "Asked for changes on ", ghci.ReviewComment: "Commented on "}[kind]
+	return m.prRun(func(ctx context.Context, run ghci.Runner, dir string) tea.Msg {
+		err := ghci.Review(ctx, run, dir, n, kind, value)
+		if errors.Is(err, ghci.ErrNeedsText) {
+			err = errors.New("write a message first")
+		}
+		return prDoneMsg{number: n, ok: said + prRef(n), failed: "Could not send the review of " + prRef(n), err: err, reopen: true}
+	}), true
 }

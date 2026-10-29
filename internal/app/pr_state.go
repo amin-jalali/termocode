@@ -21,6 +21,7 @@ type prState struct {
 	detail *ghci.PRDetail  // the PR on screen in the view
 	diff   []ghci.FileDiff // its diff, once read
 	busy   bool            // an action runs: a second click waits
+	review ghci.ReviewKind // the review the open prompt sends
 }
 
 // prS returns the state, creating it on first use.

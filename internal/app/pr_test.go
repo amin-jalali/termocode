@@ -421,3 +421,80 @@ func TestPRCheckoutFails(t *testing.T) {
 		t.Error("no failure toast")
 	}
 }
+
+// Approve, Request Changes and Comment open a prompt; its text goes to
+// `gh pr review` as a separate argument, and the card reopens.
+func TestPRReviewPrompt(t *testing.T) {
+	for _, c := range []struct {
+		pick, flag, text, toast string
+		empty                   bool
+	}{
+		{"approve", "--approve", "ship it", "Approved #14", true},
+		{"request-changes", "--request-changes", "add a test", "Asked for changes on #14", false},
+		{"comment", "--comment", "why not a map?", "Commented on #14", false},
+	} {
+		f := &prFakeGH{answers: map[string]string{"pr view": prViewText14, "pr review": ""}}
+		m, _ := prViewModel(t)
+		m.ciW().run = f.run
+		m.onPRActionPicked(c.pick)
+		if !m.promptOpen || m.promptKind != promptKindPRReview {
+			t.Fatalf("%s: prompt not open", c.pick)
+		}
+		cmd, ok := m.handlePRPromptSubmit(c.text)
+		if !ok || cmd == nil {
+			t.Fatalf("%s: no command", c.pick)
+		}
+		done := cmd().(prDoneMsg)
+		if done.err != nil || !done.reopen {
+			t.Fatalf("%s: %+v", c.pick, done)
+		}
+		want := "pr review 14 " + c.flag + " --body " + c.text
+		if !f.called(want) {
+			t.Errorf("%s: calls %v, want %q", c.pick, f.calls, want)
+		}
+		m.onPRDone(done)
+		if !toastHas(m, c.toast) {
+			t.Errorf("%s: no toast %q", c.pick, c.toast)
+		}
+	}
+}
+
+// Request Changes and Comment do not accept an empty message; Approve does.
+func TestPRReviewEmptyMessage(t *testing.T) {
+	m, _ := prViewModel(t)
+	m.onPRActionPicked("comment")
+	m.prompt, _ = m.prompt.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if !m.promptOpen {
+		t.Fatal("prompt closed")
+	}
+	if _, cmd := m.prompt.Update(tea.KeyMsg{Type: tea.KeyEnter}); cmd != nil {
+		t.Error("an empty comment was submitted")
+	}
+	m.onPRActionPicked("approve")
+	if _, cmd := m.prompt.Update(tea.KeyMsg{Type: tea.KeyEnter}); cmd == nil {
+		t.Error("an empty approval was refused")
+	}
+}
+
+// gh's refusal (for example approving one's own PR) is shown.
+func TestPRReviewError(t *testing.T) {
+	f := &prFakeGH{answers: map[string]string{"pr view": prViewText14},
+		errs: map[string]error{"pr review": errors.New("exit 1")}, stderr: map[string]string{"pr review": "Can not approve your own pull request"}}
+	m, _ := prViewModel(t)
+	m.ciW().run = f.run
+	m.onPRActionPicked("approve")
+	cmd, _ := m.handlePRPromptSubmit("")
+	m.onPRDone(cmd().(prDoneMsg))
+	if !toastHas(m, "Could not send the review of #14") {
+		t.Error("no failure toast")
+	}
+}
+
+// Other prompts are not taken by the review handler.
+func TestPRPromptNotOurs(t *testing.T) {
+	m := prModel(&prFakeGH{})
+	m.promptKind = promptKindRename
+	if _, ok := m.handlePRPromptSubmit("x"); ok {
+		t.Error("took a rename prompt")
+	}
+}
