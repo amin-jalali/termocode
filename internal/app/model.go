@@ -212,6 +212,9 @@ type Model struct {
 	// gitBlurredSkips counts git ticks skipped meanwhile.
 	termBlurred     bool
 	gitBlurredSkips int
+	// gitGate lets the git poll sleep while nothing happens
+	// (git_poll_idle.go).
+	gitGate *gitPollGate
 
 	// Always-visible commit box (VSCode-style). gitCommitMsg is the single-line
 	// inline message buffer; gitCommitFocused routes keystrokes to it (vs the
@@ -917,6 +920,7 @@ func New() Model {
 		m.subscribeNotify()
 	}
 	m.clipRing = clipring.New()
+	m.gitGate = &gitPollGate{}
 	return m
 }
 

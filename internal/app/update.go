@@ -76,6 +76,7 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if _, ok := msg.(frameTickMsg); ok {
 		return m, nil // only draws (see frameGate)
 	}
+	m.noteGitActivity(msg)
 	switch msg.(type) {
 	case tea.FocusMsg, tea.BlurMsg:
 		cmd := m.onTerminalFocus(msg)
@@ -991,12 +992,14 @@ end })`)
 		// Background poll: refresh git state and reschedule the next tick. The
 		// GitMsg handler only re-clamps the cursor, so this never disturbs the
 		// user's section-collapse state, selection, or the commit message box.
-		if m.termBlurred && m.gitBlurredSkips < gitBlurredEvery-1 {
-			m.gitBlurredSkips++ // in the background: poll less often
-			return m, gitAutoRefreshTick(), true
+		// In the background: poll less often. The idle wait
+		// (git_poll_idle.go) already does that when it runs.
+		if m.termBlurred && !m.gitIdleGated() && m.gitBlurredSkips < gitBlurredEvery-1 {
+			m.gitBlurredSkips++
+			return m, m.gitAutoRefreshTick(), true
 		}
 		m.gitBlurredSkips = 0
-		return m, tea.Batch(m.pollGitCmd(), gitAutoRefreshTick()), true
+		return m, tea.Batch(m.pollGitCmd(), m.gitAutoRefreshTick()), true
 	case GitMsg:
 		prev := m.gitBranch
 		m.applyGitSnapshot(msg)

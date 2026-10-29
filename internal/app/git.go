@@ -116,11 +116,15 @@ func (m *Model) pollGitCmd() tea.Cmd {
 	branch := m.gitBranch
 	stale := clock.Now().Sub(m.gitGraphAt) > gitGraphMaxAge
 	cwd, cwdErr := m.rootDir()
+	gate := m.gitGate
 	return func() tea.Msg {
 		if cwdErr != nil {
 			return GitMsg{}
 		}
 		st, err := git.StatusBranch(cwd)
+		if gate != nil {
+			gate.set(gitFingerprint(cwd)) // after status: it may refresh the index
+		}
 		if err != nil {
 			return GitMsg{IsRepo: false}
 		}
