@@ -290,7 +290,7 @@ func renderActionsDivider(width int) string {
 // renderActionsLauncher returns the tiny launcher chip rendered as a
 // single styled string, sized exactly the cell-width of the visible
 // glyph + label.  Caller is responsible for splicing it into the right
-// spot of the rendered base; see view.go::overlayActionsLauncher.
+// spot of the rendered base; see view.go::overlayActionsLauncherLines.
 func renderActionsLauncher() string {
 	style := theme.FgBg(theme.AccentLavender, theme.BgEditor).Bold(true)
 	return style.Render(actionsLauncherLabel)

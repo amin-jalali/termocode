@@ -2563,7 +2563,7 @@ func (m *Model) applyLayout() {
 	m.find.SetWidth(edPaneW)
 	m.replace.SetWidth(edPaneW)
 
-	// Mirror overlayFindBarInEditor's splice math so the find bar's stored
+	// Mirror overlayFindBarInEditorLines' splice math so the find bar's stored
 	// anchor matches where it actually renders. HandleMouse consumes this
 	// via Bounds() to do screen-coord hit-testing on the ↑ / ↓ / × glyphs.
 	{
