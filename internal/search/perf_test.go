@@ -87,3 +87,15 @@ func TestPerfSearch20kFiles(t *testing.T) {
 	perfbudget.Check(t, "search_20k_first_result", float64(firsts[1].Microseconds()/100)/10)
 	perfbudget.Check(t, "search_20k_done", float64(dones[1].Microseconds()/100)/10)
 }
+
+// BenchmarkRunFallback20k is the built-in search over perfTree.
+func BenchmarkRunFallback20k(b *testing.B) {
+	dir := perfTree(b)
+	b.ReportAllocs()
+	for b.Loop() {
+		n := 0
+		if err := runFallback(context.Background(), dir, "needle", Options{}, func(rs []Result) { n += len(rs) }); err != nil || n != 200 {
+			b.Fatalf("%d results, %v", n, err)
+		}
+	}
+}

@@ -483,6 +483,10 @@ const maxFallbackFileSize = 5 << 20 // 5 MiB
 type lineMatcher struct {
 	re        *regexp.Regexp
 	wholeWord bool
+	// lit is the query for mayMatch's quick file check: set for a
+	// literal ASCII query, lower-case when fold (case folded).
+	lit  []byte
+	fold bool
 }
 
 func newLineMatcher(query string, opts Options) (*lineMatcher, error) {
@@ -499,7 +503,96 @@ func newLineMatcher(query string, opts Options) (*lineMatcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &lineMatcher{re: re, wholeWord: opts.WholeWord}, nil
+	lm := &lineMatcher{re: re, wholeWord: opts.WholeWord}
+	if !opts.Regex && query != "" && isASCII(query) {
+		lm.fold = !opts.CaseSensitive && !hasUpper(query)
+		lm.lit = []byte(query)
+		if lm.fold {
+			lm.lit = bytes.ToLower(lm.lit)
+		}
+	}
+	return lm, nil
+}
+
+// mayMatch is a quick check on a whole file before it is split into
+// lines and each line run through the regexp (which is slow with case
+// folding): false means no line can match. Only a literal ASCII query
+// is checked; anything else says true.
+func (lm *lineMatcher) mayMatch(data []byte) bool {
+	if lm.lit == nil {
+		return true
+	}
+	if !lm.fold {
+		return bytes.Contains(data, lm.lit)
+	}
+	// Case folding also maps two non-ASCII letters to ASCII ones: the
+	// Kelvin sign to k and the long s to s. Leave such files to the
+	// regexp.
+	if bytes.ContainsAny(lm.lit, "ks") && !isASCII(data) {
+		return true
+	}
+	return containsFoldASCII(data, lm.lit)
+}
+
+// containsFoldASCII reports whether data holds q (lower-case ASCII)
+// with ASCII case folded.
+func containsFoldASCII(data, q []byte) bool {
+	n := len(q)
+	c0 := q[0]
+	c1 := c0
+	if 'a' <= c0 && c0 <= 'z' {
+		c1 = c0 - 'a' + 'A'
+	}
+	// Next position of each case of the first byte at or after i.
+	nextLo, nextUp := -1, -1
+	for i := 0; i+n <= len(data); {
+		if nextLo < i {
+			nextLo = indexFrom(data, c0, i)
+		}
+		if nextUp < i {
+			nextUp = indexFrom(data, c1, i)
+		}
+		p := min(nextLo, nextUp)
+		if p+n > len(data) {
+			return false
+		}
+		if equalFoldASCII(data[p+1:p+n], q[1:]) {
+			return true
+		}
+		i = p + 1
+	}
+	return false
+}
+
+// indexFrom is the index of c in data at or after i, or len(data).
+func indexFrom(data []byte, c byte, i int) int {
+	if k := bytes.IndexByte(data[i:], c); k >= 0 {
+		return i + k
+	}
+	return len(data)
+}
+
+// equalFoldASCII reports whether a equals q (lower-case ASCII) with
+// ASCII case folded.
+func equalFoldASCII(a, q []byte) bool {
+	for i, c := range a {
+		if 'A' <= c && c <= 'Z' {
+			c += 'a' - 'A'
+		}
+		if c != q[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func isASCII[T string | []byte](s T) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] >= utf8.RuneSelf {
+			return false
+		}
+	}
+	return true
 }
 
 func (lm *lineMatcher) find(line string) []MatchRange {
@@ -590,7 +683,7 @@ func runFallback(ctx context.Context, dir, query string, opts Options, onFile fu
 			return nil
 		}
 		data, e := os.ReadFile(path)
-		if e != nil || isBinary(data) {
+		if e != nil || isBinary(data) || !lm.mayMatch(data) {
 			return nil
 		}
 		if rs := searchLines(string(data), filepath.FromSlash(rel), lm, opts.Context); len(rs) > 0 {
