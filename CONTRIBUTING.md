@@ -65,6 +65,11 @@ scripts/coverage.sh -profile f.out  # only report an existing profile
 - It takes a while: `internal/app` is slow. It runs `nice -n 19` with
   `GOMAXPROCS=4` (set your own to change that). The profiles are kept in a
   temp folder (`-out DIR` to choose it).
+- `-floors scripts/coverage-floors.txt` fails when a system is below its own
+  floor. CI runs this (the `coverage` job). A floor is the measured number
+  minus 0.5, so coverage never drops unseen. When a system goes up, raise its
+  floor in the same PR. Once a system reaches 95%, its floor is 95. Never
+  lower a floor to make CI green: add the tests.
 
 Debug a running session with `tail -f ~/.config/termocode/errors.log`.
 
@@ -208,6 +213,27 @@ ci+docs: install libx11-dev on linux runner; fix README placeholders
 2. Keep the PR focused; describe what you tested (unit tests and any manual terminal checks).
 3. Add screenshots for visible UI changes.
 4. For a choice that is hard to undo, add an ADR in [docs/adr/](docs/adr/README.md).
+
+### CI checks
+
+`.github/workflows/test.yml` runs these jobs. Their names stay stable, so
+they can be marked as required checks in the branch protection of `main`:
+
+| Check | Runs on | What it does |
+|---|---|---|
+| `test (ubuntu-latest)` | every push and PR | build, vet, unit tests with `-race`, Android build, docgen check |
+| `test (macos-latest)` | every push and PR | the same on macOS |
+| `golden screens (ubuntu-latest)` | every push and PR | golden screens with a pinned nvim |
+| `e2e (ubuntu-latest)` | every push and PR | the e2e suite (real binary in a PTY) |
+| `e2e (macos-latest)` | PRs and pushes to `main` | the e2e suite on macOS |
+| `coverage (ubuntu-latest)` | PRs and pushes to `main` | coverage per system against `scripts/coverage-floors.txt`; table in the job summary, profile as an artifact |
+
+- A new push to a branch or PR cancels the older run of it. Runs on `main`
+  are never cancelled.
+- A change that only touches docs no test reads (top-level `*.md`,
+  `docs/adr/`, `docs/concepts/`, screenshots and GIFs) skips the golden,
+  e2e and coverage jobs. Skipped jobs count as passed. The `test` jobs always
+  run: the in-app help embeds the other docs.
 
 ## Releases
 
