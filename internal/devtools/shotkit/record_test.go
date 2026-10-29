@@ -19,7 +19,9 @@ func TestRunOnFrame(t *testing.T) {
 	var got []rec
 	sc := Scene{Name: "rec", Steps: []Step{
 		{Wait: 100 * time.Millisecond, Hold: 700 * time.Millisecond},
-		Key("f1"),
+		// Until: a slow runner (macOS CI) may not draw the palette within
+		// Key's fixed wait.
+		{Msg: KeyMsg("f1"), Wait: 300 * time.Millisecond, Until: "Command Palette"},
 	}}
 	_, err := Run(sc, 80, 24, Options{Quiet: true, OnFrame: func(f string, hold time.Duration) {
 		got = append(got, rec{f, hold})
