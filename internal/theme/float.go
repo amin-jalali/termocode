@@ -4,8 +4,8 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"strings"
 
+	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mattn/go-runewidth"
 )
 
 // Floating chrome (modals, pickers, prompts, confirms, menus, toasts)

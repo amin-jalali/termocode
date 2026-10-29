@@ -19,8 +19,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/theme"
-	"github.com/mattn/go-runewidth"
 )
 
 // blinkMsg toggles cursor visibility on each tick. Mirrors findbar's

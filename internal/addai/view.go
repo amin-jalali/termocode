@@ -6,9 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mattn/go-runewidth"
-
 	"github.com/amin-jalali/termocode/internal/ai"
+	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/clilogin"
 	"github.com/amin-jalali/termocode/internal/connectcard"
 	"github.com/amin-jalali/termocode/internal/theme"
