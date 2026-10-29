@@ -39,7 +39,17 @@ type Config struct {
 	X services.Exec
 	// Timeout bounds one file operation (0 = DefaultTimeout).
 	Timeout time.Duration
+	// MaxFileSize is the largest file ReadFile reads (0 =
+	// DefaultMaxFileSize).
+	MaxFileSize int64
 }
+
+// DefaultMaxFileSize caps one ReadFile (a slow remote engine cannot
+// fill memory).
+const DefaultMaxFileSize = 64 << 20
+
+// ErrTooLarge is returned by ReadFile for a file over MaxFileSize.
+var ErrTooLarge = errors.New("the file is too large to open")
 
 // ErrNotRunning is returned when the container is stopped or gone.
 var ErrNotRunning = errors.New("the container is not running")
@@ -83,6 +93,9 @@ func New(ctx context.Context, cfg Config) (*Host, error) {
 	}
 	if cfg.Timeout <= 0 {
 		cfg.Timeout = DefaultTimeout
+	}
+	if cfg.MaxFileSize <= 0 {
+		cfg.MaxFileSize = DefaultMaxFileSize
 	}
 	if cfg.Container == "" || strings.HasPrefix(cfg.Container, "-") || strings.ContainsAny(cfg.Container, ":/ \t\n") {
 		return nil, fmt.Errorf("not a container name: %q", cfg.Container)

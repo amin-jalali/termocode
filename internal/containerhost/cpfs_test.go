@@ -89,3 +89,18 @@ func TestStat(t *testing.T) {
 		t.Fatal("a stream was left open")
 	}
 }
+
+func TestReadFileRefusesTooLarge(t *testing.T) {
+	h, d, c := newHost(t, func(c *Config) { c.MaxFileSize = 4 })
+	c.WriteFile(t, "/app/big", []byte("0123456789"), 0o644)
+	c.WriteFile(t, "/app/ok", []byte("0123"), 0o644)
+	if _, err := (containerFS{h}).ReadFile(t.Context(), "big"); !errors.Is(err, ErrTooLarge) {
+		t.Fatalf("big: %v", err)
+	}
+	if data, err := (containerFS{h}).ReadFile(t.Context(), "ok"); err != nil || string(data) != "0123" {
+		t.Fatalf("ok: %q, %v", data, err)
+	}
+	if d.OpenStreams() != 0 {
+		t.Fatal("a stream was left open")
+	}
+}

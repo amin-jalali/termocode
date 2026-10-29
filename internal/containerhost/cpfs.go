@@ -80,7 +80,10 @@ func (f containerFS) ReadFile(ctx context.Context, p string) ([]byte, error) {
 		default:
 			return &fs.PathError{Op: "read", Path: abs, Err: errors.New("not a regular file")}
 		}
-		data, err = io.ReadAll(tr)
+		if hd.Size > h.cfg.MaxFileSize {
+			return &fs.PathError{Op: "read", Path: abs, Err: ErrTooLarge}
+		}
+		data, err = io.ReadAll(io.LimitReader(tr, h.cfg.MaxFileSize))
 		if err != nil {
 			return &fs.PathError{Op: "read", Path: abs, Err: err}
 		}
