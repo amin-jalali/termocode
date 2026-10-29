@@ -900,7 +900,7 @@ func (m Model) renderFindRow(innerW int) string {
 	regexGlyph := regexSty.Render(".*")
 	prev := navSty.Render("↑")
 	next := navSty.Render("↓")
-	menuGlyph := ctrlStyle.Render("☰")
+	menuGlyph := ctrlStyle.Render(theme.GlyphMore.String())
 	closeX := closeStyle.Render("×")
 
 	optInner := bodyStyle.Render(strings.Repeat(" ", fbOptInner))
