@@ -150,6 +150,16 @@ func (h *Host) Online() bool {
 	return h.online
 }
 
+// CheckOnline asks the engine again whether the container runs (one
+// inspect) and returns the answer; an engine that cannot be reached
+// counts as offline.
+func (h *Host) CheckOnline(ctx context.Context) bool {
+	if err := h.inspect(ctx); err != nil {
+		h.setOnline(false)
+	}
+	return h.Online()
+}
+
 func (h *Host) setOnline(v bool) {
 	h.mu.Lock()
 	h.online = v

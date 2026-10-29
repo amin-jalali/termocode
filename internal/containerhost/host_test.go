@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/containerhost/fakedocker"
 )
@@ -81,5 +82,32 @@ func TestNewRefusesBadInput(t *testing.T) {
 		if _, err := New(context.Background(), cfg); err == nil {
 			t.Errorf("New(%+v) accepted", cfg)
 		}
+	}
+}
+
+func TestOnlineFollowsTheContainer(t *testing.T) {
+	h, _, c := newHost(t)
+	c.Stop()
+	if _, err := h.FS().ReadDir(t.Context(), "."); !errors.Is(err, ErrNotRunning) {
+		t.Fatalf("ReadDir on a stopped container = %v", err)
+	}
+	if h.Online() {
+		t.Fatal("still online after a failed call")
+	}
+	if h.CheckOnline(t.Context()) {
+		t.Fatal("CheckOnline true while stopped")
+	}
+	c.Start()
+	if !h.CheckOnline(t.Context()) || !h.Online() {
+		t.Fatal("CheckOnline false after start")
+	}
+}
+
+func TestCheckOnlineEngineGone(t *testing.T) {
+	h, d, _ := newHost(t)
+	h.cfg.Timeout = 20 * time.Millisecond
+	d.SetDelay("inspect", time.Minute)
+	if h.CheckOnline(t.Context()) {
+		t.Fatal("online while the engine hangs")
 	}
 }
