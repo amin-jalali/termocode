@@ -2,6 +2,7 @@ package grid
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -60,7 +61,9 @@ type runStyle struct {
 // per run.
 //
 // When nothing changed since the last call (no Apply that draws, same
-// cursor, same colour profile) the last frame is returned as is.
+// cursor, same colour profile) the last frame is returned as is. Rows
+// are cached too: only the rows that changed since the last frame (and
+// the rows the cursor left and entered) are drawn again.
 func (g *Grid) Render() string {
 	if g.Width == 0 || g.Height == 0 {
 		return ""
@@ -70,42 +73,80 @@ func (g *Grid) Render() string {
 	if f.ok && f.gen == g.gen && f.profile == p && f.curR == g.CursorRow && f.curC == g.CursorCol {
 		return f.out
 	}
-	if g.styles == nil || p != g.stylesProfile || len(g.styles) > maxStyles {
-		g.styles = make(map[styleKey]*runStyle)
-		g.stylesProfile = p
-	}
-	out := g.render()
+	g.drawRows(p)
+	out := strings.Join(g.rows, "\n")
 	*f = frameCache{ok: true, gen: g.gen, profile: p, curR: g.CursorRow, curC: g.CursorCol, out: out}
 	return out
 }
 
-func (g *Grid) render() string {
-	var sb strings.Builder
-	sb.Grow(g.lastRenderLen)
-	for r := 0; r < g.Height; r++ {
-		row := g.Cells[r]
-		c := 0
-		for c < g.Width {
-			if r == g.CursorRow && c == g.CursorCol {
-				g.writeRun(&sb, row[c:c+1], true)
-				c++
-				continue
-			}
-			j := c + 1
-			for j < g.Width &&
-				row[j].HlID == row[c].HlID &&
-				!(r == g.CursorRow && j == g.CursorCol) {
-				j++
-			}
-			g.writeRun(&sb, row[c:j], false)
-			c = j
-		}
-		if r < g.Height-1 {
-			sb.WriteByte('\n')
-		}
+// RenderLines is Render split into rows. The slice is the caller's; the
+// rows that did not change are the same strings as last time.
+func (g *Grid) RenderLines() []string {
+	if g.Width == 0 || g.Height == 0 {
+		return []string{""}
 	}
-	g.lastRenderLen = sb.Len()
-	return sb.String()
+	g.Render()
+	return slices.Clone(g.rows)
+}
+
+// drawRows brings g.rows up to date: it draws the rows marked dirty, all
+// of them after Invalidate, a resize or a colour profile change.
+func (g *Grid) drawRows(p termenv.Profile) {
+	if g.styles == nil || p != g.stylesProfile || len(g.styles) > maxStyles {
+		g.styles = make(map[styleKey]*runStyle)
+		g.stylesProfile = p
+		g.allDirty = true
+	}
+	if g.allDirty || len(g.rows) != g.Height || len(g.rowOK) != g.Height {
+		g.rows = make([]string, g.Height)
+		g.rowOK = make([]bool, g.Height)
+		g.allDirty = false
+	}
+	if g.drawnCurR != g.CursorRow || g.drawnCurC != g.CursorCol {
+		g.dirtyRow(g.drawnCurR)
+		g.dirtyRow(g.CursorRow)
+	}
+	g.drawnCurR, g.drawnCurC = g.CursorRow, g.CursorCol
+	var sb strings.Builder
+	for r := 0; r < g.Height; r++ {
+		if g.rowOK[r] {
+			continue
+		}
+		sb.Reset()
+		sb.Grow(len(g.rows[r]) + 16)
+		g.renderRow(&sb, r)
+		g.rows[r] = sb.String()
+		g.rowOK[r] = true
+		g.rowsDrawn++
+	}
+}
+
+// dirtyRow marks row r to be drawn again (out-of-range r: nothing).
+func (g *Grid) dirtyRow(r int) {
+	if r >= 0 && r < len(g.rowOK) {
+		g.rowOK[r] = false
+	}
+}
+
+// renderRow writes row r.
+func (g *Grid) renderRow(sb *strings.Builder, r int) {
+	row := g.Cells[r]
+	c := 0
+	for c < g.Width {
+		if r == g.CursorRow && c == g.CursorCol {
+			g.writeRun(sb, row[c:c+1], true)
+			c++
+			continue
+		}
+		j := c + 1
+		for j < g.Width &&
+			row[j].HlID == row[c].HlID &&
+			!(r == g.CursorRow && j == g.CursorCol) {
+			j++
+		}
+		g.writeRun(sb, row[c:j], false)
+		c = j
+	}
 }
 
 // writeRun writes cells (all of one hl id) in their style.
@@ -318,7 +359,15 @@ func rgbColor(rgb int) lipgloss.Color {
 type styleCache struct {
 	styles        map[styleKey]*runStyle
 	stylesProfile termenv.Profile
-	lastRenderLen int
+
+	// rows are the drawn rows; rowOK[r] is false when row r must be drawn
+	// again. allDirty: every row must (Invalidate). drawnCurR/C is where
+	// the cursor was when the rows were drawn.
+	rows                 []string
+	rowOK                []bool
+	allDirty             bool
+	drawnCurR, drawnCurC int
+	rowsDrawn            int // rows drawn so far (tests)
 
 	// gen counts changes to what the grid draws (see Invalidate). The last
 	// frame is reused while gen, the cursor and the colour profile match.
@@ -335,10 +384,20 @@ type frameCache struct {
 	out        string
 }
 
-// Invalidate drops the cached frame, so the next Render draws again.
-// Apply and SetTermPalette call it; code that writes Cells, HlAttrs or
-// the default colours directly must call it too.
-func (g *Grid) Invalidate() { g.gen++ }
+// Invalidate drops the cached frame and rows, so the next Render draws
+// every row again. SetTermPalette and the redraw events that change every
+// row call it; code that writes Cells, HlAttrs or the default colours
+// directly must call it too.
+func (g *Grid) Invalidate() {
+	g.gen++
+	g.allDirty = true
+}
+
+// changedRow notes that row r (only) changed.
+func (g *Grid) changedRow(r int) {
+	g.gen++
+	g.dirtyRow(r)
+}
 
 // SetTermPalette sets the RGB of ANSI colours 0–15 for terminal cells
 // (see Attrs.TermFg).

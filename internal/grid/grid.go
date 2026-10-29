@@ -91,10 +91,10 @@ func (g *Grid) Apply(events [][]any) {
 }
 
 func (g *Grid) applyOne(name string, args []any) {
+	// Render must draw again what changed; the cursor is checked there.
 	switch name {
-	case "grid_resize", "grid_clear", "grid_line", "grid_scroll",
-		"default_colors_set", "hl_attr_define":
-		g.Invalidate() // Render must draw again; the cursor is checked there
+	case "grid_resize", "grid_clear", "default_colors_set":
+		g.Invalidate()
 	}
 	switch name {
 	case "grid_resize":
@@ -117,6 +117,7 @@ func (g *Grid) applyOne(name string, args []any) {
 		row := toInt(args[1])
 		colStart := toInt(args[2])
 		cellsArr, _ := args[3].([]any)
+		g.changedRow(row)
 		g.applyLine(row, colStart, cellsArr)
 	case "grid_scroll":
 		if len(args) < 7 {
@@ -146,6 +147,7 @@ func (g *Grid) applyOne(name string, args []any) {
 			return
 		}
 		id := toInt(args[0])
+		g.changedHl(id)
 		a := decodeAttrs(args[1])
 		if len(args) >= 4 && termOnly(args[3]) {
 			c := decodeAttrs(args[2]) // cterm_attr: palette indexes
@@ -171,6 +173,30 @@ func (g *Grid) resize(w, h int) {
 		}
 	}
 	g.Cells = cells
+}
+
+// changedHl marks the rows that use hl id (whose look may change). Id 0
+// is also what undefined ids draw with: every row then.
+func (g *Grid) changedHl(id int) {
+	if id == 0 {
+		g.Invalidate()
+		return
+	}
+	g.gen++
+	for r := range g.Cells {
+		if r >= len(g.rowOK) {
+			break
+		}
+		if !g.rowOK[r] {
+			continue
+		}
+		for _, c := range g.Cells[r] {
+			if c.HlID == id {
+				g.rowOK[r] = false
+				break
+			}
+		}
+	}
 }
 
 func (g *Grid) applyLine(row, colStart int, cellsArr []any) {
@@ -231,6 +257,7 @@ func (g *Grid) scroll(top, bot, left, right, rows int) {
 	if left < 0 || right > g.Width || left >= right {
 		return
 	}
+	g.scrollRows(top, bot, left, right, rows)
 
 	if rows > 0 {
 		for r := top; r < bot-rows; r++ {
@@ -245,6 +272,36 @@ func (g *Grid) scroll(top, bot, left, right, rows int) {
 			}
 		}
 	}
+}
+
+// scrollRows does to the drawn rows what scroll does to the cells. A
+// full-width scroll moves them, so only the rows it leaves behind (nvim
+// draws those next) are drawn again; a part-width one marks the region.
+func (g *Grid) scrollRows(top, bot, left, right, rows int) {
+	g.gen++
+	if left != 0 || right != g.Width || len(g.rows) != g.Height || len(g.rowOK) != g.Height ||
+		rows >= bot-top || -rows >= bot-top {
+		for r := top; r < bot; r++ {
+			g.dirtyRow(r)
+		}
+		return
+	}
+	// The row drawn with the cursor in it moves along, stale.
+	g.dirtyRow(g.drawnCurR)
+	if rows > 0 {
+		copy(g.rows[top:bot-rows], g.rows[top+rows:bot])
+		copy(g.rowOK[top:bot-rows], g.rowOK[top+rows:bot])
+		for r := max(top, bot-rows); r < bot; r++ {
+			g.rowOK[r] = false
+		}
+	} else {
+		copy(g.rows[top-rows:bot], g.rows[top:bot+rows])
+		copy(g.rowOK[top-rows:bot], g.rowOK[top:bot+rows])
+		for r := top; r < min(bot, top-rows); r++ {
+			g.rowOK[r] = false
+		}
+	}
+	g.dirtyRow(g.CursorRow)
 }
 
 func toInt(v any) int {
