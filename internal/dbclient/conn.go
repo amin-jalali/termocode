@@ -57,6 +57,9 @@ type SSLConfig struct {
 	Key  string `json:"key,omitempty"`
 }
 
+// DSN is the connection string of a SQL server: a MySQL DSN for MySQL
+// and MariaDB, a PostgreSQL URL otherwise (SQLite and Redis connect
+// without one).
 func (c Conn) DSN(password string) string {
 	if normDriver(c.Driver) == "mysql" {
 		if c.URL != "" {
@@ -94,36 +97,15 @@ func (c Conn) DSN(password string) string {
 			return u.String()
 		}
 	}
-	switch c.Driver {
-	case "sqlite":
-		return c.Path
-	case "redis":
-		u := url.URL{Scheme: "redis", Host: netHost(c.Host, c.Port), Path: "/" + strconv.Itoa(c.DB)}
+	u := url.URL{Scheme: "postgres", Host: netHost(c.Host, c.Port), Path: "/" + c.Database}
+	if c.User != "" {
 		if password != "" {
 			u.User = url.UserPassword(c.User, password)
+		} else {
+			u.User = url.User(c.User)
 		}
-		return u.String()
-	case "postgres":
-		u := url.URL{Scheme: "postgres", Host: netHost(c.Host, c.Port), Path: "/" + c.Database}
-		if c.User != "" {
-			if password != "" {
-				u.User = url.UserPassword(c.User, password)
-			} else {
-				u.User = url.User(c.User)
-			}
-		}
-		return u.String()
-	default:
-		u := url.URL{Scheme: map[string]string{"postgres": "postgres", "mysql": "mysql"}[c.Driver], Host: netHost(c.Host, c.Port), Path: "/" + c.Database}
-		if c.User != "" {
-			if password != "" {
-				u.User = url.UserPassword(c.User, password)
-			} else {
-				u.User = url.User(c.User)
-			}
-		}
-		return u.String()
 	}
+	return u.String()
 }
 func netHost(h string, p int) string {
 	if p > 0 {
