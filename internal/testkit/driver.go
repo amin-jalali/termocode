@@ -229,6 +229,18 @@ func (d *Driver) checkNvim() {
 	}
 }
 
+// Timed delivers msg and renders once, without waiting for the
+// commands it starts, and returns how long Update and View took: the
+// time the key blocks the UI loop. Call Settle (or WaitFor) after it.
+func (d *Driver) Timed(msg tea.Msg) time.Duration {
+	d.T.Helper()
+	d.history = append(d.history, describe(msg)+" (timed)")
+	t0 := time.Now()
+	d.deliver(msg)
+	d.render()
+	return time.Since(t0)
+}
+
 // Key sends one key per argument ("ctrl+p", "enter", "a").
 func (d *Driver) Key(keys ...string) string {
 	d.T.Helper()
