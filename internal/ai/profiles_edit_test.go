@@ -90,3 +90,20 @@ func TestProfileHash(t *testing.T) {
 		t.Error("hash ignores the system prompt")
 	}
 }
+
+// A profile written as null in the file (a hand edit) is replaced when
+// the form saves over it; the save must not crash the IDE.
+func TestSaveProfileReplacesNullEntry(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "profiles.json")
+	if err := os.WriteFile(path, []byte(`{"profiles": {"mine": null}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	review, _ := LoadProfiles("", "", editSlots, 1).Get(ProfileReview)
+	if err := SaveProfile(path, "mine", review, true); err != nil {
+		t.Fatalf("save over null: %v", err)
+	}
+	got, ok := LoadProfiles(path, "", editSlots, 1).Get("mine")
+	if !ok || len(got.Steps) != len(review.Steps) {
+		t.Errorf("saved profile %+v, %v", got, ok)
+	}
+}

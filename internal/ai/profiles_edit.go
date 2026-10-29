@@ -135,8 +135,8 @@ func rawProfiles(path string, doc map[string]json.RawMessage) (map[string]json.R
 // one that Profile does not know (the new object wins on the known ones).
 func mergeProfileJSON(old, fresh json.RawMessage) (json.RawMessage, error) {
 	var o, n map[string]json.RawMessage
-	if err := json.Unmarshal(old, &o); err != nil {
-		return fresh, nil // an old value that is not an object is replaced
+	if err := json.Unmarshal(old, &o); err != nil || o == nil {
+		return fresh, nil // an old value that is not an object (or null) is replaced
 	}
 	if err := json.Unmarshal(fresh, &n); err != nil {
 		return nil, err
