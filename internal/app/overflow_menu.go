@@ -1070,8 +1070,7 @@ func (m Model) overlayOverflowMenuGlyphLines(lines []string) {
 	if m.overflowMenuOpen {
 		fg = theme.TextPrimary
 	}
-	style := theme.FgBg(fg, theme.BgTitleBar).Bold(true)
-	cell := style.Render(overflowMenuGlyph())
+	cell := paintFgBg(fg, theme.BgTitleBar, true, overflowMenuGlyph())
 	lines[row] = glyphSplice.splice(lines[row], cell, gx)
 }
 

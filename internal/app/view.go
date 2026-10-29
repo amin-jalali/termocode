@@ -577,7 +577,7 @@ func (m Model) renderBaseLines() []string {
 		tabs.SetFocused(m.editorHasKeys())
 		tabsRow := tabs.View()
 		if pad := edPaneW - textWidth(tabsRow); pad > 0 {
-			tabsRow += theme.Bg(theme.BgTitleBar).Render(strings.Repeat(" ", pad))
+			tabsRow += bgSpaces(theme.BgTitleBar, pad)
 		}
 		blocks = append(blocks, strings.Split(tabsRow, "\n"))
 		if hasBreadcrumbs {
@@ -779,12 +779,12 @@ func (m Model) normalizeFrameLines(lines []string) []string {
 	for i, line := range lines {
 		w := frameWidth(line)
 		if w < m.w {
-			line += filler.Render(strings.Repeat(" ", m.w-w))
+			line += bgSpaces(theme.BgEditor, m.w-w)
 		}
 		lines[i] = restyleTrailingUnstyled(line, filler)
 	}
 	for len(lines) < m.h {
-		lines = append(lines, filler.Render(strings.Repeat(" ", m.w)))
+		lines = append(lines, bgSpaces(theme.BgEditor, m.w))
 	}
 	if len(lines) > m.h {
 		// Trim from the TOP, not bottom — the status bar lives on the
@@ -842,9 +842,11 @@ func clipRowsLines(rows []string, h, w int, filler lipgloss.Style) []string {
 				rows[i] = truncRightVisual(row, w)
 			}
 		}
-		pad := filler.Render(strings.Repeat(" ", w))
-		for len(rows) < h {
-			rows = append(rows, pad)
+		if len(rows) < h {
+			pad := filler.Render(strings.Repeat(" ", w))
+			for len(rows) < h {
+				rows = append(rows, pad)
+			}
 		}
 	}
 	return rows
