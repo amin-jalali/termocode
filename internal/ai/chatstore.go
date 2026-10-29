@@ -139,6 +139,8 @@ type Conversation struct {
 	// Folded holds the user's fold choices on step cards by card id
 	// ("step:<run>:<step>"; true = folded).
 	Folded map[string]bool `json:"folded,omitempty"`
+	// ForkedFrom is set on a chat forked from another one (G-FORK).
+	ForkedFrom *ForkInfo `json:"forked_from,omitempty"`
 }
 
 const (
