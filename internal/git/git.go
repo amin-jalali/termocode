@@ -278,11 +278,19 @@ func relativeTimeFromEpoch(epoch int64) string {
 	case diff < 86400:
 		return fmt.Sprintf("%d hr ago", diff/3600)
 	case diff < 30*86400:
-		return fmt.Sprintf("%d days ago", diff/86400)
+		return plural(diff/86400, "day")
 	case diff < 365*86400:
-		return fmt.Sprintf("%d months ago", diff/(30*86400))
+		return plural(diff/(30*86400), "month")
 	}
-	return fmt.Sprintf("%d years ago", diff/(365*86400))
+	return plural(diff/(365*86400), "year")
+}
+
+// plural formats "1 day ago" / "3 days ago".
+func plural(n int64, unit string) string {
+	if n == 1 {
+		return "1 " + unit + " ago"
+	}
+	return fmt.Sprintf("%d %ss ago", n, unit)
 }
 
 // FileHistory returns the commit list that touched the given path, newest
