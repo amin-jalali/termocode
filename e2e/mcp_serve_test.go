@@ -78,33 +78,37 @@ func TestMCPServeCardDenyAndAlwaysAllow(t *testing.T) {
 	tm := Start(t, StartOpts{Cols: 140, Rows: 40, Home: home, Workspace: ws})
 	tm.WaitText("main.go", bootTimeout)
 
-	// Connect once the listener is up: a relay that finds no socket runs in
-	// static mode ("not open" on stderr), so try again until it relays.
+	// Connect once the listener is up. A relay that finds no socket runs in
+	// static mode: initialize works, every tools/call fails with -32001.
+	// Its "not open" line on stderr is no sign to wait for: stderr is
+	// copied on another goroutine and can come after the initialize reply,
+	// so the read tool itself is the probe. Try again until it relays.
 	var r *relayProc
 	var m map[string]any
+	var s string
 	deadline := time.Now().Add(20 * time.Second)
 	for {
 		r = startRelay(t, home, "--dir", ws)
 		_, m = r.call(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","clientInfo":{"name":"e2e-agent"}}}`)
-		if !strings.Contains(r.stderr.String(), "not open") {
+		if m["result"] == nil {
+			t.Fatalf("initialize: %v", m)
+		}
+		if _, err := io.WriteString(r.in, `{"jsonrpc":"2.0","method":"notifications/initialized"}`+"\n"); err != nil {
+			t.Fatal(err)
+		}
+		// A read tool answers without a card.
+		s, m = r.call(`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"tasks_list","arguments":{}}}`)
+		e, _ := m["error"].(map[string]any)
+		if e == nil || e["code"] != float64(-32001) {
 			break
 		}
 		_ = r.in.Close()
 		_ = r.cmd.Process.Kill()
 		if time.Now().After(deadline) {
-			t.Fatal("the relay never reached the UI")
+			t.Fatalf("the relay never reached the UI: %s", s)
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
-	if m["result"] == nil {
-		t.Fatalf("initialize: %v", m)
-	}
-	if _, err := io.WriteString(r.in, `{"jsonrpc":"2.0","method":"notifications/initialized"}`+"\n"); err != nil {
-		t.Fatal(err)
-	}
-
-	// A read tool answers without a card.
-	s, m := r.call(`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"tasks_list","arguments":{}}}`)
 	if m["error"] != nil || !strings.Contains(s, "mark") {
 		t.Fatalf("tasks_list: %s", s)
 	}
