@@ -206,3 +206,46 @@ func TestSCN22UndoTurnAfterSaveAsksSafeFirst(t *testing.T) {
 		t.Errorf("tab %q", bufLines(d))
 	}
 }
+
+// Spec: Given the AI's accepted write to staged r.txt, when the user
+// types in the tab (unsaved) and runs AI: Undo Last Turn,
+// then the dialog says the unsaved text is kept (not lost), Enter is
+// Cancel, and even Restore leaves the unsaved tab and the file alone.
+func TestSCN22UndoTurnKeepsUnsavedText(t *testing.T) {
+	d, _ := scn22Driver(t)
+	acceptAIWrite(t, d)
+	typeInEditor(d, "Q")
+	d.Palette("ai-undo-turn")
+	if !d.WaitForText("Undo AI changes?", 2*time.Second) {
+		t.Fatalf("no undo dialog:\n%s", screen(d))
+	}
+	if strings.Contains(screen(d), "unsaved edits)") {
+		t.Errorf("dialog lists the unsaved file as lost:\n%s", screen(d))
+	}
+	if !strings.Contains(screen(d), "unsaved edits, left as they are: r.txt") {
+		t.Errorf("dialog does not say the unsaved file is kept:\n%s", screen(d))
+	}
+	d.Key("enter")
+	d.Settle(100 * time.Millisecond)
+	if strings.Contains(screen(d), "Undo AI changes of a turn") {
+		t.Errorf("Enter ran the undo:\n%s", screen(d))
+	}
+	if got := bufText(d, "r.txt"); !strings.Contains(got, "Q") {
+		t.Errorf("unsaved text lost: %q", got)
+	}
+	d.Palette("ai-undo-turn")
+	if !d.WaitForText("Undo AI changes?", 2*time.Second) {
+		t.Fatalf("no undo dialog:\n%s", screen(d))
+	}
+	clickButton(d, "Restore")
+	d.Settle(100 * time.Millisecond)
+	if got := bufText(d, "r.txt"); !strings.Contains(got, "Q") {
+		t.Errorf("Restore dropped the unsaved text: %q", got)
+	}
+	if got := diskFile(d, "r.txt"); got != reviewNewA {
+		t.Errorf("Restore wrote under the unsaved tab: %q", got)
+	}
+	if got := gitIndexOf(d, "r.txt"); got != scn22Staged {
+		t.Errorf("index r.txt = %q", got)
+	}
+}
