@@ -14,7 +14,7 @@ concurrency:
 
 # Required checks (CONTRIBUTING.md): keep these job names stable.
 #   test (ubuntu-latest), test (macos-latest), golden screens (ubuntu-latest),
-#   e2e (ubuntu-latest)
+#   e2e (ubuntu-latest), e2e (macos-latest)
 # A skipped job counts as passed, so docs-only changes skip the heavy jobs
 # through the "changes" job (a workflow-level paths-ignore would leave the
 # required checks waiting forever).
@@ -247,6 +247,69 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: e2e-screen-dumps
+          path: e2e-dumps/
+          if-no-files-found: ignore
+
+  # The same e2e suite on macOS (PTYs, temp paths through /var →
+  # /private/var, BSD tools). Slower and scarcer runners: only for PRs and
+  # pushes to main, not for every push to a feature branch.
+  e2e-macos:
+    name: e2e (macos-latest)
+    needs: changes
+    if: >-
+      needs.changes.outputs.code == 'true' &&
+      (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+    runs-on: macos-latest
+    timeout-minutes: 40
+    env:
+      NVIM_VERSION: v0.11.4
+      E2E_DUMP_DIR: ${{ github.workspace }}/e2e-dumps
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/Library/Caches/go-build
+          key: ${{ runner.os }}-go-e2e-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-e2e-
+            ${{ runner.os }}-go-
+
+      - name: Install Neovim (pinned release)
+        run: |
+          set -euo pipefail
+          case "$(uname -m)" in
+            arm64) arch=arm64 ;;
+            *) arch=x86_64 ;;
+          esac
+          curl -fsSL -o "$RUNNER_TEMP/nvim.tar.gz" \
+            "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-macos-${arch}.tar.gz"
+          tar -xzf "$RUNNER_TEMP/nvim.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/nvim-macos-${arch}/bin" >> "$GITHUB_PATH"
+
+      - name: Neovim and sqlite3 versions
+        run: |
+          nvim --version | head -1
+          sqlite3 --version
+
+      - name: E2E tests
+        run: go -C e2e test -tags e2e -count=1 -timeout 30m -v ./...
+
+      - name: Upload screen dumps
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screen-dumps-macos
           path: e2e-dumps/
           if-no-files-found: ignore
 
