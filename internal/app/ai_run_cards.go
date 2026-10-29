@@ -164,7 +164,7 @@ func (m Model) aiRunLines(i int, msg ai.StoredMessage, width, inner int) []aiLin
 			if pad := inner - runewidth.StringWidth(row); pad > 0 {
 				row += strings.Repeat(dash, pad)
 			}
-			out = append(out, aiLine{text: ind + row, style: theme.Fg(theme.TextDim), buttons: agentsBtn})
+			out = append(out, aiLine{text: ind + row, style: aiStyle(theme.Fg(theme.TextDim)), buttons: agentsBtn})
 		}
 		return out
 	}
@@ -174,7 +174,7 @@ func (m Model) aiRunLines(i int, msg ai.StoredMessage, width, inner int) []aiLin
 			text = "Paused by you · " + aiDollars(msg.Run.Spent) + " so far · Continue runs the next step"
 		}
 		for _, l := range wrapPlain(text, max(inner, 8)) {
-			out = append(out, aiLine{text: ind + l, style: theme.Fg(theme.DiagWarning)})
+			out = append(out, aiLine{text: ind + l, style: aiStyle(theme.Fg(theme.DiagWarning))})
 		}
 		out = append(out, aiChip("Continue", "run-continue:"+strconv.Itoa(i), width), aiChip("Stop", "run-stop:"+strconv.Itoa(i), width))
 		return out
@@ -190,14 +190,14 @@ func (m Model) aiRunLines(i int, msg ai.StoredMessage, width, inner int) []aiLin
 		off := aiIndent + runewidth.StringWidth(dash+" ")
 		buttons = append([]aiLineButton{{off + x0, off + x1, "usage:" + msg.Run.ID}}, agentsBtn...)
 	}
-	out = append(out, aiLine{text: ind + row, style: theme.Fg(theme.TextDim), buttons: buttons})
+	out = append(out, aiLine{text: ind + row, style: aiStyle(theme.Fg(theme.TextDim)), buttons: buttons})
 	if msg.Run.State == ai.RunStateInterrupted {
-		out = append(out, aiLine{text: ind + "✘ run interrupted (termocode restarted)", style: theme.Fg(theme.DiagError)})
+		out = append(out, aiLine{text: ind + "✘ run interrupted (termocode restarted)", style: aiStyle(theme.Fg(theme.DiagError))})
 	}
 	if msg.Run.Verdict == "fail" {
 		text := fmt.Sprintf("✘ Not done after %d round%s: verify still fails. The last verify report is above.", msg.Run.Rounds, plural(msg.Run.Rounds))
 		for _, l := range wrapPlain(text, max(inner, 8)) {
-			out = append(out, aiLine{text: ind + l, style: theme.Fg(theme.DiagError)})
+			out = append(out, aiLine{text: ind + l, style: aiStyle(theme.Fg(theme.DiagError))})
 		}
 	}
 	if n := s.aiRetryStep(i); n > 0 {
@@ -262,17 +262,17 @@ func (m Model) aiStepCard(msg ai.StoredMessage, k int, st ai.StoredStep, width, 
 	ind := strings.Repeat(" ", aiIndent+2)
 	dim := theme.Fg(theme.TextDim)
 	if wt := st.Worktree; wt != nil { // G-WT: shown folded too
-		out = append(out, aiLine{text: ind + ansi.Truncate(aiWorktreeStatus(wt), max(inner-2, 4), "…"), style: theme.Fg(theme.TextSecondary)})
+		out = append(out, aiLine{text: ind + ansi.Truncate(aiWorktreeStatus(wt), max(inner-2, 4), "…"), style: aiStyle(theme.Fg(theme.TextSecondary))})
 		out = append(out, m.aiWorktreeButtons(msg, st, width)...)
 	}
 	if !expanded {
 		return out
 	}
 	for _, t := range st.Notes {
-		out = append(out, aiLine{text: ind + aiOneLine(aiCleanText(t)), style: dim})
+		out = append(out, aiLine{text: ind + aiOneLine(aiCleanText(t)), style: aiStyle(dim)})
 	}
 	for _, t := range st.Tools {
-		out = append(out, aiLine{text: ind + aiOneLine(aiCleanText(t)), style: dim})
+		out = append(out, aiLine{text: ind + aiOneLine(aiCleanText(t)), style: aiStyle(dim)})
 	}
 	switch {
 	case state == agentdag.StateRunning || (state == agentdag.StatePending && st.Round == 0):
@@ -281,15 +281,15 @@ func (m Model) aiStepCard(msg ai.StoredMessage, k int, st ai.StoredStep, width, 
 			if r := []rune(t); len(r) > room {
 				t = string(r[len(r)-room:])
 			}
-			out = append(out, aiLine{text: ind + "✎ now · \"…" + strings.TrimLeft(t, " ") + "\"", style: dim})
+			out = append(out, aiLine{text: ind + "✎ now · \"…" + strings.TrimLeft(t, " ") + "\"", style: aiStyle(dim)})
 		}
 	case state == agentdag.StateFailed && st.Error != "":
 		for _, l := range wrapPlain("✘ "+aiCleanText(st.Error), max(inner-2, 4)) {
-			out = append(out, aiLine{text: ind + l, style: theme.Fg(theme.DiagError)})
+			out = append(out, aiLine{text: ind + l, style: aiStyle(theme.Fg(theme.DiagError))})
 		}
 	default:
 		for _, l := range wrapPlain(aiCleanText(st.Text), max(inner-2, 4)) {
-			out = append(out, aiLine{text: ind + l, style: theme.Fg(theme.TextSecondary), sel: aiSel{ok: true, x: aiIndent + 2, text: l, join: "\n"}})
+			out = append(out, aiLine{text: ind + l, style: aiStyle(theme.Fg(theme.TextSecondary)), sel: aiSel{ok: true, x: aiIndent + 2, text: l, join: "\n"}})
 		}
 	}
 	return out
