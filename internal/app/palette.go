@@ -416,10 +416,7 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		}
 		return fetchGitCmd()
 	case "save-all":
-		if m.nvim != nil {
-			_ = m.nvim.Command(":wall")
-		}
-		return fetchGitCmd()
+		return tea.Batch(fetchGitCmd(), m.saveAll())
 	case "close-buffer":
 		if m.activeBuf != 0 && m.promptCloseBufferIfDirty(m.activeBuf) {
 			return nil
