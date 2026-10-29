@@ -259,3 +259,33 @@ func TestProblemMessageNamesTheEngine(t *testing.T) {
 		}
 	}
 }
+
+func TestParsePSReplicasShowTheWorseState(t *testing.T) {
+	up := `{"Service":"api","State":"running","Health":"","Status":"Up 2 minutes","Publishers":[{"URL":"0.0.0.0","TargetPort":80,"PublishedPort":8080,"Protocol":"tcp"}]}`
+	healthy := `{"Service":"api","State":"running","Health":"healthy","Status":"Up 2 minutes (healthy)"}`
+	sick := `{"Service":"api","State":"running","Health":"unhealthy","Status":"Up 2 minutes (unhealthy)"}`
+	down := `{"Service":"api","State":"exited","Status":"Exited (1) 1 minute ago","ExitCode":1}`
+	cases := []struct {
+		lines []string
+		want  State
+	}{
+		{[]string{up, down}, Exited},
+		{[]string{down, up}, Exited},
+		{[]string{healthy, sick}, Unhealthy},
+		{[]string{sick, healthy}, Unhealthy},
+		{[]string{healthy, up}, Running},
+		{[]string{up, healthy}, Running},
+	}
+	for _, c := range cases {
+		st, err := ParsePS([]byte(strings.Join(c.lines, "\n")), time.Now())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := st["api"].State; got != c.want {
+			t.Errorf("replicas %v: state = %v, want %v", c.lines, got, c.want)
+		}
+		if strings.Contains(strings.Join(c.lines, ""), "8080") && len(st["api"].Ports) != 1 {
+			t.Errorf("replicas %v: ports = %v, want the up replica's port", c.lines, st["api"].Ports)
+		}
+	}
+}
