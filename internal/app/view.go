@@ -557,6 +557,9 @@ func (m Model) renderBaseLines() []string {
 		if hasBreadcrumbs {
 			blocks = append(blocks, strings.Split(m.renderBreadcrumbs(edPaneW), "\n"))
 		}
+		if pane.Merge > 0 { // git_merge_view.go
+			blocks = append(blocks, m.renderMergeRows(edPaneW, pane.Merge))
+		}
 	}
 	blocks = append(blocks, editorRows)
 	stack := joinRowsLines(blocks...)

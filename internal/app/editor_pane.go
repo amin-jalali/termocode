@@ -10,6 +10,9 @@ type editorPane struct {
 	X, W int // first screen column and width (at least 1)
 	Top  int // screen row of the first content row
 	H    int // content rows (at least 1)
+	// Merge is how many rows the merge view takes right above Top
+	// (git_merge_view.go); 0 when it is closed.
+	Merge int
 }
 
 // editorPaneLayout is the one place that computes the editor pane's
@@ -49,6 +52,10 @@ func (m Model) editorPaneLayout() editorPane {
 	p.H = bodyH - p.Top
 	if p.H < 1 {
 		p.H = 1
+	}
+	if p.Merge = m.mergeRows(p.H); p.Merge > 0 {
+		p.Top += p.Merge
+		p.H -= p.Merge
 	}
 	return p
 }
