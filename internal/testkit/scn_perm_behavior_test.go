@@ -213,3 +213,31 @@ func TestSaveOnFullDiskKeepsText(t *testing.T) {
 		t.Errorf("not modified after the failed save: %v", got)
 	}
 }
+
+// Spec: Given a.txt is read-only on disk and edited,
+// when the user quits and picks Save All,
+// then the app does not quit, the card asks again and says a.txt could
+// not be saved, and the text is still in the editor.
+func TestQuitSaveAllReadOnlySaysWhy(t *testing.T) {
+	skipIfRoot(t)
+	d := editorDriver(t, nil)
+	chmodBack(t, filepath.Join(d.Dir, "a.txt"), 0o444, 0o644)
+	open(d, "a.txt")
+	d.Type("Hi ")
+	waitTabs(d, "a.txt*")
+	d.Key("ctrl+q")
+	clickButton(d, "Save All")
+	if d.Quit() {
+		t.Fatal("quit although a.txt could not be saved")
+	}
+	if !d.WaitForText("Could not save", 3*time.Second) {
+		t.Errorf("the card does not say a.txt could not be saved:\n%s", screen(d))
+	}
+	clickButton(d, "Cancel")
+	if got := bufLines(d); got != "Hi alpha\nbravo\ncharlie" {
+		t.Errorf("the editor lost the text: %q", got)
+	}
+	if got := diskFile(d, "a.txt"); got != "alpha\nbravo\ncharlie\n" {
+		t.Errorf("a.txt on disk changed to %q", got)
+	}
+}

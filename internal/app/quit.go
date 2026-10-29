@@ -76,6 +76,11 @@ func (m *Model) promptQuit(paths []string) {
 		}
 		body = fmt.Sprintf("%d files have unsaved changes: %s.", len(base), strings.Join(shown, ", "))
 	}
+	m.showQuitCard(body)
+}
+
+// showQuitCard opens the Save All / Don't Save / Cancel card with body.
+func (m *Model) showQuitCard(body string) {
 	m.confirm = confirm.New(
 		"Save changes before quitting?",
 		body,
@@ -100,7 +105,7 @@ func (m *Model) onQuitConfirm(id string) tea.Cmd {
 		// A file that could not be written (read-only, deleted folder)
 		// is still modified: ask again instead of losing it.
 		if left := m.unsavedFiles(); len(left) > 0 {
-			m.promptQuit(left)
+			m.showQuitCard(saveAllFailText(left)) // say why it asks again
 			return nil
 		}
 		return m.quitNow()
