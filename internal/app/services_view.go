@@ -533,10 +533,10 @@ func (st *servicesState) actionLayout(w int) []svcAction {
 	return out
 }
 
-// svcFooter is the two footer lines for the cursor row (plan §2.7).
-func (m Model) svcFooter() (string, string) {
+// svcFooterFor is the two footer lines for the cursor row r (plan §2.7;
+// ok false: no row).
+func (m Model) svcFooterFor(r svcRow, ok bool) (string, string) {
 	st := m.services
-	r, ok := m.servicesCurrentRow()
 	if !ok {
 		return "", ""
 	}
@@ -900,7 +900,12 @@ func (m Model) renderServicesSidebarRaw(w, h int, focused bool, now time.Time, h
 		body = append(body, fill())
 	}
 	lines = append(lines, body...)
-	f1, f2 := m.svcFooter()
+	var cur svcRow
+	have := st.cursor >= 0 && st.cursor < len(rows)
+	if have {
+		cur = rows[st.cursor]
+	}
+	f1, f2 := m.svcFooterFor(cur, have) // the rows drawn above: no second build
 	f1 = svcFooterFit(f1, w-2)
 	if theme.CurrentIconMode == theme.IconModeASCII {
 		f1 = strings.ReplaceAll(f1, "→", "->")
