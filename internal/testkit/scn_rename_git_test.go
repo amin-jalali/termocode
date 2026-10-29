@@ -137,3 +137,55 @@ func TestSCN4RenameFolderOfDirtyStagedFile(t *testing.T) {
 		t.Errorf("saving re-created the old folder docs")
 	}
 }
+
+// Spec: Given README.md with a staged change, open with unsaved text,
+// when the user renames it with the multi-file rename (README.md →
+// INTRO.md, main.go kept) and then clicks the Undo toast,
+// then after the rename git shows README.md → INTRO.md and the tab follows;
+// after the undo everything is back: README.md staged as before, its tab
+// unsaved with the same text, no INTRO.md.
+func TestSCN4BulkRenameDirtyStagedFileAndUndo(t *testing.T) {
+	d, r := scmNvimDriver(t, scn4Setup)
+	open(d, "README.md")
+	d.Type("X")
+	if !waitTabs(d, "README.md*") {
+		got, _ := tabs(d)
+		t.Fatalf("README.md not modified: %v", got)
+	}
+	d.Action("view:files")
+	d.Palette("focus-explorer")
+	d.Palette("reveal-file")
+	d.Key("ctrl+@", "shift+down") // README.md and main.go
+	d.Palette("explorer-rename-selected")
+	if !strings.Contains(screen(d), "One name per line") {
+		t.Fatalf("no bulk rename prompt:\n%s", screen(d))
+	}
+	d.Key("ctrl+k") // line 1 is README.md
+	d.Type("INTRO.md")
+	d.Key("ctrl+s")
+	if !strings.Contains(screen(d), "README.md → INTRO.md") {
+		t.Fatalf("no preview:\n%s", screen(d))
+	}
+	d.Key("tab", "enter")
+	if !waitTabs(d, "INTRO.md*") {
+		got, _ := tabs(d)
+		t.Fatalf("tab did not follow the rename: %v\n%s", got, screen(d))
+	}
+	if !waitPorcelain(d, r, "R  README.md -> INTRO.md|M  docs/guide.md") {
+		t.Errorf("git status after rename = %q", r.porcelain())
+	}
+	clickText(d, "Renamed 1 files")
+	if !waitTabs(d, "README.md*") {
+		got, _ := tabs(d)
+		t.Fatalf("tab did not follow the undo: %v\n%s", got, screen(d))
+	}
+	if got := bufText(d, "README.md"); !strings.HasPrefix(got, "X# Demo") {
+		t.Errorf("unsaved text lost by the undo: %q", got)
+	}
+	if exists(d, "INTRO.md") {
+		t.Errorf("INTRO.md still on disk after the undo")
+	}
+	if !waitPorcelain(d, r, "M  README.md|M  docs/guide.md") {
+		t.Errorf("git status after undo = %q", r.porcelain())
+	}
+}

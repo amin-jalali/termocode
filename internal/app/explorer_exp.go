@@ -10,6 +10,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/explorer"
+	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -117,6 +118,7 @@ func (m *Model) applyBulkRename() tea.Cmd {
 		m.explorer.Reload()
 		return m.pushToastDetail(toast.Errr, "Rename failed", err.Error())
 	}
+	moveGitIndex(renameMoves(state.plan.Changes)...)
 	state.undo = nil
 	state.stamps = map[string]string{}
 	state.serial++
@@ -135,7 +137,7 @@ func (m *Model) applyBulkRename() tea.Cmd {
 	}
 	var cmd tea.Cmd
 	m.toast, cmd = m.toast.PushClick(toast.Info, fmt.Sprintf("Renamed %d files · Undo", len(state.undo)), "Click to undo", undoExplorerRenameMsg{state.serial})
-	return tea.Batch(cmd, m.refreshSearchResults(), m.explorer.SchedulePreview())
+	return tea.Batch(cmd, m.refreshSearchResults(), m.explorer.SchedulePreview(), fetchGitCmd())
 }
 func (m *Model) undoBulkRename(serial uint64) tea.Cmd {
 	state := &m.bulkRename
@@ -154,10 +156,20 @@ func (m *Model) undoBulkRename(serial uint64) tea.Cmd {
 	if err := explorer.ApplyRename(state.undo, m.followRename); err != nil {
 		return m.pushToastDetail(toast.Warn, "Cannot undo rename", err.Error())
 	}
+	moveGitIndex(renameMoves(state.undo)...)
 	state.undo = nil
 	state.serial++
 	m.explorer.Reload()
-	return tea.Batch(m.pushToastDetail(toast.Info, "Rename undone", ""), m.refreshSearchResults(), m.explorer.SchedulePreview())
+	return tea.Batch(m.pushToastDetail(toast.Info, "Rename undone", ""), m.refreshSearchResults(), m.explorer.SchedulePreview(), fetchGitCmd())
+}
+
+// renameMoves turns explorer renames into git index moves.
+func renameMoves(changes []explorer.Rename) []git.Move {
+	moves := make([]git.Move, len(changes))
+	for i, c := range changes {
+		moves[i] = git.Move{From: c.Old, To: c.New}
+	}
+	return moves
 }
 
 // renameBufferStamp also protects edits that have not reached disk yet.
