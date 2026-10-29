@@ -303,3 +303,95 @@ func BenchmarkAISendToServerShortChat(b *testing.B) {
 	}
 	b.ReportMetric(float64(total.Microseconds())/float64(b.N), "us/send")
 }
+
+// perfRunsStore stores 50 chats of 100 messages with 4 pipeline runs
+// each (200 runs) from the last few days, and opens one more chat.
+func perfRunsStore(tb testing.TB) *Model {
+	tb.Helper()
+	m := perfAIChat(tb, 0, perfAIProvider{})
+	s := m.ai
+	now := time.Now()
+	cost := 0.01
+	for c := 0; c < 50; c++ {
+		conv := ai.NewConversation()
+		for r := 0; r < 4; r++ {
+			at := now.Add(-time.Duration(c*4+r) * 20 * time.Minute).UnixMilli()
+			for k := 0; k < 23; k++ {
+				conv.Messages = append(conv.Messages, ai.StoredMessage{Role: ai.StoredTool, Text: "⚙ Read a.go → 10 lines"})
+			}
+			conv.Messages = append(conv.Messages,
+				ai.StoredMessage{Role: ai.StoredUser, Text: "task " + strconv.Itoa(c) + "/" + strconv.Itoa(r) + ": fix the flaky test"},
+				ai.StoredMessage{Role: ai.StoredAssistant, Text: "done", Run: &ai.StoredRun{ID: fmt.Sprintf("r%d-%d", c, r), Profile: ai.ProfileReview,
+					State: ai.RunStateDone, StartedAtMs: at, ElapsedMs: 60000},
+					Steps: []ai.StoredStep{
+						{ID: "reviewer", Title: "Reviewer", Model: "claude-sonnet-4-5", State: "completed", StartedAtMs: at, ElapsedMs: 20000,
+							Usage: &ai.Usage{Model: "claude-sonnet-4-5", Input: 4000, Output: 300, Requests: 1}, Cost: &cost, Text: "two problems",
+							Tools: []string{"⚙ Read a.go → 10 lines"}},
+						{ID: "fixer", Title: "Fixer", Model: "gpt-5-mini", State: "completed", StartedAtMs: at + 20000, ElapsedMs: 40000, Deps: []string{"reviewer"},
+							Usage: &ai.Usage{Model: "gpt-5-mini", Input: 6000, Output: 500, Requests: 2}, Cost: &cost, Text: "fixed",
+							Tools: []string{"⚙ Edit a.go", "⚙ Edit a_test.go"}},
+					}})
+		}
+		if err := s.store.Save(&conv); err != nil {
+			tb.Fatal(err)
+		}
+	}
+	s.conv = ai.NewConversation()
+	return m
+}
+
+// perfRunsOpen opens Runs and draws the sidebar list; perfRunsRedraw
+// draws it again after a run event (the cache key changed).
+func perfRunsOpen(m *Model) {
+	m.runs = nil
+	m.revealRuns(false)
+	_ = m.renderRunsSidebar(40, 50)
+}
+
+func perfRunsRedraw(m *Model) {
+	m.ai.runGen++
+	_ = m.renderRunsSidebar(40, 50)
+}
+
+// Perf guard: open Runs with 200 stored runs, and draw it again after a
+// run event.
+func TestPerfRunsView200(t *testing.T) {
+	perfbudget.Require(t)
+	m := perfRunsStore(t)
+	m.w, m.h = 160, 50
+	perfRunsOpen(m)
+	if n := len(m.runsCollect(runsNow())); n != 200 {
+		t.Fatalf("%d runs", n)
+	}
+	var open, redraw []time.Duration
+	for i := 0; i < 9; i++ {
+		t0 := time.Now()
+		perfRunsOpen(m)
+		open = append(open, time.Since(t0))
+		t1 := time.Now()
+		perfRunsRedraw(m)
+		redraw = append(redraw, time.Since(t1))
+	}
+	t.Logf("open %v, redraw %v", perfMedian(open), perfMedian(redraw))
+	perfbudget.Check(t, "runs_view_open_200", perfMs(perfMedian(open)))
+	perfbudget.Check(t, "runs_view_redraw_200", perfMs(perfMedian(redraw)))
+}
+
+func BenchmarkRunsViewOpen200(b *testing.B) {
+	m := perfRunsStore(b)
+	m.w, m.h = 160, 50
+	b.ReportAllocs()
+	for b.Loop() {
+		perfRunsOpen(m)
+	}
+}
+
+func BenchmarkRunsViewRedraw200(b *testing.B) {
+	m := perfRunsStore(b)
+	m.w, m.h = 160, 50
+	perfRunsOpen(m)
+	b.ReportAllocs()
+	for b.Loop() {
+		perfRunsRedraw(m)
+	}
+}
