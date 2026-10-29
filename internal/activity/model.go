@@ -27,6 +27,9 @@ const (
 	ViewDatabases // database connections and schema browser
 	ViewItermoc   // Itermoc: AI profiles, models, services and outside agents
 	ViewRuns      // Runs: what the AI is doing now (runs_*.go in app)
+	// ViewKubernetes has no icon: it lives under Containers, whose icon
+	// is lit while it shows (kube_*.go in app).
+	ViewKubernetes
 )
 
 // Width is the column count taken by the activity bar.
@@ -121,6 +124,11 @@ func New() Model { return Model{active: ViewFiles} }
 func (m *Model) SetHeight(h int)  { m.h = h }
 func (m *Model) SetActive(v View) { m.active = v }
 func (m Model) Active() View      { return m.active }
+
+// lit: the icon of v is drawn active. Kubernetes lights Containers.
+func (m Model) lit(v View) bool {
+	return v == m.active || (v == ViewServices && m.active == ViewKubernetes)
+}
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) { return m, nil }
 
@@ -356,12 +364,12 @@ func (m Model) renderRow(row int, st styleSet) string {
 		return renderMarkRow(row, st)
 	case rowItemTop, rowItemBottom:
 		if theme.CurrentIconMode != theme.IconModeASCII {
-			return renderActivityGlyphRow(it.icon, kind == rowItemTop, it.view == m.active, st, it.tint)
+			return renderActivityGlyphRow(it.icon, kind == rowItemTop, m.lit(it.view), st, it.tint)
 		}
 		if kind == rowItemTop {
-			return renderActivityBoldRow(it.icon, 0, it.view == m.active, st)
+			return renderActivityBoldRow(it.icon, 0, m.lit(it.view), st)
 		}
-		return renderActivityBoldRow(it.icon, 1, it.view == m.active, st)
+		return renderActivityBoldRow(it.icon, 1, m.lit(it.view), st)
 	case rowInterItem:
 		if theme.CurrentIconMode != theme.IconModeASCII {
 			return emptyRow
