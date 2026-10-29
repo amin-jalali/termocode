@@ -50,7 +50,7 @@ func (f containerFS) ReadDir(ctx context.Context, p string) ([]fs.DirEntry, erro
 	ctx, cancel := h.opCtx(ctx)
 	defer cancel()
 	if !h.Caps().HasShell {
-		return nil, &fs.PathError{Op: "readdir", Path: abs, Err: ErrNoShell}
+		return f.readDirTar(ctx, abs)
 	}
 	out, err := h.sh(ctx, "readdir", abs, readDirScript, abs)
 	if err != nil {

@@ -6,6 +6,8 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"sort"
+	"strings"
 )
 
 // cpfs reads and writes files with `cp` tar streams: no tool is needed
@@ -113,4 +115,36 @@ func (f containerFS) Stat(ctx context.Context, p string) (fs.FileInfo, error) {
 		return nil, err
 	}
 	return hd.FileInfo(), nil
+}
+
+// readDirTar lists a folder from the tar of the whole folder (images
+// without sh). It reads the full tree, so it is slower than the sh way.
+func (f containerFS) readDirTar(ctx context.Context, abs string) ([]fs.DirEntry, error) {
+	var ents []fs.DirEntry
+	err := f.h.withTar(ctx, "readdir", abs, true, func(tr *tar.Reader, first *tar.Header) error {
+		if first.Typeflag != tar.TypeDir {
+			return &fs.PathError{Op: "readdir", Path: abs, Err: errors.New("not a folder")}
+		}
+		for {
+			hd, err := tr.Next()
+			if err == io.EOF {
+				return nil
+			}
+			if err != nil {
+				return &fs.PathError{Op: "readdir", Path: abs, Err: err}
+			}
+			_, rest, _ := strings.Cut(hd.Name, "/")
+			rest = strings.TrimSuffix(rest, "/")
+			if rest == "" || strings.Contains(rest, "/") {
+				continue
+			}
+			fi := hd.FileInfo()
+			ents = append(ents, &dirEntry{f: f, dir: abs, name: rest, typ: fi.Mode().Type(), info: fi})
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(ents, func(i, j int) bool { return ents[i].Name() < ents[j].Name() })
+	return ents, nil
 }

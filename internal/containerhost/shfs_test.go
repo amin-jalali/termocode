@@ -57,3 +57,31 @@ func TestReadDirErrors(t *testing.T) {
 		t.Fatal("ReadDir of a file worked")
 	}
 }
+
+func TestReadDirWithoutShellUsesTheTar(t *testing.T) {
+	h, d, c := newHost(t)
+	c.WriteFile(t, "/app/b.txt", []byte("bb"), 0o644)
+	c.WriteFile(t, "/app/sub/deep.txt", nil, 0o644)
+	c.WriteFile(t, "/app/.hidden", nil, 0o644)
+	c.NoShell()
+	h.mu.Lock()
+	h.caps.HasShell = false
+	h.mu.Unlock()
+	before := len(c.Execs())
+	ents, err := containerFS{h}.ReadDir(t.Context(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := names(ents), ".hidden|b.txt|sub/"; got != want {
+		t.Fatalf("ReadDir = %q, want %q", got, want)
+	}
+	if fi, _ := ents[1].Info(); fi.Size() != 2 {
+		t.Fatalf("Info = %v", fi)
+	}
+	if len(c.Execs()) != before || d.OpenStreams() != 0 {
+		t.Fatal("exec used or stream left open")
+	}
+	if _, err := (containerFS{h}).ReadDir(t.Context(), "b.txt"); err == nil {
+		t.Fatal("ReadDir of a file worked")
+	}
+}
