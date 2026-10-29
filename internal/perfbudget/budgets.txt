@@ -1,0 +1,26 @@
+# Performance budgets (STAB-5). Format: name  limit  unit  # note
+# Checked by the perf guard tests (internal/perfbudget; e2e/perf_test.go)
+# in .github/workflows/perf.yml. A number over its limit fails the job.
+#
+# How to update a budget:
+#   1. Measure on your machine, throttled like a CI box:
+#        GOMAXPROCS=4 TERMOCODE_PERF=1 go test -count=1 -run Perf -v ./internal/testkit/
+#        GOMAXPROCS=4 TERMOCODE_PERF=1 go -C e2e test -tags e2e -count=1 -run Perf -v ./...
+#      Each guard logs "perf: <name> = <got> (budget …)".
+#   2. Set the limit to about 2x the local number (CI machines are slower)
+#      and write the measured number in the note. Numbers under ~12 ms
+#      get a 25 ms floor: scheduler jitter on a shared CI box is that big.
+#   3. Raise a budget only for a real reason (say why in the commit).
+#      A slower number by accident is a bug to fix, not a budget to raise.
+
+# Measured 2026-10-30, Linux, 20 cores throttled to GOMAXPROCS=4, no -race.
+
+# e2e (real binary in a PTY, e2e/perf_test.go)
+startup_first_frame       120   ms   # median of 3 starts; local 42 ms (worst 66)
+session_idle_rss          300   MB   # client + server + UI + nvim, notes.txt open; local 147 MB
+
+# testkit (in-process app, internal/testkit/perf_budget_test.go)
+editor_key_to_frame_p95    25   ms   # real nvim, 40 keys; local p95 2.3 ms (floor)
+open_50k_line_file        130   ms   # open request to first lines shown; local 63 ms
+palette_open_all           30   ms   # F1 to palette with every command, median of 5; local 15 ms
+explorer_5k_files          25   ms   # click a folder of 5 000 files to its rows shown; local 5.3 ms (floor)
