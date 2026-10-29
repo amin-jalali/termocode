@@ -1,0 +1,150 @@
+package testkit
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+)
+
+// SCN-22: an AI tool call edits a file that is open in the editor with
+// unsaved text and has a staged change in git; then "AI: Undo Last
+// Turn"; then git status. The user's unsaved text is never lost
+// silently, and the AI never writes over it without the review card.
+
+// scn22Staged is r.txt as staged in git (HEAD has reviewOldA).
+const scn22Staged = reviewOldA + "eleven\n"
+
+// scn22Driver starts the AI scenario on a git repo where r.txt has a
+// staged change (index and disk: scn22Staged).
+func scn22Driver(t *testing.T, auto ...string) (*Driver, *aiScript) {
+	t.Helper()
+	s, srv := fakeToolModel(t, toolCall{"write_file", map[string]any{"path": "r.txt", "content": reviewNewA}})
+	// No inline completions: they would take the fake model's replies.
+	d := aiDriverConfig(t, srv.URL, reviewFiles(), true, `"ai_inline":false`, auto...)
+	if err := writeAndStage(d.Dir, "r.txt", scn22Staged); err != nil {
+		t.Fatal(err)
+	}
+	return d, s
+}
+
+func writeAndStage(dir, rel, body string) error {
+	if err := os.WriteFile(filepath.Join(dir, rel), []byte(body), 0o644); err != nil {
+		return err
+	}
+	cmd := exec.Command("git", "add", "--", rel)
+	cmd.Dir = dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git add: %v: %s", err, out)
+	}
+	return nil
+}
+
+// gitStatusOf is the porcelain status line of one path ("" when clean).
+func gitStatusOf(d *Driver, rel string) string {
+	d.T.Helper()
+	cmd := exec.Command("git", "status", "--porcelain=v1", "--", rel)
+	cmd.Dir = d.Dir
+	out, err := cmd.Output()
+	if err != nil {
+		d.T.Fatalf("git status: %v", err)
+	}
+	return strings.TrimRight(string(out), "\n")
+}
+
+// gitIndexOf is the staged text of rel.
+func gitIndexOf(d *Driver, rel string) string {
+	d.T.Helper()
+	out, err := exec.Command("git", "-C", d.Dir, "show", ":"+rel).Output()
+	if err != nil {
+		d.T.Fatalf("git show :%s: %v", rel, err)
+	}
+	return string(out)
+}
+
+// typeInEditor clicks into the r.txt tab (on line "ten") and types s.
+func typeInEditor(d *Driver, s string) {
+	d.T.Helper()
+	clickText(d, " ten")
+	d.Type(s)
+	if !waitTabs(d, "r.txt*") {
+		got, _ := tabs(d)
+		d.T.Fatalf("r.txt not modified after typing: %v mode=%s buf=%q\n%s", got, lua(d, "return vim.fn.mode()"), bufText(d, "r.txt"), screen(d))
+	}
+}
+
+// scn22Unchanged checks that disk, index and the unsaved tab are as the
+// user left them.
+func scn22Unchanged(t *testing.T, d *Driver, typed string) {
+	t.Helper()
+	if got := diskFile(d, "r.txt"); got != scn22Staged {
+		t.Errorf("disk r.txt = %q, want the staged text", got)
+	}
+	if got := gitIndexOf(d, "r.txt"); got != scn22Staged {
+		t.Errorf("index r.txt = %q", got)
+	}
+	if got := gitStatusOf(d, "r.txt"); got != "M  r.txt" {
+		t.Errorf("git status %q, want the staged change only", got)
+	}
+	if got := bufText(d, "r.txt"); !strings.Contains(got, typed) {
+		t.Errorf("unsaved text lost: tab %q", got)
+	}
+	if !waitTabs(d, "r.txt*") {
+		got, _ := tabs(d)
+		t.Errorf("tab no longer unsaved: %v", got)
+	}
+}
+
+// Spec: Given r.txt staged and open with unsaved text, review mode,
+// when the AI calls write_file on r.txt,
+// then no review card opens, nothing is written, the model is told the
+// file has unsaved changes; and AI: Undo Last Turn has nothing to undo
+// and asks nothing. Disk, index and the unsaved tab stay as they were.
+func TestSCN22AIWriteDirtyStagedReview(t *testing.T) {
+	d, s := scn22Driver(t)
+	open(d, "r.txt")
+	typeInEditor(d, "Q")
+	askAI(d, "change it")
+	if !d.WaitForText("fake-done", 5*time.Second) {
+		t.Fatalf("the turn did not finish:\n%s", screen(d))
+	}
+	if strings.Contains(screen(d), "Review AI changes") {
+		t.Errorf("review card for a file with unsaved edits:\n%s", screen(d))
+	}
+	if r := s.toolResults(); len(r) != 1 || !strings.Contains(r[0], "unsaved changes") {
+		t.Errorf("model not told about the unsaved edits: %q\n%s", r, screen(d))
+	}
+	scn22Unchanged(t, d, "Q")
+	d.Palette("ai-undo-turn")
+	d.Settle(100 * time.Millisecond)
+	if strings.Contains(screen(d), "Undo AI changes?") {
+		t.Errorf("undo asks although the turn changed nothing:\n%s", screen(d))
+	}
+	scn22Unchanged(t, d, "Q")
+}
+
+// Spec: the same with file writes auto-approved (no review card): the
+// write is refused, and Undo Last Turn neither asks nor says it would
+// lose the unsaved text.
+func TestSCN22AIWriteDirtyStagedAuto(t *testing.T) {
+	d, s := scn22Driver(t, "fileWrite")
+	open(d, "r.txt")
+	typeInEditor(d, "Q")
+	askAI(d, "change it")
+	if !d.WaitForText("fake-done", 5*time.Second) {
+		t.Fatalf("the turn did not finish:\n%s", screen(d))
+	}
+	if r := s.toolResults(); len(r) != 1 || !strings.Contains(r[0], "unsaved changes") {
+		t.Errorf("model not told about the unsaved edits: %q", r)
+	}
+	scn22Unchanged(t, d, "Q")
+	d.Palette("ai-undo-turn")
+	d.Settle(100 * time.Millisecond)
+	if strings.Contains(screen(d), "Undo AI changes?") {
+		t.Errorf("undo asks although the turn changed nothing:\n%s", screen(d))
+	}
+	scn22Unchanged(t, d, "Q")
+}

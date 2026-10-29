@@ -311,7 +311,6 @@ return ''
 // refused: overwriting would throw the user's work away, and writing the
 // agent's text into the buffer would mix it with half-done edits.
 func (m *Model) aiWriteFile(abs, rel, content string) (string, tea.Cmd, error) {
-	m.aiRestoreNote(abs) // R3: keep the old text for "AI: Undo Last Turn"
 	fi, statErr := os.Stat(abs)
 	if statErr == nil && fi.IsDir() {
 		return "", nil, fmt.Errorf("%s is a folder", rel)
@@ -331,6 +330,9 @@ func (m *Model) aiWriteFile(abs, rel, content string) (string, tea.Cmd, error) {
 				"Ask the user to save or discard them first; do not overwrite their work", rel)
 		}
 	}
+	// R3: keep the old text for "AI: Undo Last Turn" (only now: a refused
+	// write changed nothing, so the turn has nothing to undo)
+	m.aiRestoreNote(abs)
 	if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
 		return "", nil, err
 	}
