@@ -248,7 +248,20 @@ func main() {
 	mcp.RunShareIfHelper()       // a shared MCP server's broker (internal/mcp/share.go)
 	git.RunRebaseHelperIfAsked() // git's editor during an interactive rebase (internal/git/rebase_helper.go)
 	tuneGC()
-	args, noSession := extractFlag(os.Args[1:], "--no-session")
+	os.Exit(run(os.Args[1:]))
+}
+
+// The parts of run that take over the terminal; tests replace them.
+var (
+	startClient = runClient
+	startServer = runServer
+	startTUI    = runTUI
+)
+
+// run routes the command line (without the program name) and returns
+// the exit code.
+func run(argv []string) int {
+	args, noSession := extractFlag(argv, "--no-session")
 	if noSession {
 		_ = os.Setenv(envNoSession, "1")
 	}
@@ -263,25 +276,25 @@ func main() {
 		}
 		if info, err := os.Stat(dir); err != nil || !info.IsDir() {
 			fmt.Fprintf(os.Stderr, "termocode: %s is not a folder\n", dir)
-			os.Exit(1)
+			return 1
 		}
-		os.Exit(runClient(dir, clientOpts{create: true, link: true, note: note}))
+		return startClient(dir, clientOpts{create: true, link: true, note: note})
 	}
 	if len(args) == 2 && args[0] == serverArg {
-		os.Exit(runServer(args[1]))
+		return startServer(args[1])
 	}
 	if len(args) > 0 && isVersionArg(args[0]) {
 		fmt.Println("termocode " + versionString())
-		return
+		return 0
 	}
 	if len(args) > 0 {
 		switch args[0] {
 		case "sessions":
-			os.Exit(cmdSessions())
+			return cmdSessions()
 		case "ssh":
-			os.Exit(cmdSSH(args[1:]))
+			return cmdSSH(args[1:])
 		case "mcp":
-			os.Exit(runMCP(args[1:]))
+			return runMCP(args[1:])
 		case "attach", "kill":
 			dir := "."
 			if len(args) > 1 {
@@ -289,12 +302,12 @@ func main() {
 			}
 			if info, err := os.Stat(dir); err != nil || !info.IsDir() {
 				fmt.Fprintf(os.Stderr, "termocode: %s is not a folder\n", dir)
-				os.Exit(1)
+				return 1
 			}
 			if args[0] == "attach" {
-				os.Exit(runClient(dir, clientOpts{}))
+				return startClient(dir, clientOpts{})
 			}
-			os.Exit(cmdKill(dir))
+			return cmdKill(dir)
 		}
 	}
 	os.Args = append(os.Args[:1], args...)
@@ -329,19 +342,20 @@ func main() {
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "setup":
-			os.Exit(setup.Run(os.Args[2:]))
+			return setup.Run(os.Args[2:])
 		case "-h", "--help", "help":
 			printUsage()
-			return
+			return 0
 		}
 	}
 	tty := term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd()))
 	if sessionsSupported && wantSession(app.ConfigPersistentSession(), noSession, os.Getenv, tty) {
 		if ws.Root != "" {
-			os.Exit(runClient(ws.Root, clientOpts{create: true}))
+			return startClient(ws.Root, clientOpts{create: true})
 		}
 	}
-	runTUI()
+	startTUI()
+	return 0
 }
 
 // missingFolderArg returns an error line when the first argument names a
