@@ -939,6 +939,7 @@ end })`)
 			m.applyLayout()
 		}
 		m.refreshTerminalCwd()
+		m.reconcileTerminalPanes() // terminal_split.go: windows follow the active tab
 		// Recompute the "user is actively typing into the integrated
 		// terminal" flag. handleGlobalKey reads this to decide whether
 		// to pass through terminal-meaningful shortcuts (Ctrl+C as

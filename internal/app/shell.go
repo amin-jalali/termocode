@@ -497,6 +497,7 @@ func (m *Model) newTerminalTabIn(dir string) {
 	m.terminalCwd = cwd
 	m.terminalCwdAt = time.Now()
 	m.terminalMinimized = false
+	m.reconcileTerminalPanes() // the tab we left hides its extra panes
 }
 
 // closeTerminalTab closes the tab at idx. If it's the last tab, the entire
@@ -534,6 +535,7 @@ func (m *Model) closeTerminalTab(idx int) {
 	}()
 	closedTab := m.terminalTabs[idx]
 	wasActive := idx == m.terminalActiveTab
+	m.dropTabSplits(closedTab)
 
 	// Compute the post-removal active index, mirroring the original
 	// fall-through clamp + shift-down rules:
@@ -604,6 +606,7 @@ func (m *Model) closeTerminalTab(idx int) {
 		m.terminalCwd = m.terminalTabs[newActive].Cwd
 		m.terminalCwdAt = time.Now()
 	}
+	m.reconcileTerminalPanes() // the tab we land on shows its panes
 	m.pruneAgentMCPFiles()
 }
 
@@ -616,6 +619,7 @@ func (m *Model) closeLastTerminalKeepPanel() {
 		return
 	}
 	buf := m.terminalTabs[0].BufID
+	m.dropTabSplits(m.terminalTabs[0])
 	m.ensurePanelHost(true)
 	if m.nvim != nil {
 		_ = m.nvim.ExecLua(fmt.Sprintf(`
@@ -664,6 +668,10 @@ func (m *Model) switchTerminalTab(idx int) {
 	`, m.terminalWinID, tab.BufID))
 	m.terminalCwd = tab.Cwd
 	m.terminalCwdAt = time.Now()
+	m.reconcileTerminalPanes()
+	if tab.paneCount() > 1 {
+		m.focusTerminalPane(m.terminalTabs[idx].focusedPane())
+	}
 }
 
 // cycleTerminalTab moves the active tab by `step` (negative cycles back),

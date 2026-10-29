@@ -154,3 +154,58 @@ func TestClosePaneKeepsTheOtherShell(t *testing.T) {
 		t.Errorf("closing the last pane: open=%v tabs=%d", m.termOpen, len(m.terminalTabs))
 	}
 }
+
+func TestPanesFollowTheActiveTab(t *testing.T) {
+	m := splitTestModel(t, 120, 30)
+	base := nvimWinCount(t, m)
+	m.splitTerminalPane(paneRight)
+	splitBuf := m.terminalTabs[0].Splits[0].BufID
+	if nvimWinCount(t, m) != base+1 {
+		t.Fatalf("split: wins=%d want %d", nvimWinCount(t, m), base+1)
+	}
+
+	m.newTerminalTab() // a second tab: the first tab's extra pane is hidden
+	if nvimWinCount(t, m) != base || len(m.terminalTabs) != 2 {
+		t.Fatalf("new tab: wins=%d want %d tabs=%d", nvimWinCount(t, m), base, len(m.terminalTabs))
+	}
+	if m.terminalTabs[0].Splits[0].WinID != 0 {
+		t.Error("a hidden pane must not keep a window id")
+	}
+
+	m.switchTerminalTab(0) // back: the pane is on screen again, same shell
+	tab := m.terminalTabs[0]
+	if nvimWinCount(t, m) != base+1 || tab.Splits[0].WinID <= 0 || tab.Splits[0].BufID != splitBuf {
+		t.Fatalf("switch back: wins=%d pane=%+v", nvimWinCount(t, m), tab.Splits[0])
+	}
+	shown, _ := m.nvim.EvalLuaString(`return tostring(vim.api.nvim_win_get_buf(` + itoa(tab.Splits[0].WinID) + `))`)
+	if parseInt(shown) != splitBuf {
+		t.Errorf("the pane window shows buffer %s, want %d", shown, splitBuf)
+	}
+
+	m.closeTerminalTab(0) // closing the tab ends every one of its shells
+	valid, _ := m.nvim.EvalLuaString(`return vim.api.nvim_buf_is_valid(` + itoa(splitBuf) + `) and 'yes' or 'no'`)
+	if valid != "no" || nvimWinCount(t, m) != base || len(m.terminalTabs) != 1 {
+		t.Errorf("close tab: split buf valid=%s wins=%d tabs=%d", valid, nvimWinCount(t, m), len(m.terminalTabs))
+	}
+}
+
+func TestHideAndShowKeepsPanes(t *testing.T) {
+	m := splitTestModel(t, 120, 30)
+	m.splitTerminalPane(paneDown)
+	splitBuf := m.terminalTabs[0].Splits[0].BufID
+	base := nvimWinCount(t, m)
+
+	m.hideTerminalPanel()
+	if m.termOpen || nvimWinCount(t, m) != 1 {
+		t.Fatalf("hidden: open=%v wins=%d", m.termOpen, nvimWinCount(t, m))
+	}
+	m.openTerminalPanel() // shows the hidden shells again
+	m.reconcileTerminalPanes()
+	tab := m.terminalTabs[0]
+	if !m.termOpen || tab.paneCount() != 2 || tab.Splits[0].BufID != splitBuf || tab.Splits[0].WinID <= 0 {
+		t.Fatalf("shown again: open=%v tab=%+v", m.termOpen, tab)
+	}
+	if nvimWinCount(t, m) != base {
+		t.Errorf("wins = %d, want %d", nvimWinCount(t, m), base)
+	}
+}

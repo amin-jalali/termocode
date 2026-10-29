@@ -79,6 +79,11 @@ func (m *Model) showHiddenTerminals() bool {
 	if len(kept) == 0 {
 		return false
 	}
+	for i := range kept {
+		for k := range kept[i].Splits {
+			kept[i].Splits[k].WinID = 0 // every window was closed when hiding
+		}
+	}
 	out, err := m.nvim.EvalLuaString(fmt.Sprintf(`
 		local rows, buf = %d, %d
 		vim.cmd('keepalt botright ' .. rows .. 'new')
