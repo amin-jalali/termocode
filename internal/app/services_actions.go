@@ -227,7 +227,11 @@ func (m *Model) servicesRestart(section, name string, done func(*Model, error)) 
 	if s.State == services.NotCreated {
 		note, cmd := m.servicesStart(svcSecCompose, name)
 		if done != nil && note == "" {
-			done(m, nil)
+			var err error
+			if !st.busy[svcKey(svcSecCompose, name)].Busy() { // the up tab did not start
+				err = fmt.Errorf("docker compose up could not start %s", name)
+			}
+			done(m, err)
 		}
 		return note, cmd
 	}
