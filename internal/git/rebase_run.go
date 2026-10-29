@@ -41,12 +41,17 @@ func RunRebase(dir string, todo RebaseTodo, opt RebaseOptions) (RebaseOutcome, e
 		return RebaseOutcome{}, err
 	}
 	plan.GitDir = strings.TrimSpace(gitDir)
-	return runRebaseCmd(dir, opt, plan, args...)
+	planPath, cleanup, err := writeRebasePlan(plan)
+	if err != nil {
+		return RebaseOutcome{}, err
+	}
+	defer cleanup()
+	return runRebaseCmd(dir, opt, planPath, args...)
 }
 
-// runRebaseCmd runs one git rebase command with the helper as both
-// editors, then reads where it stopped.
-func runRebaseCmd(dir string, opt RebaseOptions, plan rebasePlan, args ...string) (RebaseOutcome, error) {
+// runRebaseCmd runs one git rebase command with the helper (reading the
+// plan at planPath) as both editors, then reads where it stopped.
+func runRebaseCmd(dir string, opt RebaseOptions, planPath string, args ...string) (RebaseOutcome, error) {
 	exe := opt.Exe
 	if exe == "" {
 		var err error
@@ -54,11 +59,6 @@ func runRebaseCmd(dir string, opt RebaseOptions, plan rebasePlan, args ...string
 			return RebaseOutcome{}, err
 		}
 	}
-	planPath, cleanup, err := writeRebasePlan(plan)
-	if err != nil {
-		return RebaseOutcome{}, err
-	}
-	defer cleanup()
 	cmd := spawn.Command("git", args...)
 	cmd.Dir = dir
 	cmd.Env = append(cmd.Environ(),

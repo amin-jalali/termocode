@@ -17,6 +17,9 @@ import (
 // RebaseHelperArg is the hidden first argument that runs the helper.
 const RebaseHelperArg = "__git-rebase-helper"
 
+// keptPlanName is the plan's copy in .git/rebase-merge.
+const keptPlanName = "termocode-plan.json"
+
 // rebasePlan is what the helper needs.
 type rebasePlan struct {
 	Todo     string            `json:"todo"`     // "" keeps git's own todo (autosquash)
@@ -53,6 +56,9 @@ func runRebaseHelper(args []string) int {
 	}
 	switch mode {
 	case "seq":
+		// Keep the plan next to git's todo: Continue and Skip after a
+		// stop read it from there, and git removes it with the folder.
+		_ = os.WriteFile(filepath.Join(filepath.Dir(file), keptPlanName), b, 0o600)
 		if plan.Todo == "" {
 			return 0
 		}
