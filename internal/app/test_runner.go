@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -323,10 +324,12 @@ func (m *Model) startTestRun(scope tests.Scope) tea.Cmd {
 		return t
 	}
 	st.proc = c
+	liveTestProcs.add(c)
 	lines := make(chan string, 1024)
 	done := make(chan error, 1)
 	crash.Go("the test runner", func() {
 		err := c.Wait()
+		liveTestProcs.remove(c)
 		pw.Close()
 		done <- err
 	})
@@ -341,6 +344,40 @@ func (m *Model) startTestRun(scope tests.Scope) tea.Cmd {
 		close(lines)
 	})
 	return waitTestLines(st.runID, lines, done, cmd.Report)
+}
+
+// liveTestProcs are the test runs still going. A run is its own process
+// group (setTestProcGroup), so it does not end with termocode by itself.
+var liveTestProcs testProcSet
+
+type testProcSet struct {
+	mu    sync.Mutex
+	procs map[*exec.Cmd]bool
+}
+
+func (s *testProcSet) add(c *exec.Cmd) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.procs == nil {
+		s.procs = map[*exec.Cmd]bool{}
+	}
+	s.procs[c] = true
+}
+
+func (s *testProcSet) remove(c *exec.Cmd) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.procs, c)
+}
+
+// StopTestRuns kills every running test run (quit, hangup, kill): no
+// `go test` or test binary outlives termocode.
+func StopTestRuns() {
+	liveTestProcs.mu.Lock()
+	defer liveTestProcs.mu.Unlock()
+	for c := range liveTestProcs.procs {
+		killTestProc(c)
+	}
 }
 
 // waitTestLines returns the next batch of lines (up to 500 already
