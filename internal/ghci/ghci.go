@@ -220,40 +220,32 @@ func newestRuns(runs []Run) (string, []Run) {
 	return sha, out
 }
 
-type prJSON struct {
-	Number         int    `json:"number"`
-	Title          string `json:"title"`
-	State          string `json:"state"`
-	IsDraft        bool   `json:"isDraft"`
-	URL            string `json:"url"`
-	ReviewDecision string `json:"reviewDecision"`
-	Rollup         []struct {
-		Typename   string `json:"__typename"`
-		Name       string `json:"name"`
-		Context    string `json:"context"`
-		Status     string `json:"status"`
-		Conclusion string `json:"conclusion"`
-		State      string `json:"state"`
-		DetailsURL string `json:"detailsUrl"`
-		TargetURL  string `json:"targetUrl"`
-	} `json:"statusCheckRollup"`
+// rollupJSON is one entry of gh's statusCheckRollup.
+type rollupJSON struct {
+	Typename   string `json:"__typename"`
+	Name       string `json:"name"`
+	Context    string `json:"context"`
+	Status     string `json:"status"`
+	Conclusion string `json:"conclusion"`
+	State      string `json:"state"`
+	DetailsURL string `json:"detailsUrl"`
+	TargetURL  string `json:"targetUrl"`
 }
 
-func fetchPR(ctx context.Context, run Runner, dir, branch string) (*PR, error) {
-	out, errOut, err := run(ctx, dir, "pr", "view", branch,
-		"--json", "number,title,state,isDraft,url,reviewDecision,statusCheckRollup")
-	if err != nil {
-		if strings.Contains(strings.ToLower(errOut), "no pull requests found") {
-			return nil, nil
-		}
-		return nil, classify(err, errOut)
-	}
-	var p prJSON
-	if err := json.Unmarshal([]byte(out), &p); err != nil {
-		return nil, fmt.Errorf("gh pr view: %w", err)
-	}
-	pr := &PR{Number: p.Number, Title: p.Title, State: p.State, Draft: p.IsDraft, URL: p.URL, Review: p.ReviewDecision}
-	for _, c := range p.Rollup {
+type prJSON struct {
+	Number         int          `json:"number"`
+	Title          string       `json:"title"`
+	State          string       `json:"state"`
+	IsDraft        bool         `json:"isDraft"`
+	URL            string       `json:"url"`
+	ReviewDecision string       `json:"reviewDecision"`
+	Rollup         []rollupJSON `json:"statusCheckRollup"`
+}
+
+// checksOf turns gh's rollup into checks.
+func checksOf(rollup []rollupJSON) []Check {
+	var out []Check
+	for _, c := range rollup {
 		ch := Check{Name: c.Name, URL: c.DetailsURL}
 		if c.Typename == "StatusContext" {
 			ch.Name, ch.URL = c.Context, c.TargetURL
@@ -275,8 +267,26 @@ func fetchPR(ctx context.Context, run Runner, dir, branch string) (*PR, error) {
 				ch.State = StatePass
 			}
 		}
-		pr.Checks = append(pr.Checks, ch)
+		out = append(out, ch)
 	}
+	return out
+}
+
+func fetchPR(ctx context.Context, run Runner, dir, branch string) (*PR, error) {
+	out, errOut, err := run(ctx, dir, "pr", "view", branch,
+		"--json", "number,title,state,isDraft,url,reviewDecision,statusCheckRollup")
+	if err != nil {
+		if strings.Contains(strings.ToLower(errOut), "no pull requests found") {
+			return nil, nil
+		}
+		return nil, classify(err, errOut)
+	}
+	var p prJSON
+	if err := json.Unmarshal([]byte(out), &p); err != nil {
+		return nil, fmt.Errorf("gh pr view: %w", err)
+	}
+	pr := &PR{Number: p.Number, Title: p.Title, State: p.State, Draft: p.IsDraft, URL: p.URL, Review: p.ReviewDecision,
+		Checks: checksOf(p.Rollup)}
 	return pr, nil
 }
 
