@@ -154,7 +154,7 @@ func (p *openAIProvider) run(ctx context.Context, req Request, ch chan<- Chunk) 
 	}
 	resp, err := p.cfg.HTTPClient.Do(hreq)
 	if err != nil {
-		return Chunk{Done: true, Err: errString(Redact(err.Error()))}
+		return Chunk{Done: true, Err: requestError(err)}
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
