@@ -232,8 +232,12 @@ func TestShareBrokerStopForAll(t *testing.T) {
 	b, sock := startTestBroker(t, fakeShareConfig(nil))
 	c1 := dialTestShare(t, sock, nil)
 	c2 := dialTestShare(t, sock, nil)
-	if _, err := c1.call(context.Background(), shareStop, nil); err != nil {
-		t.Fatal(err)
+	// The answer to stop is the connection ending, never an error reply.
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if _, err := c1.call(ctx, shareStop, nil); err == nil || ctx.Err() != nil ||
+		!strings.Contains(err.Error(), "closed the connection") {
+		t.Fatalf("stop: %v", err)
 	}
 	for _, c := range []*Client{c1, c2} {
 		select {

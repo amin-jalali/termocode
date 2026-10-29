@@ -336,7 +336,9 @@ func (b *broker) fromClient(c *shareClient, conn *extproc.Conn, m extproc.Messag
 		_ = conn.Reply(m.ID, map[string]any{}, nil)
 		return
 	case shareStop:
-		_ = conn.Reply(m.ID, map[string]any{}, nil)
+		// No answer: the closed connection is the answer. A reply sent
+		// right before shutdown closes the connection could be lost in
+		// the write queue, and the session would see an error.
 		go b.shutdown()
 		return
 	case "notifications/cancelled":

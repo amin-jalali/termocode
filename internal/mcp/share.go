@@ -32,7 +32,8 @@ const (
 	// shareNotify tells a session how many sessions use the server and
 	// its pid: {"sessions": N, "pid": P}.
 	shareNotify = "notifications/termocode/share"
-	// shareStop stops the server for every session.
+	// shareStop stops the server for every session. It has no answer:
+	// every session's connection closes.
 	shareStop = "termocode/share/stop"
 )
 
@@ -105,6 +106,7 @@ var errShareUnavailable = errors.New("sharing is not available")
 // it), then closes our connection. A normal Close only leaves.
 func (p *Process) stopShared() {
 	if p.shared && p.Client != nil {
+		// Returns when the broker closed the connection (its answer).
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		_, _ = p.Client.call(ctx, shareStop, nil)
 		cancel()
