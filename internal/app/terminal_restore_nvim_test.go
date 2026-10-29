@@ -104,3 +104,24 @@ func TestRestoreTerminalsAtStart(t *testing.T) {
 		}
 	})
 }
+
+// A panel that was hidden at quit comes back, with all its tabs, on the
+// next Ctrl+T.
+func TestCtrlTOpensTheTerminalsOfAHiddenPanel(t *testing.T) {
+	m, root := layoutNvimModel(t)
+	m.termRestorePending = &savedTerminals{Active: 1, Tabs: []savedTermTab{
+		{Panes: []savedTermPane{{Cwd: root}}},
+		{Panes: []savedTermPane{{Cwd: root}, {Cwd: root, Split: "right"}}},
+	}}
+	m.toggleTerminalPanel()
+	if m.termRestorePending != nil || len(m.terminalTabs) != 2 || m.terminalActiveTab != 1 {
+		t.Fatalf("pending=%v tabs=%d active=%d err=%q", m.termRestorePending, len(m.terminalTabs), m.terminalActiveTab, m.err)
+	}
+	if m.terminalTabs[1].paneCount() != 2 {
+		t.Errorf("second tab has %d panes", m.terminalTabs[1].paneCount())
+	}
+	cur, _ := m.nvim.EvalLuaString(`return vim.bo[vim.api.nvim_get_current_buf()].buftype`)
+	if cur != "terminal" {
+		t.Errorf("Ctrl+T puts the keyboard in the terminal, current buftype %q", cur)
+	}
+}

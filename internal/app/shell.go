@@ -258,6 +258,9 @@ func (m *Model) openTerminalPanel() {
 	if m.nvim == nil {
 		return
 	}
+	if m.openPendingTerminals() { // terminal_restore.go: a panel hidden at the last quit
+		return
+	}
 	if m.termOpen {
 		if len(m.terminalTabs) == 0 {
 			m.newTerminalTab()

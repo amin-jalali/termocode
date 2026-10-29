@@ -135,6 +135,27 @@ func (m *Model) restoreTerminalsAtStart(sess SessionState) tea.Cmd {
 	return cmd
 }
 
+// openPendingTerminals opens the saved terminals of a panel that was
+// hidden at the last quit, once, when the panel opens. It reports whether
+// it opened any.
+func (m *Model) openPendingTerminals() bool {
+	p := m.termRestorePending
+	if p == nil {
+		return false
+	}
+	m.termRestorePending = nil
+	if len(m.terminalTabs) > 0 || len(m.hiddenTerminalTabs) > 0 {
+		return false
+	}
+	m.restoreTerminals(p, true)
+	if len(m.terminalTabs) == 0 {
+		return false
+	}
+	m.panelActive = panelKindTerminal
+	m.terminalMinimized = false
+	return true
+}
+
 // restoreTerminals opens the saved terminals: each tab and split pane gets a
 // fresh shell in its folder (the project folder when that is gone), and the
 // saved tab and pane get the focus. With focusTerminal false the editor
