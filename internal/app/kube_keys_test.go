@@ -119,3 +119,17 @@ func TestKubeKeyCardAndHelpTopic(t *testing.T) {
 		t.Errorf("help topic = %q", got)
 	}
 }
+
+// On the start page (no file open) the focused view keeps its keys: the
+// welcome page must not take j / k / Enter.
+func TestKubeKeysWinOverTheStartPage(t *testing.T) {
+	_, m := kubeLoaded(t, 150, 42)
+	if !m.welcomeShowing() {
+		t.Skip("the start page is not showing")
+	}
+	nm, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	got := nm.(Model)
+	if r, _ := got.kube.currentRow(); r.name != "api-7d9f8c6b5-x2x4q" {
+		t.Errorf("down on the start page: cursor on %+v", r)
+	}
+}

@@ -1619,7 +1619,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	// Source Control panel has the focus: its list and commit box need
 	// the arrows, Tab and Enter. The Services and Databases trees also own
 	// their navigation keys when focused.
-	if m.welcomeShowing() && !(m.focus == FocusExplorer && (m.activity.Active() == activity.ViewFiles || m.activity.Active() == activity.ViewGit || m.activity.Active() == activity.ViewServices || m.activity.Active() == activity.ViewDatabases || m.activity.Active() == activity.ViewItermoc || m.activity.Active() == activity.ViewRuns)) {
+	if m.welcomeShowing() && !(m.focus == FocusExplorer && (m.activity.Active() == activity.ViewFiles || m.activity.Active() == activity.ViewGit || m.activity.Active() == activity.ViewServices || m.activity.Active() == activity.ViewDatabases || m.activity.Active() == activity.ViewItermoc || m.activity.Active() == activity.ViewRuns || m.activity.Active() == activity.ViewKubernetes)) {
 		if newM, cmd, handled := m.handleWelcomeKey(msg); handled {
 			return newM, cmd
 		}
