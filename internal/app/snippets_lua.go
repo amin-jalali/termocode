@@ -203,6 +203,8 @@ vim.keymap.set('i', '<Tab>', function()
   -- 0. Group A: accept AI ghost text (continuation-vs-rewrite edit).
   local ai = _G._termocode_ai
   if ai and ai.accept and ai.accept() then return end
+  -- 0b. Next edit suggestion: jump to it, then apply it.
+  if ai and ai.nes_tab and ai.nes_tab() then return end
   -- 1. Try snippet expansion first.
   local trigger, body, start_col, end_col = _find_snippet()
   if trigger and body then

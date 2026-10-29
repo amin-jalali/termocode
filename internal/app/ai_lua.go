@@ -20,6 +20,18 @@ import (
 //   - TextChangedI → termocode_ai_changed, caret moves / InsertLeave →
 //     termocode_ai_cancel (Go debounces and cancels in-flight requests).
 //
+// Next edit suggestion (ai_nextedit.go) lives here too:
+//
+//   - any change / InsertLeave → termocode_ai_edit, BufEnter →
+//     termocode_ai_edit 'seed' (Go keeps a copy of the buffer to diff);
+//   - nes_show(...): an eol marker "⇥ next edit" on the target line, only
+//     if buffer, tick and the target's old text still match;
+//   - nes_tab(): the first Tab jumps to the target and shows the change as
+//     virt_lines (old dim + struck, new in the ghost color), the next Tab
+//     applies it as one undo step; nes_clear() (Esc) dismisses it;
+//   - every state change → termocode_ai_nes 'shown' / 'jumped' / 'gone'
+//     (the status hint in Go).
+//
 // Loaded right after snippetsLua. No backticks anywhere (Go raw string).
 const aiLua = `
 _G._termocode_ai = _G._termocode_ai or {}
@@ -38,6 +50,7 @@ function A.set_colors(ghost, accent)
   A.hl = { fg = ghost, italic = true }
   vim.api.nvim_set_hl(0, 'TermocodeAIGhost', A.hl)
   vim.api.nvim_set_hl(0, 'TermocodeAIAccent', { fg = accent, bold = true })
+  vim.api.nvim_set_hl(0, 'TermocodeAINesDel', { fg = ghost, strikethrough = true })
 end
 
 function A.set_enabled(on)
@@ -142,6 +155,138 @@ function A.accept()
   return true
 end
 
+-- ---- next edit suggestion ----
+A.nes_ns = vim.api.nvim_create_namespace('termocode_ai_nes')
+A.nes_enabled = A.nes_enabled or false
+A.nes = nil
+
+local function nes_valid(n)
+  return n ~= nil and vim.api.nvim_buf_is_valid(n.buf) and vim.api.nvim_get_current_buf() == n.buf
+    and vim.api.nvim_buf_get_changedtick(n.buf) == n.tick
+end
+
+local function nes_wipe(n)
+  if n and vim.api.nvim_buf_is_valid(n.buf) then
+    pcall(vim.api.nvim_buf_clear_namespace, n.buf, A.nes_ns, 0, -1)
+  end
+end
+
+function A.nes_clear()
+  local n = A.nes
+  A.nes = nil
+  if not n then return false end
+  nes_wipe(n)
+  notify('termocode_ai_nes', 'gone')
+  return true
+end
+
+function A.set_nes_enabled(on)
+  A.nes_enabled = on and true or false
+  if not A.nes_enabled then A.nes_clear() end
+end
+
+local function untab(buf, l)
+  return (l:gsub('\t', string.rep(' ', vim.bo[buf].tabstop)))
+end
+
+local function nes_draw(n)
+  nes_wipe(n)
+  vim.api.nvim_set_hl(0, 'TermocodeAIGhost', A.hl)
+  pcall(vim.api.nvim_buf_set_extmark, n.buf, A.nes_ns, n.s, 0, {
+    virt_text = { { '  ⇥ next edit', 'TermocodeAIAccent' } }, virt_text_pos = 'eol',
+    hl_mode = 'combine', priority = 210,
+  })
+  if not n.jumped then return end
+  local vl = {}
+  for _, l in ipairs(n.old) do vl[#vl + 1] = { { '- ' .. untab(n.buf, l), 'TermocodeAINesDel' } } end
+  for _, l in ipairs(n.new) do vl[#vl + 1] = { { '+ ' .. untab(n.buf, l), 'TermocodeAIGhost' } } end
+  pcall(vim.api.nvim_buf_set_extmark, n.buf, A.nes_ns, n.e, 0, { virt_lines = vl, priority = 210 })
+end
+
+-- nes_show draws a suggestion: replace 0-based lines s..e (now old) by new.
+function A.nes_show(buf, tick, s, e, old, new)
+  if not A.nes_enabled or vim.api.nvim_get_current_buf() ~= buf then return false end
+  if vim.api.nvim_buf_get_changedtick(buf) ~= tick then return false end
+  local cur = vim.api.nvim_buf_get_lines(buf, s, e + 1, false)
+  if #cur ~= #old or #cur ~= e - s + 1 then return false end
+  for i = 1, #old do
+    if cur[i] ~= old[i] then return false end
+  end
+  nes_wipe(A.nes)
+  A.nes = { buf = buf, tick = tick, s = s, e = e, old = old, new = new, jumped = false }
+  nes_draw(A.nes)
+  notify('termocode_ai_nes', 'shown')
+  return true
+end
+
+function A.nes_has() return nes_valid(A.nes) end
+
+local function first_col(l)
+  local i = (l or ''):find('%S')
+  return i and i - 1 or 0
+end
+
+-- nes_tab: Tab with a suggestion shown. Jump to it first; when the caret
+-- is on it already, apply it. false: no suggestion (Tab does its usual).
+function A.nes_tab()
+  local n = A.nes
+  if not n then return false end
+  if not nes_valid(n) then
+    A.nes_clear()
+    return false
+  end
+  local row = vim.api.nvim_win_get_cursor(0)[1] - 1
+  if not n.jumped or row < n.s or row > n.e then
+    pcall(vim.cmd, "normal! m'")
+    pcall(vim.api.nvim_win_set_cursor, 0, { n.s + 1, first_col(n.old[1]) })
+    n.jumped = true
+    nes_draw(n)
+    notify('termocode_ai_nes', 'jumped')
+    return true
+  end
+  A.nes_clear()
+  -- A new undo step, also in insert mode: one u takes it all back.
+  vim.o.undolevels = vim.o.undolevels
+  if not pcall(vim.api.nvim_buf_set_lines, n.buf, n.s, n.e + 1, false, n.new) then return false end
+  local at = math.min(n.s, math.max(vim.api.nvim_buf_line_count(n.buf) - 1, 0))
+  pcall(vim.api.nvim_win_set_cursor, 0, { at + 1, first_col(n.new[1]) })
+  return true
+end
+
+local function feed(keys)
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(keys, true, false, true), 'n', false)
+end
+
+vim.keymap.set('n', '<Tab>', function()
+  if A.nes_tab() then return end
+  feed((vim.v.count > 0 and tostring(vim.v.count) or '') .. '<C-i>')
+end, { silent = true, desc = 'termocode: next edit / jump forward' })
+vim.keymap.set('n', '<Esc>', function()
+  if A.nes_clear() then return end
+  feed('<Esc>')
+end, { silent = true, desc = 'termocode: dismiss next edit' })
+
+local nes_grp = vim.api.nvim_create_augroup('TermocodeAINes', { clear = true })
+vim.api.nvim_create_autocmd({ 'TextChanged', 'TextChangedI', 'TextChangedP', 'InsertLeave' }, {
+  group = nes_grp,
+  callback = function(ev)
+    if A.nes and (ev.event == 'InsertLeave' or not nes_valid(A.nes)) then A.nes_clear() end
+    if not A.nes_enabled or vim.bo[ev.buf].buftype ~= '' then return end
+    notify('termocode_ai_edit', ev.buf, ev.event == 'InsertLeave' and 'leave' or 'change')
+  end,
+})
+vim.api.nvim_create_autocmd('BufEnter', {
+  group = nes_grp,
+  callback = function(ev)
+    if not A.nes_enabled or vim.bo[ev.buf].buftype ~= '' then return end
+    notify('termocode_ai_edit', ev.buf, 'seed')
+  end,
+})
+vim.api.nvim_create_autocmd('BufLeave', {
+  group = nes_grp,
+  callback = function() A.nes_clear() end,
+})
+
 local grp = vim.api.nvim_create_augroup('TermocodeAI', { clear = true })
 vim.api.nvim_create_autocmd({ 'TextChangedI', 'TextChangedP' }, {
   group = grp,
@@ -184,6 +329,11 @@ func hexOr(c theme.Color256, fallback string) string {
 		return h
 	}
 	return fallback
+}
+
+// aiNESEnableLua mirrors the Go-side next edit toggle into Lua.
+func aiNESEnableLua(on bool) string {
+	return fmt.Sprintf(`if _G._termocode_ai and _G._termocode_ai.set_nes_enabled then _G._termocode_ai.set_nes_enabled(%v) end`, on)
 }
 
 // aiEnableLua mirrors the Go-side inline toggle into Lua.
