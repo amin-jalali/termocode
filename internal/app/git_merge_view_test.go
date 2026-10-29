@@ -48,13 +48,14 @@ func TestMergeViewTakesRowsAboveTheEditor(t *testing.T) {
 		if len(rows) != sz[1] {
 			t.Fatalf("%v: %d rows", sz, len(rows))
 		}
+		// Other tests may leave a wider sidebar: read the pane, not the window.
 		head := ansi.Strip(rows[p.Top-p.Merge])
-		if !strings.Contains(head, "Merge") || !strings.Contains(head, "Conflict 1 of 1") {
+		if !strings.Contains(head, "Merge f.txt") {
 			t.Errorf("%v: merge header row %q", sz, head)
 		}
 		narrow := strings.Contains(ansi.Strip(rows[p.Top-p.Merge+1]), "1 Base")
-		if narrow != (sz[0] < mergeNarrowW) {
-			t.Errorf("%v: narrow = %v", sz, narrow)
+		if want := sz[0] < mergeNarrowW || p.W < 90; narrow != want || narrow != m.mergeNarrow(p.W) {
+			t.Errorf("%v: narrow = %v, want %v (pane %d wide)", sz, narrow, want, p.W)
 		}
 	}
 	// Closed: no rows.
