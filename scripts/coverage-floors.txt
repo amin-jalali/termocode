@@ -1,0 +1,24 @@
+# Coverage floors for the CI coverage job (scripts/coverage.sh -floors).
+#
+# One line per system of scripts/coverage-systems.txt:  Name: percent
+# CI fails when a system is below its floor, when a system has no floor
+# and when a floor names no system. "Total" checks the whole.
+#
+# Rules:
+# - A floor is the measured number minus 0.5, so coverage can never drop
+#   unseen. When a system goes up, raise its floor in the same PR.
+# - Once a system reaches 95%, its floor becomes 95 and stays there.
+# - Never lower a floor to make CI green; add the missing tests.
+#
+# Measured 2026-10-29: unit tests, nvim and sqlite3 on PATH, no e2e.
+
+AI and agents: 89.2
+Git: 88.1
+Containers and remote: 89.0
+MCP and secrets: 87.3
+Session/transfer/update: 81.0
+Database and HTTP: 83.9
+UI parts: 88.5
+Editor and files: 84.4
+App shell: 79.4
+Total: 82.3
