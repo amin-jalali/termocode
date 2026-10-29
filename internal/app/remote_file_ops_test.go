@@ -156,3 +156,18 @@ func TestContainerDeleteWithoutShellSaysWhy(t *testing.T) {
 		t.Fatalf("main.go gone: %v", err)
 	}
 }
+
+// Renaming many files at once works on the local disk only: in a
+// container it says so and never opens the local bulk rename.
+func TestContainerBulkRenameIsRefused(t *testing.T) {
+	m, _, _, _ := newContainerModel(t)
+	m.explorer.ToggleSelection("/app/main.go")
+	m.explorer.ToggleSelection("/app/pkg")
+	m.renameExplorerSelection()
+	if m.promptOpen || m.promptKind == promptKindBulkRename {
+		t.Fatal("bulk rename opened for a container")
+	}
+	if !strings.Contains(m.err, "one by one") {
+		t.Fatalf("err = %q", m.err)
+	}
+}

@@ -46,6 +46,11 @@ func (m *Model) renameExplorerSelection() {
 		}
 		return
 	}
+	if _, ok := m.remoteFS(); ok { // a container: bulk rename is local only
+		m.err = "Rename the files one by one in a container."
+		m.toast, _ = m.toast.PushDetail(toast.Warn, "Rename many files", m.err)
+		return
+	}
 	sort.Strings(paths)
 	names := make([]string, len(paths))
 	for i, p := range paths {
