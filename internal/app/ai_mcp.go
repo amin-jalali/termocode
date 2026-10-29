@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
@@ -523,6 +524,10 @@ func (m *Model) mcpConnect(name string, answer mcp.TrustAnswer) tea.Cmd {
 }
 
 func (m *Model) onMCPConnectDone(msg mcpConnectDoneMsg) tea.Cmd {
+	var ce *mcp.ConnError
+	if errors.As(msg.err, &ce) { // offline: the cause on the toast's one line
+		return m.aiToastErr("MCP "+msg.name+": no connection", errors.New(ce.Why))
+	}
 	if msg.err != nil {
 		return m.aiToastErr("MCP "+msg.name, msg.err)
 	}
