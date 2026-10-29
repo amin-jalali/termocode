@@ -7,6 +7,7 @@ import (
 	_ "image/gif" // register decoders
 	_ "image/jpeg"
 	_ "image/png"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,8 +24,13 @@ func IsImagePath(path string) bool {
 	return false
 }
 
+// MaxPixels caps the pixels of an image Decode reads (about 160 MB as
+// RGBA).
+const MaxPixels = 40_000_000
+
 // Decode reads an image file (PNG, JPEG, GIF first frame, WebP). Files over
-// maxBytes are refused (maxBytes <= 0 means no limit).
+// maxBytes are refused (maxBytes <= 0 means no limit), and so are images
+// over MaxPixels.
 func Decode(path string, maxBytes int64) (image.Image, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -39,6 +45,19 @@ func Decode(path string, maxBytes int64) (image.Image, error) {
 		if st.Size() > maxBytes {
 			return nil, fmt.Errorf("image too large (%d bytes, limit %d)", st.Size(), maxBytes)
 		}
+	}
+	r := bufio.NewReader(f)
+	// Read the size from the header first: a small file can claim a
+	// picture that would take gigabytes to hold.
+	cfg, _, err := image.DecodeConfig(r)
+	if err != nil {
+		return nil, err
+	}
+	if cfg.Width <= 0 || cfg.Height <= 0 || int64(cfg.Width)*int64(cfg.Height) > MaxPixels {
+		return nil, fmt.Errorf("image too large (%dx%d pixels)", cfg.Width, cfg.Height)
+	}
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return nil, err
 	}
 	img, _, err := image.Decode(bufio.NewReader(f))
 	if err != nil {

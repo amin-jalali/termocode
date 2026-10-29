@@ -1,6 +1,9 @@
 package termimg
 
 import (
+	"bytes"
+	"encoding/binary"
+	"hash/crc32"
 	"image"
 	"image/color"
 	"image/gif"
@@ -8,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -374,5 +378,31 @@ func TestProtocolString(t *testing.T) {
 	}
 	if w, h := (Caps{}).CellSize(); w != 10 || h != 20 {
 		t.Error("CellSize default")
+	}
+}
+
+// A small file can claim a huge picture (a "decompression bomb"):
+// Decode refuses it from the header, before it allocates the pixels.
+func TestDecodeRefusesHugeDimensions(t *testing.T) {
+	var buf bytes.Buffer
+	_ = png.Encode(&buf, image.NewGray(image.Rect(0, 0, 1, 1)))
+	b := buf.Bytes()
+	// IHDR data starts at byte 16: width, height (big endian).
+	binary.BigEndian.PutUint32(b[16:20], 8000)
+	binary.BigEndian.PutUint32(b[20:24], 8000)
+	binary.BigEndian.PutUint32(b[29:33], crc32.ChecksumIEEE(b[12:29]))
+	p := filepath.Join(t.TempDir(), "bomb.png")
+	if err := os.WriteFile(p, b, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	_, err := Decode(p, 1<<20)
+	runtime.ReadMemStats(&after)
+	if err == nil {
+		t.Fatal("huge image decoded")
+	}
+	if grew := after.TotalAlloc - before.TotalAlloc; grew > 16<<20 {
+		t.Fatalf("Decode allocated %d MiB for a %d byte file", grew>>20, len(b))
 	}
 }
