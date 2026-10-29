@@ -10,7 +10,6 @@ type Dialect interface {
 	CatalogQueries() map[string]string
 	DDL(table string) (string, []any)
 	Explain(sql string, analyze bool) string
-	CountSQL(table string) string
 }
 
 // DialectFor is the SQL dialect of a driver name, or nil for a driver that
