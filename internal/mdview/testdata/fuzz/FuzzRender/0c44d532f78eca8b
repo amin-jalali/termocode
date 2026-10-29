@@ -1,0 +1,4 @@
+go test fuzz v1
+string("00嵐0ޙ。と0\xa6も")
+byte('\f')
+bool(true)

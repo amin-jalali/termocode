@@ -99,7 +99,9 @@ func Render(src string, opt Options) []string {
 func RenderDoc(src string, opt Options) ([]string, Marks) {
 	w := max(opt.Width, 1)
 	left, col := Layout(w, opt.MaxColumn)
-	source := []byte(src)
+	// Bytes that are not UTF-8 would be measured one way and drawn
+	// another (as U+FFFD); make them U+FFFD up front.
+	source := []byte(strings.ToValidUTF8(src, "\uFFFD"))
 	doc := md.Parser().Parse(text.NewReader(source))
 	r := newRenderer(source, opt)
 	wide := max(col, w-4)
