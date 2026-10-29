@@ -1,6 +1,7 @@
 package session
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -122,5 +123,22 @@ func TestModesNeverReplaySyncOutput(t *testing.T) {
 	}
 	if m.Mode(2026) {
 		t.Error("mode 2026 recorded")
+	}
+}
+
+// A program that sets thousands of different modes must not make the
+// tracker (and every attach replay) grow without end.
+func TestModesKeepABoundedNumberOfModes(t *testing.T) {
+	m := NewModes()
+	m.Feed([]byte("\x1b[?1049h"))
+	for i := 0; i < 5000; i++ {
+		m.Feed([]byte(fmt.Sprintf("\x1b[?%dh", 3000+i)))
+	}
+	m.Feed([]byte("\x1b[?1049l"))
+	if n := len(m.Replay()); n > 4<<10 {
+		t.Fatalf("replay is %d bytes after many modes", n)
+	}
+	if m.Mode(1049) {
+		t.Fatal("a mode already tracked must still update")
 	}
 }
