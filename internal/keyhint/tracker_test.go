@@ -128,3 +128,40 @@ func TestOtherKeysIgnored(t *testing.T) {
 		t.Error("g opened a sequence")
 	}
 }
+
+// Spec: when the editor stops waiting for the next key (its timeout),
+// the popup closes by itself, and a key that arrives in time keeps it.
+func TestPopupExpires(t *testing.T) {
+	tr, ft := newTracker(t)
+	tr.Expire = time.Second
+	out := tr.Press("<space>")
+	ft.now = ft.now.Add(Delay)
+	w := tr.Tick(out.Gen)
+	if !tr.Shown() || w <= 0 {
+		t.Fatalf("shown=%v wait=%v, want shown and a timer for the expiry", tr.Shown(), w)
+	}
+	ft.now = ft.now.Add(w / 2)
+	tr.Press("g") // a key in time: the clock restarts
+	ft.now = ft.now.Add(w)
+	if w2 := tr.Tick(out.Gen); w2 <= 0 || !tr.Shown() {
+		t.Errorf("closed too early: wait=%v shown=%v", w2, tr.Shown())
+	}
+	ft.now = ft.now.Add(2 * time.Second)
+	tr.Tick(out.Gen)
+	if tr.Shown() || tr.Active() {
+		t.Error("popup stayed after the editor timeout")
+	}
+}
+
+// Spec: with a timeout shorter than the delay the editor has already
+// let go of the sequence; the popup never shows.
+func TestPopupSkippedAfterTimeout(t *testing.T) {
+	tr, ft := newTracker(t)
+	tr.Expire = Delay / 2
+	out := tr.Press("<space>")
+	ft.now = ft.now.Add(Delay)
+	tr.Tick(out.Gen)
+	if tr.Shown() {
+		t.Error("popup shown for a dropped sequence")
+	}
+}

@@ -24,6 +24,10 @@ type Tracker struct {
 	// Load returns the mappings; called once per sequence, on the first
 	// key after the leader (or when the popup is due).
 	Load func() []Mapping
+	// Expire is how long the editor keeps waiting for the next key
+	// (nvim's timeoutlen); 0 = it waits forever. When it passes, the
+	// editor has dropped the sequence, so the popup closes too.
+	Expire time.Duration
 
 	seq    []string
 	maps   []Mapping
@@ -96,11 +100,13 @@ func (t *Tracker) Press(tok string) Outcome {
 			return Outcome{}
 		}
 		t.seq = t.seq[:len(t.seq)-1]
-		out := t.arm(Delay)
-		out.Up, out.Prefix = true, append([]string(nil), t.seq...)
+		var out Outcome
 		if t.shown {
-			out.Wait = 0 // already visible: stay visible one level up
+			t.last = clock.Now() // already visible: stay visible one level up
+		} else {
+			out = t.arm(Delay)
 		}
+		out.Up, out.Prefix = true, append([]string(nil), t.seq...)
 		return out
 	}
 	for _, e := range t.entries() {
@@ -144,8 +150,11 @@ func (t *Tracker) Tick(gen int) (wait time.Duration) {
 		t.notice = ""
 		return 0
 	}
-	if len(t.seq) == 0 || t.shown {
+	if len(t.seq) == 0 {
 		return 0
+	}
+	if t.shown {
+		return t.expire()
 	}
 	if left := Delay - clock.Since(t.last); left > 0 {
 		return left
@@ -155,6 +164,19 @@ func (t *Tracker) Tick(gen int) (wait time.Duration) {
 		return 0
 	}
 	t.shown = true
+	return t.expire()
+}
+
+// expire closes a popup the editor no longer waits for; otherwise it
+// returns when to look again.
+func (t *Tracker) expire() time.Duration {
+	if t.Expire <= 0 {
+		return 0
+	}
+	if left := t.Expire - clock.Since(t.last); left > 0 {
+		return left
+	}
+	t.Reset()
 	return 0
 }
 
