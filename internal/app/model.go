@@ -471,6 +471,9 @@ type Model struct {
 	// moment the user clicks back into the editor or runs `exit` in the
 	// shell. See shell.go::shouldPassToTerminal for the pass-through set.
 	inTerminal bool
+	// inPaneWin: nvim's current window is a shell pane of the active terminal
+	// tab, in any mode (terminal_split.go). inTerminal is the typing subset.
+	inPaneWin bool
 	// skipShell holds the actions whose keys reach termocode even while
 	// inTerminal (config.json "terminal_skip_shell"); nil = the defaults.
 	skipShell map[keymap.Action]bool

@@ -951,9 +951,10 @@ end })`)
 		// handle keys until the ModeChanged *:nt autocmd in model.go
 		// re-enters terminal-insert. Cleared whenever the panel closes
 		// or the user moves focus to an editor window.
-		m.inTerminal = m.termOpen && m.terminalWinID > 0 &&
+		m.inPaneWin = m.termOpen && m.terminalWinID > 0 &&
 			m.panelActive == panelKindTerminal &&
-			m.syncPaneFocus(msg.CurrentWin) && msg.Mode == "t"
+			m.syncPaneFocus(msg.CurrentWin)
+		m.inTerminal = m.inPaneWin && msg.Mode == "t"
 		return m, tea.Batch(m.maybeRefreshStickyContext(), m.maybeRefreshScrollbarMarkers(), reloadToastCmd, lspSuggestCmd, sessCmd), true
 	case sessionIdleMsg:
 		m.sess.flushIdle(msg.gen)
@@ -1515,6 +1516,9 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	// Any key ends a wheel scroll of the terminal scrollback; a key meant
 	// for the shell then goes to the prompt (terminal_scroll.go).
 	m.endTerminalScroll()
+	if m.exitedPaneKey(msg) { // terminal_split.go: Enter restarts, x closes
+		return m, nil
+	}
 
 	// Terminal pass-through: when the user is actively typing into the
 	// integrated terminal (current nvim window IS our terminal split AND

@@ -1,6 +1,7 @@
 package app
 
 import (
+	tea "github.com/charmbracelet/bubbletea"
 	"os/exec"
 	"strings"
 	"testing"
@@ -277,5 +278,52 @@ func TestExitedPaneStaysWithHint(t *testing.T) {
 	m.paintPaneTitles()
 	if bar := paneWinbar(t, m, win); !strings.Contains(bar, "Enter to restart") {
 		t.Errorf("repaint lost the hint: %q", bar)
+	}
+}
+
+func TestExitedPaneEnterRestartsAndXCloses(t *testing.T) {
+	m := splitTestModel(t, 120, 30)
+	m.splitTerminalPane(paneRight)
+	endShell := func() (buf int) {
+		tab := m.terminalTabs[0]
+		buf = tab.Splits[0].BufID
+		_ = m.nvim.ExecLua(`vim.fn.chansend(vim.bo[` + itoa(buf) + `].channel, "exit\n")`)
+		if !waitNvim(t, m, `vim.b[`+itoa(buf)+`].termocode_exited`) {
+			t.Fatal("the shell did not end")
+		}
+		m.refreshPaneExits()
+		m.inPaneWin = true // nvim's current window is the pane
+		return buf
+	}
+	// Other keys are not taken; a live pane is never touched.
+	m.inPaneWin = true
+	if m.exitedPaneKey(tea.KeyMsg{Type: tea.KeyEnter}) {
+		t.Fatal("Enter on a live shell must go to the shell")
+	}
+
+	old := endShell()
+	if m.exitedPaneKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")}) {
+		t.Error("only Enter and x are taken")
+	}
+	if !m.exitedPaneKey(tea.KeyMsg{Type: tea.KeyEnter}) {
+		t.Fatal("Enter on an ended pane must restart it")
+	}
+	tab := m.terminalTabs[0]
+	if tab.Splits[0].BufID == old || tab.paneExited(1) || tab.paneCount() != 2 {
+		t.Fatalf("restart: tab=%+v (old buf %d)", tab, old)
+	}
+	if !waitNvim(t, m, `vim.bo[`+itoa(tab.Splits[0].BufID)+`].buftype == 'terminal'`) {
+		t.Error("the new pane must be a terminal")
+	}
+	if bar := paneWinbar(t, m, tab.Splits[0].WinID); strings.Contains(bar, "Enter to restart") {
+		t.Errorf("the hint must go after a restart, winbar %q", bar)
+	}
+
+	endShell()
+	if !m.exitedPaneKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")}) {
+		t.Fatal("x on an ended pane must close it")
+	}
+	if m.terminalTabs[0].paneCount() != 1 || nvimWinCount(t, m) != 2 {
+		t.Errorf("close: panes=%d wins=%d", m.terminalTabs[0].paneCount(), nvimWinCount(t, m))
 	}
 }

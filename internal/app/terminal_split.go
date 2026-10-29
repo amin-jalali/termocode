@@ -453,3 +453,66 @@ func (t terminalTab) paneExited(i int) bool {
 	}
 	return false
 }
+
+// restartTerminalPane starts a new shell in pane i, in the same window and
+// folder, in place of the one that ended.
+func (m *Model) restartTerminalPane(i int) {
+	tab := m.activeTerminalTab()
+	if m.nvim == nil || tab == nil || i < 0 || i >= tab.paneCount() {
+		return
+	}
+	shell := os.Getenv("SHELL")
+	if shell == "" {
+		shell = "/bin/bash"
+	}
+	win, old := m.paneWin(*tab, i), tab.paneBuf(i)
+	out, err := m.nvim.EvalLuaString(fmt.Sprintf(termPaneSpawnLua+`
+		local win, old = %d, %d
+		if not vim.api.nvim_win_is_valid(win) then return '0' end
+		vim.api.nvim_set_current_win(win)
+		local buf = _G.termocode_pane_spawn(win, %q, %q)
+		if buf > 0 and vim.api.nvim_buf_is_valid(old) then
+			pcall(vim.api.nvim_buf_delete, old, { force = true })
+		end
+		return tostring(buf)`, win, old, tab.paneCwd(i), termShellSpecJSON(shell)))
+	buf := parseInt(out)
+	if err != nil || buf <= 0 {
+		m.err = "terminal: failed to restart the shell"
+		return
+	}
+	if i == 0 {
+		tab.BufID, tab.Exited0 = buf, false
+	} else {
+		tab.Splits[i-1].BufID, tab.Splits[i-1].Exited = buf, false
+	}
+	tab.PaneFocus = i
+	m.paintPaneTitles()
+	m.invalidateTerminalProbeCache()
+}
+
+// exitedPaneKey handles Enter (restart) and x (close) while the focused pane's
+// shell has ended. It reports whether it used the key.
+func (m *Model) exitedPaneKey(msg tea.KeyMsg) bool {
+	if !m.inPaneWin || !m.termOpen || m.panelActive != panelKindTerminal {
+		return false
+	}
+	tab := m.activeTerminalTab()
+	if tab == nil {
+		return false
+	}
+	i := tab.focusedPane()
+	if !tab.paneExited(i) {
+		return false
+	}
+	switch msg.String() {
+	case "enter":
+		m.restartTerminalPane(i)
+		return true
+	case "x":
+		m.closeTerminalPane(i)
+		m.applyLayout()
+		m.resizeTerminalSplit()
+		return true
+	}
+	return false
+}
