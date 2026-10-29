@@ -455,3 +455,24 @@ func TestBlameRelativeTime(t *testing.T) {
 		t.Errorf("relativeTimeFromEpoch(0) = %q", got)
 	}
 }
+
+// One unit reads "1 day ago", not "1 days ago".
+func TestBlameRelativeTimeSingular(t *testing.T) {
+	now := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
+	t.Cleanup(clock.Set(func() time.Time { return now }))
+	cases := []struct {
+		ago  time.Duration
+		want string
+	}{
+		{90 * time.Second, "1 min ago"},
+		{90 * time.Minute, "1 hr ago"},
+		{36 * time.Hour, "1 day ago"},
+		{45 * 24 * time.Hour, "1 month ago"},
+		{400 * 24 * time.Hour, "1 year ago"},
+	}
+	for _, c := range cases {
+		if got := relativeTimeFromEpoch(now.Add(-c.ago).Unix()); got != c.want {
+			t.Errorf("relativeTimeFromEpoch(-%v) = %q, want %q", c.ago, got, c.want)
+		}
+	}
+}
