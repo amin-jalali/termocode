@@ -117,6 +117,23 @@ func newMDStyles(bg theme.Color256) mdStyles {
 // buttons ("copy:<msg>:<block>", "apply:<msg>:<block>"); streaming hides
 // the buttons of an unfinished block.
 func renderChatMarkdown(text string, width, indent, msgIdx int, streaming bool) []aiLine {
+	out, _ := renderChatMarkdownFrom(text, width, indent, msgIdx, 0, streaming)
+	return trimBlankAILines(out)
+}
+
+// trimBlankAILines drops the empty rows at the end of an answer.
+func trimBlankAILines(out []aiLine) []aiLine {
+	for len(out) > 0 && isBlankAILine(out[len(out)-1]) {
+		out = out[:len(out)-1]
+	}
+	return out
+}
+
+// renderChatMarkdownFrom is renderChatMarkdown for a part of a message
+// that starts after a blank line: its code blocks are numbered from
+// block0, it returns the next block number, and its empty rows at the
+// end are kept (ai_md_stream.go draws a long answer in parts).
+func renderChatMarkdownFrom(text string, width, indent, msgIdx, block0 int, streaming bool) ([]aiLine, int) {
 	s := newMDStyles(theme.BgPanel)
 	inner := width - indent - 1
 	if inner < 8 {
@@ -202,7 +219,7 @@ func renderChatMarkdown(text string, width, indent, msgIdx int, streaming bool) 
 	blank := func() { out = append(out, sel(pad(nil), indent, "", "\n")) }
 
 	lines := strings.Split(strings.ReplaceAll(text, "\r", ""), "\n")
-	block := 0
+	block := block0
 	var para []string
 	flushPara := func() {
 		if len(para) == 0 {
@@ -291,13 +308,10 @@ func renderChatMarkdown(text string, width, indent, msgIdx int, streaming bool) 
 		}
 	}
 	flushPara()
-	for len(out) > 0 && isBlankAILine(out[len(out)-1]) {
-		out = out[:len(out)-1]
-	}
 	for k := range out {
 		out[k].msg = msgIdx + 1
 	}
-	return out
+	return out, block
 }
 
 func isBlankAILine(l aiLine) bool {
