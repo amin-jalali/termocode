@@ -11,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -196,8 +197,10 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		}
 		m.err = ""
 		m.followRename(m.promptPath, newPath)
+		moveGitIndex(git.Move{From: m.promptPath, To: newPath})
 		m.explorer.Reload()
-		return m.refreshSearchResults() // results show the new path (N2)
+		// results show the new path (N2); Source Control shows the rename
+		return tea.Batch(m.refreshSearchResults(), fetchGitCmd())
 	case promptKindNewFile:
 		if fsys, ok := m.remoteFS(); ok { // a container workspace
 			return m.remoteNewFile(fsys, m.promptPath, value)
