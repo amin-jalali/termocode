@@ -256,3 +256,22 @@ func TestInspectContainerAndImage(t *testing.T) {
 		t.Fatal("unknown container inspected")
 	}
 }
+
+func TestCpOutFollowsAbsoluteLinksInsideTheContainer(t *testing.T) {
+	d := New()
+	c := d.Add(t, "api-1")
+	c.WriteFile(t, "/etc/app.conf", []byte("conf"), 0o644)
+	c.Mkdir(t, "/app")
+	if err := os.Symlink("/etc/app.conf", c.Local("/app/conf")); err != nil {
+		t.Skip("no symlinks:", err)
+	}
+	out, _, code, _ := d.Capture(context.Background(), "", "docker", "cp", "-L", "api-1:/app/conf", "-")
+	h := readTar(t, out)["conf"]
+	if code != 0 || h == nil || h.Typeflag != tar.TypeReg || h.Size != 4 {
+		t.Fatalf("followed = %d %+v", code, h)
+	}
+	out, _, _, _ = d.Capture(context.Background(), "", "docker", "cp", "api-1:/app/conf", "-")
+	if h := readTar(t, out)["conf"]; h == nil || h.Typeflag != tar.TypeSymlink || h.Linkname != "/etc/app.conf" {
+		t.Fatalf("not followed = %+v", h)
+	}
+}

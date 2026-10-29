@@ -403,13 +403,23 @@ func (c *Container) header(cp string, fi fs.FileInfo, name string) (*tar.Header,
 // cpOut is `cp c:p -`: a tar of p named by its base name.
 func (c *Container) cpOut(p string, follow bool) result {
 	p = path.Clean("/" + p)
-	stat := os.Lstat
-	if follow {
-		stat = os.Stat
+	asked := p
+	fi, err := os.Lstat(c.Local(p))
+	// -L follows links like the engine: inside the container, where an
+	// absolute target is a container path.
+	for hops := 0; follow && err == nil && fi.Mode()&fs.ModeSymlink != 0; hops++ {
+		target, rerr := os.Readlink(c.Local(p))
+		if rerr != nil || hops == 16 {
+			return c.notFound(asked)
+		}
+		if !path.IsAbs(target) {
+			target = path.Join(path.Dir(p), target)
+		}
+		p = path.Clean(target)
+		fi, err = os.Lstat(c.Local(p))
 	}
-	fi, err := stat(c.Local(p))
 	if err != nil {
-		return c.notFound(p)
+		return c.notFound(asked)
 	}
 	var buf bytes.Buffer
 	tw := tar.NewWriter(&buf)
@@ -450,7 +460,7 @@ func (c *Container) cpOut(p string, follow bool) result {
 		}
 		return nil
 	}
-	base := path.Base(p)
+	base := path.Base(asked)
 	if err := add(p, base, fi); err != nil {
 		return fail("fakedocker: %v", err)
 	}
