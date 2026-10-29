@@ -15,7 +15,7 @@ import (
 func helpTestModel(t *testing.T) Model {
 	t.Helper()
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	m := New()
+	m := newTestModel(t)
 	m.w, m.h = 100, 40
 	return m
 }

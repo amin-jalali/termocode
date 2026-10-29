@@ -65,7 +65,7 @@ func TestWelcomeHitsFollowLayoutChanges(t *testing.T) {
 	})
 	invalidateWelcome()
 
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 160, Height: 45})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 160, Height: 45})
 	m := checkWelcomeHits(t, m0.(Model), "start")
 
 	nm, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 38})

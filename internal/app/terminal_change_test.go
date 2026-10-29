@@ -34,7 +34,7 @@ func TestTerminalChangeReappliesCaps(t *testing.T) {
 	t.Setenv("TERMOCODE_COLORS", "truecolor")
 	lipgloss.SetColorProfile(theme.DetectProfile(os.Getenv))
 	termCaps = termimg.Caps{Protocol: termimg.Kitty}
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 120, Height: 36})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 120, Height: 36})
 	out := m0.View()
 	if !truecolor.MatchString(out) {
 		t.Fatalf("first terminal: no truecolor SGR")
@@ -83,7 +83,7 @@ func TestTerminalChangeNoteToast(t *testing.T) {
 		theme.CurrentIconMode = oldIcons
 		anim.Enabled = oldAnim
 	})
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 120, Height: 36})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 120, Height: 36})
 	m1, _ := m0.Update(TerminalChangedMsg{Graphics: termimg.Caps{Protocol: termimg.Blocks}, Gen: 2})
 	if strings.Contains(toastText(m1.(Model)), "Reconnected") {
 		t.Fatalf("a plain attach shows a reconnect toast")

@@ -56,7 +56,7 @@ func perfModel(t testing.TB, chat bool) Model {
 		t.Setenv(k, "")
 	}
 	t.Chdir(perfWorkspace(t))
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 240, Height: 62})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 240, Height: 62})
 	m := m0.(Model)
 	if chat {
 		m.ai = newAIState()

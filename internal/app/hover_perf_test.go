@@ -11,7 +11,7 @@ import (
 // hoverModel is a 160×45 window on the welcome screen (no file open).
 func hoverModel(tb testing.TB) Model {
 	tb.Helper()
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 160, Height: 45})
+	m0, _ := newTestModel(tb).Update(tea.WindowSizeMsg{Width: 160, Height: 45})
 	m := m0.(Model)
 	_ = m.View() // warm the render caches, as the real program does
 	return m

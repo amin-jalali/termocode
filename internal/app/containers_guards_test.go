@@ -47,7 +47,7 @@ func TestContainersRenderInvariantsPoorTerminals(t *testing.T) {
 	nerd := regexp.MustCompile("[\uE000-\uF8FF\U000F0000-\U000FFFFD]")
 	for _, size := range [][2]int{{80, 24}, {100, 30}, {150, 42}} {
 		w, h := size[0], size[1]
-		m0, _ := New().Update(tea.WindowSizeMsg{Width: w, Height: h})
+		m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: w, Height: h})
 		base := m0.(Model)
 		for _, prof := range []termenv.Profile{termenv.ANSI, termenv.Ascii} {
 			for _, icons := range []theme.IconMode{theme.IconModeASCII, theme.IconModeUnicode, theme.IconModeNerdFont} {

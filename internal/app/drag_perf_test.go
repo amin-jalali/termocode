@@ -16,7 +16,7 @@ import (
 // conversation (20 messages, Markdown + code blocks).
 func dragTestModel(tb testing.TB) Model {
 	tb.Helper()
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 200, Height: 50})
+	m0, _ := newTestModel(tb).Update(tea.WindowSizeMsg{Width: 200, Height: 50})
 	m := m0.(Model)
 	m.actionsOpen, m.actionsPinned = true, true
 	m.actionsWidth, m.actionsWidthSet = 40, true

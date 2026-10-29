@@ -28,7 +28,7 @@ func TestRenderInvariantsPoorTerminals(t *testing.T) {
 	}()
 
 	const w, h = 100, 30
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: w, Height: h})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: w, Height: h})
 	base := m0.(Model)
 
 	scenes := map[string]func(m Model) Model{
