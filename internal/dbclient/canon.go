@@ -328,7 +328,7 @@ func (r *canonReader) readPostgres(schema string) error {
 		if t == nil {
 			continue
 		}
-		c := CanonConstraint{Name: canonText(canonCell(row, 1)), Columns: splitUnit(canonText(canonCell(row, 3)))}
+		c := CanonConstraint{Name: canonText(canonCell(row, 1)), Columns: splitUnit(canonCell(row, 3))}
 		switch canonText(canonCell(row, 2)) {
 		case "p":
 			c.Kind = "PRIMARY KEY"
@@ -337,7 +337,7 @@ func (r *canonReader) readPostgres(schema string) error {
 		case "f":
 			c.Kind = "FOREIGN KEY"
 			c.RefTable = canonText(canonCell(row, 4))
-			c.RefColumns = splitUnit(canonText(canonCell(row, 5)))
+			c.RefColumns = splitUnit(canonCell(row, 5))
 			c.OnUpdate = pgFKAction[canonText(canonCell(row, 6))]
 			c.OnDelete = pgFKAction[canonText(canonCell(row, 7))]
 		case "c":
@@ -357,7 +357,7 @@ func (r *canonReader) readPostgres(schema string) error {
 		if t == nil {
 			continue
 		}
-		ix := CanonIndex{Table: t.Name, Name: canonText(canonCell(row, 1)), Unique: cellTrue(canonCell(row, 2)), Exprs: splitUnit(canonText(canonCell(row, 4))), Where: canonText(canonCell(row, 5))}
+		ix := CanonIndex{Table: t.Name, Name: canonText(canonCell(row, 1)), Unique: cellTrue(canonCell(row, 2)), Exprs: splitUnit(canonCell(row, 4)), Where: canonText(canonCell(row, 5))}
 		if m := canonText(canonCell(row, 3)); m != "btree" {
 			ix.Method = m
 		}
@@ -383,11 +383,18 @@ func (r *canonReader) readPostgres(schema string) error {
 	return nil
 }
 
-func splitUnit(s string) []string {
-	if s == "" {
+// splitUnit splits a list joined with the unit separator (\x1f). It
+// splits before canonText cleans each part: the cleaning drops control
+// characters, the separator too.
+func splitUnit(c Cell) []string {
+	if c.Null || c.Text == "" {
 		return nil
 	}
-	return strings.Split(s, "\x1f")
+	parts := strings.Split(c.Text, "\x1f")
+	for i, p := range parts {
+		parts[i] = canonClean(p, false)
+	}
+	return parts
 }
 
 // stripSchemaPrefix drops "schema." qualifiers from server text (a view
