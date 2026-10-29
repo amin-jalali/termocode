@@ -172,18 +172,6 @@ func (m Model) itemsHaveIcons() bool {
 	return false
 }
 
-// hasAnyHint reports whether any non-separator item has a Hint set.
-// When false the renderer skips the hint gap entirely so menus without
-// accelerators don't waste horizontal space.
-func (m Model) hasAnyHint() bool {
-	for _, it := range m.items {
-		if !it.Sep && it.Hint != "" {
-			return true
-		}
-	}
-	return false
-}
-
 // titleColWidth returns the widest title glyph-width across non-sep items.
 func (m Model) titleColWidth() int {
 	w := 0
