@@ -49,7 +49,11 @@ type standardRenderer struct {
 	// the last flush had nothing new to draw; write and repaint start it
 	// again. Upstream ticks (and copies the whole frame) 60 times a
 	// second for ever, even when nothing changes. Guarded by mtx.
-	idle              bool
+	idle bool
+	// termocode patch: sizedFrame is true once a frame was written after
+	// the window size was known. That first one is flushed at once
+	// (startup), not on the next tick. Guarded by mtx.
+	sizedFrame        bool
 	done              chan struct{}
 	lastRender        string
 	lastRenderedLines []string
@@ -357,6 +361,15 @@ func (r *standardRenderer) lastLinesRendered() int {
 // write writes to the internal buffer. The buffer will be outputted via the
 // ticker which calls flush().
 func (r *standardRenderer) write(s string) {
+	if r.writeFrame(s) {
+		r.flushFrame(r.pacer != nil)
+	}
+}
+
+// writeFrame stores the next frame and reports whether it is the first
+// one at the window's size, which write flushes at once (termocode
+// patch: the first full frame shows up to a frame interval sooner).
+func (r *standardRenderer) writeFrame(s string) (first bool) {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 	r.buf.Reset()
@@ -371,6 +384,11 @@ func (r *standardRenderer) write(s string) {
 
 	_, _ = r.buf.WriteString(s)
 	r.wake()
+	if !r.sizedFrame && r.width > 0 && r.height > 0 {
+		r.sizedFrame = true
+		return true
+	}
+	return false
 }
 
 func (r *standardRenderer) repaint() {

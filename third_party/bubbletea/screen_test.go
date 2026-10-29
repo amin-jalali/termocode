@@ -72,8 +72,10 @@ func TestClearMsg(t *testing.T) {
 			m := &testModel{}
 			p := NewProgram(m, WithInput(&in), WithOutput(&buf))
 
-			test.cmds = append([]Cmd{func() Msg { return WindowSizeMsg{80, 24} }}, test.cmds...)
-			test.cmds = append(test.cmds, Quit)
+			// The size comes after the commands: the first frame at the
+			// window's size is flushed at once (termocode patch), and these
+			// cases check the commands' sequences before the frame.
+			test.cmds = append(test.cmds, func() Msg { return WindowSizeMsg{80, 24} }, Quit)
 			go p.Send(test.cmds)
 
 			if _, err := p.Run(); err != nil {
