@@ -163,6 +163,17 @@ func TestAIPlanDiamondSurvivesDisconnect(t *testing.T) {
 	tm.Type("split the work")
 	tm.Send(KeyEnter)
 
+	// G-PLAN: the planned steps may change files, so the plan card asks
+	// first. Deny has the focus; Right moves to Approve.
+	tm.WaitText("Approve this plan?", uiTimeout)
+	tm.WaitText("Left side", uiTimeout)
+	if pm.body("map") != "" {
+		t.Fatal("a planned step ran before the plan was approved")
+	}
+	tm.Send("\x1b[C") // Right
+	tm.Send(KeyEnter)
+	tm.WaitGone("Approve this plan?", uiTimeout)
+
 	// Both middle steps ask the model before either got an answer.
 	waitChan(t, pm.leftIn, "the left step's request", 20*time.Second)
 	waitChan(t, pm.rightIn, "the right step's request (it must run next to the left step)", 20*time.Second)
@@ -204,6 +215,9 @@ func TestAIPlanDiamondSurvivesDisconnect(t *testing.T) {
 	tm2.WaitText("wave 4/4 · done 5/5", uiTimeout)
 	for _, title := range []string{"Planner", "Map", "Left side", "Right side", "Verify"} {
 		tm2.WaitText(title, uiTimeout)
+	}
+	if tm2.Has("Approve this plan?") || tm2.Has("waiting for you") {
+		t.Errorf("an approved plan asks again after reattach:\n%s", tm2.Screen())
 	}
 	// The panel header may say "0 running"; only a running or
 	// interrupted node counts.
