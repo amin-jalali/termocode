@@ -93,7 +93,7 @@ func TestChatStoreStepsAndFolds(t *testing.T) {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(filepath.Join(s.Dir, c.ID+".json"))
-	for _, want := range []string{`"steps"`, `"folded"`, `"input": 4000`, `"elapsed_ms": 14000`} {
+	for _, want := range []string{`"steps"`, `"folded"`, `"input":4000`, `"elapsed_ms":14000`} {
 		if !strings.Contains(string(b), want) {
 			t.Errorf("chat file has no %s:\n%s", want, b)
 		}
