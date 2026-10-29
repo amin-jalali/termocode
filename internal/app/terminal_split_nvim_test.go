@@ -209,3 +209,32 @@ func TestHideAndShowKeepsPanes(t *testing.T) {
 		t.Errorf("wins = %d, want %d", nvimWinCount(t, m), base)
 	}
 }
+
+func paneWinbar(t *testing.T, m *Model, win int) string {
+	t.Helper()
+	out, _ := m.nvim.EvalLuaString(`return vim.wo[` + itoa(win) + `].winbar`)
+	return out
+}
+
+func TestPanesGetTitleBars(t *testing.T) {
+	m := splitTestModel(t, 120, 30)
+	if bar := paneWinbar(t, m, m.terminalWinID); bar != "" {
+		t.Fatalf("a single pane has no title bar, got %q", bar)
+	}
+	m.splitTerminalPane(paneRight)
+	tab := m.terminalTabs[0]
+	for i, w := range []int{m.terminalWinID, tab.Splits[0].WinID} {
+		want := " " + paneTitle(tab, i)
+		if bar := paneWinbar(t, m, w); bar != want {
+			t.Errorf("pane %d title %q, want %q", i, bar, want)
+		}
+	}
+	hl, _ := m.nvim.EvalLuaString(`return vim.wo[` + itoa(m.terminalWinID) + `].winhighlight`)
+	if hl == "" {
+		t.Error("panes need a focus and a dim title colour (winhighlight)")
+	}
+	m.closeTerminalPane(1)
+	if bar := paneWinbar(t, m, m.terminalWinID); bar != "" {
+		t.Errorf("back to one pane the title bar goes away, got %q", bar)
+	}
+}

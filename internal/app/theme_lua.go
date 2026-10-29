@@ -127,6 +127,9 @@ hi('Question',        { fg = c.info })
 -- only ever shows up as a split-boundary highlight (e.g. above the
 -- integrated terminal panel). Painting it with the accent (blue) made
 -- that boundary glow blue between editor and terminal — keep it muted.
+-- terminal pane titles (terminal_split.go): the focused pane in the focus colour
+hi('TermocodePaneTitle',   { fg = c.fg_sel, bg = c.focus, bold = true })
+hi('TermocodePaneTitleNC', { fg = c.fg_muted, bg = c.bg_panel })
 hi('StatusLine',      { fg = c.fg_muted, bg = c.bg_panel })
 hi('StatusLineNC',    { fg = c.fg_muted, bg = c.bg_panel })
 hi('MsgArea',         { fg = c.fg, bg = c.bg })

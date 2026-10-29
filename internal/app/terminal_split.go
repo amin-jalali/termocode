@@ -129,6 +129,7 @@ func (m *Model) splitTerminalPane(dir paneDir) tea.Cmd {
 	}
 	tab.Splits = append(tab.Splits, termPane{BufID: buf, WinID: win, Cwd: cwd, Dir: dir, Parent: from})
 	tab.PaneFocus = len(tab.Splits)
+	m.paintPaneTitles()
 	m.focus = FocusEditor
 	m.terminalCwdAt = time.Now()
 	m.invalidateTerminalProbeCache()
@@ -226,6 +227,7 @@ func (m *Model) closeTerminalPane(i int) {
 		m.terminalWinID = tab.Splits[0].WinID
 	}
 	*tab = next
+	m.paintPaneTitles()
 	m.focusTerminalPane(tab.PaneFocus)
 	m.invalidateTerminalProbeCache()
 	m.pruneAgentMCPFiles()
@@ -323,6 +325,7 @@ func (m *Model) reconcileTerminalPanes() {
 	for j := len(dead) - 1; j >= 0; j-- {
 		*tab = tab.withoutPane(dead[j])
 	}
+	m.paintPaneTitles()
 }
 
 // splitColonInt parses "k:v" where v may be negative.
@@ -357,3 +360,50 @@ func (m *Model) dropTabSplits(t terminalTab) {
 		end
 	end`, intList(bufs)))
 }
+
+// paneTitle is the text of pane i's title bar: "zsh · folder".
+func paneTitle(t terminalTab, i int) string {
+	name := terminalCwdBasename(t.paneCwd(i))
+	switch {
+	case t.Shell != "" && name != "":
+		return t.Shell + " · " + name
+	case t.Shell != "":
+		return t.Shell
+	}
+	return name
+}
+
+// paintPaneTitles gives every pane of the active tab a one-row title bar (an
+// nvim winbar) in the theme's focus colour while focused and a dim one while
+// not; nvim switches between them itself as focus moves. A tab with a single
+// pane has no title bar. A pane whose shell ended shows the exit hint.
+func (m *Model) paintPaneTitles() {
+	tab := m.activeTerminalTab()
+	if m.nvim == nil || tab == nil {
+		return
+	}
+	multi := tab.paneCount() > 1
+	items := ""
+	for i := 0; i < tab.paneCount(); i++ {
+		if w := m.paneWin(*tab, i); w > 0 {
+			items += fmt.Sprintf("{%d,%d,%q},", w, tab.paneBuf(i), paneTitle(*tab, i))
+		}
+	}
+	_ = m.nvim.ExecLua(fmt.Sprintf(`
+		local multi = %t
+		for _, e in ipairs({%s}) do
+			local win, buf, title = e[1], e[2], e[3]
+			if vim.api.nvim_win_is_valid(win) then
+				if vim.b[buf] and vim.b[buf].termocode_exited then
+					title = %q
+				end
+				local bar = ''
+				if multi or title == %q then bar = ' ' .. title:gsub('%%%%', '%%%%%%%%') end
+				vim.wo[win].winbar = bar
+				vim.wo[win].winhighlight = 'WinBar:TermocodePaneTitle,WinBarNC:TermocodePaneTitleNC'
+			end
+		end`, multi, items, paneExitedHint, paneExitedHint))
+}
+
+// paneExitedHint replaces a pane's title when its shell has ended.
+const paneExitedHint = "[exited · Enter to restart · x to close]"
