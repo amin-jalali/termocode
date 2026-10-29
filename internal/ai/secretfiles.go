@@ -5,22 +5,15 @@ import (
 	"strings"
 )
 
-// SecretFile reports whether path names a file that holds the user's
-// secrets: the private HTTP env file, .env files (database passwords are
-// read from them), git and network credentials and SSH private keys. The
-// AI's file tools do not read them, so a value never reaches the model;
-// the user opens them. Example files (.env.example …) are not secret.
+// SecretFile reports whether path names a file that holds nothing but
+// the user's secrets: the private HTTP env file, git and network
+// credentials and SSH private keys. The AI's file tools do not read them,
+// so a value never reaches the model; the user opens them. A .env file is
+// not one: the AI reads it to debug a setup, with its values redacted.
 func SecretFile(path string) bool {
 	name := strings.ToLower(filepath.Base(filepath.ToSlash(path)))
 	switch name {
-	case "http-client.private.env.json", ".env", ".git-credentials", ".netrc", ".pgpass":
-		return true
-	}
-	if rest, ok := strings.CutPrefix(name, ".env."); ok {
-		switch rest {
-		case "example", "sample", "template", "dist":
-			return false
-		}
+	case "http-client.private.env.json", ".git-credentials", ".netrc", ".pgpass":
 		return true
 	}
 	for _, k := range []string{"id_rsa", "id_ed25519", "id_ecdsa", "id_dsa"} {
