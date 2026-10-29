@@ -3,6 +3,7 @@ package app
 import (
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
@@ -388,5 +389,50 @@ func TestStatsAsciiIconModeUsesPlainChars(t *testing.T) {
 	theme.CurrentIconMode = theme.IconModeUnicode
 	if got := statsSparkline([]float64{100}, 100, 1); got != "█" {
 		t.Errorf("unicode sparkline = %q", got)
+	}
+}
+
+func TestStatsFailureShowsNoteAndBacksOff(t *testing.T) {
+	f := statsFake(t)
+	m, st := statsModel(t)
+	statsRunFetch(t, m, m.statsSync())
+	if st.stats.delay != statsInterval {
+		t.Fatalf("delay after success = %v", st.stats.delay)
+	}
+	if len(st.stats.series["c1"].Samples) != 1 {
+		t.Fatal("no first sample")
+	}
+	f.Set(t, "all.err", "Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?")
+	statsRunFetch(t, m, m.onStatsTick(statsTickMsg{gen: st.stats.gen}))
+	if st.stats.delay != statsBackoff || statsBackoff != 10*time.Second {
+		t.Errorf("delay after failure = %v", st.stats.delay)
+	}
+	if !strings.Contains(st.stats.lastFail, "stats unavailable") {
+		t.Errorf("note = %q", st.stats.lastFail)
+	}
+	if l := lineWith(svcRender(st, 80, 40), "stats unavailable"); l == "" {
+		t.Error("the note is not on screen")
+	}
+	if len(st.stats.series["c1"].Samples) != 1 {
+		t.Error("a failure changed the graphs")
+	}
+	// The engine answers again: the note goes, the pace is back at 2 s.
+	f.Remove("all.err")
+	statsRunFetch(t, m, m.onStatsTick(statsTickMsg{gen: st.stats.gen}))
+	if st.stats.delay != statsInterval || st.stats.lastFail != "" {
+		t.Errorf("after recovery: delay %v, note %q", st.stats.delay, st.stats.lastFail)
+	}
+	if l := lineWith(svcRender(st, 80, 40), "stats unavailable"); l != "" {
+		t.Errorf("note stays: %q", l)
+	}
+}
+
+func TestStatsEmptyAnswerIsNotAnError(t *testing.T) {
+	f := statsFake(t)
+	f.Set(t, "stats.json", "")
+	m, st := statsModel(t)
+	statsRunFetch(t, m, m.statsSync())
+	if st.stats.lastFail != "" || st.stats.delay != statsInterval {
+		t.Errorf("empty answer: note %q delay %v", st.stats.lastFail, st.stats.delay)
 	}
 }

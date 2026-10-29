@@ -23,7 +23,10 @@ import (
 // blurred window or the last container stopping ends the chain (and
 // cancels a call in flight): no timer, no process.
 
-const statsInterval = 2 * time.Second
+const (
+	statsInterval = 2 * time.Second
+	statsBackoff  = 10 * time.Second // after a failed call
+)
 
 type statsTickMsg struct{ gen uint64 }
 
@@ -40,7 +43,8 @@ type containerStats struct {
 	gen      uint64
 	polling  bool // a fetch or a tick of the current gen is outstanding
 	cancel   context.CancelFunc
-	lastFail string
+	lastFail string        // why the last call failed ("" = it worked)
+	delay    time.Duration // the wait before the next call
 }
 
 // runningContainerIDs lists the containers that are running now.
@@ -143,6 +147,14 @@ func (m *Model) onStatsResult(msg statsResultMsg) tea.Cmd {
 		cs.cancel()
 		cs.cancel = nil
 	}
+	if msg.err != nil {
+		// Engine not reachable, or `stats` not supported: say so once,
+		// quietly, keep the old graphs and try again later.
+		cs.lastFail, cs.delay = statsFailText(msg.err), statsBackoff
+		st.touch()
+		return statsTick(cs.gen, cs.delay)
+	}
+	cs.lastFail, cs.delay = "", statsInterval
 	if cs.series == nil {
 		cs.series = map[string]*containers.Series{}
 	}
@@ -168,7 +180,7 @@ func (m *Model) onStatsResult(msg statsResultMsg) tea.Cmd {
 		}
 	}
 	st.touch()
-	return statsTick(cs.gen, statsInterval)
+	return statsTick(cs.gen, cs.delay)
 }
 
 // ── Formatting ───────────────────────────────────────────────────────────
@@ -433,4 +445,13 @@ func (st *servicesState) renderStatsRow(r svcRow, w int) string {
 	b.WriteString(fg(theme.TextSecondary).Render(value))
 	used += runewidth.StringWidth(value)
 	return clampSidebarRow(b.String(), used, w, row)
+}
+
+// statsFailText is the one-line reason shown under the engine line.
+func statsFailText(err error) string {
+	l := errLine(err.Error())
+	if l == "" {
+		l = "no answer"
+	}
+	return "stats unavailable: " + l
 }

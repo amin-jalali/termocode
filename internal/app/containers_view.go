@@ -294,6 +294,9 @@ func shortRemoteError(s string) string {
 // workspace's project first, unlabeled ones last as "other").
 func (st *servicesState) containerRowsOf(key string) []svcRow {
 	out := []svcRow{{kind: svcRowHint, section: key, text: st.engineLine()}}
+	if st.stats.lastFail != "" {
+		out = append(out, svcRow{kind: svcRowHint, section: key, text: st.stats.lastFail})
+	}
 	if len(st.containerRows) == 0 {
 		return append(out, svcRow{kind: svcRowHint, section: key, text: "No containers"})
 	}
