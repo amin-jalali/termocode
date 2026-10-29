@@ -165,5 +165,9 @@ func (m *Model) handlePRConfirm(id string) (tea.Cmd, bool) {
 	if m.confirmKind != confirmKindPRView {
 		return nil, false
 	}
+	switch id {
+	case "files":
+		return m.prOpenFiles(), true
+	}
 	return nil, true
 }

@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/amin-jalali/termocode/internal/ghci"
 	"github.com/amin-jalali/termocode/internal/git"
 )
 
@@ -200,5 +201,71 @@ func TestPRViewError(t *testing.T) {
 	prDo(t, m, m.prViewCmd(99))
 	if m.prViewOpen() || !toastHas(m, "Could not read #99") {
 		t.Error("error not shown")
+	}
+}
+
+const prDiffText14 = `diff --git a/parser.go b/parser.go
+--- a/parser.go
++++ b/parser.go
+@@ -1,3 +1,3 @@
+ package p
+-func Old() {}
++func New() {}
+ var x = 1
+diff --git a/docs/new.md b/docs/new.md
+new file mode 100644
+--- /dev/null
++++ b/docs/new.md
+@@ -0,0 +1 @@
++# Title
+`
+
+// Files… reads `gh pr diff` and opens the diff card with every file; the
+// view card closes and the open card is not the AI review.
+func TestPRFilesOpensDiffCard(t *testing.T) {
+	m, f := prViewModel(t)
+	f.answers["pr diff"] = prDiffText14
+	prDo(t, m, m.prDiffCmd(14))
+	if !m.reviewOpen || m.confirmOpen {
+		t.Fatalf("diff card %v confirm %v", m.reviewOpen, m.confirmOpen)
+	}
+	card := m.aiS().review.card
+	if card.Files() != 2 || card.Review() {
+		t.Errorf("files %d review %v", card.Files(), card.Review())
+	}
+	box := ansi.Strip(card.Box())
+	for _, want := range []string{"#14 Add parser", "parser.go", "new.md", "2 files"} {
+		if !strings.Contains(box, want) {
+			t.Errorf("card misses %q:\n%s", want, box)
+		}
+	}
+	if !f.called("pr diff 14") {
+		t.Errorf("calls %v", f.calls)
+	}
+}
+
+// The Files… button asks for the diff of the pull request on screen.
+func TestPRFilesButton(t *testing.T) {
+	m, _ := prViewModel(t)
+	cmd, ok := m.handlePRConfirm("files")
+	if !ok || cmd == nil {
+		t.Fatal("Files… did nothing")
+	}
+}
+
+func TestPRDiffError(t *testing.T) {
+	m, f := prViewModel(t)
+	f.errs = map[string]error{"pr diff": errors.New("exit 1")}
+	f.stderr = map[string]string{"pr diff": "diff too large"}
+	prDo(t, m, m.prDiffCmd(14))
+	if m.reviewOpen || !toastHas(m, "Could not read the changes of #14") {
+		t.Error("error not shown")
+	}
+}
+
+func TestPRDiffCardFiles(t *testing.T) {
+	files, add, del := prDiffCardFiles(ghci.ParseDiff(prDiffText14))
+	if len(files) != 2 || add != 2 || del != 1 || files[1].Status != 'A' || files[0].Status != 'M' {
+		t.Errorf("files %+v add %d del %d", files, add, del)
 	}
 }

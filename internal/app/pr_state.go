@@ -74,6 +74,8 @@ func (m *Model) handlePRMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onPRList(msg), true
 	case prViewMsg: // pr_view.go
 		return m.onPRView(msg), true
+	case prDiffMsg: // pr_files.go
+		return m.onPRDiff(msg), true
 	}
 	return nil, false
 }
