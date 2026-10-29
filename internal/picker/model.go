@@ -721,8 +721,15 @@ func (m Model) renderBox() string {
 	if titleText == "" {
 		titleText = "Picker"
 	}
-	headerTitle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmTextPri).Bold(true).Render(" " + titleText)
 	subtitle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmSubtitleFg).Render(m.subtitleText())
+	// The title is cut to its one row: a wrapped title would push every
+	// list row down and break the mouse hit test (RowRects).
+	room := innerW - 2 - lipgloss.Width(headerIcon) - 1 - lipgloss.Width(subtitle) - 2 - 1
+	if room < 1 {
+		room = 1
+	}
+	titleText = runewidth.Truncate(titleText, room, "…")
+	headerTitle := lipgloss.NewStyle().Background(pmBoxBg).Foreground(pmTextPri).Bold(true).Render(" " + titleText)
 
 	padBg := func(s string, w int) string {
 		used := lipgloss.Width(s)
