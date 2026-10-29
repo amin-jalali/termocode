@@ -398,6 +398,15 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | LSP: Show Hover Documentation | `hover` |   |   |
 | LSP: Toggle Inlay Hints | `toggle-inlay-hints` | `Alt+L` | `Alt+L` |
 
+## Layout
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Layout: Delete… | `layout-delete` |   |   |
+| Layout: Open… | `layout-open` | `Alt+Y` | `Alt+Y` |
+| Layout: Reset to Default | `layout-reset` |   |   |
+| Layout: Save As… | `layout-save` |   |   |
+
 ## MCP
 
 | Title | ID | Key | Hint |

@@ -1787,6 +1787,10 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `itermoc-profiles` | Itermoc: Profiles | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `itermoc-services` | Itermoc: Services | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `join-lines` | Edit: Join Lines | confirm (fileWrite) |   |
+| `layout-delete` | Layout: Delete… | never | the AI changes the layout with the layout_set tool |
+| `layout-open` | Layout: Open… | never | the AI changes the layout with the layout_set tool |
+| `layout-reset` | Layout: Reset to Default | never | the AI changes the layout with the layout_set tool |
+| `layout-save` | Layout: Save As… | never | the AI changes the layout with the layout_set tool |
 | `lowercase` | Edit: Convert to lowercase | confirm (fileWrite) |   |
 | `lsp-manage` | LSP: Manage Language Servers... | never | opens a picker or prompt that only the user can answer; use a typed tool (lsp_servers) |
 | `mcp-serve-copy-config` | MCP: Copy termocode Server Config | never | AI provider, credentials and approvals stay with the user (the config is for the user to paste into an agent) |

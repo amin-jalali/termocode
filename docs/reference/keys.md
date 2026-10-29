@@ -162,6 +162,7 @@ These are the default keys. The **Key** column is the key you press. The **Key s
 
 | Key | Key string | Action | Description |
 | --- | --- | --- | --- |
+| `Alt+Y` | `alt+y` | `LayoutOpen` | Open a saved layout: panels, sizes, splits and terminals (Layout: Open…). |
 | `F7` | `f7` | `MarkdownPreview` | Open the Markdown preview for the active file. |
 | `Ctrl+Alt+I` | `ctrl+alt+i` | `ShowBufferInfo` | Show path, size, encoding and LSP info for the active file. |
 | <code>Ctrl+&#92;</code> | <code>ctrl+&#92;</code> | `SplitVertical` | Split the editor to the right. |
