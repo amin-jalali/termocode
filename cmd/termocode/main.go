@@ -272,6 +272,8 @@ func main() {
 		switch args[0] {
 		case "sessions":
 			os.Exit(cmdSessions())
+		case "ssh":
+			os.Exit(cmdSSH(args[1:]))
 		case "mcp":
 			os.Exit(runMCP(args[1:]))
 		case "attach", "kill":
@@ -339,6 +341,8 @@ func printUsage() {
 	fmt.Println("  termocode sessions         list the running sessions")
 	fmt.Println("  termocode attach [dir]     attach to the session of dir")
 	fmt.Println("  termocode kill [dir]       end the session of dir")
+	fmt.Println("  termocode ssh [--dir d] [ssh options] host")
+	fmt.Println("                             open termocode on host; reconnects by itself")
 	fmt.Println("  termocode mcp [--dir d]    run as an MCP server for an agent CLI (stdio)")
 	fmt.Println("  termocode setup            install JetBrainsMono Nerd Font and check prerequisites")
 	fmt.Println("  termocode --version        print the version")

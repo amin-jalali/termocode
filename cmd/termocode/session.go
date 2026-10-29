@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"strings"
 	"time"
 
@@ -106,4 +107,24 @@ func linkArgs(args []string) (rest []string, link bool, note string) {
 		note = session.ReconnectNote(away, dropped)
 	}
 	return out, link, note
+}
+
+// sshCommandArgs splits `termocode ssh [--dir DIR] [ssh args] destination`
+// into the far folder and the arguments for ssh.
+func sshCommandArgs(args []string) (dir string, sshArgs []string, err error) {
+	for len(args) > 0 {
+		if v, ok := strings.CutPrefix(args[0], "--dir="); ok {
+			dir, args = v, args[1:]
+			continue
+		}
+		if args[0] == "--dir" && len(args) > 1 {
+			dir, args = args[1], args[2:]
+			continue
+		}
+		break
+	}
+	if len(args) == 0 {
+		return "", nil, errors.New("usage: termocode ssh [--dir DIR] [ssh options] destination")
+	}
+	return dir, args, nil
 }

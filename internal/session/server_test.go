@@ -37,6 +37,9 @@ const catUI = "trap '' USR1; exec cat"
 const serverMarker = "test-server-started"
 
 func TestMain(m *testing.M) {
+	if os.Getenv(envFakeRemote) != "" {
+		os.Exit(fakeRemote())
+	}
 	if ws := os.Getenv(envServe); ws != "" {
 		if d, err := time.ParseDuration(os.Getenv(envWriteTimeout)); err == nil {
 			clientWriteTimeout = d

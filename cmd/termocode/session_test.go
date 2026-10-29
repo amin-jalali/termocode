@@ -82,3 +82,17 @@ func TestLinkArgs(t *testing.T) {
 		t.Errorf("no link: %v %v", rest, link)
 	}
 }
+
+func TestSSHCommandArgs(t *testing.T) {
+	dir, rest, err := sshCommandArgs([]string{"--dir", "/srv/app", "-p", "2222", "me@box"})
+	if err != nil || dir != "/srv/app" || strings.Join(rest, " ") != "-p 2222 me@box" {
+		t.Errorf("got %q %q %v", dir, rest, err)
+	}
+	dir, rest, err = sshCommandArgs([]string{"--dir=~/code", "box"})
+	if err != nil || dir != "~/code" || strings.Join(rest, " ") != "box" {
+		t.Errorf("got %q %q %v", dir, rest, err)
+	}
+	if _, _, err := sshCommandArgs([]string{"--dir", "x"}); err == nil {
+		t.Error("no destination, no error")
+	}
+}

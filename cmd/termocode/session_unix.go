@@ -177,6 +177,21 @@ func terminalChange(c *session.ClientCaps) app.TerminalChangedMsg {
 	return app.TerminalChangedMsg{Graphics: g, Gen: c.Gen, Note: c.Note}
 }
 
+// cmdSSH runs `termocode ssh`: the editor of a far machine in this
+// terminal, in its persistent session.
+func cmdSSH(args []string) int {
+	dir, sshArgs, err := sshCommandArgs(args)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "termocode:", err)
+		return 2
+	}
+	if !term.IsTerminal(int(os.Stdin.Fd())) || !term.IsTerminal(int(os.Stdout.Fd())) {
+		fmt.Fprintln(os.Stderr, "termocode: ssh needs a terminal")
+		return 1
+	}
+	return session.RunSSH(session.SSHOpts{Args: sshArgs, Dir: dir, In: os.Stdin, Out: os.Stdout})
+}
+
 // cmdSessions prints the running sessions (`termocode sessions`).
 func cmdSessions() int {
 	list, err := session.List()
