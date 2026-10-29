@@ -467,8 +467,12 @@ func aiServicesStart(ctx context.Context, call aiIDECaller, name string, all boo
 				st.localOK[svcCommandHash(svc)] = true
 				m.servicesSaveSession()
 			}
+			cmd := m.servicesSpawnLocal(svc)
+			if _, ok := m.svcTabRunning(svcLocalTab(name)); !ok {
+				return "", cmd, fmt.Errorf("could not open a terminal tab for %s; nothing started", name)
+			}
 			return fmt.Sprintf("started local service %s in its terminal tab (%q); call services_status(name: %q, wait_ms: 20000) to wait",
-				name, svc.Command, name), m.servicesSpawnLocal(svc), nil
+				name, svc.Command, name), cmd, nil
 		}
 		if len(st.compose) == 0 {
 			return "", nil, errors.New("no Docker Compose services here")
@@ -476,6 +480,9 @@ func aiServicesStart(ctx context.Context, call aiIDECaller, name string, all boo
 		note, cmd := m.servicesStart(svcSecCompose, name)
 		if note != "" {
 			return note + " (no change)", cmd, nil
+		}
+		if _, ok := m.svcTabRunning(svcTabUp); !ok {
+			return "", cmd, errors.New("could not open the terminal tab services: up; nothing started")
 		}
 		if name == "" {
 			return "started `docker compose up -d` in the terminal tab services: up; call services_status(name, wait_ms: 30000) to wait for a service", cmd, nil
