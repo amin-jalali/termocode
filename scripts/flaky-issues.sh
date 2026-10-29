@@ -15,7 +15,8 @@ run_url="${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-}/actions
 bin=$(mktemp -d)/failedtests
 go build -o "$bin" ./cmd/failedtests
 
- while| while IFS=$'\t' read -r pkg test runs; do
+# gh calls read < /dev/null: they must not eat the list of failures.
+"$bin" < "$json" | while IFS=$'\t' read -r pkg test runs; do
 	name=${test:-$pkg}
 	title="Flaky: $name"
 	body=$(mktemp)
