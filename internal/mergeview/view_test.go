@@ -40,7 +40,7 @@ func TestViewWideShowsThreePanes(t *testing.T) {
 			t.Errorf("body misses %q:\n%s", s, body)
 		}
 	}
-	if !strings.Contains(rows[13], "gm") {
+	if !strings.Contains(rows[13], "F6") {
 		t.Errorf("unfocused hint %q", rows[13])
 	}
 	m.SetFocused(true)
