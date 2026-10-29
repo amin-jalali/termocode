@@ -82,15 +82,6 @@ func (s Skills) Project() []Skill {
 	return out
 }
 
-// Names returns the skill names, in order.
-func (s Skills) Names() []string {
-	out := make([]string, len(s.List))
-	for i, sk := range s.List {
-		out[i] = sk.Name
-	}
-	return out
-}
-
 var skillNameRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
 
 // ValidSkillName reports whether name can name a skill (letters, digits,
