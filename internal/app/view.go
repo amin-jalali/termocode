@@ -509,7 +509,7 @@ func (m Model) renderBaseLines() []string {
 	// height below replace bar, tabs and breadcrumbs). The mouse hit tests
 	// use the same editorPaneLayout, so clicks match what is drawn.
 	// The find bar is a floating panel spliced onto the top-right of the
-	// content area (see overlayFindBarInEditor), not a chrome row.
+	// content area (see overlayFindBarInEditorLines), not a chrome row.
 	pane := m.editorPaneLayout()
 	edPaneW, editorH := pane.W, pane.H
 	hasBreadcrumbs := len(m.breadcrumbs) > 0 || m.stickyContext != ""
@@ -667,16 +667,9 @@ func (m Model) renderBaseLines() []string {
 	return m.normalizeFrameLines(middle)
 }
 
-// overlayActionsLauncher splices the bottom-right launcher chip onto the
-// rendered base, one row above the status bar. The base row underneath is
-// preserved everywhere except the chip's exact column range.
-func (m Model) overlayActionsLauncher(base string) string {
-	lines := strings.Split(base, "\n")
-	m.overlayActionsLauncherLines(lines)
-	return strings.Join(lines, "\n")
-}
-
-// overlayActionsLauncherLines is overlayActionsLauncher on the frame rows (in place).
+// overlayActionsLauncherLines splices the bottom-right launcher chip onto
+// the frame rows (in place), one row above the status bar. The row
+// underneath is kept everywhere except the chip's own cells.
 func (m Model) overlayActionsLauncherLines(lines []string) {
 	x1, _, y, ok := m.actionsLauncherRect()
 	if !ok {
@@ -692,20 +685,10 @@ func (m Model) overlayActionsLauncherLines(lines []string) {
 	lines[y] = spliceAt(lines[y], chip, x1)
 }
 
-// overlayFindBarInEditor splices the compact floating find panel onto the
-// top-right of the editor pane, leaving the editor content under it intact
-// (the chrome above — tabs and breadcrumbs — is NOT covered). Modeled on
-// VS Code's find widget: a small dark panel that hovers over the code.
-//
-// The panel sits 1 cell down from the editor content's top row and is
-// right-aligned with a 2-cell margin from the editor pane's right edge.
-func (m Model) overlayFindBarInEditor(base string) string {
-	lines := strings.Split(base, "\n")
-	m.overlayFindBarInEditorLines(lines)
-	return strings.Join(lines, "\n")
-}
-
-// overlayFindBarInEditorLines is overlayFindBarInEditor on the frame rows (in place).
+// overlayFindBarInEditorLines splices the compact floating find panel onto
+// the top-right of the editor pane (frame rows, in place), 1 row below the
+// editor content's top and 2 cells from its right edge. The editor content
+// under it stays; the chrome above (tabs, breadcrumbs) is not covered.
 func (m Model) overlayFindBarInEditorLines(baseLines []string) {
 	pw := m.find.PanelWidth()
 	ph := m.find.PanelHeight()
@@ -805,29 +788,10 @@ func (m Model) normalizeFrameLines(lines []string) []string {
 	return lines
 }
 
-// padColumnRowsToHeight forces a column (assumed all rows the same width)
-// to exactly `h` rows by appending styled `filler` rows at the bottom.
-// Tall columns are returned unchanged — clipping is done at the source
-// (e.g. clipRowsToHeight on editorContent) where we know which rows are
-// flexible body vs. fixed chrome (status bar, header, etc.).
-//
-// This is the LEFT-SIDE / BETWEEN-COLUMN counterpart to normalizeFrame:
-// it runs BEFORE lipgloss.JoinHorizontal so the join never has to pad
-// an unequal-height seam (lipgloss does that with naked ASCII spaces,
-// which leak the terminal's default bg as a stripe).
-func padColumnRowsToHeight(col string, h int, filler lipgloss.Style) string {
-	if h <= 0 {
-		return col
-	}
-	rows := strings.Split(col, "\n")
-	if len(rows) >= h {
-		// Don't trim from here — chrome/status-bar layout matters.
-		return col
-	}
-	return strings.Join(padColumnLines(rows, h, filler), "\n")
-}
-
-// padColumnLines is padColumnRowsToHeight on a column's rows.
+// padColumnLines forces a column's rows (all the same width) to exactly h
+// rows by appending styled filler rows; taller columns stay as they are.
+// It runs before columns are joined, so the join never pads a short seam
+// with bare spaces that show the terminal's own background.
 func padColumnLines(rows []string, h int, filler lipgloss.Style) []string {
 	if h <= 0 || len(rows) >= h {
 		return rows
@@ -847,29 +811,10 @@ func padColumnLines(rows []string, h int, filler lipgloss.Style) []string {
 	return rows
 }
 
-// clipRowsToHeight returns the first `h` rows of `s` — the rest are
-// dropped — and pads short outputs up to `h` rows of `w`-wide styled
-// spaces so callers can rely on the result being EXACTLY `h` rows tall
-// and `w` cells wide. Trim is from the BOTTOM (last rows dropped) so
-// content rendered top-down (banners, headers, action grid…) keeps its
-// most-prominent rows.
-//
-// Each individual row is also right-padded with styled `filler` spaces
-// when it falls short of `w` cells. This catches the transitional case
-// where the editor pane's grid (driven asynchronously by nvim) is briefly
-// narrower than the allocated edPaneW: without this width-pad, the
-// downstream lipgloss.JoinVertical pads the short rows with naked ASCII
-// spaces, which then reach the right edge of the screen and leak the
-// terminal's default bg as a vertical strip on the editor's right side.
-func clipRowsToHeight(s string, h, w int, filler lipgloss.Style) string {
-	if h <= 0 {
-		return ""
-	}
-	return strings.Join(clipRowsLines(strings.Split(s, "\n"), h, w, filler), "\n")
-}
-
-// clipRowsLines is clipRowsToHeight on rows (may reuse rows' backing
-// array).
+// clipRowsLines keeps the first h rows (the bottom ones go) and pads
+// short output to exactly h rows, each right-padded to w cells with styled
+// filler, so a briefly narrower nvim grid never leaves a bare strip. It
+// may reuse rows' backing array.
 func clipRowsLines(rows []string, h, w int, filler lipgloss.Style) []string {
 	if h <= 0 {
 		return nil
@@ -1152,32 +1097,6 @@ func renderSignature(sig string) string {
 
 func isIdentChar(b byte) bool {
 	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9') || b == '_'
-}
-
-// renderStickyScroll renders the 1-row "currently inside <signature>" strip.
-// Uses BgHover so it visually sits ABOVE the editor body rather than blending
-// into it. Italic + TextSecondary signals "this is metadata, not source".
-func (m Model) renderStickyScroll(width int) string {
-	if width <= 0 {
-		return ""
-	}
-	bg := theme.Bg(theme.BgHover)
-	style := theme.FgBg(theme.TextSecondary, theme.BgHover).Italic(true)
-	text := strings.TrimRight(m.stickyContext, " \t")
-	// Reserve 1 col left pad for visual breathing room.
-	avail := width - 1
-	if avail < 1 {
-		return bg.Render(strings.Repeat(" ", width))
-	}
-	if runewidth.StringWidth(text) > avail {
-		text = runewidth.Truncate(text, avail, "…")
-	}
-	out := bg.Render(" ") + style.Render(text)
-	pad := width - textWidth(out)
-	if pad > 0 {
-		out += bg.Render(strings.Repeat(" ", pad))
-	}
-	return out
 }
 
 // renderEditorScrollbar returns a height-tall, 1-column overview ruler. It
@@ -1993,23 +1912,6 @@ func renderGitSectionHeader(label, count string, expanded, active, focused bool,
 	return clampSidebarRow(sb.String(), used, w, rowStyle)
 }
 
-// letterSpace inserts a space between each rune of s ("GRAPH" → "G R A P H")
-// for the section-divider caption look.
-func letterSpace(s string) string {
-	rs := []rune(s)
-	if len(rs) <= 1 {
-		return s
-	}
-	out := make([]rune, 0, len(rs)*2-1)
-	for i, r := range rs {
-		if i > 0 {
-			out = append(out, ' ')
-		}
-		out = append(out, r)
-	}
-	return string(out)
-}
-
 // gitTypePrefix is the length of a conventional-commit prefix ("fix: ",
 // "feat(git)!: "), 0 when the subject has none. The row shows it muted.
 func gitTypePrefix(subject string) int {
@@ -2275,14 +2177,6 @@ func gitStatusDot(f git.FileStatus) (string, lipgloss.Color) {
 	return "·", theme.LG(theme.TextMuted)
 }
 
-func padToWidth(s string, w int) string {
-	pad := w - textWidth(s)
-	if pad <= 0 {
-		return s
-	}
-	return s + strings.Repeat(" ", pad)
-}
-
 // padBgToWidth pads with the sidebar bg so empty space stays the panel color.
 func padBgToWidth(s string, w int) string {
 	width := textWidth(s)
@@ -2411,23 +2305,10 @@ func (m Model) terminalStatusLabel() string {
 	return dir
 }
 
-// overlayPreferredActionHint splices a 1-row "💡 <Title>  Ctrl+. ▸ Apply
-// Ctrl+Shift+." chip onto the row directly below the editor cursor (or
-// directly above when the cursor sits near the bottom of the editor body).
-// The chip carries the LSP-flagged preferred action's title and the live
-// keymap shortcuts so the user knows the chord for picker / direct-apply.
-//
-// The hint is purely advisory — pressing the advertised chords is what
-// runs the action; this function only paints. It's cleared at the model
-// layer by cursor moves (StateMsg) and by any subsequent keystroke that
-// isn't the apply chord (handleGlobalKey).
-func (m Model) overlayPreferredActionHint(base string) string {
-	lines := strings.Split(base, "\n")
-	m.overlayPreferredActionHintLines(lines)
-	return strings.Join(lines, "\n")
-}
-
-// overlayPreferredActionHintLines is overlayPreferredActionHint on the frame rows (in place).
+// overlayPreferredActionHintLines paints a 1-row "💡 <Title>  Ctrl+. ▸
+// Apply Ctrl+Shift+." chip (frame rows, in place) below the editor cursor,
+// or above it near the bottom. It only paints: the keys run the action,
+// and a cursor move or another key clears the hint (handleGlobalKey).
 func (m Model) overlayPreferredActionHintLines(lines []string) {
 	if m.preferredCodeAction == nil {
 		return

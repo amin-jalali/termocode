@@ -472,7 +472,7 @@ func (m Model) findTargetAt(x, y int) string {
 }
 
 // findTargets maps the find bar's glyph buttons. The bar is clipped at
-// the editor pane's right edge (overlayFindBarInEditor); a clipped
+// the editor pane's right edge (overlayFindBarInEditorLines); a clipped
 // button is not drawn.
 func (m Model) findTargets(pane editorPane) []hitTarget {
 	bx, by, _, _ := m.find.Bounds()
