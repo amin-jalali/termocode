@@ -504,6 +504,8 @@ func EditorKeyCatalog() []EditorKey {
 		{"<leader>x / <leader>X", "Normal", "In a SQL console: show the query plan of the statement at the cursor / EXPLAIN ANALYZE it (asks first, the statement runs)."},
 		{"Tab / Enter", "Insert", "Accept the completion item. Tab also accepts AI ghost text and jumps to the next snippet field."},
 		{"Shift+Tab", "Insert", "Previous completion item, or previous snippet field."},
+		{"Tab", "Normal, Insert", "AI next edit (marker \"⇥ next edit\"): the first Tab goes to the suggested edit and shows it, the next Tab applies it (one undo step)."},
+		{"Esc", "Normal", "Dismiss the AI next edit suggestion."},
 		{"Ctrl+Z / Ctrl+Y", "Insert", "Undo / redo."},
 		{"Alt+Up / Alt+Down", "All", "Move the line or selection up / down."},
 		{"Shift+Alt+Up / Shift+Alt+Down", "All", "Duplicate the line or selection up / down."},

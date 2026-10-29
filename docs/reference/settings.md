@@ -44,6 +44,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `ai_inline` | bool | `true` | Show AI ghost-text completions while typing (needs a configured provider). |
+| `ai_next_edit` | bool | `true` | After an edit, show where the AI thinks the next related edit goes (Tab: go there, Tab: apply, Esc: dismiss). Not set: same as ai_inline. |
 | `ai_provider` | string | `(auto)` | AI provider: anthropic, openai, openrouter, ollama, lmstudio, openai-compatible, claude-oauth or none. Empty picks anthropic or openai from the API keys it finds. TERMOCODE_AI_PROVIDER overrides it. |
 | `ai_model` | string | `(default)` | Chat model ID. Empty uses the provider's default model. |
 | `ai_base_url` | string | `(default)` | API base URL, for local or OpenAI-compatible servers. Empty uses the provider's default. |

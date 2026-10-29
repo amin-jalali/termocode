@@ -3,11 +3,14 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // Next edit suggestion (G-NES). Flow:
@@ -255,4 +258,60 @@ func (m *Model) onAINESResult(msg aiNESResultMsg) tea.Cmd {
 if a and a.nes_show and a.nes_show(...) then return 'y' end
 return ''`, &out, msg.buf, msg.tick, ne.Start, ne.End, old, ne.Lines)
 	return nil
+}
+
+// aiToggleNextEdit flips ai_next_edit, persists it and syncs Lua.
+func (m *Model) aiToggleNextEdit() tea.Cmd {
+	if c, ok := m.aiReady(); !ok {
+		return c
+	}
+	s := m.aiS()
+	on := !s.settings.NextEditEnabled()
+	s.settings.NextEdit = &on
+	if path, err := ai.ConfigPath(); err == nil {
+		cur := ai.LoadSettings(path)
+		cur.NextEdit = &on
+		if err := ai.SaveSettings(path, cur); err != nil {
+			return m.aiToastErr("Settings error", err)
+		}
+	}
+	if !on {
+		m.cancelAINES()
+	}
+	m.syncAIInline()
+	label := "AI next edit suggestions off"
+	if on {
+		label = "AI next edit suggestions on"
+		if m.nvim != nil {
+			if raw, err := m.nvim.EvalLuaString(`return tostring(vim.api.nvim_get_current_buf())`); err == nil {
+				m.aiNESSeed(atoiSafe(raw))
+			}
+		}
+	}
+	var c tea.Cmd
+	m.toast, c = m.toast.Push(toast.Info, label)
+	return c
+}
+
+func atoiSafe(s string) int {
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
+// aiNESStatusTexts is the status-bar hint while a suggestion shows.
+func (m Model) aiNESStatusTexts() []string {
+	if m.ai == nil || m.ai.nes.shown == "" {
+		return nil
+	}
+	g := "⇥"
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		g = ">>"
+	}
+	if m.ai.nes.shown == "jumped" {
+		return []string{"{{accent}}" + g + "{{/}} Tab: apply · Esc: dismiss"}
+	}
+	return []string{"{{accent}}" + g + "{{/}} Tab: go to next edit"}
 }

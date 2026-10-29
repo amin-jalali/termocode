@@ -390,10 +390,11 @@ func (m *Model) aiInlineEnabled() bool {
 	return m.aiS().settings.InlineEnabled() && m.aiConfigured()
 }
 
-// syncAIInline mirrors the inline toggle into nvim.
+// syncAIInline mirrors the inline and next edit toggles into nvim.
 func (m *Model) syncAIInline() {
 	if m.nvim != nil {
 		_ = m.nvim.ExecLua(aiEnableLua(m.aiInlineEnabled()))
+		_ = m.nvim.ExecLua(aiNESEnableLua(m.aiNESEnabled()))
 	}
 }
 
@@ -404,11 +405,14 @@ func (m Model) aiAfterAttach() {
 		return
 	}
 	_ = m.nvim.ExecLua(aiColorsLua())
-	on := false
+	on, nes := false, false
 	if s := m.ai; s != nil {
-		on = s.settings.InlineEnabled() && s.provider != nil && s.provider.Configured()
+		ready := s.provider != nil && s.provider.Configured()
+		on = s.settings.InlineEnabled() && ready
+		nes = s.settings.NextEditEnabled() && ready
 	}
 	_ = m.nvim.ExecLua(aiEnableLua(on))
+	_ = m.nvim.ExecLua(aiNESEnableLua(nes))
 }
 
 // ── Palette ─────────────────────────────────────────────────────────────
@@ -437,6 +441,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-edit-review", "AI: Toggle Edit Review (diff / auto)", ""},
 		{"ai-trigger-inline", "AI: Trigger Inline Completion", "Alt+\\"},
 		{"ai-toggle-inline", "AI: Toggle Inline Completions", "Alt+|"},
+		{"ai-toggle-next-edit", "AI: Toggle Next Edit Suggestions", ""},
 		{"ai-configure", "AI: Configure Provider…", ""},
 		{"ai-pick-model", "AI: Pick Model…", ""},
 		{"ai-auto-approve", "AI: Agent Auto-Approve…", ""},
@@ -531,6 +536,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.aiTriggerInline(), true
 	case "ai-toggle-inline":
 		return m.aiToggleInline(), true
+	case "ai-toggle-next-edit": // ai_nextedit.go
+		return m.aiToggleNextEdit(), true
 	case "ai-configure":
 		return m.openAIConfigure(), true
 	case "ai-pick-model":
@@ -617,6 +624,8 @@ func init() {
 	settingsRows = append(settingsRows,
 		settingsRow{ID: "setting-ai-inline", Label: "ai_inline", Kind: "bool", Default: "true",
 			Desc: "Show AI ghost-text completions while typing (needs a configured provider)."},
+		settingsRow{ID: "setting-ai-next-edit", Label: "ai_next_edit", Kind: "bool", Default: "true",
+			Desc: "After an edit, show where the AI thinks the next related edit goes (Tab: go there, Tab: apply, Esc: dismiss). Not set: same as ai_inline."},
 		settingsRow{ID: "setting-ai-provider", Label: "ai_provider", Kind: "string", Default: "(auto)",
 			Desc: "AI provider: " + strings.Join(ai.Kinds, ", ") + " or none. Empty picks anthropic or openai from the API keys it finds. TERMOCODE_AI_PROVIDER overrides it."},
 		settingsRow{ID: "setting-ai-model", Label: "ai_model", Kind: "string", Default: "(default)",
@@ -633,7 +642,7 @@ func init() {
 // aiSettingsCategories puts the AI rows in their own Settings group.
 func aiSettingsCategories(cats map[string]string) map[string]string {
 	httpSettingsCategories(cats) // the HTTP client's group (http_settings.go)
-	for _, id := range []string{"setting-ai-inline", "setting-ai-provider", "setting-ai-model", "setting-ai-base-url",
+	for _, id := range []string{"setting-ai-inline", "setting-ai-next-edit", "setting-ai-provider", "setting-ai-model", "setting-ai-base-url",
 		"setting-ai-until-done-rounds", "setting-ai-until-done-budget"} {
 		cats[id] = "AI"
 	}
@@ -656,6 +665,8 @@ func aiSettingValue(id string) (string, bool) {
 			return "true", true
 		}
 		return "false", true
+	case "setting-ai-next-edit":
+		return strconv.FormatBool(s.NextEditEnabled()), true
 	case "setting-ai-provider":
 		if s.Provider == "" {
 			return "(auto)", true
@@ -712,6 +723,15 @@ func (m *Model) applyAISetting(id, value string) (tea.Cmd, bool) {
 		}
 		s.Inline = &b
 		label = "ai_inline = " + value
+	case "setting-ai-next-edit":
+		b, err := parseBoolLoose(value)
+		if err != nil {
+			var c tea.Cmd
+			m.toast, c = m.toast.Push(toast.Errr, "ai_next_edit: expected true/false")
+			return c, true
+		}
+		s.NextEdit = &b
+		label = "ai_next_edit = " + value
 	case "setting-ai-provider":
 		v := strings.ToLower(value)
 		if v != "" && v != "none" && ai.KindLabel(v) == "None" {

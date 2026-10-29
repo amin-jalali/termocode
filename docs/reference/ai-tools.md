@@ -1527,6 +1527,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `ai-sign-out-claude` | AI: Sign out of Claude | never | AI provider, credentials and approvals stay with the user |
 | `ai-skills` | AI: Skills… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `ai-toggle-inline` | AI: Toggle Inline Completions | confirm (ide) |   |
+| `ai-toggle-next-edit` | AI: Toggle Next Edit Suggestions | confirm (ide) |   |
 | `ai-trigger-inline` | AI: Trigger Inline Completion | never | inline completion is for the user's typing |
 | `ai-undo-turn` | AI: Undo Last Turn | never | the user undoes the AI's changes |
 | `ai-until-done` | AI: Work Until Done (toggle) | confirm (settings) |   |
@@ -1853,6 +1854,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `ai_max_steps` | never | AI provider, credentials and approvals stay with the user |
 | `ai_model` | never | AI provider, credentials and approvals stay with the user |
 | `ai_models` | never | AI provider, credentials and approvals stay with the user |
+| `ai_next_edit` | confirm (settings) |   |
 | `ai_parallel_max` | never | AI provider, credentials and approvals stay with the user |
 | `ai_prices` | never | AI provider, credentials and approvals stay with the user |
 | `ai_provider` | never | AI provider, credentials and approvals stay with the user |
