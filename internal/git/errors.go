@@ -25,11 +25,19 @@ func cmdError(err error, out []byte) error {
 	return &CmdError{Err: err, Reason: errorReason(text), Output: text}
 }
 
+// indexLockReason is the reason for a held .git/index.lock.
+const indexLockReason = "Another git command is using this repository (.git/index.lock). Try again in a moment."
+
 // errorReason picks the line of git output that best says what went
 // wrong: a "fatal:" line, then a rejected ref ("! [rejected] main -> main
 // (fetch first)"), then "CONFLICT", then "error:", else the last line that
 // is not a hint. The "fatal: " / "error: " prefixes are dropped.
 func errorReason(out string) string {
+	// Another git (a second window, a terminal) holds the index lock.
+	// git's own line is long and names a temp path; say what it means.
+	if strings.Contains(out, "index.lock") && strings.Contains(out, "File exists") {
+		return indexLockReason
+	}
 	lines := strings.Split(out, "\n")
 	find := func(match func(string) bool) string {
 		for _, l := range lines {
