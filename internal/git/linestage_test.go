@@ -220,10 +220,38 @@ func TestLinesBinaryFile(t *testing.T) {
 func TestLinesRename(t *testing.T) {
 	r := lineRepo(t)
 	r.git(t, "mv", "a.txt", "b.txt")
-	r.write(t, "b.txt", "l1\nX2\nl3\nl4\nl5\nl6\n")
 	// Unstage looks at the index: it holds a rename of a.txt to b.txt.
 	err := UnstageLines(r.dir, "b.txt", 2, 2)
 	if err != ErrLineRename {
 		t.Errorf("err = %v, want ErrLineRename", err)
+	}
+}
+
+func TestUnstageLinesFileWithUnstagedEditsToo(t *testing.T) {
+	r := lineRepo(t)
+	// Staged: line 4 changed. Then two lines are added at the top, unstaged,
+	// so the changed line is line 6 in the editor but line 4 in the index.
+	r.write(t, "a.txt", "l1\nl2\nl3\nX4\nl5\nl6\n")
+	r.git(t, "add", "a.txt")
+	r.write(t, "a.txt", "top1\ntop2\nl1\nl2\nl3\nX4\nl5\nl6\n")
+	if err := UnstageLines(r.dir, "a.txt", 6, 6); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.indexText(t, "a.txt"); got != "l1\nl2\nl3\nl4\nl5\nl6\n" {
+		t.Errorf("index: %q", got)
+	}
+	// An unstaged line has nothing in the index to take out.
+	if err := UnstageLines(r.dir, "a.txt", 1, 2); err != ErrNoLineChange {
+		t.Errorf("err = %v, want ErrNoLineChange", err)
+	}
+}
+
+func TestWorkToIndexLine(t *testing.T) {
+	d := "diff --git a/a b/a\n--- a/a\n+++ b/a\n@@ -1,3 +1,4 @@\n+top\n l1\n-l2\n+L2\n l3\n"
+	m := workToIndex(d)
+	for work, want := range map[int]int{1: -1, 2: 1, 3: -1, 4: 3, 5: 4, 9: 8} {
+		if got := m(work); got != want {
+			t.Errorf("work line %d -> %d, want %d", work, got, want)
+		}
 	}
 }

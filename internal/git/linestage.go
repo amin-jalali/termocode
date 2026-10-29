@@ -19,9 +19,30 @@ func StageLines(dir, file string, from, to int) error {
 	return applyLines(dir, file, from, to, false, true, false)
 }
 
-// UnstageLines takes the changes on lines from..to of the staged version of
-// the file out of the index. The lines are numbered in the index.
+// UnstageLines takes the staged changes on lines from..to of the working file
+// out of the index. When the file also has unstaged edits, the line numbers
+// are moved to where those lines are in the index.
 func UnstageLines(dir, file string, from, to int) error {
+	unstaged, err := runOut(dir, "git", "diff", "--no-color", "--no-ext-diff", "--", file)
+	if err != nil {
+		return err
+	}
+	if unstaged != "" {
+		toIndex := workToIndex(unstaged)
+		lo, hi := -1, -1
+		for l := from; l <= to; l++ {
+			if i := toIndex(l); i > 0 {
+				if lo < 0 {
+					lo = i
+				}
+				hi = i
+			}
+		}
+		if lo < 0 {
+			return ErrNoLineChange
+		}
+		from, to = lo, hi
+	}
 	return applyLines(dir, file, from, to, true, true, true)
 }
 
@@ -91,4 +112,45 @@ func stagedRename(dir, file string) bool {
 		}
 	}
 	return false
+}
+
+// workToIndex reads the diff of the working file against the index and
+// returns a function that turns a working line into the index line it came
+// from, or -1 for a line that the index does not have.
+func workToIndex(diff string) func(int) int {
+	_, hunks := parseFileDiff(diff)
+	return func(work int) int {
+		delta := 0 // index line = working line + delta outside hunks
+		for _, h := range hunks {
+			n, o := h.newStart, h.oldStart
+			if h.newCount == 0 {
+				n++
+			}
+			if h.oldCount == 0 {
+				o++
+			}
+			if work < n {
+				break
+			}
+			for _, l := range h.body {
+				switch {
+				case l == "" || l[0] == ' ':
+					if n == work {
+						return o
+					}
+					n++
+					o++
+				case l[0] == '+':
+					if n == work {
+						return -1
+					}
+					n++
+				case l[0] == '-':
+					o++
+				}
+			}
+			delta = o - n
+		}
+		return work + delta
+	}
 }
