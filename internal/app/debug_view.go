@@ -755,6 +755,7 @@ func (m *Model) openFileAtLine(path string, line int) {
 		return
 	}
 	m.ensureEditorWindowCurrent()
+	m.fetchStateSoon()
 	_ = m.nvim.ExecLuaArgs(`local p, l = ...
 		vim.cmd('edit ' .. vim.fn.fnameescape(p))
 		pcall(vim.api.nvim_win_set_cursor, 0, { math.max(l, 1), 0 })

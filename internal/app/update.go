@@ -721,6 +721,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 			return m, c
 		}
 		m.ensureEditorWindowCurrent()
+		m.fetchStateSoon()
 		if err := m.editor.Open(msg.Path); err != nil {
 			m.err = err.Error()
 		} else {
@@ -744,6 +745,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 			// (and leaving the tab-bar splice rendering across editor cells).
 			// Hop to any non-terminal window first.
 			m.ensureEditorWindowCurrent()
+			m.fetchStateSoon()
 			_ = m.nvim.Command(fmt.Sprintf("buffer %d", msg.ID))
 		}
 		// Also reveal the file in the explorer tree — expand any
@@ -1458,6 +1460,11 @@ type stateFetchBusyMsg struct{}
 // stateFetchPlan decides what a redraw at now does: fetch the editor
 // state now (the last fetch is older than stateThrottle), or schedule one
 // trailing fetch after delay (none when one is already pending).
+// fetchStateSoon makes the next redraw fetch the state at once, past the
+// throttle: after a file opens, the tab bar and status bar should not
+// wait up to stateThrottle for the trailing fetch.
+func (m *Model) fetchStateSoon() { m.stateLastFetch = time.Time{} }
+
 func stateFetchPlan(now, last time.Time, pending bool) (fetchNow bool, delay time.Duration) {
 	since := now.Sub(last)
 	if since >= stateThrottle {
@@ -2270,6 +2277,7 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		}
 		if m.nvim != nil {
 			m.ensureEditorWindowCurrent()
+			m.fetchStateSoon()
 			_ = m.nvim.OpenFile("edit", msg.ID)
 		}
 		m.explorer.RevealPath(msg.ID)
@@ -2319,6 +2327,7 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		}
 		if m.nvim != nil {
 			m.ensureEditorWindowCurrent()
+			m.fetchStateSoon()
 			_ = m.nvim.OpenFile("edit", msg.ID)
 		}
 		m.explorer.RevealPath(msg.ID)
