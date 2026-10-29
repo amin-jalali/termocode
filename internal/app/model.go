@@ -1162,16 +1162,8 @@ func (m Model) attachCmd() tea.Cmd {
 		// points: TermOpen (immediately when termopen() spawns the job) and
 		// BufEnter/WinEnter (any subsequent re-focus, e.g. via :wincmd or
 		// our own toggle).
-		// Persistent undo: write per-file undo history into ~/.local/share/
-		// nvim/undo so Ctrl+Z keeps working across sessions. Best-effort —
-		// if the directory can't be created, undo just stays in-memory like
-		// before.
-		_ = m.nvim.ExecLua(`
-			local undodir = vim.fn.stdpath('data') .. '/termocode-undo'
-			pcall(vim.fn.mkdir, undodir, 'p')
-			vim.opt.undodir = undodir
-			vim.opt.undofile = true
-		`)
+		// Persistent undo (undo_lua.go).
+		_ = m.nvim.ExecLua(persistentUndoLua)
 		// Highlight trailing whitespace so it's visible. The match group is
 		// a stable ID; reusing it across :match calls would just replace
 		// the previous one (no leak).
