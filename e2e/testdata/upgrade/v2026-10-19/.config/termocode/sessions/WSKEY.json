@@ -1,0 +1,27 @@
+{
+  "workspace": "{{WS}}",
+  "open_files": [
+    "{{WS}}/README.md",
+    "{{WS}}/main.go",
+    "{{WS}}/notes.txt"
+  ],
+  "active_path": "{{WS}}/notes.txt",
+  "expanded_dirs": [
+    "{{WS}}"
+  ],
+  "cursors": {
+    "{{WS}}/README.md": [
+      1,
+      1
+    ],
+    "{{WS}}/main.go": [
+      1,
+      1
+    ],
+    "{{WS}}/notes.txt": [
+      2,
+      22
+    ]
+  },
+  "ai_last_chat": "1793315280701-1"
+}
