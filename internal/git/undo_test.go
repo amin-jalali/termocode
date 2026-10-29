@@ -273,3 +273,21 @@ func TestRunRedoStale(t *testing.T) {
 		t.Error("HEAD moved back to c3")
 	}
 }
+
+// G-UND: undoing a checkout from a detached HEAD goes back to that
+// commit, detached; the branch entered does not move.
+func TestRunUndoCheckoutFromDetached(t *testing.T) {
+	r, h := rebaseRepo(t, 2)
+	r.git(t, "checkout", "-q", "--detach", h[0])
+	r.git(t, "checkout", "-q", "main")
+	p, _ := PlanUndo(r.dir)
+	if _, err := RunUndo(r.dir, p, UndoOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if b := strings.TrimSpace(r.git(t, "branch", "--show-current")); b != "" || headOf(t, r) != h[0] {
+		t.Errorf("on %q at %s", b, headOf(t, r))
+	}
+	if got := strings.TrimSpace(r.git(t, "rev-parse", "main")); got != h[1] {
+		t.Errorf("main moved to %s", got)
+	}
+}

@@ -17,6 +17,7 @@ type UndoPlan struct {
 	Target        string      // full hash HEAD moves to
 	TargetSubject string
 	Switch        string // a checkout undo: the branch to switch back to ("" = reset)
+	Detach        bool   // a checkout undo from a detached HEAD: go back to Target, detached
 	From          string // full hash of HEAD now (Redo comes back here)
 	Branch        string // the current branch ("" when detached)
 	Upstream      string // the branch's upstream ("origin/main"), "" without one
@@ -67,8 +68,12 @@ func PlanUndo(dir string) (UndoPlan, error) {
 		return UndoPlan{}, ErrUndoFirstCommit
 	}
 	p := UndoPlan{Entry: e, Target: e.Prev}
-	if e.Kind == ReflogCheckout && isBranch(dir, e.From) {
-		p.Switch = e.From
+	if e.Kind == ReflogCheckout {
+		if isBranch(dir, e.From) {
+			p.Switch = e.From
+		} else {
+			p.Detach = true // the checkout left a detached HEAD
+		}
 	}
 	return finishPlan(dir, p)
 }
@@ -97,10 +102,11 @@ func finishPlan(dir string, p UndoPlan) (UndoPlan, error) {
 		p.Branch = strings.TrimSpace(out)
 	}
 	to := p.Target
-	if p.Switch == "" {
-		p.Upstream, p.Pushed = RebasePushed(dir, p.Target)
-	} else {
+	switch {
+	case p.Switch != "":
 		to = "refs/heads/" + p.Switch // the switch goes to the branch's tip
+	case !p.Detach: // a detached HEAD leaves the branch as it is
+		p.Upstream, p.Pushed = RebasePushed(dir, p.Target)
 	}
 	p.Blocked = blockedBy(dir, to)
 	p.Staged = spawnQuiet(dir, "diff", "--cached", "--quiet") != nil
@@ -198,8 +204,11 @@ func RunUndo(dir string, p UndoPlan, opt UndoOptions) (UndoResult, error) {
 // refuse instead of overwriting local changes.
 func moveHead(dir string, p UndoPlan) error {
 	args := []string{"reset", "--keep", p.Target}
-	if p.Switch != "" {
+	switch {
+	case p.Switch != "":
 		args = []string{"switch", "--no-guess", p.Switch}
+	case p.Detach:
+		args = []string{"switch", "--detach", p.Target}
 	}
 	cmd := spawn.Command("git", args...)
 	cmd.Dir = dir
@@ -230,14 +239,19 @@ func RunRedo(dir string, p UndoPlan, after string) error {
 	}
 	branch, _ := runOut(dir, "git", "branch", "--show-current")
 	want := p.Branch
-	if p.Switch != "" {
+	switch {
+	case p.Switch != "":
 		want = p.Switch
+	case p.Detach:
+		want = ""
 	}
 	if headHash(dir) != after || strings.TrimSpace(branch) != want {
 		return ErrUndoStale
 	}
 	back := UndoPlan{Target: p.From}
-	if p.Switch != "" {
+	if p.Detach && p.Branch != "" {
+		back.Switch = p.Branch
+	} else if p.Switch != "" {
 		if p.Branch == "" {
 			return errors.New("can't redo: the undo left a detached HEAD")
 		}
