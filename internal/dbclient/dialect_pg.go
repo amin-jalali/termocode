@@ -41,6 +41,3 @@ func (PostgresDialect) Explain(sql string, analyze bool) string {
 	}
 	return "EXPLAIN (FORMAT TEXT) " + sql
 }
-func (d PostgresDialect) CountSQL(table string) string {
-	return "SELECT COUNT(*) FROM " + d.QuoteIdent(table)
-}

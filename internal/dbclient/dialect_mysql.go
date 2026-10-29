@@ -42,6 +42,3 @@ func (MySQLDialect) Explain(sql string, analyze bool) string {
 	}
 	return "EXPLAIN " + sql
 }
-func (d MySQLDialect) CountSQL(table string) string {
-	return "SELECT COUNT(*) FROM " + d.QuoteIdent(table)
-}

@@ -26,9 +26,6 @@ func (d SQLiteDialect) DDL(table string) (string, []any) {
 	return "SELECT sql FROM sqlite_master WHERE (name = '" + name + "' OR tbl_name = '" + name + "') AND sql IS NOT NULL ORDER BY CASE type WHEN 'table' THEN 0 WHEN 'view' THEN 0 ELSE 1 END, name", nil
 }
 func (SQLiteDialect) Explain(sql string, _ bool) string { return "EXPLAIN QUERY PLAN " + sql }
-func (d SQLiteDialect) CountSQL(table string) string {
-	return "SELECT COUNT(*) FROM " + d.QuoteIdent(table)
-}
 
 func (s *SQLiteSession) Introspect(ctx context.Context, req IntrospectionRequest) (IntrospectionResult, error) {
 	if req.Object == "" {
