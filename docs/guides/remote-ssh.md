@@ -1,10 +1,53 @@
 # Remote and SSH
 
 termocode runs well on a remote machine over SSH. When the connection drops,
-your editor does not die. Run `termocode` again and you are back where you
-were.
+your editor does not die. With `termocode ssh` it even comes back by itself.
 
-## Get your editor back after a drop
+## Reconnect by itself: `termocode ssh`
+
+Start the remote editor from your own machine:
+
+```sh
+termocode ssh --dir ~/proj me@server
+```
+
+`termocode ssh` runs `ssh` for you (with your options, your keys and your
+`~/.ssh/config`) and opens termocode in `~/proj` on the server. termocode
+must be installed on both machines.
+
+When the network changes, the Wi-Fi switches, the VPN drops or the laptop
+sleeps:
+
+- The screen stays as it was. The last row says
+  **Reconnecting… (attempt 2) · typing is paused · Ctrl+C to quit**.
+- termocode runs the same `ssh` command again: at once, then after 1 s,
+  2 s, 5 s and every 10 s, until it works or you press `Ctrl+C`.
+- Keys you type while offline are **not** sent. They are dropped, and the
+  toast after the reconnect tells you so.
+- When the server answers again you see the **same** editor, fully
+  redrawn, and a toast like **Reconnected after 12 s**.
+
+A dead link is found fast: termocode checks the link every 5 s and gives it
+up after 15 s of silence. After the laptop wakes up it checks at once and
+gives up after 5 s. `ssh` gets `ServerAliveInterval=5` and
+`ConnectTimeout=10` unless you set your own.
+
+If `ssh` asks for a password, a key passphrase or a host key while it
+reconnects, you see the question on the last row and your keys go to `ssh`.
+termocode never reads or keeps what you type there. An SSH key or an agent
+avoids the question.
+
+The first connection is not retried: a typo or a wrong password ends
+`termocode ssh` with `ssh`'s own message.
+
+Without `termocode ssh` (you ran `ssh`, then `termocode`), a link that
+freezes and comes back still reattaches by itself; a link that drops needs
+the steps below.
+
+The `auto_reconnect` setting (default `true`) turns all of this off when
+set to `false`.
+
+## Get your editor back after a drop by hand
 
 1. Your SSH connection drops (Wi-Fi, laptop sleep, VPN).
 2. Connect again with `ssh`.
@@ -46,6 +89,7 @@ terminal panel): the session would show inside itself.
 | `termocode sessions` | List the running sessions |
 | `termocode attach [dir]` | Attach to the session of `dir`; error if none runs |
 | `termocode kill [dir]` | End the session of `dir` |
+| `termocode ssh [--dir dir] [ssh options] host` | Open termocode on `host` (in `dir`) over `ssh`; reconnects by itself when the link drops |
 | `termocode mcp [--dir dir]` | Run as a stdio MCP server for an agent CLI; it relays to the termocode open in `dir` (default: the current folder or the nearest parent). Without a running termocode the tool list answers and calls fail with a clear message |
 | `termocode --no-session` | Run without a session (the old way) |
 

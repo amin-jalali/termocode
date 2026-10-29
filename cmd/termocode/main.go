@@ -349,7 +349,8 @@ func printUsage() {
 	fmt.Println("  termocode -h               show this help")
 	fmt.Println()
 	fmt.Println("Over SSH the editor runs in a persistent session: when the connection")
-	fmt.Println("drops, run termocode again in the same folder to get it back.")
+	fmt.Println("drops, run termocode again in the same folder to get it back. Started")
+	fmt.Println("as `termocode ssh host` from your machine, it reconnects by itself.")
 	fmt.Println("Setting persistent_session: auto (on over SSH), on, off.")
 }
 
