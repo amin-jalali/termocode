@@ -3,10 +3,12 @@ package app
 import (
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/alecthomas/chroma/v2"
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/rtl"
@@ -707,17 +709,25 @@ func wrapStyledLine(spans []mdSpan, w int) [][]mdSpan {
 	if w < 4 {
 		w = 4
 	}
+	// One cell per glyph (grapheme): a flag or an emoji ZWJ sequence is
+	// never cut between its runes.
 	type cell struct {
-		r  rune
+		r  rune // the glyph's first rune
+		g  string
 		st lipgloss.Style
 		cw int
 	}
 	var cells []cell
 	total := 0
 	for _, sp := range spans {
-		for _, r := range sp.text {
-			cw := runewidth.RuneWidth(r)
-			cells = append(cells, cell{r, sp.st, cw})
+		for t := sp.text; t != ""; {
+			g, cw := ansi.FirstGraphemeCluster(t, ansi.GraphemeWidth)
+			if g == "" {
+				break
+			}
+			t = t[len(g):]
+			r, _ := utf8.DecodeRuneInString(g)
+			cells = append(cells, cell{r, g, sp.st, cw})
 			total += cw
 		}
 	}
@@ -725,10 +735,10 @@ func wrapStyledLine(spans []mdSpan, w int) [][]mdSpan {
 		var out []mdSpan
 		for _, c := range cs {
 			if n := len(out); n > 0 && out[n-1].st.GetForeground() == c.st.GetForeground() {
-				out[n-1].text += string(c.r)
+				out[n-1].text += c.g
 				continue
 			}
-			out = append(out, mdSpan{text: string(c.r), st: c.st})
+			out = append(out, mdSpan{text: c.g, st: c.st})
 		}
 		return out
 	}
