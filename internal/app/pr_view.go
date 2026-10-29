@@ -168,6 +168,8 @@ func (m *Model) handlePRConfirm(id string) (tea.Cmd, bool) {
 	switch id {
 	case "files":
 		return m.prOpenFiles(), true
+	case "actions":
+		return m.prOpenActions(), true
 	}
 	return nil, true
 }

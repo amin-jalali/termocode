@@ -269,3 +269,69 @@ func TestPRDiffCardFiles(t *testing.T) {
 		t.Errorf("files %+v add %d del %d", files, add, del)
 	}
 }
+
+// Actions… opens a picker; an open non-draft PR can be checked out,
+// reviewed, converted to draft and merged.
+func TestPRActionsPicker(t *testing.T) {
+	m, _ := prViewModel(t)
+	cmd, ok := m.handlePRConfirm("actions")
+	if !ok || cmd != nil || !m.pickerOpen || m.pickerKind != pickerKindPRActions || m.confirmOpen {
+		t.Fatalf("picker open %v kind %v", m.pickerOpen, m.pickerKind)
+	}
+	box := ansi.Strip(m.picker.Box())
+	for _, want := range []string{"#14 Actions", "Open in Browser", "Check Out Branch", "Approve…", "Request Changes…", "Comment…", "Convert to Draft", "Merge…"} {
+		if !strings.Contains(box, want) {
+			t.Errorf("picker misses %q:\n%s", want, box)
+		}
+	}
+	if strings.Contains(box, "Mark Ready") {
+		t.Error("Mark Ready on a PR that is not a draft")
+	}
+}
+
+func TestPRActionItemsByState(t *testing.T) {
+	ids := func(d ghci.PRDetail) string {
+		var out []string
+		for _, it := range prActionItems(d) {
+			out = append(out, it.ID)
+		}
+		return strings.Join(out, ",")
+	}
+	if got := ids(ghci.PRDetail{State: "OPEN", PRItem: ghci.PRItem{Draft: true}}); !strings.Contains(got, "ready") || strings.Contains(got, "draft") {
+		t.Errorf("draft: %s", got)
+	}
+	if got := ids(ghci.PRDetail{State: "MERGED"}); got != "browser,description" {
+		t.Errorf("merged PR offers %s", got)
+	}
+}
+
+// Open in Browser opens the PR link, or copies it over SSH.
+func TestPROpenBrowser(t *testing.T) {
+	m, _ := prViewModel(t)
+	var opened, copied []string
+	old := osOpen
+	osOpen = func(u string) error { opened = append(opened, u); return nil }
+	defer func() { osOpen = old }()
+	defer SetClipboardSink(func(s string) { copied = append(copied, s) })()
+	t.Setenv("SSH_CONNECTION", "")
+	t.Setenv("SSH_TTY", "")
+	m.onPRActionPicked("browser")
+	if len(opened) != 1 || opened[0] != "https://github.com/o/r/pull/14" {
+		t.Errorf("opened %v", opened)
+	}
+	t.Setenv("SSH_CONNECTION", "1.2.3.4 5 6.7.8.9 22")
+	m.onPRActionPicked("browser")
+	if len(opened) != 1 || len(copied) != 1 || copied[0] != "https://github.com/o/r/pull/14" {
+		t.Errorf("over SSH: opened %v copied %v", opened, copied)
+	}
+}
+
+// An empty description says so instead of opening an empty page.
+func TestPRReadDescriptionEmpty(t *testing.T) {
+	m, _ := prViewModel(t)
+	m.prS().detail.Body = "  "
+	m.onPRActionPicked("description")
+	if !toastHas(m, "has no description") {
+		t.Error("no hint")
+	}
+}

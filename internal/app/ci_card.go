@@ -312,8 +312,11 @@ func (m *Model) onCILog(msg ciLogMsg) tea.Cmd {
 }
 
 // ciOpenBrowser opens the PR (or run) page; over SSH it copies the link.
-func (m *Model) ciOpenBrowser() tea.Cmd {
-	url := ciURL(m.ciW().snap)
+func (m *Model) ciOpenBrowser() tea.Cmd { return m.openLink(ciURL(m.ciW().snap)) }
+
+// openLink opens a page in the browser; over SSH (or with no browser)
+// it copies the link instead.
+func (m *Model) openLink(url string) tea.Cmd {
 	if url == "" {
 		return nil
 	}
