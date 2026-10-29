@@ -85,3 +85,47 @@ func TestDiscardLines(t *testing.T) {
 		t.Errorf("the index must not change:\n%s", s)
 	}
 }
+
+func TestStageLinesOnlyAdditions(t *testing.T) {
+	r := lineRepo(t)
+	r.write(t, "a.txt", "l1\nl2\nN1\nN2\nl3\nl4\nl5\nl6\n")
+	if err := StageLines(r.dir, "a.txt", 4, 4); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.indexText(t, "a.txt"); got != "l1\nl2\nN2\nl3\nl4\nl5\nl6\n" {
+		t.Errorf("index:\n%s", got)
+	}
+}
+
+func TestStageLinesOnlyDeletions(t *testing.T) {
+	r := lineRepo(t)
+	r.write(t, "a.txt", "l1\nl4\nl5\nl6\n")
+	// The removed lines l2 and l3 sit before line 2 (l4). Choosing it takes both.
+	if err := StageLines(r.dir, "a.txt", 2, 2); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.indexText(t, "a.txt"); got != "l1\nl4\nl5\nl6\n" {
+		t.Errorf("index:\n%s", got)
+	}
+}
+
+func TestStageLinesCRLF(t *testing.T) {
+	r := newGitTestRepo(t)
+	r.git(t, "config", "core.autocrlf", "false")
+	r.write(t, "w.txt", "a\r\nb\r\nc\r\n")
+	r.git(t, "add", "w.txt")
+	r.git(t, "commit", "-q", "-m", "init")
+	r.write(t, "w.txt", "a\r\nB\r\nc\r\nD\r\n")
+	if err := StageLines(r.dir, "w.txt", 4, 4); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.indexText(t, "w.txt"); got != "a\r\nb\r\nc\r\nD\r\n" {
+		t.Errorf("index keeps CRLF: %q", got)
+	}
+	if err := DiscardLines(r.dir, "w.txt", 2, 2); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.read(t, "w.txt"); got != "a\r\nb\r\nc\r\nD\r\n" {
+		t.Errorf("worktree keeps CRLF: %q", got)
+	}
+}
