@@ -67,3 +67,46 @@ func TestImageUseCountsMatchPerRepoCount(t *testing.T) {
 		t.Errorf("hand-checked counts: %v", got)
 	}
 }
+
+// PERF-5: the stats check runs after every update of the app. When
+// neither the view state nor the cursor changed since the last check it
+// builds nothing; a cursor move or a touched state makes it follow again.
+func TestStatsRetargetSkipsUnchangedState(t *testing.T) {
+	st := perfHost()
+	m := svcTestModel(st, 120, 50)
+	running := -1
+	for i, r := range st.rows() {
+		if r.kind == svcRowHostItem && r.host == hostContainer && st.containerRows[r.idx].State == "running" {
+			running = i
+			break
+		}
+	}
+	st.cursor = running
+	m.statsSync()
+	if st.stats.detailID == "" {
+		t.Fatal("charts do not follow the cursor onto a running container")
+	}
+	if n := testing.AllocsPerRun(50, func() { m.statsSync() }); n > 0 {
+		t.Errorf("unchanged state: the stats check allocated %.0f times per update", n)
+	}
+	// The cursor moves to a group row: the charts go away.
+	st.cursor = 2
+	for st.rows()[st.cursor].kind != svcRowGroup {
+		st.cursor++
+	}
+	m.statsSync()
+	if st.stats.detailID != "" {
+		t.Errorf("cursor left the container but its charts stay (%q)", st.stats.detailID)
+	}
+	// The state changes under a still cursor (the row there is now a
+	// running container): touch makes the check look again.
+	st.cursor = running
+	m.statsSync()
+	id := st.stats.detailID
+	st.stats.series = map[string]*containers.Series{}
+	st.touch()
+	m.statsSync()
+	if st.stats.detailID != "" {
+		t.Errorf("the samples are gone but the charts of %s stay", id)
+	}
+}

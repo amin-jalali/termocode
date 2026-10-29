@@ -49,6 +49,11 @@ type containerStats struct {
 	lastFail string        // why the last call failed ("" = it worked)
 	delay    time.Duration // the wait before the next call
 	off      bool          // a demo: never call the engine
+	// The view state (seq) and cursor the last retarget saw: the same
+	// pair needs no new look (statsRetarget runs after every update).
+	seenSeq    uint64
+	seenCursor int
+	seen       bool
 }
 
 // runningContainerIDs lists the containers that are running now.
@@ -71,7 +76,12 @@ func (m *Model) statsWanted() bool {
 	if !st.containerEngine.Reachable || st.containerDetecting || !st.hostSectionVisible("containers") {
 		return false
 	}
-	return len(st.runningContainerIDs()) > 0
+	for _, c := range st.containerRows {
+		if strings.EqualFold(c.State, "running") {
+			return true
+		}
+	}
+	return false
 }
 
 // statsSync starts or ends the poller to match statsWanted. Called after
@@ -332,6 +342,12 @@ func (m *Model) statsRetarget() {
 	if cs.detailID == "" && len(cs.series) == 0 {
 		return
 	}
+	// Every change of the rows touches the state, so an unchanged seq
+	// and cursor mean the same row under the cursor.
+	if cs.seen && cs.seenSeq == st.seq && cs.seenCursor == st.cursor {
+		return
+	}
+	defer func() { cs.seenSeq, cs.seenCursor, cs.seen = st.seq, st.cursor, true }()
 	rows := st.rows()
 	want := ""
 	var cur svcRow
@@ -348,6 +364,7 @@ func (m *Model) statsRetarget() {
 	}
 	cs.detailID = want
 	if cur.kind == 0 && cur.section == "" {
+		st.touch()
 		return
 	}
 	for i, r := range st.rows() {
