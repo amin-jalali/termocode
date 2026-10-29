@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -127,4 +128,46 @@ func TestUpdateReadOnlyFileStays(t *testing.T) {
 		t.Fatalf("file changed: %s", b)
 	}
 	noTemps(t, filepath.Dir(path))
+}
+
+func TestWriteFileSaysWhyInPlainWords(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("runs as root: file modes do not stop root from writing")
+	}
+	dir := filepath.Join(t.TempDir(), "termocode")
+	if err := os.Mkdir(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "config.json")
+	if err := os.WriteFile(path, []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+	err := WriteFile(path, []byte(`{"a":1}`))
+	if err == nil || !strings.HasPrefix(err.Error(), "no permission to write in ") || strings.Contains(err.Error()[:40], ".tmp") {
+		t.Fatalf("err = %v", err)
+	}
+	if !errors.Is(err, os.ErrPermission) {
+		t.Errorf("the cause is lost: %v", err)
+	}
+	if b, _ := os.ReadFile(path); string(b) != "{}\n" {
+		t.Errorf("config.json changed: %q", b)
+	}
+}
+
+func TestWriteFileFullDisk(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	old := rename
+	rename = func(string, string) error { return &os.LinkError{Op: "rename", Err: syscall.ENOSPC} }
+	t.Cleanup(func() { rename = old })
+	err := WriteFile(path, []byte(`{}`))
+	if err == nil || !strings.HasPrefix(err.Error(), "the disk is full; config.json was not changed") {
+		t.Fatalf("err = %v", err)
+	}
+	if _, serr := os.Stat(path); serr == nil {
+		t.Error("a failed write left config.json")
+	}
 }

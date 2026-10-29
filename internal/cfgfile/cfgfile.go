@@ -9,8 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
+	"syscall"
 )
 
 // rename is os.Rename; tests replace it to simulate a failing write.
@@ -61,6 +64,10 @@ func update[T any](path string, fn func(map[string]T) error) error {
 // read-only file is not replaced; the folder is created when missing. On any error the old file stays as it was and
 // no temp file is left behind.
 func WriteFile(path string, data []byte) error {
+	return plainWriteErr(path, writeFile(path, data))
+}
+
+func writeFile(path string, data []byte) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
@@ -102,4 +109,37 @@ func WriteFile(path string, data []byte) error {
 		return err
 	}
 	return nil
+}
+
+// plainWriteErr says in short words why path could not be written: the
+// raw error names a temp file ("open …/.config.json-123.tmp: permission
+// denied") that the user never made. The cause stays wrapped (errors.Is
+// still works).
+func plainWriteErr(path string, err error) error {
+	if err == nil {
+		return nil
+	}
+	name, dir := filepath.Base(path), tildeHome(filepath.Dir(path))
+	switch {
+	case errors.Is(err, syscall.ENOSPC):
+		return fmt.Errorf("the disk is full; %s was not changed: %w", name, err)
+	case errors.Is(err, fs.ErrPermission):
+		if st, serr := os.Stat(path); serr == nil && st.Mode().Perm()&0o200 == 0 {
+			return fmt.Errorf("%s is read-only; it was not changed: %w", name, err)
+		}
+		return fmt.Errorf("no permission to write in %s; %s was not changed: %w", dir, name, err)
+	}
+	return err
+}
+
+// tildeHome shows a path under the home folder as ~/….
+func tildeHome(p string) string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return p
+	}
+	if rel, err := filepath.Rel(home, p); err == nil && rel != "." && !strings.HasPrefix(rel, "..") {
+		return "~" + string(filepath.Separator) + rel
+	}
+	return p
 }
