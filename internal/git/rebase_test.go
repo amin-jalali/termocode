@@ -268,3 +268,37 @@ func TestRunRebaseRewords(t *testing.T) {
 		t.Error("the message ran in a shell")
 	}
 }
+
+// G-RBS: with uncommitted changes the rebase is refused (ErrRebaseDirty)
+// unless Autostash is on; then git stashes them and puts them back.
+// Untracked files do not count.
+func TestRunRebaseDirtyTree(t *testing.T) {
+	r, h := rebaseRepo(t, 3)
+	r.write(t, "untracked.txt", "new\n")
+	if WorkTreeDirty(r.dir) {
+		t.Fatal("an untracked file made the tree dirty")
+	}
+	r.write(t, "f1.txt", "edited\n")
+	if !WorkTreeDirty(r.dir) {
+		t.Fatal("an edit did not make the tree dirty")
+	}
+	todo, _ := LoadRebaseTodo(r.dir, h[0])
+	todo.SetAction(1, RebaseDrop)
+	opt := testRebaseOpts(t)
+	if _, err := RunRebase(r.dir, todo, opt); !errors.Is(err, ErrRebaseDirty) {
+		t.Fatalf("dirty: %v", err)
+	}
+	if head := strings.TrimSpace(r.git(t, "rev-parse", "HEAD")); head != h[2] {
+		t.Fatalf("HEAD moved")
+	}
+	opt.Autostash = true
+	if out, err := RunRebase(r.dir, todo, opt); err != nil || out.Stopped {
+		t.Fatalf("autostash: %+v %v", out, err)
+	}
+	if got := strings.Join(subjects(t, r), " "); got != "c1 c2" {
+		t.Errorf("history %q", got)
+	}
+	if b, _ := os.ReadFile(r.dir + "/f1.txt"); string(b) != "edited\n" {
+		t.Errorf("stashed edit not back: %q", b)
+	}
+}

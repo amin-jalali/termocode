@@ -1,6 +1,7 @@
 package git
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/spawn"
@@ -8,7 +9,18 @@ import (
 
 // RebaseOptions tune RunRebase.
 type RebaseOptions struct {
-	Exe string // the helper binary; "" = this program
+	Exe       string // the helper binary; "" = this program
+	Autostash bool   // stash uncommitted changes first, put them back after
+}
+
+// ErrRebaseDirty: there are uncommitted changes and Autostash is off.
+var ErrRebaseDirty = errors.New("you have uncommitted changes")
+
+// WorkTreeDirty says whether tracked files have uncommitted changes
+// (staged or not); untracked files do not count.
+func WorkTreeDirty(dir string) bool {
+	out, err := runOut(dir, "git", "status", "--porcelain", "--untracked-files=no")
+	return err == nil && strings.TrimSpace(out) != ""
 }
 
 // RebaseOutcome is how a rebase run ended without an error.
@@ -25,6 +37,11 @@ func RunRebase(dir string, todo RebaseTodo, opt RebaseOptions) (RebaseOutcome, e
 		return RebaseOutcome{}, err
 	}
 	args := []string{"rebase", "-i"}
+	if opt.Autostash {
+		args = append(args, "--autostash")
+	} else if WorkTreeDirty(dir) {
+		return RebaseOutcome{}, ErrRebaseDirty
+	}
 	if todo.Base == "" {
 		args = append(args, "--root")
 	} else {
