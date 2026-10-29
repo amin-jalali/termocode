@@ -127,3 +127,22 @@ func TestStopDuringRestartWait(t *testing.T) {
 	h.Notify("crashy", "event/notify", nil)
 	h.Notify("nobody", "event/notify", nil)
 }
+
+// An extension that writes junk instead of the protocol is broken: it
+// must end (and be restarted / given up), not sit in "starting" forever.
+func TestProtocolGarbageEndsTheRun(t *testing.T) {
+	h := lifeHost(t, Config{MaxRestarts: 1})
+	h.Set([]ext.Extension{shExt("junk", "echo 'this is not a header'; exec sleep 30")})
+	start := time.Now()
+	h.Start("junk")
+	ev := waitFor(t, h, "give up", func(e Event) bool { return e.Kind == EvFailed })
+	if time.Since(start) > 5*time.Second {
+		t.Fatalf("took %v: the broken run waited for a timeout", time.Since(start))
+	}
+	if !strings.Contains(ev.Err, "crashed") {
+		t.Fatalf("event %+v", ev)
+	}
+	if !strings.Contains(strings.Join(h.Log(), "\n"), "bad header line") {
+		t.Fatalf("protocol error not logged:\n%s", strings.Join(h.Log(), "\n"))
+	}
+}
