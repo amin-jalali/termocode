@@ -25,6 +25,8 @@ import (
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/workspace/localhost"
+	// First: the GC stays off until startup is done (see package doc).
+	"github.com/amin-jalali/termocode/internal/bootgc"
 	// Must init before bubbletea: no 5 s OSC 11 wait (see package doc).
 	_ "github.com/amin-jalali/termocode/internal/darkbg"
 	"github.com/amin-jalali/termocode/internal/setup"
@@ -58,10 +60,11 @@ func writeHeapProfile() {
 // GOGC 100 → 18-21% CPU, 44 MB RSS; 200 → 16%, 50 MB; 300 → 16%, 56 MB.
 // 200 keeps the CPU of 300 for 6 MB less. The soft limit makes GC work
 // harder before the heap grows large (the live heap is ~10 MB).
-// GOGC / GOMEMLIMIT still win.
+// GOGC / GOMEMLIMIT still win. Until bootgc.Release (the UI's first
+// frame, or at once for every other command) the GC stays off.
 func tuneGC() {
 	if os.Getenv("GOGC") == "" {
-		debug.SetGCPercent(200)
+		bootgc.SetPercent(200)
 	}
 	if os.Getenv("GOMEMLIMIT") == "" {
 		debug.SetMemoryLimit(128 << 20)
@@ -269,6 +272,9 @@ func run(argv []string) int {
 		app.SetMCPShareExe(exe)
 	}
 	args, link, note := linkArgs(args)
+	if link || !tuiCommand(args) {
+		bootgc.Release() // no first frame to wait for
+	}
 	if link { // the far end of `termocode ssh`
 		dir := "."
 		if len(args) > 0 {
@@ -351,6 +357,7 @@ func run(argv []string) int {
 	tty := term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd()))
 	if sessionsSupported && wantSession(app.ConfigPersistentSession(), noSession, os.Getenv, tty) {
 		if ws.Root != "" {
+			bootgc.Release() // the session client draws no frame
 			return startClient(ws.Root, clientOpts{create: true})
 		}
 	}
@@ -373,6 +380,21 @@ func missingFolderArg(first string) string {
 		return ""
 	}
 	return "termocode: folder " + first + " not found (moved or deleted?)"
+}
+
+// tuiCommand reports whether args (after --no-session) may start the UI
+// here, so the GC stays held for its first frame (bootgc). Every
+// subcommand, the session server and the far end of `termocode ssh`
+// release it at once.
+func tuiCommand(args []string) bool {
+	if len(args) == 0 {
+		return true
+	}
+	switch args[0] {
+	case serverArg, "sessions", "ssh", "mcp", "attach", "kill", "setup", "-h", "--help", "help":
+		return false
+	}
+	return !isVersionArg(args[0])
 }
 
 func printUsage() {

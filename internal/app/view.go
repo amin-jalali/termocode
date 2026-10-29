@@ -36,6 +36,7 @@ func (m Model) drawView() string {
 	if m.w == 0 || m.h == 0 {
 		return frame
 	}
+	defer firstFrameDrawn()
 	frame = fitTinyScreen(frame, m.w)
 	previewShown := m.imageOpen && m.imagePrev != nil && m.imagePrev.img != nil
 	logoShown := false

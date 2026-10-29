@@ -42,3 +42,19 @@ func TestMissingFolderArg(t *testing.T) {
 		}
 	}
 }
+
+// Only a start that may draw the UI here keeps the GC held for its
+// first frame (bootgc); every other command releases it at once.
+func TestTUICommand(t *testing.T) {
+	for _, args := range [][]string{nil, {"some/folder"}} {
+		if !tuiCommand(args) {
+			t.Errorf("tuiCommand(%q) = false, want true", args)
+		}
+	}
+	for _, args := range [][]string{{serverArg, "/w"}, {"sessions"}, {"ssh", "h"}, {"mcp"},
+		{"attach"}, {"kill"}, {"setup"}, {"-h"}, {"--help"}, {"help"}, {"--version"}, {"-v"}} {
+		if tuiCommand(args) {
+			t.Errorf("tuiCommand(%q) = true, want false", args)
+		}
+	}
+}
