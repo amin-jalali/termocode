@@ -222,26 +222,30 @@ type rowWidth struct {
 // about as much).
 const minMemoRow = 48
 
-// frameWidth is cellWidth(s) through rowWidths.
+// frameWidth is cellWidth(s) through rowWidths. The memo is asked first:
+// it never holds text with a line break (setFrameWidth checks), so a hit
+// needs no scan of the row.
 func frameWidth(s string) int {
+	if len(s) >= minMemoRow {
+		k := unsafe.StringData(s)
+		rowWidths.Lock()
+		if e, ok := rowWidths.cur[k]; ok && len(e.s) == len(s) {
+			rowWidths.Unlock()
+			return e.w
+		}
+		if e, ok := rowWidths.prev[k]; ok && len(e.s) == len(s) {
+			if rowWidths.cur == nil {
+				rowWidths.cur = make(map[*byte]rowWidth)
+			}
+			rowWidths.cur[k] = e
+			rowWidths.Unlock()
+			return e.w
+		}
+		rowWidths.Unlock()
+	}
 	if strings.IndexByte(s, '\n') >= 0 {
 		return textWidth(s)
 	}
-	if len(s) < minMemoRow {
-		return cellWidth(s)
-	}
-	k := unsafe.StringData(s)
-	rowWidths.Lock()
-	if e, ok := rowWidths.cur[k]; ok && len(e.s) == len(s) {
-		rowWidths.Unlock()
-		return e.w
-	}
-	if e, ok := rowWidths.prev[k]; ok && len(e.s) == len(s) {
-		rowWidths.cur[k] = e
-		rowWidths.Unlock()
-		return e.w
-	}
-	rowWidths.Unlock()
 	w := cellWidth(s)
 	setFrameWidth(s, w)
 	return w
@@ -250,7 +254,7 @@ func frameWidth(s string) int {
 // setFrameWidth records that row s is w cells wide (a row the pipeline
 // just built, so its width is known without measuring).
 func setFrameWidth(s string, w int) {
-	if len(s) < minMemoRow {
+	if len(s) < minMemoRow || strings.IndexByte(s, '\n') >= 0 {
 		return
 	}
 	rowWidths.Lock()
