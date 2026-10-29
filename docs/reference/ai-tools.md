@@ -1928,6 +1928,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `ai_until_done_rounds` | never | AI provider, credentials and approvals stay with the user |
 | `ai_worktrees` | never | AI provider, credentials and approvals stay with the user |
 | `animations` | confirm (settings) |   |
+| `auto_reconnect` | confirm (settings) |   |
 | `auto_save` | confirm (settings) |   |
 | `containers_engine` | confirm (settings) |   |
 | `containers_max_inspect_kb` | confirm (settings) |   |

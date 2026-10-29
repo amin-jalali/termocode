@@ -186,7 +186,7 @@ func (m *Model) aiSetSetting(row settingsRow, key, value string) (string, tea.Cm
 	}
 	out := key + " = " + value + " (applied and saved)"
 	switch key {
-	case "font_delta", "persistent_session":
+	case "font_delta", "persistent_session", "auto_reconnect":
 		out = key + " = " + value + " (saved; applies the next time termocode starts)"
 	}
 	return out, cmd, nil

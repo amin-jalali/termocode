@@ -48,6 +48,9 @@ type settingsConfig struct {
 	// PersistentSession: "auto" (on over SSH), "on" or "off" ("" = auto).
 	// cmd/termocode reads it before the UI starts.
 	PersistentSession string `json:"persistent_session,omitempty"`
+	// AutoReconnect: a client whose link dropped attaches again by itself
+	// (nil = true). cmd/termocode reads it before the UI starts.
+	AutoReconnect *bool `json:"auto_reconnect,omitempty"`
 	// DashboardLogo: "text", "image" or "off" ("" = text).
 	DashboardLogo string `json:"dashboard_logo,omitempty"`
 	// RTL: who lays out right-to-left text: "auto", "termocode",
@@ -105,6 +108,15 @@ func ConfigPersistentSession() string {
 	return loadSettings().PersistentSession
 }
 
+// ConfigAutoReconnect returns the "auto_reconnect" value from config.json
+// (default true). cmd/termocode reads it before the UI starts.
+func ConfigAutoReconnect() bool {
+	if v := loadSettings().AutoReconnect; v != nil {
+		return *v
+	}
+	return true
+}
+
 // loadSettings reads config.json. Missing/corrupt = empty struct.
 func loadSettings() settingsConfig {
 	path, err := settingsConfigPath()
@@ -157,6 +169,9 @@ func saveSettings(cfg settingsConfig) error {
 		}
 		if cfg.SearchMaxResults != nil {
 			merged["search_max_results"] = *cfg.SearchMaxResults
+		}
+		if cfg.AutoReconnect != nil {
+			merged["auto_reconnect"] = *cfg.AutoReconnect
 		}
 		if cfg.SetupDone != nil {
 			merged["setup_done"] = *cfg.SetupDone
@@ -217,6 +232,8 @@ var settingsRows = []settingsRow{
 		Desc: "Most results Find in Files shows. 0 means no limit."},
 	{ID: "setting-persistent-session", Label: "persistent_session", Kind: "enum", Default: "auto",
 		Desc: "Run the editor in a background session that survives a dropped connection; run termocode again in the same folder to get it back: on, off, or auto (on over SSH, off locally and inside tmux / screen). Applies the next time termocode starts; --no-session wins over it."},
+	{ID: "setting-auto-reconnect", Label: "auto_reconnect", Kind: "bool", Default: "true",
+		Desc: "When the connection to a persistent session drops (network change, Wi-Fi switch, sleep), keep the screen and attach again by itself, also after `termocode ssh` restarts ssh. Keys typed while offline are not sent. Applies the next time termocode starts."},
 }
 
 // findSettingsRow looks up a row by ID. Returns the zero value + false on
@@ -286,6 +303,11 @@ func currentSettingValue(r settingsRow, cfg settingsConfig) string {
 		return strconv.Itoa(*cfg.TabSize)
 	case "setting-search-max-results":
 		return strconv.Itoa(searchMaxResults(cfg))
+	case "setting-auto-reconnect":
+		if cfg.AutoReconnect == nil {
+			return r.Default
+		}
+		return strconv.FormatBool(*cfg.AutoReconnect)
 	}
 	return ""
 }
@@ -417,6 +439,18 @@ func (m *Model) applySetting(id, value string) tea.Cmd {
 			return m.toggleHiddenFiles()
 		}
 		m.toast, toastCmd = m.toast.Push(toast.Info, fmt.Sprintf("show_hidden = %v", b))
+	case "setting-auto-reconnect":
+		b, err := parseBoolLoose(value)
+		if err != nil {
+			m.toast, toastCmd = m.toast.Push(toast.Errr, "auto_reconnect: expected true/false")
+			return toastCmd
+		}
+		cfg.AutoReconnect = &b
+		if err := saveSettings(cfg); err != nil {
+			m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Settings error", err.Error())
+			return toastCmd
+		}
+		m.toast, toastCmd = m.toast.Push(toast.Info, fmt.Sprintf("auto_reconnect = %v (applies the next time termocode starts)", b))
 	case "setting-tab-size":
 		n, err := strconv.Atoi(value)
 		if err != nil || n < 1 || n > 16 {

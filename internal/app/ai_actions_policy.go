@@ -500,6 +500,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"show_hidden":         aiConfirm(ai.ClassSettings),
 	"tab_size":            aiConfirm(ai.ClassSettings),
 	"persistent_session":  aiConfirm(ai.ClassSettings),
+	"auto_reconnect":      aiConfirm(ai.ClassSettings),
 	"search_max_results":  aiConfirm(ai.ClassSettings),
 	"ai_inline":           aiConfirm(ai.ClassSettings),
 	"ai_next_edit":        aiConfirm(ai.ClassSettings),

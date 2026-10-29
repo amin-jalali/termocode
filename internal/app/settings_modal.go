@@ -114,6 +114,7 @@ func settingsCategories() map[string]string {
 		"setting-tab-size":           "Editor",
 		"setting-search-max-results": "Search",
 		"setting-persistent-session": "Editor",
+		"setting-auto-reconnect":     "Editor",
 	})
 }
 
