@@ -38,7 +38,11 @@ func fakeRemote() int {
 		}
 		k, found := pings.Filter(buf[:n])
 		if _, err := os.Stat(filepath.Join(dir, "freeze")); err == nil {
-			select {} // a frozen link: nothing comes back
+			// A frozen link: nothing comes back. Not select {}: without
+			// cgo (macOS) Go sees all goroutines asleep and exits 2.
+			for {
+				time.Sleep(time.Hour)
+			}
 		}
 		for range found {
 			fmt.Print(linkPong)
