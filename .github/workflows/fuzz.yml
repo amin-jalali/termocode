@@ -1,0 +1,102 @@
+name: fuzz
+
+# Nightly fuzzing of every parser (Go native fuzz tests, func FuzzXxx).
+# Plain `go test` only runs the seed corpus; this runs each fuzz target
+# for FUZZTIME and keeps any crasher as an artifact. To keep a crasher as
+# a regression case, copy it into the package's testdata/fuzz/<FuzzName>/
+# folder together with the fix.
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+    inputs:
+      fuzztime:
+        description: "Time per fuzz target (Go duration)"
+        required: false
+        default: "3m"
+
+permissions:
+  contents: read
+
+jobs:
+  list:
+    name: list fuzz packages
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.list.outputs.packages }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Find packages with fuzz tests
+        id: list
+        run: |
+          pkgs=$(grep -rl --include='*_test.go' -E '^func Fuzz[A-Za-z0-9_]*\(f \*testing\.F\)' internal cmd 2>/dev/null \
+            | xargs -n1 dirname | sort -u \
+            | jq -R -s -c 'split("\n") | map(select(length > 0)) | map("./" + .)')
+          echo "packages=$pkgs" >> "$GITHUB_OUTPUT"
+          echo "$pkgs"
+
+  fuzz:
+    name: fuzz (${{ matrix.pkg }})
+    needs: list
+    if: needs.list.outputs.packages != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg: ${{ fromJSON(needs.list.outputs.packages) }}
+    env:
+      FUZZTIME: ${{ github.event.inputs.fuzztime || '3m' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Install X11 dev headers
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Run each fuzz target
+        run: |
+          set -u
+          failed=0
+          targets=$(go test -list '^Fuzz' "${{ matrix.pkg }}" | grep '^Fuzz' || true)
+          for t in $targets; do
+            echo "::group::$t ($FUZZTIME)"
+            if ! go test -run='^$' -fuzz="^${t}\$" -fuzztime="$FUZZTIME" "${{ matrix.pkg }}"; then
+              echo "::error::${{ matrix.pkg }} $t found a failing input"
+              failed=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $failed
+
+      - name: Name the artifact
+        if: failure()
+        id: name
+        run: echo "name=fuzz-crashers-$(echo '${{ matrix.pkg }}' | tr '/.' '__')" >> "$GITHUB_OUTPUT"
+
+      - name: Upload crashers
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.name.outputs.name }}
+          path: ${{ matrix.pkg }}/testdata/fuzz/
+          if-no-files-found: ignore
