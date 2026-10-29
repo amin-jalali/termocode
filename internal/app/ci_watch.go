@@ -128,6 +128,8 @@ func (m *Model) handleCIMsg(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case ciResultMsg:
 		return m.onCIResult(msg), true
+	case ciLogMsg: // ci_card.go
+		return m.onCILog(msg), true
 	case ciTickMsg:
 		w := m.ciW()
 		if msg.gen != w.gen || w.busy {
@@ -162,6 +164,9 @@ func (m *Model) onCIResult(msg ciResultMsg) tea.Cmd {
 		w.snap = ghci.Snapshot{Branch: msg.branch} // keep nothing: CI is not available
 	}
 	w.err, w.loaded = msg.err, true
+	if m.ciCardOpen() {
+		m.showCICard() // the card shows the fresh answer
+	}
 	if msg.gen != w.gen {
 		return nil // a newer chain runs
 	}

@@ -37,6 +37,8 @@ func (m Model) statusSpans() []statusSpan {
 	add("status:agents", x0, x1, ok)
 	x0, x1, ok = sb.ServicesChipSpan(st)
 	add("status:services", x0, x1, ok)
+	x0, x1, ok = sb.CIChipSpan(st)
+	add("status:ci", x0, x1, ok)
 	if m.ext != nil && len(st.Ext) > 0 {
 		for _, sp := range sb.ExtItemSpans(st) {
 			add("status:ext:"+strconv.Itoa(sp.Index), sp.X0, sp.X1, true)

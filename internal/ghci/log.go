@@ -21,6 +21,7 @@ type FailedLog struct {
 	Step      string   // its failing step
 	OtherJobs []string // more failed jobs (named in the prompt)
 	Lines     []string // ANSI and timestamps stripped, trimmed to MaxLogLines
+	All       []string // every line of Job (for the log preview)
 	Total     int      // lines of Job before trimming
 }
 
@@ -75,6 +76,7 @@ func ParseFailedLog(out string) FailedLog {
 		}
 	}
 	fl.Total = len(lines)
+	fl.All = lines
 	fl.Lines = TrimLog(lines, MaxLogLines)
 	switch {
 	case errStep != "" && errStep != "UNKNOWN STEP":

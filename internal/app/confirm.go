@@ -139,6 +139,9 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 	if cmd, ok := m.handleImportConfirm(id); ok { // import_apply.go
 		return cmd
 	}
+	if cmd, ok := m.handleCIConfirm(id); ok { // ci_card.go
+		return cmd
+	}
 	switch m.confirmKind {
 	case confirmKindCommitRevert, confirmKindCommitCherryPick:
 		return m.runCommitPick(id)

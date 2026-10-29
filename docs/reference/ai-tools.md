@@ -1666,6 +1666,8 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `format-document` | Edit: Format Document | confirm (fileWrite) |   |
 | `git-blame` | Git: Blame Current Line | auto |   |
 | `git-branch` | Git: Switch Branch... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_branch, git_checkout) |
+| `git-ci` | Git: CI and Pull Request… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-ci-fix` | Git: Fix CI with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `git-clone` | Git: Clone Repository... | never | clones into a folder outside the workspace and opens it |
 | `git-commit` | Git: Commit... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_commit) |
 | `git-compare-rev` | Git: Compare with Revision... | never | opens a picker or prompt that only the user can answer; use a typed tool |

@@ -310,12 +310,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Accept Current Change (Conflict at Cursor) | `git-conflict-ours` |   |   |
 | Git: Accept Incoming Change (Conflict at Cursor) | `git-conflict-theirs` |   |   |
 | Git: Blame Current Line | `git-blame` | `Alt+B` | `Alt+B` |
+| Git: CI and Pull Request… | `git-ci` |   |   |
 | Git: Clone Repository... | `git-clone` |   |   |
 | Git: Commit... | `git-commit` |   |   |
 | Git: Compare with Revision... | `git-compare-rev` |   |   |
 | Git: Discard Changes in Current File | `git-discard` |   |   |
 | Git: Discard Hunk (at cursor) | `git-discard-hunk` |   |   |
 | Git: Fetch | `git-fetch` |   |   |
+| Git: Fix CI with AI | `git-ci-fix` |   |   |
 | Git: Focus Source Control | `git-focus` |   |   |
 | Git: Go to Next Change | `next-hunk` | `Alt+]` | `Alt+]` |
 | Git: Go to Next Merge Conflict | `git-conflict-next` |   | `]x` |

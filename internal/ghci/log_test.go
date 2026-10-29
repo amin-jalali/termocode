@@ -30,7 +30,7 @@ func TestParseFailedLog(t *testing.T) {
 		t.Errorf("other jobs %v", fl.OtherJobs)
 	}
 	want := []string{"Runner image ok", "--- FAIL: TestParse (0.00s)", "    parse_test.go:12: got 1 want 2"}
-	if strings.Join(fl.Lines, "|") != strings.Join(want, "|") || fl.Total != 3 {
+	if strings.Join(fl.Lines, "|") != strings.Join(want, "|") || fl.Total != 3 || len(fl.All) != 3 {
 		t.Errorf("lines %q total %d", fl.Lines, fl.Total)
 	}
 }

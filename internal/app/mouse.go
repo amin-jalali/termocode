@@ -129,6 +129,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 		if msg.Type == tea.MouseLeft && m.statusHitAt(msg.X, msg.Y) == "status:services" {
 			return m, m.revealServicesView(true)
 		}
+		if msg.Type == tea.MouseLeft && m.statusHitAt(msg.X, msg.Y) == "status:ci" { // G-CI
+			return m, m.openCICard()
+		}
 		// Group I: extension status items.
 		if msg.Type == tea.MouseLeft {
 			if cmd, ok := m.hitExtStatusItem(msg.X, msg.Y); ok {
