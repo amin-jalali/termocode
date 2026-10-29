@@ -702,7 +702,7 @@ your files stay as they are while they work.
 - A step that changed no file has its worktree removed at once.
 - **If the worktree cannot be made** (a git error), the step does not
   start in your tree, because another step works at the same time. It
-  stops with the reason; fix it and use **Retry** on the step. A git lock
+  stops with the reason; fix it and use **↻ Retry from step N**. A git lock
   that another git command holds for a moment is waited for first.
 - Steps that come later do not see the changes until you merge. They are
   told so, with the worktree path.
