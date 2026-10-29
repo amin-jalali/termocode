@@ -158,6 +158,9 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 	if cmd, ok := m.handleSecretsPromptSubmit(value); ok { // secrets_ui.go
 		return cmd
 	}
+	if cmd, ok := m.handleLayoutPrompt(value); ok { // layout_save.go
+		return cmd
+	}
 	if cmd, ok := m.handleAIPromptSubmit(value); ok { // Group A
 		return cmd
 	}

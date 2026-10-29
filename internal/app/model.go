@@ -20,6 +20,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/help"
 	"github.com/amin-jalali/termocode/internal/keymap"
+	"github.com/amin-jalali/termocode/internal/layout"
 	"github.com/amin-jalali/termocode/internal/menu"
 	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/picker"
@@ -525,7 +526,8 @@ type Model struct {
 	// bar shows it for layoutHintFor (layout_apply.go). layoutHintGen tells
 	// the clear message of an older hint from the current one.
 	layoutHint     string
-	layoutCardName string // the layout a preview card is about
+	layoutSaveSrc  layout.Source // where Layout: Save As… writes
+	layoutCardName string        // the layout a preview card is about
 	layoutHintGen  int
 
 	focus       Focus

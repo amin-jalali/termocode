@@ -188,6 +188,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"git-clone":           aiNever("clones into a folder outside the workspace and opens it"),
 	"git-ci":              aiNever(aiNoPicker),
 	"layout-open":         aiNever(layoutNoAI),
+	"layout-save":         aiNever(layoutNoAI),
 	"git-ci-fix":          aiNever(aiNoNested),
 
 	// ── Workspace, session, settings ──

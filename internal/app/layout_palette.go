@@ -28,6 +28,7 @@ const layoutNoAI = "the AI changes the layout with the layout_set tool"
 func layoutPaletteItems() []picker.Item {
 	return []picker.Item{
 		{ID: "layout-open", Title: "Layout: Open…"},
+		{ID: "layout-save", Title: "Layout: Save As…"},
 	}
 }
 
@@ -36,6 +37,8 @@ func (m *Model) dispatchLayoutPalette(id string) (tea.Cmd, bool) {
 	switch id {
 	case "layout-open":
 		return m.openLayoutPicker(), true
+	case "layout-save":
+		return m.openLayoutSave(), true
 	}
 	return nil, false
 }
@@ -156,6 +159,10 @@ func (m *Model) handleLayoutConfirm(id string) (tea.Cmd, bool) {
 	switch m.confirmKind {
 	case confirmKindLayoutOpen:
 		return m.answerLayoutOpenCard(id), true
+	case confirmKindLayoutScope:
+		return m.answerLayoutScope(id), true
+	case confirmKindLayoutReplace:
+		return m.answerLayoutReplace(id), true
 	}
 	return nil, false
 }
@@ -165,6 +172,10 @@ func (m *Model) layoutConfirmClosed() (tea.Cmd, bool) {
 	switch m.confirmKind {
 	case confirmKindLayoutOpen:
 		return m.answerLayoutOpenCard(""), true
+	case confirmKindLayoutScope:
+		return m.answerLayoutScope(""), true
+	case confirmKindLayoutReplace:
+		return m.answerLayoutReplace(""), true
 	}
 	return nil, false
 }
