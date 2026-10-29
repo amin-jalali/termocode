@@ -64,6 +64,8 @@ type kubeState struct {
 	filter       string
 	filterTyping bool
 
+	pendingRestart kubeRestartTarget // the restart card's deployment (kube_restart.go)
+
 	forwards map[string]*kube.Forward // by context/namespace/pod (kube_forward.go)
 
 	seq    uint64 // bumped on every change (render cache)
@@ -339,6 +341,8 @@ func (m *Model) handleKubeMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onKubeDescribe(msg), true
 	case kubeForwardMsg:
 		return m.onKubeForward(msg), true
+	case kubeRestartMsg:
+		return m.onKubeRestart(msg), true
 	}
 	return nil, false
 }

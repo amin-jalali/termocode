@@ -143,6 +143,9 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 	if cmd, ok := m.handleServicesConfirm(id); ok { // services_actions.go
 		return cmd
 	}
+	if cmd, ok := m.handleKubeConfirm(id); ok { // kube_restart.go
+		return cmd
+	}
 	if cmd, ok := m.handleHTTPConfirm(id); ok { // HTTP client
 		return cmd
 	}
