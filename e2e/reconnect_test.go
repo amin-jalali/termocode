@@ -45,6 +45,15 @@ func newSSHRig(t *testing.T) *sshRig {
 	if err := os.WriteFile(filepath.Join(r.dir, "ssh"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
+	// The far side runs "termocode": name the binary under test so,
+	// whatever E2E_BIN is called (a coverage build is not "termocode").
+	bin, err := filepath.Abs(binPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(bin, filepath.Join(r.dir, "termocode")); err != nil {
+		t.Fatal(err)
+	}
 	return r
 }
 
@@ -53,7 +62,7 @@ func (r *sshRig) start() *Term {
 	r.t.Helper()
 	env := append([]string{}, r.env...)
 	env = append(env,
-		"PATH="+r.dir+string(os.PathListSeparator)+filepath.Dir(binPath)+string(os.PathListSeparator)+os.Getenv("PATH"),
+		"PATH="+r.dir+string(os.PathListSeparator)+os.Getenv("PATH"),
 		"TERMOCODE_LINK_TIMING=200ms,1500ms")
 	tm := Start(r.t, StartOpts{Home: r.home, Workspace: r.ws, Env: env, Args: []string{"ssh", "--dir", r.ws, "box"}})
 	tm.WaitFor("status bar", bootTimeout, func(ls []string) bool {
