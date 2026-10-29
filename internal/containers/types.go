@@ -107,6 +107,8 @@ type Event struct {
 // Stat is one row from a non-streaming stats result.
 type Stat struct {
 	Container string
+	ID        string
+	Name      string
 	CPUPerc   string
 	MemUsage  string
 	MemPerc   string

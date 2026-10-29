@@ -1,6 +1,7 @@
 package containers
 
 import (
+	"math"
 	"strconv"
 	"strings"
 )
@@ -41,7 +42,7 @@ func ParseBytes(s string) (float64, bool) {
 	if !ok {
 		return 0, false
 	}
-	return v * mult, true
+	return math.Round(v * mult), true
 }
 
 var byteUnits = map[string]float64{
@@ -60,4 +61,43 @@ func ParsePair(s string) (a, b float64, ok bool) {
 	a, ok1 := ParseBytes(l)
 	b, ok2 := ParseBytes(r)
 	return a, b, ok1 && ok2
+}
+
+// Sample is one numeric reading of a container's resource use. A field
+// that the engine printed as "--" has its Has flag false.
+type Sample struct {
+	CPU               float64 // percent of one core, as the engine prints it
+	MemUsed, MemLimit float64 // bytes
+	NetRx, NetTx      float64
+	BlkRead, BlkWrite float64
+	HasCPU, HasMem    bool
+	HasNet, HasBlk    bool
+}
+
+// SampleOf turns one stats row into numbers.
+func SampleOf(s Stat) Sample {
+	var out Sample
+	out.CPU, out.HasCPU = ParsePercent(s.CPUPerc)
+	out.MemUsed, out.MemLimit, out.HasMem = ParsePair(s.MemUsage)
+	out.NetRx, out.NetTx, out.HasNet = ParsePair(s.NetIO)
+	out.BlkRead, out.BlkWrite, out.HasBlk = ParsePair(s.BlockIO)
+	return out
+}
+
+// Matches reports whether the stats row is about the container: the row
+// names it by id (full or short) or by name.
+func (s Stat) Matches(c Container) bool {
+	for _, k := range []string{s.ID, s.Container} {
+		if k != "" && c.ID != "" && (strings.HasPrefix(c.ID, k) || strings.HasPrefix(k, c.ID)) {
+			return true
+		}
+	}
+	for _, k := range []string{s.Name, s.Container} {
+		for _, n := range c.Names {
+			if k != "" && strings.TrimPrefix(n, "/") == k {
+				return true
+			}
+		}
+	}
+	return false
 }

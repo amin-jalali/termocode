@@ -53,3 +53,25 @@ func TestParsePercentAndPair(t *testing.T) {
 		t.Error("no slash ok")
 	}
 }
+
+func TestSampleOfAndMatches(t *testing.T) {
+	rows, err := ParseStats([]byte(`{"BlockIO":"0B / 8.19kB","CPUPerc":"12.5%","Container":"abc123def456","ID":"abc123def456","MemPerc":"0.6%","MemUsage":"210MiB / 2GiB","Name":"api-1","NetIO":"1.2kB / 3.4kB","PIDs":"12"}
+{"Container":"x","Name":"x","CPUPerc":"--","MemUsage":"-- / --","NetIO":"--","BlockIO":"--"}`))
+	if err != nil || len(rows) != 2 {
+		t.Fatalf("rows = %v, %v", rows, err)
+	}
+	s := SampleOf(rows[0])
+	if !s.HasCPU || s.CPU != 12.5 || !s.HasMem || s.MemUsed != 210*1048576 || s.MemLimit != 2*(1<<30) || !s.HasNet || s.NetTx != 3400 || !s.HasBlk || s.BlkWrite != 8190 {
+		t.Errorf("sample = %+v", s)
+	}
+	if z := SampleOf(rows[1]); z.HasCPU || z.HasMem || z.HasNet || z.HasBlk {
+		t.Errorf("-- sample = %+v", z)
+	}
+	long := Container{ID: "abc123def456789000", Names: []string{"api-1"}}
+	if !rows[0].Matches(long) || rows[0].Matches(Container{ID: "zzz", Names: []string{"other"}}) {
+		t.Error("Matches by id wrong")
+	}
+	if !(Stat{Name: "api-1"}).Matches(Container{ID: "zzz", Names: []string{"/api-1"}}) {
+		t.Error("Matches by name wrong")
+	}
+}

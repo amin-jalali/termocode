@@ -127,7 +127,7 @@ func ParseContexts(data []byte) ([]Context, error) {
 func ParseStats(data []byte) ([]Stat, error) {
 	var out []Stat
 	err := parseLines(data, func(raw map[string]json.RawMessage) error {
-		out = append(out, Stat{Container: firstString(raw, "Container", "Name"), CPUPerc: firstString(raw, "CPUPerc", "CPU %"), MemUsage: firstString(raw, "MemUsage", "Mem Usage"), MemPerc: firstString(raw, "MemPerc", "Mem %"), NetIO: firstString(raw, "NetIO", "Net I/O"), BlockIO: firstString(raw, "BlockIO", "Block I/O"), PIDs: firstString(raw, "PIDs")})
+		out = append(out, Stat{Container: firstString(raw, "Container", "Name"), ID: firstString(raw, "ID", "Id"), Name: firstString(raw, "Name"), CPUPerc: firstString(raw, "CPUPerc", "CPU %"), MemUsage: firstString(raw, "MemUsage", "Mem Usage"), MemPerc: firstString(raw, "MemPerc", "Mem %"), NetIO: firstString(raw, "NetIO", "Net I/O"), BlockIO: firstString(raw, "BlockIO", "Block I/O"), PIDs: firstString(raw, "PIDs")})
 		return nil
 	})
 	return out, err
