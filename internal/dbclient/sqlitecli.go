@@ -440,7 +440,12 @@ func (s *SQLiteSession) Run(ctx context.Context, stmt string, opts RunOptions) R
 		err = s.bindLocked(runCtx, opts.Args)
 	}
 	if err == nil {
-		lines, affected, err = s.exchangeLocked(runCtx, stmt, opts.MaxRows)
+		sent := stmt
+		if opts.MaxRows > 0 {
+			// One row more than kept: the cut still marks the result truncated.
+			sent, _ = sqliteRowLimit(stmt, opts.MaxRows+1)
+		}
+		lines, affected, err = s.exchangeLocked(runCtx, sent, opts.MaxRows)
 	}
 	if len(opts.Args) > 0 {
 		// Unbound parameters of later statements are NULL again.
