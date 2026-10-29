@@ -2,10 +2,13 @@ package app
 
 import (
 	"fmt"
+	"slices"
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/dbclient"
+	"github.com/amin-jalali/termocode/internal/perfbudget"
 )
 
 // perfDBTree is a SQLite connection with 500 tables loaded, every 10th one
@@ -123,4 +126,24 @@ func TestDatabaseTreeRowsOneAllocation(t *testing.T) {
 	if again := s.rows(); len(again) != len(first) {
 		t.Fatalf("rows changed: %d then %d", len(first), len(again))
 	}
+}
+
+// One key of the tree filter on a 500-table connection: the filter and
+// the next sidebar frame (median of 7 rounds of 6 keys).
+func TestPerfDBTreeFilterKey(t *testing.T) {
+	perfbudget.Require(t)
+	s := perfDBTree()
+	m := &Model{databases: s, w: 40, h: 40, showExp: true, activity: activity.New()}
+	texts := []string{"t", "t4", "t42", "t4", "t", ""}
+	var took []time.Duration
+	for round := 0; round < 7; round++ {
+		t0 := time.Now()
+		for _, text := range texts {
+			m.databaseSetFilter(text)
+			_ = m.renderDatabasesSidebar(40, 40)
+		}
+		took = append(took, time.Since(t0)/time.Duration(len(texts)))
+	}
+	slices.Sort(took)
+	perfbudget.Check(t, "db_tree_filter_key", float64(took[len(took)/2].Microseconds())/1000)
 }

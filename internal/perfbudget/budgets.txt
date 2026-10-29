@@ -55,3 +55,13 @@ containers_open_100        25   ms   # command to first container rows, median o
 containers_key_frame_100   25   ms   # testkit, j to the moved cursor, median of 40; local 2.0 ms (was 3.9; floor)
 containers_context_switch  25   ms   # internal/app, every section listed again, median of 5; local 3.8 ms (was 11.1; floor)
 containers_stats_tick_100   2   ms   # internal/app, stats answer + frame, median of 30; local 0.36 ms (was 1.66; CPU only, 2 ms for slow CI)
+
+# Database panel (PERF-6; internal/dbclient/perf_guard_test.go and
+# internal/app/db_perf_bench_test.go): a real sqlite3 file with 500 tables
+# of 20 columns and a 1 000 000-row table. Median of 7 runs.
+# Run: GOMAXPROCS=4 TERMOCODE_PERF=1 go test -count=1 -run '^TestPerfDB' -v ./internal/dbclient/ ./internal/app/
+db_connect_to_tree         25   ms   # open + list 500 tables; local 7.7 ms (floor; was 13.5)
+db_query_first_rows        32   ms   # console SELECT * of 1M rows to 10 000 rows; local 15.7 ms (was 1 334)
+db_export_100k_csv        720   ms   # 100 000 rows to CSV; local 360 ms (was 1 617)
+db_export_100k_json       640   ms   # 100 000 rows to JSON; local 315 ms (was 2 619)
+db_tree_filter_key         25   ms   # tree filter key + sidebar frame; local 0.96 ms (floor; was 7.0)
