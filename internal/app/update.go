@@ -414,24 +414,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		if msg.View == activity.ViewSettings {
 			return m, m.openSettingsPicker()
 		}
-		m.activity.SetActive(msg.View)
-		if !m.showExp {
-			m.showExp = true
-			m.applyLayout()
-		}
-		if msg.View == activity.ViewTests { // Group E: discover on first open
-			return m, m.ensureTestsDiscovered()
-		}
-		if msg.View == activity.ViewDatabases {
-			return m, m.revealDatabasesView(false)
-		}
-		if msg.View == activity.ViewItermoc {
-			return m, m.revealItermocView(false, "")
-		}
-		if msg.View == activity.ViewRuns {
-			return m, m.revealRuns(false)
-		}
-		return m, nil
+		return m, m.showSidebarView(msg.View)
 	case activity.ToggleSidebarMsg:
 		m.showExp = !m.showExp
 		m.applyLayout()
@@ -2772,4 +2755,26 @@ if active ~= '' then
   end
 end
 `
+}
+
+// showSidebarView makes v the sidebar view, shows the sidebar, and starts
+// what the view needs on its first open (test discovery, the databases and
+// Itermoc lists, the runs list).
+func (m *Model) showSidebarView(v activity.View) tea.Cmd {
+	m.activity.SetActive(v)
+	if !m.showExp {
+		m.showExp = true
+		m.applyLayout()
+	}
+	switch v {
+	case activity.ViewTests: // Group E: discover on first open
+		return m.ensureTestsDiscovered()
+	case activity.ViewDatabases:
+		return m.revealDatabasesView(false)
+	case activity.ViewItermoc:
+		return m.revealItermocView(false, "")
+	case activity.ViewRuns:
+		return m.revealRuns(false)
+	}
+	return nil
 }
