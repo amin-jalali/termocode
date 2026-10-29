@@ -260,16 +260,19 @@ func parseAnthropicSSE(ctx context.Context, r io.Reader, ch chan<- Chunk) Chunk 
 				raw = append(raw, map[string]any{"type": "redacted_thinking", "data": b.Data})
 			case "tool_use":
 				args := b.Input
+				bad := false
 				if s := strings.TrimSpace(b.JSON.String()); s != "" {
 					parsed := map[string]any{}
 					if json.Unmarshal([]byte(s), &parsed) == nil {
 						args = parsed
+					} else {
+						bad = true
 					}
 				}
 				if args == nil {
 					args = map[string]any{}
 				}
-				out.ToolCalls = append(out.ToolCalls, ToolCall{ID: b.ID, Name: b.Name, Args: args})
+				out.ToolCalls = append(out.ToolCalls, ToolCall{ID: b.ID, Name: b.Name, Args: args, BadArgs: bad})
 				raw = append(raw, map[string]any{"type": "tool_use", "id": b.ID, "name": b.Name, "input": args})
 			}
 		}
