@@ -81,7 +81,7 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	case "n":
 		return m, m.kubePick("ns")
 	case "?":
-		return m, m.openKeyCard("Kubernetes keys", kubeKeyRows(), help.Loc{Page: kubeGuidePage, Anchor: "keys"}, nil)
+		return m, m.openKeyCard("Kubernetes keys", kubeKeyRows(), helpLocKube(), nil)
 	case "esc":
 		m.focus = FocusEditor
 	}
@@ -90,6 +90,9 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 
 // kubeGuidePage is the Kubernetes guide.
 const kubeGuidePage = "guides/kubernetes.md"
+
+// helpLocKube is the Keys section of the guide.
+func helpLocKube() help.Loc { return help.Loc{Page: kubeGuidePage, Anchor: "keys"} }
 
 // kubeKeyRows are the rows of the ? card (the guide's Keys table).
 func kubeKeyRows() []confirm.KeyRow {

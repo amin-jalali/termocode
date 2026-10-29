@@ -7,6 +7,8 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/amin-jalali/termocode/internal/activity"
+
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -83,5 +85,25 @@ func TestKubeViewProblemStates(t *testing.T) {
 		if !strings.Contains(plain, want) {
 			t.Errorf("down: missing %q in\n%s", want, plain)
 		}
+	}
+}
+
+func TestKubeDemoNeverCallsKubectl(t *testing.T) {
+	f := kubeFake(t)
+	for _, v := range []string{"", "restart", "down", "keys"} {
+		m := kubeTestModel(t, 150, 42)
+		m.kubeDemo(v)
+		if cmd := m.kubeSync(); cmd != nil {
+			t.Errorf("%q: the demo started a load", v)
+		}
+		if !m.kube.visible || m.activity.Active() != activity.ViewKubernetes {
+			t.Errorf("%q: view not shown", v)
+		}
+		if v == "restart" && (!m.confirmOpen || m.confirmKind != confirmKindKubeRestart) {
+			t.Error("no restart card")
+		}
+	}
+	if n := len(f.Calls()); n != 0 {
+		t.Errorf("%d kubectl calls", n)
 	}
 }
