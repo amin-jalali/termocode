@@ -11,28 +11,49 @@ import (
 	"archive/zip"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
+
+// stallTimeout ends a download when no data came for this long (tests
+// shorten it).
+var stallTimeout = 60 * time.Second
 
 // Progress is called while a download runs. total is -1 when the server did
 // not send a Content-Length. May be nil.
 type Progress func(done, total int64)
 
 // Download fetches url into dest (created / truncated). A non-200 answer is
-// an error that carries the status code.
+// an error that carries the status code. When no data comes for
+// stallTimeout (no answer, or a body that stops) it ends with a timeout
+// error (a net.Error), instead of waiting for the network forever.
 func Download(ctx context.Context, url, dest string, progress Progress) error {
+	ctx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+	idle := stallTimeout
+	stall := &stallError{after: idle}
+	timer := time.AfterFunc(idle, func() { cancel(stall) })
+	defer timer.Stop()
+	stalled := func(err error) error {
+		if errors.Is(context.Cause(ctx), stall) {
+			return stall
+		}
+		return err
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return stalled(err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -43,12 +64,36 @@ func Download(ctx context.Context, url, dest string, progress Progress) error {
 		return err
 	}
 	defer out.Close()
-	var src io.Reader = resp.Body
+	var src io.Reader = &idleReader{r: resp.Body, reset: func() { timer.Reset(idle) }}
 	if progress != nil {
-		src = &progressReader{r: resp.Body, total: resp.ContentLength, fn: progress}
+		src = &progressReader{r: src, total: resp.ContentLength, fn: progress}
 	}
-	_, err = io.Copy(out, src)
-	return err
+	if _, err = io.Copy(out, src); err != nil {
+		return stalled(err)
+	}
+	return nil
+}
+
+// stallError is a download that got no data for a while. It is a
+// net.Error with Timeout, like the network's own timeouts.
+type stallError struct{ after time.Duration }
+
+func (e *stallError) Error() string   { return fmt.Sprintf("no data for %s", e.after) }
+func (e *stallError) Timeout() bool   { return true }
+func (e *stallError) Temporary() bool { return true }
+
+// idleReader calls reset each time data comes.
+type idleReader struct {
+	r     io.Reader
+	reset func()
+}
+
+func (i *idleReader) Read(b []byte) (int, error) {
+	n, err := i.r.Read(b)
+	if n > 0 {
+		i.reset()
+	}
+	return n, err
 }
 
 type progressReader struct {
