@@ -504,7 +504,10 @@ func sshHandshake(ctx context.Context, conn net.Conn, hop SSHTarget, auth []ssh.
 	}
 	stop := context.AfterFunc(ctx, func() { _ = conn.Close() })
 	c, chans, reqs, err := ssh.NewClientConn(conn, addr, config)
-	if !stop() {
+	// The connection deadline is the context's: its timeout may come
+	// first and must read the same.
+	var ne net.Error
+	if !stop() || err != nil && errors.As(err, &ne) && ne.Timeout() {
 		if err == nil {
 			_ = c.Close()
 		}
