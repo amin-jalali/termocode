@@ -170,3 +170,23 @@ func (f containerFS) Rename(ctx context.Context, from, to string) error {
 	_, err = h.sh(ctx, "rename", src, renameScript, src, dst, path.Dir(dst))
 	return err
 }
+
+// Remove deletes a file or a whole folder with `rm -rf` (needs sh);
+// never the root. A missing path is no error, like os.RemoveAll.
+func (f containerFS) Remove(ctx context.Context, p string) error {
+	h := f.h
+	abs, err := resolve(h.cfg.Root, p)
+	if err != nil {
+		return err
+	}
+	if abs == h.cfg.Root {
+		return workspace.ErrIsRoot
+	}
+	if !h.Caps().HasShell {
+		return &fs.PathError{Op: "remove", Path: abs, Err: ErrNoShell}
+	}
+	ctx, cancel := h.opCtx(ctx)
+	defer cancel()
+	_, err = h.sh(ctx, "remove", abs, `rm -rf -- "$1"`, abs)
+	return err
+}
