@@ -250,6 +250,9 @@ func paletteItems() []picker.Item {
 		{ID: "alternate-file", Title: "View: Switch to Last File", Hint: "Ctrl+Tab"},
 		{ID: "next-diagnostic", Title: "Go to Next Problem", Hint: "F5"},
 		{ID: "prev-diagnostic", Title: "Go to Previous Problem", Hint: "Shift+F5"},
+		{ID: "explorer-toggle-preview", Title: "Explorer: Toggle Preview"},
+		{ID: "explorer-rename-selected", Title: "Explorer: Rename Selected…"},
+		{ID: "explorer-undo-rename", Title: "Explorer: Undo Rename"},
 		{ID: "toggle-hidden", Title: "Files: Toggle Hidden Files"},
 		{ID: "cheat-sheet", Title: "Help: Show Shortcuts"},
 		{ID: "buffer-info", Title: "View: Show Buffer Info", Hint: "Ctrl+Alt+I"},
@@ -627,6 +630,12 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		m.gotoNextDiagnostic()
 	case "prev-diagnostic":
 		m.gotoPrevDiagnostic()
+	case "explorer-toggle-preview":
+		return m.toggleExplorerPreview()
+	case "explorer-rename-selected":
+		m.renameExplorerSelection()
+	case "explorer-undo-rename":
+		return m.undoBulkRename(m.bulkRename.serial)
 	case "toggle-hidden":
 		return m.toggleHiddenFiles()
 	case "cheat-sheet":

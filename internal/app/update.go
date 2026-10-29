@@ -66,6 +66,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if wasDatabasesVisible && !m.databasesVisible() {
 		m.databasesClose(true)
 	}
+	if pc := m.explorer.SchedulePreview(); pc != nil {
+		cmd = tea.Batch(cmd, pc)
+	}
 	return m, m.gateUpdate(msg, cmd)
 }
 
@@ -659,7 +662,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		m.w, m.h = msg.Width, msg.Height
 		m.lastWinResize = time.Now()
 		m.applyLayout()
-		return m, nil
+		return m, m.explorer.SchedulePreview()
 
 	case tea.KeyMsg:
 		return m.handleGlobalKey(msg)
@@ -667,6 +670,12 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	case tea.MouseMsg:
 		return m.handleMouse(msg)
 
+	case explorer.PreviewMsg:
+		var cmd tea.Cmd
+		m.explorer, cmd = m.explorer.Update(msg)
+		return m, cmd
+	case undoExplorerRenameMsg:
+		return m, m.undoBulkRename(msg.Serial)
 	case explorer.OpenFileMsg:
 		if termimg.IsImagePath(msg.Path) {
 			return m, m.openImagePreview(msg.Path)
@@ -1577,7 +1586,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	// Source Control panel has the focus: its list and commit box need
 	// the arrows, Tab and Enter. The Services and Databases trees also own
 	// their navigation keys when focused.
-	if m.welcomeShowing() && !(m.focus == FocusExplorer && (m.activity.Active() == activity.ViewGit || m.activity.Active() == activity.ViewServices || m.activity.Active() == activity.ViewDatabases || m.activity.Active() == activity.ViewItermoc || m.activity.Active() == activity.ViewRuns)) {
+	if m.welcomeShowing() && !(m.focus == FocusExplorer && (m.activity.Active() == activity.ViewFiles || m.activity.Active() == activity.ViewGit || m.activity.Active() == activity.ViewServices || m.activity.Active() == activity.ViewDatabases || m.activity.Active() == activity.ViewItermoc || m.activity.Active() == activity.ViewRuns)) {
 		if newM, cmd, handled := m.handleWelcomeKey(msg); handled {
 			return newM, cmd
 		}
@@ -2397,6 +2406,11 @@ func (m Model) dispatchToFocus(msg tea.Msg) (Model, tea.Cmd) {
 			// shift+arrow range select, ctrl+space toggle, etc.
 			if k, ok := msg.(tea.KeyMsg); ok {
 				switch k.String() {
+				case keymap.ExplorerPreviewKey:
+					return m, m.toggleExplorerPreview()
+				case keymap.ExplorerRenameKey, keymap.ExplorerRenameAltKey:
+					m.renameExplorerSelection()
+					return m, nil
 				case "delete", "d":
 					targets := m.explorer.Selection()
 					if len(targets) == 0 {
@@ -2460,6 +2474,13 @@ func (m *Model) applyLayout() {
 		m.explorerWidth = max(maxExp, explorerMinWidth)
 	}
 
+	if m.explorer.PreviewEnabled() && m.explorerPreviewWidth > 0 {
+		if m.w >= 100 {
+			m.explorerWidth = min(76, m.w-45)
+		} else {
+			m.explorerWidth = m.explorerPreviewWidth
+		}
+	}
 	// Editor pane geometry: one source of truth shared with renderBase
 	// and the mouse hit tests.
 	pane := m.editorPaneLayout()
@@ -2514,6 +2535,7 @@ func (m *Model) applyLayout() {
 	// reserve 1 col on the right for the sidebar's right-edge divider.
 	// Explorer renders its own header+footer chrome and so takes the full
 	// screen height (m.h).
+	m.explorer.SetTerminalWidth(m.w)
 	m.explorer.SetSize(m.explorerWidth-1, m.h)
 	m.editor.SetSize(edPaneW, nvimEditorH)
 	// Status bar is confined to the editor column now (renderBase sets

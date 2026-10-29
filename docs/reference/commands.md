@@ -256,6 +256,14 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Editor: Split Down | `split-horizontal` |   |   |
 | Editor: Split Right | `split-vertical` | <code>Ctrl+&#92;</code> | <code>Ctrl+&#92;</code> |
 
+## Explorer
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Explorer: Rename Selected… | `explorer-rename-selected` |   |   |
+| Explorer: Toggle Preview | `explorer-toggle-preview` |   |   |
+| Explorer: Undo Rename | `explorer-undo-rename` |   |   |
+
 ## Extensions
 
 | Title | ID | Key | Hint |

@@ -56,6 +56,7 @@ const (
 	promptKindDebugLogpoint
 	// Group L — Upload with kitty: the path on the user's computer (transfer.go).
 	promptKindUploadSource
+	promptKindBulkRename
 )
 
 func (m *Model) openRenamePrompt(path string) {
@@ -168,6 +169,8 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		return cmd
 	}
 	switch m.promptKind {
+	case promptKindBulkRename:
+		return m.previewBulkRename(value)
 	case promptKindRename:
 		dir := filepath.Dir(m.promptPath)
 		newPath := filepath.Join(dir, value)

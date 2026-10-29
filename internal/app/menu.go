@@ -380,7 +380,11 @@ func (m *Model) handleMenuSelect(id string) tea.Cmd {
 		m.openIntegratedTerminalAt(path)
 		return nil
 	case "rename":
-		m.openRenamePrompt(path)
+		if len(m.explorer.Selection()) > 1 {
+			m.renameExplorerSelection()
+		} else {
+			m.openRenamePrompt(path)
+		}
 	case "delete":
 		// If the user has a multi-selection AND the right-clicked row is
 		// part of it, treat the menu's Delete as a bulk delete of every

@@ -105,6 +105,8 @@ type Model struct {
 	ws                      workspace.Workspace
 	activity                activity.Model
 	explorer                explorer.Model
+	bulkRename              bulkRenameState
+	explorerPreviewWidth    int
 	editor                  editor.Model
 	tabs                    tabbar.Model
 	status                  statusbar.Model
