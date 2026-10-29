@@ -372,31 +372,29 @@ func svcRowColumns(w int) (nameW, portW, upW int) {
 // renderServiceRow draws one service row exactly w cells wide.
 func renderServiceRow(svc services.Service, s services.Status, active, focused bool, w int, now time.Time) string {
 	bg := gitSelBg(active, focused)
-	row := lipgloss.NewStyle().Background(bg)
-	fg := func(c theme.Color256) lipgloss.Style {
-		return lipgloss.NewStyle().Background(bg).Foreground(theme.LG(c))
-	}
+	row := func(s string) string { return sgrPaint("", bg, s) }
+	fg := func(c theme.Color256, s string) string { return sgrPaint(theme.LG(c), bg, s) }
 	glyph, gcol := svcGlyph(s)
 	nameW, portW, upW := svcRowColumns(w)
 	var sb strings.Builder
-	sb.WriteString(gitLead(active, focused, bg))
-	sb.WriteString(fg(gcol).Render(glyph.String()))
-	sb.WriteString(row.Render(" "))
+	sb.WriteString(hostLead(active, focused, bg))
+	sb.WriteString(fg(gcol, glyph.String()))
+	sb.WriteString(row(" "))
 	nameCol := theme.TextPrimary
 	if s.State == services.Unknown {
 		nameCol = theme.TextDim
 	}
 	name := svcTruncMiddle(svc.Name, nameW)
-	sb.WriteString(fg(nameCol).Render(name))
+	sb.WriteString(fg(nameCol, name))
 	used := 3 + runewidth.StringWidth(name)
 	if pad := 3 + nameW + 1 - used; pad > 0 {
-		sb.WriteString(row.Render(strings.Repeat(" ", pad)))
+		sb.WriteString(row(strings.Repeat(" ", pad)))
 		used += pad
 	}
 	if portW > 0 {
 		port := runewidth.Truncate(svcPortText(svc, s), portW, "")
-		sb.WriteString(fg(theme.TextSecondary).Render(port))
-		sb.WriteString(row.Render(strings.Repeat(" ", portW-runewidth.StringWidth(port))))
+		sb.WriteString(fg(theme.TextSecondary, port))
+		sb.WriteString(row(strings.Repeat(" ", portW-runewidth.StringWidth(port))))
 		used += portW
 	}
 	if upW > 0 {
@@ -405,11 +403,11 @@ func renderServiceRow(svc services.Service, s services.Status, active, focused b
 			up = ""
 		}
 		up = runewidth.Truncate(up, upW, "")
-		sb.WriteString(row.Render(strings.Repeat(" ", 1+upW-runewidth.StringWidth(up))))
-		sb.WriteString(fg(ucol).Render(up))
+		sb.WriteString(row(strings.Repeat(" ", 1+upW-runewidth.StringWidth(up))))
+		sb.WriteString(fg(ucol, up))
 		used += 1 + upW
 	}
-	return clampSidebarRow(sb.String(), used, w, row)
+	return hostClamp(sb.String(), used, w, bg)
 }
 
 // showEmptyCard: the project has no services and no host section can
@@ -422,37 +420,35 @@ func (st *servicesState) showEmptyCard() bool {
 // count is bold: one bold element per region).
 func renderServiceSection(label, count string, collapsed, active, focused bool, w int) string {
 	bg := gitSelBg(active, focused)
-	row := lipgloss.NewStyle().Background(bg)
-	fg := func(c theme.Color256) lipgloss.Style {
-		return lipgloss.NewStyle().Background(bg).Foreground(theme.LG(c))
-	}
+	row := func(s string) string { return sgrPaint("", bg, s) }
+	fg := func(c theme.Color256, s string) string { return sgrPaint(theme.LG(c), bg, s) }
 	labelCol := theme.TextSecondary
 	if active && focused {
 		labelCol = theme.BorderFocus
 	}
 	var sb strings.Builder
-	sb.WriteString(gitLead(active, focused, bg))
+	sb.WriteString(hostLead(active, focused, bg))
 	used := 1
 	foldGlyph := theme.GlyphExpand
 	if collapsed {
 		foldGlyph = theme.GlyphTreeCollapsed
 	}
-	sb.WriteString(fg(theme.TextDim).Render(foldGlyph.String()))
-	sb.WriteString(row.Render(" "))
+	sb.WriteString(fg(theme.TextDim, foldGlyph.String()))
+	sb.WriteString(row(" "))
 	used += 2
-	sb.WriteString(fg(labelCol).Render(label))
-	sb.WriteString(row.Render(" "))
+	sb.WriteString(fg(labelCol, label))
+	sb.WriteString(row(" "))
 	used += runewidth.StringWidth(label) + 1
 	// Cells, not glyphs: "─" is two cells wide where ambiguous width is wide.
 	rw := max(runewidth.StringWidth("─"), 1)
 	if rule := (w - used - len(count) - 2) / rw; rule > 0 {
-		sb.WriteString(fg(theme.BorderSubtle).Render(strings.Repeat("─", rule)))
+		sb.WriteString(fg(theme.BorderSubtle, strings.Repeat("─", rule)))
 		used += rule * rw
 	}
-	sb.WriteString(row.Render(" "))
-	sb.WriteString(fg(theme.TextMuted).Bold(true).Render(count))
+	sb.WriteString(row(" "))
+	sb.WriteString(lipgloss.NewStyle().Background(bg).Foreground(theme.LG(theme.TextMuted)).Bold(true).Render(count))
 	used += 1 + len(count)
-	return clampSidebarRow(sb.String(), used, w, row)
+	return hostClamp(sb.String(), used, w, bg)
 }
 
 // renderServiceNote draws a note / hint / code row.
