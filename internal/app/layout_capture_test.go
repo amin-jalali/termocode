@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/layout"
 	"github.com/amin-jalali/termocode/internal/nvim"
 )
 
@@ -76,5 +77,26 @@ func TestCaptureLayoutOfAClosedPanelAndHiddenChrome(t *testing.T) {
 	}
 	if l.Sidebar.Open || l.Chat.Open {
 		t.Errorf("sidebar %+v chat %+v", l.Sidebar, l.Chat)
+	}
+}
+
+func TestCaptureLayoutKeepsTerminalSplits(t *testing.T) {
+	root := layoutProject(t)
+	m := panelTestModel()
+	m.terminalTabs = []terminalTab{
+		{Name: "api", Cwd: root, Splits: []termPane{
+			{Cwd: filepath.Join(root, "web"), Dir: paneRight, Parent: 0},
+			{Cwd: "/somewhere/else", Dir: paneDown, Parent: 1},
+		}},
+		{Name: "one", Cwd: root},
+	}
+	l := m.captureLayout("x")
+	got := l.Panel.Terminals
+	want := []layout.Pane{{Split: "right", Cwd: "web"}, {Split: "down", Parent: 1}}
+	if len(got) != 2 || !reflect.DeepEqual(got[0].Panes, want) || got[1].Panes != nil {
+		t.Fatalf("terminals = %+v", got)
+	}
+	if err := l.Validate(); err != nil {
+		t.Errorf("captured layout is not valid: %v", err)
 	}
 }

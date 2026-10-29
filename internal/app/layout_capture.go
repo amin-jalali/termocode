@@ -91,7 +91,7 @@ func (m *Model) captureLayout(name string) layout.Layout {
 			}
 		}
 		for _, t := range m.terminalTabs {
-			p.Terminals = append(p.Terminals, layout.Terminal{Name: t.Name, Cwd: layoutRelPath(root, t.Cwd)})
+			p.Terminals = append(p.Terminals, layout.Terminal{Name: t.Name, Cwd: layoutRelPath(root, t.Cwd), Panes: layoutPanes(t, root)})
 		}
 	}
 	l.Panel = p
@@ -121,6 +121,19 @@ func (m *Model) captureLayout(name string) layout.Layout {
 		l.Focus = "editor"
 	}
 	return l
+}
+
+// layoutPaneSplits maps a pane direction to its name in layout files.
+var layoutPaneSplits = map[paneDir]string{paneRight: "right", paneDown: "down"}
+
+// layoutPanes is the split shape of tab t: each extra pane with its
+// direction, parent and folder (relative to root, "" when outside it).
+func layoutPanes(t terminalTab, root string) []layout.Pane {
+	var out []layout.Pane
+	for _, s := range t.Splits {
+		out = append(out, layout.Pane{Split: layoutPaneSplits[s.Dir], Parent: s.Parent, Cwd: layoutRelPath(root, s.Cwd)})
+	}
+	return out
 }
 
 // captureEditorSplit asks nvim for the editor windows (not the panel's):
