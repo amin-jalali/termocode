@@ -553,7 +553,9 @@ var sqliteRawByteEscape = lazyre.New(`(?i)\\u00[89a-f][0-9a-f]`)
 
 var sqliteJSONBlobEscape = lazyre.New(`(?i)u[0-9a-f]{8}|u00[01][0-9a-f]`)
 
-func parseSQLiteJSON(lines []string) ([][]Cell, []Column, error) {
+// parseSQLiteJSONDecoder is parseSQLiteJSON through encoding/json: slow
+// (a decoder per cell), but it reads any JSON and reports its errors.
+func parseSQLiteJSONDecoder(lines []string) ([][]Cell, []Column, error) {
 	var data []byte
 	for _, line := range lines {
 		if strings.HasPrefix(strings.TrimSpace(line), "changes:") {
