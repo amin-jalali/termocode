@@ -221,7 +221,6 @@ func addFamiliarRows(p *Plan, current Current) {
 	}
 	effective := effectiveBindings(current)
 	for _, binding := range defaults {
-		binding.Command = familiarCommand(p.Source.ID, binding.Command)
 		key, action, equivalent := mapKey(p.Source.ID, binding)
 		if key != "" {
 			key = keymap.CanonicalKey(key)
@@ -229,7 +228,7 @@ func addFamiliarRows(p *Plan, current Current) {
 		if key == "" {
 			key, _ = normalizeSourceKey(p.Source.ID, binding.Key)
 		}
-		row := ReviewRow{Kind: RowKey, SourceText: familiarSource(p.Source.ID) + " default: " + binding.Key, Equivalent: equivalent, Key: key, Action: action, Apply: true}
+		row := ReviewRow{Kind: RowKey, SourceText: "VS Code default: " + binding.Key, Equivalent: equivalent, Key: key, Action: action, Apply: true}
 		if action == "" {
 			row.Equivalent = "no equivalent"
 			row.Apply = false
@@ -258,29 +257,6 @@ func addFamiliarRows(p *Plan, current Current) {
 		}
 		p.Rows = append(p.Rows, row)
 	}
-}
-
-func familiarCommand(source, vscodeCommand string) string {
-	commands := map[string]map[string]string{
-		"zed":       {"workbench.action.quickOpen": "workspace::ActivateFile", "workbench.action.showCommands": "command_palette::Toggle", "workbench.action.terminal.toggleTerminal": "terminal::Toggle", "workbench.view.explorer": "workspace::ActivateProjectPanel", "workbench.action.findInFiles": "pane::DeploySearch", "workbench.action.debug.start": "debugger::Start", "workbench.action.debug.toggleBreakpoint": "debugger::ToggleBreakpoint", "workbench.action.debug.stepOver": "debugger::StepOver", "workbench.action.debug.stepInto": "debugger::StepInto", "editor.action.commentLine": "editor::ToggleComments"},
-		"helix":     {"workbench.action.quickOpen": "file_picker", "workbench.action.showCommands": "command_palette", "workbench.action.files.save": "save", "workbench.action.findInFiles": "global_search", "editor.action.commentLine": "toggle_comments"},
-		"jetbrains": {"workbench.action.quickOpen": "GotoFile", "workbench.action.showCommands": "GotoAction", "workbench.action.files.save": "SaveAll", "workbench.action.findInFiles": "FindInPath"},
-		"sublime":   {"workbench.action.quickOpen": "show_overlay", "workbench.action.showCommands": "show_command_palette", "workbench.action.files.save": "save", "workbench.action.findInFiles": "find_in_files", "editor.action.commentLine": "toggle_comment", "workbench.action.toggleSidebarVisibility": "toggle_side_bar"},
-	}
-	if m := commands[source]; m != nil {
-		if c := m[vscodeCommand]; c != "" {
-			return c
-		}
-		return "__no_equivalent__"
-	}
-	return vscodeCommand
-}
-
-func familiarSource(source string) string {
-	if source == "vscodium" || source == "cursor" || source == "windsurf" {
-		return "VS Code"
-	}
-	return map[string]string{"vscode": "VS Code", "zed": "Zed", "helix": "Helix", "jetbrains": "JetBrains", "sublime": "Sublime", "vim": "Vim"}[source]
 }
 
 func (p Plan) Counts() map[RowKind]int {
