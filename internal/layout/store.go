@@ -192,3 +192,13 @@ func (s Store) Delete(e Entry) error {
 	}
 	return os.Remove(e.Path)
 }
+
+// Has tells if a layout file called name is already in the folder of src.
+func (s Store) Has(src Source, name string) bool {
+	d, err := s.dir(src)
+	if err != nil || ValidName(name) != nil {
+		return false
+	}
+	_, err = os.Stat(filepath.Join(d, name+Ext))
+	return err == nil
+}

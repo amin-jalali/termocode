@@ -128,3 +128,14 @@ func TestDeleteRemovesTheFileOnly(t *testing.T) {
 		t.Fatal("built-in deleted")
 	}
 }
+
+func TestHasLooksOnlyInTheFolderAsked(t *testing.T) {
+	s := testStore(t)
+	s.Save(User, Layout{Name: "x"})
+	if !s.Has(User, "x") || s.Has(Project, "x") || s.Has(User, "y") || s.Has(User, "../x") || s.Has(Builtin, "x") {
+		t.Errorf("Has: user %v project %v other %v", s.Has(User, "x"), s.Has(Project, "x"), s.Has(User, "y"))
+	}
+	if (Store{}).Has(User, "x") {
+		t.Error("Has without a folder")
+	}
+}
