@@ -812,9 +812,10 @@ func (m Model) handleNvimMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 		// Persist the freshly-expanded set so a subsequent restart sees
 		// the same tree shape even if no further user interaction happens.
 		m.persistExplorerState()
+		termCmd := m.restoreTerminalsAtStart(sess) // terminal_restore.go
 		// Group I: load extensions after the built-in Lua. Plugins not
 		// downloaded yet are cloned in the background (plugins.go).
-		cmds := append([]tea.Cmd{m.extLoadCmd(false), m.keymapProblemsToast(), m.startHotExit(), m.syncMCPServe()}, pluginBootstrapCmds()...)
+		cmds := append([]tea.Cmd{m.extLoadCmd(false), m.keymapProblemsToast(), m.startHotExit(), m.syncMCPServe(), termCmd}, pluginBootstrapCmds()...)
 		_ = m.nvim.ExecLua(`vim.api.nvim_create_autocmd('BufWritePost', { callback = function(ev)
   if _G.termocode_notify then _G.termocode_notify('termocode_profiles_saved', ev.file) end
 end })`)

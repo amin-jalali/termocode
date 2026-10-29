@@ -689,11 +689,12 @@ type paneSpec struct {
 // buildTerminalPanes makes the extra panes of the active tab, in order. A
 // pane that cannot be made (no room, the shell did not start) is left out,
 // and panes split off it are split off its parent instead. It returns the
-// refusal toasts.
-func (m *Model) buildTerminalPanes(specs []paneSpec) tea.Cmd {
+// live pane index of each spec's pane (pane 0 first; a pane left out maps
+// to its parent) and the refusal toasts.
+func (m *Model) buildTerminalPanes(specs []paneSpec) ([]int, tea.Cmd) {
 	tab := m.activeTerminalTab()
 	if tab == nil {
-		return nil
+		return nil, nil
 	}
 	live := []int{0} // saved pane index → live pane index
 	var cmds []tea.Cmd
@@ -714,5 +715,5 @@ func (m *Model) buildTerminalPanes(specs []paneSpec) tea.Cmd {
 			live = append(live, parent)
 		}
 	}
-	return tea.Batch(cmds...)
+	return live, tea.Batch(cmds...)
 }

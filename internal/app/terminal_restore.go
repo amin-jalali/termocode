@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // Terminal restore (G-RST). A detach keeps every shell alive in the
@@ -109,6 +111,89 @@ func (m *Model) observeTerminals() {
 		snap = m.terminalSnapshot(m.termRestoreCmds)
 	}
 	m.ensureSessionWriter().terminalsChanged(snap)
+}
+
+// restoreTerminalsAtStart reads the settings and opens the terminals the
+// session kept (nvim is ready, the files are open). A panel that was hidden
+// waits for the next Ctrl+T. Only a local workspace: a remote one's shells
+// are not on this machine.
+func (m *Model) restoreTerminalsAtStart(sess SessionState) tea.Cmd {
+	defer func() { m.termRestoreReady = true }()
+	m.termRestoreOff = !terminalRestoreOn() || !isLocal(m.workspace())
+	m.termRestoreCmds = terminalRestoreCommandsOn()
+	s := sess.Terminals
+	if m.termRestoreOff || s == nil || len(s.Tabs) == 0 {
+		return nil
+	}
+	if !s.Open {
+		m.termRestorePending = s
+		return nil
+	}
+	cmd := m.restoreTerminals(s, false)
+	m.applyLayout()
+	m.resizeTerminalSplit()
+	return cmd
+}
+
+// restoreTerminals opens the saved terminals: each tab and split pane gets a
+// fresh shell in its folder (the project folder when that is gone), and the
+// saved tab and pane get the focus. With focusTerminal false the editor
+// keeps the keyboard (a restore at start). It returns the toasts of panes
+// that did not fit.
+func (m *Model) restoreTerminals(s *savedTerminals, focusTerminal bool) tea.Cmd {
+	if m.nvim == nil || s == nil || len(s.Tabs) == 0 {
+		return nil
+	}
+	root, _ := m.rootDir()
+	folder := func(p string) string {
+		if st, err := os.Stat(p); p != "" && err == nil && st.IsDir() {
+			return p
+		}
+		return root
+	}
+	if !m.termOpen && !m.ensurePanelHost(true) {
+		return nil
+	}
+	var cmds []tea.Cmd
+	active := 0
+	for i, t := range s.Tabs {
+		if len(t.Panes) == 0 {
+			continue
+		}
+		before := len(m.terminalTabs)
+		m.newTerminalTabIn(folder(t.Panes[0].Cwd))
+		if len(m.terminalTabs) == before {
+			break
+		}
+		if i == s.Active {
+			active = before
+		}
+		specs := make([]paneSpec, 0, len(t.Panes)-1)
+		for _, p := range t.Panes[1:] {
+			dir := paneRight
+			if p.Split == "down" {
+				dir = paneDown
+			}
+			specs = append(specs, paneSpec{Dir: dir, Parent: p.Parent, Cwd: folder(p.Cwd)})
+		}
+		live, c := m.buildTerminalPanes(specs)
+		cmds = append(cmds, c)
+		if tab := m.activeTerminalTab(); tab != nil && t.Focus >= 0 && t.Focus < len(live) {
+			tab.PaneFocus = live[t.Focus]
+		}
+	}
+	if len(m.terminalTabs) == 0 {
+		return tea.Batch(cmds...)
+	}
+	m.switchTerminalTab(active)
+	if tab := m.activeTerminalTab(); tab != nil {
+		m.focusTerminalPane(tab.focusedPane())
+	}
+	if !focusTerminal {
+		m.ensureEditorWindowCurrent()
+		m.inTerminal = false
+	}
+	return tea.Batch(cmds...)
 }
 
 // savedPane is one shell in the session: its folder, and what it was
