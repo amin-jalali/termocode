@@ -1,10 +1,13 @@
 package app
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -90,4 +93,28 @@ func saveAllFailText(paths []string) string {
 		names = append(names, filepath.Base(p))
 	}
 	return fmt.Sprintf("Could not save %d files: %s.%s", len(paths), strings.Join(names, ", "), kept)
+}
+
+// fileOpFailText says in short words why an explorer file operation
+// (rename, delete, new file or folder) failed, instead of Go's
+// "rename /long/path/a -> /long/path/b: permission denied".
+func fileOpFailText(err error) string {
+	var p string
+	var le *os.LinkError
+	var pe *os.PathError
+	switch {
+	case errors.As(err, &le):
+		p = le.Old
+	case errors.As(err, &pe):
+		p = pe.Path
+	}
+	switch {
+	case errors.Is(err, fs.ErrPermission) && p != "":
+		return "No permission to change folder " + filepath.Base(filepath.Dir(p)) + "."
+	case errors.Is(err, syscall.ENOSPC):
+		return "The disk is full."
+	case errors.Is(err, fs.ErrNotExist) && p != "":
+		return filepath.Base(p) + " no longer exists."
+	}
+	return err.Error()
 }
