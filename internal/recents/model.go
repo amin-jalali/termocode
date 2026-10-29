@@ -81,23 +81,6 @@ func (m Model) Init() tea.Cmd { return BlinkCmd() }
 // SetSize stores the screen dimensions used by Box() to center the modal.
 func (m *Model) SetSize(w, h int) { m.w, m.h = w, h }
 
-// BoxWidth returns the rendered box width in cells (border included).
-// Mirrors layoutDims so the host can hit-test the modal in screen coords.
-func (m Model) BoxWidth() int {
-	bw, _ := m.layoutDims()
-	return bw
-}
-
-// BoxHeight returns the rendered box height in cells (border + chrome +
-// list rows). Must stay in sync with renderBox()'s row composition:
-//
-//	2 border + 9 chrome (blank, header, blank, search, hairline,
-//	hairline, blank, footer, blank) + rowsVisible.
-func (m Model) BoxHeight() int {
-	_, rv := m.layoutDims()
-	return 11 + rv
-}
-
 // HandleMouse routes a mouse event in SCREEN coordinates. Left-click on a
 // result row selects it (emits SelectMsg). Wheel scroll moves the cursor.
 // Clicks elsewhere inside the box are consumed silently so they don't
@@ -166,11 +149,7 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 		return m, nil
 	}
 	m.cursor = target
-	idx := m.filtered[target]
-	if idx < 0 || idx >= len(m.entries) {
-		return m, nil
-	}
-	path := m.entries[idx].Path
+	path := m.entries[m.filtered[target]].Path
 	return m, func() tea.Msg { return SelectMsg{Path: path} }
 }
 
@@ -259,11 +238,7 @@ func (m Model) View() string {
 	if m.w <= 0 || m.h <= 0 {
 		return ""
 	}
-	box := m.Box()
-	if box == "" {
-		return ""
-	}
-	return lipgloss.Place(m.w, m.h, lipgloss.Center, lipgloss.Center, box)
+	return lipgloss.Place(m.w, m.h, lipgloss.Center, lipgloss.Center, m.Box())
 }
 
 // Box returns the bordered modal box only, with no surrounding whitespace.
@@ -363,9 +338,6 @@ func (m Model) layoutDims() (boxW, rowsVisible int) {
 	rowsVisible = resultCount
 	if rowsVisible > maxRows {
 		rowsVisible = maxRows
-	}
-	if rowsVisible < 1 {
-		rowsVisible = 1
 	}
 	return
 }
