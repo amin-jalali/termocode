@@ -198,20 +198,36 @@ case "$1" in
 esac
 `
 
+// Low-speed limit of remote commands: an HTTP transfer slower than
+// lowSpeedLimit bytes/s for lowSpeedTime seconds stops with "Operation too
+// slow". Without it git waits forever on a server (or a network) that
+// accepted the connection and then says nothing.
+const (
+	lowSpeedLimit = "1"
+	lowSpeedTime  = "60"
+)
+
 // cloneEnv builds the child environment: no TTY prompts, batch-mode ssh
-// (unless the user configured their own ssh command), and — when a token is
-// given — the askpass hook.
+// (unless the user configured their own ssh command), the low-speed limit
+// (unless the user set one), and — when a token is given — the askpass
+// hook.
 func cloneEnv(base []string, askpass, user, token string) []string {
-	env := make([]string, 0, len(base)+5)
+	env := make([]string, 0, len(base)+7)
 	hasSSHCmd := false
+	lowSpeed := map[string]string{"GIT_HTTP_LOW_SPEED_LIMIT": lowSpeedLimit, "GIT_HTTP_LOW_SPEED_TIME": lowSpeedTime}
 	for _, kv := range base {
-		k := kv
+		k, v := kv, ""
 		if i := strings.IndexByte(kv, '='); i >= 0 {
-			k = kv[:i]
+			k, v = kv[:i], kv[i+1:]
 		}
 		switch k {
 		case "GIT_TERMINAL_PROMPT", "TERMOCODE_GIT_TOKEN", "TERMOCODE_GIT_USER":
 			continue
+		case "GIT_HTTP_LOW_SPEED_LIMIT", "GIT_HTTP_LOW_SPEED_TIME":
+			if v == "" {
+				continue
+			}
+			delete(lowSpeed, k)
 		case "GIT_ASKPASS", "SSH_ASKPASS":
 			if askpass != "" {
 				continue
@@ -222,6 +238,11 @@ func cloneEnv(base []string, askpass, user, token string) []string {
 		env = append(env, kv)
 	}
 	env = append(env, "GIT_TERMINAL_PROMPT=0")
+	for _, k := range []string{"GIT_HTTP_LOW_SPEED_LIMIT", "GIT_HTTP_LOW_SPEED_TIME"} {
+		if v, ok := lowSpeed[k]; ok {
+			env = append(env, k+"="+v)
+		}
+	}
 	if !hasSSHCmd {
 		env = append(env, "GIT_SSH_COMMAND=ssh -o BatchMode=yes")
 	}
