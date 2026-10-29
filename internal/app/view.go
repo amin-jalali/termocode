@@ -36,12 +36,32 @@ func (m Model) drawView() string {
 	if m.w == 0 || m.h == 0 {
 		return frame
 	}
+	frame = fitTinyScreen(frame, m.w)
 	previewShown := m.imageOpen && m.imagePrev != nil && m.imagePrev.img != nil
 	logoShown := false
 	if !previewShown && m.overlayKind() == "" && !m.previewOpen && !m.searchOpen && !m.commitViewShown() && m.welcomeVisible() {
 		frame, logoShown = m.placeLogo(frame)
 	}
 	return m.markAttach(m.cleanupGraphics(frame, previewShown, logoShown))
+}
+
+// tinyScreenWidth is the narrowest screen the columns lay out on: the
+// activity bar, the sidebar at its minimum width and the smallest editor.
+const tinyScreenWidth = activity.Width + explorerMinWidth + minEditorPaneWidth
+
+// fitTinyScreen cuts every row to w on a screen narrower than the
+// columns need. Wider screens lay out to fit and skip the work.
+func fitTinyScreen(frame string, w int) string {
+	if w >= tinyScreenWidth {
+		return frame
+	}
+	lines := strings.Split(frame, "\n")
+	for i, l := range lines {
+		if ansi.StringWidth(l) > w {
+			lines[i] = ansi.Truncate(l, w, "")
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 // welcomeVisible mirrors renderBase's welcome-screen condition.
