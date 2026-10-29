@@ -2439,6 +2439,10 @@ func (m Model) dispatchToFocus(msg tea.Msg) (Model, tea.Cmd) {
 			if k, ok := msg.(tea.KeyMsg); ok {
 				return m.handleServicesSidebarKey(k)
 			}
+		case activity.ViewKubernetes: // kube_keys.go
+			if k, ok := msg.(tea.KeyMsg); ok {
+				return m.handleKubeSidebarKey(k)
+			}
 		case activity.ViewDatabases: // db_actions.go
 			if k, ok := msg.(tea.KeyMsg); ok {
 				return m.handleDatabasesSidebarKey(k)
