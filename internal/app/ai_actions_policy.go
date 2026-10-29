@@ -190,6 +190,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"layout-open":         aiNever(layoutNoAI),
 	"layout-save":         aiNever(layoutNoAI),
 	"layout-delete":       aiNever(layoutNoAI),
+	"layout-reset":        aiNever(layoutNoAI),
 	"git-ci-fix":          aiNever(aiNoNested),
 
 	// ── Workspace, session, settings ──

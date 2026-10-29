@@ -30,6 +30,7 @@ func layoutPaletteItems() []picker.Item {
 		{ID: "layout-open", Title: "Layout: Open…"},
 		{ID: "layout-save", Title: "Layout: Save As…"},
 		{ID: "layout-delete", Title: "Layout: Delete…"},
+		{ID: "layout-reset", Title: "Layout: Reset to Default"},
 	}
 }
 
@@ -42,6 +43,8 @@ func (m *Model) dispatchLayoutPalette(id string) (tea.Cmd, bool) {
 		return m.openLayoutSave(), true
 	case "layout-delete":
 		return m.openLayoutDelete(), true
+	case "layout-reset":
+		return m.resetLayout(), true
 	}
 	return nil, false
 }

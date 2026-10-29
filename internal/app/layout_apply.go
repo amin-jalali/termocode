@@ -257,3 +257,25 @@ func (m *Model) closeExtraEditorWindows() {
 		end
 		if keep then pcall(vim.api.nvim_set_current_win, keep) end`)
 }
+
+// resetLayout is Layout: Reset to Default: the built-in default layout, and
+// the sizes a first start has (sidebar width, panel height, chat width).
+// Open files stay open.
+func (m *Model) resetLayout() tea.Cmd {
+	var def layout.Layout
+	for _, e := range layout.Builtins() {
+		if e.Name == "default" {
+			def = e.Layout
+		}
+	}
+	cmd := m.openLayout(def)
+	m.explorerWidth = defaultExplorerWidth
+	m.terminalRows = terminalRowsDefault
+	m.actionsWidth, m.actionsWidthSet = defaultActionsWidth, false
+	m.persistExplorerWidth()
+	m.persistTerminalRows()
+	m.persistActionsState()
+	m.applyLayout()
+	m.resizeTerminalSplit()
+	return cmd
+}

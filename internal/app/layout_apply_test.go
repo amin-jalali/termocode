@@ -120,3 +120,32 @@ func TestOpenLayoutWithoutANameShowsNoHint(t *testing.T) {
 		t.Errorf("hint %q", m.layoutHint)
 	}
 }
+
+func TestResetLayoutIsTheFirstStartLook(t *testing.T) {
+	withConfigDir(t)
+	layoutProject(t)
+	t.Setenv("TERMOCODE_HEADLESS", "1")
+	m := panelTestModel()
+	m.activity.SetActive(activity.ViewGit)
+	m.explorerWidth, m.terminalRows = 50, 20
+	m.actionsOpen, m.actionsPinned, m.actionsWidth, m.actionsWidthSet = true, true, 70, true
+	m.zenMode = true
+
+	m.dispatchPaletteAction("layout-reset")
+	if m.zenMode || !m.showExp || m.activity.Active() != activity.ViewFiles {
+		t.Errorf("zen=%v show=%v view=%v", m.zenMode, m.showExp, m.activity.Active())
+	}
+	if m.explorerWidth != defaultExplorerWidth || m.terminalRows != terminalRowsDefault {
+		t.Errorf("sizes: sidebar %d, rows %d", m.explorerWidth, m.terminalRows)
+	}
+	if m.actionsOpen || m.actionsWidthSet {
+		t.Errorf("chat open=%v widthSet=%v", m.actionsOpen, m.actionsWidthSet)
+	}
+	s := loadSession() // saved: the next start keeps the reset
+	if s.ExplorerWidth != defaultExplorerWidth || s.ActionsWidth != 0 || s.ActionsOpen == nil || *s.ActionsOpen {
+		t.Errorf("session = %+v", s)
+	}
+	if !strings.Contains(statusLine(m), "Layout: default") {
+		t.Errorf("status bar: %q", statusLine(m))
+	}
+}
