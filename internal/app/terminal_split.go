@@ -35,6 +35,40 @@ const termPaneChromeLua = `
 	end
 `
 
+// termPaneSpawnLua defines _G.termocode_pane_spawn(win, cwd, spec): it puts a
+// fresh terminal buffer into window win, starts the shell in cwd (when that
+// folder exists), strips the window chrome and enters terminal mode. It
+// returns the buffer id, or 0 when the shell did not start. The buffer is
+// tagged as a pane, so a shell that ends stays on screen.
+const termPaneSpawnLua = termExitedLua + termShellIntLua + termPaneChromeLua + `
+	_G.termocode_pane_spawn = _G.termocode_pane_spawn or function(win, cwd, spec)
+		local buf = vim.api.nvim_create_buf(false, true)
+		if buf <= 0 then return 0 end
+		vim.bo[buf].buflisted = false
+		vim.bo[buf].swapfile  = false
+		pcall(vim.api.nvim_win_set_buf, win, buf)
+		local cmd, env = _G.termocode_shellint(vim.json.decode(spec))
+		local opts = {
+			env = env,
+			on_exit = function(_, code, _)
+				vim.g.termocode_term_last_exit = code
+				pcall(_G.termocode_term_exited, buf)
+			end,
+		}
+		if vim.fn.isdirectory(cwd) == 1 then opts.cwd = cwd end
+		vim.b[buf].termocode_pane = true
+		local job
+		vim.api.nvim_win_call(win, function() job = vim.fn.termopen(cmd, opts) end)
+		if job <= 0 then
+			pcall(vim.api.nvim_buf_delete, buf, { force = true })
+			return 0
+		end
+		chrome(win)
+		pcall(vim.cmd, 'startinsert')
+		return buf
+	end
+`
+
 // splitTerminalPane splits the focused pane of the active terminal tab: a new
 // shell appears beside it (paneRight) or below it (paneDown), in the same
 // folder. It returns a toast command when the split is refused.
@@ -66,7 +100,7 @@ func (m *Model) splitTerminalPane(dir paneDir) tea.Cmd {
 		shell = "/bin/bash"
 	}
 	cwd := tab.paneCwd(from)
-	out, err := m.nvim.EvalLuaString(fmt.Sprintf(termExitedLua+termShellIntLua+termPaneChromeLua+`
+	out, err := m.nvim.EvalLuaString(fmt.Sprintf(termPaneSpawnLua+`
 		local fromWin, down, cwd, bufs = %d, %t, %q, {%s}
 		if not vim.api.nvim_win_is_valid(fromWin) then return '0:0' end
 		-- A tab with panes keeps a shell that ended on screen (termExitedLua).
@@ -76,28 +110,12 @@ func (m *Model) splitTerminalPane(dir paneDir) tea.Cmd {
 		vim.api.nvim_set_current_win(fromWin)
 		vim.cmd(down and 'keepalt rightbelow split' or 'keepalt rightbelow vsplit')
 		local win = vim.api.nvim_get_current_win()
-		local buf = vim.api.nvim_create_buf(false, true)
-		vim.bo[buf].buflisted = false
-		vim.bo[buf].swapfile  = false
-		pcall(vim.api.nvim_win_set_buf, win, buf)
 		vim.w[win].termocode_panel = true
-		local cmd, env = _G.termocode_shellint(vim.json.decode(%q))
-		local opts = {
-			env = env,
-			on_exit = function(_, code, _)
-				vim.g.termocode_term_last_exit = code
-				pcall(_G.termocode_term_exited, buf)
-			end,
-		}
-		if vim.fn.isdirectory(cwd) == 1 then opts.cwd = cwd end
-		local job = vim.fn.termopen(cmd, opts)
-		if job <= 0 then
+		local buf = _G.termocode_pane_spawn(win, cwd, %q)
+		if buf <= 0 then
 			pcall(vim.api.nvim_win_close, win, true)
 			return '0:0'
 		end
-		vim.b[buf].termocode_pane = true
-		chrome(win)
-		pcall(vim.cmd, 'startinsert')
 		return tostring(win) .. ':' .. tostring(buf)
 	`, fromWin, dir == paneDown, cwd, intList(tab.paneBufs()), termShellSpecJSON(shell)))
 	if err != nil {
