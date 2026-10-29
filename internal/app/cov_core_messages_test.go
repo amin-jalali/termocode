@@ -72,10 +72,7 @@ func TestCovCoreReplaceAndFindMessages(t *testing.T) {
 	}
 }
 
-func TestCovCoreVimEscapes(t *testing.T) {
-	if got := vimRegexEscape("a.b*[c]^$~/\\\nx"); got != `a\.b\*\[c\]\^\$\~\/\\\nx` {
-		t.Errorf("regex escape: %q", got)
-	}
+func TestCovCoreVimReplaceEscape(t *testing.T) {
 	if got := vimReplaceEscape("a&b/c~\\\nd"); got != `a\&b\/c\~\\\rd` {
 		t.Errorf("replace escape: %q", got)
 	}

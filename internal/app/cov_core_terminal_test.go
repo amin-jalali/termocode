@@ -169,8 +169,8 @@ func TestCovCoreTerminalTabsByMouse(t *testing.T) {
 	}
 	x, y = covBarCell(t, m, terminalHitMinimize, -1)
 	m, _ = covClick(m, x, y)
-	if !m.terminalMinimized || m.integratedTerminalHeight() != 1 {
-		t.Errorf("minimize: %v, height %d", m.terminalMinimized, m.integratedTerminalHeight())
+	if !m.terminalMinimized || m.integratedTerminalRows() != 0 {
+		t.Errorf("minimize: %v, rows %d", m.terminalMinimized, m.integratedTerminalRows())
 	}
 	m.terminalMinimized = false
 	m.applyLayout()

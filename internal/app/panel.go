@@ -175,16 +175,6 @@ func (m Model) panelEntryActive(e panelBarEntry) bool {
 	return true
 }
 
-// hasPanelTab reports whether a non-terminal tab of kind k is open.
-func (m Model) hasPanelTab(k panelKind) bool {
-	for _, t := range m.panelTabs {
-		if t == k {
-			return true
-		}
-	}
-	return false
-}
-
 // insertPanelTab adds k to tabs keeping kind order (Problems, Output,
 // Tests, Debug Console). No-op when already present. Pure for tests.
 func insertPanelTab(tabs []panelKind, k panelKind) []panelKind {
