@@ -157,3 +157,18 @@ func TestRebaseTodoValidate(t *testing.T) {
 		t.Errorf("all dropped: %v", err)
 	}
 }
+
+// G-RBS: the todo file has one "<action> <full hash> <subject>" line per
+// row, in the todo's order; drop is written out, not left away.
+func TestRebaseTodoFormat(t *testing.T) {
+	todo := RebaseTodo{Items: []RebaseItem{
+		{Action: RebasePick, FullHash: "aaa", Subject: "first"},
+		{Action: RebaseReword, FullHash: "bbb", Subject: "second", Message: "new"},
+		{Action: RebaseFixup, FullHash: "ccc", Subject: "third # not a comment"},
+		{Action: RebaseDrop, FullHash: "ddd", Subject: "fourth"},
+	}}
+	want := "pick aaa first\nreword bbb second\nfixup ccc third # not a comment\ndrop ddd fourth\n"
+	if got := todo.Format(); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+}

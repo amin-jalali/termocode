@@ -145,3 +145,15 @@ func (t RebaseTodo) Validate() error {
 	}
 	return nil
 }
+
+// Format is the todo as git reads it: "<action> <full hash> <subject>"
+// per row. git only reads the first two words; the subject helps a human
+// reading .git/rebase-merge/done.
+func (t RebaseTodo) Format() string {
+	var b strings.Builder
+	for _, it := range t.Items {
+		subject := strings.ReplaceAll(it.Subject, "\n", " ")
+		fmt.Fprintf(&b, "%s %s %s\n", it.Action, it.FullHash, subject)
+	}
+	return b.String()
+}
