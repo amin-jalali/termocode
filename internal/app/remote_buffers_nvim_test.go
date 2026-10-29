@@ -144,3 +144,22 @@ func TestRemoteBufferFailedSaveKeepsTheText(t *testing.T) {
 		t.Fatalf("modified after failed save = %s", got)
 	}
 }
+
+// A file that could not be read is locked: its empty buffer must never
+// be saved over the real file.
+func TestRemoteBufferFailedReadIsNeverSaved(t *testing.T) {
+	n, c := remoteNvim(t)
+	c.Remove()
+	_ = n.Command("silent! edit /app/main.go")
+	if got := remoteEval(t, n, `return tostring(vim.bo.modifiable)`); got != "false" {
+		t.Fatalf("modifiable after a failed read = %s", got)
+	}
+	_ = n.ExecLua(`vim.bo.modifiable = true; vim.api.nvim_buf_set_lines(0, 0, -1, false, {''})`)
+	err := n.Command("silent w")
+	if err == nil || !strings.Contains(err.Error(), "could not be read") {
+		t.Fatalf("save error = %v", err)
+	}
+	if b, _ := os.ReadFile(c.Local("/app/main.go")); string(b) != "package main\n\nfunc main() {}\n" {
+		t.Fatalf("container file = %q", b)
+	}
+}

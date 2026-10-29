@@ -7,7 +7,9 @@ package app
 // touches a local file of that name. The buffer stays a normal file
 // buffer (empty buftype), so the editor treats it like any other file.
 //
-// A failed save raises an error (the Save command reports it) and the
+// Safety: a buffer whose read failed is locked (not modifiable) and is
+// never saved, so an empty buffer cannot overwrite the real file. A
+// failed save raises an error (the Save command reports it) and the
 // buffer keeps its text and stays modified.
 const remoteBuffersLua = `
 local root = ...
@@ -31,9 +33,13 @@ vim.api.nvim_create_autocmd('BufReadCmd', { group = g, pattern = pat, callback =
   vim.bo[b].swapfile = false
   local r = req('termocode_fs_read', name)
   if not r.ok then
+    vim.b[b].termocode_remote_failed = true
+    vim.bo[b].modifiable = false
+    vim.bo[b].modified = false
     vim.notify('termocode: cannot open ' .. tail(name) .. ': ' .. r.err, vim.log.levels.ERROR)
     return
   end
+  vim.b[b].termocode_remote_failed = nil
   local text = r.text
   local lines = vim.split(text, '\n', { plain = true })
   local eol = #lines > 1 and lines[#lines] == ''
@@ -45,6 +51,7 @@ vim.api.nvim_create_autocmd('BufReadCmd', { group = g, pattern = pat, callback =
   if dos then
     for i, l in ipairs(lines) do lines[i] = l:sub(1, -2) end
   end
+  vim.bo[b].modifiable = true
   local ul = vim.bo[b].undolevels
   vim.bo[b].undolevels = -1 -- loading is not an edit to undo
   vim.api.nvim_buf_set_lines(b, 0, -1, false, lines)
@@ -61,6 +68,9 @@ vim.api.nvim_create_autocmd('BufWriteCmd', { group = g, pattern = pat, callback 
   local b = ev.buf
   local name = vim.api.nvim_buf_get_name(b)
   local target = vim.fn.fnamemodify(ev.match, ':p')
+  if vim.b[b].termocode_remote_failed then
+    error('termocode: ' .. tail(name) .. ' could not be read, so it is not saved. Open it again first.', 0)
+  end
   local lines = vim.api.nvim_buf_get_lines(b, 0, -1, false)
   local nl = vim.bo[b].fileformat == 'dos' and '\r\n' or '\n'
   local text = table.concat(lines, nl)
