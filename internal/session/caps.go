@@ -42,6 +42,9 @@ type ClientCaps struct {
 	// Gen numbers the attach; the server sets it for the UI, which marks
 	// its output for this terminal with AttachedSeq(Gen).
 	Gen int `json:"gen,omitempty"`
+	// Note is a message for the user that comes with this attach, e.g.
+	// "Reconnected after 12 s" when the client came back by itself.
+	Note string `json:"note,omitempty"`
 }
 
 // GraphicsCaps mirrors termimg.Caps with a stable protocol name, so a

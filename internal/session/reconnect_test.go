@@ -160,3 +160,57 @@ func TestAttachTakenOverDoesNotReconnect(t *testing.T) {
 		t.Errorf("taken over: %q", got)
 	}
 }
+
+// TestAttachReconnectNote: the socket comes back after a while; the
+// client's new hello tells the UI it reconnected and that keys typed
+// while offline were dropped (never sent).
+func TestAttachReconnectNote(t *testing.T) {
+	var s *fakeServer
+	s = newFakeServer(t, func(c *net.UnixConn) {
+		_ = s.ln.Close() // the socket goes away
+		_ = c.Close()
+	})
+	keys, out, code := attachTo(t, s, &ClientCaps{Env: map[string]string{"TERM": "xterm"}})
+	<-s.hello
+	waitFor(t, "a failed attempt", func() bool { return strings.Contains(readOut(out), "(attempt 2)") })
+	_, _ = keys.WriteString("typed-offline")
+	ln, err := net.ListenUnix("unix", &net.UnixAddr{Name: s.p.Socket, Net: "unix"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	c, err := ln.AcceptUnix()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	typ, h, err := readFrame(c)
+	if err != nil || typ != frameHello {
+		t.Fatalf("hello: %q %v", typ, err)
+	}
+	_, _, caps, err := decodeHello(h)
+	if err != nil || caps == nil {
+		t.Fatalf("caps: %v %v", caps, err)
+	}
+	if !strings.HasPrefix(caps.Note, "Reconnected after 1 s") && !strings.HasPrefix(caps.Note, "Reconnected after 2 s") {
+		t.Errorf("note %q", caps.Note)
+	}
+	if !strings.Contains(caps.Note, "keys typed while offline were dropped") {
+		t.Errorf("note %q does not say keys were dropped", caps.Note)
+	}
+	if caps.Env["TERM"] != "xterm" {
+		t.Errorf("reconnect lost the terminal caps: %v", caps.Env)
+	}
+	_ = writeFrame(c, frameExit, encodeCode(0))
+	waitCode(t, code)
+	_ = c.SetReadDeadline(time.Now().Add(time.Second))
+	for {
+		typ, p, err := readFrame(c)
+		if err != nil {
+			break
+		}
+		if typ == frameInput && strings.Contains(string(p), "typed-offline") {
+			t.Errorf("a key typed offline was sent later")
+		}
+	}
+}

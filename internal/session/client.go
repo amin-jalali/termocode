@@ -212,6 +212,8 @@ func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
 	// keys were dropped.
 	var (
 		offline  bool
+		since    time.Time
+		dropped  bool
 		attempt  int
 		retry    <-chan time.Time
 		unicode  = clientUnicode(caps)
@@ -220,7 +222,7 @@ func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
 	goOffline := func() {
 		setConn(nil)
 		frames = nil
-		offline, attempt = true, 1
+		offline, attempt, since, dropped = true, 1, time.Now(), false
 		redrawLn()
 		retry = time.After(0)
 	}
@@ -236,6 +238,7 @@ func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
 					_, _ = out.Write(append(seen.Reset(), plainReset+msgDetached+"\r\n"...))
 					return 0
 				}
+				dropped = true
 				continue
 			}
 			_ = send(frameInput, k) // a dead link shows up as a read error
@@ -263,7 +266,7 @@ func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
 			}
 			nc, err := Dial(p)
 			if err == nil {
-				err = writeFrame(nc, frameHello, encodeHello(cols, rows, caps))
+				err = writeFrame(nc, frameHello, encodeHello(cols, rows, withNote(caps, reconnectNote(time.Since(since), dropped))))
 				if err != nil {
 					_ = nc.Close()
 				}
@@ -298,6 +301,17 @@ func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
 			}
 		}
 	}
+}
+
+// withNote is a copy of caps with a note for the user. Without caps (an
+// old caller) there is nothing to carry it: nil caps keep the UI's own.
+func withNote(caps *ClientCaps, note string) *ClientCaps {
+	if caps == nil {
+		return nil
+	}
+	c := *caps
+	c.Note = note
+	return &c
 }
 
 // clientUnicode reports whether the client's terminal takes UTF-8 (its
