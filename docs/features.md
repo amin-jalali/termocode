@@ -95,6 +95,7 @@ its name and key.
 
 - Several folders in one window, or switch projects in one step. → [Workspaces and sessions](guides/workspaces.md)
 - Tabs, cursors, folds, undo history and breakpoints come back after a restart.
+- Save the window as a named layout (panels, sizes, splits, terminals) and switch with `Alt+Y`: built-in `debug`, `review` and `focus`, your own, or one the project shares. → [Layouts](guides/workspaces.md#layouts)
 - Over SSH, a dropped connection loses nothing: run `termocode` again to get the same editor, terminals and jobs back. → [Remote and SSH](guides/remote-ssh.md)
 - `termocode ssh host` reconnects by itself after a network change, a Wi-Fi switch or sleep: the screen stays, typing pauses, and a toast says when it is back. → [Remote and SSH](guides/remote-ssh.md#reconnect-by-itself-termocode-ssh)
 - Unsaved files survive a crash or a kill: the next start offers to restore them.
