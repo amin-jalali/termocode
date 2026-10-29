@@ -173,3 +173,35 @@ func TestStageLinesAppendAfterNoNewline(t *testing.T) {
 		t.Errorf("index: %q", got)
 	}
 }
+
+func TestStageLinesNewFile(t *testing.T) {
+	r := lineRepo(t)
+	r.write(t, "new.txt", "n1\nn2\nn3\n")
+	if err := StageLines(r.dir, "new.txt", 2, 2); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.indexText(t, "new.txt"); got != "n2\n" {
+		t.Errorf("index: %q", got)
+	}
+	if got := r.read(t, "new.txt"); got != "n1\nn2\nn3\n" {
+		t.Errorf("the file must not change: %q", got)
+	}
+	// The next line goes on top of the first.
+	if err := StageLines(r.dir, "new.txt", 3, 3); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.indexText(t, "new.txt"); got != "n2\nn3\n" {
+		t.Errorf("index: %q", got)
+	}
+}
+
+func TestDiscardLinesUntrackedFile(t *testing.T) {
+	r := lineRepo(t)
+	r.write(t, "new.txt", "n1\nn2\nn3\n")
+	if err := DiscardLines(r.dir, "new.txt", 2, 2); err != ErrLineUntracked {
+		t.Errorf("err = %v, want ErrLineUntracked", err)
+	}
+	if got := r.read(t, "new.txt"); got != "n1\nn2\nn3\n" {
+		t.Errorf("the file must not change: %q", got)
+	}
+}
