@@ -1,0 +1,4 @@
+go test fuzz v1
+[]byte("00000000000000000000000000000000\xb00000000000000000000000000000000 termocode.tar.gz")
+string("termocode.tar.gz")
+[]byte("0")
