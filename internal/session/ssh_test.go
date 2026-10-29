@@ -254,3 +254,27 @@ func TestRunSSHHeartbeat(t *testing.T) {
 		t.Errorf("exit code %d, want 3", got)
 	}
 }
+
+// TestRunSSHPasswordPrompt: when ssh asks for a password, first or on a
+// reconnect, the question shows and the keys go to ssh; termocode never
+// keeps them.
+func TestRunSSHPasswordPrompt(t *testing.T) {
+	f := newFakeSSH(t)
+	f.set("prompt", true)
+	keys, out, code := f.run(SSHOpts{Reconnect: true})
+	waitFor(t, "the first question", func() bool { return strings.Contains(readOut(out), "me@box's password: ") })
+	_, _ = keys.WriteString("first-secret\r")
+	waitFor(t, "the far side", func() bool { return strings.Contains(readOut(out), "remote-args:") })
+
+	f.set("prompt", true)
+	_, _ = keys.WriteString("D")
+	waitFor(t, "the question on reconnect", func() bool { return strings.Count(readOut(out), "me@box's password: ") == 2 })
+	_, _ = keys.WriteString("second-secret\r")
+	waitFor(t, "the far side again", func() bool { return strings.Contains(readOut(out), "--reconnected=") })
+	b, _ := os.ReadFile(filepath.Join(f.dir, "pw"))
+	if strings.TrimSpace(string(b)) != "second-secret" {
+		t.Errorf("ssh got %q, want the typed answer", b)
+	}
+	_, _ = keys.WriteString("q")
+	waitCode(t, code)
+}

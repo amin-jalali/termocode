@@ -234,6 +234,11 @@ func (t *sshTerm) attempt(reconnected string) sshAttempt {
 	tick := time.NewTicker(min(time.Second, t.o.Interval/4))
 	defer tick.Stop()
 	dead := false
+	// While reconnecting, ssh may talk before the far termocode does: an
+	// error, or a question (password, passphrase, host key). Its text
+	// goes on the bottom row; a question (a line without its newline)
+	// gets the keys until it is answered.
+	shown, asking := false, false
 
 	for {
 		select {
@@ -255,7 +260,7 @@ func (t *sshTerm) attempt(reconnected string) sshAttempt {
 				kill()
 				continue
 			}
-			if t.offline {
+			if t.offline && !asking {
 				if t.offlineKey(k) {
 					kill()
 					<-exited
@@ -280,7 +285,15 @@ func (t *sshTerm) attempt(reconnected string) sshAttempt {
 			if mon != nil {
 				mon.Received(realClock(start))
 			}
-			if len(b) > 0 {
+			if len(b) > 0 && t.offline {
+				if !shown {
+					_, rows := t.size()
+					_, _ = fmt.Fprintf(t.out, "\x1b[%d;1H\x1b[0m\x1b[2K", rows)
+					shown = true
+				}
+				_, _ = t.out.Write(b)
+				asking = b[len(b)-1] != '\n'
+			} else if len(b) > 0 {
 				t.seen.Feed(b)
 				_, _ = t.out.Write(b)
 			}
