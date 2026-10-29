@@ -616,7 +616,20 @@ func (m *Model) servicesConfigure() tea.Cmd {
 
 func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	st := m.services
-	r, have := m.servicesCurrentRow()
+	rows, rowsSeq := st.rows(), st.seq
+	var r svcRow
+	have := st.cursor >= 0 && st.cursor < len(rows)
+	if have {
+		r = rows[st.cursor]
+	}
+	// The cursor keys move over the rows just built, unless a handler
+	// below changed the view (every change touches it).
+	moveRows := func() []svcRow {
+		if st.seq == rowsSeq {
+			return rows
+		}
+		return st.rows()
+	}
 	isSvc := have && r.kind == svcRowService
 	if cmd, ok := m.containersFilterKey(k); ok {
 		return m, cmd
@@ -631,13 +644,13 @@ func (m Model) handleServicesSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	}
 	switch k.String() {
 	case "up", "k":
-		m.servicesMove(-1)
+		m.servicesMoveIn(moveRows(), -1)
 	case "down", "j":
-		m.servicesMove(1)
+		m.servicesMoveIn(moveRows(), 1)
 	case "pgup":
-		m.servicesMove(-10)
+		m.servicesMoveIn(moveRows(), -10)
 	case "pgdown":
-		m.servicesMove(10)
+		m.servicesMoveIn(moveRows(), 10)
 	case "home", "g":
 		st.cursor = 0
 		m.servicesClampCursor()

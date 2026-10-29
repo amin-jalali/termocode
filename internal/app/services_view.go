@@ -232,8 +232,12 @@ func (m *Model) servicesClampCursor() {
 
 // servicesMove moves the cursor by d selectable rows.
 func (m *Model) servicesMove(d int) {
+	m.servicesMoveIn(m.services.rows(), d)
+}
+
+// servicesMoveIn is servicesMove over rows, the view's current rows.
+func (m *Model) servicesMoveIn(rows []svcRow, d int) {
 	st := m.services
-	rows := st.rows()
 	step := 1
 	if d < 0 {
 		step, d = -1, -d
