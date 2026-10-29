@@ -75,3 +75,34 @@ func TestNewRootFSListsTheContainer(t *testing.T) {
 		}
 	}
 }
+
+func TestNewFSReloadStaysInTheContainer(t *testing.T) {
+	h, _, c := fakeContainer(t, false)
+	m := NewFS(h.FS(), "/app")
+	if m.err != "" || m.PrimaryRoot() != "/app" {
+		t.Fatalf("model err %q root %q", m.err, m.PrimaryRoot())
+	}
+	m.ExpandPaths([]string{"/app/asub"})
+	c.WriteFile(t, "/app/new.txt", []byte(""), 0o644)
+	c.WriteFile(t, "/app/asub/b.go", []byte(""), 0o644)
+	m.Reload()
+	if m.PrimaryRoot() != "/app" {
+		t.Fatalf("Reload moved the root to %q", m.PrimaryRoot())
+	}
+	if got := childNames(m.root); len(got) != 5 || got[4] != "new.txt" {
+		t.Fatalf("root after reload = %v", got)
+	}
+	asub := m.root.Children[0]
+	if !asub.Expanded || len(asub.Children) != 2 || asub.FS() == nil {
+		t.Fatalf("asub after reload = %+v", asub)
+	}
+}
+
+func TestNewFSShowsAnError(t *testing.T) {
+	h, _, c := fakeContainer(t, false)
+	c.Stop()
+	m := NewFS(h.FS(), "/app")
+	if m.err == "" {
+		t.Fatal("no error for a stopped container")
+	}
+}

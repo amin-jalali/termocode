@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/anim"
+	"github.com/amin-jalali/termocode/internal/workspace"
 )
 
 // OpenFileMsg asks the host to open Path in the editor. KeepFocus = true
@@ -63,6 +64,24 @@ func New() Model {
 		return Model{err: err.Error()}
 	}
 	return Model{root: root}
+}
+
+// NewFS is New for a workspace whose folder root is reached through a
+// workspace FS (a container, ADR 0018) instead of the local disk.
+func NewFS(fsys workspace.FS, root string) Model {
+	r, err := NewRootFS(fsys, root)
+	if err != nil {
+		return Model{err: err.Error()}
+	}
+	return Model{root: r}
+}
+
+// rebuild reads a root again from where it lives (its FS or the disk).
+func rebuild(old *Node, base string) (*Node, error) {
+	if old.fsys != nil {
+		return NewRootFS(old.fsys, old.Path)
+	}
+	return NewRoot(base)
 }
 
 func (m Model) Init() tea.Cmd { return nil }
@@ -293,7 +312,7 @@ func (m *Model) Reload() {
 		if cwd, err := os.Getwd(); err == nil {
 			base = cwd
 		}
-		if newRoot, err := NewRoot(base); err == nil {
+		if newRoot, err := rebuild(m.root, base); err == nil {
 			reexpand(newRoot)
 			m.root = newRoot
 		}
@@ -305,7 +324,7 @@ func (m *Model) Reload() {
 		if old == nil {
 			continue
 		}
-		if newRoot, err := NewRoot(old.Path); err == nil {
+		if newRoot, err := rebuild(old, old.Path); err == nil {
 			reexpand(newRoot)
 			rebuilt = append(rebuilt, newRoot)
 		}
