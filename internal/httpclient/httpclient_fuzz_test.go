@@ -3,9 +3,11 @@ package httpclient
 import (
 	"bytes"
 	"encoding/json"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -146,5 +148,42 @@ func FuzzEnvFiles(f *testing.F) {
 		}
 		_ = os.WriteFile(filepath.Join(dir, "state.json"), envJSON, 0o600)
 		_, _ = LoadState(filepath.Join(dir, "state.json"))
+	})
+}
+
+// FuzzClassifyNumericHost writes an IPv4 address in the short, octal and
+// hex forms that system resolvers still read ("127.1", "0x7f.0.0.1",
+// "2130706433"). A loopback or private address must never pass as public.
+func FuzzClassifyNumericHost(f *testing.F) {
+	f.Add(uint32(0x7f000001), uint8(1), uint8(0))
+	f.Add(uint32(0x0a000005), uint8(3), uint8(1))
+	f.Add(uint32(0xa9fea9fe), uint8(0), uint8(2))
+	f.Add(uint32(0x08080808), uint8(2), uint8(0))
+	f.Fuzz(func(t *testing.T, v uint32, parts, base uint8) {
+		ip := net.IPv4(byte(v>>24), byte(v>>16), byte(v>>8), byte(v))
+		num := func(n uint32) string {
+			switch base % 3 {
+			case 1:
+				return "0" + strconv.FormatUint(uint64(n), 8)
+			case 2:
+				return "0x" + strconv.FormatUint(uint64(n), 16)
+			}
+			return strconv.FormatUint(uint64(n), 10)
+		}
+		var host string
+		switch parts % 4 {
+		case 0:
+			host = num(v)
+		case 1:
+			host = num(v>>24) + "." + num(v&0xffffff)
+		case 2:
+			host = num(v>>24) + "." + num(v>>16&0xff) + "." + num(v&0xffff)
+		default:
+			host = num(v>>24) + "." + num(v>>16&0xff) + "." + num(v>>8&0xff) + "." + num(v&0xff)
+		}
+		special := ip.IsLoopback() || ip.IsUnspecified() || IsPrivateIP(ip)
+		if special && ClassifyHost(host) == HostPublic {
+			t.Fatalf("%s (%s) passes as a public host", host, ip)
+		}
 	})
 }
