@@ -607,6 +607,21 @@ func (p *proc) runOnce(stop <-chan struct{}) (exitErr string, stopped bool, star
 		}
 	})
 	crash.Go("an extension start", func() { p.initialize(conn, gen, pid, stop) })
+	// A protocol error (junk on stdout, a bad frame) leaves a process that
+	// can never answer: end it, so it is restarted or given up instead of
+	// sitting in "starting" for ever.
+	crash.Go("an extension protocol watch", func() {
+		<-conn.Done()
+		select {
+		case <-stop:
+			return // a stop closes the conn on purpose
+		default:
+		}
+		if err := conn.Err(); err != nil {
+			h.logf(p.x.Name, "protocol error: %v; stopped", err)
+			killGroup(pid)
+		}
+	})
 
 	var werr error
 	select {
