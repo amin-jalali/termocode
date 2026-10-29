@@ -47,7 +47,7 @@ func (m *Model) ensureHTTPLua() {
 	if m.nvim == nil {
 		return
 	}
-	if ok, err := m.nvim.EvalLuaString(`return (_G._termocode_http_buf_set and _G._termocode_http_set) and 'y' or 'n'`); err == nil && ok != "y" {
+	if ok, err := m.nvim.EvalLuaString(`return (_G._termocode_http_buf_set and _G._termocode_http_open) and 'y' or 'n'`); err == nil && ok != "y" {
 		_ = m.nvim.ExecLua(httpBufferLua)
 		_ = m.nvim.ExecLua(httpPageLua)
 	}

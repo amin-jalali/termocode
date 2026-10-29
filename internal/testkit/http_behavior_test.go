@@ -695,3 +695,24 @@ func TestHTTPKeymapOverride(t *testing.T) {
 	d.Key("f9")
 	waitPage(d, "200 OK")
 }
+
+// PERF-8: the .http buffer and page Lua load once; a send does not load
+// them again (that cost four Lua loads per send).
+func TestHTTPLuaLoadsOnce(t *testing.T) {
+	api := newHTTPAPI(t, false)
+	d := httpDriver(t, api.srv.URL, 170, 40, "")
+	httpCursor(d, 5)
+	d.Key("alt+ctrl+r")
+	waitPage(d, "200 OK · ")
+	lua(d, `_G.__probe_open, _G.__probe_buf = _G._termocode_http_open, _G._termocode_http_buf_set; return ''`)
+	open(d, "api/users.http")
+	httpCursor(d, 5)
+	d.Key("alt+ctrl+r")
+	if !d.WaitFor(func() bool { return strings.Contains(httpLensRow(d, 5), "200 · ") }, 5*time.Second) {
+		t.Fatalf("second send: lens %q", httpLensRow(d, 5))
+	}
+	waitPage(d, "200 OK · ")
+	if same := lua(d, `return tostring(_G.__probe_open == _G._termocode_http_open and _G.__probe_buf == _G._termocode_http_buf_set)`); same != "true" {
+		t.Fatal("a send loaded the HTTP Lua again")
+	}
+}
