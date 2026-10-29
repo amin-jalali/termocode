@@ -124,13 +124,7 @@ func (p rebasePlan) rewordMessage() (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	var last string
-	for _, l := range strings.Split(string(b), "\n") {
-		if l = strings.TrimSpace(l); l != "" && !strings.HasPrefix(l, "#") {
-			last = l
-		}
-	}
-	f := strings.Fields(last)
+	f := strings.Fields(lastTodoLine(string(b)))
 	if len(f) < 2 || (f[0] != "reword" && f[0] != "r") {
 		return "", false
 	}

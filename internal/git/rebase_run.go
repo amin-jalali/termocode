@@ -1,7 +1,6 @@
 package git
 
 import (
-	"os"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/spawn"
@@ -77,12 +76,8 @@ func runRebaseCmd(dir string, opt RebaseOptions, plan rebasePlan, args ...string
 
 // rebaseInProgress says whether an interactive rebase is stopped in dir.
 func rebaseInProgress(dir string) bool {
-	p, err := runOut(dir, "git", "rev-parse", "--path-format=absolute", "--git-path", "rebase-merge")
-	if err != nil {
-		return false
-	}
-	_, err = os.Stat(strings.TrimSpace(p))
-	return err == nil
+	_, ok := rebaseMergeDir(dir)
+	return ok
 }
 
 // unmergedPaths lists the conflicted paths.
