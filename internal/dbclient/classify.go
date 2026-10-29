@@ -315,12 +315,6 @@ func containsSequence(words []string, target string) bool {
 	return false
 }
 
-// tokenWords removes comments and string contents while retaining quoted
-// identifiers and punctuation needed to recognize statement structure.
-func tokenWords(s string) []string {
-	return tokenWordsDialect(s, "")
-}
-
 func tokenWordsDialect(s string, dialect SQLDialect) []string {
 	clean := stripSQLLiteralsDialect(s, dialect)
 	var words []string
@@ -346,8 +340,6 @@ func tokenWordsDialect(s string, dialect SQLDialect) []string {
 func isWordByte(c byte) bool {
 	return c == '_' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9'
 }
-
-func stripSQLLiterals(sql string) string { return stripSQLLiteralsDialect(sql, "") }
 
 func stripSQLLiteralsDialect(sql string, dialect SQLDialect) string {
 	b := []byte(sql)
