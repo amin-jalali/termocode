@@ -591,7 +591,11 @@ func Split(sql string, dialectName string) ([]string, error) {
 				if k < 0 {
 					k = len(sql) - j
 				}
-				delimiter = strings.TrimSpace(sql[j+10 : j+k])
+				// An empty DELIMITER keeps the old one: an empty
+				// delimiter would match everywhere and never move on.
+				if d := strings.TrimSpace(sql[j+10 : j+k]); d != "" {
+					delimiter = d
+				}
 				start = j + k
 				if start < len(sql) {
 					start++
