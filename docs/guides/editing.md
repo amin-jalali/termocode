@@ -138,6 +138,19 @@ to right. The `rtl` setting turns this off; see
 [Persian, Arabic and other right-to-left text](ai-use.md#persian-arabic-and-other-right-to-left-text).
 The editor itself shows the text as Neovim and your terminal do.
 
+## Key hints
+
+Press the leader key in the editor (Normal mode) and wait a moment. A small
+box shows the keys that can come next and what they do, for example
+`<leader>f` to format. It reads your real mappings, so your own `<leader>`
+keys show up too.
+
+- Type the next key at once and you never see the box.
+- `Esc` closes it. A key with no binding shows "no binding" for a moment.
+- `Backspace` goes up one level when the keys are three or more deep.
+- Turn it off with the `key_hints` setting, or run **Help: Toggle Key Hints**
+  from the palette.
+
 ## Keys at a glance
 
 | Key | Action |
