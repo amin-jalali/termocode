@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // Manager holds every configured server (MC-3). Nothing runs at startup:
@@ -217,7 +218,7 @@ func (m *Manager) Reload() []string {
 		}
 	}
 	for _, p := range stop {
-		go p.Close()
+		crash.Go("an MCP server stop", func() { p.Close() })
 	}
 	return warns
 }
@@ -403,7 +404,7 @@ func (m *Manager) ensure(ctx context.Context, st *serverState, ask AskTrust) (*P
 	}
 	st.proc, st.state, st.problem = p, StateRunning, ""
 	m.mu.Unlock()
-	go func() {
+	crash.Go("an MCP server watcher", func() {
 		<-p.Done()
 		m.mu.Lock()
 		if st.proc == p {
@@ -414,7 +415,7 @@ func (m *Manager) ensure(ctx context.Context, st *serverState, ask AskTrust) (*P
 			}
 		}
 		m.mu.Unlock()
-	}()
+	})
 	return p, nil
 }
 
@@ -852,7 +853,7 @@ func (m *Manager) Close() {
 	var wg sync.WaitGroup
 	for _, p := range procs {
 		wg.Add(1)
-		go func(p *Process) { defer wg.Done(); p.Close() }(p)
+		crash.Go("an MCP server stop", func() { defer wg.Done(); p.Close() })
 	}
 	wg.Wait()
 }

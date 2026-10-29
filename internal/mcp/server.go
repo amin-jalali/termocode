@@ -8,6 +8,7 @@ import (
 	"sync"
 	"unicode/utf8"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/extproc"
 )
 
@@ -235,10 +236,10 @@ func (s *MCPServer) Handle(conn *extproc.Conn, m extproc.Message) {
 			}
 		}
 	}
-	go func() {
+	crash.Go("an MCP request", func() {
 		result, rpcErr := s.handle(conn, m)
 		_ = conn.Reply(m.ID, result, rpcErr)
-	}()
+	})
 }
 
 func (s *MCPServer) handle(conn *extproc.Conn, m extproc.Message) (any, *extproc.Error) {
@@ -309,13 +310,13 @@ func (s *MCPServer) handle(conn *extproc.Conn, m extproc.Message) (any, *extproc
 		if s.connID != 0 {
 			ctx = WithConnID(ctx, s.connID)
 		}
-		go func() {
+		crash.Go("an MCP request", func() {
 			select {
 			case <-conn.Done():
 				cancel()
 			case <-ctx.Done():
 			}
-		}()
+		})
 		text, err := rs.ReadResource(ctx, params.URI)
 		if err != nil {
 			var coded *CallError
@@ -346,13 +347,13 @@ func (s *MCPServer) handle(conn *extproc.Conn, m extproc.Message) (any, *extproc
 		if s.connID != 0 {
 			ctx = WithConnID(ctx, s.connID)
 		}
-		go func() {
+		crash.Go("an MCP request", func() {
 			select {
 			case <-conn.Done():
 				cancel()
 			case <-ctx.Done():
 			}
-		}()
+		})
 		id := string(m.ID)
 		s.mu.Lock()
 		s.calls[id] = cancel

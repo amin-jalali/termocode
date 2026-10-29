@@ -21,6 +21,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/session"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
@@ -189,10 +190,10 @@ func startShared(ctx context.Context, o *ShareOptions, s Server, roots []string,
 	}
 	p.Client = NewClient(nc, nc, opts)
 	p.closeFn = func() { leaveShared(p.Client) }
-	go func() {
+	crash.Go("a shared MCP server", func() {
 		<-p.Client.Done()
 		close(p.done)
-	}()
+	})
 	ictx, cancel := context.WithTimeout(ctx, initTimeout)
 	defer cancel()
 	if err := p.Client.Initialize(ictx); err != nil {
@@ -281,17 +282,17 @@ func spawnBroker(ctx context.Context, o *ShareOptions, sock string, cfg shareCon
 		_ = inW.Close()
 		return fmt.Errorf("%w: %v", errShareUnavailable, err)
 	}
-	go func() { _ = cmd.Wait() }() // reap it when it ends
-	go func() {
+	crash.Go("a shared MCP server", func() { _ = cmd.Wait() }) // reap it when it ends
+	crash.Go("a shared MCP server", func() {
 		_, _ = inW.Write(append(cfgJSON, '\n'))
 		_ = inW.Close()
-	}()
+	})
 	stdout := outR
 	line := make(chan string, 1)
-	go func() {
+	crash.Go("a shared MCP server", func() {
 		l, _ := bufio.NewReader(stdout).ReadString('\n')
 		line <- strings.TrimSpace(l)
-	}()
+	})
 	select {
 	case l := <-line:
 		switch {

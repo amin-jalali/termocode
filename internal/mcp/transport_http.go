@@ -17,6 +17,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/extproc"
 )
 
@@ -424,7 +425,7 @@ func (c *httpConn) dispatch(m extproc.Message) {
 		} else {
 			out["result"] = result
 		}
-		go c.post(out)
+		crash.Go("an MCP request", func() { c.post(out) })
 	}
 	c.handle(m, reply)
 }
@@ -461,9 +462,9 @@ func (c *httpConn) Notify(method string, params any) error {
 }
 
 func (c *httpConn) notifyCancelled(id json.RawMessage) {
-	go func() {
+	crash.Go("an MCP request", func() {
 		_ = c.Notify("notifications/cancelled", map[string]any{"requestId": id, "reason": "cancelled by the user"})
-	}()
+	})
 }
 
 // readStream reads SSE events until the answer of id. A stream that ends
@@ -561,10 +562,10 @@ func StartHTTP(ctx context.Context, s Server, ho HTTPOptions, opts Options) (*Pr
 	hc := newHTTPConn(s.URL, s.Headers, ho, c.handle)
 	c.conn = hc
 	p := &Process{Client: c, done: make(chan struct{}), closeFn: hc.Close}
-	go func() {
+	crash.Go("an MCP server", func() {
 		<-hc.Done()
 		close(p.done)
-	}()
+	})
 	ictx, cancel := context.WithTimeout(ctx, initTimeout)
 	defer cancel()
 	if err := c.Initialize(ictx); err != nil {

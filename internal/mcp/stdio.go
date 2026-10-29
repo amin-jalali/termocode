@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
@@ -81,14 +82,14 @@ func StartStdio(ctx context.Context, s Server, opts Options) (*Process, error) {
 	}
 	opts.log("started %s (pid %d)", s.Command, cmd.Process.Pid)
 	p := &Process{cmd: cmd, done: make(chan struct{})}
-	go func() {
+	crash.Go("an MCP server log", func() {
 		sc := bufio.NewScanner(stderr)
 		sc.Buffer(make([]byte, 64<<10), 1<<20)
 		for sc.Scan() {
 			opts.log("stderr: %s", sc.Text())
 		}
-	}()
-	go func() {
+	})
+	crash.Go("an MCP server", func() {
 		err := cmd.Wait()
 		killGroup(cmd.Process.Pid) // children it left behind
 		if err != nil {
@@ -97,7 +98,7 @@ func StartStdio(ctx context.Context, s Server, opts Options) (*Process, error) {
 			opts.log("exited")
 		}
 		close(p.done)
-	}()
+	})
 	p.Client = NewClient(stdout, stdin, opts)
 
 	ictx, cancel := context.WithTimeout(ctx, initTimeout)
