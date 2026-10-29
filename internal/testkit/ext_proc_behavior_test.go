@@ -3,6 +3,7 @@
 package testkit
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
@@ -14,16 +15,35 @@ import (
 	"github.com/amin-jalali/termocode/internal/extproc/extproctest"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/mcp/mcptest"
+	"github.com/amin-jalali/termocode/internal/services/servicestest"
 )
 
 // TestMain lets this test binary also be the fake Tier 2 extension
 // (extproctest) and the fake MCP server (mcptest): the app starts them as
-// separate processes.
+// separate processes. It also puts fail-closed docker / podman / kubectl
+// stand-ins first on PATH: no test reaches the real Docker or cluster.
 func TestMain(m *testing.M) {
 	extproctest.RunIfHelper()
 	git.RunRebaseHelperIfAsked() // git's editor in the rebase tests (scm_rebase_test.go)
 	mcptest.RunIfHelper()
-	os.Exit(m.Run())
+	os.Exit(runGuarded(m))
+}
+
+func runGuarded(m *testing.M) int {
+	dir, err := os.MkdirTemp("", "termocode-cli-guard-")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	defer os.RemoveAll(dir)
+	g, err := servicestest.InstallGuard(dir)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	_ = os.Setenv("PATH", g.PathEnv())
+	cliGuard = g
+	return m.Run()
 }
 
 // procWait is only a guard against a hang: every wait ends on what the
