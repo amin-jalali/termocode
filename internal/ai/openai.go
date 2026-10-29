@@ -221,10 +221,14 @@ func parseOpenAISSE(ctx context.Context, r io.Reader, ch chan<- Chunk) Chunk {
 		for _, i := range idx {
 			c := calls[i]
 			args := map[string]any{}
+			bad := false
 			if s := strings.TrimSpace(c.args.String()); s != "" {
-				_ = json.Unmarshal([]byte(s), &args)
+				bad = json.Unmarshal([]byte(s), &args) != nil
+				if bad {
+					args = map[string]any{}
+				}
 			}
-			out.ToolCalls = append(out.ToolCalls, ToolCall{ID: c.id, Name: c.name, Args: args})
+			out.ToolCalls = append(out.ToolCalls, ToolCall{ID: c.id, Name: c.name, Args: args, BadArgs: bad})
 		}
 		return out
 	}

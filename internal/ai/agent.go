@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -332,7 +333,10 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 	// (an argument that looks like a key …) shows its text redacted, so
 	// the transcript line never repeats the raw value.
 	var invalid error
-	if t.Validate != nil {
+	switch {
+	case call.BadArgs:
+		invalid = errors.New("the arguments were not valid JSON; send the call again with complete arguments")
+	case t.Validate != nil:
 		invalid = t.Validate(args)
 	}
 	human := t.Human(args)

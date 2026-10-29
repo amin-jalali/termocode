@@ -79,6 +79,10 @@ type ToolCall struct {
 	ID   string
 	Name string
 	Args map[string]any
+	// BadArgs is set when the provider sent arguments that are not valid
+	// JSON (a cut stream, a model slip). The agent does not run the call;
+	// it tells the model instead.
+	BadArgs bool `json:"-"`
 }
 
 // Request is a provider-neutral chat request.
