@@ -145,6 +145,10 @@ type Options struct {
 	// Continue runs it again. It runs in the node's goroutine; ctx ends
 	// when the run stops.
 	Exec func(ctx context.Context, n agentdag.Node, input string, emit func(ai.Event)) (string, *ai.Usage, error)
+	// Finished (optional) runs in the node's goroutine once its agent or
+	// CLI ended (done, failed or stopped), before the run sees the end
+	// (G-WT: the app looks at the node's worktree). ctx may be done.
+	Finished func(ctx context.Context, n agentdag.Node)
 }
 
 // Handle is a started run.
@@ -577,6 +581,9 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 	defer func() {
 		if r := recover(); r != nil {
 			res.err = fmt.Errorf("step crashed: %v", r)
+		}
+		if f := h.o.Finished; f != nil {
+			f(ctx, n)
 		}
 		res.elapsed = clock.Since(start)
 		out <- res

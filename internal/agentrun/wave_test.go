@@ -2,6 +2,7 @@ package agentrun
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 
@@ -66,5 +67,42 @@ func TestNodeWrites(t *testing.T) {
 		if got := agentdag.Writes(agentdag.Node{Tools: agentdag.ToolRule{Preset: preset}}); got != want {
 			t.Errorf("preset %q: Writes %v", preset, got)
 		}
+	}
+}
+
+// Finished runs in each node's goroutine once its agent ended (done,
+// failed or stopped), before the run sees the node's end, so the app can
+// look at the node's worktree first.
+func TestFinishedRunsBeforeNodeEnd(t *testing.T) {
+	h := newHarness(map[string]*fakeProv{"a": {}, "b": {replies: []ai.Chunk{{Err: errors.New("boom")}}}})
+	o := h.options(1)
+	var mu sync.Mutex
+	var order []string
+	o.Finished = func(_ context.Context, n agentdag.Node) {
+		mu.Lock()
+		defer mu.Unlock()
+		h.mu.Lock()
+		ended := 0
+		for _, e := range h.events {
+			if e.NodeID == n.ID && (e.Kind == NodeDone || e.Kind == NodeFailed) {
+				ended++
+			}
+		}
+		h.mu.Unlock()
+		if ended > 0 {
+			t.Errorf("%s: Finished after the node's end event", n.ID)
+		}
+		order = append(order, n.ID)
+	}
+	r := agentdag.Run{ID: "r", Nodes: []agentdag.Node{{ID: "a"}, {ID: "b"}}, Edges: agentdag.Chain("a", "b")}
+	run, err := Start(context.Background(), r, o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wait(t, run)
+	mu.Lock()
+	defer mu.Unlock()
+	if len(order) != 2 || order[0] != "a" || order[1] != "b" {
+		t.Errorf("Finished order %v", order)
 	}
 }
