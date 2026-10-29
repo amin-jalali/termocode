@@ -231,15 +231,15 @@ func TestSCMDiscardAsksFirst(t *testing.T) {
 	}
 	scmClickText(d, "main.go")
 	d.Key("x")
-	d.Key("right") // Cancel
-	d.Key("enter")
+	d.Key("enter") // Cancel is the default button (AH-1)
 	if r.read("main.go") != "package main\n// edit\n" {
-		t.Fatalf("Cancel discarded the change")
+		t.Fatalf("Enter on a fresh card discarded the change")
 	}
 
 	scmClickText(d, "main.go")
 	d.Key("x")
-	d.Key("enter") // Discard is the default button
+	d.Key("right") // Discard
+	d.Key("enter")
 	until(d, func() bool { return inSection(d, "CHANGES", "No changes") })
 	if got := r.read("main.go"); got != scmFiles["main.go"] {
 		t.Errorf("main.go = %q after discard, want the committed text", got)
@@ -261,6 +261,7 @@ func TestSCMDiscardUntrackedDeletes(t *testing.T) {
 	d.WaitForText("scratch.txt", 3*time.Second)
 	scmClickText(d, "scratch.txt")
 	d.Key("x")
+	d.Key("right") // Discard
 	d.Key("enter")
 	until(d, func() bool { return rowWith(d, "scratch.txt") < 0 })
 	if r.exists("scratch.txt") {
@@ -289,6 +290,7 @@ func TestSCMDiscardKeepsStagedPart(t *testing.T) {
 	}
 	d.Click(colOf(d, y, "main.go"), y)
 	d.Key("x")
+	d.Key("right") // Discard
 	d.Key("enter")
 	until(d, func() bool { return !inSection(d, "CHANGES", "main.go") })
 	if got := r.read("main.go"); got != "package main\n// staged\n" {
