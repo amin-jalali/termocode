@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"path/filepath"
 	"strings"
 )
@@ -332,10 +333,13 @@ func ClassifyFailure(tool, output string, err error) error {
 	if errors.As(err, &off) {
 		return err
 	}
-	var netErr net.Error
+	// Only real network errors count: a plain net.Error check would also
+	// match every syscall error (a missing file, no permission, a full
+	// disk), since syscall.Errno has Timeout and Temporary methods.
 	var dnsErr *net.DNSError
 	var opErr *net.OpError
-	if errors.As(err, &dnsErr) || errors.As(err, &opErr) || errors.As(err, &netErr) {
+	var urlErr *url.Error
+	if errors.As(err, &dnsErr) || errors.As(err, &opErr) || (errors.As(err, &urlErr) && urlErr.Timeout()) {
 		return &OfflineError{Tool: tool, Err: err}
 	}
 	if IsOfflineText(output) || IsOfflineText(err.Error()) {

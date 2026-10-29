@@ -6,13 +6,17 @@ import (
 	"compress/gzip"
 	"context"
 	"errors"
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -483,5 +487,45 @@ func TestFiletypesAndKinds(t *testing.T) {
 	}
 	if len(names) != 6 || names["unknown"] {
 		t.Fatalf("kind names %v", names)
+	}
+}
+
+// A local file error (missing file, no permission, full disk) is not a
+// network problem; only real network errors say "offline".
+func TestClassifyFailureFileErrorIsNotOffline(t *testing.T) {
+	_, statErr := os.Stat(filepath.Join(t.TempDir(), "missing"))
+	err := ClassifyFailure("x", "", fmt.Errorf("installed, but /x is missing: %w", statErr))
+	var off *OfflineError
+	if errors.As(err, &off) {
+		t.Fatalf("file error shown as offline: %v", err)
+	}
+	if !strings.Contains(err.Error(), "installed, but") {
+		t.Fatalf("message lost: %v", err)
+	}
+	permErr := &os.PathError{Op: "open", Path: "/x", Err: syscall.EACCES}
+	if errors.As(ClassifyFailure("x", "", permErr), &off) {
+		t.Fatal("permission error shown as offline")
+	}
+	// Real network errors still are.
+	if !errors.As(ClassifyFailure("x", "", &url.Error{Op: "Get", URL: "https://x", Err: &timeoutErr{}}), &off) {
+		t.Fatal("http timeout not offline")
+	}
+	if !errors.As(ClassifyFailure("x", "", &net.OpError{Op: "dial", Err: syscall.ECONNREFUSED}), &off) {
+		t.Fatal("dial error not offline")
+	}
+}
+
+type timeoutErr struct{}
+
+func (timeoutErr) Error() string   { return "i/o timeout" }
+func (timeoutErr) Timeout() bool   { return true }
+func (timeoutErr) Temporary() bool { return true }
+
+func TestInstallSucceedsButBinaryMissing(t *testing.T) {
+	toolsRoot(t)
+	fakePath(t, map[string]string{"go": "exit 0"}) // "installs" nothing
+	_, err := Install(context.Background(), fakeGoTool, nil)
+	if err == nil || !strings.Contains(err.Error(), "installed, but") {
+		t.Fatalf("err = %v", err)
 	}
 }
