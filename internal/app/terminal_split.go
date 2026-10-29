@@ -676,3 +676,43 @@ func (m *Model) runTermPaneAction(id string) (cmd tea.Cmd, ok bool) {
 	}
 	return cmd, true
 }
+
+// paneSpec is one extra pane to make: pane Parent (0 = the tab's own
+// shell) is split in direction Dir and the new shell starts in Cwd ("" =
+// the parent's folder).
+type paneSpec struct {
+	Dir    paneDir
+	Parent int
+	Cwd    string
+}
+
+// buildTerminalPanes makes the extra panes of the active tab, in order. A
+// pane that cannot be made (no room, the shell did not start) is left out,
+// and panes split off it are split off its parent instead. It returns the
+// refusal toasts.
+func (m *Model) buildTerminalPanes(specs []paneSpec) tea.Cmd {
+	tab := m.activeTerminalTab()
+	if tab == nil {
+		return nil
+	}
+	live := []int{0} // saved pane index → live pane index
+	var cmds []tea.Cmd
+	for _, s := range specs {
+		parent := 0
+		if s.Parent >= 0 && s.Parent < len(live) {
+			parent = live[s.Parent]
+		}
+		cwd := s.Cwd
+		if cwd == "" {
+			cwd = m.activeTerminalTab().paneCwd(parent)
+		}
+		before := m.activeTerminalTab().paneCount()
+		cmds = append(cmds, m.splitTerminalPaneAt(parent, s.Dir, cwd))
+		if n := m.activeTerminalTab().paneCount(); n > before {
+			live = append(live, n-1)
+		} else {
+			live = append(live, parent)
+		}
+	}
+	return tea.Batch(cmds...)
+}

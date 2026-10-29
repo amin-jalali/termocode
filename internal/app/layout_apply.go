@@ -169,8 +169,33 @@ func (m *Model) openLayoutTerminals(ts []layout.Terminal, root string) {
 		before := len(m.terminalTabs)
 		m.newTerminalTabIn(layoutDir(root, ts[before].Cwd))
 		if len(m.terminalTabs) == before {
-			return
+			break
 		}
+	}
+	m.openLayoutPanes(ts, root)
+}
+
+// openLayoutPanes gives each terminal tab that has a single shell the split
+// panes its layout entry lists. Tabs that are already split stay as they are.
+func (m *Model) openLayoutPanes(ts []layout.Terminal, root string) {
+	active := m.terminalActiveTab
+	for i, t := range ts {
+		if i >= len(m.terminalTabs) || len(t.Panes) == 0 || m.terminalTabs[i].paneCount() > 1 {
+			continue
+		}
+		m.switchTerminalTab(i)
+		specs := make([]paneSpec, 0, len(t.Panes))
+		for _, p := range t.Panes {
+			dir := paneRight
+			if p.Split == "down" {
+				dir = paneDown
+			}
+			specs = append(specs, paneSpec{Dir: dir, Parent: p.Parent, Cwd: layoutDir(root, p.Cwd)})
+		}
+		m.buildTerminalPanes(specs)
+	}
+	if active != m.terminalActiveTab && active < len(m.terminalTabs) {
+		m.switchTerminalTab(active)
 	}
 }
 

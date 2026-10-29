@@ -102,3 +102,33 @@ func TestOpenLayoutPanelWithOnlyAnOutputTabHasNoShell(t *testing.T) {
 		t.Fatalf("open=%v active=%v", m.termOpen, m.panelActive)
 	}
 }
+
+func TestOpenLayoutPanelRebuildsTerminalSplits(t *testing.T) {
+	m, root := layoutNvimModel(t)
+	for _, d := range []string{"web", "api"} {
+		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	m.openLayout(layout.Layout{Panel: &layout.Panel{
+		Open: true, Rows: 14, Active: "terminal",
+		Terminals: []layout.Terminal{
+			{Name: "web", Cwd: "web", Panes: []layout.Pane{{Split: "right", Cwd: "api"}, {Split: "down", Parent: 1}}},
+			{Name: "plain"},
+		},
+	}})
+	if len(m.terminalTabs) != 2 {
+		t.Fatalf("terminals=%d err=%q", len(m.terminalTabs), m.err)
+	}
+	tab := m.terminalTabs[0]
+	if tab.paneCount() != 3 {
+		t.Fatalf("first tab has %d panes, want 3 (err=%q)", tab.paneCount(), m.err)
+	}
+	if s := tab.Splits; s[0].Dir != paneRight || s[0].Parent != 0 || s[0].Cwd != filepath.Join(root, "api") ||
+		s[1].Dir != paneDown || s[1].Parent != 1 || s[1].Cwd != filepath.Join(root, "api") {
+		t.Errorf("splits = %+v", s)
+	}
+	if m.terminalTabs[1].paneCount() != 1 {
+		t.Errorf("second tab has %d panes, want 1", m.terminalTabs[1].paneCount())
+	}
+}
