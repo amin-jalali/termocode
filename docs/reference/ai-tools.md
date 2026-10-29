@@ -1709,6 +1709,9 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `duplicate-line` | Edit: Duplicate Line | confirm (fileWrite) |   |
 | `edit-custom-theme` | Preferences: Edit Custom Theme | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `error-log` | Help: Show Error Log | auto |   |
+| `explorer-rename-selected` | Explorer: Rename Selected… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `explorer-toggle-preview` | Explorer: Toggle Preview | auto |   |
+| `explorer-undo-rename` | Explorer: Undo Rename | never | undoes the user's own bulk rename; only the user decides that |
 | `ext-manage-install-samples` | Extensions: Install Sample Extensions | confirm (run) |   |
 | `ext-manage-log` | Extensions: Show Log | auto |   |
 | `ext-manage-new` | Extensions: New Extension... | never | opens a picker or prompt that only the user can answer; use a typed tool |

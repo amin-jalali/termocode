@@ -108,6 +108,9 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"terminal-minimize":  aiAuto(),
 	// terminal splits (terminal_split.go)
 	"terminal-split-right":     aiAuto(),
+	"explorer-toggle-preview":  aiAuto(), // UI only: shows or hides the preview pane
+	"explorer-rename-selected": aiNever(aiNoPicker),
+	"explorer-undo-rename":     aiNever("undoes the user's own bulk rename; only the user decides that"),
 	"terminal-split-down":      aiAuto(),
 	"terminal-close-pane":      aiDestructive(), // kills what runs in it
 	"terminal-focus-next-pane": aiAuto(),
