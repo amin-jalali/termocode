@@ -43,6 +43,29 @@ go test ./internal/search -run Fallback -v
   the manual checks you performed in the pull request description.
 - Tests cache hard. If a result looks stale: `go clean -testcache`.
 
+### Coverage per system
+
+```sh
+scripts/coverage.sh               # unit tests (not -short), table per system
+scripts/coverage.sh -e2e          # plus the e2e suite on a cover build
+scripts/coverage.sh -min 95       # exit 1 when a system is below 95%
+scripts/coverage.sh -profile f.out  # only report an existing profile
+```
+
+- Needs `nvim` on PATH. Without it the script runs `-short` and says so; the
+  numbers are then too low.
+- It runs one merged profile over the shipped packages only (`-coverpkg`), so
+  a test in `internal/testkit` or `e2e/` counts for the code it drives.
+- The table is statement-weighted per system, not an average of package
+  percents. After it, each system lists its 20 functions with the most
+  uncovered statements (`-top N` changes the number).
+- Systems and excluded helpers (testkit, fakes, dev tools) are in
+  `scripts/coverage-systems.txt`. A new package must be added there; a test
+  fails until it is.
+- It takes a while: `internal/app` is slow. It runs `nice -n 19` with
+  `GOMAXPROCS=4` (set your own to change that). The profiles are kept in a
+  temp folder (`-out DIR` to choose it).
+
 Debug a running session with `tail -f ~/.config/termocode/errors.log`.
 
 ### Golden screen tests
