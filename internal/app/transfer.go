@@ -21,6 +21,7 @@ import (
 	"github.com/muesli/cancelreader"
 
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -315,7 +316,7 @@ func (m *Model) startDownload(p xferPending) tea.Cmd {
 	}
 	run := &xferRun{name: name, cancel: cancel, ch: make(chan tea.Msg, 16)}
 	m.xfer = run
-	go runDownload(ctx, p, name, run.ch)
+	crash.Go("the download", func() { runDownload(ctx, p, name, run.ch) })
 	detail := "iTerm2 saves it in your Downloads folder."
 	if p.method == transfer.Kitty {
 		detail = "kitty asks you to allow it, then saves it in ~/Downloads."
@@ -523,7 +524,7 @@ func runUpload(ctx context.Context, method transfer.Method, src, dir string, in 
 		filter := transfer.NewInput(nil)
 		replies, stop := filter.Listen()
 		defer stop()
-		go func() {
+		crash.Go("the download keys", func() {
 			buf := make([]byte, 4096)
 			for {
 				n, err := in.Read(buf)
@@ -535,7 +536,7 @@ func runUpload(ctx context.Context, method transfer.Method, src, dir string, in 
 					return
 				}
 			}
-		}()
+		})
 		var last time.Time
 		err = transfer.KittyReceive(ctx, transfer.KittyReceiveJob{
 			ID: randomID(), Path: src, Dir: stage, MaxBytes: xferMaxUpload,

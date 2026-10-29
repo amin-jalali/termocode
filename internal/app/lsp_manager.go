@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/lspinstall"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -219,7 +220,7 @@ func (m *Model) startToolInstall(t lspinstall.Tool) tea.Cmd {
 	m.lspMgr.progress[t.Name] = "starting"
 	install := toolInstaller().install
 	ch := make(chan lspInstallEventMsg, 32)
-	go func() {
+	crash.Go("the language server installer", func() {
 		defer close(ch)
 		out, err := install(context.Background(), t, func(line string) {
 			if line == "done" {
@@ -231,7 +232,7 @@ func (m *Model) startToolInstall(t lspinstall.Tool) tea.Cmd {
 			}
 		})
 		ch <- lspInstallEventMsg{name: t.Name, done: true, output: out, err: err, ch: ch}
-	}()
+	})
 	var cmd tea.Cmd
 	m.toast, cmd = m.toast.PushDetail(toast.Info, "Installing "+t.Name+"…", "runs in the background")
 	return tea.Batch(cmd, waitLSPInstall(ch))

@@ -24,6 +24,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/cfgfile"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/httpclient"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -426,13 +427,13 @@ func (m *Model) startHTTPRun(run *httpRun, hooks httpclient.Hooks) tea.Cmd {
 		}
 	}
 	snap := *run // the goroutine never touches run itself
-	go func() {
+	crash.Go("the HTTP client", func() {
 		resp := client.Send(ctx, snap.rr, hooks)
 		snap.resp = resp
 		httpRecordHistory(&snap)
 		ch <- httpEvent{resp: resp}
 		close(ch)
-	}()
+	})
 	m.httpRefreshLens(run.file)
 	m.httpShowRun(run, true)
 	return waitHTTPEvent(gen, run, ch)

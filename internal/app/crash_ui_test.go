@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
@@ -182,5 +183,40 @@ func TestCrashCardCopyPath(t *testing.T) {
 	m.handleConfirmSelect("copy")
 	if got != report {
 		t.Fatalf("copied %q, want %q", got, report)
+	}
+}
+
+// TestAppGoroutinePanicIsRecovered: a panic in one of the app's own
+// goroutines (here the syntax colors of a commit file) is recovered and
+// reported; the command still returns.
+func TestAppGoroutinePanicIsRecovered(t *testing.T) {
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
+	for {
+		select {
+		case <-crash.Notices():
+			continue
+		default:
+		}
+		break
+	}
+	defer crash.PanicIn("the syntax colors")()
+	cmd := commitTokenizeCmd("a..b", 0, "x.go", "package a", "package b")
+	if cmd == nil {
+		t.Fatal("no command for a Go file")
+	}
+	done := make(chan tea.Msg, 1)
+	go func() { done <- cmd() }()
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("the command hangs after the panic")
+	}
+	select {
+	case n := <-crash.Notices():
+		if n.Where != "the syntax colors" {
+			t.Fatalf("notice from %q", n.Where)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("no crash notice")
 	}
 }

@@ -15,6 +15,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -125,7 +126,7 @@ func (m *Model) startLocalDownload(path string, size int64) tea.Cmd {
 	name := filepath.Base(path)
 	run := &xferRun{name: name, cancel: cancel, ch: make(chan tea.Msg, 16)}
 	m.xfer = run
-	go func() {
+	crash.Go("the download", func() {
 		var last time.Time
 		progress := func(n int64) {
 			if size < xferProgressAbove || (time.Since(last) < 150*time.Millisecond && n < size) {
@@ -145,7 +146,7 @@ func (m *Model) startLocalDownload(path string, size int64) tea.Cmd {
 		}
 		msg.err = err
 		run.ch <- msg
-	}()
+	})
 	var c tea.Cmd
 	if size >= xferProgressAbove {
 		m.toast, c = m.toast.PushKeyed(xferToastKey, toast.Info, "Copying "+name+"…", "to your Downloads folder")
@@ -192,7 +193,7 @@ func reveal(path string) error {
 	if err := c.Start(); err != nil {
 		return err
 	}
-	go func() { _ = c.Wait() }()
+	crash.Go("a desktop helper", func() { _ = c.Wait() })
 	return nil
 }
 

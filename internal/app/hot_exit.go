@@ -15,6 +15,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/session"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -403,10 +404,10 @@ func HotExitFlush(timeout time.Duration) {
 		return
 	}
 	done := make(chan struct{})
-	go func() {
+	crash.Go("the backup of unsaved files", func() {
 		defer close(done)
 		_ = c.ExecLua(hotExitFlushLua)
-	}()
+	})
 	select {
 	case <-done:
 	case <-time.After(timeout):
