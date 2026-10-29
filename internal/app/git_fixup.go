@@ -91,7 +91,7 @@ func (m *Model) openFixupConfirm(msg fixupCheckMsg) tea.Cmd {
 		lines = append(lines, "", "Unstaged changes are stashed and put back after.")
 		run = confirm.Button{ID: "fixup-stash", Title: "Stash and Fixup", Style: confirm.StyleDestructive}
 	}
-	lines = append(lines, "", "Undo afterwards: git reset --hard ORIG_HEAD")
+	lines = append(lines, "", "Undo afterwards: git reset --keep ORIG_HEAD")
 	m.fixupTarget = msg.target
 	m.confirm = confirm.Risky("Fixup into "+msg.short+"?", strings.Join(lines, "\n"),
 		confirm.Button{ID: "cancel", Title: "Cancel"}, run)
