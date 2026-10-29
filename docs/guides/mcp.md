@@ -352,12 +352,31 @@ How it starts, how to add it by hand, what the agent can and can not do,
 - Servers can not use your AI model (sampling is refused).
 - Tokens and secrets never show in the log, toasts or `errors.log`.
 
+### One server for all windows
+
+With more than one termocode window open, a local server runs only once.
+All windows with the same server entry and the same folder use it.
+There is nothing to set up.
+
+- The row of the server says `shared · 3 sessions`.
+- When the last window stops using it, it ends after 30 seconds.
+- If a window crashes, the server does not stay forever. It ends when no
+  window uses it.
+- **Stop** on a shared server asks first: it stops for every window. Each
+  window starts it again on its next tool call.
+- A different command, args, `env` value or folder gets its own server.
+- Secrets stay in memory. They are never written to a file or put on a
+  command line.
+- Remote servers are not shared: each window has its own session.
+- Set `mcp_share` to `false` to give each window its own server. On
+  systems without unix sockets, each window always has its own.
+
 ## Settings
 
 The MCP section of the Settings modal (**Preferences: Open Settings (UI)**)
 has `mcp_enabled`, `mcp_idle_timeout`, `mcp_call_timeout`,
-`mcp_max_result_kb`, `mcp_trust_annotations`, `mcp_oauth_port` and
-`mcp_github_client_id` (a GitHub OAuth App for the code sign-in, when
+`mcp_max_result_kb`, `mcp_trust_annotations`, `mcp_oauth_port`,
+`mcp_share` and `mcp_github_client_id` (a GitHub OAuth App for the code sign-in, when
 your build has none). The timeouts apply at once. The AI can not change these settings. They are
 listed in the settings reference.
 
