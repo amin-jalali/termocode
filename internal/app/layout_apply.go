@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -8,6 +9,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/layout"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // openLayout makes the IDE look like l. Parts the layout does not mention
@@ -52,6 +54,10 @@ func (m *Model) openLayout(l layout.Layout) tea.Cmd {
 	if p := l.Panel; p != nil {
 		m.openLayoutPanel(*p, root)
 	}
+	missing := 0
+	if e := l.Editor; e != nil {
+		missing = m.openLayoutEditor(*e, root)
+	}
 	switch l.Focus {
 	case "editor":
 		m.focus = FocusEditor
@@ -62,6 +68,11 @@ func (m *Model) openLayout(l layout.Layout) tea.Cmd {
 	}
 	m.applyLayout()
 	m.resizeTerminalSplit()
+	if missing > 0 {
+		var t tea.Cmd
+		m.toast, t = m.toast.Push(toast.Warn, fmt.Sprintf("%d file%s not found", missing, plural(missing)))
+		cmds = append(cmds, t)
+	}
 	return tea.Batch(cmds...)
 }
 
@@ -142,4 +153,88 @@ func (m *Model) openLayoutTerminals(ts []layout.Terminal, root string) {
 			return
 		}
 	}
+}
+
+// openLayoutEditor opens the files and the splits. It returns how many
+// files do not exist.
+func (m *Model) openLayoutEditor(e layout.Editor, root string) (missing int) {
+	if m.nvim == nil {
+		return 0
+	}
+	exists := func(rel string) (string, bool) {
+		abs := filepath.Join(root, filepath.FromSlash(rel))
+		st, err := os.Stat(abs)
+		return abs, err == nil && !st.IsDir()
+	}
+	m.ensureEditorWindowCurrent()
+	for _, rel := range e.Files {
+		if abs, ok := exists(rel); ok {
+			_ = m.nvim.OpenFile("edit", abs)
+		} else {
+			missing++
+		}
+	}
+	m.closeExtraEditorWindows() // the layout decides the windows: one, or one per pane
+	if e.Split == "" {
+		if abs, ok := exists(e.Active); ok {
+			_ = m.nvim.OpenFile("edit", abs)
+		} else if e.Active != "" {
+			missing++
+		}
+		return missing
+	}
+	// A split: one editor window per pane, the first in the current one.
+	activeAbs := ""
+	if abs, ok := exists(e.Active); ok && e.Active != "" {
+		activeAbs = abs
+	}
+	cmd := map[string]string{"vertical": "rightbelow vsplit", "horizontal": "rightbelow split"}[e.Split]
+	first := true
+	for _, rel := range e.Panes {
+		abs, ok := exists(rel)
+		if !ok {
+			if rel != "" {
+				missing++
+			}
+			continue
+		}
+		if first {
+			_ = m.nvim.OpenFile("edit", abs)
+			first = false
+			continue
+		}
+		_ = m.nvim.OpenFile(cmd, abs)
+	}
+	if first { // no pane file could open: still make the split
+		_ = m.nvim.Command(cmd)
+	}
+	// The window that shows the active file has the keyboard (else the first).
+	_ = m.nvim.ExecLuaArgs(`local want = ...
+		local first, hit
+		for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+			local b = vim.api.nvim_win_get_buf(w)
+			if vim.api.nvim_win_get_config(w).relative == '' and not vim.w[w].termocode_panel
+				and vim.bo[b].buftype == '' then
+				first = first or w
+				if want ~= '' and vim.api.nvim_buf_get_name(b) == want then hit = hit or w end
+			end
+		end
+		local w = hit or first
+		if w then pcall(vim.api.nvim_set_current_win, w) end`, activeAbs)
+	return missing
+}
+
+// closeExtraEditorWindows closes every editor window but one; the panel's
+// window and floating windows stay.
+func (m *Model) closeExtraEditorWindows() {
+	_ = m.nvim.ExecLua(`
+		local keep
+		for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+			local b = vim.api.nvim_win_get_buf(w)
+			if vim.api.nvim_win_get_config(w).relative == '' and not vim.w[w].termocode_panel
+				and vim.bo[b].buftype ~= 'terminal' then
+				if keep then pcall(vim.api.nvim_win_close, w, false) else keep = w end
+			end
+		end
+		if keep then pcall(vim.api.nvim_set_current_win, keep) end`)
 }
