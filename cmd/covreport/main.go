@@ -5,6 +5,7 @@
 //	scripts/coverage.sh -e2e           # plus the e2e suite on a cover build
 //	scripts/coverage.sh -min 95        # exit 1 when a system is below 95%
 //	scripts/coverage.sh -profile f.out # only report an existing profile
+//	scripts/coverage.sh -floors scripts/coverage-floors.txt  # CI: per-system floors
 package main
 
 import (
@@ -26,12 +27,13 @@ func main() {
 	e2e := flag.Bool("e2e", false, "also run the e2e suite on a cover build and merge its coverage")
 	minPct := flag.Float64("min", 0, "exit 1 when any system is below this percent (0 = off)")
 	minTotal := flag.Float64("min-total", 0, "exit 1 when the total is below this percent (0 = off)")
+	floorsFile := flag.String("floors", "", "exit 1 when a system is below its floor in this file (relative to root; e.g. scripts/coverage-floors.txt)")
 	top := flag.Int("top", 20, "uncovered functions to list per system")
 	out := flag.String("out", "", "folder for the profiles (default: a new temp folder)")
 	profile := flag.String("profile", "", "report this existing profile instead of running tests")
 	flag.Parse()
 
-	fail, err := run(*root, *systemsFile, *out, *profile, *e2e, *top, *minPct, *minTotal)
+	fail, err := run(*root, *systemsFile, *out, *profile, *floorsFile, *e2e, *top, *minPct, *minTotal)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "covreport:", err)
 		os.Exit(2)
@@ -41,7 +43,7 @@ func main() {
 	}
 }
 
-func run(root, systemsFile, outDir, profileFile string, withE2E bool, top int, minPct, minTotal float64) (bool, error) {
+func run(root, systemsFile, outDir, profileFile, floorsFile string, withE2E bool, top int, minPct, minTotal float64) (bool, error) {
 	root, err := filepath.Abs(root)
 	if err != nil {
 		return false, err
@@ -94,7 +96,20 @@ func run(root, systemsFile, outDir, profileFile string, withE2E bool, top int, m
 	}
 	PrintTopFuncs(os.Stdout, rep, TopUncovered(blocks, module, root, sys, top))
 
-	if bad := Below(rep, minPct, minTotal); len(bad) > 0 {
+	bad := Below(rep, minPct, minTotal)
+	if floorsFile != "" {
+		ff, err := os.Open(filepath.Join(root, floorsFile))
+		if err != nil {
+			return false, err
+		}
+		floors, err := ParseFloors(ff)
+		ff.Close()
+		if err != nil {
+			return false, fmt.Errorf("%s: %w", floorsFile, err)
+		}
+		bad = append(bad, BelowFloors(rep, floors)...)
+	}
+	if len(bad) > 0 {
 		fmt.Fprintln(os.Stderr, "\nCoverage below the limit:")
 		for _, b := range bad {
 			fmt.Fprintln(os.Stderr, "  "+b)
