@@ -3,9 +3,12 @@
 package extproc
 
 import (
+	"errors"
 	"os/exec"
 	"runtime"
 	"syscall"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // startAndWait starts cmd so that it gets SIGTERM when termocode dies,
@@ -20,7 +23,7 @@ func startAndWait(cmd *exec.Cmd) (<-chan error, error) {
 	cmd.SysProcAttr.Pdeathsig = syscall.SIGTERM
 	started := make(chan error, 1)
 	exited := make(chan error, 1)
-	go func() {
+	crash.GoWith("an extension start", func() {
 		runtime.LockOSThread()
 		if err := cmd.Start(); err != nil {
 			runtime.UnlockOSThread()
@@ -30,7 +33,17 @@ func startAndWait(cmd *exec.Cmd) (<-chan error, error) {
 		started <- nil
 		exited <- cmd.Wait()
 		// Return still locked: the runtime ends this thread.
-	}()
+	}, func() {
+		failed := errors.New("an extension process failed")
+		select {
+		case started <- failed:
+		default:
+		}
+		select {
+		case exited <- failed:
+		default:
+		}
+	})
 	if err := <-started; err != nil {
 		return nil, err
 	}

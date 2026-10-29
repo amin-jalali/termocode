@@ -2,7 +2,12 @@
 
 package extproc
 
-import "os/exec"
+import (
+	"errors"
+	"os/exec"
+
+	"github.com/amin-jalali/termocode/internal/crash"
+)
 
 // startAndWait starts cmd and returns a channel with cmd.Wait's result.
 // Without Pdeathsig (Linux only) an extension notices that termocode is
@@ -12,6 +17,11 @@ func startAndWait(cmd *exec.Cmd) (<-chan error, error) {
 		return nil, err
 	}
 	exited := make(chan error, 1)
-	go func() { exited <- cmd.Wait() }()
+	crash.GoWith("an extension process", func() { exited <- cmd.Wait() }, func() {
+		select {
+		case exited <- errors.New("an extension process failed"):
+		default:
+		}
+	})
 	return exited, nil
 }

@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // ErrBlocked is returned by a call made while nvim waits for the rest of a
@@ -26,7 +28,12 @@ const blockedPoll = 10 * time.Millisecond
 // them within ~100 ms and the call then completes.
 func (c *Client) unblocked(f func() error) error {
 	done := make(chan error, 1)
-	go func() { done <- f() }()
+	crash.GoWith("an editor call", func() { done <- f() }, func() {
+		select {
+		case done <- errors.New("the editor call failed"):
+		default: // f had answered
+		}
+	})
 	tick := time.NewTicker(blockedPoll)
 	defer tick.Stop()
 	for {
