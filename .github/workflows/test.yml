@@ -14,7 +14,7 @@ concurrency:
 
 # Required checks (CONTRIBUTING.md): keep these job names stable.
 #   test (ubuntu-latest), test (macos-latest), golden screens (ubuntu-latest),
-#   e2e (ubuntu-latest), e2e (macos-latest)
+#   e2e (ubuntu-latest), e2e (macos-latest), coverage (ubuntu-latest)
 # A skipped job counts as passed, so docs-only changes skip the heavy jobs
 # through the "changes" job (a workflow-level paths-ignore would leave the
 # required checks waiting forever).
@@ -307,3 +307,101 @@ jobs:
           path: e2e-dumps/
           if-no-files-found: ignore
 
+  # Coverage per system (cmd/covreport, scripts/coverage-systems.txt). It
+  # fails when a system is below its floor in scripts/coverage-floors.txt.
+  # Unit tests only: the e2e suite adds ~0.5 points and 5+ minutes, and a
+  # flaky e2e test would move the numbers. Only for PRs and main.
+  coverage:
+    name: coverage (ubuntu-latest)
+    needs: changes
+    if: >-
+      needs.changes.outputs.code == 'true' &&
+      (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      # The golden screens run here too (no -short): same nvim as the
+      # golden job, or they fail and the numbers drop.
+      NVIM_VERSION: v0.12.2
+      SHOTKIT_GOLDEN_JOBS: "4"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Install X11 dev headers and sqlite3
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev sqlite3
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-cov-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-cov-
+            ${{ runner.os }}-go-
+
+      - name: Install Neovim (pinned release)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/nvim.tar.gz \
+            "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz"
+          sudo tar -xzf /tmp/nvim.tar.gz -C /opt
+          echo "/opt/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
+
+      # Failing tests do not stop it: the test jobs catch those.
+      - name: Unit tests with coverage
+        run: scripts/coverage.sh -out "$RUNNER_TEMP/cov" -top 0
+
+      - name: Table and floors
+        run: |
+          set +e
+          go run ./cmd/covreport -profile "$RUNNER_TEMP/cov/merged.out" \
+            -floors scripts/coverage-floors.txt -top 10 \
+            > "$RUNNER_TEMP/coverage.txt" 2> "$RUNNER_TEMP/below.txt"
+          status=$?
+          set -e
+          cat "$RUNNER_TEMP/coverage.txt" "$RUNNER_TEMP/below.txt"
+          {
+            echo "## Coverage per system"
+            echo
+            if [ "$status" -eq 0 ]; then
+              echo "Every system is at or above its floor (scripts/coverage-floors.txt)."
+            else
+              echo "**Below the floor** (scripts/coverage-floors.txt):"
+              echo
+              echo '```'
+              cat "$RUNNER_TEMP/below.txt"
+              echo '```'
+            fi
+            echo
+            echo '```'
+            awk 'NF {p=1} p {print} /^Total /{exit}' "$RUNNER_TEMP/coverage.txt"
+            echo '```'
+            echo
+            echo "<details><summary>Biggest uncovered functions</summary>"
+            echo
+            echo '```'
+            awk 'f {print} /^Total /{f=1}' "$RUNNER_TEMP/coverage.txt"
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+          cp "$RUNNER_TEMP/coverage.txt" "$RUNNER_TEMP/cov/coverage.txt"
+          exit "$status"
+
+      - name: Upload the profile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-profile
+          path: |
+            ${{ runner.temp }}/cov/merged.out
+            ${{ runner.temp }}/cov/coverage.txt
+          if-no-files-found: ignore
