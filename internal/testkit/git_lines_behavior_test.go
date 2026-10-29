@@ -131,3 +131,48 @@ func TestDiscardLineRevertsOnlyThatLine(t *testing.T) {
 		t.Errorf("the index must not change: %q", got)
 	}
 }
+
+// feed sends keys to nvim as typed, so that a visual selection stays.
+func feed(d *Driver, keys string) {
+	d.T.Helper()
+	lua(d, `vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(..., true, false, true), 'nx', false); return ''`, keys)
+}
+
+func TestStageSelectedLines(t *testing.T) {
+	d := linesDriver(t)
+	// Select lines 2 to 4 (a line-wise visual selection).
+	feed(d, "2GV2j")
+	d.Settle(0)
+	d.Palette("git-stage-lines")
+	if !eventually(d, func() bool { return gitOut(d, "show", ":f.txt") == "l1\nX2\nl3\nX4\nl5\nl6" }) {
+		t.Fatalf("index: %q\n%s", gitOut(d, "show", ":f.txt"), screen(d))
+	}
+	if m := lua(d, `return vim.fn.mode()`); m != "n" {
+		t.Errorf("the selection should end, mode %q", m)
+	}
+}
+
+func TestStageSelectedLinesBackwards(t *testing.T) {
+	d := linesDriver(t)
+	// The cursor ends above the start of the selection: lines 4 up to 2.
+	feed(d, "4GV2k")
+	d.Settle(0)
+	d.Palette("git-stage-lines")
+	if !eventually(d, func() bool { return gitOut(d, "show", ":f.txt") == "l1\nX2\nl3\nX4\nl5\nl6" }) {
+		t.Fatalf("index: %q", gitOut(d, "show", ":f.txt"))
+	}
+}
+
+func TestStageLineRefusesUnsavedEdits(t *testing.T) {
+	d := linesDriver(t)
+	lua(d, `vim.api.nvim_buf_set_lines(0, 0, 1, false, {'typed'}); return ''`)
+	d.Settle(0)
+	gotoLine(d, "4")
+	d.Palette("git-stage-lines")
+	if !d.WaitForText("Save the file first", 3*time.Second) {
+		t.Fatalf("no warning:\n%s", screen(d))
+	}
+	if got := gitOut(d, "diff", "--cached", "--name-only"); got != "" {
+		t.Errorf("nothing may be staged: %q", got)
+	}
+}
