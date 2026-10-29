@@ -202,7 +202,8 @@ Good to know:
   does nothing.
 - **Undo.** git keeps the old branch tip. Press `u` in Source Control to
   go back (see [Undo a git action](#undo-a-git-action)). The toast at the
-  end also names the git command: `git reset --hard ORIG_HEAD`.
+  end also names the git command: `git reset --keep ORIG_HEAD`. It refuses
+  to run when it would throw away your uncommitted changes.
 
 ### When the rebase stops
 
