@@ -70,6 +70,25 @@ func TestAgentUnknownAndGoneBranch(t *testing.T) {
 	}
 }
 
+// The user deleted the worktree folder by hand: the next create makes it
+// again at once (git still lists the missing folder until a prune).
+func TestCreateAgentWorktreeAfterFolderDeletedByHand(t *testing.T) {
+	r := committedRepo(t)
+	w, err := CreateAgentWorktree(r.dir, "h1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(w.Path); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateAgentWorktree(r.dir, "h1"); err != nil {
+		t.Fatalf("create after the folder was deleted: %v", err)
+	}
+	if got := readFile(t, filepath.Join(w.Path, "a.txt")); got != "one\ntwo\nthree\n" {
+		t.Errorf("worktree a.txt = %q", got)
+	}
+}
+
 // An agent that makes a script executable, turns a file into a symlink and
 // deletes another: the merge writes the same kinds into the user's tree.
 func TestMergeAgentModesSymlinksAndDeletes(t *testing.T) {
