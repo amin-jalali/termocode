@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -124,29 +125,38 @@ func (m Model) visible() []VisibleEntry {
 	if len(roots) == 0 {
 		return nil
 	}
-	// Build a "is a root node" set so the dotfile filter never hides any
-	// root's title row (multi-root: an extra root could legitimately have a
-	// dot-prefixed basename).
-	isRoot := make(map[*Node]bool, len(roots))
+	// One walk into one slice, the dotfile filter applied on the way
+	// (it used to copy the whole list a second time to filter it). The
+	// filter hides a dot-named row but not its open children, and never a
+	// root's title row (multi-root: an extra root could legitimately have
+	// a dot-prefixed basename).
+	out := make([]VisibleEntry, 0, m.lastVisibleHint())
 	for _, r := range roots {
-		isRoot[r] = true
+		out = append(out, VisibleEntry{Node: r})
+		out = appendVisible(out, r, 1, !m.showHidden)
 	}
-	var all []VisibleEntry
-	for _, r := range roots {
-		all = append(all, r.Visible()...)
+	visibleHint.Store(int64(len(out)))
+	return out
+}
+
+// appendVisible adds n's shown children (and theirs) at depth.
+func appendVisible(out []VisibleEntry, n *Node, depth int, hideDot bool) []VisibleEntry {
+	if !n.IsDir || !n.Expanded {
+		return out
 	}
-	if m.showHidden {
-		return all
-	}
-	out := make([]VisibleEntry, 0, len(all))
-	for _, e := range all {
-		if !isRoot[e.Node] && strings.HasPrefix(e.Node.Name, ".") {
-			continue
+	for _, c := range n.Children {
+		if !hideDot || !strings.HasPrefix(c.Name, ".") {
+			out = append(out, VisibleEntry{Node: c, Depth: depth})
 		}
-		out = append(out, e)
+		out = appendVisible(out, c, depth+1, hideDot)
 	}
 	return out
 }
+
+// visibleHint is the last visible() length, the next one's capacity.
+var visibleHint atomic.Int64
+
+func (m Model) lastVisibleHint() int { return int(min(visibleHint.Load(), 1<<20)) + 16 }
 
 // ToggleHidden flips visibility of dotfiles in the tree. Returns the new
 // state via HiddenShown so callers can surface a toast.
