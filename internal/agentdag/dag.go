@@ -162,6 +162,10 @@ type Run struct {
 	Edges     []Edge    `json:"edges,omitempty"`
 	Loop      *Loop     `json:"loop,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
+	// Approved are the ids of the nodes whose plan the user approved
+	// (G-PLAN): they run without asking again. State: a resumed run
+	// keeps it.
+	Approved []string `json:"approved,omitempty"`
 }
 
 // Clone is a copy of r that shares no slices or loop with it.
@@ -169,6 +173,7 @@ func (r Run) Clone() Run {
 	out := r
 	out.Nodes = append([]Node(nil), r.Nodes...)
 	out.Edges = append([]Edge(nil), r.Edges...)
+	out.Approved = append([]string(nil), r.Approved...)
 	if r.Loop != nil {
 		l := *r.Loop
 		out.Loop = &l

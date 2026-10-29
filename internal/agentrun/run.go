@@ -54,6 +54,10 @@ const (
 	RunResumed                     // Continue after a pause
 	RunRound                       // verify failed and a new round starts (Round = the new round, Err = the verify report)
 	NodeLimited                    // a CLI node hit its usage limit (Err = the CLI's words, ResetAt): it waits as pending and the run pauses
+	RunAwaitApproval               // G-PLAN: the run waits for the user's answer on its plan (Nodes = the steps left; Err = why an edit did not fit)
+	RunApproved                    // the user approved the plan; the run goes on
+	RunPlanEdited                  // the user's edit changed the plan (Nodes = the steps it added); RunAwaitApproval follows
+	RunPlanKept                    // steps joined an approved run and need no approval (Nodes = them): it goes on without asking
 )
 
 // Verdicts of a loop's verify node (Event.Verdict).
@@ -149,6 +153,12 @@ type Options struct {
 	// CLI ended (done, failed or stopped), before the run sees the end
 	// (G-WT: the app looks at the node's worktree). ctx may be done.
 	Finished func(ctx context.Context, n agentdag.Node)
+	// Approval (G-PLAN; ApprovalOff, ApprovalAsk, ApprovalAlways) makes
+	// the run wait for the user's approval of its plan before a step
+	// that may write files or run commands (approve.go). Acts (optional)
+	// says what a node may do; nil: agentdag.Writes, no commands.
+	Approval string
+	Acts     func(n agentdag.Node) (writes, exec bool)
 }
 
 // Handle is a started run.
@@ -160,6 +170,10 @@ type Handle struct {
 	resume chan struct{}
 	// pause is set by Pause: the run pauses before its next node.
 	pause atomic.Bool
+	// decide carries the user's answer on a plan (approve.go); denied is
+	// set by Deny.
+	decide chan decision
+	denied atomic.Bool
 
 	emitMu sync.Mutex
 
@@ -212,7 +226,7 @@ func Start(ctx context.Context, r agentdag.Run, o Options) (*Handle, error) {
 	}
 	n = n.Clone()
 	h := &Handle{o: o, id: n.ID, done: make(chan struct{}), resume: make(chan struct{}, 1), run: n,
-		outputs: map[string]string{}}
+		outputs: map[string]string{}, decide: make(chan decision, 1)}
 	if l := n.Loop; l != nil {
 		h.verify, h.fix = strings.TrimSpace(l.Verify), strings.TrimSpace(l.Fix.ID)
 		l.Verify, l.Fix.ID = h.verify, h.fix
@@ -350,7 +364,13 @@ func (h *Handle) loop(runCtx context.Context) {
 	for {
 		if ready := agentdag.Ready(h.run); nodeCtx.Err() == nil && len(ready) > 0 {
 			overBudget := budget > 0 && spent >= budget
-			if overBudget || h.pause.Load() {
+			if h.needsApproval(ready) {
+				// G-PLAN: the running nodes end first, then the plan is
+				// shown and nothing starts before the user's answer.
+				if running == 0 && h.awaitApproval(nodeCtx) {
+					continue
+				}
+			} else if overBudget || h.pause.Load() {
 				// Pause before the next node: the running nodes end
 				// first, then the run waits for Continue or Cancel.
 				if running == 0 {
@@ -453,6 +473,7 @@ func (h *Handle) loop(runCtx context.Context) {
 				h.mu.Unlock()
 				added := append([]agentdag.Node(nil), grown.Nodes[len(grown.Nodes)-len(res.plan):]...)
 				h.emit(Event{NodeID: res.id, Kind: RunPlanned, Nodes: added})
+				h.planKept(added)
 			}
 		}
 	}
@@ -469,6 +490,9 @@ func (h *Handle) loop(runCtx context.Context) {
 		final.Kind, final.Err = RunFailed, failErr
 	case runCtx.Err() != nil:
 		final.Kind = RunCancelled
+		if h.denied.Load() {
+			final.Err = DeniedErr
+		}
 	default:
 		final.Kind, final.Output, final.Verdict = RunDone, h.lastOutput(), verdict
 	}
@@ -555,6 +579,7 @@ func (h *Handle) nextRound(res result) error {
 		h.emit(Event{NodeID: h.verify, Kind: RunPlanned, Nodes: []agentdag.Node{*h.node(h.fix)}})
 	}
 	h.emit(Event{Kind: RunRound, Round: n.Loop.Round, Err: n.Loop.Report, Verdict: res.verdict})
+	h.planKept([]agentdag.Node{*h.node(h.fix)})
 	return nil
 }
 
