@@ -78,3 +78,41 @@ func TestLoadRebaseTodoEmpty(t *testing.T) {
 		t.Fatalf("err %v", err)
 	}
 }
+
+// todoOf is a todo of rows named a, b, c … (no git needed).
+func todoOf(names ...string) RebaseTodo {
+	var t RebaseTodo
+	for _, n := range names {
+		t.Items = append(t.Items, RebaseItem{Action: RebasePick, Hash: n, FullHash: n, Subject: n})
+	}
+	return t
+}
+
+func order(t RebaseTodo) string {
+	var s []string
+	for _, it := range t.Items {
+		s = append(s, it.Hash)
+	}
+	return strings.Join(s, "")
+}
+
+// G-RBS: Move swaps a row with its neighbour and returns its new index;
+// at either end it stays put.
+func TestRebaseTodoMove(t *testing.T) {
+	todo := todoOf("a", "b", "c")
+	if i := todo.Move(0, 1); i != 1 || order(todo) != "bac" {
+		t.Fatalf("down: %d %s", i, order(todo))
+	}
+	if i := todo.Move(1, -1); i != 0 || order(todo) != "abc" {
+		t.Fatalf("up: %d %s", i, order(todo))
+	}
+	if i := todo.Move(0, -1); i != 0 || order(todo) != "abc" {
+		t.Fatalf("top: %d %s", i, order(todo))
+	}
+	if i := todo.Move(2, 1); i != 2 || order(todo) != "abc" {
+		t.Fatalf("bottom: %d %s", i, order(todo))
+	}
+	if i := todo.Move(7, 1); i != 7 || order(todo) != "abc" {
+		t.Fatalf("out of range: %d %s", i, order(todo))
+	}
+}

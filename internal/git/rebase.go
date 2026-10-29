@@ -79,3 +79,14 @@ func LoadRebaseTodo(dir, base string) (RebaseTodo, error) {
 	}
 	return todo, nil
 }
+
+// Move swaps row i with the row dir (-1 up, +1 down) away and returns
+// the row's new index; at either end (or out of range) nothing moves.
+func (t *RebaseTodo) Move(i, dir int) int {
+	j := i + dir
+	if i < 0 || i >= len(t.Items) || j < 0 || j >= len(t.Items) {
+		return i
+	}
+	t.Items[i], t.Items[j] = t.Items[j], t.Items[i]
+	return j
+}
