@@ -308,7 +308,7 @@ func ApplyPlanEdit(r agentdag.Run, text string, cats map[string]string) (agentda
 				}
 			}
 			if n.Input.Deps != nil {
-				n.Input.Deps = append([]string{}, ds...)
+				n.Input.Deps = inputDeps(out, ds)
 			}
 			continue
 		}
@@ -322,7 +322,7 @@ func ApplyPlanEdit(r agentdag.Run, text string, cats map[string]string) (agentda
 			title = id
 		}
 		out.Nodes = append(out.Nodes, agentdag.Node{ID: id, Title: title, Category: cat, Slot: cats[cat], Prompt: prompt,
-			State: agentdag.StatePending, Input: agentdag.InputRule{Deps: append([]string{}, ds...)}})
+			State: agentdag.StatePending, Input: agentdag.InputRule{Deps: inputDeps(out, ds)}})
 		idx[id] = len(out.Nodes) - 1
 	}
 	left := 0
@@ -363,4 +363,22 @@ func ApplyPlanEdit(r agentdag.Run, text string, cats map[string]string) (agentda
 	}
 	n, _ := agentdag.Normalize(out)
 	return n, nil
+}
+
+// inputDeps are the deps whose output a planned step gets: a planner's
+// answer (the plan JSON) is never passed on.
+func inputDeps(r agentdag.Run, deps []string) []string {
+	out := []string{}
+	for _, d := range deps {
+		planner := false
+		for _, n := range r.Nodes {
+			if n.ID == d && n.Plan {
+				planner = true
+			}
+		}
+		if !planner {
+			out = append(out, d)
+		}
+	}
+	return out
 }

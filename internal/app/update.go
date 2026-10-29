@@ -1618,7 +1618,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		} else if p := m.editor.Path(); p != "" {
 			m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Saved", saveDetail(p))
 			m.onAIProfilesSaved(p)
-			toastCmd = tea.Batch(toastCmd, m.onMCPServeConfigSaved(p)) // mcp_server changed
+			toastCmd = tea.Batch(toastCmd, m.onMCPServeConfigSaved(p), m.onAIPlanSaved(p)) // mcp_server changed; G-PLAN
 		}
 		return m, tea.Batch(fetchGitCmd(), toastCmd)
 	case keymap.ActionSaveAll:

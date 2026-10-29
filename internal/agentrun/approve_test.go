@@ -224,6 +224,9 @@ func TestApprovalEditPlan(t *testing.T) {
 	if h.provs["right"].callCount() != 0 {
 		t.Error("the dropped step ran")
 	}
+	if strings.Contains(h.input("map"), "\"nodes\"") {
+		t.Errorf("an edited step got the plan JSON:\n%s", h.input("map"))
+	}
 	if !strings.Contains(h.input("map"), "List only Go files.") || !strings.Contains(h.input("verify"), "### Output of step \"Docs\"") {
 		t.Errorf("inputs:\nmap %s\nverify %s", h.input("map"), h.input("verify"))
 	}

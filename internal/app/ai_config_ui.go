@@ -116,6 +116,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.onAIUndoTurnConfirm(id), true
 	case confirmKindAIBudget:
 		return m.answerAIBudget(id), true
+	case confirmKindAIPlan: // G-PLAN (ai_plan_approval.go)
+		return m.answerAIPlan(id), true
 	case confirmKindRunsStop: // runs_state.go
 		return m.answerRunsStop(id), true
 	case confirmKindAIOAuth:
@@ -188,6 +190,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 	switch m.confirmKind {
 	case confirmKindAITool:
 		return m.answerAIToolConfirm("deny")
+	case confirmKindAIPlan: // G-PLAN: Esc denies the plan
+		return m.answerAIPlan("deny")
 	case confirmKindAIWorktreeConflict, confirmKindAIWorktreeDiscard:
 		return m.answerAIWorktreeCard(m.confirmKind, "") // Esc: Cancel
 	case confirmKindAIWorktreeLeft:

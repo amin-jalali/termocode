@@ -1380,6 +1380,10 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 			return m.aiRetryRun(i)
 		}
 		return nil
+	case strings.HasPrefix(id, "plan-open:"): // G-PLAN (ai_plan_approval.go)
+		return m.openAIPlanCard()
+	case strings.HasPrefix(id, "plan-deny:"):
+		return m.answerAIPlan("deny")
 	case strings.HasPrefix(id, "run-continue:"):
 		return m.answerAIBudget("continue")
 	case strings.HasPrefix(id, "run-stop:"):

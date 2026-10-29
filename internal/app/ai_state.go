@@ -129,6 +129,10 @@ type aiState struct {
 	runPausing  bool
 	cardSel     string
 	reviewGate  agentrun.Gate
+	// planWait is the plan the running run waits on and runActs what
+	// its steps may do (G-PLAN, ai_plan_approval.go).
+	planWait *aiPlanWait
+	runActs  func(agentdag.Node) (writes, exec bool)
 	// agents is the AGENTS view of the chat's runs (agents_panel.go).
 	agents aiAgentsState
 	// usageLog is every step and plain chat turn that used a model in
@@ -455,6 +459,8 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-profile-next", "AI: Next Profile", "Alt+Shift+P"},
 		{"ai-profile-show", "AI: Show Profile", ""},
 		{"ai-until-done", "AI: Work Until Done (toggle)", ""},
+		{"ai-plan-approval", "AI: Toggle Plan Approval", ""},
+		{"ai-plan-review", "AI: Review Waiting Plan", ""},
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
 		{"ai-worktrees", "AI: Agent Worktrees…", ""},
 		{"ai-worktrees-toggle", "AI: Toggle Agent Worktrees", ""},
@@ -580,6 +586,10 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.showAIProfile(), true
 	case "ai-until-done":
 		return m.toggleAIUntilDone(), true
+	case "ai-plan-approval": // G-PLAN (ai_plan_approval.go)
+		return m.toggleAIPlanApproval(), true
+	case "ai-plan-review":
+		return m.openAIPlanCard(), true
 	case "ai-agents":
 		return m.toggleAgentsView(), true
 	case "ai-usage":

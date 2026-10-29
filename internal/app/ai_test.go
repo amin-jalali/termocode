@@ -25,7 +25,11 @@ func aiTestModel(t *testing.T) Model {
 	for _, k := range []string{"ANTHROPIC_API_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY", "TERMOCODE_AI_PROVIDER", "TERMOCODE_AI_API_KEY", "TERMOCODE_AI_MODEL", "TERMOCODE_AI_BASE_URL", "OLLAMA_HOST"} {
 		t.Setenv(k, "")
 	}
-	return Model{w: 120, h: 40, debounce: debounce.New(), ai: newAIState(), actionsWidth: defaultActionsWidth}
+	m := Model{w: 120, h: 40, debounce: debounce.New(), ai: newAIState(), actionsWidth: defaultActionsWidth}
+	// G-PLAN: the plan card has its own tests (ai_plan_approval_test.go);
+	// the other run tests run their plans without it.
+	m.ai.settings.PlanApproval = ai.PlanApprovalAuto
+	return m
 }
 
 // fakeAIProvider streams canned text without any network.

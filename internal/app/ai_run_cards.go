@@ -152,6 +152,9 @@ func (m Model) aiRunLines(i int, msg ai.StoredMessage, width, inner int) []aiLin
 	if waves != "" {
 		agentsBtn = []aiLineButton{{0, width, "agents:" + msg.Run.ID}}
 	}
+	if msg.Run.State == ai.RunStateRunning && msg.Run.PlanWait && i == s.runMsg && s.run != nil { // G-PLAN
+		return append(out, aiPlanWaitLines(i, width, inner)...)
+	}
 	if msg.Run.State == ai.RunStateRunning {
 		if waves != "" { // where the run is: "wave 2/4 · done 1/5 · 2 running"
 			if msg.Run.Rounds > 1 {

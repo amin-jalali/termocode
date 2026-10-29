@@ -360,6 +360,7 @@ func TestAIUntilDoneSettingsChangeDefaults(t *testing.T) {
 	// applySetting reloads the provider; the test's fake comes back.
 	m.ai.provider, m.ai.cfg = p, ai.Config{Kind: ai.KindOllama, Model: "fake-1"}
 	m.ai.slotFake = aiDemoSlots(p, p)
+	m.ai.settings.PlanApproval = ai.PlanApprovalAuto // G-PLAN: the card has its own tests
 	prof, _ := m.ai.profiles.Get(ai.ProfileUntilDone)
 	if prof.BudgetUSD != 0.5 || prof.Loop.MaxRounds != 2 {
 		t.Fatalf("profile %+v loop %+v", prof, prof.Loop)
@@ -419,7 +420,7 @@ func TestAIUntilDoneProfileOverrideWins(t *testing.T) {
   "loop": {"verify": "verify", "fix": {"category": "quick", "tools": {"preset": "all"}}, "max_rounds": 4},
   "budget_usd": 7
 }}}`)
-	m.ai.settings = ai.Settings{UntilDoneRounds: 2, UntilDoneBudgetUSD: func() *float64 { v := 0.25; return &v }()}
+	m.ai.settings = ai.Settings{UntilDoneRounds: 2, UntilDoneBudgetUSD: func() *float64 { v := 0.25; return &v }(), PlanApproval: ai.PlanApprovalAuto}
 	m.ai.reloadProfiles()
 	strict, ok := m.ai.profiles.Get("strict")
 	if !ok || strict.Loop.MaxRounds != 4 || strict.BudgetUSD != 7 {

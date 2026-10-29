@@ -59,6 +59,9 @@ type Settings struct {
 	// Worktrees is "off" to keep parallel agents in the user's tree
 	// (default: each gets its own git worktree; worktree.go).
 	Worktrees string `json:"ai_worktrees,omitempty"`
+	// PlanApproval is ai_plan_approval (G-PLAN): "ask" (default), "auto"
+	// or "always" (planapproval.go).
+	PlanApproval string `json:"ai_plan_approval,omitempty"`
 }
 
 // CheckUntilDoneRounds checks an ai_until_done_rounds value.
@@ -314,6 +317,7 @@ func SaveSettings(path string, s Settings) error {
 		set("ai_inline_model", s.InlineModel)
 		set("ai_edit_review", s.EditReview)
 		set("ai_worktrees", s.Worktrees)
+		set("ai_plan_approval", s.PlanApproval)
 		if s.Inline != nil {
 			merged["ai_inline"] = *s.Inline
 		}

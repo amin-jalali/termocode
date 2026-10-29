@@ -86,6 +86,11 @@ type StoredRun struct {
 	// CLI did not say, Resume goes on by hand).
 	Limit      string `json:"limit,omitempty"`
 	ResumeAtMs int64  `json:"resume_at_ms,omitempty"`
+	// Approved are the ids of the steps whose plan the user approved
+	// (G-PLAN): a resume does not ask for them again. PlanWait is set
+	// while the run waits for the user's answer on its plan.
+	Approved []string `json:"approved,omitempty"`
+	PlanWait bool     `json:"plan_wait,omitempty"`
 }
 
 // StoredStep is one step card of a pipeline run.
@@ -144,6 +149,9 @@ type Conversation struct {
 	Folded map[string]bool `json:"folded,omitempty"`
 	// ForkedFrom is set on a chat forked from another one (G-FORK).
 	ForkedFrom *ForkInfo `json:"forked_from,omitempty"`
+	// PlanApproval overrides ai_plan_approval for this chat ("": the
+	// setting; AI: Toggle Plan Approval sets it).
+	PlanApproval string `json:"plan_approval,omitempty"`
 }
 
 const (

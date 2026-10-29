@@ -420,7 +420,11 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-profile-next":   aiNever(aiNoAIConfig + " (ai-profile-switch asks the user)"),
 	"ai-profile-show":   aiNever("a read-only screen for the user; the AI already knows its own profile"),
 	// Work until done (OM-3) is a profile switch: the user confirms it.
-	"ai-until-done":    aiConfirm(ai.ClassSettings),
+	"ai-until-done": aiConfirm(ai.ClassSettings),
+	// Plan approval (G-PLAN): the AI can never approve its own plan or
+	// turn the question off.
+	"ai-plan-approval": aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
+	"ai-plan-review":   aiNever("the plan card is the user's answer; the AI never approves its own plan"),
 	"ai-profile-edit":  aiNever(aiNoAIConfig),
 	"ai-profile-new":   aiNever(aiNoAIConfig),
 	"ai-profile-form":  aiNever(aiNoAIConfig + " (the step form is for the user; a typed tool comes later)"),
@@ -511,6 +515,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_models":           aiNever(aiNoAIConfig),
 	"ai_parallel_max":     aiNever(aiNoAIConfig),
 	"ai_worktrees":        aiNever(aiNoAIConfig),
+	"ai_plan_approval":    aiNever(aiNoAIConfig + "; the AI never approves its own plan"),
 	// Work until done: the AI never raises its own rounds or budget.
 	"ai_until_done_rounds":     aiNever(aiNoAIConfig),
 	"ai_until_done_budget_usd": aiNever(aiNoAIConfig),

@@ -281,6 +281,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	}
 	auto := s.settings.AutoApprove
 	maxSteps := s.settings.MaxSteps
+	acts := func(n agentdag.Node) (bool, bool) { return aiNodeActs(tools, n) } // G-PLAN
 	// Step numbers of the profile's steps (read-only below). A planned
 	// node (it has a Prompt) has none: in a resumed run the planned nodes
 	// are in the run from the start, and they keep their own wording.
@@ -339,6 +340,8 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		Review:     &s.reviewGate,
 		Categories: prof.CategorySlots(),
 		Budget:     prof.BudgetUSD,
+		Approval:   s.aiRunApproval(),
+		Acts:       acts,
 		Cost: func(n agentdag.Node, u ai.Usage) (float64, bool) {
 			if n.CLI != "" {
 				return 0, false // the subscription: no price, not in the budget
@@ -374,6 +377,9 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 				}
 			})
 			sl := slots[n.Slot]
+			if sl.p == nil {
+				return nil, nil, fmt.Errorf("model slot %q is not set up", n.Slot)
+			}
 			dir, wtTools, err := inWorktree(ctx, n)
 			if err != nil {
 				return nil, nil, err
@@ -423,6 +429,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		return nil
 	}
 	s.run = h
+	s.runActs, s.planWait = acts, nil
 	s.runLaunched, s.runPausing = clock.Now(), false
 	s.chatCancel = cancel
 	s.streaming = true
@@ -470,6 +477,9 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 	now := clock.Now()
 	ev := msg.ev
 	if rm != nil {
+		if cmd, ok := m.onAIPlanEvent(rm, ev); ok { // G-PLAN
+			return tea.Batch(waitAIChat(msg.ch), cmd)
+		}
 		switch ev.Kind {
 		case agentrun.RunPlanned:
 			m.aiAddPlannedSteps(rm, ev)
@@ -797,7 +807,12 @@ func (m *Model) finishAIRun(final agentrun.Event) {
 			}
 		}
 	}
-	aiSettleWorktrees(rm.Steps) // G-WT: a stopped step's worktree waits for the user
+	aiSettleWorktrees(rm.Steps)              // G-WT: a stopped step's worktree waits for the user
+	rm.Run.PlanWait, s.planWait = false, nil // G-PLAN
+	aiRemovePlanFile(rm.Run.ID)
+	if final.Err == agentrun.DeniedErr {
+		rm.Text = "You denied the plan: the run stopped before its next step."
+	}
 	rm.Run.ElapsedMs += final.Elapsed.Milliseconds()
 	if final.Round > 0 {
 		rm.Run.Rounds = final.Round
@@ -828,6 +843,7 @@ func aiMarkInterrupted(c *ai.Conversation) {
 			continue
 		}
 		r.State = ai.RunStateInterrupted
+		r.PlanWait = false // G-PLAN: a resume asks again unless the plan was approved
 		for k := range c.Messages[i].Steps {
 			st := &c.Messages[i].Steps[k]
 			switch agentdag.State(st.State) {
@@ -924,6 +940,7 @@ func (m *Model) aiRetryRun(i int) tea.Cmd {
 	if err != nil {
 		return m.aiInfo(err.Error())
 	}
+	run.Approved = append([]string(nil), rm.Run.Approved...) // G-PLAN: an approved plan is not asked again
 	slots, err := s.aiRunPreflight(run, prof.CategorySlots())
 	if err != nil {
 		return m.aiProfileProblem(prof.Name, err)
@@ -992,6 +1009,9 @@ func aiRebuildRun(rm ai.StoredMessage, prof ai.Profile) (agentdag.Run, map[strin
 	for k := range run.Nodes {
 		if run.Nodes[k].ID != own[k].ID {
 			return agentdag.Run{}, nil, changed
+		}
+		if own[k].Prompt != "" { // G-PLAN: the user's edit of the plan
+			run.Nodes[k].Title, run.Nodes[k].Prompt = own[k].Title, own[k].Prompt
 		}
 	}
 	if len(planned) > 0 {

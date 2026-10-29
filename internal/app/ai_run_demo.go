@@ -78,6 +78,7 @@ func (m *Model) aiPipelineDemo(arg string) tea.Cmd {
 		ai.SlotQuick: {p: fix, cfg: ai.Config{Kind: ai.KindOpenAI, Model: "gpt-5-mini"}},
 	}
 	s.profile = ai.ProfileReview
+	s.conv.PlanApproval = ai.PlanApprovalAuto // the shots show the run, not the plan card
 	return m.sendAIChat("review my last commit and fix what you find")
 }
 
@@ -104,6 +105,7 @@ func (m *Model) aiUntilDoneDemo(arg string) tea.Cmd {
 	}}
 	s.slotFake = aiDemoSlots(main, quick)
 	s.profile = ai.ProfileUntilDone
+	s.conv.PlanApproval = ai.PlanApprovalAuto // the shots show the run, not the plan card
 	return m.sendAIChat("fix the double quit confirm and make the tests pass")
 }
 
@@ -370,6 +372,7 @@ func (m *Model) aiAgentsDemo(arg string) tea.Cmd {
 		ai.SlotQuick: {p: quick, cfg: ai.Config{Kind: ai.KindOpenAI, Model: "gpt-5-mini"}},
 	}
 	s.profile = ai.ProfilePlan
+	s.conv.PlanApproval = ai.PlanApprovalAuto // the shots show the waves, not the plan card
 	cmd := m.sendAIChat("make the parser faster")
 	return tea.Batch(cmd, m.showAgents(""))
 }
