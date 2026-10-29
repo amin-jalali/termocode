@@ -2,12 +2,15 @@ package containerhost
 
 import (
 	"archive/tar"
+	"bytes"
 	"context"
 	"errors"
 	"io"
 	"io/fs"
+	"path"
 	"sort"
 	"strings"
+	"time"
 )
 
 // cpfs reads and writes files with `cp` tar streams: no tool is needed
@@ -147,4 +150,87 @@ func (f containerFS) readDirTar(ctx context.Context, abs string) ([]fs.DirEntry,
 	}
 	sort.Slice(ents, func(i, j int) bool { return ents[i].Name() < ents[j].Name() })
 	return ents, nil
+}
+
+// cpInArgs is `cp <keep owner> - <c>:<dir>`: the tar's uid, gid and mode
+// are kept (docker -a; podman --archive=false, since podman's default
+// changes the owner).
+func (h *Host) cpInArgs(dir string) []string {
+	keep := "-a"
+	if h.cfg.Kind == "podman" {
+		keep = "--archive=false"
+	}
+	return []string{"cp", keep, "-", h.cfg.Container + ":" + dir}
+}
+
+// putTar extracts the tar data into the folder dir.
+func (h *Host) putTar(ctx context.Context, op, p, dir string, data []byte) error {
+	_, stderr, code, err := h.call(ctx, data, h.cpInArgs(dir)...)
+	if err != nil {
+		return &fs.PathError{Op: op, Path: p, Err: err}
+	}
+	if code != 0 {
+		return h.engineErr(op, p, stderr, code)
+	}
+	return nil
+}
+
+// WriteFile replaces or creates one file with a one-entry tar into its
+// folder. An existing file keeps its mode, uid and gid; a new file gets
+// perm and the uid/gid commands run as (`id -u`), or the folder's owner
+// when that is unknown. Nothing else in the container changes.
+func (f containerFS) WriteFile(ctx context.Context, p string, data []byte, perm fs.FileMode) error {
+	h := f.h
+	abs, err := resolve(h.cfg.Root, p)
+	if err != nil {
+		return err
+	}
+	if abs == h.cfg.Root {
+		return &fs.PathError{Op: "write", Path: abs, Err: errIsDir}
+	}
+	ctx, cancel := h.opCtx(ctx)
+	defer cancel()
+	mode, uid, gid := int64(perm.Perm()), 0, 0
+	hd, err := h.header(ctx, "write", abs, false)
+	switch {
+	case err == nil && hd.Typeflag == tar.TypeDir:
+		return &fs.PathError{Op: "write", Path: abs, Err: errIsDir}
+	case err == nil && hd.Typeflag == tar.TypeSymlink:
+		return &fs.PathError{Op: "write", Path: abs, Err: errors.New("is a symlink")}
+	case err == nil:
+		mode, uid, gid = hd.Mode&0o7777, hd.Uid, hd.Gid
+	case errors.Is(err, fs.ErrNotExist):
+		parent, perr := h.header(ctx, "write", path.Dir(abs), true)
+		if perr != nil {
+			return perr
+		}
+		uid, gid = parent.Uid, parent.Gid
+		if u, g, ok := h.Owner(); ok {
+			uid, gid = u, g
+		}
+	default:
+		return err
+	}
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	err = tw.WriteHeader(&tar.Header{
+		Name:     path.Base(abs),
+		Typeflag: tar.TypeReg,
+		Mode:     mode,
+		Uid:      uid,
+		Gid:      gid,
+		Size:     int64(len(data)),
+		ModTime:  time.Now(),
+		Format:   tar.FormatPAX,
+	})
+	if err == nil {
+		_, err = tw.Write(data)
+	}
+	if err == nil {
+		err = tw.Close()
+	}
+	if err != nil {
+		return &fs.PathError{Op: "write", Path: abs, Err: err}
+	}
+	return h.putTar(ctx, "write", abs, path.Dir(abs), buf.Bytes())
 }
