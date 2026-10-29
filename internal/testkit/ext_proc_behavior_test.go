@@ -23,8 +23,7 @@ import (
 // (extproctest) and the fake MCP server (mcptest): the app starts them as
 // separate processes. It also puts fail-closed docker / podman / kubectl
 // stand-ins first on PATH: no test reaches the real Docker or cluster.
-// separate processes. After the run it fails when a test left an nvim
-// running.
+// After the run it fails when a test left an nvim running.
 func TestMain(m *testing.M) {
 	extproctest.RunIfHelper()
 	git.RunRebaseHelperIfAsked() // git's editor in the rebase tests (scm_rebase_test.go)
@@ -46,14 +45,13 @@ func runGuarded(m *testing.M) int {
 	}
 	_ = os.Setenv("PATH", g.PathEnv())
 	cliGuard = g
-	return m.Run()
 	nvim.TrackClients()
 	code := m.Run()
 	if r := nvim.LeakReport(15 * time.Second); code == 0 && r != "" {
 		fmt.Fprint(os.Stderr, "FAIL: "+r)
 		code = 1
 	}
-	os.Exit(code)
+	return code
 }
 
 // procWait is only a guard against a hang: every wait ends on what the
