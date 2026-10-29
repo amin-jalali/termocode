@@ -3,6 +3,9 @@ package app
 import (
 	"context"
 	"errors"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -12,6 +15,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ghci"
 	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/workspace/localhost"
 )
 
 // prFakeGH answers gh calls from a table keyed by the first two args and
@@ -333,5 +337,87 @@ func TestPRReadDescriptionEmpty(t *testing.T) {
 	m.onPRActionPicked("description")
 	if !toastHas(m, "has no description") {
 		t.Error("no hint")
+	}
+}
+
+// prRepoModel is prModel whose folder is a fresh temp git repo with one
+// commit, so tests that read the git state never touch this repository.
+func prRepoModel(t *testing.T, f *prFakeGH) (*Model, string) {
+	t.Helper()
+	dir := t.TempDir()
+	for _, args := range [][]string{{"init", "-q"}, {"config", "user.email", "t@example.com"}, {"config", "user.name", "T"},
+		{"config", "commit.gpgsign", "false"}, {"checkout", "-q", "-b", "main"}} {
+		c := exec.Command("git", args...)
+		c.Dir = dir
+		if out, err := c.CombinedOutput(); err != nil {
+			t.Skipf("git %v: %v %s", args, err, out)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("one\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"add", "a.txt"}, {"commit", "-q", "-m", "one"}} {
+		c := exec.Command("git", args...)
+		c.Dir = dir
+		if out, err := c.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	ws, err := localhost.New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := prModel(f)
+	m.ws = ws
+	prDo(t, m, m.prViewCmd(14))
+	return m, dir
+}
+
+// Check Out runs `gh pr checkout` on a clean tree and refreshes git.
+func TestPRCheckout(t *testing.T) {
+	f := &prFakeGH{answers: map[string]string{"pr view": prViewText14, "pr checkout": ""}}
+	m, _ := prRepoModel(t, f)
+	cmd := m.onPRActionPicked("checkout")
+	if cmd == nil {
+		t.Fatal("no command")
+	}
+	msg := cmd()
+	done, ok := msg.(prDoneMsg)
+	if !ok || done.err != nil || !done.refresh {
+		t.Fatalf("msg %#v", msg)
+	}
+	if !f.called("pr checkout 14") {
+		t.Errorf("calls %v", f.calls)
+	}
+	m.onPRDone(done)
+	if !toastHas(m, "Checked out #14") {
+		t.Error("no success toast")
+	}
+}
+
+// A tree with changes to tracked files refuses, says why, and never calls gh.
+func TestPRCheckoutRefusesDirtyTree(t *testing.T) {
+	f := &prFakeGH{answers: map[string]string{"pr view": prViewText14, "pr checkout": ""}}
+	m, dir := prRepoModel(t, f)
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("changed\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m.onPRActionPicked("checkout")
+	if f.called("pr checkout") {
+		t.Fatal("gh pr checkout ran on a dirty tree")
+	}
+	if !toastHas(m, "Not checked out: you have changes") || !toastHas(m, "Commit, stash or discard") {
+		t.Error("no explanation")
+	}
+}
+
+// A failing gh shows its error.
+func TestPRCheckoutFails(t *testing.T) {
+	f := &prFakeGH{answers: map[string]string{"pr view": prViewText14},
+		errs: map[string]error{"pr checkout": errors.New("exit 1")}, stderr: map[string]string{"pr checkout": "fatal: couldn't find remote ref"}}
+	m, _ := prRepoModel(t, f)
+	m.onPRDone(m.onPRActionPicked("checkout")().(prDoneMsg))
+	if !toastHas(m, "Could not check out #14") {
+		t.Error("no failure toast")
 	}
 }

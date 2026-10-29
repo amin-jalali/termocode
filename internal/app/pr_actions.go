@@ -1,11 +1,13 @@
 package app
 
 import (
+	"context"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ghci"
+	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/picker"
 )
 
@@ -64,6 +66,8 @@ func (m *Model) onPRActionPicked(id string) tea.Cmd {
 		return m.openLink(d.URL)
 	case "description":
 		return m.prReadDescription()
+	case "checkout":
+		return m.prCheckout()
 	}
 	return nil
 }
@@ -82,4 +86,26 @@ func (m *Model) prReadDescription() tea.Cmd {
 		m.err = "Pull request: " + err.Error()
 	}
 	return nil
+}
+
+// prCheckout switches to the branch of the pull request. It refuses when
+// tracked files have changes: gh would fail or take them along.
+func (m *Model) prCheckout() tea.Cmd {
+	d := m.prS().detail
+	dir, err := m.rootDir()
+	if d == nil || err != nil {
+		return nil
+	}
+	dirty, err := git.Dirty(dir)
+	if err != nil {
+		return m.prFailToast("Could not read the git state", err)
+	}
+	if dirty {
+		return m.prInfo("Not checked out: you have changes", "Commit, stash or discard them first, then check out "+prRef(d.Number)+" again.")
+	}
+	n, branch := d.Number, d.Branch
+	return m.prRun(func(ctx context.Context, run ghci.Runner, dir string) tea.Msg {
+		err := ghci.Checkout(ctx, run, dir, n)
+		return prDoneMsg{number: n, ok: "Checked out " + prRef(n), detail: branch, failed: "Could not check out " + prRef(n), err: err, refresh: true}
+	})
 }

@@ -74,8 +74,42 @@ func (m *Model) handlePRMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onPRList(msg), true
 	case prViewMsg: // pr_view.go
 		return m.onPRView(msg), true
+	case prDoneMsg: // pr_state.go
+		return m.onPRDone(msg), true
 	case prDiffMsg: // pr_files.go
 		return m.onPRDiff(msg), true
 	}
 	return nil, false
+}
+
+// prDoneMsg is a finished change through gh (check out, review, merge…).
+type prDoneMsg struct {
+	number  int
+	ok      string // the success toast
+	failed  string // the failure toast title
+	err     error
+	refresh bool // the branch or files changed: read git again
+	reopen  bool // read the pull request again and show the card
+	detail  string
+}
+
+// onPRDone says how it went. A change of the work tree refreshes git (and
+// with it the CI chip); a change of the pull request reopens its card.
+func (m *Model) onPRDone(msg prDoneMsg) tea.Cmd {
+	s := m.prS()
+	s.busy = false
+	if msg.err != nil {
+		return m.prFailToast(msg.failed, msg.err)
+	}
+	cmds := []tea.Cmd{m.prInfo(msg.ok, msg.detail)}
+	if msg.refresh {
+		if m.nvim != nil {
+			_ = m.nvim.Command("silent! checktime")
+		}
+		cmds = append(cmds, fetchGitCmd())
+	}
+	if msg.reopen && msg.number > 0 {
+		cmds = append(cmds, m.prViewCmd(msg.number))
+	}
+	return tea.Batch(cmds...)
 }
