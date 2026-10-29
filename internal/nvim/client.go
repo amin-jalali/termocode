@@ -174,6 +174,7 @@ func New() (*Client, error) {
 		return nil, fmt.Errorf("register redraw handler: %w", err)
 	}
 	go c.serve()
+	track(c)
 
 	return c, nil
 }
