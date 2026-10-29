@@ -97,6 +97,7 @@ func modalOverlay(base, box string, screenW, screenH int, opts *ModalOpts) strin
 	}
 
 	var lines []string
+	var memo *modalDimCache // per-row work on the cached backdrop
 	dim := 1.0
 	if o.NoDim {
 		lines = strings.Split(base, "\n")
@@ -110,6 +111,7 @@ func modalOverlay(base, box string, screenW, screenH int, opts *ModalOpts) strin
 		cached := dimmedBaseCached(base, leftCol, topRow, boxW, boxH, dim)
 		lines = make([]string, len(cached))
 		copy(lines, cached)
+		memo = modalDimCacheV
 	}
 
 	for i, bl := range boxLines {
@@ -117,7 +119,12 @@ func modalOverlay(base, box string, screenW, screenH int, opts *ModalOpts) strin
 		if row < 0 || row >= len(lines) {
 			continue
 		}
-		under := parseANSIRow(lines[row])
+		var under []cellData
+		if memo != nil {
+			under = memo.underRow(row)
+		} else {
+			under = parseANSIRow(lines[row])
+		}
 		bl = edgeOnBackdrop(bl, under, leftCol, i == 0 || i == boxH-1, dim)
 		if p < 1 {
 			bl = fadeRow(bl, under, leftCol, p)
@@ -129,7 +136,11 @@ func modalOverlay(base, box string, screenW, screenH int, opts *ModalOpts) strin
 		} else if textWidth(bl) > room {
 			bl = ansi.Truncate(bl, room, "")
 		}
-		lines[row] = spliceAt(lines[row], bl, leftCol)
+		if memo != nil {
+			lines[row] = memo.splice(row, bl, leftCol)
+		} else {
+			lines[row] = spliceAt(lines[row], bl, leftCol)
+		}
 	}
 	if !o.NoShadow {
 		paintShadow(lines, leftCol, topRow, boxW, boxH, p)
@@ -281,6 +292,46 @@ type modalDimCache struct {
 	outsideDim                  float64
 	profile                     termenv.Profile
 	lines                       []string
+	// under and sides keep per-row work on lines between frames: the
+	// parsed cells of a row, and the parts of a row left and right of
+	// a card of some width (spliceAt's cuts).
+	mu    sync.Mutex
+	under map[int][]cellData
+	sides map[sideKey][2]string
+}
+
+type sideKey struct{ row, col, w int }
+
+// underRow is parseANSIRow(c.lines[row]), parsed once.
+func (c *modalDimCache) underRow(row int) []cellData {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if u, ok := c.under[row]; ok {
+		return u
+	}
+	if c.under == nil {
+		c.under = map[int][]cellData{}
+	}
+	u := parseANSIRow(c.lines[row])
+	c.under[row] = u
+	return u
+}
+
+// splice is spliceAt(c.lines[row], mid, col) with the two cuts of the
+// row remembered.
+func (c *modalDimCache) splice(row int, mid string, col int) string {
+	k := sideKey{row, col, textWidth(mid)}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	lr, ok := c.sides[k]
+	if !ok {
+		if c.sides == nil {
+			c.sides = map[sideKey][2]string{}
+		}
+		lr = [2]string{truncRightVisual(c.lines[row], col), dropLeftVisual(c.lines[row], col+k.w)}
+		c.sides[k] = lr
+	}
+	return lr[0] + mid + lr[1]
 }
 
 var modalDimCacheV *modalDimCache
