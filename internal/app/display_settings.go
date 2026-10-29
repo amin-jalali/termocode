@@ -3,6 +3,8 @@ package app
 import (
 	"fmt"
 	"os"
+	"sync"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -85,7 +87,42 @@ func SetTerminalCaps(c termimg.Caps, unicodeOK, nerdFont bool) {
 
 // imageProtocol is the protocol images use with the current setting.
 func imageProtocol() termimg.Protocol {
-	return termimg.Resolve(termimg.ParseMode(loadSettings().Images), termCaps, theme.TrueColor())
+	return termimg.Resolve(termimg.ParseMode(imagesSetting()), termCaps, theme.TrueColor())
+}
+
+// imagesMemo keeps the "images" setting: View asks for it on every frame
+// (cleanupGraphics), and reading and decoding config.json each time
+// cost more than drawing the editor. It is read again whenever the
+// file's path, size or change time differ from the last read.
+var imagesMemo struct {
+	sync.Mutex
+	ok    bool
+	path  string
+	size  int64
+	mtime time.Time
+	value string
+}
+
+// imagesSetting is loadSettings().Images through imagesMemo.
+func imagesSetting() string {
+	path, err := settingsConfigPath()
+	if err != nil {
+		return loadSettings().Images
+	}
+	var size int64 = -1
+	var mtime time.Time
+	if fi, err := os.Stat(path); err == nil {
+		size, mtime = fi.Size(), fi.ModTime()
+	}
+	c := &imagesMemo
+	c.Lock()
+	defer c.Unlock()
+	if c.ok && c.path == path && c.size == size && c.mtime.Equal(mtime) {
+		return c.value
+	}
+	v := loadSettings().Images
+	c.ok, c.path, c.size, c.mtime, c.value = true, path, size, mtime, v
+	return v
 }
 
 // ApplyDisplaySettings resolves icons + animations from the settings and
