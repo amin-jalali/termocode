@@ -1,6 +1,7 @@
 package nvim
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -91,6 +92,25 @@ func LeakedClients(wait time.Duration) []string {
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
+}
+
+// LeakReport is LeakedClients as text for a test binary's end: "" when
+// every nvim is gone, else the count and each test with its count.
+func LeakReport(wait time.Duration) string {
+	left := LeakedClients(wait)
+	if len(left) == 0 {
+		return ""
+	}
+	count := map[string]int{}
+	for _, who := range left {
+		count[who]++
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "%d nvim process(es) still running after the tests (%d nvim children); close each nvim in the test that starts it:\n", len(left), ChildProcesses())
+	for _, who := range slices.Compact(left) {
+		fmt.Fprintf(&b, "  %s: %d\n", who, count[who])
+	}
+	return b.String()
 }
 
 // ChildProcesses counts this process's children named nvim, from /proc
