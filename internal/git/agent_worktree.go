@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -270,21 +271,116 @@ func AgentChanges(dir, id string) ([]AgentChange, error) {
 	if err != nil {
 		return nil, err
 	}
-	out, err := gitOut(top, "diff", "--no-renames", "--name-status", "-z", base, tip)
+	ds, err := agentDiffRaw(top, base, tip)
 	if err != nil {
 		return nil, err
 	}
+	ch := make([]AgentChange, len(ds))
+	for i, d := range ds {
+		ch[i] = d.AgentChange
+	}
+	return ch, nil
+}
+
+// agentDiffEntry is one changed path with its blob ids and modes before
+// (base) and after (tip); a side without the file has the zero id.
+type agentDiffEntry struct {
+	AgentChange
+	baseMode, tipMode string
+	baseID, tipID     string
+}
+
+// agentDiffRaw is `git diff --raw` from base to tip, by path: one git
+// process for every changed file's ids and modes.
+func agentDiffRaw(top, base, tip string) ([]agentDiffEntry, error) {
+	out, err := gitOut(top, "diff", "--no-renames", "--raw", "--no-abbrev", "-z", base, tip)
+	if err != nil {
+		return nil, err
+	}
+	var ds []agentDiffEntry
 	f := strings.Split(strings.TrimRight(out, "\x00"), "\x00")
-	var ch []AgentChange
 	for i := 0; i+1 < len(f); i += 2 {
-		st := f[i]
+		// ":<base mode> <tip mode> <base id> <tip id> <status>"
+		h := strings.Fields(strings.TrimPrefix(f[i], ":"))
+		if len(h) != 5 {
+			return nil, fmt.Errorf("git diff: unexpected line %q", f[i])
+		}
+		st := h[4]
 		if st == "T" {
 			st = "M"
 		}
-		ch = append(ch, AgentChange{Status: st, Path: f[i+1]})
+		ds = append(ds, agentDiffEntry{AgentChange: AgentChange{Status: st, Path: f[i+1]},
+			baseMode: h[0], tipMode: h[1], baseID: h[2], tipID: h[3]})
 	}
-	sort.Slice(ch, func(i, j int) bool { return ch[i].Path < ch[j].Path })
-	return ch, nil
+	sort.Slice(ds, func(i, j int) bool { return ds[i].Path < ds[j].Path })
+	return ds, nil
+}
+
+// agentBlobs reads the blobs of ids with one `git cat-file --batch`. A
+// zero id, a submodule (not a blob) or a missing object is not in the
+// map.
+func agentBlobs(top string, ids []string) (map[string][]byte, error) {
+	var in strings.Builder
+	asked := map[string]bool{}
+	for _, id := range ids {
+		if strings.Trim(id, "0") == "" || asked[id] {
+			continue
+		}
+		asked[id] = true
+		in.WriteString(id + "\n")
+	}
+	out := map[string][]byte{}
+	if len(asked) == 0 {
+		return out, nil
+	}
+	cmd := spawn.Command("git", "cat-file", "--batch")
+	cmd.Dir = top
+	cmd.Stdin = strings.NewReader(in.String())
+	b, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git cat-file: %w", err)
+	}
+	for len(b) > 0 {
+		nl := bytes.IndexByte(b, '\n')
+		if nl < 0 {
+			return nil, errors.New("git cat-file: output cut short")
+		}
+		h := strings.Fields(string(b[:nl]))
+		b = b[nl+1:]
+		if len(h) != 3 { // "<id> missing"
+			continue
+		}
+		n, err := strconv.Atoi(h[2])
+		if err != nil || n+1 > len(b) {
+			return nil, errors.New("git cat-file: bad object size")
+		}
+		if h[1] == "blob" {
+			out[h[0]] = b[:n:n]
+		}
+		b = b[n+1:]
+	}
+	return out, nil
+}
+
+// agentChangedFiles snapshots the agent of id and returns every changed
+// file with its blobs before (base) and after (tip): one snapshot and a
+// fixed number of git processes, however many files changed.
+func agentChangedFiles(dir, id string) (top string, ds []agentDiffEntry, blobs map[string][]byte, err error) {
+	top, _, base, tip, err := snapshotAgent(dir, id)
+	if err != nil {
+		return "", nil, nil, err
+	}
+	if ds, err = agentDiffRaw(top, base, tip); err != nil {
+		return "", nil, nil, err
+	}
+	ids := make([]string, 0, 2*len(ds))
+	for _, d := range ds {
+		ids = append(ids, d.baseID, d.tipID)
+	}
+	if blobs, err = agentBlobs(top, ids); err != nil {
+		return "", nil, nil, err
+	}
+	return top, ds, blobs, nil
 }
 
 // AgentDiff is the patch of everything the agent of id changed.
@@ -294,22 +390,6 @@ func AgentDiff(dir, id string) (string, error) {
 		return "", err
 	}
 	return gitOut(top, "diff", "--no-renames", base, tip)
-}
-
-// blob is a file's content at rev (ok=false: no such file there).
-func blob(top, rev, path string) (data []byte, mode string, ok bool) {
-	ls, err := gitOut(top, "ls-tree", "-z", rev, "--", path)
-	if err != nil || ls == "" {
-		return nil, "", false
-	}
-	mode, _, _ = strings.Cut(ls, " ")
-	cmd := spawn.Command("git", "cat-file", "blob", rev+":"+path)
-	cmd.Dir = top
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, "", false
-	}
-	return out, mode, true
 }
 
 type agentFile struct {
@@ -327,20 +407,19 @@ type agentFile struct {
 // a conflict that is not plain text keeps the user's file (Kept). The
 // worktree and branch stay; RemoveAgentWorktree removes them.
 func MergeAgentWorktree(dir, id string, force bool) (AgentMerge, error) {
-	ch, err := AgentChanges(dir, id)
-	if err != nil {
-		return AgentMerge{}, err
-	}
-	top, _, base, tip, err := snapshotAgent(dir, id)
+	top, ds, blobs, err := agentChangedFiles(dir, id)
 	if err != nil {
 		return AgentMerge{}, err
 	}
 	var res AgentMerge
 	var todo, conflicts []agentFile
-	for _, c := range ch {
+	for _, c := range ds {
 		f := agentFile{path: c.Path}
-		f.base, _, f.hasBase = blob(top, base, c.Path)
-		f.theirs, f.mode, f.hasTheirs = blob(top, tip, c.Path)
+		f.base, f.hasBase = blobs[c.baseID]
+		f.theirs, f.hasTheirs = blobs[c.tipID]
+		if f.hasTheirs {
+			f.mode = c.tipMode
+		}
 		full := filepath.Join(top, filepath.FromSlash(c.Path))
 		if fi, err := os.Lstat(full); err == nil && fi.Mode().IsRegular() {
 			f.ours, _ = os.ReadFile(full)
@@ -491,19 +570,13 @@ type AgentFile struct {
 // AgentFiles lists the files the agent of id changed with both texts
 // (the review card).
 func AgentFiles(dir, id string) ([]AgentFile, error) {
-	ch, err := AgentChanges(dir, id)
+	_, ds, blobs, err := agentChangedFiles(dir, id)
 	if err != nil {
 		return nil, err
 	}
-	top, _, base, tip, err := snapshotAgent(dir, id)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]AgentFile, 0, len(ch))
-	for _, c := range ch {
-		before, _, _ := blob(top, base, c.Path)
-		after, _, _ := blob(top, tip, c.Path)
-		out = append(out, AgentFile{AgentChange: c, Before: string(before), After: string(after)})
+	out := make([]AgentFile, 0, len(ds))
+	for _, c := range ds {
+		out = append(out, AgentFile{AgentChange: c.AgentChange, Before: string(blobs[c.baseID]), After: string(blobs[c.tipID])})
 	}
 	return out, nil
 }
