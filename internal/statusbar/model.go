@@ -66,6 +66,11 @@ type State struct {
 	// chip "⇄ ready" shows instead.
 	Agents      int
 	AgentsReady bool
+	// CI chip "CI ✓" / "CI ✗ 2" / "CI …" right after the branch: the
+	// GitHub runs of the branch's newest pushed commit (G-CI, CIChipSpan
+	// for the click). CIOff hides it. CIFailed counts the failed runs.
+	CI       CIState
+	CIFailed int
 
 	// Database chip is visible only while a connection is active in the view.
 	ShowDatabase bool
@@ -449,6 +454,9 @@ func (m Model) renderCenterDiag(s State) (string, int, int) {
 	if s.Branch != "" {
 		parts = append(parts, barFg(theme.TextSecondary).Render(branchText(s)))
 	}
+	if chip := renderCIChip(s); chip != "" {
+		parts = append(parts, chip)
+	}
 	diagIdx := len(parts)
 	if s.Errors > 0 {
 		parts = append(parts, barFg(theme.DiagError).Bold(true).Render(
@@ -725,6 +733,51 @@ func (m Model) AgentsChipSpan(s State) (x0, x1 int, ok bool) {
 		}
 	}
 	return end - lipgloss.Width(chip), end, true
+}
+
+// CIState is the state of the CI chip.
+type CIState int
+
+const (
+	CIOff     CIState = iota // no chip
+	CIPending                // "CI …" a run is queued or running
+	CIPass                   // "CI ✓"
+	CIFail                   // "CI ✗ n"
+)
+
+// renderCIChip is the G-CI chip, or "" when CI is off.
+func renderCIChip(s State) string {
+	switch s.CI {
+	case CIPending:
+		return barFg(theme.AccentAmber).Render("CI …")
+	case CIPass:
+		return barFg(theme.AccentGreen).Render("CI ✓")
+	case CIFail:
+		t := "CI ✗"
+		if s.CIFailed > 0 {
+			t += fmt.Sprintf(" %d", s.CIFailed)
+		}
+		return barFg(theme.DiagError).Bold(true).Render(t)
+	}
+	return ""
+}
+
+// CIChipSpan returns the [x0, x1) cell range of the CI chip: right after
+// the branch, at the start of the center cluster.
+func (m Model) CIChipSpan(s State) (x0, x1 int, ok bool) {
+	chip := renderCIChip(s)
+	if m.w <= 0 || chip == "" || s.Err != "" {
+		return 0, 0, false
+	}
+	l := m.layout(s)
+	if l.centerW == 0 {
+		return 0, 0, false
+	}
+	x0 = 1 + l.leftW + l.gapL
+	if s.Branch != "" {
+		x0 += lipgloss.Width(branchText(s)) + 2
+	}
+	return x0, x0 + lipgloss.Width(chip), true
 }
 
 // renderServicesChip is "☷ 3/4" plus "· ✘ n" when something is bad.

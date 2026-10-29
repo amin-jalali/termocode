@@ -104,6 +104,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if c, ok := m.handleServicesMsg(msg); ok { // services_state.go
 		return m, c
 	}
+	if c, ok := m.handleCIMsg(msg); ok { // ci_watch.go
+		return m, c
+	}
 	nm, cmd := m.updateInner(msg)
 	if ws, ok := msg.(tea.WindowSizeMsg); ok {
 		nm.resizeOverlays(ws.Width, ws.Height)
@@ -946,8 +949,9 @@ end })`)
 		m.gitBlurredSkips = 0
 		return m, tea.Batch(m.pollGitCmd(), gitAutoRefreshTick()), true
 	case GitMsg:
+		prev := m.gitBranch
 		m.applyGitSnapshot(msg)
-		return m, nil, true
+		return m, m.ciOnGitSnapshot(prev), true // G-CI: a new branch or a push
 	case gitOlderMsg:
 		m.onGitOlder(msg)
 		return m, nil, true

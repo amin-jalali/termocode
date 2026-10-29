@@ -696,6 +696,8 @@ type Model struct {
 	// ai is the Group A AI assistant state (ai_state.go). Pointer so value
 	// copies and the streaming goroutines share one instance.
 	ai *aiState
+	// ci watches the GitHub CI of the branch (ci_watch.go, G-CI).
+	ci *ciWatch
 	// mcpServe is termocode as an MCP server: the socket listener and the
 	// confirm queue of outside agents (mcp_serve*.go); nil when not serving.
 	mcpServe *mcpServeState
