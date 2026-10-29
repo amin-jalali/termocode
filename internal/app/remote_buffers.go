@@ -120,3 +120,17 @@ func startRemoteBuffers(n *nvim.Client, ws workspace.Workspace) error {
 	}
 	return n.ExecLuaArgs(remoteBuffersLua, ws.Root)
 }
+
+// saveErrText is the message of a failed save for the user. A remote
+// buffer's save error comes wrapped in nvim's autocmd and Lua text; only
+// our own sentence (after "termocode: ") is kept.
+func saveErrText(err error) string {
+	msg := err.Error()
+	if _, rest, ok := strings.Cut(msg, "termocode: "); ok {
+		msg = rest
+		if i := strings.IndexByte(msg, '\n'); i >= 0 {
+			msg = msg[:i]
+		}
+	}
+	return strings.TrimSpace(msg)
+}

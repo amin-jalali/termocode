@@ -388,7 +388,7 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 	switch id {
 	case "save": // git status / markers refresh as after Ctrl+S
 		if err := m.editor.Save(); err != nil {
-			m.err = err.Error()
+			m.err = saveErrText(err)
 		}
 		return fetchGitCmd()
 	case "save-all":

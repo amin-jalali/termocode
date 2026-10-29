@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -75,5 +76,15 @@ func TestRemoteFilesNoRootWarningForAnotherUser(t *testing.T) {
 	}
 	if res := newRemoteFiles(ws).write("/app/new.go", "x\n"); res["ok"] != true || res["warn"] != "" {
 		t.Fatalf("write = %v", res)
+	}
+}
+
+func TestSaveErrTextKeepsOnlyOurSentence(t *testing.T) {
+	raw := "nvim:nvim_command exception: BufWriteCmd Autocommands for \"/app/*\": Vim(append):Lua callback: termocode: cannot save main.go: api-1 is not running. Your text is kept.\nstack traceback:\n\t[C]: in function 'error'"
+	if got := saveErrText(errors.New(raw)); got != "cannot save main.go: api-1 is not running. Your text is kept." {
+		t.Fatalf("saveErrText = %q", got)
+	}
+	if got := saveErrText(errors.New("E212: Can't open file for writing")); got != "E212: Can't open file for writing" {
+		t.Fatalf("other error changed: %q", got)
 	}
 }

@@ -1642,8 +1642,8 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	case keymap.ActionSave:
 		var toastCmd tea.Cmd
 		if err := m.editor.Save(); err != nil {
-			m.err = err.Error()
-			m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Save failed", err.Error())
+			m.err = saveErrText(err)
+			m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Save failed", m.err)
 		} else if p := m.editor.Path(); p != "" {
 			m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Saved", saveDetail(p))
 			m.onAIProfilesSaved(p)
