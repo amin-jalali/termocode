@@ -62,6 +62,13 @@ func errorReason(out string) string {
 				}
 			}
 		}
+		// Over http: "unable to access '<url>': <cause>". The URL is the
+		// user's own remote; the cause is what the short toast must show.
+		if rest, ok := strings.CutPrefix(reason, "unable to access '"); ok {
+			if i := strings.Index(rest, "': "); i >= 0 {
+				return strings.TrimSpace(rest[i+3:])
+			}
+		}
 		return reason
 	}
 	if l := find(func(l string) bool { return strings.HasPrefix(l, "! [") }); l != "" {
