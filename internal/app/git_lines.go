@@ -23,6 +23,10 @@ const (
 // selection, and nothing else: the single-line twin of gitStageHunk.
 func (m *Model) gitStageLines() tea.Cmd { return m.gitLinesOp(gitLineStage) }
 
+// gitUnstageLines takes the line under the cursor, or the selected lines,
+// out of the index again.
+func (m *Model) gitUnstageLines() tea.Cmd { return m.gitLinesOp(gitLineUnstage) }
+
 // gitLineRange is the lines the next line operation works on: the visual
 // selection of the editor, or just the cursor line. nvim is asked directly:
 // the app's copy of the cursor may be a moment behind.
@@ -87,6 +91,8 @@ func (m *Model) gitLinesOp(kind gitLineKind) tea.Cmd {
 	switch kind {
 	case gitLineStage:
 		opErr, verb = git.StageLines(cwd, rel, from, to), "Staged "+gitLineLabel(from, to)
+	case gitLineUnstage:
+		opErr, verb = git.UnstageLines(cwd, rel, from, to), "Unstaged "+gitLineLabel(from, to)
 	}
 	m.leaveVisualMode()
 	if opErr != nil {

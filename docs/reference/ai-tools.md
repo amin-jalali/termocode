@@ -1754,6 +1754,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `git-sync` | Git: Sync (Pull, then Push) | confirm (always asks) |   |
 | `git-tags` | Git: Show Tags... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-unstage-hunk` | Git: Unstage Hunk (at cursor) | confirm (git) |   |
+| `git-unstage-lines` | Git: Unstage Line (or Selected Lines) | confirm (git) |   |
 | `git-view-toggle` | Git: Toggle Tree/Flat View | auto |   |
 | `goto-impl` | LSP: Go to Implementation | auto |   |
 | `goto-line` | Go to Line... | never | opens a picker or prompt that only the user can answer; use a typed tool (open_file with line) |

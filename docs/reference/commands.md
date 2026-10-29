@@ -343,6 +343,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |
+| Git: Unstage Line (or Selected Lines) | `git-unstage-lines` |   |   |
 
 ## HTTP
 

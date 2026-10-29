@@ -200,6 +200,7 @@ func paletteItems() []picker.Item {
 		{ID: "git-unstage-hunk", Title: "Git: Unstage Hunk (at cursor)"},
 		{ID: "git-discard-hunk", Title: "Git: Discard Hunk (at cursor)"},
 		{ID: "git-stage-lines", Title: "Git: Stage Line (or Selected Lines)"},
+		{ID: "git-unstage-lines", Title: "Git: Unstage Line (or Selected Lines)"},
 		{ID: "git-commit", Title: "Git: Commit..."},
 		{ID: "git-diff", Title: "Git: Show Diff for Current File"},
 		{ID: "git-discard", Title: "Git: Discard Changes in Current File"},
@@ -512,6 +513,8 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.gitDiscardHunk()
 	case "git-stage-lines":
 		return m.gitStageLines()
+	case "git-unstage-lines":
+		return m.gitUnstageLines()
 	case "git-commit":
 		m.openCommitPrompt()
 	case "git-diff":

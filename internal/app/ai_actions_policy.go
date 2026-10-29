@@ -157,6 +157,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"git-unstage-hunk":    aiConfirm(ai.ClassGit),
 	"git-discard-hunk":    aiDestructive(),
 	"git-stage-lines":     aiConfirm(ai.ClassGit),
+	"git-unstage-lines":   aiConfirm(ai.ClassGit),
 	"git-discard":         aiDestructive(),
 	"git-commit":          aiNever(aiNoPicker + " (git_commit)"),
 	"git-diff":            aiAuto(),

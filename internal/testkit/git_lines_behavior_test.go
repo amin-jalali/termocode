@@ -70,3 +70,16 @@ func TestStageLineMovesToTheNextLine(t *testing.T) {
 		t.Errorf("cursor %s, want 3:1", cursor(d))
 	}
 }
+
+func TestUnstageLineTakesOnlyTheCursorLineOut(t *testing.T) {
+	d := linesDriver(t)
+	gitOut(d, "add", "f.txt") // both edits staged
+	gotoLine(d, "4")
+	d.Palette("git-unstage-lines")
+	if !eventually(d, func() bool { return gitOut(d, "show", ":f.txt") == "l1\nX2\nl3\nl4\nl5\nl6" }) {
+		t.Fatalf("index: %q\n%s", gitOut(d, "show", ":f.txt"), screen(d))
+	}
+	if got := diskFile(d, "f.txt"); got != "l1\nX2\nl3\nX4\nl5\nl6\n" {
+		t.Errorf("the file on disk must not change: %q", got)
+	}
+}
