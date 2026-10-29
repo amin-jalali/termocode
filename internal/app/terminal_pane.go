@@ -99,3 +99,34 @@ func splitRefusal(dir paneDir, winW, winH, count int) string {
 	}
 	return ""
 }
+
+// withoutPane returns tab t with pane i taken out (the bookkeeping only: the
+// nvim window and buffer are closed by the caller). Removing pane 0 promotes
+// the next pane to pane 0, so BufID is always a live pane. The focus moves to
+// the pane before the removed one. t must have at least two panes.
+func (t terminalTab) withoutPane(i int) terminalTab {
+	if t.paneCount() < 2 || i < 0 || i >= t.paneCount() {
+		return t
+	}
+	panes := append([]termPane{{BufID: t.BufID, Cwd: t.Cwd}}, t.Splits...)
+	removedParent := panes[i].Parent
+	panes = append(panes[:i:i], panes[i+1:]...)
+	for k := range panes {
+		switch p := panes[k].Parent; {
+		case p == i:
+			panes[k].Parent = removedParent
+		case p > i:
+			panes[k].Parent = p - 1
+		}
+		if panes[k].Parent >= k { // keep every parent earlier than its child
+			panes[k].Parent = max(k-1, 0)
+		}
+	}
+	t.BufID = panes[0].BufID
+	t.Splits = panes[1:]
+	if len(t.Splits) == 0 {
+		t.Splits = nil
+	}
+	t.PaneFocus = max(i-1, 0)
+	return t
+}

@@ -42,3 +42,35 @@ func TestSplitRefusal(t *testing.T) {
 		}
 	}
 }
+
+func TestWithoutPane(t *testing.T) {
+	base := terminalTab{BufID: 1, Cwd: "/a", Splits: []termPane{
+		{BufID: 2, Dir: paneRight, Parent: 0},
+		{BufID: 3, Dir: paneDown, Parent: 1},
+		{BufID: 4, Dir: paneDown, Parent: 0},
+	}}
+	got := base.withoutPane(2) // the middle pane (buf 3)
+	if bufs := got.paneBufs(); len(bufs) != 3 || bufs[0] != 1 || bufs[1] != 2 || bufs[2] != 4 {
+		t.Fatalf("bufs = %v", bufs)
+	}
+	if got.PaneFocus != 1 {
+		t.Errorf("focus = %d, want the pane before the removed one", got.PaneFocus)
+	}
+	for k, s := range got.Splits {
+		if s.Parent > k { // pane k+1 must have a parent earlier than itself
+			t.Errorf("split %d parent %d is not earlier", k+1, s.Parent)
+		}
+	}
+	first := base.withoutPane(0) // pane 0 closes: the next one takes over
+	if first.BufID != 2 || first.paneCount() != 3 || first.PaneFocus != 0 {
+		t.Fatalf("promote: buf=%d panes=%d focus=%d", first.BufID, first.paneCount(), first.PaneFocus)
+	}
+	one := terminalTab{BufID: 1}
+	if got := one.withoutPane(0); got.BufID != 1 {
+		t.Error("the only pane is never removed here (the tab closes instead)")
+	}
+	last := terminalTab{BufID: 1, Splits: []termPane{{BufID: 2}}}.withoutPane(1)
+	if last.paneCount() != 1 || last.BufID != 1 || last.Splits != nil {
+		t.Errorf("back to one pane: %+v", last)
+	}
+}
