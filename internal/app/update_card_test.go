@@ -16,8 +16,13 @@ import (
 // package owns it ("" = none).
 func updInstalled(t *testing.T, owner string) string {
 	t.Helper()
-	dir := filepath.Join(t.TempDir(), "bin")
-	_ = os.MkdirAll(dir, 0o755)
+	// Behind a symlink, like the macOS temp dir (/var -> /private/var).
+	root := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(root, "real", "bin"), 0o755)
+	if err := os.Symlink(filepath.Join(root, "real"), filepath.Join(root, "link")); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(root, "link", "bin")
 	exe := filepath.Join(dir, "termocode")
 	if err := os.WriteFile(exe, []byte("#!/bin/sh\necho 'termocode v0.1.0'\n"), 0o755); err != nil {
 		t.Fatal(err)
@@ -26,11 +31,21 @@ func updInstalled(t *testing.T, owner string) string {
 	updateDepsFor = func() updateDeps {
 		d := old()
 		d.exe = func() (string, error) { return exe, nil }
-		d.owner = func(p string) (string, bool) { return owner, owner != "" && p == exe }
+		// Detect asks about the real file (symlinks resolved), like pacman.
+		real := filepath.Join(root, "real", "bin", "termocode")
+		d.owner = func(p string) (string, bool) { return owner, owner != "" && sameFile(p, real) }
 		return d
 	}
 	t.Cleanup(func() { updateDepsFor = old })
 	return exe
+}
+
+// sameFile compares two paths with their symlinks resolved (the temp
+// root itself may be a symlink, as on macOS).
+func sameFile(a, b string) bool {
+	ra, err1 := filepath.EvalSymlinks(a)
+	rb, err2 := filepath.EvalSymlinks(b)
+	return err1 == nil && err2 == nil && ra == rb
 }
 
 // updModel is a model that already saw release v0.2.0 (running v0.1.0).

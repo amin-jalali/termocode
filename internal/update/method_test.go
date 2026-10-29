@@ -13,6 +13,33 @@ func envOf(m map[string]string) func(string) string {
 
 func noOwner(string) (string, bool) { return "", false }
 
+// linkedTempDir is a temp dir reached through a symlink, like the macOS
+// temp dir (/var -> /private/var): Detect must still match it.
+func linkedTempDir(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	real := filepath.Join(root, "real")
+	if err := os.Mkdir(real, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(root, "link")
+	if err := os.Symlink(real, link); err != nil {
+		t.Fatal(err)
+	}
+	return link
+}
+
+// resolved is p with its symlinks resolved: Detect reports and asks the
+// package manager about the real file, as pacman -Qqo does too.
+func resolved(t *testing.T, p string) string {
+	t.Helper()
+	r, err := filepath.EvalSymlinks(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return r
+}
+
 func TestDetectBrew(t *testing.T) {
 	root := t.TempDir()
 	cellar := filepath.Join(root, "Cellar", "termocode", "0.1.0", "bin")
@@ -67,11 +94,12 @@ func TestDetectGoInstall(t *testing.T) {
 }
 
 func TestDetectPacman(t *testing.T) {
-	dir := t.TempDir()
+	dir := linkedTempDir(t)
 	exe := filepath.Join(dir, "termocode")
 	_ = os.WriteFile(exe, []byte("x"), 0o755)
+	real := resolved(t, exe)
 	owner := func(p string) (string, bool) {
-		if p == exe {
+		if p == real {
 			return "termocode-bin", true
 		}
 		return "", false
@@ -83,11 +111,11 @@ func TestDetectPacman(t *testing.T) {
 }
 
 func TestDetectSelf(t *testing.T) {
-	dir := t.TempDir()
+	dir := linkedTempDir(t)
 	exe := filepath.Join(dir, "termocode")
 	_ = os.WriteFile(exe, []byte("x"), 0o755)
 	got := Detect(exe, Env{Getenv: envOf(nil), Owner: noOwner})
-	if got.Method != MethodSelf || got.Path != exe {
+	if got.Method != MethodSelf || got.Path != resolved(t, exe) {
 		t.Fatalf("got %+v", got)
 	}
 	// Nothing was left behind by the write probe.
@@ -100,7 +128,7 @@ func TestDetectNotWritable(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("root can write anywhere")
 	}
-	dir := filepath.Join(t.TempDir(), "bin")
+	dir := filepath.Join(linkedTempDir(t), "bin")
 	_ = os.MkdirAll(dir, 0o755)
 	exe := filepath.Join(dir, "termocode")
 	_ = os.WriteFile(exe, []byte("x"), 0o755)
@@ -109,7 +137,7 @@ func TestDetectNotWritable(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
 	got := Detect(exe, Env{Getenv: envOf(nil), Owner: noOwner})
-	if got.Method != MethodReadOnly || !strings.Contains(got.Command, "install.sh") || !strings.Contains(got.Command, "PREFIX="+filepath.Dir(dir)) {
+	if got.Method != MethodReadOnly || !strings.Contains(got.Command, "install.sh") || !strings.Contains(got.Command, "PREFIX="+filepath.Dir(resolved(t, dir))) {
 		t.Fatalf("got %+v", got)
 	}
 }

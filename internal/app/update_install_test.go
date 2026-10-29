@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -143,7 +144,12 @@ func TestUpdateInstallFlow(t *testing.T) {
 		t.Fatal("Enter must pick Cancel (focused first)")
 	}
 	box := ansi.Strip(m.confirm.Box())
-	for _, want := range []string{"v0.1.0 → v0.2.0", exe, "verified with checksums.txt", "termocode.old"} {
+	// The card names the real file it replaces (symlinks resolved).
+	real, err := filepath.EvalSymlinks(exe)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"v0.1.0 → v0.2.0", real, "verified with checksums.txt", "termocode.old"} {
 		if !strings.Contains(box, want) {
 			t.Errorf("confirm card misses %q:\n%s", want, box)
 		}
