@@ -196,6 +196,9 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		m.explorer.Reload()
 		return m.refreshSearchResults() // results show the new path (N2)
 	case promptKindNewFile:
+		if fsys, ok := m.remoteFS(); ok { // a container workspace
+			return m.remoteNewFile(fsys, m.promptPath, value)
+		}
 		newPath := filepath.Join(m.promptPath, value)
 		if err := os.MkdirAll(filepath.Dir(newPath), 0o755); err != nil {
 			m.err = err.Error()

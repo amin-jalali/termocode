@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/fs"
 	"strings"
+	"sync"
 	"sync/atomic"
 
 	"github.com/amin-jalali/termocode/internal/containerhost"
@@ -21,6 +22,7 @@ import (
 
 // remoteFiles answers the read and write requests of remote buffers.
 type remoteFiles struct {
+	host  workspace.Host
 	fs    workspace.FS
 	label string
 	// owner is the uid new files get (nil = unknown).
@@ -28,9 +30,23 @@ type remoteFiles struct {
 	rootWarned atomic.Bool
 }
 
+// remoteFilesByID shares one remoteFiles per workspace between the nvim
+// answers and the explorer's file operations (one root warning).
+var remoteFilesByID sync.Map // workspace ID → *remoteFiles
+
+// remoteFilesFor is the shared remoteFiles of the container workspace ws.
+func remoteFilesFor(ws workspace.Workspace) *remoteFiles {
+	if r, ok := remoteFilesByID.Load(ws.ID); ok && r.(*remoteFiles).host == ws.Host {
+		return r.(*remoteFiles)
+	}
+	r := newRemoteFiles(ws)
+	remoteFilesByID.Store(ws.ID, r)
+	return r
+}
+
 // newRemoteFiles serves the files of ws (a container workspace).
 func newRemoteFiles(ws workspace.Workspace) *remoteFiles {
-	r := &remoteFiles{fs: ws.Host.FS(), label: ws.Host.Label()}
+	r := &remoteFiles{host: ws.Host, fs: ws.Host.FS(), label: ws.Host.Label()}
 	if o, ok := ws.Host.(interface{ Owner() (int, int, bool) }); ok {
 		r.owner = o.Owner
 	}
@@ -50,10 +66,19 @@ func (r *remoteFiles) read(p string) map[string]any {
 	return map[string]any{"ok": false, "err": remoteErrText(r.label, err)}
 }
 
-// write saves text to p: {ok, warn}. A new file written as root is
-// accepted with one warning per session (plan decision 1). On failure
-// {ok=false, err}: nothing is changed in the editor.
+// write saves text to p: {ok, warn}. On failure {ok=false, err}:
+// nothing is changed in the editor.
 func (r *remoteFiles) write(p, text string) map[string]any {
+	warn, err := r.writeFile(p, []byte(text))
+	if err != nil {
+		return map[string]any{"ok": false, "err": remoteErrText(r.label, err)}
+	}
+	return map[string]any{"ok": true, "warn": warn}
+}
+
+// writeFile writes data to p. A new file written as root is accepted
+// with one warning per session (plan decision 1): warn is that warning.
+func (r *remoteFiles) writeFile(p string, data []byte) (warn string, err error) {
 	ctx := context.Background()
 	asRoot := false
 	if r.owner != nil && !r.rootWarned.Load() {
@@ -62,14 +87,13 @@ func (r *remoteFiles) write(p, text string) map[string]any {
 			asRoot = errors.Is(err, fs.ErrNotExist)
 		}
 	}
-	if err := r.fs.WriteFile(ctx, p, []byte(text), 0o644); err != nil {
-		return map[string]any{"ok": false, "err": remoteErrText(r.label, err)}
+	if err := r.fs.WriteFile(ctx, p, data, 0o644); err != nil {
+		return "", err
 	}
-	warn := ""
 	if asRoot && r.rootWarned.CompareAndSwap(false, true) {
 		warn = "New files in " + r.label + " are owned by root."
 	}
-	return map[string]any{"ok": true, "warn": warn}
+	return warn, nil
 }
 
 // remoteErrText is one short sentence for a failed file call on the
@@ -99,7 +123,7 @@ func remoteErrText(label string, err error) string {
 // startRemoteBuffers turns on remote buffers for the container workspace
 // ws in n: the Go answers first, then the autocmds that ask them.
 func startRemoteBuffers(n *nvim.Client, ws workspace.Workspace) error {
-	r := newRemoteFiles(ws)
+	r := remoteFilesFor(ws)
 	arg := func(a []any, i int) string {
 		if i < len(a) {
 			if s, ok := a[i].(string); ok {
