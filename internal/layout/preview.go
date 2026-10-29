@@ -54,6 +54,13 @@ func (l Layout) Preview() []string {
 			}
 			if n := len(p.Terminals); n > 0 {
 				parts = append(parts, plural(n, "terminal"))
+				panes := 0
+				for _, t := range p.Terminals {
+					panes += len(t.Panes)
+				}
+				if panes > 0 {
+					parts = append(parts, plural(panes, "split pane"))
+				}
 			} else if has(p.Tabs, "terminal") {
 				parts = append(parts, "Terminal")
 			}

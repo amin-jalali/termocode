@@ -48,3 +48,14 @@ func TestEveryBuiltinHasAPreview(t *testing.T) {
 		}
 	}
 }
+
+func TestPreviewCountsSplitPanes(t *testing.T) {
+	l := Layout{Panel: &Panel{Open: true, Terminals: []Terminal{
+		{Panes: []Pane{{Split: "right"}, {Split: "down", Parent: 1}}},
+		{},
+	}}}
+	want := []string{"Bottom panel: open with 2 terminals, 2 split panes"}
+	if got := l.Preview(); !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %q want %q", got, want)
+	}
+}
