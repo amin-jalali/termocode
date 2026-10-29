@@ -40,20 +40,8 @@ func (e *Engine) Unpause(ctx context.Context, id string) error {
 func (e *Engine) RemoveContainer(ctx context.Context, id string) error {
 	return e.action(ctx, 60*time.Second, "rm", id)
 }
-func (e *Engine) Pull(ctx context.Context, ref string) error {
-	return e.action(ctx, 10*time.Minute, "pull", ref)
-}
 func (e *Engine) Tag(ctx context.Context, src, dst string) error {
 	return e.action(ctx, 60*time.Second, "tag", src, dst)
-}
-func (e *Engine) RemoveImage(ctx context.Context, id string) error {
-	return e.action(ctx, 60*time.Second, "rmi", id)
-}
-func (e *Engine) RemoveNetwork(ctx context.Context, id string) error {
-	return e.action(ctx, 60*time.Second, "network", "rm", id)
-}
-func (e *Engine) RemoveVolume(ctx context.Context, id string) error {
-	return e.action(ctx, 60*time.Second, "volume", "rm", id)
 }
 
 // UseContext runs `docker context use <name>` (podman: `podman system
@@ -71,22 +59,6 @@ func (e *Engine) UseContextArgs(name string) []string {
 		return []string{"system", "connection", "default", name}
 	}
 	return []string{"context", "use", name}
-}
-func (e *Engine) Prune(ctx context.Context, kind string) error {
-	switch kind {
-	case "containers":
-		return e.action(ctx, 60*time.Second, "container", "prune", "-f")
-	case "images":
-		return e.action(ctx, 60*time.Second, "image", "prune", "-f")
-	case "networks":
-		return e.action(ctx, 60*time.Second, "network", "prune", "-f")
-	case "volumes":
-		return e.action(ctx, 60*time.Second, "volume", "prune", "-f")
-	case "system":
-		return e.action(ctx, 60*time.Second, "system", "prune", "-f")
-	default:
-		return fmt.Errorf("unknown prune kind: %s", kind)
-	}
 }
 func (e *Engine) Compose(project, dir string, args ...string) services.Command {
 	return e.ComposeWithFiles(project, dir, nil, args...)
