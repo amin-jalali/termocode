@@ -378,6 +378,11 @@ func (m *Model) renameOpenBuffers(oldPath, newPath string) {
 	if m.nvim == nil {
 		return
 	}
+	// The servers learn of the move first, so the reopened buffers below
+	// meet a server that already sees the new file on disk.
+	if err := m.nvim.ExecLuaArgs(lspRenameLua, oldPath, newPath); err != nil {
+		recordError("rename: tell language servers: " + err.Error())
+	}
 	if err := m.nvim.ExecLuaArgs(renameBuffersLua, oldPath, newPath); err != nil {
 		recordError("rename buffers: " + err.Error())
 	}
