@@ -303,7 +303,7 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 		}
 		switch sp.Key {
 		case "enter":
-			if v := strings.TrimSpace(m.value); v != "" {
+			if v := strings.TrimSpace(m.value); v != "" || m.allowEmpty {
 				return m, func() tea.Msg { return SubmitMsg{Value: v} }
 			}
 		case "esc":
