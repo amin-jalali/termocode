@@ -93,3 +93,51 @@ func TestHotExitBackupWithReadOnlyStateDir(t *testing.T) {
 		t.Errorf("save did not work: %q", diskFile(d, "a.txt"))
 	}
 }
+
+// Spec: Given the state folder (session files, backups) is read-only,
+// when the user edits a.txt and quits, then the quit card still asks
+// about a.txt; Don't Save quits; and the next start works (no crash, a
+// usable editor) and leaves a.txt as it was on disk.
+func TestQuitAndRestartWithReadOnlyStateDir(t *testing.T) {
+	skipIfRoot(t)
+	d := editorDriver(t, nil)
+	lockStateDirs(t)
+	open(d, "a.txt")
+	d.Type("Hi ")
+	d.Key("ctrl+q")
+	if d.Quit() || !d.WaitForText("unsaved changes", 3*time.Second) {
+		t.Fatalf("quit did not ask about a.txt:\n%s", screen(d))
+	}
+	clickButton(d, "Don't Save")
+	if !d.Quit() {
+		t.Fatalf("Don't Save did not quit:\n%s", screen(d))
+	}
+	d.Restart()
+	open(d, "b.txt")
+	if got := bufLines(d); got != "one\ntwo\nthree" {
+		t.Errorf("b.txt after restart holds %q", got)
+	}
+	if got := diskFile(d, "a.txt"); got != "alpha\nbravo\ncharlie\n" {
+		t.Errorf("a.txt on disk changed to %q", got)
+	}
+}
+
+// Spec: Given HOME itself is read-only (its config and state folders
+// still exist),
+// when the user edits and saves a file and changes a setting, then both
+// work and nothing crashes.
+func TestReadOnlyHome(t *testing.T) {
+	skipIfRoot(t)
+	d := editorDriver(t, nil)
+	chmodBack(t, os.Getenv("HOME"), 0o555, 0o755)
+	open(d, "a.txt")
+	d.Type("Hi ")
+	d.Key("esc", "ctrl+s")
+	if !eventually(d, func() bool { return diskFile(d, "a.txt") == "Hi alpha\nbravo\ncharlie\n" }) {
+		t.Errorf("save did not work: %q", diskFile(d, "a.txt"))
+	}
+	d.Action("setting:setting-tab-size=2")
+	if !d.WaitForText("tab_size = 2", 3*time.Second) {
+		t.Errorf("setting not saved:\n%s", screen(d))
+	}
+}
