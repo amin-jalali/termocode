@@ -131,7 +131,10 @@ func runOut(dir, name string, args ...string) (string, error) {
 func Stage(dir, path string) error {
 	cmd := spawn.Command("git", "add", "--", path)
 	cmd.Dir = dir
-	return cmd.Run()
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return cmdError(err, out)
+	}
+	return nil
 }
 
 // Unstage removes path from the index without touching the working tree
@@ -139,7 +142,10 @@ func Stage(dir, path string) error {
 func Unstage(dir, path string) error {
 	cmd := spawn.Command("git", "restore", "--staged", "--", path)
 	cmd.Dir = dir
-	return cmd.Run()
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return cmdError(err, out)
+	}
+	return nil
 }
 
 // Discard reverts the working-tree changes for path back to the index/HEAD.
