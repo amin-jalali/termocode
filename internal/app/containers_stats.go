@@ -251,7 +251,10 @@ func (st *servicesState) statsRowCol(c containers.Container, w int) *hostCol {
 
 // ── Sparkline ────────────────────────────────────────────────────────────
 
-var statsBlocks = []rune("▁▂▃▄▅▆▇█")
+var (
+	statsBlocks      = []rune("▁▂▃▄▅▆▇█")
+	statsBlocksASCII = []rune("_.:-=+*#") // the ascii icon mode
+)
 
 // statsSparkline draws the newest `width` values as one block char each,
 // scaled so that `max` is a full block. Fewer values than `width` leave
@@ -264,17 +267,21 @@ func statsSparkline(vals []float64, max float64, width int) string {
 	if len(vals) > width {
 		vals = vals[len(vals)-width:]
 	}
+	blocks := statsBlocks
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		blocks = statsBlocksASCII
+	}
 	var b strings.Builder
 	b.WriteString(strings.Repeat(" ", width-len(vals)))
 	for _, v := range vals {
 		level := 0
 		if max > 0 && v > 0 {
-			level = int(v / max * float64(len(statsBlocks)))
-			if level >= len(statsBlocks) {
-				level = len(statsBlocks) - 1
+			level = int(v / max * float64(len(blocks)))
+			if level >= len(blocks) {
+				level = len(blocks) - 1
 			}
 		}
-		b.WriteRune(statsBlocks[level])
+		b.WriteRune(blocks[level])
 	}
 	return b.String()
 }

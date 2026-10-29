@@ -10,6 +10,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/containers"
 	"github.com/amin-jalali/termocode/internal/services/servicestest"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // statsFake is hostFake with a stats answer for c1 and c2.
@@ -223,7 +224,16 @@ func TestStatsRowValuesByWidth(t *testing.T) {
 	}
 }
 
+// statsIcons sets the icon mode for one test.
+func statsIcons(t *testing.T, mode theme.IconMode) {
+	t.Helper()
+	old := theme.CurrentIconMode
+	theme.CurrentIconMode = mode
+	t.Cleanup(func() { theme.CurrentIconMode = old })
+}
+
 func TestStatsSparkline(t *testing.T) {
+	statsIcons(t, theme.IconModeUnicode)
 	cases := []struct {
 		name  string
 		vals  []float64
@@ -267,6 +277,7 @@ func statsDetailState(t *testing.T) (*Model, *servicesState) {
 }
 
 func TestStatsDetailShowsCharts(t *testing.T) {
+	statsIcons(t, theme.IconModeUnicode)
 	m, st := statsDetailState(t)
 	lines := strings.Split(ansi.Strip(m.renderServicesSidebarRaw(40, 40, true, svcTestNow, -1, -1)), "\n")
 	cpu, mem, net, blk := lineWith(lines, "CPU "), lineWith(lines, "MEM "), lineWith(lines, "NET "), lineWith(lines, "BLK ")
@@ -349,5 +360,33 @@ func TestStatsDetailNarrowWidthKeepsLinesInside(t *testing.T) {
 				t.Errorf("w=%d line too wide: %q", w, l)
 			}
 		}
+	}
+}
+
+func TestStatsAsciiIconModeUsesPlainChars(t *testing.T) {
+	statsIcons(t, theme.IconModeASCII)
+	if got := statsSparkline([]float64{0, 12.5, 25, 50, 75, 100}, 100, 6); got != "_.:=*#" {
+		t.Errorf("ascii sparkline = %q", got)
+	}
+	m, _ := statsDetailState(t)
+	lines := strings.Split(ansi.Strip(m.renderServicesSidebarRaw(40, 40, true, svcTestNow, -1, -1)), "\n")
+	for _, key := range []string{"CPU ", "MEM ", "NET ", "BLK "} {
+		l := lineWith(lines, key)
+		if l == "" {
+			t.Fatalf("no %q line", key)
+		}
+		for _, r := range l {
+			if r > 127 {
+				t.Errorf("%q line has %q: %q", key, r, l)
+				break
+			}
+		}
+	}
+	if l := lineWith(lines, "CPU "); !strings.Contains(l, "__.-*") {
+		t.Errorf("cpu line = %q", l)
+	}
+	theme.CurrentIconMode = theme.IconModeUnicode
+	if got := statsSparkline([]float64{100}, 100, 1); got != "█" {
+		t.Errorf("unicode sparkline = %q", got)
 	}
 }
