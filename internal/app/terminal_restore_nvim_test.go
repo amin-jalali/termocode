@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -192,5 +193,36 @@ func TestRestoredPaneSaysWhatWasRunning(t *testing.T) {
 	}}, true)
 	if bar := winbarOf(t, m, m.terminalWinID); !strings.Contains(bar, "was running: npm") {
 		t.Fatalf("title bar %q", bar)
+	}
+}
+
+// With terminal_restore_commands, Enter in the restored pane runs the last
+// command again; any other key only drops the note.
+func TestEnterRunsTheRestoredCommandAgain(t *testing.T) {
+	m, root := layoutNvimModel(t)
+	m.termRestoreCmds = true
+	marker := filepath.Join(root, "ran.txt")
+	m.restoreTerminals(&savedTerminals{Open: true, Tabs: []savedTermTab{
+		{Panes: []savedTermPane{{Cwd: root, Program: "echo", Cmd: "echo again > " + shellQuote(marker)}}},
+	}}, true)
+	if bar := winbarOf(t, m, m.terminalWinID); !strings.Contains(bar, "Enter to run it again") {
+		t.Fatalf("title bar %q", bar)
+	}
+	m.inPaneWin, m.termOpen = true, true
+	if !m.restoreHintKey(tea.KeyMsg{Type: tea.KeyEnter}) {
+		t.Fatal("Enter should run the command (and not reach the shell twice)")
+	}
+	if len(m.termHints) != 0 {
+		t.Error("the note goes once the command runs")
+	}
+	deadline := time.Now().Add(20 * time.Second)
+	for {
+		if b, err := os.ReadFile(marker); err == nil && strings.TrimSpace(string(b)) == "again" {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the command did not run")
+		}
+		time.Sleep(20 * time.Millisecond)
 	}
 }

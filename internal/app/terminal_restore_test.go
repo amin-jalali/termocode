@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -149,5 +150,16 @@ func TestRestoreHintTextNamesTheProgram(t *testing.T) {
 		if got := restoreHintText(c.p, c.gone, false); got != c.want {
 			t.Errorf("%+v gone=%v: %q, want %q", c.p, c.gone, got, c.want)
 		}
+	}
+}
+
+func TestRestoreHintTextOffersTheCommandWhenOptedIn(t *testing.T) {
+	p := savedTermPane{Cwd: "/p", Program: "npm", Cmd: "npm run dev"}
+	if got := restoreHintText(p, false, true); got != "was running: npm run dev · Enter to run it again" {
+		t.Errorf("opted in: %q", got)
+	}
+	// In the wrong folder the command is not offered again.
+	if got := restoreHintText(p, true, true); strings.Contains(got, "Enter") {
+		t.Errorf("gone folder: %q", got)
 	}
 }

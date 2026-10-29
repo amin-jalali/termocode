@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -210,8 +211,13 @@ func (m *Model) restoreTerminals(s *savedTerminals, focusTerminal bool) tea.Cmd 
 				continue // left out: it maps to its parent
 			}
 			made[i] = true
-			if text := restoreHintText(t.Panes[k], gone(t.Panes[k].Cwd), m.termRestoreCmds); text != "" {
-				m.setTermHint(tab.paneBuf(i), termHint{Text: text})
+			p, g := t.Panes[k], gone(t.Panes[k].Cwd)
+			if text := restoreHintText(p, g, m.termRestoreCmds); text != "" {
+				h := termHint{Text: text}
+				if rerunOffered(p, g, m.termRestoreCmds) {
+					h.Cmd = p.Cmd
+				}
+				m.setTermHint(tab.paneBuf(i), h)
 			}
 		}
 	}
@@ -230,9 +236,17 @@ func (m *Model) restoreTerminals(s *savedTerminals, focusTerminal bool) tea.Cmd 
 	return tea.Batch(cmds...)
 }
 
-// termHint is the note of a restored pane.
+// termHint is the note of a restored pane. Cmd is the command Enter runs
+// again ("" = none).
 type termHint struct {
 	Text string
+	Cmd  string
+}
+
+// rerunOffered: Enter may run pane p's last command again. Only with
+// terminal_restore_commands, a recorded command, and in its own folder.
+func rerunOffered(p savedTermPane, gone, cmds bool) bool {
+	return cmds && p.Cmd != "" && !gone
 }
 
 // restoreHintText is the note of restored pane p: the program it was
@@ -240,7 +254,10 @@ type termHint struct {
 // terminal_restore_commands.
 func restoreHintText(p savedTermPane, gone, cmds bool) string {
 	var parts []string
-	if p.Program != "" {
+	switch {
+	case rerunOffered(p, gone, cmds):
+		parts = append(parts, "was running: "+p.Cmd+" · Enter to run it again")
+	case p.Program != "":
 		parts = append(parts, "was running: "+p.Program)
 	}
 	if gone {
@@ -277,8 +294,23 @@ func (m *Model) restoreHintKey(msg tea.KeyMsg) bool {
 	if tab == nil {
 		return false
 	}
-	m.dropTermHint(tab.focusedBuf())
-	return false
+	buf := tab.focusedBuf()
+	h, ok := m.termHints[buf]
+	if !ok {
+		return false
+	}
+	m.dropTermHint(buf)
+	if msg.Type != tea.KeyEnter || h.Cmd == "" || m.nvim == nil {
+		return false
+	}
+	// Type the command into the fresh shell, as if the user did.
+	_ = m.nvim.ExecLua(fmt.Sprintf(`
+		local buf = %d
+		if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == 'terminal' then
+			local ok, chan = pcall(function() return vim.bo[buf].channel end)
+			if ok and chan and chan > 0 then pcall(vim.fn.chansend, chan, %q) end
+		end`, buf, h.Cmd+"\n"))
+	return true
 }
 
 // savedPane is one shell in the session: its folder, and what it was
