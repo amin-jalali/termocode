@@ -992,23 +992,39 @@ func (m Model) renderResultRow(match fuzzy.Match, it Item, active bool, w int) s
 		}
 		avail -= runewidth.StringWidth(hint) + 2
 	}
+	// Runs of runes that share a style are rendered at once (one Render
+	// per run, not per rune: a row is a handful of runs).
+	styles := [3]lipgloss.Style{titleStyle, dirStyle, matchStyle}
+	run, runKind := make([]rune, 0, len(runes)), -1
+	flush := func() {
+		if len(run) > 0 {
+			sb.WriteString(styles[runKind].Render(string(run)))
+			run = run[:0]
+		}
+	}
 	used := 0
 	for i, r := range runes {
 		rw := runewidth.RuneWidth(r)
 		if used+rw > avail {
+			flush()
 			sb.WriteString(titleStyle.Render("…"))
 			break
 		}
 		used += rw
+		kind := 0
 		switch {
 		case pos[i]:
-			sb.WriteString(matchStyle.Render(string(r)))
+			kind = 2
 		case i <= splitAt:
-			sb.WriteString(dirStyle.Render(string(r)))
-		default:
-			sb.WriteString(titleStyle.Render(string(r)))
+			kind = 1
 		}
+		if kind != runKind {
+			flush()
+			runKind = kind
+		}
+		run = append(run, r)
 	}
+	flush()
 	rendered := sb.String()
 	if hint != "" {
 		gap := w - lipgloss.Width(rendered) - runewidth.StringWidth(hint) - 2
