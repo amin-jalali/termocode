@@ -101,6 +101,7 @@ const terminalRowsMin = 5
 const terminalRowsDefault = 10
 
 type Model struct {
+	crash *crashUI // recovered panics → toasts (crash_ui.go)
 	// ws is the open workspace (ADR 0018), set by New from the process
 	// workspace. Read it through m.workspace() / m.rootDir().
 	ws                      workspace.Workspace
@@ -901,6 +902,7 @@ func New() Model {
 		secrets:          &secretsState{},  // U19 SS-3
 		setup:            newSetupState(),  // setup card (setup_card_ui.go)
 		debug:            loadDebugState(), // Group D (shared by Model copies)
+		crash:            newCrashUI(),
 	}
 	if noNvim {
 		m.editor = editor.New(nil)
@@ -938,6 +940,7 @@ func (m Model) Init() tea.Cmd {
 	cmds = append(cmds, aiRunsStartupCmd())         // prune old agent run snapshots
 	cmds = append(cmds, m.secretsMigrateStartCmd()) // plain credentials.json → safer store (SS-4)
 	cmds = append(cmds, m.updateInitCmd())          // G-UPD: a newer release? (update_check.go)
+	cmds = append(cmds, m.crash.waitCmd())          // recovered panics (crash_ui.go)
 	if m.nvim != nil {
 		cmds = append(cmds, m.attachCmd(), m.nvim.Next())
 	}
@@ -1290,6 +1293,7 @@ func (m *Model) popClosed() (string, bool) {
 // Close releases nvim resources. Call from main after tea.Program exits.
 func (m *Model) Close() error {
 	m.sess.flush() // the last cursor positions, not yet written
+	m.crash.close()
 	if m.ext != nil && m.ext.proc != nil {
 		m.ext.proc.Close() // process extensions and their children
 	}
