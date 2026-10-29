@@ -59,6 +59,9 @@ func (m Model) renderMergeRows(w, h int) []string {
 	return strings.Split(v.View(), "\n")
 }
 
+// mergeEditor reports whether the editor is up (the result lives there).
+func (m Model) mergeEditor() bool { return m.nvim != nil && m.nvimAttached }
+
 // mergeFocused reports whether the merge view has the keys: it was given
 // them and the editor column has the focus.
 func (m Model) mergeFocused() bool {
@@ -175,7 +178,7 @@ func (m *Model) closeMergeView() {
 		return
 	}
 	m.merge.open = false
-	if m.nvim != nil {
+	if m.mergeEditor() {
 		_ = m.nvim.ExecLua(`pcall(vim.api.nvim_del_augroup_by_name, 'TermocodeMerge')`)
 	}
 	m.applyLayout()
@@ -206,7 +209,7 @@ pcall(_G.termocode_conflict_paint)
 
 // mergeShowResult opens the result in the editor with the view's hooks.
 func (m *Model) mergeShowResult() {
-	if m.nvim == nil {
+	if !m.mergeEditor() {
 		return
 	}
 	m.ensureEditorWindowCurrent()
@@ -224,7 +227,7 @@ type mergeResult struct {
 
 // mergeReadResult reads the result buffer (ok=false without an editor).
 func (m *Model) mergeReadResult() (mergeResult, bool) {
-	if m.nvim == nil || !m.mergeViewShown() {
+	if !m.mergeEditor() || !m.mergeViewShown() {
 		return mergeResult{}, false
 	}
 	var r mergeResult
@@ -278,7 +281,7 @@ func (m *Model) mergeFocusResult() {
 	m.merge.view.SetFocused(false)
 	m.focus = FocusEditor
 	b, ok := m.merge.view.CurrentBlock()
-	if m.nvim == nil || !ok {
+	if !m.mergeEditor() || !ok {
 		return
 	}
 	_ = m.nvim.ExecLuaArgs(`
@@ -454,7 +457,7 @@ return 'ok'
 // mergeTake resolves the current block in the result. The result is
 // read again first: the user may have edited it since the last sync.
 func (m *Model) mergeTake(r git.Resolution) tea.Cmd {
-	if !m.mergeViewShown() || m.nvim == nil {
+	if !m.mergeViewShown() || !m.mergeEditor() {
 		return nil
 	}
 	m.mergeSync()
@@ -480,7 +483,7 @@ func (m *Model) mergeTake(r git.Resolution) tea.Cmd {
 
 // mergeUndo undoes the last change in the result (one Take at a time).
 func (m *Model) mergeUndo() tea.Cmd {
-	if !m.mergeViewShown() || m.nvim == nil {
+	if !m.mergeViewShown() || !m.mergeEditor() {
 		return nil
 	}
 	_ = m.nvim.ExecLuaArgs(`
