@@ -17,6 +17,7 @@ const (
 	confirmKindUpdateNotice confirmKindEnum = 3200 + iota
 	confirmKindUpdateInstall
 	confirmKindUpdateRestart
+	confirmKindUpdateRollback
 )
 
 // updateInstall finds out how the running binary was installed.
@@ -85,6 +86,8 @@ func (m *Model) handleUpdateConfirm(id string) (tea.Cmd, bool) {
 	switch m.confirmKind {
 	case confirmKindUpdateInstall:
 		return m.answerUpdateInstall(id), true
+	case confirmKindUpdateRollback:
+		return m.answerUpdateRollback(id), true
 	case confirmKindUpdateRestart:
 		if id == "restart" {
 			return updateRestart(m), true

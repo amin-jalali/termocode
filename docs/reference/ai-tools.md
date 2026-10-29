@@ -1903,6 +1903,8 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `trim-blanks` | Edit: Collapse Blank Lines | confirm (fileWrite) |   |
 | `trim-whitespace` | Edit: Trim Trailing Whitespace | confirm (fileWrite) |   |
 | `unfold-all` | View: Unfold All | auto |   |
+| `update-check` | termocode: Check for Updates | never | updates or rolls back the termocode binary; only the user decides that |
+| `update-rollback` | termocode: Roll Back Update | never | updates or rolls back the termocode binary; only the user decides that |
 | `uppercase` | Edit: Convert to UPPERCASE | confirm (fileWrite) |   |
 | `view-output` | View: Output | auto |   |
 | `workspace-add-folder` | Workspace: Add Folder... | never | opens a picker or prompt that only the user can answer; use a typed tool (workspace_folders) |

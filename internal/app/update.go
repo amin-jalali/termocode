@@ -1741,7 +1741,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	case keymap.ActionCommandPalette:
 		// Splice user-defined commands at the bottom so they're visible but
 		// don't push built-ins down the fuzzy-match list.
-		items := paletteItems()
+		items := updatePaletteFilter(paletteItems())                      // G-UPD: Roll Back only with termocode.old
 		items = append(items, agentPaletteFilter(tasksPaletteItems())...) // Group C; agents only when installed
 		// Hints come from the live keymap (keymap.json overrides too).
 		items = withKeyHints(items, m.keys)

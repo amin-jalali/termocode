@@ -109,6 +109,8 @@ func (m *Model) handleUpdateMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.openUpdateCard(), true
 	case updatePreparedMsg:
 		return m.onUpdatePrepared(msg), true
+	case updateManualMsg:
+		return m.onUpdateManual(msg), true
 	}
 	return nil, false
 }

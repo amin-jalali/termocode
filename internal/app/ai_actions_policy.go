@@ -42,6 +42,7 @@ func aiNever(reason string) aiActionPolicy  { return aiActionPolicy{Gate: aiGate
 const (
 	aiNoPicker   = "opens a picker or prompt that only the user can answer; use a typed tool"
 	aiNoSession  = "ends or resets the user's session"
+	aiNoUpdate   = "updates or rolls back the termocode binary; only the user decides that"
 	aiNoOutside  = "acts outside the IDE (OS shell, file manager or browser)"
 	aiNoAIConfig = "AI provider, credentials and approvals stay with the user"
 	aiNoNested   = "starts or changes an AI chat or edit; answer in this chat instead"
@@ -193,6 +194,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"layout-delete":       aiNever(layoutNoAI),
 	"layout-reset":        aiNever(layoutNoAI),
 	"git-ci-fix":          aiNever(aiNoNested),
+	"update-check":        aiNever(aiNoUpdate),
+	"update-rollback":     aiNever(aiNoUpdate),
 
 	// ── Workspace, session, settings ──
 	"workspace-add-folder":    aiNever(aiNoPicker + " (workspace_folders)"),

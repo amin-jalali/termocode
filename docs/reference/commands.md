@@ -572,6 +572,13 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Workspace: Add Folder... | `workspace-add-folder` |   |   |
 | Workspace: Remove Folder... | `workspace-remove-folder` |   |   |
 
+## termocode
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| termocode: Check for Updates | `update-check` |   |   |
+| termocode: Roll Back Update | `update-rollback` |   |   |
+
 ## Commands added at run time
 
 The palette also shows commands that are not listed here:

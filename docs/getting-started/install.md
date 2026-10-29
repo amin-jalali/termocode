@@ -232,6 +232,13 @@ the toast to see the card:
   termocode never replaces a file that a package manager owns. A folder
   you cannot write to also gets the command; termocode never uses sudo.
 
+Two commands in the palette (F1):
+
+- **termocode: Check for Updates** asks GitHub now, also with
+  `update_check` off or for a version you skipped.
+- **termocode: Roll Back Update** puts `termocode.old` back (it asks
+  first). It shows only while an earlier binary is kept, and works once.
+
 ## Package managers
 
 | Method | Status |
