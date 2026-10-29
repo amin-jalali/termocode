@@ -48,10 +48,10 @@ func TestLayoutFits(t *testing.T) {
 
 // Spec: the title is the prefix; "<space>" reads "Space"; a group shows +.
 func TestLayoutText(t *testing.T) {
-	c := Content{Title: "<space> g", Entries: []Entry{{Key: "s", Desc: "Stage"}, {Key: "<cr>", Desc: "2 more", Group: true}}}
+	c := Content{Title: "<space> g", Entries: []Entry{{Key: "s", Desc: "Stage"}, {Key: "<cr>", Desc: "+2 more", Group: true}, {Key: "f", Desc: "Find", Group: true}}}
 	rows, _, _, _ := Layout(c, 80, 24)
 	plain := ansi.Strip(strings.Join(rows, "\n"))
-	for _, want := range []string{"Space g", "Stage", "Enter  +2 more"} {
+	for _, want := range []string{"Space g", "Stage", "Enter  +2 more", "Find +"} {
 		if !strings.Contains(plain, want) {
 			t.Errorf("missing %q in\n%s", want, plain)
 		}

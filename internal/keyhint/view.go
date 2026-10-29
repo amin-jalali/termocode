@@ -67,7 +67,7 @@ func Layout(c Content, w, h int) (rows []string, x, y int, ok bool) {
 		for i, e := range c.Entries {
 			k, d := KeyLabel(e.Key), e.Desc
 			if e.Group && !strings.HasPrefix(d, "+") {
-				d = "+" + d
+				d += " +" // it does something and opens more keys
 			}
 			cells[i] = [2]string{k, ansi.Truncate(d, maxDescW, "…")}
 			keyW = max(keyW, ansi.StringWidth(k))
