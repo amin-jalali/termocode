@@ -360,10 +360,8 @@ func (m Model) pickChoose(k int) (Model, tea.Cmd) {
 			m.pick.note = "Type the model id in Search, then choose this row."
 			return m, nil
 		}
-		if !ai.ValidModelID(id) {
-			m.pick.note = "A model id uses letters, digits and . _ : / @ + -"
-			return m, nil
-		}
+		// pickRows shows this row with a search only when the search is a
+		// valid model id (ai.ValidModelID), so id needs no second check.
 		o.ch.model = id
 	}
 	m.steps[step].ch = o.ch
