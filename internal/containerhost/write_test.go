@@ -101,3 +101,19 @@ func TestWriteFileRefusesFolders(t *testing.T) {
 		}
 	}
 }
+
+func TestWriteFileMakesMissingParents(t *testing.T) {
+	for _, shell := range []bool{true, false} {
+		h, _, c := newHost(t)
+		if !shell {
+			c.NoShell()
+			noShell(h)
+		}
+		if err := (containerFS{h}).WriteFile(t.Context(), "a/b/c.txt", []byte("hi"), 0o644); err != nil {
+			t.Fatalf("shell %v: %v", shell, err)
+		}
+		if data, err := os.ReadFile(c.Local("/app/a/b/c.txt")); err != nil || string(data) != "hi" {
+			t.Fatalf("shell %v: %q, %v", shell, data, err)
+		}
+	}
+}

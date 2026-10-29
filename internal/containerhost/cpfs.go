@@ -176,7 +176,7 @@ func (h *Host) putTar(ctx context.Context, op, p, dir string, data []byte) error
 }
 
 // WriteFile replaces or creates one file with a one-entry tar into its
-// folder. An existing file keeps its mode, uid and gid; a new file gets
+// folder; missing parent folders are made first (Mkdir, 0755). An existing file keeps its mode, uid and gid; a new file gets
 // perm and the uid/gid commands run as (`id -u`), or the folder's owner
 // when that is unknown. Nothing else in the container changes.
 func (f containerFS) WriteFile(ctx context.Context, p string, data []byte, perm fs.FileMode) error {
@@ -201,6 +201,11 @@ func (f containerFS) WriteFile(ctx context.Context, p string, data []byte, perm 
 		mode, uid, gid = hd.Mode&0o7777, hd.Uid, hd.Gid
 	case errors.Is(err, fs.ErrNotExist):
 		parent, perr := h.header(ctx, "write", path.Dir(abs), true)
+		if errors.Is(perr, fs.ErrNotExist) {
+			if perr = f.mkdir(ctx, path.Dir(abs), 0o755); perr == nil {
+				parent, perr = h.header(ctx, "write", path.Dir(abs), true)
+			}
+		}
 		if perr != nil {
 			return perr
 		}

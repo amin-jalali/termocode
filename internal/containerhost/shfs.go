@@ -130,9 +130,13 @@ func (f containerFS) Mkdir(ctx context.Context, p string, perm fs.FileMode) erro
 	}
 	ctx, cancel := h.opCtx(ctx)
 	defer cancel()
-	if !h.Caps().HasShell {
+	return f.mkdir(ctx, abs, perm)
+}
+
+func (f containerFS) mkdir(ctx context.Context, abs string, perm fs.FileMode) error {
+	if !f.h.Caps().HasShell {
 		return f.mkdirTar(ctx, abs, perm)
 	}
-	_, err = h.sh(ctx, "mkdir", abs, mkdirScript, abs, fmt.Sprintf("%o", perm.Perm()))
+	_, err := f.h.sh(ctx, "mkdir", abs, mkdirScript, abs, fmt.Sprintf("%o", perm.Perm()))
 	return err
 }
