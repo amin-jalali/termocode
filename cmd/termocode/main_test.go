@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"path/filepath"
+	"strings"
+	"testing"
+)
 
 func TestResolveFontDelta(t *testing.T) {
 	three := 3
@@ -20,6 +24,21 @@ func TestResolveFontDelta(t *testing.T) {
 	for _, c := range cases {
 		if got := resolveFontDelta(c.env, c.cfg); got != c.want {
 			t.Errorf("%s: got %d, want %d", c.name, got, c.want)
+		}
+	}
+}
+
+// SCN-14: `termocode <folder>` for a folder that was moved or deleted
+// stops with a clear line instead of opening the current folder.
+func TestMissingFolderArg(t *testing.T) {
+	dir := t.TempDir()
+	gone := filepath.Join(dir, "gone")
+	if got := missingFolderArg(gone); !strings.Contains(got, "folder "+gone+" not found") {
+		t.Errorf("missing folder: %q", got)
+	}
+	for _, ok := range []string{dir, "setup", "help", "-h", "--help", "--version", ""} {
+		if got := missingFolderArg(ok); got != "" {
+			t.Errorf("%q: %q, want none", ok, got)
 		}
 	}
 }
