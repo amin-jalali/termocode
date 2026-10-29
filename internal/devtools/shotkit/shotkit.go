@@ -67,6 +67,12 @@ type Scene struct {
 	// KeepHover skips the final resize (it hides a hover label), so a
 	// scene can show one.
 	KeepHover bool
+	// Files are written into the working directory (path → body) and
+	// Commits are made on top of its history (empty commits with these
+	// subjects and fixed dates) before the app starts: for scenes about
+	// file names and commit messages, such as wide glyphs (SCN-11).
+	Files   map[string]string
+	Commits []string
 }
 
 // demoAges are how long ago the seeded recents / workspaces were opened.
@@ -261,6 +267,9 @@ func Run(sc Scene, w, h int, opt Options) (string, error) {
 		theme.CurrentIconMode = theme.IconModeNerdFont
 	}
 
+	if err := sceneWorkspace(sc.Files, sc.Commits); err != nil {
+		return "", err
+	}
 	var mu sync.Mutex
 	last, gen := "", 0
 	rec := recorder{inner: app.New(), quiet: opt.Quiet, mu: &mu, last: &last, gen: &gen}

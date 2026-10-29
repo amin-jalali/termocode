@@ -175,3 +175,35 @@ func writeDemoImage(path string) {
 	defer f.Close()
 	_ = png.Encode(f, img)
 }
+
+// sceneWorkspace writes a scene's Files into the working directory and
+// makes its Commits (empty, one minute apart after the demo history).
+func sceneWorkspace(files map[string]string, commits []string) error {
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	for rel, body := range files {
+		p := filepath.Join(wd, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			return err
+		}
+	}
+	for i, subject := range commits {
+		date := time.Date(2026, 1, 30, 9, i, 0, 0, time.UTC).Format(time.RFC3339)
+		cmd := spawn.Command("git", "commit", "-q", "--allow-empty", "--no-gpg-sign", "-m", subject)
+		cmd.Dir = wd
+		cmd.Env = append(os.Environ(),
+			"GIT_AUTHOR_NAME=termocode", "GIT_AUTHOR_EMAIL=demo@example.com",
+			"GIT_COMMITTER_NAME=termocode", "GIT_COMMITTER_EMAIL=demo@example.com",
+			"GIT_AUTHOR_DATE="+date, "GIT_COMMITTER_DATE="+date,
+			"GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL="+os.DevNull)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("git commit %q: %v: %s", subject, err, out)
+		}
+	}
+	return nil
+}
