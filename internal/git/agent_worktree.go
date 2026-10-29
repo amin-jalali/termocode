@@ -35,7 +35,14 @@ type AgentWorktree struct {
 	ID     string
 	Path   string
 	Branch string
+	// Sub is the folder CreateAgentWorktree was asked from, relative to
+	// the repository's top ("" at the top): the agent's workspace is
+	// Dir(), the same folder in its tree.
+	Sub string
 }
+
+// Dir is the agent's workspace in its worktree (Path joined with Sub).
+func (w AgentWorktree) Dir() string { return filepath.Join(w.Path, w.Sub) }
 
 // AgentChange is one file an agent changed: Status is A (added),
 // M (modified) or D (deleted).
@@ -126,6 +133,9 @@ func CreateAgentWorktree(dir, id string) (AgentWorktree, error) {
 		return AgentWorktree{}, err
 	}
 	w := agentWorktree(common, id)
+	if pre, err := gitOut(dir, "rev-parse", "--show-prefix"); err == nil {
+		w.Sub = filepath.FromSlash(strings.TrimSuffix(strings.TrimSpace(pre), "/"))
+	}
 	if _, err := os.Stat(filepath.Join(w.Path, ".git")); err == nil {
 		return w, nil
 	}

@@ -72,6 +72,25 @@ func TestCreateAgentWorktree(t *testing.T) {
 	}
 }
 
+// From a sub folder of the repository, the agent's workspace is the same
+// folder in its worktree.
+func TestCreateAgentWorktreeFromSubFolder(t *testing.T) {
+	r := committedRepo(t)
+	r.write(t, "pkg/x.go", "package x\n")
+	r.git(t, "add", "-A")
+	r.git(t, "commit", "-q", "-m", "pkg")
+	w, err := CreateAgentWorktree(filepath.Join(r.dir, "pkg"), "sub")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w.Sub != "pkg" || w.Dir() != filepath.Join(w.Path, "pkg") {
+		t.Errorf("sub %q dir %q", w.Sub, w.Dir())
+	}
+	if _, err := os.Stat(filepath.Join(w.Dir(), "x.go")); err != nil {
+		t.Error(err)
+	}
+}
+
 func TestCreateAgentWorktreeNeedsACommit(t *testing.T) {
 	r := newGitTestRepo(t)
 	if _, err := CreateAgentWorktree(r.dir, "x"); err == nil {

@@ -715,6 +715,9 @@ func (s *aiState) agentsCard(d agentsRun, n agentsNode, w int, selected bool, no
 			out = append(out, row(theme.DiagWarning, stallRow))
 		}
 	}
+	if n.st != nil && n.st.Worktree != nil { // G-WT: the step's own worktree
+		out = append(out, row(theme.TextSecondary, aiWorktreeShort(n.st.Worktree)))
+	}
 	return append(out, agSeg(border, g.bl+strings.Repeat(g.h, inner)+g.br))
 }
 
@@ -960,6 +963,9 @@ func (s *aiState) agentsDetails(d agentsRun, n agentsNode, now time.Time, w int,
 	}
 	if st == nil {
 		return out
+	}
+	if st.Worktree != nil { // G-WT: the branch and what waits
+		out = append(out, aiWorktreeStatus(st.Worktree))
 	}
 	for _, t := range st.Notes {
 		out = append(out, aiOneLine(aiCleanText(t)))

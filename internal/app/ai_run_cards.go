@@ -256,11 +256,14 @@ func (m Model) aiStepCard(msg ai.StoredMessage, k int, st ai.StoredStep, width, 
 	row := theme.Bg(theme.BgPanel).Render(strings.Repeat(" ", aiIndent)) +
 		ansi.Truncate(base.Render(head)+title.Render(aiCleanText(st.Title))+base.Render(aiCleanText(rest)), inner, "…")
 	out := []aiLine{{styled: row, buttons: []aiLineButton{{0, width, id}}}}
+	ind := strings.Repeat(" ", aiIndent+2)
+	dim := theme.Fg(theme.TextDim)
+	if wt := st.Worktree; wt != nil { // G-WT: shown folded too
+		out = append(out, aiLine{text: ind + ansi.Truncate(aiWorktreeStatus(wt), max(inner-2, 4), "…"), style: theme.Fg(theme.TextSecondary)})
+	}
 	if !expanded {
 		return out
 	}
-	ind := strings.Repeat(" ", aiIndent+2)
-	dim := theme.Fg(theme.TextDim)
 	for _, t := range st.Notes {
 		out = append(out, aiLine{text: ind + aiOneLine(aiCleanText(t)), style: dim})
 	}

@@ -26,6 +26,8 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onAIChatEvent(msg), true
 	case aiRunEventMsg:
 		return m.onAIRunEvent(msg), true
+	case aiWorktreeMsg: // ai_worktrees.go
+		return m.onAIWorktree(msg), true
 	case aiLimitResumeMsg: // ai_cli_steps.go
 		return m.onAILimitResume(msg), true
 	case aiCLIStatusMsg: // ai_cli_form.go

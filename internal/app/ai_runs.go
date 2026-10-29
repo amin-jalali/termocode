@@ -313,6 +313,25 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	}
 	var mcpOnce sync.Once
 	var extra []ai.Tool
+	wts := newAIRunWorktrees(root, run.ID, s.settings.UseWorktrees(), &s.conv.Messages[msgIdx]) // G-WT
+	// inWorktree moves node n into its own worktree when it shares its
+	// wave: the tools, the prompt's root and the card follow.
+	inWorktree := func(ctx context.Context, n agentdag.Node) (string, []ai.Tool, error) {
+		wt, ok, note := wts.forNode(ctx, n)
+		if !ok {
+			if note != "" {
+				send(aiWorktreeMsg{gen: gen, ch: ch, step: n.ID, note: note})
+			}
+			return root, nil, nil
+		}
+		var ts []ai.Tool
+		_, err := call(ctx, func(m *Model) (string, tea.Cmd, error) {
+			ts = m.aiChatTools(wt.Dir(), call)
+			m.aiSetStepWorktree(n.ID, ai.StoredWorktree{ID: wt.ID, Path: wt.Path, Branch: wt.Branch, State: ai.WorktreeRunning}, "")
+			return "", nil, nil
+		})
+		return wt.Dir(), ts, err
+	}
 	opts := agentrun.Options{
 		Parallel:   parallel,
 		User:       user,
@@ -338,8 +357,12 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 				sys = aiStepPrompt(n, index[n.ID], total)
 			}
 			handoff := n.ID == verifyID || n.ID == fixID || len(agentdag.Deps(run, n.ID)) > 0
-			prompt := aiCLIPrompt(ctx, root, sys, input, handoff)
-			res, err := aiCLIRun(ctx, clistep.Spec{CLI: n.CLI, Model: n.Model, Write: n.Tools.Preset == agentdag.PresetAll, Dir: root}, prompt, emit)
+			dir, _, err := inWorktree(ctx, n)
+			if err != nil {
+				return "", nil, err
+			}
+			prompt := aiCLIPrompt(ctx, dir, sys, input+wts.othersNote(n.ID), handoff)
+			res, err := aiCLIRun(ctx, clistep.Spec{CLI: n.CLI, Model: n.Model, Write: n.Tools.Preset == agentdag.PresetAll, Dir: dir}, prompt, emit)
 			return res.Text, res.Usage, err
 		},
 		Build: func(ctx context.Context, n agentdag.Node, input string) (*ai.Agent, []ai.Message, error) {
@@ -351,7 +374,16 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 				}
 			})
 			sl := slots[n.Slot]
-			ts := aiFilterTools(append(tools[:len(tools):len(tools)], extra...), n.Tools)
+			dir, wtTools, err := inWorktree(ctx, n)
+			if err != nil {
+				return nil, nil, err
+			}
+			nodeTools, nodeBase := tools, base
+			if wtTools != nil {
+				wt, _ := wts.get(n.ID)
+				nodeTools, nodeBase = wtTools, aiWorktreePrompt(base, root, wt)
+			}
+			ts := aiFilterTools(append(nodeTools[:len(nodeTools):len(nodeTools)], extra...), n.Tools)
 			native := sl.p.SupportsTools()
 			msgs := append([]ai.Message(nil), hist...)
 			sys := aiStepPrompt(n, index[n.ID], total)
@@ -361,9 +393,9 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 			case n.ID == fixID:
 				sys = aiFixStepPrompt + aiStepSystem(n.System)
 			}
-			msgs[0] = ai.Message{Role: ai.RoleSystem, Content: ai.SystemPrompt(base+sys, ts, native)}
+			msgs[0] = ai.Message{Role: ai.RoleSystem, Content: ai.SystemPrompt(nodeBase+sys, ts, native)}
 			last := msgs[len(msgs)-1]
-			last.Content = input
+			last.Content = input + wts.othersNote(n.ID)
 			msgs[len(msgs)-1] = last
 			own := map[string]bool{}
 			for _, c := range auto {
@@ -372,7 +404,13 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 				}
 			}
 			return &ai.Agent{Provider: sl.p, Tools: ts, Native: native, AutoApprove: own, MaxSteps: maxSteps,
-				BeforeCalls: aiBeforeCalls(root, call), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title)}, msgs, nil
+				BeforeCalls: aiBeforeCalls(dir, call), Confirm: aiChatConfirmFunc(gen, ch, own, n.Title)}, msgs, nil
+		},
+		Finished: func(_ context.Context, n agentdag.Node) {
+			if msg, ok := wts.finished(n); ok {
+				msg.gen, msg.ch = gen, ch
+				send(msg)
+			}
 		},
 	}
 	h, err := agentrun.Start(ctx, run, opts)
@@ -469,7 +507,7 @@ func (m *Model) onAIRunEvent(msg aiRunEventMsg) tea.Cmd {
 		prev := *st
 		*st = ai.StoredStep{ID: st.ID, Title: st.Title, Slot: st.Slot, Model: st.Model, Category: st.Category,
 			Deps: st.Deps, Planned: st.Planned, Prompt: st.Prompt, State: string(agentdag.StateRunning), Round: ev.Round,
-			StartedAtMs: now.UnixMilli(), CLI: st.CLI}
+			StartedAtMs: now.UnixMilli(), CLI: st.CLI, Worktree: st.Worktree}
 		if ev.Round > 1 && prev.Round > 0 { // a loop step runs again: its time, tokens, cost and notes add up
 			st.ElapsedMs, st.Usage, st.Cost, st.Notes = prev.ElapsedMs, prev.Usage, prev.Cost, prev.Notes
 			st.StartedAtMs = prev.StartedAtMs
@@ -676,6 +714,9 @@ func (m *Model) aiStepFinished(st *ai.StoredStep, ev agentrun.Event) {
 	prevUsage, prevCost := st.Usage, st.Cost
 	st.ElapsedMs += ev.Elapsed.Milliseconds()
 	st.Files = m.aiRestoreFiles(s.turnMsg) - s.runFiles[st.ID]
+	if st.Worktree != nil { // G-WT: what it changed in its own tree
+		st.Files = st.Worktree.Files
+	}
 	if u := ev.Usage; u != nil && st.CLI != "" {
 		// A subscription CLI (CS-3): its tokens, never a price.
 		c := *u
