@@ -177,36 +177,46 @@ func (d *delimitedWriter) End() error {
 }
 
 type jsonWriter struct {
-	w    io.Writer
-	cols []Column
-	rows int
+	w     io.Writer
+	cols  []Column
+	names [][]byte // the JSON text of each column name, made once
+	buf   []byte   // one row, reused
+	rows  int
 }
 
-func (j *jsonWriter) Columns(cols []Column) error { j.cols = cols; return nil }
+func (j *jsonWriter) Columns(cols []Column) error {
+	j.cols = cols
+	j.names = make([][]byte, len(cols))
+	for i, c := range cols {
+		j.names[i] = jsonCell(Cell{Text: c.Name})
+	}
+	return nil
+}
 
 func (j *jsonWriter) Row(row []Cell) error {
-	var b strings.Builder
+	b := j.buf[:0]
 	if j.rows == 0 {
-		b.WriteString("[\n")
+		b = append(b, "[\n"...)
 	} else {
-		b.WriteString(",\n")
+		b = append(b, ",\n"...)
 	}
 	j.rows++
-	b.WriteByte('{')
-	for i, c := range j.cols {
+	b = append(b, '{')
+	for i := range j.cols {
 		if i > 0 {
-			b.WriteByte(',')
+			b = append(b, ',')
 		}
-		b.Write(jsonCell(Cell{Text: c.Name}))
-		b.WriteByte(':')
+		b = append(b, j.names[i]...)
+		b = append(b, ':')
 		cell := Cell{Null: true}
 		if i < len(row) {
 			cell = row[i]
 		}
-		b.Write(jsonCell(cell))
+		b = appendJSONCell(b, cell)
 	}
-	b.WriteByte('}')
-	_, err := io.WriteString(j.w, b.String())
+	b = append(b, '}')
+	j.buf = b
+	_, err := j.w.Write(b)
 	return err
 }
 

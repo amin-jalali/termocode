@@ -118,6 +118,34 @@ func Filter(r Result, text string) Result {
 	return out
 }
 
+// appendJSONCell appends jsonCell(c) to dst. Plain text and valid numbers
+// are written directly; anything encoding/json would escape goes through
+// jsonCell.
+func appendJSONCell(dst []byte, c Cell) []byte {
+	switch {
+	case c.Null:
+		return append(dst, "null"...)
+	case c.Kind == "number":
+		if p := (jsonScan{s: c.Text}); p.number() && p.i == len(c.Text) {
+			return append(dst, c.Text...)
+		}
+	case c.Kind == "bool":
+		if c.Text == "true" {
+			return append(dst, "true"...)
+		}
+		return append(dst, "false"...)
+	}
+	for i := 0; i < len(c.Text); i++ {
+		switch ch := c.Text[i]; {
+		case ch < 0x20 || ch >= 0x80 || ch == '"' || ch == '\\' || ch == '<' || ch == '>' || ch == '&':
+			return append(dst, jsonCell(c)...)
+		}
+	}
+	dst = append(dst, '"')
+	dst = append(dst, c.Text...)
+	return append(dst, '"')
+}
+
 // jsonCell is the JSON text of one cell: NULL, a valid number, a boolean or
 // a string.
 func jsonCell(c Cell) []byte {
