@@ -179,3 +179,11 @@ func TestCRLFStages(t *testing.T) {
 		t.Errorf("crlf base = %q", tk.Lines)
 	}
 }
+
+func m2Stages() git.ConflictStages {
+	return git.ConflictStages{
+		Base:   git.ConflictSide{Present: true, Text: text("a x c")},
+		Ours:   git.ConflictSide{Present: true, Text: text("a c")},
+		Theirs: git.ConflictSide{Present: true, Text: text("a t c")},
+	}
+}
