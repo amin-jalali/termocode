@@ -277,7 +277,7 @@ type seg struct {
 
 // expandTabs replaces tabs (and drops \r and control characters).
 func expandTabs(s string) string {
-	if !strings.ContainsAny(s, "\t\r\x1b") {
+	if !hasControl(s) {
 		return s
 	}
 	var b strings.Builder
@@ -295,6 +295,17 @@ func expandTabs(s string) string {
 		}
 	}
 	return b.String()
+}
+
+// hasControl reports whether s holds a tab or another control character
+// (a backspace or escape would move the cursor and break the box).
+func hasControl(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if c := s[i]; c < 0x20 || c == 0x7f {
+			return true
+		}
+	}
+	return false
 }
 
 // paint renders segs into exactly width cells: the first skip cells are
