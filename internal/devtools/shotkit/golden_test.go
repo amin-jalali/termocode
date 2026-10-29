@@ -250,6 +250,7 @@ func goldenCases() []goldenCase {
 		out = append(out, goldenCase{fmt.Sprintf("%s-80x24", sc.Name), sc, 80, 24})
 	}
 	out = append(out, goldenCase{"setup-card-100x30", setupCardScene(), 100, 30})
+	out = append(out, keyHintCases()...)
 	// A two-step agent pipeline run, running and done (U20 AP-4).
 	for _, v := range []string{"running", "done"} {
 		sc := AIPipeline(v)
