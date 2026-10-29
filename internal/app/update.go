@@ -1687,6 +1687,17 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		// extra 'i' lands as literal `i` in the shell once the first
 		// startinsert succeeds (visible as `#ii` at the prompt).
 		return m, nil
+	case keymap.ActionTerminalSplitRight, keymap.ActionTerminalSplitDown,
+		keymap.ActionTerminalFocusPrevPane, keymap.ActionTerminalFocusNextPane:
+		// Terminal splits (terminal_split.go) share the palette commands.
+		id := map[keymap.Action]string{
+			keymap.ActionTerminalSplitRight:    "terminal-split-right",
+			keymap.ActionTerminalSplitDown:     "terminal-split-down",
+			keymap.ActionTerminalFocusPrevPane: "terminal-focus-prev-pane",
+			keymap.ActionTerminalFocusNextPane: "terminal-focus-next-pane",
+		}[matchedAction]
+		cmd, _ := m.runTermPaneAction(id)
+		return m, cmd
 	case keymap.ActionTerminalNewTab:
 		m.newTerminalTab()
 		m.applyLayout()

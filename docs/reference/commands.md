@@ -522,8 +522,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Terminal: Close Active Tab | `terminal-close-tab` | `Ctrl+Shift+W` | `Ctrl+Shift+W` |
 | Terminal: Close Pane | `terminal-close-pane` |   |   |
 | Terminal: Fix Last Command with AI | `terminal-fix-ai` |   | <code>Alt+&#92; in the terminal</code> |
-| Terminal: Focus Next Pane | `terminal-focus-next-pane` |   |   |
-| Terminal: Focus Previous Pane | `terminal-focus-prev-pane` |   |   |
+| Terminal: Focus Next Pane | `terminal-focus-next-pane` | `Alt+Right` | `Alt+Right` |
+| Terminal: Focus Previous Pane | `terminal-focus-prev-pane` | `Alt+Left` | `Alt+Left` |
 | Terminal: Grow Pane | `terminal-grow-pane` |   |   |
 | Terminal: Maximize Panel | `terminal-maximize` |   |   |
 | Terminal: Minimize Panel | `terminal-minimize` |   |   |
@@ -533,8 +533,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Terminal: Open File Link... | `terminal-open-link` |   |   |
 | Terminal: Previous Tab | `terminal-prev-tab` | `Ctrl+Shift+PgUp` | `Ctrl+Shift+PgUp` |
 | Terminal: Shrink Pane | `terminal-shrink-pane` |   |   |
-| Terminal: Split Down | `terminal-split-down` |   |   |
-| Terminal: Split Right | `terminal-split-right` |   |   |
+| Terminal: Split Down | `terminal-split-down` | `Alt+-` | `Alt+-` |
+| Terminal: Split Right | `terminal-split-right` | `Alt+/` | `Alt+/` |
 | Terminal: Toggle Integrated Panel | `toggle-terminal` | <code>Alt+&#96;</code> / <code>Ctrl+&#96;</code> / `Ctrl+T` | <code>Ctrl+T / Alt+&#96;</code> |
 
 ## Testing

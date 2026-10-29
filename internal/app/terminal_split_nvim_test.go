@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/amin-jalali/termocode/internal/keymap"
 	tea "github.com/charmbracelet/bubbletea"
 	"os/exec"
 	"strings"
@@ -444,5 +445,30 @@ func TestPaletteSplitCommands(t *testing.T) {
 	}
 	if m.dispatchPaletteAction("terminal-not-a-command") != nil {
 		t.Error("an unknown command is not ours")
+	}
+}
+
+func TestSplitKeys(t *testing.T) {
+	m := splitTestModel(t, 120, 30)
+	m.keys = keymap.Default()
+	press := func(r rune, alt bool) {
+		next, _ := m.handleGlobalKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}, Alt: alt})
+		*m = next
+	}
+	press('/', true) // Alt+/ splits right
+	if m.terminalTabs[0].paneCount() != 2 || m.terminalTabs[0].Splits[0].Dir != paneRight {
+		t.Fatalf("Alt+/: tab=%+v err=%q", m.terminalTabs[0], m.err)
+	}
+	press('-', true) // Alt+- splits down
+	if m.terminalTabs[0].paneCount() != 3 || m.terminalTabs[0].Splits[1].Dir != paneDown {
+		t.Fatalf("Alt+-: tab=%+v err=%q", m.terminalTabs[0], m.err)
+	}
+	for _, k := range []tea.KeyType{tea.KeyLeft, tea.KeyRight} {
+		before := m.terminalTabs[0].PaneFocus
+		next, _ := m.handleGlobalKey(tea.KeyMsg{Type: k, Alt: true})
+		*m = next
+		if m.terminalTabs[0].PaneFocus == before {
+			t.Errorf("Alt+%v did not move the focus from pane %d", k, before)
+		}
 	}
 }

@@ -142,9 +142,13 @@ These are the default keys. The **Key** column is the key you press. The **Key s
 | Key | Key string | Action | Description |
 | --- | --- | --- | --- |
 | `Ctrl+Shift+W` | `ctrl+shift+w` | `TerminalCloseTab` | Close the active terminal tab. |
+| `Alt+Right` | `alt+right` | `TerminalFocusNextPane` | Move to the next terminal pane. |
+| `Alt+Left` | `alt+left` | `TerminalFocusPrevPane` | Move to the previous terminal pane. |
 | <code>Ctrl+Shift+&#96;</code> | <code>ctrl+shift+&#96;</code> | `TerminalNewTab` | Open a new terminal tab. |
 | `Ctrl+Shift+PgDn` | `ctrl+shift+pgdown` | `TerminalNextTab` | Go to the next terminal tab. |
 | `Ctrl+Shift+PgUp` | `ctrl+shift+pgup` | `TerminalPrevTab` | Go to the previous terminal tab. |
+| `Alt+-` | `alt+-` | `TerminalSplitDown` | Split the terminal pane downwards (a new shell below it). |
+| `Alt+/` | `alt+/` | `TerminalSplitRight` | Split the terminal pane to the right (a new shell beside it). |
 | <code>Alt+&#96;</code> | <code>alt+&#96;</code> | `ToggleTerminal` | Show or hide the integrated terminal panel. |
 | <code>Ctrl+&#96;</code> | <code>ctrl+&#96;</code> | `ToggleTerminal` | Show or hide the integrated terminal panel. |
 | `Ctrl+T` | `ctrl+t` | `ToggleTerminal` | Show or hide the integrated terminal panel. |

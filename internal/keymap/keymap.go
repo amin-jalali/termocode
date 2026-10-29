@@ -111,6 +111,12 @@ const (
 	ActionTerminalCloseTab
 	ActionTerminalNextTab
 	ActionTerminalPrevTab
+	// Terminal splits (one terminal tab with several shells): split the
+	// focused pane to the right / down, move focus between the panes.
+	ActionTerminalSplitRight
+	ActionTerminalSplitDown
+	ActionTerminalFocusPrevPane
+	ActionTerminalFocusNextPane
 	// ActionApplyPreferredCodeAction applies the LSP-flagged "preferred"
 	// code action at the cursor (when present) without opening the picker.
 	// VSCode-style: the inline 💡 hint advertises this shortcut so users
@@ -282,6 +288,12 @@ func Default() KeyMap {
 			// editor-buffer cycle.
 			"ctrl+shift+pgup":   ActionTerminalPrevTab,
 			"ctrl+shift+pgdown": ActionTerminalNextTab,
+			// Terminal splits: "/" and "-" draw the divider's direction.
+			// Alt+Left / Alt+Right move between the panes.
+			"alt+/":     ActionTerminalSplitRight,
+			"alt+-":     ActionTerminalSplitDown,
+			"alt+left":  ActionTerminalFocusPrevPane,
+			"alt+right": ActionTerminalFocusNextPane,
 
 			// Debug Adapter Protocol. F9 is the VSCode-standard breakpoint
 			// toggle; F10 / F11 / Shift+F11 are the standard step-over /

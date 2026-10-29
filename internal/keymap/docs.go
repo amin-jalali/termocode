@@ -120,6 +120,11 @@ var actionInfo = map[Action]ActionInfo{
 	ActionTerminalNextTab:  {"Terminal", "Go to the next terminal tab."},
 	ActionTerminalPrevTab:  {"Terminal", "Go to the previous terminal tab."},
 
+	ActionTerminalSplitRight:    {"Terminal", "Split the terminal pane to the right (a new shell beside it)."},
+	ActionTerminalSplitDown:     {"Terminal", "Split the terminal pane downwards (a new shell below it)."},
+	ActionTerminalFocusPrevPane: {"Terminal", "Move to the previous terminal pane."},
+	ActionTerminalFocusNextPane: {"Terminal", "Move to the next terminal pane."},
+
 	ActionToggleExplorer:     {"Panels", "Show or hide the sidebar."},
 	ActionToggleActionsPanel: {"Panels", "Show or hide the right-side Actions / AI chat panel."},
 	ActionShowProblems:       {"Panels", "Open the Problems panel."},
