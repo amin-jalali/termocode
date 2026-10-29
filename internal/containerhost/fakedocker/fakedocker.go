@@ -9,6 +9,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -52,6 +53,12 @@ type Container struct {
 	Name string
 	Root string
 
+	// What `inspect` reports; set them before the code under test runs.
+	User   string  // Config.User
+	Image  string  // the image name ("" = "img")
+	Arch   string  // the image's Architecture ("" = "amd64")
+	Mounts []Mount // Mounts
+
 	d       *Docker
 	owners  map[string][2]int // container path → uid, gid
 	bin     string            // the only PATH of commands run inside
@@ -65,6 +72,14 @@ type Exec struct {
 	Dir  string // -w
 	User string // -u
 	Argv []string
+}
+
+// Mount is one entry of a container's Mounts.
+type Mount struct {
+	Type        string
+	Source      string
+	Destination string
+	RW          bool
 }
 
 // baseTools are the commands every fake image has (besides sh, unless
@@ -297,6 +312,12 @@ func (d *Docker) run(ctx context.Context, args []string, input []byte) result {
 		return d.cp(args[1:], input)
 	case "exec":
 		return d.exec(ctx, args[1:], input)
+	case "inspect":
+		return d.inspect(args[1:])
+	case "image":
+		if len(args) > 1 && args[1] == "inspect" {
+			return d.imageInspect(args[2:])
+		}
 	}
 	return fail("fakedocker: unknown command %q", args[0])
 }
@@ -583,4 +604,76 @@ func (d *Docker) exec(ctx context.Context, args []string, input []byte) result {
 	}
 	unmap := func(s string) string { return strings.ReplaceAll(s, c.Root, "") }
 	return result{out: unmap(out.String()), err: unmap(errb.String()), code: code}
+}
+
+// inspect is `inspect --type container c`: a JSON array of one object.
+func (d *Docker) inspect(args []string) result {
+	var name string
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--type", "-f", "--format":
+			i++
+		default:
+			name = args[i]
+		}
+	}
+	c, ok := d.container(name)
+	if !ok {
+		return fail("Error: No such container: %s", name)
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	status := "running"
+	if c.stopped {
+		status = "exited"
+	}
+	mounts := make([]map[string]any, 0, len(c.Mounts))
+	for _, m := range c.Mounts {
+		mounts = append(mounts, map[string]any{"Type": m.Type, "Source": m.Source, "Destination": m.Destination, "RW": m.RW})
+	}
+	img := c.Image
+	if img == "" {
+		img = "img"
+	}
+	obj := []map[string]any{{
+		"Id":     "id-" + c.Name,
+		"Name":   "/" + c.Name,
+		"State":  map[string]any{"Status": status, "Running": !c.stopped},
+		"Config": map[string]any{"User": c.User, "Image": img},
+		"Image":  "sha256:" + img,
+		"Mounts": mounts,
+	}}
+	b, _ := json.Marshal(obj)
+	return result{out: string(b) + "\n"}
+}
+
+// imageInspect is `image inspect <image>`: the Architecture of any
+// container that uses the image (by name or "sha256:"+name).
+func (d *Docker) imageInspect(args []string) result {
+	var ref string
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "-f", "--format":
+			i++
+		default:
+			ref = args[i]
+		}
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	for _, c := range d.cs {
+		img := c.Image
+		if img == "" {
+			img = "img"
+		}
+		if ref == img || ref == "sha256:"+img {
+			arch := c.Arch
+			if arch == "" {
+				arch = "amd64"
+			}
+			b, _ := json.Marshal([]map[string]any{{"Id": "sha256:" + img, "Architecture": arch, "Os": "linux"}})
+			return result{out: string(b) + "\n"}
+		}
+	}
+	return fail("Error: No such image: %s", ref)
 }

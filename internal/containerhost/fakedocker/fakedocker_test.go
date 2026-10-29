@@ -231,3 +231,28 @@ func TestExecMissingWorkdir(t *testing.T) {
 		t.Fatalf("code = %d", code)
 	}
 }
+
+func TestInspectContainerAndImage(t *testing.T) {
+	d := New()
+	c := d.Add(t, "api-1")
+	c.User, c.Image, c.Arch = "node", "node:22", "arm64"
+	c.Mounts = []Mount{{Type: "bind", Source: "/home/u/p", Destination: "/app", RW: true}}
+	out, _, code, _ := d.Capture(context.Background(), "", "docker", "inspect", "--type", "container", "api-1")
+	for _, want := range []string{`"Running":true`, `"User":"node"`, `"Destination":"/app"`, `"Image":"sha256:node:22"`} {
+		if code != 0 || !strings.Contains(out, want) {
+			t.Fatalf("inspect lacks %s: %s", want, out)
+		}
+	}
+	out, _, _, _ = d.Capture(context.Background(), "", "docker", "image", "inspect", "sha256:node:22")
+	if !strings.Contains(out, `"Architecture":"arm64"`) {
+		t.Fatalf("image inspect = %s", out)
+	}
+	c.Stop()
+	out, _, _, _ = d.Capture(context.Background(), "", "docker", "inspect", "--type", "container", "api-1")
+	if !strings.Contains(out, `"Running":false`) {
+		t.Fatalf("stopped inspect = %s", out)
+	}
+	if _, _, code, _ := d.Capture(context.Background(), "", "docker", "inspect", "--type", "container", "db"); code == 0 {
+		t.Fatal("unknown container inspected")
+	}
+}
