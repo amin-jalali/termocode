@@ -3,8 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-
-	"github.com/charmbracelet/lipgloss"
 	"strings"
 	"time"
 
@@ -391,8 +389,9 @@ func statsSeriesValues(s *containers.Series, f func(containers.Sample) float64) 
 // renderStatsRow draws one chart line: label, sparkline, newest value.
 func (st *servicesState) renderStatsRow(r svcRow, w int) string {
 	bg := theme.BgSidebar
-	row := lipgloss.NewStyle().Background(theme.LG(bg))
-	fg := func(c theme.Color256) lipgloss.Style { return row.Foreground(theme.LG(c)) }
+	rowBg := theme.LG(bg)
+	row := func(s string) string { return sgrPaint("", rowBg, s) }
+	fg := func(c theme.Color256, s string) string { return sgrPaint(theme.LG(c), rowBg, s) }
 	series := st.stats.series[r.hostID]
 	last, _ := series.Last()
 	lead := 1 + 2*r.depth
@@ -446,8 +445,8 @@ func (st *servicesState) renderStatsRow(r svcRow, w int) string {
 		}
 	}
 	var b strings.Builder
-	b.WriteString(row.Render(strings.Repeat(" ", lead)))
-	b.WriteString(fg(theme.TextMuted).Render(label + " "))
+	b.WriteString(row(strings.Repeat(" ", lead)))
+	b.WriteString(fg(theme.TextMuted, label+" "))
 	used := lead + len(label) + 1
 	avail := w - used - 1
 	if spark {
@@ -457,15 +456,15 @@ func (st *servicesState) renderStatsRow(r svcRow, w int) string {
 		}
 		sw := min(avail-runewidth.StringWidth(value)-1, containers.StatWindow)
 		if sw >= 4 {
-			b.WriteString(fg(theme.GitAdded).Render(statsSparkline(vals, maxV, sw)))
-			b.WriteString(row.Render(" "))
+			b.WriteString(fg(theme.GitAdded, statsSparkline(vals, maxV, sw)))
+			b.WriteString(row(" "))
 			used += sw + 1
 		}
 	}
 	value = runewidth.Truncate(value, max(w-used-1, 1), "…")
-	b.WriteString(fg(theme.TextSecondary).Render(value))
+	b.WriteString(fg(theme.TextSecondary, value))
 	used += runewidth.StringWidth(value)
-	return clampSidebarRow(b.String(), used, w, row)
+	return hostClamp(b.String(), used, w, rowBg)
 }
 
 // statsFailText is the one-line reason shown under the engine line.

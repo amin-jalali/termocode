@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/clock"
@@ -731,10 +732,8 @@ type hostCol struct {
 // the free width) and fixed columns, exactly w cells.
 func renderHostLine(active, focused bool, w, depth int, glyph string, gcol theme.Color256, name string, ncol theme.Color256, cols []hostCol) string {
 	bg := gitSelBg(active, focused)
-	row := lipgloss.NewStyle().Background(bg)
-	fg := func(c theme.Color256) lipgloss.Style {
-		return lipgloss.NewStyle().Background(bg).Foreground(theme.LG(c))
-	}
+	row := func(s string) string { return sgrPaint("", bg, s) }
+	fg := func(c theme.Color256, s string) string { return sgrPaint(theme.LG(c), bg, s) }
 	indent := 2 * depth
 	fixed := 1 + indent
 	gw := 0 // glyph and its space; the ASCII tier of an icon can be 3 cells ("(i)")
@@ -753,41 +752,39 @@ func renderHostLine(active, focused bool, w, depth int, glyph string, gcol theme
 	}
 	nameW = max(nameW, 1)
 	var b strings.Builder
-	b.WriteString(gitLead(active, focused, bg))
-	b.WriteString(row.Render(strings.Repeat(" ", indent)))
+	b.WriteString(hostLead(active, focused, bg))
+	b.WriteString(row(strings.Repeat(" ", indent)))
 	used := 1 + indent
 	if glyph != "" {
-		b.WriteString(fg(gcol).Render(glyph))
-		b.WriteString(row.Render(" "))
+		b.WriteString(fg(gcol, glyph))
+		b.WriteString(row(" "))
 		used += gw
 	}
 	n := svcTruncMiddle(name, nameW)
-	b.WriteString(fg(ncol).Render(n))
-	b.WriteString(row.Render(strings.Repeat(" ", max(nameW-runewidth.StringWidth(n), 0))))
+	b.WriteString(fg(ncol, n))
+	b.WriteString(row(strings.Repeat(" ", max(nameW-runewidth.StringWidth(n), 0))))
 	used += nameW
 	for _, c := range cols {
 		t := runewidth.Truncate(c.text, c.width, "")
 		pad := strings.Repeat(" ", max(c.width-runewidth.StringWidth(t), 0))
-		b.WriteString(row.Render(" "))
+		b.WriteString(row(" "))
 		if c.right {
-			b.WriteString(row.Render(pad))
-			b.WriteString(fg(c.col).Render(t))
+			b.WriteString(row(pad))
+			b.WriteString(fg(c.col, t))
 		} else {
-			b.WriteString(fg(c.col).Render(t))
-			b.WriteString(row.Render(pad))
+			b.WriteString(fg(c.col, t))
+			b.WriteString(row(pad))
 		}
 		used += 1 + c.width
 	}
-	return clampSidebarRow(b.String(), used, w, row)
+	return hostClamp(b.String(), used, w, bg)
 }
 
 // renderHostGroup is a group row: "▾ termocode · ········ 2/2".
 func renderHostGroup(r svcRow, collapsed, active, focused bool, w int) string {
 	bg := gitSelBg(active, focused)
-	row := lipgloss.NewStyle().Background(bg)
-	fg := func(c theme.Color256) lipgloss.Style {
-		return lipgloss.NewStyle().Background(bg).Foreground(theme.LG(c))
-	}
+	row := func(s string) string { return sgrPaint("", bg, s) }
+	fg := func(c theme.Color256, s string) string { return sgrPaint(theme.LG(c), bg, s) }
 	fold := theme.GlyphExpand
 	if collapsed {
 		fold = theme.GlyphTreeCollapsed
@@ -806,32 +803,50 @@ func renderHostGroup(r svcRow, collapsed, active, focused bool, w int) string {
 	room := w - 1 - indent - 2 - runewidth.StringWidth(mark) - 2 - cw
 	name := svcTruncMiddle(r.name, max(room, 1))
 	var b strings.Builder
-	b.WriteString(gitLead(active, focused, bg))
-	b.WriteString(row.Render(strings.Repeat(" ", indent)))
-	b.WriteString(fg(theme.TextDim).Render(fold.String()))
-	b.WriteString(row.Render(" "))
+	b.WriteString(hostLead(active, focused, bg))
+	b.WriteString(row(strings.Repeat(" ", indent)))
+	b.WriteString(fg(theme.TextDim, fold.String()))
+	b.WriteString(row(" "))
 	labelCol := theme.TextSecondary
 	if active && focused {
 		labelCol = theme.TextPrimary
 	}
-	b.WriteString(fg(labelCol).Render(name))
+	b.WriteString(fg(labelCol, name))
 	used := 1 + indent + 2 + runewidth.StringWidth(name)
 	if mark != "" {
-		b.WriteString(fg(theme.TextDim).Render(mark))
+		b.WriteString(fg(theme.TextDim, mark))
 		used += runewidth.StringWidth(mark)
 	}
 	// The leader counts cells, not dots: a terminal that draws "·" two
 	// cells wide (East Asian ambiguous width) gets half as many.
 	dw := max(runewidth.StringWidth(dot), 1)
 	if dots := (w - used - cw - 2) / dw; dots > 0 {
-		b.WriteString(row.Render(" "))
-		b.WriteString(fg(theme.BorderSubtle).Render(strings.Repeat(dot, dots)))
+		b.WriteString(row(" "))
+		b.WriteString(fg(theme.BorderSubtle, strings.Repeat(dot, dots)))
 		used += 1 + dots*dw
 	}
-	b.WriteString(row.Render(" "))
-	b.WriteString(fg(theme.TextMuted).Render(r.count))
+	b.WriteString(row(" "))
+	b.WriteString(fg(theme.TextMuted, r.count))
 	used += 1 + cw
-	return clampSidebarRow(b.String(), used, w, row)
+	return hostClamp(b.String(), used, w, bg)
+}
+
+// hostLead is gitLead drawn with sgrPaint.
+func hostLead(active, focused bool, bg lipgloss.Color) string {
+	if active && focused {
+		return sgrPaint(theme.LG(theme.BorderFocus), bg, "▌")
+	}
+	return sgrPaint("", bg, " ")
+}
+
+// hostClamp is clampSidebarRow with the row background drawn by sgrPaint.
+func hostClamp(row string, width, w int, bg lipgloss.Color) string {
+	if pad := w - width; pad > 0 {
+		return row + sgrPaint("", bg, strings.Repeat(" ", pad))
+	} else if width > w {
+		return ansi.Truncate(row, w, "")
+	}
+	return row
 }
 
 // renderHostItem draws one host object row (plan §2.4 width ladder).
