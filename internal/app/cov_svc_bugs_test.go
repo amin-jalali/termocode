@@ -20,3 +20,18 @@ func TestCovSvcRestartNotCreatedReportsStartFailure(t *testing.T) {
 		t.Errorf("done called %d times with %v, want once with an error", called, got)
 	}
 }
+
+// "Replace tag" on the card that moves an existing tag must run
+// `docker tag`; it was dropped as a Cancel.
+func TestCovSvcReplaceTagCardRunsTag(t *testing.T) {
+	m, f := covSvcHost(t)
+	m.askImageTag("postgres:16")
+	submitPrompt(t, m, "redis:7")
+	if !m.confirmOpen || !strings.Contains(cardText(m), "Replace image tag?") {
+		t.Fatalf("card = %s", cardText(m))
+	}
+	pumpHost(t, m, covSvcConfirm(t, m, "tag"))
+	if !strings.Contains(covSvcCalls(f), "tag postgres:16 redis:7") {
+		t.Errorf("calls = %q", f.Calls())
+	}
+}

@@ -452,7 +452,7 @@ func (m *Model) handleServicesConfirm(id string) (tea.Cmd, bool) {
 		}
 		return m.imagePush(ref), true
 	case confirmKindContainerHostAction:
-		if id != "run" && id != "remove" && id != "prune" && id != "create" && id != "use" && id != "signout" {
+		if id != "run" && id != "remove" && id != "prune" && id != "create" && id != "use" && id != "signout" && id != "tag" {
 			return m.runHostAction("cancel"), true
 		}
 		return m.runHostAction(id), true
