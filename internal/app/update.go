@@ -115,6 +115,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if c, ok := m.handleUpdateMsg(msg); ok { // update_check.go
 		return m, c
 	}
+	if c, ok := m.handleCrashMsg(msg); ok { // crash_ui.go
+		return m, c
+	}
 	if c, ok := m.handlePRMsg(msg); ok { // pr_state.go
 		return m, c
 	}
