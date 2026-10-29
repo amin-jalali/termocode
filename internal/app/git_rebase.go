@@ -446,10 +446,8 @@ func (m *Model) onRebaseControl(id string) tea.Cmd {
 			msg.out, msg.err = git.RebaseContinue(cwd, git.RebaseOptions{})
 		case "skip":
 			msg.out, msg.err = git.RebaseSkip(cwd, git.RebaseOptions{})
-		case "abort":
+		default: // "abort"
 			msg.err = git.RebaseAbort(cwd)
-		default:
-			return nil
 		}
 		return msg
 	}
