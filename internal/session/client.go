@@ -17,6 +17,8 @@ import (
 	"time"
 
 	"golang.org/x/term"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // ErrNoSession means no server runs for the workspace.
@@ -118,7 +120,7 @@ type attachFrame struct {
 // one sent. stop ends it early.
 func readFrames(c *net.UnixConn, stop <-chan struct{}) <-chan attachFrame {
 	ch := make(chan attachFrame, 16)
-	go func() {
+	crash.GoWith("the session reader", func() {
 		for {
 			typ, p, err := readFrame(c)
 			select {
@@ -130,7 +132,12 @@ func readFrames(c *net.UnixConn, stop <-chan struct{}) <-chan attachFrame {
 				return
 			}
 		}
-	}()
+	}, func() { // end the attach as if the connection broke
+		select {
+		case ch <- attachFrame{err: errors.New("session reader failed")}:
+		case <-stop:
+		}
+	})
 	return ch
 }
 
@@ -194,7 +201,7 @@ func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
 	inDone := make(chan struct{})
 	keys := make(chan []byte, 16)
 	pings := newSeqFilter(linkPing)
-	go func() {
+	crash.Go("the session input", func() {
 		defer close(inDone)
 		buf := make([]byte, 4096)
 		for {
@@ -218,7 +225,7 @@ func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
 				return
 			}
 		}
-	}()
+	})
 
 	// seen follows the UI's output like the server does, so a client that
 	// leaves without the server's reset (killed, server gone) can still

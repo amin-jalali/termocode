@@ -17,6 +17,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // The session tests run real servers as separate processes (the test
@@ -27,6 +29,7 @@ const (
 	envUI           = "TERMOCODE_TEST_UI"            // sh -c script of the UI
 	envWriteTimeout = "TERMOCODE_TEST_WRITE_TIMEOUT" // clientWriteTimeout
 	envHoldTimeout  = "TERMOCODE_TEST_HOLD_TIMEOUT"  // holdTimeout
+	envPanicIn      = "TERMOCODE_TEST_PANIC_IN"      // crash.PanicIn in the server
 )
 
 // catUI echoes its input. It ignores RepaintSignal like the app does (a
@@ -47,6 +50,9 @@ func TestMain(m *testing.M) {
 		if d, err := time.ParseDuration(os.Getenv(envHoldTimeout)); err == nil {
 			holdTimeout = d
 		}
+		if w := os.Getenv(envPanicIn); w != "" {
+			crash.PanicIn(w)
+		}
 		os.Exit(Serve(ws, func() *exec.Cmd {
 			fmt.Fprintln(os.Stderr, serverMarker)
 			return exec.Command("sh", "-c", os.Getenv(envUI))
@@ -62,6 +68,7 @@ type rig struct {
 	ui      string
 	timeout time.Duration
 	hold    time.Duration // holdTimeout of the server
+	panicIn string        // a goroutine of the server that panics (crash.PanicIn)
 	uiPIDs  string        // file each UI appends its pid (= process group) to
 
 	mu    sync.Mutex
@@ -125,6 +132,9 @@ func (r *rig) spawn() (*exec.Cmd, error) {
 	}
 	if r.hold > 0 {
 		cmd.Env = append(cmd.Env, envHoldTimeout+"="+r.hold.String())
+	}
+	if r.panicIn != "" {
+		cmd.Env = append(cmd.Env, envPanicIn+"="+r.panicIn)
 	}
 	cmd.Stdout, cmd.Stderr = logf, logf
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
@@ -742,5 +752,39 @@ func TestServerDetachRequest(t *testing.T) {
 	}
 	if !strings.HasPrefix(out, "\x1b[?1049h") {
 		t.Errorf("modes not replayed to the second client: %q", out)
+	}
+}
+
+// TestServerSurvivesConnectionPanic: a panic while the server serves one
+// connection closes that connection and writes a crash report; the
+// server and its UI (with the user's buffers) live on, and the next
+// client attaches as usual.
+func TestServerSurvivesConnectionPanic(t *testing.T) {
+	state := t.TempDir()
+	t.Setenv("XDG_STATE_HOME", state)
+	r := newRig(t, catUI)
+	r.panicIn = "a session connection"
+	c := r.ensure()
+	hello(t, c)
+	_ = c.SetReadDeadline(time.Now().Add(10 * time.Second))
+	typ, _, err := readFrame(c)
+	var ne net.Error
+	switch {
+	case err == nil:
+		t.Fatalf("got a %q frame on the connection whose handler panicked", typ)
+	case errors.As(err, &ne) && ne.Timeout():
+		t.Fatal("the connection whose handler panicked was left open")
+	}
+	c2 := r.ensure()
+	hello(t, c2)
+	echo(t, c2, "still-here")
+	reports, _ := filepath.Glob(filepath.Join(state, "termocode", "crash", "crash-*.txt"))
+	if len(reports) != 1 {
+		t.Fatalf("crash reports %v, want one", reports)
+	}
+	// (The goroutine's name itself is masked: it is the value of
+	// envPanicIn, an environment value.)
+	if b, _ := os.ReadFile(reports[0]); !strings.Contains(string(b), "test panic in") {
+		t.Errorf("report does not hold the panic:\n%s", b)
 	}
 }

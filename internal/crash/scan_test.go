@@ -68,9 +68,6 @@ var bareGoAllowed = map[string]int{
 	"internal/services/events.go":       1,
 	"internal/services/start_linux.go":  1,
 	"internal/services/start_other.go":  1,
-	"internal/session/client.go":        2,
-	"internal/session/server.go":        12,
-	"internal/session/ssh.go":           3,
 	"internal/transfer/kitty.go":        1,
 }
 
