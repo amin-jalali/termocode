@@ -271,9 +271,12 @@ text (a *restore point*). This covers `write_file`, `create_file`,
 
 Undo puts every file back: changed files get their old text (an open tab
 shows it as one undo step), files the turn created are deleted. If a file
-changed again after the turn, a dialog lists it and asks first. A file
-whose tab has unsaved edits is skipped and named. The chat gets a line
-saying what was restored, so the agent knows.
+changed again after the turn, a dialog lists it and asks first; Cancel has
+the focus, so Enter keeps everything. A file whose tab has unsaved edits
+is left as it is, and the dialog says so: save or discard the edits first.
+A change the AI could not make (for example a file you had not saved) is
+not part of the turn, so there is nothing to undo for it. The chat gets a
+line saying what was restored, so the agent knows.
 
 Restore points are saved with the chat (in
 `~/.local/state/termocode/ai-restore/`), so the button still works after a
