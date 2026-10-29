@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // SCN-9: hot exit when the disk changed before the restart. The user's
@@ -165,5 +167,50 @@ func TestHotExitRestoreWhenFileBecameFolder(t *testing.T) {
 	}
 	if fi, err := os.Stat(p); err != nil || !fi.IsDir() || !exists(d, "a.txt/inner") {
 		t.Errorf("the folder a.txt was changed")
+	}
+}
+
+// Spec: Given a.txt edited (not saved) and backed up on branch main,
+// then termocode dies and the user switches to branch other (where a.txt
+// has other text),
+// when termocode starts again and the user restores, then the unsaved
+// text is back, a.txt on disk keeps the other branch's text, and a card
+// says a.txt changed on disk.
+func TestHotExitRestoreAfterBranchSwitch(t *testing.T) {
+	if testing.Short() {
+		t.Skip("starts nvim")
+	}
+	git := func(t testing.TB, dir string, args ...string) {
+		t.Helper()
+		cmd := spawn.Command("git", args...)
+		cmd.Dir = dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	d := New(t, Options{W: 120, H: 34, Nvim: true, Git: true, Files: textFiles(),
+		Setup: func(t testing.TB, dir string) {
+			git(t, dir, "checkout", "-q", "-b", "other")
+			if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("OTHER\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			git(t, dir, "commit", "-q", "-am", "other a")
+			git(t, dir, "checkout", "-q", "main")
+		}})
+	crashWithBackup(t, d)
+	git(t, d.Dir, "checkout", "-q", "other")
+	restoreAfterCrash(t, d)
+	if !waitTabs(d, "a.txt*") {
+		got, _ := tabs(d)
+		t.Fatalf("after Restore tabs = %v, want [a.txt*]", got)
+	}
+	if got := bufLines(d); got != "Hi alpha\nbravo\ncharlie" {
+		t.Errorf("after Restore a.txt holds %q", got)
+	}
+	if !d.WaitForText("changed on disk", 3*time.Second) {
+		t.Errorf("not told that a.txt changed on disk:\n%s", screen(d))
+	}
+	if got := diskFile(d, "a.txt"); got != "OTHER\n" {
+		t.Errorf("the other branch's a.txt was overwritten: %q", got)
 	}
 }
