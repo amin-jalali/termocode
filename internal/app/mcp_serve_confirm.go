@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"time"
+	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -96,7 +97,7 @@ func mcpServeActionPhrase(tool, human string) string {
 		return "use " + strings.ReplaceAll(tool, "_", " ")
 	}
 	head, arg, ok := strings.Cut(h, ": ")
-	if r := []rune(head); len(r) > 0 {
+	if r := []rune(head); len(r) > 0 && !(len(r) > 1 && unicode.IsUpper(r[1])) { // "IDE" stays
 		head = strings.ToLower(string(r[:1])) + string(r[1:])
 	}
 	if !ok || strings.TrimSpace(arg) == "" {
