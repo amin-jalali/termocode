@@ -72,6 +72,10 @@ func (m *Model) onPRActionPicked(id string) tea.Cmd {
 		return m.prCheckout()
 	case "merge":
 		return m.prAskMerge()
+	case "ready":
+		return m.prSetDraft(false)
+	case "draft":
+		return m.prSetDraft(true)
 	case "approve":
 		return m.prAskReview(ghci.ReviewApprove)
 	case "request-changes":
@@ -165,4 +169,22 @@ func (m *Model) handlePRPromptSubmit(value string) (tea.Cmd, bool) {
 		}
 		return prDoneMsg{number: n, ok: said + prRef(n), failed: "Could not send the review of " + prRef(n), err: err, reopen: true}
 	}), true
+}
+
+// prSetDraft marks the pull request ready for review, or converts it back
+// to a draft.
+func (m *Model) prSetDraft(draft bool) tea.Cmd {
+	d := m.prS().detail
+	if d == nil || d.State != "OPEN" || d.Draft == draft {
+		return nil
+	}
+	n := d.Number
+	ok := "Marked " + prRef(n) + " ready for review"
+	if draft {
+		ok = "Converted " + prRef(n) + " to a draft"
+	}
+	return m.prRun(func(ctx context.Context, run ghci.Runner, dir string) tea.Msg {
+		err := ghci.SetDraft(ctx, run, dir, n, draft)
+		return prDoneMsg{number: n, ok: ok, failed: "Could not change " + prRef(n), err: err, reopen: true}
+	})
 }

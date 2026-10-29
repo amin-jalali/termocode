@@ -602,3 +602,28 @@ func TestPRMergeRefused(t *testing.T) {
 		}
 	}
 }
+
+// Mark Ready and Convert to Draft call `gh pr ready` and reopen the card.
+func TestPRSetDraft(t *testing.T) {
+	f := &prFakeGH{answers: map[string]string{"pr view": prViewText14, "pr ready": ""}}
+	m, _ := prViewModel(t)
+	m.ciW().run = f.run
+	cmd := m.onPRActionPicked("draft")
+	done := cmd().(prDoneMsg)
+	if done.err != nil || !done.reopen || !f.called("pr ready 14 --undo") {
+		t.Fatalf("draft: %+v calls %v", done, f.calls)
+	}
+	m.onPRDone(done)
+	if !toastHas(m, "Converted #14 to a draft") {
+		t.Error("no toast")
+	}
+	m.prS().detail.Draft = true
+	done = m.onPRActionPicked("ready")().(prDoneMsg)
+	if !f.called("pr ready 14") || !strings.Contains(done.ok, "ready for review") {
+		t.Errorf("ready: %+v calls %v", done, f.calls)
+	}
+	// Already a draft / already ready: nothing to do.
+	if m.onPRActionPicked("draft") != nil {
+		t.Error("converted a draft to a draft")
+	}
+}
