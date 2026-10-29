@@ -3,6 +3,7 @@ package containerhost
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
 	"path"
 	"sort"
@@ -113,4 +114,25 @@ func (e *dirEntry) Info() (fs.FileInfo, error) {
 		return nil, err
 	}
 	return hd.FileInfo(), nil
+}
+
+// mkdirScript makes $1 and its parents; mode $2 applies only to folders
+// it creates (an existing folder is never changed).
+const mkdirScript = `[ -d "$1" ] || mkdir -p -m "$2" -- "$1"`
+
+// Mkdir makes the folder and its missing parents. With sh it is `mkdir
+// -p` as the host's user; without sh, a tar of the missing folders.
+func (f containerFS) Mkdir(ctx context.Context, p string, perm fs.FileMode) error {
+	h := f.h
+	abs, err := resolve(h.cfg.Root, p)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := h.opCtx(ctx)
+	defer cancel()
+	if !h.Caps().HasShell {
+		return f.mkdirTar(ctx, abs, perm)
+	}
+	_, err = h.sh(ctx, "mkdir", abs, mkdirScript, abs, fmt.Sprintf("%o", perm.Perm()))
+	return err
 }

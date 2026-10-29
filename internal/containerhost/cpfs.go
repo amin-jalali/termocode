@@ -234,3 +234,51 @@ func (f containerFS) WriteFile(ctx context.Context, p string, data []byte, perm 
 	}
 	return h.putTar(ctx, "write", abs, path.Dir(abs), buf.Bytes())
 }
+
+// mkdirTar makes abs and its missing parents with a tar of folder
+// entries put into the nearest folder that exists (images without sh).
+func (f containerFS) mkdirTar(ctx context.Context, abs string, perm fs.FileMode) error {
+	h := f.h
+	var missing []string
+	base := abs
+	var top *tar.Header
+	for {
+		hd, err := h.header(ctx, "mkdir", base, true)
+		if err == nil {
+			if hd.Typeflag != tar.TypeDir {
+				return &fs.PathError{Op: "mkdir", Path: base, Err: errors.New("exists and is not a folder")}
+			}
+			top = hd
+			break
+		}
+		if !errors.Is(err, fs.ErrNotExist) || base == h.cfg.Root {
+			return err
+		}
+		missing = append(missing, path.Base(base))
+		base = path.Dir(base)
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	uid, gid := top.Uid, top.Gid
+	if u, g, ok := h.Owner(); ok {
+		uid, gid = u, g
+	}
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	name := ""
+	for i := len(missing) - 1; i >= 0; i-- {
+		name = path.Join(name, missing[i])
+		err := tw.WriteHeader(&tar.Header{
+			Name: name + "/", Typeflag: tar.TypeDir, Mode: int64(perm.Perm()),
+			Uid: uid, Gid: gid, ModTime: time.Now(), Format: tar.FormatPAX,
+		})
+		if err != nil {
+			return &fs.PathError{Op: "mkdir", Path: abs, Err: err}
+		}
+	}
+	if err := tw.Close(); err != nil {
+		return &fs.PathError{Op: "mkdir", Path: abs, Err: err}
+	}
+	return h.putTar(ctx, "mkdir", abs, base, buf.Bytes())
+}
