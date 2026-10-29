@@ -10,6 +10,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clistep"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/lspinstall"
 )
 
@@ -119,7 +120,7 @@ func Run(ctx context.Context, cfg Config) *Flow {
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	f := &Flow{ch: make(chan State, 16), cancel: cancel}
-	go f.run(ctx, cfg)
+	crash.Go("the sign-in", func() { f.run(ctx, cfg) })
 	return f
 }
 
@@ -222,7 +223,7 @@ func (f *Flow) install(ctx context.Context, cfg Config, title string) bool {
 		err error
 	}
 	lines, res := make(chan string, 16), make(chan result, 1)
-	go func() {
+	crash.Go("the sign-in", func() {
 		out, err := cfg.Install(ctx, tool, func(l string) {
 			select {
 			case lines <- l:
@@ -230,7 +231,7 @@ func (f *Flow) install(ctx context.Context, cfg Config, title string) bool {
 			}
 		})
 		res <- result{out, err}
-	}()
+	})
 	tick := time.NewTicker(cfg.Tick)
 	defer tick.Stop()
 	line := ""
@@ -339,7 +340,7 @@ func (f *Flow) login(ctx context.Context, cfg Config, title string) (ok, keep bo
 			f.send(ctx, cur)
 		case <-poll.C:
 			if cfg.Check(ctx, cfg.CLI, cfg.Env) == clistep.StatusReady {
-				go func() {
+				crash.Go("the sign-in", func() {
 					select {
 					case <-sess.Done():
 					case <-time.After(cfg.ExitGrace):
@@ -347,7 +348,7 @@ func (f *Flow) login(ctx context.Context, cfg Config, title string) (ok, keep bo
 					case <-ctx.Done():
 					}
 					f.cancel()
-				}()
+				})
 				return true, true
 			}
 		case <-timeout.C:

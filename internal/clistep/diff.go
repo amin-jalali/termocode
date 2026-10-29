@@ -7,6 +7,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
@@ -31,7 +32,7 @@ func GitDiff(ctx context.Context, dir string, max int) string {
 		cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "GIT_OPTIONAL_LOCKS=0")
 		setProcGroup(cmd)
 		done := make(chan struct{})
-		go func() {
+		crash.Go("an AI tool step", func() {
 			select {
 			case <-ctx.Done():
 				if cmd.Process != nil {
@@ -39,7 +40,7 @@ func GitDiff(ctx context.Context, dir string, max int) string {
 				}
 			case <-done:
 			}
-		}()
+		})
 		out, err := cmd.Output()
 		close(done)
 		return string(out), err
