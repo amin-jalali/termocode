@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/textdiff"
@@ -244,12 +243,17 @@ func TestCovAIReviewToolsWrapping(t *testing.T) {
 // answer comes back to the tool; a stopped chat answers no.
 func TestCovAIAskConfirm(t *testing.T) {
 	m := aiTestModel(t)
-	call := covSyncCall(&m)
-	got := make(chan bool, 1)
-	go func() { got <- aiAskConfirm(context.Background(), call, ai.Tool{Name: "lsp_code_actions", Class: ai.ClassReview}, "Apply fix") }()
-	for i := 0; i < 500 && m.aiS().confirm == nil; i++ {
-		time.Sleep(2 * time.Millisecond)
+	opened := make(chan struct{})
+	call := func(_ context.Context, fn aiIDEFunc) (string, error) {
+		out, _, err := fn(&m)
+		close(opened)
+		return out, err
 	}
+	got := make(chan bool, 1)
+	go func() {
+		got <- aiAskConfirm(context.Background(), call, ai.Tool{Name: "lsp_code_actions", Class: ai.ClassReview}, "Apply fix")
+	}()
+	<-opened
 	if !m.confirmOpen || len(m.confirm.Buttons()) != 2 || m.confirm.Buttons()[0].ID != "deny" {
 		t.Fatalf("card buttons: %+v", m.confirm.Buttons())
 	}
