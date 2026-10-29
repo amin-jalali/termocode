@@ -37,27 +37,27 @@ import (
 type EventKind int
 
 const (
-	NodeStart     EventKind = iota // a node's agent is about to start
-	NodeText                       // streamed text (AI.Text = the delta, Tail = the cleaned end so far)
-	NodeTool                       // a tool call started or ended (AI = ai.EventToolStart / ai.EventToolResult)
-	NodeAI                         // another agent event (AI: turn start, retry)
-	NodeDone                       // the node completed (Output, Usage, Elapsed)
-	NodeFailed                     // the node failed (Err, Usage, Elapsed)
-	NodeCancelled                  // the node was stopped or never ran because the run stopped
-	NodeBlocked                    // a node it depends on failed; it will not run
-	RunDone                        // every node completed (Output = the last node's text, Usage = the sum)
-	RunFailed                      // a node failed (Err names it; Usage = the sum)
-	RunCancelled                   // Cancel or the parent context stopped the run
-	NodeRepair                     // a planner's plan is not valid (Err); the planner is asked once more
-	RunPlanned                     // a planner's plan grew the run (NodeID = the planner, Nodes = the new nodes)
-	RunPaused                      // the budget is reached (Cost, Budget) or Pause was asked (Budget 0): nothing new starts until Continue
-	RunResumed                     // Continue after a pause
-	RunRound                       // verify failed and a new round starts (Round = the new round, Err = the verify report)
-	NodeLimited                    // a CLI node hit its usage limit (Err = the CLI's words, ResetAt): it waits as pending and the run pauses
-	RunAwaitApproval               // G-PLAN: the run waits for the user's answer on its plan (Nodes = the steps left; Err = why an edit did not fit)
-	RunApproved                    // the user approved the plan; the run goes on
-	RunPlanEdited                  // the user's edit changed the plan (Nodes = the steps it added); RunAwaitApproval follows
-	RunPlanKept                    // steps joined an approved run and need no approval (Nodes = them): it goes on without asking
+	NodeStart        EventKind = iota // a node's agent is about to start
+	NodeText                          // streamed text (AI.Text = the delta, Tail = the cleaned end so far)
+	NodeTool                          // a tool call started or ended (AI = ai.EventToolStart / ai.EventToolResult)
+	NodeAI                            // another agent event (AI: turn start, retry)
+	NodeDone                          // the node completed (Output, Usage, Elapsed)
+	NodeFailed                        // the node failed (Err, Usage, Elapsed)
+	NodeCancelled                     // the node was stopped or never ran because the run stopped
+	NodeBlocked                       // a node it depends on failed; it will not run
+	RunDone                           // every node completed (Output = the last node's text, Usage = the sum)
+	RunFailed                         // a node failed (Err names it; Usage = the sum)
+	RunCancelled                      // Cancel or the parent context stopped the run
+	NodeRepair                        // a planner's plan is not valid (Err); the planner is asked once more
+	RunPlanned                        // a planner's plan grew the run (NodeID = the planner, Nodes = the new nodes)
+	RunPaused                         // the budget is reached (Cost, Budget) or Pause was asked (Budget 0): nothing new starts until Continue
+	RunResumed                        // Continue after a pause
+	RunRound                          // verify failed and a new round starts (Round = the new round, Err = the verify report)
+	NodeLimited                       // a CLI node hit its usage limit (Err = the CLI's words, ResetAt): it waits as pending and the run pauses
+	RunAwaitApproval                  // G-PLAN: the run waits for the user's answer on its plan (Nodes = the steps left; Err = why an edit did not fit)
+	RunApproved                       // the user approved the plan; the run goes on
+	RunPlanEdited                     // the user's edit changed the plan (Nodes = the steps it added); RunAwaitApproval follows
+	RunPlanKept                       // steps joined an approved run and need no approval (Nodes = them): it goes on without asking
 )
 
 // Verdicts of a loop's verify node (Event.Verdict).
