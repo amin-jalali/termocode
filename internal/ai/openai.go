@@ -93,18 +93,7 @@ func buildOpenAIBody(req Request, model string) map[string]any {
 		body["max_tokens"] = req.MaxTokens
 	}
 	if len(req.Tools) > 0 {
-		tools := make([]map[string]any, 0, len(req.Tools))
-		for _, t := range req.Tools {
-			tools = append(tools, map[string]any{
-				"type": "function",
-				"function": map[string]any{
-					"name":        t.Name,
-					"description": t.Description,
-					"parameters":  t.Schema,
-				},
-			})
-		}
-		body["tools"] = tools
+		body["tools"] = encodedTools(req.Tools, ToolSpec.openAIJSON)
 	}
 	return body
 }
@@ -136,7 +125,7 @@ func (p *openAIProvider) run(ctx context.Context, req Request, ch chan<- Chunk) 
 	if openAISendsUsage(p.cfg.Kind) {
 		body["stream_options"] = map[string]any{"include_usage": true}
 	}
-	payload, err := json.Marshal(body)
+	payload, err := marshalBody(body)
 	if err != nil {
 		return Chunk{Done: true, Err: err}
 	}

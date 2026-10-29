@@ -14,6 +14,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/charmbracelet/x/ansi"
@@ -72,6 +73,118 @@ type ToolSpec struct {
 	Name        string
 	Description string
 	Schema      map[string]any
+	// wire keeps the spec's JSON per provider once made: every request
+	// of a turn sends the same specs (Agent.Run makes them once per
+	// turn). Copies share it; nil (a spec literal) encodes each time.
+	wire *toolWire
+}
+
+// toolWire is a ToolSpec's encoded JSON, made once per provider format.
+type toolWire struct {
+	// spec is what the JSON is made from (a deep copy of the schema, see
+	// wireFor).
+	spec              ToolSpec
+	openAI, anthropic onceJSON
+}
+
+type onceJSON struct {
+	once sync.Once
+	b    json.RawMessage
+	err  error
+}
+
+func (o *onceJSON) get(v func() any) (json.RawMessage, error) {
+	o.once.Do(func() { o.b, o.err = json.Marshal(v()) })
+	return o.b, o.err
+}
+
+// encodedTools is the "tools" list of a body: each spec's JSON (made once
+// per turn). A spec that can not be encoded makes a list json.Marshal
+// fails on, as before.
+func encodedTools(specs []ToolSpec, enc func(ToolSpec) (json.RawMessage, error)) any {
+	out := make([]json.RawMessage, 0, len(specs))
+	for _, t := range specs {
+		b, err := enc(t)
+		if err != nil {
+			return []any{unencodable{err}}
+		}
+		out = append(out, b)
+	}
+	return out
+}
+
+// marshalBody is json.Marshal(body), but an encoded "tools" list is put
+// in as it is, without encoding json checking each tool again. "tools"
+// sorts after every other key of a body, so it is the last one, where
+// json.Marshal puts it too.
+func marshalBody(body map[string]any) ([]byte, error) {
+	tools, ok := body["tools"].([]json.RawMessage)
+	if !ok {
+		return json.Marshal(body)
+	}
+	for k := range body {
+		if k > "tools" {
+			return json.Marshal(body)
+		}
+	}
+	rest := make(map[string]any, len(body)-1)
+	for k, v := range body {
+		if k != "tools" {
+			rest[k] = v
+		}
+	}
+	b, err := json.Marshal(rest)
+	if err != nil {
+		return nil, err
+	}
+	n := 0
+	for _, t := range tools {
+		n += len(t) + 1
+	}
+	out := make([]byte, 0, len(b)+n+16)
+	out = append(out, b[:len(b)-1]...) // without the closing brace
+	if len(rest) > 0 {
+		out = append(out, ',')
+	}
+	out = append(out, `"tools":[`...)
+	for i, t := range tools {
+		if i > 0 {
+			out = append(out, ',')
+		}
+		out = append(out, t...)
+	}
+	return append(out, "]}"...), nil
+}
+
+// unencodable fails json.Marshal with err (a spec that could not be
+// encoded fails the request as before).
+type unencodable struct{ err error }
+
+func (u unencodable) MarshalJSON() ([]byte, error) { return nil, u.err }
+
+// openAIJSON is the spec as an OpenAI "tools" entry.
+func (t ToolSpec) openAIJSON() (json.RawMessage, error) {
+	if w := t.wire; w != nil {
+		return w.openAI.get(func() any { return openAIToolEntry(w.spec) })
+	}
+	return json.Marshal(openAIToolEntry(t))
+}
+
+func openAIToolEntry(t ToolSpec) any {
+	return map[string]any{"type": "function", "function": map[string]any{
+		"name": t.Name, "description": t.Description, "parameters": t.Schema}}
+}
+
+// anthropicJSON is the spec as an Anthropic "tools" entry.
+func (t ToolSpec) anthropicJSON() (json.RawMessage, error) {
+	if w := t.wire; w != nil {
+		return w.anthropic.get(func() any { return anthropicToolEntry(w.spec) })
+	}
+	return json.Marshal(anthropicToolEntry(t))
+}
+
+func anthropicToolEntry(t ToolSpec) any {
+	return map[string]any{"name": t.Name, "description": t.Description, "input_schema": t.Schema}
 }
 
 // ToolCall is one tool invocation requested by the model.

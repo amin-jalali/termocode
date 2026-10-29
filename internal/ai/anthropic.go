@@ -123,15 +123,7 @@ func buildAnthropicBody(req Request, model string, oauth bool) map[string]any {
 		body["system"] = system
 	}
 	if len(req.Tools) > 0 {
-		tools := make([]map[string]any, 0, len(req.Tools))
-		for _, t := range req.Tools {
-			tools = append(tools, map[string]any{
-				"name":         t.Name,
-				"description":  t.Description,
-				"input_schema": t.Schema,
-			})
-		}
-		body["tools"] = tools
+		body["tools"] = encodedTools(req.Tools, ToolSpec.anthropicJSON)
 	}
 	return body
 }
@@ -156,7 +148,7 @@ func (p *anthropicProvider) run(ctx context.Context, req Request, ch chan<- Chun
 	if model == "" {
 		model = p.cfg.Model
 	}
-	payload, err := json.Marshal(buildAnthropicBody(req, model, oauth))
+	payload, err := marshalBody(buildAnthropicBody(req, model, oauth))
 	if err != nil {
 		return Chunk{Done: true, Err: err}
 	}

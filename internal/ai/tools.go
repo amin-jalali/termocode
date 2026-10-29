@@ -56,7 +56,7 @@ type Tool struct {
 // Spec is the native tool-calling description of t.
 func (t Tool) Spec() ToolSpec {
 	if t.Schema != nil {
-		return ToolSpec{Name: t.Name, Description: t.Description, Schema: t.Schema}
+		return ToolSpec{Name: t.Name, Description: t.Description, Schema: t.Schema, wire: wireFor(t.Name, t.Description, t.Schema)}
 	}
 	props := t.Params
 	if props == nil {
@@ -66,7 +66,7 @@ func (t Tool) Spec() ToolSpec {
 	if len(t.Required) > 0 {
 		schema["required"] = t.Required
 	}
-	return ToolSpec{Name: t.Name, Description: t.Description, Schema: schema}
+	return ToolSpec{Name: t.Name, Description: t.Description, Schema: schema, wire: wireFor(t.Name, t.Description, schema)}
 }
 
 // Label is the name shown to people: Display, or Name.

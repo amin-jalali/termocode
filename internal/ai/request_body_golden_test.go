@@ -49,9 +49,12 @@ func TestRequestBodiesGolden(t *testing.T) {
 	}
 	for name, body := range bodies {
 		for round := 0; round < 2; round++ { // a second request of the turn reuses the specs
-			got, err := json.Marshal(body)
+			got, err := marshalBody(body.(map[string]any))
 			if err != nil {
 				t.Fatal(err)
+			}
+			if plain, _ := json.Marshal(body); string(plain) != string(got) {
+				t.Errorf("%s: marshalBody differs from json.Marshal:\n%s\n%s", name, got, plain)
 			}
 			p := filepath.Join("testdata", "request_body_"+name+".json")
 			if *updateBodies {
