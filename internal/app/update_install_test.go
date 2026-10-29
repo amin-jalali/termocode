@@ -149,8 +149,11 @@ func TestUpdateInstallFlow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// A long path (macOS temp dirs) wraps over card lines: compare the
+	// text without borders, line breaks and spaces.
+	flat := strings.NewReplacer("│", "", "\n", "", " ", "").Replace(box)
 	for _, want := range []string{"v0.1.0 → v0.2.0", real, "verified with checksums.txt", "termocode.old"} {
-		if !strings.Contains(box, want) {
+		if !strings.Contains(flat, strings.ReplaceAll(want, " ", "")) {
 			t.Errorf("confirm card misses %q:\n%s", want, box)
 		}
 	}
