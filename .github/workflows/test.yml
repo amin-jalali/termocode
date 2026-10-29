@@ -71,9 +71,11 @@ jobs:
           go-version-file: go.mod
           cache: false
 
-      - name: Install X11 dev headers (Linux)
+      # sqlite3: the internal/dbclient tests that drive the CLI skip
+      # without it (macOS has it built in).
+      - name: Install X11 dev headers and sqlite3 (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libx11-dev
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev sqlite3
 
       - name: Cache Go modules
         uses: actions/cache@v4
@@ -206,8 +208,8 @@ jobs:
           go-version-file: go.mod
           cache: false
 
-      - name: Install X11 dev headers
-        run: sudo apt-get update && sudo apt-get install -y libx11-dev
+      - name: Install X11 dev headers and sqlite3
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev sqlite3
 
       - name: Cache Go modules
         uses: actions/cache@v4
