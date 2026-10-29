@@ -102,7 +102,7 @@ func runClient(dir string, create bool) int {
 	rtlEnter, rtlLeave = rtlEscapes(rtlEnter, rtlLeave, os.Getenv)
 	_, _ = os.Stdout.WriteString(rtlEnter)
 	defer func() { _, _ = os.Stdout.WriteString(rtlLeave) }()
-	return session.Attach(conn, p, os.Stdin, os.Stdout, clientCaps(running))
+	return session.Attach(conn, p, session.AttachOpts{In: os.Stdin, Out: os.Stdout, Caps: clientCaps(running)})
 }
 
 // clientCaps describes this terminal for the session. A running UI keeps

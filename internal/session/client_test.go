@@ -61,7 +61,7 @@ func attachDropped(t *testing.T, serverAlive bool, output string) string {
 		t.Fatal(err)
 	}
 	defer out.Close()
-	Attach(c, p, in, out, nil)
+	Attach(c, p, AttachOpts{In: in, Out: out})
 	b, _ := os.ReadFile(out.Name())
 	return string(b)
 }

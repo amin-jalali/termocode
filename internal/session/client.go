@@ -89,12 +89,20 @@ func Ensure(p Paths, spawn func() error) (*net.UnixConn, error) {
 	}
 }
 
-// Attach relays the terminal (in, out) to the session of p over c until
-// the UI exits (its exit code is returned), another client takes over, or
-// this client is told to stop. The session keeps running in the last
-// two cases. caps (may be nil) describe this terminal; the UI switches to
-// them when it already runs.
-func Attach(c *net.UnixConn, p Paths, in, out *os.File, caps *ClientCaps) int {
+// AttachOpts is the terminal side of an attach.
+type AttachOpts struct {
+	In, Out *os.File
+	// Caps (may be nil) describe this terminal; the UI switches to them
+	// when it already runs.
+	Caps *ClientCaps
+}
+
+// Attach relays the terminal (o.In, o.Out) to the session of p over c
+// until the UI exits (its exit code is returned), another client takes
+// over, or this client is told to stop. The session keeps running in the
+// last two cases.
+func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
+	in, out, caps := o.In, o.Out, o.Caps
 	defer c.Close()
 	cols, rows, err := term.GetSize(int(out.Fd()))
 	if err != nil || cols <= 0 || rows <= 0 {
