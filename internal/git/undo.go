@@ -190,9 +190,13 @@ func RunUndo(dir string, p UndoPlan, opt UndoOptions) (UndoResult, error) {
 	return res, nil
 }
 
-// moveHead runs the reset --keep (or switch) of p.
+// moveHead runs the reset --keep (or the switch back) of p. Both
+// refuse instead of overwriting local changes.
 func moveHead(dir string, p UndoPlan) error {
 	args := []string{"reset", "--keep", p.Target}
+	if p.Switch != "" {
+		args = []string{"switch", "--no-guess", p.Switch}
+	}
 	cmd := spawn.Command("git", args...)
 	cmd.Dir = dir
 	if out, err := cmd.CombinedOutput(); err != nil {

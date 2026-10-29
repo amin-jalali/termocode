@@ -210,3 +210,20 @@ func TestRunUndoStashConflictKeepsStash(t *testing.T) {
 		t.Errorf("result %+v, stash list %q", res, r.git(t, "stash", "list"))
 	}
 }
+
+// G-UND: undoing a checkout switches back to the branch left; the other
+// branch stays where it is.
+func TestRunUndoCheckout(t *testing.T) {
+	r, h := rebaseRepo(t, 2)
+	r.git(t, "checkout", "-q", "-b", "feat/x", h[0])
+	p, _ := PlanUndo(r.dir)
+	if _, err := RunUndo(r.dir, p, UndoOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if b := strings.TrimSpace(r.git(t, "branch", "--show-current")); b != "main" || headOf(t, r) != h[1] {
+		t.Errorf("on %q at %s", b, headOf(t, r))
+	}
+	if got := strings.TrimSpace(r.git(t, "rev-parse", "feat/x")); got != h[0] {
+		t.Errorf("feat/x moved to %s", got)
+	}
+}
