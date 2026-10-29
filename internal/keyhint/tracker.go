@@ -50,6 +50,9 @@ type Outcome struct {
 	Prefix []string
 }
 
+// Gen is the number a Tick must carry to count; tests read it.
+func (t *Tracker) Gen() int { return t.gen }
+
 // Active reports whether a sequence is open (the popup may be hidden).
 func (t *Tracker) Active() bool { return len(t.seq) > 0 }
 

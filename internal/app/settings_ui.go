@@ -471,9 +471,7 @@ func (m *Model) applySetting(id, value string) tea.Cmd {
 			m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Settings error", err.Error())
 			return toastCmd
 		}
-		if !b {
-			m.hideKeyHints()
-		}
+		m.setKeyHints(b)
 		m.toast, toastCmd = m.toast.Push(toast.Info, fmt.Sprintf("key_hints = %v", b))
 	case "setting-tab-size":
 		n, err := strconv.Atoi(value)

@@ -665,7 +665,10 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.explorer.SchedulePreview()
 
 	case tea.KeyMsg:
-		return m.handleGlobalKey(msg)
+		return m.handleKeyWithHints(msg)
+
+	case keyHintTickMsg:
+		return m, m.onKeyHintTick(msg)
 
 	case tea.MouseMsg:
 		return m.handleMouse(msg)

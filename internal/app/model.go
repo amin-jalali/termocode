@@ -231,6 +231,9 @@ type Model struct {
 	tip tooltipState
 	// hints tracks a leader sequence for the key hint popup (key_hints.go).
 	hints *keyhint.Tracker
+	// hintSrc feeds it (nil = nvim); hintsOff / hintsInit cache key_hints.
+	hintSrc             hintSource
+	hintsOff, hintsInit bool
 	// mouseProbe is set only on the copy a test probes (probeClick): the
 	// mouse code then records which target a click resolves to and stops
 	// before it acts (hit_targets.go).
