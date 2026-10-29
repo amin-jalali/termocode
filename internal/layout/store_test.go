@@ -12,8 +12,12 @@ func testStore(t *testing.T) Store {
 	return Store{UserDir: filepath.Join(root, "cfg", "layouts"), ProjectDir: filepath.Join(root, "proj", ".termocode", "layouts")}
 }
 
+// names lists the entries that are not built-in.
 func names(es []Entry) (out []string) {
 	for _, e := range es {
+		if e.Source == Builtin {
+			continue
+		}
 		out = append(out, e.Name+":"+e.Source.String())
 	}
 	return out
@@ -45,9 +49,9 @@ func TestProjectLayoutWinsOverUserOfTheSameName(t *testing.T) {
 	s := testStore(t)
 	s.Save(User, Layout{Name: "debug", Description: "mine"})
 	s.Save(Project, Layout{Name: "debug", Description: "team"})
-	es, _ := s.List()
-	if len(es) != 1 || es[0].Source != Project || es[0].Description != "team" {
-		t.Fatalf("list = %+v", es)
+	e, ok := s.Find("debug")
+	if !ok || e.Source != Project || e.Description != "team" {
+		t.Fatalf("find = %+v", e)
 	}
 }
 
@@ -59,7 +63,7 @@ func TestListReportsBrokenFilesAndKeepsTheRest(t *testing.T) {
 	}
 	os.WriteFile(filepath.Join(s.UserDir, "notes.txt"), []byte("x"), 0o644)
 	es, broken := s.List()
-	if len(es) != 1 || es[0].Name != "good" {
+	if g := names(es); len(g) != 1 || g[0] != "good:user" {
 		t.Fatalf("entries = %v", names(es))
 	}
 	if len(broken) != 1 || filepath.Base(broken[0].Path) != "bad.jsonc" {
@@ -69,7 +73,7 @@ func TestListReportsBrokenFilesAndKeepsTheRest(t *testing.T) {
 
 func TestMissingFoldersMeanNoLayouts(t *testing.T) {
 	es, broken := (Store{}).List()
-	if len(es) != 0 || len(broken) != 0 {
+	if len(names(es)) != 0 || len(broken) != 0 {
 		t.Fatalf("%v %v", es, broken)
 	}
 	if _, err := (Store{}).Save(Project, Layout{Name: "x"}); err == nil {
@@ -117,7 +121,7 @@ func TestDeleteRemovesTheFileOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	es, _ := s.List()
-	if len(es) != 1 || es[0].Name != "b" {
+	if g := names(es); len(g) != 1 || g[0] != "b:user" {
 		t.Fatalf("list = %v", names(es))
 	}
 	if err := s.Delete(Entry{Layout: Layout{Name: "debug"}, Source: Builtin}); err == nil {

@@ -106,11 +106,14 @@ func (s Store) read(dir string, src Source) (out []Entry, broken []Broken) {
 	return out, broken
 }
 
-// List is every layout, sorted by name. When the project and the user both
-// have a name, the project's wins. Files that cannot be read are returned
+// List is every layout, sorted by name: the built-in ones, then the files.
+// A later source wins on a name: project over user over built-in. Files that cannot be read are returned
 // in broken, never silently dropped.
 func (s Store) List() (entries []Entry, broken []Broken) {
 	byName := map[string]Entry{}
+	for _, e := range Builtins() {
+		byName[e.Name] = e
+	}
 	for _, src := range []Source{User, Project} { // later wins
 		d, err := s.dir(src)
 		if err != nil {
