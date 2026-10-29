@@ -664,6 +664,17 @@ return tostring(best / 1e6)`
 		t.Fatalf("page lines never reached %d", want)
 	}
 	all := time.Since(start)
+	// The indent folds, off while the batches came, are back on.
+	if fm := lua(d, `local b = vim.g.termocode_http_buf
+local w = vim.fn.win_findbuf(b)[1]
+return w and vim.wo[w].foldmethod or 'no window'`); fm != "indent" {
+		t.Fatalf("page foldmethod %q after the last batch", fm)
+	}
+	if fc := lua(d, `local b = vim.g.termocode_http_buf
+local w = vim.fn.win_findbuf(b)[1]
+return vim.api.nvim_win_call(w, function() vim.cmd('6foldclose') return tostring(vim.fn.foldclosed(6)) end)`); fc == "-1" {
+		t.Fatal("no fold closes on the page")
+	}
 	httpFocusPage(d)
 	pageMS := lua(d, redraw)
 	t.Logf("lens redraw %s ms, page redraw %s ms, send → all lines %v", lensMS, pageMS, all)

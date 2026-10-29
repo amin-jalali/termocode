@@ -359,9 +359,9 @@ func (m *Model) httpOpenPage(p httpPage) tea.Cmd {
 		}
 		lines = lines[:httpPageBatch]
 	}
-	if err := m.nvim.ExecLuaArgs(`local tmp, split, h, l, r = ...
-if _G._termocode_http_open then _G._termocode_http_open(tmp, split, h, l, r) end`,
-		httpPageTmp(), split, p.head, lines, nonNilMapRows(rows)); err != nil {
+	if err := m.nvim.ExecLuaArgs(`local tmp, split, h, l, r, more = ...
+if _G._termocode_http_open then _G._termocode_http_open(tmp, split, h, l, r, more) end`,
+		httpPageTmp(), split, p.head, lines, nonNilMapRows(rows), len(restL) > 0); err != nil {
 		recordError(fmt.Sprintf("http page: %v", err))
 		return nil
 	}
@@ -391,8 +391,8 @@ func (m *Model) httpPageAppend(msg httpAppendMsg) tea.Cmd {
 	if m.nvim == nil || msg.page != m.httpS().pageGen {
 		return nil
 	}
-	_ = m.nvim.ExecLuaArgs(`local l, r = ...
-if _G._termocode_http_append then _G._termocode_http_append(l, r) end`, msg.lines, nonNilMapRows(msg.rows))
+	_ = m.nvim.ExecLuaArgs(`local l, r, last = ...
+if _G._termocode_http_append then _G._termocode_http_append(l, r, last) end`, msg.lines, nonNilMapRows(msg.rows), len(msg.rest) == 0)
 	if len(msg.rest) == 0 {
 		return nil
 	}

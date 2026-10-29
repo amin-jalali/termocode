@@ -59,10 +59,21 @@ local function apply_syntax(b)
   vim.bo[b].synmaxcol = 200
 end
 
--- _termocode_http_open(tmp, split, head, lines, rows): fill the page
--- and show it (a vertical split on the right when split, else the
--- current window; the .http file stays the alternate buffer).
-function _G._termocode_http_open(tmp, split, h, lines, rows)
+-- folds turns the page windows' indent folds on, or off (manual) while
+-- the batches of a big body arrive: nvim then works the folds out once,
+-- not again for every batch.
+local function folds(b, on)
+  for _, w in ipairs(vim.fn.win_findbuf(b)) do
+    local want = on and 'indent' or 'manual'
+    if vim.wo[w].foldmethod ~= want then vim.wo[w].foldmethod = want end
+  end
+end
+
+-- _termocode_http_open(tmp, split, head, lines, rows, more): fill the
+-- page and show it (a vertical split on the right when split, else the
+-- current window; the .http file stays the alternate buffer). more:
+-- batches follow (_termocode_http_append).
+function _G._termocode_http_open(tmp, split, h, lines, rows, more)
   local b = the_buf()
   local fresh = false
   if not b then
@@ -70,6 +81,7 @@ function _G._termocode_http_open(tmp, split, h, lines, rows)
     vim.bo[b].buftype = 'nofile'
     vim.bo[b].swapfile = false
     vim.bo[b].bufhidden = 'hide'
+    vim.bo[b].undolevels = -1
     pcall(api.nvim_buf_set_name, b, vim.fn.fnamemodify(tmp, ':h') .. '/HTTP Response')
     vim.g.termocode_http_buf = b
     fresh = true
@@ -77,6 +89,7 @@ function _G._termocode_http_open(tmp, split, h, lines, rows)
   H.head = h
   H.rows = {}
   add_rows(rows)
+  folds(b, false)
   put(b, 0, -1, lines)
   if fresh then vim.bo[b].filetype = 'httpresponse' end
   apply_syntax(b)
@@ -93,6 +106,7 @@ function _G._termocode_http_open(tmp, split, h, lines, rows)
       set_win(0)
     end
   end
+  folds(b, not more)
   for _, w in ipairs(vim.fn.win_findbuf(b)) do
     if not split or #vim.fn.win_findbuf(b) > 0 then pcall(api.nvim_win_set_cursor, w, { 1, 0 }) end
   end
@@ -106,11 +120,14 @@ function _G._termocode_http_head(h)
   put(b, 0, 2, { h.req or '', h.summary or '' })
 end
 
--- _termocode_http_append(lines, rows): one more batch of a big body.
-function _G._termocode_http_append(lines, rows)
+-- _termocode_http_append(lines, rows, last): one more batch of a big
+-- body.
+-- last: the final batch; the indent folds come back on.
+function _G._termocode_http_append(lines, rows, last)
   local b = the_buf(); if not b then return end
   add_rows(rows)
   put(b, -1, -1, lines)
+  if last then folds(b, true) end
 end
 
 local function width(s) return vim.fn.strdisplaywidth(s) end
