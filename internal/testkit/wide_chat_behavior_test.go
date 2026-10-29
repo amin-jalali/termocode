@@ -19,7 +19,7 @@ func TestWideAIChatMessages(t *testing.T) {
 		"\n\n```\n" + strings.Repeat("中文"+wideFlag, 40) + "\n```\n\n- " + wideFa + " " + wideDev + "\n"
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
-		for _, part := range strings.SplitAfter(answer, " ") {
+		for _, part := range strings.SplitAfter(answer, "\n") {
 			q := strings.ReplaceAll(strings.ReplaceAll(part, "\n", `\n`), `"`, `\"`)
 			fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"content\":\"%s\"}}]}\n\n", q)
 		}
