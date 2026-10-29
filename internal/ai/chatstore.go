@@ -246,7 +246,7 @@ func (s ChatStore) Save(c *Conversation) error {
 	if err := os.MkdirAll(s.Dir, 0o700); err != nil {
 		return err
 	}
-	b, err := json.MarshalIndent(c, "", "  ")
+	b, err := json.Marshal(c) // compact: indenting cost more than the encoding itself
 	if err != nil {
 		return err
 	}
