@@ -33,6 +33,7 @@ import (
 //	d                  diff vs HEAD (open in preview overlay)
 //	c                  commit (opens a text-input prompt)
 //	x                  discard worktree changes (with confirm)
+//	u                  undo the last git action (git_undo.go)
 //	r                  refresh
 func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 	if !m.gitEnsureLoaded() {
@@ -166,6 +167,8 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 				return m, m.gitRebaseFromCmd(m.gitCommits[cur.ci].FullHash), true
 			}
 			return m, nil, true
+		case 'u': // git_undo.go
+			return m, m.gitUndoCmd(), true
 		case 'y':
 			if hasCur && cur.kind == gitRowCommit {
 				return m, m.gitCopyCommit(cur.ci, false), true

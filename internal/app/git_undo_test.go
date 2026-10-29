@@ -251,3 +251,16 @@ func TestGitUndoRedo(t *testing.T) {
 		t.Errorf("redo after a new commit; toasts:\n%s", toastText(*m))
 	}
 }
+
+// G-UND: u in Source Control opens the undo card.
+func TestGitUndoKeyInSourceControl(t *testing.T) {
+	m, _ := undoRepo(t, 2)
+	nm, cmd, ok := m.handleGitSidebarKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'u'}})
+	if !ok {
+		t.Fatal("u not handled")
+	}
+	undoStep(t, &nm, cmd)
+	if !nm.confirmOpen || nm.confirmKind != confirmKindGitUndo {
+		t.Fatalf("no undo card; toasts:\n%s", toastText(nm))
+	}
+}
