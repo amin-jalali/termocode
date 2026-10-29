@@ -88,6 +88,7 @@ its name and key.
 - Export / import your settings (secrets are left out).
 - Import settings, keys, theme and (from VS Code) snippets from another editor you use, with a review, a backup and **Undo Last Import**. → [Import settings from another editor](guides/import-from-another-editor.md)
 - Lua extensions: commands, sidebar panels, status items. → [Write an extension](extensions.md)
+- Updates from inside: a quiet ⬆ chip when a new release is out, then a checked download (checksums.txt), a confirm card and Restart. Package-manager installs get their command instead. → [Update termocode](getting-started/install.md#update-termocode)
 
 ![Catppuccin Latte light theme](assets/screenshots/theme-catppuccin-latte.png)
 

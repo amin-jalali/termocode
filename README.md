@@ -64,7 +64,7 @@ On the first start termocode downloads three editor plugins from GitHub in the
 background (multi-cursor, debugger, bracket colours). Until they arrive those
 features are off; everything else works offline.
 
-Run the same line again to upgrade. Uninstall with `... | sh -s -- --uninstall`.
+Run the same line again to upgrade, or use **termocode: Check for Updates** inside the app. Uninstall with `... | sh -s -- --uninstall`.
 You can also download a tarball from [Releases](https://github.com/amin-jalali/termocode/releases),
 or build with Go ≥ 1.26: `go install github.com/amin-jalali/termocode/cmd/termocode@latest`
 (on Linux, install the X11 headers first: `sudo apt install libx11-dev`).

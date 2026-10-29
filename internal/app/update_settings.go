@@ -18,7 +18,7 @@ const updateCheckRowID = "setting-update-check"
 
 func init() {
 	settingsRows = append(settingsRows, settingsRow{ID: updateCheckRowID, Label: "update_check", Kind: "bool", Default: "true",
-		Desc: "Look for a newer termocode release once a day, in the background (GitHub, no account needed). Dev builds never look."})
+		Desc: "Look for a newer termocode release once a day, in the background (GitHub, no account needed). A newer one shows a quiet ⬆ chip in the status bar and one toast. Dev builds never look. termocode: Check for Updates works with it off too."})
 }
 
 // updateCheckOn reads update_check from config.json (default true).

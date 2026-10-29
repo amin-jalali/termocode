@@ -82,7 +82,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
-| `update_check` | bool | `true` | Look for a newer termocode release once a day, in the background (GitHub, no account needed). Dev builds never look. |
+| `update_check` | bool | `true` | Look for a newer termocode release once a day, in the background (GitHub, no account needed). A newer one shows a quiet ⬆ chip in the status bar and one toast. Dev builds never look. termocode: Check for Updates works with it off too. |
 
 ## Databases (file only)
 
