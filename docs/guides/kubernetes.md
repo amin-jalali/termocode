@@ -90,8 +90,11 @@ alone never restarts anything. **Restart** replaces the pods one by one.
 
 ## The AI
 
-The AI can open the view and load it again. It can never restart a
-deployment or start a port-forward.
+The AI can open the view and load it again. It can also read the
+cluster, in the context the view shows: `kube_list` (the four lists),
+`kube_describe` (one object) and `kube_logs` (the last lines of a pod).
+Secrets in their answers are hidden. The AI can never restart a
+deployment, start a port-forward or switch the context.
 
 ## When something is wrong
 
