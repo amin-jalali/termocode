@@ -57,6 +57,7 @@ func TestScaleExplorer10kFolder(t *testing.T) {
 	t0 = time.Now()
 	d.Type("file09999")
 	if !d.WaitFor(func() bool {
+		d.render()
 		s := screen(d)
 		return strings.Contains(s, "file09999.txt") && !strings.Contains(s, "file09998.txt")
 	}, 5*time.Second*raceFactor()) {
