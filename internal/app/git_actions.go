@@ -587,19 +587,22 @@ func (m *Model) openGitDiscardConfirm() {
 	if !ok {
 		return
 	}
-	f := m.gitFiles[fi]
-	m.confirm = confirm.New(
+	m.openGitDiscardCard(m.gitFiles[fi].Path)
+}
+
+// openGitDiscardCard asks before reverting rel to its last commit. The
+// discard cannot be undone, so Cancel is first and focused (AH-1).
+func (m *Model) openGitDiscardCard(rel string) {
+	m.confirm = confirm.Risky(
 		"Discard changes?",
-		fmt.Sprintf("This will revert \"%s\" to its last committed state. This cannot be undone.", f.Path),
-		[]confirm.Button{
-			{ID: "discard", Title: "Discard", Style: confirm.StyleDestructive},
-			{ID: "cancel", Title: "Cancel"},
-		},
+		fmt.Sprintf("This will revert \"%s\" to its last committed state. This cannot be undone.", rel),
+		confirm.Button{ID: "cancel", Title: "Cancel"},
+		confirm.Button{ID: "discard", Title: "Discard", Style: confirm.StyleDestructive},
 	)
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindGitDiscard
-	m.confirmTargetPath = f.Path
+	m.confirmTargetPath = rel
 }
 
 // colorizeDiff prefixes each unified-diff line with ANSI SGR colours so the
@@ -754,22 +757,9 @@ func (m *Model) gitDiffActiveFile() tea.Cmd {
 // file is currently in the editor. Same UX as 'x' on the git sidebar but
 // reachable from the palette.
 func (m *Model) openGitDiscardForActiveFile() {
-	rel, ok := m.activeGitRel()
-	if !ok {
-		return
+	if rel, ok := m.activeGitRel(); ok {
+		m.openGitDiscardCard(rel)
 	}
-	m.confirm = confirm.New(
-		"Discard changes?",
-		fmt.Sprintf("This will revert \"%s\" to its last committed state. This cannot be undone.", rel),
-		[]confirm.Button{
-			{ID: "discard", Title: "Discard", Style: confirm.StyleDestructive},
-			{ID: "cancel", Title: "Cancel"},
-		},
-	)
-	m.confirm.SetSize(m.w, m.h)
-	m.confirmOpen = true
-	m.confirmKind = confirmKindGitDiscard
-	m.confirmTargetPath = rel
 }
 
 // gitRemoteDoneMsg reports a finished push / pull / fetch / sync. These run
