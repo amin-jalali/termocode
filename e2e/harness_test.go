@@ -635,6 +635,12 @@ func (tm *Term) dump(tag string) {
 func NewRepo(t *testing.T) string {
 	t.Helper()
 	ws := t.TempDir()
+	// The real path: termocode's working folder is the resolved one (on
+	// macOS $TMPDIR is under /var, a symlink to /private/var), and the
+	// session key and socket are made from it.
+	if real, err := filepath.EvalSymlinks(ws); err == nil {
+		ws = real
+	}
 	git := func(args ...string) {
 		t.Helper()
 		cmd := exec.Command("git", args...)

@@ -31,3 +31,24 @@ func TestShortTempDirFitsSessionSocket(t *testing.T) {
 		t.Errorf("socket path is %d bytes, want at most 100: %s", len(sock), sock)
 	}
 }
+
+// NewRepo gives the real path of the workspace: termocode's working
+// folder is the resolved one, and the session key is made from it.
+func TestNewRepoPathHasNoSymlink(t *testing.T) {
+	real := t.TempDir()
+	link := filepath.Join(t.TempDir(), "tmp-link")
+	if err := os.Symlink(real, link); err != nil {
+		t.Fatal(err)
+	}
+	t.Run("repo", func(t *testing.T) {
+		t.Setenv("TMPDIR", link)
+		ws := NewRepo(t)
+		resolved, err := filepath.EvalSymlinks(ws)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ws != resolved {
+			t.Errorf("NewRepo = %s, want the resolved path %s", ws, resolved)
+		}
+	})
+}
