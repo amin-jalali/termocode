@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -63,4 +64,9 @@ func (m *Model) handleCrashMsg(msg tea.Msg) (tea.Cmd, bool) {
 	var cmd tea.Cmd
 	m.toast, cmd = m.toast.PushDetail(toast.Errr, title, detail)
 	return tea.Batch(cmd, m.crash.waitCmd()), true
+}
+
+func init() {
+	// Crash reports pass the same secret mask as errors.log.
+	crash.SetRedactor(ai.Redact)
 }
