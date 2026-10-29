@@ -9,6 +9,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/diffview"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/menu"
@@ -487,10 +488,10 @@ func commitTokenizeCmd(sides string, file int, path, old, new string) tea.Cmd {
 	return func() tea.Msg {
 		out := commitFileSyntaxMsg{sides: sides, file: file, path: path}
 		done := make(chan struct{})
-		go func() {
+		crash.Go("the syntax colors", func() {
+			defer close(done) // also after a panic: the wait below ends
 			out.old = diffview.Tokenize(path, old)
-			close(done)
-		}()
+		})
 		out.new = diffview.Tokenize(path, new)
 		<-done
 		return out

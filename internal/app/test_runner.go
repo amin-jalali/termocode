@@ -12,6 +12,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/tests"
 	"github.com/amin-jalali/termocode/internal/theme"
@@ -324,12 +325,12 @@ func (m *Model) startTestRun(scope tests.Scope) tea.Cmd {
 	st.proc = c
 	lines := make(chan string, 1024)
 	done := make(chan error, 1)
-	go func() {
+	crash.Go("the test runner", func() {
 		err := c.Wait()
 		pw.Close()
 		done <- err
-	}()
-	go func() {
+	})
+	crash.Go("the test runner", func() {
 		sc := bufio.NewScanner(pr)
 		sc.Buffer(make([]byte, 64*1024), 4*1024*1024)
 		for sc.Scan() {
@@ -338,7 +339,7 @@ func (m *Model) startTestRun(scope tests.Scope) tea.Cmd {
 		// Drain whatever is left so the writer never blocks.
 		_, _ = io.Copy(io.Discard, pr)
 		close(lines)
-	}()
+	})
 	return waitTestLines(st.runID, lines, done, cmd.Report)
 }
 

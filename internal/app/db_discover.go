@@ -13,6 +13,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/containers"
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // DB-16: the Databases view finds servers itself. On open and on R it
@@ -68,7 +69,8 @@ func (m *Model) databaseDiscover() tea.Cmd {
 		var mu sync.Mutex
 		for _, t := range targets {
 			wg.Add(1)
-			go func(port int) {
+			port := t.port
+			crash.Go("the database search", func() {
 				defer wg.Done()
 				c, err := net.DialTimeout("tcp", net.JoinHostPort(host, strconv.Itoa(port)), timeout)
 				if err != nil {
@@ -76,19 +78,19 @@ func (m *Model) databaseDiscover() tea.Cmd {
 				}
 				_ = c.Close()
 				mu.Lock()
+				defer mu.Unlock()
 				msg.ports = append(msg.ports, port)
-				mu.Unlock()
-			}(t.port)
+			})
 		}
 		wg.Add(1)
-		go func() {
+		crash.Go("the database search", func() {
 			defer wg.Done()
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			if rows, err := list(ctx, dir); err == nil {
 				msg.containers, msg.haveList = rows, true
 			}
-		}()
+		})
 		wg.Wait()
 		sort.Ints(msg.ports)
 		return msg

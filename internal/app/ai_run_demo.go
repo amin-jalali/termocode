@@ -11,6 +11,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/addai"
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/profileform"
 )
 
@@ -40,7 +41,7 @@ func (p *aiDemoProvider) Stream(ctx context.Context, _ ai.Request) <-chan ai.Chu
 	p.mu.Unlock()
 	r := p.replies[i]
 	ch := make(chan ai.Chunk, 2)
-	go func() {
+	crash.Go("the AI demo", func() {
 		defer close(ch)
 		if r.Delta != "" {
 			ch <- ai.Chunk{Delta: r.Delta}
@@ -51,7 +52,7 @@ func (p *aiDemoProvider) Stream(ctx context.Context, _ ai.Request) <-chan ai.Chu
 			return
 		}
 		ch <- ai.Chunk{Done: true, ToolCalls: r.ToolCalls, Usage: r.Usage}
-	}()
+	})
 	return ch
 }
 
@@ -260,7 +261,7 @@ func (p *aiDemoFuncProvider) SupportsTools() bool { return true }
 func (p *aiDemoFuncProvider) Stream(ctx context.Context, req ai.Request) <-chan ai.Chunk {
 	r, hold := p.reply(req)
 	ch := make(chan ai.Chunk, 2)
-	go func() {
+	crash.Go("the AI demo", func() {
 		defer close(ch)
 		if p.delay != nil {
 			select {
@@ -279,7 +280,7 @@ func (p *aiDemoFuncProvider) Stream(ctx context.Context, req ai.Request) <-chan 
 			return
 		}
 		ch <- ai.Chunk{Done: true, ToolCalls: r.ToolCalls, Usage: r.Usage}
-	}()
+	})
 	return ch
 }
 

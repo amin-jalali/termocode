@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"strings"
 	"sync"
@@ -226,7 +227,7 @@ func (m *Model) setupImportProbeCmd() tea.Cmd {
 	detect := setupDetectFn()
 	return func() tea.Msg {
 		ch := make(chan []setupEditor, 1) // buffered: a late answer is dropped, not leaked
-		go func() {
+		crash.Go("the settings import", func() {
 			var found []setupEditor
 			for _, src := range detect() {
 				if parts, err := importSourceParts(src); err == nil && parts != "" {
@@ -234,7 +235,7 @@ func (m *Model) setupImportProbeCmd() tea.Cmd {
 				}
 			}
 			ch <- found
-		}()
+		})
 		select {
 		case found := <-ch:
 			return setupImportMsg{found: found}
@@ -521,7 +522,7 @@ func (m *Model) startSetupInstall() tea.Cmd {
 	s.installing, s.installLine = true, ""
 	install := setupInstallFn()
 	ch := make(chan setupInstallMsg, 32)
-	go func() {
+	crash.Go("the font installer", func() {
 		defer close(ch)
 		dest, err := install(context.Background(), func(line string) {
 			select {
@@ -530,7 +531,7 @@ func (m *Model) startSetupInstall() tea.Cmd {
 			}
 		})
 		ch <- setupInstallMsg{done: true, dest: dest, err: err, ch: ch}
-	}()
+	})
 	var cmd tea.Cmd
 	m.toast, cmd = m.toast.PushKeyed(setupInstallToast, toast.Info, "Installing "+setup.NerdFontName+"…", "runs in the background")
 	return tea.Batch(cmd, waitSetupInstall(ch))

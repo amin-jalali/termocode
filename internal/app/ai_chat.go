@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"path/filepath"
 	"strings"
@@ -265,7 +266,7 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		BeforeCalls: aiBeforeCalls(root, call),
 		Confirm:     aiChatConfirmFunc(gen, ch, auto, ""),
 	}
-	go func() {
+	crash.GoWith("the AI chat", func() {
 		defer cancel()
 		if mcpTools != nil {
 			if extra := aiFilterTools(mcpTools(ctx), step.Tools); len(extra) > 0 {
@@ -280,7 +281,10 @@ func (m *Model) sendAIChat(text string) tea.Cmd {
 		agent.Run(ctx, history, func(ev ai.Event) { send(aiChatEventMsg{gen: gen, ev: ev, ch: ch}) })
 		ch <- aiChatDoneMsg{gen: gen}
 		close(ch)
-	}()
+	}, func() { // the chat turn ends instead of waiting for ever
+		ch <- aiChatDoneMsg{gen: gen}
+		close(ch)
+	})
 	return waitAIChat(ch)
 }
 

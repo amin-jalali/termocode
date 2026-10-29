@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -135,7 +136,7 @@ func (m *Model) startClone(user, token string) tea.Cmd {
 	m.clone.running = true
 	url, dest := m.clone.url, m.clone.dest
 	ch := make(chan tea.Msg, 8)
-	go func() {
+	crash.Go("git clone", func() {
 		var last time.Time
 		err := git.Clone(git.CloneOptions{
 			URL: url, Dest: dest, Username: user, Token: token,
@@ -152,7 +153,7 @@ func (m *Model) startClone(user, token string) tea.Cmd {
 		})
 		ch <- cloneDoneMsg{err: err, url: url, dest: dest, withToken: token != ""}
 		close(ch)
-	}()
+	})
 	var toastCmd tea.Cmd
 	m.toast, toastCmd = m.toast.PushKeyed(cloneToastKey, toast.Info, "Cloning "+git.RepoNameFromURL(url)+"…", dest)
 	return tea.Batch(toastCmd, waitCloneMsg(ch))

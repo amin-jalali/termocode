@@ -20,6 +20,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/clistep"
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/session"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -455,12 +456,12 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	s.act.begin(clock.Now())
 	s.chatCh = ch
 	s.runGen++
-	go func() {
+	crash.Go("an agent run", func() {
 		final := h.Wait()
 		cancel()
 		ch <- aiChatDoneMsg{gen: gen, run: &final}
 		close(ch)
-	}()
+	})
 	return waitAIChat(ch)
 }
 

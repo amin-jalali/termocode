@@ -15,6 +15,7 @@ import (
 
 	"github.com/amin-jalali/termocode/extensions"
 	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/ext"
 	"github.com/amin-jalali/termocode/internal/extproc"
 	"github.com/amin-jalali/termocode/internal/keymap"
@@ -198,10 +199,10 @@ func extEval(c *nvim.Client, code string, timeout time.Duration) (string, error)
 		err error
 	}
 	ch := make(chan res, 1)
-	go func() {
+	crash.Go("an extension call", func() {
 		s, err := c.EvalLuaString(code)
 		ch <- res{s, err}
-	}()
+	})
 	select {
 	case r := <-ch:
 		return r.s, r.err

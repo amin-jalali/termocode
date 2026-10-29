@@ -9,6 +9,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 var (
@@ -58,7 +60,7 @@ func (m Model) initClipboardCapture() tea.Cmd {
 	w := newClipWatcher(clipLibRead, ring.Push, time.Second)
 	return func() tea.Msg {
 		activeClipWatcher.Store(w)
-		go w.run(context.Background()) // lives until the program exits
+		crash.Go("the clipboard watcher", func() { w.run(context.Background()) }) // lives until the program exits
 		return nil
 	}
 }

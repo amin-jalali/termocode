@@ -4,6 +4,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/editor"
 	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -37,7 +38,8 @@ func (m *Model) onNvimExited(msg nvim.ExitedMsg) tea.Cmd {
 		recordError("nvim stopped: " + msg.Err.Error())
 	}
 	// Reap the process. Not in Update: Close may wait for it.
-	go func(c *nvim.Client) { _ = c.Close() }(m.nvim)
+	c := m.nvim
+	crash.Go("the editor process", func() { _ = c.Close() })
 	m.promptNvimExited()
 	return nil
 }
