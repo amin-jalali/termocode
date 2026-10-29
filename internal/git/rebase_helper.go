@@ -62,7 +62,15 @@ func runRebaseHelper(args []string) int {
 		}
 		return 0
 	case "msg":
-		return 0 // keep git's message (a squash shows both)
+		msg, ok := plan.rewordMessage()
+		if !ok {
+			return 0 // keep git's message (a squash shows both)
+		}
+		if err := os.WriteFile(file, []byte(msg+"\n"), 0o644); err != nil {
+			fmt.Fprintln(os.Stderr, "termocode rebase helper:", err)
+			return 1
+		}
+		return 0
 	}
 	fmt.Fprintln(os.Stderr, "termocode rebase helper: unknown mode", mode)
 	return 2
@@ -103,4 +111,33 @@ func helperCommand(exe, mode, plan string) string {
 // shellQuote quotes s for sh.
 func shellQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
+// rewordMessage is the new message when git asks for the message of a
+// reword row the user typed one for. The row git is on is the last line
+// of rebase-merge/done.
+func (p rebasePlan) rewordMessage() (string, bool) {
+	if p.GitDir == "" || len(p.Messages) == 0 {
+		return "", false
+	}
+	b, err := os.ReadFile(filepath.Join(p.GitDir, "rebase-merge", "done"))
+	if err != nil {
+		return "", false
+	}
+	var last string
+	for _, l := range strings.Split(string(b), "\n") {
+		if l = strings.TrimSpace(l); l != "" && !strings.HasPrefix(l, "#") {
+			last = l
+		}
+	}
+	f := strings.Fields(last)
+	if len(f) < 2 || (f[0] != "reword" && f[0] != "r") {
+		return "", false
+	}
+	for full, msg := range p.Messages {
+		if strings.HasPrefix(full, f[1]) || strings.HasPrefix(f[1], full) {
+			return msg, true
+		}
+	}
+	return "", false
 }

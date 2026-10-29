@@ -31,7 +31,18 @@ func RunRebase(dir string, todo RebaseTodo, opt RebaseOptions) (RebaseOutcome, e
 	} else {
 		args = append(args, todo.Base)
 	}
-	return runRebaseCmd(dir, opt, rebasePlan{Todo: todo.Format()}, args...)
+	plan := rebasePlan{Todo: todo.Format(), Messages: map[string]string{}}
+	for _, it := range todo.Items {
+		if it.Action == RebaseReword && strings.TrimSpace(it.Message) != "" {
+			plan.Messages[it.FullHash] = strings.TrimSpace(it.Message)
+		}
+	}
+	gitDir, err := runOut(dir, "git", "rev-parse", "--absolute-git-dir")
+	if err != nil {
+		return RebaseOutcome{}, err
+	}
+	plan.GitDir = strings.TrimSpace(gitDir)
+	return runRebaseCmd(dir, opt, plan, args...)
 }
 
 // runRebaseCmd runs one git rebase command with the helper as both

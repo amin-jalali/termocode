@@ -233,3 +233,38 @@ func TestRunRebaseRefusesInvalidTodo(t *testing.T) {
 		t.Errorf("HEAD moved to %s", head)
 	}
 }
+
+// G-RBS: a reword row gets the message typed in termocode. The message
+// reaches git through the plan file, never a shell: quotes, $( ) and
+// backticks stay as typed. A fixup into the reworded row keeps the new
+// message; a squash elsewhere keeps git's combined message.
+func TestRunRebaseRewords(t *testing.T) {
+	r, h := rebaseRepo(t, 5)
+	todo, err := LoadRebaseTodo(r.dir, h[0]) // c2 c3 c4 c5
+	if err != nil {
+		t.Fatal(err)
+	}
+	newMsg := "new \"c2\" $(touch pwned) `id` it's\n\nnew body"
+	todo.SetAction(0, RebaseReword)
+	todo.Items[0].Message = newMsg
+	todo.SetAction(1, RebaseFixup)  // c3 into the reworded c2
+	todo.SetAction(3, RebaseSquash) // c5 into c4
+	todo.SetAction(2, RebaseReword) // c4, no message typed: keeps its own
+	if out, err := RunRebase(r.dir, todo, testRebaseOpts(t)); err != nil || out.Stopped {
+		t.Fatalf("rebase: %+v %v", out, err)
+	}
+	log := r.git(t, "log", "--reverse", "--format=%B%x1e")
+	msgs := strings.Split(strings.TrimSuffix(strings.TrimSpace(log), "\x1e"), "\x1e")
+	if len(msgs) != 3 {
+		t.Fatalf("messages %q", msgs)
+	}
+	if got := strings.TrimSpace(msgs[1]); got != newMsg {
+		t.Errorf("reworded %q, want %q", got, newMsg)
+	}
+	if got := msgs[2]; !strings.Contains(got, "c4") || !strings.Contains(got, "c5") {
+		t.Errorf("squash message %q", got)
+	}
+	if _, err := os.Stat(r.dir + "/pwned"); err == nil {
+		t.Error("the message ran in a shell")
+	}
+}
