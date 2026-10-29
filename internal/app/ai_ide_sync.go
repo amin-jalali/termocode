@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/git"
 )
 
 // The IDE follows every change the agent makes, as in VS Code / Cursor:
@@ -421,6 +422,10 @@ func (m *Model) aiRenamePath(from, to string, rel func(string) string) (string, 
 	m.aiRestoreNote(to)
 	if err := os.Rename(from, to); err != nil {
 		return "", nil, err
+	}
+	// git's index follows, so a staged file stays staged (a rename in git)
+	if err := git.MoveIndexAcross(from, to); err != nil {
+		recordError("rename: git index: " + err.Error())
 	}
 	m.followRename(from, to)
 	out := "renamed " + rel(from) + " to " + rel(to)
