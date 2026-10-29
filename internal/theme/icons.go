@@ -1,12 +1,8 @@
 package theme
 
 import (
-	"errors"
 	"os"
 	"strings"
-	"time"
-
-	"golang.org/x/term"
 )
 
 // Icon carries three glyph variants and renders the one matching CurrentIconMode.
@@ -44,9 +40,8 @@ type Icon struct {
 // mode. Callers (e.g. the activity bar) opt into the bold artwork via
 // Icon.BoldRender().
 //
-// ProbeUnicode (detect.go) can measure every single-cell glyph on the
-// real terminal, but startup does not call it: ResolveIconMode picks the
-// tier from the "icons" setting and the environment alone.
+// ResolveIconMode (detect.go) picks the tier from the "icons" setting
+// and the environment alone; no width probe runs.
 var (
 	// IconFiles — squared-with-horizontal-fill reads as a "file with lines"
 	// in most monospace fonts. U+25A4 is in EAW=Neutral, 1 cell.
@@ -273,154 +268,6 @@ func DetectIconMode() IconMode {
 		return m
 	}
 	return IconModeASCII
-}
-
-// unicodeCandidates returns every glyph that would actually be rendered
-// by the activity bar in Unicode mode. ProbeUnicode passes only if all of
-// these (plus the file-icon glyphs) probe as exactly 1 cell.
-func unicodeCandidates() []string {
-	icons := []Icon{
-		IconFiles, IconSearch, IconGit, IconOutline, IconRun, IconTests, IconServices,
-		IconDatabases, IconDebug, IconExtensions, IconTerminal, IconAccount, IconSettings,
-	}
-	out := make([]string, 0, len(icons))
-	for _, ic := range icons {
-		if ic.Unicode != "" {
-			out = append(out, ic.Unicode)
-		}
-	}
-	return out
-}
-
-// probeStreams returns the (stdin, stdout) pair the probe should use, or
-// ok=false if either side isn't a TTY (no CSI 6n response possible).
-func probeStreams() (*os.File, *os.File, bool) {
-	if !term.IsTerminal(int(os.Stdin.Fd())) {
-		return nil, nil, false
-	}
-	if !term.IsTerminal(int(os.Stdout.Fd())) {
-		return nil, nil, false
-	}
-	return os.Stdin, os.Stdout, true
-}
-
-// probeGlyph writes one glyph between two cursor-position queries and
-// returns the cell-width delta. Bails out (ok=false) if the deadline
-// elapses or the terminal stops responding.
-func probeGlyph(in *os.File, out *os.File, glyph string, deadline time.Time) (int, bool) {
-	// Move to column 1 of the current row so the start col is known
-	// even on a terminal that wrapped previous output. We saved the
-	// real cursor with DECSC in the caller.
-	if _, err := out.WriteString("\r"); err != nil {
-		return 0, false
-	}
-	startCol, ok := readCursorCol(in, out, deadline)
-	if !ok {
-		return 0, false
-	}
-	if _, err := out.WriteString(glyph); err != nil {
-		return 0, false
-	}
-	endCol, ok := readCursorCol(in, out, deadline)
-	if !ok {
-		return 0, false
-	}
-	// Roll back to column 1 so the next probe starts clean.
-	_, _ = out.WriteString("\r\x1b[2K")
-	return endCol - startCol, true
-}
-
-// readCursorCol writes CSI 6n and parses the \x1b[<row>;<col>R reply,
-// returning the 1-based column. ok=false on timeout / bad input.
-func readCursorCol(in *os.File, out *os.File, deadline time.Time) (int, bool) {
-	if _, err := out.WriteString("\x1b[6n"); err != nil {
-		return 0, false
-	}
-	_, col, err := readCPR(in, deadline)
-	if err != nil {
-		return 0, false
-	}
-	return col, true
-}
-
-// readCPR reads a Cursor-Position-Report response from r. The response
-// is `\x1b[<row>;<col>R`. Times out (deadline) returning an error. The
-// reader must be in raw mode or the bytes won't arrive until newline.
-func readCPR(r *os.File, deadline time.Time) (int, int, error) {
-	var buf [32]byte
-	idx := 0
-	// Step the parser through: ESC, '[', digits, ';', digits, 'R'.
-	// Bail when the whole response is in or the deadline passes.
-	for {
-		left := time.Until(deadline)
-		if left <= 0 {
-			return 0, 0, errors.New("probe deadline")
-		}
-		if err := r.SetReadDeadline(time.Now().Add(left)); err != nil {
-			// Some platforms don't support SetReadDeadline on a TTY.
-			// Without a deadline we'd hang forever, so bail.
-			return 0, 0, err
-		}
-		var b [1]byte
-		n, err := r.Read(b[:])
-		if err != nil || n == 0 {
-			return 0, 0, errors.New("probe read")
-		}
-		if idx < len(buf) {
-			buf[idx] = b[0]
-			idx++
-		}
-		if b[0] == 'R' {
-			break
-		}
-	}
-	return parseCPR(string(buf[:idx]))
-}
-
-// parseCPR parses a Cursor-Position-Report payload: it must contain
-// "\x1b[<row>;<col>R" anywhere inside (some terminals interleave noise
-// before the response). Returns row, col, error. Exposed for tests.
-func parseCPR(s string) (int, int, error) {
-	// Find the last ESC[ in the buffer — earlier bytes might be noise
-	// (e.g. a stale keystroke the user mashed during startup).
-	i := strings.LastIndex(s, "\x1b[")
-	if i < 0 {
-		return 0, 0, errors.New("no CSI in CPR")
-	}
-	body := s[i+2:]
-	end := strings.IndexByte(body, 'R')
-	if end < 0 {
-		return 0, 0, errors.New("no R terminator")
-	}
-	body = body[:end]
-	semi := strings.IndexByte(body, ';')
-	if semi < 0 {
-		return 0, 0, errors.New("no ; in CPR")
-	}
-	row, err := atoiStrict(body[:semi])
-	if err != nil {
-		return 0, 0, err
-	}
-	col, err := atoiStrict(body[semi+1:])
-	if err != nil {
-		return 0, 0, err
-	}
-	return row, col, nil
-}
-
-// atoiStrict parses a non-empty run of ASCII digits.
-func atoiStrict(s string) (int, error) {
-	if s == "" {
-		return 0, errors.New("empty number")
-	}
-	n := 0
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return 0, errors.New("non-digit")
-		}
-		n = n*10 + int(c-'0')
-	}
-	return n, nil
 }
 
 // Chrome glyphs: one per meaning, used by every widget (UI review #4).

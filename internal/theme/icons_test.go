@@ -7,81 +7,6 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
-func TestParseCPR(t *testing.T) {
-	cases := []struct {
-		name    string
-		in      string
-		row     int
-		col     int
-		wantErr bool
-	}{
-		{"basic", "\x1b[24;5R", 24, 5, false},
-		{"single-digit", "\x1b[1;1R", 1, 1, false},
-		{"large", "\x1b[1234;5678R", 1234, 5678, false},
-		{"with-noise-prefix", "garbage\x1b[10;20R", 10, 20, false},
-		{"two-CSIs-takes-last", "\x1b[1;1R\x1b[10;20R", 10, 20, false},
-		{"missing-R", "\x1b[24;5", 0, 0, true},
-		{"no-CSI", "24;5R", 0, 0, true},
-		{"missing-semicolon", "\x1b[245R", 0, 0, true},
-		{"non-digit-row", "\x1b[a;5R", 0, 0, true},
-		{"non-digit-col", "\x1b[24;bR", 0, 0, true},
-		{"empty-row", "\x1b[;5R", 0, 0, true},
-		{"empty-col", "\x1b[24;R", 0, 0, true},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			row, col, err := parseCPR(tc.in)
-			if tc.wantErr {
-				if err == nil {
-					t.Fatalf("expected error, got row=%d col=%d", row, col)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if row != tc.row || col != tc.col {
-				t.Fatalf("row/col = %d,%d want %d,%d", row, col, tc.row, tc.col)
-			}
-		})
-	}
-}
-
-func TestAtoiStrict(t *testing.T) {
-	cases := []struct {
-		in      string
-		want    int
-		wantErr bool
-	}{
-		{"0", 0, false},
-		{"1", 1, false},
-		{"42", 42, false},
-		{"9999", 9999, false},
-		{"", 0, true},
-		{"a", 0, true},
-		{"1a", 0, true},
-		{"-1", 0, true},
-		{" 1", 0, true},
-	}
-	for _, tc := range cases {
-		t.Run(tc.in, func(t *testing.T) {
-			n, err := atoiStrict(tc.in)
-			if tc.wantErr {
-				if err == nil {
-					t.Fatalf("expected error, got %d", n)
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if n != tc.want {
-				t.Fatalf("got %d want %d", n, tc.want)
-			}
-		})
-	}
-}
-
 func TestEnvOverrideMode(t *testing.T) {
 	saved := os.Getenv("TERMOCODE_ICON_MODE")
 	savedNF := os.Getenv("TERMOCODE_NERD_FONT")
@@ -159,18 +84,6 @@ func TestDetectIconModeEnvOverrideWins(t *testing.T) {
 		_ = os.Setenv("TERMOCODE_ICON_MODE", env.v)
 		if got := DetectIconMode(); got != env.want {
 			t.Fatalf("DetectIconMode with TERMOCODE_ICON_MODE=%s = %v want %v", env.v, got, env.want)
-		}
-	}
-}
-
-func TestUnicodeCandidatesNonEmpty(t *testing.T) {
-	got := unicodeCandidates()
-	if len(got) == 0 {
-		t.Fatal("expected at least one Unicode candidate")
-	}
-	for _, g := range got {
-		if g == "" {
-			t.Fatal("empty candidate in list")
 		}
 	}
 }
