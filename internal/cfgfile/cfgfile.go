@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -39,7 +40,17 @@ func update[T any](path string, fn func(map[string]T) error) error {
 	switch {
 	case err == nil:
 		if len(bytes.TrimSpace(b)) > 0 {
-			if err := json.Unmarshal(b, &cfg); err != nil {
+			// UseNumber keeps numbers as written: through float64,
+			// 12345678901234567891 or 0.0 would come back changed.
+			dec := json.NewDecoder(bytes.NewReader(b))
+			dec.UseNumber()
+			err := dec.Decode(&cfg)
+			if err == nil {
+				if _, terr := dec.Token(); terr != io.EOF {
+					err = errors.New("extra text after the JSON object")
+				}
+			}
+			if err != nil {
 				return fmt.Errorf("%s is not valid JSON; nothing was changed: %w", path, err)
 			}
 			if cfg == nil { // the file said null
