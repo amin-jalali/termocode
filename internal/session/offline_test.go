@@ -50,7 +50,7 @@ func TestReconnectNote(t *testing.T) {
 		{5 * time.Minute, true, "Reconnected after 5 min · keys typed while offline were dropped"},
 	}
 	for _, c := range cases {
-		if got := reconnectNote(c.d, c.dropped); got != c.want {
+		if got := ReconnectNote(c.d, c.dropped); got != c.want {
 			t.Errorf("%v %v: %q, want %q", c.d, c.dropped, got, c.want)
 		}
 	}

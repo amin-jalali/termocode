@@ -65,3 +65,9 @@ func attachRefusal(getenv func(string) string, key string) string {
 		return "termocode: cannot attach from inside another session; detach it first (Session: Detach)"
 	}
 }
+
+// clientOpts is how runClient attaches.
+type clientOpts struct {
+	// create starts the session when none runs.
+	create bool
+}

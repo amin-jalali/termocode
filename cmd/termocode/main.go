@@ -272,7 +272,7 @@ func main() {
 				os.Exit(1)
 			}
 			if args[0] == "attach" {
-				os.Exit(runClient(dir, false))
+				os.Exit(runClient(dir, clientOpts{}))
 			}
 			os.Exit(cmdKill(dir))
 		}
@@ -312,7 +312,7 @@ func main() {
 	tty := term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd()))
 	if sessionsSupported && wantSession(app.ConfigPersistentSession(), noSession, os.Getenv, tty) {
 		if ws.Root != "" {
-			os.Exit(runClient(ws.Root, true))
+			os.Exit(runClient(ws.Root, clientOpts{create: true}))
 		}
 	}
 	runTUI()

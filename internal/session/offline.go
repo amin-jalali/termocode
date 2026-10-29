@@ -47,8 +47,8 @@ func offlineQuit(p []byte) bool {
 	return bytes.IndexByte(p, 0x03) >= 0 || bytes.Contains(p, []byte("\x1b[99;5u"))
 }
 
-// reconnectNote is what the UI tells the user after a reconnect.
-func reconnectNote(offline time.Duration, dropped bool) string {
+// ReconnectNote is what the UI tells the user after a reconnect.
+func ReconnectNote(offline time.Duration, dropped bool) string {
 	s := int(offline.Round(time.Second) / time.Second)
 	var msg string
 	switch {

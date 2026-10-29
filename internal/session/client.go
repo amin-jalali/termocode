@@ -284,7 +284,7 @@ func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
 			}
 			nc, err := Dial(p)
 			if err == nil {
-				err = writeFrame(nc, frameHello, encodeHello(cols, rows, withNote(caps, reconnectNote(time.Since(since), dropped))))
+				err = writeFrame(nc, frameHello, encodeHello(cols, rows, withNote(caps, ReconnectNote(time.Since(since), dropped))))
 				if err != nil {
 					_ = nc.Close()
 				}

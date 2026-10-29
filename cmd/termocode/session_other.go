@@ -17,8 +17,8 @@ func unsupported() int {
 	return 1
 }
 
-func runServer(string) int       { return unsupported() }
-func runClient(string, bool) int { return unsupported() }
-func cmdSessions() int           { return unsupported() }
-func cmdKill(string) int         { return unsupported() }
-func watchRepaint(*tea.Program)  {}
+func runServer(string) int             { return unsupported() }
+func runClient(string, clientOpts) int { return unsupported() }
+func cmdSessions() int                 { return unsupported() }
+func cmdKill(string) int               { return unsupported() }
+func watchRepaint(*tea.Program)        {}

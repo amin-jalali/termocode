@@ -67,8 +67,8 @@ func spawnServer(p session.Paths) error {
 }
 
 // runClient attaches this terminal to the workspace session, starting
-// it first when none runs (create = true).
-func runClient(dir string, create bool) int {
+// it first when none runs (o.create).
+func runClient(dir string, o clientOpts) int {
 	p, err := session.PathsFor(dir)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "termocode:", err)
@@ -80,7 +80,7 @@ func runClient(dir string, create bool) int {
 	}
 	conn, err := session.Dial(p)
 	running := err == nil
-	if errors.Is(err, session.ErrNoSession) && create {
+	if errors.Is(err, session.ErrNoSession) && o.create {
 		conn, err = session.Ensure(p, func() error { return spawnServer(p) })
 	}
 	if err != nil {
