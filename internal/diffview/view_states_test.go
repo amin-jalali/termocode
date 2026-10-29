@@ -201,3 +201,17 @@ func TestSyntaxHelpers(t *testing.T) {
 		t.Error("Tokenize of an unknown type or empty text must be nil")
 	}
 }
+
+// Control characters in a line are not drawn: a backspace or DEL would
+// move the cursor and break the box.
+func TestControlCharsNotDrawn(t *testing.T) {
+	m := New("t", []File{{Name: "x", Old: "a\x01b\x08\x7fc\n", New: "a\x01b\x08\x7fc\nnew\n", Tag: "new file"}}, false)
+	m.SetSize(120, 20)
+	s := plain(m)
+	if !strings.Contains(s, "abc") || strings.ContainsAny(s, "\x01\x08\x7f") {
+		t.Errorf("control chars drawn:\n%q", s)
+	}
+	if !strings.Contains(s, "new file") {
+		t.Errorf("file tag not shown:\n%s", s)
+	}
+}
