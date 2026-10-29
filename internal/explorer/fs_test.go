@@ -2,7 +2,11 @@ package explorer
 
 import (
 	"context"
+	"strings"
 	"testing"
+	"time"
+
+	"github.com/amin-jalali/termocode/internal/clock"
 
 	"github.com/amin-jalali/termocode/internal/containerhost"
 	"github.com/amin-jalali/termocode/internal/containerhost/fakedocker"
@@ -104,5 +108,34 @@ func TestNewFSShowsAnError(t *testing.T) {
 	m := NewFS(h.FS(), "/app")
 	if m.err == "" {
 		t.Fatal("no error for a stopped container")
+	}
+}
+
+func TestPreviewReadsTheContainerFile(t *testing.T) {
+	h, _, c := fakeContainer(t, false)
+	c.WriteFile(t, "/app/big.log", make([]byte, 2<<20), 0o644)
+	m := NewFS(h.FS(), "/app")
+	m.SetSize(76, 30)
+	m.SetTerminalWidth(150)
+	t.Cleanup(clock.SetAfter(func(time.Duration) <-chan time.Time {
+		ch := make(chan time.Time, 1)
+		ch <- clock.Now()
+		return ch
+	}))
+	for path, want := range map[string]string{
+		"/app/main.go": "package main",
+		"/app/asub":    "1 files, 0 folders",
+		"/app/big.log": "Large file",
+	} {
+		m.previewOn = true
+		m.RevealPath(path)
+		cmd := m.SchedulePreview()
+		if cmd == nil {
+			t.Fatalf("%s: no preview", path)
+		}
+		msg := cmd().(PreviewMsg)
+		if !strings.Contains(msg.Text, want) {
+			t.Fatalf("%s: preview = %q, want %q", path, msg.Text, want)
+		}
 	}
 }

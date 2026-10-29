@@ -1,6 +1,7 @@
 package explorer
 
 import (
+	"context"
 	"path/filepath"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/preview"
 	"github.com/amin-jalali/termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/workspace"
 )
 
 type PreviewMsg struct {
@@ -53,7 +55,17 @@ func (m *Model) SchedulePreview() tea.Cmd {
 	m.previewSeq++
 	seq := m.previewSeq
 	timer := clock.After(100 * time.Millisecond)
-	return func() tea.Msg { <-timer; return PreviewMsg{Path: path, Seq: seq, Text: preview.ReadFile(path).Text} }
+	var fsys workspace.FS
+	if m.root != nil {
+		fsys = m.root.fsys
+	}
+	return func() tea.Msg {
+		<-timer
+		if fsys != nil { // a container workspace
+			return PreviewMsg{Path: path, Seq: seq, Text: preview.ReadFileFS(context.Background(), fsys, path).Text}
+		}
+		return PreviewMsg{Path: path, Seq: seq, Text: preview.ReadFile(path).Text}
+	}
 }
 func (m Model) acceptPreview(p PreviewMsg) Model {
 	if m.PreviewVisible() && p.Seq == m.previewSeq && p.Path == m.CursorPath() {
