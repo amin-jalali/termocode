@@ -32,6 +32,7 @@ func (m *Model) quitNow() tea.Cmd {
 	}
 	m.stopMCPServe() // outside agents get EOF; waiting cards are a no
 	m.removeAgentMCPFiles()
+	m.observeTerminals() // what each shell runs now, before the shells end
 	if m.nvim != nil {
 		_ = m.nvim.Close()
 	}

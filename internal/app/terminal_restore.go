@@ -97,6 +97,20 @@ func (m *Model) terminalSnapshot(withCmds bool) *savedTerminals {
 	return out
 }
 
+// observeTerminals hands the terminal part of the session to the session
+// writer, which writes it when it changed. Cheap: Go state only. Nothing is
+// written before the saved terminals were opened at start.
+func (m *Model) observeTerminals() {
+	if !m.termRestoreReady {
+		return
+	}
+	var snap *savedTerminals
+	if !m.termRestoreOff {
+		snap = m.terminalSnapshot(m.termRestoreCmds)
+	}
+	m.ensureSessionWriter().terminalsChanged(snap)
+}
+
 // savedPane is one shell in the session: its folder, and what it was
 // running.
 func savedPane(cwd string, busy bool, cmd string, withCmds bool) savedTermPane {

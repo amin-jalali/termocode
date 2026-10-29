@@ -490,6 +490,12 @@ type Model struct {
 	// termRestorePending are saved terminals of a panel that was hidden at
 	// the last quit: they come back on the next Ctrl+T (terminal_restore.go).
 	termRestorePending *savedTerminals
+	// termRestoreReady: the saved terminals were opened at start, so the
+	// live ones may now be written over them. termRestoreOff and
+	// termRestoreCmds are the settings, read at start.
+	termRestoreReady bool
+	termRestoreOff   bool
+	termRestoreCmds  bool
 
 	// ── Bottom panel framework (panel.go) ──────────────────────────────
 	// panelTabs lists the open NON-terminal tabs (Output, Problems, …) in

@@ -162,3 +162,64 @@ func TestSessionWriterKeepsOtherFields(t *testing.T) {
 		t.Errorf("after flush: rows %d roots %v cursor %v", got.TerminalRows, got.Roots, got.Cursors[path])
 	}
 }
+
+// G-RST: the terminal tabs are written when they change, not on every
+// state message, and only once the saved ones were opened at start.
+func TestSessionWriterSavesTerminals(t *testing.T) {
+	m, _, _ := sessionTestModel(t)
+	m.termOpen = true
+	m.terminalTabs = []terminalTab{{Name: "a", Cwd: "/a"}}
+	m.observeTerminals()
+	if loadSession().Terminals != nil {
+		t.Fatal("before the start-up restore nothing may be written (it would drop the saved tabs)")
+	}
+	m.termRestoreReady = true
+	m.observeTerminals()
+	got := loadSession().Terminals
+	if got == nil || len(got.Tabs) != 1 || got.Tabs[0].Panes[0].Cwd != "/a" || !got.Open {
+		t.Fatalf("saved %+v", got)
+	}
+	writes := m.sess.writes
+	m.observeTerminals()
+	if m.sess.writes != writes {
+		t.Error("unchanged terminals must not write again")
+	}
+	m.terminalTabs[0].Cwd = "/b" // shell integration: the shell moved
+	m.observeTerminals()
+	if got := loadSession().Terminals; got.Tabs[0].Panes[0].Cwd != "/b" {
+		t.Fatalf("live folder not saved: %+v", got)
+	}
+	m.terminalTabs, m.termOpen = nil, false // the user closed the last shell
+	m.observeTerminals()
+	if got := loadSession().Terminals; got != nil {
+		t.Fatalf("closed terminals must be forgotten: %+v", got)
+	}
+}
+
+func TestSessionWriterTerminalRestoreOff(t *testing.T) {
+	m, _, _ := sessionTestModel(t)
+	m.termRestoreReady, m.termRestoreOff = true, true
+	m.termOpen = true
+	m.terminalTabs = []terminalTab{{Name: "a", Cwd: "/a"}}
+	m.observeTerminals()
+	if got := loadSession().Terminals; got != nil {
+		t.Fatalf("terminal_restore off keeps nothing: %+v", got)
+	}
+}
+
+// The editor's state messages and quitting hand the terminals to the writer.
+func TestStateMsgAndQuitSaveTerminals(t *testing.T) {
+	m, _, _ := sessionTestModel(t)
+	m.termRestoreReady = true
+	m.termOpen = true
+	m.terminalTabs = []terminalTab{{Name: "a", Cwd: "/a"}}
+	nm, _, _ := m.handleNvimMsg(StateMsg{})
+	if got := loadSession().Terminals; got == nil || got.Tabs[0].Panes[0].Cwd != "/a" {
+		t.Fatalf("state message: %+v", got)
+	}
+	nm.terminalTabs[0].Busy, nm.terminalTabs[0].LastCmd = true, "make watch"
+	nm.quitNow()
+	if got := loadSession().Terminals; got == nil || got.Tabs[0].Panes[0].Program != "make" {
+		t.Fatalf("quit: %+v", got)
+	}
+}

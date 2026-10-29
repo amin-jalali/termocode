@@ -1,6 +1,7 @@
 package app
 
 import (
+	"reflect"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -48,10 +49,15 @@ type sessionWriter struct {
 	hasExpanded bool
 	cursors     map[string][2]int
 
+	// terms is the terminal part last seen (terminal_restore.go).
+	terms    *savedTerminals
+	hasTerms bool
+
 	// Changes not on disk yet.
 	dirty       bool
 	setFiles    bool
 	setExpanded bool
+	setTerms    bool
 	pendCursors map[string][2]int
 
 	gen       uint64
@@ -141,6 +147,19 @@ func (w *sessionWriter) expandedChanged(paths []string) {
 	w.flushLocked()
 }
 
+// terminalsChanged records the terminal part of the session and writes it
+// at once when it differs from the last one.
+func (w *sessionWriter) terminalsChanged(t *savedTerminals) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.hasTerms && reflect.DeepEqual(t, w.terms) {
+		return
+	}
+	w.terms, w.hasTerms, w.setTerms = t, true, true
+	w.dirty = true
+	w.flushLocked()
+}
+
 // flushIdle writes when no change came after the one that started the
 // idle timer gen.
 func (w *sessionWriter) flushIdle(gen uint64) {
@@ -179,6 +198,9 @@ func (w *sessionWriter) flushLocked() {
 	if w.setExpanded {
 		s.ExpandedDirs = slices.Clone(w.expanded)
 	}
+	if w.setTerms {
+		s.Terminals = w.terms
+	}
 	if s.Cursors == nil {
 		s.Cursors = map[string][2]int{}
 	}
@@ -186,7 +208,7 @@ func (w *sessionWriter) flushLocked() {
 		s.Cursors[p] = pos
 	}
 	saveSession(s)
-	w.dirty, w.setFiles, w.setExpanded = false, false, false
+	w.dirty, w.setFiles, w.setExpanded, w.setTerms = false, false, false, false
 	clear(w.pendCursors)
 	w.lastWrite = w.now()
 	w.writes++
