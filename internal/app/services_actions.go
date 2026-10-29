@@ -1460,9 +1460,11 @@ func (m *Model) dispatchContainerAIAction(id, target string) (tea.Cmd, error) {
 			kind, host, rows = "volume", hostVolume, len(m.services.volumeRows)
 		}
 		for i := 0; i < rows; i++ {
-			name := m.services.networkRows[i].Name
+			var name string
 			if host == hostVolume {
 				name = m.services.volumeRows[i].Name
+			} else {
+				name = m.services.networkRows[i].Name
 			}
 			if name == target {
 				return m.askStorageRemove(svcRow{kind: svcRowHostItem, host: host, idx: i, hostID: name, name: name}), nil
