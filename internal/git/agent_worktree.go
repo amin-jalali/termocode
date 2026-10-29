@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
@@ -121,13 +123,59 @@ func AgentWorktreePath(dir, id string) (AgentWorktree, error) {
 	return agentWorktree(common, id), nil
 }
 
+// agentCreateMu lets one CreateAgentWorktree at a time change a
+// repository: two `git worktree add` at once can read each other's half
+// made admin folder ("failed to read .git/worktrees/<id>/commondir") and
+// two `git stash create` at once fight for the index lock.
+var agentCreateMu sync.Mutex
+
+// agentLockTries is how often a git step that met another git process's
+// lock is tried; agentLockWait is the first wait (it doubles).
+var (
+	agentLockTries = 6
+	agentLockWait  = 40 * time.Millisecond
+)
+
+// gitLocked reports whether err is a git error that passes once the other
+// git process is done (a lock file, a half made worktree).
+func gitLocked(err error) bool {
+	if err == nil {
+		return false
+	}
+	m := err.Error()
+	for _, s := range []string{".lock", "Another git process", "commondir", "cannot lock ref", "Unable to create"} {
+		if strings.Contains(m, s) {
+			return true
+		}
+	}
+	return false
+}
+
+// gitRetry is gitOut tried again while another git process holds a lock
+// (the user's own git, an editor, termocode's status refresh).
+func gitRetry(dir string, args ...string) (string, error) {
+	wait := agentLockWait
+	for i := 1; ; i++ {
+		out, err := gitOut(dir, args...)
+		if !gitLocked(err) || i >= agentLockTries {
+			return out, err
+		}
+		time.Sleep(wait)
+		wait *= 2
+	}
+}
+
 // CreateAgentWorktree makes the worktree of id from the user's working
 // state, or returns it when it is there already (a retry keeps the
-// agent's work).
+// agent's work). Creates run one at a time and a git lock is waited for
+// (bounded); an error means there is no worktree, never a worktree from
+// a wrong start.
 func CreateAgentWorktree(dir, id string) (AgentWorktree, error) {
 	if id == "" {
 		return AgentWorktree{}, errors.New("no worktree id")
 	}
+	agentCreateMu.Lock()
+	defer agentCreateMu.Unlock()
 	top, common, err := agentRepo(dir)
 	if err != nil {
 		return AgentWorktree{}, err
@@ -144,20 +192,38 @@ func CreateAgentWorktree(dir, id string) (AgentWorktree, error) {
 		return AgentWorktree{}, errors.New("the repository has no commit yet: an agent worktree needs one")
 	}
 	base := strings.TrimSpace(head)
-	if st, err := gitOut(top, "stash", "create", "termocode agent "+id); err == nil && strings.TrimSpace(st) != "" {
-		base = strings.TrimSpace(st) // the user's uncommitted edits, as a commit nothing points at
+	// stash create takes the index lock; a failure is not "no edits": the
+	// worktree would miss the user's uncommitted edits.
+	st, err := gitRetry(top, "stash", "create", "termocode agent "+id)
+	if err != nil {
+		return AgentWorktree{}, fmt.Errorf("could not read your uncommitted edits: %w", err)
+	}
+	if st := strings.TrimSpace(st); st != "" {
+		base = st // the user's uncommitted edits, as a commit nothing points at
 	}
 	if err := os.MkdirAll(filepath.Dir(w.Path), 0o755); err != nil {
 		return AgentWorktree{}, err
 	}
-	if _, err := gitOut(top, "update-ref", agentBaseRef+id, base); err != nil {
+	if _, err := gitRetry(top, "update-ref", agentBaseRef+id, base); err != nil {
 		return AgentWorktree{}, err
 	}
-	if _, err := gitOut(top, "worktree", "add", "-q", "-B", w.Branch, w.Path, base); err != nil {
-		_, _ = gitOut(top, "update-ref", "-d", agentBaseRef+id)
-		return AgentWorktree{}, err
+	wait := agentLockWait
+	for i := 1; ; i++ {
+		_, err = gitOut(top, "worktree", "add", "-q", "-B", w.Branch, w.Path, base)
+		if err == nil {
+			return w, nil
+		}
+		// A failed add may leave a half made tree: clear it before a try.
+		_ = os.RemoveAll(w.Path)
+		_, _ = gitOut(top, "worktree", "prune")
+		if !gitLocked(err) || i >= agentLockTries {
+			break
+		}
+		time.Sleep(wait)
+		wait *= 2
 	}
-	return w, nil
+	_, _ = gitOut(top, "update-ref", "-d", agentBaseRef+id)
+	return AgentWorktree{}, err
 }
 
 // snapshotAgent commits everything in the worktree on its branch (the

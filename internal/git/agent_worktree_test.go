@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func readFile(t *testing.T, p string) string {
@@ -287,5 +288,70 @@ func TestCreateAgentWorktreesAtOnce(t *testing.T) {
 	}
 	if left, err := LeftoverAgentWorktrees(r.dir); err != nil || len(left) != 4 {
 		t.Errorf("worktrees %d %v", len(left), err)
+	}
+}
+
+// Worktrees made at the same time (the steps of one wave) each start from
+// the user's uncommitted edits: `git stash create` takes the index lock,
+// so a create that loses the race must wait for it, not start from HEAD.
+func TestCreateAgentWorktreesAtOnceKeepEdits(t *testing.T) {
+	r := committedRepo(t)
+	r.write(t, "a.txt", "dirty\n")
+	const n = 8
+	type res struct {
+		w   AgentWorktree
+		err error
+	}
+	out := make(chan res, n)
+	start := make(chan struct{})
+	for i := 0; i < n; i++ {
+		go func(id string) {
+			<-start
+			w, err := CreateAgentWorktree(r.dir, id)
+			out <- res{w, err}
+		}(AgentWorktreeID("r", string(rune('a'+i))))
+	}
+	close(start)
+	for i := 0; i < n; i++ {
+		x := <-out
+		if x.err != nil {
+			t.Errorf("create: %v", x.err)
+			continue
+		}
+		if got := readFile(t, filepath.Join(x.w.Path, "a.txt")); got != "dirty\n" {
+			t.Errorf("%s misses the user's edit: %q", x.w.ID, got)
+		}
+	}
+}
+
+// A lock another git process keeps is waited for a bounded time; then the
+// create fails with the reason and leaves nothing (no worktree from HEAD
+// that misses the user's edits).
+func TestCreateAgentWorktreeLockedIndexFails(t *testing.T) {
+	r := committedRepo(t)
+	r.write(t, "a.txt", "dirty\n")
+	tries, wait := agentLockTries, agentLockWait
+	agentLockTries, agentLockWait = 3, time.Millisecond
+	t.Cleanup(func() { agentLockTries, agentLockWait = tries, wait })
+	lock := filepath.Join(r.dir, ".git", "index.lock")
+	if err := os.WriteFile(lock, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := CreateAgentWorktree(r.dir, "r-locked")
+	if err == nil || !strings.Contains(err.Error(), "uncommitted edits") {
+		t.Fatalf("err %v, want the uncommitted edits reason", err)
+	}
+	if left, _ := LeftoverAgentWorktrees(r.dir); len(left) != 0 {
+		t.Errorf("left %v", left)
+	}
+	if err := os.Remove(lock); err != nil {
+		t.Fatal(err)
+	}
+	w, err := CreateAgentWorktree(r.dir, "r-locked")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := readFile(t, filepath.Join(w.Path, "a.txt")); got != "dirty\n" {
+		t.Errorf("worktree misses the user's edit: %q", got)
 	}
 }
