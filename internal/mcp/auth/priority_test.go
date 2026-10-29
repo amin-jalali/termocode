@@ -61,35 +61,48 @@ func urlEsc(s string) string {
 	return strings.NewReplacer(":", "%3A", "/", "%2F").Replace(s)
 }
 
-func freePorts(t *testing.T) {
+// ownPorts makes LoopbackPorts five free ports for this test only.
+func ownPorts(t *testing.T) {
 	t.Helper()
-	for _, p := range LoopbackPorts {
-		l, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(p))
+	old := LoopbackPorts
+	var ls []net.Listener
+	var ports []int
+	for range old {
+		l, err := net.Listen("tcp", "127.0.0.1:0")
 		if err != nil {
-			t.Skipf("port %d is busy on this machine", p)
+			t.Fatal(err)
 		}
+		ls = append(ls, l)
+		ports = append(ports, l.Addr().(*net.TCPAddr).Port)
+	}
+	for _, l := range ls {
 		l.Close()
 	}
+	LoopbackPorts = ports
+	t.Cleanup(func() { LoopbackPorts = old })
 }
 
 // Spec: the loopback listener takes the first free port of the fixed
 // set 47391–47395 (so CIMD's exact redirect match holds and ssh -L can
 // be set up once); all busy is a clear error; mcp_oauth_port overrides.
 func TestLoopbackPortSet(t *testing.T) {
-	freePorts(t)
+	// Other packages' sign-in tests take the real ports while this runs
+	// (go test runs packages at once), so the set is five ports of our own.
+	ownPorts(t)
+	p0, p1 := LoopbackPorts[0], LoopbackPorts[1]
 	f := newFixture(t, mcptest.AuthOptions{})
 	fl, err := Begin(ctx(t), Config{ServerURL: f.mcp.MCPURL()})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fl.Port() != 47391 || fl.RedirectURI() != "http://127.0.0.1:47391/callback" {
+	if fl.Port() != p0 || fl.RedirectURI() != "http://127.0.0.1:"+strconv.Itoa(p0)+"/callback" {
 		t.Errorf("first: %d %s", fl.Port(), fl.RedirectURI())
 	}
 	fl2, err := Begin(ctx(t), Config{ServerURL: f.mcp.MCPURL()})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fl2.Port() != 47392 {
+	if fl2.Port() != p1 {
 		t.Errorf("second: %d", fl2.Port())
 	}
 	var held []net.Listener
@@ -101,7 +114,7 @@ func TestLoopbackPortSet(t *testing.T) {
 		held = append(held, l)
 	}
 	_, err = Begin(ctx(t), Config{ServerURL: f.mcp.MCPURL()})
-	if err == nil || !strings.Contains(err.Error(), "47391") || !strings.Contains(err.Error(), "mcp_oauth_port") {
+	if err == nil || !strings.Contains(err.Error(), strconv.Itoa(p0)) || !strings.Contains(err.Error(), "mcp_oauth_port") {
 		t.Errorf("all busy: %v", err)
 	}
 	fl.Close()
