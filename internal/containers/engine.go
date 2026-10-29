@@ -45,6 +45,18 @@ type DetectOptions struct {
 
 // Detect selects docker before podman, then probes its version and daemon.
 func Detect(ctx context.Context, opts DetectOptions) Engine {
+	e := Locate(opts)
+	if e.Binary == "" {
+		return e
+	}
+	e.Probe(ctx)
+	return e
+}
+
+// Locate is the first half of Detect: it finds the engine's binary
+// (docker before podman, or the preferred one) without running it.
+// No binary: Binary is "" and Problem says so.
+func Locate(opts DetectOptions) Engine {
 	if opts.Android {
 		return Engine{}
 	}
@@ -74,21 +86,25 @@ func Detect(ctx context.Context, opts DetectOptions) Engine {
 	}
 	if e.Binary == "" {
 		e.Problem = services.Problem{Kind: services.ProblemNoDocker}
-		return e
 	}
+	return e
+}
+
+// Probe is the second half of Detect: it asks the located engine for
+// its version, which also tells whether its daemon answers.
+func (e *Engine) Probe(ctx context.Context) {
 	out, stderr, code, err := e.capture(ctx, "version", "--format", "{{json .}}")
 	if err != nil || code != 0 {
 		e.Problem = classifyEngineError(stderr, err)
 		e.Problem.Engine = e.Kind
-		return e
+		return
 	}
 	e.Version, err = ParseVersion([]byte(out))
 	if err != nil {
 		e.Problem = services.Problem{Kind: services.ProblemOther, Detail: "cannot read engine version"}
-		return e
+		return
 	}
 	e.Reachable = true
-	return e
 }
 
 func classifyEngineError(stderr string, err error) services.Problem {
