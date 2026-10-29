@@ -14,6 +14,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/search"
 	"github.com/amin-jalali/termocode/internal/theme"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 type pickerKindEnum int
@@ -407,7 +408,11 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 	switch id {
 	case "save": // git status / markers refresh as after Ctrl+S
 		if err := m.editor.Save(); err != nil {
-			m.err = saveErrText(err)
+			text := saveFailText(m.editor.Path(), err)
+			m.err = text
+			var toastCmd tea.Cmd
+			m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Save failed", text)
+			return tea.Batch(fetchGitCmd(), toastCmd)
 		}
 		return fetchGitCmd()
 	case "save-all":
