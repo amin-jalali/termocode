@@ -17,6 +17,8 @@ import (
 
 	"github.com/creack/pty"
 	"golang.org/x/sys/unix"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // RepaintSignal asks the UI inside the session to redraw everything after
@@ -110,19 +112,19 @@ func Serve(workspace string, uiCmd func() *exec.Cmd) int {
 	// outlives a dead server; SIGPIPE breaks pipes in its shells).
 	drop := make(chan os.Signal, 1)
 	signal.Notify(drop, syscall.SIGHUP, syscall.SIGINT, syscall.SIGPIPE)
-	go func() {
+	crash.Go("the session signal drain", func() {
 		for range drop {
 		}
-	}()
+	})
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM)
-	go func() {
+	crash.Go("the session signal handler", func() {
 		for range sigs {
 			s.terminate()
 		}
-	}()
+	})
 
-	go s.acceptLoop(ln)
+	crash.Go("the session listener", func() { s.acceptLoop(ln) })
 	code := <-s.done
 	// Children the UI left behind (it leads its own process group on the
 	// PTY) end with the session. nvim is not in that group (own session);
@@ -163,7 +165,7 @@ func (s *Server) acceptLoop(ln *net.UnixListener) {
 			time.Sleep(50 * time.Millisecond)
 			continue
 		}
-		go s.handle(c)
+		crash.GoWith("a session connection", func() { s.handle(c) }, func() { _ = c.Close() })
 	}
 }
 
@@ -267,8 +269,8 @@ func (s *Server) attach(c *net.UnixConn, cols, rows int, caps *ClientCaps) error
 			return fmt.Errorf("start UI: %w", err)
 		}
 		s.cmd, s.ptmx, s.client = cmd, ptmx, c
-		go s.pump()
-		go s.writeInfo()
+		crash.GoWith("the session pump", s.pump, s.pumpFailed)
+		crash.Go("the session info", s.writeInfo)
 		return nil
 	}
 	s.dropLocked(msgTakenOver)
@@ -284,7 +286,7 @@ func (s *Server) attach(c *net.UnixConn, cols, rows int, caps *ClientCaps) error
 	}
 	// The size may not have changed, so no SIGWINCH: ask for the redraw.
 	_ = s.cmd.Process.Signal(RepaintSignal)
-	go s.writeInfo()
+	crash.Go("the session info", s.writeInfo)
 	return nil
 }
 
@@ -351,7 +353,7 @@ func (s *Server) dropLocked(msg string) {
 	s.sendLocked(frameDetached, []byte(msg))
 	_ = old.Close()
 	s.client = nil
-	go s.writeInfo()
+	crash.Go("the session info", s.writeInfo)
 }
 
 // sendLocked writes a frame to the current client; a client that fails
@@ -364,7 +366,7 @@ func (s *Server) sendLocked(typ byte, p []byte) {
 	if err := writeFrame(s.client, typ, p); err != nil {
 		_ = s.client.Close()
 		s.client = nil
-		go s.writeInfo()
+		crash.Go("the session info", s.writeInfo)
 	}
 }
 
@@ -374,7 +376,7 @@ func (s *Server) readClient(c *net.UnixConn) {
 		s.mu.Lock()
 		if s.client == c {
 			s.client = nil
-			go s.writeInfo()
+			crash.Go("the session info", s.writeInfo)
 		}
 		s.mu.Unlock()
 		_ = c.Close()
@@ -407,29 +409,19 @@ func (s *Server) readClient(c *net.UnixConn) {
 // A DetachSeq in the output detaches the client.
 func (s *Server) pump() {
 	readDone := make(chan struct{})
-	go func() {
+	crash.Go("the session output", func() {
 		defer close(readDone)
 		buf := make([]byte, 32*1024)
 		for {
 			n, err := s.ptmx.Read(buf)
 			if n > 0 {
-				out, detach := s.detach.Filter(buf[:n])
-				out, marks := s.marks.Filter(out)
-				s.mu.Lock()
-				out = s.holdBack(out, marks)
-				if len(out) > 0 {
-					s.sendLocked(frameOutput, out)
-				}
-				if detach {
-					s.dropLocked(msgDetached)
-				}
-				s.mu.Unlock()
+				s.relay(buf[:n])
 			}
 			if err != nil {
 				return
 			}
 		}
-	}()
+	})
 	err := s.cmd.Wait()
 	code := 0
 	var ee *exec.ExitError
@@ -456,6 +448,36 @@ func (s *Server) pump() {
 	s.done <- code
 }
 
+// relay sends one read of UI output to the client. The lock is released
+// by a defer: a panic here (recovered by crash.Go) must not leave the
+// server locked.
+func (s *Server) relay(b []byte) {
+	out, detach := s.detach.Filter(b)
+	out, marks := s.marks.Filter(out)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out = s.holdBack(out, marks)
+	if len(out) > 0 {
+		s.sendLocked(frameOutput, out)
+	}
+	if detach {
+		s.dropLocked(msgDetached)
+	}
+}
+
+// pumpFailed ends the session after a panic in pump: the UI gets SIGTERM
+// (it saves its unsaved buffers to the hot-exit backup, see terminate)
+// and a moment for it before Serve returns.
+func (s *Server) pumpFailed() {
+	s.terminate()
+	time.AfterFunc(5*time.Second, func() {
+		select {
+		case s.done <- 1:
+		default:
+		}
+	})
+}
+
 // terminate ends the session: the UI gets SIGTERM (it saves unsaved
 // buffers to the hot-exit backup), then SIGKILL if it hangs.
 func (s *Server) terminate() {
@@ -470,10 +492,7 @@ func (s *Server) terminate() {
 		return
 	}
 	_ = cmd.Process.Signal(syscall.SIGTERM)
-	go func() {
-		time.Sleep(10 * time.Second)
-		_ = cmd.Process.Kill()
-	}()
+	time.AfterFunc(10*time.Second, func() { _ = cmd.Process.Kill() })
 }
 
 // lockFile takes an exclusive, non-blocking flock on path, creating the

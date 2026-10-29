@@ -14,6 +14,7 @@ import (
 	"github.com/creack/pty"
 	"golang.org/x/term"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
@@ -175,7 +176,7 @@ func (t *sshTerm) wait(d time.Duration) (quit bool) {
 // readKeys reads the terminal until it ends (the channel closes) or stop.
 func readKeys(in *os.File, stop <-chan struct{}) <-chan []byte {
 	keys := make(chan []byte, 16)
-	go func() {
+	crash.Go("the ssh key reader", func() {
 		defer close(keys)
 		buf := make([]byte, 4096)
 		for {
@@ -191,7 +192,7 @@ func readKeys(in *os.File, stop <-chan struct{}) <-chan []byte {
 				return
 			}
 		}
-	}()
+	})
 	return keys
 }
 
@@ -215,9 +216,9 @@ func (t *sshTerm) attempt(reconnected string) sshAttempt {
 	}
 	defer ptmx.Close()
 	exited := make(chan int, 1)
-	go func() { exited <- exitCode(cmd.Wait()) }()
+	crash.GoWith("the ssh waiter", func() { exited <- exitCode(cmd.Wait()) }, func() { exited <- 1 })
 	output := make(chan []byte, 16)
-	go func() {
+	crash.Go("the ssh output", func() {
 		defer close(output)
 		buf := make([]byte, 32*1024)
 		for {
@@ -229,7 +230,7 @@ func (t *sshTerm) attempt(reconnected string) sshAttempt {
 				return
 			}
 		}
-	}()
+	})
 	kill := func() { _ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
 	link := newSeqFilter(linkHello, linkPong)
 	keys := t.keys
