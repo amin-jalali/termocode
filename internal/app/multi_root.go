@@ -3,6 +3,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -121,13 +122,14 @@ func (m *Model) persistWorkspaceRoots() {
 
 // loadAndApplyWorkspaceRoots reads session.Roots and feeds each surviving
 // (still-on-disk) entry into the explorer. Roots whose path no longer exists
-// are silently dropped — and the cleaned list written back so the next run
-// doesn't try to load them again.
-func (m *Model) loadAndApplyWorkspaceRoots() {
+// are dropped — with a toast that names them — and the cleaned list written
+// back so the next run doesn't try to load them again.
+func (m *Model) loadAndApplyWorkspaceRoots() tea.Cmd {
 	sess := loadSession()
 	if len(sess.Roots) == 0 {
-		return
+		return nil
 	}
+	var gone []string
 	primary := m.explorer.PrimaryRoot()
 	kept := make([]string, 0, len(sess.Roots))
 	for _, p := range sess.Roots {
@@ -146,6 +148,7 @@ func (m *Model) loadAndApplyWorkspaceRoots() {
 		info, err := os.Stat(abs)
 		if err != nil || !info.IsDir() {
 			// Path no longer exists / isn't a dir — drop it.
+			gone = append(gone, filepath.Base(abs))
 			continue
 		}
 		if err := m.explorer.AddRoot(abs); err != nil {
@@ -158,6 +161,14 @@ func (m *Model) loadAndApplyWorkspaceRoots() {
 		sess.Roots = kept
 		saveSession(sess)
 	}
+	if len(gone) == 0 {
+		return nil
+	}
+	what := "Folder " + gone[0] + " was moved or deleted"
+	if len(gone) > 1 {
+		what = "Folders " + strings.Join(gone, ", ") + " were moved or deleted"
+	}
+	return m.pushToastDetail(toast.Warn, "Workspace folder not found", what+"; removed from the workspace.")
 }
 
 // expandUser expands a leading "~" or "~/..." into the user's home dir.
