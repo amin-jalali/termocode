@@ -57,8 +57,9 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 		s.scroll = s.cursor
 	} else if available > 0 {
 		// Wrapped rows take several lines: scroll until the cursor row fits.
-		for s.scroll < s.cursor && dbRowsHeight(rows, s.scroll, s.cursor+1, w) > available {
-			s.scroll++
+		// One sum, less each row scrolled off (not a sum per step).
+		for h := dbRowsHeight(rows, s.scroll, s.cursor+1, w); s.scroll < s.cursor && h > available; s.scroll++ {
+			h -= dbRowHeight(rows[s.scroll], w)
 		}
 	}
 	start := s.scroll
