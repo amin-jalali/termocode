@@ -483,7 +483,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onRebaseMsg(msg)
 	case undoPlanMsg, undoDoneMsg, redoClickMsg, redoDoneMsg, reflogListMsg: // git_undo.go
 		return m, m.onUndoMsg(msg)
-	case mergeStagesMsg, mergeSyncMsg, mergeResolvedMsg: // git_merge_view.go
+	case mergeStagesMsg, mergeSyncMsg, mergeResolvedMsg, mergeWholeDoneMsg: // git_merge_view.go
 		return m, m.onMergeMsg(msg)
 	case gitRemoteDoneMsg:
 		return m, m.gitRemoteDone(msg)

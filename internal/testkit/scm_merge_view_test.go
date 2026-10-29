@@ -185,3 +185,45 @@ func TestSCMMergeViewRebase(t *testing.T) {
 		t.Errorf("staged main.go = %q, want %q", got, want)
 	}
 }
+
+// deleteConflictRepo leaves a merge stopped on main.go changed by ours
+// and deleted by theirs.
+func deleteConflictRepo(r *repo) {
+	r.git("checkout", "-q", "-b", "theirs")
+	r.git("rm", "-q", "main.go")
+	r.commit("feat: delete main.go")
+	r.git("checkout", "-q", "main")
+	r.write("main.go", "package main\n\nfunc main() { println(\"ours\") }\n")
+	r.commit("feat: ours")
+	if _, err := r.try("merge", "--no-edit", "theirs"); err == nil {
+		r.t.Fatal("setup: merge did not conflict")
+	}
+}
+
+// Spec: Given main.go changed by ours and deleted by theirs, when the user
+// opens it from CONFLICTS, then a card asks Keep ours / Keep theirs /
+// Delete with Cancel focused; Enter changes nothing; picking Keep ours
+// keeps the file and stages it.
+func TestSCMMergeViewDeletedCard(t *testing.T) {
+	d, r := mergeDriver(t, 150, 42, deleteConflictRepo)
+	clickConflict(d)
+	waitMerge(d, "Keep theirs")
+	if !strings.Contains(text(d), "Theirs deleted it") {
+		t.Errorf("card does not say theirs deleted it:%s", dump(d))
+	}
+	d.Key("enter")
+	if got := r.porcelain(); !strings.Contains(got, "UD main.go") {
+		t.Fatalf("enter changed the repo: %q", got)
+	}
+	clickConflict(d)
+	waitMerge(d, "Keep theirs")
+	d.Key("right")
+	d.Key("enter")
+	waitMerge(d, "Kept ours: main.go")
+	if !d.WaitFor(func() bool { return strings.Contains(r.porcelain(), "M  main.go") || r.porcelain() == "" }, 5*time.Second) {
+		t.Fatalf("not staged: %q", r.porcelain())
+	}
+	if !r.exists("main.go") {
+		t.Error("main.go deleted")
+	}
+}

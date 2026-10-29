@@ -194,3 +194,26 @@ func TestMergeResolvedClosesOrRefuses(t *testing.T) {
 		t.Errorf("rebase next step = %q", got)
 	}
 }
+
+func TestMergeWholeFileCardIsSafeFirst(t *testing.T) {
+	m0, _ := New().Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m := m0.(Model)
+	st := git.ConflictStages{Path: "logo.png",
+		Base:   git.ConflictSide{Present: true, Binary: true},
+		Ours:   git.ConflictSide{Present: true, Binary: true},
+		Theirs: git.ConflictSide{Present: false}}
+	m.onMergeStages(mergeStagesMsg{rel: "logo.png", st: st})
+	if m.mergeViewShown() || !m.confirmOpen || m.confirmKind != confirmKindMergeWholeFile {
+		t.Fatalf("card not open: shown %v confirm %v", m.mergeViewShown(), m.confirmOpen)
+	}
+	bs := m.confirm.Buttons()
+	if len(bs) != 4 || bs[0].ID != "merge-cancel" || m.confirm.SafeID() != "merge-cancel" || bs[3].ID != "merge-delete" {
+		t.Errorf("buttons %+v safe %q", bs, m.confirm.SafeID())
+	}
+	if c := m.onMergeWholeCard("merge-cancel"); c != nil {
+		t.Error("cancel ran something")
+	}
+	if c := m.onMergeWholeCard("merge-delete"); c != nil {
+		t.Error("an answer after the card was used ran something")
+	}
+}

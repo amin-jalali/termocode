@@ -10,6 +10,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/mergeview"
@@ -82,6 +83,12 @@ type mergeResolvedMsg struct {
 	err error
 }
 
+// mergeWholeDoneMsg is the end of keep ours / keep theirs / delete.
+type mergeWholeDoneMsg struct {
+	rel, verb string
+	err       error
+}
+
 // mergeSyncMsg asks to read the result again (it changed or the cursor
 // moved; debounced).
 type mergeSyncMsg struct{}
@@ -104,6 +111,8 @@ func (m *Model) onMergeMsg(msg tea.Msg) tea.Cmd {
 		m.mergeSync()
 	case mergeResolvedMsg:
 		return m.onMergeResolved(msg)
+	case mergeWholeDoneMsg:
+		return m.onMergeWholeDone(msg)
 	}
 	return nil
 }
@@ -164,6 +173,10 @@ func (m *Model) onMergeStages(msg mergeStagesMsg) tea.Cmd {
 	case msg.err != nil:
 		m.toast, cmd = m.toast.PushDetail(toast.Errr, "Can't open the merge view", msg.err.Error())
 		return cmd
+	}
+	if !msg.st.TextMerge() {
+		m.openMergeWholeCard(msg.st)
+		return nil
 	}
 	root, err := m.rootDir()
 	if err != nil {
@@ -574,4 +587,81 @@ func (m Model) mergeNextStep(done string) string {
 		return "Continue the rebase from the banner in Source Control."
 	}
 	return "Commit to finish."
+}
+
+// mergeSideWord says what one side did to a whole-file conflict.
+func mergeSideWord(s git.ConflictSide) string {
+	switch {
+	case !s.Present:
+		return "deleted it"
+	case s.Binary:
+		return "changed it (binary)"
+	}
+	return "changed it"
+}
+
+// openMergeWholeCard asks how to settle a conflict that can not be merged
+// line by line: a binary file, or one side deleted the file. Cancel is
+// first and has the focus (Enter and Esc change nothing).
+func (m *Model) openMergeWholeCard(st git.ConflictStages) {
+	why := "This file is binary, so it can't be merged line by line."
+	if st.DeletedBy() != "" {
+		why = "One side deleted this file and the other changed it."
+	}
+	msg := strings.Join([]string{
+		why, "",
+		"Ours " + mergeSideWord(st.Ours) + ". Theirs " + mergeSideWord(st.Theirs) + ".",
+		"Keep ours or Keep theirs uses that side's file (a side that deleted it deletes it). Delete removes the file.",
+	}, "\n")
+	m.closeMergeView()
+	m.merge = &mergeViewState{rel: st.Path, whole: &st}
+	m.confirm = confirm.Risky("Merge conflict: "+st.Path, msg,
+		confirm.Button{ID: "merge-cancel", Title: "Cancel"},
+		confirm.Button{ID: "merge-keep-ours", Title: "Keep ours"},
+		confirm.Button{ID: "merge-keep-theirs", Title: "Keep theirs"},
+		confirm.Button{ID: "merge-delete", Title: "Delete", Style: confirm.StyleDestructive})
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = confirmKindMergeWholeFile
+}
+
+// onMergeWholeCard runs the chosen answer off the loop.
+func (m *Model) onMergeWholeCard(id string) tea.Cmd {
+	if m.merge == nil || m.merge.whole == nil {
+		return nil
+	}
+	rel := m.merge.whole.Path
+	m.merge.whole = nil
+	verb := strings.TrimPrefix(id, "merge-")
+	if verb != "keep-ours" && verb != "keep-theirs" && verb != "delete" {
+		return nil // Cancel, Esc
+	}
+	cwd, err := m.rootDir()
+	if err != nil {
+		return nil
+	}
+	return func() tea.Msg {
+		var err error
+		switch verb {
+		case "keep-ours":
+			err = git.ResolveWithSide(cwd, rel, "ours")
+		case "keep-theirs":
+			err = git.ResolveWithSide(cwd, rel, "theirs")
+		default:
+			err = git.ResolveDelete(cwd, rel)
+		}
+		return mergeWholeDoneMsg{rel: rel, verb: verb, err: err}
+	}
+}
+
+// onMergeWholeDone says how it went and refreshes Source Control.
+func (m *Model) onMergeWholeDone(msg mergeWholeDoneMsg) tea.Cmd {
+	var cmd tea.Cmd
+	if msg.err != nil {
+		m.toast, cmd = m.toast.PushDetail(toast.Errr, "Can't resolve "+msg.rel, msg.err.Error())
+		return cmd
+	}
+	title := map[string]string{"keep-ours": "Kept ours: ", "keep-theirs": "Kept theirs: ", "delete": "Deleted: "}[msg.verb] + msg.rel
+	m.toast, cmd = m.toast.PushDetail(toast.Info, title, m.mergeNextStep(msg.rel))
+	return tea.Batch(cmd, fetchGitCmd())
 }
