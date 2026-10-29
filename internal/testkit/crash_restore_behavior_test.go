@@ -58,3 +58,44 @@ func TestCrashRestoresUnsavedText(t *testing.T) {
 		t.Error("the crash is still pending")
 	}
 }
+
+// Spec: Given a.txt edited (not saved) and backed up, then termocode
+// crashes and a.txt is changed on disk by someone else,
+// when termocode starts again (the unsaved text comes back at once),
+// then the user is told a.txt changed on disk (Close first), the disk
+// keeps the new text, and the crash card follows.
+func TestCrashRestoreChecksTheDisk(t *testing.T) {
+	d := editorDriver(t, nil)
+	crashWithBackup(t, d)
+	if err := os.WriteFile(filepath.Join(d.Dir, "a.txt"), []byte("NEW\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	report, err := crash.WriteReport("update", "test crash", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := crash.MarkFatal(report); err != nil {
+		t.Fatal(err)
+	}
+	d.Restart()
+	if !waitTabs(d, "a.txt*") {
+		got, _ := tabs(d)
+		t.Fatalf("tabs = %v, want [a.txt*]", got)
+	}
+	if got := bufLines(d); got != "Hi alpha\nbravo\ncharlie" {
+		t.Errorf("a.txt holds %q", got)
+	}
+	if !d.WaitForText("changed on disk", 5*time.Second) {
+		t.Fatalf("not told that a.txt changed on disk:\n%s", screen(d))
+	}
+	if got := diskFile(d, "a.txt"); got != "NEW\n" {
+		t.Errorf("the new disk text was overwritten: %q", got)
+	}
+	d.Key("enter") // Close
+	if !d.WaitForText("stopped unexpectedly", 5*time.Second) {
+		t.Fatalf("no crash card after the disk card:\n%s", screen(d))
+	}
+	if got := diskFile(d, "a.txt"); got != "NEW\n" {
+		t.Errorf("closing the card wrote a.txt: %q", got)
+	}
+}

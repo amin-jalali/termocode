@@ -245,9 +245,9 @@ func (m *Model) startHotExit() tea.Cmd {
 			cmds = append(cmds, m.fetchStateCmd())
 		}
 	}
-	if m.restoreAfterCrash(filepath.Join(root, "previous"), backups) { // crash_ui.go
+	if disk, ok := m.restoreAfterCrash(filepath.Join(root, "previous"), backups); ok { // crash_ui.go
 		backups = nil
-		cmds = append(cmds, m.fetchStateCmd())
+		cmds = append(cmds, m.fetchStateCmd(), disk)
 	}
 	if len(backups) > 0 {
 		cmds = append(cmds, func() tea.Msg { return hotExitFoundMsg{backups: backups} })
