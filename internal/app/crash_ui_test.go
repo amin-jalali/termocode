@@ -1,11 +1,13 @@
 package app
 
 import (
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/crash"
 )
 
@@ -46,5 +48,21 @@ func TestCrashWaitStopsOnClose(t *testing.T) {
 	c.close() // twice is fine
 	if msg := c.waitCmd()(); msg != nil {
 		t.Fatalf("msg after close: %v", msg)
+	}
+}
+
+// TestCrashReportUsesTheAppSecretMask: a secret the IDE knows (a
+// password from the project's .env) never reaches a crash report.
+func TestCrashReportUsesTheAppSecretMask(t *testing.T) {
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
+	canary := "canary" + "-plain-" + "word-9271"
+	ai.RegisterSecret(canary)
+	path, err := crash.WriteReport("worker", "failed with "+canary, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(path)
+	if strings.Contains(string(b), canary) {
+		t.Fatalf("report holds the secret:\n%s", b)
 	}
 }
