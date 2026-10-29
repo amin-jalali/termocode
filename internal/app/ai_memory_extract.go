@@ -59,7 +59,8 @@ type aiMemoryDoneMsg struct {
 
 // aiMemoryTurnFrom is the user message index of the turn that just ended
 // when it qualifies for lessons (a tool call, an error or a failed run
-// step); -1 otherwise. A turn the user stopped does not qualify.
+// step); -1 otherwise. A turn the user stopped, or one that could not
+// reach the AI server, does not qualify.
 func (s *aiState) aiMemoryTurnFrom() int {
 	from := s.turnMsg
 	if from < 0 || from >= len(s.conv.Messages) || s.conv.Messages[from].Role != ai.StoredUser {
@@ -72,6 +73,11 @@ func (s *aiState) aiMemoryTurnFrom() int {
 			ok = true
 		case ai.StoredError:
 			if strings.Contains(msg.Text, context.Canceled.Error()) {
+				return -1
+			}
+			// The model was never reached (offline): nothing to learn,
+			// and a lesson request would fail the same way.
+			if ai.IsUnreachable(msg.Text) {
 				return -1
 			}
 			ok = true

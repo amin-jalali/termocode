@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -129,5 +130,26 @@ func TestAIMemoryAskOncePlainTurnNoCard(t *testing.T) {
 	driveAIChatMemory(t, m2, m2.sendAIChat("list"))
 	if m2.ai.memAsk != nil || loadSession().AIMemory != aiMemoryUndecided {
 		t.Fatal("asked without a quick slot")
+	}
+}
+
+// Spec (SCN-13): a turn that could not reach the AI server has nothing
+// to learn from: no memory card while undecided, and with memory on no
+// lesson request (it would fail the same way).
+func TestAIMemoryNotAfterUnreachableTurn(t *testing.T) {
+	offline := ai.Chunk{Err: errors.New("No connection to the AI server (127.0.0.1:9): it refused the connection. Is the server running?")}
+	m, _ := aiMemoryModel(t, &recordingAIProvider{replies: []ai.Chunk{offline}}, &recordingAIProvider{}, aiMemoryUndecided)
+	driveAIChatMemory(t, m, m.sendAIChat("hello"))
+	if !strings.Contains(aiTranscriptText(m, 100), "No connection to the AI server") {
+		t.Fatalf("no error line:\n%s", aiTranscriptText(m, 100))
+	}
+	if m.ai.memAsk != nil || strings.Contains(aiTranscriptText(m, 100), "Save lessons for later chats?") {
+		t.Error("memory card after a turn that never reached the model")
+	}
+
+	quick := &recordingAIProvider{replies: []ai.Chunk{{Delta: aiMemoryReplyOne}}}
+	m2, _ := aiMemoryModel(t, &recordingAIProvider{replies: []ai.Chunk{offline}}, quick, aiMemoryOn)
+	if msg := aiMemoryMsgFrom(driveAIChatMemory(t, m2, m2.sendAIChat("hello")), 300*time.Millisecond); msg != nil || len(quick.reqs) != 0 {
+		t.Errorf("lessons asked for after an unreachable turn (%d requests)", len(quick.reqs))
 	}
 }
