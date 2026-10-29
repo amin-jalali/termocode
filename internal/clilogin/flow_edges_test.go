@@ -89,8 +89,10 @@ func TestFlowCancelWhileWaitingForBrowser(t *testing.T) {
 	if err := f.Write("x"); err != nil && err.Error() != "no sign-in is running" {
 		t.Errorf("write before the sign-in: %v", err)
 	}
+	child := 0
 	sts := drain(t, f, func(st State) {
-		if st.Phase == PhaseWaitingForBrowser && st.URL != "" {
+		if st.Phase == PhaseWaitingForBrowser && st.URL != "" && child == 0 {
+			child = pidFile(t, home, "child.pid") // the CLI's own child runs
 			f.Cancel()
 		}
 	})
@@ -100,7 +102,7 @@ func TestFlowCancelWhileWaitingForBrowser(t *testing.T) {
 		}
 	}
 	gone(t, pidFile(t, home, "login.pid"))
-	gone(t, pidFile(t, home, "child.pid"))
+	gone(t, child)
 	if err := f.Write("x"); err == nil || err.Error() != "no sign-in is running" {
 		t.Errorf("write after the end: %v", err)
 	}
