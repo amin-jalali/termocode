@@ -31,6 +31,9 @@ func TestDiscoverGoRootPackageWithoutModule(t *testing.T) {
 	if strings.Join(got, ",") != ".,sub" {
 		t.Fatalf("package names %q", got)
 	}
+	if GoImportPath("", "") != "." || GoImportPath("example.com/m", "") != "example.com/m" {
+		t.Fatal("an empty folder is the root")
+	}
 	if GoImportPath("example.com/m", ".") != "example.com/m" || GoImportPath("example.com/m", "x/y") != "example.com/m/x/y" {
 		t.Fatal("with a module the import path is used")
 	}
