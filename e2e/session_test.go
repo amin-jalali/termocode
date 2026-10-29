@@ -32,10 +32,10 @@ type sessionRig struct {
 
 // newSessionRig: SSH_CONNECTION makes the default (auto) use a
 // persistent session; XDG_RUNTIME_DIR is short because unix socket paths
-// are limited to ~100 bytes.
+// are limited to ~100 bytes (shortTempDir).
 func newSessionRig(t *testing.T) *sessionRig {
 	t.Helper()
-	rt, err := os.MkdirTemp("", "tce2e")
+	rt, err := shortTempDir("tce2e")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -537,4 +537,17 @@ func TestSessionServerKilledRestore(t *testing.T) {
 	})
 	tm2.quitDiscard()
 	r.waitSocket(false)
+}
+
+// shortTempDir makes a temp folder for unix sockets. Their paths are
+// limited (sun_path is 104 bytes on macOS), and macOS's $TMPDIR
+// (/var/folders/…/T/) is long: a long $TMPDIR gives way to /tmp.
+func shortTempDir(pattern string) (string, error) {
+	base := os.TempDir()
+	if len(base) > 32 {
+		if fi, err := os.Stat("/tmp"); err == nil && fi.IsDir() {
+			base = "/tmp"
+		}
+	}
+	return os.MkdirTemp(base, pattern)
 }
