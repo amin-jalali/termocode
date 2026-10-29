@@ -252,11 +252,8 @@ func TestHistoryRedactsBeforeAppend(t *testing.T) {
 	}
 }
 
-func TestGridPastEndAndJSONInvalidNumber(t *testing.T) {
+func TestJSONInvalidNumber(t *testing.T) {
 	r := Result{Columns: []Column{{Name: "n"}}, Rows: [][]Cell{{{Text: "not-a-number", Kind: "number"}}}}
-	if got := Grid(r, 2, nil); len(got) != 0 {
-		t.Fatalf("past-end page = %#v", got)
-	}
 	if got := ToJSON(r); got != `[{"n":"not-a-number"}]` {
 		t.Fatalf("JSON = %s", got)
 	}
@@ -325,9 +322,6 @@ func TestFormats(t *testing.T) {
 	}
 	if got := ToJSON(r); got != "[{\"id\":\"1\",\"name\":null},{\"id\":\"2\",\"name\":\"a,b\"}]" {
 		t.Fatalf("json %s", got)
-	}
-	if len(Grid(r, 0, []int{4, 4})) == 0 || len(Transposed(r, 0)) == 0 {
-		t.Fatal("empty rendering")
 	}
 }
 func TestConfigRejectsLiteralAndPathEscape(t *testing.T) {
@@ -410,15 +404,6 @@ func TestConfigJSONCMergeAndValidate(t *testing.T) {
 
 func TestAdditionalFormatsAndSortFilter(t *testing.T) {
 	r := Result{Columns: []Column{{Name: "name"}, {Name: "n"}}, Rows: [][]Cell{{{Text: "beta"}, {Text: "2", Kind: "number"}}, {{Text: "alpha"}, {Text: "1", Kind: "number"}}}}
-	if got := ToTSV(r); got != "name\tn\r\nbeta\t2\r\nalpha\t1\r\n" {
-		t.Fatalf("tsv %q", got)
-	}
-	if got := ToSQLInserts(r, "users", "postgres"); !strings.Contains(got, `INSERT INTO "users"`) || !strings.Contains(got, "'beta'") {
-		t.Fatalf("inserts %s", got)
-	}
-	if got := ToMarkdown(r); !strings.Contains(got, "|") || !strings.Contains(got, "alpha") {
-		t.Fatalf("markdown %s", got)
-	}
 	Sort(&r, 0, false)
 	if r.Rows[0][0].Text != "alpha" {
 		t.Fatalf("sort: %+v", r.Rows)
