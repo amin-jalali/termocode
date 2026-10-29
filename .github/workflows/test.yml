@@ -7,9 +7,10 @@ on:
 
 # A new push to a branch or PR cancels the older run of it, so the queue
 # only holds the newest commit. main is never cancelled: every commit
-# there gets its own result.
+# there gets its own group (a group also drops a waiting run when a newer
+# one comes), so each one gets its own result.
 concurrency:
-  group: test-${{ github.event_name }}-${{ github.ref }}
+  group: test-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 # Required checks (CONTRIBUTING.md): keep these job names stable.
