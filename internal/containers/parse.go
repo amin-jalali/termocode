@@ -240,57 +240,6 @@ func parsePortsValue(raw json.RawMessage) (string, []Port) {
 	return "", ports
 }
 
-// ParseSize converts engine size strings (B, kB, MB, GB, KiB, ...) to bytes.
-func ParseSize(s string) (int64, bool) {
-	s = strings.TrimSpace(strings.ReplaceAll(s, ",", ""))
-	if s == "" {
-		return 0, false
-	}
-	fields := strings.Fields(s)
-	if len(fields) == 1 {
-		if n, e := strconv.ParseInt(fields[0], 10, 64); e == nil {
-			return n, true
-		}
-		cut := 0
-		for cut < len(fields[0]) && ((fields[0][cut] >= '0' && fields[0][cut] <= '9') || fields[0][cut] == '.') {
-			cut++
-		}
-		if cut == 0 || cut == len(fields[0]) {
-			return 0, false
-		}
-		fields = []string{fields[0][:cut], fields[0][cut:]}
-	}
-	n, e := strconv.ParseFloat(fields[0], 64)
-	if e != nil || n < 0 {
-		return 0, false
-	}
-	unit := strings.TrimSuffix(strings.ToLower(fields[1]), "b")
-	mult := float64(1)
-	switch unit {
-	case "", "b":
-		mult = 1
-	case "k", "kb":
-		mult = 1000
-	case "ki":
-		mult = 1024
-	case "m", "mb":
-		mult = 1e6
-	case "mi":
-		mult = 1024 * 1024
-	case "g", "gb":
-		mult = 1e9
-	case "gi":
-		mult = 1024 * 1024 * 1024
-	case "t", "tb":
-		mult = 1e12
-	case "ti":
-		mult = 1024 * 1024 * 1024 * 1024
-	default:
-		return 0, false
-	}
-	return int64(n * mult), true
-}
-
 func parseLines(data []byte, fn func(map[string]json.RawMessage) error) error {
 	s := bufio.NewScanner(strings.NewReader(string(data)))
 	s.Buffer(make([]byte, 4096), 4*1024*1024)
