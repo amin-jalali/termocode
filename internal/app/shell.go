@@ -95,6 +95,11 @@ type terminalTab struct {
 	Agent        string
 	AgentState   agents.State
 	agentFromCmd bool
+
+	// Splits are the panes after the first (terminal_pane.go); BufID is
+	// pane 0. PaneFocus is the focused pane (0 = BufID).
+	Splits    []termPane
+	PaneFocus int
 }
 
 // isJob reports a tab started by the task runner or the Services view.
