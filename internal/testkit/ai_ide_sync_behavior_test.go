@@ -17,13 +17,23 @@ import (
 // request with replies[n]: a tool call ({"tool": name, "args": {...}}) or
 // plain text. A request listed in hold waits until the test releases it,
 // so the test can look at the screen in the middle of an agent turn.
+// The editor's own requests (inline completion, next edit) are not chat
+// requests: they get an empty answer, go to side and take no reply.
 type aiScript struct {
 	mu      sync.Mutex
 	replies []aiReply
 	n       int
 	hold    map[int]chan struct{}
 	reached map[int]chan struct{}
-	bodies  []string // request bodies, in order
+	bodies  []string // chat request bodies, in order
+	side    []string // inline completion and next edit request bodies
+}
+
+// editorAIRequest reports whether body is an inline completion or next
+// edit request (by its system prompt), not a chat request.
+func editorAIRequest(body string) bool {
+	return strings.Contains(body, "You predict the NEXT edit") ||
+		strings.Contains(body, "You are an inline code completion engine")
 }
 
 // toolResults returns the tool results the app sent back to the model, in
@@ -60,6 +70,15 @@ func newAIScript(t *testing.T, replies ...aiReply) (*aiScript, *httptest.Server)
 	s := &aiScript{replies: replies, hold: map[int]chan struct{}{}, reached: map[int]chan struct{}{}}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
+		if editorAIRequest(string(body)) {
+			s.mu.Lock()
+			s.side = append(s.side, string(body))
+			s.mu.Unlock()
+			w.Header().Set("Content-Type", "text/event-stream")
+			b, _ := json.Marshal(map[string]any{"choices": []any{map[string]any{"delta": map[string]any{"content": `{"none": true}`}}}})
+			fmt.Fprintf(w, "data: %s\n\ndata: [DONE]\n\n", b)
+			return
+		}
 		s.mu.Lock()
 		s.bodies = append(s.bodies, string(body))
 		i := s.n
