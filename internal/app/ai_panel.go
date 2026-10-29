@@ -458,6 +458,12 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 	}
 	var out []aiLine
 	s := m.ai
+	if s != nil && s.conv.ForkedFrom != nil { // G-FORK: "Forked from <title> at message N"
+		out = append(out, aiLine{})
+		for _, l := range wrapPlain(s.conv.ForkNote(), inner) {
+			out = append(out, plain(l, theme.TextDim))
+		}
+	}
 	if s == nil || len(s.conv.Messages) == 0 {
 		out = append(out, aiLine{})
 		if s == nil || s.provider == nil || !s.provider.Configured() {

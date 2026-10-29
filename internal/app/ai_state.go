@@ -418,6 +418,7 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-new-chat", "AI: New Chat", ""},
 		{"ai-history", "AI: Chat History…", ""},
 		{"ai-history-rename", "AI: Rename Chat…", ""},
+		{"ai-fork-chat", "AI: Fork Chat from Message…", ""},
 		{"ai-history-delete", "AI: Delete Chat…", ""},
 		{"ai-history-clear", "AI: Clear Chat History", ""},
 		{"ai-explain", "AI: Explain Selection / Line", ""},
@@ -477,7 +478,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 	switch id {
 	case "ai-configure", "ai-sign-in-claude", "ai-sign-out-claude", "ai-credentials",
 		"ai-cancel", "ai-discard-proposal", "ai-review", "ai-edit-review", "ai-undo-turn", "ai-history", "ai-pick-model", "ai-auto-approve",
-		"ai-history-rename", "ai-history-delete", "ai-history-clear",
+		"ai-history-rename", "ai-history-delete", "ai-history-clear", "ai-fork-chat",
 		"ai-mcp-servers", "ai-mcp-log", "ai-mcp-config", "ai-mcp-connect":
 	default:
 		if c, ok := m.aiReady(); !ok {
@@ -494,6 +495,8 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.openAIHistory(), true
 	case "ai-history-rename":
 		return m.openAIHistoryFor(pickerKindAIHistoryRename, " Rename Chat "), true
+	case "ai-fork-chat":
+		return m.openAIForkPicker(), true
 	case "ai-history-delete":
 		return m.openAIHistoryFor(pickerKindAIHistoryDelete, " Delete Chat "), true
 	case "ai-history-clear":

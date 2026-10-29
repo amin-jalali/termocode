@@ -1497,6 +1497,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `ai-explain` | AI: Explain Selection / Line | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-export-chat` | AI: Export Chat as Markdown | confirm (fileWrite) |   |
 | `ai-fix` | AI: Fix Diagnostic at Cursor | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `ai-fork-chat` | AI: Fork Chat from Message… | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-history` | AI: Chat History… | never | starts or changes an AI chat or edit; answer in this chat instead |
 | `ai-history-clear` | AI: Clear Chat History | never | deletes saved chats; only the user may |
 | `ai-history-delete` | AI: Delete Chat… | never | deletes saved chats; only the user may |

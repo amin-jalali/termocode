@@ -359,6 +359,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-new-chat":         aiNever(aiNoNested),
 	"ai-history":          aiNever(aiNoNested),
 	"ai-history-rename":   aiNever(aiNoNested),
+	"ai-fork-chat":        aiNever(aiNoNested),
 	"ai-history-delete":   aiNever("deletes saved chats; only the user may"),
 	"ai-history-clear":    aiNever("deletes saved chats; only the user may"),
 	"ai-explain":          aiNever(aiNoNested),
