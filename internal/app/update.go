@@ -112,6 +112,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if c, ok := m.handleUpdateMsg(msg); ok { // update_check.go
 		return m, c
 	}
+	if c, ok := m.handlePRMsg(msg); ok { // pr_state.go
+		return m, c
+	}
 	nm, cmd := m.updateInner(msg)
 	if ws, ok := msg.(tea.WindowSizeMsg); ok {
 		nm.resizeOverlays(ws.Width, ws.Height)
@@ -2352,6 +2355,9 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 	case pickerKindContainerSearch: // containers_remote.go
 		return m.onSearchPicked(msg.ID)
 	default:
+		if cmd, ok := m.handlePRPickerSelect(msg.ID); ok { // pr_list.go
+			return cmd
+		}
 		if cmd, ok := m.handleAIPickerSelect(msg.ID); ok { // Group A
 			return cmd
 		}

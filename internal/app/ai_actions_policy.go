@@ -196,6 +196,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"git-ci-fix":          aiNever(aiNoNested),
 	"update-check":        aiNever(aiNoUpdate),
 	"update-rollback":     aiNever(aiNoUpdate),
+	"git-pr-list":         aiAuto(), // read only: a list of open pull requests
 
 	// ── Workspace, session, settings ──
 	"workspace-add-folder":    aiNever(aiNoPicker + " (workspace_folders)"),

@@ -718,6 +718,8 @@ type Model struct {
 	ci *ciWatch
 	// upd is the termocode update state (update_check.go, G-UPD).
 	upd *updateWatch
+	// pr is the pull request UI state (pr_state.go, G-PR).
+	pr *prState
 	// mcpServe is termocode as an MCP server: the socket listener and the
 	// confirm queue of outside agents (mcp_serve*.go); nil when not serving.
 	mcpServe *mcpServeState

@@ -359,6 +359,7 @@ func paletteItems() []picker.Item {
 	items = append(items, ciPaletteItems()...)        // G-CI (ci_card.go)
 	items = append(items, layoutPaletteItems()...)    // G-LAY (layout_palette.go)
 	items = append(items, updatePaletteItems()...)    // G-UPD (update_palette.go)
+	items = append(items, prPaletteItems()...)        // G-PR (pr_list.go)
 	// Group A — AI commands (ai_state.go).
 	for _, e := range aiPaletteItems() {
 		items = append(items, picker.Item{ID: e.id, Title: e.title, Hint: e.hint})
@@ -775,6 +776,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchUpdatePalette(id); ok { // update_palette.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchPRPalette(id); ok { // pr_list.go
 			return cmd
 		}
 		// Group G: merge conflicts + clone (git_conflicts.go, git_clone.go).

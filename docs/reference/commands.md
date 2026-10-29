@@ -336,6 +336,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Go to Previous Merge Conflict | `git-conflict-prev` |   | `[x` |
 | Git: Pop Latest Stash | `git-stash-pop` |   |   |
 | Git: Pull | `git-pull` |   |   |
+| Git: Pull Requests… | `git-pr-list` |   |   |
 | Git: Push | `git-push` |   |   |
 | Git: Refresh Status | `git-refresh` |   |   |
 | Git: Show Diff for Current File | `git-diff` |   |   |
