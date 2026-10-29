@@ -49,7 +49,7 @@ const (
 	httpDefaultMaxBodyMB = 20
 	httpRingMax          = 20 // responses kept in memory
 	httpRingBodies       = 3  // of those, the newest keep their full body
-	httpPageBatch        = 5000
+	httpPageBatch        = 20000
 )
 
 func loadHTTPSettings() httpSettings {
