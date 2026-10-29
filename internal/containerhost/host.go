@@ -53,6 +53,11 @@ type Host struct {
 	image  string
 	cuser  string // Config.User of the container
 	mounts []mount
+
+	caps    workspace.Caps
+	uid     int
+	gid     int
+	idKnown bool
 }
 
 type mount struct {
@@ -95,6 +100,9 @@ func New(ctx context.Context, cfg Config) (*Host, error) {
 	}
 	if !h.Online() {
 		return nil, ErrNotRunning
+	}
+	if err := h.probe(ctx); err != nil {
+		return nil, err
 	}
 	return h, nil
 }

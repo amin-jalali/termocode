@@ -36,7 +36,8 @@ func TestExecPassesArgvUnchanged(t *testing.T) {
 	if want := strings.Join(weird, " ") + "\n"; out != want {
 		t.Fatalf("out = %q, want %q", out, want)
 	}
-	if got := c.Execs()[0].Argv; strings.Join(got, "|") != strings.Join(weird, "|") {
+	ex := c.Execs()
+	if got := ex[len(ex)-1].Argv; strings.Join(got, "|") != strings.Join(weird, "|") {
 		t.Fatalf("argv = %q", got)
 	}
 }
