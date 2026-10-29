@@ -4,6 +4,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/amin-jalali/termocode/internal/containerhost/fakedocker"
 )
 
 func TestContainerNewFileIsMadeInTheContainer(t *testing.T) {
@@ -65,6 +67,53 @@ func TestContainerNewFolderGoneContainerSaysSo(t *testing.T) {
 	m.promptKind, m.promptPath = promptKindNewFolder, "/app"
 	m.handlePromptSubmit("web")
 	if m.err != "api-1 is not running." {
+		t.Fatalf("err = %q", m.err)
+	}
+}
+
+func TestContainerRenameAndMoveInTheContainer(t *testing.T) {
+	m, _, _, c := newContainerModel(t)
+	m.promptKind, m.promptPath = promptKindRename, "/app/main.go"
+	m.handlePromptSubmit("app.go")
+	if _, err := os.Stat(c.Local("/app/app.go")); err != nil || m.err != "" {
+		t.Fatalf("rename: %v, err %q", err, m.err)
+	}
+	if _, err := os.Stat(c.Local("/app/main.go")); !os.IsNotExist(err) {
+		t.Fatalf("old name still there: %v", err)
+	}
+	// A path in the new name moves the file to another folder.
+	m.promptKind, m.promptPath = promptKindRename, "/app/pkg/util.go"
+	m.handlePromptSubmit("../lib/util.go")
+	if b, err := os.ReadFile(c.Local("/app/lib/util.go")); err != nil || string(b) != "package pkg\n" || m.err != "" {
+		t.Fatalf("move: %q %v, err %q", b, err, m.err)
+	}
+	m.explorer.RevealPath("/app/lib/util.go")
+	if got := m.explorer.CursorPath(); got != "/app/lib/util.go" {
+		t.Fatalf("explorer cursor %q", got)
+	}
+}
+
+func TestContainerRenameRefusesAnExistingName(t *testing.T) {
+	m, _, _, c := newContainerModel(t)
+	c.WriteFile(t, "/app/b.go", []byte("keep me"), 0o644)
+	m.promptKind, m.promptPath = promptKindRename, "/app/main.go"
+	m.handlePromptSubmit("b.go")
+	if !strings.Contains(m.err, "already exists") {
+		t.Fatalf("err = %q", m.err)
+	}
+	if b, _ := os.ReadFile(c.Local("/app/b.go")); string(b) != "keep me" {
+		t.Fatalf("b.go = %q", b)
+	}
+}
+
+func TestContainerRenameWithoutShellSaysWhy(t *testing.T) {
+	ws, _, _, _ := fakeContainerWS(t, func(c *fakedocker.Container) { c.NoShell() })
+	setProcWorkspace(t, ws)
+	t.Setenv("TERMOCODE_NO_NVIM", "1")
+	m := New()
+	m.promptKind, m.promptPath = promptKindRename, "/app/main.go"
+	m.handlePromptSubmit("app.go")
+	if m.err != "api-1 has no shell (sh), so this is not possible." {
 		t.Fatalf("err = %q", m.err)
 	}
 }

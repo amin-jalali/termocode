@@ -60,3 +60,25 @@ func (m *Model) remoteNewFolder(fsys workspace.FS, dir, name string) tea.Cmd {
 	m.explorer.Reload()
 	return nil
 }
+
+// remoteRename renames or moves from to the name value (a path in value
+// moves it to another folder) in the container. An existing target is
+// refused: it would be replaced without a word.
+func (m *Model) remoteRename(fsys workspace.FS, from, value string) tea.Cmd {
+	label := m.workspace().Host.Label()
+	to := path.Join(path.Dir(from), value)
+	if to == from {
+		return nil
+	}
+	ctx := context.Background()
+	if _, err := fsys.Stat(ctx, to); err == nil {
+		return m.remoteOpFailed("Rename failed", value+" already exists")
+	}
+	if err := fsys.Rename(ctx, from, to); err != nil {
+		return m.remoteOpFailed("Rename failed", remoteErrText(label, err))
+	}
+	m.err = ""
+	m.followRename(from, to)
+	m.explorer.Reload()
+	return m.refreshSearchResults()
+}

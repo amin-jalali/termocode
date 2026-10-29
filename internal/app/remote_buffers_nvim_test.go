@@ -198,3 +198,30 @@ func TestModelRemoteBuffersOnlyForAContainer(t *testing.T) {
 		}
 	}
 }
+
+// An open remote buffer follows a rename in the container and keeps its
+// unsaved text.
+func TestRemoteBufferFollowsARename(t *testing.T) {
+	ws, _, _, c := fakeContainerWS(t)
+	n := remoteNvimOn(t, ws)
+	_ = n.Command("edit /app/main.go")
+	_ = n.ExecLua(`vim.api.nvim_buf_set_lines(0, 0, -1, false, {'unsaved'})`)
+	m := Model{ws: ws, nvim: n}
+	m.remoteRename(ws.Host.FS(), "/app/main.go", "app.go")
+	if m.err != "" {
+		t.Fatal(m.err)
+	}
+	got := remoteEval(t, n, `return vim.api.nvim_buf_get_name(0) .. '|' .. table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), '\n') .. '|' .. tostring(vim.bo.modified)`)
+	if got != "/app/app.go|unsaved|true" {
+		t.Fatalf("buffer after rename = %q", got)
+	}
+	if err := n.Command("silent w"); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(c.Local("/app/app.go")); string(b) != "unsaved\n" {
+		t.Fatalf("saved file = %q", b)
+	}
+	if _, err := os.Stat(c.Local("/app/main.go")); !os.IsNotExist(err) {
+		t.Fatalf("old file came back: %v", err)
+	}
+}

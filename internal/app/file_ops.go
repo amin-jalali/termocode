@@ -176,6 +176,9 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 	case promptKindBulkRename:
 		return m.previewBulkRename(value)
 	case promptKindRename:
+		if fsys, ok := m.remoteFS(); ok { // a container workspace
+			return m.remoteRename(fsys, m.promptPath, value)
+		}
 		dir := filepath.Dir(m.promptPath)
 		newPath := filepath.Join(dir, value)
 		// os.Rename replaces an existing file without a word: renaming
