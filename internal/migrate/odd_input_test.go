@@ -160,7 +160,7 @@ func TestApplyRefusesBadKeymapAndOddValues(t *testing.T) {
 		Rows: []ReviewRow{
 			{Kind: RowExtension, Apply: true, Tools: []string{"gopls", "pyright"}},
 			{Kind: RowExtension, Apply: true, Tools: []string{"gopls"}},
-			{Kind: RowKey, Apply: true}, // no key: ignored
+			{Kind: RowKey, Apply: true},     // no key: ignored
 			{Kind: RowSetting, Apply: true}, // no target: ignored
 			{Kind: RowTheme, Apply: false, Target: "x"},
 		},
