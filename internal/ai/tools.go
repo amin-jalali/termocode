@@ -231,10 +231,53 @@ func (w Workspace) Resolve(p string) (string, error) {
 		abs = filepath.Join(root, p)
 	}
 	abs = filepath.Clean(abs)
-	if abs != root && !strings.HasPrefix(abs, root+string(filepath.Separator)) {
+	if !within(root, abs) {
+		return "", ErrOutsideWorkspace
+	}
+	// A symlink in the workspace may point outside it (a cloned repo can
+	// ship one): the real place of the path must be inside the real root.
+	real, realRoot := realPath(abs, 0), realPath(root, 0)
+	if real == "" || realRoot == "" || !within(realRoot, real) {
 		return "", ErrOutsideWorkspace
 	}
 	return abs, nil
+}
+
+// within reports whether p is root or lies under it.
+func within(root, p string) bool {
+	return p == root || strings.HasPrefix(p, strings.TrimSuffix(root, string(filepath.Separator))+string(filepath.Separator))
+}
+
+// realPath is p with every symlink of its existing part followed, the
+// missing rest kept as it is. A dangling link is followed by its text, so
+// writing through it is judged by where the write would land. "" means
+// it can not be told (a link loop).
+func realPath(p string, depth int) string {
+	if depth > 40 {
+		return ""
+	}
+	cur, rest := p, ""
+	for {
+		if r, err := filepath.EvalSymlinks(cur); err == nil {
+			return filepath.Join(r, rest)
+		}
+		if fi, err := os.Lstat(cur); err == nil && fi.Mode()&os.ModeSymlink != 0 {
+			target, err := os.Readlink(cur)
+			if err != nil {
+				return ""
+			}
+			if !filepath.IsAbs(target) {
+				target = filepath.Join(filepath.Dir(cur), target)
+			}
+			return realPath(filepath.Join(target, rest), depth+1)
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			return filepath.Join(cur, rest)
+		}
+		rest = filepath.Join(filepath.Base(cur), rest)
+		cur = parent
+	}
 }
 
 func (w Workspace) rel(abs string) string {
