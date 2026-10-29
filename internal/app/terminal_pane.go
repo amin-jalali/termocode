@@ -76,3 +76,26 @@ func (t terminalTab) paneBufs() []int {
 	}
 	return out
 }
+
+// splitRefusal returns why a pane of winW x winH cells cannot be split in
+// direction dir (with count panes already in the tab), or "" when it can. The
+// text is a hint for the user. A pane must keep termPaneMinCols x
+// termPaneMinRows of shell content; each pane also spends one row on its
+// title and one column on the divider.
+func splitRefusal(dir paneDir, winW, winH, count int) string {
+	if count >= termPaneMax {
+		return "A terminal tab holds at most 4 panes. Close one first."
+	}
+	if dir == paneRight {
+		if winW < 2*termPaneMinCols+1 {
+			return "Too narrow to split: each pane needs 20 columns. Make the panel wider or split down."
+		}
+		return ""
+	}
+	// Down: each pane needs its title row plus the minimum rows, and the
+	// divider (the next pane's title) is inside that.
+	if winH < 2*(termPaneMinRows+1) {
+		return "Too short to split: each pane needs 4 rows. Make the panel taller or split right."
+	}
+	return ""
+}
