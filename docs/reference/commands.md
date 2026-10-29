@@ -337,6 +337,19 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Go to Previous Change | `prev-hunk` | `Alt+[` | `Alt+[` |
 | Git: Go to Previous Merge Conflict | `git-conflict-prev` |   | `[x` |
 | Git: Interactive Rebase… | `git-rebase` |   |   |
+| Git: Merge View: Close | `git-merge-close` |   | `Esc` |
+| Git: Merge View: Mark as Resolved | `git-merge-resolve` |   | `r` |
+| Git: Merge View: Merge Keys | `git-merge-focus` |   | `F6` |
+| Git: Merge View: Next Conflict | `git-merge-next` |   | `n` |
+| Git: Merge View: Previous Conflict | `git-merge-prev` |   | `p` |
+| Git: Merge View: Show Next Pane | `git-merge-pane` |   | `v` |
+| Git: Merge View: Take Base | `git-merge-take-base` |   | `a` |
+| Git: Merge View: Take Both (Ours, Then Theirs) | `git-merge-take-both` |   | `b` |
+| Git: Merge View: Take Both (Theirs, Then Ours) | `git-merge-take-both-theirs-first` |   | `B` |
+| Git: Merge View: Take Ours | `git-merge-take-ours` |   | `o` |
+| Git: Merge View: Take Theirs | `git-merge-take-theirs` |   | `t` |
+| Git: Merge View: Undo Last Change | `git-merge-undo` |   | `u` |
+| Git: Open Merge View | `git-merge-open` |   |   |
 | Git: Pop Latest Stash | `git-stash-pop` |   |   |
 | Git: Pull | `git-pull` |   |   |
 | Git: Pull Requests… | `git-pr-list` |   |   |
