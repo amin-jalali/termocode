@@ -130,6 +130,18 @@ func (m *Model) runsCollect(now time.Time) []runsItem {
 	if s == nil {
 		return nil
 	}
+	if st := m.runs; st != nil && st.cache.drawing && st.cache.drawAt.Equal(now) {
+		if st.cache.drawAll == nil {
+			st.cache.drawAll = m.runsCollectNow(now)
+		}
+		return st.cache.drawAll
+	}
+	return m.runsCollectNow(now)
+}
+
+// runsCollectNow is runsCollect without the frame's memo.
+func (m *Model) runsCollectNow(now time.Time) []runsItem {
+	s := m.ai
 	var out []runsItem
 	add := func(c *ai.Conversation, open bool) {
 		for i := range c.Messages {

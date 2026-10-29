@@ -39,7 +39,9 @@ func (m Model) renderRunsPage(w, h int) string {
 	if st.cache.pageKy == key && st.cache.page != nil {
 		return strings.Join(st.cache.page, "\n")
 	}
+	end := st.runsBeginDraw(now)
 	lines, hits := m.drawRunsPage(w, h, now)
+	end()
 	st.cache.pageKy, st.cache.page, st.cache.pageHits = key, lines, hits
 	return strings.Join(lines, "\n")
 }

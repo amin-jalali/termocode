@@ -63,6 +63,7 @@ func (m Model) renderRunsSidebar(w, h int) string {
 	if st.cache.sideKey == key && st.cache.side != nil {
 		return strings.Join(st.cache.side, "\n")
 	}
+	defer st.runsBeginDraw(now)()
 	c := runsCol()
 	cv := newRCCanvas(w, h, c.bgSide)
 	items := m.runsItems(now)

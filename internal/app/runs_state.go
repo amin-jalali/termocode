@@ -68,6 +68,19 @@ type runsDrawCache struct {
 	side, page      []string
 	pageHits        []runsHit
 	sideHits        []runsHit
+	// While one frame is drawn (drawing), runsCollect keeps its result
+	// for that frame's time: a frame asks for the runs several times
+	// (list, spend strip, budget …) and nothing changes inside a frame.
+	drawing bool
+	drawAt  time.Time
+	drawAll []runsItem
+}
+
+// runsBeginDraw starts a frame drawn at now (the cache lock is held);
+// the returned func ends it.
+func (st *runsState) runsBeginDraw(now time.Time) func() {
+	st.cache.drawing, st.cache.drawAt, st.cache.drawAll = true, now, nil
+	return func() { st.cache.drawing, st.cache.drawAll = false, nil }
 }
 
 // runsHit is a click target of the view or the page: cells [x0,x1) of
