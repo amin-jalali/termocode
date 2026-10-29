@@ -226,18 +226,32 @@ func openBanner(t *testing.T, d *Driver) {
 }
 
 // Spec: a rebase stopped on a conflict shows a banner in Source Control
-// and the file in CONFLICTS. The banner's card has Abort first and
-// focused: Enter aborts, the branch is back and the banner goes.
+// and the file in CONFLICTS. The banner's card has Close first and
+// focused: Enter and Esc change nothing (conflict fixes are kept). Abort
+// puts the branch back and the banner goes.
 func TestSCMRebaseConflictBannerAbort(t *testing.T) {
 	d, r := conflictRebase(t)
 	head := r.git("rev-parse", "ORIG_HEAD")
+	stopped := r.git("rev-parse", "HEAD")
 	openBanner(t, d)
 	if s := text(d); !strings.Contains(s, "1 conflict: f.txt") || !strings.Contains(s, `"c3"`) {
 		t.Errorf("card does not say where it stopped:%s", dump(d))
 	}
-	d.Key("enter")
+	d.Key("enter") // Close
+	d.Settle(0)
+	if got := r.git("rev-parse", "HEAD"); got != stopped || rowWith(d, "Rebasing") < 0 {
+		t.Fatalf("Enter changed the rebase (HEAD %s, want %s):%s", got, stopped, dump(d))
+	}
+	openBanner(t, d)
+	d.Key("esc")
+	d.Settle(0)
+	if rowWith(d, "Rebasing") < 0 {
+		t.Fatalf("Esc ended the rebase:%s", dump(d))
+	}
+	openBanner(t, d)
+	clickTarget(d, "confirm:rebase-abort")
 	if !until(d, func() bool { return strings.Contains(text(d), "Rebase aborted") }) {
-		t.Fatalf("Enter did not abort:%s", dump(d))
+		t.Fatalf("Abort did not abort:%s", dump(d))
 	}
 	if got := r.git("rev-parse", "HEAD"); got != head {
 		t.Errorf("HEAD %s, want %s", got, head)

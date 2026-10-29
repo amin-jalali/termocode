@@ -394,8 +394,9 @@ func (m Model) renderGitRebaseRow(active, focused bool, w int) string {
 	return clampSidebarRow(sb.String(), 1+2+runewidth.StringWidth(label), w, lipgloss.NewStyle().Background(bg))
 }
 
-// openRebaseControl asks what to do with the stopped rebase. Abort is
-// first and has the focus: it puts the branch back as it was.
+// openRebaseControl asks what to do with the stopped rebase. Close is
+// first and has the focus, so Enter or Esc never throw conflict fixes
+// away; Abort puts the branch back as it was.
 func (m *Model) openRebaseControl() {
 	st := m.gitRebase
 	if !st.InProgress {
@@ -419,7 +420,8 @@ func (m *Model) openRebaseControl() {
 	}
 	lines = append(lines, "", "Continue goes on · Skip drops this commit · Abort puts the branch back as it was.")
 	m.confirm = confirm.Risky("Rebase in progress", strings.Join(lines, "\n"),
-		confirm.Button{ID: "rebase-abort", Title: "Abort"},
+		confirm.Button{ID: "rebase-close", Title: "Close"},
+		confirm.Button{ID: "rebase-abort", Title: "Abort", Style: confirm.StyleDestructive},
 		confirm.Button{ID: "rebase-skip", Title: "Skip"},
 		confirm.Button{ID: "rebase-continue", Title: "Continue", Style: confirm.StylePrimary})
 	m.confirm.SetSize(m.w, m.h)
@@ -434,6 +436,9 @@ func (m *Model) onRebaseControl(id string) tea.Cmd {
 		return nil
 	}
 	verb := strings.TrimPrefix(id, "rebase-")
+	if verb != "continue" && verb != "skip" && verb != "abort" {
+		return nil // Close, Esc
+	}
 	return func() tea.Msg {
 		msg := rebaseDoneMsg{verb: verb}
 		switch verb {
