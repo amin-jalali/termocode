@@ -107,6 +107,9 @@ func (m *Model) observeTerminals() {
 	if !m.termRestoreReady {
 		return
 	}
+	if len(m.terminalTabs) > 0 || len(m.hiddenTerminalTabs) > 0 {
+		m.termRestorePending = nil // shells opened another way take their place
+	}
 	var snap *savedTerminals
 	if !m.termRestoreOff {
 		snap = m.terminalSnapshot(m.termRestoreCmds)

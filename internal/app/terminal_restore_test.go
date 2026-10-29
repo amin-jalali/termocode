@@ -163,3 +163,21 @@ func TestRestoreHintTextOffersTheCommandWhenOptedIn(t *testing.T) {
 		t.Errorf("gone folder: %q", got)
 	}
 }
+
+// Shells opened another way (a layout, a new tab) replace terminals that
+// were waiting for Ctrl+T.
+func TestLiveTerminalsReplacePendingOnes(t *testing.T) {
+	m, _, _ := sessionTestModel(t)
+	m.termRestoreReady = true
+	m.termRestorePending = &savedTerminals{Tabs: []savedTermTab{{Name: "old", Panes: []savedTermPane{{Cwd: "/old"}}}}}
+	m.termOpen = true
+	m.terminalTabs = []terminalTab{{Name: "new", Cwd: "/new"}}
+	m.observeTerminals()
+	got := loadSession().Terminals
+	if got == nil || got.Tabs[0].Name != "new" || !got.Open {
+		t.Fatalf("saved %+v", got)
+	}
+	if m.termRestorePending != nil {
+		t.Error("the old terminals must not come back on a later Ctrl+T")
+	}
+}
