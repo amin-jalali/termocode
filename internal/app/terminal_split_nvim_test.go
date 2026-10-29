@@ -472,3 +472,22 @@ func TestSplitKeys(t *testing.T) {
 		}
 	}
 }
+
+// A click on a pane reaches nvim like any click in the editor area, which
+// focuses that pane's window; the next state message then tells termocode.
+func TestClickFocusesAPane(t *testing.T) {
+	m := splitTestModel(t, 120, 30)
+	m.splitTerminalPane(paneRight)
+	tab := m.terminalTabs[0]
+	pos, _ := m.nvim.EvalLuaString(`local p = vim.api.nvim_win_get_position(` + itoa(m.terminalWinID) + `)
+		return (p[1] + 2) .. ':' .. (p[2] + 3)`)
+	row, col := parseWinBufPair(pos)
+	m.nvim.MouseAsync("left", "press", "", row, col)
+	if !waitNvim(t, m, `vim.api.nvim_get_current_win() == `+itoa(m.terminalWinID)) {
+		t.Fatal("clicking pane 0 did not focus its window")
+	}
+	cur, _ := m.nvim.EvalLuaString(`return tostring(vim.api.nvim_get_current_win())`)
+	if !m.syncPaneFocus(parseInt(cur)) || m.terminalTabs[0].PaneFocus != 0 {
+		t.Errorf("state message: focus=%d, want pane 0 (second pane is window %d)", m.terminalTabs[0].PaneFocus, tab.Splits[0].WinID)
+	}
+}
