@@ -220,3 +220,27 @@ func TestStatsRowValuesByWidth(t *testing.T) {
 		t.Errorf("stopped row shows stats: %q", l)
 	}
 }
+
+func TestStatsSparkline(t *testing.T) {
+	cases := []struct {
+		name  string
+		vals  []float64
+		max   float64
+		width int
+		want  string
+	}{
+		{"scale", []float64{0, 12.5, 25, 50, 75, 100}, 100, 6, "▁▂▃▅▇█"},
+		{"left blank when short", []float64{100, 100}, 100, 5, "   ██"},
+		{"newest kept", []float64{0, 0, 100, 100}, 100, 2, "██"},
+		{"over max is full", []float64{250}, 100, 1, "█"},
+		{"zero max is flat", []float64{5, 9}, 0, 2, "▁▁"},
+		{"negative is flat", []float64{-4}, 100, 1, "▁"},
+		{"no width", []float64{1}, 1, 0, ""},
+		{"empty", nil, 100, 3, "   "},
+	}
+	for _, c := range cases {
+		if got := statsSparkline(c.vals, c.max, c.width); got != c.want {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
+	}
+}

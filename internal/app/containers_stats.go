@@ -243,3 +243,33 @@ func (st *servicesState) statsRowCol(c containers.Container, w int) *hostCol {
 	}
 	return &hostCol{text: text, width: width, right: true, col: theme.TextSecondary}
 }
+
+// ── Sparkline ────────────────────────────────────────────────────────────
+
+var statsBlocks = []rune("▁▂▃▄▅▆▇█")
+
+// statsSparkline draws the newest `width` values as one block char each,
+// scaled so that `max` is a full block. Fewer values than `width` leave
+// blank cells on the left (the line fills from the right, like a scope).
+// A value above max is a full block; a negative one counts as 0.
+func statsSparkline(vals []float64, max float64, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	if len(vals) > width {
+		vals = vals[len(vals)-width:]
+	}
+	var b strings.Builder
+	b.WriteString(strings.Repeat(" ", width-len(vals)))
+	for _, v := range vals {
+		level := 0
+		if max > 0 && v > 0 {
+			level = int(v / max * float64(len(statsBlocks)))
+			if level >= len(statsBlocks) {
+				level = len(statsBlocks) - 1
+			}
+		}
+		b.WriteRune(statsBlocks[level])
+	}
+	return b.String()
+}
