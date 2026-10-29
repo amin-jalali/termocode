@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unsafe"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -373,7 +374,7 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 	switch msg.ev.Kind {
 	case ai.EventText:
 		if l := last(); l != nil && l.Role == ai.StoredAssistant {
-			l.Text += msg.ev.Text
+			l.Text = s.streamText.add(l.Text, msg.ev.Text)
 		} else {
 			s.conv.Messages = append(s.conv.Messages, ai.StoredMessage{Role: ai.StoredAssistant, Text: msg.ev.Text})
 		}
@@ -402,6 +403,23 @@ func (m *Model) onAIChatEvent(msg aiChatEventMsg) tea.Cmd {
 		m.aiAuditUsage(msg.ev)
 	}
 	return waitAIChat(msg.ch)
+}
+
+// aiTextAppender appends streamed tokens to a message text without
+// copying the whole text for each token: it keeps one growing buffer
+// whose String() is the text. When the text was changed elsewhere (it is
+// no longer the buffer's string) it starts over from that text.
+type aiTextAppender struct{ buf []byte }
+
+// add returns cur+delta. The bytes of a returned string are never
+// written again (only bytes after its end are), so it stays valid.
+func (a *aiTextAppender) add(cur, delta string) string {
+	if len(a.buf) != len(cur) || unsafe.StringData(cur) != unsafe.SliceData(a.buf) {
+		a.buf = make([]byte, len(cur), len(cur)+len(delta)+256)
+		copy(a.buf, cur)
+	}
+	a.buf = append(a.buf, delta...)
+	return unsafe.String(unsafe.SliceData(a.buf), len(a.buf))
 }
 
 // aiShortResult is a one-line summary of a tool result.
