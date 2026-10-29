@@ -61,6 +61,11 @@ func LoadRebaseTodo(dir, base string) (RebaseTodo, error) {
 	if err != nil {
 		return RebaseTodo{}, fmt.Errorf("git log %s: %w", rng, err)
 	}
+	return parseRebaseLog(out, base)
+}
+
+// parseRebaseLog reads the records of LoadRebaseTodo's git log format.
+func parseRebaseLog(out, base string) (RebaseTodo, error) {
 	todo := RebaseTodo{Base: base}
 	for _, rec := range strings.Split(out, "\x1e") {
 		rec = strings.TrimLeft(rec, "\n")

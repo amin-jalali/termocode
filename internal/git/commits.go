@@ -56,6 +56,21 @@ func Commits(dir string, skip, limit int) ([]GraphCommit, bool, error) {
 		}
 		return nil, false, err
 	}
+	cs := parseCommitLog(out)
+	more := len(cs) > limit
+	if more {
+		cs = cs[:limit]
+	}
+	if up := unpushed(dir); len(up) > 0 {
+		for i := range cs {
+			cs[i].Unpushed = up[cs[i].FullHash]
+		}
+	}
+	return cs, more, nil
+}
+
+// parseCommitLog reads the records of Commits' git log format.
+func parseCommitLog(out string) []GraphCommit {
 	var cs []GraphCommit
 	for _, rec := range strings.Split(out, "\x1e") {
 		rec = strings.TrimLeft(rec, "\n")
@@ -69,16 +84,7 @@ func Commits(dir string, skip, limit int) ([]GraphCommit, bool, error) {
 		c.Refs, c.IsHead = parseDecorations(f[6])
 		cs = append(cs, c)
 	}
-	more := len(cs) > limit
-	if more {
-		cs = cs[:limit]
-	}
-	if up := unpushed(dir); len(up) > 0 {
-		for i := range cs {
-			cs[i].Unpushed = up[cs[i].FullHash]
-		}
-	}
-	return cs, more, nil
+	return cs
 }
 
 // hasCommits says whether HEAD points at a commit.
