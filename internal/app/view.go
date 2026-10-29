@@ -517,6 +517,7 @@ func (m Model) renderBaseLines() []string {
 	actionsColW := m.actionsColumnWidth()
 
 	var editorContent string
+	var editorLines []string // the editor's rows when not joined (no Split)
 	// The welcome screen shows only on a truly empty editor. During a Source
 	// Control diff the focused pane may be the nameless, unlisted HEAD scratch
 	// buffer (Path()=="" and not counted in m.bufs) — without the gitDiffActive
@@ -532,15 +533,19 @@ func (m Model) renderBaseLines() []string {
 		// The Itermoc detail page: drawn here, not by nvim (itermoc_page.go).
 		editorContent = m.renderItermocPage(edPaneW, editorH)
 	} else {
-		editorContent = m.editor.View(m.focus == FocusEditor)
 		// When the integrated terminal panel is open, applyLayout shrinks
 		// nvim's render area by 1 row so we can splice our own tab-bar
 		// row between nvim's editor split and nvim's terminal split.
 		// Splice at the boundary so the output is exactly editorH rows
 		// tall.
 		if m.termOpen {
-			editorContent = m.spliceTerminalTabBar(editorContent, edPaneW, editorH)
+			editorContent = m.spliceTerminalTabBar(m.editor.View(m.focus == FocusEditor), edPaneW, editorH)
+		} else {
+			editorLines = m.editor.ViewLines(m.focus == FocusEditor)
 		}
+	}
+	if editorLines == nil {
+		editorLines = strings.Split(editorContent, "\n")
 	}
 	// Belt-and-braces: clip editorContent to exactly editorH rows so the
 	// editor column stack always settles at chromeRows + editorH = bodyH,
@@ -551,7 +556,7 @@ func (m Model) renderBaseLines() []string {
 	// in turn makes lipgloss.JoinHorizontal pad the shorter activity /
 	// sidebar columns with unstyled spaces (visible as a default-bg
 	// stripe along the LEFT edge).
-	editorRows := clipRowsLines(strings.Split(editorContent, "\n"), editorH, edPaneW, theme.Bg(theme.BgEditor))
+	editorRows := clipRowsLines(editorLines, editorH, edPaneW, theme.Bg(theme.BgEditor))
 
 	// Build the editor stack, then horizontally append the scrollbar so the
 	// scrollbar spans the full chrome height (tabs/breadcrumbs/sticky/editor).

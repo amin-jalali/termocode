@@ -154,6 +154,16 @@ func (m Model) View(focused bool) string {
 	return m.g.Render()
 }
 
+// ViewLines is View split into rows (the slice is the caller's). Rows
+// that did not change are the same strings frame after frame, so their
+// measured widths stay cached.
+func (m Model) ViewLines(focused bool) []string {
+	if m.w <= 0 || m.h <= 0 {
+		return []string{""}
+	}
+	return m.g.RenderLines()
+}
+
 // HandleMouse forwards a mouse event to nvim, translating Bubble Tea event
 // types into nvim's button/action pair.
 //
