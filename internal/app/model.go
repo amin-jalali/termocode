@@ -716,6 +716,8 @@ type Model struct {
 	ai *aiState
 	// ci watches the GitHub CI of the branch (ci_watch.go, G-CI).
 	ci *ciWatch
+	// upd is the termocode update state (update_check.go, G-UPD).
+	upd *updateWatch
 	// mcpServe is termocode as an MCP server: the socket listener and the
 	// confirm queue of outside agents (mcp_serve*.go); nil when not serving.
 	mcpServe *mcpServeState
@@ -906,6 +908,7 @@ func (m Model) Init() tea.Cmd {
 	}
 	cmds = append(cmds, aiRunsStartupCmd())         // prune old agent run snapshots
 	cmds = append(cmds, m.secretsMigrateStartCmd()) // plain credentials.json → safer store (SS-4)
+	cmds = append(cmds, m.updateInitCmd())          // G-UPD: a newer release? (update_check.go)
 	if m.nvim != nil {
 		cmds = append(cmds, m.attachCmd(), m.nvim.Next())
 	}

@@ -2328,6 +2328,7 @@ func (m Model) statusState() statusbar.State {
 	m.fillTestsStatus(&st) // Group E: ✓ n ✗ n chip (test_explorer.go)
 	m.fillServicesStatus(&st)
 	m.fillCIStatus(&st)
+	m.fillUpdateStatus(&st)            // G-UPD: ⬆ v0.2.0
 	st.Agents = m.mcpServeAgentCount() // ⇄ n agents: outside agents on the MCP server
 	st.AgentsReady = m.mcpServe != nil // ⇄ ready: it listens, nobody is connected
 	if m.databases != nil && m.databases.activeID != "" {
