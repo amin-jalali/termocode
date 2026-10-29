@@ -55,6 +55,12 @@ func TestCollectHotBackups(t *testing.T) {
 		t.Fatal(err)
 	}
 	sort.Slice(got, func(i, j int) bool { return got[i].Path < got[j].Path })
+	for i := range got { // the backup time is checked, then left out
+		if got[i].Saved.IsZero() {
+			t.Errorf("%s: no backup time", got[i].Path)
+		}
+		got[i].Saved = time.Time{}
+	}
 	want := []hotBackup{
 		{Path: "/w/a.txt", Lines: []string{"dead run"}},
 		{Path: "/w/c.txt", Lines: []string{"before reload"}},

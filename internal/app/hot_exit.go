@@ -73,6 +73,7 @@ func hotExitRootFor(id string) (string, error) {
 type hotBackup struct {
 	Path  string
 	Lines []string
+	Saved time.Time // when the backup was written (its file's mtime)
 }
 
 // parseHotBackup reads the .bak format: path, then the buffer lines.
@@ -137,6 +138,9 @@ func readHotBackups(dir string, files []os.DirEntry) []hotBackup {
 			continue
 		}
 		if hb, ok := parseHotBackup(b); ok {
+			if info, err := f.Info(); err == nil {
+				hb.Saved = info.ModTime()
+			}
 			out = append(out, hb)
 		}
 	}
@@ -353,6 +357,7 @@ func (m *Model) onHotExitConfirm(id string) tea.Cmd {
 		if m.nvim == nil || len(backups) == 0 {
 			return nil
 		}
+		backups, disk := hotExitDiskCheck(backups) // SCN-9 (hot_exit_disk.go)
 		if err := m.restoreHotBackups(backups, false); err != nil {
 			m.toast, cmd = m.toast.PushDetail(toast.Errr, "Restore failed", err.Error())
 			return cmd
@@ -364,7 +369,7 @@ func (m *Model) onHotExitConfirm(id string) tea.Cmd {
 			label = fmt.Sprintf("Restored %d unsaved files", len(backups))
 		}
 		m.toast, cmd = m.toast.Push(toast.Info, label)
-		return tea.Batch(cmd, m.fetchStateCmd())
+		return tea.Batch(cmd, m.tellHotDisk(disk), m.fetchStateCmd())
 	case "discard":
 		_ = os.RemoveAll(prev)
 	}

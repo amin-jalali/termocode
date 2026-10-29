@@ -47,6 +47,7 @@ const (
 	confirmKindRebaseFixup    // fixup staged changes into a commit (git_fixup.go)
 	confirmKindGitUndo        // undo a git action with the reflog (git_undo.go)
 	confirmKindMergeWholeFile // keep ours / theirs or delete (git_merge_view.go)
+	confirmKindHotExitDisk    // a restored file changed on disk (hot_exit_disk.go)
 )
 
 // findBuffer returns the buffer info for the given id, if known.
@@ -259,6 +260,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		return m.onQuitConfirm(id)
 	case confirmKindHotExit:
 		return m.onHotExitConfirm(id)
+	case confirmKindHotExitDisk:
+		return m.onHotDiskConfirm(id)
 	case confirmKindNvimExited:
 		return m.onNvimExitedConfirm(id)
 	case confirmKindTransferLarge, confirmKindTransferFallback:
