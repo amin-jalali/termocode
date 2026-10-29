@@ -60,3 +60,17 @@ func TestBuildLinePatchNoChange(t *testing.T) {
 		t.Errorf("empty diff: err = %v", err)
 	}
 }
+
+func TestBuildLinePatchReverse(t *testing.T) {
+	// Reversed (unstage / discard): lines that are not chosen stay as they
+	// are in the target, so an unchosen + line becomes context and an
+	// unchosen - line is dropped.
+	p, err := BuildLinePatch(diffReplace, 3, 3, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "@@ -1,5 +1,6 @@\n one\n TWO\n+THREE\n extra\n four\n five\n"
+	if got := p[strings.Index(p, "@@"):]; got != want {
+		t.Errorf("body:\n%s\nwant:\n%s", got, want)
+	}
+}
