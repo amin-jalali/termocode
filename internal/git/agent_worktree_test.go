@@ -355,3 +355,62 @@ func TestCreateAgentWorktreeLockedIndexFails(t *testing.T) {
 		t.Errorf("worktree misses the user's edit: %q", got)
 	}
 }
+
+// A merge keeps every kind of file the agent touched: a script stays
+// executable, a symlink stays a link, binary bytes and an empty file are
+// written as they are, and a name with spaces works; a nested new folder
+// is made.
+func TestAgentWorktreeMergeFileKinds(t *testing.T) {
+	r := committedRepo(t)
+	os.Chmod(r.write(t, "run.sh", "#!/bin/sh\necho hi\n"), 0o755)
+	r.git(t, "add", "-A")
+	r.git(t, "commit", "-q", "-m", "script")
+	w, err := CreateAgentWorktree(r.dir, "r6-kinds")
+	if err != nil {
+		t.Fatal(err)
+	}
+	bin := []byte{0, 1, 2, 0xff, '\n', 0}
+	os.WriteFile(filepath.Join(w.Path, "run.sh"), []byte("#!/bin/sh\necho agent\n"), 0o755)
+	os.WriteFile(filepath.Join(w.Path, "new.sh"), []byte("#!/bin/sh\n"), 0o755)
+	os.WriteFile(filepath.Join(w.Path, "data.bin"), bin, 0o644)
+	os.WriteFile(filepath.Join(w.Path, "empty.txt"), nil, 0o644)
+	os.MkdirAll(filepath.Join(w.Path, "new dir", "deep"), 0o755)
+	os.WriteFile(filepath.Join(w.Path, "new dir", "deep", "my file.txt"), []byte("spaced\n"), 0o644)
+	if err := os.Symlink("a.txt", filepath.Join(w.Path, "link")); err != nil {
+		t.Skip("no symlinks here")
+	}
+	files, err := AgentFiles(r.dir, "r6-kinds")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := []string{}
+	for _, f := range files {
+		got = append(got, f.Status+" "+f.Path)
+	}
+	if strings.Join(got, "|") != "A data.bin|A empty.txt|A link|A new dir/deep/my file.txt|A new.sh|M run.sh" {
+		t.Errorf("files %q", got)
+	}
+	res, err := MergeAgentWorktree(r.dir, "r6-kinds", false)
+	if err != nil || len(res.Conflicts) != 0 || len(res.Applied) != 6 {
+		t.Fatalf("merge %+v %v", res, err)
+	}
+	if fi, err := os.Stat(filepath.Join(r.dir, "new.sh")); err != nil || fi.Mode().Perm()&0o100 == 0 {
+		t.Errorf("new.sh %v %v", fi, err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(r.dir, "data.bin")); string(b) != string(bin) {
+		t.Errorf("data.bin %q", b)
+	}
+	if fi, err := os.Stat(filepath.Join(r.dir, "empty.txt")); err != nil || fi.Size() != 0 {
+		t.Errorf("empty.txt %v %v", fi, err)
+	}
+	if got := readFile(t, filepath.Join(r.dir, "new dir", "deep", "my file.txt")); got != "spaced\n" {
+		t.Errorf("spaced file %q", got)
+	}
+	if l, err := os.Readlink(filepath.Join(r.dir, "link")); err != nil || l != "a.txt" {
+		t.Errorf("link %q %v", l, err)
+	}
+	fi, err := os.Stat(filepath.Join(r.dir, "run.sh"))
+	if err != nil || fi.Mode().Perm()&0o100 == 0 || readFile(t, filepath.Join(r.dir, "run.sh")) != "#!/bin/sh\necho agent\n" {
+		t.Errorf("run.sh %v %v", fi, err)
+	}
+}
