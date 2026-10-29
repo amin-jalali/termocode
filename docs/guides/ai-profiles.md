@@ -477,6 +477,58 @@ While a planned run goes, the chat shows where it is under its cards:
 `─ run · wave 3/4 · done 2/5 · 2 running ──`. A click on that row opens
 the run in the AGENTS panel.
 
+## Approve the plan
+
+Before a run starts a step that **changes files** or **runs commands**,
+the chat shows the plan and waits for you. A planned run shows it after
+the planner (the planner only reads). A fixed profile, like `review`,
+shows it before its first step.
+
+```text
+ ✦ Approve this plan?
+ Nothing that changes files or runs commands starts before you answer.
+
+ 1. Map the parser · gpt-5-mini
+    only reads
+ 2. Speed up lexer · gpt-5-mini
+    ✎ changes files · ▶ runs commands
+    Make the lexer faster; keep the tests green.
+ If verify fails: Fix · gpt-5-mini
+    ✎ changes files · ▶ runs commands
+
+ Limits: up to 3 rounds of verify and fix · budget $2.00 (it pauses there)
+
+        Deny      Approve      Edit
+```
+
+- **Deny** is first and has the focus, so `Enter` alone never starts a
+  step. `Esc` is Deny too. The run stops and the chat says so.
+- **Approve** runs the plan.
+- **Edit** opens the plan as JSON in the editor. Change a task, title or
+  `deps`, leave a step out to skip it, or add a step with a new `id` and
+  a `prompt`. Save the file: the card comes back with the new plan. When
+  the edit does not fit, the card says why and the plan does not change.
+
+While the run waits, the chat shows **Review plan** and **Deny**, and the
+[AGENTS panel](#the-agents-panel) says `waiting for you` (`a` opens the
+card). **AI: Review Waiting Plan** opens it too.
+
+**Later in the run.** The fix step of [Work until done](#work-until-done)
+is part of the plan you approved: a new round goes on without a new
+question, and the step says so. When a new plan adds steps that change
+files or run commands, the card asks again for those steps.
+
+**After a restart.** The approval is saved with the chat. **↻ Resume**
+does not ask again for a plan you approved. A run that stopped before
+your answer asks again.
+
+**When it asks.** `ai_plan_approval` in `config.json`: `ask` (default)
+asks for plans that change files or run commands, and a read-only plan
+runs at once. `always` asks for every plan. `auto` never asks.
+**AI: Toggle Plan Approval** turns the question off (or on) for the
+current chat only. The AI can not approve its own plan or change this
+setting.
+
 ## The AGENTS panel
 
 To watch every run in one place (all chats, live numbers, Stop, Pause and
@@ -547,6 +599,7 @@ panel.
 | `u` | Switch to [AI: Usage](#see-your-agents-and-what-they-cost) (and back) |
 | `f` | Follow the running step again |
 | `r` | Resume the shown run when termocode's restart interrupted it |
+| `a` | Open the plan card of a run that waits for your approval |
 | `←` / `→` (or `h` / `l`) | Show the previous / next run of this chat |
 | `PgUp` / `PgDn` | Scroll the panel |
 | `Home` | Scroll to the top |
@@ -728,6 +781,9 @@ missing, the round counts as a fail, and the card says
 
 ### Safety
 
+- The plan card asks before the first step that changes files or runs
+  commands (see [Approve the plan](#approve-the-plan)). The fix step is
+  part of that plan.
 - The Fix step may use all tools, so its file changes open the review
   card (or the confirm dialog) as in any chat turn. Nothing is written
   without your answer, unless you auto-approved it.
@@ -1003,6 +1059,7 @@ you change an answer.
 | `ai_models` | `{}` | Your model slots. |
 | `ai_parallel_max` | `1` | How many steps may run at the same time (at most 8). With 1, steps run in order and `deps` is refused. A planned run uses 3 when this is not set. |
 | `ai_worktrees` | `auto` | `auto`: writing steps that run at the same time get [their own worktree](#own-worktrees-for-parallel-steps). `off`: every step works in your tree. |
+| `ai_plan_approval` | `ask` | [Approve the plan](#approve-the-plan): `ask` before steps that change files or run commands, `always` for every plan, `auto` never. |
 | `ai_prices` | `{}` | Price overrides, $ per million tokens. |
 | `ai_context_windows` | `{}` | Context window overrides, in tokens. |
 | `ai_max_steps` | `25` | Tool steps per step (a step's `max_steps` wins). |
