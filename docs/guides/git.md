@@ -108,10 +108,13 @@ Keys on a commit row:
 | `Enter` or `d` | Open the commit view |
 | `y` | Copy the short SHA |
 | `Space` | Mark the commit for compare (see below) |
+| `R` | Rebase from this commit (see [Interactive rebase](#interactive-rebase)) |
+| `F` | Fix the staged changes up into this commit (see [Fixup](#fixup-into-an-older-commit)) |
 | `Esc` | Close the commit view, or clear the compare marks |
 
 Right-click a commit for a menu: **Open Changes**, **Copy Commit Hash**,
-**Copy Commit Message**, **Show Raw (git show)** and **Refresh**.
+**Copy Commit Message**, **Show Raw (git show)**, **Rebase from Here…**
+and **Refresh**.
 
 ## The commit view
 
@@ -162,6 +165,72 @@ The card opens on all changes from the older commit to the newer one. The
 title says `Compare a1b2c3d → f31bb77`. Press `y` (or **Copy range**) to
 copy the range. `Esc` in the sidebar clears a mark.
 
+## Interactive rebase
+
+Clean up your commits before you push: change their order, join them,
+change a message, or remove one.
+
+1. In GRAPH, move to the oldest commit you want to change. Press `R`, or
+   right-click it and pick **Rebase from Here…**. From the palette, run
+   **Git: Interactive Rebase…** and pick the commit.
+2. A card lists that commit and every newer one, oldest first. Each row
+   starts as `pick`. Set an action with one key:
+
+    | Key | Action | What it does |
+    |---|---|---|
+    | `p` | pick | Keep the commit |
+    | `r` | reword | Keep it with a new subject (the body stays). termocode asks for the subject |
+    | `e` | edit | Stop after this commit so you can change it |
+    | `s` | squash | Join it into the row above; keep both messages |
+    | `f` | fixup | Join it into the row above; drop its message |
+    | `d` | drop | Remove the commit |
+
+3. Move a row with `J` / `K` (or `Alt+↓` / `Alt+↑`). Move the cursor with
+   `j` / `k`. The line under the list shows the result, for example
+   `5 commits → 3 commits`.
+4. Press `Enter`. A card says what will happen. **Cancel** is first and has
+   the focus. Pick **Start Rebase** to run it.
+
+Good to know:
+
+- **Already pushed?** When some of the commits are on the upstream branch
+  already, the card warns you. After the rebase you need to force-push.
+  termocode never force-pushes for you.
+- **Uncommitted changes.** The button is then **Stash and Continue**: git
+  puts your changes aside and brings them back after the rebase.
+- **Merge commits** cannot be rebased here yet. termocode says so and
+  does nothing.
+- **Undo.** git keeps the old branch tip. The toast at the end says how to
+  go back: `git reset --hard ORIG_HEAD`.
+
+### When the rebase stops
+
+A conflict, or an `edit` row, stops the rebase. A banner shows at the top
+of the Source Control panel, for example `⇅ Rebasing 1/3 · 1 conflict`.
+
+1. Fix the conflicts as in [Resolve a merge conflict](#resolve-a-merge-conflict).
+   For an `edit` row, change the commit with **Commit (Amend)**.
+2. Press `Enter` on the banner (or run **Git: Rebase in Progress (Continue
+   / Skip / Abort)…**). A card opens:
+    - **Abort** (first, with the focus) puts the branch back as it was.
+    - **Skip** drops the commit the rebase stopped on and goes on.
+    - **Continue** goes on. It stages the files you fixed. It refuses
+      while a file still has conflict markers.
+
+## Fixup into an older commit
+
+You found a small mistake in an older commit. Fix it in the files, then:
+
+1. Stage the fix.
+2. In GRAPH, move to the commit the fix belongs to and press `F`. Or run
+   **Git: Fixup Staged Changes Into…** and pick the commit.
+3. A card says what will happen (Cancel first). Pick **Fixup**.
+
+termocode makes a `fixup!` commit and runs an autosquash rebase: the fix
+ends up inside the older commit and the history keeps its messages. Your
+unstaged changes are stashed and put back (**Stash and Fixup**). The same
+warnings and the same undo apply as for an interactive rebase.
+
 ## Resolve a merge conflict
 
 When a merge or rebase stops with conflicts, a **CONFLICTS** section appears
@@ -175,7 +244,8 @@ at the top of the panel.
     - **Git: Accept Both Changes (Conflict at Cursor)**
 3. Jump to the next conflict with `]x`, or back with `[x` (Normal mode).
 4. Save the file. Press `s` on it in the panel to mark it resolved.
-5. Commit, or continue the rebase in the terminal.
+5. Commit. In an interactive rebase, use **Continue** on the rebase banner
+   (see [When the rebase stops](#when-the-rebase-stops)).
 
 Each accept is one edit, so one `u` brings the markers back.
 
@@ -274,6 +344,8 @@ In the Source Control panel:
 | `d` | Diff (file) or show commit |
 | `y` | Copy the commit's short SHA |
 | `Space` | Mark a commit for compare |
+| `R` | Interactive rebase from the commit |
+| `F` | Fixup staged changes into the commit |
 | `Esc` | Close the commit view / clear marks |
 | `c` | Go to the message box |
 | `x` | Discard changes (asks first) |
