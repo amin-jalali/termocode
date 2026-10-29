@@ -53,6 +53,7 @@ its name and key.
 
 - Ghost-text completion, next edit suggestions, a chat panel and an agent with tools. → [Use AI](guides/ai-use.md)
 - Explain / Fix / Edit / Doc actions that open as a diff before they apply.
+- Agent steps that run at the same time work in their own git worktree; review, merge or discard each one. → [Own worktrees](guides/ai-profiles.md#own-worktrees-for-parallel-steps)
 - Anthropic, OpenAI, OpenRouter, Ollama, LM Studio or any OpenAI-compatible server. → [Set up AI](guides/ai-setup.md)
 
 ![AI chat with a Markdown answer and a code card](assets/screenshots/ai-chat-answer.png)

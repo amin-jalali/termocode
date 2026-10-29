@@ -567,6 +567,55 @@ never prompts or answers. When the run can go on, the status row adds
 redraws once a second only while a run goes and the panel (or the chat)
 is shown; at all other times it uses no CPU.
 
+## Own worktrees for parallel steps
+
+When two steps that may change files run at the same time, each one
+works in its **own git worktree**. They never change the same file, and
+your files stay as they are while they work.
+
+- **When.** In a git repository with at least one commit, for a step
+  that runs in the same wave as another writing step. Read-only steps and
+  steps that run alone work in your tree, as before. Outside a git
+  repository every step works in your tree.
+- **Where.** The worktree is in the repository's git folder
+  (`.git/termocode/worktrees/<id>`), on the branch
+  `termocode/agent-<id>`. It starts from your files as they are now,
+  with edits you did not commit yet. New files git does not track yet are
+  not in it. Your branch, your staged files and your
+  files do not change.
+- **On the card.** The step card shows `⑂ termocode/agent-… · working`.
+  When the step ends it shows `3 files changed` and three buttons:
+
+```text
+ ▸ 3 · Speed up lexer · gpt-5-mini · 14 s · 2 tools
+     ⑂ termocode/agent-r1-lexer · 3 files changed
+      Review   Merge   Discard
+```
+
+- **Review** opens the agent's changes as a diff (read-only).
+- **Merge** writes the changes into your tree, then removes the worktree
+  and its branch. If you changed one of the same files in the meantime,
+  nothing is written. A card shows the files and asks: **Cancel**,
+  **Merge with markers** (both versions with `<<<<<<<` markers, you fix
+  them; the branch stays) or **Keep on branch** (the worktree goes, the
+  work stays on the branch for later).
+- **Discard** asks first (**Cancel** is first and selected). It removes
+  the worktree and the branch. Your files do not change.
+- A step that changed no file has its worktree removed at once.
+- Steps that come later do not see the changes until you merge. They are
+  told so, with the worktree path.
+
+In the AGENTS panel the card shows `⑂ 3 files changed`; `w` opens the
+same Review / Merge / Discard card for the selected step.
+
+**Left-over worktrees.** If termocode stops while a step works, its card
+offers Review, Merge and Discard when you open the chat again.
+**AI: Agent Worktrees…** lists every agent worktree of the repository,
+also ones from other chats. Nothing is deleted without a card that asks.
+
+**Turn it off.** **AI: Toggle Agent Worktrees**, or `"ai_worktrees": "off"`
+in `config.json`. Then every step works in your tree.
+
 ## Budget pause
 
 Set `budget_usd` on a profile to cap what one run may cost. When the
@@ -953,6 +1002,7 @@ you change an answer.
 |---|---|---|
 | `ai_models` | `{}` | Your model slots. |
 | `ai_parallel_max` | `1` | How many steps may run at the same time (at most 8). With 1, steps run in order and `deps` is refused. A planned run uses 3 when this is not set. |
+| `ai_worktrees` | `auto` | `auto`: writing steps that run at the same time get [their own worktree](#own-worktrees-for-parallel-steps). `off`: every step works in your tree. |
 | `ai_prices` | `{}` | Price overrides, $ per million tokens. |
 | `ai_context_windows` | `{}` | Context window overrides, in tokens. |
 | `ai_max_steps` | `25` | Tool steps per step (a step's `max_steps` wins). |
