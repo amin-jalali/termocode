@@ -15,6 +15,10 @@ import (
 // ErrNoLineChange means the chosen lines hold no change.
 var ErrNoLineChange = errors.New("no change on the selected lines")
 
+// ErrLineNewline means the chosen lines cannot be cut out of a change at
+// the end of a file that has no final newline: choose the whole change.
+var ErrLineNewline = errors.New("this change touches the end of the file, which has no final newline; choose all the changed lines around it, or stage the hunk")
+
 // diffHunk is one parsed hunk of a file diff.
 type diffHunk struct {
 	oldStart, oldCount int
@@ -92,7 +96,10 @@ func BuildLinePatch(diff string, from, to int, reverse bool) (string, error) {
 	var out []string
 	delta := 0 // lines the earlier kept hunks add to the new side
 	for _, h := range hunks {
-		body, oldN, newN, ok := selectLines(h, from, to, reverse)
+		body, oldN, newN, ok, err := selectLines(h, from, to, reverse)
+		if err != nil {
+			return "", err
+		}
 		if !ok {
 			continue
 		}
@@ -115,8 +122,10 @@ func BuildLinePatch(diff string, from, to int, reverse bool) (string, error) {
 
 // selectLines keeps the chosen changes of one hunk and turns the others into
 // context or drops them. ok is false when the hunk holds no chosen change.
-func selectLines(h diffHunk, from, to int, reverse bool) (body []string, oldN, newN int, ok bool) {
+func selectLines(h diffHunk, from, to int, reverse bool) (body []string, oldN, newN int, ok bool, err error) {
 	n := h.newStart
+	prev := lineKept // what became of the line before a "\\" mark
+	badMark := -1    // body index of a mark that can not stay
 	for i, l := range h.body {
 		if l == "" {
 			l = " " // a blank context line some tools strip
@@ -124,18 +133,23 @@ func selectLines(h diffHunk, from, to int, reverse bool) (body []string, oldN, n
 		switch l[0] {
 		case ' ':
 			body = append(body, l)
+			prev = lineKept
 			oldN++
 			newN++
 			n++
 		case '+':
 			if n >= from && n <= to {
 				body = append(body, l)
+				prev = lineKept
 				newN++
 				ok = true
 			} else if reverse {
 				body = append(body, " "+l[1:])
+				prev = lineContext
 				oldN++
 				newN++
+			} else {
+				prev = lineDropped
 			}
 			n++
 		case '-':
@@ -143,17 +157,40 @@ func selectLines(h diffHunk, from, to int, reverse bool) (body []string, oldN, n
 			// them, so the last line before them chooses them too.
 			if (n >= from && n <= to) || (onlyRemovals(h.body[i:]) && n-1 >= from && n-1 <= to) {
 				body = append(body, l)
+				prev = lineKept
 				oldN++
 				ok = true
 			} else if !reverse {
 				body = append(body, " "+l[1:])
+				prev = lineContext
 				oldN++
 				newN++
+			} else {
+				prev = lineDropped
 			}
+		case '\\':
+			// "\ No newline at end of file" belongs to the line before it.
+			switch prev {
+			case lineDropped:
+				continue
+			case lineContext:
+				badMark = len(body)
+			}
+			body = append(body, l)
 		}
 	}
-	return body, oldN, newN, ok
+	if badMark >= 0 && badMark < len(body)-1 {
+		return nil, 0, 0, false, ErrLineNewline
+	}
+	return body, oldN, newN, ok, nil
 }
+
+// What became of a changed line when the patch was cut.
+const (
+	lineKept = iota
+	lineContext
+	lineDropped
+)
 
 // onlyRemovals tells that nothing but removed lines (and their no-newline
 // marks) are left in the hunk: the removal runs to the end of the file.

@@ -129,3 +129,47 @@ func TestStageLinesCRLF(t *testing.T) {
 		t.Errorf("worktree keeps CRLF: %q", got)
 	}
 }
+
+func TestStageLinesNoNewlineAtEnd(t *testing.T) {
+	r := newGitTestRepo(t)
+	r.write(t, "n.txt", "a\nb\nc") // no newline at the end
+	r.git(t, "add", "n.txt")
+	r.git(t, "commit", "-q", "-m", "init")
+
+	// A line added before the unterminated last line.
+	r.write(t, "n.txt", "a\nNEW\nb\nc")
+	if err := StageLines(r.dir, "n.txt", 2, 2); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.indexText(t, "n.txt"); got != "a\nNEW\nb\nc" {
+		t.Errorf("index: %q", got)
+	}
+
+	// The last line changes and gets its newline: choose only the new text.
+	r.write(t, "n.txt", "a\nNEW\nb\nC\n")
+	if err := StageLines(r.dir, "n.txt", 4, 4); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.indexText(t, "n.txt"); got != "a\nNEW\nb\nC\n" {
+		t.Errorf("index: %q", got)
+	}
+}
+
+func TestStageLinesAppendAfterNoNewline(t *testing.T) {
+	r := newGitTestRepo(t)
+	r.write(t, "n.txt", "a\nb") // no newline at the end
+	r.git(t, "add", "n.txt")
+	r.git(t, "commit", "-q", "-m", "init")
+	r.write(t, "n.txt", "a\nb\nc\nd\n")
+	// Staging only "d" cannot keep "b" without its newline and add "c" later.
+	// Staging "c" and "d" together works.
+	if err := StageLines(r.dir, "n.txt", 4, 4); err != ErrLineNewline {
+		t.Fatalf("staging only the last of two appended lines: err = %v", err)
+	}
+	if err := StageLines(r.dir, "n.txt", 2, 4); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.indexText(t, "n.txt"); got != "a\nb\nc\nd\n" {
+		t.Errorf("index: %q", got)
+	}
+}
