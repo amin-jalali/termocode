@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/fs"
 	"strings"
+	"sync/atomic"
 
 	"github.com/amin-jalali/termocode/internal/containerhost"
 	"github.com/amin-jalali/termocode/internal/workspace"
@@ -21,11 +22,18 @@ import (
 type remoteFiles struct {
 	fs    workspace.FS
 	label string
+	// owner is the uid new files get (nil = unknown).
+	owner      func() (uid, gid int, ok bool)
+	rootWarned atomic.Bool
 }
 
 // newRemoteFiles serves the files of ws (a container workspace).
 func newRemoteFiles(ws workspace.Workspace) *remoteFiles {
-	return &remoteFiles{fs: ws.Host.FS(), label: ws.Host.Label()}
+	r := &remoteFiles{fs: ws.Host.FS(), label: ws.Host.Label()}
+	if o, ok := ws.Host.(interface{ Owner() (int, int, bool) }); ok {
+		r.owner = o.Owner
+	}
+	return r
 }
 
 // read is the text of p: {ok, text, new}; new = the file is not there
@@ -41,13 +49,26 @@ func (r *remoteFiles) read(p string) map[string]any {
 	return map[string]any{"ok": false, "err": remoteErrText(r.label, err)}
 }
 
-// write saves text to p: {ok, warn}. On failure {ok=false, err}:
-// nothing is changed in the editor.
+// write saves text to p: {ok, warn}. A new file written as root is
+// accepted with one warning per session (plan decision 1). On failure
+// {ok=false, err}: nothing is changed in the editor.
 func (r *remoteFiles) write(p, text string) map[string]any {
-	if err := r.fs.WriteFile(context.Background(), p, []byte(text), 0o644); err != nil {
+	ctx := context.Background()
+	asRoot := false
+	if r.owner != nil && !r.rootWarned.Load() {
+		if uid, _, ok := r.owner(); ok && uid == 0 {
+			_, err := r.fs.Stat(ctx, p)
+			asRoot = errors.Is(err, fs.ErrNotExist)
+		}
+	}
+	if err := r.fs.WriteFile(ctx, p, []byte(text), 0o644); err != nil {
 		return map[string]any{"ok": false, "err": remoteErrText(r.label, err)}
 	}
-	return map[string]any{"ok": true, "warn": ""}
+	warn := ""
+	if asRoot && r.rootWarned.CompareAndSwap(false, true) {
+		warn = "New files in " + r.label + " are owned by root."
+	}
+	return map[string]any{"ok": true, "warn": warn}
 }
 
 // remoteErrText is one short sentence for a failed file call on the

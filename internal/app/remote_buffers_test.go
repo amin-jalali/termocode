@@ -4,6 +4,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/amin-jalali/termocode/internal/containerhost/fakedocker"
 )
 
 func TestRemoteFilesReadsAndWritesTheContainer(t *testing.T) {
@@ -46,5 +48,32 @@ func TestRemoteFilesRefusesPathsOutsideTheRoot(t *testing.T) {
 	r := newRemoteFiles(ws)
 	if got := r.read("/etc/passwd"); got["ok"] != false || got["err"] != "The path is outside the workspace." {
 		t.Fatalf("read = %v", got)
+	}
+}
+
+// Plan decision 1: a new file written as root is accepted, with one
+// warning per session.
+func TestRemoteFilesWarnsOnceAboutRootOwnedNewFiles(t *testing.T) {
+	ws, _, _, _ := fakeContainerWS(t, func(c *fakedocker.Container) { c.NoShell() }) // runs as root
+	r := newRemoteFiles(ws)
+	res := r.write("/app/new.go", "package main\n")
+	if res["ok"] != true || !strings.Contains(res["warn"].(string), "root") {
+		t.Fatalf("first new file = %v", res)
+	}
+	if res := r.write("/app/other.go", "x\n"); res["ok"] != true || res["warn"] != "" {
+		t.Fatalf("second new file warned again: %v", res)
+	}
+	if res := r.write("/app/main.go", "x\n"); res["warn"] != "" {
+		t.Fatalf("existing file warned: %v", res)
+	}
+}
+
+func TestRemoteFilesNoRootWarningForAnotherUser(t *testing.T) {
+	ws, h, _, _ := fakeContainerWS(t)
+	if uid, _, ok := h.Owner(); !ok || uid == 0 {
+		t.Skip("the test runs as root")
+	}
+	if res := newRemoteFiles(ws).write("/app/new.go", "x\n"); res["ok"] != true || res["warn"] != "" {
+		t.Fatalf("write = %v", res)
 	}
 }
