@@ -19,9 +19,12 @@ import (
 
 type containerEventMsg struct {
 	gen    uint64
-	event  containers.Event
+	events []containers.Event // one burst: the first event and those already waiting
 	closed bool
 }
+
+// maxEventBurst caps the events taken in one message.
+const maxEventBurst = 256
 
 func (st *servicesState) stopHostWatch() {
 	if st.hostWatchStop != nil {
@@ -79,11 +82,42 @@ func waitContainerEvent(ctx context.Context, ch <-chan containers.Event, gen uin
 	return func() tea.Msg {
 		select {
 		case ev, ok := <-ch:
-			return containerEventMsg{gen: gen, event: ev, closed: !ok}
+			if !ok {
+				return containerEventMsg{gen: gen, closed: true}
+			}
+			// Take the events already waiting too: a burst (compose
+			// up of many services) lists the sections once.
+			msg := containerEventMsg{gen: gen, events: []containers.Event{ev}}
+			for len(msg.events) < maxEventBurst {
+				select {
+				case ev, ok := <-ch:
+					if !ok {
+						return msg // the next wait reports the end
+					}
+					msg.events = append(msg.events, ev)
+				default:
+					return msg
+				}
+			}
+			return msg
 		case <-ctx.Done():
 			return containerEventMsg{gen: gen, closed: true}
 		}
 	}
+}
+
+// containerEventKinds are the object kinds a burst touched (an event
+// without a type counts as a container event).
+func containerEventKinds(events []containers.Event) map[string]bool {
+	kinds := map[string]bool{}
+	for _, ev := range events {
+		k := ev.Type
+		if k == "" {
+			k = "container"
+		}
+		kinds[k] = true
+	}
+	return kinds
 }
 
 func (m *Model) onContainerEvent(msg containerEventMsg) tea.Cmd {
@@ -95,24 +129,26 @@ func (m *Model) onContainerEvent(msg containerEventMsg) tea.Cmd {
 		st.stopHostWatch()
 		return tea.Batch(m.containersReloadAll(), m.startHostWatch())
 	}
+	kinds := containerEventKinds(msg.events)
 	var cmds []tea.Cmd
-	if msg.event.Type == "container" || msg.event.Type == "" {
+	if kinds["container"] {
 		cmds = append(cmds, m.containersRefresh("containers"))
 		if st.sectionShown("project") {
 			cmds = append(cmds, m.servicesRefresh())
 		}
 	}
-	switch msg.event.Type {
-	case "image":
+	if kinds["image"] {
 		if !st.hostSectionVisible("images") && st.anyRegistryExpanded() {
 			cmds = append(cmds, m.containersList("images"))
 		} else {
 			cmds = append(cmds, m.containersRefresh("images"))
 		}
-	case "network":
+	}
+	if kinds["network"] {
 		st.clearStorageInspect("network")
 		cmds = append(cmds, m.containersRefresh("networks"))
-	case "volume":
+	}
+	if kinds["volume"] {
 		st.clearStorageInspect("volume")
 		cmds = append(cmds, m.containersRefresh("volumes"))
 	}

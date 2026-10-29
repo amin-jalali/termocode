@@ -167,3 +167,36 @@ func TestContainersDetectListsInParallel(t *testing.T) {
 		t.Errorf("loaded %v", msg.loaded)
 	}
 }
+
+// PERF-5: a burst of engine events (compose up of many projects) is
+// taken as one message: the events already waiting come together, so
+// the view lists its sections once per burst, not once per event. An
+// event of a kind that is not in the burst lists nothing.
+func TestContainerEventBurstIsOneMessage(t *testing.T) {
+	ch := make(chan containers.Event, 64)
+	for i := 0; i < 40; i++ {
+		ch <- containers.Event{Type: "container", Action: "start"}
+	}
+	ch <- containers.Event{Type: "network", Action: "create"}
+	msg := waitContainerEvent(context.Background(), ch, 7)().(containerEventMsg)
+	if msg.closed || msg.gen != 7 || len(msg.events) != 41 {
+		t.Fatalf("closed %v gen %d, %d events (want 41 in one message)", msg.closed, msg.gen, len(msg.events))
+	}
+	if len(ch) != 0 {
+		t.Errorf("%d events left behind", len(ch))
+	}
+	kinds := containerEventKinds(msg.events)
+	if !kinds["container"] || !kinds["network"] || kinds["image"] || kinds["volume"] {
+		t.Errorf("kinds %v", kinds)
+	}
+	// A closed stream after the waiting events: the events come first.
+	ch <- containers.Event{Type: "image"}
+	close(ch)
+	msg = waitContainerEvent(context.Background(), ch, 7)().(containerEventMsg)
+	if len(msg.events) != 1 || msg.closed {
+		t.Fatalf("events %d closed %v", len(msg.events), msg.closed)
+	}
+	if msg = waitContainerEvent(context.Background(), ch, 7)().(containerEventMsg); !msg.closed {
+		t.Fatal("the closed stream was not reported")
+	}
+}
