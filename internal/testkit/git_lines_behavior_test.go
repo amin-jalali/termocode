@@ -176,3 +176,17 @@ func TestStageLineRefusesUnsavedEdits(t *testing.T) {
 		t.Errorf("nothing may be staged: %q", got)
 	}
 }
+
+func TestAltShiftSStagesTheLineAndAltShiftUUnstagesIt(t *testing.T) {
+	d := linesDriver(t)
+	gotoLine(d, "2")
+	d.Key("alt+S")
+	if !eventually(d, func() bool { return gitOut(d, "show", ":f.txt") == "l1\nX2\nl3\nl4\nl5\nl6" }) {
+		t.Fatalf("Alt+Shift+S: index %q", gitOut(d, "show", ":f.txt"))
+	}
+	gotoLine(d, "2")
+	d.Key("alt+U")
+	if !eventually(d, func() bool { return gitOut(d, "diff", "--cached", "--name-only") == "" }) {
+		t.Fatalf("Alt+Shift+U: still staged %q", gitOut(d, "diff", "--cached", "--name-only"))
+	}
+}

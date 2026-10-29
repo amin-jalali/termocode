@@ -302,6 +302,8 @@ var actionNames = map[Action]string{
 	ActionStageHunk:                "StageHunk",
 	ActionUnstageHunk:              "UnstageHunk",
 	ActionDiscardHunk:              "DiscardHunk",
+	ActionStageLines:               "StageLines",
+	ActionUnstageLines:             "UnstageLines",
 	ActionReloadBuffer:             "ReloadBuffer",
 	ActionOpenURL:                  "OpenURL",
 	ActionPinTab:                   "PinTab",

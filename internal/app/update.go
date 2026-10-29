@@ -1896,6 +1896,10 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.gitUnstageHunk()
 	case keymap.ActionDiscardHunk:
 		return m, m.gitDiscardHunk()
+	case keymap.ActionStageLines:
+		return m, m.gitStageLines()
+	case keymap.ActionUnstageLines:
+		return m, m.gitUnstageLines()
 	case keymap.ActionReloadBuffer:
 		return m, m.reloadBuffer()
 	case keymap.ActionOpenURL:

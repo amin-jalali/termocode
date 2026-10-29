@@ -91,6 +91,8 @@ var actionInfo = map[Action]ActionInfo{
 	ActionStageHunk:    {"Git", "Stage the hunk at the cursor."},
 	ActionUnstageHunk:  {"Git", "Unstage the hunk at the cursor."},
 	ActionDiscardHunk:  {"Git", "Discard the hunk at the cursor."},
+	ActionStageLines:   {"Git", "Stage the cursor line, or the selected lines."},
+	ActionUnstageLines: {"Git", "Unstage the cursor line, or the selected lines."},
 
 	ActionDebugToggleBreakpoint: {"Debug", "Toggle a breakpoint on the current line."},
 	ActionDebugStepOver:         {"Debug", "Step over the current line."},

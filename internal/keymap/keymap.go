@@ -71,6 +71,8 @@ const (
 	ActionStageHunk
 	ActionUnstageHunk
 	ActionDiscardHunk
+	ActionStageLines
+	ActionUnstageLines
 	ActionReloadBuffer
 	ActionOpenURL
 	ActionPinTab
@@ -463,6 +465,10 @@ func Default() KeyMap {
 			"alt+[": ActionPrevHunk,
 			"alt+s": ActionStageHunk,
 			"alt+u": ActionUnstageHunk,
+			// Alt+Shift+S / U: the same for the cursor line or the selected
+			// lines only (arrives as "alt+S" / "alt+U" on legacy terminals).
+			"alt+S": ActionStageLines,
+			"alt+U": ActionUnstageLines,
 
 			// Pin / unpin the active tab — VSCode uses Ctrl+K Shift+Enter
 			// (chord) which we can't represent. Alt+P is universally free

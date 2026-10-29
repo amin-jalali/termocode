@@ -86,6 +86,8 @@ var paletteActions = map[string]keymap.Action{
 	"git-stage-hunk":              keymap.ActionStageHunk,
 	"git-unstage-hunk":            keymap.ActionUnstageHunk,
 	"git-discard-hunk":            keymap.ActionDiscardHunk,
+	"git-stage-lines":             keymap.ActionStageLines,
+	"git-unstage-lines":           keymap.ActionUnstageLines,
 	"code-actions":                keymap.ActionCodeActions,
 	"code-action-apply-preferred": keymap.ActionApplyPreferredCodeAction,
 	"goto-symbol-file":            keymap.ActionGotoSymbolInFile,

@@ -84,7 +84,9 @@ These are the default keys. The **Key** column is the key you press. The **Key s
 | `Alt+]` | `alt+]` | `NextHunk` | Go to the next changed block (hunk). |
 | `Alt+[` | `alt+[` | `PrevHunk` | Go to the previous changed block (hunk). |
 | `Alt+S` | `alt+s` | `StageHunk` | Stage the hunk at the cursor. |
+| `Alt+Shift+S` | `alt+S` | `StageLines` | Stage the cursor line, or the selected lines. |
 | `Alt+U` | `alt+u` | `UnstageHunk` | Unstage the hunk at the cursor. |
+| `Alt+Shift+U` | `alt+U` | `UnstageLines` | Unstage the cursor line, or the selected lines. |
 
 ## Debug
 
