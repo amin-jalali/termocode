@@ -25,13 +25,27 @@ type SSHOpts struct {
 	Dir    string   // folder on the far side ("" = the login folder)
 	In     *os.File
 	Out    *os.File
+	// Reconnect: when the link drops, run ssh again with the same
+	// arguments until it is back or the user quits (auto_reconnect).
+	Reconnect bool
 }
+
+// msgSSHLeft is what termocode ssh prints when the user leaves while the
+// link is down.
+const msgSSHLeft = "termocode: left; the session keeps running on the far side. Run the same termocode ssh command to go back."
+
+// msgSSHDropped is printed when the link dropped and reconnecting is off.
+const msgSSHDropped = "termocode: the connection dropped; the session keeps running on the far side. Run the same termocode ssh command to go back."
 
 // sshAttempt is how one ssh connection ended.
 type sshAttempt struct {
 	code int  // ssh's exit code
 	quit bool // the user or a signal ended termocode ssh: stop here
 }
+
+// lost reports whether the link was lost (ssh says 255) rather than the
+// far termocode ending (its own exit code).
+func (a sshAttempt) lost() bool { return a.code == 255 }
 
 // sshTerm is the local terminal side of RunSSH, shared by its attempts.
 type sshTerm struct {
@@ -40,6 +54,13 @@ type sshTerm struct {
 	keys <-chan []byte
 	sigs <-chan os.Signal
 	seen *Modes // the far UI's terminal modes, to undo them on a lost link
+
+	everUp  bool      // a far termocode answered once: reconnecting makes sense
+	offline bool      // the link is down; reconnecting
+	since   time.Time // when it went down
+	dropped bool      // keys typed while offline were dropped
+	tries   int       // the reconnect attempt shown
+	unicode bool      // the local terminal takes UTF-8
 }
 
 // RunSSH runs ssh to the far side's termocode session in a PTY and relays
@@ -63,8 +84,76 @@ func RunSSH(o SSHOpts) int {
 	defer signal.Stop(sigs)
 	stop := make(chan struct{})
 	defer close(stop)
-	t := &sshTerm{o: o, out: &lockedWriter{w: o.Out}, keys: readKeys(o.In, stop), sigs: sigs, seen: NewModes()}
-	return t.attempt("").code
+	local := EnvCaps(os.Getenv)
+	t := &sshTerm{o: o, out: &lockedWriter{w: o.Out}, keys: readKeys(o.In, stop), sigs: sigs, seen: NewModes(),
+		unicode: clientUnicode(&local)}
+	reconnected := ""
+	for {
+		a := t.attempt(reconnected)
+		if a.quit || !a.lost() || !t.everUp {
+			return a.code
+		}
+		if !o.Reconnect {
+			t.leave(msgSSHDropped)
+			return a.code
+		}
+		if !t.offline {
+			t.offline, t.since, t.dropped, t.tries = true, time.Now(), false, 0
+		}
+		t.tries++
+		t.drawOffline()
+		if t.tries > 1 && t.wait(reconnectDelay(t.tries-1)) {
+			t.leave(msgSSHLeft)
+			return 0
+		}
+		reconnected = fmt.Sprintf("%ds", int(time.Since(t.since).Round(time.Second)/time.Second))
+		if t.dropped {
+			reconnected += ",dropped"
+		}
+	}
+}
+
+// leave puts the terminal back to normal and prints msg.
+func (t *sshTerm) leave(msg string) {
+	_, _ = t.out.Write(append(t.seen.Reset(), plainReset+msg+"\r\n"...))
+}
+
+// drawOffline draws the offline status line.
+func (t *sshTerm) drawOffline() {
+	cols, rows := t.size()
+	_, _ = t.out.WriteString(offlineLine(t.tries, cols, rows, t.unicode))
+}
+
+// offlineKey handles keys typed while the link is down: Ctrl+C asks to
+// quit, the rest is dropped (and noted).
+func (t *sshTerm) offlineKey(k []byte) (quit bool) {
+	if offlineQuit(k) {
+		return true
+	}
+	t.dropped = t.dropped || offlineKeys(k)
+	return false
+}
+
+// wait waits d before the next attempt; it reports whether the user
+// quit meanwhile.
+func (t *sshTerm) wait(d time.Duration) (quit bool) {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	for {
+		select {
+		case <-timer.C:
+			return false
+		case k, ok := <-t.keys:
+			if !ok || t.offlineKey(k) {
+				return true
+			}
+		case s := <-t.sigs:
+			if s != syscall.SIGWINCH {
+				return true
+			}
+			t.drawOffline()
+		}
+	}
 }
 
 // readKeys reads the terminal until it ends (the channel closes) or stop.
@@ -137,13 +226,27 @@ func (t *sshTerm) attempt(reconnected string) sshAttempt {
 				kill()
 				continue
 			}
+			if t.offline {
+				if t.offlineKey(k) {
+					kill()
+					<-exited
+					t.leave(msgSSHLeft)
+					return sshAttempt{code: 0, quit: true}
+				}
+				continue
+			}
 			_, _ = ptmx.Write(k)
 		case b, ok := <-output:
 			if !ok {
 				output = nil
 				continue
 			}
-			b, _ = link.Filter(b)
+			b, found := link.Filter(b)
+			for _, i := range found {
+				if i == 0 { // linkHello: the far termocode is there
+					t.everUp, t.offline = true, false
+				}
+			}
 			if len(b) > 0 {
 				t.seen.Feed(b)
 				_, _ = t.out.Write(b)

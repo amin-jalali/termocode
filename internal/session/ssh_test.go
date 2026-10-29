@@ -141,3 +141,86 @@ func TestRunSSHRelays(t *testing.T) {
 		t.Errorf("ssh runs: %q", runs)
 	}
 }
+
+// TestRunSSHReconnects: the link drops (ssh exits 255); termocode ssh
+// keeps the screen, shows the offline line and runs ssh again with the
+// same arguments, telling the far side it reconnected.
+func TestRunSSHReconnects(t *testing.T) {
+	f := newFakeSSH(t)
+	keys, out, code := f.run(SSHOpts{Args: []string{"-p", "2222", "me@box"}, Reconnect: true})
+	waitFor(t, "the far side", func() bool { return strings.Contains(readOut(out), "remote-args:--link") })
+	_, _ = keys.WriteString("D")
+	waitFor(t, "the second connection", func() bool { return strings.Contains(readOut(out), "remote-args:--link --reconnected=") })
+	runs := f.runs()
+	if len(runs) != 2 || !strings.HasPrefix(runs[1], strings.Split(runs[0], " -- ")[0]) {
+		t.Errorf("ssh runs: %q", runs)
+	}
+	if got := readOut(out); !strings.Contains(got, "Reconnecting") || strings.Contains(got, "\x1b[?1049l") {
+		t.Errorf("no offline line, or the screen was left: %q", got)
+	}
+	_, _ = keys.WriteString("q")
+	if got := waitCode(t, code); got != 3 {
+		t.Errorf("exit code %d, want 3", got)
+	}
+}
+
+// TestRunSSHOfflineCtrlC: while the far side cannot be reached, attempts
+// go on with a growing wait; keys are not sent, and Ctrl+C leaves.
+func TestRunSSHOfflineCtrlC(t *testing.T) {
+	f := newFakeSSH(t)
+	keys, out, code := f.run(SSHOpts{Reconnect: true})
+	waitFor(t, "the far side", func() bool { return strings.Contains(readOut(out), "remote-args:") })
+	f.set("fail", true)
+	_, _ = keys.WriteString("D")
+	waitFor(t, "a failed attempt", func() bool { return strings.Contains(readOut(out), "(attempt 2)") })
+	_, _ = keys.WriteString("typed")
+	_, _ = keys.WriteString("\x03")
+	if got := waitCode(t, code); got != 0 {
+		t.Errorf("exit code %d, want 0", got)
+	}
+	got := readOut(out)
+	if !strings.Contains(got, "session keeps running") {
+		t.Errorf("no goodbye: %q", got)
+	}
+	if strings.Contains(got, "got:typed") {
+		t.Errorf("a key typed offline was sent")
+	}
+	if n := len(f.runs()); n > 3 {
+		t.Errorf("%d ssh runs in about a second, want a wait between them", n)
+	}
+}
+
+// TestRunSSHFirstConnectFails: a destination that never answered (a
+// typo, a wrong password) is not retried; ssh's code comes back.
+func TestRunSSHFirstConnectFails(t *testing.T) {
+	f := newFakeSSH(t)
+	f.set("fail", true)
+	_, out, code := f.run(SSHOpts{Reconnect: true})
+	if got := waitCode(t, code); got != 255 {
+		t.Errorf("exit code %d, want ssh's 255", got)
+	}
+	if n := len(f.runs()); n != 1 {
+		t.Errorf("%d ssh runs, want 1", n)
+	}
+	if got := readOut(out); !strings.Contains(got, "Network is unreachable") || strings.Contains(got, "Reconnecting") {
+		t.Errorf("output %q", got)
+	}
+}
+
+// TestRunSSHNoReconnect: with auto_reconnect off a dropped link ends
+// termocode ssh with a word on how to go back.
+func TestRunSSHNoReconnect(t *testing.T) {
+	f := newFakeSSH(t)
+	keys, out, code := f.run(SSHOpts{})
+	waitFor(t, "the far side", func() bool { return strings.Contains(readOut(out), "remote-args:") })
+	_, _ = keys.WriteString("D")
+	if got := waitCode(t, code); got != 255 {
+		t.Errorf("exit code %d, want 255", got)
+	}
+	if got := readOut(out); !strings.Contains(got, "connection dropped") {
+		t.Errorf("output %q", got)
+	}
+	if n := len(f.runs()); n != 1 {
+		t.Errorf("%d ssh runs, want 1", n)
+	}
+}
