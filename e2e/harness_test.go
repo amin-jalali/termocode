@@ -451,6 +451,12 @@ func (tm *Term) Resize(cols, rows int) {
 // WaitFor polls until cond(lines) is true or the timeout hits.
 func (tm *Term) WaitFor(what string, timeout time.Duration, cond func(lines []string) bool) {
 	tm.t.Helper()
+	tm.waitForEvery(what, 20*time.Millisecond, timeout, cond)
+}
+
+// waitForEvery is WaitFor checking the screen every step.
+func (tm *Term) waitForEvery(what string, step, timeout time.Duration, cond func(lines []string) bool) {
+	tm.t.Helper()
 	deadline := time.Now().Add(timeout)
 	for {
 		if cond(tm.Lines()) {
@@ -464,7 +470,7 @@ func (tm *Term) WaitFor(what string, timeout time.Duration, cond func(lines []st
 		if time.Now().After(deadline) {
 			tm.t.Fatalf("timeout after %s waiting for %s\nscreen:\n%s", timeout, what, tm.Screen())
 		}
-		time.Sleep(20 * time.Millisecond)
+		time.Sleep(step)
 	}
 }
 

@@ -69,13 +69,14 @@ func perfCheck(t *testing.T, name string, got float64) {
 }
 
 // Startup to the first full frame (tab bar and status bar drawn): the
-// median of three starts.
+// median of five starts. The screen is checked every millisecond: with
+// WaitFor's 20 ms steps a start read as 21, 41 or 61 ms.
 func TestPerfStartupFirstFrame(t *testing.T) {
 	perfRequire(t)
 	var took []time.Duration
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 		tm := Start(t, StartOpts{})
-		tm.WaitFor("status bar", bootTimeout, func(ls []string) bool {
+		tm.waitForEvery("status bar", time.Millisecond, bootTimeout, func(ls []string) bool {
 			return mainFrame.Top(ls[0]) && mainFrame.Bottom(ls[len(ls)-1])
 		})
 		took = append(took, time.Since(tm.started))
@@ -87,7 +88,7 @@ func TestPerfStartupFirstFrame(t *testing.T) {
 		tm.Quit()
 	}
 	slices.Sort(took)
-	perfCheck(t, "startup_first_frame", float64(took[1].Milliseconds()))
+	perfCheck(t, "startup_first_frame", float64(took[len(took)/2].Milliseconds()))
 }
 
 // Memory of one idle session: the client, the session server and all
