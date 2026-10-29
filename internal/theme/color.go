@@ -216,9 +216,6 @@ func FgSeq(c Color256) string { v := ToRGB(c); return SGR(&v, nil) }
 // BgSeq: see FgSeq.
 func BgSeq(c Color256) string { v := ToRGB(c); return SGR(nil, &v) }
 
-// BgSeqMix is BgSeq of a blend of two tokens.
-func BgSeqMix(a, b Color256, t float64) string { v := Lerp(ToRGB(a), ToRGB(b), t); return SGR(nil, &v) }
-
 func xterm256(n int) RGB {
 	if n < 0 || n > 255 {
 		return RGB{}

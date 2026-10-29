@@ -259,13 +259,3 @@ var rosePineDawn = Spec{
 
 // SpecThemes lists the Spec-based built-ins (registered in allThemes).
 var SpecThemes = []Spec{catppuccinMocha, catppuccinLatte, tokyoNight, rosePine, rosePineDawn}
-
-// LookupSpec returns the Spec behind a Spec theme id.
-func LookupSpec(id string) (Spec, bool) {
-	for _, s := range SpecThemes {
-		if s.ID == normalizeThemeID(id) {
-			return s, true
-		}
-	}
-	return Spec{}, false
-}

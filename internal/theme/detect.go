@@ -3,10 +3,8 @@ package theme
 import (
 	"os"
 	"strings"
-	"time"
 
 	"github.com/muesli/termenv"
-	"golang.org/x/term"
 
 	"github.com/amin-jalali/termocode/internal/nerdterm"
 )
@@ -22,7 +20,7 @@ import (
 //     dumb / vt*, or a non-UTF-8 locale); else the Unicode set, which
 //     renders in every modern terminal font. unicodeOK, when
 //     given, can veto Unicode (a width probe that saw wide glyphs); the
-//     app passes nil, since ProbeUnicode is not run at startup.
+//     app passes nil, since no width probe runs.
 func ResolveIconMode(setting string, termNerdFont bool, unicodeOK func() bool, getenv func(string) string) IconMode {
 	if getenv == nil {
 		getenv = os.Getenv
@@ -79,39 +77,6 @@ func unicodeTerminal(getenv func(string) string) bool {
 	for _, k := range []string{"LC_ALL", "LC_CTYPE", "LANG"} {
 		if v := strings.ToLower(getenv(k)); v != "" {
 			return strings.Contains(v, "utf-8") || strings.Contains(v, "utf8")
-		}
-	}
-	return true
-}
-
-// ProbeUnicode measures every Unicode icon on the real terminal (CSI 6n
-// before / after each glyph) and reports whether all of them draw one cell
-// wide. It switches the TTY to raw mode itself and must run before Bubble
-// Tea starts. Output is hidden behind save / restore cursor and erased.
-//
-// Not called at startup, and not usable as is: readCPR relies on
-// os.Stdin.SetReadDeadline, which a TTY does not support ("file type does
-// not support deadline"), so this returns false at once without
-// measuring anything. Port it to a poll-based read (termimg.readSome)
-// before wiring it in.
-func ProbeUnicode(timeout time.Duration) bool {
-	in, out, ok := probeStreams()
-	if !ok {
-		return false
-	}
-	state, err := term.MakeRaw(int(in.Fd()))
-	if err != nil {
-		return false
-	}
-	defer func() { _ = term.Restore(int(in.Fd()), state) }()
-	deadline := time.Now().Add(timeout)
-	_, _ = out.WriteString("\x1b7")
-	defer func() { _, _ = out.WriteString("\r\x1b[2K\x1b8") }()
-	glyphs := append(unicodeCandidates(), unicodeFileGlyphs()...)
-	for _, g := range glyphs {
-		w, ok := probeGlyph(in, out, g, deadline)
-		if !ok || w != 1 {
-			return false
 		}
 	}
 	return true
