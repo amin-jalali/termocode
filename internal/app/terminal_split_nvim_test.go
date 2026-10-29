@@ -117,3 +117,40 @@ func TestFocusFollowsPanes(t *testing.T) {
 		t.Error("a window that is not a pane must not count as the terminal")
 	}
 }
+
+func TestClosePaneKeepsTheOtherShell(t *testing.T) {
+	m := splitTestModel(t, 120, 30)
+	m.splitTerminalPane(paneRight)
+	first := m.terminalTabs[0].BufID
+	second := m.terminalTabs[0].Splits[0].BufID
+	wins := nvimWinCount(t, m)
+
+	m.closeTerminalPane(1) // the new pane
+	tab := m.terminalTabs[0]
+	if tab.paneCount() != 1 || tab.BufID != first || nvimWinCount(t, m) != wins-1 {
+		t.Fatalf("after closing pane 1: panes=%d buf=%d wins=%d/%d", tab.paneCount(), tab.BufID, nvimWinCount(t, m), wins)
+	}
+	valid, _ := m.nvim.EvalLuaString(`return vim.api.nvim_buf_is_valid(` + itoa(second) + `) and 'yes' or 'no'`)
+	if valid != "no" {
+		t.Error("the closed pane's buffer (and so its shell) must be gone")
+	}
+
+	// Closing pane 0 of two promotes the other one.
+	m.splitTerminalPane(paneDown)
+	third := m.terminalTabs[0].Splits[0].BufID
+	thirdWin := m.terminalTabs[0].Splits[0].WinID
+	m.closeTerminalPane(0)
+	tab = m.terminalTabs[0]
+	if tab.paneCount() != 1 || tab.BufID != third || m.terminalWinID != thirdWin {
+		t.Fatalf("after closing pane 0: panes=%d buf=%d (want %d) win=%d (want %d)", tab.paneCount(), tab.BufID, third, m.terminalWinID, thirdWin)
+	}
+	if !m.probeTerminalBufferLive() {
+		t.Error("the panel must still be open on the remaining shell")
+	}
+
+	// The last pane closes the tab and the panel, as a tab does today.
+	m.closeTerminalPane(0)
+	if m.termOpen || len(m.terminalTabs) != 0 {
+		t.Errorf("closing the last pane: open=%v tabs=%d", m.termOpen, len(m.terminalTabs))
+	}
+}

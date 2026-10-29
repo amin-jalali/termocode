@@ -175,3 +175,39 @@ func (m *Model) focusNextTerminalPane(step int) {
 	n := tab.paneCount()
 	m.focusTerminalPane(((tab.focusedPane()+step)%n + n) % n)
 }
+
+// closeTerminalPane closes pane i of the active tab: its shell stops and its
+// window goes; the others share the room. The last pane closes the tab, as
+// before.
+func (m *Model) closeTerminalPane(i int) {
+	tab := m.activeTerminalTab()
+	if tab == nil || i < 0 || i >= tab.paneCount() {
+		return
+	}
+	if tab.paneCount() == 1 {
+		m.closeTerminalTab(m.terminalActiveTab)
+		return
+	}
+	win, buf := m.paneWin(*tab, i), tab.paneBuf(i)
+	next := tab.withoutPane(i)
+	if m.nvim != nil {
+		// Close the window first, then drop the buffer, so nvim never has to
+		// pick a fallback buffer for the window (the editor would leak in).
+		_ = m.nvim.ExecLua(fmt.Sprintf(`
+			local win, buf = %d, %d
+			if vim.api.nvim_win_is_valid(win) then pcall(vim.api.nvim_win_close, win, true) end
+			if vim.api.nvim_buf_is_valid(buf) then
+				local ok, chan = pcall(function() return vim.bo[buf].channel end)
+				if ok and chan and chan > 0 then pcall(vim.fn.jobstop, chan) end
+				pcall(vim.api.nvim_buf_delete, buf, { force = true })
+			end`, win, buf))
+	}
+	if i == 0 {
+		// The next pane takes over the panel window.
+		m.terminalWinID = tab.Splits[0].WinID
+	}
+	*tab = next
+	m.focusTerminalPane(tab.PaneFocus)
+	m.invalidateTerminalProbeCache()
+	m.pruneAgentMCPFiles()
+}
