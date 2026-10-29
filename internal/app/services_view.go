@@ -54,6 +54,7 @@ const (
 	svcRowGroup    // a foldable group in a host section (a compose project, an image repo)
 	svcRowHostItem // one host object: container, image tag, network, …
 	svcRowRetry    // "Retry": a button row under an engine problem (Enter / click)
+	svcRowStats    // one chart line under the selected running container (containers_stats.go); not selectable
 )
 
 type svcRow struct {
@@ -885,6 +886,8 @@ func (m Model) renderServicesSidebarRaw(w, h int, focused bool, now time.Time, h
 			line = st.renderHostItem(r, active, focused, w)
 		case svcRowRetry:
 			line = renderServiceRetry(r, active, focused, w)
+		case svcRowStats:
+			line = st.renderStatsRow(r, w)
 		default:
 			line = renderServiceNote(r, w)
 		}

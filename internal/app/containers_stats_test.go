@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
+	"github.com/mattn/go-runewidth"
 
 	"github.com/amin-jalali/termocode/internal/containers"
 	"github.com/amin-jalali/termocode/internal/services/servicestest"
@@ -241,6 +243,111 @@ func TestStatsSparkline(t *testing.T) {
 	for _, c := range cases {
 		if got := statsSparkline(c.vals, c.max, c.width); got != c.want {
 			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
+// statsDetailState is statsSeeded with a short history for c1 and the
+// cursor on the postgres container.
+func statsDetailState(t *testing.T) (*Model, *servicesState) {
+	t.Helper()
+	st := statsSeeded()
+	for _, cpu := range []float64{5, 20, 40, 80} {
+		st.stats.series["c1"].Push(containers.Sample{CPU: cpu, HasCPU: true, MemUsed: 210 * 1048576, MemLimit: 2 << 30, HasMem: true,
+			NetRx: 1200, NetTx: 3400, HasNet: true, BlkRead: 0, BlkWrite: 8190, HasBlk: true})
+	}
+	m := svcTestModel(st, 150, 42)
+	for i, r := range st.rows() {
+		if r.kind == svcRowHostItem && r.hostID == "c1" {
+			st.cursor = i
+		}
+	}
+	m.statsRetarget()
+	return &m, st
+}
+
+func TestStatsDetailShowsCharts(t *testing.T) {
+	m, st := statsDetailState(t)
+	lines := strings.Split(ansi.Strip(m.renderServicesSidebarRaw(40, 40, true, svcTestNow, -1, -1)), "\n")
+	cpu, mem, net, blk := lineWith(lines, "CPU "), lineWith(lines, "MEM "), lineWith(lines, "NET "), lineWith(lines, "BLK ")
+	if !strings.Contains(cpu, "▇") && !strings.Contains(cpu, "█") || !strings.Contains(cpu, "80%") {
+		t.Errorf("cpu line = %q", cpu)
+	}
+	if !strings.Contains(mem, "210 MB/2.0 GB") || !strings.Contains(mem, "▁▁▁") {
+		t.Errorf("mem line = %q", mem)
+	}
+	if !strings.Contains(net, "in 1.2 KB") || !strings.Contains(net, "out 3.3 KB") {
+		t.Errorf("net line = %q", net)
+	}
+	if !strings.Contains(blk, "w 8.0 KB") {
+		t.Errorf("blk line = %q", blk)
+	}
+	// The chart lines sit right under the selected row.
+	rows := st.rows()
+	if rows[st.cursor].hostID != "c1" || rows[st.cursor+1].kind != svcRowStats || rows[st.cursor+4].kind != svcRowStats || rows[st.cursor+5].kind == svcRowStats {
+		t.Errorf("chart rows not under the cursor row")
+	}
+	// Other rows have none; they cannot be selected.
+	n := 0
+	for _, r := range rows {
+		if r.kind == svcRowStats {
+			n++
+			if r.selectable() {
+				t.Error("chart row is selectable")
+			}
+		}
+	}
+	if n != 4 {
+		t.Errorf("chart rows = %d", n)
+	}
+}
+
+func TestStatsDetailFollowsCursorAndKeepsRow(t *testing.T) {
+	m, st := statsDetailState(t)
+	st.stats.series["c2"] = &containers.Series{}
+	st.stats.series["c2"].Push(containers.Sample{CPU: 1, HasCPU: true, MemUsed: 1 << 20, HasMem: true})
+	m.servicesMove(1) // skips the chart rows: next is the next container
+	m.statsRetarget()
+	row, _ := m.servicesCurrentRow()
+	if row.hostID == "c1" || row.kind != svcRowHostItem {
+		t.Fatalf("cursor row = %+v", row)
+	}
+	if st.stats.detailID != row.hostID {
+		t.Errorf("detail = %q, cursor on %q", st.stats.detailID, row.hostID)
+	}
+	for _, r := range st.rows() {
+		if r.kind == svcRowStats && r.hostID != st.stats.detailID {
+			t.Errorf("chart rows of %s remain", r.hostID)
+		}
+	}
+	// Moving off every container drops the chart rows.
+	st.cursor = 0
+	m.statsRetarget()
+	for _, r := range st.rows() {
+		if r.kind == svcRowStats {
+			t.Fatal("chart rows stay with the cursor on a header")
+		}
+	}
+}
+
+func TestStatsDetailNeedsRunningAndSample(t *testing.T) {
+	m, st := statsDetailState(t)
+	st.containerRows[0].State = "exited"
+	m.statsRetarget()
+	for _, r := range st.rows() {
+		if r.kind == svcRowStats {
+			t.Fatal("chart rows of a stopped container")
+		}
+	}
+}
+
+func TestStatsDetailNarrowWidthKeepsLinesInside(t *testing.T) {
+	m, _ := statsDetailState(t)
+	for _, w := range []int{20, 29, 80} {
+		for _, l := range strings.Split(ansi.Strip(m.renderServicesSidebarRaw(w, 40, true, svcTestNow, -1, -1)), "\n") {
+			if runewidth.StringWidth(l) > w {
+				t.Errorf("w=%d line too wide: %q", w, l)
+			}
 		}
 	}
 }

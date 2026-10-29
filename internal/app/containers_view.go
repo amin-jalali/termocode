@@ -321,6 +321,7 @@ func (st *servicesState) containerRowsOf(key string) []svcRow {
 			}
 			out = append(out, svcRow{kind: svcRowHostItem, section: key, host: hostContainer, idx: index[c.ID],
 				hostID: c.ID, name: containerDisplayName(c, group), depth: 1})
+			out = append(out, st.statsDetailRows(c, 2)...)
 		}
 	}
 	return out

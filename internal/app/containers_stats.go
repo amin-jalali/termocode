@@ -3,6 +3,9 @@ package app
 import (
 	"context"
 	"fmt"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 	"strings"
 	"time"
 
@@ -33,6 +36,7 @@ type statsResultMsg struct {
 // containerStats is the poller's state (UI goroutine only).
 type containerStats struct {
 	series   map[string]*containers.Series // by container ID
+	detailID string                        // the selected running container whose chart rows are shown
 	gen      uint64
 	polling  bool // a fetch or a tick of the current gen is outstanding
 	cancel   context.CancelFunc
@@ -69,6 +73,7 @@ func (m *Model) statsSync() tea.Cmd {
 	if st == nil {
 		return nil
 	}
+	m.statsRetarget()
 	cs := &st.stats
 	want := m.statsWanted()
 	switch {
@@ -272,4 +277,153 @@ func statsSparkline(vals []float64, max float64, width int) string {
 		b.WriteRune(statsBlocks[level])
 	}
 	return b.String()
+}
+
+// ── Detail: chart rows under the selected container ──────────────────────
+
+// statsDetailRows are the four chart lines that follow container c's row
+// while it is the selected one (and has a sample).
+func (st *servicesState) statsDetailRows(c containers.Container, depth int) []svcRow {
+	if st.stats.detailID == "" || st.stats.detailID != c.ID || !strings.EqualFold(c.State, "running") {
+		return nil
+	}
+	if _, ok := st.statsOf(c.ID); !ok {
+		return nil
+	}
+	out := make([]svcRow, 4)
+	for i := range out {
+		out[i] = svcRow{kind: svcRowStats, section: hostSection("containers"), hostID: c.ID, idx: i, depth: depth}
+	}
+	return out
+}
+
+// statsRetarget makes the chart rows follow the cursor: the row under
+// the cursor, when it is a running container with a sample, shows them.
+// The cursor keeps the same row when the chart rows move the list.
+func (m *Model) statsRetarget() {
+	st := m.services
+	if st == nil {
+		return
+	}
+	cs := &st.stats
+	if cs.detailID == "" && len(cs.series) == 0 {
+		return
+	}
+	rows := st.rows()
+	want := ""
+	var cur svcRow
+	if st.cursor >= 0 && st.cursor < len(rows) {
+		cur = rows[st.cursor]
+		if cur.kind == svcRowHostItem && cur.host == hostContainer {
+			if _, ok := st.statsOf(cur.hostID); ok {
+				want = cur.hostID
+			}
+		}
+	}
+	if want == cs.detailID {
+		return
+	}
+	cs.detailID = want
+	if cur.kind == 0 && cur.section == "" {
+		return
+	}
+	for i, r := range st.rows() {
+		if r.kind == cur.kind && r.section == cur.section && r.host == cur.host && r.hostID == cur.hostID && r.name == cur.name && r.tag == cur.tag {
+			st.cursor = i
+			break
+		}
+	}
+	st.touch()
+}
+
+// statsSeriesValues extracts one metric of a series.
+func statsSeriesValues(s *containers.Series, f func(containers.Sample) float64) []float64 {
+	if s == nil {
+		return nil
+	}
+	out := make([]float64, len(s.Samples))
+	for i, v := range s.Samples {
+		out[i] = f(v)
+	}
+	return out
+}
+
+// renderStatsRow draws one chart line: label, sparkline, newest value.
+func (st *servicesState) renderStatsRow(r svcRow, w int) string {
+	bg := theme.BgSidebar
+	row := lipgloss.NewStyle().Background(theme.LG(bg))
+	fg := func(c theme.Color256) lipgloss.Style { return row.Foreground(theme.LG(c)) }
+	series := st.stats.series[r.hostID]
+	last, _ := series.Last()
+	lead := 1 + 2*r.depth
+	var label, value string
+	var vals []float64
+	var maxV float64
+	spark := false
+	switch r.idx {
+	case 0:
+		label, spark = "CPU", true
+		vals = statsSeriesValues(series, func(s containers.Sample) float64 { return s.CPU })
+		maxV = 100
+		for _, v := range vals {
+			maxV = max(maxV, v) // multi-core use goes past 100
+		}
+		if last.HasCPU {
+			value = statsPercent(last.CPU)
+		} else {
+			value = "--"
+		}
+	case 1:
+		label, spark = "MEM", true
+		vals = statsSeriesValues(series, func(s containers.Sample) float64 { return s.MemUsed })
+		maxV = last.MemLimit
+		if maxV <= 0 {
+			for _, v := range vals {
+				maxV = max(maxV, v)
+			}
+		}
+		if last.HasMem {
+			value = statsHumanBytes(last.MemUsed)
+			if last.MemLimit > 0 {
+				value += "/" + statsHumanBytes(last.MemLimit)
+			}
+		} else {
+			value = "--"
+		}
+	case 2:
+		label = "NET"
+		if last.HasNet {
+			value = "in " + statsHumanBytes(last.NetRx) + " out " + statsHumanBytes(last.NetTx)
+		} else {
+			value = "--"
+		}
+	default:
+		label = "BLK"
+		if last.HasBlk {
+			value = "r " + statsHumanBytes(last.BlkRead) + " w " + statsHumanBytes(last.BlkWrite)
+		} else {
+			value = "--"
+		}
+	}
+	var b strings.Builder
+	b.WriteString(row.Render(strings.Repeat(" ", lead)))
+	b.WriteString(fg(theme.TextMuted).Render(label + " "))
+	used := lead + len(label) + 1
+	avail := w - used - 1
+	if spark {
+		// The graph needs a few cells; drop the "/limit" before the graph.
+		if avail-runewidth.StringWidth(value) < 6 {
+			value, _, _ = strings.Cut(value, "/")
+		}
+		sw := min(avail-runewidth.StringWidth(value)-1, containers.StatWindow)
+		if sw >= 4 {
+			b.WriteString(fg(theme.GitAdded).Render(statsSparkline(vals, maxV, sw)))
+			b.WriteString(row.Render(" "))
+			used += sw + 1
+		}
+	}
+	value = runewidth.Truncate(value, max(w-used-1, 1), "…")
+	b.WriteString(fg(theme.TextSecondary).Render(value))
+	used += runewidth.StringWidth(value)
+	return clampSidebarRow(b.String(), used, w, row)
 }
