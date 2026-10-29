@@ -26,7 +26,7 @@ var mergeTestResult = []string{"a", "<<<<<<< HEAD", "ours", "=======", "theirs",
 // mergeTestModel is a w×h window with the merge view open (no editor).
 func mergeTestModel(t *testing.T, w, h int) Model {
 	t.Helper()
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: w, Height: h})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: w, Height: h})
 	m := m0.(Model)
 	v := mergeview.New("f.txt", mergeTestStages())
 	v.SetResult(mergeTestResult)
@@ -37,7 +37,7 @@ func mergeTestModel(t *testing.T, w, h int) Model {
 
 func TestMergeViewTakesRowsAboveTheEditor(t *testing.T) {
 	for _, sz := range [][2]int{{150, 42}, {80, 24}} {
-		m0, _ := New().Update(tea.WindowSizeMsg{Width: sz[0], Height: sz[1]})
+		m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: sz[0], Height: sz[1]})
 		before := m0.(Model).editorPaneLayout()
 		m := mergeTestModel(t, sz[0], sz[1])
 		p := m.editorPaneLayout()
@@ -79,7 +79,7 @@ func mergeKeyMsg(s string) tea.KeyMsg {
 }
 
 func TestMergeViewOpensFromStages(t *testing.T) {
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 150, Height: 42})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 150, Height: 42})
 	m := m0.(Model)
 	m.focus = FocusExplorer
 	m.onMergeStages(mergeStagesMsg{rel: "f.txt", st: mergeTestStages()})
@@ -162,7 +162,7 @@ func TestMergeViewMouse(t *testing.T) {
 }
 
 func TestMergePaletteWithoutView(t *testing.T) {
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	m := m0.(Model)
 	if _, ok := m.dispatchMergePalette("git-merge-next"); !ok || !strings.Contains(aiToastText(&m), "not open") {
 		t.Errorf("next without view: %q", aiToastText(&m))
@@ -197,7 +197,7 @@ func TestMergeResolvedClosesOrRefuses(t *testing.T) {
 }
 
 func TestMergeWholeFileCardIsSafeFirst(t *testing.T) {
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	m := m0.(Model)
 	st := git.ConflictStages{Path: "logo.png",
 		Base:   git.ConflictSide{Present: true, Binary: true},
