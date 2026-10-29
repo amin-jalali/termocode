@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"errors"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -74,13 +75,14 @@ func TestTunnelNotAnSSHServer(t *testing.T) {
 	web := func(context.Context, string, string) (net.Conn, error) {
 		a, b := net.Pipe()
 		go func() {
+			go func() { _, _ = io.Copy(io.Discard, b) }()
 			_, _ = b.Write([]byte("HTTP/1.1 400 Bad Request\r\n\r\n"))
 			_ = b.Close()
 		}()
 		return a, nil
 	}
 	_, err := openTestTunnel(t, SSHConfig{Host: "b", User: "u", Auth: "password"}, TunnelOptions{Home: home, Password: "pw-123456", Dial: web})
-	if err == nil || !strings.HasPrefix(err.Error(), "SSH: ") || strings.Contains(err.Error(), "handshake failed: ") {
+	if err == nil || !strings.HasPrefix(err.Error(), "SSH: ") || strings.Contains(err.Error(), "handshake failed: ") || strings.Contains(err.Error(), "in time") {
 		t.Fatalf("err = %v", err)
 	}
 }
