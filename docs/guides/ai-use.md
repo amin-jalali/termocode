@@ -51,7 +51,7 @@ To give the AI context, open a file or select code, then run
 To copy from the chat, drag over the text: it is copied when you let go.
 Double-click copies a word, triple-click a whole paragraph. **Copy** on an
 answer copies the whole answer (Markdown); right-click a message for
-Copy Message / Copy Selection / Copy Code Block.
+Copy Message / Copy Selection / Copy Code Block / Fork Chat from Here.
 
 To put code from the answer into your file, run
 **AI: Apply Last Code Block to File**, or click **Apply** on the code
@@ -64,6 +64,7 @@ card. You see the change in the review card first (see below).
 | `↑` / `↓`, `PgUp` / `PgDn` | Scroll the chat |
 | `Ctrl+C` | Copy the selection; with none, stop generating |
 | `Ctrl+N` | New chat |
+| `Alt+K` | Fork the chat from a message |
 | `Ctrl+U` | Clear the input |
 | `Esc` | Clear the selection, then stop a running answer, then back to the editor |
 
@@ -105,6 +106,31 @@ The setting is read when termocode starts.
 
 Chats are saved. Run **AI: Chat History…** to open an old one, and
 **AI: New Chat** to start fresh. The last 50 chats are kept.
+
+### Fork a chat
+
+A fork is a new chat that starts with the history of the old one, up to
+one message. Use it to try another question or another way, and keep the
+old chat as it is.
+
+- Right-click a message and pick **Fork Chat from Here**.
+- Or press `Alt+K` in the chat, or run **AI: Fork Chat from Message…**.
+  A list of your questions and the answers opens, newest first. Pick one.
+
+What you get:
+
+- The fork opens in the panel. Its title is the old title with
+  "(fork)". The first line says "Forked from <title> at message N".
+- Fork from an **answer**: the fork has the history up to that answer.
+  The input box is empty.
+- Fork from **your question**: the fork has the history before it, and
+  the question is in the input box. Change it, then press `Enter`.
+- The old chat does not change. Both chats are saved and stay after a
+  restart. Find the old one in **AI: Chat History…**.
+- If the AI is still answering, termocode stops the answer first (like
+  `Ctrl+C`) and keeps it in the old chat. The fork starts at the last
+  finished message.
+- The fork uses the same profile and model as before.
 
 ### Files in and out of the chat
 
