@@ -260,3 +260,56 @@ func TestReplyNilResult(t *testing.T) {
 		t.Fatalf("reply = %q", buf.String())
 	}
 }
+
+// endless is an io.Reader of one byte repeated without end; n counts
+// what was read.
+type endless struct {
+	b byte
+	n int
+}
+
+func (e *endless) Read(p []byte) (int, error) {
+	for i := range p {
+		p[i] = e.b
+	}
+	e.n += len(p)
+	return len(p), nil
+}
+
+// A peer that sends a header line (or header lines) without end must get
+// an error, not make the reader buffer it all.
+func TestReadMessageBoundsTheHeader(t *testing.T) {
+	for name, b := range map[string]byte{"one long line": 'x', "endless lines": '\n'} {
+		src := &endless{b: b}
+		if b == '\n' {
+			// "a:b\n" lines: every line is a valid, ignored header.
+			r := bufio.NewReader(io.MultiReader(strings.NewReader("a:b\n"), &repeat{s: "a:b\n", n: &src.n}))
+			if _, err := ReadMessage(r); err == nil {
+				t.Errorf("%s: want an error", name)
+			}
+		} else if _, err := ReadMessage(bufio.NewReader(src)); err == nil {
+			t.Errorf("%s: want an error", name)
+		}
+		if src.n > 2*MaxMessage {
+			t.Errorf("%s: read %d bytes of header", name, src.n)
+		}
+	}
+}
+
+// repeat is an io.Reader of s repeated without end.
+type repeat struct {
+	s string
+	n *int
+}
+
+func (r *repeat) Read(p []byte) (int, error) {
+	i := 0
+	for i+len(r.s) <= len(p) {
+		i += copy(p[i:], r.s)
+	}
+	if i == 0 {
+		i = copy(p, r.s)
+	}
+	*r.n += i
+	return i, nil
+}
