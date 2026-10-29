@@ -35,3 +35,16 @@ func TestCovSvcReplaceTagCardRunsTag(t *testing.T) {
 		t.Errorf("calls = %q", f.Calls())
 	}
 }
+
+// The AI's "remove container" opens the remove card; it must not also
+// answer "unsupported container command".
+func TestCovSvcAIContainerRemoveOpensCardWithoutError(t *testing.T) {
+	m, _ := covSvcHost(t)
+	cmd, err := m.dispatchContainerAIAction("containers-remove", "nginx")
+	if err != nil || cmd != nil {
+		t.Errorf("err = %v", err)
+	}
+	if !m.confirmOpen || !strings.Contains(cardText(m), "Remove container?") {
+		t.Errorf("card = %s", cardText(m))
+	}
+}
