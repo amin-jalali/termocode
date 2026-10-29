@@ -210,7 +210,7 @@ func (m *Model) restoreTerminals(s *savedTerminals, focusTerminal bool) tea.Cmd 
 				continue // left out: it maps to its parent
 			}
 			made[i] = true
-			if text := restoreHintText(t.Panes[k], gone(t.Panes[k].Cwd)); text != "" {
+			if text := restoreHintText(t.Panes[k], gone(t.Panes[k].Cwd), m.termRestoreCmds); text != "" {
 				m.setTermHint(tab.paneBuf(i), termHint{Text: text})
 			}
 		}
@@ -235,12 +235,18 @@ type termHint struct {
 	Text string
 }
 
-// restoreHintText is the note of restored pane p: its folder is gone.
-func restoreHintText(p savedTermPane, gone bool) string {
-	if gone {
-		return "folder " + filepath.Base(p.Cwd) + " is gone · started in the project folder"
+// restoreHintText is the note of restored pane p: the program it was
+// running (only its name), and whether its folder is gone. cmds is
+// terminal_restore_commands.
+func restoreHintText(p savedTermPane, gone, cmds bool) string {
+	var parts []string
+	if p.Program != "" {
+		parts = append(parts, "was running: "+p.Program)
 	}
-	return ""
+	if gone {
+		parts = append(parts, "folder "+filepath.Base(p.Cwd)+" is gone · started in the project folder")
+	}
+	return strings.Join(parts, " · ")
 }
 
 func (m *Model) setTermHint(buf int, h termHint) {

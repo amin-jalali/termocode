@@ -184,3 +184,13 @@ func TestRestoreNoteShowsOnTabSwitch(t *testing.T) {
 		t.Fatalf("back on tab 2, title bar %q", bar)
 	}
 }
+
+func TestRestoredPaneSaysWhatWasRunning(t *testing.T) {
+	m, root := layoutNvimModel(t)
+	m.restoreTerminals(&savedTerminals{Open: true, Tabs: []savedTermTab{
+		{Panes: []savedTermPane{{Cwd: root, Program: "npm"}}},
+	}}, true)
+	if bar := winbarOf(t, m, m.terminalWinID); !strings.Contains(bar, "was running: npm") {
+		t.Fatalf("title bar %q", bar)
+	}
+}

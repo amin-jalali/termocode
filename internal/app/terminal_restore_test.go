@@ -131,3 +131,23 @@ func TestCommandStartDropsTheRestoreNote(t *testing.T) {
 		t.Errorf("notes left: %v", m.termHints)
 	}
 }
+
+func TestRestoreHintTextNamesTheProgram(t *testing.T) {
+	cases := []struct {
+		p    savedTermPane
+		gone bool
+		want string
+	}{
+		{savedTermPane{Cwd: "/p"}, false, ""},
+		{savedTermPane{Cwd: "/p", Program: "npm"}, false, "was running: npm"},
+		// Without terminal_restore_commands the command line is not shown,
+		// even if an older session kept one.
+		{savedTermPane{Cwd: "/p", Program: "npm", Cmd: "npm run dev"}, false, "was running: npm"},
+		{savedTermPane{Cwd: "/p/web", Program: "npm"}, true, "was running: npm · folder web is gone · started in the project folder"},
+	}
+	for _, c := range cases {
+		if got := restoreHintText(c.p, c.gone, false); got != c.want {
+			t.Errorf("%+v gone=%v: %q, want %q", c.p, c.gone, got, c.want)
+		}
+	}
+}
