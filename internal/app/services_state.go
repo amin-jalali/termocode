@@ -151,6 +151,9 @@ type servicesState struct {
 	// CP-12: the last Docker Hub search, for its picker and card.
 	searchResults []containers.SearchResult
 	searchPick    containers.SearchResult
+
+	// G-DST: live CPU and memory of the running containers.
+	stats containerStats
 }
 
 func newServicesState() *servicesState {
@@ -281,6 +284,7 @@ func (m *Model) servicesSyncWatch() tea.Cmd {
 	}
 	st.visible = vis
 	if !vis {
+		st.stats.stop()
 		if st.hostWatchStop != nil || st.watchStop != nil {
 			st.stale = true
 		}
@@ -592,6 +596,10 @@ func (m *Model) handleServicesMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onStoragePrunePreview(msg), true
 	case containerEventMsg:
 		return m.onContainerEvent(msg), true
+	case statsTickMsg:
+		return m.onStatsTick(msg), true
+	case statsResultMsg:
+		return m.onStatsResult(msg), true
 	case remoteTagsMsg:
 		return m.onRemoteTags(msg), true
 	case containerSearchMsg:

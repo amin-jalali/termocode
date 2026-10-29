@@ -124,6 +124,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if sc := nm.servicesSyncWatch(); sc != nil { // the Services view shown / hidden
 		cmd = tea.Batch(cmd, sc)
 	}
+	if sc := nm.statsSync(); sc != nil { // live container stats (containers_stats.go)
+		cmd = tea.Batch(cmd, sc)
+	}
 	nm.showWaitingHotExit()
 	if mode := nm.syncMouseMode(); mode != nil { // mouse_hover.go
 		return nm, tea.Batch(cmd, mode)
