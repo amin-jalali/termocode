@@ -6,13 +6,23 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/zalando/go-keyring"
 
+	"github.com/amin-jalali/termocode/internal/services/servicestest"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
+
+// cliGuard holds the fail-closed docker / podman / kubectl stand-ins that
+// TestMain puts first on PATH (servicestest.InstallGuard). A test that
+// opens a container view without its own fake hits them and fails.
+var cliGuard *servicestest.Guard
+
+// guardReported holds the tests whose blocked calls were reported.
+var guardReported sync.Map
 
 // DefaultFiles is the workspace content when Options.Files is nil. It has
 // nested folders and wide (CJK) and accented names on purpose.
@@ -110,6 +120,18 @@ func sandbox(t testing.TB, nvim bool) {
 	}
 	for k, v := range env {
 		t.Setenv(k, v)
+	}
+	if cliGuard != nil {
+		t.Setenv(servicestest.GuardTestEnv, t.Name())
+		t.Cleanup(func() {
+			// A test with several drivers reports its calls once.
+			if _, seen := guardReported.LoadOrStore(t, true); seen {
+				return
+			}
+			if msg := cliGuard.Report(t.Name()); msg != "" {
+				t.Error(msg)
+			}
+		})
 	}
 	keyring.MockInit() // and on macOS too: an in-memory keyring
 }

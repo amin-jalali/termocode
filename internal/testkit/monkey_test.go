@@ -56,6 +56,7 @@ func monkeyKeys() []string {
 //
 // On failure the seed and every step are printed.
 func TestMonkey(t *testing.T) {
+	fakeEngine(t) // it may open a container view
 	steps := envInt("TERMOCODE_MONKEY_STEPS", 300)
 	seed := envInt("TERMOCODE_MONKEY_SEED", time.Now().UnixNano())
 	useNvim := os.Getenv("TERMOCODE_MONKEY_NVIM") == "1"

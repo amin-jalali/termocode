@@ -22,6 +22,7 @@ import (
 //
 // On failure the seed and every step are printed.
 func TestHitMapMonkey(t *testing.T) {
+	fakeEngine(t) // it may open a container view
 	steps := envInt("TERMOCODE_MONKEY_STEPS", 60)
 	if os.Getenv("TERMOCODE_MONKEY") == "long" && os.Getenv("TERMOCODE_MONKEY_STEPS") == "" {
 		steps = 600

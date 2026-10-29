@@ -66,6 +66,7 @@ func runEach(t *testing.T, items []string, every int, mk func() *Driver, step fu
 // TestWalkPaletteCommands runs every command-palette entry from the
 // dashboard (no nvim), opens what it opens, moves once and closes it.
 func TestWalkPaletteCommands(t *testing.T) {
+	fakeEngine(t) // it may open a container view
 	cmds := walkCommands()
 	if len(cmds) < 100 {
 		t.Fatalf("only %d palette commands", len(cmds))
@@ -100,6 +101,7 @@ func TestWalkPaletteCommandsNvim(t *testing.T) {
 	if testing.Short() {
 		t.Skip("slow: real nvim")
 	}
+	fakeEngine(t) // it may open a container view
 	runEach(t, sample(walkCommands(), 10), 50, func() *Driver {
 		d := New(t, Options{W: 120, H: 36, Git: true, Nvim: true})
 		d.Action("open:main.go")
@@ -116,6 +118,7 @@ func TestWalkPaletteCommandsNvim(t *testing.T) {
 // TestWalkKeyBindings presses every default key binding, from the
 // dashboard (no nvim).
 func TestWalkKeyBindings(t *testing.T) {
+	fakeEngine(t) // it may open a container view
 	skipActions := map[keymap.Action]bool{}
 	for id := range skipCommands {
 		if a, ok := app.PaletteActionFor(id); ok {
@@ -164,6 +167,7 @@ func settingValues(s app.SettingEntry) []string {
 // TestWalkSettings sets every Settings row through its values, at a wide
 // and a narrow size.
 func TestWalkSettings(t *testing.T) {
+	fakeEngine(t) // it may open a container view
 	for _, size := range [][2]int{{120, 36}, {60, 20}} {
 		t.Run(fmt.Sprintf("%dx%d", size[0], size[1]), func(t *testing.T) {
 			d := New(t, Options{W: size[0], H: size[1], Git: true})
@@ -190,6 +194,7 @@ func TestWalkSettings(t *testing.T) {
 // TestWalkViewsAndPanels opens every activity-bar view and every bottom
 // panel kind, at a wide and a narrow size, with and without nvim.
 func TestWalkViewsAndPanels(t *testing.T) {
+	fakeEngine(t) // it may open a container view
 	views := []activity.View{activity.ViewFiles, activity.ViewSearch, activity.ViewGit,
 		activity.ViewRun, activity.ViewTests, activity.ViewSettings}
 	panels := []string{"terminal", "problems", "output", "tests", "debug-console"}
