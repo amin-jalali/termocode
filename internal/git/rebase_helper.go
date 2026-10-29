@@ -61,6 +61,8 @@ func runRebaseHelper(args []string) int {
 			return 1
 		}
 		return 0
+	case "msg":
+		return 0 // keep git's message (a squash shows both)
 	}
 	fmt.Fprintln(os.Stderr, "termocode rebase helper: unknown mode", mode)
 	return 2

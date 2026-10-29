@@ -3,6 +3,7 @@ package git
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 )
@@ -170,5 +171,65 @@ func TestRebaseTodoFormat(t *testing.T) {
 	want := "pick aaa first\nreword bbb second\nfixup ccc third # not a comment\ndrop ddd fourth\n"
 	if got := todo.Format(); got != want {
 		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+}
+
+// testRebaseOpts runs the helper from this test binary (TestMain).
+func testRebaseOpts(t *testing.T) RebaseOptions {
+	t.Helper()
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return RebaseOptions{Exe: exe}
+}
+
+// G-RBS: RunRebase replays the prepared todo: rows reordered, one squashed
+// into the row above (both messages kept), one fixup (its message
+// dropped), one dropped. The work tree ends clean and ORIG_HEAD is the
+// old HEAD.
+func TestRunRebaseAppliesTodo(t *testing.T) {
+	r, h := rebaseRepo(t, 5)
+	todo, err := LoadRebaseTodo(r.dir, h[0]) // c2 c3 c4 c5
+	if err != nil {
+		t.Fatal(err)
+	}
+	todo.Move(2, 1)                 // c2 c3 c5 c4
+	todo.SetAction(1, RebaseSquash) // c3 into c2
+	todo.SetAction(2, RebaseDrop)   // c5 gone
+	todo.SetAction(3, RebaseFixup)  // c4 into c2 (no message)
+	out, err := RunRebase(r.dir, todo, testRebaseOpts(t))
+	if err != nil || out.Stopped {
+		t.Fatalf("rebase: %+v %v", out, err)
+	}
+	if got := strings.Join(subjects(t, r), " "); got != "c1 c2" {
+		t.Fatalf("history %q", got)
+	}
+	msg := r.git(t, "log", "-1", "--format=%B")
+	if !strings.Contains(msg, "body 2") || !strings.Contains(msg, "c3") || strings.Contains(msg, "c4") {
+		t.Errorf("squashed message %q", msg)
+	}
+	files := r.git(t, "ls-files")
+	if !strings.Contains(files, "f4.txt") || strings.Contains(files, "f5.txt") {
+		t.Errorf("files %q", files)
+	}
+	if st := r.git(t, "status", "--porcelain"); st != "" {
+		t.Errorf("dirty after rebase: %q", st)
+	}
+	if orig := strings.TrimSpace(r.git(t, "rev-parse", "ORIG_HEAD")); orig != h[4] {
+		t.Errorf("ORIG_HEAD %s, want %s", orig, h[4])
+	}
+}
+
+// G-RBS: a todo git cannot run is refused before git starts.
+func TestRunRebaseRefusesInvalidTodo(t *testing.T) {
+	r, h := rebaseRepo(t, 3)
+	todo, _ := LoadRebaseTodo(r.dir, h[0])
+	todo.SetAction(0, RebaseFixup)
+	if _, err := RunRebase(r.dir, todo, testRebaseOpts(t)); err == nil {
+		t.Fatal("no error")
+	}
+	if head := strings.TrimSpace(r.git(t, "rev-parse", "HEAD")); head != h[2] {
+		t.Errorf("HEAD moved to %s", head)
 	}
 }
