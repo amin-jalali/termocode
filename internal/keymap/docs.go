@@ -84,6 +84,7 @@ var actionInfo = map[Action]ActionInfo{
 	ActionPrevDiagnostic:     {"LSP", "Go to the previous problem in the active file."},
 
 	ActionGitBlameLine: {"Git", "Show who last changed the current line."},
+	ActionGitCIFix:     {"Git", "Put the failed CI log of the branch in the AI chat to fix it, or show CI and the pull request."},
 	ActionFileHistory:  {"Git", "Show the commit history of the active file."},
 	ActionNextHunk:     {"Git", "Go to the next changed block (hunk)."},
 	ActionPrevHunk:     {"Git", "Go to the previous changed block (hunk)."},

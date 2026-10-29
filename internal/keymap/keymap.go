@@ -164,6 +164,9 @@ const (
 	// ActionItermocToggle opens the Itermoc view, or goes back when it
 	// is already shown: Alt+Shift+I (Alt+I is Edit with AI) or Alt+O.
 	ActionItermocToggle
+	// ActionGitCIFix sends the failed CI log of the branch to the AI chat
+	// input (G-CI): Alt+C. Without red CI it opens the CI card.
+	ActionGitCIFix
 	// ActionContextHelp opens the built-in guide at the section for the
 	// hover label on screen, else the focused item (app/help_contexts.go).
 	// Shift+F1; xterm sends it as f13, which canonicalKey matches.
@@ -450,6 +453,7 @@ func Default() KeyMap {
 			// Git blame for the current line — pure feedback move (toast),
 			// no shortcut conflict to worry about.
 			"alt+b": ActionGitBlameLine,
+			"alt+c": ActionGitCIFix, // G-CI: red CI → the AI chat
 
 			// Git hunk navigation: F6 is focus-swap, F5/Shift+F5 are
 			// diagnostics. F-keys around there are crowded so we use Alt

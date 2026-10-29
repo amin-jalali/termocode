@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/ghci"
 	"github.com/amin-jalali/termocode/internal/git"
@@ -178,5 +179,43 @@ func TestCIWatchHeadlessNeverRunsGH(t *testing.T) {
 	w := &ciWatch{}
 	if _, _, err := w.runner()(context.Background(), t.TempDir(), "run", "list"); !errors.Is(err, ghci.ErrNoGH) {
 		t.Fatalf("headless runner err %v", err)
+	}
+}
+
+// The toast comes once when the branch turns red (with the key and a
+// click for Fix with AI), not again for the same commit, and not when the
+// branch was already red at the first look.
+func TestCIRedToastOnce(t *testing.T) {
+	f := &ciFakeGH{runs: ciPendingRuns}
+	m := ciModel("feat/x", f)
+	ciRun(t, m, m.ciOnGitSnapshot(git.Branch{}))
+	if !m.toast.Empty() {
+		t.Fatal("toast for a pending run")
+	}
+	f.runs = ciRedRuns
+	ciRun(t, m, m.ciTrigger())
+	cards := m.toast.Cards(80)
+	if len(cards) != 1 {
+		t.Fatalf("toasts %d, want 1", len(cards))
+	}
+	if got := ansi.Strip(strings.Join(cards[0].Lines, "\n")); !strings.Contains(got, "CI failed on feat/x") || !strings.Contains(got, "Alt+C Fix with AI") {
+		t.Errorf("toast %q", got)
+	}
+	ciRun(t, m, m.ciTrigger())
+	if cards[0].Click == nil {
+		t.Error("toast is not clickable")
+	}
+	if n := len(m.toast.Cards(80)); n != 1 {
+		t.Errorf("toasts %d after the same red commit", n)
+	}
+	// Already red at the first look: the chip, no toast.
+	m2 := ciModel("feat/y", &ciFakeGH{runs: ciRedRuns})
+	ciRun(t, m2, m2.ciOnGitSnapshot(git.Branch{}))
+	if !m2.toast.Empty() {
+		t.Error("toast for a branch that was red before")
+	}
+	// A click on the toast is Fix with AI.
+	if cmd, ok := m.handleCIMsg(ciFixClickMsg{}); !ok || cmd == nil {
+		t.Error("toast click did nothing")
 	}
 }

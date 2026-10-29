@@ -4,11 +4,13 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/ghci"
 	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/keymap"
 )
 
 const ciPR = `{"number":12,"title":"Add parser","state":"OPEN","isDraft":false,"url":"https://github.com/o/r/pull/12",
@@ -171,5 +173,17 @@ func TestCIOpenBrowser(t *testing.T) {
 	m.ciOpenBrowser()
 	if len(opened) != 1 || len(copied) != 1 || copied[0] != "https://github.com/o/r/pull/12" {
 		t.Errorf("over SSH: opened %v copied %v", opened, copied)
+	}
+}
+
+// Alt+C is Fix with AI: on red it reads the failed log.
+func TestCIAltCKey(t *testing.T) {
+	m, _ := ciRedModel(t)
+	m.keys = keymap.Default()
+	if a := m.keys.Match(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}, Alt: true}); a != keymap.ActionGitCIFix {
+		t.Fatalf("alt+c is action %v", a)
+	}
+	if m.ciFixKeyLabel() != "Alt+C" {
+		t.Errorf("label %q", m.ciFixKeyLabel())
 	}
 }

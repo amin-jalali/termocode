@@ -9,7 +9,9 @@ import (
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/ghci"
 	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/statusbar"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // G-CI: termocode watches the GitHub CI of the current branch through
@@ -47,6 +49,9 @@ type ciResultMsg struct {
 	snap   ghci.Snapshot
 	err    error
 }
+
+// ciFixClickMsg is a click on the red-CI toast: Fix with AI.
+type ciFixClickMsg struct{}
 
 // ciTickMsg is a poll timer.
 type ciTickMsg struct{ gen int }
@@ -128,6 +133,8 @@ func (m *Model) handleCIMsg(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case ciResultMsg:
 		return m.onCIResult(msg), true
+	case ciFixClickMsg:
+		return m.ciFixWithAI(), true
 	case ciLogMsg: // ci_card.go
 		return m.onCILog(msg), true
 	case ciTickMsg:
@@ -158,7 +165,9 @@ func (m *Model) onCIResult(msg ciResultMsg) tea.Cmd {
 	if msg.branch != w.branch {
 		return m.ciFetchCmd() // the branch changed while gh ran
 	}
+	var toastCmd tea.Cmd
 	if msg.err == nil {
+		toastCmd = m.ciRedToast(msg.snap)
 		w.snap = msg.snap
 	} else if ghci.Quiet(msg.err) {
 		w.snap = ghci.Snapshot{Branch: msg.branch} // keep nothing: CI is not available
@@ -168,13 +177,45 @@ func (m *Model) onCIResult(msg ciResultMsg) tea.Cmd {
 		m.showCICard() // the card shows the fresh answer
 	}
 	if msg.gen != w.gen {
-		return nil // a newer chain runs
+		return toastCmd // a newer chain runs
 	}
 	since := time.Duration(-1)
 	if !w.pushAt.IsZero() {
 		since = clock.Now().Sub(w.pushAt)
 	}
-	return ciTick(w.gen, ghci.NextPoll(w.snap, msg.err, since))
+	return tea.Batch(toastCmd, ciTick(w.gen, ghci.NextPoll(w.snap, msg.err, since)))
+}
+
+// ciRedToast says once per branch and commit that CI turned red, with
+// the key that sends the log to the AI. A branch that is already red
+// when termocode first looks gets only the chip.
+func (m *Model) ciRedToast(next ghci.Snapshot) tea.Cmd {
+	w := m.ciW()
+	if next.State() != ghci.StateFail {
+		return nil
+	}
+	if w.notified == nil {
+		w.notified = map[string]bool{}
+	}
+	key := next.Branch + "@" + next.HeadSHA
+	if w.notified[key] {
+		return nil
+	}
+	w.notified[key] = true
+	if !w.loaded || (w.snap.State() == ghci.StateFail && w.snap.HeadSHA == next.HeadSHA) {
+		return nil
+	}
+	var c tea.Cmd
+	m.toast, c = m.toast.PushClick(toast.Errr, "CI failed on "+next.Branch, m.ciFixKeyLabel()+" Fix with AI", ciFixClickMsg{})
+	return c
+}
+
+// ciFixKeyLabel is the key of Fix with AI ("Alt+C" unless rebound).
+func (m Model) ciFixKeyLabel() string {
+	if k := overflowMenuShortcuts(m.keys)[keymap.ActionGitCIFix]; k != "" {
+		return k
+	}
+	return "Alt+C"
 }
 
 // fillCIStatus sets the status-bar CI chip.

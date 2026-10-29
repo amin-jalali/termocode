@@ -80,6 +80,7 @@ These are the default keys. The **Key** column is the key you press. The **Key s
 | Key | Key string | Action | Description |
 | --- | --- | --- | --- |
 | `Alt+B` | `alt+b` | `GitBlameLine` | Show who last changed the current line. |
+| `Alt+C` | `alt+c` | `GitCIFix` | Put the failed CI log of the branch in the AI chat to fix it, or show CI and the pull request. |
 | `Alt+]` | `alt+]` | `NextHunk` | Go to the next changed block (hunk). |
 | `Alt+[` | `alt+[` | `PrevHunk` | Go to the previous changed block (hunk). |
 | `Alt+S` | `alt+s` | `StageHunk` | Stage the hunk at the cursor. |

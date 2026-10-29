@@ -317,7 +317,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Discard Changes in Current File | `git-discard` |   |   |
 | Git: Discard Hunk (at cursor) | `git-discard-hunk` |   |   |
 | Git: Fetch | `git-fetch` |   |   |
-| Git: Fix CI with AI | `git-ci-fix` |   |   |
+| Git: Fix CI with AI | `git-ci-fix` | `Alt+C` | `Alt+C` |
 | Git: Focus Source Control | `git-focus` |   |   |
 | Git: Go to Next Change | `next-hunk` | `Alt+]` | `Alt+]` |
 | Git: Go to Next Merge Conflict | `git-conflict-next` |   | `]x` |
