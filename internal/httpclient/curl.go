@@ -24,7 +24,7 @@ func ToCurl(rr Resolved, withSecrets bool) string {
 		u = rr.Template.URL
 	}
 	var b strings.Builder
-	b.WriteString("curl -X " + rr.Method + " " + shellQuote(u))
+	b.WriteString("curl -X " + shellWord(rr.Method) + " " + shellQuote(u))
 	for i, h := range rr.Headers {
 		v := h.Value
 		if !withSecrets && (SecretHeader(h.Name) || hasSecret(v)) {
@@ -48,6 +48,21 @@ func ToCurl(rr Resolved, withSecrets bool) string {
 	}
 	b.WriteString(" --compressed")
 	return b.String()
+}
+
+// shellWord is s as is when it is a plain word (GET, PATCH), else
+// shellQuote(s): a method from a shared .http file must not run anything
+// when the command is pasted into a shell.
+func shellWord(s string) string {
+	if s == "" {
+		return shellQuote(s)
+	}
+	for _, c := range s {
+		if !(c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '-' || c == '_') {
+			return shellQuote(s)
+		}
+	}
+	return s
 }
 
 // shellQuote wraps s in single quotes ('\” for a quote inside).
