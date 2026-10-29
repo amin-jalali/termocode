@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -123,3 +124,36 @@ func covKey(m *Model, k tea.KeyMsg) (tea.Cmd, bool) {
 }
 
 func covRunes(s string) tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)} }
+
+// covMsg runs cmd (and every command of a batch, each on its own
+// goroutine, since a toast's timer blocks) and returns the first message
+// of type T. It fails the test when none comes within a minute.
+func covMsg[T any](t *testing.T, cmd tea.Cmd) T {
+	t.Helper()
+	got := make(chan T, 64)
+	var run func(tea.Cmd)
+	run = func(c tea.Cmd) {
+		if c == nil {
+			return
+		}
+		go func() {
+			switch msg := c().(type) {
+			case tea.BatchMsg:
+				for _, s := range msg {
+					run(s)
+				}
+			case T:
+				got <- msg
+			}
+		}()
+	}
+	run(cmd)
+	select {
+	case msg := <-got:
+		return msg
+	case <-time.After(time.Minute):
+		var zero T
+		t.Fatalf("no %T came", zero)
+		return zero
+	}
+}
