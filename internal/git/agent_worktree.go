@@ -204,6 +204,9 @@ func CreateAgentWorktree(dir, id string) (AgentWorktree, error) {
 	if err := os.MkdirAll(filepath.Dir(w.Path), 0o755); err != nil {
 		return AgentWorktree{}, err
 	}
+	// A worktree folder deleted by hand is still registered, and git
+	// refuses to add it again until a prune.
+	_, _ = gitOut(top, "worktree", "prune")
 	if _, err := gitRetry(top, "update-ref", agentBaseRef+id, base); err != nil {
 		return AgentWorktree{}, err
 	}
