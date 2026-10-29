@@ -33,26 +33,6 @@ type Engine struct {
 	Context string
 }
 
-// ErrorMessage explains why the host engine is unavailable.
-func (e Engine) ErrorMessage() string {
-	if e.Binary == "" {
-		return "no container engine installed (Docker or Podman)"
-	}
-	switch e.Problem.Kind {
-	case services.ProblemDaemonDown:
-		return e.Kind + " daemon is not running"
-	case services.ProblemNoPermission:
-		return "permission denied accessing the " + e.Kind + " daemon"
-	case services.ProblemNone:
-		return ""
-	default:
-		if e.Problem.Detail != "" {
-			return e.Problem.Detail
-		}
-		return e.Kind + " engine is unavailable"
-	}
-}
-
 type DetectOptions struct {
 	Preferred string
 	Android   bool
@@ -164,21 +144,6 @@ func (e *Engine) captureTimeout(parent context.Context, timeout time.Duration, a
 	ctx, cancel := context.WithTimeout(parent, d)
 	defer cancel()
 	return e.exec().Capture(ctx, e.Dir, append([]string{e.Binary}, args...)...)
-}
-
-func (e *Engine) run(ctx context.Context, args ...string) error {
-	_, stderr, code, err := e.capture(ctx, args...)
-	if err != nil {
-		return err
-	}
-	if code != 0 {
-		p := services.ProblemFromStderr(stderr)
-		if p.Kind == services.ProblemNone {
-			return fmt.Errorf("engine command exited %d", code)
-		}
-		return errors.New(p.Message())
-	}
-	return nil
 }
 
 func (e *Engine) list(ctx context.Context, args ...string) (string, error) {

@@ -56,6 +56,3 @@ func redactPassword(message, password string) string {
 func (e *Engine) ComposeUp(project, dir string) services.Command {
 	return e.Compose(project, dir, "up", "-d")
 }
-func (e *Engine) ComposeDown(project, dir string) services.Command {
-	return e.Compose(project, dir, "down")
-}
