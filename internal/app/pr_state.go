@@ -72,6 +72,8 @@ func (m *Model) handlePRMsg(msg tea.Msg) (tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case prListMsg: // pr_list.go
 		return m.onPRList(msg), true
+	case prViewMsg: // pr_view.go
+		return m.onPRView(msg), true
 	}
 	return nil, false
 }

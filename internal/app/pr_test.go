@@ -133,3 +133,72 @@ func TestPRListEmptyAndNoRepo(t *testing.T) {
 		t.Error("asked gh outside a repo")
 	}
 }
+
+const prViewText14 = `{"number":14,"title":"Add parser","body":"Adds a parser.\n\n- one\n- two","author":{"login":"ann"},
+ "state":"OPEN","isDraft":false,"url":"https://github.com/o/r/pull/14","reviewDecision":"CHANGES_REQUESTED",
+ "headRefName":"feat/parser","baseRefName":"main","mergeable":"CONFLICTING",
+ "statusCheckRollup":[{"__typename":"CheckRun","name":"test","status":"COMPLETED","conclusion":"FAILURE"},
+                      {"__typename":"CheckRun","name":"build","status":"COMPLETED","conclusion":"SUCCESS"}],
+ "files":[{"path":"parser.go","additions":40,"deletions":2}],
+ "reviews":[{"author":{"login":"bob"},"state":"CHANGES_REQUESTED","body":"Please add tests","submittedAt":"2026-10-28T10:00:00Z"}],
+ "comments":[{"author":{"login":"ann"},"body":"Added.","createdAt":"2026-10-28T11:00:00Z"}]}`
+
+// prViewModel has the PR 14 view open.
+func prViewModel(t *testing.T) (*Model, *prFakeGH) {
+	t.Helper()
+	f := &prFakeGH{answers: map[string]string{"pr list": prListText, "pr view": prViewText14}}
+	m := prModel(f)
+	prDo(t, m, m.prViewCmd(14))
+	return m, f
+}
+
+// The view shows title, state, branches, checks, files, description and
+// reviews; Actions… is the focused first button.
+func TestPRViewCard(t *testing.T) {
+	m, f := prViewModel(t)
+	if !m.prViewOpen() {
+		t.Fatal("view not open")
+	}
+	if box := ansi.Strip(m.confirm.Box()); !strings.Contains(box, "#14 Pull Request") || !strings.Contains(box, "Add parser") {
+		t.Errorf("card:\n%s", box)
+	}
+	box := prViewText(*m.prS().detail) // the card scrolls: check the whole text
+	for _, want := range []string{"Add parser", "Open · Changes requested", "feat/parser → main · by ann",
+		"Has merge conflicts with main", "✗ test", "✓ build", "Files (1)", "parser.go  +40 -2", "Description", "Adds a parser.",
+		"Reviews and comments", "bob · Changes requested", "Please add tests", "ann"} {
+		if !strings.Contains(box, want) {
+			t.Errorf("card misses %q:\n%s", want, box)
+		}
+	}
+	b := m.confirm.Buttons()
+	if len(b) != 3 || b[0].ID != "actions" || b[1].ID != "files" || b[2].ID != "close" {
+		t.Errorf("buttons %+v", b)
+	}
+	if !f.called("pr view 14 --json") {
+		t.Errorf("calls %v", f.calls)
+	}
+}
+
+// Enter on a row of the list opens that pull request.
+func TestPRListEnterOpensView(t *testing.T) {
+	f := &prFakeGH{answers: map[string]string{"pr list": prListText, "pr view": prViewText14}}
+	m := prModel(f)
+	prDo(t, m, m.prListCmd())
+	cmd, ok := m.handlePRPickerSelect("#14")
+	if !ok || cmd == nil {
+		t.Fatal("no command for the chosen row")
+	}
+	m.pickerOpen = false
+	if cmd, ok = m.handlePRPickerSelect("#bogus"); !ok || cmd != nil {
+		t.Error("a bad id did something")
+	}
+}
+
+func TestPRViewError(t *testing.T) {
+	f := &prFakeGH{errs: map[string]error{"pr view": errors.New("exit 1")}, stderr: map[string]string{"pr view": "Could not resolve to a PullRequest"}}
+	m := prModel(f)
+	prDo(t, m, m.prViewCmd(99))
+	if m.prViewOpen() || !toastHas(m, "Could not read #99") {
+		t.Error("error not shown")
+	}
+}
