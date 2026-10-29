@@ -38,7 +38,11 @@ func Tokens(keys string) []string {
 			}
 		}
 		r := []rune(keys[i:])[0]
-		out = append(out, string(r))
+		if r == ' ' {
+			out = append(out, "<space>") // nvim writes the Space key as a blank
+		} else {
+			out = append(out, string(r))
+		}
 		i += len(string(r))
 	}
 	return out

@@ -20,6 +20,9 @@ func TestTokens(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("Tokens = %q, want %q", got, want)
 	}
+	if got := Tokens(" f"); !reflect.DeepEqual(got, []string{"<space>", "f"}) {
+		t.Errorf("blank = %q, want Space then f", got)
+	}
 	if got := Tokens("a<b"); !reflect.DeepEqual(got, []string{"a", "<", "b"}) {
 		t.Errorf("lone < = %q", got)
 	}
