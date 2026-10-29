@@ -1,0 +1,193 @@
+# Nightly flaky hunter (STAB-3). Runs the tests many times under -race
+# and the monkey test with random seeds. Each failed test gets a GitHub
+# issue "Flaky: <TestName>" (or a comment on the open one) with the seed
+# and the end of its log (scripts/flaky-issues.sh, cmd/failedtests).
+#
+# Timings (ubuntu, -race, -count=1, 2026-10): internal/app ~6 min,
+# internal/testkit ~5 min (more with nvim), internal/mdview ~5 min, the
+# rest ~3 min. -count=5 runs each shard in about 30–60 min, in parallel.
+name: nightly
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read # checkout
+  issues: write # file "Flaky: <TestName>" issues
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+env:
+  NVIM_VERSION: v0.11.4
+
+jobs:
+  race:
+    name: race x5 (${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [app, testkit, rest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Install X11 dev headers
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev
+
+      - name: Install Neovim (pinned release)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/nvim.tar.gz \
+            "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz"
+          sudo tar -xzf /tmp/nvim.tar.gz -C /opt
+          echo "/opt/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
+
+      - name: Test (-race -count=5)
+        id: test
+        run: |
+          set -uo pipefail
+          case "${{ matrix.shard }}" in
+            app) pkgs=./internal/app/ ;;
+            testkit) pkgs=./internal/testkit/ ;;
+            rest) pkgs=$(go list ./... | grep -v -x -e '.*/internal/app' -e '.*/internal/testkit') ;;
+          esac
+          # shellcheck disable=SC2086 # pkgs is a list
+          go test -json -race -count=5 -timeout 140m $pkgs > test.json
+          code=$?
+          # A readable log next to the JSON.
+          go run ./cmd/failedtests < test.json || true
+          exit $code
+
+      - name: File flaky issues
+        if: failure() && steps.test.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: scripts/flaky-issues.sh test.json "nightly race x5, shard ${{ matrix.shard }}"
+
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-race-${{ matrix.shard }}
+          path: test.json
+          if-no-files-found: ignore
+
+  monkey:
+    name: monkey (random seeds)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Install X11 dev headers
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev
+
+      - name: Install Neovim (pinned release)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/nvim.tar.gz \
+            "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz"
+          sudo tar -xzf /tmp/nvim.tar.gz -C /opt
+          echo "/opt/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
+
+      - name: TestMonkey with random seeds
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          mkdir -p monkey
+          go test -race -c -o monkey.test ./internal/testkit/
+          failed=0
+          # Four seeds without nvim, two with a real embedded nvim.
+          for i in 1 2 3 4 5 6; do
+            seed=$RANDOM$RANDOM
+            nvim=0
+            if [ "$i" -gt 4 ]; then nvim=1; fi
+            echo "::group::monkey $i: seed $seed (nvim=$nvim)"
+            echo "replay: TERMOCODE_MONKEY_SEED=$seed TERMOCODE_MONKEY_STEPS=3000 TERMOCODE_MONKEY_NVIM=$nvim go test ./internal/testkit -run '^TestMonkey\$'"
+            (cd internal/testkit && TERMOCODE_MONKEY_SEED=$seed TERMOCODE_MONKEY_STEPS=3000 TERMOCODE_MONKEY_NVIM=$nvim \
+              go tool test2json -p github.com/amin-jalali/termocode/internal/testkit \
+              ../../monkey.test -test.v=test2json -test.run '^TestMonkey$' -test.timeout 20m) > "monkey/$seed.json"
+            code=$?
+            echo "::endgroup::"
+            if [ "$code" -ne 0 ]; then
+              failed=1
+              echo "::error::TestMonkey failed with seed $seed (nvim=$nvim)"
+              scripts/flaky-issues.sh "monkey/$seed.json" \
+                "seed $seed, nvim=$nvim — replay: TERMOCODE_MONKEY_SEED=$seed TERMOCODE_MONKEY_STEPS=3000 TERMOCODE_MONKEY_NVIM=$nvim go test ./internal/testkit -run '^TestMonkey\$'" || true
+            fi
+          done
+          exit $failed
+
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-monkey
+          path: monkey/
+          if-no-files-found: ignore
+
+  e2e:
+    name: e2e x3
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      E2E_DUMP_DIR: ${{ github.workspace }}/e2e-dumps
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Install X11 dev headers
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev
+
+      - name: Install Neovim (pinned release)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/nvim.tar.gz \
+            "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz"
+          sudo tar -xzf /tmp/nvim.tar.gz -C /opt
+          echo "/opt/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
+
+      - name: E2E tests (-count=3)
+        id: test
+        run: |
+          set -uo pipefail
+          go -C e2e test -json -tags e2e -count=3 -timeout 50m ./... > e2e.json
+          code=$?
+          go run ./cmd/failedtests < e2e.json || true
+          exit $code
+
+      - name: File flaky issues
+        if: failure() && steps.test.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: scripts/flaky-issues.sh e2e.json "nightly e2e x3"
+
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-e2e
+          path: |
+            e2e.json
+            e2e-dumps/
+          if-no-files-found: ignore
