@@ -56,3 +56,15 @@ func TestTerminalCommands(t *testing.T) {
 		t.Errorf("shell label = %q", sh.Label)
 	}
 }
+
+func TestLogsTail(t *testing.T) {
+	f, c := fakeClient(t)
+	f.Set(t, "logs.txt", "line 1\nline 2\n")
+	text, err := c.Logs(context.Background(), "api-1", "sidecar", 50)
+	if err != nil || text != "line 1\nline 2\n" {
+		t.Fatalf("logs = %q, %v", text, err)
+	}
+	if got := f.Calls(); len(got) != 1 || got[0] != "logs --tail 50 --context dev --namespace shop api-1 --container sidecar" {
+		t.Errorf("calls = %v", got)
+	}
+}

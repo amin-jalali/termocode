@@ -2,6 +2,7 @@ package kube
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/services"
@@ -30,6 +31,17 @@ func shown(pod, container string) string {
 		return pod
 	}
 	return pod + "/" + container
+}
+
+// Logs is the last lines of one pod's logs (container "" = its only or
+// default container), read once.
+func (c Client) Logs(ctx context.Context, pod, container string, lines int) (string, error) {
+	args := append([]string{"logs", "--tail", strconv.Itoa(lines)}, c.scope(true)...)
+	args = append(args, pod)
+	if container != "" {
+		args = append(args, "--container", container)
+	}
+	return c.capture(ctx, args...)
 }
 
 // LogsCommand follows one pod's logs in a terminal tab (container ""
