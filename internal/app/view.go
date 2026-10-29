@@ -646,7 +646,7 @@ func (m Model) renderBaseLines() []string {
 	for i, c := range cols {
 		cols[i] = padColumnLines(c, m.h, theme.Bg(theme.BgEditor))
 	}
-	middle := joinColumnsLines(cols...)
+	middle := mainJoin.join(cols...)
 
 	if m.findOpen {
 		m.overlayFindBarInEditorLines(middle)
@@ -776,13 +776,29 @@ func (m Model) normalizeFrameLines(lines []string) []string {
 		return lines
 	}
 	filler := theme.Bg(theme.BgEditor)
+	nm := &normMemo
+	nm.Lock()
+	if rk := theme.CurrentRenderKey(); nm.w != m.w || nm.rk != rk {
+		nm.w, nm.rk, nm.in, nm.out = m.w, rk, nil, nil
+	}
+	for len(nm.in) < len(lines) {
+		nm.in = append(nm.in, "")
+		nm.out = append(nm.out, "")
+	}
 	for i, line := range lines {
+		if line == nm.in[i] && line != "" {
+			lines[i] = nm.out[i]
+			continue
+		}
+		nm.in[i] = line
 		w := frameWidth(line)
 		if w < m.w {
 			line += bgSpaces(theme.BgEditor, m.w-w)
 		}
 		lines[i] = restyleTrailingUnstyled(line, filler)
+		nm.out[i] = lines[i]
 	}
+	nm.Unlock()
 	for len(lines) < m.h {
 		lines = append(lines, bgSpaces(theme.BgEditor, m.w))
 	}
@@ -792,6 +808,16 @@ func (m Model) normalizeFrameLines(lines []string) []string {
 		lines = lines[len(lines)-m.h:]
 	}
 	return lines
+}
+
+// normMemo keeps normalizeFrameLines' rows of the last frame by
+// position: a row equal to last frame's comes out as last frame's
+// result. Valid for one window width and theme render key.
+var normMemo struct {
+	sync.Mutex
+	w       int
+	rk      theme.RenderKey
+	in, out []string
 }
 
 // padColumnLines forces a column's rows (all the same width) to exactly h

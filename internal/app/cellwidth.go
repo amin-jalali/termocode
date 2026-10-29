@@ -1,6 +1,7 @@
 package app
 
 import (
+	"slices"
 	"strings"
 	"sync"
 	"unicode"
@@ -402,4 +403,101 @@ func textWidth(s string) int {
 		}
 	}
 	return w
+}
+
+// frameJoinMemo is joinColumnsLines for the frame's main column join,
+// keeping the rows it built: a row whose column rows and column widths
+// are the same as last frame is the same string again (no copy, and its
+// width and normalized form stay memoized). Most rows do not change
+// between frames.
+type frameJoinMemo struct {
+	sync.Mutex
+	maxW []int
+	in   [][]string // in[y]: the column rows row y was built from
+	wid  [][]int    // wid[y][i]: the width of in[y][i]
+	out  []string
+}
+
+// mainJoin is the memo for renderBaseLines' column join.
+var mainJoin frameJoinMemo
+
+// join is joinColumnsLines(cols...) through the memo. Rows whose column
+// rows match last frame's take their widths from the memo too.
+func (jm *frameJoinMemo) join(cols ...[]string) []string {
+	if len(cols) <= 1 {
+		return joinColumnsLines(cols...)
+	}
+	h := 0
+	for _, c := range cols {
+		h = max(h, len(c))
+	}
+	jm.Lock()
+	defer jm.Unlock()
+	for len(jm.in) < h {
+		jm.in = append(jm.in, nil)
+		jm.wid = append(jm.wid, nil)
+		jm.out = append(jm.out, "")
+	}
+	// Which rows are as last frame; widths of the others.
+	same := make([]bool, h)
+	maxW := make([]int, len(cols))
+	for y := 0; y < h; y++ {
+		s := len(jm.in[y]) == len(cols)
+		for i, c := range cols {
+			if !s {
+				break
+			}
+			r := ""
+			if y < len(c) {
+				r = c[y]
+			}
+			s = jm.in[y][i] == r
+		}
+		same[y] = s
+		if !s {
+			in, wid := jm.in[y][:0], jm.wid[y][:0]
+			for _, c := range cols {
+				r, w := "", 0
+				if y < len(c) {
+					r = c[y]
+					w = frameWidth(r)
+				}
+				in, wid = append(in, r), append(wid, w)
+			}
+			jm.in[y], jm.wid[y] = in, wid
+		}
+		for i, w := range jm.wid[y] {
+			maxW[i] = max(maxW[i], w)
+		}
+	}
+	if !slices.Equal(jm.maxW, maxW) {
+		jm.maxW = maxW
+		clear(same) // every row is laid out again
+	}
+	total := 0
+	for _, w := range maxW {
+		total += w
+	}
+	out := make([]string, h)
+	for y := 0; y < h; y++ {
+		if same[y] {
+			out[y] = jm.out[y]
+			setFrameWidth(out[y], total)
+			continue
+		}
+		size := total
+		for i, r := range jm.in[y] {
+			size += len(r) - jm.wid[y][i]
+		}
+		var b strings.Builder
+		b.Grow(size)
+		for i, r := range jm.in[y] {
+			b.WriteString(r)
+			writeSpaces(&b, maxW[i]-jm.wid[y][i])
+		}
+		out[y] = b.String()
+		jm.out[y] = out[y]
+		setFrameWidth(out[y], total)
+	}
+	return out
 }
