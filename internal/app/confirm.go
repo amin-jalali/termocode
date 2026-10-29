@@ -42,6 +42,7 @@ const (
 	// Discard lines (git_lines.go).
 	confirmKindGitDiscardLines
 	confirmKindBulkRename
+	confirmKindRebaseStart // git_rebase.go
 )
 
 // findBuffer returns the buffer info for the given id, if known.
@@ -162,6 +163,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		return nil
 	case confirmKindCommitRevert, confirmKindCommitCherryPick:
 		return m.runCommitPick(id)
+	case confirmKindRebaseStart:
+		return m.onRebaseConfirm(id)
 	case confirmKindCloseBuffer:
 		switch id {
 		case "cancel":

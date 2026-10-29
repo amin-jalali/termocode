@@ -89,3 +89,54 @@ func TestSCMRebaseRewordPrompt(t *testing.T) {
 		t.Errorf("the card closed:%s", dump(d))
 	}
 }
+
+// startRebase presses Enter on the card and waits for the confirm.
+func startRebase(t *testing.T, d *Driver) {
+	t.Helper()
+	d.Key("enter")
+	if !until(d, func() bool { return strings.Contains(text(d), "Start the rebase?") }) {
+		t.Fatalf("no confirm:%s", dump(d))
+	}
+}
+
+// Spec: Enter on the card asks first. The confirm lists what will happen
+// and Enter alone picks Cancel (the card stays open, nothing runs).
+// Start Rebase runs it: the dropped commit leaves GRAPH, the reworded one
+// has its new subject, and the toast tells how to undo.
+func TestSCMRebaseConfirmAndRun(t *testing.T) {
+	d, r := scmDriver(t, rebaseRepo)
+	head := r.git("rev-parse", "HEAD")
+	openRebaseCard(t, d, "c2")
+	d.Key("j", "d") // drop c3
+	startRebase(t, d)
+	s := text(d)
+	for _, want := range []string{"3 commits → 2 commits", "drop 1", "git reset --hard ORIG_HEAD"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("confirm lacks %q:%s", want, dump(d))
+		}
+	}
+	d.Key("enter") // Cancel is focused
+	if !until(d, func() bool { return !strings.Contains(text(d), "Start the rebase?") }) {
+		t.Fatalf("confirm still open:%s", dump(d))
+	}
+	if !strings.Contains(text(d), "Interactive Rebase") || r.git("rev-parse", "HEAD") != head {
+		t.Fatalf("Cancel closed the card or ran the rebase:%s", dump(d))
+	}
+	d.Key("k", "r", "backspace", "backspace")
+	d.Type("c2 better")
+	d.Key("enter")
+	startRebase(t, d)
+	clickTarget(d, "confirm:rebase-start")
+	if !until(d, func() bool { return strings.Contains(text(d), "Rebase done: 3 commits → 2 commits") }) {
+		t.Fatalf("no done toast:%s", dump(d))
+	}
+	if got := r.git("log", "--format=%s"); got != "c4\nc2 better\nc1\ninit" {
+		t.Errorf("history:\n%s", got)
+	}
+	if r.exists("f3.txt") {
+		t.Error("the dropped commit's file is still there")
+	}
+	if !until(d, func() bool { return inSection(d, "GRAPH", "c2 better") && !inSection(d, "GRAPH", "c3") }) {
+		t.Errorf("GRAPH not refreshed:%s", dump(d))
+	}
+}

@@ -2,10 +2,12 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/rebaseview"
@@ -23,6 +25,21 @@ type gitRebaseState struct {
 	open   bool
 	card   rebaseview.Model
 	reword rebaseview.RewordMsg // the row the reword prompt is for
+	start  *rebaseCheckMsg      // the run the confirm card asks about
+}
+
+// rebaseCheckMsg is what the confirm card says before a run.
+type rebaseCheckMsg struct {
+	todo  git.RebaseTodo
+	title string
+}
+
+// rebaseDoneMsg is the end of a run (or of its first stretch, when git
+// stopped).
+type rebaseDoneMsg struct {
+	summary string
+	out     git.RebaseOutcome
+	err     error
 }
 
 // rebaseTodoMsg carries a loaded todo for the card.
@@ -145,6 +162,10 @@ func (m *Model) onRebaseMsg(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case rebaseTodoMsg:
 		return m.onRebaseTodo(msg)
+	case rebaseCheckMsg:
+		m.openRebaseConfirm(msg)
+	case rebaseDoneMsg:
+		return m.onRebaseDone(msg)
 	}
 	return nil
 }
@@ -156,8 +177,116 @@ func (m *Model) onRebaseCardMsg(msg tea.Msg) tea.Cmd {
 		m.closeRebaseCard()
 	case rebaseview.RewordMsg:
 		m.openRebaseRewordPrompt(msg)
+	case rebaseview.StartMsg:
+		return m.rebaseCheckCmd(msg.Todo)
 	}
 	return nil
+}
+
+// rebaseCheckCmd reads what the confirm card must say.
+func (m *Model) rebaseCheckCmd(todo git.RebaseTodo) tea.Cmd {
+	return func() tea.Msg {
+		return rebaseCheckMsg{todo: todo}
+	}
+}
+
+// openRebaseConfirm asks before the run: Cancel first and focused (the
+// rebase card stays open behind it).
+func (m *Model) openRebaseConfirm(msg rebaseCheckMsg) {
+	if !m.rebaseCardOpen() {
+		return
+	}
+	m.rebase.start = &msg
+	body := rebaseConfirmText(msg)
+	m.confirm = confirm.Risky("Start the rebase?", body,
+		confirm.Button{ID: "cancel", Title: "Cancel"},
+		confirm.Button{ID: "rebase-start", Title: "Start Rebase", Style: confirm.StyleDestructive})
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = confirmKindRebaseStart
+}
+
+// rebaseConfirmText lists what will happen.
+func rebaseConfirmText(msg rebaseCheckMsg) string {
+	todo := msg.todo
+	onto := "the root commit"
+	if len(todo.Base) >= 7 {
+		onto = todo.Base[:7]
+	}
+	lines := []string{fmt.Sprintf("Replay %s onto %s: %s.", rebaseCount(len(todo.Items)), onto, todo.Summary())}
+	counts := map[git.RebaseAction]int{}
+	for _, it := range todo.Items {
+		counts[it.Action]++
+	}
+	var parts []string
+	for _, a := range []git.RebaseAction{git.RebaseReword, git.RebaseEdit, git.RebaseSquash, git.RebaseFixup, git.RebaseDrop} {
+		if n := counts[a]; n > 0 {
+			parts = append(parts, fmt.Sprintf("%s %d", a, n))
+		}
+	}
+	if len(parts) > 0 {
+		lines = append(lines, strings.Join(parts, " · "))
+	}
+	if counts[git.RebaseEdit] > 0 {
+		lines = append(lines, "It stops at each edit row so you can change the commit.")
+	}
+	lines = append(lines, "", "Undo afterwards: git reset --hard ORIG_HEAD")
+	return strings.Join(lines, "\n")
+}
+
+func rebaseCount(n int) string {
+	if n == 1 {
+		return "1 commit"
+	}
+	return fmt.Sprintf("%d commits", n)
+}
+
+// onRebaseConfirm runs the rebase (or goes back to the card).
+func (m *Model) onRebaseConfirm(id string) tea.Cmd {
+	if m.rebase == nil || m.rebase.start == nil {
+		return nil
+	}
+	check := *m.rebase.start
+	m.rebase.start = nil
+	if id != "rebase-start" {
+		return nil // Cancel: the card is still open
+	}
+	m.closeRebaseCard()
+	cwd, err := m.rootDir()
+	if err != nil {
+		return nil
+	}
+	return func() tea.Msg {
+		out, err := git.RunRebase(cwd, check.todo, git.RebaseOptions{})
+		return rebaseDoneMsg{summary: check.todo.Summary(), out: out, err: err}
+	}
+}
+
+// onRebaseDone says how the run went and refreshes Source Control.
+func (m *Model) onRebaseDone(msg rebaseDoneMsg) tea.Cmd {
+	var cmd tea.Cmd
+	switch {
+	case msg.err != nil:
+		m.toast, cmd = m.toast.PushDetail(toast.Errr, "Rebase failed", msg.err.Error())
+	case len(msg.out.Conflicts) > 0:
+		m.toast, cmd = m.toast.PushDetail(toast.Warn, "Rebase stopped: "+conflictWord(len(msg.out.Conflicts)),
+			"Fix them in CONFLICTS, then Continue in Source Control. Abort puts everything back.")
+	case msg.out.Stopped:
+		m.toast, cmd = m.toast.PushDetail(toast.Info, "Rebase stopped to edit a commit",
+			"Change the commit (Commit (Amend)), then Continue in Source Control.")
+	default:
+		m.toast, cmd = m.toast.PushDetail(toast.Info, "Rebase done: "+msg.summary,
+			"Undo: git reset --hard ORIG_HEAD")
+	}
+	return tea.Batch(cmd, fetchGitCmd())
+}
+
+// conflictWord is "1 conflict" / "3 conflicts".
+func conflictWord(n int) string {
+	if n == 1 {
+		return "1 conflict"
+	}
+	return fmt.Sprintf("%d conflicts", n)
 }
 
 // openRebaseRewordPrompt asks for a reword row's new subject; the body
