@@ -125,24 +125,33 @@ func covKey(m *Model, k tea.KeyMsg) (tea.Cmd, bool) {
 
 func covRunes(s string) tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)} }
 
-// covMsg runs cmd (and every command of a batch, each on its own
-// goroutine, since a toast's timer blocks) and returns the first message
-// of type T. It fails the test when none comes within a minute.
+// covMsg runs cmd and returns its first message of type T.
 func covMsg[T any](t *testing.T, cmd tea.Cmd) T {
 	t.Helper()
-	got := make(chan T, 64)
+	msg := covMatch(t, cmd, func(m tea.Msg) bool { _, ok := m.(T); return ok })
+	return msg.(T)
+}
+
+// covMatch runs cmd (and every command of a batch, each on its own
+// goroutine, since a toast's timer blocks) and returns the first message
+// ok accepts. It fails the test when none comes within a minute.
+func covMatch(t *testing.T, cmd tea.Cmd, ok func(tea.Msg) bool) tea.Msg {
+	t.Helper()
+	got := make(chan tea.Msg, 64)
 	var run func(tea.Cmd)
 	run = func(c tea.Cmd) {
 		if c == nil {
 			return
 		}
 		go func() {
-			switch msg := c().(type) {
-			case tea.BatchMsg:
-				for _, s := range msg {
+			msg := c()
+			if b, isBatch := msg.(tea.BatchMsg); isBatch {
+				for _, s := range b {
 					run(s)
 				}
-			case T:
+				return
+			}
+			if msg != nil && ok(msg) {
 				got <- msg
 			}
 		}()
@@ -152,9 +161,8 @@ func covMsg[T any](t *testing.T, cmd tea.Cmd) T {
 	case msg := <-got:
 		return msg
 	case <-time.After(time.Minute):
-		var zero T
-		t.Fatalf("no %T came", zero)
-		return zero
+		t.Fatal("the awaited message never came")
+		return nil
 	}
 }
 
