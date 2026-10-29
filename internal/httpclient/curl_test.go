@@ -103,3 +103,15 @@ func TestParseQuick(t *testing.T) {
 		}
 	}
 }
+
+// A method from a shared .http file is quoted, so pasting the command
+// into a shell cannot run anything.
+func TestToCurlQuotesAnOddMethod(t *testing.T) {
+	got := ToCurl(Resolved{Request: Request{Method: "GET;id", URL: "https://x"}}, true)
+	if !strings.HasPrefix(got, "curl -X 'GET;id' 'https://x'") {
+		t.Fatalf("got %q", got)
+	}
+	if got := ToCurl(Resolved{Request: Request{Method: "PATCH", URL: "https://x"}}, true); !strings.HasPrefix(got, "curl -X PATCH ") {
+		t.Fatalf("plain method quoted: %q", got)
+	}
+}
