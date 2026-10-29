@@ -225,6 +225,9 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 	case promptKindImportFile:
 		return m.onImportFilePath(value)
 	case promptKindNewFolder:
+		if fsys, ok := m.remoteFS(); ok { // a container workspace
+			return m.remoteNewFolder(fsys, m.promptPath, value)
+		}
 		newPath := filepath.Join(m.promptPath, value)
 		if err := os.MkdirAll(newPath, 0o755); err != nil {
 			m.err = err.Error()

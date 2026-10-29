@@ -48,3 +48,15 @@ func (m *Model) remoteNewFile(fsys workspace.FS, dir, name string) tea.Cmd {
 	}
 	return tea.Batch(cmd, m.refreshSearchResults())
 }
+
+// remoteNewFolder makes the folder dir/name (and missing parents) in the
+// container.
+func (m *Model) remoteNewFolder(fsys workspace.FS, dir, name string) tea.Cmd {
+	label := m.workspace().Host.Label()
+	if err := fsys.Mkdir(context.Background(), path.Join(dir, name), 0o755); err != nil {
+		return m.remoteOpFailed("New folder failed", remoteErrText(label, err))
+	}
+	m.err = ""
+	m.explorer.Reload()
+	return nil
+}

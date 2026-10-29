@@ -42,3 +42,29 @@ func TestContainerNewFileOutsideTheRootFails(t *testing.T) {
 		t.Fatalf("err = %q", m.err)
 	}
 }
+
+func TestContainerNewFolderIsMadeInTheContainer(t *testing.T) {
+	m, _, _, c := newContainerModel(t)
+	m.promptKind, m.promptPath = promptKindNewFolder, "/app"
+	m.handlePromptSubmit("web/static")
+	if fi, err := os.Stat(c.Local("/app/web/static")); err != nil || !fi.IsDir() {
+		t.Fatalf("new folder in the container: %v %v", fi, err)
+	}
+	if m.err != "" {
+		t.Fatalf("err = %q", m.err)
+	}
+	m.explorer.RevealPath("/app/web/static")
+	if got := m.explorer.CursorPath(); got != "/app/web/static" {
+		t.Fatalf("explorer does not show the new folder: cursor %q", got)
+	}
+}
+
+func TestContainerNewFolderGoneContainerSaysSo(t *testing.T) {
+	m, _, _, c := newContainerModel(t)
+	c.Remove()
+	m.promptKind, m.promptPath = promptKindNewFolder, "/app"
+	m.handlePromptSubmit("web")
+	if m.err != "api-1 is not running." {
+		t.Fatalf("err = %q", m.err)
+	}
+}
