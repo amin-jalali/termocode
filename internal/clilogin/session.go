@@ -17,6 +17,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clistep"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/lspinstall"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
@@ -141,15 +142,15 @@ func Start(ctx context.Context, o Options) (*Session, error) {
 		events: make(chan Event, 8), done: make(chan struct{}), read: make(chan struct{}),
 		sent: map[EventKind]bool{}, device: device,
 	}
-	go s.readLoop()
-	go s.waitLoop()
-	go func() {
+	crash.Go("the sign-in", func() { s.readLoop() })
+	crash.Go("the sign-in", func() { s.waitLoop() })
+	crash.Go("the sign-in", func() {
 		select {
 		case <-ctx.Done():
 			s.Cancel()
 		case <-s.done:
 		}
-	}()
+	})
 	return s, nil
 }
 

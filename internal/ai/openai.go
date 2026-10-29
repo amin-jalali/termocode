@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // openAIProvider speaks the OpenAI chat-completions protocol with SSE
@@ -24,10 +26,10 @@ func (p *openAIProvider) SupportsTools() bool { return true }
 
 func (p *openAIProvider) Stream(ctx context.Context, req Request) <-chan Chunk {
 	ch := make(chan Chunk, 16)
-	go func() {
+	crash.Go("the AI reply", func() {
 		defer close(ch)
 		ch <- p.run(ctx, req, ch)
-	}()
+	})
 	return ch
 }
 

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/lspinstall"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
@@ -84,10 +85,10 @@ func Check(ctx context.Context, cli string, env []string) Status {
 		err error
 	}
 	ch := make(chan res, 1)
-	go func() {
+	crash.Go("an AI tool check", func() {
 		b, err := cmd.CombinedOutput()
 		ch <- res{b, err}
-	}()
+	})
 	select {
 	case r := <-ch:
 		out, err = r.b, r.err

@@ -31,6 +31,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // EventKind tags a run event.
@@ -240,7 +241,7 @@ func Start(ctx context.Context, r agentdag.Run, o Options) (*Handle, error) {
 	}
 	runCtx, cancel := context.WithCancel(ctx)
 	h.cancel = cancel
-	go h.loop(runCtx)
+	crash.Go("an agent run", func() { h.loop(runCtx) })
 	return h, nil
 }
 
@@ -411,7 +412,8 @@ func (h *Handle) loop(runCtx context.Context) {
 					if h.o.Parallel > 1 && h.sharesWave(id) {
 						nctx = context.WithValue(nodeCtx, sharedWaveKey{}, true)
 					}
-					go h.runNode(nctx, *h.node(id), input, results)
+					node := *h.node(id)
+					crash.Go("an agent step", func() { h.runNode(nctx, node, input, results) })
 				}
 			}
 		}

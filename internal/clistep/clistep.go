@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/lspinstall"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
@@ -181,13 +182,13 @@ func Run(ctx context.Context, s Spec, prompt string, emit func(ai.Event)) (Resul
 	stopped := make(chan struct{})
 	var once sync.Once
 	kill := func() { once.Do(func() { killGroup(cmd.Process.Pid) }) }
-	go func() {
+	crash.Go("an AI tool step", func() {
 		select {
 		case <-runCtx.Done():
 			kill()
 		case <-stopped:
 		}
-	}()
+	})
 	emit(ai.Event{Kind: ai.EventTurnStart})
 	p := newParser(s, emit)
 	readLines(stdout, p.line)
