@@ -383,7 +383,11 @@ func (h *Handle) loop(runCtx context.Context) {
 					h.setState(id, func(n *agentdag.Node) { n.State = agentdag.StateRunning; n.Attempt++; n.Error = "" })
 					h.emit(Event{NodeID: id, Kind: NodeStart, Round: h.round()})
 					running++
-					go h.runNode(nodeCtx, *h.node(id), input, results)
+					nctx := nodeCtx
+					if h.o.Parallel > 1 && h.sharesWave(id) {
+						nctx = context.WithValue(nodeCtx, sharedWaveKey{}, true)
+					}
+					go h.runNode(nctx, *h.node(id), input, results)
 				}
 			}
 		}
@@ -548,6 +552,22 @@ func (h *Handle) nextRound(res result) error {
 	}
 	h.emit(Event{Kind: RunRound, Round: n.Loop.Round, Err: n.Loop.Report, Verdict: res.verdict})
 	return nil
+}
+
+// sharesWave reports whether node id may write files and another node of
+// its layer that may write has not finished yet (they may run at once).
+// It runs on the loop goroutine.
+func (h *Handle) sharesWave(id string) bool {
+	n := h.node(id)
+	if n == nil || !agentdag.Writes(*n) {
+		return false
+	}
+	for _, o := range h.run.Nodes {
+		if o.ID != id && h.layer[o.ID] == h.layer[id] && agentdag.Writes(o) && !o.State.Done() && !o.State.Stops() {
+			return true
+		}
+	}
+	return false
 }
 
 // runNode builds and runs one node's agent and sends its result.

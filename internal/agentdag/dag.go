@@ -90,6 +90,12 @@ type ToolRule struct {
 	Preset string   `json:"preset,omitempty"` // "" | none | read-only | all
 }
 
+// Writes reports whether node n may change files: its tool preset is
+// not none or read-only.
+func Writes(n Node) bool {
+	return n.Tools.Preset != PresetNone && n.Tools.Preset != PresetReadOnly
+}
+
 // InputRule says what a node gets as input.
 type InputRule struct {
 	// NoUser leaves the user's message out of the input (default: in).

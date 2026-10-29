@@ -70,3 +70,13 @@ func Parallel(ctx context.Context) bool {
 	p, _ := ctx.Value(parallelKey{}).(bool)
 	return p
 }
+
+type sharedWaveKey struct{}
+
+// SharedWave reports whether the node ctx belongs to may write files at
+// the same time as another node of its wave (G-WT: the app then gives it
+// its own git worktree).
+func SharedWave(ctx context.Context) bool {
+	p, _ := ctx.Value(sharedWaveKey{}).(bool)
+	return p
+}
