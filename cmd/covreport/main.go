@@ -110,7 +110,8 @@ func readProfile(path string) ([]Block, error) {
 		return nil, err
 	}
 	defer f.Close()
-	return ParseProfile(f)
+	blocks, err := ParseProfile(f)
+	return Merge(blocks), err
 }
 
 // modulePath reads the module path from the text of a go.mod.
