@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/kube/kubetest"
 	"github.com/amin-jalali/termocode/internal/services/servicestest"
 )
 
@@ -48,7 +49,8 @@ func TestContainersViewWithoutFakeHitsGuard(t *testing.T) {
 }
 
 // fakeEngine puts a working fake docker first on PATH, answering from the
-// docker27 fixtures. Tests that may open a container view on their own
+// docker27 fixtures, and a fake kubectl (an empty cluster, the
+// Kubernetes view may open too). Tests that may open a container view on their own
 // (the monkey, the palette and key walks) call it before New.
 func fakeEngine(t *testing.T) *servicestest.Fake {
 	t.Helper()
@@ -65,6 +67,8 @@ func fakeEngine(t *testing.T) *servicestest.Fake {
 		}
 		f.Set(t, name, string(b))
 	}
-	t.Setenv("PATH", f.PathEnv())
+	k := kubetest.New(t)
+	t.Setenv("KUBECONFIG", filepath.Join(t.TempDir(), "kubeconfig"))
+	t.Setenv("PATH", k.Bin+string(os.PathListSeparator)+f.PathEnv())
 	return f
 }
