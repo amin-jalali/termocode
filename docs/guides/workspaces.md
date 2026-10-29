@@ -194,6 +194,9 @@ Edit one name per line. Use the arrow keys to move, Enter to add a line, and
 `Ctrl+S` to review. The review lists changes and conflicts. Cancel has focus;
 press Tab to reach Apply. Names must stay in the same folder. Swapping names
 works. Open editor tabs follow the new names and keep unsaved text.
+In a git repo, git follows too: a file with staged changes shows as
+renamed in Source Control, and its staged text stays staged under the new
+name. This also holds for one file or folder renamed with **Rename...**.
 
 Click **Renamed N files · Undo** to reverse the rename, or run
 **Explorer: Undo Rename**. Undo works while the renamed files are unchanged and
