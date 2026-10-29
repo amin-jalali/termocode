@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/services"
 )
 
@@ -215,7 +216,7 @@ func (e *Engine) Watch(ctx context.Context) (<-chan Event, func(), error) {
 		return nil, nil, err
 	}
 	ch := make(chan Event, 64)
-	go func() {
+	crash.Go("the container events", func() {
 		defer close(ch)
 		defer cancel()
 		s := bufio.NewScanner(out)
@@ -235,7 +236,7 @@ func (e *Engine) Watch(ctx context.Context) (<-chan Event, func(), error) {
 			}
 		}
 		stop()
-	}()
+	})
 	var once sync.Once
 	stopFn := func() {
 		once.Do(func() {

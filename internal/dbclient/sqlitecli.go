@@ -18,6 +18,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
@@ -210,7 +211,7 @@ func (s *SQLiteSession) exchangeLocked(ctx context.Context, sql string, maxRows 
 	if len(maxRows) > 0 {
 		limit = maxRows[0]
 	}
-	go func() {
+	crash.Go("the SQLite console", func() {
 		var lines []string
 		rowsSeen := 0
 		truncated := false
@@ -257,7 +258,7 @@ func (s *SQLiteSession) exchangeLocked(ctx context.Context, sql string, maxRows 
 				return
 			}
 		}
-	}()
+	})
 	select {
 	case r := <-ch:
 		if r.err != nil {

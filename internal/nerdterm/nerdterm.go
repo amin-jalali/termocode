@@ -25,6 +25,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/termcaps"
 )
@@ -230,9 +231,9 @@ func detectGNOME(e Env, info *Info) {
 	var useSys, font, mono string
 	var wg sync.WaitGroup
 	wg.Add(3)
-	go func() { defer wg.Done(); useSys = get(path, "use-system-font") }()
-	go func() { defer wg.Done(); font = get(path, "font") }()
-	go func() { defer wg.Done(); mono = get(gnomeDesktop, "monospace-font-name") }()
+	crash.Go("the font check", func() { defer wg.Done(); useSys = get(path, "use-system-font") })
+	crash.Go("the font check", func() { defer wg.Done(); font = get(path, "font") })
+	crash.Go("the font check", func() { defer wg.Done(); mono = get(gnomeDesktop, "monospace-font-name") })
 	wg.Wait()
 	switch useSys {
 	case "true":

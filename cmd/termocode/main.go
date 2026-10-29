@@ -390,12 +390,12 @@ func printUsage() {
 func watchHangup(p *tea.Program) {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGINT)
-	go func() {
+	crash.GoWith("the quit on hangup", func() {
 		<-sig
 		app.FlushSession() // the last cursor positions (N1)
 		app.HotExitFlush(2 * time.Second)
 		p.Quit()
-	}()
+	}, p.Quit)
 }
 
 // hostEscapes returns what termocode writes to the host terminal before

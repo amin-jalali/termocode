@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/zalando/go-keyring"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 const keyringService = "termocode"
@@ -84,7 +86,7 @@ func probeKeyringWith(timeout time.Duration, set func(string, string, string) er
 	}
 	name := "probe-" + hex.EncodeToString(nonce[:])
 	done := make(chan bool, 1)
-	go func() {
+	crash.Go("the keyring", func() {
 		ok := false
 		defer func() { done <- ok }()
 		if set(keyringService, name, name) != nil {
@@ -93,7 +95,7 @@ func probeKeyringWith(timeout time.Duration, set func(string, string, string) er
 		got, err := get(keyringService, name)
 		_ = del(keyringService, name)
 		ok = err == nil && got == name
-	}()
+	})
 	select {
 	case ok := <-done:
 		return ok

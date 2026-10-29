@@ -15,6 +15,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/amin-jalali/termocode/internal/app"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/session"
 	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/termimg"
@@ -245,7 +246,7 @@ func watchRepaint(p *tea.Program) {
 	capsFile := os.Getenv(session.EnvCapsFile)
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, session.RepaintSignal)
-	go func() {
+	crash.Go("the session repaint", func() {
 		for range sig {
 			if w, h, err := term.GetSize(int(os.Stdout.Fd())); err == nil {
 				p.Send(tea.WindowSizeMsg{Width: w, Height: h})
@@ -258,5 +259,5 @@ func watchRepaint(p *tea.Program) {
 			}
 			p.Send(tea.ClearScreen())
 		}
-	}()
+	})
 }

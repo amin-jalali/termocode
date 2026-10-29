@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // Event is one `docker events` line, reduced to what the app uses.
@@ -32,7 +34,7 @@ func (c *Compose) Watch(ctx context.Context, project string) (<-chan Event, func
 		return nil, nil, err
 	}
 	ch := make(chan Event, 16)
-	go func() {
+	crash.Go("the services events", func() {
 		defer close(ch)
 		sc := bufio.NewScanner(out)
 		sc.Buffer(make([]byte, 64<<10), 1<<20)
@@ -55,6 +57,6 @@ func (c *Compose) Watch(ctx context.Context, project string) (<-chan Event, func
 			default:
 			}
 		}
-	}()
+	})
 	return ch, stop, nil
 }

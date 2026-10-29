@@ -11,26 +11,11 @@ import (
 	"testing"
 )
 
-// bareGoAllowed lists the files that still start goroutines with a bare
-// `go` statement, and how many. A panic in such a goroutine ends the
-// whole process: the UI dies without its hot-exit flush. New code uses
-// crash.Go (or defers crash.Guard); this list only shrinks.
-var bareGoAllowed = map[string]int{
-	"cmd/termocode/main.go":            1,
-	"cmd/termocode/mcp_relay.go":       2,
-	"cmd/termocode/session_unix.go":    1,
-	"internal/containers/engine.go":    1,
-	"internal/dbclient/sqlitecli.go":   1,
-	"internal/dbclient/sqlsession.go":  1,
-	"internal/dbclient/tunnel.go":      2,
-	"internal/nerdterm/nerdterm.go":    3,
-	"internal/search/search.go":        1,
-	"internal/secrets/keyring.go":      1,
-	"internal/services/events.go":      1,
-	"internal/services/start_linux.go": 1,
-	"internal/services/start_other.go": 1,
-	"internal/transfer/kitty.go":       1,
-}
+// bareGoAllowed lists files allowed to start goroutines with a bare `go`
+// statement, and how many (none now). A panic in such a goroutine ends
+// the whole process: the UI dies without its hot-exit flush. Use
+// crash.Go / crash.GoWith (or defer crash.Guard) instead.
+var bareGoAllowed = map[string]int{}
 
 // bareGo matches `go f(…)`, `go x.f(…)` and `go func…`.
 var bareGo = regexp.MustCompile(`^\s*go\s+(func\b|[A-Za-z_][A-Za-z0-9_.]*\()`)

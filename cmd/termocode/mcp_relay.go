@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/extproc"
 )
 
@@ -57,7 +58,7 @@ func relayMCP(in io.Reader, out io.Writer, conn net.Conn, errw io.Writer, worksp
 	gotReply := false
 
 	inEOF := make(chan struct{})
-	go func() { // agent -> UI
+	crash.Go("the MCP relay", func() { // agent -> UI
 		r := bufio.NewReaderSize(in, 64<<10)
 		for {
 			msg, err := extproc.ReadLineMessage(r, note)
@@ -84,10 +85,10 @@ func relayMCP(in io.Reader, out io.Writer, conn net.Conn, errw io.Writer, worksp
 				return // the UI went away; the other side reports it
 			}
 		}
-	}()
+	})
 
 	fromUI := make(chan error, 1)
-	go func() { // UI -> agent
+	crash.Go("the MCP relay", func() { // UI -> agent
 		r := bufio.NewReaderSize(conn, 64<<10)
 		for {
 			msg, err := extproc.ReadLineMessage(r, note)
@@ -112,7 +113,7 @@ func relayMCP(in io.Reader, out io.Writer, conn net.Conn, errw io.Writer, worksp
 				return
 			}
 		}
-	}()
+	})
 
 	select {
 	case <-inEOF:

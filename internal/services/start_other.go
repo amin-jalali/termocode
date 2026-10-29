@@ -2,7 +2,12 @@
 
 package services
 
-import "os/exec"
+import (
+	"errors"
+	"os/exec"
+
+	"github.com/amin-jalali/termocode/internal/crash"
+)
 
 // startAndWait starts cmd and returns a channel with cmd.Wait's result.
 func startAndWait(cmd *exec.Cmd) (<-chan error, error) {
@@ -10,6 +15,11 @@ func startAndWait(cmd *exec.Cmd) (<-chan error, error) {
 		return nil, err
 	}
 	exited := make(chan error, 1)
-	go func() { exited <- cmd.Wait() }()
+	crash.GoWith("a service process", func() { exited <- cmd.Wait() }, func() {
+		select {
+		case exited <- errors.New("a service process failed"):
+		default:
+		}
+	})
 	return exited, nil
 }
