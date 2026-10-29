@@ -327,3 +327,21 @@ func TestExitedPaneEnterRestartsAndXCloses(t *testing.T) {
 		t.Errorf("close: panes=%d wins=%d", m.terminalTabs[0].paneCount(), nvimWinCount(t, m))
 	}
 }
+
+func TestSplitKeepsTheEditorHeight(t *testing.T) {
+	m := splitTestModel(t, 120, 40)
+	editorH := func() int {
+		out, _ := m.nvim.EvalLuaString(`local h = 0
+			for _, w in ipairs(vim.api.nvim_list_wins()) do
+				if not vim.w[w].termocode_panel then h = vim.api.nvim_win_get_height(w) end
+			end
+			return tostring(h)`)
+		return parseInt(out)
+	}
+	before := editorH()
+	m.splitTerminalPane(paneDown)
+	m.splitTerminalPane(paneRight)
+	if got := editorH(); got != before {
+		t.Errorf("editor height %d -> %d: splitting the terminal must not resize it", before, got)
+	}
+}

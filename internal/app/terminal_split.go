@@ -41,6 +41,19 @@ const termPaneChromeLua = `
 // returns the buffer id, or 0 when the shell did not start. The buffer is
 // tagged as a pane, so a shell that ends stays on screen.
 const termPaneSpawnLua = termExitedLua + termShellIntLua + termPaneChromeLua + `
+	-- Split the current window without nvim evening out every window of the
+	-- screen (it would resize the editor above the panel).
+	_G.termocode_pane_split = _G.termocode_pane_split or function(down)
+		local ea = vim.o.equalalways
+		vim.o.equalalways = false
+		pcall(vim.cmd, down and 'keepalt rightbelow split' or 'keepalt rightbelow vsplit')
+		-- Turning the option back on evens out the windows at once; limit
+		-- that to widths so no height (the editor's) changes.
+		local ead = vim.o.eadirection
+		vim.o.eadirection = 'hor'
+		vim.o.equalalways = ea
+		vim.o.eadirection = ead
+	end
 	_G.termocode_pane_spawn = _G.termocode_pane_spawn or function(win, cwd, spec)
 		local buf = vim.api.nvim_create_buf(false, true)
 		if buf <= 0 then return 0 end
@@ -108,7 +121,7 @@ func (m *Model) splitTerminalPane(dir paneDir) tea.Cmd {
 			if vim.api.nvim_buf_is_valid(b) then vim.b[b].termocode_pane = true end
 		end
 		vim.api.nvim_set_current_win(fromWin)
-		vim.cmd(down and 'keepalt rightbelow split' or 'keepalt rightbelow vsplit')
+		_G.termocode_pane_split(down)
 		local win = vim.api.nvim_get_current_win()
 		vim.w[win].termocode_panel = true
 		local buf = _G.termocode_pane_spawn(win, cwd, %q)
@@ -280,7 +293,7 @@ func (m *Model) reconcileTerminalPanes() {
 	for _, s := range tab.Splits {
 		rows += fmt.Sprintf("{%d,%d,%t,%d},", s.BufID, s.Parent, s.Dir == paneDown, s.WinID)
 	}
-	out, err := m.nvim.EvalLuaString(fmt.Sprintf(termPaneChromeLua+`
+	out, err := m.nvim.EvalLuaString(fmt.Sprintf(termPaneSpawnLua+`
 		local rows, wins, out = {%s}, { [0] = %d }, {}
 		for k, r in ipairs(rows) do
 			local buf, parent, down, win = r[1], r[2], r[3], r[4]
@@ -293,7 +306,7 @@ func (m *Model) reconcileTerminalPanes() {
 					local pw = wins[parent]
 					if pw and vim.api.nvim_win_is_valid(pw) then
 						vim.api.nvim_set_current_win(pw)
-						vim.cmd(down and 'keepalt rightbelow split' or 'keepalt rightbelow vsplit')
+						_G.termocode_pane_split(down)
 						local nw = vim.api.nvim_get_current_win()
 						pcall(vim.api.nvim_win_set_buf, nw, buf)
 						vim.w[nw].termocode_panel = true
