@@ -3,6 +3,7 @@ package nvim
 import (
 	"os/exec"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 )
@@ -25,6 +26,9 @@ func TestLeakTrackingNamesTheTest(t *testing.T) {
 	}
 	if before >= 0 && ChildProcesses() != before+1 {
 		t.Errorf("nvim children %d, want %d", ChildProcesses(), before+1)
+	}
+	if r := LeakReport(0); !strings.Contains(r, "  TestLeakTrackingNamesTheTest: 1\n") {
+		t.Errorf("report %q", r)
 	}
 	if err := c.Close(); err != nil {
 		t.Logf("close: %v", err)

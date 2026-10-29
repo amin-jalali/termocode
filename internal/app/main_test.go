@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -111,19 +110,11 @@ func TestRealContainerCLIsAreBlocked(t *testing.T) {
 // nvimLeaked reports (on stderr) the tests whose nvim still runs after
 // all tests ended: every test must close its nvim and wait for it.
 func nvimLeaked() bool {
-	left := nvim.LeakedClients(15 * time.Second)
-	if len(left) == 0 {
-		return false
+	r := nvim.LeakReport(15 * time.Second)
+	if r != "" {
+		fmt.Fprint(os.Stderr, "FAIL: "+r)
 	}
-	count := map[string]int{}
-	for _, who := range left {
-		count[who]++
-	}
-	fmt.Fprintf(os.Stderr, "FAIL: %d nvim process(es) still running after the tests (%d nvim children):\n", len(left), nvim.ChildProcesses())
-	for _, who := range slices.Compact(left) {
-		fmt.Fprintf(os.Stderr, "  %s: %d\n", who, count[who])
-	}
-	return true
+	return r != ""
 }
 
 // Guard for TestMain: recordError must land in the temp config dir.
