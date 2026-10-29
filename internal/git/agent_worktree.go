@@ -213,7 +213,10 @@ func CreateAgentWorktree(dir, id string) (AgentWorktree, error) {
 	}
 	wait := agentLockWait
 	for i := 1; ; i++ {
-		_, err = gitOut(top, "worktree", "add", "-q", "-B", w.Branch, w.Path, base)
+		// checkout.workers=0: write the files with one worker per core
+		// (git's parallel checkout; the same files, a big repo is ready
+		// sooner).
+		_, err = gitOut(top, "-c", "checkout.workers=0", "worktree", "add", "-q", "-B", w.Branch, w.Path, base)
 		if err == nil {
 			return w, nil
 		}
