@@ -524,8 +524,9 @@ type Model struct {
 	// layoutHint is the name of the layout opened a moment ago; the status
 	// bar shows it for layoutHintFor (layout_apply.go). layoutHintGen tells
 	// the clear message of an older hint from the current one.
-	layoutHint    string
-	layoutHintGen int
+	layoutHint     string
+	layoutCardName string // the layout a preview card is about
+	layoutHintGen  int
 
 	focus       Focus
 	gate        *frameGate // draw at most once per frame (frame_gate.go)

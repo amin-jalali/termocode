@@ -353,6 +353,7 @@ func paletteItems() []picker.Item {
 	items = append(items, mcpServePaletteItems()...)  // termocode as an MCP server (mcp_serve_status.go)
 	items = append(items, itermocPaletteItems()...)   // the Itermoc view (itermoc_actions.go)
 	items = append(items, ciPaletteItems()...)        // G-CI (ci_card.go)
+	items = append(items, layoutPaletteItems()...)    // G-LAY (layout_palette.go)
 	// Group A — AI commands (ai_state.go).
 	for _, e := range aiPaletteItems() {
 		items = append(items, picker.Item{ID: e.id, Title: e.title, Hint: e.hint})
@@ -755,6 +756,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchCIPalette(id); ok { // ci_card.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchLayoutPalette(id); ok { // layout_palette.go
 			return cmd
 		}
 		// Group G: merge conflicts + clone (git_conflicts.go, git_clone.go).

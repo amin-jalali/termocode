@@ -270,6 +270,13 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	case lspUninstallDoneMsg:
 		return m, m.onToolUninstalled(msg)
 	case picker.ActionMsg:
+		if m.pickerKind == pickerKindLayoutOpen { // layout_palette.go: → previews the row
+			cmd := m.onLayoutPickerAction(msg.ID)
+			if m.confirmOpen {
+				m.pickerOpen = false
+			}
+			return m, cmd
+		}
 		cmd, ok := m.handleAIProfilePickerAction(msg.ID)
 		if ok && m.confirmOpen {
 			m.pickerOpen = false
@@ -402,6 +409,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		// Esc on "Save changes?" also cancels a Close Others.
 		m.closeQueue = nil
 		if cmd := m.onSetupConfirmClosed(); cmd != nil {
+			return m, cmd
+		}
+		if cmd, ok := m.layoutConfirmClosed(); ok { // layout_palette.go
 			return m, cmd
 		}
 		return m, m.onAIConfirmClosed() // Group A: Esc denies an AI tool call
@@ -2312,6 +2322,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.extPickSelect(msg.ID)
 	case pickerKindRegistryProvider: // containers_registries.go
 		return m.onRegistryPicked(msg.ID)
+	case pickerKindLayoutOpen: // layout_palette.go
+		return m.onLayoutOpenPicked(msg.ID)
 	case pickerKindSecretStore: // secrets_store_ui.go
 		return m.onSecretsStoreSelected(msg.ID)
 	case pickerKindContainerSearch: // containers_remote.go

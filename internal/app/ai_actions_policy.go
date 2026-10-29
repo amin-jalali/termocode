@@ -187,6 +187,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"git-conflict-both":   aiConfirm(ai.ClassFileWrite),
 	"git-clone":           aiNever("clones into a folder outside the workspace and opens it"),
 	"git-ci":              aiNever(aiNoPicker),
+	"layout-open":         aiNever(layoutNoAI),
 	"git-ci-fix":          aiNever(aiNoNested),
 
 	// ── Workspace, session, settings ──
