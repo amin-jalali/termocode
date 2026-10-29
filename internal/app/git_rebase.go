@@ -6,11 +6,14 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/rebaseview"
+	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -39,6 +42,7 @@ type rebaseCheckMsg struct {
 // rebaseDoneMsg is the end of a run (or of its first stretch, when git
 // stopped).
 type rebaseDoneMsg struct {
+	verb    string // "" (a new run), "continue", "skip", "abort"
 	summary string
 	out     git.RebaseOutcome
 	err     error
@@ -58,6 +62,9 @@ func (m Model) rebaseCardOpen() bool { return m.rebase != nil && m.rebase.open }
 func (m *Model) gitRebaseFromCmd(full string) tea.Cmd {
 	if full == "" {
 		return nil
+	}
+	if m.gitRebase.InProgress {
+		return m.rebaseBusyToast()
 	}
 	cwd, err := m.rootDir()
 	if err != nil {
@@ -290,6 +297,10 @@ func (m *Model) onRebaseConfirm(id string) tea.Cmd {
 func (m *Model) onRebaseDone(msg rebaseDoneMsg) tea.Cmd {
 	var cmd tea.Cmd
 	switch {
+	case msg.verb == "abort" && msg.err == nil:
+		m.toast, cmd = m.toast.Push(toast.Info, "Rebase aborted: the branch is back as it was")
+	case msg.verb == "continue" && msg.err != nil:
+		m.toast, cmd = m.toast.PushDetail(toast.Warn, "Can't continue yet", msg.err.Error())
 	case msg.err != nil:
 		m.toast, cmd = m.toast.PushDetail(toast.Errr, "Rebase failed", msg.err.Error())
 	case len(msg.out.Conflicts) > 0:
@@ -298,6 +309,8 @@ func (m *Model) onRebaseDone(msg rebaseDoneMsg) tea.Cmd {
 	case msg.out.Stopped:
 		m.toast, cmd = m.toast.PushDetail(toast.Info, "Rebase stopped to edit a commit",
 			"Change the commit (Commit (Amend)), then Continue in Source Control.")
+	case msg.summary == "":
+		m.toast, cmd = m.toast.PushDetail(toast.Info, "Rebase done", "Undo: git reset --hard ORIG_HEAD")
 	default:
 		m.toast, cmd = m.toast.PushDetail(toast.Info, "Rebase done: "+msg.summary,
 			"Undo: git reset --hard ORIG_HEAD")
@@ -347,4 +360,89 @@ func (m *Model) onRebaseReword(subject string) {
 		msg += "\n\n" + body
 	}
 	m.rebase.card.SetMessage(rw.Index, msg)
+}
+
+// rebaseBusyToast says a rebase is stopped already.
+func (m *Model) rebaseBusyToast() tea.Cmd {
+	var cmd tea.Cmd
+	m.toast, cmd = m.toast.PushDetail(toast.Warn, "A rebase is in progress",
+		"Finish it first: Continue, Skip or Abort from the banner in Source Control.")
+	return cmd
+}
+
+// renderGitRebaseRow draws the Source Control banner of a stopped rebase.
+func (m Model) renderGitRebaseRow(active, focused bool, w int) string {
+	st := m.gitRebase
+	bg := gitSelBg(active, focused)
+	label := fmt.Sprintf("⇅ Rebasing %d/%d", st.Step, st.Total)
+	switch {
+	case len(st.Conflicts) > 0:
+		label += " · " + conflictWord(len(st.Conflicts))
+	case st.Action == "edit":
+		label += " · edit " + st.Hash
+	default:
+		label += " · stopped"
+	}
+	label += " ›"
+	fg := theme.LG(theme.AccentAmber)
+	var sb strings.Builder
+	sb.WriteString(gitLead(active, focused, bg))
+	sb.WriteString(lipgloss.NewStyle().Background(bg).Foreground(fg).Bold(true).Render("  " + label))
+	return clampSidebarRow(sb.String(), 1+2+runewidth.StringWidth(label), w, lipgloss.NewStyle().Background(bg))
+}
+
+// openRebaseControl asks what to do with the stopped rebase. Abort is
+// first and has the focus: it puts the branch back as it was.
+func (m *Model) openRebaseControl() {
+	st := m.gitRebase
+	if !st.InProgress {
+		return
+	}
+	var lines []string
+	where := fmt.Sprintf("Step %d of %d", st.Step, st.Total)
+	if st.Hash != "" {
+		where = fmt.Sprintf("Stopped at %s %q (%s %d of %d)", st.Hash, st.Subject, st.Action, st.Step, st.Total)
+	}
+	if st.Branch != "" {
+		where += " on " + st.Branch
+	}
+	lines = append(lines, where+".")
+	switch {
+	case len(st.Conflicts) > 0:
+		lines = append(lines, "", conflictWord(len(st.Conflicts))+": "+strings.Join(st.Conflicts, ", "),
+			"Fix them in CONFLICTS, then Continue (it stages the fixed files).")
+	case st.Action == "edit":
+		lines = append(lines, "", "Change the commit (Commit (Amend)), then Continue.")
+	}
+	lines = append(lines, "", "Continue goes on · Skip drops this commit · Abort puts the branch back as it was.")
+	m.confirm = confirm.Risky("Rebase in progress", strings.Join(lines, "\n"),
+		confirm.Button{ID: "rebase-abort", Title: "Abort"},
+		confirm.Button{ID: "rebase-skip", Title: "Skip"},
+		confirm.Button{ID: "rebase-continue", Title: "Continue", Style: confirm.StylePrimary})
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = confirmKindRebaseControl
+}
+
+// onRebaseControl runs Continue, Skip or Abort off the loop.
+func (m *Model) onRebaseControl(id string) tea.Cmd {
+	cwd, err := m.rootDir()
+	if err != nil {
+		return nil
+	}
+	verb := strings.TrimPrefix(id, "rebase-")
+	return func() tea.Msg {
+		msg := rebaseDoneMsg{verb: verb}
+		switch verb {
+		case "continue":
+			msg.out, msg.err = git.RebaseContinue(cwd, git.RebaseOptions{})
+		case "skip":
+			msg.out, msg.err = git.RebaseSkip(cwd, git.RebaseOptions{})
+		case "abort":
+			msg.err = git.RebaseAbort(cwd)
+		default:
+			return nil
+		}
+		return msg
+	}
 }

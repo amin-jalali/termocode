@@ -1583,6 +1583,8 @@ func (m Model) renderGitPanelRow(r gitPanelRow, active, focused bool, w int) str
 		return renderGitMoreRow(r.older, active, focused, w)
 	case gitRowNote:
 		return padBgToWidth(gitBranchStyle.Render("   "+r.note), w)
+	case gitRowRebase:
+		return m.renderGitRebaseRow(active, focused, w)
 	case gitRowSpacer:
 		return sidebarFill.Render(strings.Repeat(" ", w))
 	}

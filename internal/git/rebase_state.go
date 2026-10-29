@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
@@ -21,13 +22,24 @@ type RebaseState struct {
 	Conflicts     []string
 }
 
-// rebaseMergeDir is the absolute .git/rebase-merge path of dir's work tree.
+// rebaseMergePaths caches each work tree's .git/rebase-merge path: the
+// Source Control poll asks every 2 s and then only stats it.
+var rebaseMergePaths sync.Map // dir → path
+
+// rebaseMergeDir is the absolute .git/rebase-merge path of dir's work
+// tree, and whether it exists (a rebase is stopped there).
 func rebaseMergeDir(dir string) (string, bool) {
-	p, err := runOut(dir, "git", "rev-parse", "--path-format=absolute", "--git-path", "rebase-merge")
-	if err != nil {
-		return "", false
+	var p string
+	if v, ok := rebaseMergePaths.Load(dir); ok {
+		p = v.(string)
+	} else {
+		out, err := runOut(dir, "git", "rev-parse", "--path-format=absolute", "--git-path", "rebase-merge")
+		if err != nil {
+			return "", false
+		}
+		p = strings.TrimSpace(out)
+		rebaseMergePaths.Store(dir, p)
 	}
-	p = strings.TrimSpace(p)
 	if fi, err := os.Stat(p); err != nil || !fi.IsDir() {
 		return "", false
 	}

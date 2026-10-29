@@ -63,6 +63,8 @@ type GitMsg struct {
 	// KeepGraph: the poll found HEAD where it was, so Graph is empty and
 	// the graph already shown stays.
 	KeepGraph bool
+	// Rebase: an interactive rebase stopped here (git_rebase.go banner).
+	Rebase git.RebaseState
 }
 
 // gitGraphMaxAge is how long the poll keeps a graph while HEAD stays put.
@@ -87,7 +89,7 @@ func fetchGitCmd() tea.Cmd {
 		branch, _ := git.GetBranch(cwd)
 		files, _ := git.Status(cwd)
 		graph, more, _ := git.Commits(cwd, 0, gitGraphLimit)
-		return GitMsg{IsRepo: true, Branch: branch, Files: files, Graph: graph, More: more}
+		return GitMsg{IsRepo: true, Branch: branch, Files: files, Graph: graph, More: more, Rebase: git.RebaseStatus(cwd)}
 	}
 }
 
@@ -110,7 +112,7 @@ func (m *Model) pollGitCmd() tea.Cmd {
 		if err != nil {
 			return GitMsg{IsRepo: false}
 		}
-		msg := GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files}
+		msg := GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files, Rebase: git.RebaseStatus(cwd)}
 		if !stale && graphHead != "" && strings.HasPrefix(st.OID, graphHead) && st.Branch == branch {
 			msg.KeepGraph = true
 			return msg
@@ -140,6 +142,7 @@ func (m *Model) applyGitSnapshot(msg GitMsg) {
 	m.gitIsRepo = msg.IsRepo
 	m.gitLoaded = true
 	m.gitBranch = msg.Branch
+	m.gitRebase = msg.Rebase
 	m.gitFiles = msg.Files
 	m.setGitCommits(msg.Graph, msg.More)
 	// Clamp against the visible-row count: the accordion interleaves
@@ -348,6 +351,8 @@ func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (Model, tea
 		m.gitToggleGroup(r.group)
 	case gitRowMore:
 		return m, m.gitShowMore()
+	case gitRowRebase:
+		m.openRebaseControl()
 	}
 	return m, nil
 }

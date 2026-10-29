@@ -107,6 +107,8 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 			m.gitToggleGroup(cur.group)
 		case gitRowMore:
 			return m, m.gitShowMore(), true
+		case gitRowRebase:
+			m.openRebaseControl()
 		case gitRowFile:
 			if cur.section == gitSecConflicts {
 				return m, m.gitOpenConflictFile(cur.fileIndex), true

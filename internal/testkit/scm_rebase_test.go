@@ -192,3 +192,83 @@ func TestSCMRebaseStashAndContinue(t *testing.T) {
 		t.Errorf("the change did not come back: %q", got)
 	}
 }
+
+// conflictRebase: c1 sets f.txt to x, c2 to a, c3 to b. The test swaps
+// c2 and c3 in the card and starts: git stops on a conflict.
+func conflictRebase(t *testing.T) (*Driver, *repo) {
+	t.Helper()
+	d, r := scmDriver(t, func(r *repo) {
+		for i, body := range []string{"x\n", "a\n", "b\n"} {
+			r.write("f.txt", body)
+			r.commit("c" + string(rune('1'+i)))
+		}
+	})
+	openRebaseCard(t, d, "c2")
+	d.Key("J")
+	startRebase(t, d)
+	clickTarget(d, "confirm:rebase-start")
+	if !until(d, func() bool { return strings.Contains(text(d), "Rebase stopped: 1 conflict") }) {
+		t.Fatalf("no stop toast:%s", dump(d))
+	}
+	if !until(d, func() bool { return rowWith(d, "Rebasing 1/2") >= 0 && inSection(d, "CONFLICTS", "f.txt") }) {
+		t.Fatalf("no banner or CONFLICTS:%s", dump(d))
+	}
+	return d, r
+}
+
+// openBanner clicks the rebase banner and waits for its card.
+func openBanner(t *testing.T, d *Driver) {
+	t.Helper()
+	scmClickText(d, "Rebasing")
+	if !until(d, func() bool { return strings.Contains(text(d), "Rebase in progress") }) {
+		t.Fatalf("no rebase card:%s", dump(d))
+	}
+}
+
+// Spec: a rebase stopped on a conflict shows a banner in Source Control
+// and the file in CONFLICTS. The banner's card has Abort first and
+// focused: Enter aborts, the branch is back and the banner goes.
+func TestSCMRebaseConflictBannerAbort(t *testing.T) {
+	d, r := conflictRebase(t)
+	head := r.git("rev-parse", "ORIG_HEAD")
+	openBanner(t, d)
+	if s := text(d); !strings.Contains(s, "1 conflict: f.txt") || !strings.Contains(s, `"c3"`) {
+		t.Errorf("card does not say where it stopped:%s", dump(d))
+	}
+	d.Key("enter")
+	if !until(d, func() bool { return strings.Contains(text(d), "Rebase aborted") }) {
+		t.Fatalf("Enter did not abort:%s", dump(d))
+	}
+	if got := r.git("rev-parse", "HEAD"); got != head {
+		t.Errorf("HEAD %s, want %s", got, head)
+	}
+	if !until(d, func() bool { return rowWith(d, "Rebasing") < 0 }) {
+		t.Errorf("banner still shown:%s", dump(d))
+	}
+}
+
+// Spec: Continue refuses while the file has conflict markers; once fixed
+// it goes on (here to the next conflict), and Skip drops that commit and
+// finishes the rebase.
+func TestSCMRebaseContinueAndSkip(t *testing.T) {
+	d, r := conflictRebase(t)
+	openBanner(t, d)
+	clickTarget(d, "confirm:rebase-continue")
+	if !until(d, func() bool { return strings.Contains(text(d), "Can't continue yet") }) {
+		t.Fatalf("continue with markers:%s", dump(d))
+	}
+	r.write("f.txt", "b\n")
+	openBanner(t, d)
+	clickTarget(d, "confirm:rebase-continue")
+	if !until(d, func() bool { return rowWith(d, "Rebasing 2/2") >= 0 }) {
+		t.Fatalf("no second stop:%s", dump(d))
+	}
+	openBanner(t, d)
+	clickTarget(d, "confirm:rebase-skip")
+	if !until(d, func() bool { return strings.Contains(text(d), "Rebase done") && rowWith(d, "Rebasing") < 0 }) {
+		t.Fatalf("skip did not finish:%s", dump(d))
+	}
+	if got := r.git("log", "--format=%s"); got != "c3\nc1\ninit" {
+		t.Errorf("history:\n%s", got)
+	}
+}

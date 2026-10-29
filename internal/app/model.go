@@ -170,6 +170,7 @@ type Model struct {
 	gitLoaded     bool   // a GitMsg was applied (gitEnsureLoaded)
 	gitRemoteBusy string // running push/pull/fetch/sync note, "" when idle
 	gitBranch     git.Branch
+	gitRebase     git.RebaseState // a stopped interactive rebase (git_rebase.go)
 	gitFiles      []git.FileStatus
 	gitCursor     int // index into gitVisibleRows() for the ViewGit sidebar
 
