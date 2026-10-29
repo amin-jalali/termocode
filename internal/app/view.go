@@ -934,6 +934,8 @@ func lastSGRReset(s string) (int, int) {
 // scanUnstyledSpace is the forward scan behind mayEndWithUnstyledSpace,
 // starting with no style. glyph reports whether s holds any glyph.
 // lastMaybe: the last glyph is a lone ' ' with no style surely on it.
+// It jumps from escape to escape: between them only the last byte
+// matters (a ' ' byte is always a whole one-byte glyph).
 func scanUnstyledSpace(s string) (lastMaybe, glyph bool) {
 	styled, unsure := false, false
 	for i := 0; i < len(s); {
@@ -958,13 +960,14 @@ func scanUnstyledSpace(s string) (lastMaybe, glyph bool) {
 			i = j
 			continue
 		}
-		start := i
-		i++
-		for i < len(s) && (s[i]&0xC0) == 0x80 {
-			i++
+		// Text up to the next escape (a lone ESC is a glyph of its own).
+		end := len(s)
+		if k := strings.IndexByte(s[i+1:], 0x1b); k >= 0 {
+			end = i + 1 + k
 		}
-		lastMaybe = i == start+1 && s[start] == ' ' && (!styled || unsure)
+		lastMaybe = s[end-1] == ' ' && (!styled || unsure)
 		glyph = true
+		i = end
 	}
 	return lastMaybe, glyph
 }
