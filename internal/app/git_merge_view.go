@@ -363,6 +363,18 @@ func (m Model) mergeKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 		v.Scroll(1)
 	case "k":
 		v.Scroll(-1)
+	case "o":
+		return m, m.mergeTake(git.AcceptOurs), true
+	case "t":
+		return m, m.mergeTake(git.AcceptTheirs), true
+	case "b":
+		return m, m.mergeTake(git.AcceptBoth), true
+	case "B":
+		return m, m.mergeTake(git.AcceptBothTheirsFirst), true
+	case "a":
+		return m, m.mergeTake(git.AcceptBase), true
+	case "u":
+		return m, m.mergeUndo(), true
 	case "1", "2", "3":
 		v.SetPane(mergeview.Pane(msg.Runes[0] - '1'))
 	case "v":
@@ -404,8 +416,80 @@ func (m *Model) dispatchMergePalette(id string) (tea.Cmd, bool) {
 		m.mergeFocusPanes()
 	case "git-merge-close":
 		m.closeMergeView()
+	case "git-merge-take-ours":
+		return m.mergeTake(git.AcceptOurs), true
+	case "git-merge-take-theirs":
+		return m.mergeTake(git.AcceptTheirs), true
+	case "git-merge-take-both":
+		return m.mergeTake(git.AcceptBoth), true
+	case "git-merge-take-both-theirs-first":
+		return m.mergeTake(git.AcceptBothTheirsFirst), true
+	case "git-merge-take-base":
+		return m.mergeTake(git.AcceptBase), true
+	case "git-merge-undo":
+		return m.mergeUndo(), true
 	default:
 		return nil, false
 	}
 	return nil, true
+}
+
+// mergeTakeLua replaces lines [s, e) of the result with lines as one
+// undo step (the undo sequence is broken first, so two Takes never merge
+// into one undo), and puts the cursor there.
+const mergeTakeLua = `
+local p, s, e, lines = ...
+local b = _G.termocode_merge_buf and _G.termocode_merge_buf(p) or -1
+if b < 0 then return 'gone' end
+vim.api.nvim_buf_call(b, function() vim.cmd('let &undolevels = &undolevels') end)
+vim.api.nvim_buf_set_lines(b, s, e, false, lines)
+local n = vim.api.nvim_buf_line_count(b)
+for _, w in ipairs(vim.fn.win_findbuf(b)) do
+  pcall(vim.api.nvim_win_set_cursor, w, { math.min(s + 1, n), 0 })
+end
+pcall(_G.termocode_conflict_paint, b)
+return 'ok'
+`
+
+// mergeTake resolves the current block in the result. The result is
+// read again first: the user may have edited it since the last sync.
+func (m *Model) mergeTake(r git.Resolution) tea.Cmd {
+	if !m.mergeViewShown() || m.nvim == nil {
+		return nil
+	}
+	m.mergeSync()
+	tk, ok := m.merge.view.Take(r)
+	if !ok {
+		var cmd tea.Cmd
+		m.toast, cmd = m.toast.PushDetail(toast.Info, "No conflicts left", "Mark as Resolved (r) stages the file.")
+		return cmd
+	}
+	lines := tk.Lines
+	if lines == nil {
+		lines = []string{}
+	}
+	var out string
+	if err := m.nvim.ExecLuaResult(mergeTakeLua, &out, m.merge.abs, tk.Start, tk.End, lines); err != nil {
+		var cmd tea.Cmd
+		m.toast, cmd = m.toast.PushDetail(toast.Errr, "Merge", err.Error())
+		return cmd
+	}
+	m.mergeSync()
+	return nil
+}
+
+// mergeUndo undoes the last change in the result (one Take at a time).
+func (m *Model) mergeUndo() tea.Cmd {
+	if !m.mergeViewShown() || m.nvim == nil {
+		return nil
+	}
+	_ = m.nvim.ExecLuaArgs(`
+		local p = ...
+		local b = _G.termocode_merge_buf and _G.termocode_merge_buf(p) or -1
+		if b < 0 then return end
+		vim.api.nvim_buf_call(b, function() pcall(vim.cmd, 'silent undo') end)
+		pcall(_G.termocode_conflict_paint, b)
+	`, m.merge.abs)
+	m.mergeSync()
+	return nil
 }

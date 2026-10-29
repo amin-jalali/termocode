@@ -71,3 +71,56 @@ func TestSCMMergeViewOpensFromConflicts(t *testing.T) {
 		t.Errorf("file closed with the view:%s", dump(d))
 	}
 }
+
+// twoConflictRepo leaves a merge stopped on two conflicts in main.go.
+func twoConflictRepo(r *repo) {
+	body := func(a, b string) string {
+		return "package main\n\nfunc a() { println(\"" + a + "\") }\n\n// 1\n// 2\n// 3\n// 4\n// 5\n// 6\n\nfunc b() { println(\"" + b + "\") }\n"
+	}
+	r.write("main.go", body("a", "b"))
+	r.commit("base")
+	r.git("checkout", "-q", "-b", "theirs")
+	r.write("main.go", body("a-theirs", "b-theirs"))
+	r.commit("feat: theirs")
+	r.git("checkout", "-q", "main")
+	r.write("main.go", body("a-ours", "b-ours"))
+	r.commit("feat: ours")
+	if _, err := r.try("merge", "--no-edit", "theirs"); err == nil {
+		r.t.Fatal("setup: merge did not conflict")
+	}
+}
+
+// waitMerge waits for the merge view's header to say s.
+func waitMerge(d *Driver, s string) {
+	d.T.Helper()
+	if !d.WaitFor(func() bool { d.render(); return strings.Contains(text(d), s) }, 5*time.Second) {
+		d.T.Fatalf("merge header never said %q:%s", s, dump(d))
+	}
+}
+
+// Spec: Given a merge view on a file with two conflicts, when the user
+// takes theirs and then ours, then no conflicts are left; each undo (u)
+// brings back exactly one block; then Take Base and Take Both (theirs
+// first) resolve it again, and saving writes that result.
+func TestSCMMergeViewTakesAndUndo(t *testing.T) {
+	d, r := mergeDriver(t, 150, 42, twoConflictRepo)
+	clickConflict(d)
+	waitMerge(d, "Conflict 1 of 2")
+	d.Key("t")
+	waitMerge(d, "Conflict 1 of 1")
+	d.Key("o")
+	waitMerge(d, "No conflicts left")
+	d.Key("u")
+	waitMerge(d, "Conflict 1 of 1")
+	d.Key("u")
+	waitMerge(d, "Conflict 1 of 2")
+	d.Key("a")
+	waitMerge(d, "Conflict 1 of 1")
+	d.Key("B")
+	waitMerge(d, "No conflicts left")
+	d.Key("ctrl+s")
+	want := "package main\n\nfunc a() { println(\"a\") }\n\n// 1\n// 2\n// 3\n// 4\n// 5\n// 6\n\nfunc b() { println(\"b-theirs\") }\nfunc b() { println(\"b-ours\") }\n"
+	if !d.WaitFor(func() bool { return r.read("main.go") == want }, 5*time.Second) {
+		t.Fatalf("main.go = %q, want %q", r.read("main.go"), want)
+	}
+}
