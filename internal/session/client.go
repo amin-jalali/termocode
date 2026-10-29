@@ -99,6 +99,9 @@ type AttachOpts struct {
 	// e.g. a frozen SSH link) but still runs, keep the screen and attach
 	// again by itself instead of leaving (setting auto_reconnect).
 	Reconnect bool
+	// Link: this client runs at the far end of `termocode ssh`; it
+	// announces itself and answers its heartbeat (link.go).
+	Link bool
 }
 
 // errOffline is a send while the client has no connection.
@@ -136,8 +139,10 @@ func readFrames(c *net.UnixConn, stop <-chan struct{}) <-chan attachFrame {
 // over, or this client is told to stop. The session keeps running in the
 // last two cases.
 func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
-	in, out, caps := o.In, o.Out, o.Caps
-	cols, rows, err := term.GetSize(int(out.Fd()))
+	in, caps := o.In, o.Caps
+	// out is shared with the heartbeat answers of the key reader.
+	out := &lockedWriter{w: o.Out}
+	cols, rows, err := term.GetSize(int(o.Out.Fd()))
 	if err != nil || cols <= 0 || rows <= 0 {
 		cols, rows = 80, 24
 	}
@@ -178,20 +183,33 @@ func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
 		}
 	}
 
+	if o.Link {
+		_, _ = out.WriteString(linkHello)
+	}
+
 	sigs := make(chan os.Signal, 4)
 	signal.Notify(sigs, syscall.SIGWINCH, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 	defer signal.Stop(sigs)
 
 	inDone := make(chan struct{})
 	keys := make(chan []byte, 16)
+	pings := newSeqFilter(linkPing)
 	go func() {
 		defer close(inDone)
 		buf := make([]byte, 4096)
 		for {
 			n, err := in.Read(buf)
-			if n > 0 {
+			k := buf[:n]
+			if o.Link && n > 0 {
+				var found []int
+				k, found = pings.Filter(k)
+				for range found {
+					_, _ = out.WriteString(linkPong)
+				}
+			}
+			if len(k) > 0 {
 				select {
-				case keys <- append([]byte(nil), buf[:n]...):
+				case keys <- append([]byte(nil), k...):
 				case <-stop:
 					return
 				}
@@ -245,7 +263,7 @@ func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
 		case s := <-sigs:
 			switch s {
 			case syscall.SIGWINCH:
-				if w, h, err := term.GetSize(int(out.Fd())); err == nil {
+				if w, h, err := term.GetSize(int(o.Out.Fd())); err == nil {
 					cols, rows = w, h
 					if offline {
 						redrawLn()
@@ -313,6 +331,20 @@ func withNote(caps *ClientCaps, note string) *ClientCaps {
 	c.Note = note
 	return &c
 }
+
+// lockedWriter serializes writes to the client terminal.
+type lockedWriter struct {
+	mu sync.Mutex
+	w  *os.File
+}
+
+func (l *lockedWriter) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.w.Write(p)
+}
+
+func (l *lockedWriter) WriteString(s string) (int, error) { return l.Write([]byte(s)) }
 
 // clientUnicode reports whether the client's terminal takes UTF-8 (its
 // locale says so; no caps: assume it does).

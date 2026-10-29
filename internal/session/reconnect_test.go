@@ -57,6 +57,12 @@ func newFakeServer(t *testing.T, serve ...func(c *net.UnixConn)) *fakeServer {
 // returns the key pipe, the output file and the exit code channel.
 func attachTo(t *testing.T, s *fakeServer, caps *ClientCaps) (*os.File, string, <-chan int) {
 	t.Helper()
+	return attachWith(t, s, AttachOpts{Caps: caps, Reconnect: true})
+}
+
+// attachWith is attachTo with all the options (In and Out are set here).
+func attachWith(t *testing.T, s *fakeServer, o AttachOpts) (*os.File, string, <-chan int) {
+	t.Helper()
 	c, err := Dial(s.p)
 	if err != nil {
 		t.Fatal(err)
@@ -73,7 +79,8 @@ func attachTo(t *testing.T, s *fakeServer, caps *ClientCaps) (*os.File, string, 
 	}
 	t.Cleanup(func() { _ = out.Close() })
 	code := make(chan int, 1)
-	go func() { code <- Attach(c, s.p, AttachOpts{In: in, Out: out, Caps: caps, Reconnect: true}) }()
+	o.In, o.Out = in, out
+	go func() { code <- Attach(c, s.p, o) }()
 	return inW, outPath, code
 }
 

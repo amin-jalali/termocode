@@ -1,7 +1,11 @@
+//go:build unix
+
 package session
 
 import (
+	"net"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -34,5 +38,64 @@ func TestSeqFilter(t *testing.T) {
 		if out, _ := f.Filter([]byte(k)); string(out) != k {
 			t.Errorf("%q held back: %q", k, out)
 		}
+	}
+}
+
+// TestAttachLinkAnswersPing: a --link client announces itself, answers
+// each ping on its output at once, and never passes a ping to the UI.
+func TestAttachLinkAnswersPing(t *testing.T) {
+	inputs := make(chan string, 16)
+	s := newFakeServer(t, func(c *net.UnixConn) {
+		for {
+			typ, p, err := readFrame(c)
+			if err != nil {
+				return
+			}
+			if typ == frameInput {
+				inputs <- string(p)
+				if strings.Contains(string(p), "q") {
+					_ = writeFrame(c, frameExit, encodeCode(0))
+				}
+			}
+		}
+	})
+	keys, out, code := attachWith(t, s, AttachOpts{Link: true})
+	waitFor(t, "the link hello", func() bool { return strings.HasPrefix(readOut(out), linkHello) })
+	_, _ = keys.WriteString(linkPing)
+	waitFor(t, "the pong", func() bool { return strings.Contains(readOut(out), linkPong) })
+	_, _ = keys.WriteString("a" + linkPing + "q")
+	waitCode(t, code)
+	if n := strings.Count(readOut(out), linkPong); n != 2 {
+		t.Errorf("%d pongs, want 2", n)
+	}
+	close(inputs)
+	var got string
+	for k := range inputs {
+		got += k
+	}
+	if got != "aq" {
+		t.Errorf("the UI got %q, want the keys without pings", got)
+	}
+}
+
+// TestAttachNoLinkNoHello: a plain client prints no link hello and passes
+// a ping through as it came (it is not at the end of termocode ssh).
+func TestAttachNoLinkNoHello(t *testing.T) {
+	inputs := make(chan string, 4)
+	s := newFakeServer(t, func(c *net.UnixConn) {
+		typ, p, _ := readFrame(c)
+		if typ == frameInput {
+			inputs <- string(p)
+		}
+		_ = writeFrame(c, frameExit, encodeCode(0))
+	})
+	keys, out, code := attachWith(t, s, AttachOpts{})
+	_, _ = keys.WriteString(linkPing)
+	waitCode(t, code)
+	if strings.Contains(readOut(out), "termocode:link") {
+		t.Errorf("plain client announced a link")
+	}
+	if got := <-inputs; got != linkPing {
+		t.Errorf("input %q", got)
 	}
 }
