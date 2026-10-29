@@ -80,6 +80,62 @@ jobs:
         if: runner.os == 'Linux'
         run: shellcheck scripts/install.sh scripts/build-release.sh scripts/release.sh
 
+  # Golden screens (internal/devtools/shotkit): they start nvim, so the
+  # test job above (no nvim) skips them and a stale golden went unseen.
+  # The harness fixes TZ, locale, clock, PATH and HOME for every case.
+  golden:
+    name: golden screens (ubuntu-latest)
+    runs-on: ubuntu-latest
+    env:
+      # The nvim the golden frames were made with: editor screens can
+      # change between nvim releases.
+      NVIM_VERSION: v0.12.2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Install X11 dev headers
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-golden-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-golden-
+            ${{ runner.os }}-go-
+
+      - name: Install Neovim (pinned release)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/nvim.tar.gz \
+            "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz"
+          sudo tar -xzf /tmp/nvim.tar.gz -C /opt
+          echo "/opt/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
+
+      - name: Golden screens
+        # ~540 cases, each a child app with its own nvim.
+        env:
+          SHOTKIT_GOLDEN_JOBS: "4"
+        run: go test ./internal/devtools/shotkit -run 'Golden' -count=1 -timeout 45m
+
+      - name: Upload changed frames
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-actual-frames
+          path: internal/devtools/shotkit/testdata/golden/*_actual.*
+          if-no-files-found: ignore
+
   # End-to-end: the real binary in a PTY + VT emulator (e2e/, build tag
   # e2e). Needs nvim; on failure the screen dumps are uploaded.
   e2e:
