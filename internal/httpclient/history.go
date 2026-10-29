@@ -1,7 +1,6 @@
 package httpclient
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/rand"
 	"encoding/hex"
@@ -9,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"time"
 )
@@ -154,7 +152,6 @@ type Store struct {
 	// Redact, when set, runs over every text field before writing (the
 	// app passes ai.Redact so registered secrets never reach the disk).
 	Redact func(string) string
-	mu     sync.Mutex
 }
 
 func (s *Store) max() int {
@@ -191,9 +188,9 @@ func (s *Store) redact(e *Entry) {
 	}
 }
 
-// Append adds e (an ID is set when empty), trims to Max and rewrites
-// the file atomically (0600 in a 0700 folder). It returns the stored
-// entry's id through e.ID's value on disk.
+// Append adds e (an ID is set when empty). Under the cap it adds one
+// line to the file (0600 in a 0700 folder); once the file holds a
+// quarter more than Max it is rewritten atomically, trimmed to Max.
 func (s *Store) Append(e Entry) error {
 	_, err := s.AppendEntry(e)
 	return err
@@ -201,8 +198,6 @@ func (s *Store) Append(e Entry) error {
 
 // AppendEntry is Append that returns the stored entry.
 func (s *Store) AppendEntry(e Entry) (Entry, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	if e.ID == "" {
 		e.ID = newID()
 	}
@@ -210,26 +205,63 @@ func (s *Store) AppendEntry(e Entry) (Entry, error) {
 		e.Time = time.Now()
 	}
 	s.redact(&e)
-	list, err := s.read()
+	line, err := encodeEntry(e)
 	if err != nil {
 		return e, err
 	}
-	list = append(list, e)
-	if n := s.max(); len(list) > n {
-		list = list[len(list)-n:]
+	c := histLock(s.Path)
+	defer c.mu.Unlock()
+	if err := c.sync(s.Path, false); err != nil {
+		return e, err
 	}
-	return e, s.write(list)
+	if c.st == nil || c.lines+1 > s.max()+historySlack(s.max()) {
+		if err := c.sync(s.Path, true); err != nil {
+			return e, err
+		}
+		list := append(c.list[:len(c.list):len(c.list)], e)
+		return e, c.write(s.Path, trimList(list, s.max()))
+	}
+	if !c.endsNL {
+		line = append([]byte{'\n'}, line...)
+	}
+	f, err := os.OpenFile(s.Path, os.O_APPEND|os.O_WRONLY, 0)
+	if err != nil {
+		return e, err
+	}
+	_, werr := f.Write(line)
+	if cerr := f.Close(); werr == nil {
+		werr = cerr
+	}
+	if werr != nil {
+		c.st = nil
+		return e, werr
+	}
+	st, err := os.Stat(s.Path)
+	if err != nil {
+		c.st = nil
+		return e, err
+	}
+	c.st, c.endsNL = st, true
+	c.lines++
+	if c.parsed {
+		c.list = append(c.list, e)
+	}
+	return e, nil
 }
 
 // List returns the entries, newest first.
 func (s *Store) List() ([]Entry, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	list, err := s.read()
-	for l, r := 0, len(list)-1; l < r; l, r = l+1, r-1 {
-		list[l], list[r] = list[r], list[l]
+	c := histLock(s.Path)
+	defer c.mu.Unlock()
+	if err := c.sync(s.Path, true); err != nil {
+		return nil, err
 	}
-	return list, err
+	src := trimList(c.list, s.max())
+	list := make([]Entry, len(src))
+	for i, e := range src {
+		list[len(src)-1-i] = e
+	}
+	return list, nil
 }
 
 // Get returns the entry with id.
@@ -245,60 +277,149 @@ func (s *Store) Get(id string) (Entry, bool) {
 
 // Delete removes the entry with id.
 func (s *Store) Delete(id string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	list, err := s.read()
-	if err != nil {
+	c := histLock(s.Path)
+	defer c.mu.Unlock()
+	if err := c.sync(s.Path, true); err != nil {
 		return err
 	}
-	out := list[:0]
-	for _, e := range list {
+	var out []Entry
+	for _, e := range trimList(c.list, s.max()) {
 		if e.ID != id {
 			out = append(out, e)
 		}
 	}
-	return s.write(out)
+	return c.write(s.Path, out)
 }
 
 // Clear removes every entry.
 func (s *Store) Clear() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.write(nil)
+	c := histLock(s.Path)
+	defer c.mu.Unlock()
+	return c.write(s.Path, nil)
 }
 
-func (s *Store) read() ([]Entry, error) {
-	b, err := os.ReadFile(s.Path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil
-		}
-		return nil, err
+func trimList(list []Entry, n int) []Entry {
+	if len(list) > n {
+		return list[len(list)-n:]
 	}
-	var out []Entry
-	sc := bufio.NewScanner(bytes.NewReader(b))
-	sc.Buffer(make([]byte, 64<<10), 4<<20)
-	for sc.Scan() {
-		line := strings.TrimSpace(sc.Text())
-		if line == "" {
+	return list
+}
+
+// historySlack is how far over max the file may grow before a rewrite
+// (a quarter, at least 8 lines): the rewrite cost spreads over many
+// sends.
+func historySlack(n int) int { return max(n/4, 8) }
+
+// histFile is what is known of one history file: its stat when last
+// read or written, its line count and (once parsed) its entries. A stat
+// that differs (size, time or inode) means someone else wrote the file;
+// it is read again.
+type histFile struct {
+	mu sync.Mutex
+	histData
+}
+
+type histData struct {
+	st     os.FileInfo // nil: file missing or not looked at
+	known  bool        // st/lines/endsNL describe the file on disk
+	lines  int         // non-empty lines
+	endsNL bool
+	parsed bool
+	list   []Entry // oldest first (when parsed)
+}
+
+var (
+	histMu    sync.Mutex
+	histFiles = map[string]*histFile{}
+)
+
+// histLock returns the locked state of path's history file. Every Store
+// on the same path shares it, so appends never interleave.
+func histLock(path string) *histFile {
+	histMu.Lock()
+	c := histFiles[path]
+	if c == nil {
+		c = &histFile{}
+		histFiles[path] = c
+	}
+	histMu.Unlock()
+	c.mu.Lock()
+	return c
+}
+
+// sync makes c describe the file on disk; parse also fills c.list.
+func (c *histFile) sync(path string, parse bool) error {
+	st, err := os.Stat(path)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		c.histData = histData{known: true, parsed: true}
+		return nil
+	}
+	if c.known && c.st != nil && os.SameFile(c.st, st) && c.st.Size() == st.Size() && c.st.ModTime().Equal(st.ModTime()) && (c.parsed || !parse) {
+		return nil
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	c.st, c.known = st, true
+	c.lines = 0
+	c.endsNL = len(b) == 0 || b[len(b)-1] == '\n'
+	c.parsed, c.list = parse, nil
+	for len(b) > 0 {
+		var line []byte
+		if i := bytes.IndexByte(b, '\n'); i >= 0 {
+			line, b = b[:i], b[i+1:]
+		} else {
+			line, b = b, nil
+		}
+		line = bytes.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		}
+		c.lines++
+		if !parse {
 			continue
 		}
 		var e Entry
-		if json.Unmarshal([]byte(line), &e) == nil {
-			out = append(out, e)
+		if json.Unmarshal(line, &e) == nil {
+			c.list = append(c.list, e)
 		}
 	}
-	return out, nil
+	return nil
 }
 
-func (s *Store) write(list []Entry) error {
+// write rewrites the file with list (atomic, 0600) and remembers it.
+func (c *histFile) write(path string, list []Entry) error {
+	var buf bytes.Buffer
+	for _, e := range list {
+		line, err := encodeEntry(e)
+		if err != nil {
+			return err
+		}
+		buf.Write(line)
+	}
+	c.known, c.st = false, nil
+	if err := writePrivate(path, buf.Bytes()); err != nil {
+		return err
+	}
+	st, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	c.histData = histData{st: st, known: true, lines: len(list), endsNL: true, parsed: true, list: list}
+	return nil
+}
+
+// encodeEntry is one JSON line (no HTML escaping, ending in \n).
+func encodeEntry(e Entry) ([]byte, error) {
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
-	for _, e := range list {
-		if err := enc.Encode(e); err != nil {
-			return err
-		}
+	if err := enc.Encode(e); err != nil {
+		return nil, err
 	}
-	return writePrivate(s.Path, buf.Bytes())
+	return buf.Bytes(), nil
 }
