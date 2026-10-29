@@ -487,6 +487,9 @@ type Model struct {
 	// shells keep running until the panel shows again (terminal_hide.go).
 	hiddenTerminalTabs   []terminalTab
 	hiddenTerminalActive int
+	// termRestorePending are saved terminals of a panel that was hidden at
+	// the last quit: they come back on the next Ctrl+T (terminal_restore.go).
+	termRestorePending *savedTerminals
 
 	// ── Bottom panel framework (panel.go) ──────────────────────────────
 	// panelTabs lists the open NON-terminal tabs (Output, Problems, …) in

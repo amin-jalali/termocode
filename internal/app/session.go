@@ -95,6 +95,10 @@ type SessionState struct {
 	ServicesStarted     []string `json:"services_started,omitempty"`
 	ServicesLocalOK     []string `json:"services_local_ok,omitempty"`
 	ContainersCollapsed []string `json:"containers_collapsed,omitempty"`
+
+	// Terminals are the terminal tabs, split panes and folders of this
+	// workspace, opened again after a restart (terminal_restore.go).
+	Terminals *savedTerminals `json:"terminals,omitempty"`
 }
 
 // sessionPath is the global session.json: layout preferences, plus the
@@ -212,6 +216,8 @@ func workspacePart(s SessionState) SessionState {
 		ServicesStarted:     s.ServicesStarted,
 		ServicesLocalOK:     s.ServicesLocalOK,
 		ContainersCollapsed: s.ContainersCollapsed,
+
+		Terminals: s.Terminals,
 	}
 }
 
