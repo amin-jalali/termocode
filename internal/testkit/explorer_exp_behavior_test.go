@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/x/ansi"
+
 	"github.com/amin-jalali/termocode/internal/clock"
 )
 
@@ -86,5 +88,27 @@ func TestExplorerBulkRenameKeysConflictAndUndo(t *testing.T) {
 	clickText(d, "Renamed 2 files")
 	if diskFile(d, "a.txt") != "alpha" || diskFile(d, "b.txt") != "bravo" {
 		t.Fatal("undo failed")
+	}
+}
+
+// Regression (monkey seed 1793304445759874706): with the preview on, a
+// sidebar dragged wide in a big window came back at full width after
+// the window shrank to 61 columns, so every row was wider than the
+// screen. The sidebar must still leave the editor its room.
+func TestExplorerPreviewWideSidebarNarrowWindow(t *testing.T) {
+	instantExplorerPreview(t)
+	d := New(t, Options{W: 150, H: 42, Files: map[string]string{"a.txt": "alpha preview"}})
+	d.Action("view:files")
+	edge := d.Model().ExplorerWidth() + 4 // activity bar 5 cols, then the sidebar
+	d.Drag(edge, 10, 5+57, 10)
+	if w := d.Model().ExplorerWidth(); w < 50 {
+		t.Fatalf("drag left the sidebar %d wide", w)
+	}
+	d.Palette("explorer-toggle-preview")
+	d.Resize(61, 29) // the driver fails on any row wider than 61
+	for i, row := range strings.Split(d.Frame(), "\n") {
+		if w := ansi.StringWidth(row); w > 61 {
+			t.Fatalf("row %d is %d cells wide in a 61-column window", i, w)
+		}
 	}
 }

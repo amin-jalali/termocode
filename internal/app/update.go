@@ -2505,19 +2505,18 @@ func (m *Model) applyLayout() {
 	if m.explorerWidth <= 0 {
 		m.explorerWidth = defaultExplorerWidth
 	}
-	// A sidebar width dragged in a wide window must still leave the editor
-	// some room after the window shrinks; otherwise every row is wider
-	// than the screen and wraps.
-	if maxExp := m.w - activity.Width - editorScrollbarWidth - minEditorPaneWidth; m.w > 0 && m.explorerWidth > maxExp {
-		m.explorerWidth = max(maxExp, explorerMinWidth)
-	}
-
 	if m.explorer.PreviewEnabled() && m.explorerPreviewWidth > 0 {
 		if m.w >= 100 {
 			m.explorerWidth = min(76, m.w-45)
 		} else {
 			m.explorerWidth = m.explorerPreviewWidth
 		}
+	}
+	// A sidebar width dragged in a wide window (or the one kept for the preview) must still leave the editor
+	// some room after the window shrinks; otherwise every row is wider
+	// than the screen and wraps.
+	if maxExp := m.w - activity.Width - editorScrollbarWidth - minEditorPaneWidth; m.w > 0 && m.explorerWidth > maxExp {
+		m.explorerWidth = max(maxExp, explorerMinWidth)
 	}
 	// Editor pane geometry: one source of truth shared with renderBase
 	// and the mouse hit tests.
