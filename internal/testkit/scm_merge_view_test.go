@@ -227,3 +227,27 @@ func TestSCMMergeViewDeletedCard(t *testing.T) {
 		t.Error("main.go deleted")
 	}
 }
+
+// Spec: Given an 80x24 window, when the merge view opens, then one pane
+// shows at a time with 1 · 2 · 3 tabs, 3 shows theirs, the file stays
+// visible below, and a Take plus r still resolve it.
+func TestSCMMergeViewNarrow(t *testing.T) {
+	d, r := mergeDriver(t, 80, 24, conflictRepo)
+	clickConflict(d)
+	waitMerge(d, "Conflict 1 of 1")
+	if !strings.Contains(text(d), "1 Base") || !strings.Contains(text(d), "3 Theirs") {
+		t.Fatalf("no pane tabs:%s", dump(d))
+	}
+	if !strings.Contains(text(d), "<<<<<<< HEAD") {
+		t.Errorf("result not visible:%s", dump(d))
+	}
+	d.Key("3")
+	waitMerge(d, `#1▎ func main() { println("theirs")`)
+	d.Key("o")
+	waitMerge(d, "No conflicts left")
+	d.Key("r")
+	waitMerge(d, "Marked as resolved: main.go")
+	if got := r.git("show", ":main.go"); got != "package main\n\nfunc main() { println(\"ours\") }" { // r.git trims
+		t.Errorf("staged main.go = %q", got)
+	}
+}
