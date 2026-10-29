@@ -34,7 +34,12 @@ func collect(root, outDir, module string, sys *Systems, withE2E bool) ([]Block, 
 		args = append(args, "-short")
 	}
 	fmt.Fprintln(os.Stderr, "Unit tests (this takes a while)...")
-	if err := goCmd(root, nil, append(args, "./...")...).Run(); err != nil {
+	unitCmd := goCmd(root, nil, append(args, "./...")...)
+	filter := &lineFilter{w: os.Stderr, f: shortenCoverLine}
+	unitCmd.Stdout = filter
+	err := unitCmd.Run()
+	filter.Close()
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "NOTE: some unit tests failed or timed out:", err, "- coverage below is for what ran.")
 	}
 	profiles := [][]Block{}
