@@ -88,12 +88,52 @@ func ParsePS(data []byte, at time.Time) (map[string]Status, error) {
 			st.Ports = append(st.Ports, Port{Host: p.URL, Published: p.PublishedPort, Target: p.TargetPort, Proto: p.Protocol})
 		}
 		// Two replicas of one service: keep the worse one visible.
-		if old, ok := out[name]; ok && old.State.Up() && !st.State.Up() {
-			continue
+		// The ports stay those of a replica that has them.
+		if old, ok := out[name]; ok {
+			if replicaRank(old.State) >= replicaRank(st.State) {
+				if len(old.Ports) == 0 {
+					old.Ports = st.Ports
+					out[name] = old
+				}
+				continue
+			}
+			if len(st.Ports) == 0 {
+				st.Ports = old.Ports
+			}
 		}
 		out[name] = st
 	}
 	return out, nil
+}
+
+// replicaRank orders states from fine (low) to bad (high), so a down or
+// unhealthy replica wins over a healthy one.
+func replicaRank(s State) int {
+	switch s {
+	case Healthy:
+		return 0
+	case Running:
+		return 1
+	case Starting, Pulling:
+		return 2
+	case Stopping:
+		return 3
+	case Paused:
+		return 4
+	case Unknown:
+		return 5
+	case NotCreated:
+		return 6
+	case Stopped:
+		return 7
+	case Unhealthy:
+		return 8
+	case Restarting:
+		return 9
+	case Exited:
+		return 10
+	}
+	return 5
 }
 
 // StateFromPS maps compose's State / Health / Status text to a State.
