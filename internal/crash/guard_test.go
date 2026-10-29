@@ -120,3 +120,21 @@ func TestGuardCmd(t *testing.T) {
 		}
 	}
 }
+
+// TestGoWithCleansUp: after a recovered panic GoWith runs its cleanup
+// (close a connection, end a session) after the report is written.
+func TestGoWithCleansUp(t *testing.T) {
+	useTempState(t)
+	drainNotices()
+	done := make(chan string, 1)
+	GoWith("conn", func() { panic("x") }, func() { done <- "cleaned" })
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("cleanup did not run")
+	}
+	nextNotice(t)
+	ran := make(chan bool, 1)
+	GoWith("conn", func() { ran <- true }, func() { t.Error("cleanup ran without a panic") })
+	<-ran
+}

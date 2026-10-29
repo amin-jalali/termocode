@@ -55,13 +55,32 @@ func Go(where string, fn func()) {
 	}()
 }
 
+// GoWith is Go with a cleanup that runs after a recovered panic (close
+// the connection the goroutine served, end what it was driving).
+func GoWith(where string, fn func(), onPanic func()) {
+	go func() {
+		defer guardThen(where, onPanic)
+		injected(where)
+		fn()
+	}()
+}
+
+func guardThen(where string, after func()) {
+	if r := recover(); r != nil {
+		Recovered(where, r, debug.Stack())
+		if after != nil {
+			after()
+		}
+	}
+}
+
 var (
 	hookMu sync.Mutex
 	hooks  map[string]int
 )
 
-// PanicIn makes the next goroutine started by Go(where, …) panic before
-// its work (tests, and TERMOCODE_TEST_CRASH=go:<where>). undo removes it.
+// PanicIn makes the next goroutine started by Go or GoWith(where, …)
+// panic before its work (tests only). undo removes it.
 func PanicIn(where string) (undo func()) {
 	hookMu.Lock()
 	if hooks == nil {
