@@ -31,3 +31,13 @@ func TestKeycapUsesKeyLabel(t *testing.T) {
 		t.Errorf("hint bar %q", got)
 	}
 }
+
+// A letter after a symbol modifier is upper case, like after "alt+":
+// "⌥x" and "alt+x" both read "Alt+X".
+func TestKeyLabelSymbolModifierUppercasesTheLetter(t *testing.T) {
+	for in, want := range map[string]string{"⌥x": "Alt+X", "⌃p": "Ctrl+P", "⇧a": "Shift+A", "⌃↵": "Ctrl+Enter"} {
+		if got := KeyLabel(in); got != want {
+			t.Errorf("KeyLabel(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
