@@ -157,3 +157,10 @@ func covMsg[T any](t *testing.T, cmd tea.Cmd) T {
 		return zero
 	}
 }
+
+// covGitCmd is git in dir, not run yet (for a command that should fail).
+func covGitCmd(dir string, args ...string) *exec.Cmd {
+	c := exec.Command("git", args...)
+	c.Dir = dir
+	return c
+}
