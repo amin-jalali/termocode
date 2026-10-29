@@ -2,12 +2,14 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/containers"
+	"github.com/amin-jalali/termocode/internal/theme"
 )
 
 // ── Containers view: live CPU and memory (G-DST) ─────────────────────────
@@ -162,4 +164,82 @@ func (m *Model) onStatsResult(msg statsResultMsg) tea.Cmd {
 	}
 	st.touch()
 	return statsTick(cs.gen, statsInterval)
+}
+
+// ── Formatting ───────────────────────────────────────────────────────────
+
+// statsHumanBytes is a size for people: "512 B", "48 KB", "210 MB",
+// "7.7 GB" (1024 steps, one decimal under 10).
+func statsHumanBytes(v float64) string {
+	units := []string{"B", "KB", "MB", "GB", "TB"}
+	i := 0
+	for v >= 1024 && i < len(units)-1 {
+		v /= 1024
+		i++
+	}
+	if i > 0 && v < 10 {
+		return fmt.Sprintf("%.1f %s", v, units[i])
+	}
+	return fmt.Sprintf("%.0f %s", v, units[i])
+}
+
+// statsPercent is "12%" at 10 and over, "0.3%" under.
+func statsPercent(v float64) string {
+	if v >= 10 {
+		return fmt.Sprintf("%.0f%%", v)
+	}
+	return fmt.Sprintf("%.1f%%", v)
+}
+
+// statsRowText is the inline values of a container row: "CPU 12% · MEM
+// 210 MB" (full) or "12% · 210 MB" (short). "" = nothing to show yet.
+func statsRowText(s containers.Sample, full bool) string {
+	var parts []string
+	if s.HasCPU {
+		p := statsPercent(s.CPU)
+		if full {
+			p = "CPU " + p
+		}
+		parts = append(parts, p)
+	}
+	if s.HasMem {
+		p := statsHumanBytes(s.MemUsed)
+		if full {
+			p = "MEM " + p
+		}
+		parts = append(parts, p)
+	}
+	return strings.Join(parts, " · ")
+}
+
+// statsOf is the newest sample of a container (ok false: none yet).
+func (st *servicesState) statsOf(id string) (containers.Sample, bool) {
+	return st.stats.series[id].Last()
+}
+
+const (
+	statsFullMinWidth  = 62 // "CPU 12% · MEM 210 MB" in the row
+	statsShortMinWidth = 44 // "12% · 210 MB"
+)
+
+// statsRowCol is the stats column of a running container's row (nil =
+// none: no sample yet, or the sidebar is narrow).
+func (st *servicesState) statsRowCol(c containers.Container, w int) *hostCol {
+	if w < statsShortMinWidth || !strings.EqualFold(c.State, "running") {
+		return nil
+	}
+	s, ok := st.statsOf(c.ID)
+	if !ok {
+		return nil
+	}
+	full := w >= statsFullMinWidth
+	text := statsRowText(s, full)
+	if text == "" {
+		return nil
+	}
+	width := 12
+	if full {
+		width = 22
+	}
+	return &hostCol{text: text, width: width, right: true, col: theme.TextSecondary}
 }

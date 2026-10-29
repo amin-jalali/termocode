@@ -818,7 +818,9 @@ func (st *servicesState) renderHostItem(r svcRow, active, focused bool, w int) s
 			g, gcol = theme.GlyphSvcStarting, theme.TextSecondary
 		}
 		var cols []hostCol
-		if w >= 44 {
+		if sc := st.statsRowCol(c, w); sc != nil { // live CPU / memory takes the image's place
+			cols = append(cols, *sc)
+		} else if w >= 44 {
 			free := w - 1 - 2*r.depth - 2 - 7 - 7 - 18 - 1
 			if free >= 6 {
 				cols = append(cols, hostCol{text: c.Image, width: free, col: theme.TextDim})

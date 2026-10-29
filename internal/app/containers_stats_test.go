@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/containers"
 	"github.com/amin-jalali/termocode/internal/services/servicestest"
 )
 
@@ -173,5 +174,49 @@ func TestStatsStoppedContainerDropsItsSeries(t *testing.T) {
 	statsRunFetch(t, m, m.onStatsTick(statsTickMsg{gen: st.stats.gen}))
 	if st.stats.series["c2"] != nil {
 		t.Error("stopped container kept its series")
+	}
+}
+
+func TestStatsHumanFormats(t *testing.T) {
+	for in, want := range map[float64]string{0: "0 B", 512: "512 B", 2048: "2.0 KB", 210 * 1048576: "210 MB", 8.2 * 1048576: "8.2 MB", 7.7 * (1 << 30): "7.7 GB"} {
+		if got := statsHumanBytes(in); got != want {
+			t.Errorf("statsHumanBytes(%v) = %q, want %q", in, got, want)
+		}
+	}
+	if statsPercent(12.4) != "12%" || statsPercent(0.31) != "0.3%" || statsPercent(100) != "100%" {
+		t.Errorf("percent: %s %s %s", statsPercent(12.4), statsPercent(0.31), statsPercent(100))
+	}
+}
+
+// statsSeeded is the host state with one sample for c1 (postgres, running).
+func statsSeeded() *servicesState {
+	st := svcHostState()
+	st.collapsed[hostSection("containers")] = false
+	st.stats.series = map[string]*containers.Series{"c1": {}}
+	st.stats.series["c1"].Push(containers.Sample{CPU: 12.4, HasCPU: true, MemUsed: 210 * 1048576, MemLimit: 2 << 30, HasMem: true})
+	return st
+}
+
+func TestStatsRowValuesByWidth(t *testing.T) {
+	st := statsSeeded()
+	line := func(w int) string { return lineWith(svcRender(st, w, 40), "postgres-1") }
+	if l := line(70); !strings.Contains(l, "CPU 12% · MEM 210 MB") {
+		t.Errorf("wide row = %q", l)
+	}
+	if l := line(50); !strings.Contains(l, "12% · 210 MB") || strings.Contains(l, "CPU") {
+		t.Errorf("short row = %q", l)
+	}
+	if l := line(29); strings.Contains(l, "MB") || strings.Contains(l, "%") {
+		t.Errorf("narrow row = %q", l)
+	}
+	// Containers that are stopped, or have no sample yet, show nothing.
+	for _, name := range []string{"api-1", "redis-1", "builder"} {
+		if l := lineWith(svcRender(st, 70, 40), name); l == "" || strings.Contains(l, "MB") || strings.Contains(l, "CPU") {
+			t.Errorf("%s row = %q", name, l)
+		}
+	}
+	st.containerRows[0].State = "exited" // a stale sample of a stopped container
+	if l := line(70); strings.Contains(l, "MB") {
+		t.Errorf("stopped row shows stats: %q", l)
 	}
 }
