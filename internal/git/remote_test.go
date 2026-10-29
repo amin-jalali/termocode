@@ -87,3 +87,19 @@ func TestRemoteEnvLowSpeed(t *testing.T) {
 		t.Errorf("the user's values must win:\n%s", env)
 	}
 }
+
+// Spec (SCN-13): the default ssh command gives up on a host that accepts
+// the connection and never answers (ssh waits for its greeting forever
+// without a connect timeout) and on a link that dies during a transfer.
+// A GIT_SSH_COMMAND of the user is kept as it is.
+func TestRemoteEnvSSHTimeouts(t *testing.T) {
+	env := strings.Join(cloneEnv([]string{"PATH=/bin"}, "", "", ""), "\n")
+	want := "GIT_SSH_COMMAND=ssh -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4"
+	if !strings.Contains(env, want) {
+		t.Errorf("want %q in\n%s", want, env)
+	}
+	env = strings.Join(cloneEnv([]string{"GIT_SSH_COMMAND=ssh -i key"}, "", "", ""), "\n")
+	if !strings.Contains(env, "GIT_SSH_COMMAND=ssh -i key") || strings.Contains(env, "ConnectTimeout") {
+		t.Errorf("the user's ssh command must be kept:\n%s", env)
+	}
+}

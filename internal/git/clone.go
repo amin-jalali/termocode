@@ -207,6 +207,12 @@ const (
 	lowSpeedTime  = "60"
 )
 
+// sshCommand is the ssh of remote commands when the user set none: no
+// prompts, and it gives up on a host that never sends its greeting
+// (without ConnectTimeout ssh waits for it forever) or a link that dies
+// during a transfer (no keep-alive answer for a minute).
+const sshCommand = "ssh -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4"
+
 // cloneEnv builds the child environment: no TTY prompts, batch-mode ssh
 // (unless the user configured their own ssh command), the low-speed limit
 // (unless the user set one), and — when a token is given — the askpass
@@ -244,7 +250,7 @@ func cloneEnv(base []string, askpass, user, token string) []string {
 		}
 	}
 	if !hasSSHCmd {
-		env = append(env, "GIT_SSH_COMMAND=ssh -o BatchMode=yes")
+		env = append(env, "GIT_SSH_COMMAND="+sshCommand)
 	}
 	if askpass != "" {
 		if user == "" {
