@@ -77,3 +77,37 @@ func TestWideDBResultCells(t *testing.T) {
 		})
 	}
 }
+
+// Spec (SCN-12): Given a SQLite table with 100 000 rows,
+// when the user runs SELECT * and pages through the result (] next
+// page, G and gg in a page),
+// then the first page shows within its bound, the result stops at the
+// row limit (10 000 rows, 100 pages) instead of loading every row, each
+// page key leaves the UI loop fast and the Go heap stays bounded.
+//
+// Local (race off): first page 0.15–0.2 s, worst key 1–3 ms, heap +5 MB.
+func TestScaleDBResult100kRows(t *testing.T) {
+	fixture := "CREATE TABLE big(id INTEGER PRIMARY KEY, name TEXT, note TEXT);\n" +
+		"WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM c WHERE x < 100000) " +
+		"INSERT INTO big SELECT x, 'name ' || x, 'note ' || x FROM c;\n"
+	d := dbConsoleDriver(t, 140, 40, fixture)
+	base := heapMB()
+	took := runSQL(d, "SELECT * FROM big;", "page 1 of 100", 20*time.Second*raceFactor())
+	within(t, "first page of 100k rows", took, 2*time.Second)
+	if !strings.Contains(screen(d), "row limit reached") {
+		t.Errorf("no row-limit note:\n%s", screen(d))
+	}
+	var key time.Duration
+	for i := 2; i <= 5; i++ {
+		key = max(key, keyTime(d, "]"))
+		if !d.WaitForText(fmt.Sprintf("page %d of 100", i), 3*time.Second*raceFactor()) {
+			t.Fatalf("] did not show page %d:\n%s", i, screen(d))
+		}
+	}
+	if !strings.Contains(screen(d), "name 401 ") {
+		t.Errorf("page 5 does not start at row 401:\n%s", screen(d))
+	}
+	key = max(key, worstKey(d, "G", "g", "g", "j", "k"))
+	within(t, "worst page key", key, 100*time.Millisecond)
+	heapWithin(t, "100k-row result", base, 60)
+}
