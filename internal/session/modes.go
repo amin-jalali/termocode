@@ -49,6 +49,9 @@ const (
 const (
 	maxCSI = 64
 	maxOSC = 512
+	// maxModes caps the distinct DEC modes kept, so odd output cannot
+	// make the tracker and every attach replay grow without end.
+	maxModes = 256
 )
 
 // NewModes returns an empty tracker (a terminal in its default state).
@@ -159,6 +162,9 @@ func (m *Modes) csi(params string, final byte) {
 				continue
 			}
 			if _, seen := m.dec[n]; !seen {
+				if len(m.order) >= maxModes {
+					continue
+				}
 				m.order = append(m.order, n)
 			}
 			m.dec[n] = final == 'h'
