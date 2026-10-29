@@ -208,7 +208,7 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 			// user doesn't keep editing a phantom file, and so closing
 			// it (auto-save on BufLeave) can't write it back.
 			m.closeBuffersForPaths([]string{path})
-			if err := osRemoveAll(path); err != nil {
+			if err := m.removePath(path); err != nil {
 				m.err = err.Error()
 				return nil
 			}
@@ -272,7 +272,7 @@ func (m *Model) runBulkDelete(paths []string) tea.Cmd {
 		if p == "" {
 			continue
 		}
-		if err := osRemoveAll(p); err != nil {
+		if err := m.removePath(p); err != nil {
 			failed = append(failed, fmt.Sprintf("%s: %v", filepath.Base(p), err))
 			continue
 		}

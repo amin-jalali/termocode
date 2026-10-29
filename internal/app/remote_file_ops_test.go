@@ -117,3 +117,42 @@ func TestContainerRenameWithoutShellSaysWhy(t *testing.T) {
 		t.Fatalf("err = %q", m.err)
 	}
 }
+
+func TestContainerDeleteRemovesInTheContainer(t *testing.T) {
+	m, _, _, c := newContainerModel(t)
+	m.openDeleteConfirm("/app/pkg")
+	m.handleConfirmSelect("delete")
+	if _, err := os.Stat(c.Local("/app/pkg")); !os.IsNotExist(err) || m.err != "" {
+		t.Fatalf("pkg still there: %v, err %q", err, m.err)
+	}
+	if _, err := os.Stat(c.Local("/app/main.go")); err != nil {
+		t.Fatalf("main.go gone: %v", err)
+	}
+}
+
+func TestContainerBulkDeleteRemovesInTheContainer(t *testing.T) {
+	m, _, _, c := newContainerModel(t)
+	c.WriteFile(t, "/app/a.txt", []byte("a"), 0o644)
+	m.openBulkDeleteConfirm([]string{"/app/a.txt", "/app/pkg"})
+	m.handleConfirmSelect("delete")
+	for _, p := range []string{"/app/a.txt", "/app/pkg"} {
+		if _, err := os.Stat(c.Local(p)); !os.IsNotExist(err) {
+			t.Fatalf("%s still there: %v", p, err)
+		}
+	}
+}
+
+func TestContainerDeleteWithoutShellSaysWhy(t *testing.T) {
+	ws, _, _, c := fakeContainerWS(t, func(c *fakedocker.Container) { c.NoShell() })
+	setProcWorkspace(t, ws)
+	t.Setenv("TERMOCODE_NO_NVIM", "1")
+	m := New()
+	m.openDeleteConfirm("/app/main.go")
+	m.handleConfirmSelect("delete")
+	if m.err != "api-1 has no shell (sh), so this is not possible." {
+		t.Fatalf("err = %q", m.err)
+	}
+	if _, err := os.Stat(c.Local("/app/main.go")); err != nil {
+		t.Fatalf("main.go gone: %v", err)
+	}
+}

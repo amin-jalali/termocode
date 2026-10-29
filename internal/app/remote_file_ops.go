@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"path"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -81,4 +82,18 @@ func (m *Model) remoteRename(fsys workspace.FS, from, value string) tea.Cmd {
 	m.followRename(from, to)
 	m.explorer.Reload()
 	return m.refreshSearchResults()
+}
+
+// removePath deletes a file or folder of the workspace: in the container
+// for a container workspace (the error is one clear sentence), else on
+// the local disk.
+func (m *Model) removePath(p string) error {
+	fsys, ok := m.remoteFS()
+	if !ok {
+		return osRemoveAll(p)
+	}
+	if err := fsys.Remove(context.Background(), p); err != nil {
+		return errors.New(remoteErrText(m.workspace().Host.Label(), err))
+	}
+	return nil
 }
