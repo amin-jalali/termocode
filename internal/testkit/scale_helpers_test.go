@@ -4,6 +4,8 @@ import (
 	"runtime"
 	"testing"
 	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // Helpers for the huge-input scenarios (SCN-12). Each bound is about 3×
@@ -76,4 +78,12 @@ func skipShortScale(t *testing.T) {
 	if testing.Short() {
 		t.Skip("huge input: runs without -short")
 	}
+}
+
+// wheel is a wheel notch at x, y (for Driver.Timed).
+func wheel(x, y int, up bool) tea.MouseMsg {
+	if up {
+		return tea.MouseMsg{X: x, Y: y, Type: tea.MouseWheelUp, Action: tea.MouseActionPress, Button: tea.MouseButtonWheelUp}
+	}
+	return tea.MouseMsg{X: x, Y: y, Type: tea.MouseWheelDown, Action: tea.MouseActionPress, Button: tea.MouseButtonWheelDown}
 }
