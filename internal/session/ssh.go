@@ -101,6 +101,12 @@ func RunSSH(o SSHOpts) int {
 	for {
 		a := t.attempt(reconnected)
 		if a.quit || !a.lost() || !t.everUp {
+			if t.offline && !a.quit {
+				// Ended while reconnecting (e.g. termocode is gone from the
+				// far side): ssh said why on the last row; leave the old
+				// screen for the shell.
+				t.leave("")
+			}
 			return a.code
 		}
 		if !o.Reconnect {

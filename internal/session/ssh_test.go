@@ -60,7 +60,8 @@ func fakeRemote() int {
 
 // fakeSSH is a folder with an ssh script that logs its arguments
 // (argv, one line per run), counts runs, fails like an unreachable host
-// while a "fail" file exists, asks for a password once when a "prompt"
+// while a "fail" file exists, like a far side without termocode while a
+// "missing" file exists, asks for a password once when a "prompt"
 // file exists, and runs the remote command (after --) as the fake far
 // side.
 type fakeSSH struct {
@@ -76,6 +77,7 @@ func newFakeSSH(t *testing.T) *fakeSSH {
 d='` + dir + `'
 echo "$*" >> "$d/argv"
 if [ -e "$d/fail" ]; then echo "ssh: connect to host box port 22: Network is unreachable"; exit 255; fi
+if [ -e "$d/missing" ]; then echo "sh: 1: termocode: not found"; exit 127; fi
 if [ -e "$d/prompt" ]; then rm "$d/prompt"; printf "me@box's password: "; read pw; echo "$pw" > "$d/pw"; fi
 while [ "$1" != "--" ]; do shift; done; shift
 exec sh -c "$*"
@@ -277,4 +279,23 @@ func TestRunSSHPasswordPrompt(t *testing.T) {
 	}
 	_, _ = keys.WriteString("q")
 	waitCode(t, code)
+}
+
+// TestRunSSHGoneWhileReconnecting: the far side answers again but has no
+// termocode any more; termocode ssh ends with that code, ssh's message
+// shown and the terminal back to normal.
+func TestRunSSHGoneWhileReconnecting(t *testing.T) {
+	f := newFakeSSH(t)
+	keys, out, code := f.run(SSHOpts{Reconnect: true})
+	waitFor(t, "the far side", func() bool { return strings.Contains(readOut(out), "remote-args:") })
+	f.set("missing", true)
+	_, _ = keys.WriteString("D")
+	if got := waitCode(t, code); got != 127 {
+		t.Errorf("exit code %d, want 127", got)
+	}
+	got := readOut(out)
+	i := strings.Index(got, "termocode: not found")
+	if i < 0 || !strings.Contains(got[i:], "\x1b[?1049l") {
+		t.Errorf("message or terminal reset missing: %q", got)
+	}
 }
