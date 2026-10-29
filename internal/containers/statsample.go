@@ -13,7 +13,8 @@ func ParsePercent(s string) (float64, bool) {
 		return 0, false
 	}
 	v, err := strconv.ParseFloat(s, 64)
-	if err != nil || v < 0 {
+	// ParseFloat also reads "NaN" and "Inf"; neither is a CPU reading.
+	if err != nil || v < 0 || math.IsNaN(v) || math.IsInf(v, 0) {
 		return 0, false
 	}
 	return v, true
