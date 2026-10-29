@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // maxChecksums caps checksums.txt (a few lines).
@@ -114,7 +115,7 @@ func sanityCheck(ctx context.Context, bin, tag string) error {
 	// another goroutine forks; try again a few times.
 	for try := 0; try < 5; try++ {
 		out.Reset()
-		cmd := exec.CommandContext(ctx, bin, "--version")
+		cmd := spawn.CommandContext(ctx, bin, "--version")
 		cmd.Env = append(os.Environ(), "TERMOCODE_HEADLESS=1")
 		cmd.Stdout = &out
 		if err = cmd.Run(); !errors.Is(err, syscall.ETXTBSY) {

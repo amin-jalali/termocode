@@ -22,6 +22,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // Call is one logged call of the fake.
@@ -597,7 +599,7 @@ func (d *Docker) exec(ctx context.Context, args []string, input []byte) result {
 	if fi, err := os.Stat(c.Local(dir)); err != nil || !fi.IsDir() {
 		return result{err: "OCI runtime exec failed: exec failed: unable to start container process: chdir to cwd (\"" + dir + "\") set in config.json failed: no such file or directory: unknown\n", code: 126}
 	}
-	cmd := exec.CommandContext(ctx, prog, mapped...)
+	cmd := spawn.CommandContext(ctx, prog, mapped...)
 	cmd.Dir = c.Local(dir)
 	cmd.Env = []string{"PATH=" + c.bin, "HOME=" + c.Root + "/root", "LC_ALL=C"}
 	cmd.Stdin = bytes.NewReader(input)

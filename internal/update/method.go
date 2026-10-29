@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
 // Method is how termocode was installed, which decides who updates it.
@@ -176,7 +178,7 @@ func PacmanOwner(path string) (string, bool) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, bin, "-Qqo", path).Output()
+	out, err := spawn.CommandContext(ctx, bin, "-Qqo", path).Output()
 	pkg := strings.TrimSpace(string(out))
 	if err != nil || pkg == "" || strings.ContainsAny(pkg, " \n") {
 		return "", false
