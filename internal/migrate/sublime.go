@@ -53,7 +53,7 @@ func ReadSublime(dir string) (Document, error) {
 		if !found {
 			return false
 		}
-		if err := json.Unmarshal(jsonc.Strip(b), dst); err != nil {
+		if err := json.Unmarshal(jsonc.Strip(trimBOM(b)), dst); err != nil {
 			skip(kind, rel, "not valid JSON; skipped")
 			return false
 		}

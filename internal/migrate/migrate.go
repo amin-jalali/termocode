@@ -53,7 +53,7 @@ func jsonFile(path string, dst any) error {
 	if len(b) > 1<<20 {
 		return fmt.Errorf("%s exceeds 1 MB", path)
 	}
-	return json.Unmarshal(jsonc.Strip(b), dst)
+	return json.Unmarshal(jsonc.Strip(trimBOM(b)), dst)
 }
 func stringMap(path string) (map[string]any, error) {
 	m := map[string]any{}
