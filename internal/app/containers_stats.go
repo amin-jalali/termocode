@@ -23,6 +23,9 @@ import (
 // blurred window or the last container stopping ends the chain (and
 // cancels a call in flight): no timer, no process.
 
+// statsCPUFloor is the smallest CPU scale of a graph, in percent.
+const statsCPUFloor = 20
+
 const (
 	statsInterval = 2 * time.Second
 	statsBackoff  = 10 * time.Second // after a failed call
@@ -384,9 +387,9 @@ func (st *servicesState) renderStatsRow(r svcRow, w int) string {
 	case 0:
 		label, spark = "CPU", true
 		vals = statsSeriesValues(series, func(s containers.Sample) float64 { return s.CPU })
-		maxV = 100
+		maxV = statsCPUFloor // a quiet container stays low; a busy one (or several cores) fills the line
 		for _, v := range vals {
-			maxV = max(maxV, v) // multi-core use goes past 100
+			maxV = max(maxV, v)
 		}
 		if last.HasCPU {
 			value = statsPercent(last.CPU)

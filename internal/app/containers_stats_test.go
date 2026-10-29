@@ -383,7 +383,7 @@ func TestStatsAsciiIconModeUsesPlainChars(t *testing.T) {
 			}
 		}
 	}
-	if l := lineWith(lines, "CPU "); !strings.Contains(l, "__.-*") {
+	if l := lineWith(lines, "CPU "); !strings.Contains(l, "._:=#") {
 		t.Errorf("cpu line = %q", l)
 	}
 	theme.CurrentIconMode = theme.IconModeUnicode
@@ -474,5 +474,21 @@ func TestStatsDemoVariantShowsChartsWithoutEngine(t *testing.T) {
 	narrow.containersDemo("stats")
 	if narrow.explorerWidth != 30 {
 		t.Errorf("plain stats variant changed the width: %d", narrow.explorerWidth)
+	}
+}
+
+func TestStatsCPUGraphScale(t *testing.T) {
+	statsIcons(t, theme.IconModeUnicode)
+	// A quiet container (5% at most) stays low; one past the floor fills.
+	st := statsSeeded()
+	st.stats.series["c1"].Push(containers.Sample{CPU: 5, HasCPU: true})
+	l := lineWith(strings.Split(ansi.Strip(st.renderStatsRow(svcRow{kind: svcRowStats, hostID: "c1", idx: 0, depth: 2}, 40)), "\n"), "CPU")
+	if strings.Contains(l, "█") || !strings.Contains(l, "▃") {
+		t.Errorf("quiet cpu line = %q", l)
+	}
+	st.stats.series["c1"].Push(containers.Sample{CPU: 250, HasCPU: true}) // several cores
+	l = ansi.Strip(st.renderStatsRow(svcRow{kind: svcRowStats, hostID: "c1", idx: 0, depth: 2}, 40))
+	if !strings.Contains(l, "█") || !strings.Contains(l, "250%") {
+		t.Errorf("busy cpu line = %q", l)
 	}
 }
