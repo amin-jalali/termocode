@@ -797,6 +797,7 @@ func (m *Model) finishAIRun(final agentrun.Event) {
 			}
 		}
 	}
+	aiSettleWorktrees(rm.Steps) // G-WT: a stopped step's worktree waits for the user
 	rm.Run.ElapsedMs += final.Elapsed.Milliseconds()
 	if final.Round > 0 {
 		rm.Run.Rounds = final.Round
@@ -834,6 +835,7 @@ func aiMarkInterrupted(c *ai.Conversation) {
 				st.State = string(agentdag.StateCancelled)
 			}
 		}
+		aiSettleWorktrees(c.Messages[i].Steps) // G-WT: its worktrees wait for the user
 	}
 }
 

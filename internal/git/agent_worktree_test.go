@@ -268,3 +268,24 @@ func TestAgentFiles(t *testing.T) {
 		t.Errorf("files %q", got)
 	}
 }
+
+// Steps that start together create their worktrees at the same time.
+func TestCreateAgentWorktreesAtOnce(t *testing.T) {
+	r := committedRepo(t)
+	r.write(t, "a.txt", "dirty\n")
+	errs := make(chan error, 4)
+	for _, id := range []string{"p-a", "p-b", "p-c", "p-d"} {
+		go func(id string) {
+			_, err := CreateAgentWorktree(r.dir, id)
+			errs <- err
+		}(id)
+	}
+	for i := 0; i < 4; i++ {
+		if err := <-errs; err != nil {
+			t.Error(err)
+		}
+	}
+	if left, err := LeftoverAgentWorktrees(r.dir); err != nil || len(left) != 4 {
+		t.Errorf("worktrees %d %v", len(left), err)
+	}
+}

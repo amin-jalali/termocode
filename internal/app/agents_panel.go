@@ -1263,6 +1263,15 @@ func (m *Model) routeAgentsKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		if idx, _, _, ok := s.agentsShown(); ok && s.conv.Messages[idx].Run.State == ai.RunStateInterrupted && s.aiRetryStep(idx) > 0 {
 			return m.aiRetryRun(idx), true
 		}
+	case "w": // G-WT: the selected step's own worktree
+		if d, ok := s.agentsData(); ok {
+			if i := s.agentsSelected(d); i >= 0 && i < len(d.nodes) {
+				if st := d.nodes[i].st; st != nil && st.Worktree.Open() {
+					return m.onAIWorktreePicked(d.msg.Run.ID + ":" + st.ID), true
+				}
+			}
+		}
+		return m.aiInfo("This step has no worktree to review"), true
 	case "?":
 		return m.openAgentsKeyCard(), true
 	case "esc", "q":

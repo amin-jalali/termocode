@@ -74,6 +74,8 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 		return m.onAISkillsPicked(id), true
 	case pickerKindRunsMore: // runs_state.go
 		return m.onRunsMorePicked(id), true
+	case pickerKindAIWorktrees: // ai_worktree_list.go
+		return m.onAIWorktreePicked(id), true
 	}
 	if cmd, ok := m.handleItermocPickerSelect(id); ok { // itermoc_actions.go
 		return cmd, true
@@ -173,6 +175,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAgentMCPCard(id), true
 	case confirmKindAIWorktreeConflict, confirmKindAIWorktreeDiscard: // ai_worktree_actions.go
 		return m.answerAIWorktreeCard(m.confirmKind, id), true
+	case confirmKindAIWorktreeLeft: // ai_worktree_list.go
+		return m.answerAIWorktreeLeft(id), true
 	}
 	return nil, false
 }
@@ -184,6 +188,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAIToolConfirm("deny")
 	case confirmKindAIWorktreeConflict, confirmKindAIWorktreeDiscard:
 		return m.answerAIWorktreeCard(m.confirmKind, "") // Esc: Cancel
+	case confirmKindAIWorktreeLeft:
+		return m.answerAIWorktreeLeft("")
 	case confirmKindMCPTrust:
 		return m.answerMCPTrust("deny")
 	case confirmKindMCPRemove:

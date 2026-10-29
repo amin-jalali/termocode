@@ -34,7 +34,7 @@ const (
 // whose worktree waits for the user (none while the step runs).
 func (m Model) aiWorktreeButtons(msg ai.StoredMessage, st ai.StoredStep, width int) []aiLine {
 	wt := st.Worktree
-	if !wt.Open() || wt.State == ai.WorktreeRunning || agentdag.State(st.State) == agentdag.StateRunning || (wt.Files == 0 && wt.State != ai.WorktreeConflict) {
+	if !wt.Open() || wt.State == ai.WorktreeRunning || agentdag.State(st.State) == agentdag.StateRunning {
 		return nil
 	}
 	key := msg.Run.ID + ":" + st.ID
@@ -86,33 +86,73 @@ func (s *aiState) aiWorktreeStep(key string) *ai.StoredStep {
 	return nil
 }
 
+// aiWorktreeRef is the worktree an action is about: a chat step's (st
+// set; changes land on its card) or a left-over one listed by AI: Agent
+// Worktrees… (key "left:<id>").
+type aiWorktreeRef struct {
+	key, title string
+	wt         *ai.StoredWorktree
+	st         *ai.StoredStep
+}
+
+// aiWorktreeRef finds the open worktree of key.
+func (s *aiState) aiWorktreeRef(key string) (aiWorktreeRef, bool) {
+	if id, ok := strings.CutPrefix(key, "left:"); ok {
+		wt, ok := s.wtLeft[id]
+		if !ok || !wt.Open() {
+			return aiWorktreeRef{}, false
+		}
+		return aiWorktreeRef{key: key, title: wt.Branch, wt: wt}, true
+	}
+	st := s.aiWorktreeStep(key)
+	if st == nil || !st.Worktree.Open() {
+		return aiWorktreeRef{}, false
+	}
+	return aiWorktreeRef{key: key, title: aiCleanText(st.Title), wt: st.Worktree, st: st}, true
+}
+
+// done records a worktree's new state: a step's card is drawn again and
+// the chat saved; a left-over one leaves the list once it is closed.
+func (m *Model) aiWorktreeDone(r aiWorktreeRef) {
+	s := m.aiS()
+	if r.st == nil {
+		if !r.wt.Open() {
+			delete(s.wtLeft, strings.TrimPrefix(r.key, "left:"))
+		}
+		return
+	}
+	s.runGen++
+	if !s.streaming {
+		_ = s.store.Save(&s.conv)
+	}
+}
+
 // onAIWorktreeButton runs a worktree chip ("wt-review:run:step", ...).
 func (m *Model) onAIWorktreeButton(id string) tea.Cmd {
 	act, key, _ := strings.Cut(id, ":")
-	s := m.aiS()
-	st := s.aiWorktreeStep(key)
-	if st == nil || !st.Worktree.Open() {
+	r, ok := m.aiS().aiWorktreeRef(key)
+	if !ok {
 		return m.aiInfo("That worktree is gone")
 	}
 	switch act {
 	case "wt-review":
-		return aiWorktreeReviewCmd(aiWorkspaceRoot(), st.Title, *st.Worktree)
+		return aiWorktreeReviewCmd(aiWorkspaceRoot(), r.title, *r.wt)
 	case "wt-merge":
-		return aiWorktreeMergeCmd(aiWorkspaceRoot(), key, *st.Worktree, false)
+		return aiWorktreeMergeCmd(aiWorkspaceRoot(), key, *r.wt, false)
 	case "wt-discard":
-		return m.askAIWorktreeDiscard(key, st)
+		return m.askAIWorktreeDiscard(r)
 	}
 	return nil
 }
 
-// aiWorktreeReviewMsg opens the review card of a step's worktree.
+// aiWorktreeReviewMsg opens the review card of a worktree.
 type aiWorktreeReviewMsg struct {
 	title string
 	files []diffview.File
 	err   error
 }
 
-func aiWorktreeReviewCmd(root, step string, wt ai.StoredWorktree) tea.Cmd {
+func aiWorktreeReviewCmd(root, title string, wt ai.StoredWorktree) tea.Cmd {
 	return func() tea.Msg {
 		fs, err := git.AgentFiles(root, wt.ID)
 		if err != nil {
@@ -122,7 +162,7 @@ func aiWorktreeReviewCmd(root, step string, wt ai.StoredWorktree) tea.Cmd {
 		for _, f := range fs {
 			files = append(files, diffview.File{Name: f.Path + aiWorktreeStatusWord(f.Status), Old: f.Before, New: f.After})
 		}
-		return aiWorktreeReviewMsg{title: "Changes of " + aiCleanText(step) + " · " + wt.Branch, files: files}
+		return aiWorktreeReviewMsg{title: "Changes of " + title + " · " + wt.Branch, files: files}
 	}
 }
 
@@ -187,21 +227,15 @@ func aiWorktreeKeepCmd(root, key string, wt ai.StoredWorktree) tea.Cmd {
 	}
 }
 
-// onAIWorktreeMerged records a merge on the card: a conflict opens the
-// conflict card; a merge refreshes the editor, explorer and git views.
+// onAIWorktreeMerged records a merge: a conflict opens the conflict
+// card; a merge refreshes the editor, explorer and git views.
 func (m *Model) onAIWorktreeMerged(msg aiWorktreeMergedMsg) tea.Cmd {
-	s := m.aiS()
-	st := s.aiWorktreeStep(msg.key)
-	if st == nil || st.Worktree == nil {
+	r, ok := m.aiS().aiWorktreeRef(msg.key)
+	if !ok {
 		return nil
 	}
-	wt := st.Worktree
-	defer func() {
-		s.runGen++
-		if !s.streaming {
-			_ = s.store.Save(&s.conv)
-		}
-	}()
+	wt := r.wt
+	defer m.aiWorktreeDone(r)
 	if msg.err != nil {
 		return m.aiToastErr("Merge failed; the agent's work is safe on "+wt.Branch, msg.err)
 	}
@@ -211,7 +245,7 @@ func (m *Model) onAIWorktreeMerged(msg aiWorktreeMergedMsg) tea.Cmd {
 	}
 	if len(msg.res.Conflicts) > 0 && !msg.force {
 		wt.State, wt.Conflicts = ai.WorktreeConflict, msg.res.Conflicts
-		return m.askAIWorktreeConflict(msg.key, st)
+		return m.askAIWorktreeConflict(r)
 	}
 	_, sync := m.aiSyncIDE("", aiSyncDisk)
 	n := len(msg.res.Applied)
@@ -224,19 +258,18 @@ func (m *Model) onAIWorktreeMerged(msg aiWorktreeMergedMsg) tea.Cmd {
 		return tea.Batch(sync, m.aiWarn(text))
 	}
 	wt.State, wt.Conflicts = ai.WorktreeMerged, nil
-	return tea.Batch(sync, m.aiInfo(fmt.Sprintf("Merged %d file%s from %s", n, plural(n), aiCleanText(st.Title))))
+	return tea.Batch(sync, m.aiInfo(fmt.Sprintf("Merged %d file%s from %s", n, plural(n), r.title)))
 }
 
 // askAIWorktreeConflict is the conflict card: nothing was written yet.
-func (m *Model) askAIWorktreeConflict(key string, st *ai.StoredStep) tea.Cmd {
-	s := m.aiS()
-	s.wtTarget = key
-	wt := st.Worktree
-	body := "You changed these files too since the step started:\n  " + strings.Join(wt.Conflicts, "\n  ") +
+func (m *Model) askAIWorktreeConflict(r aiWorktreeRef) tea.Cmd {
+	m.aiS().wtTarget = r.key
+	wt := r.wt
+	body := "You changed these files too since the agent started:\n  " + strings.Join(wt.Conflicts, "\n  ") +
 		"\n\nNothing was written yet. Your files and the agent's work (branch " + wt.Branch + ") are both safe." +
 		"\n\nMerge with markers: writes the agent's other files and puts both versions with conflict markers (<<<<<<<) in these files for you to fix; the branch stays." +
 		"\nKeep on branch: removes the worktree and keeps the work on the branch, to merge later with git."
-	m.confirm = confirm.New("Merge conflict · "+aiCleanText(st.Title), body, []confirm.Button{
+	m.confirm = confirm.New("Merge conflict · "+r.title, body, []confirm.Button{
 		{ID: "cancel", Title: "Cancel"},
 		{ID: "markers", Title: "Merge with markers", Style: confirm.StylePrimary},
 		{ID: "branch", Title: "Keep on branch"},
@@ -247,13 +280,15 @@ func (m *Model) askAIWorktreeConflict(key string, st *ai.StoredStep) tea.Cmd {
 }
 
 // askAIWorktreeDiscard asks before the worktree and its branch go.
-func (m *Model) askAIWorktreeDiscard(key string, st *ai.StoredStep) tea.Cmd {
-	s := m.aiS()
-	s.wtTarget = key
-	wt := st.Worktree
-	body := fmt.Sprintf("%s changed %d file%s in its own worktree. Discard removes the worktree and the branch %s. Your files do not change. This cannot be undone.",
-		aiCleanText(st.Title), wt.Files, plural(wt.Files), wt.Branch)
-	m.confirm = confirm.New("Discard the changes of "+aiCleanText(st.Title)+"?", body, []confirm.Button{
+func (m *Model) askAIWorktreeDiscard(r aiWorktreeRef) tea.Cmd {
+	m.aiS().wtTarget = r.key
+	wt := r.wt
+	changed := fmt.Sprintf("%s changed %d file%s in its own worktree.", r.title, wt.Files, plural(wt.Files))
+	if wt.Files == 0 {
+		changed = "The agent worked in its own worktree."
+	}
+	body := changed + " Discard removes the worktree and the branch " + wt.Branch + ". Your files do not change. This cannot be undone."
+	m.confirm = confirm.New("Discard the changes of "+r.title+"?", body, []confirm.Button{
 		{ID: "cancel", Title: "Cancel"},
 		{ID: "discard", Title: "Discard", Style: confirm.StyleDestructive},
 	})
@@ -268,11 +303,11 @@ func (m *Model) answerAIWorktreeCard(kind confirmKindEnum, id string) tea.Cmd {
 	s := m.aiS()
 	key := s.wtTarget
 	s.wtTarget = ""
-	st := s.aiWorktreeStep(key)
-	if st == nil || !st.Worktree.Open() {
+	r, ok := s.aiWorktreeRef(key)
+	if !ok {
 		return nil
 	}
-	root, wt := aiWorkspaceRoot(), *st.Worktree
+	root, wt := aiWorkspaceRoot(), *r.wt
 	switch {
 	case kind == confirmKindAIWorktreeConflict && id == "markers":
 		return aiWorktreeMergeCmd(root, key, wt, true)
@@ -293,20 +328,16 @@ type aiWorktreeDiscardedMsg struct {
 }
 
 func (m *Model) onAIWorktreeDiscarded(msg aiWorktreeDiscardedMsg) tea.Cmd {
-	s := m.aiS()
-	st := s.aiWorktreeStep(msg.key)
-	if st == nil || st.Worktree == nil {
+	r, ok := m.aiS().aiWorktreeRef(msg.key)
+	if !ok {
 		return nil
 	}
 	if msg.err != nil {
 		return m.aiToastErr("Could not discard the worktree", msg.err)
 	}
-	st.Worktree.State = ai.WorktreeDiscarded
-	s.runGen++
-	if !s.streaming {
-		_ = s.store.Save(&s.conv)
-	}
-	return m.aiInfo("Discarded the changes of " + aiCleanText(st.Title))
+	r.wt.State = ai.WorktreeDiscarded
+	m.aiWorktreeDone(r)
+	return m.aiInfo("Discarded the changes of " + r.title)
 }
 
 // aiWarn pushes a warning toast.

@@ -46,6 +46,9 @@ type aiState struct {
 	// wtTarget is the step ("run:step") a worktree Merge / Discard card
 	// is about (G-WT, ai_worktree_actions.go).
 	wtTarget string
+	// wtLeft are the agent worktrees AI: Agent Worktrees… listed that no
+	// card of this chat owns (left over), by id.
+	wtLeft map[string]*ai.StoredWorktree
 	// streamSteps counts chat events; the status bar's busy comet moves
 	// one step per event (no timer).
 	streamSteps int
@@ -453,6 +456,8 @@ func aiPaletteItems() []paletteEntry {
 		{"ai-profile-show", "AI: Show Profile", ""},
 		{"ai-until-done", "AI: Work Until Done (toggle)", ""},
 		{"ai-agents", "AI: Toggle Agents Panel", "Alt+Shift+A"},
+		{"ai-worktrees", "AI: Agent Worktrees…", ""},
+		{"ai-worktrees-toggle", "AI: Toggle Agent Worktrees", ""},
 		{"ai-usage", "AI: Usage", ""},
 		{"ai-runs", "AI: Runs", ""},
 		{"ai-profile-edit", "AI: Edit Profiles", ""},
@@ -503,6 +508,10 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 		return m.newAIChat(), true
 	case "ai-history":
 		return m.openAIHistory(), true
+	case "ai-worktrees": // G-WT (ai_worktree_list.go)
+		return m.openAIWorktrees(), true
+	case "ai-worktrees-toggle":
+		return m.toggleAIWorktrees(), true
 	case "ai-history-rename":
 		return m.openAIHistoryFor(pickerKindAIHistoryRename, " Rename Chat "), true
 	case "ai-fork-chat":

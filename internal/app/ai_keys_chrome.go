@@ -40,6 +40,10 @@ func agentsKeyRows(usage bool) []confirm.KeyRow {
 			[]string{"f", "follow the running step again"},
 			[]string{"r", "resume a run that termocode stopped"},
 			[]string{"u", "usage: tokens and cost by model and agent"},
+			[]string{"w", "the step's own worktree: Review, Merge, Discard"},
+			[]string{"Worktrees"},
+			[]string{"⑂ on a card", "the step works in its own git worktree (it ran at the same time as another step)"},
+			[]string{"AI: Agent Worktrees…", "every agent worktree, also ones left over after a crash"},
 		)
 	}
 	rows = append(rows,

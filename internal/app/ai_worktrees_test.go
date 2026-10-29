@@ -285,3 +285,109 @@ func TestAIWorktreeDiscard(t *testing.T) {
 		t.Errorf("chips after discard:\n%s", got)
 	}
 }
+
+// A worktree left over (a crash, another chat) shows in AI: Agent
+// Worktrees…; its card has Cancel first, and Discard asks once more
+// before the worktree and branch go. Merge brings its files in.
+func TestAIWorktreesPaletteLeftover(t *testing.T) {
+	m, dir := aiIDETestModel(t, fakeAIProvider{reply: "x"})
+	gitInit(t, dir)
+	mk := func(id, file string) git.AgentWorktree {
+		w, err := git.CreateAgentWorktree(dir, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(w.Path, file), []byte(id+"\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return w
+	}
+	old, keep := mk("old-x", "x.txt"), mk("old-y", "y.txt")
+
+	cmd, ok := m.dispatchAIPalette("ai-worktrees")
+	if !ok {
+		t.Fatal("palette entry missing")
+	}
+	runWorktreeCmd(t, m, cmd)
+	if !m.pickerOpen || m.pickerKind != pickerKindAIWorktrees {
+		t.Fatal("no worktree list")
+	}
+	if got := ansi.Strip(m.picker.View()); !strings.Contains(got, old.Branch) || !strings.Contains(got, "1 file · left over") {
+		t.Errorf("list:\n%s", got)
+	}
+	m.pickerOpen = false
+	m.handleAIPickerSelect("left:old-x")
+	if !m.confirmOpen || m.confirmKind != confirmKindAIWorktreeLeft || m.confirm.Buttons()[0].ID != "cancel" {
+		t.Fatalf("card: open %v kind %v", m.confirmOpen, m.confirmKind)
+	}
+	m.confirmOpen = false
+	m.onAIConfirmClosed() // Esc
+	if _, err := os.Stat(old.Path); err != nil {
+		t.Fatal("Esc removed the worktree")
+	}
+	m.handleAIPickerSelect("left:old-x")
+	m.confirmOpen = false
+	m.handleAIConfirm("discard") // the second card
+	if !m.confirmOpen || m.confirmKind != confirmKindAIWorktreeDiscard || m.confirm.Buttons()[0].ID != "cancel" {
+		t.Fatal("discard did not ask first")
+	}
+	m.confirmOpen = false
+	cmd, _ = m.handleAIConfirm("discard")
+	runWorktreeCmd(t, m, cmd)
+	if _, err := os.Stat(old.Path); !os.IsNotExist(err) || gitBranchExists(t, dir, old.Branch) {
+		t.Error("old-x still there")
+	}
+
+	m.handleAIPickerSelect("left:old-y")
+	m.confirmOpen = false
+	cmd, _ = m.handleAIConfirm("merge")
+	runWorktreeCmd(t, m, cmd)
+	if got := readFile(filepath.Join(dir, "y.txt")); got != "old-y\n" {
+		t.Errorf("y.txt %q", got)
+	}
+	if _, err := os.Stat(keep.Path); !os.IsNotExist(err) {
+		t.Error("old-y worktree still there after merge")
+	}
+}
+
+// AI: Toggle Agent Worktrees saves ai_worktrees.
+func TestAIWorktreesToggle(t *testing.T) {
+	m, _ := aiIDETestModel(t, fakeAIProvider{reply: "x"})
+	m.dispatchAIPalette("ai-worktrees-toggle")
+	p, _ := ai.ConfigPath()
+	if m.ai.settings.UseWorktrees() || ai.LoadSettings(p).Worktrees != ai.WorktreesOff {
+		t.Error("not off")
+	}
+	m.dispatchAIPalette("ai-worktrees-toggle")
+	if !m.ai.settings.UseWorktrees() || ai.LoadSettings(p).Worktrees != "" {
+		t.Error("not on again")
+	}
+}
+
+// After a crash (the chat is loaded again) a step's worktree that was
+// still in use waits for the user: its card offers Review, Merge and
+// Discard; in AGENTS, w opens its card.
+func TestAIWorktreeAfterCrash(t *testing.T) {
+	m, _ := aiIDETestModel(t, fakeAIProvider{reply: "x"})
+	c := ai.Conversation{ID: "c1", Messages: []ai.StoredMessage{
+		{Role: ai.StoredUser, Text: "go"},
+		{Role: ai.StoredAssistant, Run: &ai.StoredRun{ID: "r1", State: ai.RunStateRunning}, Steps: []ai.StoredStep{
+			{ID: "left", Title: "Left", State: "running", Worktree: &ai.StoredWorktree{ID: "r1-left", Path: "/x", Branch: "termocode/agent-r1-left", State: ai.WorktreeRunning}},
+		}},
+	}}
+	aiMarkInterrupted(&c)
+	m.ai.conv = c
+	if wt := c.Messages[1].Steps[0].Worktree; wt.State != ai.WorktreeReady {
+		t.Fatalf("state %q", wt.State)
+	}
+	got := aiTranscriptText(m, 100)
+	if !strings.Contains(got, "Review   Merge   Discard") || !strings.Contains(got, "stopped · Review shows its changes") {
+		t.Errorf("transcript:\n%s", got)
+	}
+	m.ai.agents.on = true
+	m.ai.agents.sel, m.ai.agents.manual = "left", true
+	m.routeAgentsKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("w")})
+	if !m.confirmOpen || m.confirmKind != confirmKindAIWorktreeLeft {
+		t.Error("w did not open the worktree card")
+	}
+}

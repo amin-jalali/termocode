@@ -435,6 +435,10 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"ai-skills": aiNever(aiNoPicker),
 	// The AGENTS view (U20 AP-9) only shows the chat's runs.
 	"ai-agents": aiAuto(),
+	// Agent worktrees (G-WT): merging or discarding an agent's work and
+	// turning the feature off are the user's.
+	"ai-worktrees":        aiNever(aiNoPicker),
+	"ai-worktrees-toggle": aiNever(aiNoAIConfig),
 	// AI: Usage (AU-4) is the user's own view of tokens and money.
 	"ai-usage": aiNever("a read-only screen for the user; the AI cannot read its own bill"),
 	// Runs is the user's monitoring page (stop, pause and resume are theirs).

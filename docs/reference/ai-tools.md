@@ -1532,6 +1532,8 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `ai-undo-turn` | AI: Undo Last Turn | never | the user undoes the AI's changes |
 | `ai-until-done` | AI: Work Until Done (toggle) | confirm (settings) |   |
 | `ai-usage` | AI: Usage | never | a read-only screen for the user; the AI cannot read its own bill |
+| `ai-worktrees` | AI: Agent Worktrees… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `ai-worktrees-toggle` | AI: Toggle Agent Worktrees | never | AI provider, credentials and approvals stay with the user |
 | `alternate-file` | View: Switch to Last File | auto |   |
 | `bookmark-clear` | Bookmarks: Clear All | confirm (ide) |   |
 | `bookmark-list` | Bookmarks: Show List | never | opens a picker or prompt that only the user can answer; use a typed tool |

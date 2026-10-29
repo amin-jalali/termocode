@@ -205,5 +205,8 @@ func aiWorktreeState(wt *ai.StoredWorktree) string {
 	case ai.WorktreeOnBranch:
 		return head + "not merged · work kept on the branch"
 	}
+	if wt.Files == 0 { // stopped before its files were counted
+		return head + "stopped · Review shows its changes"
+	}
 	return head + fmt.Sprintf("%d file%s changed", wt.Files, plural(wt.Files))
 }

@@ -34,6 +34,8 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onAIWorktreeMerged(msg), true
 	case aiWorktreeDiscardedMsg:
 		return m.onAIWorktreeDiscarded(msg), true
+	case aiWorktreesListMsg: // ai_worktree_list.go
+		return m.onAIWorktreesList(msg), true
 	case aiLimitResumeMsg: // ai_cli_steps.go
 		return m.onAILimitResume(msg), true
 	case aiCLIStatusMsg: // ai_cli_form.go
