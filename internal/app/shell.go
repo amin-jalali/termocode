@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -395,7 +396,11 @@ func (m *Model) resetTerminalState() {
 // the existing terminal window via nvim_win_set_buf. When the panel isn't
 // open yet, this just delegates to openTerminalPanel (which creates the
 // first tab from scratch).
-func (m *Model) newTerminalTab() {
+func (m *Model) newTerminalTab() { m.newTerminalTabIn("") }
+
+// newTerminalTabIn is newTerminalTab with the shell started in dir ("" = the
+// workspace root, as before).
+func (m *Model) newTerminalTabIn(dir string) {
 	if m.nvim == nil {
 		return
 	}
@@ -417,6 +422,7 @@ func (m *Model) newTerminalTab() {
 	if shell == "" {
 		shell = "/bin/bash"
 	}
+	dirJSON, _ := json.Marshal(dir)
 	luaNew := fmt.Sprintf(termExitedLua+termShellIntLua+`
 		local termWin = %d
 		if not vim.api.nvim_win_is_valid(termWin) then return '0' end
@@ -427,7 +433,9 @@ func (m *Model) newTerminalTab() {
 		pcall(vim.api.nvim_win_set_buf, termWin, buf)
 		pcall(vim.api.nvim_set_current_win, termWin)
 		local cmd, env = _G.termocode_shellint(vim.json.decode(%q))
+		local wd = vim.json.decode(%q)
 		local job = vim.fn.termopen(cmd, {
+			cwd = wd ~= '' and wd or nil,
 			env = env,
 			on_exit = function(_, code, _)
 				vim.g.termocode_term_last_exit = code
@@ -452,7 +460,7 @@ func (m *Model) newTerminalTab() {
 			pcall(vim.cmd, 'startinsert')
 		end
 		return tostring(buf)
-	`, m.terminalWinID, termShellSpecJSON(shell))
+	`, m.terminalWinID, termShellSpecJSON(shell), dirJSON)
 	out, err := m.nvim.EvalLuaString(luaNew)
 	if err != nil {
 		m.err = "terminal: " + err.Error()
@@ -463,7 +471,10 @@ func (m *Model) newTerminalTab() {
 		m.err = "terminal: failed to spawn shell"
 		return
 	}
-	cwd, _ := m.rootDir()
+	cwd := dir
+	if cwd == "" {
+		cwd, _ = m.rootDir()
+	}
 	tab := terminalTab{
 		BufID:    bufID,
 		Cwd:      cwd,
