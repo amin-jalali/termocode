@@ -146,10 +146,20 @@ var (
 )
 
 // UndoOptions tune RunUndo.
-type UndoOptions struct{}
+type UndoOptions struct {
+	Stash bool // stash local changes first and put them back after
+}
 
 // UndoResult is how an undo went.
-type UndoResult struct{}
+type UndoResult struct {
+	Stashed   bool   // local changes were stashed (and popped unless StashKept)
+	StashKept bool   // they did not go back cleanly: the stash is still there
+	StashRef  string // the stash that holds them ("stash@{0}") when kept
+	PopError  string // what git said when the pop stopped
+}
+
+// undoStashMessage names the stash an undo makes.
+const undoStashMessage = "termocode: before undo"
 
 // RunUndo carries out p: `git reset --keep <target>` (or a switch back
 // for a checkout). It refuses when HEAD moved since the plan, or when a
@@ -161,7 +171,23 @@ func RunUndo(dir string, p UndoPlan, opt UndoOptions) (UndoResult, error) {
 	if head, err := runOut(dir, "git", "rev-parse", "--verify", "-q", "HEAD"); err != nil || strings.TrimSpace(head) != p.From {
 		return UndoResult{}, ErrUndoStale
 	}
-	return UndoResult{}, moveHead(dir, p)
+	if !opt.Stash || !WorkTreeDirty(dir) {
+		return UndoResult{}, moveHead(dir, p)
+	}
+	if err := Stash(dir, undoStashMessage); err != nil {
+		return UndoResult{}, err
+	}
+	res := UndoResult{Stashed: true}
+	if err := moveHead(dir, p); err != nil {
+		_ = StashPop(dir) // put the changes back where they were
+		return UndoResult{}, err
+	}
+	if err := StashPop(dir); err != nil {
+		// git keeps the stash when the pop stops on a conflict.
+		res.StashKept, res.StashRef = true, "stash@{0}"
+		res.PopError = err.Error()
+	}
+	return res, nil
 }
 
 // moveHead runs the reset --keep (or switch) of p.

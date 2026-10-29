@@ -169,3 +169,44 @@ func fileExists(r *gitTestRepo, name string) bool {
 	_, err := os.Stat(filepath.Join(r.dir, name))
 	return err == nil
 }
+
+// G-UND: Stash and Undo puts the changes in the way aside, moves HEAD and
+// puts them back.
+func TestRunUndoStash(t *testing.T) {
+	r, h := rebaseRepo(t, 2)
+	r.write(t, "f1.txt", "top\nfile 1\n")
+	r.git(t, "commit", "-q", "-am", "c3")
+	r.write(t, "f1.txt", "top\nfile 1\nbottom\n")
+	p, _ := PlanUndo(r.dir)
+	if len(p.Blocked) != 1 {
+		t.Fatalf("blocked %q", p.Blocked)
+	}
+	res, err := RunUndo(r.dir, p, UndoOptions{Stash: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if headOf(t, r) != h[1] || r.read(t, "f1.txt") != "file 1\nbottom\n" {
+		t.Errorf("HEAD %s f1 %q", headOf(t, r), r.read(t, "f1.txt"))
+	}
+	if !res.Stashed || res.StashKept || strings.TrimSpace(r.git(t, "stash", "list")) != "" {
+		t.Errorf("result %+v, stash list %q", res, r.git(t, "stash", "list"))
+	}
+}
+
+// G-UND: when the changes do not go back cleanly, the undo is done, the
+// stash stays and the result says so.
+func TestRunUndoStashConflictKeepsStash(t *testing.T) {
+	r, h := rebaseRepo(t, 3)
+	r.write(t, "f3.txt", "my edit\n") // c3 adds f3; the undo removes it
+	p, _ := PlanUndo(r.dir)
+	res, err := RunUndo(r.dir, p, UndoOptions{Stash: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if headOf(t, r) != h[1] {
+		t.Errorf("HEAD not moved")
+	}
+	if !res.StashKept || res.StashRef != "stash@{0}" || !strings.Contains(r.git(t, "stash", "list"), "before undo") {
+		t.Errorf("result %+v, stash list %q", res, r.git(t, "stash", "list"))
+	}
+}
