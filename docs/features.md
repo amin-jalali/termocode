@@ -68,7 +68,7 @@ its name and key.
 - Project services for Docker Compose and local dev commands: start, stop, logs in a terminal tab, and AI tools that read their state and logs (secrets masked). → [Dev services](guides/services.md)
 - A Databases view for PostgreSQL, MySQL / MariaDB, SQLite and Redis / Valkey: schema tree, SQL console, result pages, row edits with a reviewed transaction, export and import, EXPLAIN, SSH tunnels, and AI tools that read in a read-only session and ask before a write. → [Browse databases](guides/databases.md)
 - A Run and Debug view with breakpoints, watch, call stack and a Debug Console. → [Debug a program](guides/debug.md)
-- An integrated terminal with tabs (`Ctrl+T`). Click `file:line` links in its output.
+- An integrated terminal with tabs (`Ctrl+T`) and splits: up to four shells side by side or stacked in one tab (`Alt+/`, `Alt+-`). Click `file:line` links in its output. → [The terminal and its splits](guides/terminal.md)
 
 ![Integrated terminal under the editor](assets/screenshots/terminal.png)
 

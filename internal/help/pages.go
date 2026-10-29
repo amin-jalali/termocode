@@ -33,6 +33,7 @@ var nav = []PageInfo{
 	{"Guides", "Dev services", "guides/services.md"},
 	{"Guides", "Browse databases", "guides/databases.md"},
 	{"Guides", "Tasks and problems", "guides/tasks-problems.md"},
+	{"Guides", "The terminal and its splits", "guides/terminal.md"},
 	{"Guides", "Install language servers and debuggers", "guides/language-servers.md"},
 	{"Guides", "Workspaces and sessions", "guides/workspaces.md"},
 	{"Guides", "Remote and SSH", "guides/remote-ssh.md"},

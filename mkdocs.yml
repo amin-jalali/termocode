@@ -106,6 +106,7 @@ nav:
       - Dev services: guides/services.md
       - Browse databases: guides/databases.md
       - Tasks and problems: guides/tasks-problems.md
+      - The terminal and its splits: guides/terminal.md
       - Install language servers and debuggers: guides/language-servers.md
       - Workspaces and sessions: guides/workspaces.md
       - Remote and SSH: guides/remote-ssh.md
