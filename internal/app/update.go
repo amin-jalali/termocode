@@ -483,6 +483,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onRebaseMsg(msg)
 	case undoPlanMsg, undoDoneMsg, redoClickMsg, redoDoneMsg, reflogListMsg: // git_undo.go
 		return m, m.onUndoMsg(msg)
+	case mergeStagesMsg, mergeSyncMsg: // git_merge_view.go
+		return m, m.onMergeMsg(msg)
 	case gitRemoteDoneMsg:
 		return m, m.gitRemoteDone(msg)
 	case preview.CloseMsg:
@@ -659,6 +661,11 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	}
 	if m.itermocPageShown() {
 		if newM, cmd, ok := m.routeToItermocPage(msg); ok {
+			return newM, cmd
+		}
+	}
+	if m.mergeViewShown() { // git_merge_view.go
+		if newM, cmd, ok := m.routeToMergeView(msg); ok {
 			return newM, cmd
 		}
 	}

@@ -215,6 +215,13 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"git-undo":            aiNever(aiNoGitUndo),
 	"git-redo":            aiNever(aiNoGitUndo),
 	"git-reflog":          aiNever(aiNoPicker),
+	// Merge view (git_merge_view.go): opening and moving around only.
+	"git-merge-open":  aiAuto(),
+	"git-merge-next":  aiAuto(),
+	"git-merge-prev":  aiAuto(),
+	"git-merge-pane":  aiAuto(),
+	"git-merge-focus": aiAuto(),
+	"git-merge-close": aiAuto(),
 
 	// ── Workspace, session, settings ──
 	"workspace-add-folder":    aiNever(aiNoPicker + " (workspace_folders)"),
