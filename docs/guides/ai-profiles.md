@@ -672,8 +672,9 @@ works in its **own git worktree**. They never change the same file, and
 your files stay as they are while they work.
 
 - **When.** In a git repository with at least one commit, for a step
-  that runs in the same wave as another writing step. Read-only steps and
-  steps that run alone work in your tree, as before. Outside a git
+  that may run at the same time as another writing step (one that runs
+  now, or one still to come that does not wait for it). Read-only steps
+  and steps that run alone work in your tree, as before. Outside a git
   repository every step works in your tree.
 - **Where.** The worktree is in the repository's git folder
   (`.git/termocode/worktrees/<id>`), on the branch

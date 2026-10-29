@@ -583,16 +583,28 @@ func (h *Handle) nextRound(res result) error {
 	return nil
 }
 
-// sharesWave reports whether node id may write files and another node of
-// its layer that may write has not finished yet (they may run at once).
-// It runs on the loop goroutine.
+// sharesWave reports whether node id may write files and another node
+// that may write could run at the same time: one that is running, or
+// still to run and not after id (not downstream of it). Layers are not
+// enough: a node of the next layer whose deps ended early runs next to a
+// slow node of this one, and both would work in the user's tree. It runs
+// on the loop goroutine.
 func (h *Handle) sharesWave(id string) bool {
 	n := h.node(id)
 	if n == nil || !agentdag.Writes(*n) {
 		return false
 	}
+	after := map[string]bool{id: true}
+	for grew := true; grew; {
+		grew = false
+		for _, e := range h.run.Edges {
+			if after[e.From] && !after[e.To] {
+				after[e.To], grew = true, true
+			}
+		}
+	}
 	for _, o := range h.run.Nodes {
-		if o.ID != id && h.layer[o.ID] == h.layer[id] && agentdag.Writes(o) && !o.State.Done() && !o.State.Stops() {
+		if !after[o.ID] && agentdag.Writes(o) && !o.State.Done() && !o.State.Stops() {
 			return true
 		}
 	}

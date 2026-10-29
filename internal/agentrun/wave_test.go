@@ -62,6 +62,47 @@ func TestSharedWave(t *testing.T) {
 	}
 }
 
+// A writing node of a later layer can start while a slow writing node
+// of an earlier layer still runs (its own deps ended early): both share a
+// wave, else both would write in the user's tree at once.
+func TestSharedWaveAcrossLayers(t *testing.T) {
+	slow := &fakeProv{gate: make(chan struct{})}
+	h := newHarness(map[string]*fakeProv{"a": slow, "r": {}, "b": {}})
+	o := h.options(2)
+	var mu sync.Mutex
+	got := map[string]bool{}
+	build := o.Build
+	o.Build = func(ctx context.Context, n agentdag.Node, input string) (*ai.Agent, []ai.Message, error) {
+		mu.Lock()
+		got[n.ID] = SharedWave(ctx)
+		mu.Unlock()
+		if n.ID == "b" {
+			close(slow.gate) // a still runs while b starts
+		}
+		return build(ctx, n, input)
+	}
+	// a (writes, slow) and r (read-only) are the first layer; b (writes)
+	// needs only r.
+	r := agentdag.Run{ID: "r3", Nodes: []agentdag.Node{
+		{ID: "a"}, {ID: "r", Tools: agentdag.ToolRule{Preset: agentdag.PresetReadOnly}}, {ID: "b"}},
+		Edges: []agentdag.Edge{{From: "r", To: "b"}}}
+	run, err := Start(context.Background(), r, o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if end := wait(t, run); end.Kind != RunDone {
+		t.Fatalf("end %+v", end)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if !got["a"] || !got["b"] {
+		t.Errorf("SharedWave a=%v b=%v, want both true", got["a"], got["b"])
+	}
+	if got["r"] {
+		t.Error("read-only r: SharedWave true")
+	}
+}
+
 func TestNodeWrites(t *testing.T) {
 	for preset, want := range map[string]bool{"": true, agentdag.PresetAll: true, agentdag.PresetReadOnly: false, agentdag.PresetNone: false} {
 		if got := agentdag.Writes(agentdag.Node{Tools: agentdag.ToolRule{Preset: preset}}); got != want {
