@@ -2,8 +2,11 @@ package search
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -453,5 +456,39 @@ func TestCountAndReplaceLiteral(t *testing.T) {
 	data, _ := os.ReadFile(counts[0].Path)
 	if string(data) != "Z Z axb\n" {
 		t.Errorf("after replace: %q", data)
+	}
+}
+
+// Spec: the built-in search hands files over in walk order (folders and
+// names sorted), whatever order its workers finish in, and stops with
+// the context's error when cancelled.
+func TestFallbackOrderAndCancel(t *testing.T) {
+	dir := t.TempDir()
+	var want []string
+	for d := 0; d < 12; d++ {
+		for f := 0; f < 40; f++ {
+			rel := filepath.Join(fmt.Sprintf("d%02d", d), fmt.Sprintf("f%02d.txt", f))
+			writeFile(t, dir, rel, strings.Repeat("x\n", f*7)+"hit\n")
+			want = append(want, rel)
+		}
+	}
+	var got []string
+	if err := runFallback(context.Background(), dir, "hit", Options{}, func(rs []Result) {
+		got = append(got, rs[0].Path)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("files out of walk order:\n got %v\nwant %v", got, want)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	n := 0
+	err := runFallback(ctx, dir, "hit", Options{}, func([]Result) {
+		if n++; n == 3 {
+			cancel()
+		}
+	})
+	if !errors.Is(err, context.Canceled) || n >= len(want) {
+		t.Fatalf("after cancel: err %v, %d files", err, n)
 	}
 }

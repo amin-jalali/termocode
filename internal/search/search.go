@@ -12,8 +12,10 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -658,39 +660,120 @@ func runFallback(ctx context.Context, dir, query string, opts Options, onFile fu
 	}
 	globs := globFilter{include: opts.Include, exclude: opts.Exclude}
 
-	return filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		if err != nil {
-			return nil // unreadable entry — skip it, keep walking
-		}
-		rel, e := filepath.Rel(dir, path)
-		if e != nil {
-			rel = path
-		}
-		rel = filepath.ToSlash(rel)
-		if d.IsDir() {
-			if path != dir && (skipSearchDir(d.Name()) || globs.excluded(rel, d.Name())) {
-				return fs.SkipDir
+	// One goroutine walks the tree (in order), a few workers read and
+	// search the files, and this goroutine hands each file's results to
+	// onFile in walk order: reading 20 000 files one by one waited on the
+	// disk the whole time.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	work := make(chan *fileJob, 64)
+	order := make(chan *fileJob, 256)
+	walkDone := make(chan error, 1)
+	go func() {
+		defer close(order)
+		defer close(work)
+		walkDone <- filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			if err != nil {
+				return nil // unreadable entry — skip it, keep walking
+			}
+			rel, e := filepath.Rel(dir, path)
+			if e != nil {
+				rel = path
+			}
+			rel = filepath.ToSlash(rel)
+			if d.IsDir() {
+				if path != dir && (skipSearchDir(d.Name()) || globs.excluded(rel, d.Name())) {
+					return fs.SkipDir
+				}
+				return nil
+			}
+			if !globs.allowFile(rel, d.Name()) {
+				return nil
+			}
+			j := &fileJob{path: path, rel: filepath.FromSlash(rel), out: make(chan []Result, 1)}
+			for _, ch := range []chan *fileJob{order, work} {
+				select {
+				case ch <- j:
+				case <-ctx.Done():
+					return ctx.Err()
+				}
 			}
 			return nil
+		})
+	}()
+	workers := min(max(runtime.GOMAXPROCS(0), 1), 8)
+	var wg sync.WaitGroup
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			var buf []byte
+			for j := range work {
+				var rs []Result
+				buf, rs = searchFile(j, buf, lm, opts.Context)
+				j.out <- rs
+			}
+		}()
+	}
+	defer wg.Wait()
+	for j := range order {
+		select {
+		case rs := <-j.out:
+			if len(rs) > 0 {
+				onFile(rs)
+			}
+		case <-ctx.Done():
+			cancel()
+			for range order { // let the walker end
+			}
+			return ctx.Err()
 		}
-		if !globs.allowFile(rel, d.Name()) {
-			return nil
+	}
+	return <-walkDone
+}
+
+// fileJob is one file for the built-in search's workers; out gets its
+// results (nil for none).
+type fileJob struct {
+	path, rel string
+	out       chan []Result
+}
+
+// searchFile reads one file into buf (reused between files) and returns
+// its results. Binary, oversized and unreadable files have none.
+func searchFile(j *fileJob, buf []byte, lm *lineMatcher, ctxLines int) ([]byte, []Result) {
+	f, err := os.Open(j.path)
+	if err != nil {
+		return buf, nil
+	}
+	defer f.Close()
+	if info, e := f.Stat(); e != nil || !info.Mode().IsRegular() || info.Size() > maxFallbackFileSize {
+		return buf, nil
+	}
+	buf = buf[:0]
+	for {
+		if len(buf) == cap(buf) {
+			buf = append(buf, 0)[:len(buf)]
 		}
-		if info, e := d.Info(); e == nil && info.Size() > maxFallbackFileSize {
-			return nil
+		n, e := f.Read(buf[len(buf):cap(buf)])
+		buf = buf[:len(buf)+n]
+		if e == io.EOF {
+			break
 		}
-		data, e := os.ReadFile(path)
-		if e != nil || isBinary(data) || !lm.mayMatch(data) {
-			return nil
+		if e != nil {
+			return buf, nil
 		}
-		if rs := searchLines(string(data), filepath.FromSlash(rel), lm, opts.Context); len(rs) > 0 {
-			onFile(rs)
+		if len(buf) > maxFallbackFileSize {
+			return buf, nil
 		}
-		return nil
-	})
+	}
+	if isBinary(buf) || !lm.mayMatch(buf) {
+		return buf, nil
+	}
+	return buf, searchLines(string(buf), j.rel, lm, ctxLines)
 }
 
 // searchLines runs the matcher over one file's text and builds its results,
