@@ -4,6 +4,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/charmbracelet/x/ansi"
 	"github.com/muesli/termenv"
@@ -519,8 +520,44 @@ func parseSGRInto(s sgrState, sgr string) sgrState {
 	return s
 }
 
+// sgrMemo remembers encoded SGR states: a frame with a card over it
+// encodes the same few dozen colours thousands of times. The key holds
+// the colour profile, so a profile switch never reuses an old encoding.
+// It is cleared when it grows past sgrMemoMax (blended colours of an
+// animation make new states).
+type sgrMemoKey struct {
+	s    sgrState
+	prof termenv.Profile
+}
+
+const sgrMemoMax = 4096
+
+var sgrMemo = struct {
+	sync.Mutex
+	m map[sgrMemoKey]string
+}{m: map[sgrMemoKey]string{}}
+
 // render encodes the state for the active colour profile.
 func (s sgrState) render() string {
+	k := sgrMemoKey{s, theme.Profile()}
+	sgrMemo.Lock()
+	out, ok := sgrMemo.m[k]
+	sgrMemo.Unlock()
+	if ok {
+		return out
+	}
+	out = s.encode(k.prof)
+	sgrMemo.Lock()
+	if len(sgrMemo.m) >= sgrMemoMax {
+		clear(sgrMemo.m)
+	}
+	sgrMemo.m[k] = out
+	sgrMemo.Unlock()
+	return out
+}
+
+// encode is render without the memo.
+func (s sgrState) encode(prof termenv.Profile) string {
 	var parts []string
 	if s.bold {
 		parts = append(parts, "1")
@@ -540,7 +577,6 @@ func (s sgrState) render() string {
 	if s.strike {
 		parts = append(parts, "9")
 	}
-	prof := theme.Profile()
 	if prof != termenv.Ascii {
 		if s.hasFg {
 			if c := prof.Color(s.fg.Hex()); c != nil {
