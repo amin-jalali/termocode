@@ -46,6 +46,22 @@ You do not have to stage the whole file.
 
 The colored bars in the left gutter show added, changed and deleted lines.
 
+## Stage single lines
+
+A hunk is sometimes too big. Stage just the lines you want.
+
+1. Put the cursor on a changed line, or select several lines with `V`.
+2. Press `Alt+Shift+S`. Only those lines go to the index. The cursor moves
+   to the next line, so you can press the key again.
+3. `Alt+Shift+U` takes the line (or the selected lines) out of the index.
+4. **Git: Discard Line (or Selected Lines)** throws the change away. It asks
+   first, and **Cancel** is the choice that is ready.
+
+Save the file first: the lines are taken from the saved file. A removed line
+counts as part of the line below it. A binary file or a renamed file cannot
+be cut into lines, and you cannot discard lines of a new file that git does
+not track yet; termocode says so.
+
 ## Sync with the remote
 
 Click **⟳ Sync**, or run **Git: Sync (Pull, then Push)**. It pulls, then
@@ -236,6 +252,7 @@ In the editor:
 |---|---|
 | `Alt+]` / `Alt+[` | Next / previous change |
 | `Alt+S` / `Alt+U` | Stage / unstage hunk |
+| `Alt+Shift+S` / `Alt+Shift+U` | Stage / unstage line (or selected lines) |
 | `Alt+B` | Blame line |
 | `Alt+C` | Fix red CI with AI |
 | `]x` / `[x` | Next / previous merge conflict |
