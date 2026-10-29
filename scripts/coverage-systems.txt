@@ -7,13 +7,13 @@
 # fails when a new package is in neither list.
 
 AI and agents: internal/ai internal/addai internal/agentdag internal/agentrun internal/agents internal/aimemory internal/clilogin internal/clistep
-Git: internal/git internal/ghci internal/diffview internal/rebaseview internal/textdiff
-Containers and remote: internal/containers internal/containerhost internal/services internal/workspace/...
+Git: internal/git internal/ghci internal/diffview internal/mergeview internal/rebaseview internal/textdiff
+Containers and remote: internal/containers internal/containerhost internal/kube internal/services internal/workspace/...
 MCP and secrets: internal/mcp/... internal/secrets internal/connectcard
 Session/transfer/update: internal/session internal/transfer internal/update internal/fetch
 Database and HTTP: internal/dbclient internal/httpclient
 UI parts: internal/activity internal/anim internal/clipring internal/clock internal/confirm internal/darkbg internal/debounce internal/findbar internal/grid internal/help internal/importview internal/keyhint internal/keymap internal/layout internal/menu internal/nerdterm internal/picker internal/preview internal/profileform internal/prompt internal/replacebar internal/rtl internal/statusbar internal/tabbar internal/termcaps internal/termfont internal/termimg internal/theme internal/toast
 Editor and files: internal/editor internal/nvim internal/explorer internal/search internal/mdview internal/recents internal/tasks internal/tests internal/lspinstall internal/ext internal/extproc internal/migrate internal/cfgfile internal/jsonc internal/shellint
-App shell: internal/app cmd/termocode internal/setup internal/spawn
+App shell: internal/app internal/crash cmd/termocode internal/setup internal/spawn
 
-exclude: internal/testkit/... internal/mcp/mcptest internal/services/servicestest internal/containerhost/fakedocker internal/secrets/secretstest internal/dbclient/dbtest internal/extproc/extproctest internal/keytest internal/devtools/... cmd/docgen cmd/recordgifs cmd/covreport
+exclude: internal/testkit/... internal/mcp/mcptest internal/services/servicestest internal/kube/kubetest internal/containerhost/fakedocker internal/secrets/secretstest internal/dbclient/dbtest internal/extproc/extproctest internal/keytest internal/devtools/... cmd/docgen cmd/recordgifs cmd/covreport
