@@ -76,9 +76,12 @@ func (m *Model) onUndoPlan(msg undoPlanMsg) tea.Cmd {
 	if msg.move {
 		title, verb = "Move HEAD back to here?", "Move HEAD"
 	}
+	act := confirm.Button{ID: "undo", Title: verb, Style: confirm.StyleDestructive}
+	if len(msg.plan.Blocked) > 0 { // a plain undo would stop
+		act = confirm.Button{ID: "undo-stash", Title: "Stash and " + verb, Style: confirm.StyleDestructive}
+	}
 	m.confirm = confirm.Risky(title, undoConfirmText(msg.plan, msg.move),
-		confirm.Button{ID: "cancel", Title: "Cancel"},
-		confirm.Button{ID: "undo", Title: verb, Style: confirm.StyleDestructive})
+		confirm.Button{ID: "cancel", Title: "Cancel"}, act)
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindGitUndo
@@ -121,8 +124,12 @@ func undoConfirmText(p git.UndoPlan, move bool) string {
 	}
 	switch {
 	case len(p.Blocked) > 0:
+		stash := "Stash and Undo"
+		if move {
+			stash = "Stash and Move HEAD"
+		}
 		lines = append(lines, "", "Your local changes in "+fileList(p.Blocked)+" are in the way.",
-			"The undo will stop; commit or stash them first.")
+			stash+" puts them aside and back after.")
 	case p.Staged && p.Switch == "":
 		lines = append(lines, "", "Staged changes stay, but become unstaged.")
 	}
@@ -144,15 +151,16 @@ func (m *Model) onUndoConfirm(id string) tea.Cmd {
 	}
 	p, move := *m.gitUndo.plan, m.gitUndo.move
 	m.gitUndo.plan = nil
-	if id != "undo" {
+	if id != "undo" && id != "undo-stash" {
 		return nil
 	}
+	opt := git.UndoOptions{Stash: id == "undo-stash"}
 	cwd, err := m.rootDir()
 	if err != nil {
 		return nil
 	}
 	return func() tea.Msg {
-		res, err := git.RunUndo(cwd, p, git.UndoOptions{})
+		res, err := git.RunUndo(cwd, p, opt)
 		return undoDoneMsg{plan: p, move: move, res: res, err: err}
 	}
 }
@@ -172,6 +180,11 @@ func (m *Model) onUndoDone(msg undoDoneMsg) tea.Cmd {
 		detail = "Back on " + p.Switch + "."
 	}
 	var cmd tea.Cmd
+	if msg.res.StashKept {
+		m.toast, cmd = m.toast.PushDetail(toast.Warn, "Undone, but your changes did not go back cleanly",
+			"They are kept in "+msg.res.StashRef+". Fix the conflicts, then drop the stash.")
+		return tea.Batch(cmd, fetchGitCmd())
+	}
 	m.toast, cmd = m.toast.PushDetail(toast.Info, title, detail)
 	return tea.Batch(cmd, fetchGitCmd())
 }

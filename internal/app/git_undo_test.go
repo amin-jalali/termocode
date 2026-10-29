@@ -129,3 +129,35 @@ func TestUndoConfirmTextWarnings(t *testing.T) {
 		t.Errorf("no blocked note:\n%s", body)
 	}
 }
+
+// G-UND: with local changes in the way the card offers Stash and Undo
+// (after Cancel). When the changes do not go back cleanly the undo is
+// done, the stash stays, and the toast says how to get them back.
+func TestGitUndoStashAndUndo(t *testing.T) {
+	m, run := undoRepo(t, 3)
+	c2 := run("rev-parse", "HEAD~1")
+	if err := os.WriteFile("f3.txt", []byte("my edit\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	openUndoCard(t, m)
+	b := m.confirm.Buttons()
+	if len(b) != 2 || b[0].ID != "cancel" || b[1].ID != "undo-stash" || b[1].Title != "Stash and Undo" {
+		t.Fatalf("buttons %+v", b)
+	}
+	if body := undoConfirmText(*m.gitUndo.plan, false); !strings.Contains(body, "Stash and Undo puts them aside") {
+		t.Errorf("card:\n%s", body)
+	}
+	undoStep(t, m, m.handleConfirmSelect("undo-stash"))
+	if run("rev-parse", "HEAD") != c2 {
+		t.Errorf("HEAD not back at c2; toasts:\n%s", toastText(*m))
+	}
+	if !strings.Contains(run("stash", "list"), "before undo") {
+		t.Errorf("stash dropped")
+	}
+	s := toastText(*m)
+	for _, want := range []string{"Undone, but your changes did not go back cleanly", "stash@{0}"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("toast lacks %q:\n%s", want, s)
+		}
+	}
+}
