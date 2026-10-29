@@ -85,6 +85,11 @@ type State struct {
 	// "AI" when unconfigured); AIState picks the look. AIOff hides it.
 	AI      string
 	AIState AIState
+
+	// Update is a newer termocode release ("v0.2.0"): the quiet chip
+	// "⬆ v0.2.0" before the cursor position (G-UPD, UpdateChipSpan for
+	// the click). "" hides it.
+	Update string
 }
 
 // AIState is the status-bar AI badge look (Group A).
@@ -167,7 +172,7 @@ type barLayout struct {
 // priority): low-value right items go first, then the center cluster,
 // then the language and TERM. Items are dropped whole, never cut, so the
 // "Ln, Col" pill (and the DEBUG badge) always show complete.
-var dropOrder = []rightItem{itemAI, itemLSP, itemEncoding, itemIndent, itemLang, itemCenter, itemTermLabel}
+var dropOrder = []rightItem{itemUpdate, itemAI, itemLSP, itemEncoding, itemIndent, itemLang, itemCenter, itemTermLabel}
 
 // layout fits left / center / right into the bar width (see View).
 func (m Model) layout(s State) barLayout {
@@ -535,6 +540,7 @@ const (
 	itemTermLabel
 	itemPos
 	itemDebug
+	itemUpdate // G-UPD: "⬆ v0.2.0"
 	itemCenter // the whole center cluster (only used in dropOrder)
 )
 
@@ -566,6 +572,9 @@ func (m Model) renderRightItems(s State, drop map[rightItem]bool) (string, map[r
 		if s.AIState != AIOff {
 			add(itemAI, renderAIBadge(s.AI, s.AIState))
 		}
+		if s.Update != "" {
+			add(itemUpdate, renderUpdateChip(s))
+		}
 		if s.Debug {
 			add(itemDebug, pill(debugBadgeText, theme.OnAccent, theme.LG(theme.DiagError), true))
 		}
@@ -593,6 +602,9 @@ func (m Model) renderRightItems(s State, drop map[rightItem]bool) (string, map[r
 	}
 	if s.AIState != AIOff {
 		add(itemAI, renderAIBadge(s.AI, s.AIState))
+	}
+	if s.Update != "" {
+		add(itemUpdate, renderUpdateChip(s))
 	}
 	// Cursor position sits in a soft accent pill near the right edge.
 	add(itemPos, pill(fmt.Sprintf("Ln %d, Col %d", s.Line, s.Col), theme.TextWhite,
@@ -830,4 +842,31 @@ func truncate(s string, n int) string {
 		return ""
 	}
 	return ansi.Truncate(s, n, "…")
+}
+
+// renderUpdateChip is the G-UPD chip "⬆ v0.2.0", or "" with no update.
+func renderUpdateChip(s State) string {
+	if s.Update == "" {
+		return ""
+	}
+	arrow := "⬆"
+	if theme.CurrentIconMode == theme.IconModeASCII {
+		arrow = "^"
+	}
+	return barFg(theme.TextSecondary).Render(arrow + " " + truncate(s.Update, 20))
+}
+
+// UpdateChipSpan returns the [x0, x1) cell range of the update chip;
+// ok=false when hidden or dropped for width.
+func (m Model) UpdateChipSpan(s State) (x0, x1 int, ok bool) {
+	if m.w <= 0 || s.Update == "" {
+		return 0, 0, false
+	}
+	l := m.layout(s)
+	sp, shown := l.spans[itemUpdate]
+	if !shown || sp[1] == 0 {
+		return 0, 0, false
+	}
+	rightX := 1 + l.leftW + l.gapL + l.centerW + l.gapR
+	return rightX + sp[0], rightX + sp[0] + sp[1], true
 }
