@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // Forward is one running `kubectl port-forward`. It lives until Stop (or
@@ -47,7 +49,7 @@ func (c Client) PortForward(parent context.Context, pod string, remote int) (*Fo
 	port := make(chan int, 1)
 	var mu sync.Mutex
 	var said strings.Builder
-	go func() {
+	crash.GoWith("kubectl port-forward", func() {
 		defer close(fw.done)
 		s := bufio.NewScanner(out)
 		found := false
@@ -68,7 +70,7 @@ func (c Client) PortForward(parent context.Context, pod string, remote int) (*Fo
 		if !found {
 			close(port)
 		}
-	}()
+	}, cancel)
 	d := c.Timeout
 	if d <= 0 {
 		d = DefaultTimeout
