@@ -229,3 +229,27 @@ func TestTermShellSpec(t *testing.T) {
 		t.Errorf("off: %s", s)
 	}
 }
+
+// G-RST: a split pane's shell reports its own folder and command, so a
+// restart can bring the pane back where it was.
+func TestOnTermOSCSplitPane(t *testing.T) {
+	m := &Model{terminalTabs: []terminalTab{{BufID: 7, Cwd: "/a", Name: "a", LastExit: -1,
+		Splits: []termPane{{BufID: 9, Cwd: "/a"}}}}}
+	m.onTermOSC(9, "\x1b]7;file:///srv/web")
+	m.onTermOSC(9, "\x1b]133;C;cmdline_url=npm run dev")
+	tab := m.terminalTabs[0]
+	if p := tab.Splits[0]; p.Cwd != "/srv/web" || !p.Busy || p.LastCmd != "npm run dev" {
+		t.Fatalf("pane = %+v", p)
+	}
+	if tab.Cwd != "/a" || tab.Busy || tab.LastCmd != "" {
+		t.Errorf("pane 0 must not change: %+v", tab)
+	}
+	m.onTermOSC(9, "\x1b]133;D;0")
+	if m.terminalTabs[0].Splits[0].Busy {
+		t.Error("the command ended: the pane is not busy")
+	}
+	m.onTermOSC(9, "\x1b]7;file://some-remote-host.example/srv")
+	if m.terminalTabs[0].Splits[0].Cwd != "/srv/web" {
+		t.Error("a remote OSC 7 must not move the pane")
+	}
+}

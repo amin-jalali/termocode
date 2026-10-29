@@ -134,6 +134,7 @@ func (m *Model) onTermOSC(buf int, seq string) tea.Cmd {
 	}
 	t, shown := m.termTabByBuf(buf)
 	if t == nil {
+		m.onPaneOSC(buf, e)
 		return nil
 	}
 	t.Integrated = true
@@ -182,6 +183,44 @@ func (m *Model) onTermOSC(buf int, seq string) tea.Cmd {
 		}
 		if shown >= 0 && shown == m.terminalActiveTab {
 			m.terminalCwd = e.Cwd
+		}
+	}
+	return nil
+}
+
+// onPaneOSC records an event of a split pane's shell (pane 1 and up): its
+// folder, and whether a command runs and which one.
+func (m *Model) onPaneOSC(buf int, e shellint.Event) {
+	p := m.termPaneByBuf(buf)
+	if p == nil {
+		return
+	}
+	switch e.Kind {
+	case shellint.PromptStart, shellint.CommandEnd:
+		p.Busy = false
+	case shellint.CommandStart:
+		cmd := e.Cmd
+		if len(cmd) > termCmdMax {
+			cmd = cmd[:termCmdMax]
+		}
+		p.Busy, p.LastCmd = true, cmd
+	case shellint.Cwd:
+		if termHostLocal(e.Host) {
+			p.Cwd = e.Cwd
+		}
+	}
+}
+
+// termPaneByBuf finds the split pane (pane 1 and up) of terminal buffer
+// buf among the shown and the hidden tabs.
+func (m *Model) termPaneByBuf(buf int) *termPane {
+	for _, tabs := range [][]terminalTab{m.terminalTabs, m.hiddenTerminalTabs} {
+		for i := range tabs {
+			for k := range tabs[i].Splits {
+				if tabs[i].Splits[k].BufID == buf {
+					return &tabs[i].Splits[k]
+				}
+			}
 		}
 	}
 	return nil

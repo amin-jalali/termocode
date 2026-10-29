@@ -27,7 +27,8 @@ const (
 type termPane struct {
 	BufID int // nvim terminal buffer
 	WinID int // nvim window showing it; 0 while the tab is not on show
-	// Cwd is the folder the shell started in (the parent pane's folder).
+	// Cwd is the folder the shell started in (the parent pane's folder),
+	// then the folder shell integration reports (OSC 7).
 	Cwd string
 	// Dir and Parent record the shape: pane Parent (an index into the tab's
 	// panes, 0 = the tab's own shell) was split in direction Dir.
@@ -36,6 +37,10 @@ type termPane struct {
 	// Exited is set once the shell has ended; the pane stays until the user
 	// restarts or closes it.
 	Exited bool
+	// Busy and LastCmd come from shell integration (OSC 133), like the
+	// tab's own fields for pane 0: a command runs, and its command line.
+	Busy    bool
+	LastCmd string
 }
 
 // paneCount is the number of panes in the tab (always at least 1).
