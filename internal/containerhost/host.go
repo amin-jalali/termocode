@@ -107,6 +107,16 @@ func New(ctx context.Context, cfg Config) (*Host, error) {
 	return h, nil
 }
 
+var _ workspace.Host = (*Host)(nil)
+
+// Workspace is the opened folder with this host.
+func (h *Host) Workspace() workspace.Workspace {
+	return workspace.Workspace{ID: h.ID(), Kind: workspace.KindContainer, Root: h.cfg.Root, Host: h}
+}
+
+// FS is the container's file system for the workspace.
+func (h *Host) FS() workspace.FS { return containerFS{h} }
+
 // ID is the workspace ID: "container:<context>/<name>:<root>"; the
 // context is "default" when none is set.
 func (h *Host) ID() string {
