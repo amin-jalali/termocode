@@ -36,7 +36,8 @@ func TestBudgetsFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, name := range []string{"startup_first_frame", "editor_key_to_frame_p95", "session_idle_rss",
-		"open_50k_line_file", "palette_open_all", "explorer_5k_files"} {
+		"open_50k_line_file", "palette_open_all", "explorer_5k_files",
+		"agent_worktree_create_5k", "agent_worktree_merge_20"} {
 		if _, ok := bs[name]; !ok {
 			t.Errorf("budgets.txt has no %s", name)
 		}

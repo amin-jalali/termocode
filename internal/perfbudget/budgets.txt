@@ -65,3 +65,8 @@ db_query_first_rows        32   ms   # console SELECT * of 1M rows to 10 000 row
 db_export_100k_csv        720   ms   # 100 000 rows to CSV; local 360 ms (was 1 617)
 db_export_100k_json       640   ms   # 100 000 rows to JSON; local 315 ms (was 2 619)
 db_tree_filter_key         25   ms   # tree filter key + sidebar frame; local 0.96 ms (floor; was 7.0)
+
+# AI agents (PERF-7): termocode's own work around a model (a fake one
+# that answers at once). Go tests: internal/git, internal/app.
+agent_worktree_create_5k  280   ms   # worktree of a 5 000-file repo, median of 5; local 139 ms
+agent_worktree_merge_20   650   ms   # merge 20 changed files back, median of 5; local 324 ms
