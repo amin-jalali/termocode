@@ -7,6 +7,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/containerhost/fakedocker"
 	"github.com/amin-jalali/termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/workspace"
 )
 
 // remoteNvim is a real nvim with remote buffers on for a fake container
@@ -161,5 +162,33 @@ func TestRemoteBufferFailedReadIsNeverSaved(t *testing.T) {
 	}
 	if b, _ := os.ReadFile(c.Local("/app/main.go")); string(b) != "package main\n\nfunc main() {}\n" {
 		t.Fatalf("container file = %q", b)
+	}
+}
+
+// The Model turns remote buffers on for a container workspace only.
+func TestModelRemoteBuffersOnlyForAContainer(t *testing.T) {
+	ws, _, _, _ := fakeContainerWS(t)
+	for _, container := range []bool{true, false} {
+		n, err := nvim.New()
+		if err != nil {
+			t.Skipf("nvim not available: %v", err)
+		}
+		if err := n.Attach(80, 24); err != nil {
+			_ = n.Close()
+			t.Fatal(err)
+		}
+		m := Model{ws: ws}
+		if !container {
+			m.ws = workspace.Workspace{ID: workspace.LocalID(t.TempDir()), Kind: workspace.KindLocal, Root: t.TempDir()}
+		}
+		if err := m.enableRemoteBuffers(n); err != nil {
+			_ = n.Close()
+			t.Fatal(err)
+		}
+		got := remoteEval(t, n, `return tostring(vim.fn.exists('#termocode_remote_buffers#BufReadCmd'))`)
+		_ = n.Close()
+		if want := map[bool]string{true: "1", false: "0"}[container]; got != want {
+			t.Fatalf("container %v: remote buffer autocmds = %s, want %s", container, got, want)
+		}
 	}
 }

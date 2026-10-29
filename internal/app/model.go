@@ -933,6 +933,11 @@ func (m Model) attachCmd() tea.Cmd {
 		// First: vim.notify → toasts. With cmdheight=0 a notify would
 		// open a hit-enter prompt and block every later RPC call.
 		_ = m.nvim.ExecLua(notifyLua)
+		// A container workspace: its files open as remote buffers. Before
+		// any file is opened (session restore, hot exit).
+		if err := m.enableRemoteBuffers(m.nvim); err != nil {
+			recordError("remote buffers: " + err.Error())
+		}
 		for _, cmd := range []string{
 			"set termguicolors",
 			"set number",

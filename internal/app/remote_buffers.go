@@ -134,3 +134,13 @@ func saveErrText(err error) string {
 	}
 	return strings.TrimSpace(msg)
 }
+
+// enableRemoteBuffers turns remote buffers on in n when the Model's
+// workspace is a container (a local folder needs nothing).
+func (m Model) enableRemoteBuffers(n *nvim.Client) error {
+	ws := m.workspace()
+	if _, ok := remoteFS(ws); !ok {
+		return nil
+	}
+	return startRemoteBuffers(n, ws)
+}
