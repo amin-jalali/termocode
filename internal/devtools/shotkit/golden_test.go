@@ -251,6 +251,11 @@ func goldenCases() []goldenCase {
 	}
 	out = append(out, goldenCase{"setup-card-100x30", setupCardScene(), 100, 30})
 	out = append(out, keyHintCases()...)
+	// A terminal tab split into three panes (G-SPL).
+	{
+		sc := TerminalSplit()
+		out = append(out, goldenCase{sc.Name + "-150x42", sc, 150, 42}, goldenCase{sc.Name + "-80x24", sc, 80, 24})
+	}
 	// A two-step agent pipeline run, running and done (U20 AP-4).
 	for _, v := range []string{"running", "done"} {
 		sc := AIPipeline(v)

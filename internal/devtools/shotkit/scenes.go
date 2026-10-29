@@ -69,6 +69,15 @@ func TerminalMarks() Scene {
 		Act("palette:terminal-new-tab"), Pause(1000*time.Millisecond), Act("termdemo"), Pause(300*time.Millisecond))}
 }
 
+// TerminalSplit is one terminal tab with three panes: the first shell beside
+// two stacked ones, the last pane focused.
+func TerminalSplit() Scene {
+	return Scene{Name: "terminal-split", Steps: WithEditor(Act("palette:toggle-terminal"), Pause(1500*time.Millisecond),
+		Act("termsend:ls --color=always -F"), Pause(1200*time.Millisecond),
+		Act("palette:terminal-split-right"), Pause(1000*time.Millisecond),
+		Act("palette:terminal-split-down"), Pause(1000*time.Millisecond))}
+}
+
 // SCMCommit is the commit view: HEAD (the demo merge) in the diff card,
 // docked over the editor when it is wide enough, floating otherwise.
 func SCMCommit() Scene {
