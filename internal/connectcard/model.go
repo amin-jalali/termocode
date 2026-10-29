@@ -12,6 +12,7 @@ package connectcard
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -752,8 +753,16 @@ func wrap(s string, w int) []string {
 					line = ""
 				}
 				cut := runewidth.Truncate(word, w, "")
+				if cut == "" { // a wide character wider than the line
+					_, n := utf8.DecodeRuneInString(word)
+					cut = word[:n]
+				}
 				out = append(out, cut)
 				word = word[len(cut):]
+			}
+			if word == "" { // the last cut took the rest: it is the line
+				line, out = out[len(out)-1], out[:len(out)-1]
+				continue
 			}
 			switch {
 			case line == "":
