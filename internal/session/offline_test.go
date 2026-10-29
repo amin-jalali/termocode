@@ -55,3 +55,21 @@ func TestReconnectNote(t *testing.T) {
 		}
 	}
 }
+
+// TestOfflineKeys: mouse moves and focus changes while offline are not
+// keys the user lost.
+func TestOfflineKeys(t *testing.T) {
+	for in, want := range map[string]bool{
+		"a":                          true,
+		"\x1b[<35;10;5M":             false,
+		"\x1b[<35;10;5M\x1b[<0;1;1m": false,
+		"\x1b[I\x1b[O":               false,
+		"\x1b[M #!":                  false,
+		"\x1b[<35;10;5Mx":            true,
+		"\x1b[A":                     true,
+	} {
+		if got := offlineKeys([]byte(in)); got != want {
+			t.Errorf("%q: %v, want %v", in, got, want)
+		}
+	}
+}

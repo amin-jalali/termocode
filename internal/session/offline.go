@@ -3,6 +3,7 @@ package session
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -45,6 +46,16 @@ func offlineLine(attempt, cols, rows int, unicode bool) string {
 // Ctrl+C, as a plain byte or in the kitty keyboard encoding.
 func offlineQuit(p []byte) bool {
 	return bytes.IndexByte(p, 0x03) >= 0 || bytes.Contains(p, []byte("\x1b[99;5u"))
+}
+
+// terminalReports are what a terminal sends by itself while the UI's
+// modes stay on: mouse (SGR and X10) and focus reports.
+var terminalReports = regexp.MustCompile(`\x1b\[<[0-9;]*[Mm]|\x1b\[M[\x20-\xff]{3}|\x1b\[[IO]`)
+
+// offlineKeys reports whether p, read while offline, holds keys the user
+// typed (not just mouse moves or focus changes), which are then lost.
+func offlineKeys(p []byte) bool {
+	return len(terminalReports.ReplaceAll(p, nil)) > 0
 }
 
 // ReconnectNote is what the UI tells the user after a reconnect.

@@ -256,7 +256,7 @@ func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
 					_, _ = out.Write(append(seen.Reset(), plainReset+msgDetached+"\r\n"...))
 					return 0
 				}
-				dropped = true
+				dropped = dropped || offlineKeys(k)
 				continue
 			}
 			_ = send(frameInput, k) // a dead link shows up as a read error
