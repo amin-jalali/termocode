@@ -421,3 +421,28 @@ func TestGrowAStackedPaneKeepsThePanelHeight(t *testing.T) {
 		t.Error("a tab with one pane has nothing to resize")
 	}
 }
+
+func TestPaletteSplitCommands(t *testing.T) {
+	m := splitTestModel(t, 120, 30)
+	for _, it := range termPanePaletteItems() {
+		if !strings.HasPrefix(it.Title, "Terminal: ") {
+			t.Errorf("%s: title %q must start with Terminal:", it.ID, it.Title)
+		}
+	}
+	m.dispatchPaletteAction("terminal-split-right")
+	m.dispatchPaletteAction("terminal-split-down")
+	if m.terminalTabs[0].paneCount() != 3 {
+		t.Fatalf("two splits give %d panes, want 3 (err=%q)", m.terminalTabs[0].paneCount(), m.err)
+	}
+	m.dispatchPaletteAction("terminal-focus-prev-pane")
+	if m.terminalTabs[0].PaneFocus != 1 {
+		t.Errorf("focus = %d, want 1", m.terminalTabs[0].PaneFocus)
+	}
+	m.dispatchPaletteAction("terminal-close-pane")
+	if m.terminalTabs[0].paneCount() != 2 {
+		t.Errorf("close pane left %d panes, want 2", m.terminalTabs[0].paneCount())
+	}
+	if m.dispatchPaletteAction("terminal-not-a-command") != nil {
+		t.Error("an unknown command is not ours")
+	}
+}

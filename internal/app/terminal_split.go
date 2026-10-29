@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -611,4 +612,56 @@ func (m *Model) resizeTerminalPane(delta int) bool {
 	m.terminalRowsLastSent = 0
 	m.resizeTerminalSplit()
 	return true
+}
+
+// termPanePaletteItems are the palette commands for terminal panes.
+func termPanePaletteItems() []picker.Item {
+	return []picker.Item{
+		{ID: "terminal-split-right", Title: "Terminal: Split Right"},
+		{ID: "terminal-split-down", Title: "Terminal: Split Down"},
+		{ID: "terminal-close-pane", Title: "Terminal: Close Pane"},
+		{ID: "terminal-focus-next-pane", Title: "Terminal: Focus Next Pane"},
+		{ID: "terminal-focus-prev-pane", Title: "Terminal: Focus Previous Pane"},
+		{ID: "terminal-grow-pane", Title: "Terminal: Grow Pane"},
+		{ID: "terminal-shrink-pane", Title: "Terminal: Shrink Pane"},
+	}
+}
+
+// termPaneStep is how many cells Grow / Shrink Pane move the divider.
+const termPaneStep = 4
+
+// runTermPaneAction runs a terminal-pane palette command. ok is false when id
+// is not one of them.
+func (m *Model) runTermPaneAction(id string) (cmd tea.Cmd, ok bool) {
+	switch id {
+	case "terminal-split-right", "terminal-split-down":
+		dir := paneRight
+		if id == "terminal-split-down" {
+			dir = paneDown
+		}
+		if !m.termOpen {
+			m.openTerminalPanel()
+			m.applyLayout()
+			m.resizeTerminalSplit()
+		}
+		cmd = m.splitTerminalPane(dir)
+		m.applyLayout()
+	case "terminal-close-pane":
+		if tab := m.activeTerminalTab(); tab != nil && m.termOpen {
+			m.closeTerminalPane(tab.focusedPane())
+			m.applyLayout()
+			m.resizeTerminalSplit()
+		}
+	case "terminal-focus-next-pane":
+		m.focusNextTerminalPane(1)
+	case "terminal-focus-prev-pane":
+		m.focusNextTerminalPane(-1)
+	case "terminal-grow-pane":
+		m.resizeTerminalPane(termPaneStep)
+	case "terminal-shrink-pane":
+		m.resizeTerminalPane(-termPaneStep)
+	default:
+		return nil, false
+	}
+	return cmd, true
 }

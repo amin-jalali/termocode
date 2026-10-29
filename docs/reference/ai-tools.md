@@ -1873,14 +1873,21 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `tasks-run` | Tasks: Run Task... | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `tasks-terminate` | Tasks: Terminate Task | confirm (ide) |   |
 | `tasks-test` | Tasks: Run Test Task | confirm (run) |   |
+| `terminal-close-pane` | Terminal: Close Pane | confirm (always asks) |   |
 | `terminal-close-tab` | Terminal: Close Active Tab | confirm (always asks) |   |
 | `terminal-fix-ai` | Terminal: Fix Last Command with AI | never | starts or changes an AI chat or edit; answer in this chat instead |
+| `terminal-focus-next-pane` | Terminal: Focus Next Pane | auto |   |
+| `terminal-focus-prev-pane` | Terminal: Focus Previous Pane | auto |   |
+| `terminal-grow-pane` | Terminal: Grow Pane | auto |   |
 | `terminal-maximize` | Terminal: Maximize Panel | auto |   |
 | `terminal-minimize` | Terminal: Minimize Panel | auto |   |
 | `terminal-new-tab` | Terminal: New Tab | auto |   |
 | `terminal-next-tab` | Terminal: Next Tab | auto |   |
 | `terminal-open-link` | Terminal: Open File Link... | never | opens a picker or prompt that only the user can answer; use a typed tool (open_file) |
 | `terminal-prev-tab` | Terminal: Previous Tab | auto |   |
+| `terminal-shrink-pane` | Terminal: Shrink Pane | auto |   |
+| `terminal-split-down` | Terminal: Split Down | auto |   |
+| `terminal-split-right` | Terminal: Split Right | auto |   |
 | `testing-collapse` | Testing: Collapse All | auto |   |
 | `testing-debug-cursor` | Testing: Debug Test at Cursor | confirm (run) |   |
 | `testing-focus` | Testing: Focus Test Explorer | auto |   |

@@ -106,8 +106,16 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"terminal-prev-tab":  aiAuto(),
 	"terminal-maximize":  aiAuto(),
 	"terminal-minimize":  aiAuto(),
-	"terminal-open-link": aiNever(aiNoPicker + " (open_file)"),
-	"open-shell":         aiNever(aiNoOutside),
+	// terminal splits (terminal_split.go)
+	"terminal-split-right":     aiAuto(),
+	"terminal-split-down":      aiAuto(),
+	"terminal-close-pane":      aiDestructive(), // kills what runs in it
+	"terminal-focus-next-pane": aiAuto(),
+	"terminal-focus-prev-pane": aiAuto(),
+	"terminal-grow-pane":       aiAuto(),
+	"terminal-shrink-pane":     aiAuto(),
+	"terminal-open-link":       aiNever(aiNoPicker + " (open_file)"),
+	"open-shell":               aiNever(aiNoOutside),
 
 	// ── Text edits at the cursor / in the active file ──
 	"duplicate-line":  aiConfirm(ai.ClassFileWrite),
