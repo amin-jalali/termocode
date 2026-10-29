@@ -152,7 +152,9 @@ func TestBeginSignInRefusals(t *testing.T) {
 // failTokens is a TokenStore whose saves fail.
 type failTokens struct{ memTokens }
 
-func (*failTokens) Save(string, ai.MCPOAuth) error { return errors.New("credentials.json is read-only") }
+func (*failTokens) Save(string, ai.MCPOAuth) error {
+	return errors.New("credentials.json is read-only")
+}
 
 // Spec (MC-6): a sign-in that can not be stored is an error and the
 // server still asks for a sign-in.
