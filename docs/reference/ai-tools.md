@@ -1996,6 +1996,8 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `services_on_quit` | confirm (settings) |   |
 | `show_hidden` | confirm (settings) |   |
 | `tab_size` | confirm (settings) |   |
+| `terminal_restore` | never | decides what is kept of the user's terminals between starts; a file-only switch the user edits in config.json |
+| `terminal_restore_commands` | never | keeps command lines on disk and re-runs them; a file-only switch the user edits in config.json |
 | `terminal_shell_integration` | never | changes how the user's shell starts; a file-only switch the user edits in config.json |
 | `terminal_skip_shell` | never | decides which keys reach the shell; a file-only list the user edits in config.json |
 | `theme` | confirm (settings) |   |

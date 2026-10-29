@@ -144,6 +144,8 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `terminal_skip_shell` | string[] | `[]` | Actions (keymap.json names) whose keys reach termocode while the terminal has focus. Other Ctrl keys go to the shell. Quit (Ctrl+Q) and ContextHelp (Shift+F1) are in the list by default; add a name, or remove one with "-Name" (for example `["QuickOpen", "-Quit"]`). |
+| `terminal_restore` | bool | `true` | After a restart of termocode, the terminal tabs of the project come back: each tab and split pane gets a fresh shell in the folder it was in, and the same tab and pane have focus. Output, scrollback and environment values are never kept. A pane that was running a program shows its name. A folder that is gone starts in the project folder. false: the panel starts empty. Read at start. |
+| `terminal_restore_commands` | bool | `false` | With terminal_restore: also keep the last command line of a pane that was running a program (needs shell integration), so after a restart Enter in that pane runs it again. Command lines can hold secrets, so this is off by default; off, only the program name is kept. |
 | `terminal_shell_integration` | bool | `true` | bash, zsh and fish terminal tabs load a small script (after your own rc file) that tells termocode each command, its exit code and the folder (OSC 133 / OSC 7). It gives the tab its folder name, the "✦ Fix?" chip on a failed command and the CLI agent marks. false starts the shell exactly as before. Read when a terminal tab opens; needs Neovim 0.10+. |
 
 ## Environment variables
