@@ -64,3 +64,107 @@ func TestMergeViewTakesRowsAboveTheEditor(t *testing.T) {
 		t.Errorf("closed view takes %d rows", p.Merge)
 	}
 }
+
+func mergeKeyMsg(s string) tea.KeyMsg {
+	switch s {
+	case "esc":
+		return tea.KeyMsg{Type: tea.KeyEsc}
+	case "tab":
+		return tea.KeyMsg{Type: tea.KeyTab}
+	case "f6":
+		return tea.KeyMsg{Type: tea.KeyF6}
+	}
+	return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
+}
+
+func TestMergeViewOpensFromStages(t *testing.T) {
+	m0, _ := New().Update(tea.WindowSizeMsg{Width: 150, Height: 42})
+	m := m0.(Model)
+	m.focus = FocusExplorer
+	m.onMergeStages(mergeStagesMsg{rel: "f.txt", st: mergeTestStages()})
+	if !m.mergeViewShown() || !m.mergeFocused() || m.focus != FocusEditor {
+		t.Fatalf("view not open and focused: shown %v focused %v", m.mergeViewShown(), m.mergeFocused())
+	}
+	if m.editorPaneLayout().Merge == 0 {
+		t.Error("no rows for the view")
+	}
+	m2 := m
+	m2.merge = nil
+	m2.onMergeStages(mergeStagesMsg{rel: "g.txt", err: git.ErrNotConflicted})
+	if m2.mergeViewShown() || !strings.Contains(aiToastText(&m2), "No merge conflict in g.txt") {
+		t.Errorf("not conflicted: toast %q", aiToastText(&m2))
+	}
+}
+
+func TestMergeViewKeys(t *testing.T) {
+	m := mergeTestModel(t, 80, 24)
+	m.merge.view.SetFocused(true)
+	m.focus = FocusEditor
+	two := []string{"<<<<<<< HEAD", "o1", "=======", "t1", ">>>>>>> b", "mid", "<<<<<<< HEAD", "o2", "=======", "t2", ">>>>>>> b"}
+	m.merge.view.SetResult(two)
+	send := func(k string) bool {
+		t.Helper()
+		nm, _, ok := m.routeToMergeView(mergeKeyMsg(k))
+		m = nm
+		return ok
+	}
+	if !send("n") || m.merge.view.Current() != 1 {
+		t.Errorf("n: cur %d", m.merge.view.Current())
+	}
+	if !send("p") || m.merge.view.Current() != 0 {
+		t.Errorf("p: cur %d", m.merge.view.Current())
+	}
+	if !send("3") || m.merge.view.ShownPane() != mergeview.PaneTheirs {
+		t.Errorf("3: pane %d", m.merge.view.ShownPane())
+	}
+	if send("x") {
+		t.Error("unknown key was taken")
+	}
+	if !send("tab") || m.mergeFocused() {
+		t.Error("tab did not give the editor the keys")
+	}
+	if send("n") {
+		t.Error("keys taken while the editor has them")
+	}
+	// F6 stops at the view, then goes on to the sidebar.
+	if !send("f6") || !m.mergeFocused() {
+		t.Error("f6 did not give the view the keys")
+	}
+	if send("f6") || m.merge.view.Focused() {
+		t.Error("second f6 kept the keys in the view")
+	}
+	m.mergeFocusPanes()
+	if send("esc") || m.mergeViewShown() || m.editorPaneLayout().Merge != 0 {
+		t.Error("esc did not close the view")
+	}
+}
+
+func TestMergeViewMouse(t *testing.T) {
+	m := mergeTestModel(t, 150, 42)
+	p := m.editorPaneLayout()
+	press := func(x, y int) bool {
+		nm, _, ok := m.routeToMergeView(tea.MouseMsg{X: x, Y: y, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft})
+		m = nm
+		return ok
+	}
+	if press(p.X+2, p.Top+2) || m.merge.view.Focused() {
+		t.Error("a click in the editor kept the view's focus")
+	}
+	if !press(p.X+2, p.Top-p.Merge+3) || !m.mergeFocused() {
+		t.Error("a click on the view did not give it the keys")
+	}
+}
+
+func TestMergePaletteWithoutView(t *testing.T) {
+	m0, _ := New().Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m := m0.(Model)
+	if _, ok := m.dispatchMergePalette("git-merge-next"); !ok || !strings.Contains(aiToastText(&m), "not open") {
+		t.Errorf("next without view: %q", aiToastText(&m))
+	}
+	if _, ok := m.dispatchMergePalette("git-merge-open"); !ok || !strings.Contains(aiToastText(&m), "No merge conflicts") {
+		t.Errorf("open without conflicts: %q", aiToastText(&m))
+	}
+	if _, ok := m.dispatchMergePalette("git-commit"); ok {
+		t.Error("took a foreign id")
+	}
+}

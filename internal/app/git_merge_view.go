@@ -1,10 +1,18 @@
 package app
 
 import (
+	"errors"
+	"path/filepath"
+	"slices"
 	"strings"
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/mergeview"
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // The three-way merge view (G-MRG): base, ours and theirs of one
@@ -55,4 +63,349 @@ func (m Model) renderMergeRows(w, h int) []string {
 // them and the editor column has the focus.
 func (m Model) mergeFocused() bool {
 	return m.mergeViewShown() && m.merge.view.Focused() && m.focus == FocusEditor
+}
+
+// mergeStagesMsg carries a conflicted file's index stages.
+type mergeStagesMsg struct {
+	rel string
+	st  git.ConflictStages
+	err error
+}
+
+// mergeSyncMsg asks to read the result again (it changed or the cursor
+// moved; debounced).
+type mergeSyncMsg struct{}
+
+func init() {
+	registerNotifyHandler("termocode_merge_sync", func(m *Model, _ []any) tea.Cmd {
+		if !m.mergeViewShown() {
+			return nil
+		}
+		return m.debounce.Do("merge-sync", 60*time.Millisecond, func() tea.Msg { return mergeSyncMsg{} })
+	})
+}
+
+// onMergeMsg handles the merge view's messages.
+func (m *Model) onMergeMsg(msg tea.Msg) tea.Cmd {
+	switch msg := msg.(type) {
+	case mergeStagesMsg:
+		return m.onMergeStages(msg)
+	case mergeSyncMsg:
+		m.mergeSync()
+	}
+	return nil
+}
+
+// gitOpenMergeView reads rel's stages off the loop; the view opens when
+// they come back (onMergeStages).
+func (m *Model) gitOpenMergeView(rel string) tea.Cmd {
+	cwd, err := m.rootDir()
+	if err != nil || rel == "" {
+		return nil
+	}
+	return func() tea.Msg {
+		st, err := git.ReadConflictStages(cwd, rel)
+		return mergeStagesMsg{rel: rel, st: st, err: err}
+	}
+}
+
+// gitOpenMergeViewForFile opens the merge view for a CONFLICTS row.
+func (m *Model) gitOpenMergeViewForFile(fileIndex int) tea.Cmd {
+	if fileIndex < 0 || fileIndex >= len(m.gitFiles) {
+		return nil
+	}
+	return m.gitOpenMergeView(m.gitFiles[fileIndex].Path)
+}
+
+// mergePaletteTarget is the file "Git: Open Merge View" opens: the file in
+// the editor when it has a conflict, else the CONFLICTS row under the
+// cursor, else the first conflicted file.
+func (m *Model) mergePaletteTarget() string {
+	var conflicted []string
+	for _, f := range m.gitFiles {
+		if f.Conflicted() {
+			conflicted = append(conflicted, f.Path)
+		}
+	}
+	if root, err := m.rootDir(); err == nil && m.editor.Path() != "" {
+		if rel, err := filepath.Rel(root, m.editor.Path()); err == nil && slices.Contains(conflicted, filepath.ToSlash(rel)) {
+			return filepath.ToSlash(rel)
+		}
+	}
+	if fi, ok := m.gitCurrentFileIndex(); ok && m.gitFiles[fi].Conflicted() {
+		return m.gitFiles[fi].Path
+	}
+	if len(conflicted) > 0 {
+		return conflicted[0]
+	}
+	return ""
+}
+
+// onMergeStages opens the view (a text conflict) or the keep-or-delete
+// card (binary, or deleted by one side).
+func (m *Model) onMergeStages(msg mergeStagesMsg) tea.Cmd {
+	var cmd tea.Cmd
+	switch {
+	case errors.Is(msg.err, git.ErrNotConflicted):
+		m.toast, cmd = m.toast.Push(toast.Info, "No merge conflict in "+msg.rel)
+		return cmd
+	case msg.err != nil:
+		m.toast, cmd = m.toast.PushDetail(toast.Errr, "Can't open the merge view", msg.err.Error())
+		return cmd
+	}
+	root, err := m.rootDir()
+	if err != nil {
+		return nil
+	}
+	m.closeCommitView()
+	m.closeMergeView()
+	v := mergeview.New(msg.rel, msg.st)
+	v.SetFocused(true)
+	m.merge = &mergeViewState{open: true, view: v, rel: msg.rel, abs: filepath.Join(root, filepath.FromSlash(msg.rel))}
+	m.mergeShowResult()
+	m.mergeSync()
+	m.focus = FocusEditor
+	m.applyLayout()
+	return nil
+}
+
+// closeMergeView hides the view and drops its editor hooks.
+func (m *Model) closeMergeView() {
+	if !m.mergeViewShown() {
+		return
+	}
+	m.merge.open = false
+	if m.nvim != nil {
+		_ = m.nvim.ExecLua(`pcall(vim.api.nvim_del_augroup_by_name, 'TermocodeMerge')`)
+	}
+	m.applyLayout()
+}
+
+// mergeResultLua opens the result and finds its buffer later; edits and
+// cursor moves in it sync the view.
+const mergeResultLua = `
+_G.termocode_merge_buf = function(p)
+  local full = vim.fn.fnamemodify(p, ':p')
+  for _, b in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(b) and vim.api.nvim_buf_get_name(b) == full then return b end
+  end
+  return -1
+end
+local p = ...
+vim.cmd('edit ' .. vim.fn.fnameescape(p))
+local buf = vim.api.nvim_get_current_buf()
+local g = vim.api.nvim_create_augroup('TermocodeMerge', { clear = true })
+vim.api.nvim_create_autocmd({ 'TextChanged', 'TextChangedI', 'CursorMoved', 'CursorMovedI' }, {
+  group = g, buffer = buf,
+  callback = function() _G.termocode_notify('termocode_merge_sync') end,
+})
+vim.api.nvim_win_set_cursor(0, { 1, 0 })
+vim.fn.search([[^<<<<<<<\%( \|\t\|$\)]], 'cW')
+pcall(_G.termocode_conflict_paint)
+`
+
+// mergeShowResult opens the result in the editor with the view's hooks.
+func (m *Model) mergeShowResult() {
+	if m.nvim == nil {
+		return
+	}
+	m.ensureEditorWindowCurrent()
+	if err := m.nvim.ExecLuaArgs(mergeResultLua, m.merge.abs); err != nil {
+		recordError("[merge] open result: " + err.Error())
+	}
+}
+
+// mergeResult is the result buffer as nvim has it.
+type mergeResult struct {
+	Lines []string `msgpack:"lines"`
+	Cur   int      `msgpack:"cur"` // 0-based cursor line, -1: not the current buffer
+	Gone  bool     `msgpack:"gone"`
+}
+
+// mergeReadResult reads the result buffer (ok=false without an editor).
+func (m *Model) mergeReadResult() (mergeResult, bool) {
+	if m.nvim == nil || !m.mergeViewShown() {
+		return mergeResult{}, false
+	}
+	var r mergeResult
+	err := m.nvim.ExecLuaResult(`
+		local p = ...
+		local b = _G.termocode_merge_buf and _G.termocode_merge_buf(p) or -1
+		if b < 0 then return { gone = true, cur = -1, lines = {} } end
+		local cur = -1
+		if vim.api.nvim_get_current_buf() == b then cur = vim.api.nvim_win_get_cursor(0)[1] - 1 end
+		return { lines = vim.api.nvim_buf_get_lines(b, 0, -1, false), cur = cur, gone = false }
+	`, &r, m.merge.abs)
+	if err != nil {
+		recordError("[merge] read result: " + err.Error())
+		return mergeResult{}, false
+	}
+	return r, true
+}
+
+// mergeSync gives the view the result's lines and the cursor's block.
+// A closed result buffer closes the view.
+func (m *Model) mergeSync() {
+	r, ok := m.mergeReadResult()
+	if !ok {
+		return
+	}
+	if r.Gone {
+		m.closeMergeView()
+		return
+	}
+	m.merge.view.SetResult(r.Lines)
+	if r.Cur >= 0 && !m.mergeFocused() {
+		m.merge.view.SetCursorLine(r.Cur)
+	}
+}
+
+// mergeFocusPanes gives the view the keys.
+func (m *Model) mergeFocusPanes() {
+	if !m.mergeViewShown() {
+		return
+	}
+	m.merge.view.SetFocused(true)
+	m.focus = FocusEditor
+}
+
+// mergeFocusResult gives the editor the keys, the cursor on the current
+// block.
+func (m *Model) mergeFocusResult() {
+	if !m.mergeViewShown() {
+		return
+	}
+	m.merge.view.SetFocused(false)
+	m.focus = FocusEditor
+	b, ok := m.merge.view.CurrentBlock()
+	if m.nvim == nil || !ok {
+		return
+	}
+	_ = m.nvim.ExecLuaArgs(`
+		local p, line = ...
+		local b = _G.termocode_merge_buf and _G.termocode_merge_buf(p) or -1
+		if b < 0 then return end
+		local w = vim.fn.win_findbuf(b)[1]
+		if not w then return end
+		vim.api.nvim_set_current_win(w)
+		pcall(vim.api.nvim_win_set_cursor, w, { line + 1, 0 })
+	`, m.merge.abs, b.Conflict.Start)
+}
+
+// routeToMergeView gives the view its keys (while it has the focus) and
+// the clicks and wheel on its rows. ok=false sends msg on.
+func (m Model) routeToMergeView(msg tea.Msg) (Model, tea.Cmd, bool) {
+	pane := m.editorPaneLayout()
+	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		top := pane.Top - pane.Merge
+		inside := pane.Merge > 0 && msg.X >= pane.X && msg.X < pane.X+pane.W && msg.Y >= top && msg.Y < pane.Top
+		if !inside {
+			if msg.Action == tea.MouseActionPress && m.mouseProbe == nil {
+				m.merge.view.SetFocused(false)
+			}
+			return m, nil, false
+		}
+		if m.mouseProbe != nil {
+			m.probed("merge")
+			return m, nil, true
+		}
+		switch {
+		case msg.Button == tea.MouseButtonWheelUp:
+			m.merge.view.Scroll(-3)
+		case msg.Button == tea.MouseButtonWheelDown:
+			m.merge.view.Scroll(3)
+		case msg.Action == tea.MouseActionPress:
+			m.mergeFocusPanes()
+			v := m.merge.view
+			v.SetSize(pane.W, pane.Merge, m.mergeNarrow(pane.W))
+			v.Click(msg.X-pane.X, msg.Y-top)
+			m.merge.view = v
+		}
+		return m, nil, true
+	case tea.KeyMsg:
+		// F6 (focus swap) stops at the view between the editor and
+		// the sidebar.
+		if m.keys.Match(msg) == keymap.ActionFocusSwap && m.focus == FocusEditor && !m.inTerminal {
+			if m.merge.view.Focused() {
+				m.merge.view.SetFocused(false)
+				return m, nil, false
+			}
+			m.mergeFocusPanes()
+			return m, nil, true
+		}
+		if !m.mergeFocused() {
+			return m, nil, false
+		}
+		return m.mergeKey(msg)
+	}
+	return m, nil, false
+}
+
+// mergeKey runs one merge key. Keys the view does not know go on, so
+// global shortcuts (the palette, save) still work.
+func (m Model) mergeKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
+	v := &m.merge.view
+	switch msg.String() {
+	case "esc":
+		// Esc goes on too: it leaves Insert mode in the editor.
+		m.closeMergeView()
+		return m, nil, false
+	case "q":
+		m.closeMergeView()
+	case "tab", "e":
+		m.mergeFocusResult()
+	case "n", "]", "down":
+		v.Next()
+	case "p", "[", "up":
+		v.Prev()
+	case "j":
+		v.Scroll(1)
+	case "k":
+		v.Scroll(-1)
+	case "1", "2", "3":
+		v.SetPane(mergeview.Pane(msg.Runes[0] - '1'))
+	case "v":
+		v.CyclePane()
+	default:
+		return m, nil, false
+	}
+	return m, nil, true
+}
+
+// dispatchMergePalette handles the merge view's palette entries.
+func (m *Model) dispatchMergePalette(id string) (tea.Cmd, bool) {
+	if id == "git-merge-open" {
+		rel := m.mergePaletteTarget()
+		if rel == "" {
+			var cmd tea.Cmd
+			m.toast, cmd = m.toast.Push(toast.Info, "No merge conflicts")
+			return cmd, true
+		}
+		return m.gitOpenMergeView(rel), true
+	}
+	if !strings.HasPrefix(id, "git-merge-") {
+		return nil, false
+	}
+	if !m.mergeViewShown() {
+		var cmd tea.Cmd
+		m.toast, cmd = m.toast.PushDetail(toast.Info, "The merge view is not open", "Open it first: Git: Open Merge View")
+		return cmd, true
+	}
+	v := &m.merge.view
+	switch id {
+	case "git-merge-next":
+		v.Next()
+	case "git-merge-prev":
+		v.Prev()
+	case "git-merge-pane":
+		v.CyclePane()
+	case "git-merge-focus":
+		m.mergeFocusPanes()
+	case "git-merge-close":
+		m.closeMergeView()
+	default:
+		return nil, false
+	}
+	return nil, true
 }

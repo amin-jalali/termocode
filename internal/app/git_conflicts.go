@@ -21,8 +21,9 @@ import (
 //   - Resolution (Accept Current / Incoming / Both) is parsed in Go with
 //     git.ParseConflictLines and applied as ONE nvim_buf_set_lines call, so a
 //     single undo restores the markers.
-//   - Entry points: Ctrl+. code actions on a conflict, palette commands, and
-//     the CONFLICTS section of the Source Control panel.
+//   - Entry points: Ctrl+. code actions on a conflict and palette commands.
+//     A CONFLICTS row of Source Control opens the merge view
+//     (git_merge_view.go).
 
 // Synthesized code-action kinds for conflict resolution (see
 // code_actions_extra.go for the synth-action pattern).
@@ -155,27 +156,6 @@ func (m *Model) jumpConflict(dir int) tea.Cmd {
 		m.toast, toastCmd = m.toast.Push(toast.Info, "No merge conflicts in this file")
 		return toastCmd
 	}
-	m.focus = FocusEditor
-	return nil
-}
-
-// gitOpenConflictFile opens a CONFLICTS-section file and puts the cursor on
-// its first conflict marker.
-func (m *Model) gitOpenConflictFile(fileIndex int) tea.Cmd {
-	if fileIndex < 0 || fileIndex >= len(m.gitFiles) || m.nvim == nil {
-		return nil
-	}
-	path := gitFileAbsPath(m.gitFiles[fileIndex].Path)
-	m.ensureEditorWindowCurrent()
-	_ = m.nvim.ExecLuaArgs(`
-		local p = ...
-		vim.cmd('edit ' .. vim.fn.fnameescape(p))
-		vim.api.nvim_win_set_cursor(0, { 1, 0 })
-		if _G.termocode_conflict_jump then
-			vim.fn.search([[^<<<<<<<\%( \|\t\|$\)]], 'cW')
-			pcall(_G.termocode_conflict_paint)
-		end
-	`, path)
 	m.focus = FocusEditor
 	return nil
 }

@@ -342,7 +342,7 @@ func (m Model) handleGitSidebarMouse(x, y int, t tea.MouseEventType) (Model, tea
 		m.gitToggleCollapse(r.dirPath)
 	case gitRowFile:
 		if r.section == gitSecConflicts {
-			return m, m.gitOpenConflictFile(r.fileIndex)
+			return m, m.gitOpenMergeViewForFile(r.fileIndex)
 		}
 		return m, m.gitDiffCmd()
 	case gitRowCommit:

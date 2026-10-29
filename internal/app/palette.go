@@ -291,6 +291,13 @@ func paletteItems() []picker.Item {
 		{ID: "git-conflict-theirs", Title: "Git: Accept Incoming Change (Conflict at Cursor)"},
 		{ID: "git-conflict-both", Title: "Git: Accept Both Changes (Conflict at Cursor)"},
 		{ID: "git-clone", Title: "Git: Clone Repository..."},
+		// Three-way merge view (git_merge_view.go).
+		{ID: "git-merge-open", Title: "Git: Open Merge View"},
+		{ID: "git-merge-next", Title: "Git: Merge View: Next Conflict", Hint: "n"},
+		{ID: "git-merge-prev", Title: "Git: Merge View: Previous Conflict", Hint: "p"},
+		{ID: "git-merge-pane", Title: "Git: Merge View: Show Next Pane", Hint: "v"},
+		{ID: "git-merge-focus", Title: "Git: Merge View: Merge Keys", Hint: "F6"},
+		{ID: "git-merge-close", Title: "Git: Merge View: Close", Hint: "Esc"},
 		// ── end Group G ──
 		{ID: "git-rebase", Title: "Git: Interactive Rebase…"},                                  // git_rebase.go
 		{ID: "git-fixup", Title: "Git: Fixup Staged Changes Into…"},                            // git_fixup.go
@@ -803,6 +810,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 			return cmd
 		}
 		if cmd, ok := m.dispatchUndoPalette(id); ok { // git_undo.go
+			return cmd
+		}
+		if cmd, ok := m.dispatchMergePalette(id); ok { // git_merge_view.go
 			return cmd
 		}
 		// Group C: tasks + problems panel (tasks_run.go).
