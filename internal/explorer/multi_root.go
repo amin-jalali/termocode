@@ -1,6 +1,7 @@
 package explorer
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 )
@@ -64,6 +65,9 @@ func (m *Model) AddRoot(path string) error {
 	node, err := NewRoot(abs)
 	if err != nil {
 		return err
+	}
+	if !node.IsDir {
+		return fmt.Errorf("%s is not a folder", abs)
 	}
 	m.extraRoots = append(m.extraRoots, node)
 	m.scrollIntoView()
