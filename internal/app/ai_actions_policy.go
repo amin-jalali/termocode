@@ -504,6 +504,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"ai_context_windows":  aiNever(aiNoAIConfig),
 	"ai_models":           aiNever(aiNoAIConfig),
 	"ai_parallel_max":     aiNever(aiNoAIConfig),
+	"ai_worktrees":        aiNever(aiNoAIConfig),
 	// Work until done: the AI never raises its own rounds or budget.
 	"ai_until_done_rounds":     aiNever(aiNoAIConfig),
 	"ai_until_done_budget_usd": aiNever(aiNoAIConfig),

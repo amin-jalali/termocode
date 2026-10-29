@@ -56,6 +56,9 @@ type Settings struct {
 	// DayBudgetUSD (nil or 0: none) is a daily spend line the Runs page
 	// draws today's spend against. It stops nothing; edited by hand.
 	DayBudgetUSD *float64 `json:"ai_day_budget_usd,omitempty"`
+	// Worktrees is "off" to keep parallel agents in the user's tree
+	// (default: each gets its own git worktree; worktree.go).
+	Worktrees string `json:"ai_worktrees,omitempty"`
 }
 
 // CheckUntilDoneRounds checks an ai_until_done_rounds value.
@@ -310,6 +313,7 @@ func SaveSettings(path string, s Settings) error {
 		set("ai_base_url", s.BaseURL)
 		set("ai_inline_model", s.InlineModel)
 		set("ai_edit_review", s.EditReview)
+		set("ai_worktrees", s.Worktrees)
 		if s.Inline != nil {
 			merged["ai_inline"] = *s.Inline
 		}

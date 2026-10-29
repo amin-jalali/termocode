@@ -126,6 +126,9 @@ type StoredStep struct {
 	// subscription (CLIClaude, CLICodex; "": a model slot). Its tokens
 	// have no price: the cost is the subscription.
 	CLI string `json:"cli,omitempty"`
+	// Worktree is the git worktree the step ran in (G-WT; nil: the
+	// user's tree).
+	Worktree *StoredWorktree `json:"worktree,omitempty"`
 }
 
 // Conversation is one persisted chat. Port of mobocode's chat_store.dart,
