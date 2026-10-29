@@ -127,3 +127,89 @@ func TestSaveAllNamesTheFileItCouldNotSave(t *testing.T) {
 		t.Errorf("tabs after Save All = %v, want [a.txt* b.txt]", got)
 	}
 }
+
+// Spec: Given the folder notes is read-only (0555) and a new file
+// notes/new.md is typed in the editor,
+// when the user saves, then the error says there is no permission to
+// write in folder notes, the text stays and no file is made.
+func TestSaveNewFileInReadOnlyFolder(t *testing.T) {
+	skipIfRoot(t)
+	d := editorDriver(t, nil)
+	chmodBack(t, filepath.Join(d.Dir, "notes"), 0o555, 0o755)
+	d.Action("open:" + filepath.Join(d.Dir, "notes", "new.md"))
+	if !d.WaitFor(func() bool { _, a := tabs(d); return a == "notes/new.md" }, 5*time.Second) {
+		got, _ := tabs(d)
+		t.Fatalf("notes/new.md not open: %v", got)
+	}
+	d.Type("Hi ")
+	saveFails(t, d, "notes/new.md", "", "No permission to write in folder notes")
+	if exists(d, "notes/new.md") {
+		t.Error("a failed save made notes/new.md")
+	}
+}
+
+// Spec: Given the folder notes is read-only (0555) but notes/todo.md
+// itself is writable,
+// when the user edits and saves todo.md, then it is saved (a file in a
+// locked folder can still be written in place) and nothing is left over
+// in the folder.
+func TestSaveWritableFileInReadOnlyFolder(t *testing.T) {
+	skipIfRoot(t)
+	d := editorDriver(t, nil)
+	chmodBack(t, filepath.Join(d.Dir, "notes"), 0o555, 0o755)
+	open(d, "notes/todo.md")
+	d.Type("Hi ")
+	d.Key("ctrl+s")
+	if !eventually(d, func() bool { return strings.HasPrefix(diskFile(d, "notes/todo.md"), "Hi # Todo") }) {
+		t.Fatalf("todo.md not saved: %q\n%s", diskFile(d, "notes/todo.md"), screen(d))
+	}
+	if strings.Contains(screen(d), "Save failed") {
+		t.Errorf("a save that worked shows an error:\n%s", screen(d))
+	}
+	ents, _ := os.ReadDir(filepath.Join(d.Dir, "notes"))
+	if len(ents) != 2 {
+		var names []string
+		for _, e := range ents {
+			names = append(names, e.Name())
+		}
+		t.Errorf("notes holds %v after the save, want done.md and todo.md", names)
+	}
+}
+
+// Spec: Given the disk is full (full.txt is swapped for a link to
+// /dev/full, which fails every write with ENOSPC) and the buffer is
+// edited, when the user saves, then the error says the disk is full and
+// the text stays modified in the editor.
+func TestSaveOnFullDiskKeepsText(t *testing.T) {
+	skipIfRoot(t)
+	if _, err := os.Stat("/dev/full"); err != nil {
+		t.Skip("no /dev/full on this system (Linux only)")
+	}
+	files := textFiles()
+	files["full.txt"] = "x\n"
+	d := editorDriver(t, files)
+	open(d, "full.txt")
+	d.Type("Hi ")
+	full := filepath.Join(d.Dir, "full.txt")
+	if err := os.Remove(full); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("/dev/full", full); err != nil {
+		t.Fatal(err)
+	}
+	lua(d, `vim.cmd('silent! checktime'); return ''`)
+	d.Key("ctrl+s")
+	if !d.WaitForText("Save failed", 3*time.Second) {
+		t.Fatalf("no Save failed toast:\n%s", screen(d))
+	}
+	if !strings.Contains(screen(d), "disk is full") {
+		t.Errorf("the toast does not say the disk is full:\n%s", screen(d))
+	}
+	if got := bufLines(d); got != "Hi x" {
+		t.Errorf("the editor lost the text: %q", got)
+	}
+	if !waitTabs(d, "full.txt*") {
+		got, _ := tabs(d)
+		t.Errorf("not modified after the failed save: %v", got)
+	}
+}
