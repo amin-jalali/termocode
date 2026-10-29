@@ -325,6 +325,8 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"redis-set-ttl":                aiNever(aiNoPicker + " (redis_command)"),
 	"redis-delete-key":             aiNever(aiNoPicker + " (redis_command)"),
 	"containers-focus":             aiAuto(),
+	"kubernetes-show":              aiAuto(), // read only (kube_actions.go)
+	"kubernetes-refresh":           aiAuto(),
 	"containers-context-use":       aiNever("a context switch is the user's choice; it moves every container action to another host"),
 	"containers-context-default":   aiNever("changes the machine-wide Docker default"),
 	"containers-registry-connect":  aiNever("signing in to a registry takes the user's token; it is the user's"),

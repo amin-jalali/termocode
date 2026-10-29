@@ -404,6 +404,13 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Itermoc: Profiles | `itermoc-profiles` |   |   |
 | Itermoc: Services | `itermoc-services` |   |   |
 
+## Kubernetes
+
+| Title | ID | Key | Hint |
+| --- | --- | --- | --- |
+| Kubernetes: Refresh | `kubernetes-refresh` |   |   |
+| Kubernetes: Show | `kubernetes-show` |   |   |
+
 ## LSP
 
 | Title | ID | Key | Hint |
