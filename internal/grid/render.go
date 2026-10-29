@@ -118,7 +118,7 @@ func (g *Grid) writeRun(sb *strings.Builder, cells []Cell, cursor bool) {
 		var text strings.Builder
 		for _, cell := range cells {
 			if !cell.Cont {
-				text.WriteRune(cellRune(cell))
+				writeCell(&text, cell)
 			}
 		}
 		sb.WriteString(st.style.Render(text.String()))
@@ -134,14 +134,14 @@ func (g *Grid) writeRun(sb *strings.Builder, cells []Cell, cursor bool) {
 			if unicode.IsSpace(rn) {
 				pre = st.spacePre
 			}
-			writeStyled(sb, pre, rn)
+			writeStyled(sb, pre, cell)
 		}
 		return
 	}
 	sb.WriteString(st.pre)
 	for _, cell := range cells {
 		if !cell.Cont {
-			sb.WriteRune(cellRune(cell))
+			writeCell(sb, cell)
 		}
 	}
 	if st.pre != "" {
@@ -149,11 +149,20 @@ func (g *Grid) writeRun(sb *strings.Builder, cells []Cell, cursor bool) {
 	}
 }
 
-func writeStyled(sb *strings.Builder, pre string, rn rune) {
+func writeStyled(sb *strings.Builder, pre string, cell Cell) {
 	sb.WriteString(pre)
-	sb.WriteRune(rn)
+	writeCell(sb, cell)
 	if pre != "" {
 		sb.WriteString(sgrReset)
+	}
+}
+
+// writeCell writes the glyph a cell draws: its rune and the rest of a
+// glyph of several runes.
+func writeCell(sb *strings.Builder, cell Cell) {
+	sb.WriteRune(cellRune(cell))
+	if cell.Tail != "" {
+		sb.WriteString(strings.ToValidUTF8(cell.Tail, "\uFFFD"))
 	}
 }
 
