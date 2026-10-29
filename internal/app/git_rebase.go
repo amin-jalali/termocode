@@ -30,8 +30,9 @@ type gitRebaseState struct {
 
 // rebaseCheckMsg is what the confirm card says before a run.
 type rebaseCheckMsg struct {
-	todo  git.RebaseTodo
-	title string
+	todo     git.RebaseTodo
+	upstream string // the branch's upstream ("origin/main")
+	pushed   int    // commits of the range on it already
 }
 
 // rebaseDoneMsg is the end of a run (or of its first stretch, when git
@@ -185,8 +186,14 @@ func (m *Model) onRebaseCardMsg(msg tea.Msg) tea.Cmd {
 
 // rebaseCheckCmd reads what the confirm card must say.
 func (m *Model) rebaseCheckCmd(todo git.RebaseTodo) tea.Cmd {
+	cwd, err := m.rootDir()
+	if err != nil {
+		return nil
+	}
 	return func() tea.Msg {
-		return rebaseCheckMsg{todo: todo}
+		msg := rebaseCheckMsg{todo: todo}
+		msg.upstream, msg.pushed = git.RebasePushed(cwd, todo.Base)
+		return msg
 	}
 }
 
@@ -229,6 +236,14 @@ func rebaseConfirmText(msg rebaseCheckMsg) string {
 	}
 	if counts[git.RebaseEdit] > 0 {
 		lines = append(lines, "It stops at each edit row so you can change the commit.")
+	}
+	if msg.pushed > 0 {
+		these := "these commits are"
+		if msg.pushed < len(todo.Items) {
+			these = fmt.Sprintf("%d of these commits are", msg.pushed)
+		}
+		lines = append(lines, "", fmt.Sprintf("⚠ %s on %s already; you will need to force-push.", these, msg.upstream),
+			"termocode never force-pushes for you.")
 	}
 	lines = append(lines, "", "Undo afterwards: git reset --hard ORIG_HEAD")
 	return strings.Join(lines, "\n")

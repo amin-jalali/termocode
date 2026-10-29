@@ -140,3 +140,30 @@ func TestSCMRebaseConfirmAndRun(t *testing.T) {
 		t.Errorf("GRAPH not refreshed:%s", dump(d))
 	}
 }
+
+// Spec: when commits of the range are on the upstream already, the
+// confirm warns that a force-push will be needed (termocode never does
+// it); a range of new commits only has no warning.
+func TestSCMRebasePushedWarning(t *testing.T) {
+	d, r := scmDriver(t, func(r *repo) {
+		rebaseRepo(r)
+		r.addOrigin()
+		r.write("f5.txt", "5\n")
+		r.commit("c5")
+	})
+	openRebaseCard(t, d, "c3")
+	startRebase(t, d)
+	if s := text(d); !strings.Contains(s, "2 of these commits are on origin/main already; you") || !strings.Contains(s, "force-push") {
+		t.Errorf("no warning:%s", dump(d))
+	}
+	d.Key("esc", "esc")
+	if !until(d, func() bool { return !strings.Contains(text(d), "Interactive Rebase") }) {
+		t.Fatalf("card still open:%s", dump(d))
+	}
+	openRebaseCard(t, d, "c5")
+	startRebase(t, d)
+	if strings.Contains(text(d), "force-push") {
+		t.Errorf("warning for unpushed commits:%s", dump(d))
+	}
+	_ = r
+}
