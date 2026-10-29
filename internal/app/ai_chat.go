@@ -538,8 +538,11 @@ func (m *Model) persistAIState() {
 	sess := loadSession()
 	if len(s.conv.Messages) > 0 {
 		sess.AILastChat = s.conv.ID
+		s.holdChat(s.conv.ID) // other windows now leave it alone
 	} else {
 		sess.AILastChat = ""
+		s.claim.Release()
+		s.claim = nil
 	}
 	sess.AIChatScroll = s.scroll
 	saveSession(sess)
@@ -553,8 +556,8 @@ func (s *aiState) restoreAIChat() {
 	s.restored = true
 	sess := loadSession()
 	s.profile = sess.AIProfile // the workspace's agent profile (U20 AP-5)
-	if sess.AILastChat == "" {
-		return
+	if sess.AILastChat == "" || !s.holdChat(sess.AILastChat) {
+		return // none, or another window shows it: start a new chat
 	}
 	if c, err := s.store.Load(sess.AILastChat); err == nil {
 		aiMarkInterrupted(&c)
@@ -646,6 +649,9 @@ func (m *Model) onAIHistoryPicked(id string) tea.Cmd {
 	c, err := s.store.Load(id)
 	if err != nil {
 		return m.aiToastErr("Could not open chat", err)
+	}
+	if !s.holdChat(id) {
+		return m.aiInfo("This chat is open in another termocode window")
 	}
 	if s.chatCancel != nil {
 		s.chatCancel()
