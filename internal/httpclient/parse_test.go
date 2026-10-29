@@ -240,7 +240,7 @@ func TestParseAllocs200(t *testing.T) {
 	if f := Parse(src); len(f.Requests) != 200 || f.Requests[7].URL != "{{base}}/users/7" {
 		t.Fatalf("%d requests, url %q", len(f.Requests), f.Requests[7].URL)
 	}
-	const maxAllocs = 700 // measured 615 (was 1215)
+	const maxAllocs = 450 // measured 407 (was 1215)
 	if n := testing.AllocsPerRun(5, func() { Parse(src) }); n > maxAllocs {
 		t.Errorf("Parse of 200 requests: %.0f allocs (max %d)", n, maxAllocs)
 	}

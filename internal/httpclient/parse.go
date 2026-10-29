@@ -23,6 +23,7 @@ var varLineRe = lazyre.New(`^@([\w.-]+)\s*=\s*(.*?)\s*$`)
 func Parse(src string) File {
 	var f File
 	lines := strings.Split(src, "\n")
+	f.Requests = make([]Request, 0, strings.Count(src, "\n###")+1)
 	start, first := 1, 1 // separator line, first content line
 	var block []string
 	name := ""
@@ -46,6 +47,9 @@ func Parse(src string) File {
 		block = append(block, line)
 	}
 	flush(len(lines))
+	if len(f.Requests) == 0 {
+		f.Requests = nil // as before the pre-sizing (JSON null)
+	}
 	return f
 }
 
@@ -125,6 +129,13 @@ request:
 	r.URL = url
 	r.Name = name
 
+	hdrEnd := i
+	for hdrEnd < len(lines) && !isBlank(lines[hdrEnd]) {
+		hdrEnd++
+	}
+	if hdrEnd > i {
+		r.Headers = make([]Header, 0, hdrEnd-i)
+	}
 	for i < len(lines) && !isBlank(lines[i]) {
 		h := lines[i]
 		i++
