@@ -1747,6 +1747,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `git-stage` | Git: Stage Current File | confirm (git) |   |
 | `git-stage-all` | Git: Stage All Changes | confirm (git) |   |
 | `git-stage-hunk` | Git: Stage Hunk (at cursor) | confirm (git) |   |
+| `git-stage-lines` | Git: Stage Line (or Selected Lines) | confirm (git) |   |
 | `git-stash` | Git: Stash Changes | confirm (git) |   |
 | `git-stash-list` | Git: Show Stash List... | never | opens a picker or prompt that only the user can answer; use a typed tool (git_stash list) |
 | `git-stash-pop` | Git: Pop Latest Stash | confirm (git) |   |

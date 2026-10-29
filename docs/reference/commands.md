@@ -337,6 +337,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Stage All Changes | `git-stage-all` |   |   |
 | Git: Stage Current File | `git-stage` |   |   |
 | Git: Stage Hunk (at cursor) | `git-stage-hunk` | `Alt+S` | `Alt+S` |
+| Git: Stage Line (or Selected Lines) | `git-stage-lines` |   |   |
 | Git: Stash Changes | `git-stash` |   |   |
 | Git: Switch Branch... | `git-branch` |   |   |
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
