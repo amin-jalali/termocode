@@ -281,10 +281,11 @@ func (m *Model) aiUndoTurn(msg int) tea.Cmd {
 		fmt.Fprintf(&body, "Too big to restore, left as they are: %s.", aiListNames(tooBig))
 	}
 	s.undoTurn = msg
-	m.confirm = confirm.New("↶ Undo AI changes?", body.String(), []confirm.Button{
-		{ID: "restore", Title: "Restore", Style: confirm.StyleDestructive},
-		{ID: "cancel", Title: "Cancel"},
-	})
+	// Restore can overwrite later work: Cancel comes first and has the
+	// focus, so Enter keeps everything (AH-1).
+	m.confirm = confirm.Risky("↶ Undo AI changes?", body.String(),
+		confirm.Button{ID: "cancel", Title: "Cancel"},
+		confirm.Button{ID: "restore", Title: "Restore", Style: confirm.StyleDestructive})
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindAIUndoTurn
