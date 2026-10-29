@@ -124,16 +124,9 @@ func NewSQLiteSession(ctx context.Context, conn Conn) (*SQLiteSession, error) {
 	if err != nil {
 		return nil, fmt.Errorf("sqlite3 is not installed. %s", sqliteHostInstallHint())
 	}
-	checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	cmd := spawn.CommandContext(checkCtx, path, "-version")
-	b, err := cmd.Output()
+	v, err := sqliteVersionOf(ctx, path)
 	if err != nil {
-		return nil, fmt.Errorf("could not check sqlite3 version: %w", err)
-	}
-	v, err := ParseSQLiteVersion(string(b))
-	if err != nil {
-		return nil, fmt.Errorf("%s. %s", err, sqliteHostInstallHint())
+		return nil, err
 	}
 	if conn.ReadOnly && (v.Major < 3 || (v.Major == 3 && v.Minor < 37)) {
 		return nil, errors.New("Update sqlite3 to 3.37 or newer to let the AI read this database")
@@ -143,6 +136,36 @@ func NewSQLiteSession(ctx context.Context, conn Conn) (*SQLiteSession, error) {
 		return nil, err
 	}
 	return s, nil
+}
+
+// sqliteVersions caches the version of each sqlite3 binary, keyed by its
+// path, size and change time: a replaced binary is checked again.
+var sqliteVersions sync.Map
+
+// sqliteVersionOf runs "sqlite3 -version" once per binary.
+func sqliteVersionOf(ctx context.Context, path string) (SQLiteVersion, error) {
+	key := ""
+	if st, err := os.Stat(path); err == nil {
+		key = fmt.Sprintf("%s\x00%d\x00%d", path, st.Size(), st.ModTime().UnixNano())
+		if v, ok := sqliteVersions.Load(key); ok {
+			return v.(SQLiteVersion), nil
+		}
+	}
+	checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	cmd := spawn.CommandContext(checkCtx, path, "-version")
+	b, err := cmd.Output()
+	if err != nil {
+		return SQLiteVersion{}, fmt.Errorf("could not check sqlite3 version: %w", err)
+	}
+	v, err := ParseSQLiteVersion(string(b))
+	if err != nil {
+		return SQLiteVersion{}, fmt.Errorf("%s. %s", err, sqliteHostInstallHint())
+	}
+	if key != "" {
+		sqliteVersions.Store(key, v)
+	}
+	return v, nil
 }
 
 func (s *SQLiteSession) start(path string, readonly bool) error {

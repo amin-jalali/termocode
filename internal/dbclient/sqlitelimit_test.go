@@ -2,7 +2,10 @@ package dbclient
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -117,5 +120,32 @@ func TestSQLiteRunMaxRowsStopsEarly(t *testing.T) {
 	r := s.Run(ctx, "WITH RECURSIVE c(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM c) SELECT i FROM c", RunOptions{MaxRows: 10})
 	if r.Err != nil || len(r.Rows) != 10 || !r.Truncated || r.Rows[9][0].Text != "10" {
 		t.Fatalf("err %v, %d rows, truncated %v", r.Err, len(r.Rows), r.Truncated)
+	}
+}
+
+// The sqlite3 version is checked once per binary: a second session of the
+// same unchanged sqlite3 starts no "-version" process.
+func TestSQLiteVersionCheckedOncePerBinary(t *testing.T) {
+	dir := t.TempDir()
+	log := filepath.Join(dir, "versions.log")
+	fake, err := os.ReadFile(filepath.Join("dbtest", "sqlite3.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := strings.Replace(string(fake), "if [ \"$1\" = \"-version\" ]; then\n", "if [ \"$1\" = \"-version\" ]; then\n\techo x >> '"+log+"'\n", 1)
+	bin := writeFakeSQLite(t, script)
+	old := lookupSQLite
+	lookupSQLite = func() (string, error) { return bin, nil }
+	t.Cleanup(func() { lookupSQLite = old })
+	for i := 0; i < 3; i++ {
+		s, err := NewSQLiteSession(context.Background(), Conn{Driver: "sqlite", Path: ":memory:"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = s.Close()
+	}
+	b, _ := os.ReadFile(log)
+	if n := strings.Count(string(b), "x"); n != 1 {
+		t.Fatalf("sqlite3 -version ran %d times, want 1", n)
 	}
 }
