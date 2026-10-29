@@ -235,23 +235,35 @@ func TestContextEnterSwitchesThisSessionOnly(t *testing.T) {
 	}
 	before := len(f.CtxCalls())
 	selectContext(t, st, "prod")
-	pumpHost(t, m, press(m, "enter"))
+	// Wait for the detect on prod and the new watcher, not a fixed time:
+	// on a busy -race runner the detect takes longer than pumpHost waits.
+	pumpHostUntil(t, m, press(m, "enter"), func(tea.Msg) bool {
+		return st.containerEngine.Context == "prod" && st.hostWatchStop != nil
+	})
 	if st.sessionContext != "prod" || st.containerEngine.Context != "prod" {
 		t.Fatalf("session context = %q engine context = %q", st.sessionContext, st.containerEngine.Context)
 	}
-	calls := f.CtxCalls()[before:]
+	subs := []string{"version", "ps", "images", "network ls", "volume ls", "events"}
+	var calls []string
 	seen := map[string]bool{}
+	allSeen := func() bool {
+		calls = f.CtxCalls()[before:]
+		for _, c := range calls {
+			for _, sub := range subs {
+				if strings.HasPrefix(strings.TrimPrefix(c, "prod|"), sub) {
+					seen[sub] = true
+				}
+			}
+		}
+		return len(seen) == len(subs)
+	}
+	servicestest.WaitFor(10*time.Second, allSeen) // the watcher's events call is logged by its own process
 	for _, c := range calls {
 		if !strings.HasPrefix(c, "prod|") {
 			t.Errorf("call after the switch without DOCKER_CONTEXT=prod: %q", c)
 		}
-		for _, sub := range []string{"version", "ps", "images", "network ls", "volume ls", "events"} {
-			if strings.HasPrefix(strings.TrimPrefix(c, "prod|"), sub) {
-				seen[sub] = true
-			}
-		}
 	}
-	for _, sub := range []string{"version", "ps", "images", "network ls", "volume ls", "events"} {
+	for _, sub := range subs {
 		if !seen[sub] {
 			t.Errorf("no %q call after the switch (full refresh + watcher restart): %q", sub, calls)
 		}
