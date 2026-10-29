@@ -202,6 +202,8 @@ func aiWorktreeState(wt *ai.StoredWorktree) string {
 		return head + "merged with conflict markers · branch kept"
 	case ai.WorktreeDiscarded:
 		return head + "discarded"
+	case ai.WorktreeOnBranch:
+		return head + "not merged · work kept on the branch"
 	}
 	return head + fmt.Sprintf("%d file%s changed", wt.Files, plural(wt.Files))
 }

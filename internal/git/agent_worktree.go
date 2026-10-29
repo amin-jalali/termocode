@@ -411,3 +411,30 @@ func LeftoverAgentWorktrees(dir string) ([]AgentWorktree, error) {
 	sort.Slice(left, func(i, j int) bool { return left[i].ID < left[j].ID })
 	return left, nil
 }
+
+// AgentFile is one changed file with its text before the agent (Before)
+// and after (After); a side that does not exist is "".
+type AgentFile struct {
+	AgentChange
+	Before, After string
+}
+
+// AgentFiles lists the files the agent of id changed with both texts
+// (the review card).
+func AgentFiles(dir, id string) ([]AgentFile, error) {
+	ch, err := AgentChanges(dir, id)
+	if err != nil {
+		return nil, err
+	}
+	top, _, base, tip, err := snapshotAgent(dir, id)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]AgentFile, 0, len(ch))
+	for _, c := range ch {
+		before, _, _ := blob(top, base, c.Path)
+		after, _, _ := blob(top, tip, c.Path)
+		out = append(out, AgentFile{AgentChange: c, Before: string(before), After: string(after)})
+	}
+	return out, nil
+}

@@ -260,6 +260,7 @@ func (m Model) aiStepCard(msg ai.StoredMessage, k int, st ai.StoredStep, width, 
 	dim := theme.Fg(theme.TextDim)
 	if wt := st.Worktree; wt != nil { // G-WT: shown folded too
 		out = append(out, aiLine{text: ind + ansi.Truncate(aiWorktreeStatus(wt), max(inner-2, 4), "…"), style: theme.Fg(theme.TextSecondary)})
+		out = append(out, m.aiWorktreeButtons(msg, st, width)...)
 	}
 	if !expanded {
 		return out

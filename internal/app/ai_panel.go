@@ -1373,6 +1373,8 @@ func (m *Model) onAIButton(id string) tea.Cmd {
 		return m.showAIUsage(strings.TrimPrefix(id, "usage:"))
 	case strings.HasPrefix(id, "agents:"): // a planned run's row: show it in AGENTS
 		return m.showAgents(strings.TrimPrefix(id, "agents:"))
+	case strings.HasPrefix(id, "wt-"): // G-WT: a step's worktree (ai_worktree_actions.go)
+		return m.onAIWorktreeButton(id)
 	case strings.HasPrefix(id, "run-retry:"):
 		if i, err := strconv.Atoi(strings.TrimPrefix(id, "run-retry:")); err == nil {
 			return m.aiRetryRun(i)

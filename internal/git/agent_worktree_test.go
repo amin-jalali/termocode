@@ -244,3 +244,27 @@ func TestAgentWorktreeID(t *testing.T) {
 		t.Errorf("id %q", got)
 	}
 }
+
+// AgentFiles gives each changed file's text before and after the agent,
+// for the review card.
+func TestAgentFiles(t *testing.T) {
+	r := committedRepo(t)
+	w, err := CreateAgentWorktree(r.dir, "r5-a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile(filepath.Join(w.Path, "a.txt"), []byte("one\n"), 0o644)
+	os.WriteFile(filepath.Join(w.Path, "c.txt"), []byte("sea\n"), 0o644)
+	os.Remove(filepath.Join(w.Path, "b.txt"))
+	files, err := AgentFiles(r.dir, "r5-a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := []string{}
+	for _, f := range files {
+		got = append(got, f.Status+" "+f.Path+" "+strings.TrimSpace(f.Before)+">"+strings.TrimSpace(f.After))
+	}
+	if strings.Join(got, "|") != "M a.txt one\ntwo\nthree>one|D b.txt bee>|A c.txt >sea" {
+		t.Errorf("files %q", got)
+	}
+}

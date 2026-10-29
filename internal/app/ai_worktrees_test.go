@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/ai"
@@ -129,5 +130,158 @@ func TestAIRunParallelStepsSameTree(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// runWorktreeCmd runs a worktree action's cmd and routes its message.
+func runWorktreeCmd(t *testing.T, m *Model, cmd tea.Cmd) {
+	t.Helper()
+	if cmd == nil {
+		t.Fatal("no cmd")
+	}
+	if _, ok := m.handleAIMsg(cmd()); !ok {
+		t.Fatal("message not routed")
+	}
+}
+
+func gitBranchExists(t *testing.T, dir, branch string) bool {
+	t.Helper()
+	out, err := exec.Command("git", "-C", dir, "branch", "--list", branch).Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.TrimSpace(string(out)) != ""
+}
+
+// A finished worktree step offers Review, Merge and Discard. Review
+// shows the agent's changes; Merge writes them into the user's tree and
+// removes the worktree and its branch.
+func TestAIWorktreeReviewAndMerge(t *testing.T) {
+	m, dir, _ := aiWorktreeRunModel(t, true)
+	driveAIChat(t, m, m.sendAIChat("change things"), nil)
+	rm := aiRunMsg(t, m)
+	got := aiTranscriptText(m, 100)
+	if !strings.Contains(got, "Review   Merge   Discard") {
+		t.Fatalf("no worktree chips:\n%s", got)
+	}
+	key := rm.Run.ID + ":left"
+	runWorktreeCmd(t, m, m.onAIButton("wt-review:"+key))
+	if m.ai.review == nil || m.ai.review.card.Files() != 1 || m.ai.review.card.File(0).Name != "a.txt" || m.ai.review.card.File(0).New != "left\n" {
+		t.Fatalf("review card %+v", m.ai.review)
+	}
+	m.ai.review = nil
+
+	wt := *rm.Steps[0].Worktree
+	runWorktreeCmd(t, m, m.onAIButton("wt-merge:"+key))
+	if got := readFile(filepath.Join(dir, "a.txt")); got != "left\n" {
+		t.Errorf("a.txt after merge %q", got)
+	}
+	if st := aiRunMsg(t, m).Steps[0].Worktree; st.State != ai.WorktreeMerged {
+		t.Errorf("state %q", st.State)
+	}
+	if _, err := os.Stat(wt.Path); !os.IsNotExist(err) {
+		t.Error("worktree still there after merge")
+	}
+	if gitBranchExists(t, dir, wt.Branch) {
+		t.Error("branch still there after a clean merge")
+	}
+	if got := aiTranscriptText(m, 100); !strings.Contains(got, "merged into your tree") {
+		t.Errorf("transcript:\n%s", got)
+	}
+}
+
+// When the user changed the same file, Merge writes nothing and shows a
+// conflict card with Cancel first; Merge with markers then writes both
+// versions and keeps the branch; Keep on branch only removes the tree.
+func TestAIWorktreeMergeConflict(t *testing.T) {
+	m, dir, _ := aiWorktreeRunModel(t, true)
+	driveAIChat(t, m, m.sendAIChat("change things"), nil)
+	rm := aiRunMsg(t, m)
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("user\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	key := rm.Run.ID + ":left"
+	runWorktreeCmd(t, m, m.onAIButton("wt-merge:"+key))
+	if !m.confirmOpen || m.confirmKind != confirmKindAIWorktreeConflict {
+		t.Fatalf("no conflict card (open %v kind %v)", m.confirmOpen, m.confirmKind)
+	}
+	if b := m.confirm.Buttons(); b[0].ID != "cancel" {
+		t.Errorf("first button %q, want cancel", b[0].ID)
+	}
+	if got := readFile(filepath.Join(dir, "a.txt")); got != "user\n" {
+		t.Errorf("a.txt written on a conflict: %q", got)
+	}
+	if st := aiRunMsg(t, m).Steps[0].Worktree; st.State != ai.WorktreeConflict || strings.Join(st.Conflicts, ",") != "a.txt" {
+		t.Errorf("worktree %+v", st)
+	}
+	// Cancel: nothing happens.
+	if cmd, _ := m.handleAIConfirm("cancel"); cmd != nil {
+		t.Error("cancel returned a cmd")
+	}
+	// Again, then merge with markers.
+	runWorktreeCmd(t, m, m.onAIButton("wt-merge:"+key))
+	cmd, _ := m.handleAIConfirm("markers")
+	runWorktreeCmd(t, m, cmd)
+	a := readFile(filepath.Join(dir, "a.txt"))
+	if !strings.Contains(a, "<<<<<<<") || !strings.Contains(a, "user") || !strings.Contains(a, "left") {
+		t.Errorf("a.txt %q", a)
+	}
+	wt := aiRunMsg(t, m).Steps[0].Worktree
+	if wt.State != ai.WorktreeKept || !gitBranchExists(t, dir, wt.Branch) {
+		t.Errorf("after markers %+v", wt)
+	}
+	if _, err := os.Stat(wt.Path); !os.IsNotExist(err) {
+		t.Error("worktree still there")
+	}
+
+	// right: Keep on branch.
+	if err := os.WriteFile(filepath.Join(dir, "b.txt"), []byte("mine too\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rkey := rm.Run.ID + ":right"
+	runWorktreeCmd(t, m, m.onAIButton("wt-merge:"+rkey))
+	cmd, _ = m.handleAIConfirm("branch")
+	runWorktreeCmd(t, m, cmd)
+	rwt := aiRunMsg(t, m).Steps[1].Worktree
+	if rwt.State != ai.WorktreeOnBranch || !gitBranchExists(t, dir, rwt.Branch) || readFile(filepath.Join(dir, "b.txt")) != "mine too\n" {
+		t.Errorf("keep on branch %+v", rwt)
+	}
+}
+
+// Discard asks first (Cancel first); Cancel keeps everything, Discard
+// removes the worktree and its branch and leaves the user's tree alone.
+func TestAIWorktreeDiscard(t *testing.T) {
+	m, dir, _ := aiWorktreeRunModel(t, true)
+	driveAIChat(t, m, m.sendAIChat("change things"), nil)
+	rm := aiRunMsg(t, m)
+	key := rm.Run.ID + ":right"
+	wt := *rm.Steps[1].Worktree
+	m.onAIButton("wt-discard:" + key)
+	if !m.confirmOpen || m.confirmKind != confirmKindAIWorktreeDiscard || m.confirm.Buttons()[0].ID != "cancel" {
+		t.Fatalf("discard card: open %v kind %v", m.confirmOpen, m.confirmKind)
+	}
+	if cmd := m.onAIConfirmClosed(); cmd != nil { // Esc
+		t.Error("Esc returned a cmd")
+	}
+	if _, err := os.Stat(wt.Path); err != nil {
+		t.Fatal("Esc removed the worktree")
+	}
+	m.onAIButton("wt-discard:" + key)
+	cmd, _ := m.handleAIConfirm("discard")
+	runWorktreeCmd(t, m, cmd)
+	if _, err := os.Stat(wt.Path); !os.IsNotExist(err) {
+		t.Error("worktree still there")
+	}
+	if gitBranchExists(t, dir, wt.Branch) {
+		t.Error("branch still there")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "b.txt")); err == nil {
+		t.Error("b.txt appeared in the user's tree")
+	}
+	if st := aiRunMsg(t, m).Steps[1].Worktree; st.State != ai.WorktreeDiscarded {
+		t.Errorf("state %q", st.State)
+	}
+	if got := aiTranscriptText(m, 100); strings.Count(got, "Review   Merge   Discard") != 1 {
+		t.Errorf("chips after discard:\n%s", got)
 	}
 }

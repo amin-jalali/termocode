@@ -18,6 +18,7 @@ const (
 	WorktreeConflict  = "conflict"  // a merge found files the user changed too
 	WorktreeMerged    = "merged"    // applied to the user's tree; removed
 	WorktreeKept      = "kept"      // merged with conflicts: worktree removed, branch kept
+	WorktreeOnBranch  = "branch"    // not merged: worktree removed, the work stays on the branch
 	WorktreeDiscarded = "discarded" // removed with its branch
 )
 
@@ -35,5 +36,5 @@ type StoredWorktree struct {
 
 // Open reports whether the worktree still waits for Merge or Discard.
 func (w *StoredWorktree) Open() bool {
-	return w != nil && w.State != WorktreeMerged && w.State != WorktreeDiscarded && w.State != WorktreeKept
+	return w != nil && w.State != WorktreeMerged && w.State != WorktreeDiscarded && w.State != WorktreeKept && w.State != WorktreeOnBranch
 }

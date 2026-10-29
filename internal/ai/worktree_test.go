@@ -49,7 +49,7 @@ func TestStoredStepWorktree(t *testing.T) {
 	if !back.Worktree.Open() {
 		t.Error("ready: want open")
 	}
-	for _, s := range []string{WorktreeMerged, WorktreeDiscarded} {
+	for _, s := range []string{WorktreeMerged, WorktreeDiscarded, WorktreeKept, WorktreeOnBranch} {
 		if (&StoredWorktree{State: s}).Open() {
 			t.Errorf("%s: want closed", s)
 		}

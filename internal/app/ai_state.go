@@ -43,6 +43,9 @@ import (
 type aiState struct {
 	// historyTarget is the chat a Delete / Rename dialog is about.
 	historyTarget string
+	// wtTarget is the step ("run:step") a worktree Merge / Discard card
+	// is about (G-WT, ai_worktree_actions.go).
+	wtTarget string
 	// streamSteps counts chat events; the status bar's busy comet moves
 	// one step per event (no timer).
 	streamSteps int
