@@ -230,10 +230,11 @@ func (m *Model) aiLastRestoreTurn() int {
 	return p.Turns[len(p.Turns)-1].Msg
 }
 
-// aiRestoreChanged lists the files of t that changed after the turn
-// (or have unsaved edits in a tab), and the ones that can not be
-// restored (too big).
-func (m *Model) aiRestoreChanged(t *aiRestoreTurn) (changed, tooBig []string) {
+// aiRestoreChanged sorts the files of t that need a word before the
+// undo: changed after the turn (restoring loses that), open with unsaved
+// edits (left as they are: aiWriteFile never writes under them), and too
+// big to restore. A file that already has its old text needs nothing.
+func (m *Model) aiRestoreChanged(t *aiRestoreTurn) (changed, unsaved, tooBig []string) {
 	rel := aiRel(aiWorkspaceRoot())
 	for _, f := range t.Files {
 		if f.TooBig {
@@ -242,15 +243,18 @@ func (m *Model) aiRestoreChanged(t *aiRestoreTurn) (changed, tooBig []string) {
 		}
 		b, err := os.ReadFile(f.Path)
 		exists := err == nil
-		if f.AfterSet && (exists != f.AfterExists || (exists && string(b) != f.After)) {
-			changed = append(changed, rel(f.Path))
-			continue
+		if exists == f.Existed && (!exists || string(b) == f.Before) {
+			continue // nothing to restore
 		}
 		if bufs, _ := m.aiBuffersUnder(f.Path); len(aiUnsaved(bufs, rel)) > 0 {
-			changed = append(changed, rel(f.Path)+" (unsaved edits)")
+			unsaved = append(unsaved, rel(f.Path))
+			continue
+		}
+		if f.AfterSet && (exists != f.AfterExists || (exists && string(b) != f.After)) {
+			changed = append(changed, rel(f.Path))
 		}
 	}
-	return changed, tooBig
+	return changed, unsaved, tooBig
 }
 
 // aiUndoTurn starts "undo the AI changes of turn msg" (-1: the last one).
@@ -266,20 +270,23 @@ func (m *Model) aiUndoTurn(msg int) tea.Cmd {
 	if t == nil {
 		return m.aiInfo("No AI changes to undo in this chat")
 	}
-	changed, tooBig := m.aiRestoreChanged(t)
-	if len(changed) == 0 && len(tooBig) == 0 {
+	changed, unsaved, tooBig := m.aiRestoreChanged(t)
+	if len(changed) == 0 && len(unsaved) == 0 && len(tooBig) == 0 {
 		return m.aiDoUndoTurn(msg)
 	}
 	var body strings.Builder
-	if len(changed) > 0 {
-		fmt.Fprintf(&body, "Changed since the AI turn: %s.\nRestoring puts back the text from before the turn; these later changes are lost (an open tab can undo it with u).", aiListNames(changed))
-	}
-	if len(tooBig) > 0 {
+	line := func(format string, names []string) {
+		if len(names) == 0 {
+			return
+		}
 		if body.Len() > 0 {
 			body.WriteString("\n")
 		}
-		fmt.Fprintf(&body, "Too big to restore, left as they are: %s.", aiListNames(tooBig))
+		fmt.Fprintf(&body, format, aiListNames(names))
 	}
+	line("Changed since the AI turn: %s.\nRestoring puts back the text from before the turn; these later changes are lost (an open tab can undo it with u).", changed)
+	line("Open with unsaved edits, left as they are: %s. Save or discard the edits first to undo the AI changes there.", unsaved)
+	line("Too big to restore, left as they are: %s.", tooBig)
 	s.undoTurn = msg
 	// Restore can overwrite later work: Cancel comes first and has the
 	// focus, so Enter keeps everything (AH-1).
