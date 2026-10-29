@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -13,13 +14,17 @@ import (
 	"github.com/amin-jalali/termocode/internal/clistep"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/mcp/mcptest"
+	"github.com/amin-jalali/termocode/internal/services/servicestest"
 	"github.com/zalando/go-keyring"
 )
 
 // TestMain points HOME and every XDG dir at a temp folder, so no test in
 // this package reads or writes the developer's real ~/.config/termocode
 // (errors.log, recents, session …) or clones plugins into ~/.local/share.
-// It also cuts the system clipboard and the network off.
+// It also cuts the system clipboard and the network off, and puts
+// fail-closed docker / podman / kubectl stand-ins first on PATH: a test
+// that forgets its fake (servicestest) fails instead of reaching the
+// developer's real Docker or cluster.
 func TestMain(m *testing.M) {
 	mcp.RunShareIfHelper() // the shared-server broker re-runs this binary
 	mcptest.RunIfHelper()  // the fake MCP server re-runs this binary
@@ -54,6 +59,13 @@ func TestMain(m *testing.M) {
 	} {
 		_ = os.Setenv(k, v)
 	}
+	guard, err := servicestest.InstallGuard(filepath.Join(dir, "cli-guard"))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	_ = os.Setenv("PATH", guard.PathEnv())
+	cliGuard = guard
 	setupCardOff = true // see setup_card_ui.go
 	// The secret store: an in-memory keyring, never the real one, and the
 	// plain backend these tests were written for (they share one config
@@ -68,8 +80,29 @@ func TestMain(m *testing.M) {
 		return clistep.Result{}, errors.New("a test ran a CLI step without faking aiCLIRun")
 	}
 	code := m.Run()
+	if msg := guard.Report(""); msg != "" {
+		fmt.Fprintln(os.Stderr, "FAIL:", msg)
+		code = 1
+	}
 	_ = os.RemoveAll(dir)
 	os.Exit(code)
+}
+
+// cliGuard holds the stand-ins TestMain put first on PATH.
+var cliGuard *servicestest.Guard
+
+// Guard for TestMain: with no fake installed, every container / cluster
+// tool on PATH is the guard's stand-in, never the real one.
+func TestRealContainerCLIsAreBlocked(t *testing.T) {
+	for _, name := range servicestest.GuardedCLIs {
+		p, err := exec.LookPath(name)
+		if err != nil {
+			continue // not installed at all: nothing to reach
+		}
+		if cliGuard == nil || filepath.Dir(p) != cliGuard.Bin {
+			t.Errorf("a test would run the real %s at %s", name, p)
+		}
+	}
 }
 
 // Guard for TestMain: recordError must land in the temp config dir.
