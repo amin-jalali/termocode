@@ -39,7 +39,33 @@ When a shell ends (for example you type `exit`), its pane stays and says
 `[exited · Enter to restart · x to close]`. Press `Enter` to start a new shell
 there, or `x` to close the pane.
 
+## After a restart
+
+When you detach (over SSH, or when the connection drops), your shells keep
+running. When you quit and start termocode again, the shells end, but your
+terminal tabs come back:
+
+- each tab and each pane, split the same way,
+- each shell in the folder it was in (with shell integration, the folder you
+  last moved to with `cd`),
+- the same tab and pane in focus, and the panel open or hidden as before.
+
+Each shell is new: output, scrollback and environment values are not kept.
+
+- A pane that was running a program says so in its title bar, for example
+  `was running: npm`. Only the program name is kept.
+- If the folder is gone, the shell starts in the project folder and the pane
+  says so.
+- The note goes away when you type in the pane.
+
+To run the last command again with `Enter`, set
+`"terminal_restore_commands": true` in `config.json`. Then termocode also keeps
+the command line, and the pane shows `was running: npm run dev · Enter to run
+it again`. It is off by default, because a command line can hold a secret.
+
+To start with an empty panel every time, set `"terminal_restore": false`.
+
 ## Good to know
 
 - Switching to another tab hides its panes. The shells keep running.
-- Terminal tabs and panes are not restored after you quit termocode.
+- Tabs started by the task runner or the Services view are not restored.

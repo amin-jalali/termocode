@@ -318,7 +318,7 @@ var fileOnlySettings = []SettingEntry{
 	{Key: "terminal_restore", Type: "bool", Default: "true", Category: "Terminal (file only)",
 		Description: "After a restart of termocode, the terminal tabs of the project come back: each tab and split pane gets a fresh shell in the folder it was in, and the same tab and pane have focus. Output, scrollback and environment values are never kept. A pane that was running a program shows its name. A folder that is gone starts in the project folder. false: the panel starts empty. Read at start."},
 	{Key: "terminal_restore_commands", Type: "bool", Default: "false", Category: "Terminal (file only)",
-		Description: "With terminal_restore: also keep the last command line of a pane that was running a program (needs shell integration), so after a restart Enter in that pane runs it again. Command lines can hold secrets, so this is off by default; off, only the program name is kept."},
+		Description: "With terminal_restore: also keep the last command line of a pane that was running a program (needs shell integration), so after a restart Enter in that pane runs it again. Command lines can hold secrets, so this is off by default; off, only the program name is kept. Read at start."},
 	{Key: "terminal_shell_integration", Type: "bool", Default: "true", Category: "Terminal (file only)",
 		Description: "bash, zsh and fish terminal tabs load a small script (after your own rc file) that tells termocode each command, its exit code and the folder (OSC 133 / OSC 7). It gives the tab its folder name, the \"✦ Fix?\" chip on a failed command and the CLI agent marks. false starts the shell exactly as before. Read when a terminal tab opens; needs Neovim 0.10+."},
 }

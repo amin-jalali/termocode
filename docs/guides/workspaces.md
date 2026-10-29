@@ -43,7 +43,9 @@ termocode saves your session when you work and restores it on the next start:
 - extra workspace folders,
 - undo history for each file,
 - the Source Control tree / flat choice,
-- the last AI chat.
+- the last AI chat,
+- terminal tabs, their split panes and folders (new shells, no output: see
+  [The terminal](terminal.md#after-a-restart)).
 
 It also keeps your recent files (`Ctrl+R`), recent workspaces, breakpoints and
 theme.
@@ -112,7 +114,10 @@ leave out stays as it is when the layout opens:
   "panel": {
     "open": true, "rows": 14, "active": "terminal",
     "tabs": ["problems"],
-    "terminals": [{ "name": "api", "cwd": "cmd/api" }, { "name": "web", "cwd": "web" }]
+    "terminals": [
+      { "name": "api", "cwd": "cmd/api", "panes": [{ "split": "right", "cwd": "web" }] },
+      { "name": "logs" }
+    ]
   },
   "chat": { "open": false },
   "editor": { "split": "vertical", "panes": ["main.go", "main_test.go"], "files": ["README.md"] },
@@ -124,6 +129,11 @@ Sidebar views: `files`, `search`, `git`, `run`, `tests`, `containers`,
 `databases`, `itermoc`, `runs`. Panel tabs: `terminal`, `problems`, `output`,
 `tests`, `debug-console`.
 
+A terminal tab can list its split `panes` (up to 3). Each pane has `split`
+(`right` or `down`), `parent` (the pane it was split from: 0 is the tab's own
+shell, 1 the first pane in the list) and `cwd`. Older layout files without
+`panes` still work.
+
 When a layout opens:
 
 - Files that do not exist are skipped. One message says how many ("2 files not
@@ -131,7 +141,7 @@ When a layout opens:
 - A panel that needs something you do not have (a database connection, a
   running debug session) opens with its normal empty state.
 - Terminal tabs you already have stay; a layout only adds missing ones, each in
-  its folder.
+  its folder. A tab with a single shell gets the panes its entry lists.
 - Zen mode ends, so the layout shows.
 
 ## Start fresh
