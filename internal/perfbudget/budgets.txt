@@ -72,3 +72,6 @@ agent_worktree_create_5k  280   ms   # worktree of a 5 000-file repo, median of 
 agent_worktree_merge_20   650   ms   # merge 20 changed files back, median of 5; local 324 ms
 chat_save_2k_messages      90   ms   # end of a turn: save a 2 000-message chat, 50 chats stored; local 44 ms
 chat_load_2k_messages      13   ms   # open that chat; local 6.2 ms
+ai_send_to_request         25   ms   # Enter to the request leaving, 2 000-message chat, median of 15; local 0.95 ms (floor)
+ai_turn_3k_tokens          35   ms   # a 3 000-token answer applied and saved, no drawing, median of 7; local 17 ms
+ai_tool_calls_20           25   ms   # a turn that reads 20 files at once, median of 9; local 1.4 ms (floor)
