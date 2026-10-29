@@ -52,3 +52,21 @@ func BenchmarkFrameWidthMemo(b *testing.B) {
 		frameWidth(row)
 	}
 }
+
+// Entries live two frames: a row measured in one frame is known in the
+// next, and forgotten after a frame that did not use it.
+func TestFrameWidthsLiveTwoFrames(t *testing.T) {
+	row := strings.Repeat("w", 80)
+	nextFrameWidths()
+	setFrameWidth(row, 5) // a recorded width, so a hit is visible
+	nextFrameWidths()
+	if got := frameWidth(row); got != 5 {
+		t.Fatalf("next frame: %d, want the memo's 5", got)
+	}
+	nextFrameWidths()
+	nextFrameWidths()
+	nextFrameWidths()
+	if got := frameWidth(row); got != 80 {
+		t.Fatalf("after unused frames: %d, want 80 (measured again)", got)
+	}
+}

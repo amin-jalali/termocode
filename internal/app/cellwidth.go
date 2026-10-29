@@ -265,10 +265,16 @@ func setFrameWidth(s string, w int) {
 	rowWidths.Unlock()
 }
 
-// nextFrameWidths starts a new generation of rowWidths.
+// nextFrameWidths starts a new generation of rowWidths. The oldest
+// generation's map is emptied and used again (no new map per frame).
 func nextFrameWidths() {
 	rowWidths.Lock()
-	rowWidths.prev, rowWidths.cur = rowWidths.cur, make(map[*byte]rowWidth, len(rowWidths.cur))
+	old := rowWidths.prev
+	clear(old)
+	if old == nil {
+		old = make(map[*byte]rowWidth, len(rowWidths.cur))
+	}
+	rowWidths.prev, rowWidths.cur = rowWidths.cur, old
 	rowWidths.Unlock()
 }
 
