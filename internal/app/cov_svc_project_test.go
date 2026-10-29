@@ -28,10 +28,28 @@ func covSvcProject(t *testing.T) (*Model, *servicestest.Fake) {
 	t.Setenv("SSH_TTY", "")
 	f := servicestest.New(t)
 	t.Setenv("PATH", f.PathEnv())
+	for name, src := range map[string]string{"config.json": "config.json", "ps.json": "ps-lines.json"} {
+		b, err := os.ReadFile(filepath.Join("..", "services", "testdata", src))
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.Set(t, name, string(b))
+	}
 	st := svcTestState()
 	st.root = t.TempDir()
+	// The project files, so a refresh finds the same services.
+	for name, body := range map[string]string{
+		"compose.yaml": "services:\n  postgres:\n    image: postgres:16\n  redis:\n    image: redis:7\n  api:\n    build: .\n  mailhog:\n    image: mailhog/mailhog\n",
+		"Procfile":     "web: npm run dev\n",
+	} {
+		if err := os.WriteFile(filepath.Join(st.root, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
 	mm := svcTestModel(st, 120, 50)
-	return &mm, f
+	m := &mm
+	t.Cleanup(func() { m.services.stopWatch() })
+	return m, f
 }
 
 // covSvcNvim gives m a real headless nvim (closed at the end), so
