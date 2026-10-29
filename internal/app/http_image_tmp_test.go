@@ -19,7 +19,7 @@ func TestHTTPImagePreviewRemovesTempFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	m := m0.(Model)
 
 	open := func() string {
@@ -58,7 +58,7 @@ func TestHTTPImagePreviewRemovesTempFile(t *testing.T) {
 func TestImagePreviewKeepsUserFile(t *testing.T) {
 	withConfigDir(t)
 	path := writePNG(t, t.TempDir(), 4, 4)
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	m := m0.(Model)
 	m.openImagePreview(path)
 	nm, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
@@ -78,7 +78,7 @@ func TestHTTPImagePreviewTempGoneOnClose(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	m := m0.(Model)
 	run := testRun()
 	run.resp = &httpclient.Response{Status: 200, StatusText: "OK", ContentType: "image/png", IsBinary: true, Size: int64(len(png)), Body: png}

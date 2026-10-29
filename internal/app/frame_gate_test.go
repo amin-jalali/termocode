@@ -11,7 +11,7 @@ import (
 func gateModel(t *testing.T) Model {
 	t.Helper()
 	withConfigDir(t)
-	m := New()
+	m := newTestModel(t)
 	m.gate = &frameGate{on: true}
 	nm, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	m = nm.(Model)

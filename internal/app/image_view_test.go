@@ -39,7 +39,7 @@ func writePNG(t *testing.T, dir string, w, h int) string {
 func TestImagePreviewOpensInsteadOfRefusing(t *testing.T) {
 	withConfigDir(t)
 	path := writePNG(t, t.TempDir(), 40, 30)
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	m := m0.(Model)
 	next, cmd := m.updateInner(explorer.OpenFileMsg{Path: path})
 	mm := next

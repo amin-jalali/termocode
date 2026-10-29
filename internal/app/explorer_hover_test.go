@@ -13,7 +13,7 @@ import (
 // and save the session file on every mouse move.
 func TestExplorerHoverDoesNotSaveSession(t *testing.T) {
 	withConfigDir(t)
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 160, Height: 45})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 160, Height: 45})
 	m := m0.(Model)
 	p, err := sessionPath()
 	if err != nil {

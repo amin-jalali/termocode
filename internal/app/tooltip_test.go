@@ -52,7 +52,7 @@ func TestTooltipPaletteIDs(t *testing.T) {
 		}
 	}
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	m := New()
+	m := newTestModel(t)
 	if got := m.tooltipText("actions:close"); got != "Close panel (Alt+A)" {
 		t.Errorf("actions:close label = %q", got)
 	}

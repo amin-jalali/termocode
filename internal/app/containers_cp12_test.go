@@ -67,7 +67,7 @@ func promptValue(m *Model) string {
 func filterDemo(t *testing.T) *Model {
 	t.Helper()
 	withConfigDir(t)
-	m0 := New()
+	m0 := newTestModel(t)
 	m0.w, m0.h = 120, 60
 	m := &m0
 	m.containersDemo("")
@@ -750,7 +750,7 @@ func TestContainersRowOpenInDatabases(t *testing.T) {
 // name and the short id (the demo is what the golden shows).
 func TestContainersDemoAICard(t *testing.T) {
 	withConfigDir(t)
-	m0 := New()
+	m0 := newTestModel(t)
 	m0.w, m0.h = 120, 40
 	m := &m0
 	m.containersDemo("ai-card")

@@ -37,7 +37,7 @@ func TestDatabasesRenderInvariantsPoorTerminals(t *testing.T) {
 		theme.ApplyTheme("vscode-dark-plus")
 	}()
 	const w, h = 100, 30
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: w, Height: h})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: w, Height: h})
 	base := m0.(Model)
 	scenes := []struct{ name, arg, marker string }{
 		{"tree", "", "users"}, {"empty", "empty", "No databases yet"}, {"no-sqlite", "no-sqlite", "sqlite3"},
@@ -325,7 +325,7 @@ const maxAllocsDBSidebarCached = 16 // the cache key and the stopped hint (measu
 // asks for no work.
 func TestPerfGuardDatabasesViewHiddenAndIdle(t *testing.T) {
 	withConfigDir(t)
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	m := m0.(Model)
 	m.runDevAction("dbdemo")
 	s := m.databases
@@ -427,7 +427,7 @@ func TestDatabasesCompareScenesFitAndIdle(t *testing.T) {
 		for _, icons := range []theme.IconMode{theme.IconModeASCII, theme.IconModeNerdFont} {
 			theme.CurrentIconMode = icons
 			for _, sc := range []string{"compare-pick", "compare"} {
-				m0, _ := New().Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
+				m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: size[0], Height: size[1]})
 				m := m0.(Model)
 				m.runDevAction("dbdemo:" + sc)
 				out := m.View()

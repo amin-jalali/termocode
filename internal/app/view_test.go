@@ -12,7 +12,7 @@ func TestViewDoesNotPanicAcrossSizes(t *testing.T) {
 		{80, 24}, {120, 40}, {40, 12}, {200, 80}, {1, 1},
 	}
 	for _, s := range sizes {
-		m := New()
+		m := newTestModel(t)
 		updated, _ := m.Update(tea.WindowSizeMsg{Width: s.w, Height: s.h})
 		out := updated.View()
 		if out == "" && s.w > 1 && s.h > 1 {
@@ -23,7 +23,7 @@ func TestViewDoesNotPanicAcrossSizes(t *testing.T) {
 
 func TestKeyDispatchSequence(t *testing.T) {
 	withConfigDir(t) // never read the developer's real session (open panels, widths)
-	m := New()
+	m := newTestModel(t)
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 
 	keys := []tea.KeyMsg{

@@ -119,3 +119,14 @@ func TestErrorLogIsSandboxed(t *testing.T) {
 		t.Fatalf("errors.log not in sandbox: %v", err)
 	}
 }
+
+// newTestModel is New for tests: the nvim it starts is closed, and waited
+// for, when the test ends.
+func newTestModel(tb testing.TB) Model {
+	tb.Helper()
+	m := New()
+	if c := m.nvim; c != nil {
+		tb.Cleanup(func() { _ = c.Close() })
+	}
+	return m
+}

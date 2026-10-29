@@ -20,7 +20,7 @@ func welcomeModel(t *testing.T) Model {
 	theme.CurrentIconMode = theme.IconModeUnicode
 	t.Cleanup(func() { theme.CurrentIconMode = old })
 	withWelcomeLists(t, 7, 2)
-	nm, _ := New().Update(tea.WindowSizeMsg{Width: 150, Height: 42})
+	nm, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 150, Height: 42})
 	m := nm.(Model)
 	m.focus = FocusEditor
 	return m

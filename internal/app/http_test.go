@@ -222,7 +222,7 @@ func TestHTTPSettingsCatalog(t *testing.T) {
 // The values round-trip through config.json and the settings code.
 func TestHTTPSettingApply(t *testing.T) {
 	withConfigDir(t)
-	m := New()
+	m := newTestModel(t)
 	row, ok := findSettingsRow("setting-http-timeout")
 	if !ok {
 		t.Fatal("no row")

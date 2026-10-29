@@ -20,7 +20,7 @@ func TestDBCompareCardKeysCopyAndClose(t *testing.T) {
 	var mu sync.Mutex
 	var clip []string
 	defer SetClipboardSink(func(s string) { mu.Lock(); clip = append(clip, s); mu.Unlock() })()
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	m := m0.(Model)
 	m.runDevAction("dbdemo:compare")
 	if !m.reviewOpen {
@@ -68,7 +68,7 @@ func TestDBCompareHelpTopicAndButtonClick(t *testing.T) {
 	defer SetClipboardSink(func(s string) { mu.Lock(); clip = append(clip, s); mu.Unlock() })()
 	want := "guides/databases.md#compare-schemas"
 	for _, sc := range []string{"compare-pick", "compare"} {
-		m0, _ := New().Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+		m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 		m := m0.(Model)
 		m.runDevAction("dbdemo:" + sc)
 		if got := m.helpTopicForFocus(); got != want {
@@ -101,7 +101,7 @@ func TestDBCompareHelpTopicAndButtonClick(t *testing.T) {
 // review card (it is not added to the read-only compare card).
 func TestDBCompareCardMakesRoomForAnAIReview(t *testing.T) {
 	withConfigDir(t)
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	m := m0.(Model)
 	m.runDevAction("dbdemo:compare")
 	m.addAIReview(&aiReviewItem{file: diffview.File{Name: "a.go", Old: "a\n", New: "b\n"}})
@@ -115,7 +115,7 @@ func TestDBCompareCardMakesRoomForAnAIReview(t *testing.T) {
 // the card's buttons.
 func TestDBCompareProgressToastGoesWhenCardOpens(t *testing.T) {
 	withConfigDir(t)
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 120, Height: 36})
+	m0, _ := newTestModel(t).Update(tea.WindowSizeMsg{Width: 120, Height: 36})
 	m := m0.(Model)
 	m.runDevAction("dbdemo:compare-pick")
 	m.pickerOpen = false

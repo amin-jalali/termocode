@@ -19,7 +19,7 @@ func TestAutoReconnectSetting(t *testing.T) {
 	if got := currentSettingValue(row, loadSettings()); got != "true" {
 		t.Errorf("shown as %q, want true", got)
 	}
-	m := New()
+	m := newTestModel(t)
 	m.applySetting(row.ID, "false")
 	if ConfigAutoReconnect() {
 		t.Error("still on after turning it off")

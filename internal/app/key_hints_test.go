@@ -23,7 +23,7 @@ func TestKeyHintsDefaultOn(t *testing.T) {
 // Spec: "Help: Toggle Key Hints" flips the setting, saves it and says so.
 func TestToggleKeyHintsPersists(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	m := New()
+	m := newTestModel(t)
 	m.toggleKeyHints()
 	if keyHintsEnabled(loadSettings()) {
 		t.Error("first toggle must turn it off")
@@ -50,7 +50,7 @@ func TestKeyHintsPaletteAndRow(t *testing.T) {
 	if !ok || r.Label != "key_hints" || r.Default != "true" {
 		t.Fatalf("row = %+v ok=%v", r, ok)
 	}
-	m := New()
+	m := newTestModel(t)
 	m.toggleKeyHints()
 	if got := currentSettingValue(r, loadSettings()); got != "false" {
 		t.Errorf("row value after toggle = %q", got)
@@ -78,7 +78,7 @@ func hintModel(t *testing.T) (Model, *fakeHints, *time.Time) {
 		{LHS: "<Space>gs", Desc: "Stage hunk"},
 		{LHS: "<Space>gp", Desc: "Push"},
 	}}
-	m := New()
+	m := newTestModel(t)
 	m.w, m.h = 80, 24
 	m.focus = FocusEditor
 	m.hintSrc = f
@@ -243,7 +243,7 @@ vim.keymap.set('n', '<leader>wv', '<Cmd>vsplit<CR>')`); err != nil {
 // level deeper, and the "no binding" hint.
 func TestKeyHintsDemoScreens(t *testing.T) {
 	for arg, want := range map[string]string{"": "Format the buffer", "group": "Search in files", "notice": "no binding: q"} {
-		m := New()
+		m := newTestModel(t)
 		m.w, m.h = 80, 24
 		m.keyHintsDemo(arg)
 		if got := hintScreen(m); !strings.Contains(got, want) {

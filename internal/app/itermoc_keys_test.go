@@ -153,7 +153,7 @@ func TestChipTooltips(t *testing.T) {
 	// Only the keymap is needed. A real nvim would outlive the test and
 	// write into XDG_CONFIG_HOME while t.TempDir removes it.
 	t.Setenv("TERMOCODE_NO_NVIM", "1")
-	k := New() // the live keymap gives the key
+	k := newTestModel(t) // the live keymap gives the key
 	k.ai = m.ai
 	got := k.tooltipText("ai:profile")
 	for _, want := range []string{"Profile", "click", "pick", "Alt+Shift+P", "next"} {
