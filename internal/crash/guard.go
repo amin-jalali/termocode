@@ -50,8 +50,8 @@ func Guard(where string) {
 func Go(where string, fn func()) {
 	go func() {
 		defer Guard(where)
-		injected(where)
 		fn()
+		injected(where)
 	}()
 }
 
@@ -60,8 +60,8 @@ func Go(where string, fn func()) {
 func GoWith(where string, fn func(), onPanic func()) {
 	go func() {
 		defer guardThen(where, onPanic)
-		injected(where)
 		fn()
+		injected(where)
 	}()
 }
 
@@ -80,7 +80,8 @@ var (
 )
 
 // PanicIn makes the next goroutine started by Go or GoWith(where, …)
-// panic before its work (tests only). undo removes it.
+// panic at the end of its work, after fn's own defers ran, like a panic
+// in its last line (tests only). undo removes it.
 func PanicIn(where string) (undo func()) {
 	hookMu.Lock()
 	if hooks == nil {
