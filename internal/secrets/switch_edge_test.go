@@ -20,14 +20,23 @@ type fakeBackend struct {
 	getErr, setErr  error
 	delErr          error
 	missing, differ map[string]bool
+	locked          bool
+	unlockErr       error
+	deleted         []string
 }
 
 func newFakeBackend() *fakeBackend { return &fakeBackend{data: map[string]string{}} }
 
-func (f *fakeBackend) Name() string        { return "fake" }
-func (f *fakeBackend) Locked() bool        { return false }
-func (f *fakeBackend) Unlock(string) error { return nil }
-func (f *fakeBackend) Lock()               {}
+func (f *fakeBackend) Name() string { return "fake" }
+func (f *fakeBackend) Locked() bool { return f.locked }
+func (f *fakeBackend) Unlock(string) error {
+	if f.unlockErr != nil {
+		return f.unlockErr
+	}
+	f.locked = false
+	return nil
+}
+func (f *fakeBackend) Lock() {}
 func (f *fakeBackend) Get(n string) (string, bool, error) {
 	if f.getErr != nil {
 		return "", false, f.getErr
@@ -52,6 +61,7 @@ func (f *fakeBackend) Delete(n string) error {
 	if f.delErr != nil {
 		return f.delErr
 	}
+	f.deleted = append(f.deleted, n)
 	delete(f.data, n)
 	return nil
 }
