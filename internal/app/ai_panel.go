@@ -730,7 +730,7 @@ func (s *aiState) renderAnswer(i int, text string, width int, streaming, resizin
 	if e, ok := s.mdCache[i]; ok && (e.key == key || (resizing && e.key.text == text && e.key.theme == key.theme)) {
 		return e.lines
 	}
-	lines := renderChatMarkdown(text, width, aiIndent, i, streaming)
+	lines := s.renderAnswerParts(i, text, width, streaming)
 	s.mdCache[i] = aiMDEntry{key: key, lines: lines}
 	return lines
 }
@@ -750,6 +750,7 @@ func (s *aiState) dropRenderCaches() {
 		return
 	}
 	s.transcript, s.inputCache, s.mdCache = aiTranscriptCache{}, aiInputCache{}, nil
+	s.mdStream = aiMDStream{}
 }
 
 // pruneMDCache drops rendered answers past the last message (a cleared
@@ -759,6 +760,9 @@ func (s *aiState) pruneMDCache(n int) {
 		if i >= n {
 			delete(s.mdCache, i)
 		}
+	}
+	if s.mdStream.i >= n {
+		s.mdStream = aiMDStream{}
 	}
 }
 

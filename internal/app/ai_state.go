@@ -227,6 +227,8 @@ type aiState struct {
 
 	// mdCache holds rendered answers per message index (ai_panel.go).
 	mdCache map[int]aiMDEntry
+	// mdStream keeps the drawn start of a long answer (ai_md_stream.go).
+	mdStream aiMDStream
 	// transcript keeps the built transcript and its drawn rows between
 	// frames (ai_panel.go).
 	transcript aiTranscriptCache
