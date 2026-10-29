@@ -114,8 +114,13 @@ func writeFrame(w io.Writer, body []byte) error {
 func ReadMessage(r *bufio.Reader) ([]byte, error) {
 	length := -1
 	first := true
+	total := 0
 	for {
-		line, err := r.ReadString('\n')
+		line, err := readHeaderLine(r, maxHeader-total)
+		total += len(line)
+		if errors.Is(err, errHeaderTooBig) {
+			return nil, err
+		}
 		if err != nil {
 			if first && line == "" && errors.Is(err, io.EOF) {
 				return nil, io.EOF
@@ -150,6 +155,29 @@ func ReadMessage(r *bufio.Reader) ([]byte, error) {
 		return nil, fmt.Errorf("reading body: %w", err)
 	}
 	return body, nil
+}
+
+// maxHeader caps the header block of one message, so a peer cannot make
+// the reader buffer a header line without end.
+const maxHeader = 64 << 10
+
+var errHeaderTooBig = fmt.Errorf("message header too big (over %d bytes)", maxHeader)
+
+// readHeaderLine reads up to and including '\n', failing once the line
+// would pass limit bytes.
+func readHeaderLine(r *bufio.Reader, limit int) (string, error) {
+	var line []byte
+	for {
+		part, err := r.ReadSlice('\n')
+		if len(line)+len(part) > limit {
+			return "", errHeaderTooBig
+		}
+		line = append(line, part...)
+		if err == bufio.ErrBufferFull {
+			continue
+		}
+		return string(line), err
+	}
 }
 
 // Framing is how messages are cut on the wire.
