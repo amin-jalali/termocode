@@ -11,9 +11,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mattn/go-runewidth"
 
 	"github.com/amin-jalali/termocode/internal/agents"
+	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/keymap"
 	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/theme"

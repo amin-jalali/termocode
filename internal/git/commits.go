@@ -7,8 +7,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/mattn/go-runewidth"
-
+	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/clock"
 )
 

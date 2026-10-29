@@ -5,8 +5,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
+	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/theme"
-	"github.com/mattn/go-runewidth"
 
 	tea "github.com/charmbracelet/bubbletea"
 )

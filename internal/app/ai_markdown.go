@@ -7,8 +7,8 @@ import (
 	"github.com/alecthomas/chroma/v2"
 	"github.com/alecthomas/chroma/v2/lexers"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/mattn/go-runewidth"
 
+	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/rtl"
 	"github.com/amin-jalali/termocode/internal/theme"
 )

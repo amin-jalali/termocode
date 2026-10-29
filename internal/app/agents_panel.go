@@ -11,10 +11,10 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/mattn/go-runewidth"
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
+	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/theme"
 )

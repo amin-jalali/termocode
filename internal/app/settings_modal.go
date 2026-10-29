@@ -6,8 +6,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/theme"
-	"github.com/mattn/go-runewidth"
 )
 
 // SettingsSelectMsg is emitted when the user activates a settings row in the
