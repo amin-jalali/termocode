@@ -226,6 +226,40 @@ termocode asks GitHub right after a push, every 20 seconds while a run is
 going, and every 5 minutes otherwise. It does not ask while the terminal
 window is in the background.
 
+### Work with pull requests
+
+termocode uses the `gh` command, so you need `gh` installed and signed in.
+Without it you see one quiet hint.
+
+**Git: Pull Requests…** lists the open pull requests. Each row has the
+number, title, author and branch, and the state: Draft, checks (✓ ✗ …) and
+review. Type to filter. `Enter` opens a pull request.
+
+The pull request card shows the title, state, branches, checks, changed
+files, the description and the reviews. Its buttons:
+
+- **Files…**: opens the changes in the diff card (the changed parts of each
+  file).
+- **Actions…**: a list of what you can do:
+  - **Open in Browser** (over SSH it copies the link)
+  - **Read Description**: the whole text in a read-only tab
+  - **Check Out Branch**: refused when tracked files have changes
+  - **Approve…**, **Request Changes…**, **Comment…**: a small text input.
+    Request Changes and Comment need a message.
+  - **Mark Ready for Review** / **Convert to Draft**
+  - **Merge…**: a card with **Cancel** first. Choose squash, merge commit or
+    rebase. The card warns when checks failed or still run, when there are
+    conflicts, or when a reviewer asked for changes. termocode never
+    bypasses the rules of the repository.
+
+**Git: Create Pull Request…** starts from your current branch. The title is
+the first commit, the description lists all commit subjects, and the base is
+the default branch. Edit the title, then choose **Create** or **Create as
+Draft**. If the branch is not pushed, termocode offers a plain push first
+(never a forced one).
+
+The AI can open the list. It cannot create, merge or review a pull request.
+
 ## Keys at a glance
 
 In the Source Control panel:
