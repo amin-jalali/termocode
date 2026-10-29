@@ -307,19 +307,32 @@ func httpRootFor(path string) string {
 	return best
 }
 
-// httpSecretLookup reads {{$secret NAME}} from ai/credentials.json (the
-// store MCP uses for ${secret:NAME}).
-func httpSecretLookup(name string) (string, bool) {
-	path, err := ai.CredentialsPath()
-	if err != nil {
-		return "", false
+// httpLoadCredentials reads the credentials store (a test hook).
+var httpLoadCredentials = ai.LoadCredentials
+
+// httpSecretLookup returns a {{$secret NAME}} lookup in
+// ai/credentials.json (the store MCP uses for ${secret:NAME}). The
+// store is read once, on the first lookup, so one resolver (one send,
+// one buffer refresh) never reads it per placeholder; a new lookup
+// reads it again.
+func httpSecretLookup() func(name string) (string, bool) {
+	var (
+		once    sync.Once
+		secrets map[string]string
+	)
+	return func(name string) (string, bool) {
+		once.Do(func() {
+			path, err := ai.CredentialsPath()
+			if err != nil {
+				return
+			}
+			if c, err := httpLoadCredentials(path); err == nil {
+				secrets = c.MCPSecrets
+			}
+		})
+		v, ok := secrets[name]
+		return v, ok
 	}
-	c, err := ai.LoadCredentials(path)
-	if err != nil {
-		return "", false
-	}
-	v, ok := c.MCPSecrets[name]
-	return v, ok
 }
 
 // httpResolver builds the resolver for a .http file (or a quick request
@@ -341,7 +354,7 @@ func httpResolver(file string, fileVars []httpclient.Var, env string) *httpclien
 		FileVars: fileVars,
 		Env:      env,
 		Envs:     httpclient.LoadEnvs(dir, root),
-		Secret:   httpSecretLookup,
+		Secret:   httpSecretLookup(),
 		OnSecret: ai.RegisterSecret,
 	}
 }
