@@ -91,20 +91,35 @@ func (m *Model) aiChatHistory(system string) []ai.Message {
 // pipeline run's step tool lines count as the turn's tools.
 func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 	s := m.aiS()
-	msgs := []ai.Message{{Role: ai.RoleSystem, Content: system}}
-	var tools, text []string
+	users := 0
+	for i := range s.conv.Messages[:n] {
+		if s.conv.Messages[i].Role == ai.StoredUser {
+			users++
+		}
+	}
+	msgs := make([]ai.Message, 1, 2*users+2) // a user and an assistant message per turn
+	msgs[0] = ai.Message{Role: ai.RoleSystem, Content: system}
+	var tools, text []string // reused from turn to turn (the joins copy)
 	flush := func() {
-		var parts []string
-		if len(tools) > 0 {
-			parts = append(parts, "[tools I ran]\n"+strings.Join(tools, "\n"))
+		t := ""
+		if len(text) == 1 {
+			t = strings.TrimSpace(text[0]) // the usual case: no join
+		} else if len(text) > 1 {
+			t = strings.TrimSpace(strings.Join(text, ""))
 		}
-		if t := strings.TrimSpace(strings.Join(text, "")); t != "" {
-			parts = append(parts, t)
+		var c string
+		switch {
+		case len(tools) > 0 && t != "":
+			c = "[tools I ran]\n" + strings.Join(tools, "\n") + "\n\n" + t
+		case len(tools) > 0:
+			c = "[tools I ran]\n" + strings.Join(tools, "\n")
+		default:
+			c = t
 		}
-		if len(parts) > 0 {
-			msgs = append(msgs, ai.Message{Role: ai.RoleAssistant, Content: strings.Join(parts, "\n\n")})
+		if c != "" {
+			msgs = append(msgs, ai.Message{Role: ai.RoleAssistant, Content: c})
 		}
-		tools, text = nil, nil
+		tools, text = tools[:0], text[:0]
 	}
 	for _, sm := range s.conv.Messages[:n] {
 		switch sm.Role {
