@@ -2,6 +2,7 @@ package httpclient
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
