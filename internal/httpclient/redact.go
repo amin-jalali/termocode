@@ -4,6 +4,7 @@ import (
 	"net"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -168,11 +169,62 @@ func ClassifyHost(host string) HostClass {
 		}
 		return HostPublic
 	}
+	// System resolvers still read short, octal and hex IPv4 forms
+	// ("127.1", "0x7f.0.0.1"); class them by the address they name.
+	if ip, ok := looseIPv4(h); ok {
+		if c := ClassifyHost(ip.String()); c != HostPublic {
+			return c
+		}
+	}
 	if !strings.Contains(h, ".") || strings.HasSuffix(h, ".internal") || strings.HasSuffix(h, ".local") ||
 		strings.HasSuffix(h, ".lan") || strings.HasSuffix(h, ".home.arpa") {
 		return HostPrivate
 	}
 	return HostPublic
+}
+
+// looseIPv4 reads an IPv4 address the way inet_aton does: one to four
+// dot parts, each decimal, octal (leading 0) or hex (0x); the last part
+// fills the bytes that are left.
+func looseIPv4(h string) (net.IP, bool) {
+	parts := strings.Split(h, ".")
+	if len(parts) > 4 {
+		return nil, false
+	}
+	var vals []uint64
+	for _, p := range parts {
+		base, digits := 10, p
+		switch {
+		case strings.HasPrefix(p, "0x"):
+			base, digits = 16, p[2:]
+		case len(p) > 1 && p[0] == '0':
+			base, digits = 8, p[1:]
+		}
+		if digits == "" && base != 8 {
+			return nil, false
+		}
+		if digits == "" {
+			digits = "0"
+		}
+		v, err := strconv.ParseUint(digits, base, 32)
+		if err != nil {
+			return nil, false
+		}
+		vals = append(vals, v)
+	}
+	var n uint64
+	for i, v := range vals[:len(vals)-1] {
+		if v > 0xff {
+			return nil, false
+		}
+		n |= v << (24 - 8*i)
+	}
+	last := vals[len(vals)-1]
+	if last >= 1<<(8*(5-len(vals))) {
+		return nil, false
+	}
+	n |= last
+	return net.IPv4(byte(n>>24), byte(n>>16), byte(n>>8), byte(n)), true
 }
 
 var cgnat = &net.IPNet{IP: net.IPv4(100, 64, 0, 0), Mask: net.CIDRMask(10, 32)}
