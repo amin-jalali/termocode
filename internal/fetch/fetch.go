@@ -135,6 +135,13 @@ func ExtractTarGz(path, dest string, m NameMapper) error {
 		return err
 	}
 	defer gz.Close()
+	if err := os.MkdirAll(dest, 0o755); err != nil {
+		return err
+	}
+	realDest, err := filepath.EvalSymlinks(dest)
+	if err != nil {
+		return err
+	}
 	tr := tar.NewReader(gz)
 	for {
 		h, err := tr.Next()
@@ -152,6 +159,12 @@ func ExtractTarGz(path, dest string, m NameMapper) error {
 		if err != nil {
 			return err
 		}
+		// Check the parent as it is on disk: an earlier symlink entry
+		// may already sit in the path.
+		realParent := resolveExisting(filepath.Dir(target))
+		if !within(realDest, realParent) {
+			return fmt.Errorf("archive entry %q escapes destination", rel)
+		}
 		switch h.Typeflag {
 		case tar.TypeDir:
 			if err := os.MkdirAll(target, 0o755); err != nil {
@@ -162,14 +175,14 @@ func ExtractTarGz(path, dest string, m NameMapper) error {
 				return err
 			}
 		case tar.TypeSymlink:
-			// Resolve the link relative to its own directory and refuse
+			// Resolve the link relative to its real directory and refuse
 			// anything that would point outside dest.
-			linkTarget := filepath.Join(filepath.Dir(target), h.Linkname)
+			linkTarget := filepath.Join(realParent, h.Linkname)
 			if filepath.IsAbs(h.Linkname) {
-				linkTarget = h.Linkname
+				linkTarget = resolveExisting(h.Linkname)
 			}
-			if _, err := safeJoin(dest, relOrSelf(dest, linkTarget)); err != nil {
-				return err
+			if !within(realDest, linkTarget) {
+				return fmt.Errorf("archive link %q escapes destination", rel)
 			}
 			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return err
@@ -182,12 +195,25 @@ func ExtractTarGz(path, dest string, m NameMapper) error {
 	}
 }
 
-func relOrSelf(base, p string) string {
-	r, err := filepath.Rel(base, p)
-	if err != nil {
-		return p
+// resolveExisting resolves the symlinks of the longest existing prefix of
+// p and appends the rest unchanged.
+func resolveExisting(p string) string {
+	rest := ""
+	for cur := filepath.Clean(p); ; cur = filepath.Dir(cur) {
+		if r, err := filepath.EvalSymlinks(cur); err == nil {
+			return filepath.Join(r, rest)
+		}
+		if cur == filepath.Dir(cur) {
+			return filepath.Clean(p)
+		}
+		rest = filepath.Join(filepath.Base(cur), rest)
 	}
-	return filepath.ToSlash(r)
+}
+
+// within reports whether p is root or below it.
+func within(root, p string) bool {
+	p = filepath.Clean(p)
+	return p == root || strings.HasPrefix(p, root+string(filepath.Separator))
 }
 
 // Gunzip decompresses a single-file .gz into dest with the given mode.
