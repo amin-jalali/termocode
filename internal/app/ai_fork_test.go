@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/amin-jalali/termocode/internal/ai"
 )
 
@@ -125,6 +127,47 @@ func TestAIForkPalettePicker(t *testing.T) {
 	m.handleAIPickerSelect("2")
 	if string(m.aiS().input) != "second question" {
 		t.Fatalf("pick did not fork: input %q", string(m.aiS().input))
+	}
+}
+
+// Alt+K in the focused chat opens the same picker.
+func TestAIForkKey(t *testing.T) {
+	m, _ := forkModel(t)
+	m.actionsOpen, m.actionsPinned = true, true
+	m.aiS().focused = true
+	if !m.actionsPanelVisible() {
+		t.Skip("panel not visible in this model")
+	}
+	_, ok := m.routeAIPanelKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}, Alt: true})
+	if !ok || !m.pickerOpen || m.pickerKind != pickerKindAIFork {
+		t.Fatalf("handled %v picker %v", ok, m.pickerOpen)
+	}
+}
+
+// The transcript's right-click menu has "Fork Chat from Here" on a
+// message, and it forks at that message.
+func TestAIForkContextMenu(t *testing.T) {
+	m, _ := forkModel(t)
+	s := m.aiS()
+	s.sel.ctxMsg = 2 // 1-based: the first answer
+	found := false
+	for _, it := range m.aiChatMenuItems() {
+		if it.ID == aiMenuForkHere {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("no fork entry in the menu")
+	}
+	m.handleAIChatMenuSelect(aiMenuForkHere)
+	if len(s.conv.Messages) != 2 || s.conv.ForkedFrom == nil || s.conv.ForkedFrom.Message != 2 {
+		t.Fatalf("fork %+v", s.conv)
+	}
+	s.sel.ctxMsg = 0
+	for _, it := range m.aiChatMenuItems() {
+		if it.ID == aiMenuForkHere {
+			t.Error("fork entry without a message under the pointer")
+		}
 	}
 }
 

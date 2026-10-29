@@ -1106,6 +1106,8 @@ func (m *Model) routeAIPanelKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		return m.aiCancelAll(), true
 	case "ctrl+n":
 		return m.newAIChat(), true
+	case aiForkKey: // G-FORK: pick the message to fork from
+		return m.openAIForkPicker(), true
 	case "tab", "shift+tab": // select a step card (Enter toggles it)
 		dir := 1
 		if msg.String() == "shift+tab" {

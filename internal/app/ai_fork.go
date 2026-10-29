@@ -19,6 +19,9 @@ import (
 
 const pickerKindAIFork pickerKindEnum = 975
 
+// aiForkKey forks from a picked message in the focused chat panel.
+const aiForkKey = "alt+k"
+
 // aiForkLimit is the last message a fork may start at: while a reply
 // streams, the running turn's question (its answer is not finished).
 func aiForkLimit(s *aiState) int {

@@ -448,6 +448,7 @@ const (
 	aiMenuCopyMessage   = "ai-chat-copy-message"
 	aiMenuCopySelection = "ai-chat-copy-selection"
 	aiMenuCopyCode      = "ai-chat-copy-code"
+	aiMenuForkHere      = "ai-chat-fork-here"
 )
 
 // aiChatRightClick opens the transcript context menu for the row at y.
@@ -464,6 +465,20 @@ func (m *Model) aiChatRightClick(x, y int) {
 	if r := start + y - g.transTop; r >= 0 && r < len(lines) {
 		s.sel.ctxMsg, s.sel.ctxBlock = lines[r].msg, lines[r].block
 	}
+	items := m.aiChatMenuItems()
+	if len(items) == 0 {
+		return
+	}
+	m.menu = menu.New(items, x, y)
+	m.menu.SetScreenSize(m.w, m.h)
+	m.menuOpen = true
+	m.menuKind = menuKindAIChat
+}
+
+// aiChatMenuItems are the transcript menu's rows for s.sel.ctxMsg /
+// ctxBlock and the selection.
+func (m *Model) aiChatMenuItems() []menu.Item {
+	s := m.aiS()
 	var items []menu.Item
 	if s.sel.ctxMsg > 0 {
 		items = append(items, menu.Item{ID: aiMenuCopyMessage, Title: "Copy Message", Icon: "⎘"})
@@ -474,13 +489,10 @@ func (m *Model) aiChatRightClick(x, y int) {
 	if s.sel.ctxMsg > 0 && s.sel.ctxBlock > 0 {
 		items = append(items, menu.Item{ID: aiMenuCopyCode, Title: "Copy Code Block", Icon: "⎘"})
 	}
-	if len(items) == 0 {
-		return
+	if s.sel.ctxMsg > 0 && s.sel.ctxMsg <= len(s.conv.Messages) {
+		items = append(items, menu.Item{ID: aiMenuForkHere, Title: "Fork Chat from Here", Hint: "Alt+K", Icon: "⑂"})
 	}
-	m.menu = menu.New(items, x, y)
-	m.menu.SetScreenSize(m.w, m.h)
-	m.menuOpen = true
-	m.menuKind = menuKindAIChat
+	return items
 }
 
 // handleAIChatMenuSelect runs a transcript context-menu entry.
@@ -492,6 +504,8 @@ func (m *Model) handleAIChatMenuSelect(id string) tea.Cmd {
 	case aiMenuCopySelection:
 		cmd, _ := m.aiCopySelection()
 		return cmd
+	case aiMenuForkHere:
+		return m.aiForkChat(s.sel.ctxMsg - 1)
 	case aiMenuCopyCode:
 		text, ok := m.aiMessageText(s.sel.ctxMsg - 1)
 		if !ok {
