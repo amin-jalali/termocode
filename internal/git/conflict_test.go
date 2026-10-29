@@ -135,3 +135,83 @@ func TestFileStatusConflicted(t *testing.T) {
 		}
 	}
 }
+
+func TestReplacementTheirsFirstAndBase(t *testing.T) {
+	text := "<<<<<<< HEAD\no\n||||||| base\nb\n=======\nt\n>>>>>>> x\n"
+	b := ParseConflicts(text)[0]
+	if got := b.Replacement(AcceptBothTheirsFirst); !reflect.DeepEqual(got, []string{"t", "o"}) {
+		t.Errorf("theirs first = %q", got)
+	}
+	if got := b.Replacement(AcceptBase); !reflect.DeepEqual(got, []string{"b"}) {
+		t.Errorf("base = %q", got)
+	}
+	if got := ResolveConflict(text, b, AcceptBase); got != "b\n" {
+		t.Errorf("resolve base = %q", got)
+	}
+	// No diff3 section: the caller gives the base lines.
+	b2 := ParseConflicts("<<<<<<< HEAD\no\n=======\nt\n>>>>>>> x")[0]
+	if got := b2.Replacement(AcceptBase); len(got) != 0 {
+		t.Errorf("unknown base = %q", got)
+	}
+	b2.BaseLn = []string{"from index"}
+	if got := ResolveConflict("<<<<<<< HEAD\no\n=======\nt\n>>>>>>> x", b2, AcceptBase); got != "from index" {
+		t.Errorf("given base, no final newline = %q", got)
+	}
+}
+
+func TestResolveEveryWayCRLF(t *testing.T) {
+	text := "a\r\n<<<<<<< HEAD\r\no\r\n||||||| base\r\nb\r\n=======\r\nt\r\n>>>>>>> x\r\nz\r\n"
+	b := ParseConflicts(text)[0]
+	want := map[Resolution]string{
+		AcceptOurs:            "a\r\no\r\nz\r\n",
+		AcceptTheirs:          "a\r\nt\r\nz\r\n",
+		AcceptBoth:            "a\r\no\r\nt\r\nz\r\n",
+		AcceptBothTheirsFirst: "a\r\nt\r\no\r\nz\r\n",
+		AcceptBase:            "a\r\nb\r\nz\r\n",
+	}
+	for r, w := range want {
+		if got := ResolveConflict(text, b, r); got != w {
+			t.Errorf("resolution %d = %q, want %q", r, got, w)
+		}
+	}
+}
+
+func TestParseKeepsMarkerLookalikes(t *testing.T) {
+	// 8-char runs and a Markdown underline inside the bodies are text.
+	text := "<<<<<<< HEAD\n<<<<<<<< not a marker\nTitle\n========\n=======\n>>>>>>>> nope\nt\n>>>>>>> x\n"
+	bs := ParseConflicts(text)
+	if len(bs) != 1 {
+		t.Fatalf("blocks = %d", len(bs))
+	}
+	if want := []string{"<<<<<<<< not a marker", "Title", "========"}; !reflect.DeepEqual(bs[0].Ours, want) {
+		t.Errorf("ours = %q", bs[0].Ours)
+	}
+	if want := []string{">>>>>>>> nope", "t"}; !reflect.DeepEqual(bs[0].Theirs, want) {
+		t.Errorf("theirs = %q", bs[0].Theirs)
+	}
+}
+
+func TestResolveManyBlocksOneAtATime(t *testing.T) {
+	var sb []byte
+	for i := 0; i < 50; i++ {
+		sb = append(sb, "ctx\n<<<<<<< HEAD\no\n=======\nt\n>>>>>>> x\n"...)
+	}
+	text := string(sb)
+	for i := 0; i < 50; i++ {
+		bs := ParseConflicts(text)
+		if len(bs) != 50-i {
+			t.Fatalf("step %d: %d blocks", i, len(bs))
+		}
+		r := AcceptOurs
+		if i%2 == 1 {
+			r = AcceptTheirs
+		}
+		text = ResolveConflict(text, bs[0], r)
+	}
+	if HasConflicts(text) {
+		t.Fatal("markers left")
+	}
+	if got := len(SplitLines(text)); got != 100 {
+		t.Errorf("lines = %d", got)
+	}
+}

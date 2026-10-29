@@ -54,23 +54,34 @@ func (b ConflictBlock) Contains(line int) bool {
 type Resolution int
 
 const (
-	AcceptOurs   Resolution = iota // keep the current (HEAD) side
-	AcceptTheirs                   // keep the incoming side
-	AcceptBoth                     // keep ours, then theirs
+	AcceptOurs            Resolution = iota // keep the current (HEAD) side
+	AcceptTheirs                            // keep the incoming side
+	AcceptBoth                              // keep ours, then theirs
+	AcceptBothTheirsFirst                   // keep theirs, then ours
+	AcceptBase                              // keep the common ancestor (BaseLn)
 )
 
 // Replacement returns the lines that replace the whole marker region for the
-// given resolution. An empty side contributes nothing.
+// given resolution. An empty side contributes nothing. AcceptBase uses
+// BaseLn: the diff3 section when the file has one, or what the caller put
+// there (the merge view reads it from the index).
 func (b ConflictBlock) Replacement(r Resolution) []string {
+	join := func(a, c []string) []string {
+		out := make([]string, 0, len(a)+len(c))
+		out = append(out, a...)
+		return append(out, c...)
+	}
 	switch r {
 	case AcceptOurs:
 		return append([]string{}, b.Ours...)
 	case AcceptTheirs:
 		return append([]string{}, b.Theirs...)
+	case AcceptBothTheirsFirst:
+		return join(b.Theirs, b.Ours)
+	case AcceptBase:
+		return append([]string{}, b.BaseLn...)
 	default:
-		out := make([]string, 0, len(b.Ours)+len(b.Theirs))
-		out = append(out, b.Ours...)
-		return append(out, b.Theirs...)
+		return join(b.Ours, b.Theirs)
 	}
 }
 
