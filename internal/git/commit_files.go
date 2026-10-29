@@ -169,11 +169,7 @@ func pickLike(dir, verb, hash string) ([]string, error) {
 		return nil, nil
 	}
 	msg := strings.TrimSpace(string(out))
-	var conflicts []string
-	if u, e := runOut(dir, "git", "diff", "--name-only", "--diff-filter=U"); e == nil {
-		conflicts = strings.Fields(u)
-	}
-	if len(conflicts) > 0 {
+	if conflicts := unmergedPaths(dir); len(conflicts) > 0 {
 		return conflicts, fmt.Errorf("%s stopped: %d conflict(s)", verb, len(conflicts))
 	}
 	if msg == "" {
