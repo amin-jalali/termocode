@@ -37,8 +37,11 @@ const aiInputRows = 1
 // aiLine is one rendered transcript row before padding. Either text +
 // style (plain, padded by renderAILine) or styled (already rendered).
 type aiLine struct {
-	text    string
-	style   lipgloss.Style
+	text string
+	// style draws text when styled is "" (nil: no colour). A pointer:
+	// a lipgloss.Style is ~0.5 KB and a long answer has tens of
+	// thousands of rows, most of them pre-styled.
+	style   *lipgloss.Style
 	bg      theme.Color256
 	buttons []aiLineButton
 	styled  string
@@ -47,6 +50,9 @@ type aiLine struct {
 	// index+1 (0 = none): the right-click menu's target.
 	msg, block int
 }
+
+// aiStyle is st for aiLine.style.
+func aiStyle(st lipgloss.Style) *lipgloss.Style { return &st }
 
 // aiLineButton is a clickable span on a transcript / divider row.
 type aiLineButton struct {
@@ -229,15 +235,19 @@ func renderAILine(l aiLine, width int) string {
 	if pad < 0 {
 		pad = 0
 	}
+	st := lipgloss.NewStyle()
+	if l.style != nil {
+		st = *l.style
+	}
 	if len(l.buttons) == 0 {
-		return l.style.Background(theme.LG(bgTok)).Render(txt) + theme.Bg(bgTok).Render(strings.Repeat(" ", pad))
+		return st.Background(theme.LG(bgTok)).Render(txt) + theme.Bg(bgTok).Render(strings.Repeat(" ", pad))
 	}
 	// Buttons: draw each span in the accent color, the rest in l.style.
 	var b strings.Builder
 	runes := []rune(txt)
 	col := 0
 	btnStyle := theme.FgBg(theme.AIAccent, bgTok).Bold(true)
-	base := l.style.Background(theme.LG(bgTok))
+	base := st.Background(theme.LG(bgTok))
 	seg := strings.Builder{}
 	segBtn := false
 	flush := func() {
@@ -439,7 +449,7 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 	}
 	ind := strings.Repeat(" ", aiIndent)
 	plain := func(s string, tok theme.Color256) aiLine {
-		return aiLine{text: ind + s, style: theme.Fg(tok)}
+		return aiLine{text: ind + s, style: aiStyle(theme.Fg(tok))}
 	}
 	// selPlain wraps text into selectable rows of message msgIdx.
 	selPlain := func(text string, tok theme.Color256, msgIdx int) []aiLine {
@@ -476,7 +486,7 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 			}
 			return out
 		}
-		out = append(out, aiLine{text: ind + aiSpark() + " Ask about your code", style: theme.Fg(theme.AIAccent).Bold(true)})
+		out = append(out, aiLine{text: ind + aiSpark() + " Ask about your code", style: aiStyle(theme.Fg(theme.AIAccent).Bold(true))})
 		out = append(out, aiLine{})
 		for _, sg := range aiSuggestions {
 			out = append(out, aiChip(sg.label, "suggest:"+sg.id, width))
@@ -824,7 +834,7 @@ func (m Model) aiFooterLine(width int) aiLine {
 	case s != nil && !s.focused:
 		hint = "Alt+A chat · F6 focus"
 	}
-	return aiLine{text: hint, style: theme.Fg(theme.TextDim)}
+	return aiLine{text: hint, style: aiStyle(theme.Fg(theme.TextDim))}
 }
 
 // aiInputWrapped wraps the input into rows and returns the row / column

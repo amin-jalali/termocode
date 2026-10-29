@@ -388,7 +388,7 @@ func aiPlanWaitLines(i int, width, inner int) []aiLine {
 	ind := strings.Repeat(" ", aiIndent)
 	var out []aiLine
 	for _, l := range wrapPlain("Waiting for you: approve the plan before steps that change files or run commands start.", max(inner, 8)) {
-		out = append(out, aiLine{text: ind + l, style: theme.Fg(theme.DiagWarning)})
+		out = append(out, aiLine{text: ind + l, style: aiStyle(theme.Fg(theme.DiagWarning))})
 	}
 	return append(out, aiChips(width, []aiChipSpec{{"Review plan", "plan-open:" + strconv.Itoa(i)}, {"Deny", "plan-deny:" + strconv.Itoa(i)}}))
 }

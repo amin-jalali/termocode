@@ -49,7 +49,7 @@ func (m Model) aiMemoryAskLines(width, inner int) []aiLine {
 	}
 	ind := strings.Repeat(" ", aiIndent)
 	out := []aiLine{{}}
-	out = append(out, aiLine{text: ind + "Save lessons for later chats?", style: theme.Fg(theme.TextSecondary).Bold(true)})
+	out = append(out, aiLine{text: ind + "Save lessons for later chats?", style: aiStyle(theme.Fg(theme.TextSecondary).Bold(true))})
 	chip := func(label string, t float64) (string, int) {
 		return lipgloss.NewStyle().Background(theme.Mix(theme.BgPanel, theme.AIAccent, t)).
 			Foreground(theme.LG(theme.TextPrimary)).Render(" " + label + " "), runewidth.StringWidth(label) + 2
@@ -60,7 +60,7 @@ func (m Model) aiMemoryAskLines(width, inner int) []aiLine {
 	out = append(out, aiLine{styled: row, buttons: []aiLineButton{
 		{aiIndent, aiIndent + onW, "memask-on"},
 		{aiIndent + onW + 1, aiIndent + onW + 1 + noW, "memask-notnow"}}})
-	out = append(out, aiLine{text: ind + "Or: palette, AI: Memory…", style: theme.Fg(theme.TextDim)})
+	out = append(out, aiLine{text: ind + "Or: palette, AI: Memory…", style: aiStyle(theme.Fg(theme.TextDim))})
 	return out
 }
 

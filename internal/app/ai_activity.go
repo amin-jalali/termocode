@@ -166,7 +166,7 @@ func (v aiActivityView) lines(ind string, inner int) []aiLine {
 	}
 	var out []aiLine
 	for _, l := range wrapPlain(text, inner) {
-		out = append(out, aiLine{text: ind + l, style: style})
+		out = append(out, aiLine{text: ind + l, style: aiStyle(style)})
 	}
 	return out
 }

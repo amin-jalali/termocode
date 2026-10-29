@@ -307,6 +307,6 @@ func aiMemorySavedLine(n, width int) aiLine {
 	if lim := width - aiIndent - 1; runewidth.StringWidth(text) > lim && lim > 3 {
 		text = runewidth.Truncate(text, lim, "…")
 	}
-	return aiLine{text: strings.Repeat(" ", aiIndent) + text, style: theme.Fg(theme.TextDim),
+	return aiLine{text: strings.Repeat(" ", aiIndent) + text, style: aiStyle(theme.Fg(theme.TextDim)),
 		buttons: []aiLineButton{{aiIndent, aiIndent + runewidth.StringWidth(text), "memory-view"}}}
 }
