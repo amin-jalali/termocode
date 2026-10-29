@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -8,6 +9,7 @@ import (
 	"runtime/debug"
 	"runtime/pprof"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -298,6 +300,12 @@ func main() {
 	// subcommand), chdir into it so termocode opens that workspace.
 	if len(os.Args) > 1 {
 		first := os.Args[1]
+		if msg := missingFolderArg(first); msg != "" {
+			// A folder that was moved or deleted: opening the current
+			// folder instead, without a word, is the wrong workspace.
+			fmt.Fprintln(os.Stderr, msg)
+			os.Exit(1)
+		}
 		if first != "setup" && first != "-h" && first != "--help" && first != "help" {
 			if info, err := os.Stat(first); err == nil && info.IsDir() {
 				_ = os.Chdir(first)
@@ -332,6 +340,23 @@ func main() {
 		}
 	}
 	runTUI()
+}
+
+// missingFolderArg returns an error line when the first argument names a
+// folder that does not exist (it was moved or deleted), "" otherwise.
+// Subcommands and flags are no folder.
+func missingFolderArg(first string) string {
+	switch first {
+	case "", "setup", "-h", "--help", "help":
+		return ""
+	}
+	if strings.HasPrefix(first, "-") {
+		return ""
+	}
+	if _, err := os.Stat(first); err == nil || !errors.Is(err, os.ErrNotExist) {
+		return ""
+	}
+	return "termocode: folder " + first + " not found (moved or deleted?)"
 }
 
 func printUsage() {
