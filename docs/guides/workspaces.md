@@ -167,3 +167,24 @@ When a layout opens:
 
 **I want a totally clean start**
 :   Run **Developer: Reset Session**.
+
+## Preview and rename in the explorer
+
+Focus the Files explorer and press `p`, or run **Explorer: Toggle Preview**.
+Move up or down to preview a file beside the tree. Enter opens it in the editor.
+Use `PgUp/PgDn` or the mouse wheel over the preview to scroll.
+The preview shows up to 200 text lines and reads at most 64 KB. Images show their
+size and dimensions. Other files show a binary notice; folders show file and
+folder counts. Secret names such as `.env`, `.pem`, `.key` and `id_rsa` stay hidden.
+Preview needs a terminal at least 100 columns wide.
+
+Select files with `Ctrl+Space` or `Shift+Up/Down`. Press `r` or `F2`, choose
+**Rename…** from the file menu, or run **Explorer: Rename Selected…**.
+Edit one name per line. Use the arrow keys to move, Enter to add a line, and
+`Ctrl+S` to review. The review lists changes and conflicts. Cancel has focus;
+press Tab to reach Apply. Names must stay in the same folder. Swapping names
+works. Open editor tabs follow the new names and keep unsaved text.
+
+Click **Renamed N files · Undo** to reverse the rename, or run
+**Explorer: Undo Rename**. Undo works while the renamed files are unchanged and
+the old names are free. It covers the last bulk rename in this session.
