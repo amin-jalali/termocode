@@ -137,3 +137,18 @@ func TestAITools(t *testing.T) {
 	}
 	var _ ai.Tool = echo
 }
+
+// Spec (SCN-1): a server's tool result is redacted before the model (and
+// the chat, the screen) see it: a known secret it repeats is masked.
+func TestAIToolsRedactKnownSecrets(t *testing.T) {
+	secret := "scn" + "canary" + "adapter-77"
+	ai.RegisterSecret(secret)
+	call := func(context.Context, string, string, map[string]any) (CallResult, error) {
+		return CallResult{Content: []Content{{Type: "text", Text: "signed in with token " + secret}}}, nil
+	}
+	got := AITools(Server{Name: "fake"}, []Tool{{Name: "whoami", Annotations: ann(bp(true), nil)}}, call, AdapterOptions{TrustAnnotations: true})
+	out, err := got[0].Run(context.Background(), map[string]any{})
+	if err != nil || strings.Contains(out, secret) || !strings.Contains(out, "signed in with token") {
+		t.Errorf("result %q %v", out, err)
+	}
+}
