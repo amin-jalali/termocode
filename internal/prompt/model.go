@@ -17,11 +17,13 @@ type SubmitMsg struct{ Value string }
 type CloseMsg struct{}
 
 type Model struct {
-	title  string
-	label  string
-	value  string
-	masked bool // render the value as bullets (secrets: tokens, passwords)
-	w, h   int
+	multiline bool
+	caret     int
+	title     string
+	label     string
+	value     string
+	masked    bool // render the value as bullets (secrets: tokens, passwords)
+	w, h      int
 	// complete, when set, is what Tab does to the value (SetCompleter).
 	complete func(string) string
 	// note is extra text under the label, wrapped to the card (SetNote).
@@ -109,6 +111,9 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	k, ok := msg.(tea.KeyMsg)
 	if !ok {
 		return m, nil
+	}
+	if m.multiline {
+		return m.updateMultiline(k)
 	}
 	switch k.Type {
 	case tea.KeyEsc, tea.KeyCtrlC:
@@ -280,6 +285,9 @@ func (m Model) Origin() (x, y int) {
 // HandleMouse makes the footer hints buttons: a click on "Enter submit"
 // submits, on "Esc cancel" closes. Other clicks do nothing.
 func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseButton) (Model, tea.Cmd) {
+	if m.multiline {
+		return m, nil
+	}
 	if action != tea.MouseActionPress || button != tea.MouseButtonLeft || m.w <= 0 {
 		return m, nil
 	}
@@ -308,6 +316,9 @@ func (m Model) HandleMouse(x, y int, action tea.MouseAction, button tea.MouseBut
 var promptHints = []string{"enter", "submit", "esc", "cancel"}
 
 func (m Model) Box() string {
+	if m.multiline {
+		return m.multilineBox()
+	}
 	if m.w <= 0 || m.h <= 0 {
 		return ""
 	}
