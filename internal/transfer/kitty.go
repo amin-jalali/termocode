@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // kitty file transfer protocol, see
@@ -176,14 +178,14 @@ func KittySend(ctx context.Context, j KittySendJob) (err error) {
 	var src io.Reader = counted
 	if zip {
 		pr, pw := io.Pipe()
-		go func() {
+		crash.Go("the download", func() {
 			zw := zlib.NewWriter(pw)
 			_, cerr := io.Copy(zw, counted)
 			if cerr == nil {
 				cerr = zw.Close()
 			}
 			_ = pw.CloseWithError(cerr)
-		}()
+		})
 		defer pr.Close()
 		src = pr
 	}

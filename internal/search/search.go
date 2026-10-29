@@ -18,6 +18,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
@@ -272,7 +273,7 @@ const (
 // Cancelling ctx stops the search; pending sends are dropped.
 func Stream(ctx context.Context, dirs []string, query string, opts Options) <-chan Batch {
 	ch := make(chan Batch, 4)
-	go func() {
+	crash.Go("the search", func() {
 		defer close(ch)
 		send := func(b Batch) bool {
 			select {
@@ -300,7 +301,7 @@ func Stream(ctx context.Context, dirs []string, query string, opts Options) <-ch
 		})
 		flush()
 		send(Batch{Done: true, Summary: sum, Err: err})
-	}()
+	})
 	return ch
 }
 

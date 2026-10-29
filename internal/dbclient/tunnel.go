@@ -21,6 +21,8 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/knownhosts"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // The SSH tunnel is in-process: one *ssh.Client per connection, the
@@ -345,10 +347,10 @@ func (t *Tunnel) watch(i int) {
 // answer is taken as alive).
 func hopAnswers(c *ssh.Client) bool {
 	res := make(chan error, 1)
-	go func() {
+	crash.Go("the SSH tunnel", func() {
 		_, _, err := c.SendRequest("keepalive@openssh.com", true, nil)
 		res <- err
-	}()
+	})
 	select {
 	case err := <-res:
 		return err == nil
@@ -462,7 +464,7 @@ func OpenTunnel(ctx context.Context, cfg SSHConfig, opts TunnelOptions) (*Tunnel
 	}
 	t := &Tunnel{client: clients[len(clients)-1], hops: clients, names: names, target: target, done: make(chan struct{})}
 	for i := range clients {
-		go t.watch(i)
+		crash.Go("the SSH tunnel", func() { t.watch(i) })
 	}
 	return t, nil
 }

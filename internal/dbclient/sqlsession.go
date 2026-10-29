@@ -17,6 +17,8 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // SQLSession implements Session for PostgreSQL and MySQL.
@@ -399,13 +401,13 @@ func (s *SQLSession) runOne(ctx context.Context, query string, kind Kind, maxRow
 		if err := conn.QueryRowContext(ctx, "SELECT CONNECTION_ID()").Scan(&connectionID); err == nil {
 			finished := make(chan struct{})
 			defer close(finished)
-			go func() {
+			crash.Go("a database query", func() {
 				select {
 				case <-ctx.Done():
 					s.killMySQLQuery(connectionID)
 				case <-finished:
 				}
-			}()
+			})
 		}
 	}
 	if queryReturnsRows(query, s.name) || s.mariadb && firstSQLWord(query, s.name) == "ANALYZE" {
