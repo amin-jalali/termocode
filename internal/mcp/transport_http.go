@@ -19,6 +19,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/extproc"
+	"github.com/amin-jalali/termocode/internal/netmsg"
 )
 
 // Streamable HTTP transport (MC-5, MCP 2025-03-26 … 2025-11-25):
@@ -196,6 +197,9 @@ func (c *httpConn) do(ctx context.Context, method string, body []byte, accept st
 		if err != nil {
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
+			}
+			if why, ok := netmsg.Why(err); ok {
+				return nil, &ConnError{Host: hostOf(c.url), Why: why, Err: err}
 			}
 			return nil, fmt.Errorf("MCP %s: %w", hostOf(c.url), unwrapURLError(err))
 		}
@@ -599,3 +603,13 @@ func checkURL(raw string) error {
 func IsLoopback(host string) bool {
 	return host == "localhost" || host == "::1" || strings.HasPrefix(host, "127.")
 }
+
+// ConnError is a remote server that could not be reached: Why says the
+// cause in plain words (refused, name not found, no answer, proxy).
+type ConnError struct {
+	Host, Why string
+	Err       error
+}
+
+func (e *ConnError) Error() string { return "no connection to " + e.Host + ": " + e.Why }
+func (e *ConnError) Unwrap() error { return e.Err }
