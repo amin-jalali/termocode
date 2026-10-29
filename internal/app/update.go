@@ -2324,6 +2324,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.onRegistryPicked(msg.ID)
 	case pickerKindLayoutOpen: // layout_palette.go
 		return m.onLayoutOpenPicked(msg.ID)
+	case pickerKindLayoutDelete: // layout_delete.go
+		return m.onLayoutDeletePicked(msg.ID)
 	case pickerKindSecretStore: // secrets_store_ui.go
 		return m.onSecretsStoreSelected(msg.ID)
 	case pickerKindContainerSearch: // containers_remote.go

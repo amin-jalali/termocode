@@ -29,6 +29,7 @@ func layoutPaletteItems() []picker.Item {
 	return []picker.Item{
 		{ID: "layout-open", Title: "Layout: Open…"},
 		{ID: "layout-save", Title: "Layout: Save As…"},
+		{ID: "layout-delete", Title: "Layout: Delete…"},
 	}
 }
 
@@ -39,6 +40,8 @@ func (m *Model) dispatchLayoutPalette(id string) (tea.Cmd, bool) {
 		return m.openLayoutPicker(), true
 	case "layout-save":
 		return m.openLayoutSave(), true
+	case "layout-delete":
+		return m.openLayoutDelete(), true
 	}
 	return nil, false
 }
@@ -163,6 +166,8 @@ func (m *Model) handleLayoutConfirm(id string) (tea.Cmd, bool) {
 		return m.answerLayoutScope(id), true
 	case confirmKindLayoutReplace:
 		return m.answerLayoutReplace(id), true
+	case confirmKindLayoutDelete:
+		return m.answerLayoutDelete(id), true
 	}
 	return nil, false
 }
@@ -176,6 +181,8 @@ func (m *Model) layoutConfirmClosed() (tea.Cmd, bool) {
 		return m.answerLayoutScope(""), true
 	case confirmKindLayoutReplace:
 		return m.answerLayoutReplace(""), true
+	case confirmKindLayoutDelete:
+		return m.answerLayoutDelete(""), true
 	}
 	return nil, false
 }
