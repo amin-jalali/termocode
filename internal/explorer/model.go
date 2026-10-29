@@ -45,7 +45,12 @@ type Model struct {
 
 	// scroll animates the drawn window toward top (smooth wheel / page
 	// scrolling); see AnimStep.
-	scroll anim.Value
+	scroll                   anim.Value
+	previewOn                bool
+	terminalWidth            int
+	previewPath, previewText string
+	previewSeq               uint64
+	previewTop               int
 }
 
 func New() Model {
@@ -135,8 +140,21 @@ func (m *Model) ToggleHidden() {
 func (m Model) HiddenShown() bool { return m.showHidden }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	if p, ok := msg.(PreviewMsg); ok {
+		return m.acceptPreview(p), nil
+	}
 	if k, ok := msg.(tea.KeyMsg); ok {
-		return m.handleKey(k)
+		if m.PreviewVisible() && (k.Type == tea.KeyPgDown || k.Type == tea.KeyPgUp) {
+			delta := max(m.h-3, 1)
+			if k.Type == tea.KeyPgUp {
+				delta = -delta
+			}
+			m.scrollPreview(delta)
+			return m, nil
+		}
+		next, cmd := m.handleKey(k)
+		previewCmd := next.SchedulePreview()
+		return next, tea.Batch(cmd, previewCmd)
 	}
 	return m, nil
 }
@@ -233,6 +251,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 // Reload rebuilds every root from disk, preserving the set of currently
 // expanded directories where possible.
 func (m *Model) Reload() {
+	if m.previewOn {
+		m.previewPath = ""
+		m.previewSeq++
+	}
 	roots := m.allRoots()
 	if len(roots) == 0 {
 		return
@@ -386,7 +408,17 @@ func (m Model) VisibleAt(y int) (*Node, bool) {
 // extends the selection from the last anchor to the clicked row. Plain
 // MouseLeft clears the multi-selection and behaves like a normal click
 // (open file / toggle dir).
-func (m Model) HandleMouse(x, y int, t tea.MouseEventType, ctrl, shift bool) (Model, tea.Cmd) {
+func (m Model) HandleMouse(x, y int, t tea.MouseEventType, ctrl, shift bool) (next Model, cmd tea.Cmd) {
+	defer func() { cmd = tea.Batch(cmd, next.SchedulePreview()) }()
+	if m.PreviewVisible() && x >= m.w/2 {
+		if t == tea.MouseWheelUp {
+			m.scrollPreview(-3)
+		}
+		if t == tea.MouseWheelDown {
+			m.scrollPreview(3)
+		}
+		return m, nil
+	}
 	vis := m.visible()
 	switch t {
 	case tea.MouseWheelUp:
@@ -451,6 +483,9 @@ func (m Model) HandleMouse(x, y int, t tea.MouseEventType, ctrl, shift bool) (Mo
 		m.anchorPath = path
 		if node.IsDir {
 			_ = node.Toggle()
+			return m, nil
+		}
+		if m.PreviewVisible() {
 			return m, nil
 		}
 		// KeepFocus=true: file opens in editor as a preview, but focus

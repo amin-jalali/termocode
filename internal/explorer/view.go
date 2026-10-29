@@ -56,6 +56,17 @@ func (m *Model) SetMeta(workspace, branch string, isRepo bool, totalFiles int) {
 //
 // The last result is reused while nothing it reads changed (cache.go).
 func (m Model) View(focused bool, activePath string, activeDirty bool, gitStatus GitStatus) string {
+	if m.PreviewVisible() {
+		return m.previewView(focused, activePath, activeDirty, gitStatus)
+	}
+	if m.previewOn && m.terminalWidth < 100 {
+		out := strings.Split(m.draw(focused, activePath, activeDirty, gitStatus), "\n")
+		if len(out) > 0 {
+			hint := runewidth.Truncate("Preview needs 100 cols", m.w, "")
+			out[len(out)-1] = hint + strings.Repeat(" ", max(m.w-runewidth.StringWidth(hint), 0))
+		}
+		return strings.Join(out, "\n")
+	}
 	k := m.viewKey(focused, activePath, activeDirty, gitStatus)
 	viewCache.Lock()
 	defer viewCache.Unlock()
