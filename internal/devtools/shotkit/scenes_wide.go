@@ -31,7 +31,7 @@ func WideScenes() []Scene {
 			"fix: 👩‍💻 pair work 🇮🇷 flag",
 			"docs: café naïve",
 			"chore: سلام دنیا و English",
-		}, Steps: scmStepsNoEditor()},
+		}, Steps: []Step{Act("view:git"), Pause(1500 * time.Millisecond)}},
 		// A toast with wide text over the editor.
 		{Name: "wide-toast", Files: wideFiles, Steps: []Step{
 			Act("open:" + wideDoc), Pause(600 * time.Millisecond),
