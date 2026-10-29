@@ -78,8 +78,8 @@ func parseBlock(lines []string, first int, name string, vars *[]Var) (Request, b
 		l := lines[i]
 		switch {
 		case isBlank(l):
-		case isComment(l):
-			c := commentText(l)
+		case isComment(strings.TrimSpace(l)):
+			c := commentText(strings.TrimSpace(l))
 			if strings.HasPrefix(c, "@name") {
 				name = strings.TrimSpace(c[5:])
 			} else if strings.HasPrefix(c, "@") && len(c) > 1 {
