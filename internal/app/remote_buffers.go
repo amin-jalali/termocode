@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 
 	"github.com/amin-jalali/termocode/internal/containerhost"
+	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/workspace"
 )
 
@@ -93,4 +94,29 @@ func remoteErrText(label string, err error) string {
 		return "No permission for this file in " + label + "."
 	}
 	return err.Error()
+}
+
+// startRemoteBuffers turns on remote buffers for the container workspace
+// ws in n: the Go answers first, then the autocmds that ask them.
+func startRemoteBuffers(n *nvim.Client, ws workspace.Workspace) error {
+	r := newRemoteFiles(ws)
+	arg := func(a []any, i int) string {
+		if i < len(a) {
+			if s, ok := a[i].(string); ok {
+				return s
+			}
+		}
+		return ""
+	}
+	if err := n.RegisterRequest("termocode_fs_read", func(a []any) (any, error) {
+		return r.read(arg(a, 0)), nil
+	}); err != nil {
+		return err
+	}
+	if err := n.RegisterRequest("termocode_fs_write", func(a []any) (any, error) {
+		return r.write(arg(a, 0), arg(a, 1)), nil
+	}); err != nil {
+		return err
+	}
+	return n.ExecLuaArgs(remoteBuffersLua, ws.Root)
 }
