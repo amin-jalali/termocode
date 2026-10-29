@@ -95,6 +95,40 @@ type AttachOpts struct {
 	// Caps (may be nil) describe this terminal; the UI switches to them
 	// when it already runs.
 	Caps *ClientCaps
+	// Reconnect: when the server drops this client (it stopped reading,
+	// e.g. a frozen SSH link) but still runs, keep the screen and attach
+	// again by itself instead of leaving (setting auto_reconnect).
+	Reconnect bool
+}
+
+// errOffline is a send while the client has no connection.
+var errOffline = errors.New("session: offline")
+
+// attachFrame is one frame read from the server.
+type attachFrame struct {
+	typ byte
+	p   []byte
+	err error
+}
+
+// readFrames reads the frames of c until an error, which is the last
+// one sent. stop ends it early.
+func readFrames(c *net.UnixConn, stop <-chan struct{}) <-chan attachFrame {
+	ch := make(chan attachFrame, 16)
+	go func() {
+		for {
+			typ, p, err := readFrame(c)
+			select {
+			case ch <- attachFrame{typ, p, err}:
+			case <-stop:
+				return
+			}
+			if err != nil {
+				return
+			}
+		}
+	}()
+	return ch
 }
 
 // Attach relays the terminal (o.In, o.Out) to the session of p over c
@@ -103,16 +137,36 @@ type AttachOpts struct {
 // last two cases.
 func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
 	in, out, caps := o.In, o.Out, o.Caps
-	defer c.Close()
 	cols, rows, err := term.GetSize(int(out.Fd()))
 	if err != nil || cols <= 0 || rows <= 0 {
 		cols, rows = 80, 24
 	}
+	stop := make(chan struct{})
+	defer close(stop)
 	var wmu sync.Mutex
+	conn := c // nil while offline
+	defer func() {
+		wmu.Lock()
+		if conn != nil {
+			_ = conn.Close()
+		}
+		wmu.Unlock()
+	}()
 	send := func(typ byte, p []byte) error {
 		wmu.Lock()
 		defer wmu.Unlock()
-		return writeFrame(c, typ, p)
+		if conn == nil {
+			return errOffline
+		}
+		return writeFrame(conn, typ, p)
+	}
+	setConn := func(nc *net.UnixConn) {
+		wmu.Lock()
+		if conn != nil {
+			_ = conn.Close()
+		}
+		conn = nc
+		wmu.Unlock()
 	}
 	if err := send(frameHello, encodeHello(cols, rows, caps)); err != nil {
 		fmt.Fprintln(os.Stderr, "termocode:", err)
@@ -129,13 +183,16 @@ func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
 	defer signal.Stop(sigs)
 
 	inDone := make(chan struct{})
+	keys := make(chan []byte, 16)
 	go func() {
 		defer close(inDone)
 		buf := make([]byte, 4096)
 		for {
 			n, err := in.Read(buf)
 			if n > 0 {
-				if send(frameInput, buf[:n]) != nil {
+				select {
+				case keys <- append([]byte(nil), buf[:n]...):
+				case <-stop:
 					return
 				}
 			}
@@ -145,35 +202,51 @@ func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
 		}
 	}()
 
-	type frame struct {
-		typ byte
-		p   []byte
-		err error
-	}
 	// seen follows the UI's output like the server does, so a client that
 	// leaves without the server's reset (killed, server gone) can still
 	// undo what plainReset cannot know about (the font size).
 	seen := NewModes()
-	frames := make(chan frame, 16)
-	go func() {
-		for {
-			typ, p, err := readFrame(c)
-			frames <- frame{typ, p, err}
-			if err != nil {
-				return
-			}
-		}
-	}()
+	frames := readFrames(c, stop)
+
+	// Offline state: since when, the next attempt, its timer, and whether
+	// keys were dropped.
+	var (
+		offline  bool
+		attempt  int
+		retry    <-chan time.Time
+		unicode  = clientUnicode(caps)
+		redrawLn = func() { _, _ = out.WriteString(offlineLine(attempt, cols, rows, unicode)) }
+	)
+	goOffline := func() {
+		setConn(nil)
+		frames = nil
+		offline, attempt = true, 1
+		redrawLn()
+		retry = time.After(0)
+	}
 
 	for {
 		select {
 		case <-inDone:
 			// No more keys (the terminal is gone): leave, the session stays.
 			return 0
+		case k := <-keys:
+			if offline {
+				if offlineQuit(k) {
+					_, _ = out.Write(append(seen.Reset(), plainReset+msgDetached+"\r\n"...))
+					return 0
+				}
+				continue
+			}
+			_ = send(frameInput, k) // a dead link shows up as a read error
 		case s := <-sigs:
 			switch s {
 			case syscall.SIGWINCH:
 				if w, h, err := term.GetSize(int(out.Fd())); err == nil {
+					cols, rows = w, h
+					if offline {
+						redrawLn()
+					}
 					_ = send(frameResize, encodeSize(w, h))
 				}
 			case syscall.SIGHUP:
@@ -182,8 +255,34 @@ func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
 				_, _ = out.Write(append(seen.Reset(), plainReset...))
 				return 0
 			}
+		case <-retry:
+			retry = nil
+			if !locked(p.Lock) {
+				_, _ = out.Write(append(seen.Reset(), plainReset+lostMessage(p)+"\r\n"...))
+				return 1
+			}
+			nc, err := Dial(p)
+			if err == nil {
+				err = writeFrame(nc, frameHello, encodeHello(cols, rows, caps))
+				if err != nil {
+					_ = nc.Close()
+				}
+			}
+			if err != nil {
+				attempt++
+				redrawLn()
+				retry = time.After(reconnectDelay(attempt - 1))
+				continue
+			}
+			setConn(nc)
+			frames = readFrames(nc, stop)
+			offline = false
 		case f := <-frames:
 			if f.err != nil {
+				if o.Reconnect && locked(p.Lock) {
+					goOffline()
+					continue
+				}
 				_, _ = out.Write(append(seen.Reset(), plainReset+lostMessage(p)+"\r\n"...))
 				return 1
 			}
@@ -199,6 +298,21 @@ func Attach(c *net.UnixConn, p Paths, o AttachOpts) int {
 			}
 		}
 	}
+}
+
+// clientUnicode reports whether the client's terminal takes UTF-8 (its
+// locale says so; no caps: assume it does).
+func clientUnicode(caps *ClientCaps) bool {
+	if caps == nil {
+		return true
+	}
+	for _, k := range []string{"LC_ALL", "LC_CTYPE", "LANG"} {
+		if v := caps.Env[k]; v != "" {
+			v = strings.ToUpper(v)
+			return strings.Contains(v, "UTF-8") || strings.Contains(v, "UTF8")
+		}
+	}
+	return false
 }
 
 // lostMessage says why the connection to the server ended without a
