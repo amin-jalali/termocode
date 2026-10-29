@@ -817,10 +817,19 @@ func (m *Model) gitRemoteDone(msg gitRemoteDoneMsg) tea.Cmd {
 // integrated terminal for the first push.
 func (m *Model) gitPush() tea.Cmd {
 	m.gitEnsureLoaded() // the branch name below comes from the snapshot
-	branch := m.gitBranch.Name
+	branch := pushBranch(m.gitBranch)
 	return m.gitRemoteOp("Pushing…", func(cwd string) gitRemoteDoneMsg {
 		return gitRemoteDoneMsg{failTitle: "Push failed", okText: "Pushed to origin", err: pushCurrent(cwd, branch)}
 	})
+}
+
+// pushBranch is the branch a first push sets as upstream: none on a
+// detached HEAD, whose shown name ("(detached abc1234)") is no branch.
+func pushBranch(b git.Branch) string {
+	if strings.HasPrefix(b.Name, "(detached ") {
+		return ""
+	}
+	return b.Name
 }
 
 // pushCurrent pushes the current branch, setting origin as its upstream
@@ -854,7 +863,7 @@ func (m *Model) gitFetch() tea.Cmd {
 // configured it falls back to a first push (-u origin <branch>).
 func (m *Model) gitSync() tea.Cmd {
 	m.gitEnsureLoaded()
-	branch := m.gitBranch.Name
+	branch := pushBranch(m.gitBranch)
 	return m.gitRemoteOp("Syncing…", func(cwd string) gitRemoteDoneMsg {
 		if !git.HasUpstream(cwd) {
 			return gitRemoteDoneMsg{failTitle: "Push failed", okText: "Pushed to origin", err: pushCurrent(cwd, branch)}
