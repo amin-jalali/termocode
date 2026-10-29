@@ -327,3 +327,37 @@ func TestRebasePushed(t *testing.T) {
 		t.Errorf("from the root: %d", n)
 	}
 }
+
+// G-RBS: FixupInto commits the staged changes as a fixup of an older
+// commit and folds them into it (autosquash); the history keeps its
+// subjects. Nothing staged, or unstaged changes left without Autostash,
+// is refused before anything is committed.
+func TestFixupInto(t *testing.T) {
+	r, h := rebaseRepo(t, 3)
+	opt := testRebaseOpts(t)
+	if _, err := FixupInto(r.dir, h[1], opt); !errors.Is(err, ErrNothingStaged) {
+		t.Fatalf("nothing staged: %v", err)
+	}
+	r.write(t, "f2.txt", "fixed 2\n")
+	r.git(t, "add", "f2.txt")
+	r.write(t, "f3.txt", "unstaged\n")
+	if _, err := FixupInto(r.dir, h[1], opt); !errors.Is(err, ErrRebaseDirty) {
+		t.Fatalf("unstaged left: %v", err)
+	}
+	if head := strings.TrimSpace(r.git(t, "rev-parse", "HEAD")); head != h[2] {
+		t.Fatal("committed before refusing")
+	}
+	opt.Autostash = true
+	if out, err := FixupInto(r.dir, h[1], opt); err != nil || out.Stopped {
+		t.Fatalf("fixup: %+v %v", out, err)
+	}
+	if got := strings.Join(subjects(t, r), " "); got != "c1 c2 c3" {
+		t.Errorf("history %q", got)
+	}
+	if got := r.git(t, "show", "HEAD~1:f2.txt"); got != "fixed 2\n" {
+		t.Errorf("c2 has f2 %q", got)
+	}
+	if b, _ := os.ReadFile(r.dir + "/f3.txt"); string(b) != "unstaged\n" {
+		t.Errorf("unstaged edit lost: %q", b)
+	}
+}

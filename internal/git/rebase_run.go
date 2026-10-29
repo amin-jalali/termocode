@@ -2,6 +2,7 @@ package git
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -135,4 +136,57 @@ func RebasePushed(dir, base string) (upstream string, n int) {
 		return c
 	}
 	return upstream, count() - count("^@{upstream}")
+}
+
+// ErrNothingStaged: a fixup needs staged changes.
+var ErrNothingStaged = errors.New("nothing is staged")
+
+// FixupInto commits the staged changes as `git commit --fixup=target` and
+// folds them into target with `git rebase -i --autosquash` (git's own
+// todo, unchanged). Unstaged changes need Autostash; with them refused,
+// nothing is committed.
+func FixupInto(dir, target string, opt RebaseOptions) (RebaseOutcome, error) {
+	if err := spawnQuiet(dir, "diff", "--cached", "--quiet"); err == nil {
+		return RebaseOutcome{}, ErrNothingStaged
+	}
+	if !opt.Autostash && spawnQuiet(dir, "diff", "--quiet") != nil {
+		return RebaseOutcome{}, ErrRebaseDirty
+	}
+	base := ""
+	if p, err := runOut(dir, "git", "rev-parse", "--verify", "-q", target+"^"); err == nil {
+		base = strings.TrimSpace(p)
+	}
+	if err := spawnQuiet(dir, "merge-base", "--is-ancestor", target, "HEAD"); err != nil {
+		return RebaseOutcome{}, fmt.Errorf("%s is not on the current branch", target)
+	}
+	if _, err := LoadRebaseTodo(dir, base); err != nil { // a merge commit after target
+		return RebaseOutcome{}, err
+	}
+	cmd := spawn.Command("git", "commit", "--fixup="+target)
+	cmd.Dir = dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return RebaseOutcome{}, cmdError(err, out)
+	}
+	args := []string{"rebase", "-i", "--autosquash"}
+	if opt.Autostash {
+		args = append(args, "--autostash")
+	}
+	if base == "" {
+		args = append(args, "--root")
+	} else {
+		args = append(args, base)
+	}
+	planPath, cleanup, err := writeRebasePlan(rebasePlan{})
+	if err != nil {
+		return RebaseOutcome{}, err
+	}
+	defer cleanup()
+	return runRebaseCmd(dir, opt, planPath, args...)
+}
+
+// spawnQuiet runs git and only reports its exit.
+func spawnQuiet(dir string, args ...string) error {
+	cmd := spawn.Command("git", args...)
+	cmd.Dir = dir
+	return cmd.Run()
 }
