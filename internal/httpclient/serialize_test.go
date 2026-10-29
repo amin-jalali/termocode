@@ -117,7 +117,7 @@ func FuzzRoundTrip(f *testing.F) {
 		for _, r := range a.Requests {
 			// A request line that only parses because of leading spaces
 			// ("  #x y") reads as a comment once written; same in Dart.
-			if isComment(r.Method) || httpSuffixRe.MatchString(r.URL) || strings.Contains(r.BodyText(), "\r") {
+			if isComment(r.Method) || cutHTTPVersion(r.URL) != r.URL || strings.Contains(r.BodyText(), "\r") {
 				t.Skip()
 			}
 			for _, h := range r.Headers {

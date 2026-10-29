@@ -16,11 +16,7 @@ import (
 //   - `# @no-redirect`, `# @no-cookie-jar`, `# @timeout 10s` directives,
 //   - blank lines between the comment lines above a request.
 
-var (
-	varLineRe    = lazyre.New(`^@([\w.-]+)\s*=\s*(.*?)\s*$`)
-	httpSuffixRe = lazyre.New(`\s+HTTP/\S+$`)
-	schemeRe     = lazyre.New(`^[A-Za-z][A-Za-z0-9+.-]*://`)
-)
+var varLineRe = lazyre.New(`^@([\w.-]+)\s*=\s*(.*?)\s*$`)
 
 // Parse reads a `.http` file. It never fails: blocks it cannot read are
 // skipped, like the Dart parser.
@@ -69,7 +65,7 @@ func commentText(s string) string {
 // LooksLikeURL reports whether s starts like a URL (a scheme, or a
 // `{{host}}` placeholder).
 func LooksLikeURL(s string) bool {
-	return schemeRe.MatchString(s) || strings.HasPrefix(s, "{{")
+	return looksLikeScheme(s) || strings.HasPrefix(s, "{{")
 }
 
 func parseBlock(lines []string, first int, name string, vars *[]Var) (Request, bool) {
@@ -91,7 +87,11 @@ func parseBlock(lines []string, first int, name string, vars *[]Var) (Request, b
 				r.Directives[word] = strings.TrimSpace(val)
 			}
 		default:
-			m := varLineRe.FindStringSubmatch(strings.TrimSpace(l))
+			t := strings.TrimSpace(l)
+			if !strings.HasPrefix(t, "@") {
+				goto request
+			}
+			m := varLineRe.FindStringSubmatch(t)
 			if m == nil {
 				goto request
 			}
@@ -118,7 +118,7 @@ request:
 	default:
 		r.Method, url = strings.ToUpper(tok), strings.TrimSpace(rest)
 	}
-	url = strings.TrimSpace(httpSuffixRe.ReplaceAllString(url, ""))
+	url = strings.TrimSpace(cutHTTPVersion(url))
 	if url == "" {
 		return r, false
 	}
@@ -151,4 +151,46 @@ request:
 		r.Body = &b
 	}
 	return r, true
+}
+
+// looksLikeScheme reports whether s starts with a URL scheme and "://"
+// (^[A-Za-z][A-Za-z0-9+.-]*://, without a regexp: it runs on every
+// request line of every parse).
+func looksLikeScheme(s string) bool {
+	if s == "" || !isLetter(s[0]) {
+		return false
+	}
+	for i := 1; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case isLetter(c), c >= '0' && c <= '9', c == '+', c == '.', c == '-':
+		case c == ':':
+			return strings.HasPrefix(s[i:], "://")
+		default:
+			return false
+		}
+	}
+	return false
+}
+
+func isLetter(c byte) bool { return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' }
+
+// isRESpace is regexp's \s: [\t\n\f\r ].
+func isRESpace(c byte) bool { return c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r' }
+
+// cutHTTPVersion drops a trailing " HTTP/1.1" (the regexp
+// \s+HTTP/\S+$ replaced by "").
+func cutHTTPVersion(s string) string {
+	j := len(s)
+	for j > 0 && !isRESpace(s[j-1]) {
+		j--
+	}
+	tok := s[j:]
+	if j == 0 || len(tok) <= len("HTTP/") || !strings.HasPrefix(tok, "HTTP/") {
+		return s
+	}
+	for j > 0 && isRESpace(s[j-1]) {
+		j--
+	}
+	return s[:j]
 }

@@ -1,7 +1,10 @@
 package httpclient
 
 import (
+	"fmt"
 	"reflect"
+	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -218,5 +221,56 @@ func TestLines(t *testing.T) {
 	}
 	if f := Parse(""); f.AtLine(1) != nil {
 		t.Fatal("AtLine on an empty file must be nil")
+	}
+}
+
+func parseBench200() string {
+	var sb strings.Builder
+	sb.WriteString("@base = {{host}}/v1\n\n")
+	for i := 0; i < 200; i++ {
+		fmt.Fprintf(&sb, "### r%d\n# @name r%d\nPOST {{base}}/users/%d HTTP/1.1\nAuthorization: Bearer {{token}}\nContent-Type: application/json\n\n{\"id\": \"{{$guid}}\", \"n\": %d}\n\n", i, i, i, i)
+	}
+	return sb.String()
+}
+
+// PERF-8: parsing a 200-request file (every send and every buffer
+// refresh does it) stays cheap: no regexp on plain lines.
+func TestParseAllocs200(t *testing.T) {
+	src := parseBench200()
+	if f := Parse(src); len(f.Requests) != 200 || f.Requests[7].URL != "{{base}}/users/7" {
+		t.Fatalf("%d requests, url %q", len(f.Requests), f.Requests[7].URL)
+	}
+	const maxAllocs = 700 // measured 615 (was 1215)
+	if n := testing.AllocsPerRun(5, func() { Parse(src) }); n > maxAllocs {
+		t.Errorf("Parse of 200 requests: %.0f allocs (max %d)", n, maxAllocs)
+	}
+}
+
+// looksLikeScheme is schemeRe without the regexp.
+func TestLooksLikeSchemeMatchesRegexp(t *testing.T) {
+	re := regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*://`)
+	for _, s := range []string{"", "h", "http://x", "https://", "HTTP://a", "git+ssh://h", "a.b-c://", "1http://x",
+		"http:/x", "http//x", "ht tp://x", "{{host}}/x", "GET", "x://", "+a://", "a+://b", "é://x", "http:", "://x"} {
+		if got, want := looksLikeScheme(s), re.MatchString(s); got != want {
+			t.Errorf("%q: %v, regexp says %v", s, got, want)
+		}
+	}
+}
+
+func TestCutHTTPVersionMatchesRegexp(t *testing.T) {
+	re := regexp.MustCompile(`\s+HTTP/\S+$`)
+	for _, s := range []string{"", "x", "/a HTTP/1.1", "/a  \t HTTP/2", "/a HTTP/", "/a HTTP/1.1 ", "/aHTTP/1.1", "HTTP/1.1",
+		" HTTP/1.1", "/a HTTP/x HTTP/1.1", "/a HTTP/xHTTP/1", "/a\vHTTP/1.1", "/a http/1.1", "/a HTTP/1.1\r", "/a\fHTTP/9"} {
+		if got, want := cutHTTPVersion(s), re.ReplaceAllString(s, ""); got != want {
+			t.Errorf("%q: %q, regexp gives %q", s, got, want)
+		}
+	}
+}
+
+func BenchmarkParse200(b *testing.B) {
+	src := parseBench200()
+	b.ReportAllocs()
+	for b.Loop() {
+		Parse(src)
 	}
 }
