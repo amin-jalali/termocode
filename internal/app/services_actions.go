@@ -1538,6 +1538,7 @@ func (m *Model) dispatchContainerAIAction(id, target string) (tea.Cmd, error) {
 		return m.containerAction(verb, c), nil
 	case "containers-remove":
 		m.askRemoveContainer(c)
+		return nil, nil
 	case "containers-logs":
 		return m.openContainerTerminal(c, "logs"), nil
 	case "containers-shell":
