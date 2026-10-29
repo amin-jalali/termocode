@@ -3,6 +3,7 @@ package bootgc
 import (
 	"runtime/debug"
 	"testing"
+	"time"
 )
 
 // gcPercent reads the current GC percent without changing it.
@@ -51,5 +52,30 @@ func TestGOGCEnvIsNotHeld(t *testing.T) {
 	}
 	if Held() {
 		t.Fatal("held although GOGC is set")
+	}
+}
+
+// Once startup has settled after Release, the memory startup used and
+// no longer needs goes back to the OS (once).
+func TestReleaseFreesStartupMemoryOnceSettled(t *testing.T) {
+	defer debug.SetGCPercent(gcPercent())
+	var delays []time.Duration
+	freed := 0
+	oldFree, oldAfter := freeOSMemory, afterFunc
+	freeOSMemory = func() { freed++ }
+	afterFunc = func(d time.Duration, f func()) { delays = append(delays, d); f() }
+	t.Cleanup(func() { freeOSMemory, afterFunc = oldFree, oldAfter })
+
+	start(func(string) string { return "" })
+	if freed != 0 {
+		t.Fatal("memory freed while still held")
+	}
+	Release()
+	if freed != 1 || len(delays) != 1 || delays[0] != settleDelay {
+		t.Fatalf("after Release: freed %d times, delays %v; want once after %v", freed, delays, settleDelay)
+	}
+	Release()
+	if freed != 1 {
+		t.Fatalf("a second Release freed memory again (%d)", freed)
 	}
 }
