@@ -263,10 +263,10 @@ func TestBuildListsFamiliarRowsAndImportedConflictsForEverySource(t *testing.T) 
 				wantFamiliar = 0
 			}
 			for _, row := range p.Rows {
-				if row.Kind == RowKey && strings.HasPrefix(row.SourceText, familiarSource(source)+" default: ctrl+p") {
+				if row.Kind == RowKey && strings.HasPrefix(row.SourceText, "VS Code default: ctrl+p") {
 					foundFamiliar = true
 				}
-				if row.Kind == RowKey && strings.HasPrefix(row.SourceText, familiarSource(source)+" default:") {
+				if row.Kind == RowKey && strings.HasPrefix(row.SourceText, "VS Code default:") {
 					familiarCount++
 				}
 				if row.Kind == RowKey && row.Key == "ctrl+p" && row.Conflict && !row.Apply {
