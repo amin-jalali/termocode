@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/extproc"
 )
 
@@ -82,7 +83,7 @@ type socketConn struct {
 func Serve(ln net.Listener, source ToolSource, peer func(net.Conn) error, onErr func(error)) *SocketServer {
 	s := &SocketServer{ln: ln, source: source, peer: peer, onErr: onErr, conns: map[net.Conn]*socketConn{}}
 	s.wg.Add(1)
-	go s.accept()
+	crash.Go("the MCP socket", func() { s.accept() })
 	return s
 }
 
@@ -116,7 +117,7 @@ func (s *SocketServer) accept() {
 		s.conns[c] = &socketConn{}
 		s.wg.Add(1)
 		s.mu.Unlock()
-		go s.serve(c)
+		crash.Go("an MCP connection", func() { s.serve(c) })
 	}
 }
 

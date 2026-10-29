@@ -38,6 +38,7 @@ import (
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // ErrNeedsApp: the authorization server lets no unknown client in (no
@@ -404,7 +405,7 @@ func Begin(ctx context.Context, cfg Config) (*Flow, error) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/callback", f.serveCallback)
 	f.srv = &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
-	go func() { _ = f.srv.Serve(ln) }()
+	crash.Go("the sign-in page", func() { _ = f.srv.Serve(ln) })
 	ok = true
 	return f, nil
 }
@@ -490,7 +491,7 @@ func (f *Flow) serveCallback(w http.ResponseWriter, r *http.Request) {
 	} else {
 		fmt.Fprintf(w, donePage, "Signed in. You can close this tab and go back to termocode.")
 	}
-	go f.stopListener()
+	crash.Go("the sign-in page", func() { f.stopListener() })
 }
 
 func htmlEscape(s string) string {
@@ -533,7 +534,7 @@ func (f *Flow) Paste(input string) error {
 		return errors.New("paste the whole address from the browser (it has ?code=…&state=…)")
 	}
 	err = f.deliver(u.Query())
-	go f.stopListener()
+	crash.Go("the sign-in page", func() { f.stopListener() })
 	return err
 }
 

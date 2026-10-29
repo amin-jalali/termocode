@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/extproc"
 	"github.com/amin-jalali/termocode/internal/session"
 	"github.com/amin-jalali/termocode/internal/spawn"
@@ -106,14 +107,14 @@ func startBroker(sock string, cfg shareConfig, peer func(net.Conn) error) (*brok
 		_ = ln.Close()
 		return nil, err
 	}
-	go func() {
+	crash.Go("the shared MCP server", func() {
 		<-b.exit
 		b.shutdown()
-	}()
+	})
 	b.mu.Lock()
 	b.armLocked()
 	b.mu.Unlock()
-	go b.accept()
+	crash.Go("the shared MCP server", func() { b.accept() })
 	return b, nil
 }
 
@@ -171,18 +172,18 @@ func (b *broker) startServer() error {
 		return fmt.Errorf("start %s: %w", b.cfg.Command, err)
 	}
 	b.cmd = cmd
-	go func() {
+	crash.Go("the shared MCP server log", func() {
 		sc := bufio.NewScanner(stderr)
 		sc.Buffer(make([]byte, 64<<10), 1<<20)
 		for sc.Scan() {
 			b.log("stderr", sc.Text())
 		}
-	}()
-	go func() {
+	})
+	crash.Go("the shared MCP server", func() {
 		_ = cmd.Wait()
 		killGroup(cmd.Process.Pid)
 		close(b.exit)
-	}()
+	})
 	b.srv = extproc.NewConnWith(stdout, stdin, b.fromServer, extproc.ConnOptions{
 		Framing: extproc.FramingNewline,
 		Skipped: func(line string) { b.log("stdout (not JSON)", line) },
@@ -298,7 +299,7 @@ func (b *broker) accept() {
 		c.conn = extproc.NewConnWith(nc, nc, func(conn *extproc.Conn, m extproc.Message) { b.fromClient(c, conn, m) },
 			extproc.ConnOptions{Framing: extproc.FramingNewline})
 		b.mu.Unlock()
-		go b.watch(c)
+		crash.Go("the shared MCP server", func() { b.watch(c) })
 	}
 }
 
@@ -320,7 +321,7 @@ func (b *broker) watch(c *shareClient) {
 	}
 	b.mu.Unlock()
 	if last {
-		go b.shutdown()
+		crash.Go("the shared MCP server", func() { b.shutdown() })
 		return
 	}
 	b.sendStatus()
@@ -354,7 +355,7 @@ func (b *broker) fromClient(c *shareClient, conn *extproc.Conn, m extproc.Messag
 		// No answer: the closed connection is the answer. A reply sent
 		// right before shutdown closes the connection could be lost in
 		// the write queue, and the session would see an error.
-		go b.shutdown()
+		crash.Go("the shared MCP server", func() { b.shutdown() })
 		return
 	case shareLeave:
 		b.mu.Lock()
@@ -383,7 +384,7 @@ func (b *broker) fromClient(c *shareClient, conn *extproc.Conn, m extproc.Messag
 	b.mu.Lock()
 	c.calls[key] = cancel
 	b.mu.Unlock()
-	go func() {
+	crash.Go("a shared MCP call", func() {
 		defer func() {
 			b.mu.Lock()
 			delete(c.calls, key)
@@ -403,7 +404,7 @@ func (b *broker) fromClient(c *shareClient, conn *extproc.Conn, m extproc.Messag
 			return
 		}
 		_ = conn.Reply(m.ID, raw, nil)
-	}()
+	})
 }
 
 // fromServer handles the server's requests and notifications.
