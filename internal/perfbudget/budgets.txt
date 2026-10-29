@@ -19,6 +19,8 @@
 # e2e (real binary in a PTY, e2e/perf_test.go)
 startup_first_frame        30   ms   # median of 5 starts, 1 ms polling; local 15 ms (PERF-1; was 39-41)
 session_idle_rss          300   MB   # client + server + UI + nvim, notes.txt open; local 147 MB
+session_idle_cpu          100   ms   # CPU per idle minute, whole session + ended git children; local 47 ms (was 140)
+session_idle_wakeups       32   1/s  # thread wakeups per second while idle; local 15.9 (was 32.6)
 
 # testkit (in-process app, internal/testkit/perf_budget_test.go)
 editor_key_to_frame_p95    25   ms   # real nvim, 40 keys; local p95 1.3 ms (was 2.3; floor)
