@@ -508,6 +508,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"persistent_session":  aiConfirm(ai.ClassSettings),
 	"auto_reconnect":      aiConfirm(ai.ClassSettings),
 	"search_max_results":  aiConfirm(ai.ClassSettings),
+	"update_check":        aiConfirm(ai.ClassSettings),
 	"ai_inline":           aiConfirm(ai.ClassSettings),
 	"ai_next_edit":        aiConfirm(ai.ClassSettings),
 	"mouse_hover":         aiNever("a file-only terminal setting read at start; the user edits it in config.json"),

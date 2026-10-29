@@ -1982,4 +1982,5 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `terminal_shell_integration` | never | changes how the user's shell starts; a file-only switch the user edits in config.json |
 | `terminal_skip_shell` | never | decides which keys reach the shell; a file-only list the user edits in config.json |
 | `theme` | confirm (settings) |   |
+| `update_check` | confirm (settings) |   |
 | `word_wrap` | confirm (settings) |   |

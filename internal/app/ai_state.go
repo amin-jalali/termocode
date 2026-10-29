@@ -675,7 +675,8 @@ func init() {
 
 // aiSettingsCategories puts the AI rows in their own Settings group.
 func aiSettingsCategories(cats map[string]string) map[string]string {
-	httpSettingsCategories(cats) // the HTTP client's group (http_settings.go)
+	httpSettingsCategories(cats)   // the HTTP client's group (http_settings.go)
+	updateSettingsCategories(cats) // G-UPD (update_settings.go)
 	for _, id := range []string{"setting-ai-inline", "setting-ai-next-edit", "setting-ai-provider", "setting-ai-model", "setting-ai-base-url",
 		"setting-ai-until-done-rounds", "setting-ai-until-done-budget"} {
 		cats[id] = "AI"
@@ -689,6 +690,9 @@ func aiSettingValue(id string) (string, bool) {
 		return v, true
 	}
 	if v, ok := httpSettingValue(id); ok { // HTTP client (http_settings.go)
+		return v, true
+	}
+	if v, ok := updateSettingValue(id); ok { // G-UPD (update_settings.go)
 		return v, true
 	}
 	path, _ := ai.ConfigPath()
@@ -735,6 +739,9 @@ func (m *Model) applyAISetting(id, value string) (tea.Cmd, bool) {
 		return cmd, true
 	}
 	if c, ok := m.applyHTTPSetting(id, value); ok { // HTTP client (http_settings.go)
+		return c, true
+	}
+	if c, ok := m.applyUpdateSetting(id, value); ok { // G-UPD (update_settings.go)
 		return c, true
 	}
 	path, err := ai.ConfigPath()

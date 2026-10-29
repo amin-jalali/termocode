@@ -78,6 +78,12 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `mcp_github_client_id` | string | `(built in)` | Client ID of a GitHub OAuth App with Device Flow on, for the GitHub sign-in with a code (Connect a service). Empty uses the one built into termocode (none until it is registered). Not a secret. |
 | `mcp_share` | bool | `true` | Run each local MCP server once for all your termocode windows with the same server entry and folder, not once per window. It ends when the last window stops using it (mcp_idle_timeout or quit). false: every window runs its own. Remote servers are not affected. |
 
+## Updates
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `update_check` | bool | `true` | Look for a newer termocode release once a day, in the background (GitHub, no account needed). Dev builds never look. |
+
 ## Databases (file only)
 
 | Key | Type | Default | Description |
