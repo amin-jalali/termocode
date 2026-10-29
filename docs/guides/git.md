@@ -200,8 +200,9 @@ Good to know:
   puts your changes aside and brings them back after the rebase.
 - **Merge commits** cannot be rebased here yet. termocode says so and
   does nothing.
-- **Undo.** git keeps the old branch tip. The toast at the end says how to
-  go back: `git reset --hard ORIG_HEAD`.
+- **Undo.** git keeps the old branch tip. Press `u` in Source Control to
+  go back (see [Undo a git action](#undo-a-git-action)). The toast at the
+  end also names the git command: `git reset --hard ORIG_HEAD`.
 
 ### When the rebase stops
 
@@ -232,6 +233,40 @@ termocode makes a `fixup!` commit and runs an autosquash rebase: the fix
 ends up inside the older commit and the history keeps its messages. Your
 unstaged changes are stashed and put back (**Stash and Fixup**). The same
 warnings and the same undo apply as for an interactive rebase.
+
+## Undo a git action
+
+git writes every move of HEAD to the reflog: a commit, an amend, a reset,
+a checkout, a merge, a rebase, a cherry-pick, a pull. termocode reads it
+and can take the last one back.
+
+1. Press `u` in the Source Control panel, or run **Git: Undo Last Git
+   Action…**.
+2. A card says what the last action was, in plain words, for example
+   `Last action: commit 'fix x' (2 min ago).` It also says what the undo
+   does: `HEAD (main) goes back to a1b2c3d 'old subject'.`
+3. **Cancel** is first and has the focus. Pick **Undo** to do it.
+
+How it works:
+
+- The undo runs `git reset --keep`. It never throws local changes away.
+  The commits it leaves stay in the reflog for 90 days.
+- Undo of a checkout switches back to the branch you left.
+- **Local changes in the way.** When you changed a file the undo must
+  change, the button is **Stash and Undo**: termocode stashes your
+  changes, undoes, and puts them back. If they do not go back cleanly,
+  the stash stays (`stash@{0}`) and the toast says so.
+- **Already pushed?** When commits that leave the branch are on the
+  upstream already, the card warns you: you would need to force-push.
+  termocode never force-pushes.
+- **Redo.** After an undo, click the toast or run **Git: Redo Undone Git
+  Action**. It works while HEAD has not moved since.
+- A stopped merge, rebase, cherry-pick or revert must be finished (or
+  aborted) first. termocode says so and does nothing.
+
+**Git: Reflog…** lists the last 50 actions, newest first. Pick one and
+press `Enter`: the card asks **Move HEAD back to here?** with the same
+checks.
 
 ## Resolve a merge conflict
 
@@ -348,6 +383,7 @@ In the Source Control panel:
 | `Space` | Mark a commit for compare |
 | `R` | Interactive rebase from the commit |
 | `F` | Fixup staged changes into the commit |
+| `u` | Undo the last git action (asks first) |
 | `Esc` | Close the commit view / clear marks |
 | `c` | Go to the message box |
 | `x` | Discard changes (asks first) |
