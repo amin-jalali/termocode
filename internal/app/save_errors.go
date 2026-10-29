@@ -1,9 +1,14 @@
 package app
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/amin-jalali/termocode/internal/toast"
 )
 
 // saveFailText turns the error of a nvim :write into short words for the
@@ -50,4 +55,39 @@ func dirWritable(dir string) bool {
 	_ = f.Close()
 	_ = os.Remove(name)
 	return true
+}
+
+// saveAll writes every modified file and tells the user how it went: a
+// file that could not be written (read-only, no permission, disk full)
+// is still modified afterwards, and the toast names it instead of
+// claiming that everything was saved.
+func (m *Model) saveAll() tea.Cmd {
+	if m.nvim == nil {
+		return nil
+	}
+	_ = m.nvim.Command("silent! wall")
+	var cmd tea.Cmd
+	if left := m.unsavedFiles(); len(left) > 0 {
+		m.toast, cmd = m.toast.PushDetail(toast.Errr, "Save failed", saveAllFailText(left))
+		return cmd
+	}
+	m.toast, cmd = m.toast.Push(toast.Info, "Saved all open files")
+	return cmd
+}
+
+// saveAllFailText names the files Save All could not write.
+func saveAllFailText(paths []string) string {
+	const kept = " Your changes are still in the editor."
+	if len(paths) == 1 {
+		return "Could not save " + filepath.Base(paths[0]) + "." + kept
+	}
+	names := make([]string, 0, 3)
+	for i, p := range paths {
+		if i == 3 {
+			names = append(names, "…")
+			break
+		}
+		names = append(names, filepath.Base(p))
+	}
+	return fmt.Sprintf("Could not save %d files: %s.%s", len(paths), strings.Join(names, ", "), kept)
 }

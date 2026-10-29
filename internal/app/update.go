@@ -1672,12 +1672,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		}
 		return m, tea.Batch(fetchGitCmd(), toastCmd)
 	case keymap.ActionSaveAll:
-		var toastCmd tea.Cmd
-		if m.nvim != nil {
-			_ = m.nvim.Command(":wall")
-			m.toast, toastCmd = m.toast.Push(toast.Info, "Saved all open files")
-		}
-		return m, tea.Batch(fetchGitCmd(), toastCmd)
+		return m, tea.Batch(fetchGitCmd(), m.saveAll())
 	case keymap.ActionToggleExplorer:
 		m.showExp = !m.showExp
 		m.applyLayout()

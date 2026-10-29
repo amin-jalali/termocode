@@ -96,3 +96,34 @@ func TestPaletteSaveReadOnlyFileToasts(t *testing.T) {
 		t.Errorf("a.txt on disk changed to %q", got)
 	}
 }
+
+// Spec: Given a.txt (read-only on disk) and b.txt both edited,
+// when the user runs File: Save All Files,
+// then b.txt is saved, a.txt is not, a toast names a.txt as not saved
+// (no "Saved all" message) and a.txt stays modified.
+func TestSaveAllNamesTheFileItCouldNotSave(t *testing.T) {
+	skipIfRoot(t)
+	d := editorDriver(t, nil)
+	chmodBack(t, filepath.Join(d.Dir, "a.txt"), 0o444, 0o644)
+	open(d, "a.txt")
+	d.Type("Hi ")
+	open(d, "b.txt")
+	d.Type("Hi ")
+	d.Palette("save-all")
+	if !d.WaitForText("Save failed", 3*time.Second) {
+		t.Fatalf("no Save failed toast after Save All:\n%s", screen(d))
+	}
+	if s := screen(d); !strings.Contains(s, "Could not save a.txt") || strings.Contains(s, "Saved all") {
+		t.Errorf("the toast does not name a.txt:\n%s", s)
+	}
+	if got := diskFile(d, "b.txt"); got != "Hi one\ntwo\nthree\n" {
+		t.Errorf("b.txt not saved: %q", got)
+	}
+	if got := diskFile(d, "a.txt"); got != "alpha\nbravo\ncharlie\n" {
+		t.Errorf("a.txt on disk changed to %q", got)
+	}
+	if !waitTabs(d, "a.txt*", "b.txt") {
+		got, _ := tabs(d)
+		t.Errorf("tabs after Save All = %v, want [a.txt* b.txt]", got)
+	}
+}
