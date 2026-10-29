@@ -103,6 +103,7 @@ nav:
       - Debug a program: guides/debug.md
       - Run and explore tests: guides/tests.md
       - Containers: guides/containers.md
+      - Kubernetes: guides/kubernetes.md
       - Dev services: guides/services.md
       - Browse databases: guides/databases.md
       - Tasks and problems: guides/tasks-problems.md

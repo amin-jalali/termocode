@@ -30,6 +30,7 @@ var nav = []PageInfo{
 	{"Guides", "Debug a program", "guides/debug.md"},
 	{"Guides", "Run and explore tests", "guides/tests.md"},
 	{"Guides", "Containers", "guides/containers.md"},
+	{"Guides", "Kubernetes", "guides/kubernetes.md"},
 	{"Guides", "Dev services", "guides/services.md"},
 	{"Guides", "Browse databases", "guides/databases.md"},
 	{"Guides", "Tasks and problems", "guides/tasks-problems.md"},
