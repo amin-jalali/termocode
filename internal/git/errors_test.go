@@ -15,7 +15,22 @@ func TestErrorReasonSSH(t *testing.T) {
 		// Nothing before it: the fatal line is all there is.
 		tail: "Could not read from remote repository.",
 		// Other fatal lines are kept as they are.
-		"fatal: unable to access 'http://127.0.0.1:1/r.git/': Failed to connect to 127.0.0.1 port 1: Connection refused": "unable to access 'http://127.0.0.1:1/r.git/': Failed to connect to 127.0.0.1 port 1: Connection refused",
+		"fatal: repository 'x' does not exist": "repository 'x' does not exist",
+	} {
+		if got := errorReason(out); got != want {
+			t.Errorf("errorReason(%q)\n got %q\nwant %q", out, got, want)
+		}
+	}
+}
+
+// Spec (SCN-13): over http git says "unable to access '<url>': <cause>";
+// the toast's one line is short, so the cause comes first and the URL
+// (the user's own remote) is dropped.
+func TestErrorReasonHTTP(t *testing.T) {
+	for out, want := range map[string]string{
+		"fatal: unable to access 'http://127.0.0.1:1/r.git/': Failed to connect to 127.0.0.1 port 1 after 0 ms: Couldn't connect to server": "Failed to connect to 127.0.0.1 port 1 after 0 ms: Couldn't connect to server",
+		"fatal: unable to access 'https://example.test/r.git/': Operation too slow. Less than 1 bytes/sec transferred the last 60 seconds":  "Operation too slow. Less than 1 bytes/sec transferred the last 60 seconds",
+		"fatal: unable to access 'https://example.test/r.git/': Could not resolve host: example.test":                                       "Could not resolve host: example.test",
 	} {
 		if got := errorReason(out); got != want {
 			t.Errorf("errorReason(%q)\n got %q\nwant %q", out, got, want)
