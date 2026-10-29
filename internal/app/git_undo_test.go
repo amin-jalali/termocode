@@ -198,3 +198,56 @@ func TestGitUndoRefusesDuringMerge(t *testing.T) {
 		t.Errorf("rebase: card %v, toast:\n%s", m.confirmOpen, s)
 	}
 }
+
+// undoToastClick is the click message of the newest clickable toast.
+func undoToastClick(t *testing.T, m *Model) tea.Msg {
+	t.Helper()
+	cards := m.toast.Cards(120)
+	for i := len(cards) - 1; i >= 0; i-- {
+		if cards[i].Click != nil {
+			return cards[i].Click
+		}
+	}
+	t.Fatalf("no clickable toast:\n%s", toastText(*m))
+	return nil
+}
+
+// G-UND: after an undo the toast offers Redo; a click (or the palette
+// entry) puts HEAD back. Once HEAD moved again, Redo refuses.
+func TestGitUndoRedo(t *testing.T) {
+	m, run := undoRepo(t, 3)
+	c3 := run("rev-parse", "HEAD")
+	openUndoCard(t, m)
+	undoStep(t, m, m.handleConfirmSelect("undo"))
+	if s := toastText(*m); !strings.Contains(s, "Redo") {
+		t.Errorf("toast does not offer Redo:\n%s", s)
+	}
+	click := undoToastClick(t, m)
+	undoStep(t, m, m.onUndoMsg(click))
+	if run("rev-parse", "HEAD") != c3 {
+		t.Fatalf("not redone; toasts:\n%s", toastText(*m))
+	}
+	if s := toastText(*m); !strings.Contains(s, "Redone: commit 'c3'") {
+		t.Errorf("toast:\n%s", s)
+	}
+	// Redo is spent: the palette entry has nothing left to redo.
+	cmd, ok := m.dispatchUndoPalette("git-redo")
+	if !ok || cmd == nil {
+		t.Fatal("git-redo not handled")
+	}
+	if !strings.Contains(toastText(*m), "Nothing to redo") {
+		t.Errorf("toast:\n%s", toastText(*m))
+	}
+
+	openUndoCard(t, m)
+	undoStep(t, m, m.handleConfirmSelect("undo"))
+	_ = os.WriteFile("f9.txt", []byte("9\n"), 0o644)
+	run("add", "-A")
+	run("commit", "-q", "-m", "c9")
+	c9 := run("rev-parse", "HEAD")
+	cmd, _ = m.dispatchUndoPalette("git-redo")
+	undoStep(t, m, cmd)
+	if run("rev-parse", "HEAD") != c9 || !strings.Contains(toastText(*m), "Can't redo") {
+		t.Errorf("redo after a new commit; toasts:\n%s", toastText(*m))
+	}
+}

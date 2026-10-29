@@ -21,6 +21,24 @@ import (
 type gitUndoState struct {
 	plan *git.UndoPlan // the plan on the card (nil when no card is open)
 	move bool          // the card moves HEAD to a reflog line (Git: Reflog…)
+	redo *undoRedo     // the last undo, until it is redone or replaced
+}
+
+// undoRedo is what Redo needs: the undo's plan and HEAD right after it.
+type undoRedo struct {
+	plan  git.UndoPlan
+	after string
+	move  bool
+}
+
+// redoClickMsg is a click on the toast after an undo (or Git: Redo).
+type redoClickMsg struct{}
+
+// redoDoneMsg is the end of a redo.
+type redoDoneMsg struct {
+	plan git.UndoPlan
+	move bool
+	err  error
 }
 
 // undoPlanMsg carries a plan (or why there is none) for the card.
@@ -57,6 +75,10 @@ func (m *Model) onUndoMsg(msg tea.Msg) tea.Cmd {
 		return m.onUndoPlan(msg)
 	case undoDoneMsg:
 		return m.onUndoDone(msg)
+	case redoClickMsg:
+		return m.gitRedoCmd()
+	case redoDoneMsg:
+		return m.onRedoDone(msg)
 	}
 	return nil
 }
@@ -185,8 +207,62 @@ func (m *Model) onUndoDone(msg undoDoneMsg) tea.Cmd {
 			"They are kept in "+msg.res.StashRef+". Fix the conflicts, then drop the stash.")
 		return tea.Batch(cmd, fetchGitCmd())
 	}
-	m.toast, cmd = m.toast.PushDetail(toast.Info, title, detail)
+	if m.gitUndo == nil {
+		m.gitUndo = &gitUndoState{}
+	}
+	m.gitUndo.redo = &undoRedo{plan: p, after: msg.res.After, move: msg.move}
+	m.toast, cmd = m.toast.PushClick(toast.Info, title, detail+" Click to Redo.", redoClickMsg{})
 	return tea.Batch(cmd, fetchGitCmd())
+}
+
+// gitRedoCmd takes back the last undo (once), off the loop.
+func (m *Model) gitRedoCmd() tea.Cmd {
+	if m.gitUndo == nil || m.gitUndo.redo == nil {
+		var cmd tea.Cmd
+		m.toast, cmd = m.toast.PushDetail(toast.Info, "Nothing to redo", "Redo works right after an undo.")
+		return cmd
+	}
+	r := *m.gitUndo.redo
+	m.gitUndo.redo = nil
+	cwd, err := m.rootDir()
+	if err != nil {
+		return nil
+	}
+	return func() tea.Msg {
+		return redoDoneMsg{plan: r.plan, move: r.move, err: git.RunRedo(cwd, r.plan, r.after)}
+	}
+}
+
+// onRedoDone says how the redo went.
+func (m *Model) onRedoDone(msg redoDoneMsg) tea.Cmd {
+	var cmd tea.Cmd
+	switch {
+	case errors.Is(msg.err, git.ErrUndoStale):
+		m.toast, cmd = m.toast.PushDetail(toast.Warn, "Can't redo: HEAD moved since the undo",
+			"Nothing moved. Git: Reflog… still lists where it was.")
+		return cmd
+	case errors.Is(msg.err, git.ErrUndoLocalChanges):
+		m.toast, cmd = m.toast.PushDetail(toast.Warn, "Can't redo: your local changes are in the way",
+			"Nothing moved. Commit or stash them first.")
+		return cmd
+	case msg.err != nil:
+		m.toast, cmd = m.toast.PushDetail(toast.Errr, "Redo failed", msg.err.Error())
+		return cmd
+	}
+	title := "Redone: " + msg.plan.Entry.Summary()
+	if msg.move {
+		title = "Redone"
+	}
+	m.toast, cmd = m.toast.PushDetail(toast.Info, title, "HEAD is back at "+shortHashOf(msg.plan.From)+".")
+	return tea.Batch(cmd, fetchGitCmd())
+}
+
+// shortHashOf is the first 7 letters of a hash.
+func shortHashOf(h string) string {
+	if len(h) > 7 {
+		return h[:7]
+	}
+	return h
 }
 
 // undoErrorToast says why an undo did not run; nothing moved.
@@ -221,6 +297,8 @@ func (m *Model) dispatchUndoPalette(id string) (tea.Cmd, bool) {
 			return nil, true
 		}
 		return m.gitUndoCmd(), true
+	case "git-redo":
+		return m.gitRedoCmd(), true
 	}
 	return nil, false
 }

@@ -295,6 +295,7 @@ func paletteItems() []picker.Item {
 		{ID: "git-fixup", Title: "Git: Fixup Staged Changes Into…"},                            // git_fixup.go
 		{ID: "git-rebase-status", Title: "Git: Rebase in Progress (Continue / Skip / Abort)…"}, // git_rebase.go
 		{ID: "git-undo", Title: "Git: Undo Last Git Action…"},                                  // git_undo.go
+		{ID: "git-redo", Title: "Git: Redo Undone Git Action"},                                 // git_undo.go
 		{ID: "reload-buffer", Title: "File: Revert / Reload from Disk"},
 		{ID: "open-url", Title: "View: Open URL on Current Line"},
 		{ID: "pin-tab", Title: "Tab: Toggle Pinned", Hint: "Alt+P"},

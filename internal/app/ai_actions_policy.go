@@ -213,6 +213,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"git-fixup":           aiNever(aiNoPicker),
 	"git-rebase-status":   aiNever(aiNoPicker),
 	"git-undo":            aiNever(aiNoGitUndo),
+	"git-redo":            aiNever(aiNoGitUndo),
 
 	// ── Workspace, session, settings ──
 	"workspace-add-folder":    aiNever(aiNoPicker + " (workspace_folders)"),
