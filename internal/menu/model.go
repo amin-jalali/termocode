@@ -40,8 +40,6 @@ type Model struct {
 	anchorY int
 	scrW    int
 	scrH    int
-	title   string // optional header label; "" hides the header row
-	icon    string // optional header glyph; "" falls back to a generic dot
 }
 
 // Layout constants. Each row is composed as:
@@ -70,23 +68,9 @@ func New(items []Item, x, y int) Model {
 	return m
 }
 
-// NewWithItems is an alias for New kept for callers that prefer the more
-// explicit name. Both constructors produce identical menus.
-func NewWithItems(items []Item, x, y int) Model {
-	return New(items, x, y)
-}
-
 // SetScreenSize tells the menu the current terminal dimensions so it can
 // clamp its anchor inside the visible area.
 func (m *Model) SetScreenSize(w, h int) { m.scrW, m.scrH = w, h }
-
-// SetSize is an alias for SetScreenSize, provided for parity with the other
-// overlay components (picker, prompt, settings modal).
-func (m *Model) SetSize(w, h int) { m.SetScreenSize(w, h) }
-
-// SetPosition repositions the menu anchor (e.g. when the underlying tab/row
-// shifts). The next render call re-clamps the new anchor to the screen.
-func (m *Model) SetPosition(x, y int) { m.anchorX, m.anchorY = x, y }
 
 // SelectID moves the highlight onto the row with this ID (a menu rebuilt
 // after a toggle keeps its place). An unknown ID changes nothing.
@@ -106,11 +90,6 @@ func (m Model) SelectedID() string {
 	}
 	return ""
 }
-
-// SetTitle attaches an optional header label and icon. Pass "" for either to
-// suppress that piece (or both, to skip the header row entirely). No current
-// caller sets a header; the field is preserved for API stability.
-func (m *Model) SetTitle(title, icon string) { m.title, m.icon = title, icon }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -149,7 +128,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 // HandleMouse routes a tea.MouseMsg through the menu. Hover (plain motion)
 // moves the highlight onto the row under the pointer; click outside the
 // rendered panel closes the menu; click on an action row selects it; clicks
-// on borders/headers/separators are no-ops.
+// on borders/separators are no-ops.
 func (m Model) HandleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 	w, h := m.size()
 	x, y := m.clampedAnchor()
@@ -173,16 +152,13 @@ func (m Model) HandleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 	if !inside {
 		return m, func() tea.Msg { return CloseMsg{} }
 	}
-	// Map screen y to a logical item index (skipping border + optional header).
+	// Map screen y to a logical item index (skipping the border).
 	idx := m.itemAt(msg.Y - y)
 	if idx < 0 || idx >= len(m.items) || m.items[idx].Sep {
 		return m, nil
 	}
 	return m, func() tea.Msg { return SelectMsg{ID: m.items[idx].ID} }
 }
-
-// hasHeader reports whether the menu renders a header row above its items.
-func (m Model) hasHeader() bool { return m.title != "" || m.icon != "" }
 
 // itemsHaveIcons reports whether any non-separator item has an Icon set.
 // When true the renderer reserves an icon column on every row so labels
@@ -258,35 +234,19 @@ func (m Model) panelInnerWidth() int {
 	}
 	row += menuRightPad
 
-	if m.hasHeader() {
-		hdr := menuLeftPad
-		if m.icon != "" {
-			hdr += runewidth.StringWidth(m.icon) + 1
-		}
-		hdr += runewidth.StringWidth(m.title) + menuRightPad
-		if hdr > row {
-			row = hdr
-		}
-	}
 	if row < menuMinWidth {
 		row = menuMinWidth
 	}
 	return row
 }
 
-// innerWidth is preserved as the legacy name — alias for panelInnerWidth.
-func (m Model) innerWidth() int { return m.panelInnerWidth() }
-
 // size returns the FULL rendered size of the menu — including the rounded
-// border on all four sides and the optional header row + hairline. The
+// border on all four sides. The
 // return value is what callers (e.g. clampedAnchor, mouse hit-test) should
 // use as the bounding box.
 func (m Model) size() (w, h int) {
 	w = m.panelInnerWidth() + 2 // +2 for left/right border cells
 	rows := len(m.items)
-	if m.hasHeader() {
-		rows += 2 // header row + hairline below it
-	}
 	h = rows + 2 // +2 for top/bottom border cells
 	return w, h
 }
@@ -313,12 +273,9 @@ func (m Model) clampedAnchor() (int, int) {
 
 // itemAt translates a row offset (0 = top border, etc.) within the rendered
 // panel back into an items[] index. Returns -1 for non-actionable rows
-// (borders, header, hairline, out of range).
+// (borders, out of range).
 func (m Model) itemAt(rowOff int) int {
 	first := 1 // row 0 = top border
-	if m.hasHeader() {
-		first += 2
-	}
 	if rowOff < first {
 		return -1
 	}
@@ -453,23 +410,6 @@ func renderItemRow(it Item, selected bool, innerW int, showIcons bool) string {
 	return padToWidth(row, innerW, bg)
 }
 
-// renderHeaderRow renders the optional header row (title + icon) followed
-// by a hairline separator. Both rows are exactly innerW cells wide.
-func (m Model) renderHeaderRow(innerW int) (string, string) {
-	bgFill := styleBg(theme.BgHover)
-	iconStyle := styleFgBg(theme.AccentLavender, theme.BgHover).Bold(true)
-	titleStyle := styleFgBg(theme.TextPrimary, theme.BgHover).Bold(true)
-
-	row := bgFill.Render(strings.Repeat(" ", menuLeftPad))
-	if m.icon != "" {
-		row += iconStyle.Render(m.icon)
-		row += bgFill.Render(" ")
-	}
-	row += titleStyle.Render(m.title)
-	row = padToWidth(row, innerW, theme.BgHover)
-	return row, renderSeparatorRow(innerW)
-}
-
 // render produces the full menu including its rounded border. Layout
 // matches the spec in the package doc: every body row is exactly innerW
 // cells of panel-bg-styled output, separators are hairlines, the selected
@@ -479,11 +419,6 @@ func (m Model) render() string {
 	showIcons := m.itemsHaveIcons()
 
 	var rows []string
-
-	if m.hasHeader() {
-		hdr, hr := m.renderHeaderRow(innerW)
-		rows = append(rows, hdr, hr)
-	}
 
 	for i, it := range m.items {
 		if it.Sep {
