@@ -117,6 +117,11 @@ func TestMergeViewKeys(t *testing.T) {
 	if !send("3") || m.merge.view.ShownPane() != mergeview.PaneTheirs {
 		t.Errorf("3: pane %d", m.merge.view.ShownPane())
 	}
+	for _, k := range []string{"o", "t", "b", "B", "a", "u"} {
+		if !send(k) {
+			t.Errorf("%s was not taken", k)
+		}
+	}
 	if send("x") {
 		t.Error("unknown key was taken")
 	}

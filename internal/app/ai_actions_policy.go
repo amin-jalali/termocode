@@ -47,6 +47,7 @@ const (
 	aiNoAIConfig = "AI provider, credentials and approvals stay with the user"
 	aiNoNested   = "starts or changes an AI chat or edit; answer in this chat instead"
 	aiNoTransfer = "moves files between the user's machine and the server; user only"
+	aiNoMerge    = "resolves the user's merge conflict in the merge view; user only"
 )
 
 var aiActionPolicies = map[string]aiActionPolicy{
@@ -215,13 +216,22 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"git-undo":            aiNever(aiNoGitUndo),
 	"git-redo":            aiNever(aiNoGitUndo),
 	"git-reflog":          aiNever(aiNoPicker),
-	// Merge view (git_merge_view.go): opening and moving around only.
-	"git-merge-open":  aiAuto(),
-	"git-merge-next":  aiAuto(),
-	"git-merge-prev":  aiAuto(),
-	"git-merge-pane":  aiAuto(),
-	"git-merge-focus": aiAuto(),
-	"git-merge-close": aiAuto(),
+
+	// ── Merge view (git_merge_view.go): opening and moving around are
+	// UI only; each Take changes the user's merge result, so the user
+	// decides it. ──
+	"git-merge-open":                   aiAuto(),
+	"git-merge-next":                   aiAuto(),
+	"git-merge-prev":                   aiAuto(),
+	"git-merge-pane":                   aiAuto(),
+	"git-merge-focus":                  aiAuto(),
+	"git-merge-close":                  aiAuto(),
+	"git-merge-take-ours":              aiNever(aiNoMerge),
+	"git-merge-take-theirs":            aiNever(aiNoMerge),
+	"git-merge-take-both":              aiNever(aiNoMerge),
+	"git-merge-take-both-theirs-first": aiNever(aiNoMerge),
+	"git-merge-take-base":              aiNever(aiNoMerge),
+	"git-merge-undo":                   aiNever(aiNoMerge),
 
 	// ── Workspace, session, settings ──
 	"workspace-add-folder":    aiNever(aiNoPicker + " (workspace_folders)"),
