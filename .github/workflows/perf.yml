@@ -1,0 +1,88 @@
+# Performance budgets (STAB-5). Runs the perf guard tests (no -race) and
+# fails when a number is over its budget in
+# internal/perfbudget/budgets.txt. The numbers go to the job summary.
+name: perf
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  perf:
+    name: perf budgets (ubuntu-latest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NVIM_VERSION: v0.11.4
+      TERMOCODE_PERF: "1"
+      TERMOCODE_PERF_OUT: ${{ github.workspace }}/perf.tsv
+      E2E_DUMP_DIR: ${{ github.workspace }}/e2e-dumps
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Install X11 dev headers
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-perf-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-perf-
+            ${{ runner.os }}-go-
+
+      - name: Install Neovim (pinned release)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/nvim.tar.gz \
+            "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-x86_64.tar.gz"
+          sudo tar -xzf /tmp/nvim.tar.gz -C /opt
+          echo "/opt/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
+
+      - name: Perf guards
+        run: |
+          set -uo pipefail
+          : > "$TERMOCODE_PERF_OUT"
+          code=0
+          go test -count=1 -run '^TestPerf' -v ./internal/testkit/ || code=1
+          go -C e2e test -tags e2e -count=1 -run '^TestPerf' -v ./... || code=1
+          exit $code
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "### Performance budgets"
+            echo
+            echo "| Measure | Got | Budget | |"
+            echo "|---|---:|---:|---|"
+            if [ -s "$TERMOCODE_PERF_OUT" ]; then
+              awk -F'\t' '{ mark = ($5 == "ok") ? "ok" : "**over budget**"; printf "| %s | %s %s | %s %s | %s |\n", $1, $2, $4, $3, $4, mark }' "$TERMOCODE_PERF_OUT"
+            else
+              echo "| (no numbers: the guards did not run) | | | |"
+            fi
+            echo
+            echo "Budgets: \`internal/perfbudget/budgets.txt\` (how to update them is at its top)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload numbers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-numbers
+          path: |
+            perf.tsv
+            e2e-dumps/
+          if-no-files-found: ignore
