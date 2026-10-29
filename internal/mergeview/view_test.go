@@ -61,7 +61,7 @@ func TestViewNarrowOnePane(t *testing.T) {
 	if !strings.Contains(body, "X1") || strings.Contains(body, "X2") {
 		t.Errorf("narrow shows ours only:\n%s", body)
 	}
-	if !strings.HasPrefix(strings.TrimSpace(rows[9]), "1-3") {
+	if !strings.HasPrefix(strings.TrimSpace(rows[9]), "o  ours") {
 		t.Errorf("narrow hint %q", rows[9])
 	}
 	m.CyclePane()

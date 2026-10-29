@@ -245,7 +245,8 @@ func (m Model) hintRow(w int) string {
 	}
 	pairs := []string{"n/p", "conflict", "o", "ours", "t", "theirs", "b", "both", "B", "theirs+ours", "a", "base", "u", "undo", "tab", "edit", "r", "resolved", "esc", "close"}
 	if m.narrow {
-		pairs = append([]string{"1-3", "pane"}, pairs...)
+		// Most needed first: the end is dropped when it does not fit.
+		pairs = []string{"o", "ours", "t", "theirs", "b/B", "both", "a", "base", "n/p", "next", "r", "resolved", "tab", "edit", "1-3", "pane", "esc", "close", "u", "undo"}
 	}
 	// Drop pairs from the end until the row fits.
 	for len(pairs) > 2 && ansi.StringWidth(" "+theme.HintBar(bg, pairs...)) > w {
