@@ -459,3 +459,64 @@ func TestAgentGateDecidesPerCall(t *testing.T) {
 		t.Errorf("destructive: asked %v, want one ask with no class", asked)
 	}
 }
+
+// Spec (SCN-2): a path may not leave the workspace through a symlink: a
+// link to a folder outside, a link to a file outside and a dangling link
+// to a place outside are all refused, for reading and for writing. Links
+// that stay inside work, and so does a workspace reached through a link.
+func TestWorkspaceResolveSymlinkEscape(t *testing.T) {
+	base := t.TempDir()
+	root := filepath.Join(base, "ws")
+	outside := filepath.Join(base, "outside")
+	for _, d := range []string{filepath.Join(root, "sub"), outside} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("s"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	links := map[string]string{
+		"dirlink":   outside,
+		"filelink":  filepath.Join(outside, "secret.txt"),
+		"dangling":  filepath.Join(outside, "missing", "new.txt"),
+		"rellink":   "../outside",
+		"inside":    "sub",
+		"sub/up":    "..",
+		"loop":      "loop",
+		"sub/chain": "../dirlink",
+	}
+	for name, target := range links {
+		if err := os.Symlink(target, filepath.Join(root, name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	w := Workspace{Root: root}
+	for _, p := range []string{"dirlink/secret.txt", "dirlink", "dirlink/new/x.txt", "filelink", "dangling",
+		"rellink/secret.txt", "sub/chain/secret.txt", "loop/x"} {
+		if _, err := w.Resolve(p); err != ErrOutsideWorkspace {
+			t.Errorf("Resolve(%q) = %v, want ErrOutsideWorkspace", p, err)
+		}
+	}
+	for _, p := range []string{"sub", "inside/new.txt", "sub/up/sub", "new/folder/file.txt", "."} {
+		if _, err := w.Resolve(p); err != nil {
+			t.Errorf("Resolve(%q) = %v, want ok", p, err)
+		}
+	}
+	// The workspace itself behind a link (macOS /var → /private/var).
+	via := filepath.Join(base, "via")
+	if err := os.Symlink(root, via); err != nil {
+		t.Fatal(err)
+	}
+	wv := Workspace{Root: via}
+	if abs, err := wv.Resolve("sub"); err != nil || abs != filepath.Join(via, "sub") {
+		t.Errorf("through a linked root: %q %v", abs, err)
+	}
+	if _, err := wv.Resolve("dirlink/secret.txt"); err != ErrOutsideWorkspace {
+		t.Errorf("linked root, escape: %v", err)
+	}
+	read, _ := FindTool(WorkspaceTools(w), "read_file")
+	if out, err := read.Run(context.Background(), map[string]any{"path": "dirlink/secret.txt"}); err == nil {
+		t.Errorf("read_file through a link read %q", out)
+	}
+}
