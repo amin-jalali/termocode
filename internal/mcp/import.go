@@ -85,18 +85,24 @@ func secretName(server, key string) string {
 // moveSecrets replaces literal tokens in headers, env and oauth with
 // ${secret:NAME} and keeps the values in Secrets.
 func (im *Imported) moveSecrets() {
-	for _, field := range []string{"headers", "env"} {
-		m, ok := im.Entry[field].(map[string]any)
+	// JSON keys match struct fields in any case ("Headers", "ENV"), so
+	// every spelling of a field is cleaned.
+	for _, key := range sortedAnyKeys(im.Entry) {
+		field := strings.ToLower(key)
+		if field != "headers" && field != "env" {
+			continue
+		}
+		m, ok := im.Entry[key].(map[string]any)
 		if !ok {
 			continue
 		}
-		for k, v := range m {
-			s, ok := v.(string)
+		for _, k := range sortedAnyKeys(m) {
+			s, ok := m[k].(string)
 			if !ok || !secretLiteralRe.MatchString(refRe.ReplaceAllString(s, "")) {
 				continue
 			}
 			name := secretName(im.Name, k)
-			if scheme, tok, ok := strings.Cut(s, " "); ok && strings.EqualFold(field, "headers") && !strings.Contains(tok, " ") &&
+			if scheme, tok, ok := strings.Cut(s, " "); ok && field == "headers" && !strings.Contains(tok, " ") &&
 				(strings.EqualFold(scheme, "Bearer") || strings.EqualFold(scheme, "Sentry-Bearer") || strings.EqualFold(scheme, "Basic") || strings.EqualFold(scheme, "token")) {
 				im.Secrets[name] = tok
 				m[k] = scheme + " ${secret:" + name + "}"
@@ -106,13 +112,32 @@ func (im *Imported) moveSecrets() {
 			m[k] = "${secret:" + name + "}"
 		}
 	}
-	if o, ok := im.Entry["oauth"].(map[string]any); ok {
-		if s, ok := o["client_secret"].(string); ok && s != "" && !strings.Contains(s, "${") {
+	for _, key := range sortedAnyKeys(im.Entry) {
+		o, ok := im.Entry[key].(map[string]any)
+		if !ok || !strings.EqualFold(key, "oauth") {
+			continue
+		}
+		for _, k := range sortedAnyKeys(o) {
+			s, ok := o[k].(string)
+			if !ok || !strings.EqualFold(k, "client_secret") || s == "" || strings.Contains(s, "${") {
+				continue
+			}
 			name := secretName(im.Name, "client_secret")
 			im.Secrets[name] = s
-			o["client_secret"] = "${secret:" + name + "}"
+			o[k] = "${secret:" + name + "}"
 		}
 	}
+}
+
+// sortedAnyKeys returns the keys of m in order, so secret names do not
+// depend on map order.
+func sortedAnyKeys(m map[string]any) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // ImportSummary is a one-line result for the wizard.
