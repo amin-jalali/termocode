@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // Leak tracking for tests: a test binary calls TrackClients in TestMain
@@ -41,12 +43,12 @@ func track(c *Client) {
 	}
 	leaks.live[c] = creator()
 	leaks.mu.Unlock()
-	go func() {
+	crash.Go("nvim leak tracking", func() {
 		<-c.reaped
 		leaks.mu.Lock()
 		delete(leaks.live, c)
 		leaks.mu.Unlock()
-	}()
+	})
 }
 
 // creator is the first Test… function on the caller's stack, else the

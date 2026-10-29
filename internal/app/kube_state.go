@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/activity"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/kube"
 )
 
@@ -210,10 +211,10 @@ func (m *Model) kubeLoad() tea.Cmd {
 			}
 		}
 		wg.Add(4)
-		go func() { defer wg.Done(); var err error; msg.pods, err = c.Pods(ctx); set("pods", err) }()
-		go func() { defer wg.Done(); var err error; msg.deploys, err = c.Deployments(ctx); set("deployments", err) }()
-		go func() { defer wg.Done(); var err error; msg.services, err = c.Services(ctx); set("services", err) }()
-		go func() { defer wg.Done(); var err error; msg.jobs, err = c.Jobs(ctx); set("jobs", err) }()
+		crash.Go("kubernetes pods", func() { defer wg.Done(); var err error; msg.pods, err = c.Pods(ctx); set("pods", err) })
+		crash.Go("kubernetes deployments", func() { defer wg.Done(); var err error; msg.deploys, err = c.Deployments(ctx); set("deployments", err) })
+		crash.Go("kubernetes services", func() { defer wg.Done(); var err error; msg.services, err = c.Services(ctx); set("services", err) })
+		crash.Go("kubernetes jobs", func() { defer wg.Done(); var err error; msg.jobs, err = c.Jobs(ctx); set("jobs", err) })
 		wg.Wait()
 		// The cluster itself does not answer: one line, not four.
 		if len(msg.errs) == len(kubeSections) {
