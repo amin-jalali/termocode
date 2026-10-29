@@ -58,10 +58,6 @@ type Hunk struct {
 	First, End int
 }
 
-// Added / Removed count the hunk's added and removed lines.
-func (h Hunk) Added() int   { return h.NewCount }
-func (h Hunk) Removed() int { return h.OldCount }
-
 // Diff is the computed diff of two texts.
 type Diff struct {
 	Rows           []Row
