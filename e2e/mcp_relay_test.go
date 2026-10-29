@@ -25,8 +25,15 @@ type relayProc struct {
 
 func startRelay(t *testing.T, home string, args ...string) *relayProc {
 	t.Helper()
+	return startRelayEnv(t, home, nil, args...)
+}
+
+// startRelayEnv is startRelay with extra environment (a session rig's
+// runtime dir).
+func startRelayEnv(t *testing.T, home string, env []string, args ...string) *relayProc {
+	t.Helper()
 	cmd := exec.Command(binPath, append([]string{"mcp"}, args...)...)
-	cmd.Env = isolatedEnv(home)
+	cmd.Env = append(isolatedEnv(home), env...)
 	in, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatal(err)
