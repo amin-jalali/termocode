@@ -98,22 +98,6 @@ func normalizeSourceKey(source, input string) (string, bool) {
 		} else {
 			s = strings.ReplaceAll(s, "-", "+")
 		}
-	} else if source == "helix" {
-		parts := strings.Split(s, "-")
-		if len(parts) > 1 {
-			mods := make([]string, 0, len(parts))
-			for _, part := range parts[:len(parts)-1] {
-				switch strings.ToLower(part) {
-				case "c":
-					mods = append(mods, "ctrl")
-				case "a":
-					mods = append(mods, "alt")
-				case "s":
-					mods = append(mods, "shift")
-				}
-			}
-			s = strings.Join(append(mods, strings.ToLower(parts[len(parts)-1])), "+")
-		}
 	} else if source == "sublime" {
 		s = strings.ToLower(s)
 		if i := strings.LastIndex(s, "+"); i > 0 && i < len(s)-1 {
