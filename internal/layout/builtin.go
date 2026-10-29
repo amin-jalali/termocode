@@ -4,14 +4,14 @@ package layout
 // fit any project. A user or project file with the same name wins.
 //
 // "default" is what termocode shows on a first start: sidebar with files,
-// the chat panel open, no bottom panel.
+// no chat panel, no bottom panel, one editor window.
 var builtins = []Layout{
 	{
 		Name:        "default",
-		Description: "Files, editor and chat. The panel is closed.",
+		Description: "Files and editor, as on a first start.",
 		Sidebar:     &Sidebar{Open: true, View: "files"},
 		Panel:       &Panel{Open: false},
-		Chat:        &Chat{Open: true},
+		Chat:        &Chat{Open: false},
 		Editor:      &Editor{Split: ""},
 		Focus:       "editor",
 	},

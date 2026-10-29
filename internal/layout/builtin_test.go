@@ -57,3 +57,11 @@ func TestFileWithABuiltinNameWinsOverTheBuiltin(t *testing.T) {
 		t.Fatalf("after delete: %+v", e)
 	}
 }
+
+// A first start has the chat panel and the bottom panel closed.
+func TestDefaultBuiltinMatchesAFirstStart(t *testing.T) {
+	e, _ := testStore(t).Find("default")
+	if e.Chat == nil || e.Chat.Open || e.Panel == nil || e.Panel.Open || e.Sidebar == nil || !e.Sidebar.Open || e.Sidebar.View != "files" {
+		t.Fatalf("default = %+v %+v %+v", e.Sidebar, e.Panel, e.Chat)
+	}
+}
