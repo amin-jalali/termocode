@@ -30,3 +30,26 @@ func TestCoverPkgsKeepsOnlyShippedPackages(t *testing.T) {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 }
+
+func TestShortenCoverLine(t *testing.T) {
+	in := "ok  \tm/internal/ai\t0.2s\tcoverage: 2.8% of statements in m/a, m/b, m/c\n"
+	want := "ok  \tm/internal/ai\t0.2s\tcoverage: 2.8% of statements in -coverpkg\n"
+	if got := shortenCoverLine(in); got != want {
+		t.Errorf("got %q", got)
+	}
+	plain := "--- FAIL: TestX (0.00s)\n"
+	if got := shortenCoverLine(plain); got != plain {
+		t.Errorf("plain line changed: %q", got)
+	}
+}
+
+func TestLineFilterWriter(t *testing.T) {
+	var out strings.Builder
+	w := &lineFilter{w: &out, f: strings.ToUpper}
+	w.Write([]byte("ab"))
+	w.Write([]byte("c\nde"))
+	w.Close()
+	if out.String() != "ABC\nDE" {
+		t.Errorf("got %q", out.String())
+	}
+}
