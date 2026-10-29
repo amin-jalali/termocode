@@ -105,3 +105,22 @@ func TestDatabaseSidebarScrollFitsCursorWithWrappedRows(t *testing.T) {
 		}
 	}
 }
+
+// The tree's row list is made with one allocation (sized like the last
+// one), and the size hint never changes what is listed.
+func TestDatabaseTreeRowsOneAllocation(t *testing.T) {
+	s := perfDBTree()
+	first := s.rows()
+	if allocs := testing.AllocsPerRun(10, func() { _ = s.rows() }); allocs > 1 {
+		t.Fatalf("rows() took %.0f allocations, want 1", allocs)
+	}
+	s.filter = "T42" // the filter ignores case
+	got := s.rows()
+	if len(got) != 10 || got[0].name != "t420" || got[9].name != "t429" {
+		t.Fatalf("filtered rows = %v", got)
+	}
+	s.filter = ""
+	if again := s.rows(); len(again) != len(first) {
+		t.Fatalf("rows changed: %d then %d", len(first), len(again))
+	}
+}

@@ -21,7 +21,8 @@ func (m Model) renderDatabasesSidebar(w, h int) string {
 	}
 	focused := m.focus == FocusExplorer
 	hint := ""
-	if rows := s.rows(); s.cursor >= 0 && s.cursor < len(rows) {
+	rows := s.rows()
+	if s.cursor >= 0 && s.cursor < len(rows) {
 		hint, _ = m.dbStoppedHint(rows[s.cursor], max(w-2, 0))
 	}
 	key := fmt.Sprintf("%d|%d|%d|%d|%t|%v|%s", s.seq, s.cursor, w, h, focused, theme.CurrentRenderKey(), hint)
@@ -30,12 +31,18 @@ func (m Model) renderDatabasesSidebar(w, h int) string {
 	if s.render.key == key && s.render.out != "" {
 		return s.render.out
 	}
-	out := m.renderDatabasesSidebarRaw(w, h, focused)
+	out := m.renderDatabasesSidebarRows(w, h, focused, rows)
 	s.render.key, s.render.out = key, out
 	return out
 }
 
 func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
+	return m.renderDatabasesSidebarRows(w, h, focused, m.databases.rows())
+}
+
+// renderDatabasesSidebarRows draws the sidebar with rows, the tree's
+// s.rows() of this frame (made once per frame).
+func (m Model) renderDatabasesSidebarRows(w, h int, focused bool, rows []dbTreeRow) string {
 	s := m.databases
 	if h <= 0 {
 		return ""
@@ -50,7 +57,6 @@ func (m Model) renderDatabasesSidebarRaw(w, h int, focused bool) string {
 		second = testsPad(theme.FgBg(theme.TextSecondary, theme.BgSidebar).Render(dbRemoteLabel()), w)
 	}
 	lines = append(lines, testsPad(theme.FgBg(theme.TextSecondary, theme.BgSidebar).Render(actions), w), second)
-	rows := s.rows()
 	available := max(h-len(lines)-2, 0)
 	s.scroll = min(s.scroll, max(len(rows)-available, 0))
 	if s.cursor < s.scroll {

@@ -96,6 +96,7 @@ type dbState struct {
 	filter              string
 	filterTyping        bool // the inline "/" filter takes the keys (db_filter.go)
 	seq                 uint64
+	rowsHint            int // the length of the last rows() list (a size hint only)
 	render              dbRenderCache
 	visible             bool
 	schemaVer           uint64                         // bumps when the tree or the column cache changes
@@ -136,14 +137,16 @@ func (s *dbState) rows() []dbTreeRow {
 	if s == nil {
 		return nil
 	}
-	var out []dbTreeRow
+	// Sized like the last list: a big tree grows its slice once, not ten times.
+	out := make([]dbTreeRow, 0, s.rowsHint)
+	filter := strings.ToLower(s.filter)
 	var walk func(string, int)
 	walk = func(path string, depth int) {
 		n, ok := s.nodes[path]
 		if !ok {
 			return
 		}
-		if s.filter != "" && !strings.Contains(strings.ToLower(n.name), strings.ToLower(s.filter)) {
+		if filter != "" && !strings.Contains(strings.ToLower(n.name), filter) {
 			for _, child := range n.children {
 				walk(child, depth+1)
 			}
@@ -183,6 +186,7 @@ func (s *dbState) rows() []dbTreeRow {
 	if len(out) == 0 && !s.loaded {
 		out = append(out, dbTreeRow{kind: dbNodeLoading, name: "Loading database connections…"})
 	}
+	s.rowsHint = len(out)
 	return out
 }
 
