@@ -1,0 +1,11 @@
+{
+  "kind": "List",
+  "items": [
+    {"metadata": {"name": "api", "namespace": "shop", "creationTimestamp": "2026-10-20T10:00:00Z"},
+     "spec": {"type": "ClusterIP", "clusterIP": "10.96.12.4", "ports": [{"port": 80, "targetPort": 8080, "protocol": "TCP"}]}},
+    {"metadata": {"name": "web", "namespace": "shop", "creationTimestamp": "2026-10-21T10:00:00Z"},
+     "spec": {"type": "NodePort", "clusterIP": "10.96.40.2", "ports": [{"port": 80, "targetPort": "http", "nodePort": 30080, "protocol": "TCP"}, {"port": 443, "protocol": "TCP"}]}},
+    {"metadata": {"name": "db", "namespace": "shop", "creationTimestamp": "2026-10-22T10:00:00Z"},
+     "spec": {"type": "ClusterIP", "clusterIP": "None", "ports": [{"port": 5432, "protocol": "TCP"}]}}
+  ]
+}

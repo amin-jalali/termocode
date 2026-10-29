@@ -1,0 +1,14 @@
+{
+  "kind": "List",
+  "items": [
+    {"metadata": {"name": "migrate", "namespace": "shop", "creationTimestamp": "2026-10-29T08:00:00Z"},
+     "spec": {"completions": 1},
+     "status": {"succeeded": 1, "startTime": "2026-10-29T08:00:00Z", "completionTime": "2026-10-29T08:00:42Z"}},
+    {"metadata": {"name": "backfill", "namespace": "shop", "creationTimestamp": "2026-10-29T11:00:00Z"},
+     "spec": {"completions": 5},
+     "status": {"succeeded": 2, "active": 1, "startTime": "2026-10-29T11:00:00Z"}},
+    {"metadata": {"name": "broken", "namespace": "shop", "creationTimestamp": "2026-10-29T10:00:00Z"},
+     "spec": {"completions": 1},
+     "status": {"failed": 4, "conditions": [{"type": "Failed", "status": "True"}]}}
+  ]
+}

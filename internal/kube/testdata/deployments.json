@@ -1,0 +1,14 @@
+{
+  "kind": "List",
+  "items": [
+    {"metadata": {"name": "api", "namespace": "shop", "creationTimestamp": "2026-10-20T10:00:00Z"},
+     "spec": {"replicas": 3},
+     "status": {"replicas": 3, "readyReplicas": 3, "updatedReplicas": 3, "availableReplicas": 3}},
+    {"metadata": {"name": "worker", "namespace": "shop", "creationTimestamp": "2026-10-28T12:00:00Z"},
+     "spec": {"replicas": 2},
+     "status": {"replicas": 2, "readyReplicas": 1, "updatedReplicas": 2, "availableReplicas": 1}},
+    {"metadata": {"name": "idle", "namespace": "shop", "creationTimestamp": "2026-10-29T09:00:00Z"},
+     "spec": {"replicas": 0},
+     "status": {}}
+  ]
+}

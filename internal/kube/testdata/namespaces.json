@@ -1,0 +1,8 @@
+{
+  "kind": "List",
+  "items": [
+    {"metadata": {"name": "default"}},
+    {"metadata": {"name": "kube-system"}},
+    {"metadata": {"name": "shop"}}
+  ]
+}
