@@ -7,10 +7,12 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/services"
 	"github.com/amin-jalali/termocode/internal/services/servicestest"
 )
 
@@ -383,5 +385,155 @@ func TestCovAIServicesTrust(t *testing.T) {
 	seq := m.services.reqSeq
 	if got, cmd := m.servicesRefreshTarget(); got != seq+1 || cmd != nil || !m.services.pending {
 		t.Errorf("in-flight refresh target = %d %v", got, cmd != nil)
+	}
+}
+
+// With the editor: a local service starts in its tab and its logs come
+// from that tab; compose up opens the services: up tab; a local restart
+// replaces the tab.
+func TestCovAIServicesWithTerminalNvim(t *testing.T) {
+	e := covSvcSetup(t)
+	t.Chdir(e.root)
+	t.Setenv("SHELL", "/bin/sh")
+	c := covNvim(t)
+	_ = c.ExecLua(`vim.o.shell = '/bin/sh'`)
+	_ = os.WriteFile(filepath.Join(e.root, "Procfile"), []byte("web: echo web-started; echo DB_PASSWORD=sup3rsecretvalue; sleep 30\n"), 0o644)
+	e.mu.Lock()
+	e.m.nvim, e.m.terminalRows, e.m.output, e.m.tasks, e.m.problems = c, 8, newOutputStore(), newTaskRunner(), newProblemsPanel()
+	e.mu.Unlock()
+	if _, err := e.run(t, "services_list", nil); err != nil {
+		t.Fatal(err)
+	}
+	out, err := e.run(t, "services_start", map[string]any{"name": "web"})
+	if err != nil || !strings.HasPrefix(out, "started local service web in its terminal tab") {
+		t.Fatalf("start web: %q %v", out, err)
+	}
+	if !servicestest.WaitFor(10*time.Second, func() bool {
+		out, err = e.run(t, "services_logs", map[string]any{"name": "web", "lines": 10})
+		return err == nil && strings.Contains(out, "web-started")
+	}) {
+		t.Fatalf("web logs: %q %v", out, err)
+	}
+	if strings.Contains(out, "sup3rsecretvalue") {
+		t.Errorf("local logs leaked a secret:\n%s", out)
+	}
+	out, err = e.run(t, "services_start", map[string]any{"name": "api"})
+	if err != nil || !strings.HasPrefix(out, "started `docker compose up -d api` in the terminal tab services: up") {
+		t.Errorf("start api: %q %v", out, err)
+	}
+	e.mu.Lock()
+	for i := range e.m.terminalTabs {
+		if e.m.terminalTabs[i].Service == svcTabUp {
+			e.m.terminalTabs[i].Running = false
+		}
+	}
+	e.mu.Unlock()
+	out, err = e.run(t, "services_start", map[string]any{"all": true})
+	if err != nil || !strings.HasPrefix(out, "started `docker compose up -d` in the terminal tab services: up") {
+		t.Errorf("start all: %q %v", out, err)
+	}
+	out, err = e.run(t, "services_restart", map[string]any{"name": "web"})
+	if err != nil || !strings.HasPrefix(out, "restarted. Now:\n- web [local]") {
+		t.Errorf("restart web: %q %v", out, err)
+	}
+}
+
+// The chat stops in the middle of a tool: whatever call fails, the tool
+// returns "the chat was stopped" and never a half result.
+func TestCovAIServicesChatStoppedMidTool(t *testing.T) {
+	e := covSvcSetup(t)
+	if _, err := e.run(t, "services_list", nil); err != nil {
+		t.Fatal(err)
+	}
+	cases := []struct {
+		tool string
+		a    map[string]any
+	}{
+		{"services_list", nil}, {"services_status", nil}, {"services_status", map[string]any{"name": "api", "wait_ms": 2000}},
+		{"services_logs", map[string]any{"name": "api"}}, {"services_stop", map[string]any{"name": "redis"}},
+		{"services_restart", map[string]any{"name": "redis"}},
+	}
+	for _, c := range cases {
+		maxN := 12
+		if c.tool == "services_restart" {
+			maxN = 4 // each later stop waits the 2 s second look
+		}
+		for n := 0; n < maxN; n++ {
+			left := n
+			var mu sync.Mutex
+			stopping := func(ctx context.Context, fn aiIDEFunc) (string, error) {
+				mu.Lock()
+				left--
+				stop := left < 0
+				mu.Unlock()
+				if stop {
+					return "", errAIChatStopped
+				}
+				return e.call(ctx, fn)
+			}
+			tl, _ := ai.FindTool(e.m.aiServicesTools(stopping), c.tool)
+			a := c.a
+			if a == nil {
+				a = map[string]any{}
+			}
+			out, err := tl.Run(context.Background(), a)
+			if err != nil && err != errAIChatStopped {
+				t.Errorf("%s stopped after %d calls: %v", c.tool, n, err)
+			}
+			if err != nil && out != "" {
+				t.Errorf("%s stopped after %d calls returned %q too", c.tool, n, out)
+			}
+		}
+	}
+	stopped := func(context.Context, aiIDEFunc) (string, error) { return "", errAIChatStopped }
+	if err := aiServicesValidate(stopped, map[string]any{"name": "api"}, false); err != errAIChatStopped {
+		t.Errorf("validate with a stopped chat: %v", err)
+	}
+}
+
+// Rows: profiles, a port probe result, an unhealthy service, the card
+// texts and the result redaction.
+func TestCovAIServicesRowsAndCards(t *testing.T) {
+	e := covSvcSetup(t)
+	m := e.m
+	st := m.services
+	st.det.Profiles = []string{"mail"}
+	st.det.ComposeFiles = []string{"compose.yaml"}
+	st.det.Compose = true
+	st.compose = []services.Service{{Name: "db", Backend: svcSecCompose, Image: "postgres:16", Ports: []services.Port{{Published: 5432, Target: 5432}}}}
+	st.status = map[string]services.Status{"db": {Name: "db", State: services.Running, Ports: []services.Port{{Published: 5432, Target: 5432}, {Target: 9000}}}}
+	st.probes = map[string]bool{svcKey(svcSecCompose, "db"): true}
+	list := m.aiServicesListReport()
+	covAIMustContain(t, "list", list, "profiles mail", "ports 5432→5432/tcp")
+	rep := m.aiServicesStatusReport("db")
+	if !strings.Contains(rep, "localhost:5432→5432 open") || strings.Contains(rep, "9000") {
+		t.Errorf("open port: %q", rep)
+	}
+	st.probes = map[string]bool{svcKey(svcSecCompose, "db"): false}
+	if rep := m.aiServicesStatusReport("db"); !strings.Contains(rep, "localhost:5432→5432 closed") {
+		t.Errorf("closed port: %q", rep)
+	}
+	st.status["db"] = services.Status{Name: "db", State: services.Unhealthy}
+	if !st.aiSettled(svcSecCompose, "db") {
+		t.Error("unhealthy must end a wait")
+	}
+	tools := m.aiServicesTools(nil)
+	for name, want := range map[string]string{"services_start": "Start all services", "services_stop": "Stop all services", "services_restart": "Restart service api (docker compose restart api)"} {
+		tl, _ := ai.FindTool(tools, name)
+		if got := tl.Describe(map[string]any{"name": map[bool]string{true: "api"}[name == "services_restart"]}); got != want {
+			t.Errorf("%s card = %q, want %q", name, got, want)
+		}
+	}
+	ai.RegisterSecret("tok-cov-redact-12345678")
+	red := aiRedactResults([]ai.Tool{{Name: "x", Run: func(context.Context, map[string]any) (string, error) { return "a tok-cov-redact-12345678 b", nil }}})
+	if out, _ := red[0].Run(context.Background(), nil); strings.Contains(out, "tok-cov-redact") {
+		t.Errorf("result not redacted: %q", out)
+	}
+	// A hidden open sets the root from the workspace.
+	t.Chdir(e.root)
+	m2 := &Model{services: newServicesState()}
+	m2.servicesOpenHidden()
+	if !m2.services.opened || m2.services.root == "" {
+		t.Errorf("hidden open: %+v", m2.services.root)
 	}
 }
