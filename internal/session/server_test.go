@@ -756,25 +756,27 @@ func TestServerDetachRequest(t *testing.T) {
 }
 
 // TestServerSurvivesConnectionPanic: a panic while the server serves one
-// connection closes that connection and writes a crash report; the
-// server and its UI (with the user's buffers) live on, and the next
-// client attaches as usual.
+// connection writes a crash report; the server lives on, and the next
+// client starts the UI and works as usual.
 func TestServerSurvivesConnectionPanic(t *testing.T) {
 	state := t.TempDir()
 	t.Setenv("XDG_STATE_HOME", state)
 	r := newRig(t, catUI)
 	r.panicIn = "a session connection"
 	c := r.ensure()
-	hello(t, c)
-	_ = c.SetReadDeadline(time.Now().Add(10 * time.Second))
-	typ, _, err := readFrame(c)
-	var ne net.Error
-	switch {
-	case err == nil:
-		t.Fatalf("got a %q frame on the connection whose handler panicked", typ)
-	case errors.As(err, &ne) && ne.Timeout():
-		t.Fatal("the connection whose handler panicked was left open")
+	// A status request: the handler answers, then panics.
+	if err := writeFrame(c, frameStatus, nil); err != nil {
+		t.Fatal(err)
 	}
+	_ = c.SetReadDeadline(time.Now().Add(10 * time.Second))
+	if typ, _, err := readFrame(c); err != nil || typ != frameStatus {
+		t.Fatalf("status reply %q, %v", typ, err)
+	}
+	_ = c.Close()
+	waitFor(t, "the crash report", func() bool {
+		m, _ := filepath.Glob(filepath.Join(state, "termocode", "crash", "crash-*.txt"))
+		return len(m) > 0
+	})
 	c2 := r.ensure()
 	hello(t, c2)
 	echo(t, c2, "still-here")

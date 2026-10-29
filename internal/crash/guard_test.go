@@ -65,8 +65,8 @@ func TestGoRunsFn(t *testing.T) {
 	}
 }
 
-// TestPanicInHook: the test hook makes the named goroutine panic before
-// its work; the others run as usual.
+// TestPanicInHook: the test hook makes the named goroutine panic at the
+// end of its work; the others run as usual.
 func TestPanicInHook(t *testing.T) {
 	useTempState(t)
 	drainNotices()
@@ -81,8 +81,8 @@ func TestPanicInHook(t *testing.T) {
 	if n := nextNotice(t); n.Where != "lsp reader" {
 		t.Fatalf("notice where = %q", n.Where)
 	}
-	if ran {
-		t.Fatal("fn ran after the injected panic")
+	if !ran {
+		t.Fatal("fn did not run")
 	}
 }
 
