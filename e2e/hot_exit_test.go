@@ -180,6 +180,7 @@ func TestNvimEndsWithTermocode(t *testing.T) {
 // the exit the EOF of its pipe starts, and ignores SIGTERM: it used to
 // stay forever. Nothing of the test may be left a few seconds later.
 func TestNvimEndsWithTermocodeInSystem(t *testing.T) {
+	needProcFS(t)
 	home := t.TempDir()
 	ws := NewRepo(t)
 	tm := Start(t, StartOpts{Home: home, Workspace: ws, Args: []string{"--no-session"},
