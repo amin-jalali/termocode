@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestWantSession(t *testing.T) {
@@ -94,5 +95,16 @@ func TestSSHCommandArgs(t *testing.T) {
 	}
 	if _, _, err := sshCommandArgs([]string{"--dir", "x"}); err == nil {
 		t.Error("no destination, no error")
+	}
+}
+
+func TestLinkTiming(t *testing.T) {
+	if i, d := linkTiming("200ms,1s"); i != 200*time.Millisecond || d != time.Second {
+		t.Errorf("got %v %v", i, d)
+	}
+	for _, bad := range []string{"", "1s", "x,1s", "2s,1s", "0s,1s"} {
+		if i, d := linkTiming(bad); i != 0 || d != 0 {
+			t.Errorf("%q: %v %v, want the defaults", bad, i, d)
+		}
 	}
 }

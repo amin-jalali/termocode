@@ -128,3 +128,21 @@ func sshCommandArgs(args []string) (dir string, sshArgs []string, err error) {
 	}
 	return dir, args, nil
 }
+
+// envLinkTiming sets the heartbeat of termocode ssh, "interval,dead"
+// (e.g. "200ms,1s"); for tests. Unset or bad: the defaults (5 s, 15 s).
+const envLinkTiming = "TERMOCODE_LINK_TIMING"
+
+// linkTiming parses envLinkTiming (zeros: the defaults).
+func linkTiming(v string) (interval, dead time.Duration) {
+	a, b, ok := strings.Cut(v, ",")
+	if !ok {
+		return 0, 0
+	}
+	i, err1 := time.ParseDuration(a)
+	d, err2 := time.ParseDuration(b)
+	if err1 != nil || err2 != nil || i <= 0 || d <= i {
+		return 0, 0
+	}
+	return i, d
+}

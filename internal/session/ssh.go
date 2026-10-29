@@ -28,6 +28,9 @@ type SSHOpts struct {
 	// Reconnect: when the link drops, run ssh again with the same
 	// arguments until it is back or the user quits (auto_reconnect).
 	Reconnect bool
+	// Interval and Dead time the heartbeat: a ping every Interval, the
+	// link is gone after Dead without a byte (0: 5 s and 15 s).
+	Interval, Dead time.Duration
 }
 
 // msgSSHLeft is what termocode ssh prints when the user leaves while the
@@ -41,11 +44,12 @@ const msgSSHDropped = "termocode: the connection dropped; the session keeps runn
 type sshAttempt struct {
 	code int  // ssh's exit code
 	quit bool // the user or a signal ended termocode ssh: stop here
+	dead bool // the heartbeat gave the link up and ssh was killed
 }
 
-// lost reports whether the link was lost (ssh says 255) rather than the
-// far termocode ending (its own exit code).
-func (a sshAttempt) lost() bool { return a.code == 255 }
+// lost reports whether the link was lost (ssh says 255, or the heartbeat
+// gave it up) rather than the far termocode ending (its own exit code).
+func (a sshAttempt) lost() bool { return a.dead || a.code == 255 }
 
 // sshTerm is the local terminal side of RunSSH, shared by its attempts.
 type sshTerm struct {
@@ -73,6 +77,12 @@ func RunSSH(o SSHOpts) int {
 	}
 	if o.Remote == "" {
 		o.Remote = "termocode"
+	}
+	if o.Interval <= 0 {
+		o.Interval = 5 * time.Second
+	}
+	if o.Dead <= 0 {
+		o.Dead = 15 * time.Second
 	}
 	if term.IsTerminal(int(o.In.Fd())) {
 		if st, err := term.MakeRaw(int(o.In.Fd())); err == nil {
@@ -217,9 +227,28 @@ func (t *sshTerm) attempt(reconnected string) sshAttempt {
 	kill := func() { _ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
 	link := newSeqFilter(linkHello, linkPong)
 	keys := t.keys
+	// The heartbeat runs once the far termocode said hello (an older one
+	// never does, and never gets a ping).
+	start := time.Now()
+	var mon *linkMonitor
+	tick := time.NewTicker(min(time.Second, t.o.Interval/4))
+	defer tick.Stop()
+	dead := false
 
 	for {
 		select {
+		case <-tick.C:
+			if mon == nil || dead {
+				continue
+			}
+			ping, gone, _ := mon.Tick(realClock(start))
+			if ping {
+				_, _ = ptmx.Write([]byte(linkPing))
+			}
+			if gone {
+				dead = true
+				kill()
+			}
 		case k, ok := <-keys:
 			if !ok { // the terminal is gone
 				keys = nil
@@ -245,7 +274,11 @@ func (t *sshTerm) attempt(reconnected string) sshAttempt {
 			for _, i := range found {
 				if i == 0 { // linkHello: the far termocode is there
 					t.everUp, t.offline = true, false
+					mon = newLinkMonitor(t.o.Interval, t.o.Dead, realClock(start))
 				}
+			}
+			if mon != nil {
+				mon.Received(realClock(start))
 			}
 			if len(b) > 0 {
 				t.seen.Feed(b)
@@ -265,8 +298,10 @@ func (t *sshTerm) attempt(reconnected string) sshAttempt {
 				return sshAttempt{code: 0, quit: true}
 			}
 		case code := <-exited:
-			t.drain(output, link)
-			return sshAttempt{code: code}
+			if !dead {
+				t.drain(output, link)
+			}
+			return sshAttempt{code: code, dead: dead}
 		}
 	}
 }

@@ -189,7 +189,9 @@ func cmdSSH(args []string) int {
 		fmt.Fprintln(os.Stderr, "termocode: ssh needs a terminal")
 		return 1
 	}
-	return session.RunSSH(session.SSHOpts{Args: sshArgs, Dir: dir, In: os.Stdin, Out: os.Stdout, Reconnect: app.ConfigAutoReconnect()})
+	interval, dead := linkTiming(os.Getenv(envLinkTiming))
+	return session.RunSSH(session.SSHOpts{Args: sshArgs, Dir: dir, In: os.Stdin, Out: os.Stdout,
+		Reconnect: app.ConfigAutoReconnect(), Interval: interval, Dead: dead})
 }
 
 // cmdSessions prints the running sessions (`termocode sessions`).

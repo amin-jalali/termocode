@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"golang.org/x/term"
 )
@@ -41,6 +42,10 @@ func fakeRemote() int {
 		}
 		for range found {
 			fmt.Print(linkPong)
+			if f, err := os.OpenFile(filepath.Join(dir, "pings"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644); err == nil {
+				_, _ = f.WriteString("ping\n")
+				_ = f.Close()
+			}
 		}
 		switch {
 		case bytes.Contains(k, []byte("q")):
@@ -222,5 +227,30 @@ func TestRunSSHNoReconnect(t *testing.T) {
 	}
 	if n := len(f.runs()); n != 1 {
 		t.Errorf("%d ssh runs, want 1", n)
+	}
+}
+
+// TestRunSSHHeartbeat: a far side that answers the pings keeps its link;
+// one that stops answering (a frozen network) is given up after Dead,
+// and termocode ssh connects again by itself.
+func TestRunSSHHeartbeat(t *testing.T) {
+	f := newFakeSSH(t)
+	keys, out, code := f.run(SSHOpts{Reconnect: true, Interval: 50 * time.Millisecond, Dead: 400 * time.Millisecond})
+	waitFor(t, "the far side", func() bool { return strings.Contains(readOut(out), "remote-args:") })
+	waitFor(t, "ten pings", func() bool {
+		b, _ := os.ReadFile(filepath.Join(f.dir, "pings"))
+		return bytes.Count(b, []byte("ping")) >= 10
+	})
+	if n := len(f.runs()); n != 1 {
+		t.Fatalf("an answering link was dropped: %d ssh runs", n)
+	}
+	f.set("freeze", true)
+	_, _ = keys.WriteString("x")
+	waitFor(t, "the second connection", func() bool { return len(f.runs()) == 2 })
+	f.set("freeze", false)
+	waitFor(t, "the far side again", func() bool { return strings.Contains(readOut(out), "--reconnected=") })
+	_, _ = keys.WriteString("q")
+	if got := waitCode(t, code); got != 3 {
+		t.Errorf("exit code %d, want 3", got)
 	}
 }
