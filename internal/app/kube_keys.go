@@ -2,6 +2,9 @@ package app
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/help"
 )
 
 // ── Kubernetes view: keys ────────────────────────────────────────────────
@@ -77,10 +80,37 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		return m, m.kubePick("ctx")
 	case "n":
 		return m, m.kubePick("ns")
+	case "?":
+		return m, m.openKeyCard("Kubernetes keys", kubeKeyRows(), help.Loc{Page: kubeGuidePage, Anchor: "keys"}, nil)
 	case "esc":
 		m.focus = FocusEditor
 	}
 	return m, nil
+}
+
+// kubeGuidePage is the Kubernetes guide.
+const kubeGuidePage = "guides/kubernetes.md"
+
+// kubeKeyRows are the rows of the ? card (the guide's Keys table).
+func kubeKeyRows() []confirm.KeyRow {
+	return keyRows(
+		[]string{"Move"},
+		[]string{"↑ ↓ j k", "move · g G top, end"},
+		[]string{"Tab", "next section"},
+		[]string{"Space", "fold or open a section"},
+		[]string{"/", "filter by name · Esc clears"},
+		[]string{"Pods"},
+		[]string{"Enter l", "follow logs"},
+		[]string{"e", "open a shell"},
+		[]string{"f", "start or stop a port-forward"},
+		[]string{"Every row"},
+		[]string{"i", "describe (read only)"},
+		[]string{"y", "copy the name"},
+		[]string{"r", "deployment: restart (asks first)"},
+		[]string{"Cluster"},
+		[]string{"c n", "pick the context, the namespace"},
+		[]string{"R", "load now"},
+	)
 }
 
 // move goes d selectable rows down (up when negative).

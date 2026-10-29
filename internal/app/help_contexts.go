@@ -50,6 +50,7 @@ var helpContexts = map[string]string{
 	"db-compare":    "guides/databases.md#compare-schemas",
 	"databases":     databasesGuidePage + "#open-the-view",
 	"db-result":     databasesGuidePage + "#results",
+	"kubernetes":    kubeGuidePage + "#what-you-see",
 }
 
 // settingsTopic is the row of setting key in the settings reference:
@@ -212,6 +213,8 @@ func (m Model) sidebarHelpTopic() string {
 		return activityHelp["Itermoc"]
 	case activity.ViewRuns:
 		return activityHelp["Runs"]
+	case activity.ViewKubernetes:
+		return helpContexts["kubernetes"]
 	}
 	return ""
 }

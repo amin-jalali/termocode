@@ -108,3 +108,14 @@ func TestKubeRefreshKeyLoadsNow(t *testing.T) {
 		t.Errorf("pod lists = %d, want 2", n)
 	}
 }
+
+func TestKubeKeyCardAndHelpTopic(t *testing.T) {
+	_, m := kubeLoaded(t, 150, 42)
+	kubeKey(t, m, "?")
+	if !m.confirmOpen || m.confirmKind != confirmKindKeyCard || m.keyCardGuide.Page != kubeGuidePage || m.keyCardGuide.Anchor != "keys" {
+		t.Errorf("card open %v kind %v guide %+v", m.confirmOpen, m.confirmKind, m.keyCardGuide)
+	}
+	if got := m.sidebarHelpTopic(); got != "guides/kubernetes.md#what-you-see" {
+		t.Errorf("help topic = %q", got)
+	}
+}
