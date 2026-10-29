@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"path"
 	"strings"
 
@@ -121,6 +122,9 @@ func Parse(src []byte) (Layout, error) {
 	dec := json.NewDecoder(bytes.NewReader(jsonc.Strip(src)))
 	if err := dec.Decode(&l); err != nil {
 		return Layout{}, fmt.Errorf("layout file: %w", err)
+	}
+	if _, err := dec.Token(); err != io.EOF {
+		return Layout{}, errors.New("layout file: extra text after the layout")
 	}
 	if err := l.Validate(); err != nil {
 		return Layout{}, err
