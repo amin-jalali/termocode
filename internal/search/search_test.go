@@ -347,6 +347,26 @@ func TestStream_Batches(t *testing.T) {
 	}
 }
 
+// Spec: Given a search with a few hits in several files,
+// when the first file with a hit is found,
+// then its results are sent at once (not held back until 200 results or
+// 100 ms have piled up), so the first hits show right away.
+func TestStream_FirstResultsSentAtOnce(t *testing.T) {
+	dir := t.TempDir()
+	for i := 0; i < 4; i++ {
+		writeFile(t, dir, string(rune('a'+i))+".txt", "hit\n")
+	}
+	var sizes []int
+	for b := range Stream(context.Background(), []string{dir}, "hit", Options{}) {
+		if !b.Done {
+			sizes = append(sizes, len(b.Results))
+		}
+	}
+	if len(sizes) == 0 || sizes[0] != 1 {
+		t.Fatalf("batch sizes %v, want the first file's one result alone first", sizes)
+	}
+}
+
 // TestStream_Cancel makes sure a cancelled stream still closes its channel.
 func TestStream_Cancel(t *testing.T) {
 	dir := t.TempDir()

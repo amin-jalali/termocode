@@ -260,8 +260,9 @@ type Batch struct {
 	Err     error
 }
 
-// Streaming batch thresholds: flush once this many results are pending, or
-// when this much time has passed since the last flush (checked per file).
+// Streaming batch thresholds: after the first file with results (sent at
+// once), flush once this many results are pending, or when this much time
+// has passed since the last flush (checked per file).
 const (
 	streamBatchSize     = 200
 	streamBatchInterval = 100 * time.Millisecond
@@ -285,17 +286,20 @@ func Stream(ctx context.Context, dirs []string, query string, opts Options) <-ch
 		}
 		var pending []Result
 		last := time.Now()
+		sent := false
 		flush := func() {
 			if len(pending) == 0 {
 				return
 			}
 			send(Batch{Results: pending})
-			pending = nil
+			pending, sent = nil, true
 			last = time.Now()
 		}
 		sum, err := Search(ctx, dirs, query, opts, func(rs []Result) {
 			pending = append(pending, rs...)
-			if len(pending) >= streamBatchSize || time.Since(last) >= streamBatchInterval {
+			// The first hits go out at once: the page opens on them while
+			// the rest of the tree is searched.
+			if !sent || len(pending) >= streamBatchSize || time.Since(last) >= streamBatchInterval {
 				flush()
 			}
 		})
