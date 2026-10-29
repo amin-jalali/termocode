@@ -505,7 +505,13 @@ func (s *SQLiteSession) Run(ctx context.Context, stmt string, opts RunOptions) R
 // ordinary Latin-1 text; real UTF-8 text is printed raw, never escaped, so
 // such an escape in the raw output marks the cell holding that rune.
 func sqliteFindBlob(lines []string, rows [][]Cell) (int, int, bool) {
-	byteEscape := sqliteRawByteEscape.MatchString(strings.Join(lines, "\n"))
+	byteEscape := false
+	for _, line := range lines {
+		if sqliteRawByteEscape(line) {
+			byteEscape = true
+			break
+		}
+	}
 	for i := range rows {
 		for j := range rows[i] {
 			text := rows[i][j].Text
@@ -551,12 +557,52 @@ func sqliteJSONBlob(text string) bool {
 	// sqlite3's JSON mode renders non-text bytes differently by version and
 	// platform: u plus eight hex digits (sign-extended byte), a bare control
 	// escape such as u0000, or real invalid UTF-8 / U+FFFD. All mean binary.
-	return sqliteJSONBlobEscape.MatchString(text) || !utf8.ValidString(text) || strings.ContainsRune(text, utf8.RuneError)
+	return sqliteJSONBlobEscape(text) || !utf8.ValidString(text) || strings.ContainsRune(text, utf8.RuneError)
 }
 
-var sqliteRawByteEscape = lazyre.New(`(?i)\\u00[89a-f][0-9a-f]`)
+// sqliteRawByteEscape reports a \u0080-\u00ff escape in raw sqlite3 output
+// (the regexp (?i)\\u00[89a-f][0-9a-f], without a regexp per line).
+func sqliteRawByteEscape(s string) bool {
+	for i := 0; i+5 < len(s); i++ {
+		if s[i] == '\\' && (s[i+1] == 'u' || s[i+1] == 'U') && s[i+2] == '0' && s[i+3] == '0' &&
+			(s[i+4] >= '8' && s[i+4] <= '9' || hexLetter(s[i+4])) && isHexByte(s[i+5]) {
+			return true
+		}
+	}
+	return false
+}
 
-var sqliteJSONBlobEscape = lazyre.New(`(?i)u[0-9a-f]{8}|u00[01][0-9a-f]`)
+// sqliteJSONBlobEscape reports u plus eight hex digits or u000x / u001x in
+// a cell (the regexp (?i)u[0-9a-f]{8}|u00[01][0-9a-f], without a regexp
+// per cell).
+func sqliteJSONBlobEscape(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] != 'u' && s[i] != 'U' {
+			continue
+		}
+		rest := s[i+1:]
+		if len(rest) >= 4 && rest[0] == '0' && rest[1] == '0' && (rest[2] == '0' || rest[2] == '1') && isHexByte(rest[3]) {
+			return true
+		}
+		if len(rest) >= 8 {
+			hex := true
+			for j := 0; j < 8; j++ {
+				if !isHexByte(rest[j]) {
+					hex = false
+					break
+				}
+			}
+			if hex {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func hexLetter(c byte) bool { return c >= 'a' && c <= 'f' || c >= 'A' && c <= 'F' }
+
+func isHexByte(c byte) bool { return c >= '0' && c <= '9' || hexLetter(c) }
 
 // parseSQLiteJSONDecoder is parseSQLiteJSON through encoding/json: slow
 // (a decoder per cell), but it reads any JSON and reports its errors.
