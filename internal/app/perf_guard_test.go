@@ -282,3 +282,29 @@ func benchFrame(b *testing.B, chat bool) {
 
 func BenchmarkEditorFrame(b *testing.B)  { benchFrame(b, false) }
 func BenchmarkAIPanelFrame(b *testing.B) { benchFrame(b, true) }
+
+// typeKey is what nvim sends for one letter typed in insert mode: the
+// line under the cursor is drawn again and the cursor moves one cell.
+func typeKey(m Model, i int) Model {
+	pane := m.editorPaneLayout()
+	row := pane.H / 2
+	m, _, _ = m.handleNvimMsg(nvim.RedrawMsg{Events: [][]any{
+		{"grid_line", []any{1, row, 0, perfLine(i)}},
+		{"grid_cursor_goto", []any{1, row, 6 + i%40}},
+		{"flush"},
+	}})
+	return m
+}
+
+// BenchmarkEditorTypingFrame is one typed letter: one line redrawn,
+// the cursor moved, then View.
+func BenchmarkEditorTypingFrame(b *testing.B) {
+	perfColour(b)
+	m := perfModel(b, false)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		m = typeKey(m, i)
+		_ = m.View()
+	}
+}
