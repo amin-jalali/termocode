@@ -36,6 +36,8 @@ func undoRepo(t *testing.T, n int) (*Model, func(args ...string) string) {
 		return strings.TrimSpace(string(out))
 	}
 	run("init", "-q", "-b", "main")
+	run("config", "user.name", "Test")
+	run("config", "user.email", "test@example.com")
 	for i := 1; i <= n; i++ {
 		name := "f" + string(rune('0'+i)) + ".txt"
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(name+"\n"), 0o644); err != nil {
@@ -159,5 +161,40 @@ func TestGitUndoStashAndUndo(t *testing.T) {
 		if !strings.Contains(s, want) {
 			t.Errorf("toast lacks %q:\n%s", want, s)
 		}
+	}
+}
+
+// G-UND: during a stopped merge (or rebase) the undo refuses and says how
+// to finish first; no card opens.
+func TestGitUndoRefusesDuringMerge(t *testing.T) {
+	m, run := undoRepo(t, 1)
+	run("checkout", "-q", "-b", "side")
+	_ = os.WriteFile("f1.txt", []byte("side\n"), 0o644)
+	run("commit", "-q", "-am", "side")
+	run("checkout", "-q", "main")
+	_ = os.WriteFile("f1.txt", []byte("main\n"), 0o644)
+	run("commit", "-q", "-am", "main")
+	if err := exec.Command("git", "merge", "side").Run(); err == nil {
+		t.Fatal("merge did not stop")
+	}
+	cmd, _ := m.dispatchUndoPalette("git-undo")
+	undoStep(t, m, cmd)
+	if m.confirmOpen {
+		t.Fatal("card opened during a merge")
+	}
+	s := toastText(*m)
+	for _, want := range []string{"A merge is in progress", "git merge --abort"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("toast lacks %q:\n%s", want, s)
+		}
+	}
+	run("merge", "--abort")
+	if err := exec.Command("git", "rebase", "side").Run(); err == nil {
+		t.Fatal("rebase did not stop")
+	}
+	cmd, _ = m.dispatchUndoPalette("git-undo")
+	undoStep(t, m, cmd)
+	if s := toastText(*m); m.confirmOpen || !strings.Contains(s, "banner in Source Control") {
+		t.Errorf("rebase: card %v, toast:\n%s", m.confirmOpen, s)
 	}
 }

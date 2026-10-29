@@ -192,7 +192,13 @@ func (m *Model) onUndoDone(msg undoDoneMsg) tea.Cmd {
 // undoErrorToast says why an undo did not run; nothing moved.
 func (m *Model) undoErrorToast(err error) tea.Cmd {
 	var cmd tea.Cmd
+	var busy *git.BusyError
 	switch {
+	case errors.As(err, &busy) && busy.Op == "rebase":
+		return m.rebaseBusyToast() // it points to the banner in Source Control
+	case errors.As(err, &busy):
+		m.toast, cmd = m.toast.PushDetail(toast.Warn, "A "+busy.Op+" is in progress",
+			"Finish it first (fix the conflicts and commit), or stop it: git "+busy.Op+" --abort")
 	case errors.Is(err, git.ErrNothingToUndo), errors.Is(err, git.ErrUndoFirstCommit):
 		m.toast, cmd = m.toast.PushDetail(toast.Info, "Nothing to undo", err.Error())
 	case errors.Is(err, git.ErrUndoLocalChanges):
