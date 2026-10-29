@@ -475,6 +475,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onCommitPickDone(msg)
 	case rebaseTodoMsg, rebaseCheckMsg, rebaseDoneMsg, fixupCheckMsg: // git_rebase.go
 		return m, m.onRebaseMsg(msg)
+	case undoPlanMsg, undoDoneMsg: // git_undo.go
+		return m, m.onUndoMsg(msg)
 	case gitRemoteDoneMsg:
 		return m, m.gitRemoteDone(msg)
 	case preview.CloseMsg:
