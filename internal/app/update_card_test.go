@@ -58,7 +58,7 @@ func TestUpdateNoticeCardSelf(t *testing.T) {
 			t.Errorf("card misses %q:\n%s", want, box)
 		}
 	}
-	if ids := buttonIDs(m.confirm); ids != "cancel,notes,skip" {
+	if ids := buttonIDs(m.confirm); ids != "cancel,notes,skip,update" {
 		t.Errorf("buttons %v", ids)
 	}
 }

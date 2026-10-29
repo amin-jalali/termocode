@@ -214,11 +214,23 @@ When a newer release is out, the status bar shows a quiet chip such as
 `⬆ v0.2.0`, and one toast says so (once per version). Click the chip or
 the toast to see the card:
 
+- **Update** (when `install.sh` put termocode there, or you copied it to a
+  folder you can write) downloads the release for your system over HTTPS,
+  checks its SHA-256 with the release's `checksums.txt`, takes only the
+  `termocode` binary out of the tarball and runs it once with `--version`.
+  A card then shows the old and new version, where it installs and the
+  size. **Cancel** is first. **Install** swaps the binary in one step and
+  keeps the old one as `termocode.old`. Then **Restart** starts the new
+  version in place; unsaved text is kept, as on Reload Window. In a
+  background session (`persistent_session`) the small session process
+  keeps the old version until the session ends; it only passes keys and
+  the screen through.
 - **Release notes** opens the release page.
 - **Skip this version** hides the chip until an even newer release comes.
 - When Homebrew, the AUR package or `go install` put termocode on your
   system, the card shows the command to run there, with **Copy command**.
-  termocode never replaces a file that a package manager owns.
+  termocode never replaces a file that a package manager owns. A folder
+  you cannot write to also gets the command; termocode never uses sudo.
 
 ## Package managers
 

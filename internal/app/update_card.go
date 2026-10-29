@@ -15,6 +15,8 @@ import (
 
 const (
 	confirmKindUpdateNotice confirmKindEnum = 3200 + iota
+	confirmKindUpdateInstall
+	confirmKindUpdateRestart
 )
 
 // updateInstall finds out how the running binary was installed.
@@ -60,7 +62,8 @@ func (m *Model) openUpdateCard() tea.Cmd {
 	}
 	switch in.Method {
 	case update.MethodSelf:
-		fmt.Fprintf(&body, "Installed at %s.", in.Path)
+		fmt.Fprintf(&body, "Installed at %s.\n\nUpdate downloads it from GitHub and checks it with checksums.txt; you confirm before it replaces anything.", in.Path)
+		buttons = append(buttons, confirm.Button{ID: "update", Title: "Update", Style: confirm.StylePrimary})
 	case update.MethodReadOnly:
 		fmt.Fprintf(&body, "Installed at %s, a folder you cannot write to. Run this in a shell (with the rights that folder needs):", in.Path)
 		buttons = append(buttons, confirm.Button{ID: "copy", Title: "Copy command", Style: confirm.StylePrimary})
@@ -79,11 +82,22 @@ func (m *Model) openUpdateCard() tea.Cmd {
 
 // handleUpdateConfirm answers the update cards. ok=false: not ours.
 func (m *Model) handleUpdateConfirm(id string) (tea.Cmd, bool) {
-	if m.confirmKind != confirmKindUpdateNotice {
+	switch m.confirmKind {
+	case confirmKindUpdateInstall:
+		return m.answerUpdateInstall(id), true
+	case confirmKindUpdateRestart:
+		if id == "restart" {
+			return updateRestart(m), true
+		}
+		return nil, true
+	case confirmKindUpdateNotice:
+	default:
 		return nil, false
 	}
 	w := m.updW()
 	switch id {
+	case "update":
+		return m.updateStart(), true
 	case "notes":
 		return m.updateOpenNotes(), true
 	case "skip":

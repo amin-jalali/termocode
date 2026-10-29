@@ -47,8 +47,11 @@ var updateDepsFor = func() updateDeps {
 
 // updateWatch is the update state of this window.
 type updateWatch struct {
-	state   update.State
-	install update.Install // how termocode was installed (the card)
+	state     update.State
+	install   update.Install // how termocode was installed (the card)
+	busy      bool           // a download runs (update_install.go)
+	staged    *update.Staged // checked, waiting for Install
+	installed string         // the tag Install put in place (no chip then)
 }
 
 // updateCheckedMsg is a finished check (or the saved state when no check
@@ -104,6 +107,8 @@ func (m *Model) handleUpdateMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.updateToast(), true
 	case updateCardClickMsg:
 		return m.openUpdateCard(), true
+	case updatePreparedMsg:
+		return m.onUpdatePrepared(msg), true
 	}
 	return nil, false
 }
@@ -128,7 +133,7 @@ func (m *Model) updateToast() tea.Cmd {
 
 // fillUpdateStatus sets the status-bar update chip.
 func (m Model) fillUpdateStatus(st *statusbar.State) {
-	if m.upd != nil {
+	if m.upd != nil && m.upd.installed == "" {
 		st.Update = m.upd.state.Available(termocodeVersion)
 	}
 }

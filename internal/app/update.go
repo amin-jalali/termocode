@@ -403,6 +403,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.handleConfirmSelect(msg.ID)
 	case confirm.CloseMsg:
 		m.confirmOpen = false
+		m.updateCardClosed() // G-UPD: Esc drops a staged download
 		if m.confirmKind == confirmKindKeyCard {
 			return m, m.closeKeyCard()
 		}
