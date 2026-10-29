@@ -116,3 +116,44 @@ func TestRebaseTodoMove(t *testing.T) {
 		t.Fatalf("out of range: %d %s", i, order(todo))
 	}
 }
+
+// G-RBS: the preview counts the commits left: squash and fixup meld into
+// the row above, drop removes one.
+func TestRebaseTodoSummary(t *testing.T) {
+	todo := todoOf("a", "b", "c", "d", "e")
+	if got := todo.Summary(); got != "5 commits → 5 commits" {
+		t.Errorf("all picks: %q", got)
+	}
+	todo.SetAction(1, RebaseSquash)
+	todo.SetAction(2, RebaseFixup)
+	todo.SetAction(4, RebaseDrop)
+	if got := todo.Summary(); got != "5 commits → 2 commits" {
+		t.Errorf("mixed: %q", got)
+	}
+	todo.SetAction(3, RebaseDrop)
+	if got := todo.Summary(); got != "5 commits → 1 commit" {
+		t.Errorf("one left: %q", got)
+	}
+	todo.SetAction(9, RebaseDrop) // out of range: ignored
+}
+
+// G-RBS: Validate refuses a todo git cannot run or that loses everything.
+func TestRebaseTodoValidate(t *testing.T) {
+	todo := todoOf("a", "b")
+	if err := todo.Validate(); err != nil {
+		t.Errorf("picks: %v", err)
+	}
+	todo.SetAction(0, RebaseFixup)
+	if err := todo.Validate(); err == nil || !strings.Contains(err.Error(), "nothing above") {
+		t.Errorf("fixup first: %v", err)
+	}
+	todo.SetAction(0, RebaseDrop)
+	todo.SetAction(1, RebaseSquash)
+	if err := todo.Validate(); err == nil || !strings.Contains(err.Error(), "nothing above") {
+		t.Errorf("squash after only drops: %v", err)
+	}
+	todo.SetAction(1, RebaseDrop)
+	if err := todo.Validate(); err == nil || !strings.Contains(err.Error(), "every commit") {
+		t.Errorf("all dropped: %v", err)
+	}
+}

@@ -90,3 +90,58 @@ func (t *RebaseTodo) Move(i, dir int) int {
 	t.Items[i], t.Items[j] = t.Items[j], t.Items[i]
 	return j
 }
+
+// SetAction sets row i's action (out of range: ignored).
+func (t *RebaseTodo) SetAction(i int, a RebaseAction) {
+	if i >= 0 && i < len(t.Items) {
+		t.Items[i].Action = a
+	}
+}
+
+// Result is how many commits the todo leaves: squash and fixup meld into
+// the row above, drop removes the commit.
+func (t RebaseTodo) Result() int {
+	n := 0
+	for _, it := range t.Items {
+		switch it.Action {
+		case RebaseSquash, RebaseFixup, RebaseDrop:
+		default:
+			n++
+		}
+	}
+	return n
+}
+
+// Summary is the preview line: "5 commits → 3 commits".
+func (t RebaseTodo) Summary() string {
+	return commitsWord(len(t.Items)) + " → " + commitsWord(t.Result())
+}
+
+func commitsWord(n int) string {
+	if n == 1 {
+		return "1 commit"
+	}
+	return fmt.Sprintf("%d commits", n)
+}
+
+// Validate says why git could not run the todo (or should not): a squash
+// or fixup needs a kept commit above it, and at least one commit must be
+// left.
+func (t RebaseTodo) Validate() error {
+	kept := false
+	for _, it := range t.Items {
+		switch it.Action {
+		case RebaseDrop:
+		case RebaseSquash, RebaseFixup:
+			if !kept {
+				return fmt.Errorf("%s %s has nothing above it to meld into", it.Action, it.Hash)
+			}
+		default:
+			kept = true
+		}
+	}
+	if !kept {
+		return errors.New("every commit is dropped; nothing would be left")
+	}
+	return nil
+}
