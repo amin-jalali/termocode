@@ -33,6 +33,10 @@ Runs are grouped by time:
 Each run has two lines. The first line is the task (your message) and
 one word on the right: the cost so far, or a state word. The second line
 is the profile, a small pipeline (`●─◉─○`) and where the run is now.
+A run the AI started has a **by AI** chip after the profile; its page and
+its log name the chat that asked (see
+[Let the AI start a run](ai-profiles.md#let-the-ai-start-a-run)). Type
+`by AI` in the filter to see only those.
 
 Colour is state only:
 

@@ -529,6 +529,51 @@ runs at once. `always` asks for every plan. `auto` never asks.
 current chat only. The AI can not approve its own plan or change this
 setting.
 
+## Let the AI start a run
+
+The AI in the chat can start another run for you: a profile, or a few
+steps it writes itself, on a task. It always asks first.
+
+```text
+ ✦ AI wants to: start an agent run
+ Start an agent run with profile review (2 steps):
+   1 · Reviewer · main → claude-sonnet-4-5 · tools read-only
+   2 · Fixer · quick → gpt-5-mini · tools all
+
+ Task:
+   Review parser.go and fix the bug
+
+ Worktrees: auto (steps that run side by side work in their own git worktree)
+
+ Started by AI in the chat "fix the parser".
+ It starts here when the current answer or run ends; plan approval still asks before steps that write.
+
+        Deny      Start run
+```
+
+- **Deny** is first and has the focus. The card asks every time: no
+  "Always allow" and no setting turns it off.
+- **Start run** puts the run in a queue. When the AI's answer (or the
+  run it works in) ends, the run starts in the same chat, as if you sent
+  the task with that profile. [Approve the plan](#approve-the-plan),
+  [own worktrees](#own-worktrees-for-parallel-steps), the budget card
+  and the review cards work as usual.
+- The task shows in the chat with **✦ started by AI**. The
+  [AGENTS panel](#the-agents-panel) and [Runs](runs.md) show a
+  **by AI** chip.
+- The AI reads a run with `agent_run_status` and `agent_run_result`
+  (state, steps, cost, final answer, changed files) in a later answer.
+  It can not wait for the run inside the same answer.
+- `agent_run_stop` drops a run that waits, or stops a running one. It
+  asks first too. A step can not stop its own run.
+- **Stop** (`Ctrl+C`) also drops the runs that wait.
+
+**Limits.** At most 3 runs started by the AI wait or run at once. A run
+the AI started can start one more run, not two levels more. A run
+started from a run with a budget gets only what is left of that budget;
+when nothing is left it does not start and the chat says why. Outside
+agents (over MCP) never get these tools.
+
 ## The AGENTS panel
 
 To watch every run in one place (all chats, live numbers, Stop, Pause and
