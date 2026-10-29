@@ -89,3 +89,52 @@ func TestReflogRealRepo(t *testing.T) {
 		t.Errorf("empty repo: %+v %v", got, err)
 	}
 }
+
+// G-UND: a rebase writes many reflog lines (start, picks, finish); they
+// fold into one "rebase finished" entry whose Prev is the HEAD before the
+// start. An aborted rebase folds the same way.
+func TestParseReflogFoldsRebase(t *testing.T) {
+	raw := reflogLine("h6", 9, "commit: after", "after") +
+		reflogLine("h5", 8, "rebase (finish): returning to refs/heads/main", "c3") +
+		reflogLine("h5", 8, "rebase (pick): c3", "c3") +
+		reflogLine("h4", 8, "rebase: fast-forward", "c2") +
+		reflogLine("h3", 8, "rebase (start): checkout HEAD~2", "c1") +
+		reflogLine("h2", 7, "rebase -i (abort): returning to refs/heads/main", "c2") +
+		reflogLine("h3", 6, "rebase -i (start): checkout HEAD~1", "c1") +
+		reflogLine("h2", 5, "commit: c2", "c2") +
+		reflogLine("h1", 4, "commit (initial): c1", "c1")
+	got := parseReflog(raw)
+	var sums []string
+	for _, e := range got {
+		sums = append(sums, e.Summary()+"<"+e.Prev)
+	}
+	want := []string{"commit 'after'<h5", "rebase finished<h2", "rebase aborted<h2", "commit 'c2'<h1", "first commit 'c1'<"}
+	if strings.Join(sums, "|") != strings.Join(want, "|") {
+		t.Fatalf("got  %q\nwant %q", sums, want)
+	}
+	if got[1].Hash != "h5" || got[2].Hash != "h2" {
+		t.Errorf("hashes %q %q", got[1].Hash, got[2].Hash)
+	}
+}
+
+// G-UND: a real rebase is one entry in Reflog, and its Prev is the
+// branch before the rebase.
+func TestReflogRealRebase(t *testing.T) {
+	r, h := rebaseRepo(t, 2)
+	r.git(t, "checkout", "-q", "-b", "side", h[0])
+	r.write(t, "side.txt", "side\n")
+	r.git(t, "add", "-A")
+	r.git(t, "commit", "-q", "-m", "side")
+	before := strings.TrimSpace(r.git(t, "rev-parse", "HEAD"))
+	r.git(t, "rebase", "-q", "main")
+	got, err := Reflog(r.dir, 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got[0].Kind != ReflogRebase || got[0].Summary() != "rebase finished" || got[0].Prev != before {
+		t.Fatalf("newest %+v (before %s)", got[0], before)
+	}
+	if got[1].Kind != ReflogCommit || got[1].Subject != "side" {
+		t.Errorf("next %+v", got[1])
+	}
+}

@@ -78,7 +78,18 @@ func (e ReflogEntry) Summary() string {
 	case ReflogRevert:
 		return "revert " + q
 	case ReflogPull:
+		if step, _ := rebaseStep(e.Message); step {
+			return "pull (rebase)"
+		}
 		return "pull"
+	case ReflogRebase:
+		action, _, _ := strings.Cut(e.Message, ": ")
+		switch {
+		case strings.Contains(action, "(finish)"):
+			return "rebase finished"
+		case strings.Contains(action, "(abort)"):
+			return "rebase aborted"
+		}
 	}
 	return e.Message
 }
@@ -93,16 +104,24 @@ func Reflog(dir string, limit int) ([]ReflogEntry, error) {
 	if !hasCommits(dir) {
 		return nil, nil
 	}
-	out, err := runOut(dir, "git", "log", "-g", "--date=unix", reflogFormat,
-		"-n", strconv.Itoa(limit+1), "HEAD", "--")
-	if err != nil {
-		return nil, err
+	// A rebase folds many lines into one entry: read more lines until
+	// limit entries (and the one before, for Prev) are there or the
+	// reflog ends.
+	for n := limit*4 + 16; ; n *= 4 {
+		out, err := runOut(dir, "git", "log", "-g", "--date=unix", reflogFormat,
+			"-n", strconv.Itoa(n), "HEAD", "--")
+		if err != nil {
+			return nil, err
+		}
+		lines := strings.Count(out, "\n")
+		entries := parseReflog(out)
+		if len(entries) > limit || lines < n {
+			if len(entries) > limit {
+				entries = entries[:limit]
+			}
+			return entries, nil
+		}
 	}
-	entries := parseReflog(out)
-	if len(entries) > limit {
-		entries = entries[:limit]
-	}
-	return entries, nil
 }
 
 // parseReflog reads Reflog's records; each entry's Prev is the next
@@ -128,7 +147,50 @@ func parseReflog(out string) []ReflogEntry {
 	for i := 0; i+1 < len(entries); i++ {
 		entries[i].Prev = entries[i+1].Hash
 	}
-	return entries
+	return foldRebases(entries)
+}
+
+// rebaseStep reports whether a reflog line is a step of a rebase (git's
+// own, or the one of `git pull --rebase`), and whether it is its start.
+func rebaseStep(msg string) (step, start bool) {
+	action, _, _ := strings.Cut(msg, ": ")
+	if !strings.HasPrefix(action, "rebase") && !(strings.HasPrefix(action, "pull") && strings.Contains(action, "(")) {
+		return false, false
+	}
+	return true, strings.Contains(action, "(start)")
+}
+
+// foldRebases makes the lines of one rebase (finish or abort back to its
+// start) one entry: the newest line's hash, the HEAD before the start as
+// Prev. A rebase whose start is cut off (an incomplete read) is dropped
+// with everything after it, so a Prev is never wrong.
+func foldRebases(entries []ReflogEntry) []ReflogEntry {
+	var out []ReflogEntry
+	for i := 0; i < len(entries); i++ {
+		e := entries[i]
+		if step, start := rebaseStep(e.Message); !step || start {
+			out = append(out, e)
+			continue
+		}
+		j := i
+		for ; j < len(entries); j++ {
+			if step, start := rebaseStep(entries[j].Message); !step || start {
+				break
+			}
+		}
+		if j == len(entries) {
+			break // the start is not in what was read
+		}
+		if step, _ := rebaseStep(entries[j].Message); step {
+			e.Prev = entries[j].Prev
+			i = j
+		} else {
+			e.Prev = entries[j].Hash // a start-less run (an old git): stop at the first other line
+			i = j - 1
+		}
+		out = append(out, e)
+	}
+	return out
 }
 
 // reflogKind is the kind of action a reflog line records, from its
