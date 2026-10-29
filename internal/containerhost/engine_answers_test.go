@@ -19,6 +19,8 @@ type scripted struct {
 	calls [][]string
 	// answer gets the args after the binary and global flags.
 	answer func(args []string) (out, stderr string, code int, err error)
+	// stream answers `cp … -` streams (nil = streams fail to start).
+	stream func(args []string) (io.ReadCloser, error)
 }
 
 func (s *scripted) Capture(_ context.Context, _ string, argv ...string) (string, string, int, error) {
@@ -32,8 +34,19 @@ func (s *scripted) CaptureInput(ctx context.Context, dir string, _ []byte, argv 
 	return s.Capture(ctx, dir, argv...)
 }
 
-func (s *scripted) Stream(context.Context, string, ...string) (io.ReadCloser, func(), error) {
-	return nil, nil, errors.New("no streams here")
+func (s *scripted) Stream(_ context.Context, _ string, argv ...string) (io.ReadCloser, func(), error) {
+	s.mu.Lock()
+	s.calls = append(s.calls, argv[1:])
+	stream := s.stream
+	s.mu.Unlock()
+	if stream == nil {
+		return nil, nil, errors.New("no streams here")
+	}
+	r, err := stream(argv[1:])
+	if err != nil {
+		return nil, nil, err
+	}
+	return r, func() { r.Close() }, nil
 }
 
 func (s *scripted) called(sub string) bool {
