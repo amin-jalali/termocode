@@ -1,8 +1,13 @@
 package app
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/amin-jalali/termocode/internal/dbclient"
 )
 
 // Restart of a never-created service is a compose up. When the up
@@ -46,5 +51,27 @@ func TestCovSvcAIContainerRemoveOpensCardWithoutError(t *testing.T) {
 	}
 	if !m.confirmOpen || !strings.Contains(cardText(m), "Remove container?") {
 		t.Errorf("card = %s", cardText(m))
+	}
+}
+
+// A .env DATABASE_URL suggestion is tested with the URL's password, not
+// with the whole URL as the password.
+func TestCovSvcDBEnvSuggestionTestsWithURLPassword(t *testing.T) {
+	m, _ := covSvcDB(t, "")
+	s := m.databases
+	if err := os.WriteFile(filepath.Join(s.root, ".env"), []byte("DATABASE_URL=postgres://app:pw@localhost:5432/app\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	old := dbSQLSessionFactory
+	dbSQLSessionFactory = func(_ context.Context, _ dbclient.Conn, password string) (dbclient.Session, error) {
+		got = append(got, password)
+		return &covSvcSQL{}, nil
+	}
+	defer func() { dbSQLSessionFactory = old }()
+	s.nodes["suggest-env-database_url"] = dbNode{kind: dbNodeSuggestion, name: "DATABASE_URL", path: "suggest-env-database_url"}
+	covSvcRun(t, m, m.databaseAddSuggestion("suggest-env-database_url"))
+	if len(got) != 1 || got[0] != "pw" {
+		t.Errorf("tested with password %q, want \"pw\"", got)
 	}
 }

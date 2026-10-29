@@ -1001,6 +1001,8 @@ func (m *Model) databaseAddSuggestion(path string) tea.Cmd {
 					return m.pushToastDetail(toast.Errr, "Could not read the suggested password", sanitizeDBText(err.Error()))
 				}
 				ai.RegisterSecret(password)
+				password = dbPasswordFromValue(password) // the .env value is the whole URL
+				ai.RegisterSecret(password)
 			}
 		}
 		s.pendingConn = c
