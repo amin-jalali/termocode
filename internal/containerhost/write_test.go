@@ -117,3 +117,40 @@ func TestWriteFileMakesMissingParents(t *testing.T) {
 		}
 	}
 }
+
+func TestWriteFileThroughSymlinkKeepsTheLink(t *testing.T) {
+	h, _, c := newHost(t)
+	c.WriteFile(t, "/app/conf/real.yml", []byte("old"), 0o640)
+	if err := os.Symlink("conf/real.yml", c.Local("/app/link.yml")); err != nil {
+		t.Skip("no symlinks:", err)
+	}
+	if err := os.Symlink("/app/link.yml", c.Local("/app/link2.yml")); err != nil {
+		t.Fatal(err)
+	}
+	if err := (containerFS{h}).WriteFile(t.Context(), "link2.yml", []byte("new"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, l := range []string{"/app/link.yml", "/app/link2.yml"} {
+		if fi, err := os.Lstat(c.Local(l)); err != nil || fi.Mode()&fs.ModeSymlink == 0 {
+			t.Fatalf("%s is no longer a link: %v %v", l, fi, err)
+		}
+	}
+	data, _ := os.ReadFile(c.Local("/app/conf/real.yml"))
+	fi, _ := os.Stat(c.Local("/app/conf/real.yml"))
+	if string(data) != "new" || fi.Mode().Perm() != 0o640 {
+		t.Fatalf("target = %q %v", data, fi.Mode())
+	}
+}
+
+func TestWriteFileSymlinkLoop(t *testing.T) {
+	h, _, c := newHost(t)
+	if err := os.Symlink("b", c.Local("/app/a")); err != nil {
+		t.Skip("no symlinks:", err)
+	}
+	if err := os.Symlink("a", c.Local("/app/b")); err != nil {
+		t.Fatal(err)
+	}
+	if err := (containerFS{h}).WriteFile(t.Context(), "a", nil, 0o644); err == nil {
+		t.Fatal("symlink loop written")
+	}
+}

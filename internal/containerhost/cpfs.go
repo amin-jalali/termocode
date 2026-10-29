@@ -178,7 +178,8 @@ func (h *Host) putTar(ctx context.Context, op, p, dir string, data []byte) error
 // WriteFile replaces or creates one file with a one-entry tar into its
 // folder; missing parent folders are made first (Mkdir, 0755). An existing file keeps its mode, uid and gid; a new file gets
 // perm and the uid/gid commands run as (`id -u`), or the folder's owner
-// when that is unknown. Nothing else in the container changes.
+// when that is unknown. Through a symlink the link's target is written.
+// Nothing else in the container changes.
 func (f containerFS) WriteFile(ctx context.Context, p string, data []byte, perm fs.FileMode) error {
 	h := f.h
 	abs, err := resolve(h.cfg.Root, p)
@@ -192,11 +193,22 @@ func (f containerFS) WriteFile(ctx context.Context, p string, data []byte, perm 
 	defer cancel()
 	mode, uid, gid := int64(perm.Perm()), 0, 0
 	hd, err := h.header(ctx, "write", abs, false)
+	// A symlink stays a link: the file it points to is written, like
+	// os.WriteFile does.
+	for hops := 0; err == nil && hd.Typeflag == tar.TypeSymlink; hops++ {
+		if hops == 8 {
+			return &fs.PathError{Op: "write", Path: abs, Err: errors.New("too many symlinks")}
+		}
+		target := hd.Linkname
+		if !path.IsAbs(target) {
+			target = path.Join(path.Dir(abs), target)
+		}
+		abs = path.Clean(target)
+		hd, err = h.header(ctx, "write", abs, false)
+	}
 	switch {
 	case err == nil && hd.Typeflag == tar.TypeDir:
 		return &fs.PathError{Op: "write", Path: abs, Err: errIsDir}
-	case err == nil && hd.Typeflag == tar.TypeSymlink:
-		return &fs.PathError{Op: "write", Path: abs, Err: errors.New("is a symlink")}
 	case err == nil:
 		mode, uid, gid = hd.Mode&0o7777, hd.Uid, hd.Gid
 	case errors.Is(err, fs.ErrNotExist):
