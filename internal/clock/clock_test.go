@@ -38,3 +38,27 @@ func TestSetWhileReading(t *testing.T) {
 		t.Error("restore did not bring back the real clock")
 	}
 }
+
+func TestAfterCanBeAdvanced(t *testing.T) {
+	ch := make(chan time.Time, 1)
+	restore := SetAfter(func(d time.Duration) <-chan time.Time {
+		if d != 100*time.Millisecond {
+			t.Fatal(d)
+		}
+		return ch
+	})
+	timer := After(100 * time.Millisecond)
+	select {
+	case <-timer:
+		t.Fatal("timer fired early")
+	default:
+	}
+	fixed := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	ch <- fixed
+	if got := <-timer; !got.Equal(fixed) {
+		t.Fatal(got)
+	}
+	restore()
+	// A zero-duration real timer needs no fixed sleep.
+	<-After(0)
+}

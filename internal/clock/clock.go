@@ -1,7 +1,7 @@
 // Package clock is the wall-clock seam for text the user sees ("3 days ago",
 // recent-file ages). Display code calls clock.Now instead of time.Now so the
-// golden screen tests (internal/devtools/shotkit) can freeze time. Timers,
-// debounces and deadlines keep using time.Now directly.
+// golden screen tests (internal/devtools/shotkit) can freeze time. Timers
+// for debounced work can use After; deadlines keep using time.Now directly.
 package clock
 
 import (
@@ -35,3 +35,23 @@ func Set(f func() time.Time) (restore func()) {
 
 // Since is time.Since against Now.
 func Since(t time.Time) time.Duration { return Now().Sub(t) }
+
+// After is the timer seam for debounced model work.
+func After(d time.Duration) <-chan time.Time {
+	if f := afterOverride.Load(); f != nil {
+		return (*f)(d)
+	}
+	return time.After(d)
+}
+
+var afterOverride atomic.Pointer[func(time.Duration) <-chan time.Time]
+
+// SetAfter installs a timer factory; tests can advance it without sleeping.
+func SetAfter(f func(time.Duration) <-chan time.Time) func() {
+	var p *func(time.Duration) <-chan time.Time
+	if f != nil {
+		p = &f
+	}
+	old := afterOverride.Swap(p)
+	return func() { afterOverride.Store(old) }
+}
