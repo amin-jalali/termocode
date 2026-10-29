@@ -75,3 +75,24 @@ func TestSaveReadOnlyFileKeepsText(t *testing.T) {
 	d.Type("Hi ")
 	saveFails(t, d, "a.txt", "alpha\nbravo\ncharlie\n", "read-only")
 }
+
+// Spec: Given a.txt is read-only on disk and edited,
+// when the user runs File: Save from the command palette,
+// then the same clear error toast shows as for Ctrl+S.
+func TestPaletteSaveReadOnlyFileToasts(t *testing.T) {
+	skipIfRoot(t)
+	d := editorDriver(t, nil)
+	chmodBack(t, filepath.Join(d.Dir, "a.txt"), 0o444, 0o644)
+	open(d, "a.txt")
+	d.Type("Hi ")
+	d.Palette("save")
+	if !d.WaitForText("Save failed", 3*time.Second) {
+		t.Fatalf("no Save failed toast after File: Save:\n%s", screen(d))
+	}
+	if !strings.Contains(screen(d), "read-only") {
+		t.Errorf("the toast does not say read-only:\n%s", screen(d))
+	}
+	if got := diskFile(d, "a.txt"); got != "alpha\nbravo\ncharlie\n" {
+		t.Errorf("a.txt on disk changed to %q", got)
+	}
+}
