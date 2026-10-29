@@ -1,10 +1,12 @@
 package mcp
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"sort"
 	"time"
 )
@@ -93,3 +95,22 @@ func shareKey(salt []byte, c shareConfig) string {
 	mac.Write(b)
 	return hex.EncodeToString(mac.Sum(nil))[:32]
 }
+
+// errShareUnavailable: sharing is not possible here (no unix sockets, no
+// private folder, the broker did not run); the session runs its own
+// process instead.
+var errShareUnavailable = errors.New("sharing is not available")
+
+// stopShared stops a shared server for every session (the broker ends
+// it), then closes our connection. A normal Close only leaves.
+func (p *Process) stopShared() {
+	if p.shared && p.Client != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		_, _ = p.Client.call(ctx, shareStop, nil)
+		cancel()
+	}
+	p.Close()
+}
+
+// Sessions is how many sessions use a shared server (0: not shared).
+func (p *Process) Sessions() int { return int(p.sessions.Load()) }

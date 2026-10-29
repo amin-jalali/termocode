@@ -59,8 +59,8 @@ type shareSeen struct {
 	lines         []string
 }
 
-// dialShare connects one session to the broker and runs its handshake.
-func dialShare(t *testing.T, sock string, seen *shareSeen) *Client {
+// dialTestShare connects one session to the broker and runs its handshake.
+func dialTestShare(t *testing.T, sock string, seen *shareSeen) *Client {
 	t.Helper()
 	nc, err := net.Dial("unix", sock)
 	if err != nil {
@@ -113,8 +113,8 @@ func TestShareBrokerTwoSessionsOneServer(t *testing.T) {
 	log := filepath.Join(t.TempDir(), "fake.log")
 	b, sock := startTestBroker(t, fakeShareConfig(map[string]string{"FAKE_LOG": log}))
 	s1, s2 := &shareSeen{}, &shareSeen{}
-	c1 := dialShare(t, sock, s1)
-	c2 := dialShare(t, sock, s2)
+	c1 := dialTestShare(t, sock, s1)
+	c2 := dialTestShare(t, sock, s2)
 	if c1.ServerInfo().Name != "fake-mcp" || c2.ServerInfo().Name != "fake-mcp" {
 		t.Fatalf("server info %+v %+v", c1.ServerInfo(), c2.ServerInfo())
 	}
@@ -148,8 +148,8 @@ func TestShareBrokerTwoSessionsOneServer(t *testing.T) {
 func TestShareBrokerFansOutToolsChanged(t *testing.T) {
 	_, sock := startTestBroker(t, fakeShareConfig(nil))
 	s1, s2 := &shareSeen{}, &shareSeen{}
-	c1 := dialShare(t, sock, s1)
-	dialShare(t, sock, s2)
+	c1 := dialTestShare(t, sock, s1)
+	dialTestShare(t, sock, s2)
 	if _, err := c1.CallTool(context.Background(), "notify_changed", nil); err != nil {
 		t.Fatal(err)
 	}
@@ -158,8 +158,8 @@ func TestShareBrokerFansOutToolsChanged(t *testing.T) {
 
 func TestShareBrokerProgressGoesToTheCaller(t *testing.T) {
 	_, sock := startTestBroker(t, fakeShareConfig(nil))
-	c1 := dialShare(t, sock, nil)
-	c2 := dialShare(t, sock, nil)
+	c1 := dialTestShare(t, sock, nil)
+	c2 := dialTestShare(t, sock, nil)
 	// Both sessions use the same token ("termocode-1"); the 300 ms
 	// deadline only holds when each one gets its own progress.
 	var wg sync.WaitGroup
@@ -179,7 +179,7 @@ func TestShareBrokerProgressGoesToTheCaller(t *testing.T) {
 func TestShareBrokerCancelReachesServer(t *testing.T) {
 	log := filepath.Join(t.TempDir(), "fake.log")
 	_, sock := startTestBroker(t, fakeShareConfig(map[string]string{"FAKE_LOG": log}))
-	c := dialShare(t, sock, nil)
+	c := dialTestShare(t, sock, nil)
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 	if _, err := c.CallTool(ctx, "slow", nil); !errors.Is(err, context.DeadlineExceeded) {
@@ -195,7 +195,7 @@ func TestShareBrokerAnswersRoots(t *testing.T) {
 	cfg := fakeShareConfig(nil)
 	cfg.Roots = []string{"/work/a"}
 	_, sock := startTestBroker(t, cfg)
-	c := dialShare(t, sock, nil)
+	c := dialTestShare(t, sock, nil)
 	res, err := c.CallTool(context.Background(), "roots", nil)
 	if err != nil || res.Text() != "roots: file:///work/a" {
 		t.Fatalf("roots: %q %v", res.Text(), err)
@@ -207,7 +207,7 @@ func TestShareBrokerStopsAfterGrace(t *testing.T) {
 	cfg := fakeShareConfig(map[string]string{"FAKE_MARKER": marker})
 	cfg.GraceMS = 150
 	b, sock := startTestBroker(t, cfg)
-	c := dialShare(t, sock, nil)
+	c := dialTestShare(t, sock, nil)
 	time.Sleep(300 * time.Millisecond) // longer than the grace: a session holds it
 	select {
 	case <-b.done:
@@ -230,8 +230,8 @@ func TestShareBrokerStopsAfterGrace(t *testing.T) {
 
 func TestShareBrokerStopForAll(t *testing.T) {
 	b, sock := startTestBroker(t, fakeShareConfig(nil))
-	c1 := dialShare(t, sock, nil)
-	c2 := dialShare(t, sock, nil)
+	c1 := dialTestShare(t, sock, nil)
+	c2 := dialTestShare(t, sock, nil)
 	if _, err := c1.call(context.Background(), shareStop, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -247,7 +247,7 @@ func TestShareBrokerStopForAll(t *testing.T) {
 
 func TestShareBrokerServerExitEndsSessions(t *testing.T) {
 	b, sock := startTestBroker(t, fakeShareConfig(nil))
-	c := dialShare(t, sock, nil)
+	c := dialTestShare(t, sock, nil)
 	killGroup(b.pid())
 	select {
 	case <-c.Done():

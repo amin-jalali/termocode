@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/spawn"
@@ -26,11 +27,20 @@ type Process struct {
 	cmd       *exec.Cmd
 	done      chan struct{} // closed when the process exited / the session ended
 	closeOnce sync.Once
-	closeFn   func() // HTTP: end the session
+	closeFn   func() // HTTP: end the session; shared: leave the broker
+
+	// shared: a server the share broker runs for many sessions (cmd nil);
+	// pid and sessions come from the broker.
+	shared    bool
+	sharedPid atomic.Int64
+	sessions  atomic.Int64
 }
 
 // Pid is the server's process id (0 for a remote server).
 func (p *Process) Pid() int {
+	if p.shared {
+		return int(p.sharedPid.Load())
+	}
 	if p.cmd == nil || p.cmd.Process == nil {
 		return 0
 	}

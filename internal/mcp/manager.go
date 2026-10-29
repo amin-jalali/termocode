@@ -90,6 +90,10 @@ type ManagerOptions struct {
 	OAuthPort func() int
 	// CIMDURL is termocode's OAuth client metadata document.
 	CIMDURL string
+
+	// Share runs stdio servers once for every session of this user
+	// (share.go); nil: each session runs its own (mcp_share off).
+	Share *ShareOptions
 }
 
 // Status is one row of the servers list.
@@ -108,7 +112,11 @@ type Status struct {
 	// ToolsChanged: the tools differ from the list the user trusted and
 	// the user did not accept the new list (its tools all ask first).
 	ToolsChanged bool
-	server       Server
+	// Shared: the server runs once for every session of this user;
+	// Sessions is how many use it now (this one too).
+	Shared   bool
+	Sessions int
+	server   Server
 }
 
 // ServerTools is one server's tools for a chat turn.
@@ -249,6 +257,9 @@ func (m *Manager) Servers() []Status {
 		}
 		if st.proc != nil {
 			s.Pid = st.proc.Pid()
+			if st.proc.shared {
+				s.Shared, s.Sessions = true, st.proc.Sessions()
+			}
 		}
 		out = append(out, s)
 	}
@@ -374,7 +385,7 @@ func (m *Manager) ensure(ctx context.Context, st *serverState, ask AskTrust) (*P
 	if cfg.Type == TypeHTTP {
 		p, err = m.startHTTP(ctx, st, exp, opts)
 	} else {
-		p, err = StartStdio(ctx, exp, opts)
+		p, err = m.startStdio(ctx, exp, opts)
 	}
 	if err != nil {
 		if !errors.Is(err, ErrSignInNeeded) {
@@ -405,6 +416,26 @@ func (m *Manager) ensure(ctx context.Context, st *serverState, ask AskTrust) (*P
 		m.mu.Unlock()
 	}()
 	return p, nil
+}
+
+// startStdio uses the shared server when sharing is on and possible,
+// else its own process.
+func (m *Manager) startStdio(ctx context.Context, exp Server, opts Options) (*Process, error) {
+	m.mu.Lock()
+	share := m.opts.Share
+	m.mu.Unlock()
+	if share != nil {
+		var roots []string
+		if m.opts.Roots != nil {
+			roots = m.opts.Roots()
+		}
+		p, err := startShared(ctx, share, exp, roots, opts)
+		if !errors.Is(err, errShareUnavailable) {
+			return p, err
+		}
+		m.log(exp.Name, "not shared (%v): running its own process", err)
+	}
+	return StartStdio(ctx, exp, opts)
 }
 
 func (m *Manager) setFailed(st *serverState, err error) {
@@ -769,7 +800,8 @@ func (m *Manager) Caller(ask AskTrust) CallFunc {
 	}
 }
 
-// Stop stops one server (it starts again on the next call).
+// Stop stops one server (it starts again on the next call). A shared
+// server stops for every session that uses it.
 func (m *Manager) Stop(name string) {
 	st, err := m.get(name)
 	if err != nil {
@@ -788,7 +820,7 @@ func (m *Manager) Stop(name string) {
 	m.mu.Unlock()
 	if p != nil {
 		m.log(name, "stopped")
-		p.Close()
+		p.stopShared()
 	}
 }
 

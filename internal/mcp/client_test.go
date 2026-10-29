@@ -17,6 +17,7 @@ import (
 
 // TestMain lets this test binary also be the fake MCP server (mcptest).
 func TestMain(m *testing.M) {
+	RunShareIfHelper() // the share broker re-runs this binary
 	mcptest.RunIfHelper()
 	os.Exit(m.Run())
 }
