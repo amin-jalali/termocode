@@ -49,6 +49,7 @@ const (
 	confirmKindMergeWholeFile // keep ours / theirs or delete (git_merge_view.go)
 	confirmKindHotExitDisk    // a restored file changed on disk (hot_exit_disk.go)
 	confirmKindWorkspaceGone  // a recent workspace folder is gone (workspaces.go)
+	confirmKindCrash          // the last run crashed (crash_ui.go)
 )
 
 // findBuffer returns the buffer info for the given id, if known.
@@ -265,6 +266,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		return m.onHotDiskConfirm(id)
 	case confirmKindWorkspaceGone:
 		return m.onWorkspaceGoneConfirm(id)
+	case confirmKindCrash:
+		return m.onCrashConfirm(id)
 	case confirmKindNvimExited:
 		return m.onNvimExitedConfirm(id)
 	case confirmKindTransferLarge, confirmKindTransferFallback:

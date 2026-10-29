@@ -146,6 +146,7 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 		cmd = tea.Batch(cmd, kc)
 	}
 	nm.showWaitingHotExit()
+	nm.showWaitingCrashCard()
 	if mode := nm.syncMouseMode(); mode != nil { // mouse_hover.go
 		return nm, tea.Batch(cmd, mode)
 	}
@@ -833,7 +834,7 @@ func (m Model) handleNvimMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 		termCmd := m.restoreTerminalsAtStart(sess) // terminal_restore.go
 		// Group I: load extensions after the built-in Lua. Plugins not
 		// downloaded yet are cloned in the background (plugins.go).
-		cmds := append([]tea.Cmd{m.extLoadCmd(false), m.keymapProblemsToast(), m.startHotExit(), m.syncMCPServe(), termCmd, rootsCmd}, pluginBootstrapCmds()...)
+		cmds := append([]tea.Cmd{m.extLoadCmd(false), m.keymapProblemsToast(), m.startHotExit(), m.crashCardCmd(), m.syncMCPServe(), termCmd, rootsCmd}, pluginBootstrapCmds()...)
 		_ = m.nvim.ExecLua(`vim.api.nvim_create_autocmd('BufWritePost', { callback = function(ev)
   if _G.termocode_notify then _G.termocode_notify('termocode_profiles_saved', ev.file) end
 end })`)
