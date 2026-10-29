@@ -45,6 +45,10 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 		}
 	case "R":
 		return m, m.kubeReload()
+	case "c":
+		return m, m.kubePick("ctx")
+	case "n":
+		return m, m.kubePick("ns")
 	case "esc":
 		m.focus = FocusEditor
 	}

@@ -13,6 +13,8 @@ func kubePaletteItems() []picker.Item {
 	return []picker.Item{
 		{ID: "kubernetes-show", Title: "Kubernetes: Show"},
 		{ID: "kubernetes-refresh", Title: "Kubernetes: Refresh"},
+		{ID: "kubernetes-context", Title: "Kubernetes: Switch Context…"},
+		{ID: "kubernetes-namespace", Title: "Kubernetes: Switch Namespace…"},
 	}
 }
 
@@ -22,7 +24,20 @@ func (m *Model) dispatchKubePalette(id string) (tea.Cmd, bool) {
 	case "kubernetes-show":
 		return m.revealKube(), true
 	case "kubernetes-refresh":
-		return tea.Batch(m.revealKube(), m.kubeReload()), true
+		m.revealKube() // its load is replaced by the reload (a cmd never run starts nothing)
+		return m.kubeReload(), true
+	case "kubernetes-context", "kubernetes-namespace":
+		kind := "ctx"
+		if id == "kubernetes-namespace" {
+			kind = "ns"
+		}
+		open := m.revealKube()
+		if m.kube.binary == "" {
+			// Not found yet: the view loads and says why; c and n
+			// work in it once kubectl is there.
+			return open, true
+		}
+		return tea.Batch(open, m.kubePick(kind)), true
 	}
 	return nil, false
 }

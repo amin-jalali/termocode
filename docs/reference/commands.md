@@ -410,6 +410,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | --- | --- | --- | --- |
 | Kubernetes: Refresh | `kubernetes-refresh` |   |   |
 | Kubernetes: Show | `kubernetes-show` |   |   |
+| Kubernetes: Switch Context… | `kubernetes-context` |   |   |
+| Kubernetes: Switch Namespace… | `kubernetes-namespace` |   |   |
 
 ## LSP
 

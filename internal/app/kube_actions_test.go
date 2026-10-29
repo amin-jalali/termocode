@@ -34,7 +34,8 @@ func TestKubePaletteShowOpensTheView(t *testing.T) {
 }
 
 func TestKubeAIPolicy(t *testing.T) {
-	for id, gate := range map[string]aiGate{"kubernetes-show": aiGateAuto, "kubernetes-refresh": aiGateAuto} {
+	for id, gate := range map[string]aiGate{"kubernetes-show": aiGateAuto, "kubernetes-refresh": aiGateAuto,
+		"kubernetes-context": aiGateNever, "kubernetes-namespace": aiGateNever} {
 		if p, ok := aiActionPolicies[id]; !ok || p.Gate != gate {
 			t.Errorf("%s policy = %+v, want %s", id, p, gate)
 		}

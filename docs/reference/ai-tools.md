@@ -1798,6 +1798,8 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `itermoc-profiles` | Itermoc: Profiles | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `itermoc-services` | Itermoc: Services | never | a screen for the user (secrets and access live there); the AI opens it with the typed ai_view_open tool |
 | `join-lines` | Edit: Join Lines | confirm (fileWrite) |   |
+| `kubernetes-context` | Kubernetes: Switch Context… | never | opens a picker or prompt that only the user can answer; use a typed tool; the context is the user's choice |
+| `kubernetes-namespace` | Kubernetes: Switch Namespace… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `kubernetes-refresh` | Kubernetes: Refresh | auto |   |
 | `kubernetes-show` | Kubernetes: Show | auto |   |
 | `layout-delete` | Layout: Delete… | never | the AI changes the layout with the layout_set tool |
