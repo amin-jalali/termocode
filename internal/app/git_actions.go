@@ -111,7 +111,7 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 			m.openRebaseControl()
 		case gitRowFile:
 			if cur.section == gitSecConflicts {
-				return m, m.gitOpenConflictFile(cur.fileIndex), true
+				return m, m.gitOpenMergeViewForFile(cur.fileIndex), true
 			}
 			path := gitFileAbsPath(m.gitFiles[cur.fileIndex].Path)
 			if m.nvim != nil {
