@@ -91,9 +91,6 @@ func New(opts Options) *Client {
 	return c
 }
 
-// Options returns the client's options.
-func (c *Client) Options() Options { return c.opts }
-
 // Close drops idle connections.
 func (c *Client) Close() {
 	if c.plain != nil {
