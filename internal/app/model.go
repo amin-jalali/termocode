@@ -570,6 +570,7 @@ type Model struct {
 	// commitView is the Source Control commit view (git_commit_view.go;
 	// nil until a commit is opened).
 	commitView *commitViewState
+	rebase     *gitRebaseState // the interactive rebase card (git_rebase.go)
 	// Hot exit (hot_exit.go): this workspace's backup dir, this run's
 	// live dir, the backups waiting for Restore / Discard, and the ones
 	// found while another dialog was open (asked once it closes).

@@ -12,6 +12,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	"github.com/amin-jalali/termocode/internal/extproc/extproctest"
+	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/mcp/mcptest"
 )
 
@@ -20,6 +21,7 @@ import (
 // separate processes.
 func TestMain(m *testing.M) {
 	extproctest.RunIfHelper()
+	git.RunRebaseHelperIfAsked() // git's editor in the rebase tests (scm_rebase_test.go)
 	mcptest.RunIfHelper()
 	os.Exit(m.Run())
 }

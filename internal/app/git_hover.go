@@ -81,7 +81,7 @@ func (m *Model) updateHoverCommit() tea.Cmd {
 // Source Control panel when the pointer is over a commit whose details have
 // loaded. Returns base unchanged otherwise.
 func (m Model) overlayCommitHoverCard(base string) string {
-	if m.hoverCommitHash == "" || m.commitViewShown() {
+	if m.hoverCommitHash == "" || m.commitViewShown() || m.rebaseCardOpen() {
 		return base // the commit view already shows the commit
 	}
 	d, ok := m.commitDetails[m.hoverCommitHash]

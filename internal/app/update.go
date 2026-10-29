@@ -473,6 +473,8 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 	case commitPickDoneMsg:
 		return m, m.onCommitPickDone(msg)
+	case rebaseTodoMsg: // git_rebase.go
+		return m, m.onRebaseMsg(msg)
 	case gitRemoteDoneMsg:
 		return m, m.gitRemoteDone(msg)
 	case preview.CloseMsg:
@@ -633,6 +635,9 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 	}
 	if m.menuOpen {
 		return m.routeToMenu(msg)
+	}
+	if m.rebaseCardOpen() { // git_rebase.go
+		return m.routeToRebaseCard(msg)
 	}
 	if m.commitViewShown() {
 		if newM, cmd, ok := m.routeToCommitView(msg); ok {

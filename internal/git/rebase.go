@@ -157,3 +157,13 @@ func (t RebaseTodo) Format() string {
 	}
 	return b.String()
 }
+
+// ParentOf is the full hash of commit's first parent (an error for a root
+// commit).
+func ParentOf(dir, commit string) (string, error) {
+	out, err := runOut(dir, "git", "rev-parse", "--verify", "-q", commit+"^")
+	if err != nil {
+		return "", fmt.Errorf("%s has no parent", commit)
+	}
+	return strings.TrimSpace(out), nil
+}

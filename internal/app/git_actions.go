@@ -154,6 +154,11 @@ func (m Model) handleGitSidebarKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 		case 'x':
 			m.openGitDiscardConfirm()
 			return m, nil, true
+		case 'R': // git_rebase.go
+			if hasCur && cur.kind == gitRowCommit {
+				return m, m.gitRebaseFromCmd(m.gitCommits[cur.ci].FullHash), true
+			}
+			return m, nil, true
 		case 'y':
 			if hasCur && cur.kind == gitRowCommit {
 				return m, m.gitCopyCommit(cur.ci, false), true

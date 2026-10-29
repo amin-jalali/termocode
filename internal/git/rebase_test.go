@@ -361,3 +361,14 @@ func TestFixupInto(t *testing.T) {
 		t.Errorf("unstaged edit lost: %q", b)
 	}
 }
+
+// G-RBS: ParentOf gives a commit's first parent; a root commit has none.
+func TestParentOf(t *testing.T) {
+	r, h := rebaseRepo(t, 2)
+	if p, err := ParentOf(r.dir, h[1]); err != nil || p != h[0] {
+		t.Errorf("parent of c2: %q %v", p, err)
+	}
+	if _, err := ParentOf(r.dir, h[0]); err == nil {
+		t.Error("root commit has a parent")
+	}
+}

@@ -466,7 +466,7 @@ func truncRightVisual(s string, cells int) string {
 // has a single ▕ in BorderDefault. Each component renders strictly
 // inside its column width so there are no overlaps.
 func (m Model) renderBase() string {
-	return m.commitViewLayer(strings.Join(m.renderBaseLines(), "\n"))
+	return m.rebaseLayer(m.commitViewLayer(strings.Join(m.renderBaseLines(), "\n")))
 }
 
 // renderBaseLines composes the frame as rows. The pieces are joined and
