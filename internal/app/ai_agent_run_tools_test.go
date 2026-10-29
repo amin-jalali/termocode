@@ -12,6 +12,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/clock"
 )
 
 // G-API: agents start agent runs. Each test runs scripted models only.
@@ -610,4 +611,70 @@ func TestAIAgentRunStopNotSelf(t *testing.T) {
 	if res := aiLastMsg(main, 1); !strings.Contains(res, "cannot stop its own run") {
 		t.Fatalf("result %q", res)
 	}
+}
+
+// Spec: the chat marks a run the AI started under its task, with the
+// chat and the run and step that asked.
+func TestAIAgentRunChatChip(t *testing.T) {
+	m, _ := aiAgentRunModel(t, []ai.Chunk{{Delta: "a"}, {Delta: "b"}}, nil)
+	fast, _ := m.ai.profiles.Get("fast")
+	m.ai.runQueue = []aiQueuedRun{{id: "c1", chat: m.ai.conv.ID, prof: fast, task: "count the TODOs",
+		by: ai.RunBy{Chat: m.ai.conv.ID, ChatTitle: "fix the parser", ParentRun: "p1", Step: "Reviewer", Depth: 2}}}
+	if m.aiStartQueuedRun() == nil {
+		t.Fatal("not started")
+	}
+	aiDriveQueued(t, m, nil)
+	got := aiTranscriptText(m, 120)
+	wantAll(t, got, "count the TODOs", `started by AI in the chat "fix the parser" · from step Reviewer of run p1`)
+	m.ai.conv.Messages[len(m.ai.conv.Messages)-1].Run.By = nil
+	if got := aiTranscriptText(m, 120); strings.Contains(got, "started by AI") {
+		t.Fatalf("a user's run is marked:\n%s", got)
+	}
+}
+
+// aiMarkDemoRun marks the Runs demo run of task as started by the AI.
+func aiMarkDemoRun(t *testing.T, m *Model, task string) {
+	t.Helper()
+	msgs := m.ai.conv.Messages
+	for i := range msgs {
+		if msgs[i].Run != nil && runsTask(msgs, i) == task {
+			msgs[i].Run.By = &ai.RunBy{Chat: m.ai.conv.ID, ChatTitle: "plan the release", Depth: 1}
+			m.ai.runGen++
+			return
+		}
+	}
+	t.Fatalf("no run %q in the open chat", task)
+}
+
+// Spec: the Runs list, a run's page and its log mark AI-started runs
+// and name the chat that asked; the filter finds them by "by AI".
+func TestAIAgentRunRunsViewChip(t *testing.T) {
+	m := runsRig(t, "list", 200, 50)
+	aiMarkDemoRun(t, m, "fix the toast flicker")
+	wantAll(t, runsSideText(m), "review by AI")
+	n := 0
+	for _, it := range m.runsCollect(clock.Now()) {
+		if aiRunByChip(&it.run) != "" {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("%d runs marked", n)
+	}
+	m = runsRig(t, "detail", 200, 50)
+	aiMarkDemoRun(t, m, "fix the toast flicker")
+	page := runsPageText(m, 165, 48)
+	wantAll(t, page, "review · Review then fix · started 11:59 · by AI", `started by AI in the chat "plan the release" · profile review`)
+}
+
+// Spec: the AGENTS view's run line says "by AI".
+func TestAIAgentRunAgentsViewChip(t *testing.T) {
+	agentsUnicode(t)
+	msgs := agentsRunMsgs("r1", ai.RunStateDone, agentsDiamondSteps())
+	msgs[1].Run.By = &ai.RunBy{Chat: "c", Depth: 1}
+	m := agentsModel(t, msgs...)
+	wantAll(t, agentsText(m, 64, 60), "run r1 · plan · by AI")
+	msgs[1].Run.By = nil
+	m = agentsModel(t, msgs...)
+	wantAll(t, agentsText(m, 64, 60), "!by AI")
 }

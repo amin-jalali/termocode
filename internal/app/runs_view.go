@@ -279,7 +279,11 @@ func (m *Model) drawRunsRow(cv *rcCanvas, y, w int, it runsItem, sel, narrow, fo
 	if narrow {
 		cv.textMax(5, y, it.task, min(24, w-6), title)
 		px := 30
-		cv.textMax(px, y, it.run.Profile, 7, rcSt{fg: c.muted})
+		prof := it.run.Profile
+		if it.run.By != nil { // G-API: by AI
+			prof = "AI·" + prof
+		}
+		cv.textMax(px, y, prof, 7, rcSt{fg: c.muted})
 		x := runsMiniPipe(cv, px+8, y, 12, it, c) + 2
 		right := w - 1
 		switch it.kind {
@@ -320,6 +324,9 @@ func (m *Model) drawRunsRow(cv *rcCanvas, y, w int, it runsItem, sel, narrow, fo
 	wx := cv.textR(w-1, y, word, rcSt{fg: wordCol})
 	cv.textMax(5, y, it.task, wx-5-1, title)
 	x := cv.textMax(5, y+1, it.run.Profile, 10, rcSt{fg: c.dim})
+	if chip := aiRunByChip(&it.run); chip != "" { // G-API
+		x = cv.textMax(x+1, y+1, chip, 5, rcSt{fg: c.accent})
+	}
 	x = runsMiniPipe(cv, x+1, y+1, max(w-1-x-8, 3), it, c) + 1
 	tail, tcol := m.runsTail(it, c, now)
 	cv.textMax(x, y+1, tail, w-1-x, rcSt{fg: tcol})

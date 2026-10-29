@@ -844,3 +844,32 @@ func aiRunStopTool(call aiIDECaller, sn aiRunSnap) ai.Tool {
 		},
 	}
 }
+
+// aiRunByChip is the "by AI" chip of a run the AI started ("" for the
+// user's own runs).
+func aiRunByChip(r *ai.StoredRun) string {
+	if r == nil || r.By == nil {
+		return ""
+	}
+	return "by AI"
+}
+
+// aiRunByLine says who started run r and from where: "started by AI in
+// the chat "fix the parser" · from step Reviewer of run r1".
+func aiRunByLine(r *ai.StoredRun) string {
+	if r == nil || r.By == nil {
+		return ""
+	}
+	by := r.By
+	out := "started by AI"
+	if t := aiCardText(by.ChatTitle, 30); t != "" {
+		out += " in the chat \"" + t + "\""
+	}
+	switch {
+	case by.ParentRun != "" && by.Step != "":
+		out += " · from step " + aiCardText(by.Step, 24) + " of run " + by.ParentRun
+	case by.ParentRun != "":
+		out += " · from run " + by.ParentRun
+	}
+	return out
+}

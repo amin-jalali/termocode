@@ -398,6 +398,9 @@ func (m *Model) runsDetailHead(cv *rcCanvas, w int, it runsItem, compact bool, c
 	if it.run.Rounds > 0 {
 		sub += " · " + aiRoundText(it.run.Rounds, it.run.MaxRounds)
 	}
+	if chip := aiRunByChip(&it.run); chip != "" { // G-API
+		sub += " · " + chip
+	}
 	word := runsKindWord(it)
 	status := g + " " + word + " · " + runsDur(it.elapsed)
 	if it.anyTok && !compact {
@@ -867,7 +870,11 @@ func (m *Model) runsLog(it runsItem, now time.Time) []runsLogLine {
 	if !it.open {
 		where = "the chat \"" + rcCut(aiCleanText(it.chatTitle), 30) + "\""
 	}
-	add(it.started, "started from "+where+" · profile "+it.run.Profile, 0)
+	if by := aiRunByLine(&it.run); by != "" { // G-API: the AI started it
+		add(it.started, by+" · profile "+it.run.Profile, 0)
+	} else {
+		add(it.started, "started from "+where+" · profile "+it.run.Profile, 0)
+	}
 	for k, st := range it.steps {
 		if st.StartedAtMs == 0 {
 			continue

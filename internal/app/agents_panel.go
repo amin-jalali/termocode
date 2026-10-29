@@ -812,6 +812,9 @@ func (m Model) agentsBuild(width int, now time.Time) aiAgentsCache {
 	if d.msg.Run.Profile != "" {
 		left += " · " + d.msg.Run.Profile
 	}
+	if chip := aiRunByChip(d.msg.Run); chip != "" { // G-API
+		left += " · " + chip
+	}
 	if d.of > 1 {
 		left += " (" + strconv.Itoa(d.nth) + "/" + strconv.Itoa(d.of) + ")"
 	}

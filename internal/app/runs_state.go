@@ -152,7 +152,7 @@ func (m *Model) runsItems(now time.Time) []runsItem {
 		if st.profile != "" && it.run.Profile != st.profile {
 			continue
 		}
-		if q != "" && !strings.Contains(strings.ToLower(it.task+" "+it.run.Profile+" "+it.chatTitle), q) {
+		if q != "" && !strings.Contains(strings.ToLower(it.task+" "+it.run.Profile+" "+it.chatTitle+" "+aiRunByChip(&it.run)), q) {
 			continue
 		}
 		out = append(out, it)

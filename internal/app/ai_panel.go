@@ -519,6 +519,11 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 			if msg.Rules != "" || msg.Lessons > 0 { // OM-1/OM-2: "rules: AGENTS.md (4 KB) · memory: 3 lessons"
 				out = append(out, aiRulesLine(msg.Rules, msg.Lessons, width))
 			}
+			if i+1 < len(s.conv.Messages) { // G-API: the AI wrote this task for a run it started
+				if by := aiRunByLine(s.conv.Messages[i+1].Run); by != "" {
+					out = append(out, aiRightChip(aiSpark()+" "+by, width))
+				}
+			}
 		case ai.StoredAssistant:
 			if msg.Run != nil { // a pipeline run: step cards (ai_run_cards.go)
 				out = append(out, m.aiRunLines(i, msg, width, inner)...)
