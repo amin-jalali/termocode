@@ -142,6 +142,12 @@ func (m *Model) aiChatHistoryN(system string, n int) []ai.Message {
 // (AIToolCatalog, cmd/docgen) is built from this list too, so a new tool
 // group goes here, with one appended line.
 func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
+	return m.aiChatToolsBy(root, call, aiRunCaller{})
+}
+
+// aiChatToolsBy is aiChatTools for the steps of a run (c says which:
+// agent_run_start knows how deep it is and the run's budget).
+func (m *Model) aiChatToolsBy(root string, call aiIDECaller, c aiRunCaller) []ai.Tool {
 	tools := append(ai.WorkspaceTools(ai.Workspace{Root: root}), m.aiEditorTools()...)
 	tools = aiSyncTools(tools, root, call) // the IDE follows file / git changes
 	tools = append(tools, aiIDETools(root, call)...)
@@ -159,6 +165,7 @@ func (m *Model) aiChatTools(root string, call aiIDECaller) []ai.Tool {
 	tools = append(tools, aiHelpTools()...)               // U21: the built-in guide (ai_help_tools.go)
 	tools = append(tools, aiItermocTools(call)...)        // AH-7: profiles, models, MCP services, outside agents (ai_itermoc_tools.go)
 	tools = append(tools, m.aiItermocWriteTools(call)...) // AH-8: switch, drafts, connect, access, start (ai_itermoc_write_tools.go)
+	tools = append(tools, m.aiAgentRunTools(call, c)...)  // G-API: agents start agent runs (ai_agent_run_tools.go)
 	if m.aiReviewEdits() {                                // Group R2: file changes become diffs to review
 		tools = m.aiReviewTools(tools, root, call)
 	}
@@ -423,7 +430,7 @@ func (m *Model) onAIChatConfirm(msg aiChatConfirmMsg) tea.Cmd {
 	if strings.HasPrefix(msg.tool.Name, "db_") {
 		m.confirm = m.confirm.WithScrollText() // the whole SQL, Up/Down scroll
 	}
-	if msg.tool.Name == "profile_draft" || msg.tool.Name == "model_slot_draft" {
+	if msg.tool.Name == "profile_draft" || msg.tool.Name == "model_slot_draft" || msg.tool.Name == "agent_run_start" {
 		m.confirm = m.confirm.WithScrollText().WithWideText() // AH-8: the whole draft, indents kept, Up/Down scroll
 	}
 	m.confirm.SetSize(m.w, m.h)
@@ -441,6 +448,9 @@ func (m *Model) onAIChatConfirm(msg aiChatConfirmMsg) tea.Cmd {
 func aiToolCardButtons(t ai.Tool) []confirm.Button {
 	allow := confirm.Button{ID: "allow", Title: "Allow", Style: confirm.StylePrimary}
 	if title, ok := aiItermocWriteAllow[t.Name]; ok { // AH-8: the button names the action
+		allow.Title = title
+	}
+	if title, ok := aiAgentRunAllow[t.Name]; ok { // G-API
 		allow.Title = title
 	}
 	deny := confirm.Button{ID: "deny", Title: "Deny"}
@@ -461,7 +471,7 @@ func aiToolCardButtons(t ai.Tool) []confirm.Button {
 // aiToolCardSafeFirst reports whether the card of t puts Deny first.
 func aiToolCardSafeFirst(t ai.Tool) bool {
 	return strings.HasPrefix(t.Name, "db_") || strings.HasPrefix(t.Name, mcp.WirePrefix) ||
-		t.Class == ai.ClassContainers || t.Class == ai.ClassServices || aiItermocWriteTool(t.Name)
+		t.Class == ai.ClassContainers || t.Class == ai.ClassServices || aiItermocWriteTool(t.Name) || aiAgentRunTool(t.Name)
 }
 
 // answerAIToolConfirm replies to the waiting agent.
@@ -523,8 +533,9 @@ func (m *Model) onAIChatDone(msg aiChatDoneMsg) tea.Cmd {
 	}
 	m.aiRestoreTurnDone()
 	m.persistAIState()
-	_, cmd := m.aiSyncIDE("", aiSyncDisk)        // each tool synced already; this catches the rest
-	return tea.Batch(cmd, m.aiMemoryAfterTurn()) // OM-2: lessons, beside the chat
+	_, cmd := m.aiSyncIDE("", aiSyncDisk)            // each tool synced already; this catches the rest
+	mem := m.aiMemoryAfterTurn()                     // OM-2: lessons, beside the chat
+	return tea.Batch(cmd, mem, m.aiStartQueuedRun()) // G-API: a run the AI started waits for this turn
 }
 
 // persistAIState stores the open chat id + scroll in session.json.

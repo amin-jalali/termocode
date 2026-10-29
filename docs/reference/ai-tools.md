@@ -108,6 +108,7 @@ The column **MCP server** says what an outside agent (Claude Code, Codex, …) g
 | [`service_connect`](#service_connect) | confirm (always asks): Deny (first) · Open wizard (you sign in yourself) | no | Open the Connect wizard for an MCP service (github, gitlab, linear, notion, sentry, clickup, atlassian, slack, or one in mcp.json) so the user can sign in. |
 | [`service_set_access`](#service_set_access) | confirm (always asks): Deny (first) · Change | no | Allow writes for a connected MCP service, or make it read only (known services with a read-only endpoint or scopes, such as GitHub and Linear). |
 | [`outside_agent_start`](#outside_agent_start) | confirm (always asks): Deny (first) · Start | no | Start an outside coding agent (claude, codex, gemini, opencode, aider) in a new terminal tab, with termocode's tools when the agent supports it. |
+| [`agent_run_start`](#agent_run_start) | confirm (always asks): Deny (first) · Start run | no | Start another agent run on a task: a profile (profiles_list), or steps you write (each with a title and a prompt, as in profile_draft). |
 | [`http_list_requests`](#http_list_requests) | auto | yes | List the HTTP requests in the user's .http / .rest files (request templates with {{variables}}, not resolved), the file variable names and the selected environment. |
 | [`http_environments`](#http_environments) | auto | yes | Show the HTTP environments (http-client.env.json and the private file), the selected one and their variable names. |
 | [`http_send`](#http_send) | GET / HEAD / OPTIONS to localhost: auto<br>other safe methods: confirm (http:<host[:port]>)<br>other methods: confirm (http:<host[:port]>/write)<br>private, link-local or metadata hosts, *.internal, *.local and dot-less names: confirm (always asks) | some ask | Send an HTTP request and read the answer (status, headers, body). |
@@ -1239,6 +1240,22 @@ Start an outside coding agent (claude, codex, gemini, opencode, aider) in a new 
 | Argument | Type | Required | Description |
 | --- | --- | --- | --- |
 | `agent` | string | yes | which agent. One of: `claude`, `codex`, `gemini`, `opencode`, `aider` |
+
+### agent_run_start
+
+Start another agent run on a task: a profile (profiles_list), or steps you write (each with a title and a prompt, as in profile_draft). The user confirms on a card. The run starts in this chat when your current answer (or run) ends, like a message the user sends with that profile, so plan approval and agent worktrees apply; you cannot wait for it in this turn. Returns the run id for agent_run_status and agent_run_result. At most 3 such runs at once; a run started this way may start one more level, not two.
+
+**Gate:** confirm (always asks): Deny (first) · Start run
+
+**MCP server:** no
+
+| Argument | Type | Required | Description |
+| --- | --- | --- | --- |
+| `task` | string | yes | what the run should do (its first message) |
+| `budget_usd` | number |   | with steps: pause the run once it cost this much (optional) |
+| `profile` | string |   | profile name from profiles_list (or give steps) |
+| `steps` | array |   | the run's own steps in order, instead of a profile |
+| `worktree` | string |   | auto (default): steps that run side by side get their own git worktree, as the user's settings say; off: every step works in the workspace. One of: `auto`, `off` |
 
 ### http_list_requests
 

@@ -133,6 +133,13 @@ type aiState struct {
 	// its steps may do (G-PLAN, ai_plan_approval.go).
 	planWait *aiPlanWait
 	runActs  func(agentdag.Node) (writes, exec bool)
+	// runQueue are the runs the AI started (agent_run_start) that wait
+	// for the chat; runInline the AI's own steps of such a run by run id;
+	// runNotStarted why a queued run never started (G-API,
+	// ai_agent_run_tools.go).
+	runQueue      []aiQueuedRun
+	runInline     map[string]ai.Profile
+	runNotStarted map[string]string
 	// agents is the AGENTS view of the chat's runs (agents_panel.go).
 	agents aiAgentsState
 	// usageLog is every step and plain chat turn that used a model in
@@ -622,6 +629,7 @@ func (m *Model) dispatchAIPalette(id string) (tea.Cmd, bool) {
 func (m *Model) aiCancelAll() tea.Cmd {
 	s := m.aiS()
 	stopped := s.streaming || s.actionBusy != ""
+	dropped := m.aiDropQueuedRuns("the user stopped the AI") // G-API: Stop stops what the AI queued too
 	if s.chatCancel != nil {
 		s.chatCancel()
 		m.cancelAIReviewTurn()
@@ -636,7 +644,11 @@ func (m *Model) aiCancelAll() tea.Cmd {
 		return nil
 	}
 	var c tea.Cmd
-	m.toast, c = m.toast.Push(toast.Info, "AI stopped")
+	text := "AI stopped"
+	if dropped > 0 {
+		text += " · " + strconv.Itoa(dropped) + " queued run" + plural(dropped) + " not started"
+	}
+	m.toast, c = m.toast.Push(toast.Info, text)
 	return c
 }
 

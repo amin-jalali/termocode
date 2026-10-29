@@ -219,8 +219,17 @@ func (s *aiState) aiRunPreflight(run agentdag.Run, cats map[string]string) (map[
 
 // startAIRun starts a pipeline run of prof for a new user message.
 func (m *Model) startAIRun(text string, prof ai.Profile, rules ai.Rules) tea.Cmd {
+	return m.startAIRunAs(text, prof, rules, "", nil)
+}
+
+// startAIRunAs is startAIRun with the run's id ("" = a new one) and, for
+// a run the AI started, who started it (G-API).
+func (m *Model) startAIRunAs(text string, prof ai.Profile, rules ai.Rules, id string, by *ai.RunBy) tea.Cmd {
 	s := m.aiS()
-	run := prof.Run(aiNewRunID())
+	if id == "" {
+		id = aiNewRunID()
+	}
+	run := prof.Run(id)
 	run.CreatedAt = clock.Now()
 	slots, err := s.aiRunPreflight(run, prof.CategorySlots())
 	if err != nil {
@@ -243,7 +252,7 @@ func (m *Model) startAIRun(text string, prof ai.Profile, rules ai.Rules) tea.Cmd
 			steps[i].Deps = agentdag.Deps(run, n.ID)
 		}
 	}
-	sr := &ai.StoredRun{ID: run.ID, Profile: prof.Name, State: ai.RunStateRunning, StartedAtMs: run.CreatedAt.UnixMilli()}
+	sr := &ai.StoredRun{ID: run.ID, Profile: prof.Name, State: ai.RunStateRunning, StartedAtMs: run.CreatedAt.UnixMilli(), By: by}
 	if run.Loop != nil {
 		sr.Rounds, sr.MaxRounds = 1, run.Loop.MaxRounds
 	}
@@ -268,7 +277,17 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 
 	root := aiWorkspaceRoot()
 	call := newAIIDECaller(gen, ch)
-	tools := m.aiChatTools(root, call)
+	prof, _ := s.profiles.Get(run.Profile)
+	if p, ok := s.runInline[run.ID]; ok { // G-API: the AI's own steps
+		prof = p
+	}
+	by := s.conv.Messages[msgIdx].Run.By
+	budget := aiRunBudget(prof, by)
+	caller := aiRunCaller{parentRun: run.ID, budget: budget}
+	if by != nil {
+		caller.depth = by.Depth
+	}
+	tools := m.aiChatToolsBy(root, call, caller)
 	memBlock, lessons := m.aiMemoryTurn(root, s.conv.Messages[msgIdx-1].Text) // OM-2
 	s.conv.Messages[msgIdx-1].Lessons = lessons
 	base := m.aiChatBasePrompt(root, rules, memBlock)
@@ -302,7 +321,6 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	if planned {
 		parallel = s.settings.PlannedParallel()
 	}
-	prof, _ := s.profiles.Get(run.Profile)
 	pricing := ai.NewPricing(s.settings.Prices)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -314,7 +332,8 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	}
 	var mcpOnce sync.Once
 	var extra []ai.Tool
-	wts := newAIRunWorktrees(root, run.ID, s.settings.UseWorktrees(), &s.conv.Messages[msgIdx]) // G-WT
+	useWT := s.settings.UseWorktrees() && (by == nil || by.Worktree != "off") // G-API: the AI may ask for none
+	wts := newAIRunWorktrees(root, run.ID, useWT, &s.conv.Messages[msgIdx])   // G-WT
 	// inWorktree moves node n into its own worktree when it shares its
 	// wave: the tools, the prompt's root and the card follow.
 	inWorktree := func(ctx context.Context, n agentdag.Node) (string, []ai.Tool, error) {
@@ -327,7 +346,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		}
 		var ts []ai.Tool
 		_, err := call(ctx, func(m *Model) (string, tea.Cmd, error) {
-			ts = m.aiChatTools(wt.Dir(), call)
+			ts = m.aiChatToolsBy(wt.Dir(), call, caller)
 			m.aiSetStepWorktree(n.ID, ai.StoredWorktree{ID: wt.ID, Path: wt.Path, Branch: wt.Branch, State: ai.WorktreeRunning}, "")
 			return "", nil, nil
 		})
@@ -339,7 +358,7 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		Outputs:    outputs,
 		Review:     &s.reviewGate,
 		Categories: prof.CategorySlots(),
-		Budget:     prof.BudgetUSD,
+		Budget:     budget,
 		Approval:   s.aiRunApproval(),
 		Acts:       acts,
 		Cost: func(n agentdag.Node, u ai.Usage) (float64, bool) {
@@ -443,6 +462,16 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 		close(ch)
 	}()
 	return waitAIChat(ch)
+}
+
+// aiRunBudget is a run's budget: its profile's, or less when the AI
+// started it from a run with a budget (what was left of that one).
+func aiRunBudget(prof ai.Profile, by *ai.RunBy) float64 {
+	b := prof.BudgetUSD
+	if by != nil && by.Budget > 0 && (b <= 0 || by.Budget < b) {
+		b = by.Budget
+	}
+	return b
 }
 
 // aiRunMessage is the running run's assistant message (nil when none).

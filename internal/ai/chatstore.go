@@ -91,6 +91,26 @@ type StoredRun struct {
 	// while the run waits for the user's answer on its plan.
 	Approved []string `json:"approved,omitempty"`
 	PlanWait bool     `json:"plan_wait,omitempty"`
+	// By is set when the AI started the run (agent_run_start, G-API).
+	By *RunBy `json:"by,omitempty"`
+}
+
+// RunBy is who started a run the AI started: the chat where it asked,
+// and the run and step when a step of a run asked.
+type RunBy struct {
+	Chat      string `json:"chat"`
+	ChatTitle string `json:"chat_title,omitempty"`
+	ParentRun string `json:"parent_run,omitempty"`
+	Step      string `json:"step,omitempty"`
+	// Depth is 1 for a run the chat's AI started, 2 for one a step of
+	// such a run started (the most there may be).
+	Depth int `json:"depth"`
+	// Worktree is "off" when the AI asked for no agent worktrees.
+	Worktree string `json:"worktree,omitempty"`
+	// ParentBudget is the asking run's budget in dollars (0: none) and
+	// Budget what was left of it when this run started.
+	ParentBudget float64 `json:"parent_budget,omitempty"`
+	Budget       float64 `json:"budget_left,omitempty"`
 }
 
 // StoredStep is one step card of a pipeline run.

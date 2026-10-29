@@ -60,6 +60,7 @@ var aiGateNotes = map[string]string{
 	"service_connect":     "confirm (always asks): Deny (first) · Open wizard (you sign in yourself)",
 	"service_set_access":  "confirm (always asks): Deny (first) · Change",
 	"outside_agent_start": "confirm (always asks): Deny (first) · Start",
+	"agent_run_start":     "confirm (always asks): Deny (first) · Start run",
 }
 
 // aiGateRefused are ops a tool always refuses (Validate), with no dialog.

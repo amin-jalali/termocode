@@ -688,11 +688,11 @@ var aiStartOutsideAgentHook func(m *Model, a agents.Agent) (tea.Cmd, error)
 
 // ── The tools ────────────────────────────────────────────────────────────
 
-// aiItermocWriteTools are the write tools of the Itermoc view.
-func (m *Model) aiItermocWriteTools(call aiIDECaller) []ai.Tool {
-	sn := m.aiItermocWriteSnapshot()
+// aiProfileStepProps is the JSON schema of one profile step (profile_draft,
+// agent_run_start).
+func aiProfileStepProps() map[string]any {
 	str := func(d string) map[string]any { return map[string]any{"type": "string", "description": d} }
-	stepProps := map[string]any{
+	return map[string]any{
 		"id":       str("step id (optional; step-1, step-2 … when left out)"),
 		"title":    str("what the step does, e.g. Review"),
 		"slot":     str("model slot from models_list (optional; main when left out)"),
@@ -702,6 +702,13 @@ func (m *Model) aiItermocWriteTools(call aiIDECaller) []ai.Tool {
 		"planner":  map[string]any{"type": "boolean", "description": "the step plans the run (at most one)"},
 		"after":    map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "step ids this step waits for (needs ai_parallel_max 2 or more)"},
 	}
+}
+
+// aiItermocWriteTools are the write tools of the Itermoc view.
+func (m *Model) aiItermocWriteTools(call aiIDECaller) []ai.Tool {
+	sn := m.aiItermocWriteSnapshot()
+	str := func(d string) map[string]any { return map[string]any{"type": "string", "description": d} }
+	stepProps := aiProfileStepProps()
 	return []ai.Tool{
 		{
 			Name: "profile_switch",

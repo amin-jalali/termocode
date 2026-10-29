@@ -80,3 +80,12 @@ func SharedWave(ctx context.Context) bool {
 	p, _ := ctx.Value(sharedWaveKey{}).(bool)
 	return p
 }
+
+type nodeKey struct{}
+
+// NodeOf reports the node and the run ctx belongs to ("" outside a run):
+// a tool that starts another run names the step that asked (G-API).
+func NodeOf(ctx context.Context) (node, run string) {
+	v, _ := ctx.Value(nodeKey{}).([2]string)
+	return v[0], v[1]
+}

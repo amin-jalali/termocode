@@ -613,6 +613,7 @@ func (h *Handle) runNode(ctx context.Context, n agentdag.Node, input string, out
 		res.elapsed = clock.Since(start)
 		out <- res
 	}()
+	ctx = context.WithValue(ctx, nodeKey{}, [2]string{n.ID, h.id})
 	if g := h.o.Review; g != nil {
 		ctx = context.WithValue(ctx, reviewKey{}, g)
 	}
