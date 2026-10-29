@@ -1,0 +1,2 @@
+go test fuzz v1
+string("@kitty-cmd{\"cmd\":\"set-font-size\",\"payload\":{\"size\":1e300,\"increment_op\":\"+\"}}")

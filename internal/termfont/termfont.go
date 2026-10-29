@@ -57,6 +57,9 @@ func Detect(getenv func(string) string) Method {
 // kittyPrefix starts a kitty remote-control command (DCS body).
 const kittyPrefix = "@kitty-cmd"
 
+// maxStep is the largest font size change ParseKitty accepts.
+const maxStep = 1000
+
 type kittyCmd struct {
 	Cmd        string       `json:"cmd"`
 	Version    [3]int       `json:"version"`
@@ -100,6 +103,11 @@ func ParseKitty(body string) (delta int, ok bool) {
 		} `json:"payload"`
 	}
 	if json.Unmarshal([]byte(js), &c) != nil || c.Cmd != "set-font-size" {
+		return 0, false
+	}
+	// A step past maxStep is no real request; converting a huge float
+	// to int would also flip its sign.
+	if c.Payload.Size > maxStep || c.Payload.Size < -maxStep {
 		return 0, false
 	}
 	n := int(c.Payload.Size)
