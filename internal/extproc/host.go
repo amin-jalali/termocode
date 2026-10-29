@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/ext"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
@@ -318,13 +319,13 @@ func (h *Host) Event(event, path string) {
 	}
 	h.mu.Unlock()
 	for _, n := range wake {
-		go func(n string) {
+		crash.Go("an extension", func() {
 			ctx, cancel := context.WithTimeout(context.Background(), h.cfg.InitTimeout)
 			defer cancel()
 			if c, err := h.ensure(ctx, n); err == nil {
 				_ = c.Notify("event/notify", params)
 			}
-		}(n)
+		})
 	}
 }
 
@@ -423,7 +424,8 @@ func (p *proc) startLocked() {
 	p.done = make(chan struct{})
 	p.restarts = 0
 	p.lastErr = ""
-	go p.supervise(p.stop, p.done)
+	stop, done := p.stop, p.done
+	crash.Go("an extension supervisor", func() { p.supervise(stop, done) })
 }
 
 func (p *proc) closeReadyLocked() {
@@ -596,15 +598,15 @@ func (p *proc) runOnce(stop <-chan struct{}) (exitErr string, stopped bool, star
 	h.logf(p.x.Name, "started (pid %d)", pid)
 
 	stderrDone := make(chan struct{})
-	go func() {
+	crash.Go("an extension log", func() {
 		defer close(stderrDone)
 		sc := bufio.NewScanner(errR)
 		sc.Buffer(make([]byte, 64<<10), 64<<10)
 		for sc.Scan() {
 			h.logf(p.x.Name, "stderr: %s", sc.Text())
 		}
-	}()
-	go p.initialize(conn, gen, pid, stop)
+	})
+	crash.Go("an extension start", func() { p.initialize(conn, gen, pid, stop) })
 
 	var werr error
 	select {
@@ -631,14 +633,14 @@ func (p *proc) shutdown(conn *Conn, pid int, exited <-chan error) error {
 	grace := p.h.cfg.StopTimeout
 	deadline := time.NewTimer(grace)
 	defer deadline.Stop()
-	go func() {
+	crash.Go("an extension stop", func() {
 		ctx, cancel := context.WithTimeout(context.Background(), grace/2)
 		defer cancel()
 		_, _ = conn.Call(ctx, "shutdown", nil)
 		_ = conn.Notify("exit", nil)
 		// Give the writer a moment to send "exit", then EOF on stdin.
 		conn.Close()
-	}()
+	})
 	select {
 	case err := <-exited:
 		return err
@@ -706,14 +708,14 @@ func (p *proc) handler(gen int, stop <-chan struct{}) Handler {
 			if !m.IsRequest() {
 				return
 			}
-			go func() {
+			crash.Go("an extension file read", func() {
 				text, err := p.readFile(m.Params)
 				if err != nil {
 					_ = c.Reply(m.ID, nil, &Error{Code: CodeRequestFailed, Message: err.Error()})
 					return
 				}
 				_ = c.Reply(m.ID, map[string]string{"text": text}, nil)
-			}()
+			})
 			return
 		case "openFile":
 			var a map[string]any

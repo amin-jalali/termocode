@@ -3,9 +3,12 @@
 package nvim
 
 import (
+	"errors"
 	"os/exec"
 	"runtime"
 	"syscall"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // startProc starts nvim so that it gets SIGTERM when termocode dies,
@@ -22,7 +25,7 @@ func startProc(cmd *exec.Cmd, reaped <-chan struct{}) error {
 	}
 	cmd.SysProcAttr.Pdeathsig = syscall.SIGTERM
 	errc := make(chan error, 1)
-	go func() {
+	crash.GoWith("the editor start", func() {
 		runtime.LockOSThread()
 		err := cmd.Start()
 		errc <- err
@@ -31,6 +34,11 @@ func startProc(cmd *exec.Cmd, reaped <-chan struct{}) error {
 			return
 		}
 		<-reaped
-	}()
+	}, func() {
+		select {
+		case errc <- errors.New("starting nvim failed"):
+		default:
+		}
+	})
 	return <-errc
 }

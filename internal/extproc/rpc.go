@@ -27,6 +27,8 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // MaxMessage caps one message body. A bigger Content-Length is a
@@ -295,8 +297,8 @@ func NewConnWith(r io.Reader, w io.Writer, h Handler, opts ConnOptions) *Conn {
 		done:    make(chan struct{}),
 		quit:    make(chan struct{}),
 	}
-	go c.readLoop()
-	go c.writeLoop()
+	crash.Go("an extension reader", func() { c.readLoop() })
+	crash.Go("an extension writer", func() { c.writeLoop() })
 	return c
 }
 

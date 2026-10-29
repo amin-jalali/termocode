@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	gonvim "github.com/neovim/go-client/nvim"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/lspinstall"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
@@ -111,7 +112,7 @@ func New() (*Client, error) {
 		reaped:     make(chan struct{}),
 		redrawn:    make(chan struct{}, 1),
 	}
-	go c.mouseDispatcher()
+	crash.Go("the editor mouse", func() { c.mouseDispatcher() })
 
 	// -i NONE disables ShaDa (shared data) so termocode never reads or
 	// writes the user's nvim history / marks / registers. Avoids E576
@@ -173,7 +174,7 @@ func New() (*Client, error) {
 		close(c.reaped)
 		return nil, fmt.Errorf("register redraw handler: %w", err)
 	}
-	go c.serve()
+	crash.GoWith("the editor connection", c.serve, c.serveFailed)
 	track(c)
 
 	return c, nil
@@ -191,6 +192,19 @@ func (c *Client) serve() {
 	close(c.exited)
 	c.waitErr = c.cmd.Wait()
 	c.reapedOnce.Do(func() { close(c.reaped) })
+}
+
+// serveFailed ends the connection after a panic in serve (recovered by
+// crash.GoWith) like an nvim exit: Next reports ExitedMsg, so the app
+// offers Restart and the unsaved text comes back from the backup.
+func (c *Client) serveFailed() {
+	select {
+	case <-c.exited:
+		return
+	default:
+	}
+	c.exitErr = errors.New("the connection to nvim failed")
+	close(c.exited)
 }
 
 // Exited reports whether the RPC connection to nvim has ended.
