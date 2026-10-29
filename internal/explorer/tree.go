@@ -1,9 +1,13 @@
 package explorer
 
 import (
+	"context"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
+
+	"github.com/amin-jalali/termocode/internal/workspace"
 )
 
 type Node struct {
@@ -13,6 +17,10 @@ type Node struct {
 	Children []*Node
 	Expanded bool
 	Loaded   bool
+
+	// fsys lists a folder that is not on this machine (a container
+	// workspace, ADR 0018); nil = the local disk. Children inherit it.
+	fsys workspace.FS
 }
 
 func NewRoot(path string) (*Node, error) {
@@ -38,11 +46,52 @@ func NewRoot(path string) (*Node, error) {
 	return n, nil
 }
 
+// NewRootFS is NewRoot for the folder root reached through a workspace
+// FS (a container): Path values are the host's own slash paths. Each
+// folder is one listing call; entries are never stat'ed one by one.
+func NewRootFS(fsys workspace.FS, root string) (*Node, error) {
+	root = path.Clean(root)
+	info, err := fsys.Stat(context.Background(), root)
+	if err != nil {
+		return nil, err
+	}
+	n := &Node{
+		Name:     path.Base(root),
+		Path:     root,
+		IsDir:    info.IsDir(),
+		Expanded: info.IsDir(),
+		fsys:     fsys,
+	}
+	if n.IsDir {
+		if err := n.Load(); err != nil {
+			return nil, err
+		}
+	}
+	return n, nil
+}
+
+// FS is the workspace FS the node is listed through (nil = local disk).
+func (n *Node) FS() workspace.FS { return n.fsys }
+
+func (n *Node) readDir() ([]os.DirEntry, error) {
+	if n.fsys != nil {
+		return n.fsys.ReadDir(context.Background(), n.Path)
+	}
+	return os.ReadDir(n.Path)
+}
+
+func (n *Node) join(name string) string {
+	if n.fsys != nil {
+		return path.Join(n.Path, name)
+	}
+	return filepath.Join(n.Path, name)
+}
+
 func (n *Node) Load() error {
 	if !n.IsDir {
 		return nil
 	}
-	entries, err := os.ReadDir(n.Path)
+	entries, err := n.readDir()
 	if err != nil {
 		return err
 	}
@@ -51,8 +100,9 @@ func (n *Node) Load() error {
 	for _, e := range entries {
 		n.Children = append(n.Children, &Node{
 			Name:  e.Name(),
-			Path:  filepath.Join(n.Path, e.Name()),
+			Path:  n.join(e.Name()),
 			IsDir: e.IsDir(),
+			fsys:  n.fsys,
 		})
 	}
 	sort.SliceStable(n.Children, func(i, j int) bool {
