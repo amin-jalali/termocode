@@ -380,6 +380,11 @@ func (m *Manager) ensure(ctx context.Context, st *serverState, ask AskTrust) (*P
 			m.mu.Lock()
 			st.haveTools = false // listed again on the next turn
 			m.mu.Unlock()
+			// The disk cache holds the old list: drop it, or the next
+			// turn would read it back instead of asking the server.
+			if p := m.cachePath(name); p != "" {
+				_ = os.Remove(p)
+			}
 		},
 	}
 	var p *Process
