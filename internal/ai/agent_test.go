@@ -520,3 +520,46 @@ func TestWorkspaceResolveSymlinkEscape(t *testing.T) {
 		t.Errorf("read_file through a link read %q", out)
 	}
 }
+
+// Spec (SCN-2): a mutating file tool with a path outside the workspace is
+// refused by Validate, before the user is asked: no card for a call that
+// could never run.
+func TestWorkspaceToolsRefuseOutsidePathsBeforeAsking(t *testing.T) {
+	base := t.TempDir()
+	root := filepath.Join(base, "ws")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(base, filepath.Join(root, "up")); err != nil {
+		t.Fatal(err)
+	}
+	tools := WorkspaceTools(Workspace{Root: root})
+	for _, c := range []struct {
+		tool string
+		args map[string]any
+	}{
+		{"write_file", map[string]any{"path": "../x.txt", "content": "x"}},
+		{"create_file", map[string]any{"path": "/tmp/x.txt"}},
+		{"create_dir", map[string]any{"path": "up/new"}},
+		{"delete", map[string]any{"path": "../other"}},
+		{"rename", map[string]any{"from": "a.txt", "to": "../a.txt"}},
+		{"rename", map[string]any{"from": "up/a.txt", "to": "a.txt"}},
+		{"git_stage", map[string]any{"path": "../a.txt"}},
+	} {
+		tool, ok := FindTool(tools, c.tool)
+		if !ok {
+			t.Fatalf("no tool %s", c.tool)
+		}
+		if tool.Validate == nil {
+			t.Errorf("%s has no Validate", c.tool)
+			continue
+		}
+		if err := tool.Validate(c.args); err != ErrOutsideWorkspace {
+			t.Errorf("%s %v: Validate = %v, want ErrOutsideWorkspace", c.tool, c.args, err)
+		}
+	}
+	write, _ := FindTool(tools, "write_file")
+	if err := write.Validate(map[string]any{"path": "a.txt", "content": "x"}); err != nil {
+		t.Errorf("a workspace path is refused: %v", err)
+	}
+}
