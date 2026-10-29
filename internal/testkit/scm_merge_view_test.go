@@ -124,3 +124,64 @@ func TestSCMMergeViewTakesAndUndo(t *testing.T) {
 		t.Fatalf("main.go = %q, want %q", r.read("main.go"), want)
 	}
 }
+
+// Spec: Given the merge view on a conflict, when the user presses r with
+// markers left, then it says so and nothing is staged; when the user
+// takes theirs and presses r, then the file is saved and staged, the view
+// closes and CONFLICTS goes away.
+func TestSCMMergeViewMarkResolved(t *testing.T) {
+	d, r := mergeDriver(t, 150, 42, conflictRepo)
+	clickConflict(d)
+	waitMerge(d, "Conflict 1 of 1")
+	d.Key("r")
+	waitMerge(d, "Can't mark as resolved")
+	if got := r.porcelain(); !strings.Contains(got, "UU main.go") {
+		t.Fatalf("staged with markers: %q", got)
+	}
+	d.Key("t")
+	waitMerge(d, "No conflicts left")
+	d.Key("r")
+	waitMerge(d, "Marked as resolved: main.go")
+	if !until(d, func() bool { return section(d, "CONFLICTS") == nil }) {
+		t.Fatalf("CONFLICTS still shown:%s", dump(d))
+	}
+	if strings.Contains(text(d), "No conflicts left") {
+		t.Errorf("merge view still open:%s", dump(d))
+	}
+	// r.git trims the output.
+	if got := r.git("show", ":main.go"); got != "package main\n\nfunc main() { println(\"theirs\") }" {
+		t.Errorf("staged main.go = %q", got)
+	}
+}
+
+// rebaseConflictRepo leaves a rebase of "feature" onto main stopped on a
+// conflict in main.go.
+func rebaseConflictRepo(r *repo) {
+	r.git("checkout", "-q", "-b", "feature")
+	r.write("main.go", "package main\n\nfunc main() { println(\"feature\") }\n")
+	r.commit("feat: feature")
+	r.git("checkout", "-q", "main")
+	r.write("main.go", "package main\n\nfunc main() { println(\"main\") }\n")
+	r.commit("feat: main")
+	r.git("checkout", "-q", "feature")
+	if _, err := r.try("rebase", "main"); err == nil {
+		r.t.Fatal("setup: rebase did not conflict")
+	}
+}
+
+// Spec: Given a rebase stopped on a conflict, when the user resolves it in
+// the merge view, then the file is staged and the app says to continue
+// the rebase from Source Control.
+func TestSCMMergeViewRebase(t *testing.T) {
+	d, r := mergeDriver(t, 150, 42, rebaseConflictRepo)
+	clickConflict(d)
+	waitMerge(d, "Conflict 1 of 1")
+	d.Key("b")
+	waitMerge(d, "No conflicts left")
+	d.Key("r")
+	waitMerge(d, "Continue the rebase")
+	want := "package main\n\nfunc main() { println(\"main\") }\nfunc main() { println(\"feature\") }"
+	if got := r.git("show", ":main.go"); got != want { // r.git trims
+		t.Errorf("staged main.go = %q, want %q", got, want)
+	}
+}

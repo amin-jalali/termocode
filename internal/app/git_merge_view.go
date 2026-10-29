@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -75,6 +76,12 @@ type mergeStagesMsg struct {
 	err error
 }
 
+// mergeResolvedMsg is the end of Mark as Resolved.
+type mergeResolvedMsg struct {
+	rel string
+	err error
+}
+
 // mergeSyncMsg asks to read the result again (it changed or the cursor
 // moved; debounced).
 type mergeSyncMsg struct{}
@@ -95,6 +102,8 @@ func (m *Model) onMergeMsg(msg tea.Msg) tea.Cmd {
 		return m.onMergeStages(msg)
 	case mergeSyncMsg:
 		m.mergeSync()
+	case mergeResolvedMsg:
+		return m.onMergeResolved(msg)
 	}
 	return nil
 }
@@ -378,6 +387,8 @@ func (m Model) mergeKey(msg tea.KeyMsg) (Model, tea.Cmd, bool) {
 		return m, m.mergeTake(git.AcceptBase), true
 	case "u":
 		return m, m.mergeUndo(), true
+	case "r":
+		return m, m.mergeMarkResolved(), true
 	case "1", "2", "3":
 		v.SetPane(mergeview.Pane(msg.Runes[0] - '1'))
 	case "v":
@@ -431,6 +442,8 @@ func (m *Model) dispatchMergePalette(id string) (tea.Cmd, bool) {
 		return m.mergeTake(git.AcceptBase), true
 	case "git-merge-undo":
 		return m.mergeUndo(), true
+	case "git-merge-resolve":
+		return m.mergeMarkResolved(), true
 	default:
 		return nil, false
 	}
@@ -495,4 +508,70 @@ func (m *Model) mergeUndo() tea.Cmd {
 	`, m.merge.abs)
 	m.mergeSync()
 	return nil
+}
+
+// mergeMarkResolved saves the result and stages it, but only when no
+// conflict markers are left in it.
+func (m *Model) mergeMarkResolved() tea.Cmd {
+	if !m.mergeViewShown() {
+		return nil
+	}
+	var cmd tea.Cmd
+	if r, ok := m.mergeReadResult(); ok && !r.Gone && git.HasConflicts(strings.Join(r.Lines, "\n")) {
+		m.toast, cmd = m.toast.PushDetail(toast.Warn, "Can't mark as resolved",
+			conflictWord(max(len(git.ParseConflictLines(r.Lines)), 1))+" left. Take a side or edit the file first.")
+		return cmd
+	}
+	if m.mergeEditor() {
+		_ = m.nvim.ExecLuaArgs(`
+			local p = ...
+			local b = _G.termocode_merge_buf and _G.termocode_merge_buf(p) or -1
+			if b >= 0 then vim.api.nvim_buf_call(b, function() vim.cmd('silent update') end) end
+		`, m.merge.abs)
+	}
+	cwd, err := m.rootDir()
+	if err != nil {
+		return nil
+	}
+	rel := m.merge.rel
+	return func() tea.Msg { return mergeResolvedMsg{rel: rel, err: git.MarkResolved(cwd, rel)} }
+}
+
+// onMergeResolved closes the view once the file is staged, and says what
+// comes next.
+func (m *Model) onMergeResolved(msg mergeResolvedMsg) tea.Cmd {
+	var cmd tea.Cmd
+	switch {
+	case errors.Is(msg.err, git.ErrMarkersLeft):
+		m.toast, cmd = m.toast.PushDetail(toast.Warn, "Can't mark as resolved", "Conflict markers are still in the saved file.")
+		return cmd
+	case msg.err != nil:
+		m.toast, cmd = m.toast.PushDetail(toast.Errr, "Can't mark as resolved", msg.err.Error())
+		return cmd
+	}
+	if m.mergeViewShown() && m.merge.rel == msg.rel {
+		m.closeMergeView()
+	}
+	m.toast, cmd = m.toast.PushDetail(toast.Info, "Marked as resolved: "+msg.rel, m.mergeNextStep(msg.rel))
+	return tea.Batch(cmd, fetchGitCmd())
+}
+
+// mergeNextStep is the hint after a file is resolved: the other
+// conflicted files, else how to finish.
+func (m Model) mergeNextStep(done string) string {
+	left := 0
+	for _, f := range m.gitFiles {
+		if f.Conflicted() && f.Path != done {
+			left++
+		}
+	}
+	switch {
+	case left == 1:
+		return "1 more file in CONFLICTS."
+	case left > 1:
+		return fmt.Sprintf("%d more files in CONFLICTS.", left)
+	case m.gitRebase.InProgress:
+		return "Continue the rebase from the banner in Source Control."
+	}
+	return "Commit to finish."
 }

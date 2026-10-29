@@ -301,6 +301,7 @@ func paletteItems() []picker.Item {
 		{ID: "git-merge-take-both-theirs-first", Title: "Git: Merge View: Take Both (Theirs, Then Ours)", Hint: "B"},
 		{ID: "git-merge-take-base", Title: "Git: Merge View: Take Base", Hint: "a"},
 		{ID: "git-merge-undo", Title: "Git: Merge View: Undo Last Change", Hint: "u"},
+		{ID: "git-merge-resolve", Title: "Git: Merge View: Mark as Resolved", Hint: "r"},
 		{ID: "git-merge-pane", Title: "Git: Merge View: Show Next Pane", Hint: "v"},
 		{ID: "git-merge-focus", Title: "Git: Merge View: Merge Keys", Hint: "F6"},
 		{ID: "git-merge-close", Title: "Git: Merge View: Close", Hint: "Esc"},
