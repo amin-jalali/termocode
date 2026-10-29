@@ -58,11 +58,6 @@ func LoadEnvs(dir, root string) *Envs {
 	return e
 }
 
-// FindEnvFiles returns the env file paths between dir and root.
-func FindEnvFiles(dir, root string) []string {
-	return LoadEnvs(dir, root).Files
-}
-
 func envDirs(dir, root string) []string {
 	dir = filepath.Clean(dir)
 	root = filepath.Clean(root)
