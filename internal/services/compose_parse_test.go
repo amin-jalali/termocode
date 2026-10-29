@@ -239,3 +239,23 @@ func TestPortString(t *testing.T) {
 		}
 	}
 }
+
+func TestProblemMessageNamesTheEngine(t *testing.T) {
+	cases := []struct {
+		p    Problem
+		want string
+	}{
+		{Problem{Kind: ProblemDaemonDown}, "Docker is not running"},
+		{Problem{Kind: ProblemDaemonDown, Engine: "podman"}, "Podman is not running"},
+		{Problem{Kind: ProblemNoPermission}, "No access to the Docker socket"},
+		{Problem{Kind: ProblemNoPermission, Engine: "podman"}, "No access to the Podman socket"},
+		{ProblemFromStderr("Cannot connect to Podman. Please verify your connection"), "Podman is not running"},
+		{ProblemFromStderr("podman: permission denied while connecting to /run/user/1000/podman/podman.sock"), "No access to the Podman socket"},
+		{ProblemFromStderr("Cannot connect to the Docker daemon at unix:///var/run/docker.sock."), "Docker is not running"},
+	}
+	for _, c := range cases {
+		if got := c.p.Message(); got != c.want {
+			t.Errorf("%+v.Message() = %q, want %q", c.p, got, c.want)
+		}
+	}
+}

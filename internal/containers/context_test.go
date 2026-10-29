@@ -137,3 +137,27 @@ func TestDetectTimesOutOnAStuckRemote(t *testing.T) {
 		t.Fatalf("engine = %+v", e)
 	}
 }
+
+// downExec answers every call like a stopped engine daemon.
+type downExec struct{ services.Exec }
+
+func (downExec) Capture(context.Context, string, ...string) (string, string, int, error) {
+	return "", "Cannot connect to the daemon socket: connection refused", 125, nil
+}
+
+func TestDetectNamesPodmanWhenItIsDown(t *testing.T) {
+	look := func(name string) (string, error) {
+		if name == "podman" {
+			return "/usr/bin/podman", nil
+		}
+		return "", context.Canceled
+	}
+	e := Detect(context.Background(), DetectOptions{LookPath: look, Exec: downExec{}})
+	if got := e.Problem.Message(); got != "Podman is not running" {
+		t.Fatalf("message = %q, want Podman is not running", got)
+	}
+	e = Engine{Binary: "/usr/bin/podman", Kind: "podman", X: downExec{}}
+	if _, err := e.list(context.Background(), "ps"); err == nil || err.Error() != "Podman is not running" {
+		t.Fatalf("list err = %v, want Podman is not running", err)
+	}
+}
