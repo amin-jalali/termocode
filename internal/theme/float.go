@@ -88,7 +88,7 @@ func KeyLabel(key string) string {
 		return "Ctrl+" + strings.ToUpper(key[1:])
 	}
 	if r := []rune(key); len(r) == 2 && (r[0] == '⌃' || r[0] == '⌥' || r[0] == '⇧') {
-		return map[rune]string{'⌃': "Ctrl+", '⌥': "Alt+", '⇧': "Shift+"}[r[0]] + KeyLabel(string(r[1]))
+		return map[rune]string{'⌃': "Ctrl+", '⌥': "Alt+", '⇧': "Shift+"}[r[0]] + keyWord(string(r[1]), true)
 	}
 	parts := strings.Split(key, "+")
 	if len(parts) > 1 && parts[len(parts)-1] == "" { // "ctrl++"
