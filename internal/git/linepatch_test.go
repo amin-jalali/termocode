@@ -74,3 +74,51 @@ func TestBuildLinePatchReverse(t *testing.T) {
 		t.Errorf("body:\n%s\nwant:\n%s", got, want)
 	}
 }
+
+const diffTwoHunks = `diff --git a/a.txt b/a.txt
+index 1111111..2222222 100644
+--- a/a.txt
++++ b/a.txt
+@@ -1,3 +1,4 @@
+ l1
++new1
++new2
+ l2
+ l3
+@@ -20,3 +21,3 @@
+ l20
+-l21
++L21
+ l22
+`
+
+func TestBuildLinePatchTwoHunks(t *testing.T) {
+	// Choosing only the second hunk drops the first one.
+	p, err := BuildLinePatch(diffTwoHunks, 22, 22, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Count(p, "@@") != 2 || !strings.Contains(p, "@@ -20,3 +20,3 @@") {
+		t.Errorf("only the second hunk, start moved back by the dropped adds:\n%s", p)
+	}
+	// Choosing one added line in the first hunk and the line in the second
+	// moves the second hunk's new start by one, not two.
+	p, err = BuildLinePatch(diffTwoHunks, 2, 22, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(p, "@@ -1,3 +1,5 @@") || !strings.Contains(p, "@@ -20,3 +22,3 @@") {
+		t.Errorf("hunk starts:\n%s", p)
+	}
+}
+
+func TestBuildLinePatchRemovalAtEnd(t *testing.T) {
+	d := "diff --git a/a b/a\n--- a/a\n+++ b/a\n@@ -1,3 +1,1 @@\n a\n-b\n-c\n"
+	p, err := BuildLinePatch(d, 1, 1, false)
+	if err != nil {
+		t.Fatalf("the last line must choose the removed tail: %v", err)
+	}
+	if !strings.Contains(p, "\n-b\n-c\n") {
+		t.Errorf("patch:\n%s", p)
+	}
+}

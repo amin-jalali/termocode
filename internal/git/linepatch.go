@@ -117,7 +117,7 @@ func BuildLinePatch(diff string, from, to int, reverse bool) (string, error) {
 // context or drops them. ok is false when the hunk holds no chosen change.
 func selectLines(h diffHunk, from, to int, reverse bool) (body []string, oldN, newN int, ok bool) {
 	n := h.newStart
-	for _, l := range h.body {
+	for i, l := range h.body {
 		if l == "" {
 			l = " " // a blank context line some tools strip
 		}
@@ -139,7 +139,9 @@ func selectLines(h diffHunk, from, to int, reverse bool) (body []string, oldN, n
 			}
 			n++
 		case '-':
-			if n >= from && n <= to {
+			// Lines removed at the very end of the file have no line after
+			// them, so the last line before them chooses them too.
+			if (n >= from && n <= to) || (onlyRemovals(h.body[i:]) && n-1 >= from && n-1 <= to) {
 				body = append(body, l)
 				oldN++
 				ok = true
@@ -151,4 +153,15 @@ func selectLines(h diffHunk, from, to int, reverse bool) (body []string, oldN, n
 		}
 	}
 	return body, oldN, newN, ok
+}
+
+// onlyRemovals tells that nothing but removed lines (and their no-newline
+// marks) are left in the hunk: the removal runs to the end of the file.
+func onlyRemovals(rest []string) bool {
+	for _, l := range rest {
+		if l != "" && l[0] != '-' && l[0] != '\\' {
+			return false
+		}
+	}
+	return true
 }
