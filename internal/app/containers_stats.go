@@ -472,18 +472,18 @@ func (m *Model) statsDemo() {
 		limitGB   float64
 		wave, amp int
 	}{
-		{"9f3c2e1a", 18, 210, 2, 9, 14},
-		{"a1b2c3d4", 3, 24, 1, 5, 2},
-		{"f3e4d5c6", 41, 380, 2, 7, 25},
-		{"e4d5c6b7", 9, 150, 2, 11, 6},
-		{"aabbccdd", 1, 12, 1, 3, 1},
+		{"9f3c2e1a", 18, 210, 0.5, 9, 14},
+		{"a1b2c3d4", 3, 24, 0.125, 5, 2},
+		{"f3e4d5c6", 41, 380, 1, 7, 25},
+		{"e4d5c6b7", 9, 150, 0.5, 11, 6},
+		{"aabbccdd", 1, 12, 0.0625, 3, 1},
 	} {
 		se := &containers.Series{}
 		for i := 0; i < containers.StatWindow; i++ {
 			w := float64((i*d.wave)%(2*d.amp+1) - d.amp) // a zig-zag, no randomness
 			se.Push(containers.Sample{
 				CPU: max(d.cpu+w, 0.1), HasCPU: true,
-				MemUsed: (d.mem + float64(i)/3) * 1048576, MemLimit: d.limitGB * (1 << 30), HasMem: true,
+				MemUsed: d.mem * (1 + 0.4*float64(i)/containers.StatWindow) * 1048576, MemLimit: d.limitGB * (1 << 30), HasMem: true,
 				NetRx: float64(1200 + 90*i), NetTx: float64(3400 + 40*i), HasNet: true,
 				BlkRead: 0, BlkWrite: float64(8190 + 512*i), HasBlk: true,
 			})

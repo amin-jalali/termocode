@@ -139,6 +139,8 @@ func ctCardScenes() []Scene {
 		ContainersVariant("containers-search", "search"),
 		// ? on a container: the key card (X-1).
 		ContainersVariant("containers-keys-card", "keys"),
+		// Live CPU and memory: charts under the selected container (G-DST).
+		ContainersVariant("containers-stats", "stats"),
 		{Name: "containers-logs", Steps: WithEditor(Act("contdemo:logs"), Pause(1500*time.Millisecond))},
 	}
 }
@@ -197,6 +199,10 @@ func goldenExtras() []Scene {
 		{Name: "db-tree-light", Theme: "catppuccin-latte", Steps: Databases().Steps},
 		{Name: "db-stopped-hint-ascii", Icons: "ascii", Steps: DatabasesVariant("db-stopped-hint", "stopped").Steps},
 		{Name: "db-compare-ascii", Icons: "ascii", Steps: DatabasesVariant("db-compare", "compare").Steps},
+		// Live CPU and memory (G-DST): a wide sidebar whose rows show the
+		// values, and the charts in ASCII icons.
+		ContainersVariant("containers-stats-wide", "stats-wide"),
+		{Name: "containers-stats-ascii", Icons: "ascii", Steps: ContainersVariant("containers-stats", "stats").Steps},
 		ContainersVariant("containers-menu", "menu"),
 		ContainersVariant("containers-docker-down", "down"),
 		ContainersVariant("containers-no-engine", "noengine"),
