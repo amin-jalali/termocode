@@ -716,7 +716,18 @@ func ollamaHostURL(host string) string {
 var (
 	secretsMu sync.RWMutex
 	secrets   = map[string]bool{}
+	// secretsByLen is the secrets, longest first (a longer secret that
+	// holds a shorter one is hidden whole). It is replaced, never
+	// changed, so a reader may keep the slice it read.
+	secretsByLen []string
 )
+
+// secretList is the registered secrets, longest first.
+func secretList() []string {
+	secretsMu.RLock()
+	defer secretsMu.RUnlock()
+	return secretsByLen
+}
 
 // RegisterSecret adds a literal secret Redact must always hide. Short
 // values (< 8 chars) are ignored to avoid shredding normal text.
@@ -729,8 +740,17 @@ func RegisterSecret(s string) {
 		return // a reference is not a secret; what it resolves to is registered
 	}
 	secretsMu.Lock()
+	defer secretsMu.Unlock()
+	if secrets[s] {
+		return
+	}
 	secrets[s] = true
-	secretsMu.Unlock()
+	list := make([]string, 0, len(secrets))
+	for k := range secrets {
+		list = append(list, k)
+	}
+	sort.Slice(list, func(i, j int) bool { return len(list[i]) > len(list[j]) })
+	secretsByLen = list
 }
 
 var redactPatterns = []*regexp.Regexp{
@@ -778,17 +798,10 @@ func RedactSecrets(s string) string {
 	if s == "" {
 		return s
 	}
-	secretsMu.RLock()
-	list := make([]string, 0, len(secrets))
-	for k := range secrets {
+	for _, k := range secretList() {
 		if strings.Contains(s, k) {
-			list = append(list, k)
+			s = strings.ReplaceAll(s, k, "[REDACTED]")
 		}
-	}
-	secretsMu.RUnlock()
-	sort.Slice(list, func(i, j int) bool { return len(list[i]) > len(list[j]) })
-	for _, k := range list {
-		s = strings.ReplaceAll(s, k, "[REDACTED]")
 	}
 	return s
 }
@@ -815,14 +828,7 @@ func Redact(s string) string {
 	if s == "" {
 		return s
 	}
-	secretsMu.RLock()
-	list := make([]string, 0, len(secrets))
-	for k := range secrets {
-		list = append(list, k)
-	}
-	secretsMu.RUnlock()
-	sort.Slice(list, func(i, j int) bool { return len(list[i]) > len(list[j]) })
-	for _, k := range list {
+	for _, k := range secretList() {
 		s = strings.ReplaceAll(s, k, "[REDACTED]")
 	}
 	// A pattern runs only when its keyword is in the text: the
