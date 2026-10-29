@@ -68,9 +68,6 @@ type Response struct {
 	ErrKind     ErrKind
 }
 
-// OK reports a 2xx answer without error.
-func (r *Response) OK() bool { return r.Err == "" && r.Status >= 200 && r.Status < 300 }
-
 // Header returns the value of the response header name (any case).
 func (r *Response) Header(name string) string {
 	name = strings.ToLower(name)
