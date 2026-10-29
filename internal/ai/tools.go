@@ -330,6 +330,9 @@ func WorkspaceTools(w Workspace) []Tool {
 				if err != nil {
 					return "", err
 				}
+				if SecretFile(abs) {
+					return "", errSecretFile(w.rel(abs))
+				}
 				b, err := os.ReadFile(abs)
 				if err != nil {
 					return "", err
@@ -379,7 +382,13 @@ func WorkspaceTools(w Workspace) []Tool {
 				}
 				var b strings.Builder
 				for _, r := range res {
+					if SecretFile(r.Path) {
+						continue // not even a count: it would hint at the value
+					}
 					fmt.Fprintf(&b, "%s:%d: %s\n", r.Path, r.Line, strings.TrimSpace(r.Preview))
+				}
+				if b.Len() == 0 {
+					return "no matches", nil
 				}
 				if sum.Truncated() {
 					fmt.Fprintf(&b, "(showing %d of %d)\n", sum.Shown, sum.Total)
