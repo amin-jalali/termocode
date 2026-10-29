@@ -196,15 +196,13 @@ func ExtractTarGz(path, dest string, m NameMapper) error {
 }
 
 // resolveExisting resolves the symlinks of the longest existing prefix of
-// p and appends the rest unchanged.
+// p and appends the rest unchanged. p is absolute or below an existing dir,
+// so the loop always ends.
 func resolveExisting(p string) string {
 	rest := ""
 	for cur := filepath.Clean(p); ; cur = filepath.Dir(cur) {
 		if r, err := filepath.EvalSymlinks(cur); err == nil {
 			return filepath.Join(r, rest)
-		}
-		if cur == filepath.Dir(cur) {
-			return filepath.Clean(p)
 		}
 		rest = filepath.Join(filepath.Base(cur), rest)
 	}
