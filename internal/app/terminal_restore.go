@@ -172,6 +172,7 @@ func (m *Model) restoreTerminals(s *savedTerminals, focusTerminal bool) tea.Cmd 
 		}
 		return root
 	}
+	gone := func(p string) bool { return p != "" && folder(p) != p }
 	if !m.termOpen && !m.ensurePanelHost(true) {
 		return nil
 	}
@@ -199,8 +200,19 @@ func (m *Model) restoreTerminals(s *savedTerminals, focusTerminal bool) tea.Cmd 
 		}
 		live, c := m.buildTerminalPanes(specs)
 		cmds = append(cmds, c)
-		if tab := m.activeTerminalTab(); tab != nil && t.Focus >= 0 && t.Focus < len(live) {
+		tab := m.activeTerminalTab()
+		if t.Focus >= 0 && t.Focus < len(live) {
 			tab.PaneFocus = live[t.Focus]
+		}
+		made := map[int]bool{}
+		for k, i := range live {
+			if made[i] {
+				continue // left out: it maps to its parent
+			}
+			made[i] = true
+			if text := restoreHintText(t.Panes[k], gone(t.Panes[k].Cwd)); text != "" {
+				m.setTermHint(tab.paneBuf(i), termHint{Text: text})
+			}
 		}
 	}
 	if len(m.terminalTabs) == 0 {
@@ -210,11 +222,57 @@ func (m *Model) restoreTerminals(s *savedTerminals, focusTerminal bool) tea.Cmd 
 	if tab := m.activeTerminalTab(); tab != nil {
 		m.focusTerminalPane(tab.focusedPane())
 	}
+	m.paintPaneTitles()
 	if !focusTerminal {
 		m.ensureEditorWindowCurrent()
 		m.inTerminal = false
 	}
 	return tea.Batch(cmds...)
+}
+
+// termHint is the note of a restored pane.
+type termHint struct {
+	Text string
+}
+
+// restoreHintText is the note of restored pane p: its folder is gone.
+func restoreHintText(p savedTermPane, gone bool) string {
+	if gone {
+		return "folder " + filepath.Base(p.Cwd) + " is gone · started in the project folder"
+	}
+	return ""
+}
+
+func (m *Model) setTermHint(buf int, h termHint) {
+	if m.termHints == nil {
+		m.termHints = map[int]termHint{}
+	}
+	m.termHints[buf] = h
+}
+
+// dropTermHint removes the note of terminal buffer buf and repaints the
+// title bars when it had one.
+func (m *Model) dropTermHint(buf int) {
+	if _, ok := m.termHints[buf]; !ok {
+		return
+	}
+	delete(m.termHints, buf)
+	m.paintPaneTitles()
+}
+
+// restoreHintKey handles a key typed in a pane that shows a restore note:
+// the note goes away. It reports whether it used the key (the key then
+// does not reach the shell).
+func (m *Model) restoreHintKey(msg tea.KeyMsg) bool {
+	if len(m.termHints) == 0 || !m.inPaneWin || !m.termOpen {
+		return false
+	}
+	tab := m.activeTerminalTab()
+	if tab == nil {
+		return false
+	}
+	m.dropTermHint(tab.focusedBuf())
+	return false
 }
 
 // savedPane is one shell in the session: its folder, and what it was

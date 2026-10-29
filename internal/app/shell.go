@@ -674,6 +674,9 @@ func (m *Model) switchTerminalTab(idx int) {
 	m.terminalCwd = tab.Cwd
 	m.terminalCwdAt = time.Now()
 	m.reconcileTerminalPanes()
+	if len(m.termHints) > 0 { // terminal_restore.go: a restored pane's note
+		m.paintPaneTitles()
+	}
 	if tab.paneCount() > 1 {
 		m.focusTerminalPane(m.terminalTabs[idx].focusedPane())
 	}

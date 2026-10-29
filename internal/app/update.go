@@ -1521,6 +1521,9 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	if m.exitedPaneKey(msg) { // terminal_split.go: Enter restarts, x closes
 		return m, nil
 	}
+	if m.restoreHintKey(msg) { // terminal_restore.go: a restored pane's note
+		return m, nil
+	}
 
 	// Terminal pass-through: when the user is actively typing into the
 	// integrated terminal (current nvim window IS our terminal split AND

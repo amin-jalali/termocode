@@ -411,19 +411,24 @@ func (m *Model) paintPaneTitles() {
 	items := ""
 	for i := 0; i < tab.paneCount(); i++ {
 		if w := m.paneWin(*tab, i); w > 0 {
-			items += fmt.Sprintf("{%d,%d,%q},", w, tab.paneBuf(i), paneTitle(*tab, i))
+			// A restored pane's note shows even on a one-pane tab.
+			title, force := paneTitle(*tab, i), false
+			if h, ok := m.termHints[tab.paneBuf(i)]; ok {
+				title, force = h.Text, true
+			}
+			items += fmt.Sprintf("{%d,%d,%q,%t},", w, tab.paneBuf(i), title, force)
 		}
 	}
 	_ = m.nvim.ExecLua(fmt.Sprintf(`
 		local multi = %t
 		for _, e in ipairs({%s}) do
-			local win, buf, title = e[1], e[2], e[3]
+			local win, buf, title, force = e[1], e[2], e[3], e[4]
 			if vim.api.nvim_win_is_valid(win) then
 				if vim.b[buf] and vim.b[buf].termocode_exited then
 					title = %q
 				end
 				local bar = ''
-				if multi or title == %q then bar = ' ' .. title:gsub('%%%%', '%%%%%%%%') end
+				if multi or force or title == %q then bar = ' ' .. title:gsub('%%%%', '%%%%%%%%') end
 				vim.wo[win].winbar = bar
 				vim.wo[win].winhighlight = 'WinBar:TermocodePaneTitle,WinBarNC:TermocodePaneTitleNC'
 			end

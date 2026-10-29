@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // paneShellDir is the folder the shell of pane i of tab ti runs in (Linux:
@@ -123,5 +125,62 @@ func TestCtrlTOpensTheTerminalsOfAHiddenPanel(t *testing.T) {
 	cur, _ := m.nvim.EvalLuaString(`return vim.bo[vim.api.nvim_get_current_buf()].buftype`)
 	if cur != "terminal" {
 		t.Errorf("Ctrl+T puts the keyboard in the terminal, current buftype %q", cur)
+	}
+}
+
+// winbarOf is the title bar text of nvim window win.
+func winbarOf(t *testing.T, m Model, win int) string {
+	t.Helper()
+	out, err := m.nvim.EvalLuaString(`return vim.wo[` + intToLua(win) + `].winbar`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+// A folder that is gone: the shell starts in the project folder, and the
+// pane says so until the user types in it.
+func TestRestoreTerminalsGoneFolderStartsInTheProject(t *testing.T) {
+	m, root := layoutNvimModel(t)
+	gone := filepath.Join(root, "old-build")
+	m.restoreTerminals(&savedTerminals{Open: true, Tabs: []savedTermTab{
+		{Panes: []savedTermPane{{Cwd: gone}}},
+	}}, true)
+	if len(m.terminalTabs) != 1 || m.terminalTabs[0].Cwd != root {
+		t.Fatalf("tabs = %+v err=%q", m.terminalTabs, m.err)
+	}
+	if got := paneShellDir(t, m, 0, 0); got != "" && got != root {
+		t.Errorf("shell in %q, want the project folder", got)
+	}
+	bar := winbarOf(t, m, m.terminalWinID)
+	if !strings.Contains(bar, "old-build is gone") || !strings.Contains(bar, "project folder") {
+		t.Fatalf("title bar %q should say the folder is gone", bar)
+	}
+	m.inPaneWin, m.termOpen = true, true
+	if m.restoreHintKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("l")}) {
+		t.Error("a typed key must still reach the shell")
+	}
+	if bar := winbarOf(t, m, m.terminalWinID); bar != "" {
+		t.Errorf("after typing the note goes away, title bar %q", bar)
+	}
+}
+
+// The note of a tab that is not on show appears when the user switches to it.
+func TestRestoreNoteShowsOnTabSwitch(t *testing.T) {
+	m, root := layoutNvimModel(t)
+	m.restoreTerminals(&savedTerminals{Open: true, Active: 1, Tabs: []savedTermTab{
+		{Panes: []savedTermPane{{Cwd: filepath.Join(root, "gone")}}},
+		{Panes: []savedTermPane{{Cwd: root}}},
+	}}, true)
+	if bar := winbarOf(t, m, m.terminalWinID); bar != "" {
+		t.Fatalf("tab 2 has no note, title bar %q", bar)
+	}
+	m.switchTerminalTab(0)
+	if bar := winbarOf(t, m, m.terminalWinID); !strings.Contains(bar, "gone is gone") {
+		t.Fatalf("tab 1's note is missing, title bar %q", bar)
+	}
+	m.switchTerminalTab(1)
+	if bar := winbarOf(t, m, m.terminalWinID); bar != "" {
+		t.Fatalf("back on tab 2, title bar %q", bar)
 	}
 }

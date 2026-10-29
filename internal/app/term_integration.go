@@ -132,6 +132,9 @@ func (m *Model) onTermOSC(buf int, seq string) tea.Cmd {
 	if !ok {
 		return nil
 	}
+	if e.Kind == shellint.CommandStart {
+		m.dropTermHint(buf) // terminal_restore.go: the user runs something new
+	}
 	t, shown := m.termTabByBuf(buf)
 	if t == nil {
 		m.onPaneOSC(buf, e)

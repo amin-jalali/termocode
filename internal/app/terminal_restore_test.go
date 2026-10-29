@@ -114,3 +114,20 @@ func TestTerminalSnapshotDropsPendingCommandsWhenTheSettingIsOff(t *testing.T) {
 		t.Fatal("the pending terminals must not change")
 	}
 }
+
+// A command started in a restored pane ends its note.
+func TestCommandStartDropsTheRestoreNote(t *testing.T) {
+	m := &Model{terminalTabs: []terminalTab{{BufID: 7, Splits: []termPane{{BufID: 9}}}},
+		termHints: map[int]termHint{7: {Text: "a"}, 9: {Text: "b"}}}
+	m.onTermOSC(9, "\x1b]133;C;cmdline_url=ls")
+	if _, ok := m.termHints[9]; ok {
+		t.Error("pane 1's note should go")
+	}
+	if _, ok := m.termHints[7]; !ok {
+		t.Error("pane 0's note should stay")
+	}
+	m.onTermOSC(7, "\x1b]133;C;cmdline_url=ls")
+	if len(m.termHints) != 0 {
+		t.Errorf("notes left: %v", m.termHints)
+	}
+}

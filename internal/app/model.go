@@ -496,6 +496,9 @@ type Model struct {
 	termRestoreReady bool
 	termRestoreOff   bool
 	termRestoreCmds  bool
+	// termHints are the one-line notes of restored panes, by terminal
+	// buffer, shown in the pane's title bar until the user types there.
+	termHints map[int]termHint
 
 	// ── Bottom panel framework (panel.go) ──────────────────────────────
 	// panelTabs lists the open NON-terminal tabs (Output, Problems, …) in
