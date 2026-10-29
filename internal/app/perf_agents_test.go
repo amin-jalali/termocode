@@ -3,6 +3,9 @@ package app
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"slices"
@@ -10,6 +13,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/debounce"
@@ -242,4 +247,59 @@ func BenchmarkAIToolCalls20(b *testing.B) {
 	for b.Loop() {
 		perfTurn(b, m, "read them")
 	}
+}
+
+func BenchmarkAIChatTools(b *testing.B) {
+	m := perfAIChat(b, 0, perfAIProvider{})
+	ch := make(chan tea.Msg, 1)
+	root := aiWorkspaceRoot()
+	b.ReportAllocs()
+	for b.Loop() {
+		m.aiChatTools(root, newAIIDECaller(1, ch))
+	}
+}
+
+// perfAIServer is an OpenAI-compatible server that answers at once with
+// tokens words; got gets the time each request arrived (body read).
+func perfAIServer(tb testing.TB, tokens int, got chan time.Time) ai.Provider {
+	tb.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		select {
+		case got <- time.Now():
+		default:
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		for i := 0; i < tokens; i++ {
+			fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"content\":\"word%d \"}}]}\n\n", i%10)
+		}
+		fmt.Fprint(w, "data: [DONE]\n\n")
+	}))
+	tb.Cleanup(srv.Close)
+	return ai.NewProvider(ai.Config{Kind: ai.KindOllama, Model: "fake-1", BaseURL: srv.URL + "/v1"})
+}
+
+func BenchmarkAISendToServer(b *testing.B) {
+	got := make(chan time.Time, 1)
+	m := perfAIChat(b, 2000, nil)
+	m.ai.provider = perfAIServer(b, 1, got)
+	b.ReportAllocs()
+	var total time.Duration
+	for b.Loop() {
+		total += perfSend(b, m, got)
+	}
+	b.ReportMetric(float64(total.Microseconds())/float64(b.N), "us/send")
+}
+
+func BenchmarkAISendToServerShortChat(b *testing.B) {
+	got := make(chan time.Time, 1)
+	m := perfAIChat(b, 20, nil)
+	m.ai.provider = perfAIServer(b, 1, got)
+	b.ReportAllocs()
+	var total time.Duration
+	for b.Loop() {
+		total += perfSend(b, m, got)
+		m.ai.conv.Messages = m.ai.conv.Messages[:20]
+	}
+	b.ReportMetric(float64(total.Microseconds())/float64(b.N), "us/send")
 }
