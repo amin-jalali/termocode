@@ -190,16 +190,6 @@ func welcomeRecentHits(w, h int) []welcomeRecentHit {
 	return welcomeLayoutHits(w, h).recents
 }
 
-// welcomeWorkspaceHits returns the workspace rows of the welcome page.
-func welcomeWorkspaceHits(w, h int) []welcomeWorkspaceHit {
-	return welcomeLayoutHits(w, h).workspaces
-}
-
-// welcomeSetupHits returns the setup card's rows.
-func welcomeSetupHits(w, h int) []welcomeSetupHit {
-	return welcomeLayoutHits(w, h).setup
-}
-
 // welcomeQuickActionHits returns the START rows.
 func welcomeQuickActionHits(w, h int) []welcomeQuickActionHit {
 	return welcomeLayoutHits(w, h).actions

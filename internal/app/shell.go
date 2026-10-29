@@ -796,22 +796,6 @@ func (m *Model) persistExplorerWidth() {
 	saveSession(existing)
 }
 
-// integratedTerminalHeight returns the total number of rows the integrated
-// terminal panel occupies when open. The bar/resizer is INSIDE this height
-// (it overpaints nvim's terminal split row 0), so the total = the panel's
-// drag-set rows (or 1 when minimized — just the bar). Returns 0 when the
-// panel is closed so callers can fold the value into chrome math without
-// an extra branch.
-func (m Model) integratedTerminalHeight() int {
-	if !m.termOpen {
-		return 0
-	}
-	if m.terminalMinimized {
-		return 1
-	}
-	return m.integratedTerminalRows()
-}
-
 // terminalTabBarRowAbsolute returns the screen-space Y coordinate of the
 // terminal tab-bar row, or -1 when the panel isn't open. Used by the mouse
 // router to hit-test tab clicks, "+", and the right-side controls.

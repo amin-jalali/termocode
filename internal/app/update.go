@@ -1268,24 +1268,6 @@ func (m Model) routeToReplace(msg tea.Msg) (Model, tea.Cmd) {
 	return m, cmd
 }
 
-// vimRegexEscape escapes characters that are special inside an nvim "magic"
-// regex pattern. Used when interpolating raw user text into a `:s` source.
-func vimRegexEscape(s string) string {
-	var b strings.Builder
-	for _, r := range s {
-		switch r {
-		case '\\', '/', '.', '*', '[', ']', '^', '$', '~':
-			b.WriteByte('\\')
-			b.WriteRune(r)
-		case '\n':
-			b.WriteString("\\n")
-		default:
-			b.WriteRune(r)
-		}
-	}
-	return b.String()
-}
-
 // vimReplaceEscape escapes characters that are special inside the replacement
 // half of a `:s` command (the right side of the second slash).
 func vimReplaceEscape(s string) string {
