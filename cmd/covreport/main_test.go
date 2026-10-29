@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -51,5 +53,19 @@ func TestLineFilterWriter(t *testing.T) {
 	w.Close()
 	if out.String() != "ABC\nDE" {
 		t.Errorf("got %q", out.String())
+	}
+}
+
+// go test writes one block list per package into the same profile, so a
+// block can appear many times; reading must count it once.
+func TestReadProfileCountsDuplicateBlocksOnce(t *testing.T) {
+	f := filepath.Join(t.TempDir(), "p.out")
+	data := "mode: set\nm/internal/a/a.go:1.1,2.2 4 0\nm/internal/a/a.go:1.1,2.2 4 1\n"
+	if err := os.WriteFile(f, []byte(data), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := readProfile(f)
+	if err != nil || len(got) != 1 || got[0].Count != 1 {
+		t.Fatalf("got %+v, %v", got, err)
 	}
 }
