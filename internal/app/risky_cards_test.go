@@ -95,6 +95,11 @@ func riskyCards() []riskyCard {
 			m.openAgentMCPCard(&agentMCPCard{agent: a, path: "/w/opencode.json"})
 			return &m, nil
 		}},
+		{name: "merge a pull request", safe: "cancel", helper: true, open: func(t *testing.T) (*Model, func() bool) {
+			m, f := prViewModel(t)
+			m.onPRActionPicked("merge")
+			return m, func() bool { return f.called("pr merge") }
+		}},
 		{name: "stop listening", safe: "cancel", helper: true, open: func(t *testing.T) (*Model, func() bool) {
 			m := mcpServeStatusModel(t)
 			m.onMCPServeStatusPicked("serve-stop")

@@ -70,6 +70,8 @@ func (m *Model) onPRActionPicked(id string) tea.Cmd {
 		return m.prReadDescription()
 	case "checkout":
 		return m.prCheckout()
+	case "merge":
+		return m.prAskMerge()
 	case "approve":
 		return m.prAskReview(ghci.ReviewApprove)
 	case "request-changes":

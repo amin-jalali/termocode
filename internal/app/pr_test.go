@@ -498,3 +498,107 @@ func TestPRPromptNotOurs(t *testing.T) {
 		t.Error("took a rename prompt")
 	}
 }
+
+// Merge… opens a card with Cancel first and focused, the three methods,
+// and a warning for red checks, conflicts and requested changes.
+func TestPRMergeCard(t *testing.T) {
+	m, _ := prViewModel(t)
+	m.onPRActionPicked("merge")
+	if !m.confirmOpen || m.confirmKind != confirmKindPRMerge {
+		t.Fatal("merge card not open")
+	}
+	b := m.confirm.Buttons()
+	if len(b) != 4 || b[0].ID != "cancel" || b[1].ID != "squash" || b[2].ID != "merge" || b[3].ID != "rebase" {
+		t.Fatalf("buttons %+v", b)
+	}
+	text := prMergeText(*m.prS().detail)
+	for _, want := range []string{`Merge #14 "Add parser" from feat/parser into main?`, "Warning: 1 of 2 checks failed.",
+		"Warning: the branch has conflicts with main.", "Warning: a reviewer asked for changes."} {
+		if !strings.Contains(text, want) {
+			t.Errorf("text misses %q:\n%s", want, text)
+		}
+	}
+}
+
+func TestPRMergeWarningsPendingAndClean(t *testing.T) {
+	d := ghci.PRDetail{State: "OPEN", Mergeable: "MERGEABLE", PRItem: ghci.PRItem{Number: 1, Checks: []ghci.Check{{Name: "a", State: ghci.StatePending}}}}
+	if w := prMergeWarnings(d); len(w) != 1 || !strings.Contains(w[0], "still running") {
+		t.Errorf("pending: %v", w)
+	}
+	d.Checks = []ghci.Check{{Name: "a", State: ghci.StatePass}}
+	if w := prMergeWarnings(d); len(w) != 0 || !strings.Contains(prMergeText(d), "All checks passed.") {
+		t.Errorf("clean: %v", w)
+	}
+}
+
+// Each method calls `gh pr merge` with its flag, never with --admin; the
+// card then reopens with the new state.
+func TestPRMergeRuns(t *testing.T) {
+	for id, flag := range map[string]string{"squash": "--squash", "merge": "--merge", "rebase": "--rebase"} {
+		f := &prFakeGH{answers: map[string]string{"pr view": prViewText14, "pr merge": ""}}
+		m, _ := prViewModel(t)
+		m.ciW().run = f.run
+		m.onPRActionPicked("merge")
+		cmd, ok := m.handlePRConfirm(id)
+		if !ok || cmd == nil {
+			t.Fatalf("%s: no command", id)
+		}
+		done := cmd().(prDoneMsg)
+		if done.err != nil || !done.reopen {
+			t.Fatalf("%s: %+v", id, done)
+		}
+		if !f.called("pr merge 14 " + flag) {
+			t.Errorf("%s: calls %v", id, f.calls)
+		}
+		if f.called("pr merge 14 " + flag + " ") {
+			t.Errorf("%s: extra flags %v", id, f.calls)
+		}
+		m.onPRDone(done)
+		if !toastHas(m, "Merged #14") {
+			t.Errorf("%s: no toast", id)
+		}
+	}
+}
+
+// Cancel does not call gh; a draft, a closed PR or an unknown id never merge.
+func TestPRMergeCancelAndRefusals(t *testing.T) {
+	m, f := prViewModel(t)
+	m.onPRActionPicked("merge")
+	if cmd, _ := m.handlePRConfirm("cancel"); cmd != nil {
+		t.Error("Cancel ran something")
+	}
+	if cmd, _ := m.handlePRConfirm("bogus"); cmd != nil {
+		t.Error("unknown id ran something")
+	}
+	m.prS().detail.Draft = true
+	m.confirmOpen = false
+	m.onPRActionPicked("merge")
+	if m.confirmOpen || !toastHas(m, "is a draft") {
+		t.Error("draft got a merge card")
+	}
+	m.prS().detail.Draft = false
+	m.prS().detail.State = "MERGED"
+	m.onPRActionPicked("merge")
+	if m.confirmOpen || !toastHas(m, "is not open") || f.called("pr merge") {
+		t.Error("merged PR got a merge card")
+	}
+}
+
+// gh's refusal (branch rules) is shown; no retry with admin rights.
+func TestPRMergeRefused(t *testing.T) {
+	f := &prFakeGH{answers: map[string]string{"pr view": prViewText14},
+		errs: map[string]error{"pr merge": errors.New("exit 1")}, stderr: map[string]string{"pr merge": "Pull request is not mergeable: the base branch policy prohibits the merge."}}
+	m, _ := prViewModel(t)
+	m.ciW().run = f.run
+	m.onPRActionPicked("merge")
+	cmd, _ := m.handlePRConfirm("squash")
+	m.onPRDone(cmd().(prDoneMsg))
+	if !toastHas(m, "Could not merge #14") {
+		t.Error("no failure toast")
+	}
+	for _, c := range f.calls {
+		if strings.Contains(c, "admin") {
+			t.Errorf("call %q", c)
+		}
+	}
+}
