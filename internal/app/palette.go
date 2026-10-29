@@ -49,6 +49,8 @@ const (
 	pickerKindSetupStep      // the setup card's step chooser (setup_card_ui.go)
 	pickerKindHelpGuide      // Help: Open Guide… (help.go)
 	pickerKindImportSource   // Import from Another Editor: the source (import_editor.go)
+	pickerKindRebaseFrom     // Git: Interactive Rebase… (git_rebase.go)
+	pickerKindFixupInto      // Git: Fixup Staged Changes Into… (git_fixup.go)
 )
 
 // loadFiles walks the cwd and returns one picker.Item per file (relative path).
@@ -289,6 +291,9 @@ func paletteItems() []picker.Item {
 		{ID: "git-conflict-both", Title: "Git: Accept Both Changes (Conflict at Cursor)"},
 		{ID: "git-clone", Title: "Git: Clone Repository..."},
 		// ── end Group G ──
+		{ID: "git-rebase", Title: "Git: Interactive Rebase…"},                                  // git_rebase.go
+		{ID: "git-fixup", Title: "Git: Fixup Staged Changes Into…"},                            // git_fixup.go
+		{ID: "git-rebase-status", Title: "Git: Rebase in Progress (Continue / Skip / Abort)…"}, // git_rebase.go
 		{ID: "reload-buffer", Title: "File: Revert / Reload from Disk"},
 		{ID: "open-url", Title: "View: Open URL on Current Line"},
 		{ID: "pin-tab", Title: "Tab: Toggle Pinned", Hint: "Alt+P"},
@@ -783,6 +788,9 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		}
 		// Group G: merge conflicts + clone (git_conflicts.go, git_clone.go).
 		if cmd, ok := m.dispatchGitExtrasPalette(id); ok {
+			return cmd
+		}
+		if cmd, ok := m.dispatchRebasePalette(id); ok { // git_rebase.go
 			return cmd
 		}
 		// Group C: tasks + problems panel (tasks_run.go).

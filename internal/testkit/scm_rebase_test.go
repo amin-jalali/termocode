@@ -327,3 +327,49 @@ func TestSCMFixupNothingStaged(t *testing.T) {
 		t.Fatalf("no toast:%s", dump(d))
 	}
 }
+
+// Spec: the palette's "Git: Interactive Rebase…" asks for the oldest
+// commit to rebase (a list of HEAD's commits) and opens the card there.
+func TestSCMRebaseFromPalette(t *testing.T) {
+	d, _ := scmDriver(t, rebaseRepo)
+	d.Palette("git-rebase")
+	if !until(d, func() bool { return strings.Contains(text(d), "Rebase from which commit?") }) {
+		t.Fatalf("no picker:%s", dump(d))
+	}
+	d.Type("c3")
+	d.Key("enter")
+	if !until(d, func() bool { return strings.Contains(text(d), "2 commits → 2 commits") }) {
+		t.Fatalf("no card from c3:%s", dump(d))
+	}
+}
+
+// Spec: "Git: Fixup Staged Changes Into…" lists commits and folds the
+// staged changes into the chosen one; "Git: Rebase in Progress…" says
+// when none is running.
+func TestSCMFixupFromPalette(t *testing.T) {
+	d, r := scmDriver(t, func(r *repo) {
+		rebaseRepo(r)
+		r.write("f3.txt", "fixed 3\n")
+		r.git("add", "f3.txt")
+	})
+	d.Palette("git-rebase-status")
+	if !until(d, func() bool { return strings.Contains(text(d), "No rebase in progress") }) {
+		t.Fatalf("no toast:%s", dump(d))
+	}
+	d.Palette("git-fixup")
+	if !until(d, func() bool { return strings.Contains(text(d), "Fixup the staged changes into which commit?") }) {
+		t.Fatalf("no picker:%s", dump(d))
+	}
+	d.Type("c3")
+	d.Key("enter")
+	if !until(d, func() bool { return strings.Contains(text(d), "Fixup into") }) {
+		t.Fatalf("no confirm:%s", dump(d))
+	}
+	clickTarget(d, "confirm:fixup")
+	if !until(d, func() bool { return strings.Contains(text(d), "staged changes folded into") }) {
+		t.Fatalf("no done toast:%s", dump(d))
+	}
+	if got := r.git("show", "HEAD~1:f3.txt"); got != "fixed 3" {
+		t.Errorf("c3's f3.txt %q", got)
+	}
+}

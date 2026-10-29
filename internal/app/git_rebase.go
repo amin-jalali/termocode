@@ -11,6 +11,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/rebaseview"
 	"github.com/amin-jalali/termocode/internal/theme"
@@ -447,4 +448,60 @@ func (m *Model) onRebaseControl(id string) tea.Cmd {
 		}
 		return msg
 	}
+}
+
+// dispatchRebasePalette handles the rebase palette entries.
+func (m *Model) dispatchRebasePalette(id string) (tea.Cmd, bool) {
+	switch id {
+	case "git-rebase":
+		return m.openCommitTargetPicker(pickerKindRebaseFrom, " Rebase from which commit? (it and every newer one) "), true
+	case "git-fixup":
+		if !m.gitEnsureLoaded() {
+			return nil, true
+		}
+		if staged, _ := m.gitFileCounts(); staged == 0 {
+			return m.nothingStagedToast(), true
+		}
+		return m.openCommitTargetPicker(pickerKindFixupInto, " Fixup the staged changes into which commit? "), true
+	case "git-rebase-status":
+		if !m.gitEnsureLoaded() {
+			return nil, true
+		}
+		if !m.gitRebase.InProgress {
+			var cmd tea.Cmd
+			m.toast, cmd = m.toast.Push(toast.Info, "No rebase in progress")
+			return cmd, true
+		}
+		m.openRebaseControl()
+		return nil, true
+	}
+	return nil, false
+}
+
+// openCommitTargetPicker lists HEAD's commits down to the first merge
+// (newest first) for the rebase and fixup palette entries.
+func (m *Model) openCommitTargetPicker(kind pickerKindEnum, title string) tea.Cmd {
+	if !m.gitEnsureLoaded() {
+		return nil
+	}
+	if m.gitRebase.InProgress {
+		return m.rebaseBusyToast()
+	}
+	var items []picker.Item
+	for _, c := range m.gitCommits {
+		if c.IsMerge {
+			break
+		}
+		items = append(items, picker.Item{ID: c.FullHash, Title: c.Hash + "  " + c.Subject, Hint: git.CompactAge(c.Committed)})
+	}
+	if len(items) == 0 {
+		var cmd tea.Cmd
+		m.toast, cmd = m.toast.Push(toast.Info, "No commits to rebase")
+		return cmd
+	}
+	m.picker = picker.NewItems(title, items)
+	m.picker.SetSize(m.w, m.h)
+	m.pickerOpen = true
+	m.pickerKind = kind
+	return nil
 }

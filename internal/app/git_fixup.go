@@ -33,10 +33,7 @@ func (m *Model) gitFixupIntoCmd(full string) tea.Cmd {
 		return m.rebaseBusyToast()
 	}
 	if staged, _ := m.gitFileCounts(); staged == 0 {
-		var cmd tea.Cmd
-		m.toast, cmd = m.toast.PushDetail(toast.Info, "Nothing is staged",
-			"Stage the changes that belong in the older commit first.")
-		return cmd
+		return m.nothingStagedToast()
 	}
 	cwd, err := m.rootDir()
 	if err != nil {
@@ -55,6 +52,14 @@ func (m *Model) gitFixupIntoCmd(full string) tea.Cmd {
 		msg.upstream, msg.pushed = git.RebasePushed(cwd, base)
 		return msg
 	}
+}
+
+// nothingStagedToast says a fixup needs staged changes.
+func (m *Model) nothingStagedToast() tea.Cmd {
+	var cmd tea.Cmd
+	m.toast, cmd = m.toast.PushDetail(toast.Info, "Nothing is staged",
+		"Stage the changes that belong in the older commit first.")
+	return cmd
 }
 
 // openFixupConfirm asks before the fixup: Cancel first and focused.

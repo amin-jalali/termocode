@@ -2325,6 +2325,10 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.onDiffRightPicked(msg.ID)
 	case pickerKindGitLog:
 		return m.showCommitFromPicker(msg.ID)
+	case pickerKindRebaseFrom:
+		return m.gitRebaseFromCmd(msg.ID)
+	case pickerKindFixupInto:
+		return m.gitFixupIntoCmd(msg.ID)
 	case pickerKindTags:
 		return m.checkoutTagSelected(msg.ID)
 	case pickerKindHelpGuide:
