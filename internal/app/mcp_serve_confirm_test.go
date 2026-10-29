@@ -251,3 +251,17 @@ func TestMCPServeConfirmCleanTextAndCap(t *testing.T) {
 	}
 	m.mcpServe.declineAll()
 }
+
+// Spec: the outside agent's card title keeps a word in capitals as it is
+// ("IDE", not "iDE"); other first words start small.
+func TestMCPServeActionPhraseKeepsAcronyms(t *testing.T) {
+	for human, want := range map[string]string{
+		`IDE: Testing: Run Tests in Current File`: `IDE "Testing: Run Tests in Current File"`,
+		`Run task: mark`: `run task "mark"`,
+		`Git status`:     `git status`,
+	} {
+		if got := mcpServeActionPhrase("execute_action", human); got != want {
+			t.Errorf("%q → %q, want %q", human, got, want)
+		}
+	}
+}
