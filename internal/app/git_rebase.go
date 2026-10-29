@@ -2,10 +2,12 @@ package app
 
 import (
 	"errors"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/rebaseview"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -18,8 +20,9 @@ import (
 
 // gitRebaseState is the open rebase card.
 type gitRebaseState struct {
-	open bool
-	card rebaseview.Model
+	open   bool
+	card   rebaseview.Model
+	reword rebaseview.RewordMsg // the row the reword prompt is for
 }
 
 // rebaseTodoMsg carries a loaded todo for the card.
@@ -148,9 +151,47 @@ func (m *Model) onRebaseMsg(msg tea.Msg) tea.Cmd {
 
 // onRebaseCardMsg runs what the card asked for.
 func (m *Model) onRebaseCardMsg(msg tea.Msg) tea.Cmd {
-	switch msg.(type) {
+	switch msg := msg.(type) {
 	case rebaseview.CloseMsg:
 		m.closeRebaseCard()
+	case rebaseview.RewordMsg:
+		m.openRebaseRewordPrompt(msg)
 	}
 	return nil
+}
+
+// openRebaseRewordPrompt asks for a reword row's new subject; the body
+// of the message stays.
+func (m *Model) openRebaseRewordPrompt(msg rebaseview.RewordMsg) {
+	m.rebase.reword = msg
+	subject := msg.Item.Subject
+	if msg.Item.Message != "" {
+		subject, _, _ = strings.Cut(msg.Item.Message, "\n")
+	}
+	m.prompt = prompt.New("Reword "+msg.Item.Hash, "New subject (the body stays):", subject)
+	m.prompt.SetSize(m.w, m.h)
+	m.promptOpen = true
+	m.promptKind = promptKindRebaseReword
+}
+
+// onRebaseReword gives the reword row its new message: the typed subject
+// and the commit's body. An empty subject keeps the old message.
+func (m *Model) onRebaseReword(subject string) {
+	if !m.rebaseCardOpen() {
+		return
+	}
+	rw := m.rebase.reword
+	subject = strings.TrimSpace(subject)
+	if subject == "" {
+		return
+	}
+	body := rw.Item.Body
+	if rw.Item.Message != "" {
+		_, body, _ = strings.Cut(rw.Item.Message, "\n")
+	}
+	msg := subject
+	if body = strings.TrimSpace(body); body != "" {
+		msg += "\n\n" + body
+	}
+	m.rebase.card.SetMessage(rw.Index, msg)
 }

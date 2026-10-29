@@ -57,6 +57,7 @@ const (
 	// Group L — Upload with kitty: the path on the user's computer (transfer.go).
 	promptKindUploadSource
 	promptKindBulkRename
+	promptKindRebaseReword // a reword row's new subject (git_rebase.go)
 )
 
 func (m *Model) openRenamePrompt(path string) {
@@ -216,6 +217,8 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 		return m.refreshSearchResults() // an empty file; kept in step (N2)
 	case promptKindUploadSource:
 		return m.onUploadSource(value)
+	case promptKindRebaseReword:
+		m.onRebaseReword(value)
 	case promptKindImportFile:
 		return m.onImportFilePath(value)
 	case promptKindNewFolder:

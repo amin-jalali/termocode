@@ -69,3 +69,23 @@ func TestSCMRebaseFromMenu(t *testing.T) {
 		t.Fatalf("no card for c3..HEAD:%s", dump(d))
 	}
 }
+
+// Spec: r on a row marks it reword and asks for the new subject (filled
+// with the old one); the row then shows the new subject.
+func TestSCMRebaseRewordPrompt(t *testing.T) {
+	d, _ := scmDriver(t, rebaseRepo)
+	openRebaseCard(t, d, "c2")
+	d.Key("r")
+	if !until(d, func() bool { return strings.Contains(text(d), "New subject (the body stays)") }) {
+		t.Fatalf("no reword prompt:%s", dump(d))
+	}
+	d.Key("backspace", "backspace")
+	d.Type("better")
+	d.Key("enter")
+	if !until(d, func() bool { s := text(d); return strings.Contains(s, "reword") && strings.Contains(s, "better") }) {
+		t.Fatalf("row not reworded:%s", dump(d))
+	}
+	if !strings.Contains(text(d), "Interactive Rebase") {
+		t.Errorf("the card closed:%s", dump(d))
+	}
+}
