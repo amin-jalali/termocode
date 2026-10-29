@@ -21,7 +21,11 @@ func wantSum(sums []byte, name string) string {
 		if len(fields) != 2 {
 			continue
 		}
-		if strings.TrimPrefix(fields[1], "*") == name && len(fields[0]) == sha256.Size*2 {
+		if strings.TrimPrefix(fields[1], "*") != name || len(fields[0]) != sha256.Size*2 {
+			continue
+		}
+		// Only a real hex sum counts; anything else could never match.
+		if _, err := hex.DecodeString(fields[0]); err == nil {
 			return strings.ToLower(fields[0])
 		}
 	}
