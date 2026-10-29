@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -311,37 +312,44 @@ func (m *Model) containersDetectWithWatch(force bool) tea.Cmd {
 		msg := containerHostMsg{gen: gen, engine: e, section: "detect", errs: map[string]string{}}
 		// Contexts are files, not daemon answers: list them even when
 		// the engine does not answer, so a broken remote context can be
-		// switched away from.
+		// switched away from. The engine answers: the contexts and the
+		// open sections are listed at the same time (one engine call's
+		// wait instead of one per section).
+		jobs := []string{}
 		if e.Kind == "docker" || e.Kind == "podman" {
-			var err error
-			msg.contexts, err = e.ListContexts(ctx)
-			if err != nil {
-				msg.errs["contexts"] = err.Error()
-			}
-			msg.loaded = append(msg.loaded, "contexts")
+			jobs = append(jobs, "contexts")
 		}
-		if !e.Reachable {
-			return msg
+		if e.Reachable {
+			for _, s := range load {
+				if s != "contexts" {
+					jobs = append(jobs, s)
+				}
+			}
 		}
-		for _, s := range load {
-			if s == "contexts" {
-				continue
-			}
-			var err error
-			switch s {
-			case "containers":
-				msg.containers, err = e.ListContainers(ctx)
-			case "images":
-				msg.images, err = e.ListImages(ctx)
-			case "networks":
-				msg.networks, err = e.ListNetworks(ctx)
-			case "volumes":
-				msg.volumes, err = e.ListVolumes(ctx)
-			case "contexts":
-				msg.contexts, err = e.ListContexts(ctx)
-			}
-			if err != nil {
-				msg.errs[s] = err.Error()
+		errs := make([]error, len(jobs))
+		var wg sync.WaitGroup
+		for i, s := range jobs {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				switch s {
+				case "containers":
+					msg.containers, errs[i] = e.ListContainers(ctx)
+				case "images":
+					msg.images, errs[i] = e.ListImages(ctx)
+				case "networks":
+					msg.networks, errs[i] = e.ListNetworks(ctx)
+				case "volumes":
+					msg.volumes, errs[i] = e.ListVolumes(ctx)
+				case "contexts":
+					msg.contexts, errs[i] = e.ListContexts(ctx)
+				}
+			}()
+		}
+		wg.Wait()
+		for i, s := range jobs {
+			if errs[i] != nil {
+				msg.errs[s] = errs[i].Error()
 			}
 			msg.loaded = append(msg.loaded, s)
 		}

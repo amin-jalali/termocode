@@ -1,11 +1,16 @@
 package app
 
 import (
+	"context"
 	"fmt"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/containers"
+	"github.com/amin-jalali/termocode/internal/services"
 )
 
 // imagesInUseOneRepo is the old per-repository count (one pass over the
@@ -108,5 +113,57 @@ func TestStatsRetargetSkipsUnchangedState(t *testing.T) {
 	m.statsSync()
 	if st.stats.detailID != "" {
 		t.Errorf("the samples are gone but the charts of %s stay", id)
+	}
+}
+
+// gateExec runs the fake engine, but `context ls` waits until `ps` has
+// started: it answers only when the two run at the same time.
+type gateExec struct {
+	services.Exec
+	psStarted chan struct{}
+	once      sync.Once
+}
+
+func (g *gateExec) Capture(ctx context.Context, dir string, argv ...string) (string, string, int, error) {
+	args := strings.Join(argv[1:], " ")
+	if strings.HasPrefix(args, "ps ") {
+		g.once.Do(func() { close(g.psStarted) })
+	}
+	if strings.HasPrefix(args, "context ls") {
+		select {
+		case <-g.psStarted:
+		case <-time.After(5 * time.Second):
+			return "", "context ls ran before ps started", 1, nil
+		}
+	}
+	return g.Exec.Capture(ctx, dir, argv...)
+}
+
+// PERF-5: opening the view (and a context switch) finds the engine and
+// then lists the contexts and the open sections at the same time, not
+// one engine call after the other.
+func TestContainersDetectListsInParallel(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("DOCKER_CONTEXT", "")
+	hostFake(t)
+	old := servicesExec
+	servicesExec = &gateExec{Exec: services.SpawnExec{}, psStarted: make(chan struct{})}
+	defer func() { servicesExec = old }()
+	st := svcTestState()
+	st.root = t.TempDir()
+	st.sections = map[string]bool{}
+	st.visible = true
+	st.collapsed[hostSection("containers")] = false
+	m := svcTestModel(st, 100, 80)
+	msg, ok := m.containersDetect()().(containerHostMsg)
+	if !ok {
+		t.Fatal("detect gave no host message")
+	}
+	if !msg.engine.Reachable || len(msg.errs) != 0 || len(msg.contexts) != 2 || len(msg.containers) == 0 {
+		t.Fatalf("engine %v, errs %v, %d contexts, %d containers", msg.engine.Reachable, msg.errs, len(msg.contexts), len(msg.containers))
+	}
+	if !slices.Contains(msg.loaded, "contexts") || !slices.Contains(msg.loaded, "containers") {
+		t.Errorf("loaded %v", msg.loaded)
 	}
 }
