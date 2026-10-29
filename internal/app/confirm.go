@@ -213,14 +213,17 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 				return m.runBulkDelete(m.confirmTargetPaths)
 			}
 			path := m.confirmTargetPath
-			// Close any open buffer pointing at the path first, so the
-			// user doesn't keep editing a phantom file, and so closing
-			// it (auto-save on BufLeave) can't write it back.
-			m.closeBuffersForPaths([]string{path})
 			if err := m.removePath(path); err != nil {
+				// The file is still there: its tab (maybe with unsaved
+				// edits) stays open.
 				m.err = fileOpFailText(err)
 				return m.pushToastDetail(toast.Errr, "Delete failed", m.err)
 			}
+			// Close any open buffer pointing at the path, so the user
+			// doesn't keep editing a phantom file. discardBufferCmd
+			// marks it unmodified first, so closing it (auto-save on
+			// BufLeave) can't write it back.
+			m.closeBuffersForPaths([]string{path})
 			m.forgetPaths([]string{path})
 			m.err = ""
 			m.explorer.Reload()
@@ -272,9 +275,6 @@ func (m *Model) runBulkDelete(paths []string) tea.Cmd {
 	if len(paths) == 0 {
 		return nil
 	}
-	// Close their buffers first: closing a modified one auto-saves it
-	// (BufLeave), which would re-create a file deleted before.
-	m.closeBuffersForPaths(paths)
 	deleted := 0
 	var failed, gone []string
 	for _, p := range paths {
@@ -288,6 +288,10 @@ func (m *Model) runBulkDelete(paths []string) tea.Cmd {
 		deleted++
 		gone = append(gone, p)
 	}
+	// Close the buffers of what is gone (a failed delete keeps its tab
+	// and unsaved edits). discardBufferCmd marks them unmodified first,
+	// so the auto-save on BufLeave cannot write a deleted file back.
+	m.closeBuffersForPaths(gone)
 	m.forgetPaths(gone)
 	m.explorer.Reload()
 	m.explorer.ClearSelection()

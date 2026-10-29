@@ -76,3 +76,33 @@ func TestExplorerDeleteInReadOnlyFolder(t *testing.T) {
 		t.Errorf("explorer dropped todo.md although it is still on disk:\n%s", screen(d))
 	}
 }
+
+// Spec: Given notes/todo.md open with unsaved edits and the folder notes
+// read-only,
+// when the user deletes todo.md from the explorer and confirms,
+// then the delete fails and the tab with the unsaved text stays open
+// (a failed delete must not throw the edits away).
+func TestExplorerFailedDeleteKeepsUnsavedTab(t *testing.T) {
+	skipIfRoot(t)
+	d := editorDriver(t, nil)
+	clickExplorer(d, "notes")
+	open(d, "notes/todo.md")
+	d.Type("Hi ")
+	if !waitTabs(d, "notes/todo.md*") {
+		got, _ := tabs(d)
+		t.Fatalf("todo.md not modified: %v", got)
+	}
+	chmodBack(t, filepath.Join(d.Dir, "notes"), 0o555, 0o755)
+	d.Palette("focus-explorer")
+	clickExplorer(d, "todo.md")
+	d.Key("delete")
+	d.Key("enter")
+	plainError(t, d, "Delete failed")
+	if !waitTabs(d, "notes/todo.md*") {
+		got, _ := tabs(d)
+		t.Fatalf("the unsaved tab was closed by a failed delete: %v", got)
+	}
+	if got := bufLines(d); !strings.HasPrefix(got, "Hi # Todo") {
+		t.Errorf("the editor lost the text: %q", got)
+	}
+}
