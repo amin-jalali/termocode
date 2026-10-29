@@ -345,3 +345,41 @@ func TestShareBrokerListenFailureIsUnavailable(t *testing.T) {
 		t.Fatalf("exit %d, said %q", code, out.String())
 	}
 }
+
+// Spec: the last session that leaves on purpose (idle stop, quit) stops
+// the server at once; the grace is only for a session that dropped.
+func TestShareBrokerLastLeaveStopsAtOnce(t *testing.T) {
+	cfg := fakeShareConfig(nil)
+	cfg.GraceMS = 60_000
+	b, sock := startTestBroker(t, cfg)
+	c1 := dialTestShare(t, sock, nil)
+	c2 := dialTestShare(t, sock, nil)
+	p1 := &Process{Client: c1, shared: true, done: make(chan struct{})}
+	p1.closeFn = func() { leaveShared(c1) }
+	go func() { <-c1.Done(); close(p1.done) }()
+	p1.Close()
+	select {
+	case <-b.done:
+		t.Fatal("stopped while another session used it")
+	case <-time.After(200 * time.Millisecond):
+	}
+	leaveShared(c2)
+	select {
+	case <-b.done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the last session left, the server still runs")
+	}
+}
+
+func TestShareBrokerDroppedSessionKeepsGrace(t *testing.T) {
+	cfg := fakeShareConfig(nil)
+	cfg.GraceMS = 60_000
+	b, sock := startTestBroker(t, cfg)
+	c := dialTestShare(t, sock, nil)
+	c.Close() // no leave: a crash
+	select {
+	case <-b.done:
+		t.Fatal("a dropped session stopped it without the grace")
+	case <-time.After(500 * time.Millisecond):
+	}
+}

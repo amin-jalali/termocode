@@ -47,7 +47,7 @@ func init() {
 		settingsRow{ID: "setting-mcp-github-client-id", Label: "mcp_github_client_id", Kind: "string", Default: "(built in)",
 			Desc: "Client ID of a GitHub OAuth App with Device Flow on, for the GitHub sign-in with a code (Connect a service). Empty uses the one built into termocode (none until it is registered). Not a secret."},
 		settingsRow{ID: "setting-mcp-share", Label: "mcp_share", Kind: "bool", Default: "true",
-			Desc: "Run each local MCP server once for all your termocode windows with the same server entry and folder, not once per window. It stops 30 s after the last window stops using it. false: every window runs its own. Remote servers are not affected."},
+			Desc: "Run each local MCP server once for all your termocode windows with the same server entry and folder, not once per window. It ends when the last window stops using it (mcp_idle_timeout or quit). false: every window runs its own. Remote servers are not affected."},
 	)
 }
 

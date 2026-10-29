@@ -211,3 +211,41 @@ func TestManagerSetShareOffRunsOwnProcess(t *testing.T) {
 		t.Fatalf("status %+v, want its own process", st)
 	}
 }
+
+// Spec: mcp_idle_timeout still stops a shared server when the last
+// session stops using it (not only after the share grace), and quitting
+// the last session stops it too.
+func TestManagerSharedIdleAndQuitStopTheServer(t *testing.T) {
+	for name, idle := range map[string]time.Duration{"idle": 300 * time.Millisecond, "quit": 0} {
+		t.Run(name, func(t *testing.T) {
+			e := newManagerEnv(t)
+			marker := filepath.Join(e.dir, "running")
+			e.write(t, e.user, map[string]any{"fake": map[string]string{"FAKE_MARKER": marker}})
+			share := shareTestOptions(t)
+			share.Grace = time.Minute
+			m := NewManager(ManagerOptions{UserPath: e.user, ProjectPath: e.project, CacheDir: e.cache,
+				Expander: func() Expander { return Expander{Env: os.LookupEnv} }, IdleTimeout: idle,
+				CallTimeout: 5 * time.Second, Share: share})
+			t.Cleanup(m.Close)
+			callEcho(t, m, "x")
+			if !shareStatus(m, "fake").Shared {
+				t.Fatal("not shared")
+			}
+			if idle == 0 {
+				m.Close()
+			}
+			deadline := time.Now().Add(5 * time.Second)
+			for exists(marker) {
+				if time.Now().After(deadline) {
+					t.Fatal("the shared server still runs")
+				}
+				time.Sleep(20 * time.Millisecond)
+			}
+		})
+	}
+}
+
+func exists(p string) bool {
+	_, err := os.Stat(p)
+	return err == nil
+}

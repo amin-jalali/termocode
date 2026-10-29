@@ -359,9 +359,10 @@ All windows with the same server entry and the same folder use it.
 There is nothing to set up.
 
 - The row of the server says `shared · 3 sessions`.
-- When the last window stops using it, it ends after 30 seconds.
-- If a window crashes, the server does not stay forever. It ends when no
-  window uses it.
+- It stops like before: when the last window stops using it
+  (`mcp_idle_timeout`, or quit), it ends.
+- If a window crashes, the server waits 30 seconds for it, then ends
+  when no window uses it. It never stays forever.
 - **Stop** on a shared server asks first: it stops for every window. Each
   window starts it again on its next tool call.
 - A different command, args, `env` value or folder gets its own server.

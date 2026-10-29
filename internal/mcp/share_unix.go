@@ -188,7 +188,7 @@ func startShared(ctx context.Context, o *ShareOptions, s Server, roots []string,
 		}
 	}
 	p.Client = NewClient(nc, nc, opts)
-	p.closeFn = p.Client.Close
+	p.closeFn = func() { leaveShared(p.Client) }
 	go func() {
 		<-p.Client.Done()
 		close(p.done)

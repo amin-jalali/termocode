@@ -35,6 +35,8 @@ const (
 	// shareStop stops the server for every session. It has no answer:
 	// every session's connection closes.
 	shareStop = "termocode/share/stop"
+	// shareLeave: this session is done with the server (leaveShared).
+	shareLeave = "termocode/share/leave"
 )
 
 // DefaultShareGrace is how long a shared server stays after the last
@@ -116,3 +118,15 @@ func (p *Process) stopShared() {
 
 // Sessions is how many sessions use a shared server (0: not shared).
 func (p *Process) Sessions() int { return int(p.sessions.Load()) }
+
+// leaveShared tells the broker this session is done with the server
+// (idle stop, quit), then closes. When it was the last session, the
+// server stops at once; only a session that just dropped (a crash) gets
+// the grace. A request, not a notification: its answer proves the broker
+// read it before the connection closes.
+func leaveShared(c *Client) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	_, _ = c.call(ctx, shareLeave, nil)
+	cancel()
+	c.Close()
+}

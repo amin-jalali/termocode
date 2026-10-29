@@ -85,6 +85,7 @@ type shareClient struct {
 	id    uint64
 	conn  *extproc.Conn
 	ready bool                          // initialized (guarded by broker.mu)
+	left  bool                          // said shareLeave (broker.mu)
 	calls map[string]context.CancelFunc // its request id → cancel (broker.mu)
 }
 
@@ -310,8 +311,18 @@ func (b *broker) watch(c *shareClient) {
 	for _, cancel := range c.calls {
 		cancel()
 	}
-	b.armLocked()
+	// The last session is done with it (idle stop, quit): stop now, as an
+	// unshared server would. Only a session that dropped without a word
+	// (a crash) leaves the grace for it to come back.
+	last := len(b.clients) == 0 && c.left && !b.closed
+	if !last {
+		b.armLocked()
+	}
 	b.mu.Unlock()
+	if last {
+		go b.shutdown()
+		return
+	}
 	b.sendStatus()
 }
 
@@ -344,6 +355,12 @@ func (b *broker) fromClient(c *shareClient, conn *extproc.Conn, m extproc.Messag
 		// right before shutdown closes the connection could be lost in
 		// the write queue, and the session would see an error.
 		go b.shutdown()
+		return
+	case shareLeave:
+		b.mu.Lock()
+		c.left = true
+		b.mu.Unlock()
+		_ = conn.Reply(m.ID, map[string]any{}, nil)
 		return
 	case "notifications/cancelled":
 		var p struct {
