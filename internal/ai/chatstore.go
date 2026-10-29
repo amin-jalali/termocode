@@ -317,8 +317,43 @@ func (s ChatStore) Delete(id string) error {
 	return err
 }
 
+// prune deletes all but the newest maxChats chats. It runs after every
+// save, so it reads no chat file while there are not more files than
+// that, and then only each chat's id and time.
 func (s ChatStore) prune() {
-	list := s.List()
+	entries, err := os.ReadDir(s.Dir)
+	if err != nil {
+		return
+	}
+	n := 0
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".json") {
+			n++
+		}
+	}
+	if n <= maxChats {
+		return
+	}
+	type head struct {
+		ID          string `json:"id"`
+		UpdatedAtMs int64  `json:"updated_at_ms"`
+	}
+	var list []head
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		b, err := os.ReadFile(filepath.Join(s.Dir, e.Name()))
+		if err != nil {
+			continue
+		}
+		var h head
+		if json.Unmarshal(b, &h) != nil || h.ID == "" {
+			continue
+		}
+		list = append(list, h)
+	}
+	sort.SliceStable(list, func(i, j int) bool { return list[i].UpdatedAtMs > list[j].UpdatedAtMs })
 	for i := maxChats; i < len(list); i++ {
 		_ = s.Delete(list[i].ID)
 	}

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestChatStoreSaveLoadList(t *testing.T) {
@@ -47,12 +48,25 @@ func TestChatStorePrunes(t *testing.T) {
 	for i := 0; i < maxChats+3; i++ {
 		c := NewConversation()
 		c.Messages = []StoredMessage{{Role: StoredUser, Text: fmt.Sprint(i)}}
+		for ms := time.Now().UnixMilli(); time.Now().UnixMilli() == ms; { // each save its own ms
+		}
 		if err := s.Save(&c); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if n := len(s.List()); n != maxChats {
+	list := s.List()
+	if n := len(list); n != maxChats {
 		t.Fatalf("kept %d", n)
+	}
+	// The newest are kept: the first three saved are gone.
+	kept := map[string]bool{}
+	for _, c := range list {
+		kept[c.Title] = true
+	}
+	for i := 0; i < maxChats+3; i++ {
+		if want := i >= 3; kept[fmt.Sprint(i)] != want {
+			t.Errorf("chat %d kept=%v, want %v", i, !want, want)
+		}
 	}
 	if DeriveTitle(nil) != defaultChatTitle {
 		t.Error("default title")
