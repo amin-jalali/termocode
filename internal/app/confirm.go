@@ -42,10 +42,11 @@ const (
 	// Discard lines (git_lines.go).
 	confirmKindGitDiscardLines
 	confirmKindBulkRename
-	confirmKindRebaseStart   // git_rebase.go
-	confirmKindRebaseControl // Continue / Skip / Abort a stopped rebase
-	confirmKindRebaseFixup   // fixup staged changes into a commit (git_fixup.go)
-	confirmKindGitUndo       // undo a git action with the reflog (git_undo.go)
+	confirmKindRebaseStart    // git_rebase.go
+	confirmKindRebaseControl  // Continue / Skip / Abort a stopped rebase
+	confirmKindRebaseFixup    // fixup staged changes into a commit (git_fixup.go)
+	confirmKindGitUndo        // undo a git action with the reflog (git_undo.go)
+	confirmKindMergeWholeFile // keep ours / theirs or delete (git_merge_view.go)
 )
 
 // findBuffer returns the buffer info for the given id, if known.
@@ -177,6 +178,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 		return m.onFixupConfirm(id)
 	case confirmKindGitUndo:
 		return m.onUndoConfirm(id)
+	case confirmKindMergeWholeFile:
+		return m.onMergeWholeCard(id)
 	case confirmKindCloseBuffer:
 		switch id {
 		case "cancel":
