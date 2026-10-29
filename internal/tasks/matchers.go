@@ -150,6 +150,9 @@ func Match(matchers []string, lines []string) []Problem {
 	var out []Problem
 	seen := map[Problem]bool{}
 	add := func(p Problem) {
+		if p.Line <= 0 {
+			return // no such line to jump to (tsc/rustc "file(0,0)")
+		}
 		if p.Col <= 0 {
 			p.Col = 1
 		}
