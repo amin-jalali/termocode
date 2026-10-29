@@ -27,6 +27,9 @@ type Options struct {
 	Log func(line string)
 	// ToolsChanged is called on notifications/tools/list_changed.
 	ToolsChanged func()
+	// Shared is called when the share broker says how many sessions use
+	// a shared server, and its pid (share.go).
+	Shared func(sessions, pid int)
 }
 
 func (o Options) log(format string, args ...any) {
@@ -262,6 +265,14 @@ func (c *Client) handle(m extproc.Message, reply replyFunc) {
 		c.mu.Unlock()
 		if f != nil {
 			f()
+		}
+	case shareNotify:
+		var p struct {
+			Sessions int `json:"sessions"`
+			Pid      int `json:"pid"`
+		}
+		if json.Unmarshal(m.Params, &p) == nil && c.opts.Shared != nil {
+			c.opts.Shared(p.Sessions, p.Pid)
 		}
 	case "notifications/message":
 		var p struct {

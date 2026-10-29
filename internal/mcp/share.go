@@ -25,6 +25,15 @@ import (
 // socket path. RunShareIfHelper checks it at the top of main.
 const ShareEnv = "TERMOCODE_MCP_SHARE"
 
+// Methods of the share protocol (termocode only; a server never sees them).
+const (
+	// shareNotify tells a session how many sessions use the server and
+	// its pid: {"sessions": N, "pid": P}.
+	shareNotify = "notifications/termocode/share"
+	// shareStop stops the server for every session.
+	shareStop = "termocode/share/stop"
+)
+
 // DefaultShareGrace is how long a shared server stays after the last
 // session left.
 const DefaultShareGrace = 30 * time.Second

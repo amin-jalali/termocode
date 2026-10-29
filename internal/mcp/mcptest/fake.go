@@ -18,6 +18,7 @@
 //   - roots: asks the client roots/list and returns the URIs
 //   - mixed: text, a resource and a resource_link
 //   - structured: only structuredContent {"n": 42}
+//   - notify_changed: sends notifications/tools/list_changed, returns "notified"
 //
 // Environment switches: FAKE_BANNER=1 prints a non-JSON line on stdout
 // first; FAKE_IGNORE_SHUTDOWN=1 keeps running after stdin closes (to test
@@ -322,6 +323,9 @@ func call(ctx context.Context, c Caller, name string, args map[string]any, token
 		}}, nil
 	case "structured":
 		return map[string]any{"content": []any{}, "structuredContent": map[string]any{"n": 42}}, nil
+	case "notify_changed":
+		_ = c.Notify("notifications/tools/list_changed", nil)
+		return text("notified"), nil
 	}
 	return nil, &extproc.Error{Code: extproc.CodeInvalidParams, Message: "unknown tool: " + name}
 }

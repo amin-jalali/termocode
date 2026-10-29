@@ -1,0 +1,328 @@
+//go:build unix
+
+package mcp
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"net"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/amin-jalali/termocode/internal/mcp/mcptest"
+	"github.com/amin-jalali/termocode/internal/session"
+)
+
+// fakeShareConfig runs the fake server under a broker.
+func fakeShareConfig(env map[string]string) shareConfig {
+	e := mcptest.Entry(env)
+	return shareConfig{Command: e["command"].(string), Args: e["args"].([]string), Env: e["env"].(map[string]string)}
+}
+
+// startTestBroker starts a broker in this process on a temp socket.
+func startTestBroker(t *testing.T, cfg shareConfig) (*broker, string) {
+	t.Helper()
+	dir, err := shareDir(&ShareOptions{Dir: filepath.Join(shortTemp(t), "mcp")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sock := filepath.Join(dir, "test.sock")
+	b, err := startBroker(sock, cfg, session.CheckPeer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { b.shutdown() })
+	return b, sock
+}
+
+// shortTemp is a temp dir short enough for a unix socket path.
+func shortTemp(t *testing.T) string {
+	t.Helper()
+	d, err := os.MkdirTemp("", "tcs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(d) })
+	return d
+}
+
+type shareSeen struct {
+	sessions, pid atomic.Int64
+	changed       atomic.Int64
+	mu            sync.Mutex
+	lines         []string
+}
+
+// dialShare connects one session to the broker and runs its handshake.
+func dialShare(t *testing.T, sock string, seen *shareSeen) *Client {
+	t.Helper()
+	nc, err := net.Dial("unix", sock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if seen == nil {
+		seen = &shareSeen{}
+	}
+	c := NewClient(nc, nc, Options{
+		Shared:       func(n, pid int) { seen.sessions.Store(int64(n)); seen.pid.Store(int64(pid)) },
+		ToolsChanged: func() { seen.changed.Add(1) },
+		Log: func(l string) {
+			seen.mu.Lock()
+			seen.lines = append(seen.lines, l)
+			seen.mu.Unlock()
+		},
+	})
+	t.Cleanup(c.Close)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := c.Initialize(ctx); err != nil {
+		t.Fatal(err)
+	}
+	return c
+}
+
+func waitFor(t *testing.T, what string, ok func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for !ok() {
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for %s", what)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+func countLines(path, line string) int {
+	b, _ := os.ReadFile(path)
+	n := 0
+	for _, l := range strings.Split(string(b), "\n") {
+		if l == line {
+			n++
+		}
+	}
+	return n
+}
+
+func TestShareBrokerTwoSessionsOneServer(t *testing.T) {
+	log := filepath.Join(t.TempDir(), "fake.log")
+	b, sock := startTestBroker(t, fakeShareConfig(map[string]string{"FAKE_LOG": log}))
+	s1, s2 := &shareSeen{}, &shareSeen{}
+	c1 := dialShare(t, sock, s1)
+	c2 := dialShare(t, sock, s2)
+	if c1.ServerInfo().Name != "fake-mcp" || c2.ServerInfo().Name != "fake-mcp" {
+		t.Fatalf("server info %+v %+v", c1.ServerInfo(), c2.ServerInfo())
+	}
+	waitFor(t, "2 sessions", func() bool { return s1.sessions.Load() == 2 && s2.sessions.Load() == 2 })
+	if int(s1.pid.Load()) != b.pid() || b.pid() == 0 {
+		t.Fatalf("pid %d, want %d", s1.pid.Load(), b.pid())
+	}
+	var wg sync.WaitGroup
+	for i, c := range []*Client{c1, c2, c1, c2} {
+		wg.Add(1)
+		go func(i int, c *Client) {
+			defer wg.Done()
+			want := "echo: " + string(rune('a'+i))
+			res, err := c.CallTool(context.Background(), "echo", map[string]any{"text": string(rune('a' + i))})
+			if err != nil || res.Text() != want {
+				t.Errorf("call %d: %q %v, want %q", i, res.Text(), err, want)
+			}
+		}(i, c)
+	}
+	wg.Wait()
+	if tools, err := c2.ListTools(context.Background()); err != nil || len(tools) == 0 {
+		t.Fatalf("tools/list: %d %v", len(tools), err)
+	}
+	if n := countLines(log, "initialize"); n != 1 {
+		t.Fatalf("the server was initialized %d times, want once", n)
+	}
+	c1.Close()
+	waitFor(t, "1 session", func() bool { return s2.sessions.Load() == 1 })
+}
+
+func TestShareBrokerFansOutToolsChanged(t *testing.T) {
+	_, sock := startTestBroker(t, fakeShareConfig(nil))
+	s1, s2 := &shareSeen{}, &shareSeen{}
+	c1 := dialShare(t, sock, s1)
+	dialShare(t, sock, s2)
+	if _, err := c1.CallTool(context.Background(), "notify_changed", nil); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, "list_changed in both sessions", func() bool { return s1.changed.Load() == 1 && s2.changed.Load() == 1 })
+}
+
+func TestShareBrokerProgressGoesToTheCaller(t *testing.T) {
+	_, sock := startTestBroker(t, fakeShareConfig(nil))
+	c1 := dialShare(t, sock, nil)
+	c2 := dialShare(t, sock, nil)
+	// Both sessions use the same token ("termocode-1"); the 300 ms
+	// deadline only holds when each one gets its own progress.
+	var wg sync.WaitGroup
+	for _, c := range []*Client{c1, c2} {
+		wg.Add(1)
+		go func(c *Client) {
+			defer wg.Done()
+			res, err := c.CallToolTimeout(context.Background(), "slow", map[string]any{"total_ms": 900, "progress_ms": 50}, 300*time.Millisecond)
+			if err != nil || res.Text() != "slow done" {
+				t.Errorf("slow: %q %v", res.Text(), err)
+			}
+		}(c)
+	}
+	wg.Wait()
+}
+
+func TestShareBrokerCancelReachesServer(t *testing.T) {
+	log := filepath.Join(t.TempDir(), "fake.log")
+	_, sock := startTestBroker(t, fakeShareConfig(map[string]string{"FAKE_LOG": log}))
+	c := dialShare(t, sock, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	if _, err := c.CallTool(ctx, "slow", nil); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err %v", err)
+	}
+	waitFor(t, "the server's cancel", func() bool {
+		b, _ := os.ReadFile(log)
+		return strings.Contains(string(b), "cancelled ")
+	})
+}
+
+func TestShareBrokerAnswersRoots(t *testing.T) {
+	cfg := fakeShareConfig(nil)
+	cfg.Roots = []string{"/work/a"}
+	_, sock := startTestBroker(t, cfg)
+	c := dialShare(t, sock, nil)
+	res, err := c.CallTool(context.Background(), "roots", nil)
+	if err != nil || res.Text() != "roots: file:///work/a" {
+		t.Fatalf("roots: %q %v", res.Text(), err)
+	}
+}
+
+func TestShareBrokerStopsAfterGrace(t *testing.T) {
+	marker := filepath.Join(t.TempDir(), "running")
+	cfg := fakeShareConfig(map[string]string{"FAKE_MARKER": marker})
+	cfg.GraceMS = 150
+	b, sock := startTestBroker(t, cfg)
+	c := dialShare(t, sock, nil)
+	time.Sleep(300 * time.Millisecond) // longer than the grace: a session holds it
+	select {
+	case <-b.done:
+		t.Fatal("stopped while a session used it")
+	default:
+	}
+	c.Close()
+	select {
+	case <-b.done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("still running after the grace")
+	}
+	if _, err := os.Stat(sock); !os.IsNotExist(err) {
+		t.Fatalf("socket left: %v", err)
+	}
+	if _, err := os.Stat(marker); !os.IsNotExist(err) {
+		t.Fatalf("server left running: %v", err)
+	}
+}
+
+func TestShareBrokerStopForAll(t *testing.T) {
+	b, sock := startTestBroker(t, fakeShareConfig(nil))
+	c1 := dialShare(t, sock, nil)
+	c2 := dialShare(t, sock, nil)
+	if _, err := c1.call(context.Background(), shareStop, nil); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []*Client{c1, c2} {
+		select {
+		case <-c.Done():
+		case <-time.After(10 * time.Second):
+			t.Fatal("a session stayed connected")
+		}
+	}
+	<-b.done
+}
+
+func TestShareBrokerServerExitEndsSessions(t *testing.T) {
+	b, sock := startTestBroker(t, fakeShareConfig(nil))
+	c := dialShare(t, sock, nil)
+	killGroup(b.pid())
+	select {
+	case <-c.Done():
+	case <-time.After(10 * time.Second):
+		t.Fatal("the session did not see the server exit")
+	}
+}
+
+func TestShareBrokerRefusesOtherPeers(t *testing.T) {
+	dir, _ := shareDir(&ShareOptions{Dir: filepath.Join(shortTemp(t), "mcp")})
+	sock := filepath.Join(dir, "x.sock")
+	b, err := startBroker(sock, fakeShareConfig(nil), func(net.Conn) error { return errors.New("other uid") })
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.shutdown()
+	nc, err := net.Dial("unix", sock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := NewClient(nc, nc, Options{})
+	defer c.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := c.Initialize(ctx); err == nil {
+		t.Fatal("a refused peer got an answer")
+	}
+	fi, _ := os.Stat(sock)
+	if fi.Mode().Perm() != 0o600 {
+		t.Fatalf("socket mode %o", fi.Mode().Perm())
+	}
+}
+
+func TestShareBrokerInitFailureLeavesNothing(t *testing.T) {
+	dir, _ := shareDir(&ShareOptions{Dir: filepath.Join(shortTemp(t), "mcp")})
+	sock := filepath.Join(dir, "x.sock")
+	_, err := startBroker(sock, fakeShareConfig(map[string]string{"FAKE_VERSION": "1999-01-01"}), session.CheckPeer)
+	if err == nil || !strings.Contains(err.Error(), "1999-01-01") {
+		t.Fatalf("err %v", err)
+	}
+	if _, err := os.Stat(sock); !os.IsNotExist(err) {
+		t.Fatalf("socket left: %v", err)
+	}
+	_, err = startBroker(sock, shareConfig{Command: "termocode-no-such-server"}, session.CheckPeer)
+	if err == nil || !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("err %v", err)
+	}
+}
+
+func TestShareProgressTokenRoundTrip(t *testing.T) {
+	in := json.RawMessage(`{"name":"slow","_meta":{"progressToken":"termocode-1"}}`)
+	out := rewriteProgress(in, 7)
+	var p struct {
+		Meta struct {
+			Token string `json:"progressToken"`
+		} `json:"_meta"`
+	}
+	_ = json.Unmarshal(out, &p)
+	if p.Meta.Token != `c7:"termocode-1"` {
+		t.Fatalf("token %q", p.Meta.Token)
+	}
+	id, back, ok := routeProgress(json.RawMessage(`{"progressToken":` + mustJSON(p.Meta.Token) + `,"progress":3}`))
+	if !ok || id != 7 || !strings.Contains(string(back), `"progressToken":"termocode-1"`) {
+		t.Fatalf("route %d %s %v", id, back, ok)
+	}
+	if _, _, ok := routeProgress(json.RawMessage(`{"progressToken":"other"}`)); ok {
+		t.Fatal("a foreign token was routed")
+	}
+	plain := json.RawMessage(`{"name":"echo"}`)
+	if string(rewriteProgress(plain, 1)) != string(plain) {
+		t.Fatal("params without a token changed")
+	}
+}
+
+func mustJSON(v any) string {
+	b, _ := json.Marshal(v)
+	return string(b)
+}
