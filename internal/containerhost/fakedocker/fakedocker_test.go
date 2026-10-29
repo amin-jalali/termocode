@@ -176,3 +176,58 @@ func TestStreamCountsOpenStreams(t *testing.T) {
 		t.Fatal("stop not counted once")
 	}
 }
+
+func TestExecRunsShWithMappedPositionalArgs(t *testing.T) {
+	d := New()
+	c := d.Add(t, "api-1")
+	c.WriteFile(t, "/app/a b.txt", []byte("hi"), 0o644)
+	out, stderr, code, err := d.Capture(context.Background(), "", "docker", "exec", "-i", "-w", "/app", "-u", "1000", "api-1",
+		"sh", "-c", `cat -- "$1"; pwd`, "sh", "/app/a b.txt")
+	if err != nil || code != 0 || out != "hi/app\n" {
+		t.Fatalf("exec = %q %q %d %v", out, stderr, code, err)
+	}
+	ex := c.Execs()
+	if len(ex) != 1 || ex[0].Dir != "/app" || ex[0].User != "1000" || ex[0].Argv[0] != "sh" {
+		t.Fatalf("execs = %+v", ex)
+	}
+}
+
+func TestExecOnlyFindsImageTools(t *testing.T) {
+	d := New()
+	c := d.Add(t, "api-1")
+	out, _, code, _ := d.Capture(context.Background(), "", "docker", "exec", "api-1", "sh", "-c", "command -v git || echo none")
+	if code != 0 || out != "none\n" {
+		t.Fatalf("git found without AddTool: %q", out)
+	}
+	c.AddTool(t, "git")
+	out, _, _, _ = d.Capture(context.Background(), "", "docker", "exec", "api-1", "git", "status")
+	if out != "git status\n" {
+		t.Fatalf("tool = %q", out)
+	}
+	_, stderr, code, _ := d.Capture(context.Background(), "", "docker", "exec", "api-1", "gopls")
+	if code != 127 || !strings.Contains(stderr, "executable file not found") {
+		t.Fatalf("missing tool = %d %q", code, stderr)
+	}
+}
+
+func TestExecNoShellAndStopped(t *testing.T) {
+	d := New()
+	c := d.Add(t, "api-1")
+	c.NoShell()
+	if _, _, code, _ := d.Capture(context.Background(), "", "docker", "exec", "api-1", "sh", "-c", "true"); code != 127 {
+		t.Fatalf("sh ran in a distroless image: %d", code)
+	}
+	c.Stop()
+	_, stderr, code, _ := d.Capture(context.Background(), "", "docker", "exec", "api-1", "echo", "x")
+	if code == 0 || !strings.Contains(stderr, "is not running") {
+		t.Fatalf("stopped = %d %q", code, stderr)
+	}
+}
+
+func TestExecMissingWorkdir(t *testing.T) {
+	d := New()
+	d.Add(t, "api-1")
+	if _, _, code, _ := d.Capture(context.Background(), "", "docker", "exec", "-w", "/nope", "api-1", "echo"); code != 126 {
+		t.Fatalf("code = %d", code)
+	}
+}

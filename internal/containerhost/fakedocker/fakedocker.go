@@ -14,6 +14,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -51,9 +52,25 @@ type Container struct {
 	Name string
 	Root string
 
-	d      *Docker
-	owners map[string][2]int // container path → uid, gid
+	d       *Docker
+	owners  map[string][2]int // container path → uid, gid
+	bin     string            // the only PATH of commands run inside
+	stopped bool
+	noShell bool
+	execs   []Exec
 }
+
+// Exec is one `exec` call the fake ran (or refused).
+type Exec struct {
+	Dir  string // -w
+	User string // -u
+	Argv []string
+}
+
+// baseTools are the commands every fake image has (besides sh, unless
+// NoShell): real local programs, run with the container's paths mapped
+// to Root.
+var baseTools = []string{"mkdir", "mv", "rm", "id", "uname", "ls", "cat", "echo", "pwd", "sleep"}
 
 // New is a fake docker with no containers.
 func New() *Docker {
@@ -63,11 +80,57 @@ func New() *Docker {
 // Add creates a running container name whose "/" is a new temp folder.
 func (d *Docker) Add(t testing.TB, name string) *Container {
 	t.Helper()
-	c := &Container{Name: name, Root: t.TempDir(), d: d, owners: map[string][2]int{}}
+	root, err := filepath.EvalSymlinks(t.TempDir()) // macOS: /var → /private/var
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := &Container{Name: name, Root: root, d: d, owners: map[string][2]int{}, bin: t.TempDir()}
+	for _, tool := range baseTools {
+		if real, err := exec.LookPath(tool); err == nil {
+			if err := os.Symlink(real, filepath.Join(c.bin, tool)); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
 	d.mu.Lock()
 	d.cs[name] = c
 	d.mu.Unlock()
 	return c
+}
+
+// AddTool puts a command named name on the container's PATH: a script
+// that prints "<name> <args>" and exits 0.
+func (c *Container) AddTool(t testing.TB, name string) {
+	t.Helper()
+	_ = os.Remove(filepath.Join(c.bin, name))
+	body := "#!/bin/sh\necho " + name + " \"$@\"\n"
+	if err := os.WriteFile(filepath.Join(c.bin, name), []byte(body), 0o755); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// NoShell removes sh from the image (a distroless image).
+func (c *Container) NoShell() {
+	c.d.mu.Lock()
+	c.noShell = true
+	c.d.mu.Unlock()
+}
+
+// Stop stops the container; Start starts it again.
+func (c *Container) Stop()  { c.setStopped(true) }
+func (c *Container) Start() { c.setStopped(false) }
+
+func (c *Container) setStopped(v bool) {
+	c.d.mu.Lock()
+	c.stopped = v
+	c.d.mu.Unlock()
+}
+
+// Execs returns the exec calls the container got.
+func (c *Container) Execs() []Exec {
+	c.d.mu.Lock()
+	defer c.d.mu.Unlock()
+	return append([]Exec(nil), c.execs...)
 }
 
 // Local is the local path of the container path p.
@@ -232,6 +295,8 @@ func (d *Docker) run(ctx context.Context, args []string, input []byte) result {
 	switch args[0] {
 	case "cp":
 		return d.cp(args[1:], input)
+	case "exec":
+		return d.exec(ctx, args[1:], input)
 	}
 	return fail("fakedocker: unknown command %q", args[0])
 }
@@ -430,4 +495,92 @@ func (c *Container) cpIn(dir string, input []byte, archive bool) result {
 		c.d.mu.Unlock()
 	}
 	return result{}
+}
+
+// exec is `exec [-i] [-t] [-w dir] [-u user] c argv...`. sh runs as the
+// real /bin/sh; every other command must be on the container's PATH.
+// Arguments that start with "/" (for sh: the ones after the script and
+// $0) are mapped into Root, and Root is cut from the output.
+func (d *Docker) exec(ctx context.Context, args []string, input []byte) result {
+	var e Exec
+	for len(args) > 0 && strings.HasPrefix(args[0], "-") {
+		switch args[0] {
+		case "-i", "-t", "-it", "-ti", "--interactive", "--tty":
+			args = args[1:]
+		case "-w", "--workdir", "-u", "--user":
+			if len(args) < 2 {
+				return fail("flag needs an argument: %s", args[0])
+			}
+			if args[0] == "-w" || args[0] == "--workdir" {
+				e.Dir = args[1]
+			} else {
+				e.User = args[1]
+			}
+			args = args[2:]
+		default:
+			return fail("unknown flag: %s", args[0])
+		}
+	}
+	if len(args) < 2 {
+		return fail("\"docker exec\" requires at least 2 arguments")
+	}
+	c, ok := d.container(args[0])
+	if !ok {
+		return fail("Error response from daemon: No such container: %s", args[0])
+	}
+	e.Argv = append([]string(nil), args[1:]...)
+	d.mu.Lock()
+	c.execs = append(c.execs, e)
+	stopped, noShell := c.stopped, c.noShell
+	d.mu.Unlock()
+	if stopped {
+		return fail("Error response from daemon: container %s is not running", c.Name)
+	}
+	argv := e.Argv
+	notFound := result{err: fmt.Sprintf("OCI runtime exec failed: exec failed: unable to start container process: exec: %q: executable file not found in $PATH: unknown\n", argv[0]), code: 127}
+	prog := filepath.Join(c.bin, argv[0])
+	mapFrom := 1
+	if argv[0] == "sh" {
+		if noShell {
+			return notFound
+		}
+		prog = "/bin/sh"
+		if len(argv) >= 3 && argv[1] == "-c" {
+			mapFrom = 4
+		}
+	} else if strings.Contains(argv[0], "/") {
+		return notFound
+	} else if _, err := os.Stat(prog); err != nil {
+		return notFound
+	}
+	mapped := append([]string(nil), argv[1:]...)
+	for i := range mapped {
+		if i+1 >= mapFrom && strings.HasPrefix(mapped[i], "/") {
+			mapped[i] = c.Root + mapped[i]
+		}
+	}
+	dir := e.Dir
+	if dir == "" {
+		dir = "/"
+	}
+	if fi, err := os.Stat(c.Local(dir)); err != nil || !fi.IsDir() {
+		return result{err: "OCI runtime exec failed: exec failed: unable to start container process: chdir to cwd (\"" + dir + "\") set in config.json failed: no such file or directory: unknown\n", code: 126}
+	}
+	cmd := exec.CommandContext(ctx, prog, mapped...)
+	cmd.Dir = c.Local(dir)
+	cmd.Env = []string{"PATH=" + c.bin, "HOME=" + c.Root + "/root", "LC_ALL=C"}
+	cmd.Stdin = bytes.NewReader(input)
+	cmd.WaitDelay = 2 * time.Second
+	var out, errb bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &out, &errb
+	err := cmd.Run()
+	code := 0
+	var ee *exec.ExitError
+	if errors.As(err, &ee) {
+		code = ee.ExitCode()
+	} else if err != nil {
+		return fail("fakedocker: %v", err)
+	}
+	unmap := func(s string) string { return strings.ReplaceAll(s, c.Root, "") }
+	return result{out: unmap(out.String()), err: unmap(errb.String()), code: code}
 }
