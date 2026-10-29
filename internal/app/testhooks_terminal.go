@@ -9,6 +9,7 @@ type TerminalTabState struct {
 	FixChip            bool // the chip is set (it shows only while AI is on)
 	Agent, AgentState  string
 	Hidden             bool // the panel is hidden (Ctrl+T)
+	Panes              int  // shells in the tab (split panes + 1)
 }
 
 // TerminalTabStates lists the terminal tabs, shown ones first.
@@ -22,7 +23,7 @@ func (m Model) TerminalTabStates() []TerminalTabState {
 			}
 			out = append(out, TerminalTabState{Name: m.panelEntryNameOf(t), Cwd: t.Cwd, LastCmd: t.LastCmd,
 				LastExit: t.LastExit, Busy: t.Busy, Integrated: t.Integrated, FixChip: t.FixChip,
-				Agent: t.Agent, AgentState: st, Hidden: hidden})
+				Agent: t.Agent, AgentState: st, Hidden: hidden, Panes: t.paneCount()})
 		}
 	}
 	add(m.terminalTabs, false)
