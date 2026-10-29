@@ -17,6 +17,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/amin-jalali/termocode/internal/app"
+	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/workspace/localhost"
@@ -240,7 +241,8 @@ func kittyKeyboardOption(on bool) tea.ProgramOption {
 }
 
 func main() {
-	mcp.RunShareIfHelper() // a shared MCP server's broker (internal/mcp/share.go)
+	mcp.RunShareIfHelper()       // a shared MCP server's broker (internal/mcp/share.go)
+	git.RunRebaseHelperIfAsked() // git's editor during an interactive rebase (internal/git/rebase_helper.go)
 	tuneGC()
 	args, noSession := extractFlag(os.Args[1:], "--no-session")
 	if noSession {
