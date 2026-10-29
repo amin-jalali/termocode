@@ -123,3 +123,33 @@ func TestMoveIndexConflictLeftAlone(t *testing.T) {
 		t.Errorf("conflict entries moved: %q", got)
 	}
 }
+
+// Swapped names (a → b and b → a, as the bulk rename allows) move in one
+// step: each staged text ends up under its new name.
+func TestMoveIndexAllSwap(t *testing.T) {
+	r := newGitTestRepo(t)
+	r.write(t, "a.txt", "alpha\n")
+	r.write(t, "b.txt", "bravo\n")
+	r.git(t, "add", ".")
+	r.git(t, "commit", "-q", "-m", "init")
+	r.write(t, "a.txt", "alpha staged\n")
+	r.git(t, "add", "a.txt")
+	a, b, tmp := filepath.Join(r.dir, "a.txt"), filepath.Join(r.dir, "b.txt"), filepath.Join(r.dir, "tmp")
+	for _, mv := range [][2]string{{a, tmp}, {b, a}, {tmp, b}} {
+		if err := os.Rename(mv[0], mv[1]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := MoveIndexAll([]Move{{From: a, To: b}, {From: b, To: a}}); err != nil {
+		t.Fatalf("MoveIndexAll: %v", err)
+	}
+	if got := r.git(t, "show", ":b.txt"); got != "alpha staged\n" {
+		t.Errorf("index b.txt %q", got)
+	}
+	if got := r.git(t, "show", ":a.txt"); got != "bravo\n" {
+		t.Errorf("index a.txt %q", got)
+	}
+	if got := porcelain(t, r); got != "M  a.txt|M  b.txt" {
+		t.Errorf("status %q", got)
+	}
+}
