@@ -20,7 +20,7 @@ import (
 //	last row   key hints (when h ≥ 5)
 
 // FocusHint is the hint shown while the result (the editor) has the keys.
-const FocusHint = "gm in the result or a click here: merge keys"
+const FocusHint = "F6 or a click here: merge keys"
 
 const gutterW = 5 // "  12▎"
 
