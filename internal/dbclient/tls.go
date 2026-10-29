@@ -119,12 +119,3 @@ func errText(err error) string {
 	}
 	return err.Error()
 }
-
-// SSLHint adds what to change to a server error that asks for SSL.
-func SSLHint(msg string) string {
-	l := strings.ToLower(msg)
-	if strings.Contains(l, "no encryption") || strings.Contains(l, "requires secure transport") || strings.Contains(l, "ssl required") || strings.Contains(l, "ssl connection is required") {
-		return "server requires SSL · set \"ssl\": {\"mode\": \"require\"}"
-	}
-	return ""
-}
