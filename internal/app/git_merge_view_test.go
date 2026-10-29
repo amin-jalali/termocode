@@ -173,3 +173,24 @@ func TestMergePaletteWithoutView(t *testing.T) {
 		t.Error("took a foreign id")
 	}
 }
+
+func TestMergeResolvedClosesOrRefuses(t *testing.T) {
+	m := mergeTestModel(t, 150, 42)
+	m.onMergeResolved(mergeResolvedMsg{rel: "f.txt", err: git.ErrMarkersLeft})
+	if !m.mergeViewShown() || !strings.Contains(aiToastText(&m), "Can't mark as resolved") {
+		t.Errorf("markers left: shown %v toast %q", m.mergeViewShown(), aiToastText(&m))
+	}
+	m.gitFiles = []git.FileStatus{{Code: "UU", Path: "f.txt"}, {Code: "UU", Path: "g.txt"}}
+	m.onMergeResolved(mergeResolvedMsg{rel: "f.txt"})
+	if m.mergeViewShown() || !strings.Contains(aiToastText(&m), "Marked as resolved: f.txt") || !strings.Contains(aiToastText(&m), "1 more file") {
+		t.Errorf("resolved: shown %v toast %q", m.mergeViewShown(), aiToastText(&m))
+	}
+	m.gitFiles = nil
+	if got := m.mergeNextStep("f.txt"); got != "Commit to finish." {
+		t.Errorf("next step = %q", got)
+	}
+	m.gitRebase.InProgress = true
+	if got := m.mergeNextStep("f.txt"); !strings.Contains(got, "Continue the rebase") {
+		t.Errorf("rebase next step = %q", got)
+	}
+}

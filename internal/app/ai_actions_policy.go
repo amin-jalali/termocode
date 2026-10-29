@@ -232,6 +232,7 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	"git-merge-take-both-theirs-first": aiNever(aiNoMerge),
 	"git-merge-take-base":              aiNever(aiNoMerge),
 	"git-merge-undo":                   aiNever(aiNoMerge),
+	"git-merge-resolve":                aiNever(aiNoMerge),
 
 	// ── Workspace, session, settings ──
 	"workspace-add-folder":    aiNever(aiNoPicker + " (workspace_folders)"),
