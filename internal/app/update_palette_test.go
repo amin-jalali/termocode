@@ -2,8 +2,10 @@ package app
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/update"
 )
@@ -107,5 +109,22 @@ func TestUpdatePaletteRollback(t *testing.T) {
 	}
 	if m.confirmKind != confirmKindUpdateRestart || !m.confirmOpen {
 		t.Fatal("no restart card after the rollback")
+	}
+}
+
+// Opening the palette only looks for termocode.old: it writes nothing
+// next to the binary.
+func TestUpdatePaletteFilterWritesNothing(t *testing.T) {
+	exe := updInstalled(t, "")
+	dir := filepath.Dir(exe)
+	before, err := os.Stat(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(10 * time.Millisecond)
+	updPaletteIDs()
+	after, _ := os.Stat(dir)
+	if !after.ModTime().Equal(before.ModTime()) {
+		t.Fatal("the palette changed the binary's folder")
 	}
 }

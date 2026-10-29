@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -46,9 +47,12 @@ func updateCanRollback() bool {
 }
 
 // updateInstallPath is exe with symlinks resolved (where Apply wrote).
+// It only reads: the palette calls it on every open.
 func updateInstallPath(exe string) string {
-	d := updateDepsFor()
-	return update.Detect(exe, update.Env{Getenv: d.getenv}).Path
+	if real, err := filepath.EvalSymlinks(exe); err == nil {
+		return real
+	}
+	return exe
 }
 
 // dispatchUpdatePalette runs the update palette ids. ok=false: not ours.
