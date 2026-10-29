@@ -545,7 +545,7 @@ func (m *Model) beginClaudeOAuth() tea.Cmd {
 	}
 	m.aiS().pkce = &p
 	u := p.AuthorizeURL()
-	_ = defaultOpen(u)
+	_ = osOpen(u)
 	m.copyToClipboard(u)
 	m.prompt = prompt.New("✦ Sign in with Claude", "Browser opened (URL also copied). Paste the code here:", "")
 	m.prompt.SetMasked(true)
