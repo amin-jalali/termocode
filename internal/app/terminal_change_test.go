@@ -86,4 +86,14 @@ func TestTerminalChangeNoteToast(t *testing.T) {
 	if got := toastText(m2.(Model)); !strings.Contains(got, "Reconnected after 12 s") {
 		t.Errorf("no reconnect toast: %q", got)
 	}
+	// Keys were dropped: said in full, below the title.
+	m3, _ := m2.Update(TerminalChangedMsg{Gen: 4, Note: "Reconnected after 3 s · keys typed while offline were dropped"})
+	// As wide as the toast column of view.go (at most 52).
+	var got strings.Builder
+	for _, c := range m3.(Model).toast.Cards(52) {
+		got.WriteString(strings.Join(c.Lines, " "))
+	}
+	if !strings.Contains(got.String(), "keys typed while offline were dropped") {
+		t.Errorf("dropped keys not said in full: %q", got.String())
+	}
 }

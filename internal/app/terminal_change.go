@@ -2,6 +2,7 @@ package app
 
 import (
 	"os"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -40,8 +41,14 @@ func (m *Model) applyTerminalChange(msg TerminalChangedMsg) tea.Cmd {
 	if msg.Note == "" {
 		return nil
 	}
+	// "Reconnected after 12 s · keys typed while offline were dropped":
+	// the second part goes below the title, where it has room.
 	var cmd tea.Cmd
-	m.toast, cmd = m.toast.Push(toast.Info, msg.Note)
+	if title, detail, ok := strings.Cut(msg.Note, " · "); ok {
+		m.toast, cmd = m.toast.PushDetail(toast.Info, title, detail)
+	} else {
+		m.toast, cmd = m.toast.Push(toast.Info, msg.Note)
+	}
 	return cmd
 }
 
