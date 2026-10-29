@@ -605,8 +605,8 @@ func (m Model) buttonColumnsFind() (chev, caseCol, word, regex, prev, next, menu
 	rightW := rightChromeWidth()
 	// findInputW consumes the leftover after fixed-width chrome.
 	findInputW := innerW - fbLeadPad - fbChevW - fbChevGap - fbCursorW - rightW - fbTrailPad
-	if findInputW < 8 {
-		findInputW = 8
+	if findInputW < 1 {
+		findInputW = 1
 	}
 
 	innerChev := fbLeadPad
@@ -673,8 +673,8 @@ func (m Model) buttonColumnsReplace() (oneCol, allCol int) {
 	// Same flex math as the find row so the input sits under the find input.
 	rightW := rightChromeWidth()
 	findInputW := innerW - fbLeadPad - fbChevW - fbChevGap - fbCursorW - rightW - fbTrailPad
-	if findInputW < 8 {
-		findInputW = 8
+	if findInputW < 1 {
+		findInputW = 1
 	}
 
 	const replOneW = 1
@@ -862,8 +862,8 @@ func (m Model) renderFindRow(innerW int) string {
 	rightW := rightChromeWidth()
 
 	findInputW := innerW - fbLeadPad - fbChevW - fbChevGap - fbCursorW - rightW - fbTrailPad
-	if findInputW < 8 {
-		findInputW = 8
+	if findInputW < 1 {
+		findInputW = 1
 	}
 
 	// Chevron — points right when collapsed, down when expanded.
@@ -952,8 +952,8 @@ func (m Model) renderReplaceRow(innerW int) string {
 
 	rightW := rightChromeWidth()
 	findInputW := innerW - fbLeadPad - fbChevW - fbChevGap - fbCursorW - rightW - fbTrailPad
-	if findInputW < 8 {
-		findInputW = 8
+	if findInputW < 1 {
+		findInputW = 1
 	}
 
 	disabled := m.input == "" || m.matchCount == "0" || m.matchCount == "0/0"
