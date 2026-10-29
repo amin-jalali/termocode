@@ -10,6 +10,19 @@ const hotExitLua = `
 local dir = ...
 local uv = vim.uv or vim.loop
 local timer
+local warned = false
+
+-- A backup that cannot be written (read-only or full state folder) is
+-- said once in plain words, not as a Lua error on every key; the text is
+-- still in the editor.
+local function failed()
+  if warned then return end
+  warned = true
+  vim.schedule(function()
+    vim.notify('termocode: Cannot back up unsaved changes: no permission to write '
+      .. vim.fn.fnamemodify(dir, ':~') .. ' (or the disk is full). Save your files.', vim.log.levels.WARN)
+  end)
+end
 
 local function flush()
   if timer then timer:stop() end
@@ -21,16 +34,20 @@ local function flush()
       local path = vim.api.nvim_buf_get_name(b)
       if path ~= '' then
         if not made then
-          vim.fn.mkdir(dir, 'p', 448) -- 0700
-          made = true
+          made = pcall(vim.fn.mkdir, dir, 'p', 448) -- 0700
+          if not made then failed() return end
         end
         local name = vim.fn.sha256(path):sub(1, 16) .. '.bak'
         keep[name] = true
         local lines = vim.api.nvim_buf_get_lines(b, 0, -1, false)
         table.insert(lines, 1, path)
         local tmp = dir .. '/' .. name .. '.tmp'
-        if vim.fn.writefile(lines, tmp, 'b') == 0 then
-          os.rename(tmp, dir .. '/' .. name)
+        local ok, res = pcall(vim.fn.writefile, lines, tmp, 'b')
+        if ok and res == 0 and os.rename(tmp, dir .. '/' .. name) then
+          warned = false
+        else
+          os.remove(tmp)
+          failed()
         end
       end
     end
