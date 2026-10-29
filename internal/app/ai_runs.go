@@ -962,6 +962,9 @@ func (m *Model) aiRetryRun(i int) tea.Cmd {
 	}
 	rm := s.conv.Messages[i]
 	prof, ok := s.profiles.Get(rm.Run.Profile)
+	if p, in := s.runInline[rm.Run.ID]; in { // G-API: the AI's own steps (this session)
+		prof, ok = p, true
+	}
 	if !ok {
 		return m.aiInfo("Profile " + rm.Run.Profile + " no longer exists; send the message again")
 	}

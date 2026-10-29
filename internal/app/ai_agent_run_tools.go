@@ -33,10 +33,10 @@ import (
 // outside agents never get them (mcpServeAllowList).
 
 const (
-	aiRunMaxDepth  = 2       // chat → AI run → its child; the child's steps cannot start another
-	aiRunMaxActive = 3       // AI-started runs that wait or run at once
-	aiRunInline    = "steps" // the profile name of a run with the AI's own steps
-	aiRunTaskMax   = 8000    // runes of a task
+	aiRunMaxDepth  = 2          // chat → AI run → its child; the child's steps cannot start another
+	aiRunMaxActive = 3          // AI-started runs that wait or run at once
+	aiRunInline    = "AI steps" // the profile name of a run with the AI's own steps (never a valid profile name)
+	aiRunTaskMax   = 8000       // runes of a task
 )
 
 // aiAgentRunToolNames are the tools of this file, in list order.
@@ -236,10 +236,11 @@ func (sn aiRunSnap) checkStart(a map[string]any) (aiRunStartReq, error) {
 		if err != nil {
 			return r, err
 		}
-		p.Name, p.Title = aiRunInline, "steps from the AI"
+		p.Name, p.Title = "ai-steps", "steps from the AI" // a valid name to check the steps by profiles.json's rules
 		if err := ai.ValidateProfile(p, sn.slots, sn.parallel); err != nil {
 			return r, fmt.Errorf("%v (models_list names the slots)", err)
 		}
+		p.Name = aiRunInline
 		for i := range p.Steps { // as profiles.json fills them
 			if p.Steps[i].ID == "" {
 				p.Steps[i].ID = "step-" + strconv.Itoa(i+1)
@@ -294,7 +295,7 @@ func (sn aiRunSnap) describeStart(a map[string]any) string {
 	}
 	var b strings.Builder
 	what := "profile " + r.prof.Name
-	if r.prof.Name == aiRunInline && r.prof.Source == ai.ProfileSourceUser {
+	if r.prof.Name == aiRunInline {
 		what = "steps the AI wrote"
 	}
 	fmt.Fprintf(&b, "Start an agent run with %s (%d step%s):\n", what, len(r.prof.Steps), plural(len(r.prof.Steps)))
@@ -409,7 +410,7 @@ func (m *Model) aiStartQueuedRun() tea.Cmd {
 			}
 			q.by.Budget = left
 		}
-		if q.prof.Name == aiRunInline && q.prof.Source == ai.ProfileSourceUser {
+		if q.prof.Name == aiRunInline {
 			if s.runInline == nil {
 				s.runInline = map[string]ai.Profile{}
 			}

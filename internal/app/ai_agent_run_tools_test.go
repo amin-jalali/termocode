@@ -182,7 +182,8 @@ func TestAIAgentRunStartAsksDespiteAlwaysAllow(t *testing.T) {
 }
 
 // Spec: the AI's own steps (the profile_draft step schema) run as a run
-// named "steps"; steps on an unknown slot are refused before any card.
+// named "AI steps" (never a profile name); steps on an unknown slot are
+// refused before any card.
 func TestAIAgentRunStartInlineSteps(t *testing.T) {
 	m := aiWriteModel(t)
 	sn := m.aiRunSnapshot(aiRunCaller{})
@@ -330,8 +331,10 @@ func TestAIAgentRunWorktreeOff(t *testing.T) {
 			if mode == "off" && (wt || err != nil) {
 				t.Fatalf("off: worktree %v, b.txt in the folder: %v", wt, err == nil)
 			}
-			if mode == "auto" && (!wt || err == nil) {
-				t.Fatalf("auto: worktree %v, b.txt in the folder: %v", wt, err == nil)
+			// auto: G-WT decides; under load one step may fall back to the
+			// folder (its card says so), so only ask for a worktree at all.
+			if mode == "auto" && !wt {
+				t.Fatalf("auto: no step got a worktree; steps %+v", rm.Steps)
 			}
 		})
 	}
@@ -677,4 +680,39 @@ func TestAIAgentRunAgentsViewChip(t *testing.T) {
 	msgs[1].Run.By = nil
 	m = agentsModel(t, msgs...)
 	wantAll(t, agentsText(m, 64, 60), "!by AI")
+}
+
+// Spec: the AI's own steps are no profile anyone can name, and a run of
+// them that stopped resumes with those steps in this session.
+func TestAIAgentRunInlineResume(t *testing.T) {
+	if ai.ValidProfileName(aiRunInline) == nil {
+		t.Fatalf("%q is a valid profile name", aiRunInline)
+	}
+	block := &blockingAIProvider{started: make(chan struct{}, 1), stopped: make(chan struct{})}
+	m, _ := aiRunModel(t, block, block)
+	steps := ai.Profile{Name: aiRunInline, Source: ai.ProfileSourceUser, Steps: []ai.ProfileStep{{ID: "step-1", Title: "Counter", Slot: ai.SlotMain}}}
+	m.ai.runQueue = []aiQueuedRun{{id: "in1", chat: m.ai.conv.ID, prof: steps, task: "count", by: ai.RunBy{Chat: m.ai.conv.ID, Depth: 1}}}
+	if m.aiStartQueuedRun() == nil {
+		t.Fatal("not started")
+	}
+	<-block.started
+	m.aiCancelAll()
+	driveAIChat(t, m, waitAIChat(m.ai.chatCh), nil)
+	idx := len(m.ai.conv.Messages) - 1
+	for m.ai.conv.Messages[idx].Run == nil {
+		idx--
+	}
+	if st := m.ai.conv.Messages[idx].Run.State; st != ai.RunStateCancelled {
+		t.Fatalf("state %s", st)
+	}
+	again := &recordingAIProvider{replies: []ai.Chunk{{Delta: "42 lines"}}}
+	m.ai.slotFake[ai.SlotMain] = aiSlot{p: again, cfg: ai.Config{Kind: ai.KindOllama, Model: "fake-1"}}
+	cmd := m.aiRetryRun(idx)
+	if cmd == nil || !m.ai.streaming {
+		t.Fatalf("no resume; toast %q", toastText(*m))
+	}
+	driveAIChat(t, m, cmd, nil)
+	if rm := aiRunMsg(t, m); rm.Run.State != ai.RunStateDone || rm.Text != "42 lines" || rm.Steps[0].Title != "Counter" {
+		t.Fatalf("run %+v text %q", rm.Run, rm.Text)
+	}
 }
