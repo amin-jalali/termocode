@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/amin-jalali/termocode/internal/editor"
 	"github.com/amin-jalali/termocode/internal/nvim"
 )
 
@@ -32,6 +33,7 @@ func covNvimModel(t *testing.T, w, h int) Model {
 	}
 	m := New()
 	m.nvim = c
+	m.editor = editor.New(c)
 	m, _ = m.update(tea.WindowSizeMsg{Width: w, Height: h})
 	m.invalidateTerminalProbeCache()
 	return m
