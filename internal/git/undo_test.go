@@ -227,3 +227,49 @@ func TestRunUndoCheckout(t *testing.T) {
 		t.Errorf("feat/x moved to %s", got)
 	}
 }
+
+// G-UND: Redo puts HEAD back where the undo found it, for a reset and for
+// a checkout.
+func TestRunRedo(t *testing.T) {
+	r, h := rebaseRepo(t, 3)
+	p, _ := PlanUndo(r.dir)
+	res, err := RunUndo(r.dir, p, UndoOptions{})
+	if err != nil || res.After != h[1] {
+		t.Fatalf("undo %+v %v", res, err)
+	}
+	if err := RunRedo(r.dir, p, res.After); err != nil {
+		t.Fatal(err)
+	}
+	if headOf(t, r) != h[2] || !fileExists(r, "f3.txt") {
+		t.Errorf("not redone")
+	}
+
+	r.git(t, "checkout", "-q", "-b", "feat/x", h[0])
+	p, _ = PlanUndo(r.dir)
+	res, err = RunUndo(r.dir, p, UndoOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := RunRedo(r.dir, p, res.After); err != nil {
+		t.Fatal(err)
+	}
+	if b := strings.TrimSpace(r.git(t, "branch", "--show-current")); b != "feat/x" || headOf(t, r) != h[0] {
+		t.Errorf("on %q at %s", b, headOf(t, r))
+	}
+}
+
+// G-UND: Redo refuses once HEAD moved after the undo.
+func TestRunRedoStale(t *testing.T) {
+	r, h := rebaseRepo(t, 3)
+	p, _ := PlanUndo(r.dir)
+	res, _ := RunUndo(r.dir, p, UndoOptions{})
+	r.write(t, "f9.txt", "9\n")
+	r.git(t, "add", "-A")
+	r.git(t, "commit", "-q", "-m", "c9")
+	if err := RunRedo(r.dir, p, res.After); !errors.Is(err, ErrUndoStale) {
+		t.Fatalf("err %v", err)
+	}
+	if headOf(t, r) == h[2] {
+		t.Error("HEAD moved back to c3")
+	}
+}

@@ -152,6 +152,7 @@ type UndoOptions struct {
 
 // UndoResult is how an undo went.
 type UndoResult struct {
+	After     string // full hash of HEAD after the undo (Redo checks it)
 	Stashed   bool   // local changes were stashed (and popped unless StashKept)
 	StashKept bool   // they did not go back cleanly: the stash is still there
 	StashRef  string // the stash that holds them ("stash@{0}") when kept
@@ -168,20 +169,23 @@ func RunUndo(dir string, p UndoPlan, opt UndoOptions) (UndoResult, error) {
 	if op := OperationInProgress(dir); op != "" {
 		return UndoResult{}, &BusyError{Op: op}
 	}
-	if head, err := runOut(dir, "git", "rev-parse", "--verify", "-q", "HEAD"); err != nil || strings.TrimSpace(head) != p.From {
+	if headHash(dir) != p.From {
 		return UndoResult{}, ErrUndoStale
 	}
 	if !opt.Stash || !WorkTreeDirty(dir) {
-		return UndoResult{}, moveHead(dir, p)
+		if err := moveHead(dir, p); err != nil {
+			return UndoResult{}, err
+		}
+		return UndoResult{After: headHash(dir)}, nil
 	}
 	if err := Stash(dir, undoStashMessage); err != nil {
 		return UndoResult{}, err
 	}
-	res := UndoResult{Stashed: true}
 	if err := moveHead(dir, p); err != nil {
 		_ = StashPop(dir) // put the changes back where they were
 		return UndoResult{}, err
 	}
+	res := UndoResult{Stashed: true, After: headHash(dir)}
 	if err := StashPop(dir); err != nil {
 		// git keeps the stash when the pop stops on a conflict.
 		res.StashKept, res.StashRef = true, "stash@{0}"
@@ -206,4 +210,38 @@ func moveHead(dir string, p UndoPlan) error {
 		return cmdError(err, out)
 	}
 	return nil
+}
+
+// headHash is the full hash of HEAD ("" without commits).
+func headHash(dir string) string {
+	out, err := runOut(dir, "git", "rev-parse", "--verify", "-q", "HEAD")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
+}
+
+// RunRedo takes back the undo of p: HEAD goes back to p.From (or the
+// switch goes back to p.Branch). after is HEAD right after the undo; when
+// HEAD (or the branch) changed since, Redo refuses with ErrUndoStale.
+func RunRedo(dir string, p UndoPlan, after string) error {
+	if op := OperationInProgress(dir); op != "" {
+		return &BusyError{Op: op}
+	}
+	branch, _ := runOut(dir, "git", "branch", "--show-current")
+	want := p.Branch
+	if p.Switch != "" {
+		want = p.Switch
+	}
+	if headHash(dir) != after || strings.TrimSpace(branch) != want {
+		return ErrUndoStale
+	}
+	back := UndoPlan{Target: p.From}
+	if p.Switch != "" {
+		if p.Branch == "" {
+			return errors.New("can't redo: the undo left a detached HEAD")
+		}
+		back.Switch = p.Branch
+	}
+	return moveHead(dir, back)
 }
