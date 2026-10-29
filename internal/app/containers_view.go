@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -406,6 +407,7 @@ func (st *servicesState) imageRowsOf(key string) []svcRow {
 	if len(repos) == 0 {
 		return []svcRow{{kind: svcRowHint, section: key, text: "No images"}}
 	}
+	inUse := st.imageUseCounts(byRepo)
 	var out []svcRow
 	for _, repo := range repos {
 		gkey := hostGroup("images", repo)
@@ -415,7 +417,7 @@ func (st *servicesState) imageRowsOf(key string) []svcRow {
 		}
 		count := strconv.Itoa(uniqueImages(st.imageRows, byRepo[repo]))
 		if repo != danglingRepo {
-			if used := st.imagesInUse(byRepo[repo]); used > 0 {
+			if used := inUse[repo]; used > 0 {
 				count += " · " + strconv.Itoa(used) + " in use"
 			}
 		}
@@ -443,23 +445,48 @@ func uniqueImages(images []containers.Image, refs []imageRef) int {
 	return len(seen)
 }
 
-func (st *servicesState) imagesInUse(refs []imageRef) int {
-	ids, names := map[string]bool{}, map[string]bool{}
-	for _, ref := range refs {
-		im := st.imageRows[ref.idx]
-		ids[strings.TrimPrefix(im.ID, "sha256:")] = true
+// imageUseCounts is the "N in use" of each repository: the containers
+// that run one of its images, by image ID or by any tag of those images.
+// A container counts once per repository. One pass over the containers
+// for all repositories (it was one pass per repository).
+func (st *servicesState) imageUseCounts(byRepo map[string][]imageRef) map[string]int {
+	reposOf := make([][]string, len(st.imageRows)) // image index → the repositories that list it
+	for repo, refs := range byRepo {
+		for _, ref := range refs {
+			if !slices.Contains(reposOf[ref.idx], repo) {
+				reposOf[ref.idx] = append(reposOf[ref.idx], repo)
+			}
+		}
+	}
+	byID, byTag := map[string][]int{}, map[string][]int{}
+	for i, im := range st.imageRows {
+		if len(reposOf[i]) == 0 {
+			continue
+		}
+		id := strings.TrimPrefix(im.ID, "sha256:")
+		byID[id] = append(byID[id], i)
 		for _, tag := range im.RepoTags {
-			names[tag] = true
+			byTag[tag] = append(byTag[tag], i)
 		}
 	}
-	used := 0
+	counts := make(map[string]int, len(byRepo))
+	var hit []string
 	for _, c := range st.containerRows {
-		id := strings.TrimPrefix(c.ImageID, "sha256:")
-		if ids[id] || names[c.Image] {
-			used++
+		hit = hit[:0]
+		for _, list := range [][]int{byID[strings.TrimPrefix(c.ImageID, "sha256:")], byTag[c.Image]} {
+			for _, i := range list {
+				for _, repo := range reposOf[i] {
+					if !slices.Contains(hit, repo) {
+						hit = append(hit, repo)
+					}
+				}
+			}
+		}
+		for _, repo := range hit {
+			counts[repo]++
 		}
 	}
-	return used
+	return counts
 }
 
 func storageRowDetail(st *servicesState, r svcRow) string {
