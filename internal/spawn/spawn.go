@@ -47,8 +47,12 @@ func CommandContext(ctx context.Context, name string, arg ...string) *exec.Cmd {
 
 // Fix rewrites a not yet started cmd for the trampoline on Android. Use
 // it when the code changes cmd.Path or cmd.Args after exec.Command.
-func Fix(cmd *exec.Cmd) *exec.Cmd {
-	if !onAndroid || cmd.Err != nil || len(cmd.Args) == 0 {
+func Fix(cmd *exec.Cmd) *exec.Cmd { return fixFor(cmd, onAndroid) }
+
+// fixFor is Fix with the platform as a parameter, so the Android path is
+// tested on every OS.
+func fixFor(cmd *exec.Cmd, android bool) *exec.Cmd {
+	if !android || cmd.Err != nil || len(cmd.Args) == 0 {
 		return cmd
 	}
 	if path, args, ok := trampoline(cmd.Path, cmd.Args); ok {
@@ -59,12 +63,19 @@ func Fix(cmd *exec.Cmd) *exec.Cmd {
 
 // Exec is syscall.Exec, through the trampoline on Android.
 func Exec(argv0 string, argv []string, envv []string) error {
-	if onAndroid {
+	argv0, argv = execArgs(argv0, argv, onAndroid)
+	return syscall.Exec(argv0, argv, envv)
+}
+
+// execArgs is what Exec runs: argv0 and argv as given, or the trampoline
+// on Android.
+func execArgs(argv0 string, argv []string, android bool) (string, []string) {
+	if android {
 		if path, args, ok := trampoline(argv0, argv); ok {
-			argv0, argv = path, args
+			return path, args
 		}
 	}
-	return syscall.Exec(argv0, argv, envv)
+	return argv0, argv
 }
 
 // trampoline returns the system shell call that execs path with argv[1:],
@@ -102,8 +113,10 @@ func Executable() (string, error) {
 
 // selfExe is $TERMUX_EXEC__PROC_SELF_EXE made absolute at start (it can
 // be relative to the start dir). termux-exec sets it to the file it ran.
-var selfExe = func() string {
-	p := os.Getenv("TERMUX_EXEC__PROC_SELF_EXE")
+var selfExe = absPath(os.Getenv("TERMUX_EXEC__PROC_SELF_EXE"))
+
+// absPath makes p absolute ("" stays "").
+func absPath(p string) string {
 	if p == "" {
 		return ""
 	}
@@ -111,7 +124,7 @@ var selfExe = func() string {
 		return abs
 	}
 	return p
-}()
+}
 
 // realExecutable picks the env path when /proc/self/exe is the linker.
 func realExecutable(exe, self string) string {
