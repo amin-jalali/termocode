@@ -1664,17 +1664,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	case keymap.ActionQuit:
 		return m, m.quit()
 	case keymap.ActionSave:
-		var toastCmd tea.Cmd
-		if err := m.editor.Save(); err != nil {
-			text := saveFailText(m.editor.Path(), err)
-			m.err = text
-			m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Save failed", text)
-		} else if p := m.editor.Path(); p != "" {
-			m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Saved", saveDetail(p))
-			m.onAIProfilesSaved(p)
-			toastCmd = tea.Batch(toastCmd, m.onMCPServeConfigSaved(p), m.onAIPlanSaved(p)) // mcp_server changed; G-PLAN
-		}
-		return m, tea.Batch(fetchGitCmd(), toastCmd)
+		return m, m.saveActiveFile() // save_conflict.go: asks when the file changed on disk
 	case keymap.ActionSaveAll:
 		return m, tea.Batch(fetchGitCmd(), m.saveAll())
 	case keymap.ActionToggleExplorer:

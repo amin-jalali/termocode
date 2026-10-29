@@ -50,13 +50,24 @@ vim.api.nvim_create_autocmd('FileChangedShell', {
 		end
 	end,
 })
+-- termocode_mtime: the file's mtime when the buffer last matched it
+-- (read, written, reloaded). Ctrl+S compares it with the disk
+-- (save_conflict.go): :checktime inside an RPC call is postponed.
+_G._termocode_mtime = function(buf)
+	local st = (vim.uv or vim.loop).fs_stat(vim.api.nvim_buf_get_name(buf))
+	return st and (st.mtime.sec .. '.' .. st.mtime.nsec) or nil
+end
 vim.api.nvim_create_autocmd({ 'BufWritePost', 'BufReadPost' }, {
 	group = 'TermocodeFileReload',
-	callback = function(args) vim.b[args.buf].termocode_disk_warned = nil end,
+	callback = function(args)
+		vim.b[args.buf].termocode_disk_warned = nil
+		vim.b[args.buf].termocode_mtime = _G._termocode_mtime(args.buf)
+	end,
 })
 vim.api.nvim_create_autocmd('FileChangedShellPost', {
 	group = 'TermocodeFileReload',
 	callback = function(args)
+		if args.buf and args.buf > 0 then vim.b[args.buf].termocode_mtime = _G._termocode_mtime(args.buf) end
 		local name = args.file or vim.api.nvim_buf_get_name(args.buf or 0)
 		if name == nil or name == '' then return end
 		vim.g.termocode_last_reload = name
