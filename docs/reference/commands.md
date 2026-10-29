@@ -342,6 +342,8 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Pull Requests… | `git-pr-list` |   |   |
 | Git: Push | `git-push` |   |   |
 | Git: Rebase in Progress (Continue / Skip / Abort)… | `git-rebase-status` |   |   |
+| Git: Redo Undone Git Action | `git-redo` |   |   |
+| Git: Reflog… | `git-reflog` |   |   |
 | Git: Refresh Status | `git-refresh` |   |   |
 | Git: Show Diff for Current File | `git-diff` |   |   |
 | Git: Show File History... | `git-history` |   |   |
@@ -356,6 +358,7 @@ Open the palette with `F1` and type a few letters of a command. **Key** is the d
 | Git: Switch Branch... | `git-branch` |   |   |
 | Git: Sync (Pull, then Push) | `git-sync` |   |   |
 | Git: Toggle Tree/Flat View | `git-view-toggle` |   |   |
+| Git: Undo Last Git Action… | `git-undo` |   |   |
 | Git: Unstage Hunk (at cursor) | `git-unstage-hunk` | `Alt+U` | `Alt+U` |
 | Git: Unstage Line (or Selected Lines) | `git-unstage-lines` | `Alt+Shift+U` | `Alt+Shift+U` |
 

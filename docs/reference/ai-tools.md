@@ -1752,6 +1752,8 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `git-push` | Git: Push | confirm (always asks) |   |
 | `git-rebase` | Git: Interactive Rebase… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-rebase-status` | Git: Rebase in Progress (Continue / Skip / Abort)… | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-redo` | Git: Redo Undone Git Action | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |
+| `git-reflog` | Git: Reflog… | never | opens a picker or prompt that only the user can answer; use a typed tool |
 | `git-refresh` | Git: Refresh Status | auto |   |
 | `git-stage` | Git: Stage Current File | confirm (git) |   |
 | `git-stage-all` | Git: Stage All Changes | confirm (git) |   |
@@ -1762,6 +1764,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `git-stash-pop` | Git: Pop Latest Stash | confirm (git) |   |
 | `git-sync` | Git: Sync (Pull, then Push) | confirm (always asks) |   |
 | `git-tags` | Git: Show Tags... | never | opens a picker or prompt that only the user can answer; use a typed tool |
+| `git-undo` | Git: Undo Last Git Action… | never | moves HEAD back (undo, redo, reflog); only the user rewinds git history |
 | `git-unstage-hunk` | Git: Unstage Hunk (at cursor) | confirm (git) |   |
 | `git-unstage-lines` | Git: Unstage Line (or Selected Lines) | confirm (git) |   |
 | `git-view-toggle` | Git: Toggle Tree/Flat View | auto |   |
