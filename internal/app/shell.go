@@ -751,6 +751,9 @@ func (m *Model) resizeTerminalSplit() {
 		// Minimized — squash the split to 1 row (nvim won't allow 0).
 		rows = 1
 	}
+	if m.resizeTerminalPanes(rows) { // several panes: terminal_split.go
+		return
+	}
 	// Prefer the known panel window (it may hold the non-terminal
 	// placeholder buffer); fall back to the first terminal window.
 	_ = m.nvim.ExecLua(fmt.Sprintf(`

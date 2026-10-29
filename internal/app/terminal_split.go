@@ -529,3 +529,43 @@ func (m *Model) exitedPaneKey(msg tea.KeyMsg) bool {
 	}
 	return false
 }
+
+// resizeTerminalPanes sets the panel to rows shell rows when the active tab
+// has several panes, and reports whether it did. Panes can be stacked, so
+// the height of one window is not the height of the panel: the editor window
+// above it is resized instead and the space moves to or from the panes.
+func (m *Model) resizeTerminalPanes(rows int) bool {
+	tab := m.activeTerminalTab()
+	if tab == nil || tab.paneCount() < 2 || m.panelActive != panelKindTerminal {
+		return false
+	}
+	wins := []int{}
+	for i := 0; i < tab.paneCount(); i++ {
+		if w := m.paneWin(*tab, i); w > 0 {
+			wins = append(wins, w)
+		}
+	}
+	_ = m.nvim.ExecLua(fmt.Sprintf(`
+		local rows, wins = %d, {%s}
+		local bottom = 0
+		for _, w in ipairs(wins) do
+			if vim.api.nvim_win_is_valid(w) then
+				bottom = math.max(bottom, vim.api.nvim_win_get_position(w)[1] + vim.api.nvim_win_get_height(w) + 1)
+			end
+		end
+		local ed, edBottom = nil, -1
+		for _, w in ipairs(vim.api.nvim_list_wins()) do
+			if not vim.w[w].termocode_panel and vim.api.nvim_win_get_config(w).relative == '' then
+				local b = vim.api.nvim_win_get_position(w)[1] + vim.api.nvim_win_get_height(w)
+				if b > edBottom then ed, edBottom = w, b end
+			end
+		end
+		if not ed then return end
+		-- Everything below the editor's status line, down to the last pane's
+		-- status line, is the panel: it must be rows + 1 tall.
+		local delta = (bottom - (edBottom + 1)) - (rows + 1)
+		if delta ~= 0 then
+			pcall(vim.api.nvim_win_set_height, ed, vim.api.nvim_win_get_height(ed) + delta)
+		end`, rows, intList(wins)))
+	return true
+}

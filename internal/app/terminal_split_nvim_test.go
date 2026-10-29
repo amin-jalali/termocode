@@ -328,6 +328,44 @@ func TestExitedPaneEnterRestartsAndXCloses(t *testing.T) {
 	}
 }
 
+// panelRegion returns how many rows the panel takes: everything below the
+// editor's status line down to the last pane's status line.
+func panelRegion(t *testing.T, m *Model) int {
+	t.Helper()
+	tab := m.terminalTabs[0]
+	wins := []int{}
+	for i := 0; i < tab.paneCount(); i++ {
+		wins = append(wins, m.paneWin(tab, i))
+	}
+	out, _ := m.nvim.EvalLuaString(`local bottom = 0
+		for _, w in ipairs({` + intList(wins) + `}) do
+			bottom = math.max(bottom, vim.api.nvim_win_get_position(w)[1] + vim.api.nvim_win_get_height(w) + 1)
+		end
+		local eb = 0
+		for _, w in ipairs(vim.api.nvim_list_wins()) do
+			if not vim.w[w].termocode_panel then
+				eb = vim.api.nvim_win_get_position(w)[1] + vim.api.nvim_win_get_height(w) + 1
+			end
+		end
+		return tostring(bottom - eb)`)
+	return parseInt(out)
+}
+
+func TestResizeKeepsStackedPanelHeight(t *testing.T) {
+	m := splitTestModel(t, 120, 40)
+	m.splitTerminalPane(paneDown)
+	if got := panelRegion(t, m); got != 13 {
+		t.Fatalf("before resize the panel is %d rows, want 13 (12 + its status line)", got)
+	}
+	for _, rows := range []int{20, 9} {
+		m.terminalRows = rows
+		m.resizeTerminalSplit()
+		if got := panelRegion(t, m); got != rows+1 {
+			t.Errorf("terminalRows=%d: the panel is %d rows, want %d", rows, got, rows+1)
+		}
+	}
+}
+
 func TestSplitKeepsTheEditorHeight(t *testing.T) {
 	m := splitTestModel(t, 120, 40)
 	editorH := func() int {
