@@ -38,45 +38,69 @@ func TestShareKeySameConfigSameKey(t *testing.T) {
 	}
 }
 
-func TestShareDirIsPrivateAndSaltIsKept(t *testing.T) {
+// bothTMPDIRs runs f with the normal $TMPDIR and with one as long as
+// macOS's, where the sockets go to a short /tmp folder.
+func bothTMPDIRs(t *testing.T, f func(t *testing.T)) {
+	t.Run("tmp", f)
+	t.Run("long-tmp", func(t *testing.T) {
+		longTMPDIR(t)
+		f(t)
+	})
+}
+
+func TestShareDirIsPrivateAndSaltIsKept(t *testing.T) { bothTMPDIRs(t, testShareDirIsPrivate) }
+
+func testShareDirIsPrivate(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "mcp")
+	used := ShareSocketDir(dir) // dir, or a short /tmp folder under a long $TMPDIR
+	cleanShareDir(t, used)
 	got, err := shareDir(&ShareOptions{Dir: dir})
-	if err != nil || got != dir {
-		t.Fatalf("shareDir = %q, %v", got, err)
+	if err != nil || got != used {
+		t.Fatalf("shareDir = %q, %v; want %q", got, err, used)
 	}
-	fi, _ := os.Stat(dir)
+	fi, _ := os.Stat(used)
 	if fi.Mode().Perm() != 0o700 {
 		t.Fatalf("dir mode %o", fi.Mode().Perm())
 	}
-	s1, err := shareSalt(dir)
+	s1, err := shareSalt(used)
 	if err != nil || len(s1) != 32 {
 		t.Fatalf("salt %v", err)
 	}
-	fi, _ = os.Stat(filepath.Join(dir, "salt"))
+	fi, _ = os.Stat(filepath.Join(used, "salt"))
 	if fi.Mode().Perm() != 0o600 {
 		t.Fatalf("salt mode %o", fi.Mode().Perm())
 	}
-	s2, _ := shareSalt(dir)
+	s2, _ := shareSalt(used)
 	if string(s1) != string(s2) {
 		t.Fatal("a second session got another salt")
 	}
 }
 
-func TestShareDirRefusesLooseFolder(t *testing.T) {
+func TestShareDirRefusesLooseFolder(t *testing.T) { bothTMPDIRs(t, testShareDirRefusesLoose) }
+
+func testShareDirRefusesLoose(t *testing.T) {
+	// The folder really used (a short /tmp one under a long $TMPDIR) is
+	// the one that must be private.
 	dir := filepath.Join(t.TempDir(), "mcp")
-	if err := os.Mkdir(dir, 0o755); err != nil {
+	used := ShareSocketDir(dir)
+	cleanShareDir(t, used)
+	if err := os.MkdirAll(used, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(dir, 0o755); err != nil {
+	if err := os.Chmod(used, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := shareDir(&ShareOptions{Dir: dir}); err == nil {
-		t.Fatal("a 0755 folder was accepted")
+		t.Fatalf("a 0755 folder was accepted (%s)", used)
 	}
 	link := filepath.Join(t.TempDir(), "link")
-	_ = os.Symlink(t.TempDir(), link)
+	usedLink := ShareSocketDir(link)
+	cleanShareDir(t, usedLink)
+	if err := os.Symlink(t.TempDir(), usedLink); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := shareDir(&ShareOptions{Dir: link}); err == nil {
-		t.Fatal("a symlink was accepted")
+		t.Fatalf("a symlink was accepted (%s)", usedLink)
 	}
 }
 

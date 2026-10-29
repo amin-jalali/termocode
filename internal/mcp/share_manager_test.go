@@ -120,16 +120,19 @@ func TestManagerOtherConfigOtherServer(t *testing.T) {
 // looseDir is a socket folder others can open (0755): never used.
 func looseDir(t *testing.T) string {
 	d := filepath.Join(shortTemp(t), "mcp")
-	if err := os.Mkdir(d, 0o755); err != nil {
+	used := ShareSocketDir(d) // the short /tmp one under a long $TMPDIR
+	if err := os.MkdirAll(used, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chmod(d, 0o755); err != nil {
+	if err := os.Chmod(used, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	return d
 }
 
-func TestManagerShareFallsBackToOwnProcess(t *testing.T) {
+func TestManagerShareFallsBackToOwnProcess(t *testing.T) { bothTMPDIRs(t, testManagerShareFallsBack) }
+
+func testManagerShareFallsBack(t *testing.T) {
 	for name, share := range map[string]*ShareOptions{
 		"loose folder": {Exe: os.Args[0], Args: []string{"-test.run=^$"}, Dir: looseDir(t)},
 		"no broker":    {Exe: filepath.Join(t.TempDir(), "no-such-termocode"), Dir: filepath.Join(shortTemp(t), "mcp")},
@@ -177,7 +180,10 @@ func TestManagerShareKeepsSecretsOffDiskAndArgv(t *testing.T) {
 	if !shareStatus(m, "fake").Shared {
 		t.Fatal("not shared")
 	}
-	_ = filepath.Walk(share.Dir, func(p string, fi os.FileInfo, err error) error {
+	if _, err := os.Stat(filepath.Join(ShareSocketDir(share.Dir), "salt")); err != nil {
+		t.Fatalf("not the folder in use: %v", err) // the walk below must look there
+	}
+	_ = filepath.Walk(ShareSocketDir(share.Dir), func(p string, fi os.FileInfo, err error) error {
 		if err == nil && strings.Contains(p, secret) {
 			t.Errorf("secret in a file name: %s", p)
 		}
