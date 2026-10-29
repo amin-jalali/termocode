@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -152,6 +154,10 @@ func (m *Model) openWorkspace(path string) tea.Cmd {
 		return nil
 	}
 	if _, err := os.Stat(path); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			m.promptWorkspaceGone(path)
+			return nil
+		}
 		var toastCmd tea.Cmd
 		m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Workspace error", err.Error())
 		return toastCmd
@@ -177,6 +183,41 @@ func (m *Model) openWorkspace(path string) tea.Cmd {
 	}
 	// Unreachable on success.
 	return nil
+}
+
+// promptWorkspaceGone says a recent workspace folder was moved or
+// deleted. Close (first, focused) keeps the entry, for a drive that is
+// only unplugged; Remove from List drops it.
+func (m *Model) promptWorkspaceGone(path string) {
+	home, _ := os.UserHomeDir()
+	m.workspaceGone = path
+	m.confirm = confirm.New("Folder not found",
+		homeShort(path, home)+" was moved or deleted.",
+		[]confirm.Button{
+			{ID: "close", Title: "Close"},
+			{ID: "remove", Title: "Remove from List"},
+		})
+	m.confirm.SetSize(m.w, m.h)
+	m.confirmOpen = true
+	m.confirmKind = confirmKindWorkspaceGone
+}
+
+// onWorkspaceGoneConfirm handles Close / Remove from List.
+func (m *Model) onWorkspaceGoneConfirm(id string) tea.Cmd {
+	path := m.workspaceGone
+	m.workspaceGone = ""
+	if id != "remove" || path == "" {
+		return nil
+	}
+	entries := loadWorkspaces()
+	out := make([]WorkspaceEntry, 0, len(entries))
+	for _, e := range entries {
+		if e.Path != path {
+			out = append(out, e)
+		}
+	}
+	saveWorkspaces(out)
+	return m.pushToastDetail(toast.Info, "Removed from the list", filepath.Base(path))
 }
 
 var _ = fmt.Sprintf

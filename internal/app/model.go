@@ -600,6 +600,7 @@ type Model struct {
 	hotExitLive       string
 	hotExitPending    []hotBackup
 	hotDiskChanged    []hotBackup // restored files that changed on disk (hot_exit_disk.go)
+	workspaceGone     string      // the recent workspace folder that is gone (workspaces.go)
 	hotExitWaiting    []hotBackup
 	confirmTargetID   int
 	keyCardGuide      help.Loc             // the key card's guide page (keycard.go)
