@@ -62,7 +62,10 @@ func (c *Client) promptGuard() {
 		}
 		c.guardPolls.Add(1)
 		m, err := c.nv.Mode()
-		if err != nil || !m.Blocking || !strings.HasPrefix(m.Mode, "r") {
+		// A yes/no question asked inside an RPC call (":w" of a file
+		// another program saved meanwhile) is mode "r?" with blocking
+		// false: the call that asked it waits too, so answer it as well.
+		if err != nil || !strings.HasPrefix(m.Mode, "r") || (!m.Blocking && m.Mode != "r?") {
 			continue
 		}
 		key := "<CR>"
