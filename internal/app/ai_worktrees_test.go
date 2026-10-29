@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -130,6 +131,41 @@ func TestAIRunParallelStepsSameTree(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// A step that shares its wave but cannot get its own worktree (a git
+// error) must not write in the user's tree next to another step: it
+// stops with the reason and the user's files stay as they are.
+func TestAIRunWorktreeCreateFailsStopsStep(t *testing.T) {
+	m, dir, _ := aiWorktreeRunModel(t, true)
+	orig := createAgentWorktree
+	createAgentWorktree = func(string, string) (git.AgentWorktree, error) {
+		return git.AgentWorktree{}, errors.New("git worktree: fatal: failed to read .git/worktrees/x/commondir")
+	}
+	t.Cleanup(func() { createAgentWorktree = orig })
+	driveAIChat(t, m, m.sendAIChat("change things"), nil)
+	rm := aiRunMsg(t, m)
+	if rm.Run.State != ai.RunStateFailed {
+		t.Fatalf("run %+v", rm.Run)
+	}
+	if got := readFile(filepath.Join(dir, "a.txt")); got != "mine\n" {
+		t.Errorf("user's a.txt changed: %q", got)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "b.txt")); err == nil {
+		t.Error("b.txt written into the user's tree")
+	}
+	failed := false
+	for _, st := range rm.Steps[:2] {
+		if st.Worktree != nil {
+			t.Errorf("%s has a worktree %+v", st.ID, st.Worktree)
+		}
+		if strings.Contains(st.Error, "own git worktree") && strings.Contains(st.Error, "commondir") {
+			failed = true
+		}
+	}
+	if !failed {
+		t.Errorf("no step names the worktree error: %+v", rm.Steps)
 	}
 }
 

@@ -337,15 +337,15 @@ func (m *Model) launchAIRun(msgIdx int, run agentdag.Run, slots map[string]aiSlo
 	// inWorktree moves node n into its own worktree when it shares its
 	// wave: the tools, the prompt's root and the card follow.
 	inWorktree := func(ctx context.Context, n agentdag.Node) (string, []ai.Tool, error) {
-		wt, ok, note := wts.forNode(ctx, n)
+		wt, ok, err := wts.forNode(ctx, n)
+		if err != nil {
+			return root, nil, err // never the user's tree at the same time as another step
+		}
 		if !ok {
-			if note != "" {
-				send(aiWorktreeMsg{gen: gen, ch: ch, step: n.ID, note: note})
-			}
 			return root, nil, nil
 		}
 		var ts []ai.Tool
-		_, err := call(ctx, func(m *Model) (string, tea.Cmd, error) {
+		_, err = call(ctx, func(m *Model) (string, tea.Cmd, error) {
 			ts = m.aiChatToolsBy(wt.Dir(), call, caller)
 			m.aiSetStepWorktree(n.ID, ai.StoredWorktree{ID: wt.ID, Path: wt.Path, Branch: wt.Branch, State: ai.WorktreeRunning}, "")
 			return "", nil, nil

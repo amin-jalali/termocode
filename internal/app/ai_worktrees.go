@@ -51,10 +51,15 @@ func newAIRunWorktrees(root, runID string, on bool, rm *ai.StoredMessage) *aiRun
 	return w
 }
 
+// createAgentWorktree makes a step's worktree (a var: tests make it
+// fail).
+var createAgentWorktree = git.CreateAgentWorktree
+
 // forNode is node n's worktree. A node that shares its wave with
-// another writing node gets a new one (in the node's goroutine); note
-// says why it works in the user's tree when that failed.
-func (w *aiRunWorktrees) forNode(ctx context.Context, n agentdag.Node) (wt git.AgentWorktree, ok bool, note string) {
+// another writing node gets a new one (in the node's goroutine). When
+// that fails the node must not run: it would write in the user's tree
+// at the same time as another step, so err stops it with the reason.
+func (w *aiRunWorktrees) forNode(ctx context.Context, n agentdag.Node) (wt git.AgentWorktree, ok bool, err error) {
 	w.mu.Lock()
 	wt, ok = w.byNode[n.ID]
 	w.mu.Unlock()
@@ -63,18 +68,18 @@ func (w *aiRunWorktrees) forNode(ctx context.Context, n agentdag.Node) (wt git.A
 	case ok: // a retry: the same tree again
 		id = wt.ID
 	case !w.on || !agentrun.SharedWave(ctx):
-		return wt, false, ""
+		return wt, false, nil
 	case !git.IsRepo(w.root):
-		return wt, false, "" // not a git repository: every step works in your tree
+		return wt, false, nil // not a git repository: every step works in your tree
 	}
-	wt, err := git.CreateAgentWorktree(w.root, id)
+	wt, err = createAgentWorktree(w.root, id)
 	if err != nil {
-		return wt, false, "⚠ no own worktree (" + aiOneLine(err.Error()) + "): works in your tree"
+		return wt, false, fmt.Errorf("could not make its own git worktree (%s); stopped so that two steps never write in your folder at the same time: retry the step", aiOneLine(err.Error()))
 	}
 	w.mu.Lock()
 	w.byNode[n.ID] = wt
 	w.mu.Unlock()
-	return wt, true, ""
+	return wt, true, nil
 }
 
 // get is node id's worktree (ok=false: it has none).
