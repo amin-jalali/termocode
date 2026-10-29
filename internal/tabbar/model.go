@@ -559,15 +559,11 @@ func renderTabCellsSfx(b nvim.BufferInfo, active bool, suffix string, welcome bo
 		}
 		cells = append(cells, bgStyle.Render(" "))
 	}
-	for _, r := range name {
-		cells = append(cells, textStyle.Render(string(r)))
-	}
+	cells = appendGlyphCells(cells, name, textStyle)
 	if suffix != "" {
 		dim := theme.FgBg(theme.TextDim, bg)
 		cells = append(cells, bgStyle.Render(" "))
-		for _, r := range suffix {
-			cells = append(cells, dim.Render(string(r)))
-		}
+		cells = appendGlyphCells(cells, suffix, dim)
 	}
 	cells = append(cells, bgStyle.Render(" "))
 	// A modified buffer shows the dirty dot where the close glyph sits
@@ -582,6 +578,29 @@ func renderTabCellsSfx(b nvim.BufferInfo, active bool, suffix string, welcome bo
 		cells = append(cells, bgStyle.Render(" "))
 	}
 	cells = append(cells, bgStyle.Render(" "))
+	return cells
+}
+
+// appendGlyphCells adds s to cells one glyph (grapheme) at a time: a
+// glyph two cells wide (CJK, emoji, a flag) is followed by an empty
+// cell, so len(cells) stays the width; a mark with no letter before it
+// joins the cell before.
+func appendGlyphCells(cells []string, s string, st lipgloss.Style) []string {
+	for s != "" {
+		g, w := ansi.FirstGraphemeCluster(s, ansi.GraphemeWidth)
+		if g == "" {
+			break
+		}
+		s = s[len(g):]
+		if w == 0 && len(cells) > 0 {
+			cells[len(cells)-1] += st.Render(g)
+			continue
+		}
+		cells = append(cells, st.Render(g))
+		for i := 1; i < w; i++ {
+			cells = append(cells, "")
+		}
+	}
 	return cells
 }
 
