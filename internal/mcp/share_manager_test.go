@@ -117,11 +117,23 @@ func TestManagerOtherConfigOtherServer(t *testing.T) {
 	}
 }
 
+// looseDir is a socket folder others can open (0755): never used.
+func looseDir(t *testing.T) string {
+	d := filepath.Join(shortTemp(t), "mcp")
+	if err := os.Mkdir(d, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(d, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return d
+}
+
 func TestManagerShareFallsBackToOwnProcess(t *testing.T) {
 	for name, share := range map[string]*ShareOptions{
-		"folder too long": {Exe: os.Args[0], Args: []string{"-test.run=^$"}, Dir: filepath.Join(t.TempDir(), strings.Repeat("d", 90))},
-		"no broker":       {Exe: filepath.Join(t.TempDir(), "no-such-termocode"), Dir: filepath.Join(shortTemp(t), "mcp")},
-		"broker fails":    {Exe: "/bin/false", Dir: filepath.Join(shortTemp(t), "mcp")},
+		"loose folder": {Exe: os.Args[0], Args: []string{"-test.run=^$"}, Dir: looseDir(t)},
+		"no broker":    {Exe: filepath.Join(t.TempDir(), "no-such-termocode"), Dir: filepath.Join(shortTemp(t), "mcp")},
+		"broker fails": {Exe: "/bin/false", Dir: filepath.Join(shortTemp(t), "mcp")},
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := newManagerEnv(t)

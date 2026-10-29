@@ -43,11 +43,17 @@ func useShareBroker(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// As long as macOS's $TMPDIR (/var/folders/…/T/): the sockets must
+	// still work (a short /tmp folder), on every system.
+	share := filepath.Join(dir, "var", "folders", "n6", strings.Repeat("x", 30), "T", "mcp")
 	oldExe, oldArgs, oldDir := mcpShareExe, mcpShareArgs, mcpShareDir
-	mcpShareExe, mcpShareArgs, mcpShareDir = os.Args[0], []string{"-test.run=^$"}, filepath.Join(dir, "mcp")
+	mcpShareExe, mcpShareArgs, mcpShareDir = os.Args[0], []string{"-test.run=^$"}, share
 	t.Cleanup(func() {
 		mcpShareExe, mcpShareArgs, mcpShareDir = oldExe, oldArgs, oldDir
 		_ = os.RemoveAll(dir)
+		if short := mcp.ShareSocketDir(share); short != share {
+			_ = os.RemoveAll(short)
+		}
 	})
 }
 

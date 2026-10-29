@@ -41,14 +41,18 @@ func startTestBroker(t *testing.T, cfg shareConfig) (*broker, string) {
 	return b, sock
 }
 
-// shortTemp is a temp dir short enough for a unix socket path.
+// shortTemp is a temp dir for socket folders (<it>/mcp). Under a long
+// $TMPDIR (macOS) the sockets go to a short /tmp folder, removed too.
 func shortTemp(t *testing.T) string {
 	t.Helper()
 	d, err := os.MkdirTemp("", "tcs")
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = os.RemoveAll(d) })
+	t.Cleanup(func() {
+		_ = os.RemoveAll(d)
+		cleanShortDir(filepath.Join(d, "mcp"))
+	})
 	return d
 }
 
@@ -329,4 +333,15 @@ func TestShareProgressTokenRoundTrip(t *testing.T) {
 func mustJSON(v any) string {
 	b, _ := json.Marshal(v)
 	return string(b)
+}
+
+// Spec: a broker that can not listen says "unavailable" (the session
+// runs its own server), not a server error.
+func TestShareBrokerListenFailureIsUnavailable(t *testing.T) {
+	var out strings.Builder
+	sock := filepath.Join(shortTemp(t), "no-such-folder", "x.sock")
+	in := strings.NewReader(`{"command":"` + os.Args[0] + `"}`)
+	if code := runShareBroker(sock, in, &out); code == 0 || !strings.HasPrefix(out.String(), "unavailable: ") {
+		t.Fatalf("exit %d, said %q", code, out.String())
+	}
 }

@@ -6,6 +6,8 @@ import (
 	"bufio"
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,6 +29,22 @@ import (
 // bytes on macOS, 108 on Linux).
 const maxShareSocket = 100
 
+// shortShareBase holds the short socket folders (shortShareDir).
+const shortShareBase = "/tmp"
+
+// ShareSocketDir is the folder the sockets of dir really use: dir, or —
+// when a socket path in dir would be too long (macOS's $TMPDIR is
+// /var/folders/…/T/) — the short /tmp/termocode-<uid>-<hash of dir>.
+// The hash keeps one short folder per long one, the same for every
+// session. shareDir checks the folder is ours and private either way.
+func ShareSocketDir(dir string) string {
+	if len(dir)+len("/")+32+len(".sock") <= maxShareSocket {
+		return dir
+	}
+	sum := sha256.Sum256([]byte(dir))
+	return filepath.Join(shortShareBase, fmt.Sprintf("termocode-%d-%s", os.Getuid(), hex.EncodeToString(sum[:6])))
+}
+
 // shareDir returns the private socket folder (0700, ours, no symlink),
 // creating it.
 func shareDir(o *ShareOptions) (string, error) {
@@ -38,9 +56,7 @@ func shareDir(o *ShareOptions) (string, error) {
 		}
 		dir = filepath.Join(base, "mcp")
 	}
-	if len(dir)+len("/")+32+len(".sock") > maxShareSocket {
-		return "", fmt.Errorf("socket folder %s is too long for a unix socket", dir)
-	}
+	dir = ShareSocketDir(dir)
 	if err := os.MkdirAll(filepath.Dir(dir), 0o700); err != nil {
 		return "", err
 	}
@@ -281,6 +297,8 @@ func spawnBroker(ctx context.Context, o *ShareOptions, sock string, cfg shareCon
 		switch {
 		case l == "ok":
 			return nil
+		case strings.HasPrefix(l, "unavailable: "):
+			return fmt.Errorf("%w: %s", errShareUnavailable, strings.TrimPrefix(l, "unavailable: "))
 		case strings.HasPrefix(l, "error: "):
 			return errors.New(strings.TrimPrefix(l, "error: "))
 		}

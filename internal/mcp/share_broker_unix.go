@@ -45,7 +45,11 @@ func runShareBroker(sock string, in io.Reader, out io.Writer) int {
 	}
 	b, err := startBroker(sock, cfg, session.CheckPeer)
 	if err != nil {
-		fmt.Fprintf(out, "error: %s\n", strings.ReplaceAll(err.Error(), "\n", " "))
+		kind := "error"
+		if errors.Is(err, errShareUnavailable) {
+			kind = "unavailable"
+		}
+		fmt.Fprintf(out, "%s: %s\n", kind, strings.ReplaceAll(err.Error(), "\n", " "))
 		return 1
 	}
 	fmt.Fprintln(out, "ok")
@@ -93,8 +97,8 @@ func startBroker(sock string, cfg shareConfig, peer func(net.Conn) error) (*brok
 		b.grace = DefaultShareGrace
 	}
 	ln, err := ListenUnix(sock)
-	if err != nil {
-		return nil, err
+	if err != nil { // not the server's fault: the session runs its own
+		return nil, fmt.Errorf("%w: %v", errShareUnavailable, err)
 	}
 	b.ln = ln
 	if err := b.startServer(); err != nil {
