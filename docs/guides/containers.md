@@ -144,6 +144,26 @@ to detach without stopping the container.
 Logs, shell, attach, stats and pulls run in terminal tabs, so you see
 progress and can type.
 
+## Live CPU and memory
+
+While the Containers view is on screen and the CONTAINERS section is open,
+termocode asks the engine for stats of the running containers every 2
+seconds (one `stats --no-stream` call for all of them, in the context the
+view uses). Nothing runs when the view is hidden, the terminal window is
+in the background, or no container is running. Stopped containers have no
+stats.
+
+- The selected running container shows four lines under its row: a CPU
+  graph (percent of one core), a memory graph (used, scaled to the limit),
+  and the network and disk totals. Each graph is the last 60 samples,
+  about two minutes. Unicode block characters draw it; with `icons`
+  set to `ascii` it uses `_.:-=+*#`.
+- With a wider sidebar the row shows the values too: `12% · 210 MB` from
+  44 columns, `CPU 12% · MEM 210 MB` from 62 (drag the splitter).
+- If the engine does not answer or does not support stats, the section
+  shows one quiet line (`stats unavailable: …`) and tries again every 10
+  seconds. The graphs keep what they had.
+
 ## Images, networks, and volumes
 
 The IMAGES section groups tags by repository and keeps dangling images in a
