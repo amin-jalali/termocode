@@ -1,6 +1,7 @@
 package clistep
 
 import (
+	"bytes"
 	"context"
 	"regexp"
 	"time"
@@ -77,35 +78,27 @@ func Check(ctx context.Context, cli string, env []string) Status {
 	cmd := spawn.Command(bin, statusArgs(cli)...)
 	cmd.Env = env
 	setProcGroup(cmd)
-	done := make(chan struct{})
-	defer close(done)
-	var out []byte
-	type res struct {
-		b   []byte
-		err error
+	// Start here, not in the waiting goroutine: a stop must see the
+	// started process to kill its group.
+	var buf bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &buf, &buf
+	if err := cmd.Start(); err != nil {
+		return StatusUnknown
 	}
-	ch := make(chan res, 1)
-	crash.Go("an AI tool check", func() {
-		b, err := cmd.CombinedOutput()
-		ch <- res{b, err}
-	})
+	ch := make(chan error, 1)
+	crash.Go("an AI tool check", func() { ch <- cmd.Wait() })
 	select {
-	case r := <-ch:
-		out, err = r.b, r.err
+	case err = <-ch:
 	case <-ctx.Done():
-		if cmd.Process != nil {
-			killGroup(cmd.Process.Pid)
-		}
+		killGroup(cmd.Process.Pid)
 		<-ch
 		return StatusUnknown
 	}
+	out := buf.Bytes()
 	switch {
 	case loggedOutJSON.Match(out) || isLoggedOut(string(out)):
 		return StatusLoggedOut
 	case err != nil:
-		if cmd.ProcessState == nil { // it did not start
-			return StatusUnknown
-		}
 		return StatusLoggedOut
 	}
 	return StatusReady

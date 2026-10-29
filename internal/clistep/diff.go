@@ -1,6 +1,7 @@
 package clistep
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"strings"
@@ -31,19 +32,24 @@ func GitDiff(ctx context.Context, dir string, max int) string {
 		cmd := spawn.Command("git", append([]string{"-C", dir, "--no-pager"}, args...)...)
 		cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "GIT_OPTIONAL_LOCKS=0")
 		setProcGroup(cmd)
+		// Start here, not in a goroutine: the stop below must see the
+		// started process to kill its group.
+		var out bytes.Buffer
+		cmd.Stdout = &out
+		if err := cmd.Start(); err != nil {
+			return "", err
+		}
 		done := make(chan struct{})
 		crash.Go("an AI tool step", func() {
 			select {
 			case <-ctx.Done():
-				if cmd.Process != nil {
-					killGroup(cmd.Process.Pid)
-				}
+				killGroup(cmd.Process.Pid)
 			case <-done:
 			}
 		})
-		out, err := cmd.Output()
+		err := cmd.Wait()
 		close(done)
-		return string(out), err
+		return out.String(), err
 	}
 	status, err := git("status", "--short", "--untracked-files=normal")
 	if err != nil || strings.TrimSpace(status) == "" {
