@@ -218,8 +218,8 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 			// it (auto-save on BufLeave) can't write it back.
 			m.closeBuffersForPaths([]string{path})
 			if err := m.removePath(path); err != nil {
-				m.err = err.Error()
-				return nil
+				m.err = fileOpFailText(err)
+				return m.pushToastDetail(toast.Errr, "Delete failed", m.err)
 			}
 			m.forgetPaths([]string{path})
 			m.err = ""
@@ -282,7 +282,7 @@ func (m *Model) runBulkDelete(paths []string) tea.Cmd {
 			continue
 		}
 		if err := m.removePath(p); err != nil {
-			failed = append(failed, fmt.Sprintf("%s: %v", filepath.Base(p), err))
+			failed = append(failed, fmt.Sprintf("%s: %s", filepath.Base(p), fileOpFailText(err)))
 			continue
 		}
 		deleted++

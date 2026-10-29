@@ -191,8 +191,8 @@ func (m *Model) handlePromptSubmit(value string) tea.Cmd {
 			}
 		}
 		if err := os.Rename(m.promptPath, newPath); err != nil {
-			m.err = err.Error()
-			return nil
+			m.err = fileOpFailText(err)
+			return m.pushToastDetail(toast.Errr, "Rename failed", m.err)
 		}
 		m.err = ""
 		m.followRename(m.promptPath, newPath)
