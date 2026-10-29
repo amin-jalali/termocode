@@ -827,6 +827,9 @@ func (m Model) agentsBuild(width int, now time.Time) aiAgentsCache {
 	case rs == ai.RunStatePaused:
 		glyph, _, _ := agentsLook(agentdag.StatePaused, true)
 		status, statusTok = glyph+" paused · budget "+aiBudgetText(d.msg.Run.Budget)+" reached", theme.DiagWarning
+	case d.live && d.msg.Run.PlanWait: // G-PLAN: the plan card waits
+		glyph, _, _ := agentsLook(agentdag.StatePaused, true)
+		status, statusTok = glyph+" waiting for you · approve the plan · a opens it", theme.DiagWarning
 	case d.live:
 		glyph, _, tok := agentsLook(agentdag.StateRunning, true)
 		status, statusTok = glyph+" "+strconv.Itoa(running)+" running", tok
@@ -1263,6 +1266,11 @@ func (m *Model) routeAgentsKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		if idx, _, _, ok := s.agentsShown(); ok && s.conv.Messages[idx].Run.State == ai.RunStateInterrupted && s.aiRetryStep(idx) > 0 {
 			return m.aiRetryRun(idx), true
 		}
+	case "a": // G-PLAN: the plan card of a run that waits for approval
+		if idx, _, _, ok := s.agentsShown(); ok && s.conv.Messages[idx].Run.PlanWait && idx == s.runMsg {
+			return m.openAIPlanCard(), true
+		}
+		return m.aiInfo("This run does not wait for a plan approval"), true
 	case "w": // G-WT: the selected step's own worktree
 		if d, ok := s.agentsData(); ok {
 			if i := s.agentsSelected(d); i >= 0 && i < len(d.nodes) {

@@ -332,3 +332,27 @@ func TestAIPlanApprovalSettingDefault(t *testing.T) {
 		}
 	}
 }
+
+// Spec: the AGENTS view says a run waits for the user; a opens the plan
+// card there.
+func TestAIPlanAgentsWaitingForYou(t *testing.T) {
+	agentsUnicode(t)
+	m, _, _ := aiAskModel(t)
+	driveUntilPlanCard(t, m, m.sendAIChat("review and fix"))
+	m.confirmOpen = false
+	m.ai.agents.on = true
+	m.focusAIForTest()
+	wantAll(t, agentsText(m, 90, 30), "waiting for you · approve the plan · a opens it")
+	m.agentsKey(t, "a")
+	if !m.confirmOpen || m.confirmKind != confirmKindAIPlan {
+		t.Fatal("a did not open the plan card")
+	}
+	m.confirmOpen = false
+	m.handleAIConfirm("approve")
+	driveAIChat(t, m, waitAIChat(m.ai.chatCh), nil)
+	wantAll(t, agentsText(m, 90, 30), "!waiting for you")
+	m.agentsKey(t, "a")
+	if m.confirmOpen {
+		t.Error("a opened a card for a run that does not wait")
+	}
+}

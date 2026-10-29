@@ -39,6 +39,7 @@ func agentsKeyRows(usage bool) []confirm.KeyRow {
 			[]string{"d", "details on / off"},
 			[]string{"f", "follow the running step again"},
 			[]string{"r", "resume a run that termocode stopped"},
+			[]string{"a", "the plan card of a run that waits for you"},
 			[]string{"u", "usage: tokens and cost by model and agent"},
 			[]string{"w", "the step's own worktree: Review, Merge, Discard"},
 			[]string{"Worktrees"},
