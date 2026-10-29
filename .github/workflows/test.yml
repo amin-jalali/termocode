@@ -5,7 +5,55 @@ on:
     branches: ["**"]
   pull_request:
 
+# A new push to a branch or PR cancels the older run of it, so the queue
+# only holds the newest commit. main is never cancelled: every commit
+# there gets its own result.
+concurrency:
+  group: test-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# Required checks (CONTRIBUTING.md): keep these job names stable.
+#   test (ubuntu-latest), test (macos-latest), golden screens (ubuntu-latest),
+#   e2e (ubuntu-latest)
+# A skipped job counts as passed, so docs-only changes skip the heavy jobs
+# through the "changes" job (a workflow-level paths-ignore would leave the
+# required checks waiting forever).
+
 jobs:
+  # code=false when the push or PR only touches docs that no test reads.
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+
+      - name: Docs-only change?
+        id: diff
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          # Docs no test reads: top-level *.md, ADRs, concept pages, media.
+          # docs/guides, docs/reference … are embedded in the app (docs/embed.go).
+          docs='^([^/]+\.md|docs/(adr|concepts)/.*|assets/(gifs|screenshots)/.*|\.github/PULL_REQUEST_TEMPLATE\.md|LICENSE.*|requirements-docs\.txt)$'
+          code=true
+          if [ -n "$BASE" ] && [ "$BASE" != 0000000000000000000000000000000000000000 ] \
+            && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            files=$(git diff --name-only "$BASE...$HEAD")
+            if [ -n "$files" ] && ! printf '%s\n' "$files" | grep -qvE "$docs"; then
+              code=false
+            fi
+          fi
+          echo "code=$code" | tee -a "$GITHUB_OUTPUT"
+
   test:
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -85,6 +133,8 @@ jobs:
   # The harness fixes TZ, locale, clock, PATH and HOME for every case.
   golden:
     name: golden screens (ubuntu-latest)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     env:
       # The nvim the golden frames were made with: editor screens can
@@ -140,6 +190,8 @@ jobs:
   # e2e). Needs nvim; on failure the screen dumps are uploaded.
   e2e:
     name: e2e (ubuntu-latest)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     env:
       NVIM_VERSION: v0.11.4
@@ -189,3 +241,4 @@ jobs:
           name: e2e-screen-dumps
           path: e2e-dumps/
           if-no-files-found: ignore
+
