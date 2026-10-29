@@ -73,6 +73,8 @@ import (
 //	                       "Always allow" entries, or the status screen with
 //	                       nothing listening (made-up state, no listener;
 //	                       allow and off write config.json: shots only)
+//	keyhintdemo[:group|notice] the key hint popup after the leader key with
+//	                       sample mappings (nothing is sent to the editor)
 //	helpdemo               open the in-app guide at the chat panel section
 //	importdemo:picker|panel|confirm|undo|setup|snippets|empty|file
 //	                       sample editor folders (sandbox config dir only),
@@ -116,6 +118,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 			m.setupPlugin(pluginDap, dir)
 			return m.debugRefresh()
 		}
+	case "keyhintdemo":
+		m.keyHintsDemo(arg)
 	case "svcdemo": // the Services view with a canned snapshot (services_demo.go)
 		m.servicesDemo(arg)
 	case "contdemo":

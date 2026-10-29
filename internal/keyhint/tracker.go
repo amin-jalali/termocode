@@ -59,6 +59,14 @@ func (t *Tracker) Active() bool { return len(t.seq) > 0 }
 // Shown reports whether the popup (or its notice) is on screen.
 func (t *Tracker) Shown() bool { return t.shown || t.notice != "" }
 
+// Show opens the popup now, without the wait. It is for the developer
+// screens (golden frames run with a frozen clock).
+func (t *Tracker) Show() {
+	if len(t.seq) > 0 {
+		t.shown = true
+	}
+}
+
 // Reset closes the sequence and the popup. Pending ticks go stale.
 func (t *Tracker) Reset() {
 	t.seq, t.maps, t.loaded = nil, nil, false

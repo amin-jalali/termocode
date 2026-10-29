@@ -238,3 +238,16 @@ vim.keymap.set('n', '<leader>wv', '<Cmd>vsplit<CR>')`); err != nil {
 		t.Errorf("Timeout = %v, want nvim's timeoutlen", src.Timeout())
 	}
 }
+
+// Spec: the developer screen "keyhintdemo" shows the leader level, one
+// level deeper, and the "no binding" hint.
+func TestKeyHintsDemoScreens(t *testing.T) {
+	for arg, want := range map[string]string{"": "Format the buffer", "group": "Search in files", "notice": "no binding: q"} {
+		m := New()
+		m.w, m.h = 80, 24
+		m.keyHintsDemo(arg)
+		if got := hintScreen(m); !strings.Contains(got, want) {
+			t.Errorf("keyhintdemo %q lacks %q:\n%s", arg, want, got)
+		}
+	}
+}

@@ -121,6 +121,20 @@ func TestBackspaceUp(t *testing.T) {
 	}
 }
 
+// Spec: Show opens the popup without a tick.
+func TestShowNow(t *testing.T) {
+	tr, _ := newTracker(t)
+	tr.Show()
+	if tr.Shown() {
+		t.Error("Show opened a popup with no sequence")
+	}
+	tr.Press("<space>")
+	tr.Show()
+	if c, ok := tr.Content(); !ok || len(c.Entries) == 0 {
+		t.Errorf("Show: content = %+v ok=%v", c, ok)
+	}
+}
+
 // Spec: only the leader opens a sequence.
 func TestOtherKeysIgnored(t *testing.T) {
 	tr, _ := newTracker(t)
