@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "old-reviewer": {
+      "title": "Old reviewer",
+      "steps": [
+        {"id": "review", "title": "Review it", "system": "Review the change.", "tools": {"preset": "read-only"}, "output": "shown"}
+      ]
+    }
+  }
+}

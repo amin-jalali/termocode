@@ -1,0 +1,13 @@
+{
+  "theme": "tokyo-night",
+  "tab_size": 2,
+  "word_wrap": true,
+  "show_hidden": true,
+  "search_max_results": 345,
+  "ai_provider": "openai",
+  "ai_model": "gpt-old-model",
+  "ai_base_url": "{{AI_URL}}/v1",
+  "ai_inline": false,
+  "ai_max_steps": 7,
+  "my_own_note": "keep me"
+}
