@@ -65,3 +65,30 @@ func TestSplitRightMakesASecondShell(t *testing.T) {
 		t.Errorf("layout %q, want the new pane beside the first", out)
 	}
 }
+
+func TestSplitDownStacksTheNewShell(t *testing.T) {
+	m := splitTestModel(t, 120, 30)
+	m.splitTerminalPane(paneDown)
+	tab := m.terminalTabs[0]
+	if tab.paneCount() != 2 || tab.Splits[0].Dir != paneDown || tab.Splits[0].Parent != 0 {
+		t.Fatalf("tab = %+v err=%q", tab, m.err)
+	}
+	out, _ := m.nvim.EvalLuaString(`local a = vim.api.nvim_win_get_position(` + itoa(m.terminalWinID) + `)
+		local b = vim.api.nvim_win_get_position(` + itoa(tab.Splits[0].WinID) + `)
+		return (a[2] == b[2] and b[1] > a[1]) and 'stacked' or 'other'`)
+	if out != "stacked" {
+		t.Errorf("layout %q, want the new pane below the first", out)
+	}
+}
+
+func TestSplitRefusedWhenTooNarrow(t *testing.T) {
+	m := splitTestModel(t, 30, 30)
+	before := nvimWinCount(t, m)
+	cmd := m.splitTerminalPane(paneRight)
+	if cmd == nil {
+		t.Error("a refused split must tell the user (toast)")
+	}
+	if m.terminalTabs[0].paneCount() != 1 || nvimWinCount(t, m) != before {
+		t.Fatalf("a refused split changed something: panes=%d wins=%d/%d", m.terminalTabs[0].paneCount(), nvimWinCount(t, m), before)
+	}
+}
