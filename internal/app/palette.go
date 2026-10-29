@@ -255,6 +255,7 @@ func paletteItems() []picker.Item {
 		{ID: "explorer-undo-rename", Title: "Explorer: Undo Rename"},
 		{ID: "toggle-hidden", Title: "Files: Toggle Hidden Files"},
 		{ID: "cheat-sheet", Title: "Help: Show Shortcuts"},
+		{ID: "toggle-key-hints", Title: "Help: Toggle Key Hints"},
 		{ID: "buffer-info", Title: "View: Show Buffer Info", Hint: "Ctrl+Alt+I"},
 		{ID: "error-log", Title: "Help: Show Error Log"},
 		{ID: "run-doctor", Title: "Help: Run Doctor"},
@@ -638,6 +639,8 @@ func (m *Model) dispatchPaletteAction(id string) tea.Cmd {
 		return m.undoBulkRename(m.bulkRename.serial)
 	case "toggle-hidden":
 		return m.toggleHiddenFiles()
+	case "toggle-key-hints":
+		return m.toggleKeyHints()
 	case "cheat-sheet":
 		m.openCheatSheet()
 	case "buffer-info":

@@ -1893,6 +1893,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `toggle-fold` | View: Toggle Fold Under Cursor | auto |   |
 | `toggle-hidden` | Files: Toggle Hidden Files | auto |   |
 | `toggle-inlay-hints` | LSP: Toggle Inlay Hints | auto |   |
+| `toggle-key-hints` | Help: Toggle Key Hints | auto |   |
 | `toggle-terminal` | Terminal: Toggle Integrated Panel | auto |   |
 | `toggle-wrap` | View: Toggle Word Wrap | auto |   |
 | `transfer-cancel` | File: Cancel Download | never | moves files between the user's machine and the server; user only |
@@ -1955,6 +1956,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `http_tls_insecure` | never | AI provider, credentials and approvals stay with the user |
 | `icons` | confirm (settings) |   |
 | `images` | confirm (settings) |   |
+| `key_hints` | confirm (settings) |   |
 | `mcp_call_timeout` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_enabled` | never | AI provider, credentials and approvals stay with the user |
 | `mcp_github_client_id` | never | AI provider, credentials and approvals stay with the user |

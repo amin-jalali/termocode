@@ -33,7 +33,9 @@ type settingsConfig struct {
 	AutoSave   *bool  `json:"auto_save,omitempty"`
 	WordWrap   *bool  `json:"word_wrap,omitempty"`
 	ShowHidden *bool  `json:"show_hidden,omitempty"`
-	TabSize    *int   `json:"tab_size,omitempty"`
+	// KeyHints: the popup after a leader key (key_hints.go); nil = on.
+	KeyHints *bool `json:"key_hints,omitempty"`
+	TabSize  *int  `json:"tab_size,omitempty"`
 	// SearchMaxResults caps Find-in-Files results (0 = unlimited).
 	SearchMaxResults *int `json:"search_max_results,omitempty"`
 	// Display (display_settings.go). "" means auto.
@@ -164,6 +166,9 @@ func saveSettings(cfg settingsConfig) error {
 		if cfg.ShowHidden != nil {
 			merged["show_hidden"] = *cfg.ShowHidden
 		}
+		if cfg.KeyHints != nil {
+			merged["key_hints"] = *cfg.KeyHints
+		}
 		if cfg.TabSize != nil {
 			merged["tab_size"] = *cfg.TabSize
 		}
@@ -226,6 +231,8 @@ var settingsRows = []settingsRow{
 		Desc: "Soft-wrap long lines in the editor."},
 	{ID: "setting-show-hidden", Label: "show_hidden", Kind: "bool", Default: "false",
 		Desc: "Show dot-files in the explorer."},
+	{ID: "setting-key-hints", Label: "key_hints", Kind: "bool", Default: "true",
+		Desc: "Show a small popup of the next keys when you press the leader key in the editor and wait a moment. Esc closes it."},
 	{ID: "setting-tab-size", Label: "tab_size", Kind: "int", Default: "4",
 		Desc: "Indent width in spaces (1-16). Sets tabstop and shiftwidth."},
 	{ID: "setting-search-max-results", Label: "search_max_results", Kind: "int", Default: strconv.Itoa(search.DefaultMaxResults),
@@ -296,6 +303,8 @@ func currentSettingValue(r settingsRow, cfg settingsConfig) string {
 			return r.Default
 		}
 		return strconv.FormatBool(*cfg.ShowHidden)
+	case "setting-key-hints":
+		return strconv.FormatBool(keyHintsEnabled(cfg))
 	case "setting-tab-size":
 		if cfg.TabSize == nil {
 			return r.Default
@@ -451,6 +460,21 @@ func (m *Model) applySetting(id, value string) tea.Cmd {
 			return toastCmd
 		}
 		m.toast, toastCmd = m.toast.Push(toast.Info, fmt.Sprintf("auto_reconnect = %v (applies the next time termocode starts)", b))
+	case "setting-key-hints":
+		b, err := parseBoolLoose(value)
+		if err != nil {
+			m.toast, toastCmd = m.toast.Push(toast.Errr, "key_hints: expected true/false")
+			return toastCmd
+		}
+		cfg.KeyHints = &b
+		if err := saveSettings(cfg); err != nil {
+			m.toast, toastCmd = m.toast.PushDetail(toast.Errr, "Settings error", err.Error())
+			return toastCmd
+		}
+		if !b {
+			m.hideKeyHints()
+		}
+		m.toast, toastCmd = m.toast.Push(toast.Info, fmt.Sprintf("key_hints = %v", b))
 	case "setting-tab-size":
 		n, err := strconv.Atoi(value)
 		if err != nil || n < 1 || n > 16 {

@@ -112,6 +112,7 @@ func settingsCategories() map[string]string {
 		"setting-word-wrap":          "Editor",
 		"setting-show-hidden":        "Editor",
 		"setting-tab-size":           "Editor",
+		"setting-key-hints":          "Editor",
 		"setting-search-max-results": "Search",
 		"setting-persistent-session": "Editor",
 		"setting-auto-reconnect":     "Editor",

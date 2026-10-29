@@ -30,6 +30,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `auto_save` | bool | `false` | Save files automatically after edits. |
 | `word_wrap` | bool | `false` | Soft-wrap long lines in the editor. |
 | `show_hidden` | bool | `false` | Show dot-files in the explorer. |
+| `key_hints` | bool | `true` | Show a small popup of the next keys when you press the leader key in the editor and wait a moment. Esc closes it. |
 | `tab_size` | int | `4` | Indent width in spaces (1-16). Sets tabstop and shiftwidth. |
 | `persistent_session` | enum | `auto` | Run the editor in a background session that survives a dropped connection; run termocode again in the same folder to get it back: on, off, or auto (on over SSH, off locally and inside tmux / screen). Applies the next time termocode starts; --no-session wins over it. |
 | `auto_reconnect` | bool | `true` | When the connection to a persistent session drops (network change, Wi-Fi switch, sleep), keep the screen and attach again by itself, also after `termocode ssh` restarts ssh. Keys typed while offline are not sent. Applies the next time termocode starts. |
