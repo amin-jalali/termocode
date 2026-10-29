@@ -243,6 +243,22 @@ func (w Workspace) Resolve(p string) (string, error) {
 	return abs, nil
 }
 
+// argsInside is a Validate for file tools: each named path argument must
+// resolve inside the workspace, so a call that could never run is
+// refused before the user is asked.
+func (w Workspace) argsInside(keys ...string) func(map[string]any) error {
+	return func(a map[string]any) error {
+		for _, k := range keys {
+			if p := ArgString(a, k); p != "" {
+				if _, err := w.Resolve(p); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+}
+
 // within reports whether p is root or lies under it.
 func within(root, p string) bool {
 	return p == root || strings.HasPrefix(p, strings.TrimSuffix(root, string(filepath.Separator))+string(filepath.Separator))
@@ -303,6 +319,7 @@ func capOut(s string, n int) string {
 // app adds editor-backed (LSP) tools on top.
 func WorkspaceTools(w Workspace) []Tool {
 	path := func(args map[string]any) string { return ArgString(args, "path") }
+	inside := w.argsInside("path")
 	return []Tool{
 		{
 			Name: "read_file", Description: "Read a file and return its contents.",
@@ -426,6 +443,7 @@ func WorkspaceTools(w Workspace) []Tool {
 			Name: "write_file", Description: "Overwrite a file with new content (creates it if missing).",
 			Params:   map[string]any{"path": strParam("file path"), "content": strParam("the complete new file content")},
 			Required: []string{"path", "content"}, Mutating: true, Class: ClassFileWrite,
+			Validate: inside,
 			Describe: func(a map[string]any) string {
 				return fmt.Sprintf("Write %s (%d lines)", path(a), strings.Count(ArgString(a, "content"), "\n")+1)
 			},
@@ -447,6 +465,7 @@ func WorkspaceTools(w Workspace) []Tool {
 			Name: "create_file", Description: "Create a new file, optionally with content. Fails if it exists.",
 			Params:   map[string]any{"path": strParam("file path"), "content": strParam("initial content (optional)")},
 			Required: []string{"path"}, Mutating: true, Class: ClassFileWrite,
+			Validate: inside,
 			Describe: func(a map[string]any) string { return "Create " + path(a) },
 			Run: func(_ context.Context, a map[string]any) (string, error) {
 				abs, err := w.Resolve(path(a))
@@ -468,6 +487,7 @@ func WorkspaceTools(w Workspace) []Tool {
 		{
 			Name: "create_dir", Description: "Create a directory (and missing parents).",
 			Params: map[string]any{"path": strParam("directory path")}, Required: []string{"path"},
+			Validate: inside,
 			Mutating: true, Class: ClassFileWrite,
 			Describe: func(a map[string]any) string { return "Create folder " + path(a) },
 			Run: func(_ context.Context, a map[string]any) (string, error) {
@@ -481,6 +501,7 @@ func WorkspaceTools(w Workspace) []Tool {
 		{
 			Name: "delete", Description: "Delete a file or directory.",
 			Params: map[string]any{"path": strParam("path to delete")}, Required: []string{"path"},
+			Validate: inside,
 			Mutating: true, Class: ClassFileWrite,
 			Describe: func(a map[string]any) string { return "Delete " + path(a) },
 			Run: func(_ context.Context, a map[string]any) (string, error) {
@@ -498,6 +519,7 @@ func WorkspaceTools(w Workspace) []Tool {
 			Name: "rename", Description: "Rename or move a file / directory.",
 			Params:   map[string]any{"from": strParam("current path"), "to": strParam("new path")},
 			Required: []string{"from", "to"}, Mutating: true, Class: ClassFileWrite,
+			Validate: w.argsInside("from", "to"),
 			Describe: func(a map[string]any) string { return "Rename " + ArgString(a, "from") + " → " + ArgString(a, "to") },
 			Run: func(_ context.Context, a map[string]any) (string, error) {
 				from, err := w.Resolve(ArgString(a, "from"))
@@ -517,6 +539,7 @@ func WorkspaceTools(w Workspace) []Tool {
 		{
 			Name: "git_stage", Description: "Stage a file for the next commit.",
 			Params: map[string]any{"path": strParam("file path")}, Required: []string{"path"},
+			Validate: inside,
 			Mutating: true, Class: ClassGit,
 			Describe: func(a map[string]any) string { return "Stage " + path(a) },
 			Run: func(_ context.Context, a map[string]any) (string, error) {
