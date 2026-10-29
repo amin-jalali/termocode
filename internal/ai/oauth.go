@@ -47,25 +47,19 @@ type PKCE struct {
 	State     string
 }
 
-func randomURLSafe(n int) (string, error) {
+// randomURLSafe returns n random bytes as base64url. crypto/rand.Read
+// never fails (Go 1.24+: it crashes the program instead).
+func randomURLSafe(n int) string {
 	b := make([]byte, n)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	return base64.RawURLEncoding.EncodeToString(b), nil
+	_, _ = rand.Read(b)
+	return base64.RawURLEncoding.EncodeToString(b)
 }
 
-// NewPKCE creates a verifier, its S256 challenge and a state value.
+// NewPKCE creates a verifier, its S256 challenge and a state value. The
+// error is always nil; it stays for the callers.
 func NewPKCE() (PKCE, error) {
-	v, err := randomURLSafe(64)
-	if err != nil {
-		return PKCE{}, err
-	}
-	st, err := randomURLSafe(32)
-	if err != nil {
-		return PKCE{}, err
-	}
-	return PKCE{Verifier: v, Challenge: S256Challenge(v), State: st}, nil
+	v := randomURLSafe(64)
+	return PKCE{Verifier: v, Challenge: S256Challenge(v), State: randomURLSafe(32)}, nil
 }
 
 // S256Challenge is base64url(sha256(verifier)) without padding.
