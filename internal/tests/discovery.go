@@ -285,11 +285,14 @@ func GoModulePath(root string) string {
 // GoImportPath maps a package directory (relative, slash-separated) to its
 // import path under module.
 func GoImportPath(module, relDir string) string {
-	if relDir == "." || relDir == "" {
-		return module
+	if relDir == "" {
+		relDir = "."
 	}
 	if module == "" {
-		return relDir
+		return relDir // no go.mod: the folder, "." for the root
+	}
+	if relDir == "." {
+		return module
 	}
 	return module + "/" + relDir
 }
