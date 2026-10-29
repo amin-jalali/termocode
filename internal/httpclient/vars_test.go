@@ -230,3 +230,38 @@ func BenchmarkResolve(b *testing.B) {
 		rv.Resolve(req)
 	}
 }
+
+// PERF-8: the undercurl check (Known, once per placeholder on every
+// buffer refresh) neither runs a regexp nor makes a UUID.
+func TestKnownAllocs(t *testing.T) {
+	rv := &Resolver{FileVars: []Var{{Name: "host", Value: "h"}}, Env: "dev", Envs: &Envs{public: map[string]map[string]string{"dev": {"token": "t"}}}}
+	for _, expr := range []string{"host", "token", "$guid", "$uuid", "$isoTimestamp", "nope"} {
+		if n := testing.AllocsPerRun(20, func() { rv.Known(expr) }); n != 0 {
+			t.Errorf("Known(%q): %.0f allocs", expr, n)
+		}
+	}
+}
+
+func TestIsPlainNameMatchesRegexp(t *testing.T) {
+	re := regexp.MustCompile(`^[\w.-]+$`)
+	for _, s := range []string{"", "a", "host", "a.b-c_D9", "a b", "a{", "é", "$guid", "x/y", "-", ".", "_", "a\n"} {
+		if got, want := isPlainName(s), re.MatchString(s); got != want {
+			t.Errorf("%q: %v, regexp says %v", s, got, want)
+		}
+	}
+}
+
+// Known agrees with evaluating the dynamic function.
+func TestKnownDynamicMatchesValue(t *testing.T) {
+	rv := &Resolver{}
+	now := time.Now()
+	for _, expr := range []string{"$guid", "$uuid", "$random.uuid", "$timestamp", "$timestamp -1 d", "$timestamp x", "$timestamp 1 q",
+		"$isoTimestamp", "$datetime iso8601", "$datetime rfc1123 1 h", "$datetime", "$datetime bad", "$localDatetime iso8601",
+		"$randomInt 1 10", "$randomInt 10 1", "$randomInt", "$nope"} {
+		fn, arg, _ := strings.Cut(expr, " ")
+		_, want := dynamicValue(fn, strings.TrimSpace(arg), now)
+		if got := rv.Known(expr); got != want {
+			t.Errorf("Known(%q) = %v, evaluating says %v", expr, got, want)
+		}
+	}
+}

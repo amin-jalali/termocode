@@ -15,10 +15,7 @@ import (
 )
 
 // placeholderRe matches {{name}}, {{ name }} and {{$fn args}}.
-var (
-	placeholderRe = lazyre.New(`\{\{\s*([^{}]*?)\s*\}\}`)
-	plainNameRe   = lazyre.New(`^[\w.-]+$`)
-)
+var placeholderRe = lazyre.New(`\{\{\s*([^{}]*?)\s*\}\}`)
 
 // maxNesting is how many times values that hold other {{names}} are
 // expanded (a cycle stops there and is reported as unresolved).
@@ -151,8 +148,7 @@ func (rv *Resolver) Known(expr string) bool {
 			_, ok := rv.Secret(arg)
 			return ok
 		}
-		_, ok := dynamicValue(fn, arg, rv.now())
-		return ok
+		return knownDynamic(fn, arg, rv.now)
 	}
 	_, _, ok := rv.named(expr)
 	return ok
@@ -204,7 +200,7 @@ func (sc *sendScope) secret(v string) {
 // named looks a plain name up: file variables (last definition wins),
 // then the environment.
 func (rv *Resolver) named(name string) (val string, private, ok bool) {
-	if !plainNameRe.MatchString(name) {
+	if !isPlainName(name) {
 		return "", false, false
 	}
 	for i := len(rv.FileVars) - 1; i >= 0; i-- {
@@ -338,4 +334,29 @@ func newUUID() string {
 	b[8] = b[8]&0x3f | 0x80
 	h := hex.EncodeToString(b[:])
 	return fmt.Sprintf("%s-%s-%s-%s-%s", h[0:8], h[8:12], h[12:16], h[16:20], h[20:32])
+}
+
+// isPlainName is ^[\w.-]+$ without the regexp.
+func isPlainName(s string) bool {
+	if s == "" {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if !(isLetter(c) || c >= '0' && c <= '9' || c == '_' || c == '.' || c == '-') {
+			return false
+		}
+	}
+	return true
+}
+
+// knownDynamic is dynamicValue's ok without making the value (no UUID
+// or clock text for an undercurl check).
+func knownDynamic(fn, arg string, now func() time.Time) bool {
+	switch fn {
+	case "$guid", "$uuid", "$random.uuid", "$isoTimestamp":
+		return true
+	}
+	_, ok := dynamicValue(fn, arg, now())
+	return ok
 }
