@@ -12,9 +12,9 @@ func TestClassifyUncertainInputIsAWrite(t *testing.T) {
 		sql, dialect string
 		want         Kind
 	}{
-		{"SELECT 'open", "postgres", KindWrite},                 // incomplete: cannot split
-		{"SELECT 1 --x\nDELETE FROM t", "", KindWrite},           // unknown dialect: --x may not be a comment
-		{"SELECT 1 -- note", "", KindRead},                       // a real comment
+		{"SELECT 'open", "postgres", KindWrite},                   // incomplete: cannot split
+		{"SELECT 1 --x\nDELETE FROM t", "", KindWrite},            // unknown dialect: --x may not be a comment
+		{"SELECT 1 -- note", "", KindRead},                        // a real comment
 		{"SELECT 1 /*! , (DELETE FROM t) */", "mysql", KindWrite}, // MySQL runs /*! … */
 		{"WITH a AS (SELECT 1) DELETE FROM t", "postgres", KindWrite},
 		{"WITH a AS (SELECT 1) SELECT * FROM a", "postgres", KindRead},
