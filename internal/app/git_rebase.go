@@ -263,7 +263,7 @@ func rebaseConfirmText(msg rebaseCheckMsg) string {
 		lines = append(lines, "", "You have uncommitted changes. Stash and Continue puts them aside",
 			"and back after the rebase.")
 	}
-	lines = append(lines, "", "Undo afterwards: git reset --hard ORIG_HEAD")
+	lines = append(lines, "", "Undo afterwards: git reset --keep ORIG_HEAD")
 	return strings.Join(lines, "\n")
 }
 
@@ -313,10 +313,10 @@ func (m *Model) onRebaseDone(msg rebaseDoneMsg) tea.Cmd {
 		m.toast, cmd = m.toast.PushDetail(toast.Info, "Rebase stopped to edit a commit",
 			"Change the commit (Commit (Amend)), then Continue in Source Control.")
 	case msg.summary == "":
-		m.toast, cmd = m.toast.PushDetail(toast.Info, "Rebase done", "Undo: git reset --hard ORIG_HEAD")
+		m.toast, cmd = m.toast.PushDetail(toast.Info, "Rebase done", "Undo: git reset --keep ORIG_HEAD")
 	default:
 		m.toast, cmd = m.toast.PushDetail(toast.Info, "Rebase done: "+msg.summary,
-			"Undo: git reset --hard ORIG_HEAD")
+			"Undo: git reset --keep ORIG_HEAD")
 	}
 	return tea.Batch(cmd, fetchGitCmd())
 }

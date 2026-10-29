@@ -110,10 +110,13 @@ func TestSCMRebaseConfirmAndRun(t *testing.T) {
 	d.Key("j", "d") // drop c3
 	startRebase(t, d)
 	s := text(d)
-	for _, want := range []string{"3 commits → 2 commits", "drop 1", "git reset --hard ORIG_HEAD"} {
+	for _, want := range []string{"3 commits → 2 commits", "drop 1", "git reset --keep ORIG_HEAD"} {
 		if !strings.Contains(s, want) {
 			t.Errorf("confirm lacks %q:%s", want, dump(d))
 		}
+	}
+	if strings.Contains(s, "--hard") {
+		t.Errorf("confirm names a hard reset, which loses work:%s", dump(d))
 	}
 	d.Key("enter") // Cancel is focused
 	if !until(d, func() bool { return !strings.Contains(text(d), "Start the rebase?") }) {
@@ -129,6 +132,9 @@ func TestSCMRebaseConfirmAndRun(t *testing.T) {
 	clickTarget(d, "confirm:rebase-start")
 	if !until(d, func() bool { return strings.Contains(text(d), "Rebase done: 3 commits → 2 commits") }) {
 		t.Fatalf("no done toast:%s", dump(d))
+	}
+	if s := text(d); !strings.Contains(s, "Undo: git reset --keep ORIG_HEAD") || strings.Contains(s, "--hard") {
+		t.Errorf("done toast must point to the safe undo:%s", dump(d))
 	}
 	if got := r.git("log", "--format=%s"); got != "c4\nc2 better\nc1\ninit" {
 		t.Errorf("history:\n%s", got)
@@ -305,6 +311,9 @@ func TestSCMFixupInto(t *testing.T) {
 	}
 	if s := text(d); !strings.Contains(s, "Fold the staged changes (1 file)") || !strings.Contains(s, "Stash and Fixup") {
 		t.Errorf("confirm text:%s", dump(d))
+	}
+	if s := text(d); !strings.Contains(s, "git reset --keep ORIG_HEAD") || strings.Contains(s, "--hard") {
+		t.Errorf("fixup confirm must point to the safe undo:%s", dump(d))
 	}
 	head := r.git("rev-parse", "HEAD")
 	d.Key("enter") // Cancel
