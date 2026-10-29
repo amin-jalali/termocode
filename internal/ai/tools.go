@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -181,7 +182,9 @@ func ArgString(args map[string]any, key string) string {
 func ArgInt(args map[string]any, key string) int {
 	switch v := args[key].(type) {
 	case float64:
-		return int(v)
+		// A number past int would wrap to the other sign (1e300 to a
+		// negative count); keep it in a sane range instead.
+		return int(max(min(v, math.MaxInt32), math.MinInt32))
 	case int:
 		return v
 	case string:
