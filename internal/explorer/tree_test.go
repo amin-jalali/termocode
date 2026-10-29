@@ -361,3 +361,26 @@ func mustMkdir(t *testing.T, path string) {
 		t.Fatal(err)
 	}
 }
+
+// Spec: a loaded folder's children carry their full paths (folder path
+// joined with the name), folders first, each group by name.
+func TestLoadChildPathsAndOrder(t *testing.T) {
+	dir := t.TempDir()
+	mustWrite(t, filepath.Join(dir, "B.txt"), "")
+	mustWrite(t, filepath.Join(dir, "a.txt"), "")
+	mustMkdir(t, filepath.Join(dir, "sub"))
+	mustMkdir(t, filepath.Join(dir, "Dir"))
+	n := &Node{Path: dir, IsDir: true}
+	if err := n.Load(); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"Dir", "sub", "B.txt", "a.txt"}
+	if len(n.Children) != len(want) {
+		t.Fatalf("children %d, want %d", len(n.Children), len(want))
+	}
+	for i, c := range n.Children {
+		if c.Name != want[i] || c.Path != filepath.Join(dir, want[i]) || c.IsDir != (i < 2) {
+			t.Fatalf("child %d = %+v, want %s at %s", i, *c, want[i], filepath.Join(dir, want[i]))
+		}
+	}
+}
