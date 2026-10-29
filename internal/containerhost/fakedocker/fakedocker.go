@@ -137,6 +137,15 @@ func (c *Container) NoShell() {
 func (c *Container) Stop()  { c.setStopped(true) }
 func (c *Container) Start() { c.setStopped(false) }
 
+// Remove deletes the container from the engine: every later call on it
+// fails with "No such container". Its files stay on the local disk for
+// the test's checks.
+func (c *Container) Remove() {
+	c.d.mu.Lock()
+	delete(c.d.cs, c.Name)
+	c.d.mu.Unlock()
+}
+
 func (c *Container) setStopped(v bool) {
 	c.d.mu.Lock()
 	c.stopped = v

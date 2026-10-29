@@ -275,3 +275,23 @@ func TestCpOutFollowsAbsoluteLinksInsideTheContainer(t *testing.T) {
 		t.Fatalf("not followed = %+v", h)
 	}
 }
+
+func TestRemovedContainerIsGone(t *testing.T) {
+	d := New()
+	c := d.Add(t, "api-1")
+	c.WriteFile(t, "/app/a.txt", []byte("a"), 0o644)
+	c.Remove()
+	ctx := context.Background()
+	for _, argv := range [][]string{
+		{"docker", "cp", "api-1:/app/a.txt", "-"},
+		{"docker", "inspect", "--type", "container", "api-1"},
+	} {
+		_, stderr, code, err := d.Capture(ctx, "", argv...)
+		if err != nil || code == 0 || !strings.Contains(strings.ToLower(stderr), "no such container") {
+			t.Fatalf("%q = %d %q %v", argv, code, stderr, err)
+		}
+	}
+	if _, err := os.Stat(c.Local("/app/a.txt")); err != nil {
+		t.Fatalf("files of a removed container should stay for checks: %v", err)
+	}
+}
