@@ -2,7 +2,6 @@ package httpclient
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"mime"
 	"strings"
@@ -160,12 +159,11 @@ func PrettyJSON(b []byte) ([]byte, bool) {
 	if len(t) == 0 || (t[0] != '{' && t[0] != '[') {
 		return b, false
 	}
-	var out bytes.Buffer
-	out.Grow(len(b) + len(b)/2)
-	if err := json.Indent(&out, t, "", "  "); err != nil {
+	out, ok := indentJSON(make([]byte, 0, 2*len(t)+64), t)
+	if !ok {
 		return b, false
 	}
-	return out.Bytes(), true
+	return out, true
 }
 
 // DecodeText decodes b with charset: latin-1 (iso-8859-1, latin1,
