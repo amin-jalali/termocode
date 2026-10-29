@@ -62,8 +62,7 @@ func checkCardRule(t *testing.T, name string, m Model, wantRisky bool) {
 
 // C-1 / C-2 (DB-19): the AI's card for a database write (and the other
 // cards of the four features) puts Deny first, plain and focused; the write
-// is the red action. The card of any other tool keeps its order but its
-// Deny is not red either.
+// is the red action. Every other tool's card puts Deny first as well.
 func TestAIToolCardsFollowTheRule(t *testing.T) {
 	open := func(tool ai.Tool) Model {
 		m := Model{w: 120, h: 40}
@@ -78,15 +77,21 @@ func TestAIToolCardsFollowTheRule(t *testing.T) {
 	checkCardRule(t, "containers_control", open(ai.Tool{Name: "containers_control", Class: ai.ClassContainers, Mutating: true}), false)
 	checkCardRule(t, "services_start", open(ai.Tool{Name: "services_start", Class: ai.ClassServices, Mutating: true}), false)
 	checkCardRule(t, "mcp tool", open(ai.Tool{Name: mcp.WirePrefix + "github__create_issue", Mutating: true}), false)
-	// Other tools: the order stays (Allow first), Deny is plain.
-	other := open(ai.Tool{Name: "write_file", Class: ai.ClassFileWrite, Mutating: true})
-	for _, b := range other.confirm.Buttons() {
-		if b.ID == "deny" && b.Style == confirm.StyleDestructive {
-			t.Error("write_file: Deny is red")
+	// AH-1 / SCN-2: every other tool too (a command, a file change, a
+	// palette command that starts a program): Deny first and focused, so
+	// Enter alone never lets the AI act.
+	for _, tool := range []ai.Tool{
+		{Name: "write_file", Class: ai.ClassFileWrite, Mutating: true},
+		{Name: "run_command", Class: ai.ClassRun, Mutating: true},
+		{Name: "execute_action", Class: ai.ClassRun, Mutating: true},
+		{Name: "git_push", Class: ai.ClassGit, Mutating: true},
+		{Name: "reload_buffer", Mutating: true},
+	} {
+		other := open(tool)
+		checkCardRule(t, tool.Name, other, false)
+		if got := other.confirm.Buttons()[0].ID; got != "deny" {
+			t.Errorf("%s: first button %q, want deny", tool.Name, got)
 		}
-	}
-	if got := other.confirm.Buttons()[0].ID; got != "allow" {
-		t.Errorf("write_file: first button %q, want allow (unchanged)", got)
 	}
 }
 
