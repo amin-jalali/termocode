@@ -86,3 +86,31 @@ func (f containerFS) ReadFile(ctx context.Context, p string) ([]byte, error) {
 	}
 	return data, nil
 }
+
+// header is the tar header of p itself (follow: through a symlink).
+func (h *Host) header(ctx context.Context, op, abs string, follow bool) (*tar.Header, error) {
+	var out *tar.Header
+	err := h.withTar(ctx, op, abs, follow, func(_ *tar.Reader, hd *tar.Header) error {
+		c := *hd
+		out = &c
+		return nil
+	})
+	return out, err
+}
+
+// Stat reads the first tar header of `cp -L <c>:<p> -` and stops the
+// stream: it needs no tool in the image. Sys() is the *tar.Header (Uid,
+// Gid).
+func (f containerFS) Stat(ctx context.Context, p string) (fs.FileInfo, error) {
+	abs, err := resolve(f.h.cfg.Root, p)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := f.h.opCtx(ctx)
+	defer cancel()
+	hd, err := f.h.header(ctx, "stat", abs, true)
+	if err != nil {
+		return nil, err
+	}
+	return hd.FileInfo(), nil
+}

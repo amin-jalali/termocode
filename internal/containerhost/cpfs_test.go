@@ -1,6 +1,7 @@
 package containerhost
 
 import (
+	"archive/tar"
 	"errors"
 	"io/fs"
 	"os"
@@ -52,6 +53,37 @@ func TestReadFileErrors(t *testing.T) {
 	}
 	if _, err := f.ReadFile(t.Context(), "../etc/passwd"); !errors.Is(err, workspace.ErrOutsideRoot) {
 		t.Fatalf("outside: %v", err)
+	}
+	if d.OpenStreams() != 0 {
+		t.Fatal("a stream was left open")
+	}
+}
+
+func TestStat(t *testing.T) {
+	h, d, c := newHost(t)
+	c.WriteFile(t, "/app/run.sh", []byte("#!/bin/sh\n"), 0o750)
+	c.SetOwner("/app/run.sh", 1001, 1002)
+	c.WriteFile(t, "/app/big/x", []byte("x"), 0o644)
+	f := containerFS{h}
+
+	fi, err := f.Stat(t.Context(), "run.sh")
+	if err != nil || fi.Name() != "run.sh" || fi.Size() != 10 || fi.IsDir() || fi.Mode().Perm() != 0o750 {
+		t.Fatalf("Stat(file) = %v, %v", fi, err)
+	}
+	if hd, ok := fi.Sys().(*tar.Header); !ok || hd.Uid != 1001 || hd.Gid != 1002 {
+		t.Fatalf("Sys = %+v", fi.Sys())
+	}
+	for _, p := range []string{"", "big"} {
+		fi, err = f.Stat(t.Context(), p)
+		if err != nil || !fi.IsDir() {
+			t.Fatalf("Stat(%q) = %v, %v", p, fi, err)
+		}
+	}
+	if fi.Name() != "big" {
+		t.Fatalf("name = %q", fi.Name())
+	}
+	if _, err := f.Stat(t.Context(), "nope"); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("missing: %v", err)
 	}
 	if d.OpenStreams() != 0 {
 		t.Fatal("a stream was left open")
