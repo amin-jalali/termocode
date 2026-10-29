@@ -620,6 +620,9 @@ func parseSQLiteJSON(lines []string) ([][]Cell, []Column, error) {
 		}
 		rows = append(rows, row)
 	}
+	if t, err := dec.Token(); err != nil || t != json.Delim(']') {
+		return nil, nil, errors.New("sqlite3 output ended early")
+	}
 	return rows, cols, nil
 }
 
