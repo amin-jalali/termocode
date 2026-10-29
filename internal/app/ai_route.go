@@ -18,6 +18,10 @@ func (m *Model) handleAIMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.startAIInline(msg.manual, msg.settled), true
 	case aiInlineResultMsg:
 		return m.onAIInlineResult(msg), true
+	case aiNESTriggerMsg: // ai_nextedit.go
+		return m.startAINES(), true
+	case aiNESResultMsg:
+		return m.onAINESResult(msg), true
 	case aiChatEventMsg:
 		return m.onAIChatEvent(msg), true
 	case aiRunEventMsg:

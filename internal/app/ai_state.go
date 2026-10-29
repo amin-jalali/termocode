@@ -136,6 +136,8 @@ type aiState struct {
 	inlineBusy   bool
 	inlineCache  ai.InlineCache // type-through of the shown ghost
 	inlineImp    map[string]any // imports of the cached ghost
+	// nes is the next edit suggestion (ai_nextedit.go).
+	nes aiNESState
 
 	// chat panel
 	store       ai.ChatStore
