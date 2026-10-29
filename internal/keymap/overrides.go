@@ -173,6 +173,11 @@ func ValidateKey(s string) error {
 	if strings.TrimSpace(s) != s {
 		return fmt.Errorf("%q: key has spaces around it", s)
 	}
+	// Bytes that are not UTF-8 would turn into U+FFFD when keymap.json
+	// is written, so the key could never match again.
+	if !utf8.ValidString(s) {
+		return fmt.Errorf("%q: key is not valid UTF-8", s)
+	}
 	rest := s
 	seen := map[string]bool{}
 	for {
