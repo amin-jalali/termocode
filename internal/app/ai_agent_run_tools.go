@@ -9,8 +9,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/agentrun"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/git"
 )
 
 // ── Agents that start agents (G-API) ──────────────────────────────────────
@@ -432,7 +434,7 @@ func (s *aiState) aiRunNotStarted(id, why string) {
 func (m *Model) aiAgentRunTools(call aiIDECaller, c aiRunCaller) []ai.Tool {
 	sn := m.aiRunSnapshot(c)
 	str := func(d string) map[string]any { return map[string]any{"type": "string", "description": d} }
-	return []ai.Tool{
+	return append([]ai.Tool{
 		{
 			Name:    "agent_run_start",
 			Display: "start an agent run",
@@ -463,7 +465,7 @@ func (m *Model) aiAgentRunTools(call aiIDECaller, c aiRunCaller) []ai.Tool {
 				return call(ctx, func(m *Model) (string, tea.Cmd, error) { return m.aiToolRunStart(ctx, c, r) })
 			},
 		},
-	}
+	}, aiRunReadTools(call)...)
 }
 
 // aiAgentRunTool reports a tool of this file.
@@ -486,4 +488,270 @@ func (m *Model) aiDropQueuedRuns(why string) int {
 	}
 	s.runQueue = nil
 	return n
+}
+
+// ── agent_run_status / agent_run_result ──────────────────────────────────
+
+// Text caps of the read tools (runes).
+const (
+	aiRunAnswerMax = 4000
+	aiRunStepMax   = 1500
+)
+
+// aiRunClip is s redacted and cleaned, cut at n runes.
+func aiRunClip(s string, n int) string {
+	s = strings.TrimSpace(aiCleanText(ai.Redact(s)))
+	if r := []rune(s); len(r) > n {
+		return string(r[:n]) + "\n…(cut: " + strconv.Itoa(len(r)-n) + " more characters)"
+	}
+	return s
+}
+
+// aiRunFound is a run of the open chat by id: its message (nil while it
+// is queued or when it never started), its queue entry, why it never
+// started, and whether it is the live one.
+type aiRunFound struct {
+	idx    int
+	msg    *ai.StoredMessage
+	queued *aiQueuedRun
+	why    string
+	live   bool
+}
+
+func (m *Model) aiRunFind(id string) (aiRunFound, error) {
+	s := m.aiS()
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return aiRunFound{}, errors.New("run_id is required (agent_run_start returns it)")
+	}
+	for i := range s.runQueue {
+		if q := &s.runQueue[i]; q.id == id && q.chat == s.conv.ID {
+			return aiRunFound{queued: q}, nil
+		}
+	}
+	for i := range s.conv.Messages {
+		if msg := &s.conv.Messages[i]; msg.Run != nil && msg.Run.ID == id {
+			return aiRunFound{idx: i, msg: msg, live: s.run != nil && s.runMsg == i}, nil
+		}
+	}
+	if why, ok := s.runNotStarted[id]; ok {
+		return aiRunFound{why: why}, nil
+	}
+	return aiRunFound{}, fmt.Errorf("there is no run %q in this chat", aiCardText(id, 30))
+}
+
+type aiRunStepStatus struct {
+	ID       string   `json:"id"`
+	Title    string   `json:"title,omitempty"`
+	State    string   `json:"state"`
+	Model    string   `json:"model,omitempty"`
+	CostUSD  *float64 `json:"cost_usd,omitempty"`
+	Error    string   `json:"error,omitempty"`
+	Worktree string   `json:"worktree_branch,omitempty"`
+}
+
+type aiRunStatusInfo struct {
+	RunID        string            `json:"run_id"`
+	State        string            `json:"state"`
+	Profile      string            `json:"profile,omitempty"`
+	Task         string            `json:"task,omitempty"`
+	StartedByAI  bool              `json:"started_by_ai"`
+	Depth        int               `json:"depth,omitempty"`
+	ParentRun    string            `json:"parent_run,omitempty"`
+	Steps        []aiRunStepStatus `json:"steps,omitempty"`
+	CostUSD      float64           `json:"cost_usd"`
+	CostComplete bool              `json:"cost_complete"`
+	BudgetUSD    float64           `json:"budget_usd,omitempty"`
+	WaitingFor   []string          `json:"waiting_for_user,omitempty"`
+	Note         string            `json:"note,omitempty"`
+}
+
+// aiRunStatusOf is the status of run id (on the UI goroutine).
+func (m *Model) aiRunStatusOf(id string) (aiRunStatusInfo, error) {
+	f, err := m.aiRunFind(id)
+	if err != nil {
+		return aiRunStatusInfo{}, err
+	}
+	out := aiRunStatusInfo{RunID: strings.TrimSpace(id), CostComplete: true}
+	switch {
+	case f.queued != nil:
+		q := f.queued
+		out.State, out.Profile, out.Task = "queued", q.prof.Name, aiRunClip(q.task, 200)
+		out.StartedByAI, out.Depth, out.ParentRun = true, q.by.Depth, q.by.ParentRun
+		for _, st := range q.prof.Steps {
+			out.Steps = append(out.Steps, aiRunStepStatus{ID: st.ID, Title: aiCleanText(st.Title), State: string(agentdag.StatePending)})
+		}
+		out.Note = "It starts in this chat when the current answer or run ends."
+		return out, nil
+	case f.msg == nil:
+		out.State, out.Note = "not_started", "It never started: "+f.why+"."
+		return out, nil
+	}
+	s := m.aiS()
+	r := f.msg.Run
+	out.State, out.Profile = r.State, r.Profile
+	out.Task = aiRunClip(runsTask(s.conv.Messages, f.idx), 200)
+	if r.By != nil {
+		out.StartedByAI, out.Depth, out.ParentRun = true, r.By.Depth, r.By.ParentRun
+	}
+	for _, st := range f.msg.Steps {
+		ss := aiRunStepStatus{ID: st.ID, Title: aiCleanText(st.Title), State: st.State, Model: st.Model, CostUSD: st.Cost,
+			Error: aiRunClip(st.Error, 300)}
+		if st.Worktree != nil {
+			ss.Worktree = st.Worktree.Branch
+		}
+		out.Steps = append(out.Steps, ss)
+	}
+	out.CostUSD, out.CostComplete = aiRunMsgCost(*f.msg)
+	if prof, ok := s.runInline[r.ID]; ok {
+		out.BudgetUSD = aiRunBudget(prof, r.By)
+	} else if prof, ok := s.profiles.Get(r.Profile); ok {
+		out.BudgetUSD = aiRunBudget(prof, r.By)
+	}
+	if f.live {
+		switch {
+		case r.PlanWait:
+			out.WaitingFor = append(out.WaitingFor, "plan approval: the user approves, edits or denies the plan")
+		case r.State == ai.RunStatePaused && r.Budget > 0:
+			out.WaitingFor = append(out.WaitingFor, "budget reached: the user continues or stops the run")
+		case r.State == ai.RunStatePaused:
+			out.WaitingFor = append(out.WaitingFor, "paused: the user resumes the run")
+		}
+		if m.confirmOpen && m.confirmKind == confirmKindAITool && s.confirm != nil {
+			out.WaitingFor = append(out.WaitingFor, "a card asks the user to allow "+s.confirm.tool.Name)
+		}
+	} else if r.State == ai.RunStateRunning || r.State == ai.RunStatePaused {
+		out.State = ai.RunStateInterrupted // a stored run that is not live does not go on
+	}
+	return out, nil
+}
+
+type aiRunStepResult struct {
+	ID     string `json:"id"`
+	Title  string `json:"title,omitempty"`
+	State  string `json:"state"`
+	Answer string `json:"answer,omitempty"`
+	Error  string `json:"error,omitempty"`
+}
+
+type aiRunChangedFile struct {
+	Path   string `json:"path"`
+	Status string `json:"status"` // A, M or D
+	Step   string `json:"step"`
+	Branch string `json:"worktree_branch"`
+}
+
+type aiRunResultInfo struct {
+	RunID        string             `json:"run_id"`
+	State        string             `json:"state"`
+	Answer       string             `json:"answer,omitempty"`
+	Steps        []aiRunStepResult  `json:"steps,omitempty"`
+	ChangedFiles []aiRunChangedFile `json:"changed_files,omitempty"`
+	FilesInTree  int                `json:"files_changed_in_workspace,omitempty"`
+	Note         string             `json:"note,omitempty"`
+}
+
+// aiRunWT is a step's open worktree the result lists the files of.
+type aiRunWT struct{ id, step, branch string }
+
+// aiRunResultOf is the result of run id (on the UI goroutine) and the
+// open worktrees whose files the caller lists (off it: git runs).
+func (m *Model) aiRunResultOf(id string) (aiRunResultInfo, []aiRunWT, error) {
+	st, err := m.aiRunStatusOf(id)
+	if err != nil {
+		return aiRunResultInfo{}, nil, err
+	}
+	out := aiRunResultInfo{RunID: st.RunID, State: st.State}
+	f, _ := m.aiRunFind(id)
+	if f.msg == nil {
+		out.Note = st.Note
+		return out, nil, nil
+	}
+	var wts []aiRunWT
+	for _, s := range f.msg.Steps {
+		sr := aiRunStepResult{ID: s.ID, Title: aiCleanText(s.Title), State: s.State, Error: aiRunClip(s.Error, 300)}
+		if agentdag.State(s.State) == agentdag.StateCompleted {
+			sr.Answer = aiRunClip(s.Text, aiRunStepMax)
+		}
+		out.Steps = append(out.Steps, sr)
+		switch {
+		case s.Worktree.Open():
+			wts = append(wts, aiRunWT{id: s.Worktree.ID, step: s.ID, branch: s.Worktree.Branch})
+		case s.Worktree == nil:
+			out.FilesInTree += s.Files
+		}
+	}
+	switch st.State {
+	case ai.RunStateDone:
+		out.Answer = aiRunClip(f.msg.Text, aiRunAnswerMax)
+	case ai.RunStateRunning, ai.RunStatePaused:
+		out.Note = "The run is not finished; the answers of finished steps are below. Ask again later."
+	default:
+		out.Note = "The run ended without a final answer (" + st.State + ")."
+	}
+	if len(wts) > 0 {
+		out.Note = strings.TrimSpace(out.Note + " Changes in worktrees wait for the user to merge or discard them.")
+	}
+	return out, wts, nil
+}
+
+// aiRunReadTools are agent_run_status and agent_run_result.
+func aiRunReadTools(call aiIDECaller) []ai.Tool {
+	idParam := map[string]any{"run_id": map[string]any{"type": "string", "description": "the id agent_run_start returned (or a run id of this chat)"}}
+	return []ai.Tool{
+		{
+			Name: "agent_run_status",
+			Description: "The state of an agent run of this chat: queued, running, paused, done, failed, cancelled, " +
+				"interrupted or not_started; each step's state and model, the cost so far, and what waits for the user " +
+				"(plan approval, budget, a card). Read only.",
+			Params:   idParam,
+			Required: []string{"run_id"},
+			Describe: func(a map[string]any) string { return "Agent run status " + aiCardText(ai.ArgString(a, "run_id"), 20) },
+			Run: func(ctx context.Context, a map[string]any) (string, error) {
+				id := ai.ArgString(a, "run_id")
+				return call(ctx, func(m *Model) (string, tea.Cmd, error) {
+					st, err := m.aiRunStatusOf(id)
+					if err != nil {
+						return "", nil, err
+					}
+					out, err := aiItermocJSON(st)
+					return out, nil, err
+				})
+			},
+		},
+		{
+			Name: "agent_run_result",
+			Description: "The result of an agent run of this chat: the final answer, each finished step's answer (long " +
+				"text is cut) and the files it changed (in agent worktrees: path, status and branch; they wait for the " +
+				"user's merge). Read only.",
+			Params:   idParam,
+			Required: []string{"run_id"},
+			Describe: func(a map[string]any) string { return "Agent run result " + aiCardText(ai.ArgString(a, "run_id"), 20) },
+			Run: func(ctx context.Context, a map[string]any) (string, error) {
+				id := ai.ArgString(a, "run_id")
+				var res aiRunResultInfo
+				var wts []aiRunWT
+				root := ""
+				if _, err := call(ctx, func(m *Model) (string, tea.Cmd, error) {
+					var err error
+					res, wts, err = m.aiRunResultOf(id)
+					root = aiWorkspaceRoot()
+					return "", nil, err
+				}); err != nil {
+					return "", err
+				}
+				for _, w := range wts {
+					ch, err := git.AgentChanges(root, w.id)
+					if err != nil {
+						res.Note = strings.TrimSpace(res.Note + " The worktree of step " + w.step + " could not be read.")
+						continue
+					}
+					for _, c := range ch {
+						res.ChangedFiles = append(res.ChangedFiles, aiRunChangedFile{Path: c.Path, Status: c.Status, Step: w.step, Branch: w.branch})
+					}
+				}
+				return aiItermocJSON(res)
+			},
+		},
+	}
 }

@@ -370,3 +370,185 @@ func TestAIAgentRunStartRefusesSecrets(t *testing.T) {
 		}
 	}
 }
+
+// aiRunToolOut runs a read tool of this file on the real model (its IDE
+// call runs at once, as on the UI goroutine).
+func aiRunToolOut(t *testing.T, m *Model, name, id string) (string, error) {
+	t.Helper()
+	call := func(_ context.Context, fn aiIDEFunc) (string, error) {
+		out, _, err := fn(m)
+		return out, err
+	}
+	tl, ok := ai.FindTool(m.aiAgentRunTools(call, aiRunCaller{}), name)
+	if !ok {
+		t.Fatalf("no tool %s", name)
+	}
+	if tl.Mutating {
+		t.Fatalf("%s is mutating", name)
+	}
+	return tl.Run(context.Background(), map[string]any{"run_id": id})
+}
+
+// Spec: status says queued before the run starts and done after, with
+// steps, cost and who started it; result gives the final answer and
+// each step's answer; an unknown id is an error.
+func TestAIAgentRunStatusAndResult(t *testing.T) {
+	m, _ := aiAgentRunModel(t, []ai.Chunk{{Delta: "Problem: parser.go line 3.",
+		Usage: &ai.Usage{Model: "claude-sonnet-4-5", Input: 1000, Output: 100, Requests: 1}}},
+		[]ai.Chunk{{Delta: "Fixed parser.go.", Usage: &ai.Usage{Model: "gpt-5-mini", Input: 1000, Output: 100, Requests: 1}}})
+	review, _ := m.ai.profiles.Get(ai.ProfileReview)
+	if _, _, err := m.aiToolRunStart(context.Background(), aiRunCaller{}, aiRunStartReq{prof: review, task: "review parser.go", worktree: "auto"}); err != nil {
+		t.Fatal(err)
+	}
+	id := m.ai.runQueue[0].id
+	out, err := aiRunToolOut(t, m, "agent_run_status", id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st := aiToolJSON(t, out)
+	if st["state"] != "queued" || st["started_by_ai"] != true || st["profile"] != ai.ProfileReview || len(st["steps"].([]any)) != 2 {
+		t.Fatalf("queued status %s", out)
+	}
+	if m.aiStartQueuedRun() == nil {
+		t.Fatal("not started")
+	}
+	aiDriveQueued(t, m, nil)
+	out, _ = aiRunToolOut(t, m, "agent_run_status", id)
+	st = aiToolJSON(t, out)
+	if st["state"] != ai.RunStateDone || st["task"] != "review parser.go" || st["cost_usd"].(float64) <= 0 || st["cost_complete"] != true {
+		t.Fatalf("done status %s", out)
+	}
+	steps := st["steps"].([]any)
+	if s0 := steps[0].(map[string]any); s0["state"] != "completed" || s0["model"] != "claude-sonnet-4-5" {
+		t.Fatalf("step %v", s0)
+	}
+	out, err = aiRunToolOut(t, m, "agent_run_result", id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res := aiToolJSON(t, out)
+	if res["answer"] != "Fixed parser.go." {
+		t.Fatalf("result %s", out)
+	}
+	if s0 := res["steps"].([]any)[0].(map[string]any); s0["answer"] != "Problem: parser.go line 3." {
+		t.Fatalf("step answer %v", s0)
+	}
+	if _, err := aiRunToolOut(t, m, "agent_run_status", "nope"); err == nil {
+		t.Fatal("unknown id: no error")
+	}
+	if _, err := aiRunToolOut(t, m, "agent_run_result", "nope"); err == nil {
+		t.Fatal("unknown id: no error")
+	}
+}
+
+// Spec: a run that never started says why.
+func TestAIAgentRunStatusNotStarted(t *testing.T) {
+	m := aiWriteModel(t)
+	m.ai.aiRunNotStarted("gone1", "the user stopped the AI")
+	out, err := aiRunToolOut(t, m, "agent_run_status", "gone1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st := aiToolJSON(t, out); st["state"] != "not_started" || !strings.Contains(st["note"].(string), "stopped") {
+		t.Fatalf("status %s", out)
+	}
+}
+
+// Spec: while the live run waits for the plan card, status says it
+// waits for the user; a stored run that is not live reads interrupted.
+func TestAIAgentRunStatusWaitingForUser(t *testing.T) {
+	block := &blockingAIProvider{started: make(chan struct{}, 1), stopped: make(chan struct{})}
+	m, _ := aiRunModel(t, block, block)
+	fast, _ := m.ai.profiles.Get(ai.ProfileReview)
+	m.ai.runQueue = []aiQueuedRun{{id: "live1", chat: m.ai.conv.ID, prof: fast, task: "x", by: ai.RunBy{Chat: m.ai.conv.ID, Depth: 1}}}
+	cmd := m.aiStartQueuedRun()
+	if cmd == nil {
+		t.Fatal("not started")
+	}
+	<-block.started
+	rm := aiRunMsg(t, m)
+	rm.Run.PlanWait = true
+	out, _ := aiRunToolOut(t, m, "agent_run_status", "live1")
+	st := aiToolJSON(t, out)
+	if st["state"] != ai.RunStateRunning || !strings.Contains(out, "plan approval") {
+		t.Fatalf("status %s", out)
+	}
+	m.aiCancelAll()
+	driveAIChat(t, m, waitAIChat(m.ai.chatCh), nil)
+
+	m.ai.conv.Messages = append(m.ai.conv.Messages, ai.StoredMessage{Role: ai.StoredUser, Text: "old"},
+		ai.StoredMessage{Role: ai.StoredAssistant, Run: &ai.StoredRun{ID: "old1", State: ai.RunStateRunning}})
+	out, _ = aiRunToolOut(t, m, "agent_run_status", "old1")
+	if st := aiToolJSON(t, out); st["state"] != ai.RunStateInterrupted {
+		t.Fatalf("stored running run %s", out)
+	}
+}
+
+// Spec: the result lists the files the steps changed in their agent
+// worktrees, with the branch; the user's tree stays untouched.
+func TestAIAgentRunResultWorktreeFiles(t *testing.T) {
+	m, _, _ := aiWorktreeRunModel(t, true)
+	prof, _ := m.ai.profiles.Get("two")
+	m.ai.runQueue = []aiQueuedRun{{id: "wt1", chat: m.ai.conv.ID, prof: prof, task: "change things", by: ai.RunBy{Chat: m.ai.conv.ID, Depth: 1}}}
+	if m.aiStartQueuedRun() == nil {
+		t.Fatal("not started")
+	}
+	aiDriveQueued(t, m, nil)
+	out, err := aiRunToolOut(t, m, "agent_run_result", "wt1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var res aiRunResultInfo
+	if err := json.Unmarshal([]byte(out), &res); err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, f := range res.ChangedFiles {
+		if f.Branch == "" {
+			t.Errorf("no branch: %+v", f)
+		}
+		got[f.Step] = f.Status + " " + f.Path
+	}
+	if got["left"] != "M a.txt" || got["right"] != "A b.txt" {
+		t.Fatalf("changed files %+v\n%s", res.ChangedFiles, out)
+	}
+}
+
+// Spec: the read tools never show a key: not from the task, the steps'
+// answers or their errors.
+func TestAIAgentRunReadToolsHideSecrets(t *testing.T) {
+	m := aiWriteModel(t)
+	key := "sk-" + "test" + strings.Repeat("Z9y8", 8)
+	tok := "ghp_" + strings.Repeat("a1B2", 9)
+	m.ai.conv.Messages = []ai.StoredMessage{
+		{Role: ai.StoredUser, Text: "call it with " + key},
+		{Role: ai.StoredAssistant, Text: "done, token " + tok, Run: &ai.StoredRun{ID: "s1", State: ai.RunStateDone},
+			Steps: []ai.StoredStep{{ID: "a", State: "completed", Text: "I used " + key}, {ID: "b", State: "failed", Error: "401 for " + tok}}},
+	}
+	for _, name := range []string{"agent_run_status", "agent_run_result"} {
+		out, err := aiRunToolOut(t, m, name, "s1")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, sec := range []string{key, tok, "Z9y8Z9y8", "a1B2a1B2"} {
+			if strings.Contains(out, sec) {
+				t.Errorf("%s shows a secret:\n%s", name, out)
+			}
+		}
+	}
+}
+
+// Spec: status and result are read only: a read-only step gets them,
+// outside agents do not.
+func TestAIAgentRunReadToolsGates(t *testing.T) {
+	m := aiWriteModel(t)
+	ro := aiFilterTools(m.aiChatTools(".", nil), agentdag.ToolRule{Preset: agentdag.PresetReadOnly})
+	for _, name := range []string{"agent_run_status", "agent_run_result"} {
+		if _, ok := ai.FindTool(ro, name); !ok {
+			t.Errorf("a read-only step lacks %s", name)
+		}
+		if _, ok := mcpServeRow(name); ok {
+			t.Errorf("%s is offered to outside agents", name)
+		}
+	}
+}
