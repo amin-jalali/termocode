@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/amin-jalali/termocode/internal/app"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/spawn"
@@ -447,6 +449,9 @@ func runTUI() {
 		// Undo the font change (if the terminal made one).
 		_, _ = os.Stdout.WriteString(font.Restore())
 		if r := recover(); r != nil {
+			if path, err := crash.WriteReport("main", r, debug.Stack()); err == nil {
+				_ = crash.MarkFatal(path)
+			}
 			app.FlushSession() // the last cursor positions (N1)
 			app.HotExitFlush(2 * time.Second)
 			app.StopExtensions() // N6b: no extension process outlives us
@@ -462,8 +467,21 @@ func runTUI() {
 	app.SetMouseHover(app.ResolveMouseHover(app.ConfigMouseHover()))
 	app.ThrottleFrames()
 	app.SetVersion(versionString()) // sent to process extensions (N6b)
+	crash.SetVersion(versionString())
+	// A panic in Update / View / Init: crash.Wrap writes the report, then
+	// the program is killed (Bubble Tea restores the terminal) and the
+	// error path below keeps the unsaved buffers. Panics in commands are
+	// recovered there too and only show a toast.
+	var prog atomic.Pointer[tea.Program]
+	var fatal atomic.Pointer[string]
+	model := crash.Wrap(testCrashModel(app.New(), os.Getenv(envTestCrash)), func(path string) {
+		fatal.Store(&path)
+		if p := prog.Load(); p != nil {
+			p.Kill()
+		}
+	})
 	p := tea.NewProgram(
-		app.New(),
+		model,
 		tea.WithAltScreen(),
 		kittyKeyboardOption(kittyKeys),
 		// Each frame drawn at once where the terminal can (no torn rows on
@@ -489,6 +507,7 @@ func runTUI() {
 		// git less and stops reading the clipboard (app/clip_watch.go).
 		tea.WithReportFocus(),
 	)
+	prog.Store(p)
 	watchRepaint(p)
 	watchHangup(p)
 	stopProfile := startCPUProfile()
@@ -502,8 +521,16 @@ func runTUI() {
 		app.StopExtensions() // N6b
 		app.StopMCP()
 		app.StopMCPServer()
-		_, _ = os.Stdout.WriteString("\x1b]111\x07" + font.Restore() + rtlLeave) // os.Exit skips the defer
-		fmt.Fprintln(os.Stderr, err)
+		// os.Exit skips the defer.
+		_, _ = os.Stdout.WriteString(crashLeave("\x1b]111\x07"+hostLeave, font.Restore(), rtlLeave))
+		if path := fatal.Load(); path != nil {
+			fmt.Fprintln(os.Stderr, "termocode stopped unexpectedly. Your unsaved work is kept: it comes back at the next start.")
+			if *path != "" {
+				fmt.Fprintln(os.Stderr, "Report: "+*path)
+			}
+		} else {
+			fmt.Fprintln(os.Stderr, err)
+		}
 		os.Exit(1)
 	}
 	// Quit already wrote it; a hangup (p.Quit from watchHangup) too. A
