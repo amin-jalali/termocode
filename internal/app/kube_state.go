@@ -60,6 +60,7 @@ type kubeState struct {
 	off     bool          // a demo: never call kubectl
 
 	cursor       int
+	lastClick    time.Time // a second click on the cursor row opens it
 	collapsed    map[string]bool
 	filter       string
 	filterTyping bool
