@@ -475,7 +475,7 @@ func (m Model) updateInner(msg tea.Msg) (Model, tea.Cmd) {
 		return m, m.onCommitPickDone(msg)
 	case rebaseTodoMsg, rebaseCheckMsg, rebaseDoneMsg, fixupCheckMsg: // git_rebase.go
 		return m, m.onRebaseMsg(msg)
-	case undoPlanMsg, undoDoneMsg, redoClickMsg, redoDoneMsg: // git_undo.go
+	case undoPlanMsg, undoDoneMsg, redoClickMsg, redoDoneMsg, reflogListMsg: // git_undo.go
 		return m, m.onUndoMsg(msg)
 	case gitRemoteDoneMsg:
 		return m, m.gitRemoteDone(msg)
@@ -2352,6 +2352,8 @@ func (m *Model) handlePickerSelect(msg picker.SelectMsg) tea.Cmd {
 		return m.gitRebaseFromCmd(msg.ID)
 	case pickerKindFixupInto:
 		return m.gitFixupIntoCmd(msg.ID)
+	case pickerKindReflog:
+		return m.onReflogPicked(msg.ID)
 	case pickerKindTags:
 		return m.checkoutTagSelected(msg.ID)
 	case pickerKindHelpGuide:

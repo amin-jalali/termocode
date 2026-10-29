@@ -3,12 +3,14 @@ package app
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -22,7 +24,18 @@ type gitUndoState struct {
 	plan *git.UndoPlan // the plan on the card (nil when no card is open)
 	move bool          // the card moves HEAD to a reflog line (Git: Reflog…)
 	redo *undoRedo     // the last undo, until it is redone or replaced
+	// reflog is the list Git: Reflog… shows (picker IDs index it).
+	reflog []git.ReflogEntry
 }
+
+// reflogListMsg carries the reflog for Git: Reflog….
+type reflogListMsg struct {
+	entries []git.ReflogEntry
+	err     error
+}
+
+// reflogLimit is how many actions Git: Reflog… lists.
+const reflogLimit = 50
 
 // undoRedo is what Redo needs: the undo's plan and HEAD right after it.
 type undoRedo struct {
@@ -79,6 +92,8 @@ func (m *Model) onUndoMsg(msg tea.Msg) tea.Cmd {
 		return m.gitRedoCmd()
 	case redoDoneMsg:
 		return m.onRedoDone(msg)
+	case reflogListMsg:
+		return m.openReflogPicker(msg)
 	}
 	return nil
 }
@@ -93,7 +108,10 @@ func (m *Model) onUndoPlan(msg undoPlanMsg) tea.Cmd {
 		m.toast, cmd = m.toast.PushDetail(toast.Info, "Nothing to undo", "HEAD is there already.")
 		return cmd
 	}
-	m.gitUndo = &gitUndoState{plan: &msg.plan, move: msg.move}
+	if m.gitUndo == nil {
+		m.gitUndo = &gitUndoState{}
+	}
+	m.gitUndo.plan, m.gitUndo.move = &msg.plan, msg.move
 	title, verb := "Undo the last git action?", "Undo"
 	if msg.move {
 		title, verb = "Move HEAD back to here?", "Move HEAD"
@@ -299,9 +317,74 @@ func (m *Model) dispatchUndoPalette(id string) (tea.Cmd, bool) {
 		return m.gitUndoCmd(), true
 	case "git-redo":
 		return m.gitRedoCmd(), true
+	case "git-reflog":
+		if !m.gitEnsureLoaded() {
+			return nil, true
+		}
+		cwd, err := m.rootDir()
+		if err != nil {
+			return nil, true
+		}
+		return func() tea.Msg {
+			entries, err := git.Reflog(cwd, reflogLimit)
+			return reflogListMsg{entries: entries, err: err}
+		}, true
 	}
 	return nil, false
 }
 
 // aiNoGitUndo is why the AI can't run the undo entries (ai_actions_policy.go).
 const aiNoGitUndo = "moves HEAD back (undo, redo, reflog); only the user rewinds git history"
+
+// openReflogPicker lists the reflog, newest first.
+func (m *Model) openReflogPicker(msg reflogListMsg) tea.Cmd {
+	var cmd tea.Cmd
+	switch {
+	case msg.err != nil:
+		m.toast, cmd = m.toast.PushDetail(toast.Errr, "Can't read the reflog", msg.err.Error())
+		return cmd
+	case len(msg.entries) == 0:
+		m.toast, cmd = m.toast.Push(toast.Info, "The reflog is empty")
+		return cmd
+	}
+	if m.gitUndo == nil {
+		m.gitUndo = &gitUndoState{}
+	}
+	m.gitUndo.reflog = msg.entries
+	m.picker = picker.NewItems(" Reflog: move HEAD back to which point? ", reflogItems(msg.entries))
+	m.picker.SetSize(m.w, m.h)
+	m.pickerOpen = true
+	m.pickerKind = pickerKindReflog
+	return nil
+}
+
+// reflogItems are the picker rows: "a1b2c3d  commit 'fix x'", the age as
+// the hint; the newest row is where HEAD is.
+func reflogItems(entries []git.ReflogEntry) []picker.Item {
+	items := make([]picker.Item, 0, len(entries))
+	for i, e := range entries {
+		title := e.Short() + "  " + e.Summary()
+		if i == 0 {
+			title += "  ← HEAD"
+		}
+		items = append(items, picker.Item{ID: strconv.Itoa(i), Title: title, Hint: e.Ago()})
+	}
+	return items
+}
+
+// onReflogPicked plans a move of HEAD to the picked reflog line.
+func (m *Model) onReflogPicked(id string) tea.Cmd {
+	i, err := strconv.Atoi(id)
+	if err != nil || m.gitUndo == nil || i < 0 || i >= len(m.gitUndo.reflog) {
+		return nil
+	}
+	e := m.gitUndo.reflog[i]
+	cwd, err := m.rootDir()
+	if err != nil {
+		return nil
+	}
+	return func() tea.Msg {
+		p, err := git.PlanMoveTo(cwd, e)
+		return undoPlanMsg{plan: p, move: true, err: err}
+	}
+}

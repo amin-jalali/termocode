@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/workspace/localhost"
 )
 
@@ -262,5 +263,45 @@ func TestGitUndoKeyInSourceControl(t *testing.T) {
 	undoStep(t, &nm, cmd)
 	if !nm.confirmOpen || nm.confirmKind != confirmKindGitUndo {
 		t.Fatalf("no undo card; toasts:\n%s", toastText(nm))
+	}
+}
+
+// G-UND: Git: Reflog… lists the actions newest first in plain words (HEAD
+// marked); Enter on an older one opens "Move HEAD back to here?" with
+// Cancel first, and Move HEAD resets the branch to that commit.
+func TestGitReflogMoveHere(t *testing.T) {
+	m, run := undoRepo(t, 3)
+	c1 := run("rev-parse", "HEAD~2")
+	cmd, ok := m.dispatchUndoPalette("git-reflog")
+	if !ok {
+		t.Fatal("git-reflog not handled")
+	}
+	undoStep(t, m, cmd)
+	if !m.pickerOpen || m.pickerKind != pickerKindReflog || m.gitUndo == nil || len(m.gitUndo.reflog) != 3 {
+		t.Fatalf("no reflog picker; toasts:\n%s", toastText(*m))
+	}
+	items := reflogItems(m.gitUndo.reflog)
+	if !strings.HasSuffix(items[0].Title, "commit 'c3'  ← HEAD") || !strings.HasSuffix(items[2].Title, "first commit 'c1'") {
+		t.Errorf("items %+v", items)
+	}
+	undoStep(t, m, m.handlePickerSelect(picker.SelectMsg{ID: items[2].ID}))
+	if !m.confirmOpen || m.confirmKind != confirmKindGitUndo || m.confirm.Buttons()[0].ID != "cancel" {
+		t.Fatalf("no move card; toasts:\n%s", toastText(*m))
+	}
+	if body := undoConfirmText(*m.gitUndo.plan, true); !strings.Contains(body, "Reflog line: first commit 'c1'") ||
+		!strings.Contains(body, "goes back to "+c1[:7]+" 'c1'") {
+		t.Errorf("card:\n%s", body)
+	}
+	m.confirmOpen = false // the confirm route closes the card before the answer
+	undoStep(t, m, m.handleConfirmSelect("undo"))
+	if run("rev-parse", "HEAD") != c1 || run("branch", "--show-current") != "main" {
+		t.Errorf("HEAD not moved to c1; toasts:\n%s", toastText(*m))
+	}
+	// The newest line is where HEAD is: nothing to do.
+	cmd, _ = m.dispatchUndoPalette("git-reflog")
+	undoStep(t, m, cmd)
+	undoStep(t, m, m.handlePickerSelect(picker.SelectMsg{ID: "0"}))
+	if m.confirmOpen || !strings.Contains(toastText(*m), "HEAD is there already") {
+		t.Errorf("card %v; toasts:\n%s", m.confirmOpen, toastText(*m))
 	}
 }
