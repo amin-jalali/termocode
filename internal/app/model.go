@@ -528,6 +528,8 @@ type Model struct {
 	// services is the Services view state (services_state.go). Pointer,
 	// shared by copies; idle (no process, no goroutine) until shown.
 	services *servicesState
+	// kube is the Kubernetes view state (kube_state.go); idle until shown.
+	kube *kubeState
 	// databases is lazy and holds idle sessions only while the view is open.
 	databases *dbState
 	// itermoc is the Itermoc view (profiles, models, services, outside
@@ -889,6 +891,7 @@ func New() Model {
 		tasks:            newTaskRunner(),    // Group C
 		testView:         newTestsState(),    // Group E
 		services:         newServicesState(),
+		kube:             newKubeState(),
 		databases:        newDBState(),
 		ext:              newExtState(),    // Group I
 		ai:               newAIState(),     // Group A
@@ -1288,6 +1291,7 @@ func (m *Model) Close() error {
 		m.ext.proc.Close() // process extensions and their children
 	}
 	m.services.shutdown()   // the docker events watcher (services_state.go)
+	m.kube.shutdown()       // kubectl loads and port-forwards (kube_state.go)
 	m.databasesClose(false) // database sessions are idle unless the view is visible
 	m.dropImageTemp()       // an HTTP image preview's temp copy (U16)
 	m.stopMCPServe()        // the MCP socket and its clients (mcp_serve_run.go)

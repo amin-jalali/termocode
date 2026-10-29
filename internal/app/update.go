@@ -106,6 +106,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	if c, ok := m.handleServicesMsg(msg); ok { // services_state.go
 		return m, c
 	}
+	if c, ok := m.handleKubeMsg(msg); ok { // kube_state.go
+		return m, c
+	}
 	if c, ok := m.handleCIMsg(msg); ok { // ci_watch.go
 		return m, c
 	}
@@ -135,6 +138,9 @@ func (m Model) update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 	if sc := nm.statsSync(); sc != nil { // live container stats (containers_stats.go)
 		cmd = tea.Batch(cmd, sc)
+	}
+	if kc := nm.kubeSync(); kc != nil { // the Kubernetes view shown / hidden (kube_state.go)
+		cmd = tea.Batch(cmd, kc)
 	}
 	nm.showWaitingHotExit()
 	if mode := nm.syncMouseMode(); mode != nil { // mouse_hover.go
