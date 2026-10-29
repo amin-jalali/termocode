@@ -64,6 +64,10 @@ func CachePath(getenv func(string) string) string {
 	return filepath.Join(state, "termocode", "termcaps.json")
 }
 
+// jsonKey is key as it reads back from JSON: bytes that are not UTF-8
+// become U+FFFD there, so a key from an odd TERM would never hit.
+func jsonKey(key string) string { return strings.ToValidUTF8(key, "\uFFFD") }
+
 func load(path string) map[string]Entry {
 	m := map[string]Entry{}
 	if path == "" {
@@ -79,7 +83,7 @@ func load(path string) map[string]Entry {
 // Lookup returns the cached entry for key when it is younger than
 // CacheTTL.
 func Lookup(path, key string, now time.Time) (Entry, bool) {
-	e, ok := load(path)[key]
+	e, ok := load(path)[jsonKey(key)]
 	if !ok || now.Sub(e.At) > CacheTTL || e.At.After(now.Add(time.Hour)) {
 		return Entry{}, false
 	}
@@ -100,7 +104,7 @@ func Remember(path, key string, e Entry, now time.Time) {
 		}
 	}
 	e.At = now
-	m[key] = e
+	m[jsonKey(key)] = e
 	b, err := json.Marshal(m)
 	if err != nil || os.MkdirAll(filepath.Dir(path), 0o755) != nil {
 		return
