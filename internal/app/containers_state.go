@@ -41,6 +41,12 @@ func (m *Model) startHostWatch() tea.Cmd {
 	if st == nil || !st.visible || st.watchStop != nil || st.hostWatchStop != nil {
 		return nil
 	}
+	// While a detection runs (after a context switch) containerEngine is
+	// the old engine: a watcher started now would watch the old context
+	// and block the new one. The detect's answer starts the watcher.
+	if st.containerDetecting && st.containerEngine.Reachable {
+		return nil
+	}
 	if st.containerEngine.Reachable {
 		ctx, cancel := context.WithCancel(context.Background())
 		ch, stop, err := st.containerEngine.Watch(ctx)

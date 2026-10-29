@@ -500,3 +500,60 @@ func fakeToolsDir(t *testing.T) string {
 	}
 	return dir
 }
+
+// TestContextSwitchRefreshBeforeDetectWatchesNewContext: after a switch
+// the project refresh and the detect with DOCKER_CONTEXT run at once, and
+// the refresh often answers first. Its answer must not start the watcher
+// with the old engine (no context); the detect's answer starts it on prod.
+func TestContextSwitchRefreshBeforeDetectWatchesNewContext(t *testing.T) {
+	m, f := ctxSession(t)
+	st := m.services
+	t.Cleanup(func() { st.stopHostWatch(); st.stopWatch() })
+	before := len(f.CtxCalls())
+	b, ok := m.switchContext("prod")().(tea.BatchMsg)
+	if !ok {
+		t.Fatal("switch is not a batch")
+	}
+	results := make(chan tea.Msg, len(b))
+	for _, c := range b {
+		if c != nil {
+			go func(c tea.Cmd) { results <- c() }(c)
+		}
+	}
+	var snap, detect tea.Msg
+	deadline := time.After(30 * time.Second)
+	for snap == nil || detect == nil {
+		select {
+		case got := <-results:
+			switch got.(type) {
+			case servicesSnapshotMsg:
+				snap = got
+			case containerHostMsg:
+				detect = got
+			}
+		case <-deadline:
+			t.Fatalf("no refresh/detect answer (refresh %v, detect %v)", snap != nil, detect != nil)
+		}
+	}
+	m.handleServicesMsg(snap) // the refresh wins the race
+	m.handleServicesMsg(detect)
+	if st.containerEngine.Context != "prod" {
+		t.Fatalf("engine context = %q", st.containerEngine.Context)
+	}
+	hasProdEvents := func() bool {
+		for _, c := range f.CtxCalls()[before:] {
+			if strings.HasPrefix(c, "prod|events") {
+				return true
+			}
+		}
+		return false
+	}
+	if !servicestest.WaitFor(10*time.Second, hasProdEvents) {
+		t.Errorf("watcher did not restart on prod: %q", f.CtxCalls()[before:])
+	}
+	for _, c := range f.CtxCalls()[before:] {
+		if !strings.HasPrefix(c, "prod|") {
+			t.Errorf("call after the switch without DOCKER_CONTEXT=prod: %q", c)
+		}
+	}
+}
