@@ -14,5 +14,3 @@ func killGroup(pid int) {
 		_ = p.Kill()
 	}
 }
-
-func termGroup(pid int) { killGroup(pid) }
