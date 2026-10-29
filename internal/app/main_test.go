@@ -15,8 +15,8 @@ import (
 	"github.com/amin-jalali/termocode/internal/clistep"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/mcp/mcptest"
-	"github.com/amin-jalali/termocode/internal/services/servicestest"
 	"github.com/amin-jalali/termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/services/servicestest"
 	"github.com/zalando/go-keyring"
 )
 
@@ -85,6 +85,8 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 	if msg := guard.Report(""); msg != "" {
 		fmt.Fprintln(os.Stderr, "FAIL:", msg)
+		code = 1
+	}
 	if code == 0 && nvimLeaked() {
 		code = 1
 	}
@@ -107,6 +109,8 @@ func TestRealContainerCLIsAreBlocked(t *testing.T) {
 			t.Errorf("a test would run the real %s at %s", name, p)
 		}
 	}
+}
+
 // nvimLeaked reports (on stderr) the tests whose nvim still runs after
 // all tests ended: every test must close its nvim and wait for it.
 func nvimLeaked() bool {
