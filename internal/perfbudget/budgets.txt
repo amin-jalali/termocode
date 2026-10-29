@@ -24,3 +24,7 @@ editor_key_to_frame_p95    25   ms   # real nvim, 40 keys; local p95 1.3 ms (was
 open_50k_line_file        130   ms   # open request to first lines shown; local 63 ms
 palette_open_all           30   ms   # F1 to palette with every command, median of 5; local 15 ms
 explorer_5k_files          25   ms   # click a folder of 5 000 files to its rows shown; local 5.3 ms (floor)
+
+# search (internal/search/perf_test.go): built-in walker, no rg on PATH
+search_20k_first_result   210   ms   # Find in Files, 20k files, 200 hits: to the first results; local 104 ms
+search_20k_done          2700   ms   # same search to the end; local 1.32 s
