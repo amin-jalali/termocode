@@ -203,6 +203,22 @@ the background: you can work at once, and each feature turns on when its
 plugin arrives. If you are offline, a message says the download failed.
 Those features stay off until the next online start.
 
+## Update termocode
+
+A release build of termocode looks for a newer release on GitHub once a
+day, in the background. It needs no account. When it is offline it says
+nothing. Builds from source (`termocode --version` says `dev`) never look.
+Turn it off with the setting `update_check`.
+
+When a newer release is out, the status bar shows a quiet chip such as
+`⬆ v0.2.0`. Click it to see the card:
+
+- **Release notes** opens the release page.
+- **Skip this version** hides the chip until an even newer release comes.
+- When Homebrew, the AUR package or `go install` put termocode on your
+  system, the card shows the command to run there, with **Copy command**.
+  termocode never replaces a file that a package manager owns.
+
 ## Package managers
 
 | Method | Status |

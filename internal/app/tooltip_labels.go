@@ -93,6 +93,7 @@ var tooltipLabels = map[string]tooltipSpec{
 	"status:agents":   {name: "Outside agents (MCP server)", help: "guides/mcp.md#let-an-outside-agent-use-termocode"},
 	"status:services": {name: "Services", help: "guides/services.md#the-view"},
 	"status:ci":       {name: "CI and pull request", help: "guides/git.md#ci-and-pull-requests"},
+	"status:update":   {name: "A newer termocode is out", help: "getting-started/install.md#update-termocode"},
 	"status:debug":    {name: "Call stack", help: "guides/debug.md#step-through-code"},
 	"status:branch":   {name: "Git branch", help: helpBranches},
 	"status:indent":   {name: "Indentation"},

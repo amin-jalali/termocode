@@ -46,7 +46,8 @@ var updateDepsFor = func() updateDeps {
 
 // updateWatch is the update state of this window.
 type updateWatch struct {
-	state update.State
+	state   update.State
+	install update.Install // how termocode was installed (the card)
 }
 
 // updateCheckedMsg is a finished check (or the saved state when no check

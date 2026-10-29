@@ -148,6 +148,9 @@ func (m *Model) handleConfirmSelect(id string) tea.Cmd {
 	if cmd, ok := m.handleCIConfirm(id); ok { // ci_card.go
 		return cmd
 	}
+	if cmd, ok := m.handleUpdateConfirm(id); ok { // update_card.go
+		return cmd
+	}
 	switch m.confirmKind {
 	case confirmKindBulkRename:
 		if id == "apply" {
