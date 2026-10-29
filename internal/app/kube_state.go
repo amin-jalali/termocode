@@ -335,6 +335,8 @@ func (m *Model) handleKubeMsg(msg tea.Msg) (tea.Cmd, bool) {
 		return m.onKubeTick(msg), true
 	case kubePickMsg:
 		return m.onKubePick(msg), true
+	case kubeDescribeMsg:
+		return m.onKubeDescribe(msg), true
 	}
 	return nil, false
 }

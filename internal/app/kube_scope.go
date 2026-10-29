@@ -95,5 +95,5 @@ func (m *Model) handleKubePickerSelect(id string) tea.Cmd {
 		}
 		return m.kubeRescope(st.context, value)
 	}
-	return nil
+	return m.handleKubePodPick(kind, value)
 }

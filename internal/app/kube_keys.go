@@ -42,6 +42,25 @@ func (m Model) handleKubeSidebarKey(k tea.KeyMsg) (Model, tea.Cmd) {
 	case "enter", "l":
 		if have && r.kind == kubeRowSection {
 			st.toggleFold(r.section)
+			return m, nil
+		}
+		if p, ok := st.selectedPod(); ok {
+			return m, m.kubePodTerminal("logs", p, "")
+		}
+		if have && r.kind == kubeRowItem && k.String() == "enter" {
+			return m, m.kubeDescribe(kubeKindOf(r.section), r.name)
+		}
+	case "i":
+		if have && r.kind == kubeRowItem {
+			return m, m.kubeDescribe(kubeKindOf(r.section), r.name)
+		}
+	case "e":
+		if p, ok := st.selectedPod(); ok {
+			return m, m.kubePodTerminal("shell", p, "")
+		}
+	case "y":
+		if have && r.kind == kubeRowItem {
+			return m, m.kubeCopyName(r.name)
 		}
 	case "R":
 		return m, m.kubeReload()
