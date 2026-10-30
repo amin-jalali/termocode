@@ -12,11 +12,11 @@ import { wordWrap } from "../lib/workbench";
 import { modKey } from "../lib/platform";
 import { FileIcon, IconLaptop, IconPencil, IconRedo, IconRows, IconSave, IconUndo, IconWrap } from "../ui/icons";
 import { draft, own, save, saveErr, selection, startEdit, tapRow, undo } from "../lib/edit";
-import { closePath, file, openPath, type FileState } from "../lib/file";
+import { closePath, fileOf, holdPath, openPath, type FileState } from "../lib/file";
 import { dropHl, hl, rowSegs, wantHl } from "../lib/hl";
 import { IMAGE_EXT } from "../lib/image";
 import { BlobImg } from "../ui/BlobImg";
-import { editing, liveStatus, session } from "../lib/live";
+import { editing, syncs } from "../lib/live";
 import { go } from "../lib/router";
 import { toast } from "../lib/toasts";
 import { link, live, store } from "../session";
@@ -237,12 +237,12 @@ function Body({ st, scroller, wrap, canEdit }: { st: FileState; scroller: { curr
   }
 }
 
-export function FileView({ path }: { path: string }) {
+export function FileView({ path, slot = "g0" }: { path: string; slot?: string }) {
   const body = useRef<HTMLDivElement | null>(null);
   usePinch(body);
   const wrap = wordWrap.value;
   useEffect(() => {
-    openPath(path);
+    holdPath(path);
     selection.value = null;
     saveErr.value = null;
     return () => {
@@ -252,7 +252,7 @@ export function FileView({ path }: { path: string }) {
       dropHl();
     };
   }, [path]);
-  const st = file.value?.path === path ? file.value : { path, kind: "loading" as const };
+  const st = fileOf(path) ?? { path, kind: "loading" as const };
   // Offline at the start: open it when the link is back.
   useEffect(() => {
     if (st.kind === "offline" && live.value) openPath(path);
@@ -271,8 +271,8 @@ export function FileView({ path }: { path: string }) {
   // when this page may change it (a viewer or a read-only buffer reads).
   const deskLive = desk && st.kind === "open" && !!buf;
   const isEditing = (canEdit && editing.value === path && st.kind === "open") || deskLive;
-  const phase = liveStatus.value.phase;
-  const sync = session.value;
+  const sync = syncs.value.get(slot) ?? null;
+  const phase = sync?.status.value.phase ?? "synced";
   return (
     <View
       tab="files"
@@ -394,7 +394,7 @@ export function FileView({ path }: { path: string }) {
       }
     >
       {deskLive && buf ? (
-        <LiveEditor key={buf.buf} path={path} buf={buf.buf} desk={{ readOnly: !canEdit, wrap, tabSize: buf.ts ?? 0, insertSpaces: buf.et === true }} />
+        <LiveEditor key={buf.buf} path={path} buf={buf.buf} slot={slot} desk={{ readOnly: !canEdit, wrap, tabSize: buf.ts ?? 0, insertSpaces: buf.et === true }} />
       ) : isEditing && buf ? (
         <LiveEditor path={path} buf={buf.buf} />
       ) : (

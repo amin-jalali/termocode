@@ -6,13 +6,14 @@
 // editor at once; when both sides changed, nothing is merged: the user's
 // text stays, the editor stops sending and shows the laptop's change
 // until the user chooses (use the laptop's text, or send theirs).
-import { signal } from "@preact/signals";
+import { computed, signal, type Signal } from "@preact/signals";
 import type { BufSnap, EditRes } from "../../../../webproto/proto";
 import type { EditorHandle } from "../editor/api";
 import { OfflineError, ReqError } from "../net/link";
 import { link, live } from "../session";
 import { own, save as saveBuf } from "./edit";
 import { diff, pos } from "./textdiff";
+import { focusSlot } from "./workbench";
 
 export type LivePhase = "synced" | "sending" | "waiting" | "conflict" | "error" | "gone";
 
@@ -30,9 +31,21 @@ export const SEND_MS = 150;
 
 /** editing is the path open in the editor (null: the read view). */
 export const editing = signal<string | null>(null);
-export const liveStatus = signal<LiveStatus>({ phase: "synced" });
-/** session is the running sync, for the view's buttons. */
-export const session = signal<LiveSync | null>(null);
+/** syncs are the running syncs by editor slot (one per editor group). */
+export const syncs = signal<ReadonlyMap<string, LiveSync>>(new Map());
+/** session is the focused editor's sync (Save, Done and the keys act on it). */
+export const session = computed<LiveSync | null>(() => syncs.value.get(focusSlot.value) ?? null);
+const SYNCED: LiveStatus = { phase: "synced" };
+/** liveStatus is the focused editor's state. */
+export const liveStatus = computed<LiveStatus>(() => session.value?.status.value ?? SYNCED);
+
+/** setSync puts (or with null, takes) the sync of an editor slot. */
+export function setSync(slot: string, s: LiveSync | null): void {
+  const next = new Map(syncs.peek());
+  if (s) next.set(slot, s);
+  else next.delete(slot);
+  syncs.value = next;
+}
 
 export class LiveSync {
   private known: { text: string; tick: number };
@@ -41,11 +54,12 @@ export class LiveSync {
   private flying: Promise<void> | null = null;
   private conflict: { base: string } | null = null;
   private gone = false;
+  /** status is this editor's state (shown above it and in its header). */
+  readonly status: Signal<LiveStatus> = signal<LiveStatus>(SYNCED);
 
   constructor(readonly buf: number, private readonly ed: EditorHandle, snap: BufSnap) {
     this.known = { text: snap.lines.join("\n"), tick: snap.tick };
     this.latest = snap;
-    liveStatus.value = { phase: "synced" };
   }
 
   /** dirty: the editor holds text the laptop does not have yet. */
@@ -66,7 +80,7 @@ export class LiveSync {
     if (gone && !this.gone) {
       this.gone = true;
       clearTimeout(this.timer);
-      liveStatus.value = { phase: "gone" };
+      this.status.value = { phase: "gone" };
       return;
     }
     this.process();
@@ -82,7 +96,7 @@ export class LiveSync {
       return;
     }
     if (this.conflict) {
-      liveStatus.value = { phase: "conflict", base: this.conflict.base, laptop: text };
+      this.status.value = { phase: "conflict", base: this.conflict.base, laptop: text };
       return;
     }
     if (!this.dirty()) {
@@ -92,7 +106,7 @@ export class LiveSync {
     }
     this.conflict = { base: this.known.text };
     clearTimeout(this.timer);
-    liveStatus.value = { phase: "conflict", base: this.known.text, laptop: text };
+    this.status.value = { phase: "conflict", base: this.known.text, laptop: text };
   }
 
   /** flush sends what is unsent now; it resolves when the hub answered. */
@@ -103,23 +117,23 @@ export class LiveSync {
     const now = this.ed.text();
     const d = diff(this.known.text, now);
     if (!d) {
-      liveStatus.value = { phase: "synced" };
+      this.status.value = { phase: "synced" };
       return Promise.resolve();
     }
     if (!live.peek()) {
-      liveStatus.value = { phase: "waiting" };
+      this.status.value = { phase: "waiting" };
       return Promise.resolve();
     }
     const base = this.known;
     const args = { buf: this.buf, tick: base.tick, start: pos(base.text, d.from), end: pos(base.text, d.to), lines: d.insert.split("\n") };
-    liveStatus.value = { phase: "sending" };
+    this.status.value = { phase: "sending" };
     this.flying = link.request("buf.set_text", args).then(
       (res) => {
         const r = res as EditRes;
         own.tick = Math.max(own.tick, r.tick);
         this.known = { text: now, tick: r.tick };
         this.flying = null;
-        liveStatus.value = { phase: "synced" };
+        this.status.value = { phase: "synced" };
         this.process();
         if (!this.conflict && this.dirty()) this.local();
       },
@@ -127,11 +141,11 @@ export class LiveSync {
         this.flying = null;
         if (e instanceof ReqError && e.code === "conflict") {
           this.conflict = { base: base.text };
-          liveStatus.value = { phase: "conflict", base: base.text, laptop: this.latest.lines.join("\n") };
+          this.status.value = { phase: "conflict", base: base.text, laptop: this.latest.lines.join("\n") };
         } else if (e instanceof OfflineError) {
-          liveStatus.value = { phase: "waiting" };
+          this.status.value = { phase: "waiting" };
         } else {
-          liveStatus.value = { phase: "error", note: e instanceof Error ? e.message : "" };
+          this.status.value = { phase: "error", note: e instanceof Error ? e.message : "" };
         }
         this.process();
       },
@@ -146,7 +160,7 @@ export class LiveSync {
     this.conflict = null;
     this.known = { text, tick: s.tick };
     this.ed.replace(text);
-    liveStatus.value = { phase: "synced" };
+    this.status.value = { phase: "synced" };
   }
 
   /** sendMine sends the user's text over the laptop's newest. */

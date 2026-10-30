@@ -4,12 +4,12 @@
 // way. The frame gets the text and colours by message and sends back what
 // the user typed; the page keeps a copy of the frame's text, so text() is
 // at hand at once.
-import { signal } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
 import { FRAME_PATH, type FrameOpts, type FromFrame, type ToFrame } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
-import { cursorAt, quick } from "./workbench";
+import { cursorAt, focusSlot, quick } from "./workbench";
 
 /** COLOR_TOKENS are the workbench colours the frame paints with. */
 const COLOR_TOKENS = [
@@ -48,6 +48,8 @@ export function frameColors(at: Element): { colors: Record<string, string>; dark
 }
 
 export interface DeskHost extends EditorHost {
+  /** slot is the editor group's slot; only the focused one moves the status bar. */
+  slot?: string;
   readOnly: boolean;
   wrap: boolean;
   tabSize: number;
@@ -61,8 +63,19 @@ export interface DeskHandle extends EditorHandle {
   reveal(line: number): void;
 }
 
-/** activeDesk is the desktop editor on screen (Go to line reveals in it). */
-export const activeDesk = signal<DeskHandle | null>(null);
+/** desks are the desktop editors on screen, by editor group slot. */
+export const desks = signal<ReadonlyMap<string, DeskHandle>>(new Map());
+
+/** activeDesk is the focused group's editor (Go to line reveals in it). */
+export const activeDesk = computed<DeskHandle | null>(() => desks.value.get(focusSlot.value) ?? null);
+
+/** setDesk puts (or with null, takes) the editor of a slot. */
+export function setDesk(slot: string, d: DeskHandle | null): void {
+  const next = new Map(desks.peek());
+  if (d) next.set(slot, d);
+  else next.delete(slot);
+  desks.value = next;
+}
 
 /** mountDesk puts the frame in parent and returns its handle. */
 export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
@@ -116,7 +129,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         host.onViewport(m.first, m.last);
         return;
       case "cursor":
-        cursorAt.value = { line: m.line, col: m.col };
+        if ((host.slot ?? "g0") === focusSlot.peek()) cursorAt.value = { line: m.line, col: m.col };
         return;
       case "save":
         host.onSave();
@@ -170,7 +183,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     },
     destroy() {
       removeEventListener("message", onMessage);
-      cursorAt.value = null;
+      if ((host.slot ?? "g0") === focusSlot.peek()) cursorAt.value = null;
       frame.remove();
     },
   };

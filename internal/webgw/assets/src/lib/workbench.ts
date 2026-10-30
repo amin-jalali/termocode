@@ -6,7 +6,7 @@
 // the open tabs, the active file, which panels are open and their sizes.
 // Sizes and open panels are a per-browser convenience (lib/prefs.ts
 // stores them; missing or blocked storage: the defaults).
-import { effect, signal } from "@preact/signals";
+import { computed, effect, signal } from "@preact/signals";
 import type { BufItem } from "../../../../webproto/proto";
 import { loadLayout, saveLayout } from "./prefs";
 import { go, route } from "./router";
@@ -74,6 +74,17 @@ export const quick = signal<{ mode: QuickMode } | null>(null);
 
 /** cursorAt is the desktop editor's cursor (1-based), for the status bar. */
 export const cursorAt = signal<{ line: number; col: number } | null>(null);
+
+/** focusedGroup is the editor group that has the focus (0: the first). */
+export const focusedGroup = signal<number>(0);
+
+/** slotOf names an editor group's editor ("g0", "g1"). */
+export function slotOf(group: number): string {
+  return "g" + group;
+}
+
+/** focusSlot is the focused group's editor slot. */
+export const focusSlot = computed<string>(() => slotOf(focusedGroup.value));
 
 /** activeFile is the file the editor shows (null: none). */
 export const activeFile = signal<string | null>(null);
