@@ -1264,36 +1264,6 @@
       "phase": "v2"
     },
     {
-      "op": "git.graph",
-      "args": "GitGraphArgs",
-      "result": "GitGraph",
-      "role": "viewer",
-      "rate": {
-        "n": 5,
-        "per_ms": 1000
-      },
-      "max_bytes": 1024,
-      "live": 1,
-      "laptop_card": false,
-      "audit": "no",
-      "phase": "v2"
-    },
-    {
-      "op": "git.blame",
-      "args": "GitBlameArgs",
-      "result": "GitBlame",
-      "role": "viewer",
-      "rate": {
-        "n": 5,
-        "per_ms": 1000
-      },
-      "max_bytes": 8192,
-      "live": 1,
-      "laptop_card": false,
-      "audit": "no",
-      "phase": "v2"
-    },
-    {
       "op": "git.file_log",
       "args": "GitFileLogArgs",
       "result": "GitFileLog",
@@ -1490,6 +1460,80 @@
         "per_ms": 5000
       },
       "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.graph",
+      "args": "GitGraphArgs",
+      "result": "GitGraph",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "git.blame",
+      "args": "GitBlameArgs",
+      "result": "GitBlame",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "git.conflict",
+      "args": "GitConflictArgs",
+      "result": "GitConflict",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "git.resolve",
+      "args": "GitResolveArgs",
+      "result": "GitResolved",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1048576,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.resolve_side",
+      "args": "GitResolveSideArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 8192,
       "laptop_card": true,
       "audit": "yes",
       "phase": "v2"
@@ -4068,6 +4112,109 @@
       ],
       "additionalProperties": true
     },
+    "GitConflict": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "$ref": "#/defs/GitConflictSide"
+        },
+        "blocks": {
+          "items": {
+            "$ref": "#/defs/GitConflictPart"
+          },
+          "type": "array"
+        },
+        "ours": {
+          "$ref": "#/defs/GitConflictSide"
+        },
+        "path": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "theirs": {
+          "$ref": "#/defs/GitConflictSide"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "text",
+        "version",
+        "ours",
+        "theirs",
+        "base",
+        "blocks"
+      ],
+      "additionalProperties": true
+    },
+    "GitConflictArgs": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    },
+    "GitConflictPart": {
+      "type": "object",
+      "properties": {
+        "both": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "ours": {
+          "type": "string"
+        },
+        "oursLabel": {
+          "type": "string"
+        },
+        "raw": {
+          "type": "string"
+        },
+        "theirs": {
+          "type": "string"
+        },
+        "theirsLabel": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "line",
+        "raw",
+        "ours",
+        "theirs",
+        "both"
+      ],
+      "additionalProperties": true
+    },
+    "GitConflictSide": {
+      "type": "object",
+      "properties": {
+        "binary": {
+          "type": "boolean"
+        },
+        "present": {
+          "type": "boolean"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "present"
+      ],
+      "additionalProperties": true
+    },
     "GitDiff": {
       "type": "object",
       "properties": {
@@ -4347,6 +4494,61 @@
       "required": [
         "name",
         "kind"
+      ],
+      "additionalProperties": true
+    },
+    "GitResolveArgs": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "text",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "GitResolveSideArgs": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "side": {
+          "enum": [
+            "ours",
+            "theirs"
+          ]
+        }
+      },
+      "required": [
+        "path",
+        "side"
+      ],
+      "additionalProperties": false
+    },
+    "GitResolved": {
+      "type": "object",
+      "properties": {
+        "left": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "left"
       ],
       "additionalProperties": true
     },

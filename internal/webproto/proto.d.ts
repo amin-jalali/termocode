@@ -291,15 +291,6 @@ export interface TestIDArgs {
   id: string;
 }
 
-export interface GitGraphArgs {
-  skip?: number;
-  head?: boolean;
-}
-
-export interface GitBlameArgs {
-  path: string;
-}
-
 export interface GitFileLogArgs {
   path: string;
 }
@@ -336,6 +327,30 @@ export interface ServiceLogsArgs {
 
 export interface ServiceArgs {
   name: string;
+}
+
+export interface GitGraphArgs {
+  skip?: number;
+  head?: boolean;
+}
+
+export interface GitBlameArgs {
+  path: string;
+}
+
+export interface GitConflictArgs {
+  path: string;
+}
+
+export interface GitResolveArgs {
+  path: string;
+  text: string;
+  version: string;
+}
+
+export interface GitResolveSideArgs {
+  path: string;
+  side: "ours" | "theirs";
 }
 
 export interface ItemArgs {
@@ -1248,53 +1263,6 @@ export interface TestOutput {
   truncated?: boolean;
 }
 
-export interface GitGraph {
-  skip: number;
-  rows: GitGraphRow[];
-  more?: boolean;
-}
-
-export interface GitGraphRow {
-  hash: string;
-  parents: string[];
-  subject: string;
-  author: string;
-  when: number;
-  refs?: GitRef[];
-  head?: boolean;
-  unpushed?: boolean;
-  col: number;
-  color: number;
-  up: GitGraphEdge[];
-  down: GitGraphEdge[];
-}
-
-export interface GitRef {
-  name: string;
-  kind: "local" | "remote" | "tag";
-}
-
-export interface GitGraphEdge {
-  f: number;
-  t: number;
-  c: number;
-}
-
-export interface GitBlame {
-  path: string;
-  commits: GitBlameCommit[];
-  lines: number[];
-  cut?: boolean;
-}
-
-export interface GitBlameCommit {
-  hash?: string;
-  author?: string;
-  subject?: string;
-  when?: number;
-  uncommitted?: boolean;
-}
-
 export interface GitFileLog {
   path: string;
   log: GitCommit[];
@@ -1396,6 +1364,84 @@ export interface ServiceLogs {
 export interface ServiceDone {
   asked?: boolean;
   note?: string;
+}
+
+export interface GitGraph {
+  skip: number;
+  rows: GitGraphRow[];
+  more?: boolean;
+}
+
+export interface GitGraphRow {
+  hash: string;
+  parents: string[];
+  subject: string;
+  author: string;
+  when: number;
+  refs?: GitRef[];
+  head?: boolean;
+  unpushed?: boolean;
+  col: number;
+  color: number;
+  up: GitGraphEdge[];
+  down: GitGraphEdge[];
+}
+
+export interface GitRef {
+  name: string;
+  kind: "local" | "remote" | "tag";
+}
+
+export interface GitGraphEdge {
+  f: number;
+  t: number;
+  c: number;
+}
+
+export interface GitBlame {
+  path: string;
+  commits: GitBlameCommit[];
+  lines: number[];
+  cut?: boolean;
+}
+
+export interface GitBlameCommit {
+  hash?: string;
+  author?: string;
+  subject?: string;
+  when?: number;
+  uncommitted?: boolean;
+}
+
+export interface GitConflict {
+  path: string;
+  text: string;
+  version: string;
+  ours: GitConflictSide;
+  theirs: GitConflictSide;
+  base: GitConflictSide;
+  blocks: GitConflictPart[];
+}
+
+export interface GitConflictSide {
+  present: boolean;
+  binary?: boolean;
+  text?: string;
+}
+
+export interface GitConflictPart {
+  line: number;
+  raw: string;
+  oursLabel?: string;
+  theirsLabel?: string;
+  ours: string;
+  theirs: string;
+  both: string;
+}
+
+export interface GitResolved {
+  path: string;
+  left: number;
 }
 
 export interface TreeChanged {
@@ -1583,8 +1629,6 @@ export interface OpArgs {
   "tests.run": TestRunArgs;
   "tests.debug": TestIDArgs;
   "tests.stop": EmptyArgs;
-  "git.graph": GitGraphArgs;
-  "git.blame": GitBlameArgs;
   "git.file_log": GitFileLogArgs;
   "git.text": GitTextArgs;
   "buf.symbols": BufArgs;
@@ -1599,6 +1643,11 @@ export interface OpArgs {
   "services.start": ServiceArgs;
   "services.restart": ServiceArgs;
   "services.stop": ServiceArgs;
+  "git.graph": GitGraphArgs;
+  "git.blame": GitBlameArgs;
+  "git.conflict": GitConflictArgs;
+  "git.resolve": GitResolveArgs;
+  "git.resolve_side": GitResolveSideArgs;
   "tree.new_file": ItemArgs;
   "tree.new_dir": ItemArgs;
   "tree.rename": RenameArgs;
@@ -1696,8 +1745,6 @@ export interface OpResult {
   "lsp.definition": LspLocations;
   "lsp.references": LspLocations;
   "tests.output": TestOutput;
-  "git.graph": GitGraph;
-  "git.blame": GitBlame;
   "git.file_log": GitFileLog;
   "git.text": GitText;
   "buf.symbols": BufSymbols;
@@ -1711,6 +1758,11 @@ export interface OpResult {
   "services.start": ServiceDone;
   "services.restart": ServiceDone;
   "services.stop": AskRef;
+  "git.graph": GitGraph;
+  "git.blame": GitBlame;
+  "git.conflict": GitConflict;
+  "git.resolve": GitResolved;
+  "git.resolve_side": AskRef;
   "tree.new_file": TreeChanged;
   "tree.new_dir": TreeChanged;
   "tree.rename": TreeChanged;

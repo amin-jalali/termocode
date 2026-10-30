@@ -1,6 +1,9 @@
 package webproto
 
-import "strings"
+import (
+	"strings"
+	"unicode/utf8"
+)
 
 // The ops of the desktop's git views (WEBP-5): the commit graph, blame,
 // the merge editor, interactive rebase, amend, clone, pull requests and
@@ -13,6 +16,10 @@ import "strings"
 const (
 	OpGitGraph = "git.graph"
 	OpGitBlame = "git.blame"
+
+	OpGitConflict    = "git.conflict"
+	OpGitResolve     = "git.resolve"
+	OpGitResolveSide = "git.resolve_side"
 )
 
 // Graph limits.
@@ -94,9 +101,79 @@ type GitBlameCommit struct {
 	Uncommitted bool   `json:"uncommitted,omitempty"`
 }
 
+// MaxResolveText caps the merged text git.resolve saves.
+const MaxResolveText = 1<<20 - 4<<10
+
+// GitConflictArgs names a file with a merge conflict.
+type GitConflictArgs struct {
+	Path string `json:"path"`
+}
+
+// GitConflict is the result of git.conflict: the file as saved, with
+// its conflict markers (line ends as "\n"), and its three sides as git's
+// index keeps them. Version names the saved file; git.resolve takes it
+// back, so a file changed meanwhile is not overwritten.
+type GitConflict struct {
+	Path    string            `json:"path"`
+	Text    string            `json:"text"`
+	Version string            `json:"version"`
+	Ours    GitConflictSide   `json:"ours"`   // current: the branch you are on
+	Theirs  GitConflictSide   `json:"theirs"` // incoming: what is merged in
+	Base    GitConflictSide   `json:"base"`   // the common ancestor
+	Blocks  []GitConflictPart `json:"blocks"`
+}
+
+// GitConflictSide is one side of the conflict. Present false: that side
+// deleted the file. Binary: not shown as text (only git.resolve_side).
+type GitConflictSide struct {
+	Present bool   `json:"present"`
+	Binary  bool   `json:"binary,omitempty"`
+	Text    string `json:"text,omitempty"`
+}
+
+// GitConflictPart is one conflict of Text. Raw is its exact text, the
+// markers included (each line ending in "\n"); each choice is the text
+// that replaces Raw for it, as the laptop's merge view resolves it.
+type GitConflictPart struct {
+	Line        int    `json:"line"` // 1-based line of the "<<<<<<<" marker
+	Raw         string `json:"raw"`
+	OursLabel   string `json:"oursLabel,omitempty"`
+	TheirsLabel string `json:"theirsLabel,omitempty"`
+	Ours        string `json:"ours"`
+	Theirs      string `json:"theirs"`
+	Both        string `json:"both"`
+}
+
+// GitResolveArgs saves Text as the merged file and marks it resolved, if
+// the saved file is still the one Version names.
+type GitResolveArgs struct {
+	Path    string `json:"path"`
+	Text    string `json:"text"`
+	Version string `json:"version"`
+}
+
+// GitResolveSideArgs keeps one side of the whole file ("ours": current,
+// "theirs": incoming). If that side deleted the file, the file goes.
+type GitResolveSideArgs struct {
+	Path string `json:"path"`
+	Side string `json:"side" enum:"ours|theirs"`
+}
+
+// GitResolved is the result of git.resolve.
+type GitResolved struct {
+	Path string `json:"path"`
+	Left int    `json:"left"` // conflicted files left after this one
+}
+
 var opGitViewRows = []Policy{
 	{Op: OpGitGraph, New: newOf[GitGraphArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpGitBlame, New: newOf[GitBlameArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 8 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpGitConflict, New: newOf[GitConflictArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 8 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
+	// Resolving writes the working file the page shows merged and stages
+	// it (as the laptop's merge view does): the page asks first; the
+	// version keeps a changed file from being overwritten.
+	{Op: OpGitResolve, New: newOf[GitResolveArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 1 * mib, Live: 1, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpGitResolveSide, New: newOf[GitResolveSideArgs](), Role: RoleController, Rate: slow, MaxBytes: 8 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 }
 
 func (a *GitGraphArgs) validate(int) error {
@@ -113,10 +190,43 @@ func (a *GitBlameArgs) validate(int) error {
 	return nil
 }
 
+func (a *GitConflictArgs) validate(int) error {
+	if !validPath(a.Path, false) || strings.HasSuffix(a.Path, "/") {
+		return invalid("bad path")
+	}
+	return nil
+}
+
+func (a *GitResolveArgs) validate(int) error {
+	if !validPath(a.Path, false) || strings.HasSuffix(a.Path, "/") {
+		return invalid("bad path")
+	}
+	if len(a.Version) != 64 || strings.Trim(a.Version, "0123456789abcdef") != "" {
+		return invalid("bad version")
+	}
+	if len(a.Text) > MaxResolveText || !utf8.ValidString(a.Text) || strings.IndexByte(a.Text, 0) >= 0 {
+		return invalid("bad text")
+	}
+	return nil
+}
+
+func (a *GitResolveSideArgs) validate(int) error {
+	if !validPath(a.Path, false) || strings.HasSuffix(a.Path, "/") {
+		return invalid("bad path")
+	}
+	if a.Side != "ours" && a.Side != "theirs" {
+		return invalid("bad side")
+	}
+	return nil
+}
+
 // The rows join the table before any init() runs (as ops_more.go's).
 var _ = func() bool { opTable = append(opTable, opGitViewRows...); return true }()
 
 func init() {
 	registerResult(OpGitGraph, GitGraph{})
 	registerResult(OpGitBlame, GitBlame{})
+	registerResult(OpGitConflict, GitConflict{})
+	registerResult(OpGitResolve, GitResolved{})
+	registerResult(OpGitResolveSide, AskRef{})
 }
