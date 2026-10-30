@@ -9,9 +9,9 @@ import type { BufSnap, GitDiff, GitSnap } from "../../../../webproto/proto";
 import type { EditorHandle, EditorModule } from "../editor/api";
 import { startEdit } from "../lib/edit";
 import { hl, hlRows, wantHl } from "../lib/hl";
-import { activeDesk, mountDesk, type DeskHandle } from "../lib/deskeditor";
+import { mountDesk, setDesk, type DeskHandle } from "../lib/deskeditor";
 import { loadEditor } from "../lib/lazy";
-import { editing, liveStatus, LiveSync, session } from "../lib/live";
+import { editing, liveStatus, LiveSync, session, setSync, syncs } from "../lib/live";
 import { toast } from "../lib/toasts";
 import { link, live, store } from "../session";
 import { gutterMarks } from "../lib/gutter";
@@ -96,7 +96,7 @@ export interface DeskOpts {
   insertSpaces: boolean;
 }
 
-export function LiveEditor({ path, buf, desk }: { path: string; buf: number; desk?: DeskOpts }) {
+export function LiveEditor({ path, buf, desk, slot = "g0" }: { path: string; buf: number; desk?: DeskOpts; slot?: string }) {
   const topic = "buf:" + buf;
   const ts = store.topic(topic).value;
   const snap = readBuf(ts?.data);
@@ -109,7 +109,7 @@ export function LiveEditor({ path, buf, desk }: { path: string; buf: number; des
     const peek = () => readBuf(store.topic(topic).peek()?.data);
     const d = desk;
     const load: Promise<EditorModule> = d
-      ? Promise.resolve({ mount: (el, host) => mountDesk(el, { ...host, ...d, onDone: () => undefined }) })
+      ? Promise.resolve({ mount: (el, host) => mountDesk(el, { ...host, ...d, slot, onDone: () => undefined }) })
       : loadEditor();
     load.then(
       (mod) => {
@@ -129,8 +129,8 @@ export function LiveEditor({ path, buf, desk }: { path: string; buf: number; des
         });
         sync = new LiveSync(buf, handle, first);
         ed.current = handle;
-        if (d) activeDesk.value = handle as DeskHandle;
-        session.value = sync;
+        if (d) setDesk(slot, handle as DeskHandle);
+        setSync(slot, sync);
         handle.setHl(hlRows(hl.peek(), buf));
         handle.focus();
         setReady(true);
@@ -145,18 +145,22 @@ export function LiveEditor({ path, buf, desk }: { path: string; buf: number; des
     );
     return () => {
       dead = true;
-      session.peek()?.dispose();
-      session.value = null;
-      if (activeDesk.peek() === ed.current) activeDesk.value = null;
+      const mine = syncs.peek().get(slot);
+      if (mine && mine.buf === buf) {
+        mine.dispose();
+        setSync(slot, null);
+      }
+      if (ed.current) setDesk(slot, null);
       ed.current?.destroy();
       ed.current = null;
     };
   }, [buf]);
 
   // The laptop's copy: every delta goes to the sync.
+  const own = syncs.value.get(slot) ?? null;
   useEffect(() => {
-    if (snap) session.peek()?.store(snap, isGone(ts?.data));
-  }, [snap, ready]);
+    if (snap) own?.store(snap, isGone(ts?.data));
+  }, [snap, ready, own]);
   // Git change marks (desktop): the file's unstaged diff on disk, asked
   // again when the laptop saves or git's list changes.
   const gitData = desk ? (store.topic("git").value?.data as GitSnap | undefined) : undefined;
@@ -186,11 +190,11 @@ export function LiveEditor({ path, buf, desk }: { path: string; buf: number; des
   // The link came back: send what waited.
   const on = live.value;
   useEffect(() => {
-    if (on && liveStatus.peek().phase === "waiting") void session.peek()?.flush();
+    if (on && own?.status.peek().phase === "waiting") void own.flush();
   }, [on]);
 
-  const st = liveStatus.value;
-  const sync = session.value;
+  const st = own?.status.value ?? { phase: "synced" as const };
+  const sync = own;
   return (
     <div class="live">
       {st.phase === "conflict" && sync && st.base !== undefined && st.laptop !== undefined && <Conflict base={st.base} laptop={st.laptop} sync={sync} />}

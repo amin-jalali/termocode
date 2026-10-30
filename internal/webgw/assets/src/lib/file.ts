@@ -4,11 +4,13 @@
 // file too big to open is never sent: the view shows what it is instead
 // (a big file shows its first 2 000 lines read-only, from buf.head).
 // Leaving the view unsubscribes and drops the page's own reference with
-// buf.close; the laptop's buffer stays.
-import { signal } from "@preact/signals";
+// buf.close; the laptop's buffer stays. Two editor groups may show the
+// same file: it is opened once and closed when the last view leaves.
+import { computed, signal } from "@preact/signals";
 import type { BufHeadRes, BufOpenRes } from "../../../../webproto/proto";
 import { OfflineError, ReqError } from "../net/link";
 import { link } from "../session";
+import { activeFile } from "./workbench";
 
 export type FileKind = "loading" | "open" | "head" | "binary" | "secret" | "missing" | "offline" | "error";
 
@@ -25,8 +27,23 @@ export interface FileState {
   err?: unknown;
 }
 
-export const file = signal<FileState | null>(null);
+/** files are the open file views' states, by path. */
+export const files = signal<ReadonlyMap<string, FileState>>(new Map());
 
+/** file is the state of the file the editor shows (the focused one). */
+export const file = computed<FileState | null>(() => {
+  const p = activeFile.value;
+  return p === null ? null : (files.value.get(p) ?? null);
+});
+
+/** fileOf is the state of path's view (null: no view holds it). */
+export function fileOf(path: string): FileState | null {
+  return files.value.get(path) ?? null;
+}
+
+/** gens: the newest open of each path; refs: the views that hold it. */
+const gens = new Map<string, number>();
+const refs = new Map<string, number>();
 let gen = 0;
 
 function reason(e: unknown): { reason?: string; size?: number } {
@@ -34,8 +51,15 @@ function reason(e: unknown): { reason?: string; size?: number } {
   return { reason: typeof d.reason === "string" ? d.reason : undefined, size: typeof d.size === "number" ? d.size : undefined };
 }
 
+function put(path: string, st: FileState | null): void {
+  const next = new Map(files.peek());
+  if (st) next.set(path, st);
+  else next.delete(path);
+  files.value = next;
+}
+
 function set(g: number, st: FileState): void {
-  if (g === gen) file.value = st;
+  if (gens.get(st.path) === g) put(st.path, st);
 }
 
 /** kindOf maps a refusal of buf.open or buf.head to what the view shows. */
@@ -55,15 +79,16 @@ function head(g: number, path: string, size?: number): void {
   );
 }
 
-/** openPath shows path: buf.open, then the buf topic. */
+/** openPath (re)opens path: buf.open, then the buf topic. */
 export function openPath(path: string): void {
   const g = ++gen;
-  closeCurrent();
-  file.value = { path, kind: "loading" };
+  gens.set(path, g);
+  closeBuf(path);
+  put(path, { path, kind: "loading" });
   link.request("buf.open", { path }).then(
     (data) => {
       const res = data as BufOpenRes;
-      if (g !== gen) {
+      if (gens.get(path) !== g) {
         link.request("buf.close", { buf: res.buf }).catch(() => undefined);
         return;
       }
@@ -81,17 +106,29 @@ export function openPath(path: string): void {
   );
 }
 
-function closeCurrent(): void {
-  const cur = file.peek();
+/** holdPath: a view shows path (it opens when the first one does). */
+export function holdPath(path: string): void {
+  const n = refs.get(path) ?? 0;
+  refs.set(path, n + 1);
+  if (n === 0) openPath(path);
+}
+
+function closeBuf(path: string): void {
+  const cur = files.peek().get(path);
   if (cur?.buf === undefined) return;
   link.unsubscribe("buf:" + cur.buf);
   link.request("buf.close", { buf: cur.buf }).catch(() => undefined); // only the page's own reference
 }
 
-/** closePath leaves the file view of path. */
+/** closePath: a view of path left (the file closes when the last one does). */
 export function closePath(path: string): void {
-  if (file.peek()?.path !== path) return;
-  gen++;
-  closeCurrent();
-  file.value = null;
+  const n = (refs.get(path) ?? 0) - 1;
+  if (n > 0) {
+    refs.set(path, n);
+    return;
+  }
+  refs.delete(path);
+  gens.delete(path);
+  closeBuf(path);
+  put(path, null);
 }
