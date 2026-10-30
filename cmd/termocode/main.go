@@ -319,7 +319,7 @@ func run(argv []string) int {
 			// A folder that was moved or deleted: opening the current
 			// folder instead, without a word, is the wrong workspace.
 			fmt.Fprintln(os.Stderr, msg)
-			os.Exit(1)
+			return 1
 		}
 		if first != "setup" && first != "-h" && first != "--help" && first != "help" {
 			if info, err := os.Stat(first); err == nil && info.IsDir() {

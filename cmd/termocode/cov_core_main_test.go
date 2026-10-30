@@ -233,11 +233,11 @@ func TestCovCoreRunOpensFolder(t *testing.T) {
 	if len(os.Args) != 1 {
 		t.Errorf("os.Args still holds the folder: %q", os.Args)
 	}
-	// A name that is not a folder stays an argument; the UI starts in
-	// the current folder.
+	// A folder that is gone (moved or deleted) is an error: the UI does
+	// not open the current folder instead, and the test process lives on.
 	r = covCall(t, []string{"no-such-folder"}, nil)
-	if r.tuiStart != 1 || len(os.Args) != 2 || os.Args[1] != "no-such-folder" {
-		t.Errorf("non-folder arg: %+v, args %q", r, os.Args)
+	if r.code != 1 || r.tuiStart != 0 || !strings.Contains(r.stderr, "folder no-such-folder not found") {
+		t.Errorf("gone folder arg: %+v", r)
 	}
 }
 
