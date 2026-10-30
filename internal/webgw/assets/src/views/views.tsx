@@ -23,13 +23,7 @@ export function FilesView() {
   return r.tab === "files" && r.rest ? <FileView path={r.rest} /> : <TreeView />;
 }
 
-export function TermView() {
-  return (
-    <View tab="term" title={t("tab.term")}>
-      <TopicBody topic="terms" empty={<p>{t("term.none")}</p>} />
-    </View>
-  );
-}
+export { TermView } from "./Term";
 
 export { GitView } from "./git/GitView";
 

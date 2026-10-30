@@ -157,6 +157,8 @@ export const FA: Record<StringKey, string> = {
   // Terminal
   "term.busy": "مشغول",
   "term.ended": "این ترمینال تمام شد (کد خروج {code}).",
+  "term.ended_now": "این ترمینال تمام شد.",
+  "term.gone": "این ترمینال روی لپ‌تاپ بسته شد.",
   "term.new": "یک ترمینال تازه",
   "term.none": "هیچ ترمینالی روی لپ‌تاپ باز نیست.",
   "term.open_one": "باز کردن یکی",
