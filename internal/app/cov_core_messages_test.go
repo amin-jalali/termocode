@@ -13,6 +13,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/findbar"
 	"github.com/amin-jalali/termocode/internal/menu"
 	"github.com/amin-jalali/termocode/internal/nvim"
+	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/recents"
 	"github.com/amin-jalali/termocode/internal/replacebar"
 	"github.com/amin-jalali/termocode/internal/search"
@@ -160,4 +161,69 @@ func TestCovCoreOverlayResults(t *testing.T) {
 	}
 	m, _ = m.update(SettingsCloseMsg{})
 	covFitsScreen(t, m, "after the messages")
+}
+
+// LSP answers open their pickers, or say there is nothing.
+func TestCovCoreLSPResultMessages(t *testing.T) {
+	m := covNew(t)
+	m, _ = m.update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	items := []picker.Item{{ID: "a", Title: "main.go:3"}}
+	for name, c := range map[string]struct {
+		msg  tea.Msg
+		kind pickerKindEnum
+	}{
+		"problems":   {ProblemsMsg{Items: items, Index: map[string]nvim.Diagnostic{"a": {Path: "/w/main.go", Line: 3}}}, pickerKindProblems},
+		"symbols":    {SymbolPickerMsg{Items: items, Index: map[string][2]int{"a": {3, 1}}}, pickerKindSymbols},
+		"workspace":  {WorkspaceSymbolPickerMsg{Items: items, Index: map[string]workspaceSymbolTarget{"a": {File: "/w/main.go", Line: 3}}}, pickerKindWorkspaceSymbols},
+		"references": {ReferencesPickerMsg{Items: items, Index: map[string]workspaceSymbolTarget{"a": {File: "/w/main.go", Line: 3}}}, pickerKindWorkspaceSymbols},
+	} {
+		mm, _ := m.update(c.msg)
+		if !mm.pickerOpen || mm.pickerKind != c.kind {
+			t.Errorf("%s: picker %v kind %v", name, mm.pickerOpen, mm.pickerKind)
+		}
+	}
+	m, _ = m.update(ProblemsMsg{})
+	m, _ = m.update(CodeActionsMsg{})
+	if !strings.Contains(toastText(m), "No problems detected") {
+		t.Errorf("empty problems:\n%s", toastText(m))
+	}
+	m.commitDetails = nil
+	m, _ = m.update(commitDetailMsg{hash: "abc"})
+	if _, ok := m.commitDetails["abc"]; !ok {
+		t.Error("commit detail not kept")
+	}
+	// Without nvim the find bar does nothing and counts nothing.
+	m.applyReplaceNext("a", "b")
+	m.applyReplaceAll("a", "b")
+	m.applySearch("a")
+	if m.fetchMatchCount() != "" || m.getNvimSelection() != "" {
+		t.Error("find without nvim")
+	}
+}
+
+// Overlay results with a relative path and a dirty tab.
+func TestCovCoreOverlayResultsMore(t *testing.T) {
+	m := covNvimModel(t, 120, 40)
+	root, err := m.rootDir()
+	if err != nil {
+		t.Skip("no workspace folder")
+	}
+	m.searchOpen = true
+	m, _ = m.update(search.SelectMsg{Path: "update.go", Line: 2})
+	covWaitLua(t, m, `return vim.api.nvim_buf_get_name(0)`, filepath.Join(root, "update.go"))
+	// A dirty tab asks before it closes.
+	covModify(t, m, filepath.Join(t.TempDir(), "d.txt"), "changed")
+	id, _ := m.nvim.EvalLuaString(`return tostring(vim.api.nvim_get_current_buf())`)
+	m, _ = m.update(tabbar.CloseMsg{ID: parseInt(id)})
+	if !m.confirmOpen || m.confirmKind != confirmKindCloseBuffer {
+		t.Error("closing a dirty tab did not ask")
+	}
+	m.confirmOpen = false
+	// Keys go to the recents list while it is open.
+	f := filepath.Join(t.TempDir(), "r.go")
+	_ = os.WriteFile(f, nil, 0o644)
+	pushRecent(f)
+	_ = m.openRecentFilePicker()
+	m, _ = m.update(tea.KeyMsg{Type: tea.KeyDown})
+	m, _ = m.update(tea.KeyMsg{Type: tea.KeyEsc})
 }
