@@ -57,6 +57,7 @@ type Event struct {
 	Code    int       `json:"code,omitempty"`    // HTTP status or close code
 	Why     string    `json:"why,omitempty"`     // fixed reason name
 	Summary string    `json:"summary,omitempty"` // short, cleaned
+	By      string    `json:"by,omitempty"`      // who asked, for EvOp: "web:<device>"
 }
 
 // Rotation: the log moves to <path>.1 before it would pass AuditMaxBytes;
@@ -126,7 +127,7 @@ func (a *Audit) Log(e Event) error {
 	if e.T.IsZero() {
 		e.T = a.now()
 	}
-	for _, f := range []*string{&e.Conn, &e.Device, &e.Op, &e.Why, &e.Summary} {
+	for _, f := range []*string{&e.Conn, &e.Device, &e.Op, &e.Why, &e.Summary, &e.By} {
 		*f = cleanAuditText(*f)
 	}
 	line, err := json.Marshal(e)

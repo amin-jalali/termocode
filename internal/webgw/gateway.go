@@ -113,6 +113,10 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 		case linked <- struct{}{}:
 		default:
 		}
+	}, func(n webproto.AuditNote) {
+		ok := n.OK
+		_ = audit.Log(Event{Kind: EvOp, Conn: n.Conn, Device: n.Device, Op: n.Op, OK: &ok,
+			Why: n.Why, Summary: n.Summary, By: "web:" + n.Device})
 	})
 	if err != nil {
 		return 0, fmt.Errorf("reach termocode: %w", err)

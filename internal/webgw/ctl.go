@@ -22,25 +22,29 @@ import (
 // The hub also sends {"t":"ev","kind":"link","data":{"sha256":"<hex>"}}
 // when the user opens a new launch link: the digest of the secret only
 // the UI knows (NewLinkSecret).
+// It also sends {"t":"ev","kind":"audit","data":{…}} (webproto.AuditNote)
+// for every web write op, for the gateway's audit log.
 // The hub counts the browsers itself (one hub connection each), so the
 // gateway reports nothing on it.
 
 // Ctl is a live control connection.
 type Ctl struct {
-	nc     net.Conn
-	onLink func([sha256.Size]byte)
-	once   sync.Once
-	done   chan struct{}
-	code   webproto.CloseCode
+	nc      net.Conn
+	onLink  func([sha256.Size]byte)
+	onAudit func(webproto.AuditNote)
+	once    sync.Once
+	done    chan struct{}
+	code    webproto.CloseCode
 }
 
 // EvLink is the event kind of a new launch link.
 const EvLink = "link"
 
 // DialCtl opens the control connection; onLink hears each new launch
-// link's digest (on the reader goroutine). The error is for the
-// gateway's start: without the hub there is nothing to serve.
-func DialCtl(ctx context.Context, dial func(context.Context) (net.Conn, error), onLink func([sha256.Size]byte)) (*Ctl, error) {
+// link's digest and onAudit each op summary (both on the reader
+// goroutine; either may be nil). The error is for the gateway's start:
+// without the hub there is nothing to serve.
+func DialCtl(ctx context.Context, dial func(context.Context) (net.Conn, error), onLink func([sha256.Size]byte), onAudit func(webproto.AuditNote)) (*Ctl, error) {
 	nc, err := dial(ctx)
 	if err != nil {
 		return nil, err
@@ -53,7 +57,7 @@ func DialCtl(ctx context.Context, dial func(context.Context) (net.Conn, error), 
 		_ = nc.Close()
 		return nil, err
 	}
-	c := &Ctl{nc: nc, onLink: onLink, done: make(chan struct{})}
+	c := &Ctl{nc: nc, onLink: onLink, onAudit: onAudit, done: make(chan struct{})}
 	// A panic in the reader ends the link like a lost hub.
 	crash.GoWith("web gateway: the control link", c.read, func() { c.finish(webproto.CloseHubGone) })
 	return c, nil
@@ -90,16 +94,25 @@ func (c *Ctl) read() {
 			T    string          `json:"t"`
 			Code json.RawMessage `json:"code"`
 			Kind string          `json:"kind"`
-			Data struct {
-				SHA256 string `json:"sha256"`
-			} `json:"data"`
+			Data json.RawMessage `json:"data"`
 		}
 		if json.Unmarshal(line, &head) != nil {
 			continue
 		}
 		if head.T == webproto.KindEv && head.Kind == EvLink {
-			if d, err := hex.DecodeString(head.Data.SHA256); err == nil && len(d) == sha256.Size && c.onLink != nil {
+			var data struct {
+				SHA256 string `json:"sha256"`
+			}
+			_ = json.Unmarshal(head.Data, &data)
+			if d, err := hex.DecodeString(data.SHA256); err == nil && len(d) == sha256.Size && c.onLink != nil {
 				c.onLink([sha256.Size]byte(d))
+			}
+			continue
+		}
+		if head.T == webproto.KindEv && head.Kind == webproto.EvAudit {
+			var n webproto.AuditNote
+			if json.Unmarshal(head.Data, &n) == nil && n.Op != "" && c.onAudit != nil {
+				c.onAudit(n)
 			}
 			continue
 		}
