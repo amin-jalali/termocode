@@ -19,7 +19,7 @@ func TestProjectLabelIsTheModelsWorkspace(t *testing.T) {
 		}
 	}
 	t.Chdir(a)
-	m := New()
+	m := newTestModel(t)
 	t.Chdir(b)
 	if got := m.statusState().Project; got != "alpha" {
 		t.Fatalf("status bar project %q, want alpha", got)
