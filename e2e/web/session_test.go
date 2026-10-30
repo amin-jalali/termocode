@@ -44,6 +44,12 @@ func (p *Page) firstTopics() []string {
 func (p *Page) Login(conn string) *HubConn {
 	p.T.Helper()
 	p.Open()
+	return p.LoginHere(conn)
+}
+
+// LoginHere is Login on a page that already shows the connect screen.
+func (p *Page) LoginHere(conn string) *HubConn {
+	p.T.Helper()
 	p.Tap(".connect-foot button")
 	c := p.S.Hub.Accept(p.T)
 	c.Handshake(p.T, conn)
