@@ -5,6 +5,7 @@ package webgw
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +20,7 @@ import (
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/crash"
+	"github.com/amin-jalali/termocode/internal/webdevices"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -58,6 +60,9 @@ type RunConfig struct {
 	LinkWait time.Duration
 	// Now is the clock of tokens and links (nil: time.Now).
 	Now func() time.Time
+	// DevicesDir, when set, holds the paired devices (WEB-32) and turns
+	// on the pairing endpoints.
+	DevicesDir string
 	// Tailnet, when set, is tailnet mode (WEB-31): still 127.0.0.1 only,
 	// reached from the user's tailnet through tailscale serve on
 	// https://<machine>.<tailnet>.ts.net/; Funnel is refused.
@@ -147,20 +152,29 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	tokens := NewTokens(cfg.Idle, cfg.Max)
 	auth := NewAuth(tokens, now, audit)
 	linked := make(chan struct{}, 1)
-	ctl, err := DialCtl(ctx, cfg.Dial, func(d [sha256.Size]byte) {
+	var ctlRef atomic.Pointer[Ctl] // set once the control connection is up
+	var pairing *Pairing
+	if cfg.DevicesDir != "" {
+		pairing = NewPairing(PairingConfig{Tokens: tokens, Store: webdevices.Open(cfg.DevicesDir), Audit: audit, Now: now,
+			Ask: func(ctx context.Context, a webproto.PairAskArgs) (string, error) { return askPair(ctx, ctlRef.Load(), a) }})
+	}
+	ctl, err := DialCtlWith(ctx, cfg.Dial, CtlHandlers{Link: func(d [sha256.Size]byte) {
 		auth.SetSecretDigest(d)
 		select {
 		case linked <- struct{}{}:
 		default:
 		}
-	}, func(n webproto.AuditNote) {
+	}, Audit: func(n webproto.AuditNote) {
 		ok := n.OK
 		_ = audit.Log(Event{Kind: EvOp, Conn: n.Conn, Device: n.Device, Op: n.Op, OK: &ok,
 			Why: n.Why, Summary: n.Summary, By: "web:" + n.Device})
-	})
+	}, Event: func(kind string, data json.RawMessage) {
+		onCtlEvent(kind, data, pairing)
+	}})
 	if err != nil {
 		return 0, fmt.Errorf("reach termocode: %w", err)
 	}
+	ctlRef.Store(ctl)
 	defer ctl.Close()
 
 	var last atomic.Int64 // unix nanos of the last use
@@ -170,6 +184,9 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	mux := http.NewServeMux()
 	mux.Handle("/auth", auth)
 	mux.Handle("/ws", ws)
+	if pairing != nil {
+		mux.Handle("/pair/", pairing)
+	}
 	if cfg.Assets != nil {
 		mux.Handle("/", cfg.Assets)
 	}
@@ -231,6 +248,57 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	_ = audit.Log(Event{Kind: EvStop, Code: int(code), Why: why})
 	return code, nil
 }
+
+// askPair asks the laptop to pair a device and returns the owner's role.
+func askPair(ctx context.Context, ctl *Ctl, a webproto.PairAskArgs) (string, error) {
+	if ctl == nil {
+		return "", ErrCtlGone
+	}
+	data, err := ctl.Call(ctx, webproto.OpWebPairAsk, a)
+	if err != nil {
+		return "", err
+	}
+	var r struct {
+		Role string `json:"role"`
+	}
+	if err := json.Unmarshal(data, &r); err != nil {
+		return "", err
+	}
+	return r.Role, nil
+}
+
+// onCtlEvent handles the hub's other events: a new pairing link
+// ({sha256, ttl_s, guest}) or its end (pair_close).
+func onCtlEvent(kind string, data json.RawMessage, pairing *Pairing) {
+	switch kind {
+	case EvPairLink:
+		var d struct {
+			SHA256 string `json:"sha256"`
+			TTLS   int    `json:"ttl_s"`
+			Guest  bool   `json:"guest"`
+		}
+		if json.Unmarshal(data, &d) != nil || pairing == nil {
+			return
+		}
+		ttl := time.Duration(d.TTLS) * time.Second
+		if ttl <= 0 || ttl > ShareTTL {
+			ttl = PairTTL
+		}
+		if b, err := hex.DecodeString(d.SHA256); err == nil && len(b) == sha256.Size {
+			pairing.SetSecret([sha256.Size]byte(b), ttl, d.Guest)
+		}
+	case EvPairClose:
+		if pairing != nil {
+			pairing.CloseSecret()
+		}
+	}
+}
+
+// Control events of v2.
+const (
+	EvPairLink  = "pair"       // {sha256, ttl_s, guest}: a new pairing link
+	EvPairClose = "pair_close" // the pairing link was closed on the laptop
+)
 
 // waitStop waits for the first reason to stop. The idle timer is one
 // timer moved forward only when it fires early: no ticking while idle.
