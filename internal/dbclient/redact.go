@@ -19,48 +19,116 @@ var (
 	shortPassword      = lazyre.New(`(?i)(^|\s)-p([^\s]+)`)
 )
 
+// Redact hides passwords, tokens and keys in s (connection URLs and
+// DSNs, key=value pairs, JSON fields, SQL, Redis AUTH lines). A pattern
+// runs only when s holds a word every match of it needs: result grids
+// redact every cell, and most cells hold none.
 func Redact(s string) string {
+	k := newFoldKeys(s)
+	at := strings.IndexByte(s, '@') >= 0
 	// Handle whole URLs through net/url so escaped credentials remain valid.
-	if u, err := url.Parse(s); err == nil && u.User != nil {
-		if _, ok := u.User.Password(); ok {
-			u.User = url.UserPassword(u.User.Username(), "[redacted]")
-			s = u.String()
+	if at {
+		if u, err := url.Parse(s); err == nil && u.User != nil {
+			if _, ok := u.User.Password(); ok {
+				u.User = url.UserPassword(u.User.Username(), "[redacted]")
+				s = u.String()
+			}
+		}
+		if k.has("://") {
+			s = urlCredential.ReplaceAllString(s, "$1[redacted]$3")
+		}
+		s = dsnCredential.ReplaceAllString(s, "$1[redacted]$3")
+		if strings.Contains(s, "@/") {
+			s = userPathCredential.ReplaceAllString(s, "$1[redacted]$3")
 		}
 	}
-	s = urlCredential.ReplaceAllString(s, "$1[redacted]$3")
-	s = dsnCredential.ReplaceAllString(s, "$1[redacted]$3")
-	s = userPathCredential.ReplaceAllString(s, "$1[redacted]$3")
-	s = jsonSecret.ReplaceAllString(s, "$1[redacted]$2")
-	s = redisCommand.ReplaceAllString(s, "$1 [redacted]")
-	s = bearerSecret.ReplaceAllString(s, "$1[redacted]")
-	s = shortPassword.ReplaceAllString(s, "${1}-p[redacted]")
-	s = assignmentSecret.ReplaceAllStringFunc(s, func(match string) string {
-		loc := assignmentSecret.FindStringSubmatchIndex(match)
-		if loc == nil {
-			return match
-		}
-		name := strings.ToLower(match[loc[2]:loc[3]])
-		value := strings.Trim(strings.ToLower(match[loc[6]:loc[7]]), `\"')`)
-		if strings.Contains(name, "password") && (value == "yes" || value == "no") && strings.Contains(strings.ToLower(s), "using password:") {
-			return match
-		}
-		return match[:loc[6]] + "[redacted]"
-	})
-	s = sqlSecret.ReplaceAllStringFunc(s, func(match string) string {
-		loc := sqlSecret.FindStringSubmatchIndex(match)
-		if loc == nil {
-			return match
-		}
-		name, sep, value := match[loc[2]:loc[3]], match[loc[4]:loc[5]], match[loc[6]:loc[7]]
-		if strings.EqualFold(name, "password") && strings.EqualFold(value, "authentication") {
-			return match
-		}
-		if len(value) >= 2 && (value[0] == '\'' || value[0] == '"') {
-			return name + sep + string(value[0]) + "[redacted]" + string(value[0])
-		}
-		return name + sep + "[redacted]"
-	})
+	secretWord := k.has("pass", "pwd", "secret", "token", "api")
+	if secretWord {
+		s = jsonSecret.ReplaceAllString(s, "$1[redacted]$2")
+	}
+	if k.has("requirepass", "auth2", "masterauth") {
+		s = redisCommand.ReplaceAllString(s, "$1 [redacted]")
+	}
+	if k.has("bearer") {
+		s = bearerSecret.ReplaceAllString(s, "$1[redacted]")
+	}
+	if k.has("-p") {
+		s = shortPassword.ReplaceAllString(s, "${1}-p[redacted]")
+	}
+	if secretWord {
+		s = assignmentSecret.ReplaceAllStringFunc(s, func(match string) string {
+			loc := assignmentSecret.FindStringSubmatchIndex(match)
+			if loc == nil {
+				return match
+			}
+			name := strings.ToLower(match[loc[2]:loc[3]])
+			value := strings.Trim(strings.ToLower(match[loc[6]:loc[7]]), `\"')`)
+			if strings.Contains(name, "password") && (value == "yes" || value == "no") && strings.Contains(strings.ToLower(s), "using password:") {
+				return match
+			}
+			return match[:loc[6]] + "[redacted]"
+		})
+	}
+	if k.has("password", "identified") {
+		s = sqlSecret.ReplaceAllStringFunc(s, func(match string) string {
+			loc := sqlSecret.FindStringSubmatchIndex(match)
+			if loc == nil {
+				return match
+			}
+			name, sep, value := match[loc[2]:loc[3]], match[loc[4]:loc[5]], match[loc[6]:loc[7]]
+			if strings.EqualFold(name, "password") && strings.EqualFold(value, "authentication") {
+				return match
+			}
+			if len(value) >= 2 && (value[0] == '\'' || value[0] == '"') {
+				return name + sep + string(value[0]) + "[redacted]" + string(value[0])
+			}
+			return name + sep + "[redacted]"
+		})
+	}
+	if !k.has("auth") {
+		return s
+	}
 	return redactAuthLines(s)
+}
+
+// foldKeys answers "may s contain this word, ignoring case" the way the
+// (?i) patterns match. Only two non-ASCII letters fold to ASCII ones
+// (ſ to s, the Kelvin sign K to k); a string with either says yes to
+// every word, so the full patterns decide.
+type foldKeys struct {
+	lower string // s with ASCII letters lower-cased
+	all   bool
+}
+
+func newFoldKeys(s string) foldKeys {
+	if strings.Contains(s, "ſ") || strings.Contains(s, "\u212a") {
+		return foldKeys{all: true}
+	}
+	for i := 0; i < len(s); i++ {
+		if c := s[i]; c >= 'A' && c <= 'Z' {
+			b := []byte(s)
+			for j := i; j < len(b); j++ {
+				if c := b[j]; c >= 'A' && c <= 'Z' {
+					b[j] = c + 'a' - 'A'
+				}
+			}
+			return foldKeys{lower: string(b)}
+		}
+	}
+	return foldKeys{lower: s}
+}
+
+// has reports whether one of words (lower-case ASCII) may be in s.
+func (k foldKeys) has(words ...string) bool {
+	if k.all {
+		return true
+	}
+	for _, w := range words {
+		if strings.Contains(k.lower, w) {
+			return true
+		}
+	}
+	return false
 }
 
 func redactAuthLines(s string) string {
