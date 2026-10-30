@@ -602,6 +602,14 @@ func (m *Model) toggleAIPanel() tea.Cmd {
 
 // newAIChat starts an empty conversation (the old one stays in history).
 func (m *Model) newAIChat() tea.Cmd {
+	m.startNewAIChat()
+	return m.openAIPanel(true)
+}
+
+// startNewAIChat stops the running turn and opens an empty conversation,
+// without touching the panel (the web's chat.new keeps the laptop's
+// focus where it is).
+func (m *Model) startNewAIChat() {
 	s := m.aiS()
 	if s.chatCancel != nil {
 		s.chatCancel()
@@ -615,7 +623,6 @@ func (m *Model) newAIChat() tea.Cmd {
 	s.scroll = 0
 	s.restored = true
 	m.persistAIState()
-	return m.openAIPanel(true)
 }
 
 // openAIHistory lists stored chats.
