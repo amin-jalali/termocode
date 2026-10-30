@@ -1,5 +1,5 @@
 // Entry of the termocode web UI. Built by cmd/webbuild (esbuild Go API).
-import { secret } from "./boot"; // first: safety hook, secret out of the URL
+import { pairSecret, secret } from "./boot"; // first: safety hook, secrets out of the URL
 import { h, render } from "preact";
 import { effect, signal } from "@preact/signals";
 import { AuthError, forgetToken, redeem, token } from "./net/auth";
@@ -20,11 +20,19 @@ import { dict, has } from "./state/dict";
 import { THEME_TOKENS, themeTokens } from "./state/theme";
 import { TABS } from "./state/route";
 import { ConnectScreen, type ConnectState } from "./ui/ConnectScreen";
+import { PairScreen } from "./ui/PairScreen";
+import { SignInScreen } from "./ui/SignInScreen";
+import { passkeysHere } from "./net/passkey";
 import { lang } from "./strings";
 
 const RTL_LANGS = /^(fa|ar|he|ur|ps|ckb|dv|yi|sd|ug)\b/i;
 
-const phase = signal<"connect" | "shell">("connect");
+// Where the page starts: a launch link opens the workspace, a pairing link
+// pairs this device, and a page with neither offers the passkey sign-in
+// of a paired device (where the browser can) or says to use the link.
+const phase = signal<"connect" | "pair" | "signin" | "shell">(
+  secret ? "connect" : pairSecret ? "pair" : passkeysHere() ? "signin" : "connect",
+);
 const connect = signal<ConnectState>(secret ? "ready" : "nolink");
 
 function startShell(): void {
@@ -42,7 +50,16 @@ function open(): void {
 }
 
 function Root() {
-  return phase.value === "shell" ? <App /> : <ConnectScreen state={connect.value} onOpen={open} />;
+  switch (phase.value) {
+    case "shell":
+      return <App />;
+    case "pair":
+      return <PairScreen secret={pairSecret ?? ""} onDone={startShell} />;
+    case "signin":
+      return <SignInScreen onDone={startShell} />;
+    default:
+      return <ConnectScreen state={connect.value} onOpen={open} />;
+  }
 }
 
 const html = document.documentElement;
@@ -109,7 +126,7 @@ addEventListener("keydown", (e: KeyboardEvent) => {
   }
 });
 
-if (!secret && token()) startShell();
+if (!secret && !pairSecret && token()) startShell();
 
 const root = document.getElementById("app");
 if (root) render(<Root />, root);
