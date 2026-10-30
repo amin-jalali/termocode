@@ -217,6 +217,23 @@ func TestAuthStrictJSON(t *testing.T) {
 	}
 }
 
+// TestSecretInQueryRefused: a secret or token in a URL ends up in history
+// and logs, so /auth refuses any query string, even with a good body (T10).
+func TestSecretInQueryRefused(t *testing.T) {
+	a, _, _, plain := newAuth(t)
+	for _, q := range []string{"?s=" + plain, "?token=x", "?secret=" + plain, "?x"} {
+		r := authReq(secretBody(plain))
+		r.URL.RawQuery = q[1:]
+		r.RequestURI = "/auth" + q
+		if w := do(a, r); w.Code != http.StatusBadRequest {
+			t.Errorf("query %q: code %d, want 400", q, w.Code)
+		}
+	}
+	if w := do(a, authReq(secretBody(plain))); w.Code != http.StatusOK {
+		t.Fatalf("the refused requests used up the secret: code %d", w.Code)
+	}
+}
+
 func TestAuthOnlyPost(t *testing.T) {
 	a, _, _, _ := newAuth(t)
 	r := httptest.NewRequest(http.MethodGet, "/auth", nil)
