@@ -80,6 +80,14 @@ type settingsConfig struct {
 	// agent's card, client name → tool names (mcp_serve_allow.go). File
 	// only; separate from ai_auto_approve.
 	MCPServerAutoApprove map[string][]string `json:"mcp_server_auto_approve,omitempty"`
+	// The web panel (ADR 0020, web_settings.go). File only; the AI can
+	// never change them, project files never set them.
+	WebPanel       string `json:"web_panel,omitempty"`
+	WebPort        *int   `json:"web_port,omitempty"`
+	WebIdleMinutes *int   `json:"web_idle_minutes,omitempty"`
+	WebMaxHours    *int   `json:"web_max_hours,omitempty"`
+	WebOpenBrowser *bool  `json:"web_open_browser,omitempty"`
+	WebMaxViewers  *int   `json:"web_max_viewers,omitempty"`
 }
 
 // settingsConfigPath returns the absolute path to config.json. We don't

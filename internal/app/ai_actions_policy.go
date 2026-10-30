@@ -597,7 +597,17 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	"mcp_server": aiNever("lets outside agents use the IDE's tools; the user turns it on or off in config.json"),
 	// What an outside agent may do without a card: the user's answer only.
 	"mcp_server_auto_approve": aiNever("what outside agents may do without asking; only the user's \"Always allow\" on their card sets it"),
+	// The web panel gives shell access from a browser (web_settings.go).
+	"web_panel":        aiNever(aiNoWeb),
+	"web_port":         aiNever(aiNoWeb),
+	"web_idle_minutes": aiNever(aiNoWeb),
+	"web_max_hours":    aiNever(aiNoWeb),
+	"web_open_browser": aiNever(aiNoWeb),
+	"web_max_viewers":  aiNever(aiNoWeb),
 }
+
+// aiNoWeb is why the AI never touches the web panel.
+const aiNoWeb = "the web panel gives shell access from a browser; only the user changes it, in config.json"
 
 // aiListActionsMax caps list_actions results.
 const aiListActionsMax = 40
