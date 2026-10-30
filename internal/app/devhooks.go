@@ -62,6 +62,9 @@ import (
 //	contdemo[:down|noengine|menu|filter|keys|tags|ai-card|logs|inspect|search|db-menu|db-container-menu] show the Containers view with a canned host snapshot
 //	kubedemo[:restart|down|keys] show the Kubernetes view with a canned
 //	                       cluster (no kubectl; the shots and goldens)
+//	webdemo:card|on|connected the web panel's start card, or its status
+//	                       chip with no browser / one browser (made-up
+//	                       state: nothing listens, nothing starts)
 //	dbdemo[:empty|no-sqlite|stopped|result|messages|error|table|transposed|describe|ddl|edits|submit|plan|plan-card|redis|redis-key|ssh-host|ssh-form|ssl-form|compare-pick|compare]   show a canned Databases tree or result page (no connection)
 //	secretsdemo:<card|locked|open> the secret store: migration card with
 //	                       sample counts, store screen locked or open (writes
@@ -129,6 +132,8 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		m.containersDemo(arg)
 	case "kubedemo": // the Kubernetes view with a canned cluster (kube_demo.go)
 		m.kubeDemo(arg)
+	case "webdemo": // the web start card or chip, made-up state (web_tui.go)
+		m.webDemo(arg)
 	case "secretsdemo":
 		return m.secretsDemo(arg)
 	case "mcpservedemo": // the MCP server's status screen or an outside agent's card (mcp_serve_demo.go)
