@@ -1,6 +1,7 @@
 package app
 
 import (
+	"os/exec"
 	"strconv"
 	"strings"
 	"testing"
@@ -254,5 +255,59 @@ func TestLspGuards(t *testing.T) {
 	n := webBufOpen(t, r, r.c, "n.txt")
 	if f := r.callLsp(webproto.OpLspHover, &webproto.LspPosArgs{Buf: n.Buf, Tick: n.Tick}); webErrCode(f) != "not_found" || !strings.Contains(f["msg"].(string), "No language server") {
 		t.Errorf("no server: %v", f)
+	}
+}
+
+// Spec: with the real gopls (skipped when it is not installed), hover
+// and go to definition come from it through nvim's own client.
+func TestLspWithGopls(t *testing.T) {
+	if _, err := exec.LookPath("gopls"); err != nil {
+		t.Skip("gopls not installed")
+	}
+	r := newWebFilesRig(t)
+	r.withNvim()
+	r.write("go.mod", "module example.com/a\n\ngo 1.22\n")
+	src := "package main\n\nimport \"fmt\"\n\nfunc greet() string { return \"hi\" }\n\nfunc main() { fmt.Println(greet()) }\n"
+	r.write("main.go", src)
+	b := webBufOpen(t, r, r.c, "main.go")
+	var ok bool
+	r.lua(`local b, root, cache = ...
+vim.lsp.start({ name = 'gopls', cmd = { 'gopls' }, root_dir = root, cmd_env = { XDG_CACHE_HOME = cache } }, { bufnr = b })
+return vim.wait(15000, function()
+  for _, c in ipairs(vim.lsp.get_clients({ bufnr = b })) do
+    if c.initialized then return true end
+  end
+  return false
+end, 50)`, &ok, b.Buf, r.root, t.TempDir())
+	if !ok {
+		t.Fatal("gopls did not start")
+	}
+	t.Cleanup(func() {
+		var done bool
+		r.lua(`for _, c in ipairs(vim.lsp.get_clients()) do c:stop(true) end
+return vim.wait(5000, function() return #vim.lsp.get_clients() == 0 end, 50)`, &done)
+	})
+	line := 6
+	row := strings.Split(src, "\n")[line]
+	at := func(s string) int { return u16(row[:strings.Index(row, s)]) + 1 }
+	// The first answers wait for gopls to load the package: ask again.
+	var hover webproto.LspHover
+	for end := time.Now().Add(30 * time.Second); time.Now().Before(end); {
+		f := r.callLsp(webproto.OpLspHover, &webproto.LspPosArgs{Buf: b.Buf, Tick: b.Tick, Line: line, Col: at("Println")})
+		if webErrCode(f) == "" {
+			webResData(t, f, &hover)
+			if !hover.None {
+				break
+			}
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
+	if hover.MD == nil || !strings.Contains(webMdTextOf(*hover.MD), "Println") {
+		t.Fatalf("hover %+v", hover)
+	}
+	var defs webproto.LspLocations
+	webResData(t, r.callLsp(webproto.OpLspDefinition, &webproto.LspPosArgs{Buf: b.Buf, Tick: b.Tick, Line: line, Col: at("greet")}), &defs)
+	if len(defs.Locs) != 1 || defs.Locs[0].Path != "main.go" || defs.Locs[0].Line != 4 || defs.Locs[0].Col != 5 {
+		t.Errorf("definition %+v", defs)
 	}
 }
