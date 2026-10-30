@@ -11,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/theme"
@@ -343,7 +344,9 @@ func (m Model) boxSize() (int, int) {
 	if boxH < 9 {
 		boxH = 9
 	}
-	return boxW, boxH
+	// Never larger than the screen: a tiny window gets a cramped box,
+	// not one whose rows wrap past the edge.
+	return min(boxW, m.w), min(boxH, m.h)
 }
 
 // boxRect is the box's screen rectangle. lipgloss.Place centres with the
@@ -470,11 +473,13 @@ func (m Model) renderBox(w, h int) string {
 	default:
 		summary = st.hint.Render(fmt.Sprintf(" %d results%s ", len(m.results), basic))
 	}
-	summary = padBg(st, summary, innerW)
+	summary = padBg(st, ansi.Truncate(summary, max(innerW, 0), "…"), innerW)
 
 	rows := m.renderResults(st, available, innerW)
 
-	footer := st.hint.Width(innerW).Render(" ↑↓ navigate · tab field · alt+c/w/r toggles · enter open · esc close ")
+	// One row: a narrow box cuts the key hints rather than wrapping them
+	// onto a row the box has no room for.
+	footer := padBg(st, ansi.Truncate(st.hint.Render(" ↑↓ navigate · tab field · alt+c/w/r toggles · enter open · esc close "), max(innerW, 0), "…"), innerW)
 
 	return st.border.Render(lipgloss.JoinVertical(lipgloss.Left, title, input, filters, summary, lipgloss.JoinVertical(lipgloss.Left, rows...), footer))
 }
