@@ -234,7 +234,7 @@ func TestRowFontButtons(t *testing.T) {
 			p, _ := openShell(t, vp)
 			row := `[data-view="term"] .trow`
 			def := Eval[float64](p, fmt.Sprintf(rowFontJS, row))
-			p.Tap(`[data-view="term"] .term-info-btn`)
+			p.Tap(`[data-view="term"] .term-info-btn, .wb-panel .term-info-btn`) // the desktop has it in the panel title
 			p.Tap(`.font-size .font-bigger`)
 			p.WaitJS(fmt.Sprintf(rowFontJS, row) + fmt.Sprintf(" === %f + 1", def))
 			if got := p.Text(`.font-size .font-now`); got != fmt.Sprintf("%.0f px", def+1) {
@@ -361,7 +361,7 @@ func TestWakeLockWhileARunStreams(t *testing.T) {
 	showTerm(t, p, c, termSnap(3, 0, 80, "$ go test ./..."), termItem(3, "zsh", true, true))
 	p.Holds(`window.__held === 0`, 300*time.Millisecond)
 
-	p.Tap(`[data-view="term"] .term-info-btn`)
+	p.Tap(`[data-view="term"] .term-info-btn, .wb-panel .term-info-btn`) // the desktop has it in the panel title
 	p.TapJS(`[...document.querySelectorAll(".term-about .chip")].find((b) => b.textContent.includes("Keep screen on"))`)
 	p.WaitJS(`window.__held === 1 && window.__locks[0] === "request screen"`)
 	if !Eval[bool](p, `JSON.parse(localStorage.getItem("termocode.prefs.v1")).wakeLock === true`) {
