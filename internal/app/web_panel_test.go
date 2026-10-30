@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -330,6 +331,12 @@ func (r *webPanelRig) ctlRes(ctl *webClient, req string, id int) map[string]any 
 // with the same port (a reconnect) gives a new secret from the same
 // gateway; another port is a conflict.
 func TestWebCLIOpenSSHMode(t *testing.T) {
+	// web.open is rate limited (one a second, a burst of two); the test
+	// moves the clock a second before each later call instead of sleeping.
+	var skew atomic.Int64
+	oldNow := webNow
+	webNow = func() time.Time { return time.Now().Add(time.Duration(skew.Load())) }
+	t.Cleanup(func() { webNow = oldNow })
 	r := newWebPanelRig(t)
 	ctl := r.dial(`{"t":"ctl"}`)
 	res := r.ctlRes(ctl, `{"t":"req","id":1,"op":"web.open","args":{"yes":true,"ssh_port":41237}}`, 1)
@@ -369,6 +376,7 @@ func TestWebCLIOpenSSHMode(t *testing.T) {
 		t.Fatalf("auth with the secret through the socket: %d", code)
 	}
 
+	skew.Add(int64(time.Second))
 	res = r.ctlRes(ctl, `{"t":"req","id":2,"op":"web.open","args":{"yes":true,"ssh_port":41237}}`, 2)
 	data, _ = res["data"].(map[string]any)
 	again, _ := data["secret"].(string)
@@ -384,6 +392,7 @@ func TestWebCLIOpenSSHMode(t *testing.T) {
 	if code := auth(again); code != http.StatusOK {
 		t.Fatalf("auth with the new secret: %d", code)
 	}
+	skew.Add(int64(time.Second))
 	if res := r.ctlRes(ctl, `{"t":"req","id":3,"op":"web.open","args":{"yes":true,"ssh_port":41000}}`, 3); res["t"] != "err" || res["code"] != "conflict" {
 		t.Fatalf("another port: %v", res)
 	}
