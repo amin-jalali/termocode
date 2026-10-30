@@ -355,6 +355,55 @@ export interface ChatDelta {
   chat?: ChatSnap;
 }
 
+export interface CardsSnap {
+  cards: Card[];
+}
+
+export interface Card {
+  id: string;
+  kind: "tool" | "mcp" | "plan" | "review" | "trust";
+  title: string;
+  body?: string;
+  choices: CardChoice[];
+  since: number;
+  read_only?: boolean;
+  file?: string;
+  diff?: CardDiff;
+}
+
+export interface CardChoice {
+  id: string;
+  label: string;
+  safe?: boolean;
+  needs_laptop?: boolean;
+}
+
+export interface CardDiff {
+  rows: DiffRow[];
+  added: number;
+  removed: number;
+  truncated?: boolean;
+}
+
+export interface DiffRow {
+  k: "ctx" | "add" | "del";
+  text: string;
+  old?: number;
+  new?: number;
+}
+
+export interface CardsDelta {
+  op: "upsert" | "remove";
+  card?: Card;
+  id?: string;
+  by?: string;
+}
+
+export interface Answered {
+  id: string;
+  by?: string;
+}
+
 export interface Attention {
   kind: "card" | "run_done" | "run_failed" | "task_done" | "bell";
   id?: string;
@@ -413,10 +462,12 @@ export interface TopicData {
   "toasts": { snap: ToastsSnap; delta: ToastsDelta };
   "chats": { snap: ChatsSnap; delta: ChatsDelta };
   "chat": { snap: ChatSnap; delta: ChatDelta };
+  "cards": { snap: CardsSnap; delta: CardsDelta };
 }
 
 // The data of an ev message, by kind.
 export interface EventData {
+  "answered": Answered;
   "attention": Attention;
 }
 
