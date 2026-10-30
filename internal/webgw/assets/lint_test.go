@@ -1,0 +1,164 @@
+package assets
+
+import (
+	"io/fs"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+	"testing"
+)
+
+// The browser code never builds HTML from strings and never runs code
+// from strings (never-do 20). These rules scan our own sources; the built
+// bundle gets the rules that still hold with the vendored library in it.
+
+type rule struct {
+	name  string
+	re    *regexp.Regexp
+	allow map[string]bool // source files (relative to src/) that may match, with a reason in the comment
+}
+
+var sourceRules = []rule{
+	{name: "innerHTML and friends", re: regexp.MustCompile(`\b(innerHTML|outerHTML|insertAdjacentHTML|createContextualFragment|DOMParser)\b`)},
+	// The one file that may name the prop is the guard that throws on it.
+	{name: "dangerouslySetInnerHTML", re: regexp.MustCompile(`dangerouslySetInnerHTML`), allow: map[string]bool{"lib/safety.ts": true}},
+	{name: "eval", re: regexp.MustCompile(`\beval\s*\(`)},
+	{name: "Function constructor", re: regexp.MustCompile(`\bFunction\s*\(`)},
+	{name: "document.write", re: regexp.MustCompile(`document\.write`)},
+	{name: "string timer", re: regexp.MustCompile(`set(Timeout|Interval)\s*\(\s*["'\x60]`)},
+	{name: "javascript: URL", re: regexp.MustCompile(`(?i)javascript:`)},
+	{name: "external URL", re: regexp.MustCompile(`(?i)\b(https?|wss?)://`)},
+	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`)},
+	{name: "remote script/style", re: regexp.MustCompile(`(?i)@import|url\(\s*["']?(https?:)?//`)},
+	// Only the prefs module touches localStorage, and it never holds a secret.
+	{name: "localStorage", re: regexp.MustCompile(`\blocalStorage\b`), allow: map[string]bool{"lib/prefs.ts": true}},
+	// Only the auth module keeps the session token, in sessionStorage.
+	{name: "sessionStorage", re: regexp.MustCompile(`\bsessionStorage\b`), allow: map[string]bool{"net/auth.ts": true}},
+	{name: "cookies", re: regexp.MustCompile(`document\.cookie`)},
+	{name: "postMessage/window.open", re: regexp.MustCompile(`\b(postMessage|window\.open)\s*\(`)},
+}
+
+// lintSource returns the rules text breaks; rel is the path under src/.
+func lintSource(rel, text string) []string {
+	var bad []string
+	for _, r := range sourceRules {
+		if r.allow[rel] {
+			continue
+		}
+		if loc := r.re.FindStringIndex(text); loc != nil {
+			line := strings.Count(text[:loc[0]], "\n") + 1
+			bad = append(bad, rel+":"+strconv.Itoa(line)+": "+r.name)
+		}
+	}
+	return bad
+}
+
+func TestLintCatchesEachRule(t *testing.T) {
+	for _, bad := range []string{
+		`el.innerHTML = x`, `<div dangerouslySetInnerHTML={{__html: x}} />`, `eval("1")`,
+		`new Function("return 1")`, `document.write("x")`, `setTimeout("go()", 1)`,
+		`a.href = "javascript:void 0"`, `fetch("https://example.com")`, `await import("./x")`,
+		`@import "x.css";`, `localStorage.setItem("t", tok)`, `sessionStorage.x = 1`,
+		`document.cookie = "a=b"`, `window.open("/")`, `new DOMParser()`,
+	} {
+		if len(lintSource("views/x.tsx", bad)) == 0 {
+			t.Errorf("lint passed %q", bad)
+		}
+	}
+	if got := lintSource("views/x.tsx", "const a = h(\"p\", null, text);\nel.textContent = s;"); len(got) != 0 {
+		t.Errorf("lint refused clean code: %v", got)
+	}
+}
+
+func TestSourcesFollowTheBrowserRules(t *testing.T) {
+	n := 0
+	err := filepath.WalkDir("src", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		switch filepath.Ext(path) {
+		case ".ts", ".tsx", ".css", ".html":
+		default:
+			t.Errorf("%s: unexpected file kind in src", path)
+			return nil
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel("src", path)
+		for _, bad := range lintSource(filepath.ToSlash(rel), string(b)) {
+			t.Error(bad)
+		}
+		n++
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n == 0 {
+		t.Fatal("no sources scanned")
+	}
+}
+
+// The vendored library names a few XML namespaces; they are identifiers,
+// never fetched.
+var namespaceURL = regexp.MustCompile(`http://www\.w3\.org/(1998/Math/MathML|1999/xhtml|2000/svg|1999/xlink|XML/1998/namespace)`)
+
+func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
+	for _, e := range Lock() {
+		if filepath.Ext(e.Path) != ".js" && filepath.Ext(e.Path) != ".css" {
+			continue
+		}
+		b, err := fs.ReadFile(FS(), e.Path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		text := namespaceURL.ReplaceAllString(string(b), "")
+		for _, r := range []*regexp.Regexp{
+			regexp.MustCompile(`\beval\s*\(`), regexp.MustCompile(`\bnew Function\b|\bFunction\s*\(\s*["'\x60]`),
+			regexp.MustCompile(`document\.write`), regexp.MustCompile(`\bimport\s*\(`),
+			regexp.MustCompile(`(?i)(https?|wss?):\/\/`), regexp.MustCompile(`(?i)@import`),
+			regexp.MustCompile(`(?i)sourceMappingURL`),
+		} {
+			if loc := r.FindStringIndex(text); loc != nil {
+				lo, hi := max(0, loc[0]-40), min(len(text), loc[1]+40)
+				t.Errorf("%s matches %s near %q", e.Path, r, text[lo:hi])
+			}
+		}
+	}
+}
+
+func TestPagesHaveNoInlineCodeOrStyle(t *testing.T) {
+	scriptTag := regexp.MustCompile(`(?is)<script\b([^>]*)>(.*?)</script>`)
+	for _, e := range Lock() {
+		if filepath.Ext(e.Path) != ".html" {
+			continue
+		}
+		b, err := fs.ReadFile(FS(), e.Path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		html := string(b)
+		tags := scriptTag.FindAllStringSubmatch(html, -1)
+		if len(tags) == 0 {
+			t.Errorf("%s has no script tag", e.Path)
+		}
+		for _, m := range tags {
+			if strings.TrimSpace(m[2]) != "" || !strings.Contains(m[1], `src="/assets/`) || !strings.Contains(m[1], `integrity="sha384-`) {
+				t.Errorf("%s: script tag %q is inline or has no SRI", e.Path, m[0])
+			}
+		}
+		for _, r := range []*regexp.Regexp{
+			regexp.MustCompile(`(?i)<style\b`), regexp.MustCompile(`(?i)\sstyle\s*=`),
+			regexp.MustCompile(`(?i)\son[a-z]+\s*=`), regexp.MustCompile(`(?i)(https?|wss?):\/\/`),
+			regexp.MustCompile(`(?i)<(iframe|object|embed|base|form)\b`),
+		} {
+			if r.MatchString(html) {
+				t.Errorf("%s matches %s", e.Path, r)
+			}
+		}
+	}
+}
