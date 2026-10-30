@@ -45,6 +45,8 @@ import { DeskTerm } from "../views/DeskTerm";
 import { ExplorerSections } from "../views/Explorer";
 import { DiffView } from "../views/DiffView";
 import { diffOf, fileOfTab, tabName } from "../lib/difftab";
+import { gitTabIcon, gitTabOf } from "../lib/gittab";
+import { GitTabView } from "../views/git/GitTabView";
 import { FileView } from "../views/FileView";
 import { TreeView } from "../views/Files";
 import { Cod, FileIcon } from "./icons";
@@ -212,6 +214,8 @@ function EditorTabs({ group, tabs, bufs }: { group: number; tabs: readonly strin
 function TabIcon({ tab }: { tab: string }) {
   const v = vtabOf(tab);
   if (v) return <span class="ed-tab-cod"><Cod name={vtabIcon(v)} /></span>;
+  const g = gitTabOf(tab);
+  if (g) return <span class="ed-tab-cod"><Cod name={gitTabIcon(g)} /></span>;
   return <FileIcon path={fileOfTab(tab) ?? tab} />;
 }
 
@@ -319,6 +323,7 @@ function EditorBody({ more, file, slot }: { more: boolean; file: string | null; 
   if (v?.kind === "db") return <DBTableTab key={file} conn={v.conn} table={v.table} slot={slot} />;
   if (v?.kind === "sql") return <DBQueryTab key={file} conn={v.conn} slot={slot} />;
   if (v?.kind === "mcp") return <MCPAgentTab key={file} name={v.name} slot={slot} />;
+  if (file && gitTabOf(file)) return <GitTabView key={file} tab={file} slot={slot} />;
   if (file) return <FileView key={file} path={file} slot={slot} />;
   return <Welcome />;
 }

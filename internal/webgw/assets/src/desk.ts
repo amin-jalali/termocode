@@ -7,3 +7,4 @@ import "./styles/deskterm.css";
 import "./styles/explorer.css";
 import "./styles/panes.css";
 import "./styles/run.css";
+import "./styles/gitviews.css";

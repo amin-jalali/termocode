@@ -801,6 +801,32 @@ export const S = {
   "kube.none": "None in this namespace.",
   "kube.restart": "Restart…",
   "kube.restart_q": "Restart every pod of {name} in {ns}, one by one?",
+  "gg.tab": "Commit Graph",
+  "gg.details": "Details of commit {hash}",
+  "gg.col_graph": "Graph",
+  "gg.col_desc": "Description",
+  "gg.col_date": "Date",
+  "gg.col_author": "Author",
+  "gg.parents": "Parents",
+  "gg.files_label": "Changed files",
+  "gg.files.one": "1 file changed",
+  "gg.files.other": "{n} files changed",
+  "gg.files_more": "More files: the rest is on the laptop.",
+  "gg.scope": "Branches",
+  "gg.all": "All Branches",
+  "gg.head": "Current Branch",
+  "gg.empty": "No commits yet.",
+  "gg.more": "Load More Commits",
+  "gg.copy_hash": "Copy Commit Hash",
+  "gg.copy_subject": "Copy Commit Subject",
+  "gg.rebase": "Interactive Rebase from Here…",
+  "gg.checkout": "Check Out {name}…",
+  "gg.checkout_text": "Switch the laptop to the branch {name}? Files there may change.",
+  "pr.tab": "Pull Requests",
+  "pr.tab_one": "Pull Request #{n}",
+  "gm.tab": "{name} (Merge)",
+  "gr.tab": "Rebase from {hash}",
+  "gg.open": "Show Commit Graph",
 } as const;
 
 export type StringKey = keyof typeof S;
@@ -836,7 +862,7 @@ export function t(key: StringKey, vars?: Record<string, string | number>): strin
   });
 }
 
-type Plural = "pill.cards" | "edit.sent" | "git.commit" | "e.idle" | "e.max";
+type Plural = "pill.cards" | "edit.sent" | "git.commit" | "e.idle" | "e.max" | "gg.files";
 
 /** tn picks the .one or .other form of a plural key by n. */
 export function tn(key: Plural, n: number, vars?: Record<string, string | number>): string {

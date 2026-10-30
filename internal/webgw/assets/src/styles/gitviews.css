@@ -1,0 +1,60 @@
+/* The desktop's git editor tabs (views/git/GitTabView.tsx): the commit
+   graph, the merge editor, interactive rebase and pull requests. */
+.layout-desktop {
+  --gg-0: #0085d9; --gg-1: #d9008f; --gg-2: #00c40a; --gg-3: #d98500;
+  --gg-4: #a300d9; --gg-5: #e8312f; --gg-6: #00b3a8; --gg-7: #e138e8;
+}
+.ficon-cod { display: inline-flex; align-items: center; justify-content: center; color: var(--wb-tab-fg); }
+.ficon-cod .cod { font-size: 14px; }
+.gg-c0 { --gg: var(--gg-0); } .gg-c1 { --gg: var(--gg-1); } .gg-c2 { --gg: var(--gg-2); } .gg-c3 { --gg: var(--gg-3); }
+.gg-c4 { --gg: var(--gg-4); } .gg-c5 { --gg: var(--gg-5); } .gg-c6 { --gg: var(--gg-6); } .gg-c7 { --gg: var(--gg-7); }
+
+/* ---- Commit graph ---- */
+.gg-body { overflow: auto; font-size: var(--fs-ui); }
+.gg-branch { display: inline-flex; align-items: center; gap: 4px; }
+.gg-scope { display: inline-flex; margin-inline-end: 6px; border: 1px solid var(--wb-section-border); border-radius: 2px; }
+.gg-scope-b { height: 20px; padding: 0 8px; border: 0; border-radius: 0; background: none; color: var(--wb-breadcrumb); font: inherit; font-size: 0.75rem; cursor: pointer; }
+.gg-scope-b.is-on { background: var(--wb-button-bg); color: var(--wb-button-fg); }
+.gg-table { width: 100%; border-collapse: collapse; table-layout: fixed; color: var(--wb-editor-fg); }
+.gg-col-date { width: 160px; } .gg-col-author { width: 140px; } .gg-col-hash { width: 84px; }
+.gg-table thead th { position: sticky; top: 0; z-index: 1; height: 24px; padding: 0 8px; border-bottom: 1px solid var(--wb-section-border); background: var(--wb-editor-bg); color: var(--wb-panel-title); font-weight: 600; font-size: 0.75rem; text-align: start; white-space: nowrap; }
+.gg-row { height: 24px; cursor: pointer; }
+.gg-row:hover { background: var(--wb-list-hover); }
+.gg-row.is-open { background: var(--wb-list-active); }
+.gg-row:focus-visible { outline: 1px solid var(--wb-focus); outline-offset: -1px; }
+.gg-row td { height: 24px; padding: 0 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; vertical-align: middle; }
+.gg-row td.gg-graph { padding: 0 0 0 4px; line-height: 0; }
+.gg-svg { display: block; overflow: visible; }
+.gg-line { fill: none; stroke: var(--gg); stroke-width: 2; }
+.gg-node { fill: var(--gg); stroke: var(--wb-editor-bg); stroke-width: 1; }
+.gg-node.is-head { fill: var(--wb-editor-bg); stroke: var(--gg); stroke-width: 2; }
+.gg-row.is-head .gg-subject { font-weight: 600; }
+.gg-ref { display: inline-flex; align-items: center; gap: 3px; height: 18px; max-width: 220px; margin-inline-end: 4px; padding: 0 5px 0 3px; border: 1px solid var(--gg); border-radius: 3px; color: var(--wb-editor-fg); font-size: 0.75rem; line-height: 16px; vertical-align: middle; }
+.gg-ref .cod { font-size: 13px; color: var(--gg); }
+.gg-ref-name { overflow: hidden; text-overflow: ellipsis; }
+.gg-ref-local { background: color-mix(in srgb, var(--gg) 18%, transparent); }
+.gg-ref-remote .gg-ref-name { font-style: italic; opacity: 0.85; }
+.gg-ref-tag { border-style: dashed; }
+.gg-ref.is-head { font-weight: 700; }
+.gg-date, .gg-author { color: var(--wb-breadcrumb); }
+.gg-hash { font-family: var(--font-mono); font-size: 0.75rem; color: var(--wb-breadcrumb); }
+.gg-open td { padding: 0; vertical-align: top; }
+.gg-open td.gg-pass { position: relative; padding-inline-start: 4px; }
+.gg-pass-svg { position: absolute; inset: 0 auto 0 4px; height: 100%; }
+.gg-details { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; max-height: 280px; padding: 10px 16px 12px; overflow: hidden; background: var(--wb-side-bg); border-block: 1px solid var(--wb-section-border); }
+.gg-info { min-width: 0; overflow: auto; }
+.gg-info-line { display: flex; gap: 8px; margin: 0 0 2px; font-size: 0.8125rem; }
+.gg-k { flex: none; min-width: 64px; color: var(--wb-breadcrumb); font-weight: 600; }
+.gg-mono { font-family: var(--font-mono); font-size: 0.75rem; }
+.gg-msg { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.gg-files { min-width: 0; overflow: auto; border-inline-start: 1px solid var(--wb-section-border); padding-inline-start: 12px; }
+.gg-files-head { margin: 0 0 4px; color: var(--wb-panel-title); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.gg-file { display: flex; align-items: center; gap: 6px; width: 100%; height: 22px; padding: 0 4px; border: 0; background: none; color: var(--wb-editor-fg); font: inherit; font-size: 0.8125rem; text-align: start; cursor: pointer; }
+.gg-file:hover { background: var(--wb-list-hover); }
+.gg-file:focus-visible { outline: 1px solid var(--wb-focus); outline-offset: -1px; }
+.gg-file-name { flex: none; }
+.gg-file-dir { flex: 1 1 auto; min-width: 0; overflow: hidden; color: var(--wb-breadcrumb); font-size: 0.75rem; text-overflow: ellipsis; white-space: nowrap; }
+.gg-file-n { flex: none; margin-inline-start: auto; display: inline-flex; gap: 6px; font-family: var(--font-mono); font-size: 0.75rem; }
+.gg-add { color: var(--git-add); } .gg-del { color: var(--git-del); }
+.gg-wait { margin: 4px 0; color: var(--wb-breadcrumb); font-size: 0.75rem; }
+.gg-more { display: flex; justify-content: center; padding: 8px; }

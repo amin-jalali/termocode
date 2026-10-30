@@ -191,6 +191,11 @@ func shotHub(t *testing.T, c *HubConn) {
 					data = webproto.ContainerLogs{ID: "9f3c2e1a1234", Lines: []string{"2026-10-30T09:12:44Z listening on :8080", "2026-10-30T09:12:45Z connected to postgres shop-db-1:5432", "2026-10-30T09:13:02Z GET /api/orders 200 14ms", "2026-10-30T09:13:05Z token=[REDACTED]"}, Redacted: 1}
 				case "tasks.tail":
 					data = webproto.TaskTail{Buf: 8, Lines: []string{"=== RUN   TestShorten", "--- PASS: TestShorten (0.00s)", "ok  \tgithub.com/amin-jalali/termocode/cmd/covreport\t0.412s"}}
+				case "git.graph":
+					data = graphRows()
+				case "git.show":
+					data = webproto.GitDiff{Commit: &webproto.GitCommitInfo{Hash: "cccc333", Subject: "Feature work", Body: "Why it changed.", Author: "Bob"},
+						Rows: []webproto.DiffRow{{K: "file", Text: "src/a.go"}, {K: "add", Text: "x"}, {K: "del", Text: "z"}, {K: "file", Text: "README.md"}, {K: "add", Text: "y"}}}
 				case "buf.hl":
 					var a webproto.HlArgs
 					_ = json.Unmarshal(v.Args, &a)
@@ -268,6 +273,11 @@ func TestShots(t *testing.T) {
 				}
 				for _, rs := range runShots(vp) {
 					shot(rs.name, rs.hash, rs.ready)
+				}
+				if !vp.Mobile {
+					shot("graph", "#/files/@git:graph", `document.querySelectorAll('tr.gg-row').length === 4`)
+					Eval[bool](p, `(document.querySelector('tr.gg-row[data-hash="cccc333"]').click(), true)`)
+					shot("graph-open", "#/files/@git:graph", `document.querySelectorAll('.gg-details .gg-file').length === 2`)
 				}
 			})
 		}
