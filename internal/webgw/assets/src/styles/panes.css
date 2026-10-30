@@ -333,6 +333,7 @@
 .layout-desktop .chatcol .composer-frame .composer-box { min-height: 20px; padding: 0; border: 0; border-radius: 0; background: transparent; outline: none; }
 .layout-desktop .chatcol .composer-frame .composer-box:focus-visible { outline: none; }
 .composer-tools { display: flex; align-items: center; gap: 4px; height: 24px; }
+.chat-picks { display: inline-flex; align-items: center; gap: 2px; min-width: 0; }
 .chat-chip { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 6px; border-radius: 4px; color: var(--wb-input-fg); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-chip .cod { font-size: 14px; }
 .composer-tools .send, .composer-tools .stop { margin-inline-start: auto; }
