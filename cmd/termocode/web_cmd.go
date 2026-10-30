@@ -139,6 +139,11 @@ func webPIDAlive(pid int) bool {
 func webCtlCall(sock, op, args string) (data json.RawMessage, code, msg string, err error) {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	return webCtlCallCtx(ctx, sock, op, args)
+}
+
+// webCtlCallCtx is webCtlCall until ctx ends.
+func webCtlCallCtx(ctx context.Context, sock, op, args string) (data json.RawMessage, code, msg string, err error) {
 	var d net.Dialer
 	dctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	nc, err := d.DialContext(dctx, "unix", sock)
@@ -190,4 +195,47 @@ func cleanLine(s string) string {
 		}
 		return r
 	}, s)
+}
+
+// webSSHOffText is what the far side hands over when its UI does not
+// answer: no termocode with the web panel on runs there.
+const webSSHOffText = `The web panel is off on the far computer. Turn it on there in config.json: "web_panel": "on"`
+
+// webSSHHandoff is the far end of `termocode ssh --web` (WEB-29): it asks
+// the UI of dir for the web panel in SSH mode for the local port, waiting
+// up to wait for the UI to come up, and returns the in-band hand-off for
+// the local termocode ssh: the port, the gateway's socket and a one-time
+// secret, or why there is none.
+func webSSHHandoff(dir string, port int, wait time.Duration) string {
+	fail := func(msg string) string { return session.WebHandoffAPC(session.WebHandoff{Err: msg}) }
+	paths, err := session.PathsFor(dir)
+	if err != nil {
+		return fail("No web panel: " + err.Error())
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), wait)
+	defer cancel()
+	args := `{"yes":true,"ssh_port":` + strconv.Itoa(port) + `}`
+	for {
+		data, code, msg, err := webCtlCallCtx(ctx, paths.WebSocket, webproto.OpWebOpen, args)
+		if err == nil {
+			if code != "" {
+				return fail(msg)
+			}
+			var r struct {
+				Port   int    `json:"port"`
+				Sock   string `json:"sock"`
+				Secret string `json:"secret"`
+			}
+			if json.Unmarshal(data, &r) != nil || r.Port != port || r.Sock == "" || r.Secret == "" {
+				return fail("The web panel did not start in SSH mode.")
+			}
+			return session.WebHandoffAPC(session.WebHandoff{Port: r.Port, Sock: r.Sock, Secret: r.Secret})
+		}
+		// The UI may still be starting: its hub comes up with it.
+		select {
+		case <-ctx.Done():
+			return fail(webSSHOffText)
+		case <-time.After(200 * time.Millisecond):
+		}
+	}
 }

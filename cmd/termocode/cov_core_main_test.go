@@ -160,6 +160,12 @@ func TestCovCoreRunAttachAndLink(t *testing.T) {
 	if len(r.clients) != 1 || r.clients[0] != "." {
 		t.Errorf("link without dir: %+v", r)
 	}
+	// termocode ssh --web: the port of the forward, never a folder.
+	r = covCall(t, []string{"--link", "--web=41237", dir}, nil)
+	want = clientOpts{create: true, link: true, webPort: 41237}
+	if len(r.opts) != 1 || r.opts[0] != want || r.clients[0] != dir {
+		t.Errorf("link --web: %+v, want %+v", r, want)
+	}
 }
 
 func TestCovCoreRunServer(t *testing.T) {

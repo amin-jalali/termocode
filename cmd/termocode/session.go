@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
@@ -81,6 +82,9 @@ type clientOpts struct {
 	link bool
 	// note is shown by the UI after the attach ("Reconnected after 12 s").
 	note string
+	// webPort (link only, 0: none) is `termocode ssh --web`: the client
+	// asks the UI for the web panel in SSH mode and hands it over in-band.
+	webPort int
 }
 
 // linkArgs removes the flags `termocode ssh` gives the termocode it starts
@@ -107,6 +111,23 @@ func linkArgs(args []string) (rest []string, link bool, note string) {
 		note = session.ReconnectNote(away, dropped)
 	}
 	return out, link, note
+}
+
+// linkWebPort takes `--web=<port>` (from `termocode ssh --web`) out of the
+// far side's arguments. A bad port is 0: no web, the editor still opens.
+func linkWebPort(args []string) (rest []string, port int) {
+	rest = args[:0:0]
+	for _, a := range args {
+		v, ok := strings.CutPrefix(a, "--web=")
+		if !ok {
+			rest = append(rest, a)
+			continue
+		}
+		if n, err := strconv.Atoi(v); err == nil && n >= 1024 && n <= 65535 {
+			port = n
+		}
+	}
+	return rest, port
 }
 
 // sshCommandArgs splits `termocode ssh [--dir DIR] [ssh args] destination`

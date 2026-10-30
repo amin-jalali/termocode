@@ -67,6 +67,9 @@ func spawnServer(p session.Paths) error {
 	return cmd.Process.Release()
 }
 
+// webSSHWait bounds how long the far side waits for its UI's web hub.
+const webSSHWait = time.Minute
+
 // runClient attaches this terminal to the workspace session, starting
 // it first when none runs (o.create).
 func runClient(dir string, o clientOpts) int {
@@ -107,8 +110,15 @@ func runClient(dir string, o clientOpts) int {
 	if running {
 		caps.Note = o.note
 	}
+	var announce chan string
+	if o.link && o.webPort > 0 {
+		announce = make(chan string, 1)
+		crash.Go("termocode --link: the web hand-off", func() {
+			announce <- webSSHHandoff(p.Workspace, o.webPort, webSSHWait)
+		})
+	}
 	return session.Attach(conn, p, session.AttachOpts{In: os.Stdin, Out: os.Stdout, Caps: caps,
-		Reconnect: app.ConfigAutoReconnect(), Link: o.link})
+		Reconnect: app.ConfigAutoReconnect(), Link: o.link, Announce: announce})
 }
 
 // clientCaps describes this terminal for the session. A running UI keeps
