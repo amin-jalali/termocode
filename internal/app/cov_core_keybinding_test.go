@@ -16,7 +16,7 @@ import (
 func covKeyModel(t *testing.T) (Model, string) {
 	t.Helper()
 	dir := withConfigDir(t)
-	m := New()
+	m := covNew(t)
 	m.w, m.h = 120, 40
 	return m, dir
 }

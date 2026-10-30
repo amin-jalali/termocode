@@ -44,7 +44,7 @@ func coreRunes(s string) tea.KeyMsg    { return tea.KeyMsg{Type: tea.KeyRunes, R
 func covSettingsModel(t *testing.T, w, h int) Model {
 	t.Helper()
 	withConfigDir(t)
-	m := New()
+	m := covNew(t)
 	m, _ = m.update(tea.WindowSizeMsg{Width: w, Height: h})
 	_ = m.dispatchPaletteAction("open-settings-ui")
 	if !m.settingsModalOpen {

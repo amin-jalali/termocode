@@ -73,7 +73,7 @@ func TestCovCoreHintKeys(t *testing.T) {
 // The launcher chip of an unpinned actions panel sits above the status bar.
 func TestCovCoreActionsLauncherChip(t *testing.T) {
 	withConfigDir(t)
-	m := New()
+	m := covNew(t)
 	m, _ = m.update(tea.WindowSizeMsg{Width: 120, Height: 30})
 	m.actionsOpen, m.actionsPinned = true, false
 	x0, _, y, ok := m.actionsLauncherRect()
@@ -98,7 +98,7 @@ func TestCovCoreScrollbarRuler(t *testing.T) {
 	old := lipgloss.ColorProfile()
 	lipgloss.SetColorProfile(termenv.TrueColor)
 	t.Cleanup(func() { lipgloss.SetColorProfile(old) })
-	m := New()
+	m := covNew(t)
 	if m.renderEditorScrollbar(0) != "" {
 		t.Error("zero-height ruler")
 	}
