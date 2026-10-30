@@ -38,6 +38,7 @@ var nav = []PageInfo{
 	{"Guides", "Install language servers and debuggers", "guides/language-servers.md"},
 	{"Guides", "Workspaces and sessions", "guides/workspaces.md"},
 	{"Guides", "Remote and SSH", "guides/remote-ssh.md"},
+	{"Guides", "The web panel", "guides/web.md"},
 	{"Guides", "Customize termocode", "guides/customize.md"},
 	{"Guides", "Import settings from another editor", "guides/import-from-another-editor.md"},
 	{"Guides", "Write an extension", "extensions.md"},

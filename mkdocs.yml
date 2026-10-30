@@ -111,6 +111,7 @@ nav:
       - Install language servers and debuggers: guides/language-servers.md
       - Workspaces and sessions: guides/workspaces.md
       - Remote and SSH: guides/remote-ssh.md
+      - The web panel: guides/web.md
       - Customize termocode: guides/customize.md
       - Import settings from another editor: guides/import-from-another-editor.md
       - Write an extension: extensions.md

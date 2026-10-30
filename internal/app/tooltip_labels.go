@@ -91,7 +91,7 @@ var tooltipLabels = map[string]tooltipSpec{
 	"status:diag":     {name: "Problems", palette: "problems-panel", help: "guides/tasks-problems.md#the-problems-panel"},
 	"status:tests":    {name: "Test results", help: "guides/tests.md#read-a-failure"},
 	"status:agents":   {name: "Outside agents (MCP server)", help: "guides/mcp.md#let-an-outside-agent-use-termocode"},
-	"status:web":      {name: "Web panel: click to stop it", palette: "web-stop", help: "guides/remote-ssh.md#the-web-panel"},
+	"status:web":      {name: "Web panel: click to stop it", palette: "web-stop", help: "guides/web.md"},
 	"status:services": {name: "Services", help: "guides/services.md#the-view"},
 	"status:ci":       {name: "CI and pull request", help: "guides/git.md#ci-and-pull-requests"},
 	"status:update":   {name: "A newer termocode is out", help: "getting-started/install.md#update-termocode"},
