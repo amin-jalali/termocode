@@ -43,6 +43,7 @@ type Model struct {
 	note       string   // text below the code
 	keyRows    []KeyRow // a key card's table (WithKeys)
 	safeID     string   // the safe answer of a Risky card
+	picture    []string // lines shown exactly as given (WithPicture)
 }
 
 func New(title, message string, buttons []Button) Model {
@@ -68,6 +69,15 @@ func (m Model) WithFocus(n int) Model {
 	if m.safeID == "" && n >= 0 && n < len(m.buttons) {
 		m.cursor = n
 	}
+	return m
+}
+
+// WithPicture shows lines below the message exactly as given: no wrap,
+// no cut, every space kept, light on dark whatever the theme (a QR code
+// drawn with half blocks reads right only that way). The card grows to
+// fit it.
+func (m Model) WithPicture(lines []string) Model {
+	m.picture = append([]string(nil), lines...)
 	return m
 }
 
@@ -371,6 +381,7 @@ type confirmDims struct {
 	buttonLabels []string
 	buttonXs     []int // inner-x offset of each button (relative to inner area)
 	codeAt       int   // index in bodyLines of the code frame's top row; -1 without code
+	pictureAt    int   // index in bodyLines of the picture's first row; -1 without one
 }
 
 // layoutDims is the single source of truth for confirm panel geometry.
@@ -404,6 +415,9 @@ func (m Model) boxWidth() int {
 	}
 	if len(m.keyRows) > 0 {
 		boxW = max(boxW, min(m.keyTableWidth()+6, 110))
+	}
+	for _, l := range m.picture {
+		boxW = max(boxW, lipgloss.Width(l)+6)
 	}
 	if m.code != "" {
 		// Room for the command on one line: frame + padding + border.
@@ -440,6 +454,11 @@ func (m Model) layoutRest(boxW, innerW, bodyW int, bodyLines []string) confirmDi
 		extra := len(bodyLines) - maxBodyLines + 1
 		bodyLines = bodyLines[:maxBodyLines-1]
 		bodyLines = append(bodyLines, "…and "+strconv.Itoa(extra)+" more lines")
+	}
+	pictureAt := -1
+	if len(m.picture) > 0 {
+		pictureAt = len(bodyLines) + 1
+		bodyLines = append(append(bodyLines, ""), m.picture...)
 	}
 	codeAt := -1
 	if m.code != "" {
@@ -490,6 +509,7 @@ func (m Model) layoutRest(boxW, innerW, bodyW int, bodyLines []string) confirmDi
 		buttonLabels: labels,
 		buttonXs:     xs,
 		codeAt:       codeAt,
+		pictureAt:    pictureAt,
 	}
 }
 
@@ -585,7 +605,14 @@ func (m Model) Box() string {
 	if dims.codeAt < 0 {
 		cmdAt = commandLineAt(dims.bodyLines)
 	}
+	picStyle := lipgloss.NewStyle().Background(lipgloss.Color("#000000")).Foreground(lipgloss.Color("#ffffff"))
 	for i, line := range dims.bodyLines {
+		if dims.pictureAt >= 0 && i >= dims.pictureAt && i < dims.pictureAt+len(m.picture) {
+			pad := max(0, (innerW-lipgloss.Width(line))/2)
+			row := bgFill.Render(strings.Repeat(" ", pad)) + picStyle.Render(line)
+			rows = append(rows, padBg(row, innerW))
+			continue
+		}
 		style := bodyStyle
 		switch {
 		case cmdAt >= 0 && i >= cmdAt:
