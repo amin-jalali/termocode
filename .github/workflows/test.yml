@@ -420,3 +420,52 @@ jobs:
             ${{ runner.temp }}/cov/merged.out
             ${{ runner.temp }}/cov/coverage.txt
           if-no-files-found: ignore
+
+  # The web page in a real Chrome (e2e/web, build tags browser + webdev):
+  # the embedded page behind the real gateway guard, CSP and /auth, with a
+  # fake hub on /ws. Both runner images ship Chrome; a missing Chrome
+  # fails here instead of skipping. Screenshots of failures are uploaded.
+  web-e2e:
+    name: web-e2e (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    env:
+      TERMOCODE_WEB_E2E: require
+      WEB_E2E_DUMP_DIR: ${{ github.workspace }}/web-e2e-dumps
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+            ~/Library/Caches/go-build
+          key: ${{ runner.os }}-go-web-e2e-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-web-e2e-
+            ${{ runner.os }}-go-
+
+      - name: Web e2e tests
+        run: go -C e2e test -tags browser,webdev -race -count=1 -v -timeout 15m ./web/
+
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-e2e-dumps-${{ matrix.os }}
+          path: web-e2e-dumps/
+          if-no-files-found: ignore
