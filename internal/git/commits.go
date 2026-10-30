@@ -9,6 +9,7 @@ import (
 
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // RefKind says what a ref on a commit is.
@@ -50,7 +51,7 @@ func Commits(dir string, skip, limit int) ([]GraphCommit, bool, error) {
 	const format = "--format=%h%x1f%H%x1f%p%x1f%s%x1f%an%x1f%ct%x1f%D%x1e"
 	// The unpushed set does not depend on the log: read both at once.
 	upc := make(chan map[string]bool, 1)
-	go func() { upc <- unpushed(dir) }()
+	crash.GoWith("reading the unpushed commits", func() { upc <- unpushed(dir) }, func() { upc <- nil })
 	out, err := runOut(dir, "git", "log", "--decorate=full", format,
 		fmt.Sprintf("-n%d", limit+1), fmt.Sprintf("--skip=%d", skip), "HEAD", "--")
 	up := <-upc

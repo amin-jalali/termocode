@@ -1,6 +1,7 @@
 package git
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
@@ -104,10 +106,10 @@ func GetBranch(dir string) (Branch, error) {
 		err error
 	}
 	cc := make(chan counts, 1)
-	go func() {
+	crash.GoWith("reading ahead/behind", func() {
 		out, err := runOut(dir, "git", "rev-list", "--left-right", "--count", "@{upstream}...HEAD")
 		cc <- counts{out, err}
-	}()
+	}, func() { cc <- counts{err: errors.New("the ahead/behind read stopped")} })
 	name, err := runOut(dir, "git", "branch", "--show-current")
 	if err != nil {
 		<-cc
