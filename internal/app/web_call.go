@@ -109,7 +109,8 @@ func (c *webConn) request(r *webproto.Req) bool {
 	refuse := func(code webproto.ErrCode, msg string) bool {
 		return c.send(&webproto.ErrMsg{T: webproto.KindErr, ID: r.ID, Code: code, Msg: msg})
 	}
-	if _, ok := webproto.Lookup(r.Op); !ok {
+	p, ok := webproto.Lookup(r.Op)
+	if !ok {
 		return refuse(webproto.CodeBadRequest, "Unknown action.")
 	}
 	if !webproto.Allowed(c.role, r.Op) {
@@ -121,6 +122,9 @@ func (c *webConn) request(r *webproto.Req) bool {
 	}
 	if err != nil {
 		return refuse(webproto.CodeBadRequest, "That request is not valid.")
+	}
+	if !c.rates.allow(p, len(r.Args), webNow()) {
+		return refuse(webproto.CodeLimit, "Too fast. Wait a moment.")
 	}
 	if c.inflight.Add(1) > webMaxInFlight {
 		c.inflight.Add(-1)

@@ -38,8 +38,9 @@ type webConn struct {
 	out        *webQueue
 	writerDone chan struct{}
 
-	hello  bool   // reader goroutine only: hello was seen
-	lastID uint64 // reader goroutine only: the last request id
+	hello  bool     // reader goroutine only: hello was seen
+	lastID uint64   // reader goroutine only: the last request id
+	rates  webRates // reader goroutine only: the hub's rate check (web_rate.go)
 
 	inflight atomic.Int32 // requests sent to Update and not answered yet
 
