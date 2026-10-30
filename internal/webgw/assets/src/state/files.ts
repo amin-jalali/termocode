@@ -136,7 +136,7 @@ export const reduceTerm: Reducer = (data, delta) => {
   switch (d.kind) {
     case "lines": {
       const r = linesApply(int(s.first, "first"), out.rows, int(d.first, "first"), int(d.last, "last"), strs(d.lines, "lines"), MAX_TERM_ROWS);
-      if (!r) bad("term: lines do not fit the window");
+      if (!r) bad("term: lines do not fit the rows kept");
       out = { ...out, first: r.first, rows: r.rows, tick: int(d.tick, "tick") };
       break;
     }
