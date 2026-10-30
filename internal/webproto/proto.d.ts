@@ -291,6 +291,21 @@ export interface TestIDArgs {
   id: string;
 }
 
+export interface AICompleteArgs {
+  buf: number;
+  tick: number;
+  line: number;
+  col: number;
+  manual?: boolean;
+}
+
+export interface AINextEditArgs {
+  buf: number;
+  tick: number;
+  line: number;
+  seed?: boolean;
+}
+
 export interface GitFileLogArgs {
   path: string;
 }
@@ -1307,6 +1322,25 @@ export interface TestOutput {
   truncated?: boolean;
 }
 
+export interface AICompletion {
+  none?: boolean;
+  why?: string;
+  line: number;
+  from: number;
+  to: number;
+  text: string;
+  importAt?: number;
+  imports?: string[];
+}
+
+export interface AINextEdit {
+  none?: boolean;
+  start: number;
+  end: number;
+  old: string[];
+  lines: string[];
+}
+
 export interface GitFileLog {
   path: string;
   log: GitCommit[];
@@ -1757,6 +1791,8 @@ export interface OpArgs {
   "tests.run": TestRunArgs;
   "tests.debug": TestIDArgs;
   "tests.stop": EmptyArgs;
+  "ai.complete": AICompleteArgs;
+  "ai.next_edit": AINextEditArgs;
   "git.file_log": GitFileLogArgs;
   "git.text": GitTextArgs;
   "buf.symbols": BufArgs;
@@ -1885,6 +1921,8 @@ export interface OpResult {
   "lsp.definition": LspLocations;
   "lsp.references": LspLocations;
   "tests.output": TestOutput;
+  "ai.complete": AICompletion;
+  "ai.next_edit": AINextEdit;
   "git.file_log": GitFileLog;
   "git.text": GitText;
   "buf.symbols": BufSymbols;
