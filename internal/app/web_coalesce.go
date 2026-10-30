@@ -18,3 +18,21 @@ func (d webTextAppend) coalesce(next any) (any, bool) {
 	}
 	return webTextAppend{ID: d.ID, Append: d.Append + n.Append}, true
 }
+
+// webLinesDelta replaces lines [First, Last) (0-based, end-exclusive, as
+// nvim_buf_set_lines) with Lines. A delta that replaces exactly the lines
+// the queued one wrote merges with it: the result replaces the queued
+// one's range with the newest lines.
+type webLinesDelta struct {
+	First int      `json:"first"`
+	Last  int      `json:"last"`
+	Lines []string `json:"lines"`
+}
+
+func (d webLinesDelta) coalesce(next any) (any, bool) {
+	n, ok := next.(webLinesDelta)
+	if !ok || n.First != d.First || n.Last != d.First+len(d.Lines) {
+		return nil, false
+	}
+	return webLinesDelta{First: d.First, Last: d.Last, Lines: n.Lines}, true
+}
