@@ -18,7 +18,7 @@ import { showOnLaptop } from "../views/FileView";
 import { modKey } from "./platform";
 import { loadRecentCmds, saveRecentCmds, setPref } from "./prefs";
 import { go, route } from "./router";
-import { activeFile, closeTab, panes, quick, setPanes, wordWrap } from "./workbench";
+import { activeFile, closeTab, focusedGroup, focusGroup, groups, panes, quick, setPanes, splitEditor, tabsIn, wordWrap } from "./workbench";
 
 export interface Command {
   id: string;
@@ -34,8 +34,8 @@ export interface Command {
   run: () => void;
 }
 
-/** tabsNow is the editor's tab list, set by the workbench as it draws. */
-export const tabsNow: { list: readonly string[] } = { list: [] };
+/** tabsNow is the focused group's tab list. */
+const tabsNow = (): string[] => tabsIn(focusedGroup.peek());
 
 const hasFile = () => activeFile.peek() !== null && route.peek().tab !== "more";
 
@@ -47,8 +47,12 @@ export function commands(): Command[] {
     { id: "gotoLine", label: "cmd.goto_line", keys: "Ctrl+G", when: hasFile, run: () => (quick.value = { mode: "line" }) },
     { id: "save", label: "cmd.save", keys: `${mod}+S`, when: hasFile, run: saveLive },
     { id: "closeEditor", label: "cmd.close_editor", keys: `${mod}+W`, when: hasFile, run: () => closeActive() },
-    { id: "nextEditor", label: "cmd.next_editor", keys: "Ctrl+Tab", when: () => tabsNow.list.length > 1, run: () => cycleTab(1) },
-    { id: "prevEditor", label: "cmd.prev_editor", keys: "Ctrl+Shift+Tab", when: () => tabsNow.list.length > 1, run: () => cycleTab(-1) },
+    { id: "nextEditor", label: "cmd.next_editor", keys: "Ctrl+Tab", when: () => tabsNow().length > 1, run: () => cycleTab(1) },
+    { id: "prevEditor", label: "cmd.prev_editor", keys: "Ctrl+Shift+Tab", when: () => tabsNow().length > 1, run: () => cycleTab(-1) },
+    { id: "splitRight", label: "cmd.split_right", keys: `${mod}+\\`, when: hasFile, run: () => splitEditor(activeFile.peek(), "right") },
+    { id: "splitDown", label: "cmd.split_down", when: hasFile, run: () => splitEditor(activeFile.peek(), "down") },
+    { id: "focusGroup1", label: "cmd.focus_group1", keys: `${mod}+1`, run: () => focusGroup(0) },
+    { id: "focusGroup2", label: "cmd.focus_group2", keys: `${mod}+2`, when: () => groups.peek().length > 1 || hasFile(), run: focusSecond },
     { id: "wrap", label: "cmd.wrap", keys: "Alt+Z", run: () => (wordWrap.value = !wordWrap.peek()) },
     { id: "showOnLaptop", label: "cmd.show_on_laptop", when: hasFile, run: () => { const f = activeFile.peek(); if (f) showOnLaptop(f); } },
     { id: "sidebar", label: "cmd.toggle_side", keys: `${mod}+B`, run: () => setPanes({ side: !panes.peek().side }) },
@@ -139,12 +143,19 @@ export function noteRun(id: string): void {
 /** closeActive closes the active editor tab. */
 export function closeActive(): void {
   const f = activeFile.peek();
-  if (f) closeTab(f, tabsNow.list);
+  if (f) closeTab(f);
+}
+
+/** focusSecond focuses the second group, splitting the editor first
+ * when there is one group. */
+export function focusSecond(): void {
+  if (groups.peek().length > 1) focusGroup(1);
+  else splitEditor(activeFile.peek(), "right");
 }
 
 /** cycleTab shows the next (1) or previous (-1) editor tab. */
 export function cycleTab(dir: 1 | -1): void {
-  const list = tabsNow.list;
+  const list = tabsNow();
   if (list.length < 2) return;
   const i = list.indexOf(activeFile.peek() ?? "");
   go({ tab: "files", rest: list[(i + dir + list.length) % list.length], query: {} });

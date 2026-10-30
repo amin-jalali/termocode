@@ -174,7 +174,7 @@ function workbenchKey(e: KeyboardEvent): boolean {
   if (!mod) return false;
   const k = e.key.toLowerCase();
   if (e.shiftKey) return k === "p" || k === "e" || k === "g" || k === "f";
-  return ["p", "b", "j", "w", "`", "tab", "k", ","].includes(k) || (e.ctrlKey && k === "pagedown") || (e.ctrlKey && k === "pageup");
+  return ["p", "b", "j", "w", "`", "tab", "k", ",", "\\", "1", "2"].includes(k) || (e.ctrlKey && k === "pagedown") || (e.ctrlKey && k === "pageup");
 }
 
 function colors(c: Record<string, string>): Record<string, string> {

@@ -7,6 +7,8 @@ import { Fragment, h, type ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import type { BufItem, TreeDir, TreeEntry } from "../../../../webproto/proto";
 import { go, route } from "../lib/router";
+import { layout } from "../lib/layout";
+import { keep, showFile } from "../lib/workbench";
 import { expanded, failed, hideDots, reconcile, retry, toggle } from "../lib/tree";
 import { link, listOf, live, store } from "../session";
 import { own } from "../state/dict";
@@ -117,7 +119,8 @@ function Folder({ path, depth, tree }: { path: string; depth: number; tree: Tree
                 git={gitBadge(e.git)}
                 dim={e.ignored === true}
                 path={p}
-                onClick={() => (e.dir ? toggle(p) : openFile(p))}
+                onClick={() => (e.dir ? toggle(p) : layout.peek() === "desktop" ? showFile(p, true) : openFile(p))}
+                onDblClick={e.dir || layout.peek() !== "desktop" ? undefined : () => keep(p)}
               />
               {canEdit() && (
                 <button type="button" class="tree-more" aria-label={t("files.more", { name: e.name })} onClick={() => (acting.value = { path: p, dir: e.dir })}>
