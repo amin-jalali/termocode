@@ -343,4 +343,6 @@ var (
 	// GlyphAgents marks outside agents connected to termocode's MCP
 	// server (status-bar chip).
 	GlyphAgents = Icon{NerdFont: "\uf0ec", Unicode: "⇄", ASCII: "="} // nf-fa-exchange
+	// GlyphWeb marks the running web panel (status-bar chip).
+	GlyphWeb = Icon{NerdFont: "\U000f059f", Unicode: "◉", ASCII: "@"} // nf-md-web
 )
