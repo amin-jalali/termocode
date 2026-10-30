@@ -5,6 +5,7 @@
 // resolutions, given by git.conflict); Complete Merge saves the result
 // and marks the file resolved, if it is still the file you read. A file
 // that cannot be merged line by line keeps one side through the laptop.
+import { Crumbs } from "../FileView";
 import { h } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { GitConflict, GitConflictPart } from "../../../../../webproto/proto";
@@ -269,7 +270,7 @@ export function MergeEditor({ path, slot = "g0" }: { path: string; slot?: string
   const oursLabel = parts[0]?.oursLabel ?? "";
   const canAct = !viewer && on && left > 0;
   return (
-    <View tab="files" name="merge" title={name} sub={<span class="trunc file-path crumbs" dir="ltr" title={path}>{path}</span>} bodyClass="gm-body">
+    <View tab="files" name="merge" title={name} sub={path.includes("/") ? <Crumbs dir={path.slice(0, path.lastIndexOf("/"))} file={path} /> : undefined} bodyClass="gm-body">
       {err ? (
         <div class="gm-err">
           <p class="empty refused">{err}</p>

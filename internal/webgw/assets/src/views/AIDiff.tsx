@@ -5,6 +5,7 @@
 // what is left in one edit; Reject drops it, the file unchanged. A file
 // an agent changed in its own worktree ("@agent:<id>:<path>") shows the
 // file before and after the agent, read only.
+import { Crumbs } from "./FileView";
 import { Fragment, h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { AIWorktreeText } from "../../../../webproto/proto";
@@ -90,11 +91,7 @@ function Proposed({ p, slot }: { p: Proposal; slot: string }) {
       tab="files"
       name="ai-diff"
       title={name(p.path)}
-      sub={
-        <span class="trunc file-path crumbs" dir="ltr" title={p.path}>
-          {p.path}
-        </span>
-      }
+      sub={p.path.includes("/") ? <Crumbs dir={p.path.slice(0, p.path.lastIndexOf("/"))} file={p.path} /> : undefined}
       bodyClass="is-editing"
       actions={
         <>
@@ -141,11 +138,7 @@ function AgentFile({ d, slot }: { d: DiffTab; slot: string }) {
       tab="files"
       name="ai-diff"
       title={name(d.path)}
-      sub={
-        <span class="trunc file-path crumbs" dir="ltr" title={d.path}>
-          {d.path}
-        </span>
-      }
+      sub={d.path.includes("/") ? <Crumbs dir={d.path.slice(0, d.path.lastIndexOf("/"))} file={d.path} /> : undefined}
       bodyClass="is-editing"
       actions={
         <>
