@@ -2,10 +2,54 @@ package webproto
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 )
+
+// FuzzOpsArgs feeds every op's args decoder random bytes. Invariants: no
+// panic; accepted args fit the row's size cap; they encode, and their
+// encoding (when it still fits) is accepted again and is stable.
+func FuzzOpsArgs(f *testing.F) {
+	ops := Ops()
+	for i, p := range ops {
+		b, err := os.ReadFile(filepath.Join("testdata", "golden", "ops", p.Op+".json"))
+		if err != nil {
+			f.Fatal(err)
+		}
+		m, err := DecodeClient(bytes.TrimSuffix(b, []byte("\n")))
+		if err != nil {
+			f.Fatal(err)
+		}
+		f.Add(uint8(i), []byte(m.(*Req).Args))
+	}
+	f.Fuzz(func(t *testing.T, i uint8, raw []byte) {
+		p := ops[int(i)%len(ops)]
+		a, err := DecodeArgs(p.Op, raw)
+		if err != nil {
+			return
+		}
+		if len(raw) > p.MaxBytes {
+			t.Fatalf("%s: accepted %d bytes", p.Op, len(raw))
+		}
+		out, err := json.Marshal(a)
+		if err != nil {
+			t.Fatalf("%s: accepted args do not encode: %v", p.Op, err)
+		}
+		if len(out) > p.MaxBytes {
+			return
+		}
+		a2, err := DecodeArgs(p.Op, out)
+		if err != nil {
+			t.Fatalf("%s: own encoding refused: %v\n in %q\nout %q", p.Op, err, raw, out)
+		}
+		out2, _ := json.Marshal(a2)
+		if !bytes.Equal(out, out2) {
+			t.Fatalf("%s: not stable: %q vs %q", p.Op, out, out2)
+		}
+	})
+}
 
 // FuzzDecodeClientMsg feeds the strict decoder random bytes. Invariants:
 // it never panics; an accepted message encodes; when the encoding is not
