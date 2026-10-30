@@ -307,7 +307,9 @@ export const S = {
   "e.idle.one": "The web session stopped after {n} minute without use.",
   "e.idle.other": "The web session stopped after {n} minutes without use.",
   "e.idle_any": "The web session stopped after a time without use.",
-  "e.max": "The web session stopped after 12 hours.",
+  "e.max.one": "The web session stopped after {n} hour.",
+  "e.max.other": "The web session stopped after {n} hours.",
+  "e.max_any": "The web session stopped after its time limit.",
   "e.still_running": "Your work is still running on the laptop.",
   "e.ended": "This termocode session has ended.",
   "e.ended_code": "This termocode session has ended (exit code {n}).",
@@ -356,7 +358,7 @@ export function t(key: StringKey, vars?: Record<string, string | number>): strin
   });
 }
 
-type Plural = "pill.cards" | "edit.sent" | "git.commit" | "e.idle";
+type Plural = "pill.cards" | "edit.sent" | "git.commit" | "e.idle" | "e.max";
 
 /** tn picks the .one or .other form of a plural key by n. */
 export function tn(key: Plural, n: number, vars?: Record<string, string | number>): string {
