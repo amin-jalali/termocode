@@ -321,8 +321,9 @@ function Pane({ buf, item, n, focused, controller }: { buf: number; item: TermIt
       onMouseDown={() => {
         if (!focused) focusBuf.value = buf;
       }}
-      onMouseUp={() => {
-        if (!selectedIn(root.current)) input.current?.focus({ preventScroll: true });
+      onMouseUp={(e: MouseEvent) => {
+        // Not after a right click: its menu (opened on the press) keeps the focus.
+        if (e.button === 0 && !selectedIn(root.current)) input.current?.focus({ preventScroll: true });
       }}
       onContextMenu={(e: MouseEvent) => {
         const row = (e.target as Element).closest(".trow");
