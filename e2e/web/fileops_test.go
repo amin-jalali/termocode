@@ -3,9 +3,12 @@
 package web
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
@@ -124,5 +127,55 @@ func TestFilesViewerHasNoActions(t *testing.T) {
 	p.WaitJS(treeRow("a.go"))
 	if n := Eval[int](p, `document.querySelectorAll(".tree-more, .head-new").length`); n != 0 {
 		t.Fatalf("a viewer sees %d action buttons", n)
+	}
+}
+
+// Download reads the file in chunks and hands the browser one blob with
+// the bytes; a secret file's refusal shows in the hub's words.
+func TestFilesDownload(t *testing.T) {
+	p, c := openTree(t, Desktop)
+	Eval[bool](p, `(() => { window.__txt = null; const o = URL.createObjectURL.bind(URL); URL.createObjectURL = (b) => { b.text().then((x) => (window.__txt = x)); return o(b); }; return true; })()`)
+	p.TapJS(moreOf("a.go"))
+	p.TapJS(ButtonByText("Download"))
+	r := expectOp(t, c, webproto.OpFileDownload, `{"path":"a.go"}`)
+	reply(t, c, r, webproto.FileChunk{Path: "a.go", Size: 11, From: 0, Data: "cGFja2FnZSA=", Next: 8, Mtime: 7})
+	r = expectOp(t, c, webproto.OpFileDownload, `{"path":"a.go","from":8}`)
+	reply(t, c, r, webproto.FileChunk{Path: "a.go", Size: 11, From: 8, Data: "YWJj", Mtime: 7})
+	p.WaitJS(`window.__txt === "package abc"`)
+	p.WaitJS(`document.querySelector(".toasts")?.textContent.includes("Downloaded a.go.")`)
+
+	p.TapJS(moreOf("a.go"))
+	p.TapJS(ButtonByText("Download"))
+	r = expectOp(t, c, webproto.OpFileDownload, `{"path":"a.go"}`)
+	c.Send(t, &webproto.ErrMsg{T: webproto.KindErr, ID: r.ID, Code: webproto.CodeForbidden, Msg: "This file may hold secrets. It stays on the laptop."})
+	p.WaitJS(`document.querySelector(".toasts")?.textContent.includes("It stays on the laptop.")`)
+}
+
+// Upload sends the chosen file in chunks to the folder; a name that
+// exists asks the laptop to replace it.
+func TestFilesUpload(t *testing.T) {
+	for _, exists := range []bool{false, true} {
+		p, c := openTree(t, Desktop)
+		f := filepath.Join(t.TempDir(), "note.txt")
+		if err := os.WriteFile(f, []byte("hello upload"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		p.TapJS(moreOf("src"))
+		p.TapJS(ButtonByText("Upload here"))
+		p.WaitJS(`document.querySelector(".xfer-input")`)
+		p.Do(chromedp.SetUploadFiles(".xfer-input", []string{f}))
+		reply(t, c, expectOp(t, c, webproto.OpFileUploadBegin, `{"path":"src/note.txt","size":12}`), webproto.UploadStarted{ID: "0a1b2c3d", Chunk: 524288, Exists: exists})
+		reply(t, c, expectOp(t, c, webproto.OpFileUploadChunk, `{"id":"0a1b2c3d","off":0,"data":"aGVsbG8gdXBsb2Fk"}`), webproto.UploadProgress{Got: 12})
+		if !exists {
+			reply(t, c, expectOp(t, c, webproto.OpFileUploadSave, `{"id":"0a1b2c3d"}`), webproto.TreeChanged{Path: "src/note.txt"})
+			p.WaitJS(`document.querySelector(".toasts")?.textContent.includes("Uploaded src/note.txt.")`)
+			continue
+		}
+		p.WaitJS(`document.querySelector(".ask-text")?.textContent === "src/note.txt exists. Replace it with the upload?"`)
+		p.WaitJS(`document.querySelector(".ask .arm.is-armed")`)
+		p.TapJS(ButtonByText("Ask the laptop"))
+		reply(t, c, expectOp(t, c, webproto.OpFileUploadReplace, `{"id":"0a1b2c3d"}`), webproto.AskRef{Card: "card-31"})
+		c.Send(t, &webproto.Event{T: webproto.KindEv, Kind: webproto.EventAnswered, Data: raw(webproto.Answered{ID: "card-31", By: "laptop", Choice: "confirm"})})
+		p.WaitJS(`document.querySelector(".toasts")?.textContent.includes("Done on the laptop.")`)
 	}
 }
