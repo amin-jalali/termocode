@@ -70,13 +70,18 @@ func parseStatusV2(out string) BranchStatus {
 		case '1', '2', 'u':
 			// "1 XY sub mH mI mW hH hI path", "2 … Xscore path" (then
 			// the old path as the next record), "u … h1 h2 h3 path".
-			n := map[byte]int{'1': 8, '2': 9, 'u': 10}[rec[0]]
-			f := strings.SplitN(rec, " ", n+1)
-			if len(f) <= n {
+			n := 8
+			switch rec[0] {
+			case '2':
+				n = 9
+			case 'u':
+				n = 10
+			}
+			path, ok := afterFields(rec, n)
+			if !ok || len(rec) < 4 || rec[4] != ' ' {
 				continue
 			}
-			code := strings.ReplaceAll(f[1], ".", " ")
-			bs.Files = append(bs.Files, FileStatus{Code: code, Path: f[n]})
+			bs.Files = append(bs.Files, FileStatus{Code: v1Code(rec[2:4]), Path: path})
 			if rec[0] == '2' {
 				i++ // the old path
 			}
@@ -89,6 +94,41 @@ func parseStatusV2(out string) BranchStatus {
 		bs.Branch.Name = "(detached " + shortOID(bs.OID) + ")"
 	}
 	return bs
+}
+
+// afterFields is rec after its first n space-separated fields (the
+// path, which may hold spaces itself).
+func afterFields(rec string, n int) (string, bool) {
+	for ; n > 0; n-- {
+		i := strings.IndexByte(rec, ' ')
+		if i < 0 {
+			return "", false
+		}
+		rec = rec[i+1:]
+	}
+	return rec, true
+}
+
+// v1Code is a v2 "XY" code with v1 letters ('.' becomes ' '); the
+// common ones without an allocation.
+func v1Code(xy string) string {
+	switch xy {
+	case ".M":
+		return " M"
+	case ".D":
+		return " D"
+	case "M.":
+		return "M "
+	case "A.":
+		return "A "
+	case "D.":
+		return "D "
+	case "R.":
+		return "R "
+	case "MM", "AM", "UU", "AA", "DD":
+		return xy
+	}
+	return strings.ReplaceAll(xy, ".", " ")
 }
 
 // shortOID abbreviates a hash; StatusBranch replaces it with git's own
