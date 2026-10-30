@@ -23,11 +23,26 @@ import (
 
 func init() {
 	webOps[webproto.OpAIComplete] = (*Model).webAIComplete
+	webOps[webproto.OpAINextEdit] = (*Model).webAINextEdit
 }
 
 // webAICalls is the page's AI calls in flight (Update only).
 type webAICalls struct {
-	inline map[*webConn]*webAIRun
+	inline map[webAIKey]*webAIRun
+	nes    map[int]*webAINES // by buffer
+}
+
+// webAIKey is one kind of AI call (its op) of one connection.
+type webAIKey struct {
+	conn *webConn
+	op   string
+}
+
+// webAINES is a buffer's text at the page's last pause and its recent
+// edits (the next edit suggestion's memory, as the laptop keeps its own).
+type webAINES struct {
+	shadow []string
+	hist   ai.EditHistory
 }
 
 // webAIRun is one AI call of a connection.
@@ -124,14 +139,15 @@ func webAINone(call *webCall, manual bool, why string) {
 func (m *Model) webAIStart(call *webCall) *webAIRun {
 	st := &m.web.ai
 	if st.inline == nil {
-		st.inline = map[*webConn]*webAIRun{}
+		st.inline = map[webAIKey]*webAIRun{}
 	}
-	if old := st.inline[call.conn]; old != nil {
+	k := webAIKey{call.conn, call.op}
+	if old := st.inline[k]; old != nil {
 		old.cancel()
 	}
 	r := &webAIRun{}
 	r.ctx, r.cancel = context.WithTimeout(call.ctx, aiInlineTimeout)
-	st.inline[call.conn] = r
+	st.inline[k] = r
 	return r
 }
 
@@ -139,8 +155,9 @@ func (m *Model) webAIStart(call *webCall) *webAIRun {
 func (r *webAIRun) end(call *webCall) tea.Msg {
 	r.cancel()
 	return applyMsg(func(m *Model) tea.Cmd {
-		if m.web != nil && m.web.ai.inline[call.conn] == r {
-			delete(m.web.ai.inline, call.conn)
+		k := webAIKey{call.conn, call.op}
+		if m.web != nil && m.web.ai.inline[k] == r {
+			delete(m.web.ai.inline, k)
 		}
 		return nil
 	})
@@ -206,6 +223,79 @@ func (m *Model) webAIComplete(call *webCall) tea.Cmd {
 			out.ImportAt, out.Imports = show.importAt, show.imports
 		}
 		call.reply(out)
+		return run.end(call)
+	}
+}
+
+// nesOf is a buffer's next edit memory (forgetting all copies when there
+// are too many buffers, as the laptop does).
+func (st *webAICalls) nesOf(buf int) *webAINES {
+	if st.nes == nil || (len(st.nes) >= aiNESMaxBufs && st.nes[buf] == nil) {
+		st.nes = map[int]*webAINES{}
+	}
+	n := st.nes[buf]
+	if n == nil {
+		n = &webAINES{}
+		st.nes[buf] = n
+	}
+	return n
+}
+
+// webAINextEdit is ai.next_edit: after the page's pause, the laptop's
+// next edit suggestion from the edits since the last pause.
+func (m *Model) webAINextEdit(call *webCall) tea.Cmd {
+	a := call.args.(*webproto.AINextEditArgs)
+	b, ok := m.webAIBuf(call, a.Buf, a.Tick)
+	if !ok {
+		return nil
+	}
+	none := func() tea.Cmd { call.reply(webproto.AINextEdit{None: true, Old: []string{}, Lines: []string{}}); return nil }
+	st := &m.web.ai
+	size := 0
+	for _, l := range b.rows {
+		size += len(l) + 1
+	}
+	if !m.aiNESEnabled() {
+		return none()
+	}
+	if ok, _ := ai.NextEditAllowed(b.path, len(b.rows), size); !ok {
+		delete(st.nes, a.Buf)
+		return none()
+	}
+	n := st.nesOf(a.Buf)
+	old, had := n.shadow, n.shadow != nil
+	n.shadow = append([]string(nil), b.rows...)
+	if a.Seed || !had {
+		return none()
+	}
+	hunk, changed := ai.DiffHunk(old, n.shadow)
+	if !changed {
+		return none()
+	}
+	n.hist.Add(hunk)
+	in := ai.NextEditInput{Filetype: b.ft, Path: b.path, Lines: n.shadow, CursorRow: min(a.Line, max(len(n.shadow)-1, 0)),
+		Edits: append([]ai.EditHunk(nil), n.hist.Edits()...)}
+	prov, model := webAIProvider(m)
+	run := m.webAIStart(call)
+	ctx := run.ctx
+	call.later()
+	return func() tea.Msg {
+		temp := 0.0
+		text, last := ai.Collect(prov.Stream(ctx, ai.Request{
+			Messages:    ai.BuildNextEditPrompt(in),
+			Model:       model,
+			MaxTokens:   aiNESMaxTokens,
+			Temperature: &temp,
+		}))
+		if last.Err != nil && ctx.Err() == nil {
+			recordError("[web] ai.next_edit: " + ai.Redact(last.Err.Error()))
+		}
+		ne, ok := ai.ParseNextEdit(text, in)
+		if last.Err != nil || !ok || len(ne.Lines) > webproto.MaxAIEditLines || ne.End-ne.Start >= webproto.MaxAIEditLines {
+			none()
+			return run.end(call)
+		}
+		call.reply(webproto.AINextEdit{Start: ne.Start, End: ne.End, Old: in.Lines[ne.Start : ne.End+1], Lines: ne.Lines})
 		return run.end(call)
 	}
 }
