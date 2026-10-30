@@ -1,0 +1,168 @@
+/* Design tokens (web UX 7.1, 7.2). Dark is the termocode default theme
+   mapped 1:1; light keeps the hues at AA contrast. A few values are moved
+   from the TUI palette to pass AA on every surface they sit on; the
+   numbers are checked by tokens_test.go (TestWebTokensContrast). */
+
+/* tokens:dark */
+:root {
+  --bg: #1c1c1c;
+  --bg-2: #303030;
+  --bg-panel: #121212;
+  --bg-float: #303030;
+  --bg-hover: #262626;
+  --sel: #005f87;
+  --strip: #0070b8;
+  --on-strip: #ffffff;
+  --text: #d0d0d0;
+  --text-2: #bcbcbc;
+  --muted: #9e9e9e;
+  --dim: #808080;
+  --border: #444444;
+  --focus: #0087d7;
+  --ai: #bb86fc;
+  --blue: #00afff;
+  --green: #5fd787;
+  --amber: #d7af00;
+  --red: #ff7070;
+  --git-mod: #d7af87;
+  --git-add: #5fd787;
+  --git-del: #e06c6c;
+  --git-conf: #8787ff;
+  --diff-add-bg: rgba(95, 215, 135, 0.12);
+  --diff-del-bg: rgba(215, 95, 95, 0.14);
+  --scrim: rgba(0, 0, 0, 0.55);
+  --shadow-float: 0 16px 40px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+
+/* tokens:light */
+:root[data-theme="light"] {
+  --bg: #fafaf8;
+  --bg-2: #f0f0ee;
+  --bg-panel: #ffffff;
+  --bg-float: #ffffff;
+  --bg-hover: #ebebe9;
+  --sel: #d6ecf7;
+  --strip: #0070b8;
+  --on-strip: #ffffff;
+  --text: #1c1c1c;
+  --text-2: #3a3a3a;
+  --muted: #6b6b6b;
+  --dim: #767676;
+  --border: #d9d9d6;
+  --focus: #0087d7;
+  --ai: #6f3ff5;
+  --blue: #0070c0;
+  --green: #18763f;
+  --amber: #8a6400;
+  --red: #c8322b;
+  --git-mod: #8a5a00;
+  --git-add: #18763f;
+  --git-del: #b02a2a;
+  --git-conf: #4040c0;
+  --diff-add-bg: rgba(27, 127, 69, 0.1);
+  --diff-del-bg: rgba(176, 42, 42, 0.1);
+  --scrim: rgba(20, 20, 20, 0.35);
+  --shadow-float: 0 16px 40px rgba(0, 0, 0, 0.12);
+  color-scheme: light;
+}
+
+/* tokens:system-light (same values as tokens:light) */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #fafaf8;
+    --bg-2: #f0f0ee;
+    --bg-panel: #ffffff;
+    --bg-float: #ffffff;
+    --bg-hover: #ebebe9;
+    --sel: #d6ecf7;
+    --strip: #0070b8;
+    --on-strip: #ffffff;
+    --text: #1c1c1c;
+    --text-2: #3a3a3a;
+    --muted: #6b6b6b;
+    --dim: #767676;
+    --border: #d9d9d6;
+    --focus: #0087d7;
+    --ai: #6f3ff5;
+    --blue: #0070c0;
+    --green: #18763f;
+    --amber: #8a6400;
+    --red: #c8322b;
+    --git-mod: #8a5a00;
+    --git-add: #18763f;
+    --git-del: #b02a2a;
+    --git-conf: #4040c0;
+    --diff-add-bg: rgba(27, 127, 69, 0.1);
+    --diff-del-bg: rgba(176, 42, 42, 0.1);
+    --scrim: rgba(20, 20, 20, 0.35);
+    --shadow-float: 0 16px 40px rgba(0, 0, 0, 0.12);
+    color-scheme: light;
+  }
+}
+
+/* Type, space, radius, motion, layers. rem everywhere so 200 % works. */
+:root {
+  --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Vazirmatn, "Noto Sans Arabic", sans-serif;
+  --fs-hint: 0.75rem;   /* mono 12/18 */
+  --lh-hint: 1.125rem;
+  --fs-row: 0.8125rem;  /* mono 13/20 */
+  --lh-row: 1.25rem;
+  --fs-body: 0.9375rem; /* sans 15/22 */
+  --lh-body: 1.375rem;
+  --fs-title: 1.0625rem; /* sans 17/24 */
+  --lh-title: 1.5rem;
+  --fs-view: 1.25rem;   /* sans 20/26 */
+  --lh-view: 1.625rem;
+  --fs-hero: 1.5rem;    /* sans 24/30 */
+  --lh-hero: 1.875rem;
+  --s1: 0.25rem;
+  --s2: 0.5rem;
+  --s3: 0.75rem;
+  --s4: 1rem;
+  --s6: 1.5rem;
+  --s8: 2rem;
+  --gutter: 1rem;
+  --r-chip: 6px;
+  --r-card: 10px;
+  --r-sheet: 14px;
+  --r-pill: 999px;
+  --t-fast: 120ms;
+  --t-sheet: 200ms;
+  --t-arm: 600ms;
+  --t-pulse: 1.6s;
+  --t-flash: 400ms;
+  --tap: 2.75rem;       /* 44 px targets */
+  --strip-h: 2rem;
+  --tabbar-h: 3.5rem;
+  --rail-w: 4rem;
+  --chat-w: 25rem;
+  --z-sticky: 10;
+  --z-nav: 20;
+  --z-bar: 30;
+  --z-sheet: 40;
+  --z-card: 50;
+  --z-toast: 60;
+  --z-connect: 70;
+}
+
+@media (min-width: 720px) {
+  :root {
+    --gutter: 1.5rem;
+    --fs-row: 0.875rem;
+    --lh-row: 1.3125rem;
+  }
+}
+
+@media (min-width: 1200px) {
+  :root { --gutter: 2rem; }
+}
+
+@media (prefers-contrast: more) {
+  :root { --dim: var(--muted); --border: var(--muted); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --t-fast: 0ms; --t-sheet: 0ms; --t-flash: 0ms; }
+}
