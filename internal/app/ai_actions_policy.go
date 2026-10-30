@@ -622,6 +622,7 @@ var aiSettingPolicies = map[string]aiActionPolicy{
 	// The web panel gives shell access from a browser (web_settings.go).
 	"web_panel":        aiNever(aiNoWeb),
 	"web_port":         aiNever(aiNoWeb),
+	"web_listen":       aiNever(aiNoWeb),
 	"web_idle_minutes": aiNever(aiNoWeb),
 	"web_max_hours":    aiNever(aiNoWeb),
 	"web_open_browser": aiNever(aiNoWeb),

@@ -2070,6 +2070,7 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `theme` | confirm (settings) |   |
 | `update_check` | confirm (settings) |   |
 | `web_idle_minutes` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
+| `web_listen` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web_max_hours` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web_max_viewers` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web_open_browser` | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
