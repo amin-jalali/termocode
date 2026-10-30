@@ -4,12 +4,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/git"
 )
 
 // The 2-second git poll used to start five git processes (rev-parse,
@@ -137,5 +140,51 @@ func (m Model) updateGitTickForTest() (Model, bool, bool) {
 		return nm, ok, true
 	case <-time.After(200 * time.Millisecond):
 		return nm, false, true
+	}
+}
+
+// Spec: the full Source Control refresh (after a git action) reads the
+// branch and the changed files with one `git status` and the graph at
+// the same time, instead of six git processes one after another.
+func TestGitFullRefreshGitProcesses(t *testing.T) {
+	realGit, err := exec.LookPath("git")
+	if err != nil || runtime.GOOS == "windows" {
+		t.Skip("needs git and a shell")
+	}
+	dir := t.TempDir()
+	run := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command(realGit, args...)
+		cmd.Dir = dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	run("init", "-q", "-b", "main")
+	run("config", "user.email", "t@e.x")
+	run("config", "user.name", "T")
+	run("config", "commit.gpgsign", "false")
+	_ = os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a\n"), 0o644)
+	run("add", ".")
+	run("commit", "-q", "-m", "one")
+	_ = os.WriteFile(filepath.Join(dir, "a.txt"), []byte("b\n"), 0o644)
+	t.Chdir(dir)
+	git.RebaseStatus(dir) // its rev-parse is cached per folder
+
+	// A git on PATH that logs each run, then runs the real one.
+	bin, log := t.TempDir(), filepath.Join(t.TempDir(), "runs")
+	script := "#!/bin/sh\necho \"$1\" >> '" + log + "'\nexec '" + realGit + "' \"$@\"\n"
+	if err := os.WriteFile(filepath.Join(bin, "git"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	msg := fetchGitCmd()().(GitMsg)
+	if !msg.IsRepo || msg.Branch.Name != "main" || len(msg.Files) != 1 || len(msg.Graph) != 1 {
+		t.Fatalf("snapshot = %+v", msg)
+	}
+	runs, _ := os.ReadFile(log)
+	if n := strings.Count(string(runs), "\n"); n > 3 {
+		t.Fatalf("%d git processes, want at most 3:\n%s", n, runs)
 	}
 }

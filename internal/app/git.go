@@ -76,20 +76,31 @@ const gitGraphMaxAge = 30 * time.Second
 const gitGraphLimit = 200
 
 // fetchGitCmd asynchronously runs git status + branch + graph and returns a
-// GitMsg.
+// GitMsg. One `git status --porcelain=v2 --branch` gives the branch and
+// the files (it fails outside a work tree, like rev-parse
+// --is-inside-work-tree), and the graph is read at the same time: on a
+// big repo the six git processes one after another took twice as long.
 func fetchGitCmd() tea.Cmd {
 	return func() tea.Msg {
 		cwd, err := procRootDir()
 		if err != nil {
 			return GitMsg{}
 		}
-		if !git.IsRepo(cwd) {
+		var (
+			graph []git.GraphCommit
+			more  bool
+		)
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			graph, more, _ = git.Commits(cwd, 0, gitGraphLimit)
+		}()
+		st, err := git.StatusBranch(cwd)
+		<-done
+		if err != nil {
 			return GitMsg{IsRepo: false}
 		}
-		branch, _ := git.GetBranch(cwd)
-		files, _ := git.Status(cwd)
-		graph, more, _ := git.Commits(cwd, 0, gitGraphLimit)
-		return GitMsg{IsRepo: true, Branch: branch, Files: files, Graph: graph, More: more, Rebase: git.RebaseStatus(cwd)}
+		return GitMsg{IsRepo: true, Branch: st.Branch, Files: st.Files, Graph: graph, More: more, Rebase: git.RebaseStatus(cwd)}
 	}
 }
 

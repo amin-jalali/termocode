@@ -33,7 +33,9 @@ func bigGitRepo(tb testing.TB) string {
 	run("config", "user.email", "t@e.x")
 	run("config", "user.name", "T")
 	run("config", "commit.gpgsign", "false")
-	path := func(d, f int) string { return filepath.Join(dir, fmt.Sprintf("pkg%03d", d), fmt.Sprintf("file%03d.go", f)) }
+	path := func(d, f int) string {
+		return filepath.Join(dir, fmt.Sprintf("pkg%03d", d), fmt.Sprintf("file%03d.go", f))
+	}
 	for d := 0; d < 200; d++ {
 		if err := os.MkdirAll(filepath.Dir(path(d, 0)), 0o755); err != nil {
 			tb.Fatal(err)
