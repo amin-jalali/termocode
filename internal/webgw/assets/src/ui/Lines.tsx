@@ -25,9 +25,17 @@ export interface LinesProps {
   scroller: { current: HTMLElement | null };
   wrap: boolean;
   flash?: Flash | null;
+  /** sel is the selected rows [a, b], inclusive. */
+  sel?: { a: number; b: number } | null;
+  /** onTap and onLong take a tap and a long press (450 ms) on a row. */
+  onTap?: (i: number) => void;
+  onLong?: (i: number) => void;
 }
 
-export function Lines({ lines, scroller, wrap, flash }: LinesProps) {
+const LONG_MS = 450;
+const MOVE_PX = 10;
+
+export function Lines({ lines, scroller, wrap, flash, sel, onTap, onLong }: LinesProps) {
   const n = lines.length;
   const blocks = Math.ceil(n / BLOCK);
   const virtual = n > VIRTUAL_FROM;
@@ -36,6 +44,7 @@ export function Lines({ lines, scroller, wrap, flash }: LinesProps) {
   const rowPx = useRef(20);
   const [win, setWin] = useState<[number, number]>([0, 3]);
   const [chip, setChip] = useState<number | null>(null);
+  const press = useRef<{ i: number; x: number; y: number; timer: ReturnType<typeof setTimeout>; long: boolean } | null>(null);
 
   const rowsIn = (i: number) => Math.min(BLOCK, n - i * BLOCK);
   const est = (i: number) => heights.current.get(i) ?? rowsIn(i) * rowPx.current;
@@ -109,9 +118,39 @@ export function Lines({ lines, scroller, wrap, flash }: LinesProps) {
     if (rows > 0) rowPx.current = px / rows;
   });
 
+  const down = (e: PointerEvent) => {
+    const row = (e.target as HTMLElement).closest<HTMLElement>("[data-i]");
+    if (!row || (!onTap && !onLong)) return;
+    const i = Number(row.dataset.i);
+    const p = { i, x: e.clientX, y: e.clientY, long: false, timer: setTimeout(() => {
+      p.long = true;
+      onLong?.(i);
+    }, LONG_MS) };
+    press.current = p;
+  };
+  const move = (e: PointerEvent) => {
+    const p = press.current;
+    if (p && Math.hypot(e.clientX - p.x, e.clientY - p.y) > MOVE_PX) {
+      clearTimeout(p.timer);
+      press.current = null; // a scroll, not a press
+    }
+  };
+  const up = () => {
+    const p = press.current;
+    press.current = null;
+    if (!p) return;
+    clearTimeout(p.timer);
+    if (!p.long) onTap?.(p.i);
+  };
+  const cancel = () => {
+    if (press.current) clearTimeout(press.current.timer);
+    press.current = null;
+  };
+
   const row = (i: number) => {
     const f = flash && i >= flash.a && i <= flash.b;
-    return <CodeRow key={f ? `f${flash!.id}-${i}` : i} i={i} n={i + 1} text={lines[i]} flash={!!f} />;
+    const on = sel && i >= sel.a && i <= sel.b;
+    return <CodeRow key={f ? `f${flash!.id}-${i}` : i} i={i} n={i + 1} text={lines[i]} flash={!!f} sel={!!on} />;
   };
   const out = [];
   for (let k = 0; k < blocks; k++) {
@@ -133,6 +172,11 @@ export function Lines({ lines, scroller, wrap, flash }: LinesProps) {
       ref={box}
       class={`lines${wrap ? "" : " is-nowrap"}`}
       style={{ "--nw": String(n).length + 1 + "ch" }}
+      onPointerDown={down}
+      onPointerMove={move}
+      onPointerUp={up}
+      onPointerCancel={cancel}
+      onContextMenu={(e) => onLong && e.preventDefault()}
     >
       {chip !== null && (
         <span class="chip line-chip" role="status">

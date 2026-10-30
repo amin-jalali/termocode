@@ -6,6 +6,7 @@
 import { Fragment, h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { BufSnap } from "../../../../webproto/proto";
+import { draft, own, save, saveErr, selection, startEdit, tapRow, undo } from "../lib/edit";
 import { closePath, file, openPath, type FileState } from "../lib/file";
 import { go } from "../lib/router";
 import { toast } from "../lib/toasts";
@@ -17,6 +18,7 @@ import { errText } from "../ui/CardSheet";
 import { Chip } from "../ui/Chip";
 import { Lines, type Flash } from "../ui/Lines";
 import { SkeletonRows } from "../ui/Skeleton";
+import { EditSheet } from "./EditSheet";
 import { Refused } from "./Placeholder";
 import { View } from "./View";
 
@@ -63,6 +65,18 @@ export function changed(prev: readonly string[], next: readonly string[]): { a: 
   return { a, b: Math.max(a, ne) };
 }
 
+/** topRow is the first row on screen, for Edit without a selection. */
+function topRow(sc: HTMLElement | null): { a: number; b: number } {
+  const top = sc?.getBoundingClientRect().top ?? 0;
+  for (const el of sc?.querySelectorAll<HTMLElement>(".crow[data-i]") ?? []) {
+    if (el.getBoundingClientRect().bottom > top) {
+      const i = Number(el.dataset.i);
+      return { a: i, b: i };
+    }
+  }
+  return { a: 0, b: 0 };
+}
+
 function showOnLaptop(path: string): void {
   link.request("tree.reveal_on_laptop", { path }).then(
     () => toast("ok", t("laptop.shown")),
@@ -71,7 +85,7 @@ function showOnLaptop(path: string): void {
 }
 
 /** Body draws an open buffer: its rows, live. */
-function OpenBody({ st, scroller, wrap }: { st: FileState; scroller: { current: HTMLElement | null }; wrap: boolean }) {
+function OpenBody({ st, scroller, wrap, canEdit }: { st: FileState; scroller: { current: HTMLElement | null }; wrap: boolean; canEdit: boolean }) {
   const topic = "buf:" + st.buf;
   const ts = store.topic(topic).value;
   const buf = readBuf(ts?.data);
@@ -87,6 +101,7 @@ function OpenBody({ st, scroller, wrap }: { st: FileState; scroller: { current: 
     const c = changed(before, lines);
     if (!c) return;
     if (c.b - c.a < MAX_FLASH) setFlash({ id: Date.now(), a: c.a, b: c.b });
+    if (buf && buf.tick <= own.tick) return; // this page's own change
     setUpdated(true);
     const timer = setTimeout(() => setUpdated(false), UPDATED_MS);
     return () => clearTimeout(timer);
@@ -109,22 +124,43 @@ function OpenBody({ st, scroller, wrap }: { st: FileState; scroller: { current: 
           </Button>
         </p>
       )}
+      {saveErr.value !== null && (
+        <p class="file-note save-err" role="alert">
+          <span dir="auto">{t("edit.save_err", { msg: saveErr.value })}</span>
+          <Button kind="neutral" small needsLink onClick={() => save(buf.buf).then((ok) => ok && toast("ok", t("file.saved")))}>
+            {t("retry")}
+          </Button>
+        </p>
+      )}
       {updated && (
         <p class="file-updated" role="status">
           {t("file.updated")}
         </p>
       )}
-      {empty ? <div class="empty">{t("file.empty")}</div> : <Lines lines={buf.lines} scroller={scroller} wrap={wrap} flash={flash} />}
+      {empty ? (
+        <div class="empty">{t("file.empty")}</div>
+      ) : (
+        <Lines
+          lines={buf.lines}
+          scroller={scroller}
+          wrap={wrap}
+          flash={flash}
+          sel={canEdit && !gone ? selection.value : null}
+          onTap={canEdit && !gone ? tapRow : undefined}
+          onLong={canEdit && !gone ? (i) => startEdit(st.path, buf, i, i) : undefined}
+        />
+      )}
+      {canEdit && !gone && draft.value && <EditSheet buf={buf} />}
     </div>
   );
 }
 
-function Body({ st, scroller, wrap }: { st: FileState; scroller: { current: HTMLElement | null }; wrap: boolean }) {
+function Body({ st, scroller, wrap, canEdit }: { st: FileState; scroller: { current: HTMLElement | null }; wrap: boolean; canEdit: boolean }) {
   switch (st.kind) {
     case "loading":
       return <SkeletonRows rows={12} />;
     case "open":
-      return <OpenBody st={st} scroller={scroller} wrap={wrap} />;
+      return <OpenBody st={st} scroller={scroller} wrap={wrap} canEdit={canEdit} />;
     case "head":
       return (
         <div class="topic">
@@ -166,7 +202,12 @@ export function FileView({ path }: { path: string }) {
   const [wrap, setWrap] = useState(wrapOn.value);
   useEffect(() => {
     openPath(path);
-    return () => closePath(path);
+    selection.value = null;
+    saveErr.value = null;
+    return () => {
+      closePath(path);
+      draft.value = null;
+    };
   }, [path]);
   const st = file.value?.path === path ? file.value : { path, kind: "loading" as const };
   // Offline at the start: open it when the link is back.
@@ -176,6 +217,12 @@ export function FileView({ path }: { path: string }) {
   const buf = st.kind === "open" ? readBuf(store.topic("buf:" + st.buf).value?.data) : null;
   const dir = dirName(path);
   const controller = link.meta.value?.role === "controller";
+  const canEdit = controller && !!buf && !buf.readonly && !isGone(store.topic("buf:" + st.buf).value?.data);
+  const edit = () => {
+    if (!buf || !live.peek()) return;
+    const s = selection.peek() ?? topRow(body.current);
+    startEdit(path, buf, s.a, s.b);
+  };
   return (
     <View
       tab="files"
@@ -199,6 +246,24 @@ export function FileView({ path }: { path: string }) {
           >
             {t("term.wrap")}
           </Chip>
+          {canEdit && buf.dirty && (
+            <Button kind="primary" small needsLink onClick={() => save(buf.buf).then((ok) => ok && toast("ok", t("file.saved")))}>
+              {t("file.save")}
+            </Button>
+          )}
+          {canEdit && (
+            <Button kind="quiet" small needsLink onClick={() => undo(buf.buf).then((why) => why !== null && toast("warn", why))}>
+              {t("undo")}
+            </Button>
+          )}
+          {canEdit && (
+            <Button kind="neutral" small needsLink onClick={edit}>
+              {t("file.edit")}
+            </Button>
+          )}
+          {st.kind === "open" && buf && !canEdit && (
+            <Chip>{t("viewonly")}</Chip>
+          )}
           {controller && (
             <Button kind="quiet" small needsLink onClick={() => showOnLaptop(path)}>
               {t("laptop.show")}
@@ -207,7 +272,7 @@ export function FileView({ path }: { path: string }) {
         </>
       }
     >
-      <Body st={st} scroller={body} wrap={wrap} />
+      <Body st={st} scroller={body} wrap={wrap} canEdit={canEdit} />
     </View>
   );
 }
