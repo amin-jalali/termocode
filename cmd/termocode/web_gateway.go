@@ -62,7 +62,9 @@ func webGatewayConfig(args []string, errw io.Writer) (webgw.RunConfig, bool) {
 	maxH := fs.Int("max-hours", 12, "hours at most")
 	viewers := fs.Int("viewers", webgw.DefaultMaxViewers, "browsers at once")
 	port := fs.Int("port", 0, "port (0: random)")
-	if err := fs.Parse(args); err != nil || *dir == "" || *audit == "" || fs.NArg() != 0 {
+	sshPort := fs.Int("ssh-port", 0, "SSH mode: serve on the folder's unix socket for this forwarded port")
+	if err := fs.Parse(args); err != nil || *dir == "" || *audit == "" || fs.NArg() != 0 ||
+		(*sshPort != 0 && (*port != 0 || *sshPort < 1024 || *sshPort > 65535)) {
 		fmt.Fprintln(errw, "termocode: the web gateway is started by termocode itself")
 		return webgw.RunConfig{}, false
 	}
@@ -71,7 +73,7 @@ func webGatewayConfig(args []string, errw io.Writer) (webgw.RunConfig, bool) {
 		fmt.Fprintf(errw, "termocode web gateway: %v\n", err)
 		return webgw.RunConfig{}, false
 	}
-	return webgw.RunConfig{
+	cfg := webgw.RunConfig{
 		Dial: func(ctx context.Context) (net.Conn, error) {
 			var d net.Dialer
 			return d.DialContext(ctx, "unix", paths.WebSocket)
@@ -79,5 +81,9 @@ func webGatewayConfig(args []string, errw io.Writer) (webgw.RunConfig, bool) {
 		AuditPath: *audit, StatusPath: paths.WebStatus, LockPath: paths.WebLock,
 		Port: *port, Idle: time.Duration(*idle) * time.Minute, Max: time.Duration(*maxH) * time.Hour,
 		MaxViewers: *viewers, Assets: webAssets(),
-	}, true
+	}
+	if *sshPort != 0 {
+		cfg.UnixPath, cfg.PortHint = paths.WebHTTPSocket, *sshPort
+	}
+	return cfg, true
 }
