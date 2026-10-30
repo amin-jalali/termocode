@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/spawn"
 	"github.com/amin-jalali/termocode/internal/termimg"
 )
@@ -105,12 +106,14 @@ func Doctor() []Check {
 
 func secretStoreCheck() Check {
 	c := Check{Group: "security", Name: "Secret store", Status: Warn}
-	config, err := os.UserConfigDir()
+	// The same folder the secrets store uses (ai.ConfigDir), not
+	// os.UserConfigDir: on macOS that is ~/Library/Application Support.
+	config, err := ai.ConfigDir()
 	if err != nil {
 		c.Detail = "keyring (Secret Service) / encrypted file / plain; choose a store in Settings"
 		return c
 	}
-	b, err := os.ReadFile(filepath.Join(config, "termocode", "secrets.json"))
+	b, err := os.ReadFile(filepath.Join(config, "secrets.json"))
 	var index struct {
 		Backend string `json:"backend"`
 	}
