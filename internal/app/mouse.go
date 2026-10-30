@@ -123,6 +123,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 			m.revealTestsView(true)
 			return m, m.ensureTestsDiscovered()
 		}
+		if msg.Type == tea.MouseLeft && m.statusHitAt(msg.X, msg.Y) == "status:web" { // web_tui.go: click stops the panel
+			return m, m.stopWebPanel()
+		}
 		if msg.Type == tea.MouseLeft && m.statusHitAt(msg.X, msg.Y) == "status:agents" {
 			return m, m.revealItermocView(true, imSecAgents) // outside agents (Itermoc); its Status… row is the old screen
 		}
