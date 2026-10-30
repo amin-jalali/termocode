@@ -876,3 +876,37 @@ kbd {
 .wb-side .git-commit { min-height: 22px; padding: 0 8px 0 20px; gap: 8px; }
 .wb-side .git-clean, .wb-side .git-many { padding: 4px 20px; }
 .wb-side .view-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---- Context menus (right click) ---- */
+.ctx-layer { position: fixed; inset: 0; z-index: 60; }
+.ctx-menu {
+  position: fixed;
+  min-width: 220px;
+  max-width: 360px;
+  padding: 4px 0;
+  border: 1px solid var(--wb-panel-border);
+  border-radius: 5px;
+  background: var(--wb-side-bg);
+  color: var(--wb-side-fg);
+  box-shadow: 0 2px 8px var(--wb-shadow);
+  font-size: var(--fs-ui);
+}
+.ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  width: calc(100% - 8px);
+  margin: 0 4px;
+  height: 24px;
+  padding: 0 20px 0 22px;
+  border-radius: 3px;
+  color: inherit;
+  text-align: start;
+  white-space: nowrap;
+  outline: none;
+}
+.ctx-item:not([disabled]):hover, .ctx-item:not([disabled]):focus-visible, .ctx-item:not([disabled]):focus { background: var(--wb-list-focus); color: #ffffff; }
+.ctx-item[disabled] { opacity: 0.45; cursor: default; }
+.ctx-label { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; }
+.ctx-keys { flex: none; opacity: 0.8; }
+.ctx-sep { height: 1px; margin: 4px 0; background: var(--wb-panel-border); }

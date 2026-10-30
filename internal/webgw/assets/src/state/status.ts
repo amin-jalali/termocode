@@ -3,6 +3,8 @@
 // never breaks the strip.
 
 export interface StatusView {
+  /** root is the workspace folder's absolute path on the laptop (Copy Path). */
+  root: string;
   workspace: string;
   branch: string;
   dirty: number;
@@ -31,6 +33,7 @@ function text(v: unknown, max = 80): string {
 export function readStatus(data: unknown): StatusView {
   const d = obj(data), ai = obj(d.ai), terms = obj(d.terminals), runs = obj(d.runs), web = obj(d.web);
   return {
+    root: text(d.root, 4096),
     workspace: text(d.workspace_label),
     branch: text(d.branch),
     dirty: num(d.dirty_files),

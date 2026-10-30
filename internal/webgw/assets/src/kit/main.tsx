@@ -40,6 +40,7 @@ const width = signal<Width>(390);
 const themes = signal<Themes>("both");
 
 const baseStatus: StatusView = {
+  root: "",
   workspace: "termocode",
   branch: "main",
   dirty: 2,

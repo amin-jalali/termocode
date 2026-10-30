@@ -13,6 +13,7 @@ import {
   activeFile,
   CHAT_MAX,
   CHAT_MIN,
+  closeMany,
   closeTab,
   focusedGroup,
   focusGroup,
@@ -45,6 +46,8 @@ import { TreeView } from "../views/Files";
 import { Cod, FileIcon } from "./icons";
 import { asking, closeActive, cycleTab, focusSecond } from "../lib/commands";
 import { AskLaptop } from "./AskLaptop";
+import { ContextMenu, onMenu, type MenuItems } from "./ContextMenu";
+import { absPath, copyText } from "../lib/clip";
 import { signal } from "@preact/signals";
 import { ACTIVITIES, ACTIVITIES_BOTTOM, ActivityBar, activityOf, sideActivity, type Activity } from "./ActivityBar";
 import type { StringKey } from "../strings";
@@ -161,6 +164,7 @@ function EditorTabs({ group, tabs, bufs }: { group: number; tabs: readonly strin
             onDrop={(e) => land(e, drop?.group === group ? drop.index : i)}
             onAuxClick={(e) => e.button === 1 && closeTab(path, group)}
             onDblClick={() => keep(path, group)}
+            onContextMenu={onMenu(name, () => tabMenu(path, group, tabs, bufs))}
           >
             <button
               type="button"
@@ -185,6 +189,27 @@ function EditorTabs({ group, tabs, bufs }: { group: number; tabs: readonly strin
       })}
     </div>
   );
+}
+
+/** tabMenu is an editor tab's context menu. */
+function tabMenu(path: string, group: number, tabs: readonly string[], bufs: readonly BufItem[]): MenuItems {
+  const mod = modKey();
+  const i = tabs.indexOf(path);
+  const dirty = (p: string) => bufs.some((b) => b.path === p && b.dirty);
+  const items: (MenuItems[number])[] = [
+    { label: t("close"), keys: `${mod}+W`, run: () => closeTab(path, group) },
+    { label: t("menu.close_others"), disabled: tabs.length < 2, run: () => closeMany(group, (p) => p === path) },
+    { label: t("menu.close_right"), disabled: i === tabs.length - 1, run: () => closeMany(group, (_p, j) => j <= i) },
+    { label: t("menu.close_saved"), disabled: tabs.every(dirty), run: () => closeMany(group, dirty) },
+    null,
+    { label: t("menu.copy_path"), run: () => copyText(absPath(path)) },
+    { label: t("menu.copy_rel"), run: () => copyText(path) },
+    null,
+    { label: t("menu.split_right"), keys: `${mod}+\\`, run: () => splitEditor(path, "right") },
+    { label: t("menu.split_down"), run: () => splitEditor(path, "down") },
+  ];
+  if (groups.peek()[group]?.preview === path) items.push(null, { label: t("menu.keep"), run: () => keep(path, group) });
+  return items;
 }
 
 type Zone = "center" | "right" | "down";
@@ -401,6 +426,7 @@ export function Workbench() {
           )}
           {quick.value && <QuickInput key={quick.value.mode} />}
           {asking.value && <LaptopCommand id={asking.value.id} name={asking.value.title} />}
+          <ContextMenu />
           <div class={`ed-groups${all.length > 1 ? " is-split split-" + splitDir.value : ""}`}>
             {all.map((g, i) => (
               <section
