@@ -1,0 +1,240 @@
+{
+  "k": "doc",
+  "c": [
+    {
+      "k": "h",
+      "c": [
+        {
+          "k": "text",
+          "text": "Plan"
+        }
+      ],
+      "level": 1
+    },
+    {
+      "k": "p",
+      "c": [
+        {
+          "k": "text",
+          "text": "Change "
+        },
+        {
+          "k": "strong",
+          "c": [
+            {
+              "k": "text",
+              "text": "two"
+            }
+          ]
+        },
+        {
+          "k": "text",
+          "text": " files and "
+        },
+        {
+          "k": "em",
+          "c": [
+            {
+              "k": "text",
+              "text": "one"
+            }
+          ]
+        },
+        {
+          "k": "text",
+          "text": " test, see "
+        },
+        {
+          "k": "code",
+          "text": "model.go"
+        },
+        {
+          "k": "text",
+          "text": ".\nA soft break here,"
+        },
+        {
+          "k": "br"
+        },
+        {
+          "k": "text",
+          "text": "and a hard one."
+        }
+      ]
+    },
+    {
+      "k": "ol",
+      "c": [
+        {
+          "k": "li",
+          "c": [
+            {
+              "k": "text",
+              "text": "Read the code"
+            }
+          ]
+        },
+        {
+          "k": "li",
+          "c": [
+            {
+              "k": "text",
+              "text": "Write the fix"
+            },
+            {
+              "k": "ul",
+              "c": [
+                {
+                  "k": "li",
+                  "c": [
+                    {
+                      "k": "text",
+                      "text": "with a test"
+                    }
+                  ]
+                },
+                {
+                  "k": "li",
+                  "c": [
+                    {
+                      "k": "text",
+                      "text": "☑ green first"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "k": "blockquote",
+      "c": [
+        {
+          "k": "p",
+          "c": [
+            {
+              "k": "text",
+              "text": "A quote with "
+            },
+            {
+              "k": "link",
+              "c": [
+                {
+                  "k": "text",
+                  "text": "a link"
+                }
+              ],
+              "href": "https://example.com/docs?a=1\u0026b=2"
+            },
+            {
+              "k": "text",
+              "text": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "k": "codeblock",
+      "text": "func main() {}",
+      "lang": "go"
+    },
+    {
+      "k": "table",
+      "rows": [
+        [
+          {
+            "k": "th",
+            "c": [
+              {
+                "k": "text",
+                "text": "File"
+              }
+            ]
+          },
+          {
+            "k": "th",
+            "c": [
+              {
+                "k": "text",
+                "text": "Lines"
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "k": "td",
+            "c": [
+              {
+                "k": "text",
+                "text": "a.go"
+              }
+            ]
+          },
+          {
+            "k": "td",
+            "c": [
+              {
+                "k": "text",
+                "text": "10"
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "k": "td",
+            "c": [
+              {
+                "k": "text",
+                "text": "b.go"
+              }
+            ]
+          },
+          {
+            "k": "td",
+            "c": [
+              {
+                "k": "em",
+                "c": [
+                  {
+                    "k": "text",
+                    "text": "20"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "k": "hr"
+    },
+    {
+      "k": "p",
+      "c": [
+        {
+          "k": "text",
+          "text": "Visit "
+        },
+        {
+          "k": "link",
+          "c": [
+            {
+              "k": "text",
+              "text": "https://termocode.dev"
+            }
+          ],
+          "href": "https://termocode.dev"
+        },
+        {
+          "k": "text",
+          "text": " now. old new."
+        }
+      ]
+    }
+  ]
+}
