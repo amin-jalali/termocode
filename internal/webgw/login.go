@@ -11,6 +11,7 @@ import (
 	"mime"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/webdevices"
@@ -29,9 +30,15 @@ type Login struct {
 	limit *Bucket
 	noisy *Bucket
 
+	totpOn atomic.Bool // RequireTOTP, changeable while serving
+
 	mu      sync.Mutex
 	tickets map[string]*totpTicket
 }
+
+// SetRequireTOTP turns the sign-in code step on or off for the next
+// sign-ins.
+func (l *Login) SetRequireTOTP(on bool) { l.totpOn.Store(on) }
 
 // With TOTP on (WEB-48), a good passkey gives a ticket instead of a
 // token, and the token comes with the code:
@@ -72,8 +79,10 @@ func NewLogin(cfg LoginConfig) *Login {
 	if cfg.Now == nil {
 		cfg.Now = time.Now
 	}
-	return &Login{cfg: cfg, limit: NewBucket(loginRatePerSecond, 2*loginRatePerSecond),
+	l := &Login{cfg: cfg, limit: NewBucket(loginRatePerSecond, 2*loginRatePerSecond),
 		noisy: NewBucket(blockedAuditPerSecond, blockedAuditBurst), tickets: map[string]*totpTicket{}}
+	l.totpOn.Store(cfg.RequireTOTP)
+	return l
 }
 
 func (l *Login) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -151,7 +160,7 @@ func (l *Login) finish(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUnauthorized, errorReply(reply))
 		return
 	}
-	if l.cfg.RequireTOTP {
+	if l.totpOn.Load() {
 		tk, err := l.newTicket(d)
 		if err != nil {
 			writeJSON(w, http.StatusServiceUnavailable, errorReply("busy"))
