@@ -149,3 +149,36 @@ func TestBuildAcceptsVendoredImports(t *testing.T) {
 		t.Fatal("no app.js")
 	}
 }
+
+// writeStatic puts one file into the fixture's src/static.
+func writeStatic(t *testing.T, dir, name, body string) {
+	t.Helper()
+	st := filepath.Join(dir, "src", "static")
+	if err := os.MkdirAll(st, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(st, name), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// The web app manifest (WEB-35) is a static file: it is copied as it is,
+// but only as valid JSON that names no other site.
+func TestBuildCopiesAValidManifest(t *testing.T) {
+	dir := fixture(t, ``)
+	writeStatic(t, dir, "manifest.webmanifest", `{"name":"termocode","start_url":"/","icons":[{"src":"/assets/icon.svg"}]}`)
+	out, err := Build(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(out["manifest.webmanifest"]), `"start_url":"/"`) {
+		t.Fatalf("manifest not copied: %q", out["manifest.webmanifest"])
+	}
+	for _, bad := range []string{`{"name":`, `{"start_url":"https://evil.example/"}`, `{"icons":[{"src":"//evil.example/i.svg"}]}`} {
+		dir := fixture(t, ``)
+		writeStatic(t, dir, "manifest.webmanifest", bad)
+		if _, err := Build(dir); err == nil {
+			t.Errorf("manifest %s built", bad)
+		}
+	}
+}
