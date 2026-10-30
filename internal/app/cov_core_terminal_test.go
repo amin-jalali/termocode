@@ -106,6 +106,11 @@ func TestCovCoreShouldPassToTerminal(t *testing.T) {
 		{tea.KeyMsg{Type: tea.KeyShiftEnd}, true},
 		{tea.KeyMsg{Type: tea.KeyCtrlShiftUp}, false},
 		{tea.KeyMsg{Type: tea.KeyInsert}, false},
+		{tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("fx")}, true},
+		{tea.KeyMsg{Type: tea.KeyExtended, Name: "shift+f4"}, false},
+		{tea.KeyMsg{Type: tea.KeyExtended, Name: "ctrl+f12"}, false},
+		{tea.KeyMsg{Type: tea.KeyExtended, Name: "ctrl+fn"}, false},
+		{tea.KeyMsg{Type: tea.KeyExtended, Name: "ctrl+shift+k"}, false},
 	}
 	for _, c := range cases {
 		if got := shouldPassToTerminal(c.msg); got != c.pass {
