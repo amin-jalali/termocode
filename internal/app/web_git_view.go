@@ -21,6 +21,7 @@ func init() {
 	webOps[webproto.OpGitGraph] = (*Model).webGitGraph
 	webOps[webproto.OpGitBlame] = (*Model).webGitBlame
 	webAskOps[webproto.OpGitAmend] = (*Model).webGitAmend
+	webAskOps[webproto.OpGitClone] = (*Model).webGitClone
 }
 
 var gitRefKinds = map[git.RefKind]string{git.RefLocal: "local", git.RefRemote: "remote", git.RefTag: "tag"}
@@ -173,4 +174,38 @@ func (m *Model) webHeadPushed(root string) bool {
 		return false
 	}
 	return git.HasUpstream(root)
+}
+
+// webGitClone clones after a laptop card, as the laptop's Git: Clone
+// Repository… does: into the laptop's default folder (next to this
+// repository, or inside a folder that is not one), with its progress
+// toast; a sign-in it needs is asked on the laptop. When it is done the
+// laptop opens the new folder (the page reconnects).
+func (m *Model) webGitClone(call *webCall) *webAsk {
+	url := call.args.(*webproto.GitCloneArgs).URL
+	root, err := m.rootDir()
+	if err != nil {
+		call.fail(webproto.CodeConflict, "No workspace is open on the laptop.")
+		return nil
+	}
+	if m.clone.running {
+		call.fail(webproto.CodeBusy, "A clone is running on the laptop.")
+		return nil
+	}
+	name := git.RepoNameFromURL(url)
+	dest := git.DefaultCloneDest(root, m.gitIsRepo, name)
+	if err := git.CheckCloneDest(dest); err != nil {
+		call.fail(webproto.CodeConflict, "Can't clone there: "+webName(err.Error()))
+		return nil
+	}
+	return &webAsk{summary: url, title: "Clone repository?",
+		body:   "Clone " + url + " into " + dest + "? Git on the laptop signs in, never the web. When it is done, termocode opens that folder.",
+		action: "Clone",
+		run: func(m *Model) tea.Cmd {
+			if m.clone.running {
+				return m.openCloneURLPrompt() // says a clone is running
+			}
+			m.clone.url, m.clone.dest = url, dest
+			return m.startClone("", "")
+		}}
 }

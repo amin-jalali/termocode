@@ -1,8 +1,13 @@
 package app
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -158,5 +163,76 @@ func TestGitAmendNothingToChange(t *testing.T) {
 	c := webTestSub(t, &m)
 	if got := webTestErr(webTestCallBg(t, &m, c, webproto.OpGitAmend, `{}`)); got != string(webproto.CodeConflict) || m.confirmOpen {
 		t.Errorf("amend with nothing to change: %q, card open %v", got, m.confirmOpen)
+	}
+}
+
+// Spec (clone): git.clone waits for a laptop card that names the URL and
+// the folder (the laptop's default, next to this repository); nothing
+// starts before the laptop says yes; then the laptop's own clone runs
+// (its progress toast, its sign-in prompt on the laptop). A folder that
+// is not empty is refused before any card.
+func TestGitCloneNeedsLaptopCard(t *testing.T) {
+	m := aiTestModel(t)
+	webTestHub(t, &m)
+	dir, _ := webTestRepo(t, &m)
+	c := webTestSub(t, &m)
+	url := "https://example.com/team/tool.git"
+	dest := filepath.Join(filepath.Dir(dir), "tool")
+	var ref webproto.AskRef
+	webTestData(t, webTestCallBg(t, &m, c, webproto.OpGitClone, `{"url":"`+url+`"}`), &ref)
+	if ref.Card == "" || !m.confirmOpen || m.confirm.SafeID() != "cancel" {
+		t.Fatalf("no laptop card: %+v", ref)
+	}
+	if v := m.confirm.View(); !strings.Contains(v, "example.com/team/tool.git") || !strings.Contains(v, "tool") {
+		t.Errorf("card:\n%s", v)
+	}
+	if m.clone.running {
+		t.Fatal("started before the laptop said so")
+	}
+	m.confirmOpen = false
+	cmd := m.handleConfirmSelect("confirm")
+	if cmd == nil || !m.clone.running || m.clone.url != url || m.clone.dest != dest {
+		t.Errorf("after yes: running %v url %q dest %q (want %q)", m.clone.running, m.clone.url, m.clone.dest, dest)
+	}
+	webTestCloneDone(t, cmd) // the tests' proxy stops it at once
+	m.clone = cloneState{}
+
+	if err := os.MkdirAll(filepath.Join(dest, "x"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	m.confirmOpen = false
+	if got := webTestErr(webTestCallBg(t, &m, c, webproto.OpGitClone, `{"url":"`+url+`"}`)); got != string(webproto.CodeConflict) || m.confirmOpen {
+		t.Errorf("a folder that is not empty: %q", got)
+	}
+}
+
+// webTestCloneDone runs the clone's commands until it says it is done (a
+// toast's timer is left alone).
+func webTestCloneDone(t *testing.T, cmd tea.Cmd) {
+	t.Helper()
+	got := make(chan tea.Msg, 16)
+	start := func(c tea.Cmd) {
+		if c != nil {
+			go func() { got <- c() }()
+		}
+	}
+	start(cmd)
+	deadline := time.After(60 * time.Second)
+	for {
+		select {
+		case msg := <-got:
+			switch msg := msg.(type) {
+			case cloneDoneMsg:
+				return
+			case cloneProgressMsg:
+				start(waitCloneMsg(msg.ch))
+			case tea.BatchMsg:
+				for _, c := range msg {
+					start(c)
+				}
+			}
+		case <-deadline:
+			t.Fatal("the clone did not end")
+		}
 	}
 }

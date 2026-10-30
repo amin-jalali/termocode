@@ -378,6 +378,10 @@ export interface GitRebaseCtlArgs {
   do: "continue" | "skip" | "abort";
 }
 
+export interface GitCloneArgs {
+  url: string;
+}
+
 export interface ItemArgs {
   path: string;
 }
@@ -1698,6 +1702,7 @@ export interface OpArgs {
   "git.rebase_state": EmptyArgs;
   "git.rebase": GitRebaseArgs;
   "git.rebase_ctl": GitRebaseCtlArgs;
+  "git.clone": GitCloneArgs;
   "tree.new_file": ItemArgs;
   "tree.new_dir": ItemArgs;
   "tree.rename": RenameArgs;
@@ -1818,6 +1823,7 @@ export interface OpResult {
   "git.rebase_state": GitRebaseState;
   "git.rebase": AskRef;
   "git.rebase_ctl": AskRef;
+  "git.clone": AskRef;
   "tree.new_file": TreeChanged;
   "tree.new_dir": TreeChanged;
   "tree.rename": TreeChanged;

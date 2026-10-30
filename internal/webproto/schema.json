@@ -1610,6 +1610,20 @@
       "phase": "v2"
     },
     {
+      "op": "git.clone",
+      "args": "GitCloneArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 4096,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "tree.new_file",
       "args": "ItemArgs",
       "result": "TreeChanged",
@@ -4108,6 +4122,18 @@
       },
       "required": [
         "branch"
+      ],
+      "additionalProperties": false
+    },
+    "GitCloneArgs": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
       ],
       "additionalProperties": false
     },

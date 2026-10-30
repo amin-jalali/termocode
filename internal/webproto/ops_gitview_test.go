@@ -96,3 +96,15 @@ func TestGitRebaseOps(t *testing.T) {
 	checkArgs(t, OpGitRebaseCtl, []string{`{"do":"edit"}`, `{"do":""}`}, []string{`{"do":"continue"}`, `{"do":"skip"}`, `{"do":"abort"}`})
 	checkRow(t, OpGitRebaseCtl, RoleController, true, AuditYes)
 }
+
+// Spec (clone): git.clone takes a remote's https or ssh URL only (never a
+// local path, a file:// or helper transport, or a URL with a password or
+// token in it) and talks to a remote, so it waits for a laptop card.
+func TestGitCloneOp(t *testing.T) {
+	checkArgs(t, OpGitClone, []string{`{"url":""}`, `{"url":"/home/u/repo"}`, `{"url":"file:///etc"}`, `{"url":"ext::sh -c touch% /tmp/x"}`,
+		`{"url":"https://user:tok@github.com/a/b.git"}`, `{"url":"https://x-access-token@github.com/a/b"}`, `{"url":"-u https://h/a"}`,
+		`{"url":"https://github.com/a/b c"}`, `{"url":"git@github.com:"}`, `{"url":"http://github.com/a/b"}`, `{"url":"ssh://h:22"}`,
+		`{"url":"https://github.com"}`, `{"url":"git@-oProxyCommand=x:a/b"}`},
+		[]string{`{"url":"https://github.com/amin-jalali/termocode.git"}`, `{"url":"git@github.com:amin-jalali/termocode.git"}`, `{"url":"ssh://git@host.example:2222/a/b.git"}`})
+	checkRow(t, OpGitClone, RoleController, true, AuditYes)
+}
