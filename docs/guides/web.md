@@ -6,46 +6,54 @@ state as the terminal, and you can work in both at the same time. Nothing
 is copied: the page shows what termocode shows, and what you do in the
 page happens in termocode.
 
-The web panel is **experimental** and **off** by default.
+The web panel is **experimental**. It runs only when you open it.
 
 !!! warning "Anyone who controls the browser tab can run any command as you"
     The page can type into your terminals and answer the AI's cards.
     Open the link only in a browser you trust, and stop the panel when
     you are done.
 
-## Turn it on
+## Open it
 
-Add one line to your own `config.json` (see
-[Config files](../reference/config-files.md)):
+In termocode, press `F1` and type `web`. **Web: Open in Browser** is
+first. Press `Enter`. That is all: the panel starts and opens in your
+browser. You do not need to change a setting or restart termocode.
 
-```json
-{ "web_panel": "on" }
-```
-
-When you save, termocode opens a private socket for the panel. Nothing
-listens on the network yet. The panel itself starts only when you ask.
-
-## Start and stop
-
-In termocode:
-
-- **Web: Start Panel** shows a card first. It says what the browser can
-  do. Pick **Open in browser** or **Copy link**. **Not now** is first and
-  is what `Enter` and `Esc` do.
-- **Web: Copy Link** copies a new link while the panel runs.
-- **Web: Stop Panel** stops it. Every browser is disconnected at once.
-  The web chip in the status bar does the same when you click it.
-
-From a shell, in the folder where termocode runs:
+Or, in a terminal in the folder where termocode runs:
 
 ```sh
-termocode web start          # asks on the laptop first
-termocode web start --yes    # you are at the laptop: no question
+termocode web                # open it in the browser now
 termocode web status         # is it on, and until when?
 termocode web stop
 ```
 
-The link works **once**, for **60 seconds**. The page then gets its own
+- **Web: Open in Browser** (also named **Web: Start Panel**) starts the
+  panel and opens it. If it runs already, it opens a new link.
+- **Web: Copy Link** copies a new link while the panel runs.
+- **Web: Stop Panel** stops it. Every browser is disconnected at once.
+  The web chip in the status bar does the same when you click it.
+
+The panel listens only on this computer (`127.0.0.1`).
+
+If no browser opens (for example, on a computer with no desktop),
+termocode copies the link for you and shows it in a toast. Paste it into
+a browser. Click the toast to copy it again.
+
+When a script runs `termocode web` (not you, typing in a terminal),
+termocode shows a card on the laptop first. **Not now** is first and is
+what `Enter` and `Esc` do. `termocode web --yes` skips the card only when
+your `config.json` has `"web_panel": "on"`.
+
+To turn the panel off completely, add to your own `config.json` (see
+[Config files](../reference/config-files.md)):
+
+```json
+{ "web_panel": "off" }
+```
+
+Settings apply when you save `config.json`. No restart is needed.
+
+The link works **once**, for **5 minutes**. The page then gets its own
 key, which lives only in that tab. A new tab needs a new link.
 
 The panel also stops by itself:
@@ -85,7 +93,8 @@ your computer to that socket. The link then opens in your browser here.
 
 - The server opens **no network port**. Everything goes through your SSH
   connection.
-- The panel must be on in the server's `config.json`.
+- The panel must be turned on in the server's `config.json`:
+  `"web_panel": "on"`.
 - The second `ssh` cannot ask for a password. Use an SSH key or
   `ssh-agent`.
 - After a reconnect the forward comes back, and the open tab connects
@@ -106,10 +115,10 @@ the same tailnet, and **HTTPS certificates** turned on for the tailnet
 `config.json`:
 
 ```json
-{ "web_panel": "on", "web_listen": "tailnet" }
+{ "web_listen": "tailnet" }
 ```
 
-**Web: Start Panel** now says that your tailnet devices can reach the
+**Web: Open in Browser** now says that your tailnet devices can reach the
 panel. When it starts, termocode runs `tailscale serve` for the panel,
 and the panel gets an address like `https://box.tail1234.ts.net/`. The
 toast and `termocode web status` show it.
@@ -196,7 +205,7 @@ To let someone else watch, run **Web: Share as Viewer…**:
 
 The panel can also be reached through an SSH app on the phone that
 forwards the same port number to this computer. Then open a fresh link
-(**Web: Copy Link**) in the phone's browser within 60 seconds.
+(**Web: Copy Link**) in the phone's browser within 5 minutes.
 
 ## How it keeps you safe
 
@@ -208,7 +217,8 @@ In simple words:
   computer is refused before anything is read.
 - **A one-time link.** The secret is in the part of the link after `#`,
   which the browser never sends anywhere. It is never in a program's
-  command line, in a log or on the screen. It works once, for 60 seconds.
+  command line or in a log. It is on the screen only when no browser
+  opens, and never on another screen. It works once, for 5 minutes.
 - **No cookies.** Each tab has its own key. Close the tab and the key is
   gone.
 - **A strict page.** The page loads nothing from the internet and runs no
@@ -236,7 +246,8 @@ In simple words:
   columns such as `password` or `token`. Files that look like they hold
   secrets (such as `.env` or keys) are never downloaded.
 - **The AI cannot open the door.** The AI can never start the panel,
-  pair a device, give control or change its settings.
+  pair a device, give control or change its settings. It cannot run or
+  type `termocode web` either.
 - **A record.** termocode keeps an audit log of web starts, stops and
   logins in its config folder (`web-audit.jsonl`).
 
@@ -258,7 +269,7 @@ In simple words:
 
 | Setting | Default | What it does |
 |---|---|---|
-| `web_panel` | `off` | `on` lets you start the panel. |
+| `web_panel` | `auto` | `auto`: open it on this computer. `on`: also over SSH, and a script's `--yes`. `off`: never. |
 | `web_port` | `0` | A fixed port on `127.0.0.1` (1024..65535); `0` picks a free one. |
 | `web_idle_minutes` | `15` | Stop after this many minutes without use (1..120). |
 | `web_max_hours` | `12` | Stop this many hours after the start (1..24). |
@@ -268,17 +279,17 @@ In simple words:
 | `web_require_totp` | `false` | A paired device also types a code from an authenticator app. |
 
 These settings live only in your own `config.json`. A project's settings
-cannot turn the panel on.
+cannot change them.
 
 ## Troubleshooting
 
-**`termocode web start` says no termocode runs here**
-:   Start termocode in this folder first, and check `"web_panel": "on"`
-    in `config.json`.
+**`termocode web` says no termocode runs here**
+:   Start termocode in this folder first. Check that `config.json` does
+    not say `"web_panel": "off"`.
 
 **"This link has expired or was already used"**
-:   Each link works once, for 60 seconds. Use **Web: Copy Link** for a
-    new one.
+:   Each link works once, for 5 minutes. Use **Web: Open in Browser** for
+    a new one.
 
 **The page says "Offline"**
 :   The page lost its connection and tries again by itself. Your work goes
@@ -320,5 +331,5 @@ cannot turn the panel on.
     device. Remove it in **Web: Devices…** and pair it again.
 
 **The browser did not open**
-:   Use **Web: Copy Link** and paste the link into the browser yourself
-    within 60 seconds.
+:   termocode copied the link and shows it in a toast. Paste it into the
+    browser yourself within 5 minutes. Click the toast to copy it again.
