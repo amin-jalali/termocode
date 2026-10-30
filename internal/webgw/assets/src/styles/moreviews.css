@@ -35,3 +35,10 @@
 .tree-more { flex: none; min-width: var(--tap); min-height: var(--tap); color: var(--dim); font-size: 1.1rem; }
 .tree-more:hover { color: var(--text); background: var(--bg-hover); }
 .head-new { min-width: var(--tap); min-height: var(--tap); font-size: 1.25rem; color: var(--blue); }
+.head-remote { min-width: var(--tap); min-height: var(--tap); font-size: 1.15rem; color: var(--blue); }
+.remote { display: flex; flex-direction: column; gap: var(--s3); padding: var(--s2); }
+.remote-branch { font-family: var(--font-mono); font-weight: 600; }
+.branch-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--r-card); overflow: hidden; max-height: 40dvh; overflow-y: auto; }
+.branch-row { min-height: var(--tap); padding: 0 var(--s3); text-align: start; font-family: var(--font-mono); font-size: var(--fs-row); overflow-wrap: anywhere; }
+.branch-row + .branch-row { border-top: 1px solid var(--border); }
+.branch-row:hover { background: var(--bg-hover); }

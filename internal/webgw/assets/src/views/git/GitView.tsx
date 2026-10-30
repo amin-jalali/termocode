@@ -17,6 +17,7 @@ import { DiffSheet } from "./DiffSheet";
 import { DiscardFlow } from "./DiscardFlow";
 import { gitFailed } from "./errors";
 import { GitRow } from "./GitRow";
+import { RemoteSheet } from "./RemoteSheet";
 import { ShowSheet } from "./ShowSheet";
 
 const LOG_SHOWN = 10;
@@ -49,6 +50,7 @@ export function GitView() {
   const viewer = link.meta.value?.role === "viewer";
   const canAct = !viewer && live.value;
   const [discard, setDiscard] = useState<string[] | null>(null);
+  const [remote, setRemote] = useState(false);
 
   const branch = g.branch.name;
   const sub = g.repo && (
@@ -142,7 +144,20 @@ export function GitView() {
   }
 
   return (
-    <View tab="git" title={t("tab.git")} sub={sub}>
+    <View
+      tab="git"
+      title={t("tab.git")}
+      sub={sub}
+      actions={
+        !viewer &&
+        g.repo &&
+        !g.op && (
+          <button type="button" class="head-remote" aria-label={t("git.remote")} onClick={() => setRemote(true)}>
+            ⇅
+          </button>
+        )
+      }
+    >
       <div class={`git${st?.stale ? " is-stale" : ""}`}>{body}</div>
       {diffPath && (
         <DiffSheet
@@ -158,6 +173,9 @@ export function GitView() {
       )}
       {showHash && <ShowSheet hash={showHash} onClose={close} />}
       {discard && <DiscardFlow paths={discard} onDone={() => setDiscard(null)} />}
+      {remote && (
+        <RemoteSheet branch={branch} ahead={g.branch.ahead} behind={g.branch.behind} changed={g.files.length} onDone={() => setRemote(false)} />
+      )}
     </View>
   );
 }
