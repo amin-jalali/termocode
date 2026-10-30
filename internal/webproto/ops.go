@@ -172,6 +172,11 @@ func DecodeArgs(op string, raw json.RawMessage) (any, error) {
 	if err := unmarshalStrict(raw, a); err != nil {
 		return nil, err
 	}
+	if v, ok := a.(validator); ok {
+		if err := v.validate(len(raw)); err != nil {
+			return nil, err
+		}
+	}
 	return a, nil
 }
 
