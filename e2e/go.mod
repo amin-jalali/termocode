@@ -12,8 +12,18 @@ require (
 )
 
 require (
+	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
+	github.com/charmbracelet/bubbletea v1.3.10 // indirect
+	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834 // indirect
+	github.com/charmbracelet/x/cellbuf v0.0.15 // indirect
+	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/go-json-experiment/json v0.0.0-20260213210345-44df1a37e875 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mattn/go-localereader v0.0.1 // indirect
+	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
+	github.com/muesli/termenv v0.16.0 // indirect
 	golang.org/x/term v0.37.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 )
 
 require (
@@ -36,3 +46,5 @@ require (
 )
 
 replace github.com/amin-jalali/termocode => ../
+
+replace github.com/charmbracelet/bubbletea => ../third_party/bubbletea
