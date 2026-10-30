@@ -215,7 +215,9 @@
 .toasts {
   position: fixed;
   z-index: var(--z-toast);
-  top: calc(var(--strip-h) + env(safe-area-inset-top) + var(--s2));
+  /* Toasts.tsx sets --toast-top (under the middle column's head) and
+     --toast-end (the chat column's width on a desktop). */
+  top: var(--toast-top, calc(var(--strip-h) + env(safe-area-inset-top) + var(--s2)));
   inset-inline: var(--gutter);
   display: flex;
   flex-direction: column;
@@ -247,10 +249,10 @@
 
 @media (min-width: 1200px) {
   .desk-only { display: inline-flex; }
-  .toasts { top: auto; bottom: var(--s6); inset-inline: auto var(--gutter); width: 22rem; }
 }
-@media (min-width: 720px) and (max-width: 1199px) {
-  .toasts { inset-inline-start: auto; width: 22rem; }
+.layout-tablet .toasts, .layout-desktop .toasts {
+  inset-inline: auto calc(var(--toast-end, 0px) + var(--gutter));
+  width: 22rem;
 }
 .att-mark { font-family: var(--font-mono); color: var(--muted); }
 .attention.att-run_failed { border-color: var(--red); }
