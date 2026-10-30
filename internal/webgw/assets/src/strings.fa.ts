@@ -160,6 +160,7 @@ export const FA: Record<StringKey, string> = {
   "term.ended_now": "این ترمینال تمام شد.",
   "term.gone": "این ترمینال روی لپ‌تاپ بسته شد.",
   "term.bell": "یک پوسته زنگ زد",
+  "term.about": "دربارهٔ این ترمینال",
   "term.new": "یک ترمینال تازه",
   "term.none": "هیچ ترمینالی روی لپ‌تاپ باز نیست.",
   "term.open_one": "باز کردن یکی",
