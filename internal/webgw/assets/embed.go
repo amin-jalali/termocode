@@ -11,7 +11,7 @@ import (
 // files holds only what cmd/webbuild wrote; sources and vendored
 // originals stay out of the binary.
 //
-//go:embed index.html app.js editor.js app.css desk.css licenses.txt icon.svg icon-maskable.svg manifest.webmanifest fonts/nf-*.woff2 assets.lock
+//go:embed index.html app.js app-chunk.js workbench.js editor.js app.css desk.css licenses.txt icon.svg icon-maskable.svg manifest.webmanifest fonts/nf-*.woff2 assets.lock
 //go:embed monaco.html monaco-amd.js monaco-frame.js monaco-frame.css monaco/editor.js monaco/editor-host.js monaco/editor-contrib.js monaco/editor.css icons/codicon.ttf
 var files embed.FS
 

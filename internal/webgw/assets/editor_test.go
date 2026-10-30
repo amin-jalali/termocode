@@ -21,7 +21,7 @@ const (
 
 func TestPerfGuardEditorBudget(t *testing.T) {
 	ed := gzSize(t, "editor.js")
-	all := ed + gzSize(t, "app.js") + gzSize(t, "app.css") + gzSize(t, "index.html")
+	all := ed + gzSize(t, "app.js") + gzSize(t, "app-chunk.js") + gzSize(t, "app.css") + gzSize(t, "index.html")
 	t.Logf("gzipped: editor.js %d B, page with the editor %d B", ed, all)
 	if ed > budgetEditor {
 		t.Errorf("editor.js is %d B gzipped, budget %d B", ed, budgetEditor)
@@ -31,8 +31,9 @@ func TestPerfGuardEditorBudget(t *testing.T) {
 	}
 }
 
-// The page's one dynamic import is the editor file, by a fixed path.
-func TestTheOnlyDynamicImportIsTheEditor(t *testing.T) {
+// The page's only dynamic imports are the editor file and the desktop
+// workbench, each by a fixed path, both in lib/lazy.ts.
+func TestTheOnlyDynamicImportsAreTheEditorAndTheWorkbench(t *testing.T) {
 	re := regexp.MustCompile(`\bimport\s*\(([^)]*)\)`)
 	var found []string
 	err := filepath.WalkDir("src", func(p string, d os.DirEntry, err error) error {
@@ -52,8 +53,9 @@ func TestTheOnlyDynamicImportIsTheEditor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(found) != 1 || found[0] != `src/lib/lazy.ts "/assets/editor.js"` {
-		t.Errorf("dynamic imports %q, want only lib/lazy.ts loading /assets/editor.js", found)
+	sort.Strings(found)
+	if len(found) != 2 || found[0] != `src/lib/lazy.ts "/assets/editor.js"` || found[1] != `src/lib/lazy.ts "/assets/workbench.js"` {
+		t.Errorf("dynamic imports %q, want only lib/lazy.ts loading /assets/editor.js and /assets/workbench.js", found)
 	}
 }
 

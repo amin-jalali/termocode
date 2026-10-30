@@ -30,7 +30,8 @@ var sourceRules = []rule{
 	{name: "string timer", re: regexp.MustCompile(`set(Timeout|Interval)\s*\(\s*["'\x60]`)},
 	{name: "javascript: URL", re: regexp.MustCompile(`(?i)javascript:`)},
 	{name: "external URL", re: regexp.MustCompile(`(?i)\b(https?|wss?)://`)},
-	// The one dynamic import loads the editor file (WEB-39), a fixed path.
+	// The two dynamic imports load the editor file (WEB-39) and the
+	// desktop workbench, each a fixed path.
 	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true}},
 	{name: "remote script/style", re: regexp.MustCompile(`(?i)@import|url\(\s*["']?(https?:)?//`)},
 	// Only the prefs module touches localStorage, and it never holds a secret.
@@ -182,8 +183,9 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 			// load anything. The other rules hold for it too.
 			text = regexp.MustCompile(`(?i)(https?|wss?):\/\/|\bimport\s*\(`).ReplaceAllString(text, "")
 		}
-		if e.Path == "app.js" { // its one dynamic import: the editor file, a fixed path
+		if e.Path == "app.js" || e.Path == "app-chunk.js" { // the page's two dynamic imports (lib/lazy.ts), fixed paths
 			text = strings.Replace(text, `import("/assets/editor.js")`, "", 1)
+			text = strings.Replace(text, `import("/assets/workbench.js")`, "", 1)
 		}
 		for _, r := range []*regexp.Regexp{
 			regexp.MustCompile(`\beval\s*\(`), regexp.MustCompile(`\bnew Function\b|\bFunction\s*\(\s*["'\x60]`),
