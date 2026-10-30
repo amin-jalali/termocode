@@ -96,7 +96,7 @@ func shotHub(t *testing.T, c *HubConn) {
 			Files: []webproto.GitFile{{Path: "cmd/covreport/filter.go", X: " ", Y: "M", Unstaged: true}, {Path: "README.md", X: "M", Y: " ", Staged: true}, {Path: "notes.txt", X: "?", Y: "?", Untracked: true}},
 			Log:   []webproto.GitCommit{{Hash: "60ed1c8", Subject: "test(e2e): the MCP relay's stderr is read under a lock", Author: "Amin", When: time.Now().Add(-time.Hour).UnixMilli()}}},
 	}
-	for _, tp := range []string{"chat", "cards", "chats", "tree", "bufs"} { // asked for at login
+	for _, tp := range []string{"chat", "cards", "chats", "tree", "bufs", "git"} { // asked for at login (git: on a desktop)
 		c.Send(t, Snap(tp, 1, snaps[tp]))
 	}
 	go func() {
