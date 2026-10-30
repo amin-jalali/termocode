@@ -12,6 +12,7 @@ import "./styles/chat.css";
 import "./styles/git.css";
 import "./styles/more.css";
 import "./styles/files.css";
+import "./styles/fonts.css";
 import { App } from "./app";
 import { prefs } from "./lib/prefs";
 import { setOnOpen, unseen } from "./lib/notify";

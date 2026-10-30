@@ -1,0 +1,59 @@
+{
+  "$comment": "Symbol glyphs for the terminal view (WEB-58), cut from Nerd Fonts Symbols Only 3.4.0 (SymbolsNerdFontMono-Regular.ttf in the release zip below) with fonttools 4.55.3: pyftsubset --unicodes=<range> --no-hinting --desubroutinize, then the name table set to 'termocode symbols' (no reserved font name is used) and saved as woff2. One file per glyph set: the browser fetches a file only when a terminal row shows a glyph of its range. Never edit a file here; to update, cut new files and change the rows (sha384 of each file). cmd/webbuild checks every hash and copies LICENSE.txt into licenses.txt.",
+  "name": "Nerd Fonts Symbols Only",
+  "version": "3.4.0",
+  "source": "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/NerdFontsSymbolsOnly.zip",
+  "source_sha256": "8e617904b980fe3648a4b116808788fe50c99d2d495376cb7c0badbd8a564c47",
+  "family": "termocode symbols",
+  "faces": [
+    {
+      "file": "nf-powerline.woff2",
+      "unicode_range": "U+E0A0-E0A3, U+E0B0-E0D7",
+      "glyphs": "Powerline Symbols and Powerline Extra Symbols",
+      "license": "MIT",
+      "sha384": "sha384-dy+2FQMRiPODrEHw2cbFr4wK5XiPhoZfUFC6GTizk3TGJlR7QymlirjL07DskqLB"
+    },
+    {
+      "file": "nf-seti.woff2",
+      "unicode_range": "U+E5FA-E6B7",
+      "glyphs": "Seti-UI and Nerd Fonts custom icons",
+      "license": "MIT",
+      "sha384": "sha384-SIRO07PrKQGKqZz8AqBLr5pTSfSdjHR93D+woV27NzC1QnmdQf6bYcCBljfRiMZh"
+    },
+    {
+      "file": "nf-devicons.woff2",
+      "unicode_range": "U+E700-E8EF",
+      "glyphs": "Devicons",
+      "license": "MIT",
+      "sha384": "sha384-wUH+v6WoaVUttsmf/h5v4dkRuoqahceAkv1xrpwZtXkl+OmHeVQ8Na1lkb47vg+C"
+    },
+    {
+      "file": "nf-fontawesome.woff2",
+      "unicode_range": "U+F000-F2E0",
+      "glyphs": "Font Awesome",
+      "license": "OFL-1.1",
+      "sha384": "sha384-xbG3QbUbmF5KtpRpNMJc6dPG5KjFzBV60KvpS1wb+LRRk9Wjq58yyWmFkRvo96y9"
+    },
+    {
+      "file": "nf-fa-extension.woff2",
+      "unicode_range": "U+E200-E2A9",
+      "glyphs": "Font Awesome Extension",
+      "license": "MIT",
+      "sha384": "sha384-6BEtIZZkxrg7PvLXCc1ixQVY7+TPzyhXLbdjhd7alitXS26M37KznH4dEnv4+g3k"
+    },
+    {
+      "file": "nf-octicons.woff2",
+      "unicode_range": "U+2665, U+26A1, U+F400-F533",
+      "glyphs": "Octicons",
+      "license": "MIT",
+      "sha384": "sha384-rDipdQDajxGNf0ETrJFB8zpcxkhN01dV1jvffvzzcxT8hENrf9Y+w0LKCH1L2D44"
+    },
+    {
+      "file": "nf-logos.woff2",
+      "unicode_range": "U+F300-F381",
+      "glyphs": "Font Logos",
+      "license": "Unlicense",
+      "sha384": "sha384-3gubXCoKVUP4ABk6zF/XjJAUei4PN+g8hz/3+kD7ABJOOLNFbCvICNdqy5Pv4DMe"
+    }
+  ]
+}

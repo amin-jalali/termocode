@@ -50,10 +50,11 @@ func TestAssetsServeThePageWithSRI(t *testing.T) {
 func TestAssetsContentTypes(t *testing.T) {
 	h := Assets()
 	for path, want := range map[string]string{
-		"/assets/app.js":       "text/javascript; charset=utf-8",
-		"/assets/app.css":      "text/css; charset=utf-8",
-		"/assets/licenses.txt": "text/plain; charset=utf-8",
-		"/assets/icon.svg":     "image/svg+xml",
+		"/assets/app.js":                   "text/javascript; charset=utf-8",
+		"/assets/app.css":                  "text/css; charset=utf-8",
+		"/assets/licenses.txt":             "text/plain; charset=utf-8",
+		"/assets/icon.svg":                 "image/svg+xml",
+		"/assets/fonts/nf-powerline.woff2": "font/woff2",
 	} {
 		res := getAsset(t, h, http.MethodGet, path)
 		if res.StatusCode != http.StatusOK || res.Header.Get("Content-Type") != want {
