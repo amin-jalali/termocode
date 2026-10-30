@@ -1049,7 +1049,7 @@
     },
     {
       "op": "tests.output",
-      "args": "TestIDArgs",
+      "args": "TestOutputArgs",
       "result": "TestOutput",
       "role": "viewer",
       "rate": {
@@ -5379,6 +5379,16 @@
         "lines"
       ],
       "additionalProperties": true
+    },
+    "TestOutputArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
     },
     "TestRunArgs": {
       "type": "object",

@@ -21,7 +21,7 @@ const (
 )
 
 var opTestsRows = []Policy{
-	{Op: OpTestsOutput, New: newOf[TestIDArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 8 * kib, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpTestsOutput, New: newOf[TestOutputArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 8 * kib, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpTestsRefresh, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: perSec(1), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpTestsRun, New: newOf[TestRunArgs](), Role: RoleController, Rate: perSec(2), MaxBytes: 8 * kib, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpTestsDebug, New: newOf[TestIDArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 8 * kib, Audit: AuditYes, Phase: PhaseV2},
@@ -110,6 +110,12 @@ type TestIDArgs struct {
 	ID string `json:"id"`
 }
 
+// TestOutputArgs names a row whose output to read; no ID: the whole
+// run's log.
+type TestOutputArgs struct {
+	ID string `json:"id,omitempty"`
+}
+
 // TestRunArgs runs one row of the tree (ID), every test (no ID), or the
 // tests that failed last time (Failed, no ID).
 type TestRunArgs struct {
@@ -138,6 +144,13 @@ func validTestID(id string) bool {
 
 func (a *TestIDArgs) validate(int) error {
 	if !validTestID(a.ID) {
+		return invalid("bad test id")
+	}
+	return nil
+}
+
+func (a *TestOutputArgs) validate(int) error {
+	if a.ID != "" && !validTestID(a.ID) {
 		return invalid("bad test id")
 	}
 	return nil

@@ -243,13 +243,17 @@ export interface LspPosArgs {
   col: number;
 }
 
-export interface TestIDArgs {
-  id: string;
+export interface TestOutputArgs {
+  id?: string;
 }
 
 export interface TestRunArgs {
   id?: string;
   failed?: boolean;
+}
+
+export interface TestIDArgs {
+  id: string;
 }
 
 export interface GitFileLogArgs {
@@ -1237,7 +1241,7 @@ export interface OpArgs {
   "lsp.complete": LspPosArgs;
   "lsp.definition": LspPosArgs;
   "lsp.references": LspPosArgs;
-  "tests.output": TestIDArgs;
+  "tests.output": TestOutputArgs;
   "tests.refresh": EmptyArgs;
   "tests.run": TestRunArgs;
   "tests.debug": TestIDArgs;
