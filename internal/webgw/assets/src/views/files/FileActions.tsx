@@ -12,6 +12,7 @@ import { AskLaptop } from "../../ui/AskLaptop";
 import { Button } from "../../ui/Button";
 import { Sheet } from "../../ui/Sheet";
 import { gitFailed as failed } from "../git/errors";
+import { DownloadSheet, UploadSheet } from "./Transfer";
 
 export interface Target {
   /** path is the workspace path ("" for the workspace folder). */
@@ -19,7 +20,7 @@ export interface Target {
   dir: boolean;
 }
 
-type Step = { s: "menu" } | { s: "new"; dir: boolean } | { s: "rename" } | { s: "delete" };
+type Step = { s: "menu" } | { s: "new"; dir: boolean } | { s: "rename" } | { s: "delete" } | { s: "download" } | { s: "upload" };
 
 const base = (p: string): string => p.slice(p.lastIndexOf("/") + 1);
 const join = (dir: string, name: string): string => (dir ? dir + "/" + name : name);
@@ -86,6 +87,8 @@ export function FileActions({ target, onDone }: { target: Target; onDone: () => 
     }, failed);
   };
 
+  if (step.s === "download") return <DownloadSheet path={target.path} onDone={onDone} />;
+  if (step.s === "upload") return <UploadSheet dir={target.path} onDone={onDone} />;
   if (step.s === "delete") {
     return (
       <AskLaptop
@@ -115,6 +118,16 @@ export function FileActions({ target, onDone }: { target: Target; onDone: () => 
             {target.dir && (
               <Button needsLink onClick={() => setStep({ s: "new", dir: true })}>
                 {t("files.new_dir")}
+              </Button>
+            )}
+            {target.dir && (
+              <Button needsLink onClick={() => setStep({ s: "upload" })}>
+                {t("xfer.upload")}
+              </Button>
+            )}
+            {!target.dir && (
+              <Button needsLink onClick={() => setStep({ s: "download" })}>
+                {t("xfer.download")}
               </Button>
             )}
             {target.path !== "" && (
