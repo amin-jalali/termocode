@@ -80,6 +80,8 @@ func TestAICannotAnswerWebCards(t *testing.T) {
 		"openWebPair":              {"web_access.go"},
 		"webRevokeDevice":          {"web_access.go"},
 		"dispatchWebAccessPalette": {"palette.go"},
+		"openWebTotpSetup":         {"web_access.go"},
+		"webTotpNew":               {"webtotp_setup.go"},
 	}
 	fset := token.NewFileSet()
 	files, _ := filepath.Glob("*.go")
