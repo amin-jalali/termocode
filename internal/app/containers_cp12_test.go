@@ -615,7 +615,17 @@ func TestPodmanConnectionsAreContexts(t *testing.T) {
 	// Enter on a connection: every podman call carries it from now on.
 	before := len(f.ConnCalls())
 	selectContext(t, st, "build-box")
-	pumpHost(t, m, press(m, "enter"))
+	// Wait for the refresh after the switch: on a slow runner (macOS CI)
+	// the events and images calls come later than one pump.
+	pumpHostUntil(t, m, press(m, "enter"), func(tea.Msg) bool {
+		got := strings.Join(f.ConnCalls()[before:], "\n")
+		for _, sub := range []string{"version", "ps", "images", "events"} {
+			if !strings.Contains(got, "build-box|"+sub) {
+				return false
+			}
+		}
+		return true
+	})
 	if st.sessionContext != "build-box" {
 		t.Fatalf("session connection = %q", st.sessionContext)
 	}
