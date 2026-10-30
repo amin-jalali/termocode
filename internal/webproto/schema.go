@@ -75,6 +75,11 @@ func genTypes(browserOnly bool) []genType {
 	for _, k := range EventKinds() {
 		add(eventData[k], false)
 	}
+	for _, p := range opTable {
+		if r, ok := resultData[p.Op]; ok && !(browserOnly && p.Role == RoleCtl) {
+			add(r, false)
+		}
+	}
 	return out
 }
 
@@ -151,7 +156,7 @@ func tsType(t reflect.Type) string {
 		return "string"
 	case reflect.Bool:
 		return "boolean"
-	case reflect.Int, reflect.Int64, reflect.Uint64, reflect.Uint32, reflect.Int32:
+	case reflect.Int, reflect.Int64, reflect.Uint64, reflect.Uint32, reflect.Int32, reflect.Float64:
 		return "number"
 	case reflect.Slice:
 		return tsType(t.Elem()) + "[]"
@@ -240,6 +245,12 @@ func GenerateTS() ([]byte, error) {
 	for _, k := range EventKinds() {
 		fmt.Fprintf(&b, "  %q: %s;\n", k, eventData[k].Name())
 	}
+	b.WriteString("}\n\n// The data of a res message, by op (ops not listed answer without data).\nexport interface OpResult {\n")
+	for _, p := range opTable {
+		if r, ok := resultData[p.Op]; ok && p.Role != RoleCtl {
+			fmt.Fprintf(&b, "  %q: %s;\n", p.Op, r.Name())
+		}
+	}
 	b.WriteString("}\n")
 	return b.Bytes(), nil
 }
@@ -276,6 +287,7 @@ type schemaTopic struct {
 type schemaOp struct {
 	Op          string     `json:"op"`
 	Args        string     `json:"args"`
+	Result      string     `json:"result,omitempty"` // the def of the res data
 	Role        Role       `json:"role"`
 	Rate        schemaRate `json:"rate"`
 	MaxBytes    int        `json:"max_bytes"`
@@ -320,6 +332,8 @@ func schemaOf(t reflect.Type) any {
 		return map[string]any{"type": "integer"}
 	case reflect.Uint64, reflect.Uint32:
 		return map[string]any{"type": "integer", "minimum": 0}
+	case reflect.Float64:
+		return map[string]any{"type": "number"}
 	case reflect.Slice:
 		return map[string]any{"type": "array", "items": schemaOf(t.Elem())}
 	case reflect.Map:
@@ -374,8 +388,12 @@ func GenerateSchema() ([]byte, error) {
 		doc.Events[k] = eventData[k].Name()
 	}
 	for _, p := range opTable {
+		res := ""
+		if r, ok := resultData[p.Op]; ok {
+			res = r.Name()
+		}
 		doc.Ops = append(doc.Ops, schemaOp{
-			Op: p.Op, Args: reflect.TypeOf(p.New()).Elem().Name(), Role: p.Role,
+			Op: p.Op, Args: reflect.TypeOf(p.New()).Elem().Name(), Result: res, Role: p.Role,
 			Rate:     schemaRate{N: p.Rate.N, PerMS: p.Rate.Per.Milliseconds()},
 			MaxBytes: p.MaxBytes, BytesPerSec: p.BytesPerSec, Live: p.Live,
 			LaptopCard: p.LaptopCard, Audit: p.Audit, Phase: p.Phase,
