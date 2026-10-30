@@ -76,12 +76,27 @@ func reopenCard(p *Page) {
 	p.WaitJS(dialog + ` && ` + dialog + `.contains(document.activeElement)`)
 }
 
-// nextReq returns the page's next request; subs on the way are skipped.
+// paintOps are requests the page sends on its own to colour what it
+// shows (syntax, terminal colours); a test that does not look for one
+// skips it.
+var paintOps = map[string]bool{"buf.hl": true, "term.colors": true}
+
+// nextReq returns the page's next request; subs and paint requests on the
+// way are skipped.
 func nextReq(t *testing.T, c *HubConn) *webproto.Req {
+	t.Helper()
+	return nextReqOr(t, c, "")
+}
+
+// nextReqOr is nextReq that also returns a paint request for op.
+func nextReqOr(t *testing.T, c *HubConn, op string) *webproto.Req {
 	t.Helper()
 	for {
 		m := c.Next(t)
 		if r, ok := m.(*webproto.Req); ok {
+			if paintOps[r.Op] && r.Op != op {
+				continue
+			}
 			return r
 		}
 		if _, ok := m.(*webproto.Sub); !ok {
