@@ -71,7 +71,7 @@ func (f *fakePostgres) serve(c net.Conn) {
 	}
 	be.Send(&pgproto3.AuthenticationOk{})
 	be.Send(&pgproto3.ParameterStatus{Name: "server_version", Value: "16.4"})
-	be.Send(&pgproto3.BackendKeyData{ProcessID: 1, SecretKey: 2})
+	be.Send(&pgproto3.BackendKeyData{ProcessID: 1, SecretKey: []byte{0, 0, 0, 2}})
 	be.Send(&pgproto3.ReadyForQuery{TxStatus: 'I'})
 	if be.Flush() != nil {
 		return

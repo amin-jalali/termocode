@@ -13,7 +13,7 @@ require (
 	github.com/creack/pty v1.1.24
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/gomodule/redigo v1.9.2
-	github.com/jackc/pgx/v5 v5.7.2
+	github.com/jackc/pgx/v5 v5.9.2
 	github.com/mattn/go-runewidth v0.0.19
 	github.com/muesli/cancelreader v0.2.2
 	github.com/muesli/termenv v0.16.0
