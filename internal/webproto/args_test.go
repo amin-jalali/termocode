@@ -28,6 +28,8 @@ func TestArgsRules(t *testing.T) {
 		{OpBufSetText, `{"buf":1,"tick":1,"start":{"row":2,"col":0},"end":{"row":1,"col":0},"lines":[]}`},
 		{OpBufSetText, `{"buf":1,"tick":1,"start":{"row":1,"col":5},"end":{"row":1,"col":4},"lines":[]}`},
 		{OpBufSetText, `{"buf":1,"tick":1,"start":{"row":0,"col":0},"end":{"row":0,"col":0},"lines":["a\nb"]}`},
+		{OpBufSetText, "{\"buf\":1,\"tick\":1,\"start\":{\"row\":0,\"col\":0},\"end\":{\"row\":0,\"col\":0},\"lines\":[\"a\xffb\"]}"},
+		{OpBufSetText, `{"buf":1,"tick":1,"start":{"row":0,"col":0},"end":{"row":0,"col":0},"lines":["a\ud800b"]}`},
 		{OpChatSend, `{"text":""}`},
 		{OpChatSend, `{"text":"` + long(32*1024+1) + `"}`},
 		{OpChatSend, `{"text":"hi","chat_id":"a\u0007"}`},
@@ -112,5 +114,19 @@ func TestDecodeArgsStrict(t *testing.T) {
 	big := `{"path":"` + strings.Repeat("a", p.MaxBytes) + `"}`
 	if _, err := DecodeArgs(OpTreeList, json.RawMessage(big)); !errors.Is(err, ErrTooBig) {
 		t.Fatalf("big args: err = %v", err)
+	}
+}
+
+// A surrogate pair and an escaped backslash before "ud800" are text the
+// user typed: accepted.
+func TestArgsGoodUnicodeEscapes(t *testing.T) {
+	for _, raw := range []string{
+		`{"buf":1,"tick":1,"start":{"row":0,"col":0},"end":{"row":0,"col":0},"lines":["😀"]}`,
+		`{"buf":1,"tick":1,"start":{"row":0,"col":0},"end":{"row":0,"col":0},"lines":["a\\ud800"]}`,
+		`{"buf":1,"tick":1,"start":{"row":0,"col":0},"end":{"row":0,"col":0},"lines":["ü é"]}`,
+	} {
+		if _, err := DecodeArgs(OpBufSetText, []byte(raw)); err != nil {
+			t.Errorf("%s: %v", raw, err)
+		}
 	}
 }
