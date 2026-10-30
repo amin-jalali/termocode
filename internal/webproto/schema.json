@@ -461,6 +461,20 @@
       "phase": "v1"
     },
     {
+      "op": "buf.hl",
+      "args": "HlArgs",
+      "result": "HlRes",
+      "role": "viewer",
+      "rate": {
+        "n": 10,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "chat.send",
       "args": "ChatSendArgs",
       "result": "ChatRef",
@@ -1977,6 +1991,69 @@
         "token"
       ],
       "additionalProperties": false
+    },
+    "HlArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "first": {
+          "type": "integer"
+        },
+        "last": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "first",
+        "last"
+      ],
+      "additionalProperties": false
+    },
+    "HlRes": {
+      "type": "object",
+      "properties": {
+        "cut": {
+          "type": "boolean"
+        },
+        "first": {
+          "type": "integer"
+        },
+        "groups": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "last": {
+          "type": "integer"
+        },
+        "none": {
+          "type": "boolean"
+        },
+        "spans": {
+          "items": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tick",
+        "first",
+        "last",
+        "groups",
+        "spans"
+      ],
+      "additionalProperties": true
     },
     "KeyArgs": {
       "type": "object",
