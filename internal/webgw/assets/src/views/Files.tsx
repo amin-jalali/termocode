@@ -6,7 +6,7 @@
 import { Fragment, h, type ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import type { BufItem, TreeDir, TreeEntry } from "../../../../webproto/proto";
-import { go } from "../lib/router";
+import { go, route } from "../lib/router";
 import { expanded, failed, hideDots, reconcile, retry, toggle } from "../lib/tree";
 import { link, listOf, live, store } from "../session";
 import { own } from "../state/dict";
@@ -201,9 +201,11 @@ function NewHere() {
 export function TreeView() {
   useEffect(() => link.subscribe("tree", "bufs"), []);
   const a = acting.value;
+  const r = route.value;
   return (
     <View
       tab="files"
+      name={r.tab === "files" && r.rest ? "tree" : undefined}
       title={t("tab.files")}
       actions={
         <>

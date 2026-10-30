@@ -67,11 +67,15 @@ export function Nav({
   variant,
   active,
   badges,
+  onTap,
 }: {
   variant: "tabs" | "rail";
   active: Tab;
   /** badges overrides the live badges (the kit shows fixed ones). */
   badges?: Partial<Record<Tab, BadgeKind>>;
+  /** onTap replaces what a tap does (the desktop workbench opens and
+   * closes its panels). */
+  onTap?: (tab: Tab) => void;
 }) {
   return (
     <nav class={variant === "tabs" ? "tabbar" : "rail"} aria-label={t("tabs.label")}>
@@ -85,7 +89,8 @@ export function Nav({
             class={`nav-item${active === tab ? " is-active" : ""}`}
             aria-current={active === tab ? "page" : undefined}
             aria-label={t(label) + extra}
-            onClick={() => onTabTap(tab)}
+            title={t(label)}
+            onClick={() => (onTap ? onTap(tab) : onTabTap(tab))}
           >
             <span class="nav-icon">
               <Icon />

@@ -27,7 +27,7 @@ export function Comet() {
   );
 }
 
-function ThemeToggle() {
+export function ThemeToggle() {
   const p = prefs.value;
   const dark =
     p.theme === "dark" || (p.theme === "system" && !matchMedia("(prefers-color-scheme: light)").matches);

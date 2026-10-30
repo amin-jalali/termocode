@@ -518,6 +518,26 @@ export const S = {
   "err.forbidden": "You cannot do this from here.",
   "err.limit": "Too much at once. Try a smaller change.",
   "err.internal": "Something failed inside termocode. The laptop has the details.",
+  // Desktop workbench and status bar
+  "wb.terminal": "Terminal",
+  "wb.tabs": "Open files",
+  "wb.close_tab": "Close {name}",
+  "wb.welcome": "Open a file from the tree on the left.",
+  "wb.key.side": "Show or hide the side panel",
+  "wb.key.panel": "Show or hide the terminal",
+  "wb.panel_hide": "Hide the terminal",
+  "wb.side_show": "Show the side panel",
+  "wb.resize_side": "Resize the side panel",
+  "wb.resize_panel": "Resize the terminal",
+  "wb.resize_chat": "Resize the chat",
+  "wb.toggle_side": "Side panel",
+  "wb.toggle_panel": "Terminal panel",
+  "wb.toggle_chat": "Chat panel",
+  "sb.pos": "Ln {n}, Col {c}",
+  "sb.line_of": "Line {n} of {m}",
+  "sb.tabs": "Tab size: {n}",
+  "sb.spaces": "Spaces: {n}",
+  "sb.changed": "{n} changed files",
 } as const;
 
 export type StringKey = keyof typeof S;

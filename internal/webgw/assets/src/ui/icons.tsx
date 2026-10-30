@@ -80,3 +80,86 @@ export const IconSun = () => (
     <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4" />
   </Icon>
 );
+
+// Small icons of the desktop workbench and its toolbars (16 px).
+export const IconClose = () => (
+  <Icon size={14}>
+    <path d="M7 7l10 10M17 7L7 17" />
+  </Icon>
+);
+
+export const IconChevronDown = () => (
+  <Icon size={16}>
+    <path d="M6.5 9.5l5.5 5.5 5.5-5.5" />
+  </Icon>
+);
+
+export const IconFileSmall = () => (
+  <Icon size={14}>
+    <path d="M6 3.5h8l4 4v13H6z M14 3.5v4h4" />
+  </Icon>
+);
+
+export const IconSidebar = () => (
+  <Icon size={16}>
+    <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+    <path d="M9.5 4.5v15" />
+  </Icon>
+);
+
+export const IconPanel = () => (
+  <Icon size={16}>
+    <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+    <path d="M3.5 14.5h17" />
+  </Icon>
+);
+
+export const IconChatSide = () => (
+  <Icon size={16}>
+    <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+    <path d="M14.5 4.5v15" />
+  </Icon>
+);
+
+export const IconWrap = () => (
+  <Icon size={16}>
+    <path d="M4 6.5h16M4 12h13a3 3 0 0 1 0 6h-4M4 17.5h5M14.5 15.5L12.5 18l2 2.5" />
+  </Icon>
+);
+
+export const IconUndo = () => (
+  <Icon size={16}>
+    <path d="M9 7.5L5 11.5l4 4M5.5 11.5H15a4.5 4.5 0 0 1 0 9h-2" />
+  </Icon>
+);
+
+export const IconRedo = () => (
+  <Icon size={16}>
+    <path d="M15 7.5l4 4-4 4M18.5 11.5H9a4.5 4.5 0 0 0 0 9h2" />
+  </Icon>
+);
+
+export const IconPencil = () => (
+  <Icon size={16}>
+    <path d="M4.5 19.5l1-4L16 5a2.1 2.1 0 0 1 3 3L8.5 18.5z M14 7l3 3" />
+  </Icon>
+);
+
+export const IconLaptop = () => (
+  <Icon size={16}>
+    <rect x="5" y="5.5" width="14" height="9.5" rx="1.5" />
+    <path d="M3 18.5h18" />
+  </Icon>
+);
+
+export const IconSave = () => (
+  <Icon size={16}>
+    <path d="M5 4.5h11l3.5 3.5v11.5H5z M8 4.5v5h7v-5 M8 19.5v-5.5h8v5.5" />
+  </Icon>
+);
+
+export const IconRows = () => (
+  <Icon size={16}>
+    <path d="M5 7h14M5 12h14M5 17h9" />
+  </Icon>
+);

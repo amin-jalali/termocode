@@ -115,8 +115,8 @@ func TestFileSyntaxUsesThemeSyntaxColours(t *testing.T) {
 	p.WaitJS(codeRow(0) + `.querySelector(".hl-kc")`)
 	for cls, tok := range map[string]string{"hl-kc": "--syn-ctl", "hl-f": "--syn-fn", "hl-n": "--syn-num"} {
 		js := `(() => { const el = ` + codeRow(0) + `.querySelector(".` + cls + `"); const probe = document.createElement("span");
-			probe.style.color = getComputedStyle(document.documentElement).getPropertyValue("` + tok + `").trim();
-			document.body.append(probe); const want = getComputedStyle(probe).color; probe.remove();
+			probe.style.color = getComputedStyle(el).getPropertyValue("` + tok + `").trim();
+			el.parentElement.append(probe); const want = getComputedStyle(probe).color; probe.remove();
 			return el !== null && getComputedStyle(el).color === want })()`
 		if !Eval[bool](p, js) {
 			t.Errorf(".%s is not painted with %s", cls, tok)

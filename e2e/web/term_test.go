@@ -195,9 +195,14 @@ func TestTermTypeKeysAndInterrupt(t *testing.T) {
 			}
 			p.WaitJS(termLine + `.value === ""`)
 
-			small := Eval[[]float64](p, `[...document.querySelectorAll('[data-view="term"] .keybar .key')].map((k) => Math.min(k.getBoundingClientRect().width, k.getBoundingClientRect().height)).filter((s) => s < 44)`)
+			// Thumb-sized keys on a phone; a desktop's are a mouse's (22 px).
+			min := 44
+			if !vp.Mobile {
+				min = 22
+			}
+			small := Eval[[]float64](p, fmt.Sprintf(`[...document.querySelectorAll('[data-view="term"] .keybar .key')].map((k) => Math.min(k.getBoundingClientRect().width, k.getBoundingClientRect().height)).filter((s) => s < %d)`, min))
 			if len(small) > 0 {
-				t.Errorf("keys smaller than 44 px: %v", small)
+				t.Errorf("keys smaller than %d px: %v", min, small)
 			}
 			for _, k := range []struct{ key, want string }{{"Esc", "\x1b"}, {"↑", "\x1b[A"}, {"Tab", "\t"}} {
 				tapKey(p, k.key)
