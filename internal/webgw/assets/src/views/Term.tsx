@@ -10,7 +10,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { TermItem, TermNewRes } from "../../../../webproto/proto";
 import { rang } from "../lib/attention";
 import { useLongPress } from "../lib/longpress";
+import { prefs, setPref } from "../lib/prefs";
 import { usePinch } from "../lib/rowfont";
+import { canKeepOn, useWakeLock } from "../lib/wakelock";
 import { go, route } from "../lib/router";
 import { dropOlder, loadingOlder, loadOlder, older, stitch } from "../lib/term";
 import { toast } from "../lib/toasts";
@@ -97,6 +99,11 @@ function About({ buf, cols, screen, onClose }: { buf: number; cols: number; scre
           <Chip on={screen && !asRows.value.has(buf)} onClick={() => setAsRows(buf, !asRows.peek().has(buf))}>
             {t("term.screen")}
           </Chip>
+          {canKeepOn() && (
+            <Chip on={prefs.value.wakeLock} onClick={() => setPref("wakeLock", !prefs.peek().wakeLock)}>
+              {t("term.keep_on")}
+            </Chip>
+          )}
         </div>
         <FontSize />
         <div class="edit-actions">
@@ -301,6 +308,7 @@ export function TermView() {
   const want = r.tab === "term" && /^\d+$/.test(r.rest) ? Number(r.rest) : NaN;
   const buf = Number.isInteger(want) ? want : (terms.find((x) => x.active) ?? terms[0])?.buf;
   const item = terms.find((x) => x.buf === buf);
+  useWakeLock(prefs.value.wakeLock && item?.busy === true && !item.exited);
   useEffect(() => {
     if (buf === undefined) return;
     const topic = "term:" + buf;
