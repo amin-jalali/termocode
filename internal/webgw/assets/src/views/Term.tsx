@@ -35,6 +35,8 @@ import { View } from "./View";
 
 /** NEAR_BOTTOM_PX: closer than this to the end, new output keeps the view at the end. */
 const NEAR_BOTTOM_PX = 48;
+/** READ_ROWS is how many rows "Read the last rows" reads. */
+const READ_ROWS = 20;
 /** RING_MS is how long the bell dot shows after a shell rang. */
 const RING_MS = 3000;
 
@@ -180,6 +182,7 @@ function Rows({ buf, item, body }: { buf: number; item: TermItem | undefined; bo
   const stick = useRef(true);
   const [pinned, setPinned] = useState(true);
   const [menu, setMenu] = useState<string | null>(null);
+  const [said, setSaid] = useState("");
   useLongPress(body, (target) => {
     const row = target.closest(".term-rows .trow");
     if (row) setMenu(row.querySelector(".trow-text")?.textContent ?? "");
@@ -253,10 +256,17 @@ function Rows({ buf, item, body }: { buf: number; item: TermItem | undefined; bo
           {t("term.older")}
         </button>
       )}
+      {/* A screen reader hears the rows only when asked (web UX 8.1). */}
+      <button type="button" class="sr-focus term-read" onClick={() => setSaid(lines.slice(-READ_ROWS).map((l) => l.text).join("\n"))}>
+        {t("term.read_last")}
+      </button>
+      <div class="sr-only term-said" role="status">
+        {said}
+      </div>
       {screen ? (
         <Screen buf={buf} rows={snap.rows} cols={snap.cols} height={snap.height} />
       ) : (
-        <div class={`term-rows${wrapRows.value ? "" : " is-nowrap"}`} role="log" aria-label={item?.title || t("tab.term")}>
+        <div class={`term-rows${wrapRows.value ? "" : " is-nowrap"}`} role="log" aria-live="off" aria-label={item?.title || t("tab.term")}>
           {lines.map((l) => (
             <TermRow key={l.row} text={l.text} />
           ))}
