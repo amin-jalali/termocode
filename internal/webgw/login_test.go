@@ -156,7 +156,7 @@ func TestLoginNeedsTOTPWhenOn(t *testing.T) {
 	r, l, k := passkeyPairRig(t)
 	pairWithKey(t, r, k, webdevices.RoleControl)
 	var asked []string
-	l.cfg.RequireTOTP = true
+	l.SetRequireTOTP(true)
 	l.cfg.CheckTOTP = func(_ context.Context, device, code string) error {
 		asked = append(asked, device+" "+code)
 		if code == "123456" {

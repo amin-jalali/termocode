@@ -113,3 +113,38 @@ func TestPairNotNowInTheBrowser(t *testing.T) {
 		t.Fatalf("stored %+v", ds)
 	}
 }
+
+// Spec (WEB-48): with the sign-in code on, the passkey alone does not
+// open the workspace: the page asks for the code, a wrong one is said
+// plainly and nothing connects, the right one opens it.
+func TestSignInCodeInTheBrowser(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Phone)
+	plain, digest, _ := webgw.NewLinkSecret()
+	s.Pairing.SetSecret(digest, webgw.PairTTL, false)
+	p.Do(chromedp.Navigate(s.localhostBase() + "/#p=" + plain))
+	p.virtualAuthenticator()
+	p.Tap(".pair .connect-foot button")
+	<-s.Asks
+	s.PairAnswers <- webdevices.RoleViewer
+	p.WaitJS(`[...document.querySelectorAll(".pair .connect-foot button")].some((b) => b.textContent.trim() === "Save passkey")`)
+	p.Tap(".pair .connect-foot button")
+	c := s.Hub.Accept(t)
+	c.HandshakeMeta(t, Meta("c-1"))
+
+	s.Login.SetRequireTOTP(true)
+	Eval[bool](p, `(sessionStorage.clear(), true)`)
+	p.Do(chromedp.Reload())
+	p.Tap(".connect-foot button")
+	p.WaitJS(`document.querySelector(".signin-code-input")`)
+	p.Tap(".signin-code-input")
+	p.Do(chromedp.SendKeys(".signin-code-input", "111111"))
+	p.Tap(".signin-code button")
+	p.WaitJS(`document.querySelector(".connect-line.is-error")`)
+	s.Hub.NoConn(t, 300*time.Millisecond)
+	p.Do(chromedp.SendKeys(".signin-code-input", "246810"))
+	p.Tap(".signin-code button")
+	c2 := s.Hub.Accept(t)
+	c2.HandshakeMeta(t, Meta("c-2"))
+	p.WaitJS(`document.documentElement.dataset.link === "online"`)
+}

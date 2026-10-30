@@ -105,7 +105,7 @@ export interface Reply {
 /** postJSON posts body to one of the gateway's own endpoints (pairing and
  * passkey sign-in), the way /auth is posted: no credentials, no cache, no
  * redirect, no referrer. A network failure is status 0. */
-export async function postJSON(path: "/pair/start" | "/pair/wait" | "/pair/finish" | "/login/start" | "/login/finish", body: unknown): Promise<Reply> {
+export async function postJSON(path: "/pair/start" | "/pair/wait" | "/pair/finish" | "/login/start" | "/login/finish" | "/login/totp", body: unknown): Promise<Reply> {
   let res: Response;
   try {
     res = await fetch(path, {
