@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/spawn"
@@ -29,6 +30,14 @@ func DiffFile(dir, path string, staged, untracked bool, max int) (out string, cu
 	default:
 		args = append(args, "--", path)
 	}
+	return runCapped(dir, max, untracked, args...)
+}
+
+// runCapped runs git with args in dir and reads at most max bytes of its
+// output: a longer output is cut at the last line end before max, cut is
+// true and git is stopped. exit1OK accepts exit status 1 (diff --no-index
+// says "they differ" so).
+func runCapped(dir string, max int, exit1OK bool, args ...string) (out string, cut bool, err error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	cmd := spawn.CommandContext(ctx, "git", args...)
@@ -62,13 +71,41 @@ func DiffFile(dir, path string, staged, untracked bool, max int) (out string, cu
 		return "", false, rerr
 	}
 	if werr != nil {
-		// --no-index exits 1 when the files differ, which they do.
 		var ee *exec.ExitError
-		if !(untracked && errors.As(werr, &ee) && ee.ExitCode() == 1) {
+		if !(exit1OK && errors.As(werr, &ee) && ee.ExitCode() == 1) {
 			return "", false, cmdError(werr, bytes.TrimSpace(stderr.Bytes()))
 		}
 	}
 	return string(buf), false, nil
+}
+
+// CommitHead is the head of a commit for a reader.
+type CommitHead struct {
+	Hash    string // short
+	Author  string
+	When    int64 // committer date, Unix seconds
+	Subject string
+	Body    string
+}
+
+// ShowCapped returns a commit's head and its diff (as DiffFile: no
+// external diff programs or filters, at most max bytes of output).
+func ShowCapped(dir, rev string, max int) (head CommitHead, diff string, cut bool, err error) {
+	const sep = "\x1f"
+	out, cut, err := runCapped(dir, max, false, "-c", "core.quotepath=off", "show", "--no-color", "--no-ext-diff", "--no-textconv",
+		"--format=%h"+sep+"%an"+sep+"%ct"+sep+"%s"+sep+"%b\x1e", rev, "--")
+	if err != nil {
+		return CommitHead{}, "", false, err
+	}
+	meta, rest, ok := strings.Cut(out, "\x1e")
+	if !ok {
+		return CommitHead{}, "", cut, errors.New("the commit is too big to show")
+	}
+	if f := strings.SplitN(meta, sep, 5); len(f) == 5 {
+		head = CommitHead{Hash: f[0], Author: f[1], Subject: f[3], Body: strings.TrimSpace(f[4])}
+		head.When, _ = strconv.ParseInt(f[2], 10, 64)
+	}
+	return head, strings.TrimLeft(rest, "\n"), cut, nil
 }
 
 // ErrHunkGone: the hunk header asked for is not in the file's diff now

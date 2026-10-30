@@ -128,3 +128,33 @@ func TestHunkByHeader(t *testing.T) {
 		t.Fatalf("index should be clean after unstage:\n%s", s)
 	}
 }
+
+// ShowCapped gives a commit's head (hash, author, time, subject, body)
+// and its diff, capped like DiffFile.
+func TestShowCapped(t *testing.T) {
+	r := newGitTestRepo(t)
+	r.write(t, "a.txt", "one\n")
+	r.git(t, "add", "a.txt")
+	r.git(t, "commit", "-q", "-m", "first line\n\nthe body")
+	full := strings.TrimSpace(r.git(t, "rev-parse", "HEAD"))
+	head, diff, cut, err := ShowCapped(r.dir, full[:8], 1<<20)
+	if err != nil || cut {
+		t.Fatalf("err %v cut %v", err, cut)
+	}
+	if head.Subject != "first line" || head.Body != "the body" || head.Author != "Test" || head.When == 0 || !strings.HasPrefix(full, head.Hash) {
+		t.Errorf("head %+v", head)
+	}
+	if !strings.Contains(diff, "diff --git a/a.txt b/a.txt") || !strings.Contains(diff, "+one") || strings.Contains(diff, "the body") {
+		t.Errorf("diff %q", diff)
+	}
+	r.write(t, "b.txt", strings.Repeat("row\n", 5000))
+	r.git(t, "add", "b.txt")
+	r.git(t, "commit", "-q", "-m", "big")
+	_, diff, cut, err = ShowCapped(r.dir, "HEAD", 2048)
+	if err != nil || !cut || len(diff) > 2048 {
+		t.Fatalf("capped show: %d bytes cut %v err %v", len(diff), cut, err)
+	}
+	if _, _, _, err := ShowCapped(r.dir, "deadbeef", 1<<20); err == nil {
+		t.Error("an unknown commit is an error")
+	}
+}
