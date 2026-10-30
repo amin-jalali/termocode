@@ -15,7 +15,7 @@ registerPanel({ id: "test-results", label: "test.results", order: TERMINAL_ORDER
 registerSide("run", () => (
   <div class="side-stack run-stack">
     <DebugView />
-    <DeskRun />
+    <DeskRun head={false} />
   </div>
 ));
 registerPanel({ id: "debug-console", label: "dbg.console", order: 20, view: () => <DebugConsole /> });

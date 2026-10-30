@@ -11,7 +11,15 @@ import { t } from "../strings";
 import { Cod } from "./icons";
 
 /** PaneView is a side bar view: its title (uppercase) and actions. */
-export function PaneView({ id, title, actions, children }: { id: string; title: string; actions?: ComponentChildren; children: ComponentChildren }) {
+export function PaneView({ id, title, actions, head = true, children }: { id: string; title: string; actions?: ComponentChildren; head?: boolean; children: ComponentChildren }) {
+  // head false: the view sits under another one's title (Run and Debug's
+  // tasks and runs under its debugger), named for screen readers only.
+  if (!head)
+    return (
+      <section class="pv view pv-headless" data-view={id} aria-label={title}>
+        <div class="pv-body">{children}</div>
+      </section>
+    );
   return (
     <section class="pv view" data-view={id} aria-labelledby={`pv-${id}`}>
       <header class="pv-title">
