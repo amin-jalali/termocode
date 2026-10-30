@@ -612,6 +612,9 @@ func WorkspaceTools(w Workspace) []Tool {
 				if t <= 0 {
 					t = 2 * time.Minute
 				}
+				if StartsWebPanel(ArgString(a, "command")) {
+					return "", ErrNoWebPanel
+				}
 				return runCmd(ctx, w.Root, t, "sh", "-c", ArgString(a, "command"))
 			},
 		},
