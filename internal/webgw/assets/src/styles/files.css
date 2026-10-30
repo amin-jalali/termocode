@@ -86,3 +86,11 @@
 .term-screen-box { overflow-x: auto; }
 .term-toggles { display: flex; gap: var(--s2); flex-wrap: wrap; }
 .term-info-btn { font-size: 1.125rem; }
+
+/* The rows' own text size (WEB-36, lib/rowfont.ts): pinch or the ⓘ
+   buttons. Two fingers there are ours, not the page's zoom. */
+.term-rows .trow, .term-screen, .lines .crow { font-size: var(--row-zoom, var(--fs-row)); line-height: var(--row-zoom-lh, var(--lh-row)); }
+.term-body, .lines { touch-action: pan-x pan-y; }
+.font-row { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+.font-now { min-width: 4.5ch; text-align: center; font-family: var(--font-mono); font-size: var(--fs-hint); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.key:disabled { opacity: 0.45; cursor: default; }

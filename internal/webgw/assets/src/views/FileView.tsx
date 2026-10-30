@@ -5,6 +5,7 @@
 // says so for 2 s. Files the web never shows say what they are instead.
 import { Fragment, h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
+import { usePinch } from "../lib/rowfont";
 import type { BufSnap } from "../../../../webproto/proto";
 import { draft, own, save, saveErr, selection, startEdit, tapRow, undo } from "../lib/edit";
 import { closePath, file, openPath, type FileState } from "../lib/file";
@@ -199,6 +200,7 @@ function Body({ st, scroller, wrap, canEdit }: { st: FileState; scroller: { curr
 
 export function FileView({ path }: { path: string }) {
   const body = useRef<HTMLDivElement | null>(null);
+  usePinch(body);
   const [wrap, setWrap] = useState(wrapOn.value);
   useEffect(() => {
     openPath(path);

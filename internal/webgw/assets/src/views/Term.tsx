@@ -9,6 +9,7 @@ import { signal } from "@preact/signals";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { TermItem, TermNewRes } from "../../../../webproto/proto";
 import { rang } from "../lib/attention";
+import { usePinch } from "../lib/rowfont";
 import { go, route } from "../lib/router";
 import { dropOlder, loadingOlder, loadOlder, older, stitch } from "../lib/term";
 import { toast } from "../lib/toasts";
@@ -20,6 +21,7 @@ import { t } from "../strings";
 import { Button } from "../ui/Button";
 import { errText } from "../ui/CardSheet";
 import { Chip } from "../ui/Chip";
+import { FontSize } from "../ui/FontSize";
 import { Sheet } from "../ui/Sheet";
 import { TermRow } from "../ui/rows";
 import { SkeletonRows } from "../ui/Skeleton";
@@ -94,6 +96,7 @@ function About({ buf, cols, screen, onClose }: { buf: number; cols: number; scre
             {t("term.screen")}
           </Chip>
         </div>
+        <FontSize />
         <div class="edit-actions">
           <Button kind="neutral" onClick={onClose}>
             {t("close")}
@@ -257,6 +260,7 @@ function NoTerms({ controller }: { controller: boolean }) {
 
 export function TermView() {
   const body = useRef<HTMLDivElement | null>(null);
+  usePinch(body);
   useEffect(() => link.subscribe("terms"), []);
   const terms = readTerms(store.topic("terms").value?.data);
   const r = route.value;
