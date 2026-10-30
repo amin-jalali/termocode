@@ -132,6 +132,17 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | `services_on_quit` | enum | `ask` | On quit, the Docker Compose services termocode started in this session (never the ones that were already running): ask shows a card (Keep running and quit / Stop and quit / Cancel), keep leaves them running, stop runs docker compose stop for them first. Local services always stop with the editor. |
 | `services_max_log_kb` | int | `16` | Cut the log text the AI's services_logs tool returns to this many KB (the newest lines stay). |
 
+## Web (file only)
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `web_panel` | enum | `off` | The web panel (experimental): your files, chats and terminals in a web browser, on this computer or over SSH. on: termocode listens on a private socket in the session folder, and Web: Start Panel (or termocode web) can open the panel after you say yes on a card. Anyone who controls the browser tab can run any command as you. off: nothing listens and the commands only explain how to turn it on. Applied when you save config.json. |
+| `web_port` | int | `0` | The port the web panel listens on, on 127.0.0.1 only. 0: a free port each time. Else 1024..65535. |
+| `web_idle_minutes` | int | `15` | The web panel stops after this many minutes with no use from any browser (1..120). |
+| `web_max_hours` | int | `12` | The web panel stops this many hours after it started, in use or not (1..24). |
+| `web_open_browser` | bool | `true` | Open the one-time link in the browser of this computer when the panel starts. false: only Copy link on the start card or Web: Copy Link. |
+| `web_max_viewers` | int | `4` | How many browsers may be connected at once (1..8). One more is turned away. |
+
 ## Appearance (file only)
 
 | Key | Type | Default | Description |
