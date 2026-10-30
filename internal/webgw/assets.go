@@ -21,6 +21,29 @@ var assetTypes = map[string]string{
 	".svg":  "image/svg+xml",
 }
 
+// ManifestPath is where an installable site serves its app manifest.
+const ManifestPath = "/manifest.webmanifest"
+
+// Manifest serves the app manifest (WEB-35) at ManifestPath and nothing
+// else. The gateway mounts it only on an installable site; there is no
+// service worker, so nothing of the page is kept in the browser.
+func Manifest() http.Handler {
+	b, err := fs.ReadFile(assets.FS(), "manifest.webmanifest")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err != nil || r.URL.Path != ManifestPath {
+			http.NotFound(w, r)
+			return
+		}
+		if r.Method != http.MethodGet {
+			w.Header().Set("Allow", http.MethodGet)
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		w.Header().Set("Content-Type", "application/manifest+json")
+		_, _ = w.Write(b)
+	})
+}
+
 type asset struct {
 	body  []byte
 	ctype string
@@ -58,8 +81,8 @@ func Assets() http.Handler {
 			routes["/"] = asset{b, ctype}
 		case e.Path == "kit.html":
 			routes["/dev/kit"] = asset{b, ctype}
-		case strings.HasSuffix(e.Path, ".html"):
-			// No other pages.
+		case strings.HasSuffix(e.Path, ".html"), e.Path == "manifest.webmanifest":
+			// No other pages; the manifest is Manifest()'s.
 		default:
 			routes["/assets/"+e.Path] = asset{b, ctype}
 		}

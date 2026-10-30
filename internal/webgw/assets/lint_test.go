@@ -120,7 +120,7 @@ func TestSourcesFollowTheBrowserRules(t *testing.T) {
 			return err
 		}
 		switch filepath.Ext(path) {
-		case ".ts", ".tsx", ".css", ".html":
+		case ".ts", ".tsx", ".css", ".html", ".webmanifest":
 		case ".svg":
 			b, err := os.ReadFile(path)
 			if err != nil {

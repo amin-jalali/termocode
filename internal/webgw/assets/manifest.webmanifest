@@ -1,0 +1,15 @@
+{
+  "id": "/",
+  "name": "termocode",
+  "short_name": "termocode",
+  "description": "Your laptop's termocode, on this device.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1c1c1c",
+  "theme_color": "#0070b8",
+  "icons": [
+    { "src": "/assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/assets/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
