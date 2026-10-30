@@ -29,6 +29,10 @@ const RoleControl Role = "control"
 // token.
 var ErrTokenUnknown = errors.New("unknown session token")
 
+// ErrTokenExpired: the session ran past its idle or max time; it is
+// forgotten, so the next check is ErrTokenUnknown.
+var ErrTokenExpired = errors.New("the session token expired")
+
 // Sess is one browser session. It holds no secret: the token itself is
 // known only to the browser (sessionStorage) and as a digest here.
 type Sess struct {
@@ -75,7 +79,8 @@ func (t *Tokens) Issue(device string, role Role, now time.Time) (string, Sess, e
 	return tok, *s, nil
 }
 
-// Check returns the session of tok and marks it used at now.
+// Check returns the session of tok and marks it used at now. An expired
+// session is dropped and reported once as ErrTokenExpired.
 func (t *Tokens) Check(tok string, now time.Time) (Sess, error) {
 	h := sha256.Sum256([]byte(tok))
 	t.mu.Lock()
@@ -84,6 +89,15 @@ func (t *Tokens) Check(tok string, now time.Time) (Sess, error) {
 	if !ok {
 		return Sess{}, ErrTokenUnknown
 	}
+	if t.expired(s, now) {
+		delete(t.byHash, h)
+		return Sess{}, ErrTokenExpired
+	}
 	s.LastSeen = now
 	return *s, nil
+}
+
+// expired: the session was idle for t.idle or longer.
+func (t *Tokens) expired(s *Sess, now time.Time) bool {
+	return !now.Before(s.LastSeen.Add(t.idle))
 }
