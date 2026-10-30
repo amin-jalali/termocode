@@ -25,7 +25,7 @@ func openRemote(t *testing.T, vp Viewport) (*Page, *HubConn) {
 }
 
 func TestGitPushWaitsForLaptop(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range RowViews {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openRemote(t, vp)
 			if n := Eval[int](p, `document.querySelectorAll('.branch-row[data-branch="main"]').length`); n != 0 {

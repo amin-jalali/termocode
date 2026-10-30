@@ -670,6 +670,21 @@ export const S = {
   "sv.count_file": "{n} results in 1 file",
   "sv.count_one": "1 result in 1 file",
   "sv.results": "Search results",
+  "scm.staged": "Staged Changes",
+  "scm.merge": "Merge Changes",
+  "scm.stage": "Stage Changes",
+  "scm.unstage": "Unstage Changes",
+  "scm.stage_all": "Stage All Changes",
+  "scm.unstage_all": "Unstage All Changes",
+  "scm.discard": "Discard Changes",
+  "scm.discard_all": "Discard All Changes",
+  "scm.placeholder": "Message ({keys} to commit on '{branch}')",
+  "scm.more_actions": "More Actions…",
+  "scm.checkout": "Checkout to {branch}",
+  "scm.graph": "Commits",
+  "scm.nothing_staged": "Stage the changes to commit first.",
+  "sb.branch": "{branch} (Checkout Branch, Pull, Push…)",
+  "sb.sync": "Synchronize Changes: {behind} to pull, {ahead} to push",
 } as const;
 
 export type StringKey = keyof typeof S;

@@ -214,3 +214,11 @@
 .sr-line { font-size: var(--fs-ui); }
 .sr-mark { background: var(--wb-match-bg); color: inherit; border-radius: 0; outline: 1px solid var(--wb-match-border); outline-offset: -1px; }
 .tr .count { margin-inline-end: 2px; }
+
+/* ---- Source control ---- */
+.scm-input { flex: none; display: flex; flex-direction: column; gap: 6px; padding: 0 12px 8px 20px; }
+.scm-input .pv-input textarea { padding: 4px 6px; }
+.scm-commit .pv-btn .cod { font-size: 16px; }
+.tr-label.is-del { text-decoration: line-through; }
+.layout-desktop .statusbar button.strip-item { border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.layout-desktop .statusbar .sb-sync { gap: 3px; }
