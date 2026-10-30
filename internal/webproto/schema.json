@@ -2048,6 +2048,50 @@
       "laptop_card": true,
       "audit": "yes",
       "phase": "v2"
+    },
+    {
+      "op": "pr.list",
+      "args": "EmptyArgs",
+      "result": "PRList",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "pr.view",
+      "args": "PRNumberArgs",
+      "result": "PRView",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "ci.status",
+      "args": "EmptyArgs",
+      "result": "CIStatus",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
     }
   ],
   "defs": {
@@ -2339,6 +2383,81 @@
         "t"
       ],
       "additionalProperties": false
+    },
+    "CIRun": {
+      "type": "object",
+      "properties": {
+        "conclusion": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "pending",
+            "pass",
+            "fail",
+            "none"
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "workflow",
+        "title",
+        "status",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "CIStatus": {
+      "type": "object",
+      "properties": {
+        "branch": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "head": {
+          "type": "string"
+        },
+        "loading": {
+          "type": "boolean"
+        },
+        "pr": {
+          "$ref": "#/defs/PRItem"
+        },
+        "runs": {
+          "items": {
+            "$ref": "#/defs/CIRun"
+          },
+          "type": "array"
+        },
+        "state": {
+          "enum": [
+            "none",
+            "pending",
+            "pass",
+            "fail"
+          ]
+        }
+      },
+      "required": [
+        "branch",
+        "state",
+        "runs"
+      ],
+      "additionalProperties": true
     },
     "Card": {
       "type": "object",
@@ -5831,6 +5950,197 @@
         "device"
       ],
       "additionalProperties": false
+    },
+    "PRCheck": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "none",
+            "pending",
+            "pass",
+            "fail"
+          ]
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "PRFile": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "integer"
+        },
+        "del": {
+          "type": "integer"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "add",
+        "del"
+      ],
+      "additionalProperties": true
+    },
+    "PRItem": {
+      "type": "object",
+      "properties": {
+        "author": {
+          "type": "string"
+        },
+        "base": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "checks": {
+          "enum": [
+            "none",
+            "pending",
+            "pass",
+            "fail"
+          ]
+        },
+        "draft": {
+          "type": "boolean"
+        },
+        "number": {
+          "type": "integer"
+        },
+        "review": {
+          "enum": [
+            "APPROVED",
+            "CHANGES_REQUESTED",
+            "REVIEW_REQUIRED"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "number",
+        "title",
+        "author",
+        "branch",
+        "base",
+        "url",
+        "checks"
+      ],
+      "additionalProperties": true
+    },
+    "PRList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/PRItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "PRNumberArgs": {
+      "type": "object",
+      "properties": {
+        "number": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "number"
+      ],
+      "additionalProperties": false
+    },
+    "PRReview": {
+      "type": "object",
+      "properties": {
+        "author": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "when": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "author"
+      ],
+      "additionalProperties": true
+    },
+    "PRView": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/defs/PRCheck"
+          },
+          "type": "array"
+        },
+        "files": {
+          "items": {
+            "$ref": "#/defs/PRFile"
+          },
+          "type": "array"
+        },
+        "item": {
+          "$ref": "#/defs/PRItem"
+        },
+        "mergeable": {
+          "type": "string"
+        },
+        "reviews": {
+          "items": {
+            "$ref": "#/defs/PRReview"
+          },
+          "type": "array"
+        },
+        "state": {
+          "enum": [
+            "OPEN",
+            "CLOSED",
+            "MERGED"
+          ]
+        }
+      },
+      "required": [
+        "item",
+        "state",
+        "body",
+        "files",
+        "reviews",
+        "checks"
+      ],
+      "additionalProperties": true
     },
     "PairAskArgs": {
       "type": "object",
