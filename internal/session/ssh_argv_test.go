@@ -6,22 +6,26 @@ import (
 )
 
 func TestSSHArgv(t *testing.T) {
-	got := sshArgv([]string{"-p", "2222", "me@box"}, "termocode", "/srv/my app", "")
+	got := sshArgv([]string{"-p", "2222", "me@box"}, "termocode", "/srv/my app", "", 0)
 	want := []string{"-t", "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=3", "-o", "ConnectTimeout=10",
 		"-p", "2222", "me@box", "--", "termocode --link '/srv/my app'"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("first connect:\n got %q\nwant %q", got, want)
 	}
 	// The user's own keep-alive and timeout win; a reconnect says so.
-	got = sshArgv([]string{"-o", "ServerAliveInterval=30", "-oConnectTimeout=3", "box"}, "~/bin/termocode", "~/it's", "12s,dropped")
+	got = sshArgv([]string{"-o", "ServerAliveInterval=30", "-oConnectTimeout=3", "box"}, "~/bin/termocode", "~/it's", "12s,dropped", 0)
 	want = []string{"-t", "-o", "ServerAliveInterval=30", "-oConnectTimeout=3", "box", "--",
 		`~/bin/termocode --link --reconnected=12s,dropped ~/'it'\''s'`}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("reconnect:\n got %q\nwant %q", got, want)
 	}
 	// No folder: the login folder on the far side.
-	if got := sshArgv([]string{"box"}, "termocode", "", ""); got[len(got)-1] != "termocode --link" {
+	if got := sshArgv([]string{"box"}, "termocode", "", "", 0); got[len(got)-1] != "termocode --link" {
 		t.Errorf("no folder: %q", got[len(got)-1])
+	}
+	// With --web the far termocode is told the local port of the forward.
+	if got := sshArgv([]string{"box"}, "termocode", "/w", "3s", 41237); got[len(got)-1] != "termocode --link --web=41237 --reconnected=3s '/w'" {
+		t.Errorf("web: %q", got[len(got)-1])
 	}
 }
 
