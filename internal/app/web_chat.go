@@ -250,21 +250,33 @@ func webChatRedact(s string) string { return ai.RedactSecrets(s) }
 
 // webChatMsg trims a stored message for the page and says what was sent.
 func webChatMsg(i int, sm *ai.StoredMessage, streaming bool) (webproto.ChatMsg, webChatSent) {
+	if streaming {
+		return webChatMsgOf(i, sm, true, webproto.MaxChatMsgText)
+	}
+	return webChatMsgMax(i, sm, webproto.MaxChatMsgText)
+}
+
+// webChatMsgMax is webChatMsg for a finished message cut at max bytes.
+func webChatMsgMax(i int, sm *ai.StoredMessage, max int) (webproto.ChatMsg, webChatSent) {
+	return webChatMsgOf(i, sm, false, max)
+}
+
+func webChatMsgOf(i int, sm *ai.StoredMessage, streaming bool, max int) (webproto.ChatMsg, webChatSent) {
 	cm := webproto.ChatMsg{I: i, Role: sm.Role, Model: sm.Model, Rules: sm.Rules}
 	sent := webChatSent{role: sm.Role, text: sm.Text, streaming: streaming, key: webChatKey(sm)}
 	switch {
 	case cm.Role != ai.StoredUser && cm.Role != ai.StoredAssistant && cm.Role != ai.StoredTool && cm.Role != ai.StoredError:
 		cm.Role = ai.StoredTool // an unknown role shows as a plain line
-		cm.Text, cm.Truncated = webChatCut(webChatRedact(sm.Text), webproto.MaxChatMsgText)
+		cm.Text, cm.Truncated = webChatCut(webChatRedact(sm.Text), max)
 	case streaming:
 		end, trunc := webChatVisible(sm.Text)
 		cm.Text, cm.Streaming, cm.Truncated = webChatRedact(sm.Text[:end]), true, trunc
 		sent.sent, sent.truncated = end, trunc
 	case cm.Role == ai.StoredTool || cm.Role == ai.StoredError:
-		cm.Text, cm.Truncated = webChatCut(webChatRedact(sm.Text), webproto.MaxChatMsgText)
+		cm.Text, cm.Truncated = webChatCut(webChatRedact(sm.Text), max)
 	default:
 		var text string
-		text, cm.Truncated = webChatCut(webChatRedact(sm.Text), webproto.MaxChatMsgText)
+		text, cm.Truncated = webChatCut(webChatRedact(sm.Text), max)
 		if strings.TrimSpace(text) != "" {
 			cm.MD = webMarkdown(text)
 		}

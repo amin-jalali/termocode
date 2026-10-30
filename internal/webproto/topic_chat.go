@@ -19,7 +19,6 @@ const (
 	MaxChats       = 200      // chats in the chats topic, newest first
 	MaxChatMsgText = 64 << 10 // bytes of a message's text in a snap or delta; more is cut
 	MaxChatMsgFull = 512 << 10
-	MaxChatSend    = 32 << 10 // bytes of text chat.send takes
 )
 
 // ChatsSnap is the chats topic: the stored chats, newest first.
