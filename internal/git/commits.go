@@ -48,8 +48,12 @@ func Commits(dir string, skip, limit int) ([]GraphCommit, bool, error) {
 		limit = 200
 	}
 	const format = "--format=%h%x1f%H%x1f%p%x1f%s%x1f%an%x1f%ct%x1f%D%x1e"
+	// The unpushed set does not depend on the log: read both at once.
+	upc := make(chan map[string]bool, 1)
+	go func() { upc <- unpushed(dir) }()
 	out, err := runOut(dir, "git", "log", "--decorate=full", format,
 		fmt.Sprintf("-n%d", limit+1), fmt.Sprintf("--skip=%d", skip), "HEAD", "--")
+	up := <-upc
 	if err != nil {
 		if !hasCommits(dir) {
 			return nil, false, nil
@@ -61,7 +65,7 @@ func Commits(dir string, skip, limit int) ([]GraphCommit, bool, error) {
 	if more {
 		cs = cs[:limit]
 	}
-	if up := unpushed(dir); len(up) > 0 {
+	if len(up) > 0 {
 		for i := range cs {
 			cs[i].Unpushed = up[cs[i].FullHash]
 		}

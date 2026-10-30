@@ -98,8 +98,19 @@ func parseStatusZ(out string) []FileStatus {
 
 // GetBranch returns current branch name and ahead/behind counts vs upstream.
 func GetBranch(dir string) (Branch, error) {
+	// Ahead/behind does not depend on the name: read both at once.
+	type counts struct {
+		out string
+		err error
+	}
+	cc := make(chan counts, 1)
+	go func() {
+		out, err := runOut(dir, "git", "rev-list", "--left-right", "--count", "@{upstream}...HEAD")
+		cc <- counts{out, err}
+	}()
 	name, err := runOut(dir, "git", "branch", "--show-current")
 	if err != nil {
+		<-cc
 		return Branch{}, err
 	}
 	name = strings.TrimSpace(name)
@@ -113,9 +124,8 @@ func GetBranch(dir string) (Branch, error) {
 	}
 
 	var ahead, behind int
-	out, err := runOut(dir, "git", "rev-list", "--left-right", "--count", "@{upstream}...HEAD")
-	if err == nil {
-		_, _ = fmt.Sscanf(strings.TrimSpace(out), "%d\t%d", &behind, &ahead)
+	if c := <-cc; c.err == nil {
+		_, _ = fmt.Sscanf(strings.TrimSpace(c.out), "%d\t%d", &behind, &ahead)
 	}
 
 	return Branch{Name: name, Ahead: ahead, Behind: behind}, nil
