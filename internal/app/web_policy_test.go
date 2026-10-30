@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -105,5 +107,42 @@ func TestPolicyTableEnforcedInHub(t *testing.T) {
 			t.Errorf("%s after %s: %s", p.Op, p.Rate.Per, got)
 		}
 		*now = now.Add(time.Duration(i+1) * time.Hour) // a fresh start for the next op
+	}
+}
+
+// Spec (3.2, 3.9): an op whose row says LaptopCard can only run through
+// a laptop card: its handler is a card builder (webAskOps), never a plain
+// op handler, and the hub routes it through the card even if a plain
+// handler were registered by mistake. Every such browser op has one.
+func TestLaptopCardOpsOnlyThroughTheCard(t *testing.T) {
+	for _, p := range webproto.Ops() {
+		if !p.LaptopCard || p.Role == webproto.RoleCtl {
+			continue
+		}
+		if webAskOps[p.Op] == nil {
+			t.Errorf("%s needs a laptop card but has no card builder", p.Op)
+		}
+		if webOps[p.Op] != nil {
+			t.Errorf("%s needs a laptop card but has a plain handler", p.Op)
+		}
+	}
+
+	m := aiTestModel(t)
+	h := webTestHub(t, &m)
+	ran := false
+	h.ops = map[string]webOpFunc{webproto.OpTermClose: func(m *Model, call *webCall) tea.Cmd {
+		ran = true
+		call.reply(nil)
+		return nil
+	}}
+	c := webTestSub(t, &m)
+	call := &webCall{ctx: c.ctx, conn: c, id: 1, op: webproto.OpTermClose, args: &webproto.BufArgs{Buf: 7}}
+	c.inflight.Add(1)
+	m.onWebCall(webCallMsg{hub: h, call: call})
+	if ran {
+		t.Fatal("a plain handler ran an op that needs a laptop card")
+	}
+	if fs := webTestNow(t, c); len(fs) != 1 || fs[0]["t"] != "err" {
+		t.Fatalf("answer %v", fs)
 	}
 }

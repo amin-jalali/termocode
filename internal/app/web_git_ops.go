@@ -28,7 +28,7 @@ func init() {
 	webOps[webproto.OpGitStageHunk] = (*Model).webGitStageHunk
 	webOps[webproto.OpGitUnstageHunk] = (*Model).webGitUnstageHunk
 	webOps[webproto.OpGitCommit] = (*Model).webGitCommit
-	webOps[webproto.OpGitDiscard] = (*Model).webGitDiscard
+	webAskOps[webproto.OpGitDiscard] = (*Model).webGitDiscard
 }
 
 // webGitRoot is the workspace folder when it is a git repository.
@@ -369,7 +369,7 @@ func (m *Model) webGitCommit(call *webCall) tea.Cmd {
 
 // webGitDiscard asks the laptop to discard the work-tree changes of paths
 // (a new file is deleted). Nothing happens until the laptop confirms.
-func (m *Model) webGitDiscard(call *webCall) tea.Cmd {
+func (m *Model) webGitDiscard(call *webCall) *webAsk {
 	paths := call.args.(*webproto.PathsArgs).Paths
 	root, ok := m.webGitRoot(call)
 	if !ok || !m.webGitPick(call, root, paths, false) {
@@ -385,7 +385,7 @@ func (m *Model) webGitDiscard(call *webCall) tea.Cmd {
 	if len(paths) > 1 {
 		what = strconv.Itoa(len(paths)) + " files: " + webAuditPaths(paths)
 	}
-	m.webAskOpen(call, &webAsk{
+	return &webAsk{
 		summary: webAuditPaths(paths),
 		title:   "Discard changes?",
 		body:    "Discard changes in " + what + "? This cannot be undone.",
@@ -416,8 +416,7 @@ func (m *Model) webGitDiscard(call *webCall) tea.Cmd {
 				})
 			}
 		},
-	})
-	return nil
+	}
 }
 
 // webGitInside: path's folder, with every link followed, is inside root

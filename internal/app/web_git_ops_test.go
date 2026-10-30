@@ -75,11 +75,10 @@ func webTestCallBg(t *testing.T, m *Model, c *webConn, op, args string) map[stri
 	c.lastID++
 	call := &webCall{ctx: c.ctx, conn: c, id: c.lastID, op: op, args: a}
 	c.inflight.Add(1)
-	fn := m.web.ops[op]
-	if fn == nil {
+	cmd, found := m.webRunCall(m.web, call)
+	if !found {
 		t.Fatalf("no handler for %s", op)
 	}
-	cmd := m.webRunOp(fn, call)
 	if cmd != nil {
 		if am, ok := cmd().(applyMsg); ok {
 			webTestGitRefresh(t, m, am(m))

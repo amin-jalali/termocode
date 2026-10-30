@@ -30,7 +30,7 @@ func init() {
 	webOps[webproto.OpTermInterrupt] = webOpTermInterrupt
 	webOps[webproto.OpTermNew] = webOpTermNew
 	webOps[webproto.OpTermShowOnLaptop] = webOpTermShow
-	webOps[webproto.OpTermClose] = webOpTermClose
+	webAskOps[webproto.OpTermClose] = webOpTermClose
 	webTermReset = func(m *Model, b *webBuf) {
 		m.webPublish(b.topic(), webproto.TermResetDelta{Kind: "reset", First: b.first, Rows: webNonNil(b.rows), More: b.first > 0, Tick: b.tick})
 	}
@@ -290,7 +290,7 @@ func webOpTermShow(m *Model, call *webCall) tea.Cmd {
 // webOpTermClose asks the laptop to close a shell (web design 3.2): a
 // program running in it stops, so nothing happens until the laptop
 // confirms its Risky card.
-func webOpTermClose(m *Model, call *webCall) tea.Cmd {
+func webOpTermClose(m *Model, call *webCall) *webAsk {
 	buf := call.args.(*webproto.BufArgs).Buf
 	n, ok := m.webTermNumber(buf)
 	if !ok || m.nvim == nil {
@@ -298,7 +298,7 @@ func webOpTermClose(m *Model, call *webCall) tea.Cmd {
 		return nil
 	}
 	what := "terminal " + strconv.Itoa(n)
-	m.webAskOpen(call, &webAsk{
+	return &webAsk{
 		summary: what,
 		title:   "Close this shell?",
 		body:    "Close " + what + "? Anything running in it stops.",
@@ -310,8 +310,7 @@ func webOpTermClose(m *Model, call *webCall) tea.Cmd {
 			}
 			return t
 		},
-	})
-	return nil
+	}
 }
 
 // webTermNumber is the 1-based number of the tab that holds shell buf,

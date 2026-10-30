@@ -30,6 +30,15 @@ func init() {
 	webAfterUpdates = append(webAfterUpdates, (*Model).webAskPump)
 }
 
+// webAskFunc checks a request whose op needs a laptop card and returns
+// the card; nil means it answered the call itself (a refusal).
+type webAskFunc func(m *Model, call *webCall) *webAsk
+
+// webAskOps are the card builders of the ops whose policy row says
+// LaptopCard. The hub runs such an op only through its card: a plain
+// handler in webOps is never used for it (web_call.go).
+var webAskOps = map[string]webAskFunc{}
+
 // webAsk is one request waiting for the laptop.
 type webAsk struct {
 	op      string // the op, for the audit line
