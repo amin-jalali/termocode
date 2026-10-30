@@ -50,7 +50,8 @@ func webErr(code webproto.ErrCode, msg string) error { return &webError{code: co
 
 // webSub is one live subscription of a connection (Update only).
 type webSub struct {
-	seq uint64 // the seq of the last snap or delta queued
+	seq   uint64    // the seq of the last snap or delta queued
+	marks []webMark // the last seqs and the publishes they cover (resume)
 }
 
 // webSubMsg: a browser subscribed to or dropped topics.
@@ -68,6 +69,7 @@ func (m *Model) onWebSub(msg webSubMsg) {
 		if msg.unsub {
 			delete(c.subs, name)
 			c.out.resetTopic(name)
+			msg.hub.pruneResume()
 			continue
 		}
 		if err := m.webSubscribe(msg.hub, c, name); err != nil {
@@ -116,6 +118,9 @@ func (m *Model) webSubscribe(h *webHub, c *webConn, name string) error {
 	c.subs[name] = sub
 	c.out.resetTopic(name) // queued deltas are older than this snap
 	sub.seq++
+	sub.marks = sub.marks[:0]
+	sub.mark(sub.seq, h.gseq)
+	h.ring(name) // keep its deltas from now on, for a resume
 	frame, err := webproto.Encode(&webproto.Snap{T: webproto.KindSnap, Topic: name, Seq: sub.seq, Data: data})
 	if err != nil {
 		return err
@@ -178,7 +183,8 @@ func (h *webHub) publish(topic string, delta any) {
 			subs = append(subs, c)
 		}
 	}
-	if len(subs) == 0 {
+	ring := h.rings[topic]
+	if len(subs) == 0 && ring == nil {
 		return
 	}
 	data, err := webData(delta)
@@ -186,6 +192,20 @@ func (h *webHub) publish(topic string, delta any) {
 		recordError("[web] publish " + topic + ": " + err.Error())
 		return
 	}
+	h.gseq++
+	if ring != nil { // kept for a browser that comes back (web_resume.go)
+		ring.add(webRingItem{gseq: h.gseq, delta: delta, data: data})
+	}
+	for _, c := range subs {
+		h.deliver(c, topic, delta, data, h.gseq)
+	}
+}
+
+// deliver queues one delta of topic on c: merged into the newest queued
+// delta when it can be, else with the next seq; dropped when the topic
+// is stale there.
+func (h *webHub) deliver(c *webConn, topic string, delta any, data []byte, gseq uint64) {
+	sub := c.subs[topic]
 	encodeMerged := func(merged any, seq uint64) ([]byte, error) {
 		d, err := webData(merged)
 		if err != nil {
@@ -193,19 +213,18 @@ func (h *webHub) publish(topic string, delta any) {
 		}
 		return webproto.Encode(&webproto.Delta{T: webproto.KindDelta, Topic: topic, Seq: seq, Data: d})
 	}
-	for _, c := range subs {
-		sub := c.subs[topic]
-		if c.out.mergeDelta(topic, delta, encodeMerged) {
-			continue
-		}
-		frame, err := webproto.Encode(&webproto.Delta{T: webproto.KindDelta, Topic: topic, Seq: sub.seq + 1, Data: data})
-		if err != nil {
-			recordError("[web] publish " + topic + ": " + err.Error())
-			return
-		}
-		if c.out.pushTopic(topic, sub.seq+1, delta, frame) == webQueued {
-			sub.seq++
-		}
+	if c.out.mergeDelta(topic, delta, encodeMerged) {
+		sub.mark(sub.seq, gseq)
+		return
+	}
+	frame, err := webproto.Encode(&webproto.Delta{T: webproto.KindDelta, Topic: topic, Seq: sub.seq + 1, Data: data})
+	if err != nil {
+		recordError("[web] publish " + topic + ": " + err.Error())
+		return
+	}
+	if c.out.pushTopic(topic, sub.seq+1, delta, frame) == webQueued {
+		sub.seq++
+		sub.mark(sub.seq, gseq)
 	}
 }
 
@@ -215,7 +234,13 @@ type webGoneMsg struct {
 	conn *webConn
 }
 
-// onWebGone forgets a connection's subscriptions.
+// onWebGone forgets a connection and keeps its topics for a resume.
 func (m *Model) onWebGone(msg webGoneMsg) {
-	delete(msg.hub.live, msg.conn)
+	h := msg.hub
+	if !h.live[msg.conn] {
+		return
+	}
+	delete(h.live, msg.conn)
+	h.keepForResume(msg.conn)
+	h.pruneResume()
 }

@@ -46,9 +46,12 @@ type webHub struct {
 	once   sync.Once
 	ctx    context.Context // ends when the hub stops; every call's ctx comes from it
 	cancel context.CancelFunc
-	ops    map[string]webOpFunc   // Update only (tests swap it)
-	topics map[string]webTopicDef // Update only (tests swap it)
-	live   map[*webConn]bool      // Update only: browsers that said hello
+	ops    map[string]webOpFunc       // Update only (tests swap it)
+	topics map[string]webTopicDef     // Update only (tests swap it)
+	live   map[*webConn]bool          // Update only: browsers that said hello
+	gseq   uint64                     // Update only: publishes so far (web_resume.go)
+	rings  map[string]*webRing        // Update only: recent deltas per topic
+	resume map[string]*webResumeEntry // Update only: dropped connections by id
 
 	ln    net.Listener
 	peer  func(net.Conn) error
@@ -67,6 +70,7 @@ func newWebHub() *webHub {
 	return &webHub{
 		ch: make(chan tea.Msg, 64), done: make(chan struct{}), ctx: ctx, cancel: cancel, ops: webOps, topics: webTopics,
 		all: map[net.Conn]*webConn{}, byID: map[string]*webConn{}, live: map[*webConn]bool{},
+		rings: map[string]*webRing{}, resume: map[string]*webResumeEntry{},
 	}
 }
 
