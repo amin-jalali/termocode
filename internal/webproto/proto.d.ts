@@ -849,6 +849,11 @@ export interface HlRes {
   cut?: boolean;
 }
 
+export interface FilesListRes {
+  paths: string[];
+  truncated?: boolean;
+}
+
 export interface ChatRef {
   id: string;
 }
@@ -1010,6 +1015,7 @@ export interface OpArgs {
   "search.open": SearchOpenArgs;
   "term.colors": BufArgs;
   "buf.hl": HlArgs;
+  "files.list": EmptyArgs;
   "chat.send": ChatSendArgs;
   "chat.stop": EmptyArgs;
   "chat.new": EmptyArgs;
@@ -1110,6 +1116,7 @@ export interface OpResult {
   "tasks.tail": TaskTail;
   "term.colors": TermColorsRes;
   "buf.hl": HlRes;
+  "files.list": FilesListRes;
   "chat.send": ChatRef;
   "chat.new": ChatRef;
   "buf.set_text": EditRes;

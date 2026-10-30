@@ -501,6 +501,21 @@
       "phase": "v2"
     },
     {
+      "op": "files.list",
+      "args": "EmptyArgs",
+      "result": "FilesListRes",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "chat.send",
       "args": "ChatSendArgs",
       "result": "ChatRef",
@@ -2617,6 +2632,24 @@
         "from",
         "data",
         "mtime"
+      ],
+      "additionalProperties": true
+    },
+    "FilesListRes": {
+      "type": "object",
+      "properties": {
+        "paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "paths"
       ],
       "additionalProperties": true
     },
