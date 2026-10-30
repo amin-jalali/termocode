@@ -11,6 +11,7 @@
 // every rule of tokens_test.go (TestWebTokensContrast) is enforced by
 // moving the foreground's lightness, so a theme can never make the page
 // unreadable. Pure: no DOM here; main.tsx writes the result to :root.
+import { dict } from "./dict";
 
 /** TOKEN_FIELDS maps each colour token to its palette field. */
 export const TOKEN_FIELDS: Readonly<Record<string, string>> = {
@@ -58,7 +59,7 @@ export function readTheme(v: unknown): LaptopTheme | null {
   const o = v as Record<string, unknown>;
   const c = o.colors;
   if (typeof c !== "object" || c === null || Array.isArray(c)) return null;
-  const colors: Record<string, string> = {};
+  const colors = dict<string>();
   for (const [k, hex] of Object.entries(c as Record<string, unknown>)) {
     if (FIELDS.has(k) && typeof hex === "string" && HEX.test(hex)) colors[k] = hex.toLowerCase();
   }
@@ -158,7 +159,7 @@ const ROWS = ["--bg", "--bg-panel", "--bg-hover"];
 /** themeTokens returns the token values for the laptop theme shown in
  * scheme, every contrast rule of the page met. */
 export function themeTokens(th: LaptopTheme, scheme: "dark" | "light"): Record<string, string> {
-  const out: Record<string, string> = {};
+  const out = dict<string>();
   for (const [tok, field] of Object.entries(TOKEN_FIELDS)) {
     const c = th.colors[field];
     if (c) out[tok] = c;

@@ -9,6 +9,7 @@
 import { batch, signal, type ReadonlySignal, type Signal } from "@preact/signals";
 import type { Delta, Resync, Snap } from "../../../../webproto/proto";
 import { isTopic, topicName } from "../proto/guard";
+import { dict, type Dict } from "./dict";
 
 /** Reducer folds one delta into a topic's data and returns the new data.
  * It must not change its inputs; a throw means the delta is bad. */
@@ -109,8 +110,8 @@ export class Store {
 
   /** seqs returns the last good seq per topic, for hello.resume. A
    * broken topic is left out: it needs a snap, not the deltas after its seq. */
-  seqs(): Record<string, number> {
-    const out: Record<string, number> = {};
+  seqs(): Dict<number> {
+    const out = dict<number>();
     for (const [name, s] of this.topics) {
       const cur = s.peek();
       if (cur && !cur.broken) out[name] = cur.seq;

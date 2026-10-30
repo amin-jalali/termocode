@@ -16,6 +16,7 @@ import { App } from "./app";
 import { prefs } from "./lib/prefs";
 import { goTab } from "./lib/router";
 import { laptopTheme, link, waiting } from "./session";
+import { dict, has } from "./state/dict";
 import { THEME_TOKENS, themeTokens } from "./state/theme";
 import { TABS } from "./state/route";
 import { ConnectScreen, type ConnectState } from "./ui/ConnectScreen";
@@ -64,9 +65,9 @@ effect(() => {
   const th = laptopTheme.value;
   const p = prefs.value.theme;
   const scheme = p === "system" ? (systemLight.value ? "light" : "dark") : p;
-  const tokens = th ? themeTokens(th, scheme) : {};
+  const tokens = th ? themeTokens(th, scheme) : dict<string>();
   for (const k of THEME_TOKENS) {
-    if (k in tokens) html.style.setProperty(k, tokens[k]);
+    if (has(tokens, k)) html.style.setProperty(k, tokens[k]);
     else html.style.removeProperty(k);
   }
   if (th && th.name) html.dataset.laptopTheme = th.name;

@@ -44,6 +44,12 @@ var sourceRules = []rule{
 	// never reads the clipboard (web UX 6.3).
 	{name: "clipboard read", re: regexp.MustCompile(`\bclipboard\.read(Text)?\b`)},
 	{name: "postMessage/window.open", re: regexp.MustCompile(`\b(postMessage|window\.open)\s*\(`)},
+	// Names from the hub or the URL (folders, topics, query keys) are never
+	// keys of a plain object: "__proto__" would swap its prototype and
+	// "constructor" would read Object's. Tables built from data are a Map
+	// or a dict (state/dict.ts, no prototype), read with own/has (T49).
+	{name: "plain object as a table", re: regexp.MustCompile(`Record<string,[^=;]*>\s*=\s*\{\s*(\}|\.\.\.)|\{\s*\[\w+:\s*string\]:[^=;]*\}\s*=\s*\{\s*(\}|\.\.\.)`)},
+	{name: "the in operator on a table", re: regexp.MustCompile(`[(!&|]\s*[A-Za-z_$][\w$]*\s+in\s+[A-Za-z_$][\w$.]*\s*\)|\bfor\s*\(\s*(const|let|var)\s+[\w$]+\s+in\s`)},
 }
 
 // lintSource returns the rules text breaks; rel is the path under src/.
@@ -91,12 +97,14 @@ func TestLintCatchesEachRule(t *testing.T) {
 		`@import "x.css";`, `localStorage.setItem("t", tok)`, `sessionStorage.x = 1`,
 		`document.cookie = "a=b"`, `window.open("/")`, `new DOMParser()`,
 		`fetch("/x")`, `new WebSocket("/ws")`, `navigator.clipboard.readText()`,
+		`const dirs: Record<string, TreeDir> = { ...s.dirs };`, `const q: Record<string, string> = {};`,
+		`const o: { [k: string]: number } = {};`, `if (p in dirs) x();`, `return !(t in seqs);`, `for (const k in obj) f(k);`,
 	} {
 		if len(lintSource("views/x.tsx", bad)) == 0 {
 			t.Errorf("lint passed %q", bad)
 		}
 	}
-	if got := lintSource("views/x.tsx", "const a = h(\"p\", null, text);\nel.textContent = s;"); len(got) != 0 {
+	if got := lintSource("views/x.tsx", "const a = h(\"p\", null, text);\nel.textContent = s;\nconst d = dict<number>();\nif (!(\"data\" in v)) f();\nconst t: Record<string, number> = { \"--x\": 1 };"); len(got) != 0 {
 		t.Errorf("lint refused clean code: %v", got)
 	}
 }

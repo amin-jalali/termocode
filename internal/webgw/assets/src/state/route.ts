@@ -2,6 +2,7 @@
 // (web UX 4.4): #/chat, #/files/<path>, #/term/<buf>, #/git, #/git/<path>,
 // #/more, #/more/search?q=, #/card/<id>. The hash never carries a token.
 // Pure: parse and format only; lib/router.ts talks to history.
+import { dict } from "./dict";
 
 export const TABS = ["chat", "files", "term", "git", "more"] as const;
 export type Tab = (typeof TABS)[number];
@@ -30,7 +31,7 @@ function decode(s: string): string | null {
 export function parseHash(hash: string, under: Tab = "chat"): Route {
   const m = /^#\/([a-z]+)(?:\/([^?]*))?(?:\?(.*))?$/.exec(hash);
   if (!m) return { ...DEFAULT_ROUTE, tab: under };
-  const query: Record<string, string> = {};
+  const query = dict<string>();
   for (const pair of (m[3] ?? "").split("&")) {
     if (!pair) continue;
     const [k, v = ""] = pair.split("=");
