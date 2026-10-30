@@ -11,6 +11,7 @@ import "./styles/components.css";
 import "./styles/chat.css";
 import "./styles/git.css";
 import "./styles/more.css";
+import "./styles/moreviews.css";
 import "./styles/files.css";
 import { App } from "./app";
 import { prefs } from "./lib/prefs";
