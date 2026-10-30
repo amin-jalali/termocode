@@ -790,6 +790,17 @@ export const S = {
   "svc.asked": "The laptop asks before this command runs. Answer there.",
   "svc.stop_q": "Stop {name} on the laptop? What runs in it ends.",
   "svc.logs_none": "No log lines yet.",
+  "act.kube": "Kubernetes",
+  "kube.context": "Context",
+  "kube.ns": "Namespace",
+  "kube.pods": "Pods",
+  "kube.deploys": "Deployments",
+  "kube.jobs": "Jobs",
+  "kube.describe": "Describe",
+  "kube.container": "Container",
+  "kube.none": "None in this namespace.",
+  "kube.restart": "Restart…",
+  "kube.restart_q": "Restart every pod of {name} in {ns}, one by one?",
 } as const;
 
 export type StringKey = keyof typeof S;

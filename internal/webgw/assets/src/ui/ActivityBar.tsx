@@ -37,6 +37,7 @@ export const ACTIVITIES: readonly Item[] = [
   { id: "db", label: "more.db", icon: "database", side: true, to: () => more("db") },
   { id: "containers", label: "more.containers", icon: "package", side: true, to: () => more("containers") },
   { id: "services", label: "act.services", icon: "server-process", side: true, to: () => more("services") },
+  { id: "kube", label: "act.kube", icon: "cloud", side: false, to: () => more("kube") },
   { id: "mcp", label: "more.mcp", icon: "plug", side: true, to: () => more("mcp") },
   { id: "chat", label: "tab.chat", icon: "comment-discussion", side: false, to: () => ({ tab: "chat", rest: "", query: {} }) },
 ];

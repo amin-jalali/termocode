@@ -18,6 +18,7 @@ import { TasksView } from "./more/TasksView";
 import { TestingView } from "./run/TestingView";
 import { DebugView } from "./run/DebugView";
 import { ServicesView } from "./run/ServicesView";
+import { KubeView } from "./run/KubeView";
 import { View } from "./View";
 import { FileView } from "./FileView";
 import { TreeView } from "./Files";
@@ -45,6 +46,7 @@ export function MoreView() {
   if (sub === "testing") return <TestingView />;
   if (sub === "debug") return <DebugView />;
   if (sub === "services") return <ServicesView />;
+  if (sub === "kube") return <KubeView />;
   const p = prefs.value;
   // Built on each draw, so a language change shows at once.
   const themes = [
@@ -92,6 +94,9 @@ export function MoreView() {
           </button>
           <button type="button" class="more-link" data-sub="services" onClick={() => go({ tab: "more", rest: "services", query: {} })}>
             {t("act.services")}
+          </button>
+          <button type="button" class="more-link" data-sub="kube" onClick={() => go({ tab: "more", rest: "kube", query: {} })}>
+            {t("act.kube")}
           </button>
           <button type="button" class="more-link" data-sub="testing" onClick={() => go({ tab: "more", rest: "testing", query: {} })}>
             {t("act.testing")}

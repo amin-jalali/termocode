@@ -18,6 +18,9 @@ func runShotSnaps() map[string]any {
 }
 
 func runShotAnswer(op string) (any, bool) {
+	if d, ok := kubeAnswer(&webproto.Req{Op: op, Args: []byte(`{"context":"dev"}`)}); ok {
+		return d, true
+	}
 	switch op {
 	case webproto.OpDebugSources:
 		return webproto.DebugSources{Sources: []webproto.DebugSource{{Name: "main.go", Path: "cmd/covreport/main.go"}, {Name: "proc.go", Outside: true}}}, true
@@ -33,6 +36,7 @@ type runShot struct {
 
 func runShots(vp Viewport) []runShot {
 	out := []runShot{{name: "testing", hash: "#/more/testing", ready: `document.querySelectorAll(".tx-row").length === 4`}}
+	out = append(out, runShot{name: "kube", hash: "#/more/kube", ready: `(document.querySelector('.kb-row[data-kube="pod/api-7d9f-x2"]')?.click(), document.querySelectorAll(".kb-text .trow").length === 2)`})
 	out = append(out, runShot{name: "services", hash: "#/more/services", ready: `document.querySelectorAll(".svc").length === 3`})
 	out = append(out, runShot{name: "debug", hash: "#/more/debug", ready: `document.querySelectorAll(".dv-frame").length === 2`})
 	if !vp.Mobile {

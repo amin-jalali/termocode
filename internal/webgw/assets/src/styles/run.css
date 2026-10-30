@@ -131,3 +131,20 @@
 .svc .dbg-ask { padding: 2px 8px 4px 28px; }
 .svc-logs { display: flex; align-items: flex-start; gap: 4px; max-height: 240px; margin: 0 8px 4px 28px; }
 .svc-logs .tres-rows { flex: 1 1 auto; max-height: 240px; padding: 4px 6px; background: var(--wb-editor-bg); font-size: 0.75rem; }
+
+/* Kubernetes (editor area): the lists left, the picked object right. */
+.kb { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; flex: 1 1 auto; }
+.kb.has-detail { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+.kb-lists { min-height: 0; overflow-y: auto; padding: 4px 0 12px; }
+.kb-scope .kb-sel { height: 22px; max-width: 220px; border: 0; border-radius: 2px; background: var(--wb-input-bg); color: var(--wb-input-fg); font: inherit; font-size: var(--fs-ui); }
+.kb-row { display: grid; grid-template-columns: minmax(8rem, 1fr) minmax(3rem, max-content) minmax(5rem, 10rem) minmax(2rem, max-content) minmax(2.5rem, max-content); gap: 12px; align-items: center; width: 100%; height: 22px; padding: 0 12px 0 20px; border: 0; background: none; color: var(--wb-editor-fg); font: inherit; font-size: var(--fs-ui); text-align: start; cursor: pointer; }
+.kb-row:hover { background: var(--wb-list-hover); }
+.kb-row.is-picked { background: var(--wb-list-active); }
+.kb-row:focus-visible { outline: 1px solid var(--wb-focus); outline-offset: -1px; }
+.kb-fact { font-size: 0.75rem; opacity: 0.8; }
+.kb-detail { display: flex; flex-direction: column; min-height: 0; border-inline-start: 1px solid var(--wb-panel-border); }
+.kb-bar { display: flex; align-items: center; gap: 4px; height: 30px; padding: 0 8px; border-bottom: 1px solid var(--wb-panel-border); }
+.kb-what { flex: 1 1 auto; font-family: var(--font-mono); font-size: 0.75rem; }
+.kb-bar .tb:not(.tb-icon) { padding: 0 8px; font-size: 0.75rem; }
+.kb-bar .kb-sel { height: 22px; border: 0; background: var(--wb-input-bg); color: var(--wb-input-fg); font: inherit; font-size: 0.75rem; }
+.kb-text { padding: 6px 12px; }
