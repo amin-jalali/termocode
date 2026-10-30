@@ -672,3 +672,40 @@ kbd {
 .desk-host { position: relative; flex: 1 1 auto; min-height: 0; }
 .desk-editor { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: var(--wb-editor-bg); }
 .wb-editor .live-conflict { background: var(--wb-side-bg); }
+
+/* ---- Quick input: Go to file, commands, Go to line ---- */
+.quick-layer { position: absolute; inset: 0; z-index: var(--z-sheet); }
+.quick {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(600px, calc(100% - 24px));
+  padding: 6px 6px 4px;
+  border-radius: 6px;
+  background: var(--wb-side-bg);
+  color: var(--wb-side-fg);
+  box-shadow: 0 0 8px 2px var(--wb-shadow);
+  font-size: var(--fs-ui);
+}
+.quick-box {
+  width: 100%;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--wb-focus);
+  border-radius: 2px;
+  background: var(--wb-input-bg);
+  color: var(--wb-input-fg);
+  font: inherit;
+  outline: none;
+}
+.quick-list { list-style: none; margin: 4px 0 0; padding: 0; max-height: 440px; overflow-y: auto; }
+.quick-row { display: flex; align-items: center; gap: 6px; height: 22px; padding: 0 6px; border-radius: 3px; cursor: pointer; white-space: nowrap; }
+.quick-row .icon { color: var(--syn-kw); flex: none; }
+.quick-row.is-on { background: var(--wb-list-focus); color: #ffffff; }
+.quick-label { flex: none; max-width: 60%; overflow: hidden; text-overflow: ellipsis; }
+.quick-detail { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; opacity: 0.7; font-size: 0.75rem; }
+.quick-keys { margin-inline-start: auto; flex: none; }
+.quick mark { background: none; color: var(--wb-highlight, #2aaaff); font-weight: 700; }
+.quick-row.is-on mark { color: inherit; }
+.quick-empty { padding: 2px 6px; opacity: 0.7; }

@@ -62,6 +62,16 @@ export function setPanes(p: Partial<Panes>): void {
 export const opened = signal<string[]>([]);
 /** closed are the laptop's open files the user closed here (their tab hides). */
 export const closed = signal<ReadonlySet<string>>(new Set());
+/** wordWrap: long rows wrap in the file view (on by default on a phone,
+ * off on a desktop, as the laptop's editor has it). */
+export const wordWrap = signal<boolean>(!matchMedia("(min-width: 1200px)").matches);
+
+/** QuickMode is what the quick input lists: files, commands, or a line. */
+export type QuickMode = "files" | "commands" | "line";
+
+/** quick is the open quick input (Go to file, the command list), or null. */
+export const quick = signal<{ mode: QuickMode } | null>(null);
+
 /** cursorAt is the desktop editor's cursor (1-based), for the status bar. */
 export const cursorAt = signal<{ line: number; col: number } | null>(null);
 
