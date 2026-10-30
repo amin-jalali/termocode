@@ -52,6 +52,7 @@ func (m *Model) webAfterOne(f func(*Model, tea.Msg) tea.Cmd, msg tea.Msg) (cmd t
 // webShellState is what the shell's topics sent last (Update only).
 type webShellState struct {
 	status webStatusPub
+	toasts webToastsPub
 }
 
 // webApplyReplace is the apply of a topic whose delta is the whole new
