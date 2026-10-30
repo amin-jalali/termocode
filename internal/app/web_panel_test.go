@@ -384,7 +384,10 @@ func TestWebCLIOpenSSHMode(t *testing.T) {
 	if code := auth(again); code != http.StatusOK {
 		t.Fatalf("auth with the new secret: %d", code)
 	}
-	if res := r.ctlRes(ctl, `{"t":"req","id":3,"op":"web.open","args":{"yes":true,"ssh_port":41000}}`, 3); res["t"] != "err" || res["code"] != "conflict" {
+	// Another `termocode --link` (its own control connection: the rate of
+	// web.open is per connection) asks for another port.
+	other := r.dial(`{"t":"ctl"}`)
+	if res := r.ctlRes(other, `{"t":"req","id":1,"op":"web.open","args":{"yes":true,"ssh_port":41000}}`, 1); res["t"] != "err" || res["code"] != "conflict" {
 		t.Fatalf("another port: %v", res)
 	}
 }
