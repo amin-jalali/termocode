@@ -12,10 +12,24 @@ import (
 	"time"
 )
 
+// shareBaseTemp is a temp folder under /tmp, short enough that
+// ShareSocketDir keeps paths in it as they are. Under macOS's long
+// $TMPDIR it moves them to /tmp/termocode-<uid>-<hash>, so a bad path
+// (a file in the way) would never be looked at.
+func shareBaseTemp(t *testing.T) string {
+	t.Helper()
+	d, err := os.MkdirTemp(shortShareBase, "tcs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(d) })
+	return d
+}
+
 // Spec (G-MCP): the socket folder must be a real, private folder; a
 // path under a file or a file in its place is refused.
 func TestShareDirRefusesFiles(t *testing.T) {
-	base := shortTemp(t)
+	base := shareBaseTemp(t)
 	file := filepath.Join(base, "afile")
 	if err := os.WriteFile(file, []byte("x"), 0o600); err != nil {
 		t.Fatal(err)
@@ -158,7 +172,7 @@ func TestStartSharedServerError(t *testing.T) {
 	if err == nil || errors.Is(err, errShareUnavailable) || err.Error() != "the server would not start" {
 		t.Fatalf("err = %v", err)
 	}
-	o.Dir = filepath.Join(shortTemp(t), "f")
+	o.Dir = filepath.Join(shareBaseTemp(t), "f")
 	if err := os.WriteFile(o.Dir, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
