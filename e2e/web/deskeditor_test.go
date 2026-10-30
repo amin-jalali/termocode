@@ -144,3 +144,26 @@ func TestDeskEditorViewerReadsOnly(t *testing.T) {
 		t.Errorf("a viewer typed into the file: %q", got)
 	}
 }
+
+// The open file's git changes show in the gutter: changed, added and
+// deleted rows, read from its unstaged diff once the file is saved.
+func TestDeskEditorGitGutter(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	c.Send(t, Snap("git", 1, webproto.GitSnap{Repo: true, Branch: webproto.GitBranch{Name: "main"},
+		Files: []webproto.GitFile{{Path: "a.txt", X: " ", Y: "M", Unstaged: true}}}))
+	openDesk(t, p, c, 2, "a.txt", "one", "TWO", "three", "new", "five")
+	r := expectReq(t, c, "git.diff")
+	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(webproto.GitDiff{Path: "a.txt", Rows: []webproto.DiffRow{
+		{K: "hunk", Text: "@@ -1,5 +1,5 @@"},
+		{K: "ctx", Text: "one", Old: 1, New: 1},
+		{K: "del", Text: "two", Old: 2},
+		{K: "add", Text: "TWO", New: 2},
+		{K: "ctx", Text: "three", Old: 3, New: 3},
+		{K: "add", Text: "new", New: 4},
+		{K: "ctx", Text: "five", Old: 4, New: 5},
+	}})})
+	p.WaitJS(deskDoc + `.querySelector(".tc-gm-mod") && ` + deskDoc + `.querySelector(".tc-gm-add")`)
+	if probs := p.Problems(); len(probs) > 0 {
+		t.Errorf("problems: %v", probs)
+	}
+}

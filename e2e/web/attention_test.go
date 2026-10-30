@@ -59,12 +59,12 @@ func TestAttentionPillFromEvents(t *testing.T) {
 			c.Send(t, attention("card", "card-1"))
 			p.WaitJS(pill + `?.classList.contains("att-cards") && ` + pill + `.textContent.includes("1 approval waiting")`)
 			p.WaitJS(`document.title === "(1) termocode"`)
-			p.WaitJS(`document.querySelector("nav .nav-item:nth-child(1) .badge")?.textContent === "1"`)
+			p.WaitJS(`document.querySelector(` + chatBadge(p) + `)?.textContent === "1"`)
 			c.Send(t, attention("run_done", "r-2")) // a card still wins
 			p.Holds(pill+`.classList.contains("att-cards")`, 300e6)
 
 			c.Send(t, Delta("cards", 3, map[string]any{"op": "remove", "id": "card-1", "by": "laptop"}))
-			p.WaitJS(`document.title === "termocode" && !document.querySelector("nav .nav-item:nth-child(1) .badge")`)
+			p.WaitJS(`document.title === "termocode" && !document.querySelector(` + chatBadge(p) + `)`)
 		})
 	}
 }
@@ -75,4 +75,13 @@ func TestAttentionPillWaitingForLaptop(t *testing.T) {
 	c := p.Login("c-1")
 	c.Send(t, Snap("cards", 1, cardsData(trustCard("card-9"))))
 	p.WaitJS(pill + `?.classList.contains("att-waiting_laptop") && ` + pill + `.textContent.includes("1 waiting for the laptop")`)
+}
+
+// chatBadge is the selector of the chat's count badge: the tab bar's on a
+// phone, the activity bar's on a desktop.
+func chatBadge(p *Page) string {
+	if p.VP.W >= 1200 {
+		return `'.act-item[data-act="chat"] .act-badge'`
+	}
+	return `"nav .nav-item:nth-child(1) .badge"`
 }

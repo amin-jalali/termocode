@@ -5,7 +5,7 @@
 // simple edit sheet opens instead.
 import { h } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { BufSnap } from "../../../../webproto/proto";
+import type { BufSnap, GitDiff, GitSnap } from "../../../../webproto/proto";
 import type { EditorHandle, EditorModule } from "../editor/api";
 import { startEdit } from "../lib/edit";
 import { hl, hlRows, wantHl } from "../lib/hl";
@@ -13,7 +13,8 @@ import { activeDesk, mountDesk, type DeskHandle } from "../lib/deskeditor";
 import { loadEditor } from "../lib/lazy";
 import { editing, liveStatus, LiveSync, session } from "../lib/live";
 import { toast } from "../lib/toasts";
-import { live, store } from "../session";
+import { link, live, store } from "../session";
+import { gutterMarks } from "../lib/gutter";
 import { isGone } from "../state/files";
 import { t } from "../strings";
 import { Button } from "../ui/Button";
@@ -156,6 +157,27 @@ export function LiveEditor({ path, buf, desk }: { path: string; buf: number; des
   useEffect(() => {
     if (snap) session.peek()?.store(snap, isGone(ts?.data));
   }, [snap, ready]);
+  // Git change marks (desktop): the file's unstaged diff on disk, asked
+  // again when the laptop saves or git's list changes.
+  const gitData = desk ? (store.topic("git").value?.data as GitSnap | undefined) : undefined;
+  const changed = gitData?.files?.find((f) => f.path === path && (f.unstaged || f.untracked));
+  const saved = snap ? !snap.dirty : false;
+  useEffect(() => {
+    const h = ed.current as DeskHandle | null;
+    if (!desk || !ready || !h) return;
+    if (!changed) {
+      h.gutter([]);
+      return;
+    }
+    if (!saved) return; // the marks follow the file on disk
+    const timer = setTimeout(() => {
+      link.request("git.diff", { path }).then(
+        (data) => (ed.current as DeskHandle | null)?.gutter(gutterMarks((data as GitDiff).rows ?? [])),
+        () => undefined,
+      );
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [ready, !!changed, changed?.x, changed?.y, saved, snap?.tick, gitData]);
   // The desktop editor's settings follow the view.
   useEffect(() => (ed.current as DeskHandle | null)?.opts?.({ wrap: desk?.wrap, readOnly: desk?.readOnly }), [desk?.wrap, desk?.readOnly, ready]);
   // Colours: rows whose text still matches.
