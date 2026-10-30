@@ -447,6 +447,10 @@ export interface PaletteArgs {
   id: string;
 }
 
+export interface PRNumberArgs {
+  number: number;
+}
+
 export interface StatusSnap {
   root: string;
   workspace_label: string;
@@ -1609,6 +1613,70 @@ export interface PaletteItem {
   ask?: boolean;
 }
 
+export interface PRList {
+  items: PRItem[];
+}
+
+export interface PRItem {
+  number: number;
+  title: string;
+  author: string;
+  branch: string;
+  base: string;
+  url: string;
+  draft?: boolean;
+  review?: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED";
+  checks: "none" | "pending" | "pass" | "fail";
+}
+
+export interface PRView {
+  item: PRItem;
+  state: "OPEN" | "CLOSED" | "MERGED";
+  body: string;
+  mergeable?: string;
+  files: PRFile[];
+  reviews: PRReview[];
+  checks: PRCheck[];
+}
+
+export interface PRFile {
+  path: string;
+  add: number;
+  del: number;
+}
+
+export interface PRReview {
+  author: string;
+  state?: string;
+  body?: string;
+  when?: string;
+}
+
+export interface PRCheck {
+  name: string;
+  state: "none" | "pending" | "pass" | "fail";
+  url?: string;
+}
+
+export interface CIStatus {
+  branch: string;
+  loading?: boolean;
+  error?: string;
+  state: "none" | "pending" | "pass" | "fail";
+  head?: string;
+  runs: CIRun[];
+  pr?: PRItem;
+}
+
+export interface CIRun {
+  workflow: string;
+  title: string;
+  status: string;
+  conclusion?: string;
+  state: "pending" | "pass" | "fail" | "none";
+  url?: string;
+}
+
 export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;
 export type ServerMsg = Delta | ErrMsg | Event | Meta | Pong | Res | Resync | ServerBye | Snap;
 
@@ -1733,6 +1801,9 @@ export interface OpArgs {
   "palette.list": EmptyArgs;
   "palette.run": PaletteArgs;
   "palette.ask": PaletteArgs;
+  "pr.list": EmptyArgs;
+  "pr.view": PRNumberArgs;
+  "ci.status": EmptyArgs;
 }
 
 export type OpName = keyof OpArgs;
@@ -1852,4 +1923,7 @@ export interface OpResult {
   "containers.remove": AskRef;
   "palette.list": PaletteList;
   "palette.ask": AskRef;
+  "pr.list": PRList;
+  "pr.view": PRView;
+  "ci.status": CIStatus;
 }
