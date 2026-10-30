@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -118,7 +119,36 @@ func TestLaunchSecretFourWrongThenRight(t *testing.T) {
 	}
 }
 
-// TestLaunchSecretErrorsHoldNoValue:an error names the rule, never the
+// TestLaunchSecretRedeemRace: many tabs racing with the right secret; one
+// wins, the rest see ErrSecretUsed.
+func TestLaunchSecretRedeemRace(t *testing.T) {
+	plain, s := newSecret(t)
+	const n = 32
+	errs := make(chan error, n)
+	var wg sync.WaitGroup
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs <- s.Redeem(plain, t0)
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	wins := 0
+	for err := range errs {
+		if err == nil {
+			wins++
+		} else if !errors.Is(err, ErrSecretUsed) {
+			t.Fatalf("loser: %v", err)
+		}
+	}
+	if wins != 1 {
+		t.Fatalf("%d winners, want 1", wins)
+	}
+}
+
+// TestLaunchSecretErrorsHoldNoValue: an error names the rule, never the
 // value tried or the real one (T8).
 func TestLaunchSecretErrorsHoldNoValue(t *testing.T) {
 	plain, s := newSecret(t)
