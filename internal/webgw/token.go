@@ -22,8 +22,11 @@ const (
 // Role is what a session may do. v1 has only control.
 type Role string
 
-// RoleControl may type and act (v1's only role).
-const RoleControl Role = "control"
+// Roles. v1 issues only RoleControl; RoleViewer (v2) may read only.
+const (
+	RoleControl Role = "control"
+	RoleViewer  Role = "viewer"
+)
 
 // ErrTokenUnknown: no live session has this token. Errors never hold the
 // token.
