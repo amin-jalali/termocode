@@ -3,7 +3,9 @@
 package webgw
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -142,6 +144,65 @@ func TestBodyCapForPasskeyAnswers(t *testing.T) {
 		Guard(testSite, &okHandler{}).ServeHTTP(w, r)
 		if w.Code != tc.code {
 			t.Errorf("%s %d bytes: %d, want %d", tc.path, tc.size, w.Code, tc.code)
+		}
+	}
+}
+
+// Spec (WEB-48): with TOTP on, a good passkey is not enough: the reply
+// asks for a code (no token yet); the laptop checks the code; a wrong
+// code gets nothing, the right one the token; a ticket works once, lives
+// TOTPTicketTTL and burns after MaxTOTPTries wrong codes.
+func TestLoginNeedsTOTPWhenOn(t *testing.T) {
+	r, l, k := passkeyPairRig(t)
+	pairWithKey(t, r, k, webdevices.RoleControl)
+	var asked []string
+	l.cfg.RequireTOTP = true
+	l.cfg.CheckTOTP = func(_ context.Context, device, code string) error {
+		asked = append(asked, device+" "+code)
+		if code == "123456" {
+			return nil
+		}
+		return errors.New("wrong")
+	}
+	ticket := func() string {
+		_, m := postTo(t, l, "/login/start", `{}`)
+		opts, _ := json.Marshal(m["options"])
+		code, f := postTo(t, l, "/login/finish", `{"login_id":"`+m["login_id"].(string)+`","credential":`+string(k.get(opts))+`}`)
+		if code != http.StatusOK || f["totp"] != true || f["token"] != nil || f["ticket"] == nil {
+			t.Fatalf("finish with TOTP on: %d %v", code, f)
+		}
+		return f["ticket"].(string)
+	}
+	tk := ticket()
+	if code, f := postTo(t, l, "/login/totp", `{"ticket":"`+tk+`","code":"000000"}`); code != http.StatusUnauthorized || f["token"] != nil || f["error"] != "wrong_code" {
+		t.Fatalf("wrong code: %d %v", code, f)
+	}
+	code, f := postTo(t, l, "/login/totp", `{"ticket":"`+tk+`","code":"123456"}`)
+	if code != http.StatusOK || f["token"] == nil {
+		t.Fatalf("right code: %d %v", code, f)
+	}
+	ds, _ := r.store.List()
+	if len(asked) != 2 || asked[1] != ds[0].ID+" 123456" {
+		t.Fatalf("the laptop was asked %v", asked)
+	}
+	if code, _ := postTo(t, l, "/login/totp", `{"ticket":"`+tk+`","code":"123456"}`); code == http.StatusOK {
+		t.Fatal("a ticket worked twice")
+	}
+	tk = ticket()
+	for i := 0; i < MaxTOTPTries; i++ {
+		postTo(t, l, "/login/totp", `{"ticket":"`+tk+`","code":"000000"}`)
+	}
+	if code, _ := postTo(t, l, "/login/totp", `{"ticket":"`+tk+`","code":"123456"}`); code == http.StatusOK {
+		t.Fatal("the ticket did not burn after wrong codes")
+	}
+	tk = ticket()
+	r.clock.Add(TOTPTicketTTL)
+	if code, _ := postTo(t, l, "/login/totp", `{"ticket":"`+tk+`","code":"123456"}`); code != http.StatusGone {
+		t.Fatalf("late code: %d", code)
+	}
+	for _, bad := range []string{`{"ticket":"x","code":"12345"}`, `{"ticket":"x"}`, `{"ticket":"x","code":"123456","more":1}`} {
+		if code, _ := postTo(t, l, "/login/totp", bad); code == http.StatusOK {
+			t.Errorf("%s passed", bad)
 		}
 	}
 }
