@@ -1,0 +1,56 @@
+{
+  "topic": "diagnostics",
+  "snap0": {
+    "errors": 0,
+    "files": [],
+    "hints": 0,
+    "infos": 0,
+    "warnings": 0
+  },
+  "deltas": [
+    {
+      "errors": 0,
+      "files": [
+        {
+          "items": [
+            {
+              "col": 0,
+              "endCol": 12,
+              "endLine": 0,
+              "line": 0,
+              "message": "missing package doc",
+              "sev": 2,
+              "source": "lint"
+            }
+          ],
+          "path": "main.go"
+        }
+      ],
+      "hints": 0,
+      "infos": 0,
+      "warnings": 1
+    }
+  ],
+  "snapn": {
+    "files": [
+      {
+        "path": "main.go",
+        "items": [
+          {
+            "sev": 2,
+            "line": 0,
+            "col": 0,
+            "endLine": 0,
+            "endCol": 12,
+            "message": "missing package doc",
+            "source": "lint"
+          }
+        ]
+      }
+    ],
+    "errors": 0,
+    "warnings": 1,
+    "infos": 0,
+    "hints": 0
+  }
+}

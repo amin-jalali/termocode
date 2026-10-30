@@ -60,6 +60,7 @@ type webHub struct {
 	cards  webCardsPub                // Update only: the waiting cards (web_cards.go)
 	files  *webFiles                  // Update only: file and terminal views (web_files.go)
 	git    webGitPub                  // Update only: what the git topic sent (web_git.go)
+	diag   webDiagPub                 // Update only: what the diagnostics topic sent (web_diag.go)
 	asks   webAskState                // Update only: requests waiting for a laptop card (web_ask.go)
 	search webSearches                // the running searches by connection (web_search.go; own lock)
 	tasks  webTasksPub                // Update only: what the tasks topic sent (web_tasks.go)
