@@ -275,6 +275,18 @@ func (r *standardRenderer) flushFrame(query bool) {
 			buf.WriteByte('\r')
 		}
 
+		// termocode patch: only the changed cells of a line that was
+		// drawn last frame (line_diff.go).
+		if !flushQueuedMessages && r.width > 0 && len(r.lastRenderedLines) > i {
+			if upd, ok := lineUpdate(r.lastRenderedLines[i], newLines[i], r.width); ok {
+				buf.WriteString(upd)
+				if i < len(newLines)-1 {
+					buf.WriteString("\r\n")
+				}
+				continue
+			}
+		}
+
 		line := newLines[i]
 
 		// Truncate lines wider than the width of the window to avoid
