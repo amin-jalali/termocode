@@ -3,6 +3,7 @@ package assets
 import (
 	"math"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -130,6 +131,29 @@ func TestWebTokensContrast(t *testing.T) {
 						t.Errorf("%s: %s %s on %s %s = %.2f:1, want >= %.1f", name, fg, th[fg], bg, th[bg], c, r.min)
 					}
 				}
+			}
+		}
+	}
+}
+
+// --dim reaches 3:1 only (UI parts): text a reader needs uses --muted or
+// stronger (WCAG 1.4.3, found by axe in WEB-47). Only marks, numbers
+// that are hidden from screen readers and dimmed-on-purpose rows use it.
+func TestDimIsNotForText(t *testing.T) {
+	allowed := map[string]bool{
+		".wrap-mark": true, ".crow-n": true, ".drow-n": true, ".step-head::before": true,
+		".more-link::after": true, ".tree-row.is-dim .tree-name, .tree-row.is-dim .tree-icon": true,
+	}
+	rule := regexp.MustCompile(`(?m)^([^{}@/][^{}]*?)\s*\{[^}]*\bcolor:\s*var\(--dim\)`)
+	files, _ := filepath.Glob("src/styles/*.css")
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, m := range rule.FindAllStringSubmatch(string(b), -1) {
+			if sel := strings.TrimSpace(m[1]); !allowed[sel] {
+				t.Errorf("%s: %s is text in --dim; use --muted", f, sel)
 			}
 		}
 	}
