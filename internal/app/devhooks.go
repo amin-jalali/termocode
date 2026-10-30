@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -197,6 +198,15 @@ func (m *Model) runDevAction(id string) tea.Cmd {
 		return m.addAISignInDemo(arg)
 	case "itermocdemo": // the Itermoc view with sample data (itermoc_demo.go): full or empty
 		return m.itermocDemo(arg)
+	case "aidemo-long": // a chat of arg messages, its answer streaming (perf_demo.go)
+		n, _ := strconv.Atoi(arg)
+		m.aiLongChatDemo(n)
+	case "aitoken": // one streamed token of that answer (perf_demo.go)
+		m.aiTokenDemo(arg)
+	case "dbdemo-big": // a result grid of arg rows (perf_demo.go)
+		return m.databaseBigResultDemo(arg)
+	case "dbkey": // a key on the result page (], [, …)
+		return m.databasePageKey(arg, 0, 0)
 	case "aidemo-fa": // a Persian (right-to-left) conversation for the shots
 		s := m.aiS()
 		s.conv.Messages = []ai.StoredMessage{
