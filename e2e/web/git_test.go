@@ -46,9 +46,9 @@ func openGit(t *testing.T, vp Viewport, snap webproto.GitSnap) (*Page, *HubConn)
 	return p, c
 }
 
-// expectReq reads the page's messages until a req for op (subs and
+// expectOp reads the page's messages until a req for op (subs and
 // unsubs on the way are fine) and checks its args.
-func expectReq(t *testing.T, c *HubConn, op, args string) *webproto.Req {
+func expectOp(t *testing.T, c *HubConn, op, args string) *webproto.Req {
 	t.Helper()
 	for {
 		m := c.Next(t)
@@ -107,10 +107,10 @@ func TestGitGroupsAndStageWithUndo(t *testing.T) {
 				t.Errorf("branch line %q", txt)
 			}
 			p.TapJS(`document.querySelector('` + rowSel("src/a.go") + ` .git-row .btn')`)
-			reply(t, c, expectReq(t, c, webproto.OpGitStage, `{"paths":["src/a.go"]}`), nil)
+			reply(t, c, expectOp(t, c, webproto.OpGitStage, `{"paths":["src/a.go"]}`), nil)
 			p.WaitJS(`document.querySelector(".toasts .toast-title")?.textContent === "Staged a.go"`)
 			p.TapJS(ButtonByText("Undo"))
-			reply(t, c, expectReq(t, c, webproto.OpGitUnstage, `{"paths":["src/a.go"]}`), nil)
+			reply(t, c, expectOp(t, c, webproto.OpGitUnstage, `{"paths":["src/a.go"]}`), nil)
 			p.WaitJS(`document.querySelector(".toasts .toast-title")?.textContent !== "Staged a.go"`)
 		})
 	}
@@ -137,7 +137,7 @@ func TestGitCommitBox(t *testing.T) {
 			p.TapJS(ButtonByText("Commit 1 file"))
 			p.WaitJS(`document.querySelector(".commit-ask")`)
 			p.TapJS(`[...document.querySelectorAll(".commit-ask button")].find((b) => b.textContent.trim() === "Commit")`)
-			r := expectReq(t, c, webproto.OpGitCommit, `{"message":"fix: one line"}`)
+			r := expectOp(t, c, webproto.OpGitCommit, `{"message":"fix: one line"}`)
 			reply(t, c, r, webproto.GitCommitted{Hash: "9f9f9f9", Files: 1})
 			p.WaitJS(`[...document.querySelectorAll(".toasts .toast-title")].some((e) => e.textContent === "Committed 9f9f9f9 · 1 files")`)
 			p.WaitJS(`document.querySelector(".commit-subject").value === ""`)
@@ -149,7 +149,7 @@ func TestGitCommitBox(t *testing.T) {
 func TestGitShowCommit(t *testing.T) {
 	p, c := openGit(t, Phone, gitSnap())
 	p.TapJS(`document.querySelector(".git-commit")`)
-	r := expectReq(t, c, webproto.OpGitShow, `{"hash":"1a2b3c4"}`)
+	r := expectOp(t, c, webproto.OpGitShow, `{"hash":"1a2b3c4"}`)
 	reply(t, c, r, webproto.GitDiff{Commit: &webproto.GitCommitInfo{Hash: "1a2b3c4", Subject: "first", Author: "Ann", When: time.Now().UnixMilli()},
 		Added: 1, Rows: []webproto.DiffRow{{K: "file", Text: "a.go"}, {K: "hunk", Text: "@@ -0,0 +1 @@"}, {K: "add", Text: "x", New: 1}}})
 	p.WaitJS(`document.querySelector(".show-subject")?.textContent === "first" && document.querySelectorAll(".diff-rows .drow").length === 3`)
@@ -194,10 +194,10 @@ func (p *Page) swipe(sel string, right bool) {
 func TestGitSwipeStages(t *testing.T) {
 	p, c := openGit(t, Phone, gitSnap())
 	p.swipe(rowSel("new.txt")+" .git-row", true)
-	reply(t, c, expectReq(t, c, webproto.OpGitStage, `{"paths":["new.txt"]}`), nil)
+	reply(t, c, expectOp(t, c, webproto.OpGitStage, `{"paths":["new.txt"]}`), nil)
 	p.WaitJS(`document.querySelector(".toasts .toast-title")?.textContent === "Staged new.txt"`)
 	p.swipe(rowSel("b.go")+" .git-row", false)
-	reply(t, c, expectReq(t, c, webproto.OpGitUnstage, `{"paths":["b.go"]}`), nil)
+	reply(t, c, expectOp(t, c, webproto.OpGitUnstage, `{"paths":["b.go"]}`), nil)
 	// Staged rows do not move right: nothing is sent.
 	p.swipe(rowSel("b.go")+" .git-row", true)
 	c.Quiet(t, 400*time.Millisecond)
@@ -213,7 +213,7 @@ func TestGitDiffSheet(t *testing.T) {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openGit(t, vp, gitSnap())
 			p.TapJS(`document.querySelector('` + rowSel("src/a.go") + ` .git-open')`)
-			r := expectReq(t, c, webproto.OpGitDiff, `{"path":"src/a.go"}`)
+			r := expectOp(t, c, webproto.OpGitDiff, `{"path":"src/a.go"}`)
 			hunk := "@@ -1,2 +1,2 @@ func main() {"
 			reply(t, c, r, webproto.GitDiff{Path: "src/a.go", Added: 1, Removed: 1, Next: 3, Rows: []webproto.DiffRow{
 				{K: "hunk", Text: hunk, Old: 1, New: 1}, {K: "del", Text: "old <b>line</b>", Old: 1}, {K: "add", Text: "new line", New: 1}}})
@@ -225,12 +225,12 @@ func TestGitDiffSheet(t *testing.T) {
 				t.Fatal("diff text became HTML")
 			}
 			p.TapJS(ButtonByText("Show more rows"))
-			r = expectReq(t, c, webproto.OpGitDiff, `{"path":"src/a.go","from":3}`)
+			r = expectOp(t, c, webproto.OpGitDiff, `{"path":"src/a.go","from":3}`)
 			reply(t, c, r, webproto.GitDiff{Path: "src/a.go", From: 3, Rows: []webproto.DiffRow{{K: "ctx", Text: "tail", Old: 2, New: 2}}})
 			p.WaitJS(`document.querySelectorAll(".diff-rows .drow").length === 4`)
 			p.TapJS(ButtonByText("Stage this part"))
-			reply(t, c, expectReq(t, c, webproto.OpGitStageHunk, `{"path":"src/a.go","hunk":"`+hunk+`"}`), nil)
-			expectReq(t, c, webproto.OpGitDiff, `{"path":"src/a.go"}`) // read again
+			reply(t, c, expectOp(t, c, webproto.OpGitStageHunk, `{"path":"src/a.go","hunk":"`+hunk+`"}`), nil)
+			expectOp(t, c, webproto.OpGitDiff, `{"path":"src/a.go"}`) // read again
 			if pr := p.Problems(); len(pr) > 0 {
 				t.Errorf("problems: %q", pr)
 			}
@@ -246,7 +246,7 @@ func TestDiscardWaitsForLaptop(t *testing.T) {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openGit(t, vp, gitSnap())
 			p.TapJS(`document.querySelector('` + rowSel("src/a.go") + ` .git-open')`)
-			reply(t, c, expectReq(t, c, webproto.OpGitDiff, ""), webproto.GitDiff{Path: "src/a.go", Rows: []webproto.DiffRow{}})
+			reply(t, c, expectOp(t, c, webproto.OpGitDiff, ""), webproto.GitDiff{Path: "src/a.go", Rows: []webproto.DiffRow{}})
 			p.TapJS(ButtonByText("Discard changes…"))
 			p.WaitJS(`document.querySelector(".discard") && document.activeElement === document.querySelector(".discard .choices button")`)
 			if txt := p.Text(".discard-text"); txt != "Discard changes in src/a.go? This cannot be undone." {
@@ -259,11 +259,11 @@ func TestDiscardWaitsForLaptop(t *testing.T) {
 			p.TapJS(ButtonByText("Discard changes…"))
 			p.WaitJS(`document.querySelector(".discard .arm.is-armed")`)
 			p.TapJS(ButtonByText("Ask the laptop"))
-			r := expectReq(t, c, webproto.OpGitDiscard, `{"paths":["src/a.go"]}`)
+			r := expectOp(t, c, webproto.OpGitDiscard, `{"paths":["src/a.go"]}`)
 			reply(t, c, r, webproto.AskRef{Card: "card-7"})
 			p.WaitJS(`document.querySelector(".waiting-title")?.textContent === "Waiting for the laptop…"`)
 			p.TapJS(`document.querySelector(".waiting button")`)
-			cr := expectReq(t, c, webproto.OpCardsAnswer, `{"id":"card-7","choice":"cancel"}`)
+			cr := expectOp(t, c, webproto.OpCardsAnswer, `{"id":"card-7","choice":"cancel"}`)
 			reply(t, c, cr, nil)
 			c.Send(t, &webproto.Event{T: webproto.KindEv, Kind: webproto.EventAnswered, Data: raw(webproto.Answered{ID: "card-7", By: "phone", Choice: "cancel"})})
 			p.WaitJS(`!document.querySelector(".waiting")`)
@@ -273,7 +273,7 @@ func TestDiscardWaitsForLaptop(t *testing.T) {
 			p.TapJS(ButtonByText("Discard changes…"))
 			p.WaitJS(`document.querySelector(".discard .arm.is-armed")`)
 			p.TapJS(ButtonByText("Ask the laptop"))
-			reply(t, c, expectReq(t, c, webproto.OpGitDiscard, ""), webproto.AskRef{Card: "card-8"})
+			reply(t, c, expectOp(t, c, webproto.OpGitDiscard, ""), webproto.AskRef{Card: "card-8"})
 			p.WaitJS(`document.querySelector(".waiting")`)
 			c.Send(t, &webproto.Event{T: webproto.KindEv, Kind: webproto.EventAnswered, Data: raw(webproto.Answered{ID: "card-8", By: "laptop", Choice: "confirm"})})
 			p.WaitJS(`!document.querySelector(".waiting") && document.querySelector(".toasts")?.textContent.includes("Done on the laptop.")`)
