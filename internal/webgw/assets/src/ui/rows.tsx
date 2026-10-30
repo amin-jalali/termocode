@@ -37,9 +37,14 @@ export function DiffRow({ kind, a, b, text }: { kind: DiffKind; a?: number; b?: 
   );
 }
 
-export type GitBadge = "M" | "A" | "?" | "D" | "U";
+export type GitBadge = "M" | "A" | "?" | "D" | "U" | "R";
 
-const badgeClass: Record<GitBadge, string> = { M: "git-mod", A: "git-add", "?": "git-add", D: "git-del", U: "git-conf" };
+const badgeClass: Record<GitBadge, string> = { M: "git-mod", A: "git-add", "?": "git-add", D: "git-del", U: "git-conf", R: "git-mod" };
+
+/** gitBadge is the badge of a git status letter, or undefined when clean or unknown. */
+export function gitBadge(letter: unknown): GitBadge | undefined {
+  return typeof letter === "string" && letter in badgeClass ? (letter as GitBadge) : undefined;
+}
 
 function FolderGlyph({ open }: { open?: boolean }) {
   return (
@@ -69,6 +74,8 @@ export function TreeRow({
   git,
   dirty,
   active,
+  dim,
+  path,
   onClick,
 }: {
   depth?: number;
@@ -78,13 +85,18 @@ export function TreeRow({
   git?: GitBadge;
   dirty?: boolean;
   active?: boolean;
+  /** dim: an ignored name, drawn dimmed as on the laptop. */
+  dim?: boolean;
+  /** path is the workspace path the row stands for. */
+  path?: string;
   onClick?: () => void;
 }) {
   return (
     <button
       type="button"
-      class={`tree-row depth-${Math.min(depth, 8)}${active ? " is-active" : ""}`}
+      class={`tree-row depth-${Math.min(depth, 8)}${active ? " is-active" : ""}${dim ? " is-dim" : ""}`}
       aria-expanded={dir ? (open ? "true" : "false") : undefined}
+      data-path={path}
       onClick={onClick}
     >
       <span class={`chev${open ? " is-open" : ""}`} aria-hidden="true">{dir ? "›" : ""}</span>

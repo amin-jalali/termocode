@@ -1,0 +1,22 @@
+/* The Files tab, the file view and the terminal (web UX 5.4–5.6). */
+
+/* Tree */
+.tree { display: flex; flex-direction: column; gap: var(--s4); }
+.tree-group { display: flex; flex-direction: column; }
+.tree-group .group-title { padding: 0 var(--s2) var(--s1); }
+.tree-row.is-dim .tree-name, .tree-row.is-dim .tree-icon { color: var(--dim); }
+.tree-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+  min-height: var(--tap);
+  padding-inline: calc(var(--s2) + var(--depth, 0) * 1rem + 3ch) var(--s3);
+  color: var(--muted);
+  font-size: var(--fs-hint);
+}
+.tree-note .sk-row { flex: 1; max-width: 12rem; }
+.tree-err { color: var(--text-2); }
+.tree-retry { min-height: var(--tap); }
+.tree-filter, .field-box { flex: 1 1 10rem; min-height: var(--tap); padding: 0 var(--s3); border: 1px solid var(--border); border-radius: var(--r-chip); background: var(--bg-panel); color: var(--text); font: inherit; }
+.tree-filter:focus-visible, .field-box:focus-visible { outline: 2px solid var(--focus); outline-offset: -1px; }

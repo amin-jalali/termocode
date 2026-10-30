@@ -492,6 +492,7 @@ function Kit() {
                 <TreeRow depth={2} name="merge_conflict.go" git="U" />
                 <TreeRow depth={2} name="old_quit.go" git="D" />
                 <TreeRow depth={1} dir name="statusbar" />
+                <TreeRow depth={1} dir dim name="node_modules" />
                 <TreeRow name="یادداشت‌ها.md" git="?" />
                 <TreeRow name="a-very-long-file-name-that-does-not-fit-on-a-phone-screen.go" />
               </div>
