@@ -508,3 +508,22 @@ func (m *Model) handleWebAccessConfirm(id string) (tea.Cmd, bool) {
 	}
 	return m.handleWebTotpConfirm(id)
 }
+
+// webConnectText is the laptop's toast for a browser that came in: a
+// paired device by its stored name (never the name the browser sent)
+// and its role; a launch-link tab as a web browser.
+func webConnectText(c *webConn) string {
+	if !strings.HasPrefix(c.device, "dev-") {
+		return "A web browser connected."
+	}
+	name := "A paired device"
+	if dir, err := webDevicesDir(); err == nil {
+		if d, ok, _ := webdevices.Open(dir).Get(c.device); ok {
+			name = d.Name
+		}
+	}
+	if c.role == webproto.RoleViewer {
+		return name + " is watching (view only)."
+	}
+	return name + " connected with control."
+}
