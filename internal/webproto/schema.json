@@ -1384,6 +1384,47 @@
       "laptop_card": true,
       "audit": "yes",
       "phase": "v2"
+    },
+    {
+      "op": "palette.list",
+      "args": "EmptyArgs",
+      "result": "PaletteList",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "palette.run",
+      "args": "PaletteArgs",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "palette.ask",
+      "args": "PaletteArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
     }
   ],
   "defs": {
@@ -3554,6 +3595,55 @@
         "code"
       ],
       "additionalProperties": false
+    },
+    "PaletteArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "PaletteItem": {
+      "type": "object",
+      "properties": {
+        "ask": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "keys": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "PaletteList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/PaletteItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
     },
     "PathArgs": {
       "type": "object",

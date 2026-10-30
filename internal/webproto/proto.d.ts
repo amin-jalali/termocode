@@ -301,6 +301,10 @@ export interface ContainerArgs {
   id: string;
 }
 
+export interface PaletteArgs {
+  id: string;
+}
+
 export interface StatusSnap {
   root: string;
   workspace_label: string;
@@ -1021,6 +1025,17 @@ export interface ContainerDone {
   status?: string;
 }
 
+export interface PaletteList {
+  items: PaletteItem[];
+}
+
+export interface PaletteItem {
+  id: string;
+  title: string;
+  keys?: string;
+  ask?: boolean;
+}
+
 export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;
 export type ServerMsg = Delta | ErrMsg | Event | Meta | Pong | Res | Resync | ServerBye | Snap;
 
@@ -1100,6 +1115,9 @@ export interface OpArgs {
   "containers.restart": ContainerArgs;
   "containers.stop": ContainerArgs;
   "containers.remove": ContainerArgs;
+  "palette.list": EmptyArgs;
+  "palette.run": PaletteArgs;
+  "palette.ask": PaletteArgs;
 }
 
 export type OpName = keyof OpArgs;
@@ -1185,4 +1203,6 @@ export interface OpResult {
   "containers.restart": ContainerDone;
   "containers.stop": AskRef;
   "containers.remove": AskRef;
+  "palette.list": PaletteList;
+  "palette.ask": AskRef;
 }
