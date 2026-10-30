@@ -10,6 +10,7 @@ import { computed, signal } from "@preact/signals";
 import type { BufHeadRes, BufOpenRes } from "../../../../webproto/proto";
 import { OfflineError, ReqError } from "../net/link";
 import { link } from "../session";
+import { fileOfTab } from "./difftab";
 import { activeFile } from "./workbench";
 
 export type FileKind = "loading" | "open" | "head" | "binary" | "secret" | "missing" | "offline" | "error";
@@ -32,7 +33,8 @@ export const files = signal<ReadonlyMap<string, FileState>>(new Map());
 
 /** file is the state of the file the editor shows (the focused one). */
 export const file = computed<FileState | null>(() => {
-  const p = activeFile.value;
+  const a = activeFile.value;
+  const p = a === null ? null : fileOfTab(a);
   return p === null ? null : (files.value.get(p) ?? null);
 });
 

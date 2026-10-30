@@ -6,7 +6,7 @@
 // at hand at once.
 import { computed, signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
-import { FRAME_PATH, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type ToFrame } from "../monaco/protocol";
+import { FRAME_PATH, type FrameDiff, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type ToFrame } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
 import { cursorAt, focusSlot, quick } from "./workbench";
@@ -65,6 +65,10 @@ export interface DeskHost extends EditorHost {
   onLsp?(kind: LspKind, line: number, col: number): Promise<unknown>;
   onRefs?(line: number, col: number): void;
   onOpen?(path: string, line: number, col: number): void;
+  /** diff makes it a diff editor (the older text on the left); onDiff
+   * hears its change count. */
+  diff?: FrameDiff;
+  onDiff?(changes: number, added: number, removed: number): void;
 }
 
 /** DeskHandle is an EditorHandle with the settings the view changes. */
@@ -74,6 +78,10 @@ export interface DeskHandle extends EditorHandle {
   /** reveal shows a 1-based line (and column) with the cursor there. */
   reveal(line: number, col?: number): void;
   markers(items: FrameMarker[]): void;
+  /** original sets a diff editor's older text. */
+  original(text: string): void;
+  diffView(o: { inline?: boolean; collapse?: boolean }): void;
+  diffGo(dir: 1 | -1): void;
 }
 
 /** desks are the desktop editors on screen, by editor group slot. */
@@ -119,7 +127,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
       case "ready": {
         ready = true;
         const c = frameColors(parent);
-        frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, lsp: host.lsp, refsLabel: host.refsLabel, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, ...c } satisfies ToFrame, location.origin);
+        frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, path: host.path, diff: host.diff, lsp: host.lsp, refsLabel: host.refsLabel, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, ...c } satisfies ToFrame, location.origin);
         for (const q of queue.splice(0)) {
           // A focus asked before the frame was ready does not take the
           // keyboard from something the user went to meanwhile.
@@ -140,6 +148,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         return;
       case "viewport":
         host.onViewport(m.first, m.last);
+        return;
+      case "diff":
+        host.onDiff?.(m.changes, m.added, m.removed);
         return;
       case "cursor":
         if ((host.slot ?? "g0") === focusSlot.peek()) cursorAt.value = { line: m.line, col: m.col };
@@ -214,6 +225,15 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     },
     markers(items) {
       send({ t: "markers", items });
+    },
+    original(text) {
+      send({ t: "original", text });
+    },
+    diffView(o) {
+      send({ t: "diffView", ...o });
+    },
+    diffGo(dir) {
+      send({ t: "diffGo", dir });
     },
     destroy() {
       removeEventListener("message", onMessage);
