@@ -14,8 +14,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 	"unicode/utf8"
@@ -245,9 +247,17 @@ func Start(t *testing.T, o StartOpts) *Term {
 		if t.Failed() {
 			tm.dump("failure")
 		}
+		// Off Linux no leak check waits for what termocode started (nvim,
+		// git …): a child still writing in HOME after the kill breaks
+		// TempDir's cleanup ("directory not empty", macOS 2026-10-30), so
+		// they are found before the kill and waited for after it.
+		var kids []int
 		select {
 		case <-tm.exited:
 		default:
+			if runtime.GOOS != "linux" {
+				kids = descendants(cmd.Process.Pid)
+			}
 			_ = cmd.Process.Kill()
 			<-tm.exited
 		}
@@ -257,6 +267,13 @@ func Start(t *testing.T, o StartOpts) *Term {
 		tm.mu.Lock()
 		_ = em.Close()
 		tm.mu.Unlock()
+		if left := waitGone(kids, leakWait); len(left) > 0 {
+			t.Logf("killed processes termocode left running %v after it ended: %v", leakWait, left)
+			for _, p := range left {
+				_ = syscall.Kill(p, syscall.SIGKILL)
+			}
+			waitGone(left, leakWait)
+		}
 	})
 	return tm
 }
