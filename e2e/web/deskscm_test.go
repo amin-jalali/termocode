@@ -14,7 +14,7 @@ import (
 
 // The desktop's Source Control view (views/desk/DeskSCM.tsx).
 
-const scm = `document.querySelector('.wb-side [data-view="scm"]')`
+const scm = `document.querySelector('.wb-side [data-view="git"]')`
 
 func scmRow(group, path string) string {
 	return scm + `.querySelector('.tr[data-group="` + group + `"][data-path="` + path + `"]')`
@@ -71,7 +71,7 @@ func TestDeskSCMGroupsAndStage(t *testing.T) {
 // focused (Enter does not commit); then git.commit with the message.
 func TestDeskSCMCommit(t *testing.T) {
 	p, c := openDeskSCM(t, nil)
-	box := `.wb-side [data-view="scm"] textarea`
+	box := `.wb-side [data-view="git"] textarea`
 	p.WaitJS(`document.querySelector('` + box + `').placeholder === "Message (Ctrl+Enter to commit on 'main')" || document.querySelector('` + box + `').placeholder === "Message (⌘+Enter to commit on 'main')"`)
 	p.Tap(box)
 	p.Do(chromedp.SendKeys(box, "fix the toast"))

@@ -61,7 +61,7 @@ func tasksSnap(last *webproto.TaskLast) webproto.TasksSnap {
 // then starts the task by label; its output shows under the row and
 // reads again while it runs; Stop asks first too. No command field.
 func TestTaskRunShowsOutput(t *testing.T) {
-	for _, vp := range Both {
+	for _, vp := range RowViews {
 		t.Run(vp.Name, func(t *testing.T) {
 			p, c := openMore(t, vp, 1, "tasks")
 			c.Send(t, Snap("tasks", 1, tasksSnap(nil)))
@@ -147,4 +147,45 @@ func TestRunsStopFromPhone(t *testing.T) {
 	p.TapJS(ButtonByText("Pause"))
 	reply(t, c, expectOp(t, c, webproto.OpRunsPause, `{"key":"c1/r1"}`), nil)
 	p.noOverflow("runs")
+}
+
+// The desktop's Tasks and AI runs view: a tree with state icons; Run
+// asks in the view (Cancel first and focused; Enter cancels), then runs
+// the task by label; Show Output opens its terminal in the panel; a run
+// pauses at once and asks before it stops.
+func TestDeskRunTasksAndRuns(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Desktop)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	c := p.Login("c-run")
+	Eval[bool](p, `(location.hash = "#/more/tasks", true)`)
+	waitSubs(t, c, "tasks", "runs")
+	c.Send(t, Snap("tasks", 1, tasksSnap(&webproto.TaskLast{State: "failed", Code: 2, When: time.Now().UnixMilli(), Buf: 41})))
+	c.Send(t, Snap("runs", 1, webproto.RunsSnap{Runs: []webproto.RunItem{{Key: "c1/r1", Title: "fix the toast flicker", Profile: "coder", State: "running", Step: 2, Steps: 3, ElapsedMs: 41000, Live: true, Can: []string{"stop", "pause"}}}}))
+	const view = `document.querySelector('.wb-side [data-view="run"]')`
+	p.WaitJS(view + `?.querySelectorAll('.tr[data-label]').length === 2 && ` + view + `.querySelector('.tr[data-key]')`)
+	if !Eval[bool](p, `!!`+view+`.querySelector('.tr[data-label="test"] .c-err .cod-error') && !!`+view+`.querySelector('.tr[data-label="build"] .cod-circle-outline')`) {
+		t.Error("the state icons are wrong")
+	}
+	if n := Eval[int](p, view+`.querySelectorAll("input, textarea").length`); n != 0 {
+		t.Fatalf("%d text fields in the view", n)
+	}
+	Eval[bool](p, view+`.querySelector('.tr[data-label="build"] [aria-label="Run Task"]').click() ?? true`)
+	p.WaitJS(view + `.querySelector(".pv-ask")?.textContent.includes("Run build on the laptop?") && document.activeElement?.textContent === "Cancel"`)
+	p.Key(kb.Enter)
+	p.WaitJS(`!` + view + `.querySelector(".pv-ask")`)
+	c.Quiet(t, 200*time.Millisecond)
+	Eval[bool](p, view+`.querySelector('.tr[data-label="build"] [aria-label="Run Task"]').click() ?? true`)
+	p.TapJS(`[...` + view + `.querySelectorAll(".pv-ask button")].find((b) => b.textContent === "Run")`)
+	reply(t, c, expectOp(t, c, webproto.OpTasksRun, `{"label":"build"}`), webproto.TaskStarted{Buf: 42})
+	// Show Output: the task's terminal in the panel.
+	p.TapJS(view + `.querySelector('.tr[data-label="test"]')`)
+	p.WaitJS(`location.hash === "#/term/41" && document.querySelector(".wb-panel")`)
+	// The run: Pause at once; Stop asks first.
+	Eval[bool](p, view+`.querySelector('.tr[data-key="c1/r1"] [aria-label="Pause"]').click() ?? true`)
+	reply(t, c, expectOp(t, c, "runs.pause", `{"key":"c1/r1"}`), nil)
+	Eval[bool](p, view+`.querySelector('.tr[data-key="c1/r1"] [aria-label="Stop"]').click() ?? true`)
+	p.WaitJS(view + `.querySelector(".pv-ask")?.textContent.includes("Stop this run?")`)
+	p.TapJS(`[...` + view + `.querySelectorAll(".pv-ask button")].find((b) => b.textContent === "Stop")`)
+	reply(t, c, expectOp(t, c, "runs.stop", `{"key":"c1/r1"}`), nil)
 }
