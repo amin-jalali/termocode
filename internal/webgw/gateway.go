@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -154,9 +155,14 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 	linked := make(chan struct{}, 1)
 	var ctlRef atomic.Pointer[Ctl] // set once the control connection is up
 	var pairing *Pairing
+	var devices *webdevices.Store
+	var wsRef atomic.Pointer[WS]
 	if cfg.DevicesDir != "" {
-		pairing = NewPairing(PairingConfig{Tokens: tokens, Store: webdevices.Open(cfg.DevicesDir), Audit: audit, Now: now,
-			Ask: func(ctx context.Context, a webproto.PairAskArgs) (string, error) { return askPair(ctx, ctlRef.Load(), a) }})
+		devices = webdevices.Open(cfg.DevicesDir)
+		pairing = NewPairing(PairingConfig{Tokens: tokens, Store: devices, Audit: audit, Now: now,
+			Ask: func(ctx context.Context, a webproto.PairAskArgs) (string, error) {
+				return askPair(ctx, ctlRef.Load(), a)
+			}})
 	}
 	ctl, err := DialCtlWith(ctx, cfg.Dial, CtlHandlers{Link: func(d [sha256.Size]byte) {
 		auth.SetSecretDigest(d)
@@ -169,7 +175,7 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 		_ = audit.Log(Event{Kind: EvOp, Conn: n.Conn, Device: n.Device, Op: n.Op, OK: &ok,
 			Why: n.Why, Summary: n.Summary, By: "web:" + n.Device})
 	}, Event: func(kind string, data json.RawMessage) {
-		onCtlEvent(kind, data, pairing)
+		onCtlEvent(kind, data, ctlTargets{pairing: pairing, tokens: tokens, ws: wsRef.Load(), audit: audit})
 	}})
 	if err != nil {
 		return 0, fmt.Errorf("reach termocode: %w", err)
@@ -179,8 +185,9 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 
 	var last atomic.Int64 // unix nanos of the last use
 	last.Store(time.Now().UnixNano())
-	ws := NewWS(WSConfig{Site: site, Tokens: tokens, Audit: audit, Dial: cfg.Dial, Now: now,
+	ws := NewWS(WSConfig{Site: site, Tokens: tokens, Audit: audit, Dial: cfg.Dial, Now: now, Devices: devices,
 		MaxViewers: cfg.MaxViewers, Activity: func() { last.Store(time.Now().UnixNano()) }})
+	wsRef.Store(ws)
 	mux := http.NewServeMux()
 	mux.Handle("/auth", auth)
 	mux.Handle("/ws", ws)
@@ -267,10 +274,32 @@ func askPair(ctx context.Context, ctl *Ctl, a webproto.PairAskArgs) (string, err
 	return r.Role, nil
 }
 
+// ctlTargets are what the hub's events act on.
+type ctlTargets struct {
+	pairing *Pairing
+	tokens  *Tokens
+	ws      *WS // nil until the WebSocket endpoint is made
+	audit   *Audit
+}
+
 // onCtlEvent handles the hub's other events: a new pairing link
-// ({sha256, ttl_s, guest}) or its end (pair_close).
-func onCtlEvent(kind string, data json.RawMessage, pairing *Pairing) {
+// ({sha256, ttl_s, guest}), its end (pair_close), a removed device
+// (revoke {device}).
+func onCtlEvent(kind string, data json.RawMessage, t ctlTargets) {
+	pairing := t.pairing
 	switch kind {
+	case EvRevokeDevice:
+		var d struct {
+			Device string `json:"device"`
+		}
+		if json.Unmarshal(data, &d) != nil || !strings.HasPrefix(d.Device, "dev-") {
+			return
+		}
+		n := t.tokens.RevokeDevice(d.Device)
+		if t.ws != nil {
+			n += t.ws.CloseDevice(d.Device, webproto.CloseDeviceRevoked)
+		}
+		_ = t.audit.Log(Event{Kind: EvRevoke, Device: d.Device, Summary: fmt.Sprintf("%d sessions closed", n)})
 	case EvPairLink:
 		var d struct {
 			SHA256 string `json:"sha256"`
@@ -298,6 +327,8 @@ func onCtlEvent(kind string, data json.RawMessage, pairing *Pairing) {
 const (
 	EvPairLink  = "pair"       // {sha256, ttl_s, guest}: a new pairing link
 	EvPairClose = "pair_close" // the pairing link was closed on the laptop
+	// EvRevokeDevice: {device}: the device was removed on the laptop.
+	EvRevokeDevice = "revoke"
 )
 
 // waitStop waits for the first reason to stop. The idle timer is one
