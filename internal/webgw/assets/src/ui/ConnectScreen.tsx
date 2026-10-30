@@ -14,7 +14,7 @@ const errorText: Partial<Record<ConnectState, StringKey>> = {
   nolink: "e.no_link",
 };
 
-export function ConnectScreen({ state, onOpen }: { state: ConnectState; onOpen?: () => void }) {
+export function ConnectScreen({ state, onOpen, focus = true }: { state: ConnectState; onOpen?: () => void; focus?: boolean }) {
   const err = errorText[state];
   return (
     <main class="connect">
@@ -31,7 +31,7 @@ export function ConnectScreen({ state, onOpen }: { state: ConnectState; onOpen?:
       </div>
       {(!err || state === "busy") && (
         <div class="connect-foot">
-          <Button kind="primary" wide autoFocus disabled={state === "opening"} onClick={onOpen}>
+          <Button kind="primary" wide autoFocus={focus} disabled={state === "opening"} onClick={onOpen}>
             {state === "opening" ? t("connect.opening") : t("connect.open")}
           </Button>
         </div>
