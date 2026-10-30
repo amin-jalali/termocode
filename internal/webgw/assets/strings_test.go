@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -299,5 +300,33 @@ func TestComponentsHaveNoHardcodedText(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Every Persian text is filled in, is Persian (but for the few that are
+// key names, symbols or names that stay as they are), and keeps exactly
+// the placeholders of its English text, so t() fills the same values.
+func TestPersianStringsAreCompleteAndKeepPlaceholders(t *testing.T) {
+	en := map[string]string{}
+	for _, e := range parseStrings(t, "src/strings.ts", "S") {
+		en[e.key] = e.text
+	}
+	same := map[string]bool{"connect.title": true, "toast.more": true, "more.lang.en": true, "more.lang.fa": true}
+	persian := regexp.MustCompile(`[\x{0600}-\x{06FF}]`)
+	ph := regexp.MustCompile(`\{[a-z_]+\}`)
+	for _, e := range parseStrings(t, "src/strings.fa.ts", "FA") {
+		if strings.TrimSpace(e.text) == "" {
+			t.Errorf("strings.fa.ts:%d: %s is empty", e.line, e.key)
+			continue
+		}
+		if !same[e.key] && !strings.HasPrefix(e.key, "key.") && !persian.MatchString(e.text) {
+			t.Errorf("strings.fa.ts:%d: %s is not Persian: %q", e.line, e.key, e.text)
+		}
+		got, want := ph.FindAllString(e.text, -1), ph.FindAllString(en[e.key], -1)
+		sort.Strings(got)
+		sort.Strings(want)
+		if strings.Join(got, ",") != strings.Join(want, ",") {
+			t.Errorf("strings.fa.ts:%d: %s has placeholders %v, English has %v", e.line, e.key, got, want)
+		}
 	}
 }

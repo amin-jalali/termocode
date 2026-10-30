@@ -7,14 +7,16 @@ const KEY = "termocode.prefs.v1";
 
 export type Theme = "system" | "dark" | "light";
 export type Direction = "auto" | "ltr" | "rtl";
+export type Language = "auto" | "en" | "fa";
 
 export interface Prefs {
   theme: Theme;
   dir: Direction;
+  lang: Language;
   firstRunDone: boolean;
 }
 
-const defaults: Prefs = { theme: "system", dir: "auto", firstRunDone: false };
+const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false };
 
 function pick<T extends string>(v: unknown, allowed: readonly T[], def: T): T {
   return typeof v === "string" && (allowed as readonly string[]).includes(v) ? (v as T) : def;
@@ -28,6 +30,7 @@ function load(): Prefs {
     return {
       theme: pick(v.theme, ["system", "dark", "light"], defaults.theme),
       dir: pick(v.dir, ["auto", "ltr", "rtl"], defaults.dir),
+      lang: pick(v.lang, ["auto", "en", "fa"], defaults.lang),
       firstRunDone: v.firstRunDone === true,
     };
   } catch {
