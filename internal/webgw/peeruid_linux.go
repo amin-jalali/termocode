@@ -34,7 +34,16 @@ var openProcNet = func(name string) (io.ReadCloser, error) { return os.Open(name
 
 // checkTCPPeer accepts a TCP connection whose peer socket is owned by our
 // uid. Anything but TCP passes (a unix socket has its own peer check).
-func checkTCPPeer(c net.Conn) error {
+func checkTCPPeer(c net.Conn) error { return checkPeerUID(c, false) }
+
+// peerCheck is the peer check of a listener: checkTCPPeer, and in
+// tailnet mode also root, the owner of tailscaled, whose Serve proxy is
+// the only way a tailnet browser reaches the gateway.
+func peerCheck(tailnet bool) func(net.Conn) error {
+	return func(c net.Conn) error { return checkPeerUID(c, tailnet) }
+}
+
+func checkPeerUID(c net.Conn, allowRoot bool) error {
 	local, ok1 := c.LocalAddr().(*net.TCPAddr)
 	remote, ok2 := c.RemoteAddr().(*net.TCPAddr)
 	if !ok1 || !ok2 {
@@ -44,7 +53,7 @@ func checkTCPPeer(c net.Conn) error {
 	if err != nil {
 		return fmt.Errorf("%w: %v", errPeerUID, err)
 	}
-	if uid != os.Getuid() {
+	if uid != os.Getuid() && !(allowRoot && uid == 0) {
 		return errPeerUID
 	}
 	return nil
