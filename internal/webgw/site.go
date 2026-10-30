@@ -2,7 +2,11 @@
 
 package webgw
 
-import "strconv"
+import (
+	"errors"
+	"strconv"
+	"strings"
+)
 
 // Site is the one origin the gateway serves: the scheme and the exact Host
 // header values a browser may send. Everything else is another site.
@@ -38,4 +42,42 @@ func (s Site) wsScheme() string {
 		return "wss"
 	}
 	return "ws"
+}
+
+// ErrNotTailnetName: the name is not a machine name on a tailnet.
+var ErrNotTailnetName = errors.New("not a tailnet machine name (name.tailXXXX.ts.net)")
+
+// TailnetSite is the site of a gateway behind Tailscale Serve (WEB-31):
+// https on the machine's tailnet name, with no port (Serve answers on
+// 443). The name must be exactly what a browser sends as Host: lower
+// case, no trailing dot, letters, digits and dashes in at least three
+// labels under ts.net. Anything else is refused, so a typo or a public
+// name can never become an allowed Host.
+func TailnetSite(host string) (Site, error) {
+	if !isTailnetName(host) {
+		return Site{}, ErrNotTailnetName
+	}
+	return Site{Scheme: "https", Hosts: []string{host}}, nil
+}
+
+func isTailnetName(host string) bool {
+	if len(host) > 253 || !strings.HasSuffix(host, ".ts.net") {
+		return false
+	}
+	labels := strings.Split(host, ".")
+	if len(labels) < 4 {
+		return false
+	}
+	for _, l := range labels {
+		if l == "" || len(l) > 63 || l[0] == '-' || l[len(l)-1] == '-' {
+			return false
+		}
+		for i := 0; i < len(l); i++ {
+			c := l[i]
+			if !('a' <= c && c <= 'z' || '0' <= c && c <= '9' || c == '-') {
+				return false
+			}
+		}
+	}
+	return true
 }
