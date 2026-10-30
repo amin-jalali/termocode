@@ -1264,6 +1264,36 @@
       "phase": "v2"
     },
     {
+      "op": "ai.complete",
+      "args": "AICompleteArgs",
+      "result": "AICompletion",
+      "role": "controller",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 2,
+      "laptop_card": false,
+      "audit": "counted",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.next_edit",
+      "args": "AINextEditArgs",
+      "result": "AINextEdit",
+      "role": "controller",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 2,
+      "laptop_card": false,
+      "audit": "counted",
+      "phase": "v2"
+    },
+    {
       "op": "git.file_log",
       "args": "GitFileLogArgs",
       "result": "GitFileLog",
@@ -2137,6 +2167,128 @@
     }
   ],
   "defs": {
+    "AICompleteArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "col": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "manual": {
+          "type": "boolean"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "tick",
+        "line",
+        "col"
+      ],
+      "additionalProperties": false
+    },
+    "AICompletion": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "integer"
+        },
+        "importAt": {
+          "type": "integer"
+        },
+        "imports": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "none": {
+          "type": "boolean"
+        },
+        "text": {
+          "type": "string"
+        },
+        "to": {
+          "type": "integer"
+        },
+        "why": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "line",
+        "from",
+        "to",
+        "text"
+      ],
+      "additionalProperties": true
+    },
+    "AINextEdit": {
+      "type": "object",
+      "properties": {
+        "end": {
+          "type": "integer"
+        },
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "none": {
+          "type": "boolean"
+        },
+        "old": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "start": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "old",
+        "lines"
+      ],
+      "additionalProperties": true
+    },
+    "AINextEditArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "seed": {
+          "type": "boolean"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "tick",
+        "line"
+      ],
+      "additionalProperties": false
+    },
     "Answered": {
       "type": "object",
       "properties": {
