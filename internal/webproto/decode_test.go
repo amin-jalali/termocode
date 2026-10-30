@@ -50,3 +50,24 @@ func TestDecodeClientRefusesBadInput(t *testing.T) {
 		t.Fatalf("unknown kind: err = %v", err)
 	}
 }
+
+// Go's decoder keeps the last of two equal keys and matches keys without
+// case; the browser and a proxy may see the first one. Both are refused.
+func TestStrictDecoderRejectsDuplicateAndFoldedKeys(t *testing.T) {
+	for _, in := range []string{
+		`{"t":"ping","n":"1","n":"2"}`,
+		`{"t":"ping","t":"bye"}`,
+		`{"t":"hello","v":2,"token":"a","resume":{"conn":"c","topics":{"git":1,"git":2}}}`,
+		`{"t":"hello","v":2,"TOKEN":"x"}`,
+		`{"T":"ping","n":"1"}`,
+		"{\"t\":\"hello\",\"v\":2,\"toKen\":\"x\"}",
+		`{"t":"req","id":1,"op":"x","args":{"a":1,"a":2}}`,
+	} {
+		if _, err := DecodeClient([]byte(in)); err == nil {
+			t.Errorf("accepted %s", in)
+		}
+	}
+	if _, err := DecodeClient([]byte(`{"t":"req","id":1,"op":"x","args":{"a":[{"b":1},{"b":2}]}}`)); err != nil {
+		t.Fatalf("equal keys in two array items refused: %v", err)
+	}
+}
