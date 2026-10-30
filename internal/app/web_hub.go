@@ -68,6 +68,7 @@ type webHub struct {
 	runs   webRunsPub                 // Update only: what the runs topic sent (web_runs.go)
 	run    webRunPub                  // Update only: the Test, Debug and Services topics (web_tests.go)
 	more   webMorePub                 // Update only: the v2 More views (web_more.go)
+	ai     webAICalls                 // Update only: the page's AI calls (web_ai.go)
 	ups    webUploads                 // staged uploads (web_transfer.go; own lock)
 	// settled: Update only; the publishers ran once since the hub went
 	// idle (web_after.go).
