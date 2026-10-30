@@ -25,7 +25,12 @@ var (
 	ErrSecretWrong   = errors.New("wrong launch secret")
 	ErrSecretUsed    = errors.New("the launch secret was already used")
 	ErrSecretExpired = errors.New("the launch secret expired")
+	ErrSecretBurned  = errors.New("too many wrong tries: the launch secret is burned")
+	ErrSecretClosed  = errors.New("the launch secret was burned")
 )
+
+// MaxBadTries wrong tries burn a launch secret.
+const MaxBadTries = 5
 
 // LaunchSecret is the one-time secret that lets the first browser tab in
 // (it travels in the URL #fragment, never in a query, argv or a log). Only
@@ -49,7 +54,8 @@ func NewLaunchSecret(now time.Time) (plain string, s *LaunchSecret, err error) {
 }
 
 // Redeem uses the secret up if plain is right, unused and not expired at
-// now. The check compares SHA-256 digests in constant time, so the time it
+// now. The MaxBadTries-th wrong try burns it (ErrSecretBurned, once);
+// after that every try is ErrSecretClosed. The check compares SHA-256 digests in constant time, so the time it
 // takes says nothing about how much of a guess was right.
 func (s *LaunchSecret) Redeem(plain string, now time.Time) error {
 	s.mu.Lock()
@@ -57,12 +63,18 @@ func (s *LaunchSecret) Redeem(plain string, now time.Time) error {
 	if s.used {
 		return ErrSecretUsed
 	}
+	if s.bad >= MaxBadTries {
+		return ErrSecretClosed
+	}
 	if !now.Before(s.exp) {
 		return ErrSecretExpired
 	}
 	sum := sha256.Sum256([]byte(plain))
 	if subtle.ConstantTimeCompare(sum[:], s.hash[:]) != 1 {
 		s.bad++
+		if s.bad >= MaxBadTries {
+			return ErrSecretBurned
+		}
 		return ErrSecretWrong
 	}
 	s.used = true
