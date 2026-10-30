@@ -20,6 +20,6 @@ Session/transfer/update: 81.0
 Database and HTTP: 83.9
 UI parts: 88.5
 Editor and files: 84.4
-Web UI: 95
+Web UI: 90.5
 App shell: 79.4
 Total: 82.3
