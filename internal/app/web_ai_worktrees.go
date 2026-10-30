@@ -104,10 +104,6 @@ func webAIChangeStatus(st string) string {
 
 func (m *Model) webAIWorktreeText(call *webCall) tea.Cmd {
 	a := call.args.(*webproto.AIWorktreeTextArgs)
-	if ai.IsSecretFileName(a.Path) {
-		call.reply(webproto.AIWorktreeText{ID: a.ID, Path: a.Path, Secret: true})
-		return nil
-	}
 	if st, ok := m.aiS().webAIWorktreeSteps()[a.ID]; ok && st.running {
 		call.fail(webproto.CodeBusy, "Its step still runs. Look again when it ends.")
 		return nil
@@ -123,6 +119,12 @@ func (m *Model) webAIWorktreeText(call *webCall) tea.Cmd {
 		for _, f := range fs {
 			if f.Path != a.Path {
 				continue
+			}
+			// Only a file the agent changed is named back, and one that may
+			// hold secrets stays on the laptop.
+			if ai.IsSecretFileName(a.Path) {
+				call.reply(webproto.AIWorktreeText{ID: a.ID, Path: a.Path, Secret: true})
+				return nil
 			}
 			out := webproto.AIWorktreeText{ID: a.ID, Path: a.Path}
 			if webAIBinary(f.Before) || webAIBinary(f.After) {
