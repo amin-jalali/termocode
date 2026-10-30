@@ -3,6 +3,7 @@
 package webgw
 
 import (
+	"encoding/json"
 	"io"
 	"io/fs"
 	"net/http"
@@ -87,8 +88,8 @@ func TestAssetsServeEveryLockedFileButTheLock(t *testing.T) {
 	h := Assets()
 	for _, e := range assets.Lock() {
 		want := http.StatusOK
-		if e.Path == manifest.LockFile || strings.HasSuffix(e.Path, ".html") || assets.IsKitFile(e.Path) && !KitEnabled {
-			continue // the page is served at /, the lock is not served
+		if e.Path == manifest.LockFile || strings.HasSuffix(e.Path, ".html") || assets.IsKitFile(e.Path) && !KitEnabled || e.Path == "manifest.webmanifest" {
+			continue // the page is served at /, the manifest by Manifest(), the lock is not served
 		}
 		path := "/assets/" + e.Path
 		res := getAsset(t, h, http.MethodGet, path)
@@ -112,5 +113,52 @@ func TestKitIsServedOnlyByDevBuilds(t *testing.T) {
 		if res := getAsset(t, h, http.MethodGet, path); res.StatusCode != want {
 			t.Errorf("GET %s = %d, want %d (KitEnabled=%v)", path, res.StatusCode, want, KitEnabled)
 		}
+	}
+}
+
+// The app manifest (WEB-35) is served only by Manifest(), which the
+// gateway mounts on an installable site; Assets() never serves it. It
+// opens the page standalone at "/", and every icon it names is served.
+func TestManifestServedOnlyByManifest(t *testing.T) {
+	for _, path := range []string{ManifestPath, "/assets/manifest.webmanifest"} {
+		if res := getAsset(t, Assets(), http.MethodGet, path); res.StatusCode != http.StatusNotFound {
+			t.Errorf("Assets GET %s = %d, want 404", path, res.StatusCode)
+		}
+	}
+	res := getAsset(t, Manifest(), http.MethodGet, ManifestPath)
+	body, _ := io.ReadAll(res.Body)
+	if res.StatusCode != http.StatusOK || res.Header.Get("Content-Type") != "application/manifest+json" {
+		t.Fatalf("GET %s = %d %q", ManifestPath, res.StatusCode, res.Header.Get("Content-Type"))
+	}
+	var m struct {
+		Name, StartURL, Scope, Display string
+		Icons                          []struct{ Src, Type, Purpose string }
+	}
+	if err := json.Unmarshal(body, &m); err != nil {
+		t.Fatal(err)
+	}
+	if m.Name != "termocode" || m.Display != "standalone" {
+		t.Errorf("manifest %+v", m)
+	}
+	var raw map[string]any
+	_ = json.Unmarshal(body, &raw)
+	if raw["start_url"] != "/" || raw["scope"] != "/" {
+		t.Errorf("start_url %v scope %v, want /", raw["start_url"], raw["scope"])
+	}
+	purposes := map[string]bool{}
+	for _, ic := range m.Icons {
+		purposes[ic.Purpose] = true
+		if r := getAsset(t, Assets(), http.MethodGet, ic.Src); r.StatusCode != http.StatusOK || r.Header.Get("Content-Type") != ic.Type {
+			t.Errorf("icon %s = %d %q, want 200 %q", ic.Src, r.StatusCode, r.Header.Get("Content-Type"), ic.Type)
+		}
+	}
+	if !purposes["any"] || !purposes["maskable"] {
+		t.Errorf("icon purposes %v, want any and maskable", purposes)
+	}
+	if res := getAsset(t, Manifest(), http.MethodPost, ManifestPath); res.StatusCode != http.StatusMethodNotAllowed {
+		t.Errorf("POST = %d", res.StatusCode)
+	}
+	if res := getAsset(t, Manifest(), http.MethodGet, "/sw.js"); res.StatusCode != http.StatusNotFound {
+		t.Errorf("GET /sw.js = %d", res.StatusCode)
 	}
 }
