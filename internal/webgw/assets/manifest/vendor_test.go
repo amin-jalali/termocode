@@ -129,6 +129,9 @@ func TestVendorShipsTypeDeclarations(t *testing.T) {
 		"preact":               {"src/index.d.ts", "src/jsx.d.ts", "src/dom.d.ts", "hooks/src/index.d.ts", "jsx-runtime/src/index.d.ts"},
 		"@preact/signals":      {"dist/signals.d.ts"},
 		"@preact/signals-core": {"dist/signals-core.d.ts"},
+		"@codemirror/state":    {"dist/index.d.ts"},
+		"@codemirror/view":     {"dist/index.d.ts"},
+		"style-mod":            {"src/style-mod.d.ts"},
 	}
 	for _, p := range pkgs {
 		for _, f := range want[p.Name] {
