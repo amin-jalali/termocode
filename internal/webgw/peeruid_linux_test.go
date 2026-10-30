@@ -178,3 +178,32 @@ func FuzzProcNetTCP(f *testing.F) {
 		}
 	})
 }
+
+// In tailnet mode Tailscale Serve proxies from tailscaled, which runs as
+// root: its connection passes there, never in plain loopback mode, and
+// any other user stays refused in both (T16).
+func TestTailnetAllowsTailscaledOnly(t *testing.T) {
+	a, b := tcpPair(t)
+	defer a.Close()
+	defer b.Close()
+	for _, tc := range []struct {
+		uid     int
+		tailnet bool
+		ok      bool
+	}{
+		{os.Getuid(), false, true},
+		{os.Getuid(), true, true},
+		{0, true, true},
+		{0, false, os.Getuid() == 0},
+		{os.Getuid() + 1, true, os.Getuid()+1 == 0},
+	} {
+		uid := tc.uid
+		fakeProcNet(t, func() string {
+			return procHeader + procRow(procHex(a.LocalAddr().(*net.TCPAddr).AddrPort()), procHex(b.LocalAddr().(*net.TCPAddr).AddrPort()), uid)
+		})
+		err := peerCheck(tc.tailnet)(b)
+		if (err == nil) != tc.ok {
+			t.Errorf("uid %d tailnet %v: err %v, want ok=%v", tc.uid, tc.tailnet, err, tc.ok)
+		}
+	}
+}
