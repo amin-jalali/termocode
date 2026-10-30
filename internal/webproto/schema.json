@@ -956,6 +956,48 @@
       "laptop_card": false,
       "audit": "yes",
       "phase": "v2"
+    },
+    {
+      "op": "tree.new_file",
+      "args": "ItemArgs",
+      "result": "TreeChanged",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "tree.new_dir",
+      "args": "ItemArgs",
+      "result": "TreeChanged",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "tree.rename",
+      "args": "RenameArgs",
+      "result": "TreeChanged",
+      "role": "controller",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
     }
   ],
   "defs": {
@@ -2251,6 +2293,18 @@
       ],
       "additionalProperties": true
     },
+    "ItemArgs": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    },
     "KeyArgs": {
       "type": "object",
       "properties": {
@@ -2634,6 +2688,22 @@
       "required": [
         "row",
         "col"
+      ],
+      "additionalProperties": false
+    },
+    "RenameArgs": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "name"
       ],
       "additionalProperties": false
     },
@@ -3773,6 +3843,18 @@
         "code"
       ],
       "additionalProperties": false
+    },
+    "TreeChanged": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": true
     },
     "TreeDir": {
       "type": "object",
