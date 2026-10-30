@@ -230,7 +230,8 @@
   ],
   "events": {
     "answered": "Answered",
-    "attention": "Attention"
+    "attention": "Attention",
+    "search.batch": "SearchBatch"
   },
   "messages": {
     "client": {
@@ -399,6 +400,7 @@
     {
       "op": "search.run",
       "args": "SearchRunArgs",
+      "result": "SearchSummary",
       "role": "viewer",
       "rate": {
         "n": 20,
@@ -408,6 +410,19 @@
       "live": 1,
       "laptop_card": false,
       "audit": "yes",
+      "phase": "v1"
+    },
+    {
+      "op": "search.stop",
+      "args": "EmptyArgs",
+      "role": "viewer",
+      "rate": {
+        "n": 20,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
       "phase": "v1"
     },
     {
@@ -2345,6 +2360,84 @@
       ],
       "additionalProperties": true
     },
+    "SearchBatch": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "results": {
+          "items": {
+            "$ref": "#/defs/SearchHit"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "results"
+      ],
+      "additionalProperties": true
+    },
+    "SearchHit": {
+      "type": "object",
+      "properties": {
+        "after": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "before": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "col": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "marks": {
+          "items": {
+            "$ref": "#/defs/SearchMark"
+          },
+          "type": "array"
+        },
+        "path": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "line",
+        "col",
+        "text"
+      ],
+      "additionalProperties": true
+    },
+    "SearchMark": {
+      "type": "object",
+      "properties": {
+        "e": {
+          "type": "integer"
+        },
+        "s": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "s",
+        "e"
+      ],
+      "additionalProperties": true
+    },
     "SearchOpenArgs": {
       "type": "object",
       "properties": {
@@ -2390,6 +2483,37 @@
         "query"
       ],
       "additionalProperties": false
+    },
+    "SearchSummary": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "integer"
+        },
+        "matches": {
+          "type": "integer"
+        },
+        "ms": {
+          "type": "integer"
+        },
+        "stopped": {
+          "enum": [
+            "stopped",
+            "replaced",
+            "timeout",
+            "limit"
+          ]
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "files",
+        "matches",
+        "ms"
+      ],
+      "additionalProperties": true
     },
     "ServerBye": {
       "type": "object",
