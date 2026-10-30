@@ -3,9 +3,10 @@
 // markdown from the AST, tool lines in mono, a cursor while an answer
 // streams. Every message follows its own text direction (dir=auto); code
 // stays left to right.
-import { h } from "preact";
-import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
-import type { ChatMsg } from "../../../../webproto/proto";
+import { Fragment, h } from "preact";
+import { signal } from "@preact/signals";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import type { ChatItem, ChatMsg, ChatSnap } from "../../../../webproto/proto";
 import { toast } from "../lib/toasts";
 import { ReqError } from "../net/link";
 import { link, live, store } from "../session";
@@ -14,6 +15,7 @@ import { t } from "../strings";
 import { Md } from "../ui/Markdown";
 import { Progress, SkeletonBubbles } from "../ui/Skeleton";
 import { errText } from "../ui/CardSheet";
+import { ChatList } from "./ChatList";
 import { Composer } from "./Composer";
 import { View } from "./View";
 
@@ -80,12 +82,44 @@ export function Message({ m }: { m: ChatMsg }) {
   }
 }
 
+/** pinned is a stored chat the page reads instead of following the
+ * laptop's (chat.open + chat.pin); null while following. */
+export const pinned = signal<ChatSnap | null>(null);
+
+/** follow goes back to the laptop's chat. */
+export function follow(): void {
+  pinned.value = null;
+  link.request("chat.pin", { on: false }).catch(() => undefined); // advisory only
+}
+
+/** openChat shows a chat: the laptop's is followed, another is read here. */
+function openChat(c: ChatItem, laptop: string): void {
+  if (c.open || c.id === laptop) {
+    if (pinned.peek()) follow();
+    return;
+  }
+  link.request("chat.open", { id: c.id }).then(
+    (data) => {
+      const snap = readChat(data);
+      if (!snap) return;
+      pinned.value = snap;
+      link.request("chat.pin", { on: true }).catch(() => undefined);
+    },
+    (e: unknown) => {
+      if (e instanceof ReqError) toast("warn", e.code === "not_found" ? t("chat.gone") : errText(e));
+    },
+  );
+}
+
 export function ChatView() {
   useEffect(() => link.subscribe("chat", "cards", "chats"), []);
   const body = useRef<HTMLDivElement | null>(null);
   const stick = useRef(true);
+  const [list, setList] = useState(false);
   const st = store.topic("chat").value;
-  const chat = readChat(st?.data);
+  const laptop = readChat(st?.data);
+  const pin = pinned.value;
+  const chat = pin ?? laptop;
   const msgs = chat?.messages ?? [];
 
   useEffect(() => {
@@ -98,11 +132,22 @@ export function ChatView() {
   // New text keeps the view at the end while the reader is there.
   useLayoutEffect(() => {
     const el = body.current;
-    if (el && stick.current) el.scrollTop = el.scrollHeight;
+    if (el && stick.current && !list) el.scrollTop = el.scrollHeight;
   });
 
   let content;
-  if (!st) {
+  if (list) {
+    content = (
+      <ChatList
+        current={chat?.id ?? ""}
+        onPick={(c) => {
+          setList(false);
+          stick.current = true;
+          openChat(c, laptop?.id ?? "");
+        }}
+      />
+    );
+  } else if (!st && !pin) {
     content = (
       <div class="loading">
         <Progress k="chat" />
@@ -111,7 +156,7 @@ export function ChatView() {
     );
   } else {
     content = (
-      <div class={`topic chat${st.stale ? " is-stale" : ""}`}>
+      <div class={`topic chat${st?.stale && !pin ? " is-stale" : ""}`}>
         {msgs.length === 0 ? (
           <div class="empty">
             <div class="empty-state">
@@ -129,18 +174,42 @@ export function ChatView() {
       </div>
     );
   }
+  let foot;
+  if (pin) {
+    foot = (
+      <div class="composer">
+        <p class="composer-note" dir="auto">
+          {t("chat.conflict")}
+        </p>
+      </div>
+    );
+  } else if (st) {
+    foot = <Composer chat={laptop?.id ?? ""} busy={laptop?.busy ?? false} />;
+  }
   return (
     <View
       tab="chat"
       title={t("tab.chat")}
       sub={chat?.title ? <span class="trunc" dir="auto">{chat.title}</span> : undefined}
       actions={
-        <button type="button" class="head-btn chat-new" onClick={newChat}>
-          {t("chat.new")}
-        </button>
+        <>
+          {pin && <span class="chat-pinned">📌 {t("chat.pinned")}</span>}
+          <button type="button" class={`head-btn chat-list-btn${list ? " is-on" : ""}`} aria-pressed={list ? "true" : "false"} onClick={() => setList(!list)}>
+            {t("chat.list")}
+          </button>
+          {pin ? (
+            <button type="button" class="head-btn chat-follow" onClick={follow}>
+              {t("chat.follow")}
+            </button>
+          ) : (
+            <button type="button" class="head-btn chat-new" onClick={newChat}>
+              {t("chat.new")}
+            </button>
+          )}
+        </>
       }
       bodyRef={body}
-      foot={st ? <Composer chat={chat?.id ?? ""} busy={chat?.busy ?? false} /> : undefined}
+      foot={foot}
     >
       {content}
     </View>
