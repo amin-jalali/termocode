@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -100,6 +101,30 @@ func NewPageLang(t *testing.T, s *Server, vp Viewport, lang string) *Page {
 		}
 		t.Skip("no Chrome found; set CHROME_PATH or install Chrome")
 	}
+	var err error
+	for try := 1; try <= startTries; try++ {
+		var p *Page
+		if p, err = startPage(t, s, vp, lang, exe, startWait); err == nil {
+			return p
+		}
+		t.Logf("start Chrome (try %d of %d): %v", try, startTries, err)
+	}
+	t.Fatalf("start Chrome: %v", err)
+	return nil
+}
+
+// A Chrome start that gets no answer is stopped and tried again with a
+// fresh Chrome: on the macOS runner one start in many hangs for ever in
+// Target.attachToTarget (2026-10-30, the whole suite timed out on it).
+var (
+	startWait  = time.Minute
+	startTries = 3
+)
+
+// startPage is one try of NewPageLang: Chrome must start, open its tab
+// and take the settings within wait, or it is stopped and an error says so.
+func startPage(t *testing.T, s *Server, vp Viewport, lang, exe string, wait time.Duration) (*Page, error) {
+	t.Helper()
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.ExecPath(exe),
 		chromedp.UserDataDir(t.TempDir()),
@@ -121,14 +146,18 @@ func NewPageLang(t *testing.T, s *Server, vp Viewport, lang string) *Page {
 	}
 	actx, acancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	ctx, cancel := chromedp.NewContext(actx)
-	p := &Page{T: t, Ctx: ctx, S: s, VP: vp}
-	t.Cleanup(func() {
-		if t.Failed() {
-			p.dump()
-		}
+	stop := func() {
 		cancel()
 		acancel()
+	}
+	// The watchdog ends a start that hangs: every call waiting on Chrome
+	// returns once the context is canceled, and Chrome is killed.
+	var hung atomic.Bool
+	watchdog := time.AfterFunc(wait, func() {
+		hung.Store(true)
+		stop()
 	})
+	p := &Page{T: t, Ctx: ctx, S: s, VP: vp}
 	// Subscribe before anything loads, so nothing is missed.
 	requests := chromedp.Events(ctx, network.RequestWillBeSent)
 	sockets := chromedp.Events(ctx, network.WebSocketCreated)
@@ -189,10 +218,22 @@ func NewPageLang(t *testing.T, s *Server, vp Viewport, lang string) *Page {
 	if vp.Mobile {
 		view = append(view, chromedp.EmulateMobile, chromedp.EmulateTouch)
 	}
-	if err := chromedp.Do(ctx, enable, chromedp.EmulateViewport(vp.W, vp.H, view...)); err != nil {
-		t.Fatalf("start Chrome: %v", err)
+	err := chromedp.Do(ctx, enable, chromedp.EmulateViewport(vp.W, vp.H, view...))
+	if !watchdog.Stop() || hung.Load() {
+		stop()
+		return nil, fmt.Errorf("Chrome gave no answer in %s (last error: %v)", wait, err)
 	}
-	return p
+	if err != nil {
+		stop()
+		return nil, err
+	}
+	t.Cleanup(func() {
+		if t.Failed() {
+			p.dump()
+		}
+		stop()
+	})
+	return p, nil
 }
 
 func (p *Page) record(into *[]string, s string) {
