@@ -82,3 +82,27 @@
 .xfer-bar { width: 100%; height: 0.5rem; accent-color: var(--blue); }
 .xfer-pct { color: var(--text-2); font-family: var(--font-mono); font-size: var(--fs-hint); }
 .xfer-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+/* Run, Test and Debug on a phone (views/run; the desktop's look is in
+   run.css): rows a thumb can tap, names in words where the desktop
+   shows icons. */
+@media (max-width: 1199.98px) {
+  .rt, .tx-acts { display: flex; flex-wrap: wrap; gap: var(--s1); }
+  .rt .tb, .tx-acts .tb { min-height: var(--tap); padding: 0 var(--s2); border: 1px solid var(--border); border-radius: var(--r-chip); background: none; color: var(--blue); font: inherit; font-size: 0.875rem; }
+  .tb[aria-disabled="true"] { opacity: 0.45; }
+  .tx { display: flex; flex-direction: column; gap: var(--s2); padding: 0 var(--s4); }
+  .tx-sum { display: flex; flex-wrap: wrap; gap: var(--s2); color: var(--text-2); font-size: 0.875rem; }
+  .tx .tx-filter { flex: none; height: var(--tap); }
+  .tx-sum .tx-link { display: none; }
+  .tx-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); min-height: var(--tap); padding-inline-start: calc(var(--d, 0) * 1rem); border-top: 1px solid var(--border); }
+  .tx-twist .cod-chevron-right::before { content: "▸"; }
+  .tx-twist .cod-chevron-down::before { content: "▾"; }
+  .tx-icon::before { font-weight: 700; }
+  .tx-passed::before { content: "✓"; color: var(--green); }
+  .tx-failed::before { content: "✗"; color: var(--red); }
+  .tx-skipped::before { content: "⊘"; color: var(--muted); }
+  .tx-running::before { content: "…"; color: var(--amber); }
+  .tx-pending::before { content: "○"; color: var(--muted); }
+  .tx-desc { color: var(--muted); font-size: 0.8125rem; }
+  .rp-note { color: var(--muted); }
+}

@@ -119,6 +119,9 @@ func shotHub(t *testing.T, c *HubConn) {
 			{Key: "mcp_server", Group: "AI", Type: "enum", Value: "auto", Default: "auto", Description: "Let outside agents use termocode as an MCP server."},
 		}},
 	}
+	for k, v := range runShotSnaps() {
+		snaps[k] = v
+	}
 	for _, tp := range []string{"chat", "cards", "chats", "tree", "bufs", "git"} { // asked for at login (git: on a desktop)
 		c.Send(t, Snap(tp, 1, snaps[tp]))
 	}
@@ -194,8 +197,12 @@ func shotHub(t *testing.T, c *HubConn) {
 					res, _ := webhl.Chroma("filter.go", "go", lines, 3, a.First, a.Last, webproto.MaxHlSpans)
 					data = res
 				default:
-					_ = c.send(&webproto.ErrMsg{T: webproto.KindErr, ID: v.ID, Code: webproto.CodeNotFound, Msg: "Not in this test."})
-					continue
+					d, ok := runShotAnswer(v.Op)
+					if !ok {
+						_ = c.send(&webproto.ErrMsg{T: webproto.KindErr, ID: v.ID, Code: webproto.CodeNotFound, Msg: "Not in this test."})
+						continue
+					}
+					data = d
 				}
 				_ = c.send(&webproto.Res{T: webproto.KindRes, ID: v.ID, Data: raw(data)})
 			}
@@ -258,6 +265,12 @@ func TestShots(t *testing.T) {
 					shot("device", "#/more", `document.querySelector('[data-view="more"], [data-view="device"]')`)
 					diffDoc := `document.querySelector('[data-view="diff"] .desk-editor')?.contentDocument`
 					shot("diff", "#/git/cmd/covreport/filter.go", diffDoc+`?.querySelector(".editor.modified .char-insert") && `+diffDoc+`.querySelector(".editor.modified .view-line .hl-kc")`)
+				}
+				for _, rs := range runShots(vp) {
+					if rs.prep != "" {
+						Eval[bool](p, `(`+rs.prep+`, true)`)
+					}
+					shot(rs.name, rs.hash, rs.ready)
 				}
 			})
 		}

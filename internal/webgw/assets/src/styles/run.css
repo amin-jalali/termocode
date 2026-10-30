@@ -1,0 +1,59 @@
+/* Run, Test and Debug on the desktop (views/run): the laptop editor's
+   TESTING, RUN AND DEBUG and SERVICES side bars, its TEST RESULTS and
+   DEBUG CONSOLE panel tabs. 22 px rows, the side bar's colours; the
+   testing icons in the editor's own testing colours. */
+
+/* Toolbar buttons: the icon shows, the name is for screen readers. */
+.tb-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.rt { display: flex; align-items: center; gap: 2px; }
+.tb[aria-disabled="true"] { opacity: 0.4; cursor: default; }
+.tb[aria-disabled="true"]:hover { background: none; }
+
+/* TESTING */
+.tx { display: flex; flex-direction: column; min-height: 0; }
+.tx-filter { flex: none; margin: 2px 12px 6px 20px; padding: 0 6px; }
+.tx-sum { position: relative; display: flex; align-items: center; gap: 6px; height: 22px; margin: 0; padding: 0 12px 0 20px; font-size: 0.75rem; color: var(--wb-side-fg); white-space: nowrap; }
+.tx-sum-text { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tx-bar { position: absolute; inset: -6px 0 auto; height: 2px; overflow: hidden; }
+.tx-bar::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 20%; background: var(--wb-focus); animation: tx-slide 1.2s linear infinite; }
+@keyframes tx-slide { from { transform: translateX(-100%); } to { transform: translateX(500%); } }
+.tx-link { flex: none; margin-inline-start: auto; padding: 0; border: 0; background: none; color: var(--blue); font: inherit; font-size: 0.75rem; cursor: pointer; }
+.tx-link:hover { text-decoration: underline; }
+.tx-tree { display: flex; flex-direction: column; }
+.tx-row { display: flex; align-items: center; height: 22px; padding-inline: calc(8px + var(--d, 0) * 8px) 8px; color: var(--wb-side-fg); font-size: var(--fs-ui); cursor: pointer; outline: none; }
+.tx-row:hover { background: var(--wb-list-hover); }
+.tx-row.is-picked { background: var(--wb-list-active); }
+.tx-row:focus-visible { outline: 1px solid var(--wb-focus); outline-offset: -1px; background: var(--wb-list-focus); }
+.tx-twist { flex: none; display: inline-flex; width: 16px; justify-content: center; }
+.tx-icon { flex: none; display: inline-flex; width: 16px; margin-inline-end: 6px; justify-content: center; }
+.tx-icon::before { content: none; }
+.tx-passed { color: #73c991; }
+.tx-failed { color: #f14c4c; }
+.tx-skipped, .tx-pending { color: #848484; }
+.tx-running { color: #cca700; }
+.tx-running .cod { animation: spin 1.5s steps(30) infinite; }
+.tx-label { flex: 0 1 auto; }
+.tx-desc { flex: none; margin-inline-start: 0.5em; font-size: 0.75rem; opacity: 0.7; }
+.tx-acts { display: none; margin-inline-start: auto; padding-inline-start: 4px; gap: 2px; }
+.tx-row:hover .tx-acts, .tx-row:focus-within .tx-acts, .tx-row.is-picked .tx-acts { display: flex; }
+.tx-acts .tb { width: 20px; height: 20px; }
+
+/* Folding panes of a side bar view (RUN AND DEBUG). */
+.rp { flex: none; display: flex; flex-direction: column; min-height: 0; border-top: 1px solid var(--wb-section-border); }
+.rp.is-open { flex: 0 1 auto; }
+.rp-head { display: flex; align-items: center; margin: 0; padding-inline-end: 8px; font-size: inherit; }
+.rp-toggle { display: flex; flex: 1 1 auto; align-items: center; gap: 2px; min-width: 0; height: 22px; padding: 0 4px; border: 0; background: none; color: var(--wb-side-fg); font: inherit; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; cursor: pointer; }
+.rp-toggle:focus-visible { outline: 1px solid var(--wb-focus); outline-offset: -1px; }
+.rp-count { margin-inline-start: 6px; padding: 0 5px; border-radius: 9px; background: var(--wb-badge-bg); color: var(--wb-badge-fg); font-size: 0.625rem; font-weight: 400; line-height: 16px; }
+.rp-actions { display: none; gap: 2px; }
+.rp-head:hover .rp-actions, .rp-head:focus-within .rp-actions { display: flex; }
+.rp-body { min-height: 0; max-height: 40vh; overflow-y: auto; padding-bottom: 4px; }
+.rp-note { margin: 2px 20px 4px; color: var(--muted); font-size: 0.75rem; }
+
+/* TEST RESULTS (panel) */
+.tres { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; background: var(--wb-panel-bg); }
+.tres-head { display: flex; align-items: center; gap: 8px; flex: none; height: 24px; padding: 0 12px; font-size: 0.75rem; color: var(--wb-panel-title-inactive); }
+.tres-what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); }
+.tres-head .tx-link { margin-inline-start: 0; }
+.tres-rows { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 12px 8px; font-family: var(--font-mono); font-size: var(--fs-row); }
+.tres-rows .trow { background: transparent; }
