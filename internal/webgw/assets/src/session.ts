@@ -1,6 +1,7 @@
 // The page's one store and one link to the hub.
 import { computed, effect, signal } from "@preact/signals";
 import { onAttention } from "./lib/attention";
+import { notify } from "./lib/notify";
 import { syncLaptopToasts, type LaptopToast } from "./lib/toasts";
 import { token } from "./net/auth";
 import { Link } from "./net/link";
@@ -46,7 +47,12 @@ export const answeredBy = signal<ReadonlyMap<string, string>>(new Map());
 const MAX_ANSWERED = 64;
 
 link.onEvent((kind, data) => {
-  if (kind === "attention") onAttention(data);
+  if (kind === "attention") {
+    onAttention(data);
+    const k = typeof data === "object" && data !== null ? (data as Record<string, unknown>).kind : undefined;
+    if (k === "run_done" || k === "task_done") notify("run_done");
+    if (k === "run_failed") notify("run_failed");
+  }
   if (kind === "answered" && typeof data === "object" && data !== null) {
     const d = data as Record<string, unknown>;
     if (typeof d.id !== "string") return;
@@ -59,6 +65,18 @@ link.onEvent((kind, data) => {
 
 /** cards is the waiting cards, oldest first. */
 export const cards = computed(() => readCards(store.topic("cards").value?.data));
+
+// A card that was not there before is worth a notification (the page
+// decides only that one came; its text never leaves the page).
+let known: ReadonlySet<string> | null = null;
+effect(() => {
+  const st = store.topic("cards").value;
+  if (!st) return;
+  const ids = new Set(cards.value.map((c) => c.id));
+  const fresh = known !== null && [...ids].some((id) => !known!.has(id));
+  known = ids;
+  if (fresh) notify("card");
+});
 
 /** waiting splits the cards into those the web may answer and those that
  * wait for the laptop; before the cards topic arrives, the status count
