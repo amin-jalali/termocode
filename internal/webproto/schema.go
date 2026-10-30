@@ -70,7 +70,9 @@ func genTypes(browserOnly bool) []genType {
 	}
 	for _, d := range topicDataList() { // topicdata.go: hub → browser, tolerant
 		add(d.Snap, false)
-		add(d.Delta, false)
+		for _, x := range d.Deltas {
+			add(x, false)
+		}
 	}
 	for _, k := range EventKinds() {
 		add(eventData[k], false)
@@ -99,16 +101,24 @@ func enumOf(f reflect.StructField) []string {
 }
 
 // fieldTS is a field's TypeScript type: an enum tag gives a union of
-// string literals.
+// string literals, a const tag one literal (a delta's kind, so the store
+// can narrow on it).
 func fieldTS(f reflect.StructField) string {
+	if c := f.Tag.Get("const"); c != "" {
+		return fmt.Sprintf("%q", c)
+	}
 	if vs := enumOf(f); vs != nil {
 		return quoted(vs)
 	}
 	return tsType(f.Type)
 }
 
-// fieldSchema is a field's JSON Schema: an enum tag gives an enum.
+// fieldSchema is a field's JSON Schema: an enum tag gives an enum, a
+// const tag a const.
 func fieldSchema(f reflect.StructField) any {
+	if c := f.Tag.Get("const"); c != "" {
+		return map[string]any{"const": c}
+	}
 	if vs := enumOf(f); vs != nil {
 		return map[string]any{"enum": vs}
 	}
@@ -239,7 +249,7 @@ func GenerateTS() ([]byte, error) {
 	b.WriteString("}\n\nexport type OpName = keyof OpArgs;\n")
 	b.WriteString("\n// The data of a topic's snap and delta messages, by topic name.\nexport interface TopicData {\n")
 	for _, d := range topicDataList() {
-		fmt.Fprintf(&b, "  %q: { snap: %s; delta: %s };\n", d.Topic, d.Snap.Name(), d.Delta.Name())
+		fmt.Fprintf(&b, "  %q: { snap: %s; delta: %s };\n", d.Topic, d.Snap.Name(), d.deltaNames(" | "))
 	}
 	b.WriteString("}\n\n// The data of an ev message, by kind.\nexport interface EventData {\n")
 	for _, k := range EventKinds() {
@@ -277,11 +287,11 @@ type schemaClose struct {
 }
 
 type schemaTopic struct {
-	Name  string `json:"name"`
-	Keyed bool   `json:"keyed"`
-	Phase Phase  `json:"phase"`
-	Snap  string `json:"snap,omitempty"`  // the def of the snap's data
-	Delta string `json:"delta,omitempty"` // the def of a delta's data
+	Name   string   `json:"name"`
+	Keyed  bool     `json:"keyed"`
+	Phase  Phase    `json:"phase"`
+	Snap   string   `json:"snap,omitempty"`   // the def of the snap's data
+	Deltas []string `json:"deltas,omitempty"` // the defs a delta's data can be
 }
 
 type schemaOp struct {
@@ -379,7 +389,10 @@ func GenerateSchema() ([]byte, error) {
 	for _, d := range topicDefs {
 		st := schemaTopic{Name: d.Name, Keyed: d.Keyed, Phase: d.Phase}
 		if td, ok := topicData[d.Name]; ok {
-			st.Snap, st.Delta = td.Snap.Name(), td.Delta.Name()
+			st.Snap = td.Snap.Name()
+			for _, x := range td.Deltas {
+				st.Deltas = append(st.Deltas, x.Name())
+			}
 		}
 		doc.Topics = append(doc.Topics, st)
 	}
