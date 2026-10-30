@@ -108,3 +108,25 @@ func TestAIWorktreeOps(t *testing.T) {
 		}
 	}
 }
+
+// Spec (WEBP-3, web design 3.3): the page may only ask to use another
+// profile or model; the laptop decides with a card. A name has no
+// control characters.
+func TestAIUseOps(t *testing.T) {
+	for _, op := range []string{OpAIUseProfile, OpAIUseModel} {
+		if p, ok := Lookup(op); !ok || p.Role != RoleController || !p.LaptopCard || p.Audit != AuditYes {
+			t.Errorf("%s: %+v", op, p)
+		}
+		if _, err := DecodeArgs(op, []byte(`{"name":"review"}`)); err != nil {
+			t.Errorf("%s: %v", op, err)
+		}
+		for _, b := range []string{`{"name":""}`, `{"name":"a\nb"}`, `{"name":"` + strings.Repeat("a", MaxAIName+1) + `"}`} {
+			if _, err := DecodeArgs(op, []byte(b)); err == nil {
+				t.Errorf("%s %q accepted", op, b)
+			}
+		}
+	}
+	if _, ok := TopicDataOf("ai"); !ok {
+		t.Error("no ai topic data")
+	}
+}
