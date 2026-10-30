@@ -181,6 +181,9 @@ const (
 	ActionContextHelp
 	// ActionLayoutOpen opens the Layout: Open… list (G-LAY): Alt+Y.
 	ActionLayoutOpen
+	// ActionWebStop stops the web panel (the kill switch, ADR 0020). No
+	// default key (owner): the user binds one in keymap.json.
+	ActionWebStop
 )
 
 // KittyOnlyKeys are default bindings a legacy terminal cannot send (or
