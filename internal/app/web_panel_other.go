@@ -17,6 +17,8 @@ func webWriteRedirect(string, string) error { return errWebPanelOS }
 
 func webRedirectPath() (string, error) { return "", errWebPanelOS }
 
+var webHTTPSocketPath = func() (string, error) { return "", errWebPanelOS }
+
 func startWebGatewayProcess(*webHub, []string) (*webGatewayProc, error) {
 	return nil, errWebPanelOS
 }

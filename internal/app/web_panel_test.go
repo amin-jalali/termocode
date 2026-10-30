@@ -38,6 +38,10 @@ func newWebPanelRig(t *testing.T) *webPanelRig {
 	writeUserConfig(t, `{"web_panel":"on"}`)
 	dir := t.TempDir()
 	r.audit = filepath.Join(dir, "audit.jsonl")
+	sockDir := webTestDir(t)
+	oldSock := webHTTPSocketPath
+	t.Cleanup(func() { webHTTPSocketPath = oldSock })
+	webHTTPSocketPath = func() (string, error) { return filepath.Join(sockDir, "k.webhttp.sock"), nil }
 	restore := SetClipboardSink(func(s string) { r.links <- s })
 	t.Cleanup(restore)
 	old := webGatewayStart
@@ -57,15 +61,22 @@ func newWebPanelRig(t *testing.T) *webPanelRig {
 				return true
 			}
 		}}
+		cfg := webgw.RunConfig{
+			Dial: func(ctx context.Context) (net.Conn, error) {
+				var d net.Dialer
+				return d.DialContext(ctx, "unix", r.path)
+			},
+			AuditPath: r.audit, StatusPath: filepath.Join(dir, "web.json"),
+			LockPath: filepath.Join(dir, "web.lock"), Handoff: pw,
+		}
+		for i, a := range args { // SSH mode, as the real gateway reads it
+			if a == "--ssh-port" && i+1 < len(args) {
+				cfg.PortHint, _ = strconv.Atoi(args[i+1])
+				cfg.UnixPath, _ = webHTTPSocketPath()
+			}
+		}
 		go func() {
-			_, _ = webgw.Run(ctx, webgw.RunConfig{
-				Dial: func(ctx context.Context) (net.Conn, error) {
-					var d net.Dialer
-					return d.DialContext(ctx, "unix", r.path)
-				},
-				AuditPath: r.audit, StatusPath: filepath.Join(dir, "web.json"),
-				LockPath: filepath.Join(dir, "web.lock"), Handoff: pw,
-			})
+			_, _ = webgw.Run(ctx, cfg)
 			_ = pw.Close()
 			close(done)
 			_ = h.send(h.ctx, webPanelExitMsg{hub: h, proc: proc})
@@ -297,5 +308,83 @@ func TestWebPanelOffToastAndHubFollowsSetting(t *testing.T) {
 	m.syncWebHub()
 	if m.web != nil {
 		t.Fatal("hub still runs with web_panel off")
+	}
+}
+
+// ctlRes sends a control request and returns its answer (res or err).
+func (r *webPanelRig) ctlRes(ctl *webClient, req string, id int) map[string]any {
+	r.t.Helper()
+	ctl.send(req)
+	for {
+		m := r.nextMsg(ctl)
+		if (m["t"] == "res" || m["t"] == "err") && m["id"] == float64(id) {
+			return m
+		}
+	}
+}
+
+// Spec (WEB-29): web.open with ssh_port (from the far `termocode --link
+// --web`) starts the gateway in SSH mode (--ssh-port, no --port, no
+// browser here, nothing copied) and answers with the port, the socket
+// and a one-time secret that works through the socket. Asking again
+// with the same port (a reconnect) gives a new secret from the same
+// gateway; another port is a conflict.
+func TestWebCLIOpenSSHMode(t *testing.T) {
+	r := newWebPanelRig(t)
+	ctl := r.dial(`{"t":"ctl"}`)
+	res := r.ctlRes(ctl, `{"t":"req","id":1,"op":"web.open","args":{"yes":true,"ssh_port":41237}}`, 1)
+	data, _ := res["data"].(map[string]any)
+	sock, _ := webHTTPSocketPath()
+	secret, _ := data["secret"].(string)
+	if res["t"] != "res" || data["port"] != float64(41237) || data["sock"] != sock || len(secret) < 40 {
+		t.Fatalf("res %v", res)
+	}
+	r.mu.Lock()
+	args := strings.Join(r.args[0], " ")
+	r.mu.Unlock()
+	if !strings.Contains(args, "--ssh-port 41237") || strings.Contains(args, "--port ") || strings.Contains(args, secret) {
+		t.Fatalf("gateway argv: %s", args)
+	}
+	select {
+	case l := <-r.links:
+		t.Fatalf("a link was copied on the far side: %q", l)
+	default:
+	}
+	client := &http.Client{Transport: &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+		var d net.Dialer
+		return d.DialContext(ctx, "unix", sock)
+	}}}
+	auth := func(secret string) int {
+		req, _ := http.NewRequest(http.MethodPost, "http://127.0.0.1:41237/auth", strings.NewReader(`{"secret":"`+secret+`"}`))
+		req.Header.Set("Origin", "http://127.0.0.1:41237")
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		return resp.StatusCode
+	}
+	if code := auth(secret); code != http.StatusOK {
+		t.Fatalf("auth with the secret through the socket: %d", code)
+	}
+
+	res = r.ctlRes(ctl, `{"t":"req","id":2,"op":"web.open","args":{"yes":true,"ssh_port":41237}}`, 2)
+	data, _ = res["data"].(map[string]any)
+	again, _ := data["secret"].(string)
+	if res["t"] != "res" || again == "" || again == secret || data["port"] != float64(41237) {
+		t.Fatalf("again: %v", res)
+	}
+	r.mu.Lock()
+	n := len(r.args)
+	r.mu.Unlock()
+	if n != 1 {
+		t.Fatalf("%d gateways started, want 1", n)
+	}
+	if code := auth(again); code != http.StatusOK {
+		t.Fatalf("auth with the new secret: %d", code)
+	}
+	if res := r.ctlRes(ctl, `{"t":"req","id":3,"op":"web.open","args":{"yes":true,"ssh_port":41000}}`, 3); res["t"] != "err" || res["code"] != "conflict" {
+		t.Fatalf("another port: %v", res)
 	}
 }

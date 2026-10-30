@@ -45,6 +45,10 @@ type webPanelState struct {
 	open     bool   // open the link in a browser once up
 	copy     bool   // copy the link once up
 	waiters  []*webCall
+	// sshPort (0: plain TCP) is SSH mode (WEB-29): the gateway serves on
+	// a unix socket for the user's ssh forward of 127.0.0.1:sshPort, and
+	// each waiter gets its own one-time secret instead of a browser here.
+	sshPort int
 }
 
 // webGatewayProc is a started gateway process.
@@ -104,6 +108,11 @@ const webOffText = `The web panel is off. Turn it on in config.json: "web_panel"
 // copy: copy it). Only the user's own act calls it: the start card,
 // or `termocode web --yes` from the same user.
 func (m *Model) startWebPanel(open, copyLink bool) tea.Cmd {
+	return m.startWebPanelOn(open, copyLink, 0)
+}
+
+// startWebPanelOn is startWebPanel; sshPort > 0 is SSH mode.
+func (m *Model) startWebPanelOn(open, copyLink bool, sshPort int) tea.Cmd {
 	cfg := webSettings()
 	if !cfg.On {
 		return m.webToast(toast.Warn, webOffText)
@@ -131,7 +140,13 @@ func (m *Model) startWebPanel(open, copyLink bool) tea.Cmd {
 	}
 	args := []string{"--dir", aiWorkspaceRoot(), "--audit", audit,
 		"--idle-min", strconv.Itoa(cfg.IdleMinutes), "--max-hours", strconv.Itoa(cfg.MaxHours),
-		"--viewers", strconv.Itoa(cfg.MaxViewers), "--port", strconv.Itoa(cfg.Port)}
+		"--viewers", strconv.Itoa(cfg.MaxViewers)}
+	if sshPort > 0 {
+		args = append(args, "--ssh-port", strconv.Itoa(sshPort))
+		open, copyLink = false, false // the browser is on the user's computer
+	} else {
+		args = append(args, "--port", strconv.Itoa(cfg.Port))
+	}
 	proc, err := webGatewayStart(m.web, args)
 	if err != nil {
 		recordError("[web] gateway not started: " + err.Error())
@@ -139,7 +154,7 @@ func (m *Model) startWebPanel(open, copyLink bool) tea.Cmd {
 		m.toast, c = m.toast.PushDetail(toast.Errr, "Web panel not started", ai.Redact(err.Error()))
 		return c
 	}
-	m.webPanel = &webPanelState{proc: proc, plain: plain, open: open && cfg.OpenBrowser, copy: copyLink}
+	m.webPanel = &webPanelState{proc: proc, plain: plain, open: open && cfg.OpenBrowser, copy: copyLink, sshPort: sshPort}
 	for _, p := range cfg.Problems {
 		cmds = append(cmds, m.webToast(toast.Warn, "config.json: "+p))
 	}
@@ -166,9 +181,12 @@ func (m *Model) onWebPanelUp(msg webPanelUpMsg) tea.Cmd {
 	}
 	st.up, st.port = true, msg.port
 	for _, w := range st.waiters {
-		w.reply(map[string]int{"port": st.port})
+		m.webCtlReply(w)
 	}
 	st.waiters = nil
+	if st.sshPort > 0 {
+		return m.webToast(toast.Info, "Web panel is on, through your ssh connection.")
+	}
 	cmd := m.webDeliverLink(st.open, st.copy)
 	st.open, st.copy = false, false
 	return cmd
@@ -325,22 +343,32 @@ func init() {
 }
 
 // webCtlOpen answers web.open: the port once the panel serves. Without
-// --yes the laptop must say yes (webAskStart).
+// --yes the laptop must say yes (webAskStart). With ssh_port (always
+// with yes: `termocode ssh --web` is the user's own command) the panel
+// runs in SSH mode and the answer carries a one-time secret.
 func (m *Model) webCtlOpen(call *webCall) tea.Cmd {
+	args, _ := call.args.(*webproto.WebOpenArgs)
+	sshPort := 0
+	if args != nil {
+		sshPort = args.SSHPort
+	}
 	if st := m.webPanel; st != nil {
+		if sshPort > 0 && st.sshPort != sshPort {
+			call.fail(webproto.CodeConflict, "The web panel already runs for this folder. Stop it first: termocode web stop")
+			return nil
+		}
 		if st.up {
-			call.reply(map[string]int{"port": st.port})
+			m.webCtlReply(call)
 			return nil
 		}
 		st.waiters = append(st.waiters, call)
 		call.later()
 		return nil
 	}
-	args, _ := call.args.(*webproto.WebOpenArgs)
 	if args == nil || !args.Yes {
 		return m.webAskStart(call)
 	}
-	cmd := m.startWebPanel(true, false)
+	cmd := m.startWebPanelOn(true, false, sshPort)
 	if m.webPanel == nil {
 		call.fail(webproto.CodeInternal, "The web panel did not start. See the laptop.")
 		return cmd
@@ -348,6 +376,41 @@ func (m *Model) webCtlOpen(call *webCall) tea.Cmd {
 	m.webPanel.waiters = append(m.webPanel.waiters, call)
 	call.later()
 	return cmd
+}
+
+// webCtlReply answers a web.open of a running panel: the port; in SSH
+// mode also the socket and a fresh one-time secret for the far
+// `termocode --link` to hand to the user's computer (a same-user peer on
+// the private hub socket, like the 0600 redirect page).
+func (m *Model) webCtlReply(call *webCall) {
+	st := m.webPanel
+	args, _ := call.args.(*webproto.WebOpenArgs)
+	if st.sshPort == 0 || args == nil || args.SSHPort == 0 {
+		call.reply(map[string]int{"port": st.port})
+		return
+	}
+	plain := st.plain
+	st.plain = ""
+	if plain == "" {
+		var err error
+		if plain, err = m.web.newLink(); err != nil {
+			call.fail(webproto.CodeInternal, "No new link: no random numbers")
+			return
+		}
+	}
+	sock, err := webHTTPSocketPath()
+	if err != nil {
+		call.fail(webproto.CodeInternal, "The web panel has no socket here.")
+		return
+	}
+	call.reply(webSSHOpen{Port: st.port, Sock: sock, Secret: plain})
+}
+
+// webSSHOpen is the answer to web.open in SSH mode.
+type webSSHOpen struct {
+	Port   int    `json:"port"`
+	Sock   string `json:"sock"`
+	Secret string `json:"secret"`
 }
 
 // webAskStart shows the laptop's start card for `termocode web`.
