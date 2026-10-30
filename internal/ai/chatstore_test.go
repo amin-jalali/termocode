@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -116,4 +117,59 @@ func TestChatStoreStepsAndFolds(t *testing.T) {
 	if strings.Contains(string(plain), "steps") || strings.Contains(string(plain), "run") {
 		t.Errorf("a plain message stays as before: %s", plain)
 	}
+}
+
+// ListCached reads a chat file again only when it changed: a saved chat
+// (also one with the same size), a new and a deleted chat show at once;
+// an unchanged file is not read again.
+func TestChatStoreListCached(t *testing.T) {
+	s := ChatStore{Dir: t.TempDir()}
+	var lc ChatListCache
+	a, b := NewConversation(), NewConversation()
+	a.Messages = []StoredMessage{{Role: StoredUser, Text: "alpha"}}
+	b.Messages = []StoredMessage{{Role: StoredUser, Text: "bravo"}}
+	for _, c := range []*Conversation{&a, &b} {
+		if err := s.Save(c); err != nil {
+			t.Fatal(err)
+		}
+	}
+	titles := func() string {
+		var ts []string
+		for _, c := range s.ListCached(&lc) {
+			ts = append(ts, c.Messages[0].Text)
+		}
+		sort.Strings(ts)
+		return strings.Join(ts, ",")
+	}
+	if got := titles(); got != "alpha,bravo" {
+		t.Fatalf("first: %s", got)
+	}
+	// Unchanged: not read again (an unreadable file still lists).
+	pb := s.path(b.ID)
+	if err := os.Chmod(pb, 0); err == nil && os.Getuid() != 0 {
+		if got := titles(); got != "alpha,bravo" {
+			t.Errorf("unchanged file read again: %s", got)
+		}
+		_ = os.Chmod(pb, 0o600)
+	}
+	b.Messages[0].Text = "BRAVO" // the same size
+	if err := s.Save(&b); err != nil {
+		t.Fatal(err)
+	}
+	c := NewConversation()
+	c.Messages = []StoredMessage{{Role: StoredUser, Text: "charlie"}}
+	if err := s.Save(&c); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Delete(a.ID); err != nil {
+		t.Fatal(err)
+	}
+	if got := titles(); got != "BRAVO,charlie" {
+		t.Errorf("after changes: %s", got)
+	}
+	if got := titles(); got != "BRAVO,charlie" {
+		t.Errorf("again: %s", got)
+	}
+	// A file rewritten in place with the same size and time is the one
+	// case it can not see; the store never does that (it renames).
 }

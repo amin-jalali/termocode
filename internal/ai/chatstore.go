@@ -282,7 +282,28 @@ func (s ChatStore) Load(id string) (Conversation, error) {
 // List returns every stored conversation, newest first. The files are
 // read and parsed by a few goroutines at once (parsing is the slow part
 // of a long history).
-func (s ChatStore) List() []Conversation {
+func (s ChatStore) List() []Conversation { return s.ListCached(nil) }
+
+// ChatListCache keeps the chats ListCached parsed, by file: a file that
+// is still the same file with the same size and time is not read again.
+// The chats it returns are shared between calls, so a caller may only
+// change them in ways it would repeat on every call.
+type ChatListCache struct {
+	files map[string]chatListEntry
+}
+
+type chatListEntry struct {
+	fi os.FileInfo
+	c  Conversation
+}
+
+func sameChatFile(a, b os.FileInfo) bool {
+	return a != nil && b != nil && os.SameFile(a, b) && a.Size() == b.Size() && a.ModTime().Equal(b.ModTime())
+}
+
+// ListCached is List, reading only the files that changed since the last
+// call with lc (nil: read every file).
+func (s ChatStore) ListCached(lc *ChatListCache) []Conversation {
 	if s.Dir == "" {
 		return nil
 	}
@@ -291,15 +312,31 @@ func (s ChatStore) List() []Conversation {
 		return nil
 	}
 	var names []string
+	var infos []os.FileInfo
 	for _, e := range entries {
 		if !e.IsDir() && strings.HasSuffix(e.Name(), ".json") {
 			names = append(names, e.Name())
+			var fi os.FileInfo
+			if lc != nil {
+				fi, _ = e.Info()
+			}
+			infos = append(infos, fi)
 		}
 	}
 	parsed := make([]Conversation, len(names))
+	var todo []int
+	for i, n := range names {
+		if lc != nil {
+			if old, ok := lc.files[n]; ok && sameChatFile(old.fi, infos[i]) {
+				parsed[i] = old.c
+				continue
+			}
+		}
+		todo = append(todo, i)
+	}
 	work := make(chan int)
 	var wg sync.WaitGroup
-	for w := 0; w < min(runtime.GOMAXPROCS(0), len(names)); w++ {
+	for w := 0; w < min(runtime.GOMAXPROCS(0), len(todo)); w++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -315,11 +352,19 @@ func (s ChatStore) List() []Conversation {
 			}
 		}()
 	}
-	for i := range names {
+	for _, i := range todo {
 		work <- i
 	}
 	close(work)
 	wg.Wait()
+	if lc != nil {
+		lc.files = make(map[string]chatListEntry, len(names))
+		for i, n := range names {
+			if infos[i] != nil && parsed[i].ID != "" { // a file that failed is read again
+				lc.files[n] = chatListEntry{fi: infos[i], c: parsed[i]}
+			}
+		}
+	}
 	var out []Conversation
 	for _, c := range parsed { // directory order, as before the sort
 		if c.ID != "" {
