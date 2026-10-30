@@ -62,6 +62,7 @@ type webHub struct {
 	git    webGitPub                  // Update only: what the git topic sent (web_git.go)
 	asks   webAskState                // Update only: requests waiting for a laptop card (web_ask.go)
 	search webSearches                // the running searches by connection (web_search.go; own lock)
+	tasks  webTasksPub                // Update only: what the tasks topic sent (web_tasks.go)
 
 	ln    net.Listener
 	peer  func(net.Conn) error
