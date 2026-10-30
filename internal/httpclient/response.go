@@ -176,7 +176,7 @@ func PrettyJSON(b []byte) ([]byte, bool) {
 	if len(t) == 0 || (t[0] != '{' && t[0] != '[') {
 		return b, false
 	}
-	out, ok := indentJSON(make([]byte, 0, 2*len(t)+64), t)
+	out, ok := indentJSON(make([]byte, 0, 3*len(t)+64), t)
 	if !ok {
 		return b, false
 	}
