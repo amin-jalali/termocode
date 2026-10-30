@@ -1,0 +1,89 @@
+//go:build unix
+
+package webgw
+
+import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"sync"
+	"time"
+)
+
+// Owner limits for a browser session.
+const (
+	// DefaultIdle ends a session nobody used for this long.
+	DefaultIdle = 15 * time.Minute
+	// DefaultMax ends every session this long after it began.
+	DefaultMax = 12 * time.Hour
+)
+
+// Role is what a session may do. v1 has only control.
+type Role string
+
+// RoleControl may type and act (v1's only role).
+const RoleControl Role = "control"
+
+// ErrTokenUnknown: no live session has this token. Errors never hold the
+// token.
+var ErrTokenUnknown = errors.New("unknown session token")
+
+// Sess is one browser session. It holds no secret: the token itself is
+// known only to the browser (sessionStorage) and as a digest here.
+type Sess struct {
+	// ID names the session in the audit log and the TUI; it is random and
+	// not derived from the token.
+	ID       string
+	Device   string
+	Role     Role
+	Created  time.Time
+	LastSeen time.Time
+}
+
+// Tokens are the live session tokens, kept by SHA-256 digest. A lookup by
+// digest leaks nothing useful through timing: an attacker cannot steer
+// the digest of a guess toward a real one.
+type Tokens struct {
+	idle, max time.Duration
+
+	mu     sync.Mutex
+	byHash map[[sha256.Size]byte]*Sess
+}
+
+// NewTokens keeps sessions that end after idle without use or max after
+// they began.
+func NewTokens(idle, max time.Duration) *Tokens {
+	return &Tokens{idle: idle, max: max, byHash: map[[sha256.Size]byte]*Sess{}}
+}
+
+// Issue makes a new session and returns its token (once; it is not kept)
+// and a copy of the session.
+func (t *Tokens) Issue(device string, role Role, now time.Time) (string, Sess, error) {
+	tok, err := randomToken()
+	if err != nil {
+		return "", Sess{}, err
+	}
+	id := make([]byte, 4)
+	if _, err := rand.Read(id); err != nil {
+		return "", Sess{}, err
+	}
+	s := &Sess{ID: "s-" + hex.EncodeToString(id), Device: device, Role: role, Created: now, LastSeen: now}
+	t.mu.Lock()
+	t.byHash[sha256.Sum256([]byte(tok))] = s
+	t.mu.Unlock()
+	return tok, *s, nil
+}
+
+// Check returns the session of tok and marks it used at now.
+func (t *Tokens) Check(tok string, now time.Time) (Sess, error) {
+	h := sha256.Sum256([]byte(tok))
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	s, ok := t.byHash[h]
+	if !ok {
+		return Sess{}, ErrTokenUnknown
+	}
+	s.LastSeen = now
+	return *s, nil
+}
