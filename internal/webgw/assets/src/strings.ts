@@ -76,6 +76,8 @@ export const S = {
   "chat.steps": "{n} steps · {tok} tok · {time}",
   "chat.paused": "paused",
   "chat.ai": "AI",
+  "chat.rules": "rules {name}",
+  "run.plan_wait": "Waits for a plan approval.",
   "chat.older": "Load older messages",
   "chat.stub_laptop": "An older message. Read it on the laptop.",
   "chat.list": "Chats",
