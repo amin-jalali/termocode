@@ -114,3 +114,51 @@ func (a *ContainerLogsArgs) validate(int) error {
 	}
 	return nil
 }
+
+// Database limits of the args.
+const (
+	MaxDBTable = 256
+	MaxDBSQL   = 32 << 10
+)
+
+// DBConnArgs names a connection by its id.
+type DBConnArgs struct {
+	Conn string `json:"conn"`
+}
+
+// DBRowsArgs pages the rows of a table db.tables listed.
+type DBRowsArgs struct {
+	Conn  string `json:"conn"`
+	Table string `json:"table"`
+	From  int    `json:"from,omitempty"`
+}
+
+// DBSQLArgs is one SQL statement for a connection.
+type DBSQLArgs struct {
+	Conn string `json:"conn"`
+	SQL  string `json:"sql"`
+}
+
+func (a *DBConnArgs) validate(int) error {
+	if !validName(a.Conn, MaxID) {
+		return invalid("bad connection")
+	}
+	return nil
+}
+
+func (a *DBRowsArgs) validate(int) error {
+	if !validName(a.Conn, MaxID) || !validName(a.Table, MaxDBTable) || a.From < 0 || a.From > 1<<30 {
+		return invalid("bad connection, table or page")
+	}
+	return nil
+}
+
+func (a *DBSQLArgs) validate(int) error {
+	if !validName(a.Conn, MaxID) {
+		return invalid("bad connection")
+	}
+	if strings.TrimSpace(a.SQL) == "" || len(a.SQL) > MaxDBSQL || strings.ContainsRune(a.SQL, 0) {
+		return invalid("bad SQL")
+	}
+	return nil
+}
