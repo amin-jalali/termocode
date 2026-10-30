@@ -124,7 +124,9 @@ func TestCovCoreAttachNeedsTerminal(t *testing.T) {
 // A broken session folder: every session command says why and fails.
 func TestCovCoreSessionDirBroken(t *testing.T) {
 	covMainEnv(t)
-	file := filepath.Join(t.TempDir(), "runtime")
+	// A short base: under macOS's long $TMPDIR the session dir would move
+	// to the $TMPDIR fallback and never meet the file.
+	file := filepath.Join(shortTemp(t), "runtime")
 	if err := os.WriteFile(file, nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
