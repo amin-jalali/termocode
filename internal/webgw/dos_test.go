@@ -91,7 +91,82 @@ func TestConnCap32(t *testing.T) {
 	}
 }
 
-// TestConnCapCountsCloseOnce: closing a connection twice frees one slot,
+func TestServerLimitsExact(t *testing.T) {
+	want := Limits{
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    8 << 10,
+		MaxConns:          32,
+	}
+	if DefaultLimits != want {
+		t.Fatalf("DefaultLimits = %+v, want %+v", DefaultLimits, want)
+	}
+	srv := NewServer(testSite, okServer().Handler, DefaultLimits)
+	if srv.ReadHeaderTimeout != want.ReadHeaderTimeout || srv.ReadTimeout != want.ReadTimeout ||
+		srv.WriteTimeout != want.WriteTimeout || srv.IdleTimeout != want.IdleTimeout ||
+		srv.MaxHeaderBytes != want.MaxHeaderBytes {
+		t.Fatalf("server limits %+v", srv)
+	}
+	if srv.ErrorLog == nil {
+		t.Fatal("ErrorLog is nil: net/http would print request details to stderr")
+	}
+}
+
+// TestServerGuards: NewServer puts the guard in front of the handler.
+func TestServerGuards(t *testing.T) {
+	addr := startServer(t, NewServer(testSite, okServer().Handler, DefaultLimits), nil)
+	out, err := rawGet(addr, 10*time.Second) // Host: x is not ours
+	if err != nil || !strings.Contains(out, "421") {
+		t.Fatalf("got %q %v, want 421", out, err)
+	}
+}
+
+// TestSlowHeadersClosed: a client that never finishes its headers
+// (slowloris) is cut off after ReadHeaderTimeout.
+func TestSlowHeadersClosed(t *testing.T) {
+	l := DefaultLimits
+	l.ReadHeaderTimeout = 200 * time.Millisecond
+	addr := startServer(t, NewServer(testSite, okServer().Handler, l), nil)
+	c, err := net.Dial("tcp", addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	if _, err := c.Write([]byte("GET / HTTP/1.1\r\nHost: " + testSite.Hosts[0] + "\r\n")); err != nil {
+		t.Fatal(err)
+	}
+	_ = c.SetReadDeadline(time.Now().Add(20 * time.Second))
+	out, err := io.ReadAll(c)
+	if ne, ok := err.(net.Error); ok && ne.Timeout() {
+		t.Fatal("server kept a half-sent request open")
+	}
+	if strings.Contains(string(out), "200 OK") {
+		t.Fatalf("served a half-sent request: %q", out)
+	}
+}
+
+// TestBigHeaderRefused: headers over MaxHeaderBytes (plus net/http's fixed
+// 4 KiB slack) get 431, and the handler never runs.
+func TestBigHeaderRefused(t *testing.T) {
+	addr := startServer(t, NewServer(testSite, okServer().Handler, DefaultLimits), nil)
+	c, err := net.Dial("tcp", addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	_ = c.SetDeadline(time.Now().Add(20 * time.Second))
+	req := "GET / HTTP/1.1\r\nHost: " + testSite.Hosts[0] + "\r\nX-Big: " +
+		strings.Repeat("a", 16<<10) + "\r\nConnection: close\r\n\r\n"
+	_, _ = c.Write([]byte(req))
+	out, _ := io.ReadAll(c)
+	if !strings.Contains(string(out), "431") {
+		t.Fatalf("got %q, want 431", out)
+	}
+}
+
+// TestConnCapCountsCloseOnce:closing a connection twice frees one slot,
 // not two.
 func TestConnCapCountsCloseOnce(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
