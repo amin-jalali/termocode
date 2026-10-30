@@ -228,8 +228,8 @@ func TestPerfGuardDatabasesDisplayedResultCache(t *testing.T) {
 // The alloc guard of one grid page (100 rows x 4 columns) and its time
 // budget with 20 000 rows loaded: only the page is formatted.
 const (
-	maxAllocsDBPageIdx   = 8     // measured 4
-	maxAllocsDBGridPage  = 40000 // measured ~29600 for 100 rows x 4 columns (4.6 ms)
+	maxAllocsDBPageIdx   = 8    // measured 4
+	maxAllocsDBGridPage  = 7000 // measured ~5200 for 100 rows x 4 columns (1 ms)
 	maxMillisDBGridPage  = 60
 	maxMillisDBSchemaFor = 50
 )
