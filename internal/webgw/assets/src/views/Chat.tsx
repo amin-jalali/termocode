@@ -7,10 +7,11 @@ import { Fragment, h } from "preact";
 import { signal } from "@preact/signals";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { ChatItem, ChatMsg, ChatSnap } from "../../../../webproto/proto";
+import { fetchMsg, full, msgKey } from "../lib/fullmsg";
 import { toast } from "../lib/toasts";
 import { ReqError } from "../net/link";
 import { link, live, store } from "../session";
-import { readChat } from "../state/chat";
+import { isStub, readChat } from "../state/chat";
 import { t } from "../strings";
 import { Md } from "../ui/Markdown";
 import { Progress, SkeletonBubbles } from "../ui/Skeleton";
@@ -28,6 +29,8 @@ function newChat(): void {
 
 /** NEAR_BOTTOM_PX: closer than this to the end, new text keeps the view at the end. */
 const NEAR_BOTTOM_PX = 80;
+/** PAGE is how many messages draw at first and per Load older. */
+const PAGE = 60;
 
 function MsgText({ text, streaming }: { text?: string; streaming?: boolean }) {
   return (
@@ -43,13 +46,48 @@ function MsgText({ text, streaming }: { text?: string; streaming?: boolean }) {
   );
 }
 
-export function Message({ m }: { m: ChatMsg }) {
+/** Stub is an older message sent without its text: it fetches itself
+ * when it scrolls near the view (only for the laptop's own chat). */
+function Stub({ m, chat, canFetch }: { m: ChatMsg; chat: string; canFetch: boolean }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!canFetch) return;
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") {
+      fetchMsg(chat, m.i);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (es) => {
+        if (es.some((e) => e.isIntersecting)) fetchMsg(chat, m.i);
+      },
+      { root: el.closest(".view-body"), rootMargin: "200px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [chat, m.i, canFetch, full.value]);
+  return (
+    <div ref={ref} class={`msg msg-stub ${m.role === "user" ? "msg-user" : "msg-ai"}`} data-i={m.i}>
+      {canFetch ? <span class="sk-row" aria-hidden="true" /> : <span class="stub-text">{t("chat.stub_laptop")}</span>}
+    </div>
+  );
+}
+
+export function Message({ m: raw, chat = "", canFetch = false }: { m: ChatMsg; chat?: string; canFetch?: boolean }) {
+  const m = (raw.truncated && full.value.get(msgKey(chat, raw.i))) || raw;
+  if (isStub(m)) return <Stub m={m} chat={chat} canFetch={canFetch} />;
+  const rest = m.truncated && canFetch && (
+    <button type="button" class="msg-rest" onClick={() => fetchMsg(chat, m.i)}>
+      {t("chat.rest")}
+    </button>
+  );
   switch (m.role) {
     case "user":
       return (
         <div class="msg msg-user" data-i={m.i}>
           <div class="bubble" dir="auto">
             {m.md ? <Md doc={m.md} /> : <MsgText text={m.text} />}
+            {rest}
           </div>
         </div>
       );
@@ -76,6 +114,7 @@ export function Message({ m }: { m: ChatMsg }) {
           </div>
           <div class="msg-body">
             {m.md && !m.streaming ? <Md doc={m.md} /> : <MsgText text={m.text} streaming={m.streaming} />}
+            {rest}
           </div>
         </div>
       );
@@ -116,11 +155,15 @@ export function ChatView() {
   const body = useRef<HTMLDivElement | null>(null);
   const stick = useRef(true);
   const [list, setList] = useState(false);
+  const [page, setPage] = useState({ chat: "", n: PAGE });
+  const keep = useRef<number | null>(null);
   const st = store.topic("chat").value;
   const laptop = readChat(st?.data);
   const pin = pinned.value;
   const chat = pin ?? laptop;
   const msgs = chat?.messages ?? [];
+  const shownN = page.chat === (chat?.id ?? "") ? page.n : PAGE;
+  const from = Math.max(0, msgs.length - shownN);
 
   useEffect(() => {
     const el = body.current;
@@ -132,8 +175,18 @@ export function ChatView() {
   // New text keeps the view at the end while the reader is there.
   useLayoutEffect(() => {
     const el = body.current;
-    if (el && stick.current && !list) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    if (keep.current !== null) {
+      // Load older: what the reader saw stays where it was.
+      el.scrollTop += el.scrollHeight - keep.current;
+      keep.current = null;
+    } else if (stick.current && !list) el.scrollTop = el.scrollHeight;
   });
+
+  const older = () => {
+    keep.current = body.current?.scrollHeight ?? null;
+    setPage({ chat: chat?.id ?? "", n: shownN + PAGE });
+  };
 
   let content;
   if (list) {
@@ -166,8 +219,13 @@ export function ChatView() {
           </div>
         ) : (
           <div class="msgs" role="log" aria-live="polite" aria-label={chat?.title || t("tab.chat")}>
-            {msgs.map((m) => (
-              <Message key={m.i} m={m} />
+            {from > 0 && (
+              <button type="button" class="chat-older" onClick={older}>
+                {t("chat.older")}
+              </button>
+            )}
+            {msgs.slice(from).map((m) => (
+              <Message key={m.i} m={m} chat={chat?.id ?? ""} canFetch={!pin} />
             ))}
           </div>
         )}

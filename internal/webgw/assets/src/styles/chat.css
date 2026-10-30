@@ -82,3 +82,10 @@
 .chat-pinned { align-self: center; font-family: var(--font-mono); font-size: var(--fs-hint); color: var(--amber); white-space: nowrap; }
 .head-btn.is-on { background: var(--bg-2); }
 .view-head { flex-wrap: wrap; }
+
+/* Paging */
+.chat-older, .msg-rest { min-height: var(--tap); padding: 0 var(--s3); color: var(--blue); font-size: var(--fs-hint); }
+.chat-older { align-self: center; }
+.msg-stub .sk-row { display: block; width: 60%; height: 1.25rem; border-radius: var(--r-chip); background: var(--bg-2); }
+.msg-stub.msg-user .sk-row { margin-inline-start: auto; width: 40%; }
+.stub-text { font-size: var(--fs-hint); color: var(--dim); }
