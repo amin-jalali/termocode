@@ -1990,7 +1990,8 @@ Load one skill (a knowledge file from the "Skills you can load" list) by name an
 | `web-devices` | Web: Devices… | never | the web panel gives shell access from a browser; only the user changes it, in config.json (who may come in) |
 | `web-pair` | Web: Pair a Device… | never | the web panel gives shell access from a browser; only the user changes it, in config.json (pairing lets another device in) |
 | `web-share` | Web: Share as Viewer… | never | the web panel gives shell access from a browser; only the user changes it, in config.json (lets another person watch) |
-| `web-start` | Web: Start Panel | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
+| `web-start` | Web: Open in Browser | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
+| `web-start-panel` | Web: Start Panel | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web-stop` | Web: Stop Panel | never | the web panel gives shell access from a browser; only the user changes it, in config.json |
 | `web-totp` | Web: Set Up Sign-in Code… | never | the web panel gives shell access from a browser; only the user changes it, in config.json (a second factor of the web sign-in) |
 | `workspace-add-folder` | Workspace: Add Folder... | never | opens a picker or prompt that only the user can answer; use a typed tool (workspace_folders) |
