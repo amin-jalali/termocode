@@ -4,6 +4,8 @@ package webgw
 
 import (
 	"bufio"
+	"errors"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -176,6 +178,44 @@ func TestHeadersOnEveryResponse(t *testing.T) {
 		t.Fatalf("code %d", w.Code)
 	}
 	checkHeaders(t, w.Header(), "404")
+}
+
+// TestBodyCapped: a declared body over MaxBodyBytes is refused with 413
+// before the handler runs; an undeclared (chunked) one stops at the cap
+// when the handler reads it.
+func TestBodyCapped(t *testing.T) {
+	post := func(body io.Reader, size int64) *http.Request {
+		r := httptest.NewRequest(http.MethodPost, "/auth", body)
+		r.Host = testSite.Hosts[0]
+		r.Header.Set("Origin", "http://"+testSite.Hosts[0])
+		r.ContentLength = size
+		return r
+	}
+	var read int
+	var readErr error
+	reader := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, err := io.ReadAll(r.Body)
+		read, readErr = len(b), err
+	})
+	serve := func(r *http.Request) int {
+		w := httptest.NewRecorder()
+		Guard(testSite, reader).ServeHTTP(w, r)
+		return w.Code
+	}
+
+	if code := serve(post(strings.NewReader(strings.Repeat("a", MaxBodyBytes)), MaxBodyBytes)); code != http.StatusOK || readErr != nil || read != MaxBodyBytes {
+		t.Fatalf("at the cap: code %d read %d err %v", code, read, readErr)
+	}
+	read, readErr = 0, nil
+	if code := serve(post(strings.NewReader(strings.Repeat("a", MaxBodyBytes+1)), MaxBodyBytes+1)); code != http.StatusRequestEntityTooLarge || read != 0 {
+		t.Fatalf("declared over the cap: code %d read %d", code, read)
+	}
+	read, readErr = 0, nil
+	serve(post(strings.NewReader(strings.Repeat("a", 1<<20)), -1))
+	var tooBig *http.MaxBytesError
+	if !errors.As(readErr, &tooBig) || read > MaxBodyBytes {
+		t.Fatalf("chunked over the cap: read %d err %v", read, readErr)
+	}
 }
 
 func TestOriginExact(t *testing.T) {
