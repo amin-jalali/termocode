@@ -17,13 +17,15 @@ export interface Prefs {
   firstRunDone: boolean;
   /** rowPx is the text size of terminal and file rows in px; 0 is the default. */
   rowPx: number;
+  /** wakeLock: keep the screen on while a run streams (opt-in). */
+  wakeLock: boolean;
 }
 
 /** ROW_MIN and ROW_MAX bound rowPx (WEB-36). */
 export const ROW_MIN = 10;
 export const ROW_MAX = 24;
 
-const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, rowPx: 0 };
+const defaults: Prefs = { theme: "system", dir: "auto", lang: "auto", firstRunDone: false, rowPx: 0, wakeLock: false };
 
 function rowSize(v: unknown): number {
   return typeof v === "number" && Number.isInteger(v) && v >= ROW_MIN && v <= ROW_MAX ? v : 0;
@@ -44,6 +46,7 @@ function load(): Prefs {
       lang: pick(v.lang, ["auto", "en", "fa"], defaults.lang),
       firstRunDone: v.firstRunDone === true,
       rowPx: rowSize(v.rowPx),
+      wakeLock: v.wakeLock === true,
     };
   } catch {
     return defaults;

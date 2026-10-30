@@ -183,6 +183,7 @@ export const S = {
   "term.copy_row": "Copy this row",
   "term.copy_all": "Copy all rows",
   "term.paste": "Paste…",
+  "term.keep_on": "Keep screen on while it runs",
   "term.read_last": "Read the last 20 rows",
   "key.esc": "Esc",
   "key.tab": "Tab",

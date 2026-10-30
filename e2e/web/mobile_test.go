@@ -12,6 +12,7 @@ import (
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/input"
+	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 	"github.com/chromedp/chromedp/kb"
 
@@ -312,4 +313,71 @@ func TestTermRowMenu(t *testing.T) {
 			p.WaitJS(`document.querySelector(".paste") && !` + rowMenu)
 		})
 	}
+}
+
+// onNewDocument runs js in the page before its own scripts, on every load.
+func (p *Page) onNewDocument(js string) {
+	p.T.Helper()
+	p.Do(chromedp.Func(func(ctx context.Context, t *chromedp.Target) error {
+		_, err := cdp.Call(ctx, t, page.AddScriptToEvaluateOnNewDocument, page.AddScriptToEvaluateOnNewDocumentParams{Source: js})
+		return err
+	}))
+}
+
+// fakeWakeLock records the page's wake lock calls in window.__locks and
+// keeps the number held in window.__held.
+const fakeWakeLock = `(() => {
+	window.__locks = []; window.__held = 0;
+	Object.defineProperty(navigator, "wakeLock", {configurable: true, value: {
+		request: async (type) => {
+			window.__locks.push("request " + type); window.__held++;
+			const s = {released: false, type, addEventListener() {}, removeEventListener() {},
+				release: async () => { if (!s.released) { s.released = true; window.__held--; window.__locks.push("release"); } }};
+			return s;
+		},
+	}});
+})()`
+
+// setHidden makes the page think it went to the background or came back.
+func (p *Page) setHidden(hidden bool) {
+	p.T.Helper()
+	Eval[bool](p, fmt.Sprintf(`(Object.defineProperty(document, "hidden", {configurable: true, get: () => %t}),
+		Object.defineProperty(document, "visibilityState", {configurable: true, get: () => %q}),
+		document.dispatchEvent(new Event("visibilitychange")), true)`, hidden, map[bool]string{true: "hidden", false: "visible"}[hidden]))
+}
+
+// "Keep screen on" in the terminal's ⓘ sheet is off until the user turns
+// it on; then the screen stays on while the shell on screen runs
+// something, and is let go when it stops, when the page hides or when the
+// user turns it off.
+func TestWakeLockWhileARunStreams(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Phone)
+	p.onNewDocument(fakeWakeLock)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	c := p.Login("c-1")
+	p.GoTab("term")
+	c.Subs(t, "terms")
+	showTerm(t, p, c, termSnap(3, 0, 80, "$ go test ./..."), termItem(3, "zsh", true, true))
+	p.Holds(`window.__held === 0`, 300*time.Millisecond)
+
+	p.Tap(`[data-view="term"] .term-info-btn`)
+	p.TapJS(`[...document.querySelectorAll(".term-about .chip")].find((b) => b.textContent.includes("Keep screen on"))`)
+	p.WaitJS(`window.__held === 1 && window.__locks[0] === "request screen"`)
+	if !Eval[bool](p, `JSON.parse(localStorage.getItem("termocode.prefs.v1")).wakeLock === true`) {
+		t.Error("the choice is not kept on this device")
+	}
+
+	c.Send(t, Snap("terms", 2, termsSnap(termItem(3, "zsh", false, true))))
+	p.WaitJS(`window.__held === 0`)
+	c.Send(t, Snap("terms", 3, termsSnap(termItem(3, "zsh", true, true))))
+	p.WaitJS(`window.__held === 1`)
+
+	p.setHidden(true)
+	p.WaitJS(`window.__held === 0`)
+	p.setHidden(false)
+	p.WaitJS(`window.__held === 1`)
+
+	p.TapJS(`[...document.querySelectorAll(".term-about .chip")].find((b) => b.textContent.includes("Keep screen on"))`)
+	p.WaitJS(`window.__held === 0`)
 }
