@@ -284,14 +284,8 @@ func (h *webHub) newLink() (string, error) {
 	}
 	h.mu.Lock()
 	h.link, h.linkUntil = digest, time.Now().Add(webLinkTTL)
-	var ctls []*webConn
-	for _, c := range h.all {
-		if c != nil && c.role == webproto.RoleCtl {
-			ctls = append(ctls, c)
-		}
-	}
 	h.mu.Unlock()
-	for _, c := range ctls {
+	for _, c := range h.ctlConns() {
 		c.sendLink(digest)
 	}
 	return plain, nil
@@ -314,14 +308,8 @@ func (c *webConn) sendLink(digest [sha256.Size]byte) {
 func (h *webHub) ctlBye(code webproto.CloseCode) {
 	h.mu.Lock()
 	h.linkUntil = time.Time{}
-	var ctls []*webConn
-	for _, c := range h.all {
-		if c != nil && c.role == webproto.RoleCtl {
-			ctls = append(ctls, c)
-		}
-	}
 	h.mu.Unlock()
-	for _, c := range ctls {
+	for _, c := range h.ctlConns() {
 		c.send(&webproto.ServerBye{T: webproto.KindBye, Code: code})
 	}
 }
