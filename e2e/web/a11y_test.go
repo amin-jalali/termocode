@@ -82,7 +82,7 @@ func TestAxeEveryView(t *testing.T) {
 				c.WaitSub(t, "terms")
 				showTerm(t, p, c, termSnap(3, 0, 80, "$ ls", "a b c"), termItem(3, "zsh", true, true), termItem(4, "build", false, false))
 				p.axe(src, "term")
-				p.Tap(`[data-view="term"] .term-info-btn`)
+				p.Tap(`.term-info-btn`)
 				p.WaitJS(`document.querySelector(".term-about")`)
 				p.axe(src, "term about sheet")
 				p.Key(kb.Escape)

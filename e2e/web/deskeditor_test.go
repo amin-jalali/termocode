@@ -137,7 +137,7 @@ func TestDeskEditorViewerReadsOnly(t *testing.T) {
 	m.Role = webproto.RoleViewer
 	c := p.LoginMeta(m)
 	openDesk(t, p, c, 2, "a.txt", "one")
-	p.WaitJS(filesView + `.querySelector(".view-actions .chip")?.textContent === "View only"`)
+	p.WaitJS(`document.querySelector(".ed-tabbar .ed-actions .view-actions .chip")?.textContent === "View only"`)
 	deskType(p, false, "X")
 	noReq(t, c, 400*time.Millisecond)
 	if got := deskText(p); got != "one" {

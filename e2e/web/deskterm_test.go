@@ -178,7 +178,7 @@ func TestDeskTermListSplitAndKill(t *testing.T) {
 	c.Send(t, Snap("term:9", 1, termSnap(9, 0, 80, "$ nine")))
 	p.WaitJS(`document.querySelectorAll('[data-view="term"] .dterm-pane').length === 1 && ` + deskPane + `?.dataset.buf === "9"`)
 
-	p.TapJS(`document.querySelector('[data-view="term"] .dterm-split')`)
+	p.TapJS(`document.querySelector('.wb-panel .dterm-split')`)
 	r := expectReq(t, c, "term.new")
 	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(map[string]any{"buf": 14})})
 	c.Send(t, Delta("terms", 2, termsSnap(termItem(3, "zsh", false, true), termItem(9, "build", true, false), termItem(14, "zsh", false, false))))
@@ -198,7 +198,7 @@ func TestDeskTermListSplitAndKill(t *testing.T) {
 		t.Errorf("typed %q into %d, want b into shell 9", s, b)
 	}
 
-	p.TapJS(`document.querySelector('[data-view="term"] .dterm-kill')`)
+	p.TapJS(`document.querySelector('.wb-panel .dterm-kill')`)
 	p.WaitJS(`document.querySelector(".ask")?.innerText.includes("Close terminal 2?")`)
 	p.WaitJS(`document.activeElement?.textContent === "Cancel"`) // the safe choice has the focus
 	p.Holds(`!document.querySelector(".ask .arm.is-armed")`, 200*time.Millisecond)

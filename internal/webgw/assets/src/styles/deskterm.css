@@ -1,7 +1,7 @@
 /* The desktop's terminal panel (views/DeskTerm.tsx): shells you type
    into, a list of them on the right, two side by side when split. */
 .dterm { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--wb-panel-bg); }
-.dterm-actions { position: absolute; top: 5px; inset-inline-end: 44px; z-index: 4; display: flex; align-items: center; gap: 2px; height: 22px; }
+.dterm-actions { display: flex; align-items: center; gap: 2px; height: 22px; }
 .dterm-actions .tb:disabled { opacity: 0.4; cursor: default; }
 .dterm-body { flex: 1; display: flex; min-height: 0; }
 .dterm-panes { flex: 1; display: flex; min-width: 0; min-height: 0; }
@@ -31,7 +31,7 @@
 .dterm-tab-kill { visibility: hidden; height: 24px; min-width: 24px; }
 .dterm-tab:hover .dterm-tab-kill, .dterm-tab.is-on .dterm-tab-kill, .dterm-tab-kill:focus-visible { visibility: visible; }
 .dterm-none { margin: auto; text-align: center; }
-.dterm-viewonly { position: absolute; top: 6px; inset-inline-end: 120px; z-index: 4; }
+.dterm-viewonly { margin-inline-start: 4px; }
 .dterm-paste-text { max-height: 12rem; overflow: auto; margin: 0 0 var(--s3); padding: var(--s2); background: var(--bg-panel); font-family: var(--font-mono); font-size: 0.8125rem; white-space: pre; unicode-bidi: isolate; }
 .dterm .term-screen-box { margin: 0; }
 .dterm-actions .tb { min-width: 24px; height: 24px; }

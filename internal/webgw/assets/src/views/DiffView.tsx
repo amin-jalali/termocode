@@ -179,6 +179,7 @@ export function DiffView({ tab, slot = "g0" }: { tab: string; slot?: string }) {
       title={name}
       sub={d.path.includes("/") ? <Crumbs dir={d.path.slice(0, d.path.lastIndexOf("/"))} file={d.path} /> : undefined}
       bodyClass="is-editing"
+      actionsInto={"ed-actions-" + slot}
       actions={
         <>
           {d.kind !== "wt" && <Chip>{t("viewonly")}</Chip>}

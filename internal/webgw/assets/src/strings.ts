@@ -543,7 +543,6 @@ export const S = {
   "wb.key.side": "Show or hide the side panel",
   "wb.key.panel": "Show or hide the terminal",
   "wb.panel_hide": "Hide the terminal",
-  "wb.side_show": "Show the side panel",
   "wb.resize_side": "Resize the side panel",
   "wb.resize_panel": "Resize the terminal",
   "wb.resize_chat": "Resize the chat",
@@ -651,6 +650,14 @@ export const S = {
   "dv.review": "Review…",
   "dv.changed": "The file changed since then. Read the change on the laptop.",
   "card.open_diff": "Open Changes",
+  "wb.panel_max": "Maximize Panel Size",
+  "wb.panel_restore": "Restore Panel Size",
+  "wb.panel_more": "Views and More Actions…",
+  "wb.panel_right": "Move Panel Right",
+  "wb.panel_down": "Move Panel Down",
+  "cmd.panel_right": "View: Move Panel Right",
+  "cmd.panel_down": "View: Move Panel Down",
+  "cmd.panel_max": "View: Toggle Maximized Panel",
 } as const;
 
 export type StringKey = keyof typeof S;

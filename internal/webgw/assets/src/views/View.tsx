@@ -1,5 +1,6 @@
 // The frame every view shares: a sticky header and a scrolling body.
 import { h, type ComponentChildren, type Ref } from "preact";
+import { Portal } from "../ui/Portal";
 import type { Tab } from "../state/route";
 
 export function View({
@@ -13,6 +14,7 @@ export function View({
   back,
   bodyClass,
   name,
+  actionsInto,
 }: {
   tab: Tab;
   title: string;
@@ -29,6 +31,9 @@ export function View({
   /** name replaces tab in data-view and the title's id: the desktop shows
    * the tree beside a file, and data-view names the route's own view. */
   name?: string;
+  /** actionsInto: the id of the element the actions go to (the desktop
+   * editor group's tab bar), when it is there. */
+  actionsInto?: string;
 }) {
   const id = name ?? tab;
   return (
@@ -43,7 +48,12 @@ export function View({
           {title}
         </h1>
         {sub && <div class="view-sub">{sub}</div>}
-        {actions && <div class="view-actions">{actions}</div>}
+        {actions && !actionsInto && <div class="view-actions">{actions}</div>}
+        {actions && actionsInto && (
+          <Portal into={actionsInto}>
+            <div class="view-actions">{actions}</div>
+          </Portal>
+        )}
       </header>
       <div class={`view-body${bodyClass ? " " + bodyClass : ""}`} ref={bodyRef}>
         {children}

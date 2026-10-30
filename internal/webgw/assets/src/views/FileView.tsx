@@ -281,6 +281,7 @@ export function FileView({ path, slot = "g0" }: { path: string; slot?: string })
       back={desk ? undefined : { label: t("tab.files"), onClick: () => go({ tab: "files", rest: "", query: {} }) }}
       bodyRef={body}
       bodyClass={isEditing ? "is-editing" : undefined}
+      actionsInto={desk ? "ed-actions-" + slot : undefined}
       actions={
         deskLive ? (
           <>
