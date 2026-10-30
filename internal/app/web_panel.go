@@ -140,7 +140,11 @@ func (m *Model) startWebPanelOn(open, copyLink bool, sshPort int) tea.Cmd {
 	if err != nil {
 		return m.webToast(toast.Errr, "Web panel not started: no config folder")
 	}
-	args := []string{"--dir", aiWorkspaceRoot(), "--audit", audit,
+	devices, err := webDevicesDir()
+	if err != nil {
+		return m.webToast(toast.Errr, "Web panel not started: no config folder")
+	}
+	args := []string{"--dir", aiWorkspaceRoot(), "--audit", audit, "--devices", devices,
 		"--idle-min", strconv.Itoa(cfg.IdleMinutes), "--max-hours", strconv.Itoa(cfg.MaxHours),
 		"--viewers", strconv.Itoa(cfg.MaxViewers)}
 	switch {
@@ -165,6 +169,16 @@ func (m *Model) startWebPanelOn(open, copyLink bool, sshPort int) tea.Cmd {
 	}
 	cmds = append(cmds, m.webToast(toast.Info, "Starting the web panel…"))
 	return tea.Batch(cmds...)
+}
+
+// webDevicesDir is the paired-device folder (WEB-32), next to
+// config.json: devices.json holds names, roles and passkey public keys.
+func webDevicesDir() (string, error) {
+	dir, err := configDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "web"), nil
 }
 
 // webAuditPath is the gateway's audit log, next to errors.log.
