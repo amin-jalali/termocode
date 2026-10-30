@@ -11,6 +11,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/amin-jalali/termocode/internal/explorer"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/services"
 	"github.com/amin-jalali/termocode/internal/webproto"
@@ -256,4 +257,43 @@ func TestTreeReplayGolden(t *testing.T) {
 	}
 	webReplayCheck(t, webTopics["tree"], c)
 	webReplayGolden(t, webReplayPath("tree", "list_refresh_unlist"), c)
+}
+
+// Spec (T49 follow-up, web design 3.2): tree.reveal_on_laptop shows a
+// file in the laptop's explorer: the sidebar opens if it was closed, the
+// explorer's cursor moves to the file, and keyboard focus stays where the
+// user had it. The path goes through the same root check as tree.list.
+func TestTreeRevealOnLaptop(t *testing.T) {
+	r := newWebFilesRig(t)
+	abs := r.write("src/deep/a.go", "package deep")
+	r.m.explorer = explorer.Model{}
+	if err := r.m.explorer.AddRoot(r.root); err != nil {
+		t.Fatal(err)
+	}
+	r.m.showExp = false
+	r.m.focus = FocusEditor
+	if f := r.call(webproto.OpTreeRevealLaptop, &webproto.PathArgs{Path: "src/deep/a.go"}); f["t"] != "res" {
+		t.Fatalf("reveal: %v", f)
+	}
+	if got := r.m.explorer.CursorPath(); got != abs {
+		t.Errorf("explorer cursor %q, want %q", got, abs)
+	}
+	if !r.m.showExp {
+		t.Error("the explorer stays hidden")
+	}
+	if r.m.focus != FocusEditor {
+		t.Errorf("focus moved to %v", r.m.focus)
+	}
+	outside := t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(r.root, "out")); err != nil {
+		t.Fatal(err)
+	}
+	for p, want := range map[string]string{"../x": "forbidden", "/etc/passwd": "forbidden", "out": "forbidden", "nope.txt": "not_found"} {
+		if f := r.call(webproto.OpTreeRevealLaptop, &webproto.PathArgs{Path: p}); webErrCode(f) != want {
+			t.Errorf("reveal %q: %v, want %s", p, f, want)
+		}
+	}
+	if got := r.m.explorer.CursorPath(); got != abs {
+		t.Errorf("a refused reveal moved the cursor to %q", got)
+	}
 }
