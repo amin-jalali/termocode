@@ -108,6 +108,7 @@
 .toast-detail { font-size: 0.8125rem; color: var(--muted); margin-top: 2px; }
 .toast-x { width: var(--tap); height: var(--tap); margin: calc(-1 * var(--s2)) 0; border-radius: var(--r-chip); color: var(--muted); font-size: 1.25rem; flex: none; }
 .toast-x:hover { color: var(--text); background: var(--bg-hover); }
+.toast-act { color: var(--blue); font-weight: 600; min-height: var(--tap); min-width: var(--tap); padding: 0 var(--s2); flex: none; }
 .toast-more { align-self: flex-end; font-family: var(--font-mono); font-size: var(--fs-hint); color: var(--muted); background: var(--bg-float); border: 1px solid var(--border); border-radius: var(--r-pill); padding: 0 var(--s2); }
 
 /* ---- More ---- */

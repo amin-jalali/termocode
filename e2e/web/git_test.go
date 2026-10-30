@@ -1,0 +1,194 @@
+//go:build browser
+
+package web
+
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/amin-jalali/termocode/internal/webproto"
+)
+
+// The Git tab (WEB-23, web UX 3.5, 3.9, 5.7) against the fake hub, on the
+// phone (touch) and the desktop (mouse).
+
+// gitSnap is a git topic value: a.go changed, b.go staged, new.txt new.
+func gitSnap() webproto.GitSnap {
+	return webproto.GitSnap{Repo: true, Branch: webproto.GitBranch{Name: "main", Ahead: 1},
+		Files: []webproto.GitFile{
+			{Path: "src/a.go", X: " ", Y: "M", Unstaged: true},
+			{Path: "b.go", X: "M", Y: " ", Staged: true},
+			{Path: "new.txt", X: "?", Y: "?", Untracked: true},
+		},
+		Log: []webproto.GitCommit{{Hash: "1a2b3c4", Subject: "first", Author: "Ann", When: time.Now().Add(-time.Hour).UnixMilli()}}}
+}
+
+// openGit logs in, opens the Git tab and sends the git snapshot.
+func openGit(t *testing.T, vp Viewport, snap webproto.GitSnap) (*Page, *HubConn) {
+	t.Helper()
+	s := StartServer(t)
+	p := NewPage(t, s, vp)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	c := p.Login("c-git")
+	p.GoTab("git")
+	c.WaitSub(t, "git")
+	c.Send(t, Snap("git", 1, snap))
+	p.WaitJS(`document.querySelector('.git-row-wrap[data-path="b.go"]')`)
+	return p, c
+}
+
+// expectReq reads the page's messages until a req for op (subs and
+// unsubs on the way are fine) and checks its args.
+func expectReq(t *testing.T, c *HubConn, op, args string) *webproto.Req {
+	t.Helper()
+	for {
+		m := c.Next(t)
+		switch v := m.(type) {
+		case *webproto.Sub, *webproto.Unsub:
+			continue
+		case *webproto.Req:
+			if v.Op != op {
+				t.Fatalf("page asked %s %s; want %s", v.Op, v.Args, op)
+			}
+			if args != "" && canonJSON(t, v.Args) != canonJSON(t, json.RawMessage(args)) {
+				t.Fatalf("%s args %s; want %s", op, v.Args, args)
+			}
+			return v
+		default:
+			t.Fatalf("page sent %s; want a %s request", show(m), op)
+		}
+	}
+}
+
+func canonJSON(t *testing.T, b json.RawMessage) string {
+	t.Helper()
+	var v any
+	if err := json.Unmarshal(b, &v); err != nil {
+		t.Fatalf("%v: %s", err, b)
+	}
+	out, _ := json.Marshal(v)
+	return string(out)
+}
+
+// reply answers a req with data (nil: no data).
+func reply(t *testing.T, c *HubConn, r *webproto.Req, data any) {
+	t.Helper()
+	res := &webproto.Res{T: webproto.KindRes, ID: r.ID}
+	if data != nil {
+		res.Data = raw(data)
+	}
+	c.Send(t, res)
+}
+
+func rowSel(path string) string {
+	return fmt.Sprintf(`.git-row-wrap[data-path=%q]`, path)
+}
+
+// The groups show what git says; Stage on a row stages it, the toast
+// offers Undo, which unstages it again.
+func TestGitGroupsAndStageWithUndo(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			p, c := openGit(t, vp, gitSnap())
+			got := Eval[[]string](p, `[...document.querySelectorAll(".git-group .group-title")].map((e) => e.textContent.trim())`)
+			if strings.Join(got, "|") != "Staged (1)|Changes (1)|Untracked (1)|Recent commits" {
+				t.Fatalf("groups %q", got)
+			}
+			if txt := p.Text(".view-sub"); !strings.Contains(txt, "main") || !strings.Contains(txt, "↑1") {
+				t.Errorf("branch line %q", txt)
+			}
+			p.TapJS(`document.querySelector('` + rowSel("src/a.go") + ` .git-row .btn')`)
+			reply(t, c, expectReq(t, c, webproto.OpGitStage, `{"paths":["src/a.go"]}`), nil)
+			p.WaitJS(`document.querySelector(".toasts .toast-title")?.textContent === "Staged a.go"`)
+			p.TapJS(ButtonByText("Undo"))
+			reply(t, c, expectReq(t, c, webproto.OpGitUnstage, `{"paths":["src/a.go"]}`), nil)
+			p.WaitJS(`document.querySelector(".toasts .toast-title")?.textContent !== "Staged a.go"`)
+		})
+	}
+}
+
+// A commit of the log opens with its subject, author and rows.
+func TestGitShowCommit(t *testing.T) {
+	p, c := openGit(t, Phone, gitSnap())
+	p.TapJS(`document.querySelector(".git-commit")`)
+	r := expectReq(t, c, webproto.OpGitShow, `{"hash":"1a2b3c4"}`)
+	reply(t, c, r, webproto.GitDiff{Commit: &webproto.GitCommitInfo{Hash: "1a2b3c4", Subject: "first", Author: "Ann", When: time.Now().UnixMilli()},
+		Added: 1, Rows: []webproto.DiffRow{{K: "file", Text: "a.go"}, {K: "hunk", Text: "@@ -0,0 +1 @@"}, {K: "add", Text: "x", New: 1}}})
+	p.WaitJS(`document.querySelector(".show-subject")?.textContent === "first" && document.querySelectorAll(".diff-rows .drow").length === 3`)
+	if loc := Eval[string](p, "location.hash"); loc != "#/git?show=1a2b3c4" {
+		t.Errorf("route %q", loc)
+	}
+}
+
+// Tapping a row opens its diff: rows with the hunk header; "Stage this
+// part" sends the exact header; more rows come page by page.
+func TestGitDiffSheet(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			p, c := openGit(t, vp, gitSnap())
+			p.TapJS(`document.querySelector('` + rowSel("src/a.go") + ` .git-open')`)
+			r := expectReq(t, c, webproto.OpGitDiff, `{"path":"src/a.go"}`)
+			hunk := "@@ -1,2 +1,2 @@ func main() {"
+			reply(t, c, r, webproto.GitDiff{Path: "src/a.go", Added: 1, Removed: 1, Next: 3, Rows: []webproto.DiffRow{
+				{K: "hunk", Text: hunk, Old: 1, New: 1}, {K: "del", Text: "old <b>line</b>", Old: 1}, {K: "add", Text: "new line", New: 1}}})
+			p.WaitJS(`document.querySelectorAll(".diff-rows .drow").length === 3`)
+			if loc := Eval[string](p, "location.hash"); loc != "#/git/src/a.go" {
+				t.Errorf("route %q", loc)
+			}
+			if Eval[int](p, `document.querySelectorAll(".diff-rows b").length`) != 0 {
+				t.Fatal("diff text became HTML")
+			}
+			p.TapJS(ButtonByText("Show more rows"))
+			r = expectReq(t, c, webproto.OpGitDiff, `{"path":"src/a.go","from":3}`)
+			reply(t, c, r, webproto.GitDiff{Path: "src/a.go", From: 3, Rows: []webproto.DiffRow{{K: "ctx", Text: "tail", Old: 2, New: 2}}})
+			p.WaitJS(`document.querySelectorAll(".diff-rows .drow").length === 4`)
+			p.TapJS(ButtonByText("Stage this part"))
+			reply(t, c, expectReq(t, c, webproto.OpGitStageHunk, `{"path":"src/a.go","hunk":"`+hunk+`"}`), nil)
+			expectReq(t, c, webproto.OpGitDiff, `{"path":"src/a.go"}`) // read again
+			if pr := p.Problems(); len(pr) > 0 {
+				t.Errorf("problems: %q", pr)
+			}
+		})
+	}
+}
+
+// A viewer reads only: no stage buttons and no commit box. Offline,
+// actions say Offline.
+func TestGitViewerReadsOnly(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Desktop)
+	p.Open()
+	p.Tap(".connect-foot button")
+	c := s.Hub.Accept(t)
+	Expect[*webproto.Hello](t, c)
+	m := Meta("c-v")
+	m.Role = webproto.RoleViewer
+	c.Send(t, m)
+	c.Subs(t, "status", "toasts")
+	c.Send(t, Snap("status", 1, statusData("main", 3)))
+	p.WaitJS(`document.documentElement.dataset.link === "online"`)
+	p.GoTab("git")
+	c.WaitSub(t, "git")
+	c.Send(t, Snap("git", 1, gitSnap()))
+	p.WaitJS(`document.querySelector('` + rowSel("b.go") + `')`)
+	if n := Eval[int](p, `document.querySelectorAll(".git-row .btn, .commit-box").length`); n != 0 {
+		t.Fatalf("a viewer sees %d actions", n)
+	}
+}
+
+// Not a repository, and the laptop still reading: say so.
+func TestGitEmptyStates(t *testing.T) {
+	p, c := openGit(t, Phone, gitSnap())
+	c.Send(t, Delta("git", 2, webproto.GitSnap{Repo: false, Files: []webproto.GitFile{}, Log: []webproto.GitCommit{}}))
+	p.WaitJS(`document.querySelector(".git .empty")?.textContent === "This workspace is not a git repository."`)
+	c.Send(t, Delta("git", 3, webproto.GitSnap{Repo: true, Branch: webproto.GitBranch{Name: "main"}, Files: []webproto.GitFile{},
+		Log: []webproto.GitCommit{{Hash: "1a2b3c4", Subject: "first", When: time.Now().UnixMilli()}}}))
+	p.WaitJS(`document.querySelector(".git-clean")?.textContent === "Nothing to commit. The tree is clean."`)
+	if n := Eval[int](p, `document.querySelectorAll(".git-commit").length`); n != 1 {
+		t.Errorf("log rows %d", n)
+	}
+	p.noOverflow("git tab")
+}

@@ -5,6 +5,12 @@ import { signal } from "@preact/signals";
 
 export type Severity = "info" | "ok" | "warn" | "error";
 
+/** ToastAction is one button on a toast (Undo). */
+export interface ToastAction {
+  label: string;
+  run: () => void;
+}
+
 export interface Toast {
   id: number;
   severity: Severity;
@@ -12,6 +18,7 @@ export interface Toast {
   detail?: string;
   /** laptop is the toast's id on the laptop, for toasts from the topic. */
   laptop?: number;
+  action?: ToastAction;
 }
 
 /** LaptopToast is one toast of the toasts topic (webproto.Toast). */
@@ -33,9 +40,9 @@ function arm(id: number, severity: Severity): void {
   if (severity !== "error") timers.set(id, setTimeout(() => dismiss(id), TOAST_MS));
 }
 
-export function toast(severity: Severity, title: string, detail?: string): number {
+export function toast(severity: Severity, title: string, detail?: string, action?: ToastAction): number {
   const id = nextID++;
-  toasts.value = [...toasts.peek(), { id, severity, title, detail }];
+  toasts.value = [...toasts.peek(), { id, severity, title, detail, action }];
   arm(id, severity);
   return id;
 }

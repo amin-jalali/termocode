@@ -205,6 +205,15 @@ export const S = {
   "git.body": "More (optional)",
   "git.long": "Diff is long. Showing the first part.",
   "git.err": "git said: {line}",
+  "git.unstaged_toast": "Unstaged {name}",
+  "git.many": "Showing 2 000 files. {n} more are on the laptop.",
+  "git.log": "Recent commits",
+  "git.hunk_stage": "Stage this part",
+  "git.hunk_unstage": "Unstage this part",
+  "git.more_rows": "Show more rows",
+  "git.gone": "This file has no changes now.",
+  "git.reading": "The laptop is reading git…",
+  "git.cancelled_here": "Cancelled. Nothing changed.",
 
   // Search, tasks, runs
   "search.placeholder": "Search in files",

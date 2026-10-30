@@ -26,13 +26,7 @@ export function TermView() {
   );
 }
 
-export function GitView() {
-  return (
-    <View tab="git" title={t("tab.git")}>
-      <TopicBody topic="git" empty={<p>{t("git.clean")}</p>} />
-    </View>
-  );
-}
+export { GitView } from "./git/GitView";
 
 export function MoreView() {
   const p = prefs.value;
