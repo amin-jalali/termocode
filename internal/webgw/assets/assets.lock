@@ -2,9 +2,11 @@
 # One built file per line: path, sha384 (SRI form), size in bytes.
 app.css sha384-kYoRzM5/7tye4juHxQZo07r7DHF0WWo8j3dhPeyPZkneOtsjW7XVOiX2T9Ut5lmV 49810
 app.js sha384-OntH59FykMhmXHNKV5PJUD3rsTXQihFS0ptHTAWh5BMv3eikS8rJfUuvAUALI+W7 188161
+icon-maskable.svg sha384-jsUQFC456bVobLxEI3ZKbp9mW6SjO1Joa3U86iXD66qm+YF+smRbvNGYVLvYMqOf 201
 icon.svg sha384-1i6/INXc16ryIXQB25IUE2qoPWGgij99HXLf1+5KcACYRgURj9eQzm/tcozbgZjh 210
 index.html sha384-/ceAIJ0i5+gy5uV4kpiVbbyqN6lf6IDPsx05nUrt4fddRFR4EIESfO29Gqb1H0Md 764
 kit.css sha384-Vku1UyLwBzMWaMZq9WZFNE+B2DytZKaA+9AwjPiHYZGUdq1lPcXpNuzDHbrwk45y 32581
 kit.html sha384-LsfSeQ0okNPcEKfaL7XkVMtJb8aMgZw8drUK73V+ddbidp4Vnf7UPklHNkDp+9li 719
 kit.js sha384-T9Ipyt21exXTjlEI+BMPNojCDe8CTrPFixMXIFypGJ5OsUXnIdcL3OXz3/Sd2W9o 108357
 licenses.txt sha384-Yc3Ynnbygxy3h+WVQ2LKi09qBiCPX99EtCrfQa7m8/58IWbHJC6tthxpPXCm6Rov 3617
+manifest.webmanifest sha384-qjNU0Xp9lZOqlzINposbupMidCLCs3E42jt7va9KMYlF9pwoBpOh8VZq76FMMpD8 472
