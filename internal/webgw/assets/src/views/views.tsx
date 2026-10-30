@@ -10,6 +10,7 @@ import { TopicBody } from "./Placeholder";
 import { RunsView } from "./more/RunsView";
 import { SettingsView } from "./more/SettingsView";
 import { MCPView } from "./more/MCPView";
+import { ContainersView } from "./more/ContainersView";
 import { SearchView } from "./more/SearchView";
 import { TasksView } from "./more/TasksView";
 import { View } from "./View";
@@ -34,6 +35,7 @@ export function MoreView() {
   if (sub === "runs") return <RunsView />;
   if (sub === "settings") return <SettingsView />;
   if (sub === "mcp") return <MCPView />;
+  if (sub === "containers") return <ContainersView />;
   const p = prefs.value;
   // Built on each draw, so a language change shows at once.
   const themes = [
@@ -66,6 +68,9 @@ export function MoreView() {
           </button>
           <button type="button" class="more-link" data-sub="settings" onClick={() => go({ tab: "more", rest: "settings", query: {} })}>
             {t("more.settings")}
+          </button>
+          <button type="button" class="more-link" data-sub="containers" onClick={() => go({ tab: "more", rest: "containers", query: {} })}>
+            {t("more.containers")}
           </button>
           <button type="button" class="more-link" data-sub="mcp" onClick={() => go({ tab: "more", rest: "mcp", query: {} })}>
             {t("more.mcp")}
