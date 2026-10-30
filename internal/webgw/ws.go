@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/coder/websocket"
@@ -75,6 +76,8 @@ type WSConfig struct {
 	// Devices are the paired devices (nil: none). A paired device's
 	// hello is refused with 4003 once it is no longer in the store.
 	Devices *webdevices.Store
+	// Control answers control.challenge / control.ask (nil: not here).
+	Control *Control
 }
 
 // Defaults of WSConfig.
@@ -308,6 +311,9 @@ type wsConn struct {
 
 	lastID uint64 // browser reader only: the last request id
 	gate   *gate
+
+	grantLogin string      // browser reader only: the open control challenge
+	asking     atomic.Bool // the laptop is being asked for control
 }
 
 // serve runs one connection until it ends.
@@ -558,7 +564,15 @@ func (c *wsConn) fromBrowser() {
 			case reqAnswered:
 				continue
 			}
-			if !c.throttle(m.Op, len(m.Args)) || !c.sendSlot(m.ID) {
+			if !c.throttle(m.Op, len(m.Args)) {
+				return
+			}
+			if p, _ := webproto.Lookup(m.Op); p.Gateway { // never to the hub
+				c.activity()
+				c.gatewayOp(m)
+				continue
+			}
+			if !c.sendSlot(m.ID) {
 				return
 			}
 			c.activity()

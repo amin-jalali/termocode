@@ -202,7 +202,19 @@ func Run(ctx context.Context, cfg RunConfig) (webproto.CloseCode, error) {
 
 	var last atomic.Int64 // unix nanos of the last use
 	last.Store(time.Now().UnixNano())
-	ws := NewWS(WSConfig{Site: site, Tokens: tokens, Audit: audit, Dial: cfg.Dial, Now: now, Devices: devices,
+	var control *Control
+	if pairing != nil {
+		control = &Control{Passkeys: pairing.cfg.Passkeys, Tokens: tokens, Store: devices, Audit: audit, Now: now,
+			Ask: func(ctx context.Context, a webproto.GrantAskArgs) error {
+				c := ctlRef.Load()
+				if c == nil {
+					return ErrCtlGone
+				}
+				_, err := c.Call(ctx, webproto.OpWebGrantAsk, a)
+				return err
+			}}
+	}
+	ws := NewWS(WSConfig{Site: site, Tokens: tokens, Audit: audit, Dial: cfg.Dial, Now: now, Devices: devices, Control: control,
 		MaxViewers: cfg.MaxViewers, Activity: func() { last.Store(time.Now().UnixNano()) }})
 	wsRef.Store(ws)
 	mux := http.NewServeMux()
@@ -318,6 +330,20 @@ func onCtlEvent(kind string, data json.RawMessage, t ctlTargets) {
 			n += t.ws.CloseDevice(d.Device, webproto.CloseDeviceRevoked)
 		}
 		_ = t.audit.Log(Event{Kind: EvRevoke, Device: d.Device, Summary: fmt.Sprintf("%d sessions closed", n)})
+	case EvRoleChange:
+		var d struct {
+			Device string `json:"device"`
+			Role   string `json:"role"`
+		}
+		if json.Unmarshal(data, &d) != nil || !strings.HasPrefix(d.Device, "dev-") ||
+			(d.Role != webdevices.RoleViewer && d.Role != webdevices.RoleControl) {
+			return
+		}
+		t.tokens.SetDeviceRole(d.Device, sessionRole(d.Role))
+		if t.ws != nil {
+			t.ws.CloseDevice(d.Device, webproto.CloseRoleChanged)
+		}
+		_ = t.audit.Log(Event{Kind: EvRole, Device: d.Device, Summary: d.Role, By: "laptop"})
 	case EvPairLink:
 		var d struct {
 			SHA256 string `json:"sha256"`
@@ -347,6 +373,8 @@ const (
 	EvPairClose = "pair_close" // the pairing link was closed on the laptop
 	// EvRevokeDevice: {device}: the device was removed on the laptop.
 	EvRevokeDevice = "revoke"
+	// EvRoleChange: {device, role}: the laptop changed a device's role.
+	EvRoleChange = "role"
 )
 
 // waitStop waits for the first reason to stop. The idle timer is one

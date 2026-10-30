@@ -43,6 +43,7 @@ const (
 	EvRevoke        EventKind = "revoke"         // a device was removed: its tokens and links dropped
 	EvLoginOK       EventKind = "login_ok"       // a paired device signed in with its passkey
 	EvLoginFail     EventKind = "login_fail"     // a passkey sign-in was refused (Why: the rule)
+	EvRole          EventKind = "role"           // a device's role changed (Summary: the new role; By: who)
 )
 
 // AllEventKinds lists every kind, for tests and docs.
@@ -50,7 +51,7 @@ var AllEventKinds = []EventKind{
 	EvStart, EvStop, EvAuthOK, EvAuthFail, EvSecretBurned, EvRateLimited,
 	EvConnect, EvDisconnect, EvProtoError, EvOriginBlocked, EvHostBlocked,
 	EvIdleStop, EvMaxStop, EvKillSwitch, EvOp, EvFunnelStop, EvServeGone,
-	EvPairStart, EvPairOK, EvPairFail, EvRevoke, EvLoginOK, EvLoginFail,
+	EvPairStart, EvPairOK, EvPairFail, EvRevoke, EvLoginOK, EvLoginFail, EvRole,
 }
 
 // Event is one audit line. It has no field for a secret, a token, a
