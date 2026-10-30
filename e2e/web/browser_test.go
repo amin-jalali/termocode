@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -22,6 +23,10 @@ import (
 
 // requireEnv set to "require" turns a missing Chrome into a failure (CI).
 const requireEnv = "TERMOCODE_WEB_E2E"
+
+// dumpEnv names a folder for a screenshot and the record of each failed
+// test (CI uploads it).
+const dumpEnv = "WEB_E2E_DUMP_DIR"
 
 // Viewport is a screen the page runs on.
 type Viewport struct {
@@ -104,11 +109,14 @@ func NewPage(t *testing.T, s *Server, vp Viewport) *Page {
 	}
 	actx, acancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	ctx, cancel := chromedp.NewContext(actx)
+	p := &Page{T: t, Ctx: ctx, S: s, VP: vp}
 	t.Cleanup(func() {
+		if t.Failed() {
+			p.dump()
+		}
 		cancel()
 		acancel()
 	})
-	p := &Page{T: t, Ctx: ctx, S: s, VP: vp}
 	// Subscribe before anything loads, so nothing is missed.
 	requests := chromedp.Events(ctx, network.RequestWillBeSent)
 	sockets := chromedp.Events(ctx, network.WebSocketCreated)
@@ -285,4 +293,25 @@ func (p *Page) Key(keys string) {
 func (p *Page) Text(sel string) string {
 	p.T.Helper()
 	return Eval[string](p, fmt.Sprintf(`(document.querySelector(%q)?.textContent ?? "")`, sel))
+}
+
+// dump writes a screenshot, the page's text, its requests and problems
+// to $WEB_E2E_DUMP_DIR, for a failed test.
+func (p *Page) dump() {
+	dir := os.Getenv(dumpEnv)
+	if dir == "" {
+		return
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return
+	}
+	name := filepath.Join(dir, strings.NewReplacer("/", "_", " ", "_").Replace(p.T.Name()))
+	ctx, cancel := context.WithTimeout(p.Ctx, 5*time.Second)
+	defer cancel()
+	if png, err := chromedp.Run(ctx, chromedp.CaptureScreenshot()); err == nil {
+		_ = os.WriteFile(name+".png", png, 0o644)
+	}
+	text, _ := chromedp.Run(ctx, chromedp.Evaluate[string](`location.href + "\n\n" + document.body.innerText`))
+	rec := text + "\n\nrequests:\n" + strings.Join(p.Requests(), "\n") + "\n\nproblems:\n" + strings.Join(p.Problems(), "\n") + "\n"
+	_ = os.WriteFile(name+".txt", []byte(rec), 0o644)
 }
