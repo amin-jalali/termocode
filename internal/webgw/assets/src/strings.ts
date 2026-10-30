@@ -559,7 +559,6 @@ export const S = {
   "prob.sev4": "Hint",
   "sb.problems": "{e} to fix, {w} warnings",
   "cmd.problems": "View: Show problems",
-  "refs.find": "Find All References",
   "refs.title": "References to {word}",
   "refs.count": "{n} found",
   "refs.close": "Close the list",

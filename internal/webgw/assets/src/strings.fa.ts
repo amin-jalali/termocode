@@ -556,7 +556,6 @@ export const FA: Record<StringKey, string> = {
   "prob.sev4": "پیشنهاد",
   "sb.problems": "{e} برای درست کردن، {w} هشدار",
   "cmd.problems": "نما: نمایش مشکلات",
-  "refs.find": "پیدا کردن همهٔ ارجاع‌ها",
   "refs.title": "ارجاع‌ها به {word}",
   "refs.count": "{n} مورد",
   "refs.close": "بستن فهرست",
