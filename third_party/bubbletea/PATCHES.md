@@ -13,6 +13,15 @@ Changed files are marked with "termocode patch". The renderer:
 
 `idle_renderer_test.go` is new.
 
+First frame at once (termocode PERF-1):
+
+- `standard_renderer.go`: the first frame written after the window
+  size is known is flushed at once (`write` / `writeFrame`), not on the
+  next tick: startup showed it up to one frame interval later. Later
+  frames still wait for the tick.
+- Test: `first_frame_test.go`. `screen_test.go`'s `TestClearMsg` sends
+  the window size after its commands, so the frame still comes last.
+
 Frame pacing for slow links (termocode Group S2):
 
 - `pacing.go` (new): `WithFramePacing(window)`. Each frame ends with a
