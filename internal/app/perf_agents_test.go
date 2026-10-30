@@ -483,3 +483,52 @@ func TestPerfAIUndoTurn300(t *testing.T) {
 	t.Logf("undo 300 files: median %v, all %v", perfMedian(ds), ds)
 	perfbudget.Check(t, "ai_undo_turn_300_files", perfMs(perfMedian(ds)))
 }
+
+// Perf guard: Enter with a two-step profile (Review: reviewer, then
+// fixer) to the first step's request leaving: the run, its graph and its
+// step cards are made first.
+func TestPerfAIRunStart(t *testing.T) {
+	perfbudget.Require(t)
+	sent := make(chan time.Time, 1)
+	m, _ := aiRunModel(t, perfAIProvider{n: 5, sent: sent}, perfAIProvider{n: 5})
+	for i := 0; i < 1000; i++ {
+		m.ai.conv.Messages = append(m.ai.conv.Messages, ai.StoredMessage{Role: ai.StoredUser, Text: "q"},
+			ai.StoredMessage{Role: ai.StoredAssistant, Text: strings.Repeat("answer ", 40)})
+	}
+	var ds []time.Duration
+	for i := 0; i < 9; i++ {
+		t0 := time.Now()
+		cmd := m.sendAIChat("review the change")
+		var dt time.Duration
+		select {
+		case t1 := <-sent:
+			dt = t1.Sub(t0)
+		case <-time.After(10 * time.Second):
+			t.Fatal("no request")
+		}
+		driveAIChat(t, m, cmd, nil)
+		if m.ai.streaming {
+			t.Fatal("the run did not end")
+		}
+		ds = append(ds, dt)
+	}
+	t.Logf("run start: median %v, all %v", perfMedian(ds), ds)
+	perfbudget.Check(t, "ai_run_start", perfMs(perfMedian(ds)))
+}
+
+// Perf guard: Enter in a 20-message chat to the request arriving at an
+// OpenAI-compatible server on this machine (prompt, tools list, history
+// and the request body encoded).
+func TestPerfAISendToServer(t *testing.T) {
+	perfbudget.Require(t)
+	got := make(chan time.Time, 1)
+	m := perfAIChat(t, 20, nil)
+	m.ai.provider = perfAIServer(t, 1, got)
+	var ds []time.Duration
+	for i := 0; i < 15; i++ {
+		ds = append(ds, perfSend(t, m, got))
+		m.ai.conv.Messages = m.ai.conv.Messages[:20]
+	}
+	t.Logf("send to server: median %v, all %v", perfMedian(ds), ds)
+	perfbudget.Check(t, "ai_send_to_server", perfMs(perfMedian(ds)))
+}
