@@ -72,7 +72,7 @@ func TestDetectSilentFailure(t *testing.T) {
 	f.Set(t, "all.err", "")
 	f.Set(t, "all.code", "3")
 	e := detectFake(t, f, 0)
-	if e.Reachable || e.Problem != (services.Problem{Kind: services.ProblemOther}) {
+	if e.Reachable || e.Problem.Kind != services.ProblemOther || e.Problem.Detail != "" {
 		t.Fatalf("problem = %+v", e.Problem)
 	}
 }
