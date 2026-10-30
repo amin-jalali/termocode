@@ -161,7 +161,9 @@ function RunRows({ runs, canAct }: { runs: RunView[]; canAct: boolean }) {
   );
 }
 
-export function DeskRun() {
+/** DeskRun is the Run activity's tasks and AI runs; head false when it
+ * sits under the debugger's title (views/run/index.tsx). */
+export function DeskRun({ head = true }: { head?: boolean } = {}) {
   useEffect(() => link.subscribe("tasks", "runs"), []);
   const ts = store.topic("tasks").value;
   const rs = store.topic("runs").value;
@@ -169,7 +171,7 @@ export function DeskRun() {
   const runs = readRuns(rs?.data);
   const canAct = link.meta.value?.role !== "viewer";
   return (
-    <PaneView id="run" title={t("act.run")}>
+    <PaneView id="run" title={t("act.run")} head={head}>
       <PaneSection id="tasks" title={t("more.tasks")} open={!shut.value.has("tasks")} onToggle={() => toggle("tasks")} count={ts ? tasks.length : undefined}>
         {!ts ? (
           <p class="pv-msg">{t("loading")}</p>
