@@ -141,8 +141,9 @@ func VerifyVendor(dir string) ([]Package, error) {
 	return pkgs, nil
 }
 
-// servedName is a file name under /assets/: a folder, then a plain name.
-var servedName = regexp.MustCompile(`^[a-z0-9-]+/[A-Za-z0-9._-]+\.(js|css)$`)
+// servedName is a file name under /assets/: a folder, then a plain name
+// of a script, a style sheet or a font.
+var servedName = regexp.MustCompile(`^[a-z0-9-]+/[A-Za-z0-9._-]+\.(js|css|ttf|woff2)$`)
 
 func sortedKeys(m map[string]string) []string {
 	keys := make([]string, 0, len(m))
