@@ -29,7 +29,12 @@ func StopWebHub() {
 
 // startWebHub starts the hub for the workspace (nil when it runs
 // already). An error is one toast and errors.log, never a crash.
-func (m *Model) startWebHub() tea.Cmd {
+func (m *Model) startWebHub() tea.Cmd { return m.startWebHubAt(false) }
+
+// startWebHubAt is startWebHub; quiet (at launch, when the user asked
+// for nothing: another termocode in this folder may have the socket)
+// says nothing.
+func (m *Model) startWebHubAt(quiet bool) tea.Cmd {
 	if m.web != nil {
 		return nil
 	}
@@ -44,6 +49,9 @@ func (m *Model) startWebHub() tea.Cmd {
 			return waitWeb(hub)
 		}
 		err = lerr
+	}
+	if quiet {
+		return nil // opening the panel tries again and says why
 	}
 	recordError("[web] hub not started: " + err.Error())
 	var c tea.Cmd
@@ -67,7 +75,7 @@ func (m *Model) stopWebHub() {
 // stops the panel and the hub when it is turned off.
 func (m *Model) syncWebHub() tea.Cmd {
 	if webSettings().On {
-		return m.startWebHub()
+		return m.startWebHubAt(true)
 	}
 	var cmd tea.Cmd
 	if m.webPanel != nil {
