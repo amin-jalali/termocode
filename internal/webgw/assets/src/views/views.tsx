@@ -12,12 +12,15 @@ import { SearchView } from "./more/SearchView";
 import { TasksView } from "./more/TasksView";
 import { View } from "./View";
 
+import { route } from "../lib/router";
+import { FileView } from "./FileView";
 import { TreeView } from "./Files";
 
 export { ChatView } from "./Chat";
 
 export function FilesView() {
-  return <TreeView />;
+  const r = route.value;
+  return r.tab === "files" && r.rest ? <FileView path={r.rest} /> : <TreeView />;
 }
 
 export function TermView() {

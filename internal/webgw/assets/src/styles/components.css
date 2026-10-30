@@ -150,7 +150,7 @@ button.chip:hover { background: var(--bg-hover); }
 .trow-text, .crow-text, .drow-text { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; padding-inline-start: 2ch; text-indent: -2ch; }
 .trow, .crow, .drow, .card-subject, .chip { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
 .wrap-mark { color: var(--dim); user-select: none; }
-.crow { grid-template-columns: 4ch 1.5ch minmax(0, 1fr); padding-inline-end: var(--s2); }
+.crow { grid-template-columns: var(--nw, 4ch) 1.5ch minmax(0, 1fr); padding-inline-end: var(--s2); }
 .crow-n { color: var(--dim); text-align: right; padding-inline-end: 1ch; user-select: none; }
 .crow.is-flash { animation: flash var(--t-flash) ease-out; }
 @keyframes flash { from { background: var(--sel); } to { background: transparent; } }
