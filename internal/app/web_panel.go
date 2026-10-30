@@ -402,7 +402,7 @@ func (m *Model) webCtlReply(call *webCall) {
 	st := m.webPanel
 	args, _ := call.args.(*webproto.WebOpenArgs)
 	if st.sshPort == 0 || args == nil || args.SSHPort == 0 {
-		call.reply(map[string]int{"port": st.port})
+		call.reply(webOpenReply{Port: st.port, URL: st.url})
 		return
 	}
 	plain := st.plain
@@ -420,6 +420,13 @@ func (m *Model) webCtlReply(call *webCall) {
 		return
 	}
 	call.reply(webSSHOpen{Port: st.port, Sock: sock, Secret: plain})
+}
+
+// webOpenReply is the answer to web.open: the port, and in tailnet mode
+// the https address browsers use.
+type webOpenReply struct {
+	Port int    `json:"port"`
+	URL  string `json:"url,omitempty"`
 }
 
 // webSSHOpen is the answer to web.open in SSH mode.
