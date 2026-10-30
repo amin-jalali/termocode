@@ -6,6 +6,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"io"
+	"mime"
 	"net/http"
 	"sync"
 	"time"
@@ -47,7 +49,22 @@ func (a *Auth) NewSecret() (string, error) {
 
 // authRequest is the only body /auth reads.
 type authRequest struct {
-	Secret string `json:"secret"`
+	Secret *string `json:"secret"`
+}
+
+// decodeAuth reads exactly one JSON object with a string "secret" and
+// nothing else: no other field, no second value, no trailing bytes.
+func decodeAuth(body io.Reader) (string, bool) {
+	dec := json.NewDecoder(body)
+	dec.DisallowUnknownFields()
+	var req authRequest
+	if err := dec.Decode(&req); err != nil || req.Secret == nil {
+		return "", false
+	}
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
+		return "", false
+	}
+	return *req.Secret, true
 }
 
 // authReply is the answer to a good secret.
@@ -63,13 +80,17 @@ func (a *Auth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusMethodNotAllowed, errorReply("method_not_allowed"))
 		return
 	}
-	var req authRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mt != "application/json" {
+		writeJSON(w, http.StatusUnsupportedMediaType, errorReply("need_json"))
+		return
+	}
+	secret, ok := decodeAuth(r.Body)
+	if !ok {
 		writeJSON(w, http.StatusBadRequest, errorReply("bad_request"))
 		return
 	}
 	now := a.now()
-	if err := a.redeem(req.Secret, now); err != nil {
+	if err := a.redeem(secret, now); err != nil {
 		writeJSON(w, http.StatusUnauthorized, errorReply("auth_failed"))
 		return
 	}
