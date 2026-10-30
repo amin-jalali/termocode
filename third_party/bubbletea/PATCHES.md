@@ -97,6 +97,18 @@ Synchronized output (termocode terminal-compat R10):
   answered DECRQM for mode 2026 (or `TERMOCODE_SYNC=on`).
 - Test: `sync_output_test.go`.
 
+Line updates (termocode perf):
+
+- `line_diff.go` (new): `lineUpdate` turns a line drawn last frame into
+  the new one by writing only from its first to its last changed cell
+  (a cursor move, that cell's style, the line's own bytes, a reset).
+  Lines with other escape sequences, another width or no saving are
+  drawn whole, as upstream does.
+- `standard_renderer.go`: `flushFrame` tries `lineUpdate` for each
+  changed line it drew last frame.
+- Test: `line_diff_test.go` (replays random frames on a small terminal
+  model and compares the screen with drawing the last frame alone).
+
 All other files are unchanged.
 
 To update: copy the new upstream release here, apply the same change,
