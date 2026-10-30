@@ -201,6 +201,9 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 			if _, op := webproto.Lookup(m[1]); op {
 				continue // an op name ("chat.send"), not a string key
 			}
+			if _, isEv := webproto.EventDataOf(m[1]); isEv {
+				continue // an event kind ("search.batch")
+			}
 			if spaces[strings.Split(m[1], ".")[0]] && !exists(m[1]) {
 				t.Errorf("%s: %q looks like a string key but is not one", path, m[1])
 			}
