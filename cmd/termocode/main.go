@@ -266,6 +266,9 @@ func main() {
 	if len(args) == 2 && args[0] == serverArg {
 		os.Exit(runServer(args[1]))
 	}
+	if len(args) > 0 && args[0] == webGatewayArg {
+		os.Exit(runWebGateway(args[1:]))
+	}
 	if len(args) > 0 && isVersionArg(args[0]) {
 		fmt.Println("termocode " + versionString())
 		return
@@ -278,6 +281,8 @@ func main() {
 			os.Exit(cmdSSH(args[1:]))
 		case "mcp":
 			os.Exit(runMCP(args[1:]))
+		case "web":
+			os.Exit(runWeb(args[1:]))
 		case "attach", "kill":
 			dir := "."
 			if len(args) > 1 {
@@ -346,6 +351,8 @@ func printUsage() {
 	fmt.Println("  termocode ssh [--dir d] [ssh options] host")
 	fmt.Println("                             open termocode on host; reconnects by itself")
 	fmt.Println("  termocode mcp [--dir d]    run as an MCP server for an agent CLI (stdio)")
+	fmt.Println("  termocode web [start|stop|status]")
+	fmt.Println("                             open or stop the web panel of the running termocode")
 	fmt.Println("  termocode setup            install JetBrainsMono Nerd Font and check prerequisites")
 	fmt.Println("  termocode --version        print the version")
 	fmt.Println("  termocode -h               show this help")
