@@ -75,7 +75,11 @@ func TestTaskRunShowsOutput(t *testing.T) {
 			p.TapJS(`document.querySelector('.task[data-label="test"] .task-line .btn')`)
 			p.WaitJS(`document.querySelector(".row-ask-text")?.textContent === "Stop test on the laptop?"`)
 			p.TapJS(`[...document.querySelectorAll(".row-ask button")].find((b) => b.textContent.trim() === "Stop")`)
+			end := time.Now().Add(wait)
 			for {
+				if time.Now().After(end) {
+					t.Fatalf("no %s within %s", webproto.OpTasksTerminate, wait)
+				}
 				m := c.Next(t)
 				if req, ok := m.(*webproto.Req); ok {
 					if req.Op == webproto.OpTasksTail {
