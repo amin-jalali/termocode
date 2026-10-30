@@ -178,17 +178,41 @@ func buildHTTPPage(run *httpRun, view int, reveal, sending bool) httpPage {
 		case len(resp.Body) == 0:
 			add("note", "(empty body)")
 		default:
-			text := resp.TextBytes()
-			if pretty, ok := httpclient.PrettyJSON(text); ok {
-				text = pretty
-				if len(resp.Body) <= 1<<20 {
-					head["syntax"] = "json"
-				}
+			b := run.bodyLines()
+			if b.json && len(resp.Body) <= 1<<20 {
+				head["syntax"] = "json"
 			}
-			lines = appendTextLines(lines, text)
+			lines = append(slices.Grow(lines, len(b.lines)), b.lines...)
 		}
 	}
 	return httpPage{head: head, lines: lines, rows: rows}
+}
+
+// httpBody is the Body view's text of one answer (pretty JSON when it
+// is JSON), laid out once: by the send goroutine, or on the first
+// build. Tab back to Body reuses it.
+type httpBody struct {
+	resp  *httpclient.Response // the answer it was made from
+	lines []string
+	json  bool // pretty-printed JSON
+}
+
+func layoutHTTPBody(resp *httpclient.Response) *httpBody {
+	text := resp.TextBytes()
+	b := &httpBody{resp: resp}
+	if pretty, ok := httpclient.PrettyJSON(text); ok {
+		text, b.json = pretty, true
+	}
+	b.lines = appendTextLines(nil, text)
+	return b
+}
+
+// bodyLines is run's laid-out body, made again when the answer changed.
+func (r *httpRun) bodyLines() *httpBody {
+	if r.body == nil || r.body.resp != r.resp {
+		r.body = layoutHTTPBody(r.resp)
+	}
+	return r.body
 }
 
 // appendTextLines splits a body into buffer lines (CR LF as LF, NUL as

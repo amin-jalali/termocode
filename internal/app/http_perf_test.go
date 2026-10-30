@@ -163,7 +163,8 @@ func TestHTTPBuildPage5MBBytes(t *testing.T) {
 	if len(p.lines) < 100000 {
 		t.Fatal(len(p.lines))
 	}
-	if got := ms1.TotalAlloc - ms0.TotalAlloc; got > 12*uint64(len(body)) {
+	t.Logf("%d MB", (ms1.TotalAlloc-ms0.TotalAlloc)>>20)
+	if got := ms1.TotalAlloc - ms0.TotalAlloc; got > 12*uint64(len(body)) && !raceEnabled {
 		t.Errorf("built the page with %d MB allocated (max %d MB)", got>>20, 12*len(body)>>20)
 	}
 }

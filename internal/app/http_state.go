@@ -174,6 +174,7 @@ type httpRun struct {
 	by       string // "user" or "ai"
 	at       time.Time
 	progress int64
+	body     *httpBody // the Body view's lines (made once per resp)
 }
 
 // httpState is the HTTP client's per-app state (Model.http).
@@ -270,6 +271,7 @@ func (s *httpState) remember(r *httpRun) {
 			cp.Body = cp.Body[:64<<10]
 			cp.Truncated = true
 			old.resp = &cp
+			old.body = nil
 		}
 	}
 }
@@ -365,6 +367,7 @@ func httpResolver(file string, fileVars []httpclient.Var, env string) *httpclien
 type httpEvent struct {
 	progress int64
 	resp     *httpclient.Response
+	body     *httpBody // resp laid out for the page (nil: binary or empty)
 }
 
 // httpEventMsg carries one httpEvent into Update.
@@ -443,8 +446,19 @@ func (m *Model) startHTTPRun(run *httpRun, hooks httpclient.Hooks) tea.Cmd {
 	crash.Go("the HTTP client", func() {
 		resp := client.Send(ctx, snap.rr, hooks)
 		snap.resp = resp
-		httpRecordHistory(&snap)
-		ch <- httpEvent{resp: resp}
+		// History and the page layout (pretty print, lines) side by
+		// side, both off the UI loop.
+		recorded := make(chan struct{})
+		go func() {
+			httpRecordHistory(&snap)
+			close(recorded)
+		}()
+		var body *httpBody
+		if !resp.IsBinary && len(resp.Body) > 0 {
+			body = layoutHTTPBody(resp)
+		}
+		<-recorded
+		ch <- httpEvent{resp: resp, body: body}
 		close(ch)
 	})
 	m.httpRefreshLens(run.file)
@@ -465,7 +479,7 @@ func (m *Model) handleHTTPMsg(msg tea.Msg) (tea.Cmd, bool) {
 			m.httpUpdateHead()
 			return waitHTTPEvent(msg.gen, msg.run, msg.ch), true
 		}
-		msg.run.resp = msg.ev.resp
+		msg.run.resp, msg.run.body = msg.ev.resp, msg.ev.body
 		return m.httpFinish(msg.run), true
 	case httpAppendMsg:
 		return m.httpPageAppend(msg), true
