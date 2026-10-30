@@ -65,7 +65,7 @@ type PRItem struct {
 type PRView struct {
 	Item      PRItem     `json:"item"`
 	State     string     `json:"state" enum:"OPEN|CLOSED|MERGED"`
-	Body      string     `json:"body"` // Markdown
+	Body      *MdNode    `json:"body,omitempty"` // the description, as the hub's Markdown tree
 	Mergeable string     `json:"mergeable,omitempty"`
 	Files     []PRFile   `json:"files"`
 	Reviews   []PRReview `json:"reviews"` // oldest first
@@ -81,10 +81,10 @@ type PRFile struct {
 
 // PRReview is one review or comment.
 type PRReview struct {
-	Author string `json:"author"`
-	State  string `json:"state,omitempty"` // APPROVED, CHANGES_REQUESTED, COMMENTED, DISMISSED; "" a plain comment
-	Body   string `json:"body,omitempty"`
-	When   string `json:"when,omitempty"` // ISO time
+	Author string  `json:"author"`
+	State  string  `json:"state,omitempty"` // APPROVED, CHANGES_REQUESTED, COMMENTED, DISMISSED; "" a plain comment
+	Body   *MdNode `json:"body,omitempty"`  // Markdown tree
+	When   string  `json:"when,omitempty"`  // ISO time
 }
 
 // PRCheck is one check (a job or a commit status).
