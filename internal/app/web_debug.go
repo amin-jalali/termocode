@@ -49,8 +49,21 @@ var (
 	webDebugSetBp   = (*Model).webDebugSetBpNvim
 	webDebugAsk     = (*Model).debugRequestChildren
 	webDebugSources = func(c *nvim.Client) (string, error) {
-		return c.EvalLuaStringArgs(`local t = ...; return _G._termocode_dap and _G._termocode_dap.loaded_sources and _G._termocode_dap.loaded_sources(t) or ''`, 3000)
+		return c.EvalLuaStringArgs(luaWebDebugSources, 3000)
 	}
+)
+
+// The Lua the debug ops send nvim: constant chunks, their values as RPC
+// arguments (WEB-21).
+const (
+	// luaWebDebugSources asks nvim-dap for the loaded scripts (the
+	// argument is the wait in ms).
+	luaWebDebugSources = `local t = ...; return _G._termocode_dap and _G._termocode_dap.loaded_sources and _G._termocode_dap.loaded_sources(t) or ''`
+	// luaWebDebugSetBp sets a breakpoint: path, line, condition, log
+	// message, hit count.
+	luaWebDebugSetBp = `local p, l, c, g, h = ...
+		if not (_G._termocode_dap and _G._termocode_dap.set_bp) then return 'the debugger is not set up yet' end
+		return _G._termocode_dap.set_bp(p, l, c, g, h)`
 )
 
 // errWebNoEditor: the laptop's editor is not running.
@@ -476,9 +489,7 @@ func (m *Model) webDebugSetBpNvim(abs string, line int, cond, hit, logMsg string
 	if m.nvim == nil {
 		return errWebNoEditor
 	}
-	res, err := m.nvim.EvalLuaStringArgs(`local p, l, c, g, h = ...
-		if not (_G._termocode_dap and _G._termocode_dap.set_bp) then return 'the debugger is not set up yet' end
-		return _G._termocode_dap.set_bp(p, l, c, g, h)`, abs, line, cond, logMsg, hit)
+	res, err := m.nvim.EvalLuaStringArgs(luaWebDebugSetBp, abs, line, cond, logMsg, hit)
 	if err != nil {
 		return err
 	}
