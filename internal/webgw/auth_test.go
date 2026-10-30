@@ -296,3 +296,34 @@ func TestAuthOnlyPost(t *testing.T) {
 		t.Fatalf("GET /auth: code %d", w.Code)
 	}
 }
+
+// Spec (WEB-9): the UI makes the secret and hands the gateway only its
+// digest; the link then works once, for 60 s, and a new digest closes the
+// old link.
+func TestAuthWithSecretDigestFromUI(t *testing.T) {
+	clk := &fakeClock{now: t0}
+	ts := NewTokens(DefaultIdle, DefaultMax)
+	a := NewAuth(ts, clk.Now, nil)
+	plain, digest, err := NewLinkSecret()
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.SetSecretDigest(digest)
+	if w := do(a, authReq(secretBody(plain))); w.Code != http.StatusOK {
+		t.Fatalf("code %d: %s", w.Code, w.Body)
+	}
+	if w := do(a, authReq(secretBody(plain))); w.Code != http.StatusUnauthorized {
+		t.Fatalf("second use: %d", w.Code)
+	}
+	old, d1, _ := NewLinkSecret()
+	a.SetSecretDigest(d1)
+	fresh, d2, _ := NewLinkSecret()
+	a.SetSecretDigest(d2)
+	if w := do(a, authReq(secretBody(old))); w.Code != http.StatusUnauthorized {
+		t.Fatalf("replaced link still works: %d", w.Code)
+	}
+	clk.Add(LaunchSecretTTL)
+	if w := do(a, authReq(secretBody(fresh))); w.Code != http.StatusUnauthorized {
+		t.Fatalf("expired link works: %d", w.Code)
+	}
+}

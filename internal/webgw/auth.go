@@ -4,6 +4,7 @@ package webgw
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -58,6 +59,15 @@ func (a *Auth) NewSecret() (string, error) {
 	a.secret = s
 	a.mu.Unlock()
 	return plain, nil
+}
+
+// SetSecretDigest opens a new launch link whose secret only the UI knows
+// (NewLinkSecret); the old link closes.
+func (a *Auth) SetSecretDigest(digest [sha256.Size]byte) {
+	s := LaunchSecretFromDigest(digest, a.now())
+	a.mu.Lock()
+	a.secret = s
+	a.mu.Unlock()
 }
 
 // authRequest is the only body /auth reads.
