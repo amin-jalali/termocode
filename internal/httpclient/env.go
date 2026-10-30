@@ -2,6 +2,7 @@ package httpclient
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 // Environment file names (the VS Code / JetBrains convention).
@@ -36,8 +38,85 @@ type Envs struct {
 }
 
 // LoadEnvs walks from dir up to root (both included; dir outside root
-// reads only dir) and merges the env files it finds.
+// reads only dir) and merges the env files it finds. The result is
+// shared and must not be changed. It is kept until one of the files it
+// looked at changes (size, time, inode), appears or goes away, so a send
+// or a buffer refresh does not read and decode the env files each time.
 func LoadEnvs(dir, root string) *Envs {
+	key := [2]string{dir, root}
+	paths := envPaths(dir, root)
+	stamps, ok := statAll(paths)
+	envMu.Lock()
+	c := envCache[key]
+	envMu.Unlock()
+	if ok && c != nil && sameStamps(c.stamps, stamps) {
+		return c.envs
+	}
+	e := loadEnvs(dir, root)
+	if ok {
+		envMu.Lock()
+		if len(envCache) >= 64 {
+			clear(envCache)
+		}
+		envCache[key] = &envEntry{stamps: stamps, envs: e}
+		envMu.Unlock()
+	}
+	return e
+}
+
+type envEntry struct {
+	stamps []os.FileInfo // per envPaths entry; nil = missing
+	envs   *Envs
+}
+
+var (
+	envMu    sync.Mutex
+	envCache = map[[2]string]*envEntry{}
+)
+
+// envPaths lists every file LoadEnvs looks at.
+func envPaths(dir, root string) []string {
+	var out []string
+	for _, d := range envDirs(dir, root) {
+		out = append(out, filepath.Join(d, EnvFile), filepath.Join(d, PrivateEnvFile), filepath.Join(d, DotenvFile))
+	}
+	return out
+}
+
+// statAll stats paths; ok=false when one could not be checked (then
+// nothing is cached).
+func statAll(paths []string) ([]os.FileInfo, bool) {
+	out := make([]os.FileInfo, len(paths))
+	for i, p := range paths {
+		st, err := os.Stat(p)
+		switch {
+		case err == nil:
+			out[i] = st
+		case errors.Is(err, os.ErrNotExist):
+		default:
+			return nil, false
+		}
+	}
+	return out, true
+}
+
+func sameStamps(a, b []os.FileInfo) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		x, y := a[i], b[i]
+		if (x == nil) != (y == nil) {
+			return false
+		}
+		if x != nil && !(os.SameFile(x, y) && x.Size() == y.Size() && x.ModTime().Equal(y.ModTime())) {
+			return false
+		}
+	}
+	return true
+}
+
+func loadEnvs(dir, root string) *Envs {
 	e := &Envs{
 		public:  map[string]map[string]string{},
 		private: map[string]map[string]string{},
@@ -80,8 +159,11 @@ func envDirs(dir, root string) []string {
 	return out
 }
 
+// envReadFile reads an env file (a test hook).
+var envReadFile = os.ReadFile
+
 func (e *Envs) loadJSON(path string, into map[string]map[string]string) {
-	b, err := os.ReadFile(path)
+	b, err := envReadFile(path)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			e.Errs = append(e.Errs, fmt.Errorf("%s: %w", path, err))
@@ -117,12 +199,11 @@ func jsonScalar(v json.RawMessage) string {
 }
 
 func (e *Envs) loadDotenv(path string) {
-	f, err := os.Open(path)
+	b, err := envReadFile(path)
 	if err != nil {
 		return
 	}
-	defer f.Close()
-	sc := bufio.NewScanner(f)
+	sc := bufio.NewScanner(bytes.NewReader(b))
 	for sc.Scan() {
 		line := strings.TrimSpace(sc.Text())
 		if line == "" || strings.HasPrefix(line, "#") {
