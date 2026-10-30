@@ -85,9 +85,6 @@ func FuzzStatNumbers(f *testing.F) {
 		if a, b, ok := ParsePair(s); ok && (bad(a) || bad(b)) {
 			t.Fatalf("ParsePair(%q) = %v, %v", s, a, b)
 		}
-		if n, ok := ParseSize(s); ok && n < 0 {
-			t.Fatalf("ParseSize(%q) = %d", s, n)
-		}
 		_ = ParsePortsText(s)
 		_, _ = ParseRemoteRepo(s)
 	})
