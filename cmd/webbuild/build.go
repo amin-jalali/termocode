@@ -23,6 +23,8 @@ type page struct {
 	Entry    string
 	Template string
 	HTML     string
+	// CSSOnly: the entry only gathers stylesheets; only <Name>.css is kept.
+	CSSOnly bool
 }
 
 var appPage = page{Name: "app", Entry: "main.tsx", Template: "index.html", HTML: "index.html"}
@@ -40,6 +42,11 @@ var (
 	monacoAMD   = page{Name: "monaco-amd", Entry: "monaco/amd.ts"}
 	monacoFrame = page{Name: "monaco-frame", Entry: "monaco/frame.ts", Template: "monaco/frame.html", HTML: "monaco.html"}
 )
+
+// deskChunk is the desktop workbench's stylesheet (desk.css): index.html
+// links it for wide screens only (media="(min-width: 1200px)"), so a
+// phone neither waits for it nor counts it in its budget.
+var deskChunk = page{Name: "desk", Entry: "desk.ts", CSSOnly: true}
 
 // chunkPaths are the only dynamic imports a page may make.
 var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true}
@@ -72,7 +79,7 @@ func Build(dir string) (map[string][]byte, error) {
 	if err := copyServed(vendorDir, pkgs, out); err != nil {
 		return nil, err
 	}
-	for _, p := range []page{appPage, editorChunk, monacoAMD, monacoFrame, kitPage} {
+	for _, p := range []page{deskChunk, appPage, editorChunk, monacoAMD, monacoFrame, kitPage} {
 		if p.Name != appPage.Name {
 			if _, err := os.Stat(filepath.Join(abs, "src", p.Entry)); errors.Is(err, os.ErrNotExist) {
 				continue // a folder without the kit or the editor (test fixtures)
@@ -129,6 +136,13 @@ func buildPage(abs, vendorDir string, pkgs []manifest.Package, p page, out map[s
 			body = append([]byte(banner(used)+"\n"), body...)
 		}
 		out[name] = body
+	}
+	if p.CSSOnly {
+		delete(out, p.Name+".js")
+		if _, ok := out[p.Name+".css"]; !ok {
+			return fmt.Errorf("webbuild: %s built no %s.css", p.Entry, p.Name)
+		}
+		return nil
 	}
 	if _, ok := out[p.Name+".js"]; !ok {
 		return fmt.Errorf("webbuild: %s built no %s.js", p.Entry, p.Name)
