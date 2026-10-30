@@ -81,6 +81,29 @@ func TestTokenIdleExpiry(t *testing.T) {
 	}
 }
 
+// TestTokenMaxLifetime: even a token in steady use ends DefaultMax (12 h)
+// after it was issued (T12).
+func TestTokenMaxLifetime(t *testing.T) {
+	if DefaultMax != 12*time.Hour {
+		t.Fatalf("DefaultMax %v", DefaultMax)
+	}
+	ts := NewTokens(DefaultIdle, DefaultMax)
+	tok, _, err := ts.Issue("d", RoleControl, t0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := t0
+	for now.Before(t0.Add(DefaultMax - 10*time.Minute)) {
+		now = now.Add(10 * time.Minute)
+		if _, err := ts.Check(tok, now); err != nil {
+			t.Fatalf("at %v: %v", now.Sub(t0), err)
+		}
+	}
+	if _, err := ts.Check(tok, t0.Add(DefaultMax)); !errors.Is(err, ErrTokenExpired) {
+		t.Fatalf("at max: %v, want ErrTokenExpired", err)
+	}
+}
+
 func TestTokenKeepsNoPlainText(t *testing.T) {
 	ts := NewTokens(DefaultIdle, DefaultMax)
 	tok, _, err := ts.Issue("d", RoleControl, t0)
