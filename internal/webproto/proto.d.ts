@@ -633,6 +633,21 @@ export interface RunItem {
   can?: string[];
 }
 
+export interface MCPSnap {
+  mode: "auto" | "on" | "off";
+  listening: boolean;
+  why?: string;
+  agents: MCPAgent[];
+  calls: string[];
+}
+
+export interface MCPAgent {
+  name: string;
+  since: number;
+  calls: number;
+  asked: number;
+}
+
 export interface SettingsSnap {
   items: SettingItem[];
 }
@@ -873,6 +888,7 @@ export interface TopicData {
   "git": { snap: GitSnap; delta: GitSnap };
   "tasks": { snap: TasksSnap; delta: TasksSnap };
   "runs": { snap: RunsSnap; delta: RunsSnap };
+  "mcp": { snap: MCPSnap; delta: MCPSnap };
   "settings": { snap: SettingsSnap; delta: SettingsSnap };
 }
 

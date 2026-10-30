@@ -232,7 +232,11 @@
     {
       "name": "mcp",
       "keyed": false,
-      "phase": "v2"
+      "phase": "v2",
+      "snap": "MCPSnap",
+      "deltas": [
+        "MCPSnap"
+      ]
     },
     {
       "name": "settings",
@@ -2299,6 +2303,67 @@
         "last",
         "lines",
         "tick"
+      ],
+      "additionalProperties": true
+    },
+    "MCPAgent": {
+      "type": "object",
+      "properties": {
+        "asked": {
+          "type": "integer"
+        },
+        "calls": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "since": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "since",
+        "calls",
+        "asked"
+      ],
+      "additionalProperties": true
+    },
+    "MCPSnap": {
+      "type": "object",
+      "properties": {
+        "agents": {
+          "items": {
+            "$ref": "#/defs/MCPAgent"
+          },
+          "type": "array"
+        },
+        "calls": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "listening": {
+          "type": "boolean"
+        },
+        "mode": {
+          "enum": [
+            "auto",
+            "on",
+            "off"
+          ]
+        },
+        "why": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "listening",
+        "agents",
+        "calls"
       ],
       "additionalProperties": true
     },
