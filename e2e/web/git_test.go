@@ -318,3 +318,29 @@ func TestGitEmptyStates(t *testing.T) {
 	}
 	p.noOverflow("git tab")
 }
+
+// A laptop card (a destructive web request waiting for the laptop) is
+// shown as laptop-only in the cards view: no action button, no error.
+func TestLaptopCardIsLaptopOnly(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Phone)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	c := p.Login("c-1")
+	c.Send(t, Snap("cards", 1, map[string]any{"cards": []any{map[string]any{
+		"id": "card-3", "kind": "laptop", "title": "Discard changes?", "since": 1700000000000,
+		"body": "Discard changes in a.go? This cannot be undone.\n\nRequested from phone.",
+		"choices": []any{
+			map[string]any{"id": "cancel", "label": "Cancel", "safe": true},
+			map[string]any{"id": "confirm", "label": "Discard", "needs_laptop": true},
+		}}}}))
+	reopenCard(p)
+	if n := Eval[int](p, `[...document.querySelectorAll(".sheet button")].filter((b) => b.textContent.trim() === "Discard").length`); n != 0 {
+		t.Fatalf("%d Discard buttons on the web", n)
+	}
+	if title := p.Text(".sheet .card-title"); title != "This needs the laptop." {
+		t.Errorf("title %q", title)
+	}
+	if pr := p.Problems(); len(pr) > 0 {
+		t.Errorf("problems: %q", pr)
+	}
+}
