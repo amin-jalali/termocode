@@ -3,6 +3,7 @@ package app
 import (
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -176,4 +177,26 @@ func TestCovCoreFindBarNarrowPane(t *testing.T) {
 	m.replaceOpen, m.findOpen = true, false
 	m, _ = m.update(tea.WindowSizeMsg{Width: 90, Height: 30})
 	covFitsScreen(t, m, "replace bar")
+}
+
+// The gutter width comes from nvim (line numbers on: wider), is cached
+// for a moment, and is 7 without nvim.
+func TestCovCoreGutterWidth(t *testing.T) {
+	var none Model
+	if none.queryGutterWidth() != 7 {
+		t.Error("no nvim: want 7")
+	}
+	m := covNvimModel(t, 100, 30)
+	covEditorFile(t, &m, "g.go", "package g\n")
+	_ = m.nvim.Command("set number numberwidth=6 signcolumn=no foldcolumn=0")
+	gutterCacheMu.Lock()
+	gutterCacheAt = time.Time{}
+	gutterCacheMu.Unlock()
+	if got := m.queryGutterWidth(); got != 6 {
+		t.Errorf("gutter = %d, want 6", got)
+	}
+	_ = m.nvim.Command("set nonumber")
+	if got := m.queryGutterWidth(); got != 6 {
+		t.Errorf("cached gutter = %d, want 6", got)
+	}
 }
