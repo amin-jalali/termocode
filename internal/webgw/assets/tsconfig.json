@@ -1,0 +1,25 @@
+{
+  "$comment": "Type check only (tsc --noEmit, run on the dev machine with TERMOCODE_TSC=1; see doc.go). esbuild builds the bundle and does not check types. JSX matches cmd/webbuild (classic transform, h and Fragment imported from preact; the automatic runtime would import preact/jsx-runtime, which is not bundled). The libraries resolve to the vendored declarations.",
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react",
+    "jsxFactory": "h",
+    "jsxFragmentFactory": "Fragment",
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "preact": ["./vendor/preact@10.29.8/src/index.d.ts"],
+      "preact/hooks": ["./vendor/preact@10.29.8/hooks/src/index.d.ts"],
+      "preact/jsx-runtime": ["./vendor/preact@10.29.8/jsx-runtime/src/index.d.ts"],
+      "@preact/signals": ["./vendor/preact-signals@2.11.3/dist/signals.d.ts"],
+      "@preact/signals-core": ["./vendor/preact-signals-core@1.14.4/dist/signals-core.d.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}
