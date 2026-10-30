@@ -1,0 +1,115 @@
+{
+  "topic": "tree",
+  "snap0": {
+    "dirs": {},
+    "hidden": false,
+    "roots": [
+      {
+        "label": "ws-root",
+        "path": ""
+      }
+    ]
+  },
+  "deltas": [
+    {
+      "entries": [
+        {
+          "dir": true,
+          "mtime": 1793361600000,
+          "name": "src",
+          "size": 0
+        },
+        {
+          "dir": false,
+          "mtime": 1793361600000,
+          "name": "README.md",
+          "size": 2
+        }
+      ],
+      "kind": "dir",
+      "path": ""
+    },
+    {
+      "entries": [
+        {
+          "dir": false,
+          "mtime": 1793361600000,
+          "name": "a.go",
+          "size": 9
+        }
+      ],
+      "kind": "dir",
+      "path": "src"
+    },
+    {
+      "entries": [
+        {
+          "dir": true,
+          "git": "M",
+          "mtime": 1793361600000,
+          "name": "src",
+          "size": 0
+        },
+        {
+          "dir": false,
+          "mtime": 1793361600000,
+          "name": "README.md",
+          "size": 2
+        }
+      ],
+      "kind": "dir",
+      "path": ""
+    },
+    {
+      "entries": [
+        {
+          "dir": false,
+          "mtime": 1793361600000,
+          "name": "a.go",
+          "size": 9
+        },
+        {
+          "dir": false,
+          "git": "?",
+          "mtime": 1793361600000,
+          "name": "b.go",
+          "size": 9
+        }
+      ],
+      "kind": "dir",
+      "path": "src"
+    },
+    {
+      "kind": "remove",
+      "path": "src"
+    }
+  ],
+  "snapn": {
+    "roots": [
+      {
+        "path": "",
+        "label": "ws-root"
+      }
+    ],
+    "hidden": false,
+    "dirs": {
+      "": {
+        "entries": [
+          {
+            "name": "src",
+            "dir": true,
+            "size": 0,
+            "mtime": 1793361600000,
+            "git": "M"
+          },
+          {
+            "name": "README.md",
+            "dir": false,
+            "size": 2,
+            "mtime": 1793361600000
+          }
+        ]
+      }
+    }
+  }
+}
