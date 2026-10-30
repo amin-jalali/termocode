@@ -66,6 +66,8 @@ export const S = {
   "pill.waiting_laptop": "{n} waiting for the laptop",
   "viewonly": "View only",
   "viewonly.ask": "Ask for control",
+  "control.denied": "Not given: the laptop said Not now.",
+  "control.failed": "Asking for control did not work. Try again.",
   "laptop.open": "Open on laptop",
   "laptop.show": "Show on laptop",
   "laptop.shown": "Shown on the laptop",
