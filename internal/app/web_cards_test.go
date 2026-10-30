@@ -304,3 +304,15 @@ func TestCardsReplayGolden(t *testing.T) {
 	webReplayCheck(t, h.topics["cards"], c)
 	webReplayGolden(t, webReplayPath("cards", "appear_answered"), c)
 }
+
+// Spec (WEB-15): status.ai.cards_waiting counts the cards topic's cards,
+// trust questions too.
+func TestStatusCountsCards(t *testing.T) {
+	m := aiTestModel(t)
+	webTestHub(t, &m)
+	webTestToolCard(&m, ai.Tool{Name: "write_file"})
+	m.ai.skillsTrust = &aiSkillsTrustPending{hash: "h"}
+	if n := m.webStatus(&webStatusPub{}).AI.CardsWaiting; n != 2 {
+		t.Fatalf("cards_waiting %d, want 2", n)
+	}
+}
