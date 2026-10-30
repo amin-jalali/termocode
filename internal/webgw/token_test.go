@@ -54,6 +54,33 @@ func TestTokenUnknownRejected(t *testing.T) {
 	}
 }
 
+// TestTokenIdleExpiry: a token unused for DefaultIdle (15 min) is gone for
+// good; each use moves the idle deadline (T12).
+func TestTokenIdleExpiry(t *testing.T) {
+	if DefaultIdle != 15*time.Minute {
+		t.Fatalf("DefaultIdle %v", DefaultIdle)
+	}
+	ts := NewTokens(DefaultIdle, DefaultMax)
+	tok, _, err := ts.Issue("d", RoleControl, t0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := t0
+	for i := 0; i < 3; i++ { // used every 14 min: stays alive past 15 min
+		now = now.Add(DefaultIdle - time.Minute)
+		if _, err := ts.Check(tok, now); err != nil {
+			t.Fatalf("use %d: %v", i, err)
+		}
+	}
+	now = now.Add(DefaultIdle)
+	if _, err := ts.Check(tok, now); !errors.Is(err, ErrTokenExpired) {
+		t.Fatalf("after idle: %v, want ErrTokenExpired", err)
+	}
+	if _, err := ts.Check(tok, now); !errors.Is(err, ErrTokenUnknown) {
+		t.Fatalf("after expiry the token must be forgotten: %v", err)
+	}
+}
+
 func TestTokenKeepsNoPlainText(t *testing.T) {
 	ts := NewTokens(DefaultIdle, DefaultMax)
 	tok, _, err := ts.Issue("d", RoleControl, t0)
