@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -277,7 +279,9 @@ func (s ChatStore) Load(id string) (Conversation, error) {
 	return c, nil
 }
 
-// List returns every stored conversation, newest first.
+// List returns every stored conversation, newest first. The files are
+// read and parsed by a few goroutines at once (parsing is the slow part
+// of a long history).
 func (s ChatStore) List() []Conversation {
 	if s.Dir == "" {
 		return nil
@@ -286,20 +290,41 @@ func (s ChatStore) List() []Conversation {
 	if err != nil {
 		return nil
 	}
-	var out []Conversation
+	var names []string
 	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
-			continue
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".json") {
+			names = append(names, e.Name())
 		}
-		b, err := os.ReadFile(filepath.Join(s.Dir, e.Name()))
-		if err != nil {
-			continue
+	}
+	parsed := make([]Conversation, len(names))
+	work := make(chan int)
+	var wg sync.WaitGroup
+	for w := 0; w < min(runtime.GOMAXPROCS(0), len(names)); w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := range work {
+				b, err := os.ReadFile(filepath.Join(s.Dir, names[i]))
+				if err != nil {
+					continue
+				}
+				var c Conversation
+				if json.Unmarshal(b, &c) == nil {
+					parsed[i] = c
+				}
+			}
+		}()
+	}
+	for i := range names {
+		work <- i
+	}
+	close(work)
+	wg.Wait()
+	var out []Conversation
+	for _, c := range parsed { // directory order, as before the sort
+		if c.ID != "" {
+			out = append(out, c)
 		}
-		var c Conversation
-		if json.Unmarshal(b, &c) != nil || c.ID == "" {
-			continue
-		}
-		out = append(out, c)
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].UpdatedAtMs > out[j].UpdatedAtMs })
 	return out

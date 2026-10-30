@@ -99,3 +99,14 @@ func BenchmarkChatStoreLoad2k(b *testing.B) {
 		}
 	}
 }
+
+// The history list / Runs: every chat of a full store (50 chats).
+func BenchmarkChatStoreList50(b *testing.B) {
+	s, _ := perfStore(b)
+	b.ReportAllocs()
+	for b.Loop() {
+		if n := len(s.List()); n != maxChats {
+			b.Fatalf("%d chats", n)
+		}
+	}
+}
