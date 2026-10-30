@@ -246,6 +246,15 @@
       "deltas": [
         "SettingsSnap"
       ]
+    },
+    {
+      "name": "diagnostics",
+      "keyed": false,
+      "phase": "v2",
+      "snap": "DiagSnap",
+      "deltas": [
+        "DiagSnap"
+      ]
     }
   ],
   "events": {
@@ -970,6 +979,63 @@
       "max_bytes": 1024,
       "laptop_card": false,
       "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "lsp.hover",
+      "args": "LspPosArgs",
+      "result": "LspHover",
+      "role": "viewer",
+      "rate": {
+        "n": 10,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "lsp.complete",
+      "args": "LspPosArgs",
+      "result": "LspCompletion",
+      "role": "viewer",
+      "rate": {
+        "n": 10,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "lsp.definition",
+      "args": "LspPosArgs",
+      "result": "LspLocations",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "lsp.references",
+      "args": "LspPosArgs",
+      "result": "LspLocations",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
       "phase": "v2"
     },
     {
@@ -2602,6 +2668,97 @@
       ],
       "additionalProperties": true
     },
+    "Diag": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "col": {
+          "type": "integer"
+        },
+        "endCol": {
+          "type": "integer"
+        },
+        "endLine": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        },
+        "sev": {
+          "type": "integer"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "sev",
+        "line",
+        "col",
+        "endLine",
+        "endCol",
+        "message"
+      ],
+      "additionalProperties": true
+    },
+    "DiagFile": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/Diag"
+          },
+          "type": "array"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "DiagSnap": {
+      "type": "object",
+      "properties": {
+        "errors": {
+          "type": "integer"
+        },
+        "files": {
+          "items": {
+            "$ref": "#/defs/DiagFile"
+          },
+          "type": "array"
+        },
+        "hints": {
+          "type": "integer"
+        },
+        "infos": {
+          "type": "integer"
+        },
+        "more": {
+          "type": "integer"
+        },
+        "warnings": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "files",
+        "errors",
+        "warnings",
+        "infos",
+        "hints"
+      ],
+      "additionalProperties": true
+    },
     "DiffRow": {
       "type": "object",
       "properties": {
@@ -3342,6 +3499,194 @@
         "tick"
       ],
       "additionalProperties": true
+    },
+    "LspCompletion": {
+      "type": "object",
+      "properties": {
+        "cut": {
+          "type": "boolean"
+        },
+        "incomplete": {
+          "type": "boolean"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/defs/LspItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
+    },
+    "LspEdit": {
+      "type": "object",
+      "properties": {
+        "col": {
+          "type": "integer"
+        },
+        "endCol": {
+          "type": "integer"
+        },
+        "endLine": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "line",
+        "col",
+        "endLine",
+        "endCol",
+        "text"
+      ],
+      "additionalProperties": true
+    },
+    "LspHover": {
+      "type": "object",
+      "properties": {
+        "md": {
+          "$ref": "#/defs/MdNode"
+        },
+        "none": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "LspItem": {
+      "type": "object",
+      "properties": {
+        "detail": {
+          "type": "string"
+        },
+        "doc": {
+          "type": "string"
+        },
+        "edits": {
+          "items": {
+            "$ref": "#/defs/LspEdit"
+          },
+          "type": "array"
+        },
+        "filter": {
+          "type": "string"
+        },
+        "from": {
+          "type": "integer"
+        },
+        "insert": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "integer"
+        },
+        "label": {
+          "type": "string"
+        },
+        "snippet": {
+          "type": "boolean"
+        },
+        "sort": {
+          "type": "string"
+        },
+        "to": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "label",
+        "insert",
+        "from",
+        "to"
+      ],
+      "additionalProperties": true
+    },
+    "LspLoc": {
+      "type": "object",
+      "properties": {
+        "col": {
+          "type": "integer"
+        },
+        "endCol": {
+          "type": "integer"
+        },
+        "endLine": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "outside": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "line",
+        "col",
+        "endLine",
+        "endCol"
+      ],
+      "additionalProperties": true
+    },
+    "LspLocations": {
+      "type": "object",
+      "properties": {
+        "cut": {
+          "type": "boolean"
+        },
+        "locs": {
+          "items": {
+            "$ref": "#/defs/LspLoc"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "locs"
+      ],
+      "additionalProperties": true
+    },
+    "LspPosArgs": {
+      "type": "object",
+      "properties": {
+        "buf": {
+          "type": "integer"
+        },
+        "col": {
+          "type": "integer"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "tick": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "buf",
+        "tick",
+        "line",
+        "col"
+      ],
+      "additionalProperties": false
     },
     "MCPAgent": {
       "type": "object",
