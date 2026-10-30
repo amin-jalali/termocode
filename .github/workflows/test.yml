@@ -423,8 +423,9 @@ jobs:
 
   # The web page in a real Chrome (e2e/web, build tags browser + webdev):
   # the embedded page behind the real gateway guard, CSP and /auth, with a
-  # fake hub on /ws. Both runner images ship Chrome; a missing Chrome
-  # fails here instead of skipping. Screenshots of failures are uploaded.
+  # fake hub on /ws; then the real-binary walk (WEB-28). Both runner
+  # images ship Chrome; a missing Chrome fails here instead of skipping.
+  # Screenshots of failures are uploaded.
   web-e2e:
     name: web-e2e (${{ matrix.os }})
     needs: changes
@@ -437,6 +438,7 @@ jobs:
     env:
       TERMOCODE_WEB_E2E: require
       WEB_E2E_DUMP_DIR: ${{ github.workspace }}/web-e2e-dumps
+      NVIM_VERSION: v0.11.4
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -461,6 +463,31 @@ jobs:
 
       - name: Web e2e tests
         run: go -C e2e test -tags browser,webdev -race -count=1 -v -timeout 15m ./web/
+
+      # The same page against the real binary in a PTY (e2e/web_real_test.go,
+      # tags e2e + browser): termocode web start → link → auth → chat with a
+      # fake AI → card → file → terminal → commit → web stop. Needs nvim.
+      - name: Install X11 dev headers (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev
+
+      - name: Install Neovim (pinned release)
+        run: |
+          set -euo pipefail
+          if [ "$RUNNER_OS" = Linux ]; then
+            name=nvim-linux-x86_64
+          else
+            case "$(uname -m)" in arm64) name=nvim-macos-arm64 ;; *) name=nvim-macos-x86_64 ;; esac
+          fi
+          curl -fsSL -o "$RUNNER_TEMP/nvim.tar.gz" \
+            "https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/${name}.tar.gz"
+          tar -xzf "$RUNNER_TEMP/nvim.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/${name}/bin" >> "$GITHUB_PATH"
+
+      - name: Web e2e tests against the real binary
+        env:
+          E2E_DUMP_DIR: ${{ github.workspace }}/web-e2e-dumps
+        run: go -C e2e test -tags e2e,browser -count=1 -v -timeout 15m -run 'TestWebReal' .
 
       - name: Upload failure screenshots
         if: failure()
