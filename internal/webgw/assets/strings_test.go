@@ -208,3 +208,29 @@ func TestEveryUsedStringKeyExists(t *testing.T) {
 		t.Fatal("no t() calls found")
 	}
 }
+
+// The Persian file (WEB-UX-5 fills it) has exactly the English keys, so
+// a new string cannot be forgotten there.
+func TestPersianStringsHaveTheSameKeys(t *testing.T) {
+	en := parseStrings(t, "src/strings.ts", "S")
+	fa := parseStrings(t, "src/strings.fa.ts", "FA")
+	enKeys := map[string]bool{}
+	for _, e := range en {
+		enKeys[e.key] = true
+	}
+	faKeys := map[string]bool{}
+	for _, e := range fa {
+		faKeys[e.key] = true
+		if !enKeys[e.key] {
+			t.Errorf("strings.fa.ts:%d: %s is not an English key", e.line, e.key)
+		}
+		if strings.Contains(e.text, "!") || namesProduct(e.text) != "" {
+			t.Errorf("strings.fa.ts:%d: %s breaks the voice rules", e.line, e.key)
+		}
+	}
+	for k := range enKeys {
+		if !faKeys[k] {
+			t.Errorf("strings.fa.ts has no %s", k)
+		}
+	}
+}
