@@ -1,0 +1,1 @@
+{"t":"req","id":43,"op":"tree.rename","args":{"path":"src/a.go","name":"b.go"}}
