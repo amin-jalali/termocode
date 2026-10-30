@@ -49,6 +49,9 @@ func Build(dir string) (map[string][]byte, error) {
 	if err := copyStatic(filepath.Join(abs, "src", "static"), out); err != nil {
 		return nil, err
 	}
+	if err := copyFonts(filepath.Join(abs, "fonts"), out); err != nil {
+		return nil, err
+	}
 	for _, p := range []page{appPage, kitPage} {
 		if p.Name == "kit" {
 			if _, err := os.Stat(filepath.Join(abs, "src", p.Entry)); errors.Is(err, os.ErrNotExist) {
@@ -86,6 +89,7 @@ func buildPage(abs, vendorDir string, pkgs []manifest.Package, p page, out map[s
 		Banner:              map[string]string{"js": banner(pkgs), "css": "/* termocode web UI */"},
 		LogLevel:            api.LogLevelSilent,
 		Plugins:             []api.Plugin{vendorOnly(vendorDir, pkgs)},
+		External:            []string{"/assets/*"}, // url() of our own served files (the symbol fonts)
 	})
 	if len(res.Errors) > 0 {
 		msgs := api.FormatMessages(res.Errors, api.FormatMessagesOptions{Kind: api.ErrorMessage})
@@ -153,6 +157,54 @@ func checkManifest(b []byte) error {
 	if regexp.MustCompile(`(?i)[a-z][a-z0-9+.-]*://|"//`).Match(b) {
 		return errors.New("names another site")
 	}
+	return nil
+}
+
+// fontsRecord is fonts/fonts.json: the symbol fonts of the terminal view
+// (WEB-58) and the hash of each file.
+type fontsRecord struct {
+	Family string `json:"family"`
+	Faces  []struct {
+		File   string `json:"file"`
+		SHA384 string `json:"sha384"`
+	} `json:"faces"`
+}
+
+var fontFile = regexp.MustCompile(`^nf-[a-z0-9-]+\.woff2$`)
+
+// copyFonts checks each font of dir/fonts.json against its hash and
+// copies it to the output as fonts/<name>; dir/LICENSE.txt joins
+// licenses.txt. A folder without fonts.json has no fonts.
+func copyFonts(dir string, out map[string][]byte) error {
+	b, err := os.ReadFile(filepath.Join(dir, "fonts.json"))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	var rec fontsRecord
+	if err := json.Unmarshal(b, &rec); err != nil {
+		return fmt.Errorf("webbuild: fonts/fonts.json: %w", err)
+	}
+	for _, f := range rec.Faces {
+		if !fontFile.MatchString(f.File) {
+			return fmt.Errorf("webbuild: fonts/fonts.json: bad file name %q", f.File)
+		}
+		body, err := os.ReadFile(filepath.Join(dir, f.File))
+		if err != nil {
+			return err
+		}
+		if manifest.SRI(body) != f.SHA384 {
+			return fmt.Errorf("webbuild: fonts/%s does not match its sha384 in fonts.json", f.File)
+		}
+		out["fonts/"+f.File] = body
+	}
+	lic, err := os.ReadFile(filepath.Join(dir, "LICENSE.txt"))
+	if err != nil {
+		return fmt.Errorf("webbuild: the symbol fonts need fonts/LICENSE.txt: %w", err)
+	}
+	out["licenses.txt"] = append(append(out["licenses.txt"], "\n"...), lic...)
 	return nil
 }
 
