@@ -260,10 +260,14 @@ func TestOverlayScrollsToKeepCursorBlockVisible(t *testing.T) {
 
 func TestOverlayTinyScreenAndLongValues(t *testing.T) {
 	m := New()
-	m.SetSize(10, 5) // clamps to 40x9
+	m.SetSize(10, 5) // the box never grows past the screen
 	m = typeText(m, strings.Repeat("q", 80))
 	m.results = []Result{{Path: strings.Repeat("d/", 40) + "file.go", Line: 1, Col: 1,
 		Preview: "\t  " + strings.Repeat("x", 100), After: []ContextLine{{2, strings.Repeat("y", 100)}}}}
+	if w, h := m.boxSize(); w != 10 || h != 5 {
+		t.Fatalf("tiny box %dx%d, want 10x5", w, h)
+	}
+	m.SetSize(40, 9)
 	w, h := m.boxSize()
 	if w != 40 || h != 9 {
 		t.Fatalf("box %dx%d", w, h)
