@@ -3,6 +3,8 @@
 package web
 
 import (
+	"fmt"
+
 	"github.com/chromedp/chromedp"
 )
 
@@ -41,4 +43,13 @@ func (p *Page) Login(conn string) *HubConn {
 	p.WaitJS(`document.documentElement.dataset.link === "online"`)
 	p.WaitJS(`document.querySelector(".strip .branch")?.textContent.includes("main")`)
 	return c
+}
+
+// GoTab taps a tab in the tab bar (phone) or the rail (desktop) and waits
+// until it is the current tab and its view is on screen.
+func (p *Page) GoTab(tab string) {
+	p.T.Helper()
+	i := map[string]int{"chat": 1, "files": 2, "term": 3, "git": 4, "more": 5}[tab]
+	p.Tap(fmt.Sprintf("nav .nav-item:nth-child(%d)", i))
+	p.WaitJS(fmt.Sprintf(`document.querySelector('nav .nav-item:nth-child(%d)[aria-current="page"]') && document.querySelector('[data-view="%s"]')`, i, tab))
 }
