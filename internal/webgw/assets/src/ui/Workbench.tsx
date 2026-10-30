@@ -18,11 +18,13 @@ import {
   opened,
   PANEL_MIN,
   panes,
+  quick,
   setPanes,
   showFile,
   SIDE_MAX,
   SIDE_MIN,
   tabsOf,
+  wordWrap,
 } from "../lib/workbench";
 import { link, listOf, store } from "../session";
 import type { Tab } from "../state/route";
@@ -31,7 +33,9 @@ import { ChatView, GitView, MoreView, TermView } from "../views/views";
 import { FileView } from "../views/FileView";
 import { TreeView } from "../views/Files";
 import { IconChevronDown, IconClose, IconFileSmall, IconSidebar } from "./icons";
+import { closeActive, cycleTab, tabsNow } from "../lib/commands";
 import { Nav } from "./Nav";
+import { QuickInput } from "./QuickInput";
 import { StatusBar } from "./StatusBar";
 
 function baseName(path: string): string {
@@ -148,6 +152,29 @@ function PanelHead({ children }: { children: ComponentChildren }) {
   );
 }
 
+/** workbenchKeys runs the workbench's shortcuts (also those the editor's
+ * frame passes on). Keys the browser keeps for itself (Ctrl+W, Ctrl+Tab
+ * in a normal window) work where the browser lets them through, as in an
+ * installed app window. */
+function workbenchKeys(e: KeyboardEvent): void {
+  const mod = e.ctrlKey || e.metaKey;
+  const k = e.key.toLowerCase();
+  const run = (f: () => void) => {
+    e.preventDefault();
+    f();
+  };
+  if (e.key === "F1" || (mod && e.shiftKey && k === "p")) return run(() => (quick.value = { mode: "commands" }));
+  if (e.altKey && !mod && (k === "z" || e.code === "KeyZ")) return run(() => (wordWrap.value = !wordWrap.peek()));
+  if (e.ctrlKey && k === "tab") return run(() => cycleTab(e.shiftKey ? -1 : 1));
+  if (e.ctrlKey && (k === "pagedown" || k === "pageup")) return run(() => cycleTab(k === "pagedown" ? 1 : -1));
+  if (!mod || e.altKey || e.shiftKey) return;
+  if (k === "p") return run(() => (quick.value = { mode: "files" }));
+  if (k === "b") return run(() => setPanes({ side: !panes.peek().side }));
+  if (k === "j" || k === "`") return run(() => setPanes({ panel: !panes.peek().panel }));
+  if (k === "w") return run(closeActive);
+  if (k === "g" && e.ctrlKey && activeFile.peek()) return run(() => (quick.value = { mode: "line" }));
+}
+
 /** railTap: the rail of the workbench opens and closes panels, as an IDE's
  * activity bar does. */
 function railTap(tab: Tab): void {
@@ -181,26 +208,16 @@ function railTap(tab: Tab): void {
 
 export function Workbench() {
   useEffect(() => link.subscribe("bufs"), []);
-  // The IDE's keys: side panel and terminal panel.
+  // The workbench's keys (lib/commands.ts lists them with their names).
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
-      const k = e.key.toLowerCase();
-      if (k === "b") {
-        e.preventDefault();
-        setPanes({ side: !panes.peek().side });
-      } else if (k === "j" || k === "`") {
-        e.preventDefault();
-        setPanes({ panel: !panes.peek().panel });
-      }
-    };
-    addEventListener("keydown", onKey);
-    return () => removeEventListener("keydown", onKey);
+    addEventListener("keydown", workbenchKeys);
+    return () => removeEventListener("keydown", workbenchKeys);
   }, []);
   const r = route.value;
   const p = panes.value;
   const bufs = listOf<BufItem>(store.topic("bufs").value?.data, "bufs").filter((b) => typeof b.path === "string" && b.path);
   const tabs = tabsOf(opened.value, bufs, closed.value);
+  tabsNow.list = tabs;
   const file = activeFile.value;
   const sideGit = r.tab === "git";
   return (
@@ -220,6 +237,7 @@ export function Workbench() {
             </button>
           )}
           <EditorTabs tabs={tabs} bufs={bufs} />
+          {quick.value && <QuickInput key={quick.value.mode} />}
           <main class="main" id="main" tabIndex={-1}>
             <EditorBody more={r.tab === "more"} file={file} />
           </main>

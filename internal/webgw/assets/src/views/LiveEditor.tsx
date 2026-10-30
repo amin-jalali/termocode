@@ -9,7 +9,7 @@ import type { BufSnap } from "../../../../webproto/proto";
 import type { EditorHandle, EditorModule } from "../editor/api";
 import { startEdit } from "../lib/edit";
 import { hl, hlRows, wantHl } from "../lib/hl";
-import { mountDesk, type DeskHandle } from "../lib/deskeditor";
+import { activeDesk, mountDesk, type DeskHandle } from "../lib/deskeditor";
 import { loadEditor } from "../lib/lazy";
 import { editing, liveStatus, LiveSync, session } from "../lib/live";
 import { toast } from "../lib/toasts";
@@ -128,6 +128,7 @@ export function LiveEditor({ path, buf, desk }: { path: string; buf: number; des
         });
         sync = new LiveSync(buf, handle, first);
         ed.current = handle;
+        if (d) activeDesk.value = handle as DeskHandle;
         session.value = sync;
         handle.setHl(hlRows(hl.peek(), buf));
         handle.focus();
@@ -145,6 +146,7 @@ export function LiveEditor({ path, buf, desk }: { path: string; buf: number; des
       dead = true;
       session.peek()?.dispose();
       session.value = null;
+      if (activeDesk.peek() === ed.current) activeDesk.value = null;
       ed.current?.destroy();
       ed.current = null;
     };
