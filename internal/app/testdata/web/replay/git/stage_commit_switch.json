@@ -1,0 +1,93 @@
+{
+  "topic": "git",
+  "snap0": {
+    "branch": {
+      "ahead": 1,
+      "behind": 0,
+      "name": "main"
+    },
+    "files": [
+      {
+        "path": "a.go",
+        "staged": true,
+        "x": "M",
+        "y": " "
+      },
+      {
+        "path": "b.go",
+        "unstaged": true,
+        "x": " ",
+        "y": "M"
+      },
+      {
+        "path": "new.txt",
+        "untracked": true,
+        "x": "?",
+        "y": "?"
+      },
+      {
+        "conflict": true,
+        "path": "c.go",
+        "staged": true,
+        "unstaged": true,
+        "x": "U",
+        "y": "U"
+      }
+    ],
+    "log": [
+      {
+        "author": "Ann",
+        "hash": "1a2b3c4",
+        "subject": "second",
+        "unpushed": true,
+        "when": 1700000100000
+      },
+      {
+        "author": "Bob",
+        "hash": "0f0f0f0",
+        "subject": "first",
+        "when": 1700000000000
+      }
+    ],
+    "op": "merge",
+    "repo": true
+  },
+  "deltas": [
+    {
+      "branch": {
+        "ahead": 0,
+        "behind": 0,
+        "name": "feat/web"
+      },
+      "files": [],
+      "log": [
+        {
+          "author": "Ann",
+          "hash": "2b2b2b2",
+          "subject": "third",
+          "unpushed": true,
+          "when": 1700000200000
+        }
+      ],
+      "repo": true
+    }
+  ],
+  "snapn": {
+    "repo": true,
+    "branch": {
+      "name": "feat/web",
+      "ahead": 0,
+      "behind": 0
+    },
+    "files": [],
+    "log": [
+      {
+        "hash": "2b2b2b2",
+        "subject": "third",
+        "author": "Ann",
+        "when": 1700000200000,
+        "unpushed": true
+      }
+    ]
+  }
+}

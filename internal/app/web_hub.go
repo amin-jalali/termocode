@@ -59,6 +59,7 @@ type webHub struct {
 	chats  webChatsPub                // Update only: the chat list (web_chats.go)
 	cards  webCardsPub                // Update only: the waiting cards (web_cards.go)
 	files  *webFiles                  // Update only: file and terminal views (web_files.go)
+	git    webGitPub                  // Update only: what the git topic sent (web_git.go)
 
 	ln    net.Listener
 	peer  func(net.Conn) error

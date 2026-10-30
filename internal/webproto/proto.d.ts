@@ -542,6 +542,7 @@ export interface TermModeDelta {
 }
 
 export interface GitSnap {
+  loading?: boolean;
   repo: boolean;
   branch: GitBranch;
   op?: "rebase" | "merge";

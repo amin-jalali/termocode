@@ -26,12 +26,13 @@ const (
 
 // GitSnap is the git topic.
 type GitSnap struct {
-	Repo   bool        `json:"repo"` // false: the workspace is not a git repository
-	Branch GitBranch   `json:"branch"`
-	Op     string      `json:"op,omitempty" enum:"rebase|merge"` // a rebase or merge stopped half-way: finish it on the laptop
-	Files  []GitFile   `json:"files"`                            // as git status lists them
-	More   int         `json:"more,omitempty"`                   // changed files past MaxGitFiles, not listed
-	Log    []GitCommit `json:"log"`                              // the last commits of HEAD, newest first
+	Loading bool        `json:"loading,omitempty"` // the laptop has not read git yet
+	Repo    bool        `json:"repo"`              // false: the workspace is not a git repository
+	Branch  GitBranch   `json:"branch"`
+	Op      string      `json:"op,omitempty" enum:"rebase|merge"` // a rebase or merge stopped half-way: finish it on the laptop
+	Files   []GitFile   `json:"files"`                            // as git status lists them
+	More    int         `json:"more,omitempty"`                   // changed files past MaxGitFiles, not listed
+	Log     []GitCommit `json:"log"`                              // the last commits of HEAD, newest first
 }
 
 // GitBranch is the checked-out branch.
