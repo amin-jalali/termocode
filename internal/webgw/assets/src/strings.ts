@@ -933,6 +933,15 @@ export const S = {
   "gx.clone_body": "Clone {url} on the laptop? It then opens the new folder, and this page connects again.",
   "gx.next": "Next",
   "gx.more": "More Actions…",
+  "bl.you": "You",
+  "bl.you_now": "You, Uncommitted changes",
+  "bl.uncommitted": "Uncommitted changes",
+  "bl.line": "{author}, {when} • {subject}",
+  "cmd.git_graph": "Git: Show Commit Graph",
+  "cmd.git_prs": "Git: Pull Requests",
+  "cmd.git_blame": "Git: Toggle Line Blame",
+  "cmd.git_amend": "Git: Commit (Amend)…",
+  "cmd.git_clone": "Git: Clone Repository…",
 } as const;
 
 export type StringKey = keyof typeof S;

@@ -929,4 +929,13 @@ export const FA: Record<StringKey, string> = {
   "gx.clone_body": "{url} روی لپ‌تاپ کلون شود؟ بعد پوشه تازه باز می‌شود و این صفحه دوباره وصل می‌شود.",
   "gx.next": "بعدی",
   "gx.more": "کارهای بیشتر…",
+  "bl.you": "شما",
+  "bl.you_now": "شما، تغییرهای کامیت‌نشده",
+  "bl.uncommitted": "تغییرهای کامیت‌نشده",
+  "bl.line": "{author}، {when} • {subject}",
+  "cmd.git_graph": "گیت: نمایش گراف کامیت‌ها",
+  "cmd.git_prs": "گیت: درخواست‌های ادغام",
+  "cmd.git_blame": "گیت: روشن/خاموش کردن نویسنده خط‌ها",
+  "cmd.git_amend": "گیت: اصلاح کامیت آخر…",
+  "cmd.git_clone": "گیت: کلون مخزن…",
 };
