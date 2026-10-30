@@ -46,6 +46,9 @@ var sourceRules = []rule{
 	// OS notifications come only from lib/notify.ts, which shows fixed
 	// texts from a closed list (WEB-37, never-do 14).
 	{name: "notifications", re: regexp.MustCompile(`\bNotification\b|\brequestPermission\b|\bshowNotification\b`), allow: map[string]bool{"lib/notify.ts": true}},
+	// No service worker, ever (WEB-35): no code of the page may outlive it
+	// in the browser, so an old or poisoned copy can never run.
+	{name: "service worker", re: regexp.MustCompile(`\bserviceWorker\b|\bServiceWorker\b|\bPushManager\b`)},
 	{name: "postMessage/window.open", re: regexp.MustCompile(`\b(postMessage|window\.open)\s*\(`)},
 	// Names from the hub or the URL (folders, topics, query keys) are never
 	// keys of a plain object: "__proto__" would swap its prototype and
@@ -99,6 +102,7 @@ func TestLintCatchesEachRule(t *testing.T) {
 		`a.href = "javascript:void 0"`, `fetch("https://example.com")`, `await import("./x")`,
 		`@import "x.css";`, `localStorage.setItem("t", tok)`, `sessionStorage.x = 1`,
 		`document.cookie = "a=b"`, `window.open("/")`, `new DOMParser()`,
+		`navigator.serviceWorker.register("/sw.js")`, `new PushManager()`,
 		`new Notification("x", {body: msg})`, `Notification.requestPermission()`, `reg.showNotification("x")`,
 		`fetch("/x")`, `new WebSocket("/ws")`, `navigator.clipboard.readText()`,
 		`const dirs: Record<string, TreeDir> = { ...s.dirs };`, `const q: Record<string, string> = {};`,
@@ -171,7 +175,7 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 			regexp.MustCompile(`\beval\s*\(`), regexp.MustCompile(`\bnew Function\b|\bFunction\s*\(\s*["'\x60]`),
 			regexp.MustCompile(`document\.write`), regexp.MustCompile(`\bimport\s*\(`),
 			regexp.MustCompile(`(?i)(https?|wss?):\/\/`), regexp.MustCompile(`(?i)@import`),
-			regexp.MustCompile(`(?i)sourceMappingURL`),
+			regexp.MustCompile(`(?i)sourceMappingURL`), regexp.MustCompile(`\bserviceWorker\b`),
 		} {
 			if loc := r.FindStringIndex(text); loc != nil {
 				lo, hi := max(0, loc[0]-40), min(len(text), loc[1]+40)
