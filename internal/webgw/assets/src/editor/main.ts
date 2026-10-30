@@ -52,7 +52,7 @@ const flashField = StateField.define<DecorationSet>({
 });
 
 const theme = EditorView.theme({
-  "&": { height: "100%", color: "var(--text)", backgroundColor: "var(--bg-panel)", fontSize: "var(--fs-row)" },
+  "&": { height: "100%", color: "var(--text)", backgroundColor: "var(--bg-panel)", fontSize: "var(--fs-edit, var(--fs-row))" },
   "&.cm-focused": { outline: "2px solid var(--focus)", outlineOffset: "-2px" },
   ".cm-scroller": { fontFamily: "var(--font-mono)", lineHeight: "var(--lh-row)", overflow: "auto" },
   ".cm-content": { caretColor: "var(--text)", padding: "var(--s2) 0" },
