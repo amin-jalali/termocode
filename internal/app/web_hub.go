@@ -66,6 +66,9 @@ type webHub struct {
 	runs   webRunsPub                 // Update only: what the runs topic sent (web_runs.go)
 	more   webMorePub                 // Update only: the v2 More views (web_more.go)
 	ups    webUploads                 // staged uploads (web_transfer.go; own lock)
+	// settled: Update only; the publishers ran once since the hub went
+	// idle (web_after.go).
+	settled bool
 
 	ln    net.Listener
 	peer  func(net.Conn) error
