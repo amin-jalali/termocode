@@ -76,3 +76,43 @@ func TestDetectTailnetRefuses(t *testing.T) {
 		}
 	}
 }
+
+func serveTS(serve string) *fakeTailscale {
+	return &fakeTailscale{out: map[string]string{"serve status --json": serve}}
+}
+
+// Funnel would make the panel public on the internet: refused, whether the
+// config is the background one or a foreground session's (T16, E9).
+func TestFunnelRefused(t *testing.T) {
+	const host = "box.tail1234.ts.net"
+	for _, tc := range []struct {
+		name, serve string
+		want        error
+		ours        bool
+	}{
+		{"empty", `{}`, nil, false},
+		{"empty output", ``, nil, false},
+		{"ours", `{"Web":{"box.tail1234.ts.net:443":{"Handlers":{"/":{"Proxy":"http://127.0.0.1:41237"}}}}}`, nil, true},
+		{"ours in foreground", `{"Foreground":{"abc":{"Web":{"box.tail1234.ts.net:443":{"Handlers":{"/":{"Proxy":"http://127.0.0.1:41237"}}}}}}}`, nil, true},
+		{"funnel", `{"AllowFunnel":{"box.tail1234.ts.net:443":true}}`, ErrFunnel, false},
+		{"funnel on ours", `{"Web":{"box.tail1234.ts.net:443":{"Handlers":{"/":{"Proxy":"http://127.0.0.1:41237"}}}},"AllowFunnel":{"box.tail1234.ts.net:443":true}}`, ErrFunnel, false},
+		{"funnel in foreground", `{"Foreground":{"x":{"AllowFunnel":{"box.tail1234.ts.net:443":true}}}}`, ErrFunnel, false},
+		{"funnel off", `{"AllowFunnel":{"box.tail1234.ts.net:443":false}}`, nil, false},
+		{"funnel other port", `{"AllowFunnel":{"box.tail1234.ts.net:8443":true}}`, nil, false},
+		{"busy", `{"Web":{"box.tail1234.ts.net:443":{"Handlers":{"/":{"Proxy":"http://127.0.0.1:3000"}}}}}`, ErrServeBusy, false},
+		{"busy path", `{"Web":{"box.tail1234.ts.net:443":{"Handlers":{"/api":{"Proxy":"http://127.0.0.1:41237"}}}}}`, ErrServeBusy, false},
+		{"tcp forward on 443", `{"TCP":{"443":{"TCPForward":"127.0.0.1:22"}}}`, ErrServeBusy, false},
+		{"garbage", `nope`, ErrServeUnknown, false},
+	} {
+		ours, err := CheckServe(context.Background(), serveTS(tc.serve).run, host, "http://127.0.0.1:41237")
+		if !errors.Is(err, tc.want) || (tc.want == nil && err != nil) {
+			t.Errorf("%s: err = %v, want %v", tc.name, err, tc.want)
+		}
+		if ours != tc.ours {
+			t.Errorf("%s: ours = %v, want %v", tc.name, ours, tc.ours)
+		}
+	}
+	if !strings.Contains(ErrFunnel.Error(), "tailscale funnel") {
+		t.Errorf("E9 does not say how to turn Funnel off: %q", ErrFunnel)
+	}
+}
