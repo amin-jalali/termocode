@@ -14,12 +14,14 @@ import "./styles/more.css";
 import "./styles/files.css";
 import { App } from "./app";
 import { prefs } from "./lib/prefs";
+import { setOnOpen, unseen } from "./lib/notify";
 import { goTab } from "./lib/router";
 import { watchViewport } from "./lib/viewport";
 import { laptopTheme, link, waiting } from "./session";
 import { dict, has } from "./state/dict";
 import { THEME_TOKENS, themeTokens } from "./state/theme";
 import { TABS } from "./state/route";
+import { openCards } from "./ui/CardSheet";
 import { ConnectScreen, type ConnectState } from "./ui/ConnectScreen";
 import { PairScreen } from "./ui/PairScreen";
 import { SignInScreen } from "./ui/SignInScreen";
@@ -111,9 +113,11 @@ effect(() => {
   if (link.finalCode.value === 4001 || link.finalCode.value === 4002) forgetToken();
 });
 
+// The title badge: the waiting cards, or a dot for a run that ended
+// while the page was in the background (WEB-37).
 effect(() => {
   const n = waiting.value.count;
-  document.title = n > 0 ? `(${n}) termocode` : "termocode";
+  document.title = n > 0 ? `(${n}) termocode` : unseen.value ? "(•) termocode" : "termocode";
 });
 
 document.addEventListener("visibilitychange", () => link.setVisible(!document.hidden));
@@ -128,6 +132,7 @@ addEventListener("keydown", (e: KeyboardEvent) => {
 });
 
 watchViewport();
+setOnOpen((kind) => (kind === "card" ? openCards() : goTab("more")));
 
 if (!secret && !pairSecret && token()) startShell();
 
