@@ -10,11 +10,12 @@ import { signal } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { BufSnap, GitSnap, GitText } from "../../../../webproto/proto";
 import { desks, mountDesk, setDesk, type DeskHandle } from "../lib/deskeditor";
-import { diffOf, revs, type DiffTab } from "../lib/difftab";
+import { applyRows, diffOf, revs, type DiffTab } from "../lib/difftab";
+import { go as goRoute, route } from "../lib/router";
 import { closePath, fileOf, holdPath } from "../lib/file";
 import { showFile, wordWrap } from "../lib/workbench";
 import { modKey } from "../lib/platform";
-import { link, live, store } from "../session";
+import { cards, link, live, store } from "../session";
 import { isGone } from "../state/files";
 import { t } from "../strings";
 import { errText } from "../ui/CardSheet";
@@ -131,6 +132,25 @@ function LiveSide({ d, left, slot, onCount }: { d: DiffTab; left: Side; slot: st
   );
 }
 
+/** ReviewSide is a review card's change: the file as it is now on the
+ * left, with the AI's change on the right (both read only). */
+function ReviewSide({ d, slot }: { d: DiffTab; slot: string }) {
+  useEffect(() => {
+    holdPath(d.path);
+    return () => closePath(d.path);
+  }, [d.path]);
+  const card = cards.value.find((c) => c.id === d.hash);
+  const st = fileOf(d.path);
+  const buf = st?.kind === "open" && st.buf !== undefined ? readBuf(store.topic("buf:" + st.buf).value?.data) : null;
+  if (!card || !card.diff) return <p class="empty">{t("card.gone")}</p>;
+  // A new file is not there yet: its old side is empty.
+  const old = st?.kind === "missing" ? [] : buf?.lines;
+  if (!old) return <div class="editor-host desk-host" />;
+  const next = applyRows(old, card.diff.rows);
+  if (!next) return <p class="empty">{t("dv.changed")}</p>;
+  return <StaticDiff d={d} left={{ text: old.join("\n"), binary: false, cut: false }} right={{ text: next.join("\n"), binary: false, cut: false }} slot={slot} onCount={() => undefined} />;
+}
+
 export function DiffView({ tab, slot = "g0" }: { tab: string; slot?: string }) {
   const d = diffOf(tab);
   const git = store.topic("git").value;
@@ -162,6 +182,11 @@ export function DiffView({ tab, slot = "g0" }: { tab: string; slot?: string }) {
       actions={
         <>
           {d.kind !== "wt" && <Chip>{t("viewonly")}</Chip>}
+          {d.kind === "review" && cards.value.some((c) => c.id === d.hash) && (
+            <button type="button" class="tb" data-act="review" title={t("dv.review")} onClick={() => goRoute({ ...route.peek(), card: d.hash })}>
+              {t("dv.review")}
+            </button>
+          )}
           <button type="button" class="tb tb-icon" data-act="prev" aria-label={t("dv.prev")} title={`${t("dv.prev")} (Shift+F7)`} onClick={() => go(-1)}>
             <Cod name="arrow-up" />
           </button>
@@ -192,6 +217,8 @@ export function DiffView({ tab, slot = "g0" }: { tab: string; slot?: string }) {
           <p class="empty refused">{err}</p>
         ) : binary ? (
           <p class="empty">{t("dv.binary")}</p>
+        ) : d.kind === "review" ? (
+          <ReviewSide d={d} slot={slot} />
         ) : !leftSide || (d.kind !== "wt" && !rightSide) ? (
           <div class="editor-host desk-host" />
         ) : d.kind === "wt" && !deleted ? (

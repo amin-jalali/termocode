@@ -170,3 +170,31 @@ func TestDiffEditorIndexReadOnly(t *testing.T) {
 	}
 	noReq(t, c, 300*time.Millisecond)
 }
+
+// A review card on the desktop offers Open Changes: the AI's change opens
+// as "name (AI Change)", the file as it is now on the left and the change
+// on the right, read only; Review… opens the card again (Reject first).
+func TestDiffEditorReviewCard(t *testing.T) {
+	p, c := openCardView(t, Wide, "review")
+	p.TapJS(ButtonByText("Open Changes"))
+	p.WaitJS("!" + dialog)
+	answerBufOpen(t, c, 2, "a.go", []string{"package a", "x := 1", "y := 3"})
+	p.WaitJS(diffDoc + `?.querySelector(".editor.modified .line-insert, .editor.modified .char-insert")`)
+	if got := Eval[string](p, `document.querySelector(".ed-tab.is-on .ed-tab-name")?.textContent ?? ""`); got != "a.go (AI Change)" {
+		t.Errorf("the tab is %q", got)
+	}
+	if got := diffSide(p, "modified"); got != "package a\nx := 2\ny := 3" {
+		t.Errorf("the change shows %q", got)
+	}
+	if got := diffSide(p, "original"); got != "package a\nx := 1\ny := 3" {
+		t.Errorf("the file shows %q", got)
+	}
+	p.TapJS(diffView + `.querySelector('[data-act="review"]')`)
+	p.WaitJS(dialog + ` && ` + dialog + `.contains(document.activeElement) && document.activeElement.textContent === "Reject"`)
+}
+
+// answerBufOpen answers the page's buf.open of path as buffer buf with lines.
+func answerBufOpen(t *testing.T, c *HubConn, buf int, path string, lines []string) {
+	t.Helper()
+	answerGitText(t, c, path, map[string]string{}, buf, lines)
+}
