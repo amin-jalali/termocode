@@ -3,6 +3,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -161,4 +162,24 @@ func TestWebNvimText(t *testing.T) {
 			t.Errorf("%q → %q, want %q", in, got, want)
 		}
 	}
+}
+
+// Spec (WEB-21, WEB-7): a web edit, an undo and a save replay on the
+// buf topic (lines, dirty on, dirty off).
+func TestEditReplayGolden(t *testing.T) {
+	r, b := webEditRig(t, "one\ntwo\n")
+	topic := "buf:" + strconv.Itoa(b.Buf)
+	c := webReplayRecord(t, r.m, r.h, topic, func() {
+		var res webproto.EditRes
+		webResData(t, webSetText(r, r.c, b.Buf, b.Tick, 1, 0, 1, 3, "TWO", "three"), &res)
+		webResData(t, webSetText(r, r.c, b.Buf, res.Tick, 0, 3, 0, 3, "!"), &res)
+		webResData(t, r.call(webproto.OpBufUndo, &webproto.BufArgs{Buf: b.Buf}), &res)
+		webResData(t, r.call(webproto.OpBufSave, &webproto.BufArgs{Buf: b.Buf}), &res)
+		r.pumpUntil("the save", func() bool { m := r.h.files.bufs[b.Buf]; return m.tick == res.Tick && !m.dirty })
+	})
+	webReplayCheck(t, webTopics["buf"], c)
+	if !strings.Contains(string(c.SnapN), `"lines":["one","TWO","three"]`) || !strings.Contains(string(c.SnapN), `"dirty":false`) {
+		t.Fatalf("final: %s", c.SnapN)
+	}
+	webReplayGolden(t, webReplayPath(topic, "web_edit_undo_save"), c)
 }

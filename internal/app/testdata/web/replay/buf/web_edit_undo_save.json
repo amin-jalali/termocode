@@ -1,0 +1,65 @@
+{
+  "topic": "buf:2",
+  "snap0": {
+    "buf": 2,
+    "dirty": false,
+    "ft": "text",
+    "lines": [
+      "one",
+      "two"
+    ],
+    "path": "f.txt",
+    "readonly": false,
+    "tick": 2
+  },
+  "deltas": [
+    {
+      "first": 1,
+      "kind": "lines",
+      "last": 2,
+      "lines": [
+        "TWO",
+        "three"
+      ],
+      "tick": 3
+    },
+    {
+      "kind": "dirty",
+      "on": true
+    },
+    {
+      "first": 0,
+      "kind": "lines",
+      "last": 1,
+      "lines": [
+        "one"
+      ],
+      "tick": 5
+    },
+    {
+      "kind": "tick",
+      "tick": 6
+    },
+    {
+      "kind": "dirty",
+      "on": false
+    },
+    {
+      "kind": "tick",
+      "tick": 7
+    }
+  ],
+  "snapn": {
+    "buf": 2,
+    "path": "f.txt",
+    "tick": 7,
+    "lines": [
+      "one",
+      "TWO",
+      "three"
+    ],
+    "dirty": false,
+    "ft": "text",
+    "readonly": false
+  }
+}
