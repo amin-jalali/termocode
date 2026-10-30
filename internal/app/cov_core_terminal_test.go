@@ -318,3 +318,88 @@ func TestCovCoreTerminalOpenAtCopyPaste(t *testing.T) {
 		t.Errorf("open-at made %d tabs", len(m.terminalTabs))
 	}
 }
+
+func TestCovCoreTerminalWithoutNvim(t *testing.T) {
+	var m Model
+	m.toggleTerminalPanel()
+	m.openTerminalPanel()
+	m.newTerminalTabIn("/tmp")
+	m.openIntegratedTerminalAt("/tmp")
+	m.terminalPasteFromClipboard()
+	if m.termOpen || m.probeTerminalWindowID() != 0 || m.terminalCopyToClipboard() != 0 {
+		t.Error("a terminal without nvim")
+	}
+	for in, want := range map[string]string{"": "", "/": "/", "///": "/", "/a/b/": "b", "rel": "rel"} {
+		if got := terminalCwdBasename(in); got != want {
+			t.Errorf("terminalCwdBasename(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// The panel with only Output: Ctrl+T brings a shell forward; a new tab
+// finds the window again; a lost window reopens the panel.
+func TestCovCoreTerminalPanelRecovers(t *testing.T) {
+	m := covNvimModel(t, 120, 40)
+	t.Setenv("SHELL", "") // the /bin/bash fallback
+	if _, err := exec.LookPath("bash"); err != nil {
+		t.Setenv("SHELL", "/bin/sh")
+	}
+	m.showPanelTab(panelKindOutput)
+	m.toggleTerminalPanel()
+	if m.panelActive != panelKindTerminal || len(m.terminalTabs) != 1 {
+		t.Fatalf("ctrl+t over Output: active %v tabs %d", m.panelActive, len(m.terminalTabs))
+	}
+	m.openTerminalPanel() // already open with a shell: nothing
+	if len(m.terminalTabs) != 1 {
+		t.Error("open on an open panel added a tab")
+	}
+	// The window id was forgotten: a new tab finds it.
+	m.terminalWinID = 0
+	m.newTerminalTab()
+	if len(m.terminalTabs) != 2 || m.terminalWinID <= 0 {
+		t.Fatalf("new tab with a forgotten window: %d tabs, win %d", len(m.terminalTabs), m.terminalWinID)
+	}
+	// Every terminal window gone: a new tab reopens the panel.
+	_ = m.nvim.ExecLua(`for _, w in ipairs(vim.api.nvim_list_wins()) do
+		if vim.bo[vim.api.nvim_win_get_buf(w)].buftype == 'terminal' then pcall(vim.api.nvim_win_close, w, true) end
+	end`)
+	m.terminalWinID = 0
+	m.newTerminalTab()
+	if !m.termOpen || len(m.terminalTabs) == 0 {
+		t.Errorf("reopen after a lost window: open %v tabs %d", m.termOpen, len(m.terminalTabs))
+	}
+}
+
+// Shell titles name the folder; when the shown shell ends another takes
+// its window; when all end with Output open the panel stays.
+func TestCovCoreTerminalTitlesAndEnds(t *testing.T) {
+	m := covNvimModel(t, 120, 40)
+	m.showPanelTab(panelKindOutput)
+	m.showPanelTab(panelKindTerminal)
+	m.newTerminalTab()
+	a, b := m.terminalTabs[0].BufID, m.terminalTabs[1].BufID
+	_ = m.nvim.ExecLua(`vim.b[` + itoa(a) + `].term_title = 'me@box: /srv/www'
+		vim.b[` + itoa(b) + `].term_title = 'me@box: '`)
+	m.terminalCwdAt = time.Time{}
+	m.refreshTerminalCwd()
+	if m.terminalTabs[0].Cwd != "/srv/www" || m.terminalTabs[0].Name != "www" {
+		t.Errorf("title cwd: %+v", m.terminalTabs[0])
+	}
+	// The shown shell (b) exits: its window gets a: a is active.
+	m.terminalActiveTab = 1
+	_ = m.nvim.ExecLua(`vim.fn.chansend(vim.bo[` + itoa(b) + `].channel, "exit\n")`)
+	covWaitLua(t, m, `return vim.api.nvim_buf_is_valid(`+itoa(b)+`) and '1' or '0'`, "0")
+	m.terminalCwdAt = time.Time{}
+	m.refreshTerminalCwd()
+	if len(m.terminalTabs) != 1 || m.terminalActiveTab != 0 {
+		t.Fatalf("after b ended: %d tabs, active %d", len(m.terminalTabs), m.terminalActiveTab)
+	}
+	// The last shell ends: Output stays and shows.
+	_ = m.nvim.ExecLua(`vim.fn.chansend(vim.bo[` + itoa(a) + `].channel, "exit\n")`)
+	covWaitLua(t, m, `return vim.api.nvim_buf_is_valid(`+itoa(a)+`) and '1' or '0'`, "0")
+	m.terminalCwdAt = time.Time{}
+	m.refreshTerminalCwd()
+	if !m.termOpen || m.panelActive != panelKindOutput || len(m.terminalTabs) != 0 {
+		t.Errorf("all shells ended: open %v active %v tabs %d", m.termOpen, m.panelActive, len(m.terminalTabs))
+	}
+}
