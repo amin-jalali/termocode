@@ -53,3 +53,25 @@ func TestFilterGroupedKeepsOrderSelectsBest(t *testing.T) {
 		t.Errorf("group order changed: second row is %q", got)
 	}
 }
+
+// Spec (web-easy): an item's Lead word typed in full puts that item
+// first, even when shorter titles score better; an exact title still
+// wins, and any other query ranks as before.
+func TestFilterLeadWordFirst(t *testing.T) {
+	items := []Item{
+		{ID: "copy", Title: "Web: Copy Link"},
+		{ID: "open", Title: "Web: Open in Browser", Lead: "web"},
+		{ID: "stop", Title: "Web: Stop Panel"},
+		{ID: "exact", Title: "Web"},
+	}
+	for q, want := range map[string]string{"web": "exact", "WEB": "exact", "web co": "copy"} {
+		m := typeQuery(NewItems("t", items), q)
+		if it, ok := m.Current(); !ok || it.ID != want {
+			t.Errorf("query %q selects %q, want %q", q, it.ID, want)
+		}
+	}
+	m := typeQuery(NewItems("t", items[:3]), "Web")
+	if it, ok := m.Current(); !ok || it.ID != "open" {
+		t.Errorf("query Web selects %q, want open", it.ID)
+	}
+}

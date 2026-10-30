@@ -26,6 +26,10 @@ type Item struct {
 	// File marks Title as a file path: the row gets a file-type icon and
 	// the directory part is dimmed.
 	File bool
+	// Lead is a word that, typed in full as the query (any case), puts
+	// this row first (after a row whose title is the query): the main
+	// command of a family, e.g. "web" for Web: Open in Browser.
+	Lead string
 }
 
 // SelectMsg is emitted when the user activates a row.
@@ -252,7 +256,7 @@ func (m *Model) refilter() {
 	// section labels still bracket the filtered list. Headers whose group
 	// has no survivors stay hidden.
 	titles, indexMap, raw := m.fc.find(m.items, m.input) // titles[k] → m.items[indexMap[k]]
-	hits := bestFirst(m.input, raw, titles)
+	hits := bestFirst(m.input, raw, titles, func(k int) string { return m.items[indexMap[k]].Lead })
 	if !m.hasGroups() {
 		// Flat list: best match first, so Enter runs what was typed.
 		m.matches = make(fuzzy.Matches, len(hits))
@@ -333,18 +337,25 @@ func (m Model) hasGroups() bool {
 }
 
 // bestFirst moves titles equal to the query (ignoring case) to the front
-// of hits, which fuzzy.Find already sorts by score. Typing a full title
-// must select that row even when a longer title scores as well.
-func bestFirst(query string, hits fuzzy.Matches, titles []string) fuzzy.Matches {
-	out := make(fuzzy.Matches, 0, len(hits))
-	for _, h := range hits {
-		if strings.EqualFold(titles[h.Index], query) {
-			out = append(out, h)
+// of hits, which fuzzy.Find already sorts by score, then rows whose Lead
+// word (lead(k) for titles[k]) is the query. Typing a full title must
+// select that row even when a longer title scores as well.
+func bestFirst(query string, hits fuzzy.Matches, titles []string, lead func(k int) string) fuzzy.Matches {
+	rank := func(h fuzzy.Match) int {
+		switch {
+		case strings.EqualFold(titles[h.Index], query):
+			return 0
+		case strings.EqualFold(lead(h.Index), query):
+			return 1
 		}
+		return 2
 	}
-	for _, h := range hits {
-		if !strings.EqualFold(titles[h.Index], query) {
-			out = append(out, h)
+	out := make(fuzzy.Matches, 0, len(hits))
+	for r := 0; r <= 2; r++ {
+		for _, h := range hits {
+			if rank(h) == r {
+				out = append(out, h)
+			}
 		}
 	}
 	return out
