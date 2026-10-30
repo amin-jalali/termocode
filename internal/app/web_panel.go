@@ -147,6 +147,9 @@ func (m *Model) startWebPanelOn(open, copyLink bool, sshPort int) tea.Cmd {
 	args := []string{"--dir", aiWorkspaceRoot(), "--audit", audit, "--devices", devices,
 		"--idle-min", strconv.Itoa(cfg.IdleMinutes), "--max-hours", strconv.Itoa(cfg.MaxHours),
 		"--viewers", strconv.Itoa(cfg.MaxViewers)}
+	if cfg.RequireTOTP {
+		args = append(args, "--totp")
+	}
 	switch {
 	case sshPort > 0:
 		args = append(args, "--ssh-port", strconv.Itoa(sshPort))
