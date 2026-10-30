@@ -301,6 +301,9 @@ func TestChatDraftSurvivesOffline(t *testing.T) {
 			}
 			p.Tap(send)
 			p.TapJS(composer + `.querySelector("textarea")`)
+			// A tap puts the caret where it lands (the box's middle); with
+			// a wider font the draft reaches past it. Go to the end first.
+			p.Key(kb.End)
 			p.Key(" more")
 			c2 := p.S.Hub.Accept(t)
 			c2.Handshake(t, "c-1")
