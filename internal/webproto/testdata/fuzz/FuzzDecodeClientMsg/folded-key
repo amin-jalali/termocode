@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\"t\":\"hello\",\"v\":2,\"to\xe2\x84\xaaen\":\"x\"}")

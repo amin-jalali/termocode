@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\"t\":\"hello\",\"v\":2,\"token\":\"x\",\"resume\":{\"conn\":\"c\",\"topics\":{\"__proto__\":1}}}")
