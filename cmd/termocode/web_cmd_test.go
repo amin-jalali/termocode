@@ -222,3 +222,21 @@ func TestWebSSHHandoff(t *testing.T) {
 		t.Fatalf("refused: %q", apc)
 	}
 }
+
+// Spec (WEB-31): --tailnet is tailnet mode (tailscale serve in front of
+// 127.0.0.1); it cannot be mixed with SSH mode.
+func TestWebGatewayTailnetMode(t *testing.T) {
+	sessionEnv(t)
+	ws := shortTemp(t)
+	var errb bytes.Buffer
+	cfg, ok := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl", "--tailnet"}, &errb)
+	if !ok || cfg.Tailnet == nil || cfg.UnixPath != "" {
+		t.Fatalf("ok %v tailnet %v unix %q: %s", ok, cfg.Tailnet != nil, cfg.UnixPath, errb.String())
+	}
+	if _, ok := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl", "--tailnet", "--ssh-port", "41237"}, &errb); ok {
+		t.Error("tailnet mixed with SSH mode was accepted")
+	}
+	if cfg, _ := webGatewayConfig([]string{"--dir", ws, "--audit", "/a.jsonl"}, &errb); cfg.Tailnet != nil {
+		t.Error("plain mode is tailnet")
+	}
+}
