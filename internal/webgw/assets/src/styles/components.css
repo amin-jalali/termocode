@@ -78,7 +78,7 @@
 }
 
 /* ---- Sheet ---- */
-.sheet-layer { position: fixed; inset: 0; z-index: var(--z-sheet); display: flex; align-items: flex-end; justify-content: center; }
+.sheet-layer { position: fixed; inset: 0; z-index: var(--z-sheet); display: flex; align-items: flex-end; justify-content: center; padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
 .scrim { position: absolute; inset: 0; background: var(--scrim); animation: fade-in var(--t-fast); }
 .sheet {
   position: relative;
