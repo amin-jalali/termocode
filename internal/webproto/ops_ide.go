@@ -1,5 +1,7 @@
 package webproto
 
+import "strings"
+
 // The ops of the desktop workbench's explorer sections: the OUTLINE (the
 // symbols of the open file) and the TIMELINE (the commits of one file). They join the op table below; every rule of
 // ops.go holds for them.
@@ -8,6 +10,7 @@ package webproto
 const (
 	OpGitFileLog = "git.file_log"
 	OpBufSymbols = "buf.symbols"
+	OpGitText    = "git.text"
 )
 
 // BufSymbols is the result of buf.symbols: the symbols of a buffer the
@@ -48,11 +51,33 @@ type GitFileLog struct {
 	Log  []GitCommit `json:"log"`
 }
 
+// GitTextArgs asks for one file as git keeps it: Rev is "index", "HEAD",
+// a commit hash, or a hash followed by "^" (its parent). The desktop's
+// diff editor shows it beside the newer text.
+type GitTextArgs struct {
+	Path string `json:"path"`
+	Rev  string `json:"rev"`
+}
+
+// GitText is the result of git.text.
+type GitText struct {
+	Path      string `json:"path"`
+	Rev       string `json:"rev"`
+	Text      string `json:"text"`
+	Missing   bool   `json:"missing,omitempty"`   // the file is not in that revision (a new file)
+	Binary    bool   `json:"binary,omitempty"`    // not text: Text is empty
+	Truncated bool   `json:"truncated,omitempty"` // longer than MaxGitText: Text is its start
+}
+
+// MaxGitText caps the bytes of one git.text.
+const MaxGitText = 512 << 10
+
 // MaxFileLog caps the commits of one git.file_log.
 const MaxFileLog = 50
 
 var opIDERows = []Policy{
 	{Op: OpGitFileLog, New: newOf[GitFileLogArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 8 * kib, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpGitText, New: newOf[GitTextArgs](), Role: RoleViewer, Rate: perSec(10), MaxBytes: 8 * kib, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpBufSymbols, New: newOf[BufArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
 }
 
@@ -63,10 +88,30 @@ func (a *GitFileLogArgs) validate(int) error {
 	return nil
 }
 
+func (a *GitTextArgs) validate(int) error {
+	if !validPath(a.Path, false) || strings.HasSuffix(a.Path, "/") {
+		return invalid("bad path")
+	}
+	if a.Rev == "index" || a.Rev == "HEAD" {
+		return nil
+	}
+	h := strings.TrimSuffix(a.Rev, "^")
+	if len(h) < 4 || len(h) > 64 {
+		return invalid("bad revision")
+	}
+	for _, c := range h {
+		if !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f') {
+			return invalid("bad revision")
+		}
+	}
+	return nil
+}
+
 // The rows join the table before any init() runs (as ops_more.go's).
 var _ = func() bool { opTable = append(opTable, opIDERows...); return true }()
 
 func init() {
 	registerResult(OpGitFileLog, GitFileLog{})
+	registerResult(OpGitText, GitText{})
 	registerResult(OpBufSymbols, BufSymbols{})
 }

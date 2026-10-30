@@ -50,3 +50,28 @@ func TestBufSymbolsOp(t *testing.T) {
 		t.Error("buf.symbols has no result type")
 	}
 }
+
+// Spec (diff editor): git.text reads one workspace file from the index,
+// HEAD, a commit or its parent; a v2 read for viewers, not audited. Only
+// those revisions: never a branch name, a range or an option.
+func TestGitTextOp(t *testing.T) {
+	for _, bad := range []string{`{"path":"a.go","rev":""}`, `{"path":"a.go","rev":"main"}`, `{"path":"a.go","rev":"--output=x"}`,
+		`{"path":"a.go","rev":"abc"}`, `{"path":"a.go","rev":"abcd..ef01"}`, `{"path":"a.go","rev":"abcd^^"}`,
+		`{"path":"../x","rev":"HEAD"}`, `{"path":"","rev":"HEAD"}`, `{"path":"dir/","rev":"HEAD"}`} {
+		if _, err := DecodeArgs(OpGitText, json.RawMessage(bad)); !errors.Is(err, ErrInvalid) {
+			t.Errorf("%s: %v, want invalid", bad, err)
+		}
+	}
+	for _, ok := range []string{`{"path":"src/a.go","rev":"index"}`, `{"path":"a.go","rev":"HEAD"}`, `{"path":"a.go","rev":"60ed1c8"}`, `{"path":"a.go","rev":"60ed1c8^"}`} {
+		if _, err := DecodeArgs(OpGitText, json.RawMessage(ok)); err != nil {
+			t.Errorf("%s: %v", ok, err)
+		}
+	}
+	p, ok := Lookup(OpGitText)
+	if !ok || p.Role != RoleViewer || p.Phase != PhaseV2 || p.Audit != AuditNo || p.LaptopCard {
+		t.Errorf("git.text row %+v", p)
+	}
+	if _, ok := ResultOf(OpGitText); !ok {
+		t.Error("git.text has no result type")
+	}
+}

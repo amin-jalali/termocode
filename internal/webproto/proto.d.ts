@@ -247,6 +247,11 @@ export interface GitFileLogArgs {
   path: string;
 }
 
+export interface GitTextArgs {
+  path: string;
+  rev: string;
+}
+
 export interface ItemArgs {
   path: string;
 }
@@ -985,6 +990,15 @@ export interface GitFileLog {
   log: GitCommit[];
 }
 
+export interface GitText {
+  path: string;
+  rev: string;
+  text: string;
+  missing?: boolean;
+  binary?: boolean;
+  truncated?: boolean;
+}
+
 export interface BufSymbols {
   buf: number;
   source: "lsp" | "syntax" | "none";
@@ -1172,6 +1186,7 @@ export interface OpArgs {
   "lsp.definition": LspPosArgs;
   "lsp.references": LspPosArgs;
   "git.file_log": GitFileLogArgs;
+  "git.text": GitTextArgs;
   "buf.symbols": BufArgs;
   "tree.new_file": ItemArgs;
   "tree.new_dir": ItemArgs;
@@ -1266,6 +1281,7 @@ export interface OpResult {
   "lsp.definition": LspLocations;
   "lsp.references": LspLocations;
   "git.file_log": GitFileLog;
+  "git.text": GitText;
   "buf.symbols": BufSymbols;
   "tree.new_file": TreeChanged;
   "tree.new_dir": TreeChanged;

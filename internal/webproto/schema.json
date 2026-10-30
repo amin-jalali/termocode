@@ -1053,6 +1053,20 @@
       "phase": "v2"
     },
     {
+      "op": "git.text",
+      "args": "GitTextArgs",
+      "result": "GitText",
+      "role": "viewer",
+      "rate": {
+        "n": 10,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "buf.symbols",
       "args": "BufArgs",
       "result": "BufSymbols",
@@ -3294,6 +3308,51 @@
         }
       },
       "required": [],
+      "additionalProperties": false
+    },
+    "GitText": {
+      "type": "object",
+      "properties": {
+        "binary": {
+          "type": "boolean"
+        },
+        "missing": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string"
+        },
+        "rev": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path",
+        "rev",
+        "text"
+      ],
+      "additionalProperties": true
+    },
+    "GitTextArgs": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "rev": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "rev"
+      ],
       "additionalProperties": false
     },
     "GoneDelta": {
