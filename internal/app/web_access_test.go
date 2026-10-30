@@ -225,3 +225,53 @@ func webAccessSelect(m *Model, id string) {
 var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
 func ansiStrip(s string) string { return ansiRe.ReplaceAllString(s, "") }
+
+// Spec (WEB-34, AH-1): the gateway's control question is a Risky card
+// (Not now first); Give control answers yes, Esc is Not now.
+func TestWebGrantAskCard(t *testing.T) {
+	r := newAccessRig(t)
+	line := `{"t":"req","id":1,"op":"web.grant_ask","args":{"device":"dev-1a2b3c4d","name":"iPhone · Safari"}}`
+	r.ctl.send(line)
+	r.pumpUntil("the grant card", func() bool { return r.m.confirmOpen && r.m.confirmKind == confirmKindWebGrant })
+	if r.m.confirm.SafeID() != "not-now" {
+		t.Fatal("Not now is not the safe answer")
+	}
+	if v := r.m.confirm.View(); !strings.Contains(v, "iPhone · Safari") || !strings.Contains(v, "any command") {
+		t.Fatalf("card:\n%s", v)
+	}
+	webAccessSelect(r.m, "give")
+	if res := r.nextMsg(r.ctl); res["t"] != "res" {
+		t.Fatalf("answer %v", res)
+	}
+	r.ctl.send(strings.Replace(line, `"id":1`, `"id":2`, 1))
+	r.pumpUntil("the grant card", func() bool { return r.m.confirmOpen && r.m.confirmKind == confirmKindWebGrant })
+	r.m.confirmOpen = false
+	r.m.onAIConfirmClosed()
+	if res := r.nextMsg(r.ctl); res["t"] != "err" || res["code"] != "forbidden" {
+		t.Fatalf("Esc answer %v", res)
+	}
+}
+
+// Spec (WEB-34): the device card of a controller offers Make viewer: the
+// store changes and the gateway hears the new role (its links come back
+// as a viewer).
+func TestWebDeviceMakeViewer(t *testing.T) {
+	r := newAccessRig(t)
+	dir, _ := webDevicesDir()
+	st := webdevices.Open(dir)
+	_ = st.Add(webdevices.Device{ID: "dev-1a2b3c4d", Name: "iPad", Role: webdevices.RoleControl, Created: time.Now()})
+	r.m.openWebDeviceCard("dev-1a2b3c4d")
+	webAccessSelect(r.m, "viewer")
+	if ev := r.ctlEvent("role"); ev["device"] != "dev-1a2b3c4d" || ev["role"] != "viewer" {
+		t.Fatalf("role event %v", ev)
+	}
+	if d, _, _ := st.Get("dev-1a2b3c4d"); d.Role != webdevices.RoleViewer {
+		t.Fatalf("stored role %q", d.Role)
+	}
+	r.m.openWebDeviceCard("dev-1a2b3c4d")
+	for _, b := range r.m.confirm.Buttons() {
+		if b.ID == "viewer" || b.ID == "control" {
+			t.Fatalf("a viewer's card offers %q (control is asked for on the device)", b.ID)
+		}
+	}
+}
