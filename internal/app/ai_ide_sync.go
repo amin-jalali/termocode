@@ -155,6 +155,14 @@ func aiSyncAfter(ctx context.Context, call aiIDECaller, reveal string, lvl aiSyn
 // results; always git status (git panel, branch, explorer markers) and
 // the tab bar.
 func (m *Model) aiSyncIDE(reveal string, lvl aiSyncLevel) (string, tea.Cmd) {
+	if b := m.aiBatchNow(); b != nil { // once, when the batch ends
+		b.sync = true
+		b.disk = b.disk || lvl == aiSyncDisk
+		if reveal != "" {
+			b.reveals = append(b.reveals, reveal)
+		}
+		return "", nil
+	}
 	note := ""
 	var search tea.Cmd
 	if lvl == aiSyncDisk {
@@ -262,6 +270,9 @@ return vim.json.encode(out)
 func (m *Model) aiBuffersUnder(path string) ([]aiBuf, error) {
 	if m.nvim == nil {
 		return nil, nil
+	}
+	if b := m.aiBatchNow(); b != nil {
+		return b.buffersUnder(m, path)
 	}
 	var raw string
 	if err := m.nvim.ExecLuaResult(aiBuffersUnderLua, &raw, path); err != nil {
@@ -382,6 +393,9 @@ func (m *Model) aiDeletePath(abs string, rel func(string) string) (string, tea.C
 				if vim.bo[b].buflisted and vim.api.nvim_buf_is_loaded(b) then pcall(vim.cmd, 'bdelete! ' .. b) end
 				if vim.api.nvim_buf_is_valid(b) then pcall(vim.api.nvim_buf_delete, b, { force = true }) end`, b.ID)
 		}
+	}
+	if b := m.aiBatchNow(); b != nil && len(bufs) > 0 {
+		b.have = false // its buffers are gone: read the list again
 	}
 	m.aiRestoreNote(abs)
 	if err := osRemoveAll(abs); err != nil {

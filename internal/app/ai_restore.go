@@ -235,6 +235,7 @@ func (m *Model) aiLastRestoreTurn() int {
 // edits (left as they are: aiWriteFile never writes under them), and too
 // big to restore. A file that already has its old text needs nothing.
 func (m *Model) aiRestoreChanged(t *aiRestoreTurn) (changed, unsaved, tooBig []string) {
+	defer m.aiBeginBatch()() // one buffer list for all files; it changes nothing
 	rel := aiRel(aiWorkspaceRoot())
 	for _, f := range t.Files {
 		if f.TooBig {
@@ -317,6 +318,7 @@ func (m *Model) aiDoUndoTurn(msg int) tea.Cmd {
 	rel := aiRel(aiWorkspaceRoot())
 	var restored, skipped []string
 	var cmds []tea.Cmd
+	end := m.aiBeginBatch() // the IDE is refreshed once, after all files
 	// Newest first: a file created, then written, is deleted once.
 	for i := len(t.Files) - 1; i >= 0; i-- {
 		f := t.Files[i]
@@ -344,6 +346,7 @@ func (m *Model) aiDoUndoTurn(msg int) tea.Cmd {
 		restored = append(restored, rel(f.Path))
 		cmds = append(cmds, cmd)
 	}
+	cmds = append(cmds, end())
 	// Drop the point (and newer ones: they were made on top of it).
 	for i := range p.Turns {
 		if p.Turns[i].Msg == msg {

@@ -54,10 +54,12 @@ type aiState struct {
 	streamSteps int
 	// streamText grows the streamed answer in place (aiTextAppender).
 	streamText aiTextAppender
-	settings   ai.Settings
-	cfg        ai.Config
-	provider   ai.Provider
-	loadErr    string
+	// batch is set while one user action changes many files (aiBatch).
+	batch    *aiBatch
+	settings ai.Settings
+	cfg      ai.Config
+	provider ai.Provider
+	loadErr  string
 	// profiles are the agent profiles (built-ins + profiles.json + the
 	// project's ai-profiles.json, with their load errors); slots holds
 	// one provider per model slot, built on first use (ai_profiles.go).
