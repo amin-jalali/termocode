@@ -1,12 +1,16 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
 	"github.com/amin-jalali/termocode/internal/workspace"
@@ -78,11 +82,7 @@ func webTestCallBg(t *testing.T, m *Model, c *webConn, op, args string) map[stri
 	cmd := m.webRunOp(fn, call)
 	if cmd != nil {
 		if am, ok := cmd().(applyMsg); ok {
-			if next := am(m); next != nil { // the laptop's git refresh
-				if g, ok := next().(GitMsg); ok {
-					m.applyGitSnapshot(g)
-				}
-			}
+			webTestGitRefresh(t, m, am(m))
 		}
 	}
 	for _, f := range webTestNow(t, c) {
@@ -92,6 +92,44 @@ func webTestCallBg(t *testing.T, m *Model, c *webConn, op, args string) map[stri
 	}
 	t.Fatalf("%s gave no answer", op)
 	return nil
+}
+
+// webTestGitRefresh runs the laptop's git refresh among the commands an
+// answer returned (a toast's timer is left alone).
+func webTestGitRefresh(t *testing.T, m *Model, cmd tea.Cmd) {
+	t.Helper()
+	if cmd == nil {
+		return
+	}
+	got := make(chan tea.Msg, 8)
+	var start func(tea.Cmd)
+	n := 0
+	start = func(c tea.Cmd) {
+		if c == nil {
+			return
+		}
+		n++
+		go func() { got <- c() }()
+	}
+	start(cmd)
+	deadline := time.After(10 * time.Second)
+	for n > 0 {
+		select {
+		case msg := <-got:
+			n--
+			switch msg := msg.(type) {
+			case GitMsg:
+				m.applyGitSnapshot(msg)
+				return
+			case tea.BatchMsg:
+				for _, c := range msg {
+					start(c)
+				}
+			}
+		case <-deadline:
+			t.Fatal("no git refresh after the answer")
+		}
+	}
 }
 
 // webTestErr is the code of an err frame ("" for a res).
@@ -297,4 +335,61 @@ func TestStageUnstageRoundTrip(t *testing.T) {
 		}
 	}
 	_ = run
+}
+
+// Spec (WEB-23): git.commit needs a controller and a message (the args
+// rules), something staged and no rebase or merge stopped half-way; it
+// answers the new short hash and the file count, the laptop shows a toast
+// and refreshes, and the Web channel keeps one line (never the message).
+func TestCommitNeedsMessageAndController(t *testing.T) {
+	m := aiTestModel(t)
+	m.output = newOutputStore()
+	webTestHub(t, &m)
+	dir, run := webTestRepo(t, &m)
+	c := webTestSub(t, &m)
+
+	viewer := &webConn{hub: m.web, id: "v-1", role: webproto.RoleViewer, out: newWebQueue(), subs: map[string]*webSub{}}
+	viewer.ctx, viewer.cancel = context.WithCancel(m.web.ctx)
+	viewer.request(&webproto.Req{T: webproto.KindReq, ID: 1, Op: webproto.OpGitCommit, Args: json.RawMessage(`{"message":"x"}`)})
+	if f := webTestNow(t, viewer); len(f) != 1 || webTestErr(f[0]) != "forbidden" {
+		t.Fatalf("viewer commit: %v", f)
+	}
+	for _, msg := range []string{`""`, `"   "`, `"\n\nbody"`} {
+		if _, err := webproto.DecodeArgs(webproto.OpGitCommit, json.RawMessage(`{"message":`+msg+`}`)); err == nil {
+			t.Errorf("message %s decoded", msg)
+		}
+	}
+	if got := webTestErr(webTestCallBg(t, &m, c, webproto.OpGitCommit, `{"message":"nothing"}`)); got != "conflict" {
+		t.Fatalf("nothing staged: %q", got)
+	}
+
+	webTestWrite(t, dir, "a.txt", "ONE\ntwo\n")
+	webTestWrite(t, dir, "b.txt", "b\n")
+	run("add", ".")
+	webTestGitLoad(&m)
+	m.gitRebase.InProgress = true
+	if got := webTestErr(webTestCallBg(t, &m, c, webproto.OpGitCommit, `{"message":"during a rebase"}`)); got != "conflict" {
+		t.Fatalf("during a rebase: %q", got)
+	}
+	m.gitRebase.InProgress = false
+
+	f := webTestCallBg(t, &m, c, webproto.OpGitCommit, `{"message":"fix: the secret plan\n\nmore words"}`)
+	var r webproto.GitCommitted
+	webTestData(t, f, &r)
+	head := strings.TrimSpace(run("rev-parse", "--short", "HEAD"))
+	if r.Hash != head || r.Files != 2 {
+		t.Fatalf("committed %+v, HEAD %s", r, head)
+	}
+	if subj := strings.TrimSpace(run("log", "-1", "--format=%s")); subj != "fix: the secret plan" {
+		t.Errorf("subject %q", subj)
+	}
+	if len(m.gitFiles) != 0 || len(m.gitCommits) == 0 || m.gitCommits[0].Hash != head {
+		t.Errorf("the laptop's git state was not refreshed: %v %v", m.gitFiles, m.gitCommits)
+	}
+	if a := webTestAudit(&m); !strings.Contains(a, "git.commit  2 files") || strings.Contains(a, "secret plan") {
+		t.Errorf("audit:\n%s", a)
+	}
+	if !strings.Contains(webTestToasts(m), "Committed on phone") {
+		t.Errorf("toasts %q", webTestToasts(m))
+	}
 }
