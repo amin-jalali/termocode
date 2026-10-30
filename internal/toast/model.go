@@ -39,6 +39,9 @@ type Toast struct {
 	// Click, when set, is the message a click on the toast sends (the app
 	// hit-tests the cards; see PushClick).
 	Click tea.Msg
+	// Private marks a toast that carries a secret (a one-time link): it
+	// stays on this screen only (no OnPush, no mirror to other screens).
+	Private bool
 
 	// slide is the horizontal slide position: 0 = in place, 1 = fully
 	// off to the right. New toasts slide in, expired ones slide out.
@@ -100,6 +103,11 @@ func (m Model) Push(severity Severity, msg string) (Model, tea.Cmd) {
 // PushDetail enqueues a two-line toast: title row + detail row.
 // Pass detail="" to leave the second line blank.
 func (m Model) PushDetail(severity Severity, title, detail string) (Model, tea.Cmd) {
+	return m.push(severity, title, detail, true)
+}
+
+// push adds a toast; hook: tell OnPush.
+func (m Model) push(severity Severity, title, detail string, hook bool) (Model, tea.Cmd) {
 	m.nextID++
 	t := Toast{
 		ID:        m.nextID,
@@ -111,7 +119,7 @@ func (m Model) PushDetail(severity Severity, title, detail string) (Model, tea.C
 	t.slide.Jump(1)
 	t.slide.Set(0)
 	m.toasts = append(m.toasts, t)
-	if OnPush != nil {
+	if hook && OnPush != nil {
 		combined := title
 		if detail != "" {
 			combined += " — " + detail
@@ -153,6 +161,16 @@ func (m Model) PushClick(severity Severity, title, detail string, click tea.Msg)
 	t := &m.toasts[len(m.toasts)-1]
 	t.Click = click
 	t.ExpiresAt = time.Now().Add(clickLifetime)
+	return m, cmd
+}
+
+// PushPrivate shows a Private toast for life: clickable like PushClick,
+// but OnPush (the error log) never sees it.
+func (m Model) PushPrivate(severity Severity, title, detail string, click tea.Msg, life time.Duration) (Model, tea.Cmd) {
+	m, cmd := m.push(severity, title, detail, false)
+	t := &m.toasts[len(m.toasts)-1]
+	t.Click, t.Private = click, true
+	t.ExpiresAt = time.Now().Add(life)
 	return m, cmd
 }
 
