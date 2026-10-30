@@ -151,7 +151,7 @@ function EditorBody({ more, file }: { more: boolean; file: string | null }) {
 function PanelHead({ children }: { children: ComponentChildren }) {
   return (
     <div class="wb-panel-head">
-      <span class="wb-panel-title" role="tab" aria-selected="true">
+      <span class="wb-panel-title">
         {children}
       </span>
       <span class="wb-panel-actions">
