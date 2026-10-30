@@ -24,7 +24,8 @@
       "@marijn/find-cluster-break": ["./vendor/marijn-find-cluster-break@1.0.4/src/index.d.ts"],
       "crelt": ["./vendor/crelt@1.0.7/index.d.ts"],
       "style-mod": ["./vendor/style-mod@4.1.4/src/style-mod.d.ts"],
-      "w3c-keyname": ["./vendor/w3c-keyname@2.2.8/index.d.ts"]
+      "w3c-keyname": ["./vendor/w3c-keyname@2.2.8/index.d.ts"],
+      "/assets/editor.js": ["./src/editor/main.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"]

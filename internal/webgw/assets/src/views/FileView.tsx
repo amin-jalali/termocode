@@ -10,6 +10,7 @@ import type { BufSnap } from "../../../../webproto/proto";
 import { draft, own, save, saveErr, selection, startEdit, tapRow, undo } from "../lib/edit";
 import { closePath, file, openPath, type FileState } from "../lib/file";
 import { dropHl, hl, rowSegs, wantHl } from "../lib/hl";
+import { editing, liveStatus, session } from "../lib/live";
 import { go } from "../lib/router";
 import { toast } from "../lib/toasts";
 import { link, live, store } from "../session";
@@ -21,6 +22,7 @@ import { Chip } from "../ui/Chip";
 import { Lines, type Flash } from "../ui/Lines";
 import { SkeletonRows } from "../ui/Skeleton";
 import { EditSheet } from "./EditSheet";
+import { doneLive, LiveEditor, saveLive } from "./LiveEditor";
 import { Refused } from "./Placeholder";
 import { View } from "./View";
 
@@ -212,6 +214,7 @@ export function FileView({ path }: { path: string }) {
     return () => {
       closePath(path);
       draft.value = null;
+      editing.value = null;
       dropHl();
     };
   }, [path]);
@@ -224,11 +227,14 @@ export function FileView({ path }: { path: string }) {
   const dir = dirName(path);
   const controller = link.meta.value?.role === "controller";
   const canEdit = controller && !!buf && !buf.readonly && !isGone(store.topic("buf:" + st.buf).value?.data);
-  const edit = () => {
+  const editLines = () => {
     if (!buf || !live.peek()) return;
     const s = selection.peek() ?? topRow(body.current);
     startEdit(path, buf, s.a, s.b);
   };
+  const isEditing = canEdit && editing.value === path && st.kind === "open";
+  const phase = liveStatus.value.phase;
+  const sync = session.value;
   return (
     <View
       tab="files"
@@ -236,7 +242,27 @@ export function FileView({ path }: { path: string }) {
       sub={dir ? <span class="trunc file-path">{dir}</span> : undefined}
       back={{ label: t("tab.files"), onClick: () => go({ tab: "files", rest: "", query: {} }) }}
       bodyRef={body}
+      bodyClass={isEditing ? "is-editing" : undefined}
       actions={
+        isEditing ? (
+          <>
+            <Chip tone={phase === "conflict" || phase === "error" || phase === "gone" ? "amber" : phase === "waiting" ? "amber" : undefined} dot={phase === "sending" ? "busy" : undefined}>
+              {phase === "sending" ? t("live.sending") : phase === "waiting" ? t("live.waiting") : phase === "synced" ? t("live.synced") : t("file.not_saved")}
+            </Chip>
+            <Button kind="quiet" small onClick={() => sync?.undoEd()}>
+              {t("undo")}
+            </Button>
+            <Button kind="quiet" small onClick={() => sync?.redoEd()}>
+              {t("live.redo")}
+            </Button>
+            <Button kind="neutral" small needsLink onClick={saveLive}>
+              {t("file.save")}
+            </Button>
+            <Button kind="primary" small onClick={doneLive}>
+              {t("live.done")}
+            </Button>
+          </>
+        ) : (
         <>
           {buf?.dirty && (
             <Chip tone="amber" dot="busy">
@@ -262,8 +288,13 @@ export function FileView({ path }: { path: string }) {
               {t("undo")}
             </Button>
           )}
+          {canEdit && selection.value && (
+            <Button kind="neutral" small needsLink onClick={editLines}>
+              {t("file.edit_lines")}
+            </Button>
+          )}
           {canEdit && (
-            <Button kind="neutral" small needsLink onClick={edit}>
+            <Button kind="neutral" small needsLink onClick={() => (editing.value = path)}>
               {t("file.edit")}
             </Button>
           )}
@@ -276,9 +307,10 @@ export function FileView({ path }: { path: string }) {
             </Button>
           )}
         </>
+        )
       }
     >
-      <Body st={st} scroller={body} wrap={wrap} canEdit={canEdit} />
+      {isEditing && buf ? <LiveEditor path={path} buf={buf.buf} /> : <Body st={st} scroller={body} wrap={wrap} canEdit={canEdit} />}
     </View>
   );
 }

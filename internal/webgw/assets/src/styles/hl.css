@@ -18,3 +18,11 @@
 .hl-da { color: var(--git-add); }
 .hl-dd { color: var(--git-del); }
 .hl-dm { color: var(--git-mod); }
+
+/* The in-page editor (WEB-39): it fills the view body. */
+.view-body.is-editing { display: flex; flex-direction: column; overflow: hidden; }
+.live { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+.editor-host { flex: 1 1 auto; min-height: 12rem; }
+.live-conflict { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s2) var(--s3); border-bottom: 1px solid var(--border); }
+.live-conflict .file-note { padding: 0; }
+.live-choices { display: flex; flex-wrap: wrap; gap: var(--s2); }

@@ -192,3 +192,19 @@ export function dropHl(): void {
   asked = "";
   hl.value = null;
 }
+
+/** hlRows is the state as rows for the editor: runs as UTF-16 ranges. */
+export function hlRows(st: HlState | null, buf: number): { row: number; text: string; segs: { from: number; to: number; cls: string }[] }[] {
+  if (!st || st.buf !== buf || st.none) return [];
+  const out = [];
+  for (const [row, r] of st.rows) {
+    const segs = [];
+    let at = 0;
+    for (const g of r.segs) {
+      if (g.cls) segs.push({ from: at, to: at + g.text.length, cls: g.cls });
+      at += g.text.length;
+    }
+    if (segs.length) out.push({ row, text: r.text, segs });
+  }
+  return out;
+}

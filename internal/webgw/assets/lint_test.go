@@ -30,7 +30,8 @@ var sourceRules = []rule{
 	{name: "string timer", re: regexp.MustCompile(`set(Timeout|Interval)\s*\(\s*["'\x60]`)},
 	{name: "javascript: URL", re: regexp.MustCompile(`(?i)javascript:`)},
 	{name: "external URL", re: regexp.MustCompile(`(?i)\b(https?|wss?)://`)},
-	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`)},
+	// The one dynamic import loads the editor file (WEB-39), a fixed path.
+	{name: "dynamic import", re: regexp.MustCompile(`\bimport\s*\(`), allow: map[string]bool{"lib/lazy.ts": true}},
 	{name: "remote script/style", re: regexp.MustCompile(`(?i)@import|url\(\s*["']?(https?:)?//`)},
 	// Only the prefs module touches localStorage, and it never holds a secret.
 	{name: "localStorage", re: regexp.MustCompile(`\blocalStorage\b`), allow: map[string]bool{"lib/prefs.ts": true}},
@@ -171,6 +172,9 @@ func TestBundleRunsNoStringCodeAndFetchesNothing(t *testing.T) {
 			t.Fatal(err)
 		}
 		text := namespaceURL.ReplaceAllString(string(b), "")
+		if e.Path == "app.js" { // its one dynamic import: the editor file, a fixed path
+			text = strings.Replace(text, `import("/assets/editor.js")`, "", 1)
+		}
 		for _, r := range []*regexp.Regexp{
 			regexp.MustCompile(`\beval\s*\(`), regexp.MustCompile(`\bnew Function\b|\bFunction\s*\(\s*["'\x60]`),
 			regexp.MustCompile(`document\.write`), regexp.MustCompile(`\bimport\s*\(`),
