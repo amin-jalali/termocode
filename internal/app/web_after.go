@@ -27,9 +27,18 @@ func (h *webHub) webListens(topic string) bool { return h.rings[topic] != nil }
 // webAfterUpdate runs the publishers; nothing when the hub is off. A
 // publisher that panics loses its publish, never the editor.
 func (m *Model) webAfterUpdate(msg tea.Msg) tea.Cmd {
-	if m.web == nil {
+	h := m.web
+	if h == nil {
 		return nil
 	}
+	// The hub runs in every termocode: while nothing is connected or
+	// waiting, the publishers run once more (they forget what they sent)
+	// and then not at all, so an unused hub costs nothing per Update.
+	idle := h.idle()
+	if idle && h.settled {
+		return nil
+	}
+	h.settled = idle
 	var cmds []tea.Cmd
 	for _, f := range webAfterUpdates {
 		if c := m.webAfterOne(f, msg); c != nil {
@@ -37,6 +46,21 @@ func (m *Model) webAfterUpdate(msg tea.Msg) tea.Cmd {
 		}
 	}
 	return tea.Batch(cmds...)
+}
+
+// idle: no connection (browser or gateway), no topic, no file view, no
+// laptop card waiting and no staged upload.
+func (h *webHub) idle() bool {
+	if len(h.live) != 0 || len(h.rings) != 0 || h.files != nil || len(h.asks.line) != 0 || h.asks.shown != nil {
+		return false
+	}
+	h.mu.Lock()
+	conns := len(h.all)
+	h.mu.Unlock()
+	h.ups.mu.Lock()
+	ups := len(h.ups.by)
+	h.ups.mu.Unlock()
+	return conns == 0 && ups == 0
 }
 
 func (m *Model) webAfterOne(f func(*Model, tea.Msg) tea.Cmd, msg tea.Msg) (cmd tea.Cmd) {
