@@ -88,7 +88,7 @@
    shows icons. */
 @media (max-width: 1199.98px) {
   .rt, .tx-acts { display: flex; flex-wrap: wrap; gap: var(--s1); }
-  .rt .tb, .tx-acts .tb { min-height: var(--tap); padding: 0 var(--s2); border: 1px solid var(--border); border-radius: var(--r-chip); background: none; color: var(--blue); font: inherit; font-size: 0.875rem; }
+  .rt .tb, .tx-acts .tb, .dbg-start .tb, .dw-add-wrap .tb, .rp-actions .tb { min-height: var(--tap); padding: 0 var(--s2); border: 1px solid var(--border); border-radius: var(--r-chip); background: none; color: var(--blue); font: inherit; font-size: 0.875rem; }
   .tb[aria-disabled="true"] { opacity: 0.45; }
   .tx { display: flex; flex-direction: column; gap: var(--s2); padding: 0 var(--s4); }
   .tx-sum { display: flex; flex-wrap: wrap; gap: var(--s2); color: var(--text-2); font-size: 0.875rem; }
@@ -105,4 +105,20 @@
   .tx-pending::before { content: "○"; color: var(--muted); }
   .tx-desc { color: var(--muted); font-size: 0.8125rem; }
   .rp-note { color: var(--muted); }
+  .dbg { display: flex; flex-direction: column; gap: var(--s2); padding: 0 var(--s4) var(--s4); }
+  .dbg-head, .dbg-start, .dbg-live { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+  .dbg-cfg { min-height: var(--tap); flex: 1 1 12rem; font: inherit; }
+  .dbg-status, .dbg-hint { width: 100%; color: var(--amber); }
+  .rp-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: var(--s3) 0 0; font-size: 1rem; }
+  .rp-toggle { display: flex; align-items: center; gap: var(--s2); min-height: var(--tap); border: 0; background: none; color: var(--text); font: inherit; font-weight: 600; }
+  .rp-count { color: var(--muted); font-weight: 400; }
+  .rp-actions { display: flex; }
+  .dbg-start [data-act="console"] { display: none; }
+  .dv-row { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--s2); min-height: var(--tap); padding-inline-start: calc(var(--d, 0) * 1rem); border-top: 1px solid var(--border); overflow-wrap: anywhere; }
+  .dv-row.is-picked { background: var(--bg-hover); }
+  .dv-val { font-family: var(--font-mono); font-size: 0.875rem; min-width: 0; }
+  .dv-at, .dv-line { color: var(--muted); font-size: 0.875rem; }
+  .dv-bp-icon::before { content: "●"; color: var(--red); }
+  .dw-input { min-height: var(--tap); width: 100%; font-family: var(--font-mono); }
+  .dbg-ask { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
 }

@@ -412,8 +412,8 @@ function workbenchKeys(e: KeyboardEvent): void {
   if (e.altKey && !mod && (k === "z" || e.code === "KeyZ")) return run(() => (wordWrap.value = !wordWrap.peek()));
   if (e.ctrlKey && k === "tab") return run(() => cycleTab(e.shiftKey ? -1 : 1));
   if (e.ctrlKey && (k === "pagedown" || k === "pageup")) return run(() => cycleTab(k === "pagedown" ? 1 : -1));
-  if (mod && e.shiftKey && !e.altKey && (k === "e" || k === "f" || k === "g")) {
-    const id = k === "e" ? "files" : k === "f" ? "search" : "git";
+  if (mod && e.shiftKey && !e.altKey && (k === "e" || k === "f" || k === "g" || k === "d")) {
+    const id = k === "e" ? "files" : k === "f" ? "search" : k === "d" ? "run" : "git";
     return run(() => openSide(id));
   }
   if (mod && e.shiftKey && !e.altKey && k === "m") return run(toggleProblems);
