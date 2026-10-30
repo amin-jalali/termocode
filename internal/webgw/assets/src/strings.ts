@@ -777,6 +777,12 @@ export const S = {
   "dbg.console_none": "Program output and answers show here.",
   "dbg.eval": "Evaluate in the paused program",
   "dbg.eval_off": "Start a debug session to evaluate.",
+  "dbg.bp_add": "Add Breakpoint",
+  "dbg.bp_cond": "Add Conditional Breakpoint…",
+  "dbg.bp_logpt": "Add Logpoint…",
+  "dbg.bp_at": "Line {n}",
+  "dbg.cond_ph": "Stop when this expression is true",
+  "dbg.log_ph": "Message to log; values go in curly brackets",
 } as const;
 
 export type StringKey = keyof typeof S;
