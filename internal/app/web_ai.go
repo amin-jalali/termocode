@@ -249,7 +249,10 @@ func (m *Model) webAINextEdit(call *webCall) tea.Cmd {
 	if !ok {
 		return nil
 	}
-	none := func() tea.Cmd { call.reply(webproto.AINextEdit{None: true, Old: []string{}, Lines: []string{}}); return nil }
+	none := func() tea.Cmd {
+		call.reply(webproto.AINextEdit{None: true, Old: []string{}, Lines: []string{}})
+		return nil
+	}
 	st := &m.web.ai
 	size := 0
 	for _, l := range b.rows {
