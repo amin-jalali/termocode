@@ -16,7 +16,6 @@ import "./styles/files.css";
 import "./styles/fonts.css";
 import "./styles/hl.css";
 import "./styles/media.css";
-import "./styles/codicons.css";
 import { App } from "./app";
 import { prefs } from "./lib/prefs";
 import { setOnOpen, unseen } from "./lib/notify";
