@@ -57,18 +57,22 @@ jobs:
           sudo tar -xzf /tmp/nvim.tar.gz -C /opt
           echo "/opt/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
 
+      # -p 1: one package at a time. In parallel, go test compiles the
+      # big internal/app test binary while another package measures, and
+      # the guards then count that CPU (search_20k_done 82 vs 54 ms on 4
+      # CPUs locally).
       - name: Perf guards
         run: |
           set -uo pipefail
           : > "$TERMOCODE_PERF_OUT"
           code=0
-          go test -count=1 -run '^TestPerf' -v ./internal/testkit/ || code=1
-          go test -count=1 -run '^TestPerf(Search20kFiles|GitRefresh20k|QuickOpen50k)$' -v ./internal/search/ ./internal/app/ || code=1
-          go test -count=1 -run '^TestPerfContainers' -v ./internal/app/ || code=1
-          go test -count=1 -run '^TestPerfDB' -v ./internal/dbclient/ ./internal/app/ || code=1
-          go test -count=1 -run '^TestPerf' -v ./internal/git/ ./internal/ai/ ./internal/app/ || code=1
-          go test -count=1 -run '^TestPerfHTTP' -v ./internal/app/ || code=1
-          go -C e2e test -tags e2e -count=1 -run '^TestPerf' -v ./... || code=1
+          go test -p 1 -count=1 -run '^TestPerf' -v ./internal/testkit/ || code=1
+          go test -p 1 -count=1 -run '^TestPerf(Search20kFiles|GitRefresh20k|QuickOpen50k)$' -v ./internal/search/ ./internal/app/ || code=1
+          go test -p 1 -count=1 -run '^TestPerfContainers' -v ./internal/app/ || code=1
+          go test -p 1 -count=1 -run '^TestPerfDB' -v ./internal/dbclient/ ./internal/app/ || code=1
+          go test -p 1 -count=1 -run '^TestPerf' -v ./internal/git/ ./internal/ai/ ./internal/app/ || code=1
+          go test -p 1 -count=1 -run '^TestPerfHTTP' -v ./internal/app/ || code=1
+          go -C e2e test -p 1 -tags e2e -count=1 -run '^TestPerf' -v ./... || code=1
           exit $code
 
       - name: Job summary
