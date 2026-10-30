@@ -121,7 +121,7 @@ function OpenBody({ st, scroller, wrap, canEdit }: { st: FileState; scroller: { 
   const gone = isGone(ts?.data);
   const empty = buf.lines.length === 0 || (buf.lines.length === 1 && buf.lines[0] === "");
   return (
-    <div class={`topic${ts?.stale ? " is-stale" : ""}`}>
+    <div class={`topic${ts?.stale ? " is-stale" : ""}`} style={buf.ts ? { "--ts": String(buf.ts) } : undefined}>
       {gone && (
         <p class="file-note" role="status">
           <span>{t("file.gone")}</span>
