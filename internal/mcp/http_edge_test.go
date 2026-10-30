@@ -241,6 +241,21 @@ func TestHTTPStreamResumeCap(t *testing.T) {
 	}
 }
 
+// Spec (MC-5): end cancels the connection before it marks it done; a
+// call cut in that window still ends with ErrClosed, not "context
+// canceled".
+func TestHTTPCallCutWhileClosing(t *testing.T) {
+	s := newRawServer(t, func(w http.ResponseWriter, r *http.Request, _ string) {
+		<-r.Context().Done()
+	})
+	c := newHTTPConn(s.srv.URL, nil, HTTPOptions{}, nil)
+	defer c.end(false)
+	c.cancel() // the first half of end: done is not closed yet
+	if _, err := c.Call(context.Background(), "tools/list", nil); !errors.Is(err, extproc.ErrClosed) {
+		t.Fatalf("err = %v, want ErrClosed", err)
+	}
+}
+
 // Spec (MC-5): a closed connection refuses calls and notifications; a
 // Close during a call ends it with ErrClosed.
 func TestHTTPClosedConnection(t *testing.T) {

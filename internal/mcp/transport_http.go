@@ -344,7 +344,9 @@ func (c *httpConn) Call(ctx context.Context, method string, params any) (json.Ra
 		c.notifyCancelled(idRaw)
 		return nil, ctx.Err()
 	}
-	if err != nil && c.closed() && !errors.Is(err, ErrSessionExpired) {
+	// end cancels c.ctx before it closes done: a call cut by Close can
+	// get here in between, so the cancelled c.ctx counts as closed too.
+	if err != nil && (c.ctx.Err() != nil || c.closed()) && !errors.Is(err, ErrSessionExpired) {
 		return nil, extproc.ErrClosed
 	}
 	return res, err
