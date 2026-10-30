@@ -105,3 +105,58 @@ func TestHubRequestChecks(t *testing.T) {
 		t.Fatalf("ctl op: %v", got)
 	}
 }
+
+// Spec (WEB-6): a panic in a handler is err internal for that request;
+// the editor goes on and the next request works.
+func TestCallPanicIsError(t *testing.T) {
+	r := newWebRig(t, nil)
+	r.hub.ops = map[string]webOpFunc{
+		webproto.OpChatOpen: func(m *Model, call *webCall) tea.Cmd {
+			if call.args.(*webproto.ChatOpenArgs).ID == "boom" {
+				panic("boom")
+			}
+			call.reply("ok")
+			return nil
+		},
+	}
+	c, _ := r.webHello(webTestOpen)
+	c.send(`{"t":"req","id":1,"op":"chat.open","args":{"id":"boom"}}`)
+	if got := r.nextMsg(c); got["t"] != "err" || got["code"] != "internal" || got["id"] != float64(1) {
+		t.Fatalf("panic: %v", got)
+	}
+	c.send(`{"t":"req","id":2,"op":"chat.open","args":{"id":"fine"}}`)
+	if got := r.nextMsg(c); got["t"] != "res" || got["data"] != "ok" {
+		t.Fatalf("after the panic: %v", got)
+	}
+}
+
+// Spec (WEB-6): every request gets exactly one answer: a handler that
+// returns without one is err internal; one that says later answers from
+// another goroutine, and a second answer is dropped.
+func TestCallAnswersOnce(t *testing.T) {
+	r := newWebRig(t, nil)
+	r.hub.ops = map[string]webOpFunc{
+		webproto.OpChatOpen: func(m *Model, call *webCall) tea.Cmd { return nil },
+		webproto.OpChatPin: func(m *Model, call *webCall) tea.Cmd {
+			call.later()
+			go func() { // slow work off Update, answered from there
+				call.reply("later")
+				call.reply("twice")
+			}()
+			return nil
+		},
+	}
+	c, _ := r.webHello(webTestOpen)
+	c.send(`{"t":"req","id":1,"op":"chat.open","args":{"id":"x"}}`)
+	if got := r.nextMsg(c); got["t"] != "err" || got["code"] != "internal" {
+		t.Fatalf("no answer: %v", got)
+	}
+	c.send(`{"t":"req","id":2,"op":"chat.pin","args":{"on":true}}`)
+	if got := r.nextMsg(c); got["t"] != "res" || got["data"] != "later" {
+		t.Fatalf("later: %v", got)
+	}
+	c.send(`{"t":"ping","n":"x"}`)
+	if got := r.nextMsg(c); got["t"] != "pong" {
+		t.Fatalf("a second answer went out: %v", got)
+	}
+}
