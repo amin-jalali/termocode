@@ -93,7 +93,7 @@ func tsExports(src string) map[string]bool {
 // the bare modules it re-exports from.
 func jsExports(src string) (names map[string]bool, from []string) {
 	names = map[string]bool{}
-	for _, m := range regexp.MustCompile(`export\{([^}]*)\}(?:from"([^"]+)")?`).FindAllStringSubmatch(src, -1) {
+	for _, m := range regexp.MustCompile(`export\s*\{([^}]*)\}\s*(?:from\s*["']([^"']+)["'])?`).FindAllStringSubmatch(src, -1) {
 		for _, item := range strings.Split(m[1], ",") {
 			f := strings.Fields(item)
 			if len(f) > 0 {
@@ -101,7 +101,7 @@ func jsExports(src string) (names map[string]bool, from []string) {
 			}
 		}
 	}
-	for _, m := range regexp.MustCompile(`export\*from"([^"]+)"`).FindAllStringSubmatch(src, -1) {
+	for _, m := range regexp.MustCompile(`export\s*\*\s*from\s*["']([^"']+)["']`).FindAllStringSubmatch(src, -1) {
 		from = append(from, m[1])
 	}
 	return names, from
@@ -111,9 +111,10 @@ func jsExports(src string) (names map[string]bool, from []string) {
 // libraries. This list is a cheap check that runs without tsc; the vendored
 // .d.ts files and TestTypeScriptTypeChecks are the real one.
 var vendorTypes = map[string]map[string]bool{
-	"preact":          {"VNode": true, "ComponentChildren": true, "ComponentType": true, "FunctionComponent": true, "JSX": true, "Ref": true},
-	"preact/hooks":    {"MutableRef": true},
-	"@preact/signals": {"ReadonlySignal": true, "Signal": true},
+	"preact":           {"VNode": true, "ComponentChildren": true, "ComponentType": true, "FunctionComponent": true, "JSX": true, "Ref": true},
+	"preact/hooks":     {"MutableRef": true},
+	"@preact/signals":  {"ReadonlySignal": true, "Signal": true},
+	"@codemirror/view": {"DecorationSet": true},
 }
 
 // resolveTS finds the file a relative import names.
