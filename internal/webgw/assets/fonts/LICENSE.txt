@@ -7,7 +7,7 @@ Each file holds one glyph set, under the license of that set:
   nf-powerline.woff2     Powerline Symbols, Powerline Extra Symbols   MIT
   nf-seti.woff2          Seti-UI, Nerd Fonts custom icons             MIT
   nf-devicons.woff2      Devicons                                     MIT
-  nf-fontawesome.woff2   Font Awesome (Fonticons, Inc.)               SIL OFL 1.1
+  nf-fontawesome.woff2   Font Awesome Free (Fonticons, Inc.)          SIL OFL 1.1
   nf-fa-extension.woff2  Font Awesome Extension                       MIT
   nf-octicons.woff2      Octicons (GitHub Inc.)                       MIT
   nf-logos.woff2         Font Logos                                   The Unlicense
@@ -38,8 +38,14 @@ SOFTWARE.
 
 ---- Font Awesome glyphs (SIL Open Font License 1.1) ----
 
-Copyright (c) 2012-2024 Fonticons, Inc. (https://fontawesome.com),
-with Reserved Font Name "Font Awesome". This subset does not use that name.
+Copyright (c) 2023 Fonticons, Inc. (https://fontawesome.com)
+with Reserved Font Name: "Font Awesome".
+
+This subset is a Modified Version. It does not use the Reserved Font Name:
+its family name is "termocode symbols". The glyphs are Font Awesome Free
+6.5.1 as packaged in Nerd Fonts 3.4.0. Font Awesome Free licenses the icons
+in web and desktop font files under the SIL OFL 1.1 (its SVG and JS icons are
+CC BY 4.0). Nerd Fonts credits this set as "Font Awesome" (Fonticons, Inc.).
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
@@ -135,13 +141,27 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
 ---- The other glyph sets ----
 
-Powerline Symbols: Copyright (c) 2013 Kim Silkebækken, MIT.
-Powerline Extra Symbols: Copyright (c) 2015 Ryan L McIntyre, MIT.
-Seti-UI: Copyright (c) 2014 Jesse Weed, MIT.
-Devicons: Copyright (c) 2014 Theodore Vorillas, MIT.
-Font Awesome Extension: Copyright (c) 2018 Julien Deniau, MIT.
-Octicons: Copyright (c) 2012-2016 GitHub, Inc., MIT.
-Font Logos: by Lukas W, released into the public domain (The Unlicense).
+Powerline Symbols: Copyright 2013 Kim Silkebækken and other contributors
+  (https://github.com/powerline/powerline), MIT.
+Powerline Extra Symbols: Copyright (c) 2016 Ryan L McIntyre
+  (https://github.com/ryanoasis/powerline-extra-symbols), MIT.
+Seti-UI: Copyright (c) 2014 Jesse Weed (https://github.com/jesseweed/seti-ui), MIT.
+Nerd Fonts custom icons: Copyright (c) 2014 Ryan L McIntyre, MIT (see above).
+Devicons: Copyright (c) 2015 konpa (https://github.com/devicons/devicon,
+  v2.16.0), MIT. A few glyphs come from https://github.com/vorillaz/devicons,
+  also MIT.
+Font Awesome Extension: Copyright (c) 2017 Andre Luiz Gava
+  (https://github.com/AndreLZGava/font-awesome-extension), MIT.
+Octicons: Copyright (c) 2023 GitHub Inc. (https://github.com/primer/octicons;
+  the copy in Nerd Fonts 3.4.0), MIT.
+Font Logos: https://github.com/Lukas-W/font-logos, released into the public
+  domain under The Unlicense (https://unlicense.org).
 
 The MIT terms are the ones printed above for Nerd Fonts, with each
-holder's own name.
+holder's own name and year in the copyright line.
+
+The Unlicense (Font Logos): This is free and unencumbered software released
+into the public domain. Anyone is free to copy, modify, publish, use,
+compile, sell, or distribute this software, either in source code form or as
+a compiled binary, for any purpose, commercial or non-commercial, and by any
+means. For more information, please refer to <http://unlicense.org>
