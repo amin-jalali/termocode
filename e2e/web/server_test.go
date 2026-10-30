@@ -63,7 +63,7 @@ func StartServer(t *testing.T) *Server {
 	return s
 }
 
-// LaunchURL opens a fresh one-time link, as "Web: Open in Browser" does.
+// LaunchURL opens a fresh one-time link, as "Web: Start Panel" does.
 func (s *Server) LaunchURL(t *testing.T) (url, secret string) {
 	t.Helper()
 	secret, err := s.auth.NewSecret()
