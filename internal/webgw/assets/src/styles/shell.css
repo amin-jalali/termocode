@@ -3,6 +3,7 @@
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto auto;
   grid-template-columns: minmax(0, 1fr); /* never wider than the screen (P2) */
+  container: page / inline-size;
   height: 100dvh;
   overflow: hidden;
 }
@@ -11,7 +12,6 @@
 .strip {
   --pill-calm: rgba(0, 0, 0, 0.26);
   --pill-ai: #5b2fa8;
-  --pill-dirty: #6e5200;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -39,15 +39,18 @@
   transition: background var(--t-fast);
 }
 .brand.tint-ai { background: var(--pill-ai); }
-.brand.tint-dirty { background: var(--pill-dirty); }
+/* Unsaved work: the TUI puts a dot inside the pill. */
+.brand.tint-dirty::after { content: "●"; margin-inline-start: 0.375rem; color: #ffd75f; font-size: 0.625rem; }
 .strip-item { display: inline-flex; align-items: center; gap: 0.3125rem; white-space: nowrap; min-width: 0; }
 .strip-item.branch { max-width: 12rem; }
 .web-n { display: none; }
-@media (max-width: 719px) {
+/* Container query, so the kit's 390 px frames show the phone strip too. */
+@container page (max-width: 719px) {
   .strip { column-gap: 0.625rem; }
   .strip-item.branch { max-width: 7.5rem; }
   .web-label { display: none; }
   .strip-item.dirty { display: none; } /* the Git tab badge shows it */
+  .strip-item.rtt-text { display: none; } /* the dot's colour says it */
   .web-n { display: inline; }
 }
 .strip-item.ai .star { color: var(--ai-on-strip); }
@@ -249,3 +252,9 @@
 @media (min-width: 720px) and (max-width: 1199px) {
   .toasts { inset-inline-start: auto; width: 22rem; }
 }
+.att-mark { font-family: var(--font-mono); color: var(--muted); }
+.attention.att-run_failed { border-color: var(--red); }
+.attention.att-run_failed .att-mark { color: var(--red); }
+.attention.att-run_done, .attention.att-task_done { border-color: var(--green); }
+.attention.att-run_done .att-mark, .attention.att-task_done .att-mark { color: var(--green); }
+.attention.att-waiting_laptop { border-color: var(--amber); }

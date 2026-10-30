@@ -4,6 +4,7 @@
 import { h } from "preact";
 import { setPref, prefs } from "../lib/prefs";
 import { link, status } from "../session";
+import type { StatusView } from "../state/status";
 import { t } from "../strings";
 import { IconBranch, IconMoon, IconSun } from "./icons";
 
@@ -43,11 +44,15 @@ function ThemeToggle() {
   );
 }
 
+/** Strip draws the live status. */
 export function Strip() {
-  const s = status.value;
-  const state = link.state.value;
-  const rtt = link.rtt.value;
-  const level = state === "online" ? rttLevel(rtt) : "none";
+  return <StripView s={status.value} online={link.state.value === "online"} rtt={link.rtt.value} />;
+}
+
+/** StripView draws a given status (the kit shows every state with it). */
+export function StripView({ s, online, rtt }: { s: StatusView; online: boolean; rtt: number | null }) {
+  const level = online ? rttLevel(rtt) : "none";
+  const state = online ? "online" : "offline";
   const ai = s.cardsWaiting > 0 ? "waiting" : s.aiBusy ? "working" : "idle";
   const tint = s.aiBusy ? "ai" : s.dirty > 0 ? "dirty" : "calm";
   return (

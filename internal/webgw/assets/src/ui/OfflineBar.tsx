@@ -1,7 +1,7 @@
 // The offline bar under the strip (web UX 3.6). Lost: amber, a countdown
 // and Try now. Back: green for 2 s. Final: the session is over; the text
 // says why and that the work goes on on the laptop; no retry.
-import { h } from "preact";
+import { h, type ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { useNow } from "../lib/time";
 import { link } from "../session";
@@ -38,6 +38,21 @@ export function finalText(code: number | null): { main: StringKey; sub?: StringK
   }
 }
 
+export type BarKind = "lost" | "back" | "final";
+
+/** Bar is one line under the strip: amber lost, green back, red final. */
+export function Bar({ kind, text, sub, action }: { kind: BarKind; text: string; sub?: string; action?: ComponentChildren }) {
+  return (
+    <div class={`bar bar-${kind}`} role={kind === "final" ? "alert" : "status"}>
+      <span class="bar-text">
+        {text}
+        {sub && <span class="bar-sub"> {sub}</span>}
+      </span>
+      {action}
+    </div>
+  );
+}
+
 const SHOW_AFTER_MS = 1000;
 const BACK_FOR_MS = 2000;
 
@@ -57,36 +72,36 @@ export function OfflineBar() {
   if (state === "final") {
     const f = finalText(link.finalCode.value);
     return (
-      <div class="bar bar-final" role="alert">
-        <span class="bar-text">
-          {t(f.main)}
-          {f.sub && <span class="bar-sub"> {t(f.sub)}</span>}
-        </span>
-        {f.reload && (
-          <Button small onClick={() => location.reload()}>
-            {t("e.reload")}
-          </Button>
-        )}
-      </div>
+      <Bar
+        kind="final"
+        text={t(f.main)}
+        sub={f.sub && t(f.sub)}
+        action={
+          f.reload && (
+            <Button small onClick={() => location.reload()}>
+              {t("e.reload")}
+            </Button>
+          )
+        }
+      />
     );
   }
   if (state === "offline" && down !== null && now - down >= SHOW_AFTER_MS) {
     const s = Math.max(0, Math.ceil((link.retryAt.value - now) / 1000));
     return (
-      <div class="bar bar-lost" role="status">
-        <span class="bar-text">{s > 0 ? t("offline.lost", { s }) : t("offline.trying")}</span>
-        <Button small onClick={() => link.tryNow()}>
-          {t("offline.try")}
-        </Button>
-      </div>
+      <Bar
+        kind="lost"
+        text={s > 0 ? t("offline.lost", { s }) : t("offline.trying")}
+        action={
+          <Button small onClick={() => link.tryNow()}>
+            {t("offline.try")}
+          </Button>
+        }
+      />
     );
   }
   if (state === "online" && showBack && back !== null && back >= SHOW_AFTER_MS) {
-    return (
-      <div class="bar bar-back" role="status">
-        <span class="bar-text">{t("offline.back", { s: Math.round(back / 1000) })}</span>
-      </div>
-    );
+    return <Bar kind="back" text={t("offline.back", { s: Math.round(back / 1000) })} />;
   }
   return null;
 }

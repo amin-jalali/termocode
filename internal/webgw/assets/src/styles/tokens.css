@@ -4,7 +4,8 @@
    numbers are checked by tokens_test.go (TestWebTokensContrast). */
 
 /* tokens:dark */
-:root {
+:root,
+.theme-dark {
   --bg: #1c1c1c;
   --bg-2: #303030;
   --bg-panel: #121212;
@@ -37,8 +38,9 @@
   color-scheme: dark;
 }
 
-/* tokens:light */
-:root[data-theme="light"] {
+/* tokens:light (.theme-light scopes it to a box, for the kit page) */
+:root[data-theme="light"],
+.theme-light {
   --bg: #fafaf8;
   --bg-2: #f0f0ee;
   --bg-panel: #ffffff;
