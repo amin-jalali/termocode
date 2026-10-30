@@ -159,6 +159,10 @@ export interface SearchRunArgs {
   max?: number;
 }
 
+export interface LabelArgs {
+  label: string;
+}
+
 export interface EmptyArgs {
 }
 
@@ -210,10 +214,6 @@ export interface GitHunkArgs {
 
 export interface GitCommitArgs {
   message: string;
-}
-
-export interface LabelArgs {
-  label: string;
 }
 
 export interface KeyArgs {
@@ -575,6 +575,49 @@ export interface GitCommit {
   unpushed?: boolean;
 }
 
+export interface TasksSnap {
+  tasks: TaskItem[];
+  error?: string;
+}
+
+export interface TaskItem {
+  label: string;
+  group?: string;
+  default?: boolean;
+  source: string;
+  detail?: string;
+  last?: TaskLast;
+}
+
+export interface TaskLast {
+  state: "running" | "ok" | "failed";
+  code?: number;
+  when: number;
+  buf: number;
+}
+
+export interface RunsSnap {
+  runs: RunItem[];
+}
+
+export interface RunItem {
+  key: string;
+  title: string;
+  chat?: string;
+  profile?: string;
+  state: "running" | "stalled" | "pausing" | "paused" | "resumable" | "done" | "failed" | "cancelled";
+  why?: string;
+  step: number;
+  steps: number;
+  step_title?: string;
+  started: number;
+  elapsed_ms: number;
+  live?: boolean;
+  cost_usd?: number;
+  needs_you?: boolean;
+  can?: string[];
+}
+
 export interface Answered {
   id: string;
   by?: string;
@@ -664,6 +707,14 @@ export interface SearchSummary {
   stopped?: "stopped" | "replaced" | "timeout" | "limit";
 }
 
+export interface TaskTail {
+  buf: number;
+  lines: string[];
+  truncated?: boolean;
+  running?: boolean;
+  code?: number;
+}
+
 export interface ChatRef {
   id: string;
 }
@@ -686,6 +737,10 @@ export interface AskRef {
   card: string;
 }
 
+export interface TaskStarted {
+  buf: number;
+}
+
 export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;
 export type ServerMsg = Delta | ErrMsg | Event | Meta | Pong | Res | Resync | ServerBye | Snap;
 
@@ -701,6 +756,7 @@ export interface OpArgs {
   "git.diff": GitDiffArgs;
   "git.show": GitShowArgs;
   "search.run": SearchRunArgs;
+  "tasks.tail": LabelArgs;
   "search.stop": EmptyArgs;
   "search.open": SearchOpenArgs;
   "chat.send": ChatSendArgs;
@@ -745,6 +801,8 @@ export interface TopicData {
   "terms": { snap: TermsSnap; delta: TermsSnap };
   "term": { snap: TermSnap; delta: LinesDelta | TickDelta | TermResetDelta | TermModeDelta | GoneDelta };
   "git": { snap: GitSnap; delta: GitSnap };
+  "tasks": { snap: TasksSnap; delta: TasksSnap };
+  "runs": { snap: RunsSnap; delta: RunsSnap };
 }
 
 // The data of an ev message, by kind.
@@ -765,6 +823,7 @@ export interface OpResult {
   "git.diff": GitDiff;
   "git.show": GitDiff;
   "search.run": SearchSummary;
+  "tasks.tail": TaskTail;
   "chat.send": ChatRef;
   "chat.new": ChatRef;
   "buf.set_text": EditRes;
@@ -773,4 +832,5 @@ export interface OpResult {
   "term.new": TermNewRes;
   "git.commit": GitCommitted;
   "git.discard": AskRef;
+  "tasks.run": TaskStarted;
 }
