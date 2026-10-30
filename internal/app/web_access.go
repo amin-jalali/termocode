@@ -92,7 +92,7 @@ func (m *Model) openWebPair(guest bool) tea.Cmd {
 	}
 	st := m.webPanel
 	if st == nil || !st.up || m.web == nil {
-		return m.webToast(toast.Warn, "Start the web panel first: Web: Start Panel.")
+		return m.webToast(toast.Warn, "Start the web panel first: Web: Open in Browser.")
 	}
 	if st.url == "" {
 		return m.webToast(toast.Warn, `Pairing a device needs tailnet mode. Set "web_listen": "tailnet" in config.json, then start the panel again.`)

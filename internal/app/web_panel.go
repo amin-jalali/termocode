@@ -245,7 +245,7 @@ func (m *Model) webDeliverLink(open, copyLink bool) tea.Cmd {
 	case copyLink:
 		// Never in an nvim register: the link would stay there (WEB-F1).
 		if writeSystemClipboard(link) == clipFailed {
-			return m.webToast(toast.Warn, "Could not copy the link. Use Web: Start Panel to open it in a browser.")
+			return m.webToast(toast.Warn, "Could not copy the link. Use Web: Open in Browser.")
 		}
 		return m.webToast(toast.Info, "Link copied. "+webLinkLife+where)
 	case open:
@@ -302,7 +302,7 @@ func (m *Model) webOpenLink(link string) error {
 func (m *Model) webNewLink(open, copyLink bool) tea.Cmd {
 	st := m.webPanel
 	if st == nil || !st.up || m.web == nil {
-		return m.webToast(toast.Warn, "The web panel is not running. Use Web: Start Panel.")
+		return m.webToast(toast.Warn, "The web panel is not running. Use Web: Open in Browser.")
 	}
 	plain, err := m.web.newLink()
 	if err != nil {
