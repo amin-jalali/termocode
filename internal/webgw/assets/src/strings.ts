@@ -783,6 +783,13 @@ export const S = {
   "dbg.bp_at": "Line {n}",
   "dbg.cond_ph": "Stop when this expression is true",
   "dbg.log_ph": "Message to log; values go in curly brackets",
+  "act.services": "Services",
+  "svc.compose": "Docker Compose",
+  "svc.local": "Local commands",
+  "svc.none": "This project has no services: no compose file, Procfile or services.json.",
+  "svc.asked": "The laptop asks before this command runs. Answer there.",
+  "svc.stop_q": "Stop {name} on the laptop? What runs in it ends.",
+  "svc.logs_none": "No log lines yet.",
 } as const;
 
 export type StringKey = keyof typeof S;

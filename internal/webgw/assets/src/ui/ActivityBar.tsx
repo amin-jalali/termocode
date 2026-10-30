@@ -36,6 +36,7 @@ export const ACTIVITIES: readonly Item[] = [
   { id: "testing", label: "act.testing", icon: "beaker", side: true, to: () => more("testing") },
   { id: "db", label: "more.db", icon: "database", side: true, to: () => more("db") },
   { id: "containers", label: "more.containers", icon: "package", side: true, to: () => more("containers") },
+  { id: "services", label: "act.services", icon: "server-process", side: true, to: () => more("services") },
   { id: "mcp", label: "more.mcp", icon: "plug", side: true, to: () => more("mcp") },
   { id: "chat", label: "tab.chat", icon: "comment-discussion", side: false, to: () => ({ tab: "chat", rest: "", query: {} }) },
 ];

@@ -2,9 +2,11 @@
 // a section that folds (the side bar's VARIABLES, WATCH …), a request
 // that toasts its failure, and whether this page may act.
 import { h, type ComponentChildren } from "preact";
+import { useEffect, useRef } from "preact/hooks";
 import { link, live } from "../../session";
 import { Cod } from "../../ui/icons";
 import { gitFailed } from "../git/errors";
+import { t } from "../../strings";
 
 /** canAct: this page controls the laptop (a viewer only looks). */
 export function canAct(): boolean {
@@ -64,5 +66,23 @@ export function Note({ children }: { children: ComponentChildren }) {
     <p class="rp-note" dir="auto">
       {children}
     </p>
+  );
+}
+
+/** Confirm asks in the row before an action: the question, Cancel
+ * (first and focused; Enter and Esc never do the action) and the verb. */
+export function Confirm({ text, verb, onYes, onNo, danger }: { text: string; verb: string; onYes: () => void; onNo: () => void; danger?: boolean }) {
+  const safe = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => safe.current?.focus(), []);
+  return (
+    <span class="dbg-ask" role="group" aria-label={text} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.key === "Escape" && onNo()}>
+      <span>{text}</span>
+      <button type="button" class="btn btn-neutral btn-small" ref={safe} onClick={onNo}>
+        {t("cancel")}
+      </button>
+      <button type="button" class={`btn ${danger ? "btn-danger" : "btn-primary"} btn-small`} onClick={onYes}>
+        {verb}
+      </button>
+    </span>
   );
 }
