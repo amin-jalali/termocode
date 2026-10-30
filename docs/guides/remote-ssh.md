@@ -222,6 +222,20 @@ AI keys and other secrets need a safe place on the server too.
 
 See [Set up AI](ai-setup.md#which-store-is-used) for the details.
 
+## The web panel
+
+The web panel shows your files, chats and terminals in a browser tab on
+this computer.
+
+- **Web: Start Panel** opens a card first. It says what the panel can do.
+  Anyone who controls the browser tab can run commands as you.
+- The panel listens only on this computer (127.0.0.1), never on the
+  network. **Web: Copy Link** copies a new one-time link.
+- While the panel runs, the status bar shows a web chip. Click it, or use
+  **Web: Stop Panel**, to stop it. It also stops by itself after some
+  minutes without use.
+- The AI can never start the panel or change its settings.
+
 ## Security
 
 Sessions listen on a unix socket only, never on the network. The socket
