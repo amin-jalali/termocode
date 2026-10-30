@@ -1,0 +1,155 @@
+{
+  "topic": "services",
+  "snap0": {
+    "compose_files": [
+      "compose.yaml"
+    ],
+    "project": "shop",
+    "services": [
+      {
+        "health": "healthy",
+        "image": "postgres:17",
+        "kind": "compose",
+        "name": "db",
+        "ports": [
+          {
+            "open": "yes",
+            "proto": "tcp",
+            "published": 5432,
+            "target": 5432
+          }
+        ],
+        "since": 1700000000000,
+        "source": "compose.yaml:3",
+        "state": "healthy",
+        "status": "Up 2 hours (healthy)"
+      },
+      {
+        "exit": 1,
+        "kind": "compose",
+        "name": "api",
+        "ports": [],
+        "source": "compose.yaml:9",
+        "state": "exited",
+        "status": "Exited (1) 3 minutes ago"
+      },
+      {
+        "command": "npm run dev",
+        "kind": "local",
+        "name": "web",
+        "ports": [
+          {
+            "published": 3000,
+            "target": 3000
+          }
+        ],
+        "since": 1700000000000,
+        "source": "Procfile",
+        "state": "running"
+      }
+    ],
+    "state": "ready"
+  },
+  "deltas": [
+    {
+      "compose_files": [
+        "compose.yaml"
+      ],
+      "project": "shop",
+      "services": [
+        {
+          "health": "healthy",
+          "image": "postgres:17",
+          "kind": "compose",
+          "name": "db",
+          "ports": [
+            {
+              "open": "yes",
+              "proto": "tcp",
+              "published": 5432,
+              "target": 5432
+            }
+          ],
+          "since": 1700000000000,
+          "source": "compose.yaml:3",
+          "state": "healthy",
+          "status": "Up 2 hours (healthy)"
+        },
+        {
+          "kind": "compose",
+          "name": "api",
+          "ports": [],
+          "since": 1700000100000,
+          "source": "compose.yaml:9",
+          "state": "running",
+          "status": "Up 1 second"
+        },
+        {
+          "command": "npm run dev",
+          "kind": "local",
+          "name": "web",
+          "ports": [
+            {
+              "published": 3000,
+              "target": 3000
+            }
+          ],
+          "since": 1700000000000,
+          "source": "Procfile",
+          "state": "running"
+        }
+      ],
+      "state": "ready"
+    }
+  ],
+  "snapn": {
+    "state": "ready",
+    "project": "shop",
+    "compose_files": [
+      "compose.yaml"
+    ],
+    "services": [
+      {
+        "name": "db",
+        "kind": "compose",
+        "state": "healthy",
+        "health": "healthy",
+        "image": "postgres:17",
+        "source": "compose.yaml:3",
+        "status": "Up 2 hours (healthy)",
+        "since": 1700000000000,
+        "ports": [
+          {
+            "published": 5432,
+            "target": 5432,
+            "proto": "tcp",
+            "open": "yes"
+          }
+        ]
+      },
+      {
+        "name": "api",
+        "kind": "compose",
+        "state": "running",
+        "source": "compose.yaml:9",
+        "status": "Up 1 second",
+        "since": 1700000100000,
+        "ports": []
+      },
+      {
+        "name": "web",
+        "kind": "local",
+        "state": "running",
+        "command": "npm run dev",
+        "source": "Procfile",
+        "since": 1700000000000,
+        "ports": [
+          {
+            "published": 3000,
+            "target": 3000
+          }
+        ]
+      }
+    ]
+  }
+}

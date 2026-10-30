@@ -36,8 +36,9 @@ var (
 
 // webRunPub is what the Run, Test and Debug topics sent last (Update only).
 type webRunPub struct {
-	tests webTestsPub
-	debug webDebugPub
+	tests    webTestsPub
+	debug    webDebugPub
+	services webServicesPub
 }
 
 type webTestsPub struct {
