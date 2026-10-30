@@ -35,13 +35,15 @@ const (
 	EvMaxStop       EventKind = "max_stop"       // stopped at the max lifetime
 	EvKillSwitch    EventKind = "kill_switch"    // the user stopped the panel
 	EvOp            EventKind = "op"             // a browser request (Op, OK, Summary)
+	EvFunnelStop    EventKind = "funnel_stop"    // stopped: the tailnet port became public
+	EvServeGone     EventKind = "serve_gone"     // stopped: tailscale serve ended
 )
 
 // AllEventKinds lists every kind, for tests and docs.
 var AllEventKinds = []EventKind{
 	EvStart, EvStop, EvAuthOK, EvAuthFail, EvSecretBurned, EvRateLimited,
 	EvConnect, EvDisconnect, EvProtoError, EvOriginBlocked, EvHostBlocked,
-	EvIdleStop, EvMaxStop, EvKillSwitch, EvOp,
+	EvIdleStop, EvMaxStop, EvKillSwitch, EvOp, EvFunnelStop, EvServeGone,
 }
 
 // Event is one audit line. It has no field for a secret, a token, a
