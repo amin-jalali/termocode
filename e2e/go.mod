@@ -7,7 +7,7 @@ require (
 	github.com/charmbracelet/x/vt v0.0.0-20261011004359-2acd7e345453
 	github.com/chromedp/cdproto v0.157.8
 	github.com/chromedp/chromedp v0.21.0
-	github.com/coder/websocket v1.8.14
+	github.com/coder/websocket v1.8.15
 	github.com/creack/pty v1.1.24
 )
 
