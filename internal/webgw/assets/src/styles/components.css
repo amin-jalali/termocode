@@ -145,12 +145,14 @@ button.chip:hover { background: var(--bg-hover); }
   unicode-bidi: isolate;
   direction: ltr;
   text-align: left;
-  tab-size: 4;
+  tab-size: var(--ts, 4);
 }
 .trow { grid-template-columns: 1.25ch minmax(0, 1fr); background: var(--bg-panel); color: var(--text); padding: 0 var(--s2); }
 /* A row the browser wraps hangs its rest 2 columns in, so one row still
-   reads as one; ligatures off so code shows the characters it has. */
-.trow-text, .crow-text, .drow-text { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; padding-inline-start: 2ch; text-indent: -2ch; }
+   reads as one ("hanging": the first line starts at the edge, so tab
+   stops stay where the laptop's editor has them); ligatures off so code
+   shows the characters it has. */
+.trow-text, .crow-text, .drow-text { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; text-indent: 2ch hanging; }
 .trow, .crow, .drow, .card-subject, .chip { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
 .wrap-mark { color: var(--dim); user-select: none; }
 .crow { grid-template-columns: var(--nw, 4ch) 1.5ch minmax(0, 1fr); padding-inline-end: var(--s2); }
