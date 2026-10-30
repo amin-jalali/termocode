@@ -10,7 +10,7 @@ import type { BufSnap } from "../../../../webproto/proto";
 import { layout } from "../lib/layout";
 import { wordWrap } from "../lib/workbench";
 import { modKey } from "../lib/platform";
-import { IconLaptop, IconPencil, IconRedo, IconRows, IconSave, IconUndo, IconWrap } from "../ui/icons";
+import { FileIcon, IconLaptop, IconPencil, IconRedo, IconRows, IconSave, IconUndo, IconWrap } from "../ui/icons";
 import { draft, own, save, saveErr, selection, startEdit, tapRow, undo } from "../lib/edit";
 import { closePath, file, openPath, type FileState } from "../lib/file";
 import { dropHl, hl, rowSegs, wantHl } from "../lib/hl";
@@ -86,7 +86,7 @@ function topRow(sc: HTMLElement | null): { a: number; b: number } {
 }
 
 /** Crumbs is the folder path as a breadcrumb: cmd › covreport. */
-function Crumbs({ dir }: { dir: string }) {
+function Crumbs({ dir, file }: { dir: string; file: string }) {
   const parts = dir.split("/");
   return (
     <span class="trunc file-path crumbs" title={dir}>
@@ -103,6 +103,7 @@ function Crumbs({ dir }: { dir: string }) {
       <span class="crumb-sep" aria-hidden="true">
         ›
       </span>
+      {layout.value === "desktop" && <FileIcon path={file} />}
     </span>
   );
 }
@@ -276,7 +277,7 @@ export function FileView({ path }: { path: string }) {
     <View
       tab="files"
       title={baseName(path)}
-      sub={dir ? <Crumbs dir={dir} /> : undefined}
+      sub={dir ? <Crumbs dir={dir} file={path} /> : undefined}
       back={desk ? undefined : { label: t("tab.files"), onClick: () => go({ tab: "files", rest: "", query: {} }) }}
       bodyRef={body}
       bodyClass={isEditing ? "is-editing" : undefined}

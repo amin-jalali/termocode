@@ -8,7 +8,7 @@ import { signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
 import { FRAME_PATH, type FrameOpts, type FromFrame, type ToFrame } from "../monaco/protocol";
 import { dict } from "../state/dict";
-import { cursorAt } from "./workbench";
+import { cursorAt, quick } from "./workbench";
 
 /** COLOR_TOKENS are the workbench colours the frame paints with. */
 const COLOR_TOKENS = [
@@ -92,7 +92,13 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
         ready = true;
         const c = frameColors(parent);
         frame.contentWindow?.postMessage({ t: "init", doc: text, label: host.label, readOnly: host.readOnly, wrap: host.wrap, tabSize: host.tabSize, insertSpaces: host.insertSpaces, ...c } satisfies ToFrame, location.origin);
-        for (const q of queue.splice(0)) frame.contentWindow?.postMessage(q, location.origin);
+        for (const q of queue.splice(0)) {
+          // A focus asked before the frame was ready does not take the
+          // keyboard from something the user went to meanwhile.
+          const away = document.activeElement !== null && document.activeElement !== frame && document.activeElement !== document.body;
+          if (q.t === "focus" && (away || quick.peek())) continue;
+          frame.contentWindow?.postMessage(q, location.origin);
+        }
         return;
       }
       case "text":
@@ -147,6 +153,7 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     canUndo: () => canUndo,
     canRedo: () => canRedo,
     focus() {
+      if (quick.peek()) return; // the quick input keeps the keyboard
       frame.focus();
       send({ t: "focus" });
     },

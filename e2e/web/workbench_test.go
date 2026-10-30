@@ -74,8 +74,11 @@ func TestWorkbenchLayoutTabsAndStatusBar(t *testing.T) {
 			t.Errorf("status bar %s = %q, want %q", sel, got, want)
 		}
 	}
-	if got := p.Text(".wb-editor .crumbs"); got != "src›" {
-		t.Errorf("breadcrumb %q, want the folder then a separator", got)
+	if got := Eval[string](p, `[...document.querySelectorAll(".wb-editor .crumbs .crumb")].map((e) => e.textContent).join("/")`); got != "src" {
+		t.Errorf("breadcrumb folders %q, want src", got)
+	}
+	if !Eval[bool](p, `document.querySelector(".wb-editor .crumbs .ficon.fi-blue") !== null`) {
+		t.Error("the breadcrumb has no Go file icon before the name")
 	}
 	if Eval[bool](p, filesView+`.querySelector(".head-back") !== null`) {
 		t.Error("the desktop file view has a phone back button")
