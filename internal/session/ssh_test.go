@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -29,6 +30,17 @@ func fakeRemote() int {
 	}
 	fmt.Print(linkHello)
 	fmt.Printf("remote-args:%s\r\n", strings.Join(os.Args[1:], " "))
+	for _, a := range os.Args[1:] {
+		if v, ok := strings.CutPrefix(a, "--web="); ok {
+			// The web hand-off, split in two writes like a real stream.
+			port, _ := strconv.Atoi(v)
+			apc := WebHandoffAPC(WebHandoff{Port: port, Sock: "/tmp/fake.webhttp.sock", Secret: fakeWebSecret})
+			fmt.Print("web:" + apc[:9])
+			_ = os.Stdout.Sync()
+			time.Sleep(20 * time.Millisecond)
+			fmt.Print(apc[9:] + ":done\r\n")
+		}
+	}
 	pings := newSeqFilter(linkPing)
 	buf := make([]byte, 4096)
 	for {
@@ -61,6 +73,9 @@ func fakeRemote() int {
 		}
 	}
 }
+
+// fakeWebSecret is the far side's launch secret in the --web tests.
+const fakeWebSecret = "fakeSecret-0123456789_abcdefghijklmnopqr"
 
 // fakeSSH is a folder with an ssh script that logs its arguments
 // (argv, one line per run), counts runs, fails like an unreachable host
@@ -301,5 +316,33 @@ func TestRunSSHGoneWhileReconnecting(t *testing.T) {
 	i := strings.Index(got, "termocode: not found")
 	if i < 0 || !strings.Contains(got[i:], "\x1b[?1049l") {
 		t.Errorf("message or terminal reset missing: %q", got)
+	}
+}
+
+// TestRunSSHWebHandoff: with a web port the far side is started with
+// --web=<port>; its hand-off reaches OnWeb and never the terminal.
+func TestRunSSHWebHandoff(t *testing.T) {
+	f := newFakeSSH(t)
+	got := make(chan WebHandoff, 4)
+	keys, out, code := f.run(SSHOpts{WebPort: 41237, OnWeb: func(h WebHandoff) { got <- h }})
+	var h WebHandoff
+	select {
+	case h = <-got:
+	case <-time.After(10 * time.Second):
+		t.Fatalf("no hand-off; output %q", readOut(out))
+	}
+	if h.Port != 41237 || h.Sock != "/tmp/fake.webhttp.sock" || h.Secret != fakeWebSecret {
+		t.Errorf("hand-off %+v", h)
+	}
+	waitFor(t, "the rest of the line", func() bool { return strings.Contains(readOut(out), "web::done") })
+	if o := readOut(out); strings.Contains(o, "termocode:web") || strings.Contains(o, fakeWebSecret) {
+		t.Errorf("the hand-off reached the terminal: %q", o)
+	}
+	if runs := f.runs(); len(runs) != 1 || !strings.Contains(runs[0], "--link --web=41237") {
+		t.Errorf("ssh runs: %q", runs)
+	}
+	_, _ = keys.WriteString("q")
+	if c := waitCode(t, code); c != 3 {
+		t.Errorf("exit code %d, want 3", c)
 	}
 }
