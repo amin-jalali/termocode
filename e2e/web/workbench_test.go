@@ -181,3 +181,28 @@ func TestWorkbenchActivityBar(t *testing.T) {
 	p.Tap(`.act-item[data-act="files"]`)
 	p.WaitJS(`!document.querySelector(".wb-side")`)
 }
+
+// The workbench is its own file (workbench.js): a desktop loads it, a
+// phone never does, not even by the page's preload hint (index.html
+// asks for it on wide screens only).
+func TestWorkbenchFileLoadsOnDesktopOnly(t *testing.T) {
+	loaded := `performance.getEntriesByType("resource").some((e) => e.name.endsWith("/assets/workbench.js"))`
+	for _, vp := range []Viewport{Phone, Desktop} {
+		t.Run(vp.Name, func(t *testing.T) {
+			s := StartServer(t)
+			p := NewPage(t, s, vp)
+			p.Login("c-wb")
+			if vp.Mobile {
+				p.WaitJS(`document.querySelector(".layout-phone nav")`)
+				if Eval[bool](p, loaded) {
+					t.Error("a phone loaded workbench.js")
+				}
+				return
+			}
+			p.WaitJS(`document.querySelector(".layout-desktop .rail")`)
+			if !Eval[bool](p, loaded) {
+				t.Error("the desktop shows a workbench without workbench.js")
+			}
+		})
+	}
+}

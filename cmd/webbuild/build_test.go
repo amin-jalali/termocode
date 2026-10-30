@@ -42,13 +42,13 @@ func TestBuildWritesThePageFiles(t *testing.T) {
 	if !strings.Contains(string(out["index.html"]), `href="/assets/desk.css" media="(min-width: 1200px)"`) {
 		t.Errorf("index.html does not link desk.css for wide screens only:\n%s", out["index.html"])
 	}
-	for _, name := range []string{"index.html", "app.js", "app.css", "desk.css", "licenses.txt", "icon.svg", "kit.html", "kit.js", "kit.css", manifest.LockFile} {
+	for _, name := range []string{"index.html", "app.js", "app-chunk.js", "workbench.js", "app.css", "desk.css", "licenses.txt", "icon.svg", "kit.html", "kit.js", "kit.css", manifest.LockFile} {
 		if len(out[name]) == 0 {
 			t.Errorf("build wrote no %s", name)
 		}
 	}
 	html := string(out["index.html"])
-	for _, f := range []string{"app.js", "app.css", "desk.css"} {
+	for _, f := range []string{"app.js", "app-chunk.js", "workbench.js", "app.css", "desk.css"} {
 		if !strings.Contains(html, `integrity="`+manifest.SRI(out[f])+`"`) {
 			t.Errorf("index.html has no SRI for %s:\n%s", f, html)
 		}
@@ -121,7 +121,10 @@ func fixture(t *testing.T, mainTSX string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	files := map[string]string{"main.tsx": `import "./x.css";` + mainTSX, "x.css": "p{margin:0}", "desk.ts": `import "./y.css";`, "y.css": "b{margin:0}", "index.html": string(tpl)}
+	// The workbench shares a module with the page, as the real one does,
+	// so the split build writes app-chunk.js (index.html preloads it).
+	files := map[string]string{"main.tsx": `import "./x.css"; import { shared } from "./shared"; shared.push(2);` + mainTSX, "x.css": "p{margin:0}", "desk.ts": `import "./y.css";`, "y.css": "b{margin:0}", "index.html": string(tpl),
+		"shared.ts": "export const shared = [1];", "workbench.tsx": `import { shared } from "./shared"; export const n = shared.length;`}
 	for name, body := range files {
 		if err := os.WriteFile(filepath.Join(src, name), []byte(body), 0o644); err != nil {
 			t.Fatal(err)
@@ -255,12 +258,12 @@ func TestBuildWritesTheEditorChunk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	app, ed := string(out["app.js"]), string(out["editor.js"])
+	app, ed := string(out["app.js"])+string(out["app-chunk.js"]), string(out["editor.js"])
 	if ed == "" {
 		t.Fatal("build wrote no editor.js")
 	}
 	if !strings.Contains(app, `import("/assets/editor.js")`) {
-		t.Error("app.js does not load /assets/editor.js")
+		t.Error("the page does not load /assets/editor.js")
 	}
 	if strings.Contains(app, "cm-content") {
 		t.Error("app.js holds editor code")
@@ -270,6 +273,45 @@ func TestBuildWritesTheEditorChunk(t *testing.T) {
 	}
 	if !strings.Contains(ed, "@codemirror/view 6.43.14") {
 		t.Error("editor.js does not name what it bundles")
+	}
+}
+
+// The desktop workbench is its own file (workbench.js), loaded by the
+// page on a wide screen only; it shares the page's modules through
+// app-chunk.js, which both import, so Preact and the session have one
+// copy. index.html preloads the chunk with its SRI, and the workbench
+// with its SRI for wide screens only.
+func TestBuildSplitsTheWorkbench(t *testing.T) {
+	out, err := Build(realAssets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	app, chunk, wb := string(out["app.js"]), string(out["app-chunk.js"]), string(out["workbench.js"])
+	if chunk == "" || wb == "" {
+		t.Fatal("build wrote no app-chunk.js or workbench.js")
+	}
+	for name, code := range map[string]string{"app.js": app, "workbench.js": wb} {
+		if !strings.Contains(code, `from"./app-chunk.js"`) {
+			t.Errorf("%s does not import the shared chunk", name)
+		}
+	}
+	if !strings.Contains(app+chunk, `import("/assets/workbench.js")`) {
+		t.Error("the page does not load /assets/workbench.js")
+	}
+	if strings.Contains(app+chunk, "wb-panel-tabs") {
+		t.Error("the phone's files hold the workbench's layout")
+	}
+	if !strings.Contains(wb, "wb-panel-tabs") || strings.Contains(wb, "__H") {
+		t.Error("workbench.js is not the workbench alone (it has no layout, or its own Preact)")
+	}
+	html := string(out["index.html"])
+	for _, want := range []string{
+		`<link rel="modulepreload" href="/assets/app-chunk.js" integrity="` + manifest.SRI(out["app-chunk.js"]) + `">`,
+		`<link rel="modulepreload" href="/assets/workbench.js" media="(min-width: 1200px)" integrity="` + manifest.SRI(out["workbench.js"]) + `">`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("index.html has no %s:\n%s", want, html)
+		}
 	}
 }
 

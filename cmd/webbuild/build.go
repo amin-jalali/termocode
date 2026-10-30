@@ -25,9 +25,22 @@ type page struct {
 	HTML     string
 	// CSSOnly: the entry only gathers stylesheets; only <Name>.css is kept.
 	CSSOnly bool
+	// With are more entries built in the same split build: the modules
+	// they share with this one go to <Name>-chunk.js, loaded once, so a
+	// module (Preact, the session, the strings) has one copy in the page.
+	With []page
 }
 
-var appPage = page{Name: "app", Entry: "main.tsx", Template: "index.html", HTML: "index.html"}
+// workbenchChunk is the desktop workbench (workbench.js): its layout and
+// the views only a wide screen shows (debug, testing, services, the
+// commit graph, merge and rebase editors, pull requests, agent
+// worktrees, the data grid, settings). app.js loads it with its second
+// dynamic import (lib/lazy.ts) on a desktop only, so a phone never
+// waits for it nor counts it in its budget. It shares app.js's modules
+// through app-chunk.js, which index.html preloads with its SRI.
+var workbenchChunk = page{Name: "workbench", Entry: "workbench.tsx"}
+
+var appPage = page{Name: "app", Entry: "main.tsx", Template: "index.html", HTML: "index.html", With: []page{workbenchChunk}}
 
 // editorChunk is the in-page editor (WEB-39): CodeMirror and its glue,
 // built alone (no Preact) into editor.js. app.js loads it with its one
@@ -49,7 +62,7 @@ var (
 var deskChunk = page{Name: "desk", Entry: "desk.ts", CSSOnly: true}
 
 // chunkPaths are the only dynamic imports a page may make.
-var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true}
+var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true, "/assets/" + workbenchChunk.Name + ".js": true}
 
 // kitPage is the component kit (WEB-UX-1). It is always built, so CI keeps
 // it fresh, but only a webdev build embeds and serves it.
@@ -94,10 +107,22 @@ func Build(dir string) (map[string][]byte, error) {
 }
 
 func buildPage(abs, vendorDir string, pkgs []manifest.Package, p page, out map[string][]byte) error {
+	entries := []api.EntryPoint{{InputPath: filepath.Join("src", p.Entry), OutputPath: p.Name}}
+	var with []page
+	for _, w := range p.With {
+		if _, err := os.Stat(filepath.Join(abs, "src", w.Entry)); errors.Is(err, os.ErrNotExist) {
+			continue // a folder without the workbench (test fixtures)
+		}
+		with = append(with, w)
+		entries = append(entries, api.EntryPoint{InputPath: filepath.Join("src", w.Entry), OutputPath: w.Name})
+	}
+	p.With = with
 	res := api.Build(api.BuildOptions{
 		AbsWorkingDir:       abs,
-		EntryPointsAdvanced: []api.EntryPoint{{InputPath: filepath.Join("src", p.Entry), OutputPath: p.Name}},
+		EntryPointsAdvanced: entries,
 		Outdir:              filepath.Join(abs, "out"),
+		Splitting:           len(p.With) > 0,
+		ChunkNames:          p.Name + "-[name]", // one shared chunk: app-chunk.js
 		Bundle:              true,
 		Write:               false,
 		Format:              api.FormatESModule,
@@ -146,6 +171,14 @@ func buildPage(abs, vendorDir string, pkgs []manifest.Package, p page, out map[s
 	}
 	if _, ok := out[p.Name+".js"]; !ok {
 		return fmt.Errorf("webbuild: %s built no %s.js", p.Entry, p.Name)
+	}
+	for _, w := range p.With {
+		if _, ok := out[w.Name+".js"]; !ok {
+			return fmt.Errorf("webbuild: %s built no %s.js", w.Entry, w.Name)
+		}
+		if _, ok := out[w.Name+".css"]; ok {
+			return fmt.Errorf("webbuild: %s imports a style sheet; desk.ts gathers the desktop's", w.Entry)
+		}
 	}
 	if p.Template == "" {
 		return nil // a chunk: no page of its own
