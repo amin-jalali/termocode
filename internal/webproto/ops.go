@@ -65,6 +65,7 @@ const (
 	OpBufUndo          = "buf.undo"
 	OpBufClose         = "buf.close"
 	OpBufHl            = "buf.hl"
+	OpFilesList        = "files.list"
 	OpFileImage        = "file.image"
 	OpChatImage        = "chat.image"
 	OpTermHistory      = "term.history"
@@ -130,6 +131,7 @@ var opTable = []Policy{
 	{Op: OpSearchOpen, New: newOf[SearchOpenArgs](), Role: RoleViewer, Rate: perSec(20), MaxBytes: 8 * kib, Audit: AuditNo, Phase: PhaseV1},
 	{Op: OpTermColors, New: newOf[BufArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpBufHl, New: newOf[HlArgs](), Role: RoleViewer, Rate: perSec(10), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpFilesList, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: perSec(1), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
 
 	// Chat and cards.
 	{Op: OpChatSend, New: newOf[ChatSendArgs](), Role: RoleController, Rate: Rate{N: 1, Per: 2 * time.Second}, MaxBytes: 72 * kib, Audit: AuditYes, Phase: PhaseV1},
