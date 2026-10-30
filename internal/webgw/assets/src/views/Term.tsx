@@ -138,8 +138,8 @@ function Chips({ terms, cur }: { terms: TermItem[]; cur: number | undefined }) {
   return (
     <div class="term-chips" role="tablist" aria-label={t("tab.term")}>
       {terms.map((x, i) => (
-        <span key={x.buf} class="term-chip" role="tab" aria-selected={x.buf === cur ? "true" : "false"} data-buf={x.buf}>
-          <Chip on={x.buf === cur} dot={x.busy ? "busy" : x.exited ? "warn" : undefined} onClick={() => showTerm(x.buf)}>
+        <span key={x.buf} class="term-chip" data-buf={x.buf}>
+          <Chip tab on={x.buf === cur} dot={x.busy ? "busy" : x.exited ? "warn" : undefined} onClick={() => showTerm(x.buf)}>
             <span class="trunc term-chip-title" dir="auto">
               {x.task || x.title}
             </span>

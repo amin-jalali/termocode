@@ -1,0 +1,13 @@
+{
+  "$comment": "Test only (WEB-47): the accessibility checker the browser tests run in the page. Copied byte for byte from the npm tarball below; never edit, never served by termocode. a11y_test.go checks each sha384 before it injects axe.min.js.",
+  "name": "axe-core",
+  "version": "4.10.3",
+  "license": "MPL-2.0",
+  "tarball": "https://registry.npmjs.org/axe-core/-/axe-core-4.10.3.tgz",
+  "integrity": "sha512-Xm7bpRXnDSX2YE2YFfBk2FnF0ep6tmG7xPh8iHee8MIcrgq762Nkce856dYtJYLkuIoYZvGfTs/PbZhideTcEg==",
+  "files": {
+    "axe.min.js": "sha384-17w4i/EfU4m8vRTTBQs69gAb/fjBpQi0/OOcQTspZXbRlDA0OcGoZX3ZUxQpgTYL",
+    "LICENSE": "sha384-huImz98LFM4P7jkMIRcCLziQFxAj2rzo78x5VeIP8bHMFofak+fua4eCQys4sium",
+    "LICENSE-3RD-PARTY.txt": "sha384-kRupidJJw8EanDd+dHZzcWq65459pkQHNTA2O/ScYq2ZrJJN+xbMFG3kb5n4KF0P"
+  }
+}

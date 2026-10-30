@@ -9,6 +9,7 @@ export function Chip({
   tone,
   onClick,
   label,
+  tab,
 }: {
   children: ComponentChildren;
   dot?: "busy" | "ok" | "warn";
@@ -16,6 +17,8 @@ export function Chip({
   tone?: "ai" | "amber" | "plain";
   onClick?: () => void;
   label?: string;
+  /** tab: the chip is one tab of a tablist; on is its selected state. */
+  tab?: boolean;
 }) {
   const cls = `chip${on ? " is-on" : ""}${tone ? " tone-" + tone : ""}`;
   const inner = (
@@ -25,7 +28,15 @@ export function Chip({
     </>
   );
   return onClick ? (
-    <button type="button" class={cls} aria-pressed={on ? "true" : undefined} aria-label={label} onClick={onClick}>
+    <button
+      type="button"
+      class={cls}
+      role={tab ? "tab" : undefined}
+      aria-selected={tab ? (on ? "true" : "false") : undefined}
+      aria-pressed={!tab && on ? "true" : undefined}
+      aria-label={label}
+      onClick={onClick}
+    >
       {inner}
     </button>
   ) : (
