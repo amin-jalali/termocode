@@ -35,7 +35,7 @@
 .tx-label { flex: 0 1 auto; }
 .tx-desc { flex: none; margin-inline-start: 0.5em; font-size: 0.75rem; opacity: 0.7; }
 .tx-acts { display: none; margin-inline-start: auto; padding-inline-start: 4px; gap: 2px; }
-.tx-row:hover .tx-acts, .tx-row:focus-within .tx-acts, .tx-row.is-picked .tx-acts { display: flex; }
+.tx-row:hover .tx-acts, .tx-row:focus-within .tx-acts, .tx-row.is-picked .tx-acts, .dv-row:focus-within .tx-acts { display: flex; }
 .tx-acts .tb { width: 20px; height: 20px; }
 
 /* Folding panes of a side bar view (RUN AND DEBUG). */
@@ -117,3 +117,17 @@
 
 /* The status bar while the laptop debugs (the editor's debugging colour). */
 .layout-desktop .statusbar.is-debugging { background: #cc6633; }
+
+/* SERVICES */
+.svcs { display: flex; flex-direction: column; }
+.svc-head { margin: 0; padding: 0 8px 0 20px; height: 22px; line-height: 22px; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; color: var(--wb-side-fg); }
+.svc-dot { flex: none; display: inline-flex; width: 16px; justify-content: center; }
+.svc-dot .cod { font-size: 10px; }
+.svc-dot.is-up { color: #89d185; }
+.svc-dot.is-bad { color: #f14c4c; }
+.svc-dot.is-busy { color: #cca700; }
+.svc-dot.is-busy .cod { font-size: 16px; animation: spin 1.5s steps(30) infinite; }
+.svc-dot.is-off { color: #848484; }
+.svc .dbg-ask { padding: 2px 8px 4px 28px; }
+.svc-logs { display: flex; align-items: flex-start; gap: 4px; max-height: 240px; margin: 0 8px 4px 28px; }
+.svc-logs .tres-rows { flex: 1 1 auto; max-height: 240px; padding: 4px 6px; background: var(--wb-editor-bg); font-size: 0.75rem; }

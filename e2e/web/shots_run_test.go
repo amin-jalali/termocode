@@ -9,10 +9,11 @@ import "github.com/amin-jalali/termocode/internal/webproto"
 
 func runShotSnaps() map[string]any {
 	return map[string]any{
-		"tests": testsTree("idle", 1),
-		"debug": debugPaused(),
-		"runs":  webproto.RunsSnap{Runs: []webproto.RunItem{}},
-		"tasks": webproto.TasksSnap{Tasks: []webproto.TaskItem{{Label: "build", Group: "build", Source: "tasks.json", Detail: "go build ./..."}}},
+		"tests":    testsTree("idle", 1),
+		"debug":    debugPaused(),
+		"services": servicesSnap(),
+		"runs":     webproto.RunsSnap{Runs: []webproto.RunItem{}},
+		"tasks":    webproto.TasksSnap{Tasks: []webproto.TaskItem{{Label: "build", Group: "build", Source: "tasks.json", Detail: "go build ./..."}}},
 	}
 }
 
@@ -32,6 +33,7 @@ type runShot struct {
 
 func runShots(vp Viewport) []runShot {
 	out := []runShot{{name: "testing", hash: "#/more/testing", ready: `document.querySelectorAll(".tx-row").length === 4`}}
+	out = append(out, runShot{name: "services", hash: "#/more/services", ready: `document.querySelectorAll(".svc").length === 3`})
 	out = append(out, runShot{name: "debug", hash: "#/more/debug", ready: `document.querySelectorAll(".dv-frame").length === 2`})
 	if !vp.Mobile {
 		out = append(out, runShot{name: "debug-console", hash: "#/more/debug", ready: `(document.querySelector('[data-act="console"]')?.click(), document.querySelectorAll(".dcon-row").length === 4)`})
@@ -61,4 +63,14 @@ func debugPaused() webproto.DebugSnap {
 		Console: []webproto.DebugLine{{Cat: "console", Text: "Starting Debug covreport…"}, {Cat: "stdout", Text: "reading coverage.out"},
 			{Cat: "input", Text: "› len(line)"}, {Cat: "result", Text: "48"}},
 	}
+}
+
+// servicesSnap is a compose project with db (healthy) and api (exited
+// 1), and a local command web (running).
+func servicesSnap() webproto.ServicesSnap {
+	return webproto.ServicesSnap{State: "ready", Project: "shop", ComposeFiles: []string{"compose.yaml"}, Services: []webproto.ServiceItem{
+		{Name: "db", Kind: "compose", State: "healthy", Image: "postgres:17", Source: "compose.yaml:3", Status: "Up 2 hours (healthy)", Ports: []webproto.ServicePort{{Published: 5432, Target: 5432, Proto: "tcp", Open: "yes"}}},
+		{Name: "api", Kind: "compose", State: "exited", Exit: 1, Source: "compose.yaml:9", Status: "Exited (1) 3 minutes ago", Ports: []webproto.ServicePort{}},
+		{Name: "web", Kind: "local", State: "running", Command: "npm run dev", Source: "Procfile", Ports: []webproto.ServicePort{{Published: 3000, Target: 3000}}},
+	}}
 }

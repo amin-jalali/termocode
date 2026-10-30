@@ -122,3 +122,14 @@
   .dw-input { min-height: var(--tap); width: 100%; font-family: var(--font-mono); }
   .dbg-ask { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
 }
+@media (max-width: 1199.98px) {
+  .svcs { display: flex; flex-direction: column; gap: var(--s2); padding: 0 var(--s4); }
+  .svc-head { margin: var(--s3) 0 0; font-size: 1rem; }
+  .svc-dot::before { content: "●"; }
+  .svc-dot.is-up { color: var(--green); }
+  .svc-dot.is-bad { color: var(--red); }
+  .svc-dot.is-busy { color: var(--amber); }
+  .svc-dot.is-off { color: var(--muted); }
+  .svc-logs { display: flex; flex-direction: column; gap: var(--s2); }
+  .svc-logs .tres-rows { font-family: var(--font-mono); font-size: 0.8125rem; overflow-x: auto; }
+}

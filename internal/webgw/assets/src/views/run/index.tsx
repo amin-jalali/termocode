@@ -5,6 +5,7 @@ import { h } from "preact";
 import { registerPanel, registerSide, TERMINAL_ORDER } from "../../lib/views";
 import { TestingView } from "./TestingView";
 import { DebugView } from "./DebugView";
+import { ServicesView } from "./ServicesView";
 import { DebugConsole } from "./DebugConsole";
 import { DeskRun } from "../desk/DeskRun";
 import { TestResults } from "./TestResults";
@@ -18,3 +19,4 @@ registerSide("run", () => (
   </div>
 ));
 registerPanel({ id: "debug-console", label: "dbg.console", order: 20, view: () => <DebugConsole /> });
+registerSide("services", () => <ServicesView />);

@@ -7,7 +7,7 @@
 // debugger. #/more/debug
 import { Fragment, h } from "preact";
 import { signal } from "@preact/signals";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import type { DebugBreakpoint, DebugSnap, DebugSources, DebugVar } from "../../../../../webproto/proto";
 import { goTo, panelTab } from "../../lib/lsp";
 import { setPanes } from "../../lib/workbench";
@@ -16,7 +16,7 @@ import { readDebugSnap } from "../../state/run";
 import { t, type StringKey } from "../../strings";
 import { Cod } from "../../ui/icons";
 import { SubView } from "../more/SubView";
-import { ask, canAct, IconBtn, Note, Pane } from "./bits";
+import { ask, canAct, Confirm, IconBtn, Note, Pane } from "./bits";
 
 const panes = signal<Record<string, boolean>>({ vars: true, watch: true, stack: true, bps: true, scripts: false });
 /** closedScopes are the scopes the page folded (the rest follow the hub). */
@@ -369,31 +369,20 @@ export function DebugView() {
   );
 }
 
-/** ClearAll removes every breakpoint after an in-row question (Cancel
- * first and focused). */
+/** ClearAll removes every breakpoint after an in-row question. */
 function ClearAll() {
   const [asking, setAsking] = useState(false);
-  const safe = useRef<HTMLButtonElement | null>(null);
-  useEffect(() => {
-    if (asking) safe.current?.focus();
-  }, [asking]);
   if (!asking) return <IconBtn icon="close-all" act="bp-clear" label={t("dbg.bp_clear")} onClick={() => setAsking(true)} />;
   return (
-    <span class="dbg-ask" role="group" aria-label={t("dbg.bp_clear_q")}>
-      <span>{t("dbg.bp_clear_q")}</span>
-      <button type="button" class="btn btn-neutral btn-small" ref={safe} onClick={() => setAsking(false)}>
-        {t("cancel")}
-      </button>
-      <button
-        type="button"
-        class="btn btn-danger btn-small"
-        onClick={() => {
-          setAsking(false);
-          ask("debug.bp", { op: "clear" });
-        }}
-      >
-        {t("dbg.bp_clear")}
-      </button>
-    </span>
+    <Confirm
+      text={t("dbg.bp_clear_q")}
+      verb={t("dbg.bp_clear")}
+      danger
+      onNo={() => setAsking(false)}
+      onYes={() => {
+        setAsking(false);
+        ask("debug.bp", { op: "clear" });
+      }}
+    />
   );
 }
