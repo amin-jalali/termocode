@@ -9,6 +9,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/toast"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -25,6 +26,7 @@ func init() {
 	webOps[webproto.OpGitUnstage] = (*Model).webGitUnstage
 	webOps[webproto.OpGitStageHunk] = (*Model).webGitStageHunk
 	webOps[webproto.OpGitUnstageHunk] = (*Model).webGitUnstageHunk
+	webOps[webproto.OpGitCommit] = (*Model).webGitCommit
 }
 
 // webGitRoot is the workspace folder when it is a git repository.
@@ -300,4 +302,65 @@ func (m *Model) webGitHunkOp(call *webCall, unstage bool) tea.Cmd {
 		op = git.UnstageHunkHeader
 	}
 	return m.webGitWrite(call, a.Path+" "+a.Hunk, func() error { return op(root, a.Path, a.Hunk) })
+}
+
+// webGitCommit commits what is staged with the page's message. No amend,
+// no sign-off, no stage-all: the page commits exactly what the Git tab
+// shows as staged. The laptop's undo (git_undo) takes it back.
+func (m *Model) webGitCommit(call *webCall) tea.Cmd {
+	msg := call.args.(*webproto.GitCommitArgs).Message
+	root, ok := m.webGitRoot(call)
+	if !ok {
+		return nil
+	}
+	if op := m.webGitBuild().Op; op != "" {
+		call.fail(webproto.CodeConflict, "A "+op+" is in progress on the laptop. Finish it there.")
+		return nil
+	}
+	staged := 0
+	for _, f := range m.gitFiles {
+		if f.Staged() {
+			staged++
+		}
+	}
+	if staged == 0 {
+		call.fail(webproto.CodeConflict, "Nothing is staged.")
+		return nil
+	}
+	device := webName(call.conn.device)
+	if device == "" {
+		device = "web"
+	}
+	call.later()
+	return func() tea.Msg {
+		files := 0
+		if st, err := git.Status(root); err == nil {
+			for _, f := range st {
+				if f.Staged() {
+					files++
+				}
+			}
+		}
+		err := git.Commit(root, msg)
+		hash := ""
+		if err == nil {
+			if cs, _, cerr := git.Commits(root, 0, 1); cerr == nil && len(cs) > 0 {
+				hash = cs[0].Hash
+			}
+		}
+		return applyMsg(func(m *Model) tea.Cmd {
+			summary := strconv.Itoa(files) + " files"
+			if err != nil {
+				m.webAuditOp(call, summary, "failed")
+				webGitFail(call, err)
+				return m.pollGitCmd()
+			}
+			m.webAuditOp(call, summary, "ok "+hash)
+			call.reply(webproto.GitCommitted{Hash: hash, Files: files})
+			subject, _, _ := strings.Cut(msg, "\n")
+			var t tea.Cmd
+			m.toast, t = m.toast.PushDetail(toast.Info, "Committed on "+device, hash+" · "+webName(subject))
+			return tea.Batch(m.pollGitCmd(), t)
+		})
+	}
 }
