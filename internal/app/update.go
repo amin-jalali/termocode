@@ -1009,7 +1009,7 @@ end })`)
 	case GitMsg:
 		prev := m.gitBranch
 		m.applyGitSnapshot(msg)
-		return m, m.ciOnGitSnapshot(prev), true // G-CI: a new branch or a push
+		return m, tea.Batch(m.ciOnGitSnapshot(prev), m.webTreeRefresh()), true // G-CI: a new branch or a push; web tree badges
 	case gitOlderMsg:
 		m.onGitOlder(msg)
 		return m, nil, true
