@@ -59,8 +59,9 @@ func TestCovGitCloneFlow(t *testing.T) {
 		t.Fatal("no folder prompt")
 	}
 	base := filepath.Base(dir)
-	if want := filepath.Join(filepath.Dir(dir), base); !strings.Contains(m.prompt.View(), want) {
-		t.Errorf("folder not prefilled next to the repo (%s): %q", want, m.prompt.View())
+	// The value, not the view: the box cuts a long path (macOS $TMPDIR).
+	if want := filepath.Join(filepath.Dir(dir), base); m.prompt.Value() != want {
+		t.Errorf("folder not prefilled next to the repo: %q, want %q", m.prompt.Value(), want)
 	}
 	m.promptOpen = false
 	m.handlePromptSubmit(dir) // the repo itself: not empty
