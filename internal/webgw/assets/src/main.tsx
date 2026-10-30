@@ -8,6 +8,7 @@ import "./styles/base.css";
 import "./styles/shell.css";
 import "./styles/ui.css";
 import "./styles/components.css";
+import "./styles/chat.css";
 import { App } from "./app";
 import { prefs } from "./lib/prefs";
 import { goTab } from "./lib/router";

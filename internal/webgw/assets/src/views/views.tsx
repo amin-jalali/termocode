@@ -8,23 +8,7 @@ import { Segmented } from "../ui/Segmented";
 import { TopicBody } from "./Placeholder";
 import { View } from "./View";
 
-export function ChatView() {
-  return (
-    <View tab="chat" title={t("tab.chat")}>
-      <TopicBody
-        topic="chat"
-        also={["cards", "chats"]}
-        bubbles
-        empty={
-          <div class="empty-state">
-            <span class="empty-mark" aria-hidden="true">✦</span>
-            <p>{t("chat.empty")}</p>
-          </div>
-        }
-      />
-    </View>
-  );
-}
+export { ChatView } from "./Chat";
 
 export function FilesView() {
   return (

@@ -1,5 +1,6 @@
 // The frame every view shares: a sticky header and a scrolling body.
 import { h, type ComponentChildren } from "preact";
+import type { Ref } from "preact/hooks";
 import type { Tab } from "../state/route";
 
 export function View({
@@ -7,11 +8,16 @@ export function View({
   title,
   sub,
   children,
+  foot,
+  bodyRef,
 }: {
   tab: Tab;
   title: string;
   sub?: ComponentChildren;
   children: ComponentChildren;
+  /** foot stays under the scrolling body (the chat composer). */
+  foot?: ComponentChildren;
+  bodyRef?: Ref<HTMLDivElement>;
 }) {
   return (
     <section class="view" data-view={tab} aria-labelledby={`vh-${tab}`}>
@@ -21,7 +27,10 @@ export function View({
         </h1>
         {sub && <div class="view-sub">{sub}</div>}
       </header>
-      <div class="view-body">{children}</div>
+      <div class="view-body" ref={bodyRef}>
+        {children}
+      </div>
+      {foot}
     </section>
   );
 }
