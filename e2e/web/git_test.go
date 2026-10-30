@@ -3,11 +3,16 @@
 package web
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/input"
+	"github.com/chromedp/chromedp"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -120,6 +125,54 @@ func TestGitShowCommit(t *testing.T) {
 	p.WaitJS(`document.querySelector(".show-subject")?.textContent === "first" && document.querySelectorAll(".diff-rows .drow").length === 3`)
 	if loc := Eval[string](p, "location.hash"); loc != "#/git?show=1a2b3c4" {
 		t.Errorf("route %q", loc)
+	}
+}
+
+// swipe drags a touch from the row's left (or right) side across most
+// of it, in small steps, as a thumb does.
+func (p *Page) swipe(sel string, right bool) {
+	p.T.Helper()
+	b := Eval[struct{ X, Y, W float64 }](p, `(() => { const r = document.querySelector(`+fmt.Sprintf("%q", sel)+`).getBoundingClientRect(); return {X: r.left, Y: r.top + r.height / 2, W: r.width}; })()`)
+	from, to := b.X+b.W*0.15, b.X+b.W*0.9
+	if !right {
+		from, to = to, from
+	}
+	touch := func(ctx context.Context, tg *chromedp.Target, typ input.DispatchTouchEventType, x float64) error {
+		id := 1.0
+		pts := []*input.TouchPoint{}
+		if typ != input.DispatchTouchEventTypeTouchEnd {
+			pts = append(pts, &input.TouchPoint{X: x, Y: b.Y, ID: &id})
+		}
+		_, err := cdp.Call(ctx, tg, input.DispatchTouchEvent, input.DispatchTouchEventParams{Type: typ, TouchPoints: pts})
+		return err
+	}
+	p.Do(chromedp.Func(func(ctx context.Context, tg *chromedp.Target) error {
+		if err := touch(ctx, tg, input.DispatchTouchEventTypeTouchStart, from); err != nil {
+			return err
+		}
+		for i := 1; i <= 8; i++ {
+			if err := touch(ctx, tg, input.DispatchTouchEventTypeTouchMove, from+(to-from)*float64(i)/8); err != nil {
+				return err
+			}
+		}
+		return touch(ctx, tg, input.DispatchTouchEventTypeTouchEnd, to)
+	}))
+}
+
+// A swipe right past half the row stages it, a swipe left unstages a
+// staged row; a short swipe does nothing; the verb shows under the row.
+func TestGitSwipeStages(t *testing.T) {
+	p, c := openGit(t, Phone, gitSnap())
+	p.swipe(rowSel("new.txt")+" .git-row", true)
+	reply(t, c, expectReq(t, c, webproto.OpGitStage, `{"paths":["new.txt"]}`), nil)
+	p.WaitJS(`document.querySelector(".toasts .toast-title")?.textContent === "Staged new.txt"`)
+	p.swipe(rowSel("b.go")+" .git-row", false)
+	reply(t, c, expectReq(t, c, webproto.OpGitUnstage, `{"paths":["b.go"]}`), nil)
+	// Staged rows do not move right: nothing is sent.
+	p.swipe(rowSel("b.go")+" .git-row", true)
+	c.Quiet(t, 400*time.Millisecond)
+	if pr := p.Problems(); len(pr) > 0 { // the row moves by CSSOM, never a style attribute
+		t.Errorf("problems: %q", pr)
 	}
 }
 

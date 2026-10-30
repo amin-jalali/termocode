@@ -1,6 +1,6 @@
 // The Git tab (WEB-23, web UX 3.5, 5.7): the laptop's changed files in
 // groups (Conflicts, Staged, Changes, Untracked), a diff sheet per file,
-// stage and unstage with Undo. Routes: #/git, #/git/<path>?side=staged,
+// stage and unstage by button or swipe with Undo. Routes: #/git, #/git/<path>?side=staged,
 // #/git?show=<hash>.
 import { h, Fragment } from "preact";
 import { useEffect } from "preact/hooks";
