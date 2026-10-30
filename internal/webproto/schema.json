@@ -624,7 +624,7 @@
         "per_ms": 1000
       },
       "max_bytes": 8192,
-      "live": 2,
+      "live": 1,
       "laptop_card": false,
       "audit": "no",
       "phase": "v2"
@@ -639,7 +639,7 @@
         "per_ms": 1000
       },
       "max_bytes": 1024,
-      "live": 2,
+      "live": 1,
       "laptop_card": false,
       "audit": "no",
       "phase": "v2"

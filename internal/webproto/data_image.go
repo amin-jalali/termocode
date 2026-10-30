@@ -20,7 +20,9 @@ type ImageRes struct {
 }
 
 // MaxImageBytes caps an image the page can show (base64 makes it 4/3).
-const MaxImageBytes = 2 << 20
+// One image answer stays well inside the hub's 4 MiB hard queue cap even
+// with the other image op running.
+const MaxImageBytes = 1 << 20
 
 // ImageMimes are the only image types sent.
 var ImageMimes = []string{"image/png", "image/jpeg", "image/gif", "image/webp"}
