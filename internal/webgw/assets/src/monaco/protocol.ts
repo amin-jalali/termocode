@@ -58,6 +58,9 @@ export type ToFrame =
   | { t: "original"; text: string }
   /** diffView: switch side by side / inline, fold unchanged regions. */
   | { t: "diffView"; inline?: boolean; collapse?: boolean }
+  /** insert: put text at the cursor as the user's own edit (the chat's
+   * Insert at Cursor). */
+  | { t: "insert"; text: string }
   /** diffGo: to the next (1) or previous (-1) change. */
   | { t: "diffGo"; dir: 1 | -1 }
   | ({ t: "opts" } & FrameOpts)

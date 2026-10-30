@@ -776,6 +776,14 @@ function onMessage(e: MessageEvent): void {
       diffEd?.updateOptions(u);
       return;
     }
+    case "insert": {
+      if (!ed || readOnly) return;
+      ed.pushUndoStop();
+      ed.executeEdits("insert", (ed.getSelections() ?? []).map((range) => ({ range, text: m.text, forceMoveMarkers: true })));
+      ed.pushUndoStop();
+      ed.focus();
+      return;
+    }
     case "diffGo":
       diffEd?.goToDiff(m.dir > 0 ? "next" : "previous");
       ed?.focus();

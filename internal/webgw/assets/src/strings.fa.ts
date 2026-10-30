@@ -715,4 +715,7 @@ export const FA: Record<StringKey, string> = {
   "dev.viewers": "مرورگرهای باز",
   "dev.viewer": "فقط خواندن",
   "dev.controller": "خواندن و تغییر",
+  "chat.insert": "گذاشتن در جای مکان‌نما",
+  "chat.agent": "نمایه و مدل عامل این گفت‌وگو",
+  "chat.default_profile": "پیش‌فرض",
 };

@@ -15,6 +15,8 @@ import { isStub, readChat } from "../state/chat";
 import { t } from "../strings";
 import { BlobImg } from "../ui/BlobImg";
 import { Md } from "../ui/Markdown";
+import { Cod } from "../ui/icons";
+import { layout } from "../lib/layout";
 import { Progress, SkeletonBubbles } from "../ui/Skeleton";
 import { errText } from "../ui/CardSheet";
 import { ChatList } from "./ChatList";
@@ -187,6 +189,7 @@ function openChat(c: ChatItem, laptop: string): void {
 
 export function ChatView() {
   useEffect(() => link.subscribe("chat", "cards", "chats"), []);
+  const desk = layout.value === "desktop";
   const body = useRef<HTMLDivElement | null>(null);
   const stick = useRef(true);
   const [list, setList] = useState(false);
@@ -277,7 +280,7 @@ export function ChatView() {
       </div>
     );
   } else if (st) {
-    foot = <Composer chat={laptop?.id ?? ""} busy={laptop?.busy ?? false} />;
+    foot = <Composer chat={laptop?.id ?? ""} busy={laptop?.busy ?? false} profile={laptop?.profile ?? ""} model={laptop?.model ?? ""} />;
   }
   return (
     <View
@@ -287,16 +290,30 @@ export function ChatView() {
       actions={
         <>
           {pin && <span class="chat-pinned">📌 {t("chat.pinned")}</span>}
-          <button type="button" class={`head-btn chat-list-btn${list ? " is-on" : ""}`} aria-pressed={list ? "true" : "false"} onClick={() => setList(!list)}>
-            {t("chat.list")}
+          <button type="button" class={`head-btn chat-list-btn${list ? " is-on" : ""}`} aria-pressed={list ? "true" : "false"} title={desk ? t("chat.list") : undefined} onClick={() => setList(!list)}>
+            {desk ? (
+              <>
+                <Cod name="history" />
+                <span class="sr-only">{t("chat.list")}</span>
+              </>
+            ) : (
+              t("chat.list")
+            )}
           </button>
           {pin ? (
             <button type="button" class="head-btn chat-follow" onClick={follow}>
               {t("chat.follow")}
             </button>
           ) : (
-            <button type="button" class="head-btn chat-new" onClick={newChat}>
-              {t("chat.new")}
+            <button type="button" class="head-btn chat-new" title={desk ? t("chat.new") : undefined} onClick={newChat}>
+              {desk ? (
+                <>
+                  <Cod name="add" />
+                  <span class="sr-only">{t("chat.new")}</span>
+                </>
+              ) : (
+                t("chat.new")
+              )}
             </button>
           )}
         </>

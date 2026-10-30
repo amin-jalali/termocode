@@ -4,6 +4,9 @@
 // sheet; code blocks stay left to right and isolated with a copy button.
 import { Fragment, h, type ComponentChildren } from "preact";
 import { useState } from "preact/hooks";
+import { activeDesk } from "../lib/deskeditor";
+import { layout } from "../lib/layout";
+import { Cod } from "./icons";
 import type { MdNode } from "../../../../webproto/proto";
 import { askLink } from "../lib/links";
 import { toast } from "../lib/toasts";
@@ -35,12 +38,27 @@ export function CodeBlock({ text, lang }: { text: string; lang?: string }) {
       fail();
     }
   };
+  const desk = layout.value === "desktop";
+  const ed = desk ? activeDesk.value : null;
   return (
     <div class="codeblock" dir="ltr">
       <div class="cb-head">
         <span class="cb-lang">{lang}</span>
-        <button type="button" class="cb-copy" onClick={copy}>
-          {t("copy")}
+        {desk && (
+          <button type="button" class="cb-insert" aria-label={t("chat.insert")} title={t("chat.insert")} disabled={!ed} onClick={() => ed?.insert(text.replace(/\n$/, ""))}>
+            <Cod name="insert" />
+            <span class="sr-only">{t("chat.insert")}</span>
+          </button>
+        )}
+        <button type="button" class="cb-copy" aria-label={desk ? t("copy") : undefined} title={desk ? t("copy") : undefined} onClick={copy}>
+          {desk ? (
+            <>
+              <Cod name="copy" />
+              <span class="sr-only">{t("copy")}</span>
+            </>
+          ) : (
+            t("copy")
+          )}
         </button>
       </div>
       <pre class="cb-pre">

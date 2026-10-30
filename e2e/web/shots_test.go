@@ -107,8 +107,8 @@ func shotHub(t *testing.T, c *HubConn) {
 			{Key: "c2/r4", Title: "rename the cover report flags", Profile: "coder", State: "paused", Why: "Waiting for you to answer a card.", Step: 1, Steps: 5, ElapsedMs: 9000, NeedsYou: true, Can: []string{"resume", "stop"}},
 		}},
 		"mcp": webproto.MCPSnap{Mode: "auto", Listening: true,
-			Agents: []webproto.MCPAgent{{Name: "claude-desktop", Since: time.Now().Add(-25 * time.Minute).UnixMilli(), Calls: 14, Asked: 2}, {Name: "cursor-agent", Since: time.Now().Add(-4 * time.Minute).UnixMilli(), Calls: 3}},
-			Calls: []string{"12:03 claude-desktop · read_file · ran without asking", "12:04 claude-desktop · run_task · asked, you allowed", "12:09 cursor-agent · search · ran without asking"}},
+			Agents: []webproto.MCPAgent{{Name: "claude-desktop", Since: time.Now().Add(-25 * time.Minute).UnixMilli(), Calls: 14, Asked: 2}, {Name: "lint-agent", Since: time.Now().Add(-4 * time.Minute).UnixMilli(), Calls: 3}},
+			Calls: []string{"12:03 claude-desktop · read_file · ran without asking", "12:04 claude-desktop · run_task · asked, you allowed", "12:09 lint-agent · search · ran without asking"}},
 		"settings": webproto.SettingsSnap{Items: []webproto.SettingItem{
 			{Key: "theme", Group: "Appearance", Type: "enum", Value: "vscode-dark-plus", Default: "vscode-dark-plus", Description: "The colour theme of the editor and the panels."},
 			{Key: "font_size", Group: "Appearance", Type: "int", Value: "14", Default: "13", Description: "The size of the editor's text, in points."},
