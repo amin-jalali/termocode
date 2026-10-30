@@ -408,6 +408,7 @@ func (m Model) aiTranscriptCached(width int) *aiTranscriptCache {
 		c.configured, c.label = s.provider.Configured(), s.modelLabel()
 	}
 	s.pruneMDCache(len(s.conv.Messages))
+	s.pruneSegCache(len(s.conv.Messages))
 	return c
 }
 
@@ -493,11 +494,25 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 			out = append(out, aiChip("↶ Undo AI changes ("+strconv.Itoa(n)+" file"+plural(n)+")", "undo-turn:"+strconv.Itoa(turn), width))
 		}
 	}
+	resizing := m.dragKind == dragActionsLeft
 	for i, msg := range s.conv.Messages {
-		switch msg.Role {
-		case ai.StoredUser:
+		if msg.Role == ai.StoredUser {
 			undo()
 			turn = i
+		}
+		streaming := s.streaming && i == last
+		var key aiSegKey
+		cacheable := !resizing && !streaming && msg.Run == nil
+		if cacheable {
+			key = m.aiSegKeyFor(i, width)
+			if e, ok := s.segCache[i]; ok && e.key == key {
+				out = append(out, e.lines...)
+				continue
+			}
+		}
+		start := len(out)
+		switch msg.Role {
+		case ai.StoredUser:
 			out = append(out, aiLine{sel: aiSel{ok: true, join: "\n"}})
 			out = append(out, aiUserBubble(aiCleanText(msg.Text), width, i)...)
 			if msg.Context != "" {
@@ -518,12 +533,11 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 			}
 			out = append(out, aiLine{sel: aiSel{ok: true, join: "\n"}})
 			text := aiCleanText(msg.Text)
-			streaming := s.streaming && i == last
 			out = append(out, m.aiAnswerHeader(width, i, !streaming))
 			if strings.TrimSpace(text) == "" && streaming {
 				break // the activity line below says what the model does
 			}
-			out = append(out, s.renderAnswer(i, text, width, streaming, m.dragKind == dragActionsLeft)...)
+			out = append(out, s.renderAnswer(i, text, width, streaming, resizing)...)
 		case ai.StoredTool:
 			out = append(out, selPlain(aiCleanText(msg.Text), theme.TextDim, i)...)
 		case ai.StoredError:
@@ -532,12 +546,58 @@ func (m Model) buildAITranscriptAt(width int, act aiActivityView) []aiLine {
 		if msg.Memory > 0 { // OM-2: "memory: 2 lessons saved · view"
 			out = append(out, aiMemorySavedLine(msg.Memory, width))
 		}
+		if cacheable {
+			if s.segCache == nil {
+				s.segCache = map[int]aiSegEntry{}
+			}
+			s.segCache[i] = aiSegEntry{key: key, lines: slices.Clip(out[start:])}
+		}
 	}
 	out = append(out, m.aiMemoryAskLines(width, inner)...) // OM-2 ask-once card
 	undo()
 	out = append(out, act.lines(ind, inner)...)
 	out = append(out, aiLine{sel: aiSel{ok: true, join: "\n"}})
 	return out
+}
+
+// aiSegKey is everything the transcript lines of one finished message
+// depend on (buildAITranscriptAt): the message, the "run by" line of the
+// next one, the width, the theme and the model label of its header.
+type aiSegKey struct {
+	role, text, context, rules, model, runBy, label string
+	lessons, memory, width                          int
+	rk                                              theme.RenderKey
+	rtl                                             rtl.Mode
+}
+
+type aiSegEntry struct {
+	key   aiSegKey
+	lines []aiLine
+}
+
+// aiSegKeyFor is the segment key of message i at width.
+func (m Model) aiSegKeyFor(i, width int) aiSegKey {
+	s := m.ai
+	msg := &s.conv.Messages[i]
+	k := aiSegKey{role: msg.Role, text: msg.Text, context: msg.Context, rules: msg.Rules, model: msg.Model,
+		lessons: msg.Lessons, memory: msg.Memory, width: width, rk: theme.CurrentRenderKey(), rtl: rtlMode}
+	if i+1 < len(s.conv.Messages) {
+		k.runBy = aiRunByLine(s.conv.Messages[i+1].Run)
+	}
+	if s.provider != nil {
+		k.label = s.modelLabel()
+	}
+	return k
+}
+
+// pruneSegCache drops the segments of messages past n (a new or
+// shortened chat).
+func (s *aiState) pruneSegCache(n int) {
+	for i := range s.segCache {
+		if i >= n {
+			delete(s.segCache, i)
+		}
+	}
 }
 
 // aiSuggestions are the empty-state chips.

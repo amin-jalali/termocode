@@ -229,6 +229,9 @@ type aiState struct {
 	mdCache map[int]aiMDEntry
 	// mdStream keeps the drawn start of a long answer (ai_md_stream.go).
 	mdStream aiMDStream
+	// segCache holds the transcript lines of each finished message, so a
+	// streamed token rebuilds only the last answer (ai_panel.go).
+	segCache map[int]aiSegEntry
 	// transcript keeps the built transcript and its drawn rows between
 	// frames (ai_panel.go).
 	transcript aiTranscriptCache
