@@ -68,6 +68,13 @@ func genTypes(browserOnly bool) []genType {
 		}
 		add(reflect.TypeOf(p.New()), true)
 	}
+	for _, d := range topicDataList() { // topicdata.go: hub → browser, tolerant
+		add(d.Snap, false)
+		add(d.Delta, false)
+	}
+	for _, k := range EventKinds() {
+		add(eventData[k], false)
+	}
 	return out
 }
 
@@ -75,6 +82,32 @@ type jsonField struct {
 	name     string
 	optional bool
 	f        reflect.StructField
+}
+
+// enumOf is a string field's allowed values from its `enum:"a|b"` tag.
+func enumOf(f reflect.StructField) []string {
+	tag := f.Tag.Get("enum")
+	if tag == "" || f.Type.Kind() != reflect.String {
+		return nil
+	}
+	return strings.Split(tag, "|")
+}
+
+// fieldTS is a field's TypeScript type: an enum tag gives a union of
+// string literals.
+func fieldTS(f reflect.StructField) string {
+	if vs := enumOf(f); vs != nil {
+		return quoted(vs)
+	}
+	return tsType(f.Type)
+}
+
+// fieldSchema is a field's JSON Schema: an enum tag gives an enum.
+func fieldSchema(f reflect.StructField) any {
+	if vs := enumOf(f); vs != nil {
+		return map[string]any{"enum": vs}
+	}
+	return schemaOf(f.Type)
 }
 
 func jsonFields(t reflect.Type) []jsonField {
@@ -184,7 +217,7 @@ func GenerateTS() ([]byte, error) {
 			if f.optional {
 				opt = "?"
 			}
-			fmt.Fprintf(&b, "  %s%s: %s;\n", f.name, opt, tsType(f.f.Type))
+			fmt.Fprintf(&b, "  %s%s: %s;\n", f.name, opt, fieldTS(f.f))
 		}
 		b.WriteString("}\n")
 	}
@@ -199,6 +232,15 @@ func GenerateTS() ([]byte, error) {
 		fmt.Fprintf(&b, "  %q: %s;\n", p.Op, reflect.TypeOf(p.New()).Elem().Name())
 	}
 	b.WriteString("}\n\nexport type OpName = keyof OpArgs;\n")
+	b.WriteString("\n// The data of a topic's snap and delta messages, by topic name.\nexport interface TopicData {\n")
+	for _, d := range topicDataList() {
+		fmt.Fprintf(&b, "  %q: { snap: %s; delta: %s };\n", d.Topic, d.Snap.Name(), d.Delta.Name())
+	}
+	b.WriteString("}\n\n// The data of an ev message, by kind.\nexport interface EventData {\n")
+	for _, k := range EventKinds() {
+		fmt.Fprintf(&b, "  %q: %s;\n", k, eventData[k].Name())
+	}
+	b.WriteString("}\n")
 	return b.Bytes(), nil
 }
 
@@ -212,6 +254,7 @@ type schemaDoc struct {
 	CloseCodes  []schemaClose                `json:"close_codes"`
 	ErrCodes    []ErrCode                    `json:"err_codes"`
 	Topics      []schemaTopic                `json:"topics"`
+	Events      map[string]string            `json:"events"`
 	Messages    map[string]map[string]string `json:"messages"`
 	Ops         []schemaOp                   `json:"ops"`
 	Defs        map[string]schemaObj         `json:"defs"`
@@ -226,6 +269,8 @@ type schemaTopic struct {
 	Name  string `json:"name"`
 	Keyed bool   `json:"keyed"`
 	Phase Phase  `json:"phase"`
+	Snap  string `json:"snap,omitempty"`  // the def of the snap's data
+	Delta string `json:"delta,omitempty"` // the def of a delta's data
 }
 
 type schemaOp struct {
@@ -318,7 +363,15 @@ func GenerateSchema() ([]byte, error) {
 		doc.CloseCodes = append(doc.CloseCodes, schemaClose{c, c.Reason()})
 	}
 	for _, d := range topicDefs {
-		doc.Topics = append(doc.Topics, schemaTopic{d.Name, d.Keyed, d.Phase})
+		st := schemaTopic{Name: d.Name, Keyed: d.Keyed, Phase: d.Phase}
+		if td, ok := topicData[d.Name]; ok {
+			st.Snap, st.Delta = td.Snap.Name(), td.Delta.Name()
+		}
+		doc.Topics = append(doc.Topics, st)
+	}
+	doc.Events = map[string]string{}
+	for _, k := range EventKinds() {
+		doc.Events[k] = eventData[k].Name()
 	}
 	for _, p := range opTable {
 		doc.Ops = append(doc.Ops, schemaOp{
@@ -336,7 +389,7 @@ func GenerateSchema() ([]byte, error) {
 			if f.name == "t" && kind != "" {
 				obj.Properties["t"] = map[string]any{"const": kind}
 			} else {
-				obj.Properties[f.name] = schemaOf(f.f.Type)
+				obj.Properties[f.name] = fieldSchema(f.f)
 			}
 			if !f.optional {
 				obj.Required = append(obj.Required, f.name)
