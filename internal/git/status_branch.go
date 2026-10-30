@@ -20,7 +20,9 @@ type BranchStatus struct {
 // gives the same answer as GetBranch + Status, which start three or
 // four git processes; the background poll runs it every 2 s.
 func StatusBranch(dir string) (BranchStatus, error) {
-	cmd := spawn.Command("git", "status", "--porcelain=v2", "--branch", "-z")
+	// --no-optional-locks: a read never takes .git/index.lock, so it
+	// cannot make the user's commit or rebase fail at the same moment.
+	cmd := spawn.Command("git", "--no-optional-locks", "status", "--porcelain=v2", "--branch", "-z")
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
