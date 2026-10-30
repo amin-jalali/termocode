@@ -1,6 +1,7 @@
 package webproto
 
 import (
+	"encoding/json"
 	"math"
 	"strings"
 	"unicode/utf8"
@@ -299,6 +300,13 @@ func (a *GrantAskArgs) validate(int) error {
 func (a *TotpCheckArgs) validate(int) error {
 	if !digits(a.Code, 6) || (a.Device != "" && !validName(a.Device, MaxID)) {
 		return invalid("bad code")
+	}
+	return nil
+}
+
+func (a *ControlAskArgs) validate(int) error {
+	if len(a.Credential) < 2 || a.Credential[0] != '{' || !json.Valid([]byte(a.Credential)) {
+		return invalid("no passkey answer")
 	}
 	return nil
 }

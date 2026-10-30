@@ -1,5 +1,7 @@
 package webproto
 
+import "encoding/json"
+
 // Args types of the requests. Paths are workspace-relative with forward
 // slashes; the hub checks them with the workspace resolver. Buf is an nvim
 // buffer number. No args type carries Lua, an RPC name, a command line or
@@ -140,6 +142,21 @@ type PairAskArgs struct {
 	Code   string `json:"code"`
 	Guest  bool   `json:"guest,omitempty"`
 }
+
+// ControlAskArgs carries a viewer's answer to its control challenge: a
+// WebAuthn assertion, as JSON text (its keys are camelCase, which the
+// strict decoder refuses as keys; the gateway parses and checks it).
+type ControlAskArgs struct {
+	Credential string `json:"credential"`
+}
+
+// ControlChallenge is the answer to control.challenge: WebAuthn request
+// options for this device's own passkey.
+type ControlChallenge struct {
+	Options json.RawMessage `json:"options"`
+}
+
+func init() { registerResult(OpControlChallenge, ControlChallenge{}) }
 
 // GrantAskArgs asks the owner to give a viewer device control (WEB-34);
 // the gateway has checked a fresh passkey assertion already.

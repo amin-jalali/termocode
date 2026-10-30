@@ -41,6 +41,9 @@ type Policy struct {
 	LaptopCard  bool // waits for a Risky card on the laptop
 	Audit       Audit
 	Phase       Phase
+	// Gateway: the gateway answers it itself (it holds the passkeys);
+	// it never reaches the hub, which refuses it.
+	Gateway bool
 }
 
 // Op names.
@@ -89,6 +92,8 @@ const (
 	OpWebPairAsk       = "web.pair_ask"
 	OpWebGrantAsk      = "web.grant_ask"
 	OpWebTotpCheck     = "web.totp_check"
+	OpControlChallenge = "control.challenge"
+	OpControlAsk       = "control.ask"
 )
 
 const (
@@ -154,6 +159,11 @@ var opTable = []Policy{
 	{Op: OpRunsStop, New: newOf[KeyArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV1},
 	{Op: OpRunsPause, New: newOf[KeyArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV1},
 	{Op: OpRunsResume, New: newOf[KeyArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV1},
+
+	// Asking for control (v2, WEB-34): a viewer proves it holds its
+	// passkey (a fresh assertion) and the gateway asks the laptop.
+	{Op: OpControlChallenge, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: Rate{N: 1, Per: 5 * time.Second}, MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV2, Gateway: true},
+	{Op: OpControlAsk, New: newOf[ControlAskArgs](), Role: RoleViewer, Rate: Rate{N: 1, Per: 5 * time.Second}, MaxBytes: 16 * kib, Audit: AuditYes, Phase: PhaseV2, Gateway: true},
 
 	// Control connection only (same user, never a browser).
 	{Op: OpWebOpen, New: newOf[WebOpenArgs](), Role: RoleCtl, Rate: perSec(1), MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV1},

@@ -5,7 +5,7 @@ export type Version = 2;
 export type Subprotocol = "termocode.v2";
 export type Role = "viewer" | "controller";
 export type ErrCode = "bad_request" | "forbidden" | "limit" | "conflict" | "gone" | "busy" | "not_found" | "internal";
-export type CloseCode = 1000 | 1003 | 1008 | 1009 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012;
+export type CloseCode = 1000 | 1003 | 1008 | 1009 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012 | 4013;
 export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings";
 
 export interface Bye {
@@ -218,6 +218,10 @@ export interface GitCommitArgs {
 
 export interface KeyArgs {
   key: string;
+}
+
+export interface ControlAskArgs {
+  credential: string;
 }
 
 export interface StatusSnap {
@@ -741,6 +745,10 @@ export interface TaskStarted {
   buf: number;
 }
 
+export interface ControlChallenge {
+  options: unknown;
+}
+
 export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;
 export type ServerMsg = Delta | ErrMsg | Event | Meta | Pong | Res | Resync | ServerBye | Snap;
 
@@ -784,6 +792,8 @@ export interface OpArgs {
   "runs.stop": KeyArgs;
   "runs.pause": KeyArgs;
   "runs.resume": KeyArgs;
+  "control.challenge": EmptyArgs;
+  "control.ask": ControlAskArgs;
 }
 
 export type OpName = keyof OpArgs;
@@ -833,4 +843,5 @@ export interface OpResult {
   "git.commit": GitCommitted;
   "git.discard": AskRef;
   "tasks.run": TaskStarted;
+  "control.challenge": ControlChallenge;
 }
