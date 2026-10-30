@@ -3,6 +3,7 @@ package app
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -15,6 +16,7 @@ import (
 
 func init() {
 	webOps[webproto.OpGitGraph] = (*Model).webGitGraph
+	webOps[webproto.OpGitBlame] = (*Model).webGitBlame
 }
 
 var gitRefKinds = map[git.RefKind]string{git.RefLocal: "local", git.RefRemote: "remote", git.RefTag: "tag"}
@@ -57,6 +59,52 @@ func (m *Model) webGitGraph(call *webCall) tea.Cmd {
 				r.Refs = append(r.Refs, webproto.GitRef{Name: webName(ref.Name), Kind: gitRefKinds[ref.Kind]})
 			}
 			out.Rows = append(out.Rows, r)
+		}
+		call.reply(out)
+		return nil
+	}
+}
+
+// webGitBlame blames the saved file. A new file has no history yet; a
+// file that may hold secrets stays on the laptop, as in buf.open.
+func (m *Model) webGitBlame(call *webCall) tea.Cmd {
+	a := call.args.(*webproto.GitBlameArgs)
+	root, ok := m.webGitRoot(call)
+	if !ok || !webGitInWorkspace(call, root, a.Path) {
+		return nil
+	}
+	if ai.IsSecretFileName(a.Path) {
+		webFail(call, webErrSecret())
+		return nil
+	}
+	if f, ok := m.webGitFind(root, a.Path); ok && f.Untracked() {
+		call.fail(webproto.CodeNotFound, "This file is not committed yet.")
+		return nil
+	}
+	call.later()
+	return func() tea.Msg {
+		lines, err := git.BlameRange(root, a.Path, 1, webproto.MaxBlameLines+1)
+		if err != nil {
+			webGitFail(call, err)
+			return nil
+		}
+		out := webproto.GitBlame{Path: a.Path, Commits: []webproto.GitBlameCommit{}, Lines: []int{}}
+		if len(lines) > webproto.MaxBlameLines {
+			lines, out.Cut = lines[:webproto.MaxBlameLines], true
+		}
+		index := map[string]int{}
+		for _, l := range lines {
+			i, seen := index[l.Hash]
+			if !seen {
+				c := webproto.GitBlameCommit{Uncommitted: true}
+				if l.Hash != "uncommitted" {
+					c = webproto.GitBlameCommit{Hash: l.Hash, Author: webName(l.Author), Subject: webName(l.Subject), When: l.When * 1000}
+				}
+				i = len(out.Commits)
+				index[l.Hash] = i
+				out.Commits = append(out.Commits, c)
+			}
+			out.Lines = append(out.Lines, i)
 		}
 		call.reply(out)
 		return nil

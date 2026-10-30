@@ -65,3 +65,46 @@ func TestGitGraphRowsAndLanes(t *testing.T) {
 		t.Errorf("page 2: %+v", g)
 	}
 }
+
+// Spec (blame): git.blame lists each commit once and points every line
+// of the saved file at one; a line changed since the last commit is
+// uncommitted. A new file, a file that may hold secrets and a path out
+// of the workspace are refused.
+func TestGitBlameLines(t *testing.T) {
+	m := aiTestModel(t)
+	webTestHub(t, &m)
+	dir, run := webTestRepo(t, &m)
+	webTestWrite(t, dir, "a.txt", "one\ntwo\nthree\n")
+	run("commit", "-q", "-am", "add three")
+	webTestWrite(t, dir, "a.txt", "ONE\ntwo\nthree\n")
+	webTestWrite(t, dir, "new.txt", "n\n")
+	webTestWrite(t, dir, ".env", "TOKEN=x\n")
+	run("add", "-f", ".env")
+	run("commit", "-q", "-m", "env", "--", ".env")
+	webTestGitLoad(&m)
+	c := webTestSub(t, &m)
+
+	var b webproto.GitBlame
+	webTestData(t, webTestCallBg(t, &m, c, webproto.OpGitBlame, `{"path":"a.txt"}`), &b)
+	if b.Path != "a.txt" || len(b.Lines) != 3 || b.Cut {
+		t.Fatalf("blame %+v", b)
+	}
+	at := func(line int) webproto.GitBlameCommit { return b.Commits[b.Lines[line-1]] }
+	if l := at(1); !l.Uncommitted || l.Hash != "" {
+		t.Errorf("line 1 (changed): %+v", l)
+	}
+	if l := at(2); l.Subject != "first" || l.Author != "T" || l.When < 1e12 || len(l.Hash) < 7 {
+		t.Errorf("line 2: %+v", l)
+	}
+	if l := at(3); l.Subject != "add three" {
+		t.Errorf("line 3: %+v", l)
+	}
+	if len(b.Commits) != 3 {
+		t.Errorf("commits listed %d times, want 3 distinct: %+v", len(b.Commits), b.Commits)
+	}
+	for path, want := range map[string]webproto.ErrCode{"new.txt": webproto.CodeNotFound, ".env": webproto.CodeForbidden} {
+		if got := webTestErr(webTestCallBg(t, &m, c, webproto.OpGitBlame, `{"path":"`+path+`"}`)); got != string(want) {
+			t.Errorf("%s: %q, want %s", path, got, want)
+		}
+	}
+}
