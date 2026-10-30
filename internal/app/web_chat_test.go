@@ -94,6 +94,7 @@ func TestStreamAppendCoalesced(t *testing.T) {
 		t.Fatalf("append %+v", d)
 	}
 	webReplayCheck(t, h.topics["chat"], c)
+	webReplayGolden(t, webReplayPath("chat", "stream_append"), c)
 
 	sub := webTestSub(t, &m, "chat")
 	webTestNow(t, sub)
