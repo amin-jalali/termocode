@@ -104,6 +104,14 @@ type BufSnap struct {
 	Dirty    bool     `json:"dirty"`
 	Ft       string   `json:"ft"`
 	Readonly bool     `json:"readonly"`
+	// The buffer's layout, as the laptop's editor has it: tab width,
+	// spaces for tabs, the file's encoding ("" is utf-8) and line ends
+	// ("unix", "dos", "mac"). The page draws tabs that wide and shows them
+	// in its status bar.
+	Tabstop   int    `json:"ts,omitempty"`
+	Expandtab bool   `json:"et,omitempty"`
+	Enc       string `json:"enc,omitempty"`
+	Eol       string `json:"eol,omitempty"`
 }
 
 // LinesDelta replaces rows [First, Last) with Lines (as
