@@ -86,8 +86,13 @@ func (m *Model) openWebStartCard(call *webCall) tea.Cmd {
 		}
 		return nil
 	}
-	// A risky card: Not now is first and focused, so Enter or Esc on a
-	// fresh card never opens the door.
+	m.showWebStartCard(cfg, call)
+	return nil
+}
+
+// showWebStartCard draws the start card. A risky card: Not now is first
+// and focused, so Enter or Esc on a fresh card never opens the door.
+func (m *Model) showWebStartCard(cfg webConfig, call *webCall) {
 	m.confirm = confirm.Risky("Open this session in a web browser?", webStartBody(cfg, call != nil),
 		confirm.Button{ID: "not-now", Title: "Not now"},
 		confirm.Button{ID: "open", Title: "Open in browser", Style: confirm.StylePrimary},
@@ -96,7 +101,24 @@ func (m *Model) openWebStartCard(call *webCall) tea.Cmd {
 	m.confirmOpen = true
 	m.confirmKind = confirmKindWebStart
 	m.webStartCall = call
-	return nil
+}
+
+// webDemo is the start card or the status chip with made-up state
+// (DevActionMsg "webdemo", for the goldens): nothing listens and no
+// process starts.
+func (m *Model) webDemo(variant string) {
+	switch variant {
+	case "card":
+		m.showWebStartCard(webConfig{IdleMinutes: 15, MaxHours: 12, OpenBrowser: true, MaxViewers: 4}, nil)
+	case "on", "connected":
+		m.webPanel = &webPanelState{up: true, port: 41237}
+		if variant == "connected" {
+			if m.web == nil {
+				m.web = newWebHub()
+			}
+			m.web.live[&webConn{id: "c-demo"}] = true
+		}
+	}
 }
 
 // answerWebStart acts on the start card; anything but open or copy (Esc

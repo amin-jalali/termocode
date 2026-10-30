@@ -252,6 +252,7 @@ func goldenCases() []goldenCase {
 	out = append(out, goldenCase{"setup-card-100x30", setupCardScene(), 100, 30})
 	out = append(out, keyHintCases()...)
 	out = append(out, kubeCases()...) // golden_kube_test.go
+	out = append(out, webCases()...)  // golden_web_test.go
 	// A terminal tab split into three panes (G-SPL).
 	{
 		sc := TerminalSplit()
