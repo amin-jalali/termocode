@@ -102,3 +102,31 @@ func TestAxeEveryView(t *testing.T) {
 		}
 	}
 }
+
+// The terminal's rows do not speak each new line (too noisy): the log is
+// not live. A button, shown when it has the keyboard focus, reads the
+// last 20 rows aloud through a status region.
+func TestTermReadLastRows(t *testing.T) {
+	p, c := openTerm(t, Desktop)
+	rows := make([]string, 30)
+	for i := range rows {
+		rows[i] = "row " + string(rune('a'+i%26)) + string(rune('0'+i/10)) + string(rune('0'+i%10))
+	}
+	showTerm(t, p, c, termSnap(3, 0, 80, rows...), termItem(3, "zsh", false, true))
+	if got := Eval[string](p, `document.querySelector('[data-view="term"] .term-rows').getAttribute("aria-live") ?? ""`); got != "off" {
+		t.Errorf("term rows aria-live %q, want off", got)
+	}
+	read := `document.querySelector('[data-view="term"] .term-read')`
+	if w := Eval[float64](p, read+`.getBoundingClientRect().width`); w > 1 {
+		t.Errorf("the read button shows (%v px wide) without focus", w)
+	}
+	Eval[bool](p, read+`.focus() || true`)
+	if w := Eval[float64](p, read+`.getBoundingClientRect().width`); w < 44 {
+		t.Errorf("the focused read button is %v px wide", w)
+	}
+	p.Key("\r")
+	p.WaitJS(`document.querySelector('[data-view="term"] .term-said').textContent === ` + jsq(strings.Join(rows[10:], "\n")))
+	if Eval[string](p, `document.querySelector('[data-view="term"] .term-said').getAttribute("role")`) != "status" {
+		t.Error("the read rows are not in a status region")
+	}
+}
