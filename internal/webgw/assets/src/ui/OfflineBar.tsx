@@ -5,11 +5,11 @@ import { h, type ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { useNow } from "../lib/time";
 import { link } from "../session";
-import { t, type StringKey } from "../strings";
+import { t, tn, type StringKey } from "../strings";
 import { Button } from "./Button";
 
 /** finalText is what a close code means for the user (web UX 7.4 E-texts). */
-export function finalText(code: number | null): { main: StringKey; sub?: StringKey; reload?: boolean } {
+export function finalText(code: number | null): { main: StringKey; sub?: StringKey; reload?: boolean; idle?: boolean } {
   switch (code) {
     case 4001:
     case 4002:
@@ -21,7 +21,7 @@ export function finalText(code: number | null): { main: StringKey; sub?: StringK
     case 4005:
       return { main: "e.too_many", sub: "e.still_running" };
     case 4006:
-      return { main: "e.idle", sub: "e.still_running" };
+      return { main: "e.idle_any", sub: "e.still_running", idle: true };
     case 4007:
       return { main: "e.max", sub: "e.still_running" };
     case 4010:
@@ -36,6 +36,13 @@ export function finalText(code: number | null): { main: StringKey; sub?: StringK
     default:
       return { main: "e.stopped", sub: "e.still_running" };
   }
+}
+
+/** idleText says how long the panel waits without use, from the hub's
+ * meta (the laptop's own setting); without it, in general words. */
+export function idleText(idleS: number | undefined): string {
+  const min = Math.round((idleS ?? 0) / 60);
+  return min >= 1 ? tn("e.idle", min) : t("e.idle_any");
 }
 
 export type BarKind = "lost" | "back" | "final";
@@ -74,7 +81,7 @@ export function OfflineBar() {
     return (
       <Bar
         kind="final"
-        text={t(f.main)}
+        text={f.idle ? idleText(link.meta.value?.idle_s) : t(f.main)}
         sub={f.sub && t(f.sub)}
         action={
           f.reload && (
