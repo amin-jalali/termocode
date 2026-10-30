@@ -3,6 +3,7 @@ package app
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/toast"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -48,7 +49,10 @@ func (m *Model) handleWebMsg(msg tea.Msg) (tea.Cmd, bool) {
 	case webHelloMsg:
 		msg.hub.live[msg.conn] = true
 		m.onWebHello(msg)
-		return waitWeb(msg.hub), true
+		if msg.resume != nil { // a reconnect: no news for the laptop
+			return waitWeb(msg.hub), true
+		}
+		return tea.Batch(m.webToast(toast.Info, "A web browser connected."), waitWeb(msg.hub)), true
 	}
 	return nil, false
 }
