@@ -4,6 +4,7 @@
 // a desktop (like the TUI's editor + AI chat).
 import { h } from "preact";
 import { effect, signal } from "@preact/signals";
+import { bell } from "./lib/attention";
 import { layout } from "./lib/layout";
 import { route } from "./lib/router";
 import type { Tab } from "./state/route";
@@ -22,6 +23,7 @@ export const lastPrimary = signal<Exclude<Tab, "chat">>("files");
 effect(() => {
   const tab = route.value.tab;
   if (tab !== "chat") lastPrimary.value = tab;
+  if (tab === "term") bell.value = false; // the bell was seen
 });
 
 /** skipToMain moves focus to the view without touching the hash route. */

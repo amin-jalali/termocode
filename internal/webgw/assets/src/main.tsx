@@ -11,7 +11,7 @@ import "./styles/components.css";
 import { App } from "./app";
 import { prefs } from "./lib/prefs";
 import { goTab } from "./lib/router";
-import { laptopTheme, link, status } from "./session";
+import { laptopTheme, link, waiting } from "./session";
 import { THEME_TOKENS, themeTokens } from "./state/theme";
 import { TABS } from "./state/route";
 import { ConnectScreen, type ConnectState } from "./ui/ConnectScreen";
@@ -24,7 +24,7 @@ const connect = signal<ConnectState>(secret ? "ready" : "nolink");
 
 function startShell(): void {
   phase.value = "shell";
-  link.subscribe("status", "toasts");
+  link.subscribe("status", "toasts", "cards");
   link.start();
 }
 
@@ -89,7 +89,7 @@ effect(() => {
 });
 
 effect(() => {
-  const n = status.value.cardsWaiting;
+  const n = waiting.value.count;
   document.title = n > 0 ? `(${n}) termocode` : "termocode";
 });
 
