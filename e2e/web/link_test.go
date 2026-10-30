@@ -158,3 +158,28 @@ func TestLinkIdleCloseSaysTheRealLimit(t *testing.T) {
 		})
 	}
 }
+
+// The max-time text says the panel's own limit from meta too.
+func TestLinkMaxCloseSaysTheRealLimit(t *testing.T) {
+	for _, tc := range []struct {
+		maxS      int
+		want, not string
+	}{
+		{4 * 3600, "after 4 hours", "12"},
+		{3600, "after 1 hour.", "12"},
+		{0, "stopped after its time limit", "hours"},
+	} {
+		t.Run(strconv.Itoa(tc.maxS), func(t *testing.T) {
+			s := StartServer(t)
+			p := NewPage(t, s, Phone)
+			meta := Meta("c-1")
+			meta.MaxS = tc.maxS
+			c := p.LoginMeta(meta)
+			c.Close(t, webproto.CloseMaxLifetime)
+			p.WaitJS(`document.querySelector(".bar-final")`)
+			if got := p.Text(".bar-final"); !strings.Contains(got, tc.want) || strings.Contains(got, tc.not) {
+				t.Errorf("final bar %q, want %q and no %q", got, tc.want, tc.not)
+			}
+		})
+	}
+}

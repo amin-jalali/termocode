@@ -3,13 +3,14 @@
 // says why and that the work goes on on the laptop; no retry.
 import { h, type ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
+import type { Meta } from "../../../../webproto/proto";
 import { useNow } from "../lib/time";
 import { link } from "../session";
 import { t, tn, type StringKey } from "../strings";
 import { Button } from "./Button";
 
 /** finalText is what a close code means for the user (web UX 7.4 E-texts). */
-export function finalText(code: number | null): { main: StringKey; sub?: StringKey; reload?: boolean; idle?: boolean } {
+export function finalText(code: number | null): { main: StringKey; sub?: StringKey; reload?: boolean; limit?: "idle" | "max" } {
   switch (code) {
     case 4001:
     case 4002:
@@ -21,9 +22,9 @@ export function finalText(code: number | null): { main: StringKey; sub?: StringK
     case 4005:
       return { main: "e.too_many", sub: "e.still_running" };
     case 4006:
-      return { main: "e.idle_any", sub: "e.still_running", idle: true };
+      return { main: "e.idle_any", sub: "e.still_running", limit: "idle" };
     case 4007:
-      return { main: "e.max", sub: "e.still_running" };
+      return { main: "e.max_any", sub: "e.still_running", limit: "max" };
     case 4010:
     case 4012:
       return { main: "e.ended" };
@@ -38,11 +39,16 @@ export function finalText(code: number | null): { main: StringKey; sub?: StringK
   }
 }
 
-/** idleText says how long the panel waits without use, from the hub's
- * meta (the laptop's own setting); without it, in general words. */
-export function idleText(idleS: number | undefined): string {
-  const min = Math.round((idleS ?? 0) / 60);
-  return min >= 1 ? tn("e.idle", min) : t("e.idle_any");
+/** limitText says which of the panel's limits ended the session, with
+ * the laptop's own setting from the hub's meta (idle minutes, max
+ * hours); without it, in general words. */
+export function limitText(limit: "idle" | "max", m: Meta | null): string {
+  if (limit === "idle") {
+    const min = Math.round((m?.idle_s ?? 0) / 60);
+    return min >= 1 ? tn("e.idle", min) : t("e.idle_any");
+  }
+  const hours = Math.round((m?.max_s ?? 0) / 3600);
+  return hours >= 1 ? tn("e.max", hours) : t("e.max_any");
 }
 
 export type BarKind = "lost" | "back" | "final";
@@ -81,7 +87,7 @@ export function OfflineBar() {
     return (
       <Bar
         kind="final"
-        text={f.idle ? idleText(link.meta.value?.idle_s) : t(f.main)}
+        text={f.limit ? limitText(f.limit, link.meta.value) : t(f.main)}
         sub={f.sub && t(f.sub)}
         action={
           f.reload && (
