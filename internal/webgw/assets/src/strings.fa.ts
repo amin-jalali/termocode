@@ -63,6 +63,8 @@ export const FA: Record<StringKey, string> = {
   "pill.waiting_laptop": "{n} مورد منتظر لپ‌تاپ",
   "viewonly": "فقط دیدن",
   "viewonly.ask": "درخواست کنترل",
+  "control.denied": "داده نشد: پاسخ لپ‌تاپ «الان نه» بود.",
+  "control.failed": "درخواست کنترل انجام نشد. دوباره امتحان کنید.",
   "laptop.open": "باز کردن روی لپ‌تاپ",
   "laptop.show": "نشان دادن روی لپ‌تاپ",
   "laptop.shown": "روی لپ‌تاپ نشان داده شد",

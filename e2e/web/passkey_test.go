@@ -4,6 +4,7 @@ package web
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/webdevices"
 	"github.com/amin-jalali/termocode/internal/webgw"
+	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
 // localhostBase is the page origin passkeys work on: an RP id may not be
@@ -147,4 +149,77 @@ func TestSignInCodeInTheBrowser(t *testing.T) {
 	c2 := s.Hub.Accept(t)
 	c2.HandshakeMeta(t, Meta("c-2"))
 	p.WaitJS(`document.documentElement.dataset.link === "online"`)
+}
+
+// pairInBrowser pairs the page's device with role and returns the first
+// hub connection, after its handshake with meta.
+func pairInBrowser(t *testing.T, s *Server, p *Page, role string, meta *webproto.Meta) *HubConn {
+	t.Helper()
+	plain, digest, _ := webgw.NewLinkSecret()
+	s.Pairing.SetSecret(digest, webgw.PairTTL, false)
+	p.Do(chromedp.Navigate(s.localhostBase() + "/#p=" + plain))
+	p.virtualAuthenticator()
+	p.Tap(".pair .connect-foot button")
+	<-s.Asks
+	s.PairAnswers <- role
+	p.WaitJS(`[...document.querySelectorAll(".pair .connect-foot button")].some((b) => b.textContent.trim() === "Save passkey")`)
+	p.Tap(".pair .connect-foot button")
+	c := s.Hub.Accept(t)
+	c.HandshakeMeta(t, meta)
+	return c
+}
+
+// Spec (WEB-34): a paired viewer sees "View only · Ask for control";
+// asking signs the gateway's challenge with this device's passkey and
+// sends it as control.ask; after the yes the link closes with 4013, the
+// page connects again at once, and as a controller the bar is gone.
+func TestViewerAsksForControlInTheBrowser(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Phone)
+	ds := func() webdevices.Device {
+		d, _ := s.Devices.List()
+		return d[0]
+	}
+	viewer := Meta("c-v")
+	viewer.Role = webproto.RoleViewer
+	c := pairInBrowser(t, s, p, webdevices.RoleViewer, viewer)
+	dev := ds()
+	viewer.Device = dev.ID
+	// The pairing's meta did not know the device id yet: say it again.
+	c.Send(t, viewer)
+	p.WaitJS(`document.querySelector(".viewer-bar button")?.textContent.trim() === "Ask for control"`)
+	p.Tap(".viewer-bar button")
+	var req *webproto.Req
+	for req == nil {
+		if m, ok := c.Next(t).(*webproto.Req); ok && m.Op == webproto.OpControlChallenge {
+			req = m
+		}
+	}
+	id, opts, err := s.Passkeys.BeginLogin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: req.ID, Data: raw(webproto.ControlChallenge{Options: opts})})
+	var askReq *webproto.Req
+	for askReq == nil {
+		if m, ok := c.Next(t).(*webproto.Req); ok && m.Op == webproto.OpControlAsk {
+			askReq = m
+		}
+	}
+	var args webproto.ControlAskArgs
+	if err := json.Unmarshal(askReq.Args, &args); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.Passkeys.FinishLogin(id, json.RawMessage(args.Credential))
+	if err != nil || got.ID != dev.ID {
+		t.Fatalf("the page's answer: %+v %v", got, err)
+	}
+	p.WaitJS(`document.querySelector(".viewer-bar")?.textContent.includes("Waiting for the laptop")`)
+	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: askReq.ID})
+	c.Close(t, webproto.CloseRoleChanged)
+	c2 := s.Hub.Accept(t)
+	ctrl := Meta("c-c")
+	ctrl.Device = dev.ID
+	c2.HandshakeMeta(t, ctrl)
+	p.WaitJS(`document.documentElement.dataset.link === "online" && !document.querySelector(".viewer-bar")`)
 }
