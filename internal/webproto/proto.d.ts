@@ -220,6 +220,15 @@ export interface KeyArgs {
   key: string;
 }
 
+export interface ItemArgs {
+  path: string;
+}
+
+export interface RenameArgs {
+  path: string;
+  name: string;
+}
+
 export interface StatusSnap {
   root: string;
   workspace_label: string;
@@ -769,6 +778,10 @@ export interface TaskStarted {
   buf: number;
 }
 
+export interface TreeChanged {
+  path: string;
+}
+
 export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;
 export type ServerMsg = Delta | ErrMsg | Event | Meta | Pong | Res | Resync | ServerBye | Snap;
 
@@ -812,6 +825,9 @@ export interface OpArgs {
   "runs.stop": KeyArgs;
   "runs.pause": KeyArgs;
   "runs.resume": KeyArgs;
+  "tree.new_file": ItemArgs;
+  "tree.new_dir": ItemArgs;
+  "tree.rename": RenameArgs;
 }
 
 export type OpName = keyof OpArgs;
@@ -863,4 +879,7 @@ export interface OpResult {
   "git.commit": GitCommitted;
   "git.discard": AskRef;
   "tasks.run": TaskStarted;
+  "tree.new_file": TreeChanged;
+  "tree.new_dir": TreeChanged;
+  "tree.rename": TreeChanged;
 }
