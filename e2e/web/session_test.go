@@ -55,7 +55,7 @@ func (p *Page) LoginHere(conn string) *HubConn {
 	c.Handshake(p.T, conn)
 	c.Subs(p.T, p.firstTopics()...)
 	c.Send(p.T, Snap("status", 1, statusData("main", 0)))
-	c.Send(p.T, Snap("toasts", 1, []any{}))
+	c.Send(p.T, Snap("toasts", 1, map[string]any{"toasts": []any{}}))
 	p.WaitJS(`document.documentElement.dataset.link === "online"`)
 	p.WaitJS(`document.querySelector(".strip .branch")?.textContent.includes("main")`)
 	return c

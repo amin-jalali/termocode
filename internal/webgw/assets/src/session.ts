@@ -1,5 +1,6 @@
 // The page's one store and one link to the hub.
-import { computed } from "@preact/signals";
+import { computed, effect } from "@preact/signals";
+import { syncLaptopToasts, type LaptopToast } from "./lib/toasts";
 import { token } from "./net/auth";
 import { Link } from "./net/link";
 import { readStatus } from "./state/status";
@@ -27,3 +28,12 @@ export const laptopTheme = computed(() => {
   const d = store.topic("status").value?.data;
   return readTheme(typeof d === "object" && d !== null ? (d as Record<string, unknown>).theme : undefined);
 });
+
+/** listOf reads data[key] as a list (an empty one when it is not). */
+export function listOf<T>(data: unknown, key: string): T[] {
+  const v = typeof data === "object" && data !== null ? (data as Record<string, unknown>)[key] : undefined;
+  return Array.isArray(v) ? (v as T[]) : [];
+}
+
+// The laptop's toasts show on the page as they come and go (WEB-12).
+effect(() => syncLaptopToasts(listOf<LaptopToast>(store.topic("toasts").value?.data, "toasts")));
