@@ -64,7 +64,9 @@ func webTestFakeServices(t *testing.T, askLocal bool) *webTestSvcLog {
 		l.calls = append(l.calls, "logs "+name)
 		return "db-1  | ready\ndb-1  | password=" + "hunter" + "2secret\n", nil
 	}
-	t.Cleanup(func() { webSvcStart, webSvcRestart, webSvcStop, webSvcComposeLogs = oldStart, oldRestart, oldStop, oldLogs })
+	t.Cleanup(func() {
+		webSvcStart, webSvcRestart, webSvcStop, webSvcComposeLogs = oldStart, oldRestart, oldStop, oldLogs
+	})
 	return l
 }
 
