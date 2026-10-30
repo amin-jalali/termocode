@@ -428,6 +428,10 @@ var aiActionPolicies = map[string]aiActionPolicy{
 	// screens; the config snippet is for the user's agents, not the chat.
 	"mcp-serve-status":      aiNever(aiNoPicker),
 	"mcp-serve-copy-config": aiNever(aiNoAIConfig + " (the config is for the user to paste into an agent)"),
+	// The web panel gives shell access from a browser (web_tui.go).
+	"web-start":     aiNever(aiNoWeb),
+	"web-stop":      aiNever(aiNoWeb),
+	"web-copy-link": aiNever(aiNoWeb + " (the link logs a browser in)"),
 	// Itermoc (itermoc_actions.go): the user's screen for profiles, models,
 	// services and outside agents. The AI opens it with the typed tool
 	// ai_view_open (ai_itermoc_tools.go); as palette commands they are the user's.
