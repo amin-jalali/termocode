@@ -76,4 +76,5 @@ ai_send_to_request         25   ms   # Enter to the request leaving, 2 000-messa
 ai_turn_3k_tokens          35   ms   # a 3 000-token answer applied and saved, no drawing, median of 7; local 17 ms
 ai_tool_calls_20           25   ms   # a turn that reads 20 files at once, median of 9; local 1.4 ms (floor)
 runs_view_open_200         25   ms   # open Runs with 200 stored runs (50 chats), median of 9; local 8.0 ms (floor)
+runs_view_reopen_200       25   ms   # show Runs again / another chat opened, state kept; local 5.0 ms before the chat file cache (floor)
 runs_view_redraw_200       25   ms   # draw the Runs list again after a run event; local 1.3 ms (floor)

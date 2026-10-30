@@ -348,6 +348,15 @@ func perfRunsOpen(m *Model) {
 	_ = m.renderRunsSidebar(40, 50)
 }
 
+// perfRunsReopen shows Runs again (its state kept, as when the user
+// comes back to it or opens another chat) and draws it.
+func perfRunsReopen(m *Model) {
+	m.runs.loadedFor = "" // as after another chat was opened
+	m.ai.runGen++
+	m.revealRuns(false)
+	_ = m.renderRunsSidebar(40, 50)
+}
+
 func perfRunsRedraw(m *Model) {
 	m.ai.runGen++
 	_ = m.renderRunsSidebar(40, 50)
@@ -363,7 +372,7 @@ func TestPerfRunsView200(t *testing.T) {
 	if n := len(m.runsCollect(runsNow())); n != 200 {
 		t.Fatalf("%d runs", n)
 	}
-	var open, redraw []time.Duration
+	var open, reopen, redraw []time.Duration
 	for i := 0; i < 9; i++ {
 		t0 := time.Now()
 		perfRunsOpen(m)
@@ -371,9 +380,13 @@ func TestPerfRunsView200(t *testing.T) {
 		t1 := time.Now()
 		perfRunsRedraw(m)
 		redraw = append(redraw, time.Since(t1))
+		t2 := time.Now()
+		perfRunsReopen(m)
+		reopen = append(reopen, time.Since(t2))
 	}
-	t.Logf("open %v, redraw %v", perfMedian(open), perfMedian(redraw))
+	t.Logf("open %v, reopen %v, redraw %v", perfMedian(open), perfMedian(reopen), perfMedian(redraw))
 	perfbudget.Check(t, "runs_view_open_200", perfMs(perfMedian(open)))
+	perfbudget.Check(t, "runs_view_reopen_200", perfMs(perfMedian(reopen)))
 	perfbudget.Check(t, "runs_view_redraw_200", perfMs(perfMedian(redraw)))
 }
 
@@ -383,6 +396,16 @@ func BenchmarkRunsViewOpen200(b *testing.B) {
 	b.ReportAllocs()
 	for b.Loop() {
 		perfRunsOpen(m)
+	}
+}
+
+func BenchmarkRunsViewReopen200(b *testing.B) {
+	m := perfRunsStore(b)
+	m.w, m.h = 160, 50
+	perfRunsOpen(m)
+	b.ReportAllocs()
+	for b.Loop() {
+		perfRunsReopen(m)
 	}
 }
 
