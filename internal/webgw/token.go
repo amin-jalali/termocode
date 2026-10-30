@@ -143,3 +143,18 @@ func (t *Tokens) Check(tok string, now time.Time) (Sess, error) {
 func (t *Tokens) expired(s *Sess, now time.Time) bool {
 	return !now.Before(s.LastSeen.Add(t.idle)) || !now.Before(s.Created.Add(t.max))
 }
+
+// RevokeDevice drops every token of device (a removed device, T30) and
+// says how many.
+func (t *Tokens) RevokeDevice(device string) int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	n := 0
+	for h, s := range t.byHash {
+		if s.Device == device {
+			delete(t.byHash, h)
+			n++
+		}
+	}
+	return n
+}
