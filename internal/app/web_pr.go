@@ -3,10 +3,12 @@ package app
 import (
 	"context"
 	"errors"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ghci"
+	"github.com/amin-jalali/termocode/internal/git"
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
 
@@ -20,6 +22,9 @@ func init() {
 	webOps[webproto.OpPRList] = (*Model).webPRList
 	webOps[webproto.OpPRView] = (*Model).webPRView
 	webOps[webproto.OpCIStatus] = (*Model).webCIStatus
+	webAskOps[webproto.OpPRMerge] = (*Model).webPRMerge
+	webAskOps[webproto.OpPRReview] = (*Model).webPRReview
+	webAskOps[webproto.OpPRCheckout] = (*Model).webPRCheckout
 }
 
 var webCIStates = map[ghci.State]string{ghci.StateNone: "none", ghci.StatePending: "pending", ghci.StatePass: "pass", ghci.StateFail: "fail"}
@@ -60,8 +65,9 @@ func webPRReview(r string) string {
 	return ""
 }
 
-// webGH runs fn with the laptop's gh runner off the UI thread.
-func (m *Model) webGH(call *webCall, fn func(ctx context.Context, run ghci.Runner, dir string)) tea.Cmd {
+// webGH runs fn with the laptop's gh runner off the UI thread; what fn
+// returns (if not nil) runs on Update after it.
+func (m *Model) webGH(call *webCall, fn func(ctx context.Context, run ghci.Runner, dir string) func(m *Model)) tea.Cmd {
 	root, ok := m.webGitRoot(call)
 	if !ok {
 		return nil
@@ -69,33 +75,36 @@ func (m *Model) webGH(call *webCall, fn func(ctx context.Context, run ghci.Runne
 	run := m.ciW().runner()
 	call.later()
 	return func() tea.Msg {
-		fn(call.ctx, run, root)
+		if then := fn(call.ctx, run, root); then != nil {
+			return applyMsg(func(m *Model) tea.Cmd { then(m); return nil })
+		}
 		return nil
 	}
 }
 
 func (m *Model) webPRList(call *webCall) tea.Cmd {
-	return m.webGH(call, func(ctx context.Context, run ghci.Runner, dir string) {
+	return m.webGH(call, func(ctx context.Context, run ghci.Runner, dir string) func(m *Model) {
 		items, err := ghci.ListPRs(ctx, run, dir)
 		if err != nil {
 			webGHFail(call, err)
-			return
+			return nil
 		}
 		out := webproto.PRList{Items: []webproto.PRItem{}}
 		for _, p := range items {
 			out.Items = append(out.Items, webPRItem(p))
 		}
 		call.reply(out)
+		return nil
 	})
 }
 
 func (m *Model) webPRView(call *webCall) tea.Cmd {
 	n := call.args.(*webproto.PRNumberArgs).Number
-	return m.webGH(call, func(ctx context.Context, run ghci.Runner, dir string) {
+	return m.webGH(call, func(ctx context.Context, run ghci.Runner, dir string) func(m *Model) {
 		d, err := ghci.ViewPR(ctx, run, dir, n)
 		if err != nil {
 			webGHFail(call, err)
-			return
+			return nil
 		}
 		out := webproto.PRView{Item: webPRItem(d.PRItem), State: d.State, Body: webClean(d.Body), Mergeable: webName(d.Mergeable),
 			Files: []webproto.PRFile{}, Reviews: []webproto.PRReview{}, Checks: webPRChecks(d.Checks)}
@@ -105,7 +114,15 @@ func (m *Model) webPRView(call *webCall) tea.Cmd {
 		for _, r := range d.Reviews {
 			out.Reviews = append(out.Reviews, webproto.PRReview{Author: webName(r.Author), State: webName(r.State), Body: webClean(r.Body), When: webName(r.When)})
 		}
-		call.reply(out)
+		return func(m *Model) {
+			if m.web != nil {
+				if m.web.more.prs == nil || len(m.web.more.prs) >= 64 {
+					m.web.more.prs = map[int]ghci.PRDetail{}
+				}
+				m.web.more.prs[n] = d
+			}
+			call.reply(out)
+		}
 	})
 }
 
@@ -159,4 +176,98 @@ func (m *Model) webCIStatus(call *webCall) tea.Cmd {
 	}
 	call.reply(out)
 	return cmd
+}
+
+// webPRRead is the pull request pr.view read last (the cards name it).
+func (m *Model) webPRRead(call *webCall, n int) (ghci.PRDetail, bool) {
+	if _, ok := m.webGitRoot(call); !ok {
+		return ghci.PRDetail{}, false
+	}
+	d, ok := m.web.more.prs[n]
+	if !ok {
+		call.fail(webproto.CodeNotFound, "Open the pull request again.")
+	}
+	return d, ok
+}
+
+// webPRDone is the end of a gh change from the web: the laptop's own
+// toast; its PR card is not opened (the page shows the pull request).
+func webPRDone(n int, ok, detail, failed string, refresh bool, err error) tea.Msg {
+	return prDoneMsg{number: n, ok: ok, detail: detail, failed: failed, err: err, refresh: refresh}
+}
+
+var webMergeLabels = map[string]string{"squash": "Squash and merge", "merge": "Merge commit", "rebase": "Rebase and merge"}
+
+func (m *Model) webPRMerge(call *webCall) *webAsk {
+	a := call.args.(*webproto.PRMergeArgs)
+	d, ok := m.webPRRead(call, a.Number)
+	if !ok {
+		return nil
+	}
+	if d.State != "OPEN" || d.Draft {
+		call.fail(webproto.CodeConflict, prRef(d.Number)+" is not open for merging (a draft or closed).")
+		return nil
+	}
+	body := "Merge " + prRef(d.Number) + " \"" + webName(d.Title) + "\" from " + webName(d.Branch) + " into " + webName(d.Base) + " (" + strings.ToLower(webMergeLabels[a.Method]) + ")?"
+	if w := prMergeWarnings(d); len(w) > 0 {
+		body += " " + strings.Join(w, " ")
+	}
+	body += " The branch stays. Rules of the repository still apply."
+	n, method := d.Number, ghci.MergeMethod(a.Method)
+	return &webAsk{summary: prRef(n) + " " + a.Method, title: "Merge " + prRef(n) + "?", body: body, action: webMergeLabels[a.Method],
+		run: func(m *Model) tea.Cmd {
+			return m.prRun(func(ctx context.Context, run ghci.Runner, dir string) tea.Msg {
+				return webPRDone(n, "Merged "+prRef(n), string(method), "Could not merge "+prRef(n), false, ghci.Merge(ctx, run, dir, n, method))
+			})
+		}}
+}
+
+func (m *Model) webPRReview(call *webCall) *webAsk {
+	a := call.args.(*webproto.PRReviewArgs)
+	d, ok := m.webPRRead(call, a.Number)
+	if !ok {
+		return nil
+	}
+	n := d.Number
+	kind := map[string]ghci.ReviewKind{"approve": ghci.ReviewApprove, "request_changes": ghci.ReviewRequestChanges, "comment": ghci.ReviewComment}[a.Kind]
+	verb := map[string]string{"approve": "Approve", "request_changes": "Request changes on", "comment": "Comment on"}[a.Kind]
+	said := map[string]string{"approve": "Approved ", "request_changes": "Asked for changes on ", "comment": "Commented on "}[a.Kind]
+	body := verb + " " + prRef(n) + " \"" + webName(d.Title) + "\" as you on GitHub?"
+	if msg := strings.TrimSpace(a.Body); msg != "" {
+		if r := []rune(msg); len(r) > 300 {
+			msg = string(r[:300]) + "…"
+		}
+		body += " Message: " + webName(msg)
+	}
+	text := a.Body
+	return &webAsk{summary: prRef(n) + " " + a.Kind, title: verb + " " + prRef(n) + "?", body: body, action: strings.Fields(verb)[0],
+		run: func(m *Model) tea.Cmd {
+			return m.prRun(func(ctx context.Context, run ghci.Runner, dir string) tea.Msg {
+				return webPRDone(n, said+prRef(n), "", "Could not send the review of "+prRef(n), false, ghci.Review(ctx, run, dir, n, kind, text))
+			})
+		}}
+}
+
+func (m *Model) webPRCheckout(call *webCall) *webAsk {
+	a := call.args.(*webproto.PRNumberArgs)
+	d, ok := m.webPRRead(call, a.Number)
+	if !ok {
+		return nil
+	}
+	n, branch := d.Number, d.Branch
+	return &webAsk{summary: prRef(n), title: "Check out " + prRef(n) + "?",
+		body:   "Switch the laptop to " + webName(branch) + ", the branch of " + prRef(n) + "? Files on the laptop change. With uncommitted changes it stops.",
+		action: "Check out",
+		run: func(m *Model) tea.Cmd {
+			dir, err := m.rootDir()
+			if err != nil {
+				return nil
+			}
+			if dirty, err := git.Dirty(dir); err != nil || dirty {
+				return m.prInfo("Not checked out: you have changes", "Commit, stash or discard them first, then check out "+prRef(n)+" again.")
+			}
+			return m.prRun(func(ctx context.Context, run ghci.Runner, dir string) tea.Msg {
+				return webPRDone(n, "Checked out "+prRef(n), branch, "Could not check out "+prRef(n), true, ghci.Checkout(ctx, run, dir, n))
+			})
+		}}
 }

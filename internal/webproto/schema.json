@@ -2092,6 +2092,48 @@
       "laptop_card": false,
       "audit": "no",
       "phase": "v2"
+    },
+    {
+      "op": "pr.merge",
+      "args": "PRMergeArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "pr.review",
+      "args": "PRReviewArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 24576,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "pr.checkout",
+      "args": "PRNumberArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
     }
   ],
   "defs": {
@@ -6061,6 +6103,26 @@
       ],
       "additionalProperties": true
     },
+    "PRMergeArgs": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "enum": [
+            "squash",
+            "merge",
+            "rebase"
+          ]
+        },
+        "number": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "number",
+        "method"
+      ],
+      "additionalProperties": false
+    },
     "PRNumberArgs": {
       "type": "object",
       "properties": {
@@ -6093,6 +6155,29 @@
         "author"
       ],
       "additionalProperties": true
+    },
+    "PRReviewArgs": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "approve",
+            "request_changes",
+            "comment"
+          ]
+        },
+        "number": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "number",
+        "kind"
+      ],
+      "additionalProperties": false
     },
     "PRView": {
       "type": "object",

@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/amin-jalali/termocode/internal/ghci"
@@ -78,5 +79,47 @@ func TestCIStatus(t *testing.T) {
 	webTestData(t, webTestCallBg(t, m, c, webproto.OpCIStatus, `{}`), &s)
 	if !s.Loading {
 		t.Errorf("before the first answer: %+v", s)
+	}
+}
+
+// Spec (pull requests): merge, review and check out wait for a laptop
+// card that names the pull request (and warns as the laptop's own merge
+// card does); gh runs only after the laptop's yes, never with an admin
+// override. They need the pull request read first (pr.view).
+func TestPRActionsNeedLaptopCard(t *testing.T) {
+	f := &prFakeGH{answers: map[string]string{"pr list": prListText, "pr view": prViewText14, "pr merge": "", "pr review": "", "pr checkout": ""}}
+	m, c := webTestPR(t, f)
+	if got := webTestErr(webTestCallBg(t, m, c, webproto.OpPRMerge, `{"number":14,"method":"squash"}`)); got != string(webproto.CodeNotFound) {
+		t.Errorf("not read yet: %q", got)
+	}
+	webTestData(t, webTestCallBg(t, m, c, webproto.OpPRView, `{"number":14}`), &webproto.PRView{})
+
+	for _, tc := range []struct{ args, op, want, call string }{
+		{`{"number":14,"method":"squash"}`, webproto.OpPRMerge, "conflicts with main", "pr merge 14 --squash"},
+		{`{"number":14,"kind":"approve"}`, webproto.OpPRReview, "Approve #14", "pr review 14 --approve"},
+		{`{"number":14,"kind":"comment","body":"Nice work"}`, webproto.OpPRReview, "Nice work", "pr review 14 --comment"},
+		{`{"number":14}`, webproto.OpPRCheckout, "feat/parser", "pr checkout 14"},
+	} {
+		var ref webproto.AskRef
+		webTestData(t, webTestCallBg(t, m, c, tc.op, tc.args), &ref)
+		if ref.Card == "" || !m.confirmOpen || m.confirm.SafeID() != "cancel" {
+			t.Fatalf("%s: no laptop card", tc.op)
+		}
+		if v := m.confirm.View(); !strings.Contains(v, tc.want) {
+			t.Errorf("%s card has no %q:\n%s", tc.op, tc.want, v)
+		}
+		if f.called(tc.call) {
+			t.Fatalf("%s ran before the laptop said so", tc.call)
+		}
+		m.confirmOpen = false
+		webDrain(t, m, m.handleConfirmSelect("confirm"))
+		if !f.called(tc.call) {
+			t.Errorf("%s did not run after the laptop's yes: %v", tc.call, f.calls)
+		}
+	}
+	for _, c := range f.calls {
+		if strings.Contains(c, "--admin") {
+			t.Errorf("an admin override: %s", c)
+		}
 	}
 }
