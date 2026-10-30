@@ -1012,6 +1012,90 @@
       "laptop_card": true,
       "audit": "yes",
       "phase": "v2"
+    },
+    {
+      "op": "git.branches",
+      "args": "EmptyArgs",
+      "result": "GitBranches",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "git.push",
+      "args": "EmptyArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.pull",
+      "args": "EmptyArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.checkout",
+      "args": "GitCheckoutArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.stash",
+      "args": "GitStashArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 2048,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "git.stash_pop",
+      "args": "EmptyArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
     }
   ],
   "defs": {
@@ -1920,6 +2004,48 @@
       ],
       "additionalProperties": true
     },
+    "GitBranches": {
+      "type": "object",
+      "properties": {
+        "branches": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "current": {
+          "type": "string"
+        },
+        "more": {
+          "type": "integer"
+        },
+        "stashes": {
+          "type": "integer"
+        },
+        "upstream": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "current",
+        "branches",
+        "stashes",
+        "upstream"
+      ],
+      "additionalProperties": true
+    },
+    "GitCheckoutArgs": {
+      "type": "object",
+      "properties": {
+        "branch": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "branch"
+      ],
+      "additionalProperties": false
+    },
     "GitCommit": {
       "type": "object",
       "properties": {
@@ -2169,6 +2295,16 @@
         "log"
       ],
       "additionalProperties": true
+    },
+    "GitStashArgs": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
     },
     "GoneDelta": {
       "type": "object",

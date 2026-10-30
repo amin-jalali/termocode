@@ -7,4 +7,5 @@ package app
 type webMorePub struct {
 	settings webSettingsPub
 	mcp      webMCPPub
+	branches []string // the local branches git.branches listed last (git.checkout takes one of them)
 }

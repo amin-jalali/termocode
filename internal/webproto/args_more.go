@@ -42,3 +42,34 @@ func (a *RenameArgs) validate(int) error {
 	}
 	return nil
 }
+
+// MaxBranch caps a branch name; MaxStashMsg a stash message.
+const (
+	MaxBranch   = 255
+	MaxStashMsg = 1 << 10
+)
+
+// GitCheckoutArgs switches to a local branch (one git.branches lists).
+type GitCheckoutArgs struct {
+	Branch string `json:"branch"`
+}
+
+// GitStashArgs stashes the changes, with an optional message.
+type GitStashArgs struct {
+	Message string `json:"message,omitempty"`
+}
+
+func (a *GitCheckoutArgs) validate(int) error {
+	b := a.Branch
+	if b == "" || len(b) > MaxBranch || hasControl(b) || strings.HasPrefix(b, "-") || strings.ContainsAny(b, " ~^:?*[\\") || strings.Contains(b, "..") {
+		return invalid("bad branch")
+	}
+	return nil
+}
+
+func (a *GitStashArgs) validate(int) error {
+	if len(a.Message) > MaxStashMsg || hasControl(a.Message) {
+		return invalid("bad stash message")
+	}
+	return nil
+}

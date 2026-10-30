@@ -150,7 +150,8 @@ func TestRolesAndCaps(t *testing.T) {
 }
 
 func TestLaptopCardOps(t *testing.T) {
-	want := map[string]bool{OpTermClose: true, OpGitDiscard: true, OpWebOpen: true, OpWebPairAsk: true, OpWebGrantAsk: true, OpTreeDelete: true}
+	want := map[string]bool{OpTermClose: true, OpGitDiscard: true, OpWebOpen: true, OpWebPairAsk: true, OpWebGrantAsk: true, OpTreeDelete: true,
+		OpGitPush: true, OpGitPull: true, OpGitCheckout: true, OpGitStash: true, OpGitStashPop: true}
 	for _, p := range Ops() {
 		if p.LaptopCard != want[p.Op] {
 			t.Errorf("%s: laptop card = %v", p.Op, p.LaptopCard)
