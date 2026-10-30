@@ -32,6 +32,11 @@ type SSHOpts struct {
 	// Interval and Dead time the heartbeat: a ping every Interval, the
 	// link is gone after Dead without a byte (0: 5 s and 15 s).
 	Interval, Dead time.Duration
+	// WebPort (0: off) is the local port of `termocode ssh --web`: the far
+	// termocode gets --web=<port> and answers with a web hand-off, which
+	// is removed from the output and given to OnWeb (it must not block).
+	WebPort int
+	OnWeb   func(WebHandoff)
 }
 
 // msgSSHLeft is what termocode ssh prints when the user leaves while the
@@ -208,7 +213,7 @@ func (t *sshTerm) size() (cols, rows int) {
 // attempt runs one ssh connection until ssh exits.
 func (t *sshTerm) attempt(reconnected string) sshAttempt {
 	cols, rows := t.size()
-	cmd := spawn.Command(t.o.SSH, sshArgv(t.o.Args, t.o.Remote, t.o.Dir, reconnected, 0)...)
+	cmd := spawn.Command(t.o.SSH, sshArgv(t.o.Args, t.o.Remote, t.o.Dir, reconnected, t.o.WebPort)...)
 	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: uint16(cols), Rows: uint16(rows)})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "termocode: %s: %v\r\n", t.o.SSH, err)
@@ -233,6 +238,7 @@ func (t *sshTerm) attempt(reconnected string) sshAttempt {
 	})
 	kill := func() { _ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
 	link := newSeqFilter(linkHello, linkPong)
+	web := newWebFilter()
 	keys := t.keys
 	// The heartbeat runs once the far termocode said hello (an older one
 	// never does, and never gets a ping).
@@ -283,6 +289,7 @@ func (t *sshTerm) attempt(reconnected string) sshAttempt {
 				continue
 			}
 			b, found := link.Filter(b)
+			b = t.webFilter(web, b)
 			for _, i := range found {
 				if i == 0 { // linkHello: the far termocode is there
 					t.everUp, t.offline = true, false
@@ -319,7 +326,7 @@ func (t *sshTerm) attempt(reconnected string) sshAttempt {
 			}
 		case code := <-exited:
 			if !dead {
-				t.drain(output, link)
+				t.drain(output, link, web)
 			}
 			return sshAttempt{code: code, dead: dead}
 		}
@@ -328,7 +335,7 @@ func (t *sshTerm) attempt(reconnected string) sshAttempt {
 
 // drain shows what ssh wrote just before it exited (its last message),
 // without waiting long for a child that keeps the PTY open.
-func (t *sshTerm) drain(output <-chan []byte, link *seqFilter) {
+func (t *sshTerm) drain(output <-chan []byte, link *seqFilter, web *webFilter) {
 	if output == nil {
 		return
 	}
@@ -340,12 +347,26 @@ func (t *sshTerm) drain(output <-chan []byte, link *seqFilter) {
 				return
 			}
 			b, _ = link.Filter(b)
+			b = t.webFilter(web, b)
 			t.seen.Feed(b)
 			_, _ = t.out.Write(b)
 		case <-deadline:
 			return
 		}
 	}
+}
+
+// webFilter removes the far side's web hand-offs from b and passes them
+// to OnWeb. Without --web nothing is ever asked for, but a hand-off is
+// still never shown.
+func (t *sshTerm) webFilter(f *webFilter, b []byte) []byte {
+	b, found := f.Filter(b)
+	if t.o.OnWeb != nil {
+		for _, h := range found {
+			t.o.OnWeb(h)
+		}
+	}
+	return b
 }
 
 // exitCode is the exit code of a finished command (-1: killed by a
