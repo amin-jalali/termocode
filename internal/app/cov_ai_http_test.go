@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -338,5 +339,35 @@ func TestCovAIHTTPSaveRequest(t *testing.T) {
 	a["name"] = "nope"
 	if err := save.Validate(a); err == nil || !strings.Contains(err.Error(), `no request named "nope" to replace`) {
 		t.Errorf("replace missing: %v", err)
+	}
+}
+
+// A request cached for an args map that is gone (Describe without a
+// Release) is never served to a new map the runtime put at the same
+// address. On macOS the "too many headers" case of
+// TestCovAIHTTPSendRefusals got the error of its earlier "a.txt" map.
+func TestHTTPAICacheNeverServesARecycledMap(t *testing.T) {
+	root := t.TempDir()
+	var old []uintptr
+	describe := func() {
+		a := map[string]any{"path": "a.txt"}
+		_ = httpAIGet(root, a) // cached, never released
+		old = append(old, httpAIKey(a))
+	}
+	t.Cleanup(func() {
+		for _, k := range old {
+			httpAICache.Delete(k)
+		}
+	})
+	for i := 0; i < 200; i++ {
+		describe()
+		runtime.GC()
+		for j := 0; j < 64; j++ {
+			b := map[string]any{"url": "http://127.0.0.1/x"}
+			if r := httpAIGet(root, b); r.err != nil {
+				t.Fatalf("a new map got another map's request: %v", r.err)
+			}
+			httpAIForget(b)
+		}
 	}
 }

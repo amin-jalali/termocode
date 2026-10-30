@@ -216,6 +216,10 @@ type httpAIReq struct {
 	un        []httpclient.Unresolved
 	env       string
 	err       error
+	// args is the map this request was built from. Holding it keeps the
+	// map alive while its entry is cached, so the runtime can never give
+	// its address to a new map that would then get this request.
+	args map[string]any
 }
 
 var httpAICache sync.Map // args map pointer → *httpAIReq
@@ -236,6 +240,7 @@ func httpAIGet(root string, a map[string]any) *httpAIReq {
 		return v.(*httpAIReq)
 	}
 	r := httpAIBuild(root, a)
+	r.args = a
 	httpAICache.Store(k, r)
 	return r
 }
