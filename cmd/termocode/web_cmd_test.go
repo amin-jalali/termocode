@@ -188,3 +188,37 @@ func TestWebGatewaySSHMode(t *testing.T) {
 		t.Errorf("plain mode: ok %v unix %q", ok, cfg.UnixPath)
 	}
 }
+
+// Spec (WEB-29): the far `termocode --link --web=<port>` asks its UI for
+// the panel in SSH mode (yes, ssh_port) and turns the answer into the
+// in-band hand-off; with no UI answering in time it hands over why.
+func TestWebSSHHandoff(t *testing.T) {
+	sessionEnv(t)
+	ws := shortTemp(t)
+	got := fakeWebHub(t, ws, `{"t":"res","id":1,"data":{"port":41237,"sock":"/run/x/k.webhttp.sock","secret":"abcDEF_123-xyz"}}`)
+	apc := webSSHHandoff(ws, 41237, 5*time.Second)
+	want := session.WebHandoffAPC(session.WebHandoff{Port: 41237, Sock: "/run/x/k.webhttp.sock", Secret: "abcDEF_123-xyz"})
+	if apc != want {
+		t.Fatalf("hand-off %q, want %q", apc, want)
+	}
+	lines := <-got
+	var req struct {
+		Op   string
+		Args map[string]any
+	}
+	if err := json.Unmarshal([]byte(lines[1]), &req); err != nil || req.Op != "web.open" || req.Args["yes"] != true || req.Args["ssh_port"] != float64(41237) {
+		t.Fatalf("request %q", lines[1])
+	}
+
+	ws2 := shortTemp(t)
+	apc = webSSHHandoff(ws2, 41237, 300*time.Millisecond)
+	if !strings.HasPrefix(apc, "\x1b_termocode:web;0;") {
+		t.Fatalf("no hub: %q", apc)
+	}
+
+	ws3 := shortTemp(t)
+	fakeWebHub(t, ws3, `{"t":"err","id":1,"code":"conflict","msg":"The web panel already runs for this folder."}`)
+	if apc := webSSHHandoff(ws3, 41237, 5*time.Second); !strings.HasPrefix(apc, "\x1b_termocode:web;0;") {
+		t.Fatalf("refused: %q", apc)
+	}
+}

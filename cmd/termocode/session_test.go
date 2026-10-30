@@ -84,6 +84,23 @@ func TestLinkArgs(t *testing.T) {
 	}
 }
 
+// TestLinkWebPort: --web=<port> (from termocode ssh --web) is taken out
+// of the far side's arguments; a bad port is 0 (no web) and still taken out.
+func TestLinkWebPort(t *testing.T) {
+	rest, port := linkWebPort([]string{"--web=41237", "/srv/app"})
+	if port != 41237 || len(rest) != 1 || rest[0] != "/srv/app" {
+		t.Errorf("got %v %d", rest, port)
+	}
+	for _, bad := range []string{"--web=80", "--web=x", "--web=70000", "--web="} {
+		if rest, port := linkWebPort([]string{bad}); port != 0 || len(rest) != 0 {
+			t.Errorf("%s: %v %d", bad, rest, port)
+		}
+	}
+	if rest, port := linkWebPort([]string{"/srv/app"}); port != 0 || len(rest) != 1 {
+		t.Errorf("none: %v %d", rest, port)
+	}
+}
+
 func TestSSHCommandArgs(t *testing.T) {
 	dir, rest, err := sshCommandArgs([]string{"--dir", "/srv/app", "-p", "2222", "me@box"})
 	if err != nil || dir != "/srv/app" || strings.Join(rest, " ") != "-p 2222 me@box" {

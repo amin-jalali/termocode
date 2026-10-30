@@ -276,6 +276,8 @@ func run(argv []string) int {
 		bootgc.Release() // no first frame to wait for
 	}
 	if link { // the far end of `termocode ssh`
+		var webPort int
+		args, webPort = linkWebPort(args)
 		dir := "."
 		if len(args) > 0 {
 			dir = args[0]
@@ -284,7 +286,7 @@ func run(argv []string) int {
 			fmt.Fprintf(os.Stderr, "termocode: %s is not a folder\n", dir)
 			return 1
 		}
-		return startClient(dir, clientOpts{create: true, link: true, note: note})
+		return startClient(dir, clientOpts{create: true, link: true, note: note, webPort: webPort})
 	}
 	if len(args) == 2 && args[0] == serverArg {
 		return startServer(args[1])
