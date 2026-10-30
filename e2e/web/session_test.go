@@ -28,6 +28,16 @@ func (p *Page) Open() string {
 	return secret
 }
 
+// firstTopics are the topics the page asks for at start on the chat tab:
+// the shell's, the chat view's and, on a desktop, the files column's.
+func (p *Page) firstTopics() []string {
+	ts := []string{"status", "toasts", "chat", "cards", "chats"}
+	if !p.VP.Mobile {
+		ts = append(ts, "tree", "bufs")
+	}
+	return ts
+}
+
 // Login opens the page, taps "Open workspace", answers the hello as conn,
 // sends the first status (branch main) and toasts snapshots and waits
 // until the page says it is online.
@@ -37,7 +47,7 @@ func (p *Page) Login(conn string) *HubConn {
 	p.Tap(".connect-foot button")
 	c := p.S.Hub.Accept(p.T)
 	c.Handshake(p.T, conn)
-	c.Subs(p.T, "status", "toasts")
+	c.Subs(p.T, p.firstTopics()...)
 	c.Send(p.T, Snap("status", 1, statusData("main", 0)))
 	c.Send(p.T, Snap("toasts", 1, []any{}))
 	p.WaitJS(`document.documentElement.dataset.link === "online"`)
