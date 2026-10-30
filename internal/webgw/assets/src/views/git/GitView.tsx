@@ -6,7 +6,7 @@
 import { h, Fragment } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { diffTab } from "../../lib/difftab";
-import { GRAPH_TAB, mergeTab } from "../../lib/gittab";
+import { GRAPH_TAB, PRS_TAB, mergeTab } from "../../lib/gittab";
 import { layout } from "../../lib/layout";
 import { go, route } from "../../lib/router";
 import { showFile } from "../../lib/workbench";
@@ -15,6 +15,7 @@ import { link, live, store } from "../../session";
 import { age, groupFiles, readGit, splitPath, type GitFile, type Side } from "../../state/git";
 import { Progress, SkeletonRows } from "../../ui/Skeleton";
 import { t, type StringKey } from "../../strings";
+import { openMenu } from "../../ui/ContextMenu";
 import { Cod } from "../../ui/icons";
 import { View } from "../View";
 import { CommitBox } from "./CommitBox";
@@ -22,6 +23,7 @@ import { DiffSheet } from "./DiffSheet";
 import { DiscardFlow } from "./DiscardFlow";
 import { gitFailed } from "./errors";
 import { GitRow } from "./GitRow";
+import { GitActionFlow, gitMoreMenu, type GitAction } from "./GitMore";
 import { RebaseBanner } from "./RebaseBanner";
 import { RemoteSheet } from "./RemoteSheet";
 import { ShowSheet } from "./ShowSheet";
@@ -57,6 +59,7 @@ export function GitView() {
   const canAct = !viewer && live.value;
   const [discard, setDiscard] = useState<string[] | null>(null);
   const [remote, setRemote] = useState(false);
+  const [action, setAction] = useState<GitAction | null>(null);
 
   const branch = g.branch.name;
   const sub = g.repo && (
@@ -97,7 +100,16 @@ export function GitView() {
   } else if (g.loading) {
     body = <div class="empty">{t("git.reading")}</div>;
   } else if (!g.repo) {
-    body = <div class="empty">{t("git.not_repo")}</div>;
+    body = (
+      <div class="empty">
+        {t("git.not_repo")}
+        {desk && canAct && (
+          <button type="button" class="gv-btn gx-clone" data-act="clone" onClick={() => setAction("clone")}>
+            {t("gx.clone")}…
+          </button>
+        )}
+      </div>
+    );
   } else {
     const groups = groupFiles(g.files);
     const sides: Side[] = ["conflicts", "staged", "changes", "untracked"];
@@ -176,6 +188,27 @@ export function GitView() {
               <Cod name="git-commit" />
             </button>
           )}
+          {desk && g.repo && (
+            <button type="button" class="tb tb-icon" data-act="prs" aria-label={t("pr.tab")} title={t("pr.tab")} onClick={() => showFile(PRS_TAB)}>
+              <Cod name="git-pull-request" />
+            </button>
+          )}
+          {desk && st && !g.loading && (
+            <button
+              type="button"
+              class="tb tb-icon"
+              data-act="more"
+              aria-haspopup="menu"
+              aria-label={t("gx.more")}
+              title={t("gx.more")}
+              onClick={(e) => {
+                const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                openMenu(r.left, r.bottom, t("gx.more"), gitMoreMenu(g.repo, canAct, g.op, setAction));
+              }}
+            >
+              <Cod name="ellipsis" />
+            </button>
+          )}
           {!viewer && g.repo && !g.op && (
             <button type="button" class="head-remote" aria-label={t("git.remote")} onClick={() => setRemote(true)}>
               ⇅
@@ -198,6 +231,7 @@ export function GitView() {
         />
       )}
       {showHash && <ShowSheet hash={showHash} onClose={close} />}
+      {action && <GitActionFlow kind={action} onDone={() => setAction(null)} />}
       {discard && <DiscardFlow paths={discard} onDone={() => setDiscard(null)} />}
       {remote && (
         <RemoteSheet branch={branch} ahead={g.branch.ahead} behind={g.branch.behind} changed={g.files.length} onDone={() => setRemote(false)} />

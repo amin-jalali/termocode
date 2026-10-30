@@ -197,6 +197,12 @@ func shotHub(t *testing.T, c *HubConn) {
 					data = rebasePlan()
 				case "git.conflict":
 					data = mergeConflict()
+				case "pr.list":
+					data = webproto.PRList{Items: []webproto.PRItem{prItem(), {Number: 13, Title: "WIP cache", Author: "bob", Branch: "wip/cache", Base: "main", Draft: true, Checks: "none"}}}
+				case "ci.status":
+					data = ciStatus()
+				case "pr.view":
+					data = prViewData()
 				case "git.show":
 					data = webproto.GitDiff{Commit: &webproto.GitCommitInfo{Hash: "cccc333", Subject: "Feature work", Body: "Why it changed.", Author: "Bob"},
 						Rows: []webproto.DiffRow{{K: "file", Text: "src/a.go"}, {K: "add", Text: "x"}, {K: "del", Text: "z"}, {K: "file", Text: "README.md"}, {K: "add", Text: "y"}}}
@@ -285,6 +291,8 @@ func TestShots(t *testing.T) {
 					shot("rebase", "#/files/@git:rebase:aaaa111", `document.querySelectorAll('li.gr-row').length === 3 && (() => {
 						const set = (h, a) => { const s = document.querySelector('li.gr-row[data-hash="' + h + '"] select'); if (s.value !== a) { s.value = a; s.dispatchEvent(new Event("change", {bubbles: true})); } };
 						set("bbbb222", "reword"); set("cccc333", "fixup"); return !!document.querySelector("textarea.gr-msg"); })()`)
+					shot("prs", "#/files/@git:prs", `document.querySelectorAll('[data-view="prs"] .pr-row').length === 2`)
+					shot("pr", "#/files/@git:pr:14", `document.querySelector('[data-view="pr"] .pr-md')`)
 					shot("merge", "#/files/@git:merge:src/a.go", `(() => { const f = [...document.querySelectorAll('[data-view="merge"] .desk-editor')].map((e) => e.contentDocument); return f.length === 3 && f.every((d) => d && d.querySelector(".tc-mg-current, .tc-mg-incoming")); })()`)
 				}
 			})
