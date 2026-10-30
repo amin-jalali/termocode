@@ -1,7 +1,7 @@
 // Persian strings (WEB-UX-5). The keys must equal src/strings.ts exactly
 // and every text keeps the English placeholders (strings_test.go). An
 // empty text falls back to English. Simple, everyday Persian; product
-// and command names (termocode, Web: Start Panel) and key names stay
+// and command names (termocode, Web: Open in Browser) and key names stay
 // as they are.
 import type { StringKey } from "./strings";
 
@@ -493,8 +493,8 @@ export const FA: Record<StringKey, string> = {
   "more.licenses": "مجوزها",
 
   // Errors (web design E-texts)
-  "e.link_expired": "این پیوند منقضی شده یا قبلاً استفاده شده است. در termocode برای پیوندی تازه Web: Start Panel را اجرا کنید.",
-  "e.no_link": "این صفحه را از termocode روی لپ‌تاپ باز کنید: Web: Start Panel را اجرا کنید.",
+  "e.link_expired": "این پیوند منقضی شده یا قبلاً استفاده شده است. در termocode برای پیوندی تازه Web: Open in Browser را اجرا کنید.",
+  "e.no_link": "این صفحه را از termocode روی لپ‌تاپ باز کنید: Web: Open in Browser را اجرا کنید.",
   "e.stopped": "نشست وب متوقف شد.",
   "e.idle.one": "نشست وب پس از {n} دقیقه بدون استفاده متوقف شد.",
   "e.idle.other": "نشست وب پس از {n} دقیقه بدون استفاده متوقف شد.",

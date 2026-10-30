@@ -58,7 +58,7 @@ func TestWebPairNeedsTailnetPanel(t *testing.T) {
 	}
 	r.m.webPanel = nil
 	r.m.openWebPair(false)
-	if r.m.confirmOpen || !strings.Contains(webTestToasts(*r.m), "Web: Start Panel") {
+	if r.m.confirmOpen || !strings.Contains(webTestToasts(*r.m), "Web: Open in Browser") {
 		t.Fatalf("no panel: card %v toast %q", r.m.confirmOpen, webTestToasts(*r.m))
 	}
 }
