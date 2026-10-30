@@ -6,4 +6,5 @@ package app
 // webMorePub holds the publishers of the More views' topics.
 type webMorePub struct {
 	settings webSettingsPub
+	mcp      webMCPPub
 }

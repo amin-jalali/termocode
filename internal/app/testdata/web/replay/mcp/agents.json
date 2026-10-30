@@ -1,0 +1,39 @@
+{
+  "topic": "mcp",
+  "snap0": {
+    "agents": [
+      {
+        "asked": 2,
+        "calls": 14,
+        "name": "claude-code",
+        "since": 1700000000000
+      }
+    ],
+    "calls": [
+      "12:03 claude-code · read_file · ran without asking",
+      "12:03 claude-code · tasks_run · asked, you allowed"
+    ],
+    "listening": true,
+    "mode": "auto"
+  },
+  "deltas": [
+    {
+      "agents": [],
+      "calls": [
+        "12:03 claude-code · read_file · ran without asking",
+        "12:03 claude-code · tasks_run · asked, you allowed"
+      ],
+      "listening": true,
+      "mode": "auto"
+    }
+  ],
+  "snapn": {
+    "mode": "auto",
+    "listening": true,
+    "agents": [],
+    "calls": [
+      "12:03 claude-code · read_file · ran without asking",
+      "12:03 claude-code · tasks_run · asked, you allowed"
+    ]
+  }
+}
