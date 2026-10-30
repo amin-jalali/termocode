@@ -26,6 +26,13 @@ func webRedirectPath() (string, error) {
 	return p.WebOpen, err
 }
 
+// webHTTPSocketPath is where the gateway serves in SSH mode (WEB-29).
+// Tests swap it.
+var webHTTPSocketPath = func() (string, error) {
+	p, err := session.PathsFor(aiWorkspaceRoot())
+	return p.WebHTTPSocket, err
+}
+
 // webHandoffWait bounds the gateway's start (listen, hub, first link).
 const webHandoffWait = 15 * time.Second
 
