@@ -68,3 +68,57 @@ func TestCoalesceAppend(t *testing.T) {
 		t.Fatalf("after a snap: %v", got)
 	}
 }
+
+// webTestApplyLines applies a lines delta the way the page does.
+func webTestApplyLines(lines []string, d webLinesDelta) []string {
+	out := append([]string(nil), lines[:d.First]...)
+	out = append(out, d.Lines...)
+	return append(out, lines[d.Last:]...)
+}
+
+// Spec (WEB-7): a lines delta (replace [first, last) with lines) merges
+// with the queued one when it replaces exactly the lines that one wrote
+// (a row redrawn again); the merged delta does what both did. Other
+// ranges, and other shapes, start a new frame.
+func TestCoalesceLines(t *testing.T) {
+	base := []string{"a", "b", "c", "d", "e"}
+	for _, tc := range []struct {
+		name      string
+		d1, d2    webLinesDelta
+		wantMerge bool
+	}{
+		{"same row again", webLinesDelta{First: 2, Last: 3, Lines: []string{"C"}}, webLinesDelta{First: 2, Last: 3, Lines: []string{"CC"}}, true},
+		{"grown block redrawn", webLinesDelta{First: 1, Last: 2, Lines: []string{"x", "y"}}, webLinesDelta{First: 1, Last: 3, Lines: []string{"z"}}, true},
+		{"insert then redraw it", webLinesDelta{First: 5, Last: 5, Lines: []string{"f"}}, webLinesDelta{First: 5, Last: 6, Lines: []string{"F", "G"}}, true},
+		{"other row", webLinesDelta{First: 2, Last: 3, Lines: []string{"C"}}, webLinesDelta{First: 3, Last: 4, Lines: []string{"D"}}, false},
+		{"wider range", webLinesDelta{First: 2, Last: 3, Lines: []string{"C"}}, webLinesDelta{First: 1, Last: 4, Lines: []string{"Q"}}, false},
+	} {
+		h, c := webQueueRig("term:7")
+		h.publish("term:7", tc.d1)
+		h.publish("term:7", tc.d2)
+		got := webTestTake(t, c)
+		if merged := len(got) == 1; merged != tc.wantMerge {
+			t.Errorf("%s: %d frames", tc.name, len(got))
+			continue
+		}
+		want := webTestApplyLines(webTestApplyLines(base, tc.d1), tc.d2)
+		var have []string
+		if tc.wantMerge {
+			var d webLinesDelta
+			b, _ := json.Marshal(got[0]["data"])
+			_ = json.Unmarshal(b, &d)
+			have = webTestApplyLines(base, d)
+		} else {
+			have = want
+		}
+		if strings.Join(have, ",") != strings.Join(want, ",") {
+			t.Errorf("%s: merged gives %v, both give %v", tc.name, have, want)
+		}
+	}
+	h, c := webQueueRig("term:7")
+	h.publish("term:7", webLinesDelta{First: 0, Last: 1, Lines: []string{"a"}})
+	h.publish("term:7", webTextAppend{ID: "x", Append: "y"})
+	if got := webTestTake(t, c); len(got) != 2 {
+		t.Fatalf("shapes mixed: %v", got)
+	}
+}
