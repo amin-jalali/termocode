@@ -826,7 +826,7 @@
       "args": "PairAskArgs",
       "role": "ctl",
       "rate": {
-        "n": 2,
+        "n": 1,
         "per_ms": 1000
       },
       "max_bytes": 1024,
@@ -839,7 +839,7 @@
       "args": "GrantAskArgs",
       "role": "ctl",
       "rate": {
-        "n": 2,
+        "n": 1,
         "per_ms": 1000
       },
       "max_bytes": 1024,
