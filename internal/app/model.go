@@ -772,6 +772,9 @@ type Model struct {
 	// mcpServeStopped: the user chose "Stop listening" on the status
 	// screen (this session only; the setting is untouched).
 	mcpServeStopped bool
+	// web is the web hub (web_hub.go): the web gateway's way into this
+	// UI; nil unless the web side is on.
+	web *webHub
 	// HTTP client for .http files (http_state.go); made on first use.
 	http *httpState
 	// secrets is the secret store's unlock flow (secrets_ui.go); the store
