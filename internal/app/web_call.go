@@ -89,6 +89,7 @@ func (c *webCall) answer(m webproto.Msg) {
 	}
 	c.conn.inflight.Add(-1)
 	c.conn.send(m)
+	c.audited(m)
 }
 
 // webCallMsg runs one request on Update.

@@ -231,6 +231,7 @@ func (h *webHub) handle(nc net.Conn) {
 		return
 	}
 	c.run(br)
+	c.flushCounts()
 	if c.role != webproto.RoleCtl { // Update forgets it (and keeps its topics for a resume)
 		_ = h.send(h.ctx, webGoneMsg{hub: h, conn: c})
 	}
