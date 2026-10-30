@@ -15,6 +15,7 @@ import "./styles/files.css";
 import { App } from "./app";
 import { prefs } from "./lib/prefs";
 import { goTab } from "./lib/router";
+import { watchViewport } from "./lib/viewport";
 import { laptopTheme, link, waiting } from "./session";
 import { dict, has } from "./state/dict";
 import { THEME_TOKENS, themeTokens } from "./state/theme";
@@ -108,6 +109,8 @@ addEventListener("keydown", (e: KeyboardEvent) => {
     goTab(TABS[i]);
   }
 });
+
+watchViewport();
 
 if (!secret && token()) startShell();
 
