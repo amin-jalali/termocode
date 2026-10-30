@@ -225,8 +225,8 @@ func TestDBView(t *testing.T) {
 			p.TapJS(`document.querySelector('.db-table[data-table="users"]')`)
 			reply(t, c, expectOp(t, c, webproto.OpDBRows, `{"conn":"local","table":"users","from":0}`), webproto.DBRows{
 				Columns: []string{"id", "email", "password"},
-				Rows: [][]webproto.DBCell{{{V: "1"}, {V: "<b>ada</b>"}, {V: webproto.DBMaskedValue, M: true}}, {{V: "2"}, {N: true}, {V: webproto.DBMaskedValue, M: true}}},
-				Next: 100, Masked: 2})
+				Rows:    [][]webproto.DBCell{{{V: "1"}, {V: "<b>ada</b>"}, {V: webproto.DBMaskedValue, M: true}}, {{V: "2"}, {N: true}, {V: webproto.DBMaskedValue, M: true}}},
+				Next:    100, Masked: 2})
 			p.WaitJS(`document.querySelectorAll(".db-grid tbody tr").length === 2`)
 			if n := Eval[int](p, `document.querySelectorAll(".db-grid b").length`); n != 0 {
 				t.Fatal("a cell became HTML")
