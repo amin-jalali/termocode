@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -49,4 +50,16 @@ func (m *Model) webAfterOne(f func(*Model, tea.Msg) tea.Cmd, msg tea.Msg) (cmd t
 }
 
 // webShellState is what the shell's topics sent last (Update only).
-type webShellState struct{}
+type webShellState struct {
+	status webStatusPub
+}
+
+// webApplyReplace is the apply of a topic whose delta is the whole new
+// state: the delta must decode as T, and it is the next snapshot.
+func webApplyReplace[T any](_, delta json.RawMessage) (json.RawMessage, error) {
+	var v T
+	if err := json.Unmarshal(delta, &v); err != nil {
+		return nil, err
+	}
+	return delta, nil
+}
