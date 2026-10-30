@@ -75,3 +75,14 @@
 .key-int { color: var(--red); }
 .key[aria-disabled="true"] { opacity: 0.45; }
 .keybar-off { flex: none; align-self: center; }
+
+/* Screen mode and the about sheet */
+.term-rows.is-nowrap { overflow-x: auto; }
+.term-rows.is-nowrap .trow { width: max-content; min-width: 100%; }
+.term-rows.is-nowrap .trow-text { white-space: pre; overflow-wrap: normal; }
+.term-screen-box { margin-inline: calc(-1 * var(--gutter)); }
+.term-banner { margin-inline: var(--gutter); }
+.term-screen { margin: 0; padding: var(--s2); overflow: visible; box-sizing: content-box; background: var(--bg-panel); color: var(--text); font-family: var(--font-mono); font-size: var(--fs-row); line-height: var(--lh-row); white-space: pre; unicode-bidi: isolate; touch-action: pan-x pan-y pinch-zoom; font-variant-ligatures: none; }
+.term-screen-box { overflow-x: auto; }
+.term-toggles { display: flex; gap: var(--s2); flex-wrap: wrap; }
+.term-info-btn { font-size: 1.125rem; }

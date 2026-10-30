@@ -162,6 +162,7 @@ export const S = {
   "term.ended_now": "This terminal ended.",
   "term.gone": "This terminal was closed on the laptop.",
   "term.bell": "A shell rang",
+  "term.about": "About this terminal",
   "term.new": "Open a new one",
   "term.none": "No terminal is open on the laptop.",
   "term.open_one": "Open one",

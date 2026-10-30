@@ -5,6 +5,7 @@
 // reader is at the end; scrolling up stops that and shows Follow. Older
 // rows page in from the top.
 import { Fragment, h } from "preact";
+import { signal } from "@preact/signals";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { TermItem, TermNewRes } from "../../../../webproto/proto";
 import { rang } from "../lib/attention";
@@ -19,6 +20,7 @@ import { t } from "../strings";
 import { Button } from "../ui/Button";
 import { errText } from "../ui/CardSheet";
 import { Chip } from "../ui/Chip";
+import { Sheet } from "../ui/Sheet";
 import { TermRow } from "../ui/rows";
 import { SkeletonRows } from "../ui/Skeleton";
 import { Refused, TopicBody } from "./Placeholder";
@@ -29,6 +31,81 @@ import { View } from "./View";
 const NEAR_BOTTOM_PX = 48;
 /** RING_MS is how long the bell dot shows after a shell rang. */
 const RING_MS = 3000;
+
+/** wrapRows: long rows wrap (on) or scroll sideways (off). */
+export const wrapRows = signal(true);
+/** asRows holds the shells shown as rows although screen mode is on
+ * (the guess can be wrong; the Rows toggle fixes it). */
+export const asRows = signal<ReadonlySet<number>>(new Set());
+
+function setAsRows(buf: number, on: boolean): void {
+  const next = new Set(asRows.peek());
+  if (on) next.add(buf);
+  else next.delete(buf);
+  asRows.value = next;
+}
+
+/** showOnLaptop shows the shell's tab on the laptop. */
+function showOnLaptop(buf: number): void {
+  link.request("term.show_on_laptop", { buf }).then(
+    () => toast("ok", t("laptop.shown")),
+    (e: unknown) => {
+      if (e instanceof ReqError) toast("warn", errText(e));
+    },
+  );
+}
+
+/** Screen is a full-screen program's screen at the laptop's size: a fixed
+ * grid, read-only, that scrolls sideways; keys still work. */
+function Screen({ buf, rows, cols, height }: { buf: number; rows: readonly string[]; cols: number; height: number }) {
+  const shown = height > 0 ? rows.slice(-height) : rows;
+  return (
+    <div class="term-screen-box">
+      <div class="file-note is-info term-banner" role="status">
+        <span>{t("term.screen_banner", { cols, rows: height || shown.length })}</span>
+        <Button kind="neutral" small needsLink onClick={() => showOnLaptop(buf)}>
+          {t("laptop.open")}
+        </Button>
+        <Button kind="quiet" small onClick={() => setAsRows(buf, true)}>
+          {t("term.rows")}
+        </Button>
+      </div>
+      <pre class="term-screen" dir="ltr" style={cols > 0 ? { width: cols + "ch" } : undefined} aria-readonly="true">
+        {shown.join("\n")}
+      </pre>
+    </div>
+  );
+}
+
+/** About is the ⓘ sheet: the honest width note and the view's toggles. */
+function About({ buf, cols, screen, onClose }: { buf: number; cols: number; screen: boolean; onClose: () => void }) {
+  return (
+    <Sheet onLater={onClose} label={t("term.about")}>
+      <section class="edit term-about" role="dialog" aria-modal="true" aria-labelledby="term-about-t">
+        <h2 class="edit-title" id="term-about-t">
+          {t("term.about")}
+        </h2>
+        <p class="group-text">{t("term.info", { cols: cols || 80 })}</p>
+        <div class="term-toggles">
+          <Chip on={wrapRows.value} onClick={() => (wrapRows.value = !wrapRows.peek())}>
+            {t("term.wrap")}
+          </Chip>
+          <Chip on={screen && !asRows.value.has(buf)} onClick={() => setAsRows(buf, !asRows.peek().has(buf))}>
+            {t("term.screen")}
+          </Chip>
+        </div>
+        <div class="edit-actions">
+          <Button kind="neutral" onClick={onClose}>
+            {t("close")}
+          </Button>
+          <Button kind="primary" needsLink onClick={() => showOnLaptop(buf)}>
+            {t("laptop.open")}
+          </Button>
+        </div>
+      </section>
+    </Sheet>
+  );
+}
 
 /** newTerm starts a shell on the laptop and shows it here. */
 export function newTerm(): void {
@@ -116,6 +193,7 @@ function Rows({ buf, item, body }: { buf: number; item: TermItem | undefined; bo
   const lines = reflow(joined ? [...o.rows, ...snap.rows] : snap.rows, first, snap.cols);
   const more = joined ? o.more : snap.more;
   const gone = isGone(ts?.data);
+  const screen = snap.screen && !asRows.value.has(buf);
   const follow = () => {
     stick.current = true;
     setPinned(true);
@@ -138,11 +216,15 @@ function Rows({ buf, item, body }: { buf: number; item: TermItem | undefined; bo
           {t("term.older")}
         </button>
       )}
-      <div class="term-rows" role="log" aria-label={item?.title || t("tab.term")}>
-        {lines.map((l) => (
-          <TermRow key={l.row} text={l.text} />
-        ))}
-      </div>
+      {screen ? (
+        <Screen buf={buf} rows={snap.rows} cols={snap.cols} height={snap.height} />
+      ) : (
+        <div class={`term-rows${wrapRows.value ? "" : " is-nowrap"}`} role="log" aria-label={item?.title || t("tab.term")}>
+          {lines.map((l) => (
+            <TermRow key={l.row} text={l.text} />
+          ))}
+        </div>
+      )}
       {(gone || item?.exited) && (
         <p class="file-note term-ended" role="status">
           <span>{t(gone ? "term.gone" : "term.ended_now")}</span>
@@ -189,6 +271,7 @@ export function TermView() {
   }, [buf]);
   const controller = link.meta.value?.role === "controller";
   const [ring, setRing] = useState(false);
+  const [about, setAbout] = useState(false);
   const bells = rang.value;
   useEffect(() => {
     if (bells === 0) return;
@@ -218,6 +301,11 @@ export function TermView() {
       actions={
         <>
           {ring && <span class="bell-dot" role="status" aria-label={t("term.bell")} />}
+          {buf !== undefined && ts && (
+            <button type="button" class="head-btn term-info-btn" aria-label={t("term.about")} onClick={() => setAbout(true)}>
+              ⓘ
+            </button>
+          )}
           {controller && terms.length > 0 && (
             <Button kind="quiet" small needsLink label={t("term.new")} onClick={newTerm}>
               +
@@ -241,6 +329,9 @@ export function TermView() {
           </>
         )}
       </TopicBody>
+      {about && buf !== undefined && (
+        <About buf={buf} cols={readTerm(ts?.data)?.cols ?? 0} screen={readTerm(ts?.data)?.screen === true} onClose={() => setAbout(false)} />
+      )}
     </View>
   );
 }

@@ -296,3 +296,60 @@ func TestTermBellDot(t *testing.T) {
 	c.Send(t, attention("bell", ""))
 	p.WaitJS(termView + `.querySelector(".bell-dot")?.getAttribute("aria-label") === "A shell rang"`)
 }
+
+// A full-screen program: the rows become a fixed grid at the laptop's
+// size with a banner that says so, Open on laptop and Rows (the guess can
+// be wrong); keys still work. When the program ends the rows come back.
+func TestTermScreenModeGrid(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			p, c := openTerm(t, vp)
+			showTerm(t, p, c, termSnap(3, 0, 80, "$ top"), termItem(3, "zsh", true, true))
+			c.Send(t, Delta("term:3", 2, map[string]any{"kind": "lines", "first": 0, "last": 1, "lines": []string{"load 2", "cpu 4%", "mem 2G", "q quit"}, "tick": 4}))
+			c.Send(t, Delta("term:3", 3, map[string]any{"kind": "mode", "screen": true, "cols": 100, "height": 4}))
+			p.WaitJS(termView + `.querySelector(".term-banner")?.innerText.includes("You see the laptop's size (100×4).")`)
+			if got := Eval[string](p, termView+`.querySelector(".term-screen").textContent`); got != "load 2\ncpu 4%\nmem 2G\nq quit" {
+				t.Errorf("screen grid %q", got)
+			}
+			if Eval[bool](p, `document.documentElement.scrollWidth > document.documentElement.clientWidth`) {
+				t.Error("the 100-column grid makes the page scroll sideways")
+			}
+			tapKey(p, "Esc")
+			if got := expectSend(t, c); got != "\x1b" {
+				t.Errorf("a key in screen mode sent %q", got)
+			}
+			p.TapJS(`[...` + termView + `.querySelectorAll(".term-banner .btn")].find((b) => b.textContent === "Open on laptop")`)
+			r := expectReq(t, c, "term.show_on_laptop")
+			c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID})
+			p.WaitJS(`(` + toastsJS + `).includes("Shown on the laptop")`)
+
+			p.TapJS(`[...` + termView + `.querySelectorAll(".term-banner .btn")].find((b) => b.textContent === "Rows")`)
+			p.WaitJS(`!` + termView + `.querySelector(".term-screen") && ` + termView + `.querySelector(".term-rows")`)
+			// The about sheet turns screen mode back on.
+			p.TapJS(termView + `.querySelector(".term-info-btn")`)
+			p.WaitJS(`document.querySelector(".sheet .term-about")?.innerText.includes("the laptop's (100 columns)")`)
+			p.TapJS(`[...document.querySelectorAll(".sheet .term-toggles .chip")].find((b) => b.textContent === "Screen mode")`)
+			p.WaitJS(termView + `.querySelector(".term-screen")`)
+			p.TapJS(`[...document.querySelectorAll(".sheet .btn")].find((b) => b.textContent === "Close")`)
+
+			c.Send(t, Delta("term:3", 4, map[string]any{"kind": "mode", "screen": false, "cols": 100, "height": 4}))
+			p.WaitJS(`!` + termView + `.querySelector(".term-screen") && ` + termView + `.querySelector(".term-rows")`)
+		})
+	}
+}
+
+// Wrap off: long rows scroll sideways inside the rows box, not the page.
+func TestTermWrapToggle(t *testing.T) {
+	p, c := openTerm(t, Phone)
+	showTerm(t, p, c, termSnap(3, 0, 0, strings.Repeat("long-row-", 30)), termItem(3, "zsh", false, true))
+	h0 := Eval[float64](p, termView+`.querySelector(".trow").getBoundingClientRect().height`)
+	p.TapJS(termView + `.querySelector(".term-info-btn")`)
+	p.TapJS(`[...document.querySelectorAll(".sheet .term-toggles .chip")].find((b) => b.textContent === "Wrap")`)
+	p.WaitJS(termView + `.querySelector(".term-rows.is-nowrap")`)
+	if h1 := Eval[float64](p, termView+`.querySelector(".trow").getBoundingClientRect().height`); h1 >= h0 {
+		t.Errorf("row height %.0f with wrap off, %.0f with wrap on; want one line", h1, h0)
+	}
+	if Eval[bool](p, `document.documentElement.scrollWidth > document.documentElement.clientWidth`) {
+		t.Error("a long row makes the page scroll sideways")
+	}
+}
