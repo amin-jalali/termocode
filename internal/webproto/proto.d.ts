@@ -270,9 +270,97 @@ export interface ToastsDelta {
   id?: number;
 }
 
+export interface ChatsSnap {
+  chats: ChatItem[];
+}
+
+export interface ChatItem {
+  id: string;
+  title: string;
+  updated: number;
+  msgs: number;
+  open?: boolean;
+  live?: boolean;
+}
+
+export interface ChatsDelta {
+  op: "upsert" | "remove";
+  chat?: ChatItem;
+  id?: string;
+}
+
+export interface ChatSnap {
+  id: string;
+  title: string;
+  profile?: string;
+  model?: string;
+  busy: boolean;
+  messages: ChatMsg[];
+}
+
+export interface ChatMsg {
+  i: number;
+  role: "user" | "assistant" | "tool" | "error";
+  text?: string;
+  md?: MdNode;
+  streaming?: boolean;
+  truncated?: boolean;
+  model?: string;
+  images?: string[];
+  rules?: string;
+  run?: ChatRun;
+  steps?: ChatStep[];
+}
+
+export interface MdNode {
+  k: "doc" | "p" | "h" | "em" | "strong" | "code" | "codeblock" | "ul" | "ol" | "li" | "blockquote" | "link" | "hr" | "br" | "table" | "th" | "td" | "text";
+  text?: string;
+  c?: MdNode[];
+  level?: number;
+  lang?: string;
+  href?: string;
+  start?: number;
+  rows?: MdNode[][];
+}
+
+export interface ChatRun {
+  id: string;
+  profile?: string;
+  state: "running" | "done" | "failed" | "cancelled" | "interrupted" | "paused";
+  elapsed_ms?: number;
+  cost_usd?: number;
+  plan_wait?: boolean;
+}
+
+export interface ChatStep {
+  id: string;
+  title?: string;
+  state?: string;
+  model?: string;
+  tools?: string[];
+  text?: string;
+  md?: MdNode;
+  error?: string;
+}
+
+export interface ChatDelta {
+  op: "append" | "message" | "truncate" | "state" | "switched";
+  i?: number;
+  text?: string;
+  msg?: ChatMsg;
+  n?: number;
+  busy?: boolean;
+  title?: string;
+  chat?: ChatSnap;
+}
+
 export interface Attention {
   kind: "card" | "run_done" | "run_failed" | "task_done" | "bell";
   id?: string;
+}
+
+export interface ChatRef {
+  id: string;
 }
 
 export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;
@@ -322,9 +410,19 @@ export type OpName = keyof OpArgs;
 export interface TopicData {
   "status": { snap: StatusSnap; delta: StatusSnap };
   "toasts": { snap: ToastsSnap; delta: ToastsDelta };
+  "chats": { snap: ChatsSnap; delta: ChatsDelta };
+  "chat": { snap: ChatSnap; delta: ChatDelta };
 }
 
 // The data of an ev message, by kind.
 export interface EventData {
   "attention": Attention;
+}
+
+// The data of a res message, by op (ops not listed answer without data).
+export interface OpResult {
+  "chat.open": ChatSnap;
+  "chat.get_message": ChatMsg;
+  "chat.send": ChatRef;
+  "chat.new": ChatRef;
 }

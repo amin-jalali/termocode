@@ -105,12 +105,16 @@
     {
       "name": "chats",
       "keyed": false,
-      "phase": "v1"
+      "phase": "v1",
+      "snap": "ChatsSnap",
+      "delta": "ChatsDelta"
     },
     {
       "name": "chat",
       "keyed": false,
-      "phase": "v1"
+      "phase": "v1",
+      "snap": "ChatSnap",
+      "delta": "ChatDelta"
     },
     {
       "name": "cards",
@@ -210,6 +214,7 @@
     {
       "op": "chat.open",
       "args": "ChatOpenArgs",
+      "result": "ChatSnap",
       "role": "viewer",
       "rate": {
         "n": 20,
@@ -223,6 +228,7 @@
     {
       "op": "chat.get_message",
       "args": "ChatGetMessageArgs",
+      "result": "ChatMsg",
       "role": "viewer",
       "rate": {
         "n": 20,
@@ -367,6 +373,7 @@
     {
       "op": "chat.send",
       "args": "ChatSendArgs",
+      "result": "ChatRef",
       "role": "controller",
       "rate": {
         "n": 1,
@@ -393,6 +400,7 @@
     {
       "op": "chat.new",
       "args": "EmptyArgs",
+      "result": "ChatRef",
       "role": "controller",
       "rate": {
         "n": 1,
@@ -753,6 +761,45 @@
       ],
       "additionalProperties": false
     },
+    "ChatDelta": {
+      "type": "object",
+      "properties": {
+        "busy": {
+          "type": "boolean"
+        },
+        "chat": {
+          "$ref": "#/defs/ChatSnap"
+        },
+        "i": {
+          "type": "integer"
+        },
+        "msg": {
+          "$ref": "#/defs/ChatMsg"
+        },
+        "n": {
+          "type": "integer"
+        },
+        "op": {
+          "enum": [
+            "append",
+            "message",
+            "truncate",
+            "state",
+            "switched"
+          ]
+        },
+        "text": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "additionalProperties": true
+    },
     "ChatGetMessageArgs": {
       "type": "object",
       "properties": {
@@ -764,6 +811,90 @@
         "i"
       ],
       "additionalProperties": false
+    },
+    "ChatItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "live": {
+          "type": "boolean"
+        },
+        "msgs": {
+          "type": "integer"
+        },
+        "open": {
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string"
+        },
+        "updated": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "updated",
+        "msgs"
+      ],
+      "additionalProperties": true
+    },
+    "ChatMsg": {
+      "type": "object",
+      "properties": {
+        "i": {
+          "type": "integer"
+        },
+        "images": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "md": {
+          "$ref": "#/defs/MdNode"
+        },
+        "model": {
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "user",
+            "assistant",
+            "tool",
+            "error"
+          ]
+        },
+        "rules": {
+          "type": "string"
+        },
+        "run": {
+          "$ref": "#/defs/ChatRun"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/defs/ChatStep"
+          },
+          "type": "array"
+        },
+        "streaming": {
+          "type": "boolean"
+        },
+        "text": {
+          "type": "string"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "i",
+        "role"
+      ],
+      "additionalProperties": true
     },
     "ChatOpenArgs": {
       "type": "object",
@@ -789,6 +920,53 @@
       ],
       "additionalProperties": false
     },
+    "ChatRef": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": true
+    },
+    "ChatRun": {
+      "type": "object",
+      "properties": {
+        "cost_usd": {
+          "type": "number"
+        },
+        "elapsed_ms": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "plan_wait": {
+          "type": "boolean"
+        },
+        "profile": {
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "running",
+            "done",
+            "failed",
+            "cancelled",
+            "interrupted",
+            "paused"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "state"
+      ],
+      "additionalProperties": true
+    },
     "ChatSendArgs": {
       "type": "object",
       "properties": {
@@ -803,6 +981,111 @@
         "text"
       ],
       "additionalProperties": false
+    },
+    "ChatSnap": {
+      "type": "object",
+      "properties": {
+        "busy": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "messages": {
+          "items": {
+            "$ref": "#/defs/ChatMsg"
+          },
+          "type": "array"
+        },
+        "model": {
+          "type": "string"
+        },
+        "profile": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "busy",
+        "messages"
+      ],
+      "additionalProperties": true
+    },
+    "ChatStep": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "md": {
+          "$ref": "#/defs/MdNode"
+        },
+        "model": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "tools": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": true
+    },
+    "ChatsDelta": {
+      "type": "object",
+      "properties": {
+        "chat": {
+          "$ref": "#/defs/ChatItem"
+        },
+        "id": {
+          "type": "string"
+        },
+        "op": {
+          "enum": [
+            "upsert",
+            "remove"
+          ]
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "additionalProperties": true
+    },
+    "ChatsSnap": {
+      "type": "object",
+      "properties": {
+        "chats": {
+          "items": {
+            "$ref": "#/defs/ChatItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "chats"
+      ],
+      "additionalProperties": true
     },
     "Ctl": {
       "type": "object",
@@ -984,6 +1267,67 @@
         "label"
       ],
       "additionalProperties": false
+    },
+    "MdNode": {
+      "type": "object",
+      "properties": {
+        "c": {
+          "items": {
+            "$ref": "#/defs/MdNode"
+          },
+          "type": "array"
+        },
+        "href": {
+          "type": "string"
+        },
+        "k": {
+          "enum": [
+            "doc",
+            "p",
+            "h",
+            "em",
+            "strong",
+            "code",
+            "codeblock",
+            "ul",
+            "ol",
+            "li",
+            "blockquote",
+            "link",
+            "hr",
+            "br",
+            "table",
+            "th",
+            "td",
+            "text"
+          ]
+        },
+        "lang": {
+          "type": "string"
+        },
+        "level": {
+          "type": "integer"
+        },
+        "rows": {
+          "items": {
+            "items": {
+              "$ref": "#/defs/MdNode"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "start": {
+          "type": "integer"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "k"
+      ],
+      "additionalProperties": true
     },
     "Meta": {
       "type": "object",
