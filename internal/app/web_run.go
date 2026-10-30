@@ -1,6 +1,7 @@
 package app
 
 import (
+	"path/filepath"
 	"sync/atomic"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -59,4 +60,28 @@ func (m *Model) stopWebHub() {
 	m.web = nil
 	webHubTarget.CompareAndSwap(h, nil)
 	h.stop()
+}
+
+// syncWebHub runs the hub while web_panel is "on" (a private socket only:
+// nothing listens on the network until the user starts the panel) and
+// stops the panel and the hub when it is turned off.
+func (m *Model) syncWebHub() tea.Cmd {
+	if webSettings().On {
+		return m.startWebHub()
+	}
+	var cmd tea.Cmd
+	if m.webPanel != nil {
+		cmd = m.stopWebPanel()
+	}
+	m.stopWebHub()
+	return cmd
+}
+
+// onWebConfigSaved applies web_panel when config.json is saved.
+func (m *Model) onWebConfigSaved(path string) tea.Cmd {
+	want, err := settingsConfigPath()
+	if err != nil || filepath.Clean(path) != filepath.Clean(want) {
+		return nil
+	}
+	return m.syncWebHub()
 }

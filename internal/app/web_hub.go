@@ -3,6 +3,7 @@ package app
 import (
 	"bufio"
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"net"
@@ -62,7 +63,11 @@ type webHub struct {
 	byID   map[string]*webConn   // browser connections by the gateway's id
 	ctlSeq int
 	closed bool
-	wg     sync.WaitGroup
+	// link is the digest of the open launch link, sent to each control
+	// connection that comes before linkUntil (web_panel.go).
+	link      [sha256.Size]byte
+	linkUntil time.Time
+	wg        sync.WaitGroup
 }
 
 func newWebHub() *webHub {
@@ -239,6 +244,9 @@ func (h *webHub) admit(nc net.Conn, first webproto.Msg) (*webConn, error) {
 	if c.role == webproto.RoleCtl {
 		h.ctlSeq++
 		c.id = fmt.Sprintf("ctl-%d", h.ctlSeq)
+		if d, ok := h.linkForLocked(); ok {
+			defer c.sendLink(d)
+		}
 	} else {
 		if _, dup := h.byID[c.id]; dup {
 			return nil, fmt.Errorf("connection id %q is in use", c.id)

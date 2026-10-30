@@ -43,6 +43,8 @@ func (m *Model) handleWebMsg(msg tea.Msg) (tea.Cmd, bool) {
 	case webGoneMsg:
 		m.onWebGone(msg)
 		return waitWeb(msg.hub), true
+	case webPanelUpMsg, webPanelFailMsg, webPanelExitMsg:
+		return m.handleWebPanelMsg(msg)
 	case webHelloMsg:
 		msg.hub.live[msg.conn] = true
 		m.onWebHello(msg)

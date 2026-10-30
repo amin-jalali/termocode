@@ -826,7 +826,7 @@ func (m Model) handleNvimMsg(msg tea.Msg) (Model, tea.Cmd, bool) {
 		termCmd := m.restoreTerminalsAtStart(sess) // terminal_restore.go
 		// Group I: load extensions after the built-in Lua. Plugins not
 		// downloaded yet are cloned in the background (plugins.go).
-		cmds := append([]tea.Cmd{m.extLoadCmd(false), m.keymapProblemsToast(), m.startHotExit(), m.syncMCPServe(), termCmd}, pluginBootstrapCmds()...)
+		cmds := append([]tea.Cmd{m.extLoadCmd(false), m.keymapProblemsToast(), m.startHotExit(), m.syncMCPServe(), m.syncWebHub(), termCmd}, pluginBootstrapCmds()...)
 		_ = m.nvim.ExecLua(`vim.api.nvim_create_autocmd('BufWritePost', { callback = function(ev)
   if _G.termocode_notify then _G.termocode_notify('termocode_profiles_saved', ev.file) end
 end })`)
@@ -1663,7 +1663,7 @@ func (m Model) handleGlobalKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		} else if p := m.editor.Path(); p != "" {
 			m.toast, toastCmd = m.toast.PushDetail(toast.Info, "Saved", saveDetail(p))
 			m.onAIProfilesSaved(p)
-			toastCmd = tea.Batch(toastCmd, m.onMCPServeConfigSaved(p), m.onAIPlanSaved(p)) // mcp_server changed; G-PLAN
+			toastCmd = tea.Batch(toastCmd, m.onMCPServeConfigSaved(p), m.onWebConfigSaved(p), m.onAIPlanSaved(p)) // mcp_server, web_panel changed; G-PLAN
 		}
 		return m, tea.Batch(fetchGitCmd(), toastCmd)
 	case keymap.ActionSaveAll:
