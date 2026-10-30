@@ -102,3 +102,24 @@ func noPaint(t *testing.T, c *HubConn, op string, d time.Duration) {
 		}
 	}
 }
+
+// Code is painted in the laptop theme's own syntax colours (Syntax*), as
+// the TUI's editor paints it: control words apart from other keywords.
+func TestFileSyntaxUsesThemeSyntaxColours(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	openBuf(t, p, c, 2, "a.go", "if x { return f(1) }")
+	r, _ := expectHl(t, c)
+	c.Send(t, &webproto.Res{T: webproto.KindRes, ID: r.ID, Data: raw(map[string]any{"tick": 3, "first": 0, "last": 1,
+		"groups": []string{"keyword.conditional", "function.call", "number"},
+		"spans":  [][]int{{0, 0, 2, 0}, {0, 7, 13, 0}, {0, 14, 15, 1}, {0, 16, 17, 2}}})})
+	p.WaitJS(codeRow(0) + `.querySelector(".hl-kc")`)
+	for cls, tok := range map[string]string{"hl-kc": "--syn-ctl", "hl-f": "--syn-fn", "hl-n": "--syn-num"} {
+		js := `(() => { const el = ` + codeRow(0) + `.querySelector(".` + cls + `"); const probe = document.createElement("span");
+			probe.style.color = getComputedStyle(document.documentElement).getPropertyValue("` + tok + `").trim();
+			document.body.append(probe); const want = getComputedStyle(probe).color; probe.remove();
+			return el !== null && getComputedStyle(el).color === want })()`
+		if !Eval[bool](p, js) {
+			t.Errorf(".%s is not painted with %s", cls, tok)
+		}
+	}
+}
