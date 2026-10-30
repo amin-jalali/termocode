@@ -8,6 +8,7 @@
 // Pure: no DOM, timers or network; inputs are never changed.
 import type { BufSnap, TermSnap, TreeDir, TreeSnap } from "../../../../webproto/proto";
 import { arr, bad, int, obj, str } from "./delta";
+import { dict } from "./dict";
 import type { Reducer } from "./store";
 
 /** MAX_TERM_ROWS is webproto.MaxTermRows: a terminal view keeps its last 2 000 rows. */
@@ -69,7 +70,7 @@ export function under(dir: string, p: string): boolean {
 export const reduceTree: Reducer = (data, delta) => {
   const s = obj(data, "tree") as unknown as TreeSnap;
   const d = obj(delta, "tree delta");
-  const dirs: Record<string, TreeDir> = { ...(s.dirs ?? {}) };
+  const dirs = dict<TreeDir>(s.dirs);
   switch (d.kind) {
     case "dir": {
       const dir: TreeDir = { entries: d.entries === undefined ? (null as unknown as TreeDir["entries"]) : (arr(d.entries, "entries") as TreeDir["entries"]) };

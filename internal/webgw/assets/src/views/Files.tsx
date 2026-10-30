@@ -9,6 +9,7 @@ import type { BufItem, TreeDir, TreeEntry } from "../../../../webproto/proto";
 import { go } from "../lib/router";
 import { expanded, failed, hideDots, reconcile, retry, toggle } from "../lib/tree";
 import { link, listOf, live, store } from "../session";
+import { own } from "../state/dict";
 import { t } from "../strings";
 import { Chip } from "../ui/Chip";
 import { gitBadge, TreeRow } from "../ui/rows";
@@ -52,7 +53,7 @@ function StatusRow({ depth, children }: { depth: number; children: ComponentChil
 
 function Folder({ path, depth, tree }: { path: string; depth: number; tree: TreeData }) {
   const [filter, setFilter] = useState("");
-  const dir = tree.dirs[path];
+  const dir = own(tree.dirs, path);
   const why = failed.value.get(path);
   if (!dir) {
     if (why !== undefined) {
