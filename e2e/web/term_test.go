@@ -300,7 +300,7 @@ func TestTermBellDot(t *testing.T) {
 	p, c := openTerm(t, Desktop)
 	showTerm(t, p, c, termSnap(3, 0, 80, "$ "), termItem(3, "zsh", false, true))
 	c.Send(t, attention("bell", ""))
-	p.WaitJS(termView + `.querySelector(".bell-dot")?.getAttribute("aria-label") === "A shell rang"`)
+	p.WaitJS(`document.querySelector(".bell-dot")?.getAttribute("aria-label") === "A shell rang"`) // in the panel title on the desktop
 }
 
 // A full-screen program: the rows become a fixed grid at the laptop's
@@ -337,7 +337,7 @@ func TestTermScreenModeGrid(t *testing.T) {
 			p.TapJS(`[...` + termView + `.querySelectorAll(".term-banner .btn")].find((b) => b.textContent === "Rows")`)
 			p.WaitJS(`!` + termView + `.querySelector(".term-screen") && ` + termView + `.querySelector(".term-rows")`)
 			// The about sheet turns screen mode back on.
-			p.TapJS(termView + `.querySelector(".term-info-btn")`)
+			p.TapJS(`document.querySelector(".term-info-btn")`)
 			p.WaitJS(`document.querySelector(".sheet .term-about")?.innerText.includes("the laptop's (100 columns)")`)
 			p.TapJS(`[...document.querySelectorAll(".sheet .term-toggles .chip")].find((b) => b.textContent === "Screen mode")`)
 			p.WaitJS(termView + `.querySelector(".term-screen")`)
