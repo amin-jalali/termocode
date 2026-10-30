@@ -65,6 +65,11 @@ func TestDeskSCMGroupsAndStage(t *testing.T) {
 	p.WaitJS(`document.activeElement?.dataset.group === "changes" && !document.activeElement.dataset.path`)
 	p.Key(kb.ArrowDown + kb.ArrowDown + kb.Enter) // new.txt, src/a.go
 	p.WaitJS(`location.hash.startsWith("#/files/%40diff%3Awt%3Asrc")`)
+	// The change opens beside the view: the side bar keeps source control.
+	p.WaitJS(`document.querySelector('[data-view="diff"]')`)
+	if !Eval[bool](p, `!!`+scm+` && !!document.querySelector('nav.act-bar .act-item.is-active[data-act="git"]')`) {
+		t.Error("opening a change left source control in the side bar")
+	}
 }
 
 // Commit: Ctrl/Cmd+Enter in the message asks first, Cancel first and
