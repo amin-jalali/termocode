@@ -45,6 +45,10 @@ func TestWebSettingsDefaultsAndBadValues(t *testing.T) {
 	if c = webSettings(); c.On || c.Explicit || len(c.Problems) != 0 {
 		t.Fatalf("off %+v", c)
 	}
+	writeUserConfig(t, `{"web_panel":"auto"}`)
+	if c = webSettings(); !c.On || c.Explicit || len(c.Problems) != 0 {
+		t.Fatalf("auto (the default, written out) %+v", c)
+	}
 }
 
 // Spec (T31, WEB-10): every web_* setting is aiNever and documented as
