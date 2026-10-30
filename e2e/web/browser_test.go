@@ -16,6 +16,7 @@ import (
 
 	"github.com/chromedp/cdproto/audits"
 	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/log"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
@@ -269,18 +270,30 @@ func short(js string) string {
 // into view first.
 func (p *Page) Tap(sel string) {
 	p.T.Helper()
-	p.WaitJS(fmt.Sprintf(`document.querySelector(%q)`, sel))
-	pt := Eval[struct{ X, Y float64 }](p, fmt.Sprintf(`(() => {
-		const el = document.querySelector(%q);
+	p.TapJS(fmt.Sprintf(`document.querySelector(%q)`, sel))
+}
+
+// TapJS is Tap for the element a JavaScript expression returns.
+func (p *Page) TapJS(el string) {
+	p.T.Helper()
+	p.WaitJS(el)
+	pt := Eval[struct{ X, Y float64 }](p, `(() => {
+		const el = `+el+`;
 		el.scrollIntoView({block: "center", inline: "center"});
 		const r = el.getBoundingClientRect();
 		return {X: r.left + r.width / 2, Y: r.top + r.height / 2};
-	})()`, sel))
+	})()`)
 	if p.VP.Mobile {
 		p.Do(chromedp.TapXY(pt.X, pt.Y))
 	} else {
 		p.Do(chromedp.MouseClickXY(pt.X, pt.Y))
 	}
+}
+
+// ButtonByText is a JavaScript expression for the first button whose
+// text is exactly text.
+func ButtonByText(text string) string {
+	return fmt.Sprintf(`[...document.querySelectorAll("button")].find((b) => b.textContent.trim() === %q)`, text)
 }
 
 // Key sends key presses to the focused element (chromedp kb names, e.g. "\r").
@@ -314,4 +327,18 @@ func (p *Page) dump() {
 	text, _ := chromedp.Run(ctx, chromedp.Evaluate[string](`location.href + "\n\n" + document.body.innerText`))
 	rec := text + "\n\nrequests:\n" + strings.Join(p.Requests(), "\n") + "\n\nproblems:\n" + strings.Join(p.Problems(), "\n") + "\n"
 	_ = os.WriteFile(name+".txt", []byte(rec), 0o644)
+}
+
+// Media emulates CSS media features, e.g. "prefers-color-scheme": "light"
+// or "prefers-reduced-motion": "reduce". Features left out are not emulated.
+func (p *Page) Media(features map[string]string) {
+	p.T.Helper()
+	var fs []*emulation.MediaFeature
+	for k, v := range features {
+		fs = append(fs, &emulation.MediaFeature{Name: k, Value: v})
+	}
+	p.Do(chromedp.Func(func(ctx context.Context, t *chromedp.Target) error {
+		_, err := cdp.Call(ctx, t, emulation.SetEmulatedMedia, emulation.SetEmulatedMediaParams{Features: fs})
+		return err
+	}))
 }
