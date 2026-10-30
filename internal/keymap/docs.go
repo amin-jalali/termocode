@@ -136,6 +136,7 @@ var actionInfo = map[Action]ActionInfo{
 	ActionToggleWordWrap:  {"View", "Turn soft word wrap on or off."},
 	ActionToggleZenMode:   {"View", "Turn Zen mode on or off."},
 	ActionLayoutOpen:      {"View", "Open a saved layout: panels, sizes, splits and terminals (Layout: Open…)."},
+	ActionWebStop:         {"View", "Stop the web panel: every browser is disconnected at once (Web: Stop Panel). No default key."},
 	ActionMarkdownPreview: {"View", "Open the Markdown preview for the active file."},
 	ActionShowBufferInfo:  {"View", "Show path, size, encoding and LSP info for the active file."},
 

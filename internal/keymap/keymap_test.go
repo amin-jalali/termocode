@@ -93,3 +93,17 @@ func TestSearchResultKeys(t *testing.T) {
 		t.Errorf("F4 KeyMsg: got %s", ActionName(got))
 	}
 }
+
+// Spec (owner, ADR 0020): the web kill switch has no default key, and
+// keymap.json can bind it by name.
+func TestWebStopHasNoDefaultKeyButIsBindable(t *testing.T) {
+	km := Default()
+	for k, a := range km.bindings {
+		if a == ActionWebStop {
+			t.Fatalf("default key %q for WebStop", k)
+		}
+	}
+	if actionNames[ActionWebStop] != "WebStop" {
+		t.Fatalf("name %q", actionNames[ActionWebStop])
+	}
+}
