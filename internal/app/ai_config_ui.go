@@ -183,6 +183,8 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 		return m.answerAIWorktreeLeft(id), true
 	case confirmKindWebStart: // web_tui.go
 		return m.answerWebStart(id), true
+	case confirmKindWebAsk: // web_ask.go
+		return m.answerWebAsk(id), true
 	}
 	return nil, false
 }
@@ -238,6 +240,8 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerAgentMCPCard("skip")
 	case confirmKindWebStart:
 		return m.answerWebStart("") // Esc: Not now
+	case confirmKindWebAsk:
+		return m.answerWebAsk("") // Esc: Cancel
 	}
 	return nil
 }

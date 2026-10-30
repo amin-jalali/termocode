@@ -85,6 +85,7 @@ func webTestCallBg(t *testing.T, m *Model, c *webConn, op, args string) map[stri
 			webTestGitRefresh(t, m, am(m))
 		}
 	}
+	m.webAfterUpdate(nil) // as Update does after every message
 	for _, f := range webTestNow(t, c) {
 		if f["id"] == float64(call.id) {
 			return f
@@ -391,5 +392,127 @@ func TestCommitNeedsMessageAndController(t *testing.T) {
 	}
 	if !strings.Contains(webTestToasts(m), "Committed on phone") {
 		t.Errorf("toasts %q", webTestToasts(m))
+	}
+}
+
+// webTestLaptopSelect presses a button of the laptop's open dialog, as
+// Update does with confirm.SelectMsg, and runs what it starts.
+func webTestLaptopSelect(t *testing.T, m *Model, id string) {
+	t.Helper()
+	m.confirmOpen = false
+	cmd := m.handleConfirmSelect(id)
+	if cmd != nil {
+		if am, ok := cmd().(applyMsg); ok {
+			webTestGitRefresh(t, m, am(m))
+		}
+	}
+	m.webAfterUpdate(nil)
+}
+
+// webTestAskCard is the laptop card in the cards snapshot of a new sub.
+func webTestAskCard(t *testing.T, m *Model, id string) *webproto.Card {
+	t.Helper()
+	for _, c := range webTestCards(t, webTestSub(t, m, "cards")) {
+		if c.ID == id {
+			c := c
+			return &c
+		}
+	}
+	return nil
+}
+
+// Spec (WEB-23, web design 3.9): git.discard waits for the laptop. The
+// phone gets the card's id at once and nothing is discarded; the laptop
+// shows a Risky card (Cancel first and focused) naming the device; the
+// web may only cancel it. Confirmed on the laptop: the change is gone,
+// every browser hears answered with the choice, the Web channel keeps a
+// line. Cancelled from the phone, or Esc on the laptop: nothing changes.
+// A dialog already open on the laptop is never replaced: the card waits.
+func TestDiscardNeedsLaptopCard(t *testing.T) {
+	m := aiTestModel(t)
+	m.output = newOutputStore()
+	webTestHub(t, &m)
+	dir, _ := webTestRepo(t, &m)
+	webTestWrite(t, dir, "a.txt", "changed\n")
+	webTestWrite(t, dir, "new.txt", "fresh\n")
+	webTestGitLoad(&m)
+	c := webTestSub(t, &m)
+	ev := webTestSub(t, &m) // another browser: hears every answered event
+
+	var ref webproto.AskRef
+	webTestData(t, webTestCallBg(t, &m, c, webproto.OpGitDiscard, `{"paths":["a.txt"]}`), &ref)
+	if ref.Card == "" {
+		t.Fatal("no card id")
+	}
+	if body, _ := os.ReadFile(filepath.Join(dir, "a.txt")); string(body) != "changed\n" {
+		t.Fatalf("discarded before the laptop said so: %q", body)
+	}
+	if !m.confirmOpen || m.confirmKind != confirmKindWebAsk || m.confirm.SafeID() != "cancel" {
+		t.Fatalf("laptop dialog open=%v kind=%v safe=%q", m.confirmOpen, m.confirmKind, m.confirm.SafeID())
+	}
+	if b := m.confirm.Buttons(); len(b) != 2 || b[0].ID != "cancel" || b[1].Title != "Discard" {
+		t.Fatalf("buttons %+v", b)
+	}
+	if v := m.confirm.View(); !strings.Contains(v, "a.txt") || !strings.Contains(v, "phone") {
+		t.Errorf("the laptop card does not name the file and the device:\n%s", v)
+	}
+	card := webTestAskCard(t, &m, ref.Card)
+	if card == nil || card.Kind != webproto.CardLaptop || len(card.Choices) != 2 ||
+		!card.Choices[0].Safe || card.Choices[0].ID != webproto.ChoiceCancel || !card.Choices[1].NeedsLaptop {
+		t.Fatalf("card %+v", card)
+	}
+	if f, _ := webTestCall(t, &m, c, webproto.OpCardsAnswer, `{"id":"`+ref.Card+`","choice":"confirm"}`); webTestErr(f) != "forbidden" {
+		t.Fatalf("the web confirmed a laptop card: %v", f)
+	}
+
+	webTestLaptopSelect(t, &m, "confirm")
+	if body, _ := os.ReadFile(filepath.Join(dir, "a.txt")); string(body) != "one\ntwo\n" {
+		t.Fatalf("not discarded after the laptop's yes: %q", body)
+	}
+	if a := webTestAnswered(t, ev); len(a) != 1 || a[0] != (webproto.Answered{ID: ref.Card, By: "laptop", Choice: webproto.ChoiceConfirm}) {
+		t.Fatalf("answered %+v", a)
+	}
+	if a := webTestAudit(&m); !strings.Contains(a, "git.discard  a.txt  by=web:phone  → confirmed on the laptop") {
+		t.Errorf("audit:\n%s", a)
+	}
+	if _, ok := webTestGitCodes(&m)["a.txt"]; ok {
+		t.Error("the laptop's git state still lists a.txt")
+	}
+
+	// The phone cancels: the laptop's dialog closes, the file stays.
+	webTestData(t, webTestCallBg(t, &m, c, webproto.OpGitDiscard, `{"paths":["new.txt"]}`), &ref)
+	if f, _ := webTestCall(t, &m, c, webproto.OpCardsAnswer, `{"id":"`+ref.Card+`","choice":"cancel"}`); f["t"] != "res" {
+		t.Fatalf("cancel from the phone: %v", f)
+	}
+	m.webAfterUpdate(nil)
+	if m.confirmOpen {
+		t.Error("the laptop dialog stayed open")
+	}
+	if a := webTestAnswered(t, ev); len(a) != 1 || a[0] != (webproto.Answered{ID: ref.Card, By: "phone", Choice: webproto.ChoiceCancel}) {
+		t.Fatalf("answered %+v", a)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "new.txt")); err != nil {
+		t.Fatal("cancelled, yet the file is gone")
+	}
+
+	// Esc on the laptop cancels.
+	webTestData(t, webTestCallBg(t, &m, c, webproto.OpGitDiscard, `{"paths":["new.txt"]}`), &ref)
+	m.confirmOpen = false
+	m.onAIConfirmClosed()
+	m.webAfterUpdate(nil)
+	if a := webTestAnswered(t, ev); len(a) != 1 || a[0].Choice != webproto.ChoiceCancel || a[0].By != "laptop" {
+		t.Fatalf("answered after Esc %+v", a)
+	}
+
+	// Another dialog is open: it stays; the card waits, then shows.
+	m.confirmOpen, m.confirmKind = true, confirmKindGitUndo
+	webTestData(t, webTestCallBg(t, &m, c, webproto.OpGitDiscard, `{"paths":["new.txt"]}`), &ref)
+	if m.confirmKind != confirmKindGitUndo || webTestAskCard(t, &m, ref.Card) == nil {
+		t.Fatal("the open dialog was replaced, or the card is missing")
+	}
+	m.confirmOpen = false
+	m.webAfterUpdate(nil)
+	if !m.confirmOpen || m.confirmKind != confirmKindWebAsk {
+		t.Fatal("the waiting card did not show when the laptop was free")
 	}
 }

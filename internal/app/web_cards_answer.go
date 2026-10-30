@@ -42,6 +42,13 @@ func (m *Model) webCardsAnswer(call *webCall) tea.Cmd {
 	if device == "" {
 		device = "web"
 	}
+	if ask, ok := ref.obj.(*webAsk); ok { // the web may only cancel it
+		cmd := m.webAskDone(ask, webproto.ChoiceCancel, device)
+		var t tea.Cmd
+		m.toast, t = m.toast.PushDetail(toast.Info, "Cancelled on "+device, ask.title)
+		call.reply(nil)
+		return tea.Batch(cmd, t)
+	}
 	cmd := m.webAnswerCard(ref, a.Choice)
 	if p.by == nil {
 		p.by = map[string]string{}

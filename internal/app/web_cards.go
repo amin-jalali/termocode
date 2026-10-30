@@ -38,6 +38,7 @@ type webCardsPub struct {
 	last  []webproto.Card     // what the browsers have (cards topic)
 	seen  map[string]bool     // the ids of the last build (attention, answered)
 	by    map[string]string   // card id → the device that answered it from the web
+	chose map[string]string   // card id → the answer of a laptop card (confirm, cancel)
 	fresh bool                // seen is a real earlier build
 }
 
@@ -89,11 +90,12 @@ func (m *Model) webPublishCards(tea.Msg) tea.Cmd {
 	for id := range p.seen {
 		if !now[id] {
 			gone[id] = p.byFor(id)
-			h.answered(id, gone[id])
+			h.answered(id, gone[id], p.chose[id])
 		}
 	}
 	for _, r := range refs {
-		if p.fresh && !p.seen[r.card.ID] {
+		// A laptop card is the browser's own request: no attention.
+		if p.fresh && !p.seen[r.card.ID] && r.card.Kind != webproto.CardLaptop {
 			h.attention(webproto.AttentionCard, r.card.ID)
 		}
 	}
@@ -140,9 +142,25 @@ func (p *webCardsPub) byFor(id string) string {
 	return "laptop"
 }
 
-// answered tells every browser that a card went away, and who answered.
-func (h *webHub) answered(id, by string) {
-	data, err := webData(webproto.Answered{ID: id, By: by})
+// decided records the answer of a laptop card: the choice, and the
+// device when a browser gave it.
+func (p *webCardsPub) decided(id, choice, by string) {
+	if p.chose == nil {
+		p.chose = map[string]string{}
+	}
+	p.chose[id] = choice
+	if by != "laptop" {
+		if p.by == nil {
+			p.by = map[string]string{}
+		}
+		p.by[id] = by
+	}
+}
+
+// answered tells every browser that a card went away, who answered and,
+// for a laptop card, what.
+func (h *webHub) answered(id, by, choice string) {
+	data, err := webData(webproto.Answered{ID: id, By: by, Choice: choice})
 	if err != nil {
 		return
 	}
@@ -171,6 +189,11 @@ func (p *webCardsPub) prune(refs []webCardRef) {
 	for id := range p.by {
 		if p.since[id] == 0 {
 			delete(p.by, id)
+		}
+	}
+	for id := range p.chose {
+		if p.since[id] == 0 {
+			delete(p.chose, id)
 		}
 	}
 }
@@ -270,6 +293,13 @@ func (m *Model) webCards(p *webCardsPub, diffs bool) []webCardRef {
 		}
 		if t := s.mcpTrust; t != nil {
 			trust(t, "Trust the MCP server "+t.server+"?", "A service wants to give the AI its tools.")
+		}
+	}
+	if m.web != nil {
+		for _, a := range m.web.asks.line {
+			add(a, webproto.Card{Kind: webproto.CardLaptop, Title: a.title, Body: a.body, Choices: []webproto.CardChoice{
+				{ID: webproto.ChoiceCancel, Label: "Cancel", Safe: true},
+				{ID: webproto.ChoiceConfirm, Label: a.action, NeedsLaptop: true}}})
 		}
 	}
 	return out
