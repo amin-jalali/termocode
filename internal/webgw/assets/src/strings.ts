@@ -704,6 +704,20 @@ export const S = {
   "mcpv.tool": "Tool",
   "mcpv.outcome": "What happened",
   "wb.output_none": "Choose Logs on a container to see its output here.",
+  "set.search": "Search settings",
+  "set.found": "{n} settings found",
+  "set.toc": "Setting groups",
+  "set.none_found": "No settings found.",
+  "dev.look": "Appearance",
+  "dev.link": "Connection",
+  "dev.theme_desc": "The colours of this page on this device.",
+  "dev.lang_desc": "The language of this page. Auto follows the browser.",
+  "dev.dir_desc": "The direction of text in this page.",
+  "dev.name": "Device name",
+  "dev.role": "What this device may do",
+  "dev.viewers": "Browsers open now",
+  "dev.viewer": "Read only",
+  "dev.controller": "Read and change",
 } as const;
 
 export type StringKey = keyof typeof S;

@@ -57,6 +57,7 @@ import { ACTIVITIES, ACTIVITIES_BOTTOM, ActivityBar, openSide, routeSide, sideVi
 import type { StringKey } from "../strings";
 import { DeskSearch } from "../views/desk/DeskSearch";
 import { DeskDB } from "../views/desk/DeskDB";
+import { DeskDevice, DeskSettings } from "../views/desk/DeskSettings";
 import { DeskContainers, OutputView } from "../views/desk/DeskContainers";
 import { DBQueryTab, DBTableTab } from "../views/desk/DBTabs";
 import { DeskMCP, MCPAgentTab } from "../views/desk/DeskMCP";
@@ -306,7 +307,12 @@ function Welcome() {
 /** EditorBody is what the editor area shows: More, the active file or
  * the welcome. */
 function EditorBody({ more, file, slot }: { more: boolean; file: string | null; slot: string }) {
-  if (more) return <MoreView />;
+  if (more) {
+    const sub = route.value.tab === "more" ? route.value.rest : "";
+    if (sub === "settings") return <DeskSettings />;
+    if (sub === "") return <DeskDevice />;
+    return <MoreView />;
+  }
   if (file && diffOf(file)) return <DiffView key={file} tab={file} slot={slot} />;
   const v = file ? vtabOf(file) : null;
   if (v?.kind === "db") return <DBTableTab key={file} conn={v.conn} table={v.table} slot={slot} />;

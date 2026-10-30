@@ -30,7 +30,7 @@ func TestTapHitsATargetThatIsStillMoving(t *testing.T) {
 			requestAnimationFrame(step);
 			return true;
 		})()`)
-		p.Tap(`.more .field:nth-of-type(1) .seg-item:nth-child(` + n + `)`)
+		p.pickPref(1, n)
 		p.WaitJS(`document.documentElement.dataset.theme === "` + scheme + `"`)
 	}
 }

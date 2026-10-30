@@ -102,3 +102,18 @@ func (p *Page) goActivity(tab string) {
 	p.Tap(fmt.Sprintf(`nav .act-item[data-act="%s"]`, act))
 	p.WaitJS(fmt.Sprintf(`document.querySelector('nav .act-item[data-act="%s"][aria-current="page"]') && document.querySelector('[data-view="%s"]')`, act, tab))
 }
+
+// pickPref picks choice n (1-based) of this device's setting field (1
+// theme, 2 language, 3 text direction): the segmented control on a
+// phone, the setting's dropdown on the desktop's This device page.
+func (p *Page) pickPref(field int, n string) {
+	p.T.Helper()
+	if p.VP.W >= 1200 {
+		key := map[int]string{1: "theme", 2: "lang", 3: "dir"}[field]
+		sel := `document.querySelector('.set-item[data-key="` + key + `"] select')`
+		p.WaitJS(sel)
+		Eval[bool](p, `(() => { const s = `+sel+`; s.selectedIndex = `+n+` - 1; s.dispatchEvent(new Event("change", { bubbles: true })); return true; })()`)
+		return
+	}
+	p.Tap(fmt.Sprintf(`.more .field:nth-of-type(%d) .seg-item:nth-child(%s)`, field, n))
+}

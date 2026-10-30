@@ -35,7 +35,7 @@ func TestPersianFromMore(t *testing.T) {
 			if desk {
 				en = p.actLabels()
 			}
-			p.Tap(`.more .field:nth-of-type(2) .seg-item:nth-child(3)`) // فارسی
+			p.pickPref(2, "3") // فارسی
 			p.WaitJS(`document.documentElement.lang === "fa" && document.documentElement.dir === "rtl"`)
 			if desk {
 				fa := p.actLabels()
@@ -50,8 +50,12 @@ func TestPersianFromMore(t *testing.T) {
 			} else if got := p.tabLabels(); got != faTabs {
 				t.Errorf("tab labels %q, want %q", got, faTabs)
 			}
-			if got := p.Text(`[data-view="more"] .view-title`); got != "بیشتر" {
-				t.Errorf("More title %q", got)
+			want := "بیشتر"
+			if desk {
+				want = "این دستگاه" // the desktop's This device page
+			}
+			if got := p.Text(`[data-view="more"] .view-title`); got != want {
+				t.Errorf("More title %q, want %q", got, want)
 			}
 			if got := Eval[string](p, `getComputedStyle(document.querySelector(".strip")).direction`); got != "ltr" {
 				t.Errorf("the strip runs %s; its facts stay ltr", got)
@@ -67,7 +71,7 @@ func TestPersianFromMore(t *testing.T) {
 			if got := p.Text(".bar-lost .bar-text"); !strings.Contains(got, "اتصال قطع شد") || strings.ContainsAny(got, "0123456789") {
 				t.Errorf("offline bar %q: want Persian text with Persian digits", got)
 			}
-			p.Tap(`.more .field:nth-of-type(2) .seg-item:nth-child(2)`) // English
+			p.pickPref(2, "2") // English
 			p.WaitJS(`document.documentElement.lang === "en" && document.documentElement.dir === "ltr"`)
 			if desk {
 				// Source Control now counts the 12 changes: "Source Control (12)".

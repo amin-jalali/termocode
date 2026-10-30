@@ -101,7 +101,7 @@ func TestBigFontStillFits(t *testing.T) {
 				p.Login("c-1")
 				if dir == "rtl" {
 					p.GoTab("more")
-					p.Tap(`.more .field:nth-of-type(2) .seg-item:nth-child(3)`) // فارسی
+					p.pickPref(2, "3") // فارسی
 					p.WaitJS(`document.documentElement.lang === "fa" && document.documentElement.dir === "rtl"`)
 				}
 				Eval[bool](p, `(document.documentElement.style.fontSize = "200%", true)`)

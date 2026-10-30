@@ -188,8 +188,8 @@ func TestMotionAndContrastPreferences(t *testing.T) {
 
 // The Tab key walks the page the way it reads: "Skip to content" first,
 // then the title bar (desktop) or the strip, the activity bar, the side
-// bar, the editor, the panel, the chat column (desktop), the status bar
-// and the tab bar (phone); inside each, top to bottom and left to right.
+// bar, the editor, the panel, the chat column (desktop), the hint line
+// and the status bar (desktop) and the tab bar (phone); inside each, top to bottom and left to right.
 // A sash goes with the pane it resizes. The skip link moves the focus
 // into the view.
 func TestFocusOrderFollowsTheScreen(t *testing.T) {
@@ -222,7 +222,7 @@ func TestFocusOrderFollowsTheScreen(t *testing.T) {
 					for (let x = e.parentElement; x; x = x.parentElement) { top += x.scrollTop; left += x.scrollLeft; }
 					const sash = !e.classList.contains("sash") ? null : e.previousElementSibling?.matches(".wb-side") ? e.previousElementSibling : e.nextElementSibling;
 					const at = sash ?? e;
-					const region = e === document.body || e === document.documentElement ? 99 : at.closest(".skip") ? 0 : at.closest(".titlebar, .strip, .bars") ? 1 : at.closest("nav.rail") ? 2 : at.closest(".wb-side") ? 3 : at.closest("main, .wb-editor") ? 4 : at.closest(".wb-panel") ? 5 : at.closest(".chatcol") ? 6 : at.closest(".statusbar") ? 7 : at.closest(".pill-wrap") ? 8 : at.closest("nav.tabbar") ? 9 : 98;
+					const region = e === document.body || e === document.documentElement ? 99 : at.closest(".skip") ? 0 : at.closest(".statusbar, .layout-desktop .hint") ? 7 : at.closest(".titlebar, .strip, .bars") ? 1 : at.closest("nav.rail") ? 2 : at.closest(".wb-side") ? 3 : at.closest("main, .wb-editor") ? 4 : at.closest(".wb-panel") ? 5 : at.closest(".chatcol") ? 6 : at.closest(".statusbar") ? 7 : at.closest(".pill-wrap") ? 8 : at.closest("nav.tabbar") ? 9 : 98;
 					return {Name: (e.getAttribute("aria-label") || e.textContent || e.tagName).trim().slice(0, 20), Top: top, Left: left, Region: region, Sash: !!sash}; })()`))
 			}
 			for i := 1; i < len(stops); i++ {
@@ -269,7 +269,7 @@ func TestAxeViewsWithContent(t *testing.T) {
 				p.GoTab("git")
 				waitGitSub(t, p, c)
 				c.Send(t, Snap("git", 1, gitSnap()))
-				p.WaitJS(`document.querySelector('.git-row-wrap[data-path="b.go"]')`)
+				p.WaitJS(`document.querySelector('.git-row-wrap[data-path="b.go"], .tr[data-path="b.go"]')`)
 				p.axe(src, "git with changes")
 
 				p.GoTab("term")
