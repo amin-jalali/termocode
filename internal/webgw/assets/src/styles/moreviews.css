@@ -133,3 +133,16 @@
   .svc-logs { display: flex; flex-direction: column; gap: var(--s2); }
   .svc-logs .tres-rows { font-family: var(--font-mono); font-size: 0.8125rem; overflow-x: auto; }
 }
+@media (max-width: 1199.98px) {
+  .kb-scope { width: 100%; }
+  .kb-sel { min-height: var(--tap); flex: 1 1 8rem; font: inherit; }
+  .kb { display: flex; flex-direction: column; gap: var(--s3); padding: 0 var(--s4); }
+  .kb-row { display: flex; flex-wrap: wrap; gap: var(--s2); width: 100%; min-height: var(--tap); align-items: center; border: 0; border-top: 1px solid var(--border); background: none; color: var(--text); font: inherit; text-align: start; }
+  .kb-row.is-picked { background: var(--bg-hover); }
+  .kb-name { font-family: var(--font-mono); font-weight: 600; }
+  .kb-fact { color: var(--muted); font-size: 0.875rem; }
+  .kb-bar { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
+  .kb-bar .tb { min-height: var(--tap); padding: 0 var(--s2); border: 1px solid var(--border); border-radius: var(--r-chip); background: none; color: var(--blue); font: inherit; }
+  .kb-bar .tb.is-on { background: var(--sel); }
+  .kb-text { font-family: var(--font-mono); font-size: 0.8125rem; overflow-x: auto; }
+}
