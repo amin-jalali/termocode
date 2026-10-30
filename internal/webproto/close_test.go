@@ -8,7 +8,7 @@ func TestCloseCodesKnownAndShort(t *testing.T) {
 		CloseAuthFailed: true, CloseTokenExpired: true, CloseDeviceRevoked: true,
 		CloseTakenOver: true, CloseTooManyViewers: true, CloseIdle: true, CloseMaxLifetime: true,
 		CloseSlowClient: true, CloseStopped: true, CloseSessionEnded: true,
-		CloseUnsupportedVersion: true, CloseHubGone: true,
+		CloseUnsupportedVersion: true, CloseHubGone: true, CloseRoleChanged: true,
 	}
 	seen := map[CloseCode]bool{}
 	for _, c := range CloseCodes() {

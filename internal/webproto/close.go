@@ -22,6 +22,7 @@ const (
 	CloseSessionEnded       CloseCode = 4010 // the termocode session ended
 	CloseUnsupportedVersion CloseCode = 4011 // the page and the binary do not match
 	CloseHubGone            CloseCode = 4012 // the UI process went away
+	CloseRoleChanged        CloseCode = 4013 // the device's role changed: reconnect at once (v2)
 )
 
 var closeReasons = map[CloseCode]string{
@@ -41,6 +42,7 @@ var closeReasons = map[CloseCode]string{
 	CloseSessionEnded:       "session ended",
 	CloseUnsupportedVersion: "unsupported version",
 	CloseHubGone:            "termocode went away",
+	CloseRoleChanged:        "role changed",
 }
 
 // CloseCodes lists every close code, in numeric order.
@@ -49,7 +51,7 @@ func CloseCodes() []CloseCode {
 		CloseNormal, CloseUnsupportedData, ClosePolicy, CloseTooBig,
 		CloseAuthFailed, CloseTokenExpired, CloseDeviceRevoked, CloseTakenOver,
 		CloseTooManyViewers, CloseIdle, CloseMaxLifetime, CloseSlowClient,
-		CloseStopped, CloseSessionEnded, CloseUnsupportedVersion, CloseHubGone,
+		CloseStopped, CloseSessionEnded, CloseUnsupportedVersion, CloseHubGone, CloseRoleChanged,
 	}
 }
 

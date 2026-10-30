@@ -36,7 +36,7 @@ export const ERR_CODES = [
 ] as const;
 
 export const CLOSE_CODES = [
-  1000, 1003, 1008, 1009, 4001, 4002, 4003, 4004, 4005, 4006, 4007, 4008, 4009, 4010, 4011, 4012,
+  1000, 1003, 1008, 1009, 4001, 4002, 4003, 4004, 4005, 4006, 4007, 4008, 4009, 4010, 4011, 4012, 4013,
 ] as const;
 
 export class ProtoError extends Error {}
