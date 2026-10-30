@@ -13,7 +13,7 @@ func paletteModel(tb testing.TB) Model {
 	tb.Helper()
 	tb.Setenv("XDG_CONFIG_HOME", tb.TempDir())
 	perfColour(tb)
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m0, _ := newTestModel(tb).Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	m1, _ := m0.(Model).Update(tea.KeyMsg{Type: tea.KeyF1})
 	m := m1.(Model)
 	if !m.pickerOpen || !strings.Contains(m.View(), "Command Palette") {

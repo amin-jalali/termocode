@@ -18,7 +18,7 @@ func chatPerfModel(tb testing.TB, n int) Model {
 	tb.Helper()
 	tb.Setenv("XDG_CONFIG_HOME", tb.TempDir())
 	perfColour(tb)
-	m0, _ := New().Update(tea.WindowSizeMsg{Width: 200, Height: 50})
+	m0, _ := newTestModel(tb).Update(tea.WindowSizeMsg{Width: 200, Height: 50})
 	m := m0.(Model)
 	m.actionsOpen, m.actionsPinned = true, true
 	m.actionsWidth, m.actionsWidthSet = 70, true
