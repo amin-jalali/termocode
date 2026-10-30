@@ -11,7 +11,7 @@ import { FA } from "./strings.fa";
 export const S = {
   // Shell and connect
   "connect.title": "termocode",
-  "connect.once": "This link works once and for 60 seconds.",
+  "connect.once": "This link works once and for 5 minutes.",
   "connect.open": "Open workspace",
   "connect.opening": "Opening…",
   "connect.sas": "Check this code on the laptop: {code}",

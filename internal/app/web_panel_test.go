@@ -397,3 +397,15 @@ func TestWebCLIOpenSSHMode(t *testing.T) {
 		t.Fatalf("another port: %v", res)
 	}
 }
+
+// Spec (web-easy): the laptop keeps a link as long as the gateway takes
+// it (5 minutes: time to paste it by hand), and the toast says so.
+func TestWebLinkTTLMatchesGateway(t *testing.T) {
+	laptop, gateway := webLinkTTL, webgw.LaunchSecretTTL
+	if laptop != gateway || laptop != 5*time.Minute {
+		t.Fatalf("laptop %v, gateway %v, want 5m", laptop, gateway)
+	}
+	if !strings.Contains(webLinkLife, "5 minutes") {
+		t.Fatalf("toast says %q", webLinkLife)
+	}
+}

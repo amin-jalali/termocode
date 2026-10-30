@@ -28,8 +28,12 @@ import (
 // bye 4009 on every control connection (the gateway revokes every token
 // and closes every browser), then SIGTERM after 1 s if it still runs.
 
-// webLinkTTL is how long a launch link works (webgw.LaunchSecretTTL).
-const webLinkTTL = 60 * time.Second
+// webLinkTTL is how long a launch link works (webgw.LaunchSecretTTL):
+// long enough to paste it by hand when no browser opens.
+const webLinkTTL = 5 * time.Minute
+
+// webLinkLife is webLinkTTL in the toasts' words.
+const webLinkLife = "It works once, for 5 minutes."
 
 // webStopGrace: a gateway that ignores the kill switch this long gets
 // SIGTERM.
@@ -237,7 +241,7 @@ func (m *Model) webDeliverLink(open, copyLink bool) tea.Cmd {
 		if writeSystemClipboard(link) == clipFailed {
 			return m.webToast(toast.Warn, "Could not copy the link. Use Web: Start Panel to open it in a browser.")
 		}
-		return m.webToast(toast.Info, "Link copied. It works once, for 60 seconds."+where)
+		return m.webToast(toast.Info, "Link copied. "+webLinkLife+where)
 	case open:
 		if err := m.webOpenLink(link); err != nil {
 			return m.webToast(toast.Warn, "Could not open a browser. Use Web: Copy Link.")

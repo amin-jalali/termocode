@@ -13,7 +13,7 @@ import (
 )
 
 // LaunchSecretTTL is how long a launch secret can be redeemed.
-const LaunchSecretTTL = 60 * time.Second
+const LaunchSecretTTL = 5 * time.Minute
 
 // secretBytes is the size of a launch secret and of a session token:
 // 256 random bits, so guessing is hopeless (T13).

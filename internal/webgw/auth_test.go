@@ -298,7 +298,7 @@ func TestAuthOnlyPost(t *testing.T) {
 }
 
 // Spec (WEB-9): the UI makes the secret and hands the gateway only its
-// digest; the link then works once, for 60 s, and a new digest closes the
+// digest; the link then works once, for LaunchSecretTTL, and a new digest closes the
 // old link.
 func TestAuthWithSecretDigestFromUI(t *testing.T) {
 	clk := &fakeClock{now: t0}
