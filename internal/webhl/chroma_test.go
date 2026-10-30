@@ -1,8 +1,9 @@
-package app
+package webhl
 
 import (
 	"strings"
 	"testing"
+	"unicode/utf16"
 
 	"github.com/amin-jalali/termocode/internal/webproto"
 )
@@ -42,7 +43,7 @@ func TestHlChromaLanguages(t *testing.T) {
 	} {
 		t.Run(c.file+"/"+c.want, func(t *testing.T) {
 			rows := strings.Split(strings.TrimSuffix(c.body, "\n"), "\n")
-			res, ok := webHlChroma(c.file, "", rows, 7, 0, len(rows), webproto.MaxHlSpans)
+			res, ok := Chroma(c.file, "", rows, 7, 0, len(rows), webproto.MaxHlSpans)
 			if !ok {
 				t.Fatal("no lexer")
 			}
@@ -61,7 +62,7 @@ func TestHlChromaLanguages(t *testing.T) {
 // for a file type it does not know.
 func TestHlChromaWindowColumnsCap(t *testing.T) {
 	rows := []string{"/* open", "still comment */", `s := "سلام 😀" // note`}
-	res, _ := webHlChroma("x.go", "", rows, 1, 1, 3, webproto.MaxHlSpans)
+	res, _ := Chroma("x.go", "", rows, 1, 1, 3, webproto.MaxHlSpans)
 	for _, s := range res.Spans {
 		if s[0] < 1 || s[0] > 2 {
 			t.Errorf("row %d outside [1,3)", s[0])
@@ -75,40 +76,16 @@ func TestHlChromaWindowColumnsCap(t *testing.T) {
 		t.Errorf("comment at UTF-16 col %d is %q (%v)", at, g, res.Spans)
 	}
 	many := strings.Split(strings.Repeat("a := 1\n", 30), "\n")
-	res, _ = webHlChroma("x.go", "", many, 1, 0, len(many), 3)
+	res, _ = Chroma("x.go", "", many, 1, 0, len(many), 3)
 	if !res.Cut || len(res.Spans) != 3 {
 		t.Errorf("cap: cut %v, %d spans", res.Cut, len(res.Spans))
 	}
-	if _, ok := webHlChroma("notes.unknownext", "", []string{"x"}, 1, 0, 1, 10); ok {
+	if _, ok := Chroma("notes.unknownext", "", []string{"x"}, 1, 0, 1, 10); ok {
 		t.Error("a file type no lexer knows got colours")
 	}
-	if _, ok := webHlChroma("Makefile.x", "python", []string{"def f(): pass"}, 1, 0, 1, 10); !ok {
+	if _, ok := Chroma("Makefile.x", "python", []string{"def f(): pass"}, 1, 0, 1, 10); !ok {
 		t.Error("nvim's filetype is not used when the name says nothing")
 	}
 }
 
-// Spec: when nvim has no parser for the file (an install with no Go
-// parser), buf.hl answers the hub's own colours, not "none".
-func TestHlFallsBackWhenNvimHasNoParser(t *testing.T) {
-	r := newWebFilesRig(t)
-	r.withNvim()
-	old := webHlNoParser
-	webHlNoParser = true // as an nvim with no parsers at all
-	t.Cleanup(func() { webHlNoParser = old })
-	r.write("a.go", "package main\n\nfunc main() {}\n")
-	b := webBufOpen(t, r, r.c, "a.go")
-	var res webproto.HlRes
-	webResData(t, webHl(r, b.Buf, 0, 99), &res)
-	if res.None || res.Tick != b.Tick || res.Last != 3 {
-		t.Fatalf("head %+v", res)
-	}
-	if g := webHlGroup(res, 0, 0); g != "keyword.import" && g != "keyword" {
-		t.Errorf("`package` is %q (%v %v)", g, res.Spans, res.Groups)
-	}
-	r.write("n.txt", "just words\n")
-	b = webBufOpen(t, r, r.c, "n.txt")
-	webResData(t, webHl(r, b.Buf, 0, 9), &res)
-	if !res.None || len(res.Spans) != 0 {
-		t.Errorf("plain text: %+v", res)
-	}
-}
+func u16(s string) int { return len(utf16.Encode([]rune(s))) }
