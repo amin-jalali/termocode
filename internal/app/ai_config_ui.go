@@ -77,6 +77,9 @@ func (m *Model) handleAIPickerSelect(id string) (tea.Cmd, bool) {
 	case pickerKindAIWorktrees: // ai_worktree_list.go
 		return m.onAIWorktreePicked(id), true
 	}
+	if cmd, ok := m.handleWebAccessPicker(id); ok { // web_access.go
+		return cmd, true
+	}
 	if cmd, ok := m.handleItermocPickerSelect(id); ok { // itermoc_actions.go
 		return cmd, true
 	}
@@ -186,6 +189,9 @@ func (m *Model) handleAIConfirm(id string) (tea.Cmd, bool) {
 	case confirmKindWebAsk: // web_ask.go
 		return m.answerWebAsk(id), true
 	}
+	if cmd, ok := m.handleWebAccessConfirm(id); ok { // web_access.go
+		return cmd, true
+	}
 	return nil, false
 }
 
@@ -242,6 +248,9 @@ func (m *Model) onAIConfirmClosed() tea.Cmd {
 		return m.answerWebStart("") // Esc: Not now
 	case confirmKindWebAsk:
 		return m.answerWebAsk("") // Esc: Cancel
+	}
+	if cmd, ok := m.handleWebAccessConfirm(""); ok { // web_access.go: Esc is the safe answer
+		return cmd
 	}
 	return nil
 }

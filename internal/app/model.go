@@ -779,6 +779,8 @@ type Model struct {
 	webPanel *webPanelState
 	// webStartCall is the `termocode web` request the start card answers.
 	webStartCall *webCall
+	// webAcc is pairing and the device list (web_access.go).
+	webAcc *webAccessState
 	// HTTP client for .http files (http_state.go); made on first use.
 	http *httpState
 	// secrets is the secret store's unlock flow (secrets_ui.go); the store
