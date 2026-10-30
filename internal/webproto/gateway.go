@@ -58,3 +58,20 @@ func (o *Open) validate(int) error {
 	}
 	return nil
 }
+
+// EvAudit is the event kind, on the control connection, of a summary of
+// one web op for the gateway's audit log (web design 3.5).
+const EvAudit = "audit"
+
+// AuditNote is what the hub tells the gateway's audit log about one web
+// op: ids, the op, the result and a short summary built from the policy
+// table (a path, a label, a count: never chat, file or terminal text, or
+// a secret).
+type AuditNote struct {
+	Conn    string `json:"conn,omitempty"`
+	Device  string `json:"device"`
+	Op      string `json:"op"`
+	OK      bool   `json:"ok"`
+	Why     string `json:"why,omitempty"` // a fixed name: an err code, "laptop_card", "confirmed_laptop", …
+	Summary string `json:"summary,omitempty"`
+}
