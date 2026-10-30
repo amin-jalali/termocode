@@ -89,7 +89,6 @@ func buildPage(abs, vendorDir string, pkgs []manifest.Package, p page, out map[s
 		Banner:              map[string]string{"js": banner(pkgs), "css": "/* termocode web UI */"},
 		LogLevel:            api.LogLevelSilent,
 		Plugins:             []api.Plugin{vendorOnly(vendorDir, pkgs)},
-		External:            []string{"/assets/*"}, // url() of our own served files (the symbol fonts)
 	})
 	if len(res.Errors) > 0 {
 		msgs := api.FormatMessages(res.Errors, api.FormatMessagesOptions{Kind: api.ErrorMessage})
@@ -231,6 +230,10 @@ func fillSRI(tpl string, out map[string][]byte) (string, error) {
 	return html, nil
 }
 
+// ownAsset is a file the gateway serves next to the page, as a style
+// sheet's url() names it (the symbol fonts).
+var ownAsset = regexp.MustCompile(`^/assets/[a-z0-9][a-z0-9/._-]*$`)
+
 // vendorOnly resolves bare imports to the vendored files and refuses any
 // other import that is not a relative path inside the sources.
 func vendorOnly(vendorDir string, pkgs []manifest.Package) api.Plugin {
@@ -249,6 +252,9 @@ func vendorOnly(vendorDir string, pkgs []manifest.Package) api.Plugin {
 				}
 				if a.Kind == api.ResolveEntryPoint {
 					return api.OnResolveResult{}, nil
+				}
+				if a.Kind == api.ResolveCSSURLToken && ownAsset.MatchString(a.Path) {
+					return api.OnResolveResult{Path: a.Path, External: true}, nil // served next to the page
 				}
 				if f, ok := files[a.Path]; ok {
 					return api.OnResolveResult{Path: f}, nil

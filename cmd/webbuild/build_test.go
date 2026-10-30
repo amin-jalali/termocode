@@ -216,3 +216,27 @@ func TestBuildChecksAndCopiesTheSymbolFonts(t *testing.T) {
 		t.Errorf("a changed font built: %v", err)
 	}
 }
+
+// A style sheet may name the page's own served files by their /assets/
+// URL (the symbol fonts); the URL stays as it is. Any other URL in a
+// style sheet still fails.
+func TestBuildKeepsOwnAssetURLsInCSS(t *testing.T) {
+	dir := fixture(t, ``)
+	css := `@font-face { font-family: "s"; src: url("/assets/fonts/nf-x.woff2") format("woff2"); }`
+	if err := os.WriteFile(filepath.Join(dir, "src", "x.css"), []byte(css), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, err := Build(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(out["app.css"]), `url(/assets/fonts/nf-x.woff2)`) {
+		t.Errorf("app.css lost the URL: %s", out["app.css"])
+	}
+	if err := os.WriteFile(filepath.Join(dir, "src", "x.css"), []byte(`p { background: url("/elsewhere/x.png"); }`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Build(dir); err == nil {
+		t.Error("a URL outside /assets/ built")
+	}
+}
