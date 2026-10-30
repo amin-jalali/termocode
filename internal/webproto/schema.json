@@ -1279,6 +1279,21 @@
       "phase": "v2"
     },
     {
+      "op": "git.blame",
+      "args": "GitBlameArgs",
+      "result": "GitBlame",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
       "op": "git.file_log",
       "args": "GitFileLogArgs",
       "result": "GitFileLog",
@@ -3844,6 +3859,69 @@
       "required": [
         "paths"
       ],
+      "additionalProperties": true
+    },
+    "GitBlame": {
+      "type": "object",
+      "properties": {
+        "commits": {
+          "items": {
+            "$ref": "#/defs/GitBlameCommit"
+          },
+          "type": "array"
+        },
+        "cut": {
+          "type": "boolean"
+        },
+        "lines": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "commits",
+        "lines"
+      ],
+      "additionalProperties": true
+    },
+    "GitBlameArgs": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    },
+    "GitBlameCommit": {
+      "type": "object",
+      "properties": {
+        "author": {
+          "type": "string"
+        },
+        "hash": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "uncommitted": {
+          "type": "boolean"
+        },
+        "when": {
+          "type": "integer"
+        }
+      },
+      "required": [],
       "additionalProperties": true
     },
     "GitBranch": {

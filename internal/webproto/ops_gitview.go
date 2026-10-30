@@ -1,5 +1,7 @@
 package webproto
 
+import "strings"
+
 // The ops of the desktop's git views (WEBP-5): the commit graph, blame,
 // the merge editor, interactive rebase, amend, clone, pull requests and
 // CI checks. They join the op table below; every rule of ops.go holds
@@ -10,6 +12,7 @@ package webproto
 // Git view op names.
 const (
 	OpGitGraph = "git.graph"
+	OpGitBlame = "git.blame"
 )
 
 // Graph limits.
@@ -64,8 +67,36 @@ type GitGraphEdge struct {
 	C int `json:"c"`
 }
 
+// MaxBlameLines caps the lines of one git.blame; the rest is not blamed.
+const MaxBlameLines = 20000
+
+// GitBlameArgs names the file to blame (as saved on the laptop).
+type GitBlameArgs struct {
+	Path string `json:"path"`
+}
+
+// GitBlame is the result of git.blame: for line n (1-based) of the saved
+// file, Lines[n-1] is the index of its commit in Commits.
+type GitBlame struct {
+	Path    string           `json:"path"`
+	Commits []GitBlameCommit `json:"commits"`
+	Lines   []int            `json:"lines"`
+	Cut     bool             `json:"cut,omitempty"` // more than MaxBlameLines: the rest is left out
+}
+
+// GitBlameCommit is one commit that last changed some lines. A line not
+// committed yet has Uncommitted set and no hash.
+type GitBlameCommit struct {
+	Hash        string `json:"hash,omitempty"` // short
+	Author      string `json:"author,omitempty"`
+	Subject     string `json:"subject,omitempty"`
+	When        int64  `json:"when,omitempty"` // Unix ms (author date)
+	Uncommitted bool   `json:"uncommitted,omitempty"`
+}
+
 var opGitViewRows = []Policy{
 	{Op: OpGitGraph, New: newOf[GitGraphArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpGitBlame, New: newOf[GitBlameArgs](), Role: RoleViewer, Rate: perSec(5), MaxBytes: 8 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
 }
 
 func (a *GitGraphArgs) validate(int) error {
@@ -75,9 +106,17 @@ func (a *GitGraphArgs) validate(int) error {
 	return nil
 }
 
+func (a *GitBlameArgs) validate(int) error {
+	if !validPath(a.Path, false) || strings.HasSuffix(a.Path, "/") {
+		return invalid("bad path")
+	}
+	return nil
+}
+
 // The rows join the table before any init() runs (as ops_more.go's).
 var _ = func() bool { opTable = append(opTable, opGitViewRows...); return true }()
 
 func init() {
 	registerResult(OpGitGraph, GitGraph{})
+	registerResult(OpGitBlame, GitBlame{})
 }
