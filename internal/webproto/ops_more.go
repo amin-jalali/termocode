@@ -27,6 +27,17 @@ const (
 	OpGitStashPop = "git.stash_pop"
 )
 
+// Container op names (WEB-44). Reads list and tail the logs; start and
+// restart ask in the page; stop and remove wait for the laptop.
+const (
+	OpContainersList    = "containers.list"
+	OpContainersLogs    = "containers.logs"
+	OpContainersStart   = "containers.start"
+	OpContainersRestart = "containers.restart"
+	OpContainersStop    = "containers.stop"
+	OpContainersRemove  = "containers.remove"
+)
+
 // slow is the rate of an op that waits for the laptop.
 var slow = Rate{N: 1, Per: 5 * time.Second}
 
@@ -45,6 +56,14 @@ var opMoreRows = []Policy{
 	{Op: OpGitCheckout, New: newOf[GitCheckoutArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpGitStash, New: newOf[GitStashArgs](), Role: RoleController, Rate: slow, MaxBytes: 2 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 	{Op: OpGitStashPop, New: newOf[EmptyArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
+
+	// Containers.
+	{Op: OpContainersList, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: perSec(2), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpContainersLogs, New: newOf[ContainerLogsArgs](), Role: RoleViewer, Rate: perSec(2), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpContainersStart, New: newOf[ContainerArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpContainersRestart, New: newOf[ContainerArgs](), Role: RoleController, Rate: perSec(1), MaxBytes: 1 * kib, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpContainersStop, New: newOf[ContainerArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpContainersRemove, New: newOf[ContainerArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 }
 
 // The rows join the table before any init() runs (package variables are
