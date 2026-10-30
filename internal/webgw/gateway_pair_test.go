@@ -50,6 +50,14 @@ func (r *gwRig) openPairing(guest bool) string {
 // returns the phone's token.
 func (r *gwRig) pairPhone(role string) string {
 	r.t.Helper()
+	tok, _ := r.pairPhoneKey(role)
+	return tok
+}
+
+// pairPhoneKey is pairPhone that also returns the phone's passkey.
+func (r *gwRig) pairPhoneKey(role string) (string, *softKey) {
+	r.t.Helper()
+	k := newSoftKey(r.t, "localhost", "http://localhost:"+strconv.Itoa(r.port))
 	plain := r.openPairing(false)
 	var code int
 	var m map[string]any
@@ -69,16 +77,18 @@ func (r *gwRig) pairPhone(role string) string {
 	}
 	r.ctl.send(r.t, `{"t":"res","id":`+jsonNum(ask["id"])+`,"data":{"role":"`+role+`"}}`)
 	id := m["pair_id"].(string)
+	var opts []byte
 	for i := 0; i < 100; i++ {
 		if _, w := r.postJSON("/pair/wait", `{"pair_id":"`+id+`"}`); w["state"] == "approved" {
+			opts, _ = json.Marshal(w["options"])
 			break
 		}
 	}
-	code, m = r.postJSON("/pair/finish", `{"pair_id":"`+id+`"}`)
+	code, m = r.postJSON("/pair/finish", `{"pair_id":"`+id+`","credential":`+string(k.create(opts))+`}`)
 	if code != http.StatusOK {
 		r.t.Fatalf("finish: %d %v", code, m)
 	}
-	return m["token"].(string)
+	return m["token"].(string), k
 }
 
 // dialWS opens a WebSocket to the gateway without saying hello.
@@ -190,5 +200,28 @@ func TestRemovedDeviceRefusedAtHello(t *testing.T) {
 	writeText(t, c, helloMsg(tok))
 	if got := closeCode(t, c); got != websocket.StatusCode(4003) {
 		t.Fatalf("closed with %d, want 4003", got)
+	}
+}
+
+// Spec (WEB-33): a paired phone comes back later with its passkey alone
+// (a new tab, no QR), through the real gateway, with its stored role.
+func TestGatewayPasskeyLogin(t *testing.T) {
+	r := pairedGateway(t)
+	_, k := r.pairPhoneKey(webdevices.RoleControl)
+	code, m := r.postJSON("/login/start", `{}`)
+	if code != http.StatusOK {
+		t.Fatalf("start %d %v", code, m)
+	}
+	opts, _ := json.Marshal(m["options"])
+	code, f := r.postJSON("/login/finish", `{"login_id":"`+m["login_id"].(string)+`","credential":`+string(k.get(opts))+`}`)
+	if code != http.StatusOK {
+		t.Fatalf("finish %d %v", code, f)
+	}
+	_, _, open := r.connectToken(f["token"].(string))
+	if open["role"] != "controller" {
+		t.Fatalf("open %v", open)
+	}
+	if !strings.Contains(auditText(t, r.cfg.AuditPath), `"ev":"login_ok"`) {
+		t.Error("no login_ok in the audit")
 	}
 }

@@ -69,6 +69,10 @@ type PairingConfig struct {
 	Now func() time.Time
 	// WaitPoll is how long /pair/wait holds (0: PairWait).
 	WaitPoll time.Duration
+	// Passkeys, when set, makes every pairing end with a passkey
+	// (WEB-33): /pair/wait hands out its options once the owner said
+	// yes, and /pair/finish needs the browser's answer.
+	Passkeys *Passkeys
 }
 
 // Pairing serves /pair/start, /pair/wait and /pair/finish.
@@ -98,7 +102,9 @@ type pendingPair struct {
 	until          time.Time
 	state          pairState
 	role           string
-	changed        chan struct{} // closed on the next state change
+	changed        chan struct{}   // closed on the next state change
+	reg            *passkeyReg     // the passkey being made (WEB-33)
+	options        json.RawMessage // its creation options
 }
 
 // NewPairing makes the endpoints; no pairing is open until SetSecret.
@@ -265,6 +271,11 @@ func (p *Pairing) ask(pp *pendingPair) {
 	if pp.guest {
 		role = webdevices.RoleViewer // a share is never more than a viewer
 	}
+	var reg *passkeyReg
+	var opts json.RawMessage
+	if err == nil && p.cfg.Passkeys != nil {
+		reg, opts, err = p.cfg.Passkeys.BeginRegistration(pp.name)
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if pp.state != pairAsking {
@@ -274,7 +285,7 @@ func (p *Pairing) ask(pp *pendingPair) {
 		pp.state = pairDenied
 		_ = p.cfg.Audit.Log(Event{Kind: EvPairFail, Device: pp.name, Why: "denied"})
 	} else {
-		pp.state, pp.role = pairApproved, role
+		pp.state, pp.role, pp.reg, pp.options = pairApproved, role, reg, opts
 	}
 	close(pp.changed)
 	pp.changed = make(chan struct{})
@@ -314,7 +325,11 @@ func (p *Pairing) wait(w http.ResponseWriter, r *http.Request) {
 		p.mu.Unlock()
 		switch state {
 		case pairApproved:
-			writeJSON(w, http.StatusOK, map[string]any{"state": "approved", "role": role})
+			out := map[string]any{"state": "approved", "role": role}
+			if pp.options != nil {
+				out["options"] = pp.options
+			}
+			writeJSON(w, http.StatusOK, out)
 			return
 		case pairDenied:
 			writeJSON(w, http.StatusForbidden, errorReply("denied"))
@@ -334,9 +349,28 @@ func (p *Pairing) wait(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// pairFinishReq is /pair/finish's body: the pairing and, with passkeys,
+// the browser's answer to the creation options.
+type pairFinishReq struct {
+	PairID     string          `json:"pair_id"`
+	Credential json.RawMessage `json:"credential,omitempty"`
+}
+
 func (p *Pairing) finish(w http.ResponseWriter, r *http.Request) {
-	pp, ok := p.lookup(w, r)
-	if !ok {
+	var req pairFinishReq
+	if !decodeStrict(r.Body, &req) {
+		writeJSON(w, http.StatusBadRequest, errorReply("bad_request"))
+		return
+	}
+	p.mu.Lock()
+	pp := p.pending[req.PairID]
+	p.mu.Unlock()
+	if pp == nil || !p.cfg.Now().Before(pp.until) {
+		writeJSON(w, http.StatusGone, errorReply("expired"))
+		return
+	}
+	if p.cfg.Passkeys != nil && len(req.Credential) == 0 {
+		writeJSON(w, http.StatusBadRequest, errorReply("need_passkey"))
 		return
 	}
 	p.mu.Lock()
@@ -358,6 +392,15 @@ func (p *Pairing) finish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	d := webdevices.Device{ID: id, Name: pp.name, Role: pp.role, Guest: pp.guest, Created: now.UTC(), LastSeen: now.UTC()}
+	if p.cfg.Passkeys != nil {
+		key, err := p.cfg.Passkeys.FinishRegistration(pp.reg, req.Credential)
+		if err != nil {
+			_ = p.cfg.Audit.Log(Event{Kind: EvPairFail, Device: pp.name, Why: passkeyWhy(err)})
+			writeJSON(w, http.StatusUnauthorized, errorReply("passkey"))
+			return
+		}
+		d.CredID, d.PublicKey, d.SignCount, d.AAGUID, d.UserID, d.RPID = key.CredID, key.PublicKey, key.SignCount, key.AAGUID, key.UserID, key.RPID
+	}
 	if err := p.cfg.Store.Add(d); err != nil {
 		code := "internal"
 		if errors.Is(err, webdevices.ErrFull) {
