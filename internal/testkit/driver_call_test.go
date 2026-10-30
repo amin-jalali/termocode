@@ -50,3 +50,33 @@ type fakeTB struct {
 
 func (f *fakeTB) Errorf(string, ...any) { f.failed = true }
 func (f *fakeTB) Helper()               {}
+
+// A frame's rows that passed the checks last frame are not measured
+// again; a changed or bad row always is.
+func TestFrameChecksSkipRowsThatPassed(t *testing.T) {
+	var memo rowMemo
+	good := "abcd\nefgh\nijkl"
+	if p := frameProblems(good, 4, 3, &memo); p != nil {
+		t.Fatal(p)
+	}
+	n := rowsChecked.Load()
+	if p := frameProblems(good, 4, 3, &memo); p != nil {
+		t.Fatal(p)
+	}
+	if d := rowsChecked.Load() - n; d != 0 {
+		t.Fatalf("an unchanged frame checked %d rows again, want 0", d)
+	}
+	n = rowsChecked.Load()
+	bad := "abcd\nefghX\nijkl"
+	for i := 0; i < 2; i++ {
+		if p := frameProblems(bad, 4, 3, &memo); len(p) != 1 {
+			t.Fatalf("call %d: problems %q, want one (row 1)", i, p)
+		}
+	}
+	if d := rowsChecked.Load() - n; d != 2 {
+		t.Fatalf("checked %d rows, want 2 (the bad row, both times)", d)
+	}
+	if p := frameProblems(good, 5, 3, &memo); len(p) != 3 {
+		t.Fatalf("another width: %d problems, want 3", len(p))
+	}
+}

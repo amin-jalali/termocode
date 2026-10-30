@@ -71,6 +71,8 @@ type Driver struct {
 	// work runs the model's calls on one goroutine, as Bubble Tea runs
 	// Update and View on its event loop (see call).
 	work chan func()
+	// rowsOK: rows of the last frame that passed the frame checks.
+	rowsOK rowMemo
 }
 
 // New builds a sandboxed app model at opt.W × opt.H and settles it.
@@ -566,7 +568,7 @@ func (d *Driver) render() string {
 		return d.frame
 	}
 	d.frame = frame
-	if probs := FrameProblems(frame, d.W, d.H); len(probs) > 0 {
+	if probs := frameProblems(frame, d.W, d.H, &d.rowsOK); len(probs) > 0 {
 		d.fail("bad frame %dx%d:\n  %s", d.W, d.H, strings.Join(probs, "\n  "))
 	}
 	return frame

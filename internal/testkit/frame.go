@@ -3,6 +3,7 @@ package testkit
 import (
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"unicode/utf8"
 
@@ -25,6 +26,23 @@ const maxProblems = 8
 
 // FrameProblems returns what is wrong with a w×h frame, or nil.
 func FrameProblems(frame string, w, h int) []string {
+	return frameProblems(frame, w, h, nil)
+}
+
+// rowMemo keeps the rows of the last frame that passed the row checks, by
+// position, for one width: a driver draws a frame after every message
+// and most rows do not change, so they are not measured again.
+type rowMemo struct {
+	w    int
+	good []string
+}
+
+// rowsChecked counts the rows frameProblems measured (tests).
+var rowsChecked atomic.Int64
+
+// frameProblems is FrameProblems; rows that memo saw pass at the same
+// position are not checked again (memo may be nil).
+func frameProblems(frame string, w, h int, memo *rowMemo) []string {
 	var out []string
 	add := func(format string, args ...any) bool {
 		out = append(out, fmt.Sprintf(format, args...))
@@ -38,7 +56,15 @@ func FrameProblems(frame string, w, h int) []string {
 	if len(rows) != h {
 		add("%d rows, want %d", len(rows), h)
 	}
+	if memo != nil && memo.w != w {
+		memo.w, memo.good = w, nil
+	}
 	for i, r := range rows {
+		if memo != nil && i < len(memo.good) && memo.good[i] == r {
+			continue
+		}
+		rowsChecked.Add(1)
+		bad := len(out)
 		if got := ansi.StringWidth(r); got != w {
 			if !add("row %d is %d cells, want %d: %q", i, got, w, ansi.Strip(r)) {
 				return out
@@ -48,6 +74,12 @@ func FrameProblems(frame string, w, h int) []string {
 			if !add("row %d: %s", i, p) {
 				return out
 			}
+		}
+		if memo != nil && len(out) == bad {
+			for len(memo.good) <= i {
+				memo.good = append(memo.good, "\x00") // no real row
+			}
+			memo.good[i] = r
 		}
 	}
 	return out
