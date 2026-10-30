@@ -244,11 +244,12 @@ func TestFocusOrderFollowsTheScreen(t *testing.T) {
 func TestAxeViewsWithContent(t *testing.T) {
 	src := axeSource(t)
 	for _, vp := range Both {
-		for _, lang := range []string{"en-US", "fa-IR"} {
-			t.Run(vp.Name+"/"+lang, func(t *testing.T) {
+		for _, tc := range []struct{ lang, theme string }{{"en-US", "dark"}, {"en-US", "light"}, {"fa-IR", "dark"}, {"fa-IR", "light"}} {
+			lang := tc.lang
+			t.Run(vp.Name+"/"+lang+"/"+tc.theme, func(t *testing.T) {
 				s := StartServer(t)
 				p := NewPageLang(t, s, vp, lang)
-				p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+				p.Media(map[string]string{"prefers-reduced-motion": "reduce", "prefers-color-scheme": tc.theme})
 				c := p.Login("c-1")
 				c.Send(t, Snap("chat", 1, chatWith(false, userMsg(0, "fix the build"), aiMsg(1, md("doc", mdPara("Done: go test ./... passes."))))))
 				p.WaitJS(`document.querySelector('[data-view="chat"] .msg')`)
