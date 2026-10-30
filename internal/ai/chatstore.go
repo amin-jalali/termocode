@@ -11,6 +11,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/crash"
 )
 
 // Stored chat roles. "tool" and "error" lines are kept for display only;
@@ -338,7 +340,7 @@ func (s ChatStore) ListCached(lc *ChatListCache) []Conversation {
 	var wg sync.WaitGroup
 	for w := 0; w < min(runtime.GOMAXPROCS(0), len(todo)); w++ {
 		wg.Add(1)
-		go func() {
+		crash.Go("reading saved chats", func() {
 			defer wg.Done()
 			for i := range work {
 				b, err := os.ReadFile(filepath.Join(s.Dir, names[i]))
@@ -350,7 +352,7 @@ func (s ChatStore) ListCached(lc *ChatListCache) []Conversation {
 					parsed[i] = c
 				}
 			}
-		}()
+		})
 	}
 	for _, i := range todo {
 		work <- i
