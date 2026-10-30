@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -26,6 +27,14 @@ type page struct {
 
 var appPage = page{Name: "app", Entry: "main.tsx", Template: "index.html", HTML: "index.html"}
 
+// editorChunk is the in-page editor (WEB-39): CodeMirror and its glue,
+// built alone (no Preact) into editor.js. app.js loads it with its one
+// dynamic import, only when the user starts editing.
+var editorChunk = page{Name: "editor", Entry: "editor/main.ts"}
+
+// chunkPaths are the only dynamic imports a page may make.
+var chunkPaths = map[string]bool{"/assets/" + editorChunk.Name + ".js": true}
+
 // kitPage is the component kit (WEB-UX-1). It is always built, so CI keeps
 // it fresh, but only a webdev build embeds and serves it.
 var kitPage = page{Name: "kit", Entry: "kit/main.tsx", Template: "kit/kit.html", HTML: "kit.html"}
@@ -48,10 +57,10 @@ func Build(dir string) (map[string][]byte, error) {
 	if err := copyStatic(filepath.Join(abs, "src", "static"), out); err != nil {
 		return nil, err
 	}
-	for _, p := range []page{appPage, kitPage} {
-		if p.Name == "kit" {
+	for _, p := range []page{appPage, editorChunk, kitPage} {
+		if p.Name != appPage.Name {
 			if _, err := os.Stat(filepath.Join(abs, "src", p.Entry)); errors.Is(err, os.ErrNotExist) {
-				continue // a folder without the kit (test fixtures)
+				continue // a folder without the kit or the editor (test fixtures)
 			}
 		}
 		if err := buildPage(abs, vendorDir, pkgs, p, out); err != nil {
@@ -82,7 +91,8 @@ func buildPage(abs, vendorDir string, pkgs []manifest.Package, p page, out map[s
 		JSX:                 api.JSXTransform,
 		JSXFactory:          "h",
 		JSXFragment:         "Fragment",
-		Banner:              map[string]string{"js": banner(pkgs), "css": "/* termocode web UI */"},
+		Banner:              map[string]string{"css": "/* termocode web UI */"},
+		Metafile:            true,
 		LogLevel:            api.LogLevelSilent,
 		Plugins:             []api.Plugin{vendorOnly(vendorDir, pkgs)},
 	})
@@ -90,15 +100,26 @@ func buildPage(abs, vendorDir string, pkgs []manifest.Package, p page, out map[s
 		msgs := api.FormatMessages(res.Errors, api.FormatMessagesOptions{Kind: api.ErrorMessage})
 		return errors.New(strings.Join(msgs, ""))
 	}
+	used, err := usedPackages(res.Metafile, vendorDir, pkgs)
+	if err != nil {
+		return err
+	}
 	for _, f := range res.OutputFiles {
 		name := filepath.Base(f.Path)
 		if _, dup := out[name]; dup {
 			return fmt.Errorf("webbuild: two outputs named %s", name)
 		}
-		out[name] = f.Contents
+		body := f.Contents
+		if filepath.Ext(name) == ".js" {
+			body = append([]byte(banner(used)+"\n"), body...)
+		}
+		out[name] = body
 	}
 	if _, ok := out[p.Name+".js"]; !ok {
 		return fmt.Errorf("webbuild: %s built no %s.js", p.Entry, p.Name)
+	}
+	if p.Template == "" {
+		return nil // a chunk: no page of its own
 	}
 	tpl, err := os.ReadFile(filepath.Join(abs, "src", p.Template))
 	if err != nil {
@@ -177,6 +198,9 @@ func vendorOnly(vendorDir string, pkgs []manifest.Package) api.Plugin {
 				if a.Kind == api.ResolveEntryPoint {
 					return api.OnResolveResult{}, nil
 				}
+				if a.Kind == api.ResolveJSDynamicImport && chunkPaths[a.Path] {
+					return api.OnResolveResult{Path: a.Path, External: true}, nil // a chunk built beside
+				}
 				if f, ok := files[a.Path]; ok {
 					return api.OnResolveResult{Path: f}, nil
 				}
@@ -184,6 +208,28 @@ func vendorOnly(vendorDir string, pkgs []manifest.Package) api.Plugin {
 			})
 		},
 	}
+}
+
+// usedPackages lists the vendored packages a build bundled, from its
+// metafile, so each file's banner names only what it holds.
+func usedPackages(meta, vendorDir string, pkgs []manifest.Package) ([]manifest.Package, error) {
+	var m struct {
+		Inputs map[string]json.RawMessage `json:"inputs"`
+	}
+	if err := json.Unmarshal([]byte(meta), &m); err != nil {
+		return nil, fmt.Errorf("webbuild: metafile: %w", err)
+	}
+	var used []manifest.Package
+	for _, p := range pkgs {
+		dir := filepath.ToSlash(filepath.Join(filepath.Base(vendorDir), p.Dir)) + "/"
+		for in := range m.Inputs {
+			if strings.HasPrefix(in, dir) {
+				used = append(used, p)
+				break
+			}
+		}
+	}
+	return used, nil
 }
 
 func banner(pkgs []manifest.Package) string {

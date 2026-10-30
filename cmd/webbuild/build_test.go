@@ -149,3 +149,36 @@ func TestBuildAcceptsVendoredImports(t *testing.T) {
 		t.Fatal("no app.js")
 	}
 }
+
+// Spec (WEB-39): the in-page editor is its own file, editor.js, loaded
+// only when the user edits: app.js names it in its one dynamic import and
+// carries none of the editor's code; editor.js carries no Preact.
+func TestBuildWritesTheEditorChunk(t *testing.T) {
+	out, err := Build(realAssets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	app, ed := string(out["app.js"]), string(out["editor.js"])
+	if ed == "" {
+		t.Fatal("build wrote no editor.js")
+	}
+	if !strings.Contains(app, `import("/assets/editor.js")`) {
+		t.Error("app.js does not load /assets/editor.js")
+	}
+	if strings.Contains(app, "cm-content") {
+		t.Error("app.js holds editor code")
+	}
+	if !strings.Contains(ed, "cm-content") || strings.Contains(ed, "__H") || strings.Contains(ed, "preact") {
+		t.Error("editor.js is not the editor alone")
+	}
+	if !strings.Contains(ed, "@codemirror/view 6.43.14") {
+		t.Error("editor.js does not name what it bundles")
+	}
+}
+
+func TestBuildRefusesAnyOtherDynamicImport(t *testing.T) {
+	dir := fixture(t, `import("/assets/other.js").then(() => 0);`)
+	if _, err := Build(dir); err == nil || !strings.Contains(err.Error(), "other.js") {
+		t.Fatalf("err = %v, want a refusal naming other.js", err)
+	}
+}

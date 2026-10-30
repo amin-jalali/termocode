@@ -19,7 +19,7 @@ const editSheet = `document.querySelector(".sheet .edit")`
 
 func tapEdit(p *Page) {
 	p.T.Helper()
-	p.TapJS(`[...` + filesView + `.querySelectorAll(".view-actions .btn")].find((b) => b.textContent === "Edit")`)
+	p.TapJS(`[...` + filesView + `.querySelectorAll(".view-actions .btn")].find((b) => b.textContent === "Edit lines")`)
 	p.WaitJS(editSheet)
 }
 
