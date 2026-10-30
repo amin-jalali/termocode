@@ -14,6 +14,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 )
 
@@ -30,7 +31,11 @@ type Package struct {
 	Integrity string            `json:"integrity"`
 	License   string            `json:"license"`
 	Imports   map[string]string `json:"imports"`
-	Files     map[string]string `json:"files"`
+	// Serve lists files the gateway serves as they are (not bundled), by
+	// their name under /assets/ ("monaco/editor.js"): a library that is
+	// loaded as plain scripts, such as the desktop editor.
+	Serve map[string]string `json:"serve,omitempty"`
+	Files map[string]string `json:"files"`
 }
 
 type vendorDoc struct {
@@ -87,6 +92,15 @@ func VerifyVendor(dir string) ([]Package, error) {
 			}
 			seen["import:"+spec] = true
 		}
+		for name, file := range p.Serve {
+			if _, ok := p.Files[file]; !ok {
+				return nil, fmt.Errorf("vendor: %s serves %q from unlisted file %q", p.Name, name, file)
+			}
+			if !servedName.MatchString(name) || seen["serve:"+name] {
+				return nil, fmt.Errorf("vendor: %s serves a bad or repeated name %q", p.Name, name)
+			}
+			seen["serve:"+name] = true
+		}
 		for _, file := range sortedKeys(p.Files) {
 			b, err := os.ReadFile(filepath.Join(dir, p.Dir, filepath.FromSlash(file)))
 			if err != nil {
@@ -126,6 +140,9 @@ func VerifyVendor(dir string) ([]Package, error) {
 	}
 	return pkgs, nil
 }
+
+// servedName is a file name under /assets/: a folder, then a plain name.
+var servedName = regexp.MustCompile(`^[a-z0-9-]+/[A-Za-z0-9._-]+\.(js|css)$`)
 
 func sortedKeys(m map[string]string) []string {
 	keys := make([]string, 0, len(m))

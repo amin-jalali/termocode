@@ -51,6 +51,8 @@ func TestVendorRefusesBadManifests(t *testing.T) {
 		{"dir with a slash", "bad package row", func(p *Package, _ *vendorDoc) { p.Dir = "x/pkg" }},
 		{"LICENSE not listed", "has no LICENSE", func(p *Package, _ *vendorDoc) { delete(p.Files, "LICENSE") }},
 		{"import of an unlisted file", "unlisted file", func(p *Package, _ *vendorDoc) { p.Imports["b"] = "b.js" }},
+		{"serve of an unlisted file", "unlisted file", func(p *Package, _ *vendorDoc) { p.Serve = map[string]string{"x/a.js": "b.js"} }},
+		{"serve outside a folder", "bad or repeated name", func(p *Package, _ *vendorDoc) { p.Serve = map[string]string{"../a.js": "a.js"} }},
 		{"import listed twice", "listed twice", func(p *Package, doc *vendorDoc) {
 			q := *p
 			q.Name = "b"
