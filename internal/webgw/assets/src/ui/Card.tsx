@@ -44,11 +44,13 @@ export interface CardProps {
   onLater?: () => void;
   onClose?: () => void;
   onLaptop?: () => void;
+  /** by names who answered an answered card: "laptop" (the default) or another browser. */
+  by?: string;
 }
 
 const CHECK_MS = 300;
 
-export function Card({ id, kind, state = "open", subject, where, children, mode = "dialog", onAnswer, onLater, onClose, onLaptop }: CardProps) {
+export function Card({ id, kind, state = "open", subject, where, children, mode = "dialog", onAnswer, onLater, onClose, onLaptop, by }: CardProps) {
   const root = useRef<HTMLElement | null>(null);
   const safeBtn = useRef<HTMLButtonElement | null>(null);
   const arm = useArming(root);
@@ -79,7 +81,7 @@ export function Card({ id, kind, state = "open", subject, where, children, mode 
   if (state === "answered" || state === "gone") {
     foot = (
       <div class="card-line">
-        <span>{t(state === "answered" ? "answered.laptop" : "card.gone")}</span>
+        <span>{state === "gone" ? t("card.gone") : by && by !== "laptop" ? t("answered.other", { name: by }) : t("answered.laptop")}</span>
         <button type="button" class="btn btn-neutral" ref={safeBtn} onClick={onClose}>
           {t("close")}
         </button>

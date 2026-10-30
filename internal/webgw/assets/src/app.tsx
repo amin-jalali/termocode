@@ -10,6 +10,7 @@ import { route } from "./lib/router";
 import type { Tab } from "./state/route";
 import { t } from "./strings";
 import { AttentionPill } from "./ui/AttentionPill";
+import { CardSheet } from "./ui/CardSheet";
 import { FirstRunHint } from "./ui/FirstRunHint";
 import { Nav } from "./ui/Nav";
 import { OfflineBar } from "./ui/OfflineBar";
@@ -74,6 +75,7 @@ export function App() {
       </div>
       <AttentionPill />
       {l === "phone" && <Nav variant="tabs" active={r.tab} />}
+      {r.card && <CardSheet key={r.card} id={r.card} />}
       <Toasts />
     </div>
   );
