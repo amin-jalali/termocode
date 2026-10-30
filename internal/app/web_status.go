@@ -152,25 +152,11 @@ func webAIState(s statusbar.AIState) string {
 	return "off"
 }
 
-// webCardsWaiting counts what waits for the user's answer: a tool call,
-// outside agents' calls, a plan and the files of a review.
+// webCardsWaiting counts the cards that wait for the user (the cards
+// topic's list: tool calls, outside agents' calls, a plan, review files,
+// trust questions).
 func (m *Model) webCardsWaiting() int {
-	n := 0
-	if s := m.ai; s != nil {
-		if s.confirm != nil {
-			n++
-		}
-		if s.planWait != nil {
-			n++
-		}
-	}
-	if st := m.mcpServe; st != nil {
-		n += len(st.queue)
-		if st.active != nil {
-			n++
-		}
-	}
-	return n + m.aiReviewPending()
+	return len(m.webCards(&webCardsPub{}, false))
 }
 
 // webThemeFields are the palette fields the page maps to its tokens (web
