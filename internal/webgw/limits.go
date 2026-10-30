@@ -39,13 +39,14 @@ var DefaultLimits = Limits{
 	MaxConns:          32,
 }
 
-// NewServer is the gateway's HTTP server: next behind the Guard for site,
-// with the limits l. net/http's own error log is dropped: its lines can
-// quote request data, and nothing from a request may reach a log. Serve it
-// on a listener wrapped with LimitConns(ln, l.MaxConns).
-func NewServer(site Site, next http.Handler, l Limits) *http.Server {
+// NewServer is the gateway's HTTP server: next behind the guard for site
+// (refusals go to audit, which may be nil), with the limits l. net/http's
+// own error log is dropped: its lines can quote request data, and nothing
+// from a request may reach a log. Serve it on a listener wrapped with
+// LimitConns(ln, l.MaxConns).
+func NewServer(site Site, next http.Handler, l Limits, audit *Audit) *http.Server {
 	return &http.Server{
-		Handler:           Guard(site, next),
+		Handler:           GuardWithAudit(site, next, audit),
 		ReadHeaderTimeout: l.ReadHeaderTimeout,
 		ReadTimeout:       l.ReadTimeout,
 		WriteTimeout:      l.WriteTimeout,
