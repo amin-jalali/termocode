@@ -237,3 +237,51 @@ func TestFocusOrderFollowsTheScreen(t *testing.T) {
 		})
 	}
 }
+
+// axe on the views with content and on the other sheets and bars: a
+// chat with messages, git changes, a file, the row menu, the paste
+// sheet, the offline bar; in English and in Persian (right to left).
+func TestAxeViewsWithContent(t *testing.T) {
+	src := axeSource(t)
+	for _, vp := range Both {
+		for _, lang := range []string{"en-US", "fa-IR"} {
+			t.Run(vp.Name+"/"+lang, func(t *testing.T) {
+				s := StartServer(t)
+				p := NewPageLang(t, s, vp, lang)
+				p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+				c := p.Login("c-1")
+				c.Send(t, Snap("chat", 1, chatWith(false, userMsg(0, "fix the build"), aiMsg(1, md("doc", mdPara("Done: go test ./... passes."))))))
+				p.WaitJS(`document.querySelector('[data-view="chat"] .msg')`)
+				p.axe(src, "chat with messages")
+
+				p.GoTab("git")
+				c.WaitSub(t, "git")
+				c.Send(t, Snap("git", 1, gitSnap()))
+				p.WaitJS(`document.querySelector('.git-row-wrap[data-path="b.go"]')`)
+				p.axe(src, "git with changes")
+
+				p.GoTab("term")
+				c.WaitSub(t, "terms")
+				showTerm(t, p, c, termSnap(3, 0, 80, "$ ls", "a b c"), termItem(3, "zsh", false, true))
+				if vp.Mobile {
+					p.press(`document.querySelector('[data-view="term"] .trow')`, `document.querySelector(".row-menu")`)
+				} else {
+					Eval[bool](p, `(document.querySelector('[data-view="term"] .trow').dispatchEvent(new MouseEvent("contextmenu", {bubbles: true, cancelable: true})), true)`)
+				}
+				p.WaitJS(`document.querySelector(".row-menu")`)
+				p.axe(src, "row menu")
+				p.Key(kb.Escape)
+				p.WaitJS(`!document.querySelector(".row-menu")`)
+				p.TapJS(`document.querySelector('[data-view="term"] .key-paste')`)
+				p.WaitJS(`document.querySelector(".paste")`)
+				p.axe(src, "paste sheet")
+				p.Key(kb.Escape)
+
+				s.Hub.Refuse(true)
+				c.Drop()
+				p.WaitJS(`document.querySelector(".bar-lost")`)
+				p.axe(src, "offline")
+			})
+		}
+	}
+}
