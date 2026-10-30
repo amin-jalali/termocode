@@ -76,6 +76,12 @@ jobs:
         if: runner.os == 'Linux'
         run: go run ./cmd/docgen -check
 
+      - name: Web protocol types up to date
+        if: runner.os == 'Linux'
+        run: |
+          go generate ./internal/webproto
+          git diff --exit-code -- internal/webproto
+
       - name: Shellcheck release and install scripts
         if: runner.os == 'Linux'
         run: shellcheck scripts/install.sh scripts/build-release.sh scripts/release.sh
