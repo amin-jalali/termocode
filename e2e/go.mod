@@ -5,10 +5,19 @@ go 1.26.2
 require (
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/charmbracelet/x/vt v0.0.0-20261011004359-2acd7e345453
+	github.com/chromedp/cdproto v0.157.8
+	github.com/chromedp/chromedp v0.21.0
+	github.com/coder/websocket v1.8.14
 	github.com/creack/pty v1.1.24
 )
 
 require (
+	github.com/go-json-experiment/json v0.0.0-20260213210345-44df1a37e875 // indirect
+	golang.org/x/term v0.37.0 // indirect
+)
+
+require (
+	github.com/amin-jalali/termocode v0.0.0-00010101000000-000000000000
 	github.com/charmbracelet/colorprofile v0.4.2 // indirect
 	github.com/charmbracelet/ultraviolet v0.0.0-20260303162955-0b88c25f3fff // indirect
 	github.com/charmbracelet/x/exp/ordered v0.1.0 // indirect
@@ -25,3 +34,5 @@ require (
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 )
+
+replace github.com/amin-jalali/termocode => ../
