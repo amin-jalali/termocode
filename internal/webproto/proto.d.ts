@@ -6,7 +6,7 @@ export type Subprotocol = "termocode.v2";
 export type Role = "viewer" | "controller";
 export type ErrCode = "bad_request" | "forbidden" | "limit" | "conflict" | "gone" | "busy" | "not_found" | "internal";
 export type CloseCode = 1000 | 1003 | 1008 | 1009 | 4001 | 4002 | 4003 | 4004 | 4005 | 4006 | 4007 | 4008 | 4009 | 4010 | 4011 | 4012 | 4013;
-export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug";
+export type TopicName = "status" | "toasts" | "chats" | "chat" | "cards" | "tree" | "bufs" | `buf:${number}` | "terms" | `term:${number}` | "git" | "tasks" | "runs" | "db" | "containers" | "mcp" | "settings" | "diagnostics" | "tests" | "debug" | "services";
 
 export interface Bye {
   t: "bye";
@@ -298,6 +298,15 @@ export interface GitFileLogArgs {
 export interface GitTextArgs {
   path: string;
   rev: string;
+}
+
+export interface ServiceLogsArgs {
+  name: string;
+  lines?: number;
+}
+
+export interface ServiceArgs {
+  name: string;
 }
 
 export interface ItemArgs {
@@ -947,6 +956,38 @@ export interface DebugLine {
   text: string;
 }
 
+export interface ServicesSnap {
+  state: "none" | "loading" | "ready";
+  project?: string;
+  compose_files: string[];
+  problem?: string;
+  config_error?: string;
+  services: ServiceItem[];
+  more?: number;
+}
+
+export interface ServiceItem {
+  name: string;
+  kind: "compose" | "local";
+  state: string;
+  health?: string;
+  exit?: number;
+  busy?: boolean;
+  image?: string;
+  command?: string;
+  source?: string;
+  status?: string;
+  since?: number;
+  ports: ServicePort[];
+}
+
+export interface ServicePort {
+  published: number;
+  target?: number;
+  proto?: string;
+  open?: "yes" | "no";
+}
+
 export interface Answered {
   id: string;
   by?: string;
@@ -1208,6 +1249,18 @@ export interface BufSymbol {
   depth: number;
 }
 
+export interface ServiceLogs {
+  name: string;
+  lines: string[];
+  redacted?: number;
+  truncated?: boolean;
+}
+
+export interface ServiceDone {
+  asked?: boolean;
+  note?: string;
+}
+
 export interface TreeChanged {
   path: string;
 }
@@ -1396,6 +1449,11 @@ export interface OpArgs {
   "git.file_log": GitFileLogArgs;
   "git.text": GitTextArgs;
   "buf.symbols": BufArgs;
+  "services.refresh": EmptyArgs;
+  "services.logs": ServiceLogsArgs;
+  "services.start": ServiceArgs;
+  "services.restart": ServiceArgs;
+  "services.stop": ServiceArgs;
   "tree.new_file": ItemArgs;
   "tree.new_dir": ItemArgs;
   "tree.rename": RenameArgs;
@@ -1450,6 +1508,7 @@ export interface TopicData {
   "diagnostics": { snap: DiagSnap; delta: DiagSnap };
   "tests": { snap: TestsSnap; delta: TestsSnap };
   "debug": { snap: DebugSnap; delta: DebugSnap };
+  "services": { snap: ServicesSnap; delta: ServicesSnap };
 }
 
 // The data of an ev message, by kind.
@@ -1495,6 +1554,10 @@ export interface OpResult {
   "git.file_log": GitFileLog;
   "git.text": GitText;
   "buf.symbols": BufSymbols;
+  "services.logs": ServiceLogs;
+  "services.start": ServiceDone;
+  "services.restart": ServiceDone;
+  "services.stop": AskRef;
   "tree.new_file": TreeChanged;
   "tree.new_dir": TreeChanged;
   "tree.rename": TreeChanged;
