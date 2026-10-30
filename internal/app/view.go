@@ -1239,7 +1239,7 @@ func (m Model) renderSidebar(h int) string {
 		// directly (no sidebarHeader join). Size is already set to (contentW,
 		// m.h) in update.go.
 		ex := m.explorer
-		ex.SetMeta(projectName(), m.gitBranch.Name, m.gitIsRepo, totalVisibleFiles(&ex))
+		ex.SetMeta(m.projectLabel(), m.gitBranch.Name, m.gitIsRepo, totalVisibleFiles(&ex))
 		content = ex.View(
 			m.focus == FocusExplorer,
 			m.editor.Path(),
@@ -1314,6 +1314,16 @@ func totalVisibleFiles(ex *explorer.Model) int {
 		return 0
 	}
 	return ex.CountVisibleFiles()
+}
+
+// projectLabel is projectName for the Model's workspace (drawn on every
+// frame: no getcwd).
+func (m Model) projectLabel() string {
+	root, err := m.rootDir()
+	if err != nil {
+		return ""
+	}
+	return strings.ToUpper(filepath.Base(root))
 }
 
 func projectName() string {
@@ -2242,7 +2252,7 @@ func (m Model) statusState() statusbar.State {
 	// Project name is the cwd basename — the breadcrumbs row above the
 	// editor already carries the active filename + directory, so the
 	// status bar only surfaces project-level context here.
-	proj := projectName()
+	proj := m.projectLabel()
 	if proj != "" {
 		// projectName() upper-cases for the sidebar header; in the
 		// status bar's left zone we want a softer, mixed-case look so
