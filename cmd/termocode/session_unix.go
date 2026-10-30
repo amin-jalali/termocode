@@ -201,8 +201,27 @@ func cmdSSH(args []string) int {
 		return 1
 	}
 	interval, dead := linkTiming(os.Getenv(envLinkTiming))
-	return session.RunSSH(session.SSHOpts{Args: c.args, Dir: c.dir, In: os.Stdin, Out: os.Stdout,
-		Reconnect: app.ConfigAutoReconnect(), Interval: interval, Dead: dead})
+	o := session.SSHOpts{Args: c.args, Dir: c.dir, In: os.Stdin, Out: os.Stdout,
+		Reconnect: app.ConfigAutoReconnect(), Interval: interval, Dead: dead}
+	if !c.web {
+		return session.RunSSH(o)
+	}
+	// --web (WEB-29): the far web panel through a second ssh, opened here.
+	port, err := freeLocalPort()
+	if err == nil {
+		var dir string
+		if dir, err = session.Dir(); err == nil {
+			fwd := newWebForward("ssh", c.args, dir)
+			o.WebPort, o.OnWeb = port, fwd.Handoff
+			code := session.RunSSH(o)
+			for _, n := range fwd.Close() {
+				fmt.Fprintln(os.Stderr, n)
+			}
+			return code
+		}
+	}
+	fmt.Fprintln(os.Stderr, "termocode: --web:", err)
+	return 1
 }
 
 // cmdSessions prints the running sessions (`termocode sessions`).
