@@ -354,6 +354,15 @@ export interface ServiceArgs {
   name: string;
 }
 
+export interface AIWorktreeTextArgs {
+  id: string;
+  path: string;
+}
+
+export interface AIWorktreeArgs {
+  id: string;
+}
+
 export interface GitGraphArgs {
   skip?: number;
   head?: boolean;
@@ -1465,6 +1474,36 @@ export interface ServiceDone {
   note?: string;
 }
 
+export interface AIWorktrees {
+  off?: boolean;
+  noRepo?: boolean;
+  items: AIWorktree[];
+}
+
+export interface AIWorktree {
+  id: string;
+  branch: string;
+  owner?: string;
+  running?: boolean;
+  files: AIWorktreeChange[];
+  cut?: boolean;
+}
+
+export interface AIWorktreeChange {
+  path: string;
+  status: "A" | "M" | "D";
+}
+
+export interface AIWorktreeText {
+  id: string;
+  path: string;
+  before: string;
+  after: string;
+  binary?: boolean;
+  secret?: boolean;
+  truncated?: boolean;
+}
+
 export interface GitGraph {
   skip: number;
   rows: GitGraphRow[];
@@ -1829,6 +1868,10 @@ export interface OpArgs {
   "services.start": ServiceArgs;
   "services.restart": ServiceArgs;
   "services.stop": ServiceArgs;
+  "ai.worktrees": EmptyArgs;
+  "ai.worktree_text": AIWorktreeTextArgs;
+  "ai.worktree_merge": AIWorktreeArgs;
+  "ai.worktree_discard": AIWorktreeArgs;
   "git.graph": GitGraphArgs;
   "git.blame": GitBlameArgs;
   "git.conflict": GitConflictArgs;
@@ -1959,6 +2002,10 @@ export interface OpResult {
   "services.start": ServiceDone;
   "services.restart": ServiceDone;
   "services.stop": AskRef;
+  "ai.worktrees": AIWorktrees;
+  "ai.worktree_text": AIWorktreeText;
+  "ai.worktree_merge": AskRef;
+  "ai.worktree_discard": AskRef;
   "git.graph": GitGraph;
   "git.blame": GitBlame;
   "git.conflict": GitConflict;

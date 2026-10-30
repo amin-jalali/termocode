@@ -1510,6 +1510,64 @@
       "phase": "v2"
     },
     {
+      "op": "ai.worktrees",
+      "args": "EmptyArgs",
+      "result": "AIWorktrees",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.worktree_text",
+      "args": "AIWorktreeTextArgs",
+      "result": "AIWorktreeText",
+      "role": "viewer",
+      "rate": {
+        "n": 5,
+        "per_ms": 1000
+      },
+      "max_bytes": 8192,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.worktree_merge",
+      "args": "AIWorktreeArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "ai.worktree_discard",
+      "args": "AIWorktreeArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
       "op": "git.graph",
       "args": "GitGraphArgs",
       "result": "GitGraph",
@@ -2387,6 +2445,140 @@
         "line"
       ],
       "additionalProperties": false
+    },
+    "AIWorktree": {
+      "type": "object",
+      "properties": {
+        "branch": {
+          "type": "string"
+        },
+        "cut": {
+          "type": "boolean"
+        },
+        "files": {
+          "items": {
+            "$ref": "#/defs/AIWorktreeChange"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "running": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "branch",
+        "files"
+      ],
+      "additionalProperties": true
+    },
+    "AIWorktreeArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "AIWorktreeChange": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "A",
+            "M",
+            "D"
+          ]
+        }
+      },
+      "required": [
+        "path",
+        "status"
+      ],
+      "additionalProperties": true
+    },
+    "AIWorktreeText": {
+      "type": "object",
+      "properties": {
+        "after": {
+          "type": "string"
+        },
+        "before": {
+          "type": "string"
+        },
+        "binary": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "secret": {
+          "type": "boolean"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "path",
+        "before",
+        "after"
+      ],
+      "additionalProperties": true
+    },
+    "AIWorktreeTextArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "path"
+      ],
+      "additionalProperties": false
+    },
+    "AIWorktrees": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/defs/AIWorktree"
+          },
+          "type": "array"
+        },
+        "noRepo": {
+          "type": "boolean"
+        },
+        "off": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": true
     },
     "Answered": {
       "type": "object",
