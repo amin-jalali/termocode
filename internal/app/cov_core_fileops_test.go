@@ -1,10 +1,13 @@
 package app
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/search"
@@ -105,4 +108,42 @@ func TestCovCoreFindToggles(t *testing.T) {
 		t.Error("close without nvim")
 	}
 	m.findRun.cancel()
+}
+
+// Streamed Find in Files batches: the first opens the page, the next
+// appends, the end with an error says so; a closed stream ends the run.
+func TestCovCoreFindBatches(t *testing.T) {
+	m := covNvimModel(t, 120, 40)
+	dir := t.TempDir()
+	ch := make(chan search.Batch)
+	close(ch)
+	m.findRun = findResultsRun{gen: 7, query: "needle", roots: []string{dir},
+		started: time.Now().Add(-2 * time.Second), st: findState{searching: true, engine: "basic"}}
+	res := func(path string) search.Batch {
+		return search.Batch{Results: []search.Result{{Path: path, Line: 1, Col: 1, Preview: "a needle"}}}
+	}
+	m, _ = m.update(findBatchMsg{gen: 7, ch: ch, batch: res("a.txt")})
+	if !m.findRun.opened {
+		t.Fatal("the first batch did not open the page")
+	}
+	covWaitLua(t, m, `return vim.g.termocode_find_results_buf and '1' or '0'`, "1")
+	m, _ = m.update(findBatchMsg{gen: 7, ch: ch, batch: res("b.txt")})
+	if m.findRun.st.matches != 2 || m.findRun.st.files != 2 {
+		t.Errorf("after two batches: %+v", m.findRun.st)
+	}
+	m, _ = m.update(findBatchMsg{gen: 7, ch: ch, batch: search.Batch{Done: true, Err: errors.New("rg: broken pattern")}})
+	if !strings.Contains(toastText(m), "Find failed") || m.findRun.st.searching {
+		t.Errorf("end with an error:\n%s", toastText(m))
+	}
+	if h := m.findHead(); !strings.Contains(fmt.Sprint(h), " s") {
+		t.Errorf("a long search shows its time: %v", h)
+	}
+	// A batch of an older run is dropped.
+	if cmd := m.handleFindBatch(findBatchMsg{gen: 3}); cmd != nil {
+		t.Error("an old batch was used")
+	}
+	// A closed stream reads as the end.
+	if msg := waitFindBatch(7, ch)(); !msg.(findBatchMsg).batch.Done {
+		t.Error("a closed stream is not the end")
+	}
 }
