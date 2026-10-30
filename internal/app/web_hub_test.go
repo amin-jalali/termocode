@@ -184,8 +184,9 @@ func TestHubPeerUID(t *testing.T) {
 	t.Cleanup(hub.stop)
 	m.web = hub
 	r := &webRig{t: t, m: &m, hub: hub, path: path}
-	c := r.dial(webTestOpen)
-	c.send(`{"t":"hello","v":2,"token":"x"}`)
+	c := r.dial("")
+	// The hub may close before or while we write: the write may fail.
+	_, _ = c.c.Write([]byte(webTestOpen + "\n" + `{"t":"hello","v":2,"token":"x"}` + "\n"))
 	r.waitEOF(c)
 	if refused.Load() != 1 || reads.Load() != 0 {
 		t.Fatalf("refused %d, reads %d: want 1 refusal and no read", refused.Load(), reads.Load())
