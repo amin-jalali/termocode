@@ -11,6 +11,7 @@ import { fileOfTab } from "../lib/difftab";
 import { activeFile, cursorAt } from "../lib/workbench";
 import { diags, toggleProblems } from "../lib/lsp";
 import { link, status, store } from "../session";
+import { readDebugSnap } from "../state/run";
 import { t } from "../strings";
 import { Cod } from "./icons";
 import { readGit } from "../state/git";
@@ -109,7 +110,7 @@ export function StatusBar() {
   const ai = s.cardsWaiting > 0 ? "waiting" : s.aiBusy ? "working" : "idle";
   const tint = s.aiBusy ? "ai" : s.dirty > 0 ? "dirty" : "calm";
   return (
-    <footer class="strip statusbar" dir="ltr">
+    <footer class={`strip statusbar${readDebugSnap(store.topic("debug").value?.data)?.active ? " is-debugging" : ""}`} dir="ltr">
       <span class={`brand sb-remote tint-${tint}`} title={s.workspace}>
         <Cod name="remote" />
         <span>termocode</span>

@@ -15,6 +15,7 @@ import { editing, liveStatus, LiveSync, session, setSync, syncs } from "../lib/l
 import { toast } from "../lib/toasts";
 import { link, live, store } from "../session";
 import { gutterMarks } from "../lib/gutter";
+import { BpAsk, onGlyph, useRunGutter } from "../lib/rungutter";
 import { ask, diagSnap, fileMarkers, findRefs, goTo, revealAt, wordAt } from "../lib/lsp";
 import { isGone } from "../state/files";
 import { t } from "../strings";
@@ -138,6 +139,7 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
               onOpen: (to, line, col) => goTo(to, line, col),
               diff: diff ? { original: diff.original ?? "", inline: diff.inline, collapse: diff.collapse } : undefined,
               onDiff: (n, a, r) => diffRef.current?.onCount(n, a, r),
+              onGlyph: diff ? undefined : (line, menu, x, y) => onGlyph(path, line, menu, x, y),
             }),
         })
       : loadEditor();
@@ -217,6 +219,8 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
   useEffect(() => {
     if (desk && ready) (ed.current as DeskHandle | null)?.markers(fileMarkers(fileDiags));
   }, [ready, fileDiags]);
+  // Breakpoints, tests and the stopped row in the glyph margin (desktop).
+  useRunGutter(path, !!desk && ready && !diff, (items, stop) => (ed.current as DeskHandle | null)?.glyphs(items, stop));
   // A place to show in this file (a problem, a definition, a reference).
   const at = revealAt.value;
   useEffect(() => {
@@ -261,6 +265,7 @@ export function LiveEditor({ path, buf, desk, slot = "g0", diff }: { path: strin
       )}
       {!ready && !desk && <div class="empty">{t("live.loading")}</div>}
       <div ref={host} class={desk ? "editor-host desk-host" : "editor-host"} />
+      {desk && !diff && <BpAsk path={path} />}
     </div>
   );
 }

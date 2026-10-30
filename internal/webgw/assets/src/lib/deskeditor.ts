@@ -6,7 +6,7 @@
 // at hand at once.
 import { computed, signal } from "@preact/signals";
 import type { EditorHandle, EditorHost, HlRow } from "../editor/api";
-import { FRAME_PATH, type FrameDiff, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type ToFrame } from "../monaco/protocol";
+import { FRAME_PATH, type FrameDiff, type FrameGlyph, type FrameMarker, type FrameOpts, type FromFrame, type LspKind, type ToFrame } from "../monaco/protocol";
 import { dict } from "../state/dict";
 import type { Mark } from "./gutter";
 import { cursorAt, focusSlot, quick } from "./workbench";
@@ -71,6 +71,9 @@ export interface DeskHost extends EditorHost {
   /** lang: "sql" for a query editor (the frame colours it). */
   lang?: "sql";
   onDiff?(changes: number, added: number, removed: number): void;
+  /** onGlyph hears a click in the glyph margin (menu: a right click at
+   * x, y on the page). */
+  onGlyph?(line: number, menu: boolean, x: number, y: number): void;
 }
 
 /** DeskHandle is an EditorHandle with the settings the view changes. */
@@ -86,6 +89,8 @@ export interface DeskHandle extends EditorHandle {
   diffGo(dir: 1 | -1): void;
   /** insert puts text at the cursor as the user's edit. */
   insert(text: string): void;
+  /** glyphs sets the glyph margin's marks and the stopped row (0: none). */
+  glyphs(items: FrameGlyph[], stop: number): void;
 }
 
 /** desks are the desktop editors on screen, by editor group slot. */
@@ -177,6 +182,11 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
       case "refs":
         host.onRefs?.(m.line, m.col);
         return;
+      case "glyph": {
+        const r = frame.getBoundingClientRect();
+        host.onGlyph?.(m.line, m.menu, r.left + m.x, r.top + m.y);
+        return;
+      }
       case "open":
         host.onOpen?.(m.path, m.line, m.col);
         return;
@@ -241,6 +251,9 @@ export function mountDesk(parent: HTMLElement, host: DeskHost): DeskHandle {
     },
     insert(text) {
       send({ t: "insert", text });
+    },
+    glyphs(items, stop) {
+      send({ t: "glyphs", items, stop });
     },
     destroy() {
       removeEventListener("message", onMessage);

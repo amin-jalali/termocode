@@ -14,7 +14,7 @@ import { diff } from "../lib/textdiff";
 import type { LspCompletion, LspHover, LspLocations } from "../../../../webproto/proto";
 import type { HlRow } from "../editor/api";
 import { md } from "./mdtext";
-import type { FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, ToFrame } from "./protocol";
+import type { FrameGlyph, FrameMarker, FrameOpts, FromFrame, LspKind, MenuCan, ToFrame } from "./protocol";
 import "./frame.css";
 
 // The small part of the editor's API this file uses.
@@ -64,7 +64,25 @@ interface Model {
 }
 interface Decoration {
   range: IRange;
-  options: { inlineClassName?: string; className?: string; isWholeLine?: boolean; linesDecorationsClassName?: string };
+  options: {
+    inlineClassName?: string;
+    className?: string;
+    isWholeLine?: boolean;
+    linesDecorationsClassName?: string;
+    glyphMarginClassName?: string;
+    glyphMarginHoverMessage?: { value: string };
+    stickiness?: number;
+  };
+}
+/** MouseTarget is where a mouse event of the editor landed (type 2:
+ * the glyph margin). */
+interface MouseTarget {
+  type: number;
+  position: Pos | null;
+}
+interface EditorMouse {
+  target: MouseTarget;
+  event: { rightButton: boolean; leftButton: boolean; browserEvent: MouseEvent };
 }
 interface Collection {
   set(d: Decoration[]): void;
@@ -90,6 +108,9 @@ interface Editor {
   getVisibleRanges(): IRange[];
   createDecorationsCollection(d?: Decoration[]): Collection;
   onDidChangeCursorPosition(cb: (e: { position: Pos }) => void): void;
+  onMouseDown(cb: (e: EditorMouse) => void): void;
+  onMouseMove(cb: (e: EditorMouse) => void): void;
+  onMouseLeave(cb: () => void): void;
   onDidScrollChange(cb: () => void): void;
   onDidLayoutChange(cb: () => void): void;
   onKeyDown(cb: (e: KeyEvent) => void): void;
@@ -199,6 +220,17 @@ let diffEd: DiffEditor | null = null;
 let origModel: Model | null = null;
 let origDecos: Collection | null = null;
 let lastHl: readonly HlRow[] = [];
+/** The glyph margin (breakpoints, tests), the debugger's stopped row and
+ * the faint breakpoint under the pointer. */
+let glyphDecos: Collection | null = null;
+let hintDecos: Collection | null = null;
+let glyphRows = new Set<number>();
+/** glyphMenu: a right click in the glyph margin opens the page's menu
+ * for that row instead of the editor's. */
+let glyphMenu = 0;
+/** lastStop: the editor shows a new stopped row once, then the user scrolls. */
+let lastStop = 0;
+const GLYPH_MARGIN = 2;
 
 /** workerless stands in for the editor's worker service (the frame runs
  * no worker, its policy says worker-src 'none'): the diff editor's diff
@@ -299,6 +331,11 @@ async function goDef(): Promise<void> {
 function onMenu(e: MouseEvent): void {
   e.preventDefault();
   e.stopPropagation();
+  if (glyphMenu) {
+    post({ t: "glyph", line: glyphMenu, menu: true, x: e.clientX, y: e.clientY });
+    glyphMenu = 0;
+    return;
+  }
   const sel = (ed?.getSelections() ?? []).map((r) => model?.getValueInRange(r) ?? "").join("\n");
   post({ t: "menu", x: e.clientX, y: e.clientY, sel: sel.length > MENU_SEL_MAX ? "" : sel, readOnly, can: can() });
 }
@@ -628,6 +665,8 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
     suggestOnTriggerCharacters: m.lsp === true,
     gotoLocation: { multiple: "goto" },
     definitionLinkOpensInPeek: false,
+    // Breakpoints and tests in the margin left of the row numbers.
+    glyphMargin: !m.diff,
   };
   if (m.lang === "sql") {
     sqlLang();
@@ -667,6 +706,9 @@ function init(m: Extract<ToFrame, { t: "init" }>): void {
   hlDecos = ed.createDecorationsCollection();
   flashDecos = ed.createDecorationsCollection();
   gutterDecos = ed.createDecorationsCollection();
+  glyphDecos = ed.createDecorationsCollection();
+  hintDecos = ed.createDecorationsCollection();
+  if (!m.diff) watchGlyphs(ed);
   model?.onDidChangeContent((e) => {
     const specs: { from: number; to: number; insert: string }[] = e.changes.map((c) => ({ from: c.rangeOffset, to: c.rangeOffset + c.rangeLength, insert: c.text }));
     const cs = ChangeSet.of(specs, cur.length);
@@ -818,10 +860,47 @@ function onMessage(e: MessageEvent): void {
     case "markers":
       markers(m.items);
       return;
+    case "glyphs":
+      setGlyphs(m.items, m.stop);
+      return;
     case "lspRes":
       asks.get(m.id)?.(m.data);
       return;
   }
+}
+
+/** setGlyphs draws the glyph margin's marks and the stopped row. */
+function setGlyphs(items: readonly FrameGlyph[], stop: number): void {
+  glyphRows = new Set(items.filter((g) => g.kind.startsWith("bp")).map((g) => g.line));
+  const decos: Decoration[] = items.map((g) => ({
+    range: { startLineNumber: g.line, startColumn: 1, endLineNumber: g.line, endColumn: 1 },
+    options: { glyphMarginClassName: "tc-g tc-g-" + g.kind, glyphMarginHoverMessage: g.title ? { value: g.title } : undefined, stickiness: 1 },
+  }));
+  if (stop > 0) {
+    decos.push({
+      range: { startLineNumber: stop, startColumn: 1, endLineNumber: stop, endColumn: 1 },
+      options: { isWholeLine: true, className: "tc-stop-line", glyphMarginClassName: "tc-g tc-g-stop", stickiness: 1 },
+    });
+    if (stop !== lastStop) ed?.revealLineInCenter(stop);
+  }
+  lastStop = stop;
+  glyphDecos?.set(decos);
+}
+
+/** watchGlyphs sends clicks in the glyph margin to the page and shows a
+ * faint breakpoint under the pointer, as the laptop's editor does. */
+function watchGlyphs(e: Editor): void {
+  e.onMouseDown((ev) => {
+    const line = ev.target.type === GLYPH_MARGIN ? (ev.target.position?.lineNumber ?? 0) : 0;
+    glyphMenu = ev.event.rightButton ? line : 0;
+    if (line && ev.event.leftButton) post({ t: "glyph", line, menu: false, x: 0, y: 0 });
+  });
+  e.onMouseMove((ev) => {
+    const line = ev.target.type === GLYPH_MARGIN ? (ev.target.position?.lineNumber ?? 0) : 0;
+    if (!line || glyphRows.has(line) || readOnly) return hintDecos?.clear();
+    hintDecos?.set([{ range: { startLineNumber: line, startColumn: 1, endLineNumber: line, endColumn: 1 }, options: { glyphMarginClassName: "tc-g tc-g-hint" } }]);
+  });
+  e.onMouseLeave(() => hintDecos?.clear());
 }
 
 addEventListener("message", onMessage);

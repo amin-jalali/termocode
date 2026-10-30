@@ -50,6 +50,18 @@ export interface FrameDiff {
   collapse?: boolean;
 }
 
+/** GlyphKind is what the editor's glyph margin shows on a row: a
+ * breakpoint (conditional, logpoint, not verified) or a test's state. */
+export type GlyphKind = "bp" | "bp-cond" | "bp-log" | "bp-off" | "test-pending" | "test-passed" | "test-failed" | "test-running" | "test-skipped";
+
+/** FrameGlyph is one row's mark in the glyph margin (1-based). */
+export interface FrameGlyph {
+  line: number;
+  kind: GlyphKind;
+  /** title is its tooltip. */
+  title?: string;
+}
+
 export type ToFrame =
   /** init: path is the file's workspace path (a definition there stays
    * in this editor); diff makes it a diff editor. */
@@ -81,6 +93,9 @@ export type ToFrame =
   | { t: "edit"; op: "cut" | "def" | "refs" | "format" }
   /** markers: the file's diagnostics (all of them, each time). */
   | { t: "markers"; items: FrameMarker[] }
+  /** glyphs: the glyph margin's marks (all of them, each time) and the
+   * row the debugger stopped on (0: none). */
+  | { t: "glyphs"; items: FrameGlyph[]; stop: number }
   /** lspRes answers the frame's lsp question id (data null: nothing). */
   | { t: "lspRes"; id: number; data: unknown };
 
@@ -109,6 +124,9 @@ export type FromFrame =
   | { t: "refs"; line: number; col: number }
   /** open: go to another file (a definition there), 0-based. */
   | { t: "open"; path: string; line: number; col: number }
+  /** glyph: a click in the glyph margin on a 1-based row; menu: a right
+   * click at (x, y) in the frame. */
+  | { t: "glyph"; line: number; menu: boolean; x: number; y: number }
   /** key: a workbench key pressed in the editor (Ctrl/Cmd+P, +B, +J …). */
   | { t: "key"; key: string; code: string; ctrl: boolean; meta: boolean; shift: boolean; alt: boolean };
 

@@ -34,3 +34,20 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--wb-edi
 .tc-gm-add { background: var(--wb-gm-add, #487e02); }
 .tc-gm-mod { background: var(--wb-gm-mod, #1b81a8); }
 .tc-gm-del { width: 0 !important; height: 0 !important; margin-top: 15px; border-left: 4px solid var(--wb-gm-del, #f14c4c); border-top: 4px solid transparent; border-bottom: 4px solid transparent; }
+
+/* The glyph margin: breakpoints, tests and the debugger's stopped row,
+   as the laptop's editor draws them (its icon font, its colours). */
+.tc-g { display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.tc-g::before { font: normal normal normal 16px/1 codicon; }
+.tc-g-bp::before { content: "\ea71"; color: #e51400; }
+.tc-g-bp-cond::before { content: "\eaa7"; color: #e51400; }
+.tc-g-bp-log::before { content: "\eaab"; color: #e51400; }
+.tc-g-bp-off::before { content: "\eabc"; color: #848484; }
+.tc-g-hint::before { content: "\ea71"; color: #e51400; opacity: 0.4; }
+.tc-g-test-pending::before { content: "\eb2c"; color: #73c991; }
+.tc-g-test-passed::before { content: "\eba4"; color: #73c991; }
+.tc-g-test-failed::before { content: "\ea87"; color: #f14c4c; }
+.tc-g-test-skipped::before { content: "\eabd"; color: #848484; }
+.tc-g-test-running::before { content: "\eb19"; color: #cca700; }
+.tc-g-stop::before { content: "\eb89"; color: #ffcc00; }
+.tc-stop-line { background: rgba(255, 255, 0, 0.2); }

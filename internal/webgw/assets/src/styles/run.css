@@ -109,3 +109,11 @@
 .dcon-in { display: flex; align-items: center; flex: none; gap: 4px; height: 26px; padding: 0 12px; border-top: 1px solid var(--wb-panel-border); }
 .dcon-prompt { color: #75beff; font-family: var(--font-mono); }
 .dcon-input { flex: 1 1 auto; height: 22px; border: 0; background: transparent; color: var(--wb-editor-fg); font-family: var(--font-mono); font-size: var(--fs-row); outline: none; }
+
+/* The box that asks a breakpoint's condition or log message. */
+.bp-ask { position: fixed; z-index: 30; display: flex; align-items: center; gap: 8px; width: 420px; max-width: 60vw; padding: 4px 8px; border: 1px solid var(--wb-focus); background: var(--wb-side-bg); box-shadow: 0 2px 8px var(--wb-shadow); }
+.bp-ask-line { flex: none; font-size: 0.75rem; color: var(--wb-side-fg); }
+.bp-ask-input { flex: 1 1 auto; height: 22px; padding: 0 4px; border: 0; background: var(--wb-input-bg); color: var(--wb-input-fg); font-family: var(--font-mono); font-size: var(--fs-row); outline: none; }
+
+/* The status bar while the laptop debugs (the editor's debugging colour). */
+.layout-desktop .statusbar.is-debugging { background: #cc6633; }
