@@ -121,3 +121,77 @@ func lastLine(s string, err error) string {
 	}
 	return cleanAuditText(last)
 }
+
+// More errors of tailnet mode.
+var (
+	ErrFunnel       = errors.New("this port is public on the internet (Tailscale Funnel). The web panel will not start. Run: tailscale funnel off")
+	ErrServeBusy    = errors.New("Tailscale Serve already uses port 443 on this computer. See: tailscale serve status")
+	ErrServeUnknown = errors.New("could not read tailscale serve status")
+)
+
+// TailnetPort is the https port Serve answers on for the panel.
+const TailnetPort = 443
+
+// tsServe is the part of `tailscale serve status --json` (ipn.ServeConfig)
+// the gateway reads. Foreground sessions carry their own config.
+type tsServe struct {
+	TCP map[string]struct {
+		HTTPS      bool
+		TCPForward string
+	}
+	Web map[string]struct {
+		Handlers map[string]struct {
+			Proxy string
+		}
+	}
+	AllowFunnel map[string]bool
+	Foreground  map[string]tsServe
+}
+
+// CheckServe reads the Serve config: ErrFunnel when the panel's port on
+// host is public anywhere in it, ErrServeBusy when something else uses
+// that port, else ours says whether it already proxies to target alone.
+func CheckServe(ctx context.Context, run TailscaleRun, host, target string) (ours bool, err error) {
+	out, err := run(ctx, "serve", "status", "--json")
+	if err != nil {
+		return false, fmt.Errorf("%w: %v", ErrServeUnknown, err)
+	}
+	if len(bytes.TrimSpace(out)) == 0 {
+		return false, nil // nothing served at all
+	}
+	var cfg tsServe
+	if json.Unmarshal(out, &cfg) != nil {
+		return false, ErrServeUnknown
+	}
+	key := host + ":" + fmt.Sprint(TailnetPort)
+	busy := false
+	var walk func(c tsServe)
+	walk = func(c tsServe) {
+		if c.AllowFunnel[key] {
+			err = ErrFunnel
+		}
+		if tcp, ok := c.TCP[fmt.Sprint(TailnetPort)]; ok && tcp.TCPForward != "" {
+			busy = true
+		}
+		if w, ok := c.Web[key]; ok {
+			for path, h := range w.Handlers {
+				if path == "/" && h.Proxy == target {
+					ours = true
+				} else {
+					busy = true
+				}
+			}
+		}
+		for _, f := range c.Foreground {
+			walk(f)
+		}
+	}
+	walk(cfg)
+	switch {
+	case err != nil:
+		return false, err
+	case busy:
+		return false, ErrServeBusy
+	}
+	return ours, nil
+}
