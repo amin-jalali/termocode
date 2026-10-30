@@ -91,3 +91,84 @@ func itoa(i int) string {
 	}
 	return itoa(i/10) + d[i%10:i%10+1]
 }
+
+func discard(id int) string {
+	return `{"t":"req","id":` + itoa(id) + `,"op":"git.discard","args":{"paths":["a.go"]}}`
+}
+
+// Spec (3.5): over an op's rate the gateway stops reading that browser
+// (backpressure) instead of refusing; the message goes on once there is
+// room again.
+func TestRateLimitBackpressure(t *testing.T) {
+	r := newWSRig(t, DefaultLimits, nil)
+	c, p := r.connect()
+	writeText(t, c, discard(1))
+	writeText(t, c, discard(2)) // git.discard: 1 per 5 s
+	if m := p.line(t); m["id"] != float64(1) {
+		t.Fatalf("hub got %v", m)
+	}
+	p.send(t, `{"t":"res","id":1}`)
+	readMsg(t, c)
+	noHubLine(t, p)
+	r.clock.Add(5 * time.Second)
+	if m := p.line(t); m["id"] != float64(2) {
+		t.Fatalf("hub got %v", m)
+	}
+}
+
+// Spec (3.5): held back by the limits for ThrottleMax in one go, the
+// connection is closed with 1008.
+func TestRateLimitTooLongCloses1008(t *testing.T) {
+	r := newWSRig(t, DefaultLimits, func(c *WSConfig) { c.ThrottleMax = 200 * time.Millisecond })
+	c, p := r.connect()
+	writeText(t, c, discard(1))
+	writeText(t, c, discard(2))
+	p.line(t)
+	if got := closeCode(t, c); got != websocket.StatusCode(webproto.ClosePolicy) {
+		t.Fatalf("closed with %d, want 1008", got)
+	}
+	if !strings.Contains(auditText(t, r.alog), `"ev":"rate_limited"`) {
+		t.Fatal("no rate_limited in the audit log")
+	}
+}
+
+// Spec (1.4): at most 4 requests wait for the hub; the 5th goes once one
+// is answered.
+func TestInFlightCap(t *testing.T) {
+	r := newWSRig(t, DefaultLimits, nil)
+	c, p := r.connect()
+	for i := 1; i <= MaxInFlight+1; i++ {
+		writeText(t, c, `{"t":"req","id":`+itoa(i)+`,"op":"tree.list","args":{"path":""}}`)
+	}
+	for i := 1; i <= MaxInFlight; i++ {
+		if m := p.line(t); m["id"] != float64(i) {
+			t.Fatalf("hub got %v", m)
+		}
+	}
+	noHubLine(t, p)
+	p.send(t, `{"t":"err","id":2,"code":"busy","msg":"x"}`)
+	if m := p.line(t); m["id"] != float64(MaxInFlight+1) {
+		t.Fatalf("hub got %v", m)
+	}
+}
+
+// Spec (3.2): term.send is capped at 1 MiB per second.
+func TestTermSendByteRate(t *testing.T) {
+	r := newWSRig(t, DefaultLimits, nil)
+	c, p := r.connect()
+	text := strings.Repeat("y", 60<<10)
+	sent := 0
+	for i := 1; sent+len(text) <= 1<<20; i++ {
+		writeText(t, c, `{"t":"req","id":`+itoa(i)+`,"op":"term.send","args":{"buf":1,"text":"`+text+`"}}`)
+		m := p.line(t)
+		p.send(t, `{"t":"res","id":`+itoa(int(m["id"].(float64)))+`}`)
+		readMsg(t, c)
+		sent += len(text) + len(`{"buf":1,"text":""}`)
+	}
+	writeText(t, c, `{"t":"req","id":99,"op":"term.send","args":{"buf":1,"text":"`+text+`"}}`)
+	noHubLine(t, p)
+	r.clock.Add(time.Second)
+	if m := p.line(t); m["id"] != float64(99) {
+		t.Fatalf("hub got %v", m)
+	}
+}
