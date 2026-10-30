@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/tasks"
 	"github.com/amin-jalali/termocode/internal/webproto"
@@ -208,7 +209,7 @@ func (m *Model) webTasksTail(call *webCall) tea.Cmd {
 	}
 	buf, running, code, c := r.Buf, r.Running, r.Code, m.nvim
 	call.later()
-	go func() {
+	crash.GoWith("web task tail", func() {
 		// A terminal buffer ends in blank rows (the rest of its screen):
 		// read some more than needed, then drop them.
 		want := webproto.MaxTailLines + webTailSpare
@@ -235,6 +236,6 @@ func (m *Model) webTasksTail(call *webCall) tea.Cmd {
 		}
 		tail.Lines = append([]string{}, lines[from:]...)
 		call.reply(tail)
-	}()
+	}, func() { call.fail(webproto.CodeInternal, "Something went wrong.") })
 	return nil
 }
