@@ -50,11 +50,9 @@ func (m *Model) onAIHistoryDeletePicked(id string) tea.Cmd {
 		return m.aiToastErr("Could not open chat", err)
 	}
 	s.historyTarget = id
-	m.confirm = confirm.New("Delete chat?", "Delete \""+c.Title+"\"? This cannot be undone.",
-		[]confirm.Button{
-			{ID: "delete", Title: "Delete", Style: confirm.StyleDestructive},
-			{ID: "cancel", Title: "Cancel"},
-		})
+	m.confirm = confirm.Risky("Delete chat?", "Delete \""+c.Title+"\"? This cannot be undone.",
+		confirm.Button{ID: "cancel", Title: "Cancel"},
+		confirm.Button{ID: "delete", Title: "Delete", Style: confirm.StyleDestructive})
 	m.confirm.SetSize(m.w, m.h)
 	m.confirmOpen = true
 	m.confirmKind = confirmKindAIHistoryDelete
