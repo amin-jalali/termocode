@@ -35,7 +35,7 @@ func newAuth(t *testing.T) (*Auth, *Tokens, *fakeClock, string) {
 	t.Helper()
 	clk := &fakeClock{now: t0}
 	ts := NewTokens(DefaultIdle, DefaultMax)
-	a := NewAuth(ts, clk.Now)
+	a := NewAuth(ts, clk.Now, nil)
 	plain, err := a.NewSecret()
 	if err != nil {
 		t.Fatal(err)
@@ -120,7 +120,7 @@ func TestAuthFailsTheSameWay(t *testing.T) {
 // TestAuthWithoutSecretRefused: no secret was made yet (or it was
 // replaced): nothing redeems.
 func TestAuthWithoutSecretRefused(t *testing.T) {
-	a := NewAuth(NewTokens(DefaultIdle, DefaultMax), nil)
+	a := NewAuth(NewTokens(DefaultIdle, DefaultMax), nil, nil)
 	if w := do(a, authReq(secretBody(""))); w.Code != http.StatusUnauthorized {
 		t.Fatalf("code %d", w.Code)
 	}

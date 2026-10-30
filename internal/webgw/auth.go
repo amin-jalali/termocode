@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"mime"
 	"net/http"
@@ -21,6 +22,10 @@ type Auth struct {
 	tokens *Tokens
 	now    func() time.Time
 	limit  *Bucket // every /auth request, before its body is read
+	audit  *Audit  // nil: no log
+
+	noisyFail    *Bucket // log lines for repeatable failures
+	noisyLimited *Bucket // log lines for 429s
 
 	mu     sync.Mutex
 	secret *LaunchSecret // nil: no link is open
@@ -29,12 +34,16 @@ type Auth struct {
 // AuthRatePerSecond caps /auth requests per second for the whole gateway.
 const AuthRatePerSecond = 20
 
-// NewAuth issues tokens from tokens. now is the clock (nil: time.Now).
-func NewAuth(tokens *Tokens, now func() time.Time) *Auth {
+// NewAuth issues tokens from tokens and logs every outcome to audit (nil:
+// no log). now is the clock (nil: time.Now).
+func NewAuth(tokens *Tokens, now func() time.Time, audit *Audit) *Auth {
 	if now == nil {
 		now = time.Now
 	}
-	return &Auth{tokens: tokens, now: now, limit: NewBucket(AuthRatePerSecond, AuthRatePerSecond)}
+	return &Auth{tokens: tokens, now: now, audit: audit,
+		limit:        NewBucket(AuthRatePerSecond, AuthRatePerSecond),
+		noisyFail:    NewBucket(blockedAuditPerSecond, blockedAuditBurst),
+		noisyLimited: NewBucket(blockedAuditPerSecond, blockedAuditBurst)}
 }
 
 // NewSecret opens a new launch link: it makes a fresh one-time secret and
@@ -81,31 +90,37 @@ type authReply struct {
 func (a *Auth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", "POST")
-		writeJSON(w, http.StatusMethodNotAllowed, errorReply("method_not_allowed"))
+		a.fail(w, http.StatusMethodNotAllowed, "method_not_allowed")
 		return
 	}
 	if !a.limit.Allow(a.now()) {
 		w.Header().Set("Retry-After", "1")
+		if a.noisyLimited.Allow(a.now()) {
+			_ = a.audit.Log(Event{Kind: EvRateLimited, Code: http.StatusTooManyRequests, Op: "auth"})
+		}
 		writeJSON(w, http.StatusTooManyRequests, errorReply("rate_limited"))
 		return
 	}
 	if r.URL.RawQuery != "" {
 		// A secret in a URL lands in history and logs (T10).
-		writeJSON(w, http.StatusBadRequest, errorReply("no_query"))
+		a.fail(w, http.StatusBadRequest, "no_query")
 		return
 	}
 	if mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mt != "application/json" {
-		writeJSON(w, http.StatusUnsupportedMediaType, errorReply("need_json"))
+		a.fail(w, http.StatusUnsupportedMediaType, "need_json")
 		return
 	}
 	secret, ok := decodeAuth(r.Body)
 	if !ok {
-		writeJSON(w, http.StatusBadRequest, errorReply("bad_request"))
+		a.fail(w, http.StatusBadRequest, "bad_request")
 		return
 	}
 	now := a.now()
 	if err := a.redeem(secret, now); err != nil {
-		writeJSON(w, http.StatusUnauthorized, errorReply("auth_failed"))
+		a.fail(w, http.StatusUnauthorized, redeemWhy(err))
+		if errors.Is(err, ErrSecretBurned) {
+			_ = a.audit.Log(Event{Kind: EvSecretBurned})
+		}
 		return
 	}
 	device, err := deviceID()
@@ -113,13 +128,44 @@ func (a *Auth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, errorReply("internal"))
 		return
 	}
-	tok, _, err := a.tokens.Issue(device, RoleControl, now)
+	tok, sess, err := a.tokens.Issue(device, RoleControl, now)
 	if err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, errorReply("too_many_sessions"))
+		a.fail(w, http.StatusServiceUnavailable, "too_many_sessions")
 		return
 	}
+	_ = a.audit.Log(Event{Kind: EvAuthOK, Conn: sess.ID, Device: sess.Device, Code: http.StatusOK})
 	writeJSON(w, http.StatusOK, authReply{Token: tok,
 		IdleS: int(a.tokens.idle / time.Second), MaxS: int(a.tokens.max / time.Second)})
+}
+
+// fail answers a refused /auth and logs it as auth_fail with the rule's
+// name. Every secret failure gets the same answer, auth_failed; only the
+// log tells them apart. Failures anyone can repeat without end pass a
+// rate limit on their way to the log; wrong secrets always get logged
+// (at most MaxBadTries per secret).
+func (a *Auth) fail(w http.ResponseWriter, code int, why string) {
+	if why == "wrong" || a.noisyFail.Allow(a.now()) {
+		_ = a.audit.Log(Event{Kind: EvAuthFail, Code: code, Why: why})
+	}
+	reply := why
+	if code == http.StatusUnauthorized {
+		reply = "auth_failed"
+	}
+	writeJSON(w, code, errorReply(reply))
+}
+
+// redeemWhy is the log name of a Redeem error.
+func redeemWhy(err error) string {
+	switch {
+	case errors.Is(err, ErrSecretWrong), errors.Is(err, ErrSecretBurned):
+		return "wrong"
+	case errors.Is(err, ErrSecretUsed):
+		return "used"
+	case errors.Is(err, ErrSecretExpired):
+		return "expired"
+	default:
+		return "closed"
+	}
 }
 
 // redeem uses up the current launch secret with plain.
