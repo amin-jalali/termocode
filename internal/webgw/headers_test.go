@@ -28,7 +28,8 @@ func TestCSPExact(t *testing.T) {
 	want := "default-src 'none'; script-src 'self'; style-src 'self'; " +
 		"connect-src 'self' ws://127.0.0.1:41237 ws://localhost:41237; " +
 		"img-src 'self' data: blob:; font-src 'self'; frame-ancestors 'none'; " +
-		"base-uri 'none'; form-action 'none'"
+		"base-uri 'none'; form-action 'none'; " +
+		"require-trusted-types-for 'script'; trusted-types 'none'"
 	if got != want {
 		t.Fatalf("CSP\n got %q\nwant %q", got, want)
 	}

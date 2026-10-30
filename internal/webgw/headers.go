@@ -9,7 +9,9 @@ import (
 
 // CSP is the Content-Security-Policy for site: only our own scripts,
 // styles, fonts and images; no inline code, no frames, no forms, no base
-// URL. connect-src names the WebSocket origins in full as well as 'self',
+// URL. Trusted Types are required with no policy allowed, so even a bug
+// cannot hand a string to an HTML or script sink (never-do 20); the page
+// builds DOM from text nodes only. connect-src names the WebSocket origins in full as well as 'self',
 // because older engines do not count ws:// as 'self'.
 func CSP(site Site) string {
 	connect := []string{"'self'"}
@@ -26,6 +28,8 @@ func CSP(site Site) string {
 		"frame-ancestors 'none'",
 		"base-uri 'none'",
 		"form-action 'none'",
+		"require-trusted-types-for 'script'",
+		"trusted-types 'none'",
 	}, "; ")
 }
 
