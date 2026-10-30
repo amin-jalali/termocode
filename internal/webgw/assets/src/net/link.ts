@@ -37,6 +37,13 @@ export class ReqError extends Error {
   }
 }
 
+/** Refusal is why the hub would not send a topic (an err without an id
+ * whose data names the topic): no workspace, a closed terminal, a cap. */
+export interface Refusal {
+  code: string;
+  msg: string;
+}
+
 export interface LinkDeps {
   store: Store;
   url: string;
@@ -66,6 +73,8 @@ export class Link {
   /** finalCode is the close code that ended the session for good. */
   readonly finalCode = signal<number | null>(null);
   readonly live = computed(() => this.state.value === "online");
+  /** refused holds the topics the hub would not send, until a snap comes. */
+  readonly refused = signal<ReadonlyMap<string, Refusal>>(new Map());
 
   private ws: WebSocket | null = null;
   private conn = "";
@@ -124,7 +133,15 @@ export class Link {
   unsubscribe(...topics: string[]): void {
     const gone = topics.filter((t) => this.wanted.delete(t));
     gone.forEach((t) => this.deps.store.drop(t));
+    this.clearRefused(gone);
     if (gone.length && this.state.peek() === "online") this.send({ t: "unsub", topics: gone });
+  }
+
+  /** retry asks again for a topic the hub refused. */
+  retry(topic: string): void {
+    if (!this.wanted.has(topic)) return;
+    this.clearRefused([topic]);
+    if (this.state.peek() === "online") this.sendSub([topic]);
   }
 
   /** onEvent registers a handler for ev messages; it returns the undo. */
@@ -231,6 +248,7 @@ export class Link {
       }
       case "snap":
         this.resyncing.delete(msg.topic);
+        this.clearRefused([msg.topic]);
         store.apply(msg);
         return;
       case "delta":
@@ -247,6 +265,7 @@ export class Link {
         return;
       case "err":
         if (msg.id !== undefined) this.settle(msg.id, (p) => p.reject(new ReqError(msg.code, msg.msg, msg.data)));
+        else this.refuse(msg.code, msg.msg, msg.data);
         return;
       case "ev":
         this.evHandlers.forEach((fn) => fn(msg.kind, msg.data));
@@ -261,6 +280,24 @@ export class Link {
         this.byeCode = msg.code;
         return;
     }
+  }
+
+  /** refuse records a sub the hub refused; the topic stays wanted, so
+   * the next connection asks again. */
+  private refuse(code: string, text: string, data: unknown): void {
+    const topic = typeof data === "object" && data !== null ? (data as Record<string, unknown>).topic : undefined;
+    if (typeof topic !== "string" || !this.wanted.has(topic)) return;
+    const next = new Map(this.refused.peek());
+    next.set(topic, { code, msg: text });
+    this.refused.value = next;
+  }
+
+  private clearRefused(topics: string[]): void {
+    const cur = this.refused.peek();
+    if (!topics.some((t) => cur.has(t))) return;
+    const next = new Map(cur);
+    topics.forEach((t) => next.delete(t));
+    this.refused.value = next;
   }
 
   private settle(id: number, fn: (p: Pending) => void): void {
