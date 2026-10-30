@@ -58,3 +58,22 @@ func BenchmarkView5kExpanded(b *testing.B) {
 		_ = m.View(false, "", false, git)
 	}
 }
+
+// BenchmarkCountVisibleFiles5k counts the file rows with a folder of
+// 5 000 files open (the footer asks each frame after a tree change).
+func BenchmarkCountVisibleFiles5k(b *testing.B) {
+	root, err := NewRoot(manyDir(b, 5000))
+	if err != nil {
+		b.Fatal(err)
+	}
+	if err := root.Children[0].Toggle(); err != nil {
+		b.Fatal(err)
+	}
+	m := Model{root: root}
+	b.ReportAllocs()
+	for b.Loop() {
+		if m.countVisibleFiles() != 5000 {
+			b.Fatal("count")
+		}
+	}
+}

@@ -52,8 +52,18 @@ func TestVisibleMatchesDefinition(t *testing.T) {
 		for j := 0; j < r.Intn(3); j++ {
 			m.extraRoots = append(m.extraRoots, randTree(r, fmt.Sprintf(".x%d", j), 3))
 		}
-		if got, want := m.visible(), refVisible(m); !reflect.DeepEqual(got, want) {
+		want := refVisible(m)
+		if got := m.visible(); !reflect.DeepEqual(got, want) {
 			t.Fatalf("case %d: visible() has %d rows, the definition %d", i, len(got), len(want))
+		}
+		files := 0
+		for _, e := range want {
+			if !e.Node.IsDir {
+				files++
+			}
+		}
+		if got := m.countVisibleFiles(); got != files {
+			t.Fatalf("case %d: countVisibleFiles() = %d, the definition %d", i, got, files)
 		}
 	}
 }

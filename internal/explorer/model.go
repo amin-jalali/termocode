@@ -375,13 +375,30 @@ func (m Model) CountVisibleFiles() int {
 }
 
 func (m Model) countVisibleFiles() int {
+	// The file rows of visible(), counted on a walk without the list.
 	n := 0
-	for _, e := range m.visible() {
-		if !e.Node.IsDir {
-			n++
+	for _, r := range m.allRoots() {
+		if !r.IsDir {
+			n++ // a root row is never hidden
 		}
+		n += countFiles(r, !m.showHidden)
 	}
 	return n
+}
+
+// countFiles counts the shown file rows below n (see appendVisible).
+func countFiles(n *Node, hideDot bool) int {
+	if !n.IsDir || !n.Expanded {
+		return 0
+	}
+	c := 0
+	for _, ch := range n.Children {
+		if !ch.IsDir && (!hideDot || !strings.HasPrefix(ch.Name, ".")) {
+			c++
+		}
+		c += countFiles(ch, hideDot)
+	}
+	return c
 }
 
 // HeaderChromeRows reports how many rows at the TOP of the panel the
