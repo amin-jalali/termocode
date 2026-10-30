@@ -20,6 +20,7 @@ var assetTypes = map[string]string{
 	".txt":   "text/plain; charset=utf-8",
 	".svg":   "image/svg+xml",
 	".woff2": "font/woff2",
+	".ttf":   "font/ttf",
 }
 
 // ManifestPath is where an installable site serves its app manifest.

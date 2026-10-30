@@ -186,6 +186,7 @@
       "files": {
         "LICENSE": "sha384-ha4Orln/jtBfG5SN3pqQ3Q4g4wJ5D8g7htOzPdaY/X5g95m2LpD5TODdcyqngQYs",
         "LICENSE-CODE": "sha384-c/xpLeDknFOH3uVphSG27vUjo4SvKvULHq97trS0ElUC26iDGtS14XmwocgWDyfd",
+        "dist/codicon.css": "sha384-v8luYjir+1ZVBUPKXcNvMqe3EKad0QPawMh9XifwSuddMAC62Pr8MKa8SdudB5eQ",
         "dist/codicon.ttf": "sha384-ydwWqX1+Wu2d6/YNWz288+ntV4SOp+lwtNI+XWqY3797m8eIMAmbNR5P9SCqdB5N"
       }
     }

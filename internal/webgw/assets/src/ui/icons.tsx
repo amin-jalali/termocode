@@ -163,3 +163,9 @@ export const IconRows = () => (
     <path d="M5 7h14M5 12h14M5 17h9" />
   </Icon>
 );
+
+/** Cod is one icon of the codicon font (styles/codicons.css), 16 px or
+ * 24 px (the activity bar). */
+export function Cod({ name, big }: { name: string; big?: boolean }) {
+  return <span class={`cod cod-${name}${big ? " cod-24" : ""}`} aria-hidden="true" />;
+}
