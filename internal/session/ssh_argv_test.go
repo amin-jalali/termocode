@@ -34,7 +34,7 @@ func TestSSHArgv(t *testing.T) {
 // shared master (a stale one cannot forward), and one local forward from
 // 127.0.0.1 only to the far gateway's unix socket.
 func TestSSHForwardArgv(t *testing.T) {
-	got := sshForwardArgv([]string{"-p", "2222", "me@box"}, 41237, "/run/user/1000/termocode/0123456789abcdef.webhttp.sock")
+	got := SSHForwardArgv([]string{"-p", "2222", "me@box"}, 41237, "/run/user/1000/termocode/0123456789abcdef.webhttp.sock")
 	want := []string{"-N", "-T", "-o", "ExitOnForwardFailure=yes", "-o", "ControlPath=none", "-o", "BatchMode=yes",
 		"-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=3", "-o", "ConnectTimeout=10",
 		"-L", "127.0.0.1:41237:/run/user/1000/termocode/0123456789abcdef.webhttp.sock",
@@ -43,7 +43,7 @@ func TestSSHForwardArgv(t *testing.T) {
 		t.Errorf("forward:\n got %q\nwant %q", got, want)
 	}
 	// The user's own keep-alive and timeout win, as for the main ssh.
-	got = sshForwardArgv([]string{"-o", "ServerAliveInterval=30", "-oConnectTimeout=3", "box"}, 2000, "/s.sock")
+	got = SSHForwardArgv([]string{"-o", "ServerAliveInterval=30", "-oConnectTimeout=3", "box"}, 2000, "/s.sock")
 	for _, a := range got {
 		if a == "ServerAliveInterval=5" || a == "ConnectTimeout=10" {
 			t.Errorf("forward overrides the user's %s: %q", a, got)
