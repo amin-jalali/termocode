@@ -97,7 +97,8 @@ func (t *Tokens) Check(tok string, now time.Time) (Sess, error) {
 	return *s, nil
 }
 
-// expired: the session was idle for t.idle or longer.
+// expired: the session was idle for t.idle or longer, or began t.max or
+// longer ago.
 func (t *Tokens) expired(s *Sess, now time.Time) bool {
-	return !now.Before(s.LastSeen.Add(t.idle))
+	return !now.Before(s.LastSeen.Add(t.idle)) || !now.Before(s.Created.Add(t.max))
 }
