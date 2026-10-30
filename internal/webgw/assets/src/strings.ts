@@ -4,6 +4,9 @@
 // {name} marks a value. Plural forms use .one / .other keys.
 // strings_test.go lints this file: unique keys and texts, length,
 // banned words, every key the code uses exists.
+import { signal } from "@preact/signals";
+import { FA } from "./strings.fa";
+
 export const S = {
   // Shell and connect
   "connect.title": "termocode",
@@ -215,6 +218,9 @@ export const S = {
   "more.dir.auto": "Auto",
   "more.dir.ltr": "Left to right",
   "more.dir.rtl": "Right to left",
+  "more.lang": "Language",
+  "more.lang.en": "English",
+  "more.lang.fa": "فارسی",
   "more.haptics": "Haptics",
   "more.forget_drafts": "Forget drafts",
   "more.about": "About",
@@ -244,11 +250,35 @@ export const S = {
 
 export type StringKey = keyof typeof S;
 
-/** t returns the text of key with each {name} replaced by vars[name]. */
+export type Lang = "en" | "fa";
+
+/** lang is the language of the UI. t() reads it, so every view that
+ * shows a string draws again when it changes. */
+export const lang = signal<Lang>("en");
+
+const FA_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
+
+/** localDigits writes a number of a sentence in the UI language: Persian
+ * digits in Persian text. Data (counts in the strip, paths, code, line
+ * numbers) never goes through it and keeps Latin digits (WEB-UX-5). */
+export function localDigits(v: number, l: Lang): string {
+  const s = String(v);
+  return l === "fa" ? s.replace(/[0-9]/g, (d) => FA_DIGITS[Number(d)]) : s;
+}
+
+/** t returns the text of key in the UI language (English when the
+ * Persian text is missing) with each {name} replaced by vars[name].
+ * Number values follow the language's digits; text values are data and
+ * stay as they are. */
 export function t(key: StringKey, vars?: Record<string, string | number>): string {
-  const text: string = S[key];
+  const l = lang.value;
+  const text: string = (l === "fa" && FA[key]) || S[key];
   if (!vars) return text;
-  return text.replace(/\{([a-z_]+)\}/g, (m, name: string) => (name in vars ? String(vars[name]) : m));
+  return text.replace(/\{([a-z_]+)\}/g, (m, name: string) => {
+    if (!(name in vars)) return m;
+    const v = vars[name];
+    return typeof v === "number" ? localDigits(v, l) : v;
+  });
 }
 
 type Plural = "pill.cards" | "edit.sent" | "git.commit";
