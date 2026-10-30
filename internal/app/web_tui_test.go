@@ -7,8 +7,10 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/statusbar"
 )
 
 // Spec (AH-1, old 5.2): the start card has Not now first and focused;
@@ -96,5 +98,54 @@ func TestAIActionsNeverWeb(t *testing.T) {
 		if !ids[id] {
 			t.Errorf("no palette entry %s", id)
 		}
+	}
+}
+
+// Spec (WEB-10): the chip says "web on" once the panel serves, "web
+// connected" with a browser (and a toast says so); a click on it stops
+// the panel (no card: stopping is the safe way).
+func TestWebChipFollowsAndClickStops(t *testing.T) {
+	r := newWebPanelRig(t)
+	m := r.m
+	m.w, m.h = 160, 40
+	m.status = statusbar.New()
+	chip := func() string {
+		_, bw := m.statusBarRect()
+		sb := m.status
+		sb.SetWidth(bw)
+		return ansi.Strip(sb.View(m.statusState()))
+	}
+	if strings.Contains(chip(), "web") {
+		t.Fatal("a chip before the panel runs")
+	}
+	link := r.started()
+	if !strings.Contains(chip(), "web on") {
+		t.Fatalf("bar %q", chip())
+	}
+	r.browser(link)
+	if !strings.Contains(chip(), "web connected") {
+		t.Fatalf("bar %q", chip())
+	}
+	if v := strings.Join(m.toast.View(200, 10), "\n"); !strings.Contains(v, "A web browser connected") {
+		t.Fatalf("toast %q", v)
+	}
+	var span statusSpan
+	for _, sp := range m.statusSpans() {
+		if sp.id == "status:web" {
+			span = sp
+		}
+	}
+	if span.id == "" {
+		t.Fatalf("no web span in %v", m.statusSpans())
+	}
+	bx, _ := m.statusBarRect()
+	got, _ := m.handleMouse(tea.MouseMsg{X: bx + span.x0 + 1, Y: m.h - 1, Type: tea.MouseLeft, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft})
+	*m = got
+	if m.webPanel == nil || !m.webPanel.stopping {
+		t.Fatal("the click did not stop the panel")
+	}
+	r.pumpUntil("the gateway gone", func() bool { return m.webPanel == nil })
+	if strings.Contains(chip(), "web") {
+		t.Fatalf("chip after stop: %q", chip())
 	}
 }
