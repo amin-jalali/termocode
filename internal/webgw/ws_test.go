@@ -651,3 +651,36 @@ func TestSlowBrowserClosed4008(t *testing.T) {
 			strings.Contains(auditText(t, r.alog), `"code":4008`)
 	})
 }
+
+// Spec (old 2.5): the gateway pings; a browser that does not answer in
+// PongWait is dropped, one that reads stays.
+func TestKeepaliveDropsDeadLink(t *testing.T) {
+	r := newWSRig(t, DefaultLimits, func(c *WSConfig) {
+		c.PingEvery, c.PongWait = 50*time.Millisecond, 100*time.Millisecond
+	})
+	live, lp := r.connect()
+	msgs := make(chan []byte, 8)
+	go func() { // a reading browser answers pings
+		for {
+			_, b, err := live.Read(context.Background())
+			if err != nil {
+				return
+			}
+			msgs <- b
+		}
+	}()
+	_, dp := r.connect() // never reads: no pongs
+	dp.eof(t)
+	waitFor(t, "disconnect 1006 logged", func() bool { return strings.Contains(auditText(t, r.alog), `"code":1006`) })
+	writeText(t, live, `{"t":"ping","n":"7"}`)
+	lp.line(t)
+	lp.send(t, `{"t":"pong","n":"7"}`)
+	select {
+	case b := <-msgs:
+		if !strings.Contains(string(b), `"pong"`) {
+			t.Fatalf("got %s", b)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("the reading browser was dropped")
+	}
+}
