@@ -35,7 +35,9 @@ type ListenConfig struct {
 
 // Listen opens the gateway's listener and returns the site a browser
 // reaches it as. It refuses every address but 127.0.0.1: never a
-// wildcard, a LAN address or a name (T15).
+// wildcard, a LAN address or a name (T15). On Linux every accepted
+// connection's peer must run as our uid (checkTCPPeer); another user's
+// is closed before anything is read (T16).
 func Listen(cfg ListenConfig) (net.Listener, Site, error) {
 	if cfg.Host != "" && cfg.Host != loopbackHost {
 		return nil, Site{}, ErrNotLoopback
@@ -55,7 +57,7 @@ func Listen(cfg ListenConfig) (net.Listener, Site, error) {
 		_ = ln.Close()
 		return nil, Site{}, ErrNotLoopback
 	}
-	return ln, LoopbackSite(addr.Port), nil
+	return &peerListener{Listener: ln, check: checkTCPPeer}, LoopbackSite(addr.Port), nil
 }
 
 // ErrSocketBusy: another process answers on the socket path.
