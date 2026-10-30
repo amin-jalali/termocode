@@ -36,7 +36,7 @@ func TestBuildWritesThePageFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"index.html", "app.js", "app.css", "licenses.txt", "icon.svg", manifest.LockFile} {
+	for _, name := range []string{"index.html", "app.js", "app.css", "licenses.txt", "icon.svg", "kit.html", "kit.js", "kit.css", manifest.LockFile} {
 		if len(out[name]) == 0 {
 			t.Errorf("build wrote no %s", name)
 		}

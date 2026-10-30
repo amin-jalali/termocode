@@ -13,7 +13,17 @@ func TestEmbeddedFilesMatchTheLock(t *testing.T) {
 		t.Fatal("empty lock")
 	}
 	for _, e := range entries {
-		b, err := fs.ReadFile(FS(), e.Path)
+		src := FS()
+		if IsKitFile(e.Path) {
+			if !KitEnabled {
+				if _, err := fs.Stat(FS(), e.Path); err == nil {
+					t.Errorf("%s is embedded in a release build", e.Path)
+				}
+				continue
+			}
+			src = KitFS()
+		}
+		b, err := fs.ReadFile(src, e.Path)
 		if err != nil {
 			t.Errorf("%s is in the lock but not embedded: %v", e.Path, err)
 			continue
