@@ -81,7 +81,9 @@ function VarRows({ s, parent, vars, depth }: { s: DebugSnap; parent: string; var
               <span class="tx-twist">{v.ref ? <Cod name={open ? "chevron-down" : "chevron-right"} /> : null}</span>
               <Value v={v} />
             </div>
-            {open && kids && (kids.error ? <Note>{kids.error}</Note> : <VarRows s={s} parent={key} vars={kids.vars} depth={depth + 1} />)}
+            {open && kids && (
+              <div role="group">{kids.error ? <Note>{kids.error}</Note> : <VarRows s={s} parent={key} vars={kids.vars} depth={depth + 1} />}</div>
+            )}
           </div>
         );
       })}
@@ -113,7 +115,7 @@ function Variables({ s }: { s: DebugSnap }) {
               </span>
               <span class="trunc">{sc.name}</span>
             </div>
-            {open && (vars ? <VarRows s={s} parent={sc.key} vars={vars} depth={1} /> : <Note>{t("loading")}</Note>)}
+            {open && <div role="group">{vars ? <VarRows s={s} parent={sc.key} vars={vars} depth={1} /> : <Note>{t("loading")}</Note>}</div>}
           </div>
         );
       })}
