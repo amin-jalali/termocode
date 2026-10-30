@@ -434,3 +434,38 @@ func TestWebLinkTTLMatchesGateway(t *testing.T) {
 		t.Fatalf("toast says %q", webLinkLife)
 	}
 }
+
+// Spec (web-easy): the hub now starts with every termocode, so a hub
+// that cannot start at launch (another termocode in this folder has the
+// socket) is quiet: no toast. Opening the panel then says why.
+func TestWebHubBusyAtLaunchIsQuiet(t *testing.T) {
+	m := aiTestModel(t)
+	t.Setenv("XDG_RUNTIME_DIR", webTestDir(t))
+	t.Chdir(t.TempDir())
+	path, err := webHubSocketPath(aiWorkspaceRoot())
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := webHubListen(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer other.Close()
+	go func() {
+		for {
+			c, err := other.Accept()
+			if err != nil {
+				return
+			}
+			_ = c.Close()
+		}
+	}()
+	m.syncWebHub()
+	if m.web != nil || !m.toast.Empty() {
+		t.Fatalf("hub %v toasts %v", m.web != nil, m.toast.Live())
+	}
+	m.startWebPanel(true, false)
+	if m.toast.Empty() {
+		t.Fatal("opening the panel said nothing")
+	}
+}
