@@ -115,3 +115,77 @@ export function readContainers(data: unknown): ContainersView {
       })),
   };
 }
+
+export interface DBConnView {
+  id: string;
+  name: string;
+  driver: string;
+  database: string;
+  env: string;
+  readonly: boolean;
+  problem: string;
+  sql: boolean;
+}
+
+/** readDBConns reads the answer of db.conns. */
+export function readDBConns(data: unknown): DBConnView[] {
+  return list(obj(data).conns)
+    .map(obj)
+    .filter((c) => str(c.id) !== "")
+    .map((c) => ({
+      id: str(c.id),
+      name: str(c.name),
+      driver: str(c.driver),
+      database: str(c.database),
+      env: str(c.env),
+      readonly: c.readonly === true,
+      problem: str(c.problem),
+      sql: c.sql === true,
+    }));
+}
+
+/** readDBTables reads the answer of db.tables. */
+export function readDBTables(data: unknown): { schema: string; tables: { name: string; view: boolean }[]; more: number } {
+  const d = obj(data);
+  return {
+    schema: str(d.schema),
+    more: num(d.more),
+    tables: list(d.tables)
+      .map(obj)
+      .filter((x) => str(x.name) !== "")
+      .map((x) => ({ name: str(x.name), view: x.view === true })),
+  };
+}
+
+export interface DBCellView {
+  v: string;
+  n: boolean;
+  m: boolean;
+  c: boolean;
+}
+
+export interface DBRowsView {
+  columns: string[];
+  rows: DBCellView[][];
+  next: number;
+  truncated: boolean;
+  masked: number;
+  ms: number;
+}
+
+/** readDBRows reads the answer of db.rows and db.query. */
+export function readDBRows(data: unknown): DBRowsView {
+  const d = obj(data);
+  return {
+    columns: list(d.columns).map(str),
+    rows: list(d.rows).map((r) =>
+      list(r)
+        .map(obj)
+        .map((c) => ({ v: str(c.v), n: c.n === true, m: c.m === true, c: c.c === true })),
+    ),
+    next: num(d.next),
+    truncated: d.truncated === true,
+    masked: num(d.masked),
+    ms: num(d.ms),
+  };
+}

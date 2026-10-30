@@ -183,3 +183,100 @@ func TestContainersViewer(t *testing.T) {
 		t.Fatalf("viewer buttons %q", got)
 	}
 }
+
+// openDB opens More › Databases and answers the connection list.
+func openDB(t *testing.T, vp Viewport, meta *webproto.Meta) (*Page, *HubConn) {
+	t.Helper()
+	s := StartServer(t)
+	p := NewPage(t, s, vp)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	if meta == nil {
+		meta = Meta("c-db")
+	}
+	c := p.LoginMeta(meta)
+	p.GoTab("more")
+	p.TapJS(`document.querySelector('.more-link[data-sub="db"]')`)
+	reply(t, c, expectOp(t, c, webproto.OpDBConns, `{}`), webproto.DBConns{Conns: []webproto.DBConn{
+		{ID: "local", Driver: "postgres", Database: "app", SQL: true},
+		{ID: "prod", Driver: "postgres", Database: "app", Env: "production", SQL: true},
+		{ID: "cache", Driver: "redis"},
+	}})
+	p.WaitJS(`document.querySelectorAll(".db-conn").length === 3`)
+	return p, c
+}
+
+// Databases: connections (no host shown, a Redis one only on the
+// laptop), tables, rows with NULL and masked cells as text; a read query
+// asks in the page; a write asks the laptop.
+func TestDBView(t *testing.T) {
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			p, c := openDB(t, vp, nil)
+			if !Eval[bool](p, `document.querySelector('.db-conn[data-conn="cache"]').disabled`) {
+				t.Error("a Redis connection can be opened here")
+			}
+			if s := p.Text(`.db-conn[data-conn="prod"] .db-chip.is-prod`); s != "production" {
+				t.Errorf("prod chip %q", s)
+			}
+			p.TapJS(`document.querySelector('.db-conn[data-conn="local"]')`)
+			reply(t, c, expectOp(t, c, webproto.OpDBTables, `{"conn":"local"}`), webproto.DBTables{Conn: "local", Schema: "public",
+				Tables: []webproto.DBTable{{Name: "users"}, {Name: "active", View: true}}})
+			p.WaitJS(`document.querySelectorAll(".db-table").length === 2`)
+			p.TapJS(`document.querySelector('.db-table[data-table="users"]')`)
+			reply(t, c, expectOp(t, c, webproto.OpDBRows, `{"conn":"local","table":"users","from":0}`), webproto.DBRows{
+				Columns: []string{"id", "email", "password"},
+				Rows: [][]webproto.DBCell{{{V: "1"}, {V: "<b>ada</b>"}, {V: webproto.DBMaskedValue, M: true}}, {{V: "2"}, {N: true}, {V: webproto.DBMaskedValue, M: true}}},
+				Next: 100, Masked: 2})
+			p.WaitJS(`document.querySelectorAll(".db-grid tbody tr").length === 2`)
+			if n := Eval[int](p, `document.querySelectorAll(".db-grid b").length`); n != 0 {
+				t.Fatal("a cell became HTML")
+			}
+			if s := p.Text(".db-grid td.is-null"); s != "NULL" {
+				t.Errorf("null cell %q", s)
+			}
+			if n := Eval[int](p, `document.querySelectorAll(".db-grid td.is-masked").length`); n != 2 {
+				t.Errorf("%d masked cells", n)
+			}
+			p.TapJS(ButtonByText("Next rows"))
+			reply(t, c, expectOp(t, c, webproto.OpDBRows, `{"conn":"local","table":"users","from":100}`), webproto.DBRows{Columns: []string{"id"}, Rows: [][]webproto.DBCell{{{V: "101"}}}, From: 100})
+			p.WaitJS(`document.querySelectorAll(".db-grid tbody tr").length === 1`)
+			p.TapJS(`document.querySelector(".dbv .sub-back")`)
+			reply(t, c, expectOp(t, c, webproto.OpDBTables, `{"conn":"local"}`), webproto.DBTables{Conn: "local", Tables: []webproto.DBTable{{Name: "users"}}})
+			p.WaitJS(`document.querySelector(".db-sql")`)
+			setInput(p, `document.querySelector(".db-sql")`, "SELECT count(*) FROM users")
+			p.TapJS(ButtonByText("Run query"))
+			p.WaitJS(`document.activeElement === document.querySelector(".row-ask button")`)
+			p.Key(kb.Enter) // Cancel
+			c.Quiet(t, 200*time.Millisecond)
+			p.TapJS(ButtonByText("Run query"))
+			p.TapJS(`[...document.querySelectorAll(".row-ask .btn")].find((b) => b.textContent === "Run query")`)
+			reply(t, c, expectOp(t, c, webproto.OpDBQuery, `{"conn":"local","sql":"SELECT count(*) FROM users"}`), webproto.DBRows{Columns: []string{"count"}, Rows: [][]webproto.DBCell{{{V: "2"}}}, Ms: 3})
+			p.WaitJS(`document.querySelector(".db-query .db-grid td")?.textContent === "2"`)
+
+			setInput(p, `document.querySelector(".db-sql")`, "DELETE FROM users")
+			p.TapJS(ButtonByText("Run query"))
+			p.TapJS(`[...document.querySelectorAll(".row-ask .btn")].find((b) => b.textContent === "Run query")`)
+			r := expectOp(t, c, webproto.OpDBQuery, `{"conn":"local","sql":"DELETE FROM users"}`)
+			c.Send(t, &webproto.ErrMsg{T: webproto.KindErr, ID: r.ID, Code: webproto.CodeForbidden, Msg: "This statement may change data. It needs the laptop."})
+			p.WaitJS(`document.querySelector(".ask-text")?.textContent === "This may change data on local. Ask the laptop to run it?"`)
+			p.WaitJS(`document.querySelector(".ask .arm.is-armed")`)
+			p.TapJS(ButtonByText("Ask the laptop"))
+			reply(t, c, expectOp(t, c, webproto.OpDBExec, `{"conn":"local","sql":"DELETE FROM users"}`), webproto.AskRef{Card: "card-21"})
+			p.WaitJS(`document.querySelector(".waiting")`)
+			p.noOverflow("databases")
+		})
+	}
+}
+
+// A viewer browses but gets no query box.
+func TestDBViewer(t *testing.T) {
+	m := Meta("c-v")
+	m.Role = webproto.RoleViewer
+	p, c := openDB(t, Phone, m)
+	p.TapJS(`document.querySelector('.db-conn[data-conn="local"]')`)
+	reply(t, c, expectOp(t, c, webproto.OpDBTables, `{"conn":"local"}`), webproto.DBTables{Conn: "local", Tables: []webproto.DBTable{{Name: "users"}}})
+	p.WaitJS(`document.querySelectorAll(".db-table").length === 1`)
+	if n := Eval[int](p, `document.querySelectorAll(".db-sql, .db-query").length`); n != 0 {
+		t.Fatal("a viewer gets a query box")
+	}
+}
