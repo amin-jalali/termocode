@@ -11,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/crash"
 	"github.com/amin-jalali/termocode/internal/git"
 )
 
@@ -91,10 +92,10 @@ func fetchGitCmd() tea.Cmd {
 			more  bool
 		)
 		done := make(chan struct{})
-		go func() {
-			defer close(done)
+		crash.Go("reading the git graph", func() {
+			defer close(done) // also after a panic, so the refresh goes on
 			graph, more, _ = git.Commits(cwd, 0, gitGraphLimit)
-		}()
+		})
 		st, err := git.StatusBranch(cwd)
 		<-done
 		if err != nil {

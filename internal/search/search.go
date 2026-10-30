@@ -669,7 +669,7 @@ func runFallback(ctx context.Context, dir, query string, opts Options, onFile fu
 	work := make(chan *fileJob, 64)
 	order := make(chan *fileJob, 256)
 	walkDone := make(chan error, 1)
-	go func() {
+	crash.GoWith("find in files: the folder walk", func() {
 		defer close(order)
 		defer close(work)
 		walkDone <- filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
@@ -703,12 +703,12 @@ func runFallback(ctx context.Context, dir, query string, opts Options, onFile fu
 			}
 			return nil
 		})
-	}()
+	}, func() { walkDone <- errors.New("the folder walk stopped") })
 	workers := min(max(runtime.GOMAXPROCS(0), 1), 8)
 	var wg sync.WaitGroup
 	for range workers {
 		wg.Add(1)
-		go func() {
+		crash.Go("find in files: a search worker", func() {
 			defer wg.Done()
 			var buf []byte
 			for j := range work {
@@ -716,7 +716,7 @@ func runFallback(ctx context.Context, dir, query string, opts Options, onFile fu
 				buf, rs = searchFile(j, buf, lm, opts.Context)
 				j.out <- rs
 			}
-		}()
+		})
 	}
 	defer wg.Wait()
 	for j := range order {
