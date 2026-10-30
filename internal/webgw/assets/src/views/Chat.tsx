@@ -18,6 +18,7 @@ import { Progress, SkeletonBubbles } from "../ui/Skeleton";
 import { errText } from "../ui/CardSheet";
 import { ChatList } from "./ChatList";
 import { Composer } from "./Composer";
+import { Run } from "./Run";
 import { View } from "./View";
 
 /** newChat asks the laptop for an empty chat; refused while the AI answers. */
@@ -43,6 +44,22 @@ function MsgText({ text, streaming }: { text?: string; streaming?: boolean }) {
       )}
       {streaming && !live.value && <span class="msg-paused">{t("chat.paused")}</span>}
     </p>
+  );
+}
+
+/** Extras: the attached image names and the rules file the turn used. */
+function Extras({ m }: { m: ChatMsg }) {
+  const imgs = m.images ?? [];
+  if (imgs.length === 0 && !m.rules) return null;
+  return (
+    <div class="msg-extras" dir="ltr">
+      {imgs.map((name, i) => (
+        <span key={i} class="chip">
+          🖼 {name}
+        </span>
+      ))}
+      {m.rules && <span class="chip">{t("chat.rules", { name: m.rules })}</span>}
+    </div>
   );
 }
 
@@ -89,6 +106,7 @@ export function Message({ m: raw, chat = "", canFetch = false }: { m: ChatMsg; c
             {m.md ? <Md doc={m.md} /> : <MsgText text={m.text} />}
             {rest}
           </div>
+          <Extras m={m} />
         </div>
       );
     case "tool":
@@ -116,6 +134,8 @@ export function Message({ m: raw, chat = "", canFetch = false }: { m: ChatMsg; c
             {m.md && !m.streaming ? <Md doc={m.md} /> : <MsgText text={m.text} streaming={m.streaming} />}
             {rest}
           </div>
+          <Run m={m} />
+          <Extras m={m} />
         </div>
       );
   }

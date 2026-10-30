@@ -89,3 +89,19 @@
 .msg-stub .sk-row { display: block; width: 60%; height: 1.25rem; border-radius: var(--r-chip); background: var(--bg-2); }
 .msg-stub.msg-user .sk-row { margin-inline-start: auto; width: 40%; }
 .stub-text { font-size: var(--fs-hint); color: var(--dim); }
+
+/* Runs and steps */
+.run { margin-top: var(--s2); border: 1px solid var(--border); border-radius: var(--r-chip); background: var(--bg-panel); font-size: var(--fs-row); }
+.run-head, .step-head { display: flex; align-items: center; gap: var(--s2); min-height: var(--tap); padding: 0 var(--s3); font-family: var(--font-mono); font-size: var(--fs-row); color: var(--text-2); unicode-bidi: isolate; overflow-wrap: anywhere; }
+.run-mark { color: var(--ai); }
+.run-head.st-failed, .step.st-failed .step-head { color: var(--red); }
+.run-head.st-done { color: var(--green); }
+.run-wait { margin: 0; padding: 0 var(--s3) var(--s2); color: var(--amber); }
+.step { border-top: 1px solid var(--border); }
+.step-head { cursor: pointer; list-style: none; }
+.step-head::-webkit-details-marker { display: none; }
+.step-head::before { content: "▸"; color: var(--dim); }
+.step[open] > .step-head::before { content: "▾"; }
+.step-body { padding: 0 var(--s3) var(--s2); display: flex; flex-direction: column; gap: var(--s1); font-size: var(--fs-body); }
+.step-error { margin: 0; color: var(--red); }
+.msg-extras { display: flex; flex-wrap: wrap; gap: var(--s1); margin-top: var(--s1); unicode-bidi: isolate; }

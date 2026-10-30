@@ -463,3 +463,42 @@ func TestChatLongHistoryPages(t *testing.T) {
 		t.Error("Load older is still there with nothing older")
 	}
 }
+
+// A Persian message reads right to left with its code still left to
+// right; an English one stays left to right in a Persian page.
+func TestChatPersianRTL(t *testing.T) {
+	fa := md("doc", md("p", mdText("تست‌ها رد شدند. فایل "), func() map[string]any { c := md("code"); c["text"] = "quit_test.go"; return c }(), mdText(" خط ۸۸ را ببین.")))
+	for _, vp := range Both {
+		t.Run(vp.Name, func(t *testing.T) {
+			p, _ := openChat(t, vp, chatWith(false, userMsg(0, "why does it fail?"), aiMsg(1, fa)))
+			const ai = `document.querySelector('[data-view="chat"] .msg-ai .md p')`
+			p.WaitJS(ai)
+			got := Eval[[]string](p, `[getComputedStyle(`+ai+`).direction, getComputedStyle(`+ai+`.querySelector("code")).direction, getComputedStyle(document.querySelector('[data-view="chat"] .msg-user p')).direction]`)
+			if got[0] != "rtl" || got[1] != "ltr" || got[2] != "ltr" {
+				t.Errorf("directions (persian, its code, english) = %v", got)
+			}
+		})
+	}
+}
+
+// A pipeline answer shows its run and its steps; a step opens to show
+// its tool lines and its answer.
+func TestChatRunSteps(t *testing.T) {
+	msg := map[string]any{"i": 1, "role": "assistant", "text": "Done.",
+		"run": map[string]any{"id": "r-1", "profile": "review", "state": "done", "elapsed_ms": 125000},
+		"steps": []any{
+			map[string]any{"id": "s-1", "title": "Planner", "state": "done", "model": "m-small", "tools": []any{"⚙ Read a.go → 10 lines"}, "md": md("doc", mdPara("plan text"))},
+			map[string]any{"id": "s-2", "title": "Coder", "state": "failed", "error": "tool refused"},
+		}}
+	p, _ := openChat(t, Phone, chatWith(false, userMsg(0, "go"), msg))
+	const run = `document.querySelector('[data-view="chat"] .msg-ai .run')`
+	p.WaitJS(run + `?.innerText.includes("review") && ` + run + `.innerText.includes("2m 05s")`)
+	if n := Eval[int](p, run+`.querySelectorAll("details.step").length`); n != 2 {
+		t.Fatalf("%d steps, want 2", n)
+	}
+	p.TapJS(run + `.querySelector("details.step summary")`)
+	p.WaitJS(run + `.querySelector("details.step[open]")?.innerText.includes("Read a.go") && ` + run + `.querySelector("details.step[open]").innerText.includes("plan text")`)
+	if !Eval[bool](p, run+`.innerText.includes("tool refused")`) {
+		t.Error("the failed step's error is not shown")
+	}
+}
