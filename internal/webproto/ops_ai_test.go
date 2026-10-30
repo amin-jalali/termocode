@@ -75,3 +75,36 @@ func TestAIActionOp(t *testing.T) {
 		}
 	}
 }
+
+// Spec (WEBP-3): the agent worktrees list and a changed file's two texts
+// are reads (a viewer may look, as at git diffs); Merge and Discard are
+// controller ops that run only after a laptop card. A worktree is named
+// by its id: never a path or an option.
+func TestAIWorktreeOps(t *testing.T) {
+	for _, op := range []string{OpAIWorktrees, OpAIWorktreeText} {
+		if p, ok := Lookup(op); !ok || p.Role != RoleViewer || p.LaptopCard {
+			t.Errorf("%s: %+v", op, p)
+		}
+	}
+	for _, op := range []string{OpAIWorktreeMerge, OpAIWorktreeDiscard} {
+		if p, ok := Lookup(op); !ok || p.Role != RoleController || !p.LaptopCard || p.Audit != AuditYes {
+			t.Errorf("%s: %+v", op, p)
+		}
+		if _, err := DecodeArgs(op, []byte(`{"id":"r1-left.2_x"}`)); err != nil {
+			t.Errorf("%s: %v", op, err)
+		}
+		for _, b := range []string{`{"id":""}`, `{"id":"-f"}`, `{"id":".."}`, `{"id":"a/b"}`, `{"id":"a b"}`, `{"id":"` + strings.Repeat("a", 65) + `"}`} {
+			if _, err := DecodeArgs(op, []byte(b)); err == nil {
+				t.Errorf("%s %s accepted", op, b)
+			}
+		}
+	}
+	if _, err := DecodeArgs(OpAIWorktreeText, []byte(`{"id":"r1-a","path":"src/a.go"}`)); err != nil {
+		t.Error(err)
+	}
+	for _, b := range []string{`{"id":"r1-a","path":"../x"}`, `{"id":"r1-a","path":"/etc/passwd"}`, `{"id":"r1-a","path":"src/"}`, `{"id":"r 1","path":"a"}`} {
+		if _, err := DecodeArgs(OpAIWorktreeText, []byte(b)); err == nil {
+			t.Errorf("%s accepted", b)
+		}
+	}
+}
