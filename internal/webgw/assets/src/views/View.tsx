@@ -10,6 +10,7 @@ export function View({
   children,
   foot,
   bodyRef,
+  actions,
 }: {
   tab: Tab;
   title: string;
@@ -18,6 +19,8 @@ export function View({
   /** foot stays under the scrolling body (the chat composer). */
   foot?: ComponentChildren;
   bodyRef?: Ref<HTMLDivElement>;
+  /** actions sit at the end of the header (small buttons). */
+  actions?: ComponentChildren;
 }) {
   return (
     <section class="view" data-view={tab} aria-labelledby={`vh-${tab}`}>
@@ -26,6 +29,7 @@ export function View({
           {title}
         </h1>
         {sub && <div class="view-sub">{sub}</div>}
+        {actions && <div class="view-actions">{actions}</div>}
       </header>
       <div class="view-body" ref={bodyRef}>
         {children}

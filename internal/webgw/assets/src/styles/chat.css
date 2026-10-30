@@ -40,3 +40,31 @@
 .cb-copy, .cb-more { min-height: var(--tap); padding: 0 var(--s3); color: var(--blue); font-size: var(--fs-hint); }
 .cb-more { width: 100%; border-top: 1px solid var(--border); }
 .cb-pre { margin: 0; padding: var(--s2) var(--s3); overflow-x: auto; direction: ltr; unicode-bidi: isolate; font-family: var(--font-mono); font-size: var(--fs-row); line-height: var(--lh-row); tab-size: 4; font-variant-ligatures: none; }
+
+/* Header actions and the composer */
+.view-actions { margin-inline-start: auto; display: flex; gap: var(--s1); align-self: center; }
+.head-btn { min-height: var(--tap); padding: 0 var(--s3); border-radius: var(--r-chip); color: var(--blue); font-size: var(--fs-hint); white-space: nowrap; }
+.head-btn:hover { background: var(--bg-hover); }
+.composer { padding: var(--s2) var(--gutter) var(--s2); border-top: 1px solid var(--border); background: var(--bg); }
+.composer-row { display: flex; align-items: flex-end; gap: var(--s2); }
+.composer-box {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: var(--tap);
+  max-height: 10rem;
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--bg-panel);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  resize: none;
+  overflow-y: auto;
+}
+.composer-box:focus-visible { outline: 2px solid var(--focus); outline-offset: -1px; }
+.composer .send .btn, .composer .stop .btn { min-width: 4.5rem; }
+.composer-note { margin: 0 0 var(--s2); padding-inline-start: var(--s2); border-inline-start: 2px solid var(--amber); font-size: var(--fs-hint); color: var(--text-2); }
+.composer-hint { margin-top: var(--s1); font-family: var(--font-mono); font-size: var(--fs-hint); color: var(--dim); }
+.layout-phone .composer-hint { display: none; }

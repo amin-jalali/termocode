@@ -6,12 +6,23 @@
 import { h } from "preact";
 import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import type { ChatMsg } from "../../../../webproto/proto";
+import { toast } from "../lib/toasts";
+import { ReqError } from "../net/link";
 import { link, live, store } from "../session";
 import { readChat } from "../state/chat";
 import { t } from "../strings";
 import { Md } from "../ui/Markdown";
 import { Progress, SkeletonBubbles } from "../ui/Skeleton";
+import { errText } from "../ui/CardSheet";
+import { Composer } from "./Composer";
 import { View } from "./View";
+
+/** newChat asks the laptop for an empty chat; refused while the AI answers. */
+function newChat(): void {
+  link.request("chat.new").catch((e: unknown) => {
+    if (e instanceof ReqError) toast("warn", e.code === "busy" ? t("chat.new_busy") : errText(e));
+  });
+}
 
 /** NEAR_BOTTOM_PX: closer than this to the end, new text keeps the view at the end. */
 const NEAR_BOTTOM_PX = 80;
@@ -119,7 +130,18 @@ export function ChatView() {
     );
   }
   return (
-    <View tab="chat" title={t("tab.chat")} sub={chat?.title ? <span class="trunc" dir="auto">{chat.title}</span> : undefined} bodyRef={body}>
+    <View
+      tab="chat"
+      title={t("tab.chat")}
+      sub={chat?.title ? <span class="trunc" dir="auto">{chat.title}</span> : undefined}
+      actions={
+        <button type="button" class="head-btn chat-new" onClick={newChat}>
+          {t("chat.new")}
+        </button>
+      }
+      bodyRef={body}
+      foot={st ? <Composer chat={chat?.id ?? ""} busy={chat?.busy ?? false} /> : undefined}
+    >
       {content}
     </View>
   );
