@@ -41,6 +41,9 @@ func (c *Client) unblocked(f func() error) error {
 		case err := <-done:
 			return err
 		case <-tick.C:
+			if c.nv == nil { // not connected (a test client): nothing can block
+				continue
+			}
 			m, err := c.nv.Mode()
 			if err == nil && m.Blocking && !strings.HasPrefix(m.Mode, "r") {
 				return ErrBlocked

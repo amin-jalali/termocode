@@ -22,7 +22,11 @@ func TestServeFailedEndsTheConnection(t *testing.T) {
 func TestUnblockedSurvivesAPanic(t *testing.T) {
 	c := &Client{exited: make(chan struct{})}
 	done := make(chan error, 1)
-	go func() { done <- c.unblocked(func() error { panic("test") }) }()
+	// The panic comes after a few poll ticks, as on a slow runner: a tick
+	// must not touch the missing connection.
+	go func() {
+		done <- c.unblocked(func() error { time.Sleep(5 * blockedPoll); panic("test") })
+	}()
 	select {
 	case err := <-done:
 		if err == nil {
