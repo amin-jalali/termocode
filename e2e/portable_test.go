@@ -71,3 +71,17 @@ func TestClickAfterThePressEndedTheApp(t *testing.T) {
 	}()
 	tm.Click(3, 4)
 }
+
+// The sandbox keeps the OS keyring out. On macOS the runner's login
+// keychain never answers: each start waited the probe's two seconds
+// (TestStartupSilentTerminal took 2.03 s) and the secrets card lost the
+// race to the restore card (TestUpgradeFromOldHome). Linux has no D-Bus
+// here, so it never tried.
+func TestSandboxHasNoKeyring(t *testing.T) {
+	for _, kv := range isolatedEnv(t.TempDir()) {
+		if kv == "TERMOCODE_NO_KEYRING=1" {
+			return
+		}
+	}
+	t.Fatal("isolatedEnv lets termocode use the OS keyring")
+}

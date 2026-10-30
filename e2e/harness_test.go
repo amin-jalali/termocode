@@ -282,6 +282,7 @@ func isolatedEnv(home string) []string {
 		"SHELL=/bin/sh",
 		"TERMOCODE_FONT_DELTA=0",
 		"TERMOCODE_NO_DB_DISCOVERY=1",
+		"TERMOCODE_NO_KEYRING=1", // never the real keychain (macOS: it hangs 2 s)
 		"GIT_CONFIG_NOSYSTEM=1",
 	}
 	for _, k := range keep {
