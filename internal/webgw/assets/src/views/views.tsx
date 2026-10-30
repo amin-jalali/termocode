@@ -9,6 +9,7 @@ import { NotifyField } from "../ui/NotifyField";
 import { Segmented } from "../ui/Segmented";
 import { TopicBody } from "./Placeholder";
 import { RunsView } from "./more/RunsView";
+import { SettingsView } from "./more/SettingsView";
 import { SearchView } from "./more/SearchView";
 import { TasksView } from "./more/TasksView";
 import { View } from "./View";
@@ -31,6 +32,7 @@ export function MoreView() {
   if (sub === "search") return <SearchView />;
   if (sub === "tasks") return <TasksView />;
   if (sub === "runs") return <RunsView />;
+  if (sub === "settings") return <SettingsView />;
   const p = prefs.value;
   // Built on each draw, so a language change shows at once.
   const themes = [
@@ -60,6 +62,9 @@ export function MoreView() {
           </button>
           <button type="button" class="more-link" onClick={() => go({ tab: "more", rest: "runs", query: {} })}>
             {t("more.runs")}
+          </button>
+          <button type="button" class="more-link" data-sub="settings" onClick={() => go({ tab: "more", rest: "settings", query: {} })}>
+            {t("more.settings")}
           </button>
         </nav>
         <section class="group" aria-labelledby="g-phone">
