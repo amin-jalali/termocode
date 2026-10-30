@@ -252,6 +252,15 @@ export interface GitStashArgs {
   message?: string;
 }
 
+export interface ContainerLogsArgs {
+  id: string;
+  lines?: number;
+}
+
+export interface ContainerArgs {
+  id: string;
+}
+
 export interface StatusSnap {
   root: string;
   workspace_label: string;
@@ -849,6 +858,36 @@ export interface GitBranches {
   upstream: boolean;
 }
 
+export interface ContainersList {
+  engine: string;
+  context?: string;
+  containers: ContainerItem[];
+  more?: number;
+}
+
+export interface ContainerItem {
+  id: string;
+  name: string;
+  image: string;
+  state: string;
+  status: string;
+  ports?: string;
+  project?: string;
+  busy?: boolean;
+}
+
+export interface ContainerLogs {
+  id: string;
+  lines: string[];
+  redacted?: number;
+  truncated?: boolean;
+}
+
+export interface ContainerDone {
+  state: string;
+  status?: string;
+}
+
 export type ClientMsg = Bye | Hello | Ping | Req | Sub | Unsub;
 export type ServerMsg = Delta | ErrMsg | Event | Meta | Pong | Res | Resync | ServerBye | Snap;
 
@@ -908,6 +947,12 @@ export interface OpArgs {
   "git.checkout": GitCheckoutArgs;
   "git.stash": GitStashArgs;
   "git.stash_pop": EmptyArgs;
+  "containers.list": EmptyArgs;
+  "containers.logs": ContainerLogsArgs;
+  "containers.start": ContainerArgs;
+  "containers.restart": ContainerArgs;
+  "containers.stop": ContainerArgs;
+  "containers.remove": ContainerArgs;
 }
 
 export type OpName = keyof OpArgs;
@@ -974,4 +1019,10 @@ export interface OpResult {
   "git.checkout": AskRef;
   "git.stash": AskRef;
   "git.stash_pop": AskRef;
+  "containers.list": ContainersList;
+  "containers.logs": ContainerLogs;
+  "containers.start": ContainerDone;
+  "containers.restart": ContainerDone;
+  "containers.stop": AskRef;
+  "containers.remove": AskRef;
 }

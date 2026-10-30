@@ -1096,6 +1096,92 @@
       "laptop_card": true,
       "audit": "yes",
       "phase": "v2"
+    },
+    {
+      "op": "containers.list",
+      "args": "EmptyArgs",
+      "result": "ContainersList",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "containers.logs",
+      "args": "ContainerLogsArgs",
+      "result": "ContainerLogs",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "containers.start",
+      "args": "ContainerArgs",
+      "result": "ContainerDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "containers.restart",
+      "args": "ContainerArgs",
+      "result": "ContainerDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "containers.stop",
+      "args": "ContainerArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "containers.remove",
+      "args": "ContainerArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
+      "phase": "v2"
     }
   ],
   "defs": {
@@ -1807,6 +1893,135 @@
       },
       "required": [
         "chats"
+      ],
+      "additionalProperties": true
+    },
+    "ContainerArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "ContainerDone": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "state"
+      ],
+      "additionalProperties": true
+    },
+    "ContainerItem": {
+      "type": "object",
+      "properties": {
+        "busy": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ports": {
+          "type": "string"
+        },
+        "project": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "image",
+        "state",
+        "status"
+      ],
+      "additionalProperties": true
+    },
+    "ContainerLogs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "redacted": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "lines"
+      ],
+      "additionalProperties": true
+    },
+    "ContainerLogsArgs": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "lines": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "ContainersList": {
+      "type": "object",
+      "properties": {
+        "containers": {
+          "items": {
+            "$ref": "#/defs/ContainerItem"
+          },
+          "type": "array"
+        },
+        "context": {
+          "type": "string"
+        },
+        "engine": {
+          "type": "string"
+        },
+        "more": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "engine",
+        "containers"
       ],
       "additionalProperties": true
     },

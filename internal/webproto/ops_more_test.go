@@ -76,3 +76,33 @@ func TestGitMoreOps(t *testing.T) {
 		t.Error("a stash message with a control character")
 	}
 }
+
+// Spec (WEB-44): the container reads are viewer ops; start and restart
+// are controller ops; stop and remove wait for the laptop. A container is
+// named only by its hex id, which no engine reads as an option.
+func TestContainerOps(t *testing.T) {
+	want := map[string]struct {
+		role Role
+		card bool
+	}{
+		OpContainersList: {RoleViewer, false}, OpContainersLogs: {RoleViewer, false},
+		OpContainersStart: {RoleController, false}, OpContainersRestart: {RoleController, false},
+		OpContainersStop: {RoleController, true}, OpContainersRemove: {RoleController, true},
+	}
+	for op, w := range want {
+		if p, ok := Lookup(op); !ok || p.Role != w.role || p.LaptopCard != w.card {
+			t.Errorf("%s: %+v", op, p)
+		}
+	}
+	if _, err := DecodeArgs(OpContainersStop, []byte(`{"id":"9f3c2e1a1234"}`)); err != nil {
+		t.Error(err)
+	}
+	for _, a := range []string{`{"id":""}`, `{"id":"-f"}`, `{"id":"nginx"}`, `{"id":"9F3C2E1A1234"}`, `{"id":"9f3c"}`} {
+		if _, err := DecodeArgs(OpContainersStop, []byte(a)); err == nil {
+			t.Errorf("%s accepted", a)
+		}
+	}
+	if _, err := DecodeArgs(OpContainersLogs, []byte(`{"id":"9f3c2e1a1234","lines":5000}`)); err == nil {
+		t.Error("5000 log lines accepted")
+	}
+}
