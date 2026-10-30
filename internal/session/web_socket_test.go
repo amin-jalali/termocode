@@ -43,3 +43,17 @@ func TestWebSocketNamesFit(t *testing.T) {
 		t.Fatalf("dir %q does not fit the web sockets", dir)
 	}
 }
+
+// Spec (WEB-9): the web gateway's status file, lock and redirect page sit
+// next to the session files under the same key.
+func TestWebFilesNextToSession(t *testing.T) {
+	t.Setenv("XDG_RUNTIME_DIR", shortTemp(t))
+	p, err := PathsFor("/some/project")
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := strings.TrimSuffix(p.Socket, ".sock")
+	if p.WebStatus != base+".web.json" || p.WebLock != base+".web.lock" || p.WebOpen != base+".web-open.html" {
+		t.Fatalf("web files %q %q %q", p.WebStatus, p.WebLock, p.WebOpen)
+	}
+}
