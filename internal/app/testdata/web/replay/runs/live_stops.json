@@ -1,0 +1,275 @@
+{
+  "topic": "runs",
+  "snap0": {
+    "runs": [
+      {
+        "can": [
+          "stop",
+          "pause"
+        ],
+        "chat": "fix the toast flicker",
+        "cost_usd": 0.009,
+        "elapsed_ms": 41000,
+        "key": "demo-live/runlive",
+        "live": true,
+        "profile": "review",
+        "started": 1769947159000,
+        "state": "running",
+        "step": 2,
+        "step_title": "Fixer",
+        "steps": 2,
+        "title": "fix the toast flicker"
+      },
+      {
+        "chat": "write release notes for 0.9",
+        "cost_usd": 0.019,
+        "elapsed_ms": 71000,
+        "key": "demo-notes/runnotes",
+        "needs_you": true,
+        "profile": "plan",
+        "started": 1769944740000,
+        "state": "resumable",
+        "step": 3,
+        "step_title": "Draft notes",
+        "steps": 5,
+        "title": "write release notes for 0.9",
+        "why": "termocode closed at 11:20 · 3 of 5 steps left"
+      },
+      {
+        "chat": "why does the toast flicker",
+        "cost_usd": 0.031,
+        "elapsed_ms": 58000,
+        "key": "demo-why/runwhy",
+        "profile": "review",
+        "started": 1769943120000,
+        "state": "done",
+        "step": 2,
+        "step_title": "Fixer",
+        "steps": 2,
+        "title": "why does the toast flicker"
+      },
+      {
+        "chat": "fix the double quit confirm",
+        "cost_usd": 0.064,
+        "elapsed_ms": 130000,
+        "key": "demo-quit/runquit",
+        "profile": "until-done",
+        "started": 1769939280000,
+        "state": "failed",
+        "step": 3,
+        "step_title": "Fix",
+        "steps": 3,
+        "title": "fix the double quit confirm",
+        "why": "verify still fails"
+      },
+      {
+        "chat": "tidy the status bar code",
+        "cost_usd": 0.04,
+        "elapsed_ms": 50000,
+        "key": "demo-o1/rundemo-o1",
+        "profile": "review",
+        "started": 1769853600000,
+        "state": "done",
+        "step": 2,
+        "step_title": "Fixer",
+        "steps": 2,
+        "title": "tidy the status bar code"
+      },
+      {
+        "chat": "add tests for the toast queue",
+        "cost_usd": 0.06,
+        "elapsed_ms": 50000,
+        "key": "demo-o2/rundemo-o2",
+        "profile": "review",
+        "started": 1769767200000,
+        "state": "done",
+        "step": 2,
+        "step_title": "Fixer",
+        "steps": 2,
+        "title": "add tests for the toast queue"
+      }
+    ]
+  },
+  "deltas": [
+    {
+      "runs": [
+        {
+          "can": [
+            "resume"
+          ],
+          "chat": "fix the toast flicker",
+          "cost_usd": 0.009,
+          "elapsed_ms": 0,
+          "key": "demo-live/runlive",
+          "needs_you": true,
+          "profile": "review",
+          "started": 1769947159000,
+          "state": "resumable",
+          "step": 2,
+          "step_title": "Fixer",
+          "steps": 2,
+          "title": "fix the toast flicker",
+          "why": "stopped at 11:59 · 1 of 2 steps left"
+        },
+        {
+          "chat": "write release notes for 0.9",
+          "cost_usd": 0.019,
+          "elapsed_ms": 71000,
+          "key": "demo-notes/runnotes",
+          "needs_you": true,
+          "profile": "plan",
+          "started": 1769944740000,
+          "state": "resumable",
+          "step": 3,
+          "step_title": "Draft notes",
+          "steps": 5,
+          "title": "write release notes for 0.9",
+          "why": "termocode closed at 11:20 · 3 of 5 steps left"
+        },
+        {
+          "chat": "why does the toast flicker",
+          "cost_usd": 0.031,
+          "elapsed_ms": 58000,
+          "key": "demo-why/runwhy",
+          "profile": "review",
+          "started": 1769943120000,
+          "state": "done",
+          "step": 2,
+          "step_title": "Fixer",
+          "steps": 2,
+          "title": "why does the toast flicker"
+        },
+        {
+          "chat": "fix the double quit confirm",
+          "cost_usd": 0.064,
+          "elapsed_ms": 130000,
+          "key": "demo-quit/runquit",
+          "profile": "until-done",
+          "started": 1769939280000,
+          "state": "failed",
+          "step": 3,
+          "step_title": "Fix",
+          "steps": 3,
+          "title": "fix the double quit confirm",
+          "why": "verify still fails"
+        },
+        {
+          "chat": "tidy the status bar code",
+          "cost_usd": 0.04,
+          "elapsed_ms": 50000,
+          "key": "demo-o1/rundemo-o1",
+          "profile": "review",
+          "started": 1769853600000,
+          "state": "done",
+          "step": 2,
+          "step_title": "Fixer",
+          "steps": 2,
+          "title": "tidy the status bar code"
+        },
+        {
+          "chat": "add tests for the toast queue",
+          "cost_usd": 0.06,
+          "elapsed_ms": 50000,
+          "key": "demo-o2/rundemo-o2",
+          "profile": "review",
+          "started": 1769767200000,
+          "state": "done",
+          "step": 2,
+          "step_title": "Fixer",
+          "steps": 2,
+          "title": "add tests for the toast queue"
+        }
+      ]
+    }
+  ],
+  "snapn": {
+    "runs": [
+      {
+        "key": "demo-live/runlive",
+        "title": "fix the toast flicker",
+        "chat": "fix the toast flicker",
+        "profile": "review",
+        "state": "resumable",
+        "why": "stopped at 11:59 · 1 of 2 steps left",
+        "step": 2,
+        "steps": 2,
+        "step_title": "Fixer",
+        "started": 1769947159000,
+        "elapsed_ms": 0,
+        "cost_usd": 0.009,
+        "needs_you": true,
+        "can": [
+          "resume"
+        ]
+      },
+      {
+        "key": "demo-notes/runnotes",
+        "title": "write release notes for 0.9",
+        "chat": "write release notes for 0.9",
+        "profile": "plan",
+        "state": "resumable",
+        "why": "termocode closed at 11:20 · 3 of 5 steps left",
+        "step": 3,
+        "steps": 5,
+        "step_title": "Draft notes",
+        "started": 1769944740000,
+        "elapsed_ms": 71000,
+        "cost_usd": 0.019,
+        "needs_you": true
+      },
+      {
+        "key": "demo-why/runwhy",
+        "title": "why does the toast flicker",
+        "chat": "why does the toast flicker",
+        "profile": "review",
+        "state": "done",
+        "step": 2,
+        "steps": 2,
+        "step_title": "Fixer",
+        "started": 1769943120000,
+        "elapsed_ms": 58000,
+        "cost_usd": 0.031
+      },
+      {
+        "key": "demo-quit/runquit",
+        "title": "fix the double quit confirm",
+        "chat": "fix the double quit confirm",
+        "profile": "until-done",
+        "state": "failed",
+        "why": "verify still fails",
+        "step": 3,
+        "steps": 3,
+        "step_title": "Fix",
+        "started": 1769939280000,
+        "elapsed_ms": 130000,
+        "cost_usd": 0.064
+      },
+      {
+        "key": "demo-o1/rundemo-o1",
+        "title": "tidy the status bar code",
+        "chat": "tidy the status bar code",
+        "profile": "review",
+        "state": "done",
+        "step": 2,
+        "steps": 2,
+        "step_title": "Fixer",
+        "started": 1769853600000,
+        "elapsed_ms": 50000,
+        "cost_usd": 0.04
+      },
+      {
+        "key": "demo-o2/rundemo-o2",
+        "title": "add tests for the toast queue",
+        "chat": "add tests for the toast queue",
+        "profile": "review",
+        "state": "done",
+        "step": 2,
+        "steps": 2,
+        "step_title": "Fixer",
+        "started": 1769767200000,
+        "elapsed_ms": 50000,
+        "cost_usd": 0.06
+      }
+    ]
+  }
+}
