@@ -167,8 +167,10 @@
   :root { --gutter: 2rem; }
 }
 
+/* More contrast wins over every theme: the light ones (more specific
+   selectors) and the laptop's (set on the html element). */
 @media (prefers-contrast: more) {
-  :root { --dim: var(--muted); --border: var(--muted); }
+  :root { --dim: var(--muted) !important; --border: var(--muted) !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {

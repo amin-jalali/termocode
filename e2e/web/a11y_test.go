@@ -149,3 +149,37 @@ func TestOfflineBarSpeaksOnce(t *testing.T) {
 		t.Error("the countdown is not on screen")
 	}
 }
+
+// Reduced motion stops every endless animation (the ✦ pulse, the busy
+// comet); more contrast raises the dim text; forced colours keep the
+// bars' edges and the focus ring.
+func TestMotionAndContrastPreferences(t *testing.T) {
+	s := StartServer(t)
+	p := NewPage(t, s, Phone)
+	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
+	c := p.Login("c-1")
+	st := statusData("main", 0)
+	st["ai"] = map[string]any{"provider_label": "AI", "model": "m", "busy": true, "cards_waiting": 0}
+	c.Send(t, Snap("status", 2, st))
+	p.WaitJS(`document.querySelector(".strip .ai-working")`)
+	endless := `document.getAnimations().filter((a) => a.playState === "running" && a.effect && a.effect.getComputedTiming().iterations === Infinity).length`
+	if n := Eval[float64](p, endless); n != 0 {
+		t.Errorf("%v endless animations run with reduced motion", n)
+	}
+
+	p.Media(map[string]string{"prefers-contrast": "more"})
+	if !Eval[bool](p, `(() => { const s = getComputedStyle(document.documentElement); return s.getPropertyValue("--dim").trim() === s.getPropertyValue("--muted").trim(); })()`) {
+		t.Error("more contrast does not raise --dim (light system theme)")
+	}
+
+	p.Media(map[string]string{"forced-colors": "active"})
+	if got := Eval[string](p, `getComputedStyle(document.querySelector(".tabbar")).borderTopStyle`); got != "solid" {
+		t.Errorf("forced colours: tab bar edge %q", got)
+	}
+	Eval[bool](p, `document.querySelector("nav .nav-item").focus() || true`)
+	p.Key("\t")
+	p.Key("\t")
+	if got := Eval[string](p, `getComputedStyle(document.activeElement).outlineStyle`); got == "none" {
+		t.Error("forced colours: no focus ring")
+	}
+}
