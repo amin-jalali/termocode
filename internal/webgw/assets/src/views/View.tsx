@@ -1,6 +1,5 @@
 // The frame every view shares: a sticky header and a scrolling body.
-import { h, type ComponentChildren } from "preact";
-import type { Ref } from "preact/hooks";
+import { h, type ComponentChildren, type Ref } from "preact";
 import type { Tab } from "../state/route";
 
 export function View({

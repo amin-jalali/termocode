@@ -108,10 +108,11 @@ func jsExports(src string) (names map[string]bool, from []string) {
 }
 
 // vendorTypes are the type-only names our sources take from the vendored
-// libraries; their .d.ts files are not vendored, so this list is the check.
+// libraries. This list is a cheap check that runs without tsc; the vendored
+// .d.ts files and TestTypeScriptTypeChecks are the real one.
 var vendorTypes = map[string]map[string]bool{
-	"preact":          {"VNode": true, "ComponentChildren": true, "ComponentType": true, "FunctionComponent": true, "JSX": true},
-	"preact/hooks":    {"MutableRef": true, "Ref": true},
+	"preact":          {"VNode": true, "ComponentChildren": true, "ComponentType": true, "FunctionComponent": true, "JSX": true, "Ref": true},
+	"preact/hooks":    {"MutableRef": true},
 	"@preact/signals": {"ReadonlySignal": true, "Signal": true},
 }
 

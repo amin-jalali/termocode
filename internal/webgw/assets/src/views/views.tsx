@@ -11,8 +11,6 @@ import { RunsView } from "./more/RunsView";
 import { SearchView } from "./more/SearchView";
 import { TasksView } from "./more/TasksView";
 import { View } from "./View";
-
-import { route } from "../lib/router";
 import { FileView } from "./FileView";
 import { TreeView } from "./Files";
 
