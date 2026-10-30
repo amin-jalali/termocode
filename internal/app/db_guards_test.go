@@ -195,6 +195,9 @@ func TestDatabasesGridColumnsAlignWithWideText(t *testing.T) {
 // Spec: the result cache hands back the same rows until the filter, the
 // sort or the loaded row count changes, and building it is paid once.
 func TestPerfGuardDatabasesDisplayedResultCache(t *testing.T) {
+	// pageIdx reads config.json; a file left in the shared config dir by
+	// another test adds its read and JSON parse to the count.
+	withConfigDir(t)
 	m := dbGridModel(dbWideResult(20000))
 	s := m.dbConsole()
 	first := s.displayedResult()
