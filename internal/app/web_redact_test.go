@@ -95,3 +95,27 @@ func TestNoSecretInReplies(t *testing.T) {
 		}
 	}
 }
+
+// Spec (WEB-7, T43): snapshots and deltas leave the hub redacted and
+// cleaned, also when two appends merge into one delta.
+func TestNoSecretInTopicFrames(t *testing.T) {
+	ai.RegisterSecret(webTestSecret)
+	r := newWebRig(t, nil)
+	n, log := 0, "boot "+webTestSecret
+	webTestTopics(r, &n, &log)
+	c, _ := r.webHello(webTestOpen)
+	c.send(`{"t":"sub","topics":["status"]}`)
+	snap, _ := r.next(c)
+	half := len(webTestSecret) / 2
+	h, qc := webQueueRig("status")
+	h.publish("status", webTextAppend{ID: "log", Append: "a " + webTestSecret[:half]})
+	h.publish("status", webTextAppend{ID: "log", Append: webTestSecret[half:] + " \x1b[0m"})
+	frames, _ := qc.out.take()
+	r.m.webPublish("status", map[string]string{"log": webTestSecret})
+	delta, _ := r.next(c)
+	for _, l := range []string{snap, string(frames[0]), delta} {
+		if strings.Contains(l, webTestSecret) || strings.Contains(l, "\\u001b") || !strings.Contains(l, "[REDACTED]") {
+			t.Fatalf("frame %s", l)
+		}
+	}
+}
