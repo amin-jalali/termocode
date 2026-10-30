@@ -273,6 +273,15 @@
       "deltas": [
         "DebugSnap"
       ]
+    },
+    {
+      "name": "services",
+      "keyed": false,
+      "phase": "v2",
+      "snap": "ServicesSnap",
+      "deltas": [
+        "ServicesSnap"
+      ]
     }
   ],
   "events": {
@@ -1294,6 +1303,76 @@
       "max_bytes": 1024,
       "laptop_card": false,
       "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "services.refresh",
+      "args": "EmptyArgs",
+      "role": "viewer",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "services.logs",
+      "args": "ServiceLogsArgs",
+      "result": "ServiceLogs",
+      "role": "viewer",
+      "rate": {
+        "n": 2,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "live": 1,
+      "laptop_card": false,
+      "audit": "no",
+      "phase": "v2"
+    },
+    {
+      "op": "services.start",
+      "args": "ServiceArgs",
+      "result": "ServiceDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "services.restart",
+      "args": "ServiceArgs",
+      "result": "ServiceDone",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 1000
+      },
+      "max_bytes": 1024,
+      "laptop_card": false,
+      "audit": "yes",
+      "phase": "v2"
+    },
+    {
+      "op": "services.stop",
+      "args": "ServiceArgs",
+      "result": "AskRef",
+      "role": "controller",
+      "rate": {
+        "n": 1,
+        "per_ms": 5000
+      },
+      "max_bytes": 1024,
+      "laptop_card": true,
+      "audit": "yes",
       "phase": "v2"
     },
     {
@@ -5228,6 +5307,191 @@
       "required": [
         "t",
         "code"
+      ],
+      "additionalProperties": true
+    },
+    "ServiceArgs": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "ServiceDone": {
+      "type": "object",
+      "properties": {
+        "asked": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "additionalProperties": true
+    },
+    "ServiceItem": {
+      "type": "object",
+      "properties": {
+        "busy": {
+          "type": "boolean"
+        },
+        "command": {
+          "type": "string"
+        },
+        "exit": {
+          "type": "integer"
+        },
+        "health": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "compose",
+            "local"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "ports": {
+          "items": {
+            "$ref": "#/defs/ServicePort"
+          },
+          "type": "array"
+        },
+        "since": {
+          "type": "integer"
+        },
+        "source": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "state",
+        "ports"
+      ],
+      "additionalProperties": true
+    },
+    "ServiceLogs": {
+      "type": "object",
+      "properties": {
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "redacted": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "lines"
+      ],
+      "additionalProperties": true
+    },
+    "ServiceLogsArgs": {
+      "type": "object",
+      "properties": {
+        "lines": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "ServicePort": {
+      "type": "object",
+      "properties": {
+        "open": {
+          "enum": [
+            "yes",
+            "no"
+          ]
+        },
+        "proto": {
+          "type": "string"
+        },
+        "published": {
+          "type": "integer"
+        },
+        "target": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "published"
+      ],
+      "additionalProperties": true
+    },
+    "ServicesSnap": {
+      "type": "object",
+      "properties": {
+        "compose_files": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "config_error": {
+          "type": "string"
+        },
+        "more": {
+          "type": "integer"
+        },
+        "problem": {
+          "type": "string"
+        },
+        "project": {
+          "type": "string"
+        },
+        "services": {
+          "items": {
+            "$ref": "#/defs/ServiceItem"
+          },
+          "type": "array"
+        },
+        "state": {
+          "enum": [
+            "none",
+            "loading",
+            "ready"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "compose_files",
+        "services"
       ],
       "additionalProperties": true
     },
