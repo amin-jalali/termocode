@@ -42,7 +42,8 @@ func TestPerfQuickOpen50k(t *testing.T) {
 	loadFilesIn([]string{dir})
 	var lists []time.Duration
 	var items []picker.Item
-	for i := 0; i < 3; i++ {
+	// Median of 9 (was 3): the CI runner swung 72-84 ms around a 78 ms budget.
+	for i := 0; i < 9; i++ {
 		t0 := time.Now()
 		items = loadFilesIn([]string{dir})
 		lists = append(lists, time.Since(t0))
@@ -63,6 +64,6 @@ func TestPerfQuickOpen50k(t *testing.T) {
 	}
 	slices.Sort(keys)
 	t.Logf("list %v; per key %v", lists, keys)
-	perfbudget.Check(t, "quick_open_50k_list", float64(lists[1].Microseconds()/100)/10)
+	perfbudget.Check(t, "quick_open_50k_list", float64(lists[len(lists)/2].Microseconds()/100)/10)
 	perfbudget.Check(t, "quick_open_50k_key", float64(keys[len(keys)/2].Microseconds()/100)/10)
 }

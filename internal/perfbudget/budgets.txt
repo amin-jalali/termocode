@@ -36,7 +36,7 @@ search_20k_done           128   ms   # same search to the end; local 64 ms (was 
 git_refresh_20k            47   ms   # Source Control refresh after a git action, 20k files, 2k changes; local 23 ms (was 51)
 
 # quick open (internal/app/quick_open_perf_test.go)
-quick_open_50k_list        78   ms   # Go to file, 50k files: list them; local 39 ms (was 111)
+quick_open_50k_list        78   ms   # Go to file, 50k files: list them, median of 9; local 39 ms (was 111)
 quick_open_50k_key         25   ms   # filter the 50k list after a typed key (median key); local 1.7 ms (floor; was 18.9)
 
 # testkit (internal/testkit/perf_ui_test.go). Before = feat/stab-perf.
