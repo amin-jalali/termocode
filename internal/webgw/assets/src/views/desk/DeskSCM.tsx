@@ -7,11 +7,15 @@
 // Unstage. A click opens the change in a diff editor tab. Commit asks in
 // the view first (Cancel first and focused); discarding, pull, push,
 // stash and switching branch ask the laptop. The branch and the sync
-// state are in the status bar.
+// state are in the status bar. The title bar opens the commit graph and
+// the pull requests; its … menu adds Commit (Amend) and Clone; a
+// conflicted file opens the merge editor and a stopped rebase shows
+// Continue, Skip and Abort (each asked on the laptop).
 import { Fragment, h, type ComponentChildren } from "preact";
 import { signal } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { diffTab } from "../../lib/difftab";
+import { GRAPH_TAB, mergeTab, PRS_TAB } from "../../lib/gittab";
 import { modKey } from "../../lib/platform";
 import { route } from "../../lib/router";
 import { keep, showFile } from "../../lib/workbench";
@@ -25,6 +29,8 @@ import { Cod, FileIcon } from "../../ui/icons";
 import { Act, Ask, PaneSection, PaneView, Row, Tree } from "../../ui/pane";
 import { DiscardFlow } from "../git/DiscardFlow";
 import { gitFailed } from "../git/errors";
+import { GitActionFlow, gitAction, gitMoreMenu } from "../git/GitMore";
+import { RebaseBanner } from "../git/RebaseBanner";
 import { ShowSheet } from "../git/ShowSheet";
 
 type Group = "merge" | "staged" | "changes";
@@ -39,12 +45,16 @@ export interface RemoteAsk {
 /** remoteAsk is the open laptop question of the view or the status bar. */
 export const remoteAsk = signal<RemoteAsk | null>(null);
 
-/** syncMenu lists pull, push, stash, pop and the branches (the view's …
- * and the status bar's sync and branch items). */
-export async function syncMenu(x: number, y: number): Promise<void> {
+/** syncMenu lists pull, push, stash, pop and the branches (the commit
+ * button's menu and the status bar's sync and branch items). The view's
+ * … menu puts its own items first (the graph, the pull requests, amend,
+ * clone) and opens at once, without the branches. */
+export async function syncMenu(x: number, y: number, more: MenuItems = [], branches = true): Promise<void> {
   const g = readGit(store.topic("git").peek()?.data);
   const branch = g.branch.name;
   const items: (MenuItems[number])[] = [
+    ...more,
+    ...(more.length ? [null] : []),
     { label: t("git.pull"), run: () => (remoteAsk.value = { op: "git.pull", args: {}, text: t("git.pull_q", { branch }) }) },
     { label: t("git.push"), run: () => (remoteAsk.value = { op: "git.push", args: {}, text: t("git.push_q", { branch }) }) },
     null,
@@ -52,12 +62,13 @@ export async function syncMenu(x: number, y: number): Promise<void> {
     { label: t("git.pop"), run: () => (remoteAsk.value = { op: "git.stash_pop", args: {}, text: t("git.pop_q") }) },
   ];
   let others: string[] = [];
-  try {
-    const r = (await link.request("git.branches", {})) as { branches?: unknown };
-    others = (Array.isArray(r?.branches) ? r.branches : []).filter((b): b is string => typeof b === "string" && b !== branch);
-  } catch {
-    others = [];
-  }
+  if (branches)
+    try {
+      const r = (await link.request("git.branches", {})) as { branches?: unknown };
+      others = (Array.isArray(r?.branches) ? r.branches : []).filter((b): b is string => typeof b === "string" && b !== branch);
+    } catch {
+      others = [];
+    }
   if (others.length) {
     items.push(null);
     for (const b of others.slice(0, 12)) items.push({ label: t("scm.checkout", { branch: b }), run: () => (remoteAsk.value = { op: "git.checkout", args: { branch: b }, text: t("git.checkout_q", { branch: b }) }) });
@@ -92,9 +103,10 @@ function letter(f: GitFile, g: Group): { l: string; c: string } {
   return { l: "M", c: "c-mod" };
 }
 
-/** open shows a change: a diff tab (a new or conflicted file as itself). */
+/** open shows a change: a diff tab, a conflicted file's merge editor, a
+ * new file as itself. */
 function open(f: GitFile, g: Group, pin = false): void {
-  const tab = g === "merge" || f.untracked ? f.path : diffTab(g === "staged" ? "idx" : "wt", f.path);
+  const tab = g === "merge" ? mergeTab(f.path) : f.untracked ? f.path : diffTab(g === "staged" ? "idx" : "wt", f.path);
   showFile(tab, !pin);
   if (pin) keep(tab);
 }
@@ -196,7 +208,19 @@ export function DeskSCM() {
   let body;
   if (!st) body = <p class="pv-msg">{t("git.reading")}</p>;
   else if (g.loading) body = <p class="pv-msg">{t("git.reading")}</p>;
-  else if (!g.repo) body = <p class="pv-msg">{t("git.not_repo")}</p>;
+  else if (!g.repo)
+    body = (
+      <>
+        <p class="pv-msg">{t("git.not_repo")}</p>
+        {canAct && (
+          <div class="scm-input">
+            <button type="button" class="pv-btn gx-clone" data-act="clone" onClick={() => (gitAction.value = "clone")}>
+              {t("gx.clone")}…
+            </button>
+          </div>
+        )}
+      </>
+    );
   else
     body = (
       <>
@@ -247,7 +271,7 @@ export function DeskSCM() {
             )}
           </div>
         )}
-        {g.op && <p class="pv-msg c-warn">{t("git.op", { op: g.op })}</p>}
+        {g.op === "rebase" ? <RebaseBanner seq={st?.seq} /> : g.op && <p class="pv-msg c-warn">{t("git.op", { op: g.op })}</p>}
         <div class="pv-scroll">
           <Tree label={t("act.scm")}>
             {groups.conflicts.length > 0 && (
@@ -310,17 +334,20 @@ export function DeskSCM() {
       id="git"
       title={t("act.scm")}
       actions={
-        g.repo &&
-        !viewer && (
+        g.repo && (
           <>
-            <Act icon="check" label={t("git.commit_do")} keys={`${modKey()}+Enter`} disabled={!ready} onClick={askCommit} />
+            {!viewer && <Act icon="check" label={t("git.commit_do")} keys={`${modKey()}+Enter`} disabled={!ready} onClick={askCommit} />}
+            <Act icon="git-commit" act="graph" label={t("gg.open")} onClick={() => showFile(GRAPH_TAB)} />
+            <Act icon="git-pull-request" act="prs" label={t("pr.tab")} onClick={() => showFile(PRS_TAB)} />
             <Act
               icon="ellipsis"
+              act="more"
               label={t("scm.more_actions")}
-              disabled={!canAct}
               onClick={(e) => {
                 const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                void syncMenu(r.left, r.bottom);
+                const more = gitMoreMenu(g.repo, canAct, g.op, (a) => (gitAction.value = a));
+                if (canAct) void syncMenu(r.left, r.bottom, more, false);
+                else openMenu(r.left, r.bottom, t("scm.more_actions"), more);
               }}
             />
           </>
@@ -330,6 +357,7 @@ export function DeskSCM() {
       {body}
       {discard && <DiscardFlow paths={discard} onDone={() => setDiscard(null)} />}
       {show && <ShowSheet hash={show} onClose={() => setShow("")} />}
+      {gitAction.value && <GitActionFlow kind={gitAction.value} onDone={() => (gitAction.value = null)} />}
     </PaneView>
   );
 }

@@ -42,7 +42,8 @@ func openGit(t *testing.T, vp Viewport, snap webproto.GitSnap) (*Page, *HubConn)
 	p.GoTab("git")
 	waitGitSub(t, p, c)
 	c.Send(t, Snap("git", 1, snap))
-	p.WaitJS(`document.querySelector('.git-row-wrap[data-path="b.go"]')`)
+	// A phone's or tablet's rows, or the desktop's source control tree.
+	p.WaitJS(`document.querySelector('.git-row-wrap[data-path="b.go"], .wb-side [data-view="git"] .tr[data-path="b.go"]')`)
 	return p, c
 }
 
