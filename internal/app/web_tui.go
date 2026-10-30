@@ -48,11 +48,16 @@ func webStartBody(cfg webConfig, fromCLI bool) string {
 	var b strings.Builder
 	b.WriteString("Anyone who controls the browser tab can run any command as you.\n")
 	b.WriteString("The browser shows your files, chats and terminals and can type into them.\n")
-	b.WriteString("The panel listens only on this computer (127.0.0.1")
-	if cfg.Port != 0 {
-		b.WriteString(":" + strconv.Itoa(cfg.Port))
+	if cfg.Tailnet {
+		b.WriteString("Your devices on your tailnet can reach it (tailscale serve), not on the internet.\n")
+	} else {
+		b.WriteString("The panel listens only on this computer (127.0.0.1")
+		if cfg.Port != 0 {
+			b.WriteString(":" + strconv.Itoa(cfg.Port))
+		}
+		b.WriteString(").\n")
 	}
-	b.WriteString(").\nShell output in the terminal panel is not masked.\n")
+	b.WriteString("Shell output in the terminal panel is not masked.\n")
 	b.WriteString("It stops after " + strconv.Itoa(cfg.IdleMinutes) + " minutes without use, or with Web: Stop Panel.")
 	if fromCLI {
 		b.WriteString("\n\nAsked by termocode web in a terminal.")

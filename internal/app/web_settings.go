@@ -18,6 +18,7 @@ type webConfig struct {
 	MaxHours    int
 	OpenBrowser bool
 	MaxViewers  int
+	Tailnet     bool     // web_listen: "tailnet" (WEB-31)
 	Problems    []string // one line per bad value, for a warning toast
 }
 
@@ -31,6 +32,13 @@ func webSettings() webConfig {
 		c.On = true
 	default:
 		c.Problems = append(c.Problems, fmt.Sprintf("web_panel %q: use \"on\" or \"off\"", s.WebPanel))
+	}
+	switch strings.ToLower(strings.TrimSpace(s.WebListen)) {
+	case "", "loopback":
+	case "tailnet":
+		c.Tailnet = true
+	default:
+		c.Problems = append(c.Problems, fmt.Sprintf("web_listen %q: use \"loopback\" or \"tailnet\"", s.WebListen))
 	}
 	intIn := func(key string, v *int, lo, hi int, dst *int) {
 		if v == nil {

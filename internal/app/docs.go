@@ -310,6 +310,8 @@ var fileOnlySettings = []SettingEntry{
 		Description: "The \"Always allow\" answers you gave on an outside agent's card (see mcp_server): agent name → tool names that run without asking for that agent. Separate from ai_auto_approve, which never applies to outside agents. The name is the agent's own claim. See and revoke them in AI: Agent Auto-Approve…."},
 	{Key: "web_panel", Type: "enum", Default: "off", Category: "Web (file only)", Choices: []string{"off", "on"},
 		Description: "The web panel (experimental): your files, chats and terminals in a web browser, on this computer or over SSH. on: termocode listens on a private socket in the session folder, and Web: Start Panel (or termocode web) can open the panel after you say yes on a card. Anyone who controls the browser tab can run any command as you. off: nothing listens and the commands only explain how to turn it on. Applied when you save config.json."},
+	{Key: "web_listen", Type: "enum", Default: "loopback", Category: "Web (file only)", Choices: []string{"loopback", "tailnet"},
+		Description: "Where the web panel can be reached. loopback: only on this computer (127.0.0.1), or over termocode ssh --web. tailnet: also from your own devices on your Tailscale network, at https://<this computer>.<tailnet>.ts.net/; termocode runs tailscale serve while the panel runs and refuses to start when the port is public (Funnel). Needs Tailscale with HTTPS turned on."},
 	{Key: "web_port", Type: "int", Default: "0", Category: "Web (file only)",
 		Description: "The port the web panel listens on, on 127.0.0.1 only. 0: a free port each time. Else 1024..65535."},
 	{Key: "web_idle_minutes", Type: "int", Default: "15", Category: "Web (file only)",

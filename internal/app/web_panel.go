@@ -39,6 +39,7 @@ var webStopGrace = time.Second
 type webPanelState struct {
 	proc     *webGatewayProc
 	port     int
+	url      string // the browser's address when it is not 127.0.0.1 (tailnet mode)
 	up       bool
 	stopping bool
 	plain    string // the newest launch secret, for the browser link
@@ -69,6 +70,7 @@ type webPanelUpMsg struct {
 	hub  *webHub
 	proc *webGatewayProc
 	port int
+	url  string // tailnet mode: https://<machine>.<tailnet>.ts.net/
 }
 
 type webPanelFailMsg struct {
@@ -141,10 +143,13 @@ func (m *Model) startWebPanelOn(open, copyLink bool, sshPort int) tea.Cmd {
 	args := []string{"--dir", aiWorkspaceRoot(), "--audit", audit,
 		"--idle-min", strconv.Itoa(cfg.IdleMinutes), "--max-hours", strconv.Itoa(cfg.MaxHours),
 		"--viewers", strconv.Itoa(cfg.MaxViewers)}
-	if sshPort > 0 {
+	switch {
+	case sshPort > 0:
 		args = append(args, "--ssh-port", strconv.Itoa(sshPort))
 		open, copyLink = false, false // the browser is on the user's computer
-	} else {
+	case cfg.Tailnet:
+		args = append(args, "--tailnet")
+	default:
 		args = append(args, "--port", strconv.Itoa(cfg.Port))
 	}
 	proc, err := webGatewayStart(m.web, args)
@@ -180,6 +185,9 @@ func (m *Model) onWebPanelUp(msg webPanelUpMsg) tea.Cmd {
 		return nil
 	}
 	st.up, st.port = true, msg.port
+	if strings.HasPrefix(msg.url, "https://") {
+		st.url = msg.url
+	}
 	for _, w := range st.waiters {
 		m.webCtlReply(w)
 	}
@@ -196,22 +204,30 @@ func (m *Model) onWebPanelUp(msg webPanelUpMsg) tea.Cmd {
 // just says the panel is on.
 func (m *Model) webDeliverLink(open, copyLink bool) tea.Cmd {
 	st := m.webPanel
-	link := fmt.Sprintf("http://127.0.0.1:%d/#s=%s", st.port, st.plain)
+	base := fmt.Sprintf("http://127.0.0.1:%d/", st.port)
+	if st.url != "" {
+		base = st.url
+	}
+	link := base + "#s=" + st.plain
 	st.plain = "" // used once here; a new link makes a new secret
+	where := ""
+	if st.url != "" {
+		where = " Your tailnet devices reach it at " + st.url
+	}
 	switch {
 	case copyLink:
 		// Never in an nvim register: the link would stay there (WEB-F1).
 		if writeSystemClipboard(link) == clipFailed {
 			return m.webToast(toast.Warn, "Could not copy the link. Use Web: Start Panel to open it in a browser.")
 		}
-		return m.webToast(toast.Info, "Link copied. It works once, for 60 seconds.")
+		return m.webToast(toast.Info, "Link copied. It works once, for 60 seconds."+where)
 	case open:
 		if err := m.webOpenLink(link); err != nil {
 			return m.webToast(toast.Warn, "Could not open a browser. Use Web: Copy Link.")
 		}
-		return m.webToast(toast.Info, "Web panel is on. The link opened in your browser.")
+		return m.webToast(toast.Info, "Web panel is on. The link opened in your browser."+where)
 	}
-	return m.webToast(toast.Info, "Web panel is on. Use Web: Copy Link to open it.")
+	return m.webToast(toast.Info, "Web panel is on. Use Web: Copy Link to open it."+where)
 }
 
 // webOpenLink writes the 0600 redirect page and opens its path (never the

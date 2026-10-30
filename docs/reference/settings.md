@@ -137,6 +137,7 @@ Settings live in `~/.config/termocode/config.json` (or `$XDG_CONFIG_HOME/termoco
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `web_panel` | enum | `off` | The web panel (experimental): your files, chats and terminals in a web browser, on this computer or over SSH. on: termocode listens on a private socket in the session folder, and Web: Start Panel (or termocode web) can open the panel after you say yes on a card. Anyone who controls the browser tab can run any command as you. off: nothing listens and the commands only explain how to turn it on. Applied when you save config.json. |
+| `web_listen` | enum | `loopback` | Where the web panel can be reached. loopback: only on this computer (127.0.0.1), or over termocode ssh --web. tailnet: also from your own devices on your Tailscale network, at https://<this computer>.<tailnet>.ts.net/; termocode runs tailscale serve while the panel runs and refuses to start when the port is public (Funnel). Needs Tailscale with HTTPS turned on. |
 | `web_port` | int | `0` | The port the web panel listens on, on 127.0.0.1 only. 0: a free port each time. Else 1024..65535. |
 | `web_idle_minutes` | int | `15` | The web panel stops after this many minutes with no use from any browser (1..120). |
 | `web_max_hours` | int | `12` | The web panel stops this many hours after it started, in use or not (1..24). |
