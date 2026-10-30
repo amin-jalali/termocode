@@ -121,7 +121,7 @@ export function LiveEditor({ path, buf, desk, slot = "g0" }: { path: string; buf
               // definition (another file opens in its tab), references.
               path,
               lsp: true,
-              refsLabel: t("refs.find"),
+              refsLabel: t("menu.refs"),
               onLsp: (kind, line, col) => ask(kind, buf, line, col),
               onRefs: (line, col) => findRefs(path, buf, line, col, wordAt(peek()?.lines[line] ?? "", col)),
               onOpen: (to, line, col) => goTo(to, line, col),
