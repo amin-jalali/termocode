@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"sync/atomic"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -20,6 +21,19 @@ import (
 // tea.Cmd's message or a goroutine that watches call.ctx: anything slow
 // (git, search, a big file, an nvim call that may wait) must not run on
 // Update.
+
+// webCallBudget is what a handler may take on Update. Longer work goes to
+// a tea.Cmd or a goroutine (T41).
+const webCallBudget = 20 * time.Millisecond
+
+// webNow is the clock of the budget guard; tests swap it.
+var webNow = time.Now
+
+// webSlowCall hears a handler over its budget: a bug in that op, logged
+// to errors.log. Tests swap it.
+var webSlowCall = func(op string, d time.Duration) {
+	recordError(fmt.Sprintf("[web] %s took %s on the UI thread (budget %s)", op, d.Round(time.Millisecond), webCallBudget))
+}
 
 // webOpFunc runs one request on Update.
 type webOpFunc func(m *Model, call *webCall) tea.Cmd
@@ -121,7 +135,11 @@ func (m *Model) onWebCall(msg webCallMsg) tea.Cmd {
 		call.fail(webproto.CodeNotFound, "This is not available yet.")
 		return next
 	}
+	start := webNow()
 	cmd := m.webRunOp(fn, call)
+	if d := webNow().Sub(start); d > webCallBudget {
+		webSlowCall(call.op, d)
+	}
 	if !call.deferred && !call.answered.Load() {
 		recordError("[web] " + call.op + " gave no answer")
 		call.fail(webproto.CodeInternal, "Something went wrong.")

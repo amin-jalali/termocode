@@ -219,3 +219,34 @@ func TestCallCtxCancelled(t *testing.T) {
 		t.Fatal("the slow call's context did not end with the hub")
 	}
 }
+
+// Spec (WEB-6, T41): a handler has 20 ms on Update; one that takes longer
+// is reported (it must move its work to a cmd), one within it is not.
+func TestCallBudgetGuard(t *testing.T) {
+	r := newWebRig(t, nil)
+	now := time.Unix(1000, 0)
+	oldNow, oldSlow := webNow, webSlowCall
+	t.Cleanup(func() { webNow, webSlowCall = oldNow, oldSlow })
+	webNow = func() time.Time { return now }
+	var slow []string
+	webSlowCall = func(op string, d time.Duration) { slow = append(slow, op+" "+d.String()) }
+	r.hub.ops = map[string]webOpFunc{
+		webproto.OpChatOpen: func(m *Model, call *webCall) tea.Cmd {
+			if call.args.(*webproto.ChatOpenArgs).ID == "slow" {
+				now = now.Add(webCallBudget + 5*time.Millisecond)
+			} else {
+				now = now.Add(webCallBudget / 4)
+			}
+			call.reply(nil)
+			return nil
+		},
+	}
+	c, _ := r.webHello(webTestOpen)
+	c.send(`{"t":"req","id":1,"op":"chat.open","args":{"id":"fast"}}`)
+	r.nextMsg(c)
+	c.send(`{"t":"req","id":2,"op":"chat.open","args":{"id":"slow"}}`)
+	r.nextMsg(c)
+	if len(slow) != 1 || slow[0] != "chat.open 25ms" {
+		t.Fatalf("slow calls %v, want [chat.open 25ms]", slow)
+	}
+}
