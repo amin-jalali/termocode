@@ -42,10 +42,23 @@ func TestScaleAIHugeStreamedAnswer(t *testing.T) {
 		}
 	}
 	answer := para.String() + "\nEND-OF-ANSWER\n"
+	// drawn lets the next chunk go once the test drew a frame. Without
+	// it a slow runner fell behind the stream: a frame drew every chunk
+	// that came while the last one drew, so the next frame was longer
+	// still (macOS CI, -race: 2.7 s). A frame now draws at most two
+	// chunks, as in the app, where each chunk is its own update.
+	drawn := make(chan struct{}, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		fl, _ := w.(http.Flusher)
 		for i := 0; i < len(answer); i += 4096 {
+			if i > 0 {
+				select {
+				case <-drawn:
+				case <-r.Context().Done():
+					return
+				}
+			}
 			part := answer[i:min(i+4096, len(answer))]
 			q := strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(part, `\`, `\\`), "\n", `\n`), `"`, `\"`)
 			fmt.Fprintf(w, "data: {\"choices\":[{\"delta\":{\"content\":\"%s\"}}]}\n\n", q)
@@ -81,6 +94,10 @@ func TestScaleAIHugeStreamedAnswer(t *testing.T) {
 		tf := time.Now()
 		d.Settle(20 * time.Millisecond)
 		frame = max(frame, time.Since(tf))
+		select {
+		case drawn <- struct{}{}:
+		default:
+		}
 	}
 	if !done() {
 		t.Fatalf("the answer did not finish:\n%s", screen(d))
