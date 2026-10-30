@@ -111,6 +111,9 @@ func NewPageLang(t *testing.T, s *Server, vp Viewport, lang string) *Page {
 		chromedp.Flag("lang", lang),
 		chromedp.Flag("accept-lang", lang),
 	)
+	if s.Site.Scheme == "https" {
+		opts = append(opts, chromedp.Flag("ignore-certificate-errors", true)) // the test's own certificate
+	}
 	if os.Getenv("CI") != "" {
 		// Hosted runners do not allow Chrome's user-namespace sandbox. The
 		// page is our own, served from loopback.

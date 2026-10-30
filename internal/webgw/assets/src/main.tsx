@@ -131,6 +131,15 @@ addEventListener("keydown", (e: KeyboardEvent) => {
   }
 });
 
+// Installable only on an https (tailnet) site, whose origin stays the
+// same between starts (WEB-35); the gateway serves the manifest only there.
+if (location.protocol === "https:") {
+  const m = document.createElement("link");
+  m.rel = "manifest";
+  m.href = "/manifest.webmanifest";
+  document.head.appendChild(m);
+}
+
 watchViewport();
 setOnOpen((kind) => (kind === "card" ? openCards() : goTab("more")));
 
