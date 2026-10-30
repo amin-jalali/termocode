@@ -306,11 +306,14 @@ func TestDeskAIMenuDocRejectAndExplain(t *testing.T) {
 	p.WaitJS(`document.querySelector(".chatcol")`)
 }
 
-// The chat's header shows the laptop's profile and model; picking
-// another asks here first (Cancel first), then the laptop.
+// The chat's input shows the laptop's profile and model (where its
+// header showed nothing of them); picking another asks here first
+// (Cancel first), then the laptop.
 func TestDeskAIPicker(t *testing.T) {
 	p, c := openFiles(t, Desktop)
+	c.Send(t, Snap("chat", 1, chatWith(false, userMsg(0, "hi"))))
 	c.Send(t, Snap("ai", 1, aiFixture(true, true)))
+	p.WaitJS(`document.querySelector(".chatcol .composer-tools .ai-pick") && !document.querySelector(".chatcol .view-head .ai-pick, .chatcol header .ai-pick")`)
 	pick := `document.querySelector('.ai-pick[data-pick="profile"]')`
 	p.WaitJS(pick + `?.textContent.includes("default") && document.querySelector('.ai-pick[data-pick="model"]')?.textContent.includes("claude-sonnet-4-5")`)
 	p.TapJS(pick)

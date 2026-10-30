@@ -22,7 +22,6 @@ import { errText } from "../ui/CardSheet";
 import { ChatList } from "./ChatList";
 import { Composer } from "./Composer";
 import { Run } from "./Run";
-import { AIPicker } from "./AIPicker";
 import { View } from "./View";
 
 /** newChat asks the laptop for an empty chat; refused while the AI answers. */
@@ -290,7 +289,6 @@ export function ChatView() {
       sub={chat?.title ? <span class="trunc" dir="auto">{chat.title}</span> : undefined}
       actions={
         <>
-          <AIPicker />
           {pin && <span class="chat-pinned">📌 {t("chat.pinned")}</span>}
           <button type="button" class={`head-btn chat-list-btn${list ? " is-on" : ""}`} aria-pressed={list ? "true" : "false"} title={desk ? t("chat.list") : undefined} onClick={() => setList(!list)}>
             {desk ? (

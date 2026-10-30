@@ -4,6 +4,8 @@
 // the laptop (another chat is open there, the AI is busy) shows one calm
 // line and keeps the draft. Enter sends with a keyboard; on a phone Enter
 // is a new line and the Send button sends.
+import { aiSnap } from "../lib/ai";
+import { AIPicker } from "./AIPicker";
 import { h } from "preact";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { getDraft, setDraft } from "../lib/drafts";
@@ -106,9 +108,15 @@ export function Composer({ chat, busy, profile = "", model = "" }: { chat: strin
       </div>
       {desk && (
         <div class="composer-tools">
-          <span class="chat-chip" title={t("chat.agent")}>
-            <Cod name="sparkle" /> {[profile || t("chat.default_profile"), model].filter(Boolean).join(" · ")}
-          </span>
+          {aiSnap()?.configured ? (
+            <span class="chat-picks">
+              <AIPicker />
+            </span>
+          ) : (
+            <span class="chat-chip" title={t("chat.agent")}>
+              <Cod name="sparkle" /> {[profile || t("chat.default_profile"), model].filter(Boolean).join(" · ")}
+            </span>
+          )}
           <span class={busy ? "stop" : "send"}>
             {busy ? (
               <Button kind="quiet" needsLink icon={<Cod name="debug-stop" />} iconOnly title={t("stop")} onClick={stop}>
