@@ -15,6 +15,8 @@ type guard struct {
 
 // Guard wraps next with the request checks of the gateway:
 //   - Host must be one of site.Hosts exactly, else 421 (DNS rebinding, T1).
+//   - Only GET and POST, else 405; OPTIONS too, so there is no CORS
+//     preflight answer and never an Access-Control-* header.
 //   - An Origin header must be this exact origin; POST and upgrades must
 //     send one. Else 403 (cross-site WebSocket and CSRF, T2, T3).
 //
@@ -27,6 +29,11 @@ func (g *guard) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	setSecurityHeaders(w.Header(), g.csp, g.site)
 	if !g.site.hasHost(r.Host) || (r.URL.Host != "" && r.URL.Host != r.Host) {
 		refuse(w, http.StatusMisdirectedRequest, "wrong host")
+		return
+	}
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		w.Header().Set("Allow", "GET, POST")
+		refuse(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
 	if !g.originOK(r) {
