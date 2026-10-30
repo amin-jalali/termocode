@@ -196,7 +196,9 @@ func TestCovSvcSQLiteTableCommands(t *testing.T) {
 	covSvcWaitFrame(t, d, "CREATE TABLE users")
 	d.Palette("db-count-rows")
 	d.Palette("db-select")
-	if !d.WaitFor(func() bool { return strings.Contains(dbLua(t, d, `return table.concat(vim.api.nvim_buf_get_lines(0,0,-1,false),'\n')`), "SELECT") }, 4*time.Second) {
+	if !d.WaitFor(func() bool {
+		return strings.Contains(dbLua(t, d, `return table.concat(vim.api.nvim_buf_get_lines(0,0,-1,false),'\n')`), "SELECT")
+	}, 4*time.Second) {
 		t.Fatalf("no SELECT in the console:\n%s", ansi.Strip(d.Frame()))
 	}
 }
