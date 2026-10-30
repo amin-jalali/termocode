@@ -1,8 +1,9 @@
 package httpclient
 
 import (
-	"regexp"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // The grammar is mobocode's parseHttpFile
@@ -16,9 +17,9 @@ import (
 //   - blank lines between the comment lines above a request.
 
 var (
-	varLineRe    = regexp.MustCompile(`^@([\w.-]+)\s*=\s*(.*?)\s*$`)
-	httpSuffixRe = regexp.MustCompile(`\s+HTTP/\S+$`)
-	schemeRe     = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*://`)
+	varLineRe    = lazyre.New(`^@([\w.-]+)\s*=\s*(.*?)\s*$`)
+	httpSuffixRe = lazyre.New(`\s+HTTP/\S+$`)
+	schemeRe     = lazyre.New(`^[A-Za-z][A-Za-z0-9+.-]*://`)
 )
 
 // Parse reads a `.http` file. It never fails: blocks it cannot read are

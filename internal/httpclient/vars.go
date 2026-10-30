@@ -7,16 +7,17 @@ import (
 	"math/big"
 	"net/http"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // placeholderRe matches {{name}}, {{ name }} and {{$fn args}}.
 var (
-	placeholderRe = regexp.MustCompile(`\{\{\s*([^{}]*?)\s*\}\}`)
-	plainNameRe   = regexp.MustCompile(`^[\w.-]+$`)
+	placeholderRe = lazyre.New(`\{\{\s*([^{}]*?)\s*\}\}`)
+	plainNameRe   = lazyre.New(`^[\w.-]+$`)
 )
 
 // maxNesting is how many times values that hold other {{names}} are

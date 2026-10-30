@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"sync"
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Agent profiles (U20 AP-2). A profile is a named pipeline of agent
@@ -185,7 +185,7 @@ func ProviderName(kind string) string {
 
 // modelIDRe is a model id a step may name: it goes into a CLI's argv,
 // so it never starts with '-' and has no space.
-var modelIDRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.:/@+-]{0,127}$`)
+var modelIDRe = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9_.:/@+-]{0,127}$`)
 
 // ValidModelID reports whether id is a model id a step may name.
 func ValidModelID(id string) bool { return modelIDRe.MatchString(id) }
@@ -454,7 +454,7 @@ func LoadProfiles(userPath, projectPath string, slots map[string]bool, parallelM
 	return set
 }
 
-var profileIDRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
+var profileIDRe = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
 
 // ParseProfiles reads one profiles file ({"profiles": {name: profile}};
 // other keys, "models" included, are ignored). file names the file in

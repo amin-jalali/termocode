@@ -6,12 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
@@ -41,7 +41,7 @@ type GHAccount struct {
 }
 
 // ghLoginRe is a GitHub login (it goes into gh's argument list).
-var ghLoginRe = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$`)
+var ghLoginRe = lazyre.New(`^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$`)
 
 // ValidGHLogin reports a well-formed GitHub login.
 func ValidGHLogin(s string) bool { return ghLoginRe.MatchString(s) }
@@ -91,9 +91,9 @@ func GHAccounts(ctx context.Context) ([]GHAccount, error) {
 }
 
 var (
-	ghAccountRe = regexp.MustCompile(`Logged in to (\S+) (?:account|as) ([A-Za-z0-9-]+)`)
-	ghActiveRe  = regexp.MustCompile(`Active account:\s*(true|false)`)
-	ghScopesRe  = regexp.MustCompile(`Token scopes:\s*(.*)`)
+	ghAccountRe = lazyre.New(`Logged in to (\S+) (?:account|as) ([A-Za-z0-9-]+)`)
+	ghActiveRe  = lazyre.New(`Active account:\s*(true|false)`)
+	ghScopesRe  = lazyre.New(`Token scopes:\s*(.*)`)
 )
 
 // ParseGHStatus reads the text of `gh auth status`: the github.com

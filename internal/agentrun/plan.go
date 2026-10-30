@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Planned runs (U20 AP-8). A planner node (Node.Plan) answers with a plan
@@ -59,7 +59,7 @@ type planNode struct {
 	Deps     []string `json:"deps"`
 }
 
-var planIDRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
+var planIDRe = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
 
 // ParsePlan reads a planner's answer: the first fenced code block (or the
 // whole answer when it is a bare JSON object). It returns the plan's

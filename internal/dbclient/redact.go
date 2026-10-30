@@ -2,20 +2,21 @@ package dbclient
 
 import (
 	"net/url"
-	"regexp"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 var (
-	urlCredential      = regexp.MustCompile(`(?i)([a-z][a-z0-9+.-]*://[^@\s/?#]*:)([^@\s]*)(@[^/\s?#]+)`)
-	dsnCredential      = regexp.MustCompile(`(?i)([^\s:/@]+:)([^\n]*)(@(?:tcp6?|unix)\()`)
-	userPathCredential = regexp.MustCompile(`(?i)([^\s:/@]+:)([^@\s]+)(@/)`)
-	assignmentSecret   = regexp.MustCompile(`(?i)([a-z0-9_]*(?:password|passwd|passphrase|pwd|pass|secret|token|api[_-]?key))([\t ]*[=:][\t ]*)('[^\n]*'|"(?:\\.|[^"\\])*"|[^\s,;&}]*)`)
-	jsonSecret         = regexp.MustCompile(`(?i)("[a-z0-9_]*(?:password|passwd|passphrase|pwd|secret|token|api[_-]?key)"\s*:\s*")(?:\\.|[^"\\])*(")`)
-	sqlSecret          = regexp.MustCompile(`(?i)\b(password|identified\s+by)(\s+)('(?:''|[^'])*'|"(?:""|[^"])*"|[^\s;,]+)`)
-	redisCommand       = regexp.MustCompile(`(?i)\b(CONFIG\s+SET\s+requirepass|AUTH2\s+\S+|requirepass|masterauth)\s+\S+`)
-	bearerSecret       = regexp.MustCompile(`(?i)(authorization\s*:\s*bearer\s+)\S+`)
-	shortPassword      = regexp.MustCompile(`(?i)(^|\s)-p([^\s]+)`)
+	urlCredential      = lazyre.New(`(?i)([a-z][a-z0-9+.-]*://[^@\s/?#]*:)([^@\s]*)(@[^/\s?#]+)`)
+	dsnCredential      = lazyre.New(`(?i)([^\s:/@]+:)([^\n]*)(@(?:tcp6?|unix)\()`)
+	userPathCredential = lazyre.New(`(?i)([^\s:/@]+:)([^@\s]+)(@/)`)
+	assignmentSecret   = lazyre.New(`(?i)([a-z0-9_]*(?:password|passwd|passphrase|pwd|pass|secret|token|api[_-]?key))([\t ]*[=:][\t ]*)('[^\n]*'|"(?:\\.|[^"\\])*"|[^\s,;&}]*)`)
+	jsonSecret         = lazyre.New(`(?i)("[a-z0-9_]*(?:password|passwd|passphrase|pwd|secret|token|api[_-]?key)"\s*:\s*")(?:\\.|[^"\\])*(")`)
+	sqlSecret          = lazyre.New(`(?i)\b(password|identified\s+by)(\s+)('(?:''|[^'])*'|"(?:""|[^"])*"|[^\s;,]+)`)
+	redisCommand       = lazyre.New(`(?i)\b(CONFIG\s+SET\s+requirepass|AUTH2\s+\S+|requirepass|masterauth)\s+\S+`)
+	bearerSecret       = lazyre.New(`(?i)(authorization\s*:\s*bearer\s+)\S+`)
+	shortPassword      = lazyre.New(`(?i)(^|\s)-p([^\s]+)`)
 )
 
 func Redact(s string) string {

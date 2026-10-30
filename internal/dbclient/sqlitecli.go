@@ -10,7 +10,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -19,6 +18,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/amin-jalali/termocode/internal/crash"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
@@ -346,7 +346,7 @@ func isSQLiteError(line string) bool {
 	return strings.HasPrefix(line, "Error:") || strings.HasPrefix(line, "Parse error") || strings.HasPrefix(line, "Runtime error")
 }
 
-var sqliteLineNumber = regexp.MustCompile(`(?i)\s+near line [0-9]+`)
+var sqliteLineNumber = lazyre.New(`(?i)\s+near line [0-9]+`)
 
 func cleanSQLiteError(line string) string {
 	return strings.TrimSpace(sqliteLineNumber.ReplaceAllString(line, ""))
@@ -549,9 +549,9 @@ func sqliteJSONBlob(text string) bool {
 	return sqliteJSONBlobEscape.MatchString(text) || !utf8.ValidString(text) || strings.ContainsRune(text, utf8.RuneError)
 }
 
-var sqliteRawByteEscape = regexp.MustCompile(`(?i)\\u00[89a-f][0-9a-f]`)
+var sqliteRawByteEscape = lazyre.New(`(?i)\\u00[89a-f][0-9a-f]`)
 
-var sqliteJSONBlobEscape = regexp.MustCompile(`(?i)u[0-9a-f]{8}|u00[01][0-9a-f]`)
+var sqliteJSONBlobEscape = lazyre.New(`(?i)u[0-9a-f]{8}|u00[01][0-9a-f]`)
 
 func parseSQLiteJSON(lines []string) ([][]Cell, []Column, error) {
 	var data []byte

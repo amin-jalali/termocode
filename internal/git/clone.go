@@ -8,10 +8,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
@@ -47,7 +47,7 @@ type CloneOptions struct {
 	OnProgress func(CloneProgress)
 }
 
-var progressRe = regexp.MustCompile(`^(?:remote:\s*)?([A-Za-z][A-Za-z ]+?):\s+(\d{1,3})%`)
+var progressRe = lazyre.New(`^(?:remote:\s*)?([A-Za-z][A-Za-z ]+?):\s+(\d{1,3})%`)
 
 // ParseCloneProgress parses one progress fragment from git's stderr, e.g.
 // "Receiving objects:  45% (450/1000), 1.20 MiB | 2.00 MiB/s".

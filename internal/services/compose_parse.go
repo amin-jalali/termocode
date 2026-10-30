@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // psEntry is one container in `docker compose ps --format json`. Compose
@@ -198,7 +199,7 @@ func runningState(health, text string) State {
 	return Running
 }
 
-var exitRe = regexp.MustCompile(`^(?:Exited|Restarting) \((-?\d+)\)`)
+var exitRe = lazyre.New(`^(?:Exited|Restarting) \((-?\d+)\)`)
 
 func exitCodeFromText(text string) int {
 	if m := exitRe.FindStringSubmatch(text); m != nil {
@@ -208,7 +209,7 @@ func exitCodeFromText(text string) int {
 	return 0
 }
 
-var upRe = regexp.MustCompile(`^Up (Less than a second|About an? (hour|minute)|(\d+) (second|minute|hour|day|week|month|year)s?)`)
+var upRe = lazyre.New(`^Up (Less than a second|About an? (hour|minute)|(\d+) (second|minute|hour|day|week|month|year)s?)`)
 
 // upFor reads the uptime from a Status text ("Up 2 hours (healthy)"). The
 // docker text is coarse; so is the result.
@@ -244,7 +245,7 @@ type Config struct {
 }
 
 // secretKey matches env names whose values must never reach the model.
-var secretKey = regexp.MustCompile(`(?i)(pass|secret|token|key|dsn|url|auth|credential)`)
+var secretKey = lazyre.New(`(?i)(pass|secret|token|key|dsn|url|auth|credential)`)
 
 // IsSecretKey reports whether an env name looks like it holds a secret.
 func IsSecretKey(k string) bool { return secretKey.MatchString(k) }

@@ -2,8 +2,9 @@ package dbclient
 
 import (
 	"errors"
-	"regexp"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 type Kind string
@@ -30,7 +31,7 @@ type Statement struct {
 	Table    string
 }
 
-var simpleSelectTable = regexp.MustCompile(`(?i)\bFROM\s+([\w."` + "`" + `]+)`)
+var simpleSelectTable = lazyre.New(`(?i)\bFROM\s+([\w."` + "`" + `]+)`)
 
 // Classify is a conservative hint. The read-only session and a statement
 // timeout are the real guard; callers must not use this result as a security

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/activity"
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/statusbar"
 	"github.com/amin-jalali/termocode/internal/tests"
 	"github.com/amin-jalali/termocode/internal/theme"
@@ -865,7 +865,7 @@ func testResultLineColor(ln string) theme.Color256 {
 }
 
 // testLocRe finds "path/file.ext:LINE" in an output line.
-var testLocRe = regexp.MustCompile(`((?:[A-Za-z]:)?[\w./\\\-]*[\w\-]+\.(?:go|py|rs|js|jsx|ts|tsx|mjs|cjs|mts|cts)):(\d+)`)
+var testLocRe = lazyre.New(`((?:[A-Za-z]:)?[\w./\\\-]*[\w\-]+\.(?:go|py|rs|js|jsx|ts|tsx|mjs|cjs|mts|cts)):(\d+)`)
 
 // resolveTestLocation maps a location printed by a runner to an existing
 // absolute path: absolute as-is, else relative to the workspace root, the

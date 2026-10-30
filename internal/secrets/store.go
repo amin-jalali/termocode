@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"sync"
 	"unicode/utf8"
 
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/zalando/go-keyring"
 )
 
@@ -432,7 +432,7 @@ func (s *store) Names() []string {
 // Names are dotted words: letters, digits, '_' and '-', parts split by
 // single dots, starting with a letter or digit. Case is kept because MCP
 // ${secret:NAME} names are often upper case (mcp.secret.GITHUB_PAT).
-var nameRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]*(\.[A-Za-z0-9_-]+)*$`)
+var nameRe = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9_-]*(\.[A-Za-z0-9_-]+)*$`)
 
 const maxName = 200
 

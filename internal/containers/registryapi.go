@@ -11,10 +11,11 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // ── Remote tags over the Registry HTTP API v2 (CP-12) ────────────────────
@@ -84,10 +85,10 @@ type RegistryAPI struct {
 }
 
 var (
-	registryHostRe = regexp.MustCompile(`^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*|\[[0-9a-f:.]+\])(?::([0-9]{1,5}))?$`)
-	repoNameRe     = regexp.MustCompile(`^[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*(?:/[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*)*$`)
-	tagRe          = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9._-]{0,127}$`)
-	digestRe       = regexp.MustCompile(`^sha256:[a-f0-9]{64}$`)
+	registryHostRe = lazyre.New(`^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*|\[[0-9a-f:.]+\])(?::([0-9]{1,5}))?$`)
+	repoNameRe     = lazyre.New(`^[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*(?:/[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*)*$`)
+	tagRe          = lazyre.New(`^[A-Za-z0-9_][A-Za-z0-9._-]{0,127}$`)
+	digestRe       = lazyre.New(`^sha256:[a-f0-9]{64}$`)
 )
 
 // ParseRemoteRepo reads a reference like "nginx", "nginx:1.27",

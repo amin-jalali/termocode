@@ -11,7 +11,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -23,6 +22,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/app"
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -374,7 +374,7 @@ func Run(sc Scene, w, h int, opt Options) (string, error) {
 	return f, nil
 }
 
-var ansiRE = regexp.MustCompile(`\x1b(\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(\x07|\x1b\\)|[@-Z\\-_])`)
+var ansiRE = lazyre.New(`\x1b(\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(\x07|\x1b\\)|[@-Z\\-_])`)
 
 // StripANSI removes escape sequences (SGR colours, OSC hyperlinks, …).
 func StripANSI(s string) string { return ansiRE.ReplaceAllString(s, "") }

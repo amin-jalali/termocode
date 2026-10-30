@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,6 +10,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // The pipeline of a profile as text (AU-1 picker rows, AU-2 Show
@@ -73,7 +73,7 @@ func (s *aiState) aiProfileSteps(p ai.Profile) []aiPipeStep {
 	return out
 }
 
-var aiModelDateRe = regexp.MustCompile(`-(20\d{6}|\d{4}-\d{2}-\d{2})$`)
+var aiModelDateRe = lazyre.New(`-(20\d{6}|\d{4}-\d{2}-\d{2})$`)
 
 // aiShortModel shortens a model id for a narrow row: no vendor prefix
 // ("anthropic/"), no "claude-", no date suffix.

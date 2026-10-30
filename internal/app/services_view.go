@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -13,6 +12,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/activity"
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/clock"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/services"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
@@ -629,7 +629,7 @@ func svcFooterKeys(l1, l2 string, width int) (string, string) {
 	return l1, l2
 }
 
-var svcHostRe = regexp.MustCompile(`(?:\d{1,3}(?:\.\d{1,3}){3}|\[?[0-9a-fA-F:]*::[0-9a-fA-F:]*\]?):(\d+)→`)
+var svcHostRe = lazyre.New(`(?:\d{1,3}(?:\.\d{1,3}){3}|\[?[0-9a-fA-F:]*::[0-9a-fA-F:]*\]?):(\d+)→`)
 
 // svcStatusLine is footer line 2.
 func svcStatusLine(svc services.Service, s services.Status) string {

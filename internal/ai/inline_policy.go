@@ -1,10 +1,11 @@
 package ai
 
 import (
-	"regexp"
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Inline suggestion policy: when to ask the model at all, and which of
@@ -165,7 +166,7 @@ func (c *InlineCache) Reset() { *c = InlineCache{} }
 
 // ---- helpers ----
 
-var declRe = regexp.MustCompile(`^\s*(export\s+)?(default\s+)?(async\s+)?(pub(\([^)]*\))?\s+)?((static|private|public|protected|abstract|final|override|local)\s+)*(func|def|class|type|fn|function|interface|struct|impl|trait|enum|module|object)\b`)
+var declRe = lazyre.New(`^\s*(export\s+)?(default\s+)?(async\s+)?(pub(\([^)]*\))?\s+)?((static|private|public|protected|abstract|final|override|local)\s+)*(func|def|class|type|fn|function|interface|struct|impl|trait|enum|module|object)\b`)
 
 func isDecl(line string) bool { return declRe.MatchString(line) }
 

@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -14,6 +13,7 @@ import (
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/containers"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/services"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
@@ -280,7 +280,7 @@ func (st *servicesState) remoteContextRows(sec, key, detail string) []svcRow {
 		{kind: svcRowHint, section: key, text: "R retry · Enter on CONTEXTS to switch back"}}
 }
 
-var sshHostPortRe = regexp.MustCompile(`^ssh: connect to host \S+ port \d+: `)
+var sshHostPortRe = lazyre.New(`^ssh: connect to host \S+ port \d+: `)
 
 // shortRemoteError drops the engine's wrapper words so the cause fits a
 // narrow sidebar: "error during connect: ssh: connect to host h port 22:

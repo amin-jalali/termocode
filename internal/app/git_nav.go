@@ -1,10 +1,9 @@
 package app
 
 import (
-	"regexp"
-
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
 
@@ -97,7 +96,7 @@ func (m *Model) reloadBuffer() tea.Cmd {
 // to handle gnarly edge cases (markdown link syntax, parens, …) and
 // the false-negative rate of this regex is acceptable for a "click to
 // open" feature.
-var urlPattern = regexp.MustCompile(`https?://[^\s)\]'""\x60>]+`)
+var urlPattern = lazyre.New(`https?://[^\s)\]'""\x60>]+`)
 
 // openURLUnderCursor reads the current line, finds the first URL on it,
 // and opens it in the system browser via the same xdg-open / open / start

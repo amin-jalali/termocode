@@ -1,10 +1,11 @@
 package clilogin
 
 import (
-	"regexp"
 	"strings"
 
 	"github.com/charmbracelet/x/ansi"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // The parsers below depend only on "the first https:// link in the
@@ -20,7 +21,7 @@ func cleanText(s string) string {
 	return strings.ReplaceAll(s, "\r", "\n")
 }
 
-var urlRe = regexp.MustCompile("https://[^\\s\"'<>`]+")
+var urlRe = lazyre.New("https://[^\\s\"'<>`]+")
 
 // firstURL is the first complete https:// link in s (one that a space
 // or a line end follows: the rest may not be read yet), without the
@@ -63,7 +64,7 @@ func lastLine(s string) string {
 	return ""
 }
 
-var codeRe = regexp.MustCompile(`\b[A-Z0-9]{4,}-[A-Z0-9]{4,}\b`)
+var codeRe = lazyre.New(`\b[A-Z0-9]{4,}-[A-Z0-9]{4,}\b`)
 
 // deviceCode is the one-time code printed after the link of a device
 // sign-in (Codex --device-auth), "" when there is none yet.

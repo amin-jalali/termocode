@@ -8,13 +8,13 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/termimg"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -289,7 +289,7 @@ func (m *Model) aiAttachPaths(paths []string) tea.Cmd {
 }
 
 // aiMentionRe finds "@path" and "@file path" words.
-var aiMentionRe = regexp.MustCompile(`(?:^|\s)@(?:file\s+)?(\S+)`)
+var aiMentionRe = lazyre.New(`(?:^|\s)@(?:file\s+)?(\S+)`)
 
 // aiMentionedPaths lists the workspace files named with "@" in text
 // (absolute, in order, without repeats). Words that are not an existing

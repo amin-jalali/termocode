@@ -1,13 +1,13 @@
 package app
 
 import (
-	"regexp"
 	"strings"
 	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	runewidth "github.com/amin-jalali/termocode/internal/cellwidth"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/theme"
 )
 
@@ -261,7 +261,7 @@ func outputWindow(total, h, scroll int) (start, end int) {
 	return start, end
 }
 
-var outputANSIRe = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(\x07|\x1b\\)`)
+var outputANSIRe = lazyre.New(`\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(\x07|\x1b\\)`)
 
 // sanitizeOutputLine strips ANSI escapes and control characters (they
 // would break the cell layout) and expands tabs.

@@ -3,10 +3,10 @@ package app
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/dbclient"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Table views (plan F9): the data view of a table or view is a result page
@@ -83,7 +83,7 @@ next:
 	return ""
 }
 
-var dbWithoutRowid = regexp.MustCompile(`(?i)\bWITHOUT\s+ROWID\b`)
+var dbWithoutRowid = lazyre.New(`(?i)\bWITHOUT\s+ROWID\b`)
 
 func newDBTableView(t dbTable) *dbTableView { return &dbTableView{dbTable: t, total: -1} }
 

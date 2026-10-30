@@ -3,10 +3,11 @@ package tests
 import (
 	"encoding/json"
 	"encoding/xml"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // EventKind classifies a parsed runner event.
@@ -232,7 +233,7 @@ func goStatus(action string) Status {
 
 // goLocRe matches the "file.go:12:" prefix `t.Errorf` puts on each line
 // (and compiler errors "./x.go:3:5:").
-var goLocRe = regexp.MustCompile(`^\s*((?:[\w.\-]+/)*[\w.\-]+\.go):(\d+):`)
+var goLocRe = lazyre.New(`^\s*((?:[\w.\-]+/)*[\w.\-]+\.go):(\d+):`)
 
 // goFailure strips test2json framing lines from a failing test's output
 // and returns the message plus the first file:line it mentions.
@@ -263,10 +264,10 @@ func goFailure(out []string) (msg, file string, line int) {
 
 // pytestLineRe matches a verbose result line, with or without an xdist
 // "[gw0]" prefix: "tests/test_a.py::TestX::test_m[1] PASSED   [ 50%]".
-var pytestLineRe = regexp.MustCompile(`^(?:\[gw\d+\]\s+(?:\[\s*\d+%\]\s+)?)?(\S+?\.py)::(\S+)\s+(PASSED|FAILED|SKIPPED|XFAIL|XPASS|ERROR)\b`)
+var pytestLineRe = lazyre.New(`^(?:\[gw\d+\]\s+(?:\[\s*\d+%\]\s+)?)?(\S+?\.py)::(\S+)\s+(PASSED|FAILED|SKIPPED|XFAIL|XPASS|ERROR)\b`)
 
 // pytestXdistRe matches xdist's "[gw0] [ 50%] PASSED tests/x.py::t" order.
-var pytestXdistRe = regexp.MustCompile(`^\[gw\d+\]\s+(?:\[\s*\d+%\]\s+)?(PASSED|FAILED|SKIPPED|XFAIL|XPASS|ERROR)\s+(\S+?\.py)::(\S+)`)
+var pytestXdistRe = lazyre.New(`^\[gw\d+\]\s+(?:\[\s*\d+%\]\s+)?(PASSED|FAILED|SKIPPED|XFAIL|XPASS|ERROR)\s+(\S+?\.py)::(\S+)`)
 
 // PytestParser parses `pytest -v` result lines as they stream.
 type PytestParser struct{}
@@ -337,7 +338,7 @@ type junitProblem struct {
 }
 
 // pyLocRe matches a traceback location line "tests/test_a.py:12: Error".
-var pyLocRe = regexp.MustCompile(`(?m)^(\S+\.py):(\d+):`)
+var pyLocRe = lazyre.New(`(?m)^(\S+\.py):(\d+):`)
 
 // ParseJUnitXML parses a pytest --junitxml report (xunit1 or xunit2).
 // Events carry Class = dotted classname and Test = the test name with
@@ -402,11 +403,11 @@ func ParseJUnitXML(data []byte) ([]Event, error) {
 // ── cargo test (libtest text output) ─────────────────────────────────────
 
 var (
-	cargoRunningRe = regexp.MustCompile(`^\s*Running (?:unittests )?(\S+)`)
-	cargoResultRe  = regexp.MustCompile(`^test (\S+) \.\.\. (ok|FAILED|ignored)`)
-	cargoStdoutRe  = regexp.MustCompile(`^---- (\S+) stdout ----$`)
+	cargoRunningRe = lazyre.New(`^\s*Running (?:unittests )?(\S+)`)
+	cargoResultRe  = lazyre.New(`^test (\S+) \.\.\. (ok|FAILED|ignored)`)
+	cargoStdoutRe  = lazyre.New(`^---- (\S+) stdout ----$`)
 	// New format: "panicked at src/lib.rs:10:5:"; old: "panicked at 'msg', src/lib.rs:10:5".
-	cargoPanicRe = regexp.MustCompile(`panicked at (?:'.*', )?([^\s:']+\.rs):(\d+):\d+`)
+	cargoPanicRe = lazyre.New(`panicked at (?:'.*', )?([^\s:']+\.rs):(\d+):\d+`)
 )
 
 // CargoParser parses `cargo test` output: per-test result lines as they
@@ -500,7 +501,7 @@ type jestReport struct {
 	} `json:"testResults"`
 }
 
-var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+var ansiRe = lazyre.New(`\x1b\[[0-9;]*m`)
 
 // ParseJestJSON parses a jest `--json` (or vitest `--reporter=json`)
 // report. A file that failed to run at all (syntax error, missing module)
@@ -560,7 +561,7 @@ func jestMessage(lines []string) string {
 	return strings.TrimSpace(strings.Join(keep, "\n"))
 }
 
-var jsStackRe = regexp.MustCompile(`\(?((?:/|[A-Za-z]:\\)[^\s():]+):(\d+):\d+\)?`)
+var jsStackRe = lazyre.New(`\(?((?:/|[A-Za-z]:\\)[^\s():]+):(\d+):\d+\)?`)
 
 // jestLocation returns the first stack frame inside the test file itself
 // (falling back to the first frame outside node_modules).

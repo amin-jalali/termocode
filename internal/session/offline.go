@@ -3,10 +3,11 @@ package session
 import (
 	"bytes"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // reconnectDelay is how long a client waits before reconnect attempt n
@@ -50,7 +51,7 @@ func offlineQuit(p []byte) bool {
 
 // terminalReports are what a terminal sends by itself while the UI's
 // modes stay on: mouse (SGR and X10) and focus reports.
-var terminalReports = regexp.MustCompile(`\x1b\[<[0-9;]*[Mm]|\x1b\[M[\x20-\xff]{3}|\x1b\[[IO]`)
+var terminalReports = lazyre.New(`\x1b\[<[0-9;]*[Mm]|\x1b\[M[\x20-\xff]{3}|\x1b\[[IO]`)
 
 // offlineKeys reports whether p, read while offline, holds keys the user
 // typed (not just mouse moves or focus changes), which are then lost.

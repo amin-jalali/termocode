@@ -1,9 +1,10 @@
 package update
 
 import (
-	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // version is a parsed vMAJOR.MINOR.PATCH[-pre].
@@ -14,7 +15,7 @@ type version struct {
 
 // pseudo matches the tail of a Go pseudo-version (time stamp and commit),
 // which `go install …@main` records: such a build is not a release.
-var pseudo = regexp.MustCompile(`\d{14}-[0-9a-f]{12}$`)
+var pseudo = lazyre.New(`\d{14}-[0-9a-f]{12}$`)
 
 // parseVersion reads v; ok is false for "dev", "" and anything else that
 // is not a release version.

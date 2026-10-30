@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/confirm"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -41,7 +41,7 @@ var aiSaveLangExt = map[string]string{
 
 // aiPathWordRe matches a word that looks like a file path with an
 // extension ("cmd/main.go", "README.md").
-var aiPathWordRe = regexp.MustCompile(`^[\w./-]*[\w-]\.[A-Za-z][A-Za-z0-9]*$`)
+var aiPathWordRe = lazyre.New(`^[\w./-]*[\w-]\.[A-Za-z][A-Za-z0-9]*$`)
 
 // aiCodeBlockInfo returns the n-th fenced block of a message with its
 // language and a file name hint: a path in the fence line
@@ -259,7 +259,7 @@ func aiChatMarkdown(c ai.Conversation) string {
 
 // aiContextAttachRe finds the "Attached x:" / "Attached image x (…)."
 // heads of a user message's attachment context.
-var aiContextAttachRe = regexp.MustCompile(`(?m)^Attached (?:image )?(.+?)(?::| \(sent as an image\)\.)$`)
+var aiContextAttachRe = lazyre.New(`(?m)^Attached (?:image )?(.+?)(?::| \(sent as an image\)\.)$`)
 
 func aiContextLabels(ctx string) []string {
 	var out []string

@@ -4,6 +4,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 func TestResolveFontDelta(t *testing.T) {
@@ -56,5 +58,14 @@ func TestTUICommand(t *testing.T) {
 		if tuiCommand(args) {
 			t.Errorf("tuiCommand(%q) = true, want false", args)
 		}
+	}
+}
+
+// Every package-level pattern compiles: lazyre (compiled on first use)
+// keeps the check that regexp.MustCompile did at package init, for all
+// the packages linked into termocode.
+func TestEveryLazyPatternCompiles(t *testing.T) {
+	if err := lazyre.CompileAll(); err != nil {
+		t.Fatal(err)
 	}
 }

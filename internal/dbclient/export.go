@@ -9,8 +9,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // ExportFormat is a file format the export writes.
@@ -295,7 +296,7 @@ func (s *sqlWriter) Row(row []Cell) error {
 
 func (s *sqlWriter) End() error { return nil }
 
-var hexBytes = regexp.MustCompile(`^0[xX]([0-9a-fA-F]{2})*$`)
+var hexBytes = lazyre.New(`^0[xX]([0-9a-fA-F]{2})*$`)
 
 // SQLLiteral writes c as a SQL literal of dialect d: NULL, a plain number,
 // TRUE / FALSE, a binary value in the dialect's own form, or a quoted

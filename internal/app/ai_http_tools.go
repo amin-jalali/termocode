@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -19,6 +18,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/httpclient"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // AI tools for the HTTP client (plan §4): list the user's .http requests,
@@ -37,7 +37,7 @@ const (
 	httpAIMaxHistory  = 50
 )
 
-var httpTokenRe = regexp.MustCompile(`^[!#$%&'*+.^_|~0-9A-Za-z-]+$`)
+var httpTokenRe = lazyre.New(`^[!#$%&'*+.^_|~0-9A-Za-z-]+$`)
 
 // httpAIGate is http_send's per-call rule (plan §4.3, first match):
 // private / special hosts always ask (no "Always allow"); GET, HEAD and

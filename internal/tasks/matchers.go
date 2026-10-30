@@ -2,9 +2,10 @@ package tasks
 
 import (
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // ── file:line links (ported from mobocode terminal_link_parser.dart) ────
@@ -31,7 +32,7 @@ var codeExtensions = map[string]bool{
 	".svelte": true, ".zig": true, ".mod": true, ".sql": true, ".proto": true,
 }
 
-var linkRe = regexp.MustCompile(`((?:[^\s:]+/)?[^\s:/]+\.[a-zA-Z]{1,10}):(\d+)(?::(\d+))?`)
+var linkRe = lazyre.New(`((?:[^\s:]+/)?[^\s:/]+\.[a-zA-Z]{1,10}):(\d+)(?::(\d+))?`)
 
 // linkTrimLeft are wrapper characters stripped from the front of a path
 // ("(src/a.go:3)" links "src/a.go:3").
@@ -125,17 +126,17 @@ func Enabled(names []string) bool {
 }
 
 var (
-	ansiRe = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(\x07|\x1b\\)`)
+	ansiRe = lazyre.New(`\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(\x07|\x1b\\)`)
 	// path:line(:col)?: message — gcc, go, pytest, eslint-compact, …
-	genericRe = regexp.MustCompile(`^\s*((?:[A-Za-z]:)?[^\s:()"']+\.[A-Za-z0-9]{1,10}):(\d+)(?::(\d+))?:?\s*(.*)$`)
+	genericRe = lazyre.New(`^\s*((?:[A-Za-z]:)?[^\s:()"']+\.[A-Za-z0-9]{1,10}):(\d+)(?::(\d+))?:?\s*(.*)$`)
 	// path(line,col): error TS1234: message — tsc
-	tscRe = regexp.MustCompile(`^\s*([^\s()]+\.[A-Za-z0-9]{1,10})\((\d+),(\d+)\):\s*(error|warning|info)\s+(.*)$`)
+	tscRe = lazyre.New(`^\s*([^\s()]+\.[A-Za-z0-9]{1,10})\((\d+),(\d+)\):\s*(error|warning|info)\s+(.*)$`)
 	// rustc: "error[E0308]: msg" then "  --> src/main.rs:4:5"
-	rustHeadRe  = regexp.MustCompile(`^(error|warning)(?:\[\w+\])?:\s*(.+)$`)
-	rustArrowRe = regexp.MustCompile(`^\s*-->\s*([^\s:]+):(\d+):(\d+)`)
+	rustHeadRe  = lazyre.New(`^(error|warning)(?:\[\w+\])?:\s*(.+)$`)
+	rustArrowRe = lazyre.New(`^\s*-->\s*([^\s:]+):(\d+):(\d+)`)
 	// "error: msg", "warning[W1]: msg", "note: msg" at the start of a message
-	sevPrefixRe = regexp.MustCompile(`(?i)^(fatal error|error|warning|warn|note|info|hint)(?:\[[^\]]*\])?\s*:\s*(.*)$`)
-	hasLetterRe = regexp.MustCompile(`[A-Za-z]`)
+	sevPrefixRe = lazyre.New(`(?i)^(fatal error|error|warning|warn|note|info|hint)(?:\[[^\]]*\])?\s*:\s*(.*)$`)
+	hasLetterRe = lazyre.New(`[A-Za-z]`)
 )
 
 // StripANSI removes terminal escape sequences.

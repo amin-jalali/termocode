@@ -1,31 +1,32 @@
 package clistep
 
 import (
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // CS-4: the CLIs' usage-limit messages. They are free text and change
 // between versions, so the patterns are loose and only used on the
 // CLI's error text (never on an answer that went well).
 
-var limitRe = regexp.MustCompile(`(?i)(usage limit|hit your (usage )?limit|limit reached|rate limit exceeded|quota exceeded|out of (credits|usage))`)
+var limitRe = lazyre.New(`(?i)(usage limit|hit your (usage )?limit|limit reached|rate limit exceeded|quota exceeded|out of (credits|usage))`)
 
 // isLimit reports whether text is a usage-limit message.
 func isLimit(text string) bool { return limitRe.MatchString(text) }
 
-var loggedOutRe = regexp.MustCompile(`(?i)(please run /login|not logged in|invalid api key|run .?(claude|codex) (auth )?login|authentication[_ ]error|unauthorized|oauth token (has )?expired)`)
+var loggedOutRe = lazyre.New(`(?i)(please run /login|not logged in|invalid api key|run .?(claude|codex) (auth )?login|authentication[_ ]error|unauthorized|oauth token (has )?expired)`)
 
 // isLoggedOut reports whether text says the CLI has no (valid) login.
 func isLoggedOut(text string) bool { return loggedOutRe.MatchString(text) }
 
 var (
-	resetPipeRe = regexp.MustCompile(`limit reached\|(\d{9,})`)
-	resetsAtRe  = regexp.MustCompile(`(?i)(?:resets|try again at|reset at|resets at)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?(?:\s*\(([^)]+)\))?`)
-	tryInRe     = regexp.MustCompile(`(?i)(?:try again in|resets in)\s+((?:\d+\s*(?:days?|d|hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)\b[\s,and]*)+)`)
-	partRe      = regexp.MustCompile(`(?i)(\d+)\s*(days?|d|hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)\b`)
+	resetPipeRe = lazyre.New(`limit reached\|(\d{9,})`)
+	resetsAtRe  = lazyre.New(`(?i)(?:resets|try again at|reset at|resets at)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?(?:\s*\(([^)]+)\))?`)
+	tryInRe     = lazyre.New(`(?i)(?:try again in|resets in)\s+((?:\d+\s*(?:days?|d|hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)\b[\s,and]*)+)`)
+	partRe      = lazyre.New(`(?i)(\d+)\s*(days?|d|hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)\b`)
 )
 
 // resetTime reads when a limit resets from its message (zero: it does

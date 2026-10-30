@@ -2,7 +2,6 @@ package app
 
 import (
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/help"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/picker"
 )
@@ -816,7 +816,7 @@ func (m Model) handleItermocSidebarMouse(x, y int, t tea.MouseEventType) (Model,
 
 // ── Fix for a profile file that could not be read ───────────────────────
 
-var imLineRe = regexp.MustCompile(`^(.+?\.json)(?: line (\d+))?:? `)
+var imLineRe = lazyre.New(`^(.+?\.json)(?: line (\d+))?:? `)
 
 // itermocProblemTarget reads the file and the line out of a profile load
 // error ("<file> line 7: ..." or "<file>: ..."); no line means line 1.

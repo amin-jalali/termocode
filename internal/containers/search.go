@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // ── Docker Hub search and podman connections (CP-12) ─────────────────────
@@ -50,7 +51,7 @@ func ParseSearch(data []byte) ([]SearchResult, error) {
 }
 
 // ansiRe matches terminal escape sequences (CSI and OSC).
-var ansiRe = regexp.MustCompile(`\x1b(?:\[[0-9;?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)?)`)
+var ansiRe = lazyre.New(`\x1b(?:\[[0-9;?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)?)`)
 
 // cleanText drops escape sequences and control characters and cuts s to
 // max runes.

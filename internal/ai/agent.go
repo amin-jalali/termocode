@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // EventKind tags what the agent reports while it works.
@@ -381,7 +382,7 @@ func (a *Agent) runTool(ctx context.Context, call ToolCall, emit func(Event)) (r
 	return out
 }
 
-var toolFenceRe = regexp.MustCompile("(?s)```(?:json)?\\s*(\\{.*?\\})\\s*```")
+var toolFenceRe = lazyre.New("(?s)```(?:json)?\\s*(\\{.*?\\})\\s*```")
 
 // ParseTextToolCall extracts {"tool":…,"args":…} from a reply, tolerating
 // a ```json fence, a bare fence or a naked top-level object.

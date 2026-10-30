@@ -3,11 +3,11 @@ package clistep
 import (
 	"bytes"
 	"context"
-	"regexp"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/crash"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/lspinstall"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
@@ -58,7 +58,7 @@ func LoginLine(cli string) string {
 	return ""
 }
 
-var loggedOutJSON = regexp.MustCompile(`"loggedIn"\s*:\s*false`)
+var loggedOutJSON = lazyre.New(`"loggedIn"\s*:\s*false`)
 
 // Check says whether cli is installed and logged in, by the CLI's own
 // status command (env nil: os.Environ() with termocode's tools/bin

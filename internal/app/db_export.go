@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/dbclient"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/toast"
 	tea "github.com/charmbracelet/bubbletea"
@@ -144,7 +144,7 @@ func dbThousands(n int) string {
 	return string(out)
 }
 
-var dbFileSafe = regexp.MustCompile(`[^A-Za-z0-9_.-]+`)
+var dbFileSafe = lazyre.New(`[^A-Za-z0-9_.-]+`)
 
 // dbExportTable is the table the rows came from: the data view's, the one a
 // plain SELECT names, or the name of the first column's table.

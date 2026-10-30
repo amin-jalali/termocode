@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"context"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"golang.org/x/term"
 
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
 
@@ -41,7 +41,7 @@ func hasSyncOutput(reply []byte) bool {
 	return m != nil && (m[1][0] == '1' || m[1][0] == '2' || m[1][0] == '3')
 }
 
-var syncRe = regexp.MustCompile(`\x1b\[\?2026;(\d)\$y`)
+var syncRe = lazyre.New(`\x1b\[\?2026;(\d)\$y`)
 
 // keysQuery asks for the kitty keyboard flags; a terminal with the
 // protocol answers CSI ? flags u (before DA1). See hasKittyKeys.
@@ -50,7 +50,7 @@ const keysQuery = "\x1b[?u"
 // hasKittyKeys reports a CSI ? flags u answer in reply.
 func hasKittyKeys(reply []byte) bool { return kittyKeysRe.Match(reply) }
 
-var kittyKeysRe = regexp.MustCompile(`\x1b\[\?\d+u`)
+var kittyKeysRe = lazyre.New(`\x1b\[\?\d+u`)
 
 // ProbeTerminal asks only the questions that need no images (images
 // are off, so Probe does not run): kitty keyboard flags, synchronized

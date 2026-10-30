@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Pending edits of a result grid (plan F6) become one statement per row:
@@ -214,7 +215,7 @@ func editStatement(d Dialect, table string, e RowEdit) (EditStatement, error) {
 	return EditStatement{SQL: b.sql.String(), Args: b.args, Preview: b.preview.String() + ";", Expect: 1}, nil
 }
 
-var editNumber = regexp.MustCompile(`^-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?$`)
+var editNumber = lazyre.New(`^-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?$`)
 
 // EditLiteral writes a value as a SQL literal for the preview and Copy SQL:
 // NULL, a plain number as is, anything else quoted for the dialect.

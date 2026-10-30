@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/services"
 	"github.com/amin-jalali/termocode/internal/spawn"
 )
@@ -31,7 +31,7 @@ type Ref struct {
 
 func (r Ref) String() string { return "${" + r.Kind + ":" + r.Arg + "}" }
 
-var envNameRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+var envNameRe = lazyre.New(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 // ParseRef parses a whole value as a reference (surrounding spaces are
 // ignored). A value that does not start with "${" gives ErrNotRef; one
@@ -97,7 +97,7 @@ func HasCmdRef(s string) bool {
 	return cmdRefRe.MatchString(s)
 }
 
-var cmdRefRe = regexp.MustCompile(`\$\{\s*cmd\s*:`)
+var cmdRefRe = lazyre.New(`\$\{\s*cmd\s*:`)
 
 // ProjectCmdWarning is the loaders' text for a ${cmd:} in a project file.
 const ProjectCmdWarning = "${cmd:} is not allowed in project files; keep it in your own configuration"

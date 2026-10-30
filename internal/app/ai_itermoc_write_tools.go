@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/agentdag"
 	"github.com/amin-jalali/termocode/internal/agents"
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/mcp"
 )
 
@@ -98,7 +98,7 @@ func (m *Model) aiItermocWriteSnapshot() aiItermocWriteSnap {
 
 // ── No secrets in arguments ──────────────────────────────────────────────
 
-var aiSecretArgNameRe = regexp.MustCompile(`(?i)key|token|secret|passw|bearer|cookie|credential|auth`)
+var aiSecretArgNameRe = lazyre.New(`(?i)key|token|secret|passw|bearer|cookie|credential|auth`)
 
 // aiNoSecretsText is the refusal; it never repeats the value.
 const aiNoSecretsText = "an argument looks like a key, token or password. Keys and sign-ins never pass through the AI: " +

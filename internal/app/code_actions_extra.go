@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/git"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/toast"
 )
@@ -504,7 +505,7 @@ func isGoTestFunc(name string) bool {
 // function name. Tolerates a receiver clause (`func (r *T) Name(...)`) and
 // any whitespace. We only use it on lines we already think are at column 0
 // so it's deliberately not anchored at end-of-line.
-var goFuncDeclRe = regexp.MustCompile(`^func\s+(?:\([^)]*\)\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\(`)
+var goFuncDeclRe = lazyre.New(`^func\s+(?:\([^)]*\)\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\(`)
 
 // enclosingGoFuncName scans backwards from the cursor line looking for the
 // nearest `func Name(...)` declaration, returning the name. Returns ""

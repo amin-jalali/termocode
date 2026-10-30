@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/amin-jalali/termocode/internal/jsonc"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/secrets"
 )
 
@@ -18,7 +18,7 @@ const (
 	SourceProject = "project"
 )
 
-var idPattern = regexp.MustCompile(`^[a-z0-9_-]+$`)
+var idPattern = lazyre.New(`^[a-z0-9_-]+$`)
 
 func ParseConfig(data []byte, source, file, root string) ([]Conn, error) {
 	var f struct {

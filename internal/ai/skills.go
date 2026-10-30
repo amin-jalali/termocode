@@ -7,9 +7,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Skills on demand (OM-4): knowledge files the AI loads only when a task
@@ -82,7 +83,7 @@ func (s Skills) Project() []Skill {
 	return out
 }
 
-var skillNameRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
+var skillNameRe = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
 
 // ValidSkillName reports whether name can name a skill (letters, digits,
 // '.', '_', '-'; at most 64 characters).

@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // ConfigPath is the project file for local services, root-relative.
@@ -36,7 +37,7 @@ type LocalConfig struct {
 	} `json:"health"`
 }
 
-var nameRe = regexp.MustCompile(`^[a-z0-9_-]+$`)
+var nameRe = lazyre.New(`^[a-z0-9_-]+$`)
 
 // ValidName reports whether s is a valid service name.
 func ValidName(s string) bool { return nameRe.MatchString(s) }

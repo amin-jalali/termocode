@@ -21,9 +21,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // InitFile is the entry point every extension folder must contain.
@@ -77,7 +78,7 @@ type Extension struct {
 
 // validName limits extension folder names to something safe to use in an
 // augroup name, a command id prefix and a file path.
-var validName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
+var validName = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
 
 // ValidName reports whether s can be used as an extension name.
 func ValidName(s string) bool { return validName.MatchString(s) && len(s) <= 64 }

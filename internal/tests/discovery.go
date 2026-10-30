@@ -4,9 +4,10 @@ import (
 	"bufio"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // ── Framework detection ──────────────────────────────────────────────────
@@ -73,7 +74,7 @@ func IsTestFile(fw Framework, name string) bool {
 
 // goTestDeclRe matches `func TestXxx(` / `func FuzzXxx(`. Go requires the
 // suffix to not start with a lower-case letter.
-var goTestDeclRe = regexp.MustCompile(`^func\s+((?:Test|Fuzz)(?:[^a-z(\s][A-Za-z0-9_]*)?)\s*\(`)
+var goTestDeclRe = lazyre.New(`^func\s+((?:Test|Fuzz)(?:[^a-z(\s][A-Za-z0-9_]*)?)\s*\(`)
 
 // ParseGoTests returns the TestXxx / FuzzXxx functions of a _test.go file.
 // Helpers (func setup()) and benchmarks are ignored — `go test` does not
@@ -89,8 +90,8 @@ func ParseGoTests(path, content string) []*Case {
 }
 
 var (
-	pyClassRe = regexp.MustCompile(`^class\s+(Test\w*)\s*[:(]`)
-	pyFuncRe  = regexp.MustCompile(`^(\s*)(?:async\s+)?def\s+(test\w*)\s*\(`)
+	pyClassRe = lazyre.New(`^class\s+(Test\w*)\s*[:(]`)
+	pyFuncRe  = lazyre.New(`^(\s*)(?:async\s+)?def\s+(test\w*)\s*\(`)
 )
 
 // ParsePytest returns top-level `def test_*` functions and `test*`
@@ -127,9 +128,9 @@ func ParsePytest(path, content string) []*Case {
 }
 
 var (
-	rustTestAttrRe = regexp.MustCompile(`^#\[(?:[\w]+::)*test\b`)
-	rustFnRe       = regexp.MustCompile(`^(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?:unsafe\s+)?fn\s+(\w+)`)
-	rustModRe      = regexp.MustCompile(`^(?:pub(?:\([^)]*\))?\s+)?mod\s+(\w+)\s*\{`)
+	rustTestAttrRe = lazyre.New(`^#\[(?:[\w]+::)*test\b`)
+	rustFnRe       = lazyre.New(`^(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?:unsafe\s+)?fn\s+(\w+)`)
+	rustModRe      = lazyre.New(`^(?:pub(?:\([^)]*\))?\s+)?mod\s+(\w+)\s*\{`)
 )
 
 // ParseRustTests returns `#[test]` (and `#[tokio::test]`-style) functions.
@@ -183,7 +184,7 @@ func ParseRustTests(path, content string) []*Case {
 
 // jsCallRe matches describe/it/test (with .only/.skip/… modifiers) and a
 // literal first argument in any of the three quote styles.
-var jsCallRe = regexp.MustCompile(`\b(describe|it|test)(?:\.(?:only|skip|concurrent|todo|failing|sequential))?\s*\(\s*(?:'([^']*)'|"([^"]*)"|` + "`([^`]*)`" + `)`)
+var jsCallRe = lazyre.New(`\b(describe|it|test)(?:\.(?:only|skip|concurrent|todo|failing|sequential))?\s*\(\s*(?:'([^']*)'|"([^"]*)"|` + "`([^`]*)`" + `)`)
 
 // JSNameSep joins describe titles and the test title — jest's own
 // separator in its reporters.

@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/services"
 )
 
@@ -25,10 +25,10 @@ import (
 const redacted = "[REDACTED]"
 
 var (
-	imageRefRe = regexp.MustCompile(`^(?:[a-z0-9]+(?:[.-][a-z0-9]+)*(?::[0-9]{1,5})?/)?` +
+	imageRefRe = lazyre.New(`^(?:[a-z0-9]+(?:[.-][a-z0-9]+)*(?::[0-9]{1,5})?/)?` +
 		`[a-z0-9]+(?:[._-]+[a-z0-9]+)*(?:/[a-z0-9]+(?:[._-]+[a-z0-9]+)*)*` +
 		`(?::[A-Za-z0-9_][A-Za-z0-9._-]{0,127})?(?:@sha256:[a-f0-9]{64})?$`)
-	nameRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)
+	nameRe = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)
 )
 
 // ValidImageRef checks an image reference the model gave (pull).

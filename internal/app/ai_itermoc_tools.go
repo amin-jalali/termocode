@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"regexp"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/mcp"
 )
 
@@ -243,7 +243,7 @@ type aiMCPServiceInfo struct {
 	AutoApproved int    `json:"auto_approved_tools,omitempty"`
 }
 
-var aiURLInText = regexp.MustCompile(`[A-Za-z][A-Za-z0-9+.\-]*://[^\s"'<>]+`)
+var aiURLInText = lazyre.New(`[A-Za-z][A-Za-z0-9+.\-]*://[^\s"'<>]+`)
 
 // aiCleanURLs cuts every URL in s to scheme://host (a problem text may
 // quote the server URL with its user, password or token).

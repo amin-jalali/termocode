@@ -3,9 +3,10 @@ package httpclient
 import (
 	"net"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Redacted replaces a secret value in every text that leaves the
@@ -123,11 +124,11 @@ func onlyPlaceholders(v string) bool {
 
 // secretQueryRe finds secret-looking query parameters anywhere in a
 // text (URLs inside error messages too).
-var secretQueryRe = regexp.MustCompile(`(?i)([?&;](?:[\w.-]*(?:token|secret|password|passwd|pwd|api[_-]?key|apikey|signature|sig|auth|session|code|key)[\w.-]*)=)([^&#\s"']+)`)
+var secretQueryRe = lazyre.New(`(?i)([?&;](?:[\w.-]*(?:token|secret|password|passwd|pwd|api[_-]?key|apikey|signature|sig|auth|session|code|key)[\w.-]*)=)([^&#\s"']+)`)
 
 // userinfoRe finds "scheme://user:password@" in a text; the user may
 // be empty ("redis://:password@host").
-var userinfoRe = regexp.MustCompile(`(?i)\b([a-z][a-z0-9+.-]*://[^/\s:@]*:)([^/\s@]+)(@)`)
+var userinfoRe = lazyre.New(`(?i)\b([a-z][a-z0-9+.-]*://[^/\s:@]*:)([^/\s@]+)(@)`)
 
 // RedactURL hides secret query values (token, key, password, sig, …)
 // and the password part of user:password@ in s. It works on any text,

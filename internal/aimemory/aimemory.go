@@ -21,8 +21,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 const (
@@ -57,7 +58,7 @@ func Dir(root string) string { return filepath.Join(root, filepath.FromSlash(Dir
 // Path is the lessons file of a workspace.
 func Path(root string) string { return filepath.Join(Dir(root), File) }
 
-var sectionRe = regexp.MustCompile(`^## (\d{4}-\d{2}-\d{2}) · (.*?)(?: \{#([0-9A-Za-z_-]{1,32})\})?\s*$`)
+var sectionRe = lazyre.New(`^## (\d{4}-\d{2}-\d{2}) · (.*?)(?: \{#([0-9A-Za-z_-]{1,32})\})?\s*$`)
 
 // Parse reads the lessons of a file. Sections it cannot read are skipped.
 func Parse(b []byte) []Lesson {

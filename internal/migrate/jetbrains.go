@@ -6,10 +6,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // jetBrainsProducts maps the config folder prefix to a product title.
@@ -19,7 +20,7 @@ var jetBrainsProducts = map[string]string{
 	"Rider": "Rider", "DataGrip": "DataGrip", "DataSpell": "DataSpell", "RustRover": "RustRover", "AppCode": "AppCode", "Aqua": "Aqua",
 }
 
-var jetBrainsDir = regexp.MustCompile(`^([A-Za-z]+)(\d{4}(?:\.\d+)+)$`)
+var jetBrainsDir = lazyre.New(`^([A-Za-z]+)(\d{4}(?:\.\d+)+)$`)
 
 // detectJetBrains returns the newest config folder of each JetBrains product
 // that has options or keymaps in it.

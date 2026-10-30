@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Source says where a layout comes from.
@@ -57,7 +58,7 @@ type Store struct {
 	ProjectDir string // <project>/.termocode/layouts
 }
 
-var nameRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9 _.-]{0,39}$`)
+var nameRE = lazyre.New(`^[A-Za-z0-9][A-Za-z0-9 _.-]{0,39}$`)
 
 // ValidName says why name cannot be a layout name (it is a file name).
 func ValidName(name string) error {

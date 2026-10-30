@@ -30,10 +30,10 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/secrets"
 )
 
@@ -132,7 +132,7 @@ type entry struct {
 	Timeout     int               `json:"timeout"`
 }
 
-var nameRe = regexp.MustCompile(`^[A-Za-z0-9_-]{1,40}$`)
+var nameRe = lazyre.New(`^[A-Za-z0-9_-]{1,40}$`)
 
 // ParseFile reads one mcp.json body. Bad entries come back with a
 // Problem; warnings name literal secrets. err is only for a file that is
@@ -331,7 +331,7 @@ type NeedsError struct{ What string }
 
 func (e *NeedsError) Error() string { return "needs " + e.What }
 
-var refRe = regexp.MustCompile(`\$\{([^}]*)\}`)
+var refRe = lazyre.New(`\$\{([^}]*)\}`)
 
 func (x Expander) expand(s string) (string, error) {
 	var ferr error
@@ -422,7 +422,7 @@ func expandMap(m map[string]string, one func(string) string) map[string]string {
 }
 
 // Secret values that should never be literal in mcp.json.
-var secretLiteralRe = regexp.MustCompile(`(?i)(ghp_|github_pat_|glpat-|xox[pbas]-|sk-|lin_api_|bearer\s+[A-Za-z0-9._~+/=-]{20,})`)
+var secretLiteralRe = lazyre.New(`(?i)(ghp_|github_pat_|glpat-|xox[pbas]-|sk-|lin_api_|bearer\s+[A-Za-z0-9._~+/=-]{20,})`)
 
 // secretLiteral names the first header / env key whose literal value
 // looks like a token ("" when none).

@@ -6,8 +6,9 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Detect builds tasks from well-known project files in root (ported from
@@ -161,7 +162,7 @@ func detectPytest(root string) []Task {
 	}}
 }
 
-var makeTargetRe = regexp.MustCompile(`^([A-Za-z0-9][A-Za-z0-9_.\-/ \t]*):([^=:]|$)`)
+var makeTargetRe = lazyre.New(`^([A-Za-z0-9][A-Za-z0-9_.\-/ \t]*):([^=:]|$)`)
 
 // MakeTargets returns the explicit targets of a Makefile in file order
 // (no pattern rules, no special .TARGETS, no variables).
@@ -216,7 +217,7 @@ func detectMake(root string) []Task {
 	return out
 }
 
-var justRecipeRe = regexp.MustCompile(`^@?([A-Za-z_][A-Za-z0-9_-]*)(\s[^:]*)?:([^=]|$)`)
+var justRecipeRe = lazyre.New(`^@?([A-Za-z_][A-Za-z0-9_-]*)(\s[^:]*)?:([^=]|$)`)
 
 // JustRecipes returns the public recipe names of a justfile in file order.
 func JustRecipes(data []byte) []string {

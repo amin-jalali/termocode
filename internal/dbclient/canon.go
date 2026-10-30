@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Schema compare (DB-15): one schema read whole from the catalogs and
@@ -411,7 +413,7 @@ func stripSchemaPrefix(text, schema string, quote func(string) string) string {
 	return re.ReplaceAllString(text, "$1")
 }
 
-var plainIdent = regexp.MustCompile(`^[a-z_][a-z0-9_$]*$`)
+var plainIdent = lazyre.New(`^[a-z_][a-z0-9_$]*$`)
 
 // ── MySQL / MariaDB ────────────────────────────────────────────────────
 
@@ -447,7 +449,7 @@ const myCanonRoutines = `SELECT routine_name, routine_type, dtd_identifier, rout
 
 const myCanonParams = `SELECT specific_name, parameter_mode, parameter_name, dtd_identifier FROM information_schema.parameters WHERE specific_schema = ? AND ordinal_position > 0 ORDER BY specific_name, ordinal_position`
 
-var myIntWidth = regexp.MustCompile(`^(bigint|int|integer|mediumint|smallint|tinyint)\((\d+)\)`)
+var myIntWidth = lazyre.New(`^(bigint|int|integer|mediumint|smallint|tinyint)\((\d+)\)`)
 
 // mysqlType lower-cases the type and drops the integer display width
 // (MySQL 8 no longer reports it, MariaDB does), keeping tinyint(1).
@@ -683,7 +685,7 @@ func sqliteRule(s string) string {
 	return s
 }
 
-var myCurrentTS = regexp.MustCompile(`(?i)\bcurrent_timestamp(\(\))?`)
+var myCurrentTS = lazyre.New(`(?i)\bcurrent_timestamp(\(\))?`)
 
 // mysqlNow writes current_timestamp() (MariaDB) as CURRENT_TIMESTAMP
 // (MySQL).

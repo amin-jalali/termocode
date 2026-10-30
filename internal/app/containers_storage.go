@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/containers"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/prompt"
 	"github.com/amin-jalali/termocode/internal/theme"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -283,7 +283,7 @@ func networkInspectUsers(value any) ([]string, error) {
 	return users, nil
 }
 
-var anonymousVolumeName = regexp.MustCompile(`^[a-f0-9]{64}$`)
+var anonymousVolumeName = lazyre.New(`^[a-f0-9]{64}$`)
 
 func isAnonymousVolume(name string) bool { return anonymousVolumeName.MatchString(name) }
 

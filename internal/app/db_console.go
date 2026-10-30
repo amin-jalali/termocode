@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/amin-jalali/termocode/internal/confirm"
 	"github.com/amin-jalali/termocode/internal/dbclient"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/nvim"
 	"github.com/amin-jalali/termocode/internal/picker"
 	"github.com/amin-jalali/termocode/internal/toast"
@@ -354,9 +354,9 @@ func dbErrorText(err error) string {
 
 var (
 	// "127.0.0.1:5432 (localhost): dial error: " before a connect reason.
-	dbConnectTarget = regexp.MustCompile(`^\S+ \([^)]*\): (?:(?:dial|server|tls) error: )?`)
+	dbConnectTarget = lazyre.New(`^\S+ \([^)]*\): (?:(?:dial|server|tls) error: )?`)
 	// "dial tcp 127.0.0.1:5432: connect: connection refused".
-	dbDialReason = regexp.MustCompile(`^dial \S+ \S+: (?:connect: )?(.+)$`)
+	dbDialReason = lazyre.New(`^dial \S+ \S+: (?:connect: )?(.+)$`)
 )
 
 // dbChangeSummary is the outcome of a statement without rows: "3 rows
@@ -576,7 +576,7 @@ func dbGuardText(c dbclient.Conn, kind dbclient.Kind, stmts []dbclient.Statement
 }
 
 // dbTargetTable finds the table a DELETE / UPDATE / TRUNCATE names.
-var dbTargetTable = regexp.MustCompile("(?is)^\\s*(?:DELETE\\s+FROM|UPDATE|TRUNCATE(?:\\s+TABLE)?)\\s+([\\w.\"`\\[\\]]+)")
+var dbTargetTable = lazyre.New("(?is)^\\s*(?:DELETE\\s+FROM|UPDATE|TRUNCATE(?:\\s+TABLE)?)\\s+([\\w.\"`\\[\\]]+)")
 
 func firstSQLWord(sql string) string {
 	for _, l := range strings.Split(sql, "\n") {

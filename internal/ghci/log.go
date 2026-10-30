@@ -3,13 +3,13 @@ package ghci
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/amin-jalali/termocode/internal/ai"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // MaxLogLines caps the log part that goes to the AI chat.
@@ -38,10 +38,10 @@ func FetchFailedLog(ctx context.Context, run Runner, dir string, id int64) (Fail
 }
 
 // tsRe is the timestamp GitHub puts before each log line.
-var tsRe = regexp.MustCompile(`^\x{FEFF}?\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z ?`)
+var tsRe = lazyre.New(`^\x{FEFF}?\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z ?`)
 
 // errRe finds the first line that looks like the failure.
-var errRe = regexp.MustCompile(`(?i)##\[error\]|\berror\b|--- fail|\bfail(ed|ure)?\b|panic:|✗`)
+var errRe = lazyre.New(`(?i)##\[error\]|\berror\b|--- fail|\bfail(ed|ure)?\b|panic:|✗`)
 
 // ParseFailedLog reads `gh run view --log-failed` output: one
 // "job<TAB>step<TAB>timestamp text" line per log line.

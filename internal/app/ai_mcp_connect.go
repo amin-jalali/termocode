@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"regexp"
 	"strings"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/amin-jalali/termocode/internal/ai"
 	"github.com/amin-jalali/termocode/internal/clock"
 	"github.com/amin-jalali/termocode/internal/connectcard"
+	"github.com/amin-jalali/termocode/internal/lazyre"
 	"github.com/amin-jalali/termocode/internal/mcp"
 	"github.com/amin-jalali/termocode/internal/mcp/auth"
 	"github.com/amin-jalali/termocode/internal/picker"
@@ -970,7 +970,7 @@ func clampIdx(i, n int) int {
 	return i
 }
 
-var emailRe = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
+var emailRe = lazyre.New(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
 
 // onMCPWizSubmit takes the input of a step.
 func (m *Model) onMCPWizSubmit(id, v string) tea.Cmd {

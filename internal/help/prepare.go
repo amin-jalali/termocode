@@ -2,9 +2,10 @@ package help
 
 import (
 	"html"
-	"regexp"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // Prepare turns the website-only syntax of a guide page into plain
@@ -69,16 +70,16 @@ func dropFrontMatter(lines []string) []string {
 }
 
 var (
-	reAdmon  = regexp.MustCompile(`^(\s*)(?:!!!|\?\?\?\+?)\s+([\w-]+)(?:\s+"(.*)")?\s*$`)
-	reTab    = regexp.MustCompile(`^(\s*)===\+?\s+"(.*)"\s*$`)
-	reFence  = regexp.MustCompile("^\\s*(```+|~~~+)")
-	reAttr   = regexp.MustCompile(`\{\s*:?\s*[.#][^{}]*\}`)
-	reIcon   = regexp.MustCompile(`:(?:material|fontawesome|octicons|simple)-[\w-]+:\s?`)
-	reTag    = regexp.MustCompile(`</?(?:div|p|span|strong|b|em|i|small|br)\b[^>]*>`)
-	reKeys   = regexp.MustCompile(`\+\+([\w+-]+)\+\+`)
-	reSpaces = regexp.MustCompile(`  +`)
-	reWrap   = regexp.MustCompile(`^\s*(?:<div\b[^>]*>|</div>)\s*$`)
-	reStat   = regexp.MustCompile(`^\s*<div\b[^>]*>(.*)</div>\s*$`)
+	reAdmon  = lazyre.New(`^(\s*)(?:!!!|\?\?\?\+?)\s+([\w-]+)(?:\s+"(.*)")?\s*$`)
+	reTab    = lazyre.New(`^(\s*)===\+?\s+"(.*)"\s*$`)
+	reFence  = lazyre.New("^\\s*(```+|~~~+)")
+	reAttr   = lazyre.New(`\{\s*:?\s*[.#][^{}]*\}`)
+	reIcon   = lazyre.New(`:(?:material|fontawesome|octicons|simple)-[\w-]+:\s?`)
+	reTag    = lazyre.New(`</?(?:div|p|span|strong|b|em|i|small|br)\b[^>]*>`)
+	reKeys   = lazyre.New(`\+\+([\w+-]+)\+\+`)
+	reSpaces = lazyre.New(`  +`)
+	reWrap   = lazyre.New(`^\s*(?:<div\b[^>]*>|</div>)\s*$`)
+	reStat   = lazyre.New(`^\s*<div\b[^>]*>(.*)</div>\s*$`)
 )
 
 func prepareLines(lines []string) []string {

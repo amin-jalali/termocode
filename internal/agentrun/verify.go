@@ -1,8 +1,9 @@
 package agentrun
 
 import (
-	"regexp"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // "Work until done" (OM-3). A run with a Loop has a verify node that
@@ -22,7 +23,7 @@ const VerifyRepairPrompt = `Your answer has no verdict line. Answer again with y
 // line even after the repair request: it counts as a fail.
 const NoVerdictReport = "no VERDICT line (counted as FAIL)"
 
-var verdictRe = regexp.MustCompile(`(?i)^VERDICT\s*:\s*(PASS|FAIL)\b`)
+var verdictRe = lazyre.New(`(?i)^VERDICT\s*:\s*(PASS|FAIL)\b`)
 
 // ParseVerdict reads a verify answer: the last line (outside fenced code
 // blocks) that starts with "VERDICT: PASS" or "VERDICT: FAIL" (any case,

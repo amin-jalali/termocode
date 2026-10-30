@@ -4,9 +4,10 @@ import (
 	"bufio"
 	"net/url"
 	"os"
-	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/amin-jalali/termocode/internal/lazyre"
 )
 
 // The replacement every mask uses (the same word as ai.Redact).
@@ -14,9 +15,9 @@ const redacted = "[REDACTED]"
 
 var (
 	// scheme://user:PASS@host
-	urlPassRe = regexp.MustCompile(`([a-zA-Z][a-zA-Z0-9+.-]*://[^\s:/@"']*:)([^\s@/"']+)(@)`)
+	urlPassRe = lazyre.New(`([a-zA-Z][a-zA-Z0-9+.-]*://[^\s:/@"']*:)([^\s@/"']+)(@)`)
 	// KEY=value or KEY: value where KEY looks secret.
-	assignRe = regexp.MustCompile(`(?i)\b([A-Z0-9_]*(?:pass|secret|token|key|dsn|auth|credential)[A-Z0-9_]*)(\s*[=:]\s*)("[^"\n]*"|'[^'\n]*'|[^\s"']+)`)
+	assignRe = lazyre.New(`(?i)\b([A-Z0-9_]*(?:pass|secret|token|key|dsn|auth|credential)[A-Z0-9_]*)(\s*[=:]\s*)("[^"\n]*"|'[^'\n]*'|[^\s"']+)`)
 )
 
 // Redact masks URL passwords and secret-looking KEY=value assignments.
@@ -95,7 +96,7 @@ func SecretValue(key, value string) []string {
 }
 
 // urlKey names keys that hold an address: only a password inside is secret.
-var urlKey = regexp.MustCompile(`(?i)(^|_)(url|uri|dsn|host|addr|address|endpoint)$`)
+var urlKey = lazyre.New(`(?i)(^|_)(url|uri|dsn|host|addr|address|endpoint)$`)
 
 // EnvFileSecrets returns the secret parts of a .env file's values (see
 // SecretValue), for ai.RegisterSecret.
