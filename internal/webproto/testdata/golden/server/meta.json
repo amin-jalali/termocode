@@ -1,0 +1,1 @@
+{"t":"meta","v":2,"conn":"c-3f9a","role":"controller","device":"loc-3f9a","idle_s":900,"max_s":43200,"viewers":1,"ui":{"theme":"dark","palette":{"accent":"#b4a7ff","bg":"#1e1e2e","fg":"#cdd6f4"},"font":"monospace"},"caps":["chat.send","tree.list"]}
