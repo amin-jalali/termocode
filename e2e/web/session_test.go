@@ -35,7 +35,7 @@ func (p *Page) Open() string {
 func (p *Page) firstTopics() []string {
 	ts := []string{"status", "toasts", "chat", "cards", "chats"}
 	if p.VP.W >= 1200 { // the workbench's side bar and editor tabs
-		ts = append(ts, "tree", "bufs")
+		ts = append(ts, "tree", "bufs", "git")
 	}
 	return ts
 }

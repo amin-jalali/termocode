@@ -40,7 +40,7 @@ func openGit(t *testing.T, vp Viewport, snap webproto.GitSnap) (*Page, *HubConn)
 	p.Media(map[string]string{"prefers-reduced-motion": "reduce"})
 	c := p.Login("c-git")
 	p.GoTab("git")
-	c.WaitSub(t, "git")
+	waitGitSub(t, p, c)
 	c.Send(t, Snap("git", 1, snap))
 	p.WaitJS(`document.querySelector('.git-row-wrap[data-path="b.go"]')`)
 	return p, c
@@ -303,7 +303,7 @@ func TestGitViewerReadsOnly(t *testing.T) {
 	c.Send(t, Snap("status", 1, statusData("main", 3)))
 	p.WaitJS(`document.documentElement.dataset.link === "online"`)
 	p.GoTab("git")
-	c.WaitSub(t, "git")
+	waitGitSub(t, p, c)
 	c.Send(t, Snap("git", 1, gitSnap()))
 	p.WaitJS(`document.querySelector('` + rowSel("b.go") + `')`)
 	if n := Eval[int](p, `document.querySelectorAll(".git-row .btn, .commit-box").length`); n != 0 {
@@ -349,4 +349,14 @@ func TestLaptopCardIsLaptopOnly(t *testing.T) {
 	if pr := p.Problems(); len(pr) > 0 {
 		t.Errorf("problems: %q", pr)
 	}
+}
+
+// waitGitSub waits for the page to ask for the git topic; the desktop
+// workbench asks for it at the start (the editor's change marks).
+func waitGitSub(t *testing.T, p *Page, c *HubConn) {
+	t.Helper()
+	if p.VP.W >= 1200 {
+		return
+	}
+	c.WaitSub(t, "git")
 }

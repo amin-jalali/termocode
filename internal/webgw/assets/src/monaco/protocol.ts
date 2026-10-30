@@ -25,6 +25,8 @@ export type ToFrame =
   /** replace: the user chose this text (one undo step). */
   | { t: "replace"; text: string }
   | { t: "hl"; rows: HlRow[] }
+  /** gutter: git change marks, rows [from, to] 1-based. */
+  | { t: "gutter"; marks: { from: number; to: number; kind: "add" | "mod" | "del" }[] }
   | { t: "undo" }
   | { t: "redo" }
   | { t: "focus" }

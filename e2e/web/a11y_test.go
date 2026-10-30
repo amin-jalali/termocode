@@ -260,7 +260,7 @@ func TestAxeViewsWithContent(t *testing.T) {
 				p.axe(src, "chat with messages")
 
 				p.GoTab("git")
-				c.WaitSub(t, "git")
+				waitGitSub(t, p, c)
 				c.Send(t, Snap("git", 1, gitSnap()))
 				p.WaitJS(`document.querySelector('.git-row-wrap[data-path="b.go"]')`)
 				p.axe(src, "git with changes")

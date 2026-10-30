@@ -82,7 +82,7 @@ func TestGitRemoteNotForViewer(t *testing.T) {
 	m.Role = webproto.RoleViewer
 	c := p.LoginMeta(m)
 	p.GoTab("git")
-	c.WaitSub(t, "git")
+	waitGitSub(t, p, c)
 	c.Send(t, Snap("git", 1, gitSnap()))
 	p.WaitJS(`document.querySelector('` + rowSel("b.go") + `')`)
 	if n := Eval[int](p, `document.querySelectorAll(".head-remote").length`); n != 0 {
