@@ -234,3 +234,70 @@ func TestPersianStringsHaveTheSameKeys(t *testing.T) {
 		}
 	}
 }
+
+// No user-facing text hides in the components: JSX text and text-like
+// attributes must come from strings.ts. The dev-only kit page (src/kit)
+// shows sample data and is exempt.
+var (
+	jsxText  = regexp.MustCompile(`>([^<>{}]*[A-Za-z]{2,}[^<>{}]*)<`)
+	jsxAttrs = regexp.MustCompile(`\b(aria-label|title|placeholder|alt|aria-description)="([^"]*[A-Za-z][^"]*)"`)
+)
+
+func hardcodedText(src string) []string {
+	// Drop comments and type-only generic angle brackets on one line.
+	src = regexp.MustCompile(`(?m)//.*$|(?s)/\*.*?\*/`).ReplaceAllString(src, "")
+	var out []string
+	for _, m := range jsxText.FindAllStringSubmatch(src, -1) {
+		txt := strings.TrimSpace(m[1])
+		// Generic type arguments like Segmented<Theme> look like text between > and <.
+		if txt == "" || regexp.MustCompile(`^[A-Za-z_][\w.]*$`).MatchString(txt) && !strings.Contains(m[0], " ") {
+			continue
+		}
+		if strings.ContainsAny(txt, "=;(&|") {
+			continue // code between comparison operators, not JSX text
+		}
+		out = append(out, txt)
+	}
+	for _, m := range jsxAttrs.FindAllStringSubmatch(src, -1) {
+		out = append(out, m[1]+"="+m[2])
+	}
+	return out
+}
+
+func TestHardcodedTextCatches(t *testing.T) {
+	for _, bad := range []string{`<p>Saved the file</p>`, `<button aria-label="Close this">x</button>`, `<input placeholder="Type here" />`} {
+		if len(hardcodedText(bad)) == 0 {
+			t.Errorf("passed %q", bad)
+		}
+	}
+	for _, ok := range []string{`<p>{t("x.y")}</p>`, `<span>✦</span>`, `<span>×</span>`, `<Segmented<Theme> label={t("theme")} />`, `if (a > b && c < d) {}`} {
+		if got := hardcodedText(ok); len(got) != 0 {
+			t.Errorf("refused %q: %v", ok, got)
+		}
+	}
+}
+
+func TestComponentsHaveNoHardcodedText(t *testing.T) {
+	err := filepath.WalkDir("src", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() && d.Name() == "kit" {
+			return filepath.SkipDir
+		}
+		if d.IsDir() || filepath.Ext(path) != ".tsx" {
+			return nil
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		for _, txt := range hardcodedText(string(b)) {
+			t.Errorf("%s: text %q belongs in strings.ts", path, txt)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
