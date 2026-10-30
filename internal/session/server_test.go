@@ -78,8 +78,11 @@ type rig struct {
 
 func newRig(t *testing.T, ui string) *rig {
 	t.Helper()
-	// Short: unix socket paths are limited to ~100 bytes.
-	rt, err := os.MkdirTemp("", "tcs")
+	// Short and private: unix socket paths are limited to ~100 bytes. Under
+	// macOS's long $TMPDIR the session dir would fall back to the shared
+	// $TMPDIR/termocode-<uid>, and parallel tests would see each other's
+	// files, so the base is under /tmp.
+	rt, err := os.MkdirTemp("/tmp", "tcs")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,6 +90,9 @@ func newRig(t *testing.T, ui string) *rig {
 	p, err := PathsFor(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
+	}
+	if d := filepath.Join(rt, "termocode"); filepath.Dir(p.Socket) != d {
+		t.Fatalf("session dir %s, want the private %s", filepath.Dir(p.Socket), d)
 	}
 	r := &rig{t: t, p: p, ui: ui, uiPIDs: filepath.Join(rt, "ui.pids"), exits: map[*exec.Cmd]chan struct{}{}}
 	t.Cleanup(func() {
