@@ -16,6 +16,11 @@ func (p *Page) tabLabels() string {
 	return Eval[string](p, `[...document.querySelectorAll("nav .nav-label")].map((e) => e.textContent).join("|")`)
 }
 
+// actLabels are the desktop activity bar's names (icons; the names are labels).
+func (p *Page) actLabels() []string {
+	return Eval[[]string](p, `[...document.querySelectorAll("nav.act-bar .nav-item")].map((e) => e.getAttribute("aria-label"))`)
+}
+
 // Choosing فارسی on More turns the whole UI Persian and right to left at
 // once; the strip's facts stay left to right, and English comes back.
 func TestPersianFromMore(t *testing.T) {
@@ -25,9 +30,24 @@ func TestPersianFromMore(t *testing.T) {
 			p := NewPage(t, s, vp)
 			c := p.Login("c-1")
 			p.GoTab("more")
+			desk := vp.W >= 1200
+			var en []string
+			if desk {
+				en = p.actLabels()
+			}
 			p.Tap(`.more .field:nth-of-type(2) .seg-item:nth-child(3)`) // فارسی
 			p.WaitJS(`document.documentElement.lang === "fa" && document.documentElement.dir === "rtl"`)
-			if got := p.tabLabels(); got != faTabs {
+			if desk {
+				fa := p.actLabels()
+				if len(fa) != len(en) || len(fa) == 0 {
+					t.Errorf("activity bar %q, in English %q", fa, en)
+				}
+				for _, l := range fa {
+					if !strings.ContainsFunc(l, func(r rune) bool { return r >= 0x0600 && r <= 0x06FF }) || strings.ContainsAny(l, "abcdefghijklmnopqrstuvwxyz") {
+						t.Errorf("activity bar item %q is not Persian", l)
+					}
+				}
+			} else if got := p.tabLabels(); got != faTabs {
 				t.Errorf("tab labels %q, want %q", got, faTabs)
 			}
 			if got := p.Text(`[data-view="more"] .view-title`); got != "بیشتر" {
@@ -49,7 +69,18 @@ func TestPersianFromMore(t *testing.T) {
 			}
 			p.Tap(`.more .field:nth-of-type(2) .seg-item:nth-child(2)`) // English
 			p.WaitJS(`document.documentElement.lang === "en" && document.documentElement.dir === "ltr"`)
-			if got := p.tabLabels(); got != "Chat|Files|Term|Git|More" {
+			if desk {
+				// Source Control now counts the 12 changes: "Source Control (12)".
+				got := p.actLabels()
+				if len(got) != len(en) {
+					t.Errorf("activity bar after English %q, want %q", got, en)
+				}
+				for i := range min(len(got), len(en)) {
+					if got[i] != en[i] && !strings.HasPrefix(got[i], en[i]+" (") {
+						t.Errorf("activity bar item %d after English %q, want %q", i, got[i], en[i])
+					}
+				}
+			} else if got := p.tabLabels(); got != "Chat|Files|Term|Git|More" {
 				t.Errorf("tab labels after English: %q", got)
 			}
 		})

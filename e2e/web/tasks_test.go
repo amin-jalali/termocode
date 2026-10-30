@@ -22,8 +22,32 @@ func openMore(t *testing.T, vp Viewport, n int, topic string) (*Page, *HubConn) 
 	c := p.Login("c-more")
 	p.GoTab("more")
 	p.TapJS(`document.querySelectorAll(".more-link")[` + string(rune('0'+n)) + `]`)
-	c.WaitSub(t, topic)
+	want := []string{topic}
+	if vp.W >= 1200 && topic == "tasks" {
+		// The desktop's Run side bar shows the tasks and the AI runs.
+		want = append(want, "runs")
+	}
+	waitSubs(t, c, want...)
 	return p, c
+}
+
+// waitSubs waits until the page has subscribed to every topic, in any order.
+func waitSubs(t *testing.T, c *HubConn, topics ...string) {
+	t.Helper()
+	left := map[string]bool{}
+	for _, x := range topics {
+		left[x] = true
+	}
+	for len(left) > 0 {
+		m := c.Next(t)
+		sub, ok := m.(*webproto.Sub)
+		if !ok {
+			t.Fatalf("page sent %s while subs for %v were expected", show(m), topics)
+		}
+		for _, x := range sub.Topics {
+			delete(left, x)
+		}
+	}
 }
 
 func tasksSnap(last *webproto.TaskLast) webproto.TasksSnap {
