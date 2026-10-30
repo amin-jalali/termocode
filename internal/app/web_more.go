@@ -12,4 +12,5 @@ type webMorePub struct {
 	branches []string                          // the local branches git.branches listed last (git.checkout takes one of them)
 	dbTables map[string]map[string]bool        // the tables db.tables listed last, by connection (db.rows takes one)
 	ctrs     map[string]webproto.ContainerItem // the containers containers.list gave last, by id (stop and remove take one)
+	rebase   *webRebasePlan                    // the list git.rebase_plan gave last (git.rebase takes its rows)
 }

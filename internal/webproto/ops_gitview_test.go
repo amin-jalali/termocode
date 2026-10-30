@@ -77,3 +77,22 @@ func TestGitAmendOp(t *testing.T) {
 		[]string{`{}`, `{"message":"fix: the subject\n\nthe body"}`})
 	checkRow(t, OpGitAmend, RoleController, true, AuditYes)
 }
+
+// Spec (interactive rebase): git.rebase_plan lists a commit and every
+// newer one of HEAD as picks (a read), git.rebase_state says where a
+// stopped rebase is (a read); git.rebase runs the user's list and
+// git.rebase_ctl continues, skips or aborts a stopped one: both rewrite
+// history and wait for a laptop card.
+func TestGitRebaseOps(t *testing.T) {
+	checkArgs(t, OpGitRebasePlan, []string{`{"from":""}`, `{"from":"HEAD~3"}`, `{"from":"abc"}`, `{"from":"--all"}`}, []string{`{"from":"60ed1c8"}`})
+	checkRow(t, OpGitRebasePlan, RoleViewer, false, AuditNo)
+	checkArgs(t, OpGitRebaseState, nil, []string{`{}`})
+	checkRow(t, OpGitRebaseState, RoleViewer, false, AuditNo)
+	checkArgs(t, OpGitRebase, []string{`{"base":"60ed1c8","steps":[]}`, `{"base":"main","steps":[{"hash":"60ed1c8","action":"pick"}]}`,
+		`{"base":"","steps":[{"hash":"60ed1c8","action":"exec"}]}`, `{"base":"","steps":[{"hash":"x","action":"pick"}]}`,
+		`{"base":"","steps":[{"hash":"60ed1c8","action":"reword","message":"  "}]}`, `{"base":"","steps":[{"hash":"60ed1c8","action":"pick","message":"m"}]}`},
+		[]string{`{"base":"","steps":[{"hash":"60ed1c8","action":"pick"}]}`, `{"base":"4db6cc1f","steps":[{"hash":"60ed1c8","action":"reword","message":"new"},{"hash":"1a5f196a","action":"fixup"}]}`})
+	checkRow(t, OpGitRebase, RoleController, true, AuditYes)
+	checkArgs(t, OpGitRebaseCtl, []string{`{"do":"edit"}`, `{"do":""}`}, []string{`{"do":"continue"}`, `{"do":"skip"}`, `{"do":"abort"}`})
+	checkRow(t, OpGitRebaseCtl, RoleController, true, AuditYes)
+}

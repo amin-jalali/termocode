@@ -1,0 +1,1 @@
+{"t":"req","id":48,"op":"git.rebase","args":{"base":"4db6cc1f","steps":[{"hash":"60ed1c8","action":"reword","message":"new"},{"hash":"1a5f196a","action":"fixup"}]}}
