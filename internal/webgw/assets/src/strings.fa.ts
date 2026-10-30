@@ -191,6 +191,12 @@ export const FA: Record<StringKey, string> = {
   "key.ctrl.label": "کنترل",
   "key.alt.label": "آلت",
   "key.interrupt.label": "قطع",
+  "font.smaller": "متن کوچک‌تر",
+  "font.bigger": "متن بزرگ‌تر",
+  "key.font_smaller": "A−",
+  "key.font_bigger": "A+",
+  "font.px": "{n} پیکسل",
+  "font.reset": "اندازهٔ پیش‌فرض",
 
   // Git
   "git.staged": "آماده",
