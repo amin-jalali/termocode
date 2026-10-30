@@ -203,6 +203,15 @@ export const FA: Record<StringKey, string> = {
   "git.body": "بیشتر (اختیاری)",
   "git.long": "تفاوت طولانی است. بخش اول نشان داده می‌شود.",
   "git.err": "پاسخ گیت: {line}",
+  "git.unstaged_toast": "{name} از آماده برداشته شد",
+  "git.many": "۲۰۰۰ فایل نشان داده می‌شود. {n} فایل دیگر روی لپ‌تاپ است.",
+  "git.log": "ثبت‌های اخیر",
+  "git.hunk_stage": "آماده کردن این بخش",
+  "git.hunk_unstage": "برداشتن این بخش از آماده",
+  "git.more_rows": "نمایش ردیف‌های بیشتر",
+  "git.gone": "این فایل اکنون تغییری ندارد.",
+  "git.reading": "لپ‌تاپ در حال خواندن گیت است…",
+  "git.cancelled_here": "لغو شد. چیزی تغییر نکرد.",
 
   // Search, tasks, runs
   "search.placeholder": "جستجو در فایل‌ها",

@@ -35,6 +35,18 @@ export function ToastView({ x, onClose }: { x: Toast; onClose?: () => void }) {
           </div>
         )}
       </div>
+      {x.action && (
+        <button
+          type="button"
+          class="toast-act"
+          onClick={() => {
+            x.action?.run();
+            onClose?.();
+          }}
+        >
+          {x.action.label}
+        </button>
+      )}
       <button type="button" class="toast-x" aria-label={t("close")} onClick={onClose}>
         ×
       </button>
