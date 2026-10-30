@@ -61,6 +61,7 @@ jobs:
           go test -count=1 -run '^TestPerfContainers' -v ./internal/app/ || code=1
           go test -count=1 -run '^TestPerfDB' -v ./internal/dbclient/ ./internal/app/ || code=1
           go test -count=1 -run '^TestPerf' -v ./internal/git/ ./internal/ai/ ./internal/app/ || code=1
+          go test -count=1 -run '^TestPerfHTTP' -v ./internal/app/ || code=1
           go -C e2e test -tags e2e -count=1 -run '^TestPerf' -v ./... || code=1
           exit $code
 
