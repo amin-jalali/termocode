@@ -82,6 +82,7 @@ export const FA: Record<StringKey, string> = {
 
   // Offline and connection
   "offline.lost": "اتصال قطع شد. تلاش دوباره تا {s} ثانیه دیگر…",
+  "offline.lost_sr": "اتصال قطع شد. دوباره تلاش می‌کنیم.",
   "offline.trying": "اتصال قطع شد. همین حالا دوباره تلاش می‌کنیم…",
   "offline.try": "الان امتحان کن",
   "offline.back": "پس از {s} ثانیه دوباره وصل شد.",
