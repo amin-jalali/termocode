@@ -29,6 +29,9 @@ import (
 var binPath string
 
 func TestMain(m *testing.M) {
+	if os.Getenv(envFakeForward) != "" { // the fake `ssh -N -L` of ssh_web_test.go
+		os.Exit(fakeForward(os.Args[1:]))
+	}
 	if _, err := exec.LookPath("nvim"); err != nil {
 		fmt.Println("e2e: nvim not in PATH, skipping")
 		os.Exit(0)
