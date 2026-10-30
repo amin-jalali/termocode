@@ -618,6 +618,19 @@ export interface RunItem {
   can?: string[];
 }
 
+export interface SettingsSnap {
+  items: SettingItem[];
+}
+
+export interface SettingItem {
+  key: string;
+  group: string;
+  type: "bool" | "int" | "number" | "enum" | "string";
+  value: string;
+  default: string;
+  description?: string;
+}
+
 export interface Answered {
   id: string;
   by?: string;
@@ -803,6 +816,7 @@ export interface TopicData {
   "git": { snap: GitSnap; delta: GitSnap };
   "tasks": { snap: TasksSnap; delta: TasksSnap };
   "runs": { snap: RunsSnap; delta: RunsSnap };
+  "settings": { snap: SettingsSnap; delta: SettingsSnap };
 }
 
 // The data of an ev message, by kind.
