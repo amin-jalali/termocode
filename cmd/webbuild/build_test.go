@@ -182,3 +182,37 @@ func TestBuildCopiesAValidManifest(t *testing.T) {
 		}
 	}
 }
+
+// The symbol fonts (WEB-58) are copied after their hashes check out, and
+// their license joins licenses.txt; a changed file stops the build.
+func TestBuildChecksAndCopiesTheSymbolFonts(t *testing.T) {
+	dir := fixture(t, ``)
+	fonts := filepath.Join(dir, "fonts")
+	if err := os.MkdirAll(fonts, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	body := []byte("wOF2 not really a font")
+	write := func(name string, b []byte) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(fonts, name), b, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("nf-x.woff2", body)
+	write("LICENSE.txt", []byte("glyphs under MIT\n"))
+	write("fonts.json", []byte(`{"family":"termocode symbols","faces":[{"file":"nf-x.woff2","unicode_range":"U+E0A0-E0A3","sha384":"`+manifest.SRI(body)+`"}]}`))
+	out, err := Build(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(out["fonts/nf-x.woff2"]) != string(body) {
+		t.Error("the font is not in the output")
+	}
+	if !strings.Contains(string(out["licenses.txt"]), "glyphs under MIT") {
+		t.Error("licenses.txt lacks the fonts' license")
+	}
+	write("nf-x.woff2", []byte("wOF2 changed"))
+	if _, err := Build(dir); err == nil || !strings.Contains(err.Error(), "nf-x.woff2") {
+		t.Errorf("a changed font built: %v", err)
+	}
+}
