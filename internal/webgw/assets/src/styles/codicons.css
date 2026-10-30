@@ -1,0 +1,71 @@
+/* The workbench's icons: the codicon font (vendored, CC BY 4.0; see
+   /assets/licenses.txt). One class per icon the page uses. */
+@font-face {
+  font-family: "codicon";
+  font-display: block;
+  src: url("/assets/icons/codicon.ttf") format("truetype");
+}
+.cod {
+  display: inline-block;
+  flex: none;
+  font: normal normal normal 16px/1 codicon;
+  text-align: center;
+  text-decoration: none;
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  speak: never;
+}
+.cod-24 { font-size: 24px; }
+.cod-account::before { content: "\eb99"; }
+.cod-add::before { content: "\ea60"; }
+.cod-bell::before { content: "\eaa2"; }
+.cod-check::before { content: "\eab2"; }
+.cod-chevron-down::before { content: "\eab4"; }
+.cod-chevron-right::before { content: "\eab6"; }
+.cod-chevron-up::before { content: "\eab7"; }
+.cod-circle-filled::before { content: "\ea71"; }
+.cod-close::before { content: "\ea76"; }
+.cod-collapse-all::before { content: "\eac5"; }
+.cod-comment-discussion::before { content: "\eac7"; }
+.cod-database::before { content: "\eace"; }
+.cod-device-desktop::before { content: "\ea7a"; }
+.cod-discard::before { content: "\eae2"; }
+.cod-edit::before { content: "\ea73"; }
+.cod-ellipsis::before { content: "\ea7c"; }
+.cod-error::before { content: "\ea87"; }
+.cod-file::before { content: "\ea7b"; }
+.cod-files::before { content: "\eaf0"; }
+.cod-folder::before { content: "\ea83"; }
+.cod-folder-opened::before { content: "\eaf7"; }
+.cod-gear::before { content: "\eaf8"; }
+.cod-git-branch::before { content: "\ec6f"; }
+.cod-layout-panel::before { content: "\ebf2"; }
+.cod-layout-panel-off::before { content: "\ec01"; }
+.cod-layout-sidebar-left::before { content: "\ebf3"; }
+.cod-layout-sidebar-left-off::before { content: "\ec02"; }
+.cod-layout-sidebar-right::before { content: "\ebf4"; }
+.cod-layout-sidebar-right-off::before { content: "\ec00"; }
+.cod-new-file::before { content: "\ea7f"; }
+.cod-new-folder::before { content: "\ea80"; }
+.cod-package::before { content: "\eb29"; }
+.cod-play::before { content: "\eb2c"; }
+.cod-plug::before { content: "\eb2d"; }
+.cod-redo::before { content: "\ebb0"; }
+.cod-refresh::before { content: "\eb37"; }
+.cod-remote::before { content: "\eb3a"; }
+.cod-save::before { content: "\eb4b"; }
+.cod-search::before { content: "\ea6d"; }
+.cod-server-process::before { content: "\eba2"; }
+.cod-source-control::before { content: "\ea68"; }
+.cod-sparkle::before { content: "\ec10"; }
+.cod-sync::before { content: "\ea77"; }
+.cod-terminal::before { content: "\ea85"; }
+.cod-trash::before { content: "\ea81"; }
+.cod-warning::before { content: "\ea6c"; }
+.cod-word-wrap::before { content: "\eb80"; }
+.cod-run-all::before { content: "\eb9e"; }
+.cod-vm::before { content: "\ea7a"; }
+.cod-tasklist::before { content: "\eb67"; }
+.cod-debug-alt::before { content: "\eb91"; }
+.cod-link-external::before { content: "\eb14"; }

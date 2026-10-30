@@ -16,6 +16,7 @@ import "./styles/files.css";
 import "./styles/fonts.css";
 import "./styles/hl.css";
 import "./styles/media.css";
+import "./styles/codicons.css";
 import "./styles/workbench.css";
 import { App } from "./app";
 import { prefs } from "./lib/prefs";

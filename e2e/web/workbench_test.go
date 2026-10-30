@@ -4,6 +4,7 @@ package web
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/chromedp/chromedp"
@@ -146,4 +147,31 @@ func waitSubSkipping(t *testing.T, c *HubConn, topic string) {
 			t.Fatalf("page sent %s while a sub for %s was expected", show(m), topic)
 		}
 	}
+}
+
+// Every view is an item of the desktop's activity bar, with its icon,
+// a tooltip with the keys, and a badge; side views open in the side bar,
+// the big tables in the editor area.
+func TestWorkbenchActivityBar(t *testing.T) {
+	p, c := openFiles(t, Desktop)
+	ids := Eval[[]string](p, `[...document.querySelectorAll("nav.act-bar .act-item")].map((e) => e.dataset.act)`)
+	if got := strings.Join(ids, ","); got != "files,search,git,run,db,containers,mcp,chat,device,settings" {
+		t.Errorf("activity bar items %s", got)
+	}
+	if tip := Eval[string](p, `document.querySelector('.act-item[data-act="files"]').title`); !strings.HasSuffix(tip, "+Shift+E)") || !strings.HasPrefix(tip, "Explorer (") {
+		t.Errorf("Explorer tooltip %q", tip)
+	}
+	c.Send(t, Snap("status", 2, statusData("main", 3)))
+	p.WaitJS(`document.querySelector('.act-item[data-act="git"] .act-badge')?.textContent === "3"`)
+	// Search opens in the side bar.
+	p.Tap(`.act-item[data-act="search"]`)
+	p.WaitJS(`document.querySelector('.wb-side[data-side="search"] .view') && location.hash.startsWith("#/more/search")`)
+	// Databases open in the editor area; the side bar keeps Search.
+	p.Tap(`.act-item[data-act="db"]`)
+	p.WaitJS(`document.querySelector('.wb-editor [data-view="more"]') && document.querySelector('.wb-side[data-side="search"]')`)
+	// A second click on the active side item hides the side bar.
+	p.Tap(`.act-item[data-act="files"]`)
+	p.WaitJS(`document.querySelector('.wb-side[data-side="files"]')`)
+	p.Tap(`.act-item[data-act="files"]`)
+	p.WaitJS(`!document.querySelector(".wb-side")`)
 }

@@ -565,4 +565,8 @@ export const FA: Record<StringKey, string> = {
   "cmd.theme_dark": "ترجیحات: پوستهٔ تیره",
   "cmd.theme_light": "ترجیحات: پوستهٔ روشن",
   "cmd.theme_system": "ترجیحات: پوستهٔ سیستم",
+  "act.explorer": "فایل‌ها",
+  "act.scm": "کنترل نسخه",
+  "act.run": "کارها و اجراهای هوش مصنوعی",
+  "act.device": "این دستگاه",
 };
