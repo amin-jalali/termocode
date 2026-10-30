@@ -451,6 +451,17 @@ export interface PRNumberArgs {
   number: number;
 }
 
+export interface PRMergeArgs {
+  number: number;
+  method: "squash" | "merge" | "rebase";
+}
+
+export interface PRReviewArgs {
+  number: number;
+  kind: "approve" | "request_changes" | "comment";
+  body?: string;
+}
+
 export interface StatusSnap {
   root: string;
   workspace_label: string;
@@ -1804,6 +1815,9 @@ export interface OpArgs {
   "pr.list": EmptyArgs;
   "pr.view": PRNumberArgs;
   "ci.status": EmptyArgs;
+  "pr.merge": PRMergeArgs;
+  "pr.review": PRReviewArgs;
+  "pr.checkout": PRNumberArgs;
 }
 
 export type OpName = keyof OpArgs;
@@ -1926,4 +1940,7 @@ export interface OpResult {
   "pr.list": PRList;
   "pr.view": PRView;
   "ci.status": CIStatus;
+  "pr.merge": AskRef;
+  "pr.review": AskRef;
+  "pr.checkout": AskRef;
 }

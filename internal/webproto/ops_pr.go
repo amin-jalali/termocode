@@ -1,5 +1,7 @@
 package webproto
 
+import "strings"
+
 // Pull requests and CI checks on the desktop page (WEBP-5), read through
 // the laptop's gh (its sign-in stays there). Merging, reviewing and
 // checking out wait for a laptop card.
@@ -9,7 +11,29 @@ const (
 	OpPRList   = "pr.list"
 	OpPRView   = "pr.view"
 	OpCIStatus = "ci.status"
+
+	OpPRMerge    = "pr.merge"
+	OpPRReview   = "pr.review"
+	OpPRCheckout = "pr.checkout"
 )
+
+// MaxReviewText caps a review's message.
+const MaxReviewText = 16 << 10
+
+// PRMergeArgs merges a pull request: "squash", "merge" (a merge commit)
+// or "rebase". Never with an admin override.
+type PRMergeArgs struct {
+	Number int    `json:"number"`
+	Method string `json:"method" enum:"squash|merge|rebase"`
+}
+
+// PRReviewArgs sends a review: approve (the message may be empty),
+// request_changes or comment (both need one).
+type PRReviewArgs struct {
+	Number int    `json:"number"`
+	Kind   string `json:"kind" enum:"approve|request_changes|comment"`
+	Body   string `json:"body,omitempty"`
+}
 
 // MaxPRNumber caps a pull request number.
 const MaxPRNumber = 1_000_000_000
@@ -97,11 +121,40 @@ var opPRRows = []Policy{
 	{Op: OpPRList, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: perSec(1), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpPRView, New: newOf[PRNumberArgs](), Role: RoleViewer, Rate: perSec(2), MaxBytes: 1 * kib, Live: 1, Audit: AuditNo, Phase: PhaseV2},
 	{Op: OpCIStatus, New: newOf[EmptyArgs](), Role: RoleViewer, Rate: perSec(2), MaxBytes: 1 * kib, Audit: AuditNo, Phase: PhaseV2},
+	{Op: OpPRMerge, New: newOf[PRMergeArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpPRReview, New: newOf[PRReviewArgs](), Role: RoleController, Rate: slow, MaxBytes: 24 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
+	{Op: OpPRCheckout, New: newOf[PRNumberArgs](), Role: RoleController, Rate: slow, MaxBytes: 1 * kib, LaptopCard: true, Audit: AuditYes, Phase: PhaseV2},
 }
 
 func (a *PRNumberArgs) validate(int) error {
 	if a.Number < 1 || a.Number > MaxPRNumber {
 		return invalid("bad number")
+	}
+	return nil
+}
+
+func (a *PRMergeArgs) validate(n int) error {
+	if err := (&PRNumberArgs{Number: a.Number}).validate(n); err != nil {
+		return err
+	}
+	if a.Method != "squash" && a.Method != "merge" && a.Method != "rebase" {
+		return invalid("bad method")
+	}
+	return nil
+}
+
+func (a *PRReviewArgs) validate(n int) error {
+	if err := (&PRNumberArgs{Number: a.Number}).validate(n); err != nil {
+		return err
+	}
+	if a.Kind != "approve" && a.Kind != "request_changes" && a.Kind != "comment" {
+		return invalid("bad kind")
+	}
+	if len(a.Body) > MaxReviewText || hasControl(strings.NewReplacer("\n", "", "\t", "").Replace(a.Body)) {
+		return invalid("bad message")
+	}
+	if a.Kind != "approve" && strings.TrimSpace(a.Body) == "" {
+		return invalid("a message is needed")
 	}
 	return nil
 }
@@ -113,4 +166,7 @@ func init() {
 	registerResult(OpPRList, PRList{})
 	registerResult(OpPRView, PRView{})
 	registerResult(OpCIStatus, CIStatus{})
+	for _, op := range []string{OpPRMerge, OpPRReview, OpPRCheckout} {
+		registerResult(op, AskRef{})
+	}
 }
