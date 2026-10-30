@@ -3,6 +3,7 @@ package webproto
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -48,4 +49,22 @@ func TestGitBlameOp(t *testing.T) {
 	checkArgs(t, OpGitBlame, []string{`{"path":""}`, `{"path":"../x"}`, `{"path":"dir/"}`, `{"path":"/etc/passwd"}`},
 		[]string{`{"path":"src/a.go"}`})
 	checkRow(t, OpGitBlame, RoleViewer, false, AuditNo)
+}
+
+// Spec (merge editor): git.conflict reads a conflicted file's sides and
+// blocks (a read for viewers); git.resolve saves the merged result and
+// marks the file resolved (a controller op, audited, with the version
+// the page read as its precondition); git.resolve_side keeps one side of
+// the whole file, which can delete it: a laptop card.
+func TestGitConflictOps(t *testing.T) {
+	v := strings.Repeat("ab", 32)
+	checkArgs(t, OpGitConflict, []string{`{"path":""}`, `{"path":"../x"}`}, []string{`{"path":"a.go"}`})
+	checkRow(t, OpGitConflict, RoleViewer, false, AuditNo)
+	checkArgs(t, OpGitResolve, []string{`{"path":"a.go","text":"x","version":""}`, `{"path":"a.go","text":"x","version":"` + v[:63] + `"}`,
+		`{"path":"a.go","text":"x","version":"` + strings.Repeat("g", 64) + `"}`, `{"path":"a.go","text":"a\u0000b","version":"` + v + `"}`,
+		`{"path":"/x","text":"x","version":"` + v + `"}`},
+		[]string{`{"path":"a.go","text":"","version":"` + v + `"}`, `{"path":"a.go","text":"a\nb\r\n\tc","version":"` + v + `"}`})
+	checkRow(t, OpGitResolve, RoleController, false, AuditYes)
+	checkArgs(t, OpGitResolveSide, []string{`{"path":"a.go","side":"base"}`, `{"path":"a.go","side":""}`}, []string{`{"path":"a.go","side":"ours"}`, `{"path":"a.go","side":"theirs"}`})
+	checkRow(t, OpGitResolveSide, RoleController, true, AuditYes)
 }
