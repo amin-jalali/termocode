@@ -49,6 +49,13 @@ func validName(s string, max int) bool {
 	return s != "" && len(s) <= max && !hasControl(s)
 }
 
+func (a *WebOpenArgs) validate(int) error {
+	if a.SSHPort != 0 && (!a.Yes || a.SSHPort < 1024 || a.SSHPort > 65535) {
+		return invalid("bad ssh port")
+	}
+	return nil
+}
+
 func (a *PathArgs) validate(int) error {
 	if !validPath(a.Path, true) {
 		return invalid("bad path")
