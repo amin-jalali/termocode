@@ -22,7 +22,7 @@ func procRow(local, remote string, uid int) string {
 func TestProcNetTCPParse(t *testing.T) {
 	us := netip.MustParseAddrPort("127.0.0.1:8080")
 	peer := netip.MustParseAddrPort("127.0.0.1:41205") // port A0F5
-	v4 := "0100007F"                                      // 127.0.0.1 on a little-endian host
+	v4 := "0100007F"                                   // 127.0.0.1 on a little-endian host
 	if !isLittleEndian() {
 		v4 = "7F000001"
 	}
