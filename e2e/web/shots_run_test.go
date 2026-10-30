@@ -12,8 +12,6 @@ func runShotSnaps() map[string]any {
 		"tests":    testsTree("idle", 1),
 		"debug":    debugPaused(),
 		"services": servicesSnap(),
-		"runs":     webproto.RunsSnap{Runs: []webproto.RunItem{}},
-		"tasks":    webproto.TasksSnap{Tasks: []webproto.TaskItem{{Label: "build", Group: "build", Source: "tasks.json", Detail: "go build ./..."}}},
 	}
 }
 
