@@ -20,17 +20,21 @@ import (
 type Auth struct {
 	tokens *Tokens
 	now    func() time.Time
+	limit  *Bucket // every /auth request, before its body is read
 
 	mu     sync.Mutex
 	secret *LaunchSecret // nil: no link is open
 }
+
+// AuthRatePerSecond caps /auth requests per second for the whole gateway.
+const AuthRatePerSecond = 20
 
 // NewAuth issues tokens from tokens. now is the clock (nil: time.Now).
 func NewAuth(tokens *Tokens, now func() time.Time) *Auth {
 	if now == nil {
 		now = time.Now
 	}
-	return &Auth{tokens: tokens, now: now}
+	return &Auth{tokens: tokens, now: now, limit: NewBucket(AuthRatePerSecond, AuthRatePerSecond)}
 }
 
 // NewSecret opens a new launch link: it makes a fresh one-time secret and
@@ -78,6 +82,11 @@ func (a *Auth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", "POST")
 		writeJSON(w, http.StatusMethodNotAllowed, errorReply("method_not_allowed"))
+		return
+	}
+	if !a.limit.Allow(a.now()) {
+		w.Header().Set("Retry-After", "1")
+		writeJSON(w, http.StatusTooManyRequests, errorReply("rate_limited"))
 		return
 	}
 	if r.URL.RawQuery != "" {
